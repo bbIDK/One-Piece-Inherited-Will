@@ -231,7 +231,10 @@ rearrange them.
   brig. There is wind, Grand Line weather that changes its mind, and rogue
   waves.
 - Boarding is done by hand: jump onto a deck from a pier or from your own
-  deck, or swim to a ship and climb her side. Every deck can be walked.
+  deck, or swim to a ship and climb her side. Every deck can be walked, and
+  everyone aboard rides her gentle roll and pitch with her, feet on the
+  planks (on a big ship the ends rise and fall a good way), and shoes rest on
+  a floor or a deck rather than sinking into it.
 - Ships are on One Piece's scale: every one but the rowboat is at least
   twice the size it first was, from a 24 m sloop and the 28 m Going Merry
   class to a 90 m great galleon (a Yonko flagship) and a 78 m Marine

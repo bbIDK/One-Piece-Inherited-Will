@@ -2,7 +2,7 @@
 // forecastle) is solid ground for anyone standing on it, and carries them
 // along as the ship sails or turns; the bulwarks keep you aboard unless you
 // jump over the rail, and you can't swim through a hull — you climb aboard.
-import { deckPoint, deckToWorld, helmPoint, shipDims, hullSolid, shipBob, hullPoint, pitchRise, hbAt, levelAt } from '../world/hull.js';
+import { deckPoint, deckToWorld, helmPoint, shipDims, hullSolid, shipLift, hullPoint, hbAt, levelAt } from '../world/hull.js';
 
 export function installDecks(game) {
   // taking the helm, you look out over the bow (at a rowboat's oars, down a
@@ -42,8 +42,7 @@ export function installDecks(game) {
       if (dx * dx + dy * dy > r * r) continue;
       const h = hullPoint(s, dx, dy, pad);
       if (!h) continue;
-      const lift = shipBob(s, time) + pitchRise(s, h.u);
-      h.ship = s; h.rail = h.top + lift; h.deckH = h.floor + lift;
+      h.ship = s; h.rail = shipLift(s, time, h.u, h.v, h.top); h.deckH = shipLift(s, time, h.u, h.v, h.floor);
       return h;
     }
     return null;
@@ -56,7 +55,9 @@ export function installDecks(game) {
     const r = s.def.length * 0.56 + (sails ? s.def.length * 0.3 : 0);
     const dx = game.world.dx(s.x, x), dy = y - s.y;
     if (dx * dx + dy * dy > r * r) return false;
-    const hh = h - shipBob(s, game.env?.time || 0);
+    // (in her own frame: as she rolls and pitches, her timbers ride up and down with her)
+    const ch = Math.cos(s.heading), sh = Math.sin(s.heading);
+    const hh = h - shipLift(s, game.env?.time || 0, dx * ch + dy * sh, -dx * sh + dy * ch, 0);
     if (hullSolid(s, dx, dy, hh)) return true;
     if (sails && s.sailBoxes) {
       // (in each sail's own frame: from its mast, turned as the yards are braced; furled, only a gaff sail's still there)

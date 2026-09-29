@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { interiorRect, heightsOf } from '../world/interiors.js';
 import { helmPoint } from './ships3d.js';
-import { shipBob, pitchRise, shipDims, rowLean } from '../world/hull.js';
+import { shipBob, shipLift, shipDims, rowLean } from '../world/hull.js';
 import { waterLevel } from './height.js';
 import { swellAt } from './swell.js';
 
@@ -287,7 +287,7 @@ export class CameraRig {
     let gx = 0, gz = 0; // eye position relative to the player (origin)
     // where your feet are: on a deck, on the ground (or the bottom of the shallows), in the air
     let gh = p.flying && p.alt != null ? p.alt
-      : p.deck ? p.deck.h + shipBob(p.deck.ship, time) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) + (p.z || 0)
+      : p.deck ? shipLift(p.deck.ship, time, p.deck.u ?? (p.deck.t - 0.5) * p.deck.ship.def.length, p.deck.v || 0, p.deck.h) + (p.z || 0)
         : (p.belowDeck ? p.groundAt(game, p.x, p.y) : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
     let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
     if (!sailing) this.seaPitch = 0;
@@ -300,7 +300,7 @@ export class CameraRig {
       shipX = game.world ? game.world.dx(p.x, s.x) : 0; shipZ = s.y - p.y;
       gx = shipX + Math.cos(s.heading) * hp.x; gz = shipZ + Math.sin(s.heading) * hp.x;
       const t = time + (s.seed || 0);
-      gh = (s.lvl || 0) + 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07 + pitchRise(s, hp.x);
+      gh = shipLift(s, time, hp.x, 0, hp.floor);
       eyeH = hp.eye - hp.floor + (hp.seated ? 0 : 0.15);
       if (hp.seated && s.oars) {
         // (the rower's head goes with the stroke: forward and down into the drive, back on the recovery)
@@ -517,6 +517,13 @@ export class CameraRig {
     const dashing = !!p.dash;
     const fov = this.baseFov + (sprint ? 7 : 0) + (dashing ? 6 : 0);
     if (Math.abs(cam.fov - fov) > 0.05) { cam.fov += (fov - cam.fov) * Math.min(1, dt * 6); cam.updateProjectionMatrix(); }
+    // (tests: a camera set down anywhere — rig.shot = { from: [x, y, h], at:
+    // [x, y, h] }, in world tiles and metres — to look at something closely)
+    if (this.shot && game.world) {
+      const w = game.world, f = this.shot.from, a = this.shot.at;
+      cam.position.set(w.dx(p.x, f[0]), f[2], f[1] - p.y);
+      cam.lookAt(w.dx(p.x, a[0]), a[2], a[1] - p.y);
+    }
     cam.updateMatrixWorld();
     this.aimCache = null;
     this.rigT = performance.now();

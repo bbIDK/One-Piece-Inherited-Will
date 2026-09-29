@@ -21,7 +21,7 @@ import { Trail } from './chars/trail.js';
 import { createViewmodel } from './chars/viewmodel.js';
 import { holdItem, heldSize } from './chars/helditem.js';
 import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
-import { shipBob, pitchRise } from '../world/hull.js';
+import { shipBob, shipLift } from '../world/hull.js';
 import { WakeTrail } from './wake3d.js';
 
 const TAU = Math.PI * 2;
@@ -356,7 +356,7 @@ class ActorView {
     const s = st.ship, spot = stationSpot(st), w = ctx.world, h = s.heading;
     // (the ship's middle relative to you: nothing, at her helm)
     const dx = w ? w.dx(a.x, s.x) : s.x - a.x, dy = s.y - a.y;
-    this.root.position.set(dx + Math.cos(h) * spot.u, shipBob(s, env.time) + spot.floor + pitchRise(s, spot.u), dy + Math.sin(h) * spot.u);
+    this.root.position.set(dx + Math.cos(h) * spot.u, shipLift(s, env.time, spot.u, 0, spot.floor), dy + Math.sin(h) * spot.u);
   }
 
   /** Head yaw toward the camera for nearby idle NPCs. */

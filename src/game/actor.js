@@ -10,7 +10,7 @@ import { RACES } from '../data/races.js';
 import { WALKABLE, SWIMMABLE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
 import { HIGH_DECK } from '../render3d/height.js';
 import { clamp, TAU, angleDiff } from '../core/math.js';
-import { shipDims, hbAt, deckToWorld, shipBob } from '../world/hull.js';
+import { shipDims, hbAt, deckToWorld, shipLift } from '../world/hull.js';
 import { placeOnDeck, boardingSpot } from './decks.js';
 
 // what a step sounds like on each kind of ground
@@ -28,6 +28,9 @@ for (const [k, ts] of Object.entries({
   soft: ['CARPET', 'TATAMI', 'CANDY', 'CAKE', 'ISLAND_CLOUD'],
   metal: ['STEEL'],
 })) for (const n of ts) if (T[n] !== undefined) STEP_SOUND[T[n]] = k;
+
+// where a deck point (from deckAt: its ship, u along, v across, h) rides just now
+const deckY = (dk, time) => shipLift(dk.ship, time, dk.u ?? (dk.t - 0.5) * dk.ship.def.length, dk.v || 0, dk.h);
 
 const smooth01 = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
@@ -414,7 +417,6 @@ export class Actor extends Entity {
     if (fromWater) {
       // up from treading water (the body starts where it floats, so the leap is continuous)
       v *= 1.3 * J.leap;
-      const s = this.look?.scale || 1;
       const z = -(this.depth || 0) - this.swimSink();
       this.leaveWater(game, true);
       this.leapT = 0.5;
@@ -860,7 +862,7 @@ export class Actor extends Entity {
 
   /** How high your feet are (m above the sea): on a deck, afloat, wading, standing or in the air. */
   feetH(game) {
-    if (this.deck) return this.deck.h + shipBob(this.deck.ship, game.env?.time || 0) + (this.z || 0);
+    if (this.deck) return deckY(this.deck, game.env?.time || 0) + (this.z || 0);
     const g = this.groundAt(game, this.x, this.y);
     if (this.inWater) return g - (this.depth || 0) - this.swimSink();
     return g - (this.wading || 0) + (this.z || 0);
@@ -1012,7 +1014,7 @@ export class Actor extends Entity {
 
   /** Start hauling yourself up to `to`: a spot to stand on ({ x, y, h }), or a deck spot ({ ship, t, v }). */
   startClimb(game, to) {
-    const w = game.world, s = this.look?.scale || 1;
+    const w = game.world;
     const wet = this.inWater;
     // (from where the body is drawn: afloat, on the bottom, in the air)
     const h0 = wet ? this.groundAt(game, this.x, this.y) - (this.depth || 0) - this.swimSink() : this.feetH(game);
@@ -1027,7 +1029,7 @@ export class Actor extends Entity {
     let tx, ty, th;
     if (to.ship) {
       const sh = to.ship, p = deckToWorld(sh, to.t, to.v);
-      tx = p.x; ty = p.y; th = p.h + shipBob(sh, game.env?.time || 0);
+      tx = p.x; ty = p.y; th = shipLift(sh, game.env?.time || 0, (to.t - 0.5) * sh.def.length, to.v || 0, p.h);
       // (up her side: where you started moves with her as she sails and turns)
       const cs = Math.cos(sh.heading), sn = Math.sin(sh.heading), dx = w.dx(sh.x, this.x), dy = this.y - sh.y;
       c.u0 = dx * cs + dy * sn; c.v0 = -dx * sn + dy * cs;
@@ -1053,7 +1055,7 @@ export class Actor extends Entity {
     let x0 = c.x0, y0 = c.y0, x1, y1, h1;
     if (to.ship) {
       const sh = to.ship, p = deckToWorld(sh, to.t, to.v), cs = Math.cos(sh.heading), sn = Math.sin(sh.heading);
-      x1 = p.x; y1 = p.y; h1 = p.h + shipBob(sh, game.env?.time || 0);
+      x1 = p.x; y1 = p.y; h1 = shipLift(sh, game.env?.time || 0, (to.t - 0.5) * sh.def.length, to.v || 0, p.h);
       x0 = sh.x + c.u0 * cs - c.v0 * sn; y0 = sh.y + c.u0 * sn + c.v0 * cs;
     } else { x1 = to.x; y1 = to.y; h1 = to.h; }
     const up = smooth01(0, 0.65, k), over = smooth01(0.35, 1, k);
@@ -1206,7 +1208,7 @@ export class Actor extends Entity {
       if (!dk) {
         // over the side: on from the deck's height (a jump keeps its lift)
         const g = this.groundAt(game, this.x, this.y);
-        this.z = was.h + shipBob(was.ship, time) + (this.z || 0) - g;
+        this.z = deckY(was, time) + (this.z || 0) - g;
         if (this.z < 0 && !this.overWater(game)) this.z = 0;
         if (!this.vz && this.z > 0) this.vz = -0.01;
         this.lastG = g; this.lastGX = this.x; this.lastGY = this.y;
@@ -1214,8 +1216,8 @@ export class Actor extends Entity {
     }
     if (dk) {
       // (from one ship's deck across to another's, or down onto one, the height changes too)
-      const abs = was ? was.h + shipBob(was.ship, time) + (this.z || 0) : this.groundAt(game, this.x, this.y) - (this.wading || 0) + (this.z || 0);
-      this.z = Math.max(0, abs - dk.h - shipBob(dk.ship, time));
+      const abs = was ? deckY(was, time) + (this.z || 0) : this.groundAt(game, this.x, this.y) - (this.wading || 0) + (this.z || 0);
+      this.z = Math.max(0, abs - deckY(dk, time));
       this.wading = 0;
       if (!this.vz && this.z > 0) this.vz = -0.01;
       (dk.ship.aboard || (dk.ship.aboard = new Set())).add(this);

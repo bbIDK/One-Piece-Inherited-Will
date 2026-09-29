@@ -37842,7 +37842,7 @@ ${GLSL}
     const L2 = def.length, B4 = def.beam;
     const open = L2 < 3.5;
     const D3 = B4 * 0.42;
-    const deckY = open ? 0.14 : 0.25 + B4 * 0.2;
+    const deckY2 = open ? 0.14 : 0.25 + B4 * 0.2;
     const bulH = open ? 0.36 : 0.3 + B4 * 0.07;
     const castle = L2 >= 5.5, fore = L2 >= 6.8;
     const hq = castle ? 0.85 + (L2 - 5.5) * 0.1 : 0;
@@ -37856,7 +37856,7 @@ ${GLSL}
       B: B4,
       D: D3,
       open,
-      deckY,
+      deckY: deckY2,
       bulH,
       castle,
       fore,
@@ -37867,9 +37867,9 @@ ${GLSL}
       masts,
       mastH,
       helmX,
-      yq: deckY + hq,
-      yf: deckY + hf,
-      helmFloor: castle ? deckY + hq : deckY,
+      yq: deckY2 + hq,
+      yf: deckY2 + hf,
+      helmFloor: castle ? deckY2 + hq : deckY2,
       big: false,
       poop: false,
       hp: 0,
@@ -37957,13 +37957,13 @@ ${GLSL}
     const D3 = B4 * 0.45;
     const narrow = B4 < 7;
     const large = L2 >= 44, mid = !narrow && !large;
-    const deckY = 0.6 + Math.min(B4, 11) * 0.2;
+    const deckY2 = 0.6 + Math.min(B4, 11) * 0.2;
     const bulH = 1.1;
     const fore = L2 >= 24;
     const hq = narrow ? 2.4 : Math.min(3, 1.95 + B4 * 0.075), hf = hq - 0.1;
     const poop = large, hp = poop ? hq - 0.2 : 0;
     const tq = narrow ? Math.max(0.24, 2.9 / L2) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 1 - Math.max(0.13, 5.4 / L2) : 1, tp = poop ? 0.13 : 0;
-    const yq = deckY + hq, yf = deckY + hf, yp = yq + hp;
+    const yq = deckY2 + hq, yf = deckY2 + hf, yp = yq + hp;
     const masts = Math.max(1, Math.min(4, def.masts || 3));
     const tHelm = poop ? tp + 0.02 : narrow ? 0.08 : 0.1;
     const d = {
@@ -37973,7 +37973,7 @@ ${GLSL}
       open: false,
       big: true,
       narrow,
-      deckY,
+      deckY: deckY2,
       bulH,
       castle: true,
       fore,
@@ -37994,7 +37994,7 @@ ${GLSL}
       sheer: 0.4,
       walk: 0.86
     };
-    d.bowY = fore ? yf : deckY + 0.9;
+    d.bowY = fore ? yf : deckY2 + 0.9;
     d.mastU = { 1: [0.06], 2: [0.22, -0.06], 3: large ? [0.27, 0.03, -0.24] : [0.26, 0.02, -0.28], 4: [0.3, 0.1, -0.12, -0.27] }[masts].map((k) => k * L2);
     d.mastR = Math.min(0.6, 0.05 + L2 * 0.011);
     d.wheelU = d.helmX + 0.9;
@@ -38008,12 +38008,12 @@ ${GLSL}
       const vo = Math.min(edge(ta), edge(tb)), vi = vo - W4;
       for (const s of sides2) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo, vb: s > 0 ? vo : -vi });
     };
-    flight(tq, tq + run(hq) / L2, yq, deckY, "quarter", "main");
-    if (fore) flight(tf2 - run(hf) / L2, tf2, deckY, yf, "main", "fore");
+    flight(tq, tq + run(hq) / L2, yq, deckY2, "quarter", "main");
+    if (fore) flight(tf2 - run(hf) / L2, tf2, deckY2, yf, "main", "fore");
     if (poop) flight(tp, tp + run(hp) / L2, yp, yq, "poop", "quarter");
     const qs = d.stairs.find((s) => s.la === "quarter" && s.lb === "main"), fs = d.stairs.find((s) => s.lb === "fore");
     const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
-    const holdY = deckY - Math.max(2.25, Math.min(2.7, 1.9 + B4 * 0.045));
+    const holdY = deckY2 - Math.max(2.25, Math.min(2.7, 1.9 + B4 * 0.045));
     d.holdY = holdY;
     const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
     let h0 = 0.06, h1 = 0.94;
@@ -38021,7 +38021,7 @@ ${GLSL}
     while (h1 > 0.6 && holdHalf(h1) < 0.8) h1 -= 5e-3;
     const clearU = (u0, u1, pad2) => d.mastU.every((m) => m < u0 - d.mastR - pad2 || m > u1 + d.mastR + pad2);
     const clearComp = (u0, u1) => d.mastU.every((m) => m < u0 - d.mastR - 1.2 || m > u1 + d.mastR + 1.5);
-    const rise = deckY - holdY;
+    const rise = deckY2 - holdY;
     let comp = null;
     for (const cRun of [...large ? [rise * 1.15, rise, rise * 0.85] : [], rise * 0.55]) {
       for (let k = 0; k < 160 && !comp; k++) {
@@ -38035,7 +38035,7 @@ ${GLSL}
     if (!comp) comp = { t0: (mainT0 + mainT1) / 2 - rise * 0.275 / L2, t1: (mainT0 + mainT1) / 2 + rise * 0.275 / L2, ladder: true };
     const cw = comp.ladder ? 0.9 : 1.3;
     d.comp = { ...comp, w: cw, u0: xAt(d, comp.t0), u1: xAt(d, comp.t1) };
-    d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY, la: "hold", lb: "main", s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
+    d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY2, la: "hold", lb: "main", s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
     d.hatchT = (comp.t0 + comp.t1) / 2;
     const freeT = (want2, len, pad2) => {
       for (let k = 0; k < 80; k++) {
@@ -38054,7 +38054,7 @@ ${GLSL}
     else d.boat = bt !== null ? { u0: (bt - 0.5) * L2 - bl2 / 2, u1: (bt - 0.5) * L2 + bl2 / 2, w: Math.min(2.2, B4 * 0.22) } : null;
     const gs = Math.max(0.6, Math.min(1, B4 / 6.5));
     d.gunScale = gs;
-    const rows = [{ y: deckY + 0.42, t0: mainT0 + 1.5 / L2, t1: mainT1 - 1.5 / L2, lid: 0.42, open: 1.4, deck: true }];
+    const rows = [{ y: deckY2 + 0.42, t0: mainT0 + 1.5 / L2, t1: mainT1 - 1.5 / L2, lid: 0.42, open: 1.4, deck: true }];
     if ((def.cannons || 0) >= 12) rows.push({ y: holdY + 0.42 * Math.max(0.85, gs), t0: Math.max(0.12, h0 + 0.8 / L2), t1: Math.min(0.86, h1 - 0.8 / L2), lid: 0.6, open: 1.05 });
     const perSide = Math.ceil((def.cannons || 0) / 2);
     const capU = d.capstanT !== null ? (d.capstanT - 0.5) * L2 : null;
@@ -38103,16 +38103,16 @@ ${GLSL}
     const mastIn = d.mastU.some((m) => m < xAt(d, tq) && m > xAt(d, tq) - 2.6);
     const doorVs = narrow ? [Math.max(-edge(tq) + 0.75, Math.min(0, qs.va - 0.75))] : mastIn ? [-1, 1].map((s) => s * Math.max(0.95, d.mastR + 1.15)) : [0];
     d.rooms = [
-      { kind: "cabin", t0: tS, t1: tq, floor: deckY, ceil: yq - 0.12, top: yq, doors: doorVs.map((v) => ({ t: tq, v, w: 1.05, face: 1 })) }
+      { kind: "cabin", t0: tS, t1: tq, floor: deckY2, ceil: yq - 0.12, top: yq, doors: doorVs.map((v) => ({ t: tq, v, w: 1.05, face: 1 })) }
     ];
     if (poop) d.rooms.push({ kind: "captain", t0: tS, t1: tp, floor: yq, ceil: yp - 0.12, top: yp, doors: [{ t: tp, v: 0, w: 1.05, face: 1 }] });
     if (fore) {
       let fe = 0.95;
-      while (fe > tf2 + 0.03 && innerAt(d, fe, deckY + 1) < 0.85) fe -= 5e-3;
+      while (fe > tf2 + 0.03 && innerAt(d, fe, deckY2 + 1) < 0.85) fe -= 5e-3;
       const fdv = narrow ? [Math.max(-edge(tf2) + 0.75, Math.min(0, fs.va - 0.75))] : [-0.95, 0.95];
-      d.rooms.push({ kind: "forecastle", t0: tf2, t1: fe, floor: deckY, ceil: yf - 0.12, top: yf, doors: fdv.map((v) => ({ t: tf2, v, w: 1, face: -1 })) });
+      d.rooms.push({ kind: "forecastle", t0: tf2, t1: fe, floor: deckY2, ceil: yf - 0.12, top: yf, doors: fdv.map((v) => ({ t: tf2, v, w: 1, face: -1 })) });
     }
-    d.rooms.push({ kind: "hold", t0: h0, t1: h1, floor: holdY, ceil: deckY - 0.12, doors: [] });
+    d.rooms.push({ kind: "hold", t0: h0, t1: h1, floor: holdY, ceil: deckY2 - 0.12, doors: [] });
     const upTo = { cabin: ["quarter", "main"], captain: ["poop", "quarter"], forecastle: ["main", "fore"] };
     for (const r of d.rooms) if (r.doors.length) roomFront(d, r, d.stairs.filter((s) => s.la === upTo[r.kind][0] && s.lb === upTo[r.kind][1]));
     for (const r of d.rooms) if (r.kind === "cabin" || r.kind === "captain") r.windows = sternWindows(d, r);
@@ -38617,7 +38617,14 @@ ${GLSL}
   function shipBob(ship, time) {
     return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.07;
   }
-  var pitchRise = (ship, along) => ship.pitch ? along * Math.tan(ship.pitch) : 0;
+  function shipRock(ship, time) {
+    const t = time + (ship.seed || 0), sinking = ship.sunk ? Math.min(1, (ship.sinkT || 0) / 4) : 0;
+    return [Math.sin(t * 0.9) * 0.035 + sinking * 0.5, Math.sin(t * 1.1) * 0.02 + (ship.pitch || 0)];
+  }
+  function shipLift(ship, time, u, v, h2) {
+    const [a, b] = shipRock(ship, time);
+    return shipBob(ship, time) + (u * Math.sin(b) + h2 * Math.cos(b)) * Math.cos(a) - v * Math.sin(a);
+  }
   function deckPoint(ship, dx, dy, margin = 0.2, hRef = null) {
     const d = shipDims(ship.def);
     const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
@@ -40750,7 +40757,8 @@ ${GLSL}
       const t = env.time + (s.seed || 0);
       const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
       r.position.set(rx, (s.lvl || 0) + 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
-      r.rotation.set(Math.sin(t * 0.9) * 0.035 + sinking * 0.5, -s.heading, Math.sin(t * 1.1) * 0.02 + (s.pitch || 0), "YXZ");
+      const [roll2, pitch] = shipRock(s, env.time);
+      r.rotation.set(roll2, -s.heading, pitch, "YXZ");
       if (this.inside) {
         const cam = ctx?.camera;
         this.inside.visible = !!cam && cam.position.distanceTo(r.position) < this.d.L * 0.6 + 12;
@@ -41093,7 +41101,7 @@ ${GLSL}
       const time = game.env?.time || 0;
       let eyeH = 1.72 * scale;
       let gx = 0, gz = 0;
-      let gh = p.flying && p.alt != null ? p.alt : p.deck ? p.deck.h + shipBob(p.deck.ship, time) + pitchRise(p.deck.ship, (p.deck.t - 0.5) * p.deck.ship.def.length) + (p.z || 0) : (p.belowDeck ? p.groundAt(game, p.x, p.y) : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
+      let gh = p.flying && p.alt != null ? p.alt : p.deck ? shipLift(p.deck.ship, time, p.deck.u ?? (p.deck.t - 0.5) * p.deck.ship.def.length, p.deck.v || 0, p.deck.h) + (p.z || 0) : (p.belowDeck ? p.groundAt(game, p.x, p.y) : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
       let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
       if (!sailing) this.seaPitch = 0;
       if (sailing) {
@@ -41104,7 +41112,7 @@ ${GLSL}
         gx = shipX + Math.cos(s.heading) * hp.x;
         gz = shipZ + Math.sin(s.heading) * hp.x;
         const t = time + (s.seed || 0);
-        gh = (s.lvl || 0) + 0.05 + hp.floor + Math.sin(t * 1.3) * 0.07 + pitchRise(s, hp.x);
+        gh = shipLift(s, time, hp.x, 0, hp.floor);
         eyeH = hp.eye - hp.floor + (hp.seated ? 0 : 0.15);
         if (hp.seated && s.oars) {
           const lean = rowLean(s);
@@ -41299,6 +41307,11 @@ ${GLSL}
       if (Math.abs(cam.fov - fov2) > 0.05) {
         cam.fov += (fov2 - cam.fov) * Math.min(1, dt * 6);
         cam.updateProjectionMatrix();
+      }
+      if (this.shot && game.world) {
+        const w = game.world, f = this.shot.from, a = this.shot.at;
+        cam.position.set(w.dx(p.x, f[0]), f[2], f[1] - p.y);
+        cam.lookAt(w.dx(p.x, a[0]), a[2], a[1] - p.y);
       }
       cam.updateMatrixWorld();
       this.aimCache = null;
@@ -62553,10 +62566,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (dx * dx + dy * dy > r * r) continue;
         const h2 = hullPoint(s, dx, dy, pad2);
         if (!h2) continue;
-        const lift = shipBob(s, time) + pitchRise(s, h2.u);
         h2.ship = s;
-        h2.rail = h2.top + lift;
-        h2.deckH = h2.floor + lift;
+        h2.rail = shipLift(s, time, h2.u, h2.v, h2.top);
+        h2.deckH = shipLift(s, time, h2.u, h2.v, h2.floor);
         return h2;
       }
       return null;
@@ -62567,7 +62579,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const r = s.def.length * 0.56 + (sails ? s.def.length * 0.3 : 0);
       const dx = game.world.dx(s.x, x), dy = y - s.y;
       if (dx * dx + dy * dy > r * r) return false;
-      const hh = h2 - shipBob(s, game.env?.time || 0);
+      const ch = Math.cos(s.heading), sh = Math.sin(s.heading);
+      const hh = h2 - shipLift(s, game.env?.time || 0, dx * ch + dy * sh, -dx * sh + dy * ch, 0);
       if (hullSolid(s, dx, dy, hh)) return true;
       if (sails && s.sailBoxes) {
         const c = Math.cos(s.heading), sn = Math.sin(s.heading), u = dx * c + dy * sn, v = -dx * sn + dy * c;
@@ -62710,6 +62723,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     soft: ["CARPET", "TATAMI", "CANDY", "CAKE", "ISLAND_CLOUD"],
     metal: ["STEEL"]
   })) for (const n of ts) if (T[n] !== void 0) STEP_SOUND[T[n]] = k;
+  var deckY = (dk3, time) => shipLift(dk3.ship, time, dk3.u ?? (dk3.t - 0.5) * dk3.ship.def.length, dk3.v || 0, dk3.h);
   var smooth01 = (a, b, x) => {
     const t = clamp2((x - a) / (b - a), 0, 1);
     return t * t * (3 - 2 * t);
@@ -63115,7 +63129,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       if (fromWater) {
         v *= 1.3 * J.leap;
-        const s = this.look?.scale || 1;
         const z = -(this.depth || 0) - this.swimSink();
         this.leaveWater(game, true);
         this.leapT = 0.5;
@@ -63548,7 +63561,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     /** How high your feet are (m above the sea): on a deck, afloat, wading, standing or in the air. */
     feetH(game) {
-      if (this.deck) return this.deck.h + shipBob(this.deck.ship, game.env?.time || 0) + (this.z || 0);
+      if (this.deck) return deckY(this.deck, game.env?.time || 0) + (this.z || 0);
       const g = this.groundAt(game, this.x, this.y);
       if (this.inWater) return g - (this.depth || 0) - this.swimSink();
       return g - (this.wading || 0) + (this.z || 0);
@@ -63708,7 +63721,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     /** Start hauling yourself up to `to`: a spot to stand on ({ x, y, h }), or a deck spot ({ ship, t, v }). */
     startClimb(game, to) {
-      const w = game.world, s = this.look?.scale || 1;
+      const w = game.world;
       const wet = this.inWater;
       const h0 = wet ? this.groundAt(game, this.x, this.y) - (this.depth || 0) - this.swimSink() : this.feetH(game);
       if (wet) {
@@ -63727,7 +63740,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const sh = to.ship, p = deckToWorld(sh, to.t, to.v);
         tx = p.x;
         ty = p.y;
-        th = p.h + shipBob(sh, game.env?.time || 0);
+        th = shipLift(sh, game.env?.time || 0, (to.t - 0.5) * sh.def.length, to.v || 0, p.h);
         const cs = Math.cos(sh.heading), sn = Math.sin(sh.heading), dx = w.dx(sh.x, this.x), dy = this.y - sh.y;
         c.u0 = dx * cs + dy * sn;
         c.v0 = -dx * sn + dy * cs;
@@ -63769,7 +63782,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const sh = to.ship, p = deckToWorld(sh, to.t, to.v), cs = Math.cos(sh.heading), sn = Math.sin(sh.heading);
         x1 = p.x;
         y1 = p.y;
-        h1 = p.h + shipBob(sh, game.env?.time || 0);
+        h1 = shipLift(sh, game.env?.time || 0, (to.t - 0.5) * sh.def.length, to.v || 0, p.h);
         x0 = sh.x + c.u0 * cs - c.v0 * sn;
         y0 = sh.y + c.u0 * sn + c.v0 * cs;
       } else {
@@ -63955,7 +63968,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         was.ship.aboard?.delete(this);
         if (!dk3) {
           const g = this.groundAt(game, this.x, this.y);
-          this.z = was.h + shipBob(was.ship, time) + (this.z || 0) - g;
+          this.z = deckY(was, time) + (this.z || 0) - g;
           if (this.z < 0 && !this.overWater(game)) this.z = 0;
           if (!this.vz && this.z > 0) this.vz = -0.01;
           this.lastG = g;
@@ -63964,8 +63977,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       }
       if (dk3) {
-        const abs = was ? was.h + shipBob(was.ship, time) + (this.z || 0) : this.groundAt(game, this.x, this.y) - (this.wading || 0) + (this.z || 0);
-        this.z = Math.max(0, abs - dk3.h - shipBob(dk3.ship, time));
+        const abs = was ? deckY(was, time) + (this.z || 0) : this.groundAt(game, this.x, this.y) - (this.wading || 0) + (this.z || 0);
+        this.z = Math.max(0, abs - deckY(dk3, time));
         this.wading = 0;
         if (!this.vz && this.z > 0) this.vz = -0.01;
         (dk3.ship.aboard || (dk3.ship.aboard = /* @__PURE__ */ new Set())).add(this);
@@ -68081,6 +68094,25 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.tip.copy(dir).applyMatrix4(_dm).multiplyScalar(L2).add(piv);
     }
   };
+  function soleLift(body, d) {
+    if (body.soleLift !== void 0) return body.soleLift;
+    const geo2 = body.geo, pos = geo2.attributes.position, si = geo2.attributes.skinIndex, sw2 = geo2.attributes.skinWeight;
+    let min = Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      let best = -1, bw2 = 0;
+      for (let k = 0; k < 4; k++) {
+        const w = sw2.getComponent(i, k);
+        if (w > bw2) {
+          bw2 = w;
+          best = si.getComponent(i, k);
+        }
+      }
+      if (best === B3.footR || best === B3.footL) min = Math.min(min, pos.getY(i));
+    }
+    const ankle = d.hip0 - 0.07 - d.T1 - d.T2;
+    body.soleLift = Number.isFinite(min) ? Math.max(-0.03, Math.min(0.06, ankle - min - d.hA)) : 0;
+    return body.soleLift;
+  }
   var CharacterModel = class {
     /**
      * look: the (effective) look; wpn: { kind, count, gun } or null.
@@ -68093,6 +68125,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lod = opts.lod ?? 0;
       this.body = getBody(look, wpn, this.lod, !!opts.fingers);
       this.d = this.body.dims;
+      this.soleLift = soleLift(this.body, this.d);
       this.rig = new Rig(this.d);
       this.group = new Group();
       this.group.name = "char";
@@ -68321,7 +68354,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const pivot = d.hip0 * 0.92;
       g.quaternion.setFromAxisAngle(AZ, -roll2);
       g.position.set(0, pivot, 0).applyQuaternion(g.quaternion).negate().add(_v5.set(0, pivot, 0));
-      g.position.y += o.lift || 0;
+      g.position.y += (o.lift || 0) + this.soleLift;
       if (o.sideRoll) {
         _q3.setFromAxisAngle(AX, o.sideRoll);
         g.quaternion.premultiply(_q3);
@@ -69817,7 +69850,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lastT = env.time;
       const cam = this.ctx.camera, h2 = s.heading, w = this.ctx.world;
       const dx = w ? w.dx(p.x, s.x) : s.x - p.x, dy = s.y - p.y;
-      _v7.set(dx + Math.cos(h2) * spot.u, shipBob(s, env.time) + spot.floor + pitchRise(s, spot.u), dy + Math.sin(h2) * spot.u);
+      _v7.set(dx + Math.cos(h2) * spot.u, shipLift(s, env.time, spot.u, 0, spot.floor), dy + Math.sin(h2) * spot.u);
       _q4.setFromAxisAngle(_up2, -h2);
       _mA.compose(_v7, _q4, _one2);
       _mB.copy(cam.matrixWorld).invert().multiply(_mA);
@@ -70191,7 +70224,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     placeAtStation(a, st, env, ctx) {
       const s = st.ship, spot = stationSpot(st), w = ctx.world, h2 = s.heading;
       const dx = w ? w.dx(a.x, s.x) : s.x - a.x, dy = s.y - a.y;
-      this.root.position.set(dx + Math.cos(h2) * spot.u, shipBob(s, env.time) + spot.floor + pitchRise(s, spot.u), dy + Math.sin(h2) * spot.u);
+      this.root.position.set(dx + Math.cos(h2) * spot.u, shipLift(s, env.time, spot.u, 0, spot.floor), dy + Math.sin(h2) * spot.u);
     }
     /** Head yaw toward the camera for nearby idle NPCs. */
     lookAt(a, dist, pose, cam, s) {
@@ -71480,7 +71513,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           this.attach(v.root, this.ents);
         }
         let gh;
-        if (a.deck) gh = a.deck.h + shipBob(a.deck.ship, env.time) + pitchRise(a.deck.ship, (a.deck.t - 0.5) * a.deck.ship.def.length);
+        if (a.deck) gh = shipLift(a.deck.ship, env.time, a.deck.u ?? (a.deck.t - 0.5) * a.deck.ship.def.length, a.deck.v || 0, a.deck.h);
         else if (a.flying) gh = Math.max(0, this.ground(a.x, a.y));
         else if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
         else if (a.inWater) {
@@ -128165,6 +128198,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       },
       prof: { PROF, reset: profReset },
       debug: {
+        THREE: three_module_exports,
         npcDef,
         allNpcDefs,
         standingHeight,

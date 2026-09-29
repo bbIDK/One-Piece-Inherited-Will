@@ -878,6 +878,26 @@ export function solidAt(d, u, v, margin = 0, lvl = null) {
 export function shipBob(ship, time) { return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.07; }
 /** How much higher than the middle a point `along` metres toward the bow rides (the ship pitched up a slope). */
 export const pitchRise = (ship, along) => (ship.pitch ? along * Math.tan(ship.pitch) : 0);
+/**
+ * How a ship rocks as the 3D view draws her: [roll, pitch] in radians —
+ * heeling gently side to side and dipping bow and stern (plus the slope she's
+ * on up Reverse Mountain, and the list of a ship going down).
+ */
+export function shipRock(ship, time) {
+  const t = time + (ship.seed || 0), sinking = ship.sunk ? Math.min(1, (ship.sinkT || 0) / 4) : 0;
+  return [Math.sin(t * 0.9) * 0.035 + sinking * 0.5, Math.sin(t * 1.1) * 0.02 + (ship.pitch || 0)];
+}
+/**
+ * Where a point aboard rides just now, in metres above the sea: `u` along her
+ * from the middle (+ toward the bow), `v` across (+ to starboard), `h` above
+ * her waterline — with her bob, roll and pitch, exactly as she's drawn, so
+ * whoever stands on her deck stands on the planks under them (on a 24 m
+ * sloop, the roll and pitch alone lift her ends a quarter of a metre).
+ */
+export function shipLift(ship, time, u, v, h) {
+  const [a, b] = shipRock(ship, time);
+  return shipBob(ship, time) + (u * Math.sin(b) + h * Math.cos(b)) * Math.cos(a) - v * Math.sin(a);
+}
 
 /**
  * The deck under a point (dx, dy = offset from the ship's centre, world tiles):

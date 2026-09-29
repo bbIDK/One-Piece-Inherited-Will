@@ -15,7 +15,7 @@ import { canvasTexture } from './materials.js';
 import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat } from './props/mats.js';
-import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt } from '../world/hull.js';
+import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock } from '../world/hull.js';
 import { bigHull, bigInterior, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging } from './bigship.js';
 import { WakeTrail } from './wake3d.js';
 
@@ -905,8 +905,10 @@ export class ShipView {
     const t = env.time + (s.seed || 0);
     const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
     r.position.set(rx, (s.lvl || 0) + 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
-    // (riding up or down Reverse Mountain, the bow points up or down the slope)
-    r.rotation.set(Math.sin(t * 0.9) * 0.035 + sinking * 0.5, -s.heading, Math.sin(t * 1.1) * 0.02 + (s.pitch || 0), 'YXZ');
+    // (riding up or down Reverse Mountain, the bow points up or down the slope;
+    // those aboard ride the same roll and pitch: hull.js shipLift)
+    const [roll, pitch] = shipRock(s, env.time);
+    r.rotation.set(roll, -s.heading, pitch, 'YXZ');
     // (her insides only from close by: aboard, or alongside)
     if (this.inside) {
       const cam = ctx?.camera;

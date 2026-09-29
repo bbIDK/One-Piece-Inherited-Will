@@ -19,7 +19,7 @@ import { Glow } from './fx.js';
 import { holdItem, heldSize } from './helditem.js';
 import { actorPose, rigOptions, currentLook, weaponOf, stationSpot, stationReach } from './pose.js';
 import { FRUITS } from '../../data/fruits.js';
-import { shipDims, shipBob, pitchRise } from '../../world/hull.js';
+import { shipDims, shipLift } from '../../world/hull.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 // first-person strikes (see update): reach kept to x0 + xs of the rest (and never pulled in closer than
@@ -273,7 +273,7 @@ class Viewmodel {
     // bow), seen from the camera (the view's origin is the ship's middle)
     const cam = this.ctx.camera, h = s.heading, w = this.ctx.world;
     const dx = w ? w.dx(p.x, s.x) : s.x - p.x, dy = s.y - p.y;
-    _v.set(dx + Math.cos(h) * spot.u, shipBob(s, env.time) + spot.floor + pitchRise(s, spot.u), dy + Math.sin(h) * spot.u);
+    _v.set(dx + Math.cos(h) * spot.u, shipLift(s, env.time, spot.u, 0, spot.floor), dy + Math.sin(h) * spot.u);
     _q.setFromAxisAngle(_up, -h);
     _mA.compose(_v, _q, _one);
     _mB.copy(cam.matrixWorld).invert().multiply(_mA);

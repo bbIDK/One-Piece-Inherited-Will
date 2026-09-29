@@ -108,6 +108,27 @@ class Dangle {
   }
 }
 
+/**
+ * How far to lift a body so its soles meet the ground: the lowest point of
+ * whatever's on its feet, below the ankle (measured on the geometry, in the
+ * rest pose), less the ankle's height when standing (dims.hA). Cached with
+ * the body.
+ */
+function soleLift(body, d) {
+  if (body.soleLift !== undefined) return body.soleLift;
+  const geo = body.geo, pos = geo.attributes.position, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+  let min = Infinity;
+  for (let i = 0; i < pos.count; i++) {
+    let best = -1, bw = 0;
+    for (let k = 0; k < 4; k++) { const w = sw.getComponent(i, k); if (w > bw) { bw = w; best = si.getComponent(i, k); } }
+    if (best === B.footR || best === B.footL) min = Math.min(min, pos.getY(i));
+  }
+  // (the ankle at rest: the legs hang straight from the hip joints)
+  const ankle = d.hip0 - 0.07 - d.T1 - d.T2;
+  body.soleLift = Number.isFinite(min) ? Math.max(-0.03, Math.min(0.06, ankle - min - d.hA)) : 0;
+  return body.soleLift;
+}
+
 export class CharacterModel {
   /**
    * look: the (effective) look; wpn: { kind, count, gun } or null.
@@ -120,6 +141,10 @@ export class CharacterModel {
     this.lod = opts.lod ?? 0;
     this.body = getBody(look, wpn, this.lod, !!opts.fingers);
     this.d = this.body.dims;
+    // (the whole body is lifted by however far its soles — a boot's, a geta's
+    // teeth, bare toes — reach below the ankle height the legs stand on, so
+    // they rest on a floor or a deck instead of sinking into it)
+    this.soleLift = soleLift(this.body, this.d);
     this.rig = new Rig(this.d);
     this.group = new THREE.Group();
     this.group.name = 'char';
@@ -365,7 +390,7 @@ export class CharacterModel {
     const pivot = d.hip0 * 0.92;
     g.quaternion.setFromAxisAngle(AZ, -roll);
     g.position.set(0, pivot, 0).applyQuaternion(g.quaternion).negate().add(_v.set(0, pivot, 0));
-    g.position.y += (o.lift || 0);
+    g.position.y += (o.lift || 0) + this.soleLift;
     if (o.sideRoll) {
       _q.setFromAxisAngle(AX, o.sideRoll);
       g.quaternion.premultiply(_q);
