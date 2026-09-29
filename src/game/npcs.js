@@ -259,8 +259,8 @@ export function whereNPC(game, id) {
   return v;
 }
 
-/** placeNPC's rules for where someone stands, with no side effects and no dice. */
-function placeGuess(game, island, def) {
+/** placeNPC's rules for where someone stands on `island`, with no side effects and no dice. */
+export function placeGuess(game, island, def) {
   let pl = {};
   try { pl = (typeof def.at === 'function' ? def.at(game.state?.char, game) : def.at) || {}; } catch (e) { pl = {}; }
   // (in a building: at the counter, or where the first of its people sits)
@@ -283,13 +283,13 @@ function placeGuess(game, island, def) {
       if (b) return bw(b, doorLocalX(b) + (pl.ox ?? 1.6), 1.6);
     }
     if (pl.building) {
-      const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
+      const b = town.buildings.find((x) => x.name === pl.building || (def.id && x.npc === def.id) || x.role === pl.building);
       if (b) return inB(b);
     }
     if (pl.plaza || (!pl.building && !pl.dx && !pl.door) || (pl.town && !pl.dx)) return { x: town.plaza.x + (pl.ox || 1.5), y: town.plaza.y + 2.5 + (pl.oy || 0) };
   }
-  for (const town of island.towns) { const b = town.buildings.find((x) => x.npc === def.id); if (b) return inB(b); }
-  const lm = island.landmarks.find((l) => l.npc === def.id);
+  for (const town of island.towns) { const b = town.buildings.find((x) => (def.id && x.npc === def.id)); if (b) return inB(b); }
+  const lm = island.landmarks.find((l) => def.id && l.npc === def.id);
   if (lm) return { x: lm.x + 0.6, y: lm.y + 1.2 };
   if (pl.dx !== undefined) return { x: island.x + pl.dx * island.def.w / 2, y: island.y + pl.dy * island.def.h / 2 };
   return { x: island.x, y: island.y };

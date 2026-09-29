@@ -63136,9 +63136,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           this.blocked = L2;
           return false;
         }
-        if (!this.belowDeck && !(this.z > 0.4) && w.type(this.x, this.y) === T.BRIDGE && w.type(x, y) !== T.BRIDGE) {
+        if (!this.belowDeck && !(this.z > 0.4) && w.type(this.x, this.y) === T.BRIDGE) {
           const hf = g.view3d?.terrain?.hf;
-          if (hf && hf.railAt(Math.floor(this.x), Math.floor(this.y), Math.floor(x), Math.floor(y))) return false;
+          if (hf) {
+            const tx = Math.floor(this.x), ty = Math.floor(this.y), m = r + 0.14;
+            for (const [px2, py2] of [[x + m, y], [x - m, y], [x, y + m], [x, y - m]]) {
+              const nx = Math.floor(px2), ny = Math.floor(py2);
+              if ((nx !== tx || ny !== ty) && w.type(px2, py2) !== T.BRIDGE && hf.railAt(tx, ty, nx, ny)) return false;
+            }
+          }
         }
       }
       if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
@@ -63180,10 +63186,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const top = this.highDeck(game, this.x, this.y);
       this.belowDeck = top !== null && !this.deck && this.canEnterWater() && feet0 < top - 1.2;
     }
-    /** Would a step onto (x, y) take you under a high bridge rather than up onto it? */
+    /**
+     * Would a step onto (x, y) take you under a high bridge rather than up onto
+     * it? (Not where it comes ashore: a stone pier stands under the deck there.)
+     */
     passesUnder(game, x, y) {
       const top = this.highDeck(game, x, y);
       if (top === null || !this.canEnterWater()) return false;
+      const w = game.world, tx = Math.floor(x), ty = Math.floor(y);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const t = w.type(tx + dx, ty + dy);
+        if (!IS_LIQUID[t] && !OVERLAY[t] && t !== T.WALL) return false;
+      }
       return this.belowDeck || this.feetH(game) < top - 1.2;
     }
     /** How high your feet are (m above the sea): on a deck, afloat, wading, standing or in the air. */
@@ -90204,16 +90218,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (b) return bw(b, doorLocalX(b) + (pl.ox ?? 1.6), 1.6);
       }
       if (pl.building) {
-        const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
+        const b = town.buildings.find((x) => x.name === pl.building || def.id && x.npc === def.id || x.role === pl.building);
         if (b) return inB(b);
       }
       if (pl.plaza || !pl.building && !pl.dx && !pl.door || pl.town && !pl.dx) return { x: town.plaza.x + (pl.ox || 1.5), y: town.plaza.y + 2.5 + (pl.oy || 0) };
     }
     for (const town of island.towns) {
-      const b = town.buildings.find((x) => x.npc === def.id);
+      const b = town.buildings.find((x) => def.id && x.npc === def.id);
       if (b) return inB(b);
     }
-    const lm = island.landmarks.find((l) => l.npc === def.id);
+    const lm = island.landmarks.find((l) => def.id && l.npc === def.id);
     if (lm) return { x: lm.x + 0.6, y: lm.y + 1.2 };
     if (pl.dx !== void 0) return { x: island.x + pl.dx * island.def.w / 2, y: island.y + pl.dy * island.def.h / 2 };
     return { x: island.x, y: island.y };
@@ -124432,17 +124446,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   function approxPos(game, def) {
     const isl = game.surface.islands.find((i) => i.id === def.island);
     if (!isl) return null;
-    const at4 = (typeof def.at === "function" ? null : def.at) || {};
-    if (at4.spot && isl.spots?.[at4.spot]) return { x: isl.spots[at4.spot].x, y: isl.spots[at4.spot].y };
-    const town = at4.town && isl.towns.find((t) => t.id === at4.town) || (!at4.dx ? isl.towns[0] : null);
-    if (town) {
-      const key2 = at4.building || at4.door;
-      const b = key2 && town.buildings.find((x) => x.name === key2 || x.role === key2 || x.npc === def.id);
-      if (b) return { x: b.x + (b.w || 0) / 2, y: b.y + (b.h || 0) / 2 };
-      return { x: town.plaza.x, y: town.plaza.y };
-    }
-    if (at4.dx !== void 0) return { x: isl.x + at4.dx * isl.def.w / 2, y: isl.y + at4.dy * isl.def.h / 2 };
-    return { x: isl.x, y: isl.y };
+    const q2 = placeGuess(game, isl, def);
+    return q2 ? { x: q2.x, y: q2.y } : null;
   }
   function introFor(game, c, spawn) {
     const home2 = spawn?.island?.id || null;

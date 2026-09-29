@@ -25,7 +25,7 @@ import './main/grandLine.js';
 import './main/newWorld.js';
 import { PATHS, PART_NAMES } from './main/paths.js';
 import { questDef } from '../game/quests.js';
-import { npcDef, allNpcDefs } from '../game/npcs.js';
+import { npcDef, allNpcDefs, placeGuess } from '../game/npcs.js';
 import { ISLAND_BY_ID } from '../data/islands/index.js';
 import { addItem, count } from '../game/inventory.js';
 import { persist } from '../game/lineage.js';
@@ -525,21 +525,12 @@ export function installMainStory(game) {
 
 const safe = (f) => { try { return f(); } catch (e) { return false; } };
 
-/** Roughly where someone stands (for the map) without them being about. */
+/** Where someone stands (for the map) without them being about: by the same rules the island places them by (npcs.js). */
 function approxPos(game, def) {
   const isl = game.surface.islands.find((i) => i.id === def.island);
   if (!isl) return null;
-  const at = (typeof def.at === 'function' ? null : def.at) || {};
-  if (at.spot && isl.spots?.[at.spot]) return { x: isl.spots[at.spot].x, y: isl.spots[at.spot].y };
-  const town = (at.town && isl.towns.find((t) => t.id === at.town)) || (!at.dx ? isl.towns[0] : null);
-  if (town) {
-    const key = at.building || at.door;
-    const b = key && town.buildings.find((x) => x.name === key || x.role === key || x.npc === def.id);
-    if (b) return { x: b.x + (b.w || 0) / 2, y: b.y + (b.h || 0) / 2 };
-    return { x: town.plaza.x, y: town.plaza.y };
-  }
-  if (at.dx !== undefined) return { x: isl.x + at.dx * isl.def.w / 2, y: isl.y + at.dy * isl.def.h / 2 };
-  return { x: isl.x, y: isl.y };
+  const q = placeGuess(game, isl, def);
+  return q ? { x: q.x, y: q.y } : null;
 }
 
 function introFor(game, c, spawn) {

@@ -725,10 +725,17 @@ export class Actor extends Entity {
     if (g && g.world === w) {
       const L = this.ledgeAt(g, x, y);
       if (L) { this.blocked = L; return false; }
-      // (up on a high bridge its handrail keeps you on the deck: jump it to dive off)
-      if (!this.belowDeck && !(this.z > 0.4) && w.type(this.x, this.y) === T.BRIDGE && w.type(x, y) !== T.BRIDGE) {
+      // (up on a high bridge its handrail keeps you on the deck — your body
+      // short of the rail, drawn just inside the deck's edge: jump it to dive off)
+      if (!this.belowDeck && !(this.z > 0.4) && w.type(this.x, this.y) === T.BRIDGE) {
         const hf = g.view3d?.terrain?.hf;
-        if (hf && hf.railAt(Math.floor(this.x), Math.floor(this.y), Math.floor(x), Math.floor(y))) return false;
+        if (hf) {
+          const tx = Math.floor(this.x), ty = Math.floor(this.y), m = r + 0.14;
+          for (const [px, py] of [[x + m, y], [x - m, y], [x, y + m], [x, y - m]]) {
+            const nx = Math.floor(px), ny = Math.floor(py);
+            if ((nx !== tx || ny !== ty) && w.type(px, py) !== T.BRIDGE && hf.railAt(tx, ty, nx, ny)) return false;
+          }
+        }
       }
     }
     if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
@@ -776,10 +783,18 @@ export class Actor extends Entity {
     this.belowDeck = top !== null && !this.deck && this.canEnterWater() && feet0 < top - 1.2;
   }
 
-  /** Would a step onto (x, y) take you under a high bridge rather than up onto it? */
+  /**
+   * Would a step onto (x, y) take you under a high bridge rather than up onto
+   * it? (Not where it comes ashore: a stone pier stands under the deck there.)
+   */
   passesUnder(game, x, y) {
     const top = this.highDeck(game, x, y);
     if (top === null || !this.canEnterWater()) return false;
+    const w = game.world, tx = Math.floor(x), ty = Math.floor(y);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const t = w.type(tx + dx, ty + dy);
+      if (!IS_LIQUID[t] && !OVERLAY[t] && t !== T.WALL) return false;
+    }
     return this.belowDeck || this.feetH(game) < top - 1.2;
   }
 
