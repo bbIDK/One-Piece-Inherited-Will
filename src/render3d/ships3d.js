@@ -665,6 +665,69 @@ class WakeTrail {
   dispose() { this.mesh.geometry.dispose(); this.mesh.material.dispose(); this.mesh.removeFromParent(); }
 }
 
+// ---------------------------------------------------------------- stand-in crew
+// Plain figures for a ship's company at a distance: whoever has the helm (at
+// the oars, in a rowboat) and a couple of hands on deck, dressed for the ship.
+const CREW_DRESS = {
+  marine: { top: '#f5f6fa', bottom: '#1b4f72', hat: '#f5f6fa' },
+  pirate: { top: '#37474f', bottom: '#4e342e', hat: '#b71c1c' },
+  merchant: { top: '#8d6e63', bottom: '#5d4037', hat: '#6d4c41' },
+  fishing: { top: '#607d8b', bottom: '#37474f', hat: '#e0b040' },
+};
+const CREW_SKIN = ['#f1c9a0', '#d7a47a', '#a1704f', '#e8b48a', '#8d5a3c'];
+function standInCrew(s, d) {
+  const k = new Mesher();
+  const kind = s.traffic?.kind || 'merchant';
+  const D = CREW_DRESS[kind] || CREW_DRESS.merchant;
+  const seed = Math.abs(Math.round((s.seed || 0) * 97)) || 0;
+  // (clear of the masts and the hatch)
+  const clear = (t) => {
+    for (let n = 0; n < 12; n++) {
+      const u = xAt(d, t);
+      if (d.mastU.every((mu) => Math.abs(u - mu) > d.mastR + 0.7) && !(d.hatchT !== undefined && Math.abs(t - d.hatchT) < 0.05)) return t;
+      t += 0.035;
+    }
+    return t;
+  };
+  const figure = (t, v, face, i, seated = false) => {
+    const u = xAt(d, t), y = floorAt(d, t, v);
+    const skin = CREW_SKIN[(seed + i * 3) % CREW_SKIN.length];
+    k.save(); k.translate(u, y, v); k.rotateY(face);
+    if (seated) {
+      // on the thwart at the oars, facing aft
+      const sh = d.row?.seatH ?? 0.3;
+      k.add(box(0.5, 0.14, 0.34), { at: [0.2, sh + 0.08, 0], color: D.bottom });
+      k.add(box(0.14, sh + 0.1, 0.3), { at: [0.45, (sh + 0.1) / 2, 0], color: D.bottom });
+      k.add(box(0.26, 0.58, 0.42), { at: [0, sh + 0.45, 0], color: D.top, outline: 0.02 });
+      k.add(box(0.44, 0.1, 0.1), { at: [0.22, sh + 0.55, 0.2], color: D.top });
+      k.add(box(0.44, 0.1, 0.1), { at: [0.22, sh + 0.55, -0.2], color: D.top });
+      k.add(new THREE.SphereGeometry(0.13, 7, 5), { at: [0, sh + 0.9, 0], color: skin });
+      k.add(box(0.28, 0.07, 0.28), { at: [0, sh + 1.02, 0], color: D.hat });
+    } else {
+      for (const z of [-0.1, 0.1]) k.add(box(0.15, 0.84, 0.15), { at: [0, 0.42, z], color: D.bottom });
+      k.add(box(0.26, 0.6, 0.44), { at: [0, 1.14, 0], color: D.top, outline: 0.02 });
+      for (const z of [-0.28, 0.28]) k.add(box(0.12, 0.58, 0.12), { at: [0.02, 1.12, z], color: D.top });
+      k.add(new THREE.SphereGeometry(0.13, 7, 5), { at: [0, 1.6, 0], color: skin });
+      k.add(box(0.3, 0.08, 0.3), { at: [0, 1.73, 0], color: D.hat });
+    }
+    k.restore();
+  };
+  if (d.row) figure(d.row.seatT, 0, Math.PI, 0, true);
+  else {
+    // at the wheel, facing forward; then the hands at their stations
+    const hp = helmPoint(s.def);
+    figure(Math.min(0.97, (hp.x - 0.35 + d.L / 2) / d.L), 0, 0, 0);
+    const hands = d.L > 9 ? 2 : 1;
+    const B = d.B;
+    const at = [[0.4, 0.26], [0.62, -0.28]];
+    for (let i = 0; i < hands; i++) figure(clear(at[i][0]), at[i][1] * B, (i % 2 ? -1 : 1) * 1.2, i + 1);
+  }
+  const m = new THREE.Mesh(k.build(false), SOLID());
+  m.castShadow = true;
+  m.name = 'standInCrew';
+  return m;
+}
+
 export class ShipView {
   constructor(s) {
     this.ship = s;
@@ -851,6 +914,10 @@ export class ShipView {
       bubble.renderOrder = 3;
       root.add(bubble);
     }
+    // hands on deck, seen from afar: a ship's real crew are only aboard (and
+    // only drawn) within a stone's throw of you — past that she'd sail on with
+    // nobody at her wheel (see update)
+    if (s.traffic) root.add(this.standIns = standInCrew(s, d));
     this.root = root;
     this.kindKey = kind + ':' + JSON.stringify(s.jr || null) + ':' + !!s.coated;
   }
@@ -943,6 +1010,17 @@ export class ShipView {
         const q = st ? st[o.side > 0 ? 1 : 0] : REST_OAR;
         o.mesh.rotation.set(q.b, o.side > 0 ? q.a : Math.PI - q.a, q.f * Math.PI / 2);
       }
+    }
+    // (the stand-in hands: while her real crew aren't aboard to be seen — not
+    // yet brought aboard, or too far off to be drawn; none once they're beaten)
+    if (this.standIns) {
+      const tr = s.traffic;
+      let show = !s.sunk && !tr?.raided;
+      if (tr?.crew) {
+        const on = tr.crew.filter((a) => a.alive && a.deck?.ship === s);
+        show = !s.sunk && on.length > 0 && !on.some((a) => v3?.actorViews?.has(a));
+      }
+      this.standIns.visible = show;
     }
     const t = env.time + (s.seed || 0);
     const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;

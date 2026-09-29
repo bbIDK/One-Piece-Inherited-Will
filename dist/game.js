@@ -40223,6 +40223,64 @@ void main() {
       this.mesh.removeFromParent();
     }
   };
+  var CREW_DRESS = {
+    marine: { top: "#f5f6fa", bottom: "#1b4f72", hat: "#f5f6fa" },
+    pirate: { top: "#37474f", bottom: "#4e342e", hat: "#b71c1c" },
+    merchant: { top: "#8d6e63", bottom: "#5d4037", hat: "#6d4c41" },
+    fishing: { top: "#607d8b", bottom: "#37474f", hat: "#e0b040" }
+  };
+  var CREW_SKIN = ["#f1c9a0", "#d7a47a", "#a1704f", "#e8b48a", "#8d5a3c"];
+  function standInCrew(s, d) {
+    const k = new Mesher();
+    const kind = s.traffic?.kind || "merchant";
+    const D3 = CREW_DRESS[kind] || CREW_DRESS.merchant;
+    const seed = Math.abs(Math.round((s.seed || 0) * 97)) || 0;
+    const clear3 = (t) => {
+      for (let n = 0; n < 12; n++) {
+        const u = xAt(d, t);
+        if (d.mastU.every((mu) => Math.abs(u - mu) > d.mastR + 0.7) && !(d.hatchT !== void 0 && Math.abs(t - d.hatchT) < 0.05)) return t;
+        t += 0.035;
+      }
+      return t;
+    };
+    const figure = (t, v, face, i, seated = false) => {
+      const u = xAt(d, t), y = floorAt(d, t, v);
+      const skin = CREW_SKIN[(seed + i * 3) % CREW_SKIN.length];
+      k.save();
+      k.translate(u, y, v);
+      k.rotateY(face);
+      if (seated) {
+        const sh = d.row?.seatH ?? 0.3;
+        k.add(box(0.5, 0.14, 0.34), { at: [0.2, sh + 0.08, 0], color: D3.bottom });
+        k.add(box(0.14, sh + 0.1, 0.3), { at: [0.45, (sh + 0.1) / 2, 0], color: D3.bottom });
+        k.add(box(0.26, 0.58, 0.42), { at: [0, sh + 0.45, 0], color: D3.top, outline: 0.02 });
+        k.add(box(0.44, 0.1, 0.1), { at: [0.22, sh + 0.55, 0.2], color: D3.top });
+        k.add(box(0.44, 0.1, 0.1), { at: [0.22, sh + 0.55, -0.2], color: D3.top });
+        k.add(new SphereGeometry(0.13, 7, 5), { at: [0, sh + 0.9, 0], color: skin });
+        k.add(box(0.28, 0.07, 0.28), { at: [0, sh + 1.02, 0], color: D3.hat });
+      } else {
+        for (const z of [-0.1, 0.1]) k.add(box(0.15, 0.84, 0.15), { at: [0, 0.42, z], color: D3.bottom });
+        k.add(box(0.26, 0.6, 0.44), { at: [0, 1.14, 0], color: D3.top, outline: 0.02 });
+        for (const z of [-0.28, 0.28]) k.add(box(0.12, 0.58, 0.12), { at: [0.02, 1.12, z], color: D3.top });
+        k.add(new SphereGeometry(0.13, 7, 5), { at: [0, 1.6, 0], color: skin });
+        k.add(box(0.3, 0.08, 0.3), { at: [0, 1.73, 0], color: D3.hat });
+      }
+      k.restore();
+    };
+    if (d.row) figure(d.row.seatT, 0, Math.PI, 0, true);
+    else {
+      const hp = helmPoint(s.def);
+      figure(Math.min(0.97, (hp.x - 0.35 + d.L / 2) / d.L), 0, 0, 0);
+      const hands2 = d.L > 9 ? 2 : 1;
+      const B4 = d.B;
+      const at4 = [[0.4, 0.26], [0.62, -0.28]];
+      for (let i = 0; i < hands2; i++) figure(clear3(at4[i][0]), at4[i][1] * B4, (i % 2 ? -1 : 1) * 1.2, i + 1);
+    }
+    const m = new Mesh(k.build(false), SOLID());
+    m.castShadow = true;
+    m.name = "standInCrew";
+    return m;
+  }
   var ShipView = class {
     constructor(s) {
       this.ship = s;
@@ -40399,6 +40457,7 @@ void main() {
         bubble.renderOrder = 3;
         root2.add(bubble);
       }
+      if (s.traffic) root2.add(this.standIns = standInCrew(s, d));
       this.root = root2;
       this.kindKey = kind + ":" + JSON.stringify(s.jr || null) + ":" + !!s.coated;
     }
@@ -40491,6 +40550,15 @@ void main() {
           const q2 = st ? st[o.side > 0 ? 1 : 0] : REST_OAR;
           o.mesh.rotation.set(q2.b, o.side > 0 ? q2.a : Math.PI - q2.a, q2.f * Math.PI / 2);
         }
+      }
+      if (this.standIns) {
+        const tr = s.traffic;
+        let show = !s.sunk && !tr?.raided;
+        if (tr?.crew) {
+          const on = tr.crew.filter((a) => a.alive && a.deck?.ship === s);
+          show = !s.sunk && on.length > 0 && !on.some((a) => v3?.actorViews?.has(a));
+        }
+        this.standIns.visible = show;
       }
       const t = env.time + (s.seed || 0);
       const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
