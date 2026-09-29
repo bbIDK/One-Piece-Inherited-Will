@@ -106,6 +106,18 @@
 
 .shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }
 .shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }
+/* the drawn weapon's moves (bottom right, while it's out) */
+.skillpanel { position: absolute; right: 14px; bottom: 14px; min-width: 210px; max-width: 260px; background: rgba(10,20,30,.74); border-radius: 12px; padding: 8px 10px 7px; border: 1px solid var(--border); font-size: 12px; pointer-events: none; }
+.skillpanel .sp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.skillpanel .sp-head b { font: 400 17px 'Pirata One', serif; color: var(--gold); letter-spacing: .5px; }
+.skillpanel .sp-head span { font-size: 10.5px; opacity: .75; text-align: right; }
+.skillpanel .sp-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; padding: 1px 5px; font: 800 11px Nunito, sans-serif; color: #fff; }
+.skillpanel .sp-row.unbound kbd { opacity: .45; }
+.skillpanel .sp-row.cd { opacity: .55; }
+.skillpanel .sp-cd { margin-left: auto; color: #ffcc80; font-variant-numeric: tabular-nums; }
+.skillpanel .sp-foot { margin-top: 5px; font-size: 10.5px; opacity: .7; }
+.skillpanel .sp-foot kbd { min-width: 0; padding: 0 5px; }
 .shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }
 .shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }
 .wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }

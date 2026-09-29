@@ -61,6 +61,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | Space | jump; at a pier, a bank or a ship's side, climb up | row (works without wind) |
 | Shift | hold to sprint, tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
+| X | draw your weapon, or put it back in its sheath. Sheathed, a click is a punch (your fist style); drawn, it's the weapon's moves, listed with their keys at the bottom right (the skills you've learned for it; greyed while they cool down). At the helm or the oars it's always sheathed | |
 | F | block — tap just before a hit to **parry** | |
 | 1–9, 0 | hotbar: techniques, food and weapons (a weapon's key draws it from its sheath into your stance, and again puts it back; food goes in your hand: hold the right mouse button to eat it, in bites; a punch or a dodge puts it away) | |
 | R / T / G | Haki, once it has awakened | |

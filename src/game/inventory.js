@@ -2,7 +2,7 @@
 import { addToHotbar } from './hotbar.js';
 import { ITEMS } from '../data/items.js';
 import { FRUITS } from '../data/fruits.js';
-import { refreshPlayer, persist } from './lineage.js';
+import { refreshPlayer, persist, setDrawn } from './lineage.js';
 
 export function count(char, id) {
   return (char.inventory || []).filter((i) => i.id === id).reduce((s, i) => s + (i.qty || 1), 0);
@@ -90,6 +90,7 @@ export function equip(game, id, { slot } = {}) {
     if (ws.includes(id) && ws.filter((w) => w === id).length >= count(c, id)) eq.weapons = ws.filter((w) => w !== id);
     else if (d.kind === 'sword' && ws.length && ITEMS[ws[0]]?.kind === 'sword' && ws.length < 3) eq.weapons = [...ws, id];
     else eq.weapons = [id];
+    if (eq.weapons.length) game.hint?.('draw', 'X draws your weapon, and puts it back in its sheath. Sheathed, you fight with your fists; drawn, its moves and their keys show at the bottom right.');
     if (id === 'sandai_kitetsu' && !c.flags.kitetsuTested) {
       c.flags.kitetsuTested = true;
       game.log('You toss the cursed Kitetsu into the air and hold out your arm… it spins down and misses you by a hair. The blade accepts you.', '#ef9a9a');
@@ -147,8 +148,8 @@ export function useItem(game, id) {
   // a weapon on the hotbar: draw it — putting it on first if you weren't
   // wearing it — or, drawn, put it back in its sheath (it stays on you)
   if (d.type === 'weapon') {
-    if (!(c.equipped.weapons || []).includes(id)) { equip(game, id); if (p.weapon) p.drawn = true; }
-    else { p.drawn = !p.drawn; game.audio?.sfx('equip'); }
+    if (!(c.equipped.weapons || []).includes(id)) { equip(game, id); setDrawn(game, true); }
+    else setDrawn(game, !p.drawn);
     return true;
   }
   if (d.type === 'pose' && d.target) {

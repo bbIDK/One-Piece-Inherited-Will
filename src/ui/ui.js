@@ -4,6 +4,7 @@ import { getAbility } from '../game/abilities.js';
 import { formatBerries, clamp } from '../core/math.js';
 import { raceLabel } from '../data/races.js';
 import { ITEMS } from '../data/items.js';
+import { STYLES } from '../data/styles.js';
 import { REGION_INFO, regionAt, REGION, RM_X, EQ } from '../world/constants.js';
 import { PALETTE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
 
@@ -151,6 +152,9 @@ export class UI {
     this.hud.appendChild(E.boss);
     E.ship = h('div.shiphud.hidden');
     this.hud.appendChild(E.ship);
+    // your weapon's moves and their keys, while it's drawn (X)
+    E.skills = h('div.skillpanel.hidden');
+    this.hud.appendChild(E.skills);
     E.knocked = h('div.knocked-overlay.hidden', h('div', h('h1', 'KNOCKED DOWN'), h('p.kt', ''), h('div.timer', h('i'))));
     this.hud.appendChild(E.knocked);
     // first person: a crosshair, and a prompt to capture the mouse
@@ -638,6 +642,9 @@ export class UI {
       bb.firstChild.style.width = (100 * clamp(boss.hp / boss.d.maxHp, 0, 1)) + '%';
       bb.children[1].style.width = (100 * clamp(boss.hp / boss.d.maxHp, 0, 1)) + '%';
     }
+    // the drawn weapon's moves
+    this.spT = (this.spT || 0) - 1 / 60;
+    if (this.spT <= 0) { this.spT = 0.1; this.drawSkills(game, p); }
     // ship hud
     const s = p.mode === 'sail' ? p.ship : null;
     E.ship.classList.toggle('hidden', !s);
@@ -661,6 +668,34 @@ export class UI {
       this.set(E.knocked.querySelector('.kt'), 'kt', ki.text);
       E.knocked.querySelector('.timer i').style.width = (100 * ki.frac) + '%';
     }
+  }
+
+  /**
+   * While your weapon is drawn: its style's moves and the keys that do them
+   * (the click, the right click, and the skills you've learned for it with
+   * their hotbar keys), each greyed with its time left while it's cooling
+   * down. Put away, or with no skills learned for it yet, it isn't shown.
+   */
+  drawSkills(game, p) {
+    const E = this.el, c = game.state?.char;
+    const st = p.drawn && p.weapon && p.mode !== 'sail' && !game.input?.touch?.on ? STYLES[p.style] : null;
+    const learned = st ? (st.techniques || []).filter((t) => (p.techniques || []).includes(t.id)) : [];
+    if (!st || !learned.length) { E.skills.classList.add('hidden'); this.cache.skills = null; return; }
+    const keyOf = (id) => { const i = (p.hotbar || []).indexOf(id); return i >= 0 ? HOTBAR_KEYS[i] : null; };
+    const rows = [['LMB', st.m1?.[0]?.name || 'Strike', 0], ['RMB', st.heavy?.name || 'Heavy blow', p.cooldowns?.[st.heavyId] || 0]];
+    for (const t of learned) rows.push([keyOf(t.id), t.name, p.cooldowns?.[t.id] || 0]);
+    const names = (c?.equipped?.weapons || []).map((id) => ITEMS[id]?.name).filter(Boolean);
+    const key = JSON.stringify([p.style, names, rows.map((r) => [r[0], r[1], Math.ceil(r[2] * 2)])]);
+    E.skills.classList.remove('hidden');
+    if (key === this.cache.skills) return;
+    this.cache.skills = key;
+    clear(E.skills);
+    E.skills.appendChild(h('div.sp-head', h('b', st.name), h('span', names.join(' · '))));
+    for (const [k, name, cd] of rows) {
+      E.skills.appendChild(h('div.sp-row' + (cd > 0 ? '.cd' : '') + (k ? '' : '.unbound'),
+        h('kbd', k || '—'), h('span.sp-n', name), cd > 0 ? h('span.sp-cd', `${cd.toFixed(1)}s`) : null));
+    }
+    E.skills.appendChild(h('div.sp-foot', h('kbd', 'X'), ' to sheathe'));
   }
 
   /** The quest tracker: what to do next in the main story (and where), and the tracked side quests. */

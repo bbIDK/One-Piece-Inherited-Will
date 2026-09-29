@@ -32,7 +32,7 @@ import { Services } from './game/services.js';
 import { Interactions, npcBuilder, npcDef, makeNPC, allNpcDefs, standingHeight } from './game/npcs.js';
 import { installMap } from './ui/mapUI.js';
 import { openInventory, openCharacter, openSkills, openJournal, openMenu, openSettings } from './ui/panels.js';
-import { persist, endLineage } from './game/lineage.js';
+import { persist, endLineage, setDrawn } from './game/lineage.js';
 import { addItem, useItem } from './game/inventory.js';
 import { ITEMS } from './data/items.js';
 import { installReputation } from './game/reputation.js';
@@ -293,6 +293,8 @@ async function start() {
   const touch = installTouch(game, root);
   ui.keyHandlers.push(
     { key: 'V', when: playing, fn: () => game.cycleView() },
+    // draw your weapon, or put it back in its sheath (sheathed, you fight with your fists)
+    { key: 'X', when: playing, fn: () => { const p = game.player; if (p?.weapon && p.mode !== 'sail') setDrawn(game, !p.drawn); } },
     { key: 'I', when: playing, fn: () => ui.sideAction('inventory') },
     { key: 'Tab', when: playing, fn: () => ui.sideAction('inventory') },
     { key: 'C', when: () => playing() && !game.player?.inWater, fn: () => ui.sideAction('character') }, // (in the sea, C dives)
@@ -303,6 +305,8 @@ async function start() {
     { key: 'L', when: playing, fn: () => ui.sideAction('quests') },
   );
   game.on('saved', () => ui.savedNote());
+  // (at the helm or the oars your hands are on the wheel: the weapon goes back in its sheath)
+  game.on('board', () => setDrawn(game, false));
   // (the quest tracker catches up the moment a quest moves on)
   for (const ev of ['questStarted', 'questStage', 'questDone', 'questAbandoned']) game.on(ev, () => { ui.qtT = 0; });
   game.on('playerLanded', (tgt, info) => { if (view3d?.active) ui.hitMarker(info); });
@@ -316,7 +320,7 @@ async function start() {
     const d = ITEMS[id], p = game.player;
     if (d && (d.type === 'food' || d.type === 'medicine' || d.type === 'fruit') && !input.touch?.on && p) {
       if (p.held === id) p.controller?.putAway?.(p);
-      else { p.held = id; p.eating = null; p.drawn = false; } // (a drawn weapon goes back in its sheath)
+      else { setDrawn(game, false); p.held = id; p.eating = null; } // (a drawn weapon goes back in its sheath)
       audio.sfx('equip');
       return true;
     }

@@ -238,7 +238,8 @@ export function buildPlayer(game, char) {
   const a = new Actor({ name: char.name, look: equippedLook(char), race: char.race, attrs: effectiveAttrs(char) });
   a.char = char;
   a.game = game;
-  a.style = fightingStyle(char);
+  // (you set out with your weapon in its sheath: X draws it)
+  a.style = unarmedStyle(char);
   a.masteries = char.masteries;
   a.techniques = char.techniques;
   a.hotbar = char.hotbar;
@@ -336,6 +337,41 @@ export function fightingStyle(char) {
   return learned[0] || WEAPON_STYLE[w.kind] || (st.weapon ? 'brawler' : style);
 }
 
+/**
+ * The style your fists fight in (your weapon in its sheath, or none): the one
+ * picked in Skills if it's an unarmed one, else the unarmed one you know
+ * best, else plain brawling.
+ */
+export function unarmedStyle(char) {
+  if (STYLES[char.style] && !STYLES[char.style].weapon) return char.style;
+  const known = Object.keys(char.masteries || {}).filter((s) => STYLES[s] && !STYLES[s].weapon).sort((a, b) => char.masteries[b] - char.masteries[a]);
+  return known[0] || 'brawler';
+}
+
+/** The live player's style for what's in hand: the weapon's, drawn; the fists', sheathed. */
+export function handStyle(p) {
+  const c = p.char;
+  if (!c) return p.style;
+  return p.weapon && p.drawn ? fightingStyle(c) : unarmedStyle(c);
+}
+
+/**
+ * Draw your weapon (on) or put it back in its sheath (off). Not at a ship's
+ * helm or at the oars: your hands are full. True if it changed.
+ */
+export function setDrawn(game, on) {
+  const p = game.player;
+  if (!p) return false;
+  on = !!on && !!p.weapon && p.mode !== 'sail';
+  if (!!p.drawn === on) return false;
+  p.drawn = on;
+  if (on && p.held) { p.held = null; p.eating = null; } // (food goes back in the bag)
+  p.style = handStyle(p);
+  game.audio?.sfx('equip');
+  game.emit?.('weaponDrawn', on);
+  return true;
+}
+
 /** Re-sync the live player after equipment / attribute changes. */
 export function refreshPlayer(game) {
   const p = game.player, c = p.char;
@@ -344,7 +380,7 @@ export function refreshPlayer(game) {
   p.look = equippedLook(c);
   p.weapon = weaponFromChar(c);
   if (!p.weapon) p.drawn = false;
-  p.style = fightingStyle(c);
+  p.style = handStyle(p);
   p.fruit = c.fruit;
   p.fruitMastery = c.fruitMastery;
   p.hakiSkill = c.haki;

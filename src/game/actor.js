@@ -118,7 +118,8 @@ export class Actor extends Entity {
   styleMastery(s) { return this.masteries[s || this.style] || 0; }
   /** Holding that kind of weapon — and, for swords, as many as `style` (by default your own) needs? */
   hasWeapon(kind, style = this.style) {
-    if (!this.weapon) return false;
+    // (your own weapon counts once it's drawn: sheathed, you fight with your fists — X draws it)
+    if (!this.weapon || (this.isPlayer && !this.drawn)) return false;
     if (kind === 'sword') return this.weapon.kind === 'sword' && (this.weapon.count || 1) >= (STYLES[style]?.swords || 1);
     return this.weapon.kind === kind;
   }
@@ -326,6 +327,7 @@ export class Actor extends Entity {
       if (this.isPlayer) {
         if ((this.cooldowns[def.id] || 0) > 0) game.ui?.flashSlot(id);
         else if (def.source?.startsWith('fruit') && this.inWater) game.log('Your Devil Fruit power is useless in the sea!', '#ff8a80');
+        else if (def.weapon && this.weapon && !this.drawn && this.weapon.kind === def.weapon) game.log(`Draw your ${this.weapon.kind === 'sword' ? (this.weapon.count > 1 ? 'swords' : 'sword') : 'weapon'} first (X).`, '#ffcc80');
         else if (def.weapon && !this.hasWeapon(def.weapon, def.style)) game.log(`${def.name} needs ${def.weapon === 'sword' ? `${STYLES[def.style || this.style]?.swords || 1} sword(s)` : 'a ' + def.weapon}.`, '#ff8a80');
         else game.log('Not enough ' + ((def.cost?.haki && this.haki < def.cost.haki) ? (this.hakiUnlocked() ? 'Haki.' : 'strength of will.') : 'stamina.'), '#ff8a80');
       }
