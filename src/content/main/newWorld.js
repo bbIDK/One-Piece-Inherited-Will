@@ -26,7 +26,8 @@ const divePoint = (g) => {
 /** The current up to the New World, at the far end of Fish-Man Island (for the map). */
 const riseCurrent = (g) => {
   const e = g.world?.id === 'fishman_island' && ZONES.fishman_island.exits.find((x) => x.id === 'new_world');
-  return e ? { x: e.x, y: e.y, place: e.label, zone: 'fishman_island' } : null;
+  // (not down there: the way down to it)
+  return e ? { x: e.x, y: e.y, place: e.label, zone: 'fishman_island' } : g.quests.placeOf('fishman_island', null, '');
 };
 
 // ================================================================= PIRATES

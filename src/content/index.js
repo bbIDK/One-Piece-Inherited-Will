@@ -1,10 +1,12 @@
 // Content registry: NPCs, quests, enemy groups and special events per sea.
 // Each pack is a plain object:
-//   { id, npcs, groups, quests, items, trainers, stock, archetypes, abilities, dynamicIds, install(game) }
+//   { id, npcs, groups, quests, places, items, trainers, stock, archetypes, abilities, dynamicIds, install(game) }
+// (places: where the events that finish quest steps happen, for their
+// waypoints — see quests.js registerPlaces)
 // Registries (items, trainers, shop stock, enemy archetypes, abilities) are
 // merged as soon as this module loads so every system sees them.
 import { registerNPCs, registerGroups, ARCHETYPES, sizeBuildingsForOccupants } from '../game/npcs.js';
-import { registerQuests } from '../game/quests.js';
+import { registerQuests, registerPlaces } from '../game/quests.js';
 import { registerAbilities } from '../game/abilities.js';
 import { ITEMS } from '../data/items.js';
 import { TRAINERS } from '../data/trainers.js';
@@ -38,6 +40,7 @@ export function installContent(game) {
     if (p.npcs) registerNPCs(p.npcs);
     if (p.groups) registerGroups(p.groups);
     if (p.quests) registerQuests(p.quests);
+    if (p.places) registerPlaces(p.places);
   }
   installFruits(game);
   for (const p of PACKS) if (p.install) p.install(game);

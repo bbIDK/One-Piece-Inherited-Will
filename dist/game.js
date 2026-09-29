@@ -89400,7 +89400,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return n.includes("ipponmatsu") ? STOCK.loguetown_swords : sea === "new_world" ? STOCK.weapons_new : grand ? STOCK.weapons_grand : STOCK.weapons_blue;
       case "market":
       case "shop":
-        if (n.includes("navigator") || n.includes("log")) return grand ? STOCK.navigator_grand : STOCK.navigator;
+        if (n.includes("navigator") || /\blog[ -]?poses?\b/.test(n)) return grand ? STOCK.navigator_grand : STOCK.navigator;
         if (n.includes("outfit") || n.includes("boutique")) return STOCK.outfitter;
         if (island?.def?.climate === "sky") return STOCK.skypiea;
         return grand || sea === "red_line" || sea === "sky" || sea === "undersea" ? STOCK.general : STOCK.general_blue;
@@ -91751,47 +91751,165 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /**
      * Where the current objective of a quest is, for the compass, the tracker
-     * and the map: whoever the step is about (someone to beat or to talk to)
-     * where they stand — or, not about yet, where they'll be on the island they
-     * live on (which needn't be the quest's); else the place it names; else
-     * the island. An objective in another world (Skypiea, Fish-Man Island,
-     * Impel Down) shows the way there (or out of the one you're in).
+     * and the map: the place the step is done at (the bell among the spires,
+     * the platform in the square); else whoever the step is about (someone to
+     * beat or to talk to) where they stand — or, not about yet, where they'll
+     * be on the island they live on (which needn't be the quest's); else where
+     * what it asks for is had (the shop that sells it, the shipwright on the
+     * pier, someone who'd join your crew); else the island (its harbour, when
+     * it's an island to sail to). An objective in another world (Skypiea,
+     * Fish-Man Island, Impel Down) shows the way there (or out of the one
+     * you're in).
      */
     marker(id, depth = 0) {
       const s = this.state(id), d = DEFS.get(id);
       if (!s || s.done) return null;
       const st = d.stages[s.stage];
       const g = st?.goal || {};
+      const label = d.name, home2 = g.island || st?.island || d.island;
       if (g.type === "quest" && depth < 2 && this.isActive(g.quest)) {
         const m = this.marker(g.quest, depth + 1);
-        if (m) return { ...m, label: d.name };
+        if (m) return { ...m, label };
       }
       if (st?.pinAt) {
         const w = st.pinAt(this.game);
-        if (w) return { ...w, label: d.name };
+        if (w) return { ...w, label };
       }
       if (st?.pin === false) return null;
       const who = this.whoFor(id, s.stage, st, g, d);
-      const live = who.length ? this.liveOf(who, d.name) : null;
+      const fight = g.type === "defeat" || !!st?.foes;
+      let live = fight && who.length ? this.liveOf(who, label) : null;
+      if (live) return live;
+      const at4 = st?.at || (g.type === "event" || g.type === "counter") && EVENT_AT.get(g.event);
+      if (at4) {
+        const m = typeof at4 === "function" ? at4(this.game) : this.placeOf(at4.island || home2, at4, label);
+        if (m) return { ...m, label };
+      }
+      if (!fight && who.length) live = this.liveOf(who, label);
       if (live) return live;
       if (st?.where) {
         const w = st.where(this.game);
-        if (w) return { ...w, label: d.name };
+        if (w) return { ...w, label };
+      }
+      if (!who.length) {
+        if (g.type === "item") {
+          const m = this.chestFor(g.item, home2, label) || this.shopFor(g.item, home2, label);
+          if (m) return m;
+        }
+        if (g.type === "ship") return this.shipyardOf(home2, label);
+        if (g.type === "crew") return this.recruitFor(label);
       }
       for (const n of who) {
         const q2 = whereNPC(this.game, n);
         if (!q2) continue;
-        const m = q2.island ? this.placeOf(q2.island, null, d.name) : { ...q2, label: d.name };
+        const m = q2.island ? this.placeOf(q2.island, null, label) : { ...q2, label };
         if (m) return m;
       }
-      if (g.type === "reachXY") return { x: g.x, y: g.y, label: d.name, place: g.place };
-      return this.placeOf(g.island || st?.island || d.island, g.spot, d.name);
+      if (g.type === "reachXY") return { x: g.x, y: g.y, label, place: g.place };
+      return this.placeOf(home2, g.spot || (g.type === "reach" || g.type === "quest" ? { dock: true } : null), label);
+    }
+    /** The nearest chest left on the step's island with the item in it, that still holds it (the herb baskets among the Great Tree's roots). */
+    chestFor(item, islandId, label) {
+      const g = this.game, w = g.world, p = g.player, c = this.char;
+      const isl = c && w.islands?.find((i) => i.id === islandId);
+      if (!isl) return null;
+      let best = null, bd = Infinity;
+      for (const o of isl.landmarks || []) {
+        if (o.kind !== "chest" || o.item !== item) continue;
+        const key2 = "chest_" + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`), e = c.world?.containers?.[key2];
+        if (c.world?.chests?.[key2] || e && !e.items?.some((x) => x.id === item)) continue;
+        const d = p ? w.distance(p.x, p.y, o.x, o.y) : 0;
+        if (d < bd) {
+          bd = d;
+          best = { x: o.x, y: o.y, label, place: o.name || isl.name, zone: w === g.surface ? null : w.id };
+        }
+      }
+      return best;
+    }
+    /** The nearest shop that sells an item: on the step's island if one there does, else in its sea, else anywhere in this world. */
+    shopFor(item, islandId, label) {
+      const g = this.game, w = g.world, p = g.player;
+      const C3 = this.shopC || (this.shopC = /* @__PURE__ */ new Map());
+      const key2 = `${w.id}:${item}`;
+      let list = C3.get(key2);
+      if (!list) {
+        list = [];
+        for (const isl of w.islands || []) {
+          for (const t of isl.towns || []) {
+            for (const b of t.buildings || []) {
+              if (!b.door || !SELLERS.has(b.role)) continue;
+              let stock8;
+              try {
+                stock8 = stockFor(b, isl);
+              } catch {
+                continue;
+              }
+              if (Array.isArray(stock8) && stock8.includes(item)) list.push({ x: b.door.x, y: b.door.y, island: isl.id, sea: isl.sea, place: b.name ? `${b.name}, ${t.name || isl.name}` : t.name || isl.name });
+            }
+          }
+        }
+        C3.set(key2, list);
+      }
+      const sea = w.islands?.find((i) => i.id === islandId)?.sea;
+      let best = null, bd = Infinity;
+      for (const s of list) {
+        const dd = (s.island === islandId ? 0 : sea && s.sea === sea ? 1e7 : 2e7) + (p ? w.distance(p.x, p.y, s.x, s.y) : 0);
+        if (dd < bd) {
+          bd = dd;
+          best = s;
+        }
+      }
+      return best ? { x: best.x, y: best.y, label, place: best.place, zone: w === g.surface ? null : w.id } : null;
+    }
+    /** Where to get a ship: the nearest shipwright on that island's piers (else the pier they work on). */
+    shipyardOf(islandId, label) {
+      const g = this.game, w = g.world, p = g.player;
+      let best = null, bd = Infinity;
+      for (const a of g.actors) {
+        if (!a.alive || a.shipwright?.island?.id !== islandId) continue;
+        const dd = p ? w.distance(p.x, p.y, a.x, a.y) : 0;
+        if (dd < bd) {
+          bd = dd;
+          best = a;
+        }
+      }
+      if (best) return { x: best.x, y: best.y, label, place: best.name, zone: null };
+      return this.placeOf(islandId, { dock: "stand" }, label);
+    }
+    /** Someone who'd join your crew now: the nearest about, else where the nearest of them is to be found (or null: no one yet). */
+    recruitFor(label) {
+      const g = this.game, crew = g.crew, c = this.char, w = g.world, p = g.player;
+      if (!crew || !c) return null;
+      if (!RECRUITS.length) RECRUITS.push(...allNpcDefs().filter((d) => d.recruit));
+      const ids = RECRUITS.filter((d) => {
+        if (!crew.canRecruit(d)) return false;
+        try {
+          return !d.when || d.when(c, g);
+        } catch {
+          return false;
+        }
+      }).map((d) => d.id);
+      if (!ids.length) return null;
+      const live = this.liveOf(ids, label);
+      if (live) return live;
+      let best = null, bd = Infinity;
+      for (const n of ids) {
+        const q2 = whereNPC(g, n);
+        const m = q2 && (q2.island ? this.placeOf(q2.island, null, label) : { ...q2, label });
+        if (!m) continue;
+        const dd = p ? w.distance(p.x, p.y, m.x, m.y) : 0;
+        if (dd < bd) {
+          bd = dd;
+          best = m;
+        }
+      }
+      return best;
     }
     /** Who a step is about: someone to talk to, the foes to beat (those still to beat), or whoever its words name. */
     whoFor(id, si, st, g, d) {
       if (st?.npc) return [st.npc];
-      if (g.type === "defeat") {
-        const ids = g.npc ? [g.npc] : g.any || [];
+      if (g.type === "defeat" || st?.foes) {
+        const ids = st?.foes || (g.npc ? [g.npc] : g.any || []);
         const c = this.char;
         const left = ids.filter((n2) => !(c?.defeated?.[n2] > 0) && !c?.bosses?.includes(n2));
         return left.length ? left : ids;
@@ -91875,15 +91993,22 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       return best ? { x: best.x, y: best.y, label, place: best.name, zone: w === g.surface ? null : w.id } : null;
     }
-    /** A place on an island (a spot, or the island), in this world — or the way to the world it's in. */
-    placeOf(islandId, spot, label) {
+    /**
+     * A place on an island, in this world — or the way to the world it's in.
+     * `at`: one of its spots ('spire_bell', or { spot }), a town's square
+     * ({ town }) or the door of one of its buildings ({ town?, door }: by name
+     * or role), a landmark ({ landmark }: by name), its harbour ({ dock: true }:
+     * the pier head; 'stand': where the shipwright works) — or nothing: the island.
+     */
+    placeOf(islandId, at4, label) {
       if (!islandId) return null;
       const g = this.game, w = g.world, surf2 = g.surface;
       const zone = ZONE_OF.get(islandId) || null;
       if (zone ? w.id === zone : w === surf2) {
         const isl2 = w.islands.find((i) => i.id === islandId);
         if (!isl2) return null;
-        if (spot && isl2.spots?.[spot]) return { ...isl2.spots[spot], label, place: isl2.name, zone };
+        const s = at4 ? placeIn(isl2, at4) : null;
+        if (s) return { x: s.x, y: s.y, label, place: s.place || isl2.name, zone };
         return { x: isl2.x, y: isl2.y, label, place: isl2.name, zone };
       }
       if (w !== surf2) {
@@ -91907,6 +92032,38 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var ZONE_OF = /* @__PURE__ */ new Map();
   for (const z of Object.values(ZONES)) for (const i of z.islands || []) ZONE_OF.set(i.id, z.id);
   var WAY_IN = { skypiea: { spot: "knock_up_stream" }, fishman_island: { spot: "fishman_dive" }, impel_down: { island: "impel_down" } };
+  var SELLERS = /* @__PURE__ */ new Set(["shop", "market", "weapons", "tavern", "bar", "restaurant", "cafe"]);
+  var RECRUITS = [];
+  var EVENT_AT = /* @__PURE__ */ new Map();
+  function registerPlaces(map) {
+    for (const [k, v] of Object.entries(map || {})) EVENT_AT.set(k, v);
+  }
+  function placeIn(isl, at4) {
+    if (typeof at4 === "string") at4 = { spot: at4 };
+    if (at4.spot) {
+      const s = isl.spots?.[at4.spot];
+      return s ? { x: s.x + (at4.ox || 0), y: s.y + (at4.oy || 0), place: at4.place } : null;
+    }
+    if (at4.landmark) {
+      const l = isl.landmarks?.find((o) => o.name === at4.landmark);
+      return l ? { x: l.x, y: l.y, place: l.name } : null;
+    }
+    if (at4.dock) {
+      const t = isl.towns?.[0], docks = isl.docks || [];
+      const d = t ? docks.slice().sort((a, b) => Math.hypot(a.land.x - t.x, a.land.y - t.y) - Math.hypot(b.land.x - t.x, b.land.y - t.y))[0] : docks[0];
+      if (!d) return null;
+      const p = at4.dock === "stand" ? d.stand || d.land : d.end || d;
+      return { x: p.x, y: p.y, place: `${d.name || isl.name} harbour` };
+    }
+    for (const t of isl.towns || []) {
+      if (at4.town && t.id !== at4.town && t.name !== at4.town) continue;
+      if (at4.door) {
+        const b = (t.buildings || []).find((x) => x.name === at4.door || x.role === at4.door);
+        if (b?.door) return { x: b.door.x, y: b.door.y, place: b.name ? `${b.name}, ${t.name}` : t.name };
+      } else if (at4.town) return { x: t.plaza.x, y: t.plaza.y, place: at4.place || t.name };
+    }
+    return null;
+  }
   var STOP = /* @__PURE__ */ new Set(["Captain", "Mayor", "King", "Queen", "Lord", "Lady", "Doctor", "Commodore", "Admiral", "Vice", "Chief", "Sergeant", "Colonel", "Master", "Prince", "Princess", "Sister", "Brother", "Grandpa", "Granny", "Uncle", "Aunt", "Miss", "Madam", "Madame", "General", "Officer", "Lieutenant", "Commander", "Boss", "Saint", "Father", "Mother", "Elder", "Chef", "Keeper", "Warden", "Emperor", "Young", "Little", "Great", "Marine", "Marines", "Pirate", "Pirates", "Sensei", "Shogun", "Old", "Big", "Mad", "The", "Don", "Mister", "Crewman", "Guard", "Village", "Town", "City", "House", "Island", "Harbour", "Port", "Hall", "Gate", "Mountain", "Reverse", "Sail", "Sea", "Red", "Black", "White", "Blue", "Green", "Golden", "Iron", "Heart", "Royal", "Grand", "Head", "First", "Second", "Third", "Man", "Woman", "Boy", "Girl"]);
   var NAME_FREQ = /* @__PURE__ */ new Map();
   var PLACE_WORDS = /* @__PURE__ */ new Set();
@@ -100157,7 +100314,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: "The pirate hunter Roronoa Zoro is tied up in the yard of Captain Morgan's Marine base.",
       stages: [
-        { id: "deliver", desc: "Bring Rika's rice ball to the man tied up in the Marine base yard.", goal: { type: "flag", flag: "_never" } },
+        { id: "deliver", desc: "Bring Rika's rice ball to the man tied up in the Marine base yard.", goal: { type: "flag", flag: "_never" }, npc: "zoro_tied" },
         { id: "free", desc: "Deal with Helmeppo, the captain's son (he's near the town square).", goal: { type: "defeat", npc: "helmeppo" } },
         { id: "morgan", desc: 'Defeat "Axe-Hand" Morgan at the 153rd Branch.', goal: { type: "defeat", npc: "morgan" }, onStart: (ctx, g) => {
           const m = findActor(g, "morgan");
@@ -100325,7 +100482,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           game.ui.banner("LORD OF THE COAST", "Sea King", "The water boils. Something ancient is hungry.", 4);
         }
       }
-      if (game.currentIsland?.id === "polestar_islands" && game.quests.stageId("town_of_beginning") === "platform") {
+      if (game.currentIsland?.id === "polestar_islands" && game.quests.active().some(({ s, def }) => def.stages[s.stage]?.goal?.event === "saw_platform")) {
         const t = game.currentIsland.towns[0];
         if (t && game.world.distance(game.player.x, game.player.y, t.plaza.x, t.plaza.y) < 5) {
           game.emit("questEvent", "saw_platform");
@@ -100384,7 +100541,25 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
     });
   }
-  var eastBlue_default = { id: "east_blue", npcs, groups, quests, install, dynamicIds: ["lord_of_the_coast"] };
+  var places = {
+    saw_platform: { island: "polestar_islands", town: "loguetown", place: "The execution platform, Loguetown" },
+    gaimon_chest: { island: "rare_animals", spot: "gaimon", ox: 3.8, oy: -3, place: "Gaimon's treasure chests" },
+    // (the mouth of the current up Reverse Mountain from the Blue you're in)
+    entered_grand_line: (g) => {
+      const M2 = g.world === g.surface ? g.surface.reverseMountain : null, p = g.player;
+      if (!M2?.mouths || !p) return null;
+      let best = null, bd = Infinity;
+      for (const m of Object.values(M2.mouths)) {
+        const d = g.world.distance(p.x, p.y, m.x, m.y);
+        if (d < bd) {
+          bd = d;
+          best = m;
+        }
+      }
+      return best ? { x: best.x, y: best.y, place: "Reverse Mountain" } : null;
+    }
+  };
+  var eastBlue_default = { id: "east_blue", npcs, groups, quests, places, install, dynamicIds: ["lord_of_the_coast"] };
 
   // src/content/northBlue.js
   var at2 = (ctx, id, stage2) => ctx.game.quests.stageId(id) === stage2;
@@ -101723,6 +101898,27 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       })
     },
     {
+      // (the chapter on Swallow Island promises someone who'll sail with you once Bacca is beaten)
+      id: "nb_solveig",
+      name: "Solveig Brandt",
+      title: "Ice-fisher of Pleasure Town",
+      island: "swallow_island",
+      at: { town: "swallow_town", plaza: true, ox: -2.5 },
+      look: { hair: "ponytail", hairColor: "#fff3e0", skin: "#f1d3c0", top: "#455a64", bottom: "#37474f", coat: "#6d4c41", hat: "bandana", hatColor: "#90a4ae", fem: true },
+      level: 8,
+      style: "brawler",
+      recruit: { role: "fighter", requires: (c, g) => g.quests.isDone("nb_bacca"), pitch: `"I watched you take Bacca's crew apart from behind the fish racks. ...This island's too small for me now. Take me along \u2014 I can gut a fish or a pirate, whichever comes first."` },
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => done2(ctx, "nb_bacca") ? `"Bacca's lot are gone, and the whole town's talking about you. Nobody's talked about anything here in ten years." (She sets down her harpoon.) "I'm not going to spend the next ten gutting cod."` : `"Keep your head down, stranger. The Bacca Pirates take a cut of every catch \u2014 and a finger from anyone who argues." (She glares at the harbour.) "Someone ought to do something. Rudd can't, alone."`,
+            choices: [{ text: "Goodbye.", end: true }]
+          }
+        }
+      })
+    },
+    {
       id: "nb_bepo",
       name: "Bepo",
       title: "A lost polar-bear cub (Mink)",
@@ -101943,7 +102139,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             g.ui.banner("Out the Window", "Spider Miles", "The boy marches in. Moments later glass shatters: a tall man in a black feather coat has thrown him out of a fourth-floor window into the scrap. The man is on fire \u2014 he lit his own coat with his cigarette.", 7);
           }
         },
-        { id: "talk", desc: "Check on the boy in the scrap heap below the hideout window." }
+        { id: "talk", desc: "Check on the boy in the scrap heap below the hideout window.", npc: "nb_law_scrap" }
       ],
       rewards: { berries: 1500, points: 1 },
       onComplete: (ctx, g) => {
@@ -101991,9 +102187,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: "Corazon has found a cure for the white-spotted boy: a Devil Fruit a pirate means to sell to the Marines for five billion berries.",
       stages: [
-        { id: "whiteland", island: "whiteland", desc: "Ask the Whiteland Royal Hospital, north of Lvneel, to treat the boy." },
+        { id: "whiteland", island: "whiteland", desc: "Ask the Whiteland Royal Hospital, north of Lvneel, to treat the boy.", npc: "nb_abel" },
         { id: "call", island: "lvneel", desc: "Return to Corazon on the harbour bench in Lvneel." },
-        { id: "rubeck", island: "rubeck", desc: "Find out where the fruit is: ask at the Marine exchange camp on Rubeck Island, south-east of Lvneel." },
+        { id: "rubeck", island: "rubeck", desc: "Find out where the fruit is: ask at the Marine exchange camp on Rubeck Island, south-east of Lvneel.", npc: "nb_garrow" },
         {
           id: "barrels",
           desc: "Storm the ghost town on Minion Island, east of Rubeck, and defeat Diez Barrels while Corazon steals the fruit.",
@@ -102080,7 +102276,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: "Every child in the North Blue learns that Montblanc Noland was a liar. Lvneel's Royal Archivist does not believe it.",
       stages: [
-        { id: "book", desc: 'Buy a copy of "Liar Noland" at the Royal Bookshop in Lvneel.', goal: { type: "item", item: "nb_liar_noland" } },
+        { id: "book", desc: 'Buy a copy of "Liar Noland" at the Royal Bookshop in Lvneel.', goal: { type: "item", item: "nb_liar_noland" }, npc: "nb_hedda" },
         { id: "archive", desc: "Bring the picture book to Archivist Pell at the Royal Archive." },
         {
           id: "stand",
@@ -102108,7 +102304,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       summary: 'Germa 66 \u2014 the evil army from "Sora, Warrior of the Sea" \u2014 is real, and its snail-ships are anchored by the Red Line.',
       stages: [
         { id: "reach", desc: "Find the Germa Kingdom's snail-ships, anchored near the Red Line at the eastern edge of the North Blue.", goal: { type: "reach", island: "germa_kingdom" } },
-        { id: "cosette", desc: "Someone in the Royal Kitchen of Vinsmoke Castle needs help. Find the head chef." },
+        { id: "cosette", desc: "Someone in the Royal Kitchen of Vinsmoke Castle needs help. Find the head chef.", npc: "nb_cosette" },
         { id: "depot", desc: "Break the Germa 66 squad drilling on the west platform: defeat their clone squad leader.", goal: { type: "defeat", npc: "nb_clone_captain", island: "germa_kingdom", spot: "germa_parade" } },
         {
           id: "niji",
@@ -102130,7 +102326,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "side",
       summary: 'Princess Reiju had a brother who "died in a shipwreck". She has heard of a curly-browed cook on a sea restaurant in the East Blue.',
       stages: [
-        { id: "baratie", island: "baratie", desc: "See the curly-browed cook of the Baratie, the sea restaurant of the East Blue, with your own eyes. (A long voyage: Reverse Mountain, the Grand Line, then north across the Calm Belt.)", goal: { type: "flag", flag: "nbSawSanji" } },
+        { id: "baratie", island: "baratie", desc: "See the curly-browed cook of the Baratie, the sea restaurant of the East Blue, with your own eyes. (A long voyage: Reverse Mountain, the Grand Line, then north across the Calm Belt.)", goal: { type: "flag", flag: "nbSawSanji" }, at: { dock: true } },
         { id: "report", desc: "Tell Reiju what you saw, on the Germa Kingdom." }
       ],
       rewards: { berries: 2e4, points: 1, items: [["nb_germa_antidote", 3]] }
@@ -102150,7 +102346,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           goal: { type: "reach", island: "kuen", spot: "kuen_cave", r: 3 },
           onComplete: (ctx, g) => g.ui.banner("A Faded Ribbon", "Kuen Mountain", "Cold ashes, a child's ribbon... and caught on a thornbush, one long PINK FEATHER.", 6)
         },
-        { id: "report", desc: "Tell the mother what you found." }
+        { id: "report", desc: "Tell the mother what you found.", npc: "nb_kuen_mother" }
       ],
       rewards: { berries: 3e3, attrs: { wil: 1 } }
     },
@@ -102871,6 +103067,28 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           moulon: {
             text: `"The Moulon Family. Seventy years ago their Don tried to carry off Queen Candelle from the Opera House \u2014 the captain sent them all running. Now old Moulon's son is back with his gunmen, stripping the Opera House ruins to sell our instruments to collectors. The last Esperian concert harp is still in there."`,
             choices: [{ text: "I'll run them off.", do: (c) => c.startQuest("wb_esperia_convoy"), end: true }, { text: "Not my fight.", end: true }]
+          }
+        }
+      })
+    },
+    {
+      // (the chapter in Esperia promises a crewmate who can keep up with you once the convoy is safe)
+      id: "wb_chiara",
+      name: "Chiara",
+      title: "Violinist of Cello Port",
+      island: "esperia",
+      at: { town: "esperia_town", door: "Instrument Makers' Guild", ox: -1.8 },
+      look: { hair: "long", hairColor: "#4e342e", skin: "#e0ac7e", top: "#7b1fa2", bottom: "#263238", coat: "#311b92", fem: true, swords: 1 },
+      level: 8,
+      style: "ittoryu",
+      weapon: "sword",
+      recruit: { role: "musician", requires: (c, g) => g.quests.isDone("wb_esperia_convoy"), pitch: `"Grandfather says the captain of the Battle Convoy hummed while he fought, and finished his song with the last gunman down. I've been practising both since I was six. ...Take me to sea. I'll keep your crew on its feet \u2014 and your enemies busy."` },
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => done3(ctx, "wb_esperia_convoy") ? `"The Moulon Family ran from the Opera House \u2014 Grandfather is still laughing about it." (She tucks her violin under her chin and plays three bars of something fast.) "Cello Port is lovely. It's also very, very small."` : `"Old Ottavio is my grandfather. He won't say it, but the Moulon Family are bleeding the Guild dry \u2014 they took the Opera House's instruments too." (She rests a hand on the rapier at her hip.) "If I were a little older, I'd go in there myself."`,
+            choices: [{ text: "Goodbye.", end: true }]
           }
         }
       })
@@ -103903,7 +104121,26 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: "Old Coyote survived the Native Hunting Competition on God Valley thirty-six years ago. He wants proof that it happened.",
       stages: [
-        { id: "relics", desc: "Search God Valley's remains: the Nobles' hunting grounds (west), the drowned canyon town (east) and the Rocks longboat wreck (east shore).", goal: { type: "flag", flag: "wbGvRelics" } },
+        {
+          id: "relics",
+          desc: "Search God Valley's remains: the Nobles' hunting grounds (west), the drowned canyon town (east) and the Rocks longboat wreck (east shore).",
+          goal: { type: "flag", flag: "wbGvRelics" },
+          // (the nearest of the three still to search)
+          where: (g) => {
+            const isl = g.world === g.surface ? g.surface.islands.find((i) => i.id === "god_valley") : null, c = g.state.char, p = g.player;
+            let best = null, bd = Infinity;
+            for (const [spot, , flag, title2] of GV_RELICS) {
+              const s = isl?.spots?.[spot];
+              if (!s || c.flags[flag]) continue;
+              const d = g.world.distance(p.x, p.y, s.x, s.y);
+              if (d < bd) {
+                bd = d;
+                best = { x: s.x, y: s.y, place: GV_PLACES[spot] || title2 };
+              }
+            }
+            return best;
+          }
+        },
         {
           id: "serpent",
           desc: "Something nests in the drowned ravine. Sail out north of God Valley and slay it.",
@@ -103987,7 +104224,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: 'Capone "Gang" Bege wants the head of Don Mamba of the Twin Snakes \u2014 one more of the Five Families of the West.',
       stages: [
-        { id: "scout", island: "soja_island", desc: "Go to the Twin Snakes Gambling House in Soja Village (Soja Island, north of Las Camp) and talk to the blind bodyguard.", goal: { type: "flag", flag: "wbIsshoTalked" } },
+        { id: "scout", island: "soja_island", desc: "Go to the Twin Snakes Gambling House in Soja Village (Soja Island, north of Las Camp) and talk to the blind bodyguard.", goal: { type: "flag", flag: "wbIsshoTalked" }, npc: "wb_issho" },
         {
           id: "dice",
           island: "soja_island",
@@ -104049,7 +104286,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "side",
       summary: "The Raccoon Pirates raid Las Camp's south-east shore. Their captain plays dead when he is losing.",
       stages: [
-        { id: "crew", desc: "Break the Raccoon Pirates' raiding party on Las Camp's south-east shore.", goal: { type: "defeat", any: ["wb_raccoon_pirate"], count: 3 } },
+        { id: "crew", desc: "Break the Raccoon Pirates' raiding party on Las Camp's south-east shore.", goal: { type: "defeat", any: ["wb_raccoon_pirate"], count: 3 }, at: { spot: "raider_landing", place: "The raiders' landing" } },
         {
           id: "raccoon",
           desc: `Defeat "Pretended Sleep" Raccoon. When he goes down, keep hitting \u2014 he's faking.`,
@@ -104070,7 +104307,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: "Revolutionary pamphlets flood Ilisia Harbor. King Thalassa Lucas wants the cell found; refugees want to be forgotten.",
       stages: [
-        { id: "investigate", desc: "Find who is behind the pamphlets \u2014 search the warehouses of Ilisia Harbor.", goal: { type: "flag", flag: "wbIlisiaFound" } },
+        { id: "investigate", desc: "Find who is behind the pamphlets \u2014 search the warehouses of Ilisia Harbor.", goal: { type: "flag", flag: "wbIlisiaFound" }, npc: "wb_refugee" },
         { id: "choice", desc: "Choose: tell Captain Gallardo of the Royal Guard (Royal Capital), or help the Revolutionary at the smugglers' cove (east shore)." },
         { id: "crown_fight", desc: "Defeat Ushiano of the Revolutionary Army at the smugglers' cove (east shore).", goal: { type: "defeat", npc: "wb_ushiano" } },
         { id: "crown_report", desc: "Report to King Thalassa Lucas at Ilisia Palace." },
@@ -104436,6 +104673,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       learn: { mastery: 20, price: 22e3 }
     }
   ];
+  var GV_PLACES = { hunting_lodge: "The Nobles' hunting grounds", canyon_town: "The drowned canyon town", rocks_wreck: "The Rocks longboat wreck" };
   var GV_RELICS = [
     ["hunting_lodge", "wb_rabbit_tag", "wbGvTag", "The Hunting Grounds", 'Rusted cages, and a tin tag stamped with a target. "Rabbits" had one hour to hide before the Celestial Dragons began to score points.'],
     ["canyon_town", "wb_noble_horn", "wbGvHorn", "The Drowned Canyon Town", "False-fronted houses half-buried in gravel. Wedged in a doorway: a gold horn with the crest of the Celestial Dragons."],
@@ -104571,11 +104809,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
     });
   }
+  var places2 = {
+    wb_kano_bell: { island: "kano_country", landmark: "Bell of the Eight Impacts" },
+    wb_searched_clinic: { island: "ballywood", spot: "hogback_clinic", place: "Dr. Hogback's clinic" }
+  };
   var westBlue_default = {
     id: "westBlue",
     npcs: npcs3,
     groups: groups3,
     quests: quests3,
+    places: places2,
     items: items2,
     trainers: trainers2,
     stock: stock2,
@@ -106385,6 +106628,29 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       })
     },
     {
+      // (the chapter on Tumi promises that some of Inti's people might follow you to sea)
+      id: "sb_killa",
+      name: "Killa",
+      title: "Rebel sharpshooter of Tumi",
+      island: "tumi",
+      at: { town: "tumi_town", door: "Rebel Command", ox: -1.8 },
+      faction: "revolutionary",
+      look: { hair: "long", hairColor: "#212121", skin: "#a1693f", top: "#bf360c", bottom: "#4e342e", coat: "#6d4c41", hat: "bandana", hatColor: "#f9a825", fem: true },
+      level: 9,
+      style: "sniper",
+      weapon: "gun",
+      recruit: { role: "sniper", requires: (c, g) => g.quests.isDone("sb_tumi_tower"), pitch: `"The tower is ours, and Inti doesn't need another rifle now. You do. I can hit a gull on the wing from the top of the Sun Gate. Let me prove it on the Grand Line, captain."` },
+      dialogue: (ctx) => ({
+        start: "a",
+        nodes: {
+          a: {
+            text: () => done4(ctx, "sb_tumi_tower") ? '"Huaca is finished. For the first time in three years I slept a whole night." (She checks the sights of her rifle anyway.) "Old habits."' : `"Three years I've been shooting at that tower. Huaca's men shoot back from behind stone; we shoot back from behind laundry." (She spits.) "If Inti would only let us rush it."`,
+            choices: [{ text: "Goodbye.", end: true }]
+          }
+        }
+      })
+    },
+    {
       id: "sb_huaca",
       name: "General Huaca",
       title: "Commander of the loyalist army of Tumi",
@@ -106834,7 +107100,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: "The Marines are searching Baterilla for the Pirate King's unborn child. A woman on the hill has a secret.",
       stages: [
-        { id: "visit", desc: "Bring Pimienta's hibiscus tea to the woman on the hill, north-east of Baterilla Village." },
+        { id: "visit", desc: "Bring Pimienta's hibiscus tea to the woman on the hill, north-east of Baterilla Village.", npc: "sb_rouge" },
         {
           id: "patrol",
           desc: "A Marine search patrol is coming up the cottage path. Stop Lieutenant Gablin.",
@@ -106863,15 +107129,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         {
           id: "wait",
           desc: "Rouge must hold on until the searchers give up. Let a few days pass (rest at the inn), then visit her.",
+          npc: "sb_rouge",
           onStart: (ctx, g) => {
             const c = g.state?.char;
             if (c) c.flags.sbRougeDay = g.env.day;
           }
         },
-        { id: "birth", desc: "Stay with Rouge." },
+        { id: "birth", desc: "Stay with Rouge.", npc: "sb_rouge" },
         {
           id: "garp",
           desc: "Talk to the Marine who came for the child.",
+          npc: "sb_garp",
           onStart: (ctx, g) => {
             setTimeout(() => {
               despawn(g, "sb_rouge");
@@ -107065,7 +107333,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "side",
       summary: "Two hundred and ten years ago the exploration ship St. Briss left Briss for the Grand Line and never came home.",
       stages: [
-        { id: "sky", desc: "Sail into the Grand Line and ask about the St. Briss at Jaya, where sailors say wrecks fall out of the sky.", goal: { type: "flag", flag: "sbStBrissFound" }, island: "jaya" },
+        { id: "sky", desc: "Sail into the Grand Line and ask about the St. Briss at Jaya, where sailors say wrecks fall out of the sky.", goal: { type: "flag", flag: "sbStBrissFound" }, island: "jaya", at: { dock: true } },
         { id: "report", desc: "Return to Archivist Briony at the Royal Archives of Briss.", island: "briss_kingdom" }
       ],
       rewards: { berries: 3e4, points: 2, items: [["gold_coins", 5]] }
@@ -107152,7 +107420,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             if (populated(g, "kutsukku_island")) g.ui.banner("Four Towns, One Gang", "Kutsukku Island", "Kid, Killer, Heat and Wire storm the gates. The Grinder Family's men pour out to meet them \u2014 and the Don is waiting for you.", 5);
           })
         },
-        { id: "report", desc: "Return to Kid at Victoria's grave, west of South Town." }
+        { id: "report", desc: "Return to Kid at Victoria's grave, west of South Town.", npc: "sb_kid" }
       ],
       rewards: { berries: 15e3, points: 2, items: [["sb_scrap_flintlock", 1]] }
     },
@@ -109753,6 +110021,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           id: "flag",
           desc: "Search the wreck at the old anchorage on Foolshout's south-west shore for the Sun Pirates' flag.",
           goal: { type: "item", item: "p1_sun_flag" },
+          at: { spot: "sun_anchorage", place: "The wreck at the old anchorage" },
           onStart: (ctx, g) => ensureGroundItem(g, "foolshout_island", "sun_anchorage", "p1_sun_flag", "the Sun Pirates' flag")
         },
         { id: "report", desc: "Bring the flag to Koala's mother." }
@@ -109772,7 +110041,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           goal: { type: "defeat", npc: "p1_mr3" },
           onStart: skipIf("p1_kyuka_bill", "collect", "report", (c) => c.bosses.includes("p1_mr3"))
         },
-        { id: "report", desc: "Return to the manager of Hotel Kyuka." }
+        { id: "report", desc: "Return to the manager of Hotel Kyuka.", npc: "p1_kyuka_manager" }
       ],
       rewards: { berries: 9e3, items: [["p1_ice_cream", 5]] }
     },
@@ -109804,7 +110073,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: "Whisky Peak throws a party for every crew that survives Reverse Mountain. The whole town is very, very welcoming.",
       stages: [
-        { id: "party", desc: "Enjoy Mayor Igarappoi's welcome party at the Whisky Peak Saloon (talk to him)." },
+        { id: "party", desc: "Enjoy Mayor Igarappoi's welcome party at the Whisky Peak Saloon (talk to him).", npc: "p1_igaram" },
         {
           id: "hunters",
           desc: "Whisky Peak is a nest of Baroque Works bounty hunters! Defeat their ringleaders, Mr. 9 and Miss Monday.",
@@ -109941,6 +110210,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           id: "billions",
           desc: "A trap! The floor of Rain Dinners opens and the Billions pour out. Defeat four Billions agents.",
           goal: { type: "defeat", any: ["p1_billions_agent"], count: 4 },
+          at: { spot: "rain_dinners", place: "Rain Dinners" },
           onStart: (ctx, g) => {
             banner(g, "RAIN DINNERS", "Crocodile's casino", '"Kuhahaha. Welcome, little rat." A voice from the dark \u2014 then the floor gives way.', 5);
             spawnGroupNow(g, "alabasta", "rain_dinners", BILLIONS);
@@ -110023,6 +110293,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           id: "bird",
           desc: "Catch a South Bird in the woods on Jaya's southern arm. Its giant insects will defend it.",
           goal: { type: "item", item: "south_bird" },
+          at: { spot: "south_bird_woods", place: "The woods on Jaya's southern arm" },
           onStart: (ctx, g) => {
             ensureGroundItem(g, "jaya", "south_bird_woods", "south_bird", "a South Bird (its head points south)");
             spawnGroupNow(g, "jaya", "south_bird_woods", JAYA_INSECTS);
@@ -110835,11 +111106,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
     });
   }
+  var places3 = {
+    "rang_bell:golden_bell": { island: "upper_yard", spot: "golden_bell", place: "The Golden Bell of Shandora" }
+  };
   var paradise1_default = {
     id: "paradise1",
     npcs: npcs5,
     groups: groups5,
     quests: quests5,
+    places: places3,
     items: items4,
     trainers: trainers4,
     stock: stock4,
@@ -114384,6 +114659,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           island: "water_7",
           desc: "The Aqua Laguna is hitting Water 7. Ride the Rocketman from Kokoro's Shift Station (east shore) \u2014 or brave the storm and sail \u2014 to Enies Lobby.",
           goal: { type: "reach", island: "enies_lobby" },
+          // (on Water 7: the Rocketman, at Shift Station; out at sea: Enies Lobby)
+          where: (g) => g.currentIsland?.id === "water_7" ? g.quests.liveOf(["p2_kokoro"], "") : null,
           onStart: (ctx, g) => bannerG(g, "AQUA LAGUNA", "Water 7", "A tidal wave taller than the city is coming. The whole of Water 7 flees to high ground. The Puffing Tom has already left for Enies Lobby.", 6)
         },
         {
@@ -114435,6 +114712,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           island: "water_7",
           desc: "BUSTER CALL! Five Vice Admirals are shelling Enies Lobby to dust. Escape \u2014 take the Puffing Tom from Day Station, or sail \u2014 back to Water 7.",
           goal: { type: "reach", island: "water_7" },
+          // (on Enies Lobby: the Puffing Tom, at Day Station; out at sea: Water 7)
+          where: (g) => g.currentIsland?.id === "enies_lobby" ? g.quests.liveOf(["p2_day_station"], "") : null,
           onStart: (ctx, g) => {
             bannerG(g, "BUSTER CALL", "Enies Lobby", "Ten battleships, five Vice Admirals: the island is being erased \u2014 with its own soldiers still on it. Run!", 7);
             spawnHere(g, { island: "enies_lobby", spot: "courtyard", radius: 8, enemies: BUSTER });
@@ -114451,7 +114730,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "side",
       summary: "Franky wants to build a ship that can sail to the end of the world. All he needs is a plank of Adam wood.",
       stages: [
-        { id: "wood", desc: "Find Adam wood \u2014 the black market in St. Poplar sells it, and people there might pay in it.", goal: { type: "item", item: "adam_wood" } },
+        { id: "wood", desc: "Find Adam wood \u2014 the black market in St. Poplar sells it, and people there might pay in it.", goal: { type: "item", item: "adam_wood" }, npc: "p2_poplar_dealer" },
         { id: "build", desc: "Bring the Adam wood to Franky's workshop on Scrap Island (south-east Water 7)." }
       ],
       rewards: { points: 1 }
@@ -115162,11 +115441,20 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
     });
   }
+  var places4 = {
+    p2_w7_assault: { island: "water_7", town: "w7_main_street", door: "Galley-La Company Headquarters" },
+    p2_read_lab: { island: "karakuri", town: "baldimore", door: "Vegapunk's Old Laboratory" },
+    // (it happens as you reach Fish-Man Island: from up here, where the current goes down)
+    p2_dived: { island: "fishman_island" },
+    // (the war ends in time — or you get away by sea)
+    p2_war_end: { island: "marineford", dock: true }
+  };
   var paradise2_default = {
     id: "paradise2",
     npcs: npcs6,
     groups: groups6,
     quests: quests6,
+    places: places4,
     items: items5,
     trainers: trainers5,
     stock: stock5,
@@ -118535,7 +118823,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       summary: "Fleet Admiral Sakazuki's orders: bring down Caesar Clown and the Warlord Doflamingo.",
       stages: [
         { id: "g5", desc: "Report to Marine Base G-5 near the Red Line.", goal: { type: "reach", island: "g5_base" } },
-        { id: "caesar", desc: "Bring down the fugitive scientist Caesar Clown on Punk Hazard.", goal: { type: "flag", flag: "nw_down_nw_caesar" } },
+        { id: "caesar", desc: "Bring down the fugitive scientist Caesar Clown on Punk Hazard.", goal: { type: "flag", flag: "nw_down_nw_caesar" }, npc: "nw_caesar" },
         { id: "doflamingo", desc: "Expose and defeat the Warlord Donquixote Doflamingo on Dressrosa.", goal: { type: "flag", flag: "nw_down_nw_doflamingo" } },
         { id: "report", desc: "Report to Fleet Admiral Sakazuki at New Marineford." }
       ],
@@ -118956,11 +119244,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (id === "nw_wci_poneglyph" || id === "nw_zou_poneglyph") persist(game);
     });
   }
+  var places5 = {
+    nw_rub_road_zou: { island: "zou", spot: "zou_poneglyph", place: "The Road Poneglyph in the Whale's tail" },
+    nw_rub_road_wci: { island: "whole_cake_island", spot: "room_of_treasure", place: "The Room of Treasure" }
+  };
   var newWorld_default = {
     id: "newWorld",
     npcs: npcs7,
     groups: groups7,
     quests: quests7,
+    places: places5,
     items: items6,
     trainers: trainers6,
     stock: stock6,
@@ -118979,6 +119272,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   var TOBI_ROPPO = ["whos_who", "black_maria", "sasaki", "ulti", "page_one"];
   var ALL_STARS = ["king_wildfire", "queen_plague", "jack_drought"];
   var TITANIC = ["shiryu_hachinosu", "pizarro_hachinosu", "devon_hachinosu", "burgess_winner"];
+  var RUBBINGS = [["nw_rubbingZou", "zou", "zou_poneglyph", "nw_zou_poneglyph"], ["nw_rubbingWci", "whole_cake_island", "room_of_treasure", "nw_wci_poneglyph"], ["rubbing_road_wano", "wano", "fuji_poneglyph", "wano_road_poneglyph"], ["rubbing_road_4", "lodestar", "road4_cave", "burn_scar"]];
   var TRACKED = [
     "holdem",
     "babanuki",
@@ -120430,7 +120724,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "side",
       summary: "After Whitebeard's death the Brownbeard Pirates seized Foodvalten and slashed his flag in half.",
       stages: [
-        { id: "brownbeard", desc: "Drive the Brownbeard Pirates out of Foodvalten: defeat Brownbeard at his camp north-east of the village.", goal: { type: "flag", flag: "nw2_beat_brownbeard_foodvalten" } },
+        { id: "brownbeard", desc: "Drive the Brownbeard Pirates out of Foodvalten: defeat Brownbeard at his camp north-east of the village.", goal: { type: "flag", flag: "nw2_beat_brownbeard_foodvalten" }, npc: "brownbeard_foodvalten" },
         { id: "report", desc: "Return to the chief of Foodvalten." }
       ],
       rewards: { berries: 6e5, points: 2, liberate: "Foodvalten", items: [["sea_king_steak", 2]] },
@@ -120465,8 +120759,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           goal: { type: "reach", island: "onigashima" },
           onComplete: (ctx, g) => g.ui.banner("THE FIRE FESTIVAL", "Onigashima", "Drums, lanterns, sake \u2014 and a whole army of Beasts Pirates who do not know what is coming.", 5)
         },
-        { id: "tobiroppo", desc: "Defeat three of the Tobi Roppo (Who's-Who, Black Maria, Sasaki, Ulti, Page One).", goal: { type: "flag", flag: "nw2_tobiroppo3" } },
-        { id: "all_stars", desc: "Defeat two of the All-Stars: King, Queen or Jack.", goal: { type: "flag", flag: "nw2_allstars2" } },
+        { id: "tobiroppo", desc: "Defeat three of the Tobi Roppo (Who's-Who, Black Maria, Sasaki, Ulti, Page One).", goal: { type: "flag", flag: "nw2_tobiroppo3" }, foes: TOBI_ROPPO },
+        { id: "all_stars", desc: "Defeat two of the All-Stars: King, Queen or Jack.", goal: { type: "flag", flag: "nw2_allstars2" }, foes: ALL_STARS },
         {
           id: "kaido",
           desc: "Climb to the roof of the Skull Dome and defeat Kaido of the Beasts.",
@@ -120477,7 +120771,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             g.ui.banner("KAIDO OF THE BEASTS", "Emperor of the Sea", "Thunder cracks over the Skull Dome. The strongest creature in the world is waiting on the roof.", 5);
           }
         },
-        { id: "report", desc: "Return to the Flower Capital: the new shogun awaits at the Shogun Castle." }
+        { id: "report", desc: "Return to the Flower Capital: the new shogun awaits at the Shogun Castle.", npc: "momonosuke_wano" }
       ],
       rewards: { berries: 5e6, points: 3, liberate: "Wano Country", haki: { armament: 10 }, items: [["wano_sake", 3]], flag: "wanoLiberated" }
     },
@@ -120537,6 +120831,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           id: "scavengers",
           desc: "Drive the Blackbeard scavengers out of the ruins of Baltigo.",
           goal: { type: "defeat", any: ["bb_scavenger"], count: 3 },
+          at: { spot: "scavenger_camp", place: "The scavengers' camp" },
           onStart: (ctx, g) => spawnSquad2(g, "baltigo", "scavenger_camp", SCAVENGERS, 6)
         },
         { id: "archive", desc: "Search the collapsed vault north of the ruins for Dragon's sealed dossier.", goal: { type: "reach", island: "baltigo", spot: "burned_archive", r: 3 } },
@@ -120553,7 +120848,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       summary: "Blackbeard ambushed the Heart Pirates for their Road Poneglyph copies. Burgess is still hunting the survivors.",
       stages: [
         { id: "burgess", desc: 'Defeat "Champion" Jesus Burgess at the Blackbeard camp on the beach.', goal: { type: "flag", flag: "nw2_beat_burgess_winner" } },
-        { id: "report", desc: "Tell the stranded Heart Pirate." }
+        { id: "report", desc: "Tell the stranded Heart Pirate.", npc: "heart_pirate_winner" }
       ],
       rewards: { berries: 8e5, points: 2, items: [["rumble_ball", 1]] }
     },
@@ -120574,7 +120869,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             spawnNow(g, "shanks_gartel");
           }
         },
-        { id: "shanks", desc: "Someone is waiting on the pier." }
+        { id: "shanks", desc: "Someone is waiting on the pier.", npc: "shanks_gartel" }
       ],
       rewards: { berries: 3e5, points: 1 },
       onComplete: (ctx, g) => {
@@ -120597,6 +120892,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           id: "seraphim",
           desc: "York has handed control of the Seraphim to CP0. Stop the Seraphim at the Labophase gate.",
           goal: { type: "defeat", any: ["s_hawk", "s_bear", "s_snake", "s_shark"], count: 3 },
+          at: { spot: "labophase_gate", place: "The Labophase gate" },
           onStart: (ctx, g) => {
             spawnSquad2(g, "egghead", "labophase_gate", SERAPHIM, 6);
             g.ui.banner("THE SERAPHIM", "Egghead", "Winged children with the faces of Warlords drop from the Labophase \u2014 and turn on their creator.", 5);
@@ -120616,6 +120912,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           id: "kizaru",
           desc: "A Buster Call fleet surrounds Egghead. Admiral Kizaru lands at the Labophase gate \u2014 hold the line!",
           goal: { type: "flag", flag: "nw2_beat_kizaru_egghead" },
+          npc: "kizaru_egghead",
           onStart: (ctx, g) => {
             const a = spawnNow(g, "kizaru_egghead");
             if (a) aggro(g, a);
@@ -120624,7 +120921,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             g.ui.banner("BUSTER CALL", "Admiral Kizaru \u2014 and one of the Five Elders", "Battleships ring the island. A flash of yellow light lands at the gate... and behind it, an old man in black.", 6);
           }
         },
-        { id: "message", desc: "Every Den Den Mushi in the world begins to speak. Listen to Vegapunk's message.", goal: { type: "event", event: "nw2_vegapunk_broadcast" } },
+        // (every Den Den Mushi in the world: it's heard wherever you are)
+        { id: "message", desc: "Every Den Den Mushi in the world begins to speak. Listen to Vegapunk's message.", goal: { type: "event", event: "nw2_vegapunk_broadcast" }, pin: false },
         { id: "report", desc: "Find Lilith in her workshop in the Labophase." }
       ],
       rewards: { berries: 3e6, points: 3, haki: { observation: 10 }, flag: "vegapunkMessage", items: [["cola", 3]] }
@@ -120642,6 +120940,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           id: "school",
           desc: "The children's nightmares walk as MMA. Protect the Walrus School and the Owl Library \u2014 defeat three of the monsters.",
           goal: { type: "defeat", any: ["mma_beast"], count: 3 },
+          at: { spot: "walrus_school", place: "The Walrus School" },
           onStart: (ctx, g) => {
             spawnSquad2(g, "elbaf", "walrus_school", MMA, 8);
             g.ui.banner("MMA", "Nightmares made flesh", "Monsters taller than giants stalk out of the children's dreams toward the Walrus School.", 5);
@@ -120721,8 +121020,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "side",
       summary: "Blackbeard dares you to fight your way through his Titanic Captains.",
       stages: [
-        { id: "captains", desc: "Defeat two of Blackbeard's Titanic Captains (Shiryu, Pizarro and Devon on Hachinosu; Burgess on Winner Island).", goal: { type: "flag", flag: "nw2_captains2" } },
-        { id: "teach", desc: "Face Marshall D. Teach in the Skull Fortress.", goal: { type: "flag", flag: "nw2_beat_teach_hachinosu" } }
+        { id: "captains", desc: "Defeat two of Blackbeard's Titanic Captains (Shiryu, Pizarro and Devon on Hachinosu; Burgess on Winner Island).", goal: { type: "flag", flag: "nw2_captains2" }, foes: TITANIC },
+        { id: "teach", desc: "Face Marshall D. Teach in the Skull Fortress.", goal: { type: "flag", flag: "nw2_beat_teach_hachinosu" }, npc: "teach_hachinosu" }
       ],
       rewards: { berries: 4e6, points: 3, flag: "blackbeardBeaten" }
     },
@@ -120759,7 +121058,27 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: "No Log Pose can reach the final island. Only the four red Road Poneglyphs, read together, show the way to Laugh Tale.",
       stages: [
-        { id: "rubbings", desc: "Collect rubbings of the four Road Poneglyphs: Zou, Whole Cake Island, Wano \u2014 and the lost fourth.", goal: { type: "item", item: "poneglyph_rubbing", n: 4 } },
+        {
+          id: "rubbings",
+          desc: "Collect rubbings of the four Road Poneglyphs: Zou, Whole Cake Island, Wano \u2014 and the lost fourth.",
+          goal: { type: "item", item: "poneglyph_rubbing", n: 4 },
+          // (the nearest stone still to rub: where its own quest is up to, if it's under way)
+          where: (g) => {
+            const c = g.state.char, p = g.player, W4 = g.world;
+            let best = null, bd = Infinity;
+            for (const [flag, island, spot, q2] of RUBBINGS) {
+              if (c.flags[flag]) continue;
+              const m = g.quests.isActive(q2) && g.quests.marker(q2) || g.quests.placeOf(island, spot, "");
+              if (!m || (m.zone ? m.zone !== W4.id : W4 !== g.surface)) continue;
+              const d = W4.distance(p.x, p.y, m.x, m.y);
+              if (d < bd) {
+                bd = d;
+                best = m;
+              }
+            }
+            return best;
+          }
+        },
         { id: "decipher", island: "wano", desc: "Have the rubbings read: an archaeologist in your crew \u2014 or the last of the Kozuki, who still read the ancient script (a certain swordsmith of Amigasa Village, Wano).", goal: { type: "flag", flag: "laughTaleRevealed" } },
         {
           id: "voyage",
@@ -120773,7 +121092,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           goal: { type: "reach", island: "laugh_tale", spot: "one_piece", r: 3 },
           onComplete: (ctx, g) => openFinale(g)
         },
-        { id: "laugh", desc: "Laugh.", goal: { type: "flag", flag: "laughTale" } }
+        { id: "laugh", desc: "Laugh.", goal: { type: "flag", flag: "laughTale" }, at: { island: "laugh_tale", spot: "one_piece", place: "What Joy Boy left behind" } }
       ],
       rewards: { points: 5, attrs: { wil: 5 }, items: [["joy_boy_promise", 1]] }
     },
@@ -120784,7 +121103,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "side",
       summary: "Blackbeard followed your wake to the final island. He wants the One Piece.",
       stages: [
-        { id: "duel", desc: "Blackbeard's ship has run aground below the cliffs. Defeat Marshall D. Teach on Laugh Tale.", goal: { type: "flag", flag: "nw2_beat_teach_laugh_tale" } }
+        { id: "duel", desc: "Blackbeard's ship has run aground below the cliffs. Defeat Marshall D. Teach on Laugh Tale.", goal: { type: "flag", flag: "nw2_beat_teach_laugh_tale" }, npc: "teach_laugh_tale" }
       ],
       rewards: { points: 5, berries: 1e7, flag: "pirateKingUndisputed" },
       onComplete: (ctx, g) => g.ui.banner("KING OF THE PIRATES", "Laugh Tale", "The darkness is beaten. The whole sea will hear about this by morning.", 7)
@@ -124410,7 +124729,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   };
   var riseCurrent = (g) => {
     const e = g.world?.id === "fishman_island" && ZONES.fishman_island.exits.find((x) => x.id === "new_world");
-    return e ? { x: e.x, y: e.y, place: e.label, zone: "fishman_island" } : null;
+    return e ? { x: e.x, y: e.y, place: e.label, zone: "fishman_island" } : g.quests.placeOf("fishman_island", null, "");
   };
   chapter("nw_fishman", { part: 3, kind: "solo", place: "Fish-Man Island" }, {
     pirate: {
@@ -125271,6 +125590,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (p.npcs) registerNPCs(p.npcs);
       if (p.groups) registerGroups(p.groups);
       if (p.quests) registerQuests(p.quests);
+      if (p.places) registerPlaces(p.places);
     }
     installFruits(game);
     for (const p of PACKS) if (p.install) p.install(game);

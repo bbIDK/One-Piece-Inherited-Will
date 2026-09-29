@@ -12,6 +12,7 @@ import { ZONES } from '../data/zones/index.js';
 import { persist } from './lineage.js';
 import { ITEMS } from '../data/items.js';
 import { ownsShip } from './fleet.js';
+import { stockFor } from '../data/shops.js';
 
 /** Does the character carry (or wield) a weapon? */
 export function hasWeapon(c) {
@@ -271,45 +272,151 @@ export class Quests {
 
   /**
    * Where the current objective of a quest is, for the compass, the tracker
-   * and the map: whoever the step is about (someone to beat or to talk to)
-   * where they stand — or, not about yet, where they'll be on the island they
-   * live on (which needn't be the quest's); else the place it names; else
-   * the island. An objective in another world (Skypiea, Fish-Man Island,
-   * Impel Down) shows the way there (or out of the one you're in).
+   * and the map: the place the step is done at (the bell among the spires,
+   * the platform in the square); else whoever the step is about (someone to
+   * beat or to talk to) where they stand — or, not about yet, where they'll
+   * be on the island they live on (which needn't be the quest's); else where
+   * what it asks for is had (the shop that sells it, the shipwright on the
+   * pier, someone who'd join your crew); else the island (its harbour, when
+   * it's an island to sail to). An objective in another world (Skypiea,
+   * Fish-Man Island, Impel Down) shows the way there (or out of the one
+   * you're in).
    */
   marker(id, depth = 0) {
     const s = this.state(id), d = DEFS.get(id);
     if (!s || s.done) return null;
     const st = d.stages[s.stage];
     const g = st?.goal || {};
+    const label = d.name, home = g.island || st?.island || d.island;
     // (another quest to see through: wherever that one's objective is)
     if (g.type === 'quest' && depth < 2 && this.isActive(g.quest)) {
       const m = this.marker(g.quest, depth + 1);
-      if (m) return { ...m, label: d.name };
+      if (m) return { ...m, label };
     }
     // (a step done somewhere in particular, whoever's there: a bout is in the ring)
-    if (st?.pinAt) { const w = st.pinAt(this.game); if (w) return { ...w, label: d.name }; }
+    if (st?.pinAt) { const w = st.pinAt(this.game); if (w) return { ...w, label }; }
     // (a step done in a menu is done anywhere: no pin)
     if (st?.pin === false) return null;
     const who = this.whoFor(id, s.stage, st, g, d);
-    const live = who.length ? this.liveOf(who, d.name) : null;
+    // (a foe to beat is wherever they are, if they're about)
+    const fight = g.type === 'defeat' || !!st?.foes;
+    let live = fight && who.length ? this.liveOf(who, label) : null;
     if (live) return live;
-    if (st?.where) { const w = st.where(this.game); if (w) return { ...w, label: d.name }; }
+    // (a step done at a place of its own: the stage names it, or the event that finishes it happens there)
+    const at = st?.at || ((g.type === 'event' || g.type === 'counter') && EVENT_AT.get(g.event));
+    if (at) {
+      const m = typeof at === 'function' ? at(this.game) : this.placeOf(at.island || home, at, label);
+      if (m) return { ...m, label };
+    }
+    if (!fight && who.length) live = this.liveOf(who, label);
+    if (live) return live;
+    if (st?.where) { const w = st.where(this.game); if (w) return { ...w, label }; }
+    // (something to get: where it's had)
+    if (!who.length) {
+      if (g.type === 'item') { const m = this.chestFor(g.item, home, label) || this.shopFor(g.item, home, label); if (m) return m; }
+      if (g.type === 'ship') return this.shipyardOf(home, label);
+      if (g.type === 'crew') return this.recruitFor(label);
+    }
     for (const n of who) {
       const q = whereNPC(this.game, n);
       if (!q) continue;
-      const m = q.island ? this.placeOf(q.island, null, d.name) : { ...q, label: d.name };
+      const m = q.island ? this.placeOf(q.island, null, label) : { ...q, label };
       if (m) return m;
     }
-    if (g.type === 'reachXY') return { x: g.x, y: g.y, label: d.name, place: g.place };
-    return this.placeOf(g.island || st?.island || d.island, g.spot, d.name);
+    if (g.type === 'reachXY') return { x: g.x, y: g.y, label, place: g.place };
+    // (an island to sail to — or whose story starts as you land: its harbour, where you'll tie up)
+    return this.placeOf(home, g.spot || (g.type === 'reach' || g.type === 'quest' ? { dock: true } : null), label);
+  }
+
+  /** The nearest chest left on the step's island with the item in it, that still holds it (the herb baskets among the Great Tree's roots). */
+  chestFor(item, islandId, label) {
+    const g = this.game, w = g.world, p = g.player, c = this.char;
+    const isl = c && w.islands?.find((i) => i.id === islandId);
+    if (!isl) return null;
+    let best = null, bd = Infinity;
+    for (const o of isl.landmarks || []) {
+      if (o.kind !== 'chest' || o.item !== item) continue;
+      // (see npcs.js chest: emptied, or opened and the thing taken out)
+      const key = 'chest_' + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`), e = c.world?.containers?.[key];
+      if (c.world?.chests?.[key] || (e && !e.items?.some((x) => x.id === item))) continue;
+      const d = p ? w.distance(p.x, p.y, o.x, o.y) : 0;
+      if (d < bd) { bd = d; best = { x: o.x, y: o.y, label, place: o.name || isl.name, zone: w === g.surface ? null : w.id }; }
+    }
+    return best;
+  }
+
+  /** The nearest shop that sells an item: on the step's island if one there does, else in its sea, else anywhere in this world. */
+  shopFor(item, islandId, label) {
+    const g = this.game, w = g.world, p = g.player;
+    const C = this.shopC || (this.shopC = new Map());
+    const key = `${w.id}:${item}`;
+    let list = C.get(key);
+    if (!list) {
+      // (the shops' doors don't move: worked out once per world and item)
+      list = [];
+      for (const isl of w.islands || []) {
+        for (const t of isl.towns || []) {
+          for (const b of t.buildings || []) {
+            if (!b.door || !SELLERS.has(b.role)) continue;
+            let stock;
+            try { stock = stockFor(b, isl); } catch { continue; }
+            if (Array.isArray(stock) && stock.includes(item)) list.push({ x: b.door.x, y: b.door.y, island: isl.id, sea: isl.sea, place: b.name ? `${b.name}, ${t.name || isl.name}` : t.name || isl.name });
+          }
+        }
+      }
+      C.set(key, list);
+    }
+    const sea = w.islands?.find((i) => i.id === islandId)?.sea;
+    let best = null, bd = Infinity;
+    for (const s of list) {
+      const dd = (s.island === islandId ? 0 : sea && s.sea === sea ? 1e7 : 2e7) + (p ? w.distance(p.x, p.y, s.x, s.y) : 0);
+      if (dd < bd) { bd = dd; best = s; }
+    }
+    return best ? { x: best.x, y: best.y, label, place: best.place, zone: w === g.surface ? null : w.id } : null;
+  }
+
+  /** Where to get a ship: the nearest shipwright on that island's piers (else the pier they work on). */
+  shipyardOf(islandId, label) {
+    const g = this.game, w = g.world, p = g.player;
+    let best = null, bd = Infinity;
+    for (const a of g.actors) {
+      if (!a.alive || a.shipwright?.island?.id !== islandId) continue;
+      const dd = p ? w.distance(p.x, p.y, a.x, a.y) : 0;
+      if (dd < bd) { bd = dd; best = a; }
+    }
+    if (best) return { x: best.x, y: best.y, label, place: best.name, zone: null };
+    return this.placeOf(islandId, { dock: 'stand' }, label);
+  }
+
+  /** Someone who'd join your crew now: the nearest about, else where the nearest of them is to be found (or null: no one yet). */
+  recruitFor(label) {
+    const g = this.game, crew = g.crew, c = this.char, w = g.world, p = g.player;
+    if (!crew || !c) return null;
+    if (!RECRUITS.length) RECRUITS.push(...allNpcDefs().filter((d) => d.recruit));
+    const ids = RECRUITS.filter((d) => {
+      if (!crew.canRecruit(d)) return false;
+      try { return !d.when || d.when(c, g); } catch { return false; }
+    }).map((d) => d.id);
+    if (!ids.length) return null;
+    const live = this.liveOf(ids, label);
+    if (live) return live;
+    let best = null, bd = Infinity;
+    for (const n of ids) {
+      const q = whereNPC(g, n);
+      const m = q && (q.island ? this.placeOf(q.island, null, label) : { ...q, label });
+      if (!m) continue;
+      const dd = p ? w.distance(p.x, p.y, m.x, m.y) : 0;
+      if (dd < bd) { bd = dd; best = m; }
+    }
+    return best;
   }
 
   /** Who a step is about: someone to talk to, the foes to beat (those still to beat), or whoever its words name. */
   whoFor(id, si, st, g, d) {
     if (st?.npc) return [st.npc];
-    if (g.type === 'defeat') {
-      const ids = g.npc ? [g.npc] : g.any || [];
+    // (a step finished by beating enough of some foes — its `foes` — however it's counted)
+    if (g.type === 'defeat' || st?.foes) {
+      const ids = st?.foes || (g.npc ? [g.npc] : g.any || []);
       const c = this.char;
       const left = ids.filter((n) => !(c?.defeated?.[n] > 0) && !c?.bosses?.includes(n));
       return left.length ? left : ids;
@@ -401,15 +508,22 @@ export class Quests {
     return best ? { x: best.x, y: best.y, label, place: best.name, zone: w === g.surface ? null : w.id } : null;
   }
 
-  /** A place on an island (a spot, or the island), in this world — or the way to the world it's in. */
-  placeOf(islandId, spot, label) {
+  /**
+   * A place on an island, in this world — or the way to the world it's in.
+   * `at`: one of its spots ('spire_bell', or { spot }), a town's square
+   * ({ town }) or the door of one of its buildings ({ town?, door }: by name
+   * or role), a landmark ({ landmark }: by name), its harbour ({ dock: true }:
+   * the pier head; 'stand': where the shipwright works) — or nothing: the island.
+   */
+  placeOf(islandId, at, label) {
     if (!islandId) return null;
     const g = this.game, w = g.world, surf = g.surface;
     const zone = ZONE_OF.get(islandId) || null;
     if (zone ? w.id === zone : w === surf) {
       const isl = w.islands.find((i) => i.id === islandId);
       if (!isl) return null;
-      if (spot && isl.spots?.[spot]) return { ...isl.spots[spot], label, place: isl.name, zone };
+      const s = at ? placeIn(isl, at) : null;
+      if (s) return { x: s.x, y: s.y, label, place: s.place || isl.name, zone };
       return { x: isl.x, y: isl.y, label, place: isl.name, zone };
     }
     // (out of the world you're in first, then into the one it's in)
@@ -435,6 +549,44 @@ export class Quests {
 const ZONE_OF = new Map();
 for (const z of Object.values(ZONES)) for (const i of z.islands || []) ZONE_OF.set(i.id, z.id);
 const WAY_IN = { skypiea: { spot: 'knock_up_stream' }, fishman_island: { spot: 'fishman_dive' }, impel_down: { island: 'impel_down' } };
+// (the buildings that sell over the counter: see npcs.js service)
+const SELLERS = new Set(['shop', 'market', 'weapons', 'tavern', 'bar', 'restaurant', 'cafe']);
+// (everyone who could ever join a crew: listed the first time it's asked)
+const RECRUITS = [];
+// where the events that finish quest steps happen: event → a place (see
+// placeOf; with the island it's on) or fn(game) → { x, y, place } or null
+const EVENT_AT = new Map();
+/** Content packs name the places their events happen at (their `places`), for the waypoints of the steps they finish. */
+export function registerPlaces(map) { for (const [k, v] of Object.entries(map || {})) EVENT_AT.set(k, v); }
+
+/** A place on an island (see Quests.placeOf): { x, y, place? } — or null, if it has no such place. */
+function placeIn(isl, at) {
+  if (typeof at === 'string') at = { spot: at };
+  if (at.spot) {
+    const s = isl.spots?.[at.spot];
+    return s ? { x: s.x + (at.ox || 0), y: s.y + (at.oy || 0), place: at.place } : null;
+  }
+  if (at.landmark) {
+    const l = isl.landmarks?.find((o) => o.name === at.landmark);
+    return l ? { x: l.x, y: l.y, place: l.name } : null;
+  }
+  if (at.dock) {
+    // (the harbour of its first town: the pier head you tie up at, or where its shipwright works)
+    const t = isl.towns?.[0], docks = isl.docks || [];
+    const d = t ? docks.slice().sort((a, b) => Math.hypot(a.land.x - t.x, a.land.y - t.y) - Math.hypot(b.land.x - t.x, b.land.y - t.y))[0] : docks[0];
+    if (!d) return null;
+    const p = at.dock === 'stand' ? d.stand || d.land : d.end || d;
+    return { x: p.x, y: p.y, place: `${d.name || isl.name} harbour` };
+  }
+  for (const t of isl.towns || []) {
+    if (at.town && t.id !== at.town && t.name !== at.town) continue;
+    if (at.door) {
+      const b = (t.buildings || []).find((x) => x.name === at.door || x.role === at.door);
+      if (b?.door) return { x: b.door.x, y: b.door.y, place: b.name ? `${b.name}, ${t.name}` : t.name };
+    } else if (at.town) return { x: t.plaza.x, y: t.plaza.y, place: at.place || t.name };
+  }
+  return null;
+}
 // (a title or a word isn't a name: "Captain" alone doesn't send you to
 // Captain Morgan, nor "Sail to Reverse Mountain" to Old Sail the fisherman)
 const STOP = new Set(['Captain', 'Mayor', 'King', 'Queen', 'Lord', 'Lady', 'Doctor', 'Commodore', 'Admiral', 'Vice', 'Chief', 'Sergeant', 'Colonel', 'Master', 'Prince', 'Princess', 'Sister', 'Brother', 'Grandpa', 'Granny', 'Uncle', 'Aunt', 'Miss', 'Madam', 'Madame', 'General', 'Officer', 'Lieutenant', 'Commander', 'Boss', 'Saint', 'Father', 'Mother', 'Elder', 'Chef', 'Keeper', 'Warden', 'Emperor', 'Young', 'Little', 'Great', 'Marine', 'Marines', 'Pirate', 'Pirates', 'Sensei', 'Shogun', 'Old', 'Big', 'Mad', 'The', 'Don', 'Mister', 'Crewman', 'Guard', 'Village', 'Town', 'City', 'House', 'Island', 'Harbour', 'Port', 'Hall', 'Gate', 'Mountain', 'Reverse', 'Sail', 'Sea', 'Red', 'Black', 'White', 'Blue', 'Green', 'Golden', 'Iron', 'Heart', 'Royal', 'Grand', 'Head', 'First', 'Second', 'Third', 'Man', 'Woman', 'Boy', 'Girl']);

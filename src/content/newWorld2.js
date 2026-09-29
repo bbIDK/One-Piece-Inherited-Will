@@ -28,6 +28,8 @@ const has = (c, id, n = 1) => count(c, id) >= n;
 const TOBI_ROPPO = ['whos_who', 'black_maria', 'sasaki', 'ulti', 'page_one'];
 const ALL_STARS = ['king_wildfire', 'queen_plague', 'jack_drought'];
 const TITANIC = ['shiryu_hachinosu', 'pizarro_hachinosu', 'devon_hachinosu', 'burgess_winner'];
+// the four Road Poneglyphs: the flag a rubbing of each leaves, where it is, the quest that leads to it
+const RUBBINGS = [['nw_rubbingZou', 'zou', 'zou_poneglyph', 'nw_zou_poneglyph'], ['nw_rubbingWci', 'whole_cake_island', 'room_of_treasure', 'nw_wci_poneglyph'], ['rubbing_road_wano', 'wano', 'fuji_poneglyph', 'wano_road_poneglyph'], ['rubbing_road_4', 'lodestar', 'road4_cave', 'burn_scar']];
 const TRACKED = ['holdem', 'babanuki', 'orochi', 'fukurokuju', 'kaku_cp0', 'kaido', ...ALL_STARS, ...TOBI_ROPPO, 'lucci_cp0', 'kizaru_egghead', 'killingham', 'loki',
   ...TITANIC, 'teach_hachinosu', 'brownbeard_foodvalten', 'teach_laugh_tale'];
 
@@ -872,7 +874,7 @@ const groups = [
 const quests = [
   { id: 'foodvalten_flag', name: 'Whitebeard\'s Torn Flag', island: 'foodvalten', kind: 'side', summary: 'After Whitebeard\'s death the Brownbeard Pirates seized Foodvalten and slashed his flag in half.',
     stages: [
-      { id: 'brownbeard', desc: 'Drive the Brownbeard Pirates out of Foodvalten: defeat Brownbeard at his camp north-east of the village.', goal: { type: 'flag', flag: 'nw2_beat_brownbeard_foodvalten' } },
+      { id: 'brownbeard', desc: 'Drive the Brownbeard Pirates out of Foodvalten: defeat Brownbeard at his camp north-east of the village.', goal: { type: 'flag', flag: 'nw2_beat_brownbeard_foodvalten' }, npc: 'brownbeard_foodvalten' },
       { id: 'report', desc: 'Return to the chief of Foodvalten.' },
     ],
     rewards: { berries: 600000, points: 2, liberate: 'Foodvalten', items: [['sea_king_steak', 2]] },
@@ -891,11 +893,11 @@ const quests = [
     stages: [
       { id: 'sail', desc: 'The Fire Festival has begun. Sail to Onigashima, just south of Wano.', goal: { type: 'reach', island: 'onigashima' },
         onComplete: (ctx, g) => g.ui.banner('THE FIRE FESTIVAL', 'Onigashima', 'Drums, lanterns, sake — and a whole army of Beasts Pirates who do not know what is coming.', 5) },
-      { id: 'tobiroppo', desc: 'Defeat three of the Tobi Roppo (Who\'s-Who, Black Maria, Sasaki, Ulti, Page One).', goal: { type: 'flag', flag: 'nw2_tobiroppo3' } },
-      { id: 'all_stars', desc: 'Defeat two of the All-Stars: King, Queen or Jack.', goal: { type: 'flag', flag: 'nw2_allstars2' } },
+      { id: 'tobiroppo', desc: 'Defeat three of the Tobi Roppo (Who\'s-Who, Black Maria, Sasaki, Ulti, Page One).', goal: { type: 'flag', flag: 'nw2_tobiroppo3' }, foes: TOBI_ROPPO },
+      { id: 'all_stars', desc: 'Defeat two of the All-Stars: King, Queen or Jack.', goal: { type: 'flag', flag: 'nw2_allstars2' }, foes: ALL_STARS },
       { id: 'kaido', desc: 'Climb to the roof of the Skull Dome and defeat Kaido of the Beasts.', goal: { type: 'flag', flag: 'nw2_beat_kaido' },
         onStart: (ctx, g) => { const k = spawnNow(g, 'kaido'); if (k) aggro(g, k); g.ui.banner('KAIDO OF THE BEASTS', 'Emperor of the Sea', 'Thunder cracks over the Skull Dome. The strongest creature in the world is waiting on the roof.', 5); } },
-      { id: 'report', desc: 'Return to the Flower Capital: the new shogun awaits at the Shogun Castle.' },
+      { id: 'report', desc: 'Return to the Flower Capital: the new shogun awaits at the Shogun Castle.', npc: 'momonosuke_wano' },
     ],
     rewards: { berries: 5000000, points: 3, liberate: 'Wano Country', haki: { armament: 10 }, items: [['wano_sake', 3]], flag: 'wanoLiberated' } },
   { id: 'wano_road_poneglyph', name: 'The Red Stone of Wano', island: 'wano', kind: 'story', summary: 'Kaido claimed Wano\'s Road Poneglyph. It lies in a secret cavern at the foot of Mt. Fuji, reached by a stair beneath the Shogun Castle.',
@@ -917,7 +919,7 @@ const quests = [
   // --------------------------------------------------------------- Baltigo
   { id: 'baltigo_archive', name: 'The Island of White Soil', island: 'baltigo', kind: 'side', summary: 'Blackbeard\'s scavengers are digging through the ruins of the Revolutionary Army\'s headquarters.',
     stages: [
-      { id: 'scavengers', desc: 'Drive the Blackbeard scavengers out of the ruins of Baltigo.', goal: { type: 'defeat', any: ['bb_scavenger'], count: 3 },
+      { id: 'scavengers', desc: 'Drive the Blackbeard scavengers out of the ruins of Baltigo.', goal: { type: 'defeat', any: ['bb_scavenger'], count: 3 }, at: { spot: 'scavenger_camp', place: 'The scavengers\' camp' },
         onStart: (ctx, g) => spawnSquad(g, 'baltigo', 'scavenger_camp', SCAVENGERS, 6) },
       { id: 'archive', desc: 'Search the collapsed vault north of the ruins for Dragon\'s sealed dossier.', goal: { type: 'reach', island: 'baltigo', spot: 'burned_archive', r: 3 } },
       { id: 'report', desc: 'Bring the dossier to the Revolutionary officer.' },
@@ -928,7 +930,7 @@ const quests = [
   { id: 'winner_ambush', name: 'The Winner Island Ambush', island: 'winner_island', kind: 'side', summary: 'Blackbeard ambushed the Heart Pirates for their Road Poneglyph copies. Burgess is still hunting the survivors.',
     stages: [
       { id: 'burgess', desc: 'Defeat "Champion" Jesus Burgess at the Blackbeard camp on the beach.', goal: { type: 'flag', flag: 'nw2_beat_burgess_winner' } },
-      { id: 'report', desc: 'Tell the stranded Heart Pirate.' },
+      { id: 'report', desc: 'Tell the stranded Heart Pirate.', npc: 'heart_pirate_winner' },
     ],
     rewards: { berries: 800000, points: 2, items: [['rumble_ball', 1]] } },
 
@@ -937,7 +939,7 @@ const quests = [
     stages: [
       { id: 'flag', desc: 'Raise a new Red Hair Jolly Roger on the flagpole above Gartel Town.', goal: { type: 'reach', island: 'gartel_island', spot: 'red_hair_flag', r: 3 },
         onComplete: (ctx, g) => { g.ui.banner('A NEW FLAG', 'Gartel Island', 'The Red Hair Jolly Roger snaps in the wind again. Down at the pier, a ship with a familiar flag has dropped anchor.', 5); spawnNow(g, 'shanks_gartel'); } },
-      { id: 'shanks', desc: 'Someone is waiting on the pier.' },
+      { id: 'shanks', desc: 'Someone is waiting on the pier.', npc: 'shanks_gartel' },
     ],
     rewards: { berries: 300000, points: 1 },
     onComplete: (ctx, g) => { const c = ctx.char; if (c.haki.conqueror) g.progression.addHaki('conqueror', 5); else if (c.haki.observation) g.progression.addHaki('observation', 5); else g.progression.raiseAttr('wil', 2); } },
@@ -946,13 +948,14 @@ const quests = [
   { id: 'egghead_incident', name: 'The Egghead Incident', island: 'egghead', kind: 'story', summary: 'Dr. Vegapunk knows the truth of the Void Century — and the World Government has come to silence him.',
     stages: [
       { id: 'meet', desc: 'Climb to the Labophase and meet Dr. Vegapunk.', goal: { type: 'flag', flag: 'nw2_met_vegapunk' } },
-      { id: 'seraphim', desc: 'York has handed control of the Seraphim to CP0. Stop the Seraphim at the Labophase gate.', goal: { type: 'defeat', any: ['s_hawk', 's_bear', 's_snake', 's_shark'], count: 3 },
+      { id: 'seraphim', desc: 'York has handed control of the Seraphim to CP0. Stop the Seraphim at the Labophase gate.', goal: { type: 'defeat', any: ['s_hawk', 's_bear', 's_snake', 's_shark'], count: 3 }, at: { spot: 'labophase_gate', place: 'The Labophase gate' },
         onStart: (ctx, g) => { spawnSquad(g, 'egghead', 'labophase_gate', SERAPHIM, 6); g.ui.banner('THE SERAPHIM', 'Egghead', 'Winged children with the faces of Warlords drop from the Labophase — and turn on their creator.', 5); } },
       { id: 'lucci', desc: 'Rob Lucci of CP0 is hunting Vegapunk through the Fabriophase. Stop him.', goal: { type: 'flag', flag: 'nw2_beat_lucci_cp0' },
         onStart: (ctx, g) => { const a = spawnNow(g, 'lucci_cp0'); if (a) aggro(g, a); spawnNow(g, 'kaku_cp0'); } },
-      { id: 'kizaru', desc: 'A Buster Call fleet surrounds Egghead. Admiral Kizaru lands at the Labophase gate — hold the line!', goal: { type: 'flag', flag: 'nw2_beat_kizaru_egghead' },
+      { id: 'kizaru', desc: 'A Buster Call fleet surrounds Egghead. Admiral Kizaru lands at the Labophase gate — hold the line!', goal: { type: 'flag', flag: 'nw2_beat_kizaru_egghead' }, npc: 'kizaru_egghead',
         onStart: (ctx, g) => { const a = spawnNow(g, 'kizaru_egghead'); if (a) aggro(g, a); spawnNow(g, 'saturn_cameo'); spawnSquad(g, 'egghead', 'labophase_gate', BUSTER_CALL, 9); g.ui.banner('BUSTER CALL', 'Admiral Kizaru — and one of the Five Elders', 'Battleships ring the island. A flash of yellow light lands at the gate... and behind it, an old man in black.', 6); } },
-      { id: 'message', desc: 'Every Den Den Mushi in the world begins to speak. Listen to Vegapunk\'s message.', goal: { type: 'event', event: 'nw2_vegapunk_broadcast' } },
+      // (every Den Den Mushi in the world: it's heard wherever you are)
+      { id: 'message', desc: 'Every Den Den Mushi in the world begins to speak. Listen to Vegapunk\'s message.', goal: { type: 'event', event: 'nw2_vegapunk_broadcast' }, pin: false },
       { id: 'report', desc: 'Find Lilith in her workshop in the Labophase.' },
     ],
     rewards: { berries: 3000000, points: 3, haki: { observation: 10 }, flag: 'vegapunkMessage', items: [['cola', 3]] } },
@@ -961,7 +964,7 @@ const quests = [
   { id: 'elbaf_siege', name: 'Warland under Siege', island: 'elbaf', kind: 'story', summary: 'The Knights of God have come to force Elbaph\'s warriors into the World Government\'s coming war.',
     stages: [
       { id: 'jarul', desc: 'Find Elder Jarul in the Western Village.', goal: { type: 'flag', flag: 'nw2_met_jarul' } },
-      { id: 'school', desc: 'The children\'s nightmares walk as MMA. Protect the Walrus School and the Owl Library — defeat three of the monsters.', goal: { type: 'defeat', any: ['mma_beast'], count: 3 },
+      { id: 'school', desc: 'The children\'s nightmares walk as MMA. Protect the Walrus School and the Owl Library — defeat three of the monsters.', goal: { type: 'defeat', any: ['mma_beast'], count: 3 }, at: { spot: 'walrus_school', place: 'The Walrus School' },
         onStart: (ctx, g) => { spawnSquad(g, 'elbaf', 'walrus_school', MMA, 8); g.ui.banner('MMA', 'Nightmares made flesh', 'Monsters taller than giants stalk out of the children\'s dreams toward the Walrus School.', 5); } },
       { id: 'killingham', desc: 'Saint Killingham commands the MMA with his horn. Drive the Knight of God out of Elbaph.', goal: { type: 'flag', flag: 'nw2_beat_killingham' },
         onStart: (ctx, g) => { const a = spawnNow(g, 'killingham'); if (a) aggro(g, a); } },
@@ -992,8 +995,8 @@ const quests = [
     onComplete: (ctx, g) => g.ui.banner('RESCUE', 'Hachinosu harbour', 'A Marine warship bursts through the harbour mouth and Koby leaps aboard. "I won\'t forget this! ...Even if I have to arrest you one day!"', 6) },
   { id: 'blackbeard_showdown', name: 'The Man Who Would Be King', island: 'hachinosu', kind: 'side', summary: 'Blackbeard dares you to fight your way through his Titanic Captains.',
     stages: [
-      { id: 'captains', desc: 'Defeat two of Blackbeard\'s Titanic Captains (Shiryu, Pizarro and Devon on Hachinosu; Burgess on Winner Island).', goal: { type: 'flag', flag: 'nw2_captains2' } },
-      { id: 'teach', desc: 'Face Marshall D. Teach in the Skull Fortress.', goal: { type: 'flag', flag: 'nw2_beat_teach_hachinosu' } },
+      { id: 'captains', desc: 'Defeat two of Blackbeard\'s Titanic Captains (Shiryu, Pizarro and Devon on Hachinosu; Burgess on Winner Island).', goal: { type: 'flag', flag: 'nw2_captains2' }, foes: TITANIC },
+      { id: 'teach', desc: 'Face Marshall D. Teach in the Skull Fortress.', goal: { type: 'flag', flag: 'nw2_beat_teach_hachinosu' }, npc: 'teach_hachinosu' },
     ],
     rewards: { berries: 4000000, points: 3, flag: 'blackbeardBeaten' } },
 
@@ -1011,18 +1014,31 @@ const quests = [
   // ------------------------------------------------------------- the ending
   { id: 'laugh_tale_voyage', name: 'The Voyage to Laugh Tale', island: 'lodestar', kind: 'story', summary: 'No Log Pose can reach the final island. Only the four red Road Poneglyphs, read together, show the way to Laugh Tale.',
     stages: [
-      { id: 'rubbings', desc: 'Collect rubbings of the four Road Poneglyphs: Zou, Whole Cake Island, Wano — and the lost fourth.', goal: { type: 'item', item: 'poneglyph_rubbing', n: 4 } },
+      { id: 'rubbings', desc: 'Collect rubbings of the four Road Poneglyphs: Zou, Whole Cake Island, Wano — and the lost fourth.', goal: { type: 'item', item: 'poneglyph_rubbing', n: 4 },
+        // (the nearest stone still to rub: where its own quest is up to, if it's under way)
+        where: (g) => {
+          const c = g.state.char, p = g.player, W = g.world;
+          let best = null, bd = Infinity;
+          for (const [flag, island, spot, q] of RUBBINGS) {
+            if (c.flags[flag]) continue;
+            const m = (g.quests.isActive(q) && g.quests.marker(q)) || g.quests.placeOf(island, spot, '');
+            if (!m || (m.zone ? m.zone !== W.id : W !== g.surface)) continue;
+            const d = W.distance(p.x, p.y, m.x, m.y);
+            if (d < bd) { bd = d; best = m; }
+          }
+          return best;
+        } },
       { id: 'decipher', island: 'wano', desc: 'Have the rubbings read: an archaeologist in your crew — or the last of the Kozuki, who still read the ancient script (a certain swordsmith of Amigasa Village, Wano).', goal: { type: 'flag', flag: 'laughTaleRevealed' } },
       { id: 'voyage', desc: 'Sail to where the four lines cross: past Lodestar, just before Reverse Mountain, where no Log Pose leads.', goal: { type: 'reach', island: 'laugh_tale' },
         onComplete: (ctx, g) => g.ui.banner('LAUGH TALE', 'The final island', 'The storm that turned every ship away for eight hundred years parts in front of your bow.', 7) },
       { id: 'treasure', desc: 'Climb past the Last Poneglyph to the top of the cliffs — to what Joy Boy left behind.', goal: { type: 'reach', island: 'laugh_tale', spot: 'one_piece', r: 3 },
         onComplete: (ctx, g) => openFinale(g) },
-      { id: 'laugh', desc: 'Laugh.', goal: { type: 'flag', flag: 'laughTale' } },
+      { id: 'laugh', desc: 'Laugh.', goal: { type: 'flag', flag: 'laughTale' }, at: { island: 'laugh_tale', spot: 'one_piece', place: 'What Joy Boy left behind' } },
     ],
     rewards: { points: 5, attrs: { wil: 5 }, items: [['joy_boy_promise', 1]] } },
   { id: 'final_rival', name: 'The Last Rival', island: 'laugh_tale', kind: 'side', summary: 'Blackbeard followed your wake to the final island. He wants the One Piece.',
     stages: [
-      { id: 'duel', desc: 'Blackbeard\'s ship has run aground below the cliffs. Defeat Marshall D. Teach on Laugh Tale.', goal: { type: 'flag', flag: 'nw2_beat_teach_laugh_tale' } },
+      { id: 'duel', desc: 'Blackbeard\'s ship has run aground below the cliffs. Defeat Marshall D. Teach on Laugh Tale.', goal: { type: 'flag', flag: 'nw2_beat_teach_laugh_tale' }, npc: 'teach_laugh_tale' },
     ],
     rewards: { points: 5, berries: 10000000, flag: 'pirateKingUndisputed' },
     onComplete: (ctx, g) => g.ui.banner('KING OF THE PIRATES', 'Laugh Tale', 'The darkness is beaten. The whole sea will hear about this by morning.', 7) },

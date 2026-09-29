@@ -1474,7 +1474,7 @@ const quests = [
   { id: 'p1_foolshout_sun', name: "The Sun Pirates' Flag", island: 'foolshout_island', kind: 'side',
     summary: 'Fisher Tiger brought Koala home to Foolshout Island and died here in a Marine ambush. His crew\'s flag was left in the wreck.',
     stages: [
-      { id: 'flag', desc: "Search the wreck at the old anchorage on Foolshout's south-west shore for the Sun Pirates' flag.", goal: { type: 'item', item: 'p1_sun_flag' },
+      { id: 'flag', desc: "Search the wreck at the old anchorage on Foolshout's south-west shore for the Sun Pirates' flag.", goal: { type: 'item', item: 'p1_sun_flag' }, at: { spot: 'sun_anchorage', place: 'The wreck at the old anchorage' },
         onStart: (ctx, g) => ensureGroundItem(g, 'foolshout_island', 'sun_anchorage', 'p1_sun_flag', "the Sun Pirates' flag") },
       { id: 'report', desc: "Bring the flag to Koala's mother." },
     ],
@@ -1484,7 +1484,7 @@ const quests = [
     stages: [
       { id: 'collect', desc: 'Find the man with the "3" hairdo — Mr. 3 of Baroque Works — on Little Garden, and defeat him.', goal: { type: 'defeat', npc: 'p1_mr3' },
         onStart: skipIf('p1_kyuka_bill', 'collect', 'report', (c) => c.bosses.includes('p1_mr3')) },
-      { id: 'report', desc: 'Return to the manager of Hotel Kyuka.' },
+      { id: 'report', desc: 'Return to the manager of Hotel Kyuka.', npc: 'p1_kyuka_manager' },
     ],
     rewards: { berries: 9000, items: [['p1_ice_cream', 5]] } },
   { id: 'p1_vira_logbook', name: "Noland's Departure", island: 'vira', kind: 'side',
@@ -1500,7 +1500,7 @@ const quests = [
   { id: 'p1_whisky_peak', name: 'Welcome to Whisky Peak', island: 'cactus_island', kind: 'story',
     summary: 'Whisky Peak throws a party for every crew that survives Reverse Mountain. The whole town is very, very welcoming.',
     stages: [
-      { id: 'party', desc: "Enjoy Mayor Igarappoi's welcome party at the Whisky Peak Saloon (talk to him)." },
+      { id: 'party', desc: "Enjoy Mayor Igarappoi's welcome party at the Whisky Peak Saloon (talk to him).", npc: 'p1_igaram' },
       { id: 'hunters', desc: 'Whisky Peak is a nest of Baroque Works bounty hunters! Defeat their ringleaders, Mr. 9 and Miss Monday.', goal: { type: 'defeat', any: ['p1_mr9', 'p1_miss_monday'], count: 2 },
         onStart: (ctx, g) => {
           banner(g, 'WHISKY PEAK', 'Midnight', 'A hundred bounty hunters step out of the shadows, grinning.', 4);
@@ -1557,7 +1557,7 @@ const quests = [
       { id: 'spiders', desc: "The rebels have left Yuba. Spy on the Spiders Café, south-west of Yuba, where Baroque Works' officer agents meet.", goal: { type: 'reach', island: 'alabasta', spot: 'spiders_cafe', r: 5 },
         onComplete: (ctx, g) => banner(g, 'THE SPIDERS CAFÉ', 'Overheard at night', '"Operation Utopia begins. The rebels march on Alubarna, the capital burns, and the kingdom falls into Mr. 0\'s hands."', 6) },
       { id: 'rainbase', desc: "Strike at the root: infiltrate Crocodile's casino, Rain Dinners, in Rainbase (north-west).", goal: { type: 'reach', island: 'alabasta', spot: 'rain_dinners', r: 6 } },
-      { id: 'billions', desc: 'A trap! The floor of Rain Dinners opens and the Billions pour out. Defeat four Billions agents.', goal: { type: 'defeat', any: ['p1_billions_agent'], count: 4 },
+      { id: 'billions', desc: 'A trap! The floor of Rain Dinners opens and the Billions pour out. Defeat four Billions agents.', goal: { type: 'defeat', any: ['p1_billions_agent'], count: 4 }, at: { spot: 'rain_dinners', place: 'Rain Dinners' },
         onStart: (ctx, g) => { banner(g, 'RAIN DINNERS', "Crocodile's casino", '"Kuhahaha. Welcome, little rat." A voice from the dark — then the floor gives way.', 5); spawnGroupNow(g, 'alabasta', 'rain_dinners', BILLIONS); } },
       { id: 'kohza', desc: 'Warn Kohza at the Rebel Army headquarters in Katorea (east of the river) that the war is Crocodile\'s plot.' },
       { id: 'officers', desc: 'The rebels march on Alubarna. Stop Baroque Works\' Officer Agents in the capital\'s square — defeat 3 of them.', goal: { type: 'defeat', any: ['p1_mr1', 'p1_mr2', 'p1_mr4', 'p1_merry_christmas', 'p1_doublefinger'], count: 3 },
@@ -1590,7 +1590,7 @@ const quests = [
   { id: 'p1_golden_city', name: 'The City of Gold', island: 'jaya', kind: 'story',
     summary: 'Montblanc Cricket\'s ancestor, "Liar Noland", swore he saw a city of gold on Jaya. Maybe it is not under the sea — but above the clouds.',
     stages: [
-      { id: 'bird', desc: "Catch a South Bird in the woods on Jaya's southern arm. Its giant insects will defend it.", goal: { type: 'item', item: 'south_bird' },
+      { id: 'bird', desc: "Catch a South Bird in the woods on Jaya's southern arm. Its giant insects will defend it.", goal: { type: 'item', item: 'south_bird' }, at: { spot: 'south_bird_woods', place: 'The woods on Jaya\'s southern arm' },
         onStart: (ctx, g) => { ensureGroundItem(g, 'jaya', 'south_bird_woods', 'south_bird', 'a South Bird (its head points south)'); spawnGroupNow(g, 'jaya', 'south_bird_woods', JAYA_INSECTS); } },
       { id: 'ship', desc: 'Bring the South Bird to Masira of the Saruyama Alliance, beside Cricket\'s house.' },
       { id: 'stream', desc: 'Sail south of Jaya to where the sea churns, and ride the Knock Up Stream to the sky (press E on the churning sea).', goal: { type: 'event', event: 'p1_reached_sky' },
@@ -1991,8 +1991,13 @@ function install(game) {
   });
 }
 
+// where the events that finish quest steps happen (for their waypoints)
+const places = {
+  'rang_bell:golden_bell': { island: 'upper_yard', spot: 'golden_bell', place: 'The Golden Bell of Shandora' },
+};
+
 export default {
-  id: 'paradise1', npcs, groups, quests, items, trainers, stock, archetypes, abilities, install,
+  id: 'paradise1', npcs, groups, quests, places, items, trainers, stock, archetypes, abilities, install,
   dynamicIds: ['p1_billions_agent', 'p1_whirlpool_lord', 'p1_island_eater'],
 };
 

@@ -513,7 +513,7 @@ const quests = [
     rewards: { berries: 1500, points: 1 } },
   { id: 'pirate_hunter', name: 'The Pirate Hunter', island: 'shells_island', kind: 'story', summary: 'The pirate hunter Roronoa Zoro is tied up in the yard of Captain Morgan\'s Marine base.',
     stages: [
-      { id: 'deliver', desc: 'Bring Rika\'s rice ball to the man tied up in the Marine base yard.', goal: { type: 'flag', flag: '_never' } },
+      { id: 'deliver', desc: 'Bring Rika\'s rice ball to the man tied up in the Marine base yard.', goal: { type: 'flag', flag: '_never' }, npc: 'zoro_tied' },
       { id: 'free', desc: 'Deal with Helmeppo, the captain\'s son (he\'s near the town square).', goal: { type: 'defeat', npc: 'helmeppo' } },
       { id: 'morgan', desc: 'Defeat "Axe-Hand" Morgan at the 153rd Branch.', goal: { type: 'defeat', npc: 'morgan' }, onStart: (ctx, g) => { const m = findActor(g, 'morgan'); if (m) aggro(g, m); } },
       { id: 'zoro', desc: 'Talk to Zoro.', goal: { type: 'flag', flag: '_never2' } },
@@ -606,8 +606,9 @@ function install(game) {
         game.ui.banner('LORD OF THE COAST', 'Sea King', 'The water boils. Something ancient is hungry.', 4);
       }
     }
-    // Loguetown square
-    if (game.currentIsland?.id === 'polestar_islands' && game.quests.stageId('town_of_beginning') === 'platform') {
+    // Loguetown square (for whichever quest is waiting on it: this one, or the
+    // main story's — which you may reach after this one has moved on)
+    if (game.currentIsland?.id === 'polestar_islands' && game.quests.active().some(({ s, def }) => def.stages[s.stage]?.goal?.event === 'saw_platform')) {
       const t = game.currentIsland.towns[0];
       if (t && game.world.distance(game.player.x, game.player.y, t.plaza.x, t.plaza.y) < 5) {
         game.emit('questEvent', 'saw_platform');
@@ -669,5 +670,19 @@ function install(game) {
   });
 }
 
-export default { id: 'east_blue', npcs, groups, quests, install, dynamicIds: ['lord_of_the_coast'] };
+// where the events that finish quest steps happen (for their waypoints)
+const places = {
+  saw_platform: { island: 'polestar_islands', town: 'loguetown', place: 'The execution platform, Loguetown' },
+  gaimon_chest: { island: 'rare_animals', spot: 'gaimon', ox: 3.8, oy: -3, place: 'Gaimon\'s treasure chests' },
+  // (the mouth of the current up Reverse Mountain from the Blue you're in)
+  entered_grand_line: (g) => {
+    const M = g.world === g.surface ? g.surface.reverseMountain : null, p = g.player;
+    if (!M?.mouths || !p) return null;
+    let best = null, bd = Infinity;
+    for (const m of Object.values(M.mouths)) { const d = g.world.distance(p.x, p.y, m.x, m.y); if (d < bd) { bd = d; best = m; } }
+    return best ? { x: best.x, y: best.y, place: 'Reverse Mountain' } : null;
+  },
+};
+
+export default { id: 'east_blue', npcs, groups, quests, places, install, dynamicIds: ['lord_of_the_coast'] };
 export { C, count, addItem, persist };

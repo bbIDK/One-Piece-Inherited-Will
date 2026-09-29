@@ -1197,6 +1197,23 @@ const npcs = [
     }),
   },
   {
+    // (the chapter on Tumi promises that some of Inti's people might follow you to sea)
+    id: 'sb_killa', name: 'Killa', title: 'Rebel sharpshooter of Tumi', island: 'tumi', at: { town: 'tumi_town', door: 'Rebel Command', ox: -1.8 }, faction: 'revolutionary',
+    look: { hair: 'long', hairColor: '#212121', skin: '#a1693f', top: '#bf360c', bottom: '#4e342e', coat: '#6d4c41', hat: 'bandana', hatColor: '#f9a825', fem: true }, level: 9, style: 'sniper', weapon: 'gun',
+    recruit: { role: 'sniper', requires: (c, g) => g.quests.isDone('sb_tumi_tower'), pitch: '"The tower is ours, and Inti doesn\'t need another rifle now. You do. I can hit a gull on the wing from the top of the Sun Gate. Let me prove it on the Grand Line, captain."' },
+    dialogue: (ctx) => ({
+      start: 'a',
+      nodes: {
+        a: {
+          text: () => (done(ctx, 'sb_tumi_tower')
+            ? '"Huaca is finished. For the first time in three years I slept a whole night." (She checks the sights of her rifle anyway.) "Old habits."'
+            : '"Three years I\'ve been shooting at that tower. Huaca\'s men shoot back from behind stone; we shoot back from behind laundry." (She spits.) "If Inti would only let us rush it."'),
+          choices: [{ text: 'Goodbye.', end: true }],
+        },
+      },
+    }),
+  },
+  {
     id: 'sb_huaca', name: 'General Huaca', title: 'Commander of the loyalist army of Tumi', island: 'tumi', at: { spot: 'tumi_tower' }, hostile: true, boss: true, hpMul: 1.25,
     faction: 'bandit', level: 16, style: 'ittoryu', weapon: 'sword', moves: ['itto_iai', 'itto_pound', 'sb_halberd_sweep'], skill: 0.45, breakthrough: 3,
     look: { hair: 'short', hairColor: '#212121', top: '#33691e', bottom: '#1b5e20', coat: '#827717', hat: 'captain', hatColor: '#33691e', skin: '#a0643a', swords: 1 }, bulk: 1.3,
@@ -1466,15 +1483,15 @@ const quests = [
     id: 'sb_rouge_secret', name: 'The Woman Who Waited', island: 'baterilla', kind: 'story',
     summary: 'The Marines are searching Baterilla for the Pirate King\'s unborn child. A woman on the hill has a secret.',
     stages: [
-      { id: 'visit', desc: 'Bring Pimienta\'s hibiscus tea to the woman on the hill, north-east of Baterilla Village.' },
+      { id: 'visit', desc: 'Bring Pimienta\'s hibiscus tea to the woman on the hill, north-east of Baterilla Village.', npc: 'sb_rouge' },
       { id: 'patrol', desc: 'A Marine search patrol is coming up the cottage path. Stop Lieutenant Gablin.', goal: { type: 'defeat', npc: 'sb_gablin' },
         onStart: (ctx, g) => { if (isMarine(g.state?.char)) { spawnNow(g, 'sb_gablin'); return; } fightAt(g, 'sb_gablin', 'baterilla', 'cottage_path'); spawnSquad(g, 'baterilla', 'cottage_path'); } },
       { id: 'hound', desc: 'A Cipher Pol agent has the midwife\'s birth ledger. Deal with him at the Marine Search Camp.', goal: { type: 'defeat', npc: 'sb_pointer' },
         onStart: (ctx, g) => { if (g.state?.char?.bosses?.includes('sb_pointer')) { setTimeout(() => g.quests.next('sb_rouge_secret'), 0); return; } if (populated(g, 'baterilla')) spawnNow(g, 'sb_pointer'); } },
-      { id: 'wait', desc: 'Rouge must hold on until the searchers give up. Let a few days pass (rest at the inn), then visit her.',
+      { id: 'wait', desc: 'Rouge must hold on until the searchers give up. Let a few days pass (rest at the inn), then visit her.', npc: 'sb_rouge',
         onStart: (ctx, g) => { const c = g.state?.char; if (c) c.flags.sbRougeDay = g.env.day; } },
-      { id: 'birth', desc: 'Stay with Rouge.' },
-      { id: 'garp', desc: 'Talk to the Marine who came for the child.',
+      { id: 'birth', desc: 'Stay with Rouge.', npc: 'sb_rouge' },
+      { id: 'garp', desc: 'Talk to the Marine who came for the child.', npc: 'sb_garp',
         onStart: (ctx, g) => { setTimeout(() => { despawn(g, 'sb_rouge'); if (populated(g, 'baterilla')) spawnNow(g, 'sb_garp'); }, 60); } },
     ],
     rewards: { berries: 12000, points: 2, attrs: { wil: 1 }, items: [['sb_rouge_hibiscus', 1]] },
@@ -1569,7 +1586,7 @@ const quests = [
     id: 'sb_st_briss', name: 'The Voyage of the St. Briss', island: 'briss_kingdom', kind: 'side',
     summary: 'Two hundred and ten years ago the exploration ship St. Briss left Briss for the Grand Line and never came home.',
     stages: [
-      { id: 'sky', desc: 'Sail into the Grand Line and ask about the St. Briss at Jaya, where sailors say wrecks fall out of the sky.', goal: { type: 'flag', flag: 'sbStBrissFound' }, island: 'jaya' },
+      { id: 'sky', desc: 'Sail into the Grand Line and ask about the St. Briss at Jaya, where sailors say wrecks fall out of the sky.', goal: { type: 'flag', flag: 'sbStBrissFound' }, island: 'jaya', at: { dock: true } },
       { id: 'report', desc: 'Return to Archivist Briony at the Royal Archives of Briss.', island: 'briss_kingdom' },
     ],
     rewards: { berries: 30000, points: 2, items: [['gold_coins', 5]] },
@@ -1613,7 +1630,7 @@ const quests = [
       { id: 'wire', desc: 'Win over Wire at the Trident Pier Tavern in West Town.' },
       { id: 'syndicate', desc: 'Storm the Grinder Family Mansion in the heart of the island and defeat Don Grinder.', goal: { type: 'defeat', npc: 'sb_don_grinder' },
         onStart: bossStage('sb_victoria_punk', 'sb_don_grinder', 'kutsukku_island', 'grinder_mansion', (ctx, g) => { spawnSquad(g, 'kutsukku_island', 'grinder_mansion'); if (populated(g, 'kutsukku_island')) g.ui.banner('Four Towns, One Gang', 'Kutsukku Island', 'Kid, Killer, Heat and Wire storm the gates. The Grinder Family\'s men pour out to meet them — and the Don is waiting for you.', 5); }) },
-      { id: 'report', desc: 'Return to Kid at Victoria\'s grave, west of South Town.' },
+      { id: 'report', desc: 'Return to Kid at Victoria\'s grave, west of South Town.', npc: 'sb_kid' },
     ],
     rewards: { berries: 15000, points: 2, items: [['sb_scrap_flintlock', 1]] },
   },

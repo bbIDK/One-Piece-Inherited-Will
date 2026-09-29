@@ -30,7 +30,8 @@ export function stockFor(building, island) {
     case 'tavern': case 'bar': case 'restaurant': case 'cafe': return STOCK.tavern;
     case 'weapons': return n.includes('ipponmatsu') ? STOCK.loguetown_swords : sea === 'new_world' ? STOCK.weapons_new : grand ? STOCK.weapons_grand : STOCK.weapons_blue;
     case 'market': case 'shop':
-      if (n.includes('navigator') || n.includes('log')) return grand ? STOCK.navigator_grand : STOCK.navigator;
+      // (a navigator's, or a shop that says it sells Log Poses — not any name with "log" in it: "Loguetown Outfitters")
+      if (n.includes('navigator') || /\blog[ -]?poses?\b/.test(n)) return grand ? STOCK.navigator_grand : STOCK.navigator;
       if (n.includes('outfit') || n.includes('boutique')) return STOCK.outfitter;
       if (island?.def?.climate === 'sky') return STOCK.skypiea;
       return grand || sea === 'red_line' || sea === 'sky' || sea === 'undersea' ? STOCK.general : STOCK.general_blue;

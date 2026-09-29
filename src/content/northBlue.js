@@ -926,6 +926,23 @@ const npcs = [
     }),
   },
   {
+    // (the chapter on Swallow Island promises someone who'll sail with you once Bacca is beaten)
+    id: 'nb_solveig', name: 'Solveig Brandt', title: 'Ice-fisher of Pleasure Town', island: 'swallow_island', at: { town: 'swallow_town', plaza: true, ox: -2.5 },
+    look: { hair: 'ponytail', hairColor: '#fff3e0', skin: '#f1d3c0', top: '#455a64', bottom: '#37474f', coat: '#6d4c41', hat: 'bandana', hatColor: '#90a4ae', fem: true }, level: 8, style: 'brawler',
+    recruit: { role: 'fighter', requires: (c, g) => g.quests.isDone('nb_bacca'), pitch: `"I watched you take Bacca's crew apart from behind the fish racks. ...This island's too small for me now. Take me along — I can gut a fish or a pirate, whichever comes first."` },
+    dialogue: (ctx) => ({
+      start: 'a',
+      nodes: {
+        a: {
+          text: () => (done(ctx, 'nb_bacca')
+            ? `"Bacca's lot are gone, and the whole town's talking about you. Nobody's talked about anything here in ten years." (She sets down her harpoon.) "I'm not going to spend the next ten gutting cod."`
+            : `"Keep your head down, stranger. The Bacca Pirates take a cut of every catch — and a finger from anyone who argues." (She glares at the harbour.) "Someone ought to do something. Rudd can't, alone."`),
+          choices: [{ text: 'Goodbye.', end: true }],
+        },
+      },
+    }),
+  },
+  {
     id: 'nb_bepo', name: 'Bepo', title: 'A lost polar-bear cub (Mink)', island: 'swallow_island', race: 'mink', at: { spot: 'bepo_field' },
     fullLook: { race: 'mink', skin: '#fafafa', fur: '#fafafa', hairColor: '#fafafa', hand: '#fafafa', ears: 'round', muzzle: true, furFace: true, hair: 'bald', top: '#ff7043', bottom: '#ff7043', scale: 0.8 }, level: 8, ai: 'idle',
     dialogue: (ctx) => ({
@@ -1058,7 +1075,7 @@ const quests = [
           spawnNow(g, 'nb_law_scrap');
           g.ui.banner('Out the Window', 'Spider Miles', 'The boy marches in. Moments later glass shatters: a tall man in a black feather coat has thrown him out of a fourth-floor window into the scrap. The man is on fire — he lit his own coat with his cigarette.', 7);
         } },
-      { id: 'talk', desc: 'Check on the boy in the scrap heap below the hideout window.' },
+      { id: 'talk', desc: 'Check on the boy in the scrap heap below the hideout window.', npc: 'nb_law_scrap' },
     ],
     rewards: { berries: 1500, points: 1 },
     onComplete: (ctx, g) => {
@@ -1084,9 +1101,9 @@ const quests = [
     id: 'nb_ope_ope', name: 'The Ope Ope no Mi', island: 'minion_island', kind: 'story',
     summary: 'Corazon has found a cure for the white-spotted boy: a Devil Fruit a pirate means to sell to the Marines for five billion berries.',
     stages: [
-      { id: 'whiteland', island: 'whiteland', desc: 'Ask the Whiteland Royal Hospital, north of Lvneel, to treat the boy.' },
+      { id: 'whiteland', island: 'whiteland', desc: 'Ask the Whiteland Royal Hospital, north of Lvneel, to treat the boy.', npc: 'nb_abel' },
       { id: 'call', island: 'lvneel', desc: 'Return to Corazon on the harbour bench in Lvneel.' },
-      { id: 'rubeck', island: 'rubeck', desc: 'Find out where the fruit is: ask at the Marine exchange camp on Rubeck Island, south-east of Lvneel.' },
+      { id: 'rubeck', island: 'rubeck', desc: 'Find out where the fruit is: ask at the Marine exchange camp on Rubeck Island, south-east of Lvneel.', npc: 'nb_garrow' },
       { id: 'barrels', desc: 'Storm the ghost town on Minion Island, east of Rubeck, and defeat Diez Barrels while Corazon steals the fruit.', goal: { type: 'defeat', npc: 'nb_barrels', island: 'minion_island', spot: 'mansion_yard' },
         onStart: (ctx, g) => spawnAggro(g, 'nb_barrels'),
         onComplete: (ctx, g) => g.ui.banner('Calm', 'Minion Island', 'The lamps go out, and not one sound follows. When the light returns, the Ope Ope no Mi is gone — and somewhere in the snow a boy is choking down the worst-tasting fruit in the world.', 7) },
@@ -1134,7 +1151,7 @@ const quests = [
     id: 'nb_liar_noland', name: 'Noland the Liar', island: 'lvneel', kind: 'story',
     summary: 'Every child in the North Blue learns that Montblanc Noland was a liar. Lvneel\'s Royal Archivist does not believe it.',
     stages: [
-      { id: 'book', desc: 'Buy a copy of "Liar Noland" at the Royal Bookshop in Lvneel.', goal: { type: 'item', item: 'nb_liar_noland' } },
+      { id: 'book', desc: 'Buy a copy of "Liar Noland" at the Royal Bookshop in Lvneel.', goal: { type: 'item', item: 'nb_liar_noland' }, npc: 'nb_hedda' },
       { id: 'archive', desc: 'Bring the picture book to Archivist Pell at the Royal Archive.' },
       { id: 'stand', desc: 'Stand where Noland was executed — the old stand east of the town.', goal: { type: 'reach', island: 'lvneel', spot: 'noland_stand', r: 3 },
         onComplete: (ctx, g) => g.ui.banner('"That\'s it!"', 'Lvneel, four hundred years ago', '"...The City of Gold must have sunk into the sea!" — the last words of Montblanc Noland, admiral, explorer and botanist, before the axe fell.', 7) },
@@ -1155,7 +1172,7 @@ const quests = [
     summary: 'Germa 66 — the evil army from "Sora, Warrior of the Sea" — is real, and its snail-ships are anchored by the Red Line.',
     stages: [
       { id: 'reach', desc: 'Find the Germa Kingdom\'s snail-ships, anchored near the Red Line at the eastern edge of the North Blue.', goal: { type: 'reach', island: 'germa_kingdom' } },
-      { id: 'cosette', desc: 'Someone in the Royal Kitchen of Vinsmoke Castle needs help. Find the head chef.' },
+      { id: 'cosette', desc: 'Someone in the Royal Kitchen of Vinsmoke Castle needs help. Find the head chef.', npc: 'nb_cosette' },
       { id: 'depot', desc: 'Break the Germa 66 squad drilling on the west platform: defeat their clone squad leader.', goal: { type: 'defeat', npc: 'nb_clone_captain', island: 'germa_kingdom', spot: 'germa_parade' } },
       { id: 'niji', desc: 'Prince Niji, "Dengeki Blue", waits on the south-east platform. Defeat him.', goal: { type: 'defeat', npc: 'nb_niji', island: 'germa_kingdom', spot: 'germa_courtyard' },
         onStart: (ctx, g) => { spawnAggro(g, 'nb_niji'); g.ui.banner('Dengeki Blue', 'Vinsmoke Niji, Second Prince of Germa', 'A can hisses open. A blue raid suit wraps itself around the prince, and his boots lift him off the ground.', 5); } },
@@ -1167,7 +1184,7 @@ const quests = [
     id: 'nb_third_prince', name: 'The Third Prince', island: 'germa_kingdom', kind: 'side',
     summary: 'Princess Reiju had a brother who "died in a shipwreck". She has heard of a curly-browed cook on a sea restaurant in the East Blue.',
     stages: [
-      { id: 'baratie', island: 'baratie', desc: 'See the curly-browed cook of the Baratie, the sea restaurant of the East Blue, with your own eyes. (A long voyage: Reverse Mountain, the Grand Line, then north across the Calm Belt.)', goal: { type: 'flag', flag: 'nbSawSanji' } },
+      { id: 'baratie', island: 'baratie', desc: 'See the curly-browed cook of the Baratie, the sea restaurant of the East Blue, with your own eyes. (A long voyage: Reverse Mountain, the Grand Line, then north across the Calm Belt.)', goal: { type: 'flag', flag: 'nbSawSanji' }, at: { dock: true } },
       { id: 'report', desc: 'Tell Reiju what you saw, on the Germa Kingdom.' },
     ],
     rewards: { berries: 20000, points: 1, items: [['nb_germa_antidote', 3]] },
@@ -1180,7 +1197,7 @@ const quests = [
       { id: 'elder', desc: 'Give the rice balls to Elder Grom so the village can eat.' },
       { id: 'mountain', desc: 'Search the shallow cave at the foot of Kuen Mountain, west of the village.', goal: { type: 'reach', island: 'kuen', spot: 'kuen_cave', r: 3 },
         onComplete: (ctx, g) => g.ui.banner('A Faded Ribbon', 'Kuen Mountain', 'Cold ashes, a child\'s ribbon... and caught on a thornbush, one long PINK FEATHER.', 6) },
-      { id: 'report', desc: 'Tell the mother what you found.' },
+      { id: 'report', desc: 'Tell the mother what you found.', npc: 'nb_kuen_mother' },
     ],
     rewards: { berries: 3000, attrs: { wil: 1 } },
   },

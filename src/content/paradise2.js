@@ -1744,6 +1744,8 @@ const quests = [
     summary: 'CP9 dragged Franky and the Pluton blueprints to Enies Lobby, the Judicial Island. Beyond it: the Gates of Justice, and Impel Down. Stop them first.',
     stages: [
       { id: 'rocketman', island: 'water_7', desc: 'The Aqua Laguna is hitting Water 7. Ride the Rocketman from Kokoro\'s Shift Station (east shore) — or brave the storm and sail — to Enies Lobby.', goal: { type: 'reach', island: 'enies_lobby' },
+        // (on Water 7: the Rocketman, at Shift Station; out at sea: Enies Lobby)
+        where: (g) => (g.currentIsland?.id === 'water_7' ? g.quests.liveOf(['p2_kokoro'], '') : null),
         onStart: (ctx, g) => bannerG(g, 'AQUA LAGUNA', 'Water 7', 'A tidal wave taller than the city is coming. The whole of Water 7 flees to high ground. The Puffing Tom has already left for Enies Lobby.', 6) },
       { id: 'main_gate', desc: 'Get through the Main Gate on the west side of Enies Lobby, guarded by the giant Oimo. (If you have been to Little Garden, he might listen.)', goal: { type: 'defeat', npc: 'p2_oimo' },
         onStart: (ctx, g) => {
@@ -1762,6 +1764,8 @@ const quests = [
       { id: 'lucci', desc: 'Rob Lucci is dragging Franky across the Bridge of Hesitation toward the Gates of Justice (east of the Tower). Defeat him.', goal: { type: 'defeat', npc: 'p2_lucci' },
         onStart: (ctx, g) => { if (!skipBeaten('p2_enies_lobby', 'lucci', ['p2_lucci'])(ctx, g)) { summon(g, 'p2_lucci'); bannerG(g, 'THE BRIDGE OF HESITATION', 'Rob Lucci', '"This is where criminals hesitate, one last time, before the Gates of Justice." Spandam presses the Golden Den Den Mushi by mistake. Somewhere, ten battleships turn toward Enies Lobby.', 7); } } },
       { id: 'buster_call', island: 'water_7', desc: 'BUSTER CALL! Five Vice Admirals are shelling Enies Lobby to dust. Escape — take the Puffing Tom from Day Station, or sail — back to Water 7.', goal: { type: 'reach', island: 'water_7' },
+        // (on Enies Lobby: the Puffing Tom, at Day Station; out at sea: Water 7)
+        where: (g) => (g.currentIsland?.id === 'enies_lobby' ? g.quests.liveOf(['p2_day_station'], '') : null),
         onStart: (ctx, g) => {
           bannerG(g, 'BUSTER CALL', 'Enies Lobby', 'Ten battleships, five Vice Admirals: the island is being erased — with its own soldiers still on it. Run!', 7);
           spawnHere(g, { island: 'enies_lobby', spot: 'courtyard', radius: 8, enemies: BUSTER });
@@ -1773,7 +1777,7 @@ const quests = [
   { id: 'p2_adam_wood', name: 'The Dream Ship', island: 'water_7', kind: 'side',
     summary: 'Franky wants to build a ship that can sail to the end of the world. All he needs is a plank of Adam wood.',
     stages: [
-      { id: 'wood', desc: 'Find Adam wood — the black market in St. Poplar sells it, and people there might pay in it.', goal: { type: 'item', item: 'adam_wood' } },
+      { id: 'wood', desc: 'Find Adam wood — the black market in St. Poplar sells it, and people there might pay in it.', goal: { type: 'item', item: 'adam_wood' }, npc: 'p2_poplar_dealer' },
       { id: 'build', desc: 'Bring the Adam wood to Franky\'s workshop on Scrap Island (south-east Water 7).' },
     ],
     rewards: { points: 1 } },
@@ -2296,8 +2300,18 @@ function install(game) {
   });
 }
 
+// where the events that finish quest steps happen (for their waypoints)
+const places = {
+  p2_w7_assault: { island: 'water_7', town: 'w7_main_street', door: 'Galley-La Company Headquarters' },
+  p2_read_lab: { island: 'karakuri', town: 'baldimore', door: "Vegapunk's Old Laboratory" },
+  // (it happens as you reach Fish-Man Island: from up here, where the current goes down)
+  p2_dived: { island: 'fishman_island' },
+  // (the war ends in time — or you get away by sea)
+  p2_war_end: { island: 'marineford', dock: true },
+};
+
 export default {
   id: 'paradise2',
-  npcs, groups, quests, items, trainers, stock, abilities, install,
+  npcs, groups, quests, places, items, trainers, stock, abilities, install,
   dynamicIds: [],
 };

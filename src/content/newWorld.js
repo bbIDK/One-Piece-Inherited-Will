@@ -1781,7 +1781,7 @@ const quests = [
     summary: 'Fleet Admiral Sakazuki\'s orders: bring down Caesar Clown and the Warlord Doflamingo.',
     stages: [
       { id: 'g5', desc: 'Report to Marine Base G-5 near the Red Line.', goal: { type: 'reach', island: 'g5_base' } },
-      { id: 'caesar', desc: 'Bring down the fugitive scientist Caesar Clown on Punk Hazard.', goal: { type: 'flag', flag: 'nw_down_nw_caesar' } },
+      { id: 'caesar', desc: 'Bring down the fugitive scientist Caesar Clown on Punk Hazard.', goal: { type: 'flag', flag: 'nw_down_nw_caesar' }, npc: 'nw_caesar' },
       { id: 'doflamingo', desc: 'Expose and defeat the Warlord Donquixote Doflamingo on Dressrosa.', goal: { type: 'flag', flag: 'nw_down_nw_doflamingo' } },
       { id: 'report', desc: 'Report to Fleet Admiral Sakazuki at New Marineford.' },
     ],
@@ -2090,8 +2090,14 @@ function install(game) {
   game.on('questDone', (id) => { if (id === 'nw_wci_poneglyph' || id === 'nw_zou_poneglyph') persist(game); });
 }
 
+// where the events that finish quest steps happen (for their waypoints)
+const places = {
+  nw_rub_road_zou: { island: 'zou', spot: 'zou_poneglyph', place: 'The Road Poneglyph in the Whale\'s tail' },
+  nw_rub_road_wci: { island: 'whole_cake_island', spot: 'room_of_treasure', place: 'The Room of Treasure' },
+};
+
 export default {
   id: 'newWorld',
-  npcs, groups, quests, items, trainers, stock, archetypes, abilities, install,
+  npcs, groups, quests, places, items, trainers, stock, archetypes, abilities, install,
   dynamicIds: [],
 };

@@ -257,6 +257,23 @@ const npcs = [
     }),
   },
   {
+    // (the chapter in Esperia promises a crewmate who can keep up with you once the convoy is safe)
+    id: 'wb_chiara', name: 'Chiara', title: 'Violinist of Cello Port', island: 'esperia', at: { town: 'esperia_town', door: "Instrument Makers' Guild", ox: -1.8 },
+    look: { hair: 'long', hairColor: '#4e342e', skin: '#e0ac7e', top: '#7b1fa2', bottom: '#263238', coat: '#311b92', fem: true, swords: 1 }, level: 8, style: 'ittoryu', weapon: 'sword',
+    recruit: { role: 'musician', requires: (c, g) => g.quests.isDone('wb_esperia_convoy'), pitch: `"Grandfather says the captain of the Battle Convoy hummed while he fought, and finished his song with the last gunman down. I've been practising both since I was six. ...Take me to sea. I'll keep your crew on its feet — and your enemies busy."` },
+    dialogue: (ctx) => ({
+      start: 'a',
+      nodes: {
+        a: {
+          text: () => (done(ctx, 'wb_esperia_convoy')
+            ? `"The Moulon Family ran from the Opera House — Grandfather is still laughing about it." (She tucks her violin under her chin and plays three bars of something fast.) "Cello Port is lovely. It's also very, very small."`
+            : `"Old Ottavio is my grandfather. He won't say it, but the Moulon Family are bleeding the Guild dry — they took the Opera House's instruments too." (She rests a hand on the rapier at her hip.) "If I were a little older, I'd go in there myself."`),
+          choices: [{ text: 'Goodbye.', end: true }],
+        },
+      },
+    }),
+  },
+  {
     id: 'wb_moulon_jr', name: 'Don Moulon II', title: 'Boss of the Moulon Family', island: 'esperia', at: { spot: 'opera_house' }, hostile: true, boss: true, hpMul: 0.9,
     look: { hair: 'short', hairColor: '#212121', skin: '#e0ac7e', top: '#4a148c', bottom: '#212121', coat: '#212121', hat: 'cowboy', hatColor: '#212121', bulk: 1.2 }, level: 10,
     faction: 'bandit', style: 'sniper', weapon: 'gun', ranged: true, prefRange: 5, moves: ['wb_violin_case', 'snipe_explode'], skill: 0.35, breakthrough: 2, reward: 5000,
@@ -931,7 +948,19 @@ const quests = [
     id: 'wb_god_valley', name: 'The Island That Never Was', island: 'god_valley', kind: 'story',
     summary: 'Old Coyote survived the Native Hunting Competition on God Valley thirty-six years ago. He wants proof that it happened.',
     stages: [
-      { id: 'relics', desc: 'Search God Valley\'s remains: the Nobles\' hunting grounds (west), the drowned canyon town (east) and the Rocks longboat wreck (east shore).', goal: { type: 'flag', flag: 'wbGvRelics' } },
+      { id: 'relics', desc: 'Search God Valley\'s remains: the Nobles\' hunting grounds (west), the drowned canyon town (east) and the Rocks longboat wreck (east shore).', goal: { type: 'flag', flag: 'wbGvRelics' },
+        // (the nearest of the three still to search)
+        where: (g) => {
+          const isl = g.world === g.surface ? g.surface.islands.find((i) => i.id === 'god_valley') : null, c = g.state.char, p = g.player;
+          let best = null, bd = Infinity;
+          for (const [spot, , flag, title] of GV_RELICS) {
+            const s = isl?.spots?.[spot];
+            if (!s || c.flags[flag]) continue;
+            const d = g.world.distance(p.x, p.y, s.x, s.y);
+            if (d < bd) { bd = d; best = { x: s.x, y: s.y, place: GV_PLACES[spot] || title }; }
+          }
+          return best;
+        } },
       { id: 'serpent', desc: 'Something nests in the drowned ravine. Sail out north of God Valley and slay it.', goal: { type: 'defeat', npc: 'wb_valley_king' },
         where: (g) => { const s = g.surface.islands.find((i) => i.id === 'god_valley')?.spots?.valley_deep; return s && g.world === g.surface ? { x: s.x, y: s.y, place: 'The drowned ravine' } : null; },
         onStart: (ctx, g) => g.ui.banner('The Drowned Ravine', 'God Valley', 'The water north of the island is black and very deep. Something down there is circling.', 5) },
@@ -988,7 +1017,7 @@ const quests = [
     id: 'wb_bege_job', name: 'A Job for the Gang', island: 'las_camp', kind: 'story',
     summary: 'Capone "Gang" Bege wants the head of Don Mamba of the Twin Snakes — one more of the Five Families of the West.',
     stages: [
-      { id: 'scout', island: 'soja_island', desc: 'Go to the Twin Snakes Gambling House in Soja Village (Soja Island, north of Las Camp) and talk to the blind bodyguard.', goal: { type: 'flag', flag: 'wbIsshoTalked' } },
+      { id: 'scout', island: 'soja_island', desc: 'Go to the Twin Snakes Gambling House in Soja Village (Soja Island, north of Las Camp) and talk to the blind bodyguard.', goal: { type: 'flag', flag: 'wbIsshoTalked' }, npc: 'wb_issho' },
       { id: 'dice', island: 'soja_island', desc: 'The bodyguard is working off a gambling debt. Take the house dice from the croupier who smokes in Soja\'s back alley.', goal: { type: 'defeat', npc: 'wb_croupier' },
         onComplete: (ctx) => { ctx.give('wb_loaded_dice', 1); ctx.log('The croupier drops a pair of dice. They are heavier on one side.', '#ffe082'); } },
       { id: 'issho', island: 'soja_island', desc: 'Show the loaded dice to Issho, the blind bodyguard.', goal: { type: 'flag', flag: 'wbIsshoLeft' } },
@@ -1026,7 +1055,7 @@ const quests = [
     id: 'wb_raccoon_raids', name: 'Pretended Sleep', island: 'las_camp', kind: 'side',
     summary: 'The Raccoon Pirates raid Las Camp\'s south-east shore. Their captain plays dead when he is losing.',
     stages: [
-      { id: 'crew', desc: 'Break the Raccoon Pirates\' raiding party on Las Camp\'s south-east shore.', goal: { type: 'defeat', any: ['wb_raccoon_pirate'], count: 3 } },
+      { id: 'crew', desc: 'Break the Raccoon Pirates\' raiding party on Las Camp\'s south-east shore.', goal: { type: 'defeat', any: ['wb_raccoon_pirate'], count: 3 }, at: { spot: 'raider_landing', place: 'The raiders\' landing' } },
       { id: 'raccoon', desc: 'Defeat "Pretended Sleep" Raccoon. When he goes down, keep hitting — he\'s faking.', goal: { type: 'defeat', npc: 'wb_raccoon' },
         onStart: (ctx, g) => { if (g.spawner.populated.has('las_camp')) spawnAndAggro(g, 'wb_raccoon'); g.ui.banner('"Pretended Sleep" Raccoon', 'Bounty ฿75,000,000', 'A pirate who has survived every fight by losing it convincingly.', 5); } },
       { id: 'report', island: 'marine_80th', desc: 'Report to Captain Burdock at the Marine 80th Branch (north of Soja Island).' },
@@ -1037,7 +1066,7 @@ const quests = [
     id: 'wb_ilisia_dragon', name: 'The King Who Saw Dragon Coming', island: 'ilisia', kind: 'story',
     summary: 'Revolutionary pamphlets flood Ilisia Harbor. King Thalassa Lucas wants the cell found; refugees want to be forgotten.',
     stages: [
-      { id: 'investigate', desc: 'Find who is behind the pamphlets — search the warehouses of Ilisia Harbor.', goal: { type: 'flag', flag: 'wbIlisiaFound' } },
+      { id: 'investigate', desc: 'Find who is behind the pamphlets — search the warehouses of Ilisia Harbor.', goal: { type: 'flag', flag: 'wbIlisiaFound' }, npc: 'wb_refugee' },
       { id: 'choice', desc: 'Choose: tell Captain Gallardo of the Royal Guard (Royal Capital), or help the Revolutionary at the smugglers\' cove (east shore).' },
       { id: 'crown_fight', desc: 'Defeat Ushiano of the Revolutionary Army at the smugglers\' cove (east shore).', goal: { type: 'defeat', npc: 'wb_ushiano' } },
       { id: 'crown_report', desc: 'Report to King Thalassa Lucas at Ilisia Palace.' },
@@ -1193,6 +1222,7 @@ const abilities = [
 ];
 
 // Relics hidden in God Valley's ruins: [spot, item, flag, banner title, text]
+const GV_PLACES = { hunting_lodge: 'The Nobles\' hunting grounds', canyon_town: 'The drowned canyon town', rocks_wreck: 'The Rocks longboat wreck' };
 const GV_RELICS = [
   ['hunting_lodge', 'wb_rabbit_tag', 'wbGvTag', 'The Hunting Grounds', 'Rusted cages, and a tin tag stamped with a target. "Rabbits" had one hour to hide before the Celestial Dragons began to score points.'],
   ['canyon_town', 'wb_noble_horn', 'wbGvHorn', 'The Drowned Canyon Town', 'False-fronted houses half-buried in gravel. Wedged in a doorway: a gold horn with the crest of the Celestial Dragons.'],
@@ -1351,7 +1381,13 @@ function install(game) {
   });
 }
 
+// where the events that finish quest steps happen (for their waypoints)
+const places = {
+  wb_kano_bell: { island: 'kano_country', landmark: 'Bell of the Eight Impacts' },
+  wb_searched_clinic: { island: 'ballywood', spot: 'hogback_clinic', place: 'Dr. Hogback\'s clinic' },
+};
+
 export default {
-  id: 'westBlue', npcs, groups, quests, items, trainers, stock, archetypes, abilities, install,
+  id: 'westBlue', npcs, groups, quests, places, items, trainers, stock, archetypes, abilities, install,
   dynamicIds: ['wb_valley_king', 'wb_raccoon_pirate'],
 };
