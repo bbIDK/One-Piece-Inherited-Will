@@ -168,7 +168,44 @@ const HUMAN_STARTERS = {
   south_blue: ['baterilla_town', 'karate_dojo_town', 'sorbet_town', 'briss_town', 'centaurea_town', 'kutsukku_town'],
 };
 
-export function resolveSpawn(world, char) {
+/**
+ * Towns nobody should wake up in: where a named crew who fight whoever walks
+ * in stand about the square (Arlong Park), or a band of them is camped right
+ * by it, for as long as they're still about. (`defs`: the NPC definitions,
+ * `groups`: the enemy groups; a crew that keeps to itself till you start it
+ * — `calm` — doesn't count, nor one boss behind the door of his hall, nor a
+ * lone troublemaker down at the pier: the square is where you wake.)
+ */
+export function heldTowns(world, defs, groups, char) {
+  const held = new Set();
+  const about = (d) => { try { return !d.when || !!d.when(char); } catch (e) { return true; } };
+  for (const d of defs) {
+    if (!d.hostile || d.calm || !d.at || typeof d.at !== 'object' || !d.at.town) continue;
+    const pl = d.at;
+    const inSquare = pl.plaza || (!pl.building && !pl.door && !pl.dock && !pl.spot && !pl.dx);
+    if (inSquare && about(d)) held.add(pl.town);
+  }
+  for (const grp of groups || []) {
+    if (grp.calm || !about(grp)) continue;
+    const isl = world.islands.find((i) => i.id === grp.island);
+    if (!isl) continue;
+    const base = grp.spot ? isl.spots?.[grp.spot] : { x: isl.x + (grp.dx || 0) * isl.def.w / 2, y: isl.y + (grp.dy || 0) * isl.def.h / 2 };
+    if (!base) continue;
+    for (const t of isl.towns) if (t.plaza && world.distance(base.x, base.y, t.plaza.x, t.plaza.y) < (grp.radius || 5) + 16) held.add(t.id);
+  }
+  return held;
+}
+
+/** The town (x, y) is in, of those in `ids`. */
+export function townAt(world, x, y, ids) {
+  for (const isl of world.islands) {
+    if (Math.abs(world.dx(isl.x, x)) > isl.radius + 60 || Math.abs(isl.y - y) > isl.radius + 60) continue;
+    for (const t of isl.towns) if ((!ids || ids.has(t.id)) && x >= t.x0 - 3 && x <= t.x1 + 3 && y >= t.y0 - 3 && y <= t.y1 + 3) return t;
+  }
+  return null;
+}
+
+export function resolveSpawn(world, char, avoid = new Set()) {
   const rng = new RNG(char.runSeed + ':spawn');
   const race = RACES[char.race];
   const sea = rng.pick(race.spawnSeas);
@@ -185,13 +222,13 @@ export function resolveSpawn(world, char) {
     }
   }
   const wanted = race.spawnTowns || HUMAN_STARTERS[sea] || [];
-  const byId = allTowns.filter(({ t }) => wanted.includes(t.id));
+  const byId = allTowns.filter(({ t }) => wanted.includes(t.id) && !avoid.has(t.id));
   if (byId.length) pick = rng.pick(byId);
   if (!pick) {
-    const inSea = allTowns.filter(({ isl }) => regionAt(isl.x, isl.y) === seaRegion);
+    const inSea = allTowns.filter(({ isl, t }) => regionAt(isl.x, isl.y) === seaRegion && !avoid.has(t.id));
     if (inSea.length) pick = rng.pick(inSea);
   }
-  if (!pick) pick = allTowns[0];
+  if (!pick) pick = allTowns.find(({ t }) => !avoid.has(t.id)) || allTowns[0];
   const { isl, t } = pick;
   return { x: t.plaza.x + 0.5, y: t.plaza.y + 2.5, island: isl, town: t, sea, name: `${t.name}, ${isl.name}` };
 }

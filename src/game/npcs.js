@@ -24,6 +24,7 @@ export function registerNPCs(list) { for (const n of list) NPC_DEFS.set(n.id, n)
 export function registerGroups(list) { for (const g of list) GROUPS.push(g); }
 export const npcDef = (id) => NPC_DEFS.get(id);
 export const allNpcDefs = () => [...NPC_DEFS.values()];
+export const allGroups = () => GROUPS.slice();
 
 // ---------------------------------------------------------- enemy archetypes
 // level ~ attribute value; tier gives HP/damage multipliers
@@ -154,6 +155,8 @@ export function makeNPC(def, x, y, extra = {}) {
   });
   if (kind === 'guard' || kind === 'idle') { a.stationary = true; a.faceHome = Math.PI / 2; }
   if (def.hostile) a.aggroPlayer = true;
+  // (a crew who keep to themselves till you start it, or their story does)
+  if (def.calm) a.calm = true;
   return a;
 }
 
@@ -209,6 +212,7 @@ export function npcBuilder(ctx) {
       const a = makeEnemy(arch, lvl, p.x, p.y, over || {});
       a.game = game;
       if (grp.leash) a.controller.leash = grp.leash;
+      if (grp.calm) a.calm = true;
       game.addActor(a);
       list.push(a);
     }

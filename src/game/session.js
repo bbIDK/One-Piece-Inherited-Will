@@ -1,5 +1,6 @@
 // Starting, resuming and ending a character's journey.
-import { buildPlayer, resolveSpawn, persist, decodeFog, createCharacter, refreshPlayer, upgradeChar, migrateWorld } from './lineage.js';
+import { buildPlayer, resolveSpawn, heldTowns, townAt, persist, decodeFog, createCharacter, refreshPlayer, upgradeChar, migrateWorld } from './lineage.js';
+import { allNpcDefs, allGroups } from './npcs.js';
 import { ALL_ISLANDS } from '../data/islands/index.js';
 import { saveLegacy, loadLegacy, saveChar } from './save.js';
 import { board } from './interact.js';
@@ -105,7 +106,8 @@ export function startNewCharacter(game, birth, choices) {
   legacy.heirloom = null; // it has been handed over
   saveLegacy(legacy);
   const world = game.surface;
-  const spawn = resolveSpawn(world, char);
+  // (never in a town held by a crew who'd set on you the moment you woke)
+  const spawn = resolveSpawn(world, char, heldTowns(world, allNpcDefs(), allGroups(), char));
   char.spawn = { x: spawn.x, y: spawn.y, name: spawn.name, sea: spawn.sea };
   char.rest = { ...char.spawn };
   char.birthplace = spawn.name;
@@ -123,7 +125,8 @@ export function startNewCharacter(game, birth, choices) {
   const shipType = legacy.perks?.ship ? 'sloop' : 'dinghy';
   let placed = false;
   if (isl) {
-    const dock = isl.docks[0];
+    // (at the pier nearest where you wake)
+    const dock = isl.docks.slice().sort((a, b) => world.distance(a.land.x, a.land.y, spawn.x, spawn.y) - world.distance(b.land.x, b.land.y, spawn.x, spawn.y))[0];
     if (dock) { game.giveShip(shipType, dock.moor.x, dock.moor.y, shipType === 'dinghy' ? 'Little Rowboat' : 'Sea Sparrow'); placed = true; }
   }
   if (!placed) {
@@ -151,6 +154,7 @@ export function resumeCharacter(game, char) {
   game.state = { char, legacy };
   // (saved on the old, smaller world: everything moves onto this one)
   const moved = migrateWorld(char, world, ALL_ISLANDS);
+  safeStart(world, char);
   if (char.fogSurface) decodeFog(char.fogSurface, world.fog); else world.fog.fill(0);
   if (moved) for (const id of char.discovered || []) revealIsland(game, id);
   game.renderer.terrain.updateFog(world.fog);
@@ -185,6 +189,24 @@ export function resumeCharacter(game, char) {
   setTimeout(() => game.ui.banner(char.name, `Generation ${char.generation} · ${RACES[char.race]?.name}`, `${reg} — Day ${game.env.day}`, 4), 300);
   game.emit('characterStart', { char, isNew: false });
   return p;
+}
+
+/**
+ * A character who started out in a town held by a crew who fight on sight
+ * (Fish-Men once woke in Arlong Park, and were set upon before they could
+ * stand) starts over somewhere safe: their start, their bed if it was
+ * there, and themselves if they never left.
+ */
+function safeStart(world, char) {
+  const held = heldTowns(world, allNpcDefs(), allGroups(), char);
+  if (!char.spawn || !townAt(world, char.spawn.x, char.spawn.y, held)) return false;
+  const s = resolveSpawn(world, char, held);
+  const fresh = { x: s.x, y: s.y, name: s.name, sea: s.sea };
+  if (!char.rest || townAt(world, char.rest.x, char.rest.y, held)) char.rest = { ...fresh };
+  if (char.pos && (!char.pos.zone || char.pos.zone === 'surface') && char.pos.mode !== 'sail' && townAt(world, char.pos.x, char.pos.y, held)) char.pos = { ...char.pos, x: fresh.x, y: fresh.y };
+  if (char.birthplace === char.spawn.name) char.birthplace = fresh.name;
+  char.spawn = fresh;
+  return true;
 }
 
 export function revealIsland(game, id) {

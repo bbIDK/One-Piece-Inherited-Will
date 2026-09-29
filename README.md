@@ -149,7 +149,11 @@ rearrange them.
 
 - **Race** is rolled with rarities: Human, Fish-Man, Mink, Skypiean, Longarm,
   Longleg, Buccaneer, Three-Eye or Lunarian. Race decides which Blue and
-  which town you are born in.
+  which town you are born in. Nobody is born in a town held by a crew who
+  fight on sight (Fish-Men are born in Cocoyasi, not inside Arlong Park).
+  A save that started there wakes in Cocoyasi instead. Buggy's crew in
+  Orange Town lord it over the town but leave a newcomer be, until someone
+  lays a hand on one of them.
 - **Traits** are rolled at birth. About one birth in twenty carries the
   **Will of D.**: a hidden "D." in your name, revealed with a flourish at
   birth. **King's Disposition** (Conqueror's Haki) is far rarer and stays

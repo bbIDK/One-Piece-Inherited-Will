@@ -730,10 +730,14 @@ export class Actor extends Entity {
       if (!this.belowDeck && !(this.z > 0.4) && w.type(this.x, this.y) === T.BRIDGE) {
         const hf = g.view3d?.terrain?.hf;
         if (hf) {
-          const tx = Math.floor(this.x), ty = Math.floor(this.y), m = r + 0.14;
+          // (the rails along the sides of the deck tile you'd stand on — or,
+          // stepping off onto the land at its end, the one you're leaving:
+          // the water beside the land you step onto has no rail of its own)
+          const on = w.type(x, y) === T.BRIDGE;
+          const tx = Math.floor(on ? x : this.x), ty = Math.floor(on ? y : this.y), m = r + 0.14;
           for (const [px, py] of [[x + m, y], [x - m, y], [x, y + m], [x, y - m]]) {
             const nx = Math.floor(px), ny = Math.floor(py);
-            if ((nx !== tx || ny !== ty) && w.type(px, py) !== T.BRIDGE && hf.railAt(tx, ty, nx, ny)) return false;
+            if (Math.abs(nx - tx) + Math.abs(ny - ty) === 1 && w.type(px, py) !== T.BRIDGE && hf.railAt(tx, ty, nx, ny)) return false;
           }
         }
       }

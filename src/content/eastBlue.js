@@ -231,9 +231,9 @@ const npcs = [
     level: 3,
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"Woof." (Chouchou guards his late master\'s pet shop. He won\'t move an inch — not for pirates, not for anyone.)' } } }),
   },
-  { id: 'mohji', name: 'Beast Tamer Mohji', title: 'Buggy Pirates', island: 'organ_islands', at: { town: 'orange_town', plaza: true, ox: -4 }, hostile: true, named: true, faction: 'pirate', level: 7,
+  { id: 'mohji', name: 'Beast Tamer Mohji', title: 'Buggy Pirates', island: 'organ_islands', at: { town: 'orange_town', plaza: true, ox: -4 }, hostile: true, calm: true, named: true, faction: 'pirate', level: 7,
     look: { hair: 'afro', hairColor: '#fafafa', top: '#fafafa', bottom: '#ef6c00', ears: 'round', fur: '#fafafa' }, moves: ['brawl_tackle'], bounty: 3000000, infamy: true, when: (c) => !c.defeated.mohji },
-  { id: 'cabaji', name: 'Acrobat Cabaji', title: 'Chief of Staff, Buggy Pirates', island: 'organ_islands', at: { town: 'orange_town', plaza: true, ox: 4 }, hostile: true, named: true, faction: 'pirate', level: 9,
+  { id: 'cabaji', name: 'Acrobat Cabaji', title: 'Chief of Staff, Buggy Pirates', island: 'organ_islands', at: { town: 'orange_town', plaza: true, ox: 4 }, hostile: true, calm: true, named: true, faction: 'pirate', level: 9,
     look: { hair: 'long', hairColor: '#212121', top: '#1a237e', bottom: '#fafafa', scarEye: true }, style: 'ittoryu', weapon: 'sword', moves: ['cabaji_fire', 'cabaji_dash'], bounty: 5000000, infamy: true, skill: 0.35, when: (c) => !c.defeated.cabaji },
   {
     id: 'buggy', name: 'Buggy the Clown', title: 'Captain of the Buggy Pirates', island: 'organ_islands', at: { town: 'orange_town', building: 'Buggy Pirates HQ (Tavern)' }, hostile: true, boss: true, hpMul: 1.1, faction: 'pirate', level: 11,
@@ -452,7 +452,9 @@ const groups = [
   { island: 'dawn_island', dx: 0.42, dy: 0.35, radius: 5, enemies: [['pirate', 5, { name: 'Bluejam Pirate' }], ['pirate_gunner', 5, { name: 'Bluejam Gunner' }], ['pirate', 5, { name: 'Bluejam Pirate' }]], when: (c) => !c.bosses.includes('bluejam') },
   { island: 'goat_island', dx: 0, dy: 0.2, radius: 4, enemies: [['pirate', 3, { name: 'Alvida Pirate' }], ['pirate', 3, { name: 'Alvida Pirate' }]], when: (c) => !c.bosses.includes('alvida') },
   { island: 'shells_island', town: 'marine_153', spot: 'execution_yard', radius: 4, enemies: [['marine', 5, { name: 'Morgan\'s Marine', lethal: false }], ['marine_rifle', 5, { name: 'Morgan\'s Rifleman' }]], when: (c, g) => g.quests.stageId('pirate_hunter') === 'morgan' },
-  { island: 'organ_islands', dx: 0, dy: 0.1, radius: 7, enemies: [['pirate', 6, { name: 'Buggy Pirate' }], ['pirate', 6, { name: 'Buggy Pirate' }], ['pirate_gunner', 6, { name: 'Buggy Cannoneer' }], ['beast', 8, { name: 'Richie the Lion', look: { fur: '#f6b93b', skin: '#f6b93b', hairColor: '#e67e22', hair: 'afro' } }]], when: (c) => !c.bosses.includes('buggy') },
+  // (Buggy's crew lord it over Orange Town, but leave a newcomer be — till
+  // someone lays a hand on one of them, or stands up to their captain)
+  { island: 'organ_islands', dx: 0, dy: 0.1, radius: 7, calm: true, enemies: [['pirate', 6, { name: 'Buggy Pirate' }], ['pirate', 6, { name: 'Buggy Pirate' }], ['pirate_gunner', 6, { name: 'Buggy Cannoneer' }], ['beast', 8, { name: 'Richie the Lion', look: { fur: '#f6b93b', skin: '#f6b93b', hairColor: '#e67e22', hair: 'afro' } }]], when: (c) => !c.bosses.includes('buggy') },
   { island: 'gecko_islands', spot: 'north_slope', radius: 6, enemies: [['pirate', 8, { name: 'Black Cat Pirate' }], ['pirate', 8, { name: 'Black Cat Pirate' }], ['brute', 9, { name: 'Siam (Nyaban Brother)' }], ['brute', 9, { name: 'Butchie (Nyaban Brother)' }]], when: (c, g) => g.quests.stageId('black_cat_plot') === 'slope' },
   { island: 'baratie', spot: 'baratie_deck', radius: 4, enemies: [['pirate', 10, { name: 'Krieg Pirate' }], ['pirate_gunner', 10, { name: 'Krieg Gunner' }], ['pirate', 10, { name: 'Pearl the Iron Wall', hpMul: 2, look: { bulk: 1.4 } }]], when: (c, g) => g.quests.stageId('baratie_krieg') === 'krieg' },
   { island: 'conomi_islands', dx: 0.55, dy: -0.15, radius: 7, enemies: [['fishman_thug', 9], ['fishman_thug', 9], ['fishman_thug', 10], ['fishman_thug', 10]], when: (c) => !c.bosses.includes('arlong') },

@@ -407,6 +407,8 @@ async function start() {
     teleport(x, y) { game.player.x = x; game.player.y = y; game.snapCamera(); },
     key(k, down) { input.simKey(k, down); },
     step(seconds, dt = 1 / 30) { for (let t = 0; t < seconds; t += dt) { game.update(dt); } game.render(); },
+    // (carry on a saved character, as Continue does)
+    resume(char) { hideBoot(true); sail = null; ui.hideScreen(); return resumeCharacter(game, char); },
     quickStart(race = 'human', opts = {}) {
       const birth = { race, traits: opts.traits || ['lucky'], seed: opts.seed || 12345 };
       hideBoot(true); sail = null;
