@@ -130,6 +130,7 @@ class ActorView {
       const look = currentLook(a, this.lookCache);
       const { pose, P } = actorPose(a, env, look);
       const o = rigOptions(a, pose, P, this.o);
+      this.easeWalk(a, pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
       o.wpn = this.wpn;
       // in first person, looking down you bow your head (and looking up, tip
       // it back), as anyone does: the eyes the view rides go with it, out over
@@ -261,6 +262,33 @@ class ActorView {
     // (the eyes: at the front of the head, a little above its middle)
     _v.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
     return _eyeP.add(_v);
+  }
+
+  /**
+   * The way the legs step (o.walkRel: where you're going, from where you
+   * face), eased: flicking left and right — strafing in shift lock, say —
+   * they swing round through the front rather than snapping across, and
+   * turning round (slowing to a stop and going back) they keep stepping the
+   * way they were until the new way takes over.
+   */
+  easeWalk(a, pose, o, dt) {
+    const w = o.walkRel;
+    if (w === null || w === undefined) {
+      // (slowing through a stop to go back the other way, the last way is kept a moment)
+      this.walkIdle = (this.walkIdle || 0) + dt;
+      if (this.walkIdle > 0.35) this.walkSm = undefined;
+      else if (pose.moving && this.walkSm !== undefined) o.walkRel = this.walkSm;
+      return;
+    }
+    this.walkIdle = 0;
+    let want = Math.atan2(Math.sin(w), Math.cos(w));
+    if (this.walkSm === undefined || dt >= 1) { this.walkSm = want; return; }
+    // (from stepping one way sideways to the other: by way of the front —
+    // stepping forward, not backward; walking backward is let be)
+    const d = angleDiff(this.walkSm, want);
+    if (Math.abs(d) > 2.4 && Math.abs(want) > 0.5 && Math.abs(want) < 2.6) want = 0;
+    this.walkSm += angleDiff(this.walkSm, want) * (1 - Math.exp(-dt * 11));
+    o.walkRel = this.walkSm;
   }
 
   /**

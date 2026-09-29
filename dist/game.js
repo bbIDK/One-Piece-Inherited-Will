@@ -67500,8 +67500,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const T4 = this._T;
         let fx = f[0] * d.kL, fz = side * (d.hipW + 0.012 + (o.legSpread || 0));
         if (walk !== void 0 && walk !== null) {
-          fz += fx * Math.sin(walk);
+          fz += fx * Math.sin(walk) * 0.8;
           fx *= Math.cos(walk);
+          fz = side * Math.max(d.hipW * 0.35, side * fz);
         }
         T4.set(hip.x + fx, d.hA + Math.max(0, -f[1] * d.kL), fz);
         _t.subVectors(T4, Hj);
@@ -69707,6 +69708,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const look = currentLook(a, this.lookCache);
         const { pose, P: P4 } = actorPose(a, env, look);
         const o = rigOptions(a, pose, P4, this.o);
+        this.easeWalk(a, pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
         o.wpn = this.wpn;
         if (a.isPlayer && ctx.mode === "first") {
           const pt = ctx.pitch || 0;
@@ -69809,6 +69811,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       hb.getWorldQuaternion(_eyeQ);
       _v8.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
       return _eyeP.add(_v8);
+    }
+    /**
+     * The way the legs step (o.walkRel: where you're going, from where you
+     * face), eased: flicking left and right — strafing in shift lock, say —
+     * they swing round through the front rather than snapping across, and
+     * turning round (slowing to a stop and going back) they keep stepping the
+     * way they were until the new way takes over.
+     */
+    easeWalk(a, pose, o, dt) {
+      const w = o.walkRel;
+      if (w === null || w === void 0) {
+        this.walkIdle = (this.walkIdle || 0) + dt;
+        if (this.walkIdle > 0.35) this.walkSm = void 0;
+        else if (pose.moving && this.walkSm !== void 0) o.walkRel = this.walkSm;
+        return;
+      }
+      this.walkIdle = 0;
+      let want = Math.atan2(Math.sin(w), Math.cos(w));
+      if (this.walkSm === void 0 || dt >= 1) {
+        this.walkSm = want;
+        return;
+      }
+      const d = angleDiff(this.walkSm, want);
+      if (Math.abs(d) > 2.4 && Math.abs(want) > 0.5 && Math.abs(want) < 2.6) want = 0;
+      this.walkSm += angleDiff(this.walkSm, want) * (1 - Math.exp(-dt * 11));
+      o.walkRel = this.walkSm;
     }
     /**
      * Where your eyes are on your posed body, from where you stand (scene

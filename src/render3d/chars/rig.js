@@ -234,7 +234,13 @@ export class Rig {
       const Hj = _c.set(0, -0.07, side * d.hipW).applyQuaternion(this.qPelvis).add(hip);
       const T = this._T;
       let fx = f[0] * d.kL, fz = side * (d.hipW + 0.012 + (o.legSpread || 0));
-      if (walk !== undefined && walk !== null) { fz += fx * Math.sin(walk); fx *= Math.cos(walk); }
+      if (walk !== undefined && walk !== null) {
+        // (stepping sideways the stride is a little shorter, and each foot
+        // keeps to its own side: the trailing foot closes up to the leading
+        // one — a side-step — instead of crossing through the other leg)
+        fz += fx * Math.sin(walk) * 0.8; fx *= Math.cos(walk);
+        fz = side * Math.max(d.hipW * 0.35, side * fz);
+      }
       T.set(hip.x + fx, d.hA + Math.max(0, -f[1] * d.kL), fz);
       _t.subVectors(T, Hj);
       const lxy = Math.hypot(_t.x, _t.y) || 1;
