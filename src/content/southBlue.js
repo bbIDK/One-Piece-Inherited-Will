@@ -82,6 +82,8 @@ const ROUNDS = {
   final: ['sb_jerry', 'THE FINAL', 'Jerry, the boxing champion, ducks under the ropes — and keeps ducking. He is very, very tall.'],
 };
 const ringOf = (g) => islandRec(g, 'karate_island')?.landmarks?.find((l) => l.spot === 'karate_ring') || null;
+/** The ring, for a round's waypoint (the bout is there, whoever's in it yet). */
+const ringPin = (g) => { const r = ringOf(g); return r ? { x: r.x, y: r.y, place: 'the Tournament Ring' } : null; };
 const onRing = (g, a, ring) => { const f = g.world.floorRec?.(a.x, a.y); return !!f && !!ring && f.o === ring; };
 
 /** Put this round's opponent in his corner of the ring, waiting for you. */
@@ -1482,11 +1484,11 @@ const quests = [
     id: 'sb_karate_open', name: 'The Karate Island Open', island: 'karate_island', kind: 'story',
     summary: 'Fighters from all over the South Blue gather on Karate Island to be humbled.',
     stages: [
-      { id: 'r1', desc: 'Round one: Foxy, the fox-grinned boxer, waits in the Tournament Ring east of Dojo Town. Step into the ring and knock him down — get knocked down and you are out of the Open.', goal: { type: 'defeat', npc: 'sb_foxy' },
+      { id: 'r1', desc: 'Round one: Foxy, the fox-grinned boxer, waits in the Tournament Ring east of Dojo Town. Step into the ring and knock him down — get knocked down and you are out of the Open.', pinAt: ringPin, goal: { type: 'defeat', npc: 'sb_foxy' },
         onStart: (ctx, g) => { ringWait(g, 'r1'); } },
-      { id: 'r2', desc: 'Round two: Yaguara, the Mink karateka, climbs into the ring. Knock him down.', goal: { type: 'defeat', npc: 'sb_yaguara' },
+      { id: 'r2', desc: 'Round two: Yaguara, the Mink karateka, climbs into the ring. Knock him down.', pinAt: ringPin, goal: { type: 'defeat', npc: 'sb_yaguara' },
         onStart: (ctx, g) => { setTimeout(() => ringWait(g, 'r2'), 2600); } },
-      { id: 'final', desc: 'The final: Jerry, the boxing champion, climbs into the ring. Knock him down.', goal: { type: 'defeat', npc: 'sb_jerry' },
+      { id: 'final', desc: 'The final: Jerry, the boxing champion, climbs into the ring. Knock him down.', pinAt: ringPin, goal: { type: 'defeat', npc: 'sb_jerry' },
         onStart: (ctx, g) => { setTimeout(() => ringWait(g, 'final'), 2600); } },
       { id: 'report', desc: 'Return to Grandmaster Ippon at the Grand Karate Dojo.' },
     ],

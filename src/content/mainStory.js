@@ -108,7 +108,12 @@ function buildQuest(ch, path) {
   // (names of people already in the world are looked up when they're needed: their packs register them later)
   const who = () => shortName(contactOf(ch, path)?.name);
   if (ch.kind !== 'start' && ct) stages.push({ id: 'meet', get desc() { return v.find || `Find ${who()}${ct.where ? ' ' + ct.where : ''}.`; }, goal: { type: 'flag', flag: `mq_met_${ch.id}_${path}` }, npc: cid });
-  for (const t of v.tasks || []) stages.push(prepTask(t, qid));
+  for (const t of v.tasks || []) {
+    const st = prepTask(t, qid);
+    // (a blade to get: the contact has a few old ones for sale — start there)
+    if (t.goal?.type === 'weapon' && cid && !st.npc) st.npc = cid;
+    stages.push(st);
+  }
   if (ct && (v.tasks || []).length && !v.noReport) stages.push({ id: 'report', get desc() { return v.report || `Report back to ${who()}${ct.where ? ' ' + ct.where : ''}.`; }, goal: { type: 'flag', flag: `mq_done_${ch.id}_${path}` }, npc: cid });
   if (!stages.length) throw new Error(`chapter ${ch.id} (${path}) has nothing to do`);
   return {

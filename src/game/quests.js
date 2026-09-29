@@ -272,6 +272,10 @@ export class Quests {
       const m = this.marker(g.quest, depth + 1);
       if (m) return { ...m, label: d.name };
     }
+    // (a step done somewhere in particular, whoever's there: a bout is in the ring)
+    if (st?.pinAt) { const w = st.pinAt(this.game); if (w) return { ...w, label: d.name }; }
+    // (a step done in a menu is done anywhere: no pin)
+    if (st?.pin === false) return null;
     const who = this.whoFor(id, s.stage, st, g, d);
     const live = who.length ? this.liveOf(who, d.name) : null;
     if (live) return live;

@@ -349,8 +349,9 @@ function think(game, a, ai, dt) {
       if (q) { a.x = q.x; a.y = q.y; a.vx = a.vy = 0; }
     }
   }
-  // a fight nearby: drop everything and get out of the way
-  if (ai.state === 'flee' || (p && p.inCombat && w.distance(a.x, a.y, p.x, p.y) < 7)) {
+  // hit, or their home broken into: drop everything and get away (a fight
+  // that isn't theirs, they leave to the people in it)
+  if (ai.state === 'flee') {
     if (a.activity) stop(a);
     return ai.wander(a, dt, game);
   }

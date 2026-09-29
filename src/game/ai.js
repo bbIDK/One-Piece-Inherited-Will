@@ -469,10 +469,8 @@ export class AIController {
       a.intent.mx *= 0.45; a.intent.my *= 0.45;
       if (d < 0.5) this.wanderTo = null;
     } else if (a.faceHome !== undefined) a.facing = a.faceHome;
-    // civilians watch fights nervously
-    if (!combatant && game.player && game.player.inCombat && game.world.distance(a.x, a.y, game.player.x, game.player.y) < 7) {
-      this.state = 'flee'; this.fleeFrom = game.player; this.fleeT = 2.5;
-    }
+    // (a fight that isn't theirs is no reason to run: they run when it's
+    // them being hit — onHurt — or their door kicked in)
   }
 
   follow(a, dt, game) {

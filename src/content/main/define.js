@@ -71,7 +71,7 @@ export const T = {
    * itself, not the "pirate" the world calls anyone with a bounty: a price on
    * your head isn't a crew.)
    */
-  flag: (desc = 'Raise your own Jolly Roger: found your crew in the Crew menu (U).') => ({ id: 'flag', desc, goal: { type: 'check', fn: (c) => !!c.crewName } }),
+  flag: (desc = 'Raise your own Jolly Roger: found your crew in the Crew menu (U).') => ({ id: 'flag', desc, goal: { type: 'check', fn: (c) => !!c.crewName }, pin: false }),
   crew: (n = 1, desc = `Recruit ${n > 1 ? n + ' crewmates' : 'a crewmate'} — people who'd follow you anywhere.`) => ({ id: 'crew' + n, desc, goal: { type: 'crew', n } }),
   ship: (desc = 'Get a ship that can survive the Grand Line (a Sloop or bigger).') => ({ id: 'ship', desc, goal: { type: 'ship', grandLine: true } }),
   logPose: (desc = 'Get a Log Pose — no one survives the Grand Line without one.') => ({ id: 'pose', desc, goal: { type: 'item', item: 'log_pose' } }),

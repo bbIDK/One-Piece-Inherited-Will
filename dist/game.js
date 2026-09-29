@@ -86476,11 +86476,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         a.intent.my *= 0.45;
         if (d < 0.5) this.wanderTo = null;
       } else if (a.faceHome !== void 0) a.facing = a.faceHome;
-      if (!combatant && game.player && game.player.inCombat && game.world.distance(a.x, a.y, game.player.x, game.player.y) < 7) {
-        this.state = "flee";
-        this.fleeFrom = game.player;
-        this.fleeT = 2.5;
-      }
     }
     follow(a, dt, game) {
       const p = game.player;
@@ -91288,6 +91283,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const m = this.marker(g.quest, depth + 1);
         if (m) return { ...m, label: d.name };
       }
+      if (st?.pinAt) {
+        const w = st.pinAt(this.game);
+        if (w) return { ...w, label: d.name };
+      }
+      if (st?.pin === false) return null;
       const who = this.whoFor(id, s.stage, st, g, d);
       const live = who.length ? this.liveOf(who, d.name) : null;
       if (live) return live;
@@ -96345,7 +96345,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         }
       }
     }
-    if (ai.state === "flee" || p && p.inCombat && w.distance(a.x, a.y, p.x, p.y) < 7) {
+    if (ai.state === "flee") {
       if (a.activity) stop(a);
       return ai.wander(a, dt, game);
     }
@@ -104086,6 +104086,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     final: ["sb_jerry", "THE FINAL", "Jerry, the boxing champion, ducks under the ropes \u2014 and keeps ducking. He is very, very tall."]
   };
   var ringOf = (g) => islandRec(g, "karate_island")?.landmarks?.find((l) => l.spot === "karate_ring") || null;
+  var ringPin = (g) => {
+    const r = ringOf(g);
+    return r ? { x: r.x, y: r.y, place: "the Tournament Ring" } : null;
+  };
   var onRing = (g, a, ring4) => {
     const f = g.world.floorRec?.(a.x, a.y);
     return !!f && !!ring4 && f.o === ring4;
@@ -106331,6 +106335,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         {
           id: "r1",
           desc: "Round one: Foxy, the fox-grinned boxer, waits in the Tournament Ring east of Dojo Town. Step into the ring and knock him down \u2014 get knocked down and you are out of the Open.",
+          pinAt: ringPin,
           goal: { type: "defeat", npc: "sb_foxy" },
           onStart: (ctx, g) => {
             ringWait(g, "r1");
@@ -106339,6 +106344,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         {
           id: "r2",
           desc: "Round two: Yaguara, the Mink karateka, climbs into the ring. Knock him down.",
+          pinAt: ringPin,
           goal: { type: "defeat", npc: "sb_yaguara" },
           onStart: (ctx, g) => {
             setTimeout(() => ringWait(g, "r2"), 2600);
@@ -106347,6 +106353,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         {
           id: "final",
           desc: "The final: Jerry, the boxing champion, climbs into the ring. Knock him down.",
+          pinAt: ringPin,
           goal: { type: "defeat", npc: "sb_jerry" },
           onStart: (ctx, g) => {
             setTimeout(() => ringWait(g, "final"), 2600);
@@ -120990,7 +120997,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
      * itself, not the "pirate" the world calls anyone with a bounty: a price on
      * your head isn't a crew.)
      */
-    flag: (desc = "Raise your own Jolly Roger: found your crew in the Crew menu (U).") => ({ id: "flag", desc, goal: { type: "check", fn: (c) => !!c.crewName } }),
+    flag: (desc = "Raise your own Jolly Roger: found your crew in the Crew menu (U).") => ({ id: "flag", desc, goal: { type: "check", fn: (c) => !!c.crewName }, pin: false }),
     crew: (n = 1, desc = `Recruit ${n > 1 ? n + " crewmates" : "a crewmate"} \u2014 people who'd follow you anywhere.`) => ({ id: "crew" + n, desc, goal: { type: "crew", n } }),
     ship: (desc = "Get a ship that can survive the Grand Line (a Sloop or bigger).") => ({ id: "ship", desc, goal: { type: "ship", grandLine: true } }),
     logPose: (desc = "Get a Log Pose \u2014 no one survives the Grand Line without one.") => ({ id: "pose", desc, goal: { type: "item", item: "log_pose" } }),
@@ -124070,7 +124077,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (ch.kind !== "start" && ct) stages.push({ id: "meet", get desc() {
       return v.find || `Find ${who()}${ct.where ? " " + ct.where : ""}.`;
     }, goal: { type: "flag", flag: `mq_met_${ch.id}_${path2}` }, npc: cid });
-    for (const t of v.tasks || []) stages.push(prepTask(t, qid));
+    for (const t of v.tasks || []) {
+      const st = prepTask(t, qid);
+      if (t.goal?.type === "weapon" && cid && !st.npc) st.npc = cid;
+      stages.push(st);
+    }
     if (ct && (v.tasks || []).length && !v.noReport) stages.push({ id: "report", get desc() {
       return v.report || `Report back to ${who()}${ct.where ? " " + ct.where : ""}.`;
     }, goal: { type: "flag", flag: `mq_done_${ch.id}_${path2}` }, npc: cid });
