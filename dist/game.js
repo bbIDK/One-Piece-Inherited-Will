@@ -74629,6 +74629,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     ruins: { ground: null, road: T.GRAVEL, plaza: T.STONE, walls: ["#9e9e9e", "#bdbdbd", "#a1887f"], roofs: ["#757575"], roof: "ruin", rowStep: 8, lamps: false }
   };
   var RAISED = new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK, T.ROCK, T.FOREST, T.JUNGLE].filter((t) => t !== void 0));
+  var CRAG = /* @__PURE__ */ new Set([T.MOUNTAIN, T.CLIFF, T.RED_ROCK, T.SNOWROCK]);
   var ROLE_SIZES = {
     tavern: [7, 6],
     inn: [7, 6],
@@ -74699,10 +74700,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const terraced = TERRACED.has(town.style) && !big;
     const setback = terraced ? 0 : APART_SETBACK[town.style] ?? 1;
     const laneTile = terraced ? roadTile : S3.ground === null ? T.DIRT : roadTile;
+    const inTown = (x, y) => Math.max(Math.abs((x + 0.5 - cx) / (w / 2)), Math.abs((y + 0.5 - cy) / (h2 / 2))) <= 1.08;
+    const crag = (x, y) => {
+      if (!CRAG.has(world.type(x, y)) || !inTown(x, y)) return false;
+      const b = world.base?.type(world.wx(Math.floor(x)), Math.floor(y));
+      return b !== T.RED_ROCK && b !== T.SNOWROCK;
+    };
     const okLand = (x, y) => {
       const t = world.type(x, y);
-      return !IS_LIQUID[t] && WALKABLE[t] && !OVERLAY[t];
+      return !IS_LIQUID[t] && WALKABLE[t] && !OVERLAY[t] || crag(x, y);
     };
+    if (!dry) {
+      for (let y = y0 - 1; y <= y1; y++) for (let x = x0 - 1; x <= x1; x++) if (crag(x, y)) world.setType(x, y, groundTile ?? T.GRASS);
+    }
     const bare = groundTile != null && !dry ? new Int16Array(w * h2).fill(-1) : null;
     if (bare) {
       for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
@@ -76783,7 +76793,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       h: 110,
       climate: "temperate",
       rough: 0.25,
-      mountains: [{ dx: 0.3, dy: -0.25, r: 0.25, h: 0.5, name: "Mansion hill" }],
       areas: [{ tile: T.FOREST, dx: -0.3, dy: -0.3, rx: 0.35, ry: 0.35 }, { tile: T.FARM, dx: 0.1, dy: 0.35, rx: 0.2, ry: 0.12 }],
       towns: [
         {
@@ -76812,7 +76821,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           style: "noble",
           dockDir: "e",
           plaza: "fountain",
-          buildings: [{ role: "palace", name: "Kaya's Mansion", npc: "kaya", w: 10, d: 6, hgt: 3 }, { role: "shipwright", name: "Merry's Boathouse", npc: "merry" }],
+          buildings: [{ role: "palace", name: "Kaya's Mansion", npc: "kaya", w: 10, d: 6, hgt: 3 }],
           houses: 0
         }
       ],
@@ -99078,16 +99087,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         } }
       } })
     },
+    // (the estate's butler, at the mansion's front door: he designed a ship once, but he doesn't sell them)
     {
       id: "merry",
       name: "Merry",
       title: "Butler of the Kaya estate",
       island: "gecko_islands",
-      at: { town: "kaya_mansion", building: "Merry's Boathouse" },
+      at: { town: "kaya_mansion", door: "Kaya's Mansion", ox: 1.8 },
       look: { hair: "curly", hairColor: "#fafafa", top: "#212121", bottom: "#212121", skin: "#fafafa", hat: "horns" },
       level: 2,
       dialogue: (ctx) => ({ start: "a", nodes: { a: { text: `"I designed the caravel myself. She's not big, but she has a heart. Treat her well, and she'll carry you anywhere."`, choices: [
-        { text: "Shipyard", do: (c) => c.open("shipwright", {}) },
         { text: "Thank you, Merry.", end: true }
       ] } } })
     },
@@ -122712,7 +122721,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       name: "The Going Merry",
       lure: "they say a rich girl up at the mansion has a ship nobody sails",
       summary: "Merry, the butler of the Kaya estate, built a caravel with a ram's head and a big heart. It could be yours \u2014 if Syrup Village survives the week.",
-      contact: { npc: "merry", where: "at the boathouse below Kaya's mansion" },
+      contact: { npc: "merry", where: "at the door of Kaya's mansion" },
       meet: [
         "A ship? Oh, you've heard about the caravel. I designed her myself \u2014 the Going Merry. Miss Kaya meant her for someone brave enough to sail beyond the East Blue.",
         "But I'm worried. Miss Kaya's new butler, Klahador, is... not what he seems. The Usopp boy keeps shouting that pirates are coming. What if, for once, he's telling the truth?"

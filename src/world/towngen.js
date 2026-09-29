@@ -36,6 +36,9 @@ export const TOWN_STYLES = {
 
 // tile types the height model lifts above their elevation (see render3d/height.js)
 const RAISED = new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK, T.ROCK, T.FOREST, T.JUNGLE].filter((t) => t !== undefined));
+// ...of which these stand metres tall: blocks of rock with sheer sides, that
+// no street climbs (inside a town they're levelled to its ground)
+const CRAG = new Set([T.MOUNTAIN, T.CLIFF, T.RED_ROCK, T.SNOWROCK]);
 
 // special buildings: [width, depth] (a little more is fine, less is not)
 const ROLE_SIZES = {
@@ -107,10 +110,20 @@ function layTown(world, town, rng, noise, dry) {
   const setback = terraced ? 0 : APART_SETBACK[town.style] ?? 1;
   const laneTile = terraced ? roadTile : (S.ground === null ? T.DIRT : roadTile);
 
+  // a hill or a crag where the town is laid out (it was set down on one):
+  // levelled to the town's ground at its own elevation, not left standing
+  // 7 m tall between the houses (never the Red Line's own rock)
+  const inTown = (x, y) => Math.max(Math.abs((x + 0.5 - cx) / (w / 2)), Math.abs((y + 0.5 - cy) / (h / 2))) <= 1.08;
+  const crag = (x, y) => {
+    if (!CRAG.has(world.type(x, y)) || !inTown(x, y)) return false;
+    const b = world.base?.type(world.wx(Math.floor(x)), Math.floor(y));
+    return b !== T.RED_ROCK && b !== T.SNOWROCK;
+  };
   const okLand = (x, y) => {
     const t = world.type(x, y);
-    return !IS_LIQUID[t] && WALKABLE[t] && !OVERLAY[t];
+    return (!IS_LIQUID[t] && WALKABLE[t] && !OVERLAY[t]) || crag(x, y);
   };
+  if (!dry) for (let y = y0 - 1; y <= y1; y++) for (let x = x0 - 1; x <= x1; x++) if (crag(x, y)) world.setType(x, y, groundTile ?? T.GRASS);
 
   // ground (and what was there before: paving far from anything built goes back to it, see below)
   const bare = groundTile != null && !dry ? new Int16Array(w * h).fill(-1) : null;

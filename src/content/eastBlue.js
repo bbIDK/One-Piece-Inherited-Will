@@ -285,10 +285,11 @@ const npcs = [
         return '"Oh! A traveller? Usopp tells me such wonderful stories about the sea... I\'m sick most of the time, so his stories are my adventures."';
       }, onEnter: (c) => { if (active(c, 'black_cat_plot', 'report')) c.complete('black_cat_plot'); } } } }),
   },
-  { id: 'merry', name: 'Merry', title: 'Butler of the Kaya estate', island: 'gecko_islands', at: { town: 'kaya_mansion', building: "Merry's Boathouse" },
+  // (the estate's butler, at the mansion's front door: he designed a ship once, but he doesn't sell them)
+  { id: 'merry', name: 'Merry', title: 'Butler of the Kaya estate', island: 'gecko_islands', at: { town: 'kaya_mansion', door: "Kaya's Mansion", ox: 1.8 },
     look: { hair: 'curly', hairColor: '#fafafa', top: '#212121', bottom: '#212121', skin: '#fafafa', hat: 'horns' }, level: 2,
     dialogue: (ctx) => ({ start: 'a', nodes: { a: { text: '"I designed the caravel myself. She\'s not big, but she has a heart. Treat her well, and she\'ll carry you anywhere."', choices: [
-      { text: 'Shipyard', do: (c) => c.open('shipwright', {}) }, { text: 'Thank you, Merry.', end: true }] } } }) },
+      { text: 'Thank you, Merry.', end: true }] } } }) },
   { id: 'jango', name: 'Jango', title: 'Hypnotist, Black Cat Pirates', island: 'gecko_islands', at: { spot: 'north_slope' }, hostile: true, named: true, faction: 'pirate', level: 9,
     look: { hair: 'afro', hairColor: '#212121', top: '#fafafa', bottom: '#1a237e', hat: 'cowboy', hatColor: '#212121', goggles: true }, moves: ['jango_chakram', 'jango_hypnosis'], bounty: 9000000, infamy: true, breakthrough: 1,
     when: (c, g) => g.quests.stageId('black_cat_plot') === 'slope' || g.quests.stageId('black_cat_plot') === 'kuro' },

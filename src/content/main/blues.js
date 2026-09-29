@@ -28,7 +28,7 @@ chapter('eb_syrup', { part: 1, island: 'gecko_islands', place: 'Syrup Village (G
   pirate: {
     name: 'The Going Merry', lure: 'they say a rich girl up at the mansion has a ship nobody sails',
     summary: 'Merry, the butler of the Kaya estate, built a caravel with a ram\'s head and a big heart. It could be yours — if Syrup Village survives the week.',
-    contact: { npc: 'merry', where: 'at the boathouse below Kaya\'s mansion' },
+    contact: { npc: 'merry', where: 'at the door of Kaya\'s mansion' },
     meet: [
       'A ship? Oh, you\'ve heard about the caravel. I designed her myself — the Going Merry. Miss Kaya meant her for someone brave enough to sail beyond the East Blue.',
       'But I\'m worried. Miss Kaya\'s new butler, Klahador, is... not what he seems. The Usopp boy keeps shouting that pirates are coming. What if, for once, he\'s telling the truth?',

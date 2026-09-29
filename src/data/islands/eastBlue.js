@@ -111,7 +111,6 @@ export const EAST_BLUE = [
   },
   {
     id: 'gecko_islands', name: 'Gecko Islands', sea: 'east_blue', x: 3010, y: 475, w: 145, h: 110, climate: 'temperate', rough: 0.25,
-    mountains: [{ dx: 0.3, dy: -0.25, r: 0.25, h: 0.5, name: 'Mansion hill' }],
     areas: [{ tile: T.FOREST, dx: -0.3, dy: -0.3, rx: 0.35, ry: 0.35 }, { tile: T.FARM, dx: 0.1, dy: 0.35, rx: 0.2, ry: 0.12 }],
     towns: [
       {
@@ -124,7 +123,7 @@ export const EAST_BLUE = [
       },
       {
         id: 'kaya_mansion', name: "Kaya's Mansion", dx: 0.3, dy: -0.28, w: 36, h: 26, style: 'noble', dockDir: 'e', plaza: 'fountain',
-        buildings: [{ role: 'palace', name: "Kaya's Mansion", npc: 'kaya', w: 10, d: 6, hgt: 3 }, { role: 'shipwright', name: "Merry's Boathouse", npc: 'merry' }],
+        buildings: [{ role: 'palace', name: "Kaya's Mansion", npc: 'kaya', w: 10, d: 6, hgt: 3 }],
         houses: 0,
       },
     ],
