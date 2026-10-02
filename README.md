@@ -78,7 +78,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | F | block — tap just before a hit to **parry**. A heavy blow (the red glint) smashes a guard aside, and you can't block again until the F slot fills | |
 | 1–9, 0 | hotbar: techniques, food, Devil Fruits and weapons (a weapon's key draws it from its sheath into your stance, and again puts it back; food or a Devil Fruit goes in your hand: hold the right mouse button to eat it, in bites; a punch or a dodge puts it away) | |
 | R / T / G | Haki, once it has awakened | |
-| E | talk, enter, take the helm or the oars, pick fruit, examine | dive, knock-up, go ashore, leave the helm (under sail she sails on, holding her course, while you walk the deck) |
+| E | talk, enter, take the helm or the oars, pick fruit, examine | leave the helm (under sail she sails on, holding her course, while you walk the deck) — and nothing else, but for the Knock Up Stream, the dive to Fish-Man Island and the Tarai Current where you find them. Going ashore is by hand: jump over her rail |
 | Tab/I, C, K, J, U, L | inventory, character, skills, journal, crew, quests | |
 | M | world map | |
 | − / + | zoom the minimap out / in (it's the world map's chart, round you, gliding under you as you go, with its icons: inns, shops, doctors, harbours, your quests, the Log Pose's island) | |

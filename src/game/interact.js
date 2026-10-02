@@ -15,14 +15,10 @@ export function findInteraction(game, p) {
     // custom sea interactions (Knock Up Stream, Fish-Man Island dive, Red Port...)
     const special = game.seaInteraction ? game.seaInteraction(p, s) : null;
     if (special) return special;
-    const spot = findShore(w, s.x, s.y, s.def.length * 0.5 + 2.5);
-    if (spot && Math.abs(s.speed) < 4.5) {
-      const isl = w.islandAt(spot.x, spot.y) || w.nearestIsland(spot.x, spot.y, 40);
-      return { label: `Go ashore${isl && isl.name ? ' — ' + isl.name : ''}`, key: 'E', run: () => disembark(game, p, spot) };
-    }
-    // leave the wheel and walk your own deck — under sail she sails on, holding
-    // her course (Sea of Thieves style); a rowboat's oars you ship when she's
-    // all but stopped
+    // E at the helm only lets go of it (there's no going ashore, or aboard
+    // anything, at a key press: walk to her rail and jump). Under sail she
+    // sails on, holding her course (Sea of Thieves style); a rowboat's oars
+    // you ship when she's all but stopped
     if (!s.def.oarsOnly) return { label: s.sailSet > 0.05 || Math.abs(s.speed) > 1.6 ? 'Leave the helm (she sails on)' : 'Leave the helm (walk the deck)', key: 'E', run: () => leaveHelm(game, p, s) };
     if (Math.abs(s.speed) < 1.6) return { label: 'Leave the oars (stand up)', key: 'E', run: () => leaveHelm(game, p, s) };
     return null;
@@ -133,17 +129,6 @@ export function findShore(w, x, y, r) {
   return best;
 }
 
-export function disembark(game, p, spot) {
-  const s = p.ship;
-  if (s) { s.captain = null; s.sail = 0; s.rowing = 0; s.anchored = true; s.passengers = s.passengers.filter((x) => x !== p); }
-  p.mode = 'foot';
-  p.onShip = false;
-  p.x = spot.x; p.y = spot.y;
-  p.vx = p.vy = 0;
-  game.emit('disembark', s, spot);
-  game.audio?.sfx('step');
-}
-
 /**
  * Let go of the wheel (or ship the oars) and stand on the deck beside it. A
  * ship under sail keeps them set and sails on, straight ahead, till you take
@@ -166,8 +151,8 @@ export function leaveHelm(game, p, s) {
   else placeOnDeck(game, p, s, hs.t, 0);
   game.emit('disembark', s, null);
   game.hint?.('deck', s.def.oarsOnly
-    ? 'Stand in your boat, or jump over the side for a swim (Space at her side climbs back in). Press E at the seat to take the oars again.'
-    : 'Walk your deck freely — she keeps the sails you set and sails on straight ahead. Jump over the rail for a swim (Space at her side climbs back aboard), and press E at the wheel to take the helm again: steer, or lower the sails (S) to stop.');
+    ? 'Stand in your boat, and jump over her side to go ashore or for a swim (from the water, a jump brings you back in over her low side). Press E at the seat to take the oars again.'
+    : 'Walk your deck freely — she keeps the sails you set and sails on straight ahead. Jump over the rail to go ashore or for a swim, and press E at the wheel to take the helm again: steer, or lower the sails (S) to stop.');
 }
 
 /** A Devil Fruit user in the sea, hauled up onto the deck on a line thrown from it. */
@@ -189,7 +174,7 @@ export function board(game, p, s) {
   p.setBlock(false);
   p.action = null;
   game.emit('board', s);
-  if (s.def.oarsOnly) game.hint('rowing', 'Rowing: W pulls on the oars, S backs water, A/D pull one oar to turn her. No sail and no wind — just your arms (and the currents). E near land to go ashore; E away from it to stand up in her.');
-  else game.hint('sailing', 'Sailing: W raises the sails, S lowers them, A/D steer. Hold SPACE to row (works without wind). Left-click fires a broadside toward the mouse. E near land to go ashore.');
+  if (s.def.oarsOnly) game.hint('rowing', 'Rowing: W pulls on the oars, S backs water, A/D pull one oar to turn her. No sail and no wind — just your arms (and the currents). Once she\'s all but stopped, E ships the oars and you stand up in her: jump over her side to go ashore.');
+  else game.hint('sailing', 'Sailing: W raises the sails, S lowers them, A/D steer. Hold SPACE to row (works without wind). Left-click fires a broadside toward the mouse. E leaves the helm: walk her deck, and jump over her rail to go ashore.');
   game.audio?.sfx('board');
 }
