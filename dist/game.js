@@ -90705,6 +90705,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var KEEP = 48;
   var PER_DRAW = 1;
   var RECHECK = 1.5;
+  var MARGIN2 = 32;
   var PARCH2 = [240, 224, 186];
   var BLANK = [PARCH2[0] * 0.98, PARCH2[1] * 0.96, PARCH2[2] * 0.92];
   var INK4 = [71, 51, 31];
@@ -90745,16 +90746,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     scale(sailing) {
       return ZOOMS[this.zoom[sailing ? "sea" : "foot"]] ?? ZOOMS[DEFAULT.foot];
     }
+    /**
+     * Draw the chart round you (5 times a second; every frame while there's
+     * still charting to do): into a buffer a little bigger than the minimap,
+     * which present() slides under you every frame — the chart moves with you
+     * smoothly, not in steps.
+     */
     draw(game, dt = 0.2) {
       const c = this.canvas, w = game.world, p = game.player;
       if (!w || !p || !w.map) return;
-      const css2 = c.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
+      const view = c.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
+      const css2 = view + 2 * MARGIN2;
       const size = Math.round(css2 * dpr);
-      if (c.width !== size) {
-        c.width = size;
-        c.height = size;
+      const buf = this.buf || (this.buf = document.createElement("canvas"));
+      if (buf.width !== size) {
+        buf.width = size;
+        buf.height = size;
       }
-      const g = c.getContext("2d");
+      const g = buf.getContext("2d");
       const sailing = p.mode === "sail";
       const mpp = this.scale(sailing), z = 1 / mpp;
       const zone = w !== game.surface;
@@ -90819,14 +90828,42 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         known: (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland || seenIsland(w, isl)
       });
       this.pending = charting > 0 || waiting;
-      this.at = { x: p.x, y: p.y, z, css: css2, w };
+      this.at = { x: p.x, y: p.y, z, css: view, w };
       this.pinList = gatherPins(game, z, css2, (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland);
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       rules(g, w, p, z, css2, zone);
+      g.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    /**
+     * Every frame: the chart as last drawn, slid along by how far you've come
+     * since, in its round frame (and, out of the 3D view, your arrow on it).
+     */
+    present(game) {
+      const c = this.canvas, p = game.player, w = game.world;
+      const was = this.at;
+      if (was && was.w === w && p && Math.max(Math.abs(w.dx(was.x, p.x)), Math.abs(p.y - was.y)) * was.z > MARGIN2 - 2) this.draw(game, 0);
+      const at4 = this.at, buf = this.buf;
+      if (!buf || !at4 || at4.w !== w || !p) return;
+      const css2 = c.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
+      const size = Math.round(css2 * dpr);
+      if (c.width !== size) {
+        c.width = size;
+        c.height = size;
+      }
+      const g = c.getContext("2d");
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.globalCompositeOperation = "source-over";
+      g.fillStyle = `rgb(${BLANK.map((v) => v | 0)})`;
+      g.fillRect(0, 0, size, size);
+      const k = css2 / at4.css, bs = buf.width * k;
+      const ox = -w.dx(at4.x, p.x) * at4.z * k * dpr, oy = -(p.y - at4.y) * at4.z * k * dpr;
+      g.drawImage(buf, (size - bs) / 2 + ox, (size - bs) / 2 + oy, bs, bs);
+      const z = at4.z * k, r = css2 / 2 - 2;
+      g.setTransform(dpr, 0, 0, dpr, css2 / 2 * dpr, css2 / 2 * dpr);
       for (const s of game.ships) {
         if (s.sunk) continue;
-        const [dx, dy] = toS(s.x, s.y);
-        if (Math.hypot(dx - css2 / 2, dy - css2 / 2) > css2 / 2 - 4) continue;
+        const dx = w.dx(p.x, s.x) * z, dy = (s.y - p.y) * z;
+        if (Math.hypot(dx, dy) > r) continue;
         g.fillStyle = s.owner === "player" ? "#f9d71c" : s.faction === "marine" ? "#3d8fd6" : "#d6453c";
         g.strokeStyle = "rgba(58,40,24,.85)";
         g.lineWidth = 1;
@@ -90839,8 +90876,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (a === p || a.state !== "idle" || a.hidden) continue;
         const hostileNow = a.controller?.target === p || p.observation && a.faction !== "civilian";
         if (!hostileNow && !a.questMarker) continue;
-        const [dx, dy] = toS(a.x, a.y);
-        if (Math.hypot(dx - css2 / 2, dy - css2 / 2) > css2 / 2 - 3) continue;
+        const dx = w.dx(p.x, a.x) * z, dy = (a.y - p.y) * z;
+        if (Math.hypot(dx, dy) > r) continue;
         g.fillStyle = a.questMarker ? a.questMarker[0] === "M" ? "#ff9100" : "#ffd54f" : "#e53935";
         g.strokeStyle = "rgba(40,26,14,.9)";
         g.lineWidth = 1;
@@ -90849,16 +90886,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fill();
         g.stroke();
       }
-      if (this.flash && performance.now() < this.flash.until) {
-        g.font = "600 11px Nunito, sans-serif";
-        g.textAlign = "center";
-        g.textBaseline = "middle";
-        const tw = g.measureText(this.flash.text).width + 12;
-        g.fillStyle = "rgba(40,28,16,.78)";
-        g.fillRect(css2 / 2 - tw / 2, css2 - 30, tw, 16);
-        g.fillStyle = "#f6ead0";
-        g.fillText(this.flash.text, css2 / 2, css2 - 22);
-      }
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.globalCompositeOperation = "destination-in";
       g.beginPath();
@@ -90866,6 +90893,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.fill();
       g.globalCompositeOperation = "source-over";
       if (game.view3d?.active) return;
+      const sailing = p.mode === "sail";
       g.setTransform(dpr, 0, 0, dpr, css2 / 2 * dpr, css2 / 2 * dpr);
       g.rotate(sailing && p.ship ? p.ship.heading : p.facing);
       g.fillStyle = "#fff";
@@ -90902,12 +90930,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (!g) return;
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, o.width, o.height);
-      if (!at4 || at4.w !== game.world || !this.pinList?.length) return;
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!at4 || at4.w !== game.world || !this.pinList?.length) {
+        this.flashOver(g, css2);
+        return;
+      }
       const th = up == null ? 0 : -Math.PI / 2 - up, cs = Math.cos(th), sn = Math.sin(th);
-      const r = css2 / 2, k = css2 / at4.css, w = at4.w;
+      const r = css2 / 2, k = css2 / at4.css, w = at4.w, p = game.player;
+      const mx = -w.dx(at4.x, p.x) * at4.z, my = -(p.y - at4.y) * at4.z;
+      this.flashOver(g, css2);
       for (const pin of this.pinList) {
-        const vx = (pin.rim ? w.dx(at4.x, pin.x) * at4.z : pin.sx) * k, vy = (pin.rim ? (pin.y - at4.y) * at4.z : pin.sy) * k;
+        const vx = (pin.rim ? w.dx(p.x, pin.x) * at4.z : pin.sx + mx) * k, vy = (pin.rim ? (pin.y - p.y) * at4.z : pin.sy + my) * k;
         let sx = vx * cs - vy * sn, sy = vx * sn + vy * cs;
         const d = Math.hypot(sx, sy), R4 = r - (pin.rim ? 11 : 9);
         let edge = false;
@@ -90919,6 +90952,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         drawPin(g, r + sx, r + sy, pin, edge ? Math.atan2(sy, sx) : null);
       }
+    }
+    /** Just after − or +: how far across the minimap reaches now (over it, upright). */
+    flashOver(g, css2) {
+      if (!this.flash || performance.now() > this.flash.until) return;
+      g.font = "600 11px Nunito, sans-serif";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      const tw = g.measureText(this.flash.text).width + 12;
+      g.fillStyle = "rgba(40,28,16,.78)";
+      g.fillRect(css2 / 2 - tw / 2, css2 - 30, tw, 16);
+      g.fillStyle = "#f6ead0";
+      g.fillText(this.flash.text, css2 / 2, css2 - 22);
     }
     /** Keep within the memory allowed: the pieces longest out of view go first. */
     trim() {
@@ -96535,6 +96580,12 @@ ${tip}` }), cd: h("div.cd") };
         E.mmNorth.style.left = 50 + Math.sin(phi) * 44 + "%";
         E.mmNorth.style.top = 50 - Math.cos(phi) * 44 + "%";
       }
+      this.mmT -= 1 / 60;
+      if (this.mmT <= 0) {
+        this.drawMinimap(game);
+        this.mmT = this.minimap?.pending ? 0 : 0.2;
+      }
+      this.minimap?.present(game);
       this.minimap?.pins(game, up);
       this.set(E.name, "name", ch.name || p.name);
       const title2 = ch.title || (ch.faction === "marine" ? `Marine ${ch.marineRank || "Recruit"}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === "pirate" ? "Pirate" : "Wanderer");
@@ -96698,11 +96749,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const env = game.env;
       const wx = env.storm > 0.6 ? "Storm" : env.storm > 0.25 ? "Squall" : env.snow ? "Snow" : env.fog > 0.3 ? "Fog" : env.daylight < 0.35 ? env.fullMoon ? "Full moon" : "Night" : "Clear";
       this.set(E.clock, "clock", `Day ${env.day} \xB7 ${env.clockString()} \xB7 ${wx}`);
-      this.mmT -= 1 / 60;
-      if (this.mmT <= 0) {
-        this.drawMinimap(game);
-        this.mmT = this.minimap?.pending ? 0 : 0.2;
-      }
       this.qtT = (this.qtT || 0) - 1 / 60;
       if (this.qtT <= 0) {
         this.qtT = 0.35;

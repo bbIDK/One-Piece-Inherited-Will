@@ -20,6 +20,9 @@ const CHUNK = 256; // painting pixels a side of each piece of the planet kept dr
 const KEEP = 48; // pieces kept (~12 MB)
 const PER_DRAW = 1; // pieces painted at most each time it's drawn (the rest wait as bare parchment, a frame or two)
 const RECHECK = 1.5; // s: how often the pieces round you are looked over for newly explored ground
+// (css px of chart drawn past its edge all round: between one drawing and the
+// next — a fifth of a second — it slides under you that far, every frame)
+const MARGIN = 32;
 const PARCH = [240, 224, 186];
 const BLANK = [PARCH[0] * 0.98, PARCH[1] * 0.96, PARCH[2] * 0.92];
 const INK = [71, 51, 31];
@@ -53,14 +56,22 @@ export class Minimap {
   /** Metres to a pixel of the minimap, now. */
   scale(sailing) { return ZOOMS[this.zoom[sailing ? 'sea' : 'foot']] ?? ZOOMS[DEFAULT.foot]; }
 
+  /**
+   * Draw the chart round you (5 times a second; every frame while there's
+   * still charting to do): into a buffer a little bigger than the minimap,
+   * which present() slides under you every frame — the chart moves with you
+   * smoothly, not in steps.
+   */
   draw(game, dt = 0.2) {
     const c = this.canvas, w = game.world, p = game.player;
     if (!w || !p || !w.map) return;
-    // (as sharp as the screen: the canvas is drawn at the screen's pixel density)
-    const css = c.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
+    // (as sharp as the screen: drawn at the screen's pixel density)
+    const view = c.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const css = view + 2 * MARGIN; // (the buffer's width, css px)
     const size = Math.round(css * dpr);
-    if (c.width !== size) { c.width = size; c.height = size; }
-    const g = c.getContext('2d');
+    const buf = this.buf || (this.buf = document.createElement('canvas'));
+    if (buf.width !== size) { buf.width = size; buf.height = size; }
+    const g = buf.getContext('2d');
     const sailing = p.mode === 'sail';
     const mpp = this.scale(sailing), z = 1 / mpp; // css pixels to the metre
     const zone = w !== game.surface;
@@ -117,16 +128,44 @@ export class Minimap {
     // (still something to chart or paint in view: draw again next frame)
     this.pending = charting > 0 || waiting;
     // the icons over it (drawn every frame by pins, from where you were now)
-    this.at = { x: p.x, y: p.y, z, css, w };
+    this.at = { x: p.x, y: p.y, z, css: view, w };
     this.pinList = gatherPins(game, z, css, (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     // 3. the chart's rules: the survey grid, and the edges of the Grand Line and the Calm Belts
     rules(g, w, p, z, css, zone);
-    // 4. ships, foes and quest folk
+    g.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  /**
+   * Every frame: the chart as last drawn, slid along by how far you've come
+   * since, in its round frame (and, out of the 3D view, your arrow on it).
+   */
+  present(game) {
+    const c = this.canvas, p = game.player, w = game.world;
+    // (come farther since than the chart reaches past the edge — a hitch, a
+    // fast ship, a fast travel: it's drawn again now, not left showing bare)
+    const was = this.at;
+    if (was && was.w === w && p && Math.max(Math.abs(w.dx(was.x, p.x)), Math.abs(p.y - was.y)) * was.z > MARGIN - 2) this.draw(game, 0);
+    const at = this.at, buf = this.buf;
+    if (!buf || !at || at.w !== w || !p) return;
+    const css = c.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const size = Math.round(css * dpr);
+    if (c.width !== size) { c.width = size; c.height = size; }
+    const g = c.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    g.fillStyle = `rgb(${BLANK.map((v) => v | 0)})`;
+    g.fillRect(0, 0, size, size);
+    const k = css / at.css, bs = buf.width * k; // (the minimap resized since: the chart with it)
+    const ox = -w.dx(at.x, p.x) * at.z * k * dpr, oy = -(p.y - at.y) * at.z * k * dpr;
+    g.drawImage(buf, (size - bs) / 2 + ox, (size - bs) / 2 + oy, bs, bs);
+    // ships, foes and quest folk, where they are now
+    const z = at.z * k, r = css / 2 - 2;
+    g.setTransform(dpr, 0, 0, dpr, css / 2 * dpr, css / 2 * dpr);
     for (const s of game.ships) {
       if (s.sunk) continue;
-      const [dx, dy] = toS(s.x, s.y);
-      if (Math.hypot(dx - css / 2, dy - css / 2) > css / 2 - 4) continue;
+      const dx = w.dx(p.x, s.x) * z, dy = (s.y - p.y) * z;
+      if (Math.hypot(dx, dy) > r) continue;
       g.fillStyle = s.owner === 'player' ? '#f9d71c' : s.faction === 'marine' ? '#3d8fd6' : '#d6453c';
       g.strokeStyle = 'rgba(58,40,24,.85)'; g.lineWidth = 1;
       // (the big ships show their length)
@@ -137,28 +176,20 @@ export class Minimap {
       // (with Observation Haki you sense everyone about)
       const hostileNow = a.controller?.target === p || (p.observation && a.faction !== 'civilian');
       if (!hostileNow && !a.questMarker) continue;
-      const [dx, dy] = toS(a.x, a.y);
-      if (Math.hypot(dx - css / 2, dy - css / 2) > css / 2 - 3) continue;
+      const dx = w.dx(p.x, a.x) * z, dy = (a.y - p.y) * z;
+      if (Math.hypot(dx, dy) > r) continue;
       g.fillStyle = a.questMarker ? (a.questMarker[0] === 'M' ? '#ff9100' : '#ffd54f') : '#e53935';
       g.strokeStyle = 'rgba(40,26,14,.9)'; g.lineWidth = 1;
       g.beginPath(); g.arc(dx, dy, a.questMarker ? 3.2 : 2.4, 0, Math.PI * 2); g.fill(); g.stroke();
     }
-    // (just after − or +: how far across it reaches now)
-    if (this.flash && performance.now() < this.flash.until) {
-      g.font = '600 11px Nunito, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      const tw = g.measureText(this.flash.text).width + 12;
-      g.fillStyle = 'rgba(40,28,16,.78)';
-      g.fillRect(css / 2 - tw / 2, css - 30, tw, 16);
-      g.fillStyle = '#f6ead0';
-      g.fillText(this.flash.text, css / 2, css - 22);
-    }
-    // the round frame
     g.setTransform(1, 0, 0, 1, 0, 0);
+    // the round frame
     g.globalCompositeOperation = 'destination-in';
     g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); g.fill();
     g.globalCompositeOperation = 'source-over';
     // you (the 3D view keeps a fixed arrow over the turning map instead)
     if (game.view3d?.active) return;
+    const sailing = p.mode === 'sail';
     g.setTransform(dpr, 0, 0, dpr, css / 2 * dpr, css / 2 * dpr);
     g.rotate(sailing && p.ship ? p.ship.heading : p.facing);
     g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.5;
@@ -188,13 +219,16 @@ export class Minimap {
     if (!g) return;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, o.width, o.height);
-    if (!at || at.w !== game.world || !this.pinList?.length) return;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (!at || at.w !== game.world || !this.pinList?.length) { this.flashOver(g, css); return; }
     const th = up == null ? 0 : -Math.PI / 2 - up, cs = Math.cos(th), sn = Math.sin(th);
-    const r = css / 2, k = css / at.css, w = at.w;
+    const r = css / 2, k = css / at.css, w = at.w, p = game.player;
+    // (from where you are now, not where it was last drawn from: they slide with the chart)
+    const mx = -w.dx(at.x, p.x) * at.z, my = -(p.y - at.y) * at.z;
+    this.flashOver(g, css);
     for (const pin of this.pinList) {
       // (the places in town where gatherPins spread them, the rest where they are)
-      const vx = (pin.rim ? w.dx(at.x, pin.x) * at.z : pin.sx) * k, vy = (pin.rim ? (pin.y - at.y) * at.z : pin.sy) * k;
+      const vx = (pin.rim ? w.dx(p.x, pin.x) * at.z : pin.sx + mx) * k, vy = (pin.rim ? (pin.y - p.y) * at.z : pin.sy + my) * k;
       let sx = vx * cs - vy * sn, sy = vx * sn + vy * cs;
       const d = Math.hypot(sx, sy), R = r - (pin.rim ? 11 : 9);
       let edge = false;
@@ -204,6 +238,17 @@ export class Minimap {
       }
       drawPin(g, r + sx, r + sy, pin, edge ? Math.atan2(sy, sx) : null);
     }
+  }
+
+  /** Just after − or +: how far across the minimap reaches now (over it, upright). */
+  flashOver(g, css) {
+    if (!this.flash || performance.now() > this.flash.until) return;
+    g.font = '600 11px Nunito, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const tw = g.measureText(this.flash.text).width + 12;
+    g.fillStyle = 'rgba(40,28,16,.78)';
+    g.fillRect(css / 2 - tw / 2, css - 30, tw, 16);
+    g.fillStyle = '#f6ead0';
+    g.fillText(this.flash.text, css / 2, css - 22);
   }
 
   /** Keep within the memory allowed: the pieces longest out of view go first. */

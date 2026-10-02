@@ -490,6 +490,12 @@ export class UI {
       E.mmNorth.style.left = (50 + Math.sin(phi) * 44) + '%';
       E.mmNorth.style.top = (50 - Math.cos(phi) * 44) + '%';
     }
+    // the chart round you, drawn 5 times a second (every frame while an
+    // island's still being charted on it, a little at a time) and slid under
+    // you every frame in between; the icons over it
+    this.mmT -= 1 / 60;
+    if (this.mmT <= 0) { this.drawMinimap(game); this.mmT = this.minimap?.pending ? 0 : 0.2; }
+    this.minimap?.present(game);
     this.minimap?.pins(game, up);
     this.set(E.name, 'name', ch.name || p.name);
     const title = ch.title || (ch.faction === 'marine' ? `Marine ${ch.marineRank || 'Recruit'}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === 'pirate' ? 'Pirate' : 'Wanderer');
@@ -644,10 +650,6 @@ export class UI {
     const env = game.env;
     const wx = env.storm > 0.6 ? 'Storm' : env.storm > 0.25 ? 'Squall' : env.snow ? 'Snow' : env.fog > 0.3 ? 'Fog' : env.daylight < 0.35 ? (env.fullMoon ? 'Full moon' : 'Night') : 'Clear';
     this.set(E.clock, 'clock', `Day ${env.day} · ${env.clockString()} · ${wx}`);
-    // minimap
-    this.mmT -= 1 / 60;
-    // (5 times a second; every frame while an island's still being charted on it, a little at a time)
-    if (this.mmT <= 0) { this.drawMinimap(game); this.mmT = this.minimap?.pending ? 0 : 0.2; }
     // quest tracker
     this.qtT = (this.qtT || 0) - 1 / 60;
     if (this.qtT <= 0) { this.qtT = 0.35; this.drawTracker(game); }
