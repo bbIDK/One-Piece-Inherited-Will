@@ -219,6 +219,33 @@ input.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radiu
 .wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }
 .wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }
 .wm-label.giver.main { color: #3b2a1a; }
+.wm-label.town { font: 700 13px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #4a3320; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; z-index: 1; }
+.wm-label.isle { color: #2f2012; letter-spacing: 1px; text-shadow: 0 0 4px #f5e6c4, 0 0 8px #f5e6c4; z-index: 1; }
+.wm-label.landmark { font: italic 600 12px Nunito, sans-serif; color: #5b4026; }
+/* markers standing on their spot: the icon's middle on it, the name beside it */
+.wm-pin { position: absolute; width: 0; height: 0; display: flex; align-items: center; z-index: 2; }
+.wm-pin > img { flex: none; transform: translate(-50%, 0); filter: drop-shadow(0 1px 1.5px rgba(40,24,10,.6)); }
+.wm-pin > span { margin-left: -4px; white-space: nowrap; font: 400 16px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; }
+.wm-pin.quest > span { color: #1f5f86; font-size: 17px; }
+.wm-pin.quest.main { z-index: 4; }
+.wm-pin.quest.main > span { color: #a33a00; font-size: 19px; }
+.wm-pin.poi > img { box-sizing: content-box; padding: 2px; border-radius: 50%; background: rgba(246,234,206,.96); box-shadow: 0 0 0 1.5px #5b4026, 0 1px 3px rgba(40,24,10,.45); filter: none; }
+.wm-pin.poi.dock > img { background: rgba(214,232,240,.96); }
+.wm-pin.poi > span { font: 700 11px Nunito, sans-serif; color: #4a3320; }
+.wm-pin.lp > span { color: #8e2c1c; }
+/* you: an arrow the way you face, ringed */
+.wm-me { position: absolute; width: 0; height: 0; z-index: 5; }
+.wm-me::before { content: ''; position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(192,57,43,.75); animation: wmping 1.8s ease-out infinite; }
+.wm-me i { position: absolute; left: -10px; top: -12px; width: 20px; height: 24px; }
+.wm-me i::before { content: ''; position: absolute; inset: 0; background: #c0392b; clip-path: polygon(50% 0, 100% 100%, 50% 74%, 0 100%); filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }
+@keyframes wmping { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+.wm-scale { position: absolute; left: 22px; bottom: 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; pointer-events: none; }
+.wm-scale i { display: block; height: 7px; border: 2px solid #4a3320; border-top: 0; background: repeating-linear-gradient(90deg, #4a3320 0 25%, #f2e3c2 25% 50%); background-size: 100% 3px; background-repeat: no-repeat; background-position: bottom; box-shadow: 0 0 0 1px rgba(245,230,196,.8); }
+.wm-scale span { font: 700 13px Nunito, sans-serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; }
+.wm-rose { position: absolute; right: 20px; bottom: 20px; pointer-events: none; opacity: .9; filter: drop-shadow(0 0 4px rgba(245,230,196,.9)); }
+/* (the chart has the screen to itself: no banners or toasts over it) */
+#ui.map-open .banner, #ui.map-open .toast { visibility: hidden; }
+#ui.touch .wm-rose { transform: scale(.7); transform-origin: right bottom; }
 .wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }
 .wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }
 .wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }

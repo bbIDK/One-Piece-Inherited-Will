@@ -140,12 +140,29 @@ rearrange them.
   side quests you can track or give up. An on-screen **tracker** on the right
   shows the next step and how far away it is. When the story's step is to
   see another quest through (the Black Cat's Plot), its card shows that
-  quest's step instead of listing it twice. The **world map** marks the
-  story's next stop and the quest givers on the islands you know.
+  quest's step instead of listing it twice.
+- **The world map (M)** is a chart of the planet; zoom in on an island
+  you've been to (or sailed close by) and it's charted in detail: the
+  coast inked, the shallows with their depth lines, the land shaded and
+  contoured, every tree where it stands, the streets and the roofs of the
+  towns, and, closer still, the inns, shops, taverns, doctors and harbours.
+  You're an arrow the way you face; a scale bar and a compass rose go with
+  it. It marks your quests, the story's next stop and the quest givers on
+  the islands you know.
+- **Quest markers** stand over the world where the main story's objective
+  and the side quests on the tracker are (above the head of whoever you're
+  to see), or ride a ring round the middle of the screen with an arrow when
+  they're out of view. The main story's are a gold diamond with a red star
+  and a side quest's a sky-blue diamond with a "!", the same on the
+  compass, the chart and over the world.
 - **A boss's health bar** shows while you're in the fight with them and close
   by. It goes once they're beaten, when you get well away, or when you go
   down and wake up somewhere else.
-- **Waypoints** point at whoever the step is about: the foe to beat or the
+- **Waypoints** point at where a step is done (the bell to ring among the
+  spires, the platform in the square, the chest still holding the herbs),
+  at the harbour of an island to sail to, at the shipwright for a ship, at
+  the shop that sells what you need (in that sea) and at someone who'd join
+  your crew, or else at whoever the step is about: the foe to beat or the
   person to see (a step that says "Return to Makino" points at Makino)
   where they stand, or — not about yet — where they'll be on the island
   they live on, which needn't be the quest's (Katakuri on Cacao Island, Leo
@@ -391,7 +408,7 @@ rearrange them.
 
 ## The world, sea by sea
 
-There are 111 charted islands, 683 named NPCs and 118 side quests, and a main
+There are 111 charted islands, 686 named NPCs and 118 side quests, and a main
 story of 85 chapters told 206 ways across the three roads, plus three
 zones and Mary Geoise. Every arc is told from the point of view of *your*
 pirate, Marine or wanderer. The Straw Hats appear as cameos and never as the

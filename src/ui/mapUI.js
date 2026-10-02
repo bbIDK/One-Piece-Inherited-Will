@@ -1,7 +1,22 @@
-// Full-screen world chart (M). Uses the terrain shader's parchment "map mode".
+// Full-screen world chart (M). The planet is the terrain shader's parchment
+// "map mode"; zoomed in, the islands you know are charted in detail over it
+// (chartDetail.js), with their towns, harbours and the places you'd look for
+// named; you're an arrow the way you face, with a scale bar and a compass
+// rose to read it by.
 import { uiImg } from './icon.js';
 import { h, clear } from './dom.js';
 import { W, H, EQ, RM_X, GL_TOP, GL_BOTTOM, chart } from '../world/constants.js';
+import { ChartDetail } from './chartDetail.js';
+
+// what a town's buildings are marked with on the chart, close up (and their names: what they are)
+const POI = {
+  inn: ['inn', 'Inn'], tavern: ['bar', 'Tavern'], bar: ['bar', 'Bar'], restaurant: ['food', 'Restaurant'], cafe: ['food', 'Cafe'],
+  shop: ['shop', 'Shop'], market: ['shop', 'Market'], weapons: ['sword', 'Weapons'], doctor: ['doctor', 'Doctor'],
+  shipwright: ['shipwright', 'Shipwright'], dojo: ['trainer', 'Dojo'], trainer: ['trainer', 'Trainer'],
+  marine_base: ['marine', 'Marine base'], bounty: ['bounty', 'Bounty office'], library: ['library', 'Library'],
+};
+// round lengths for the scale bar (m)
+const SCALES = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
 
 const SEA_LABELS = [
   { name: 'EAST BLUE', x: chart(3070), y: chart(390) },
@@ -24,14 +39,18 @@ export function installMap(game) {
   const title = h('div.wm-title', 'Chart of the Blue Planet');
   const help = h('div.wm-help', 'Drag to pan · wheel to zoom · M or Esc to close');
   const close = h('button.wm-close', { title: 'Close the chart (M)', on: { pointerdown: (e) => e.stopPropagation(), click: () => game.closeMap() } }, uiImg('close', 22));
-  const wrap = h('div', { style: { position: 'absolute', inset: '0', pointerEvents: 'auto', cursor: 'grab', touchAction: 'none' } }, layer, title, help, close);
+  const scaleBar = h('div.wm-scale', h('i'), h('span'));
+  const rose = h('div.wm-rose');
+  rose.innerHTML = ROSE_SVG;
+  const wrap = h('div', { style: { position: 'absolute', inset: '0', pointerEvents: 'auto', cursor: 'grab', touchAction: 'none' } }, layer, scaleBar, rose, title, help, close);
+  const detail = game.chartDetail = new ChartDetail();
   wrap.classList.add('hidden');
   ui.root.appendChild(wrap);
   const cam = { x: 0, y: 0, zoom: 0.3 };
   // (the chart is W tiles across: all of it fits the screen at the least zoom;
   // at the most, a chart pixel is a few screen pixels)
   const MIN_ZOOM = () => Math.min(0.18, (game.renderer.cw || 1280) / W * 0.9);
-  const MAX_ZOOM = 1.6;
+  const MAX_ZOOM = 3.2; // (a town's streets fill the screen)
   // drag (mouse or one finger) pans; the wheel or a two-finger pinch zooms
   let drag = null, pinch = null;
   const ptrs = new Map();
@@ -98,7 +117,13 @@ export function installMap(game) {
     game.paused = true;
     const p = game.player;
     const r = game.renderer;
-    if (game.world === game.surface) {
+    const isl = game.currentIsland;
+    if (isl?.landBox && (game.world !== game.surface || p.mode !== 'sail')) {
+      // (ashore: the island you're on, all of it, in detail)
+      const B = isl.landBox;
+      cam.zoom = Math.max(0.5, Math.min(2.2, Math.min(r.cw / (B.x1 - B.x0 + 60), r.ch / (B.y1 - B.y0 + 60)) * 0.9));
+      cam.x = p.x; cam.y = p.y;
+    } else if (game.world === game.surface) {
       // (about a quarter of the world across: the sea you're in and its neighbours)
       cam.zoom = Math.max(MIN_ZOOM(), Math.min(r.cw / (W * 0.28), 0.5));
       cam.x = p.x;
@@ -111,6 +136,7 @@ export function installMap(game) {
     help.textContent = game.input.touch?.on ? 'Drag to pan · pinch to zoom · tap the cross to close' : 'Drag to pan · wheel to zoom · M or Esc to close';
     wrap.classList.remove('hidden');
     layer.classList.remove('hidden');
+    ui.root.classList.add('map-open');
     // the chart gets the whole screen
     ui.hud.classList.add('hidden');
     ui.el.side.classList.add('hidden');
@@ -120,6 +146,7 @@ export function installMap(game) {
     ui.mapOpen = false;
     wrap.classList.add('hidden');
     layer.classList.add('hidden');
+    ui.root.classList.remove('map-open');
     ui.hud.classList.toggle('hidden', !ui.hudVisible);
     ui.el.side.classList.toggle('hidden', !ui.hudVisible);
     if (!ui.stack.length && !ui.dialogueEl) game.paused = false;
@@ -139,44 +166,98 @@ export function installMap(game) {
     const g = r.ctx;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, r.canvas.width, r.canvas.height);
+    const w = game.world, zone = w !== game.surface, c = game.state.char;
+    const discovered = new Set(c.discovered || []);
+    const p = game.player;
+    const toS = (x, y) => {
+      let dx = x - cam.x;
+      if (!zone) dx -= W * Math.round(dx / W);
+      return [dx * cam.zoom + r.cw / 2, (y - cam.y) * cam.zoom + r.ch / 2];
+    };
+    // (the islands you've set foot on or sailed close by — all of them down in a zone, or in creative mode)
+    detail.draw(g, {
+      world: w, dpr: r.dpr, zoom: cam.zoom, cw: r.cw, ch: r.ch, toS, px: p.x, py: p.y,
+      known: (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland || seenIsland(w, isl),
+    });
     drawLabels(game, r, cam, layer);
+    drawScale(scaleBar, cam.zoom);
     Object.assign(r.cam, saved);
   };
 }
 
 function drawLabels(game, r, cam, layer) {
-  clear(layer);
   const w = game.world;
   const zone = w !== game.surface;
   const c = game.state.char;
+  const z = cam.zoom;
+  // (the chart doesn't move while it's open unless you move it: the labels are laid out again only then)
+  const key = `${w.id}|${cam.x.toFixed(2)}|${cam.y.toFixed(2)}|${z.toFixed(4)}|${r.cw}x${r.ch}|${Math.floor(performance.now() / 600)}`;
+  if (layer.dataset.key === key) return;
+  layer.dataset.key = key;
+  clear(layer);
   const toS = (x, y) => {
     let dx = x - cam.x;
     if (!zone) dx -= W * Math.round(dx / W);
-    return [dx * cam.zoom + r.cw / 2, (y - cam.y) * cam.zoom + r.ch / 2];
+    return [dx * z + r.cw / 2, (y - cam.y) * z + r.ch / 2];
   };
   const placed = [];
   const add = (cls, text, x, y, extra = {}, declutter = false) => {
     const [sx, sy] = toS(x, y);
-    if (sx < -200 || sy < -50 || sx > r.cw + 200 || sy > r.ch + 50) return;
+    if (sx < -200 || sy < -50 || sx > r.cw + 200 || sy > r.ch + 50) return null;
     if (declutter) {
       // skip labels that would overlap one already on the chart
       const fs = parseFloat(extra.fontSize) || 13;
-      const w2 = text.length * fs * 0.28, h2 = fs * 0.62;
-      if (placed.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2)) return;
+      const len = typeof text === 'string' ? text.length : 8;
+      const w2 = len * fs * 0.28, h2 = fs * 0.62;
+      if (placed.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2)) return null;
       placed.push({ x: sx, y: sy, w: w2, h: h2 });
     }
-    layer.appendChild(h('div.wm-label' + cls, { style: { left: sx + 'px', top: sy + 'px', ...extra } }, text));
+    const e = h('div.wm-label' + cls, { style: { left: sx + 'px', top: sy + 'px', ...extra } }, text);
+    layer.appendChild(e);
+    return e;
   };
-  if (zone) add('.sea', w.name, w.width / 2, 14 / cam.zoom, { fontSize: '26px' });
-  if (!zone) for (const s of SEA_LABELS) add('.sea', s.name, s.x, s.y, s.vertical ? { writingMode: 'vertical-rl', fontSize: Math.max(16, 26 * cam.zoom / 0.3) + 'px' } : { fontSize: Math.max(14, 30 * cam.zoom / 0.3) + 'px' });
+  // a marker standing exactly on its spot (an icon), with a name beside it
+  // (`room`: only where it doesn't land on another icon — and its name only where that's clear of everything)
+  const icons = [];
+  const fits = (list, sx, sy, w2, h2) => !list.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2);
+  const pin = (cls, icon, size, text, x, y, room = false) => {
+    const [sx, sy] = toS(x, y);
+    if (sx < -100 || sy < -40 || sx > r.cw + 100 || sy > r.ch + 40) return;
+    if (room) {
+      if (!fits(icons, sx, sy, size * 0.42, size * 0.42)) return;
+      icons.push({ x: sx, y: sy, w: size * 0.42, h: size * 0.42 });
+      if (text) {
+        const w2 = text.length * 3.3, tx = sx + size * 0.4 + w2;
+        if (fits(placed, tx, sy, w2, 7) && fits(icons, tx, sy, w2, 7)) placed.push({ x: tx, y: sy, w: w2, h: 7 }); else text = null;
+      }
+    }
+    layer.appendChild(h('div.wm-pin' + cls, { style: { left: sx + 'px', top: sy + 'px' } }, uiImg(icon, size), text ? h('span', text) : null));
+  };
+  if (zone) add('.sea', w.name, w.width / 2, 14 / z, { fontSize: '26px' });
+  // (the seas' names: big from afar, fading as you close in on an island)
+  const seaA = (1 - Math.max(0, Math.min(1, (z - 0.45) / 0.5))).toFixed(2);
+  if (!zone && seaA > 0) for (const s of SEA_LABELS) add('.sea', s.name, s.x, s.y, s.vertical ? { writingMode: 'vertical-rl', fontSize: Math.max(16, 26 * z / 0.3) + 'px', opacity: seaA } : { fontSize: Math.min(44, Math.max(14, 30 * z / 0.3)) + 'px', opacity: seaA });
+  // quests (the main story's objective gold, on top; side quests sky blue — as on the compass and over the world)
+  const act = game.quests.active().sort((a, b) => (a.def.kind === 'main') - (b.def.kind === 'main'));
+  for (const { id, def } of act) {
+    const m = game.quests.marker(id);
+    const main = def.kind === 'main';
+    if (!m || (m.zone ? m.zone !== w.id : zone)) continue;
+    pin(main ? '.quest.main' : '.quest', main ? 'wp_main' : 'wp_side', main ? 30 : 24, m.label, m.x, m.y);
+    const [qx, qy] = toS(m.x, m.y);
+    placed.push({ x: qx + m.label.length * 3.6, y: qy, w: 14 + m.label.length * 3.8, h: 12 });
+  }
   const discovered = new Set(c.discovered || []);
+  const known = (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland;
+  const close = z >= 0.75, closer = z >= 1.15; // (how much of the islands you know is named: towns, then the places in them)
   const byImportance = w.islands.filter((i) => i.name).sort((a, b) => (b.def?.w || 0) * (b.def?.h || 0) - (a.def?.w || 0) * (a.def?.h || 0));
   for (const isl of byImportance) {
-    if (!isl.name) continue;
     if (isl.def?.hidden && !c.flags.laughTaleRevealed) continue;
-    const known = zone || discovered.has(isl.id) || w.isExplored(isl.x, isl.y);
-    if (!known) continue;
-    add('', isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + 'px' }, true);
+    if (!(known(isl) || w.isExplored(isl.x, isl.y))) continue;
+    // (charted close up, the island's name goes under it, out of the way of its town; from afar, on it)
+    const B = isl.landBox;
+    const under = close && B && known(isl);
+    add(under ? '.isle' : '', isl.name, isl.x, under ? B.y1 + 8 / z : isl.y + isl.radius * 0.2 + 6 / z, { fontSize: (under ? Math.min(30, 16 + z * 5) : Math.max(11, Math.min(20, 14 * Math.sqrt(z / 0.3)))) + 'px' }, true);
   }
   if (!zone) {
     add('', 'Reverse Mountain', RM_X, EQ - chart(40), { fontSize: '14px' });
@@ -184,23 +265,74 @@ function drawLabels(game, r, cam, layer) {
   }
   // quest givers: who can start your story, and side quests waiting on the islands you know
   if (!zone) {
-    for (const pin of game.storyPins?.() || []) {
-      add(pin.main ? '.giver.main' : '.giver', [h('b.pin', { style: { background: pin.color } }, '!'), ' ' + pin.label], pin.x, pin.y, { fontSize: pin.main ? '15px' : '13px' }, true);
+    for (const p of game.storyPins?.() || []) {
+      add(p.main ? '.giver.main' : '.giver', [h('b.pin', { style: { background: p.color } }, '!'), ' ' + p.label], p.x, p.y, { fontSize: p.main ? '15px' : '13px' }, true);
     }
-  }
-  // quests (the main story's objective gold, on top; side quests sky blue — as on the compass and over the world)
-  const act = game.quests.active().sort((a, b) => (a.def.kind === 'main') - (b.def.kind === 'main'));
-  for (const { id, def } of act) {
-    const m = game.quests.marker(id);
-    const main = def.kind === 'main';
-    if (m && (!zone || m.zone === w.id)) add(main ? '.quest.main' : '.quest', [uiImg(main ? 'wp_main' : 'wp_side', main ? 26 : 22), ' ' + m.label], m.x, m.y);
   }
   // log pose target
   const lp = game.logPoseTarget?.();
-  if (lp && !zone) add('.quest', [uiImg('log_pose', 22)], lp.x, lp.y);
-  // ships
-  for (const s of game.ships) if (s.owner === 'player' && !s.sunk) add('', [uiImg('ship', 22)], s.x, s.y, { fontSize: '16px' });
-  // me
+  if (lp && !zone) pin('.lp', 'log_pose', 24, 'Log Pose', lp.x, lp.y);
+  // your ships
+  for (const s of game.ships) if (s.owner === 'player' && !s.sunk) pin('.ship', 'ship', 24, z >= 1 ? s.name || 'Your ship' : null, s.x, s.y);
+  // close up, the islands you know are charted in detail: their towns, harbours and the places in them
+  if (close) {
+    for (const isl of w.islands) {
+      if (!isl.landBox || !known(isl)) continue;
+      const B = isl.landBox;
+      const [ax, ay] = toS(B.x0, B.y0), [bx, by] = toS(B.x1, B.y1);
+      if (bx < -50 || by < -50 || ax > r.cw + 50 || ay > r.ch + 50) continue;
+      for (const t of isl.towns || []) {
+        if (closer) {
+          for (const b of t.buildings || []) {
+            const P = POI[b.role];
+            if (!P || !b.door) continue;
+            pin('.poi', P[0], 20, z >= 2.6 ? b.name || P[1] : null, b.door.x, b.door.y, true);
+          }
+        }
+        if (t.name && t.plaza) add('.town', t.name, t.plaza.x, t.plaza.y, { fontSize: Math.min(22, 13 + z * 3) + 'px' }, true);
+      }
+      for (const d of isl.docks || []) if (d.end) pin('.poi.dock', 'anchor', 18, null, d.end.x, d.end.y);
+      // (the places a chart would name — not the notices, posters and curios you can look at)
+      if (closer) for (const l of isl.landmarks || []) if (l.name && l.name.length <= 30 && !l.lore && !l.use && l.kind !== 'mountain' && l.kind !== 'building') add('.landmark', l.name, l.x, l.y + 1.5, { fontSize: '12px' }, true);
+    }
+  }
+  // you: an arrow the way you're facing
   const p = game.player;
-  add('.me', [h('span.me-dot'), 'You'], p.x, p.y);
+  const [mx, my] = toS(p.x, p.y);
+  const yaw = game.view3d?.rig?.yaw ?? p.facing ?? 0;
+  const me = h('div.wm-me', { style: { left: mx + 'px', top: my + 'px' } }, h('i'));
+  me.firstChild.style.transform = `rotate(${(yaw + Math.PI / 2).toFixed(3)}rad)`;
+  layer.appendChild(me);
 }
+
+/** Has an island been seen (its middle or the middle of a side of it explored, sailing by)? */
+function seenIsland(w, isl) {
+  if (w.isExplored(isl.x, isl.y)) return true;
+  const B = isl.landBox;
+  if (!B) return false;
+  const mx = (B.x0 + B.x1) / 2, my = (B.y0 + B.y1) / 2;
+  return w.isExplored(B.x0, my) || w.isExplored(B.x1, my) || w.isExplored(mx, B.y0) || w.isExplored(mx, B.y1);
+}
+
+/** The scale bar: a round length, as long as it is on the chart. */
+function drawScale(el, zoom) {
+  const want = 110 / zoom; // m that 110 px stand for
+  const m = SCALES.reduce((best, s) => (Math.abs(Math.log(s / want)) < Math.abs(Math.log(best / want)) ? s : best), SCALES[0]);
+  el.firstChild.style.width = Math.round(m * zoom) + 'px';
+  const txt = m >= 1000 ? m / 1000 + ' km' : m + ' m';
+  if (el.lastChild.textContent !== txt) el.lastChild.textContent = txt;
+}
+
+// a compass rose for the corner of the chart (north up)
+const ROSE_SVG = `<svg viewBox="-60 -60 120 120" width="112" height="112" aria-hidden="true">
+  <g fill="none" stroke="#5b4026" stroke-width="1.2" opacity=".85"><circle r="44"/><circle r="40" stroke-width=".6"/><circle r="15" stroke-width=".8"/></g>
+  <g stroke="#5b4026" stroke-width=".6" opacity=".7">${Array.from({ length: 32 }, (_, i) => { const a = i * Math.PI / 16, r0 = i % 4 ? 40 : 36; return `<line x1="${(Math.sin(a) * r0).toFixed(1)}" y1="${(-Math.cos(a) * r0).toFixed(1)}" x2="${(Math.sin(a) * 44).toFixed(1)}" y2="${(-Math.cos(a) * 44).toFixed(1)}"/>`; }).join('')}</g>
+  <g stroke="#3b2a1a" stroke-width=".8" stroke-linejoin="round">
+    <path d="M0 -50 L7 -7 L0 0 Z" fill="#b8402e"/><path d="M0 -50 L-7 -7 L0 0 Z" fill="#e8c9a0"/>
+    <path d="M0 50 L7 7 L0 0 Z" fill="#e8c9a0"/><path d="M0 50 L-7 7 L0 0 Z" fill="#5b4026"/>
+    <path d="M50 0 L7 7 L0 0 Z" fill="#e8c9a0"/><path d="M50 0 L7 -7 L0 0 Z" fill="#5b4026"/>
+    <path d="M-50 0 L-7 -7 L0 0 Z" fill="#e8c9a0"/><path d="M-50 0 L-7 7 L0 0 Z" fill="#5b4026"/>
+    <path d="M24 -24 L4 -4 L6 0 Z M24 -24 L0 -6 L4 -4 Z M-24 24 L-4 4 L-6 0 Z M-24 24 L0 6 L-4 4 Z M24 24 L4 4 L0 6 Z M24 24 L6 0 L4 4 Z M-24 -24 L-4 -4 L0 -6 Z M-24 -24 L-6 0 L-4 -4 Z" fill="#c9a77a" opacity=".9"/>
+  </g>
+  <text y="-52" text-anchor="middle" font-family="'Pirata One', serif" font-size="15" fill="#b8402e">N</text>
+</svg>`;

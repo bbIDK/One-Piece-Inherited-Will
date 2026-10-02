@@ -6587,8 +6587,8 @@
       this.usage = value;
       return this;
     }
-    addUpdateRange(start3, count2) {
-      this.updateRanges.push({ start: start3, count: count2 });
+    addUpdateRange(start4, count2) {
+      this.updateRanges.push({ start: start4, count: count2 });
     }
     clearUpdateRanges() {
       this.updateRanges.length = 0;
@@ -6936,9 +6936,9 @@
     hasAttribute(name) {
       return this.attributes[name] !== void 0;
     }
-    addGroup(start3, count2, materialIndex = 0) {
+    addGroup(start4, count2, materialIndex = 0) {
       this.groups.push({
-        start: start3,
+        start: start4,
         count: count2,
         materialIndex
       });
@@ -6946,8 +6946,8 @@
     clearGroups() {
       this.groups = [];
     }
-    setDrawRange(start3, count2) {
-      this.drawRange.start = start3;
+    setDrawRange(start4, count2) {
+      this.drawRange.start = start4;
       this.drawRange.count = count2;
     }
     applyMatrix4(matrix) {
@@ -7170,9 +7170,9 @@
       }
       for (let i = 0, il = groups9.length; i < il; ++i) {
         const group3 = groups9[i];
-        const start3 = group3.start;
+        const start4 = group3.start;
         const count2 = group3.count;
-        for (let j = start3, jl = start3 + count2; j < jl; j += 3) {
+        for (let j = start4, jl = start4 + count2; j < jl; j += 3) {
           handleTriangle(
             index.getX(j + 0),
             index.getX(j + 1),
@@ -7195,9 +7195,9 @@
       }
       for (let i = 0, il = groups9.length; i < il; ++i) {
         const group3 = groups9[i];
-        const start3 = group3.start;
+        const start4 = group3.start;
         const count2 = group3.count;
-        for (let j = start3, jl = start3 + count2; j < jl; j += 3) {
+        for (let j = start4, jl = start4 + count2; j < jl; j += 3) {
           handleVertex(index.getX(j + 0));
           handleVertex(index.getX(j + 1));
           handleVertex(index.getX(j + 2));
@@ -7541,9 +7541,9 @@
           for (let i = 0, il = groups9.length; i < il; i++) {
             const group3 = groups9[i];
             const groupMaterial = material[group3.materialIndex];
-            const start3 = Math.max(group3.start, drawRange.start);
+            const start4 = Math.max(group3.start, drawRange.start);
             const end = Math.min(index.count, Math.min(group3.start + group3.count, drawRange.start + drawRange.count));
-            for (let j = start3, jl = end; j < jl; j += 3) {
+            for (let j = start4, jl = end; j < jl; j += 3) {
               const a = index.getX(j);
               const b = index.getX(j + 1);
               const c = index.getX(j + 2);
@@ -7556,9 +7556,9 @@
             }
           }
         } else {
-          const start3 = Math.max(0, drawRange.start);
+          const start4 = Math.max(0, drawRange.start);
           const end = Math.min(index.count, drawRange.start + drawRange.count);
-          for (let i = start3, il = end; i < il; i += 3) {
+          for (let i = start4, il = end; i < il; i += 3) {
             const a = index.getX(i);
             const b = index.getX(i + 1);
             const c = index.getX(i + 2);
@@ -7574,9 +7574,9 @@
           for (let i = 0, il = groups9.length; i < il; i++) {
             const group3 = groups9[i];
             const groupMaterial = material[group3.materialIndex];
-            const start3 = Math.max(group3.start, drawRange.start);
+            const start4 = Math.max(group3.start, drawRange.start);
             const end = Math.min(position.count, Math.min(group3.start + group3.count, drawRange.start + drawRange.count));
-            for (let j = start3, jl = end; j < jl; j += 3) {
+            for (let j = start4, jl = end; j < jl; j += 3) {
               const a = j;
               const b = j + 1;
               const c = j + 2;
@@ -7589,9 +7589,9 @@
             }
           }
         } else {
-          const start3 = Math.max(0, drawRange.start);
+          const start4 = Math.max(0, drawRange.start);
           const end = Math.min(position.count, drawRange.start + drawRange.count);
-          for (let i = start3, il = end; i < il; i += 3) {
+          for (let i = start4, il = end; i < il; i += 3) {
             const a = i;
             const b = i + 1;
             const c = i + 2;
@@ -9942,13 +9942,13 @@
     function setMode(value) {
       mode = value;
     }
-    function render2(start3, count2) {
-      gl.drawArrays(mode, start3, count2);
+    function render2(start4, count2) {
+      gl.drawArrays(mode, start4, count2);
       info.update(count2, mode, 1);
     }
-    function renderInstances(start3, count2, primcount) {
+    function renderInstances(start4, count2, primcount) {
       if (primcount === 0) return;
-      gl.drawArraysInstanced(mode, start3, count2, primcount);
+      gl.drawArraysInstanced(mode, start4, count2, primcount);
       info.update(count2, mode, primcount);
     }
     function renderMultiDraw(starts, counts, drawCount) {
@@ -11152,13 +11152,13 @@
       type = value.type;
       bytesPerElement = value.bytesPerElement;
     }
-    function render2(start3, count2) {
-      gl.drawElements(mode, count2, type, start3 * bytesPerElement);
+    function render2(start4, count2) {
+      gl.drawElements(mode, count2, type, start4 * bytesPerElement);
       info.update(count2, mode, 1);
     }
-    function renderInstances(start3, count2, primcount) {
+    function renderInstances(start4, count2, primcount) {
       if (primcount === 0) return;
-      gl.drawElementsInstanced(mode, count2, type, start3 * bytesPerElement, primcount);
+      gl.drawElementsInstanced(mode, count2, type, start4 * bytesPerElement, primcount);
       info.update(count2, mode, primcount);
     }
     function renderMultiDraw(starts, counts, drawCount) {
@@ -12237,9 +12237,9 @@
   function unrollLoops(string) {
     return string.replace(unrollLoopPattern, loopReplacer);
   }
-  function loopReplacer(match, start3, end, snippet) {
+  function loopReplacer(match, start4, end, snippet) {
     let string = "";
-    for (let i = parseInt(start3); i < parseInt(end); i++) {
+    for (let i = parseInt(start4); i < parseInt(end); i++) {
       string += snippet.replace(/\[\s*i\s*\]/g, "[ " + i + " ]").replace(/UNROLLED_LOOP_INDEX/g, i);
     }
     return string;
@@ -13671,8 +13671,8 @@
       state.ambient[0] = r;
       state.ambient[1] = g;
       state.ambient[2] = b;
-      const hash10 = state.hash;
-      if (hash10.directionalLength !== directionalLength || hash10.pointLength !== pointLength || hash10.spotLength !== spotLength || hash10.rectAreaLength !== rectAreaLength || hash10.hemiLength !== hemiLength || hash10.numDirectionalShadows !== numDirectionalShadows || hash10.numPointShadows !== numPointShadows || hash10.numSpotShadows !== numSpotShadows || hash10.numSpotMaps !== numSpotMaps || hash10.numLightProbes !== numLightProbes) {
+      const hash11 = state.hash;
+      if (hash11.directionalLength !== directionalLength || hash11.pointLength !== pointLength || hash11.spotLength !== spotLength || hash11.rectAreaLength !== rectAreaLength || hash11.hemiLength !== hemiLength || hash11.numDirectionalShadows !== numDirectionalShadows || hash11.numPointShadows !== numPointShadows || hash11.numSpotShadows !== numSpotShadows || hash11.numSpotMaps !== numSpotMaps || hash11.numLightProbes !== numLightProbes) {
         state.directional.length = directionalLength;
         state.spot.length = spotLength;
         state.rectArea.length = rectAreaLength;
@@ -13690,16 +13690,16 @@
         state.spotLightMap.length = numSpotMaps;
         state.numSpotLightShadowsWithMaps = numSpotShadowsWithMaps;
         state.numLightProbes = numLightProbes;
-        hash10.directionalLength = directionalLength;
-        hash10.pointLength = pointLength;
-        hash10.spotLength = spotLength;
-        hash10.rectAreaLength = rectAreaLength;
-        hash10.hemiLength = hemiLength;
-        hash10.numDirectionalShadows = numDirectionalShadows;
-        hash10.numPointShadows = numPointShadows;
-        hash10.numSpotShadows = numSpotShadows;
-        hash10.numSpotMaps = numSpotMaps;
-        hash10.numLightProbes = numLightProbes;
+        hash11.directionalLength = directionalLength;
+        hash11.pointLength = pointLength;
+        hash11.spotLength = spotLength;
+        hash11.rectAreaLength = rectAreaLength;
+        hash11.hemiLength = hemiLength;
+        hash11.numDirectionalShadows = numDirectionalShadows;
+        hash11.numPointShadows = numPointShadows;
+        hash11.numSpotShadows = numSpotShadows;
+        hash11.numSpotMaps = numSpotMaps;
+        hash11.numLightProbes = numLightProbes;
         state.version = nextVersion++;
       }
     }
@@ -19069,8 +19069,8 @@ void main() {
       this.usage = value;
       return this;
     }
-    addUpdateRange(start3, count2) {
-      this.updateRanges.push({ start: start3, count: count2 });
+    addUpdateRange(start4, count2) {
+      this.updateRanges.push({ start: start4, count: count2 });
     }
     clearUpdateRanges() {
       this.updateRanges.length = 0;
@@ -20757,9 +20757,9 @@ void main() {
       const attributes = geometry.attributes;
       const positionAttribute = attributes.position;
       if (index !== null) {
-        const start3 = Math.max(0, drawRange.start);
+        const start4 = Math.max(0, drawRange.start);
         const end = Math.min(index.count, drawRange.start + drawRange.count);
-        for (let i = start3, l = end - 1; i < l; i += step) {
+        for (let i = start4, l = end - 1; i < l; i += step) {
           const a = index.getX(i);
           const b = index.getX(i + 1);
           const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, a, b);
@@ -20769,23 +20769,23 @@ void main() {
         }
         if (this.isLineLoop) {
           const a = index.getX(end - 1);
-          const b = index.getX(start3);
+          const b = index.getX(start4);
           const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, a, b);
           if (intersect2) {
             intersects2.push(intersect2);
           }
         }
       } else {
-        const start3 = Math.max(0, drawRange.start);
+        const start4 = Math.max(0, drawRange.start);
         const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
-        for (let i = start3, l = end - 1; i < l; i += step) {
+        for (let i = start4, l = end - 1; i < l; i += step) {
           const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, i, i + 1);
           if (intersect2) {
             intersects2.push(intersect2);
           }
         }
         if (this.isLineLoop) {
-          const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, end - 1, start3);
+          const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, end - 1, start4);
           if (intersect2) {
             intersects2.push(intersect2);
           }
@@ -20925,17 +20925,17 @@ void main() {
       const attributes = geometry.attributes;
       const positionAttribute = attributes.position;
       if (index !== null) {
-        const start3 = Math.max(0, drawRange.start);
+        const start4 = Math.max(0, drawRange.start);
         const end = Math.min(index.count, drawRange.start + drawRange.count);
-        for (let i = start3, il = end; i < il; i++) {
+        for (let i = start4, il = end; i < il; i++) {
           const a = index.getX(i);
           _position$2.fromBufferAttribute(positionAttribute, a);
           testPoint(_position$2, a, localThresholdSq, matrixWorld, raycaster, intersects2, this);
         }
       } else {
-        const start3 = Math.max(0, drawRange.start);
+        const start4 = Math.max(0, drawRange.start);
         const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
-        for (let i = start3, l = end; i < l; i++) {
+        for (let i = start4, l = end; i < l; i++) {
           _position$2.fromBufferAttribute(positionAttribute, i);
           testPoint(_position$2, i, localThresholdSq, matrixWorld, raycaster, intersects2, this);
         }
@@ -22788,7 +22788,7 @@ void main() {
             const vecHash1 = hashes[jNext];
             const v0 = _triangle[vertKeys[j]];
             const v1 = _triangle[vertKeys[jNext]];
-            const hash10 = `${vecHash0}_${vecHash1}`;
+            const hash11 = `${vecHash0}_${vecHash1}`;
             const reverseHash = `${vecHash1}_${vecHash0}`;
             if (reverseHash in edgeData && edgeData[reverseHash]) {
               if (_normal.dot(edgeData[reverseHash].normal) <= thresholdDot) {
@@ -22796,8 +22796,8 @@ void main() {
                 vertices.push(v1.x, v1.y, v1.z);
               }
               edgeData[reverseHash] = null;
-            } else if (!(hash10 in edgeData)) {
-              edgeData[hash10] = {
+            } else if (!(hash11 in edgeData)) {
+              edgeData[hash11] = {
                 index0: indexArr[j],
                 index1: indexArr[jNext],
                 normal: _normal.clone()
@@ -22901,12 +22901,12 @@ void main() {
       return triangles;
     }
   };
-  function linkedList(data, start3, end, dim, clockwise) {
+  function linkedList(data, start4, end, dim, clockwise) {
     let i, last;
-    if (clockwise === signedArea(data, start3, end, dim) > 0) {
-      for (i = start3; i < end; i += dim) last = insertNode(i, data[i], data[i + 1], last);
+    if (clockwise === signedArea(data, start4, end, dim) > 0) {
+      for (i = start4; i < end; i += dim) last = insertNode(i, data[i], data[i + 1], last);
     } else {
-      for (i = end - dim; i >= start3; i -= dim) last = insertNode(i, data[i], data[i + 1], last);
+      for (i = end - dim; i >= start4; i -= dim) last = insertNode(i, data[i], data[i + 1], last);
     }
     if (last && equals(last, last.next)) {
       removeNode(last);
@@ -22914,10 +22914,10 @@ void main() {
     }
     return last;
   }
-  function filterPoints(start3, end) {
-    if (!start3) return start3;
-    if (!end) end = start3;
-    let p = start3, again;
+  function filterPoints(start4, end) {
+    if (!start4) return start4;
+    if (!end) end = start4;
+    let p = start4, again;
     do {
       again = false;
       if (!p.steiner && (equals(p, p.next) || area(p.prev, p, p.next) === 0)) {
@@ -22996,8 +22996,8 @@ void main() {
     }
     return true;
   }
-  function cureLocalIntersections(start3, triangles, dim) {
-    let p = start3;
+  function cureLocalIntersections(start4, triangles, dim) {
+    let p = start4;
     do {
       const a = p.prev, b = p.next.next;
       if (!equals(a, b) && intersects(a, p, p.next, b) && locallyInside(a, b) && locallyInside(b, a)) {
@@ -23006,14 +23006,14 @@ void main() {
         triangles.push(b.i / dim | 0);
         removeNode(p);
         removeNode(p.next);
-        p = start3 = b;
+        p = start4 = b;
       }
       p = p.next;
-    } while (p !== start3);
+    } while (p !== start4);
     return filterPoints(p);
   }
-  function splitEarcut(start3, triangles, dim, minX, minY, invSize) {
-    let a = start3;
+  function splitEarcut(start4, triangles, dim, minX, minY, invSize) {
+    let a = start4;
     do {
       let b = a.next.next;
       while (b !== a.prev) {
@@ -23028,15 +23028,15 @@ void main() {
         b = b.next;
       }
       a = a.next;
-    } while (a !== start3);
+    } while (a !== start4);
   }
   function eliminateHoles(data, holeIndices, outerNode, dim) {
     const queue = [];
-    let i, len, start3, end, list;
+    let i, len, start4, end, list;
     for (i = 0, len = holeIndices.length; i < len; i++) {
-      start3 = holeIndices[i] * dim;
+      start4 = holeIndices[i] * dim;
       end = i < len - 1 ? holeIndices[i + 1] * dim : data.length;
-      list = linkedList(data, start3, end, dim, false);
+      list = linkedList(data, start4, end, dim, false);
       if (list === list.next) list.steiner = true;
       queue.push(getLeftmost(list));
     }
@@ -23091,14 +23091,14 @@ void main() {
   function sectorContainsSector(m, p) {
     return area(m.prev, m, p.prev) < 0 && area(p.next, m, m.next) < 0;
   }
-  function indexCurve(start3, minX, minY, invSize) {
-    let p = start3;
+  function indexCurve(start4, minX, minY, invSize) {
+    let p = start4;
     do {
       if (p.z === 0) p.z = zOrder(p.x, p.y, minX, minY, invSize);
       p.prevZ = p.prev;
       p.nextZ = p.next;
       p = p.next;
-    } while (p !== start3);
+    } while (p !== start4);
     p.prevZ.nextZ = null;
     p.prevZ = null;
     sortLinked(p);
@@ -23155,12 +23155,12 @@ void main() {
     y = (y | y << 1) & 1431655765;
     return x | y << 1;
   }
-  function getLeftmost(start3) {
-    let p = start3, leftmost = start3;
+  function getLeftmost(start4) {
+    let p = start4, leftmost = start4;
     do {
       if (p.x < leftmost.x || p.x === leftmost.x && p.y < leftmost.y) leftmost = p;
       p = p.next;
-    } while (p !== start3);
+    } while (p !== start4);
     return leftmost;
   }
   function pointInTriangle(ax, ay, bx, by, cx, cy, px2, py2) {
@@ -23259,9 +23259,9 @@ void main() {
     this.nextZ = null;
     this.steiner = false;
   }
-  function signedArea(data, start3, end, dim) {
+  function signedArea(data, start4, end, dim) {
     let sum = 0;
-    for (let i = start3, j = end - dim; i < end; i += dim) {
+    for (let i = start4, j = end - dim; i < end; i += dim) {
       sum += (data[j] - data[i]) * (data[i + 1] + data[j + 1]);
       j = i;
     }
@@ -23520,7 +23520,7 @@ void main() {
         buildLidFaces();
         buildSideFaces();
         function buildLidFaces() {
-          const start3 = verticesArray.length / 3;
+          const start4 = verticesArray.length / 3;
           if (bevelEnabled) {
             let layer = 0;
             let offset = vlen * layer;
@@ -23544,10 +23544,10 @@ void main() {
               f3(face[0] + vlen * steps, face[1] + vlen * steps, face[2] + vlen * steps);
             }
           }
-          scope.addGroup(start3, verticesArray.length / 3 - start3, 0);
+          scope.addGroup(start4, verticesArray.length / 3 - start4, 0);
         }
         function buildSideFaces() {
-          const start3 = verticesArray.length / 3;
+          const start4 = verticesArray.length / 3;
           let layeroffset = 0;
           sidewalls(contour, layeroffset);
           layeroffset += contour.length;
@@ -23556,7 +23556,7 @@ void main() {
             sidewalls(ahole, layeroffset);
             layeroffset += ahole.length;
           }
-          scope.addGroup(start3, verticesArray.length / 3 - start3, 1);
+          scope.addGroup(start4, verticesArray.length / 3 - start4, 1);
         }
         function sidewalls(contour2, layeroffset) {
           let i = contour2.length;
@@ -24217,7 +24217,7 @@ void main() {
       const normal = new Vector3();
       const P1 = new Vector3();
       const P23 = new Vector3();
-      const B4 = new Vector3();
+      const B5 = new Vector3();
       const T4 = new Vector3();
       const N5 = new Vector3();
       for (let i = 0; i <= tubularSegments; ++i) {
@@ -24226,17 +24226,17 @@ void main() {
         calculatePositionOnCurve(u + 0.01, p, q2, radius, P23);
         T4.subVectors(P23, P1);
         N5.addVectors(P23, P1);
-        B4.crossVectors(T4, N5);
-        N5.crossVectors(B4, T4);
-        B4.normalize();
+        B5.crossVectors(T4, N5);
+        N5.crossVectors(B5, T4);
+        B5.normalize();
         N5.normalize();
         for (let j = 0; j <= radialSegments; ++j) {
           const v = j / radialSegments * Math.PI * 2;
           const cx = -tube3 * Math.cos(v);
           const cy = tube3 * Math.sin(v);
-          vertex2.x = P1.x + (cx * N5.x + cy * B4.x);
-          vertex2.y = P1.y + (cx * N5.y + cy * B4.y);
-          vertex2.z = P1.z + (cx * N5.z + cy * B4.z);
+          vertex2.x = P1.x + (cx * N5.x + cy * B5.x);
+          vertex2.y = P1.y + (cx * N5.y + cy * B5.y);
+          vertex2.z = P1.z + (cx * N5.z + cy * B5.z);
           vertices.push(vertex2.x, vertex2.y, vertex2.z);
           normal.subVectors(vertex2, P1).normalize();
           normals.push(normal.x, normal.y, normal.z);
@@ -24316,14 +24316,14 @@ void main() {
       function generateSegment(i) {
         P4 = path2.getPointAt(i / tubularSegments, P4);
         const N5 = frames.normals[i];
-        const B4 = frames.binormals[i];
+        const B5 = frames.binormals[i];
         for (let j = 0; j <= radialSegments; j++) {
           const v = j / radialSegments * Math.PI * 2;
           const sin = Math.sin(v);
           const cos = -Math.cos(v);
-          normal.x = cos * N5.x + sin * B4.x;
-          normal.y = cos * N5.y + sin * B4.y;
-          normal.z = cos * N5.z + sin * B4.z;
+          normal.x = cos * N5.x + sin * B5.x;
+          normal.y = cos * N5.y + sin * B5.y;
+          normal.z = cos * N5.z + sin * B5.z;
           normal.normalize();
           normals.push(normal.x, normal.y, normal.z);
           vertex2.x = P4.x + radius * normal.x;
@@ -24384,7 +24384,7 @@ void main() {
       if (geometry !== null) {
         const vertices = [];
         const edges2 = /* @__PURE__ */ new Set();
-        const start3 = new Vector3();
+        const start4 = new Vector3();
         const end = new Vector3();
         if (geometry.index !== null) {
           const position = geometry.attributes.position;
@@ -24401,10 +24401,10 @@ void main() {
               for (let j = 0; j < 3; j++) {
                 const index1 = indices.getX(i + j);
                 const index2 = indices.getX(i + (j + 1) % 3);
-                start3.fromBufferAttribute(position, index1);
+                start4.fromBufferAttribute(position, index1);
                 end.fromBufferAttribute(position, index2);
-                if (isUniqueEdge(start3, end, edges2) === true) {
-                  vertices.push(start3.x, start3.y, start3.z);
+                if (isUniqueEdge(start4, end, edges2) === true) {
+                  vertices.push(start4.x, start4.y, start4.z);
                   vertices.push(end.x, end.y, end.z);
                 }
               }
@@ -24416,10 +24416,10 @@ void main() {
             for (let j = 0; j < 3; j++) {
               const index1 = 3 * i + j;
               const index2 = 3 * i + (j + 1) % 3;
-              start3.fromBufferAttribute(position, index1);
+              start4.fromBufferAttribute(position, index1);
               end.fromBufferAttribute(position, index2);
-              if (isUniqueEdge(start3, end, edges2) === true) {
-                vertices.push(start3.x, start3.y, start3.z);
+              if (isUniqueEdge(start4, end, edges2) === true) {
+                vertices.push(start4.x, start4.y, start4.z);
                 vertices.push(end.x, end.y, end.z);
               }
             }
@@ -24434,9 +24434,9 @@ void main() {
       return this;
     }
   };
-  function isUniqueEdge(start3, end, edges2) {
-    const hash1 = `${start3.x},${start3.y},${start3.z}-${end.x},${end.y},${end.z}`;
-    const hash22 = `${end.x},${end.y},${end.z}-${start3.x},${start3.y},${start3.z}`;
+  function isUniqueEdge(start4, end, edges2) {
+    const hash1 = `${start4.x},${start4.y},${start4.z}-${end.x},${end.y},${end.z}`;
+    const hash22 = `${end.x},${end.y},${end.z}-${start4.x},${start4.y},${start4.z}`;
     if (edges2.has(hash1) === true || edges2.has(hash22) === true) {
       return false;
     } else {
@@ -30349,12 +30349,12 @@ void main() {
   var _startP = /* @__PURE__ */ new Vector3();
   var _startEnd = /* @__PURE__ */ new Vector3();
   var Line3 = class {
-    constructor(start3 = new Vector3(), end = new Vector3()) {
-      this.start = start3;
+    constructor(start4 = new Vector3(), end = new Vector3()) {
+      this.start = start4;
       this.end = end;
     }
-    set(start3, end) {
-      this.start.copy(start3);
+    set(start4, end) {
+      this.start.copy(start4);
       this.end.copy(end);
       return this;
     }
@@ -32136,8 +32136,8 @@ void main() {
     return rgbToHex(r * (1 + amt), g * (1 + amt), b * (1 + amt));
   }
   function mixHex(a, b, t) {
-    const A = hexToRgb(a), B4 = hexToRgb(b);
-    return rgbToHex(lerp2(A[0], B4[0], t), lerp2(A[1], B4[1], t), lerp2(A[2], B4[2], t));
+    const A = hexToRgb(a), B5 = hexToRgb(b);
+    return rgbToHex(lerp2(A[0], B5[0], t), lerp2(A[1], B5[1], t), lerp2(A[2], B5[2], t));
   }
 
   // src/render/terrain.js
@@ -37636,7 +37636,7 @@ ${GLSL}
     g.restore();
   }
   function drawShip(g, def, st) {
-    const L2 = def.length, B4 = def.beam;
+    const L2 = def.length, B5 = def.beam;
     const t = st.t || 0;
     g.save();
     g.rotate(st.heading);
@@ -37644,15 +37644,15 @@ ${GLSL}
     g.scale(1, 1 + bobRoll);
     g.fillStyle = "rgba(0,20,40,0.28)";
     g.beginPath();
-    g.ellipse(0.1, 0.12, L2 * 0.55, B4 * 0.62, 0, 0, TAU2);
+    g.ellipse(0.1, 0.12, L2 * 0.55, B5 * 0.62, 0, 0, TAU2);
     g.fill();
     const hullCol = def.color || "#8d5b33";
     const hullPath = () => {
       g.beginPath();
       g.moveTo(L2 * 0.52, 0);
-      g.bezierCurveTo(L2 * 0.35, -B4 * 0.55, -L2 * 0.3, -B4 * 0.55, -L2 * 0.48, -B4 * 0.38);
-      g.lineTo(-L2 * 0.5, B4 * 0.38);
-      g.bezierCurveTo(-L2 * 0.3, B4 * 0.55, L2 * 0.35, B4 * 0.55, L2 * 0.52, 0);
+      g.bezierCurveTo(L2 * 0.35, -B5 * 0.55, -L2 * 0.3, -B5 * 0.55, -L2 * 0.48, -B5 * 0.38);
+      g.lineTo(-L2 * 0.5, B5 * 0.38);
+      g.bezierCurveTo(-L2 * 0.3, B5 * 0.55, L2 * 0.35, B5 * 0.55, L2 * 0.52, 0);
       g.closePath();
     };
     hullPath();
@@ -37669,7 +37669,7 @@ ${GLSL}
     g.clip();
     g.strokeStyle = shade(hullCol, -0.1);
     g.lineWidth = 0.03;
-    for (let y = -B4; y < B4; y += 0.22) {
+    for (let y = -B5; y < B5; y += 0.22) {
       g.beginPath();
       g.moveTo(-L2, y);
       g.lineTo(L2, y);
@@ -37685,7 +37685,7 @@ ${GLSL}
       const x = -L2 * 0.3 + (i + 0.5) * (L2 * 0.6 / nC);
       for (const sy of [-1, 1]) {
         g.fillStyle = "#2d3436";
-        g.fillRect(x - 0.08, sy * B4 * 0.46 - 0.05, 0.16, 0.1);
+        g.fillRect(x - 0.08, sy * B5 * 0.46 - 0.05, 0.16, 0.1);
       }
     }
     if (def.figurehead === "ram") {
@@ -37725,8 +37725,8 @@ ${GLSL}
       g.lineWidth = 0.06;
       for (const sy of [-1, 1]) {
         g.beginPath();
-        g.moveTo(-0.1, sy * B4 * 0.3);
-        g.lineTo(-0.9, sy * (B4 * 0.5 + 0.35));
+        g.moveTo(-0.1, sy * B5 * 0.3);
+        g.lineTo(-0.9, sy * (B5 * 0.5 + 0.35));
         g.stroke();
       }
     }
@@ -37735,7 +37735,7 @@ ${GLSL}
     const set = st.sailSet ?? 0;
     for (let m = 0; m < masts; m++) {
       const mx = masts === 1 ? 0.05 * L2 : L2 * (0.28 - m * (0.56 / Math.max(1, masts - 1)));
-      const sw2 = B4 * (m === 0 && masts > 1 ? 1 : 1.2);
+      const sw2 = B5 * (m === 0 && masts > 1 ? 1 : 1.2);
       const billow = 0.12 + set * 0.35;
       g.save();
       g.translate(mx, 0);
@@ -37812,7 +37812,7 @@ ${GLSL}
       g.fillStyle = "rgba(200,240,255,0.18)";
       g.lineWidth = 0.06;
       g.beginPath();
-      g.ellipse(0, 0, L2 * 0.7, B4 * 1.2, 0, 0, TAU2);
+      g.ellipse(0, 0, L2 * 0.7, B5 * 1.2, 0, 0, TAU2);
       g.fill();
       g.stroke();
     }
@@ -37839,11 +37839,11 @@ ${GLSL}
     return d;
   }
   function smallDims(def) {
-    const L2 = def.length, B4 = def.beam;
+    const L2 = def.length, B5 = def.beam;
     const open = L2 < 3.5;
-    const D3 = B4 * 0.42;
-    const deckY2 = open ? 0.14 : 0.25 + B4 * 0.2;
-    const bulH = open ? 0.36 : 0.3 + B4 * 0.07;
+    const D3 = B5 * 0.42;
+    const deckY2 = open ? 0.14 : 0.25 + B5 * 0.2;
+    const bulH = open ? 0.36 : 0.3 + B5 * 0.07;
     const castle = L2 >= 5.5, fore = L2 >= 6.8;
     const hq = castle ? 0.85 + (L2 - 5.5) * 0.1 : 0;
     const hf = fore ? 0.5 : 0;
@@ -37853,7 +37853,7 @@ ${GLSL}
     let helmX = -L2 * 0.42;
     const d = {
       L: L2,
-      B: B4,
+      B: B5,
       D: D3,
       open,
       deckY: deckY2,
@@ -37874,7 +37874,7 @@ ${GLSL}
       poop: false,
       hp: 0,
       tp: 0,
-      sheer: 0.16 * B4,
+      sheer: 0.16 * B5,
       walk: 0.94,
       stairs: [],
       solids: []
@@ -37897,7 +37897,7 @@ ${GLSL}
         // (the top of the thwart, over the floor)
         lockT,
         lockU: xAt(d, lockT),
-        lockV: hbAt(lockT, B4) * 0.965,
+        lockV: hbAt(lockT, B5) * 0.965,
         lockH: topAt(d, lockT) + 0.04,
         inboard: 0.56,
         outboard: 1.5
@@ -37953,14 +37953,14 @@ ${GLSL}
     };
   }
   function bigDims(def) {
-    const L2 = def.length, B4 = def.beam;
-    const D3 = B4 * 0.45;
-    const narrow = B4 < 7;
+    const L2 = def.length, B5 = def.beam;
+    const D3 = B5 * 0.45;
+    const narrow = B5 < 7;
     const large = L2 >= 44, mid = !narrow && !large;
-    const deckY2 = 0.6 + Math.min(B4, 11) * 0.2;
+    const deckY2 = 0.6 + Math.min(B5, 11) * 0.2;
     const bulH = 1.1;
     const fore = L2 >= 24;
-    const hq = narrow ? 2.4 : Math.min(3, 1.95 + B4 * 0.075), hf = hq - 0.1;
+    const hq = narrow ? 2.4 : Math.min(3, 1.95 + B5 * 0.075), hf = hq - 0.1;
     const poop = large, hp = poop ? hq - 0.2 : 0;
     const tq = narrow ? Math.max(0.24, 2.9 / L2) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 1 - Math.max(0.13, 5.4 / L2) : 1, tp = poop ? 0.13 : 0;
     const yq = deckY2 + hq, yf = deckY2 + hf, yp = yq + hp;
@@ -37968,7 +37968,7 @@ ${GLSL}
     const tHelm = poop ? tp + 0.02 : narrow ? 0.08 : 0.1;
     const d = {
       L: L2,
-      B: B4,
+      B: B5,
       D: D3,
       open: false,
       big: true,
@@ -38000,9 +38000,9 @@ ${GLSL}
     d.wheelU = d.helmX + 0.9;
     const bu = d.wheelU + 1.45;
     d.binnacleU = !narrow && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
-    const W4 = narrow ? 1.05 : Math.min(1.6, 0.75 + B4 * 0.055), sides2 = narrow ? [1] : [-1, 1];
+    const W4 = narrow ? 1.05 : Math.min(1.6, 0.75 + B5 * 0.055), sides2 = narrow ? [1] : [-1, 1];
     const run = (rise2) => rise2 * (narrow ? 1.1 : mid ? 1.15 : 1.3);
-    const edge = (t) => hbAt(t, B4) * d.walk - 0.22;
+    const edge = (t) => hbAt(t, B5) * d.walk - 0.22;
     d.stairs = [];
     const flight = (ta, tb, ha, hb, la, lb) => {
       const vo = Math.min(edge(ta), edge(tb)), vi = vo - W4;
@@ -38013,7 +38013,7 @@ ${GLSL}
     if (poop) flight(tp, tp + run(hp) / L2, yp, yq, "poop", "quarter");
     const qs = d.stairs.find((s) => s.la === "quarter" && s.lb === "main"), fs = d.stairs.find((s) => s.lb === "fore");
     const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
-    const holdY = deckY2 - Math.max(2.25, Math.min(2.7, 1.9 + B4 * 0.045));
+    const holdY = deckY2 - Math.max(2.25, Math.min(2.7, 1.9 + B5 * 0.045));
     d.holdY = holdY;
     const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
     let h0 = 0.06, h1 = 0.94;
@@ -38051,8 +38051,8 @@ ${GLSL}
     d.capstanT = L2 >= 14 ? freeT(masts >= 4 ? 0.54 : 0.385, 0.9, 0.7) : null;
     const bl2 = Math.min(6, L2 * 0.14), bt = L2 >= 24 ? freeT(masts >= 4 ? 0.69 : 0.645, bl2, 0.6) : null;
     if (bt !== null && d.capstanT !== null && Math.abs(xAt(d, bt) - xAt(d, d.capstanT)) < bl2 / 2 + 1.2) d.boat = null;
-    else d.boat = bt !== null ? { u0: (bt - 0.5) * L2 - bl2 / 2, u1: (bt - 0.5) * L2 + bl2 / 2, w: Math.min(2.2, B4 * 0.22) } : null;
-    const gs = Math.max(0.6, Math.min(1, B4 / 6.5));
+    else d.boat = bt !== null ? { u0: (bt - 0.5) * L2 - bl2 / 2, u1: (bt - 0.5) * L2 + bl2 / 2, w: Math.min(2.2, B5 * 0.22) } : null;
+    const gs = Math.max(0.6, Math.min(1, B5 / 6.5));
     d.gunScale = gs;
     const rows = [{ y: deckY2 + 0.42, t0: mainT0 + 1.5 / L2, t1: mainT1 - 1.5 / L2, lid: 0.42, open: 1.4, deck: true }];
     if ((def.cannons || 0) >= 12) rows.push({ y: holdY + 0.42 * Math.max(0.85, gs), t0: Math.max(0.12, h0 + 0.8 / L2), t1: Math.min(0.86, h1 - 0.8 / L2), lid: 0.6, open: 1.05 });
@@ -38067,7 +38067,7 @@ ${GLSL}
       return w;
     };
     const walkway = large ? 0.9 : mid ? 0.7 : 0.45;
-    const offAt = (t) => hbAt(t, B4) * 0.93 - 0.95 * gs;
+    const offAt = (t) => hbAt(t, B5) * 0.93 - 0.95 * gs;
     const fitsGun = (t) => {
       const u = (t - 0.5) * L2, reach = 0.5 * gs;
       return [u - reach, u, u + reach].every((uu) => offAt(t) - gunIn(gs) - centre(uu) >= walkway);
@@ -38559,13 +38559,13 @@ ${GLSL}
     if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
     return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
   }
-  function hbAt(t, B4) {
+  function hbAt(t, B5) {
     if (t > 0.58) {
       const k = (t - 0.58) / 0.42;
-      return B4 / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(k, 2.2)));
+      return B5 / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(k, 2.2)));
     }
-    if (t < 0.14) return B4 / 2 * (0.74 + 0.26 * Math.sin(t / 0.14 * Math.PI / 2));
-    return B4 / 2;
+    if (t < 0.14) return B5 / 2 * (0.74 + 0.26 * Math.sin(t / 0.14 * Math.PI / 2));
+    return B5 / 2;
   }
   function topAt(d, t) {
     let y = d.deckY + d.bulH + d.sheer * Math.pow(Math.abs(t - 0.45) / 0.55, 2);
@@ -38762,8 +38762,8 @@ ${GLSL}
       }
     }
     for (let j = 0; j < NP - 1; j++) {
-      const A = vid(0, 1, j), B4 = vid(0, 0, j), Cc = vid(0, 1, j + 1), D3 = vid(0, 0, j + 1);
-      idx.push(A, Cc, B4, B4, Cc, D3);
+      const A = vid(0, 1, j), B5 = vid(0, 0, j), Cc = vid(0, 1, j + 1), D3 = vid(0, 0, j + 1);
+      idx.push(A, Cc, B5, B5, Cc, D3);
       const col = j < 1 ? P4.cap : j < 4 ? P4.upper : P4.bottom;
       triCol.push(col, col);
     }
@@ -39214,13 +39214,13 @@ ${GLSL}
     }
   }
   function bigFigurehead(k, def, d, P4) {
-    const L2 = d.L, B4 = d.B;
+    const L2 = d.L, B5 = d.B;
     const stem = [L2 / 2 - 0.1, d.fore ? d.deckY + d.hf * 0.35 : d.deckY + 0.35];
     const fh = def.figurehead;
-    const s = B4 / 7 * (fh === "seagull" || fh === "whale" ? 1 : 1.5);
+    const s = B5 / 7 * (fh === "seagull" || fh === "whale" ? 1 : 1.5);
     if (fh === "ram" || fh === "lion") {
       const tip = [L2 / 2, topAt(d, 1)];
-      const g = B4 / 2.3;
+      const g = B5 / 2.3;
       if (fh === "ram") {
         k.add(cyl(0.12 * g, 0.16 * g, 0.6 * g, 8), { at: [tip[0] - 0.12 * g, tip[1] - 0.25 * g, 0], rot: [0, 0, -0.5], color: "#f5f6fa", outline: 0.02 });
         const hc2 = [tip[0] + 0.28 * g, tip[1] + 0.42 * g, 0];
@@ -39254,13 +39254,13 @@ ${GLSL}
       return;
     }
     if (fh === "whale") {
-      const cx = L2 / 2 - B4 * 0.42, top = d.yf - 0.06, bot = -1.4;
+      const cx = L2 / 2 - B5 * 0.42, top = d.yf - 0.06, bot = -1.4;
       const cy = (top + bot) / 2, ry = (top - bot) / 2;
-      const rz = hbAt(0.86, B4) * 1.04;
+      const rz = hbAt(0.86, B5) * 1.04;
       const white = C("#f4f1ea");
       const head = new SphereGeometry(1, 28, 18, 0, TAU3, 0, Math.PI), hp = head.attributes.position;
       for (let i = 0; i < hp.count; i++) {
-        let x = cx + hp.getX(i) * B4 * 0.66, y = cy + hp.getY(i) * ry;
+        let x = cx + hp.getX(i) * B5 * 0.66, y = cy + hp.getY(i) * ry;
         const z = hp.getZ(i) * rz;
         if (x < L2 / 2 && x > -L2 / 2) {
           let t = (x + L2 / 2) / L2;
@@ -39275,8 +39275,8 @@ ${GLSL}
       head.computeVertexNormals();
       k.add(head, { color: white, outline: 0.06 });
       for (const z of [-1, 1]) {
-        k.add(new SphereGeometry(1, 12, 8), { at: [cx + B4 * 0.33, cy + ry * 0.22, z * rz * 0.84], scale: [0.35 * s, 0.42 * s, 0.25 * s], color: "#141414", outline: 0.02 });
-        k.add(new SphereGeometry(1, 8, 6), { at: [cx + B4 * 0.36, cy + ry * 0.3, z * rz * 0.9], scale: [0.1 * s, 0.12 * s, 0.08 * s], color: "#ffffff" });
+        k.add(new SphereGeometry(1, 12, 8), { at: [cx + B5 * 0.33, cy + ry * 0.22, z * rz * 0.84], scale: [0.35 * s, 0.42 * s, 0.25 * s], color: "#141414", outline: 0.02 });
+        k.add(new SphereGeometry(1, 8, 6), { at: [cx + B5 * 0.36, cy + ry * 0.3, z * rz * 0.9], scale: [0.1 * s, 0.12 * s, 0.08 * s], color: "#ffffff" });
       }
       const mouth = [];
       for (let i = 0; i <= 16; i++) {
@@ -39284,7 +39284,7 @@ ${GLSL}
         const ex = Math.cos(a), ez = Math.sin(a);
         const yy = cy - ry * (0.34 - 0.14 * Math.abs(ez));
         const f = Math.sqrt(Math.max(0, 1 - ((yy - cy) / ry) ** 2));
-        mouth.push(new Vector3(cx + B4 * 0.66 * f * ex * 1.01, yy, rz * f * ez * 1.01));
+        mouth.push(new Vector3(cx + B5 * 0.66 * f * ex * 1.01, yy, rz * f * ez * 1.01));
       }
       k.add(tube(new CatmullRomCurve3(mouth), 32, 0.16 * s, 6), { color: "#3b3330" });
       return;
@@ -40459,9 +40459,9 @@ ${GLSL}
       const hp = helmPoint(s.def);
       figure(Math.min(0.97, (hp.x - 0.35 + d.L / 2) / d.L), 0, 0, 0);
       const hands2 = d.L > 9 ? 2 : 1;
-      const B4 = d.B;
+      const B5 = d.B;
       const at4 = [[0.4, 0.26], [0.62, -0.28]];
-      for (let i = 0; i < hands2; i++) figure(clear3(at4[i][0]), at4[i][1] * B4, (i % 2 ? -1 : 1) * 1.2, i + 1);
+      for (let i = 0; i < hands2; i++) figure(clear3(at4[i][0]), at4[i][1] * B5, (i % 2 ? -1 : 1) * 1.2, i + 1);
     }
     const m = new Mesh(k.build(false), SOLID());
     m.castShadow = true;
@@ -40729,11 +40729,11 @@ ${GLSL}
       if (r.parent && this.wake.mesh.parent !== r.parent) r.parent.add(this.wake.mesh);
       const v3 = ctx?.game?.view3d;
       if (v3 && ctx.world) {
-        const L2 = s.def.length, B4 = s.def.beam, sp = Math.abs(s.speed || 0);
+        const L2 = s.def.length, B5 = s.def.beam, sp = Math.abs(s.speed || 0);
         const src = !s.sunk && sp > 0.8 ? { x: s.x - Math.cos(s.heading) * L2 * 0.46, y: s.y - Math.sin(s.heading) * L2 * 0.46, h: s.heading, sp } : null;
         this.wake.update(src, env.time, v3.ox, v3.oy, ctx.world, (q2, age) => {
           const k = Math.min(1, q2.sp / 6);
-          return [B4 * 0.42 + age * (1.6 + L2 * 0.25) * (0.5 + k), Math.pow(1 - age, 1.6) * (0.35 + 0.65 * k)];
+          return [B5 * 0.42 + age * (1.6 + L2 * 0.25) * (0.5 + k), Math.pow(1 - age, 1.6) * (0.35 + 0.65 * k)];
         });
       }
       const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === "sail" && ctx.mode !== "third";
@@ -43477,8 +43477,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var css = (r, g, b, a = 1) => a >= 1 ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})` : `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${Math.max(0, a).toFixed(3)})`;
   function mix2(c1, c2, t) {
-    const A = rgba(c1), B4 = rgba(c2);
-    return css(A[0] + (B4[0] - A[0]) * t, A[1] + (B4[1] - A[1]) * t, A[2] + (B4[2] - A[2]) * t, A[3]);
+    const A = rgba(c1), B5 = rgba(c2);
+    return css(A[0] + (B5[0] - A[0]) * t, A[1] + (B5[1] - A[1]) * t, A[2] + (B5[2] - A[2]) * t, A[3]);
   }
   var dk = (c, t = 0.3) => mix2(c, "#1c0f1c", t);
   var lt = (c, t = 0.4) => mix2(c, "#fffaea", t);
@@ -45469,9 +45469,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     fl(I, poly(R4), "#c9c0b0");
     fl(I, poly(top), "#fbf8f0");
     ln(I, "M7 31 L26 40 L45 31 M26 40 V60", "#a89f8c", 1);
-    const face = (A, B4, Dd, u, v, r, col) => {
-      const x = A[0] + u * (B4[0] - A[0]) + v * (Dd[0] - A[0]), y = A[1] + u * (B4[1] - A[1]) + v * (Dd[1] - A[1]);
-      fl(I, ellipse(x, y, r, r * 0.72, Math.atan2(B4[1] - A[1], B4[0] - A[0])), col);
+    const face = (A, B5, Dd, u, v, r, col) => {
+      const x = A[0] + u * (B5[0] - A[0]) + v * (Dd[0] - A[0]), y = A[1] + u * (B5[1] - A[1]) + v * (Dd[1] - A[1]);
+      fl(I, ellipse(x, y, r, r * 0.72, Math.atan2(B5[1] - A[1], B5[0] - A[0])), col);
     };
     face(top[3], top[0], top[2], 0.5, 0.5, 3, "#c8372d");
     for (const [u, v] of [[0.28, 0.3], [0.72, 0.7]]) face(L2[0], L2[1], L2[3], u, v, 2, OUT2);
@@ -49742,8 +49742,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (typeof a === "number" && typeof b === "number") return a + (b - a) * k;
     if (a && b && typeof a === "object" && typeof b === "object") {
       if (!Array.isArray(a) && !Array.isArray(b)) return { a: a.a + (b.a - a.a) * k, r: a.r + (b.r - a.r) * k };
-      const A = toXY(a), B4 = toXY(b);
-      return [A[0] + (B4[0] - A[0]) * k, A[1] + (B4[1] - A[1]) * k];
+      const A = toXY(a), B5 = toXY(b);
+      return [A[0] + (B5[0] - A[0]) * k, A[1] + (B5[1] - A[1]) * k];
     }
     if (typeof a === "boolean" || typeof b === "boolean") return k < 0.5 ? a : b;
     return k < 0.35 ? a : b;
@@ -50151,13 +50151,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       P4.wB = base2.wB === null ? null : -2.5;
     }
   }
-  function blendPose(A, B4, k) {
-    if (!A || k >= 1) return B4;
+  function blendPose(A, B5, k) {
+    if (!A || k >= 1) return B5;
     if (k <= 0) return A;
     const P4 = {};
-    for (const key2 in B4) {
+    for (const key2 in B5) {
       let a = A[key2];
-      const b = B4[key2];
+      const b = B5[key2];
       if (key2 === "sp" && typeof a === "number" && typeof b === "number") a = b + ((a - b) % 1 + 1.5) % 1 - 0.5;
       else if (key2 === "r" && typeof a === "number" && typeof b === "number") a = b + ((a - b) % TAU8 + TAU8 * 1.5) % TAU8 - Math.PI;
       P4[key2] = lerpVal(a, b, k);
@@ -54180,10 +54180,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return SHIPS_UNBREAKABLE && (this.owner === "player" || this.escortOf === "player");
     }
     hullPoints(x, y, h2) {
-      const L2 = this.def.length, B4 = this.def.beam;
+      const L2 = this.def.length, B5 = this.def.beam;
       const c = Math.cos(h2), s = Math.sin(h2);
       const pts = [];
-      const add5 = (ax, ay) => pts.push([x + c * ax * L2 - s * ay * B4, y + s * ax * L2 + c * ay * B4]);
+      const add5 = (ax, ay) => pts.push([x + c * ax * L2 - s * ay * B5, y + s * ax * L2 + c * ay * B5]);
       if (L2 < BIG_SHIP) {
         for (const [ax, ay] of SMALL_HULL) add5(ax, ay);
         return pts;
@@ -54402,14 +54402,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      * head — or, where the water's too shallow for that, as near it as she'll lie.
      */
     berth(w, dock) {
-      const L2 = this.def.length, B4 = this.def.beam, d = shipDims(this.def);
+      const L2 = this.def.length, B5 = this.def.beam, d = shipDims(this.def);
       const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
       const end = dock.end || dock;
       const qs = d.big ? d.stairs.find((s) => s.la === "quarter" && s.lb === "main") : null;
       const waist = Math.min(L2 * 0.5 - 5, qs ? -xAt(d, qs.tb) - 3.2 : Infinity);
       for (let k = 0; k < 26; k++) {
         for (const sg of [1, -1]) {
-          const along = waist + k * 2, off = sg * (B4 * 0.5 + (dock.headHalf ?? 1) + 1.4);
+          const along = waist + k * 2, off = sg * (B5 * 0.5 + (dock.headHalf ?? 1) + 1.4);
           const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
           if (this.fits(w, x, y, hd)) {
             this.x = x;
@@ -54426,13 +54426,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      * short step from its edge (so you can step or jump down onto her deck).
      */
     moorAlongside(w, dock) {
-      const L2 = this.def.length, B4 = this.def.beam;
+      const L2 = this.def.length, B5 = this.def.beam;
       const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
       const end = dock.end || dock, edge = (dock.headHalf ?? 1) + 0.5;
       for (const gap of [0.3, 0.6, 1]) {
         for (let k = 0; k < 6; k++) {
           for (const sg of [1, -1]) {
-            const along = 0.3 - L2 / 2 - k * 1.2, off = sg * (edge + gap + B4 / 2);
+            const along = 0.3 - L2 / 2 - k * 1.2, off = sg * (edge + gap + B5 / 2);
             const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
             if (this.fits(w, x, y, hd) && !(this.game && this.shipIn(this.game, x, y, hd))) {
               this.x = x;
@@ -54499,21 +54499,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (guns.length > n) guns = guns.slice(0, n);
       const heavy = want / n;
       this.cannonCd = 2.2 + n * 0.08;
-      const L2 = this.def.length, B4 = this.def.beam;
+      const L2 = this.def.length, B5 = this.def.beam;
       const mul2 = owner?.isPlayer ? game.crewMods?.cannonMul || 1 : 1;
       for (let i = 0; i < n; i++) {
         let px2, py2, h0;
         const g = guns[i];
         if (g) {
           const t = g.t, low = d.lowGuns?.includes(g);
-          const m = deckToWorld(this, t, side * (hbAt(t, B4) + 0.35));
+          const m = deckToWorld(this, t, side * (hbAt(t, B5) + 0.35));
           px2 = m.x;
           py2 = m.y;
           h0 = (low ? d.holdY + 0.42 * Math.max(0.85, d.gunScale || 1) : d.deckY + 0.42) + (this.lvl || 0) + 0.05;
         } else {
           const along = -L2 * 0.3 + (n === 1 ? 0.3 * L2 : i / (n - 1) * L2 * 0.6);
-          px2 = this.x + Math.cos(this.heading) * along + Math.cos(baseA) * B4 * 0.5;
-          py2 = this.y + Math.sin(this.heading) * along + Math.sin(baseA) * B4 * 0.5;
+          px2 = this.x + Math.cos(this.heading) * along + Math.cos(baseA) * B5 * 0.5;
+          py2 = this.y + Math.sin(this.heading) * along + Math.sin(baseA) * B5 * 0.5;
           h0 = (d.deckY || 0.4) + 0.4;
         }
         const a = baseA + aim + (Math.random() - 0.5) * 0.08;
@@ -62646,16 +62646,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return { t: 0.5, v: d.B * 0.25 };
   }
   function crewStation(ship, i) {
-    const d = shipDims(ship.def), B4 = d.B;
+    const d = shipDims(ship.def), B5 = d.B;
     const S4 = [
       [d.fore ? "fore" : "main", d.fore ? 0.93 : 0.86, 0],
-      ["main", (d.capstanT ?? d.hatchT) + 0.06, B4 * 0.22],
-      ["quarter", d.tq - 0.03, -B4 * 0.25],
-      ["main", 0.62, -B4 * 0.28],
-      ["main", 0.75, B4 * 0.26],
-      [d.fore ? "fore" : "main", d.fore ? d.tf + 0.05 : 0.8, -B4 * 0.2],
-      ["main", d.hatchT, -B4 * 0.3],
-      ["quarter", d.tq - 0.06, B4 * 0.28]
+      ["main", (d.capstanT ?? d.hatchT) + 0.06, B5 * 0.22],
+      ["quarter", d.tq - 0.03, -B5 * 0.25],
+      ["main", 0.62, -B5 * 0.28],
+      ["main", 0.75, B5 * 0.26],
+      [d.fore ? "fore" : "main", d.fore ? d.tf + 0.05 : 0.8, -B5 * 0.2],
+      ["main", d.hatchT, -B5 * 0.3],
+      ["quarter", d.tq - 0.06, B5 * 0.28]
     ];
     const [lvl, t, v] = S4[i % S4.length];
     return { ...freeDeckSpot(ship, t, v, lvl), lvl };
@@ -64780,7 +64780,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     add(g, m, color, bone = 0, part5 = 0, opts = null) {
       const P4 = g.attributes.position, N5 = g.attributes.normal;
       const UV = opts && opts.uv || g.userData && g.userData.detail ? g.attributes.uv : null;
-      const blend = opts && opts.blend, skin = opts && opts.skin;
+      const blend2 = opts && opts.blend, skin = opts && opts.skin;
       const base2 = this.count;
       _nm.getNormalMatrix(m);
       const fn = typeof color === "function" ? color : null;
@@ -64791,7 +64791,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const c = fn ? toColor(fn(_v4.x, _v4.y, _v4.z)) : c0;
         _v4.applyMatrix4(m);
         const sk = skin ? skin(_v4.x, _v4.y, _v4.z) : null;
-        const bw2 = sk ? [sk[1], sk[2]] : blend ? blend(_v4.x, _v4.y, _v4.z) : null;
+        const bw2 = sk ? [sk[1], sk[2]] : blend2 ? blend2(_v4.x, _v4.y, _v4.z) : null;
         if (bm) _v4.applyMatrix4(bm);
         _n3.fromBufferAttribute(N5, i).applyMatrix3(_nm).normalize();
         this.pos.push(_v4.x, _v4.y, _v4.z);
@@ -69014,15 +69014,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const hide = toon(col), belly = toon(mixHex(col, "#fff4fb", 0.72)), dark = toon(mixHex(col, "#1a1026", 0.45));
       const muzzle3 = toon("#f4b3c2"), nostril = toon("#6b2a3a"), horn = toon("#f3ead2"), gold = toon("#f1c40f");
       const white = toon("#ffffff"), black = toon("#141018");
-      const B4 = this.body;
+      const B5 = this.body;
       this.tailAxis = "z";
       this.labelY = 2;
-      part4(SPH2, hide, [1.35, 0.62, 0.66], [0, 0, 0], B4, 0.05);
-      part4(SPH2, belly, [1.2, 0.36, 0.52], [0.05, -0.3, 0], B4, 0);
-      for (const [x, z, r] of [[0.3, 0.5, 0.2], [-0.4, -0.52, 0.24], [-0.1, 0.55, 0.14], [0.55, -0.45, 0.16]]) part4(SPH2, dark, [r, r * 0.7, 0.05], [x, 0.22, z], B4, 0);
+      part4(SPH2, hide, [1.35, 0.62, 0.66], [0, 0, 0], B5, 0.05);
+      part4(SPH2, belly, [1.2, 0.36, 0.52], [0.05, -0.3, 0], B5, 0);
+      for (const [x, z, r] of [[0.3, 0.5, 0.2], [-0.4, -0.52, 0.24], [-0.1, 0.55, 0.14], [0.55, -0.45, 0.16]]) part4(SPH2, dark, [r, r * 0.7, 0.05], [x, 0.22, z], B5, 0);
       const H3 = new Group();
       H3.position.set(1.25, 0.15, 0);
-      B4.add(H3);
+      B5.add(H3);
       part4(SPH2, hide, [0.62, 0.55, 0.58], [0, 0, 0], H3, 0.045);
       part4(SPH2, muzzle3, [0.36, 0.3, 0.44], [0.48, -0.16, 0], H3, 0.035);
       for (const s of [-1, 1]) {
@@ -69048,12 +69048,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         hinge.position.set(0.55, -0.32, s * 0.55);
         const f = part4(SPH2, dark, [0.42, 0.06, 0.2], [-0.18, -0.05, s * 0.2], hinge, 0.025);
         f.rotation.y = s * 0.5;
-        B4.add(hinge);
+        B5.add(hinge);
         this.pecs.push(hinge);
       }
       this.tail = new Group();
       this.tail.position.set(-1.2, 0.05, 0);
-      B4.add(this.tail);
+      B5.add(this.tail);
       part4(SPH2, hide, [0.7, 0.3, 0.3], [-0.45, 0, 0], this.tail, 0.04);
       for (const s of [-1, 1]) {
         const fl2 = part4(SPH2, dark, [0.36, 0.06, 0.34], [-1.05, 0, s * 0.3], this.tail, 0.03);
@@ -69073,36 +69073,36 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const col = a.bodyColor || "#324a7a";
       const back = toon(col), belly = toon(mixHex(col, "#f2ead8", 0.8)), stripe = toon(mixHex(col, "#000000", 0.35));
       const fin3 = toon("#d84315"), finD = toon("#8e2a0c"), ivory = toon("#f1e6cc"), white = toon("#ffffff"), black = toon("#141018"), mouth = toon("#6b2430");
-      const B4 = this.body;
+      const B5 = this.body;
       this.labelY = 1.7;
       const L2 = 1.45;
-      part4(SPH2, back, [L2, 0.46, 0.4], [0, 0, 0], B4, 0.045);
-      part4(SPH2, belly, [L2 * 0.9, 0.3, 0.33], [0.05, -0.17, 0], B4, 0);
-      for (let i = 0; i < 4; i++) part4(SPH2, stripe, [0.05, 0.36, 0.41], [0.55 - i * 0.38, 0.05, 0], B4, 0);
-      const horn = part4(CONE2, ivory, [0.09, 1.35, 0.09], [L2 * 0.72, 0.3, 0], B4, 0.025);
+      part4(SPH2, back, [L2, 0.46, 0.4], [0, 0, 0], B5, 0.045);
+      part4(SPH2, belly, [L2 * 0.9, 0.3, 0.33], [0.05, -0.17, 0], B5, 0);
+      for (let i = 0; i < 4; i++) part4(SPH2, stripe, [0.05, 0.36, 0.41], [0.55 - i * 0.38, 0.05, 0], B5, 0);
+      const horn = part4(CONE2, ivory, [0.09, 1.35, 0.09], [L2 * 0.72, 0.3, 0], B5, 0.025);
       horn.rotation.z = -Math.PI / 2 + 0.12;
-      part4(new TorusGeometry(1, 0.35, 5, 10), ivory, [0.1, 0.1, 0.1], [L2 * 0.72, 0.3, 0], B4, 0).rotation.y = Math.PI / 2;
+      part4(new TorusGeometry(1, 0.35, 5, 10), ivory, [0.1, 0.1, 0.1], [L2 * 0.72, 0.3, 0], B5, 0).rotation.y = Math.PI / 2;
       for (const s of [-1, 1]) {
-        part4(SPH2, white, [0.1, 0.1, 0.06], [L2 * 0.7, 0.12, s * 0.3], B4, 0.02);
-        part4(SPH2, black, [0.045, 0.06, 0.04], [L2 * 0.74, 0.11, s * 0.34], B4, 0);
-        const brow = part4(SPH2, stripe, [0.16, 0.04, 0.05], [L2 * 0.7, 0.24, s * 0.3], B4, 0);
+        part4(SPH2, white, [0.1, 0.1, 0.06], [L2 * 0.7, 0.12, s * 0.3], B5, 0.02);
+        part4(SPH2, black, [0.045, 0.06, 0.04], [L2 * 0.74, 0.11, s * 0.34], B5, 0);
+        const brow = part4(SPH2, stripe, [0.16, 0.04, 0.05], [L2 * 0.7, 0.24, s * 0.3], B5, 0);
         brow.rotation.x = s * 0.2;
         brow.rotation.z = -0.35;
       }
       this.jaw = new Group();
       this.jaw.position.set(L2 * 0.6, -0.18, 0);
-      B4.add(this.jaw);
+      B5.add(this.jaw);
       part4(SPH2, belly, [0.5, 0.1, 0.24], [0.32, -0.02, 0], this.jaw, 0.02);
       part4(SPH2, mouth, [0.42, 0.06, 0.2], [0.3, 0.03, 0], this.jaw, 0);
       for (let i = 0; i < 5; i++) for (const s of [-1, 1]) {
         part4(CONE2, white, [0.022, 0.08, 0.022], [0.62 - i * 0.09, 0.04, s * (0.15 - i * 0.012)], this.jaw, 0);
-        const up = part4(CONE2, white, [0.022, 0.08, 0.022], [L2 * 0.6 + 0.6 - i * 0.09, -0.12, s * (0.16 - i * 0.012)], B4, 0);
+        const up = part4(CONE2, white, [0.022, 0.08, 0.022], [L2 * 0.6 + 0.6 - i * 0.09, -0.12, s * (0.16 - i * 0.012)], B5, 0);
         up.rotation.x = Math.PI;
       }
       const sail = new Mesh(finGeo([0.75, 0.38], [-0.9, 0.34], [-0.1, 1.05], 0.03), fin3);
       addOutline(sail, 0.025);
-      B4.add(sail);
-      for (let i = 0; i < 6; i++) part4(CONE2, finD, [0.018, 0.55, 0.018], [0.6 - i * 0.28, 0.4, 0], B4, 0).rotation.z = 0.25;
+      B5.add(sail);
+      for (let i = 0; i < 6; i++) part4(CONE2, finD, [0.018, 0.55, 0.018], [0.6 - i * 0.28, 0.4, 0], B5, 0).rotation.z = 0.25;
       for (const s of [-1, 1]) {
         const hinge = new Group();
         hinge.position.set(0.35, -0.22, s * 0.3);
@@ -69110,12 +69110,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         f.rotation.x = s * 1.1;
         addOutline(f, 0.02);
         hinge.add(f);
-        B4.add(hinge);
+        B5.add(hinge);
         this.pecs.push(hinge);
       }
       this.tail = new Group();
       this.tail.position.set(-L2 * 0.85, 0.02, 0);
-      B4.add(this.tail);
+      B5.add(this.tail);
       part4(SPH2, back, [0.5, 0.17, 0.15], [-0.35, 0, 0], this.tail, 0.03);
       for (const [b0, b1, tip] of [[[-0.7, 0.05], [-0.95, -0.02], [-1.3, 0.75]], [[-0.72, 0], [-0.9, 0], [-1.25, -0.65]]]) {
         const f = new Mesh(finGeo(b0, b1, tip, 0.025), fin3);
@@ -73189,11 +73189,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     };
     const rings2 = secs.map(([x, h2, w]) => ring4(x, h2, w));
     for (let s = 0; s < rings2.length - 1; s++) {
-      const A = rings2[s], B4 = rings2[s + 1];
+      const A = rings2[s], B5 = rings2[s + 1];
       for (let i = 0; i < n; i++) {
         const j = (i + 1) % n;
-        tri(...A[i], ...B4[i], ...B4[j]);
-        tri(...A[i], ...B4[j], ...A[j]);
+        tri(...A[i], ...B5[i], ...B5[j]);
+        tri(...A[i], ...B5[j], ...A[j]);
       }
     }
     const tx = secs[3][0];
@@ -73413,12 +73413,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var VIEWS2 = { elephant: elephantView, serpent: serpentView, seacat: seaCatView, yagara: yagaraView };
   function snow() {
-    const N5 = 900, B4 = 26;
+    const N5 = 900, B5 = 26;
     const base2 = new Float32Array(N5 * 3), pos = new Float32Array(N5 * 3);
     for (let i = 0; i < N5; i++) {
-      base2[i * 3] = Math.random() * B4;
+      base2[i * 3] = Math.random() * B5;
       base2[i * 3 + 1] = Math.random() * 16;
-      base2[i * 3 + 2] = Math.random() * B4;
+      base2[i * 3 + 2] = Math.random() * B5;
     }
     const g = new BufferGeometry();
     g.setAttribute("position", new BufferAttribute(pos, 3));
@@ -73431,17 +73431,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       update(wx, wz, cy, t) {
         for (let i = 0; i < N5; i++) {
           const bx = base2[i * 3] + t * 0.05 + Math.sin(t * 0.3 + i) * 0.3, bz = base2[i * 3 + 2] + t * 0.03;
-          pos[i * 3] = ((bx - wx) % B4 + B4) % B4 - B4 / 2;
+          pos[i * 3] = ((bx - wx) % B5 + B5) % B5 - B5 / 2;
           const by = base2[i * 3 + 1] - t * 0.04;
           pos[i * 3 + 1] = Math.min(-0.1, cy + ((by - cy) % 16 + 16) % 16 - 8);
-          pos[i * 3 + 2] = ((bz - wz) % B4 + B4) % B4 - B4 / 2;
+          pos[i * 3 + 2] = ((bz - wz) % B5 + B5) % B5 - B5 / 2;
         }
         g.attributes.position.needsUpdate = true;
       }
     };
   }
   function shafts() {
-    const N5 = 14, B4 = 48;
+    const N5 = 14, B5 = 48;
     const uStr = { value: 0 }, uCol = { value: new Color(0.8, 0.95, 1) }, uT = { value: 0 };
     const mat = new ShaderMaterial({
       uniforms: { uStr, uCol, uT },
@@ -73488,7 +73488,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       m.frustumCulled = false;
       m.renderOrder = 5;
       group3.add(m);
-      list.push({ m, bx: Math.random() * B4, bz: Math.random() * B4, tilt: 0.12 + Math.random() * 0.1 });
+      list.push({ m, bx: Math.random() * B5, bz: Math.random() * B5, tilt: 0.12 + Math.random() * 0.1 });
     }
     return {
       group: group3,
@@ -73497,7 +73497,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       uT,
       update(wx, wz, yaw, t) {
         for (const s of list) {
-          s.m.position.set(((s.bx + t * 0.1 - wx) % B4 + B4) % B4 - B4 / 2, 0, ((s.bz - wz) % B4 + B4) % B4 - B4 / 2);
+          s.m.position.set(((s.bx + t * 0.1 - wx) % B5 + B5) % B5 - B5 / 2, 0, ((s.bz - wz) % B5 + B5) % B5 - B5 / 2);
           s.m.rotation.set(0, 0, 0);
           s.m.rotation.y = -yaw - Math.PI / 2;
           s.m.rotateZ(s.tilt);
@@ -84481,9 +84481,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (!(sc > MIN_SC) || sc > MAX_SC) return null;
     return { x: a[0], y: a[1], sc, ux: dx / sc, uy: dy / sc };
   }
-  function setBill(g, r, B4, k = 1) {
-    const d = r.dpr, s = Math.min(B4.sc, NEAR_SC) * d * k;
-    g.setTransform(-B4.uy * s, B4.ux * s, -B4.ux * s, -B4.uy * s, B4.x * d, B4.y * d);
+  function setBill(g, r, B5, k = 1) {
+    const d = r.dpr, s = Math.min(B5.sc, NEAR_SC) * d * k;
+    g.setTransform(-B5.uy * s, B5.ux * s, -B5.ux * s, -B5.uy * s, B5.x * d, B5.y * d);
   }
   function plane(r, x, y, h2) {
     const e = 0.35;
@@ -84501,10 +84501,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const d = r.dpr;
     g.setTransform(J.a * d, J.b * d, J.c * d * ky, J.d * d * ky, J.x * d, J.y * d);
   }
-  function screenAngle(r, x, y, h2, ang, B4) {
+  function screenAngle(r, x, y, h2, ang, B5) {
     const q2 = r.project(x + Math.cos(ang) * 0.5, y + Math.sin(ang) * 0.5, h2);
-    if (q2[0] < CULL || !B4) return ang;
-    return Math.atan2(q2[1] - B4.y, q2[0] - B4.x);
+    if (q2[0] < CULL || !B5) return ang;
+    return Math.atan2(q2[1] - B5.y, q2[0] - B5.x);
   }
   function clipSeg(r, x0, y0, h0, x1, y1, h1) {
     const at4 = (u) => [x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, h0 + (h1 - h0) * u];
@@ -84554,8 +84554,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const runs = [];
     let cur = null;
     for (const [x, y, h2] of pts) {
-      const B4 = bill(r, x, y, h2);
-      if (!B4) {
+      const B5 = bill(r, x, y, h2);
+      if (!B5) {
         cur = null;
         continue;
       }
@@ -84563,7 +84563,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         cur = [];
         runs.push(cur);
       }
-      cur.push([B4.x, B4.y, B4.sc]);
+      cur.push([B5.x, B5.y, B5.sc]);
     }
     return runs;
   }
@@ -84610,7 +84610,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.fill();
     }
   }
-  var onScreen = (r, B4, m) => B4.x > -m && B4.y > -m && B4.x < r.cw + m && B4.y < r.ch + m;
+  var onScreen = (r, B5, m) => B5.x > -m && B5.y > -m && B5.x < r.cw + m && B5.y < r.ch + m;
   var LIFT = { impact: 0.7, flare: 0.7, aircrack: 0.8, claw: 0.75, cube: 0.8, cloud: 5 };
   var BILL = /* @__PURE__ */ new Set(["impact", "flare", "aircrack", "claw", "cube", "cloud", "meteor", "pieces", "spikes", "arms", "barrier", "gatling", "streaks", "ghost"]);
   var SQUASH = { decal: 0.6, scorch: 0.6, crack: 0.7, pillar: 0.62, vortex: 0.62 };
@@ -84661,9 +84661,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return;
     }
     if (t === "pillar" || t === "vortex") {
-      const B5 = bill(r, s.x, s.y, 0);
-      if (!B5 || !onScreen(r, B5, B5.sc * ((s.h || s.r * 2 || 4) + 2) + 40)) return;
-      setBill(g, r, B5);
+      const B6 = bill(r, s.x, s.y, 0);
+      if (!B6 || !onScreen(r, B6, B6.sc * ((s.h || s.r * 2 || 4) + 2) + 40)) return;
+      setBill(g, r, B6);
       drawShapeLayer(g, s, layer, k, 1, c);
       return;
     }
@@ -84673,15 +84673,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const p = fx.game.player, w = fx.game.world;
       if (Math.hypot(w.dx(p.x, s.x), s.y - p.y) < 0.6 && h2 < 2.5) return;
     }
-    const B4 = bill(r, s.x, s.y, h2);
-    if (!B4 || !onScreen(r, B4, B4.sc * 3 + 60)) return;
-    setBill(g, r, B4);
+    const B5 = bill(r, s.x, s.y, h2);
+    if (!B5 || !onScreen(r, B5, B5.sc * 3 + 60)) return;
+    setBill(g, r, B5);
     let v = s;
     if (LIFT[t] !== void 0) v = copy(s, { z: 0 });
-    if (t === "claw" || t === "streaks") v = copy(v, { angle: screenAngle(r, s.x, s.y, h2, s.angle || 0, B4) });
+    if (t === "claw" || t === "streaks") v = copy(v, { angle: screenAngle(r, s.x, s.y, h2, s.angle || 0, B5) });
     else if (t === "gatling" || t === "barrier") {
       const f = s.follow ? s.follow.facing : s.angle || 0;
-      v = copy(s, { follow: null, angle: screenAngle(r, s.x, s.y, 0.8, f, B4) });
+      v = copy(s, { follow: null, angle: screenAngle(r, s.x, s.y, 0.8, f, B5) });
     } else if (t === "ghost" && s.pose) {
       v = copy(s, { pose: { ...s.pose, facing: (s.pose.facing || 0) - (r.yaw || 0) - Math.PI / 2 } });
     }
@@ -84693,9 +84693,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (rad <= 0.01) return;
     const alpha2 = 1 - k;
     if ((s.flat ?? 0.62) >= 0.75) {
-      const B4 = bill(r, s.x, s.y, s.z ?? 0.4);
-      if (!B4 || !onScreen(r, B4, B4.sc * rad + 40)) return;
-      setBill(g, r, B4);
+      const B5 = bill(r, s.x, s.y, s.z ?? 0.4);
+      if (!B5 || !onScreen(r, B5, B5.sc * rad + 40)) return;
+      setBill(g, r, B5);
       drawShapeLayer(g, copy(s, { z: 0 }), "air", k, 1, c);
       return;
     }
@@ -84801,9 +84801,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return;
     }
     if (s.kind === "thunder") {
-      const B4 = bill(r, s.x, s.y, 4.5 + R4 * 0.3);
-      if (!B4) return;
-      setBill(g, r, B4);
+      const B5 = bill(r, s.x, s.y, 4.5 + R4 * 0.3);
+      if (!B5) return;
+      setBill(g, r, B5);
       drawShapeLayer(g, { ...s, type: "cloud", r: Math.max(1.4, R4 * 0.9), z: 0, color: "#37474f" }, "air", 0, 1, c);
       return;
     }
@@ -84812,9 +84812,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const p = fx.game.player, w = fx.game.world;
         if (p && Math.hypot(w.dx(p.x, s.x), s.y - p.y) < 1.2) return;
       }
-      const B4 = bill(r, s.x, s.y, 0);
-      if (!B4) return;
-      setBill(g, r, B4);
+      const B5 = bill(r, s.x, s.y, 0);
+      if (!B5) return;
+      setBill(g, r, B5);
       drawShapeLayer(g, s, "air", k, 1, c);
     }
   }
@@ -84826,12 +84826,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const x1 = s.x + Math.cos(s.angle) * L2, y1 = s.y + Math.sin(s.angle) * L2;
     const seg = clipSeg(r, s.x, s.y, h2, x1, y1, h2);
     if (!seg || !seg.A || !seg.B) return;
-    const A = seg.A, B4 = seg.B;
-    const sc = (A.sc + B4.sc) / 2;
-    const Ls = Math.hypot(B4.x - A.x, B4.y - A.y);
+    const A = seg.A, B5 = seg.B;
+    const sc = (A.sc + B5.sc) / 2;
+    const Ls = Math.hypot(B5.x - A.x, B5.y - A.y);
     const d = r.dpr;
     g.setTransform(sc * d, 0, 0, sc * d, A.x * d, A.y * d);
-    drawShapeLayer(g, copy(s, { z: 0, angle: Math.atan2(B4.y - A.y, B4.x - A.x), length: Ls / sc / Math.max(0.01, ext) }), "air", k, 1, c);
+    drawShapeLayer(g, copy(s, { z: 0, angle: Math.atan2(B5.y - A.y, B5.x - A.x), length: Ls / sc / Math.max(0.01, ext) }), "air", k, 1, c);
   }
   function seg3d(g, r, s, k, c) {
     let x0 = s.x, y0 = s.y, h0, h1;
@@ -84849,11 +84849,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const X1 = x0 + w.dx(x0, x1);
     const seg = clipSeg(r, x0, y0, h0, X1, y1, h1);
     if (!seg || !seg.A || !seg.B) return;
-    const A = seg.A, B4 = seg.B;
-    const sc = (A.sc + B4.sc) / 2;
+    const A = seg.A, B5 = seg.B;
+    const sc = (A.sc + B5.sc) / 2;
     const d = r.dpr;
     g.setTransform(sc * d, 0, 0, sc * d, A.x * d, A.y * d);
-    const rel2 = [(B4.x - A.x) / sc, (B4.y - A.y) / sc];
+    const rel2 = [(B5.x - A.x) / sc, (B5.y - A.y) / sc];
     const c2 = { ...c, rel: () => rel2 };
     if (s.type === "strings") {
       const rel22 = [rel2[0], rel2[1] + 0.2];
@@ -84890,19 +84890,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const d = r.dpr;
     for (const p of fx.parts) {
       if (!!p.add !== additive) continue;
-      const B4 = bill(r, p.x, p.y, p.under !== void 0 ? p.z - p.under : p.z);
-      if (!B4 || !onScreen(r, B4, 60)) continue;
+      const B5 = bill(r, p.x, p.y, p.under !== void 0 ? p.z - p.under : p.z);
+      if (!B5 || !onScreen(r, B5, 60)) continue;
       let vx = 0, vy = 0;
       if (p.kind === "spark" || p.kind === "line" || p.kind === "drop") {
         const q2 = r.project(p.x + p.vx * 0.05, p.y + p.vy * 0.05, p.z + p.vz * 0.05);
         if (q2[0] > CULL) {
-          vx = (q2[0] - B4.x) / (0.05 * B4.sc);
-          vy = (q2[1] - B4.y) / (0.05 * B4.sc);
+          vx = (q2[0] - B5.x) / (0.05 * B5.sc);
+          vy = (q2[1] - B5.y) / (0.05 * B5.sc);
         }
       }
-      const sc = Math.min(B4.sc, NEAR_SC);
-      g.setTransform(sc * d, 0, 0, sc * d, B4.x * d, B4.y * d);
-      drawPart(g, p, vx * B4.sc / sc, vy * B4.sc / sc);
+      const sc = Math.min(B5.sc, NEAR_SC);
+      g.setTransform(sc * d, 0, 0, sc * d, B5.x * d, B5.y * d);
+      drawPart(g, p, vx * B5.sc / sc, vy * B5.sc / sc);
     }
   }
   function textPlace3d(r, t) {
@@ -87016,13 +87016,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
   };
   function fleeSpot(a, f, game, cur) {
-    const w = game.world, B4 = game.buildings;
+    const w = game.world, B5 = game.buildings;
     const from = (p) => Math.hypot(w.dx(f.x, p.x), p.y - f.y);
     const b = w.interiorAt(a.x, a.y);
-    if (b && B4) {
-      const dp = B4.doorPts(b);
+    if (b && B5) {
+      const dp = B5.doorPts(b);
       const mine = Math.hypot(w.dx(a.x, dp.mid.x), dp.mid.y - a.y);
-      if (w.interiorAt(f.x, f.y) === b && from(dp.mid) > mine + 1.2 && (!B4.isLocked(b) || a.homeB === b || b.doorOpen)) {
+      if (w.interiorAt(f.x, f.y) === b && from(dp.mid) > mine + 1.2 && (!B5.isLocked(b) || a.homeB === b || b.doorOpen)) {
         for (const z of [4, 2.5]) {
           const q2 = bw(b, dp.lx, z), p = { x: w.wx(q2.x), y: q2.y };
           if (standable(w, p.x, p.y, a.r) && !w.interiorAt(p.x, p.y)) return p;
@@ -87032,7 +87032,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       let best = null, bd = -Infinity;
       for (let i = 0; i < 16; i++) {
         const p = { x: R4.x0 + 0.45 + Math.random() * Math.max(0, R4.x1 - R4.x0 - 0.9), y: R4.y0 + 0.45 + Math.random() * Math.max(0, R4.y1 - R4.y0 - 0.9) };
-        if (!B4.freeAt(b, p.x, p.y, 0.4)) continue;
+        if (!B5.freeAt(b, p.x, p.y, 0.4)) continue;
         const s = from(p);
         if (s > bd) {
           bd = s;
@@ -89178,7 +89178,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/ui/style.css
-  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n/* the drawn weapon's moves (bottom right, while it's out) */\n.skillpanel { position: absolute; right: 14px; bottom: 14px; min-width: 210px; max-width: 260px; background: rgba(10,20,30,.74); border-radius: 12px; padding: 8px 10px 7px; border: 1px solid var(--border); font-size: 12px; pointer-events: none; }\n.skillpanel .sp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }\n.skillpanel .sp-head b { font: 400 17px 'Pirata One', serif; color: var(--gold); letter-spacing: .5px; }\n.skillpanel .sp-head span { font-size: 10.5px; opacity: .75; text-align: right; }\n.skillpanel .sp-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }\n.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; padding: 1px 5px; font: 800 11px Nunito, sans-serif; color: #fff; }\n.skillpanel .sp-row.unbound kbd { opacity: .45; }\n.skillpanel .sp-row.cd { opacity: .55; }\n.skillpanel .sp-cd { margin-left: auto; color: #ffcc80; font-variant-numeric: tabular-nums; }\n.skillpanel .sp-foot { margin-top: 5px; font-size: 10.5px; opacity: .7; }\n.skillpanel .sp-foot kbd { min-width: 0; padding: 0 5px; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #1f5f86; font-size: 18px; }\n.wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n/* the shipwright's menus: your ships and the ships for sale */\n.sw-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }\n.sw-head h2 { margin: 0; }\n.row-item.cant { opacity: .6; }\n.row-item.here { outline: 2px solid #b8860b; }\n.row-item .sub.warn { color: #b71c1c; opacity: 1; font-weight: 700; }\n.price.short { color: #b71c1c; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.85)); }\n.compass .pin img { display: block; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: 1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.main { z-index: 2; }\n.compass .pin.main small { color: #ffc940; }\n.compass .pin.side small { color: #a6dcf5; }\n.compass .pin.ship small { color: #e3f2fd; }\n/* the markers over the world (see waypoints.js): where the quests on the tracker are */\n.wpmarks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wpm { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; width: 0; transition: opacity .2s; will-change: transform; }\n.wpm > img { margin-top: -17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)) drop-shadow(0 0 5px rgba(0,0,0,.35)); }\n.wpm.side > img { margin-top: -14px; }\n.wpm.main { z-index: 2; }\n.wpm small { margin-top: 1px; font: 800 12px Nunito, sans-serif; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 3px #000; }\n.wpm.main small { color: #ffd66b; }\n.wpm.side small { color: #b9e4f8; }\n.wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }\n.wpm.look .wpm-name { opacity: 1; transform: none; }\n.wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }\n.wpm-arrow::after { content: ''; position: absolute; left: 25px; top: 3px; border: 6px solid transparent; border-left: 10px solid #fff; filter: drop-shadow(0 0 1.5px #000); }\n.wpm.main .wpm-arrow::after { border-left-color: #ffc940; }\n.wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }\n.wpm.edge .wpm-arrow { display: block; }\n.wpm.edge > img { transform: scale(.85); }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-sub { text-align: right; font: 700 11.5px Nunito, sans-serif; color: #ffd98a; margin-top: 1px; letter-spacing: 0.02em; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n";
+  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n/* the drawn weapon's moves (bottom right, while it's out) */\n.skillpanel { position: absolute; right: 14px; bottom: 14px; min-width: 210px; max-width: 260px; background: rgba(10,20,30,.74); border-radius: 12px; padding: 8px 10px 7px; border: 1px solid var(--border); font-size: 12px; pointer-events: none; }\n.skillpanel .sp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }\n.skillpanel .sp-head b { font: 400 17px 'Pirata One', serif; color: var(--gold); letter-spacing: .5px; }\n.skillpanel .sp-head span { font-size: 10.5px; opacity: .75; text-align: right; }\n.skillpanel .sp-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }\n.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; padding: 1px 5px; font: 800 11px Nunito, sans-serif; color: #fff; }\n.skillpanel .sp-row.unbound kbd { opacity: .45; }\n.skillpanel .sp-row.cd { opacity: .55; }\n.skillpanel .sp-cd { margin-left: auto; color: #ffcc80; font-variant-numeric: tabular-nums; }\n.skillpanel .sp-foot { margin-top: 5px; font-size: 10.5px; opacity: .7; }\n.skillpanel .sp-foot kbd { min-width: 0; padding: 0 5px; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #1f5f86; font-size: 18px; }\n.wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label.town { font: 700 13px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #4a3320; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; z-index: 1; }\n.wm-label.isle { color: #2f2012; letter-spacing: 1px; text-shadow: 0 0 4px #f5e6c4, 0 0 8px #f5e6c4; z-index: 1; }\n.wm-label.landmark { font: italic 600 12px Nunito, sans-serif; color: #5b4026; }\n/* markers standing on their spot: the icon's middle on it, the name beside it */\n.wm-pin { position: absolute; width: 0; height: 0; display: flex; align-items: center; z-index: 2; }\n.wm-pin > img { flex: none; transform: translate(-50%, 0); filter: drop-shadow(0 1px 1.5px rgba(40,24,10,.6)); }\n.wm-pin > span { margin-left: -4px; white-space: nowrap; font: 400 16px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; }\n.wm-pin.quest > span { color: #1f5f86; font-size: 17px; }\n.wm-pin.quest.main { z-index: 4; }\n.wm-pin.quest.main > span { color: #a33a00; font-size: 19px; }\n.wm-pin.poi > img { box-sizing: content-box; padding: 2px; border-radius: 50%; background: rgba(246,234,206,.96); box-shadow: 0 0 0 1.5px #5b4026, 0 1px 3px rgba(40,24,10,.45); filter: none; }\n.wm-pin.poi.dock > img { background: rgba(214,232,240,.96); }\n.wm-pin.poi > span { font: 700 11px Nunito, sans-serif; color: #4a3320; }\n.wm-pin.lp > span { color: #8e2c1c; }\n/* you: an arrow the way you face, ringed */\n.wm-me { position: absolute; width: 0; height: 0; z-index: 5; }\n.wm-me::before { content: ''; position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(192,57,43,.75); animation: wmping 1.8s ease-out infinite; }\n.wm-me i { position: absolute; left: -10px; top: -12px; width: 20px; height: 24px; }\n.wm-me i::before { content: ''; position: absolute; inset: 0; background: #c0392b; clip-path: polygon(50% 0, 100% 100%, 50% 74%, 0 100%); filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }\n@keyframes wmping { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }\n.wm-scale { position: absolute; left: 22px; bottom: 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; pointer-events: none; }\n.wm-scale i { display: block; height: 7px; border: 2px solid #4a3320; border-top: 0; background: repeating-linear-gradient(90deg, #4a3320 0 25%, #f2e3c2 25% 50%); background-size: 100% 3px; background-repeat: no-repeat; background-position: bottom; box-shadow: 0 0 0 1px rgba(245,230,196,.8); }\n.wm-scale span { font: 700 13px Nunito, sans-serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; }\n.wm-rose { position: absolute; right: 20px; bottom: 20px; pointer-events: none; opacity: .9; filter: drop-shadow(0 0 4px rgba(245,230,196,.9)); }\n/* (the chart has the screen to itself: no banners or toasts over it) */\n#ui.map-open .banner, #ui.map-open .toast { visibility: hidden; }\n#ui.touch .wm-rose { transform: scale(.7); transform-origin: right bottom; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n/* the shipwright's menus: your ships and the ships for sale */\n.sw-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }\n.sw-head h2 { margin: 0; }\n.row-item.cant { opacity: .6; }\n.row-item.here { outline: 2px solid #b8860b; }\n.row-item .sub.warn { color: #b71c1c; opacity: 1; font-weight: 700; }\n.price.short { color: #b71c1c; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.85)); }\n.compass .pin img { display: block; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: 1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.main { z-index: 2; }\n.compass .pin.main small { color: #ffc940; }\n.compass .pin.side small { color: #a6dcf5; }\n.compass .pin.ship small { color: #e3f2fd; }\n/* the markers over the world (see waypoints.js): where the quests on the tracker are */\n.wpmarks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wpm { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; width: 0; transition: opacity .2s; will-change: transform; }\n.wpm > img { margin-top: -17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)) drop-shadow(0 0 5px rgba(0,0,0,.35)); }\n.wpm.side > img { margin-top: -14px; }\n.wpm.main { z-index: 2; }\n.wpm small { margin-top: 1px; font: 800 12px Nunito, sans-serif; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 3px #000; }\n.wpm.main small { color: #ffd66b; }\n.wpm.side small { color: #b9e4f8; }\n.wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }\n.wpm.look .wpm-name { opacity: 1; transform: none; }\n.wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }\n.wpm-arrow::after { content: ''; position: absolute; left: 25px; top: 3px; border: 6px solid transparent; border-left: 10px solid #fff; filter: drop-shadow(0 0 1.5px #000); }\n.wpm.main .wpm-arrow::after { border-left-color: #ffc940; }\n.wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }\n.wpm.edge .wpm-arrow { display: block; }\n.wpm.edge > img { transform: scale(.85); }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-sub { text-align: right; font: 700 11.5px Nunito, sans-serif; color: #ffd98a; margin-top: 1px; letter-spacing: 0.02em; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n";
 
   // src/ui/icon.js
   var img = (canvas2, px2, cls = "") => h("img.icon" + cls, { src: iconURL(canvas2), width: px2, height: px2, draggable: false, alt: "" });
@@ -91096,12 +91096,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     knock(b) {
       const g = this.game, c = g.state.char;
-      const B4 = g.buildings;
+      const B5 = g.buildings;
       const rng4 = new RNG((b.id || 1) * 13 + g.env.day * 7 + Math.floor(g.env.clock));
       g.audio?.sfx("knock");
       const kick = { text: b.pirate ? "Kick down the door." : "Kick down the door. (a crime)", do: () => {
         g.dialogue.close();
-        B4 ? B4.breakDoor(b) : robHouse(g, b);
+        B5 ? B5.breakDoor(b) : robHouse(g, b);
       }, end: true };
       const leave = { text: "Leave them be.", end: true };
       if (b.pirate) {
@@ -91110,7 +91110,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return;
       }
       if ((b.role || "house") !== "house") {
-        const opens = B4 ? B4.opensAt(b) : 7;
+        const opens = B5 ? B5.opensAt(b) : 7;
         g.dialogue.open(null, { start: "a", nodes: { a: { speaker: b.name || "Door", text: `Nobody answers. A sign hangs on the door: CLOSED \u2014 OPEN FROM ${opens}:00.`, choices: [{ text: "Come back later.", end: true }, kick] } } });
         return;
       }
@@ -91122,7 +91122,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (invite) {
         g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: rng4.pick(['"Oh, a traveller? Come in, come in \u2014 mind your head."', `"Well, don't just stand there \u2014 come in! The kettle's on."`, `"Aren't you the one folk say helped out around here? Come in!"`]), choices: [
           { text: "Step inside.", do: () => {
-            c.flags["invited_" + (B4 ? B4.key(b) : b.id)] = g.env.day;
+            c.flags["invited_" + (B5 ? B5.key(b) : b.id)] = g.env.day;
             g.dialogue.close();
             if (!c.flags["door_" + b.id]) {
               c.flags["door_" + b.id] = true;
@@ -92072,11 +92072,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** Are two islands in the same sea (or the same zone)? */
     sameSea(a, b) {
-      const A = this.allIslands().find((i) => i.id === a), B4 = this.allIslands().find((i) => i.id === b);
-      if (!A || !B4) return false;
+      const A = this.allIslands().find((i) => i.id === a), B5 = this.allIslands().find((i) => i.id === b);
+      if (!A || !B5) return false;
       const za = ZONE_OF.get(a) || null, zb = ZONE_OF.get(b) || null;
       if (za || zb) return za === zb;
-      return (A.sea || A.def?.sea) === (B4.sea || B4.def?.sea);
+      return (A.sea || A.def?.sea) === (B5.sea || B5.def?.sea);
     }
     /** Do these words name an island (or one of its towns)? */
     placeNamed(islandId, text2) {
@@ -92745,8 +92745,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const def = npc?.def;
       if (!def?.recruit || !tree?.nodes) return tree;
       const startId = tree.start || "start";
-      const start3 = tree.nodes[startId];
-      if (!start3) return tree;
+      const start4 = tree.nodes[startId];
+      if (!start4) return tree;
       const r = def.recruit;
       const role = CREW_ROLES[r.role] || CREW_ROLES.fighter;
       const cost = r.cost || 0;
@@ -92756,8 +92756,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if: () => this.canRecruit(def),
         next: "__recruit"
       };
-      nodes[startId] = { ...start3, choices: [choice, ...start3.choices || []] };
-      if (!start3.choices || !start3.choices.length) nodes[startId].choices.push({ text: "Goodbye.", end: true });
+      nodes[startId] = { ...start4, choices: [choice, ...start4.choices || []] };
+      if (!start4.choices || !start4.choices.length) nodes[startId].choices.push({ text: "Goodbye.", end: true });
       nodes.__recruit = {
         text: r.pitch || `"You want me as your ${role.name.toLowerCase()}? ...Alright. I'm in!"`,
         choices: [
@@ -95674,7 +95674,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         progression: g.progression
       };
     }
-    open(npc, treeOrId, start3) {
+    open(npc, treeOrId, start4) {
       let tree = typeof treeOrId === "string" ? this.trees[treeOrId] : treeOrId;
       if (!tree) return;
       const ctx = this.ctx(npc);
@@ -95689,7 +95689,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         npc.facing = Math.atan2(p.y - npc.y, this.game.world.dx(npc.x, p.x));
         p.facing = npc.facing + Math.PI;
       }
-      this.show(start3 || tree.start || "start");
+      this.show(start4 || tree.start || "start");
     }
     show(id) {
       const a = this.active;
@@ -96185,7 +96185,465 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
   };
 
+  // src/ui/chartDetail.js
+  var PX2 = 2;
+  var MAX_PIXELS = 9e5;
+  var MARGIN = 30;
+  var KEEP_PX = 16e6;
+  var BUDGET = 9;
+  var PARCH = [240, 226, 190];
+  var SEPIA = [74, 52, 32];
+  var mixc = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+  var LAND = [];
+  for (let t = 16; t < 256; t++) LAND[t] = PALETTE[t] ? mixc(hexToRgb(PALETTE[t][0]), PARCH, 0.22) : [214, 200, 160];
+  Object.assign(LAND, {
+    [T.GRASS]: [128, 170, 96],
+    [T.LAWN]: [134, 180, 100],
+    [T.FLOWERS]: [138, 176, 100],
+    [T.SAKURA]: [150, 184, 122],
+    [T.FOREST]: [104, 150, 86],
+    [T.JUNGLE]: [92, 142, 80],
+    [T.MANGROVE]: [124, 146, 86],
+    [T.SAND]: [236, 220, 170],
+    [T.DESERT]: [228, 200, 140],
+    [T.DIRT]: [184, 152, 106],
+    [T.MUD]: [140, 122, 84],
+    [T.FARM]: [186, 168, 102],
+    [T.ROCK]: [166, 158, 144],
+    [T.MOUNTAIN]: [152, 140, 124],
+    [T.CLIFF]: [136, 124, 108],
+    [T.SNOWROCK]: [206, 208, 210],
+    [T.RED_ROCK]: [170, 92, 66],
+    [T.SNOW]: [244, 246, 248],
+    [T.ICE]: [212, 232, 240],
+    [T.PACK_ICE]: [226, 240, 246],
+    [T.COBBLE]: [190, 180, 164],
+    [T.STONE]: [206, 198, 184],
+    [T.MARBLE]: [234, 230, 220],
+    [T.GRAVEL]: [184, 176, 162],
+    [T.PLANK]: [156, 112, 70],
+    [T.BRIDGE]: [150, 106, 64],
+    [T.RAIL]: [128, 108, 88]
+  });
+  var LIQ = { [T.LAVA]: [226, 96, 44], [T.ACID]: [140, 186, 80], [T.CLOUD_SEA]: [240, 244, 250] };
+  var WASH = [104, 164, 186];
+  var DEPTHS = [3, 7, 12];
+  var TREE = {
+    palm: [[112, 156, 80], [70, 104, 52]],
+    pine: [[74, 116, 74], [46, 76, 48]],
+    snowpine: [[98, 128, 104], [64, 88, 72]],
+    jungle: [[78, 132, 70], [46, 86, 44]],
+    sakura: [[236, 168, 192], [178, 108, 134]],
+    dead: [[140, 120, 92], [96, 80, 60]]
+  };
+  var TREE_DEFAULT = [[96, 146, 78], [58, 98, 50]];
+  var smooth7 = (a, b, x) => {
+    const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  var hash10 = (x, y) => {
+    let h2 = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) | 0;
+    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
+    return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
+  };
+  function vnoise4(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+    const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+    const a = hash10(ix, iy), b = hash10(ix + 1, iy), c = hash10(ix, iy + 1), d = hash10(ix + 1, iy + 1);
+    return (a + (b - a) * ux) * (1 - uy) + (c + (d - c) * ux) * uy;
+  }
+  function chartSea(world, x, y) {
+    const m = world.map;
+    if (!m) return [168, 196, 196];
+    const sx = world.width / m.w, sy = world.height / m.h;
+    const i = Math.max(0, Math.min(m.w - 1, Math.floor(world.wx(x) / sx))), j = Math.max(0, Math.min(m.h - 1, Math.floor(y / sy)));
+    const o = (j * m.w + i) * 4;
+    const mc = [m.data[o], m.data[o + 1], m.data[o + 2]];
+    const parch = [228, 213, 177], fog = [223, 205, 163];
+    return mixc(mixc(parch, mc, 0.62), fog, 0.15);
+  }
+  var ChartDetail = class {
+    constructor() {
+      this.charts = /* @__PURE__ */ new Map();
+      this.t = 0;
+    }
+    /** The chart of an island (started if need be): { canvas, x0, y0, px, done, ... }. */
+    chart(world, isl) {
+      const key2 = `${world.id}:${isl.id}`;
+      let c = this.charts.get(key2);
+      if (!c) {
+        c = start(world, isl);
+        this.charts.set(key2, c);
+      }
+      c.used = this.t;
+      return c;
+    }
+    /** Keep within the memory allowed: drop the charts longest out of view (never one in view now). */
+    trim() {
+      let total = 0;
+      for (const c of this.charts.values()) total += c.cw * c.ch;
+      if (total <= KEEP_PX) return;
+      const old = [...this.charts.entries()].filter(([, c]) => c.used < this.t).sort((a, b) => a[1].used - b[1].used);
+      for (const [k, c] of old) {
+        if (total <= KEEP_PX) break;
+        total -= c.cw * c.ch;
+        this.charts.delete(k);
+      }
+    }
+    /**
+     * Draw the islands in view that you know, over the world chart: `v` gives
+     * the context to draw on (device pixels), dpr, the map's zoom (css pixels
+     * to the metre), toS(x, y) → css pixels, the screen size, and which islands
+     * are known.
+     */
+    draw(g, v) {
+      this.t++;
+      const a = smooth7(0.3, 0.7, v.zoom);
+      if (a <= 0) return;
+      const { world, dpr, zoom } = v;
+      const t0 = performance.now();
+      const todo = [];
+      for (const isl of world.islands) {
+        const B5 = isl.landBox;
+        if (!B5 || !v.known(isl)) continue;
+        const [sx0, sy0] = v.toS(B5.x0 - MARGIN, B5.y0 - MARGIN);
+        const sx1 = sx0 + (B5.x1 - B5.x0 + 2 * MARGIN) * zoom, sy1 = sy0 + (B5.y1 - B5.y0 + 2 * MARGIN) * zoom;
+        if (sx1 < 0 || sy1 < 0 || sx0 > v.cw || sy0 > v.ch) continue;
+        const c = this.chart(world, isl);
+        if (!c.done) {
+          todo.push(c);
+          continue;
+        }
+        g.globalAlpha = a;
+        g.imageSmoothingEnabled = true;
+        const [cx, cy] = v.toS(c.x0, c.y0);
+        g.drawImage(c.canvas, cx * dpr, cy * dpr, c.cw / c.px * zoom * dpr, c.ch / c.px * zoom * dpr);
+        if (zoom > 0.45) drawBuildings(g, c, v, a * smooth7(0.45, 0.8, zoom));
+      }
+      todo.sort((p, q2) => Math.hypot(p.mx - v.px, p.my - v.py) - Math.hypot(q2.mx - v.px, q2.my - v.py));
+      for (const c of todo) {
+        if (performance.now() - t0 > BUDGET) break;
+        work(world, c, t0);
+      }
+      g.globalAlpha = 1;
+      this.trim();
+    }
+  };
+  function start(world, isl) {
+    const B5 = isl.landBox;
+    const x0 = Math.floor(B5.x0 - MARGIN), y0 = Math.floor(B5.y0 - MARGIN);
+    const tw = Math.ceil(B5.x1 + MARGIN) - x0 + 1, th = Math.ceil(B5.y1 + MARGIN) - y0 + 1;
+    const px2 = Math.min(PX2, Math.sqrt(MAX_PIXELS / (tw * th)));
+    const cw = Math.max(1, Math.round(tw * px2)), ch = Math.max(1, Math.round(th * px2));
+    const canvas2 = document.createElement("canvas");
+    canvas2.width = cw;
+    canvas2.height = ch;
+    return {
+      isl,
+      x0,
+      y0,
+      tw,
+      th,
+      px: px2,
+      cw,
+      ch,
+      canvas: canvas2,
+      mx: isl.x,
+      my: isl.y,
+      stage: 0,
+      row: 0,
+      done: false,
+      used: 0,
+      sea: chartSea(world, x0 - 2, y0 - 2),
+      // (the tiles, with a tile's border all round, so every pixel has four to blend)
+      gw: tw + 2,
+      gh: th + 2,
+      type: null,
+      elev: null,
+      dist: null,
+      img: null,
+      buildings: null
+    };
+  }
+  function work(world, c, t0) {
+    const tw0 = performance.now(), st = c.stage;
+    workStage(world, c, t0);
+    (c.ms || (c.ms = [0, 0, 0]))[st] += performance.now() - tw0;
+  }
+  function workStage(world, c, t0) {
+    if (c.stage === 0) {
+      const n = c.gw * c.gh;
+      if (!c.type) {
+        c.type = new Uint8Array(n);
+        c.elev = new Uint8Array(n);
+        c.dist = new Float32Array(n);
+        c.mot = new Float32Array(n);
+        c.read = 0;
+      }
+      while (c.read < c.gh) {
+        const j = c.read++;
+        for (let i = 0; i < c.gw; i++) {
+          const x = c.x0 - 1 + i, y = c.y0 - 1 + j, k = j * c.gw + i;
+          c.type[k] = world.type(x, y);
+          c.elev[k] = world.elev(x, y);
+          c.dist[k] = (world.distRaw(x, y) - 128) * 0.25;
+          c.mot[k] = vnoise4(x * 0.18, y * 0.18);
+        }
+        if ((c.read & 15) === 0 && performance.now() - t0 > BUDGET) return;
+      }
+      c.img = c.canvas.getContext("2d").createImageData(c.cw, c.ch);
+      c.stage = 1;
+    }
+    if (c.stage === 1) {
+      while (c.row < c.ch) {
+        paintRow(c, c.row++);
+        if ((c.row & 7) === 0 && performance.now() - t0 > BUDGET) return;
+      }
+      c.canvas.getContext("2d").putImageData(c.img, 0, 0);
+      c.img = null;
+      c.stage = 2;
+      if (performance.now() - t0 > BUDGET) return;
+    }
+    if (c.stage === 2) {
+      drawTrees(world, c);
+      c.buildings = buildingsOf(world, c);
+      c.type = c.elev = c.dist = c.mot = null;
+      c.stage = 3;
+      c.done = true;
+    }
+  }
+  var B4 = { r: 0, g: 0, b: 0, w: 0 };
+  function blend(t, w) {
+    if (IS_LIQUID[t] || OVERLAY[t]) return;
+    const L2 = LAND[t];
+    B4.r += L2[0] * w;
+    B4.g += L2[1] * w;
+    B4.b += L2[2] * w;
+    B4.w += w;
+  }
+  function paintRow(c, pj) {
+    const { gw, type, elev, dist, mot, px: px2, img: img2, sea } = c;
+    const data = img2.data;
+    const wy = c.y0 + (pj + 0.5) / px2;
+    const gy = wy - c.y0 + 0.5, j0 = Math.floor(gy), fy = gy - j0;
+    const lw = 0.7 / px2;
+    for (let pi = 0; pi < c.cw; pi++) {
+      const wx = c.x0 + (pi + 0.5) / px2;
+      const gx = wx - c.x0 + 0.5, i0 = Math.floor(gx), fx = gx - i0;
+      const k00 = j0 * gw + i0, k10 = k00 + 1, k01 = k00 + gw, k11 = k01 + 1;
+      const sd = (dist[k00] * (1 - fx) + dist[k10] * fx) * (1 - fy) + (dist[k01] * (1 - fx) + dist[k11] * fx) * fy;
+      const tk = (Math.floor(wy) - c.y0 + 1) * gw + (Math.floor(wx) - c.x0 + 1);
+      const tt = type[tk];
+      let r, g, b, a = 255;
+      const edge = Math.min(pi, pj, c.cw - 1 - pi, c.ch - 1 - pj) / px2;
+      const out = smooth7(0, 6, edge) * (1 - smooth7(MARGIN - 9, MARGIN - 1, -sd));
+      if (OVERLAY[tt]) {
+        const L2 = LAND[tt];
+        const plank = Math.floor(wx * 2) + Math.floor(wy * 2) & 1 ? 0.94 : 1.04;
+        r = L2[0] * plank;
+        g = L2[1] * plank;
+        b = L2[2] * plank;
+      } else if (sd < 0) {
+        const d = -sd;
+        const liq = LIQ[tt];
+        let cr = sea[0], cg = sea[1], cb = sea[2];
+        if (liq) {
+          cr = liq[0];
+          cg = liq[1];
+          cb = liq[2];
+        } else {
+          const w = 0.55 * (1 - smooth7(0, 16, d));
+          cr += (WASH[0] - cr) * w;
+          cg += (WASH[1] - cg) * w;
+          cb += (WASH[2] - cb) * w;
+          for (const L2 of DEPTHS) {
+            const ln2 = (1 - smooth7(lw * 0.5, lw * 1.5, Math.abs(d - L2))) * 0.32 * (1 - L2 / 20);
+            cr += (60 - cr) * ln2;
+            cg += (100 - cg) * ln2;
+            cb += (118 - cb) * ln2;
+          }
+        }
+        const ink2 = 1 - smooth7(0, lw * 1.6, d);
+        r = cr + (SEPIA[0] - cr) * ink2;
+        g = cg + (SEPIA[1] - cg) * ink2;
+        b = cb + (SEPIA[2] - cb) * ink2;
+        a = 255 * Math.max(out, ink2);
+      } else {
+        const sx = smooth7(0.3, 0.7, fx), sy = smooth7(0.3, 0.7, fy);
+        B4.r = B4.g = B4.b = B4.w = 0;
+        blend(type[k00], (1 - sx) * (1 - sy));
+        blend(type[k10], sx * (1 - sy));
+        blend(type[k01], (1 - sx) * sy);
+        blend(type[k11], sx * sy);
+        if (B4.w > 0) {
+          r = B4.r / B4.w;
+          g = B4.g / B4.w;
+          b = B4.b / B4.w;
+        } else {
+          r = LAND[T.SAND][0];
+          g = LAND[T.SAND][1];
+          b = LAND[T.SAND][2];
+        }
+        const e00 = elev[k00], e10 = elev[k10], e01 = elev[k01], e11 = elev[k11];
+        const ex = (e10 - e00) * (1 - fy) + (e11 - e01) * fy, ey = (e01 - e00) * (1 - fx) + (e11 - e10) * fx;
+        const e = (e00 * (1 - fx) + e10 * fx) * (1 - fy) + (e01 * (1 - fx) + e11 * fx) * fy;
+        const steep = MANMADE[tt] ? 0.35 : 1;
+        const nx = -ex * 0.09 * steep, ny = -ey * 0.09 * steep, nl = Math.sqrt(nx * nx + ny * ny + 1);
+        const lam = (nx * -0.55 + ny * -0.7 + 0.45) / nl;
+        let k = 0.86 + 0.32 * lam;
+        if (MANMADE[tt] && !OVERLAY[tt]) k *= Math.floor(wx) + Math.floor(wy) & 1 ? 0.97 : 1.02;
+        if (tt === T.FARM) k *= Math.floor(wx / 1.6) & 1 ? 0.92 : 1.05;
+        k *= 0.95 + 0.1 * ((mot[k00] * (1 - fx) + mot[k10] * fx) * (1 - fy) + (mot[k01] * (1 - fx) + mot[k11] * fx) * fy);
+        r *= k;
+        g *= k;
+        b *= k;
+        const grad2 = Math.sqrt(ex * ex + ey * ey);
+        if (grad2 > 0.6 && !MANMADE[tt]) {
+          const cd = Math.abs(e - Math.round(e / 26) * 26) / grad2;
+          const cl = (1 - smooth7(lw * 0.4, lw * 1.2, cd)) * 0.22;
+          r += (SEPIA[0] - r) * cl;
+          g += (SEPIA[1] - g) * cl;
+          b += (SEPIA[2] - b) * cl;
+        }
+        const ink2 = 1 - smooth7(lw * 0.3, lw * 1.9, sd);
+        r += (SEPIA[0] - r) * ink2;
+        g += (SEPIA[1] - g) * ink2;
+        b += (SEPIA[2] - b) * ink2;
+      }
+      const o = (pj * c.cw + pi) * 4;
+      data[o] = r;
+      data[o + 1] = g;
+      data[o + 2] = b;
+      data[o + 3] = a;
+    }
+  }
+  function drawTrees(world, c) {
+    const g = c.canvas.getContext("2d");
+    const px2 = c.px;
+    const list = world.objects ? world.objects.query(c.x0, c.y0, c.x0 + c.tw, c.y0 + c.th) : [];
+    const seen = /* @__PURE__ */ new Set();
+    const trees = [];
+    for (const o of list) {
+      if (seen.has(o) || o.kind !== "tree" && o.kind !== "rock") continue;
+      seen.add(o);
+      const x = world.dx(c.x0, o.x), y = o.y - c.y0;
+      if (x < 0 || y < 0 || x > c.tw || y > c.th) continue;
+      trees.push(o);
+    }
+    trees.sort((a, b) => a.y - b.y);
+    for (const o of trees) {
+      const x = world.dx(c.x0, o.x) * px2, y = (o.y - 0.5 - c.y0) * px2;
+      if (o.kind === "rock") {
+        const r2 = 0.7 * (o.s || 1) * px2;
+        g.fillStyle = "rgb(150,140,124)";
+        g.strokeStyle = "rgba(74,52,32,.75)";
+        g.lineWidth = Math.max(0.6, px2 * 0.3);
+        g.beginPath();
+        g.ellipse(x, y, r2 * 1.2, r2 * 0.9, 0, 0, Math.PI * 2);
+        g.fill();
+        g.stroke();
+        continue;
+      }
+      const [crown2, shade4] = TREE[o.sub] || TREE_DEFAULT;
+      const r = (o.sub === "palm" ? 1.25 : o.sub === "pine" || o.sub === "snowpine" ? 1.1 : 1.45) * (o.s || 1) * px2;
+      g.fillStyle = "rgba(60,44,28,.22)";
+      g.beginPath();
+      g.arc(x + r * 0.35, y + r * 0.35, r, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = `rgb(${shade4[0]},${shade4[1]},${shade4[2]})`;
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = "rgba(52,40,26,.7)";
+      g.lineWidth = Math.max(0.6, px2 * 0.28);
+      g.stroke();
+      g.fillStyle = `rgb(${crown2[0]},${crown2[1]},${crown2[2]})`;
+      g.beginPath();
+      g.arc(x - r * 0.22, y - r * 0.22, r * 0.68, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  function buildingsOf(world, c) {
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    const add5 = (b) => {
+      if (!b || seen.has(b) || !(b.fw > 0 && b.fd > 0)) return;
+      seen.add(b);
+      const f = footprint2(b);
+      const roof = b.roof ? hexToRgb(b.roof) : [150, 96, 70];
+      const fill2 = mixc(roof, [184, 156, 122], 0.48);
+      out.push({ x0: f.x0, y0: f.y0, x1: f.x1, y1: f.y1, fill: `rgb(${fill2[0] | 0},${fill2[1] | 0},${fill2[2] | 0})`, ridge: `rgba(${roof[0] * 0.55 | 0},${roof[1] * 0.55 | 0},${roof[2] * 0.55 | 0},.55)`, pub: b.role && b.role !== "house" });
+    };
+    for (const t of c.isl.towns || []) for (const b of t.buildings || []) add5(b);
+    for (const l of c.isl.landmarks || []) if (l.kind === "building" || l.kind === "tower" || l.kind === "hut") add5(l);
+    return out;
+  }
+  function drawBuildings(g, c, v, a) {
+    if (!c.buildings?.length || a <= 0) return;
+    const { dpr, zoom } = v;
+    const shadow = new Path2D(), outline = new Path2D(), fills = /* @__PURE__ */ new Map(), ridges = /* @__PURE__ */ new Map();
+    let n = 0;
+    for (const b of c.buildings) {
+      const [sx, sy] = v.toS(b.x0, b.y0);
+      const w = (b.x1 - b.x0) * zoom, h2 = (b.y1 - b.y0) * zoom;
+      if (sx + w < 0 || sy + h2 < 0 || sx > v.cw || sy > v.ch) continue;
+      n++;
+      const X2 = sx * dpr, Y2 = sy * dpr, Wd = w * dpr, Hd = h2 * dpr;
+      shadow.rect(X2 + Wd * 0.08 + 1, Y2 + Hd * 0.1 + 1, Wd, Hd);
+      let f = fills.get(b.fill);
+      if (!f) fills.set(b.fill, f = new Path2D());
+      f.rect(X2, Y2, Wd, Hd);
+      outline.rect(X2, Y2, Wd, Hd);
+      if (Wd > 6 && Hd > 6) {
+        let r = ridges.get(b.ridge);
+        if (!r) ridges.set(b.ridge, r = new Path2D());
+        if (Wd >= Hd) {
+          r.moveTo(X2 + Hd * 0.3, Y2 + Hd / 2);
+          r.lineTo(X2 + Wd - Hd * 0.3, Y2 + Hd / 2);
+        } else {
+          r.moveTo(X2 + Wd / 2, Y2 + Wd * 0.3);
+          r.lineTo(X2 + Wd / 2, Y2 + Hd - Wd * 0.3);
+        }
+      }
+    }
+    if (!n) return;
+    g.globalAlpha = a;
+    g.lineJoin = "round";
+    g.fillStyle = "rgba(60,40,24,.25)";
+    g.fill(shadow);
+    for (const [col, path2] of fills) {
+      g.fillStyle = col;
+      g.fill(path2);
+    }
+    g.lineWidth = Math.max(1, zoom * 0.18) * dpr;
+    for (const [col, path2] of ridges) {
+      g.strokeStyle = col;
+      g.stroke(path2);
+    }
+    g.lineWidth = Math.max(1, zoom * 0.22) * dpr;
+    g.strokeStyle = "rgba(58,40,24,.9)";
+    g.stroke(outline);
+  }
+
   // src/ui/mapUI.js
+  var POI = {
+    inn: ["inn", "Inn"],
+    tavern: ["bar", "Tavern"],
+    bar: ["bar", "Bar"],
+    restaurant: ["food", "Restaurant"],
+    cafe: ["food", "Cafe"],
+    shop: ["shop", "Shop"],
+    market: ["shop", "Market"],
+    weapons: ["sword", "Weapons"],
+    doctor: ["doctor", "Doctor"],
+    shipwright: ["shipwright", "Shipwright"],
+    dojo: ["trainer", "Dojo"],
+    trainer: ["trainer", "Trainer"],
+    marine_base: ["marine", "Marine base"],
+    bounty: ["bounty", "Bounty office"],
+    library: ["library", "Library"]
+  };
+  var SCALES = [5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4, 2e4];
   var SEA_LABELS = [
     { name: "EAST BLUE", x: chart(3070), y: chart(390) },
     { name: "NORTH BLUE", x: chart(1020), y: chart(390) },
@@ -96206,12 +96664,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const title2 = h("div.wm-title", "Chart of the Blue Planet");
     const help = h("div.wm-help", "Drag to pan \xB7 wheel to zoom \xB7 M or Esc to close");
     const close = h("button.wm-close", { title: "Close the chart (M)", on: { pointerdown: (e) => e.stopPropagation(), click: () => game.closeMap() } }, uiImg("close", 22));
-    const wrap = h("div", { style: { position: "absolute", inset: "0", pointerEvents: "auto", cursor: "grab", touchAction: "none" } }, layer, title2, help, close);
+    const scaleBar = h("div.wm-scale", h("i"), h("span"));
+    const rose = h("div.wm-rose");
+    rose.innerHTML = ROSE_SVG;
+    const wrap = h("div", { style: { position: "absolute", inset: "0", pointerEvents: "auto", cursor: "grab", touchAction: "none" } }, layer, scaleBar, rose, title2, help, close);
+    const detail = game.chartDetail = new ChartDetail();
     wrap.classList.add("hidden");
     ui.root.appendChild(wrap);
     const cam = { x: 0, y: 0, zoom: 0.3 };
     const MIN_ZOOM = () => Math.min(0.18, (game.renderer.cw || 1280) / W * 0.9);
-    const MAX_ZOOM = 1.6;
+    const MAX_ZOOM = 3.2;
     let drag = null, pinch = null;
     const ptrs = /* @__PURE__ */ new Map();
     const zoomAt = (sx, sy, f) => {
@@ -96289,7 +96751,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       game.paused = true;
       const p = game.player;
       const r = game.renderer;
-      if (game.world === game.surface) {
+      const isl = game.currentIsland;
+      if (isl?.landBox && (game.world !== game.surface || p.mode !== "sail")) {
+        const B5 = isl.landBox;
+        cam.zoom = Math.max(0.5, Math.min(2.2, Math.min(r.cw / (B5.x1 - B5.x0 + 60), r.ch / (B5.y1 - B5.y0 + 60)) * 0.9));
+        cam.x = p.x;
+        cam.y = p.y;
+      } else if (game.world === game.surface) {
         cam.zoom = Math.max(MIN_ZOOM(), Math.min(r.cw / (W * 0.28), 0.5));
         cam.x = p.x;
         cam.y = Math.max(H * 0.3, Math.min(H * 0.7, p.y));
@@ -96302,6 +96770,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       help.textContent = game.input.touch?.on ? "Drag to pan \xB7 pinch to zoom \xB7 tap the cross to close" : "Drag to pan \xB7 wheel to zoom \xB7 M or Esc to close";
       wrap.classList.remove("hidden");
       layer.classList.remove("hidden");
+      ui.root.classList.add("map-open");
       ui.hud.classList.add("hidden");
       ui.el.side.classList.add("hidden");
       game.audio?.sfx("page");
@@ -96310,6 +96779,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       ui.mapOpen = false;
       wrap.classList.add("hidden");
       layer.classList.add("hidden");
+      ui.root.classList.remove("map-open");
       ui.hud.classList.toggle("hidden", !ui.hudVisible);
       ui.el.side.classList.toggle("hidden", !ui.hudVisible);
       if (!ui.stack.length && !ui.dialogueEl) game.paused = false;
@@ -96327,70 +96797,174 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const g = r.ctx;
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, r.canvas.width, r.canvas.height);
+      const w = game.world, zone = w !== game.surface, c = game.state.char;
+      const discovered = new Set(c.discovered || []);
+      const p = game.player;
+      const toS = (x, y) => {
+        let dx = x - cam.x;
+        if (!zone) dx -= W * Math.round(dx / W);
+        return [dx * cam.zoom + r.cw / 2, (y - cam.y) * cam.zoom + r.ch / 2];
+      };
+      detail.draw(g, {
+        world: w,
+        dpr: r.dpr,
+        zoom: cam.zoom,
+        cw: r.cw,
+        ch: r.ch,
+        toS,
+        px: p.x,
+        py: p.y,
+        known: (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland || seenIsland(w, isl)
+      });
       drawLabels(game, r, cam, layer);
+      drawScale(scaleBar, cam.zoom);
       Object.assign(r.cam, saved);
     };
   }
   function drawLabels(game, r, cam, layer) {
-    clear(layer);
     const w = game.world;
     const zone = w !== game.surface;
     const c = game.state.char;
+    const z = cam.zoom;
+    const key2 = `${w.id}|${cam.x.toFixed(2)}|${cam.y.toFixed(2)}|${z.toFixed(4)}|${r.cw}x${r.ch}|${Math.floor(performance.now() / 600)}`;
+    if (layer.dataset.key === key2) return;
+    layer.dataset.key = key2;
+    clear(layer);
     const toS = (x, y) => {
       let dx = x - cam.x;
       if (!zone) dx -= W * Math.round(dx / W);
-      return [dx * cam.zoom + r.cw / 2, (y - cam.y) * cam.zoom + r.ch / 2];
+      return [dx * z + r.cw / 2, (y - cam.y) * z + r.ch / 2];
     };
     const placed = [];
     const add5 = (cls, text2, x, y, extra = {}, declutter = false) => {
       const [sx, sy] = toS(x, y);
-      if (sx < -200 || sy < -50 || sx > r.cw + 200 || sy > r.ch + 50) return;
+      if (sx < -200 || sy < -50 || sx > r.cw + 200 || sy > r.ch + 50) return null;
       if (declutter) {
         const fs = parseFloat(extra.fontSize) || 13;
-        const w2 = text2.length * fs * 0.28, h2 = fs * 0.62;
-        if (placed.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2)) return;
+        const len = typeof text2 === "string" ? text2.length : 8;
+        const w2 = len * fs * 0.28, h2 = fs * 0.62;
+        if (placed.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2)) return null;
         placed.push({ x: sx, y: sy, w: w2, h: h2 });
       }
-      layer.appendChild(h("div.wm-label" + cls, { style: { left: sx + "px", top: sy + "px", ...extra } }, text2));
+      const e = h("div.wm-label" + cls, { style: { left: sx + "px", top: sy + "px", ...extra } }, text2);
+      layer.appendChild(e);
+      return e;
     };
-    if (zone) add5(".sea", w.name, w.width / 2, 14 / cam.zoom, { fontSize: "26px" });
-    if (!zone) for (const s of SEA_LABELS) add5(".sea", s.name, s.x, s.y, s.vertical ? { writingMode: "vertical-rl", fontSize: Math.max(16, 26 * cam.zoom / 0.3) + "px" } : { fontSize: Math.max(14, 30 * cam.zoom / 0.3) + "px" });
+    const icons = [];
+    const fits = (list, sx, sy, w2, h2) => !list.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2);
+    const pin = (cls, icon, size, text2, x, y, room = false) => {
+      const [sx, sy] = toS(x, y);
+      if (sx < -100 || sy < -40 || sx > r.cw + 100 || sy > r.ch + 40) return;
+      if (room) {
+        if (!fits(icons, sx, sy, size * 0.42, size * 0.42)) return;
+        icons.push({ x: sx, y: sy, w: size * 0.42, h: size * 0.42 });
+        if (text2) {
+          const w2 = text2.length * 3.3, tx = sx + size * 0.4 + w2;
+          if (fits(placed, tx, sy, w2, 7) && fits(icons, tx, sy, w2, 7)) placed.push({ x: tx, y: sy, w: w2, h: 7 });
+          else text2 = null;
+        }
+      }
+      layer.appendChild(h("div.wm-pin" + cls, { style: { left: sx + "px", top: sy + "px" } }, uiImg(icon, size), text2 ? h("span", text2) : null));
+    };
+    if (zone) add5(".sea", w.name, w.width / 2, 14 / z, { fontSize: "26px" });
+    const seaA = (1 - Math.max(0, Math.min(1, (z - 0.45) / 0.5))).toFixed(2);
+    if (!zone && seaA > 0) for (const s of SEA_LABELS) add5(".sea", s.name, s.x, s.y, s.vertical ? { writingMode: "vertical-rl", fontSize: Math.max(16, 26 * z / 0.3) + "px", opacity: seaA } : { fontSize: Math.min(44, Math.max(14, 30 * z / 0.3)) + "px", opacity: seaA });
+    const act2 = game.quests.active().sort((a, b) => (a.def.kind === "main") - (b.def.kind === "main"));
+    for (const { id, def } of act2) {
+      const m = game.quests.marker(id);
+      const main2 = def.kind === "main";
+      if (!m || (m.zone ? m.zone !== w.id : zone)) continue;
+      pin(main2 ? ".quest.main" : ".quest", main2 ? "wp_main" : "wp_side", main2 ? 30 : 24, m.label, m.x, m.y);
+      const [qx, qy] = toS(m.x, m.y);
+      placed.push({ x: qx + m.label.length * 3.6, y: qy, w: 14 + m.label.length * 3.8, h: 12 });
+    }
     const discovered = new Set(c.discovered || []);
+    const known = (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland;
+    const close = z >= 0.75, closer = z >= 1.15;
     const byImportance = w.islands.filter((i) => i.name).sort((a, b) => (b.def?.w || 0) * (b.def?.h || 0) - (a.def?.w || 0) * (a.def?.h || 0));
     for (const isl of byImportance) {
-      if (!isl.name) continue;
       if (isl.def?.hidden && !c.flags.laughTaleRevealed) continue;
-      const known = zone || discovered.has(isl.id) || w.isExplored(isl.x, isl.y);
-      if (!known) continue;
-      add5("", isl.name, isl.x, isl.y + isl.radius * 0.2 + 6 / cam.zoom, { fontSize: Math.max(11, Math.min(20, 14 * Math.sqrt(cam.zoom / 0.3))) + "px" }, true);
+      if (!(known(isl) || w.isExplored(isl.x, isl.y))) continue;
+      const B5 = isl.landBox;
+      const under = close && B5 && known(isl);
+      add5(under ? ".isle" : "", isl.name, isl.x, under ? B5.y1 + 8 / z : isl.y + isl.radius * 0.2 + 6 / z, { fontSize: (under ? Math.min(30, 16 + z * 5) : Math.max(11, Math.min(20, 14 * Math.sqrt(z / 0.3)))) + "px" }, true);
     }
     if (!zone) {
       add5("", "Reverse Mountain", RM_X, EQ - chart(40), { fontSize: "14px" });
       if (discovered.has("mary_geoise") || w.isExplored(0, EQ)) add5("", "Mary Geoise", 4, EQ - chart(70), { fontSize: "13px" });
     }
     if (!zone) {
-      for (const pin of game.storyPins?.() || []) {
-        add5(pin.main ? ".giver.main" : ".giver", [h("b.pin", { style: { background: pin.color } }, "!"), " " + pin.label], pin.x, pin.y, { fontSize: pin.main ? "15px" : "13px" }, true);
+      for (const p2 of game.storyPins?.() || []) {
+        add5(p2.main ? ".giver.main" : ".giver", [h("b.pin", { style: { background: p2.color } }, "!"), " " + p2.label], p2.x, p2.y, { fontSize: p2.main ? "15px" : "13px" }, true);
       }
     }
-    const act2 = game.quests.active().sort((a, b) => (a.def.kind === "main") - (b.def.kind === "main"));
-    for (const { id, def } of act2) {
-      const m = game.quests.marker(id);
-      const main2 = def.kind === "main";
-      if (m && (!zone || m.zone === w.id)) add5(main2 ? ".quest.main" : ".quest", [uiImg(main2 ? "wp_main" : "wp_side", main2 ? 26 : 22), " " + m.label], m.x, m.y);
-    }
     const lp = game.logPoseTarget?.();
-    if (lp && !zone) add5(".quest", [uiImg("log_pose", 22)], lp.x, lp.y);
-    for (const s of game.ships) if (s.owner === "player" && !s.sunk) add5("", [uiImg("ship", 22)], s.x, s.y, { fontSize: "16px" });
+    if (lp && !zone) pin(".lp", "log_pose", 24, "Log Pose", lp.x, lp.y);
+    for (const s of game.ships) if (s.owner === "player" && !s.sunk) pin(".ship", "ship", 24, z >= 1 ? s.name || "Your ship" : null, s.x, s.y);
+    if (close) {
+      for (const isl of w.islands) {
+        if (!isl.landBox || !known(isl)) continue;
+        const B5 = isl.landBox;
+        const [ax, ay] = toS(B5.x0, B5.y0), [bx, by] = toS(B5.x1, B5.y1);
+        if (bx < -50 || by < -50 || ax > r.cw + 50 || ay > r.ch + 50) continue;
+        for (const t of isl.towns || []) {
+          if (closer) {
+            for (const b of t.buildings || []) {
+              const P4 = POI[b.role];
+              if (!P4 || !b.door) continue;
+              pin(".poi", P4[0], 20, z >= 2.6 ? b.name || P4[1] : null, b.door.x, b.door.y, true);
+            }
+          }
+          if (t.name && t.plaza) add5(".town", t.name, t.plaza.x, t.plaza.y, { fontSize: Math.min(22, 13 + z * 3) + "px" }, true);
+        }
+        for (const d of isl.docks || []) if (d.end) pin(".poi.dock", "anchor", 18, null, d.end.x, d.end.y);
+        if (closer) {
+          for (const l of isl.landmarks || []) if (l.name && l.name.length <= 30 && !l.lore && !l.use && l.kind !== "mountain" && l.kind !== "building") add5(".landmark", l.name, l.x, l.y + 1.5, { fontSize: "12px" }, true);
+        }
+      }
+    }
     const p = game.player;
-    add5(".me", [h("span.me-dot"), "You"], p.x, p.y);
+    const [mx, my] = toS(p.x, p.y);
+    const yaw = game.view3d?.rig?.yaw ?? p.facing ?? 0;
+    const me = h("div.wm-me", { style: { left: mx + "px", top: my + "px" } }, h("i"));
+    me.firstChild.style.transform = `rotate(${(yaw + Math.PI / 2).toFixed(3)}rad)`;
+    layer.appendChild(me);
   }
+  function seenIsland(w, isl) {
+    if (w.isExplored(isl.x, isl.y)) return true;
+    const B5 = isl.landBox;
+    if (!B5) return false;
+    const mx = (B5.x0 + B5.x1) / 2, my = (B5.y0 + B5.y1) / 2;
+    return w.isExplored(B5.x0, my) || w.isExplored(B5.x1, my) || w.isExplored(mx, B5.y0) || w.isExplored(mx, B5.y1);
+  }
+  function drawScale(el, zoom) {
+    const want = 110 / zoom;
+    const m = SCALES.reduce((best, s) => Math.abs(Math.log(s / want)) < Math.abs(Math.log(best / want)) ? s : best, SCALES[0]);
+    el.firstChild.style.width = Math.round(m * zoom) + "px";
+    const txt = m >= 1e3 ? m / 1e3 + " km" : m + " m";
+    if (el.lastChild.textContent !== txt) el.lastChild.textContent = txt;
+  }
+  var ROSE_SVG = `<svg viewBox="-60 -60 120 120" width="112" height="112" aria-hidden="true">
+  <g fill="none" stroke="#5b4026" stroke-width="1.2" opacity=".85"><circle r="44"/><circle r="40" stroke-width=".6"/><circle r="15" stroke-width=".8"/></g>
+  <g stroke="#5b4026" stroke-width=".6" opacity=".7">${Array.from({ length: 32 }, (_, i) => {
+    const a = i * Math.PI / 16, r0 = i % 4 ? 40 : 36;
+    return `<line x1="${(Math.sin(a) * r0).toFixed(1)}" y1="${(-Math.cos(a) * r0).toFixed(1)}" x2="${(Math.sin(a) * 44).toFixed(1)}" y2="${(-Math.cos(a) * 44).toFixed(1)}"/>`;
+  }).join("")}</g>
+  <g stroke="#3b2a1a" stroke-width=".8" stroke-linejoin="round">
+    <path d="M0 -50 L7 -7 L0 0 Z" fill="#b8402e"/><path d="M0 -50 L-7 -7 L0 0 Z" fill="#e8c9a0"/>
+    <path d="M0 50 L7 7 L0 0 Z" fill="#e8c9a0"/><path d="M0 50 L-7 7 L0 0 Z" fill="#5b4026"/>
+    <path d="M50 0 L7 7 L0 0 Z" fill="#e8c9a0"/><path d="M50 0 L7 -7 L0 0 Z" fill="#5b4026"/>
+    <path d="M-50 0 L-7 -7 L0 0 Z" fill="#e8c9a0"/><path d="M-50 0 L-7 7 L0 0 Z" fill="#5b4026"/>
+    <path d="M24 -24 L4 -4 L6 0 Z M24 -24 L0 -6 L4 -4 Z M-24 24 L-4 4 L-6 0 Z M-24 24 L0 6 L-4 4 Z M24 24 L4 4 L0 6 Z M24 24 L6 0 L4 4 Z M-24 -24 L-4 -4 L0 -6 Z M-24 -24 L-6 0 L-4 -4 Z" fill="#c9a77a" opacity=".9"/>
+  </g>
+  <text y="-52" text-anchor="middle" font-family="'Pirata One', serif" font-size="15" fill="#b8402e">N</text>
+</svg>`;
 
   // src/game/buildings.js
   var SEA_LEVEL = { east_blue: 5, north_blue: 7, west_blue: 7, south_blue: 7, polar: 8, paradise: 20, calm_belt: 22, sky: 24, undersea: 30, red_line: 34, new_world: 45 };
   var FLAT = { rug: 1, tatami: 1, mats: 1, lamp: 1, picture: 1, poster: 1, wanted: 1, redcross: 1, board: 1, flag: 1, marineflag: 1 };
   function installBuildings(game) {
-    const B4 = {
+    const B5 = {
       near: [],
       t: 0,
       key(b) {
@@ -96406,17 +96980,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         return { out: pt(0.75), mid: pt(-WALL_T / 2), in: pt(-WALL_T - 0.75), dw: d.dw, lx: d.x };
       },
       isBroken(b) {
-        const day = game.state?.char?.world?.doors?.[B4.key(b)];
+        const day = game.state?.char?.world?.doors?.[B5.key(b)];
         return day !== void 0 && game.env.day - day < 2;
       },
       /** Locked right now? (homes; shops outside their hours; pirate hideouts) */
       isLocked(b) {
-        if (B4.isBroken(b)) return false;
+        if (B5.isBroken(b)) return false;
         const c = game.state?.char;
         const role = b.role || "house";
         const t = game.env.clock;
         if (b.pirate) return true;
-        if (role === "house") return c?.flags?.["invited_" + B4.key(b)] !== game.env.day;
+        if (role === "house") return c?.flags?.["invited_" + B5.key(b)] !== game.env.day;
         const h2 = HOURS[role];
         return h2 ? !(t >= h2[0] && t < h2[1]) : false;
       },
@@ -96443,17 +97017,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       update(dt) {
         const p = game.player, w = game.world;
         if (!p || !w?.objects) return;
-        if ((B4.t -= dt) <= 0) {
-          B4.t = 0.5;
-          B4.near = w.objects.near(p.x, p.y, 45, (o) => o.enterable);
-          for (const b of B4.near) w.objects.addFurniture(b);
-          B4.guardBases(p);
+        if ((B5.t -= dt) <= 0) {
+          B5.t = 0.5;
+          B5.near = w.objects.near(p.x, p.y, 45, (o) => o.enterable);
+          for (const b of B5.near) w.objects.addFurniture(b);
+          B5.guardBases(p);
         }
-        for (const b of B4.near) B4.door(b, p, dt);
+        for (const b of B5.near) B5.door(b, p, dt);
         const room = w.interiorAt(p.x, p.y);
-        if (room !== B4.room) {
-          const prev = B4.room;
-          B4.room = room;
+        if (room !== B5.room) {
+          const prev = B5.room;
+          B5.room = room;
           if (room) {
             game.emit("enteredBuilding", room);
             game.hint?.("interiors", "You can walk into buildings. Talk to the keeper at the counter to trade or rent a room; homes are locked \u2014 knock (E), and if nobody lets you in you can choose to kick the door down (a crime, unless it's a pirates' den).");
@@ -96463,9 +97037,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       /** Open or shut one door (and its collider). */
       door(b, p, dt) {
         const w = game.world;
-        const d = B4.doorPts(b);
-        const broken = B4.isBroken(b);
-        const locked = !broken && B4.isLocked(b);
+        const d = B5.doorPts(b);
+        const broken = B5.isBroken(b);
+        const locked = !broken && B5.isLocked(b);
         let want = broken, blocking = false;
         if (!want) {
           for (const a of game.actorsNear(d.mid.x, d.mid.y, 2.1)) {
@@ -96474,7 +97048,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             const dx = Math.abs(q2.lx - d.lx), dy = Math.abs(q2.lz + WALL_T / 2);
             if (b.doorOpen && dx < d.dw / 2 + a.r && dy < WALL_T / 2 + a.r - 0.08) blocking = true;
             const through = a.isPlayer || a.doorway?.b === b && game.time - a.doorway.t < 0.6;
-            const allowed = a.isPlayer ? !locked || B4.inside(a, b) : !locked || a.homeB === b;
+            const allowed = a.isPlayer ? !locked || B5.inside(a, b) : !locked || a.homeB === b;
             if (through && allowed && a.state !== "knocked" && dx < 1.2 && dy < 1.5) want = true;
           }
         }
@@ -96516,9 +97090,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       breakDoor(b) {
         const c = game.state?.char;
         if (!c) return;
-        const d = B4.doorPts(b);
+        const d = B5.doorPts(b);
         c.world.doors = c.world.doors || {};
-        c.world.doors[B4.key(b)] = game.env.day;
+        c.world.doors[B5.key(b)] = game.env.day;
         b.doorOpen = true;
         if (b.doorCol) {
           game.world.removeCol(b.doorCol);
@@ -96561,7 +97135,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       /** A pirates' hoard: nobody reports a theft from pirates. */
       lootHideout(b) {
         const c = game.state.char;
-        const key2 = "hideout_" + B4.key(b);
+        const key2 = "hideout_" + B5.key(b);
         const guards = game.actors.filter((a) => a.homeB === b && a.alive && a.state === "idle");
         if (guards.length) {
           game.log("Not with the crew still standing!", "#ff8a80");
@@ -96583,7 +97157,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         if (ba === bt) return null;
         const b = ba || bt;
         a.doorway = { b, t: game.time };
-        const d = B4.doorPts(b);
+        const d = B5.doorPts(b);
         const q2 = bl(b, a.x, a.y, w);
         const ax = Math.abs(q2.lx - d.lx);
         const zIn = -WALL_T - 0.75, zOut = 0.75;
@@ -96603,14 +97177,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       candidates(p, out) {
         const w = game.world;
         const inB = w.interiorAt(p.x, p.y);
-        for (const b of B4.near) {
-          const d = B4.doorPts(b);
+        for (const b of B5.near) {
+          const d = B5.doorPts(b);
           if (!inB && b.doorLocked && !b.doorOpen) {
             const step = bw(b, d.lx, 0.55);
             const dist = w.distance(p.x, p.y, step.x, step.y);
             if (dist < 1.4) {
               const house = (b.role || "house") === "house";
-              const label = house || b.pirate ? "Knock on the door" : `${b.name || "Closed"} \u2014 closed until ${B4.opensAt(b)}:00`;
+              const label = house || b.pirate ? "Knock on the door" : `${b.name || "Closed"} \u2014 closed until ${B5.opensAt(b)}:00`;
               out.push({ d: dist, x: d.mid.x, y: d.mid.y, label, run: () => game.emit("knockDoor", b) });
             }
           }
@@ -96624,7 +97198,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             if (dist > 1.25) continue;
             if (u.kind === "loot") {
               const label = b.pirate ? "Open the pirates' hoard" : `${u.label} (a crime)`;
-              out.push({ d: dist, x: ux, y: uy, label, run: () => b.pirate ? B4.lootHideout(b) : B4.search(b, idx, u.label) });
+              out.push({ d: dist, x: ux, y: uy, label, run: () => b.pirate ? B5.lootHideout(b) : B5.search(b, idx, u.label) });
             } else if (u.kind === "service") {
               const keeper2 = game.actors.find((a) => a.homeB === b && (a.keeper || a.npcId) && a.alive && a.state === "idle");
               if (keeper2) continue;
@@ -96641,7 +97215,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
        * it; if not, you may still be spotted).
        */
       search(b, idx, label) {
-        const key2 = `home_${B4.key(b)}_${idx}`;
+        const key2 = `home_${B5.key(b)}_${idx}`;
         const what = /drawer/i.test(label || "") ? "drawers" : /chest/i.test(label || "") ? "chest" : /cupboard/i.test(label || "") ? "cupboard" : "chest";
         game.containers.open(key2, "home", {
           title: `Searching the ${what}`,
@@ -96650,7 +97224,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             const c = game.state.char, p = game.player;
             const watchers = game.actors.filter((a) => a.homeB === b && a.alive && a.state === "idle" && !a.keeper);
             c.stats.thefts = (c.stats.thefts || 0) + 1;
-            const d = B4.doorPts(b);
+            const d = B5.doorPts(b);
             if (watchers.length) {
               for (const a of watchers) game.fx.text(a.x, a.y - 2.1, "THIEF!!", "#ff5252", 0.4, { life: 1.4 });
               raiseAlarm(game, d.mid.x, d.mid.y, "Thief");
@@ -96663,11 +97237,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         });
       }
     };
-    game.buildings = B4;
-    game.on("tick", (dt) => B4.update(dt));
+    game.buildings = B5;
+    game.on("tick", (dt) => B5.update(dt));
     game.on("characterStart", () => {
-      B4.near = [];
-      B4.t = 0;
+      B5.near = [];
+      B5.t = 0;
     });
     game.spawner.addBuilder((ctx) => populate(game, ctx));
   }
@@ -96942,21 +97516,21 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (day) {
       for (const st of S4.stall) if (rng4.next() < 0.85) {
         const a = spawnFolk(game, town, isl, rng4, list, st);
-        start(game, a, { kind: "vend", spot: st, t: 1e6 }, true);
+        start2(game, a, { kind: "vend", spot: st, t: 1e6 }, true);
         a.talk = { kind: "keeper", building: { role: "market", name: "Market Stall", town: town.id, x: st.x, y: st.y } };
         a.showName = true;
         a.name = "Stallholder";
         a.nameColor = "#ffe082";
       }
-      for (const dk3 of S4.dock.slice(0, 2)) if (rng4.next() < 0.6) start(game, spawnFolk(game, town, isl, rng4, list, dk3.stand), { kind: "fish", spot: dk3, t: rng4.range(120, 400) }, true);
+      for (const dk3 of S4.dock.slice(0, 2)) if (rng4.next() < 0.6) start2(game, spawnFolk(game, town, isl, rng4, list, dk3.stand), { kind: "fish", spot: dk3, t: rng4.range(120, 400) }, true);
       if (KID_STYLES.has(town.style) && S4.street.length && rng4.next() < 0.7) {
         const c = rng4.pick(S4.street);
         const n2 = 2 + (rng4.next() < 0.5 ? 1 : 0);
-        for (let i = 0; i < n2; i++) start(game, spawnFolk(game, town, isl, rng4, list, { x: c.x + i * 0.8, y: c.y }, true), { kind: "play", center: c, t: rng4.range(40, 120) }, true);
+        for (let i = 0; i < n2; i++) start2(game, spawnFolk(game, town, isl, rng4, list, { x: c.x + i * 0.8, y: c.y }, true), { kind: "play", center: c, t: rng4.range(40, 120) }, true);
       }
     }
     if (!day || clock >= 20) {
-      for (const t of S4.tavern.slice(0, 2)) if (rng4.next() < 0.6) start(game, spawnFolk(game, town, isl, rng4, list, bw(t.b, doorLocalX(t.b) + 1.4, 1.75)), { kind: "drunk", t: rng4.range(60, 200) }, true);
+      for (const t of S4.tavern.slice(0, 2)) if (rng4.next() < 0.6) start2(game, spawnFolk(game, town, isl, rng4, list, bw(t.b, doorLocalX(t.b) + 1.4, 1.75)), { kind: "drunk", t: rng4.range(60, 200) }, true);
     }
     const n = Math.round(crowdOf(town) * outShare(clock));
     for (let i = 0; i < n; i++) {
@@ -96964,7 +97538,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (!at4) break;
       const a = spawnFolk(game, town, isl, rng4, list, { x: at4.x, y: at4.y });
       const act2 = pick2(game, a);
-      if (act2) start(game, a, act2, true);
+      if (act2) start2(game, a, act2, true);
       if (ctx?.onTownsfolk) ctx.onTownsfolk(a, town);
     }
   }
@@ -96981,7 +97555,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           const a = folk.find((x) => x.activity?.kind !== "goHome" && x.state === "idle");
           const door = a && nearest(game, S4.door, a);
           if (door) {
-            start(game, a, { kind: "goHome", to: indoors(game, door), t: 90 });
+            start2(game, a, { kind: "goHome", to: indoors(game, door), t: 90 });
             a.homeB = door.b;
           }
         } else if (folk.length < want - 1 && S4.door.length) {
@@ -96991,14 +97565,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             const a = spawnFolk(game, town, isl, rng4, list, indoors(game, d));
             a.homeB = d.b;
             const act2 = pick2(game, a);
-            if (act2) start(game, a, act2);
+            if (act2) start2(game, a, act2);
           }
         }
         if (clock >= 19 || clock < 6) {
           for (const a of list) if (a.alive && a.town === town && a.activity?.kind === "vend") {
             const door = nearest(game, S4.door, a);
             if (door) {
-              start(game, a, { kind: "goHome", to: indoors(game, door), t: 90 });
+              start2(game, a, { kind: "goHome", to: indoors(game, door), t: 90 });
               a.homeB = door.b;
             }
           }
@@ -97058,7 +97632,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const pb2 = { x: mx + dx * 0.55, y: my + dy * 0.55, face: Math.atan2(-dy, -dx) };
         if (game.world.walkable(pa.x, pa.y) && game.world.walkable(pb2.x, pb2.y)) {
           const t = r.range(15, 40);
-          start(game, mate, { kind: "chat", spot: pb2, t, mate: a });
+          start2(game, mate, { kind: "chat", spot: pb2, t, mate: a });
           return { kind: "chat", spot: pa, t, mate, speaker: true };
         }
       }
@@ -97070,7 +97644,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (!S4.street.length) return null;
     return { kind: "stroll", to: streetStop(game, a, S4), t: r.range(25, 60), legs: 2 + Math.floor(r.next() * 3) };
   }
-  function start(game, a, act2, now2 = false) {
+  function start2(game, a, act2, now2 = false) {
     stop(a);
     a.activity = act2;
     const spot = act2.spot;
@@ -97157,7 +97731,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (!act2) {
       act2 = pick2(game, a);
       if (!act2) return ai.wander(a, dt, game);
-      start(game, a, act2);
+      start2(game, a, act2);
     }
     act2.t -= dt;
     a.intent.mx = 0;
@@ -105037,9 +105611,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     return a;
   }
   function ringBell(g) {
-    const B4 = g.karateBout, a = B4.a;
-    B4.started = true;
-    g.ui.banner(ROUNDS[B4.stage][1], "Karate Island Open", "Ding ding ding \u2014 FIGHT!", 2.5);
+    const B5 = g.karateBout, a = B5.a;
+    B5.started = true;
+    g.ui.banner(ROUNDS[B5.stage][1], "Karate Island Open", "Ding ding ding \u2014 FIGHT!", 2.5);
     g.audio?.sfx("fanfare");
     aggro(g, a);
     a.spar = "karate_open";
@@ -105050,8 +105624,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
   }
   function loseBout(g, why) {
-    const B4 = g.karateBout;
-    if (!B4) return;
+    const B5 = g.karateBout;
+    if (!B5) return;
     g.karateBout = null;
     const p = g.player, c = g.state?.char;
     if (p && p.state === "knocked") {
@@ -105061,7 +105635,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       p.iframes = 2;
       p.hp = Math.max(p.hp, Math.round(p.d.maxHp * 0.35));
     }
-    const a = B4.a;
+    const a = B5.a;
     if (a?.alive) {
       a.provoked = false;
       a.aggroPlayer = false;
@@ -107637,37 +108211,37 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   ];
   function install4(game) {
     game.on("knockout", (a) => {
-      const B4 = game.karateBout;
-      if (!B4 || !B4.started) return;
-      if (a === B4.a) {
-        B4.started = false;
+      const B5 = game.karateBout;
+      if (!B5 || !B5.started) return;
+      if (a === B5.a) {
+        B5.started = false;
         game.karateBout = null;
         if (game.bossTarget === a) game.bossTarget = null;
         setTimeout(() => {
           if (a.state === "knocked") a.alive = false;
         }, 2400);
-        if (B4.stage !== "final") game.ui.banner("K.O.!", "Karate Island Open", "The crowd roars! Stay in the ring \u2014 your next opponent is on his way.", 3);
+        if (B5.stage !== "final") game.ui.banner("K.O.!", "Karate Island Open", "The crowd roars! Stay in the ring \u2014 your next opponent is on his way.", 3);
       } else if (a.isPlayer) loseBout(game, "Knocked down \u2014 the bout is lost.");
     });
     game.on("tick", (dt) => {
-      const B4 = game.karateBout, p = game.player;
-      if (!B4 || !p || !game.state?.char) return;
-      if (!B4.a.alive || game.quests.stageId(OPEN) !== B4.stage) {
-        if (!B4.started) game.karateBout = null;
+      const B5 = game.karateBout, p = game.player;
+      if (!B5 || !p || !game.state?.char) return;
+      if (!B5.a.alive || game.quests.stageId(OPEN) !== B5.stage) {
+        if (!B5.started) game.karateBout = null;
         return;
       }
       const ring4 = ringOf(game);
-      if (!B4.started) {
-        B4.a.facing = Math.PI / 2;
-        if (p.state === "idle" && game.time > B4.readyAt && onRing(game, p, ring4)) ringBell(game);
+      if (!B5.started) {
+        B5.a.facing = Math.PI / 2;
+        if (p.state === "idle" && game.time > B5.readyAt && onRing(game, p, ring4)) ringBell(game);
         return;
       }
       if (p.state === "idle" && !onRing(game, p, ring4)) {
-        const was = Math.floor(B4.out);
-        B4.out += dt;
-        if (Math.floor(B4.out) !== was && B4.out < 5) game.fx.text(p.x, p.y - 2.2, String(Math.floor(B4.out)) + "...", "#ffeb3b", 0.4, { life: 0.9 });
-        if (B4.out >= 5) loseBout(game, "Counted out of the ring.");
-      } else B4.out = 0;
+        const was = Math.floor(B5.out);
+        B5.out += dt;
+        if (Math.floor(B5.out) !== was && B5.out < 5) game.fx.text(p.x, p.y - 2.2, String(Math.floor(B5.out)) + "...", "#ffeb3b", 0.4, { life: 0.9 });
+        if (B5.out >= 5) loseBout(game, "Counted out of the ring.");
+      } else B5.out = 0;
     });
     game.spawner.addBuilder(({ island, game: g }) => {
       if (island.id !== "karate_island") return;
@@ -126403,11 +126977,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         let pos = 0;
         for (const note of ph) {
           const len = Math.abs(note.len);
-          const start3 = pos - half2 * n;
+          const start4 = pos - half2 * n;
           pos += len;
-          if (start3 < 0 || start3 >= n || note.len < 0) continue;
+          if (start4 < 0 || start4 >= n || note.len < 0) continue;
           const d = note.deg + (T4.follow ? chord[0] : 0);
-          this.inst(T4.lead, t0 + start3 * e, len * e * (T4.legato ?? 0.95), S4.midi(d, 0), T4.leadVol ?? 0.07, bus);
+          this.inst(T4.lead, t0 + start4 * e, len * e * (T4.legato ?? 0.95), S4.midi(d, 0), T4.leadVol ?? 0.07, bus);
         }
       }
       if (bar2 === S4.bars - 1) for (const d of S4.chords[0]) this.inst(T4.arp || "piano", t0 + e * 2, e * n * 2, S4.midi(d, 0), 0.05, bus);
@@ -126630,9 +127204,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const n = mode.length, o = Math.floor(d / n), i = (d % n + n) % n;
       return key2 + 12 + mode[i] + 12 * (o + oct);
     };
-    const A = motif(T4), B4 = motif(T4), C3 = motif(T4);
+    const A = motif(T4), B5 = motif(T4), C3 = motif(T4);
     const rest = null;
-    const form = [A, vary(A), B4, A, Math.random() < T4.melody ? C3 : rest, vary(B4), A, rest];
+    const form = [A, vary(A), B5, A, Math.random() < T4.melody ? C3 : rest, vary(B5), A, rest];
     const phrases = form.map((m) => m && Math.random() < T4.melody + 0.2 ? m : null);
     phrases[0] = A;
     const bars = 2 * Math.round((T4.bars[0] + Math.random() * (T4.bars[1] - T4.bars[0])) / 2);
@@ -127270,10 +127844,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
     }
     for (const [a, sa, b, sb] of z.links || []) {
-      const A = world.islands.find((i) => i.id === a), B4 = world.islands.find((i) => i.id === b);
-      const pa = A?.spots[sa], pb2 = B4?.spots[sb];
+      const A = world.islands.find((i) => i.id === a), B5 = world.islands.find((i) => i.id === b);
+      const pa = A?.spots[sa], pb2 = B5?.spots[sb];
       if (!pa || !pb2) continue;
-      placeObject(world, { kind: "portal", x: pa.x, y: pa.y, block: false, to: { x: pb2.x, y: pb2.y + 1.5 }, interact: `Take the stairs down to ${B4.name}`, use: "portal" });
+      placeObject(world, { kind: "portal", x: pa.x, y: pa.y, block: false, to: { x: pb2.x, y: pb2.y + 1.5 }, interact: `Take the stairs down to ${B5.name}`, use: "portal" });
       placeObject(world, { kind: "portal", x: pb2.x, y: pb2.y, block: false, to: { x: pa.x, y: pa.y + 1.5 }, interact: `Climb the stairs to ${A.name}`, use: "portal", up: true });
     }
     computeDistanceField(world);
@@ -128011,7 +128585,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const t = inp.touch = { on: false, mx: 0, my: 0, run: false };
     const coarse = !!window.matchMedia?.("(hover: none) and (pointer: coarse)")?.matches;
     const btn = (cls, label) => h("button.t-btn." + cls, { type: "button" }, h("b", label));
-    const B4 = {
+    const B5 = {
       attack: btn("attack", "Attack"),
       heavy: btn("heavy", "Heavy"),
       jump: btn("jump", "Jump"),
@@ -128020,7 +128594,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       use: btn("use", "Use"),
       heal: btn("heal", "Heal")
     };
-    const pad2 = h("div.touch-pad", ...Object.values(B4));
+    const pad2 = h("div.touch-pad", ...Object.values(B5));
     const knob = h("i");
     const stickEl = h("div.t-stick.idle", knob);
     const rotate = h("div.t-rotate.hidden", "Turn your phone sideways for the best view");
@@ -128075,13 +128649,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       el.addEventListener("contextmenu", (e) => e.preventDefault());
     };
     const sailing = () => game.player?.mode === "sail";
-    bind(B4.attack, () => "mouse0");
-    bind(B4.heavy, () => sailing() ? "Shift" : "mouse2");
-    bind(B4.jump, () => "Space");
-    bind(B4.dodge, () => sailing() ? null : "dodge");
-    bind(B4.block, () => sailing() ? null : "F");
-    bind(B4.use, () => "E");
-    bind(B4.heal, () => "heal");
+    bind(B5.attack, () => "mouse0");
+    bind(B5.heavy, () => sailing() ? "Shift" : "mouse2");
+    bind(B5.jump, () => "Space");
+    bind(B5.dodge, () => sailing() ? null : "dodge");
+    bind(B5.block, () => sailing() ? null : "F");
+    bind(B5.use, () => "E");
+    bind(B5.heal, () => "heal");
     const stick = { id: null, ox: 0, oy: 0 };
     const look = { id: null, x: 0, y: 0 };
     const placeStick = (x, y, kx, ky) => {
@@ -128192,15 +128766,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         rotate.classList.toggle("hidden", window.innerHeight <= window.innerWidth * 1.05);
         const sail = p.mode === "sail";
         const knocked = p.state === "knocked";
-        set(B4.attack, sail ? "Fire" : "Attack");
-        B4.attack.classList.toggle("hidden", sail && !p.ship?.def?.cannons && p.ship?.cannonsOverride === void 0);
-        set(B4.jump, knocked ? "Get up" : sail ? "Row" : "Jump");
-        B4.dodge.classList.toggle("hidden", sail || knocked);
-        set(B4.heavy, sail ? "Burst" : "Heavy");
-        B4.heavy.classList.toggle("hidden", sail && !p.ship?.def?.coupDeBurst);
-        B4.block.classList.toggle("hidden", sail);
-        B4.heal.classList.toggle("hidden", sail);
-        B4.use.classList.toggle("hidden", !p.controller?.interaction);
+        set(B5.attack, sail ? "Fire" : "Attack");
+        B5.attack.classList.toggle("hidden", sail && !p.ship?.def?.cannons && p.ship?.cannonsOverride === void 0);
+        set(B5.jump, knocked ? "Get up" : sail ? "Row" : "Jump");
+        B5.dodge.classList.toggle("hidden", sail || knocked);
+        set(B5.heavy, sail ? "Burst" : "Heavy");
+        B5.heavy.classList.toggle("hidden", sail && !p.ship?.def?.coupDeBurst);
+        B5.block.classList.toggle("hidden", sail);
+        B5.heal.classList.toggle("hidden", sail);
+        B5.use.classList.toggle("hidden", !p.controller?.interaction);
         if (!hinted && game.view3d?.active) {
           hinted = true;
           ui.hint("Left thumb: move (push all the way to run). Right thumb: drag to look around. Jump, dodge and fight with the buttons; tap a hotbar slot to use a technique.", 10);
@@ -128263,7 +128837,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   var nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   var debug = { ready: false };
   window.OP = debug;
-  async function start2() {
+  async function start3() {
     let renderer;
     try {
       renderer = new Renderer(root);
@@ -128738,5 +129312,5 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     };
     requestAnimationFrame(frame2);
   }
-  start2();
+  start3();
 })();
