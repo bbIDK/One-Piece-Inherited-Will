@@ -301,7 +301,10 @@ it's open:
 
 - Ships range from a rowboat (you row her: no mast, no sail) to an Adam-wood
   brig. There is wind, Grand Line weather that changes its mind, and rogue
-  waves.
+  waves. The wind only sets how fast you sail: nothing drifts. A ship with
+  her sails furled and nobody rowing lies dead still, and a ship coming
+  alongside yours comes up a lane beside her and heaves to without shoving
+  her along; only Reverse Mountain's currents carry a ship.
 - Boarding is done by hand: jump onto a deck from a pier or from your own
   deck, coming down on it over her rail (her side is a wall to anyone below
   it; a rowboat's low side you jump over from the water). Every ship but

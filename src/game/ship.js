@@ -249,12 +249,22 @@ export class Ship extends Entity {
     return null;
   }
 
-  /** Push away from any ship whose hull ours is inside. */
+  /** Lying still: moored, anchored, hove to or just stopped — no way on her, no sail set, nobody rowing. */
+  get still() { return this.anchored || (Math.abs(this.speed) < 0.3 && (this.sailSet || 0) < 0.05 && !this.rowing); }
+
+  /**
+   * Push away from any ship whose hull ours is inside. A ship lying still is
+   * the rock: one under way that's come up against her gives way, and she
+   * isn't shoved along by it (nothing moves a ship but her sails, her oars
+   * and Reverse Mountain's currents); two lying on top of each other — just
+   * launched so — both ease apart, unless one's yours: the other gives way.
+   */
   separate(game, dt) {
     const w = game.world;
     let pts = null;
+    const still = this.still, mine = this.owner === 'player';
     for (const o of game.ships) {
-      if (o === this || o.sunk || o.alive === false) continue;
+      if (o === this || o.sunk || o.alive === false || (still && (!o.still || (mine && o.owner !== 'player')))) continue;
       const reach = (this.def.length + o.def.length) * 0.5 + 1;
       const dx = w.dx(o.x, this.x), dy = this.y - o.y;
       if (dx * dx + dy * dy > reach * reach) continue;
@@ -265,8 +275,7 @@ export class Ship extends Entity {
       // (straight apart; two ships lying exactly on top of each other part sideways)
       const d = Math.hypot(dx, dy);
       const ux = d > 0.05 ? dx / d : -Math.sin(o.heading), uy = d > 0.05 ? dy / d : Math.cos(o.heading);
-      // (an anchored or raided ship is the rock; the moving one gives way)
-      const k = (this.anchored && !o.anchored ? 0.3 : 1) * Math.min(4, 1 + inside * 0.35);
+      const k = Math.min(4, 1 + inside * 0.35);
       const nx = w.wx(this.x + ux * k * dt), ny = this.y + uy * k * dt;
       if (this.fits(w, nx, ny, this.heading)) { this.x = nx; this.y = ny; }
       this.speed *= Math.pow(0.5, dt);

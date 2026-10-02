@@ -65,28 +65,34 @@ export function installLegends(game) {
 
   // ------------------------------------------------------ Laugh Tale
   const laughTale = () => game.surface.islands.find((i) => i.def?.hidden);
-  let warnT = 0;
+  let warnT = 0, hold = null;
   game.on('tick', (dt) => {
     const c = game.state?.char, p = game.player;
     if (!c || !p || game.world !== game.surface) return;
     const lt = laughTale();
     if (!lt || c.flags.laughTaleRevealed) return;
-    const d = game.world.distance(p.x, p.y, lt.x, lt.y);
+    const w = game.world, d = w.distance(p.x, p.y, lt.x, lt.y);
     const R = lt.radius + 70;
-    if (d < R) {
-      // an eternal storm drives every ship away from the last island
-      game.env.storm = Math.max(game.env.storm, 0.9 * (1 - d / R) + 0.3);
-      const ang = Math.atan2(p.y - lt.y, game.world.dx(lt.x, p.x));
-      const push = 9 * (1 - d / R) + 2;
-      const s = p.mode === 'sail' ? p.ship : null;
-      if (s) {
-        s.x = game.world.wx(s.x + Math.cos(ang) * push * dt); s.y += Math.sin(ang) * push * dt;
-        if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world);
-      } else { p.x = game.world.wx(p.x + Math.cos(ang) * push * dt); p.y += Math.sin(ang) * push * dt; }
-      if ((warnT -= dt) <= 0) {
-        warnT = 12;
-        game.log('A storm that never ends and currents that turn back on themselves: the sea itself refuses to let you pass. Without the four Road Poneglyphs, no one can reach the final island.', '#ce93d8');
-      }
+    if (d >= R) { hold = null; return; }
+    // an eternal storm round the last island: no ship (nor swimmer) gets any
+    // nearer it than she's come — though it drives nobody off either (nothing
+    // drifts at sea but in Reverse Mountain's canals)
+    game.env.storm = Math.max(game.env.storm, 0.9 * (1 - d / R) + 0.3);
+    const s = p.mode === 'sail' ? p.ship : p.deck?.ship || null;
+    if (s) {
+      // (a ship makes no way toward it: whatever she's making that way is taken off her)
+      const ix = w.dx(s.x, lt.x), iy = lt.y - s.y;
+      if (s.speed > 0 && Math.cos(s.heading) * ix + Math.sin(s.heading) * iy > 0) s.speed *= Math.pow(0.02, dt);
+      hold = null;
+    } else if (hold === null || d >= hold) hold = d;
+    else {
+      // (nor does a swimmer: back out to as near as they'd come)
+      const ang = Math.atan2(p.y - lt.y, w.dx(lt.x, p.x));
+      p.x = w.wx(lt.x + Math.cos(ang) * hold); p.y = lt.y + Math.sin(ang) * hold;
+    }
+    if ((warnT -= dt) <= 0) {
+      warnT = 12;
+      game.log('A storm that never ends and currents that turn back on themselves: the sea itself refuses to let you pass. Without the four Road Poneglyphs, no one can reach the final island.', '#ce93d8');
     }
   });
   let revealed = false;

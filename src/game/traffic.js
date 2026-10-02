@@ -203,16 +203,34 @@ export function engage(s, game, target) {
   const abeam = Math.abs(rx * nx + ry * ny), ahead = rx * Math.cos(th) + ry * Math.sin(th);
   s.anchored = false;
   s.sail = 1;
-  if (Math.abs(target.speed) < 1.5 && d < 45) {
-    // she's stopped: alongside her, on whichever side we're coming up, and heave to
-    const off = (s.def.beam + target.def.beam) / 2 + 2.4;
-    const ax = w.wx(target.x + nx * off * side), ay = target.y + ny * off * side;
+  // (close by — as far off as she'll need to come round onto the lane alongside, however long she is)
+  if (Math.abs(target.speed) < 1.5 && d < 45 + s.def.length * 0.6) {
+    // she's stopped: alongside her, on whichever side we're coming up (and
+    // that side, once we've chosen it, as we come round), and heave to
+    const bs = s.berthSide ??= side;
+    const off = (s.def.beam + target.def.beam) / 2 + 2.4, hx = Math.cos(th), hy = Math.sin(th);
+    const ax = w.wx(target.x + nx * off * bs), ay = target.y + ny * off * bs;
     const da = w.distance(s.x, s.y, ax, ay);
-    if (da > 2.5) { s.heaveTo = false; s.speedCap = 1.2 + da * 0.6; return Math.atan2(ay - s.y, w.dx(s.x, ax)); }
-    s.heaveTo = true; s.sail = 0; s.speedCap = 0; s.anchored = true;
-    return th;
+    if (da > 2.5) {
+      s.heaveTo = false;
+      // (up a lane alongside her to the berth, not bow-on into her side: onto
+      // it just clear of her bow or her stern, whichever we're nearer, slowing
+      // to come round onto it; then along it, slowing to stop at the berth)
+      const ex = w.dx(ax, s.x), ey = s.y - ay, along = ex * hx + ey * hy, across = (ex * nx + ey * ny) * bs;
+      if (Math.abs(across) < 2) s.lane = true; else if (Math.abs(across) > 6) s.lane = false;
+      if (!s.lane) {
+        const reach = (target.def.length / 2 + s.def.length / 2 + 4) * (along >= 0 ? 1 : -1), lx = w.wx(ax + hx * reach), ly = ay + hy * reach;
+        s.speedCap = Math.max(3, 1.5 + w.distance(s.x, s.y, lx, ly) * 0.25);
+        return Math.atan2(ly - s.y, w.dx(s.x, lx));
+      }
+      s.speedCap = 1.2 + da * 0.35;
+      return Math.atan2(ay - s.y, w.dx(s.x, ax));
+    }
+    s.heaveTo = true; s.lane = false; s.sail = 0; s.speedCap = 0; s.anchored = true;
+    // (lying alongside her, head the same way as she came up the lane)
+    return Math.abs(angleDiff(s.heading, th)) <= Math.PI / 2 ? th : th + Math.PI;
   }
-  s.heaveTo = false;
+  s.heaveTo = false; s.lane = false; s.berthSide = null;
   const blues = isBlue(regionAt(target.x, target.y));
   const pace = Math.abs(target.speed);
   // (abreast of her at a gun's range, side to side — however broad the two of them are)
@@ -273,7 +291,7 @@ function trafficAI(s, dt, game) {
   let want;
   // (a patrol on your trail comes after you from as far off as she can see you, till her time's up)
   const hunting = tr.huntUntil > (game.time || 0) && d < sightRange(game) + 60;
-  const fighting = target && (d < 55 || hunting) && hostile(s, game) && (s.def.cannons || 0) > 0;
+  const fighting = target && (d < 55 + s.def.length * 0.6 || hunting) && hostile(s, game) && (s.def.cannons || 0) > 0;
   if (s.heaveTo && !fighting && hostile(s, game) && d < 30) {
     // hove to alongside, she waits for you (swimming over to board her, say)
     s.sail = 0; s.speedCap = 0; s.anchored = true;

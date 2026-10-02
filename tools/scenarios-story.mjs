@@ -129,7 +129,9 @@ export const scenarios = {
     },
   },
 
-  // the Grand Line won't let you sail past the island your story is on
+  // the Grand Line won't let you sail past the island your story is on: you
+  // make no way on past it (rowing east, her head's turned back), but lying
+  // still there, nothing drifts you anywhere
   storydrift: {
     async run(page, snap) {
       await page.evaluate(() => localStorage.clear());
@@ -152,10 +154,13 @@ export const scenarios = {
         s.x = px; s.y = py; s.heading = 0; s.speed = 8; s.sailSet = 1;
         g.player.x = px; g.player.y = py; g.player.mode = 'sail'; g.player.ship = s;
         const cur = g.currentAt(px, py, s);
-        const before = { x: Math.round(s.x) };
-        window.OP.step(6);
+        const before = { x: Math.round(s.x), cur: { x: +cur.x.toFixed(2), y: +cur.y.toFixed(2) } };
+        window.OP.key('W', true); window.OP.step(6); window.OP.key('W', false);
+        const rowedEast = { x: Math.round(s.x), heading: +s.heading.toFixed(2) };
+        window.OP.step(3);
+        const x0 = s.x; window.OP.step(6);
         const log = c.logPose.target;
-        return { cur: { x: +cur.x.toFixed(2), y: +cur.y.toFixed(2) }, before, after: { x: Math.round(s.x) }, log, hold: g.storyLogHold(isl), main: S.main() };
+        return { before, rowedEast, lyingStill: +(s.x - x0).toFixed(2), log, hold: g.storyLogHold(isl), main: S.main() };
       });
       console.log('drift', JSON.stringify(r, null, 1));
       await snap('storydrift');

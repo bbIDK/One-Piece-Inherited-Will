@@ -428,6 +428,8 @@ export function installMainStory(game) {
   // You can't sail on past the island your story is on: without its log the
   // Grand Line's currents turn you round (the needle is set on it, and the
   // story won't let the log settle anywhere else till you're done there).
+  // They only stop you making way on past it — a ship lying still there lies
+  // still: nothing drifts at sea but in Reverse Mountain's canals.
   S.limit = () => {
     const cur = current(game);
     if (!cur || cur.ch.part !== 2 || !cur.ch.island || cur.ch.free) return null;
@@ -444,10 +446,14 @@ export function installMainStory(game) {
     if (dx <= 0) return;
     const reg = regionAt(x, y);
     if (reg !== REGION.PARADISE) return;
-    const f = Math.min(10, 4 + dx / 50);
-    const back = Math.atan2(L.isl.y - y, game.world.dx(x, L.isl.x));
-    out.x += Math.cos(back) * f;
-    out.y += Math.sin(back) * f;
+    // (as much way as she's making on past it is taken off her, and her head's
+    // turned back; a swimmer's only ever carried by a canal: see actor.js)
+    if (who === p) return;
+    const back = Math.atan2(L.isl.y - y, game.world.dx(x, L.isl.x)), bx = Math.cos(back), by = Math.sin(back);
+    const v = who.speed || 0, away = -(Math.cos(who.heading) * v * bx + Math.sin(who.heading) * v * by);
+    if (away <= 0.05) return;
+    out.x += bx * away;
+    out.y += by * away;
     out.steer = Math.max(out.steer || 0, 0.5);
     if (game.time > S.driftMsg) {
       S.driftMsg = game.time + 25;
