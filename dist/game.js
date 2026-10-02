@@ -34589,10 +34589,16 @@ void main() {
     const dm = Math.abs(world.dx(x, RM_X)), ds = Math.abs(world.dx(x, 0));
     return dm < RL_HALF + chart(90) || ds < RL_HALF + chart(30);
   }
+  var RL_TOP = 38 + (255 - 90) * 0.55;
+  function inMaryGeoise(world, x, y) {
+    const MG = world.zone === 0 && world.maryGeoise;
+    return !!MG?.rx && Math.hypot(world.dx(MG.x, x) / MG.rx, (y - MG.y) / MG.ry) < 0.97;
+  }
   function landHeight(world, x, y, t, e) {
     if ((t === T.RED_ROCK || t === T.SNOWROCK) && onRedLine(world, x, y)) {
       return 38 + Math.max(0, e - 90) * 0.55 + (t === T.SNOWROCK ? 9 : 0);
     }
+    if (inMaryGeoise(world, x, y)) return RL_TOP;
     return 0.45 + Math.min(e, 190) * ELEV_K + BOOST[t];
   }
   var smooth2 = (a, b, x) => {
@@ -63770,13 +63776,28 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     passable(w, x, y) {
       if (w.solid(x, y)) return false;
       const t = w.type(x, y);
-      if (WALKABLE[t]) return true;
+      if (WALKABLE[t]) return !(this.isPlayer && this.redLineRise(w, x, y) > 0.9);
+      if ((t === T.RED_ROCK || t === T.SNOWROCK) && this.redLineRise(w, x, y) <= 0.5) return true;
       if (SWIMMABLE[t]) {
         if (this.dash && this.dash.ignoreWater) return true;
         if (this.forcedWater) return true;
         return this.canEnterWater();
       }
       return false;
+    }
+    /**
+     * How far the ground at (x, y) on the Red Line stands over your feet (off
+     * it: -Infinity). Up on top of it (from Mary Geoise, the summit of Reverse
+     * Mountain, a ledge you climbed) its rock is walked wherever it goes, no
+     * steeper than a stair (0.5 m); its sheer sides, from the sea or a beach
+     * below, are a cliff, as the mountains are.
+     */
+    redLineRise(w, x, y) {
+      const g = this.game;
+      if (!g?.view3d || w !== g.surface || !w.base?.type) return -Infinity;
+      const bt = w.base.type(w.wx(Math.floor(x)), Math.floor(y));
+      if (bt !== T.RED_ROCK && bt !== T.SNOWROCK) return -Infinity;
+      return g.view3d.ground(x, y) - this.feetH(g);
     }
     canEnterWater() {
       if (this.fruit && !this.inWater) return false;
@@ -77174,6 +77195,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (r < 0.95) world.setTile(x, y, r < 0.35 ? T.MARBLE : r < 0.8 ? T.LAWN : T.STONE, 180, CLIMATE.SPRING);
       }
     }
+    MG.rx = mgW;
+    MG.ry = mgH;
     world.maryGeoise = MG;
   }
   var MARY_GEOISE_DEF = {
@@ -96667,7 +96690,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
       const isl = game.currentIsland;
       const rmHere = game.world.zone === 0 && !isl?.name && Math.abs(game.world.dx(p.x, RM_X)) < 1e3 && Math.abs(p.y - EQ) < 2300 && regionAt(p.x, p.y) === REGION.RED_LINE;
-      const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : rmHere ? "Reverse Mountain" : "Open Sea";
+      const onRedLine2 = !isl?.name && game.world.zone === 0 && !p.inWater && p.mode !== "sail" && regionAt(p.x, p.y) === REGION.RED_LINE && !game.world.isLiquid(p.x, p.y);
+      const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : rmHere ? "Reverse Mountain" : onRedLine2 ? "The Red Line" : "Open Sea";
       this.set(E.loc, "loc", locName);
       const reg3 = game.world.zone === 0 ? REGION_INFO[regionAt(p.x, p.y)]?.name || "" : game.world.subtitle || "";
       this.set(E.locSub, "locSub", reg3);

@@ -374,6 +374,8 @@ function buildRedLine(world, noise, rng) {
       if (r < 0.95) world.setTile(x, y, r < 0.35 ? T.MARBLE : (r < 0.8 ? T.LAWN : T.STONE), 180, CLIMATE.SPRING);
     }
   }
+  // (how far its ground reaches: on top of the Red Line, level with it — see render3d/height.js)
+  MG.rx = mgW; MG.ry = mgH;
   world.maryGeoise = MG;
 }
 

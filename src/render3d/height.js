@@ -58,12 +58,23 @@ function onRedLine(world, x, y) {
   return dm < RL_HALF + chart(90) || ds < RL_HALF + chart(30);
 }
 
+/** The top of the Red Line, away from its edges: a plateau (worldgen's elevations top out at 255). */
+const RL_TOP = 38 + (255 - 90) * 0.55;
+
+/** Is this tile in Mary Geoise, the city on top of the Red Line (see worldgen)? */
+function inMaryGeoise(world, x, y) {
+  const MG = world.zone === 0 && world.maryGeoise;
+  return !!MG?.rx && Math.hypot(world.dx(MG.x, x) / MG.rx, (y - MG.y) / MG.ry) < 0.97;
+}
+
 /** Height of one land tile before the coastal ramp. */
 function landHeight(world, x, y, t, e) {
   if ((t === T.RED_ROCK || t === T.SNOWROCK) && onRedLine(world, x, y)) {
     // the Red Line: a wall of red rock that dwarfs everything
     return 38 + Math.max(0, e - 90) * 0.55 + (t === T.SNOWROCK ? 9 : 0);
   }
+  // (Mary Geoise is built on top of it, level with its plateau, not down in a pit cut into it)
+  if (inMaryGeoise(world, x, y)) return RL_TOP;
   return 0.45 + Math.min(e, 190) * ELEV_K + BOOST[t];
 }
 

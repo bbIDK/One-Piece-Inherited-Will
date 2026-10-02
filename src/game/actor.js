@@ -822,7 +822,10 @@ export class Actor extends Entity {
   passable(w, x, y) {
     if (w.solid(x, y)) return false;
     const t = w.type(x, y);
-    if (WALKABLE[t]) return true;
+    // (on the Red Line, ground rising faster than a stair is its face: where a
+    // Red Port's quay meets the wall, its last stones ramp up the cliff)
+    if (WALKABLE[t]) return !(this.isPlayer && this.redLineRise(w, x, y) > 0.9);
+    if ((t === T.RED_ROCK || t === T.SNOWROCK) && this.redLineRise(w, x, y) <= 0.5) return true;
     if (SWIMMABLE[t]) {
       if (this.dash && this.dash.ignoreWater) return true;
       if (this.forcedWater) return true;
@@ -830,6 +833,21 @@ export class Actor extends Entity {
     }
     return false;
   }
+  /**
+   * How far the ground at (x, y) on the Red Line stands over your feet (off
+   * it: -Infinity). Up on top of it (from Mary Geoise, the summit of Reverse
+   * Mountain, a ledge you climbed) its rock is walked wherever it goes, no
+   * steeper than a stair (0.5 m); its sheer sides, from the sea or a beach
+   * below, are a cliff, as the mountains are.
+   */
+  redLineRise(w, x, y) {
+    const g = this.game;
+    if (!g?.view3d || w !== g.surface || !w.base?.type) return -Infinity;
+    const bt = w.base.type(w.wx(Math.floor(x)), Math.floor(y));
+    if (bt !== T.RED_ROCK && bt !== T.SNOWROCK) return -Infinity;
+    return g.view3d.ground(x, y) - this.feetH(g);
+  }
+
   canEnterWater() {
     if (this.fruit && !this.inWater) return false; // Devil Fruit users won't walk into the sea
     return this.swimmer !== false;

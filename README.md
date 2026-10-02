@@ -376,7 +376,10 @@ rearrange them.
   10,000 m to cross the Red Line.
 - **Impel Down**, a prison break.
 - **Mary Geoise**, reached by the Bondola if you are a Marine officer or hold
-  a (forged) permit.
+  a (forged) permit. The Holy Land stands on top of the Red Line, level with
+  its plateau, and from its edge you can walk out across the top of the
+  wall as far as it goes. The Red Line's sheer faces can't be walked up from
+  a beach or a Red Port's quay.
 
 **Factions and life.**
 
