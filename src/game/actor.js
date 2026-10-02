@@ -12,7 +12,7 @@ import { HIGH_DECK } from '../render3d/height.js';
 import { clamp, TAU, angleDiff } from '../core/math.js';
 import { shipDims, hbAt, deckToWorld, shipLift, sideAt, topAt, floorAt, xAt, deckLift, deckPoint } from '../world/hull.js';
 import { placeOnDeck, RAIL_CLEAR } from './decks.js';
-import { plankJoins } from './gangway.js';
+import { plankJoins, PLANK_W } from './gangway.js';
 import { bw } from '../world/bframe.js';
 import { heightsOf } from '../world/interiors.js';
 
@@ -892,6 +892,11 @@ export class Actor extends Entity {
         if (dk.solid && !((g.deckAt(this.x, this.y, r * 0.7, ref, sh)?.solid || 0) >= dk.solid - 1e-4)) return false;
         return this.deckStep(dk);
       }
+      // (come down on a gangway off its middle, by its edge: back in toward its middle)
+      if (this.deck.plank) {
+        const pk = g.deckAt(x, y, 0, ref, sh);
+        if (pk?.plank === this.deck.plank && Math.abs(pk.e) < Math.abs(this.deck.e) - 1e-4) return this.deckStep(pk);
+      }
       // (a gangway has a rope along each side: off it, over the water, only with a jump)
       if (this.deck.plank && !(this.z > 0.4)) return false;
       // (off the edge of her deck is her bulwark: over it only with your feet up at its top)
@@ -1418,6 +1423,12 @@ export class Actor extends Entity {
     // (a gangway is only underfoot once your feet come down on it: under it,
     // in the water, it's over your head)
     if (dk?.plank && !was && this.feetH(game) < deckY(dk, game.env?.time || 0) - 0.4) dk = null;
+    // (and from the deck at its foot you're up on its steps along their
+    // middle, where canOccupy lets you onto them — beside them, still on the deck)
+    if (dk?.plank && was && !was.plank && Math.abs(dk.e) > PLANK_W / 2 - this.r * 0.7) {
+      const s = was.ship, d = deckPoint(s, game.world.dx(s.x, this.x), this.y - s.y, 0, this.deckRef());
+      if (d) { d.ship = s; dk = d; }
+    }
     // a hull running over a swimmer doesn't scoop them up onto its deck: it
     // passes overhead of a diver, and shoves someone at the surface aside
     if (dk && !was && this.inWater) {

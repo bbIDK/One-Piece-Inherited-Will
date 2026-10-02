@@ -504,7 +504,11 @@ it's open:
   (Before you found a crew your ships fly no colours.)
 - **Crew**: recruit nakama in the world (navigator, cook, doctor,
   shipwright, sniper, musician, archaeologist, helmsman, fighters). Each
-  gives a passive bonus, and fighters follow you on land.
+  gives a passive bonus, and fighters follow you on land — and from ship
+  to ship, the way you go: over a plank laid across, with a running jump
+  from rail to rail where the gap is a jump, or over the side and up the
+  other ship's ladder, swimming round her bow or stern (never in under
+  her), and back again.
 - **Marines**:
   - Enlist with reputation 25+ and a clean record, then climb from Seaman
     Recruit to Fleet Admiral. Each promotion needs merit **and** a better

@@ -7,6 +7,7 @@
 //   boss     – hostile + phase scripts
 import { angleDiff, clamp, TAU } from '../core/math.js';
 import { placeOnDeck, freeDeckSpot, crewStation } from './decks.js';
+import { shipNav } from './crewnav.js';
 import { clearLine, findPath, standable } from './path.js';
 import { interiorRect } from '../world/interiors.js';
 import { bw } from '../world/bframe.js';
@@ -504,14 +505,16 @@ export class AIController {
       else { a.x = p.x + (Math.random() - 0.5) * 2; a.y = p.y + 1; }
     }
     // you went ashore and left them standing on deck: they come ashore with you
-    if (a.deck && !p.deck && !p.inWater && !a.deck.ship.traffic) {
+    // (once you're ashore — not while you're in the air between two decks)
+    if (a.deck && !p.deck && !p.inWater && !p.climb && !((p.z || 0) > 0.05 || p.vz) && !a.deck.ship.traffic && !a.climb) {
       a.deck.ship.aboard?.delete(a); a.deck = null; a.z = 0; a.vz = 0;
       a.x = p.x + (Math.random() - 0.5) * 2; a.y = p.y + 1;
     }
-    // fight nearby enemies of the captain
+    if (a.climb) return; // (up a ship's ladder: see crewnav.js)
+    // fight nearby enemies of the captain (once down from a jump over a ship's rail: see crewnav.js)
     if (!this.target || this.target.state !== 'idle' || !this.target.alive) {
       this.target = null;
-      if (this.think <= 0) {
+      if (this.think <= 0 && !a.navJump) {
         this.think = 0.5;
         let best = null, bd = 64;
         for (const b of game.actorsNear(p.x, p.y, 8)) {
@@ -522,6 +525,26 @@ export class AIController {
         this.target = best;
       }
     }
+    // a ship's side between them and whoever they're making for — you, or the
+    // foe they're after on another deck: across first, as you would (a jump
+    // from rail to rail, or over the side and up her ladder), and never in
+    // under her (see crewnav.js; a gangway's walked: deckRoute)
+    const nav = shipNav(game, a, this.target || p);
+    if (nav) {
+      if (nav.climb) { game.climbLadder?.(a, nav.climb); this.navT = 0; this.navX = undefined; return; }
+      this.moveToward(a, nav.x, nav.y, game, true);
+      a.intent.sprint = !!nav.run || a.inWater;
+      if (nav.jump !== undefined && a.canJump()) a.tryJump(game, nav.jump);
+      // (getting nowhere for a good while — boxed in, say: they catch up with
+      // you; making for somewhere new, it's how near they get to that)
+      const w = game.world, dn = w.distance(a.x, a.y, nav.x, nav.y);
+      if (this.navX === undefined || w.distance(this.navX, this.navY, nav.x, nav.y) > 1.5) this.navBest = dn;
+      this.navX = nav.x; this.navY = nav.y;
+      if (dn < this.navBest - 0.5) { this.navBest = dn; this.navT = 0; }
+      if ((this.navT = (this.navT || 0) + dt) > 8) { this.navT = 0; this.navX = undefined; catchUp(game, a, p); }
+      return;
+    }
+    this.navX = undefined; this.navT = 0;
     if (this.target) {
       const saveKind = this.kind;
       this.kind = 'hostile';
@@ -532,18 +555,41 @@ export class AIController {
       return;
     }
     const d = game.world.distance(a.x, a.y, p.x, p.y);
-    if (d > 22) {
-      // left behind (on a ship's deck, or ashore): catch up
-      if (a.deck) { a.deck.ship.aboard?.delete(a); a.deck = null; }
-      a.z = 0; a.vz = 0;
-      a.x = p.x - Math.cos(p.facing) * 1.5; a.y = p.y + 0.5;
-      return;
-    }
+    if (d > 22) { catchUp(game, a, p); return; }
     if (d > 2.2) {
       this.moveToward(a, p.x - Math.cos(p.facing) * 1.2, p.y - Math.sin(p.facing) * 1.2 + 0.3, game);
       a.intent.sprint = d > 5;
     }
     void clamp; void angleDiff; void TAU;
+  }
+}
+
+/**
+ * Left behind (on a ship's deck, ashore, in the water): one of your crew
+ * catches up with you — on your deck beside you if you're aboard a ship (on
+ * a gangway, a step behind you on it), else beside you ashore or in the
+ * water, clear of any hull (never in under one).
+ */
+function catchUp(game, a, p) {
+  if (a.climb) return;
+  if (a.deck) { a.deck.ship.aboard?.delete(a); a.deck = null; }
+  a.z = 0; a.vz = 0;
+  const dk = p.deck, w = game.world;
+  if (dk && !dk.plank) {
+    const sp = dk.lvl !== undefined ? freeDeckSpot(dk.ship, dk.t - 0.03, dk.v * 0.8, typeof dk.lvl === 'string' && !dk.room ? dk.lvl : 'main') : { t: Math.max(0.15, dk.t - 0.1), v: dk.v * 0.5 };
+    placeOnDeck(game, a, dk.ship, sp.t, sp.v);
+    return;
+  }
+  if (dk?.plank) {
+    const L = dk.plank.pts(), k = dk.k > 1.2 ? dk.k - 1.2 : dk.k + 1.2;
+    a.x = w.wx(L.x + L.dir.x * k); a.y = L.y + L.dir.y * k;
+    a.deck = game.deckAt(a.x, a.y, 0) || null;
+    if (a.deck) (a.deck.ship.aboard ||= new Set()).add(a);
+    return;
+  }
+  for (const [ox, oy] of [[-Math.cos(p.facing) * 1.5, 0.5], [1.4, 0], [-1.4, 0], [0, 1.4], [0, -1.4], [2, 2], [-2, -2], [2, -2], [-2, 2]]) {
+    a.x = w.wx(p.x + ox); a.y = p.y + oy;
+    if (!game.hullAt?.(a.x, a.y, a.r || 0.35)) break;
   }
 }
 

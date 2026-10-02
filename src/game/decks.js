@@ -200,11 +200,14 @@ export function crewStation(ship, i) {
  * On a big ship's deck with someone to reach on another deck of her: the
  * next point to head for (the foot or the head of the right flight of stairs,
  * or of the ladder down to the hold). `who`: the one being reached, if it's
- * someone (down in the hold, say, under the deck at their feet).
+ * someone (down in the hold, say, under the deck at their feet). Someone on
+ * another ship's deck, with a gangway laid between her and this one: by it.
  */
 export function deckRoute(game, a, tx, ty, who = null) {
   const dk = a.deck;
-  if (!dk || dk.lvl === undefined) return null;
+  if (!dk) return null;
+  if (game.planks?.length) { const pr = plankRoute(game, a, tx, ty, who); if (pr !== undefined) return pr; }
+  if (dk.lvl === undefined || dk.plank) return null;
   const s = dk.ship, d = shipDims(s.def), w = game.world;
   const to = who?.deck?.ship === s ? who.deck : deckPoint(s, w.dx(s.x, tx), ty - s.y, 0);
   if (!to) return null;
@@ -241,6 +244,46 @@ export function deckRoute(game, a, tx, ty, who = null) {
   // at the near end: step onto the flight and head for its far end
   if (w.distance(a.x, a.y, best.p.x, best.p.y) < 0.6) return end(best.st, lower(best.st) === here);
   return best.p;
+}
+
+/**
+ * To (tx, ty) on another ship's deck by a gangway laid between it and the
+ * deck you're on (see gangway.js): the foot of its steps on this deck (by
+ * her stairs, from another deck of her), then up it and along it, keeping to
+ * its middle (alongside its steps is the deck, and they're a step too high
+ * to get onto from there), and off it at the far end. Undefined when there's
+ * no gangway in it.
+ */
+function plankRoute(game, a, tx, ty, who) {
+  const dk = a.deck, to = who?.deck || game.deckAt(tx, ty, 0);
+  if (!to) return undefined;
+  const here = dk.plank || dk.ship, there = to.plank || to.ship;
+  if (here === there) return undefined;
+  const w = game.world;
+  for (const P of game.planks) {
+    const L = P.pts(), d = L.dir;
+    // (the point on its middle line `k` along it from your ship's end — past
+    // its ends, out on the deck there — and where `a` is: k along it, e off it)
+    const on = (k) => ({ x: w.wx(L.x + d.x * k), y: L.y + d.y * k });
+    const ox = w.dx(L.x, a.x), oy = a.y - L.y, k0 = ox * d.x + oy * d.y, e0 = -ox * d.y + oy * d.x;
+    // (on along its middle, a short way ahead toward one end)
+    const ahead = (toB) => on(toB ? Math.min(L.len + 1.2, k0 + 0.8) : Math.max(-1.2, k0 - 0.8));
+    if (dk.plank === P) {
+      // on it: along it to the end on their side, and off
+      if (there === P.a) return ahead(false);
+      if (there === P.b) return ahead(true);
+      continue;
+    }
+    if (here !== P.a && here !== P.b) continue;
+    const fromA = here === P.a;
+    if (there !== P && there !== (fromA ? P.b : P.a)) continue;
+    // lined up behind the foot of its steps: up them; else to there first
+    const behind = fromA ? -k0 : k0 - L.len;
+    if (behind > -0.2 && behind < 1.6 && Math.abs(e0) < 0.35) return ahead(fromA);
+    const foot = on(fromA ? -1.2 : L.len + 1.2);
+    return deckRoute(game, { deck: dk, x: a.x, y: a.y }, foot.x, foot.y) || foot;
+  }
+  return undefined;
 }
 
 /**
