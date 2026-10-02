@@ -554,13 +554,15 @@ const ROOMS = {
     // big hall (the Baratie's) has rows of them across its floor, aisles
     // between, a diner at some
     const W = L.x1 - L.x0, D = L.z1 - L.z0;
-    const cols = Math.max(2, Math.floor((W - 1.0) / (3.2 * g))), rows = Math.max(1, Math.min(4, Math.floor((D - 3.0 * g) / (2.8 * g))));
-    const small = cols === 2 && rows === 1;
+    const cols = Math.max(2, Math.floor((W - 1.0) / (3.2 * g)));
+    const small = cols === 2 && D - 3.0 * g < 5.6 * g;
+    // (a big hall's rows go back from the front wall as far as the room left before the counter)
+    const rows = small ? 1 : Math.max(1, Math.min(4, 1 + Math.floor((D - 3.7 * g) / (2.4 * g))));
     let diners = 0;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const px = small ? (c ? L.x1 - 0.8 : L.x0 + 0.8) : L.x0 + 0.5 + (c + 0.5) * (W - 1.0) / cols;
-        const pz = L.z1 - (small ? 1.1 : 1.1 * g + r * 2.8 * g);
+        const pz = L.z1 - (small ? 1.1 : 1.1 * g + r * 2.4 * g);
         const t = small ? P.free(S('table'), px, pz) : P.at(S('table'), px, pz, 0);
         if (!t) continue;
         for (const s of [-1, 1]) {
