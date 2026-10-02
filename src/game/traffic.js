@@ -34,7 +34,7 @@ const SMALL_STATIONS = [[0.82, 0], [0.36, 0.26], [0.64, -0.3], [0.36, -0.26], [0
 
 export function installTraffic(game) {
   const T = game.traffic = { t: 3, ships: [] };
-  // (a ship on demand — tests, and creative mode — force: { kind, type, x, y, heading, dest, level })
+  // (a ship on demand — tests, creative mode and the sea's encounters (sea.js) — force: { kind, type, x, y, heading, dest, level })
   T.spawn = (force) => (game.player ? spawnShip(game, T, game.player, regionAt(game.player.x, game.player.y), force) : null);
   const reset = () => { for (const s of T.ships) { for (const a of s.traffic?.crew || []) a.alive = false; s.alive = false; } T.ships = []; };
   game.on('tick', (dt) => tick(game, T, dt));
@@ -43,7 +43,6 @@ export function installTraffic(game) {
   game.on('leaveZone', () => { T.ships = []; });
   // raids that land on a deck however they happen (a jump from your own deck counts)
   T.startRaid = (s) => startRaid(game, T, s);
-  T.spawn = (o) => spawnShip(game, T, game.player, regionAt(game.player.x, game.player.y), o);
 
   // Boarding is done by hand: heave to alongside, leave the helm, and jump
   // across onto her deck. Landing on a deck is what starts a raid (see tick).

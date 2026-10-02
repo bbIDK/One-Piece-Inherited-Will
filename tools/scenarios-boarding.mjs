@@ -1,6 +1,6 @@
-// Ships by hand: boarding with no prompts (jump across from a deck, or swim
-// over and climb her side), the start rowboat and her oars, and the camera
-// on every ship.
+// Ships by hand: boarding with no prompts (jump across from a deck, coming
+// down on hers over her rail, or swim to her ladder and climb it: E at its
+// foot), the start rowboat and her oars, and the camera on every ship.
 //   node tools/shot.mjs boarding | rowing | shipcams
 const step = (page, s) => page.evaluate((s) => window.OP.step(s), s);
 const key = async (page, k, s = 0.05) => { await page.evaluate((k) => window.OP.key(k, true), k); await step(page, s); await page.evaluate((k) => window.OP.key(k, false), k); };
@@ -170,10 +170,11 @@ export const scenarios = {
   // Boarding by hand with the real keys, no prompts. Off the home pier and
   // down into the start rowboat, E at her thwart takes the oars, and she's
   // rowed out past a pirate who leaves a newcomer be. Wanted, a pirate comes
-  // after you, and once you stop she heaves to alongside: leave the oars and
-  // jump across onto her deck. Then a running jump from a sloop's deck onto a
-  // merchant's, a swim to a hull and a climb up her side, a Marine welcomed
-  // aboard a Navy ship, and two overlapping hulls parting.
+  // after you, and once you stop she heaves to alongside: leave the oars, hop
+  // over the boat's side and up her ladder (her rail is out of a jump's reach
+  // from a rowboat). Then a running jump from a sloop's deck onto a
+  // merchant's, her side a wall to a swimmer and her ladder the way up, a
+  // Marine welcomed aboard a Navy ship, and two overlapping hulls parting.
   //   node tools/shot.mjs boarding
   boarding: {
     async run(page, snap) {
@@ -209,6 +210,34 @@ export const scenarios = {
             OP.key('W', false); OP.key('Shift', false);
             this.jumped = 0;
             this.frame(20);
+          },
+          // to the foot of ship `s`'s nearest ladder (over the side of a boat
+          // you're standing in: a hop over her gunwale; then a swim), and E
+          // there; `up` frames of the climb after it
+          toLadder(s, up = 0) {
+            const p = g.player, lad = g.ladderAt(p, 80, s);
+            if (!lad) return { ladder: null };
+            OP.key('W', true);
+            let n = 0;
+            for (; n < 900 && !g.ladderAt(p, 1.2, s); n++) {
+              this.look(this.toward(lad.foot));
+              if (p.deck && p.deck.ship !== s && p.deck.edge < 0.3 && !(p.z > 0.02)) { OP.key('Space', true); this.frame(); OP.key('Space', false); }
+              this.frame();
+            }
+            OP.key('W', false);
+            this.frame(8);
+            const prompt = p.controller.interaction?.label || null;
+            OP.key('E', true); this.frame(); OP.key('E', false);
+            this.frame(up);
+            return { ladder: `${lad.l.s > 0 ? 'starboard' : 'port'} side`, reached: `${(n / 30).toFixed(1)} s`, prompt, now: this.where() };
+          },
+          // on up it, onto her deck
+          climbOn(n = 150) {
+            const p = g.player, feet = [];
+            let i = 0;
+            for (; i < n && (p.climb || !p.deck); i++) { this.frame(); if (i % 5 === 0) feet.push(this.feet()); }
+            this.frame(10);
+            return { deck: p.deck?.ship?.name || null, climbed: `${(i / 30).toFixed(1)} s`, feet: feet.join(' ') };
           },
         };
       });
@@ -305,22 +334,24 @@ export const scenarios = {
       await frames(page, 2);
       await snap('hove-to-alongside');
 
-      // ---- leave the oars, stand, and jump across onto her deck
-      await page.evaluate(() => {
-        const B = window.__b;
+      // ---- leave the oars and stand: her rail is out of a jump's reach from a
+      // rowboat, so over the boat's side and up her ladder (E at its foot)
+      const toPirate = await page.evaluate(() => {
+        const g = window.OP.game, B = window.__b, pir = window.__pir;
         window.OP.key('E', true); B.frame(); window.OP.key('E', false); B.frame();
-        B.trace = [];
-        B.runAt(window.__pir, 'air', 40);
+        const r = B.toLadder(pir, 20);
+        B.look(pir.heading + (g.player.y > pir.y ? 1 : -1) * 1.9, 0.15, 5.5);
+        return r;
       });
       await frames(page, 1);
-      await snap('jump-to-pirate');
+      await snap('up-the-pirates-ladder');
       const boarded = await page.evaluate(() => {
         const g = window.OP.game, p = g.player, B = window.__b, pir = window.__pir, tr = pir.traffic;
-        B.runAt(pir, 'deck', 40);
+        const r = B.climbOn();
         B.look(pir.heading + 2.4, -0.2, 4.2);
-        return { deck: p.deck?.ship?.name || null, inWater: p.inWater, raided: !!tr.raided, helmsman: tr.crew?.[0] ? `${tr.crew[0].name} (${tr.crew[0].controller?.kind})` : null, her: +pir.speed.toFixed(2), trace: B.trace.join(', ') };
+        return { ...r, inWater: p.inWater, raided: !!tr.raided, helmsman: tr.crew?.[0] ? `${tr.crew[0].name} (${tr.crew[0].controller?.kind})` : null, her: +pir.speed.toFixed(2) };
       });
-      console.log('boarded the pirate', JSON.stringify(boarded));
+      console.log('boarded the pirate', JSON.stringify({ ...toPirate, ...boarded }));
       await frames(page, 2);
       await snap('boarded-pirate');
 
@@ -332,7 +363,8 @@ export const scenarios = {
         pir.alive = false; for (const a of pir.traffic.crew || []) a.alive = false;
         g.state.char.bounty = 0;
         const mine = g.giveShip('sloop', sp.x, sp.y, 'Test Sloop', { heading: 0 });
-        const o = g.traffic.spawn({ kind: 'merchant', type: 'caravel', x: sp.x, y: sp.y + 3.8, heading: 0, level: 6, dest: { x: sp.x + 400, y: sp.y + 4 } });
+        const o = g.traffic.spawn({ kind: 'merchant', type: 'caravel', x: sp.x, y: sp.y + 12, heading: 0, level: 6, dest: { x: sp.x + 400, y: sp.y + 12 } });
+        o.y = sp.y + (mine.def.beam + o.def.beam) / 2 + 1.85;
         o.traffic.surrender = true;
         window.__mine = mine; window.__o = o;
         window.OP.debug.onDeck(mine, 0.5, 0);
@@ -340,7 +372,7 @@ export const scenarios = {
         B.frame(10);
         B.trace = [];
         B.runAt(o, 'air', 40);
-        return { gap: +(3.8 - (mine.def.beam + o.def.beam) / 2).toFixed(2), airborne: B.where() };
+        return { gap: +(o.y - mine.y - (mine.def.beam + o.def.beam) / 2).toFixed(2), airborne: B.where() };
       }, spot);
       await frames(page, 1);
       await snap('jump-across');
@@ -353,33 +385,30 @@ export const scenarios = {
       await frames(page, 2);
       await snap('jumped-across');
 
-      // ---- into the sea off her far side, swim to her hull, and Space climbs her side
+      // ---- into the sea off her far side: swimming at her side and jumping,
+      // you stay in the sea (it's a wall); E at the foot of her ladder climbs it
       const swim = await page.evaluate(() => {
         const g = window.OP.game, p = g.player, B = window.__b, o = window.__o;
         for (const a of o.traffic.crew || []) a.alive = false;
         if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
-        p.x = o.x; p.y = o.y + o.def.beam / 2 + 1.2; p.z = 0; p.vz = 0;
+        p.x = o.x + 4; p.y = o.y + o.def.beam / 2 + 1.2; p.z = 0; p.vz = 0;
         B.frame(20);
         B.look(-Math.PI / 2, -0.1, 3.4);
         const before = { inWater: p.inWater, feet: B.feet() };
         window.OP.key('W', true); B.frame(12);
         window.OP.key('Space', true); B.frame(); window.OP.key('Space', false);
-        B.frame(6);
-        return { before, now: B.where(), feet: B.feet() };
-      });
-      await frames(page, 1);
-      await snap('climbing-aboard');
-      const climbed = await page.evaluate(() => {
-        const g = window.OP.game, p = g.player, B = window.__b;
-        const trace = [];
-        for (let i = 0; i < 40; i++) { B.frame(); trace.push(B.feet()); if (p.deck && !p.climb) break; }
+        B.frame(30);
         window.OP.key('W', false);
-        B.frame(10);
-        return { deck: p.deck?.ship?.name || null, frames: trace.length + 7, feet: trace.join(' ') };
+        const wall = { now: B.where(), feet: B.feet() };
+        return { before, wall, ...B.toLadder(o, 20) };
       });
-      console.log('climbed her side', JSON.stringify({ ...swim, ...climbed }));
+      await page.evaluate(() => { const o = window.__o; window.__b.look(o.heading - 1.9, 0.15, 5.5); });
+      await frames(page, 1);
+      await snap('up-her-ladder');
+      const climbed = await page.evaluate(() => window.__b.climbOn());
+      console.log('her side a wall, her ladder the way up', JSON.stringify({ ...swim, ...climbed }));
 
-      // ---- a Marine climbing aboard a Navy ship is welcomed, not fought
+      // ---- a Marine climbing aboard a Navy ship (up her ladder) is welcomed, not fought
       const navy = await page.evaluate(() => {
         const g = window.OP.game, p = g.player, c = g.state.char, B = window.__b, s = window.__mine;
         c.faction = 'marine'; c.marineRank = 'Seaman Recruit'; c.bounty = 0;
@@ -387,17 +416,14 @@ export const scenarios = {
         if (!m) return 'no marine ship';
         m.traffic.surrender = true; // (lying still, for the test)
         if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
-        p.x = m.x; p.y = m.y + m.def.beam / 2 + 1.2; p.z = 0; p.vz = 0;
+        p.x = m.x + 3; p.y = m.y + m.def.beam / 2 + 1.2; p.z = 0; p.vz = 0;
         B.frame(20);
-        B.look(-Math.PI / 2);
         const t0 = g.time;
-        window.OP.key('W', true); B.frame(12);
-        window.OP.key('Space', true); B.frame(); window.OP.key('Space', false);
-        for (let i = 0; i < 60 && !(p.deck && !p.climb); i++) B.frame();
-        window.OP.key('W', false);
-        B.frame(30);
+        const up = B.toLadder(m);
+        const on = B.climbOn();
+        B.frame(20);
         m.traffic.surrender = false;
-        return { deck: p.deck?.ship?.name || null, raided: !!m.traffic.raided, welcomed: !!m.traffic.welcomed, hostile: (m.traffic.crew || []).filter((x) => x.controller?.kind === 'hostile').length, bounty: c.bounty, log: B.logs(t0) };
+        return { ...up, ...on, raided: !!m.traffic.raided, welcomed: !!m.traffic.welcomed, hostile: (m.traffic.crew || []).filter((x) => x.controller?.kind === 'hostile').length, bounty: c.bounty, log: B.logs(t0) };
       });
       console.log('a Marine aboard a Navy ship', JSON.stringify(navy));
 
