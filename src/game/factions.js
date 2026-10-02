@@ -87,7 +87,7 @@ function squadSize(c) {
 function installFleet(game) {
   let t = 0;
   const clear = () => {
-    for (const s of game.ships) if (s.escortOf) s.alive = false;
+    for (const s of game.ships) if (s.escortOf) { s.alive = false; for (const a of s.traffic?.crew || []) a.alive = false; }
     for (const a of game.actors) if (a.marineSquad) a.alive = false;
   };
   game.on('characterStart', clear);
@@ -135,6 +135,10 @@ function spawnEscort(game, slot) {
   s.level = 10 + rankIndex(c.marineRank) * 3;
   s.label = `${s.name} (your fleet)`;
   s.ai = escortAI;
+  // (her company aboard and sailing her, as on any ship at sea: they come
+  // aboard as people close by — and salute you on her deck — and stand in as
+  // figures further off; see traffic.js)
+  s.traffic = { kind: 'marine', escort: true, level: s.level, dest: null, crew: null, raided: false, cleared: false, plundered: false, huntUntil: 0 };
 }
 
 /** A spot on open water just beyond sight of the flagship (see sightRange), astern first, heading her way. */

@@ -388,7 +388,11 @@ it's open:
   their own business at sea: they fight only when you fire on them or board
   them. Marines give chase once you're wanted (in the Blues, not much faster
   than a small boat), and a ship that's after you heaves to alongside when
-  you stop, so you can board her.
+  you stop, so you can board her. Every ship at sea has her crew aboard
+  sailing her (figures at her wheel and on her deck far off, the crew
+  themselves close by — your Marine escorts' too), so every one can be
+  beaten: board her and fight them, or sink her. With nobody left standing
+  on her deck she lies adrift, her hold yours for the taking.
 - A News Coo delivers the morning paper.
 
 **Zones.**

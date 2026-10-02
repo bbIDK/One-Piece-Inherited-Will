@@ -12,10 +12,10 @@ import { ITEMS } from '../data/items.js';
 import { persist } from './lineage.js';
 import { crime } from './reputation.js';
 import { RNG } from '../core/rng.js';
-import { TAU, clamp, angleDiff } from '../core/math.js';
+import { TAU, clamp } from '../core/math.js';
 import { drawShip } from '../render/ship.js';
 import { hullGap, hbAt } from '../world/hull.js';
-import { engage, playerShip, fireOn, sightRange } from './traffic.js';
+import { sightRange } from './traffic.js';
 
 // the eight points of the compass, round from east (y points south)
 const DIRS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
@@ -345,14 +345,22 @@ class SeaSystem {
     g.ui.banner('SEA KING!', '', 'A monster rises from the depths!', 3);
   }
 
+  /**
+   * A ship comes out of the haze: a Marine patrol on your trail once you're
+   * wanted, a pirate crossing your bow at a distance, or a merchantman
+   * passing closer. She's a ship at sea like any other (see traffic.js): her
+   * crew are aboard and sailing her, and she can be boarded and beaten, or
+   * sunk.
+   */
   encounter(p, s, reg) {
-    const g = this.game, c = this.char;
+    const g = this.game, w = g.world;
+    if (!g.traffic) return;
     const rng = new RNG(Math.floor(g.time * 1000));
     const a = rng.range(0, TAU);
     // out beyond the haze (see sightRange), making for you: she sails into sight
     const R = sightRange(g) + 30;
-    const x = g.world.wx(s.x + Math.cos(a) * R), y = s.y + Math.sin(a) * R;
-    if (!g.world.sailable(x, y)) return;
+    const x = w.wx(s.x + Math.cos(a) * R), y = s.y + Math.sin(a) * R;
+    if (!w.sailable(x, y)) return;
     const gl = isGrandLine(reg);
     const nw = reg === REGION.NEW_WORLD;
     const roll = rng.next();
@@ -361,27 +369,19 @@ class SeaSystem {
     else if (roll < 0.7) kind = 'pirate';
     else kind = 'merchant';
     const lvl = nw ? rng.int(45, 70) : gl ? rng.int(22, 40) : isBlue(reg) && reg !== REGION.EAST_BLUE ? rng.int(10, 18) : rng.int(5, 12);
-    const type = nw ? rng.pick(['frigate', 'galleon', 'war_galleon', 'man_o_war']) : gl ? rng.pick(['brigantine', 'caravel', 'frigate', 'war_galleon']) : rng.pick(['sloop', 'caravel', 'sloop']);
-    const faction = kind === 'marine' ? 'marine' : kind === 'pirate' ? 'pirate' : 'civilian';
+    const type = kind === 'marine' ? (nw ? 'marine_battleship' : gl ? rng.pick(['marine_warship', 'marine_battleship']) : 'brigantine')
+      : nw ? rng.pick(['frigate', 'galleon', 'war_galleon', 'man_o_war']) : gl ? rng.pick(['brigantine', 'caravel', 'frigate', 'war_galleon']) : rng.pick(['sloop', 'caravel', 'sloop']);
     // (pirates keep to their own business: she crosses your bow at a distance
-    // rather than bearing down on you; a merchantman passes closer)
+    // rather than bearing down on you; a merchantman passes closer; a Marine
+    // patrol comes after you, for as long as she's given — see traffic.js)
     const spared = kind === 'pirate';
     const pass = Math.asin(Math.min(1, (spared ? 90 : kind === 'merchant' ? 45 : 0) / R)) * (rng.next() < 0.5 ? -1 : 1);
-    const ship = g.addShip({
-      type: kind === 'marine' ? (nw ? 'marine_battleship' : gl ? rng.pick(['marine_warship', 'marine_battleship']) : 'brigantine') : type, x, y, heading: a + Math.PI + pass, owner: kind, faction,
-      name: kind === 'marine' ? 'Marine Patrol' : kind === 'pirate' ? pirateShipName(rng) : 'Merchant Ship',
-      jr: kind === 'pirate' ? { skull: rng.pick(['classic', 'grin', 'eyepatch']), bones: rng.pick(['cross', 'swords']), accessory: rng.pick(['bandana', 'horns', 'tricorne', 'none', 'flames']), color: '#f5f6fa' } : null,
-    });
-    if (!ship.fits(g.world, ship.x, ship.y, ship.heading) && !ship.unstick(g.world)) { ship.alive = false; return; }
-    ship.level = lvl;
+    const heading = a + Math.PI + pass;
+    const ship = g.traffic.spawn({ kind, type, x, y, heading, level: lvl, dest: { x: w.wx(x + Math.cos(heading) * R * 2), y: y + Math.sin(heading) * R * 2 }, hunt: kind === 'marine' ? 180 + R / 6 : 0 });
+    if (!ship) return;
     ship.label = `${ship.name} (Lv ${lvl})`;
     ship.showBar = true;
-    ship.cannonsOverride = kind === 'merchant' ? 0 : undefined;
-    ship.ai = kind === 'merchant' ? merchantAI : warshipAI;
-    ship.hull = ship.maxHull = Math.round(ship.maxHull * (0.5 + lvl / 40));
-    ship.loot = Math.round((kind === 'merchant' ? 3000 : 1500) * (1 + lvl / 10));
-    // (out of sight for now: the time it takes her to close is hers to take, and her news waits till she's seen)
-    ship.expire = 180 + R / 6;
+    // (her news waits till she's seen)
     ship.announce = spared ? ['A pirate ship flying an unfamiliar Jolly Roger crosses your bow in the distance — and sails on.', '#b0bec5']
       : kind === 'marine' ? ['A Marine patrol ship has spotted you! (You have a bounty.)', '#64b5f6'] : ['A merchant ship sails by.', '#b0bec5'];
   }
@@ -428,68 +428,12 @@ class SeaSystem {
   }
 }
 
-function pirateShipName(rng) {
-  return `${rng.pick(['Black', 'Crimson', 'Howling', 'Iron', 'Salty', 'Grinning', 'Rotten', 'Screaming', 'Golden'])} ${rng.pick(['Shark', 'Maiden', 'Gull', 'Kraken', 'Widow', 'Barracuda', 'Skull', 'Jackal', 'Tide'])}`;
-}
-
 function drawBarrel(g, env) {
   const bob = Math.sin(env.time * 2 + this.t) * 0.08;
   g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.ellipse(0, 0, 0.55, 0.2, 0, 0, TAU); g.fill();
   g.fillStyle = '#8d5b33'; g.fillRect(-0.3, -0.55 + bob, 0.6, 0.55);
   g.fillStyle = '#4a4a4a'; g.fillRect(-0.3, -0.45 + bob, 0.6, 0.06); g.fillRect(-0.3, -0.18 + bob, 0.6, 0.06);
   g.fillStyle = '#ffd54f'; g.font = 'bold 0.3px sans-serif'; g.textAlign = 'center'; g.fillText('?', 0, -0.75 + bob);
-}
-
-// ------------------------------------------------------------- ship AI
-/**
- * A ship's news (see SeaEvents.encounter) once she's come out of the haze.
- * True once she can go: out of sight, with her time up (or far out of it).
- */
-function gone(s, game, d) {
-  const S = sightRange(game);
-  if (s.announce && d < S * 0.75) { game.log(...s.announce); s.announce = null; }
-  return d > S && (s.expire <= 0 || d > S * 2);
-}
-
-function warshipAI(s, dt, game) {
-  const p = game.player;
-  s.expire -= dt;
-  const target = playerShip(p);
-  const d = game.world.distance(s.x, s.y, p.x, p.y);
-  if (gone(s, game, d)) { s.alive = false; return; }
-  // (pirates leave you be unless they're fired on or boarded: see traffic.js)
-  const hostileToPlayer = (s.faction === 'pirate' && s.provoked) || (s.faction === 'marine' && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked));
-  if (!hostileToPlayer) return merchantAI(s, dt, game);
-  // (her time's up and you're not at close quarters: she gives up the chase and bears away, out of sight)
-  if (s.expire <= 0 && d > 60) {
-    s.sail = 1; s.speedCap = null; s.heaveTo = false; s.anchored = false;
-    s.heading += clamp(angleDiff(s.heading, Math.atan2(s.y - p.y, game.world.dx(p.x, s.x))), -1, 1) * s.def.turn * dt;
-    return;
-  }
-  // (hove to alongside, she waits for you while you're close — swimming over to board her, say)
-  if (!target && s.heaveTo && d < 30) { s.sail = 0; s.speedCap = 0; s.anchored = true; return; }
-  if (!target || d > 50) {
-    s.sail = 1; s.speedCap = null; s.heaveTo = false;
-    // (still off: she makes for you)
-    if (target) s.heading += clamp(angleDiff(s.heading, Math.atan2(target.y - s.y, game.world.dx(s.x, target.x))), -1, 1) * s.def.turn * dt;
-    return;
-  }
-  // chase, run abreast with a broadside on you, or heave to alongside once you've stopped
-  const want = engage(s, game, target);
-  s.heading += clamp(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
-  fireOn(game, s, target, d);
-}
-
-function merchantAI(s, dt, game) {
-  s.expire -= dt;
-  s.speedCap = null; s.heaveTo = false; s.anchored = false;
-  s.sail = 0.8;
-  const d = game.world.distance(s.x, s.y, game.player.x, game.player.y);
-  if (gone(s, game, d)) s.alive = false;
-  if (s.hull < s.maxHull && d < 25) { // flee
-    const away = Math.atan2(s.y - game.player.y, game.world.dx(game.player.x, s.x));
-    s.heading += clamp(angleDiff(s.heading, away), -1, 1) * s.def.turn * dt;
-  }
 }
 
 // --------------------------------------------------------------- Sea Kings

@@ -68,7 +68,15 @@ export function installTraffic(game) {
 function tick(game, T, dt) {
   const p = game.player, w = game.world;
   if (!p || !w || w !== game.surface) return;
-  for (const s of T.ships) crewFor(game, T, s, p);
+  // every ship at sea that isn't yours has her crew aboard (these, and your
+  // Marine escorts: see factions.js) — and with nobody left standing on her
+  // deck she's adrift, not sailing on empty
+  for (const s of game.ships) {
+    const tr = s.traffic;
+    if (!tr || s.owner === 'player') continue;
+    crewFor(game, T, s, p);
+    if (tr.crew && !tr.raided && !tr.adrift && !tr.escort && !s.sunk && !tr.crew.some((a) => standing(a, s))) adrift(game, s);
+  }
   // raids: landing on a ship's deck starts one; beating the crew ends it
   const dk = p.deck?.ship;
   if (dk && dk.traffic && !dk.traffic.raided && dk.owner !== 'player') {
@@ -79,6 +87,8 @@ function tick(game, T, dt) {
   T.t -= dt;
   if (T.t > 0) return;
   T.t = 4;
+  // (a ship gone — out of sight, or to the bottom — takes her crew with her)
+  for (const a of game.actors) if (a.crewOf && a.crewOf.alive === false) a.alive = false;
   // (out of sight before she's gone: see sightRange)
   const S = sightRange(game);
   T.ships = T.ships.filter((s) => {
@@ -145,7 +155,8 @@ function spawnShip(game, T, p, reg, force = null) {
     if (!s.fits(w, x, y, heading)) { s.alive = false; if (force) return null; continue; }
     const lvl = force?.level || (nw ? rng.int(45, 70) : gl ? rng.int(20, 40) : reg === REGION.EAST_BLUE ? rng.int(4, 10) : rng.int(8, 18));
     s.level = lvl;
-    s.traffic = { kind, dest, level: lvl, crew: null, raided: false, cleared: false, plundered: false };
+    // (`hunt`: seconds she comes after you from out of sight, once she means to fight you — a Marine patrol on your trail)
+    s.traffic = { kind, dest, level: lvl, crew: null, raided: false, cleared: false, plundered: false, huntUntil: force?.hunt ? (game.time || 0) + force.hunt : 0 };
     s.ai = trafficAI;
     s.hull = s.maxHull = Math.round(s.maxHull * (0.5 + lvl / 40));
     s.loot = Math.round((kind === 'merchant' ? 3500 : kind === 'marine' ? 2500 : kind === 'fishing' ? 400 : 2000) * (1 + lvl / 10) * Math.max(1, s.def.length / 10));
@@ -242,7 +253,9 @@ export function fireOn(game, s, target, d) {
 /** Sail on past (round the coasts, clear of other ships) — or fight. */
 function trafficAI(s, dt, game) {
   const tr = s.traffic, w = game.world, p = game.player;
-  if (tr.raided || tr.surrender) { s.sail = 0; s.anchored = true; s.rowing = 0; return; }
+  // (her news, once she's come out of the haze: see sea.js encounter)
+  if (s.announce && w.distance(s.x, s.y, p.x, p.y) < sightRange(game) * 0.75) { game.log(...s.announce); s.announce = null; }
+  if (tr.raided || tr.surrender || tr.adrift) { s.sail = 0; s.anchored = true; s.rowing = 0; s.speedCap = 0; return; }
   // shot to pieces: her rigging's gone and she lies dead in the water — still firing, but you can board her
   if (!tr.crippled && (tr.kind === 'pirate' || tr.kind === 'marine') && s.hull < s.maxHull * 0.35) {
     tr.crippled = true;
@@ -257,7 +270,9 @@ function trafficAI(s, dt, game) {
   const target = playerShip(p);
   const d = w.distance(s.x, s.y, p.x, p.y);
   let want;
-  const fighting = target && d < 55 && hostile(s, game) && (s.def.cannons || 0) > 0;
+  // (a patrol on your trail comes after you from as far off as she can see you, till her time's up)
+  const hunting = tr.huntUntil > (game.time || 0) && d < sightRange(game) + 60;
+  const fighting = target && (d < 55 || hunting) && hostile(s, game) && (s.def.cannons || 0) > 0;
   if (s.heaveTo && !fighting && hostile(s, game) && d < 30) {
     // hove to alongside, she waits for you (swimming over to board her, say)
     s.sail = 0; s.speedCap = 0; s.anchored = true;
@@ -334,7 +349,22 @@ function crewFor(game, T, s, p) {
   if (!tr || s.sunk) return;
   const d = game.world.distance(s.x, s.y, p.x, p.y);
   if (!tr.crew && d < 75) spawnCrew(game, s);
-  else if (tr.crew && d > 115 && !tr.raided) { for (const a of tr.crew) a.alive = false; tr.crew = null; }
+  else if (tr.crew && d > 115 && !tr.raided && !tr.adrift) { for (const a of tr.crew) a.alive = false; tr.crew = null; }
+}
+
+/** One of her crew on his feet aboard her. */
+const standing = (a, s) => a.alive && a.state === 'idle' && a.deck?.ship === s;
+
+/**
+ * Her crew are all down (shot down at their posts, say) or gone over the
+ * side: nobody's sailing her. She lies there with her sails struck, hers for
+ * the taking — board her, and the hold is yours.
+ */
+function adrift(game, s) {
+  const tr = s.traffic;
+  tr.adrift = true;
+  s.sail = 0; s.anchored = true; s.rowing = 0; s.speedCap = 0; s.heaveTo = false;
+  if (game.world.distance(s.x, s.y, game.player.x, game.player.y) < 120) game.log(`Nobody's left standing on the ${s.name}'s deck — she's adrift. Come alongside and take what's in her hold.`, '#ffe082');
 }
 
 function spawnCrew(game, s) {
@@ -386,7 +416,7 @@ function startRaid(game, T, s) {
   }
   // whoever has the helm leaves the wheel and comes down to deal with you
   const helm = tr.crew[0];
-  if (helm?.alive) {
+  if (helm?.alive && helm.state === 'idle') {
     helm.showName = true;
     helm.name = tr.kind === 'marine' ? helm.name : tr.kind === 'pirate' ? 'Pirate Helmsman' : tr.kind === 'fishing' ? 'Skipper' : 'Ship\'s Master';
     const line = tr.kind === 'marine' ? 'Boarders! I have the deck — stand fast, men!' : tr.kind === 'pirate' ? 'Somebody take the wheel! This one\'s MINE!' : tr.kind === 'fishing' ? 'Get off my boat!' : 'Boarders! Leave the wheel — I\'ll handle this myself!';
@@ -400,16 +430,17 @@ function startRaid(game, T, s) {
     else if (tr.kind === 'fishing') crime(game, 250000, 'raided a fishing boat', { rep: 8 });
   }
   const who = tr.kind === 'marine' ? 'the Marines' : tr.kind === 'pirate' ? 'the pirates' : 'the crew';
-  game.ui.banner('BOARDED!', s.name, `The helmsman is coming for you. Beat ${who} — then the hold is yours.`, 3);
-  if (game.audio && game.audio.theme !== 'battle') { tr.prevTheme = game.audio.theme; game.audio.music('battle'); }
+  // (adrift, with nobody left standing on her deck, she's yours already)
+  const up = tr.crew.some((a) => standing(a, s));
+  game.ui.banner('BOARDED!', s.name, up ? `The helmsman is coming for you. Beat ${who} — then the hold is yours.` : 'Nobody aboard her is left standing.', 3);
+  if (up && game.audio && game.audio.theme !== 'battle') { tr.prevTheme = game.audio.theme; game.audio.music('battle'); }
   // any Marine ship in sight joins in
   for (const o of T.ships) if (o !== s && o.traffic?.kind === 'marine' && game.world.distance(o.x, o.y, s.x, s.y) < 80) o.provoked = true;
 }
 
 function checkCleared(game, s) {
   const tr = s.traffic;
-  const standing = (tr.crew || []).filter((a) => a.alive && a.state === 'idle' && a.deck?.ship === s);
-  if (standing.length) return;
+  if ((tr.crew || []).some((a) => standing(a, s))) return;
   tr.cleared = true;
   if (game.audio?.theme === 'battle') game.audio.music(tr.prevTheme || 'sea');
   game.ui.toast('THE DECK IS YOURS', `${s.name}: plunder her hold (down the hatch amidships — the chest at the foot of the ladder).`, '#ffd54f');
