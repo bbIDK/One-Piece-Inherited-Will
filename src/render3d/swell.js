@@ -8,6 +8,8 @@
 // (The hash is one that comes out the same in the GPU's 32-bit floats and in
 // JavaScript's 64-bit ones — a sin()-based hash of big numbers doesn't — so
 // what floats here stays on the water drawn there.)
+import { CANALS } from '../world/reverseMountain.js';
+
 export const SWELL_GLSL = /* glsl */`
   float sHash(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -86,6 +88,31 @@ for (const k of [0, 1, 2, 5, 7]) LIQUID[k] = 1;
 LIQUID[3] = 0.5;
 LIQUID[9] = 0; // (Reverse Mountain's canals draw their own water)
 
+/**
+ * Calm water round Reverse Mountain's canal mouths, where the canals' own
+ * water fades in over the sea (rmCanals3d.js) and a swell would heave up
+ * through it: [x, y, r] each — flat within r × 0.45 of (x, y), the swell
+ * back to its own by r. (Shared with the water's shader: water3d.js uCalm.)
+ */
+export function calmPoints(world) {
+  if (!world?.reverseMountain) return [];
+  if (world.calmPts) return world.calmPts;
+  const out = [];
+  for (const c of CANALS) {
+    if (c.i0 === undefined) continue;
+    // (centred 48 m out to sea from where the rock begins)
+    const land = c.exit ? c.i1 - 3 : c.i0 + 3;
+    const j = Math.max(0, Math.min(c.x.length - 1, land + (c.exit ? 12 : -12)));
+    out.push([c.x[j], c.y[j], 170]);
+  }
+  return (world.calmPts = out);
+}
+function calmAt(w, x, y) {
+  let k = 1;
+  for (const [cx, cy, r] of calmPoints(w)) k = Math.min(k, sst(r * 0.45, r, Math.hypot(w.dx ? w.dx(cx, x) : x - cx, y - cy)));
+  return k;
+}
+
 // this frame's sea (set by the water as it updates: see water3d.js)
 const S = { t: 0, amp: 0, world: null, ox: 0, oy: 0 };
 export function setSwell(t, amp, world, ox, oy) { S.t = t; S.amp = amp; S.world = world; S.ox = ox; S.oy = oy; }
@@ -104,5 +131,5 @@ export function swellAt(x, y) {
   const t = w.type(Math.floor(x), Math.floor(y));
   const liquid = LIQUID[t < 16 ? t : 255];
   const shore = 0.35 + 0.65 * sst(0.5, -7, w.sd ? w.sd(x, y) : -32);
-  return swells(x, y, S.t) * S.amp * shore * fade * liquid;
+  return swells(x, y, S.t) * S.amp * shore * fade * liquid * (w.reverseMountain ? calmAt(w, x, y) : 1);
 }

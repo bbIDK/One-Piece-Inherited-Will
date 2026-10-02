@@ -7,11 +7,29 @@
 // glance. It also colours the other "liquids": the Skypiea cloud sea, lava,
 // acid.
 import * as THREE from 'three';
-import { SWELL_GLSL, swellAmp, setSwell } from './swell.js';
+import { SWELL_GLSL, swellAmp, setSwell, calmPoints } from './swell.js';
 
 // The wind swells (see swell.js: the same waves are worked out there for the
 // things that float on them)
 const SWELL = SWELL_GLSL;
+// calm water: no swell heaving round Reverse Mountain's canal mouths, where
+// the canals' own water fades in over the sea (rmCanals3d.js) — a swell
+// there would heave up through it. (Only the surface's height: it's still
+// shaded as the swells have it, so it looks the same as the sea round it.)
+// (x, y: the middle, world tiles; z: how far out the calm reaches, the inner
+// half of it flat)
+const CALM_N = 5;
+const CALM = /* glsl */`
+  uniform vec4 uCalm[${CALM_N}];
+  float calmAt(vec2 P) {
+    float k = 1.0;
+    for (int i = 0; i < ${CALM_N}; i++) {
+      vec4 c = uCalm[i];
+      if (c.z > 0.0) k = min(k, smoothstep(c.z * 0.45, c.z, distance(P, c.xy)));
+    }
+    return k;
+  }
+`;
 
 const VERT = /* glsl */`
   uniform vec2 uOrigin;
@@ -26,6 +44,7 @@ const VERT = /* glsl */`
   #include <fog_pars_vertex>
 
   ${SWELL}
+  ${CALM}
 
   void main() {
     vec4 wp = modelMatrix * vec4(position, 1.0);
@@ -40,7 +59,7 @@ const VERT = /* glsl */`
     float liquid = kind < 2.5 || kind == 5.0 || kind == 7.0 ? 1.0 : kind == 3.0 ? 0.5 : 0.15;
     float shore = mix(0.35, 1.0, smoothstep(0.5, -7.0, sd));
     float fade = 1.0 - smoothstep(70.0, 190.0, length(wp.xz - cameraPosition.xz));
-    float A = uAmp * shore * fade * liquid;
+    float A = uAmp * shore * fade * liquid * calmAt(P);
     vec2 slope;
     float h = swells(P, uTime, slope);
     wp.y += h * A;
@@ -307,6 +326,7 @@ export class Water {
         uHull: { value: new THREE.Vector4() },
         uHullD: { value: new THREE.Vector3() },
         uBubble: { value: new THREE.Vector4() },
+        uCalm: { value: Array.from({ length: CALM_N }, () => new THREE.Vector4()) },
       },
     ]);
     // the water writes depth, so the ink outlines see its surface (not the sea floor under it)
@@ -356,6 +376,11 @@ export class Water {
     this.uniforms.uZone.value = world.zone || 0;
     const b = world.bubble;
     this.uniforms.uBubble.value.set(b ? b.x : 0, b ? b.y : 0, b ? b.a : 0, b ? b.b : 0);
+    // (calm where Reverse Mountain's canals meet the sea: from the rock out
+    // over the stretch where their water fades in — rmCanals3d.js)
+    const calm = this.uniforms.uCalm.value;
+    for (const v of calm) v.set(0, 0, 0, 0);
+    calmPoints(world).slice(0, CALM_N).forEach(([x, y, r], k) => calm[k].set(x, y, r, 0));
   }
 
   /** Fill in the tiles of [x0, x0+w) × [y0, y0+h) (world tiles, unwrapped) in the window's bytes. */

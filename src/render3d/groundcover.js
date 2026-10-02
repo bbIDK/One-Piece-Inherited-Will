@@ -301,6 +301,10 @@ function buildCell(world, terrain, cx, cy) {
         if (r1 < (t === T.GRAVEL ? 0.4 : 0.1)) put('pebble', x + r2, y + r3, r1 * 30, 0.6 + r2 * 0.8, col.setRGB(0.66, 0.62, 0.56));
         if (r3 < 0.2 && t !== T.GRAVEL && !winter) put('grass', x + r1, y + r2, r3 * 40, 0.55 + r1 * 0.4, grassTint(clim, col, r1).multiplyScalar(0.9));
       } else if (t === T.ROCK || t === T.MOUNTAIN || t === T.CLIFF || t === T.ASH || t === T.SNOWROCK) {
+        // (nothing on a steep face: a boulder doesn't sit on a cliff — and one
+        // there, the sun low across the face, cast a long dark streak down it)
+        const h0 = terrain(x + 0.5, y + 0.5);
+        if (Math.abs(terrain(x + 1.5, y + 0.5) - h0) > 0.9 || Math.abs(terrain(x + 0.5, y + 1.5) - h0) > 0.9) continue;
         if (r1 < 0.3) put('pebble', x + r2, y + r3, r1 * 30, 0.7 + r2 * 1.2, t === T.ASH ? col.setRGB(0.34, 0.32, 0.3) : col.setRGB(0.6, 0.58, 0.55));
         if (r2 < 0.045) put('rock', x + r3, y + r1, r2 * 70, 0.6 + r3 * 1.1, col.setRGB(0.66, 0.63, 0.6));
         if (r3 < 0.08 && !winter && t !== T.ASH) put('grass', x + r1, y + r2, r3 * 40, 0.5 + r1 * 0.3, grassTint(clim, col, r2).multiplyScalar(0.85));
