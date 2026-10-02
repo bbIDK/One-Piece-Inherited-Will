@@ -10,8 +10,8 @@ import { RACES } from '../data/races.js';
 import { WALKABLE, SWIMMABLE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
 import { HIGH_DECK } from '../render3d/height.js';
 import { clamp, TAU, angleDiff } from '../core/math.js';
-import { shipDims, hbAt, deckToWorld, shipLift } from '../world/hull.js';
-import { placeOnDeck, boardingSpot } from './decks.js';
+import { shipDims, hbAt, deckToWorld, shipLift, sideAt } from '../world/hull.js';
+import { placeOnDeck, RAIL_CLEAR } from './decks.js';
 import { bw } from '../world/bframe.js';
 import { heightsOf } from '../world/interiors.js';
 
@@ -448,9 +448,9 @@ export class Actor extends Entity {
     if (!this.canJump()) return false;
     const J = this.jumpStats();
     const k = clamp(charge, 0, 1);
-    // swimming against a ship's side: haul yourself up it and over the rail —
-    // or against a pier, a quay or a steep bank: up onto it
-    if ((this.inWater || this.wading) && ((this.isPlayer && game.climbAboard?.(this, k)) || this.climbOut(game))) return true;
+    // swimming against a pier, a quay or a steep bank: up onto it (a ship's
+    // side is a wall: a jump out of the water clears a rowboat's low one)
+    if ((this.inWater || this.wading) && this.climbOut(game)) return true;
     let v = J.v * (1 + (J.charge - 1) * k);
     const fromWater = this.inWater;
     // (wading, you spring off the bottom: the jump starts where your feet are)
@@ -702,10 +702,10 @@ export class Actor extends Entity {
     this.updateMovement(dt, game, false);
     this.underDeck(game, feet0);
     this.followGround(game);
-    // Against a ledge you can reach: in the air (a jump at a pier, a quay or a
-    // ship's rail) you grab it and haul yourself up at once; swimming or on
-    // your feet, pushing on against a pier, a quay or a steep bank for a moment
-    // does it (a ship's side from the water takes a jump: see traffic.js)
+    // Against a ledge you can reach: in the air (a jump at a pier or a quay)
+    // you grab it and haul yourself up at once; swimming or on your feet,
+    // pushing on against a pier, a quay or a steep bank for a moment does it
+    // (a ship's side is no ledge: you only come aboard over her rail)
     const L = this.ledge;
     const toward = L && (this.intent.mx * L.dx + this.intent.my * L.dy) > 0.4;
     if (toward && ((this.z || 0) > 0.05 || this.vz) && this.climbOnto(game, L)) return;
@@ -878,8 +878,9 @@ export class Actor extends Entity {
         if (above) return false;
       }
     }
-    // ship decks: walk anywhere on your deck (the rail keeps you aboard unless
-    // you jump over it); nobody swims or walks through a hull
+    // ship decks: walk anywhere on your deck; her bulwark keeps you aboard
+    // until you're up over it (it's a low wall: a jump clears it), and nobody
+    // swims or walks through a hull
     const g = this.game;
     if (g && g.deckAt && g.ships.length && this.deck) {
       const ref = this.deckRef(), sh = this.deck.ship;
@@ -889,10 +890,11 @@ export class Actor extends Entity {
         if (dk.solid && !((g.deckAt(this.x, this.y, r * 0.7, ref, sh)?.solid || 0) >= dk.solid - 1e-4)) return false;
         return this.deckStep(dk);
       }
-      if (!(this.z > 0.3)) return false;
+      // (off the edge of her deck is her bulwark: over it only with your feet up at its top)
+      if (this.feetH(g) < g.railAt(sh, x, y) - RAIL_CLEAR) return false;
     }
     // a ledge too high to step onto: a pier or a quay out of the sea, a ship's
-    // side (you come over the rail from above, or climb it), the shore from a deck
+    // side (a wall: you come over her rail from above), the shore from a deck
     if (g && g.world === w) {
       const L = this.ledgeAt(g, x, y);
       if (L) { this.blocked = L; return false; }
@@ -1018,23 +1020,28 @@ export class Actor extends Entity {
 
   /**
    * A ledge in the way at (x, y) — too high to step onto from where your feet
-   * are — or null: a ship's side from outside her (unless you come over the
-   * rail from above), or, out of the sea or off a deck, a pier, a quay or a
-   * bank (slopes, stairs and steps on land are walked). { top (m), dx, dy
-   * (the way you were going), ship? }.
+   * are — or null: a ship's side from outside her (below her rail: you come
+   * aboard from above it), or, out of the sea or off a deck, a pier, a quay
+   * or a bank (slopes, stairs and steps on land are walked).
+   * { top (m), dx, dy (the way you were going), ship? } — a ship's side is a
+   * wall, nothing to grab and haul yourself up.
    */
   ledgeAt(g, x, y) {
     const w = g.world;
     const air = (this.z || 0) > 0.05 || !!this.vz;
     let feet = null;
-    // a hull: solid from outside, below her rail (from a deck, another ship's)
-    if (g.ships.length && g.hullAt) {
-      const hk = g.hullAt(x, y, 0.15);
-      if (hk && hk.ship !== this.deck?.ship && g.hullAt(this.x, this.y, 0.15)?.ship !== hk.ship) {
-        feet = this.feetH(g);
-        const top = hk.rail;
-        // (only you come aboard over the rail: townsfolk on a pier don't wander onto a boat below)
-        if (this.inWater || !this.isPlayer || feet < top - 0.1) return this.blockedBy(x, y, top, hk);
+    // a hull: her side is solid to anyone outside her, from her keel up to her
+    // rail (from a deck, another ship's) — already up against her (where she
+    // came alongside you, say), you can still get clear of her
+    if (g.ships.length && g.hullWall) {
+      const hk = g.hullWall(this, x, y);
+      if (hk) {
+        const here = g.hullWall(this, this.x, this.y, hk.ship);
+        if (!here || hk.depth > here.depth + 1e-3) return this.blockedBy(x, y, shipLift(hk.ship, g.env?.time || 0, hk.u, hk.v, hk.top), hk);
+      } else if (!this.isPlayer && !this.crewId) {
+        // (only you and your crew come aboard over a rail: townsfolk on a pier don't wander down onto a boat below it)
+        const hb = g.hullAt(x, y, 0.15);
+        if (hb && hb.ship !== this.deck?.ship && g.hullAt(this.x, this.y, 0.15)?.ship !== hb.ship) return this.blockedBy(x, y, hb.rail, hb);
       }
     }
     const t = w.type(x, y);
@@ -1118,12 +1125,14 @@ export class Actor extends Entity {
 
   /**
    * Haul yourself up onto a ledge you ran into (see ledgeAt): a pier, a quay
-   * or a bank out of the water, or — from a jump — a ship's rail. Only if it's
+   * or a bank out of the water, or a roof's eave from a jump. Only if it's
    * within reach (from the water you kick up to a pier; on your feet, about
    * chest high) and there's room to stand on top. True if the climb began.
+   * (A ship's side isn't one: it's a wall, and you come aboard over her rail
+   * from above it.)
    */
   climbOnto(game, L) {
-    if (this.climb || this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root) return false;
+    if (L.ship || this.climb || this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root) return false;
     if (this.inWater && ((this.fruit && !this.gills) || this.under)) return false;
     const s = this.look?.scale || 1;
     const air = (this.z || 0) > 0.05 || !!this.vz;
@@ -1139,12 +1148,6 @@ export class Actor extends Entity {
         return true;
       }
       return false;
-    }
-    if (L.ship) {
-      // over her rail where you grabbed it, onto the deck just inside
-      const spot = boardingSpot(game, L.ship, L.x, L.y);
-      this.startClimb(game, { ship: L.ship, t: spot.t, v: spot.v });
-      return true;
     }
     for (const d of [0.4, 0.6, 0.85]) {
       const x = game.world.wx(L.x + L.dx * d), y = L.y + L.dy * d;
@@ -1253,18 +1256,36 @@ export class Actor extends Entity {
     this.lastLanded = game.time || 0;
   }
 
-  /** Airborne just inside a ship's bulwark (over her side, not yet over the deck): come down on the deck there. */
-  insideRail(game) {
-    if (!((this.z || 0) > 0.02 || this.vz)) return null;
-    const hk = game.hullAt(this.x, this.y, 0);
-    if (!hk || this.feetH(game) < hk.deckH - 0.05) return null;
-    const sh = hk.ship, d = shipDims(sh.def);
-    const t = clamp(hk.t, 0.05, 0.95), room = Math.max(0, hbAt(t, d.B) * d.walk - 0.22);
-    const p = deckToWorld(sh, t, clamp(hk.v, -room, room));
-    const dk = game.deckAt(p.x, p.y, 0);
-    if (!dk || dk.ship !== sh || dk.solid) return null;
-    this.x = game.world.wx(p.x); this.y = p.y;
-    return dk;
+  /**
+   * Off any deck, and up against a hull below her rail (see hullWall): come
+   * down on her rail on your way in over it and you're on her deck, just
+   * inside it; on your way out (or anywhere outside the line of her rail) you
+   * go on down her side — kept clear of her timbers all the way to the water
+   * as she flares out under you, never in under her. (A swimmer she's come
+   * down on is pushed out from under her the same way.) The deck you came
+   * down on, if any.
+   */
+  overSide(game) {
+    if (this.climb || this.flying) return null;
+    const hk = game.hullWall(this, this.x, this.y);
+    if (!hk) return null;
+    const s = hk.ship, d = shipDims(s.def), w = game.world;
+    const sg = hk.v >= 0 ? 1 : -1, c = Math.cos(s.heading), sn = Math.sin(s.heading), av = Math.abs(hk.v);
+    // (the deck's edge, and the outside of her rail at its top)
+    const inner = hbAt(hk.t, d.B) * d.walk, face = sideAt(d, hk.t, hk.top);
+    const inward = -(this.vx * -sn + this.vy * c) * sg;
+    const air = (this.z || 0) > 0.02 || !!this.vz;
+    const coming = av < inner || (av < face && (inward > 0.3 || (inward > -0.3 && face - av > av - inner)));
+    if (coming && air && !this.inWater && hk.hh >= hk.floor - 0.1) {
+      const t = clamp(hk.t, 0.05, 0.95), room = Math.max(0, hbAt(t, d.B) * d.walk - 0.22);
+      const p = deckToWorld(s, t, clamp(hk.v, -room, room));
+      const dk = game.deckAt(p.x, p.y, 0);
+      if (dk && dk.ship === s && !dk.solid) { this.x = w.wx(p.x); this.y = p.y; return dk; }
+    }
+    // out from her side to clear it at the height you're at
+    const dv = sg * (hk.side + this.r + 0.02) - hk.v;
+    this.x = w.wx(this.x - sn * dv); this.y += c * dv;
+    return null;
   }
 
   updateMovement(dt, game, knocked) {
@@ -1353,8 +1374,9 @@ export class Actor extends Entity {
       if (!this.under) this.shoveFromHull(game, dk.ship);
       dk = null;
     }
-    // (in over her side, just inside the bulwark: onto the deck, not into the sea)
-    if (!dk && !was && !this.inWater && game.hullAt && game.ships.length) dk = this.insideRail(game);
+    // (come down on a ship's rail, or alongside her below it: onto her deck if
+    // you're on your way in over it, else down her side — see overSide)
+    if (!dk && !was && game.hullWall && game.ships.length) dk = this.overSide(game);
     if (dk && was && dk.ship === was.ship) {
       // off the edge of an upper deck: drop to the one below (stairs are gentler than this)
       const drop = was.h - dk.h;

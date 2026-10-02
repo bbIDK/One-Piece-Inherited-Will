@@ -765,9 +765,17 @@ export function hullProfile(d, t) {
   ];
 }
 
-/** Half-width of the outside of a big hull at height y, t along. */
-export function skinAt(d, t, y) {
-  const pr = hullProfile(d, t), hb = hbAt(t, d.B);
+/** A small hull's cross-section (the rowboat's), rail to keel, as the 3D view builds it: [fraction of the half-beam, height]. */
+export function smallProfile(d, t) {
+  const top = topAt(d, t), dk = d.deckY;
+  return [
+    [0.965, top], [0.975, top - 0.1], [0.995, dk + (d.open ? 0.02 : 0)], [1.0, dk - 0.12], [1.0, dk * 0.55],
+    [0.975, dk * 0.12], [0.9, -d.D * 0.25], [0.68, -d.D * 0.62], [0.36, -d.D * 0.9], [0, -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4))],
+  ];
+}
+
+/** The half-width a cross-section (rail to keel) has at height y — the rail's above it, nothing below the keel. */
+function profileWidth(pr, hb, y) {
   if (y >= pr[0][1]) return pr[0][0] * hb;
   for (let i = 0; i < pr.length - 1; i++) {
     const [w0, y0] = pr[i], [w1, y1] = pr[i + 1];
@@ -775,6 +783,17 @@ export function skinAt(d, t, y) {
   }
   return 0;
 }
+
+/** Half-width of the outside of a big hull at height y, t along. */
+export function skinAt(d, t, y) { return profileWidth(hullProfile(d, t), hbAt(t, d.B), y); }
+
+/**
+ * Half-width of the outside of any hull — a big ship's or the rowboat's —
+ * at height y (above her waterline), t along: her side, where someone
+ * alongside her meets it (in at the rail on the big ships' tumblehome, out
+ * at her widest near the water, in again under it to the keel).
+ */
+export function sideAt(d, t, y) { return d.big ? skinAt(d, t, y) : profileWidth(smallProfile(d, t), hbAt(t, d.B), y); }
 /** Half-width of the inside of the bulwarks (the deck's edge) at height y. */
 export const innerAt = (d, t, y) => Math.max(0.05, skinAt(d, t, y) - 0.2);
 

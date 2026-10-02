@@ -24,7 +24,8 @@ export function findInteraction(game, p) {
     return null;
   }
   // on foot / swimming (boarding is by hand: jump onto a deck from a pier or
-  // another deck, or climb her side from the water — Space at the hull)
+  // another deck — over her rail, never up her side — or into a rowboat from
+  // the water)
   const cands = [];
   if (p.inWater && p.fruit && !p.gills && !p.climb) {
     // a Devil Fruit user in the sea can't climb, but can grab a line thrown from the deck

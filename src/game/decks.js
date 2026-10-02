@@ -1,8 +1,15 @@
 // Walking the decks of ships. A ship's deck (main deck, quarterdeck and
 // forecastle) is solid ground for anyone standing on it, and carries them
 // along as the ship sails or turns; the bulwarks keep you aboard unless you
-// jump over the rail, and you can't swim through a hull — you climb aboard.
-import { deckPoint, deckToWorld, helmPoint, shipDims, hullSolid, shipLift, hullPoint, hbAt, levelAt } from '../world/hull.js';
+// jump over the rail, and a hull's side is a wall to anyone outside her, up
+// to her rail: you come aboard from above it (a jump from a pier or another
+// deck), or up her ladder from the water.
+import { deckPoint, deckToWorld, helmPoint, shipDims, hullSolid, shipLift, hullPoint, hbAt, levelAt, topAt, sideAt, floorAt } from '../world/hull.js';
+
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+
+/** How close to the top of a rail your feet have to be to get over it (a leg swung over a waist-high wall). */
+export const RAIL_CLEAR = 0.2;
 
 export function installDecks(game) {
   // taking the helm, you look out over the bow (at a rowboat's oars, down a
@@ -44,6 +51,46 @@ export function installDecks(game) {
       if (!h) continue;
       h.ship = s; h.rail = shipLift(s, time, h.u, h.v, h.top); h.deckH = shipLift(s, time, h.u, h.v, h.floor);
       return h;
+    }
+    return null;
+  };
+  /**
+   * How high (m above the sea, as she rides now) the top of a ship's rail is
+   * where (x, y) crosses her side: you're over her bulwark once your feet are
+   * up there (see RAIL_CLEAR), and against it while they aren't.
+   */
+  game.railAt = (s, x, y) => {
+    const d = shipDims(s.def), c = Math.cos(s.heading), sn = Math.sin(s.heading);
+    const dx = game.world.dx(s.x, x), dy = y - s.y, u = dx * c + dy * sn, v = -dx * sn + dy * c;
+    return shipLift(s, game.env?.time || 0, u, v, topAt(d, clamp01((u + d.L / 2) / d.L)));
+  };
+  /**
+   * Is `a` (feet at the height they are now) up against a hull at (x, y) —
+   * their body inside her side, below her rail? { ship, t, u, v, side (her
+   * half-width at their height), depth (how far in), top (her rail), hh (the
+   * feet, in her frame), floor (her deck there) } — or null. Not the ship
+   * they stand on (`only`: just that one). Over her rail you're clear of her
+   * side; below her keel, a diver passes under her.
+   */
+  game.hullWall = (a, x, y, only = null) => {
+    const w = game.world, time = game.env?.time || 0, r = a.r ?? 0.28, sc = a.look?.scale || 1;
+    let feet = null;
+    for (const s of game.ships) {
+      if (s.sunk || s.alive === false || s === a.deck?.ship || (only && s !== only)) continue;
+      const d = shipDims(s.def), R = d.L * 0.56 + r + 1;
+      const dx = w.dx(s.x, x), dy = y - s.y;
+      if (dx * dx + dy * dy > R * R) continue;
+      const c = Math.cos(s.heading), sn = Math.sin(s.heading), u = dx * c + dy * sn, v = -dx * sn + dy * c;
+      const t = (u + d.L / 2) / d.L, tc = clamp01(t);
+      if (Math.abs(t - tc) * d.L > r) continue;
+      if (feet === null) feet = a.feetH(game);
+      const hh = feet - shipLift(s, time, u, v, 0), top = topAt(d, tc);
+      if (hh >= top - RAIL_CLEAR) continue;
+      // (the body from the feet up to the head, or as far as her rail)
+      const y1 = Math.min(top, hh + 1.7 * sc);
+      const side = Math.max(sideAt(d, tc, hh), sideAt(d, tc, (hh + y1) / 2), sideAt(d, tc, y1));
+      const depth = side + r - Math.abs(v);
+      if (depth > 0) return { ship: s, t: tc, u, v, side, depth, top, hh, floor: floorAt(d, tc) };
     }
     return null;
   };

@@ -3,8 +3,8 @@
 // prowl — each with its crew on deck, sailing smoothly around the coasts.
 // Pirates (and, once you're wanted, the Marines) come for your ship.
 //
-// Come alongside and board, swim up and climb aboard, or jump across from your
-// own deck, and you're raiding her: the crew fights for their ship. Beat them
+// Come alongside and jump across onto her deck from your own, and you're
+// raiding her: the crew fights for their ship. Beat them
 // and the hold is yours to plunder (the ship herself isn't: new ships come
 // only from a harbour's shipwright, see shipwrights.js). Raiding anyone but
 // pirates is piracy, and the bounty that comes with it grows the way One
@@ -16,7 +16,7 @@ import { board } from './interact.js';
 import { regionAt, REGION, isGrandLine, isCalmBelt, isBlue } from '../world/constants.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { RNG } from '../core/rng.js';
-import { placeOnDeck, helmSpot, hatchSpot, deckDist, freeDeckSpot, boardingSpot } from './decks.js';
+import { placeOnDeck, helmSpot, hatchSpot, deckDist, freeDeckSpot } from './decks.js';
 import { shipDims } from '../world/hull.js';
 import { SHIPS } from '../data/ships.js';
 import { wantedTier } from './wanted.js';
@@ -45,9 +45,7 @@ export function installTraffic(game) {
   T.spawn = (o) => spawnShip(game, T, game.player, regionAt(game.player.x, game.player.y), o);
 
   // Boarding is done by hand: heave to alongside, leave the helm, and jump
-  // across onto her deck — or swim to her and climb the side (jump against
-  // the hull). Landing on a deck is what starts a raid (see tick).
-  game.climbAboard = (p, k) => climbAboard(game, T, p, k);
+  // across onto her deck. Landing on a deck is what starts a raid (see tick).
   const prevSea = game.seaInteraction;
   game.seaInteraction = (p, s) => {
     const other = prevSea ? prevSea(p, s) : null;
@@ -434,22 +432,6 @@ function welcomeAboard(game, s) {
   game.log(`The crew of the ${s.name} salute as you come aboard.`, '#90caf9');
 }
 
-/**
- * Swimming (or wading) against a hull and jumping: you haul yourself up her
- * side and over the rail onto the deck there — any ship, however tall.
- */
-function climbAboard(game, T, p, k) {
-  if (!(p.inWater || p.wading) || p.under || p.climb || (p.fruit && !p.gills)) return false;
-  const hk = game.hullAt(p.x, p.y, 1.1);
-  const s = hk?.ship;
-  if (!s || s.sunk || s.alive === false) return false;
-  const spot = boardingSpot(game, s, p.x, p.y);
-  game.fx.ripple?.(p.x, p.y, 1 + k * 0.5);
-  p.startClimb(game, { ship: s, t: spot.t, v: spot.v });
-  game.log(s.owner === 'player' ? `You climb back aboard the ${s.name}.` : `You haul yourself up the side of the ${s.name} and over the rail!`, s.owner === 'player' ? '#b0bec5' : '#ffe082');
-  return true;
-}
-
 /** Plunder what's in the hold. */
 function plunder(game, s) {
   const tr = s.traffic;
@@ -500,6 +482,7 @@ function footInteraction(game, T, p) {
     // (her helm stays hers: ships are bought from a harbour's shipwright, not taken)
     return null;
   }
-  // (in the water beside a hull there's no prompt: jump against her side to climb aboard)
+  // (in the water beside a hull there's no prompt: her side's a wall, and a
+  // rowboat's low one you jump over)
   return null;
 }

@@ -15,7 +15,7 @@ import { canvasTexture } from './materials.js';
 import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat, U } from './props/mats.js';
-import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock } from '../world/hull.js';
+import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock, smallProfile } from '../world/hull.js';
 import { bigHull, bigInterior, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging } from './bigship.js';
 
 // a coated ship's bubble (see the coating, below): a soap film, its colours
@@ -71,7 +71,6 @@ const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t
 
 // ---------------------------------------------------------------- dimensions
 // (the hull's shape is shared with the game: see world/hull.js)
-const keelAt = (d, t) => -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
 
 // ---------------------------------------------------------------- palette
 function palette(def) {
@@ -111,13 +110,8 @@ export function hullGeometry(def) {
   const k = new Mesher();
   const N = 22;
   // ---- the planked shell: rings of profile points from the rail to the keel
-  const prof = (t) => {
-    const top = topAt(d, t), dk = d.deckY;
-    return [
-      [0.965, top], [0.975, top - 0.1], [0.995, dk + (d.open ? 0.02 : 0)], [1.0, dk - 0.12], [1.0, dk * 0.55],
-      [0.975, dk * 0.12], [0.9, -d.D * 0.25], [0.68, -d.D * 0.62], [0.36, -d.D * 0.9], [0, keelAt(d, t)],
-    ];
-  };
+  // (its shape is shared with the game, which keeps people out of it: hull.js smallProfile)
+  const prof = (t) => smallProfile(d, t);
   const band = [P.cap, P.bulwark, P.wale, P.plank, P.plank2, P.plank, P.bottom, shade(P.bottom, -0.1), P.bottom];
   const NP = 10;
   const pos = [], idx = [], triCol = [];

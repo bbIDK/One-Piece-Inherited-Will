@@ -70,7 +70,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | Mouse | look around | look around |
 | V | first person / third person | |
 | WASD | move where you look | W/S sails, A/D steer (at a rowboat's oars: W/S set the rowing pace, which she keeps, A/D turn) |
-| Space | jump (hold to charge it); at a pier, a bank or a ship's side, climb up; jump at a house and catch its eave to haul yourself onto the roof | row (works without wind) |
+| Space | jump (hold to charge it); at a pier or a bank, climb up (a ship's side is a wall: you come aboard over her rail); jump at a house and catch its eave to haul yourself onto the roof | row (works without wind) |
 | Shift | hold to sprint, for as long as you like; tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
 | X | draw your weapon, or put it back in its sheath. Sheathed, a click is a punch (your fist style); drawn, it's the weapon's moves, listed with their keys at the bottom right (the skills you've learned for it; greyed while they cool down). At the helm or the oars it's always sheathed | |
@@ -303,7 +303,10 @@ it's open:
   brig. There is wind, Grand Line weather that changes its mind, and rogue
   waves.
 - Boarding is done by hand: jump onto a deck from a pier or from your own
-  deck, or swim to a ship and climb her side. Every deck can be walked, and
+  deck, coming down on it over her rail (her side is a wall to anyone below
+  it; a rowboat's low side you jump over from the water). Her bulwark is a
+  low wall: jump it to go over the side, into the sea or onto the pier
+  she's tied up at. Every deck can be walked, and
   everyone aboard rides her gentle roll and pitch with her, feet on the
   planks (on a big ship the ends rise and fall a good way), and shoes rest on
   a floor or a deck rather than sinking into it.
