@@ -101,7 +101,7 @@ class LampLight {
     if (this.pools.instanceColor) this.pools.instanceColor.needsUpdate = true;
     // indoors: the room's own lamp
     const p = game.player;
-    const room = p && w.interiorAt ? w.interiorAt(p.x, p.y) : null;
+    const room = p && w.interiorAt ? w.roomOf(p) : null;
     if (room) {
       const floor = v.terrain?.hf?.floorY ? v.terrain.hf.floorY(room) : ctx.ground(p.x, p.y);
       const fd = room.fd || 3;

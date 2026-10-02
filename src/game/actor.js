@@ -12,6 +12,8 @@ import { HIGH_DECK } from '../render3d/height.js';
 import { clamp, TAU, angleDiff } from '../core/math.js';
 import { shipDims, hbAt, deckToWorld, shipLift } from '../world/hull.js';
 import { placeOnDeck, boardingSpot } from './decks.js';
+import { bw } from '../world/bframe.js';
+import { heightsOf } from '../world/interiors.js';
 
 // what a step sounds like on each kind of ground
 const STEP_SOUND = [];
@@ -33,6 +35,11 @@ for (const [k, ts] of Object.entries({
 const deckY = (dk, time) => shipLift(dk.ship, time, dk.u ?? (dk.t - 0.5) * dk.ship.def.length, dk.v || 0, dk.h);
 
 const smooth01 = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+// Up on the roofs (render3d/roofs.js): how far up a roof you walk on at a step
+// (a slope, a ridge, the step onto a neighbour's), and how far you can come
+// down onto one in the air; how far over your feet you reach for an eave you
+// jump at, arms up (×scale).
+const ROOF_STEP = 0.55, ROOF_AIR = 0.12, ROOF_REACH = 2.15;
 
 // No stamina: what you can do is paced by cooldowns. A dodge comes back after
 // DODGE_CD seconds (less with Agility); a guard broken by a heavy blow can't be
@@ -460,7 +467,7 @@ export class Actor extends Entity {
       game.audio?.sfx('splash_out', this);
     } else {
       this.z = Math.min(0, this.z || 0) + 0.001;
-      game.fx.burst(this.x, this.y, 6 + Math.round(k * 8), { color: ['#d7ccc8', '#efebe9'], speed: 1.8 + k * 1.6, z: 0.05, vz: 0.5, g: 1.2, life: 0.4 + k * 0.2, kind: 'dust', size: 0.16 + k * 0.08, grow: 0.35 });
+      game.fx.burst(this.x, this.y, 6 + Math.round(k * 8), { color: ['#d7ccc8', '#efebe9'], speed: 1.8 + k * 1.6, z: 0.05 + this.liftUnder(game), vz: 0.5, g: 1.2, life: 0.4 + k * 0.2, kind: 'dust', size: 0.16 + k * 0.08, grow: 0.35 });
       game.audio?.sfx(k > 0.5 ? 'jump_big' : 'jump', this);
     }
     this.vz = v;
@@ -525,7 +532,7 @@ export class Actor extends Entity {
     }
     this.vz -= grav * dt;
     this.z += this.vz * dt;
-    if (this.vz > 0) return; // (still rising: out of the water too)
+    if (this.vz > 0) { this.underRoof(game); return; } // (still rising: out of the water too)
     if (wd > 0 && z0 > 0 && this.z <= 0) {
       const impact = -this.vz;
       game.fx.ripple?.(this.x, this.y, Math.min(2.4, 0.8 + impact * 0.1));
@@ -547,11 +554,44 @@ export class Actor extends Entity {
       // what's left of the fall takes you on under for a moment
       if (deep) this.plungeV = Math.min(impact, Math.max(0, wd - 1.5) * 4);
       else if (impact > 3) {
-        game.fx.burst(this.x, this.y, Math.min(14, 4 + impact), { color: wd > 0 ? ['#e1f5fe', '#b3e5fc'] : ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 1.5 + impact * 0.25, z: 0.05, vz: 0.6, g: 1.2, life: 0.45, kind: wd > 0 ? undefined : 'dust', size: 0.18, grow: 0.4 });
+        game.fx.burst(this.x, this.y, Math.min(14, 4 + impact), { color: wd > 0 ? ['#e1f5fe', '#b3e5fc'] : ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 1.5 + impact * 0.25, z: 0.05 + this.liftUnder(game), vz: 0.6, g: 1.2, life: 0.45, kind: wd > 0 ? undefined : 'dust', size: 0.18, grow: 0.4 });
         if (impact > 9 && !wd) game.audio?.sfx('land_heavy', this);
         if (this.isPlayer) game.emit('playerLand', impact);
       }
     }
+  }
+
+  /**
+   * Rising under a roof — an eave out over the street, the roof over a room —
+   * your head stops at it; out under an eave and making for the house, with
+   * its edge in reach of your hands, you catch hold and haul yourself up
+   * onto it instead (see roofs.js).
+   */
+  underRoof(game) {
+    const v3 = game.view3d;
+    if (!v3?.roofAt || this.deck || this.inWater || this.climb || this.flying) return;
+    const s = this.look?.scale || 1;
+    const g = this.lastG ?? this.groundAt(game, this.x, this.y), feet = g + (this.z || 0);
+    // (in a room, its ceiling: the floor above, under the roof of a taller house)
+    const room = game.world.roomOf(this);
+    if (room) {
+      const ceil = g + heightsOf(room).ceil;
+      if (feet + 1.72 * s > ceil - 0.1) { this.z = Math.max(0, ceil - 0.1 - 1.72 * s - g); this.vz = 0; }
+      return;
+    }
+    const top = v3.roofAt(this.x, this.y);
+    if (!top || top.h <= feet + ROOF_AIR) return;
+    const head = feet + 1.72 * s;
+    if (head < top.h - 0.3) return;
+    const w = game.world, b = top.b;
+    if (b && !w.roomOf(this) && top.h - feet <= ROOF_REACH * s) {
+      // (which way the house is: you have to be going for it)
+      const fd = Math.max(2, b.fd || 3), mid = bw(b, 0, -fd / 2);
+      const hx = w.dx(this.x, mid.x), hy = mid.y - this.y, hl = Math.hypot(hx, hy) || 1;
+      if ((this.intent.mx * hx + this.intent.my * hy) / hl > 0.3 && this.climbOnto(game, { x: this.x, y: this.y, top: top.h, dx: hx / hl, dy: hy / hl, roof: b })) return;
+    }
+    this.z = Math.max(0, top.h - 0.3 - 1.72 * s - g);
+    this.vz = 0;
   }
 
   /**
@@ -658,6 +698,7 @@ export class Actor extends Entity {
       return;
     }
     const feet0 = this.bridgeNear(game) ? this.feetH(game) : 0;
+    this.roofRef(game);
     this.updateMovement(dt, game, false);
     this.underDeck(game, feet0);
     this.followGround(game);
@@ -701,6 +742,7 @@ export class Actor extends Entity {
   /** What's underfoot, for the sound of a step: a deck, a floor, a pier, or the ground's own kind. */
   footSurface(game) {
     if (this.deck) return 'wood';
+    if (this.roofed) return 'stone'; // (up on the tiles)
     const w = game.world, x = this.x, y = this.y;
     const f = w.floorRec ? w.floorRec(x, y) : null;
     if (f && f.interior) {
@@ -795,6 +837,29 @@ export class Actor extends Entity {
   /** The body is a circle around (x, y) (the 3D model stands centred on it). */
   canOccupy(w, x, y) {
     const r = this.r, e = r * 0.85;
+    // up on the roofs (or in the air over them): a roof at your feet or below
+    // them is somewhere to be, whatever stands in the street under it; one
+    // too high (a chimney, a taller house) is a wall — and in the air, an
+    // edge within reach to grab (see climbOnto)
+    if (this.feetRef != null && this.game?.world === w) {
+      const top = this.game.view3d.roofAt(x, y);
+      if (top) {
+        const air = (this.z || 0) > 0.05 || !!this.vz;
+        if (top.h <= this.feetRef + this.roofStep()) return true;
+        // (too high to step onto, from up at the height of the roofs — not
+        // walking under an eave in the street, or about a room under it — is
+        // a wall: the foot of a chimney, a taller house)
+        const above = this.roofed || this.upTop || (this.feetRef > this.game.view3d.ground(x, y) + 2.2 && !w.interiorAt(this.x, this.y));
+        if (air && !w.roomOf(this) && top.h - this.feetRef <= ROOF_REACH * (this.look?.scale || 1)) {
+          const l = Math.hypot(w.dx(this.x, x), y - this.y) || 1;
+          this.blocked = { x, y, top: top.h, dx: w.dx(this.x, x) / l, dy: (y - this.y) / l, roof: top.b };
+          // (a wall or the solid footprint under it stops you there; an eave over the street, only once you reach it)
+          if (above || w.solid(x, y) || w.hitsProp(x, y, r * 0.9, true)) return false;
+          this.blocked = null;
+        }
+        if (above) return false;
+      }
+    }
     // ship decks: walk anywhere on your deck (the rail keeps you aboard unless
     // you jump over it); nobody swims or walks through a hull
     const g = this.game;
@@ -840,12 +905,47 @@ export class Actor extends Entity {
     return !w.hitsProp(x, y, r * 0.9);
   }
 
-  /** Where feet rest at (x, y) off a deck: the ground, a pier or a quay — over the sea, its surface. */
+  /**
+   * Where feet rest at (x, y) off a deck: the ground, a pier or a quay — over
+   * the sea, its surface; up on the roofs, the roof there (one you're at or
+   * above, as this step began: see roofRef), not the street under it.
+   */
   groundAt(game, x, y) {
     if (!game.view3d) return 0;
     // (under a high bridge the ground is what's under its deck: the water, or the bed of it)
     if (this.belowDeck && game.world.type(x, y) === T.BRIDGE) return Math.max(game.view3d.terrain.terrainAt(x, y), 0);
-    return game.view3d.ground(x, y);
+    const g = game.view3d.ground(x, y);
+    if (this.feetRef != null) {
+      const r = game.view3d.roofAt?.(x, y, this.feetRef + this.roofStep());
+      if (r && r.h > g + 0.01) return r.h;
+    }
+    return g;
+  }
+
+  /**
+   * How far over your feet a roof can be and still be somewhere you go onto
+   * (not a wall, or an eave over your head): a step on foot, or in the air
+   * among the roofs (a jump up the slope you're on, onto a neighbour's a
+   * little higher); from the street, coming down onto it.
+   */
+  roofStep() {
+    const air = (this.z || 0) > 0.05 || !!this.vz;
+    return air && !this.roofed && !this.upTop ? ROOF_AIR : ROOF_STEP;
+  }
+
+  /**
+   * How high your feet are as this step begins (m above the sea) — kept only
+   * while that could put you up on the roofs: in the air, or already up
+   * there. Grounded in the street, the roofs are nothing to you.
+   */
+  roofRef(game) {
+    const air = (this.z || 0) > 0.05 || !!this.vz;
+    this.feetRef = (this.roofed || air) && this.lastG != null && !this.deck && !this.inWater && !this.flying && game.view3d?.roofAt ? this.lastG + (this.z || 0) : null;
+  }
+
+  /** How far the ground under you stands over the street (on a roof: its height; else 0) — for dust at your feet. */
+  liftUnder(game) {
+    return this.roofed && this.lastG != null && game.view3d ? Math.max(0, this.lastG - game.view3d.ground(this.x, this.y)) : 0;
   }
 
   /** The top of a bridge's deck at (x, y) if it stands high over the water there (room to swim under it), else null. */
@@ -968,8 +1068,14 @@ export class Actor extends Entity {
    * same way. (A big move at once — a door, a teleport — is not a fall.)
    */
   followGround(game) {
-    if (this.deck || this.inWater || this.flying || !game.view3d) { this.lastG = null; return; }
+    if (this.deck || this.inWater || this.flying || !game.view3d) { this.lastG = null; this.roofed = false; this.upTop = false; return; }
     const g = this.groundAt(game, this.x, this.y), last = this.lastG;
+    // (standing on — or come down over — a roof, not the street under it; and
+    // in the air off one, still up among them, not in the room under it,
+    // until you land somewhere that isn't a roof)
+    this.roofed = this.feetRef != null && g > game.view3d.ground(this.x, this.y) + 0.01;
+    if (this.roofed) this.upTop = true;
+    else if (!((this.z || 0) > 0.05 || this.vz)) this.upTop = false;
     const moved = last == null ? 0 : Math.abs(game.world.dx(this.lastGX, this.x)) + Math.abs(this.y - this.lastGY);
     this.lastG = g; this.lastGX = this.x; this.lastGY = this.y;
     if (last == null || moved > 2) return;
@@ -1004,7 +1110,18 @@ export class Actor extends Entity {
     const s = this.look?.scale || 1;
     const air = (this.z || 0) > 0.05 || !!this.vz;
     const from = this.inWater ? this.groundAt(game, this.x, this.y) : this.feetH(game);
-    if (L.top - from > (this.inWater ? 2.1 : air ? 1.35 : 1.25) * s) return false;
+    if (L.top - from > (this.inWater ? 2.1 : L.roof && air ? ROOF_REACH : air ? 1.35 : 1.25) * s) return false;
+    if (L.roof) {
+      // up over the eave (or the edge of the roof you jumped at), onto the roof just inside it
+      for (const d of [0.35, 0.55, 0.8, 1.1]) {
+        const x = game.world.wx(L.x + L.dx * d), y = L.y + L.dy * d;
+        const top = game.view3d?.roofAt?.(x, y, L.top + 0.7);
+        if (!top || top.h < L.top - 0.5) continue;
+        this.startClimb(game, { x, y, h: top.h, roof: true });
+        return true;
+      }
+      return false;
+    }
     if (L.ship) {
       // over her rail where you grabbed it, onto the deck just inside
       const spot = boardingSpot(game, L.ship, L.x, L.y);
@@ -1091,7 +1208,11 @@ export class Actor extends Entity {
     const up = smooth01(0, 0.65, k), over = smooth01(0.35, 1, k);
     const h = c.h0 + (h1 - c.h0) * up + Math.sin(Math.PI * k) * 0.14;
     this.x = w.wx(x0 + w.dx(x0, x1) * over); this.y = y0 + (y1 - y0) * over;
-    this.z = h - this.groundAt(game, this.x, this.y);
+    // (onto a roof: what you're on, from where you are on the way up)
+    if (to.roof) this.feetRef = h;
+    const g = this.groundAt(game, this.x, this.y);
+    this.z = h - g;
+    if (to.roof) { this.lastG = g; this.lastGX = this.x; this.lastGY = this.y; this.roofed = g > (game.view3d?.ground(this.x, this.y) ?? g) + 0.01; }
     this.airT = 0.1;
     if (k >= 1) this.endClimb(game);
   }
@@ -1104,7 +1225,11 @@ export class Actor extends Entity {
     const f = this.facing;
     if (fall) { this.vz = -0.01; this.lastG = null; return; }
     if (c.to.ship) placeOnDeck(game, this, c.to.ship, c.to.t, c.to.v);
-    else { this.x = game.world.wx(c.to.x); this.y = c.to.y; this.z = 0; this.vz = 0; this.lastG = null; }
+    else if (c.to.roof) {
+      // (on your feet on the roof: it's what you stand on from here)
+      this.x = game.world.wx(c.to.x); this.y = c.to.y; this.z = 0; this.vz = 0;
+      this.lastG = c.to.h; this.lastGX = this.x; this.lastGY = this.y; this.roofed = true;
+    } else { this.x = game.world.wx(c.to.x); this.y = c.to.y; this.z = 0; this.vz = 0; this.lastG = null; }
     this.facing = f;
     this.airT = 0;
     this.lastLanded = game.time || 0;

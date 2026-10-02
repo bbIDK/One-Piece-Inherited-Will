@@ -21,6 +21,7 @@ import { shipLift } from '../world/hull.js';
 import { Ship } from '../game/ship.js';
 import { buildBuilding, setNightWindows } from './buildings3d.js';
 import { FarBuildings } from './farbuildings.js';
+import { RoofIndex } from './roofs.js';
 import { COLLIDE } from '../world/objects.js';
 import { PROP_BUILDERS, VIEWS, FRAME_HOOKS, registerPropBuilder } from './registry.js';
 import { fadeProp, fadeWarmUp } from './props/instancer.js';
@@ -364,6 +365,12 @@ export class Renderer3D {
   }
 
   ground(x, y) { return this.terrain.groundAt(x, y); }
+
+  /**
+   * The top of the buildings over (x, y) — the roof as it's drawn, see
+   * roofs.js — no higher than `under` (m) when that's given: { h, b }, or null.
+   */
+  roofAt(x, y, under) { return this.roofs && this.roofs.world === this.world ? this.roofs.at(x, y, under) : null; }
 
   /** World point → CSS pixels (h metres above the ground). Off-screen when behind the camera. */
   project(x, y, h = 0) {
@@ -834,7 +841,7 @@ export class Renderer3D {
     this.built.delete(o);
     this.animProps.delete(o);
     this.retiring.delete(o);
-    if (o.kind === 'building') this.buildingsFar.show(o, true);
+    if (o.kind === 'building') { this.buildingsFar.show(o, true); this.roofs?.remove(o); }
   }
 
   /**
@@ -858,6 +865,9 @@ export class Renderer3D {
         this.buildProp(o);
       }
     }
+    // with time to spare, what's up on top of the nearest building still without it
+    // (made when first asked for otherwise — up to 10 ms for a big one, all at once)
+    if (this.roofs?.world === this.world && performance.now() < end) this.roofs.warm(ox, oy, 40, end);
   }
 
   buildProp(o) {
@@ -874,6 +884,8 @@ export class Renderer3D {
     v.position.set(w.dx(O.x, o.x), v.userData.noGround ? 0 : v.userData.founded ? this.ground(o.x, o.y) : this.propY(o), o.y - O.y);
     // (a building's far block gives way once its model is in the scene)
     if (o.kind === 'building') v.addEventListener('added', () => { if (!this.retiring.has(o)) this.buildingsFar.show(o, false); });
+    // (and what it's made of up top can be stood on)
+    if (o.kind === 'building') (this.roofs?.world === w ? this.roofs : (this.roofs = new RoofIndex(w))).add(o, v, v.position.y);
     this.attach(v, this.props);
     if (v.userData.update) this.animProps.set(o, v);
     if (CAM_FADE[o.kind]) {
@@ -1037,6 +1049,7 @@ export class Renderer3D {
         gh = Math.max(gh, this.terrain.terrainAt(a.x, a.y));
       } else if (a.belowDeck) gh = a.groundAt(game, a.x, a.y) - (a.wading || 0); // (under a high bridge: see actor.js underDeck)
       else if (a.wading) gh = this.ground(a.x, a.y) - a.wading; // (feet on the bottom of the shallows)
+      else if (a.roofed && a.lastG != null) gh = a.lastG; // (up on a roof: see actor.js groundAt)
       else gh = this.ground(a.x, a.y);
       v.root.position.set(dx, gh + (a.z || 0), dy);
       v.update(a, env, this.ctx, { camYaw3, redraw: i < 18 || (this.frame + i) % 3 === 0 });

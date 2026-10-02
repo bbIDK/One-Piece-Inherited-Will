@@ -70,7 +70,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | Mouse | look around | look around |
 | V | first person / third person | |
 | WASD | move where you look | W/S sails, A/D steer (at a rowboat's oars: W/S set the rowing pace, which she keeps, A/D turn) |
-| Space | jump; at a pier, a bank or a ship's side, climb up | row (works without wind) |
+| Space | jump (hold to charge it); at a pier, a bank or a ship's side, climb up; jump at a house and catch its eave to haul yourself onto the roof | row (works without wind) |
 | Shift | hold to sprint, for as long as you like; tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
 | X | draw your weapon, or put it back in its sheath. Sheathed, a click is a punch (your fist style); drawn, it's the weapon's moves, listed with their keys at the bottom right (the skills you've learned for it; greyed while they cool down). At the helm or the oars it's always sheathed | |
@@ -109,6 +109,17 @@ rearrange them.
   boulder on a hillside lies along the slope. A house on an upper town over
   a lower quay stands on a tall stone base rather than sunk into the hill.
   Every town is walked in every direction to check (`barrierhunt`, below).
+- **Up on the roofs.** A building's roof is as solid as it's drawn: land on
+  it from a high enough jump, or jump at the house, keep going for it, and
+  catch the eave (within reach of your hands, arms up) to haul yourself up.
+  Up there you walk its slopes and ridge, step across to the next roof, and
+  a chimney or a taller house is a wall. Walk off the edge and you drop to
+  the street. A plain human reaches a one-storey house with a running,
+  charged jump; Minks, Longlegs and other high jumpers get onto taller ones.
+  Jumping under an eave, your head stops at it. A gateway's posts are solid
+  (a torii's two, a gate's stone pillars, an arch's legs) and you walk
+  between them. A Wano house's veranda is a step up, not something you walk
+  through.
 - **Bridges** join the land at the height of the land. Most islands stand
   high over the sea, so a bridge across a river, a canal or a channel between
   two parts of an island spans it high over the water, sloping from one bank

@@ -38349,9 +38349,9 @@ ${GLSL}
       }
       return null;
     };
-    P4.group = (build2, clear3 = 0.55) => {
+    P4.group = (build3, clear3 = 0.55) => {
       const mark = P4.items.length;
-      const g = build2();
+      const g = build3();
       const mine = P4.items.slice(mark);
       if (g && mine.length) {
         const b = mine.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
@@ -41116,7 +41116,7 @@ ${GLSL}
       const time = game.env?.time || 0;
       let eyeH = 1.72 * scale;
       let gx = 0, gz = 0;
-      let gh = p.flying && p.alt != null ? p.alt : p.deck ? shipLift(p.deck.ship, time, p.deck.u ?? (p.deck.t - 0.5) * p.deck.ship.def.length, p.deck.v || 0, p.deck.h) + (p.z || 0) : (p.belowDeck ? p.groundAt(game, p.x, p.y) : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
+      let gh = p.flying && p.alt != null ? p.alt : p.deck ? shipLift(p.deck.ship, time, p.deck.u ?? (p.deck.t - 0.5) * p.deck.ship.def.length, p.deck.v || 0, p.deck.h) + (p.z || 0) : (p.belowDeck ? p.groundAt(game, p.x, p.y) : p.roofed && p.lastG != null ? p.lastG : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
       let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
       if (!sailing) this.seaPitch = 0;
       if (sailing) {
@@ -41191,7 +41191,7 @@ ${GLSL}
         cx += -fz * this.shoulder;
         cz += fx * this.shoulder;
         const w = game.world;
-        const room = !sailing && w?.interiorAt?.(p.x, p.y);
+        const room = !sailing && w?.roomOf?.(p);
         this.tilt = 0;
         const moved = w && this.armAt ? Math.hypot(w.dx(this.armAt.x, p.x), p.y - this.armAt.y) : 0;
         if (sailing || room || !w || moved > 3) this.arm = void 0;
@@ -41227,10 +41227,11 @@ ${GLSL}
             }
           }
           const n = Math.min(48, Math.max(16, Math.ceil(len / 0.25)));
+          const roofs = game.view3d?.roofAt ? game.view3d : null;
           const hitAt = (up) => {
             for (let i = 1; i <= n; i++) {
-              const t = i / n, bx = px2 + ux * t, bz = pz2 + uz * t;
-              if (w.isBlocked(bx, bz) || ships && !own && game.shipSolidAt(bx, bz, oy + (uy + up) * t, true)) return t;
+              const t = i / n, bx = px2 + ux * t, bz = pz2 + uz * t, by = oy + (uy + up) * t;
+              if (w.isBlocked(bx, bz) && !(roofs && roofs.roofAt(bx, bz)?.h < by - 0.3) || ships && !own && game.shipSolidAt(bx, bz, by, true)) return t;
             }
             return 0;
           };
@@ -41272,7 +41273,9 @@ ${GLSL}
           const floor = game.seaDepth ? -game.seaDepth(p.x + cx, p.y + cz) : -99;
           cy = Math.max(floor + 0.4, Math.min(cy, -0.35));
         } else {
-          const under = ground(p.x + cx, p.y + cz) + 0.4;
+          let under = ground(p.x + cx, p.y + cz) + 0.4;
+          const rf = p.roofed ? game.view3d?.roofAt?.(p.x + cx, p.y + cz, oy) : null;
+          if (rf && rf.h + 0.4 > under) under = rf.h + 0.4;
           if (cy < under) cy = under;
         }
         cam.position.set(cx, cy, cz);
@@ -50803,8 +50806,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (s && ALIAS2[s]) return ALIAS2[s];
     return "short";
   }
-  function capF(V4, sb, fringe2, bend = 0.07, cy = -0.04) {
-    const b = pb().M(-1.07, sb).q(-V4, cy, -0.06).arc(0, cy, V4, V4 - 0.01, 180, 360).q(1.07, sb, -0.06).L(0.93, -0.02);
+  function capF(V5, sb, fringe2, bend = 0.07, cy = -0.04) {
+    const b = pb().M(-1.07, sb).q(-V5, cy, -0.06).arc(0, cy, V5, V5 - 0.01, 180, 360).q(1.07, sb, -0.06).L(0.93, -0.02);
     b.zz(fringe2, bend).L(-0.93, -0.02).Z();
     return b.s;
   }
@@ -50821,22 +50824,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var NAPE_S = [[-0.84, 0.34], [-0.72, 0.56], [-0.6, 0.34], [-0.46, 0.46]];
   var backRound = (b) => b.C(-0.46, -1.16, -1.13, -0.86, -1.15, -0.22).C(-1.16, 0.1, -1.06, 0.36, -0.94, 0.52);
-  function capB(V4, nape, sy = 0.3, cy = -0.04) {
-    return pb().M(-1.08, sy).q(-V4, cy, -0.06).arc(0, cy, V4, V4 - 0.01, 180, 360).q(1.08, sy, -0.06).zz(nape, 0.06).L(-1.08, sy).Z().s;
+  function capB(V5, nape, sy = 0.3, cy = -0.04) {
+    return pb().M(-1.08, sy).q(-V5, cy, -0.06).arc(0, cy, V5, V5 - 0.01, 180, 360).q(1.08, sy, -0.06).zz(nape, 0.06).L(-1.08, sy).Z().s;
   }
   var NAPE_B = [[0.92, 0.46], [0.8, 0.3], [0.64, 0.6], [0.48, 0.4], [0.3, 0.64], [0.12, 0.42], [-0.06, 0.66], [-0.24, 0.42], [-0.42, 0.62], [-0.58, 0.4], [-0.76, 0.56], [-0.9, 0.34]];
   var SHINE_F = [0, -0.06, 0.8, 200, 262, 4];
   var SHINE_S = [-0.1, -0.12, 0.8, 204, 266, 4];
   var SHINE_B = [0, -0.06, 0.8, 202, 262, 4];
   var CROWN_STRAND = "M-0.5 -0.86 Q-0.2 -0.7 -0.02 -0.44";
-  function slickF(V4, hl) {
-    return pb().M(-1, 0.12).q(-V4, -0.06, -0.04).arc(0, -0.06, V4, V4 - 0.02, 180, 360).q(1, 0.12, -0.04).L(0.94, 0.02).C(0.9, -0.3, 0.72, hl + 0.04, 0.48, hl + 0.02).Q(0.2, hl + 0.04, 0, hl - 0.06).Q(-0.2, hl + 0.04, -0.48, hl + 0.02).C(-0.72, hl + 0.04, -0.9, -0.3, -0.94, 0.02).Z().s;
+  function slickF(V5, hl) {
+    return pb().M(-1, 0.12).q(-V5, -0.06, -0.04).arc(0, -0.06, V5, V5 - 0.02, 180, 360).q(1, 0.12, -0.04).L(0.94, 0.02).C(0.9, -0.3, 0.72, hl + 0.04, 0.48, hl + 0.02).Q(0.2, hl + 0.04, 0, hl - 0.06).Q(-0.2, hl + 0.04, -0.48, hl + 0.02).C(-0.72, hl + 0.04, -0.9, -0.3, -0.94, 0.02).Z().s;
   }
-  function slickS(V4, hlx = 0.9) {
-    return pb().M(hlx, -0.5).C(hlx - 0.12, -0.96, 0.42, -V4 + 0.02, 0.08, -V4 + 0.02).C(-0.52, -V4 + 0.02, -V4, -0.8, -V4, -0.16).C(-V4, 0.16, -1, 0.36, -0.88, 0.5).C(-0.6, 0.44, -0.4, 0.24, -0.24, -0.02).Q(0, -0.12, 0.14, -0.02).L(0.2, 0.16).L(0.3, -0.12).C(0.46, -0.36, 0.7, -0.48, hlx, -0.5).Z().s;
+  function slickS(V5, hlx = 0.9) {
+    return pb().M(hlx, -0.5).C(hlx - 0.12, -0.96, 0.42, -V5 + 0.02, 0.08, -V5 + 0.02).C(-0.52, -V5 + 0.02, -V5, -0.8, -V5, -0.16).C(-V5, 0.16, -1, 0.36, -0.88, 0.5).C(-0.6, 0.44, -0.4, 0.24, -0.24, -0.02).Q(0, -0.12, 0.14, -0.02).L(0.2, 0.16).L(0.3, -0.12).C(0.46, -0.36, 0.7, -0.48, hlx, -0.5).Z().s;
   }
-  function slickB(V4, ny = 0.58) {
-    return pb().M(-1, 0.36).q(-V4, -0.06, -0.05).arc(0, -0.06, V4, V4 - 0.02, 180, 360).q(1, 0.36, -0.05).Q(0.5, ny, 0, ny).Q(-0.5, ny, -1, 0.36).Z().s;
+  function slickB(V5, ny = 0.58) {
+    return pb().M(-1, 0.36).q(-V5, -0.06, -0.05).arc(0, -0.06, V5, V5 - 0.02, 180, 360).q(1, 0.36, -0.05).Q(0.5, ny, 0, ny).Q(-0.5, ny, -1, 0.36).Z().s;
   }
   var FRINGE_SHORT = [[0.84, -0.44], [0.7, -0.24], [0.54, -0.56], [0.36, -0.26], [0.18, -0.58], [-0.02, -0.25], [-0.2, -0.57], [-0.4, -0.27], [-0.58, -0.53], [-0.78, -0.25], [-0.88, -0.44]];
   var STRANDS_SHORT = "M0.54 -0.56 Q0.5 -0.78 0.38 -0.92 M0.18 -0.58 Q0.16 -0.82 0.06 -0.98 M-0.2 -0.57 Q-0.2 -0.8 -0.28 -0.95 M-0.58 -0.53 Q-0.56 -0.72 -0.66 -0.84";
@@ -55906,7 +55909,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const att = b.attach || {};
     const AL = !!att.left, AR = !!att.right;
     const ex = (sx, d) => (sx < 0 ? AL : AR) ? 0 : d;
-    const V4 = variant(b, S4, storeys, fw, fd, role);
+    const V5 = variant(b, S4, storeys, fw, fd, role);
     if (S4.wall === "hut" || rt === "hut") return finish(b, hut(k, b, S4, fw, fd, H3, wallCol, roofCol), null, H3 + fd);
     let sink = 2;
     const terr = ctx?.terrain || ctx?.ground;
@@ -55920,7 +55923,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (Number.isFinite(lo)) sink = Math.min(16, Math.max(2, base2 - lo + 0.4));
     }
     const fx0 = trimX(ex, -1, 0.08, fw), fx1 = trimX(ex, 1, 0.08, fw);
-    B2(k, fx0, -sink, -fd - 0.08, fx1, plinth, 0.08, V4.baseCol || baseCol, { outline: 0.03 });
+    B2(k, fx0, -sink, -fd - 0.08, fx1, plinth, 0.08, V5.baseCol || baseCol, { outline: 0.03 });
     const ruined = rt === "ruin" || S4.wall === "stone";
     if (ruined) {
       ruinWalls(k, b, fw, fd, H3, wallCol);
@@ -55929,17 +55932,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.save();
       if (lean) k.rotateZ(lean * ((b.v || 0) % 2 ? 1 : -1));
       let holes = null;
-      const groundCol = V4.groundCol || wallCol;
+      const groundCol = V5.groundCol || wallCol;
       if (enter) {
         const ops = hollowWalls(k, b, { fw, fd, y0: plinth, top: Hc, wallCol: groundCol });
         if (H3 > Hc + 0.01) B2(k, -fw / 2, Hc, -fd, fw / 2, H3, 0, wallCol, { outline: 0.045 });
         holes = holesOf(ops, doorOf(b), plinth);
-      } else if (V4.groundCol && H3 > Hc + 0.01) {
+      } else if (V5.groundCol && H3 > Hc + 0.01) {
         B2(k, -fw / 2, plinth - 0.05, -fd, fw / 2, Hc, 0, groundCol, { outline: 0.045 });
         B2(k, -fw / 2, Hc, -fd, fw / 2, H3, 0, wallCol, { outline: 0.045 });
       } else B2(k, -fw / 2, plinth - 0.05, -fd, fw / 2, H3, 0, wallCol, { outline: 0.045 });
       wallDetail(k, b, S4, fw, fd, H3, plinth, storeys, storeyH, wallCol, g, holes, ex, sink);
-      if (V4.jetty) jetty(k, S4, fw, plinth, storeys, storeyH, H3, Hc, V4.jetty, wallCol, ex);
+      if (V5.jetty) jetty(k, S4, fw, plinth, storeys, storeyH, H3, Hc, V5.jetty, wallCol, ex);
       k.restore();
     }
     const dd = doorAt(k, b, S4, door.x, g, wallCol, big && fw >= 5, enter ? plinth : null, sink);
@@ -55950,10 +55953,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const y = plinth + f * storeyH + 1.55 * g;
       const pane = f === 0 ? panes : null;
       const W4 = windowSlots(b, f);
-      const jz = f > 0 && V4.jetty ? V4.jetty : 0;
+      const jz = f > 0 && V5.jetty ? V5.jetty : 0;
       W4.front.forEach((x, i) => {
-        if (f > 0 && V4.balcony && Math.abs(x - V4.balcony.x) < V4.balcony.w / 2 + 0.3 && f === 1) return;
-        const flowers = (S4.flowers || V4.flowers) && (i + f + (b.v || 0)) % 2 === 0;
+        if (f > 0 && V5.balcony && Math.abs(x - V5.balcony.x) < V5.balcony.w / 2 + 0.3 && f === 1) return;
+        const flowers = (S4.flowers || V5.flowers) && (i + f + (b.v || 0)) % 2 === 0;
         windowAt(k, b, S4, x, y, winW, winH, jz, lit(b, wi++), wallCol, flowers, pane);
       });
       for (const sx of [-1, 1]) {
@@ -55966,8 +55969,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       }
     }
-    if (V4.balcony) balcony(k, b, S4, V4.balcony, plinth + storeyH, wallCol, lit(b, wi++));
-    if (V4.canopy && !(V4.balcony && Math.abs(V4.balcony.x - door.x) < (V4.balcony.w + dd.dw + 0.9) / 2)) canopy2(k, door, dd, V4.canopy, roofCol);
+    if (V5.balcony) balcony(k, b, S4, V5.balcony, plinth + storeyH, wallCol, lit(b, wi++));
+    if (V5.canopy && !(V5.balcony && Math.abs(V5.balcony.x - door.x) < (V5.balcony.w + dd.dw + 0.9) / 2)) canopy2(k, door, dd, V5.canopy, roofCol);
     let top = H3;
     if (!ruined) {
       if (rt === "flat") top += flatRoof(k, b, S4, fw, fd, H3, wallCol, roofCol, ex);
@@ -55995,11 +55998,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       } else if (rt === "pagoda") {
         top += pagodaRoofs(k, b, S4, fw, fd, H3, storeys, storeyH, plinth, wallCol, roofCol);
       } else {
-        const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S4.crooked ? 0.62 : 0.45) * V4.pitch));
+        const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S4.crooked ? 0.62 : 0.45) * V5.pitch));
         top += gableRoof(k, S4, b, fw / 2, hd, H3, rise, 0.4 * g, roofCol, wallCol, winter, g, ex);
-        if (V4.dormers) dormers(k, b, S4, fw, hd, H3, rise, 0.4 * g, V4.dormers, roofCol, wallCol, winter, lit(b, 30));
-        if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant" || b.style === "port" || b.style === "city") && fw >= 4 && V4.chimney) {
-          const cxh = V4.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
+        if (V5.dormers) dormers(k, b, S4, fw, hd, H3, rise, 0.4 * g, V5.dormers, roofCol, wallCol, winter, lit(b, 30));
+        if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant" || b.style === "port" || b.style === "city") && fw >= 4 && V5.chimney) {
+          const cxh = V5.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
           const yTop = H3 + rise * (1 - 0.35) + 0.9 * g;
           B2(k, cxh - 0.28 * g, H3, czh - 0.28 * g, cxh + 0.28 * g, yTop, czh + 0.28 * g, "#8d6e63", { outline: 0.03 });
           B2(k, cxh - 0.36 * g, yTop, czh - 0.36 * g, cxh + 0.36 * g, yTop + 0.16, czh + 0.36 * g, "#5d4037");
@@ -56363,17 +56366,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function variant(b, S4, storeys, fw, fd, role) {
     const R4 = (i) => hash3(b.x, b.y, i + 0.71);
     const house = role === "house";
-    const V4 = { pitch: 0.82 + R4(1) * 0.4, chimney: R4(2) < 0.8 ? R4(3) < 0.5 ? -1 : 1 : 0 };
-    if (house && storeys >= 2 && (S4.wall === "timber" || S4.wall === "log") && R4(4) < 0.55) V4.jetty = 0.32;
+    const V5 = { pitch: 0.82 + R4(1) * 0.4, chimney: R4(2) < 0.8 ? R4(3) < 0.5 ? -1 : 1 : 0 };
+    if (house && storeys >= 2 && (S4.wall === "timber" || S4.wall === "log") && R4(4) < 0.55) V5.jetty = 0.32;
     if (house && storeys >= 2 && ["plaster", "brick", "adobe", "smooth"].includes(S4.wall) && fw >= 4.5 && R4(5) < 0.45) {
       const w = Math.min(fw - 1.4, 1.5 + R4(6) * 1.2);
-      V4.balcony = { x: (R4(7) - 0.5) * Math.max(0, fw - w - 1.4), w, d: 0.72 };
+      V5.balcony = { x: (R4(7) - 0.5) * Math.max(0, fw - w - 1.4), w, d: 0.72 };
     }
-    if (house && R4(8) < 0.55 && S4.door !== "noren" && S4.door !== "arch" && S4.wall !== "hut") V4.canopy = { d: 0.62 + R4(9) * 0.25, kind: R4(10) < 0.5 ? "gable" : "lean" };
-    if (fw >= 5 && fd >= 4 && R4(11) < 0.4) V4.dormers = fw >= 7.5 ? 2 : 1;
-    if (R4(12) < 0.3) V4.flowers = true;
-    if (storeys >= 2 && (S4.wall === "timber" || S4.wall === "plaster") && R4(13) < 0.35) V4.groundCol = R4(14) < 0.5 ? "#b3aa9c" : "#a0634a";
-    return V4;
+    if (house && R4(8) < 0.55 && S4.door !== "noren" && S4.door !== "arch" && S4.wall !== "hut") V5.canopy = { d: 0.62 + R4(9) * 0.25, kind: R4(10) < 0.5 ? "gable" : "lean" };
+    if (fw >= 5 && fd >= 4 && R4(11) < 0.4) V5.dormers = fw >= 7.5 ? 2 : 1;
+    if (R4(12) < 0.3) V5.flowers = true;
+    if (storeys >= 2 && (S4.wall === "timber" || S4.wall === "plaster") && R4(13) < 0.35) V5.groundCol = R4(14) < 0.5 ? "#b3aa9c" : "#a0634a";
+    return V5;
   }
   function jetty(k, S4, fw, plinth, storeys, storeyH, H3, Hc, j, wallCol, ex) {
     const beam2 = S4.beam || shade2(wallCol, -0.5);
@@ -56390,8 +56393,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       B2(k, -fw / 2, y, j - 0.02, fw / 2, y + 0.18, j + 0.05, beam2);
     }
   }
-  function balcony(k, b, S4, V4, y, wallCol, litOn) {
-    const { x, w, d } = V4;
+  function balcony(k, b, S4, V5, y, wallCol, litOn) {
+    const { x, w, d } = V5;
     const rail2 = S4.wall === "adobe" ? "#6d4c33" : S4.wall === "brick" ? "#2d3436" : shade2(wallCol, -0.55);
     B2(k, x - w / 2, y - 0.12, 0, x + w / 2, y + 0.03, d, shade2(wallCol, -0.18), { outline: 0.02 });
     for (const sx of [-1, 1]) k.add(box(0.09, 0.5, 0.09), { at: [x + sx * (w / 2 - 0.18), y - 0.6, 0.05], rot: [0.6, 0, 0], color: shade2(wallCol, -0.3) });
@@ -56579,7 +56582,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const winter = S4.snow || ctx?.world && ctx.world.climate(b.x, b.y - 1) === CLIMATE.WINTER;
     const att = b.attach || {};
     const oL = att.left ? 0 : 0.3 * g, oR = att.right ? 0 : 0.3 * g;
-    const V4 = variant(b, S4, storeys, fw, fd, role);
+    const V5 = variant(b, S4, storeys, fw, fd, role);
     const x0 = -fw / 2 + IN2, x1 = fw / 2 - IN2, z0 = -fd + IN2, z1 = -IN2;
     if (S4.wall === "hut" || rt === "hut") {
       const rx = fw / 2, rz = fd / 2;
@@ -56603,14 +56606,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       if (Number.isFinite(lo)) sink = Math.min(16, Math.max(2, base2 - lo + 0.4));
     }
-    B2(k, x0, -sink, z0, x1, plinth, z1, V4.baseCol || S4.base);
+    B2(k, x0, -sink, z0, x1, plinth, z1, V5.baseCol || S4.base);
     const ruined = rt === "ruin" || S4.wall === "stone";
     if (ruined) {
       ruinWalls(k, b, fw, fd, H3, wallCol);
       return;
     }
-    if (V4.groundCol && H3 > Hc + 0.01) {
-      B2(k, x0, plinth - 0.05, z0, x1, Hc, z1, V4.groundCol);
+    if (V5.groundCol && H3 > Hc + 0.01) {
+      B2(k, x0, plinth - 0.05, z0, x1, Hc, z1, V5.groundCol);
       B2(k, x0, Hc, z0, x1, H3, z1, wallCol);
     } else B2(k, x0, plinth - 0.05, z0, x1, H3, z1, wallCol);
     const winW = 0.85 * g, winH = 1.05 * g;
@@ -56627,7 +56630,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const y = plinth + f * storeyH + 1.55 * g;
       const W4 = windowSlots(b, f);
       W4.front.forEach((x) => {
-        if (f === 1 && V4.balcony && Math.abs(x - V4.balcony.x) < V4.balcony.w / 2 + 0.3) return;
+        if (f === 1 && V5.balcony && Math.abs(x - V5.balcony.x) < V5.balcony.w / 2 + 0.3) return;
         pane(x, y, -IN2 + 0.02, lit(b, wi++));
       });
       for (const sx of [-1, 1]) {
@@ -56674,10 +56677,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (let f = 1; f < storeys; f++) farRoof(k, fw / 2, hd, plinth + f * storeyH - 0.25, 0.55, 0.5, 0.5, 0.5, rw, roofCol, wallCol);
       farRoof(k, fw / 2, hd, H3 - 0.1, Math.min(2.8, Math.max(1.3, fd * 0.5)), 0.7, 0.7, 0.7, rw, roofCol, wallCol);
     } else {
-      const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S4.crooked ? 0.62 : 0.45) * V4.pitch));
+      const rise = Math.min(3.6 * g, Math.max(1.2, fd * (S4.crooked ? 0.62 : 0.45) * V5.pitch));
       farRoof(k, fw / 2, hd, H3, rise - 0.02, 0.36 * g, oL, oR, fw, winter ? C("#f4f9ff") : roofCol, wallCol);
-      if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant" || b.style === "port" || b.style === "city") && fw >= 4 && V4.chimney) {
-        const cxh = V4.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
+      if ((b.style === "village" || b.style === "snow" || b.style === "town" || b.style === "giant" || b.style === "port" || b.style === "city") && fw >= 4 && V5.chimney) {
+        const cxh = V5.chimney * (fw / 2 - 0.9 * g), czh = -hd - hd * 0.35;
         const yTop = H3 + rise * (1 - 0.35) + 0.9 * g;
         B2(k, cxh - 0.26 * g, H3, czh - 0.26 * g, cxh + 0.26 * g, yTop + 0.14, czh + 0.26 * g, "#8d6e63");
       }
@@ -56857,6 +56860,180 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   };
 
+  // src/render3d/roofs.js
+  var CELL3 = 0.25;
+  var PAD = 0.9;
+  var FLAT = 0.35;
+  var HASH = 8;
+  var NONE = -1e9;
+  var V = new Vector3();
+  var RoofIndex = class {
+    constructor(world) {
+      this.world = world;
+      this.cells = /* @__PURE__ */ new Map();
+      this.recs = /* @__PURE__ */ new Map();
+    }
+    /** A building's model is up: its grid is made when first asked for. `group` stands at height `y0`. */
+    add(b, group3, y0) {
+      this.remove(b);
+      const f = bfoot(b);
+      const r = { b, group: group3, y0, x0: f.x0 - PAD, x1: f.x1 + PAD, y0w: f.y0 - PAD, y1w: f.y1 + PAD, grid: null, keys: [] };
+      for (let cy = Math.floor(r.y0w / HASH); cy <= Math.floor(r.y1w / HASH); cy++) {
+        for (let cx = Math.floor(r.x0 / HASH); cx <= Math.floor(r.x1 / HASH); cx++) {
+          const k = this.key(cx, cy);
+          let list = this.cells.get(k);
+          if (!list) this.cells.set(k, list = []);
+          list.push(r);
+          r.keys.push(k);
+        }
+      }
+      this.recs.set(b, r);
+    }
+    remove(b) {
+      const r = this.recs.get(b);
+      if (!r) return;
+      for (const k of r.keys) {
+        const list = this.cells.get(k);
+        if (!list) continue;
+        const i = list.indexOf(r);
+        if (i >= 0) list.splice(i, 1);
+        if (!list.length) this.cells.delete(k);
+      }
+      this.recs.delete(b);
+    }
+    /**
+     * Work on the grid of the nearest building within `r` m of (x, y) still
+     * without one, until it's done or it's `until` (performance.now()): a
+     * big one is made over a few frames, never in one go.
+     */
+    warm(x, y, r, until) {
+      let best = null, bd = r * r;
+      for (const rec of this.recs.values()) {
+        if (rec.grid !== null) continue;
+        const dx = this.world.dx(x, rec.b.x), dy = rec.b.y - y, d = dx * dx + dy * dy - (rec.make ? 1e6 : 0);
+        if (d < bd) {
+          bd = d;
+          best = rec;
+        }
+      }
+      if (best) build2(best, until);
+    }
+    key(cx, cy) {
+      const w = this.world, n = Math.ceil(w.width / HASH);
+      if (w.wrap) cx = (cx % n + n) % n;
+      return cy * n + cx;
+    }
+    /**
+     * The highest surface over (x, y) up on the buildings there — { h (m,
+     * above the sea), b (the building) } — or null. Below `under` only
+     * (the roof you'd land on from there, not one higher up over your head)
+     * when it's given.
+     */
+    at(x, y, under = Infinity) {
+      const w = this.world;
+      const list = this.cells.get(this.key(Math.floor(w.wx(x) / HASH), Math.floor(y / HASH)));
+      if (!list) return null;
+      let best = null;
+      for (const r of list) {
+        const dx = w.dx(r.x0, x);
+        if (dx < 0 || dx > r.x1 - r.x0 || y < r.y0w || y > r.y1w) continue;
+        if (r.grid === null) build2(r, Infinity);
+        const g = r.grid;
+        if (!g) continue;
+        const h2 = sample(g, bl(r.b, x, y, w));
+        if (h2 === null) continue;
+        const top = r.y0 + h2;
+        if (top <= under && (!best || top > best.h)) best = { h: top, b: r.b };
+      }
+      return best;
+    }
+  };
+  function build2(r, until) {
+    const m = r.make || (r.make = startGrid(r));
+    if (!stepGrid(m, until)) return;
+    r.grid = m.any ? { h: m.h, NX: m.NX, NZ: m.NZ, X0: m.X0, Z0: m.Z0 } : false;
+    r.make = null;
+  }
+  function startGrid(r) {
+    const b = r.b, fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+    const X0 = -fw / 2 - PAD, Z0 = -fd - PAD;
+    const NX = Math.ceil((fw + 2 * PAD) / CELL3), NZ = Math.ceil((fd + 2 * PAD) / CELL3);
+    const grp = r.group;
+    grp.updateMatrixWorld(true);
+    const inv = new Matrix4().copy(grp.matrixWorld).invert();
+    const meshes = [];
+    grp.traverse((o) => {
+      if (o.isMesh && o.geometry?.attributes?.position && !o.userData.noRoof) meshes.push({ o, m: new Matrix4().multiplyMatrices(inv, o.matrixWorld) });
+    });
+    return { h: new Float32Array(NX * NZ).fill(NONE), NX, NZ, X0, Z0, meshes, mi: 0, t: 0, P: null, any: false };
+  }
+  function stepGrid(g, until) {
+    const { h: h2, NX, NZ, X0, Z0 } = g;
+    let n = 0;
+    while (g.mi < g.meshes.length) {
+      const { o, m } = g.meshes[g.mi];
+      const pos = o.geometry.attributes.position, idx = o.geometry.index;
+      if (!g.P) {
+        g.P = new Float32Array(pos.count * 3);
+        for (let i = 0; i < pos.count; i++) {
+          V.fromBufferAttribute(pos, i).applyMatrix4(m);
+          g.P[i * 3] = V.x;
+          g.P[i * 3 + 1] = V.y;
+          g.P[i * 3 + 2] = V.z;
+        }
+      }
+      const P4 = g.P, count2 = idx ? idx.count : pos.count;
+      for (; g.t + 2 < count2; g.t += 3) {
+        if ((++n & 127) === 0 && performance.now() > until) return false;
+        const t = g.t;
+        const ia = (idx ? idx.getX(t) : t) * 3, ib = (idx ? idx.getX(t + 1) : t + 1) * 3, ic = (idx ? idx.getX(t + 2) : t + 2) * 3;
+        const ax = P4[ia], ay = P4[ia + 1], az = P4[ia + 2], bx = P4[ib], by = P4[ib + 1], bz = P4[ib + 2], cx = P4[ic], cy = P4[ic + 1], cz = P4[ic + 2];
+        const ux = bx - ax, uy = by - ay, uz = bz - az, vx = cx - ax, vy = cy - ay, vz = cz - az;
+        const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        const len = Math.hypot(nx, ny, nz);
+        if (!(len > 1e-9) || Math.abs(ny) / len < FLAT) continue;
+        const det = (bz - cz) * (ax - cx) + (cx - bx) * (az - cz);
+        if (Math.abs(det) < 1e-12) continue;
+        const i0 = Math.max(0, Math.floor((Math.min(ax, bx, cx) - X0) / CELL3)), i1 = Math.min(NX - 1, Math.floor((Math.max(ax, bx, cx) - X0) / CELL3));
+        const j0 = Math.max(0, Math.floor((Math.min(az, bz, cz) - Z0) / CELL3)), j1 = Math.min(NZ - 1, Math.floor((Math.max(az, bz, cz) - Z0) / CELL3));
+        for (let j = j0; j <= j1; j++) {
+          const pz2 = Z0 + (j + 0.5) * CELL3;
+          for (let i = i0; i <= i1; i++) {
+            const px2 = X0 + (i + 0.5) * CELL3;
+            const l1 = ((bz - cz) * (px2 - cx) + (cx - bx) * (pz2 - cz)) / det;
+            const l2 = ((cz - az) * (px2 - cx) + (ax - cx) * (pz2 - cz)) / det;
+            const l3 = 1 - l1 - l2;
+            if (l1 < -1e-4 || l2 < -1e-4 || l3 < -1e-4) continue;
+            const y = l1 * ay + l2 * by + l3 * cy, q2 = j * NX + i;
+            if (y > h2[q2]) {
+              h2[q2] = y;
+              g.any = true;
+            }
+          }
+        }
+      }
+      g.mi++;
+      g.t = 0;
+      g.P = null;
+    }
+    return true;
+  }
+  function sample(g, { lx, lz }) {
+    const fx = (lx - g.X0) / CELL3 - 0.5, fz = (lz - g.Z0) / CELL3 - 0.5;
+    const i = Math.floor(fx), j = Math.floor(fz);
+    const ci = Math.round(fx), cj = Math.round(fz);
+    if (ci < 0 || cj < 0 || ci >= g.NX || cj >= g.NZ) return null;
+    const own = g.h[cj * g.NX + ci];
+    if (own <= NONE) return null;
+    if (i < 0 || j < 0 || i + 1 >= g.NX || j + 1 >= g.NZ) return own;
+    const a = g.h[j * g.NX + i], b = g.h[j * g.NX + i + 1], c = g.h[(j + 1) * g.NX + i], d = g.h[(j + 1) * g.NX + i + 1];
+    if (a <= NONE || b <= NONE || c <= NONE || d <= NONE) return own;
+    const lo = Math.min(a, b, c, d), hi = Math.max(a, b, c, d);
+    if (hi - lo > 0.6) return own;
+    const tx = fx - i, tz = fz - j;
+    return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
+  }
+
   // src/world/objects.js
   var CHUNK2 = 32;
   var COLLIDE = {
@@ -56942,6 +57119,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (o.kind === "tree") return TRUNK[o.sub || "oak"] ?? COLLIDE.tree;
     if (TRUNK[o.kind] !== void 0) return TRUNK[o.kind];
     if (o.kind === "boat" && /flagship|perfume/i.test(o.name || "")) return [3.3, 1.15];
+    if (o.kind === "torii") return { circles: [[-1.55, 0, 0.3], [1.55, 0, 0.3]] };
+    if (o.kind === "gate") {
+      const k = /justice/i.test(o.name || "") ? 2.2 : 1;
+      return { circles: [-1, 1].flatMap((sx) => [[sx * 3.5 * k, -0.45 * k, 0.78 * k], [sx * 3.5 * k, 0.45 * k, 0.78 * k]]) };
+    }
+    if (o.kind === "arch") {
+      const n = o.name || "";
+      if (/heaven/i.test(n)) return { circles: [[-3.2, 0, 0.9], [3.2, 0, 0.9]] };
+      if (/mine|hatch|laboratory/i.test(n)) return COLLIDE.arch;
+      const [x, r, d] = /one piece|resting/i.test(n) ? [3.1, 0.5, 1.6] : [1.92, 0.38, 1.2];
+      return { circles: [-1, 1].flatMap((sx) => [[sx * x, d * 0.25, r], [sx * x, d * 0.75, r]]) };
+    }
     if (o.kind === "bell") return /harbou?r/i.test(o.name || "") ? [0.72, 0.2] : { circles: [[-1.55, 0, 0.26], [1.55, 0, 0.26]] };
     if (o.kind === "ruins") {
       const n = 3 + Math.floor(hash01(o.x, o.y, 2) * 3) % 2, a = -0.95, b = 0.6 * n - 1.45;
@@ -57006,7 +57195,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.stamp(obj, 1);
       }
       if (obj.kind === "building" && obj.style === "chinese") this.addColumns(obj);
+      if (obj.kind === "building" && obj.style === "wano" && obj.block && !isHut(obj)) this.addVeranda(obj);
       return obj;
+    }
+    /** A Wano house's raised wooden veranda along its front (see buildings3d engawa): a floor you step up onto. */
+    addVeranda(b) {
+      const fw = Math.max(2, b.fw || 3);
+      const att = b.attach || {};
+      b.veranda = { ...bbox(b, -fw / 2 - (att.left ? 0 : 0.1), fw / 2 + (att.right ? 0 : 0.1), 2e-3, 0.9), h: 0.42, o: b };
+      this.world.addFloor(b.veranda);
     }
     /** The red columns along a Chinese front stand out from the wall: they're solid (see buildings3d 'column'). */
     addColumns(b) {
@@ -57147,6 +57344,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (obj.far && this.world.farObjects) this.world.farObjects = this.world.farObjects.filter((o) => o !== obj);
       this.byId.delete(obj.id);
       this.count--;
+      if (obj.veranda) {
+        this.world.removeFloor(obj.veranda);
+        obj.veranda = null;
+      }
       if (obj.enterable) {
         this.removeInterior(obj);
         this.stamp(obj, 0);
@@ -57226,7 +57427,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
 
   // src/render3d/props/instancer.js
-  var CELL3 = 32;
+  var CELL4 = 32;
   var SUPER = 128;
   var cells = /* @__PURE__ */ new Map();
   var supers = /* @__PURE__ */ new Map();
@@ -57356,13 +57557,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return Math.hypot(nx, ny);
   }
   function cellFor(o, ctx, parent) {
-    const cx = Math.floor(o.x / CELL3), cy = Math.floor(o.y / CELL3);
+    const cx = Math.floor(o.x / CELL4), cy = Math.floor(o.y / CELL4);
     const wid = ctx?.world?.id || "";
     const key2 = `${wid}:${cx},${cy}`;
     let c = cells.get(key2);
     if (!c) {
-      c = { key: key2, wid, x0: cx * CELL3, y0: cy * CELL3, size: CELL3, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null, far: false, merged: false, sup: null };
-      const d = VIEW.world === ctx?.world ? viewDist(c.x0, c.y0, CELL3) : 0;
+      c = { key: key2, wid, x0: cx * CELL4, y0: cy * CELL4, size: CELL4, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null, far: false, merged: false, sup: null };
+      const d = VIEW.world === ctx?.world ? viewDist(c.x0, c.y0, CELL4) : 0;
       c.far = d > LOD2.far;
       if (d > LOD2.merge) join(c);
       cells.set(key2, c);
@@ -57581,7 +57782,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       const gp = mk3.parent ? mk3.parent.position : null;
       const cx = (gp ? gp.x : 0) + px2, cz = (gp ? gp.z : 0) + pz2;
-      const nx = Math.max(cx, Math.min(0, cx + CELL3)), nz = Math.max(cz, Math.min(0, cz + CELL3));
+      const nx = Math.max(cx, Math.min(0, cx + CELL4)), nz = Math.max(cz, Math.min(0, cz + CELL4));
       const d = Math.hypot(nx, nz);
       const merged = cell.merged ? d > LOD2.merge - 6 : d > LOD2.merge + 6;
       if (merged !== cell.merged && moves < 6) {
@@ -62768,6 +62969,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const t = clamp2((x - a) / (b - a), 0, 1);
     return t * t * (3 - 2 * t);
   };
+  var ROOF_STEP = 0.55;
+  var ROOF_AIR = 0.12;
+  var ROOF_REACH = 2.15;
   var DODGE_CD = 0.9;
   var SPRINT_BURST = 5;
   var SPRINT_REST = 3;
@@ -63210,7 +63414,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         game.audio?.sfx("splash_out", this);
       } else {
         this.z = Math.min(0, this.z || 0) + 1e-3;
-        game.fx.burst(this.x, this.y, 6 + Math.round(k * 8), { color: ["#d7ccc8", "#efebe9"], speed: 1.8 + k * 1.6, z: 0.05, vz: 0.5, g: 1.2, life: 0.4 + k * 0.2, kind: "dust", size: 0.16 + k * 0.08, grow: 0.35 });
+        game.fx.burst(this.x, this.y, 6 + Math.round(k * 8), { color: ["#d7ccc8", "#efebe9"], speed: 1.8 + k * 1.6, z: 0.05 + this.liftUnder(game), vz: 0.5, g: 1.2, life: 0.4 + k * 0.2, kind: "dust", size: 0.16 + k * 0.08, grow: 0.35 });
         game.audio?.sfx(k > 0.5 ? "jump_big" : "jump", this);
       }
       this.vz = v;
@@ -63273,7 +63477,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       this.vz -= grav * dt;
       this.z += this.vz * dt;
-      if (this.vz > 0) return;
+      if (this.vz > 0) {
+        this.underRoof(game);
+        return;
+      }
       if (wd > 0 && z0 > 0 && this.z <= 0) {
         const impact = -this.vz;
         game.fx.ripple?.(this.x, this.y, Math.min(2.4, 0.8 + impact * 0.1));
@@ -63292,11 +63499,44 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.lastLanded = game.time || 0;
         if (deep) this.plungeV = Math.min(impact, Math.max(0, wd - 1.5) * 4);
         else if (impact > 3) {
-          game.fx.burst(this.x, this.y, Math.min(14, 4 + impact), { color: wd > 0 ? ["#e1f5fe", "#b3e5fc"] : ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 1.5 + impact * 0.25, z: 0.05, vz: 0.6, g: 1.2, life: 0.45, kind: wd > 0 ? void 0 : "dust", size: 0.18, grow: 0.4 });
+          game.fx.burst(this.x, this.y, Math.min(14, 4 + impact), { color: wd > 0 ? ["#e1f5fe", "#b3e5fc"] : ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 1.5 + impact * 0.25, z: 0.05 + this.liftUnder(game), vz: 0.6, g: 1.2, life: 0.45, kind: wd > 0 ? void 0 : "dust", size: 0.18, grow: 0.4 });
           if (impact > 9 && !wd) game.audio?.sfx("land_heavy", this);
           if (this.isPlayer) game.emit("playerLand", impact);
         }
       }
+    }
+    /**
+     * Rising under a roof — an eave out over the street, the roof over a room —
+     * your head stops at it; out under an eave and making for the house, with
+     * its edge in reach of your hands, you catch hold and haul yourself up
+     * onto it instead (see roofs.js).
+     */
+    underRoof(game) {
+      const v3 = game.view3d;
+      if (!v3?.roofAt || this.deck || this.inWater || this.climb || this.flying) return;
+      const s = this.look?.scale || 1;
+      const g = this.lastG ?? this.groundAt(game, this.x, this.y), feet2 = g + (this.z || 0);
+      const room = game.world.roomOf(this);
+      if (room) {
+        const ceil = g + heightsOf(room).ceil;
+        if (feet2 + 1.72 * s > ceil - 0.1) {
+          this.z = Math.max(0, ceil - 0.1 - 1.72 * s - g);
+          this.vz = 0;
+        }
+        return;
+      }
+      const top = v3.roofAt(this.x, this.y);
+      if (!top || top.h <= feet2 + ROOF_AIR) return;
+      const head = feet2 + 1.72 * s;
+      if (head < top.h - 0.3) return;
+      const w = game.world, b = top.b;
+      if (b && !w.roomOf(this) && top.h - feet2 <= ROOF_REACH * s) {
+        const fd = Math.max(2, b.fd || 3), mid = bw(b, 0, -fd / 2);
+        const hx = w.dx(this.x, mid.x), hy = mid.y - this.y, hl = Math.hypot(hx, hy) || 1;
+        if ((this.intent.mx * hx + this.intent.my * hy) / hl > 0.3 && this.climbOnto(game, { x: this.x, y: this.y, top: top.h, dx: hx / hl, dy: hy / hl, roof: b })) return;
+      }
+      this.z = Math.max(0, top.h - 0.3 - 1.72 * s - g);
+      this.vz = 0;
     }
     /**
      * Flying (creative mode): WASD along where you look, Space up, C down,
@@ -63402,6 +63642,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         return;
       }
       const feet0 = this.bridgeNear(game) ? this.feetH(game) : 0;
+      this.roofRef(game);
       this.updateMovement(dt, game, false);
       this.underDeck(game, feet0);
       this.followGround(game);
@@ -63435,6 +63676,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /** What's underfoot, for the sound of a step: a deck, a floor, a pier, or the ground's own kind. */
     footSurface(game) {
       if (this.deck) return "wood";
+      if (this.roofed) return "stone";
       const w = game.world, x = this.x, y = this.y;
       const f = w.floorRec ? w.floorRec(x, y) : null;
       if (f && f.interior) {
@@ -63543,6 +63785,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /** The body is a circle around (x, y) (the 3D model stands centred on it). */
     canOccupy(w, x, y) {
       const r = this.r, e = r * 0.85;
+      if (this.feetRef != null && this.game?.world === w) {
+        const top = this.game.view3d.roofAt(x, y);
+        if (top) {
+          const air = (this.z || 0) > 0.05 || !!this.vz;
+          if (top.h <= this.feetRef + this.roofStep()) return true;
+          const above = this.roofed || this.upTop || this.feetRef > this.game.view3d.ground(x, y) + 2.2 && !w.interiorAt(this.x, this.y);
+          if (air && !w.roomOf(this) && top.h - this.feetRef <= ROOF_REACH * (this.look?.scale || 1)) {
+            const l = Math.hypot(w.dx(this.x, x), y - this.y) || 1;
+            this.blocked = { x, y, top: top.h, dx: w.dx(this.x, x) / l, dy: (y - this.y) / l, roof: top.b };
+            if (above || w.solid(x, y) || w.hitsProp(x, y, r * 0.9, true)) return false;
+            this.blocked = null;
+          }
+          if (above) return false;
+        }
+      }
       const g = this.game;
       if (g && g.deckAt && g.ships.length && this.deck) {
         const ref = this.deckRef(), sh = this.deck.ship;
@@ -63577,11 +63834,43 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (body > r * 0.9 && w.hitsProp(x, y, body, true) && !w.hitsProp(this.x, this.y, body, true)) return false;
       return !w.hitsProp(x, y, r * 0.9);
     }
-    /** Where feet rest at (x, y) off a deck: the ground, a pier or a quay — over the sea, its surface. */
+    /**
+     * Where feet rest at (x, y) off a deck: the ground, a pier or a quay — over
+     * the sea, its surface; up on the roofs, the roof there (one you're at or
+     * above, as this step began: see roofRef), not the street under it.
+     */
     groundAt(game, x, y) {
       if (!game.view3d) return 0;
       if (this.belowDeck && game.world.type(x, y) === T.BRIDGE) return Math.max(game.view3d.terrain.terrainAt(x, y), 0);
-      return game.view3d.ground(x, y);
+      const g = game.view3d.ground(x, y);
+      if (this.feetRef != null) {
+        const r = game.view3d.roofAt?.(x, y, this.feetRef + this.roofStep());
+        if (r && r.h > g + 0.01) return r.h;
+      }
+      return g;
+    }
+    /**
+     * How far over your feet a roof can be and still be somewhere you go onto
+     * (not a wall, or an eave over your head): a step on foot, or in the air
+     * among the roofs (a jump up the slope you're on, onto a neighbour's a
+     * little higher); from the street, coming down onto it.
+     */
+    roofStep() {
+      const air = (this.z || 0) > 0.05 || !!this.vz;
+      return air && !this.roofed && !this.upTop ? ROOF_AIR : ROOF_STEP;
+    }
+    /**
+     * How high your feet are as this step begins (m above the sea) — kept only
+     * while that could put you up on the roofs: in the air, or already up
+     * there. Grounded in the street, the roofs are nothing to you.
+     */
+    roofRef(game) {
+      const air = (this.z || 0) > 0.05 || !!this.vz;
+      this.feetRef = (this.roofed || air) && this.lastG != null && !this.deck && !this.inWater && !this.flying && game.view3d?.roofAt ? this.lastG + (this.z || 0) : null;
+    }
+    /** How far the ground under you stands over the street (on a roof: its height; else 0) — for dust at your feet. */
+    liftUnder(game) {
+      return this.roofed && this.lastG != null && game.view3d ? Math.max(0, this.lastG - game.view3d.ground(this.x, this.y)) : 0;
     }
     /** The top of a bridge's deck at (x, y) if it stands high over the water there (room to swim under it), else null. */
     highDeck(game, x, y) {
@@ -63695,9 +63984,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     followGround(game) {
       if (this.deck || this.inWater || this.flying || !game.view3d) {
         this.lastG = null;
+        this.roofed = false;
+        this.upTop = false;
         return;
       }
       const g = this.groundAt(game, this.x, this.y), last = this.lastG;
+      this.roofed = this.feetRef != null && g > game.view3d.ground(this.x, this.y) + 0.01;
+      if (this.roofed) this.upTop = true;
+      else if (!((this.z || 0) > 0.05 || this.vz)) this.upTop = false;
       const moved = last == null ? 0 : Math.abs(game.world.dx(this.lastGX, this.x)) + Math.abs(this.y - this.lastGY);
       this.lastG = g;
       this.lastGX = this.x;
@@ -63741,7 +64035,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const s = this.look?.scale || 1;
       const air = (this.z || 0) > 0.05 || !!this.vz;
       const from = this.inWater ? this.groundAt(game, this.x, this.y) : this.feetH(game);
-      if (L2.top - from > (this.inWater ? 2.1 : air ? 1.35 : 1.25) * s) return false;
+      if (L2.top - from > (this.inWater ? 2.1 : L2.roof && air ? ROOF_REACH : air ? 1.35 : 1.25) * s) return false;
+      if (L2.roof) {
+        for (const d of [0.35, 0.55, 0.8, 1.1]) {
+          const x = game.world.wx(L2.x + L2.dx * d), y = L2.y + L2.dy * d;
+          const top = game.view3d?.roofAt?.(x, y, L2.top + 0.7);
+          if (!top || top.h < L2.top - 0.5) continue;
+          this.startClimb(game, { x, y, h: top.h, roof: true });
+          return true;
+        }
+        return false;
+      }
       if (L2.ship) {
         const spot = boardingSpot(game, L2.ship, L2.x, L2.y);
         this.startClimb(game, { ship: L2.ship, t: spot.t, v: spot.v });
@@ -63859,7 +64163,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const h2 = c.h0 + (h1 - c.h0) * up + Math.sin(Math.PI * k) * 0.14;
       this.x = w.wx(x0 + w.dx(x0, x1) * over);
       this.y = y0 + (y1 - y0) * over;
-      this.z = h2 - this.groundAt(game, this.x, this.y);
+      if (to.roof) this.feetRef = h2;
+      const g = this.groundAt(game, this.x, this.y);
+      this.z = h2 - g;
+      if (to.roof) {
+        this.lastG = g;
+        this.lastGX = this.x;
+        this.lastGY = this.y;
+        this.roofed = g > (game.view3d?.ground(this.x, this.y) ?? g) + 0.01;
+      }
       this.airT = 0.1;
       if (k >= 1) this.endClimb(game);
     }
@@ -63875,7 +64187,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         return;
       }
       if (c.to.ship) placeOnDeck(game, this, c.to.ship, c.to.t, c.to.v);
-      else {
+      else if (c.to.roof) {
+        this.x = game.world.wx(c.to.x);
+        this.y = c.to.y;
+        this.z = 0;
+        this.vz = 0;
+        this.lastG = c.to.h;
+        this.lastGX = this.x;
+        this.lastGY = this.y;
+        this.roofed = true;
+      } else {
         this.x = game.world.wx(c.to.x);
         this.y = c.to.y;
         this.z = 0;
@@ -64697,21 +65018,21 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return [x, y];
   }
   function earGeo(hi) {
-    const prof2 = hi ? EAR_PROF : EAR_PROF_LO, U3 = hi ? 14 : 8, V4 = prof2.length - 1, T4 = 1;
+    const prof2 = hi ? EAR_PROF : EAR_PROF_LO, U3 = hi ? 14 : 8, V5 = prof2.length - 1, T4 = 1;
     const g = grid((u, v) => {
-      const [r, z] = prof2[Math.round(v * V4)];
+      const [r, z] = prof2[Math.round(v * V5)];
       const [x, y] = earOutline(u * Math.PI * 2);
       return [EAR_CEN[0] + (x - EAR_CEN[0]) * r, EAR_CEN[1] + (y - EAR_CEN[1]) * r, z * T4];
-    }, U3, V4);
+    }, U3, V5);
     const n = g.attributes.normal, W4 = U3 + 1, a = new Vector3(), b = new Vector3();
-    for (let j = 0; j <= V4; j++) {
+    for (let j = 0; j <= V5; j++) {
       a.fromBufferAttribute(n, j * W4);
       b.fromBufferAttribute(n, j * W4 + U3);
       a.add(b).normalize();
       n.setXYZ(j * W4, a.x, a.y, a.z);
       n.setXYZ(j * W4 + U3, a.x, a.y, a.z);
     }
-    for (const j of [0, V4]) {
+    for (const j of [0, V5]) {
       a.set(0, 0, 0);
       for (let i = 0; i <= U3; i++) a.add(b.fromBufferAttribute(n, j * W4 + i));
       a.normalize();
@@ -64719,19 +65040,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     return g;
   }
-  function grid(fn, U3, V4, uv = false) {
+  function grid(fn, U3, V5, uv = false) {
     U3 = Math.max(1, Math.round(U3));
-    V4 = Math.max(1, Math.round(V4));
+    V5 = Math.max(1, Math.round(V5));
     const pos = [], uvs = [], idx = [];
-    for (let j = 0; j <= V4; j++) {
+    for (let j = 0; j <= V5; j++) {
       for (let i = 0; i <= U3; i++) {
-        const p = fn(i / U3, j / V4);
+        const p = fn(i / U3, j / V5);
         pos.push(p[0], p[1], p[2]);
-        if (uv) uvs.push(p[3] ?? i / U3, p[4] ?? 1 - j / V4);
+        if (uv) uvs.push(p[3] ?? i / U3, p[4] ?? 1 - j / V5);
       }
     }
     const W4 = U3 + 1;
-    for (let j = 0; j < V4; j++) {
+    for (let j = 0; j < V5; j++) {
       for (let i = 0; i < U3; i++) {
         const a = j * W4 + i, b = a + 1, c = a + W4, d = c + 1;
         idx.push(a, b, c, b, d, c);
@@ -65351,9 +65672,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const glute = c < 0 ? bell(y + 0.09, 0.09) * bell(sn, 0.9) * (sh.fem ? 0.022 : 0.012 + 8e-3 * sh.m) * Math.pow(-c, 0.8) : 0;
     return [c >= 0 ? supEl(c, 0.8) * Df : supEl(c, 0.8) * Db - glute, y, supEl(sn, 0.8) * W4];
   }
-  function weldGrid(g, U3, V4) {
+  function weldGrid(g, U3, V5) {
     const n = g.attributes.normal, W4 = U3 + 1;
-    for (let j = 0; j <= V4; j++) {
+    for (let j = 0; j <= V5; j++) {
       const a = j * W4, b = j * W4 + U3;
       const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b);
       const l = Math.hypot(x, y, z) || 1;
@@ -65363,7 +65684,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function band(pt, rows, a0, a1, U3, inward = false, uv = null, exact = false) {
     U3 = Math.max(1, Math.round(U3));
-    const V4 = rows.length - 1;
+    const V5 = rows.length - 1;
     const full = typeof a0 === "number" && typeof a1 === "number" && a1 - a0 >= TAU13 - 1e-6;
     const at4 = (i, j) => {
       const h2 = rows[j];
@@ -65371,7 +65692,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return [h2, A0 + (A1 - A0) * (inward ? 1 - i / U3 : i / U3)];
     };
     const g = grid((u, v) => {
-      const [h2, a0v] = at4(Math.round(u * U3), Math.round(v * V4));
+      const [h2, a0v] = at4(Math.round(u * U3), Math.round(v * V5));
       const a = warp(a0v);
       const p = pt(h2, a);
       if (uv) {
@@ -65379,11 +65700,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         p.push(t[0], t[1]);
       }
       return p;
-    }, U3, V4, !!uv);
-    if (full && !inward) weldGrid(g, U3, V4);
+    }, U3, V5, !!uv);
+    if (full && !inward) weldGrid(g, U3, V5);
     if (exact) {
       const n = g.attributes.normal, W4 = U3 + 1;
-      for (let j = 0; j <= V4; j++) {
+      for (let j = 0; j <= V5; j++) {
         for (let i = 0; i <= U3; i++) {
           const [h2, a] = at4(i, j);
           const p = pt(h2, warp(a)), pa = pt(h2, warp(a + 1e-3)), ph = pt(h2 + 1e-3, warp(a));
@@ -65808,14 +66129,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return skirtInfo ? { ...o, skirtInfo } : o;
   }
   function neckGeo(nk, y0, y1, o, cloth) {
-    const U3 = cloth ? 14 : 7, V4 = cloth ? 6 : 2, C3 = cloth ? 3 : 1, VV = V4 + C3;
+    const U3 = cloth ? 14 : 7, V5 = cloth ? 6 : 2, C3 = cloth ? 3 : 1, VV = V5 + C3;
     const g = grid((u, v) => {
       const a = -Math.PI + u * TAU13, j = Math.round(v * VV);
       if (j < C3) {
         const t = j / C3 * Math.PI / 2, r2 = nk * 0.98 * Math.sin(t);
         return [Math.cos(a) * r2 * 1.05, y1 + nk * 0.5 * Math.cos(t), Math.sin(a) * r2 * 1.28];
       }
-      const h2 = 1 - (j - C3) / V4;
+      const h2 = 1 - (j - C3) / V5;
       const y = y0 + (y1 - y0) * h2;
       let r = nk * (1.1 - 0.12 * sstep(0, 0.5, h2));
       const kx = 0.95 + 0.1 * sstep(0.45, 1, h2), kz = 1 + 0.28 * sstep(0.5, 1, h2);
@@ -66717,16 +67038,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const p = headShape(d[0], d[1], d[2], true);
     return [p[0] * k, p[1] * k, p[2] * k];
   }
-  function faceNormals(g, U3, V4) {
+  function faceNormals(g, U3, V5) {
     const P4 = g.attributes.position, N5 = g.attributes.normal;
     const W4 = U3 + 1, n = N5.count;
     let a = Float32Array.from(N5.array), b = new Float32Array(a.length);
     for (let it = 0; it < 2; it++) {
-      for (let j = 0; j <= V4; j++) {
+      for (let j = 0; j <= V5; j++) {
         for (let i = 0; i <= U3; i++) {
           const k = (j * W4 + i) * 3;
           const il = i === 0 ? U3 - 1 : i - 1, ir = i === U3 ? 1 : i + 1;
-          const nb = [j * W4 + il, j * W4 + ir, Math.max(0, j - 1) * W4 + i, Math.min(V4, j + 1) * W4 + i];
+          const nb = [j * W4 + il, j * W4 + ir, Math.max(0, j - 1) * W4 + i, Math.min(V5, j + 1) * W4 + i];
           let x = a[k] * 2, y = a[k + 1] * 2, z = a[k + 2] * 2;
           for (const q2 of nb) {
             x += a[q2 * 3];
@@ -66782,16 +67103,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const key2 = HEAD.key + "|" + level;
     let g = HEADS.get(key2);
     if (!g) {
-      const V4 = G3.rows.length - 1;
-      g = grid((u, v) => headPoint(G3, Math.round(u * G3.U), Math.round(v * V4)), G3.U, V4);
+      const V5 = G3.rows.length - 1;
+      g = grid((u, v) => headPoint(G3, Math.round(u * G3.U), Math.round(v * V5)), G3.U, V5);
       const n = g.attributes.normal, W4 = G3.U + 1;
-      for (let j = 0; j <= V4; j++) {
+      for (let j = 0; j <= V5; j++) {
         const a = j * W4, b = j * W4 + G3.U;
         const x = n.getX(a) + n.getX(b), y = n.getY(a) + n.getY(b), z = n.getZ(a) + n.getZ(b), l = Math.hypot(x, y, z) || 1;
         n.setXYZ(a, x / l, y / l, z / l);
         n.setXYZ(b, x / l, y / l, z / l);
       }
-      faceNormals(g, G3.U, V4);
+      faceNormals(g, G3.U, V5);
       if (HEADS.size > 300) HEADS.clear();
       HEADS.set(key2, g);
     }
@@ -66840,7 +67161,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     HEAD = was;
     return g;
   }
-  function capGeo(rs, thF, thS, thB, zig = null, U3 = 16, V4 = 6) {
+  function capGeo(rs, thF, thS, thB, zig = null, U3 = 16, V5 = 6) {
     return grid((u, v) => {
       const ph = Math.PI + u * TAU15;
       const c = Math.cos(ph);
@@ -66849,7 +67170,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const t = v * th * DEG2;
       const p = headShape(Math.sin(t) * Math.cos(ph), Math.cos(t), Math.sin(t) * Math.sin(ph), true);
       return [p[0] * rs, p[1] * rs, p[2] * rs];
-    }, U3, V4);
+    }, U3, V5);
   }
   var napeZig = (n, amp) => (ph) => {
     const b = Math.max(0, -Math.cos(ph));
@@ -66910,7 +67231,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
   var len3 = (v) => Math.hypot(v[0], v[1], v[2]);
-  function lockGeo(a, c, b, w, flat, U3, V4, c2 = null) {
+  function lockGeo(a, c, b, w, flat, U3, V5, c2 = null) {
     const n0 = norm(a);
     return grid((u, v) => {
       const t = v, s = 1 - t;
@@ -66924,7 +67245,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const r = w * Math.pow(s, 0.9) * (1 + 0.35 * Math.sin(Math.PI * Math.min(1, t * 1.8)));
       const ang = u * TAU15, cu = Math.cos(ang) * r, su = Math.sin(ang) * r * flat;
       return [p[0] + side[0] * cu + nrm[0] * su, p[1] + side[1] * cu + nrm[1] * su, p[2] + side[2] * cu + nrm[2] * su];
-    }, U3, V4);
+    }, U3, V5);
   }
   function lock(h2, a, b, w, { bulge = 0.2, flat = 0.5, c = null, c2 = null, anchor: anchor2 = a[1] < b[1] ? a : b } = {}) {
     const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
@@ -67308,9 +67629,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     },
     hood(h2, col) {
       const c = col || "#6a5643";
-      const U3 = h2.q.cap[0] + 4, V4 = h2.q.cap[1] + 2;
-      h2.add(capGeo(1.25, 60, 134, 160, null, U3, V4), M(0.07, 0.03, 0, 0, 0, 0, [1.08, 1.02, 1.05]), c, h2.bone);
-      h2.add(capGeo(1.21, 60, 134, 160, null, U3, V4), M(0.07, 0.03, 0, 0, 0, 0, [1.06, 1, -1.03]), shade(c, -0.7), h2.bone);
+      const U3 = h2.q.cap[0] + 4, V5 = h2.q.cap[1] + 2;
+      h2.add(capGeo(1.25, 60, 134, 160, null, U3, V5), M(0.07, 0.03, 0, 0, 0, 0, [1.08, 1.02, 1.05]), c, h2.bone);
+      h2.add(capGeo(1.21, 60, 134, 160, null, U3, V5), M(0.07, 0.03, 0, 0, 0, 0, [1.06, 1, -1.03]), shade(c, -0.7), h2.bone);
       const k = surf(12, 180, 1.28);
       h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(k[0] - 0.12, k[1] + 0.02, 0, 0, 0, 0.5, [0.34, 0.2, 0.3]), shade(c, -0.06), h2.bone);
       h2.add(lathe2([[1, -0.8], [1.42, -1.3], [1.62, -1.58]], 14), M(), shade(c, -0.06), h2.bone);
@@ -67626,7 +67947,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/render3d/chars/rig.js
-  var V = () => new Vector3();
+  var V2 = () => new Vector3();
   var Q = () => new Quaternion();
   var X = new Vector3(1, 0, 0);
   var Y = new Vector3(0, 1, 0);
@@ -67634,19 +67955,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var clamp4 = (v, a, b) => v < a ? a : v > b ? b : v;
   var toXY3 = (h2, fb) => !h2 ? fb : Array.isArray(h2) ? h2 : [Math.cos(h2.a) * h2.r, Math.sin(h2.a) * h2.r];
   var _m4 = new Matrix4();
-  var _a = V();
-  var _b = V();
-  var _c = V();
-  var _d = V();
-  var _u = V();
-  var _p3 = V();
-  var _t = V();
+  var _a = V2();
+  var _b = V2();
+  var _c = V2();
+  var _d = V2();
+  var _u = V2();
+  var _p3 = V2();
+  var _t = V2();
   var _qa = Q();
   var _qb = Q();
   var _qc = Q();
-  var _att = V();
-  var _attP = V();
-  var _g2 = V();
+  var _att = V2();
+  var _attP = V2();
+  var _g2 = V2();
   function attitude(d, k, side, kind, hip, T4, P4) {
     const Bk = d.Bk, BkD = 1 + (Bk - 1) * 0.85;
     if (kind === "hips") {
@@ -67711,27 +68032,27 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     constructor(d) {
       this.d = d;
       const n = Object.keys(B3).length;
-      this.pos = Array.from({ length: n }, V);
+      this.pos = Array.from({ length: n }, V2);
       this.quat = Array.from({ length: n }, Q);
       this.len = new Float32Array(n).fill(1);
-      this.hip = V();
-      this.neck = V();
-      this.headC = V();
-      this.S = [V(), V()];
-      this.J = [V(), V()];
-      this.E = [V(), V()];
-      this.K = [V(), V()];
-      this.F = [V(), V()];
-      this.blade = [V(), V()];
-      this.plane = [V(), V()];
+      this.hip = V2();
+      this.neck = V2();
+      this.headC = V2();
+      this.S = [V2(), V2()];
+      this.J = [V2(), V2()];
+      this.E = [V2(), V2()];
+      this.K = [V2(), V2()];
+      this.F = [V2(), V2()];
+      this.blade = [V2(), V2()];
+      this.plane = [V2(), V2()];
       this.bladeOn = [false, false];
       this.qLean = Q();
       this.qChest = Q();
       this.qPelvis = Q();
       this.qHead = Q();
-      this._pole = V();
-      this._T = V();
-      this._ref = V();
+      this._pole = V2();
+      this._T = V2();
+      this._ref = V2();
     }
     /**
      * Solve a pose. `o`: { tilt, walkRel (radians, when the legs follow the walk
@@ -69797,7 +70118,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.build(p, look, wpn);
       }
       const m = this.model;
-      m.setShaded(!ctx?.world?.interiorAt?.(p.x, p.y));
+      m.setShaded(!ctx?.world?.roomOf?.(p));
       const hidden = p.state === "knocked" || p.state === "dead" || p.hidden;
       this.root.visible = !hidden;
       if (hidden) return;
@@ -70259,7 +70580,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const lod = a.isPlayer ? 0 : lodFor(dist, m.lod);
       if (lod !== m.lod) m.setLod(lod);
       m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
-      m.setShaded(!ctx.world?.interiorAt?.(a.x, a.y));
+      m.setShaded(!ctx.world?.roomOf?.(a));
       if (a.isPlayer) this.ownBody(fp, a, ctx, env);
     }
     /**
@@ -70989,6 +71310,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     ground(x, y) {
       return this.terrain.groundAt(x, y);
     }
+    /**
+     * The top of the buildings over (x, y) — the roof as it's drawn, see
+     * roofs.js — no higher than `under` (m) when that's given: { h, b }, or null.
+     */
+    roofAt(x, y, under) {
+      return this.roofs && this.roofs.world === this.world ? this.roofs.at(x, y, under) : null;
+    }
     /** World point → CSS pixels (h metres above the ground). Off-screen when behind the camera. */
     project(x, y, h2 = 0) {
       const w = this.world;
@@ -71475,7 +71803,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.built.delete(o);
       this.animProps.delete(o);
       this.retiring.delete(o);
-      if (o.kind === "building") this.buildingsFar.show(o, true);
+      if (o.kind === "building") {
+        this.buildingsFar.show(o, true);
+        this.roofs?.remove(o);
+      }
     }
     /**
      * Build the queued models, nearest first, a few milliseconds' worth a frame:
@@ -71498,6 +71829,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           this.buildProp(o);
         }
       }
+      if (this.roofs?.world === this.world && performance.now() < end) this.roofs.warm(ox, oy, 40, end);
     }
     buildProp(o) {
       if (this.built.has(o) || o.hidden) return;
@@ -71521,6 +71853,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (o.kind === "building") v.addEventListener("added", () => {
         if (!this.retiring.has(o)) this.buildingsFar.show(o, false);
       });
+      if (o.kind === "building") (this.roofs?.world === w ? this.roofs : this.roofs = new RoofIndex(w)).add(o, v, v.position.y);
       this.attach(v, this.props);
       if (v.userData.update) this.animProps.set(o, v);
       if (CAM_FADE[o.kind]) {
@@ -71682,6 +72015,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           gh = Math.max(gh, this.terrain.terrainAt(a.x, a.y));
         } else if (a.belowDeck) gh = a.groundAt(game, a.x, a.y) - (a.wading || 0);
         else if (a.wading) gh = this.ground(a.x, a.y) - a.wading;
+        else if (a.roofed && a.lastG != null) gh = a.lastG;
         else gh = this.ground(a.x, a.y);
         v.root.position.set(dx, gh + (a.z || 0), dy);
         v.update(a, env, this.ctx, { camYaw3, redraw: i < 18 || (this.frame + i) % 3 === 0 });
@@ -72053,13 +72387,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
 
   // src/render3d/groundcover.js
-  var CELL4 = 16;
+  var CELL5 = 16;
   var NEAR2 = 22;
   var KINDS = ["grass", "flower", "fern", "pebble", "shell", "rock"];
   var REACH = { grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
   var MAXN = { grass: 5200, flower: 1400, fern: 1100, pebble: 1600, shell: 500, rock: 400 };
   var MAXF = { grass: 16e3, flower: 2600, fern: 2e3, pebble: 1400, shell: 400, rock: 1200 };
-  var PAD = { grass: 0.7, flower: 0.6, fern: 1.2, pebble: 0.3, shell: 0.2, rock: 2 };
+  var PAD2 = { grass: 0.7, flower: 0.6, fern: 1.2, pebble: 0.3, shell: 0.2, rock: 2 };
   var WEDGES = { grass: 8, flower: 4, fern: 4, pebble: 1, shell: 1, rock: 4 };
   var SWAY2 = { grass: 1, flower: 0.7, fern: 0.45 };
   var THIN = { grass: 1, flower: 1, fern: 1 };
@@ -72262,7 +72596,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function buildCell(world, terrain, cx, cy) {
     const out = {};
     for (const k of KINDS) out[k] = [];
-    const x0 = cx * CELL4, y0 = cy * CELL4;
+    const x0 = cx * CELL5, y0 = cy * CELL5;
     const col = new Color();
     const put2 = (k, x, y, rot, s, c) => {
       let h2 = terrain(x, y);
@@ -72270,10 +72604,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       else if (!(h2 > 0.05)) return;
       out[k].push(x, y, h2, rot, s, c.r, c.g, c.b);
     };
-    for (let j = 0; j < CELL4; j++) {
+    for (let j = 0; j < CELL5; j++) {
       const y = y0 + j;
       if (y < 1 || y >= world.height - 1) continue;
-      for (let i = 0; i < CELL4; i++) {
+      for (let i = 0; i < CELL5; i++) {
         const x = world.wx(x0 + i);
         const t = world.type(x, y);
         const r1 = hash7(x, y, 1), r2 = hash7(x, y, 2), r3 = hash7(x, y, 3);
@@ -72360,7 +72694,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           capFar: MAXF[k],
           near: NEAR2,
           wedges: WEDGES[k],
-          pad: PAD[k],
+          pad: PAD2[k],
           setup: (m) => {
             m.receiveShadow = k === "rock" || k === "grass" || k === "pebble";
             m.castShadow = k === "rock";
@@ -72387,7 +72721,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const low = v.quality === "low";
       const R4 = low ? 36 : 64;
       const ox = v.ox, oy = v.oy;
-      const ccx = Math.floor(w.wx(ox) / CELL4), ccy = Math.floor(oy / CELL4);
+      const ccx = Math.floor(w.wx(ox) / CELL5), ccy = Math.floor(oy / CELL5);
       const key2 = `${ccx},${ccy},${low ? 1 : 0}`;
       this.t -= dt;
       if (key2 !== this.key) {
@@ -72397,14 +72731,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const wt = this.want;
       if (wt && this.t <= 0) {
         const t0 = performance.now();
-        const cr = Math.ceil(wt.R / CELL4) + 1;
+        const cr = Math.ceil(wt.R / CELL5) + 1;
         let nearReady = true, allReady = true;
         for (const [i, j] of ring2(cr)) {
           const k = this.cellKey(w, wt.ccx + i, wt.ccy + j);
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > FILL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR2 / CELL4)) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR2 / CELL5)) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -72423,16 +72757,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** The cache key of cell (cx, cy) (wrapped around the world on X), or -1 off the map. */
     cellKey(w, cx, cy) {
-      if (cy < 0 || cy * CELL4 >= w.height) return -1;
-      const n = Math.ceil(w.width / CELL4);
+      if (cy < 0 || cy * CELL5 >= w.height) return -1;
+      const n = Math.ceil(w.width / CELL5);
       if (w.wrap) cx = (cx % n + n) % n;
       else if (cx < 0 || cx >= n) return -1;
       return cy * 1e5 + cx;
     }
     /** Lay out the instances around the centre of cell (ccx, ccy). */
     place(w, ccx, ccy, R4, low) {
-      const cr = Math.ceil(R4 / CELL4) + 1;
-      const ox = (ccx + 0.5) * CELL4, oy = (ccy + 0.5) * CELL4;
+      const cr = Math.ceil(R4 / CELL5) + 1;
+      const ox = (ccx + 0.5) * CELL5, oy = (ccy + 0.5) * CELL5;
       this.origin = { x: ox, y: oy };
       for (const k of KINDS) this.sets[k].reset();
       const keep = /* @__PURE__ */ new Set();
@@ -72619,14 +72953,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 
   // src/render3d/seabed.js
   var TAU20 = Math.PI * 2;
-  var CELL5 = 16;
+  var CELL6 = 16;
   var KINDS2 = ["branch", "brain", "table", "fan", "tube", "anemone", "kelp", "seagrass", "boulder", "star", "clam"];
   var MAX3 = { branch: 1400, brain: 1e3, table: 420, fan: 800, tube: 600, anemone: 700, kelp: 1500, seagrass: 5e3, boulder: 1100, star: 500, clam: 60 };
   var SWAY3 = { fan: 0.5, anemone: 0.7, kelp: 1, seagrass: 0.9 };
   var GLOW2 = { branch: 0.07, brain: 0.04, table: 0.05, fan: 0.08, tube: 0.06, anemone: 0.16, clam: 0.14, star: 0.06 };
   var STRIDE = 9;
   var NEAR3 = 16;
-  var PAD2 = { branch: 1, brain: 1, table: 1.5, fan: 1.2, tube: 1, anemone: 0.5, kelp: 1, seagrass: 0.5, boulder: 2, star: 0.3, clam: 0.8 };
+  var PAD3 = { branch: 1, brain: 1, table: 1.5, fan: 1.2, tube: 1, anemone: 0.5, kelp: 1, seagrass: 0.5, boulder: 2, star: 0.3, clam: 0.8 };
   var WEDGES2 = { branch: 4, brain: 4, table: 1, fan: 4, tube: 1, anemone: 1, kelp: 4, seagrass: 8, boulder: 4, star: 1, clam: 1 };
   var CELL_BUDGET_MS = 2.5;
   function vnoise3(x, y, k) {
@@ -72680,7 +73014,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return m;
   }
   var UP2 = new Vector3(0, 1, 0);
-  var V2 = (x, y, z) => new Vector3(x, y, z);
+  var V3 = (x, y, z) => new Vector3(x, y, z);
   function limb3(a, b, r0, r1, seg = 4) {
     const dir = new Vector3().subVectors(b, a);
     const len = dir.length();
@@ -72710,12 +73044,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (let i = 0; i < n; i++) {
       const a = i / n * TAU20 + r() * 0.6;
       const tilt = 0.2 + r() * 0.5, L2 = 0.2 + r() * 0.14;
-      const base2 = V2(Math.cos(a) * 0.04, 0, Math.sin(a) * 0.04);
-      const mid = V2(base2.x + Math.cos(a) * Math.sin(tilt) * L2, L2 * Math.cos(tilt), base2.z + Math.sin(a) * Math.sin(tilt) * L2);
+      const base2 = V3(Math.cos(a) * 0.04, 0, Math.sin(a) * 0.04);
+      const mid = V3(base2.x + Math.cos(a) * Math.sin(tilt) * L2, L2 * Math.cos(tilt), base2.z + Math.sin(a) * Math.sin(tilt) * L2);
       parts.push(limb3(base2, mid, 0.032, 0.024, 5));
       for (const s of [-1, 1]) {
         const a2 = a + s * (0.35 + r() * 0.4), t2 = tilt * 0.45 + r() * 0.3, L22 = L2 * (0.7 + r() * 0.4);
-        const tip = V2(mid.x + Math.cos(a2) * Math.sin(t2) * L22, mid.y + Math.cos(t2) * L22, mid.z + Math.sin(a2) * Math.sin(t2) * L22);
+        const tip = V3(mid.x + Math.cos(a2) * Math.sin(t2) * L22, mid.y + Math.cos(t2) * L22, mid.z + Math.sin(a2) * Math.sin(t2) * L22);
         parts.push(limb3(mid, tip, 0.022, 9e-3, 5));
       }
     }
@@ -72748,7 +73082,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       p.setY(i, 0.36 + rr * 0.08 + Math.sin(Math.atan2(z, x) * 5) * 0.025 * rr);
     }
     plate.computeVertexNormals();
-    const stalk = limb3(V2(0, 0, 0), V2(0.02, 0.37, 0), 0.08, 0.05, 5);
+    const stalk = limb3(V3(0, 0, 0), V3(0.02, 0.37, 0), 0.08, 0.05, 5);
     return colored2(merge2([plate, stalk]), (c, x, y, z) => {
       const rr = Math.hypot(x, z);
       c.setScalar(y > 0.3 ? 0.8 + rr * 0.45 : 0.6);
@@ -72765,7 +73099,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const g = new BufferGeometry();
     g.setAttribute("position", new Float32BufferAttribute(pos, 3));
     g.computeVertexNormals();
-    const stem = limb3(V2(0, 0, 0), V2(0, y0 + 0.02, 0), 0.04, 0.03, 4);
+    const stem = limb3(V3(0, 0, 0), V3(0, y0 + 0.02, 0), 0.04, 0.03, 4);
     return colored2(merge2([g, stem]), (c, x, y) => {
       const f = Math.min(1, y / 0.8);
       c.setScalar(0.55 + f * 0.6 + 0.12 * Math.sin(x * 40) * Math.sin(y * 40));
@@ -72911,9 +73245,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function buildCell2(world, terrain, cx, cy) {
     const out = {};
     for (const k of KINDS2) out[k] = [];
-    const x0 = cx * CELL5, y0 = cy * CELL5;
+    const x0 = cx * CELL6, y0 = cy * CELL6;
     const col = new Color();
-    const warm = warmth(world, x0 + CELL5 / 2, y0 + CELL5 / 2);
+    const warm = warmth(world, x0 + CELL6 / 2, y0 + CELL6 / 2);
     const reefy = warm > 0.55, cold = warm < 0.35;
     const put2 = (k, x, y, rot, s, sy, c, sink = 0.04) => {
       const h2 = terrain(x, y);
@@ -72923,10 +73257,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       col.setRGB(c[0] * k, c[1] * k, c[2] * k, SRGB2);
       return [col.r, col.g, col.b];
     };
-    for (let j = 0; j < CELL5; j++) {
+    for (let j = 0; j < CELL6; j++) {
       const y = y0 + j;
       if (y < 1 || y >= world.height - 1) continue;
-      for (let i = 0; i < CELL5; i++) {
+      for (let i = 0; i < CELL6; i++) {
         const x = world.wx(x0 + i);
         const t = world.type(x, y);
         if (t !== T.SEA && t !== T.REEF) continue;
@@ -72996,7 +73330,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           capFar: MAX3[k],
           near: NEAR3,
           wedges: WEDGES2[k],
-          pad: PAD2[k],
+          pad: PAD3[k],
           setup: (m) => {
             m.receiveShadow = false;
             m.castShadow = false;
@@ -73029,7 +73363,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const show = camH < 40;
       this.group.visible = show;
       if (!show) return;
-      const ccx = Math.floor(w.wx(v.ox) / CELL5), ccy = Math.floor(v.oy / CELL5);
+      const ccx = Math.floor(w.wx(v.ox) / CELL6), ccy = Math.floor(v.oy / CELL6);
       const key2 = `${ccx},${ccy},${R4}`;
       this.t -= dt;
       if (key2 !== this.key) {
@@ -73039,14 +73373,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const wt = this.want;
       if (wt && this.t <= 0) {
         const t0 = performance.now();
-        const cr = Math.ceil(wt.R / CELL5) + 1;
+        const cr = Math.ceil(wt.R / CELL6) + 1;
         let nearReady = true, allReady = true;
         for (const [i, j] of ring3(cr)) {
           const k = this.cellKey(w, wt.ccx + i, wt.ccy + j);
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > CELL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR3 / CELL5) + 1) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR3 / CELL6) + 1) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell2(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -73065,16 +73399,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** The cache key of cell (cx, cy) (wrapped around the world on X), or -1 off the map. */
     cellKey(w, cx, cy) {
-      if (cy < 0 || cy * CELL5 >= w.height) return -1;
-      const n = Math.ceil(w.width / CELL5);
+      if (cy < 0 || cy * CELL6 >= w.height) return -1;
+      const n = Math.ceil(w.width / CELL6);
       if (w.wrap) cx = (cx % n + n) % n;
       else if (cx < 0 || cx >= n) return -1;
       return cy * 1e5 + cx;
     }
     /** Lay out the floor around the centre of cell (ccx, ccy). */
     place(w, ccx, ccy, R4) {
-      const cr = Math.ceil(R4 / CELL5) + 1;
-      const ox = (ccx + 0.5) * CELL5, oy = (ccy + 0.5) * CELL5;
+      const cr = Math.ceil(R4 / CELL6) + 1;
+      const ox = (ccx + 0.5) * CELL6, oy = (ccy + 0.5) * CELL6;
       this.origin = { x: ox, y: oy };
       for (const k of KINDS2) this.sets[k].reset();
       const keep = /* @__PURE__ */ new Set();
@@ -73883,7 +74217,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.pools.instanceMatrix.needsUpdate = true;
       if (this.pools.instanceColor) this.pools.instanceColor.needsUpdate = true;
       const p = game.player;
-      const room = p && w.interiorAt ? w.interiorAt(p.x, p.y) : null;
+      const room = p && w.interiorAt ? w.roomOf(p) : null;
       if (room) {
         const floor = v.terrain?.hf?.floorY ? v.terrain.hf.floorY(room) : ctx.ground(p.x, p.y);
         const fd = room.fd || 3;
@@ -73918,7 +74252,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var SNOW = { n: 7e3, box: 30, tall: 16, below: 5, fall: 1.25, near: 0.9 };
   var MAX_SPLASH = 320;
   var SH = 64;
-  var NONE = -1e4;
+  var NONE2 = -1e4;
   var Shelter = class {
     constructor() {
       this.data = new Float32Array(SH * SH * 4);
@@ -73943,7 +74277,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         for (let i = 0; i < SH; i++) {
           const k = (j * SH + i) * 4;
           d[k] = ctx.ground(w.wx(x0 + i + 0.5), y0 + j + 0.5);
-          d[k + 1] = NONE;
+          d[k + 1] = NONE2;
         }
       }
       const hf = ctx.game?.view3d?.terrain?.hf;
@@ -73968,7 +74302,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const i = Math.floor(w.dx(this.x0, x)), j = Math.floor(y - this.y0);
       if (i < 0 || j < 0 || i >= SH || j >= SH) return null;
       const k = (j * SH + i) * 4;
-      return this.data[k + 1] > NONE ? null : this.data[k];
+      return this.data[k + 1] > NONE2 ? null : this.data[k];
     }
   };
   var COMMON = (
@@ -74994,6 +75328,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     interiorAt(x, y) {
       const f = this.floorRec(x, y);
       return f && f.interior ? f.o : null;
+    }
+    /** The building someone is inside (not on its roof: see game/actor.js roofed), or null. */
+    roomOf(a) {
+      return a.roofed || a.upTop ? null : this.interiorAt(a.x, a.y);
     }
     /** Does a circle of radius r at (x, y) overlap a small prop (lamp, barrel, tree trunk...)? */
     hitsProp(x, y, r, wallsOnly = false) {
@@ -77032,9 +77370,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (!SCR.row || SCR.row.length < w) SCR.row = new Uint8Array(w);
     return SCR;
   }
-  function distanceWindow(world, X0, Y0, X1, Y1, PAD3 = 34) {
-    const h0 = Math.max(0, Y0 - PAD3), h1 = Math.min(world.height, Y1 + PAD3);
-    const x0 = X0 - PAD3, x1 = X1 + PAD3;
+  function distanceWindow(world, X0, Y0, X1, Y1, PAD4 = 34) {
+    const h0 = Math.max(0, Y0 - PAD4), h1 = Math.min(world.height, Y1 + PAD4);
+    const x0 = X0 - PAD4, x1 = X1 + PAD4;
     const w = x1 - x0, h2 = h1 - h0;
     if (w <= 0 || h2 <= 0) return;
     const n = w * h2;
@@ -77094,7 +77432,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const jy0 = Math.max(0, Y0) - h0, jy1 = Math.min(world.height, Y1) - h0;
     for (let j = jy0; j < jy1; j++) {
       const r0 = Math.max(0, j - 2) * w, r1 = Math.max(0, j - 1) * w, r2 = j * w, r3 = Math.min(h2 - 1, j + 1) * w, r4 = Math.min(h2 - 1, j + 2) * w;
-      for (let i = PAD3; i < w - PAD3; i++) {
+      for (let i = PAD4; i < w - PAD4; i++) {
         let v = tmp2[r0 + i] * 0.1 + tmp2[r1 + i] * 0.2 + tmp2[r2 + i] * 0.4 + tmp2[r3 + i] * 0.2 + tmp2[r4 + i] * 0.1;
         const raw = f[r2 + i];
         if (raw > 0 && v < 0.15) v = 0.15;
@@ -77102,7 +77440,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const e = Math.round(128 + v * 4);
         row[i] = e < 0 ? 0 : e > 255 ? 255 : e;
       }
-      world.setDistRow(h0 + j, x0 + PAD3, w - 2 * PAD3, row, PAD3);
+      world.setDistRow(h0 + j, x0 + PAD4, w - 2 * PAD4, row, PAD4);
     }
   }
   function compactDistance(world) {
@@ -86629,7 +86967,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function sameRoom(game, a, b) {
     const w = game.world;
     if (!w.interiorAt) return true;
-    const ra = w.interiorAt(a.x, a.y), rb = w.interiorAt(b.x, b.y);
+    const ra = w.roomOf(a), rb = w.roomOf(b);
     if (ra === rb) return true;
     const room = ra || rb;
     if (!room.doorOpen) return false;
@@ -86642,7 +86980,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const w = game.world;
     const dx = w.dx(a.x, b.x), dy = b.y - a.y;
     const n = Math.ceil(Math.hypot(dx, dy) / 0.45);
-    const inside2 = w.interiorAt ? w.interiorAt(a.x, a.y) || w.interiorAt(b.x, b.y) : null;
+    const inside2 = w.interiorAt ? w.roomOf(a) || w.roomOf(b) : null;
     for (let i = 1; i < n; i++) {
       const t = i / n, x = w.wx(a.x + dx * t), y = a.y + dy * t;
       if (w.solid(x, y)) return false;
@@ -89460,7 +89798,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
 
   // src/ui/waypoints.js
-  var V3 = new Vector3();
+  var V4 = new Vector3();
   var RING_X = 0.3;
   var RING_Y = 0.36;
   var RING_SIDE = 300;
@@ -89515,15 +89853,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const mk3 = this.mark(id, kind);
         const fade2 = Math.max(0, Math.min(1, (d - 10) / 12));
         const gy = d < NEAR4 ? v3.ground(m.x, m.y) + HEAD2 : cam.position.y;
-        V3.set(w.dx(v3.ox, m.x), gy, m.y - v3.oy).applyMatrix4(cam.matrixWorldInverse);
+        V4.set(w.dx(v3.ox, m.x), gy, m.y - v3.oy).applyMatrix4(cam.matrixWorldInverse);
         let sx, sy, edge;
-        if (V3.z < -0.1) {
-          V3.applyMatrix4(cam.projectionMatrix);
-          sx = (V3.x + 1) / 2 * W4;
-          sy = (1 - V3.y) / 2 * H3;
+        if (V4.z < -0.1) {
+          V4.applyMatrix4(cam.projectionMatrix);
+          sx = (V4.x + 1) / 2 * W4;
+          sy = (1 - V4.y) / 2 * H3;
           edge = ((sx - cx) / rx) ** 2 + ((sy - cy) / ry) ** 2 > 1;
         } else {
-          sx = cx + (V3.x >= 0 ? rx : -rx) * 4;
+          sx = cx + (V4.x >= 0 ? rx : -rx) * 4;
           sy = cy;
           edge = true;
         }
@@ -91549,7 +91887,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             race !== "mink" ? row("Colour", swatch("hairColor", ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#e84393", "#8e44ad", "#2980b9", "#2ecc71", "#dfe6e9"])) : h("p.muted", "Minks grow fur of their kind.")
           );
         } else if (tab === "body") {
-          const build2 = h("input.build-slider", { type: "range", min: 0, max: 1, step: 0.05, value: L2.build ?? 0.5, on: { input: (e) => {
+          const build3 = h("input.build-slider", { type: "range", min: 0, max: 1, step: 0.05, value: L2.build ?? 0.5, on: { input: (e) => {
             L2.build = Number(e.target.value);
             applyLook(L2, race);
             preview?.setLook(L2);
@@ -91565,7 +91903,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
                 L2.muscle = FRAME[v].mus ?? 0.55;
               });
             })()),
-            row("Build", h("div.build-row", h("span.muted", "Thin"), build2, h("span.muted", "Wide"))),
+            row("Build", h("div.build-row", h("span.muted", "Thin"), build3, h("span.muted", "Wide"))),
             row("Muscle", chips(mus < 0.35 ? 0.2 : mus < 0.75 ? 0.55 : 1, [0.2, 0.55, 1], ["Lean", "Toned", "Muscular"], (v) => {
               L2.muscle = v;
             })),
@@ -97581,7 +97919,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
 
   // src/game/buildings.js
   var SEA_LEVEL = { east_blue: 5, north_blue: 7, west_blue: 7, south_blue: 7, polar: 8, paradise: 20, calm_belt: 22, sky: 24, undersea: 30, red_line: 34, new_world: 45 };
-  var FLAT = { rug: 1, tatami: 1, mats: 1, lamp: 1, picture: 1, poster: 1, wanted: 1, redcross: 1, board: 1, flag: 1, marineflag: 1 };
+  var FLAT2 = { rug: 1, tatami: 1, mats: 1, lamp: 1, picture: 1, poster: 1, wanted: 1, redcross: 1, board: 1, flag: 1, marineflag: 1 };
   function installBuildings(game) {
     const B5 = {
       near: [],
@@ -97623,7 +97961,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const { lx, lz } = bl(b, x, y, game.world);
         if (lx < L2.x0 + r || lx > L2.x1 - r || lz < L2.z0 + r || lz > L2.z1 - r) return false;
         for (const it of L2.items) {
-          if (FLAT[it.k]) continue;
+          if (FLAT2[it.k]) continue;
           const hw = (it.w || 0.4) / 2, hd = (it.d || 0.4) / 2;
           const q2 = it.rect || { x0: it.x - hw, x1: it.x + hw, z0: it.z - hd, z1: it.z + hd };
           if (lx > q2.x0 - r && lx < q2.x1 + r && lz > q2.z0 - r && lz < q2.z1 + r) return false;
@@ -97631,7 +97969,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         return true;
       },
       inside(a, b) {
-        return game.world.interiorAt(a.x, a.y) === b;
+        return game.world.roomOf(a) === b;
       },
       update(dt) {
         const p = game.player, w = game.world;
@@ -97643,7 +97981,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           B5.guardBases(p);
         }
         for (const b of B5.near) B5.door(b, p, dt);
-        const room = w.interiorAt(p.x, p.y);
+        const room = w.roomOf(p);
         if (room !== B5.room) {
           const prev = B5.room;
           B5.room = room;
@@ -97691,7 +98029,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       guardBases(p) {
         const c = game.state?.char;
         if (!c || game.wanted?.tier() < 2 || p.disguised) return;
-        const b = game.world.interiorAt(p.x, p.y);
+        const b = game.world.roomOf(p);
         if (!b || roomOf(b) !== "marine") return;
         for (const a of game.actors) {
           if (a.homeB !== b || !a.alive || a.state !== "idle" || a.faction !== "marine") continue;
@@ -97795,7 +98133,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       /** "E" things around enterable buildings (for interact.js). */
       candidates(p, out) {
         const w = game.world;
-        const inB = w.interiorAt(p.x, p.y);
+        const inB = w.roomOf(p);
         for (const b of B5.near) {
           const d = B5.doorPts(b);
           if (!inB && b.doorLocked && !b.doorOpen) {
@@ -99435,7 +99773,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   }
   function sameSpace(game, a, b) {
     const w = game.world;
-    return (w.interiorAt(a.x, a.y) || null) === (w.interiorAt(b.x, b.y) || null);
+    return (w.roomOf(a) || null) === (w.roomOf(b) || null);
   }
   function recognise(game, a, p) {
     const c = game.state.char;
@@ -123469,35 +123807,35 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   var posters = { text: "Show me the posters.", do: (c) => c.open("bounty", {}) };
   var navy = (post) => ({ text: "Marine business.", if: (c) => c.char.faction === "marine", do: (c) => c.emit("marineOffice", { name: post, role: "marine_base" }), end: true });
   function home(island, sea, o) {
-    const V4 = o.villain;
+    const V5 = o.villain;
     const vid = target({
       id: `mq_v_${island}`,
       island,
-      name: V4.name,
-      title: V4.title,
-      faction: V4.faction || "pirate",
-      race: V4.race,
+      name: V5.name,
+      title: V5.title,
+      faction: V5.faction || "pirate",
+      race: V5.race,
       boss: true,
-      hpMul: V4.hpMul ?? 0.45,
-      level: V4.level ?? 4,
-      style: V4.style || "brawler",
-      weapon: V4.weapon,
-      ranged: V4.ranged,
-      look: V4.look,
-      bounty: V4.bounty,
-      at: V4.at,
-      alert: V4.alert,
-      defeatLine: V4.defeat,
+      hpMul: V5.hpMul ?? 0.45,
+      level: V5.level ?? 4,
+      style: V5.style || "brawler",
+      weapon: V5.weapon,
+      ranged: V5.ranged,
+      look: V5.look,
+      bounty: V5.bounty,
+      at: V5.at,
+      alert: V5.alert,
+      defeatLine: V5.defeat,
       skill: 0.18,
       breakthrough: 1,
       leash: 22
     });
     const P4 = o.pirate, M2 = o.marine, H3 = o.hunter;
-    const vname = V4.name.replace(/^"[^"]*"\s*/, "");
-    const bounty = formatBerries(V4.bounty);
-    const she = !!V4.look?.fem;
+    const vname = V5.name.replace(/^"[^"]*"\s*/, "");
+    const bounty = formatBerries(V5.bounty);
+    const she = !!V5.look?.fem;
     const he = she ? "she" : "he", He = she ? "She" : "He", him = she ? "her" : "him";
-    const kind = V4.faction === "pirate" || !V4.faction ? "pirate" : V4.faction === "rival" ? "swordsman" : "crook";
+    const kind = V5.faction === "pirate" || !V5.faction ? "pirate" : V5.faction === "rival" ? "swordsman" : "crook";
     chapter(`home_${island}`, { part: 1, island, kind: "start", sea, town: o.town }, {
       pirate: {
         name: P4.chapter || "A Blade and a Flag",
@@ -123521,16 +123859,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       },
       marine: {
         name: M2.chapter || "Seaman Recruit",
-        summary: `${M2.name} of the ${M2.post} will swear you into the Navy \u2014 once you've brought in ${vname}, who has been ${V4.crime}.`,
+        summary: `${M2.name} of the ${M2.post} will swear you into the Navy \u2014 once you've brought in ${vname}, who has been ${V5.crime}.`,
         contact: { name: M2.name, title: M2.post, look: M2.look || LOOK.officer(), race: M2.race, faction: "marine", at: M2.at, where: M2.where, level: 16, style: "ittoryu", weapon: "sword", choices: [navy(M2.post)] },
         pitch: M2.pitch,
         accept: "I want to join the Marines.",
         meet: [
-          M2.first || `Words are cheap. Show me what you're made of. There's a ${kind} called ${V4.name} \u2014 ${bounty} on ${she ? "her" : "his"} head \u2014 who has been ${V4.crime}.`,
-          `Bring ${vname} in ${V4.where}. Knock ${him} down, and I'll see to the cuffs. Do that, and I'll swear you in myself.`
+          M2.first || `Words are cheap. Show me what you're made of. There's a ${kind} called ${V5.name} \u2014 ${bounty} on ${she ? "her" : "his"} head \u2014 who has been ${V5.crime}.`,
+          `Bring ${vname} in ${V5.where}. Knock ${him} down, and I'll see to the cuffs. Do that, and I'll swear you in myself.`
         ],
-        tasks: [T3.defeat(vid, `Bring in ${V4.name} ${V4.where}.`)],
-        wait: M2.wait || `${vname} is still out there ${V4.where}. The people of ${o.townName} are waiting, recruit.`,
+        tasks: [T3.defeat(vid, `Bring in ${V5.name} ${V5.where}.`)],
+        wait: M2.wait || `${vname} is still out there ${V5.where}. The people of ${o.townName} are waiting, recruit.`,
         done: [
           M2.done || `Hah! That'll teach him. You've a knack for this \u2014 and a sense of Justice, I think.`,
           "Raise your right hand. Do you swear to uphold Justice and protect the people of the seas, wherever the Navy sends you? ...Good. Welcome to the Marines, Seaman Recruit.",
@@ -123538,7 +123876,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         ],
         onReport: (g) => {
           const c = g.state.char;
-          c.claims = (c.claims || []).filter((x) => x.name !== V4.name);
+          c.claims = (c.claims || []).filter((x) => x.name !== V5.name);
           enlistNow(g, o.townName);
         },
         onDone: (g) => enlistNow(g, o.townName),
@@ -123549,16 +123887,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       },
       hunter: {
         name: H3.chapter || "The First Poster",
-        summary: `${H3.name} deals in bounties in ${o.townName}. Their first poster for you: ${V4.name}, ${bounty}.`,
+        summary: `${H3.name} deals in bounties in ${o.townName}. Their first poster for you: ${V5.name}, ${bounty}.`,
         contact: { name: H3.name, title: H3.title || "Bounty Broker", look: H3.look, race: H3.race, at: H3.at, where: H3.where, level: 12, choices: [posters] },
         pitch: H3.pitch,
         accept: "I'll hunt pirates for a living.",
         meet: [
-          H3.first || `Everyone starts with a small one. Here: ${V4.name}, ${bounty}. ${He}'s been ${V4.crime}.`,
-          `Last seen ${V4.where}. Knock ${him} down \u2014 the dead can't stand trial, so keep it clean \u2014 and I'll handle the paperwork with the Marines.`
+          H3.first || `Everyone starts with a small one. Here: ${V5.name}, ${bounty}. ${He}'s been ${V5.crime}.`,
+          `Last seen ${V5.where}. Knock ${him} down \u2014 the dead can't stand trial, so keep it clean \u2014 and I'll handle the paperwork with the Marines.`
         ],
-        tasks: [T3.defeat(vid, `Hunt down ${V4.name} (${bounty}) ${V4.where}.`)],
-        wait: H3.wait || `${vname} is still out there ${V4.where}. Money doesn't walk up to you, partner.`,
+        tasks: [T3.defeat(vid, `Hunt down ${V5.name} (${bounty}) ${V5.where}.`)],
+        wait: H3.wait || `${vname} is still out there ${V5.where}. Money doesn't walk up to you, partner.`,
         done: [
           H3.done || `Ha! Look at ${him}. The Marines will be delighted \u2014 and so will I. Here's your cut, and the poster to frame.`,
           (ctx) => `And here \u2014 a Log Pose, for the road. ${onward(ctx.char, "Word is the big money is at")}`
@@ -123566,12 +123904,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         // (the broker takes him to the Marines: the claim is theirs now)
         onReport: (g) => {
           const c = g.state.char;
-          c.claims = (c.claims || []).filter((x) => x.name !== V4.name);
+          c.claims = (c.claims || []).filter((x) => x.name !== V5.name);
           c.flags.bountyHunter = true;
         },
         after: H3.after || "Bring me more posters' worth, partner. There are always more.",
         idle: H3.idle || "Every face on these posters is somebody's payday. Could be yours, one day.",
-        reward: (g) => ({ ...logPose(g), berries: Math.round(V4.bounty * 4e-3) * 10 })
+        reward: (g) => ({ ...logPose(g), berries: Math.round(V5.bounty * 4e-3) * 10 })
       }
     });
   }

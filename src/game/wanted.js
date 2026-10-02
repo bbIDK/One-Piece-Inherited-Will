@@ -76,7 +76,7 @@ function tick(game, W, dt) {
 
 function sameSpace(game, a, b) {
   const w = game.world;
-  return (w.interiorAt(a.x, a.y) || null) === (w.interiorAt(b.x, b.y) || null);
+  return (w.roomOf(a) || null) === (w.roomOf(b) || null);
 }
 
 /** A Marine knows who you are: the chase is on (and their friends hear it). */

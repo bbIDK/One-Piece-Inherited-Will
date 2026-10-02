@@ -50,6 +50,20 @@ export function colliderOf(o) {
   if (TRUNK[o.kind] !== undefined) return TRUNK[o.kind];
   // (a beached ship, not a rowboat)
   if (o.kind === 'boat' && /flagship|perfume/i.test(o.name || '')) return [3.3, 1.15];
+  // a gateway's posts and legs stand solid where they're drawn (render3d/props/
+  // landmarks.js); between them you walk through
+  if (o.kind === 'torii') return { circles: [[-1.55, 0, 0.3], [1.55, 0, 0.3]] };
+  if (o.kind === 'gate') {
+    const k = /justice/i.test(o.name || '') ? 2.2 : 1; // (the Gate of Justice is drawn 2.2 times the size)
+    return { circles: [-1, 1].flatMap((sx) => [[sx * 3.5 * k, -0.45 * k, 0.78 * k], [sx * 3.5 * k, 0.45 * k, 0.78 * k]]) };
+  }
+  if (o.kind === 'arch') {
+    const n = o.name || '';
+    if (/heaven/i.test(n)) return { circles: [[-3.2, 0, 0.9], [3.2, 0, 0.9]] };
+    if (/mine|hatch|laboratory/i.test(n)) return COLLIDE.arch;
+    const [x, r, d] = /one piece|resting/i.test(n) ? [3.1, 0.5, 1.6] : [1.92, 0.38, 1.2];
+    return { circles: [-1, 1].flatMap((sx) => [[sx * x, d * 0.25, r], [sx * x, d * 0.75, r]]) };
+  }
   // a big bell hangs over your head between two posts (you walk under it); a harbour bell's small frame is solid
   if (o.kind === 'bell') return /harbou?r/i.test(o.name || '') ? [0.72, 0.2] : { circles: [[-1.55, 0, 0.26], [1.55, 0, 0.26]] };
   // a broken wall, three or four blocks long from x = -1.2 and half a metre
@@ -126,7 +140,16 @@ export class ObjectIndex {
       if (c) this.addCollider(obj, c);
     } else if (obj.block) { this.align(obj); this.stamp(obj, 1); }
     if (obj.kind === 'building' && obj.style === 'chinese') this.addColumns(obj);
+    if (obj.kind === 'building' && obj.style === 'wano' && obj.block && !isHut(obj)) this.addVeranda(obj);
     return obj;
+  }
+
+  /** A Wano house's raised wooden veranda along its front (see buildings3d engawa): a floor you step up onto. */
+  addVeranda(b) {
+    const fw = Math.max(2, b.fw || 3);
+    const att = b.attach || {};
+    b.veranda = { ...bbox(b, -fw / 2 - (att.left ? 0 : 0.1), fw / 2 + (att.right ? 0 : 0.1), 0.002, 0.9), h: 0.42, o: b };
+    this.world.addFloor(b.veranda);
   }
 
   /** The red columns along a Chinese front stand out from the wall: they're solid (see buildings3d 'column'). */
@@ -268,6 +291,7 @@ export class ObjectIndex {
     if (obj.far && this.world.farObjects) this.world.farObjects = this.world.farObjects.filter((o) => o !== obj);
     this.byId.delete(obj.id);
     this.count--;
+    if (obj.veranda) { this.world.removeFloor(obj.veranda); obj.veranda = null; }
     if (obj.enterable) { this.removeInterior(obj); this.stamp(obj, 0); }
     else if (obj.hut) { for (const c of obj.cols || []) this.world.removeCol(c); obj.cols = null; this.stamp(obj, 0); }
     else if (obj.soft) this.removeCollider(obj);

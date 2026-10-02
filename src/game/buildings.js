@@ -64,7 +64,7 @@ export function installBuildings(game) {
       }
       return true;
     },
-    inside(a, b) { return game.world.interiorAt(a.x, a.y) === b; },
+    inside(a, b) { return game.world.roomOf(a) === b; },
 
     update(dt) {
       const p = game.player, w = game.world;
@@ -77,7 +77,7 @@ export function installBuildings(game) {
       }
       for (const b of B.near) B.door(b, p, dt);
       // walking in and out
-      const room = w.interiorAt(p.x, p.y);
+      const room = w.roomOf(p);
       if (room !== B.room) {
         const prev = B.room;
         B.room = room;
@@ -131,7 +131,7 @@ export function installBuildings(game) {
     guardBases(p) {
       const c = game.state?.char;
       if (!c || game.wanted?.tier() < 2 || p.disguised) return;
-      const b = game.world.interiorAt(p.x, p.y);
+      const b = game.world.roomOf(p);
       if (!b || roomOf(b) !== 'marine') return;
       for (const a of game.actors) {
         if (a.homeB !== b || !a.alive || a.state !== 'idle' || a.faction !== 'marine') continue;
@@ -216,7 +216,7 @@ export function installBuildings(game) {
     /** "E" things around enterable buildings (for interact.js). */
     candidates(p, out) {
       const w = game.world;
-      const inB = w.interiorAt(p.x, p.y);
+      const inB = w.roomOf(p);
       for (const b of B.near) {
         const d = B.doorPts(b);
         // a shut, locked door in front of you

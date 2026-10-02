@@ -72,7 +72,7 @@ function mayPath(game) {
 function sameRoom(game, a, b) {
   const w = game.world;
   if (!w.interiorAt) return true;
-  const ra = w.interiorAt(a.x, a.y), rb = w.interiorAt(b.x, b.y);
+  const ra = w.roomOf(a), rb = w.roomOf(b);
   if (ra === rb) return true;
   const room = ra || rb;
   if (!room.doorOpen) return false;
@@ -90,7 +90,7 @@ export function canSee(game, a, b) {
   const w = game.world;
   const dx = w.dx(a.x, b.x), dy = b.y - a.y;
   const n = Math.ceil(Math.hypot(dx, dy) / 0.45);
-  const inside = w.interiorAt ? w.interiorAt(a.x, a.y) || w.interiorAt(b.x, b.y) : null;
+  const inside = w.interiorAt ? w.roomOf(a) || w.roomOf(b) : null;
   for (let i = 1; i < n; i++) {
     const t = i / n, x = w.wx(a.x + dx * t), y = a.y + dy * t;
     if (w.solid(x, y)) return false;

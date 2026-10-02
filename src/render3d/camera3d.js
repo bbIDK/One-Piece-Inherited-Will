@@ -288,7 +288,7 @@ export class CameraRig {
     // where your feet are: on a deck, on the ground (or the bottom of the shallows), in the air
     let gh = p.flying && p.alt != null ? p.alt
       : p.deck ? shipLift(p.deck.ship, time, p.deck.u ?? (p.deck.t - 0.5) * p.deck.ship.def.length, p.deck.v || 0, p.deck.h) + (p.z || 0)
-        : (p.belowDeck ? p.groundAt(game, p.x, p.y) : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
+        : (p.belowDeck ? p.groundAt(game, p.x, p.y) : p.roofed && p.lastG != null ? p.lastG : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
     let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
     if (!sailing) this.seaPitch = 0;
     if (sailing) {
@@ -379,7 +379,7 @@ export class CameraRig {
       this.shoulder = (this.shoulder || 0) + ((this.shiftLock && !sailing ? 0.7 : 0) - (this.shoulder || 0)) * Math.min(1, dt * 8);
       cx += -fz * this.shoulder; cz += fx * this.shoulder;
       const w = game.world;
-      const room = !sailing && w?.interiorAt?.(p.x, p.y);
+      const room = !sailing && w?.roomOf?.(p);
       this.tilt = 0;
       // (the arm's reach eases back out after something pulled it in: not
       // across a jump to somewhere else, though, or at the helm or indoors)
@@ -416,10 +416,13 @@ export class CameraRig {
         // the first thing in the way out to the camera (looked for every
         // quarter metre or so), with the camera raised `up`
         const n = Math.min(48, Math.max(16, Math.ceil(len / 0.25)));
+        // (a building's in the way only below its roof: up on the roofs, or
+        // looking back over a low one, the view goes over the top)
+        const roofs = game.view3d?.roofAt ? game.view3d : null;
         const hitAt = (up) => {
           for (let i = 1; i <= n; i++) {
-            const t = i / n, bx = px + ux * t, bz = pz + uz * t;
-            if (w.isBlocked(bx, bz) || (ships && !own && game.shipSolidAt(bx, bz, oy + (uy + up) * t, true))) return t;
+            const t = i / n, bx = px + ux * t, bz = pz + uz * t, by = oy + (uy + up) * t;
+            if ((w.isBlocked(bx, bz) && !(roofs && roofs.roofAt(bx, bz)?.h < by - 0.3)) || (ships && !own && game.shipSolidAt(bx, bz, by, true))) return t;
           }
           return 0;
         };
@@ -459,8 +462,10 @@ export class CameraRig {
         const floor = game.seaDepth ? -game.seaDepth(p.x + cx, p.y + cz) : -99;
         cy = Math.max(floor + 0.4, Math.min(cy, -0.35));
       } else {
-        // keep the camera above the ground
-        const under = ground(p.x + cx, p.y + cz) + 0.4;
+        // keep the camera above the ground — and above a roof you're up on (one below your eyes)
+        let under = ground(p.x + cx, p.y + cz) + 0.4;
+        const rf = p.roofed ? game.view3d?.roofAt?.(p.x + cx, p.y + cz, oy) : null;
+        if (rf && rf.h + 0.4 > under) under = rf.h + 0.4;
         if (cy < under) cy = under;
       }
       cam.position.set(cx, cy, cz);

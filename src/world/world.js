@@ -439,6 +439,8 @@ export class World {
   floorAt(x, y) { return this.floorRec(x, y)?.h || 0; }
   /** The enterable building whose ground floor (x, y) is on, or null. */
   interiorAt(x, y) { const f = this.floorRec(x, y); return f && f.interior ? f.o : null; }
+  /** The building someone is inside (not on its roof: see game/actor.js roofed), or null. */
+  roomOf(a) { return a.roofed || a.upTop ? null : this.interiorAt(a.x, a.y); }
 
   /** Does a circle of radius r at (x, y) overlap a small prop (lamp, barrel, tree trunk...)? */
   hitsProp(x, y, r, wallsOnly = false) {

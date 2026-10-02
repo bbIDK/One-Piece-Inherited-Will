@@ -158,7 +158,7 @@ class Viewmodel {
     const key = `${look === p.look ? '' : JSON.stringify(look)}|${wpn ? wpn.kind + wpn.count + (wpn.gun || '') : ''}`;
     if (!this.model || key !== this.key || this.baseLook !== p.look) { this.key = key; this.baseLook = p.look; this.build(p, look, wpn); }
     const m = this.model;
-    m.setShaded(!ctx?.world?.interiorAt?.(p.x, p.y));
+    m.setShaded(!ctx?.world?.roomOf?.(p));
     const hidden = p.state === 'knocked' || p.state === 'dead' || p.hidden;
     this.root.visible = !hidden;
     if (hidden) return;
