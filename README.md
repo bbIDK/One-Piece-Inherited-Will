@@ -76,18 +76,37 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | X | draw your weapon, or put it back in its sheath. Sheathed, a click is a punch (your fist style); drawn, it's the weapon's moves, listed with their keys at the bottom right (the skills you've learned for it; greyed while they cool down). At the helm or the oars it's always sheathed | |
 | Q | dodge (i-frames); it comes back after a moment — the Q slot left of the hotbar fills up again | |
 | F | block — tap just before a hit to **parry**. A heavy blow (the red glint) smashes a guard aside, and you can't block again until the F slot fills | |
-| 1–9, 0 | hotbar: techniques, food and weapons (a weapon's key draws it from its sheath into your stance, and again puts it back; food goes in your hand: hold the right mouse button to eat it, in bites; a punch or a dodge puts it away) | |
+| 1–9, 0 | hotbar: techniques, food, Devil Fruits and weapons (a weapon's key draws it from its sheath into your stance, and again puts it back; food or a Devil Fruit goes in your hand: hold the right mouse button to eat it, in bites; a punch or a dodge puts it away) | |
 | R / T / G | Haki, once it has awakened | |
 | E | talk, enter, take the helm or the oars, pick fruit, examine | dive, knock-up, go ashore, leave the helm (under sail she sails on, holding her course, while you walk the deck) |
 | Tab/I, C, K, J, U, L | inventory, character, skills, journal, crew, quests | |
 | M | world map | |
 | − / + | zoom the minimap out / in (it's the world map's chart, round you, gliding under you as you go, with its icons: inns, shops, doctors, harbours, your quests, the Log Pose's island) | |
 | H / Esc | help / pause menu | |
+| F1 | the creative panel (in creative mode: see below) | |
 
 The same menus are on the **sidebar** under the minimap. Press a menu's key
-again (or Esc) to close it. Drag techniques, food and weapons onto the hotbar (a
-weapon's key draws it, or sheathes it again), and drag hotbar slots to
-rearrange them.
+again (or Esc) to close it. Drag techniques, food, Devil Fruits and weapons onto
+the hotbar (a weapon's key draws it, or sheathes it again), and drag hotbar
+slots to rearrange them.
+
+**Creative mode** (pause menu) is for trying things out: fly anywhere
+(double-tap Space), take no harm, see the whole chart and click it to travel,
+and type commands with `/`. Its **creative panel** (F1, or the button under it
+in the pause menu) does all that and more with a click; the game waits while
+it's open:
+
+- **Devil Fruits**: any of them into your bag, to eat the usual way (one still
+  growing out in the world comes to you, so no second one turns up), its
+  mastery, and its power taken away again to try another.
+- **Items**: any item, by kind and with a count, and berries.
+- **Character**: another race there and then (the model, the attributes, the
+  lives and the race's gifts: jumping, swimming, breathing, reach), Haki
+  levels with the techniques they open, attributes, bounty and reputation.
+- **Spawn**: foes of every kind at a level, any boss (a stand-in to fight: the
+  real one keeps their place in the story), ships sailing past or coming for
+  you, Sea Kings, Sea Cows, Fighting Fish and schools of fish.
+- **World**: any island or zone, the hour and the weather.
 
 ## What's in it
 
@@ -596,6 +615,7 @@ node tools/shot.mjs probeshots --js=<file>        # several camera views in one 
 node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's start, then fast-forwards through all three parts
 node tools/shot.mjs storydrift | storyswitch               # the Grand Line's currents; the story following a change of road
 node tools/shot.mjs rmride       # rides Reverse Mountain from the East Blue gate to the Grand Line
+node tools/shot.mjs creative     # the creative panel (F1): fruits given and eaten, races changed (third person), foes, a boss, a ship and a Sea King called up, travel, a small window
 ```
 
 In the page, `window.OP.prof` is a frame profiler: set `OP.prof.PROF.on = true`
@@ -616,7 +636,8 @@ frame separately.
 - `src/game/`: gameplay systems (combat, abilities, AI, lives, progression,
   reputation, foraging, quests, sea, zones, crew, factions, legends, saving).
 - `src/ui/`: HUD and sidebar, menus (inventory, character, skills, journal,
-  crew), title and creation screens. `src/render/icons.js` draws every icon.
+  crew, the creative panel), title and creation screens. `src/render/icons.js`
+  draws every icon.
 - `src/data/`: races, styles, fruits, items, ships, trainers, and island data
   per sea.
 - `src/content/`: NPCs, bosses, quests and events per sea. See

@@ -14,7 +14,8 @@ export class Input {
       const k = normKey(e);
       if (!this.down.has(k)) this.pressed.add(k);
       this.down.add(k);
-      if (this.captureKeys && ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backquote'].includes(k)) e.preventDefault();
+      // (F1 opens the creative panel, not the browser's help)
+      if (this.captureKeys && ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backquote', 'F1'].includes(k)) e.preventDefault();
     };
     const ku = (e) => {
       const k = normKey(e);

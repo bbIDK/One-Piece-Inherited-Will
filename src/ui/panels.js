@@ -28,8 +28,9 @@ import { fmtDist } from './compass.js';
 const berriesLine = (c) => h('div.berries', uiImg('berries', 20), ` ${formatBerries(c.berries)}`);
 const HOTBAR = HOTBAR_SIZE;
 const USABLE = new Set(['food', 'medicine']);
-// what can sit on the hotbar: food and medicine (eaten), weapons (taken in hand)
-const ON_HOTBAR = new Set([...USABLE, 'weapon']);
+// what can sit on the hotbar: food, medicine and Devil Fruits (taken in hand
+// and eaten: see main.js useHotbarItem), weapons (taken in hand)
+const ON_HOTBAR = new Set([...USABLE, 'fruit', 'weapon']);
 const title = (s) => s[0].toUpperCase() + s.slice(1);
 
 // ============================================================== hotbar editor
@@ -68,7 +69,7 @@ export function assignHotbar(game, slot, payload) {
     else if (payload.startsWith('item:') || payload.startsWith('inv:')) {
       const iid = payload.slice(payload.indexOf(':') + 1);
       const d = ITEMS[iid];
-      if (!d || !ON_HOTBAR.has(d.type)) { game.log('Only food, medicine and weapons can go on the hotbar.', '#ff8a80'); return; }
+      if (!d || !ON_HOTBAR.has(d.type)) { game.log('Only food, medicine, Devil Fruits and weapons can go on the hotbar.', '#ff8a80'); return; }
       id = 'item:' + iid;
     } else return;
     for (let k = 0; k < HOTBAR; k++) if (hb[k] === id) hb[k] = null;
@@ -87,7 +88,7 @@ function hotbarNote(game, what) {
   const pick = game.ui.hotbarPick;
   return h('p.hb-note' + (pick ? '.picking' : ''), pick
     ? `Now click a slot on your hotbar (keys ${HOTBAR_KEYS.join(' ')}) to put ${what || 'it'} there.`
-    : 'Drag techniques, food and weapons straight onto your hotbar at the bottom of the screen (keys 1-9 and 0) — or click one, then click a slot. Drag slots to rearrange them; right-click one to clear it.');
+    : 'Drag techniques, food, Devil Fruits and weapons straight onto your hotbar at the bottom of the screen (keys 1-9 and 0) — or click one, then click a slot. Drag slots to rearrange them; right-click one to clear it.');
 }
 
 /** Pick something to put on the hotbar with a click (the next hotbar slot clicked takes it). */
@@ -116,7 +117,8 @@ const CATS = [
 const TYPE_ORDER = ['weapon', 'hat', 'coat', 'accessory', 'food', 'medicine', 'fruit', 'dial', 'pose', 'key', 'treasure', 'material'];
 const TYPE_NAME = { weapon: 'Weapon', hat: 'Headgear', coat: 'Body', accessory: 'Accessory', food: 'Food', medicine: 'Medicine', fruit: 'Devil Fruit', dial: 'Dial', pose: 'Eternal Pose', key: 'Key item', treasure: 'Treasure', material: 'Material' };
 
-function statLine(d) {
+/** An item's numbers in a line: power, defence, bonuses, healing (also the creative panel's). */
+export function statLine(d) {
   const parts = [];
   if (d.type === 'weapon') parts.push(`${title(d.kind || 'weapon')} · power ×${d.power}${d.grade ? ' · ' + d.grade : ''}`);
   if (d.armor) parts.push(`Defence +${Math.round(d.armor * 100)}%`);
@@ -254,7 +256,7 @@ export function openInventory(game) {
         // (the Log Pose you follow: where its needle points, and where else you can set it)
         isPose && sd.logPose && worn ? coursePicker(game, render) : null);
     } else {
-      details = h('div.inv-details.empty', h('p.muted', 'Select an item to see it. Drag gear onto the equipment slots, and food or weapons onto the hotbar. Double-click to equip or eat. Click your Log Pose in its slot to choose where its needle points.'));
+      details = h('div.inv-details.empty', h('p.muted', 'Select an item to see it. Drag gear onto the equipment slots, and food, Devil Fruits or weapons onto the hotbar. Double-click to equip or eat. Click your Log Pose in its slot to choose where its needle points.'));
     }
     const right = h('div.inv-right', tabs, grid, details);
     game.ui.onHotbarChange = render;
@@ -314,7 +316,8 @@ function fruitInfo(d) {
     h('p', f.desc));
 }
 
-function confirmEat(game, itemId, done) {
+/** Eat a Devil Fruit, after a last warning (from the Inventory — or the hotbar, on a touch screen). */
+export function confirmEat(game, itemId, done = () => {}) {
   const c = game.state.char;
   const d = ITEMS[itemId];
   const f = FRUITS[d.fruit];
@@ -526,10 +529,12 @@ export function openMenu(game, { onQuit, onRetire, onSave }) {
       btn('map', game.creative?.on ? 'Creative mode: on — turn off' : 'Creative mode (fly, commands)', async () => {
         const C = game.creative;
         if (!C) return;
-        if (!C.on && !(await ui.ask({ title: 'Creative mode?', text: "Fly anywhere (double-tap Space; Space rises, C sinks, Shift goes fast), take no harm, see the whole chart and click it to travel, and type commands with / (help lists them). Turn it off here any time.", ok: 'Turn it on' }))) return;
+        if (!C.on && !(await ui.ask({ title: 'Creative mode?', text: "Fly anywhere (double-tap Space; Space rises, C sinks, Shift goes fast), take no harm, see the whole chart and click it to travel, type commands with / (help lists them) — and open the creative panel (F1, or here) for Devil Fruits, items, races, Haki, foes, ships and the world. Turn it off here any time.", ok: 'Turn it on' }))) return;
         ui.closePanel();
         C.set(!C.on);
       }, game.creative?.on ? '.gold' : ''),
+      // (beside it while creative mode is on: the panel with everything to try out)
+      game.creative?.on ? btn('star', game.input.touch?.on ? 'Creative panel' : 'Creative panel (F1)', () => { ui.closePanel(); ui.sideAction('creative'); }) : null,
       fullscreenOK() ? btn('fullscreen', fullscreenOn() ? 'Leave full screen' : 'Full screen', () => { ui.closePanel(); toggleFullscreen(); }) : null,
       (c.legends || []).length ? btn('journal', 'Retire as a legend', async () => {
         if (!(await ui.ask({ title: 'Retire?', text: `${c.name} hangs up their hat and becomes a legend. This life ends here and its Inherited Will passes to the next generation.`, ok: 'Retire', danger: true }))) return;

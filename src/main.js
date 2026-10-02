@@ -31,7 +31,8 @@ import { Quests, allQuests } from './game/quests.js';
 import { Services } from './game/services.js';
 import { Interactions, npcBuilder, npcDef, makeNPC, allNpcDefs, standingHeight } from './game/npcs.js';
 import { installMap } from './ui/mapUI.js';
-import { openInventory, openCharacter, openSkills, openJournal, openMenu, openSettings } from './ui/panels.js';
+import { openInventory, openCharacter, openSkills, openJournal, openMenu, openSettings, confirmEat } from './ui/panels.js';
+import { openCreative } from './ui/creativePanel.js';
 import { persist, endLineage, setDrawn } from './game/lineage.js';
 import { addItem, useItem } from './game/inventory.js';
 import { ITEMS } from './data/items.js';
@@ -289,6 +290,8 @@ async function start() {
     help: () => ui.openPanel(helpContent(game.state?.char), { wide: true, id: 'help' }),
     map: () => game.openMap(),
     view: () => game.cycleView(),
+    // (creative mode only: F1, or the pause menu)
+    creative: () => openCreative(game),
   };
   const touch = installTouch(game, root);
   ui.keyHandlers.push(
@@ -303,6 +306,7 @@ async function start() {
     { key: 'H', when: playing, fn: () => ui.sideAction('help') },
     { key: 'U', when: playing, fn: () => ui.sideAction('crew') },
     { key: 'L', when: playing, fn: () => ui.sideAction('quests') },
+    { key: 'F1', when: () => playing() && !!game.creative?.on, fn: () => ui.sideAction('creative') },
     // the minimap: − zooms it out, + (or =) in
     { key: 'Minus', when: playing, fn: () => ui.minimapZoom(game, 1) },
     { key: 'NumpadSubtract', when: playing, fn: () => ui.minimapZoom(game, 1) },
@@ -321,8 +325,10 @@ async function start() {
     if (!c) return false;
     if (!c.inventory.some((i) => i.id === id)) { game.log(`You have no ${ITEMS[id]?.name || id} left.`, '#ff8a80'); return false; }
     // food, medicine and Devil Fruits are taken in hand (hold the right button to
-    // eat; again to put it away). On a touch screen they're eaten at once.
+    // eat; again to put it away). On a touch screen they're eaten at once — a
+    // Devil Fruit after the same last warning as in the Inventory.
     const d = ITEMS[id], p = game.player;
+    if (d?.type === 'fruit' && input.touch?.on) { if (!game.state.char.fruit) confirmEat(game, id); else useItem(game, id); return true; }
     if (d && (d.type === 'food' || d.type === 'medicine' || d.type === 'fruit') && !input.touch?.on && p) {
       if (p.held === id) p.controller?.putAway?.(p);
       else { setDrawn(game, false); p.held = id; p.eating = null; } // (a drawn weapon goes back in its sheath)
