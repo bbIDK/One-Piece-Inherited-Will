@@ -129,6 +129,7 @@ export class Sky {
     this.fog = new THREE.Fog(0xbfdcff, 60, 700);
     scene.fog = this.fog;
     this.sunDir = new THREE.Vector3();
+    this.moonDir = new THREE.Vector3();
     this.sunCol = new THREE.Color();
     this.horizon = new THREE.Color();
     this.top = new THREE.Color();
@@ -138,10 +139,13 @@ export class Sky {
     const u = this.uniforms;
     const zone = world?.zone || 0;
     const c = env.clock;
-    // sun path: rises in the east (+x), sets in the west
-    const a = (c - 6) / 12 * Math.PI; // 0 at 6h, π at 18h
+    // sun path: rises in the east (+x), sets in the west, keeping to the day's
+    // light (env.js: half light at 6h and at 19h), so it's still up, low and
+    // golden, while the evening sky glows, and down only as it darkens. (Day
+    // and night are each half a turn, at their own pace.)
+    const a = c >= 6 && c <= 19 ? (c - 6) / 13 * Math.PI : Math.PI * (1 + ((c - 19 + 24) % 24) / 11);
     this.sunDir.set(Math.cos(a), Math.sin(a) * 0.95 + 0.05, 0.35).normalize();
-    const moon = new THREE.Vector3(-Math.cos(a), -Math.sin(a) * 0.9 + 0.1, -0.3).normalize();
+    const moon = this.moonDir.set(-Math.cos(a), -Math.sin(a) * 0.9 + 0.1, -0.3).normalize();
     const day = env.daylight;
     const night = 1 - day;
     const dusk = Math.max(0, 1 - Math.abs(c - 18.8) / 1.6, 1 - Math.abs(c - 6.2) / 1.6);
@@ -179,11 +183,21 @@ export class Sky {
     this.top.setRGB(...top);
 
     // lighting: the sun by day, a cool moon by night (the light itself is
-    // placed with its shadow map, round you: see shadowAt)
+    // placed with its shadow map, round you: see shadowAt). The sun fades
+    // out over its last few degrees down to the horizon, warming as it goes,
+    // and the moon's light comes up only as the sky darkens after it (and
+    // goes before the dawn): the one light changes over from the one to the
+    // other while it's dark, so the shadows never swing round at a stroke.
     const amb = env.ambient || [1, 1, 1];
-    this.lightDir.copy(this.sunDir.y > 0 ? this.sunDir : moon);
-    this.sun.intensity = (this.sunDir.y > 0 ? 2.4 * Math.min(1, day + 0.15) : 0.5) * (1 - env.storm * 0.55) * (zone === 3 ? 0.25 : zone === 2 ? 0.6 : 1);
-    this.sun.color.setRGB(this.sunDir.y > 0 ? 1 : 0.6, this.sunDir.y > 0 ? 0.95 - dusk * 0.2 : 0.7, this.sunDir.y > 0 ? 0.88 - dusk * 0.35 : 1);
+    const sunUp = this.sunDir.y > 0;
+    const sm = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+    const low = 1 - sm(0.02, 0.4, this.sunDir.y); // 1 at the horizon, 0 well up
+    const warm = Math.max(dusk, low * 0.9);
+    this.lightDir.copy(sunUp ? this.sunDir : moon);
+    this.sun.intensity = (sunUp ? 2.4 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y))
+      * (1 - env.storm * 0.55) * (zone === 3 ? 0.25 : zone === 2 ? 0.6 : 1);
+    if (sunUp) this.sun.color.setRGB(1, 0.95 - warm * 0.24, 0.88 - warm * 0.42);
+    else this.sun.color.setRGB(0.6, 0.7, 1);
     this.hemi.color.setRGB(amb[0] * 0.8, amb[1] * 0.85, amb[2] * 0.95);
     this.hemi.groundColor.setRGB(amb[0] * 0.45, amb[1] * 0.4, amb[2] * 0.35);
     this.hemi.intensity = 1.0 + (zone === 3 ? -0.3 : 0);
@@ -208,8 +222,11 @@ export class Sky {
     FOG.fogDensity2.value = dens;
     FOG.fogHeightK.value = zone === 1 ? 0.012 : 0.028;
     FOG.fogBase.value = zone === 1 ? -25 : 0; // the sky islands' haze lies on the cloud sea below
-    FOG.fogSunDir.value.copy(this.sunDir.y > -0.05 ? this.sunDir : moon);
-    const glow = (this.sunDir.y > -0.05 ? 1 : 0.25) * (1 - env.storm * 0.8) * (zone >= 2 ? 0.3 : 1);
+    // (the haze glows round the sun till it's well down, fading as it goes;
+    // then, faded in from nothing, round the moon)
+    const sunHaze = this.sunDir.y > -0.15;
+    FOG.fogSunDir.value.copy(sunHaze ? this.sunDir : moon);
+    const glow = (sunHaze ? sm(-0.15, 0, this.sunDir.y) : 0.25 * sm(-0.15, -0.3, this.sunDir.y)) * (1 - env.storm * 0.8) * (zone >= 2 ? 0.3 : 1);
     FOG.fogSunColor.value.copy(this.horizon).lerp(this.sunCol, 0.75 * glow).multiplyScalar(1 + 0.25 * glow);
   }
 

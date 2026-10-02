@@ -14,7 +14,8 @@
 import * as THREE from 'three';
 import { CharacterModel } from './model.js';
 import { B } from './bones.js';
-import { bodyMaterial, outlineMaterial, glowMaterial, charGradient } from './mats.js';
+import { bodyMaterial, outlineMaterial, glowMaterial, charGradient, SELF_SHADE_VM } from './mats.js';
+import { sunSelf } from '../sunshadow.js';
 import { Glow } from './fx.js';
 import { holdItem, heldSize } from './helditem.js';
 import { actorPose, rigOptions, currentLook, weaponOf, stationSpot, stationReach } from './pose.js';
@@ -119,6 +120,7 @@ class Viewmodel {
     this.outlineMat = nearCut(outlineMaterial(0.0022, 0x3a2418, { fog: false }));
     this.outlineMat.transparent = true;
     this.weaponMat = nearCut(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false }));
+    this.weaponMat.defines = { ...this.weaponMat.defines, SUN_SELF: sunSelf(SELF_SHADE_VM) };
   }
 
   build(p, look, wpn) {
@@ -156,6 +158,7 @@ class Viewmodel {
     const key = `${look === p.look ? '' : JSON.stringify(look)}|${wpn ? wpn.kind + wpn.count + (wpn.gun || '') : ''}`;
     if (!this.model || key !== this.key || this.baseLook !== p.look) { this.key = key; this.baseLook = p.look; this.build(p, look, wpn); }
     const m = this.model;
+    m.setShaded(!ctx?.world?.interiorAt?.(p.x, p.y));
     const hidden = p.state === 'knocked' || p.state === 'dead' || p.hidden;
     this.root.visible = !hidden;
     if (hidden) return;

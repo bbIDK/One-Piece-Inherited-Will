@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { BONES, B, PARENT, restOffsets, SKIRT_N, skirtWaist } from './bones.js';
 import { getBody, releaseBody, faceGeo, headLevel } from './build.js';
 import { Rig } from './rig.js';
-import { bodyMaterial, sharedOutline, glowMaterial } from './mats.js';
+import { bodyMaterial, sharedOutline, glowMaterial, SELF_SHADE, SELF_SHADE_VM } from './mats.js';
 import { faceMaterial, releaseFace, expression } from './face.js';
 import { HeldWeapon } from './weapons.js';
 
@@ -152,11 +152,15 @@ export class CharacterModel {
     for (const n of BONES) (PARENT[n] ? this.bones[B[PARENT[n]]] : this.group).add(this.bones[B[n]]);
     // (inverse bind matrices: the geometry is stored in the rest pose — see bones.js bindPose)
     this.skeleton = new THREE.Skeleton(this.bones, this.body.inv.map((m) => m.clone()));
-    this.mat = bodyMaterial({ fog: opts.fog ?? true });
+    // (a figure twice the size ignores twice as much of its own shade: one step, so
+    // there's only the one extra shader)
+    this.mat = bodyMaterial({ fog: opts.fog ?? true, self: opts.viewmodel ? SELF_SHADE_VM : SELF_SHADE * ((look?.scale || 1) >= 1.5 ? 2 : 1) });
     this.mesh = new THREE.SkinnedMesh(this.body.geo, this.mat);
     this.mesh.bind(this.skeleton, IDENT);
     this.mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 2.4);
     this.mesh.castShadow = !opts.viewmodel;
+    // (in a wall's or a sail's shade, a figure is in shade too: see SELF_SHADE)
+    this.mesh.receiveShadow = true;
     this.outline = new THREE.SkinnedMesh(this.body.geo, opts.outline || sharedOutline());
     this.outline.bind(this.skeleton, IDENT);
     this.outline.boundingSphere = this.mesh.boundingSphere;
@@ -169,6 +173,7 @@ export class CharacterModel {
     this.restFingers();
     // face decal on the head
     this.face = new THREE.Mesh(faceGeo(look, headLevel(this.lod)), undefined);
+    this.face.receiveShadow = true;
     this.face.position.set(d.hx, d.hc, 0);
     this.face.scale.setScalar(d.headR);
     this.face.renderOrder = 1;
@@ -252,6 +257,15 @@ export class CharacterModel {
     _t2.set(-1, 0, 0).multiplyScalar(0.25 + c * 0.9).add(_t1).normalize();
     _q2.copy(tb.quaternion).invert();
     tc.quaternion.setFromUnitVectors(DOWN, _t2).premultiply(_q2);
+  }
+
+  /**
+   * Whether the sun's shadows fall on the figure, and on what it holds: not
+   * indoors, where rooms are lit without them (interiors3d.js) and the roof
+   * would leave only the people in the room in the dark.
+   */
+  setShaded(on) {
+    this.group.traverse((o) => { if (o.isMesh) o.receiveShadow = on; });
   }
 
   /** Switch detail level (0 near, 2 mid, 1 far): same skeleton, another shared geometry. */

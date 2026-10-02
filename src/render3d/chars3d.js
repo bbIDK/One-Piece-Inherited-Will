@@ -222,6 +222,7 @@ class ActorView {
     if (lod !== m.lod) m.setLod(lod);
     // (far off, the ink pass's outlines are enough, when it's on)
     m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
+    m.setShaded(!ctx.world?.interiorAt?.(a.x, a.y));
     if (a.isPlayer) this.ownBody(fp, a, ctx, env);
   }
 

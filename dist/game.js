@@ -37118,14 +37118,14 @@ void main() {
 
   // src/render3d/sunshadow.js
   var SIZE = 2048;
-  var NEAR = 12;
+  var NEAR = 16;
   var RATIO = 4;
   var AHEAD = 0.35;
   var DIST = 120;
   var DEPTH = 260;
-  var BLEND = 1;
-  var FADE = 4;
-  var BIAS = 0.06;
+  var BLEND = 2;
+  var FADE = 14;
+  var BIAS = 0.08;
   var NORMAL_BIAS = 0.02;
   function patch2(name, find, fn) {
     const chunk = ShaderChunk[name];
@@ -37133,12 +37133,16 @@ void main() {
     if (out === chunk) console.warn(`sunshadow: ${find} not found in ${name}; left as it is`);
     else ShaderChunk[name] = out;
   }
+  var sunSelf = (m) => (m / (DEPTH - 1)).toFixed(6);
   var GLSL = (
     /* glsl */
     `
 	const float SUN_RATIO = ${RATIO.toFixed(1)};
 	const float SUN_BLEND = ${(BLEND / (2 * NEAR)).toFixed(5)};
 	const float SUN_FADE = ${(FADE / (2 * NEAR * RATIO)).toFixed(5)};
+	#ifndef SUN_SELF
+	#define SUN_SELF 0.0
+	#endif
 
 	float sunShadowRead( sampler2D map, vec2 uv, float z ) {
 		return step( z, unpackRGBAToDepth( texture2D( map, uv ) ) );
@@ -37170,8 +37174,8 @@ void main() {
 		if ( edge > 0.5 - margin || c.z > 1.0 ) return 1.0;
 		float k = smoothstep( 0.5 - SUN_BLEND, 0.5 - margin, edge * SUN_RATIO ); // 0: the fine cascade, 1: the coarse
 		float s = 1.0;
-		if ( k < 1.0 ) s = sunShadowCascade( map, size, ( c.xy - 0.5 ) * SUN_RATIO + 0.5, c.z + bias, 0.0 );
-		if ( k > 0.0 ) s = mix( s, sunShadowCascade( map, size, c.xy, c.z + bias * SUN_RATIO, 0.5 ), k );
+		if ( k < 1.0 ) s = sunShadowCascade( map, size, ( c.xy - 0.5 ) * SUN_RATIO + 0.5, c.z + bias - SUN_SELF, 0.0 );
+		if ( k > 0.0 ) s = mix( s, sunShadowCascade( map, size, c.xy, c.z + bias * SUN_RATIO - SUN_SELF, 0.5 ), k );
 		s = mix( s, 1.0, smoothstep( 0.5 - SUN_FADE, 0.5 - margin, edge ) );
 		return mix( 1.0, s, intensity );
 	}
@@ -37378,6 +37382,7 @@ ${GLSL}
       this.fog = new Fog(12573951, 60, 700);
       scene.fog = this.fog;
       this.sunDir = new Vector3();
+      this.moonDir = new Vector3();
       this.sunCol = new Color();
       this.horizon = new Color();
       this.top = new Color();
@@ -37386,9 +37391,9 @@ ${GLSL}
       const u = this.uniforms;
       const zone = world?.zone || 0;
       const c = env.clock;
-      const a = (c - 6) / 12 * Math.PI;
+      const a = c >= 6 && c <= 19 ? (c - 6) / 13 * Math.PI : Math.PI * (1 + (c - 19 + 24) % 24 / 11);
       this.sunDir.set(Math.cos(a), Math.sin(a) * 0.95 + 0.05, 0.35).normalize();
-      const moon = new Vector3(-Math.cos(a), -Math.sin(a) * 0.9 + 0.1, -0.3).normalize();
+      const moon = this.moonDir.set(-Math.cos(a), -Math.sin(a) * 0.9 + 0.1, -0.3).normalize();
       const day = env.daylight;
       const night = 1 - day;
       const dusk = Math.max(0, 1 - Math.abs(c - 18.8) / 1.6, 1 - Math.abs(c - 6.2) / 1.6);
@@ -37432,9 +37437,17 @@ ${GLSL}
       this.horizon.setRGB(...hor);
       this.top.setRGB(...top);
       const amb = env.ambient || [1, 1, 1];
-      this.lightDir.copy(this.sunDir.y > 0 ? this.sunDir : moon);
-      this.sun.intensity = (this.sunDir.y > 0 ? 2.4 * Math.min(1, day + 0.15) : 0.5) * (1 - env.storm * 0.55) * (zone === 3 ? 0.25 : zone === 2 ? 0.6 : 1);
-      this.sun.color.setRGB(this.sunDir.y > 0 ? 1 : 0.6, this.sunDir.y > 0 ? 0.95 - dusk * 0.2 : 0.7, this.sunDir.y > 0 ? 0.88 - dusk * 0.35 : 1);
+      const sunUp = this.sunDir.y > 0;
+      const sm = (e0, e1, x) => {
+        const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
+        return t * t * (3 - 2 * t);
+      };
+      const low = 1 - sm(0.02, 0.4, this.sunDir.y);
+      const warm = Math.max(dusk, low * 0.9);
+      this.lightDir.copy(sunUp ? this.sunDir : moon);
+      this.sun.intensity = (sunUp ? 2.4 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y)) * (1 - env.storm * 0.55) * (zone === 3 ? 0.25 : zone === 2 ? 0.6 : 1);
+      if (sunUp) this.sun.color.setRGB(1, 0.95 - warm * 0.24, 0.88 - warm * 0.42);
+      else this.sun.color.setRGB(0.6, 0.7, 1);
       this.hemi.color.setRGB(amb[0] * 0.8, amb[1] * 0.85, amb[2] * 0.95);
       this.hemi.groundColor.setRGB(amb[0] * 0.45, amb[1] * 0.4, amb[2] * 0.35);
       this.hemi.intensity = 1 + (zone === 3 ? -0.3 : 0);
@@ -37454,8 +37467,9 @@ ${GLSL}
       FOG.fogDensity2.value = dens;
       FOG.fogHeightK.value = zone === 1 ? 0.012 : 0.028;
       FOG.fogBase.value = zone === 1 ? -25 : 0;
-      FOG.fogSunDir.value.copy(this.sunDir.y > -0.05 ? this.sunDir : moon);
-      const glow3 = (this.sunDir.y > -0.05 ? 1 : 0.25) * (1 - env.storm * 0.8) * (zone >= 2 ? 0.3 : 1);
+      const sunHaze = this.sunDir.y > -0.15;
+      FOG.fogSunDir.value.copy(sunHaze ? this.sunDir : moon);
+      const glow3 = (sunHaze ? sm(-0.15, 0, this.sunDir.y) : 0.25 * sm(-0.15, -0.3, this.sunDir.y)) * (1 - env.storm * 0.8) * (zone >= 2 ? 0.3 : 1);
       FOG.fogSunColor.value.copy(this.horizon).lerp(this.sunCol, 0.75 * glow3).multiplyScalar(1 + 0.25 * glow3);
     }
     /**
@@ -65911,6 +65925,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
 	vec3 irradiance = gi * mix( vec3( 0.84, 0.7, 0.74 ), vec3( 1.0 ), smoothstep( 0.62, 0.95, gi.r ) ) * directLight.color;`);
     sh.fragmentShader = sh.fragmentShader.replace("#include <lights_toon_pars_fragment>", toon2);
   }
+  var SELF_SHADE = 0.3;
+  var SELF_SHADE_VM = 0.7;
   function bodyMaterial(opts = {}) {
     const u = {
       uFlash: { value: 0 },
@@ -65926,6 +65942,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       uHideHead: { value: 0 }
     };
     const m = new MeshToonMaterial({ vertexColors: true, map: detailTexture2(), gradientMap: charGradient(), fog: opts.fog ?? true });
+    m.defines = { ...m.defines, SUN_SELF: sunSelf(opts.self ?? SELF_SHADE) };
     m.userData.u = u;
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, FOG, u);
@@ -65986,7 +66003,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var WEAPON = null;
   function weaponMaterial() {
-    if (!WEAPON) WEAPON = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient() });
+    if (!WEAPON) {
+      WEAPON = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient() });
+      WEAPON.defines = { ...WEAPON.defines, SUN_SELF: sunSelf(SELF_SHADE) };
+    }
     return WEAPON;
   }
   var GLOW = /* @__PURE__ */ new Map();
@@ -66498,6 +66518,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       tex2.colorSpace = SRGBColorSpace;
       tex2.anisotropy = 4;
       const mat = new MeshToonMaterial({ map: tex2, gradientMap: charGradient(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+      mat.defines = { ...mat.defines, SUN_SELF: sunSelf(SELF_SHADE) };
       mat.onBeforeCompile = celShading;
       mat.customProgramCacheKey = () => "op-char-face-1";
       e = { key: key2, tex: tex2, mat, refs: 1, t: ++tick2 };
@@ -68001,6 +68022,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       this.mesh = new three_module_exports.Mesh(g, opts.material || weaponMaterial());
       this.mesh.castShadow = !opts.noShadow;
+      this.mesh.receiveShadow = true;
       this.group.add(this.mesh);
       if (!opts.noOutline) {
         this.outline = new three_module_exports.Mesh(g, opts.outline || sharedOutline(false));
@@ -68168,11 +68190,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       });
       for (const n of BONES) (PARENT[n] ? this.bones[B3[PARENT[n]]] : this.group).add(this.bones[B3[n]]);
       this.skeleton = new Skeleton(this.bones, this.body.inv.map((m) => m.clone()));
-      this.mat = bodyMaterial({ fog: opts.fog ?? true });
+      this.mat = bodyMaterial({ fog: opts.fog ?? true, self: opts.viewmodel ? SELF_SHADE_VM : SELF_SHADE * ((look?.scale || 1) >= 1.5 ? 2 : 1) });
       this.mesh = new SkinnedMesh(this.body.geo, this.mat);
       this.mesh.bind(this.skeleton, IDENT);
       this.mesh.boundingSphere = new Sphere(new Vector3(0, 1, 0), 2.4);
       this.mesh.castShadow = !opts.viewmodel;
+      this.mesh.receiveShadow = true;
       this.outline = new SkinnedMesh(this.body.geo, opts.outline || sharedOutline());
       this.outline.bind(this.skeleton, IDENT);
       this.outline.boundingSphere = this.mesh.boundingSphere;
@@ -68186,6 +68209,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       this.restFingers();
       this.face = new Mesh(faceGeo(look, headLevel(this.lod)), void 0);
+      this.face.receiveShadow = true;
       this.face.position.set(d.hx, d.hc, 0);
       this.face.scale.setScalar(d.headR);
       this.face.renderOrder = 1;
@@ -68263,6 +68287,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       _t2.set(-1, 0, 0).multiplyScalar(0.25 + c * 0.9).add(_t1).normalize();
       _q22.copy(tb.quaternion).invert();
       tc.quaternion.setFromUnitVectors(DOWN, _t2).premultiply(_q22);
+    }
+    /**
+     * Whether the sun's shadows fall on the figure, and on what it holds: not
+     * indoors, where rooms are lit without them (interiors3d.js) and the roof
+     * would leave only the people in the room in the dark.
+     */
+    setShaded(on) {
+      this.group.traverse((o) => {
+        if (o.isMesh) o.receiveShadow = on;
+      });
     }
     /** Switch detail level (0 near, 2 mid, 1 far): same skeleton, another shared geometry. */
     setLod(lod) {
@@ -69401,24 +69435,36 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       geo2 = k.build(false);
       cache3.set(id, geo2);
     }
-    const mat = opts.viewmodel ? vmMat() : vcMat();
+    const mat = opts.viewmodel ? vmMat() : heldMat();
     const m = new Mesh(geo2, mat);
     m.name = "held-" + id;
     m.castShadow = !opts.viewmodel;
+    m.receiveShadow = true;
     m.frustumCulled = false;
     m.userData.shared = true;
     return m;
   }
   var _vm = null;
+  var _held = null;
   function vmMat() {
     if (_vm) return _vm;
     const base2 = vcMat();
     _vm = base2.clone();
     _vm.onBeforeCompile = base2.onBeforeCompile;
     _vm.customProgramCacheKey = () => "opvc-vm";
+    _vm.defines = { ...base2.defines, SUN_SELF: sunSelf(SELF_SHADE_VM) };
     _vm.fog = false;
     _vm.transparent = true;
     return _vm;
+  }
+  function heldMat() {
+    if (_held) return _held;
+    const base2 = vcMat();
+    _held = base2.clone();
+    _held.onBeforeCompile = base2.onBeforeCompile;
+    _held.customProgramCacheKey = () => "opvc-held";
+    _held.defines = { ...base2.defines, SUN_SELF: sunSelf(SELF_SHADE) };
+    return _held;
   }
   var HOLD_Q = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(new Vector3(0, 0, 1), new Vector3(-1, 0, 0), new Vector3(0, -1, 0)));
   function holdItem(model2, id, opts = {}) {
@@ -69695,6 +69741,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.outlineMat = nearCut(outlineMaterial2(22e-4, 3810328, { fog: false }));
       this.outlineMat.transparent = true;
       this.weaponMat = nearCut(new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false }));
+      this.weaponMat.defines = { ...this.weaponMat.defines, SUN_SELF: sunSelf(SELF_SHADE_VM) };
     }
     build(p, look, wpn) {
       if (this.model) this.model.dispose();
@@ -69738,6 +69785,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.build(p, look, wpn);
       }
       const m = this.model;
+      m.setShaded(!ctx?.world?.interiorAt?.(p.x, p.y));
       const hidden = p.state === "knocked" || p.state === "dead" || p.hidden;
       this.root.visible = !hidden;
       if (hidden) return;
@@ -70199,6 +70247,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const lod = a.isPlayer ? 0 : lodFor(dist, m.lod);
       if (lod !== m.lod) m.setLod(lod);
       m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
+      m.setShaded(!ctx.world?.interiorAt?.(a.x, a.y));
       if (a.isPlayer) this.ownBody(fp, a, ctx, env);
     }
     /**

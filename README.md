@@ -35,8 +35,17 @@ frees it). **V** switches between first and third person (the mouse wheel
 sets the third-person distance). In first person your own body is there:
 look down and you see your chest, your legs and your feet walking, and your
 shadow is whole. Shadows have clean, smooth edges: the sun's shadow map is
-fine close to you (a texel every centimetre or so), coarser farther off, and
-holds still on the world as you move, so edges neither stair-step nor crawl.
+fine close to you (a texel every centimetre and a half, out to 16 m),
+coarser farther off (out to 64 m, fading away over the last stretch, so a
+far house's shadow comes and goes gently rather than at a line), and holds
+still on the world as you move, so edges neither stair-step nor crawl.
+People stand in the shade too: step into a house's shadow and you, the
+weapon in your hand and your arms in first person darken with the street
+(never with your own shadow: an arm or a hat brim doesn't blotch the figure;
+indoors, where rooms are lit without the sun's shadows, nor does the roof).
+The sun keeps to the daylight, setting low and golden as the evening sky
+darkens; the moonlight comes up only once it's dark (and goes before dawn),
+so shadows never swing round at sunset.
 Settings has mouse sensitivity, invert-Y,
 field of view, view bobbing, a fast graphics mode, a **render distance**
 (in 32 m chunks, like Minecraft's: 4 to 24, 12 by default; at sea you see

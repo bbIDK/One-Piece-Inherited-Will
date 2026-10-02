@@ -151,6 +151,7 @@ export class HeldWeapon {
     }
     this.mesh = new THREE.Mesh(g, opts.material || weaponMaterial());
     this.mesh.castShadow = !opts.noShadow;
+    this.mesh.receiveShadow = true;
     this.group.add(this.mesh);
     if (!opts.noOutline) {
       this.outline = new THREE.Mesh(g, opts.outline || sharedOutline(false));

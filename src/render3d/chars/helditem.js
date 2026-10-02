@@ -7,6 +7,8 @@
 import * as THREE from 'three';
 import { Mesher } from '../props/kit.js';
 import { vcMat } from '../props/mats.js';
+import { sunSelf } from '../sunshadow.js';
+import { SELF_SHADE, SELF_SHADE_VM } from './mats.js';
 import { ITEMS } from '../../data/items.js';
 import { FRUITS } from '../../data/fruits.js';
 import { B } from './bones.js';
@@ -152,25 +154,37 @@ export function heldItemMesh(id, opts = {}) {
     geo = k.build(false);
     cache.set(id, geo);
   }
-  const mat = opts.viewmodel ? vmMat() : vcMat();
+  const mat = opts.viewmodel ? vmMat() : heldMat();
   const m = new THREE.Mesh(geo, mat);
   m.name = 'held-' + id;
   m.castShadow = !opts.viewmodel;
+  m.receiveShadow = true;
   m.frustumCulled = false;
   m.userData.shared = true; // (the geometry is cached: never dispose it with the model)
   return m;
 }
 
-let _vm = null;
+let _vm = null, _held = null;
 function vmMat() {
   if (_vm) return _vm;
   const base = vcMat();
   _vm = base.clone();
   _vm.onBeforeCompile = base.onBeforeCompile; // (the tint and glow attributes: see props/mats)
   _vm.customProgramCacheKey = () => 'opvc-vm';
+  _vm.defines = { ...base.defines, SUN_SELF: sunSelf(SELF_SHADE_VM) };
   _vm.fog = false;
   _vm.transparent = true;
   return _vm;
+}
+/** What a character holds takes the sun's shadow, though not its own hand's (see SELF_SHADE). */
+function heldMat() {
+  if (_held) return _held;
+  const base = vcMat();
+  _held = base.clone();
+  _held.onBeforeCompile = base.onBeforeCompile;
+  _held.customProgramCacheKey = () => 'opvc-held';
+  _held.defines = { ...base.defines, SUN_SELF: sunSelf(SELF_SHADE) };
+  return _held;
 }
 
 // item → hand: the item's top (+Y) away from the palm (hand -X), its long axis across the hand (Z)

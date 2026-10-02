@@ -7,6 +7,7 @@
 //    (after skinning), scaled with view depth so it stays ~2 px wide.
 import * as THREE from 'three';
 import { FOG } from '../fog.js';
+import { sunSelf } from '../sunshadow.js';
 import { detailTexture } from './detail.js';
 
 const BODY_KEY = 'op-char-body-5';
@@ -48,7 +49,14 @@ export function celShading(sh) {
   sh.fragmentShader = sh.fragmentShader.replace('#include <lights_toon_pars_fragment>', toon);
 }
 
-/** A per-character body material (see the uniforms in `mat.userData.u`). */
+/**
+ * How far (m) toward the sun a character's surface ignores what shades it: its
+ * own limbs, head and hat (see sunSelf). Your own arms in first person ignore
+ * more: the body they're drawn for hangs a little apart from them.
+ */
+export const SELF_SHADE = 0.3, SELF_SHADE_VM = 0.7;
+
+/** A per-character body material (see the uniforms in `mat.userData.u`). opts.self: see SELF_SHADE. */
 export function bodyMaterial(opts = {}) {
   const u = {
     uFlash: { value: 0 }, uFlashCol: { value: new THREE.Color(1, 1, 1) },
@@ -59,6 +67,7 @@ export function bodyMaterial(opts = {}) {
     uClipY: { value: 1e6 }, uHideArms: { value: 0 }, uHideHead: { value: 0 },
   };
   const m = new THREE.MeshToonMaterial({ vertexColors: true, map: detailTexture(), gradientMap: charGradient(), fog: opts.fog ?? true });
+  m.defines = { ...m.defines, SUN_SELF: sunSelf(opts.self ?? SELF_SHADE) };
   m.userData.u = u;
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, FOG, u);
@@ -137,7 +146,10 @@ export function sharedOutline(skinned = true) {
 let WEAPON = null;
 /** Cel-shaded vertex-coloured material for weapons and props held by characters. */
 export function weaponMaterial() {
-  if (!WEAPON) WEAPON = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient() });
+  if (!WEAPON) {
+    WEAPON = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient() });
+    WEAPON.defines = { ...WEAPON.defines, SUN_SELF: sunSelf(SELF_SHADE) };
+  }
   return WEAPON;
 }
 

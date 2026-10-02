@@ -1,7 +1,7 @@
 // The sun's shadows, with clean smooth outlines close up:
 //  * one shadow map holding two cascades side by side: a fine one around you
-//    (24 m across, a texel to every 1.2 cm) and a coarse one four times as
-//    wide, out to 48 m, for everything farther off. Both are centred a little
+//    (32 m across, a texel to every 1.6 cm) and a coarse one four times as
+//    wide, out to 64 m, for everything farther off. Both are centred a little
 //    ahead of you, the way you look;
 //  * they only ever move by whole texels of the coarse cascade, counted from
 //    a fixed point in the world, so each shadow falls on the same texels
@@ -10,23 +10,24 @@
 //  * each shadow is read through a quadratic B-spline over the 3×3 texels
 //    around the point, so its outline is a smooth curve instead of a
 //    staircase of blended texels; the fine cascade hands over to the coarse
-//    one over its last metre, and the coarse one fades out at its edge.
+//    one over its last two metres, and the coarse one fades out over its last
+//    fourteen (so far shadows come and go gently as you move, not at a line).
 // The shadow lookup is patched into three.js's shader chunks (like lighting.js)
 // before anything compiles.
 import * as THREE from 'three';
 
 const SIZE = 2048; // texels across each cascade
-const NEAR = 12; // m: half the width of the fine cascade
+const NEAR = 16; // m: half the width of the fine cascade
 const RATIO = 4; // the coarse one is this many times wider (a whole number: its texels hold whole fine ones)
 const AHEAD = 0.35; // how far ahead of you both are centred (a share of NEAR)
 const DIST = 120; // m from the middle of the map up to the light
 const DEPTH = 260; // m of depth the map holds, from 1 m in front of the light
-const BLEND = 1; // m: the fine cascade hands over to the coarse one over this much of its edge
-const FADE = 4; // m: the coarse one fades out over this much of its edge
+const BLEND = 2; // m: the fine cascade hands over to the coarse one over this much of its edge
+const FADE = 14; // m: the coarse one fades out over this much of its edge
 // how far a surface is taken to lie toward the light before it's tested (m): a
 // little more than the fine filter's reach down a steep slope, so a surface
 // never shadows itself (in the coarse cascade, RATIO times as much)
-const BIAS = 0.06;
+const BIAS = 0.08;
 const NORMAL_BIAS = 0.02; // m: the point tested is moved this far out along the surface normal
 
 function patch(name, find, fn) {
@@ -36,12 +37,24 @@ function patch(name, find, fn) {
   else THREE.ShaderChunk[name] = out;
 }
 
+/**
+ * The SUN_SELF define for a material whose surfaces shouldn't be shadowed by
+ * anything within `m` metres of them toward the sun: a character's own arm,
+ * head or hat brim, which at a cel shader's hard edge would blotch the figure
+ * with its own shadow (the cel ramp already gives it a shadow side). A wall
+ * or a roof, farther off, still shades it.
+ */
+export const sunSelf = (m) => (m / (DEPTH - 1)).toFixed(6);
+
 // (the shadow coordinate given is the coarse cascade's: the fine one's is
 // RATIO times as far from the middle)
 const GLSL = /* glsl */`
 	const float SUN_RATIO = ${RATIO.toFixed(1)};
 	const float SUN_BLEND = ${(BLEND / (2 * NEAR)).toFixed(5)};
 	const float SUN_FADE = ${(FADE / (2 * NEAR * RATIO)).toFixed(5)};
+	#ifndef SUN_SELF
+	#define SUN_SELF 0.0
+	#endif
 
 	float sunShadowRead( sampler2D map, vec2 uv, float z ) {
 		return step( z, unpackRGBAToDepth( texture2D( map, uv ) ) );
@@ -73,8 +86,8 @@ const GLSL = /* glsl */`
 		if ( edge > 0.5 - margin || c.z > 1.0 ) return 1.0;
 		float k = smoothstep( 0.5 - SUN_BLEND, 0.5 - margin, edge * SUN_RATIO ); // 0: the fine cascade, 1: the coarse
 		float s = 1.0;
-		if ( k < 1.0 ) s = sunShadowCascade( map, size, ( c.xy - 0.5 ) * SUN_RATIO + 0.5, c.z + bias, 0.0 );
-		if ( k > 0.0 ) s = mix( s, sunShadowCascade( map, size, c.xy, c.z + bias * SUN_RATIO, 0.5 ), k );
+		if ( k < 1.0 ) s = sunShadowCascade( map, size, ( c.xy - 0.5 ) * SUN_RATIO + 0.5, c.z + bias - SUN_SELF, 0.0 );
+		if ( k > 0.0 ) s = mix( s, sunShadowCascade( map, size, c.xy, c.z + bias * SUN_RATIO - SUN_SELF, 0.5 ), k );
 		s = mix( s, 1.0, smoothstep( 0.5 - SUN_FADE, 0.5 - margin, edge ) );
 		return mix( 1.0, s, intensity );
 	}
