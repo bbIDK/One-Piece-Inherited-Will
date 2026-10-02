@@ -535,6 +535,8 @@ node tools/shot.mjs c3motion [--looks=longskirt,dress,skirt,coat,longarm] [--sit
 node tools/shot.mjs c3draw [--wpns=fine_katana,flintlock,bo_staff] [--modes=third,first]   # weapons worn, drawn from the hotbar and sheathed, part way through
 node tools/shot.mjs fpweapons [--wpns=rusty_katana,flintlock] [--skip=run,atk] [--pitches=-0.08,-0.75]   # first person per weapon: ready, running, sprinting, a combo and a heavy, frame by frame
 node tools/shot.mjs c3carry [--wpns=sword,sword2,gun,staff,axe]   # third person: a weapon carried at a run and a sprint
+node tools/zfight.mjs [--island=<id>] [--kinds=building] [--per=3]   # z-fighting: every object in the world built as the game does; faces in one plane, facing the same way and overlapping, that can be seen (grouped by cause)
+node tools/zfight.mjs --ships [--part=hull|inside] | --inspect=<object id>   # the same over every ship class; one object's worst pairs with their triangles
 node tools/shot.mjs probeshots --js=<file>        # several camera views in one run (the file returns [{ x, y, yaw, pitch }])
 node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's start, then fast-forwards through all three parts
 node tools/shot.mjs storydrift | storyswitch               # the Grand Line's currents; the story following a change of road

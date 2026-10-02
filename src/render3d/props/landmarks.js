@@ -176,7 +176,7 @@ const fountainGeo = () => model('fountain', (k) => {
   k.add(lathe([[1.18, 0.22], [1.2, 0.58], [1.3, 0.64], [1.44, 0.6], [1.46, 0.05], [1.5, -0.2]], 18), { color: stone, outline: 0.03 });
   k.add(new THREE.CircleGeometry(1.2, 18), { at: [0, 0.22, 0], rot: [-Math.PI / 2, 0, 0], color: '#8fa7ad' });
   k.add(new THREE.CircleGeometry(1.19, 18), { at: [0, 0.46, 0], rot: [-Math.PI / 2, 0, 0], color: '#4fb3d9' });
-  k.add(new THREE.RingGeometry(0.62, 0.74, 18), { at: [0, 0.462, 0], rot: [-Math.PI / 2, 0, 0], color: '#bfe9ff' });
+  k.add(new THREE.RingGeometry(0.62, 0.74, 18), { at: [0, 0.475, 0], rot: [-Math.PI / 2, 0, 0], color: '#bfe9ff' }); // (1.5 cm over the water: at 2 mm the two flickered from across the square)
   k.add(cyl(0.16, 0.24, 1.35, 10), { at: [0, 0.2, 0], color: '#bdb5a6', outline: 0.02 });
   k.add(lathe([[0.1, 0], [0.42, 0.1], [0.56, 0.24], [0.6, 0.3], [0.52, 0.3], [0.12, 0.2]], 14), { at: [0, 1.45, 0], color: stone, outline: 0.02 });
   k.add(new THREE.CircleGeometry(0.5, 14), { at: [0, 1.72, 0], rot: [-Math.PI / 2, 0, 0], color: '#4fb3d9' });
@@ -449,7 +449,9 @@ const lighthouseGeo = () => model('lighthouse', (k) => {
   const bands = [[0, 2.2, '#fdfefe'], [2.2, 3.3, '#c0392b'], [3.3, 5.4, '#fdfefe'], [5.4, 6.5, '#c0392b'], [6.5, 8.2, '#fdfefe']];
   const r = (y) => 1.7 - y / 8.2 * 0.62;
   k.add(cyl(1.95, 2.0, 0.6, 12), { at: [0, -0.3, 0], color: '#9e9a90', outline: 0.03 });
-  for (const [y0, y1, c] of bands) k.add(cyl(r(y1), r(y0), y1 - y0 + 0.01, 14, true), { at: [0, y0 + 0.28, 0], color: c, outline: 0.045 });
+  // (each band meets the next edge to edge, the same width at the seam: run a
+  // centimetre into it, the two flickered in a thin ring round the tower)
+  for (const [y0, y1, c] of bands) k.add(cyl(r(y1), r(y0), y1 - y0, 14, true), { at: [0, y0 + 0.28, 0], color: c, outline: 0.045 });
   k.add(box(0.85, 1.9, 0.2), { at: [0, 0.28, 1.62], rot: [-0.07, 0, 0], color: '#5a3a22' });
   for (const [y, z] of [[3.9, 1.38], [6.9, 1.2]]) k.add(box(0.36, 0.6, 0.12), { at: [0, y, z], rot: [-0.07, 0, 0], color: '#2d4150', glow: '#ffc766' });
   k.add(cyl(1.5, 1.5, 0.16, 14), { at: [0, 8.48, 0], color: '#2d3436', outline: 0.02 });

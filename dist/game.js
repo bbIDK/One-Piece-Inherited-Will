@@ -38820,15 +38820,16 @@ ${GLSL}
       for (let i = 0; i <= N5; i++) {
         const t = i / N5, x = xAt(d, t);
         const top = topAt(d, t), fl2 = floorAt(d, t);
-        const wt = skinAt(d, t, top), wi = innerAt(d, t, top - 0.12);
-        inner.push([[x, top - 0.1, s * wi], [x, fl2 - 0.02, s * innerAt(d, t, fl2)]]);
-        cap2.push([[x, top, s * wt], [x, top - 0.1, s * wi]]);
+        const wt = skinAt(d, t, top), wi2 = innerAt(d, t, top - 0.12);
+        inner.push([[x, top - 0.1, s * wi2], [x, fl2 - 0.02, s * innerAt(d, t, fl2)]]);
+        cap2.push([[x, top, s * wt], [x, top - 0.1, s * wi2]]);
       }
       strip(k, inner, shade2(P4.upper, -0.12), s > 0);
       strip(k, cap2, P4.cap, s > 0);
     }
     const ys = floorAt(d, 0.01), ts = topAt(d, 0) - 0.1;
-    k.add(box(0.2, ts - ys + 0.04, innerAt(d, 0.01, (ys + ts) / 2) * 2 + 0.1), { at: [xAt(d, 0) + 0.1, ys - 0.02, 0], color: shade2(P4.upper, -0.12) });
+    const wi = Math.min(innerAt(d, 0, ys), innerAt(d, 0, ts)) + 0.04;
+    k.add(box(0.2, ts - ys + 0.04, wi * 2), { at: [xAt(d, 0) + 0.12, ys - 0.02, 0], color: shade2(P4.upper, -0.12) });
   }
   function deckGrid(k, d, P4, t0, t1, y, vIn = null, down = false, col0 = null) {
     if (t1 <= t0) return;
@@ -39017,7 +39018,7 @@ ${GLSL}
   function cabinFront(k, d, P4, r) {
     const f = r.front, face = f.face, y0 = r.floor, y1 = r.top;
     const x = f.u + face * 0.07, w = f.w;
-    const h2 = y1 - y0, dh = f.dh;
+    const h2 = y1 - y0 - 0.01, dh = f.dh;
     const ds = [...r.doors].sort((a, b) => a.v - b.v);
     let z = -w;
     const piece3 = (za, zb) => {
@@ -39079,7 +39080,7 @@ ${GLSL}
         const lowEnd = s.ha < s.hb ? "a" : "b";
         const fa = lowEnd === "a" ? f0 : 1 - f1, fb = lowEnd === "a" ? f1 : 1 - f0;
         const x0 = xa + (xb - xa) * fa, x1 = xa + (xb - xa) * fb;
-        const top = Math.min(s.ha, s.hb) + rise * (i + 1) / n;
+        const top = Math.min(s.ha, s.hb) + rise * (i + 1) / n - (i === n - 1 ? 0.01 : 0);
         k.add(box(Math.abs(x1 - x0) + 0.02, 0.07, w - 0.1), { at: [(x0 + x1) / 2, top - 0.07, zc], color: shade2(P4.deck, -0.05), outline: 0.01 });
         k.add(box(0.04, top - Math.min(s.ha, s.hb) - 0.02, w - 0.14), { at: [lowEnd === "a" ? x0 : x1, Math.min(s.ha, s.hb), zc], color: shade2(P4.deck, -0.3) });
       }
@@ -39125,7 +39126,7 @@ ${GLSL}
       const f0 = i / n, f12 = (i + 1) / n;
       const x0 = xa + (xb - xa) * f0, x12 = xa + (xb - xa) * f12, top = lo + (hi - lo) * f12;
       k.add(box(Math.abs(x12 - x0) + 0.02, 0.06, w - 0.08), { at: [(x0 + x12) / 2, top - 0.06, 0], color: shade2(P4.deck, -0.05), outline: 8e-3 });
-      k.add(box(0.03, (hi - lo) / n, w - 0.1), { at: [x0, top - (hi - lo) / n, 0], color: shade2(P4.deck, -0.3) });
+      k.add(box(0.03, (hi - lo) / n - 0.01, w - 0.1), { at: [x0, top - (hi - lo) / n, 0], color: shade2(P4.deck, -0.3) });
     }
     const f1 = Math.max(0.1, (hi - 0.95 - lo) / (hi - lo)), x1 = xa + (xb - xa) * f1, y1 = lo + (hi - lo) * f1;
     for (const e of [-1, 1]) {
@@ -39755,7 +39756,7 @@ ${GLSL}
         const x = xAt(d, r.t0);
         for (const wd of r.windows || []) {
           k.add(box(0.04, 0.9, wd.w), { at: [x + 0.01, r.floor + 0.75, wd.v], color: "#a9d6ee", glow: "#ffd58a" });
-          k.add(box(0.06, 0.05, wd.w), { at: [x + 0.02, r.floor + 1.18, wd.v], color: IN.beam });
+          k.add(box(0.06, 0.05, wd.w - 0.02), { at: [x + 0.02, r.floor + 1.18, wd.v], color: IN.beam });
           k.add(box(0.06, 0.9, 0.05), { at: [x + 0.02, r.floor + 0.75, wd.v], color: IN.beam });
           k.add(box(0.12, 0.06, wd.w + 0.1), { at: [x + 0.04, r.floor + 0.72, wd.v], color: IN.beam });
         }
@@ -55530,7 +55531,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const G3 = pane ? (pane.m.copy(k.m), pane) : k;
     switch (S4.win) {
       case "shoji": {
-        if (pane) rectFrame(k, w, h2, 0.06, -0.02, 0.06, "#3e2723");
+        if (pane) rectFrame(k, w, h2, 0.06, 0, 0.06, "#3e2723");
         else B2(k, -w / 2 - 0.06, -h2 / 2 - 0.06, -0.02, w / 2 + 0.06, h2 / 2 + 0.06, 0.06, "#3e2723");
         B2(G3, -w / 2, -h2 / 2, 0, w / 2, h2 / 2, 0.035, "#f3ead3", { glow: litOn ? "#ffb84d" : null });
         for (let i = 1; i < 3; i++) B2(k, -w / 2 + i * w / 3 - 0.015, -h2 / 2, 0.03, -w / 2 + i * w / 3 + 0.015, h2 / 2, 0.05, "#5d4037");
@@ -55538,7 +55539,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         break;
       }
       case "lattice": {
-        if (pane) rectFrame(k, w, h2, 0.08, -0.02, 0.06, "#8e2b22");
+        if (pane) rectFrame(k, w, h2, 0.08, 0, 0.06, "#8e2b22");
         else B2(k, -w / 2 - 0.08, -h2 / 2 - 0.08, -0.02, w / 2 + 0.08, h2 / 2 + 0.08, 0.06, "#8e2b22");
         B2(G3, -w / 2, -h2 / 2, 0, w / 2, h2 / 2, 0.035, "#f6ddcc", { glow: litOn ? "#ffab66" : null });
         for (let i = 1; i < 4; i++) B2(k, -w / 2 + i * w / 4 - 0.012, -h2 / 2, 0.03, -w / 2 + i * w / 4 + 0.012, h2 / 2, 0.05, "#8e2b22");
@@ -55584,11 +55585,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         break;
       default: {
         const hh = S4.win === "tall" ? h2 * 1.2 : h2;
-        if (pane) rectFrame(k, w, hh, 0.08, -0.02, 0.05, frame2);
+        if (pane) rectFrame(k, w, hh, 0.08, 0, 0.05, frame2);
         else B2(k, -w / 2 - 0.08, -hh / 2 - 0.08, -0.02, w / 2 + 0.08, hh / 2 + 0.08, 0.05, frame2);
         B2(G3, -w / 2, -hh / 2, 0, w / 2, hh / 2, 0.06, glass, { glow: glow3 });
-        B2(k, -0.025, -hh / 2, 0.05, 0.025, hh / 2, 0.08, frame2);
-        B2(k, -w / 2, -0.025, 0.05, w / 2, 0.025, 0.08, frame2);
+        B2(k, -0.025, -hh / 2 + 0.01, 0.05, 0.025, hh / 2 - 0.01, 0.08, frame2);
+        B2(k, -w / 2 + 0.01, -0.025, 0.05, w / 2 - 0.01, 0.025, 0.08, frame2);
         B2(k, -w / 2 - 0.12, -hh / 2 - 0.14, -0.02, w / 2 + 0.12, -hh / 2 - 0.06, 0.14, shade2(frame2, 0.1));
         if (S4.shutters) {
           const sc = ["#2e6b8a", "#4f7d3a", "#8a3b2e", "#6d4c33"][(b.v || 0) % 4];
@@ -55646,15 +55647,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         break;
       }
       case "noren": {
-        if (open) doorFrame(k, dw, dh, yb, 0.12, -0.02, 0.05, "#3e2723");
+        if (open) doorFrame(k, dw, dh, yb, 0.12, 0, 0.05, "#3e2723");
         else {
           B2(k, -dw / 2 - 0.12, yb, -0.02, dw / 2 + 0.12, yb + dh + 0.1, 0.05, "#3e2723");
           B2(k, -dw / 2, yb, 0, dw / 2, dh, 0.03, "#2b2420");
         }
         const nc = ["#1f3a68", "#7b1f1f", "#2e5e3a", "#4a2e6b"][(b.v || 0) % 4];
         const top = open ? yb + dh : dh;
-        for (let i = 0; i < 3; i++) B2(k, -dw / 2 + i * dw / 3 + 0.02, top - 0.75, 0.05, -dw / 2 + (i + 1) * dw / 3 - 0.02, top, 0.08, nc);
-        B2(k, -dw / 2 - 0.05, top - 0.05, 0.04, dw / 2 + 0.05, top + 0.05, 0.1, "#3e2723");
+        for (let i = 0; i < 3; i++) B2(k, -dw / 2 + i * dw / 3 + 0.02, top - 0.75, 0.05, -dw / 2 + (i + 1) * dw / 3 - 0.02, top, 0.095, nc);
+        B2(k, -dw / 2 - 0.05, top - 0.05, 0.04, dw / 2 + 0.05, top + 0.05, 0.115, "#3e2723");
         break;
       }
       case "hide": {
@@ -55669,7 +55670,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         break;
       }
       default: {
-        if (open) doorFrame(k, dw, dh, yb, 0.14, -0.02, 0.07, frame2);
+        if (open) doorFrame(k, dw, dh, yb, 0.14, 0, 0.07, frame2);
         else {
           B2(k, -dw / 2 - 0.14, 0.1, -0.02, dw / 2 + 0.14, dh + 0.16, 0.07, frame2, { outline: 0.015 });
           B2(k, -dw / 2, 0.1, 0, dw / 2, dh, 0.09, wood);
@@ -55678,7 +55679,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             B2(k, -dw / 2 + 0.12, 0.35, 0.08, dw / 2 - 0.12, dh * 0.45, 0.11, shade2(wood, 0.12));
             B2(k, -dw / 2 + 0.12, dh * 0.55, 0.08, dw / 2 - 0.12, dh - 0.15, 0.11, shade2(wood, 0.12));
           }
-          if (big) B2(k, -0.012, 0.1, 0.09, 0.012, dh, 0.11, shade2(wood, -0.35));
+          if (big) B2(k, -0.02, 0.1, 0.09, 0.02, dh, 0.12, shade2(wood, -0.35));
           k.add(new SphereGeometry(0.05, 5, 4), { at: [dw / 2 - 0.16, 0.1 + dh * 0.47, 0.13], color: "#f1c40f" });
         }
         const top = open ? yb + dh : dh;
@@ -55703,6 +55704,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if ((b.role || "house") === "house" && ["village", "town", "port", "city", "noble", "snow", "spooky"].includes(b.style)) return DOOR_PAINT[Math.floor(hash3(b.x, b.y, 5.3) * DOOR_PAINT.length)];
     return b.style === "noble" ? "#6d3b1f" : "#5a3a22";
   }
+  var trimX = (ex, sx, d, fw, inset = 0.01) => sx * (ex(sx, 1) > 0 ? fw / 2 + d : fw / 2 - inset);
   function gableRoof(k, S4, b, hw, hd, y, rise, ov, roofCol, wallCol, snowy, g, ex = () => 0.3) {
     const alpha2 = Math.atan2(rise, hd);
     const oL = ex(-1, 0.3 * g), oR = ex(1, 0.3 * g);
@@ -55740,16 +55742,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       } else {
         k.add(box(L2 - 0.1, 0.18 * g, slopeLen - 0.05), { at: [xs, th, slopeLen / 2 + 0.02], color: "#f4f9ff" });
-        k.add(cyl(0.13 * g, 0.13 * g, L2 - 0.1, 7), { at: [xs + (L2 - 0.1) / 2, th + 0.06, slopeLen], rot: [0, 0, Math.PI / 2], color: "#ffffff" });
+        k.add(cyl(0.13 * g, 0.13 * g, L2 - 0.08, 7), { at: [xs + (L2 - 0.08) / 2, th + 0.06, slopeLen], rot: [0, 0, Math.PI / 2], color: "#ffffff" });
       }
       for (const sx of [-1, 1]) {
         const world = side < 0 ? -sx : sx;
         if (!ex(world, 1)) continue;
-        k.add(box(0.1 * g, th + 0.08, slopeLen), { at: [xs + sx * (L2 / 2 + 0.03), -0.04, slopeLen / 2], color: shade2(roofCol, -0.4) });
+        k.add(box(0.1 * g, th + 0.08, slopeLen + 0.04), { at: [xs + sx * (L2 / 2 + 0.03), -0.04, slopeLen / 2], color: shade2(roofCol, -0.4) });
       }
       k.restore();
     }
-    k.add(box(L2 + (oL ? 0.05 : 0) + (oR ? 0.05 : 0), 0.16 * g, 0.26 * g), { at: [xc + ((oR ? 0.05 : 0) - (oL ? 0.05 : 0)) / 2, y + rise + th * 0.5, zc], color: snowy ? "#ffffff" : shade2(roofCol, -0.3), outline: 0.02 });
+    const cL = oL ? 0.05 : -0.01, cR = oR ? 0.05 : -0.01;
+    k.add(box(L2 + cL + cR, 0.16 * g, 0.26 * g), { at: [xc + (cR - cL) / 2, y + rise + th * 0.5, zc], color: snowy ? "#ffffff" : shade2(roofCol, -0.3), outline: 0.02 });
     return rise + th;
   }
   function curvedRoof(k, cx, cz, y, W4, D3, rise, ov, roofCol, opts = {}) {
@@ -55901,7 +55904,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       if (Number.isFinite(lo)) sink = Math.min(16, Math.max(2, base2 - lo + 0.4));
     }
-    B2(k, -fw / 2 - ex(-1, 0.08), -sink, -fd - 0.08, fw / 2 + ex(1, 0.08), plinth, 0.08, V4.baseCol || baseCol, { outline: 0.03 });
+    const fx0 = trimX(ex, -1, 0.08, fw), fx1 = trimX(ex, 1, 0.08, fw);
+    B2(k, fx0, -sink, -fd - 0.08, fx1, plinth, 0.08, V4.baseCol || baseCol, { outline: 0.03 });
     const ruined = rt === "ruin" || S4.wall === "stone";
     if (ruined) {
       ruinWalls(k, b, fw, fd, H3, wallCol);
@@ -55953,7 +55957,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (!ruined) {
       if (rt === "flat") top += flatRoof(k, b, S4, fw, fd, H3, wallCol, roofCol, ex);
       else if (rt === "dome" || rt === "shell") {
-        B2(k, -fw / 2 - 0.15, H3 - 0.05, -fd - 0.15, fw / 2 + 0.15, H3 + 0.18, 0.15, shade2(wallCol, -0.12), { outline: 0.03 });
+        B2(k, trimX(ex, -1, 0.15, fw), H3 - 0.05, -fd - 0.15, trimX(ex, 1, 0.15, fw), H3 + 0.18, 0.15, shade2(wallCol, -0.12), { outline: 0.03 });
         const r = Math.min(fw, fd) / 2 * 0.98;
         const kind = rt === "shell" ? "shell" : b.style === "candy" ? "onion" : "dome";
         top += 0.18 + domeRoof(k, 0, -hd, H3 + 0.15, r, rt === "shell" ? 0.8 : 0.9, roofCol, kind);
@@ -56071,7 +56075,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (aw) y = Math.max(y, aw.top + bh / 2 + 0.08);
       if (info.rt === "pagoda" && info.storeys >= 2) y = info.plinth + info.storeyH + 0.3 + bh / 2 + 0.1;
       y = Math.min(y, info.H - (info.rt === "pagoda" ? 0.4 : 0.3) - bh / 2);
-      board2.position.set(0, y, S4.wall === "column" ? 0.46 : 0.1);
+      board2.position.set(0, y, S4.wall === "column" ? 0.46 : 0.165);
       grp.add(board2);
     }
     grp.userData.height = top;
@@ -56079,9 +56083,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function wallDetail(k, b, S4, fw, fd, H3, plinth, storeys, storeyH, wallCol, g, holes = null, ex = (sx, d) => d, sink = 0) {
     const free = (sx) => ex(sx, 1) > 0;
-    const xl = (d) => -fw / 2 - ex(-1, d), xr = (d) => fw / 2 + ex(1, d);
+    const xl = (d) => free(-1) ? -fw / 2 - d : -fw / 2 + 0.01, xr = (d) => free(1) ? fw / 2 + d : fw / 2 - 0.01;
     const beam2 = S4.beam || shade2(wallCol, -0.5);
-    const HF = holes?.front || [], HS = { [-1]: holes?.left || [], [1]: holes?.right || [] };
+    const dOf = doorOf(b);
+    const HF = holes?.front || [{ a0: dOf.x - dOf.dw / 2 - 0.16, a1: dOf.x + dOf.dw / 2 + 0.16, y0: -10, y1: dOf.dh + 0.2 }];
+    const HS = { [-1]: holes?.left || [], [1]: holes?.right || [] };
     const segs = (a0, a1, y0, y1, list) => {
       let parts = [[Math.min(a0, a1), Math.max(a0, a1)]];
       for (const o of list) {
@@ -56110,7 +56116,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     switch (S4.wall) {
       case "timber": {
         for (const sx of [-1, 1]) for (const sz of [0, -fd]) {
-          const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.12);
+          const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * (free(sx) ? 0.12 : -0.02);
           B2(k, Math.min(inner, outer), plinth, sz - 0.12, Math.max(inner, outer), H3, sz + 0.12, beam2);
         }
         for (let f = 0; f <= storeys; f++) {
@@ -56123,8 +56129,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             const x0 = sx * (fw / 2 - 0.1), x1 = sx * (fw / 2 - 1 * g);
             const y0 = plinth + 0.2, y1 = plinth + Math.min(storeyH, H3 - plinth) - 0.1;
             if (crosses(x0, y0, y1, 0.05) || crosses(x1, y0, y1, 0.05) || crosses((x0 + x1) / 2, y0, y1, 0.05)) continue;
+            const lo = Math.min(x0, x1) - 0.1, hi = Math.max(x0, x1) + 0.1, W0 = windowSlots(b, 0), dr = doorOf(b);
+            if (W0.front.some((x) => x + W0.reach > lo && x - W0.reach < hi) || dr.x + dr.dw / 2 + 0.15 > lo && dr.x - dr.dw / 2 - 0.15 < hi) continue;
             const len = Math.hypot(x1 - x0, y1 - y0);
-            k.add(box(0.13, len, 0.06), { at: [x0, y0, 0.03], rot: [0, 0, -Math.atan2(x1 - x0, y1 - y0)], color: beam2 });
+            k.add(box(0.13, len, 0.06), { at: [x0, y0, 0.035], rot: [0, 0, -Math.atan2(x1 - x0, y1 - y0)], color: beam2 });
           }
         }
         break;
@@ -56148,9 +56156,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           FB(xl(0.01), y, -0.01, xr(0.01), y + 0.025, 0.012, mortar);
           for (const sx of [-1, 1]) if (free(sx)) SB2(sx, sx * (fw / 2 + 6e-3) - 6e-3, y, -fd, sx * (fw / 2 + 6e-3) + 6e-3, y + 0.025, 0, mortar);
         }
-        for (let f = 1; f < storeys; f++) FB(xl(0.06), plinth + f * storeyH - 0.2, -0.06, xr(0.06), plinth + f * storeyH, 0.1, S4.trim || shade2(wallCol, 0.3));
+        for (let f = 1; f < storeys; f++) FB(xl(0.06), plinth + f * storeyH - 0.2, -0.05, xr(0.06), plinth + f * storeyH, 0.1, S4.trim || shade2(wallCol, 0.3));
         for (const sx of [-1, 1]) {
-          const inner = sx * fw / 2 - sx * 0.16, outer = sx * fw / 2 + sx * ex(sx, 0.16);
+          const inner = sx * fw / 2 - sx * 0.16, outer = sx * fw / 2 + sx * (free(sx) ? 0.16 : -0.02);
           B2(k, Math.min(inner, outer), plinth, -0.06, Math.max(inner, outer), H3, 0.08, shade2(wallCol, -0.12));
         }
         break;
@@ -56162,11 +56170,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
             if (!free(sx)) continue;
             for (let y = plinth, i = 0; y < H3 - 0.3; y += 0.45, i++) {
               const w = i % 2 ? 0.35 : 0.55;
-              B2(k, sx * fw / 2 - (sx > 0 ? w : 0.05), y, -0.05, sx * fw / 2 + (sx > 0 ? 0.05 : w), y + 0.38, 0.05, shade2(wallCol, -0.14));
+              B2(k, sx * fw / 2 - (sx > 0 ? w : 0.03), y, -0.05, sx * fw / 2 + (sx > 0 ? 0.03 : w), y + 0.38, 0.03, shade2(wallCol, -0.14));
             }
           }
         }
-        for (let f = 1; f < storeys; f++) FB(xl(0.05), plinth + f * storeyH - 0.15, -0.05, xr(0.05), plinth + f * storeyH, 0.08, qc);
+        for (let f = 1; f < storeys; f++) FB(xl(0.05), plinth + f * storeyH - 0.15, -0.04, xr(0.05), plinth + f * storeyH, 0.08, qc);
         if (S4.band) FB(xl(0.04), H3 - 0.7, -0.04, xr(0.04), H3 - 0.2, 0.08, qc);
         break;
       }
@@ -56175,17 +56183,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         for (let i = 0; i <= n; i++) {
           const x = -fw / 2 + i * fw / n;
           if (crosses(x, plinth, H3, 0.1)) continue;
-          B2(k, x - 0.08, plinth, -0.02, x + 0.08, H3, 0.08, S4.beam);
+          B2(k, x - 0.08, plinth, -0.02, x + 0.08, H3 - 0.01, 0.08, S4.beam);
         }
         for (const sx of [-1, 1]) for (let i = 0; i <= 2; i++) {
           if (!free(sx) || crossesSide(sx, -i * fd / 2, plinth, H3, 0.1)) continue;
-          B2(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H3, -i * fd / 2 + 0.08, S4.beam);
+          B2(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H3 - 0.01, -i * fd / 2 + 0.08, S4.beam);
         }
         for (let f = 0; f < storeys; f++) {
           const y = plinth + f * storeyH + storeyH * 0.45;
           FB(xl(0.02), y, -0.02, xr(0.02), y + 0.14, 0.1, S4.beam);
         }
-        B2(k, xl(0.02), H3 - 0.25, -0.02, xr(0.02), H3, 0.1, S4.beam);
+        B2(k, xl(0.02), H3 - 0.25, -0.02, xr(0.02), H3 - 0.01, 0.1, S4.beam);
         break;
       }
       case "column": {
@@ -56217,7 +56225,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const pad2 = 0.03;
     const win = (w) => ({ a0: w.u - w.w / 2 - pad2, a1: w.u + w.w / 2 + pad2, y0: w.y - w.h / 2 - pad2, y1: w.y + w.h / 2 + (w.kind === "gothic" ? w.w * 0.18 : 0) + pad2 });
     return {
-      front: [{ a0: d.x - d.dw / 2 - pad2, a1: d.x + d.dw / 2 + pad2, y0: -10, y1: y0 + d.dh + pad2 }, ...ops.front.map(win)],
+      // (the door's frame stands 14 cm round its opening: bands stop at the frame, not in it)
+      front: [{ a0: d.x - d.dw / 2 - 0.16, a1: d.x + d.dw / 2 + 0.16, y0: -10, y1: y0 + d.dh + 0.16 }, ...ops.front.map(win)],
       left: ops.left.map(win),
       right: ops.right.map(win)
     };
@@ -56229,12 +56238,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     for (let i = 0; i < seg; i++) {
       const x0 = -fw / 2 + i * fw / seg, x1 = x0 + fw / seg;
       const h2 = 0.8 + R4(i) * (H3 - 0.8) * 0.9;
-      B2(k, x0, -1, -0.45, x1 + 0.01, h2, 0, i % 2 ? shade2(stone, -0.08) : stone, { outline: 0.03 });
+      const dz = i % 2 ? 0.015 : 0;
+      B2(k, x0, -1, -0.45 + dz, x1 + 0.01, h2, dz, i % 2 ? shade2(stone, -0.08) : stone, { outline: 0.03 });
     }
     for (const sx of [-1, 1]) {
       const sseg = Math.max(2, Math.round(fd / 1.2));
       for (let i = 0; i < sseg; i++) {
-        const z0 = -i * fd / sseg, z1 = z0 - fd / sseg;
+        const z0 = i ? -i * fd / sseg : -0.44, z1 = -(i + 1) * fd / sseg;
         const h2 = 0.5 + R4(i + sx * 10) * (H3 - 0.5) * 0.8;
         B2(k, sx * fw / 2 - 0.45 * (sx > 0 ? 1 : 0), -1, z1, sx * fw / 2 + 0.45 * (sx > 0 ? 0 : 1), h2, z0, stone, { outline: 0.03 });
       }
@@ -56246,7 +56256,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function flatRoof(k, b, S4, fw, fd, H3, wallCol, roofCol, ex = (sx, d) => d) {
     const hd = fd / 2;
-    const xl = -fw / 2 - ex(-1, 0.12), xr = fw / 2 + ex(1, 0.12);
+    const xl = trimX(ex, -1, 0.12, fw), xr = trimX(ex, 1, 0.12, fw);
     B2(k, xl, H3 - 0.05, -fd - 0.12, xr, H3 + 0.15, 0.12, roofCol, { outline: 0.03 });
     const pc = b.style === "marine" ? "#f5f6fa" : shade2(wallCol, -0.06);
     const ph = 0.45;
@@ -56353,10 +56363,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function jetty(k, S4, fw, plinth, storeys, storeyH, H3, Hc, j, wallCol, ex) {
     const beam2 = S4.beam || shade2(wallCol, -0.5);
     B2(k, -fw / 2, Hc, 0, fw / 2, H3, j, wallCol, { outline: 0.04 });
-    B2(k, -fw / 2 - ex(-1, 0.03), Hc - 0.2, -0.02, fw / 2 + ex(1, 0.03), Hc + 0.04, j + 0.07, beam2);
+    B2(k, trimX(ex, -1, 0.03, fw), Hc - 0.2, -0.02, trimX(ex, 1, 0.03, fw), Hc + 0.04, j + 0.07, beam2);
     for (let x = -fw / 2 + 0.35; x < fw / 2 - 0.2; x += 1.15) k.add(box(0.1, 0.5, 0.1), { at: [x, Hc - 0.62, 0.06], rot: [0.55, 0, 0], color: beam2 });
     for (const sx of [-1, 1]) {
-      const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.02);
+      const inner = sx * fw / 2 - sx * 0.12, outer = trimX(ex, sx, 0.02, fw, 0.02);
       B2(k, Math.min(inner, outer), Hc, j - 0.1, Math.max(inner, outer), H3, j + 0.04, beam2);
     }
     for (let f = 1; f <= storeys; f++) {
@@ -56430,13 +56440,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const n = Math.max(4, Math.round(aw / 0.45));
       for (let i = 0; i < n; i++) {
         const x0 = door.x - aw / 2 + i * aw / n;
-        k.add(box(aw / n + 5e-3, 0.05, 1), { at: [x0 + aw / n / 2, ay, 0.45], rot: [0.42, 0, 0], color: i % 2 ? "#ffffff" : c });
+        k.add(box(aw / n + 5e-3, i % 2 ? 0.07 : 0.05, 1), { at: [x0 + aw / n / 2, ay - (i % 2 ? 0.01 : 0), 0.45], rot: [0.42, 0, 0], color: i % 2 ? "#ffffff" : c });
       }
       for (let i = 0; i < n; i++) k.add(new CircleGeometry(aw / n / 2, 8, Math.PI, Math.PI), { at: [door.x - aw / 2 + (i + 0.5) * aw / n, ay - 0.4, 0.92], rot: [-0.42, 0, 0], color: i % 2 ? "#ffffff" : c, double: true, backShade: 0.85 });
     }
     if (S4.engawa) {
       B2(k, -fw / 2 - ex(-1, 0.1), -dn, 0, fw / 2 + ex(1, 0.1), 0.42, 0.9, "#8d6e4a", { outline: 0.02 });
-      for (let x = -fw / 2 + 0.2; x < fw / 2; x += 0.3) B2(k, x, 0.42, 0.02, x + 0.02, 0.425, 0.88, "#6d4c33");
+      for (let x = -fw / 2 + 0.2; x < fw / 2; x += 0.3) B2(k, x, 0.42, 0.02, x + 0.02, 0.432, 0.88, "#6d4c33");
       if (Math.abs(door.x) < fw) B2(k, door.x - 0.6, -dn, 0.85, door.x + 0.6, 0.22, 1.3, "#9a948a");
     }
     if (S4.lanterns || b.style === "wano" && role !== "house") {
@@ -56463,10 +56473,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       k.add(slab([[-pw / 2 + 0.1, 0.06], [pw / 2 - 0.1, 0.06], [0, 0.72]], 0.05), { at: [0, 0, 0.71], color: "#d4ac0d" });
       k.restore();
     }
-    if (b.role === "marine_base" || b.style === "marine" && fw >= 6) {
-      B2(k, -fw / 2 - ex(-1, 0.05), H3 - 1.15, 0, fw / 2 + ex(1, 0.05), H3 - 0.35, 0.12, "#f5f6fa", { outline: 0.02 });
-      B2(k, -fw / 2 - ex(-1, 0.06), H3 - 1.2, 0, fw / 2 + ex(1, 0.06), H3 - 1.1, 0.13, "#1b4f72");
-      B2(k, -fw / 2 - ex(-1, 0.06), H3 - 0.4, 0, fw / 2 + ex(1, 0.06), H3 - 0.3, 0.13, "#1b4f72");
+    if ((b.role === "marine_base" || b.style === "marine" && fw >= 6) && b.style !== "ruins") {
+      B2(k, trimX(ex, -1, 0.05, fw, 0.03), H3 - 1.15, 0, trimX(ex, 1, 0.05, fw, 0.03), H3 - 0.35, 0.135, "#f5f6fa", { outline: 0.02 });
+      B2(k, trimX(ex, -1, 0.06, fw, 0.04), H3 - 1.2, 5e-3, trimX(ex, 1, 0.06, fw, 0.04), H3 - 1.1, 0.15, "#1b4f72");
+      B2(k, trimX(ex, -1, 0.06, fw, 0.04), H3 - 0.4, 5e-3, trimX(ex, 1, 0.06, fw, 0.04), H3 - 0.3, 0.15, "#1b4f72");
     }
     if (b.style === "spooky") {
       if (clearOfDoor(-fw / 2 + 0.3, -fw / 2 + 1.4)) B2(k, -fw / 2 + 0.3, 1.4, 0.06, -fw / 2 + 1.4, 1.52, 0.1, "#5d4037", { rot: [0, 0, 0.3] });
@@ -58863,7 +58873,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(lathe([[1.18, 0.22], [1.2, 0.58], [1.3, 0.64], [1.44, 0.6], [1.46, 0.05], [1.5, -0.2]], 18), { color: stone, outline: 0.03 });
     k.add(new CircleGeometry(1.2, 18), { at: [0, 0.22, 0], rot: [-Math.PI / 2, 0, 0], color: "#8fa7ad" });
     k.add(new CircleGeometry(1.19, 18), { at: [0, 0.46, 0], rot: [-Math.PI / 2, 0, 0], color: "#4fb3d9" });
-    k.add(new RingGeometry(0.62, 0.74, 18), { at: [0, 0.462, 0], rot: [-Math.PI / 2, 0, 0], color: "#bfe9ff" });
+    k.add(new RingGeometry(0.62, 0.74, 18), { at: [0, 0.475, 0], rot: [-Math.PI / 2, 0, 0], color: "#bfe9ff" });
     k.add(cyl(0.16, 0.24, 1.35, 10), { at: [0, 0.2, 0], color: "#bdb5a6", outline: 0.02 });
     k.add(lathe([[0.1, 0], [0.42, 0.1], [0.56, 0.24], [0.6, 0.3], [0.52, 0.3], [0.12, 0.2]], 14), { at: [0, 1.45, 0], color: stone, outline: 0.02 });
     k.add(new CircleGeometry(0.5, 14), { at: [0, 1.72, 0], rot: [-Math.PI / 2, 0, 0], color: "#4fb3d9" });
@@ -59130,7 +59140,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const bands = [[0, 2.2, "#fdfefe"], [2.2, 3.3, "#c0392b"], [3.3, 5.4, "#fdfefe"], [5.4, 6.5, "#c0392b"], [6.5, 8.2, "#fdfefe"]];
     const r = (y) => 1.7 - y / 8.2 * 0.62;
     k.add(cyl(1.95, 2, 0.6, 12), { at: [0, -0.3, 0], color: "#9e9a90", outline: 0.03 });
-    for (const [y0, y1, c] of bands) k.add(cyl(r(y1), r(y0), y1 - y0 + 0.01, 14, true), { at: [0, y0 + 0.28, 0], color: c, outline: 0.045 });
+    for (const [y0, y1, c] of bands) k.add(cyl(r(y1), r(y0), y1 - y0, 14, true), { at: [0, y0 + 0.28, 0], color: c, outline: 0.045 });
     k.add(box(0.85, 1.9, 0.2), { at: [0, 0.28, 1.62], rot: [-0.07, 0, 0], color: "#5a3a22" });
     for (const [y, z] of [[3.9, 1.38], [6.9, 1.2]]) k.add(box(0.36, 0.6, 0.12), { at: [0, y, z], rot: [-0.07, 0, 0], color: "#2d4150", glow: "#ffc766" });
     k.add(cyl(1.5, 1.5, 0.16, 14), { at: [0, 8.48, 0], color: "#2d3436", outline: 0.02 });

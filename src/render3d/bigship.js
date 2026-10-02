@@ -162,9 +162,13 @@ function bulwarks(k, d, P) {
     strip(k, inner, shade(P.upper, -0.12), s > 0);
     strip(k, cap, P.cap, s > 0);
   }
-  // the inside of the stern, across the transom
+  // the inside of the stern, across the transom: 2 cm in from its outer face
+  // (flush with it, the two flickered against each other across the whole
+  // stern) and no wider than the planking there (measured further forward,
+  // where she's broader, its ends stood out of her quarters)
   const ys = floorAt(d, 0.01), ts = topAt(d, 0) - 0.1;
-  k.add(box(0.2, ts - ys + 0.04, innerAt(d, 0.01, (ys + ts) / 2) * 2 + 0.1), { at: [xAt(d, 0) + 0.1, ys - 0.02, 0], color: shade(P.upper, -0.12) });
+  const wi = Math.min(innerAt(d, 0, ys), innerAt(d, 0, ts)) + 0.04;
+  k.add(box(0.2, ts - ys + 0.04, wi * 2), { at: [xAt(d, 0) + 0.12, ys - 0.02, 0], color: shade(P.upper, -0.12) });
 }
 
 /**
@@ -368,7 +372,9 @@ function cabinFront(k, d, P, r) {
   const f = r.front, face = f.face, y0 = r.floor, y1 = r.top;
   // `face`: +1 the front faces forward (the cabin is aft of it), -1 aft (the forecastle)
   const x = f.u + face * 0.07, w = f.w;
-  const h = y1 - y0, dh = f.dh;
+  // (up to a centimetre under the deck above: right up to it, the wall's top
+  // lay in the deck's own plane and flickered through its planking)
+  const h = y1 - y0 - 0.01, dh = f.dh;
   // the wall, in pieces round its doorways (you walk in through them)
   const ds = [...r.doors].sort((a, b) => a.v - b.v);
   let z = -w;
@@ -440,7 +446,9 @@ function stairs(k, d, P) {
       // walking up the flight from its low end
       const fa = lowEnd === 'a' ? f0 : 1 - f1, fb = lowEnd === 'a' ? f1 : 1 - f0;
       const x0 = xa + (xb - xa) * fa, x1 = xa + (xb - xa) * fb;
-      const top = Math.min(s.ha, s.hb) + rise * (i + 1) / n;
+      // (the top one a centimetre under the deck it climbs to: level with it,
+      // the two flickered where it runs in under the deck's edge)
+      const top = Math.min(s.ha, s.hb) + rise * (i + 1) / n - (i === n - 1 ? 0.01 : 0);
       k.add(box(Math.abs(x1 - x0) + 0.02, 0.07, w - 0.1), { at: [(x0 + x1) / 2, top - 0.07, zc], color: shade(P.deck, -0.05), outline: 0.01 });
       k.add(box(0.04, top - Math.min(s.ha, s.hb) - 0.02, w - 0.14), { at: [lowEnd === 'a' ? x0 : x1, Math.min(s.ha, s.hb), zc], color: shade(P.deck, -0.3) });
     }
@@ -495,7 +503,7 @@ function companionway(k, d, P, s) {
     const f0 = i / n, f1 = (i + 1) / n;
     const x0 = xa + (xb - xa) * f0, x1 = xa + (xb - xa) * f1, top = lo + (hi - lo) * f1;
     k.add(box(Math.abs(x1 - x0) + 0.02, 0.06, w - 0.08), { at: [(x0 + x1) / 2, top - 0.06, 0], color: shade(P.deck, -0.05), outline: 0.008 });
-    k.add(box(0.03, (hi - lo) / n, w - 0.1), { at: [x0, top - (hi - lo) / n, 0], color: shade(P.deck, -0.3) });
+    k.add(box(0.03, (hi - lo) / n - 0.01, w - 0.1), { at: [x0, top - (hi - lo) / n, 0], color: shade(P.deck, -0.3) }); // (its top a centimetre under the tread's)
   }
   // (the handrails run up the flight as far as the opening: they end under the deck's edge, not above it)
   const f1 = Math.max(0.1, (hi - 0.95 - lo) / (hi - lo)), x1 = xa + (xb - xa) * f1, y1 = lo + (hi - lo) * f1;
@@ -1188,7 +1196,7 @@ export function bigInterior(def, d) {
       for (const wd of r.windows || []) {
         // (the sea and sky beyond the glass: pale by day, lit from within by night)
         k.add(box(0.04, 0.9, wd.w), { at: [x + 0.01, r.floor + 0.75, wd.v], color: '#a9d6ee', glow: '#ffd58a' });
-        k.add(box(0.06, 0.05, wd.w), { at: [x + 0.02, r.floor + 1.18, wd.v], color: IN.beam });
+        k.add(box(0.06, 0.05, wd.w - 0.02), { at: [x + 0.02, r.floor + 1.18, wd.v], color: IN.beam }); // (a centimetre short of the glass's sides, not ending in their planes)
         k.add(box(0.06, 0.9, 0.05), { at: [x + 0.02, r.floor + 0.75, wd.v], color: IN.beam });
         k.add(box(0.12, 0.06, wd.w + 0.1), { at: [x + 0.04, r.floor + 0.72, wd.v], color: IN.beam });
       }

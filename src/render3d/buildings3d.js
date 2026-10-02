@@ -115,7 +115,7 @@ function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers, pane = nu
   const G = pane ? (pane.m.copy(k.m), pane) : k;
   switch (S.win) {
     case 'shoji': {
-      if (pane) rectFrame(k, w, h, 0.06, -0.02, 0.06, '#3e2723');
+      if (pane) rectFrame(k, w, h, 0.06, 0, 0.06, '#3e2723');
       else B(k, -w / 2 - 0.06, -h / 2 - 0.06, -0.02, w / 2 + 0.06, h / 2 + 0.06, 0.06, '#3e2723');
       B(G, -w / 2, -h / 2, 0, w / 2, h / 2, 0.035, '#f3ead3', { glow: litOn ? '#ffb84d' : null });
       for (let i = 1; i < 3; i++) B(k, -w / 2 + i * w / 3 - 0.015, -h / 2, 0.03, -w / 2 + i * w / 3 + 0.015, h / 2, 0.05, '#5d4037');
@@ -123,7 +123,7 @@ function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers, pane = nu
       break;
     }
     case 'lattice': {
-      if (pane) rectFrame(k, w, h, 0.08, -0.02, 0.06, '#8e2b22');
+      if (pane) rectFrame(k, w, h, 0.08, 0, 0.06, '#8e2b22');
       else B(k, -w / 2 - 0.08, -h / 2 - 0.08, -0.02, w / 2 + 0.08, h / 2 + 0.08, 0.06, '#8e2b22');
       B(G, -w / 2, -h / 2, 0, w / 2, h / 2, 0.035, '#f6ddcc', { glow: litOn ? '#ffab66' : null });
       for (let i = 1; i < 4; i++) B(k, -w / 2 + i * w / 4 - 0.012, -h / 2, 0.03, -w / 2 + i * w / 4 + 0.012, h / 2, 0.05, '#8e2b22');
@@ -163,11 +163,12 @@ function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers, pane = nu
     case 'none': break;
     default: { // 'cross' / 'tall': framed glass with mullions and a sill
       const hh = S.win === 'tall' ? h * 1.2 : h;
-      if (pane) rectFrame(k, w, hh, 0.08, -0.02, 0.05, frame);
+      if (pane) rectFrame(k, w, hh, 0.08, 0, 0.05, frame);
       else B(k, -w / 2 - 0.08, -hh / 2 - 0.08, -0.02, w / 2 + 0.08, hh / 2 + 0.08, 0.05, frame);
       B(G, -w / 2, -hh / 2, 0, w / 2, hh / 2, 0.06, glass, { glow });
-      B(k, -0.025, -hh / 2, 0.05, 0.025, hh / 2, 0.08, frame);
-      B(k, -w / 2, -0.025, 0.05, w / 2, 0.025, 0.08, frame);
+      // (the mullions stop a centimetre short of the glass's edges: ending in the planes of its sides, they flickered)
+      B(k, -0.025, -hh / 2 + 0.01, 0.05, 0.025, hh / 2 - 0.01, 0.08, frame);
+      B(k, -w / 2 + 0.01, -0.025, 0.05, w / 2 - 0.01, 0.025, 0.08, frame);
       B(k, -w / 2 - 0.12, -hh / 2 - 0.14, -0.02, w / 2 + 0.12, -hh / 2 - 0.06, 0.14, shade(frame, 0.1));
       if (S.shutters) {
         const sc = ['#2e6b8a', '#4f7d3a', '#8a3b2e', '#6d4c33'][(b.v || 0) % 4];
@@ -230,15 +231,16 @@ function doorAt(k, b, S, x, g, wallCol, big, y0 = null, sink = 0.3) {
       break;
     }
     case 'noren': {
-      if (open) doorFrame(k, dw, dh, yb, 0.12, -0.02, 0.05, '#3e2723');
+      if (open) doorFrame(k, dw, dh, yb, 0.12, 0, 0.05, '#3e2723');
       else {
         B(k, -dw / 2 - 0.12, yb, -0.02, dw / 2 + 0.12, yb + dh + 0.1, 0.05, '#3e2723');
         B(k, -dw / 2, yb, 0, dw / 2, dh, 0.03, '#2b2420');
       }
       const nc = ['#1f3a68', '#7b1f1f', '#2e5e3a', '#4a2e6b'][(b.v || 0) % 4];
       const top = open ? yb + dh : dh;
-      for (let i = 0; i < 3; i++) B(k, -dw / 2 + i * dw / 3 + 0.02, top - 0.75, 0.05, -dw / 2 + (i + 1) * dw / 3 - 0.02, top, 0.08, nc);
-      B(k, -dw / 2 - 0.05, top - 0.05, 0.04, dw / 2 + 0.05, top + 0.05, 0.1, '#3e2723');
+      // (hung clear of the posts' faces, 8 cm out, and the rails', 10)
+      for (let i = 0; i < 3; i++) B(k, -dw / 2 + i * dw / 3 + 0.02, top - 0.75, 0.05, -dw / 2 + (i + 1) * dw / 3 - 0.02, top, 0.095, nc);
+      B(k, -dw / 2 - 0.05, top - 0.05, 0.04, dw / 2 + 0.05, top + 0.05, 0.115, '#3e2723');
       break;
     }
     case 'hide': {
@@ -248,13 +250,13 @@ function doorAt(k, b, S, x, g, wallCol, big, y0 = null, sink = 0.3) {
       break;
     }
     default: {
-      if (open) doorFrame(k, dw, dh, yb, 0.14, -0.02, 0.07, frame);
+      if (open) doorFrame(k, dw, dh, yb, 0.14, 0, 0.07, frame);
       else {
         B(k, -dw / 2 - 0.14, 0.1, -0.02, dw / 2 + 0.14, dh + 0.16, 0.07, frame, { outline: 0.015 });
         B(k, -dw / 2, 0.1, 0, dw / 2, dh, 0.09, wood);
         if (S.door === 'plank') for (let i = 1; i < 4; i++) B(k, -dw / 2 + i * dw / 4 - 0.012, 0.15, 0.08, -dw / 2 + i * dw / 4 + 0.012, dh - 0.05, 0.1, shade(wood, -0.3));
         else { B(k, -dw / 2 + 0.12, 0.35, 0.08, dw / 2 - 0.12, dh * 0.45, 0.11, shade(wood, 0.12)); B(k, -dw / 2 + 0.12, dh * 0.55, 0.08, dw / 2 - 0.12, dh - 0.15, 0.11, shade(wood, 0.12)); }
-        if (big) B(k, -0.012, 0.1, 0.09, 0.012, dh, 0.11, shade(wood, -0.35));
+        if (big) B(k, -0.02, 0.1, 0.09, 0.02, dh, 0.12, shade(wood, -0.35)); // (proud of the panels and wider than a plank joint: not level with either)
         k.add(new THREE.SphereGeometry(0.05, 5, 4), { at: [dw / 2 - 0.16, 0.1 + dh * 0.47, 0.13], color: '#f1c40f' });
       }
       // a lamp over shop doors
@@ -270,7 +272,11 @@ function doorAt(k, b, S, x, g, wallCol, big, y0 = null, sink = 0.3) {
   return { dw, dh, top: open ? yb + dh : dh };
 }
 
-/** Jambs and a lintel round a doorway (the opening itself stays open). */
+/**
+ * Jambs and a lintel round a doorway (the opening itself stays open). They
+ * stand on the wall's face (z0 ≥ 0): set back into it, their inner faces lay
+ * in the plane of the doorway's own sides and flickered against them.
+ */
 function doorFrame(k, dw, dh, yb, t, z0, z1, color) {
   B(k, -dw / 2 - t, yb, z0, -dw / 2, yb + dh + t, z1, color, { outline: 0.015 });
   B(k, dw / 2, yb, z0, dw / 2 + t, yb + dh + t, z1, color, { outline: 0.015 });
@@ -284,6 +290,14 @@ function doorWood(b, S) {
   if ((b.role || 'house') === 'house' && ['village', 'town', 'port', 'city', 'noble', 'snow', 'spooky'].includes(b.style)) return DOOR_PAINT[Math.floor(hash(b.x, b.y, 5.3) * DOOR_PAINT.length)];
   return b.style === 'noble' ? '#6d3b1f' : '#5a3a22';
 }
+
+/**
+ * Where a trim on side sx (-1 left, 1 right) ends along x: d past the corner,
+ * or, against a neighbour (ex(sx, …) is 0 there), a centimetre short of it —
+ * ending in the shared wall's own plane, its end flickered against that wall
+ * wherever the neighbour is lower.
+ */
+const trimX = (ex, sx, d, fw, inset = 0.01) => sx * (ex(sx, 1) > 0 ? fw / 2 + d : fw / 2 - inset);
 
 /** A pitched roof with the ridge along x (gable ends at x = ±hw). */
 function gableRoof(k, S, b, hw, hd, y, rise, ov, roofCol, wallCol, snowy, g, ex = () => 0.3) {
@@ -326,18 +340,22 @@ function gableRoof(k, S, b, hw, hd, y, rise, ov, roofCol, wallCol, snowy, g, ex 
     } else {
       // a thick snow blanket with a rounded lip at the eave
       k.add(box(L - 0.1, 0.18 * g, slopeLen - 0.05), { at: [xs, th, slopeLen / 2 + 0.02], color: '#f4f9ff' });
-      k.add(cyl(0.13 * g, 0.13 * g, L - 0.1, 7), { at: [xs + (L - 0.1) / 2, th + 0.06, slopeLen], rot: [0, 0, Math.PI / 2], color: '#ffffff' });
+      // (a centimetre longer than the blanket each end: cut level with it, the ends flickered)
+      k.add(cyl(0.13 * g, 0.13 * g, L - 0.08, 7), { at: [xs + (L - 0.08) / 2, th + 0.06, slopeLen], rot: [0, 0, Math.PI / 2], color: '#ffffff' });
     }
     // bargeboards on the gable edges (not where a neighbour's roof carries on)
     for (const sx of [-1, 1]) {
       const world = side < 0 ? -sx : sx;
       if (!ex(world, 1)) continue;
-      k.add(box(0.1 * g, th + 0.08, slopeLen), { at: [xs + sx * (L / 2 + 0.03), -0.04, slopeLen / 2], color: shade(roofCol, -0.4) });
+      // (2 cm past the roof at the eave and the ridge: cut level with it, the ends flickered)
+      k.add(box(0.1 * g, th + 0.08, slopeLen + 0.04), { at: [xs + sx * (L / 2 + 0.03), -0.04, slopeLen / 2], color: shade(roofCol, -0.4) });
     }
     k.restore();
   }
   // ridge cap
-  k.add(box(L + (oL ? 0.05 : 0) + (oR ? 0.05 : 0), 0.16 * g, 0.26 * g), { at: [xc + ((oR ? 0.05 : 0) - (oL ? 0.05 : 0)) / 2, y + rise + th * 0.5, zc], color: snowy ? '#ffffff' : shade(roofCol, -0.3), outline: 0.02 });
+  // (a centimetre short of a shared gable: level with the roof's end there, the two flickered)
+  const cL = oL ? 0.05 : -0.01, cR = oR ? 0.05 : -0.01;
+  k.add(box(L + cL + cR, 0.16 * g, 0.26 * g), { at: [xc + (cR - cL) / 2, y + rise + th * 0.5, zc], color: snowy ? '#ffffff' : shade(roofCol, -0.3), outline: 0.02 });
   return rise + th;
 }
 
@@ -507,7 +525,10 @@ function buildBuilding0(b, ctx) {
     for (const u of [-0.5, -0.25, 0, 0.25, 0.5]) for (const v of [0, -0.33, -0.66, -1]) { const q = bw(b, u * fw, v * fd); lo = Math.min(lo, terr(q.x, q.y)); }
     if (Number.isFinite(lo)) sink = Math.min(16, Math.max(2, base - lo + 0.4));
   }
-  B(k, -fw / 2 - ex(-1, 0.08), -sink, -fd - 0.08, fw / 2 + ex(1, 0.08), plinth, 0.08, V.baseCol || baseCol, { outline: 0.03 });
+  // (against a neighbour it stops a centimetre inside the shared wall: flush
+  // with it, the band where the wall comes down over it flickered)
+  const fx0 = trimX(ex, -1, 0.08, fw), fx1 = trimX(ex, 1, 0.08, fw);
+  B(k, fx0, -sink, -fd - 0.08, fx1, plinth, 0.08, V.baseCol || baseCol, { outline: 0.03 });
 
   // walls
   const ruined = rt === 'ruin' || S.wall === 'stone';
@@ -565,7 +586,9 @@ function buildBuilding0(b, ctx) {
   if (!ruined) {
     if (rt === 'flat') top += flatRoof(k, b, S, fw, fd, H, wallCol, roofCol, ex);
     else if (rt === 'dome' || rt === 'shell') {
-      B(k, -fw / 2 - 0.15, H - 0.05, -fd - 0.15, fw / 2 + 0.15, H + 0.18, 0.15, shade(wallCol, -0.12), { outline: 0.03 });
+      // (its base slab stops short of a neighbour: run 15 cm on into the next
+      // house's, the two lay in one plane and flickered)
+      B(k, trimX(ex, -1, 0.15, fw), H - 0.05, -fd - 0.15, trimX(ex, 1, 0.15, fw), H + 0.18, 0.15, shade(wallCol, -0.12), { outline: 0.03 });
       const r = Math.min(fw, fd) / 2 * 0.98;
       const kind = rt === 'shell' ? 'shell' : b.style === 'candy' ? 'onion' : 'dome';
       top += 0.18 + domeRoof(k, 0, -hd, H + 0.15, r, rt === 'shell' ? 0.8 : 0.9, roofCol, kind);
@@ -696,7 +719,8 @@ function finish(b, k, info, top) {
     if (aw) y = Math.max(y, aw.top + bh / 2 + 0.08);
     if (info.rt === 'pagoda' && info.storeys >= 2) y = info.plinth + info.storeyH + 0.3 + bh / 2 + 0.1;
     y = Math.min(y, info.H - (info.rt === 'pagoda' ? 0.4 : 0.3) - bh / 2);
-    board.position.set(0, y, S.wall === 'column' ? 0.46 : 0.1);
+    // (16.5 cm out: string courses stand 10 cm out, sills 14, and in their planes the board flickered)
+    board.position.set(0, y, S.wall === 'column' ? 0.46 : 0.165);
     grp.add(board);
   }
   grp.userData.height = top;
@@ -710,11 +734,18 @@ function finish(b, k, info, top) {
  * out. holes = { front: [{ a0, a1, y0, y1 }], left: [...], right: [...] } (a along the wall).
  */
 function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, holes = null, ex = (sx, d) => d, sink = 0) {
-  // (on a side against a neighbour, trims stop at the corner and side-wall detail is left off)
+  // (on a side against a neighbour, trims stop a centimetre short of the
+  // corner — ending in the shared wall's own plane, they flickered against it
+  // wherever the neighbour is lower — and side-wall detail is left off)
   const free = (sx) => ex(sx, 1) > 0;
-  const xl = (d) => -fw / 2 - ex(-1, d), xr = (d) => fw / 2 + ex(1, d);
+  const xl = (d) => (free(-1) ? -fw / 2 - d : -fw / 2 + 0.01), xr = (d) => (free(1) ? fw / 2 + d : fw / 2 - 0.01);
   const beam = S.beam || shade(wallCol, -0.5);
-  const HF = holes?.front || [], HS = { [-1]: holes?.left || [], [1]: holes?.right || [] };
+  // (a house you can't walk into has no openings cut, but its bands and beams
+  // still stop at its door's frame: run across it, they lay in the frame's
+  // plane and flickered against it)
+  const dOf = doorOf(b);
+  const HF = holes?.front || [{ a0: dOf.x - dOf.dw / 2 - 0.16, a1: dOf.x + dOf.dw / 2 + 0.16, y0: -10, y1: dOf.dh + 0.2 }];
+  const HS = { [-1]: holes?.left || [], [1]: holes?.right || [] };
   const segs = (a0, a1, y0, y1, list) => {
     let parts = [[Math.min(a0, a1), Math.max(a0, a1)]];
     for (const o of list) {
@@ -739,7 +770,7 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, ho
       // half-timbering: corner posts, floor beams, braces
       // corner posts (half a post each where two houses share the corner)
       for (const sx of [-1, 1]) for (const sz of [0, -fd]) {
-        const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.12);
+        const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * (free(sx) ? 0.12 : -0.02); // (deeper in than the trims' ends: see xl)
         B(k, Math.min(inner, outer), plinth, sz - 0.12, Math.max(inner, outer), H, sz + 0.12, beam);
       }
       for (let f = 0; f <= storeys; f++) {
@@ -752,8 +783,12 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, ho
           const x0 = sx * (fw / 2 - 0.1), x1 = sx * (fw / 2 - 1.0 * g);
           const y0 = plinth + 0.2, y1 = plinth + Math.min(storeyH, H - plinth) - 0.1;
           if (crosses(x0, y0, y1, 0.05) || crosses(x1, y0, y1, 0.05) || crosses((x0 + x1) / 2, y0, y1, 0.05)) continue;
+          // (nor across a window or the door of a house you can't walk into:
+          // it ran over the glass, and flickered against it)
+          const lo = Math.min(x0, x1) - 0.1, hi = Math.max(x0, x1) + 0.1, W0 = windowSlots(b, 0), dr = doorOf(b);
+          if (W0.front.some((x) => x + W0.reach > lo && x - W0.reach < hi) || (dr.x + dr.dw / 2 + 0.15 > lo && dr.x - dr.dw / 2 - 0.15 < hi)) continue;
           const len = Math.hypot(x1 - x0, y1 - y0);
-          k.add(box(0.13, len, 0.06), { at: [x0, y0, 0.03], rot: [0, 0, -Math.atan2(x1 - x0, y1 - y0)], color: beam });
+          k.add(box(0.13, len, 0.06), { at: [x0, y0, 0.035], rot: [0, 0, -Math.atan2(x1 - x0, y1 - y0)], color: beam });
         }
       }
       break;
@@ -779,10 +814,10 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, ho
         FB(xl(0.01), y, -0.01, xr(0.01), y + 0.025, 0.012, mortar);
         for (const sx of [-1, 1]) if (free(sx)) SB(sx, sx * (fw / 2 + 0.006) - 0.006, y, -fd, sx * (fw / 2 + 0.006) + 0.006, y + 0.025, 0, mortar);
       }
-      for (let f = 1; f < storeys; f++) FB(xl(0.06), plinth + f * storeyH - 0.2, -0.06, xr(0.06), plinth + f * storeyH, 0.1, S.trim || shade(wallCol, 0.3));
+      for (let f = 1; f < storeys; f++) FB(xl(0.06), plinth + f * storeyH - 0.2, -0.05, xr(0.06), plinth + f * storeyH, 0.1, S.trim || shade(wallCol, 0.3));
       // corner piers (a half pier where the next house carries on)
       for (const sx of [-1, 1]) {
-        const inner = sx * fw / 2 - sx * 0.16, outer = sx * fw / 2 + sx * ex(sx, 0.16);
+        const inner = sx * fw / 2 - sx * 0.16, outer = sx * fw / 2 + sx * (free(sx) ? 0.16 : -0.02); // (deeper in than the trims' ends: see xl)
         B(k, Math.min(inner, outer), plinth, -0.06, Math.max(inner, outer), H, 0.08, shade(wallCol, -0.12));
       }
       break;
@@ -793,13 +828,15 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, ho
       if (S.quoins || b.style === 'marine' || b.style === 'noble') {
         for (const sx of [-1, 1]) {
           if (!free(sx)) continue; // (a shared wall has no corner)
+          // (standing 3 cm proud: a window frame, 5 cm proud, passes in front
+          // of one rather than flickering against it in the same plane)
           for (let y = plinth, i = 0; y < H - 0.3; y += 0.45, i++) {
             const w = i % 2 ? 0.35 : 0.55;
-            B(k, sx * fw / 2 - (sx > 0 ? w : 0.05), y, -0.05, sx * fw / 2 + (sx > 0 ? 0.05 : w), y + 0.38, 0.05, shade(wallCol, -0.14));
+            B(k, sx * fw / 2 - (sx > 0 ? w : 0.03), y, -0.05, sx * fw / 2 + (sx > 0 ? 0.03 : w), y + 0.38, 0.03, shade(wallCol, -0.14));
           }
         }
       }
-      for (let f = 1; f < storeys; f++) FB(xl(0.05), plinth + f * storeyH - 0.15, -0.05, xr(0.05), plinth + f * storeyH, 0.08, qc);
+      for (let f = 1; f < storeys; f++) FB(xl(0.05), plinth + f * storeyH - 0.15, -0.04, xr(0.05), plinth + f * storeyH, 0.08, qc);
       if (S.band) FB(xl(0.04), H - 0.7, -0.04, xr(0.04), H - 0.2, 0.08, qc);
       break;
     }
@@ -809,17 +846,17 @@ function wallDetail(k, b, S, fw, fd, H, plinth, storeys, storeyH, wallCol, g, ho
       for (let i = 0; i <= n; i++) {
         const x = -fw / 2 + i * fw / n;
         if (crosses(x, plinth, H, 0.1)) continue;
-        B(k, x - 0.08, plinth, -0.02, x + 0.08, H, 0.08, S.beam);
+        B(k, x - 0.08, plinth, -0.02, x + 0.08, H - 0.01, 0.08, S.beam); // (its top under the wall's, not level with it)
       }
       for (const sx of [-1, 1]) for (let i = 0; i <= 2; i++) {
         if (!free(sx) || crossesSide(sx, -i * fd / 2, plinth, H, 0.1)) continue;
-        B(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H, -i * fd / 2 + 0.08, S.beam);
+        B(k, sx * fw / 2 - 0.08, plinth, -i * fd / 2 - 0.08, sx * fw / 2 + 0.08, H - 0.01, -i * fd / 2 + 0.08, S.beam);
       }
       for (let f = 0; f < storeys; f++) {
         const y = plinth + f * storeyH + storeyH * 0.45;
         FB(xl(0.02), y, -0.02, xr(0.02), y + 0.14, 0.1, S.beam);
       }
-      B(k, xl(0.02), H - 0.25, -0.02, xr(0.02), H, 0.1, S.beam);
+      B(k, xl(0.02), H - 0.25, -0.02, xr(0.02), H - 0.01, 0.1, S.beam); // (under the wall's top, not level with it)
       break;
     }
     case 'column': {
@@ -857,7 +894,8 @@ function holesOf(ops, d, y0) {
   const pad = 0.03;
   const win = (w) => ({ a0: w.u - w.w / 2 - pad, a1: w.u + w.w / 2 + pad, y0: w.y - w.h / 2 - pad, y1: w.y + w.h / 2 + (w.kind === 'gothic' ? w.w * 0.18 : 0) + pad });
   return {
-    front: [{ a0: d.x - d.dw / 2 - pad, a1: d.x + d.dw / 2 + pad, y0: -10, y1: y0 + d.dh + pad }, ...ops.front.map(win)],
+    // (the door's frame stands 14 cm round its opening: bands stop at the frame, not in it)
+    front: [{ a0: d.x - d.dw / 2 - 0.16, a1: d.x + d.dw / 2 + 0.16, y0: -10, y1: y0 + d.dh + 0.16 }, ...ops.front.map(win)],
     left: ops.left.map(win),
     right: ops.right.map(win),
   };
@@ -871,12 +909,16 @@ function ruinWalls(k, b, fw, fd, H, wallCol) {
   for (let i = 0; i < seg; i++) {
     const x0 = -fw / 2 + i * fw / seg, x1 = x0 + fw / seg;
     const h = 0.8 + R(i) * (H - 0.8) * 0.9;
-    B(k, x0, -1, -0.45, x1 + 0.01, h, 0, i % 2 ? shade(stone, -0.08) : stone, { outline: 0.03 });
+    // (every other piece stands 1.5 cm proud: run into each other in one
+    // plane, the pieces' faces flickered at every join)
+    const dz = i % 2 ? 0.015 : 0;
+    B(k, x0, -1, -0.45 + dz, x1 + 0.01, h, dz, i % 2 ? shade(stone, -0.08) : stone, { outline: 0.03 });
   }
   for (const sx of [-1, 1]) {
     const sseg = Math.max(2, Math.round(fd / 1.2));
     for (let i = 0; i < sseg; i++) {
-      const z0 = -i * fd / sseg, z1 = z0 - fd / sseg;
+      // (from behind the front wall: out to its face, they flickered against it)
+      const z0 = i ? -i * fd / sseg : -0.44, z1 = -(i + 1) * fd / sseg;
       const h = 0.5 + R(i + sx * 10) * (H - 0.5) * 0.8;
       B(k, sx * fw / 2 - 0.45 * (sx > 0 ? 1 : 0), -1, z1, sx * fw / 2 + 0.45 * (sx > 0 ? 0 : 1), h, z0, stone, { outline: 0.03 });
     }
@@ -889,7 +931,7 @@ function ruinWalls(k, b, fw, fd, H, wallCol) {
 
 function flatRoof(k, b, S, fw, fd, H, wallCol, roofCol, ex = (sx, d) => d) {
   const hd = fd / 2;
-  const xl = -fw / 2 - ex(-1, 0.12), xr = fw / 2 + ex(1, 0.12);
+  const xl = trimX(ex, -1, 0.12, fw), xr = trimX(ex, 1, 0.12, fw);
   B(k, xl, H - 0.05, -fd - 0.12, xr, H + 0.15, 0.12, roofCol, { outline: 0.03 });
   // parapet (none along a shared wall)
   const pc = b.style === 'marine' ? '#f5f6fa' : shade(wallCol, -0.06);
@@ -1013,10 +1055,10 @@ function variant(b, S, storeys, fw, fd, role) {
 function jetty(k, S, fw, plinth, storeys, storeyH, H, Hc, j, wallCol, ex) {
   const beam = S.beam || shade(wallCol, -0.5);
   B(k, -fw / 2, Hc, 0, fw / 2, H, j, wallCol, { outline: 0.04 });
-  B(k, -fw / 2 - ex(-1, 0.03), Hc - 0.2, -0.02, fw / 2 + ex(1, 0.03), Hc + 0.04, j + 0.07, beam);
+  B(k, trimX(ex, -1, 0.03, fw), Hc - 0.2, -0.02, trimX(ex, 1, 0.03, fw), Hc + 0.04, j + 0.07, beam);
   for (let x = -fw / 2 + 0.35; x < fw / 2 - 0.2; x += 1.15) k.add(box(0.1, 0.5, 0.1), { at: [x, Hc - 0.62, 0.06], rot: [0.55, 0, 0], color: beam });
   for (const sx of [-1, 1]) {
-    const inner = sx * fw / 2 - sx * 0.12, outer = sx * fw / 2 + sx * ex(sx, 0.02);
+    const inner = sx * fw / 2 - sx * 0.12, outer = trimX(ex, sx, 0.02, fw, 0.02);
     B(k, Math.min(inner, outer), Hc, j - 0.1, Math.max(inner, outer), H, j + 0.04, beam);
   }
   for (let f = 1; f <= storeys; f++) {
@@ -1104,7 +1146,8 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex 
     const n = Math.max(4, Math.round(aw / 0.45));
     for (let i = 0; i < n; i++) {
       const x0 = door.x - aw / 2 + i * aw / n;
-      k.add(box(aw / n + 0.005, 0.05, 1.0), { at: [x0 + aw / n / 2, ay, 0.45], rot: [0.42, 0, 0], color: i % 2 ? '#ffffff' : c });
+      // (the white stripes a centimetre thicker: lapped over each other in one plane, the stripes' edges flickered)
+      k.add(box(aw / n + 0.005, i % 2 ? 0.07 : 0.05, 1.0), { at: [x0 + aw / n / 2, ay - (i % 2 ? 0.01 : 0), 0.45], rot: [0.42, 0, 0], color: i % 2 ? '#ffffff' : c });
     }
     // scalloped valance
     for (let i = 0; i < n; i++) k.add(new THREE.CircleGeometry(aw / n / 2, 8, Math.PI, Math.PI), { at: [door.x - aw / 2 + (i + 0.5) * aw / n, ay - 0.4, 0.92], rot: [-0.42, 0, 0], color: i % 2 ? '#ffffff' : c, double: true, backShade: 0.85 });
@@ -1112,7 +1155,8 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex 
   if (S.engawa) {
     // a raised wooden veranda along the front
     B(k, -fw / 2 - ex(-1, 0.1), -dn, 0, fw / 2 + ex(1, 0.1), 0.42, 0.9, '#8d6e4a', { outline: 0.02 });
-    for (let x = -fw / 2 + 0.2; x < fw / 2; x += 0.3) B(k, x, 0.42, 0.02, x + 0.02, 0.425, 0.88, '#6d4c33');
+    // (the boards' joins stand 1.2 cm proud: at half a centimetre the deck and they flickered from across the street)
+    for (let x = -fw / 2 + 0.2; x < fw / 2; x += 0.3) B(k, x, 0.42, 0.02, x + 0.02, 0.432, 0.88, '#6d4c33');
     if (Math.abs(door.x) < fw) B(k, door.x - 0.6, -dn, 0.85, door.x + 0.6, 0.22, 1.3, '#9a948a');
   }
   if (S.lanterns || (b.style === 'wano' && role !== 'house')) {
@@ -1139,11 +1183,14 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex 
     k.add(slab([[-pw / 2 + 0.1, 0.06], [pw / 2 - 0.1, 0.06], [0, 0.72]], 0.05), { at: [0, 0, 0.71], color: '#d4ac0d' });
     k.restore();
   }
-  if (b.role === 'marine_base' || (b.style === 'marine' && fw >= 6)) {
+  if ((b.role === 'marine_base' || (b.style === 'marine' && fw >= 6)) && b.style !== 'ruins') {
     // the blue MARINE band with the gull, and a gull on the roof edge
-    B(k, -fw / 2 - ex(-1, 0.05), H - 1.15, 0.0, fw / 2 + ex(1, 0.05), H - 0.35, 0.12, '#f5f6fa', { outline: 0.02 });
-    B(k, -fw / 2 - ex(-1, 0.06), H - 1.2, 0.0, fw / 2 + ex(1, 0.06), H - 1.1, 0.13, '#1b4f72');
-    B(k, -fw / 2 - ex(-1, 0.06), H - 0.4, 0.0, fw / 2 + ex(1, 0.06), H - 0.3, 0.13, '#1b4f72');
+    // (13.5 cm out, the stripes 15: clear of the 12 cm faces of corner posts
+    // and cornices; and against a neighbour each stops at its own depth, 3
+    // and 4 cm in, clear of the bands', posts' and piers' ends at 1 and 2)
+    B(k, trimX(ex, -1, 0.05, fw, 0.03), H - 1.15, 0.0, trimX(ex, 1, 0.05, fw, 0.03), H - 0.35, 0.135, '#f5f6fa', { outline: 0.02 });
+    B(k, trimX(ex, -1, 0.06, fw, 0.04), H - 1.2, 0.005, trimX(ex, 1, 0.06, fw, 0.04), H - 1.1, 0.15, '#1b4f72');
+    B(k, trimX(ex, -1, 0.06, fw, 0.04), H - 0.4, 0.005, trimX(ex, 1, 0.06, fw, 0.04), H - 0.3, 0.15, '#1b4f72');
   }
   if (b.style === 'spooky') {
     // boarded-up planks across a window and a crooked weathervane
