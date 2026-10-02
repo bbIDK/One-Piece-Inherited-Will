@@ -23,6 +23,7 @@ import { SHIPS } from '../data/ships.js';
 import { wantedTier } from './wanted.js';
 import { T as TT } from '../world/tiles.js';
 import { nearRM } from '../world/reverseMountain.js';
+import { seaHeading, seaRoom, routeEnded } from './searoute.js';
 
 const SAILOR = { name: 'Sailor', faction: 'civilian', style: 'brawler', look: { top: '#eceff1', bottom: '#37474f', hat: 'bandana', hatColor: '#1565c0' }, skill: 0.1, barks: ['Repel boarders!', 'Get off our ship!'] };
 const FISHER = { name: 'Fisherman', faction: 'civilian', style: 'brawler', look: { top: '#8d6e63', bottom: '#455a64', hat: 'cap', hatColor: '#6d8f5e' }, skill: 0.05, barks: ['Not the catch!', 'Help!'] };
@@ -199,7 +200,7 @@ export function engage(s, game, target) {
   const th = target.heading, nx = -Math.sin(th), ny = Math.cos(th);
   const rx = w.dx(target.x, s.x), ry = s.y - target.y;
   const side = rx * nx + ry * ny >= 0 ? 1 : -1;
-  const abeam = Math.abs(rx * nx + ry * ny), ahead = rx * Math.cos(th) + ry * Math.sin(th);
+  const ahead = rx * Math.cos(th) + ry * Math.sin(th);
   s.anchored = false;
   s.sail = 1;
   // (close by — as far off as she'll need to come round onto the lane alongside, however long she is)
@@ -234,14 +235,27 @@ export function engage(s, game, target) {
   const pace = Math.abs(target.speed);
   // (abreast of her at a gun's range, side to side — however broad the two of them are)
   const lane = (s.def.beam + target.def.beam) / 2 + 7;
-  if (d > lane + 2) {
+  // (near enough to be working up her side: within a ship's length or so of her)
+  const close = (s.def.length + target.def.length) / 2 + 30;
+  // her station is on the side she's coming up on — chosen as she closes, and
+  // kept, so she never cuts across your stern for the other one
+  if (d > close * 2 || !s.chaseSide) s.chaseSide = side;
+  const cs = s.chaseSide;
+  if (d > close) {
     // (in chase: never much faster than her, and in the Blues hardly faster than a rowboat)
     s.speedCap = blues ? 8.5 : Math.max(10, pace * 1.2 + 2);
-    return Math.atan2(target.y - s.y, w.dx(s.x, target.x));
+    // for that station, abreast of you and a little ahead of where you are
+    // (so she closes on your side, not on your stern: from astern she'd only
+    // ever push at your taffrail, her bow against it) — round any land in
+    // the way, not into it (searoute.js)
+    const lead = Math.min(40, pace * 3), hx = Math.cos(th), hy = Math.sin(th);
+    return seaHeading(game, s, w.wx(target.x + (nx * lane * cs + hx * lead)), target.y + ny * lane * cs + hy * lead, seaRoom(s));
   }
-  // up with her: abreast at a gun's range, keeping her pace (a little faster to draw level)
+  // up with her: out to her side and abreast at a gun's range, keeping her
+  // pace (faster to draw level from astern, slower if she's overshot)
+  const across = (rx * nx + ry * ny) * cs;
   s.speedCap = Math.min(blues ? 8.5 : 99, pace + clamp(-ahead * 0.3, -1.5, 2) + 0.3);
-  return th - side * clamp((abeam - lane) * 0.1, -0.6, 0.6);
+  return th - cs * clamp((across - lane) * 0.1, -0.6, 0.6);
 }
 
 /** Your ship, while you're at her helm or on her deck (or null). */
@@ -308,8 +322,9 @@ function trafficAI(s, dt, game) {
     s.sail = tr.running ? 1 : tr.kind === 'fishing' ? 0.45 : tr.kind === 'merchant' ? 0.7 : 0.8;
     // a merchant that's been shot at runs for it
     if (tr.running && d < 60) want = Math.atan2(s.y - p.y, w.dx(p.x, s.x));
-    else want = Math.atan2(tr.dest.y - s.y, w.dx(s.x, tr.dest.x));
-    if (w.distance(s.x, s.y, tr.dest.x, tr.dest.y) < 25) { tr.dest = { x: w.wx(s.x + Math.cos(s.heading) * 300), y: s.y + Math.sin(s.heading) * 300 }; }
+    // (bound where she's bound by sea: round the land in the way, not along its shore — searoute.js)
+    else want = seaHeading(game, s, tr.dest.x, tr.dest.y, seaRoom(s));
+    if (w.distance(s.x, s.y, tr.dest.x, tr.dest.y) < 25 || routeEnded(w, s)) { tr.dest = { x: w.wx(s.x + Math.cos(s.heading) * 300), y: s.y + Math.sin(s.heading) * 300 }; s.route = null; }
   }
   // stuck against the coast (or another hull) for a few seconds: come about
   // and make for the openest water; still stuck, she's eased clear (or, out
@@ -329,6 +344,7 @@ function trafficAI(s, dt, game) {
         if (sd < bestSd) { bestSd = sd; bestA = a; }
       }
       tr.escape = { a: bestA, until: now + 9 };
+      s.route = null;
       tr.dest = { x: w.wx(s.x + Math.cos(bestA) * 300), y: s.y + Math.sin(bestA) * 300 };
       s.speed = Math.min(s.speed, 1);
     }
@@ -341,8 +357,10 @@ function trafficAI(s, dt, game) {
   if (tr.escape) { if (now > tr.escape.until) tr.escape = null; else if (!fighting) want = tr.escape.a; }
   // round the coast: look ahead, and turn toward the open side (lying hove to, she just lies there)
   const L = s.def.length;
-  const open = (ang, dist) => { const x = w.wx(s.x + Math.cos(ang) * dist), y = s.y + Math.sin(ang) * dist; return w.sailable(x, y) && w.sd(x, y) < -2.5; };
-  if (!s.heaveTo && (!open(want, L + 14) || !open(s.heading, L + 10))) {
+  const open = (ang, dist, m = 2.5) => { const x = w.wx(s.x + Math.cos(ang) * dist), y = s.y + Math.sin(ang) * dist; return w.sailable(x, y) && w.sd(x, y) < -m; };
+  // (on a planned route the way's known to be open: only land coming up under her bow turns her off it)
+  const routed = s.onRoute === now, m = s.def.beam * 0.5 + 2;
+  if (!s.heaveTo && (routed ? !open(s.heading, L * 0.6 + 6, m) || !open(s.heading, L * 0.3 + 3, m) : !open(want, L + 14) || !open(s.heading, L + 10))) {
     for (const off of [0.45, -0.45, 0.9, -0.9, 1.4, -1.4, 2.1, -2.1, 3]) {
       if (open(s.heading + off, L + 14) && open(s.heading + off, L + 6)) { want = s.heading + off; break; }
     }
@@ -357,6 +375,8 @@ function trafficAI(s, dt, game) {
       want = s.heading + clamp(angleDiff(s.heading, away), -1.2, 1.2) * (1 - dd / room);
     }
   }
+  // (coming hard round, she spills her wind and turns short — not in a wide sweep, onto the shore)
+  if (!s.heaveTo && Math.abs(angleDiff(s.heading, want)) > 1.2) s.speedCap = Math.min(s.speedCap ?? 99, 3.5);
   s.heading += clamp(angleDiff(s.heading, want), -1, 1) * s.def.turn * 0.55 * dt;
 }
 

@@ -398,12 +398,15 @@ it's open:
 - Marine patrols, pirate ships, merchants and flotsam. Pirates keep to
   their own business at sea: they fight only when you fire on them or board
   them. Marines give chase once you're wanted (in the Blues, not much faster
-  than a small boat), and a ship that's after you heaves to alongside when
-  you stop, so you can board her. Every ship at sea has her crew aboard
-  sailing her (figures at her wheel and on her deck far off, the crew
-  themselves close by — your Marine escorts' too), so every one can be
-  beaten: board her and fight them, or sink her. With nobody left standing
-  on her deck she lies adrift, her hold yours for the taking.
+  than a small boat): she comes up on your side, not your stern, and runs
+  abreast of you at a gun's range with her broadside on you; once you stop
+  she heaves to alongside, so you can board her. Ships plan their way round
+  the land between them and where they're bound (a chase too), keeping a
+  good berth off the coast instead of scraping along it. Every ship at sea
+  has her crew aboard sailing her (figures at her wheel and on her deck far
+  off, the crew themselves close by — your Marine escorts' too), so every
+  one can be beaten: board her and fight them, or sink her. With nobody left
+  standing on her deck she lies adrift, her hold yours for the taking.
 - A News Coo delivers the morning paper.
 
 **Zones.**
