@@ -18,7 +18,7 @@ import { BubbleDome } from './bubble3d.js';
 import { CameraRig } from './camera3d.js';
 import { SpriteForest, ActorSprite, propSprite, projectileMesh, tintSprites } from './billboards.js';
 import { ShipView } from './ships3d.js';
-import { shipLift } from '../world/hull.js';
+import { deckLift } from '../world/hull.js';
 import { Ship } from '../game/ship.js';
 import { buildBuilding, setNightWindows } from './buildings3d.js';
 import { FarBuildings } from './farbuildings.js';
@@ -1040,7 +1040,7 @@ export class Renderer3D {
         this.attach(v.root, this.ents);
       }
       let gh;
-      if (a.deck) gh = shipLift(a.deck.ship, env.time, a.deck.u ?? (a.deck.t - 0.5) * a.deck.ship.def.length, a.deck.v || 0, a.deck.h);
+      if (a.deck) gh = deckLift(a.deck, env.time);
       else if (a.flying) gh = Math.max(0, this.ground(a.x, a.y));
       else if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
       else if (a.inWater) {

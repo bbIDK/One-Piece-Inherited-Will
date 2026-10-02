@@ -5,6 +5,7 @@
 // to her rail: you come aboard from above it (a jump from a pier or another
 // deck), or up her ladder from the water.
 import { deckPoint, deckToWorld, helmPoint, shipDims, hullSolid, shipLift, hullPoint, hbAt, levelAt, topAt, sideAt, floorAt } from '../world/hull.js';
+import { plankDeck } from './gangway.js';
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
@@ -25,6 +26,10 @@ export function installDecks(game) {
    */
   game.deckAt = (x, y, margin = 0.2, hRef = null, only = null) => {
     const w = game.world;
+    // (a gangway laid across to another ship — see gangway.js — is what's
+    // underfoot wherever it is, over the decks at its ends too: you walk up
+    // its steps, not under them; `only`: one laid to or from that ship)
+    if (game.planks?.length) { const pk = plankDeck(game, x, y, margin, only, hRef); if (pk) return pk; }
     for (const s of game.ships) {
       if (s.sunk || (only && s !== only)) continue;
       const r = s.def.length * 0.56;

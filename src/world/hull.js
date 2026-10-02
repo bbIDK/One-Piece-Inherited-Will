@@ -951,6 +951,15 @@ export function shipLift(ship, time, u, v, h) {
 }
 
 /**
+ * How high (m above the sea) a deck point (from deckAt) is just now, as it
+ * rides: on a ship's deck, with her (shipLift); on a gangway laid between two
+ * ships, on its planks (see game/gangway.js).
+ */
+export function deckLift(dk, time) {
+  return dk.plank ? dk.plank.liftAt(dk.k) : shipLift(dk.ship, time, dk.u ?? (dk.t - 0.5) * dk.ship.def.length, dk.v || 0, dk.h);
+}
+
+/**
  * The deck under a point (dx, dy = offset from the ship's centre, world tiles):
  * { t (0 stern → 1 bow), u, v (across, + to starboard), h (floor height), edge
  * (distance in from the rail), lvl (which deck, on the big ships), solid (a

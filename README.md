@@ -309,7 +309,12 @@ it's open:
   rail: at its foot (swimming, in a boat alongside or on the quay she lies
   at) E climbs it, up her side and over the rail onto her deck. Her bulwark
   is a low wall: jump it to go over the side, into the sea or onto the pier
-  she's tied up at. Every deck can be walked, and
+  she's tied up at. Lie your ship stopped alongside another (a Marine's, or
+  one you're fighting, hove to beside you) and your crew run a plank
+  across: up its steps from your deck, over the water between the rails
+  with a rope along each side, and down onto hers — walked by you, your
+  crew and hers alike, and hauled in once either ship gets under way or
+  they drift apart. Every deck can be walked, and
   everyone aboard rides her gentle roll and pitch with her, feet on the
   planks (on a big ship the ends rise and fall a good way), and shoes rest on
   a floor or a deck rather than sinking into it.

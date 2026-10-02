@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { interiorRect, heightsOf } from '../world/interiors.js';
 import { helmPoint } from './ships3d.js';
-import { shipBob, shipLift, shipDims, rowLean } from '../world/hull.js';
+import { shipBob, shipLift, shipDims, rowLean, deckLift } from '../world/hull.js';
 import { waterLevel } from './height.js';
 import { swellAt } from './swell.js';
 
@@ -287,7 +287,7 @@ export class CameraRig {
     let gx = 0, gz = 0; // eye position relative to the player (origin)
     // where your feet are: on a deck, on the ground (or the bottom of the shallows), in the air
     let gh = p.flying && p.alt != null ? p.alt
-      : p.deck ? shipLift(p.deck.ship, time, p.deck.u ?? (p.deck.t - 0.5) * p.deck.ship.def.length, p.deck.v || 0, p.deck.h) + (p.z || 0)
+      : p.deck ? deckLift(p.deck, time) + (p.z || 0)
         : (p.belowDeck ? p.groundAt(game, p.x, p.y) : p.roofed && p.lastG != null ? p.lastG : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
     let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
     if (!sailing) this.seaPitch = 0;

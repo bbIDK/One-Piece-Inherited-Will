@@ -10,8 +10,9 @@ import { RACES } from '../data/races.js';
 import { WALKABLE, SWIMMABLE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
 import { HIGH_DECK } from '../render3d/height.js';
 import { clamp, TAU, angleDiff } from '../core/math.js';
-import { shipDims, hbAt, deckToWorld, shipLift, sideAt, topAt, floorAt, xAt } from '../world/hull.js';
+import { shipDims, hbAt, deckToWorld, shipLift, sideAt, topAt, floorAt, xAt, deckLift, deckPoint } from '../world/hull.js';
 import { placeOnDeck, RAIL_CLEAR } from './decks.js';
+import { plankJoins } from './gangway.js';
 import { bw } from '../world/bframe.js';
 import { heightsOf } from '../world/interiors.js';
 
@@ -31,8 +32,8 @@ for (const [k, ts] of Object.entries({
   metal: ['STEEL'],
 })) for (const n of ts) if (T[n] !== undefined) STEP_SOUND[T[n]] = k;
 
-// where a deck point (from deckAt: its ship, u along, v across, h) rides just now
-const deckY = (dk, time) => shipLift(dk.ship, time, dk.u ?? (dk.t - 0.5) * dk.ship.def.length, dk.v || 0, dk.h);
+// where a deck point (from deckAt: its ship, u along, v across, h — or a gangway's planks) rides just now
+const deckY = (dk, time) => deckLift(dk, time);
 
 const smooth01 = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 // Up on the roofs (render3d/roofs.js): how far up a roof you walk on at a step
@@ -885,11 +886,14 @@ export class Actor extends Entity {
     if (g && g.deckAt && g.ships.length && this.deck) {
       const ref = this.deckRef(), sh = this.deck.ship;
       const dk = g.deckAt(x, y, r * 0.7, ref, sh) || g.deckAt(x, y, r * 0.7);
-      if (dk && dk.ship === sh) {
+      // (her deck — or a gangway laid to or from her, and the deck at its other end)
+      if (dk && (dk.ship === sh || plankJoins(dk, this.deck))) {
         // into a mast (or the like) only while already in it and getting out
         if (dk.solid && !((g.deckAt(this.x, this.y, r * 0.7, ref, sh)?.solid || 0) >= dk.solid - 1e-4)) return false;
         return this.deckStep(dk);
       }
+      // (a gangway has a rope along each side: off it, over the water, only with a jump)
+      if (this.deck.plank && !(this.z > 0.4)) return false;
       // (off the edge of her deck is her bulwark: over it only with your feet up at its top)
       if (this.feetH(g) < g.railAt(sh, x, y) - RAIL_CLEAR) return false;
     }
@@ -1070,8 +1074,14 @@ export class Actor extends Entity {
    * the like are in the way.
    */
   deckStep(dk) {
+    const cur = this.deck;
+    // (onto a gangway, along it or off it at either end: by how far its planks are above your feet)
+    if (dk.plank || cur.plank || dk.ship !== cur.ship) {
+      const time = this.game?.env?.time || 0;
+      return deckLift(dk, time) <= deckLift(cur, time) + Math.max(0, this.z || 0) + 0.55;
+    }
     if (dk.lvl === undefined) return true;
-    return dk.h <= this.deck.h + Math.max(0, this.z || 0) + 0.55;
+    return dk.h <= cur.h + Math.max(0, this.z || 0) + 0.55;
   }
 
   /**
@@ -1405,6 +1415,9 @@ export class Actor extends Entity {
   updateDeck(game) {
     const was = this.deck;
     let dk = game.deckAt && game.ships.length ? (was ? game.deckAt(this.x, this.y, 0, this.deckRef(), was.ship) : null) || game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
+    // (a gangway is only underfoot once your feet come down on it: under it,
+    // in the water, it's over your head)
+    if (dk?.plank && !was && this.feetH(game) < deckY(dk, game.env?.time || 0) - 0.4) dk = null;
     // a hull running over a swimmer doesn't scoop them up onto its deck: it
     // passes overhead of a diver, and shoves someone at the surface aside
     if (dk && !was && this.inWater) {
@@ -1459,7 +1472,7 @@ export class Actor extends Entity {
     const nx = -hy * side, ny = hx * side;
     for (let k = 0; k < 48; k++) {
       this.x = w.wx(this.x + nx * 0.25); this.y += ny * 0.25;
-      if (!game.deckAt(this.x, this.y, 0.35)) break;
+      if (!deckPoint(ship, w.dx(ship.x, this.x), this.y - ship.y, 0.35)) break;
     }
     this.kb.x += nx * 2.5; this.kb.y += ny * 2.5;
     game.fx.ripple?.(this.x, this.y, 0.9);
