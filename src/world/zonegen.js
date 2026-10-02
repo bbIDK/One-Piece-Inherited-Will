@@ -1,6 +1,7 @@
 // Builds the small separate worlds used by zones (Skypiea, Fish-Man Island,
 // Impel Down): a flat "sea" of the zone's fill tile with islands from data.
 import { World } from './world.js';
+import { inBubble } from './bubble.js';
 import { ObjectIndex } from './objects.js';
 import { Noise } from '../core/noise.js';
 import { RNG } from '../core/rng.js';
@@ -32,6 +33,14 @@ export function generateZoneWorld(z) {
     if (!pa || !pb) continue;
     placeObject(world, { kind: 'portal', x: pa.x, y: pa.y, block: false, to: { x: pb.x, y: pb.y + 1.5 }, interact: `Take the stairs down to ${B.name}`, use: 'portal' });
     placeObject(world, { kind: 'portal', x: pb.x, y: pb.y, block: false, to: { x: pa.x, y: pa.y + 1.5 }, interact: `Climb the stairs to ${A.name}`, use: 'portal', up: true });
+  }
+  // Fish-Man Island's bubble: past its skin there's only the deep sea — no
+  // sailing, swimming or walking out there (see world/bubble.js)
+  if (z.bubble) {
+    world.bubble = { ...z.bubble };
+    for (let y = 0; y < z.h; y++) {
+      for (let x = 0; x < z.w; x++) if (!inBubble(world, x + 0.5, y + 0.5)) world.setBlocked(x, y, 1);
+    }
   }
   computeDistanceField(world);
   compactDistance(world);

@@ -263,6 +263,11 @@ function drawLabels(game, r, cam, layer) {
   if (!zone) {
     add('', 'Reverse Mountain', RM_X, EQ - chart(40), { fontSize: '14px' });
     if (discovered.has('mary_geoise') || w.isExplored(0, EQ)) add('', 'Mary Geoise', 4, EQ - chart(70), { fontSize: '13px' });
+    // the way down to Fish-Man Island, under the Red Line: where coated ships dive (once you know Sabaody)
+    for (const isl of w.islands) {
+      const sp = isl.spots?.fishman_dive;
+      if (sp && (known(isl) || w.isExplored(sp.x, sp.y))) add('.dive', 'Fish-Man Island · dive here, 10,000 m down', sp.x, sp.y, { fontSize: '13px' });
+    }
   }
   // quest givers: who can start your story, and side quests waiting on the islands you know
   if (!zone) {

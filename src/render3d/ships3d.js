@@ -14,9 +14,54 @@ import * as THREE from 'three';
 import { canvasTexture } from './materials.js';
 import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
-import { vcMat } from './props/mats.js';
+import { vcMat, U } from './props/mats.js';
 import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock } from '../world/hull.js';
 import { bigHull, bigInterior, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging } from './bigship.js';
+
+// a coated ship's bubble (see the coating, below): a soap film, its colours
+// running with the angle you see it at, bright at its rim — from either side
+const COAT_GEO = new THREE.SphereGeometry(1, 40, 24);
+COAT_GEO.userData.shared = true;
+let coatMat = null;
+function coatMaterial() {
+  if (coatMat) return coatMat;
+  coatMat = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uTime: { value: 0 } }]),
+    vertexShader: /* glsl */`
+      varying vec3 vN; varying vec3 vV; varying vec3 vP;
+      #include <common>
+      #include <fog_pars_vertex>
+      void main() {
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vN = normalize(normalMatrix * normal);
+        vV = -mvPosition.xyz;
+        vP = position;
+        gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }`,
+    fragmentShader: /* glsl */`
+      uniform float uTime;
+      varying vec3 vN; varying vec3 vV; varying vec3 vP;
+      #include <common>
+      #include <fog_pars_fragment>
+      void main() {
+        vec3 n = normalize(vN), v = normalize(vV);
+        float f = 1.0 - abs(dot(n, v));
+        float rim = pow(f, 2.2);
+        // (thin-film bands drifting over it, as on a soap bubble)
+        float film = f * 1.4 + vP.y * 0.9 + sin(vP.x * 3.0 + uTime * 0.4) * 0.12 + uTime * 0.04;
+        vec3 irid = 0.55 + 0.45 * cos(6.2831 * (film + vec3(0.0, 0.33, 0.67)));
+        vec3 col = mix(vec3(0.84, 0.95, 1.0), irid, 0.55);
+        float spec = pow(max(0.0, dot(n, normalize(vec3(-0.35, 0.6, 0.72)))), 48.0) * (gl_FrontFacing ? 1.0 : 0.3);
+        col += spec * 1.4;
+        gl_FragColor = vec4(col, clamp(0.06 + rim * 0.7 + spec, 0.0, 0.92));
+        #include <fog_fragment>
+      }`,
+    transparent: true, depthWrite: false, fog: true, side: THREE.DoubleSide,
+  });
+  coatMat.uniforms.uTime = U.time;
+  return coatMat;
+}
 import { WakeTrail } from './wake3d.js';
 
 export { shipDims, helmPoint };
@@ -776,13 +821,15 @@ export class ShipView {
       root.add(pm);
       this.ghostables.push(pm);
     }
-    // a Coating bubble for the dive to Fish-Man Island
+    // her coating, for the dive to Fish-Man Island: a bubble round all of
+    // her, masts and keel and all, blown the way Sabaody's coaters do it —
+    // shimmering like the archipelago's soap bubbles, seen from on deck as
+    // well as from outside
     if (s.coated) {
-      const bg = new THREE.SphereGeometry(1, 24, 16);
-      const bm = own(new THREE.MeshToonMaterial({ color: 0xbfe9ff, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }));
-      const bubble = new THREE.Mesh(bg, bm);
-      bubble.scale.set(d.L * 0.72, d.mastH * 0.75, d.B * 1.6);
-      bubble.position.y = d.mastH * 0.25;
+      const mh = Math.max(d.mastH || 0, 3);
+      const bubble = new THREE.Mesh(COAT_GEO, coatMaterial());
+      bubble.scale.set(d.L * 0.62 + 1, mh * 0.62 + 1.5, d.B * 0.5 + mh * 0.33 + 1);
+      bubble.position.y = mh * 0.38;
       bubble.renderOrder = 3;
       root.add(bubble);
     }

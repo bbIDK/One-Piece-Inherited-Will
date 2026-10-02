@@ -333,6 +333,8 @@ export const PARADISE_2 = [
       { kind: 'sign', dx: 0.4, dy: 0.42, name: 'Grove 50' }, { kind: 'sign', dx: -0.12, dy: 0.52, name: 'Grove 66' },
       ...[[-0.62, 0.42], [-0.44, 0.16], [-0.62, -0.18], [-0.4, -0.36], [-0.1, -0.56], [0.12, -0.72], [0.4, -0.18], [0.62, -0.4], [0.62, 0.18], [0.42, 0.4], [-0.1, 0.72], [0.12, 0.54]]
         .map(([dx, dy]) => ({ kind: 'bubble', dx, dy, block: false })),
+      // (the dive point, out at sea: where the current goes down — see the spot below)
+      { kind: 'downcurrent', dx: 115, dy: 0, block: false, water: true, name: 'The dive point' },
     ],
     spots: [
       { id: 'fishman_dive', dx: 115, dy: 0 },

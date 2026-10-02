@@ -70,6 +70,7 @@ const FRAG = /* glsl */`
   uniform float uUnder;
   uniform vec4 uHull;   // the hull you're aboard: its middle (render space x, z), cos and sin of its heading
   uniform vec3 uHullD;  // its length, its beam, 1 = on
+  uniform vec4 uBubble; // Fish-Man Island's bubble: its middle (world x, y) and half-widths (none: 0)
   varying vec3 vWorld;
   varying vec3 vView;
   varying vec3 vSwell;
@@ -105,6 +106,9 @@ const FRAG = /* glsl */`
   }
 
   void main() {
+    // (10,000 m down, the sea is only inside Fish-Man Island's bubble: past
+    // its skin there's no surface, only the deep — world/bubble.js)
+    if (uBubble.z > 0.0) { vec2 eb = (vWorld.xz - uBubble.xy) / uBubble.zw; if (dot(eb, eb) > 1.0) discard; }
     // no sea inside the hull you're aboard (down in her hold it would lie
     // across the room): her waterline's outline, as world/hull.js hbAt has it
     if (uHullD.z > 0.5) {
@@ -302,6 +306,7 @@ export class Water {
         uWin: { value: new THREE.Vector2(-1e9, -1e9) },
         uHull: { value: new THREE.Vector4() },
         uHullD: { value: new THREE.Vector3() },
+        uBubble: { value: new THREE.Vector4() },
       },
     ]);
     // the water writes depth, so the ink outlines see its surface (not the sea floor under it)
@@ -349,6 +354,8 @@ export class Water {
     this.uniforms.uMap.value = this.tex;
     this.uniforms.uSize.value.set(WIN, WIN);
     this.uniforms.uZone.value = world.zone || 0;
+    const b = world.bubble;
+    this.uniforms.uBubble.value.set(b ? b.x : 0, b ? b.y : 0, b ? b.a : 0, b ? b.b : 0);
   }
 
   /** Fill in the tiles of [x0, x0+w) × [y0, y0+h) (world tiles, unwrapped) in the window's bytes. */

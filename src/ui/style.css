@@ -221,6 +221,7 @@ input.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radiu
 .worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }
 .wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }
+.wm-label.dive { color: #0d5f8a; font-style: italic; }
 .wm-label.me { font-size: 22px; color: #c0392b; }
 .wm-label.quest { color: #1f5f86; font-size: 18px; }
 .wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }

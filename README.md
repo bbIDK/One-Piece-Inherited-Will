@@ -372,8 +372,15 @@ rearrange them.
 **Zones.**
 
 - **Skypiea**, reached by the Knock Up Stream off Jaya.
-- **Fish-Man Island**, reached by coating your ship at Sabaody and diving
-  10,000 m to cross the Red Line.
+- **Fish-Man Island**, 10,000 m down under the Red Line, inside a great
+  bubble of air lit by shafts of sunlight from far above, with Ryugu Palace
+  high on its stalk of coral in a bubble of its own. Have your ship coated
+  at Sabaody (the Coating Mechanic at Grove 50, or Rayleigh): she gets a
+  shimmering bubble round her, masts and all. Then sail east to the dive
+  point (marked on the chart, where the sea swirls down) and press E at the
+  helm: she goes under, sinks out of the light, comes down onto the
+  island's bubble out of the dark, passes through its skin and settles on
+  the sea inside.
 - **Impel Down**, a prison break.
 - **Mary Geoise**, reached by the Bondola if you are a Marine officer or hold
   a (forged) permit. The Holy Land stands on top of the Red Line, level with

@@ -7,7 +7,7 @@
 // signposts and Laboon. Static parts are merged, cached geometries; the moving
 // parts animate every frame through animate() (see mats.js).
 import * as THREE from 'three';
-import { Mesher, box, cbox, cyl, cone, lathe, torus, extrude, slab, ribbon, C, shade, hash, rng } from './kit.js';
+import { Mesher, box, cbox, cyl, cone, lathe, torus, extrude, slab, ribbon, blob, C, shade, hash, rng } from './kit.js';
 import { vcMat, glowMat, meshOf, animate, bindCtx, STATE, U } from './mats.js';
 import { model, simple, signModel, footY, postFeet } from './street.js';
 import { registerPropBuilder } from '../registry.js';
@@ -1102,5 +1102,109 @@ reg('p1_laboon', (o) => {
   return root;
 });
 reg('p1_laboon_talk', () => { const g = new THREE.Object3D(); return g; });
+
+// ------------------------------------------------------------ Ryugu Palace
+// The palace of the Ryugu Kingdom, high over Fish-Man Island as in the
+// anime: a castle of white walls and onion domes, coral pink, sea green and
+// gold, on a great stalk of coral, in a bubble of its own.
+const ryuguGeo = () => model('ryugu', (k) => {
+  const coral = '#f48fb1', coralD = '#d9668f', wall = '#fff4f6', band = '#f8bbd0', pink = '#ec407a', teal = '#26c6da', gold = '#ffca28', win = '#3a2a4a';
+  // the stalk: flared at its foot, slender in the middle, opening out under the palace
+  k.add(lathe([[9.5, 0], [8.2, 2], [6.1, 7], [4.7, 15], [4.4, 23], [5.4, 30], [8.2, 36], [12.2, 40], [13.4, 41.4], [0, 41.6]], 28), { color: coral, outline: 0.08 });
+  // its branches, curling up and out (with knobbly tips)
+  for (let i = 0; i < 6; i++) {
+    const a = i * 1.047 + 0.4, y = 9 + (i % 3) * 7, L = 6 + (i % 2) * 3;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    k.add(cyl(0.9, 1.4, L, 8), { at: [ca * 4.4, y, sa * 4.4], rot: [0, -a, -1.0], color: coralD, outline: 0.05 });
+    const tx = ca * (4.4 + L * 0.84), ty = y + L * 0.54, tz = sa * (4.4 + L * 0.84);
+    k.add(cyl(0.6, 0.9, 3.4, 8), { at: [tx, ty, tz], rot: [0, -a, -0.25], color: coralD, outline: 0.04 });
+    k.add(blob(1.1, 1), { at: [tx + ca * 0.9, ty + 3.2, tz + sa * 0.9], color: coral, outline: 0.04 });
+  }
+  // the terrace, its wall round the edge
+  k.add(cyl(13.6, 13.6, 1.2, 32), { at: [0, 41.2, 0], color: band, outline: 0.05 });
+  k.add(cyl(13.2, 13.2, 1.8, 32, true), { at: [0, 42.4, 0], color: wall, outline: 0.04 });
+  // the keep: tiers of white, a band of pink, arched windows, the great onion dome
+  const Y = 42.4;
+  k.add(cyl(6.2, 6.6, 7, 24), { at: [0, Y, 0], color: wall, outline: 0.06 });
+  k.add(cyl(6.7, 6.7, 0.8, 24), { at: [0, Y + 7, 0], color: band, outline: 0.04 });
+  k.add(cyl(4.6, 5.0, 7, 20), { at: [0, Y + 7.8, 0], color: wall, outline: 0.06 });
+  for (let i = 0; i < 10; i++) {
+    const a = i / 10 * Math.PI * 2;
+    k.add(box(1.0, 2.2, 0.3), { at: [Math.cos(a) * 6.45, Y + 2.2, Math.sin(a) * 6.45], rot: [0, -a + Math.PI / 2, 0], color: win });
+    if (i % 2 === 0) k.add(box(0.8, 1.8, 0.3), { at: [Math.cos(a) * 4.85, Y + 10.5, Math.sin(a) * 4.85], rot: [0, -a + Math.PI / 2, 0], color: win });
+  }
+  const onion = (r, at, color) => {
+    k.add(lathe([[r * 0.9, 0], [r * 1.15, r * 0.45], [r * 1.05, r * 0.95], [r * 0.6, r * 1.45], [r * 0.18, r * 1.85], [0.05, r * 2.15]], 18), { at, color, outline: 0.05 });
+    k.add(cyl(0.06 * r, 0.1 * r, r * 0.7, 6), { at: [at[0], at[1] + r * 2.1, at[2]], color: gold });
+    k.add(blob(0.14 * r, 0), { at: [at[0], at[1] + r * 2.85, at[2]], color: gold });
+  };
+  onion(4.8, [0, Y + 14.8, 0], pink);
+  // the towers round it, white with sea-green and pink domes
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2 + 0.26, R = 9.6, h = i % 2 ? 9 : 11.5;
+    const x = Math.cos(a) * R, z = Math.sin(a) * R;
+    k.add(cyl(1.8, 2.0, h, 14), { at: [x, Y, z], color: wall, outline: 0.05 });
+    k.add(cyl(2.15, 2.15, 0.5, 14), { at: [x, Y + h, z], color: band, outline: 0.03 });
+    k.add(box(0.7, 1.5, 0.25), { at: [x * 1.11, Y + h - 3, z * 1.11], rot: [0, -a + Math.PI / 2, 0], color: win });
+    onion(2.0, [x, Y + h + 0.5, z], i % 2 ? teal : pink);
+  }
+  // the walk between them, round the keep
+  k.add(torus(9.6, 0.9, 6, 36), { at: [0, Y + 3.6, 0], rot: [Math.PI / 2, 0, 0], color: wall, outline: 0.04 });
+});
+
+reg('ryugu', (o) => {
+  const root = group('ryugu');
+  add(root, ryuguGeo());
+  // its own bubble, round the palace on top of the coral
+  const b = new THREE.Mesh(BUBBLE_GEO, bubbleMaterial());
+  b.scale.setScalar(23);
+  b.position.y = 52;
+  b.renderOrder = 3;
+  root.add(b);
+  animate(root, (t) => {
+    const w = 1 + Math.sin(t * 0.6) * 0.006;
+    b.scale.set(23 * w, 23 / w, 23 * w);
+  });
+  return root;
+});
+
+// ------------------------------------------------------------ the dive point
+// Where the sea goes down at the foot of the Red Line, east of Sabaody (the
+// spot fishman_dive): the water darkening in a slow, wide swirl, foam drawn
+// round and into it — the way down to Fish-Man Island, for a coated ship.
+let swirlMat = null;
+reg('downcurrent', () => {
+  const root = group('downcurrent');
+  root.userData.noGround = true; // (on the sea itself)
+  if (!swirlMat) {
+    swirlMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: U.time },
+      vertexShader: /* glsl */`
+        varying vec2 vP;
+        void main() { vP = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: /* glsl */`
+        uniform float uTime;
+        varying vec2 vP;
+        void main() {
+          float r = length(vP) / 26.0;
+          if (r > 1.0) discard;
+          float a = atan(vP.y, vP.x);
+          // (arms of foam wound in toward the middle, turning slowly)
+          float arm = sin(a * 3.0 + r * 15.0 - uTime * 0.9 + sin(a * 5.0 + uTime * 0.3) * 0.4);
+          float foam = smoothstep(0.78, 1.0, arm) * smoothstep(0.04, 0.3, r) * (1.0 - r);
+          float dark = (1.0 - smoothstep(0.0, 0.95, r)) * 0.62;
+          vec3 col = mix(vec3(0.0, 0.04, 0.09), vec3(0.86, 0.95, 1.0), foam / max(0.001, foam + dark));
+          gl_FragColor = vec4(col, (dark + foam * 0.7) * (1.0 - smoothstep(0.8, 1.0, r)));
+        }`,
+      transparent: true, depthWrite: false,
+    });
+  }
+  const m = new THREE.Mesh(new THREE.CircleGeometry(26, 56).rotateX(-Math.PI / 2), swirlMat);
+  m.position.y = 0.14;
+  m.renderOrder = 2;
+  m.castShadow = false; m.receiveShadow = false;
+  root.add(m);
+  return root;
+});
 
 export { bubbleMaterial as bubbleMat };

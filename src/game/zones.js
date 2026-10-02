@@ -10,6 +10,8 @@ import { persist } from './lineage.js';
 import { findShore } from './interact.js';
 import { formatBerries } from '../core/math.js';
 import { npcDef, allNpcDefs, sizeBuildingsForOccupants } from './npcs.js';
+import { inBubble, domeHeight } from '../world/bubble.js';
+import { shipDims } from '../world/hull.js';
 
 export function installZones(game) {
   const cache = new Map();
@@ -76,6 +78,11 @@ export function installZones(game) {
       carried.speed = 0;
       if (!carried.fits(w, carried.x, carried.y, carried.heading)) carried.unstick(w);
       p.x = carried.x; p.y = carried.y;
+      // (diving in: she comes down out of the deep over the bubble — see diveTick)
+      if (opts.dive && carried.diving) {
+        carried.diving = { phase: 'down', t: 0, from: diveStart(w, carried.x, carried.y) };
+        carried.dive = carried.diving.from;
+      } else { carried.diving = null; carried.dive = 0; }
     } else {
       p.mode = 'foot'; p.onShip = false; p.ship = null;
       let s = findShore(w, pos.x, pos.y, 6);
@@ -104,7 +111,8 @@ export function installZones(game) {
     game.env.zoneKind = z.kind;
     game.emit('enterZone', id);
     if (!resuming) {
-      game.ui.banner(z.name, z.altitude || '', z.kind === 'sky' ? 'Above the clouds, the sea is white.' : z.kind === 'undersea' ? '10,000 metres beneath the waves, a bubble of air and light.' : 'The Great Underwater Prison.', 5);
+      // (diving in, the banner waits till she's down: see diveTick)
+      if (!opts.dive) game.ui.banner(z.name, z.altitude || '', z.kind === 'sky' ? 'Above the clouds, the sea is white.' : z.kind === 'undersea' ? '10,000 metres beneath the waves, a bubble of air and light.' : 'The Great Underwater Prison.', 5);
       persist(game);
     }
     game.audio?.music(z.kind === 'prison' ? 'night' : z.kind === 'sky' ? 'town' : 'grandline');
@@ -187,13 +195,7 @@ export function installZones(game) {
           label: s.coated ? 'Dive to Fish-Man Island (10,000 m)' : 'Dive to Fish-Man Island (needs a coated ship)', key: 'E',
           run: () => {
             if (!s.coated) { game.log('Without a resin coating your ship would be crushed by the deep. Sabaody\'s coating mechanics can help — for a price.', '#ff8a80'); return; }
-            game.ui.fade(true);
-            setTimeout(() => {
-              s.coated = false; // the coating lasts one voyage
-              game.enterZoneById('fishman_island', { byShip: true });
-              game.ui.fade(false);
-              game.log('The bubble holds. Down past the Sea Kings, past the downward currents… light below: Fish-Man Island.', '#80deea');
-            }, 900);
+            startDive(game, s);
           },
         };
       }
@@ -252,6 +254,9 @@ export function installZones(game) {
     }, 500);
   });
 
+  // the dive under way (see startDive)
+  game.on('tick', (dt) => diveTick(game, dt || 1 / 60));
+
   // falling off the edge of a sky island (Cloud End) or swimming off the
   // edge of the zone takes you back down
   game.on('tick', () => {
@@ -270,7 +275,7 @@ export function installZones(game) {
       }
     } else p.cloudFallT = 0;
     // the deep sea outside Fish-Man Island's bubble: only fish-men and merfolk can swim there
-    if (w.zone === 2 && p.mode === 'foot' && p.inWater && game.state.char.race !== 'fishman') {
+    if (w.zone === 2 && p.mode === 'foot' && p.inWater && !inBubble(w, p.x, p.y, -1) && game.state.char.race !== 'fishman') {
       p.deepT = (p.deepT || 0) + 1 / 30;
       if (p.deepT > 1.5) {
         p.deepT = 0;
@@ -324,6 +329,68 @@ export function installZones(game) {
     game.progression?.breakthrough(2, 'Escaped the Great Prison');
   });
 }
+
+// The dive to Fish-Man Island in a coated ship, as the Straw Hats made it:
+// at the foot of the Red Line she goes under in her bubble and sinks out of
+// the light; then, 10,000 m down, she comes down out of the dark onto Fish-
+// Man Island's great bubble, through its skin — her own coating merging with
+// it — and settles on the sea inside. Nobody steers or leaves the helm on
+// the way (playerController.js sail); she just goes down (ship.js: `dive`,
+// metres above the sea she'd ride at, which everything aboard rides with).
+const DIVE = { under: 4.2, dark: 0.9, down: 18 }; // s: going under; the dark; coming down to the island
+// (how far she sinks before the dark: masts and all out of sight)
+const diveDepth = (s) => (shipDims(s.def).mastH || 8) + 14;
+
+function startDive(game, s) {
+  if (s.diving) return;
+  s.diving = { phase: 'under', t: 0 };
+  s.speed = 0; s.sail = 0; s.rowing = 0;
+  game.ui.banner('DOWN TO FISH-MAN ISLAND', 'The coating holds', 'The sea closes over the bubble. Down past the Sea Kings, down the currents, ten thousand metres into the dark…', 5);
+  game.audio?.sfx('splash_big');
+}
+
+function diveTick(game, dt) {
+  const p = game.player, s = p?.ship;
+  if (!s?.diving || p.mode !== 'sail') return;
+  const d = s.diving;
+  d.t += dt;
+  s.speed = 0;
+  if (d.at) { s.x = d.at.x; s.y = d.at.y; } else d.at = { x: s.x, y: s.y };
+  if (d.phase === 'under') {
+    // (down under the waves in her bubble, at the foot of the Red Line)
+    const k = Math.min(1, d.t / DIVE.under);
+    s.dive = -diveDepth(s) * k * k;
+    if (d.t >= DIVE.under && !d.dark) { d.dark = true; game.ui.fade(true); }
+    if (d.t >= DIVE.under + DIVE.dark) {
+      game.enterZoneById('fishman_island', { byShip: true, dive: true });
+      game.ui.fade(false);
+    }
+    return;
+  }
+  // coming down onto the island's bubble out of the deep, through its skin, onto the sea inside
+  const w = game.world, b = w.bubble;
+  const u = Math.min(1, d.t / DIVE.down), ease = 1 - Math.pow(1 - u, 2.3);
+  s.dive = d.from * (1 - ease);
+  const skin = b ? domeHeight(b, s.x, s.y) : 0;
+  if (s.coated && s.dive < skin) {
+    // (her coating meets the island's bubble, and the two run together)
+    s.coated = false;
+    game.audio?.sfx('splash_out');
+    game.fx?.shake?.(0.35);
+    game.log('Her coating touches the island\'s great bubble — and the two run together. You\'re through, into air and light.', '#80deea');
+  }
+  if (u >= 1) {
+    s.dive = 0;
+    s.diving = null;
+    s.coated = false; // (the coating lasts the one voyage)
+    game.audio?.sfx('splash');
+    game.fx?.burst?.(s.x, s.y, 40, { color: ['#e0f7fa', '#80deea', '#ffffff'], speed: 6, vz: 6, g: 9, life: 1.1, kind: 'smoke', size: 0.45 });
+    game.ui.banner('Fish-Man Island', '10,000 m below', 'A bubble of air and light at the bottom of the sea. The Ryugu Kingdom stands on its hill; Mermaid Cove is off your bow.', 6);
+  }
+}
+
+/** Where a ship coming down to a zone starts, metres over the sea (zone entry, below): well above the bubble's skin. */
+function diveStart(w, x, y) { return (w.bubble ? domeHeight(w.bubble, x, y) : 0) + 110; }
 
 function exitZone(game, e, falling = false) {
   game.ui.fade(true);

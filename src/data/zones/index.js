@@ -77,15 +77,22 @@ export const ZONES = {
   },
 
   fishman_island: {
-    id: 'fishman_island', name: 'Fish-Man Island', kind: 'undersea', w: 480, h: 380, fill: T.SEA, altitude: '10,000 m below',
-    arrive: { x: 420, y: 200, heading: Math.PI },
+    id: 'fishman_island', name: 'Fish-Man Island', kind: 'undersea', w: 640, h: 520, fill: T.SEA, altitude: '10,000 m below',
+    // the great bubble of air the island lives in, 10,000 m down: a dome over
+    // the whole zone, its foot an ellipse on the sea a by b m round (x, y),
+    // h m high in the middle. Outside it there's only the deep sea (see
+    // world/bubble.js); ships come down into it through its top (zones.js
+    // dive) and go out through its wall at the exits.
+    bubble: { x: 320, y: 260, a: 300, b: 250, h: 170 },
+    // (where a coated ship comes down: off Mermaid Cove's harbour)
+    arrive: { x: 500, y: 270, heading: Math.PI },
     exits: [
-      { id: 'new_world', x: 20, y: 60, r: 16, to: 'surface', surface: { x: chart(118), y: chart(990) }, label: 'Rise to the New World' },
-      { id: 'paradise', x: 462, y: 330, r: 16, to: 'surface', surface: { x: chart(3985), y: chart(1070) }, label: 'Rise back to Sabaody' },
+      { id: 'new_world', x: 91, y: 127, r: 16, to: 'surface', surface: { x: chart(118), y: chart(990) }, label: 'Rise to the New World' },
+      { id: 'paradise', x: 549, y: 393, r: 16, to: 'surface', surface: { x: chart(3985), y: chart(1070) }, label: 'Rise back to Sabaody' },
     ],
     islands: [
       {
-        id: 'fishman_island', name: 'Fish-Man Island', sea: 'undersea', x: 245, y: 195, w: 230, h: 190, climate: 'undersea', rough: 0.2,
+        id: 'fishman_island', name: 'Fish-Man Island', sea: 'undersea', x: 325, y: 265, w: 230, h: 190, climate: 'undersea', rough: 0.2,
         population: [['fishman', 82], ['human', 12], ['mink', 2]],
         trees: ['coral', 'kelp'],
         towns: [
@@ -97,10 +104,14 @@ export const ZONES = {
             buildings: [{ role: 'bar', name: 'Noah Tavern' }, { role: 'dojo', name: 'Fish-Man Karate Dojo', trainer: 'jinbe' }] },
         ],
         spots: [{ id: 'gyoncorde_plaza', dx: 0.0, dy: 0.05 }, { id: 'coral_hill', dx: 0.35, dy: 0.45 }],
-        landmarks: [{ kind: 'fountain', dx: 0.0, dy: 0.1, name: 'Gyoncorde Plaza' }],
+        landmarks: [
+          { kind: 'fountain', dx: 0.0, dy: 0.1, name: 'Gyoncorde Plaza' },
+          // (high over the Ryugu Kingdom, on its stalk of coral, in its own bubble)
+          { kind: 'ryugu', dx: 0.0, dy: -0.72, name: 'Ryugu Palace' },
+        ],
       },
       {
-        id: 'sea_forest', name: 'Forest of the Sea', sea: 'undersea', x: 75, y: 320, w: 90, h: 60, climate: 'undersea', rough: 0.3, noDock: false,
+        id: 'sea_forest', name: 'Forest of the Sea', sea: 'undersea', x: 155, y: 390, w: 90, h: 60, climate: 'undersea', rough: 0.3, noDock: false,
         trees: ['kelp', 'coral'],
         landmarks: [
           { kind: 'poneglyph', dx: 0, dy: -0.1, poneglyph: 'apology', name: "Joy Boy's Apology" },

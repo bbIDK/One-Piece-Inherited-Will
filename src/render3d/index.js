@@ -14,6 +14,7 @@ import { waterLevel } from './height.js';
 import { swellAt } from './swell.js';
 import { Water } from './water3d.js';
 import { Sky } from './sky3d.js';
+import { BubbleDome } from './bubble3d.js';
 import { CameraRig } from './camera3d.js';
 import { SpriteForest, ActorSprite, propSprite, projectileMesh, tintSprites } from './billboards.js';
 import { ShipView } from './ships3d.js';
@@ -150,6 +151,7 @@ export class Renderer3D {
     this.renderer.info.autoReset = false;
     this.scene = new THREE.Scene();
     this.sky = new Sky(this.scene);
+    this.dome = new BubbleDome(this.scene); // (Fish-Man Island's bubble)
     this.water = new Water(this.scene, this.renderer);
     this.terrain = new TerrainManager(this.scene);
     this.rig = new CameraRig(canvas, game);
@@ -269,7 +271,8 @@ export class Renderer3D {
   /** How far out (m) the world is drawn: on foot, or at sea (not past the short fixed fogs of the sea bed and the prison). */
   viewDist(sailing) {
     const d = (sailing ? this.seaChunks() : this.viewChunks) * CHUNK_M, zone = this.world?.zone;
-    return zone === 2 ? Math.min(d, 192) : zone === 3 ? Math.min(d, 128) : d;
+    // (a bubble's air is clear right across it)
+    return zone === 2 ? Math.min(d, this.world?.bubble ? 640 : 192) : zone === 3 ? Math.min(d, 128) : d;
   }
 
   /**
@@ -419,12 +422,15 @@ export class Renderer3D {
 
     this.terrain.setSailing(sailing);
     this.sky.maxFar = this.terrain.extent;
+    // (down at Fish-Man Island: inside its bubble, the air is clear; outside, the deep sea)
+    this.sky.inBubble = this.dome.update(w, ox, oy, env, cam);
     this.sky.update(env, w, sailing);
     this.sky.mesh.position.copy(cam.position);
     this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
     // (no sea inside the hull you're aboard: from her hold you'd see it across the room)
     const hs = p.deck?.ship || (sailing ? p.ship : null);
-    this.water.setHull(hs && !hs.sunk ? { x: w.dx(ox, hs.x), z: hs.y - oy, h: hs.heading, L: hs.def.length, B: hs.def.beam } : null);
+    // (nor while she's diving: going under, the sea closes over her)
+    this.water.setHull(hs && !hs.sunk && !hs.dive ? { x: w.dx(ox, hs.x), z: hs.y - oy, h: hs.heading, L: hs.def.length, B: hs.def.beam } : null);
     this.underwater(env, -cam.position.y);
     prof('r.sky+water', t0); t0 = performance.now();
     // the floor of the open sea (far from any land) is only drawn for a swimmer

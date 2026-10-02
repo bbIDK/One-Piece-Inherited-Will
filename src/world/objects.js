@@ -20,6 +20,7 @@ export const COLLIDE = {
   // landmarks (sized like their models; gates and arches you walk through)
   statue: 0.7, pillar: 0.45, totem: 0.35, dummy: 0.28, cannon: 0.55, anchor: 0.2, grave: 0.3, bell: 0.6, ruins: 0.8,
   poneglyph: [0.8, 0.35], boat: [1.4, 0.6], shipwreck: [2.5, 1.2], lighthouse: 1.6, tower: 2.0, windmill: 1.5, wheel: 1.0, elevator: 1.5,
+  ryugu: 8.2, // (Ryugu Palace's coral stalk, at its foot)
   gate: 0, torii: 0, arch: 0, bones: 0, skull: 0, bubble: 0,
   platform: 0, // a raised floor you walk onto (see floorOf)
 };

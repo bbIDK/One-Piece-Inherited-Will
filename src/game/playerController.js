@@ -256,6 +256,8 @@ export class PlayerController {
     const s = p.ship;
     if (!s || s.sunk) return;
     s.captain = p;
+    // (diving to Fish-Man Island she just goes down: nobody steers, nobody leaves the helm — zones.js)
+    if (s.diving) { this.interaction = null; return; }
     let turn = 0;
     if (inp.isDown('A') || inp.isDown('ArrowLeft')) turn -= 1;
     if (inp.isDown('D') || inp.isDown('ArrowRight')) turn += 1;

@@ -158,7 +158,8 @@ export class Ship extends Entity {
     // (a light boat under oars answers each stroke; a ship under sail gathers way slowly)
     this.speed += (target - this.speed) * Math.min(1, dt * (oared ? 1.6 : target > this.speed ? 0.7 : 1.2));
     // the water's height under the keel (up the mountain's canals) and the slope she's riding
-    this.lvl = cur.level;
+    // (and, diving to Fish-Man Island, how far over or under it she is: zones.js)
+    this.lvl = cur.level + (this.dive || 0);
     const along = cur.canal ? Math.cos(angleDiff(this.heading, Math.atan2(cur.y, cur.x))) : 0;
     const pitchT = Math.atan(cur.slope) * along;
     this.pitch = (this.pitch || 0) + (pitchT - (this.pitch || 0)) * Math.min(1, dt * 3);

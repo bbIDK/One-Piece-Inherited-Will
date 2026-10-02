@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { FOG } from './fog.js';
 import { SunShadow } from './sunshadow.js';
+import { DEEP, MID } from './bubble3d.js';
 
 const VERT = /* glsl */`
   varying vec3 vDir;
@@ -39,6 +40,18 @@ const FRAG = /* glsl */`
   void main() {
     vec3 d = normalize(vDir);
     float y = d.y;
+    // 10,000 m down (Fish-Man Island, out in the deep beyond its bubble): no
+    // sun, moon or stars — the dark of the deep sea, the daylight filtering
+    // down from far above in rays
+    if (uZone == 2.0) {
+      float az = atan(d.z, d.x);
+      vec3 c2 = y > 0.0 ? mix(uHorizon, uTop, pow(y, 0.6)) : mix(uHorizon, uBottom, smoothstep(0.0, 0.4, -y));
+      float r = 0.5 + 0.5 * sin(az * 23.0 + sin(az * 5.0 + uTime * 0.05) * 2.0);
+      c2 += uTop * 1.4 * pow(r, 4.0) * smoothstep(0.2, 1.0, y) * (1.0 - uNight * 0.8);
+      c2 += vec3(0.25, 0.45, 0.55) * pow(max(y, 0.0), 6.0) * 0.6 * (1.0 - uNight * 0.8);
+      gl_FragColor = vec4(c2, 1.0);
+      return;
+    }
     // below the horizon the sky only ever shows past the edge of the sea: keep it the far sea's hazy colour
     vec3 col = y > 0.0 ? mix(uHorizon, uTop, pow(clamp(y, 0.0, 1.0), 0.55)) : mix(uHorizon, uBottom, smoothstep(0.0, 0.35, -y) * 0.6);
     // sun and its glow
@@ -103,6 +116,9 @@ const FRAG = /* glsl */`
 `;
 
 const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+// (the haze inside Fish-Man Island's bubble: between the colours of its skin low down)
+const BUBBLE_HAZE = lerp3(DEEP, MID, 0.45);
+const _haze = new THREE.Color();
 
 export class Sky {
   constructor(scene) {
@@ -145,6 +161,10 @@ export class Sky {
     // and night are each half a turn, at their own pace.)
     const a = c >= 6 && c <= 19 ? (c - 6) / 13 * Math.PI : Math.PI * (1 + ((c - 19 + 24) % 24) / 11);
     this.sunDir.set(Math.cos(a), Math.sin(a) * 0.95 + 0.05, 0.35).normalize();
+    // (10,000 m down the daylight comes from straight overhead, all day long)
+    if (zone === 2) this.sunDir.set(0.22, 0.95, 0.2).normalize();
+    // (Fish-Man Island: 1 inside its bubble, 0 out in the deep: see bubble3d.js)
+    const ib = zone === 2 ? this.inBubble ?? 1 : 1;
     const moon = this.moonDir.set(-Math.cos(a), -Math.sin(a) * 0.9 + 0.1, -0.3).normalize();
     const day = env.daylight;
     const night = 1 - day;
@@ -158,8 +178,9 @@ export class Sky {
     top = lerp3(top, [0.32, 0.35, 0.4].map((v) => v * (0.3 + day * 0.7)), grey * 0.85);
     hor = lerp3(hor, [0.5, 0.53, 0.56].map((v) => v * (0.3 + day * 0.7)), grey * 0.85);
     let bottom = lerp3(hor, [0.05, 0.12, 0.2], 0.6);
-    if (zone === 2) { // undersea
-      top = [0.02, 0.12, 0.25]; hor = [0.04, 0.22, 0.38]; bottom = [0.01, 0.05, 0.1];
+    if (zone === 2) { // undersea: the deep sea (from inside the bubble, its skin is the sky: bubble3d.js)
+      const k = 0.25 + 0.75 * day;
+      top = [0.02, 0.1, 0.22].map((v) => v * k); hor = [0.012, 0.06, 0.13].map((v) => v * k); bottom = [0.004, 0.02, 0.05];
     } else if (zone === 3) { // prison interior
       top = [0.05, 0.02, 0.02]; hor = [0.18, 0.08, 0.06]; bottom = [0.05, 0.02, 0.02];
     } else if (zone === 1) { // sky island: brighter, whiter horizon
@@ -195,7 +216,7 @@ export class Sky {
     const warm = Math.max(dusk, low * 0.9);
     this.lightDir.copy(sunUp ? this.sunDir : moon);
     this.sun.intensity = (sunUp ? 2.4 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y))
-      * (1 - env.storm * 0.55) * (zone === 3 ? 0.25 : zone === 2 ? 0.6 : 1);
+      * (1 - env.storm * 0.55) * (zone === 3 ? 0.25 : zone === 2 ? 0.35 + 0.5 * ib : 1);
     if (sunUp) this.sun.color.setRGB(1, 0.95 - warm * 0.24, 0.88 - warm * 0.42);
     else this.sun.color.setRGB(0.6, 0.7, 1);
     this.hemi.color.setRGB(amb[0] * 0.8, amb[1] * 0.85, amb[2] * 0.95);
@@ -208,15 +229,19 @@ export class Sky {
     // or out; thick weather draws it in nearer still.
     let far = this.maxFar || (sailing ? 900 : 620);
     far *= (1 - env.fog * 0.72) * (1 - env.storm * 0.4);
-    if (zone === 2) far = 170;
+    // (inside Fish-Man Island's bubble the air's clear right across it; out
+    // in the deep, its dark lies over the island seen through the bubble)
+    if (zone === 2) far = 420 + 220 * ib;
     if (zone === 3) far = 95;
     far = Math.max(60, Math.min(far, this.maxFar || far));
     this.fog.far = far;
     this.fog.near = far * 0.6;
     this.fog.color.copy(this.horizon);
+    // (inside the bubble, the haze is the deep's colour through its skin, low down)
+    if (zone === 2) this.fog.color.lerp(_haze.setRGB(...BUBBLE_HAZE.map((v) => v * (0.22 + 0.78 * day))), ib);
     let dens = 0.0011 + env.storm * 0.0045 + env.fog * 0.013 + (env.snow ? 0.0025 : 0) + night * 0.0004;
     if (sailing) dens *= 0.8;
-    if (zone === 2) dens = 0.012;
+    if (zone === 2) dens = 0.0012 + 0.0018 * (1 - ib);
     else if (zone === 3) dens = 0.02;
     else if (zone === 1) dens = 0.0014;
     FOG.fogDensity2.value = dens;
