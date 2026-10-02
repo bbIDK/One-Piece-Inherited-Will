@@ -104,7 +104,7 @@ export function createCharacter(legacy, birth, choices) {
   if (birth.race === 'fishman') { style = 'fishman_karate'; masteries.fishman_karate = 8; techniques.push('fmk_uchimizu'); }
   if (birth.race === 'mink') { masteries.electro = 5; techniques.push('elec_discharge'); style = 'electro'; }
   const inventory = [{ id: 'meat', qty: 3 }, { id: 'rice_ball', qty: 2 }, { id: 'bandage', qty: 2 }];
-  const equipped = { weapons: [], hat: null, coat: null, accessories: [] };
+  const equipped = { weapons: [], hat: null, coat: null, accessories: [], pose: null };
   if (legacy.heirloom && ITEMS[legacy.heirloom.id]) {
     const it = legacy.heirloom;
     inventory.push({ id: it.id, qty: 1, heirloom: true, from: it.from });
@@ -278,6 +278,14 @@ export function upgradeChar(c) {
   if (!c) return c;
   c.equipped = c.equipped || { weapons: [], hat: null, coat: null };
   c.equipped.accessories = c.equipped.accessories || [];
+  // the Log Pose slot: the Eternal Pose you were following, else your Log Pose
+  if (c.equipped.pose === undefined) {
+    const has = (id) => (c.inventory || []).some((i) => i.id === id);
+    const lp = c.logPose || {};
+    c.equipped.pose = lp.eternal && has(lp.eternal) ? lp.eternal
+      : (c.inventory || []).find((i) => ITEMS[i.id]?.logPose)?.id || (c.inventory || []).find((i) => ITEMS[i.id]?.type === 'pose')?.id || null;
+    delete lp.eternal;
+  }
   c.weaponMastery = c.weaponMastery || { fists: 0, legs: 0, sword: 0, gun: 0, staff: 0, axe: 0 };
   c.train = c.train || { str: 0, agi: 0, end: 0, vit: 0, wil: 0 };
   if (c.reputation === undefined) c.reputation = 0;

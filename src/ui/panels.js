@@ -23,6 +23,7 @@ import { openJollyRoger } from './crewPanel.js';
 import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
 import { RENDER_DIST, renderChunks } from '../game/save.js';
 import { openShipwright } from './shipwrightPanel.js';
+import { fmtDist } from './compass.js';
 
 const berriesLine = (c) => h('div.berries', uiImg('berries', 20), ` ${formatBerries(c.berries)}`);
 const HOTBAR = HOTBAR_SIZE;
@@ -167,7 +168,8 @@ export function openInventory(game) {
       h('div.doll-col',
         slotBox('weapon0', 'Weapon', ws[0], 'weapon', 'weapon_slot'),
         slotBox('weapon1', '2nd sword', ws[1], 'weapon', 'weapon_slot', !swords),
-        slotBox('weapon2', '3rd sword', ws[2], 'weapon', 'weapon_slot', !swords)),
+        slotBox('weapon2', '3rd sword', ws[2], 'weapon', 'weapon_slot', !swords),
+        slotBox('pose', 'Log Pose', eq.pose, 'pose', 'log_pose')),
       h('div.doll-mid', portrait(equippedLook(c), 104, 130)),
       h('div.doll-col',
         slotBox('head', 'Head', eq.hat, 'head', 'head_slot'),
@@ -234,10 +236,10 @@ export function openInventory(game) {
       const id = st.selected;
       const worn = isEquipped(c, id);
       const acts = [];
-      if (slotKind(sd)) acts.push(h('button.btn' + (worn ? '.red' : '.gold'), { on: { click: () => { equip(game, id); render(); } } }, worn ? 'Take off' : 'Equip'));
+      const isPose = slotKind(sd) === 'pose';
+      if (slotKind(sd)) acts.push(h('button.btn' + (worn ? '.red' : '.gold'), { on: { click: () => { equip(game, id); render(); } } }, isPose ? (worn ? 'Put away' : 'Follow its needle') : worn ? 'Take off' : 'Equip'));
       if (USABLE.has(sd.type)) acts.push(h('button.btn.green', { on: { click: () => { useItem(game, id); render(); } } }, sd.type === 'food' ? 'Eat' : 'Use'));
       if (ON_HOTBAR.has(sd.type)) acts.push(h('button.btn' + (game.ui.hotbarPick === 'item:' + id ? '.gold' : ''), { on: { click: () => pickForHotbar(game, 'item:' + id, render) } }, game.ui.hotbarPick === 'item:' + id ? 'Now click a hotbar slot…' : 'Put on hotbar'));
-      if (sd.type === 'pose') acts.push(h('button.btn', { on: { click: () => { useItem(game, id); render(); } } }, c.logPose?.eternal === id ? 'Following' : 'Follow the needle'));
       if (sd.type === 'dial') acts.push(h('button.btn', { disabled: c.techniques.includes(sd.ability), on: { click: () => { useItem(game, id); render(); } } }, c.techniques.includes(sd.ability) ? 'Learned' : 'Learn to use'));
       if (sd.type === 'fruit') {
         if (c.fruit) acts.push(h('span.muted', 'You have already eaten a Devil Fruit — a body can only hold one. Keep it, sell it, or give it away.'));
@@ -248,9 +250,11 @@ export function openInventory(game) {
         h('div.det-head', itemImg(id, 56), h('div', h('h4', sd.name), h('div.sub', `${TYPE_NAME[sd.type] || sd.type}${count(c, id) > 1 ? ' · ×' + count(c, id) : ''}${worn ? ' · equipped' : ''}`), heir ? h('div.sub', `Heirloom of ${heir.from}`) : null)),
         statLine(sd) ? h('div.det-stats', statLine(sd)) : null,
         sd.type === 'fruit' ? fruitInfo(sd) : h('p', sd.desc || ''),
-        h('div.det-actions', acts));
+        h('div.det-actions', acts),
+        // (the Log Pose you follow: where its needle points, and where else you can set it)
+        isPose && sd.logPose && worn ? coursePicker(game, render) : null);
     } else {
-      details = h('div.inv-details.empty', h('p.muted', 'Select an item to see it. Drag gear onto the equipment slots, and food or weapons onto the hotbar. Double-click to equip or eat.'));
+      details = h('div.inv-details.empty', h('p.muted', 'Select an item to see it. Drag gear onto the equipment slots, and food or weapons onto the hotbar. Double-click to equip or eat. Click your Log Pose in its slot to choose where its needle points.'));
     }
     const right = h('div.inv-right', tabs, grid, details);
     game.ui.onHotbarChange = render;
@@ -265,6 +269,41 @@ export function openInventory(game) {
     render();
   };
   render();
+}
+
+// the eight points of the compass, round from east (y points south)
+const POINTS8 = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+
+/**
+ * Where the needle of the Log Pose in your slot points, and the islands you
+ * can set it to instead (sea.js logOptions): where the story goes on, the
+ * islands the last log can lock onto, and in the Blues the islands you've
+ * charted in that sea.
+ */
+function coursePicker(game, rerender) {
+  const c = game.state.char, p = game.player, w = game.surface;
+  const opts = game.logPoseOptions?.() || [];
+  const cur = c.logPose?.target;
+  const rows = opts.map((o) => {
+    const d = w.distance(p.x, p.y, o.isl.x, o.isl.y);
+    const dir = POINTS8[((Math.round(Math.atan2(o.isl.y - p.y, w.dx(p.x, o.isl.x)) / (Math.PI / 4)) % 8) + 8) % 8];
+    const on = o.id === cur;
+    const here = game.currentIsland === o.isl;
+    const why = { story: 'Where your story goes on', needle: 'A needle of your log', chart: 'Charted', now: 'Where it points now' }[o.why];
+    return h('button.lp-opt' + (on ? '.on' : '') + (o.why === 'story' ? '.story' : ''), {
+      title: on ? 'The needle points here' : `Set the needle to ${o.known ? o.isl.name : 'this island'}`,
+      on: { click: () => { if (!on && game.setLogCourse?.(o.id)) rerender(); } },
+    },
+    uiImg(o.why === 'story' ? 'wp_main' : o.why === 'chart' ? 'map' : 'log_pose', 22),
+    h('span.lp-name', o.known ? o.isl.name : 'An uncharted island', h('small', why)),
+    h('span.lp-way', here ? 'here' : `${dir} · ${fmtDist(d)}`),
+    on ? h('b.lp-cur', 'Following') : h('span.lp-cur'));
+  });
+  const none = game.world !== game.surface ? 'Out here the needle has nothing to lock onto. Back at sea, choose where it points.'
+    : 'No log yet: stay on an island of the Grand Line until the needle settles, and the islands it can lock onto show here.';
+  return h('div.lp-course',
+    h('h5', uiImg('log_pose', 18), 'Where the needle points', rows.length > 1 ? h('small', 'click an island to swing it there') : null),
+    rows.length ? h('div.lp-opts', rows) : h('p.muted', none));
 }
 
 function fruitInfo(d) {

@@ -1241,7 +1241,7 @@ function install(game) {
     if (isl.id === 'elbaf' && !started(game, 'elbaf_siege')) game.quests.start('elbaf_siege');
     if (isl.id === 'lodestar') {
       // canon: at Lodestar the Log Pose cannot record the next island — the needles just spin.
-      if (c.logPose) { c.logPose.target = null; c.logPose.last = 'lodestar'; c.logPose.progress = 0; }
+      if (c.logPose) { c.logPose.target = null; c.logPose.last = 'lodestar'; c.logPose.options = []; c.logPose.progress = 0; }
       if (!c.flags.nw2_lodestarSeen) {
         c.flags.nw2_lodestarSeen = true;
         game.ui.banner('LODESTAR ISLAND', 'The end of the Log', 'Every needle of your Log Pose starts to spin and does not stop. No Log Pose can lead any further.', 6);

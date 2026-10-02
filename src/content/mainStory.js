@@ -27,7 +27,7 @@ import { PATHS, PART_NAMES } from './main/paths.js';
 import { questDef } from '../game/quests.js';
 import { npcDef, allNpcDefs, placeGuess } from '../game/npcs.js';
 import { ISLAND_BY_ID } from '../data/islands/index.js';
-import { addItem, count } from '../game/inventory.js';
+import { addItem } from '../game/inventory.js';
 import { persist } from '../game/lineage.js';
 import { spawnNow } from './helpers.js';
 import { enlistNow, rankIndex } from '../game/factions.js';
@@ -262,23 +262,33 @@ export function installMainStory(game) {
     pointTheWay();
   }
 
-  /** The Log Pose points to the island the story continues on (in the Blues, and once a log is earned in the Grand Line). */
-  function pointTheWay() {
+  /** The island the story sends you to next, when it steers the Log Pose there (in the Blues, and once a log is earned in the Grand Line). */
+  function storyIsland() {
     const cur = current(game);
-    const c = C();
-    if (!cur || !c.logPose || cur.ch.kind === 'start' || !cur.ch.island || cur.ch.noLog) return;
+    if (!cur || cur.ch.kind === 'start' || !cur.ch.island || cur.ch.noLog) return null;
     const isl = ISLAND_BY_ID[cur.ch.island];
-    if (!isl || !['east_blue', 'north_blue', 'west_blue', 'south_blue', 'paradise', 'new_world'].includes(isl.sea)) return;
-    const st = stageOf(game, cur.qid);
-    if (st !== 'arrive') return;
+    if (!isl || !['east_blue', 'north_blue', 'west_blue', 'south_blue', 'paradise', 'new_world'].includes(isl.sea)) return null;
+    return stageOf(game, cur.qid) === 'arrive' ? isl : null;
+  }
+  game.storyLogIsland = () => storyIsland()?.id || null;
+
+  /** The Log Pose points to the island the story continues on — unless you've set it elsewhere yourself (sea.js setCourse). */
+  function pointTheWay() {
+    const c = C();
+    const isl = c?.logPose && storyIsland();
+    if (!isl) return;
     const lp = c.logPose;
-    if (lp.target === isl.id || (lp.eternal && count(c, lp.eternal))) return;
+    // (you turned the needle away from this very island: it's yours till the story moves on)
+    if (lp.target === isl.id || (lp.own && lp.own === isl.id)) return;
+    lp.own = null;
     lp.target = isl.id;
     lp.last = game.currentIsland?.id || lp.last;
+    lp.options = null;
     lp.progress = 0;
     lp.setting = null;
-    if (count(c, 'log_pose') || count(c, 'new_world_log_pose')) {
-      game.ui.toast('LOG SET', `The needle swings toward ${c.discovered.includes(isl.id) ? isl.name : 'an island you haven\'t seen yet'}.`, '#81d4fa');
+    // (only the Log Pose you follow says so: an Eternal Pose in the slot points on)
+    if (game.sea?.pose()?.eternal === false) {
+      game.sea.announce('LOG SET');
       game.audio?.sfx('reveal');
     }
   }
@@ -450,6 +460,8 @@ export function installMainStory(game) {
    * until you're done there, nor on one you've wandered off to on the way.
    */
   game.storyLogHold = (isl) => {
+    // (you've set your own course: the log sets wherever you go)
+    if (C()?.logPose?.own) return false;
     const cur = current(game);
     if (!cur || !cur.s || cur.s.done || cur.ch.part < 2 || !cur.ch.island || cur.ch.noLog) return false;
     if (cur.ch.island === isl.id) return true;

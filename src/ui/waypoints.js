@@ -4,7 +4,8 @@
 // middle of the screen with an arrow when it isn't, faded out as you get
 // there (from 22 m in, gone by 10 m: by then you can see it). They wear the same icons as the compass and the chart (render/icons.js wp_main,
 // wp_side): gold for the main story, sky blue for a side quest. Look at one
-// and it says which quest it is.
+// and it says which quest it is. The island the needle of your Log Pose
+// points to has one too (its icon, coral), until you're on it.
 import * as THREE from 'three';
 import { h } from './dom.js';
 import { uiImg } from './icon.js';
@@ -38,14 +39,16 @@ export class Waypoints {
     return out;
   }
 
-  mark(id, main) {
+  /** The marker for a quest (kind 'main' or 'side') or the Log Pose ('lp'). */
+  mark(id, kind) {
     let m = this.marks.get(id);
-    if (!m || m.main !== main) {
+    if (!m || m.kind !== kind) {
       m?.e.remove();
       const arrow = h('i.wpm-arrow'), dist = h('small.wpm-d'), name = h('b.wpm-name');
-      const e = h('div.wpm' + (main ? '.main' : '.side'), arrow, uiImg(main ? 'wp_main' : 'wp_side', main ? 34 : 28), dist, name);
+      const icon = kind === 'main' ? uiImg('wp_main', 34) : kind === 'lp' ? uiImg('log_pose', 26) : uiImg('wp_side', 28);
+      const e = h('div.wpm.' + kind, arrow, icon, dist, name);
       this.el.appendChild(e);
-      m = { e, arrow, dist, name, main, seen: 0, txt: '', label: '', cls: '' };
+      m = { e, arrow, dist, name, kind, seen: 0, txt: '', label: '', cls: '' };
       this.marks.set(id, m);
     }
     m.seen = this.t;
@@ -60,11 +63,14 @@ export class Waypoints {
     const w = game.world, p = game.player, cam = v3.rig.camera;
     const W = v3.r2d.cw, H = v3.r2d.ch, cx = W / 2, cy = H / 2;
     const rx = Math.max(80, Math.min(W * RING_X, cx - RING_SIDE)), ry = H * RING_Y;
-    for (const { id, main } of Waypoints.quests(game)) {
-      const m = game.quests.marker(id);
+    const list = Waypoints.quests(game).map(({ id, main }) => ({ id, kind: main ? 'main' : 'side', m: game.quests.marker(id) }));
+    // the Log Pose's island (not once you're on it)
+    const lp = w === game.surface && game.logPoseInfo?.() ? game.logPoseTarget?.() : null;
+    if (lp && lp !== game.currentIsland && w.distance(p.x, p.y, lp.x, lp.y) > (lp.radius || 0)) list.push({ id: 'lp', kind: 'lp', m: { x: lp.x, y: lp.y, label: game.logPoseInfo()?.label === '???' ? 'Uncharted island' : lp.name } });
+    for (const { id, kind, m } of list) {
       if (!m || !Number.isFinite(m.x) || (m.zone ? m.zone !== w.id : w !== game.surface)) continue;
       const d = w.distance(p.x, p.y, m.x, m.y);
-      const mk = this.mark(id, main);
+      const mk = this.mark(id, kind);
       // (nearly there — where their name and "!" say who it is: out of the way)
       const fade = Math.max(0, Math.min(1, (d - 10) / 12));
       // into the camera's space: over the spot close by, on the horizon far off
@@ -89,7 +95,7 @@ export class Waypoints {
       // looked at: say which quest it is
       const look = !edge && Math.abs(sx - cx) < 90 && Math.abs(sy - cy) < 70;
       const cls = (edge ? ' edge' : '') + (look ? ' look' : '');
-      if (cls !== mk.cls) { mk.cls = cls; mk.e.className = 'wpm ' + (main ? 'main' : 'side') + cls; }
+      if (cls !== mk.cls) { mk.cls = cls; mk.e.className = 'wpm ' + kind + cls; }
       const txt = fmtDist(d);
       if (txt !== mk.txt) { mk.txt = txt; mk.dist.textContent = txt; }
       const label = m.label || '';

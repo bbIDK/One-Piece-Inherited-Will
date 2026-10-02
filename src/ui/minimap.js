@@ -5,8 +5,13 @@
 // close up with their buildings (chartDetail.js, shared with the map, so
 // each island is charted once); then ships, foes and quest folk. − and +
 // zoom it out and in (it remembers how far, on foot and at sea apart).
+// Over it, upright however it turns, the chart's own icons (pins): the
+// inns, shops, doctors, dojos and the rest of the towns you know, their
+// harbours, your quests and the Log Pose's island — those three on the rim,
+// pointing the way, when they're farther off than it reaches.
 import { ChartDetail } from './chartDetail.js';
-import { seenIsland } from './mapUI.js';
+import { seenIsland, POI } from './mapUI.js';
+import { uiIcon } from '../render/icons.js';
 import { GL_TOP, GL_BOTTOM, CB_TOP, CB_BOTTOM } from '../world/constants.js';
 
 const ZOOMS = [0.5, 1, 2, 4, 8, 16, 32]; // m to a pixel of the minimap
@@ -27,8 +32,9 @@ const hash = (x, y) => {
 const storeKey = 'op-minimap-zoom';
 
 export class Minimap {
-  constructor(canvas) {
+  constructor(canvas, overlay = null) {
     this.canvas = canvas;
+    this.overlay = overlay; // (the icons: see pins)
     this.chunks = new Map(); // world id:cx:cy → { canvas, sum, used }
     this.t = 0;
     this.check = 0;
@@ -110,6 +116,9 @@ export class Minimap {
     });
     // (still something to chart or paint in view: draw again next frame)
     this.pending = charting > 0 || waiting;
+    // the icons over it (drawn every frame by pins, from where you were now)
+    this.at = { x: p.x, y: p.y, z, css, w };
+    this.pinList = gatherPins(game, z, css, (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     // 3. the chart's rules: the survey grid, and the edges of the Grand Line and the Calm Belts
     rules(g, w, p, z, css, zone);
@@ -155,6 +164,46 @@ export class Minimap {
     g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.5;
     g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, -5); g.lineTo(-2, 0); g.lineTo(-5, 5); g.closePath(); g.fill(); g.stroke();
     g.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  /**
+   * The chart's icons over the minimap, every frame: where draw last put
+   * them, turned with it (in the 3D view it turns so that where you look is
+   * up: `up` is the camera's yaw, null when it doesn't) but each standing
+   * upright; the far quests and the Log Pose's island on the rim.
+   */
+  pins(game, up) {
+    const o = this.overlay, mm = this.canvas, at = this.at;
+    if (!o) return;
+    const css = mm.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
+    // (laid exactly over the minimap's face, inside its rim)
+    const left = mm.offsetLeft + mm.clientLeft, top = mm.offsetTop + mm.clientTop;
+    const key = `${css}:${left}:${top}:${dpr}`;
+    if (this.ovKey !== key) {
+      this.ovKey = key;
+      Object.assign(o.style, { left: left + 'px', top: top + 'px', width: css + 'px', height: css + 'px' });
+      o.width = o.height = Math.round(css * dpr);
+    }
+    const g = o.getContext('2d');
+    if (!g) return;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, o.width, o.height);
+    if (!at || at.w !== game.world || !this.pinList?.length) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const th = up == null ? 0 : -Math.PI / 2 - up, cs = Math.cos(th), sn = Math.sin(th);
+    const r = css / 2, k = css / at.css, w = at.w;
+    for (const pin of this.pinList) {
+      // (the places in town where gatherPins spread them, the rest where they are)
+      const vx = (pin.rim ? w.dx(at.x, pin.x) * at.z : pin.sx) * k, vy = (pin.rim ? (pin.y - at.y) * at.z : pin.sy) * k;
+      let sx = vx * cs - vy * sn, sy = vx * sn + vy * cs;
+      const d = Math.hypot(sx, sy), R = r - (pin.rim ? 11 : 9);
+      let edge = false;
+      if (d > R) {
+        if (!pin.rim) continue;
+        sx *= R / d; sy *= R / d; edge = true;
+      }
+      drawPin(g, r + sx, r + sy, pin, edge ? Math.atan2(sy, sx) : null);
+    }
   }
 
   /** Keep within the memory allowed: the pieces longest out of view go first. */
@@ -235,4 +284,103 @@ function rules(g, w, p, z, css, zone) {
   };
   line(GL_TOP, 'rgba(51,115,89,.85)', 1.4); line(GL_BOTTOM, 'rgba(51,115,89,.85)', 1.4);
   line(CB_TOP, 'rgba(89,115,128,.5)', 1); line(CB_BOTTOM, 'rgba(89,115,128,.5)', 1);
+}
+
+// how each icon is drawn: its size (css px), its disc (fill, ring: none for
+// the quests' own markers, which are their own shape) and its pointer's colour on the rim
+const PIN_STYLE = {
+  poi: { px: 12, disc: 'rgba(246,234,206,.96)', ring: '#5b4026' },
+  dock: { px: 12, disc: 'rgba(214,232,240,.96)', ring: '#5b4026' },
+  side: { px: 16, arrow: '#a6dcf5' },
+  main: { px: 19, arrow: '#ffc940' },
+  lp: { px: 14, disc: 'rgba(255,240,236,.97)', ring: '#8e2c1c', arrow: '#ff8a80' },
+};
+
+/**
+ * The icons the minimap shows, where they are in the world, the ones drawn
+ * last on top: the towns' places (close enough in to tell them apart) and
+ * the harbours of the islands you know, then your quests and the Log Pose's
+ * island (`rim`: on the edge, pointing the way, when they're off it).
+ */
+function gatherPins(game, z, css, known) {
+  const w = game.world, p = game.player, out = [];
+  const reach = css / 2 / z + 12; // m from the middle to the edge, and a little beyond
+  const near = (x, y) => Math.abs(w.dx(p.x, x)) < reach && Math.abs(y - p.y) < reach;
+  if (z >= 0.1) {
+    for (const isl of w.islands || []) {
+      const rad = isl.radius || 0;
+      if (Math.abs(w.dx(p.x, isl.x)) - rad > reach || Math.abs(isl.y - p.y) - rad > reach || !known(isl)) continue;
+      // (from too far up the places in a town would be a heap: then only its harbours)
+      if (z >= 0.45) {
+        for (const t of isl.towns || []) {
+          for (const b of t.buildings || []) {
+            const P = POI[b.role];
+            if (P && b.door && near(b.door.x, b.door.y)) out.push({ x: b.door.x, y: b.door.y, icon: P[0], kind: 'poi' });
+          }
+        }
+      }
+      for (const d of isl.docks || []) if (d.end && near(d.end.x, d.end.y)) out.push({ x: d.end.x, y: d.end.y, icon: 'anchor', kind: 'dock' });
+    }
+  }
+  // (a town's inns and shops stand round its square, close together: they're
+  // nudged apart until none covers another, and so turn with the chart as one)
+  for (const q of out) { q.sx = w.dx(p.x, q.x) * z; q.sy = (q.y - p.y) * z; }
+  spread(out, 15);
+  // the quests under way: the main story's and those you track wherever they are, any other in sight
+  const q = game.quests, tracked = new Set((q?.tracked?.() || []).map((x) => x.id));
+  const qs = [];
+  for (const { id, def } of q?.active?.() || []) {
+    const m = q.marker(id);
+    if (!m || !Number.isFinite(m.x) || (m.zone ? m.zone !== w.id : w !== game.surface)) continue;
+    const main = def.kind === 'main', rim = main || tracked.has(id);
+    if (rim || near(m.x, m.y)) qs.push({ x: m.x, y: m.y, icon: main ? 'wp_main' : 'wp_side', kind: main ? 'main' : 'side', rim, sx: w.dx(p.x, m.x) * z, sy: (m.y - p.y) * z });
+  }
+  qs.sort((a, b) => (a.kind === 'main') - (b.kind === 'main'));
+  out.push(...qs);
+  // the island the needle of your Log Pose points to (not when you're on it)
+  const lp = w === game.surface && game.logPoseInfo?.() ? game.logPoseTarget?.() : null;
+  if (lp && Number.isFinite(lp.x) && lp !== game.currentIsland) out.push({ x: lp.x, y: lp.y, icon: 'log_pose', kind: 'lp', rim: true });
+  return out;
+}
+
+/** Push apart the icons closer than `D` px (a few rounds, each pair half each way; on the same spot, round a circle). */
+function spread(list, D, rounds = 8) {
+  for (let it = 0; it < rounds; it++) {
+    let moved = false;
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i], b = list[j];
+        let dx = b.sx - a.sx, dy = b.sy - a.sy, d = Math.hypot(dx, dy);
+        if (d >= D) continue;
+        if (d < 1e-3) { dx = Math.cos(j * 2.4); dy = Math.sin(j * 2.4); d = 1; }
+        const k = (D - d) / 2 / d;
+        a.sx -= dx * k; a.sy -= dy * k; b.sx += dx * k; b.sy += dy * k;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+}
+
+/** One icon at (x, y), upright: on its disc, and with a pointer out at angle `edge` when it's on the rim. */
+function drawPin(g, x, y, pin, edge) {
+  const st = PIN_STYLE[pin.kind] || PIN_STYLE.poi, px = st.px;
+  if (edge !== null && st.arrow) {
+    // (a pointer just outside the icon, the way to go)
+    const ca = Math.cos(edge), sa = Math.sin(edge), tip = px / 2 + 7, base = px / 2 + 2;
+    g.beginPath();
+    g.moveTo(x + ca * tip, y + sa * tip);
+    g.lineTo(x + ca * base - sa * 4, y + sa * base + ca * 4);
+    g.lineTo(x + ca * base + sa * 4, y + sa * base - ca * 4);
+    g.closePath();
+    g.fillStyle = st.arrow; g.strokeStyle = 'rgba(30,20,10,.9)'; g.lineWidth = 1;
+    g.fill(); g.stroke();
+  }
+  if (st.disc) {
+    g.beginPath(); g.arc(x, y, px / 2 + 2.2, 0, Math.PI * 2);
+    g.fillStyle = st.disc; g.fill();
+    g.lineWidth = 1.3; g.strokeStyle = st.ring; g.stroke();
+  }
+  const ic = uiIcon(pin.icon, 48);
+  if (ic) g.drawImage(ic, x - px / 2, y - px / 2, px, px);
 }

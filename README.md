@@ -81,7 +81,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | E | talk, enter, take the helm or the oars, pick fruit, examine | dive, knock-up, go ashore, leave the helm (under sail she sails on, holding her course, while you walk the deck) |
 | Tab/I, C, K, J, U, L | inventory, character, skills, journal, crew, quests | |
 | M | world map | |
-| − / + | zoom the minimap out / in (it's the world map's chart, round you) | |
+| − / + | zoom the minimap out / in (it's the world map's chart, round you, with its icons: inns, shops, doctors, harbours, your quests, the Log Pose's island) | |
 | H / Esc | help / pause menu | |
 
 The same menus are on the **sidebar** under the minimap. Press a menu's key
@@ -316,6 +316,20 @@ rearrange them.
   still works). Ships the story gives you join your fleet.
 - **Log Pose** navigation: stay on an island until the log sets, and use
   Eternal Poses.
+  - **The Log Pose slot** (Inventory, under your weapons) holds the pose you
+    follow: your Log Pose, an Eternal Pose or a Vivre Card. Its needle is
+    the dial by the minimap, and where it points is marked on the compass,
+    the chart, the minimap (on its rim when it's farther) and over the sea.
+    Your first Log Pose goes straight into it.
+  - **Choose where it points**: click your Log Pose in its slot. You can set
+    it to the island your story goes on to, to any island the last log can
+    lock onto (seven at Twin Cape; three needles out of Fish-Man Island), or,
+    in the Blues, where a compass and a chart are enough, to any island
+    you've charted in that sea. A banner names the island (if you've been
+    there), which way it lies and how far. Turned off the story's road, the
+    log sets wherever you land until you choose the story's island again.
+  - An Eternal Pose put in the slot points to its island from anywhere. Once
+    you're there, your Log Pose goes back in the slot.
 - The **Calm Belt** is full of Sea Kings.
 - **Reverse Mountain**:
   - the currents of all four Blues run through stone gates in the Red Line,

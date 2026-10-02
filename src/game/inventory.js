@@ -18,6 +18,8 @@ export function addItem(game, id, qty = 1, opts = {}) {
   else if (stackable) char.inventory.push({ id, qty });
   else for (let k = 0; k < qty; k++) char.inventory.push({ id, qty: 1, ...opts });
   if (!opts.silent) game.log(`Obtained ${d.name}${qty > 1 ? ' ×' + qty : ''}.`, '#ffe082');
+  // (your first pose goes straight into the Log Pose slot: its needle shows at once)
+  if (slotKind(d) === 'pose' && char.equipped && !char.equipped.pose) { char.equipped.pose = id; game.emit('poseEquipped', id); }
   game.emit('itemGained', id, qty);
   return true;
 }
@@ -40,6 +42,8 @@ export function removeItem(game, id, qty = 1) {
     if (eq.coat === id) eq.coat = null;
     eq.weapons = (eq.weapons || []).filter((w) => w !== id);
     eq.accessories = (eq.accessories || []).filter((w) => w !== id);
+    // (another Log Pose you carry takes its place)
+    if (eq.pose === id) eq.pose = char.inventory.find((i) => ITEMS[i.id]?.logPose)?.id || null;
     const hb = char.hotbar || [];
     for (let k = 0; k < hb.length; k++) if (hb[k] === 'item:' + id) hb[k] = null;
     refreshPlayer(game);
@@ -64,7 +68,7 @@ export const ACC_SLOTS = 2;
 
 export function isEquipped(c, id) {
   const eq = c.equipped || {};
-  return eq.hat === id || eq.coat === id || (eq.weapons || []).includes(id) || (eq.accessories || []).includes(id);
+  return eq.hat === id || eq.coat === id || eq.pose === id || (eq.weapons || []).includes(id) || (eq.accessories || []).includes(id);
 }
 
 /** Equip (or, if already worn, take off) an item. `slot` picks an accessory slot. */
@@ -95,14 +99,21 @@ export function equip(game, id, { slot } = {}) {
       c.flags.kitetsuTested = true;
       game.log('You toss the cursed Kitetsu into the air and hold out your arm… it spins down and misses you by a hair. The blade accepts you.', '#ef9a9a');
     }
+  } else if (slotKind(d) === 'pose') {
+    // (the pose you follow: its needle is the one on your wrist, and on the charts)
+    eq.pose = eq.pose === id ? null : id;
+    game.audio?.sfx('equip');
+    if (eq.pose) game.emit('poseEquipped', id);
+    return;
   } else return;
   refreshPlayer(game);
   game.audio?.sfx('equip');
 }
 
-/** Take off whatever is in an equipment slot: head, body, weapon0-2, acc0-1. */
+/** Take off whatever is in an equipment slot: head, body, weapon0-2, acc0-1, pose. */
 export function unequipSlot(game, slot) {
   const eq = game.state.char.equipped;
+  if (slot === 'pose') { eq.pose = null; game.audio?.sfx('equip'); return; }
   if (slot === 'head') eq.hat = null;
   else if (slot === 'body') eq.coat = null;
   else if (slot.startsWith('weapon')) { const i = +slot.slice(6); eq.weapons = (eq.weapons || []).filter((_, k) => k !== i); }
@@ -114,7 +125,7 @@ export function unequipSlot(game, slot) {
 /** Which slot an item goes to, for drag-and-drop checks. */
 export function slotKind(d) {
   if (!d) return null;
-  return d.type === 'hat' ? 'head' : d.type === 'coat' ? 'body' : d.type === 'weapon' ? 'weapon' : d.type === 'accessory' ? 'acc' : null;
+  return d.type === 'hat' ? 'head' : d.type === 'coat' ? 'body' : d.type === 'weapon' ? 'weapon' : d.type === 'accessory' ? 'acc' : d.type === 'pose' || d.logPose ? 'pose' : null;
 }
 
 export function useItem(game, id) {
@@ -152,11 +163,9 @@ export function useItem(game, id) {
     return true;
   }
   if (d.type === 'pose' && d.target) {
-    // Eternal Pose: always points to one island, no matter where you are
-    const tgt = game.surface.islands.find((i) => i.id === d.target);
-    c.logPose.target = d.target;
-    c.logPose.eternal = id;
-    game.ui.toast('ETERNAL POSE', `The needle points to ${tgt?.name || d.target}.`, '#81d4fa');
+    // Eternal Pose: always points to one island, no matter where you are —
+    // following it is having it in the Log Pose slot
+    if (c.equipped.pose !== id) equip(game, id);
     return true;
   }
   if (d.type === 'dial' && d.ability) {

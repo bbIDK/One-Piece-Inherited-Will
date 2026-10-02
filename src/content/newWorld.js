@@ -1977,8 +1977,9 @@ function install(game) {
     const fresh = opts.filter((o) => !c.discovered?.includes(o));
     c.logPose.target = (fresh.length ? fresh : opts)[Math.floor(Math.random() * (fresh.length || opts.length))];
     c.logPose.last = 'fishman_island';
-    c.logPose.eternal = null;
-    game.ui.toast('THE NEW WORLD', 'Three needles tremble: Raijin, Risky Red, Mystoria. One shakes hard.', '#81d4fa');
+    // (the three needles: follow whichever you like, at your Log Pose slot)
+    c.logPose.options = opts.slice();
+    game.ui.toast('THE NEW WORLD', 'Three needles tremble: Raijin, Risky Red, Mystoria. Choose one to follow at your Log Pose slot.', '#81d4fa');
   });
 
   // Knockouts: remember who fell (for cross-quest goals) and script the fallout.

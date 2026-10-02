@@ -8,6 +8,7 @@ import { AIController } from './ai.js';
 import { makeLook } from '../data/races.js';
 import { makeNPC } from './npcs.js';
 import { count, addItem, earn } from './inventory.js';
+import { ITEMS } from '../data/items.js';
 import { persist } from './lineage.js';
 import { crime } from './reputation.js';
 import { RNG } from '../core/rng.js';
@@ -15,6 +16,10 @@ import { TAU, clamp, angleDiff } from '../core/math.js';
 import { drawShip } from '../render/ship.js';
 import { hullGap, hbAt } from '../world/hull.js';
 import { engage, playerShip, fireOn, sightRange } from './traffic.js';
+
+// the eight points of the compass, round from east (y points south)
+const DIRS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
+const fmtKm = (d) => (d >= 1000 ? (d / 1000).toFixed(d >= 10000 ? 0 : 1) + ' km' : Math.round(d / 10) * 10 + ' m');
 
 export function installSea(game) {
   const sea = new SeaSystem(game);
@@ -29,13 +34,17 @@ class SeaSystem {
     this.kingT = 8;
     this.flotsamT = 20;
     this.rmState = null;
-    game.on('enterIsland', (isl) => this.discover(isl));
+    game.on('enterIsland', (isl) => { this.discover(isl); this.arrive(isl); });
+    // (a pose put in the Log Pose slot: where its needle points)
+    game.on('poseEquipped', () => this.announce('LOG POSE'));
     game.on('enterRegion', (reg, prev) => this.region(reg, prev));
     game.on('tick', (dt) => this.tick(dt));
     game.on('shipSunk', (s) => this.shipSunk(s));
     game.on('characterStart', () => { this.encT = 60; this.rmState = null; });
     game.logPoseInfo = () => this.logPoseInfo();
     game.logPoseTarget = () => this.logTarget();
+    game.logPoseOptions = () => this.logOptions();
+    game.setLogCourse = (id) => this.setCourse(id);
   }
   get char() { return this.game.state?.char; }
 
@@ -77,44 +86,141 @@ class SeaSystem {
   }
 
   // ------------------------------------------------------------ log pose
+  // The needle you follow is the pose in your Log Pose slot (see inventory.js):
+  // your Log Pose, pointing where its log is set (`c.logPose.target`), or an
+  // Eternal Pose (or a Vivre Card), always at its own island. The log sets on
+  // the islands of the Grand Line as long as you carry a Log Pose, in the slot
+  // or not; and you choose which island it points to (setCourse): where the
+  // story goes next, any of the islands the last log could lock onto, or, in
+  // the Blues, where an ordinary compass and a chart do, any island you've
+  // charted in that sea.
+  island(id) {
+    const isls = this.game.surface?.islands;
+    if (!id || !isls) return null;
+    if (this.islIdx?.src !== isls) this.islIdx = { src: isls, by: new Map(isls.map((i) => [i.id, i])) };
+    return this.islIdx.by.get(id) || null;
+  }
+  /** The pose in the Log Pose slot, if you still carry it: { id, d, eternal }. */
+  pose() {
+    const c = this.char, id = c?.equipped?.pose, d = ITEMS[id];
+    if (!d || !count(c, id)) return null;
+    return { id, d, eternal: !d.logPose };
+  }
   logPoseInfo() {
     const g = this.game, c = this.char;
     if (!c || g.world !== g.surface) return null;
-    const p = g.player;
-    const reg = regionAt(p.x, p.y);
-    const hasPose = count(c, 'log_pose') || count(c, 'new_world_log_pose') || (c.logPose.eternal && count(c, c.logPose.eternal));
-    if (!hasPose) return null;
-    const lp = c.logPose;
+    const ps = this.pose();
+    if (!ps) return null;
+    const p = g.player, lp = c.logPose, here = g.currentIsland;
     const t = this.logTarget();
-    if (g.currentIsland?.def?.logSpins) return { angle: g.time * 9, label: 'The needle spins wildly…' };
-    if (!t) {
-      const isl = g.currentIsland;
-      if (isl && isGrandLine(regionAt(isl.x, isl.y)) && isl.def?.logNext?.length) return { angle: -Math.PI / 2 + Math.sin(g.time * 7) * 0.3, label: `Setting log… ${Math.round((lp.progress || 0) * 100)}%` };
-      return { angle: g.time * 3, label: isGrandLine(reg) ? 'Needle spinning…' : 'Log Pose' };
-    }
+    if (!ps.eternal) {
+      if (here?.def?.logSpins) return { angle: g.time * 9, label: 'The needle spins wildly…' };
+      // on an island of the Grand Line whose log you haven't got: it's setting
+      if (here && (!t || t === here) && here.def?.logNext?.length && lp.last !== here.id) {
+        const held = g.storyLogHold?.(here);
+        return { angle: -Math.PI / 2 + Math.sin(g.time * 7) * 0.3, label: held ? 'The log is setting…' : `Setting log… ${Math.round((lp.progress || 0) * 100)}%` };
+      }
+      if (!t) return { angle: g.time * 3, label: isGrandLine(regionAt(p.x, p.y)) ? 'Needle spinning…' : ps.d.name };
+    } else if (!t) return { angle: g.time * 3, label: ps.d.name };
     const ang = Math.atan2(t.y - p.y, g.world.dx(p.x, t.x));
-    const known = c.discovered.includes(t.id);
-    return { angle: ang, label: known ? t.name : '???' };
+    return { angle: ang, label: this.named(t) ? t.name : '???' };
   }
   logTarget() {
+    const c = this.char, ps = this.pose();
+    if (!ps) return null;
+    return this.island(ps.eternal ? ps.d.target : c.logPose?.target);
+  }
+  /** Whether the needle's island goes by its name (an Eternal Pose names its own). */
+  named(t) {
     const c = this.char;
-    if (!c?.logPose?.target) return null;
-    return this.game.surface.islands.find((i) => i.id === c.logPose.target) || null;
+    return !!t && (this.pose()?.eternal || c.discovered.includes(t.id));
+  }
+
+  /**
+   * Where you can set the needle of the Log Pose in your slot: the island the
+   * story goes on to; the islands the last log could lock onto (every needle
+   * of it); in the Blues, any island you've charted in the sea you're in; and
+   * wherever it points now. [{ id, isl, why: 'story' | 'needle' | 'chart' | 'now', known }]
+   */
+  logOptions() {
+    const g = this.game, c = this.char, ps = this.pose();
+    if (!c || !ps || ps.eternal || g.world !== g.surface) return [];
+    const lp = c.logPose, out = [], seen = new Set();
+    const add = (id, why) => {
+      const isl = this.island(id);
+      if (!isl || seen.has(id) || (isl.def?.hidden && !c.flags?.laughTaleRevealed)) return;
+      seen.add(id);
+      out.push({ id, isl, why, known: c.discovered.includes(id) });
+    };
+    const story = g.storyLogIsland?.();
+    if (story) add(story, 'story');
+    const from = this.island(lp.last);
+    for (const id of lp.options || (from?.def?.logSpins ? null : from?.def?.logNext) || []) add(id, 'needle');
+    const p = g.player, reg = regionAt(p.x, p.y);
+    if (isBlue(reg)) {
+      const near = [];
+      for (const id of c.discovered) {
+        const isl = this.island(id);
+        if (isl && isl !== g.currentIsland && !isl.def?.islet && regionAt(isl.x, isl.y) === reg) near.push([g.world.distance(p.x, p.y, isl.x, isl.y), id]);
+      }
+      near.sort((a, b) => a[0] - b[0]);
+      for (const [, id] of near) add(id, 'chart');
+    }
+    if (lp.target) add(lp.target, 'now');
+    return out;
+  }
+
+  /** Set the needle on one of logOptions(): it points there, and stays there until you choose again. */
+  setCourse(id) {
+    const g = this.game, c = this.char, lp = c?.logPose;
+    const opt = this.logOptions().find((o) => o.id === id);
+    if (!opt || !lp) return false;
+    const story = g.storyLogIsland?.();
+    lp.target = id;
+    // (off the story's road: it won't swing the needle back until it moves on, see mainStory.js)
+    lp.own = id === story ? null : story || true;
+    lp.setting = null; lp.progress = 0;
+    g.audio?.sfx('reveal');
+    this.announce(opt.why === 'chart' ? 'COURSE SET' : 'LOG SET', false);
+    g.emit('logSet', id);
+    persist(g);
+    return true;
+  }
+
+  /**
+   * The banner for where the needle points now: the island (if it goes by a
+   * name), which way and how far — and, if it swung there by itself and could
+   * have gone elsewhere, where to choose another.
+   */
+  announce(head, hint = true) {
+    const g = this.game, c = this.char, p = g.player, ps = this.pose();
+    const t = this.logTarget();
+    if (!c || !p || !ps || !t || g.world !== g.surface) return;
+    const d = g.world.distance(p.x, p.y, t.x, t.y);
+    const way = d < (t.radius || 0) ? 'You are there.' : `${DIRS[((Math.round(Math.atan2(t.y - p.y, g.world.dx(p.x, t.x)) / (Math.PI / 4)) % 8) + 8) % 8]}, ${fmtKm(d)} away.`;
+    const more = hint && !ps.eternal && this.logOptions().length > 1 ? ' Another island? Choose at your Log Pose slot (Tab).' : '';
+    g.ui?.banner?.(this.named(t) ? t.name : 'An uncharted island', ps.eternal ? (/vivre/i.test(ps.d.name) ? 'VIVRE CARD' : 'ETERNAL POSE') : head || 'LOG SET', `The needle points ${way}${more}`, 5);
+  }
+
+  /** Arrived where an Eternal Pose points: it goes back in your bag, and out comes your Log Pose. */
+  arrive(isl) {
+    const g = this.game, c = this.char, ps = this.pose();
+    if (!c || !ps?.eternal || isl.id !== ps.d.target || g.world !== g.surface) return;
+    const log = c.inventory.find((i) => ITEMS[i.id]?.logPose);
+    if (!log) return;
+    c.equipped.pose = log.id;
+    g.log(`You've arrived where the ${ps.d.name} points. You put it away and follow your ${ITEMS[log.id].name} again.`, '#81d4fa');
   }
 
   updateLog(dt) {
     const g = this.game, c = this.char, p = g.player;
+    // (carried, in the slot or in your bag, a Log Pose sets all the same)
     if (!count(c, 'log_pose') && !count(c, 'new_world_log_pose')) return;
     const isl = g.currentIsland;
     if (!isl || !isl.def?.logNext?.length || isl.def.logSpins || p.mode !== 'foot' || g.world !== g.surface) return;
     // (the main story is steering: the needle stays on the island it continues on)
     if (g.storyLogHold?.(isl)) return;
     const lp = c.logPose;
-    if (lp.eternal && count(c, lp.eternal)) {
-      if (lp.target !== isl.id) return; // an Eternal Pose keeps pointing at its island
-      lp.eternal = null; lp.target = null; // arrived: the ordinary log takes over again
-      g.log('You have arrived where the Eternal Pose was pointing.', '#81d4fa');
-    }
     if (lp.last === isl.id && lp.target) return;
     if (lp.setting !== isl.id) { lp.setting = isl.id; lp.progress = 0; }
     const secs = (isl.def.logTime ?? 1) * 45 / (g.crewMods?.logMul || 1); // canon log times are compressed
@@ -122,12 +228,13 @@ class SeaSystem {
     if (lp.progress >= 1) {
       lp.last = isl.id;
       const next = isl.def.logNext;
+      lp.options = next.slice();
       const rng = new RNG(c.runSeed + isl.id);
       const unknown = next.filter((id) => !c.discovered.includes(id));
       lp.target = (unknown.length ? rng.pick(unknown) : rng.pick(next));
       lp.progress = 0;
-      const t = this.logTarget();
-      g.ui.toast('LOG SET', `The needle swings toward ${c.discovered.includes(lp.target) ? t?.name : 'an unknown island'}.`, '#81d4fa');
+      if (!this.pose()?.eternal) this.announce('LOG SET');
+      else g.log(`The Log Pose in your bag has set: its needle swings toward ${c.discovered.includes(lp.target) ? this.island(lp.target)?.name : 'an unknown island'}.`, '#81d4fa');
       g.emit('logSet', lp.target);
       g.audio?.sfx('reveal');
       persist(g);

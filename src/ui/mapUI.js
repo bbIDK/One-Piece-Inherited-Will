@@ -9,7 +9,8 @@ import { W, H, EQ, RM_X, GL_TOP, GL_BOTTOM, chart } from '../world/constants.js'
 import { ChartDetail } from './chartDetail.js';
 
 // what a town's buildings are marked with on the chart, close up (and their names: what they are)
-const POI = {
+// the places in a town the chart marks, by the building's role: [icon, name] (the minimap marks them too)
+export const POI = {
   inn: ['inn', 'Inn'], tavern: ['bar', 'Tavern'], bar: ['bar', 'Bar'], restaurant: ['food', 'Restaurant'], cafe: ['food', 'Cafe'],
   shop: ['shop', 'Shop'], market: ['shop', 'Market'], weapons: ['sword', 'Weapons'], doctor: ['doctor', 'Doctor'],
   shipwright: ['shipwright', 'Shipwright'], dojo: ['trainer', 'Dojo'], trainer: ['trainer', 'Trainer'],
@@ -269,9 +270,9 @@ function drawLabels(game, r, cam, layer) {
       add(p.main ? '.giver.main' : '.giver', [h('b.pin', { style: { background: p.color } }, '!'), ' ' + p.label], p.x, p.y, { fontSize: p.main ? '15px' : '13px' }, true);
     }
   }
-  // log pose target
+  // where the needle of the pose in your Log Pose slot points (the island, by name if it goes by one)
   const lp = game.logPoseTarget?.();
-  if (lp && !zone) pin('.lp', 'log_pose', 24, 'Log Pose', lp.x, lp.y);
+  if (lp && !zone) pin('.lp', 'log_pose', 26, game.logPoseInfo?.()?.label === '???' ? 'Log Pose' : `Log Pose: ${lp.name}`, lp.x, lp.y);
   // your ships
   for (const s of game.ships) if (s.owner === 'player' && !s.sunk) pin('.ship', 'ship', 24, z >= 1 ? s.name || 'Your ship' : null, s.x, s.y);
   // close up, the islands you know are charted in detail: their towns, harbours and the places in them

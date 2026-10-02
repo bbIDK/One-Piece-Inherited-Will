@@ -1,6 +1,8 @@
 // Items. `type`: food | medicine | weapon | hat | coat | accessory | key | dial | fruit | treasure | material | pose
 // Equipment slots: head (hat), body (coat — coats, cloaks and armour; `armor`
-// is damage reduction), weapons (up to three swords, else one), two accessories.
+// is damage reduction), weapons (up to three swords, else one), two accessories,
+// and the Log Pose slot: the pose whose needle you follow (a Log Pose, `logPose`
+// its needles, or an Eternal Pose or Vivre Card, type pose, `target` its island).
 // Weapons: kind sword/gun/staff/axe and a power multiplier (sword grades follow canon:
 // Saijo O Wazamono > O Wazamono > Ryo Wazamono > Wazamono > unranked).
 import { FRUITS } from './fruits.js';
@@ -102,8 +104,8 @@ export const ITEMS = {
   reject_dial: { name: 'Reject Dial', icon: '💥', type: 'dial', price: 0, ability: 'dial_reject', unique: true, desc: 'Ten times the power of an Impact Dial. Can kill the user.' },
 
   // -------------------------------------------------------- navigation
-  log_pose: { name: 'Log Pose', icon: '🧭', type: 'key', price: 5000, desc: 'The only compass that works in the Grand Line. It locks onto the next island after the log is set.' },
-  new_world_log_pose: { name: 'Three-Needle Log Pose', icon: '🧭', type: 'key', price: 60000, desc: 'A Log Pose for the New World: three needles for three islands.' },
+  log_pose: { name: 'Log Pose', icon: '🧭', type: 'key', logPose: 1, price: 5000, desc: 'The only compass that works in the Grand Line. It locks onto the next island after the log is set.' },
+  new_world_log_pose: { name: 'Three-Needle Log Pose', icon: '🧭', type: 'key', logPose: 3, price: 60000, desc: 'A Log Pose for the New World: three needles for three islands.' },
   vivre_card: { name: 'Vivre Card', icon: '📃', type: 'key', price: 0, desc: 'A piece of paper made from someone\'s fingernail. It points to them and burns as their life fades.' },
   south_bird: { name: 'South Bird', icon: '🐦', type: 'key', price: 0, desc: 'A bird that always faces south. Needed to find the Knock Up Stream.' },
   adam_wood: { name: 'Adam Wood', icon: '🪵', type: 'material', price: 2000000, desc: 'Timber from the Treasure Tree Adam. Water 7 shipwrights can build a legend with it.' },

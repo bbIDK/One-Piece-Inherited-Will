@@ -345,6 +345,19 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 .det-head .sub { font-size: 12px; opacity: .8; }
 .det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }
 .det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+/* the Log Pose in its slot: where the needle points, and where else it can (panels.js coursePicker) */
+.lp-course { margin-top: 10px; border-top: 1px dashed rgba(109,76,51,.45); padding-top: 8px; }
+.lp-course h5 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font: 800 11.5px Nunito, sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: #6d4c33; }
+.lp-course h5 small { margin-left: auto; font: 700 11px Nunito, sans-serif; letter-spacing: 0; text-transform: none; color: #8a6c55; }
+.lp-opts { display: flex; flex-direction: column; gap: 4px; max-height: 214px; overflow-y: auto; padding-right: 3px; }
+.lp-opt { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 78px; align-items: center; gap: 9px; text-align: left; padding: 5px 9px; border-radius: 8px; border: 1px solid rgba(109,76,51,.32); background: rgba(255,250,240,.7); cursor: pointer; font: 800 13px Nunito, sans-serif; color: #3e2a1c; transition: border-color .12s, background .12s; }
+.lp-opt:hover { border-color: #6d4c33; background: #fffaf0; }
+.lp-opt.on { border-color: var(--red); background: #fff3e0; box-shadow: inset 3px 0 0 var(--red); cursor: default; }
+.lp-name { display: flex; flex-direction: column; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-name small { font: 700 10.5px Nunito, sans-serif; color: #7a5c45; letter-spacing: .2px; }
+.lp-opt.story .lp-name small { color: #a86b00; }
+.lp-way { font: 700 12px Nunito, sans-serif; color: #5d4433; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lp-cur { font: 900 10.5px Nunito, sans-serif; color: var(--red); text-align: right; letter-spacing: .6px; text-transform: uppercase; }
 
 /* ---------- character ---------- */
 .char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }
@@ -552,6 +565,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 
 /* ---------- 3D view: compass and turning minimap ---------- */
 .mm-box { position: relative; }
+.mm-pins { position: absolute; left: 0; top: 0; pointer-events: none; }
 .mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }
 .mm-arrow svg { display: block; }
 .mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }
@@ -581,12 +595,15 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .wpm small { margin-top: 1px; font: 800 12px Nunito, sans-serif; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
 .wpm.main small { color: #ffd66b; }
 .wpm.side small { color: #b9e4f8; }
+.wpm.lp > img { margin-top: -13px; }
+.wpm.lp small { color: #ffb4a8; }
 .wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }
 .wpm.look .wpm-name { opacity: 1; transform: none; }
 .wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }
 .wpm-arrow::after { content: ''; position: absolute; left: 25px; top: 3px; border: 6px solid transparent; border-left: 10px solid #fff; filter: drop-shadow(0 0 1.5px #000); }
 .wpm.main .wpm-arrow::after { border-left-color: #ffc940; }
 .wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }
+.wpm.lp .wpm-arrow::after { border-left-color: #ff8a80; }
 .wpm.edge .wpm-arrow { display: block; }
 .wpm.edge > img { transform: scale(.85); }
 #ui.v3 .bossbar { top: 64px; }

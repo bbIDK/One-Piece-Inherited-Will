@@ -137,7 +137,9 @@ export class UI {
     E.mmArrow = h('div.mm-arrow.hidden');
     E.mmArrow.innerHTML = '<svg viewBox="-8 -9 16 18" width="16" height="18"><path d="M0 -7.5 L6 7 L0 3.5 L-6 7 Z" fill="#fff" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg>';
     E.mmNorth = h('div.mm-north.hidden', 'N');
-    this.hud.appendChild(h('div.minimap-wrap', h('div.mm-box', E.mm, E.mmArrow, E.mmNorth), E.logpose, E.loc, E.locSub, E.clock, E.saved));
+    // (the chart's icons over it: kept upright as it turns, see minimap.js pins)
+    E.mmPins = h('canvas.mm-pins');
+    this.hud.appendChild(h('div.minimap-wrap', h('div.mm-box', E.mm, E.mmPins, E.mmArrow, E.mmNorth), E.logpose, E.loc, E.locSub, E.clock, E.saved));
     this.compass = new Compass(this.hud);
     // where the quests on the tracker are, over the world itself
     this.waypoints = new Waypoints(this.hud);
@@ -488,6 +490,7 @@ export class UI {
       E.mmNorth.style.left = (50 + Math.sin(phi) * 44) + '%';
       E.mmNorth.style.top = (50 - Math.cos(phi) * 44) + '%';
     }
+    this.minimap?.pins(game, up);
     this.set(E.name, 'name', ch.name || p.name);
     const title = ch.title || (ch.faction === 'marine' ? `Marine ${ch.marineRank || 'Recruit'}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === 'pirate' ? 'Pirate' : 'Wanderer');
     this.set(E.sub, 'sub', `${raceLabel(p.look)} · ${title} · Doriki ${p.power().toLocaleString()}`);
@@ -774,12 +777,12 @@ export class UI {
 
   /** The minimap: the world chart round you (see minimap.js). */
   drawMinimap(game) {
-    (this.minimap ||= new Minimap(this.el.mm)).draw(game, 0.2);
+    (this.minimap ||= new Minimap(this.el.mm, this.el.mmPins)).draw(game, 0.2);
   }
 
   /** − and +: the minimap a step out (+1) or in (−1), at once, saying how far across it now reaches. */
   minimapZoom(game, d) {
-    const mm = this.minimap ||= new Minimap(this.el.mm);
+    const mm = this.minimap ||= new Minimap(this.el.mm, this.el.mmPins);
     const sailing = game.player?.mode === 'sail';
     const was = mm.scale(sailing), now = mm.zoomBy(d, sailing);
     if (now === was) return;

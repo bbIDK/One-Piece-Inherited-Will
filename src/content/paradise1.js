@@ -1925,8 +1925,8 @@ function install(game) {
   game.on('questDone', (id) => {
     const c = C();
     if (id === 'p1_little_garden' && c && count(c, 'eternal_pose_alabasta')) {
-      try { useItem(game, 'eternal_pose_alabasta'); } catch (e) { /* the pose can also be followed from the inventory */ }
-      game.log('The Eternal Pose points to Alabasta. (You can switch it from your inventory: Follow.)', '#81d4fa');
+      try { useItem(game, 'eternal_pose_alabasta'); } catch (e) { /* the pose can also be put in the Log Pose slot from the inventory */ }
+      game.log('The Eternal Pose is in your Log Pose slot, pointing to Alabasta. (Put your Log Pose back in the slot, in the Inventory, to follow it instead.)', '#81d4fa');
     }
   });
 
