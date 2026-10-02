@@ -14,7 +14,7 @@ import { RNG } from '../core/rng.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { drawShip } from '../render/ship.js';
 import { hullGap, hbAt } from '../world/hull.js';
-import { engage, playerShip, fireOn } from './traffic.js';
+import { engage, playerShip, fireOn, sightRange } from './traffic.js';
 
 export function installSea(game) {
   const sea = new SeaSystem(game);
@@ -242,9 +242,9 @@ class SeaSystem {
     const g = this.game, c = this.char;
     const rng = new RNG(Math.floor(g.time * 1000));
     const a = rng.range(0, TAU);
-    // (far enough off that even two big ships don't meet hull to hull)
-    const off = 18 + s.def.length * 0.5 + 20;
-    const x = g.world.wx(s.x + Math.cos(a) * (off + 8)), y = s.y + Math.sin(a) * off;
+    // out beyond the haze (see sightRange), making for you: she sails into sight
+    const R = sightRange(g) + 30;
+    const x = g.world.wx(s.x + Math.cos(a) * R), y = s.y + Math.sin(a) * R;
     if (!g.world.sailable(x, y)) return;
     const gl = isGrandLine(reg);
     const nw = reg === REGION.NEW_WORLD;
@@ -256,10 +256,12 @@ class SeaSystem {
     const lvl = nw ? rng.int(45, 70) : gl ? rng.int(22, 40) : isBlue(reg) && reg !== REGION.EAST_BLUE ? rng.int(10, 18) : rng.int(5, 12);
     const type = nw ? rng.pick(['frigate', 'galleon', 'war_galleon', 'man_o_war']) : gl ? rng.pick(['brigantine', 'caravel', 'frigate', 'war_galleon']) : rng.pick(['sloop', 'caravel', 'sloop']);
     const faction = kind === 'marine' ? 'marine' : kind === 'pirate' ? 'pirate' : 'civilian';
-    // (pirates keep to their own business: she crosses your bow at a distance rather than bearing down on you)
+    // (pirates keep to their own business: she crosses your bow at a distance
+    // rather than bearing down on you; a merchantman passes closer)
     const spared = kind === 'pirate';
+    const pass = Math.asin(Math.min(1, (spared ? 90 : kind === 'merchant' ? 45 : 0) / R)) * (rng.next() < 0.5 ? -1 : 1);
     const ship = g.addShip({
-      type: kind === 'marine' ? (nw ? 'marine_battleship' : gl ? rng.pick(['marine_warship', 'marine_battleship']) : 'brigantine') : type, x, y, heading: a + Math.PI + (spared ? 0.9 : 0), owner: kind, faction,
+      type: kind === 'marine' ? (nw ? 'marine_battleship' : gl ? rng.pick(['marine_warship', 'marine_battleship']) : 'brigantine') : type, x, y, heading: a + Math.PI + pass, owner: kind, faction,
       name: kind === 'marine' ? 'Marine Patrol' : kind === 'pirate' ? pirateShipName(rng) : 'Merchant Ship',
       jr: kind === 'pirate' ? { skull: rng.pick(['classic', 'grin', 'eyepatch']), bones: rng.pick(['cross', 'swords']), accessory: rng.pick(['bandana', 'horns', 'tricorne', 'none', 'flames']), color: '#f5f6fa' } : null,
     });
@@ -271,10 +273,10 @@ class SeaSystem {
     ship.ai = kind === 'merchant' ? merchantAI : warshipAI;
     ship.hull = ship.maxHull = Math.round(ship.maxHull * (0.5 + lvl / 40));
     ship.loot = Math.round((kind === 'merchant' ? 3000 : 1500) * (1 + lvl / 10));
-    ship.expire = 180;
-    if (spared) g.log('A pirate ship flying an unfamiliar Jolly Roger crosses your bow in the distance — and sails on.', '#b0bec5');
-    else if (kind === 'marine') g.log('A Marine patrol ship has spotted you! (You have a bounty.)', '#64b5f6');
-    else g.log('A merchant ship sails by.', '#b0bec5');
+    // (out of sight for now: the time it takes her to close is hers to take, and her news waits till she's seen)
+    ship.expire = 180 + R / 6;
+    ship.announce = spared ? ['A pirate ship flying an unfamiliar Jolly Roger crosses your bow in the distance — and sails on.', '#b0bec5']
+      : kind === 'marine' ? ['A Marine patrol ship has spotted you! (You have a bounty.)', '#64b5f6'] : ['A merchant ship sails by.', '#b0bec5'];
   }
 
   shipSunk(s) {
@@ -332,18 +334,39 @@ function drawBarrel(g, env) {
 }
 
 // ------------------------------------------------------------- ship AI
+/**
+ * A ship's news (see SeaEvents.encounter) once she's come out of the haze.
+ * True once she can go: out of sight, with her time up (or far out of it).
+ */
+function gone(s, game, d) {
+  const S = sightRange(game);
+  if (s.announce && d < S * 0.75) { game.log(...s.announce); s.announce = null; }
+  return d > S && (s.expire <= 0 || d > S * 2);
+}
+
 function warshipAI(s, dt, game) {
   const p = game.player;
   s.expire -= dt;
   const target = playerShip(p);
   const d = game.world.distance(s.x, s.y, p.x, p.y);
-  if (s.expire <= 0 && d > 40) { s.alive = false; return; }
+  if (gone(s, game, d)) { s.alive = false; return; }
   // (pirates leave you be unless they're fired on or boarded: see traffic.js)
   const hostileToPlayer = (s.faction === 'pirate' && s.provoked) || (s.faction === 'marine' && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked));
   if (!hostileToPlayer) return merchantAI(s, dt, game);
+  // (her time's up and you're not at close quarters: she gives up the chase and bears away, out of sight)
+  if (s.expire <= 0 && d > 60) {
+    s.sail = 1; s.speedCap = null; s.heaveTo = false; s.anchored = false;
+    s.heading += clamp(angleDiff(s.heading, Math.atan2(s.y - p.y, game.world.dx(p.x, s.x))), -1, 1) * s.def.turn * dt;
+    return;
+  }
   // (hove to alongside, she waits for you while you're close — swimming over to board her, say)
   if (!target && s.heaveTo && d < 30) { s.sail = 0; s.speedCap = 0; s.anchored = true; return; }
-  if (!target || d > 50) { s.sail = 1; s.speedCap = null; s.heaveTo = false; return; }
+  if (!target || d > 50) {
+    s.sail = 1; s.speedCap = null; s.heaveTo = false;
+    // (still off: she makes for you)
+    if (target) s.heading += clamp(angleDiff(s.heading, Math.atan2(target.y - s.y, game.world.dx(s.x, target.x))), -1, 1) * s.def.turn * dt;
+    return;
+  }
   // chase, run abreast with a broadside on you, or heave to alongside once you've stopped
   const want = engage(s, game, target);
   s.heading += clamp(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
@@ -355,7 +378,7 @@ function merchantAI(s, dt, game) {
   s.speedCap = null; s.heaveTo = false; s.anchored = false;
   s.sail = 0.8;
   const d = game.world.distance(s.x, s.y, game.player.x, game.player.y);
-  if (s.expire <= 0 && d > 40) s.alive = false;
+  if (gone(s, game, d)) s.alive = false;
   if (s.hull < s.maxHull && d < 25) { // flee
     const away = Math.atan2(s.y - game.player.y, game.world.dx(game.player.x, s.x));
     s.heading += clamp(angleDiff(s.heading, away), -1, 1) * s.def.turn * dt;

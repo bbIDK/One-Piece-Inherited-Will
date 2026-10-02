@@ -54295,6 +54295,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const rowSpeed = this.def.paddle ? 0.6 : this.def.oars ? 0.42 : 0.12;
         if (this.rowing) target2 = Math.max(target2, this.def.speed * rowSpeed * this.rowing);
       }
+      if (this.catchUp) target2 *= this.catchUp;
       if (this.speedCap != null && target2 > this.speedCap) target2 = this.speedCap;
       if (this.coupT > 0) {
         this.coupT -= dt;
@@ -91978,7 +91979,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     /** How many of a defeat goal's foes are beaten already and gone for good (bosses don't come back; others only if they'd no longer appear). */
     beatenFor(g) {
       const c = this.char, game = this.game;
-      const gone2 = (id) => {
+      const gone3 = (id) => {
         const d = npcDef(id);
         if (!d || !(c.bosses.includes(id) || c.defeated?.[id] > 0)) return false;
         if (d.boss && c.bosses.includes(id) && !d.respawn) return true;
@@ -91988,8 +91989,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           return false;
         }
       };
-      if (g.npc) return gone2(g.npc) ? 1 : 0;
-      return (g.any || []).filter(gone2).length;
+      if (g.npc) return gone3(g.npc) ? 1 : 0;
+      return (g.any || []).filter(gone3).length;
     }
     spotPos(islandId, spotId) {
       const w = this.game.world;
@@ -99084,8 +99085,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     T4.t -= dt;
     if (T4.t > 0) return;
     T4.t = 4;
+    const S4 = sightRange(game);
     T4.ships = T4.ships.filter((s) => {
-      const keep = s.alive && !s.sunk && s.owner !== "player" && (s.traffic?.raided ? w.distance(s.x, s.y, p.x, p.y) < 400 : w.distance(s.x, s.y, p.x, p.y) < 300);
+      const keep = s.alive && !s.sunk && s.owner !== "player" && w.distance(s.x, s.y, p.x, p.y) < (s.traffic?.raided ? Math.max(400, S4 + 120) : S4 + 120);
       if (!keep && s.owner !== "player") {
         for (const a of s.traffic?.crew || []) a.alive = false;
         if (!s.sunk) s.alive = false;
@@ -99121,8 +99123,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   function spawnShip(game, T4, p, reg3, force = null) {
     const w = game.world;
     const rng4 = new RNG((Math.floor(game.time * 997) ^ T4.ships.length * 7919) >>> 0);
+    const S4 = sightRange(game);
     for (let tries = 0; tries < 18; tries++) {
-      const a = rng4.range(0, TAU), r = rng4.range(150, 210);
+      const a = rng4.range(0, TAU), r = rng4.range(S4 + 20, S4 + 80);
       const x = force ? force.x : w.wx(p.x + Math.cos(a) * r), y = force ? force.y : p.y + Math.sin(a) * r;
       const kind = force?.kind || pickKind(rng4, reg3, game);
       const gl = isGrandLine(reg3), nw = reg3 === REGION.NEW_WORLD;
@@ -99212,6 +99215,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     return s && !s.sunk ? s : null;
   }
   var gunReach = (s, target2) => 12 + (s.def.beam + target2.def.beam) / 2;
+  function sightRange(game) {
+    return game.view3d?.viewDist?.(true) ?? 576;
+  }
   function fireOn(game, s, target2, d) {
     const toT = Math.atan2(target2.y - s.y, game.world.dx(s.x, target2.x));
     const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
@@ -99291,7 +99297,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         s.speed = Math.min(s.speed, 1);
       }
       if (tr.stuck >= 3) {
-        if (w.distance(s.x, s.y, p.x, p.y) > 70) {
+        if (w.distance(s.x, s.y, p.x, p.y) > sightRange(game)) {
           for (const a of tr.crew || []) a.alive = false;
           s.alive = false;
           return;
@@ -99719,8 +99725,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const g = this.game, c = this.char;
       const rng4 = new RNG(Math.floor(g.time * 1e3));
       const a = rng4.range(0, TAU);
-      const off = 18 + s.def.length * 0.5 + 20;
-      const x = g.world.wx(s.x + Math.cos(a) * (off + 8)), y = s.y + Math.sin(a) * off;
+      const R4 = sightRange(g) + 30;
+      const x = g.world.wx(s.x + Math.cos(a) * R4), y = s.y + Math.sin(a) * R4;
       if (!g.world.sailable(x, y)) return;
       const gl = isGrandLine(reg3);
       const nw = reg3 === REGION.NEW_WORLD;
@@ -99733,11 +99739,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const type = nw ? rng4.pick(["frigate", "galleon", "war_galleon", "man_o_war"]) : gl ? rng4.pick(["brigantine", "caravel", "frigate", "war_galleon"]) : rng4.pick(["sloop", "caravel", "sloop"]);
       const faction = kind === "marine" ? "marine" : kind === "pirate" ? "pirate" : "civilian";
       const spared = kind === "pirate";
+      const pass = Math.asin(Math.min(1, (spared ? 90 : kind === "merchant" ? 45 : 0) / R4)) * (rng4.next() < 0.5 ? -1 : 1);
       const ship = g.addShip({
         type: kind === "marine" ? nw ? "marine_battleship" : gl ? rng4.pick(["marine_warship", "marine_battleship"]) : "brigantine" : type,
         x,
         y,
-        heading: a + Math.PI + (spared ? 0.9 : 0),
+        heading: a + Math.PI + pass,
         owner: kind,
         faction,
         name: kind === "marine" ? "Marine Patrol" : kind === "pirate" ? pirateShipName(rng4) : "Merchant Ship",
@@ -99754,10 +99761,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       ship.ai = kind === "merchant" ? merchantAI : warshipAI;
       ship.hull = ship.maxHull = Math.round(ship.maxHull * (0.5 + lvl / 40));
       ship.loot = Math.round((kind === "merchant" ? 3e3 : 1500) * (1 + lvl / 10));
-      ship.expire = 180;
-      if (spared) g.log("A pirate ship flying an unfamiliar Jolly Roger crosses your bow in the distance \u2014 and sails on.", "#b0bec5");
-      else if (kind === "marine") g.log("A Marine patrol ship has spotted you! (You have a bounty.)", "#64b5f6");
-      else g.log("A merchant ship sails by.", "#b0bec5");
+      ship.expire = 180 + R4 / 6;
+      ship.announce = spared ? ["A pirate ship flying an unfamiliar Jolly Roger crosses your bow in the distance \u2014 and sails on.", "#b0bec5"] : kind === "marine" ? ["A Marine patrol ship has spotted you! (You have a bounty.)", "#64b5f6"] : ["A merchant ship sails by.", "#b0bec5"];
     }
     shipSunk(s) {
       const g = this.game, p = g.player;
@@ -99821,17 +99826,33 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     g.textAlign = "center";
     g.fillText("?", 0, -0.75 + bob);
   }
+  function gone2(s, game, d) {
+    const S4 = sightRange(game);
+    if (s.announce && d < S4 * 0.75) {
+      game.log(...s.announce);
+      s.announce = null;
+    }
+    return d > S4 && (s.expire <= 0 || d > S4 * 2);
+  }
   function warshipAI(s, dt, game) {
     const p = game.player;
     s.expire -= dt;
     const target2 = playerShip(p);
     const d = game.world.distance(s.x, s.y, p.x, p.y);
-    if (s.expire <= 0 && d > 40) {
+    if (gone2(s, game, d)) {
       s.alive = false;
       return;
     }
     const hostileToPlayer = s.faction === "pirate" && s.provoked || s.faction === "marine" && ((game.wanted?.tier() ?? 0) >= 2 || s.provoked);
     if (!hostileToPlayer) return merchantAI(s, dt, game);
+    if (s.expire <= 0 && d > 60) {
+      s.sail = 1;
+      s.speedCap = null;
+      s.heaveTo = false;
+      s.anchored = false;
+      s.heading += clamp2(angleDiff(s.heading, Math.atan2(s.y - p.y, game.world.dx(p.x, s.x))), -1, 1) * s.def.turn * dt;
+      return;
+    }
     if (!target2 && s.heaveTo && d < 30) {
       s.sail = 0;
       s.speedCap = 0;
@@ -99842,6 +99863,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       s.sail = 1;
       s.speedCap = null;
       s.heaveTo = false;
+      if (target2) s.heading += clamp2(angleDiff(s.heading, Math.atan2(target2.y - s.y, game.world.dx(s.x, target2.x))), -1, 1) * s.def.turn * dt;
       return;
     }
     const want = engage(s, game, target2);
@@ -99855,7 +99877,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     s.anchored = false;
     s.sail = 0.8;
     const d = game.world.distance(s.x, s.y, game.player.x, game.player.y);
-    if (s.expire <= 0 && d > 40) s.alive = false;
+    if (gone2(s, game, d)) s.alive = false;
     if (s.hull < s.maxHull && d < 25) {
       const away = Math.atan2(s.y - game.player.y, game.world.dx(game.player.x, s.x));
       s.heading += clamp2(angleDiff(s.heading, away), -1, 1) * s.def.turn * dt;
@@ -122567,7 +122589,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const marine2 = c.faction === "marine";
       const escorts = game.ships.filter((s) => s.escortOf && !s.sunk && s.alive !== false);
       const wantShips = marine2 && p.mode === "sail" && p.ship && game.world === game.surface ? fleetSize(c) : 0;
-      for (let i = escorts.length - 1; i >= wantShips; i--) if (escorts[i] && game.world.distance(escorts[i].x, escorts[i].y, p.x, p.y) > 30) escorts[i].alive = false;
+      for (let i = escorts.length - 1; i >= wantShips; i--) if (escorts[i] && game.world.distance(escorts[i].x, escorts[i].y, p.x, p.y) > sightRange(game)) escorts[i].alive = false;
       for (let i = escorts.length; i < wantShips; i++) spawnEscort(game, i);
       const squad2 = game.actors.filter((a) => a.marineSquad && a.alive);
       const wantSquad = marine2 && p.mode === "foot" ? squadSize(c) : 0;
@@ -122587,9 +122609,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const big = rankIndex(c.marineRank) >= rankIndex("Vice Admiral");
     const type = big ? "marine_warship" : "brigantine";
     const spread = Math.max(1, (lead.def.length + SHIPS[type].length) / 14);
-    const pos = formationPoint(game, lead, slot2, 1.6 * spread);
-    if (!game.world.sailable(pos.x, pos.y)) return;
-    const s = game.addShip({ type, x: pos.x, y: pos.y, heading: lead.heading, owner: "marine", faction: "marine", name: big ? "Marine Warship" : "Marine Escort" });
+    const pos = outOfSight(game, lead);
+    if (!pos) return;
+    const s = game.addShip({ type, x: pos.x, y: pos.y, heading: pos.heading, owner: "marine", faction: "marine", name: big ? "Marine Warship" : "Marine Escort" });
     if (!s.fits(game.world, s.x, s.y, s.heading)) {
       s.alive = false;
       return;
@@ -122600,6 +122622,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     s.level = 10 + rankIndex(c.marineRank) * 3;
     s.label = `${s.name} (your fleet)`;
     s.ai = escortAI;
+  }
+  function outOfSight(game, lead) {
+    const w = game.world, R4 = sightRange(game) + 15;
+    for (let k = 0; k < 12; k++) {
+      const a = lead.heading + Math.PI + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * Math.PI / 6;
+      const x = w.wx(lead.x + Math.cos(a) * R4), y = lead.y + Math.sin(a) * R4;
+      if (w.sailable(x, y)) return { x, y, heading: a + Math.PI };
+    }
+    return null;
   }
   function formationPoint(game, lead, slot2, spread = 1) {
     const back = -(9 + Math.floor(slot2 / 2) * 7) * spread, side = (slot2 % 2 ? 1 : -1) * 6 * spread * (slot2 === 2 ? 0 : 1);
@@ -122636,12 +122667,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
     const pt = formationPoint(game, lead, s.escortSlot || 0, s.formSpread || 1);
     const d = w.distance(s.x, s.y, pt.x, pt.y);
-    if (d > 60 * (s.formSpread || 1)) {
-      const q2 = formationPoint(game, lead, s.escortSlot || 0, 1.6 * (s.formSpread || 1));
-      if (s.fits(w, q2.x, q2.y, lead.heading)) {
+    s.catchUp = d > 20 * (s.formSpread || 1) ? 1.8 : 1;
+    if (d > sightRange(game) + 60) {
+      const q2 = outOfSight(game, lead);
+      if (q2 && s.fits(w, q2.x, q2.y, q2.heading)) {
         s.x = q2.x;
         s.y = q2.y;
-        s.heading = lead.heading;
+        s.heading = q2.heading;
         s.speed = lead.speed;
       }
       return;

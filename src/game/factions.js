@@ -10,6 +10,7 @@ import { addItem, earn, equip, count } from './inventory.js';
 import { persist } from './lineage.js';
 import { threatFactor } from './stats.js';
 import { formatBerries } from '../core/math.js';
+import { sightRange } from './traffic.js';
 import { allNpcDefs } from './npcs.js';
 import { openTrainer } from '../ui/panels.js';
 import { wantedPoster } from '../ui/screens.js';
@@ -102,7 +103,8 @@ function installFleet(game) {
     // ships
     const escorts = game.ships.filter((s) => s.escortOf && !s.sunk && s.alive !== false);
     const wantShips = marine && p.mode === 'sail' && p.ship && game.world === game.surface ? fleetSize(c) : 0;
-    for (let i = escorts.length - 1; i >= wantShips; i--) if (escorts[i] && game.world.distance(escorts[i].x, escorts[i].y, p.x, p.y) > 30) escorts[i].alive = false;
+    // (a ship stood down stays where she is till she's out of sight)
+    for (let i = escorts.length - 1; i >= wantShips; i--) if (escorts[i] && game.world.distance(escorts[i].x, escorts[i].y, p.x, p.y) > sightRange(game)) escorts[i].alive = false;
     for (let i = escorts.length; i < wantShips; i++) spawnEscort(game, i);
     // soldiers
     const squad = game.actors.filter((a) => a.marineSquad && a.alive);
@@ -122,9 +124,10 @@ function spawnEscort(game, slot) {
   const type = big ? 'marine_warship' : 'brigantine';
   // (a fleet of big ships keeps its distance)
   const spread = Math.max(1, (lead.def.length + SHIPS[type].length) / 14);
-  const pos = formationPoint(game, lead, slot, 1.6 * spread);
-  if (!game.world.sailable(pos.x, pos.y)) return;
-  const s = game.addShip({ type, x: pos.x, y: pos.y, heading: lead.heading, owner: 'marine', faction: 'marine', name: big ? 'Marine Warship' : 'Marine Escort' });
+  // she joins you out of the haze, astern if there's open water there
+  const pos = outOfSight(game, lead);
+  if (!pos) return;
+  const s = game.addShip({ type, x: pos.x, y: pos.y, heading: pos.heading, owner: 'marine', faction: 'marine', name: big ? 'Marine Warship' : 'Marine Escort' });
   if (!s.fits(game.world, s.x, s.y, s.heading)) { s.alive = false; return; }
   s.formSpread = spread;
   s.escortOf = 'player';
@@ -132,6 +135,17 @@ function spawnEscort(game, slot) {
   s.level = 10 + rankIndex(c.marineRank) * 3;
   s.label = `${s.name} (your fleet)`;
   s.ai = escortAI;
+}
+
+/** A spot on open water just beyond sight of the flagship (see sightRange), astern first, heading her way. */
+function outOfSight(game, lead) {
+  const w = game.world, R = sightRange(game) + 15;
+  for (let k = 0; k < 12; k++) {
+    const a = lead.heading + Math.PI + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * Math.PI / 6;
+    const x = w.wx(lead.x + Math.cos(a) * R), y = lead.y + Math.sin(a) * R;
+    if (w.sailable(x, y)) return { x, y, heading: a + Math.PI };
+  }
+  return null;
 }
 
 function formationPoint(game, lead, slot, spread = 1) {
@@ -167,10 +181,12 @@ function escortAI(s, dt, game) {
   // hold formation behind the flagship
   const pt = formationPoint(game, lead, s.escortSlot || 0, s.formSpread || 1);
   const d = w.distance(s.x, s.y, pt.x, pt.y);
-  if (d > 60 * (s.formSpread || 1)) {
-    // fell far behind: it catches up out of sight
-    const q = formationPoint(game, lead, s.escortSlot || 0, 1.6 * (s.formSpread || 1));
-    if (s.fits(w, q.x, q.y, lead.heading)) { s.x = q.x; s.y = q.y; s.heading = lead.heading; s.speed = lead.speed; }
+  // fallen behind, she crowds on sail to come up; lost far out of sight (an
+  // island between you, say), she's found her way back to just beyond it
+  s.catchUp = d > 20 * (s.formSpread || 1) ? 1.8 : 1;
+  if (d > sightRange(game) + 60) {
+    const q = outOfSight(game, lead);
+    if (q && s.fits(w, q.x, q.y, q.heading)) { s.x = q.x; s.y = q.y; s.heading = q.heading; s.speed = lead.speed; }
     return;
   }
   const toP = Math.atan2(pt.y - s.y, w.dx(s.x, pt.x));

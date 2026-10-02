@@ -143,6 +143,8 @@ export class Ship extends Entity {
       const rowSpeed = this.def.paddle ? 0.6 : this.def.oars ? 0.42 : 0.12;
       if (this.rowing) target = Math.max(target, this.def.speed * rowSpeed * this.rowing);
     }
+    // (crowding on sail to come up with her flagship: see factions.js escortAI)
+    if (this.catchUp) target *= this.catchUp;
     if (this.speedCap != null && target > this.speedCap) target = this.speedCap;
     if (this.coupT > 0) { this.coupT -= dt; target = this.def.speed * 5; }
     // storms slow you and batter the hull

@@ -81,8 +81,10 @@ function tick(game, T, dt) {
   T.t -= dt;
   if (T.t > 0) return;
   T.t = 4;
+  // (out of sight before she's gone: see sightRange)
+  const S = sightRange(game);
   T.ships = T.ships.filter((s) => {
-    const keep = s.alive && !s.sunk && s.owner !== 'player' && (s.traffic?.raided ? w.distance(s.x, s.y, p.x, p.y) < 400 : w.distance(s.x, s.y, p.x, p.y) < 300);
+    const keep = s.alive && !s.sunk && s.owner !== 'player' && w.distance(s.x, s.y, p.x, p.y) < (s.traffic?.raided ? Math.max(400, S + 120) : S + 120);
     if (!keep && s.owner !== 'player') { for (const a of s.traffic?.crew || []) a.alive = false; if (!s.sunk) s.alive = false; }
     return keep;
   });
@@ -119,9 +121,10 @@ function underFire(game, s) {
 function spawnShip(game, T, p, reg, force = null) {
   const w = game.world;
   const rng = new RNG((Math.floor(game.time * 997) ^ (T.ships.length * 7919)) >>> 0);
+  // out beyond the haze, on open water, heading past you: she sails into sight
+  const S = sightRange(game);
   for (let tries = 0; tries < 18; tries++) {
-    // out in the haze, on open water, heading past you
-    const a = rng.range(0, TAU), r = rng.range(150, 210);
+    const a = rng.range(0, TAU), r = rng.range(S + 20, S + 80);
     const x = force ? force.x : w.wx(p.x + Math.cos(a) * r), y = force ? force.y : p.y + Math.sin(a) * r;
     const kind = force?.kind || pickKind(rng, reg, game);
     const gl = isGrandLine(reg), nw = reg === REGION.NEW_WORLD;
@@ -223,6 +226,14 @@ export function playerShip(p) {
 /** How far off (middle to middle) her guns reach another ship: a cannonball's flight from her side to the other's. */
 export const gunReach = (s, target) => 12 + (s.def.beam + target.def.beam) / 2;
 
+/**
+ * How far off (m) a ship can be seen: the render distance at sea, where the
+ * haze closes in completely (render3d/sky3d.js). Ships come and go beyond
+ * it, so none appears or vanishes in plain sight. (Without a 3D view: the
+ * default render distance.)
+ */
+export function sightRange(game) { return game.view3d?.viewDist?.(true) ?? 576; }
+
 /** A broadside when her guns bear (lying hove to alongside, only now and then: you're meant to be able to board her). */
 export function fireOn(game, s, target, d) {
   const toT = Math.atan2(target.y - s.y, game.world.dx(s.x, target.x));
@@ -270,8 +281,8 @@ function trafficAI(s, dt, game) {
     if (w.distance(s.x, s.y, tr.dest.x, tr.dest.y) < 25) { tr.dest = { x: w.wx(s.x + Math.cos(s.heading) * 300), y: s.y + Math.sin(s.heading) * 300 }; }
   }
   // stuck against the coast (or another hull) for a few seconds: come about
-  // and make for the openest water; still stuck, she's eased clear (or, far
-  // from you, quietly sails off the map)
+  // and make for the openest water; still stuck, she's eased clear (or, out
+  // of your sight, quietly sails off the map)
   const now = game.time || 0;
   if (!tr.lastPos) tr.lastPos = { x: s.x, y: s.y, t: now };
   if (now - tr.lastPos.t > 3) {
@@ -291,7 +302,7 @@ function trafficAI(s, dt, game) {
       s.speed = Math.min(s.speed, 1);
     }
     if (tr.stuck >= 3) {
-      if (w.distance(s.x, s.y, p.x, p.y) > 70) { for (const a of tr.crew || []) a.alive = false; s.alive = false; return; }
+      if (w.distance(s.x, s.y, p.x, p.y) > sightRange(game)) { for (const a of tr.crew || []) a.alive = false; s.alive = false; return; }
       s.unstick(w, true);
       tr.stuck = 0;
     }

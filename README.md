@@ -294,6 +294,11 @@ rearrange them.
   across to yours.
 - **Your ships can't break** (for now): no hull damage and no sinking, from
   anything. NPC ships still take damage and sink.
+- Other ships come and go **out of sight**: they sail in out of the haze from
+  beyond your render distance, and leave the same way, never appearing or
+  vanishing in front of you. A ship's news ("a Marine patrol has spotted
+  you!") comes when she's seen; your Marine escorts join you from over the
+  horizon under a press of sail.
 - **A shipwright on every pier.** Press E to talk to them:
   - **Spawn ship** lists every ship you own and where she is, and brings the
     one you choose round to this pier, ready to board. Only one copy of each
