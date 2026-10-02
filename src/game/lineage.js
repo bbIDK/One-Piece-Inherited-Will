@@ -403,6 +403,9 @@ export function snapshot(game) {
   c.world.day = game.env.day;
   c.world.clock = game.env.clock;
   c.pos = { x: p.x, y: p.y, zone: game.world.id, mode: p.mode };
+  // (on one of your ships' decks, or down in her: where on her, to stand there again — see session.js)
+  const dk = p.deck;
+  if (p.mode !== 'sail' && dk?.ship?.uid && !dk.ship.sunk) c.pos.deck = { uid: dk.ship.uid, t: dk.t, v: dk.v, h: dk.h };
   // where your ships lie (those waiting on the surface while you're in a zone too)
   const afloat = liveShips(game);
   c.ships = afloat.map((s) => ({

@@ -295,6 +295,11 @@ rearrange them.
   across to yours.
 - **Your ships can't break** (for now): no hull damage and no sinking, from
   anything. NPC ships still take damage and sink.
+- Your ships are saved where they lie, and so are you aboard them: quit on
+  her deck, in a cabin or down in the hold, and that's where you are when
+  you come back. Turn in for the night in a bunk or a hammock aboard one of
+  your ships (free, unlike an inn) and she's where you wake if you fall,
+  wherever she's sailed to since (while she's afloat).
 - Other ships come and go **out of sight**: they sail in out of the haze from
   beyond your render distance, and leave the same way, never appearing or
   vanishing in front of you. A ship's news ("a Marine patrol has spotted

@@ -62641,6 +62641,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     (ship.aboard || (ship.aboard = /* @__PURE__ */ new Set())).add(a);
     a.facing = ship.heading;
   }
+  function standAboard(game, a, ship, at4) {
+    if (!ship || !at4) return false;
+    placeOnDeck(game, a, ship, at4.t, at4.v);
+    const dk3 = game.deckAt(a.x, a.y, 0, at4.h ?? null, ship);
+    if (dk3) {
+      a.deck = dk3;
+      dk3.ship = ship;
+    }
+    a.mode = "foot";
+    return true;
+  }
   function helmSpot(ship) {
     const d = shipDims(ship.def);
     const hp = helmPoint(ship.def);
@@ -87261,6 +87272,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
       }
     }
+    const own = p.deck?.ship;
+    if (own && own.owner === "player" && !own.sunk && game.services?.restAboard) {
+      const d = shipDims(own.def);
+      const u = p.deck.t * d.L - d.L / 2, v = p.deck.v;
+      for (const it of d.furniture || []) {
+        if (it.kind !== "bunk" && it.kind !== "hammock") continue;
+        if (Math.abs((p.deck.h ?? 0) - it.floor) > 0.6) continue;
+        const f = footprint(it);
+        const dd = Math.hypot(Math.max(f.u0 - u, 0, u - f.u1), Math.max(f.v0 - v, 0, v - f.v1));
+        if (dd > 1.1) continue;
+        const at4 = deckToWorld(own, (it.u + d.L / 2) / d.L, it.v);
+        cands.push({ d: dd + 0.3, x: at4.x, y: at4.y, label: `Sleep in the ${it.kind} (wake here if you fall)`, run: () => game.services.restAboard(own, it) });
+      }
+    }
     for (const it of game.groundItems || []) {
       const d = w.distance(p.x, p.y, it.x, it.y);
       if (d < 1.4) cands.push({ d: d - 0.2, x: it.x, y: it.y, label: `Pick up ${it.label}`, run: () => game.emit("pickup", it) });
@@ -87967,6 +87992,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     c.world.day = game.env.day;
     c.world.clock = game.env.clock;
     c.pos = { x: p.x, y: p.y, zone: game.world.id, mode: p.mode };
+    const dk3 = p.deck;
+    if (p.mode !== "sail" && dk3?.ship?.uid && !dk3.ship.sunk) c.pos.deck = { uid: dk3.ship.uid, t: dk3.t, v: dk3.v, h: dk3.h };
     const afloat = liveShips(game);
     c.ships = afloat.map((s) => ({
       uid: s.uid,
@@ -96475,6 +96502,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       game.enterZoneById(pos.zone, pos, true);
     } else if (pos.mode === "sail" && active5) {
       board(game, p, active5);
+    } else if (pos.deck) {
+      if (!standAboard(game, p, game.ships.find((s) => s.uid === pos.deck.uid && !s.sunk), pos.deck)) {
+        const r = char.rest || char.spawn;
+        p.x = r.x;
+        p.y = r.y;
+      }
     } else if (!game.world.walkable(p.x, p.y - 0.1) && !game.world.swimmable(p.x, p.y - 0.1)) {
       const r = char.rest || char.spawn;
       p.x = r.x;
@@ -96721,14 +96754,24 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         return;
       }
       if (g.world !== g.surface) g.leaveZone?.(true);
-      const r = c.rest || c.spawn;
+      let r = c.rest || c.spawn;
       if (p.onShip && p.ship) {
         p.ship.captain = null;
         p.onShip = false;
       }
       p.mode = "foot";
-      p.x = r.x;
-      p.y = r.y;
+      const bunk = r.ship ? g.ships.find((s) => s.uid === r.ship && s.owner === "player" && !s.sunk) : null;
+      if (r.ship && !bunk) {
+        g.log(`The ${r.name.replace(/^the /, "")} isn't there to wake in: you come to where you began.`, "#b0bec5");
+        r = c.spawn;
+      }
+      if (bunk) standAboard(g, p, bunk, r.aboard);
+      else {
+        p.deck?.ship?.aboard?.delete(p);
+        p.deck = null;
+        p.x = r.x;
+        p.y = r.y;
+      }
       if (!(c.fleet || []).length && !g.ships.some((s) => s.owner === "player" && !s.sunk)) {
         const isl = g.world.nearestIsland(r.x, r.y, 200);
         const dock = isl && isl.docks[0];
@@ -96991,6 +97034,30 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       setTimeout(() => g.ui.fade(false), 700);
       g.log(`You rest at ${c.rest.name}. This is now where you will wake if you fall. (Second winds restored: ${c.getUpCharges})`, "#a5d6a7");
       g.emit("rested", island);
+      persist(g);
+      return true;
+    }
+    /**
+     * Turn in aboard your own ship (a bunk or a hammock, `it`, in one of her
+     * rooms): you're rested, and it's where you'll wake if you fall, wherever
+     * she sails — as long as she's afloat (see lives.js placeAtRest).
+     */
+    restAboard(ship, it) {
+      const g = this.game, c = this.char, p = g.player;
+      c.rest = { x: p.x, y: p.y, name: `the ${ship.name}`, ship: ship.uid, aboard: { t: p.deck?.t, v: p.deck?.v, h: it.floor } };
+      p.hp = p.d.maxHp;
+      p.haki = p.hakiUnlocked() ? p.d.maxHaki : 0;
+      p.status = {};
+      c.getUpCharges = 1 + (p.attrs.wil >= 40 ? 1 : 0) + (p.attrs.wil >= 80 ? 1 : 0);
+      c.flags.dLuckUsed = false;
+      c.trainedToday = 0;
+      const env = g.env;
+      if (env.clock > 6) env.day += 1;
+      env.clock = 7;
+      g.ui.fade(true);
+      setTimeout(() => g.ui.fade(false), 700);
+      g.log(`You turn in for the night in a ${it.kind} aboard the ${ship.name}. She's where you'll wake if you fall, wherever she sails. (Second winds restored: ${c.getUpCharges})`, "#a5d6a7");
+      g.emit("rested", null);
       persist(g);
       return true;
     }
@@ -129298,6 +129365,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       },
       prof: { PROF, reset: profReset },
       debug: {
+        persist: () => persist(game),
         THREE: three_module_exports,
         npcDef,
         allNpcDefs,

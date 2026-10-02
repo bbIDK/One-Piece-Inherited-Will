@@ -4,6 +4,7 @@ import { allNpcDefs, allGroups } from './npcs.js';
 import { ALL_ISLANDS } from '../data/islands/index.js';
 import { saveLegacy, loadLegacy, saveChar } from './save.js';
 import { board } from './interact.js';
+import { standAboard } from './decks.js';
 import { lifeLostScreen, lineageEndScreen, legacyShopScreen } from '../ui/screens.js';
 import { SEA_IDS, REGION_INFO, regionAt } from '../world/constants.js';
 import { RACES } from '../data/races.js';
@@ -177,6 +178,9 @@ export function resumeCharacter(game, char) {
     game.enterZoneById(pos.zone, pos, true);
   } else if (pos.mode === 'sail' && active) {
     board(game, p, active);
+  } else if (pos.deck) {
+    // on her deck, or below, just where you were — or, she gone, where you'd wake
+    if (!standAboard(game, p, game.ships.find((s) => s.uid === pos.deck.uid && !s.sunk), pos.deck)) { const r = char.rest || char.spawn; p.x = r.x; p.y = r.y; }
   } else if (!game.world.walkable(p.x, p.y - 0.1) && !game.world.swimmable(p.x, p.y - 0.1)) {
     const r = char.rest || char.spawn;
     p.x = r.x; p.y = r.y;

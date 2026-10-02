@@ -88,6 +88,20 @@ export function placeOnDeck(game, a, ship, t, v = 0) {
   a.facing = ship.heading;
 }
 
+/**
+ * Put an actor back where they stood aboard a ship ({ t, v, h }: along, across,
+ * and the height of the deck or floor they were on: a cabin's or the hold's
+ * below). False if there's no ship to stand on.
+ */
+export function standAboard(game, a, ship, at) {
+  if (!ship || !at) return false;
+  placeOnDeck(game, a, ship, at.t, at.v);
+  const dk = game.deckAt(a.x, a.y, 0, at.h ?? null, ship);
+  if (dk) { a.deck = dk; dk.ship = ship; }
+  a.mode = 'foot';
+  return true;
+}
+
 /** Where you take the helm: just aft of the wheel (on the big ships, of the double wheel; at a rowboat's oars, her thwart). */
 export function helmSpot(ship) {
   const d = shipDims(ship.def);

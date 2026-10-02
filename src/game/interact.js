@@ -2,7 +2,7 @@
 import { WALKABLE } from '../world/tiles.js';
 import { angleDiff } from '../core/math.js';
 import { placeOnDeck, helmSpot, boardingSpot, freeDeckSpot } from './decks.js';
-import { shipDims } from '../world/hull.js';
+import { shipDims, deckToWorld, footprint } from '../world/hull.js';
 import { bfront } from '../world/bframe.js';
 import { canSee } from './ai.js';
 
@@ -79,6 +79,23 @@ export function findInteraction(game, p) {
         const d = w.distance(p.x, p.y, o.x, o.y);
         if (d < 1.8) cands.push({ d: d + 0.3, x: o.x, y: o.y, label: 'Train (strike the dummy)', run: () => game.emit('trainDummy', o) });
       }
+    }
+  }
+  // aboard one of your own ships: turn in for the night in a bunk or a hammock
+  // (where you'll wake if you fall, as at an inn — and free)
+  const own = p.deck?.ship;
+  if (own && own.owner === 'player' && !own.sunk && game.services?.restAboard) {
+    const d = shipDims(own.def);
+    const u = p.deck.t * d.L - d.L / 2, v = p.deck.v;
+    for (const it of d.furniture || []) {
+      if (it.kind !== 'bunk' && it.kind !== 'hammock') continue;
+      // (in the same room as you, on its floor; within reach of its side or its end)
+      if (Math.abs((p.deck.h ?? 0) - it.floor) > 0.6) continue;
+      const f = footprint(it);
+      const dd = Math.hypot(Math.max(f.u0 - u, 0, u - f.u1), Math.max(f.v0 - v, 0, v - f.v1));
+      if (dd > 1.1) continue;
+      const at = deckToWorld(own, (it.u + d.L / 2) / d.L, it.v);
+      cands.push({ d: dd + 0.3, x: at.x, y: at.y, label: `Sleep in the ${it.kind} (wake here if you fall)`, run: () => game.services.restAboard(own, it) });
     }
   }
   for (const it of game.groundItems || []) {

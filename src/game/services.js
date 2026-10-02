@@ -48,6 +48,30 @@ export class Services {
     return true;
   }
 
+  /**
+   * Turn in aboard your own ship (a bunk or a hammock, `it`, in one of her
+   * rooms): you're rested, and it's where you'll wake if you fall, wherever
+   * she sails — as long as she's afloat (see lives.js placeAtRest).
+   */
+  restAboard(ship, it) {
+    const g = this.game, c = this.char, p = g.player;
+    c.rest = { x: p.x, y: p.y, name: `the ${ship.name}`, ship: ship.uid, aboard: { t: p.deck?.t, v: p.deck?.v, h: it.floor } };
+    p.hp = p.d.maxHp; p.haki = p.hakiUnlocked() ? p.d.maxHaki : 0;
+    p.status = {};
+    c.getUpCharges = 1 + (p.attrs.wil >= 40 ? 1 : 0) + (p.attrs.wil >= 80 ? 1 : 0);
+    c.flags.dLuckUsed = false;
+    c.trainedToday = 0;
+    const env = g.env;
+    if (env.clock > 6) env.day += 1;
+    env.clock = 7;
+    g.ui.fade(true);
+    setTimeout(() => g.ui.fade(false), 700);
+    g.log(`You turn in for the night in a ${it.kind} aboard the ${ship.name}. She's where you'll wake if you fall, wherever she sails. (Second winds restored: ${c.getUpCharges})`, '#a5d6a7');
+    g.emit('rested', null);
+    persist(g);
+    return true;
+  }
+
   // ---------------------------------------------------------- doctor
   healPrice(island) { const p = this.game.player; return Math.round((p.d.maxHp - p.hp) * 0.6 * this.seaMul(island) + 20); }
   heal(island) {

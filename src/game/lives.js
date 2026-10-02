@@ -8,6 +8,7 @@ import { persist, endLineage, snapshot } from './lineage.js';
 import { formatBerries, roundBounty } from '../core/math.js';
 import { findShore } from './interact.js';
 import { conquerorBurst } from './abilities.js';
+import { standAboard } from './decks.js';
 
 export class LivesSystem {
   constructor(game) {
@@ -216,10 +217,17 @@ export class LivesSystem {
       return;
     }
     if (g.world !== g.surface) g.leaveZone?.(true);
-    const r = c.rest || c.spawn;
+    let r = c.rest || c.spawn;
     if (p.onShip && p.ship) { p.ship.captain = null; p.onShip = false; }
     p.mode = 'foot';
-    p.x = r.x; p.y = r.y;
+    // (you turned in aboard one of your ships: you wake in her, wherever she is — if she's still afloat)
+    const bunk = r.ship ? g.ships.find((s) => s.uid === r.ship && s.owner === 'player' && !s.sunk) : null;
+    if (r.ship && !bunk) {
+      g.log(`The ${r.name.replace(/^the /, '')} isn't there to wake in: you come to where you began.`, '#b0bec5');
+      r = c.spawn;
+    }
+    if (bunk) standAboard(g, p, bunk, r.aboard);
+    else { p.deck?.ship?.aboard?.delete(p); p.deck = null; p.x = r.x; p.y = r.y; }
     // make sure the player has some way to sail again (a ship laid up in the
     // yards counts: any pier's shipwright can bring her round)
     if (!(c.fleet || []).length && !g.ships.some((s) => s.owner === 'player' && !s.sunk)) {
