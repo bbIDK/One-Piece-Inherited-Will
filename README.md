@@ -81,6 +81,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | E | talk, enter, take the helm or the oars, pick fruit, examine | dive, knock-up, go ashore, leave the helm (under sail she sails on, holding her course, while you walk the deck) |
 | Tab/I, C, K, J, U, L | inventory, character, skills, journal, crew, quests | |
 | M | world map | |
+| − / + | zoom the minimap out / in (it's the world map's chart, round you) | |
 | H / Esc | help / pause menu | |
 
 The same menus are on the **sidebar** under the minimap. Press a menu's key

@@ -6,24 +6,10 @@ import { raceLabel } from '../data/races.js';
 import { ITEMS } from '../data/items.js';
 import { STYLES } from '../data/styles.js';
 import { REGION_INFO, regionAt, REGION, RM_X, EQ } from '../world/constants.js';
-import { PALETTE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
-
-// minimap colours: land by tile, the sea by region (lighter over the shallows)
-const MM_LAND = new Uint8Array(256 * 3);
-{
-  const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-  for (let t = 0; t < 256; t++) MM_LAND.set(PALETTE[t] ? hex(PALETTE[t][0]) : [200, 190, 160], t * 3);
-  MM_LAND.set([168, 69, 47], T.RED_ROCK * 3);
-  MM_LAND.set([201, 195, 189], T.SNOWROCK * 3);
-}
-const MM_SEA = {
-  [REGION.EAST_BLUE]: [79, 150, 196], [REGION.NORTH_BLUE]: [83, 128, 184], [REGION.WEST_BLUE]: [74, 139, 175],
-  [REGION.SOUTH_BLUE]: [67, 156, 166], [REGION.PARADISE]: [47, 138, 128], [REGION.NEW_WORLD]: [98, 84, 170],
-  [REGION.CALM_NORTH]: [120, 136, 146], [REGION.CALM_SOUTH]: [120, 136, 146], [REGION.RED_LINE]: [79, 150, 196], [REGION.POLAR]: [170, 196, 210],
-};
 import { itemImg, skillImg, uiImg } from './icon.js';
 import { Compass, fmtDist } from './compass.js';
 import { Waypoints } from './waypoints.js';
+import { Minimap } from './minimap.js';
 import { assignHotbar } from './panels.js';
 import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
 
@@ -785,73 +771,20 @@ export class UI {
     E.track.classList.toggle('hidden', !E.track.childNodes.length);
   }
 
+  /** The minimap: the world chart round you (see minimap.js). */
   drawMinimap(game) {
-    const c = this.el.mm;
-    const g = c.getContext('2d');
-    const w = game.world;
-    const p = game.player;
-    const W = c.width, H = c.height;
-    const scale = p.mode === 'sail' ? 2.2 : 1; // tiles per pixel
-    if (!this.mmImg) this.mmImg = g.createImageData(W, H);
-    const img = this.mmImg.data;
-    // (read straight from the tiles: the chart is too coarse for this close a view)
-    const zoneSea = w.zone === 2 ? [40, 90, 150] : w.zone === 3 ? [20, 16, 24] : [150, 200, 230];
-    let sea = w.zone === 0 ? MM_SEA[regionAt(p.x, p.y)] || MM_SEA[REGION.EAST_BLUE] : zoneSea;
-    for (let j = 0; j < H; j++) {
-      const ty = p.y + (j - H / 2) * scale;
-      for (let i = 0; i < W; i++) {
-        const tx = p.x + (i - W / 2) * scale;
-        const o = (j * W + i) * 4;
-        if (ty < 0 || ty >= w.height || (!w.wrap && (tx < 0 || tx >= w.width))) { img[o] = 30; img[o + 1] = 40; img[o + 2] = 50; img[o + 3] = 255; continue; }
-        if (w.zone === 0 && (i & 15) === 0) sea = MM_SEA[regionAt(tx, ty)] || sea;
-        const t = w.type(tx, ty);
-        let r, g, b;
-        if (IS_LIQUID[t] || OVERLAY[t]) {
-          if (OVERLAY[t]) { r = MM_LAND[t * 3]; g = MM_LAND[t * 3 + 1]; b = MM_LAND[t * 3 + 2]; }
-          else if (t === T.LAVA) { r = 220; g = 90; b = 40; }
-          else if (t === T.CLOUD_SEA) { r = 235; g = 242; b = 250; }
-          else {
-            const sh = Math.max(0, 1 + (w.distRaw(tx, ty) - 128) / 64); // 1 at the shore, 0 from 16 tiles out
-            r = sea[0] + (150 - sea[0]) * sh * 0.6; g = sea[1] + (215 - sea[1]) * sh * 0.6; b = sea[2] + (215 - sea[2]) * sh * 0.6;
-          }
-        } else { r = MM_LAND[t * 3]; g = MM_LAND[t * 3 + 1]; b = MM_LAND[t * 3 + 2]; }
-        const f = 0.35 + 0.65 * Math.min(1, w.exploredAt(tx, ty) * 1.6);
-        img[o] = r * f; img[o + 1] = g * f; img[o + 2] = b * f; img[o + 3] = 255;
-      }
-    }
-    g.putImageData(this.mmImg, 0, 0);
-    // clip circle
-    g.save();
-    g.globalCompositeOperation = 'destination-in';
-    g.beginPath(); g.arc(W / 2, H / 2, W / 2, 0, Math.PI * 2); g.fill();
-    g.restore();
-    // ships
-    for (const s of game.ships) {
-      if (s.sunk) continue;
-      const dx = w.dx(p.x, s.x) / scale + W / 2, dy = (s.y - p.y) / scale + H / 2;
-      if (Math.hypot(dx - W / 2, dy - H / 2) > W / 2 - 4) continue;
-      g.fillStyle = s.owner === 'player' ? '#ffeb3b' : s.faction === 'marine' ? '#64b5f6' : '#ef5350';
-      // (the big ships show their length)
-      g.beginPath(); g.ellipse(dx, dy, Math.max(3, s.def.length / scale / 2), Math.max(3, s.def.beam / scale / 2), s.heading || 0, 0, Math.PI * 2); g.fill();
-    }
-    // hostiles (with observation haki you sense everything)
-    for (const a of game.actors) {
-      if (a === p || a.state !== 'idle' || a.hidden) continue;
-      const hostileNow = a.controller?.target === p || (p.observation && a.faction !== 'civilian');
-      if (!hostileNow && !a.questMarker) continue;
-      const dx = w.dx(p.x, a.x) / scale + W / 2, dy = (a.y - p.y) / scale + H / 2;
-      if (Math.hypot(dx - W / 2, dy - H / 2) > W / 2 - 3) continue;
-      g.fillStyle = a.questMarker ? (a.questMarker[0] === 'M' ? '#ff9100' : '#ffd54f') : '#ff5252';
-      g.fillRect(dx - 1.5, dy - 1.5, 3, 3);
-    }
-    // player arrow (the 3D view draws a fixed one over the turning map)
-    if (game.view3d?.active) return;
-    g.save();
-    g.translate(W / 2, H / 2);
-    g.rotate(p.mode === 'sail' && p.ship ? p.ship.heading : p.facing);
-    g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.5;
-    g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, -5); g.lineTo(-2, 0); g.lineTo(-5, 5); g.closePath(); g.fill(); g.stroke();
-    g.restore();
+    (this.minimap ||= new Minimap(this.el.mm)).draw(game, 0.2);
+  }
+
+  /** − and +: the minimap a step out (+1) or in (−1), at once, saying how far across it now reaches. */
+  minimapZoom(game, d) {
+    const mm = this.minimap ||= new Minimap(this.el.mm);
+    const sailing = game.player?.mode === 'sail';
+    const was = mm.scale(sailing), now = mm.zoomBy(d, sailing);
+    if (now === was) return;
+    const across = (this.el.mm.clientWidth || 190) * now;
+    mm.flash = { text: across >= 1000 ? `${(across / 1000).toFixed(across >= 10000 ? 0 : 1)} km across` : `${Math.round(across)} m across`, until: performance.now() + 1600 };
+    this.mmT = 0;
   }
 }
 

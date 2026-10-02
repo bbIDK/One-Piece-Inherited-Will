@@ -306,7 +306,7 @@ function drawLabels(game, r, cam, layer) {
 }
 
 /** Has an island been seen (its middle or the middle of a side of it explored, sailing by)? */
-function seenIsland(w, isl) {
+export function seenIsland(w, isl) {
   if (w.isExplored(isl.x, isl.y)) return true;
   const B = isl.landBox;
   if (!B) return false;

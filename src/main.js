@@ -303,6 +303,11 @@ async function start() {
     { key: 'H', when: playing, fn: () => ui.sideAction('help') },
     { key: 'U', when: playing, fn: () => ui.sideAction('crew') },
     { key: 'L', when: playing, fn: () => ui.sideAction('quests') },
+    // the minimap: − zooms it out, + (or =) in
+    { key: 'Minus', when: playing, fn: () => ui.minimapZoom(game, 1) },
+    { key: 'NumpadSubtract', when: playing, fn: () => ui.minimapZoom(game, 1) },
+    { key: 'Equal', when: playing, fn: () => ui.minimapZoom(game, -1) },
+    { key: 'NumpadAdd', when: playing, fn: () => ui.minimapZoom(game, -1) },
   );
   game.on('saved', () => ui.savedNote());
   // (at the helm or the oars your hands are on the wheel: the weapon goes back in its sheath)

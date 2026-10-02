@@ -114,7 +114,8 @@ export class ChartDetail {
    */
   draw(g, v) {
     this.t++;
-    const a = smooth(0.3, 0.7, v.zoom);
+    // (v.alpha: how strongly to draw them, if not as the map fades them in as you zoom)
+    const a = v.alpha ?? smooth(0.3, 0.7, v.zoom);
     if (a <= 0) return;
     const { world, dpr, zoom } = v;
     const t0 = performance.now();
