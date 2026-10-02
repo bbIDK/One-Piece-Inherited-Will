@@ -181,7 +181,7 @@ export function rigOptions(a, pose, P, o = {}) {
     const sp = Math.hypot(a.vx || 0, a.vy || 0);
     if (sp > 0.3) o.walkRel = Math.atan2(a.vy, a.vx) - a.facing;
   }
-  o.spread = 0; o.legSpread = 0; o.leanAdd = 0; o.tiltAdd = 0; o.lying = 0; o.bounce = 0; o.headRoll = 0;
+  o.spread = 0; o.legSpread = 0; o.leanAdd = 0; o.tiltAdd = 0; o.lying = 0; o.bounce = 0; o.headRoll = 0; o.grip2 = 0; o.grip2K = 1;
   if (pose.state === 'hurt') o.tiltAdd = -0.25;
   if (pose.swimming && (pose.swim === 'tread' || !pose.swim)) o.leanAdd = 0.2;
   if (pose.swimming && P.spread) o.spread = P.spread;

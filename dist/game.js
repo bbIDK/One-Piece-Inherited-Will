@@ -50142,24 +50142,52 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     P4.l = (P4.l || 0) * (1 - g.k) + 0.03 + 0.15 * g.k + 0.12 * g.s;
     P4.ht = (P4.ht || 0) - P4.l * 0.45;
-    if (pose.combat) return;
+    const armed = base2.wF !== null && base2.wF !== void 0;
+    if (pose.combat && !armed) return;
     const swF = clamp012(0.5 - a[0] / (2 * g.R)), swB = clamp012(0.5 - b[0] / (2 * g.R));
     const run = clamp012(g.k * 1.3 - 0.2);
     const walkArm = (sw2) => [mixN(-0.1, 0.14, sw2), 0.38 - sw2 * 0.03];
     const runArm = (sw2) => [mixN(-0.14, 0.22 + 0.04 * g.s, sw2), mixN(0.28, 0.06, sw2)];
     const wF = walkArm(swF), wB = walkArm(swB), rF = runArm(swF), rB = runArm(swB);
+    const freeB = [mixN(wB[0], rB[0], run) - 0.01, mixN(wB[1], rB[1], run)];
+    if (armed) {
+      carryPose(P4, pose, base2, freeB, u, load);
+      return;
+    }
     P4.hF = [mixN(wF[0], rF[0], run) + 0.02, mixN(wF[1], rF[1], run)];
-    P4.hB = [mixN(wB[0], rB[0], run) - 0.01, mixN(wB[1], rB[1], run)];
+    P4.hB = freeB;
     P4.eF = 1;
     P4.eB = 1;
     if (run > 0.5) {
       P4.hand = "fist";
       P4.handB = "fist";
     }
-    if (pose.sprint) {
-      P4.wF = base2.wF === null ? null : -2.4;
-      P4.wB = base2.wB === null ? null : -2.5;
+  }
+  function carryPose(P4, pose, base2, freeB, u, load) {
+    const sw2 = Math.sin(u * TAU8), bob = 0.014 * load, sprint = !!pose.sprint;
+    const sword = base2 === SWORD2 || base2 === SWORD22, two = base2 === SWORD22;
+    P4.eF = 1;
+    P4.eB = 1;
+    if (base2 === GUN) {
+      P4.hF = sprint ? [0.15 + 0.02 * sw2, 0.27 + bob] : [0.21 + 0.02 * sw2, 0.19 + bob];
+      P4.wF = sprint ? 1.25 : 0.8;
+      P4.hB = freeB;
+      return;
     }
+    if (sprint && sword) {
+      P4.hF = [-0.13 + 0.03 * sw2, 0.3 + bob];
+      P4.wF = 2.55;
+      if (two) {
+        P4.hB = [-0.16 - 0.03 * sw2, 0.3 + bob];
+        P4.wB = 2.65;
+      } else P4.hB = freeB;
+      return;
+    }
+    const hF = toXY(base2.hF), hB = toXY(base2.hB), low = sprint ? 0.05 : 0.02;
+    P4.hF = [hF[0] + 0.015 * sw2, hF[1] + low + bob];
+    P4.hB = [hB[0] - 0.015 * sw2, hB[1] + low + bob];
+    P4.wF = base2.wF + 0.05 * sw2 + (sprint ? 0.2 : 0);
+    if (base2.wB !== null && base2.wB !== void 0) P4.wB = base2.wB - 0.05 * sw2 + (sprint ? 0.2 : 0);
   }
   function blendPose(A, B5, k) {
     if (!A || k >= 1) return B5;
@@ -67575,6 +67603,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var _qc = Q();
   var _att = V();
   var _attP = V();
+  var _g2 = V();
   function attitude(d, k, side, kind, hip, T4, P4) {
     const Bk = d.Bk, BkD = 1 + (Bk - 1) * 0.85;
     if (kind === "hips") {
@@ -67665,7 +67694,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * Solve a pose. `o`: { tilt, walkRel (radians, when the legs follow the walk
      * cycle), spread (extra arm spread), legSpread, leanAdd, tiltAdd (head),
      * lookYaw, reachR / reachL (Vector3 targets overriding a hand: rubber
-     * punches in flight), shape: ['fist'|'palm'|'finger'|'claw'|'flat', …] }.
+     * punches in flight), grip2 / grip2K (the other hand on the first one's
+     * weapon, this far along it, and how much: 0..1), shape: ['fist'|'palm'|
+     * 'finger'|'claw'|'flat', …] }.
      */
     solve(P4, o = {}) {
       const d = this.d;
@@ -67723,6 +67754,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             _att.set(0.3 * d.Am * 0.6, -(d.A1 + d.A2) * 0.6, side * (d.shW * 0.95 + 0.05)).applyQuaternion(this.qLean).add(S4);
             T4.lerp(_att, lk2);
           }
+          if (k === 1 && o.grip2 && o.grip2K > 0) T4.lerp(_g2.copy(this.E[0]).addScaledVector(this.blade[0], o.grip2), o.grip2K);
         }
         const e = k === 0 ? P4.eF ?? 1 : P4.eB ?? 1;
         _t.subVectors(T4, S4);
@@ -67730,7 +67762,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const sg = e < 0 ? -1 : 1;
         this._pole.set(_t.y / lxy * sg, -_t.x / lxy * sg, side * 0.42);
         if (reach) this._pole.set(-0.75, -0.65, side * 0.45);
-        if (o.att && o.attK > 0 && !reach && !(k === 1 && broom)) this._pole.lerp(_attP, o.attK);
+        if (o.att && o.attK > 0 && !reach && !(k === 1 && (broom || o.grip2 && o.grip2K > 0.5))) this._pole.lerp(_attP, o.attK);
         ik2(S4, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P4.stretch || !!reach, J, E);
         const U3 = k === 0 ? B3.uarmR : B3.uarmL, F4 = k === 0 ? B3.farmR : B3.farmL, Hd = k === 0 ? B3.handR : B3.handL;
         this.pos[U3].copy(S4);
@@ -69548,6 +69580,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     o.lying = 0;
     o.bounce = 0;
     o.headRoll = 0;
+    o.grip2 = 0;
+    o.grip2K = 1;
     if (pose.state === "hurt") o.tiltAdd = -0.25;
     if (pose.swimming && (pose.swim === "tread" || !pose.swim)) o.leanAdd = 0.2;
     if (pose.swimming && P4.spread) o.spread = P4.spread;
@@ -69582,6 +69616,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render3d/chars/viewmodel.js
   var clamp5 = (v, a, b) => v < a ? a : v > b ? b : v;
   var FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16 };
+  var FPW = { xmin: 0.22, c: 0.06, top: -0.04, bottom: 0.1, aside: 0.08 };
   var FP_HOLD = [0.2, -0.22, 0.36];
   var FP_EAT = [0.05, -0.2, 0.27];
   var xy = (h2, fb) => !h2 ? fb : Array.isArray(h2) ? h2 : [Math.cos(h2.a) * h2.r, Math.sin(h2.a) * h2.r];
@@ -69590,6 +69625,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var LEGS = [B3.thighR, B3.shinR, B3.footR, B3.thighL, B3.shinL, B3.footL];
   var _v7 = new Vector3();
   var _v23 = new Vector3();
+  var _ax = new Vector3();
   var _q4 = new Quaternion();
   var _up2 = new Vector3(0, 1, 0);
   var _one2 = new Vector3(1, 1, 1);
@@ -69597,6 +69633,34 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var _mB = new Matrix4();
   function createViewmodel(ctx) {
     return new Viewmodel(ctx);
+  }
+  var NEAR_CUT = 0.15;
+  function nearCut(mat) {
+    const prev = mat.onBeforeCompile;
+    mat.onBeforeCompile = (sh, r) => {
+      prev?.call(mat, sh, r);
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying float vEyeZ;").replace("#include <project_vertex>", "#include <project_vertex>\nvEyeZ = -mvPosition.z;");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vEyeZ;").replace("void main() {", `void main() {
+  if (vEyeZ < ${NEAR_CUT.toFixed(3)}) discard;`);
+    };
+    const key2 = mat.customProgramCacheKey ? mat.customProgramCacheKey.bind(mat) : () => "";
+    mat.customProgramCacheKey = () => key2() + "|vm-near";
+    return mat;
+  }
+  function fpStrike(h0) {
+    if (!h0) return h0;
+    const T4 = FP, h2 = xy(h0);
+    const k = clamp5(h2[0] / 0.43, 0, 1);
+    let x = h2[0] > T4.x0 ? T4.x0 + (h2[0] - T4.x0) * T4.xs : h2[0] >= 0 ? Math.max(T4.xmin, h2[0]) : h2[0];
+    const y = h2[1] - T4.c - T4.L * k;
+    if (y < 0 && h2[0] > 0) x = Math.max(x, T4.xmin + (T4.xhigh - T4.xmin) * clamp5(-y / 0.3, 0, 1));
+    return [x, Math.max(T4.top, y)];
+  }
+  function fpSwing(h0) {
+    if (!h0) return h0;
+    const T4 = FP, W4 = FPW, h2 = xy(h0);
+    const x = Math.max(W4.xmin, h2[0] > T4.x0 ? T4.x0 + (h2[0] - T4.x0) * T4.xs : h2[0]);
+    return [x, clamp5(h2[1] - W4.c, W4.top, W4.bottom)];
   }
   var Viewmodel = class {
     constructor(ctx) {
@@ -69618,9 +69682,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lastActT = -1;
       this.cleared = -1;
       this.frame = 0;
-      this.outlineMat = outlineMaterial2(22e-4, 3810328, { fog: false });
+      this.outlineMat = nearCut(outlineMaterial2(22e-4, 3810328, { fog: false }));
       this.outlineMat.transparent = true;
-      this.weaponMat = new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false });
+      this.weaponMat = nearCut(new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false }));
     }
     build(p, look, wpn) {
       if (this.model) this.model.dispose();
@@ -69698,19 +69762,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const df = !!p.fruit && !p.gills;
         const stroking = pose.moving || !!p.intent?.mz;
         this.swimPh = (this.swimPh || 0) + dtv * (df ? 9 : stroking ? p.gills ? 5.5 : 3.6 : 1.9);
-        const ph = this.swimPh, s = Math.sin(ph);
+        const ph2 = this.swimPh, s = Math.sin(ph2);
         let hF, hB, spread;
         if (df) {
-          hF = [0.16 + 0.08 * s, 0.02 + 0.1 * Math.cos(ph)];
-          hB = [0.13 - 0.08 * Math.sin(ph + 1.9), 0.06 + 0.1 * Math.cos(ph + 1.9)];
-          spread = 0.2 + 0.06 * Math.sin(ph * 0.7);
+          hF = [0.16 + 0.08 * s, 0.02 + 0.1 * Math.cos(ph2)];
+          hB = [0.13 - 0.08 * Math.sin(ph2 + 1.9), 0.06 + 0.1 * Math.cos(ph2 + 1.9)];
+          spread = 0.2 + 0.06 * Math.sin(ph2 * 0.7);
         } else if (stroking) {
-          hF = [0.34 + 0.12 * Math.cos(ph), 0.02 - 0.05 * s];
+          hF = [0.34 + 0.12 * Math.cos(ph2), 0.02 - 0.05 * s];
           hB = hF.slice();
           spread = 0.02 + 0.24 * Math.max(0, s);
         } else {
-          hF = [0.3 + 0.04 * Math.cos(ph), 0.1 + 0.03 * s];
-          hB = [0.3 + 0.04 * Math.cos(ph + 0.5), 0.1 + 0.03 * Math.sin(ph + 0.5)];
+          hF = [0.3 + 0.04 * Math.cos(ph2), 0.1 + 0.03 * s];
+          hB = [0.3 + 0.04 * Math.cos(ph2 + 0.5), 0.1 + 0.03 * Math.sin(ph2 + 0.5)];
           spread = 0.14 + 0.07 * s;
         }
         const grip = df ? "claw" : stroking && s < -0.2 ? "relaxed" : "flat";
@@ -69721,20 +69785,40 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const k = this.ready, q2 = this.pump * (1 - k);
         const relF = [0.04 + q2 * (0.12 - sw2 * 0.18), 0.42 - q2 * (0.08 + Math.max(0, -sw2) * 0.13)];
         const relB = [0.02 + q2 * (0.1 + sw2 * 0.18), 0.42 - q2 * (0.08 + Math.max(0, sw2) * 0.13)];
+        let rF = xy(P4.hF, [0.05, 0.4]), rB = xy(P4.hB, [-0.03, 0.4]);
+        const carry = !!this.fpArmed && pose.moving;
+        this.carryRun = (this.carryRun ?? 0) + ((carry && pose.sprint ? 1 : 0) - (this.carryRun ?? 0)) * Math.min(1, dtv * 6);
+        const st = carry ? pose.stanceP || null : null;
+        if (st) {
+          const r = this.carryRun, dip = Math.abs(Math.sin(w));
+          const lower = (h2) => [h2[0] - 0.05 * r, h2[1] + 0.03 + 0.09 * r + 0.02 * dip];
+          rF = lower(xy(st.hF, rF));
+          rB = lower(xy(st.hB, rB));
+        }
         PP = {
           ...P4,
-          hF: mix23(relF, xy(P4.hF, [0.05, 0.4]), k),
-          hB: mix23(relB, xy(P4.hB, [-0.03, 0.4]), k),
+          hF: mix23(relF, rF, k),
+          hB: mix23(relB, rB, k),
           eF: 1,
           eB: 1,
           hand: k > 0.5 ? P4.hand : "relaxed",
           handB: k > 0.5 ? P4.handB : "relaxed"
         };
+        if (st) {
+          const r = this.carryRun, rock = Math.sin(w) * 0.06;
+          if (st.wF !== null && st.wF !== void 0) PP.wF = st.wF + 1.5 * r + rock;
+          if (st.wB !== null && st.wB !== void 0) PP.wB = st.wB + 1.5 * r - rock;
+        }
         if (k > 0.5) {
           PP.hF = [PP.hF[0], PP.hF[1] + 0.04 * k];
           PP.hB = [PP.hB[0], PP.hB[1] + 0.04 * k];
         }
         o.spread = (o.spread || 0) + 0.05 * q2 + 0.03 * k;
+        if (this.fpArmed && wpn?.kind === "gun" && wpn.gun !== "sling" && k > 0.5) {
+          PP.hF = [Math.max(PP.hF[0], 0.24), Math.min(PP.hF[1], 0.12 + 0.08 * (this.carryRun || 0))];
+          PP.hB = mix23(PP.hB, relB, k);
+          o.spread += 0.06 * k;
+        }
       }
       const holding = !!p.held && !swimming && !A && p.state !== "hurt";
       this.holdK = (this.holdK ?? 0) + ((holding ? 1 : 0) - (this.holdK ?? 0)) * Math.min(1, dtv * 10);
@@ -69754,24 +69838,35 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (reach > 0) {
         PP = { ...PP, hF: mix23(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? "palm" : "grab" };
       }
+      let windK = 0;
       if (A) {
-        const T4 = FP;
-        const fp = (h2) => {
-          if (!h2) return h2;
-          const k = clamp5(h2[0] / 0.43, 0, 1);
-          let x = h2[0] > T4.x0 ? T4.x0 + (h2[0] - T4.x0) * T4.xs : h2[0] >= 0 ? Math.max(T4.xmin, h2[0]) : h2[0];
-          const y = h2[1] - T4.c - T4.L * k;
-          if (y < 0 && h2[0] > 0) x = Math.max(x, T4.xmin + (T4.xhigh - T4.xmin) * clamp5(-y / 0.3, 0, 1));
-          return [x, Math.max(T4.top, y)];
-        };
-        PP = { ...PP, hF: fp(PP.hF), hB: fp(PP.hB) };
+        if (A.weapon && wpn && o.armed) {
+          windK = clamp5((0.1 - xy(PP.hF, [0.2, 0])[0]) / 0.25, 0, 1);
+          const pistol = wpn.kind === "gun" && wpn.gun !== "sling";
+          const oneHand = pistol || wpn.kind === "sword" && (wpn.count || 1) < 2 && (!PP.hB || Array.isArray(PP.hB));
+          PP = { ...PP, hF: fpSwing(PP.hF), hB: oneHand ? [0.02, 0.45] : fpSwing(PP.hB) };
+          if ((wpn.kind === "axe" || wpn.kind === "staff") && Number.isFinite(PP.wF)) {
+            const c = Math.cos(PP.wF), sn = Math.sin(PP.wF), k = wpn.kind === "staff" ? 0.12 : -0.1;
+            const s = clamp5((windK - 0.1) / 0.4, 0, 1), on = 1 - s * s * (3 - 2 * s);
+            PP.hB = [0.02 + (PP.hF[0] + k * c - 0.02) * on, 0.45 + (PP.hF[1] + k * sn - 0.45) * on];
+            o.grip2 = wpn.kind === "staff" ? 0.14 : -0.12;
+            o.grip2K = on;
+          }
+          if (pistol) {
+            PP.hF = [PP.hF[0], Math.max(PP.hF[1], 0.04)];
+            o.spread = (o.spread || 0) + 0.08;
+          }
+        } else PP = { ...PP, hF: fpStrike(PP.hF), hB: fpStrike(PP.hB) };
       }
+      if (PP.b && (PP.b[0] || PP.b[1])) PP = { ...PP, b: [0, 0] };
       o.leanAdd = -(PP.l || 0) * 0.55;
       o.lift = 0;
       o.roll = 0;
       o.squash = 1;
       o.reachR = holdAt || (p.fruit === "gomu" ? this.stretch(p, ctx) : null);
       m.pose(PP, o);
+      const hw0 = m.held?.[0];
+      if (hw0 && hw0.kind === "staff") hw0.group.position.addScaledVector(_ax.set(1, 0, 0).applyQuaternion(hw0.group.quaternion), 0.3);
       const held = holdItem(m, holding ? p.held : null, { viewmodel: true });
       if (held) {
         const e = p.eating && p.eating.id === p.held ? p.eating : null;
@@ -69796,12 +69891,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lastPitch = pitch;
       this.sway.multiplyScalar(Math.exp(-dt * 7));
       const moving = pose.moving;
-      this.bob += dt * (moving ? pose.sprint ? 13 : 9 : 1.6);
+      this.bob += dt * 1.6;
       const bobA = moving ? pose.sprint ? 0.028 : 0.014 : 4e-3;
-      const bx = Math.cos(this.bob * 0.5) * bobA, by = -Math.abs(Math.sin(this.bob * 0.5)) * bobA * 1.4 + Math.sin(env.time * 1.3) * 3e-3;
+      this.bobA = (this.bobA ?? bobA) + (bobA - (this.bobA ?? bobA)) * Math.min(1, dt * 8);
+      const ph = moving ? pose.walk || 0 : this.bob * 0.5;
+      const bx = Math.cos(ph) * this.bobA, by = -Math.abs(Math.sin(ph)) * this.bobA * 1.4 + Math.sin(env.time * 1.3) * 3e-3;
       this.body.rotation.set(0, Math.PI / 2, 0);
       const use = swimming ? 0.8 : Math.max(this.ready ?? 0, reach, (this.pump ?? 0) * 0.28, (this.holdK ?? 0) * 0.75);
-      this.body.position.set(this.sway.x + bx, -0.1 + 0.26 * use - eyeY + this.sway.y + by, -0.06);
+      this.windAside = (this.windAside ?? 0) + (windK - (this.windAside ?? 0)) * Math.min(1, dt * 18);
+      this.body.position.set(this.sway.x + bx + FPW.aside * this.windAside, -0.1 + 0.26 * use - eyeY + this.sway.y + by, -0.06);
       this.body.updateMatrix();
       const fx = m.fx;
       fx.uHaki.value.set(p.armament ? 1 : 0, p.armament ? 1 : 0, pose.armLegs ? 1 : 0, pose.armLegs ? 1 : 0);

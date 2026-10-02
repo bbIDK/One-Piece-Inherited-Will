@@ -369,7 +369,23 @@ rearrange them.
     it (the hand goes to the hilt and pulls it out along the sheath into
     your stance) and puts it back again.
   - In first person the view rides your head: lean into a sprint or lunge
-    into a heavy blow and your eyes go with it (never through a wall).
+    into a heavy blow and your eyes go with it (never through a wall). Your
+    arms hang from your eyes, so a lunge doesn't carry them out ahead of
+    you a second time. A weapon's swing is seen the way your eyes would see
+    it: wound up at your side (the arm never folds back past your head),
+    the blade sweeping across the view, a heavy chop raised over your
+    shoulder and brought down through the middle; with one blade the other
+    hand stays down out of the way. A pistol is held low on the right, as in
+    any shooter; a staff or an axe is swung in both hands, the other hand on
+    the shaft (a staff gripped near its end, so its far half never swings
+    back into your face), letting go to drop out of the way while a heavy
+    blow is drawn back over the shoulder.
+  - **Running with a weapon**: it's carried, not swung about like an empty
+    arm. Held in its stance, it rocks and dips with each step (in first
+    person too, in time with your feet). At a sprint a sword trails low
+    behind you, two swords both (the swordsman's run), a gun is held low,
+    and a staff or an axe is carried across the body; in first person the
+    blade dips down out of your way.
     Look down and you bow your head, as anyone does: you see your chest,
     arms, legs and feet, never your own head, hair or hat, and never into
     yourself. At the helm you look out over the wheel with your hands on
@@ -517,6 +533,8 @@ node tools/shot.mjs fpbody                      # first person: looking down sta
 node tools/shot.mjs fphelm                      # first person at a caravel's helm (ahead, down at the wheel, back) and a rowboat's oars
 node tools/shot.mjs c3motion [--looks=longskirt,dress,skirt,coat,longarm] [--sit]   # clothes and hair moving: standing, walking, running, stopping (and sat down)
 node tools/shot.mjs c3draw [--wpns=fine_katana,flintlock,bo_staff] [--modes=third,first]   # weapons worn, drawn from the hotbar and sheathed, part way through
+node tools/shot.mjs fpweapons [--wpns=rusty_katana,flintlock] [--skip=run,atk] [--pitches=-0.08,-0.75]   # first person per weapon: ready, running, sprinting, a combo and a heavy, frame by frame
+node tools/shot.mjs c3carry [--wpns=sword,sword2,gun,staff,axe]   # third person: a weapon carried at a run and a sprint
 node tools/shot.mjs probeshots --js=<file>        # several camera views in one run (the file returns [{ x, y, yaw, pitch }])
 node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's start, then fast-forwards through all three parts
 node tools/shot.mjs storydrift | storyswitch               # the Grand Line's currents; the story following a change of road

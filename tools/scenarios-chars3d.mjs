@@ -730,6 +730,39 @@ export const scenarios = {
       }
     },
   },
+  // a weapon carried on the move, seen from the side: running (four frames
+  // across a stride) and sprinting, for each kind of weapon
+  //   --wpns=sword,sword2,gun,staff,axe
+  c3carry: {
+    async run(page, snap, args) {
+      await boot(page);
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; });
+      const KIT = { sword: ['ittoryu', 'sword', 1], sword2: ['nitoryu', 'sword', 2], gun: ['sniper', 'gun', 1], staff: ['weather_science', 'staff', 1], axe: ['elbaf', 'axe', 1] };
+      for (const name of String(args.wpns || 'sword,sword2,gun,staff,axe').split(',')) {
+        const [style, kind, count] = KIT[name];
+        await page.evaluate(([style, kind, count]) => {
+          window.OP.hold = true;
+          const C = window.__C3; C.clear();
+          const a = C.spawn({ name: 'Carrier', id: 'carrier', showName: false, style, weapon: kind, count, look: { race: 'human', seed: 21, idle: 'rest', frame: 'athletic', topStyle: 'shirt', top: '#f5f5f5', bottomStyle: 'trousers', bottom: '#2d3436' } }, 3.4, -1.6, Math.PI / 2);
+          a.style = style; a.drawn = true;
+          C.view(0, -0.06);
+        }, [style, kind, count]);
+        await settle(page, 4);
+        for (const [gait, sprint, mag] of [['run', false, 1], ['sprint', true, 1]]) {
+          await page.evaluate(([sprint, mag]) => { const a = window.__C3.npcs[0]; a.intent.mx = 0; a.intent.my = mag; a.intent.sprint = sprint; }, [sprint, mag]);
+          for (let i = 0; i < 10; i++) await step(page, 0.05);
+          for (let f = 0; f < 4; f++) {
+            await step(page, 0.07);
+            await page.evaluate(() => { const a = window.__C3.npcs[0], p = window.OP.game.player; window.__C3.view(Math.atan2(a.y - p.y, a.x - p.x), -0.06); });
+            await frames(page, 1);
+            await snap(`${name}-${gait}${f}`);
+          }
+          await page.evaluate(() => { const a = window.__C3.npcs[0]; a.intent.mx = 0; a.intent.my = 0; a.intent.sprint = false; a.x = window.OP.game.player.x + 3.4; a.y = window.OP.game.player.y - 1.6; });
+          await settle(page, 2);
+        }
+      }
+    },
+  },
   // your own body in first person: looking down standing, walking, in a guard; and third person as usual
   //   --arms=1.8 (a long-armed body) --hair=long --hat=hood --top=coat --coat=#553322
   fpbody: {
@@ -929,14 +962,15 @@ export const scenarios = {
         await settle(page, 8);
         await hold(true);
         await snap(`${tag}-ready`);
-        // walking, then sprinting: four frames across a stride each
-        for (const [gait, keys] of [['run', ['W']], ['sprint', ['W', 'Shift']]]) {
+        // walking, then sprinting: four frames across a stride each (--skip=run leaves them out, --skip=atk the blows)
+        const skip = String(args.skip || '');
+        for (const [gait, keys] of skip.includes('run') ? [] : [['run', ['W']], ['sprint', ['W', 'Shift']]]) {
           await page.evaluate((keys) => { for (const k of keys) window.OP.key(k, true); for (let i = 0; i < 12; i++) window.OP.step(1 / 30); }, keys);
           for (let f = 0; f < 4; f++) { await step(page, 0.09); await snap(`${tag}-${gait}${f}`); }
           await page.evaluate((keys) => { for (const k of keys) window.OP.key(k, false); for (let i = 0; i < 20; i++) window.OP.step(1 / 30); }, keys);
         }
         // a combo, ahead and looking down
-        for (const pitch of [-0.08, -0.75]) {
+        for (const pitch of skip.includes('atk') ? [] : String(args.pitches || '-0.08,-0.75').split(',').map(Number)) {
           await page.evaluate((pitch) => { const g = window.OP.game; g.view3d.rig.pitch = pitch; for (let i = 0; i < 20; i++) window.OP.step(1 / 30); }, pitch);
           for (let k = 0; k < 3; k++) {
             await page.evaluate((k) => { const g = window.OP.game, p = g.player; p.combo.window = k ? 1 : 0; p.combo.step = k; p.cooldowns = {}; p.tryM1(g); }, k);

@@ -20,7 +20,7 @@ const toXY = (h, fb) => (!h ? fb : Array.isArray(h) ? h : [Math.cos(h.a) * h.r, 
 const _m = new THREE.Matrix4();
 const _a = V(), _b = V(), _c = V(), _d = V(), _u = V(), _p = V(), _t = V();
 const _qa = Q(), _qb = Q(), _qc = Q();
-const _att = V(), _attP = V();
+const _att = V(), _attP = V(), _g2 = V();
 
 /**
  * An idle attitude's hand target (model space) and elbow pole for arm k:
@@ -102,7 +102,9 @@ export class Rig {
    * Solve a pose. `o`: { tilt, walkRel (radians, when the legs follow the walk
    * cycle), spread (extra arm spread), legSpread, leanAdd, tiltAdd (head),
    * lookYaw, reachR / reachL (Vector3 targets overriding a hand: rubber
-   * punches in flight), shape: ['fist'|'palm'|'finger'|'claw'|'flat', …] }.
+   * punches in flight), grip2 / grip2K (the other hand on the first one's
+   * weapon, this far along it, and how much: 0..1), shape: ['fist'|'palm'|
+   * 'finger'|'claw'|'flat', …] }.
    */
   solve(P, o = {}) {
     const d = this.d;
@@ -166,6 +168,10 @@ export class Rig {
           _att.set(0.3 * d.Am * 0.6, -(d.A1 + d.A2) * 0.6, side * (d.shW * 0.95 + 0.05)).applyQuaternion(this.qLean).add(S);
           T.lerp(_att, lk);
         }
+        // the other hand on the first one's weapon — a staff's or an axe's
+        // shaft (o.grip2: how far along it from the first hand), eased on
+        // and off by o.grip2K
+        if (k === 1 && o.grip2 && o.grip2K > 0) T.lerp(_g2.copy(this.E[0]).addScaledVector(this.blade[0], o.grip2), o.grip2K);
       }
       // elbow pole: the 2D bend side in the swing plane, flared outward
       const e = k === 0 ? (P.eF ?? 1) : (P.eB ?? 1);
@@ -177,7 +183,7 @@ export class Rig {
       // elbow down and back: with the target near shoulder height the swing-plane pole
       // would flip over as the body bobs, and the whole arm and the palm with it)
       if (reach) this._pole.set(-0.75, -0.65, side * 0.45);
-      if (o.att && o.attK > 0 && !reach && !(k === 1 && broom)) this._pole.lerp(_attP, o.attK);
+      if (o.att && o.attK > 0 && !reach && !(k === 1 && (broom || (o.grip2 && o.grip2K > 0.5)))) this._pole.lerp(_attP, o.attK);
       ik(S, T, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P.stretch || !!reach, J, E);
       const U = k === 0 ? B.uarmR : B.uarmL, F = k === 0 ? B.farmR : B.farmL, Hd = k === 0 ? B.handR : B.handL;
       this.pos[U].copy(S); aimNegY(this.quat[U], _t.subVectors(J, S), this._pole);

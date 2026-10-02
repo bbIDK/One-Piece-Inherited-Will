@@ -26,6 +26,12 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 // xmin: a wind-up stays in view), hands raised c, and L more at full reach, never above top (an
 // uppercut ends up in the middle of the view, not over it)
 const FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16 };
+// a weapon's swing (see update): the hand kept at least xmin out in front of
+// the shoulder (it never folds back past your head, and never comes up big in
+// your face), raised c, and held between top (about the shoulder: no arm laid
+// along your line of sight) and bottom (a little below it, still in view) —
+// the blade does the sweeping across the view; a wind-up draws the arms aside
+const FPW = { xmin: 0.22, c: 0.06, top: -0.04, bottom: 0.1, aside: 0.08 };
 // food in the hand (see update): where the wrist goes, in the camera's frame
 // (right, up, forward; metres from the eye) — held out low on the right, and
 // brought up under your mouth to eat
@@ -34,10 +40,62 @@ const xy = (h, fb) => (!h ? fb : Array.isArray(h) ? h : [Math.cos(h.a) * h.r, Ma
 const mix2 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 const HIDE = [B.hips, B.chest, B.head, B.sheath, B.hilts, B.tail];
 const LEGS = [B.thighR, B.shinR, B.footR, B.thighL, B.shinL, B.footL];
-const _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
+const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _ax = new THREE.Vector3();
 const _q = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0), _one = new THREE.Vector3(1, 1, 1), _mA = new THREE.Matrix4(), _mB = new THREE.Matrix4();
 
 export function createViewmodel(ctx) { return new Viewmodel(ctx); }
+
+// Nothing of the view's own weapon (or the ink round it, or round the arms) is
+// drawn closer to the eye than this: a staff's far end, a pommel, a gun's
+// butt swung back toward you would fill the view from the inside.
+const NEAR_CUT = 0.15;
+function nearCut(mat) {
+  const prev = mat.onBeforeCompile;
+  mat.onBeforeCompile = (sh, r) => {
+    prev?.call(mat, sh, r);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying float vEyeZ;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvEyeZ = -mvPosition.z;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vEyeZ;')
+      .replace('void main() {', `void main() {\n  if (vEyeZ < ${NEAR_CUT.toFixed(3)}) discard;`);
+  };
+  const key = mat.customProgramCacheKey ? mat.customProgramCacheKey.bind(mat) : () => '';
+  mat.customProgramCacheKey = () => key() + '|vm-near';
+  return mat;
+}
+
+/**
+ * A strike's hand target (2D, from the shoulder: forward, down), as your own
+ * eyes see it: a fist ends big just right of and below the crosshair. (A
+ * swing's wind-up gives the hand as an angle and a reach — {a, r}: read as a
+ * point, or every weapon's wind-up came out NaN and the arms drew as wreckage
+ * across the view.)
+ */
+export function fpStrike(h0) {
+  if (!h0) return h0;
+  const T = FP, h = xy(h0);
+  const k = clamp(h[0] / 0.43, 0, 1);
+  // (a hand drawn back for a swing is left where it is: it winds up out of sight)
+  let x = h[0] > T.x0 ? T.x0 + (h[0] - T.x0) * T.xs : h[0] >= 0 ? Math.max(T.xmin, h[0]) : h[0];
+  const y = h[1] - T.c - T.L * k;
+  // (a fist going up in front of the face is kept further out, so it stays in view)
+  if (y < 0 && h[0] > 0) x = Math.max(x, T.xmin + (T.xhigh - T.xmin) * clamp(-y / 0.3, 0, 1));
+  return [x, Math.max(T.top, y)];
+}
+
+/**
+ * A weapon's swing, seen from your own eyes: the arm keeps low and out of your
+ * line of sight while the blade sweeps across it — wound up out of sight at
+ * your side (never folded back past your head, where the arm went through the
+ * view), struck through the lower half of the view.
+ */
+export function fpSwing(h0) {
+  if (!h0) return h0;
+  const T = FP, W = FPW, h = xy(h0);
+  const x = Math.max(W.xmin, h[0] > T.x0 ? T.x0 + (h[0] - T.x0) * T.xs : h[0]);
+  return [x, clamp(h[1] - W.c, W.top, W.bottom)];
+}
 
 class Viewmodel {
   constructor(ctx) {
@@ -58,9 +116,9 @@ class Viewmodel {
     this.lastActT = -1;
     this.cleared = -1;
     this.frame = 0;
-    this.outlineMat = outlineMaterial(0.0022, 0x3a2418, { fog: false });
+    this.outlineMat = nearCut(outlineMaterial(0.0022, 0x3a2418, { fog: false }));
     this.outlineMat.transparent = true;
-    this.weaponMat = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false });
+    this.weaponMat = nearCut(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false }));
   }
 
   build(p, look, wpn) {
@@ -158,14 +216,40 @@ class Viewmodel {
       // relaxed: hanging at the sides; sprinting: swinging up into the lower corners
       const relF = [0.04 + q * (0.12 - sw * 0.18), 0.42 - q * (0.08 + Math.max(0, -sw) * 0.13)];
       const relB = [0.02 + q * (0.1 + sw * 0.18), 0.42 - q * (0.08 + Math.max(0, sw) * 0.13)];
+      // A weapon in hand is carried ready as you go — not swung about with the
+      // stride like an empty arm (the body's own arms swing, and that whirled
+      // the blade round the view): held in its stance, dipping with each step
+      // (see the bob below); sprinting, lowered and tipped forward.
+      let rF = xy(P.hF, [0.05, 0.4]), rB = xy(P.hB, [-0.03, 0.4]);
+      const carry = !!this.fpArmed && pose.moving;
+      this.carryRun = (this.carryRun ?? 0) + ((carry && pose.sprint ? 1 : 0) - (this.carryRun ?? 0)) * Math.min(1, dtv * 6);
+      const st = carry ? pose.stanceP || null : null;
+      if (st) {
+        const r = this.carryRun, dip = Math.abs(Math.sin(w));
+        const lower = (h) => [h[0] - 0.05 * r, h[1] + 0.03 + 0.09 * r + 0.02 * dip];
+        rF = lower(xy(st.hF, rF)); rB = lower(xy(st.hB, rB));
+      }
       PP = {
         ...P,
-        hF: mix2(relF, xy(P.hF, [0.05, 0.4]), k), hB: mix2(relB, xy(P.hB, [-0.03, 0.4]), k),
+        hF: mix2(relF, rF, k), hB: mix2(relB, rB, k),
         eF: 1, eB: 1,
         hand: k > 0.5 ? P.hand : 'relaxed', handB: k > 0.5 ? P.handB : 'relaxed',
       };
+      if (st) {
+        // (the blade rocks a little with your steps, and dips down out of your way at a sprint)
+        const r = this.carryRun, rock = Math.sin(w) * 0.06;
+        if (st.wF !== null && st.wF !== undefined) PP.wF = st.wF + 1.5 * r + rock;
+        if (st.wB !== null && st.wB !== undefined) PP.wB = st.wB + 1.5 * r - rock;
+      }
       if (k > 0.5) { PP.hF = [PP.hF[0], PP.hF[1] + 0.04 * k]; PP.hB = [PP.hB[0], PP.hB[1] + 0.04 * k]; }
       o.spread = (o.spread || 0) + 0.05 * q + 0.03 * k;
+      // (a pistol held ready sits low on the right, in view — not down out of
+      // sight with only its muzzle showing — and the other hand stays down)
+      if (this.fpArmed && wpn?.kind === 'gun' && wpn.gun !== 'sling' && k > 0.5) {
+        PP.hF = [Math.max(PP.hF[0], 0.24), Math.min(PP.hF[1], 0.12 + 0.08 * (this.carryRun || 0))];
+        PP.hB = mix2(PP.hB, relB, k);
+        o.spread += 0.06 * k;
+      }
     }
     // food in your hand: held up in the lower right of the view; eating it,
     // brought in to your mouth at the bottom of the view, a bite at a time
@@ -189,31 +273,55 @@ class Viewmodel {
     if (reach > 0) { PP = { ...PP, hF: mix2(xy(PP.hF, [0.05, 0.4]), [0.4, 0.06], reach), hand: p.reachT > 0.22 ? 'palm' : 'grab' }; }
     // attacks aim at the crosshair: an extending hand rises toward eye level
     // (the shoulders sit well below the eye) and swings in toward the centre
+    let windK = 0;
     if (A) {
       // Seen from your own eyes a straight punch drives INTO the view: the
       // fist ends big, just right of and below the crosshair, the forearm
       // foreshortened behind it. Full reach (as the body strikes in third
       // person) would put it the length of a pole away, a small fist at the
       // end of a long sleeve; the last of the reach is taken in.
-      const T = FP;
-      const fp = (h) => {
-        if (!h) return h;
-        const k = clamp(h[0] / 0.43, 0, 1);
-        // (a hand drawn back for a swing is left where it is: it winds up out of sight)
-        let x = h[0] > T.x0 ? T.x0 + (h[0] - T.x0) * T.xs : h[0] >= 0 ? Math.max(T.xmin, h[0]) : h[0];
-        const y = h[1] - T.c - T.L * k;
-        // (a fist going up in front of the face is kept further out, so it stays in view)
-        if (y < 0 && h[0] > 0) x = Math.max(x, T.xmin + (T.xhigh - T.xmin) * clamp(-y / 0.3, 0, 1));
-        return [x, Math.max(T.top, y)];
-      };
-      PP = { ...PP, hF: fp(PP.hF), hB: fp(PP.hB) };
+      if (A.weapon && wpn && o.armed) {
+        // (how far the swing is drawn back: the arms go aside with it, out of the middle of the view)
+        windK = clamp((0.1 - xy(PP.hF, [0.2, 0])[0]) / 0.25, 0, 1);
+        // (one blade — or a pistol — in one hand: the other hand stays down out
+        // of sight, not left hanging in front of you in a fist while you cut)
+        const pistol = wpn.kind === 'gun' && wpn.gun !== 'sling';
+        const oneHand = pistol || (wpn.kind === 'sword' && (wpn.count || 1) < 2 && (!PP.hB || Array.isArray(PP.hB)));
+        PP = { ...PP, hF: fpSwing(PP.hF), hB: oneHand ? [0.02, 0.45] : fpSwing(PP.hB) };
+        // (a staff or an axe is swung in both hands: the other one on the
+        // handle, just behind the first — not off on its own side of the
+        // view. A staff is gripped at its end, so the other hand goes just
+        // above, on the shaft. Drawn right back over the shoulder for a heavy
+        // blow, the other hand lets go and drops out of the way, taking hold
+        // again as the blow comes down: reaching across to the raised one,
+        // its arm swept right across your face)
+        if ((wpn.kind === 'axe' || wpn.kind === 'staff') && Number.isFinite(PP.wF)) {
+          const c = Math.cos(PP.wF), sn = Math.sin(PP.wF), k = wpn.kind === 'staff' ? 0.12 : -0.1;
+          const s = clamp((windK - 0.1) / 0.4, 0, 1), on = 1 - s * s * (3 - 2 * s);
+          PP.hB = [0.02 + (PP.hF[0] + k * c - 0.02) * on, 0.45 + (PP.hF[1] + k * sn - 0.45) * on];
+          o.grip2 = wpn.kind === 'staff' ? 0.14 : -0.12;
+          o.grip2K = on;
+        }
+        // (a pistol is fired from low on the right, as in any shooter: not
+        // thrust out to the middle of the view)
+        if (pistol) { PP.hF = [PP.hF[0], Math.max(PP.hF[1], 0.04)]; o.spread = (o.spread || 0) + 0.08; }
+      } else PP = { ...PP, hF: fpStrike(PP.hF), hB: fpStrike(PP.hB) };
     }
+    // The view rides your eyes, and your eyes your head: a lunge, a crouch or
+    // a leap already carries it. The arms hang from the eyes, so the body's
+    // own shift is taken out (kept, a lunge carried them out ahead of your
+    // eyes twice over, an arm's length down your line of sight).
+    if (PP.b && (PP.b[0] || PP.b[1])) PP = { ...PP, b: [0, 0] };
     // the body lean mostly stays out of first person
     o.leanAdd = -(PP.l || 0) * 0.55;
     o.lift = 0; o.roll = 0; o.squash = 1;
     // Gum-Gum: the arm stretches out to the fist in flight
     o.reachR = holdAt || (p.fruit === 'gomu' ? this.stretch(p, ctx) : null);
     m.pose(PP, o);
+    // (a staff is held near its end from your own eyes, not by the middle: its
+    // other half swung back at your face)
+    const hw0 = m.held?.[0];
+    if (hw0 && hw0.kind === 'staff') hw0.group.position.addScaledVector(_ax.set(1, 0, 0).applyQuaternion(hw0.group.quaternion), 0.3);
     const held = holdItem(m, holding ? p.held : null, { viewmodel: true });
     if (held) { const e = p.eating && p.eating.id === p.held ? p.eating : null; heldSize(m, e ? 1 - 0.55 * Math.min(1, e.t / e.dur) : 1); }
     this.fixup();
@@ -236,13 +344,17 @@ class Viewmodel {
     this.lastYaw = yaw; this.lastPitch = pitch;
     this.sway.multiplyScalar(Math.exp(-dt * 7));
     const moving = pose.moving;
-    this.bob += dt * (moving ? (pose.sprint ? 13 : 9) : 1.6);
+    this.bob += dt * 1.6;
+    // (moving, in step with your feet: a dip as each one lands, a sway toward it)
     const bobA = moving ? (pose.sprint ? 0.028 : 0.014) : 0.004;
-    const bx = Math.cos(this.bob * 0.5) * bobA, by = -Math.abs(Math.sin(this.bob * 0.5)) * bobA * 1.4 + Math.sin(env.time * 1.3) * 0.003;
+    this.bobA = (this.bobA ?? bobA) + (bobA - (this.bobA ?? bobA)) * Math.min(1, dt * 8);
+    const ph = moving ? pose.walk || 0 : this.bob * 0.5;
+    const bx = Math.cos(ph) * this.bobA, by = -Math.abs(Math.sin(ph)) * this.bobA * 1.4 + Math.sin(env.time * 1.3) * 0.003;
     this.body.rotation.set(0, Math.PI / 2, 0);
     // the shoulders ride up toward the eye when the hands are in use, and sink when they aren't
     const use = swimming ? 0.8 : Math.max(this.ready ?? 0, reach, (this.pump ?? 0) * 0.28, (this.holdK ?? 0) * 0.75);
-    this.body.position.set(this.sway.x + bx, -0.1 + 0.26 * use - eyeY + this.sway.y + by, -0.06);
+    this.windAside = (this.windAside ?? 0) + (windK - (this.windAside ?? 0)) * Math.min(1, dt * 18);
+    this.body.position.set(this.sway.x + bx + FPW.aside * this.windAside, -0.1 + 0.26 * use - eyeY + this.sway.y + by, -0.06);
     this.body.updateMatrix();
     // ---- effects: haki, flash, fruit glow, muzzle flash
     const fx = m.fx;

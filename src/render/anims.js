@@ -472,18 +472,50 @@ function gaitPose(P, pose, base) {
   }
   P.l = (P.l || 0) * (1 - g.k) + 0.03 + 0.15 * g.k + 0.12 * g.s;
   P.ht = (P.ht || 0) - P.l * 0.45;
-  if (pose.combat) return;
+  const armed = base.wF !== null && base.wF !== undefined;
+  // (fists up in a fight stay up: only a weapon's carry moves with the stride)
+  if (pose.combat && !armed) return;
   // arms swing against the legs: the right hand forward as the right foot goes back
   const swF = clamp01(0.5 - a[0] / (2 * g.R)), swB = clamp01(0.5 - b[0] / (2 * g.R));
   const run = clamp01(g.k * 1.3 - 0.2);
   const walkArm = (sw) => [mixN(-0.1, 0.14, sw), 0.38 - sw * 0.03];
   const runArm = (sw) => [mixN(-0.14, 0.22 + 0.04 * g.s, sw), mixN(0.28, 0.06, sw)];
   const wF = walkArm(swF), wB = walkArm(swB), rF = runArm(swF), rB = runArm(swB);
+  const freeB = [mixN(wB[0], rB[0], run) - 0.01, mixN(wB[1], rB[1], run)];
+  if (armed) { carryPose(P, pose, base, freeB, u, load); return; }
   P.hF = [mixN(wF[0], rF[0], run) + 0.02, mixN(wF[1], rF[1], run)];
-  P.hB = [mixN(wB[0], rB[0], run) - 0.01, mixN(wB[1], rB[1], run)];
+  P.hB = freeB;
   P.eF = 1; P.eB = 1;
   if (run > 0.5) { P.hand = 'fist'; P.handB = 'fist'; }
-  if (pose.sprint) { P.wF = base.wF === null ? null : -2.4; P.wB = base.wB === null ? null : -2.5; }
+}
+
+/**
+ * A weapon in hand, on the move: carried, not swung about like an empty arm.
+ * Held in its stance, rocking a little with each step; at a sprint a blade
+ * trails low behind you (two of them, for two swords — the swordsman's run),
+ * a gun is held low, and a staff or an axe is carried across the body. The
+ * hand that isn't on the weapon swings with the stride.
+ */
+function carryPose(P, pose, base, freeB, u, load) {
+  const sw = Math.sin(u * TAU), bob = 0.014 * load, sprint = !!pose.sprint;
+  const sword = base === SWORD || base === SWORD2, two = base === SWORD2;
+  P.eF = 1; P.eB = 1;
+  if (base === GUN) {
+    P.hF = sprint ? [0.15 + 0.02 * sw, 0.27 + bob] : [0.21 + 0.02 * sw, 0.19 + bob];
+    P.wF = sprint ? 1.25 : 0.8;
+    P.hB = freeB;
+    return;
+  }
+  if (sprint && sword) {
+    P.hF = [-0.13 + 0.03 * sw, 0.3 + bob]; P.wF = 2.55;
+    if (two) { P.hB = [-0.16 - 0.03 * sw, 0.3 + bob]; P.wB = 2.65; } else P.hB = freeB;
+    return;
+  }
+  const hF = toXY(base.hF), hB = toXY(base.hB), low = sprint ? 0.05 : 0.02;
+  P.hF = [hF[0] + 0.015 * sw, hF[1] + low + bob];
+  P.hB = [hB[0] - 0.015 * sw, hB[1] + low + bob];
+  P.wF = base.wF + 0.05 * sw + (sprint ? 0.2 : 0);
+  if (base.wB !== null && base.wB !== undefined) P.wB = base.wB - 0.05 * sw + (sprint ? 0.2 : 0);
 }
 
 /** Mix two poses (used to ease between clips, stances and states). */
