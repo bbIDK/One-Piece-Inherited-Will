@@ -13,7 +13,7 @@ const ZOOMS = [0.5, 1, 2, 4, 8, 16, 32]; // m to a pixel of the minimap
 const DEFAULT = { foot: 1, sea: 2 }; // (indices into ZOOMS)
 const CHUNK = 256; // painting pixels a side of each piece of the planet kept drawn
 const KEEP = 48; // pieces kept (~12 MB)
-const PER_DRAW = 3; // pieces painted at most each time it's drawn (the rest wait as bare parchment)
+const PER_DRAW = 1; // pieces painted at most each time it's drawn (the rest wait as bare parchment, a frame or two)
 const RECHECK = 1.5; // s: how often the pieces round you are looked over for newly explored ground
 const PARCH = [240, 224, 186];
 const BLANK = [PARCH[0] * 0.98, PARCH[1] * 0.96, PARCH[2] * 0.92];
@@ -73,7 +73,7 @@ export class Minimap {
     const cx0 = Math.floor((p.x - half) / mx / CHUNK), cx1 = Math.floor((p.x + half) / mx / CHUNK);
     const cy0 = Math.max(0, Math.floor((p.y - half) / my / CHUNK)), cy1 = Math.min(Math.ceil(m.h / CHUNK) - 1, Math.floor((p.y + half) / my / CHUNK));
     const pcx = Math.floor(w.wx(p.x) / mx / CHUNK), pcy = Math.floor(p.y / my / CHUNK);
-    let painted = 0;
+    let painted = 0, waiting = false;
     g.imageSmoothingEnabled = true;
     for (let cy = cy0; cy <= cy1; cy++) {
       for (let cxr = cx0; cxr <= cx1; cxr++) {
@@ -86,7 +86,7 @@ export class Minimap {
         const near = Math.abs(cx - pcx) <= 1 && Math.abs(cy - pcy) <= 1;
         if (ch && near && recheck && painted < PER_DRAW && fogSum(w, m, cx, cy) !== ch.sum) { paint(w, m, cx, cy, ch, game.env?.revealAll); painted++; }
         if (!ch) {
-          if (painted >= PER_DRAW) continue;
+          if (painted >= PER_DRAW) { waiting = true; continue; }
           ch = { canvas: document.createElement('canvas'), sum: -1, used: 0 };
           paint(w, m, cx, cy, ch, game.env?.revealAll);
           painted++;
@@ -102,11 +102,14 @@ export class Minimap {
     // 2. the islands you know, charted close up (their buildings too, near enough)
     const detail = game.chartDetail || (game.chartDetail = new ChartDetail());
     const discovered = new Set(game.state?.char?.discovered || []);
-    detail.draw(g, {
+    // (a little at a time, every frame while there's charting to do: see ui.js)
+    const charting = detail.draw(g, {
       // (solid until the painting alone can show an island: a few metres to the pixel)
-      world: w, dpr, zoom: z, cw: css, ch: css, toS, px: p.x, py: p.y, alpha: smooth(0.07, 0.2, z),
+      world: w, dpr, zoom: z, cw: css, ch: css, toS, px: p.x, py: p.y, alpha: smooth(0.07, 0.2, z), budget: 3,
       known: (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland || seenIsland(w, isl),
     });
+    // (still something to chart or paint in view: draw again next frame)
+    this.pending = charting > 0 || waiting;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     // 3. the chart's rules: the survey grid, and the edges of the Grand Line and the Calm Belts
     rules(g, w, p, z, css, zone);

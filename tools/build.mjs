@@ -3,6 +3,7 @@
 // self-contained single-file build of the game.
 import * as esbuild from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,11 +29,25 @@ function writeSingleFile(code) {
   const js = code ?? readFileSync(join(root, 'dist/game.js'), 'utf8');
   // Inline the bundle; escape any "</script" sequences inside the code.
   const inlined = html.replace(
-    /<script src="dist\/game\.js"><\/script>/,
+    /<script src="dist\/game\.js[^"]*"><\/script>/,
     () => `<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`,
   );
   writeFileSync(join(root, 'dist/onepiece.html'), inlined);
   console.log('wrote dist/onepiece.html');
+}
+
+/**
+ * index.html asks for dist/game.js?v=<a hash of the bundle>: a new build has
+ * a new address, so browsers (and GitHub Pages' ten-minute cache) load it on
+ * a plain reload instead of running the old one.
+ */
+function stampIndex() {
+  const js = readFileSync(join(root, 'dist/game.js'));
+  const v = createHash('sha1').update(js).digest('hex').slice(0, 10);
+  const file = join(root, 'index.html');
+  const html = readFileSync(file, 'utf8');
+  const out = html.replace(/<script src="dist\/game\.js[^"]*"><\/script>/, `<script src="dist/game.js?v=${v}"></script>`);
+  if (out !== html) writeFileSync(file, out);
 }
 
 /** A page fragment (no <html>/<head>/<body>) for hosts that wrap pages in their own skeleton. */
@@ -64,6 +79,7 @@ if (watch) {
   console.log('watching…');
 } else {
   await esbuild.build(options);
+  stampIndex();
   // the shareable single-file build is minified
   const min = await esbuild.build({ ...options, minify: true, write: false, logLevel: 'silent' });
   writeSingleFile(min.outputFiles[0].text);

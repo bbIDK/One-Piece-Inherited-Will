@@ -641,7 +641,8 @@ export class UI {
     this.set(E.clock, 'clock', `Day ${env.day} · ${env.clockString()} · ${wx}`);
     // minimap
     this.mmT -= 1 / 60;
-    if (this.mmT <= 0) { this.mmT = 0.2; this.drawMinimap(game); }
+    // (5 times a second; every frame while an island's still being charted on it, a little at a time)
+    if (this.mmT <= 0) { this.drawMinimap(game); this.mmT = this.minimap?.pending ? 0 : 0.2; }
     // quest tracker
     this.qtT = (this.qtT || 0) - 1 / 60;
     if (this.qtT <= 0) { this.qtT = 0.35; this.drawTracker(game); }

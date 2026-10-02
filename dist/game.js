@@ -89647,12 +89647,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (zoom > 0.45) drawBuildings(g, c, v, a * smooth7(0.45, 0.8, zoom));
       }
       todo.sort((p, q2) => Math.hypot(p.mx - v.px, p.my - v.py) - Math.hypot(q2.mx - v.px, q2.my - v.py));
+      const budget = v.budget ?? BUDGET;
       for (const c of todo) {
-        if (performance.now() - t0 > BUDGET) break;
-        work(world, c, t0);
+        if (performance.now() - t0 > budget) break;
+        work(world, c, t0, budget);
       }
       g.globalAlpha = 1;
       this.trim();
+      return todo.filter((c) => !c.done).length;
     }
   };
   function start(world, isl) {
@@ -89691,12 +89693,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       buildings: null
     };
   }
-  function work(world, c, t0) {
+  function work(world, c, t0, budget = BUDGET) {
     const tw0 = performance.now(), st = c.stage;
-    workStage(world, c, t0);
+    workStage(world, c, t0, budget);
     (c.ms || (c.ms = [0, 0, 0]))[st] += performance.now() - tw0;
   }
-  function workStage(world, c, t0) {
+  function workStage(world, c, t0, BUDGET2) {
     if (c.stage === 0) {
       const n = c.gw * c.gh;
       if (!c.type) {
@@ -89715,7 +89717,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           c.dist[k] = (world.distRaw(x, y) - 128) * 0.25;
           c.mot[k] = vnoise4(x * 0.18, y * 0.18);
         }
-        if ((c.read & 15) === 0 && performance.now() - t0 > BUDGET) return;
+        if ((c.read & 15) === 0 && performance.now() - t0 > BUDGET2) return;
       }
       c.img = c.canvas.getContext("2d").createImageData(c.cw, c.ch);
       c.stage = 1;
@@ -89723,12 +89725,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (c.stage === 1) {
       while (c.row < c.ch) {
         paintRow(c, c.row++);
-        if ((c.row & 7) === 0 && performance.now() - t0 > BUDGET) return;
+        if ((c.row & 7) === 0 && performance.now() - t0 > BUDGET2) return;
       }
       c.canvas.getContext("2d").putImageData(c.img, 0, 0);
       c.img = null;
       c.stage = 2;
-      if (performance.now() - t0 > BUDGET) return;
+      if (performance.now() - t0 > BUDGET2) return;
     }
     if (c.stage === 2) {
       drawTrees(world, c);
@@ -90291,7 +90293,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var DEFAULT = { foot: 1, sea: 2 };
   var CHUNK3 = 256;
   var KEEP = 48;
-  var PER_DRAW = 3;
+  var PER_DRAW = 1;
   var RECHECK = 1.5;
   var PARCH2 = [240, 224, 186];
   var BLANK = [PARCH2[0] * 0.98, PARCH2[1] * 0.96, PARCH2[2] * 0.92];
@@ -90358,7 +90360,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const cx0 = Math.floor((p.x - half2) / mx / CHUNK3), cx1 = Math.floor((p.x + half2) / mx / CHUNK3);
       const cy0 = Math.max(0, Math.floor((p.y - half2) / my / CHUNK3)), cy1 = Math.min(Math.ceil(m.h / CHUNK3) - 1, Math.floor((p.y + half2) / my / CHUNK3));
       const pcx = Math.floor(w.wx(p.x) / mx / CHUNK3), pcy = Math.floor(p.y / my / CHUNK3);
-      let painted = 0;
+      let painted = 0, waiting = false;
       g.imageSmoothingEnabled = true;
       for (let cy = cy0; cy <= cy1; cy++) {
         for (let cxr = cx0; cxr <= cx1; cxr++) {
@@ -90374,7 +90376,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             painted++;
           }
           if (!ch) {
-            if (painted >= PER_DRAW) continue;
+            if (painted >= PER_DRAW) {
+              waiting = true;
+              continue;
+            }
             ch = { canvas: document.createElement("canvas"), sum: -1, used: 0 };
             paint(w, m, cx, cy, ch, game.env?.revealAll);
             painted++;
@@ -90388,7 +90393,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.trim();
       const detail = game.chartDetail || (game.chartDetail = new ChartDetail());
       const discovered = new Set(game.state?.char?.discovered || []);
-      detail.draw(g, {
+      const charting = detail.draw(g, {
         // (solid until the painting alone can show an island: a few metres to the pixel)
         world: w,
         dpr,
@@ -90399,8 +90404,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         px: p.x,
         py: p.y,
         alpha: smooth8(0.07, 0.2, z),
+        budget: 3,
         known: (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland || seenIsland(w, isl)
       });
+      this.pending = charting > 0 || waiting;
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       rules(g, w, p, z, css2, zone);
       for (const s of game.ships) {
@@ -96110,8 +96117,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       this.set(E.clock, "clock", `Day ${env.day} \xB7 ${env.clockString()} \xB7 ${wx}`);
       this.mmT -= 1 / 60;
       if (this.mmT <= 0) {
-        this.mmT = 0.2;
         this.drawMinimap(game);
+        this.mmT = this.minimap?.pending ? 0 : 0.2;
       }
       this.qtT = (this.qtT || 0) - 1 / 60;
       if (this.qtT <= 0) {

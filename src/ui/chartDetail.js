@@ -134,14 +134,17 @@ export class ChartDetail {
       g.drawImage(c.canvas, cx * dpr, cy * dpr, c.cw / c.px * zoom * dpr, c.ch / c.px * zoom * dpr);
       if (zoom > 0.45) drawBuildings(g, c, v, a * smooth(0.45, 0.8, zoom));
     }
-    // (the nearest first: the island you're on)
+    // (the nearest first: the island you're on; v.budget: ms to spend, if not the map's)
     todo.sort((p, q) => Math.hypot(p.mx - v.px, p.my - v.py) - Math.hypot(q.mx - v.px, q.my - v.py));
+    const budget = v.budget ?? BUDGET;
     for (const c of todo) {
-      if (performance.now() - t0 > BUDGET) break;
-      work(world, c, t0);
+      if (performance.now() - t0 > budget) break;
+      work(world, c, t0, budget);
     }
     g.globalAlpha = 1;
     this.trim();
+    // (how many in view are still being charted)
+    return todo.filter((c) => !c.done).length;
   }
 }
 
@@ -164,14 +167,14 @@ function start(world, isl) {
 }
 
 /** Chart some more of an island, until the frame's time is up. */
-function work(world, c, t0) {
+function work(world, c, t0, budget = BUDGET) {
   const tw0 = performance.now(), st = c.stage;
-  workStage(world, c, t0);
+  workStage(world, c, t0, budget);
   // (how long each stage took, all told: for the tests)
   (c.ms || (c.ms = [0, 0, 0]))[st] += performance.now() - tw0;
 }
 
-function workStage(world, c, t0) {
+function workStage(world, c, t0, BUDGET) {
   // 1: read the tiles (a row at a time)
   if (c.stage === 0) {
     const n = c.gw * c.gh;
