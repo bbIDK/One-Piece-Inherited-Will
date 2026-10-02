@@ -3,6 +3,7 @@
 // everything you've finished. The main story can't be abandoned.
 import { h, clear } from './dom.js';
 import { uiImg } from './icon.js';
+import { fmtDist } from './compass.js';
 import { questDef } from '../game/quests.js';
 import { PATHS } from '../content/main/paths.js';
 
@@ -26,7 +27,7 @@ function whereLine(game, id) {
   const w = game.world, p = game.player;
   if (m.zone ? m.zone !== w.id : w !== game.surface) return null;
   const d = w.distance(p.x, p.y, m.x, m.y);
-  return h('div.q-where', uiImg('map', 14), d < 12 ? ' You are here' : ` ${m.place || m.label} — ${d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m'} away`);
+  return h('div.q-where', uiImg('map', 14), d < 12 ? ' You are here' : ` ${m.place || m.label} — ${fmtDist(d)} away`);
 }
 
 export function openQuests(game, first = 'main') {

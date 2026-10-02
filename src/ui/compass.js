@@ -1,5 +1,7 @@
 // The first-person compass: a strip at the top of the screen with the
-// cardinal points, the Log Pose target, active quests and your ship.
+// cardinal points, the Log Pose target, the quests under way (the main
+// story's gold, side quests' sky blue: the icons of the chart and of the
+// markers over the world) and your ship.
 import { h } from './dom.js';
 import { angleDiff } from '../core/math.js';
 import { uiImg } from './icon.js';
@@ -8,7 +10,8 @@ import { uiImg } from './icon.js';
 const POINTS = [['E', 0], ['SE', Math.PI / 4], ['S', Math.PI / 2], ['SW', Math.PI * 3 / 4], ['W', Math.PI], ['NW', -Math.PI * 3 / 4], ['N', -Math.PI / 2], ['NE', -Math.PI / 4]];
 const SPAN = Math.PI * 0.8; // the angle shown across the strip
 
-const fmtDist = (d) => (d >= 1000 ? (d / 1000).toFixed(d >= 10000 ? 0 : 1) + ' km' : Math.round(d / 10) * 10 + ' m');
+/** A distance as the HUD says it everywhere (the compass, the tracker, the markers over the world, the quest log). */
+export const fmtDist = (d) => (d >= 1000 ? (d / 1000).toFixed(d >= 10000 ? 0 : 1) + ' km' : d >= 100 ? Math.round(d / 10) * 10 + ' m' : Math.max(1, Math.round(d)) + ' m');
 
 export class Compass {
   constructor(parent) {
@@ -43,7 +46,7 @@ export class Compass {
     let p = this.pins.get(key);
     if (!p) {
       const dist = h('small');
-      p = { e: h('div.pin.' + kind, uiImg(icon, kind === 'lp' ? 20 : 18), dist), dist, seen: 0 };
+      p = { e: h('div.pin.' + kind, uiImg(icon, kind === 'main' ? 24 : kind === 'side' ? 20 : kind === 'lp' ? 20 : 18), dist), dist, seen: 0 };
       this.el.appendChild(p.e);
       this.pins.set(key, p);
     }
@@ -71,16 +74,17 @@ export class Compass {
     // the Log Pose (or Eternal Pose) target
     const lp = surface && game.logPoseTarget && game.logPoseInfo?.() ? game.logPoseTarget() : null;
     if (lp && Number.isFinite(lp.x)) mark('lp', 'lp', 'log_pose', lp.x, lp.y, 'Log Pose');
-    // active quests in this world, nearest three
+    // the quests in this world: the main story's always, and the nearest three
+    // others (with the icons the chart and the markers over the world use)
     const qs = [];
-    for (const { id } of game.quests?.active?.() || []) {
+    for (const { id, def } of game.quests?.active?.() || []) {
       const m = game.quests.marker(id);
       if (!m || !Number.isFinite(m.x)) continue;
       if (m.zone ? m.zone !== w.id : !surface) continue;
-      qs.push({ id, m, d: w.distance(p.x, p.y, m.x, m.y) });
+      qs.push({ id, m, main: def.kind === 'main', d: w.distance(p.x, p.y, m.x, m.y) });
     }
-    qs.sort((a, b) => a.d - b.d);
-    for (const q of qs.slice(0, 3)) mark('q:' + q.id, 'quest', 'quest', q.m.x, q.m.y, q.m.label);
+    qs.sort((a, b) => b.main - a.main || a.d - b.d);
+    for (const q of qs.slice(0, 4)) mark('q:' + q.id, q.main ? 'main' : 'side', q.main ? 'wp_main' : 'wp_side', q.m.x, q.m.y, q.m.label);
     // your ship, while you're ashore
     if (p.mode !== 'sail') {
       const s = game.ships.find((x) => x.owner === 'player' && !x.sunk);

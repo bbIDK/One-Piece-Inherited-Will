@@ -3218,6 +3218,17 @@ UI.quest = (I) => {
   tf(I, { s: 0.62, y: -4 }, () => part(I, exclaimP(), '#8a2a1e', { flat: true, ol: I.ol * 0.6 }));
 };
 UI.quests = (I) => UI.quest(I);
+// the waypoints of quests — the compass, the chart and the markers over the
+// world all use these: the main story's objective a gold diamond with a red
+// star, a side quest's a smaller sky-blue one with a "!"
+UI.wp_main = (I) => {
+  part(I, 'M32 2 L60 32 L32 62 L4 32 Z', '#f7b928', { sd: 3.2, hd: 2.4 });
+  part(I, star(32, 33.5, 5, 15.5, 6.6), '#c0281e', { sd: 1.4, hd: 0.9, ol: I.ol * 0.75 });
+};
+UI.wp_side = (I) => {
+  part(I, 'M32 6 L56 32 L32 58 L8 32 Z', '#84cdef', { sd: 2.8, hd: 2.2 });
+  tf(I, { s: 0.6, y: 0.5 }, () => part(I, exclaimP(), '#133a61', { flat: true, ol: I.ol * 0.55 }));
+};
 UI.reputation = (I) => {
   const g = '#e0b24a';
   tube(I, 'M32 10 V54', dk(g, 0.1), 3.6);

@@ -22,7 +22,8 @@ const MM_SEA = {
   [REGION.CALM_NORTH]: [120, 136, 146], [REGION.CALM_SOUTH]: [120, 136, 146], [REGION.RED_LINE]: [79, 150, 196], [REGION.POLAR]: [170, 196, 210],
 };
 import { itemImg, skillImg, uiImg } from './icon.js';
-import { Compass } from './compass.js';
+import { Compass, fmtDist } from './compass.js';
+import { Waypoints } from './waypoints.js';
 import { assignHotbar } from './panels.js';
 import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
 
@@ -141,6 +142,8 @@ export class UI {
     E.mmNorth = h('div.mm-north.hidden', 'N');
     this.hud.appendChild(h('div.minimap-wrap', h('div.mm-box', E.mm, E.mmArrow, E.mmNorth), E.logpose, E.loc, E.locSub, E.clock, E.saved));
     this.compass = new Compass(this.hud);
+    // where the quests on the tracker are, over the world itself
+    this.waypoints = new Waypoints(this.hud);
     // under the compass while you're fighting (or being hunted)
     E.combat = h('div.combat-tag.off');
     E.combat.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><g stroke="#fff3e0" stroke-width="1.8" stroke-linecap="round" fill="none"><path d="M3 3 L12.5 12.5"/><path d="M13 3 L3.5 12.5"/><path d="M10 14 L14 10"/><path d="M2 10 L6 14"/></g></svg><span>In combat</span>';
@@ -465,6 +468,7 @@ export class UI {
     }
     this.root.classList.toggle('v3', !!v3);
     this.compass.update(game, v3 ? v3.rig.yaw : 0, !!v3 && !this.mapOpen);
+    this.waypoints.update(game, v3, !!v3 && !this.blocksInput());
     const fighting = !!p.inCombat && p.state === 'idle' && !this.mapOpen && E.boss.classList.contains('hidden');
     if (fighting !== this.cache.combat) { this.cache.combat = fighting; E.combat.classList.toggle('off', !fighting); }
     // the minimap turns so that where you look is up
@@ -710,7 +714,7 @@ export class UI {
       if (d < 12) return 'here';
       const a = Math.atan2(m.y - p.y, w.dx(p.x, m.x));
       const dir = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'][((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8];
-      return `${d >= 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d / 10) * 10 + ' m'} ${dir}`;
+      return `${fmtDist(d)} ${dir}`;
     };
     const card = (qq, main, sub = null) => {
       // (a step that's "see that quest through": what to do in it, here)

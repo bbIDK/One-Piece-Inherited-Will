@@ -215,8 +215,8 @@ input.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radiu
 .wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }
 .wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }
 .wm-label.me { font-size: 22px; color: #c0392b; }
-.wm-label.quest { color: #b8860b; font-size: 18px; }
-.wm-label.quest.main { color: #d35400; font-size: 20px; z-index: 3; }
+.wm-label.quest { color: #1f5f86; font-size: 18px; }
+.wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }
 .wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }
 .wm-label.giver.main { color: #3b2a1a; }
 .wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }
@@ -530,11 +530,31 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }
 .compass .cp.major.n { color: #ff8a80; }
 .compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }
-.compass .pin { position: absolute; top: 20px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
-.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: -1px; }
+.compass .pin { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.85)); }
+.compass .pin img { display: block; }
+.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: 1px; }
 .compass .pin.lp small { color: #ff8a80; }
-.compass .pin.quest small { color: #ffd54f; }
+.compass .pin.main { z-index: 2; }
+.compass .pin.main small { color: #ffc940; }
+.compass .pin.side small { color: #a6dcf5; }
 .compass .pin.ship small { color: #e3f2fd; }
+/* the markers over the world (see waypoints.js): where the quests on the tracker are */
+.wpmarks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.wpm { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; width: 0; transition: opacity .2s; will-change: transform; }
+.wpm > img { margin-top: -17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)) drop-shadow(0 0 5px rgba(0,0,0,.35)); }
+.wpm.side > img { margin-top: -14px; }
+.wpm.main { z-index: 2; }
+.wpm small { margin-top: 1px; font: 800 12px Nunito, sans-serif; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 3px #000; }
+.wpm.main small { color: #ffd66b; }
+.wpm.side small { color: #b9e4f8; }
+.wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }
+.wpm.look .wpm-name { opacity: 1; transform: none; }
+.wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }
+.wpm-arrow::after { content: ''; position: absolute; left: 25px; top: 3px; border: 6px solid transparent; border-left: 10px solid #fff; filter: drop-shadow(0 0 1.5px #000); }
+.wpm.main .wpm-arrow::after { border-left-color: #ffc940; }
+.wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }
+.wpm.edge .wpm-arrow { display: block; }
+.wpm.edge > img { transform: scale(.85); }
 #ui.v3 .bossbar { top: 64px; }
 #ui.v3 .hint { top: 118px; }
 #ui.touch .compass { top: 52px; width: min(320px, 40vw); }

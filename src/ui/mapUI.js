@@ -188,11 +188,12 @@ function drawLabels(game, r, cam, layer) {
       add(pin.main ? '.giver.main' : '.giver', [h('b.pin', { style: { background: pin.color } }, '!'), ' ' + pin.label], pin.x, pin.y, { fontSize: pin.main ? '15px' : '13px' }, true);
     }
   }
-  // quests (the main story's objective in orange, on top)
+  // quests (the main story's objective gold, on top; side quests sky blue — as on the compass and over the world)
   const act = game.quests.active().sort((a, b) => (a.def.kind === 'main') - (b.def.kind === 'main'));
   for (const { id, def } of act) {
     const m = game.quests.marker(id);
-    if (m && (!zone || m.zone === w.id)) add(def.kind === 'main' ? '.quest.main' : '.quest', [uiImg('quest', 18), ' ' + m.label], m.x, m.y - 12 / cam.zoom);
+    const main = def.kind === 'main';
+    if (m && (!zone || m.zone === w.id)) add(main ? '.quest.main' : '.quest', [uiImg(main ? 'wp_main' : 'wp_side', main ? 26 : 22), ' ' + m.label], m.x, m.y);
   }
   // log pose target
   const lp = game.logPoseTarget?.();
