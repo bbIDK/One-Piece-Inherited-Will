@@ -550,15 +550,26 @@ const ROOMS = {
   },
   restaurant(P, L, b, R, S, g) {
     counterRoom(P, L, S, g, { shelf: 'bottles', len: 2.2 });
-    for (const px of [L.x0 + 0.8, L.x1 - 0.8]) {
-      const t = P.free(S('table'), px, L.z1 - 1.1);
-      if (!t) continue;
-      for (const s of [-1, 1]) {
-        const x = t.x + s * (t.w / 2 + 0.22);
-        if (x < L.x0 + 0.2 || x > L.x1 - 0.2) continue;
-        P.deco(S('chair'), x, t.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+    // the dining room: a little café has a table by each front corner; a
+    // big hall (the Baratie's) has rows of them across its floor, aisles
+    // between, a diner at some
+    const W = L.x1 - L.x0, D = L.z1 - L.z0;
+    const cols = Math.max(2, Math.floor((W - 1.0) / (3.2 * g))), rows = Math.max(1, Math.min(4, Math.floor((D - 3.0 * g) / (2.8 * g))));
+    const small = cols === 2 && rows === 1;
+    let diners = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const px = small ? (c ? L.x1 - 0.8 : L.x0 + 0.8) : L.x0 + 0.5 + (c + 0.5) * (W - 1.0) / cols;
+        const pz = L.z1 - (small ? 1.1 : 1.1 * g + r * 2.8 * g);
+        const t = small ? P.free(S('table'), px, pz) : P.at(S('table'), px, pz, 0);
+        if (!t) continue;
+        for (const s of [-1, 1]) {
+          const x = t.x + s * (t.w / 2 + 0.22);
+          if (x < L.x0 + 0.2 || x > L.x1 - 0.2) continue;
+          P.deco(S('chair'), x, t.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+        }
+        if (small || (diners < 6 && (r + c) % 2 === 0)) { L.residents.push({ x: t.x + t.w / 2 + 0.22, z: t.z, sit: true, face: -Math.PI / 2 }); diners++; }
       }
-      L.residents.push({ x: t.x + t.w / 2 + 0.22, z: t.z, sit: true, face: -Math.PI / 2 });
     }
     P.wall(S('plant'), 'front', 'end');
   },
