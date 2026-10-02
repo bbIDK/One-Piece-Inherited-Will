@@ -3,8 +3,9 @@
 // prowl — each with its crew on deck, sailing smoothly around the coasts.
 // Pirates (and, once you're wanted, the Marines) come for your ship.
 //
-// Come alongside and jump across onto her deck from your own, and you're
-// raiding her: the crew fights for their ship. Beat them
+// Come alongside and jump across onto her deck from your own (or swim over
+// and climb her ladder), and you're raiding her: the crew fights for their
+// ship. Beat them
 // and the hold is yours to plunder (the ship herself isn't: new ships come
 // only from a harbour's shipwright, see shipwrights.js). Raiding anyone but
 // pirates is piracy, and the bounty that comes with it grows the way One
@@ -514,6 +515,6 @@ function footInteraction(game, T, p) {
     return null;
   }
   // (in the water beside a hull there's no prompt: her side's a wall, and a
-  // rowboat's low one you jump over)
+  // rowboat's low one you jump over — but for the foot of her ladder: see ladders.js)
   return null;
 }

@@ -1,4 +1,4 @@
-// `npm test`: the ships' sizes, and the big ships' layouts (tools/shiplayout.mjs)
+// `npm test`: the ships' sizes, rails you can jump and ladders up their sides, and the big ships' layouts (tools/shiplayout.mjs)
 // — furniture that fits its rooms, stands clear of everything else and faces
 // the right way, drawn as big as what you walk round; doors, the hatch and the
 // ladder you can walk through; masts you can walk right up to; nothing of the
@@ -7,7 +7,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { checkShipLayout, bigTypes } from '../tools/shiplayout.mjs';
 import { SHIPS, shipClassLine } from '../src/data/ships.js';
-import { shipDims, floorAt } from '../src/world/hull.js';
+import { shipDims, floorAt, hbAt, levelAt, solidAt } from '../src/world/hull.js';
+import { RAIL_CLEAR } from '../src/game/decks.js';
 import { Mesher } from '../src/render3d/props/kit.js';
 import { furniture, bigPalette, bigHull, bigMastPlan, bigSailPlan } from '../src/render3d/bigship.js';
 
@@ -35,9 +36,29 @@ test('the big ships\' decks, rooms and hold are sized for people: headroom, a ra
     const d = shipDims({ ...SHIPS[type] });
     for (const r of d.rooms) assert.ok(r.ceil - r.floor >= 2.1, `${type} ${r.kind}: headroom ${r.ceil - r.floor}`);
     assert.ok(d.bulH >= 1 && d.bulH <= 1.2, `${type}: rail ${d.bulH}`);
-    // (a pier's planks are 1.5 m over the sea: a jump of 1.3 m and a reach of 1.35 over the rail)
-    assert.ok(d.deckY + d.bulH <= 1.5 + 1.3 + 1.3, `${type}: rail ${d.deckY + d.bulH} m over the sea`);
+    // (a pier's planks are 1.5 m over the sea: a charged jump — 7.6 m/s, 1.45 times
+    // that at full charge, against a gravity of 22 — has your feet up over her rail)
+    const charged = (7.6 * 1.45) ** 2 / (2 * 22);
+    assert.ok(d.deckY + d.bulH - RAIL_CLEAR <= 1.5 + charged, `${type}: rail ${d.deckY + d.bulH} m over the sea`);
+    // (and her bulwark is a low wall a plain jump from her deck clears: 7.6 m/s)
+    assert.ok(d.bulH - RAIL_CLEAR <= 7.6 ** 2 / (2 * 22), `${type}: bulwark ${d.bulH} m`);
   }
+});
+
+test('every big ship has a ladder down each side amidships: over no gunport, up onto a clear stretch of her main deck', () => {
+  for (const type of bigTypes()) {
+    const d = shipDims({ ...SHIPS[type] });
+    for (const s of [1, -1]) {
+      const l = d.ladders.find((x) => x.s === s);
+      assert.ok(l, `${type}: no ladder down her ${s > 0 ? 'starboard' : 'port'} side`);
+      assert.ok(Math.abs(l.t - 0.5) < 0.15, `${type}: her ladder at t ${l.t.toFixed(2)} isn't amidships`);
+      for (const g of [...d.guns, ...d.lowGuns]) if (g.s === s) assert.ok(Math.abs(g.u - l.u) >= l.w / 2 + 0.31, `${type}: her ladder hangs over a gunport`);
+      const v = s * (hbAt(l.t, d.B) * d.walk - 0.5);
+      assert.equal(levelAt(d, l.t, v), 'main', `${type}: her ladder comes up off the main deck`);
+      assert.equal(solidAt(d, l.u, v, 0.3, 'main'), 0, `${type}: something stands where her ladder comes over the rail`);
+    }
+  }
+  assert.equal(shipDims({ ...SHIPS.dinghy }).ladders, undefined); // (a rowboat's low side you just jump)
 });
 
 test('the spanker\'s boom is head-high over every deck it reaches over, never in through a cabin front or a ceiling', () => {

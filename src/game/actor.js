@@ -10,7 +10,7 @@ import { RACES } from '../data/races.js';
 import { WALKABLE, SWIMMABLE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
 import { HIGH_DECK } from '../render3d/height.js';
 import { clamp, TAU, angleDiff } from '../core/math.js';
-import { shipDims, hbAt, deckToWorld, shipLift, sideAt } from '../world/hull.js';
+import { shipDims, hbAt, deckToWorld, shipLift, sideAt, topAt, floorAt, xAt } from '../world/hull.js';
 import { placeOnDeck, RAIL_CLEAR } from './decks.js';
 import { bw } from '../world/bframe.js';
 import { heightsOf } from '../world/interiors.js';
@@ -1129,7 +1129,7 @@ export class Actor extends Entity {
    * within reach (from the water you kick up to a pier; on your feet, about
    * chest high) and there's room to stand on top. True if the climb began.
    * (A ship's side isn't one: it's a wall, and you come aboard over her rail
-   * from above it.)
+   * from above it, or up her ladder: see ladders.js.)
    */
   climbOnto(game, L) {
     if (L.ship || this.climb || this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root) return false;
@@ -1180,7 +1180,11 @@ export class Actor extends Entity {
     return false;
   }
 
-  /** Start hauling yourself up to `to`: a spot to stand on ({ x, y, h }), or a deck spot ({ ship, t, v }). */
+  /**
+   * Start hauling yourself up to `to`: a spot to stand on ({ x, y, h }), or a
+   * deck spot ({ ship, t, v }) — up her ladder (`ladder`: hull.js ladders),
+   * hand over hand.
+   */
   startClimb(game, to) {
     const w = game.world;
     const wet = this.inWater;
@@ -1203,6 +1207,8 @@ export class Actor extends Entity {
       c.u0 = dx * cs + dy * sn; c.v0 = -dx * sn + dy * cs;
     } else { tx = to.x; ty = to.y; th = to.h; }
     c.T = 0.32 + 0.2 * clamp(th - h0, 0, 3);
+    // (a ladder up a ship's side: the height of her rail at a steady climb)
+    if (to.ladder) c.T = 0.6 + 0.3 * Math.max(0, shipLift(to.ship, game.env?.time || 0, to.ladder.u, to.v, topAt(shipDims(to.ship.def), to.ladder.t)) - h0);
     this.climb = c;
     this.vx = 0; this.vy = 0; this.vz = 0; this.kb.x = 0; this.kb.y = 0;
     this.dash = null; this.blocking = false; this.wading = 0; this.charging = 0;
@@ -1220,6 +1226,7 @@ export class Actor extends Entity {
     if (to.ship && (to.ship.sunk || to.ship.alive === false)) { this.endClimb(game, true); return; }
     c.t += dt;
     const k = Math.min(1, c.t / c.T);
+    if (to.ladder) { this.ladderClimb(game, c, k); return; }
     let x0 = c.x0, y0 = c.y0, x1, y1, h1;
     if (to.ship) {
       const sh = to.ship, p = deckToWorld(sh, to.t, to.v), cs = Math.cos(sh.heading), sn = Math.sin(sh.heading);
@@ -1234,6 +1241,36 @@ export class Actor extends Entity {
     const g = this.groundAt(game, this.x, this.y);
     this.z = h - g;
     if (to.roof) { this.lastG = g; this.lastGX = this.x; this.lastGY = this.y; this.roofed = g > (game.view3d?.ground(this.x, this.y) ?? g) + 0.01; }
+    this.airT = 0.1;
+    if (k >= 1) this.endClimb(game);
+  }
+
+  /**
+   * Up a ship's ladder (startClimb with `ladder`), all of it in her frame as
+   * she rides: a reach for its foot, then hand over hand up her side —
+   * against it as it curves in toward her rail — and over the rail onto her
+   * deck just inside.
+   */
+  ladderClimb(game, c, k) {
+    const w = game.world, to = c.to, sh = to.ship, l = to.ladder, d = shipDims(sh.def), time = game.env?.time || 0;
+    const cs = Math.cos(sh.heading), sn = Math.sin(sh.heading);
+    const lift = (u, v, h) => shipLift(sh, time, u, v, h);
+    const top = topAt(d, l.t) + 0.12, hb = (h) => l.s * (sideAt(d, l.t, Math.min(h, topAt(d, l.t))) + this.r + 0.06);
+    // (the climb from where you are, in her frame: up the rungs to over her rail)
+    const h0 = c.h0 - lift(c.u0, c.v0, 0), rise = smooth01(0.12, 0.82, k);
+    let u, v, h;
+    if (k < 0.82) {
+      h = h0 + (top - h0) * rise;
+      const g = smooth01(0, 0.12, k);
+      u = c.u0 + (l.u - c.u0) * g; v = c.v0 + (hb(h) - c.v0) * g;
+    } else {
+      const o = smooth01(0.82, 1, k), fl = floorAt(d, to.t, to.v);
+      u = l.u + (xAt(d, to.t) - l.u) * o; v = hb(top) + (to.v - hb(top)) * o;
+      h = top + (fl - top) * o + Math.sin(Math.PI * o) * 0.12;
+    }
+    this.x = w.wx(sh.x + u * cs - v * sn); this.y = sh.y + u * sn + v * cs;
+    this.z = lift(u, v, h) - this.groundAt(game, this.x, this.y);
+    this.facing = sh.heading - l.s * Math.PI / 2;
     this.airT = 0.1;
     if (k >= 1) this.endClimb(game);
   }

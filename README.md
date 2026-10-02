@@ -70,7 +70,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | Mouse | look around | look around |
 | V | first person / third person | |
 | WASD | move where you look | W/S sails, A/D steer (at a rowboat's oars: W/S set the rowing pace, which she keeps, A/D turn) |
-| Space | jump (hold to charge it); at a pier or a bank, climb up (a ship's side is a wall: you come aboard over her rail); jump at a house and catch its eave to haul yourself onto the roof | row (works without wind) |
+| Space | jump (hold to charge it); at a pier or a bank, climb up (a ship's side is a wall: you come aboard over her rail, or up her ladder); jump at a house and catch its eave to haul yourself onto the roof | row (works without wind) |
 | Shift | hold to sprint, for as long as you like; tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
 | X | draw your weapon, or put it back in its sheath. Sheathed, a click is a punch (your fist style); drawn, it's the weapon's moves, listed with their keys at the bottom right (the skills you've learned for it; greyed while they cool down). At the helm or the oars it's always sheathed | |
@@ -78,7 +78,7 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | F | block — tap just before a hit to **parry**. A heavy blow (the red glint) smashes a guard aside, and you can't block again until the F slot fills | |
 | 1–9, 0 | hotbar: techniques, food, Devil Fruits and weapons (a weapon's key draws it from its sheath into your stance, and again puts it back; food or a Devil Fruit goes in your hand: hold the right mouse button to eat it, in bites; a punch or a dodge puts it away) | |
 | R / T / G | Haki, once it has awakened | |
-| E | talk, enter, take the helm or the oars, pick fruit, examine | leave the helm (under sail she sails on, holding her course, while you walk the deck) — and nothing else, but for the Knock Up Stream, the dive to Fish-Man Island and the Tarai Current where you find them. Going ashore is by hand: jump over her rail |
+| E | talk, enter, take the helm or the oars, climb a ship's ladder (at its foot), pick fruit, examine | leave the helm (under sail she sails on, holding her course, while you walk the deck) — and nothing else, but for the Knock Up Stream, the dive to Fish-Man Island and the Tarai Current where you find them. Going ashore is by hand: jump over her rail |
 | Tab/I, C, K, J, U, L | inventory, character, skills, journal, crew, quests | |
 | M | world map | |
 | − / + | zoom the minimap out / in (it's the world map's chart, round you, gliding under you as you go, with its icons: inns, shops, doctors, harbours, your quests, the Log Pose's island) | |
@@ -304,8 +304,11 @@ it's open:
   waves.
 - Boarding is done by hand: jump onto a deck from a pier or from your own
   deck, coming down on it over her rail (her side is a wall to anyone below
-  it; a rowboat's low side you jump over from the water). Her bulwark is a
-  low wall: jump it to go over the side, into the sea or onto the pier
+  it; a rowboat's low side you jump over from the water). Every ship but
+  the rowboat has a ladder down each side amidships, from the water to her
+  rail: at its foot (swimming, in a boat alongside or on the quay she lies
+  at) E climbs it, up her side and over the rail onto her deck. Her bulwark
+  is a low wall: jump it to go over the side, into the sea or onto the pier
   she's tied up at. Every deck can be walked, and
   everyone aboard rides her gentle roll and pitch with her, feet on the
   planks (on a big ship the ends rise and fall a good way), and shoes rest on

@@ -51,6 +51,7 @@ import { installSea } from './game/sea.js';
 import { installDecks, hatchSpot, helmSpot, placeOnDeck } from './game/decks.js';
 import { deckToWorld, shipDims } from './world/hull.js';
 import { installTraffic } from './game/traffic.js';
+import { installLadders } from './game/ladders.js';
 import { installFleet, launchShip } from './game/fleet.js';
 import { shipwrightBuilder } from './game/shipwrights.js';
 import { openShipwright } from './ui/shipwrightPanel.js';
@@ -237,6 +238,7 @@ async function start() {
   installSea(game);
   installDecks(game);
   installTraffic(game);
+  installLadders(game);
   installFleet(game);
   installWanted(game);
   installLoot(game);

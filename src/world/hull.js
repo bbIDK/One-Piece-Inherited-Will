@@ -344,7 +344,39 @@ function bigDims(def) {
   if (d.shotPile) { const p = d.shotPile; d.solids.push({ u0: p.u0, u1: p.u1, v0: p.v0, v1: p.v1, lvl: 'main' }); }
   // (the furniture in the rooms: see furnish)
   furnish(d);
+  // a ladder down each side amidships, from the water to her rail: the way up
+  // her side from the sea, a boat or a quay below it (her side's too tall to
+  // jump) — clear of the gunports and the channels, coming over the rail onto
+  // a stretch of the main deck with nothing in the way
+  d.ladders = [];
+  for (const s of [1, -1]) {
+    const t = ladderT(d, def, s, mainT0, mainT1);
+    if (t !== null) d.ladders.push({ t, u: xAt(d, t), s, w: LADDER_W });
+  }
   return d;
+}
+
+/** A side ladder's width (between its stiles' outsides). */
+export const LADDER_W = 0.62;
+
+/** Where along a big ship the ladder down side `s` goes: as near the middle of her main deck as there's room for it (or null). */
+function ladderT(d, def, s, t0, t1) {
+  const L = d.L, mid = (t0 + t1) / 2;
+  for (let k = 0; k < 600; k++) {
+    const t = mid + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.05 / L;
+    if (t < t0 + 1 / L || t > t1 - 1 / L) continue;
+    const u = xAt(d, t);
+    // (not over a gunport, on deck or below — a port's 0.62 m wide)
+    if ([...d.guns, ...(d.lowGuns || [])].some((g) => g.s === s && Math.abs(g.u - u) < LADDER_W / 2 + 0.31 + 0.3)) continue;
+    // (nor across the channels the shrouds come down to, beside each mast, nor a paddle-box)
+    if (d.mastU.some((m) => Math.abs(u - (m - 0.5)) < (2.4 + d.mastR * 2) / 2 + LADDER_W / 2 + 0.25)) continue;
+    if (def.paddle && Math.abs(t - 0.34) < (0.72 * d.B / 3.2 + LADDER_W / 2 + 0.5) / L) continue;
+    // (and at its top, room to stand inside the rail: on the main deck, clear of everything on it)
+    const v = s * (hbAt(t, d.B) * d.walk - 0.5);
+    if (levelAt(d, t, v) !== 'main' || solidAt(d, u, v, 0.4, 'main') > 0) continue;
+    return t;
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------- the big ships' fittings

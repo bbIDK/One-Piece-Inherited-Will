@@ -69,8 +69,35 @@ export function bigHull(def, d) {
   cabinFronts(k, d, P);
   stairs(k, d, P);
   fittings(k, d, P);
+  sideLadders(k, d, P);
   bigFigurehead(k, def, d, P);
   return k;
+}
+
+/**
+ * The ladders down her sides amidships (hull.js ladders): two stiles that
+ * follow her side from the water up past her rail, rounded over it into
+ * iron grab-rails to haul yourself aboard by, with a step every 30 cm.
+ */
+function sideLadders(k, d, P) {
+  for (const l of d.ladders || []) {
+    const s = l.s, t = l.t, top = topAt(d, t), half = l.w / 2 - 0.035;
+    const z0 = skinAt(d, t, 1);
+    // (out from her side by a hand's breadth, in her own frame there: she narrows toward the bow)
+    const zAt = (y) => s * (skinAt(d, t, Math.min(y, top)) + 0.1) - s * z0;
+    k.save(); k.translate(l.u, 0, s * z0); k.rotateY(skinYaw(d, t, 1, s));
+    for (const x of [-half, half]) {
+      const pts = [];
+      for (let y = -0.4; y < top - 0.1; y += 0.35) pts.push(new THREE.Vector3(x, y, zAt(y)));
+      pts.push(new THREE.Vector3(x, top, zAt(top)));
+      k.add(tube(new THREE.CatmullRomCurve3(pts, false, 'centripetal'), pts.length * 3, 0.035, 5), { color: P.wood, outline: 0.008 });
+      // (the grab-rail: up from the stile's head and over the rail cap, inboard)
+      const g = [[x, top - 0.15, zAt(top)], [x, top + 0.45, zAt(top)], [x, top + 0.6, zAt(top) - s * 0.15], [x, top + 0.45, zAt(top) - s * 0.36]].map((q) => new THREE.Vector3(...q));
+      k.add(tube(new THREE.CatmullRomCurve3(g, false, 'centripetal'), 12, 0.022, 5), { color: P.iron });
+    }
+    for (let y = -0.25; y < top - 0.25; y += 0.3) k.add(cyl(0.028, 0.028, half * 2 + 0.02, 5), { at: [half + 0.01, y, zAt(y)], rot: [0, 0, Math.PI / 2], color: shade(P.wood, 0.15) });
+    k.restore();
+  }
 }
 
 function shell(k, d, P) {
