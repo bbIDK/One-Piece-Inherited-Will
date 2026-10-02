@@ -99704,6 +99704,186 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     }
   }
 
+  // src/game/searoute.js
+  function seaClear(w, ax, ay, bx, by, room) {
+    const dx = w.dx(ax, bx), dy = by - ay, l = Math.hypot(dx, dy);
+    const n = Math.max(1, Math.ceil(l / Math.max(2, room * 0.6)));
+    for (let i = 1; i <= n; i++) {
+      const x = ax + dx * (i / n), y = ay + dy * (i / n);
+      if (!w.sailable(x, y) || w.sd(x, y) > -room) return false;
+    }
+    return true;
+  }
+  var MAX_CELLS = 7e3;
+  var PAD_MIN = 120;
+  var PAD_MAX = 420;
+  var SQ22 = Math.SQRT2;
+  function planRoute(w, sx, sy, tx, ty, room) {
+    const ex = w.dx(sx, tx), ey = ty - sy, dist = Math.hypot(ex, ey);
+    const pad2 = Math.min(PAD_MAX, Math.max(PAD_MIN, dist * 0.35));
+    const x0 = Math.min(0, ex) - pad2, y0 = Math.min(0, ey) - pad2;
+    const bw2 = Math.abs(ex) + pad2 * 2, bh = Math.abs(ey) + pad2 * 2;
+    const c = Math.max(6, Math.sqrt(bw2 * bh / MAX_CELLS));
+    const nx = Math.ceil(bw2 / c), ny = Math.ceil(bh / c), N5 = nx * ny;
+    const need = Math.min(31, room + c * 0.71);
+    const open = new Int8Array(N5).fill(-1);
+    const isOpen = (i) => {
+      if (open[i] < 0) {
+        const x = sx + x0 + (i % nx + 0.5) * c, y = sy + y0 + (Math.floor(i / nx) + 0.5) * c;
+        open[i] = w.sailable(x, y) && w.sd(x, y) < -need ? 1 : 0;
+      }
+      return open[i] === 1;
+    };
+    const cellOf = (lx, ly) => {
+      const cx = Math.floor((lx - x0) / c), cy = Math.floor((ly - y0) / c);
+      return cx < 0 || cy < 0 || cx >= nx || cy >= ny ? -1 : cy * nx + cx;
+    };
+    const nearestOpen = (i0) => {
+      if (i0 < 0) return -1;
+      if (isOpen(i0)) return i0;
+      const cx0 = i0 % nx, cy0 = Math.floor(i0 / nx);
+      for (let r = 1, rmax = Math.ceil(160 / c); r <= rmax; r++) {
+        let best = -1, bd = Infinity;
+        for (let dy = -r; dy <= r; dy++) {
+          for (let dx = -r; dx <= r; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+            const cx = cx0 + dx, cy = cy0 + dy;
+            if (cx < 0 || cy < 0 || cx >= nx || cy >= ny) continue;
+            const i = cy * nx + cx, d = dx * dx + dy * dy;
+            if (d < bd && isOpen(i)) {
+              bd = d;
+              best = i;
+            }
+          }
+        }
+        if (best >= 0) return best;
+      }
+      return -1;
+    };
+    const start4 = nearestOpen(cellOf(0, 0)), goal = nearestOpen(cellOf(ex, ey));
+    if (start4 < 0 || goal < 0) return null;
+    const g = new Float32Array(N5).fill(Infinity), from = new Int32Array(N5).fill(-1), shut = new Uint8Array(N5);
+    const gx = goal % nx, gy = Math.floor(goal / nx);
+    const h2 = (i) => {
+      const dx = Math.abs(i % nx - gx), dy = Math.abs(Math.floor(i / nx) - gy);
+      return Math.max(dx, dy) + (SQ22 - 1) * Math.min(dx, dy);
+    };
+    const heap = [], f = new Float32Array(N5);
+    const push = (i) => {
+      heap.push(i);
+      let k2 = heap.length - 1;
+      while (k2 > 0) {
+        const p = k2 - 1 >> 1;
+        if (f[heap[p]] <= f[heap[k2]]) break;
+        [heap[p], heap[k2]] = [heap[k2], heap[p]];
+        k2 = p;
+      }
+    };
+    const pop = () => {
+      const top = heap[0], last = heap.pop();
+      if (heap.length) {
+        heap[0] = last;
+        let k2 = 0;
+        for (; ; ) {
+          const l = k2 * 2 + 1, r = l + 1;
+          let m = k2;
+          if (l < heap.length && f[heap[l]] < f[heap[m]]) m = l;
+          if (r < heap.length && f[heap[r]] < f[heap[m]]) m = r;
+          if (m === k2) break;
+          [heap[m], heap[k2]] = [heap[k2], heap[m]];
+          k2 = m;
+        }
+      }
+      return top;
+    };
+    g[start4] = 0;
+    f[start4] = h2(start4);
+    push(start4);
+    let found = false;
+    while (heap.length) {
+      const i = pop();
+      if (shut[i]) continue;
+      if (i === goal) {
+        found = true;
+        break;
+      }
+      shut[i] = 1;
+      const cx = i % nx, cy = Math.floor(i / nx);
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          const qx = cx + dx, qy = cy + dy;
+          if (qx < 0 || qy < 0 || qx >= nx || qy >= ny) continue;
+          const j = qy * nx + qx;
+          if (shut[j] || !isOpen(j)) continue;
+          if (dx && dy && (!isOpen(cy * nx + qx) || !isOpen(qy * nx + cx))) continue;
+          const ng = g[i] + (dx && dy ? SQ22 : 1);
+          if (ng < g[j]) {
+            g[j] = ng;
+            from[j] = i;
+            f[j] = ng + h2(j);
+            push(j);
+          }
+        }
+      }
+    }
+    if (!found) return null;
+    const cells2 = [];
+    for (let i = goal; i >= 0; i = from[i]) {
+      cells2.push(i);
+      if (i === start4) break;
+    }
+    cells2.reverse();
+    const at4 = (i) => ({ x: w.wx(sx + x0 + (i % nx + 0.5) * c), y: sy + y0 + (Math.floor(i / nx) + 0.5) * c });
+    const pts = cells2.map(at4);
+    pts.push({ x: w.wx(tx), y: ty });
+    const out = [];
+    let cur = { x: sx, y: sy }, k = 0;
+    while (k < pts.length - 1) {
+      let j = pts.length - 1;
+      while (j > k + 1 && !seaClear(w, cur.x, cur.y, pts[j].x, pts[j].y, room)) j--;
+      out.push(pts[j]);
+      cur = pts[j];
+      k = j;
+    }
+    if (out.length > 1 && !seaClear(w, out[out.length - 2].x, out[out.length - 2].y, w.wx(tx), ty, room * 0.5)) out.pop();
+    return out.length ? out : null;
+  }
+  function seaHeading(game, s, gx, gy, room) {
+    const w = game.world, now2 = game.time || 0;
+    const direct = Math.atan2(gy - s.y, w.dx(s.x, gx));
+    let R4 = s.route;
+    if (!R4 || now2 >= R4.check) {
+      if (seaClear(w, s.x, s.y, gx, gy, room)) {
+        s.route = { pts: null, check: now2 + 1 };
+        return direct;
+      }
+      const moved = R4?.pts ? w.distance(R4.gx, R4.gy, gx, gy) : Infinity;
+      if (!R4?.pts || moved > Math.max(30, w.distance(s.x, s.y, gx, gy) * 0.15) || now2 >= R4.replan) {
+        const pts = planRoute(w, s.x, s.y, gx, gy, room);
+        R4 = s.route = { pts, i: 0, gx, gy, check: now2 + (pts ? 1 : 3), replan: now2 + 8, adv: 0 };
+      } else R4.check = now2 + 1;
+    }
+    if (!R4.pts) return direct;
+    const L2 = s.def.length;
+    while (R4.i < R4.pts.length - 1 && w.distance(s.x, s.y, R4.pts[R4.i].x, R4.pts[R4.i].y) < Math.max(8, L2 * 0.35)) R4.i++;
+    if (now2 >= R4.adv) {
+      R4.adv = now2 + 0.3;
+      while (R4.i < R4.pts.length - 1 && seaClear(w, s.x, s.y, R4.pts[R4.i + 1].x, R4.pts[R4.i + 1].y, room)) R4.i++;
+    }
+    if (routeEnded(w, s)) return direct;
+    const p = R4.pts[R4.i];
+    s.onRoute = now2;
+    return Math.atan2(p.y - s.y, w.dx(s.x, p.x));
+  }
+  var seaRoom = (s) => Math.min(22, s.def.beam * 0.5 + 10 + s.def.length * 0.1);
+  function routeEnded(w, s) {
+    const R4 = s.route;
+    if (!R4?.pts || R4.i < R4.pts.length - 1) return false;
+    const q2 = R4.pts[R4.pts.length - 1];
+    return w.distance(s.x, s.y, q2.x, q2.y) < s.def.length * 0.5 + 12;
+  }
+
   // src/game/traffic.js
   var SAILOR = { name: "Sailor", faction: "civilian", style: "brawler", look: { top: "#eceff1", bottom: "#37474f", hat: "bandana", hatColor: "#1565c0" }, skill: 0.1, barks: ["Repel boarders!", "Get off our ship!"] };
   var FISHER = { name: "Fisherman", faction: "civilian", style: "brawler", look: { top: "#8d6e63", bottom: "#455a64", hat: "cap", hatColor: "#6d8f5e" }, skill: 0.05, barks: ["Not the catch!", "Help!"] };
@@ -99858,7 +100038,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const th = target2.heading, nx = -Math.sin(th), ny = Math.cos(th);
     const rx = w.dx(target2.x, s.x), ry = s.y - target2.y;
     const side = rx * nx + ry * ny >= 0 ? 1 : -1;
-    const abeam = Math.abs(rx * nx + ry * ny), ahead = rx * Math.cos(th) + ry * Math.sin(th);
+    const ahead = rx * Math.cos(th) + ry * Math.sin(th);
     s.anchored = false;
     s.sail = 1;
     if (Math.abs(target2.speed) < 1.5 && d < 45 + s.def.length * 0.6) {
@@ -99868,9 +100048,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const da = w.distance(s.x, s.y, ax, ay);
       if (da > 2.5) {
         s.heaveTo = false;
-        const ex = w.dx(ax, s.x), ey = s.y - ay, along = ex * hx + ey * hy, across = (ex * nx + ey * ny) * bs;
-        if (Math.abs(across) < 2) s.lane = true;
-        else if (Math.abs(across) > 6) s.lane = false;
+        const ex = w.dx(ax, s.x), ey = s.y - ay, along = ex * hx + ey * hy, across2 = (ex * nx + ey * ny) * bs;
+        if (Math.abs(across2) < 2) s.lane = true;
+        else if (Math.abs(across2) > 6) s.lane = false;
         if (!s.lane) {
           const reach = (target2.def.length / 2 + s.def.length / 2 + 4) * (along >= 0 ? 1 : -1), lx = w.wx(ax + hx * reach), ly = ay + hy * reach;
           s.speedCap = Math.max(3, 1.5 + w.distance(s.x, s.y, lx, ly) * 0.25);
@@ -99892,12 +100072,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const blues = isBlue(regionAt(target2.x, target2.y));
     const pace = Math.abs(target2.speed);
     const lane = (s.def.beam + target2.def.beam) / 2 + 7;
-    if (d > lane + 2) {
+    const close = (s.def.length + target2.def.length) / 2 + 30;
+    if (d > close * 2 || !s.chaseSide) s.chaseSide = side;
+    const cs = s.chaseSide;
+    if (d > close) {
       s.speedCap = blues ? 8.5 : Math.max(10, pace * 1.2 + 2);
-      return Math.atan2(target2.y - s.y, w.dx(s.x, target2.x));
+      const lead = Math.min(40, pace * 3), hx = Math.cos(th), hy = Math.sin(th);
+      return seaHeading(game, s, w.wx(target2.x + (nx * lane * cs + hx * lead)), target2.y + ny * lane * cs + hy * lead, seaRoom(s));
     }
+    const across = (rx * nx + ry * ny) * cs;
     s.speedCap = Math.min(blues ? 8.5 : 99, pace + clamp2(-ahead * 0.3, -1.5, 2) + 0.3);
-    return th - side * clamp2((abeam - lane) * 0.1, -0.6, 0.6);
+    return th - cs * clamp2((across - lane) * 0.1, -0.6, 0.6);
   }
   function playerShip(p) {
     const s = p.mode === "sail" ? p.ship : p.deck?.ship?.owner === "player" ? p.deck.ship : null;
@@ -99965,9 +100150,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
       s.sail = tr.running ? 1 : tr.kind === "fishing" ? 0.45 : tr.kind === "merchant" ? 0.7 : 0.8;
       if (tr.running && d < 60) want = Math.atan2(s.y - p.y, w.dx(p.x, s.x));
-      else want = Math.atan2(tr.dest.y - s.y, w.dx(s.x, tr.dest.x));
-      if (w.distance(s.x, s.y, tr.dest.x, tr.dest.y) < 25) {
+      else want = seaHeading(game, s, tr.dest.x, tr.dest.y, seaRoom(s));
+      if (w.distance(s.x, s.y, tr.dest.x, tr.dest.y) < 25 || routeEnded(w, s)) {
         tr.dest = { x: w.wx(s.x + Math.cos(s.heading) * 300), y: s.y + Math.sin(s.heading) * 300 };
+        s.route = null;
       }
     }
     const now2 = game.time || 0;
@@ -99988,6 +100174,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           }
         }
         tr.escape = { a: bestA, until: now2 + 9 };
+        s.route = null;
         tr.dest = { x: w.wx(s.x + Math.cos(bestA) * 300), y: s.y + Math.sin(bestA) * 300 };
         s.speed = Math.min(s.speed, 1);
       }
@@ -100006,11 +100193,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       else if (!fighting) want = tr.escape.a;
     }
     const L2 = s.def.length;
-    const open = (ang, dist) => {
+    const open = (ang, dist, m2 = 2.5) => {
       const x = w.wx(s.x + Math.cos(ang) * dist), y = s.y + Math.sin(ang) * dist;
-      return w.sailable(x, y) && w.sd(x, y) < -2.5;
+      return w.sailable(x, y) && w.sd(x, y) < -m2;
     };
-    if (!s.heaveTo && (!open(want, L2 + 14) || !open(s.heading, L2 + 10))) {
+    const routed = s.onRoute === now2, m = s.def.beam * 0.5 + 2;
+    if (!s.heaveTo && (routed ? !open(s.heading, L2 * 0.6 + 6, m) || !open(s.heading, L2 * 0.3 + 3, m) : !open(want, L2 + 14) || !open(s.heading, L2 + 10))) {
       for (const off of [0.45, -0.45, 0.9, -0.9, 1.4, -1.4, 2.1, -2.1, 3]) {
         if (open(s.heading + off, L2 + 14) && open(s.heading + off, L2 + 6)) {
           want = s.heading + off;
@@ -100027,6 +100215,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         want = s.heading + clamp2(angleDiff(s.heading, away), -1.2, 1.2) * (1 - dd / room);
       }
     }
+    if (!s.heaveTo && Math.abs(angleDiff(s.heading, want)) > 1.2) s.speedCap = Math.min(s.speedCap ?? 99, 3.5);
     s.heading += clamp2(angleDiff(s.heading, want), -1, 1) * s.def.turn * 0.55 * dt;
   }
   function crewFor(game, T4, s, p) {
