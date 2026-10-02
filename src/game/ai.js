@@ -246,7 +246,7 @@ export class AIController {
     if (!this.sees && w.distance(a.x, a.y, t.x, t.y) > 2.2) {
       // out of sight: make for where they were last seen, then look about
       const d = w.distance(a.x, a.y, this.seenX, this.seenY);
-      if (d > 1.2) { this.moveToward(a, this.seenX, this.seenY, game); a.intent.sprint = d > 5 && a.stamina > a.d.maxStamina * 0.4; }
+      if (d > 1.2) { this.moveToward(a, this.seenX, this.seenY, game); a.intent.sprint = d > 5; }
       else a.facing += dt * 2.2 * this.strafeDir;
       if (a.blocking) a.setBlock(false);
       return;
@@ -257,13 +257,15 @@ export class AIController {
 
     // on another deck of a big ship (or down in her hold): make for the stairs (or the ladder) before anything else
     const up = game.deckRoute?.(a, t.x, t.y, t);
-    if (up) { this.moveToward(a, up.x, up.y, game, true); a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4; return; }
+    if (up) { this.moveToward(a, up.x, up.y, game, true); a.intent.sprint = dist > 4; return; }
 
     // defend against incoming attacks
     const ta = t.action;
     if (ta && dist < 4 && !a.action && ta.t < (ta.def.windup ?? 0.1) + 0.05 && this.think <= 0.35) {
       const roll = Math.random();
-      if (roll < this.skill * 0.55) { a.facing = ang; a.setBlock(true); this.blockT = 0.5; }
+      // (a blow that would smash a guard aside is one to get out of the way of)
+      const breaks = (ta.def.steps || []).some((s) => s.hit?.guardBreak || s.dash?.hit?.guardBreak);
+      if (roll < this.skill * 0.55 && !breaks) { a.facing = ang; a.setBlock(true); if (a.blocking) this.blockT = 0.5; }
       else if (roll < this.skill * 0.85) { a.tryDodge(game, -dy, dx * this.strafeDir); }
       this.think = 0.5;
     }
@@ -275,7 +277,7 @@ export class AIController {
       this.comboLeft = 0;
       const ring = 3.4 + (a.id % 5) * 0.25;
       let mx = 0, my = 0;
-      if (dist > ring + 1.2) { mx = dx / dist; my = dy / dist; a.intent.sprint = dist > 7 && a.stamina > a.d.maxStamina * 0.5; }
+      if (dist > ring + 1.2) { mx = dx / dist; my = dy / dist; a.intent.sprint = dist > 7; }
       else if (dist < ring - 0.6) { mx = -dx / dist; my = -dy / dist; }
       if (dist < ring + 2) { mx += (-dy / dist) * this.strafeDir * 0.55; my += (dx / dist) * this.strafeDir * 0.55; }
       if (Math.random() < 0.01) this.strafeDir *= -1;
@@ -310,14 +312,14 @@ export class AIController {
     const want = this.ranged ? this.prefRange : this.meleeRange(a) * 0.8;
     // a wall between us: go round by the door
     const via = game.buildings?.route(a, t.x, t.y);
-    if (via) { this.moveToward(a, via.x, via.y, game, true); a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4; return; }
+    if (via) { this.moveToward(a, via.x, via.y, game, true); a.intent.sprint = dist > 4; return; }
     // something in the way (a house, a fence, a cart): go round it
     if (dist > 1.8) {
       const wp = this.steer(a, t.x, t.y, game);
-      if (wp.x !== t.x || wp.y !== t.y) { this.moveToward(a, wp.x, wp.y, game, true); a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4; return; }
+      if (wp.x !== t.x || wp.y !== t.y) { this.moveToward(a, wp.x, wp.y, game, true); a.intent.sprint = dist > 4; return; }
     }
     let mx = 0, my = 0;
-    if (dist > want + 0.4) { mx = dx / dist; my = dy / dist; a.intent.sprint = dist > 6 && a.stamina > a.d.maxStamina * 0.5; }
+    if (dist > want + 0.4) { mx = dx / dist; my = dy / dist; a.intent.sprint = dist > 6; }
     else if (dist < want - 0.8 && this.ranged) { mx = -dx / dist; my = -dy / dist; }
     else if (Math.random() < 0.02) this.strafeDir *= -1;
     if (dist < want + 1.5) { mx += -dy / dist * this.strafeDir * 0.5; my += dx / dist * this.strafeDir * 0.5; }

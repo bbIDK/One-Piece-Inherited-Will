@@ -17,7 +17,7 @@ const HELP = [
   'weather clear | rain | storm — change the weather',
   'give <item> [how many] — e.g. give meat 5',
   'berries <amount>',
-  'heal — full health, stamina and air',
+  'heal — full health and air',
   'spawn <bandit | pirate | marine | brute> [level] — someone to fight',
   'speed <1-5> — how fast you fly',
   'creative off — back to normal play',
@@ -129,7 +129,7 @@ export function installCreative(game) {
           return '';
         }
         case 'heal':
-          p.hp = p.d.maxHp; p.stamina = p.d.maxStamina; p.oxygen = p.maxOxygen; p.status = {};
+          p.hp = p.d.maxHp; p.oxygen = p.maxOxygen; p.status = {};
           return 'Good as new.';
         case 'speed': {
           const s = +args[0];

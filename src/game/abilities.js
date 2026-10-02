@@ -69,7 +69,6 @@ export function canUse(actor, def) {
   if (!def) return false;
   if ((actor.cooldowns[def.id] || 0) > 0) return false;
   const c = def.cost || {};
-  if (c.stamina && actor.stamina < c.stamina * 0.5) return false;
   if (c.haki && actor.haki < c.haki) return false;
   if (def.source?.startsWith('fruit') && (actor.inWater || actor.seastoned)) return false;
   // (a style's technique needs that style's weapon: Santoryu moves want three swords, whatever you fight with)
@@ -80,7 +79,6 @@ export function canUse(actor, def) {
 
 export function startAbility(actor, def, game, target) {
   const c = def.cost || {};
-  if (c.stamina) actor.stamina = Math.max(0, actor.stamina - c.stamina);
   if (c.haki) actor.haki -= c.haki;
   const cdMul = actor.cdMul ?? 1;
   if (def.cd) actor.cooldowns[def.id] = def.cd * cdMul;

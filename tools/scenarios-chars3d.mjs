@@ -176,7 +176,7 @@ async function attacks(page, snap) {
       { name: 'Weather', style: 'weather_science', weapon: 'staff', look: { hair: 'long', hairColor: '#e67e22', top: '#0984e3' } },
       { name: 'Elbaf', style: 'elbaf', weapon: 'axe', bulk: 1.3, look: { hair: 'long', hairColor: '#8d6e63', hat: 'horns', top: '#795548' } },
     ];
-    defs.forEach((d, i) => { const a = C.spawn({ ...d, id: 'atk' + i }, 4.6, (i - 2.5) * 1.5, Math.PI / 2 + (i % 2 ? 0.5 : -0.5)); a.masteries = { [d.style]: 50 }; a.stamina = 999; });
+    defs.forEach((d, i) => { const a = C.spawn({ ...d, id: 'atk' + i }, 4.6, (i - 2.5) * 1.5, Math.PI / 2 + (i % 2 ? 0.5 : -0.5)); a.masteries = { [d.style]: 50 }; });
     C.view(0, -0.12, 'first');
   });
   await settle(page, 3);
@@ -189,7 +189,7 @@ async function attacks(page, snap) {
   await step(page, 0.4);
   await swing('attack-m1b', () => { for (const a of window.__C3.npcs) { a.combo.window = 1; a.combo.step = 1; a.tryM1(window.OP.game); } }, [0.05, 0.04]);
   await step(page, 0.5);
-  await swing('attack-heavy', () => { for (const a of window.__C3.npcs) { a.stamina = 999; a.tryHeavy(window.OP.game); } }, [0.05, 0.05, 0.05, 0.05]);
+  await swing('attack-heavy', () => { for (const a of window.__C3.npcs) { a.cooldowns = {}; a.tryHeavy(window.OP.game); } }, [0.05, 0.05, 0.05, 0.05]);
   await step(page, 0.3);
   await swing('attack-heavy-late', () => {}, [0.05, 0.05]);
   await step(page, 1.0);
@@ -215,7 +215,7 @@ async function viewmodel(page, snap) {
   await page.evaluate(() => {
     const C = window.__C3; C.clear();
     const g = window.OP.game, p = g.player;
-    p.style = 'brawler'; p.weapon = null; p.fruit = null; p.stamina = 999;
+    p.style = 'brawler'; p.weapon = null; p.fruit = null;
     C.spawn({ name: 'Training Dummy', id: 'dummy1', look: { hair: 'bald', top: '#8d6e63' } }, 2.2, 0.2);
     C.view(0, -0.05, 'first');
   });
@@ -388,7 +388,7 @@ export const scenarios = {
       await page.evaluate(() => {
         const C = window.__C3; C.clear();
         const g = window.OP.game, p = g.player;
-        p.style = 'brawler'; p.weapon = null; p.fruit = null; p.stamina = 999;
+        p.style = 'brawler'; p.weapon = null; p.fruit = null;
         C.spawn({ name: 'Training Dummy', id: 'dummy1', showName: false, look: { hair: 'bald', top: '#8d6e63' } }, 2.2, 0.2);
         C.view(0, -0.05, 'first');
       });
@@ -896,6 +896,59 @@ export const scenarios = {
             await snap(`${fem ? 'f' : 'm'}-${set.join('+')}-${view}`);
           }
         }
+      }
+    },
+  },
+  // first person with each kind of weapon drawn: walking, sprinting, a combo
+  // and a heavy blow, looking ahead and looking down at yourself
+  //   --wpns=rusty_katana,wado_ichimonji+shusui+sandai_kitetsu,flintlock,bo_staff,woodsman_axe  --mode=first|third
+  fpweapons: {
+    async run(page, snap, args) {
+      await boot(page);
+      await page.evaluate(() => { const u = document.getElementById('ui'); if (u) u.style.display = 'none'; });
+      const sets = String(args.wpns || 'rusty_katana,wado_ichimonji+shusui+sandai_kitetsu,flintlock,bo_staff,woodsman_axe').split(',');
+      const mode = String(args.mode || 'first');
+      const press = (k) => page.evaluate((k) => { window.OP.key(k, true); window.OP.step(1 / 30); window.OP.key(k, false); }, k);
+      const hold = (on) => page.evaluate((on) => { window.OP.hold = on; }, on);
+      for (const set of sets) {
+        const ids = set.split('+');
+        const tag = ids[0] + (ids.length > 1 ? 'x' + ids.length : '');
+        await page.evaluate(([ids, mode]) => {
+          const g = window.OP.game, p = g.player, c = g.state.char;
+          window.OP.hold = false;
+          c.equipped.weapons = []; p.weapon = null; p.drawn = false; p.held = null; p.hotbar.fill(null);
+          ids.forEach((id, i) => { window.OP.debug.addItem(g, id, 1, { silent: true }); p.hotbar[i] = 'item:' + id; });
+          window.__C3.view(0, -0.08, mode, 2.6);
+          g.view3d.rig.setShiftLock?.(true);
+        }, [ids, mode]);
+        for (let i = 0; i < ids.length; i++) await press(String(i + 1));
+        await settle(page, 2);
+        // (each key the first time puts it on and draws it: make sure it's drawn)
+        const drawn = await page.evaluate(() => window.OP.game.player.drawn);
+        if (!drawn) await press('1');
+        await settle(page, 8);
+        await hold(true);
+        await snap(`${tag}-ready`);
+        // walking, then sprinting: four frames across a stride each
+        for (const [gait, keys] of [['run', ['W']], ['sprint', ['W', 'Shift']]]) {
+          await page.evaluate((keys) => { for (const k of keys) window.OP.key(k, true); for (let i = 0; i < 12; i++) window.OP.step(1 / 30); }, keys);
+          for (let f = 0; f < 4; f++) { await step(page, 0.09); await snap(`${tag}-${gait}${f}`); }
+          await page.evaluate((keys) => { for (const k of keys) window.OP.key(k, false); for (let i = 0; i < 20; i++) window.OP.step(1 / 30); }, keys);
+        }
+        // a combo, ahead and looking down
+        for (const pitch of [-0.08, -0.75]) {
+          await page.evaluate((pitch) => { const g = window.OP.game; g.view3d.rig.pitch = pitch; for (let i = 0; i < 20; i++) window.OP.step(1 / 30); }, pitch);
+          for (let k = 0; k < 3; k++) {
+            await page.evaluate((k) => { const g = window.OP.game, p = g.player; p.combo.window = k ? 1 : 0; p.combo.step = k; p.cooldowns = {}; p.tryM1(g); }, k);
+            await step(page, 0.1); await snap(`${tag}-m1${k}${pitch < -0.3 ? '-down' : ''}`);
+            await step(page, 0.08); await snap(`${tag}-m1${k}b${pitch < -0.3 ? '-down' : ''}`);
+            await step(page, 0.3);
+          }
+          await page.evaluate(() => { const g = window.OP.game, p = g.player; p.cooldowns = {}; p.action = null; p.tryHeavy(g); });
+          for (let f = 0; f < 4; f++) { await step(page, 0.09); await snap(`${tag}-heavy${f}${pitch < -0.3 ? '-down' : ''}`); }
+          await step(page, 0.6);
+        }
+        await hold(false);
       }
     },
   },

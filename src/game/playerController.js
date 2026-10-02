@@ -63,7 +63,7 @@ export class PlayerController {
         const pitch = v3.rig.pitch;
         if (pitch < -0.28 || (pitch > 0.2 && p.depth > 0.05)) p.intent.mz = Math.max(-1, Math.min(1, pitch * 1.5)) * fwdIn;
       }
-      if (!p.gills && p.under && !this.o2Hint) { this.o2Hint = true; game.hint?.('diving', 'Under water you hold your breath — watch the bubbles under your stamina and come up for air (Space). Look down and swim, or hold C, to dive.'); }
+      if (!p.gills && p.under && !this.o2Hint) { this.o2Hint = true; game.hint?.('diving', 'Under water you hold your breath — watch the bubbles under your health and come up for air (Space). Look down and swim, or hold C, to dive.'); }
     }
     // Shift: holding it sprints (a quick tap dodges in first person); Q dashes
     if (inp.wasPressed('Shift')) this.shiftT = 0;
@@ -108,7 +108,7 @@ export class PlayerController {
       game.applySettings?.(true);
       game.ui.toast(v3.rig.shiftLock ? 'SHIFT LOCK ON' : 'SHIFT LOCK OFF', v3.rig.shiftLock ? 'Your character faces where you look. Tap Ctrl to free the mouse.' : 'Hold the right mouse button to turn the camera. Tap Ctrl to lock it.', '#ffe082', 'shiftlock');
     }
-    if (inp.wasPressed('Q')) buf.dodge = 0.16; // Q dashes
+    if (inp.wasPressed('Q')) { buf.dodge = 0.16; if (p.dodgeCd > 0.16) game.ui?.flashAct?.('dodge'); } // Q dashes (its slot flashes while it's still coming back)
     // jumping: a tap hops; holding Space crouches and charges a higher spring (how
     // high, and how much more a charge gives, depends on your race). A press in the
     // air still jumps if you land within a moment.
@@ -130,6 +130,7 @@ export class PlayerController {
       if (!p.action) { p.facing = aimM; if (p.tryM1(game)) buf.m1 = 0; }
       else { p.tryM1(game); if (p.combo.queued) buf.m1 = 0; }
     }
+    if (inp.wasPressed('F') && p.guardCd > 0) game.ui?.flashAct?.('guard');
     p.setBlock(inp.isDown('F'));
     for (let i = 0; i < HOTBAR_SIZE; i++) {
       if (inp.wasPressed(HOTBAR_KEYS[i])) {

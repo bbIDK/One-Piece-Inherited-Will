@@ -7,7 +7,7 @@ import { clamp } from '../core/math.js';
 export const ATTRS = {
   str: { name: 'Strength', short: 'STR', desc: 'Physical damage and carrying power.' },
   agi: { name: 'Agility', short: 'AGI', desc: 'Move speed, dodge recovery and attack speed.' },
-  end: { name: 'Endurance', short: 'END', desc: 'Stamina pool, defence and stamina regeneration.' },
+  end: { name: 'Endurance', short: 'END', desc: 'Defence, how much of a blow your guard stops and how soon a broken guard comes back — and, for a Devil Fruit user, how long you keep your head above water.' },
   vit: { name: 'Vitality', short: 'VIT', desc: 'Maximum health and recovery.' },
   wil: { name: 'Willpower', short: 'WIL', desc: 'Your spirit: resistance to fear, your chance to get back up, and the strength of any hidden power you awaken.' },
 };
@@ -23,12 +23,10 @@ export function derive(a, mods = {}) {
   const hpMul = mods.hpMul || 1;
   return {
     maxHp: Math.round((90 + a.vit * 9 + a.end * 2) * hpMul),
-    maxStamina: Math.round(100 + a.end * 3 + a.agi),
     maxHaki: Math.round(40 + a.wil * 4),
     speed: 4.3 * (1 + a.agi * 0.0045) * (mods.stride || 1) * (mods.speedMul || 1),
     dmg: 1 + a.str * 0.028,
     def: clamp(a.end * 0.0035 + (mods.armor || 0), 0, 0.55),
-    staminaRegen: 16 + a.end * 0.25,
     hpRegen: 0.25 + a.vit * 0.02,
     hakiRegen: 1.5 + a.wil * 0.06,
     atkSpeed: 1 + a.agi * 0.003,

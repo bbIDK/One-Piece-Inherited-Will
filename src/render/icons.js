@@ -3389,6 +3389,21 @@ UI.news = (I) => {
 UI.legacy = (I) => { D.strawHat(I, {}); sparkle(I, 52, 14, 6, '#fff3c0'); };
 UI.stats = (I) => { for (const [x, h, c] of [[10, 18, '#3f86c8'], [26, 32, '#3f9a4a'], [42, 44, '#e0b24a']]) part(I, rrect(x, 56 - h, 12, h, 2), c, { sd: 1.6, hd: 1.2 }); tube(I, 'M6 58 H58', '#6e4526', 3); };
 UI.combat = (I) => { tf(I, { s: 0.9 }, () => { D.katana(I, {}); tf(I, { sx: -1, ox: 32 }, () => D.katana(I, {})); }); };
+/** Dodge (Q): a double chevron dashing off, speed lines behind it. */
+UI.dodge = (I) => {
+  speed(I, [[4, 22, 16, 22], [2, 32, 14, 32], [4, 42, 16, 42]], '#fff4dc', 3.4, 1);
+  speed(I, [[4, 22, 16, 22], [2, 32, 14, 32], [4, 42, 16, 42]], '#3d8fd1', 1.7, 1);
+  const chev = (x) => `M${x} 12 L${x + 12} 12 L${x + 30} 32 L${x + 12} 52 L${x} 52 L${x + 18} 32 Z`;
+  part(I, chev(18), '#7cc8f2', { sd: 2.2, hd: 1.6 });
+  part(I, chev(32), '#b8e4fa', { sd: 2.2, hd: 1.6 });
+};
+/** Block (F): a round-topped shield with a gold rim and boss. */
+UI.guard = (I) => {
+  const shield = 'M32 5 C40 9.5 48 10.5 55 9.5 C56 30 50 47 32 59 C14 47 8 30 9 9.5 C16 10.5 24 9.5 32 5 Z';
+  part(I, shield, '#e0b24a', { sd: 2.4, hd: 1.6 });
+  part(I, xf(shield, { s: 0.78, oy: 31 }), '#4f79a6', { sd: 2.4, hd: 1.6, ol: I.ol * 0.7 });
+  part(I, circle(32, 29, 6), '#f2d27a', { sd: 1.4, hd: 1, ol: I.ol * 0.7 });
+};
 UI.drop = (I) => part(I, dropP(32, 36, 2.4), '#4fb3e8', { sd: 3, hd: 2, gloss: [26, 34, 3, 5, 0.7, 0.3] });
 UI.dream = (I) => { part(I, cloudP(32, 36, 1.35), '#f4f1ea', { sd: 2.4, shT: 0.15, hd: 1.4 }); part(I, star(44, 16, 5, 10, 4.5), C.gold, { sd: 1, hd: 0.8 }); };
 UI.clock = (I) => { part(I, circle(32, 32, 26), '#f4ecd8', { sd: 2.4, shT: 0.15, hd: 1.4 }); ln(I, circle(32, 32, 22), '#8e5a30', 2.4); tube(I, 'M32 32 V16 M32 32 L42 38', OUT, 3, { flat: true }); fl(I, circle(32, 32, 2.6), '#c8372d'); };

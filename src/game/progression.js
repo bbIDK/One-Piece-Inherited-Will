@@ -229,7 +229,7 @@ export class Progression {
     const names = { armament: 'ARMAMENT HAKI', observation: 'OBSERVATION HAKI', conqueror: "CONQUEROR'S HAKI" };
     g.ui.toast(names[type], how || 'Your will takes shape.', type === 'conqueror' ? '#ff5252' : '#ce93d8');
     g.fx.impactFrame?.(0.12);
-    g.log(`${names[type]} awakened. Press ${type === 'armament' ? 'R' : type === 'observation' ? 'T' : 'G'} to use it.${first ? ' Haki draws on a new spirit bar under your stamina; it refills when you rest it.' : ''}`, '#ce93d8');
+    g.log(`${names[type]} awakened. Press ${type === 'armament' ? 'R' : type === 'observation' ? 'T' : 'G'} to use it.${first ? ' Haki draws on a new spirit bar under your health; it refills when you rest it.' : ''}`, '#ce93d8');
     g.emit('hakiAwakened', type);
     persist(g);
     return true;

@@ -31436,10 +31436,10 @@ void main() {
   }
 
   // src/world/constants.js
-  var POS_SCALE2 = 6;
-  var SIZE_SCALE2 = 2.25;
-  var chart = (v) => Math.round(v * POS_SCALE2);
-  var csize = (v) => Math.round(v * SIZE_SCALE2);
+  var POS_SCALE = 6;
+  var SIZE_SCALE = 2.25;
+  var chart = (v) => Math.round(v * POS_SCALE);
+  var csize = (v) => Math.round(v * SIZE_SCALE);
   var W = chart(4096);
   var H = chart(2048);
   var EQ = chart(1024);
@@ -41630,7 +41630,6 @@ ${GLSL}
         if (facingDiff < 1.9) {
           if (tgt.blockTime < 0.2 && att && !h2.projectileOnly) {
             att.stagger(0.9);
-            tgt.stamina = Math.min(tgt.d.maxStamina, tgt.stamina + 15);
             if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + 6);
             fx.parry(tgt, att, ang);
             game.audio?.sfx("parry", tgt);
@@ -41639,15 +41638,16 @@ ${GLSL}
           }
           blocked = true;
           if (tgt.isPlayer) game.emit("playerBlocked", att, h2);
-          dmg *= h2.guardBreak ? 0.6 : 0.18;
-          tgt.stamina -= (h2.guardDmg ?? 10) + h2.damage * 0.25;
-          if (tgt.stamina <= 0) {
-            tgt.stamina = 0;
+          if (h2.guardBreak) {
+            dmg *= 0.6;
             tgt.blocking = false;
+            tgt.guardCd = tgt.guardCooldown();
             tgt.stagger(1.1);
             fx.guardBreak(tgt, att, ang);
             game.audio?.sfx("guardbreak", tgt);
+            if (tgt.isPlayer) game.hint("guardbreak", "A heavy blow smashes a guard aside \u2014 and it can't come up again until the F slot fills. Watch for the red glint and dodge (Q) those instead.");
           } else {
+            dmg *= tgt.guardChip();
             game.audio?.sfx("block", tgt);
           }
         }
@@ -42499,7 +42499,6 @@ ${GLSL}
     if (!def) return false;
     if ((actor.cooldowns[def.id] || 0) > 0) return false;
     const c = def.cost || {};
-    if (c.stamina && actor.stamina < c.stamina * 0.5) return false;
     if (c.haki && actor.haki < c.haki) return false;
     if (def.source?.startsWith("fruit") && (actor.inWater || actor.seastoned)) return false;
     if (def.weapon && !actor.hasWeapon(def.weapon, def.style)) return false;
@@ -42508,7 +42507,6 @@ ${GLSL}
   }
   function startAbility(actor, def, game, target2) {
     const c = def.cost || {};
-    if (c.stamina) actor.stamina = Math.max(0, actor.stamina - c.stamina);
     if (c.haki) actor.haki -= c.haki;
     const cdMul = actor.cdMul ?? 1;
     if (def.cd) actor.cooldowns[def.id] = def.cd * cdMul;
@@ -42783,10 +42781,10 @@ ${GLSL}
       passive: { rubber: true },
       stretch: true,
       techniques: [
-        T2(0, { id: "gomu_pistol", name: "Gum-Gum Pistol", icon: "\u{1F44A}", anim: "punch", windup: 0.12, recover: 0.25, cd: 2.5, cost: { stamina: 10 }, say: "Gomu Gomu no... Pistol!", steps: [{ proj: { speed: 26, range: 8, radius: 0.35, damage: 16, sprite: "gomufist", stretch: true, knockback: 5, stun: 0.3 } }] }),
-        T2(10, { id: "gomu_gatling", name: "Gum-Gum Gatling", icon: "\u{1F52B}", anim: "punch", windup: 0.2, recover: 0.3, cd: 6, cost: { stamina: 20 }, say: "Gomu Gomu no... Gatling!", steps: [{ hit: { shape: "arc", range: 3.2, arc: 0.9, offset: 0.3, damage: 5, knockback: 0.8, stun: 0.15, duration: 0.9, interval: 0.08 }, vfx: "fist" }] }),
-        T2(20, { id: "gomu_rocket", name: "Gum-Gum Rocket", icon: "\u{1F680}", anim: "thrust", windup: 0.15, recover: 0.2, cd: 4, cost: { stamina: 14 }, desc: "Launch yourself like a slingshot.", steps: [{ dash: { dist: 9, time: 0.3, iframes: 0.25, air: true, hit: { damage: 14, knockback: 6, stun: 0.4 } } }] }),
-        T2(30, { id: "gomu_bazooka", name: "Gum-Gum Bazooka", icon: "\u{1F4A5}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 8, cost: { stamina: 22 }, say: "Gomu Gomu no... BAZOOKA!", steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.2, offset: 0.4, damage: 36, knockback: 14, stun: 0.8, heavy: true, guardBreak: true, impactFrame: true, hitShips: true } }] }),
+        T2(0, { id: "gomu_pistol", name: "Gum-Gum Pistol", icon: "\u{1F44A}", anim: "punch", windup: 0.12, recover: 0.25, cd: 2.5, say: "Gomu Gomu no... Pistol!", steps: [{ proj: { speed: 26, range: 8, radius: 0.35, damage: 16, sprite: "gomufist", stretch: true, knockback: 5, stun: 0.3 } }] }),
+        T2(10, { id: "gomu_gatling", name: "Gum-Gum Gatling", icon: "\u{1F52B}", anim: "punch", windup: 0.2, recover: 0.3, cd: 6, say: "Gomu Gomu no... Gatling!", steps: [{ hit: { shape: "arc", range: 3.2, arc: 0.9, offset: 0.3, damage: 5, knockback: 0.8, stun: 0.15, duration: 0.9, interval: 0.08 }, vfx: "fist" }] }),
+        T2(20, { id: "gomu_rocket", name: "Gum-Gum Rocket", icon: "\u{1F680}", anim: "thrust", windup: 0.15, recover: 0.2, cd: 4, desc: "Launch yourself like a slingshot.", steps: [{ dash: { dist: 9, time: 0.3, iframes: 0.25, air: true, hit: { damage: 14, knockback: 6, stun: 0.4 } } }] }),
+        T2(30, { id: "gomu_bazooka", name: "Gum-Gum Bazooka", icon: "\u{1F4A5}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 8, say: "Gomu Gomu no... BAZOOKA!", steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.2, offset: 0.4, damage: 36, knockback: 14, stun: 0.8, heavy: true, guardBreak: true, impactFrame: true, hitShips: true } }] }),
         T2(45, {
           id: "gomu_gear2",
           name: "Gear Second",
@@ -42795,12 +42793,11 @@ ${GLSL}
           windup: 0.4,
           recover: 0.1,
           cd: 35,
-          cost: { stamina: 15 },
           say: "Gear... Second!",
           desc: "Pump blood at high speed: faster and stronger, at a cost.",
-          steps: [{ fx: { burst: 20, color: "#ffcdd2", kind: "smoke" } }, { at: 0.4, buff: { id: "gear2", name: "Gear Second", dur: 16, mods: { speedMul: 1.35, damage: 1.35, atkSpeed: 1.3 }, aura: "rgba(255,138,128,0.7)", steam: true, look: { skin: "#f4a39c" }, drain: { stamina: 2.2 } } }]
+          steps: [{ fx: { burst: 20, color: "#ffcdd2", kind: "smoke" } }, { at: 0.4, buff: { id: "gear2", name: "Gear Second", dur: 16, mods: { speedMul: 1.35, damage: 1.35, atkSpeed: 1.3 }, aura: "rgba(255,138,128,0.7)", steam: true, look: { skin: "#f4a39c" }, after: { id: "gear2_spent", name: "Spent", dur: 8, mods: { speedMul: 0.85, atkSpeed: 0.85 } } } }]
         }),
-        T2(60, { id: "gomu_gear3", name: "Gear Third: Gigant Pistol", icon: "\u{1F9B4}", anim: "pistol", windup: 0.7, recover: 0.5, cd: 18, cost: { stamina: 32 }, say: "Gear Third... Gigant Pistol!", steps: [{ proj: { speed: 16, range: 10, radius: 1.6, damage: 80, sprite: "gomufist", size: 4, stretch: true, pierce: true, knockback: 14, stun: 1, heavy: true, hitShips: true, shipDamage: 200 } }] }),
+        T2(60, { id: "gomu_gear3", name: "Gear Third: Gigant Pistol", icon: "\u{1F9B4}", anim: "pistol", windup: 0.7, recover: 0.5, cd: 18, say: "Gear Third... Gigant Pistol!", steps: [{ proj: { speed: 16, range: 10, radius: 1.6, damage: 80, sprite: "gomufist", size: 4, stretch: true, pierce: true, knockback: 14, stun: 1, heavy: true, hitShips: true, shipDamage: 200 } }] }),
         T2(80, {
           id: "gomu_gear4",
           name: "Gear Fourth: Boundman",
@@ -42809,7 +42806,7 @@ ${GLSL}
           windup: 0.8,
           recover: 0.2,
           cd: 90,
-          cost: { stamina: 30, haki: 40 },
+          cost: { haki: 40 },
           requiresHaki: "armament",
           say: "Gear... FOURTH!",
           desc: "Inflate your Haki-hardened muscles. Enormous power for a short time.",
@@ -42823,7 +42820,7 @@ ${GLSL}
           windup: 1,
           recover: 0.2,
           cd: 180,
-          cost: { stamina: 20, haki: 60 },
+          cost: { haki: 60 },
           requiresHaki: "conqueror",
           say: "...Drums of Liberation.",
           desc: "The fruit's true name is Hito Hito no Mi, Model: Nika. The warrior of liberation, bringer of joy.",
@@ -42840,10 +42837,10 @@ ${GLSL}
       weight: 0.4,
       desc: "The power to destroy the world: create quakes in the air, the ground and the sea. Once eaten by Whitebeard.",
       techniques: [
-        T2(0, { id: "gura_punch", name: "Quake Punch", icon: "\u270A", anim: "quake", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 14 }, steps: [{ hit: { shape: "arc", range: 3, arc: 1.2, offset: 0.3, damage: 26, knockback: 10, stun: 0.6, element: "quake", heavy: true, guardBreak: true, shake: 0.4 }, vfx: "ring" }] }),
-        T2(20, { id: "gura_kaishin", name: "Kaishin", icon: "\u{1F310}", anim: "quake", windup: 0.45, recover: 0.4, cd: 9, cost: { stamina: 26 }, desc: "Crack the air itself around you.", steps: [{ hit: { shape: "circle", range: 4.5, damage: 40, knockback: 12, stun: 0.9, element: "quake", heavy: true, guardBreak: true, impactFrame: true, shake: 0.8, hitShips: true }, vfx: "ring" }] }),
-        T2(45, { id: "gura_wave", name: "Quake Wave", icon: "\u{1F30A}", anim: "quake", windup: 0.5, recover: 0.4, cd: 12, cost: { stamina: 28 }, desc: "A shockwave that rips across the ground (and sea).", steps: [{ hit: { shape: "line", range: 12, width: 3, damage: 55, knockback: 14, stun: 1, element: "quake", heavy: true, unblockable: true, shake: 0.7, hitShips: true, shipDamage: 250 }, vfx: "beam", color: "#e0f7fa" }] }),
-        T2(75, { id: "gura_tsunami", name: "Seaquake", icon: "\u{1F30B}", anim: "slam", windup: 0.9, recover: 0.5, cd: 40, cost: { stamina: 40 }, desc: "Tilt the sea. Everything nearby is crushed.", steps: [{ hit: { shape: "circle", range: 8, damage: 90, knockback: 16, stun: 1.2, element: "quake", heavy: true, unblockable: true, impactFrame: true, shake: 1.2, hitShips: true, shipDamage: 500 }, vfx: "ring" }] })
+        T2(0, { id: "gura_punch", name: "Quake Punch", icon: "\u270A", anim: "quake", windup: 0.25, recover: 0.3, cd: 4, steps: [{ hit: { shape: "arc", range: 3, arc: 1.2, offset: 0.3, damage: 26, knockback: 10, stun: 0.6, element: "quake", heavy: true, guardBreak: true, shake: 0.4 }, vfx: "ring" }] }),
+        T2(20, { id: "gura_kaishin", name: "Kaishin", icon: "\u{1F310}", anim: "quake", windup: 0.45, recover: 0.4, cd: 9, desc: "Crack the air itself around you.", steps: [{ hit: { shape: "circle", range: 4.5, damage: 40, knockback: 12, stun: 0.9, element: "quake", heavy: true, guardBreak: true, impactFrame: true, shake: 0.8, hitShips: true }, vfx: "ring" }] }),
+        T2(45, { id: "gura_wave", name: "Quake Wave", icon: "\u{1F30A}", anim: "quake", windup: 0.5, recover: 0.4, cd: 12, desc: "A shockwave that rips across the ground (and sea).", steps: [{ hit: { shape: "line", range: 12, width: 3, damage: 55, knockback: 14, stun: 1, element: "quake", heavy: true, unblockable: true, shake: 0.7, hitShips: true, shipDamage: 250 }, vfx: "beam", color: "#e0f7fa" }] }),
+        T2(75, { id: "gura_tsunami", name: "Seaquake", icon: "\u{1F30B}", anim: "slam", windup: 0.9, recover: 0.5, cd: 40, desc: "Tilt the sea. Everything nearby is crushed.", steps: [{ hit: { shape: "circle", range: 8, damage: 90, knockback: 16, stun: 1.2, element: "quake", heavy: true, unblockable: true, impactFrame: true, shake: 1.2, hitShips: true, shipDamage: 500 }, vfx: "ring" }] })
       ]
     },
     ope: {
@@ -42855,12 +42852,12 @@ ${GLSL}
       weight: 0.4,
       desc: "Create a ROOM and become a surgeon within it. Its ultimate technique grants eternal youth \u2014 at the cost of the user's life.",
       techniques: [
-        T2(0, { id: "ope_room", name: "ROOM", icon: "\u{1F535}", anim: "raise", windup: 0.3, recover: 0.2, cd: 20, cost: { stamina: 15 }, desc: "Within your Room, techniques cost less and hit harder.", steps: [{ fx: { ring: 7, color: "#81d4fa" } }, { buff: { id: "room", name: "ROOM", dur: 12, mods: { damage: 1.3, cdMul: 0.6 }, aura: "rgba(129,212,250,0.5)" } }] }),
-        T2(10, { id: "ope_shambles", name: "Shambles", icon: "\u{1F500}", anim: "point", windup: 0.1, recover: 0.1, cd: 3, cost: { stamina: 10 }, desc: "Swap places instantly.", steps: [{ teleport: { dist: 8, color: "#81d4fa" } }] }),
-        T2(25, { id: "ope_amputate", name: "Amputate", icon: "\u{1F5E1}", anim: "slash", windup: 0.2, recover: 0.3, cd: 5, cost: { stamina: 16 }, desc: "A vast slash that cuts without killing.", steps: [{ hit: { shape: "arc", range: 4, arc: 2.4, offset: 0.2, damage: 28, knockback: 2, stun: 0.9, slashing: true }, vfx: "slash", color: "#81d4fa" }] }),
-        T2(45, { id: "ope_mes", name: "Mes", icon: "\u{1F499}", anim: "thrust", windup: 0.15, recover: 0.3, cd: 12, cost: { stamina: 18 }, desc: "Remove the target's heart in a cube. They freeze in terror.", steps: [{ hit: { shape: "arc", range: 1.6, arc: 1, offset: 0.2, damage: 20, stun: 2.5, unblockable: true } }] }),
-        T2(60, { id: "ope_counter", name: "Counter Shock", icon: "\u26A1", anim: "palm", windup: 0.2, recover: 0.3, cd: 10, cost: { stamina: 20 }, steps: [{ hit: { shape: "arc", range: 1.5, arc: 1.2, offset: 0.2, damage: 45, stun: 1.2, element: "lightning", status: { shock: 1.5 } }, vfx: "ring", color: "#fff176" }] }),
-        T2(80, { id: "ope_gamma", name: "Gamma Knife", icon: "\u2622", anim: "thrust", windup: 0.3, recover: 0.3, cd: 18, cost: { stamina: 26 }, desc: "Destroys organs from the inside. Ignores all defences.", steps: [{ hit: { shape: "line", range: 3, width: 0.8, damage: 85, stun: 1, unblockable: true, trueDamage: true }, vfx: "beam", color: "#b388ff" }] })
+        T2(0, { id: "ope_room", name: "ROOM", icon: "\u{1F535}", anim: "raise", windup: 0.3, recover: 0.2, cd: 20, desc: "Within your Room, techniques cost less and hit harder.", steps: [{ fx: { ring: 7, color: "#81d4fa" } }, { buff: { id: "room", name: "ROOM", dur: 12, mods: { damage: 1.3, cdMul: 0.6 }, aura: "rgba(129,212,250,0.5)" } }] }),
+        T2(10, { id: "ope_shambles", name: "Shambles", icon: "\u{1F500}", anim: "point", windup: 0.1, recover: 0.1, cd: 3, desc: "Swap places instantly.", steps: [{ teleport: { dist: 8, color: "#81d4fa" } }] }),
+        T2(25, { id: "ope_amputate", name: "Amputate", icon: "\u{1F5E1}", anim: "slash", windup: 0.2, recover: 0.3, cd: 5, desc: "A vast slash that cuts without killing.", steps: [{ hit: { shape: "arc", range: 4, arc: 2.4, offset: 0.2, damage: 28, knockback: 2, stun: 0.9, slashing: true }, vfx: "slash", color: "#81d4fa" }] }),
+        T2(45, { id: "ope_mes", name: "Mes", icon: "\u{1F499}", anim: "thrust", windup: 0.15, recover: 0.3, cd: 12, desc: "Remove the target's heart in a cube. They freeze in terror.", steps: [{ hit: { shape: "arc", range: 1.6, arc: 1, offset: 0.2, damage: 20, stun: 2.5, unblockable: true } }] }),
+        T2(60, { id: "ope_counter", name: "Counter Shock", icon: "\u26A1", anim: "palm", windup: 0.2, recover: 0.3, cd: 10, steps: [{ hit: { shape: "arc", range: 1.5, arc: 1.2, offset: 0.2, damage: 45, stun: 1.2, element: "lightning", status: { shock: 1.5 } }, vfx: "ring", color: "#fff176" }] }),
+        T2(80, { id: "ope_gamma", name: "Gamma Knife", icon: "\u2622", anim: "thrust", windup: 0.3, recover: 0.3, cd: 18, desc: "Destroys organs from the inside. Ignores all defences.", steps: [{ hit: { shape: "line", range: 3, width: 0.8, damage: 85, stun: 1, unblockable: true, trueDamage: true }, vfx: "beam", color: "#b388ff" }] })
       ]
     },
     bara: {
@@ -42873,9 +42870,9 @@ ${GLSL}
       desc: "Split your body into pieces. Blades cannot hurt you \u2014 but your feet must stay on the ground. (Buggy the Clown's fruit.)",
       passive: { immuneSlash: true },
       techniques: [
-        T2(0, { id: "bara_cannon", name: "Chop-Chop Cannon", icon: "\u{1F921}", anim: "cross", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 10 }, say: "Bara Bara Ho!", steps: [{ proj: { speed: 20, range: 9, radius: 0.35, damage: 14, sprite: "barafist", color: "#ffccbc", knockback: 3, stun: 0.3 } }] }),
-        T2(20, { id: "bara_festival", name: "Chop-Chop Festival", icon: "\u{1F3AA}", anim: "cast", windup: 0.3, recover: 0.4, cd: 10, cost: { stamina: 24 }, desc: "Scatter into a hundred pieces that pummel everything nearby.", steps: [{ hit: { shape: "circle", range: 3.2, damage: 6, knockback: 1.5, stun: 0.15, duration: 1.2, interval: 0.15 }, vfx: "ring" }] }),
-        T2(40, { id: "bara_escape", name: "Emergency Escape", icon: "\u{1F388}", anim: "fly", windup: 0.05, recover: 0.1, cd: 8, cost: { stamina: 12 }, steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, air: true } }] })
+        T2(0, { id: "bara_cannon", name: "Chop-Chop Cannon", icon: "\u{1F921}", anim: "cross", windup: 0.15, recover: 0.25, cd: 3, say: "Bara Bara Ho!", steps: [{ proj: { speed: 20, range: 9, radius: 0.35, damage: 14, sprite: "barafist", color: "#ffccbc", knockback: 3, stun: 0.3 } }] }),
+        T2(20, { id: "bara_festival", name: "Chop-Chop Festival", icon: "\u{1F3AA}", anim: "cast", windup: 0.3, recover: 0.4, cd: 10, desc: "Scatter into a hundred pieces that pummel everything nearby.", steps: [{ hit: { shape: "circle", range: 3.2, damage: 6, knockback: 1.5, stun: 0.15, duration: 1.2, interval: 0.15 }, vfx: "ring" }] }),
+        T2(40, { id: "bara_escape", name: "Emergency Escape", icon: "\u{1F388}", anim: "fly", windup: 0.05, recover: 0.1, cd: 8, steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, air: true } }] })
       ]
     },
     bomu: {
@@ -42888,9 +42885,9 @@ ${GLSL}
       desc: "Make any part of your body explode \u2014 and survive it. (Mr. 5 of Baroque Works.)",
       passive: { resist: ["explosion"] },
       techniques: [
-        T2(0, { id: "bomu_kick", name: "Kick Bomb", icon: "\u{1F4A3}", anim: "kick", windup: 0.2, recover: 0.3, cd: 3, cost: { stamina: 10 }, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.3, damage: 18, knockback: 7, stun: 0.4, element: "explosion" }, vfx: "ring", color: "#ffab40" }] }),
-        T2(15, { id: "bomu_nose", name: "Nose Fancy Cannon", icon: "\u{1F443}", anim: "flick", windup: 0.25, recover: 0.3, cd: 5, cost: { stamina: 12 }, desc: "Flick an explosive... bogey. Disgusting and effective.", steps: [{ proj: { speed: 18, range: 12, radius: 0.2, damage: 6, sprite: "orb", color: "#aed581", explode: { range: 2, damage: 24 } } }] }),
-        T2(40, { id: "bomu_breeze", name: "Breeze Breath Bomb", icon: "\u{1F32C}", anim: "breath", windup: 0.35, recover: 0.3, cd: 9, cost: { stamina: 20 }, steps: [{ hit: { shape: "arc", range: 4, arc: 1.2, offset: 0.2, damage: 32, knockback: 8, stun: 0.6, element: "explosion", heavy: true }, vfx: "ring", color: "#ffab40" }] })
+        T2(0, { id: "bomu_kick", name: "Kick Bomb", icon: "\u{1F4A3}", anim: "kick", windup: 0.2, recover: 0.3, cd: 3, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.3, damage: 18, knockback: 7, stun: 0.4, element: "explosion" }, vfx: "ring", color: "#ffab40" }] }),
+        T2(15, { id: "bomu_nose", name: "Nose Fancy Cannon", icon: "\u{1F443}", anim: "flick", windup: 0.25, recover: 0.3, cd: 5, desc: "Flick an explosive... bogey. Disgusting and effective.", steps: [{ proj: { speed: 18, range: 12, radius: 0.2, damage: 6, sprite: "orb", color: "#aed581", explode: { range: 2, damage: 24 } } }] }),
+        T2(40, { id: "bomu_breeze", name: "Breeze Breath Bomb", icon: "\u{1F32C}", anim: "breath", windup: 0.35, recover: 0.3, cd: 9, steps: [{ hit: { shape: "arc", range: 4, arc: 1.2, offset: 0.2, damage: 32, knockback: 8, stun: 0.6, element: "explosion", heavy: true }, vfx: "ring", color: "#ffab40" }] })
       ]
     },
     hana: {
@@ -42902,9 +42899,9 @@ ${GLSL}
       weight: 2.5,
       desc: "Sprout copies of your body parts on any surface \u2014 including your enemies. (Nico Robin.)",
       techniques: [
-        T2(0, { id: "hana_clutch", name: "Clutch", icon: "\u{1F338}", anim: "hana", windup: 0.25, recover: 0.3, cd: 5, cost: { stamina: 14 }, say: "Seis Fleur... Clutch!", desc: "Sprout arms on the target and bend them backwards.", steps: [{ zone: { range: 1.2, duration: 0.3, interval: 0.3, damage: 24, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.2 } } }] }),
-        T2(20, { id: "hana_mil", name: "Mil Fleur", icon: "\u{1F33A}", anim: "hana", windup: 0.4, recover: 0.4, cd: 10, cost: { stamina: 22 }, desc: "A thousand arms bloom around you and strike.", steps: [{ hit: { shape: "circle", range: 3.6, damage: 7, knockback: 1, stun: 0.3, duration: 1, interval: 0.14 }, vfx: "ring", color: "#f48fb1" }] }),
-        T2(50, { id: "hana_gigante", name: "Gigantesco Mano", icon: "\u270B", anim: "hana", windup: 0.5, recover: 0.4, cd: 14, cost: { stamina: 28 }, desc: "Two giant sprouted hands slam down.", steps: [{ zone: { range: 2.6, duration: 0.3, interval: 0.3, damage: 60, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.5 } } }] })
+        T2(0, { id: "hana_clutch", name: "Clutch", icon: "\u{1F338}", anim: "hana", windup: 0.25, recover: 0.3, cd: 5, say: "Seis Fleur... Clutch!", desc: "Sprout arms on the target and bend them backwards.", steps: [{ zone: { range: 1.2, duration: 0.3, interval: 0.3, damage: 24, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.2 } } }] }),
+        T2(20, { id: "hana_mil", name: "Mil Fleur", icon: "\u{1F33A}", anim: "hana", windup: 0.4, recover: 0.4, cd: 10, desc: "A thousand arms bloom around you and strike.", steps: [{ hit: { shape: "circle", range: 3.6, damage: 7, knockback: 1, stun: 0.3, duration: 1, interval: 0.14 }, vfx: "ring", color: "#f48fb1" }] }),
+        T2(50, { id: "hana_gigante", name: "Gigantesco Mano", icon: "\u270B", anim: "hana", windup: 0.5, recover: 0.4, cd: 14, desc: "Two giant sprouted hands slam down.", steps: [{ zone: { range: 2.6, duration: 0.3, interval: 0.3, damage: 60, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.5 } } }] })
       ]
     },
     ito: {
@@ -42916,10 +42913,10 @@ ${GLSL}
       weight: 0.5,
       desc: "Create strings sharp enough to cut steel and strong enough to puppet people. (Donquixote Doflamingo.)",
       techniques: [
-        T2(0, { id: "ito_overheat", name: "Overheat", icon: "\u{1F9F5}", anim: "point", windup: 0.3, recover: 0.3, cd: 5, cost: { stamina: 14 }, steps: [{ hit: { shape: "line", range: 9, width: 0.6, damage: 24, knockback: 4, stun: 0.4, slashing: true, element: "fire" }, vfx: "beam", color: "#ff8a80" }] }),
-        T2(15, { id: "ito_parasite", name: "Parasite", icon: "\u{1F3AD}", anim: "point", windup: 0.25, recover: 0.3, cd: 12, cost: { stamina: 18 }, desc: "Puppet strings freeze your target in place.", steps: [{ proj: { speed: 22, range: 10, radius: 0.4, damage: 8, sprite: "string", status: { root: 2.5 }, stun: 0.5 } }] }),
-        T2(35, { id: "ito_fivecolor", name: "Five Color Strings", icon: "\u{1F590}", anim: "claw", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ hit: { shape: "arc", range: 3.4, arc: 1.4, offset: 0.2, damage: 34, knockback: 3, stun: 0.5, slashing: true }, vfx: "slash", color: "#f8bbd0" }] }),
-        T2(70, { id: "ito_birdcage", name: "Birdcage", icon: "\u{1F578}", anim: "summon", windup: 0.8, recover: 0.4, cd: 45, cost: { stamina: 35 }, desc: "A cage of cutting strings that closes around the area.", steps: [{ zone: { range: 6, duration: 6, interval: 0.4, damage: 10, color: "#f8bbd0", kind: "cage" } }] })
+        T2(0, { id: "ito_overheat", name: "Overheat", icon: "\u{1F9F5}", anim: "point", windup: 0.3, recover: 0.3, cd: 5, steps: [{ hit: { shape: "line", range: 9, width: 0.6, damage: 24, knockback: 4, stun: 0.4, slashing: true, element: "fire" }, vfx: "beam", color: "#ff8a80" }] }),
+        T2(15, { id: "ito_parasite", name: "Parasite", icon: "\u{1F3AD}", anim: "point", windup: 0.25, recover: 0.3, cd: 12, desc: "Puppet strings freeze your target in place.", steps: [{ proj: { speed: 22, range: 10, radius: 0.4, damage: 8, sprite: "string", status: { root: 2.5 }, stun: 0.5 } }] }),
+        T2(35, { id: "ito_fivecolor", name: "Five Color Strings", icon: "\u{1F590}", anim: "claw", windup: 0.25, recover: 0.3, cd: 7, steps: [{ hit: { shape: "arc", range: 3.4, arc: 1.4, offset: 0.2, damage: 34, knockback: 3, stun: 0.5, slashing: true }, vfx: "slash", color: "#f8bbd0" }] }),
+        T2(70, { id: "ito_birdcage", name: "Birdcage", icon: "\u{1F578}", anim: "summon", windup: 0.8, recover: 0.4, cd: 45, desc: "A cage of cutting strings that closes around the area.", steps: [{ zone: { range: 6, duration: 6, interval: 0.4, damage: 10, color: "#f8bbd0", kind: "cage" } }] })
       ]
     },
     mochi: {
@@ -42932,9 +42929,9 @@ ${GLSL}
       desc: "A special Paramecia that behaves like a Logia: turn your body into mochi. (Charlotte Katakuri.)",
       passive: { logiaLike: true, intangible: 0.5, weakTo: ["fire"] },
       techniques: [
-        T2(0, { id: "mochi_tsuki", name: "Mochi Tsuki", icon: "\u{1F361}", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 14 }, steps: [{ proj: { speed: 18, range: 8, radius: 0.6, damage: 22, sprite: "mochi", color: "#fff8e1", knockback: 6, stun: 0.5, size: 1.5 } }] }),
-        T2(20, { id: "mochi_zangiri", name: "Zan Giri Mochi", icon: "\u{1F531}", anim: "thrust", windup: 0.3, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ hit: { shape: "line", range: 4.5, width: 1.2, damage: 36, knockback: 5, stun: 0.6, slashing: true }, vfx: "beam", color: "#fff8e1" }] }),
-        T2(50, { id: "mochi_chikara", name: "Chikara Mochi", icon: "\u{1F4AA}", anim: "slam", windup: 0.45, recover: 0.4, cd: 12, cost: { stamina: 28 }, desc: "Giant mochi fists rain down.", steps: [{ zone: { range: 3, duration: 1.2, interval: 0.2, damage: 18, color: "#fff8e1", atTarget: true, kind: "fists" } }] })
+        T2(0, { id: "mochi_tsuki", name: "Mochi Tsuki", icon: "\u{1F361}", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, steps: [{ proj: { speed: 18, range: 8, radius: 0.6, damage: 22, sprite: "mochi", color: "#fff8e1", knockback: 6, stun: 0.5, size: 1.5 } }] }),
+        T2(20, { id: "mochi_zangiri", name: "Zan Giri Mochi", icon: "\u{1F531}", anim: "thrust", windup: 0.3, recover: 0.3, cd: 7, steps: [{ hit: { shape: "line", range: 4.5, width: 1.2, damage: 36, knockback: 5, stun: 0.6, slashing: true }, vfx: "beam", color: "#fff8e1" }] }),
+        T2(50, { id: "mochi_chikara", name: "Chikara Mochi", icon: "\u{1F4AA}", anim: "slam", windup: 0.45, recover: 0.4, cd: 12, desc: "Giant mochi fists rain down.", steps: [{ zone: { range: 3, duration: 1.2, interval: 0.2, damage: 18, color: "#fff8e1", atTarget: true, kind: "fists" } }] })
       ]
     },
     horo: {
@@ -42946,8 +42943,8 @@ ${GLSL}
       weight: 3,
       desc: "Create ghosts. Negative Hollows drain the will to live from anyone they pass through. (Perona.)",
       techniques: [
-        T2(0, { id: "horo_negative", name: "Negative Hollow", icon: "\u{1F47B}", anim: "point", windup: 0.3, recover: 0.3, cd: 8, cost: { stamina: 14 }, desc: `"I'm so sorry I was born..." The target collapses in despair.`, steps: [{ proj: { speed: 10, range: 12, radius: 0.5, damage: 4, sprite: "ghost", color: "#e1bee7", homing: 3, status: { despair: 3 }, stun: 2.2, unblockable: true } }] }),
-        T2(20, { id: "horo_mini", name: "Mini Hollows", icon: "\u{1F4AB}", anim: "cast", windup: 0.3, recover: 0.3, cd: 7, cost: { stamina: 16 }, steps: [{ proj: { speed: 11, range: 10, radius: 0.3, damage: 6, count: 4, spread: 0.9, sprite: "ghost", size: 0.7, color: "#e1bee7", homing: 4, explode: { range: 1.2, damage: 12, colors: ["#e1bee7", "#fff"] } } }] })
+        T2(0, { id: "horo_negative", name: "Negative Hollow", icon: "\u{1F47B}", anim: "point", windup: 0.3, recover: 0.3, cd: 8, desc: `"I'm so sorry I was born..." The target collapses in despair.`, steps: [{ proj: { speed: 10, range: 12, radius: 0.5, damage: 4, sprite: "ghost", color: "#e1bee7", homing: 3, status: { despair: 3 }, stun: 2.2, unblockable: true } }] }),
+        T2(20, { id: "horo_mini", name: "Mini Hollows", icon: "\u{1F4AB}", anim: "cast", windup: 0.3, recover: 0.3, cd: 7, steps: [{ proj: { speed: 11, range: 10, radius: 0.3, damage: 6, count: 4, spread: 0.9, sprite: "ghost", size: 0.7, color: "#e1bee7", homing: 4, explode: { range: 1.2, damage: 12, colors: ["#e1bee7", "#fff"] } } }] })
       ]
     },
     kage: {
@@ -42959,9 +42956,9 @@ ${GLSL}
       weight: 1.2,
       desc: "Manipulate shadows, steal them, and fight with a living shadow double. (Gecko Moria.)",
       techniques: [
-        T2(0, { id: "kage_brickbat", name: "Brick Bat", icon: "\u{1F987}", anim: "cast", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 12 }, steps: [{ proj: { speed: 14, range: 11, radius: 0.3, damage: 7, count: 5, spread: 0.6, sprite: "bat", color: "#263238", homing: 2 } }] }),
-        T2(20, { id: "kage_steal", name: "Shadow Steal", icon: "\u{1F311}", anim: "grab", windup: 0.35, recover: 0.3, cd: 16, cost: { stamina: 20 }, desc: "Cut away the target's shadow: they weaken badly (and would burn in sunlight...).", steps: [{ hit: { shape: "arc", range: 2.6, arc: 1, offset: 0.2, damage: 18, stun: 0.8, status: { shadowless: 12 }, unblockable: true } }] }),
-        T2(40, { id: "kage_doppelman", name: "Doppelman", icon: "\u{1F464}", anim: "cast", windup: 0.3, recover: 0.2, cd: 30, cost: { stamina: 24 }, desc: "Your shadow fights beside you as a second body.", steps: [{ buff: { id: "doppel", name: "Doppelman", dur: 18, mods: { damage: 1.4, extraHit: 1 }, aura: "rgba(38,50,56,0.6)" } }] })
+        T2(0, { id: "kage_brickbat", name: "Brick Bat", icon: "\u{1F987}", anim: "cast", windup: 0.25, recover: 0.3, cd: 4, steps: [{ proj: { speed: 14, range: 11, radius: 0.3, damage: 7, count: 5, spread: 0.6, sprite: "bat", color: "#263238", homing: 2 } }] }),
+        T2(20, { id: "kage_steal", name: "Shadow Steal", icon: "\u{1F311}", anim: "grab", windup: 0.35, recover: 0.3, cd: 16, desc: "Cut away the target's shadow: they weaken badly (and would burn in sunlight...).", steps: [{ hit: { shape: "arc", range: 2.6, arc: 1, offset: 0.2, damage: 18, stun: 0.8, status: { shadowless: 12 }, unblockable: true } }] }),
+        T2(40, { id: "kage_doppelman", name: "Doppelman", icon: "\u{1F464}", anim: "cast", windup: 0.3, recover: 0.2, cd: 30, desc: "Your shadow fights beside you as a second body.", steps: [{ buff: { id: "doppel", name: "Doppelman", dur: 18, mods: { damage: 1.4, extraHit: 1 }, aura: "rgba(38,50,56,0.6)" } }] })
       ]
     },
     doku: {
@@ -42974,9 +42971,9 @@ ${GLSL}
       desc: "Produce and control lethal poison. (Magellan, chief warden of Impel Down.)",
       passive: { resist: ["poison"] },
       techniques: [
-        T2(0, { id: "doku_fist", name: "Poison Fist", icon: "\u2620", anim: "punch", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 10 }, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 12, knockback: 3, stun: 0.3, element: "poison", status: { poison: 5 } } }] }),
-        T2(20, { id: "doku_hydra", name: "Hydra", icon: "\u{1F40D}", anim: "cast", windup: 0.4, recover: 0.4, cd: 9, cost: { stamina: 22 }, say: "Hydra!", steps: [{ proj: { speed: 13, range: 12, radius: 0.7, damage: 26, count: 3, spread: 0.4, sprite: "hydra", element: "poison", status: { poison: 6 }, homing: 1.5, trail: { color: "#8e24aa", kind: "smoke" } } }] }),
-        T2(50, { id: "doku_venom", name: "Venom Demon", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.5, cd: 40, cost: { stamina: 35 }, steps: [{ zone: { range: 4.5, duration: 8, interval: 0.5, damage: 12, element: "poison", status: { poison: 4 }, color: "#8e24aa", kind: "field" } }] })
+        T2(0, { id: "doku_fist", name: "Poison Fist", icon: "\u2620", anim: "punch", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 12, knockback: 3, stun: 0.3, element: "poison", status: { poison: 5 } } }] }),
+        T2(20, { id: "doku_hydra", name: "Hydra", icon: "\u{1F40D}", anim: "cast", windup: 0.4, recover: 0.4, cd: 9, say: "Hydra!", steps: [{ proj: { speed: 13, range: 12, radius: 0.7, damage: 26, count: 3, spread: 0.4, sprite: "hydra", element: "poison", status: { poison: 6 }, homing: 1.5, trail: { color: "#8e24aa", kind: "smoke" } } }] }),
+        T2(50, { id: "doku_venom", name: "Venom Demon", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.5, cd: 40, steps: [{ zone: { range: 4.5, duration: 8, interval: 0.5, damage: 12, element: "poison", status: { poison: 4 }, color: "#8e24aa", kind: "field" } }] })
       ]
     },
     noro: {
@@ -42988,8 +42985,8 @@ ${GLSL}
       weight: 5,
       desc: "Fire Noro Noro photons that slow anything they hit to a crawl. (Foxy the Silver Fox.)",
       techniques: [
-        T2(0, { id: "noro_beam", name: "Noro Noro Beam", icon: "\u{1F40C}", anim: "point", windup: 0.25, recover: 0.3, cd: 8, cost: { stamina: 12 }, steps: [{ hit: { shape: "line", range: 9, width: 1.2, damage: 4, stun: 0.1, status: { slowmo: 4 } }, vfx: "beam", color: "#80deea" }] }),
-        T2(30, { id: "noro_mirror", name: "Noro Noro Beam Sword", icon: "\u{1FA9E}", anim: "slash", windup: 0.2, recover: 0.3, cd: 10, cost: { stamina: 16 }, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.2, offset: 0.2, damage: 10, stun: 0.2, status: { slowmo: 3 } }, vfx: "slash", color: "#80deea" }] })
+        T2(0, { id: "noro_beam", name: "Noro Noro Beam", icon: "\u{1F40C}", anim: "point", windup: 0.25, recover: 0.3, cd: 8, steps: [{ hit: { shape: "line", range: 9, width: 1.2, damage: 4, stun: 0.1, status: { slowmo: 4 } }, vfx: "beam", color: "#80deea" }] }),
+        T2(30, { id: "noro_mirror", name: "Noro Noro Beam Sword", icon: "\u{1FA9E}", anim: "slash", windup: 0.2, recover: 0.3, cd: 10, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.2, offset: 0.2, damage: 10, stun: 0.2, status: { slowmo: 3 } }, vfx: "slash", color: "#80deea" }] })
       ]
     },
     bari: {
@@ -43001,8 +42998,8 @@ ${GLSL}
       weight: 2.5,
       desc: "Create unbreakable barriers. (Bartolomeo.)",
       techniques: [
-        T2(0, { id: "bari_barrier", name: "Barrier", icon: "\u{1F6E1}", anim: "block", windup: 0.05, recover: 0.1, cd: 10, cost: { stamina: 14 }, desc: "Block everything for a moment.", steps: [{ buff: { id: "barrier", name: "Barrier", dur: 2.5, mods: { defMul: 0.05 }, aura: "rgba(179,229,252,0.8)" } }] }),
-        T2(20, { id: "bari_crash", name: "Barrier Crash", icon: "\u{1F9F1}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 7, cost: { stamina: 18 }, steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, hit: { damage: 30, knockback: 9, stun: 0.6, heavy: true, guardBreak: true } } }] })
+        T2(0, { id: "bari_barrier", name: "Barrier", icon: "\u{1F6E1}", anim: "block", windup: 0.05, recover: 0.1, cd: 10, desc: "Block everything for a moment.", steps: [{ buff: { id: "barrier", name: "Barrier", dur: 2.5, mods: { defMul: 0.05 }, aura: "rgba(179,229,252,0.8)" } }] }),
+        T2(20, { id: "bari_crash", name: "Barrier Crash", icon: "\u{1F9F1}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 7, steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, hit: { damage: 30, knockback: 9, stun: 0.6, heavy: true, guardBreak: true } } }] })
       ]
     },
     suke: {
@@ -43014,7 +43011,7 @@ ${GLSL}
       weight: 3,
       desc: "Turn yourself (and what you touch) invisible. (Absalom, then Shiliew.)",
       techniques: [
-        T2(0, { id: "suke_vanish", name: "Clear Body", icon: "\u{1F441}", anim: "cast", windup: 0.2, recover: 0.1, cd: 16, cost: { stamina: 14 }, desc: "Become invisible: enemies lose track of you and your first hit is a critical.", steps: [{ buff: { id: "invisible", name: "Invisible", dur: 8, mods: { stealth: 1, crit: 0.6 }, alpha: 0.12 } }] })
+        T2(0, { id: "suke_vanish", name: "Clear Body", icon: "\u{1F441}", anim: "cast", windup: 0.2, recover: 0.1, cd: 16, desc: "Become invisible: enemies lose track of you and your first hit is a critical.", steps: [{ buff: { id: "invisible", name: "Invisible", dur: 8, mods: { stealth: 1, crit: 0.6 }, alpha: 0.12 } }] })
       ]
     },
     sube: {
@@ -43027,8 +43024,8 @@ ${GLSL}
       desc: "Your skin becomes perfectly slippery. Attacks slide right off. (Alvida.)",
       passive: { slippery: 0.3 },
       techniques: [
-        T2(0, { id: "sube_slide", name: "Slip Slide", icon: "\u26F8", anim: "thrust", windup: 0.05, recover: 0.1, cd: 3, cost: { stamina: 10 }, steps: [{ dash: { dist: 6, time: 0.25, iframes: 0.25, hit: { damage: 8, knockback: 3 } } }] }),
-        T2(25, { id: "sube_mace", name: "Mace Swing", icon: "\u{1F528}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 5, cost: { stamina: 16 }, steps: [{ hit: { shape: "arc", range: 2.2, arc: 2, offset: 0.2, damage: 22, knockback: 7, stun: 0.5, heavy: true } }] })
+        T2(0, { id: "sube_slide", name: "Slip Slide", icon: "\u26F8", anim: "thrust", windup: 0.05, recover: 0.1, cd: 3, steps: [{ dash: { dist: 6, time: 0.25, iframes: 0.25, hit: { damage: 8, knockback: 3 } } }] }),
+        T2(25, { id: "sube_mace", name: "Mace Swing", icon: "\u{1F528}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 5, steps: [{ hit: { shape: "arc", range: 2.2, arc: 2, offset: 0.2, damage: 22, knockback: 7, stun: 0.5, heavy: true } }] })
       ]
     },
     doru: {
@@ -43041,9 +43038,9 @@ ${GLSL}
       desc: "Produce wax as hard as steel. Weak to fire. (Mr. 3 of Baroque Works.)",
       passive: { weakTo: ["fire"] },
       techniques: [
-        T2(0, { id: "doru_arrow", name: "Candle Arrows", icon: "\u{1F56F}", anim: "shoot", windup: 0.2, recover: 0.3, cd: 4, cost: { stamina: 12 }, steps: [{ proj: { speed: 18, range: 11, radius: 0.25, damage: 9, count: 3, spread: 0.25, sprite: "iceshard", color: "#fff8e1" } }] }),
-        T2(20, { id: "doru_lock", name: "Candle Lock", icon: "\u{1F512}", anim: "cast", windup: 0.3, recover: 0.3, cd: 11, cost: { stamina: 16 }, steps: [{ zone: { range: 1.5, duration: 0.4, interval: 0.4, damage: 10, color: "#fff8e1", atTarget: true, status: { root: 2.5 } } }] }),
-        T2(40, { id: "doru_armor", name: "Candle Champion", icon: "\u{1F5FF}", anim: "cast", windup: 0.4, recover: 0.2, cd: 30, cost: { stamina: 22 }, steps: [{ buff: { id: "waxarmor", name: "Wax Armour", dur: 12, mods: { defMul: 0.55, damage: 1.2 }, aura: "rgba(255,248,225,0.8)" } }] })
+        T2(0, { id: "doru_arrow", name: "Candle Arrows", icon: "\u{1F56F}", anim: "shoot", windup: 0.2, recover: 0.3, cd: 4, steps: [{ proj: { speed: 18, range: 11, radius: 0.25, damage: 9, count: 3, spread: 0.25, sprite: "iceshard", color: "#fff8e1" } }] }),
+        T2(20, { id: "doru_lock", name: "Candle Lock", icon: "\u{1F512}", anim: "cast", windup: 0.3, recover: 0.3, cd: 11, steps: [{ zone: { range: 1.5, duration: 0.4, interval: 0.4, damage: 10, color: "#fff8e1", atTarget: true, status: { root: 2.5 } } }] }),
+        T2(40, { id: "doru_armor", name: "Candle Champion", icon: "\u{1F5FF}", anim: "cast", windup: 0.4, recover: 0.2, cd: 30, steps: [{ buff: { id: "waxarmor", name: "Wax Armour", dur: 12, mods: { defMul: 0.55, damage: 1.2 }, aura: "rgba(255,248,225,0.8)" } }] })
       ]
     },
     supa: {
@@ -43056,8 +43053,8 @@ ${GLSL}
       desc: "Turn any part of your body into a steel blade. Blades can't hurt you. (Daz Bonez, Mr. 1.)",
       passive: { immuneSlash: true },
       techniques: [
-        T2(0, { id: "supa_sparkling", name: "Sparkling Daisy", icon: "\u2734", anim: "slash3", windup: 0.25, recover: 0.3, cd: 5, cost: { stamina: 16 }, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.6, offset: 0.2, damage: 26, knockback: 4, stun: 0.5, slashing: true }, vfx: "slash", color: "#eceff1" }] }),
-        T2(25, { id: "supa_spider", name: "Spider", icon: "\u{1F577}", anim: "block", windup: 0.05, recover: 0.1, cd: 12, cost: { stamina: 14 }, desc: "Harden your whole body into steel.", steps: [{ buff: { id: "steel", name: "Steel Body", dur: 4, mods: { defMul: 0.3 }, aura: "rgba(176,190,197,0.9)" } }] })
+        T2(0, { id: "supa_sparkling", name: "Sparkling Daisy", icon: "\u2734", anim: "slash3", windup: 0.25, recover: 0.3, cd: 5, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.6, offset: 0.2, damage: 26, knockback: 4, stun: 0.5, slashing: true }, vfx: "slash", color: "#eceff1" }] }),
+        T2(25, { id: "supa_spider", name: "Spider", icon: "\u{1F577}", anim: "block", windup: 0.05, recover: 0.1, cd: 12, desc: "Harden your whole body into steel.", steps: [{ buff: { id: "steel", name: "Steel Body", dur: 4, mods: { defMul: 0.3 }, aura: "rgba(176,190,197,0.9)" } }] })
       ]
     },
     nikyu: {
@@ -43069,10 +43066,10 @@ ${GLSL}
       weight: 0.4,
       desc: "Paw pads that repel anything \u2014 even pain, even people across the world. (Bartholomew Kuma.)",
       techniques: [
-        T2(0, { id: "nikyu_paw", name: "Pad Ho", icon: "\u{1F43E}", anim: "palm", windup: 0.25, recover: 0.3, cd: 4, cost: { stamina: 14 }, steps: [{ proj: { speed: 24, range: 12, radius: 0.5, damage: 20, sprite: "paw", pierce: true, knockback: 8, stun: 0.4 } }] }),
-        T2(20, { id: "nikyu_repel", name: "Repel", icon: "\u270B", anim: "spread", windup: 0.02, recover: 0.1, cd: 8, cost: { stamina: 12 }, desc: "Deflect everything around you.", steps: [{ hit: { shape: "circle", range: 2.2, damage: 10, knockback: 12, stun: 0.4 }, vfx: "ring", color: "#ffffff" }, { self: { iframes: 0.4 } }] }),
-        T2(45, { id: "nikyu_travel", name: "Tabi Tabi", icon: "\u2708", anim: "cast", windup: 0.2, recover: 0.1, cd: 6, cost: { stamina: 16 }, desc: "Repel yourself through the air.", steps: [{ teleport: { dist: 12, color: "#ffffff" } }] }),
-        T2(70, { id: "nikyu_ursus", name: "Ursus Shock", icon: "\u{1F4A3}", anim: "cast", windup: 1, recover: 0.5, cd: 30, cost: { stamina: 38 }, desc: "Compress the air into a paw-shaped bomb.", steps: [{ proj: { speed: 7, range: 9, radius: 1.2, damage: 20, sprite: "paw", size: 2.5, pierce: true, explode: { range: 4.5, damage: 110, colors: ["#ffffff", "#e0f7fa", "#b2ebf2"] } } }] })
+        T2(0, { id: "nikyu_paw", name: "Pad Ho", icon: "\u{1F43E}", anim: "palm", windup: 0.25, recover: 0.3, cd: 4, steps: [{ proj: { speed: 24, range: 12, radius: 0.5, damage: 20, sprite: "paw", pierce: true, knockback: 8, stun: 0.4 } }] }),
+        T2(20, { id: "nikyu_repel", name: "Repel", icon: "\u270B", anim: "spread", windup: 0.02, recover: 0.1, cd: 8, desc: "Deflect everything around you.", steps: [{ hit: { shape: "circle", range: 2.2, damage: 10, knockback: 12, stun: 0.4 }, vfx: "ring", color: "#ffffff" }, { self: { iframes: 0.4 } }] }),
+        T2(45, { id: "nikyu_travel", name: "Tabi Tabi", icon: "\u2708", anim: "cast", windup: 0.2, recover: 0.1, cd: 6, desc: "Repel yourself through the air.", steps: [{ teleport: { dist: 12, color: "#ffffff" } }] }),
+        T2(70, { id: "nikyu_ursus", name: "Ursus Shock", icon: "\u{1F4A3}", anim: "cast", windup: 1, recover: 0.5, cd: 30, desc: "Compress the air into a paw-shaped bomb.", steps: [{ proj: { speed: 7, range: 9, radius: 1.2, damage: 20, sprite: "paw", size: 2.5, pierce: true, explode: { range: 4.5, damage: 110, colors: ["#ffffff", "#e0f7fa", "#b2ebf2"] } } }] })
       ]
     },
     mane: {
@@ -43085,8 +43082,8 @@ ${GLSL}
       desc: "Touch a face with your right hand and copy it perfectly. Marines won't recognise you. (Bon Clay.)",
       passive: { disguise: true },
       techniques: [
-        T2(0, { id: "mane_disguise", name: "Mimicry", icon: "\u{1F3AD}", anim: "pray", windup: 0.4, recover: 0.2, cd: 60, cost: { stamina: 10 }, desc: "Disguise yourself: Marines and bounty hunters ignore you until you attack.", steps: [{ buff: { id: "disguise", name: "Disguised", dur: 90, mods: { stealth: 0.5 }, disguise: true } }] }),
-        T2(20, { id: "mane_memoir", name: "Memoir Strike", icon: "\u{1F4AD}", anim: "kick", windup: 0.2, recover: 0.3, cd: 8, cost: { stamina: 16 }, desc: "Take a friend's face \u2014 the enemy hesitates to strike.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] })
+        T2(0, { id: "mane_disguise", name: "Mimicry", icon: "\u{1F3AD}", anim: "pray", windup: 0.4, recover: 0.2, cd: 60, desc: "Disguise yourself: Marines and bounty hunters ignore you until you attack.", steps: [{ buff: { id: "disguise", name: "Disguised", dur: 90, mods: { stealth: 0.5 }, disguise: true } }] }),
+        T2(20, { id: "mane_memoir", name: "Memoir Strike", icon: "\u{1F4AD}", anim: "kick", windup: 0.2, recover: 0.3, cd: 8, desc: "Take a friend's face \u2014 the enemy hesitates to strike.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] })
       ]
     },
     zushi: {
@@ -43098,9 +43095,9 @@ ${GLSL}
       weight: 0.4,
       desc: "Control gravity. Pull meteors down from space. (Admiral Fujitora.)",
       techniques: [
-        T2(0, { id: "zushi_press", name: "Gravity Press", icon: "\u2B07", anim: "cast", windup: 0.3, recover: 0.3, cd: 6, cost: { stamina: 16 }, steps: [{ zone: { range: 2.8, duration: 2, interval: 0.25, damage: 6, color: "#9575cd", atTarget: true, slow: 0.25, kind: "gravity" } }] }),
-        T2(25, { id: "zushi_blade", name: "Gravity Blade: Raging Tiger", icon: "\u{1F42F}", anim: "slash", windup: 0.4, recover: 0.4, cd: 10, cost: { stamina: 24 }, steps: [{ hit: { shape: "line", range: 10, width: 2.2, damage: 48, knockback: 6, stun: 0.8, heavy: true }, vfx: "beam", color: "#9575cd" }] }),
-        T2(70, { id: "zushi_meteor", name: "Meteor", icon: "\u2604", anim: "raise", windup: 1.2, recover: 0.5, cd: 45, cost: { stamina: 40 }, desc: "Call down a meteor from the heavens.", steps: [{ zone: { range: 4, duration: 1.3, interval: 1.2, damage: 140, color: "#ff7043", atTarget: true, kind: "meteor", element: "explosion" } }] })
+        T2(0, { id: "zushi_press", name: "Gravity Press", icon: "\u2B07", anim: "cast", windup: 0.3, recover: 0.3, cd: 6, steps: [{ zone: { range: 2.8, duration: 2, interval: 0.25, damage: 6, color: "#9575cd", atTarget: true, slow: 0.25, kind: "gravity" } }] }),
+        T2(25, { id: "zushi_blade", name: "Gravity Blade: Raging Tiger", icon: "\u{1F42F}", anim: "slash", windup: 0.4, recover: 0.4, cd: 10, steps: [{ hit: { shape: "line", range: 10, width: 2.2, damage: 48, knockback: 6, stun: 0.8, heavy: true }, vfx: "beam", color: "#9575cd" }] }),
+        T2(70, { id: "zushi_meteor", name: "Meteor", icon: "\u2604", anim: "raise", windup: 1.2, recover: 0.5, cd: 45, desc: "Call down a meteor from the heavens.", steps: [{ zone: { range: 4, duration: 1.3, interval: 1.2, damage: 140, color: "#ff7043", atTarget: true, kind: "meteor", element: "explosion" } }] })
       ]
     },
     // ------------------------------------------------------------------ ZOAN
@@ -43113,9 +43110,9 @@ ${GLSL}
       weight: 2.5,
       desc: "Grants the intelligence and form of a human. Tony Tony Chopper ate it as a reindeer.",
       techniques: [
-        T2(0, { id: "hito_heavy", name: "Heavy Point", icon: "\u{1F4AA}", anim: "flex", windup: 0.4, recover: 0.1, cd: 25, cost: { stamina: 14 }, steps: [{ buff: { id: "heavy_point", name: "Heavy Point", dur: 15, mods: { damage: 1.4, defMul: 0.8, scale: 1.3 }, look: { hat: "antlers", bulk: 1.3 } } }] }),
-        T2(20, { id: "hito_horn", name: "Horn Point: Kokutei Roseo", icon: "\u{1F98C}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 18 }, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
-        T2(50, { id: "hito_monster", name: "Monster Point", icon: "\u{1F479}", anim: "flex", windup: 0.8, recover: 0.1, cd: 90, cost: { stamina: 30 }, desc: "A Rumble Ball overdose: enormous power, barely controllable.", steps: [{ buff: { id: "monster", name: "Monster Point", dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, aura: "rgba(121,85,72,0.8)", look: { hat: "antlers", bulk: 1.45, sleeve: "#8d6e63" }, drain: { stamina: 2 } } }] })
+        T2(0, { id: "hito_heavy", name: "Heavy Point", icon: "\u{1F4AA}", anim: "flex", windup: 0.4, recover: 0.1, cd: 25, steps: [{ buff: { id: "heavy_point", name: "Heavy Point", dur: 15, mods: { damage: 1.4, defMul: 0.8, scale: 1.3 }, look: { hat: "antlers", bulk: 1.3 } } }] }),
+        T2(20, { id: "hito_horn", name: "Horn Point: Kokutei Roseo", icon: "\u{1F98C}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
+        T2(50, { id: "hito_monster", name: "Monster Point", icon: "\u{1F479}", anim: "flex", windup: 0.8, recover: 0.1, cd: 90, desc: "A Rumble Ball overdose: enormous power, barely controllable.", steps: [{ buff: { id: "monster", name: "Monster Point", dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, aura: "rgba(121,85,72,0.8)", look: { hat: "antlers", bulk: 1.45, sleeve: "#8d6e63" } } }] })
       ]
     },
     neko_leopard: {
@@ -43127,9 +43124,9 @@ ${GLSL}
       weight: 1.2,
       desc: "Become a leopard or a half-leopard warrior. Rob Lucci's ferocious fruit.",
       techniques: [
-        T2(0, { id: "neko_hybrid", name: "Hybrid Form", icon: "\u{1F406}", anim: "flex", windup: 0.4, recover: 0.1, cd: 30, cost: { stamina: 14 }, steps: [{ buff: { id: "leopard", name: "Leopard Form", dur: 20, mods: { damage: 1.45, speedMul: 1.2, defMul: 0.85 }, aura: "rgba(255,183,77,0.6)", look: { spots: true, ears: "round", tail: "thin", fur: "#ffb74d", hand: "#ffb74d" } } }] }),
-        T2(20, { id: "neko_claw", name: "Leopard Claw", icon: "\u{1F43E}", anim: "claw", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 12 }, steps: [{ hit: { shape: "arc", range: 1.9, arc: 1.8, offset: 0.2, damage: 22, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#ffb74d" }] }),
-        T2(50, { id: "neko_pounce", name: "Hunting Pounce", icon: "\u{1F405}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ dash: { dist: 8, time: 0.25, iframes: 0.2, hit: { damage: 40, knockback: 5, stun: 0.8, heavy: true } } }] })
+        T2(0, { id: "neko_hybrid", name: "Hybrid Form", icon: "\u{1F406}", anim: "flex", windup: 0.4, recover: 0.1, cd: 30, steps: [{ buff: { id: "leopard", name: "Leopard Form", dur: 20, mods: { damage: 1.45, speedMul: 1.2, defMul: 0.85 }, aura: "rgba(255,183,77,0.6)", look: { spots: true, ears: "round", tail: "thin", fur: "#ffb74d", hand: "#ffb74d" } } }] }),
+        T2(20, { id: "neko_claw", name: "Leopard Claw", icon: "\u{1F43E}", anim: "claw", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 1.9, arc: 1.8, offset: 0.2, damage: 22, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#ffb74d" }] }),
+        T2(50, { id: "neko_pounce", name: "Hunting Pounce", icon: "\u{1F405}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 8, time: 0.25, iframes: 0.2, hit: { damage: 40, knockback: 5, stun: 0.8, heavy: true } } }] })
       ]
     },
     tori_phoenix: {
@@ -43142,10 +43139,10 @@ ${GLSL}
       desc: "Blue flames of resurrection. Wounds heal as fast as they are dealt. (Marco the Phoenix.)",
       passive: { regen: 3 },
       techniques: [
-        T2(0, { id: "phoenix_flame", name: "Flames of Restoration", icon: "\u{1F499}", anim: "cast", windup: 0.3, recover: 0.2, cd: 12, cost: { stamina: 12 }, steps: [{ heal: 45, color: "#4dd0e1" }] }),
-        T2(15, { id: "phoenix_fly", name: "Phoenix Flight", icon: "\u{1F54A}", anim: "cast", windup: 0.05, recover: 0.1, cd: 3, cost: { stamina: 12 }, steps: [{ dash: { dist: 10, time: 0.35, iframes: 0.3, air: true, trail: "#4dd0e1" } }] }),
-        T2(35, { id: "phoenix_brand", name: "Phoenix Brand", icon: "\u{1F525}", anim: "kick", windup: 0.3, recover: 0.3, cd: 7, cost: { stamina: 20 }, steps: [{ dash: { dist: 6, time: 0.22, iframes: 0.2, air: true, hit: { damage: 38, knockback: 8, stun: 0.6, element: "fire", heavy: true } } }] }),
-        T2(70, { id: "phoenix_rebirth", name: "Blue Rebirth", icon: "\u267E", anim: "cast", windup: 0.6, recover: 0.2, cd: 120, cost: { stamina: 20 }, desc: "Burn away all harm: full heal and a burst of blue fire.", steps: [{ heal: 400, color: "#4dd0e1" }, { hit: { shape: "circle", range: 3, damage: 30, knockback: 6, element: "fire" }, vfx: "ring", color: "#4dd0e1" }, { self: { cleanse: true } }] })
+        T2(0, { id: "phoenix_flame", name: "Flames of Restoration", icon: "\u{1F499}", anim: "cast", windup: 0.3, recover: 0.2, cd: 12, steps: [{ heal: 45, color: "#4dd0e1" }] }),
+        T2(15, { id: "phoenix_fly", name: "Phoenix Flight", icon: "\u{1F54A}", anim: "cast", windup: 0.05, recover: 0.1, cd: 3, steps: [{ dash: { dist: 10, time: 0.35, iframes: 0.3, air: true, trail: "#4dd0e1" } }] }),
+        T2(35, { id: "phoenix_brand", name: "Phoenix Brand", icon: "\u{1F525}", anim: "kick", windup: 0.3, recover: 0.3, cd: 7, steps: [{ dash: { dist: 6, time: 0.22, iframes: 0.2, air: true, hit: { damage: 38, knockback: 8, stun: 0.6, element: "fire", heavy: true } } }] }),
+        T2(70, { id: "phoenix_rebirth", name: "Blue Rebirth", icon: "\u267E", anim: "cast", windup: 0.6, recover: 0.2, cd: 120, desc: "Burn away all harm: full heal and a burst of blue fire.", steps: [{ heal: 400, color: "#4dd0e1" }, { hit: { shape: "circle", range: 3, damage: 30, knockback: 6, element: "fire" }, vfx: "ring", color: "#4dd0e1" }, { self: { cleanse: true } }] })
       ]
     },
     uo_seiryu: {
@@ -43157,10 +43154,10 @@ ${GLSL}
       weight: 0.3,
       desc: "Become the Azure Dragon of legend. Kaido, strongest creature in the world, ate this fruit.",
       techniques: [
-        T2(0, { id: "seiryu_bolo", name: "Bolo Breath", icon: "\u{1F409}", anim: "breath", windup: 0.5, recover: 0.4, cd: 7, cost: { stamina: 20 }, say: "Bolo Breath!", steps: [{ hit: { shape: "line", range: 11, width: 1.8, damage: 44, knockback: 6, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff7043" }] }),
-        T2(25, { id: "seiryu_kaifu", name: "Kaifu", icon: "\u{1F32C}", anim: "breath", windup: 0.35, recover: 0.3, cd: 6, cost: { stamina: 18 }, desc: "Wind blades from the dragon's whiskers.", steps: [{ proj: { speed: 18, range: 12, radius: 0.5, damage: 18, count: 3, spread: 0.5, sprite: "airslash", slashing: true, pierce: true } }] }),
-        T2(50, { id: "seiryu_raimei", name: "Raimei Hakke", icon: "\u26A1", anim: "heavy", windup: 0.6, recover: 0.5, cd: 14, cost: { stamina: 30 }, desc: "Thunder Bagua: a club blow that shakes the heavens.", steps: [{ hit: { shape: "arc", range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: "lightning", impactFrame: true, shake: 0.9 } }] }),
-        T2(80, { id: "seiryu_form", name: "Dragon Form", icon: "\u{1F432}", anim: "cast", windup: 1, recover: 0.1, cd: 120, cost: { stamina: 30 }, steps: [{ buff: { id: "dragon", name: "Azure Dragon", dur: 25, mods: { damage: 2, defMul: 0.4, scale: 1.6 }, aura: "rgba(66,165,245,0.8)", look: { dragonForm: true } } }] })
+        T2(0, { id: "seiryu_bolo", name: "Bolo Breath", icon: "\u{1F409}", anim: "breath", windup: 0.5, recover: 0.4, cd: 7, say: "Bolo Breath!", steps: [{ hit: { shape: "line", range: 11, width: 1.8, damage: 44, knockback: 6, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff7043" }] }),
+        T2(25, { id: "seiryu_kaifu", name: "Kaifu", icon: "\u{1F32C}", anim: "breath", windup: 0.35, recover: 0.3, cd: 6, desc: "Wind blades from the dragon's whiskers.", steps: [{ proj: { speed: 18, range: 12, radius: 0.5, damage: 18, count: 3, spread: 0.5, sprite: "airslash", slashing: true, pierce: true } }] }),
+        T2(50, { id: "seiryu_raimei", name: "Raimei Hakke", icon: "\u26A1", anim: "heavy", windup: 0.6, recover: 0.5, cd: 14, desc: "Thunder Bagua: a club blow that shakes the heavens.", steps: [{ hit: { shape: "arc", range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: "lightning", impactFrame: true, shake: 0.9 } }] }),
+        T2(80, { id: "seiryu_form", name: "Dragon Form", icon: "\u{1F432}", anim: "cast", windup: 1, recover: 0.1, cd: 120, steps: [{ buff: { id: "dragon", name: "Azure Dragon", dur: 25, mods: { damage: 2, defMul: 0.4, scale: 1.6 }, aura: "rgba(66,165,245,0.8)", look: { dragonForm: true } } }] })
       ]
     },
     // ----------------------------------------------------------------- LOGIA
@@ -43174,10 +43171,10 @@ ${GLSL}
       desc: "Become fire itself. Portgas D. Ace's fruit \u2014 later the Colosseum prize of Dressrosa.",
       passive: { logia: true, element: "fire", resist: ["fire"], weakTo: ["magma", "water"] },
       techniques: [
-        T2(0, { id: "mera_hiken", name: "Hiken", icon: "\u{1F525}", anim: "punch", windup: 0.3, recover: 0.3, cd: 4, cost: { stamina: 14 }, say: "Hiken!", desc: "Fire Fist.", steps: [{ proj: { speed: 16, range: 12, radius: 0.8, damage: 26, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 5, trail: { color: ["#ff7043", "#ffca28"] } } }] }),
-        T2(15, { id: "mera_hidaruma", name: "Hidaruma", icon: "\u{1F386}", anim: "cast", windup: 0.25, recover: 0.3, cd: 6, cost: { stamina: 14 }, desc: "Fireflies of flame that ignite everything they touch.", steps: [{ proj: { speed: 9, range: 10, radius: 0.3, damage: 8, count: 6, spread: 1.2, sprite: "fireball", element: "fire", status: { burn: 2 }, homing: 2 } }] }),
-        T2(35, { id: "mera_enkai", name: "Enkai: Hibashira", icon: "\u{1F30B}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, cost: { stamina: 22 }, desc: "A pillar of flame erupts around you.", steps: [{ hit: { shape: "circle", range: 3, damage: 36, knockback: 8, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true }, vfx: "ring" }] }),
-        T2(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "raise", windup: 1.1, recover: 0.5, cd: 40, cost: { stamina: 40 }, desc: "A second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 2.2, damage: 40, size: 4, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] })
+        T2(0, { id: "mera_hiken", name: "Hiken", icon: "\u{1F525}", anim: "punch", windup: 0.3, recover: 0.3, cd: 4, say: "Hiken!", desc: "Fire Fist.", steps: [{ proj: { speed: 16, range: 12, radius: 0.8, damage: 26, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 5, trail: { color: ["#ff7043", "#ffca28"] } } }] }),
+        T2(15, { id: "mera_hidaruma", name: "Hidaruma", icon: "\u{1F386}", anim: "cast", windup: 0.25, recover: 0.3, cd: 6, desc: "Fireflies of flame that ignite everything they touch.", steps: [{ proj: { speed: 9, range: 10, radius: 0.3, damage: 8, count: 6, spread: 1.2, sprite: "fireball", element: "fire", status: { burn: 2 }, homing: 2 } }] }),
+        T2(35, { id: "mera_enkai", name: "Enkai: Hibashira", icon: "\u{1F30B}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, desc: "A pillar of flame erupts around you.", steps: [{ hit: { shape: "circle", range: 3, damage: 36, knockback: 8, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true }, vfx: "ring" }] }),
+        T2(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "raise", windup: 1.1, recover: 0.5, cd: 40, desc: "A second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 2.2, damage: 40, size: 4, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] })
       ]
     },
     hie: {
@@ -43190,10 +43187,10 @@ ${GLSL}
       desc: "Become ice. Freeze anything \u2014 even the sea. (Admiral Aokiji.)",
       passive: { logia: true, element: "ice", resist: ["ice"], weakTo: ["magma"] },
       techniques: [
-        T2(0, { id: "hie_saber", name: "Ice Saber", icon: "\u{1F5E1}", anim: "slash", windup: 0.15, recover: 0.25, cd: 3, cost: { stamina: 10 }, steps: [{ hit: { shape: "arc", range: 2, arc: 1.8, offset: 0.2, damage: 18, knockback: 3, stun: 0.3, slashing: true, element: "ice", status: { chill: 3 } }, vfx: "slash", color: "#b3e5fc" }] }),
-        T2(15, { id: "hie_pheasant", name: "Pheasant Beak", icon: "\u{1F426}", anim: "cast", windup: 0.35, recover: 0.3, cd: 6, cost: { stamina: 16 }, say: "Pheasant Beak!", steps: [{ proj: { speed: 15, range: 12, radius: 0.8, damage: 28, sprite: "bird", color: "#b3e5fc", element: "ice", status: { freeze: 1.4 }, pierce: true } }] }),
-        T2(35, { id: "hie_ageand", name: "Ice Age", icon: "\u2744", anim: "kneel", windup: 0.6, recover: 0.4, cd: 14, cost: { stamina: 26 }, desc: "Freeze everything around you \u2014 even water becomes a road of ice.", say: "Ice Age!", steps: [{ hit: { shape: "circle", range: 5, damage: 30, knockback: 1, stun: 0.3, element: "ice", status: { freeze: 2.5 }, heavy: true }, vfx: "ring", color: "#e1f5fe" }, { zone: { range: 5, duration: 6, interval: 1, damage: 0, color: "#e1f5fe", kind: "ice", slow: 0.5 } }] }),
-        T2(65, { id: "hie_time", name: "Ice Time Capsule", icon: "\u{1F9CA}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, cost: { stamina: 32 }, steps: [{ hit: { shape: "line", range: 10, width: 2.5, damage: 60, knockback: 2, element: "ice", status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: "beam", color: "#e1f5fe" }] })
+        T2(0, { id: "hie_saber", name: "Ice Saber", icon: "\u{1F5E1}", anim: "slash", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 2, arc: 1.8, offset: 0.2, damage: 18, knockback: 3, stun: 0.3, slashing: true, element: "ice", status: { chill: 3 } }, vfx: "slash", color: "#b3e5fc" }] }),
+        T2(15, { id: "hie_pheasant", name: "Pheasant Beak", icon: "\u{1F426}", anim: "cast", windup: 0.35, recover: 0.3, cd: 6, say: "Pheasant Beak!", steps: [{ proj: { speed: 15, range: 12, radius: 0.8, damage: 28, sprite: "bird", color: "#b3e5fc", element: "ice", status: { freeze: 1.4 }, pierce: true } }] }),
+        T2(35, { id: "hie_ageand", name: "Ice Age", icon: "\u2744", anim: "kneel", windup: 0.6, recover: 0.4, cd: 14, desc: "Freeze everything around you \u2014 even water becomes a road of ice.", say: "Ice Age!", steps: [{ hit: { shape: "circle", range: 5, damage: 30, knockback: 1, stun: 0.3, element: "ice", status: { freeze: 2.5 }, heavy: true }, vfx: "ring", color: "#e1f5fe" }, { zone: { range: 5, duration: 6, interval: 1, damage: 0, color: "#e1f5fe", kind: "ice", slow: 0.5 } }] }),
+        T2(65, { id: "hie_time", name: "Ice Time Capsule", icon: "\u{1F9CA}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, steps: [{ hit: { shape: "line", range: 10, width: 2.5, damage: 60, knockback: 2, element: "ice", status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: "beam", color: "#e1f5fe" }] })
       ]
     },
     goro: {
@@ -43206,11 +43203,11 @@ ${GLSL}
       desc: "Become lightning. The self-proclaimed God Enel's fruit. Useless against rubber.",
       passive: { logia: true, element: "lightning", resist: ["lightning"], weakTo: ["rubber"] },
       techniques: [
-        T2(0, { id: "goro_vari", name: "Vari", icon: "\u26A1", anim: "point", windup: 0.2, recover: 0.25, cd: 3, cost: { stamina: 12 }, steps: [{ hit: { shape: "line", range: 8, width: 0.8, damage: 22, knockback: 2, stun: 0.5, element: "lightning", status: { shock: 1 } }, vfx: "beam", color: "#fff176" }] }),
-        T2(15, { id: "goro_sango", name: "Sango", icon: "\u{1F409}", anim: "cast", windup: 0.4, recover: 0.3, cd: 8, cost: { stamina: 20 }, desc: "A lightning dragon.", steps: [{ proj: { speed: 20, range: 14, radius: 0.9, damage: 34, sprite: "thunder", size: 2, element: "lightning", pierce: true, status: { shock: 1.2 } } }] }),
-        T2(35, { id: "goro_elthor", name: "El Thor", icon: "\u{1F329}", anim: "raise", windup: 0.7, recover: 0.4, cd: 14, cost: { stamina: 28 }, desc: "A pillar of divine lightning from the sky.", say: "El Thor!", steps: [{ zone: { range: 2.8, duration: 0.8, interval: 0.4, damage: 45, element: "lightning", status: { shock: 1.5 }, color: "#fff176", atTarget: true, kind: "thunder" } }] }),
-        T2(55, { id: "goro_amaru", name: "200 Million Volt Amaru", icon: "\u{1F47A}", anim: "cast", windup: 0.8, recover: 0.2, cd: 60, cost: { stamina: 30 }, steps: [{ buff: { id: "amaru", name: "Amaru", dur: 18, mods: { damage: 1.9, speedMul: 1.25, scale: 1.3 }, element: "lightning", aura: "rgba(255,241,118,0.9)", look: { drums: true } } }] }),
-        T2(85, { id: "goro_raigo", name: "Raigo", icon: "\u{1F311}", anim: "summon", windup: 1.4, recover: 0.6, cd: 90, cost: { stamina: 45 }, desc: "A thundercloud large enough to erase an island.", steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: "lightning", status: { shock: 0.5 }, color: "#fff176", kind: "thunder" } }] })
+        T2(0, { id: "goro_vari", name: "Vari", icon: "\u26A1", anim: "point", windup: 0.2, recover: 0.25, cd: 3, steps: [{ hit: { shape: "line", range: 8, width: 0.8, damage: 22, knockback: 2, stun: 0.5, element: "lightning", status: { shock: 1 } }, vfx: "beam", color: "#fff176" }] }),
+        T2(15, { id: "goro_sango", name: "Sango", icon: "\u{1F409}", anim: "cast", windup: 0.4, recover: 0.3, cd: 8, desc: "A lightning dragon.", steps: [{ proj: { speed: 20, range: 14, radius: 0.9, damage: 34, sprite: "thunder", size: 2, element: "lightning", pierce: true, status: { shock: 1.2 } } }] }),
+        T2(35, { id: "goro_elthor", name: "El Thor", icon: "\u{1F329}", anim: "raise", windup: 0.7, recover: 0.4, cd: 14, desc: "A pillar of divine lightning from the sky.", say: "El Thor!", steps: [{ zone: { range: 2.8, duration: 0.8, interval: 0.4, damage: 45, element: "lightning", status: { shock: 1.5 }, color: "#fff176", atTarget: true, kind: "thunder" } }] }),
+        T2(55, { id: "goro_amaru", name: "200 Million Volt Amaru", icon: "\u{1F47A}", anim: "cast", windup: 0.8, recover: 0.2, cd: 60, steps: [{ buff: { id: "amaru", name: "Amaru", dur: 18, mods: { damage: 1.9, speedMul: 1.25, scale: 1.3 }, element: "lightning", aura: "rgba(255,241,118,0.9)", look: { drums: true } } }] }),
+        T2(85, { id: "goro_raigo", name: "Raigo", icon: "\u{1F311}", anim: "summon", windup: 1.4, recover: 0.6, cd: 90, desc: "A thundercloud large enough to erase an island.", steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: "lightning", status: { shock: 0.5 }, color: "#fff176", kind: "thunder" } }] })
       ]
     },
     suna: {
@@ -43223,10 +43220,10 @@ ${GLSL}
       desc: "Become sand and drain the moisture from anything you touch. Water is its weakness. (Sir Crocodile.)",
       passive: { logia: true, element: "sand", weakTo: ["water"] },
       techniques: [
-        T2(0, { id: "suna_barjan", name: "Barjan", icon: "\u{1F319}", anim: "slash", windup: 0.2, recover: 0.3, cd: 3, cost: { stamina: 12 }, steps: [{ proj: { speed: 17, range: 10, radius: 0.5, damage: 18, sprite: "sandblade", element: "sand", slashing: true, pierce: true } }] }),
-        T2(15, { id: "suna_sables", name: "Sables", icon: "\u{1F32A}", anim: "cast", windup: 0.4, recover: 0.3, cd: 9, cost: { stamina: 20 }, desc: "A sandstorm.", steps: [{ zone: { range: 3, duration: 3.5, interval: 0.3, damage: 7, element: "sand", color: "#e1c16e", kind: "storm", atTarget: true, pull: 2 } }] }),
-        T2(35, { id: "suna_spada", name: "Desert Spada", icon: "\u{1F5E1}", anim: "grab", windup: 0.3, recover: 0.35, cd: 8, cost: { stamina: 22 }, desc: "Blades of sand rip through the ground.", steps: [{ hit: { shape: "line", range: 11, width: 1.2, damage: 40, knockback: 4, stun: 0.5, element: "sand", slashing: true }, vfx: "beam", color: "#e1c16e" }] }),
-        T2(60, { id: "suna_dry", name: "Ground Death", icon: "\u{1F3DC}", anim: "kneel", windup: 0.7, recover: 0.4, cd: 30, cost: { stamina: 32 }, desc: "Drain all moisture from the land around you.", steps: [{ zone: { range: 6, duration: 5, interval: 0.4, damage: 12, element: "sand", color: "#d7b56d", kind: "field", status: { dry: 2 } } }] })
+        T2(0, { id: "suna_barjan", name: "Barjan", icon: "\u{1F319}", anim: "slash", windup: 0.2, recover: 0.3, cd: 3, steps: [{ proj: { speed: 17, range: 10, radius: 0.5, damage: 18, sprite: "sandblade", element: "sand", slashing: true, pierce: true } }] }),
+        T2(15, { id: "suna_sables", name: "Sables", icon: "\u{1F32A}", anim: "cast", windup: 0.4, recover: 0.3, cd: 9, desc: "A sandstorm.", steps: [{ zone: { range: 3, duration: 3.5, interval: 0.3, damage: 7, element: "sand", color: "#e1c16e", kind: "storm", atTarget: true, pull: 2 } }] }),
+        T2(35, { id: "suna_spada", name: "Desert Spada", icon: "\u{1F5E1}", anim: "grab", windup: 0.3, recover: 0.35, cd: 8, desc: "Blades of sand rip through the ground.", steps: [{ hit: { shape: "line", range: 11, width: 1.2, damage: 40, knockback: 4, stun: 0.5, element: "sand", slashing: true }, vfx: "beam", color: "#e1c16e" }] }),
+        T2(60, { id: "suna_dry", name: "Ground Death", icon: "\u{1F3DC}", anim: "kneel", windup: 0.7, recover: 0.4, cd: 30, desc: "Drain all moisture from the land around you.", steps: [{ zone: { range: 6, duration: 5, interval: 0.4, damage: 12, element: "sand", color: "#d7b56d", kind: "field", status: { dry: 2 } } }] })
       ]
     },
     moku: {
@@ -43239,10 +43236,10 @@ ${GLSL}
       desc: 'Become smoke. Smoker "the White Hunter" pairs it with a Seastone jitte.',
       passive: { logia: true, element: "smoke" },
       techniques: [
-        T2(0, { id: "moku_blow", name: "White Blow", icon: "\u2601", anim: "punch", windup: 0.2, recover: 0.3, cd: 3, cost: { stamina: 12 }, steps: [{ proj: { speed: 16, range: 10, radius: 0.6, damage: 18, sprite: "smokefist", element: "smoke", knockback: 5, stun: 0.4 } }] }),
-        T2(15, { id: "moku_snake", name: "White Snake", icon: "\u{1F40D}", anim: "grab", windup: 0.25, recover: 0.3, cd: 7, cost: { stamina: 16 }, desc: "Smoke tendrils bind the target.", steps: [{ proj: { speed: 14, range: 11, radius: 0.5, damage: 12, sprite: "smokesnake", element: "smoke", status: { root: 2 }, homing: 2 } }] }),
-        T2(35, { id: "moku_out", name: "White Out", icon: "\u{1F32B}", anim: "cast", windup: 0.4, recover: 0.3, cd: 12, cost: { stamina: 22 }, steps: [{ zone: { range: 4, duration: 5, interval: 0.5, damage: 6, element: "smoke", color: "#eceff1", kind: "storm", slow: 0.45, status: { root: 0.4 } } }] }),
-        T2(60, { id: "moku_launcher", name: "White Launcher", icon: "\u{1F680}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 6, cost: { stamina: 18 }, steps: [{ dash: { dist: 10, time: 0.3, iframes: 0.3, air: true, trail: "#eceff1", hit: { damage: 36, knockback: 8, stun: 0.6, element: "smoke" } } }] })
+        T2(0, { id: "moku_blow", name: "White Blow", icon: "\u2601", anim: "punch", windup: 0.2, recover: 0.3, cd: 3, steps: [{ proj: { speed: 16, range: 10, radius: 0.6, damage: 18, sprite: "smokefist", element: "smoke", knockback: 5, stun: 0.4 } }] }),
+        T2(15, { id: "moku_snake", name: "White Snake", icon: "\u{1F40D}", anim: "grab", windup: 0.25, recover: 0.3, cd: 7, desc: "Smoke tendrils bind the target.", steps: [{ proj: { speed: 14, range: 11, radius: 0.5, damage: 12, sprite: "smokesnake", element: "smoke", status: { root: 2 }, homing: 2 } }] }),
+        T2(35, { id: "moku_out", name: "White Out", icon: "\u{1F32B}", anim: "cast", windup: 0.4, recover: 0.3, cd: 12, steps: [{ zone: { range: 4, duration: 5, interval: 0.5, damage: 6, element: "smoke", color: "#eceff1", kind: "storm", slow: 0.45, status: { root: 0.4 } } }] }),
+        T2(60, { id: "moku_launcher", name: "White Launcher", icon: "\u{1F680}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 6, steps: [{ dash: { dist: 10, time: 0.3, iframes: 0.3, air: true, trail: "#eceff1", hit: { damage: 36, knockback: 8, stun: 0.6, element: "smoke" } } }] })
       ]
     },
     pika: {
@@ -43255,10 +43252,10 @@ ${GLSL}
       desc: "Become light. Move at the speed of light and kick with its weight. (Admiral Kizaru.)",
       passive: { logia: true, element: "light" },
       techniques: [
-        T2(0, { id: "pika_yasakani", name: "Yasakani no Magatama", icon: "\u2728", anim: "cast", windup: 0.35, recover: 0.4, cd: 6, cost: { stamina: 16 }, desc: "A rain of light bullets.", steps: [{ proj: { speed: 30, range: 12, radius: 0.25, damage: 8, count: 9, spread: 1, sprite: "lightorb", element: "light" } }] }),
-        T2(15, { id: "pika_yata", name: "Yata no Kagami", icon: "\u{1FA9E}", anim: "cast", windup: 0.05, recover: 0.05, cd: 2, cost: { stamina: 10 }, desc: "Travel at the speed of light.", steps: [{ teleport: { dist: 12, color: "#fff9c4" } }] }),
-        T2(35, { id: "pika_murakumo", name: "Ama no Murakumo", icon: "\u2694", anim: "slash", windup: 0.2, recover: 0.3, cd: 5, cost: { stamina: 16 }, desc: "A sword of light.", steps: [{ hit: { shape: "arc", range: 2.6, arc: 2.2, offset: 0.2, damage: 40, knockback: 4, stun: 0.5, slashing: true, element: "light" }, vfx: "slash", color: "#fff9c4" }] }),
-        T2(60, { id: "pika_amaterasu", name: "Amaterasu", icon: "\u2600", anim: "cast", windup: 0.8, recover: 0.4, cd: 25, cost: { stamina: 35 }, steps: [{ hit: { shape: "line", range: 16, width: 1.6, damage: 90, knockback: 8, stun: 0.8, element: "light", heavy: true, impactFrame: true, hitShips: true, shipDamage: 300 }, vfx: "beam", color: "#fff59d" }] })
+        T2(0, { id: "pika_yasakani", name: "Yasakani no Magatama", icon: "\u2728", anim: "cast", windup: 0.35, recover: 0.4, cd: 6, desc: "A rain of light bullets.", steps: [{ proj: { speed: 30, range: 12, radius: 0.25, damage: 8, count: 9, spread: 1, sprite: "lightorb", element: "light" } }] }),
+        T2(15, { id: "pika_yata", name: "Yata no Kagami", icon: "\u{1FA9E}", anim: "cast", windup: 0.05, recover: 0.05, cd: 2, desc: "Travel at the speed of light.", steps: [{ teleport: { dist: 12, color: "#fff9c4" } }] }),
+        T2(35, { id: "pika_murakumo", name: "Ama no Murakumo", icon: "\u2694", anim: "slash", windup: 0.2, recover: 0.3, cd: 5, desc: "A sword of light.", steps: [{ hit: { shape: "arc", range: 2.6, arc: 2.2, offset: 0.2, damage: 40, knockback: 4, stun: 0.5, slashing: true, element: "light" }, vfx: "slash", color: "#fff9c4" }] }),
+        T2(60, { id: "pika_amaterasu", name: "Amaterasu", icon: "\u2600", anim: "cast", windup: 0.8, recover: 0.4, cd: 25, steps: [{ hit: { shape: "line", range: 16, width: 1.6, damage: 90, knockback: 8, stun: 0.8, element: "light", heavy: true, impactFrame: true, hitShips: true, shipDamage: 300 }, vfx: "beam", color: "#fff59d" }] })
       ]
     },
     magu: {
@@ -43271,9 +43268,9 @@ ${GLSL}
       desc: "Become magma \u2014 hotter than fire itself. (Admiral, then Fleet Admiral, Akainu.)",
       passive: { logia: true, element: "magma", resist: ["fire", "magma"] },
       techniques: [
-        T2(0, { id: "magu_daifunka", name: "Dai Funka", icon: "\u{1F30B}", anim: "punch", windup: 0.3, recover: 0.35, cd: 4, cost: { stamina: 16 }, say: "Dai Funka!", desc: "Great Eruption.", steps: [{ proj: { speed: 15, range: 11, radius: 0.9, damage: 34, sprite: "magmafist", size: 1.5, element: "magma", pierce: true, status: { burn: 4 }, knockback: 6, trail: { color: ["#bf360c", "#ff6f00"], kind: "fire" } } }] }),
-        T2(20, { id: "magu_meigo", name: "Meigo", icon: "\u{1F44A}", anim: "thrust", windup: 0.3, recover: 0.35, cd: 8, cost: { stamina: 22 }, desc: "Hell Hound: a magma fist that pierces through.", steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 55, knockback: 6, stun: 0.8, element: "magma", status: { burn: 4 }, heavy: true, guardBreak: true } } }] }),
-        T2(50, { id: "magu_ryusei", name: "Ryusei Kazan", icon: "\u2604", anim: "summon", windup: 1, recover: 0.5, cd: 35, cost: { stamina: 40 }, desc: "Meteor Volcano: a rain of magma fists.", steps: [{ zone: { range: 6, duration: 2.5, interval: 0.2, damage: 24, element: "magma", color: "#ff5722", kind: "meteor", status: { burn: 3 } } }] })
+        T2(0, { id: "magu_daifunka", name: "Dai Funka", icon: "\u{1F30B}", anim: "punch", windup: 0.3, recover: 0.35, cd: 4, say: "Dai Funka!", desc: "Great Eruption.", steps: [{ proj: { speed: 15, range: 11, radius: 0.9, damage: 34, sprite: "magmafist", size: 1.5, element: "magma", pierce: true, status: { burn: 4 }, knockback: 6, trail: { color: ["#bf360c", "#ff6f00"], kind: "fire" } } }] }),
+        T2(20, { id: "magu_meigo", name: "Meigo", icon: "\u{1F44A}", anim: "thrust", windup: 0.3, recover: 0.35, cd: 8, desc: "Hell Hound: a magma fist that pierces through.", steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 55, knockback: 6, stun: 0.8, element: "magma", status: { burn: 4 }, heavy: true, guardBreak: true } } }] }),
+        T2(50, { id: "magu_ryusei", name: "Ryusei Kazan", icon: "\u2604", anim: "summon", windup: 1, recover: 0.5, cd: 35, desc: "Meteor Volcano: a rain of magma fists.", steps: [{ zone: { range: 6, duration: 2.5, interval: 0.2, damage: 24, element: "magma", color: "#ff5722", kind: "meteor", status: { burn: 3 } } }] })
       ]
     },
     yami: {
@@ -43286,10 +43283,10 @@ ${GLSL}
       desc: "Darkness that swallows everything \u2014 even other Devil Fruit powers. Unlike other Logia, it cannot become intangible. (Marshall D. Teach.)",
       passive: { element: "dark", noIntangible: true, damageTaken: 1.15 },
       techniques: [
-        T2(0, { id: "yami_kurouzu", name: "Kurouzu", icon: "\u{1F573}", anim: "grab", windup: 0.3, recover: 0.3, cd: 6, cost: { stamina: 16 }, desc: "Black Vortex: drag your enemy to you.", steps: [{ pull: { range: 8, strength: 14, stun: 0.6 } }] }),
-        T2(15, { id: "yami_blackhole", name: "Black Hole", icon: "\u26AB", anim: "cast", windup: 0.5, recover: 0.4, cd: 14, cost: { stamina: 26 }, steps: [{ zone: { range: 4, duration: 4, interval: 0.4, damage: 10, element: "dark", color: "#311b92", kind: "dark", pull: 4, slow: 0.4 } }] }),
-        T2(35, { id: "yami_nullify", name: "Dark Hand", icon: "\u270B", anim: "grab", windup: 0.2, recover: 0.3, cd: 18, cost: { stamina: 20 }, desc: "Touch an enemy to nullify their Devil Fruit.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 15, stun: 0.8, status: { seastone: 8 }, unblockable: true } }] }),
-        T2(60, { id: "yami_liberation", name: "Liberation", icon: "\u{1F4A5}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, cost: { stamina: 32 }, desc: "Release everything the darkness swallowed.", steps: [{ hit: { shape: "circle", range: 5, damage: 70, knockback: 12, stun: 0.8, element: "dark", heavy: true, impactFrame: true }, vfx: "ring", color: "#7e57c2" }] })
+        T2(0, { id: "yami_kurouzu", name: "Kurouzu", icon: "\u{1F573}", anim: "grab", windup: 0.3, recover: 0.3, cd: 6, desc: "Black Vortex: drag your enemy to you.", steps: [{ pull: { range: 8, strength: 14, stun: 0.6 } }] }),
+        T2(15, { id: "yami_blackhole", name: "Black Hole", icon: "\u26AB", anim: "cast", windup: 0.5, recover: 0.4, cd: 14, steps: [{ zone: { range: 4, duration: 4, interval: 0.4, damage: 10, element: "dark", color: "#311b92", kind: "dark", pull: 4, slow: 0.4 } }] }),
+        T2(35, { id: "yami_nullify", name: "Dark Hand", icon: "\u270B", anim: "grab", windup: 0.2, recover: 0.3, cd: 18, desc: "Touch an enemy to nullify their Devil Fruit.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 15, stun: 0.8, status: { seastone: 8 }, unblockable: true } }] }),
+        T2(60, { id: "yami_liberation", name: "Liberation", icon: "\u{1F4A5}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, desc: "Release everything the darkness swallowed.", steps: [{ hit: { shape: "circle", range: 5, damage: 70, knockback: 12, stun: 0.8, element: "dark", heavy: true, impactFrame: true }, vfx: "ring", color: "#7e57c2" }] })
       ]
     }
   };
@@ -43317,26 +43314,26 @@ ${GLSL}
   // src/data/items.js
   var ITEMS = {
     // ---------------------------------------------------------------- food
-    meat: { name: "Meat on the Bone", icon: "\u{1F356}", type: "food", heal: 70, stamina: 40, price: 90, desc: "The universal fuel of every rubber-brained captain." },
-    rice_ball: { name: "Rice Ball", icon: "\u{1F359}", type: "food", heal: 40, stamina: 20, price: 45, desc: "Simple, salty, filling." },
-    fish_stew: { name: "Sea Fish Stew", icon: "\u{1F372}", type: "food", heal: 110, stamina: 60, price: 180, desc: "A sailor's favourite." },
-    tangerine: { name: "Bell-m\xE8re's Tangerine", icon: "\u{1F34A}", type: "food", heal: 35, stamina: 60, price: 60, desc: "From the groves of Cocoyasi Village." },
-    fresh_fish: { name: "Fresh Fish", icon: "\u{1F41F}", type: "food", heal: 45, stamina: 35, price: 40, desc: "Caught with your bare hands. Better cooked, but it will do." },
-    tuna: { name: "Bluefin Tuna", icon: "\u{1F41F}", type: "food", heal: 160, stamina: 90, price: 420, desc: "A fat, fast fish from the open sea. A cook would weep with joy." },
-    elephant_tuna: { name: "Elephant Honmaguro", icon: "\u{1F41F}", type: "food", heal: 320, stamina: 170, price: 1400, desc: "A giant tuna with an elephant's trunk and ears \u2014 the finest eating in the sea. Sanji would kill for one." },
-    sea_king_steak: { name: "Sea King Steak", icon: "\u{1F969}", type: "food", heal: 400, stamina: 200, price: 2500, desc: "Enough meat to feed a crew for a week." },
-    baratie_course: { name: "Baratie Full Course", icon: "\u{1F37D}", type: "food", heal: 300, stamina: 150, price: 1200, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: `Cooked by "Red Leg" Zeff's kitchen. Leaves you Well Fed.` },
-    sake: { name: "Sake", icon: "\u{1F376}", type: "food", heal: 10, stamina: 80, price: 120, buff: { id: "tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: "Dutch courage." },
+    meat: { name: "Meat on the Bone", icon: "\u{1F356}", type: "food", heal: 70, price: 90, desc: "The universal fuel of every rubber-brained captain." },
+    rice_ball: { name: "Rice Ball", icon: "\u{1F359}", type: "food", heal: 40, price: 45, desc: "Simple, salty, filling." },
+    fish_stew: { name: "Sea Fish Stew", icon: "\u{1F372}", type: "food", heal: 110, price: 180, desc: "A sailor's favourite." },
+    tangerine: { name: "Bell-m\xE8re's Tangerine", icon: "\u{1F34A}", type: "food", heal: 35, price: 60, desc: "From the groves of Cocoyasi Village." },
+    fresh_fish: { name: "Fresh Fish", icon: "\u{1F41F}", type: "food", heal: 45, price: 40, desc: "Caught with your bare hands. Better cooked, but it will do." },
+    tuna: { name: "Bluefin Tuna", icon: "\u{1F41F}", type: "food", heal: 160, price: 420, desc: "A fat, fast fish from the open sea. A cook would weep with joy." },
+    elephant_tuna: { name: "Elephant Honmaguro", icon: "\u{1F41F}", type: "food", heal: 320, price: 1400, desc: "A giant tuna with an elephant's trunk and ears \u2014 the finest eating in the sea. Sanji would kill for one." },
+    sea_king_steak: { name: "Sea King Steak", icon: "\u{1F969}", type: "food", heal: 400, price: 2500, desc: "Enough meat to feed a crew for a week." },
+    baratie_course: { name: "Baratie Full Course", icon: "\u{1F37D}", type: "food", heal: 300, price: 1200, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: `Cooked by "Red Leg" Zeff's kitchen. Leaves you Well Fed.` },
+    sake: { name: "Sake", icon: "\u{1F376}", type: "food", heal: 10, price: 120, buff: { id: "tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: "Dutch courage." },
     cola: { name: "Cola Barrel", icon: "\u{1F964}", type: "material", price: 500, desc: "Fuel for Coup de Burst and for certain cyborgs." },
     bandage: { name: "Bandages", icon: "\u{1FA79}", type: "medicine", heal: 55, price: 70, desc: "Stops the bleeding.", cure: ["bleed"] },
     antidote: { name: "Antidote", icon: "\u{1F9EA}", type: "medicine", heal: 20, price: 150, cure: ["poison"], desc: "Neutralises most poisons." },
     rumble_ball: { name: "Rumble Ball", icon: "\u{1F7E1}", type: "medicine", price: 8e3, buff: { id: "rumble", name: "Rumble", dur: 180, mods: { damage: 1.2, speedMul: 1.1 } }, desc: "Chopper's invention. Strengthens you for three minutes." },
     // foraged from trees (E next to a palm or fruit tree)
-    coconut: { name: "Coconut", icon: "", type: "food", heal: 30, stamina: 50, price: 25, desc: "Crack it open: sweet water and white flesh. Picked from palms." },
-    banana: { name: "Banana", icon: "", type: "food", heal: 25, stamina: 35, price: 20, desc: "Quick energy from a jungle tree." },
-    mango: { name: "Mango", icon: "", type: "food", heal: 40, stamina: 30, price: 35, desc: "Ripe, juicy and sticky." },
-    apple: { name: "Apple", icon: "", type: "food", heal: 25, stamina: 20, price: 15, desc: "Crisp and red." },
-    cherry: { name: "Cherries", icon: "", type: "food", heal: 12, stamina: 18, price: 10, desc: "A handful of cherries." },
+    coconut: { name: "Coconut", icon: "", type: "food", heal: 30, price: 25, desc: "Crack it open: sweet water and white flesh. Picked from palms." },
+    banana: { name: "Banana", icon: "", type: "food", heal: 25, price: 20, desc: "Quick energy from a jungle tree." },
+    mango: { name: "Mango", icon: "", type: "food", heal: 40, price: 35, desc: "Ripe, juicy and sticky." },
+    apple: { name: "Apple", icon: "", type: "food", heal: 25, price: 15, desc: "Crisp and red." },
+    cherry: { name: "Cherries", icon: "", type: "food", heal: 12, price: 10, desc: "A handful of cherries." },
     tension_hormone: { name: "Tension Hormones", icon: "\u{1F489}", type: "medicine", heal: 99999, price: 0, costsLife: true, desc: "Emporio Ivankov's miracle: fully restores you right now \u2014 at the cost of ten years of lifespan (one life)." },
     // ------------------------------------------------------------- swords
     wooden_sword: { name: "Wooden Practice Sword", icon: "\u{1FAB5}", type: "weapon", kind: "sword", power: 0.75, price: 300, grade: "Training", desc: "Every swordsman starts with one." },
@@ -47888,6 +47885,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       D.katana(I, {});
       tf(I, { sx: -1, ox: 32 }, () => D.katana(I, {}));
     });
+  };
+  UI.dodge = (I) => {
+    speed(I, [[4, 22, 16, 22], [2, 32, 14, 32], [4, 42, 16, 42]], "#fff4dc", 3.4, 1);
+    speed(I, [[4, 22, 16, 22], [2, 32, 14, 32], [4, 42, 16, 42]], "#3d8fd1", 1.7, 1);
+    const chev = (x) => `M${x} 12 L${x + 12} 12 L${x + 30} 32 L${x + 12} 52 L${x} 52 L${x + 18} 32 Z`;
+    part(I, chev(18), "#7cc8f2", { sd: 2.2, hd: 1.6 });
+    part(I, chev(32), "#b8e4fa", { sd: 2.2, hd: 1.6 });
+  };
+  UI.guard = (I) => {
+    const shield = "M32 5 C40 9.5 48 10.5 55 9.5 C56 30 50 47 32 59 C14 47 8 30 9 9.5 C16 10.5 24 9.5 32 5 Z";
+    part(I, shield, "#e0b24a", { sd: 2.4, hd: 1.6 });
+    part(I, xf(shield, { s: 0.78, oy: 31 }), "#4f79a6", { sd: 2.4, hd: 1.6, ol: I.ol * 0.7 });
+    part(I, circle(32, 29, 6), "#f2d27a", { sd: 1.4, hd: 1, ol: I.ol * 0.7 });
   };
   UI.drop = (I) => part(I, dropP(32, 36, 2.4), "#4fb3e8", { sd: 3, hd: 2, gloss: [26, 34, 3, 5, 0.7, 0.3] });
   UI.dream = (I) => {
@@ -59742,7 +59752,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var ATTRS = {
     str: { name: "Strength", short: "STR", desc: "Physical damage and carrying power." },
     agi: { name: "Agility", short: "AGI", desc: "Move speed, dodge recovery and attack speed." },
-    end: { name: "Endurance", short: "END", desc: "Stamina pool, defence and stamina regeneration." },
+    end: { name: "Endurance", short: "END", desc: "Defence, how much of a blow your guard stops and how soon a broken guard comes back \u2014 and, for a Devil Fruit user, how long you keep your head above water." },
     vit: { name: "Vitality", short: "VIT", desc: "Maximum health and recovery." },
     wil: { name: "Willpower", short: "WIL", desc: "Your spirit: resistance to fear, your chance to get back up, and the strength of any hidden power you awaken." }
   };
@@ -59755,12 +59765,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const hpMul = mods.hpMul || 1;
     return {
       maxHp: Math.round((90 + a.vit * 9 + a.end * 2) * hpMul),
-      maxStamina: Math.round(100 + a.end * 3 + a.agi),
       maxHaki: Math.round(40 + a.wil * 4),
       speed: 4.3 * (1 + a.agi * 45e-4) * (mods.stride || 1) * (mods.speedMul || 1),
       dmg: 1 + a.str * 0.028,
       def: clamp2(a.end * 35e-4 + (mods.armor || 0), 0, 0.55),
-      staminaRegen: 16 + a.end * 0.25,
       hpRegen: 0.25 + a.vit * 0.02,
       hakiRegen: 1.5 + a.wil * 0.06,
       atkSpeed: 1 + a.agi * 3e-3
@@ -61369,7 +61377,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     anim,
     windup: o.windup ?? 0.07,
     recover: o.recover ?? 0.16,
-    cost: { stamina: o.stamina ?? 3 },
     weapon: o.weapon,
     telegraph: false,
     steps: [{ hit: { shape: o.shape || "arc", range: o.range ?? 1.35, arc: o.arc ?? 1.7, offset: o.offset ?? 0.2, damage: dmg, knockback: o.kb ?? 1.2, stun: o.stun ?? 0.22, slashing: o.slashing, element: o.element, status: o.status, width: o.width }, vfx: o.vfx }]
@@ -61386,7 +61393,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("brawl_3", "brawler", "hook", 7, { windup: 0.08, recover: 0.15, stun: 0.28 }),
         m1("brawl_4", "brawler", "uppercut", 9, { name: "Uppercut", windup: 0.09, kb: 3.5, stun: 0.35, recover: 0.3 })
       ],
-      heavy: { id: "brawl_heavy", name: "Haymaker", anim: "haymaker", windup: 0.32, recover: 0.35, cd: 1.3, cost: { stamina: 12 }, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.5, offset: 0.3, damage: 15, knockback: 6, stun: 0.5, heavy: true, guardBreak: true } }] },
+      heavy: { id: "brawl_heavy", name: "Haymaker", anim: "haymaker", windup: 0.32, recover: 0.35, cd: 1.3, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.5, offset: 0.3, damage: 15, knockback: 6, stun: 0.5, heavy: true, guardBreak: true } }] },
       techniques: [
         {
           id: "brawl_tackle",
@@ -61396,7 +61403,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.15,
           recover: 0.3,
           cd: 5,
-          cost: { stamina: 16 },
           desc: "Charge forward, bowling over anyone in your way.",
           steps: [{ dash: { dist: 5, time: 0.25, hit: { damage: 12, knockback: 6, stun: 0.5 } } }],
           learn: { mastery: 0, price: 300 }
@@ -61409,7 +61415,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.12,
           recover: 0.3,
           cd: 4,
-          cost: { stamina: 12 },
           desc: "A launching knee that stuns.",
           steps: [{ hit: { shape: "arc", range: 1.3, arc: 1.2, offset: 0.2, damage: 13, knockback: 2, stun: 0.9 } }],
           learn: { mastery: 10, price: 800 }
@@ -61422,7 +61427,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.25,
           recover: 0.3,
           cd: 7,
-          cost: { stamina: 18 },
           desc: "A skull-cracking headbutt that breaks guards.",
           steps: [{ hit: { shape: "arc", range: 1.2, arc: 1, offset: 0.2, damage: 20, knockback: 5, stun: 0.8, guardBreak: true, heavy: true, impactFrame: true } }],
           learn: { mastery: 25, price: 2e3 }
@@ -61441,7 +61445,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("itto_4", "ittoryu", "rise_slash", 9, { name: "Rising Cut", weapon: "sword", slashing: true, range: 1.7, arc: 2, windup: 0.08, stun: 0.3 }),
         m1("itto_3", "ittoryu", "stab", 12, { name: "Thrust", weapon: "sword", slashing: true, range: 1.9, arc: 2.4, kb: 3.5, recover: 0.32, vfx: "stab" })
       ],
-      heavy: { id: "itto_heavy", name: "Downward Cleave", anim: "cleave", weapon: "sword", windup: 0.34, recover: 0.35, cd: 1.4, cost: { stamina: 14 }, steps: [{ hit: { shape: "line", range: 2.6, width: 1, damage: 20, knockback: 5, stun: 0.5, heavy: true, slashing: true, guardBreak: true } }] },
+      heavy: { id: "itto_heavy", name: "Downward Cleave", anim: "cleave", weapon: "sword", windup: 0.34, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: "line", range: 2.6, width: 1, damage: 20, knockback: 5, stun: 0.5, heavy: true, slashing: true, guardBreak: true } }] },
       techniques: [
         {
           id: "itto_iai",
@@ -61452,7 +61456,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.25,
           recover: 0.35,
           cd: 6,
-          cost: { stamina: 20 },
           desc: "A quick-draw dash cut \u2014 sheathe, dash, and the enemy falls behind you.",
           say: "Shishi Sonson!",
           steps: [{ dash: { dist: 6, time: 0.18, iframes: 0.2, hit: { damage: 26, knockback: 3, stun: 0.6, slashing: true } } }],
@@ -61467,7 +61470,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.3,
           recover: 0.3,
           cd: 5,
-          cost: { stamina: 18 },
           desc: "A flying slash of compressed air.",
           say: "Pound Ho!",
           steps: [{ proj: { speed: 16, range: 11, radius: 0.5, damage: 18, sprite: "airslash", slashing: true, pierce: true, knockback: 3 } }],
@@ -61482,7 +61484,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.35,
           recover: 0.45,
           cd: 9,
-          cost: { stamina: 26 },
           desc: "Spin into a tornado of blades.",
           say: "Tatsumaki!",
           steps: [{ hit: { shape: "circle", range: 2.6, damage: 9, knockback: 4, stun: 0.3, slashing: true, duration: 0.6, interval: 0.15 }, vfx: "ring", color: "#b3e5fc" }],
@@ -61502,7 +61503,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("nito_3", "nitoryu", "dual3", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.06, recover: 0.12 }),
         m1("nito_4", "nitoryu", "dualx", 12, { weapon: "sword", slashing: true, range: 1.9, arc: 2.6, kb: 4, recover: 0.3 })
       ],
-      heavy: { id: "nito_heavy", name: "Rashomon", anim: "tora", weapon: "sword", windup: 0.35, recover: 0.35, cd: 1.6, cost: { stamina: 16 }, steps: [{ hit: { shape: "line", range: 3, width: 1.2, damage: 24, knockback: 5, stun: 0.5, heavy: true, slashing: true, guardBreak: true } }] },
+      heavy: { id: "nito_heavy", name: "Rashomon", anim: "tora", weapon: "sword", windup: 0.35, recover: 0.35, cd: 1.6, steps: [{ hit: { shape: "line", range: 3, width: 1.2, damage: 24, knockback: 5, stun: 0.5, heavy: true, slashing: true, guardBreak: true } }] },
       techniques: [
         {
           id: "nito_taka",
@@ -61513,7 +61514,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.3,
           recover: 0.35,
           cd: 7,
-          cost: { stamina: 22 },
           desc: "Hawk Wave \u2014 a sweeping wave of cuts.",
           say: "Taka Nami!",
           steps: [{ hit: { shape: "arc", range: 3.2, arc: 2.6, damage: 24, knockback: 6, stun: 0.5, slashing: true, heavy: true }, vfx: "slash" }],
@@ -61528,7 +61528,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.2,
           recover: 0.3,
           cd: 6,
-          cost: { stamina: 20 },
           desc: "A crossing dash-cut.",
           say: "Nigiri!",
           steps: [{ dash: { dist: 5, time: 0.18, iframes: 0.18, hit: { damage: 28, stun: 0.6, slashing: true } } }],
@@ -61547,7 +61546,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("santo_2", "santoryu", "dual3", 8, { weapon: "sword", slashing: true, range: 1.8, arc: 2.4 }),
         m1("santo_3", "santoryu", "dualx", 15, { weapon: "sword", slashing: true, range: 2, arc: 2.8, kb: 4.5, recover: 0.3 })
       ],
-      heavy: { id: "santo_heavy", name: "Tora Gari", anim: "tora", weapon: "sword", windup: 0.4, recover: 0.35, cd: 1.6, cost: { stamina: 18 }, say: "Tora Gari!", steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.6, offset: 0.4, damage: 30, knockback: 6, stun: 0.6, heavy: true, slashing: true, guardBreak: true, impactFrame: true } }] },
+      heavy: { id: "santo_heavy", name: "Tora Gari", anim: "tora", weapon: "sword", windup: 0.4, recover: 0.35, cd: 1.6, say: "Tora Gari!", steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.6, offset: 0.4, damage: 30, knockback: 6, stun: 0.6, heavy: true, slashing: true, guardBreak: true, impactFrame: true } }] },
       techniques: [
         {
           id: "santo_onigiri",
@@ -61558,7 +61557,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.22,
           recover: 0.35,
           cd: 5,
-          cost: { stamina: 22 },
           desc: "Demon Slash: a three-blade dash that leaves an X of cuts.",
           say: "Oni Giri!",
           steps: [{ dash: { dist: 6.5, time: 0.2, iframes: 0.22, hit: { damage: 34, knockback: 4, stun: 0.7, slashing: true, heavy: true } } }],
@@ -61573,7 +61571,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.35,
           recover: 0.35,
           cd: 7,
-          cost: { stamina: 26 },
           desc: "Three flying slashes shaped like a phoenix.",
           say: "Hyakuhachi Pound Ho!",
           steps: [{ proj: { speed: 17, range: 13, radius: 0.6, damage: 22, count: 3, spread: 0.35, sprite: "airslash", slashing: true, pierce: true, knockback: 3 } }],
@@ -61588,7 +61585,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.6,
           recover: 0.5,
           cd: 16,
-          cost: { stamina: 40 },
           desc: "Three Thousand Worlds: spinning blades like windmills, a dash that cuts through everything.",
           say: "Sanzen... Sekai!",
           steps: [{ fx: { ring: 2.2, color: "#e3f2fd" } }, { at: 0.6, dash: { dist: 8, time: 0.22, iframes: 0.3, hit: { damage: 70, knockback: 7, stun: 1, slashing: true, heavy: true, guardBreak: true } } }, { at: 0.8, fx: { impact: 0.1, shake: 0.6 } }],
@@ -61603,10 +61599,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.8,
           recover: 0.4,
           cd: 45,
-          cost: { stamina: 30, haki: 30 },
+          cost: { haki: 30 },
           desc: "Nine Sword Style \u2014 a demonic spirit with three heads and six arms. Requires Armament Haki.",
           requiresHaki: "armament",
-          steps: [{ fx: { ring: 3, color: "#212121", text: "ASURA!" } }, { at: 0.8, buff: { id: "asura", name: "Asura", dur: 12, mods: { damage: 1.6, atkSpeed: 1.25 }, aura: "rgba(40,40,40,0.9)", look: { asura: true }, drain: { stamina: 2 } } }],
+          steps: [{ fx: { ring: 3, color: "#212121", text: "ASURA!" } }, { at: 0.8, buff: { id: "asura", name: "Asura", dur: 12, mods: { damage: 1.6, atkSpeed: 1.25 }, aura: "rgba(40,40,40,0.9)", look: { asura: true } } }],
           learn: { mastery: 85, price: 25e4 }
         }
       ]
@@ -61623,7 +61619,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("bleg_3", "black_leg", "kick_spin", 7, { range: 1.6 }),
         m1("bleg_4", "black_leg", "rise_kick", 12, { range: 1.8, kb: 4.5, recover: 0.3, name: "Collier" })
       ],
-      heavy: { id: "bleg_heavy", name: "Mouton Shot", anim: "mouton", windup: 0.32, recover: 0.35, cd: 1.4, cost: { stamina: 14 }, say: "Mouton Shot!", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.3, damage: 20, knockback: 9, stun: 0.5, heavy: true, guardBreak: true } }] },
+      heavy: { id: "bleg_heavy", name: "Mouton Shot", anim: "mouton", windup: 0.32, recover: 0.35, cd: 1.4, say: "Mouton Shot!", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.3, damage: 20, knockback: 9, stun: 0.5, heavy: true, guardBreak: true } }] },
       techniques: [
         {
           id: "bleg_party",
@@ -61633,7 +61629,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.2,
           recover: 0.4,
           cd: 6,
-          cost: { stamina: 20 },
           desc: "A handstand spin-kick hitting everything around you.",
           say: "Party Table Kick Course!",
           steps: [{ hit: { shape: "circle", range: 2.4, damage: 8, knockback: 3.5, stun: 0.3, duration: 0.5, interval: 0.12 }, vfx: "ring" }],
@@ -61647,7 +61642,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.25,
           recover: 0.35,
           cd: 7,
-          cost: { stamina: 20 },
           desc: "A rising kick that launches the target and stuns them.",
           say: "Anti-Manner Kick Course!",
           steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 22, knockback: 2, stun: 1.3, heavy: true } }],
@@ -61661,7 +61655,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.4,
           recover: 0.4,
           cd: 9,
-          cost: { stamina: 24 },
           desc: "A crushing heel drop from above that cracks the ground.",
           say: "Concass\xE9!",
           steps: [{ dash: { dist: 3, time: 0.2, iframes: 0.2 } }, { at: 0.62, hit: { shape: "circle", range: 1.9, damage: 30, knockback: 5, stun: 0.7, heavy: true, guardBreak: true, shake: 0.4 }, vfx: "ring" }],
@@ -61675,7 +61668,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.4,
           recover: 0.2,
           cd: 30,
-          cost: { stamina: 25 },
           desc: "Spin until your leg is red-hot. Kicks burn for a while.",
           say: "Diable Jambe!",
           steps: [{ fx: { burst: 20, color: "#ff7043", kind: "fire" } }, { at: 0.4, buff: { id: "diable", name: "Diable Jambe", dur: 14, mods: { damage: 1.35 }, element: "fire", status: { burn: 2.5 }, aura: "rgba(255,112,67,0.9)" } }],
@@ -61689,7 +61681,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.05,
           recover: 0.15,
           cd: 3,
-          cost: { stamina: 14 },
           desc: "Kick the air to leap far \u2014 even over water.",
           steps: [{ dash: { dist: 7, time: 0.3, iframes: 0.2, air: true } }],
           learn: { mastery: 40, price: 2e4 }
@@ -61706,7 +61697,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("fmk_2", "fishman_karate", "palm2", 7, { element: "water" }),
         m1("fmk_3", "fishman_karate", "palm_double", 12, { kb: 5, recover: 0.3, element: "water", stun: 0.4 })
       ],
-      heavy: { id: "fmk_heavy", name: "Shark Tile Fist", anim: "palm_double", windup: 0.3, recover: 0.35, cd: 1.4, cost: { stamina: 14 }, steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.3, damage: 18, knockback: 7, stun: 0.5, heavy: true, guardBreak: true, element: "water" } }] },
+      heavy: { id: "fmk_heavy", name: "Shark Tile Fist", anim: "palm_double", windup: 0.3, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.3, damage: 18, knockback: 7, stun: 0.5, heavy: true, guardBreak: true, element: "water" } }] },
       techniques: [
         {
           id: "fmk_uchimizu",
@@ -61716,7 +61707,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.15,
           recover: 0.25,
           cd: 3,
-          cost: { stamina: 10 },
           desc: "Fish-Man Jujutsu: flick water droplets hard as bullets. Water counters sand Logias!",
           steps: [{ proj: { speed: 22, range: 11, radius: 0.2, damage: 6, count: 5, spread: 0.3, sprite: "waterdrop", element: "water", knockback: 1, status: { wet: 6 } } }],
           learn: { mastery: 0, price: 2500 }
@@ -61729,7 +61719,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.3,
           recover: 0.35,
           cd: 6,
-          cost: { stamina: 20 },
           desc: "A punch that sends a shockwave through the air.",
           say: "Arabesque Brick Fist!",
           steps: [{ proj: { speed: 13, range: 9, radius: 0.7, damage: 24, sprite: "shockwave", element: "water", pierce: true, knockback: 6, stun: 0.5, heavy: true } }],
@@ -61743,7 +61732,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.45,
           recover: 0.4,
           cd: 10,
-          cost: { stamina: 28 },
           desc: "An overwhelming palm strike through the body's water.",
           say: "Five Thousand Brick Fist!",
           steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.2, offset: 0.3, damage: 45, knockback: 10, stun: 0.9, heavy: true, guardBreak: true, element: "water", impactFrame: true } }],
@@ -61757,7 +61745,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.35,
           recover: 0.4,
           cd: 12,
-          cost: { stamina: 30 },
           desc: "Jinbe's spiralling water drill.",
           say: "Vagabond Drill!",
           steps: [{ proj: { speed: 15, range: 12, radius: 0.9, damage: 50, sprite: "shockwave", color: "#4fc3f7", element: "water", pierce: true, knockback: 8, stun: 0.8, heavy: true, trail: { color: "#81d4fa", kind: "bubble" } } }],
@@ -61775,7 +61762,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("roku_2", "rokushiki", "shigan2", 7, { name: "Shigan", range: 1.5, arc: 0.9 }),
         m1("roku_3", "rokushiki", "kick_high", 11, { kb: 4, recover: 0.28, name: "Rankyaku Kick" })
       ],
-      heavy: { id: "roku_heavy", name: "Shigan: Bachi", anim: "shigan", windup: 0.3, recover: 0.3, cd: 1.5, cost: { stamina: 14 }, steps: [{ hit: { shape: "arc", range: 1.6, arc: 0.8, offset: 0.2, damage: 6, knockback: 1, stun: 0.12, duration: 0.45, interval: 0.07, guardBreak: true } }] },
+      heavy: { id: "roku_heavy", name: "Shigan: Bachi", anim: "shigan", windup: 0.3, recover: 0.3, cd: 1.5, steps: [{ hit: { shape: "arc", range: 1.6, arc: 0.8, offset: 0.2, damage: 6, knockback: 1, stun: 0.12, duration: 0.45, interval: 0.07, guardBreak: true } }] },
       techniques: [
         {
           id: "roku_soru",
@@ -61785,7 +61772,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.02,
           recover: 0.08,
           cd: 2.2,
-          cost: { stamina: 12 },
           desc: "Shave: kick the ground ten times in an instant and vanish.",
           steps: [{ teleport: { dist: 6, color: "#eceff1" } }],
           learn: { mastery: 0, price: 6e3 }
@@ -61798,7 +61784,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.05,
           recover: 0.12,
           cd: 3,
-          cost: { stamina: 14 },
           desc: "Moon Walk: kick the air to leap \u2014 even across water.",
           steps: [{ dash: { dist: 7, time: 0.3, iframes: 0.2, air: true } }],
           learn: { mastery: 10, price: 9e3 }
@@ -61811,7 +61796,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.05,
           recover: 0.1,
           cd: 12,
-          cost: { stamina: 16 },
           desc: "Iron Body: harden every muscle. Take 75% less damage but move slowly.",
           steps: [{ buff: { id: "tekkai", name: "Tekkai", dur: 3.5, mods: { defMul: 0.25, speedMul: 0.35 }, aura: "rgba(144,164,174,0.9)" } }],
           learn: { mastery: 15, price: 1e4 }
@@ -61824,7 +61808,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.25,
           recover: 0.3,
           cd: 5,
-          cost: { stamina: 18 },
           desc: "Storm Leg: kick so fast it launches a cutting blade of air.",
           say: "Rankyaku!",
           steps: [{ proj: { speed: 18, range: 12, radius: 0.5, damage: 22, sprite: "airslash", slashing: true, pierce: true, knockback: 3 } }],
@@ -61838,7 +61821,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.05,
           recover: 0.1,
           cd: 16,
-          cost: { stamina: 16 },
           desc: "Paper Drawing: float like paper on the wind of incoming blows.",
           steps: [{ buff: { id: "kamie", name: "Kami-e", dur: 4, mods: { evade: 0.5, speedMul: 1.15 }, aura: "rgba(255,255,255,0.7)" } }],
           learn: { mastery: 35, price: 22e3 }
@@ -61851,7 +61833,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.5,
           recover: 0.5,
           cd: 20,
-          cost: { stamina: 40 },
           desc: "Six King Gun: the secret technique of those who mastered all six powers. A shockwave that pierces armour.",
           say: "Rokuogan!",
           steps: [{ hit: { shape: "arc", range: 2.6, arc: 1.3, offset: 0.2, damage: 75, knockback: 12, stun: 1.2, heavy: true, guardBreak: true, unblockable: true, impactFrame: true, shake: 0.6 }, vfx: "ring", color: "#e0f7fa" }],
@@ -61873,12 +61854,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           weapon: "gun",
           windup: 0.12,
           recover: 0.28,
-          cost: { stamina: 3 },
           telegraph: false,
           steps: [{ proj: { speed: 22, range: 13, radius: 0.18, damage: 7, sprite: "bullet", knockback: 1.2 } }]
         }
       ],
-      heavy: { id: "snipe_heavy", name: "Deadly Aim", anim: "aim", weapon: "gun", windup: 0.55, recover: 0.3, cd: 1.8, cost: { stamina: 12 }, steps: [{ proj: { speed: 32, range: 20, radius: 0.2, damage: 24, sprite: "bullet", pierce: true, knockback: 3, stun: 0.3 } }] },
+      heavy: { id: "snipe_heavy", name: "Deadly Aim", anim: "aim", weapon: "gun", windup: 0.55, recover: 0.3, cd: 1.8, steps: [{ proj: { speed: 32, range: 20, radius: 0.2, damage: 24, sprite: "bullet", pierce: true, knockback: 3, stun: 0.3 } }] },
       techniques: [
         {
           id: "snipe_explode",
@@ -61889,7 +61869,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.2,
           recover: 0.3,
           cd: 5,
-          cost: { stamina: 14 },
           desc: "A pellet that bursts on impact.",
           say: "Exploding Star!",
           steps: [{ proj: { speed: 18, range: 12, radius: 0.25, damage: 8, sprite: "bomb", explode: { range: 1.8, damage: 18 } } }],
@@ -61904,7 +61883,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.15,
           recover: 0.25,
           cd: 7,
-          cost: { stamina: 10 },
           desc: "Hot sauce to the eyes \u2014 the target flails blindly.",
           steps: [{ proj: { speed: 20, range: 12, radius: 0.25, damage: 4, sprite: "star", color: "#e53935", status: { blind: 3 }, stun: 1.2 } }],
           learn: { mastery: 10, price: 4e3 }
@@ -61918,7 +61896,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.35,
           recover: 0.3,
           cd: 9,
-          cost: { stamina: 20 },
           desc: "A flame dial pellet that becomes a bird of fire.",
           say: "Hi no Tori Boshi!",
           steps: [{ proj: { speed: 15, range: 14, radius: 0.55, damage: 30, sprite: "bird", color: "#ff7043", element: "fire", status: { burn: 3 }, pierce: true, trail: { color: ["#ff7043", "#ffca28"] } } }],
@@ -61933,7 +61910,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.3,
           recover: 0.3,
           cd: 12,
-          cost: { stamina: 20 },
           desc: "A seed that bursts into a carnivorous plant, snaring enemies.",
           steps: [{ zone: { range: 2.2, duration: 4, interval: 0.5, damage: 5, slow: 0.35, color: "#43a047", atTarget: true, kind: "plant" } }],
           learn: { mastery: 40, price: 3e4 }
@@ -61947,7 +61923,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.3,
           recover: 0.5,
           cd: 14,
-          cost: { stamina: 28 },
           desc: "Fire a volley of stars in a fan.",
           steps: [{ proj: { speed: 20, range: 13, radius: 0.22, damage: 10, count: 7, spread: 0.9, sprite: "star", knockback: 2 } }, { at: 0.5, proj: { speed: 20, range: 13, radius: 0.22, damage: 10, count: 7, spread: 0.9, sprite: "star", knockback: 2 } }],
           learn: { mastery: 60, price: 6e4 }
@@ -61965,10 +61940,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("okama_2", "okama_kenpo", "pirouette", 7, { range: 1.7 }),
         m1("okama_3", "okama_kenpo", "jete", 13, { range: 1.9, kb: 4, recover: 0.3 })
       ],
-      heavy: { id: "okama_heavy", name: "Swan Arabesque", anim: "arabesque", windup: 0.3, recover: 0.35, cd: 1.4, cost: { stamina: 14 }, say: "Swan Arabesque!", steps: [{ hit: { shape: "line", range: 2.4, width: 0.8, damage: 20, knockback: 6, stun: 0.5, heavy: true, guardBreak: true } }] },
+      heavy: { id: "okama_heavy", name: "Swan Arabesque", anim: "arabesque", windup: 0.3, recover: 0.35, cd: 1.4, say: "Swan Arabesque!", steps: [{ hit: { shape: "line", range: 2.4, width: 0.8, damage: 20, knockback: 6, stun: 0.5, heavy: true, guardBreak: true } }] },
       techniques: [
-        { id: "okama_pirouette", name: "Swan Pirouette", icon: "\u{1FA70}", anim: "pirouette", windup: 0.2, recover: 0.35, cd: 6, cost: { stamina: 18 }, desc: "A spinning series of kicks.", steps: [{ hit: { shape: "circle", range: 2.2, damage: 7, knockback: 3, stun: 0.25, duration: 0.5, interval: 0.1 }, vfx: "ring" }], learn: { mastery: 0, price: 5e3 } },
-        { id: "okama_swan_dash", name: "Bon Kurei", icon: "\u{1F9A9}", anim: "jete", windup: 0.2, recover: 0.3, cd: 6, cost: { stamina: 18 }, desc: "Charge forward like a swan taking flight.", steps: [{ dash: { dist: 7, time: 0.24, iframes: 0.2, hit: { damage: 24, knockback: 6, stun: 0.5 } } }], learn: { mastery: 15, price: 12e3 } },
+        { id: "okama_pirouette", name: "Swan Pirouette", icon: "\u{1FA70}", anim: "pirouette", windup: 0.2, recover: 0.35, cd: 6, desc: "A spinning series of kicks.", steps: [{ hit: { shape: "circle", range: 2.2, damage: 7, knockback: 3, stun: 0.25, duration: 0.5, interval: 0.1 }, vfx: "ring" }], learn: { mastery: 0, price: 5e3 } },
+        { id: "okama_swan_dash", name: "Bon Kurei", icon: "\u{1F9A9}", anim: "jete", windup: 0.2, recover: 0.3, cd: 6, desc: "Charge forward like a swan taking flight.", steps: [{ dash: { dist: 7, time: 0.24, iframes: 0.2, hit: { damage: 24, knockback: 6, stun: 0.5 } } }], learn: { mastery: 15, price: 12e3 } },
         {
           id: "okama_hell_wink",
           name: "Death Wink",
@@ -61977,7 +61952,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.4,
           recover: 0.3,
           cd: 12,
-          cost: { stamina: 24 },
           desc: "A wink so powerful it blasts people away. (Ivankov's specialty.)",
           say: "Death Wink!",
           steps: [{ proj: { speed: 16, range: 11, radius: 0.9, damage: 34, sprite: "shockwave", color: "#f48fb1", pierce: true, knockback: 10, stun: 0.6, heavy: true } }],
@@ -61996,7 +61970,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("elec_2", "electro", "claw2", 6, { element: "lightning" }),
         m1("elec_3", "electro", "kick_high", 11, { element: "lightning", kb: 4, stun: 0.45, recover: 0.28, status: { shock: 0.6 } })
       ],
-      heavy: { id: "elec_heavy", name: "Electrical Claw", anim: "claw_x", windup: 0.3, recover: 0.35, cd: 1.4, cost: { stamina: 14 }, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.8, offset: 0.2, damage: 17, knockback: 5, stun: 0.6, heavy: true, element: "lightning", status: { shock: 1 }, slashing: true }, vfx: "slash", color: "#fff176" }] },
+      heavy: { id: "elec_heavy", name: "Electrical Claw", anim: "claw_x", windup: 0.3, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.8, offset: 0.2, damage: 17, knockback: 5, stun: 0.6, heavy: true, element: "lightning", status: { shock: 1 }, slashing: true }, vfx: "slash", color: "#fff176" }] },
       techniques: [
         {
           id: "elec_discharge",
@@ -62006,7 +61980,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.3,
           recover: 0.35,
           cd: 7,
-          cost: { stamina: 20 },
           desc: "Release all your stored electricity around you.",
           steps: [{ hit: { shape: "circle", range: 2.6, damage: 20, knockback: 4, stun: 0.8, element: "lightning", status: { shock: 1.2 } }, vfx: "ring", color: "#fff176" }],
           learn: { mastery: 0, price: 0, innate: true }
@@ -62019,7 +61992,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.25,
           recover: 0.3,
           cd: 6,
-          cost: { stamina: 18 },
           desc: "Launch a bolt of electricity in a straight line.",
           steps: [{ hit: { shape: "line", range: 7, width: 0.8, damage: 24, knockback: 3, stun: 0.5, element: "lightning", status: { shock: 0.8 } }, vfx: "beam", color: "#fff176" }],
           learn: { mastery: 20, price: 9e3 }
@@ -62032,10 +62004,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.8,
           recover: 0.2,
           cd: 90,
-          cost: { stamina: 20 },
           desc: "Under the full moon, a Mink with the will becomes a white-furred battle beast. Only at night.",
           requiresNight: true,
-          steps: [{ fx: { ring: 3, color: "#ffffff", text: "SULONG!", flash: 0.3 } }, { at: 0.8, buff: { id: "sulong", name: "Sulong", dur: 25, mods: { damage: 1.8, speedMul: 1.35, defMul: 0.8, atkSpeed: 1.2 }, aura: "rgba(255,255,255,0.95)", look: { furWhite: true }, drain: { stamina: 1.5 } } }],
+          steps: [{ fx: { ring: 3, color: "#ffffff", text: "SULONG!", flash: 0.3 } }, { at: 0.8, buff: { id: "sulong", name: "Sulong", dur: 25, mods: { damage: 1.8, speedMul: 1.35, defMul: 0.8, atkSpeed: 1.2 }, aura: "rgba(255,255,255,0.95)", look: { furWhite: true } } }],
           learn: { mastery: 70, price: 0, special: "full_moon" }
         }
       ]
@@ -62050,10 +62021,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("hassho_2", "hasshoken", "cross", 7, { stun: 0.25 }),
         m1("hassho_3", "hasshoken", "palm", 12, { kb: 4.5, recover: 0.3 })
       ],
-      heavy: { id: "hassho_heavy", name: "Vibrating Palm", anim: "palm_double", windup: 0.35, recover: 0.35, cd: 1.5, cost: { stamina: 14 }, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 20, knockback: 6, stun: 0.6, heavy: true, unblockable: true } }] },
+      heavy: { id: "hassho_heavy", name: "Vibrating Palm", anim: "palm_double", windup: 0.35, recover: 0.35, cd: 1.5, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 20, knockback: 6, stun: 0.6, heavy: true, unblockable: true } }] },
       techniques: [
-        { id: "hassho_bushin", name: "Bushin Kyuran", icon: "\u{1F300}", anim: "palm", windup: 0.3, recover: 0.3, cd: 7, cost: { stamina: 20 }, desc: "A shockwave that ignores guards.", steps: [{ proj: { speed: 14, range: 9, radius: 0.7, damage: 26, sprite: "shockwave", pierce: true, knockback: 6, stun: 0.6, unblockable: true } }], learn: { mastery: 10, price: 1e4 } },
-        { id: "hassho_drill", name: "Drill Head", icon: "\u{1F98F}", anim: "charge", windup: 0.35, recover: 0.4, cd: 10, cost: { stamina: 26 }, desc: "A spinning head-first charge that bores through anything.", steps: [{ dash: { dist: 7, time: 0.3, iframes: 0.25, hit: { damage: 40, knockback: 8, stun: 0.8, heavy: true, guardBreak: true } } }], learn: { mastery: 35, price: 35e3 } }
+        { id: "hassho_bushin", name: "Bushin Kyuran", icon: "\u{1F300}", anim: "palm", windup: 0.3, recover: 0.3, cd: 7, desc: "A shockwave that ignores guards.", steps: [{ proj: { speed: 14, range: 9, radius: 0.7, damage: 26, sprite: "shockwave", pierce: true, knockback: 6, stun: 0.6, unblockable: true } }], learn: { mastery: 10, price: 1e4 } },
+        { id: "hassho_drill", name: "Drill Head", icon: "\u{1F98F}", anim: "charge", windup: 0.35, recover: 0.4, cd: 10, desc: "A spinning head-first charge that bores through anything.", steps: [{ dash: { dist: 7, time: 0.3, iframes: 0.25, hit: { damage: 40, knockback: 8, stun: 0.8, heavy: true, guardBreak: true } } }], learn: { mastery: 35, price: 35e3 } }
       ]
     },
     weather_science: {
@@ -62066,9 +62037,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("clima_2", "weather_science", "staff2", 6, { weapon: "staff", range: 1.7 }),
         m1("clima_3", "weather_science", "staff_jab", 9, { weapon: "staff", range: 1.9, kb: 3.5, recover: 0.3 })
       ],
-      heavy: { id: "clima_heavy", name: "Heat Egg", anim: "raise", weapon: "staff", windup: 0.35, recover: 0.3, cd: 2, cost: { stamina: 12 }, steps: [{ proj: { speed: 10, range: 10, radius: 0.35, damage: 15, sprite: "orb", color: "#ff8a65", element: "fire", explode: { range: 1.5, damage: 10, element: "fire" } } }] },
+      heavy: { id: "clima_heavy", name: "Heat Egg", anim: "raise", weapon: "staff", windup: 0.35, recover: 0.3, cd: 2, steps: [{ proj: { speed: 10, range: 10, radius: 0.35, damage: 15, sprite: "orb", color: "#ff8a65", element: "fire", explode: { range: 1.5, damage: 10, element: "fire" } } }] },
       // (a plain staff swung by someone who never learned the science throws no Heat Egg)
-      plainHeavy: { id: "clima_plain_heavy", name: "Staff Sweep", anim: "heavy", weapon: "staff", windup: 0.32, recover: 0.35, cd: 1.4, cost: { stamina: 12 }, steps: [{ hit: { shape: "arc", range: 2, arc: 2, offset: 0.2, damage: 16, knockback: 5, stun: 0.45, heavy: true, guardBreak: true } }] },
+      plainHeavy: { id: "clima_plain_heavy", name: "Staff Sweep", anim: "heavy", weapon: "staff", windup: 0.32, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: "arc", range: 2, arc: 2, offset: 0.2, damage: 16, knockback: 5, stun: 0.45, heavy: true, guardBreak: true } }] },
       techniques: [
         {
           id: "clima_thunderbolt",
@@ -62079,15 +62050,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.55,
           recover: 0.3,
           cd: 8,
-          cost: { stamina: 22 },
           desc: "Build a thundercloud over your foe \u2014 and strike.",
           say: "Thunderbolt Tempo!",
           steps: [{ zone: { range: 1.6, duration: 0.6, interval: 0.6, damage: 34, element: "lightning", status: { shock: 1.2 }, color: "#fff176", atTarget: true, kind: "thunder" } }],
           learn: { mastery: 0, price: 12e3 }
         },
-        { id: "clima_cyclone", name: "Cyclone Tempo", icon: "\u{1F32A}", anim: "cast", weapon: "staff", windup: 0.4, recover: 0.3, cd: 9, cost: { stamina: 22 }, desc: "A small cyclone that blasts enemies away.", steps: [{ proj: { speed: 9, range: 9, radius: 1, damage: 16, sprite: "shockwave", color: "#b3e5fc", pierce: true, knockback: 10, stun: 0.6 } }], learn: { mastery: 15, price: 18e3 } },
-        { id: "clima_mirage", name: "Mirage Tempo", icon: "\u{1F32B}", anim: "cast", weapon: "staff", windup: 0.2, recover: 0.2, cd: 18, cost: { stamina: 18 }, desc: "Bend the light: you become nearly invisible for a while.", steps: [{ buff: { id: "mirage", name: "Mirage", dur: 6, mods: { stealth: 1, evade: 0.35 }, alpha: 0.25 } }], learn: { mastery: 30, price: 3e4 } },
-        { id: "clima_zeus", name: "Thunder Lance Tempo", icon: "\u{1F329}", anim: "staff_jab", weapon: "staff", windup: 0.8, recover: 0.4, cd: 22, cost: { stamina: 34 }, desc: "A spear of lightning from the heavens.", steps: [{ hit: { shape: "line", range: 12, width: 1.4, damage: 70, knockback: 5, stun: 1, element: "lightning", status: { shock: 1.5 }, heavy: true, impactFrame: true }, vfx: "beam", color: "#fff176" }], learn: { mastery: 55, price: 9e4 } }
+        { id: "clima_cyclone", name: "Cyclone Tempo", icon: "\u{1F32A}", anim: "cast", weapon: "staff", windup: 0.4, recover: 0.3, cd: 9, desc: "A small cyclone that blasts enemies away.", steps: [{ proj: { speed: 9, range: 9, radius: 1, damage: 16, sprite: "shockwave", color: "#b3e5fc", pierce: true, knockback: 10, stun: 0.6 } }], learn: { mastery: 15, price: 18e3 } },
+        { id: "clima_mirage", name: "Mirage Tempo", icon: "\u{1F32B}", anim: "cast", weapon: "staff", windup: 0.2, recover: 0.2, cd: 18, desc: "Bend the light: you become nearly invisible for a while.", steps: [{ buff: { id: "mirage", name: "Mirage", dur: 6, mods: { stealth: 1, evade: 0.35 }, alpha: 0.25 } }], learn: { mastery: 30, price: 3e4 } },
+        { id: "clima_zeus", name: "Thunder Lance Tempo", icon: "\u{1F329}", anim: "staff_jab", weapon: "staff", windup: 0.8, recover: 0.4, cd: 22, desc: "A spear of lightning from the heavens.", steps: [{ hit: { shape: "line", range: 12, width: 1.4, damage: 70, knockback: 5, stun: 1, element: "lightning", status: { shock: 1.5 }, heavy: true, impactFrame: true }, vfx: "beam", color: "#fff176" }], learn: { mastery: 55, price: 9e4 } }
       ]
     },
     elbaf: {
@@ -62099,7 +62069,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("elbaf_1", "elbaf", "axe", 10, { weapon: "axe", slashing: true, range: 1.9, arc: 2.2, windup: 0.12, recover: 0.24 }),
         m1("elbaf_2", "elbaf", "axe2", 16, { weapon: "axe", slashing: true, range: 2.1, arc: 2.6, kb: 5, stun: 0.5, windup: 0.15, recover: 0.4 })
       ],
-      heavy: { id: "elbaf_heavy", name: "Giant Cleaver", anim: "axe_slam", weapon: "axe", windup: 0.5, recover: 0.4, cd: 1.8, cost: { stamina: 18 }, steps: [{ hit: { shape: "circle", range: 2.3, damage: 30, knockback: 7, stun: 0.7, heavy: true, guardBreak: true, shake: 0.35 }, vfx: "ring" }] },
+      heavy: { id: "elbaf_heavy", name: "Giant Cleaver", anim: "axe_slam", weapon: "axe", windup: 0.5, recover: 0.4, cd: 1.8, steps: [{ hit: { shape: "circle", range: 2.3, damage: 30, knockback: 7, stun: 0.7, heavy: true, guardBreak: true, shake: 0.35 }, vfx: "ring" }] },
       techniques: [
         {
           id: "elbaf_hakoku",
@@ -62110,7 +62080,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.6,
           recover: 0.5,
           cd: 12,
-          cost: { stamina: 30 },
           desc: "Overlord: the thrust Dorry and Brogy used to split a Sea King in two.",
           say: "HAKOKU!",
           steps: [{ hit: { shape: "line", range: 8, width: 2, damage: 60, knockback: 10, stun: 1, heavy: true, guardBreak: true, impactFrame: true, hitShips: true }, vfx: "beam", color: "#ffe082" }],
@@ -62128,9 +62097,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("ryu_2", "ryusoken", "grab2", 8),
         m1("ryu_3", "ryusoken", "claw_x", 13, { kb: 4, recover: 0.3, stun: 0.5 })
       ],
-      heavy: { id: "ryu_heavy", name: "Dragon's Breath", anim: "slam", windup: 0.4, recover: 0.4, cd: 1.6, cost: { stamina: 16 }, steps: [{ hit: { shape: "circle", range: 2.2, damage: 26, knockback: 6, stun: 0.6, heavy: true, guardBreak: true }, vfx: "ring" }] },
+      heavy: { id: "ryu_heavy", name: "Dragon's Breath", anim: "slam", windup: 0.4, recover: 0.4, cd: 1.6, steps: [{ hit: { shape: "circle", range: 2.2, damage: 26, knockback: 6, stun: 0.6, heavy: true, guardBreak: true }, vfx: "ring" }] },
       techniques: [
-        { id: "ryu_claw", name: "Dragon Claw", icon: "\u{1F409}", anim: "claw", windup: 0.25, recover: 0.35, cd: 7, cost: { stamina: 22 }, desc: "A gripping strike that crushes guards completely.", steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 36, knockback: 3, stun: 1.2, unblockable: true, heavy: true } }], learn: { mastery: 15, price: 3e4 } },
+        { id: "ryu_claw", name: "Dragon Claw", icon: "\u{1F409}", anim: "claw", windup: 0.25, recover: 0.35, cd: 7, desc: "A gripping strike that crushes guards completely.", steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 36, knockback: 3, stun: 1.2, unblockable: true, heavy: true } }], learn: { mastery: 15, price: 3e4 } },
         {
           id: "ryu_hiken",
           name: "Fire Fist (Sabo)",
@@ -62139,7 +62108,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           windup: 0.4,
           recover: 0.35,
           cd: 14,
-          cost: { stamina: 26 },
           desc: "Requires the Mera Mera no Mi... or does it? A flaming dragon claw strike.",
           requiresFruit: "mera",
           steps: [{ proj: { speed: 16, range: 12, radius: 0.9, damage: 50, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 } } }],
@@ -62191,7 +62159,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       origin: "Born in the Conomi Islands (East Blue), in the shadow of Arlong Park.",
       stats: { str: 4, agi: 0, end: 2, vit: 1, wil: 0 },
       lives: 3,
-      traits: ["Gills: breathe underwater \u2014 never drown (unless a Devil Fruit user)", "Swims 3\xD7 faster, no stamina drain", "Fish-Man Karate affinity: learns it 30% faster", "Dolphin leap: springs far out of the water"],
+      traits: ["Gills: breathe underwater \u2014 never drown (unless a Devil Fruit user)", "Swims 3\xD7 faster", "Fish-Man Karate affinity: learns it 30% faster", "Dolphin leap: springs far out of the water"],
       spawnSeas: ["east_blue"],
       spawnTowns: ["cocoyasi"],
       swim: 3,
@@ -62736,6 +62704,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const t = clamp2((x - a) / (b - a), 0, 1);
     return t * t * (3 - 2 * t);
   };
+  var DODGE_CD = 0.9;
+  var SPRINT_BURST = 5;
+  var SPRINT_REST = 3;
   var STATUS_DEFAULTS = {
     burn: { dps: 0.035, color: "#ff7043" },
     poison: { dps: 0.03, color: "#8e24aa" },
@@ -62769,7 +62740,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.buffs = [];
       this.recalc();
       this.hp = o.hp ?? this.d.maxHp;
-      this.stamina = this.d.maxStamina;
       this.haki = this.hakiUnlocked() ? this.d.maxHaki : 0;
       this.facing = o.facing ?? Math.PI / 2;
       this.walk = 0;
@@ -63005,7 +62975,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (this.combo.window <= 0) this.combo.step = 0;
       const id = chain2[this.combo.step % chain2.length];
       const def = getAbility(id);
-      if (!def || this.stamina < 1) return false;
+      if (!def) return false;
       startAbility(this, { ...def, m1Chain: true }, game);
       this.combo.step = (this.combo.step + 1) % chain2.length;
       this.combo.window = 0.55 + (def.recover || 0.2);
@@ -63067,7 +63037,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           else if (def.source?.startsWith("fruit") && this.inWater) game.log("Your Devil Fruit power is useless in the sea!", "#ff8a80");
           else if (def.weapon && this.weapon && !this.drawn && this.weapon.kind === def.weapon) game.log(`Draw your ${this.weapon.kind === "sword" ? this.weapon.count > 1 ? "swords" : "sword" : "weapon"} first (X).`, "#ffcc80");
           else if (def.weapon && !this.hasWeapon(def.weapon, def.style)) game.log(`${def.name} needs ${def.weapon === "sword" ? `${STYLES2[def.style || this.style]?.swords || 1} sword(s)` : "a " + def.weapon}.`, "#ff8a80");
-          else game.log("Not enough " + (def.cost?.haki && this.haki < def.cost.haki ? this.hakiUnlocked() ? "Haki." : "strength of will." : "stamina."), "#ff8a80");
+          else if (def.cost?.haki && this.haki < def.cost.haki) game.log(this.hakiUnlocked() ? "Not enough Haki." : "Not enough strength of will.", "#ff8a80");
         }
         return false;
       }
@@ -63078,9 +63048,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     tryDodge(game, dx, dy) {
       if (this.state !== "idle" || this.hitstun > 0 || this.status.freeze || this.status.root || this.dodgeCd > 0 || this.climb) return false;
       if (this.action && this.action.t < this.action.total * 0.5 && !this.action.def.m1Chain) return false;
-      const cost = 16;
-      if (this.stamina < cost * 0.6) return false;
-      this.stamina = Math.max(0, this.stamina - cost);
       this.action = null;
       this.blocking = false;
       let len = Math.hypot(dx, dy);
@@ -63094,12 +63061,48 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const time = 0.22;
       this.dash = { vx: dx / len * dist / time, vy: dy / len * dist / time, t: time, t0: time, dodge: true, ignoreWater: this.race === "lunarian" };
       this.iframes = Math.max(this.iframes, 0.2 + (this.race === "mink" ? 0.05 : 0));
-      this.dodgeCd = 0.42 - this.attrs.agi * 15e-4;
+      this.dodgeCd = this.dodgeCdMax = this.dodgeCooldown();
       this._ghostTint = this.race === "lunarian" ? "#ffab91" : this.race === "skypiean" ? "#ffffff" : "#b3e5fc";
       game.fx.burst(this.x, this.y, 7, { angle: Math.atan2(-dy, -dx), spread: 1.6, color: ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 2.4, z: 0.08, vz: 0.6, g: 1.2, life: 0.5, kind: "dust", size: 0.2, grow: 0.45 });
       game.audio?.sfx("dodge", this);
       if (this.isPlayer) game.emit("playerDodge");
       return R4;
+    }
+    /** Seconds before you can dodge again: quicker the more agile you are, and with Quick Feet. */
+    dodgeCooldown() {
+      const agi = this.attrs?.agi || 0;
+      return DODGE_CD * (1 - Math.min(0.25, agi * 25e-4)) * (this.char?.traits?.includes("quick_feet") ? 0.75 : 1);
+    }
+    /** Seconds a Devil Fruit user keeps their head above water before the sea takes their strength. */
+    struggleTime() {
+      return 6 + (this.attrs?.end || 0) * 0.04;
+    }
+    /** Seconds a broken guard stays down: shorter the more Endurance you have. */
+    guardCooldown() {
+      return 2 - Math.min(0.8, (this.attrs?.end || 0) * 8e-3);
+    }
+    /** How much of a blow gets through your guard: less the more Endurance you have. */
+    guardChip() {
+      return 0.18 * (1 - Math.min(0.4, (this.attrs?.end || 0) * 4e-3));
+    }
+    /**
+     * Sprinting just now? You can for as long as you like; anyone else (your
+     * crew aside, who keep up with you) runs flat out in bursts, easing off
+     * between them — so a chase can be won by keeping going.
+     */
+    sprintOk(dt) {
+      if (this.isPlayer || this.crewId) return true;
+      if (this.sprintRest > 0) return false;
+      this.sprintT = (this.sprintT || 0) + dt;
+      if (this.sprintT > SPRINT_BURST) {
+        this.sprintT = 0;
+        this.sprintRest = SPRINT_REST;
+      }
+      return true;
+    }
+    /** Technique cooldowns run this much of their time (a Musician aboard plays you back into it sooner). */
+    get cdMul() {
+      return this.isPlayer ? this.game?.crewMods?.cdMul || 1 : 1;
     }
     /** Take-off speeds for this body: { v (a plain jump), charge (× for a full charge), leap (out of the water) }. */
     jumpStats() {
@@ -63109,7 +63112,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     /** Can you jump right now: on your feet, or at the surface of the water (not a Devil Fruit user). */
     canJump() {
       if (this.state !== "idle" || this.hitstun > 0 || this.status.freeze || this.status.root || this.blocking) return false;
-      if (this.onShip || this.climb || this.stamina < 2) return false;
+      if (this.onShip || this.climb) return false;
       if (this.action && !this.action.def.m1Chain && this.action.t < this.action.total * 0.7) return false;
       if (this.inWater) return !this.under && (this.depth || 0) < 0.15 && !(this.fruit && !this.gills) && this.state === "idle";
       return !((this.z || 0) > 0.02);
@@ -63125,10 +63128,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!this.canJump()) return false;
       const J = this.jumpStats();
       const k = clamp2(charge, 0, 1);
-      if ((this.inWater || this.wading) && (this.isPlayer && game.climbAboard?.(this, k) || this.climbOut(game))) {
-        this.stamina = Math.max(0, this.stamina - 6);
-        return true;
-      }
+      if ((this.inWater || this.wading) && (this.isPlayer && game.climbAboard?.(this, k) || this.climbOut(game))) return true;
       let v = J.v * (1 + (J.charge - 1) * k);
       const fromWater = this.inWater;
       if (this.wading && !fromWater) {
@@ -63152,7 +63152,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.vz = v;
       this.airT = 0;
       this.jumpK = k;
-      this.stamina = Math.max(0, this.stamina - 3 - 7 * k);
       if (this.action?.def.m1Chain) this.action = null;
       if (this.isPlayer) game.emit("playerJump", k);
       return true;
@@ -63266,7 +63265,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     setBlock(on) {
       if (on && !this.blocking) {
-        if (this.state !== "idle" || this.action || this.hitstun > 0 || this.status.freeze || this.climb) return;
+        if (this.state !== "idle" || this.action || this.hitstun > 0 || this.status.freeze || this.climb || this.guardCd > 0) return;
         this.blocking = true;
         this.blockTime = 0;
       } else if (!on) this.blocking = false;
@@ -63310,6 +63309,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.hitstun = Math.max(0, this.hitstun - dt);
       this.flashT = Math.max(0, this.flashT - dt);
       this.dodgeCd = Math.max(0, (this.dodgeCd || 0) - dt);
+      this.guardCd = Math.max(0, (this.guardCd || 0) - dt);
+      if (this.sprintRest > 0) this.sprintRest -= dt;
+      else if (this.sprintT > 0 && !this.intent.sprint) this.sprintT = Math.max(0, this.sprintT - dt * 0.5);
       this.combo.window = Math.max(0, this.combo.window - dt);
       this.damageShown = Math.max(0, this.damageShown - dt);
       if (this.forcedWater) this.forcedWater = Math.max(0, this.forcedWater - dt);
@@ -63413,16 +63415,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     updateBuffs(dt, game) {
-      let changed = false;
+      let changed = false, spent = null;
       for (let i = this.buffs.length - 1; i >= 0; i--) {
         const b = this.buffs[i];
         b.t -= dt;
-        if (b.drain) {
-          if (b.drain.stamina) this.stamina -= b.drain.stamina * dt;
-          if (b.drain.haki) this.haki -= b.drain.haki * dt;
-          if (this.stamina < 0 || this.haki < 0) {
-            this.stamina = Math.max(0, this.stamina);
-            this.haki = Math.max(0, this.haki);
+        if (b.drain?.haki) {
+          this.haki -= b.drain.haki * dt;
+          if (this.haki < 0) {
+            this.haki = 0;
             b.t = 0;
           }
         }
@@ -63433,22 +63433,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           if (b.forceArmament) this.armament = false;
           if (b.conquerorInfused) this.conquerorInfused = false;
           if (this.isPlayer && b.name) game.log(`${b.name} wore off.`, "#b0bec5");
-          if (b.id === "gear2" && this.isPlayer) {
-            this.stamina *= 0.5;
-          }
+          if (b.after) (spent || (spent = [])).push(b.after);
         }
       }
+      for (const a of spent || []) this.addBuff(a);
       if (changed) this.recalc();
       this.cdMulBuff = this.buffs.some((b) => b.mods?.cdMul);
     }
     updateResources(dt) {
       const d = this.d;
-      const swim = this.inWater && !this.gills;
-      const treading = swim && !this.fruit && !this.moving && !this.under && !this.intent.mz;
-      const busy = !!this.action || this.blocking || this.intent.sprint || this.running || swim && !treading;
-      const regenMul = (this.isPlayer ? this.game?.crewMods?.staminaMul || 1 : 1) * (treading ? 0.6 : 1);
-      if (!busy) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * regenMul * dt);
-      else if (!this.intent.sprint && !this.running && !this.inWater) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * 0.25 * dt);
       if (this.hakiUnlocked()) {
         if (this.armament) {
           this.haki -= (1.6 - Math.min(1, this.hakiLevel("armament") * 0.012)) * dt;
@@ -63846,23 +63839,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     updateMovement(dt, game, knocked) {
       const w = game.world;
       let vx = 0, vy = 0;
-      this.running = false;
       if (!knocked) {
         const i = this.intent;
         let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
         if (this.inWater) {
           if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.2;
-          else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1) * (!this.gills && this.stamina <= 0.5 ? 0.45 : 1);
+          else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1);
         } else if (this.wading) sp *= 1 - 0.42 * clamp2(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
         if (this.charging) sp *= 1 - 0.75 * this.charging;
-        if (i.sprint && !this.eating && this.stamina > 1 && (!this.inWater || this.gills)) {
-          sp *= this.inWater ? 1.35 : 1.55;
-          if (!this.inWater) this.stamina -= 9 * dt;
-        }
-        this.running = this.isPlayer && this.mode !== "sail" && !this.inWater && !this.climb && !i.sprint && !this.eating && !this.flying && Math.hypot(i.mx, i.my) > 0.7;
-        if (this.running) this.stamina = Math.max(0, this.stamina - 1.2 * dt);
+        if (i.sprint && (i.mx || i.my) && !this.eating && (!this.inWater || this.gills) && this.sprintOk(dt)) sp *= this.inWater ? 1.35 : 1.55;
         if (this.eating) sp *= 0.45;
-        if (this.inWater && !this.gills && (i.mx || i.my || i.mz)) this.stamina = Math.max(0, this.stamina - (this.under ? 4 : 3.5) * dt);
         if (this.blocking) sp *= 0.4;
         if (this.action) sp *= this.action.def.moveMul ?? (this.action.def.m1Chain ? 0.55 : 0.25);
         if (this.hitstun > 0 || this.status.root || this.status.freeze || this.status.despair) sp = 0;
@@ -64035,6 +64021,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
         this.depth = 0;
         this.sinking = false;
+        this.struggle = this.struggleTime();
         this.sinkNow = this.landSink ?? Math.min(this.sinkWant(), wadeWas / (this.look?.scale || 1));
         this.landSink = null;
         if (df && this.isPlayer) game.log("A Devil Fruit user can't swim! Get out before your strength gives out!", "#ff8a80");
@@ -64055,14 +64042,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const maxO2 = this.maxOxygen;
         if (this.oxygen == null || this.oxygen > maxO2) this.oxygen = maxO2;
         const breathless = !this.gills && this.oxygen <= 0;
-        if (df && !this.sinking && this.stamina <= 0.5) {
-          this.sinking = true;
-          if (this.isPlayer) game.log("Your strength is gone... the sea is dragging you down!", "#ff8a80");
+        if (df && !this.sinking) {
+          this.struggle = (this.struggle ?? this.struggleTime()) - dt;
+          if (this.struggle <= 0) {
+            this.sinking = true;
+            if (this.isPlayer) game.log("Your strength is gone... the sea is dragging you down!", "#ff8a80");
+          }
         }
-        const tired = !df && !this.gills && this.stamina <= 0.5;
         let vz;
         if (df) vz = this.sinking ? 1.15 : this.depth > 0.02 ? -0.6 : 0;
-        else if (iz) vz = -iz * (this.gills ? 3.4 : tired ? 0.9 : 1.7);
+        else if (iz) vz = -iz * (this.gills ? 3.4 : 1.7);
         else vz = this.depth > 0.05 && !this.gills ? -(breathless ? 0.12 : 0.35) : 0;
         if (this.plungeV) {
           this.plungeV -= (this.plungeV * 6 + 3.2) * dt;
@@ -64072,13 +64061,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
         this.depth = clamp2(this.depth + vz * dt, 0, bottom);
         if (this.depth >= bottom && this.plungeV > 0) this.plungeV = 0;
-        if (tired && (this.moving || iz)) {
-          if (this.isPlayer && !this.spentHint) {
-            this.spentHint = true;
-            game.log("Exhausted! Stop and tread water at the surface to get your strength back.", "#ff8a80");
-          }
-        } else if (this.stamina > this.d.maxStamina * 0.5) this.spentHint = false;
-        if (df && !this.sinking) this.stamina = Math.max(0, this.stamina - 14 * dt);
         const wasUnder = this.under;
         this.under = this.depth > 0.35;
         if (wasUnder && !this.under && !this.lowAir) {
@@ -76466,7 +76448,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (let m = 0; m < 2; m++) {
       const mx = MER[m];
       for (let y = 0; y < H; y++) {
-        const yc = y / POS_SCALE2;
+        const yc = y / POS_SCALE;
         const wobL = noise.fbm(mx * 0.01 + 5, yc * 0.012, 4) * chart(14) + noise.noise2(yc * 0.08, mx) * 3;
         const wobR = noise.fbm(mx * 0.01 + 50, yc * 0.012, 4) * chart(14) + noise.noise2(yc * 0.08, mx + 9) * 3;
         let left = -RL_HALF + wobL, right = RL_HALF + wobR;
@@ -76764,7 +76746,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (reg3 === REGION.RED_LINE || reg3 === REGION.POLAR) continue;
       if (Math.abs(x - RM_X) < REVERSE_MOUNTAIN.rx + chart(40) && Math.abs(y - EQ) < REVERSE_MOUNTAIN.ry + chart(40)) continue;
       if (world.ut[world._b(Math.floor(world.wx(x)), Math.floor(y))] === MIXED) continue;
-      const r = rng4.range(3, reg3 === REGION.PARADISE || reg3 === REGION.NEW_WORLD ? 11 : 9) * SIZE_SCALE2;
+      const r = rng4.range(3, reg3 === REGION.PARADISE || reg3 === REGION.NEW_WORLD ? 11 : 9) * SIZE_SCALE;
       let ok = true;
       for (const isl of world.islands) {
         const dd = world.distance(x, y, isl.x, isl.y);
@@ -82998,11 +82980,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/data/islands/index.js
   function toWorld(d) {
     if (d._scale) return d;
-    d.x = Math.round(d.x * POS_SCALE2);
-    d.y = Math.round(d.y * POS_SCALE2);
-    d.w = Math.round(d.w * SIZE_SCALE2);
-    d.h = Math.round(d.h * SIZE_SCALE2);
-    d._scale = SIZE_SCALE2;
+    d.x = Math.round(d.x * POS_SCALE);
+    d.y = Math.round(d.y * POS_SCALE);
+    d.w = Math.round(d.w * SIZE_SCALE);
+    d.h = Math.round(d.h * SIZE_SCALE);
+    d._scale = SIZE_SCALE;
     return d;
   }
   function marinePosts(d) {
@@ -86647,7 +86629,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const d = w.distance(a.x, a.y, this.seenX, this.seenY);
         if (d > 1.2) {
           this.moveToward(a, this.seenX, this.seenY, game);
-          a.intent.sprint = d > 5 && a.stamina > a.d.maxStamina * 0.4;
+          a.intent.sprint = d > 5;
         } else a.facing += dt * 2.2 * this.strafeDir;
         if (a.blocking) a.setBlock(false);
         return;
@@ -86658,16 +86640,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const up = game.deckRoute?.(a, t.x, t.y, t);
       if (up) {
         this.moveToward(a, up.x, up.y, game, true);
-        a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4;
+        a.intent.sprint = dist > 4;
         return;
       }
       const ta = t.action;
       if (ta && dist < 4 && !a.action && ta.t < (ta.def.windup ?? 0.1) + 0.05 && this.think <= 0.35) {
         const roll2 = Math.random();
-        if (roll2 < this.skill * 0.55) {
+        const breaks = (ta.def.steps || []).some((s) => s.hit?.guardBreak || s.dash?.hit?.guardBreak);
+        if (roll2 < this.skill * 0.55 && !breaks) {
           a.facing = ang;
           a.setBlock(true);
-          this.blockT = 0.5;
+          if (a.blocking) this.blockT = 0.5;
         } else if (roll2 < this.skill * 0.85) {
           a.tryDodge(game, -dy, dx * this.strafeDir);
         }
@@ -86687,7 +86670,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (dist > ring4 + 1.2) {
           mx2 = dx / dist;
           my2 = dy / dist;
-          a.intent.sprint = dist > 7 && a.stamina > a.d.maxStamina * 0.5;
+          a.intent.sprint = dist > 7;
         } else if (dist < ring4 - 0.6) {
           mx2 = -dx / dist;
           my2 = -dy / dist;
@@ -86735,14 +86718,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const via = game.buildings?.route(a, t.x, t.y);
       if (via) {
         this.moveToward(a, via.x, via.y, game, true);
-        a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4;
+        a.intent.sprint = dist > 4;
         return;
       }
       if (dist > 1.8) {
         const wp = this.steer(a, t.x, t.y, game);
         if (wp.x !== t.x || wp.y !== t.y) {
           this.moveToward(a, wp.x, wp.y, game, true);
-          a.intent.sprint = dist > 4 && a.stamina > a.d.maxStamina * 0.4;
+          a.intent.sprint = dist > 4;
           return;
         }
       }
@@ -86750,7 +86733,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (dist > want + 0.4) {
         mx = dx / dist;
         my = dy / dist;
-        a.intent.sprint = dist > 6 && a.stamina > a.d.maxStamina * 0.5;
+        a.intent.sprint = dist > 6;
       } else if (dist < want - 0.8 && this.ranged) {
         mx = -dx / dist;
         my = -dy / dist;
@@ -87476,7 +87459,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     sea_legs: { name: "Sea Legs", rarity: "common", weight: 10, desc: "Storms and crashes damage your ship 30% less." },
     silver_tongue: { name: "Silver Tongue", rarity: "common", weight: 10, desc: "Shops charge you 10% less." },
     hard_head: { name: "Hard Head", rarity: "common", weight: 10, desc: "You recover from stuns faster.", attrs: { end: 1 } },
-    quick_feet: { name: "Quick Feet", rarity: "common", weight: 10, desc: "Dodges cost less stamina.", attrs: { agi: 1 } },
+    quick_feet: { name: "Quick Feet", rarity: "common", weight: 10, desc: "Your dodge comes back a quarter sooner.", attrs: { agi: 1 } },
     lucky: { name: "Lucky Star", rarity: "uncommon", weight: 6, desc: "Treasure chests hold more." },
     night_owl: { name: "Night Owl", rarity: "uncommon", weight: 6, desc: "+10% damage at night." },
     born_fighter: { name: "Born Fighter", rarity: "uncommon", weight: 6, desc: "Style mastery grows 15% faster.", attrs: { str: 1 } },
@@ -87706,7 +87689,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     a.persistent = true;
     a.recalc();
     a.hp = a.d.maxHp;
-    a.stamina = a.d.maxStamina;
     a.haki = a.hakiUnlocked() ? a.d.maxHaki : 0;
     return a;
   }
@@ -88100,7 +88082,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         game.log("Tension Hormones! Your body screams back to full strength \u2014 and your lifespan shortens.", "#ff8a80");
       }
       p.hp = Math.min(p.d.maxHp, p.hp + heal);
-      p.stamina = Math.min(p.d.maxStamina, p.stamina + (d.stamina || 0));
       for (const s of d.cure || []) delete p.status[s];
       if (d.buff) p.addBuff({ ...d.buff });
       game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, "#69f0ae", 0.45);
@@ -88224,7 +88205,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         if (!p.gills && p.under && !this.o2Hint) {
           this.o2Hint = true;
-          game.hint?.("diving", "Under water you hold your breath \u2014 watch the bubbles under your stamina and come up for air (Space). Look down and swim, or hold C, to dive.");
+          game.hint?.("diving", "Under water you hold your breath \u2014 watch the bubbles under your health and come up for air (Space). Look down and swim, or hold C, to dive.");
         }
       }
       if (inp.wasPressed("Shift")) this.shiftT = 0;
@@ -88263,7 +88244,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         game.applySettings?.(true);
         game.ui.toast(v3.rig.shiftLock ? "SHIFT LOCK ON" : "SHIFT LOCK OFF", v3.rig.shiftLock ? "Your character faces where you look. Tap Ctrl to free the mouse." : "Hold the right mouse button to turn the camera. Tap Ctrl to lock it.", "#ffe082", "shiftlock");
       }
-      if (inp.wasPressed("Q")) buf.dodge = 0.16;
+      if (inp.wasPressed("Q")) {
+        buf.dodge = 0.16;
+        if (p.dodgeCd > 0.16) game.ui?.flashAct?.("dodge");
+      }
       if (inp.wasPressed("Space") && !p.flying) {
         if (p.canJump()) this.jumpHold = { t: 0 };
         else buf.jump = 0.14;
@@ -88305,6 +88289,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           if (p.combo.queued) buf.m1 = 0;
         }
       }
+      if (inp.wasPressed("F") && p.guardCd > 0) game.ui?.flashAct?.("guard");
       p.setBlock(inp.isDown("F"));
       for (let i = 0; i < HOTBAR_SIZE; i++) {
         if (inp.wasPressed(HOTBAR_KEYS[i])) {
@@ -89178,7 +89163,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/ui/style.css
-  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --st: #43a047;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.st > i { background: linear-gradient(#81c784, var(--st)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n/* the drawn weapon's moves (bottom right, while it's out) */\n.skillpanel { position: absolute; right: 14px; bottom: 14px; min-width: 210px; max-width: 260px; background: rgba(10,20,30,.74); border-radius: 12px; padding: 8px 10px 7px; border: 1px solid var(--border); font-size: 12px; pointer-events: none; }\n.skillpanel .sp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }\n.skillpanel .sp-head b { font: 400 17px 'Pirata One', serif; color: var(--gold); letter-spacing: .5px; }\n.skillpanel .sp-head span { font-size: 10.5px; opacity: .75; text-align: right; }\n.skillpanel .sp-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }\n.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; padding: 1px 5px; font: 800 11px Nunito, sans-serif; color: #fff; }\n.skillpanel .sp-row.unbound kbd { opacity: .45; }\n.skillpanel .sp-row.cd { opacity: .55; }\n.skillpanel .sp-cd { margin-left: auto; color: #ffcc80; font-variant-numeric: tabular-nums; }\n.skillpanel .sp-foot { margin-top: 5px; font-size: 10.5px; opacity: .7; }\n.skillpanel .sp-foot kbd { min-width: 0; padding: 0 5px; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #1f5f86; font-size: 18px; }\n.wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label.town { font: 700 13px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #4a3320; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; z-index: 1; }\n.wm-label.isle { color: #2f2012; letter-spacing: 1px; text-shadow: 0 0 4px #f5e6c4, 0 0 8px #f5e6c4; z-index: 1; }\n.wm-label.landmark { font: italic 600 12px Nunito, sans-serif; color: #5b4026; }\n/* markers standing on their spot: the icon's middle on it, the name beside it */\n.wm-pin { position: absolute; width: 0; height: 0; display: flex; align-items: center; z-index: 2; }\n.wm-pin > img { flex: none; transform: translate(-50%, 0); filter: drop-shadow(0 1px 1.5px rgba(40,24,10,.6)); }\n.wm-pin > span { margin-left: -4px; white-space: nowrap; font: 400 16px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; }\n.wm-pin.quest > span { color: #1f5f86; font-size: 17px; }\n.wm-pin.quest.main { z-index: 4; }\n.wm-pin.quest.main > span { color: #a33a00; font-size: 19px; }\n.wm-pin.poi > img { box-sizing: content-box; padding: 2px; border-radius: 50%; background: rgba(246,234,206,.96); box-shadow: 0 0 0 1.5px #5b4026, 0 1px 3px rgba(40,24,10,.45); filter: none; }\n.wm-pin.poi.dock > img { background: rgba(214,232,240,.96); }\n.wm-pin.poi > span { font: 700 11px Nunito, sans-serif; color: #4a3320; }\n.wm-pin.lp > span { color: #8e2c1c; }\n/* you: an arrow the way you face, ringed */\n.wm-me { position: absolute; width: 0; height: 0; z-index: 5; }\n.wm-me::before { content: ''; position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(192,57,43,.75); animation: wmping 1.8s ease-out infinite; }\n.wm-me i { position: absolute; left: -10px; top: -12px; width: 20px; height: 24px; }\n.wm-me i::before { content: ''; position: absolute; inset: 0; background: #c0392b; clip-path: polygon(50% 0, 100% 100%, 50% 74%, 0 100%); filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }\n@keyframes wmping { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }\n.wm-scale { position: absolute; left: 22px; bottom: 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; pointer-events: none; }\n.wm-scale i { display: block; height: 7px; border: 2px solid #4a3320; border-top: 0; background: repeating-linear-gradient(90deg, #4a3320 0 25%, #f2e3c2 25% 50%); background-size: 100% 3px; background-repeat: no-repeat; background-position: bottom; box-shadow: 0 0 0 1px rgba(245,230,196,.8); }\n.wm-scale span { font: 700 13px Nunito, sans-serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; }\n.wm-rose { position: absolute; right: 20px; bottom: 20px; pointer-events: none; opacity: .9; filter: drop-shadow(0 0 4px rgba(245,230,196,.9)); }\n/* (the chart has the screen to itself: no banners or toasts over it) */\n#ui.map-open .banner, #ui.map-open .toast { visibility: hidden; }\n#ui.touch .wm-rose { transform: scale(.7); transform-origin: right bottom; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n/* the shipwright's menus: your ships and the ships for sale */\n.sw-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }\n.sw-head h2 { margin: 0; }\n.row-item.cant { opacity: .6; }\n.row-item.here { outline: 2px solid #b8860b; }\n.row-item .sub.warn { color: #b71c1c; opacity: 1; font-weight: 700; }\n.price.short { color: #b71c1c; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.85)); }\n.compass .pin img { display: block; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: 1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.main { z-index: 2; }\n.compass .pin.main small { color: #ffc940; }\n.compass .pin.side small { color: #a6dcf5; }\n.compass .pin.ship small { color: #e3f2fd; }\n/* the markers over the world (see waypoints.js): where the quests on the tracker are */\n.wpmarks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wpm { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; width: 0; transition: opacity .2s; will-change: transform; }\n.wpm > img { margin-top: -17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)) drop-shadow(0 0 5px rgba(0,0,0,.35)); }\n.wpm.side > img { margin-top: -14px; }\n.wpm.main { z-index: 2; }\n.wpm small { margin-top: 1px; font: 800 12px Nunito, sans-serif; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 3px #000; }\n.wpm.main small { color: #ffd66b; }\n.wpm.side small { color: #b9e4f8; }\n.wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }\n.wpm.look .wpm-name { opacity: 1; transform: none; }\n.wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }\n.wpm-arrow::after { content: ''; position: absolute; left: 25px; top: 3px; border: 6px solid transparent; border-left: 10px solid #fff; filter: drop-shadow(0 0 1.5px #000); }\n.wpm.main .wpm-arrow::after { border-left-color: #ffc940; }\n.wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }\n.wpm.edge .wpm-arrow { display: block; }\n.wpm.edge > img { transform: scale(.85); }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-sub { text-align: right; font: 700 11.5px Nunito, sans-serif; color: #ffd98a; margin-top: 1px; letter-spacing: 0.02em; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n";
+  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n.slot.act { cursor: default; }\n.slot.act.interactive { cursor: pointer; }\n.slot.act.guard { margin-right: 8px; }\n.slot.act.wait .ico { opacity: .5; }\n.slot.act.ready { animation: actready .4s ease-out; }\n@keyframes actready { 0% { box-shadow: 0 0 0 0 rgba(140, 205, 250, .95), 0 3px 8px rgba(0,0,0,.45); border-color: #bfe6ff; } 100% { box-shadow: 0 0 0 10px rgba(140, 205, 250, 0), 0 3px 8px rgba(0,0,0,.45); } }\n.slot.act.guard.on { border-color: #9cc3ea; box-shadow: 0 0 12px rgba(110, 165, 230, .7); }\n.slot.act.guard.broken { border-color: #ff8a80; }\n.slot.act.guard.broken .ico { opacity: .45; filter: grayscale(.6); }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #1d6fb8; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n/* the drawn weapon's moves (bottom right, while it's out) */\n.skillpanel { position: absolute; right: 14px; bottom: 14px; min-width: 210px; max-width: 260px; background: rgba(10,20,30,.74); border-radius: 12px; padding: 8px 10px 7px; border: 1px solid var(--border); font-size: 12px; pointer-events: none; }\n.skillpanel .sp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }\n.skillpanel .sp-head b { font: 400 17px 'Pirata One', serif; color: var(--gold); letter-spacing: .5px; }\n.skillpanel .sp-head span { font-size: 10.5px; opacity: .75; text-align: right; }\n.skillpanel .sp-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }\n.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; padding: 1px 5px; font: 800 11px Nunito, sans-serif; color: #fff; }\n.skillpanel .sp-row.unbound kbd { opacity: .45; }\n.skillpanel .sp-row.cd { opacity: .55; }\n.skillpanel .sp-cd { margin-left: auto; color: #ffcc80; font-variant-numeric: tabular-nums; }\n.skillpanel .sp-foot { margin-top: 5px; font-size: 10.5px; opacity: .7; }\n.skillpanel .sp-foot kbd { min-width: 0; padding: 0 5px; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #1f5f86; font-size: 18px; }\n.wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label.town { font: 700 13px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #4a3320; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; z-index: 1; }\n.wm-label.isle { color: #2f2012; letter-spacing: 1px; text-shadow: 0 0 4px #f5e6c4, 0 0 8px #f5e6c4; z-index: 1; }\n.wm-label.landmark { font: italic 600 12px Nunito, sans-serif; color: #5b4026; }\n/* markers standing on their spot: the icon's middle on it, the name beside it */\n.wm-pin { position: absolute; width: 0; height: 0; display: flex; align-items: center; z-index: 2; }\n.wm-pin > img { flex: none; transform: translate(-50%, 0); filter: drop-shadow(0 1px 1.5px rgba(40,24,10,.6)); }\n.wm-pin > span { margin-left: -4px; white-space: nowrap; font: 400 16px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; }\n.wm-pin.quest > span { color: #1f5f86; font-size: 17px; }\n.wm-pin.quest.main { z-index: 4; }\n.wm-pin.quest.main > span { color: #a33a00; font-size: 19px; }\n.wm-pin.poi > img { box-sizing: content-box; padding: 2px; border-radius: 50%; background: rgba(246,234,206,.96); box-shadow: 0 0 0 1.5px #5b4026, 0 1px 3px rgba(40,24,10,.45); filter: none; }\n.wm-pin.poi.dock > img { background: rgba(214,232,240,.96); }\n.wm-pin.poi > span { font: 700 11px Nunito, sans-serif; color: #4a3320; }\n.wm-pin.lp > span { color: #8e2c1c; }\n/* you: an arrow the way you face, ringed */\n.wm-me { position: absolute; width: 0; height: 0; z-index: 5; }\n.wm-me::before { content: ''; position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(192,57,43,.75); animation: wmping 1.8s ease-out infinite; }\n.wm-me i { position: absolute; left: -10px; top: -12px; width: 20px; height: 24px; }\n.wm-me i::before { content: ''; position: absolute; inset: 0; background: #c0392b; clip-path: polygon(50% 0, 100% 100%, 50% 74%, 0 100%); filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }\n@keyframes wmping { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }\n.wm-scale { position: absolute; left: 22px; bottom: 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; pointer-events: none; }\n.wm-scale i { display: block; height: 7px; border: 2px solid #4a3320; border-top: 0; background: repeating-linear-gradient(90deg, #4a3320 0 25%, #f2e3c2 25% 50%); background-size: 100% 3px; background-repeat: no-repeat; background-position: bottom; box-shadow: 0 0 0 1px rgba(245,230,196,.8); }\n.wm-scale span { font: 700 13px Nunito, sans-serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; }\n.wm-rose { position: absolute; right: 20px; bottom: 20px; pointer-events: none; opacity: .9; filter: drop-shadow(0 0 4px rgba(245,230,196,.9)); }\n/* (the chart has the screen to itself: no banners or toasts over it) */\n#ui.map-open .banner, #ui.map-open .toast { visibility: hidden; }\n#ui.touch .wm-rose { transform: scale(.7); transform-origin: right bottom; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n/* the shipwright's menus: your ships and the ships for sale */\n.sw-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }\n.sw-head h2 { margin: 0; }\n.row-item.cant { opacity: .6; }\n.row-item.here { outline: 2px solid #b8860b; }\n.row-item .sub.warn { color: #b71c1c; opacity: 1; font-weight: 700; }\n.price.short { color: #b71c1c; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.85)); }\n.compass .pin img { display: block; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: 1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.main { z-index: 2; }\n.compass .pin.main small { color: #ffc940; }\n.compass .pin.side small { color: #a6dcf5; }\n.compass .pin.ship small { color: #e3f2fd; }\n/* the markers over the world (see waypoints.js): where the quests on the tracker are */\n.wpmarks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wpm { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; width: 0; transition: opacity .2s; will-change: transform; }\n.wpm > img { margin-top: -17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)) drop-shadow(0 0 5px rgba(0,0,0,.35)); }\n.wpm.side > img { margin-top: -14px; }\n.wpm.main { z-index: 2; }\n.wpm small { margin-top: 1px; font: 800 12px Nunito, sans-serif; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 3px #000; }\n.wpm.main small { color: #ffd66b; }\n.wpm.side small { color: #b9e4f8; }\n.wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }\n.wpm.look .wpm-name { opacity: 1; transform: none; }\n.wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }\n.wpm-arrow::after { content: ''; position: absolute; left: 25px; top: 3px; border: 6px solid transparent; border-left: 10px solid #fff; filter: drop-shadow(0 0 1.5px #000); }\n.wpm.main .wpm-arrow::after { border-left-color: #ffc940; }\n.wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }\n.wpm.edge .wpm-arrow { display: block; }\n.wpm.edge > img { transform: scale(.85); }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-sub { text-align: right; font: 700 11.5px Nunito, sans-serif; color: #ffd98a; margin-top: 1px; letter-spacing: 0.02em; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n";
 
   // src/ui/icon.js
   var img = (canvas2, px2, cls = "") => h("img.icon" + cls, { src: iconURL(canvas2), width: px2, height: px2, draggable: false, alt: "" });
@@ -89408,7 +89393,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       windup: 0.3,
       recover: 0.3,
       cd: 7,
-      cost: { haki: 18, stamina: 8 },
+      cost: { haki: 18 },
       desc: "Launch your Haki beyond your body in a shockwave.",
       learn: { haki: "armament", level: 35 },
       steps: [{ proj: { speed: 20, range: 11, radius: 0.6, damage: 28, sprite: "shockwave", color: "#212121", pierce: true, knockback: 7, stun: 0.5, heavy: true } }]
@@ -89422,7 +89407,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       windup: 0.35,
       recover: 0.35,
       cd: 10,
-      cost: { haki: 25, stamina: 10 },
+      cost: { haki: 25 },
       desc: "Flow Haki into the enemy and destroy them from within. Ignores guards and armour. (Taught in Wano.)",
       learn: { haki: "armament", level: 55 },
       steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.3, damage: 60, knockback: 10, stun: 0.9, heavy: true, unblockable: true, haki: true, trueDamage: true, impactFrame: true } }]
@@ -90394,11 +90379,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         k("Space", "jump; at a pier, a bank or a ship's side, climb up (ship: row)"),
         k("Shift", "hold to sprint (ship: Coup de Burst); tap in first person to dodge"),
         k("Ctrl", "third person: shift lock (the character faces where you look)"),
-        k("Q", "dash / dodge"),
+        k("Q", "dash / dodge \u2014 it comes back after a moment (the Q slot left of the hotbar fills up again)"),
         k("Right mouse", "heavy attack; hold and drag to turn the camera in third person without shift lock"),
         k("Left click", "attack combo (ship: cannons)"),
         k("Right click", "heavy attack"),
-        k("F", "block \u2014 tap just before a hit to PARRY"),
+        k("F", "block \u2014 tap just before a hit to PARRY; a heavy blow (the red glint) smashes a guard aside, so dodge those"),
         k("1-9, 0", "hotbar (techniques & items); food goes in your hand \u2014 hold the right mouse button to eat it"),
         haki ? k("R / T", "Armament / Observation Haki (once awakened)") : null,
         haki && char.haki?.conqueror ? k("G", "Conqueror's Haki") : null,
@@ -90421,7 +90406,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       h("h3", "Sailing"),
       h("p", "A rowboat has no mast or sail: sit at her oars (E at the seat) and set a pace: W quickens it and she keeps rowing at it, S eases it off to a stop (and, pressed again, backs water), and A/D pull one oar to turn her \u2014 no wind needed, though the currents still carry you. Anything bigger sails: W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
       h("h3", "The sea"),
-      h("p", "Swim anywhere \u2014 but swimming tires you. Run out of stamina while you keep swimming and you start to go under and drown; stop and tread water to get your breath back. Dive with C (or look down and swim) to explore the reefs, kelp forests and the dark deep water in the middle of the ocean; bubbles under your stamina show how long you can hold your breath. Grab fish with an attack as they swim past, prise giant clams open for pearls, and watch out past the reef: Sea Cows hunt swimmers in the Blues, and horned Fighting Fish in the Grand Line. Fish-Men swim fast and breathe water. Devil Fruit users cannot swim at all: the sea drags them down, and they come out of it weak \u2014 keep a crewmate close to haul you out, or grab a line thrown from your ship."),
+      h("p", "Swim anywhere. Dive with C (or look down and swim) to explore the reefs, kelp forests and the dark deep water in the middle of the ocean; the bubbles under your health show how long you can hold your breath \u2014 come up for air before they pop. Grab fish with an attack as they swim past, prise giant clams open for pearls, and watch out past the reef: Sea Cows hunt swimmers in the Blues, and horned Fighting Fish in the Grand Line. Fish-Men swim fast and breathe water. Devil Fruit users cannot swim at all: they thrash for a few seconds (the bubbles count them down), then the sea drags them under, and they come out of it weak \u2014 keep a crewmate close to haul you out, or grab a line thrown from your ship."),
       h("h3", "Ships, raids and being wanted"),
       h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols (who come after you once you're wanted), and pirates, who keep to their own business \u2014 unless you fire on them or board them. Stop, and a ship that's after you comes alongside and heaves to. Fire on a merchant and she may heave to. To board and raid a ship, leave your helm and jump across onto her deck, or swim to her hull and press Space to climb her side. Beat the crew on her deck, go down the hatch amidships and plunder the treasure chest in her hold (her cannonballs come across to your ship too), and take what's in it (a raided ship isn't yours to sail away: new ships come from the shipwrights). At your own wheel, E leaves the helm so you can walk your deck \u2014 under sail she sails on, holding her course, till you take the wheel again to steer or lower the sails (jump over the rail for a swim; Space at her side climbs back aboard). Ships come in every size, from your first rowboat to sloops, caravels, galleons and One Piece-scale men-o'-war and Yonko flagships \u2014 and every one with a sail is a ship you can live on: walk her decks, climb the stairs to the quarterdeck, go in through the door under it to the captain's cabin (a table with the chart, a bunk, the sea chest), into the crew's forecastle on the bigger ones, and down the hatch amidships to the hold, where the cargo and the treasure chest are (on the big ships, a gun deck with cannons at every port). Her guns fire cannonballs, one a gun, and they run out: the count is by your wheel, and a shipwright restocks you. Your crew stand their stations on deck while you steer. Your own ships can't break. Every pier has a shipwright: talk to them (E) to bring any ship you own round to that pier, or to buy a new one. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
       h("h3", "Crossing the Red Line"),
@@ -92549,7 +92534,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const names = { armament: "ARMAMENT HAKI", observation: "OBSERVATION HAKI", conqueror: "CONQUEROR'S HAKI" };
       g.ui.toast(names[type], how || "Your will takes shape.", type === "conqueror" ? "#ff5252" : "#ce93d8");
       g.fx.impactFrame?.(0.12);
-      g.log(`${names[type]} awakened. Press ${type === "armament" ? "R" : type === "observation" ? "T" : "G"} to use it.${first ? " Haki draws on a new spirit bar under your stamina; it refills when you rest it." : ""}`, "#ce93d8");
+      g.log(`${names[type]} awakened. Press ${type === "armament" ? "R" : type === "observation" ? "T" : "G"} to use it.${first ? " Haki draws on a new spirit bar under your health; it refills when you rest it." : ""}`, "#ce93d8");
       g.emit("hakiAwakened", type);
       persist(g);
       return true;
@@ -92668,11 +92653,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     fighter: { name: "Combatant", icon: "skills", desc: "Fights beside you on land." },
     swordsman: { name: "Swordsman", icon: "sword", desc: "Fights beside you on land with a blade." },
     navigator: { name: "Navigator", icon: "log_pose", desc: "Log Pose sets twice as fast, storms are announced early, +10% sailing speed." },
-    cook: { name: "Cook", icon: "food", desc: "Food heals 50% more; stamina regenerates at sea." },
+    cook: { name: "Cook", icon: "food", desc: "Food heals 50% more; hot meals at sea heal you while you sail." },
     doctor: { name: "Doctor", icon: "doctor", desc: "Patches you up after every battle (heals 30% when combat ends)." },
     shipwright: { name: "Shipwright", icon: "shipwright", desc: "Repairs your ship slowly while sailing." },
     sniper: { name: "Sniper", icon: "gun", desc: "Cannons deal 30% more damage." },
-    musician: { name: "Musician", icon: "bar", desc: "Stamina regenerates 25% faster." },
+    musician: { name: "Musician", icon: "bar", desc: "Lifts your spirits: techniques come back 10% sooner." },
     archaeologist: { name: "Archaeologist", icon: "library", desc: "Can read Poneglyphs." },
     helmsman: { name: "Helmsman", icon: "ship", desc: "Your ship turns 25% faster." }
   };
@@ -92683,11 +92668,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       speedMul: has2("navigator") ? 1.1 : 1,
       logMul: has2("navigator") ? 2 : 1,
       foodMul: has2("cook") ? 1.5 : 1,
-      seaStamina: has2("cook"),
+      seaMeals: has2("cook"),
       doctor: has2("doctor"),
       repair: has2("shipwright") ? 0.6 : 0,
       cannonMul: has2("sniper") ? 1.3 : 1,
-      staminaMul: has2("musician") ? 1.25 : 1,
+      cdMul: has2("musician") ? 0.9 : 1,
       poneglyphs: has2("archaeologist"),
       turnMul: has2("helmsman") ? 1.25 : 1
     };
@@ -92892,7 +92877,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.wasFighting = fighting;
       if (p.mode === "sail" && p.ship && !p.ship.sunk) {
         if (mods.repair && p.ship.hull < p.ship.maxHull) p.ship.hull = Math.min(p.ship.maxHull, p.ship.hull + mods.repair * dt);
-        if (mods.seaStamina) p.stamina = Math.min(p.d.maxStamina, p.stamina + 4 * dt);
+        if (mods.seaMeals && !p.inCombat && p.hp < p.d.maxHp) p.hp = Math.min(p.d.maxHp, p.hp + p.d.maxHp * 0.01 * dt);
       }
     }
   };
@@ -93044,10 +93029,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (mods.speedMul > 1) perks.push("+10% sailing speed");
     if (mods.logMul > 1) perks.push("Log Pose sets twice as fast");
     if (mods.foodMul > 1) perks.push("+50% healing from food");
+    if (mods.seaMeals) perks.push("Hot meals heal you at sea");
     if (mods.doctor) perks.push("Healed after every battle");
     if (mods.repair) perks.push("Ship repairs itself at sea");
     if (mods.cannonMul > 1) perks.push("+30% cannon damage");
-    if (mods.staminaMul > 1) perks.push("+25% stamina regeneration");
+    if (mods.cdMul < 1) perks.push("Techniques come back 10% sooner");
     if (mods.poneglyphs) perks.push("Can read Poneglyphs");
     if (mods.turnMul > 1) perks.push("Ship turns 25% faster");
     if (perks.length) add2(body, h("h3", "Crew bonuses"), h("p", perks.join(" \xB7 ")));
@@ -93300,7 +93286,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (d.armor) parts.push(`Defence +${Math.round(d.armor * 100)}%`);
     if (d.bonus) parts.push(Object.entries(d.bonus).map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${ATTRS[k]?.short || k.toUpperCase()}`).join("  "));
     if (d.heal) parts.push(d.heal > 9999 ? "Full health" : `+${d.heal} health`);
-    if (d.stamina) parts.push(`+${d.stamina} stamina`);
     if (d.buff) parts.push(`${d.buff.name} for ${d.buff.dur}s`);
     return parts.join(" \xB7 ");
   }
@@ -93594,7 +93579,7 @@ Trains by: ${TRAINS_BY[k]}` },
         h("div.meter.dual", h("i", { style: { width: 100 * c.attrs[k] / ATTR_CAP + "%" } }), h("u", { style: { width: 100 * (prog?.trainProgress(k) || 0) + "%" } }))
       ));
       const dd = p.d;
-      const derived = h("div.derived", `Health ${dd.maxHp} \xB7 Stamina ${dd.maxStamina}${hakiKnown(c) ? " \xB7 Spirit " + dd.maxHaki : ""} \xB7 Speed ${dd.speed.toFixed(1)} \xB7 Damage \xD7${dd.dmg.toFixed(2)} \xB7 Defence ${Math.round(dd.def * 100)}% \xB7 Doriki ${p.power().toLocaleString()}`);
+      const derived = h("div.derived", `Health ${dd.maxHp}${hakiKnown(c) ? " \xB7 Spirit " + dd.maxHaki : ""} \xB7 Speed ${dd.speed.toFixed(1)} \xB7 Damage \xD7${dd.dmg.toFixed(2)} \xB7 Defence ${Math.round(dd.def * 100)}% \xB7 Doriki ${p.power().toLocaleString()}`);
       const wm = c.weaponMastery || {};
       const wmRows = Object.entries(WEAPON_KINDS).map(([k, name]) => h(
         "div.stat-row",
@@ -93702,7 +93687,7 @@ Trains by: ${TRAINS_BY[k]}` },
               "div.grow",
               h("b", d.name),
               h("div.sub", d.desc || ""),
-              h("div.sub.meta", [d.cd ? `cooldown ${d.cd}s` : null, d.cost?.stamina ? `${d.cost.stamina} stamina` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(" \xB7 "))
+              h("div.sub.meta", [d.cd ? `cooldown ${d.cd}s` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(" \xB7 "))
             ),
             onBar ? h("span.tag", `key ${HOTBAR_KEYS[c.hotbar.indexOf(d.id)]}`) : null
           );
@@ -94298,7 +94283,6 @@ Trains by: ${TRAINS_BY[k]}` },
       E.name = h("div.hud-name");
       E.sub = h("div.hud-sub");
       E.hp = bar("hp");
-      E.st = bar("st");
       E.hk = bar("hk");
       E.o2 = h("div.o2.hidden", { title: "Breath" });
       E.o2b = [];
@@ -94310,8 +94294,22 @@ Trains by: ${TRAINS_BY[k]}` },
       E.lives = h("div.lives");
       E.bounty = h("div.hud-bounty");
       E.buffs = h("div.buffs");
-      this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.hp.el, E.st.el, E.o2, E.hk.el, E.lives, E.bounty, E.buffs));
+      this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.hp.el, E.o2, E.hk.el, E.lives, E.bounty, E.buffs));
       E.hotbar = h("div.hotbar");
+      E.acts = {};
+      for (const [k, key2, name, tip] of [["dodge", "Q", "Dodge", "Dash out of the way, untouchable for an instant. It comes back after a moment."], ["guard", "F", "Block", "Hold to block (tap just before a hit to parry). A heavy blow smashes a guard aside: it can't come up again until this fills."]]) {
+        const a = { el: h("div.slot.toggle.act." + k, { title: `${name} (${key2})
+${tip}` }), cd: h("div.cd") };
+        a.el.append(h("span.ico", uiImg(k, 28)), h("span.k", key2), a.cd);
+        if (k === "dodge") {
+          a.el.classList.add("interactive");
+          a.el.addEventListener("click", () => {
+            if (!this.blocksInput()) this.game?.player?.controller?.requestDodge?.();
+          });
+        }
+        E.acts[k] = a;
+        E.hotbar.appendChild(a.el);
+      }
       E.slots = [];
       for (let i = 0; i < HOTBAR_SIZE; i++) {
         const s = { el: h("div.slot.interactive"), ico: h("span.ico"), k: h("span.k", HOTBAR_KEYS[i]), nm: h("span.nm"), qty: h("span.qty"), cd: h("div.cd"), cdt: h("div.cdt") };
@@ -94571,6 +94569,15 @@ Trains by: ${TRAINS_BY[k]}` },
       void el.offsetWidth;
       el.classList.add("show");
     }
+    /** Flash the Q (dodge) or F (block) slot: pressed while it's still coming back. */
+    flashAct(k) {
+      const el = this.el.acts?.[k]?.el;
+      if (el) {
+        el.classList.remove("flash");
+        void el.offsetWidth;
+        el.classList.add("flash");
+      }
+    }
     flashSlot(id) {
       const p = this.game?.player;
       if (!p) return;
@@ -94764,9 +94771,9 @@ Trains by: ${TRAINS_BY[k]}` },
       const title2 = ch.title || (ch.faction === "marine" ? `Marine ${ch.marineRank || "Recruit"}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === "pirate" ? "Pirate" : "Wanderer");
       this.set(E.sub, "sub", `${raceLabel(p.look)} \xB7 ${title2} \xB7 Doriki ${p.power().toLocaleString()}`);
       E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
-      E.st.set(p.stamina / p.d.maxStamina, `${Math.ceil(p.stamina)}`);
-      const o2max = p.maxOxygen, o2 = p.oxygen;
-      const showO2 = !p.gills && o2 != null && Number.isFinite(o2max) && o2 < o2max - 0.05;
+      const struggling = p.inWater && p.fruit && !p.gills && !p.sinking && p.struggle != null;
+      const o2max = struggling ? p.struggleTime() : p.maxOxygen, o2 = struggling ? Math.max(0, p.struggle) : p.oxygen;
+      const showO2 = !p.gills && o2 != null && Number.isFinite(o2max) && (struggling || o2 < o2max - 0.05);
       if (showO2 !== this.cache.o2on) {
         E.o2.classList.toggle("hidden", !showO2);
         this.cache.o2on = showO2;
@@ -94862,6 +94869,33 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         s2.cd.style.transform = `scaleY(${frac2})`;
         const txt = cd > 0.05 ? cd >= 10 ? Math.ceil(cd) : cd.toFixed(1) : "";
         if (s2.cdt.textContent !== String(txt)) s2.cdt.textContent = txt;
+      }
+      const sea = p.mode === "sail";
+      if (sea !== this.cache.actSea) {
+        this.cache.actSea = sea;
+        for (const a of Object.values(E.acts)) a.el.classList.toggle("hidden", sea);
+      }
+      const dodge = E.acts.dodge, guard2 = E.acts.guard;
+      const dcd = p.dodgeCd > 0 ? clamp2(p.dodgeCd / (p.dodgeCdMax || 1), 0, 1) : 0;
+      if (dcd !== this.cache.dodgeCd) {
+        if (!dcd && this.cache.dodgeCd) {
+          dodge.el.classList.remove("ready");
+          void dodge.el.offsetWidth;
+          dodge.el.classList.add("ready");
+        }
+        this.cache.dodgeCd = dcd;
+        dodge.cd.style.transform = `scaleY(${dcd.toFixed(3)})`;
+        dodge.el.classList.toggle("wait", dcd > 0);
+      }
+      const gcd = p.guardCd > 0 ? clamp2(p.guardCd / p.guardCooldown(), 0, 1) : 0;
+      if (gcd !== this.cache.guardCd) {
+        this.cache.guardCd = gcd;
+        guard2.cd.style.transform = `scaleY(${gcd.toFixed(3)})`;
+        guard2.el.classList.toggle("broken", gcd > 0);
+      }
+      if (!!p.blocking !== this.cache.guardOn) {
+        this.cache.guardOn = !!p.blocking;
+        guard2.el.classList.toggle("on", !!p.blocking);
       }
       for (const t of HAKI_TOGGLES) {
         const el = E.toggles[t.type];
@@ -95429,7 +95463,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       this.k = null;
       p.state = "idle";
       p.hp = Math.round(p.d.maxHp * (0.25 + p.attrs.wil * 4e-3));
-      p.stamina = p.d.maxStamina * 0.6;
       p.iframes = 1.4;
       p.hitstun = 0;
       g.fx.text(p.x, p.y - 2, "I'M NOT DONE YET!", "#ffeb3b", 0.55, { life: 1.6 });
@@ -95553,7 +95586,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       c.berries -= lost;
       p.state = "idle";
       p.hp = p.d.maxHp;
-      p.stamina = p.d.maxStamina;
       p.status = {};
       p.buffs = [];
       p.recalc();
@@ -95843,7 +95875,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (!pay(g, price)) return false;
       c.rest = { x: p.x, y: p.y, name: `${town?.name || island?.name || "an inn"}`, islandId: island?.id };
       p.hp = p.d.maxHp;
-      p.stamina = p.d.maxStamina;
       p.haki = p.hakiUnlocked() ? p.d.maxHaki : 0;
       p.status = {};
       c.getUpCharges = 1 + (p.attrs.wil >= 40 ? 1 : 0) + (p.attrs.wil >= 80 ? 1 : 0);
@@ -98046,7 +98077,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       game.progression?.train?.("agi", 0.4);
       if (!S4.caughtHint) {
         S4.caughtHint = true;
-        game.hint?.("fishing", "Fish you catch go in your bag \u2014 eat them for health and stamina, or sell them. An Elephant Honmaguro from the deep blue is worth a fortune to a cook.");
+        game.hint?.("fishing", "Fish you catch go in your bag \u2014 eat them to heal, or sell them. An Elephant Honmaguro from the deep blue is worth a fortune to a cook.");
       }
     } else if (!S4.missLog || game.time - S4.missLog > 6) {
       S4.missLog = game.time;
@@ -98498,7 +98529,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.55,
       recover: 0.5,
       cd: 4,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "line", range: 3.4, width: 1.3, damage: 22, knockback: 7, stun: 0.6, heavy: true, guardBreak: true, slashing: true, shake: 0.3 }, vfx: "beam", color: "#cfd8dc" }]
     },
     {
@@ -98508,7 +98538,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "circle", range: 2.6, damage: 16, knockback: 6, stun: 0.4, slashing: true }, vfx: "ring" }]
     },
     {
@@ -98518,7 +98547,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 3.5,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.6, offset: 0.3, damage: 16, knockback: 8, stun: 0.6, heavy: true, guardBreak: true } }]
     },
     {
@@ -98528,7 +98556,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 10 },
       say: "Special Muggy Ball!",
       steps: [{ proj: { speed: 11, range: 12, radius: 0.5, damage: 10, sprite: "cannonball", size: 1.6, explode: { range: 2.4, damage: 30 } } }]
     },
@@ -98539,7 +98566,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 5,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 16, range: 10, radius: 0.25, damage: 8, count: 3, spread: 0.35, sprite: "iceshard", color: "#eceff1", slashing: true } }]
     },
     {
@@ -98549,7 +98575,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 3, arc: 0.8, offset: 0.2, damage: 12, knockback: 2, stun: 0.3, element: "fire", status: { burn: 2 } }, vfx: "ring", color: "#ff7043" }]
     },
     {
@@ -98559,7 +98584,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 8 },
       steps: [{ dash: { dist: 7, time: 0.3, hit: { damage: 14, knockback: 5, stun: 0.4, slashing: true } } }]
     },
     // (Kuro and Jango: the East Blue's third story — a hard fight for a new pirate, not a wall)
@@ -98570,7 +98594,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.7,
       cd: 12,
-      cost: { stamina: 12 },
       say: "Nuki Ashi...",
       steps: [0, 0.18, 0.36, 0.54, 0.72].map((t, i) => ({ at: 0.7 + t, angleOffset: (i % 2 ? 1 : -1) * (0.4 + i * 0.3), dash: { dist: 4, time: 0.15, iframes: 0.15, hit: { damage: 6, knockback: 2, stun: 0.25, slashing: true } } }))
     },
@@ -98581,7 +98604,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 3.5,
-      cost: { stamina: 6 },
       steps: [{ hit: { shape: "arc", range: 2, arc: 1.8, offset: 0.2, damage: 10, knockback: 2, stun: 0.25, slashing: true, status: { bleed: 2 } }, vfx: "slash" }]
     },
     {
@@ -98591,7 +98613,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 6 },
       steps: [{ proj: { speed: 13, range: 8, radius: 0.3, damage: 7, sprite: "orb", color: "#b0bec5", pierce: true } }]
     },
     {
@@ -98601,7 +98622,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.4,
       cd: 16,
-      cost: { stamina: 8 },
       say: "One... Two... JANGO!",
       steps: [{ hit: { shape: "circle", range: 3.5, damage: 2, stun: 1.4, knockback: 0, unblockable: true }, vfx: "ring", color: "#e1bee7" }]
     },
@@ -98612,7 +98632,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.5,
       cd: 16,
-      cost: { stamina: 10 },
       say: "MH5!",
       steps: [{ zone: { range: 3.8, duration: 5, interval: 0.5, damage: 6, element: "poison", status: { poison: 3 }, color: "#8e24aa", atTarget: true, kind: "field" } }]
     },
@@ -98623,7 +98642,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 17, range: 12, radius: 0.3, damage: 11, count: 5, spread: 0.7, sprite: "iceshard", color: "#90a4ae", knockback: 2 } }]
     },
     {
@@ -98633,7 +98651,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 7,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "line", range: 3.2, width: 1.2, damage: 22, knockback: 8, stun: 0.6, heavy: true, guardBreak: true, element: "explosion" }, vfx: "beam", color: "#ffab40" }]
     },
     {
@@ -98643,7 +98660,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.55,
       recover: 0.5,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Shark on Darts!",
       steps: [{ dash: { dist: 10, time: 0.35, iframes: 0.2, hit: { damage: 24, knockback: 7, stun: 0.6, heavy: true, guardBreak: true } } }]
     },
@@ -98654,7 +98670,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2.6, arc: 2.2, offset: 0.3, damage: 20, knockback: 4, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#b0bec5" }]
     },
     {
@@ -98664,7 +98679,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.4,
       cd: 4,
-      cost: { stamina: 6 },
       steps: [{ hit: { shape: "arc", range: 1.5, arc: 1.2, offset: 0.2, damage: 18, knockback: 1, stun: 0.8, status: { bleed: 3 } } }]
     },
     {
@@ -98674,7 +98688,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 8 },
       say: "Rokutoryu!",
       steps: [{ hit: { shape: "circle", range: 2.4, damage: 6, knockback: 2, stun: 0.2, slashing: true, duration: 0.6, interval: 0.1 }, vfx: "ring" }]
     },
@@ -98685,7 +98698,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.3,
       cd: 3,
-      cost: { stamina: 6 },
       steps: [{ proj: { speed: 22, range: 13, radius: 0.3, damage: 13, sprite: "waterdrop", size: 2, element: "water", knockback: 3, status: { wet: 5 } } }]
     },
     {
@@ -98695,7 +98707,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 3,
-      cost: { stamina: 6 },
       steps: [{ hit: { shape: "arc", range: 1.9, arc: 1, offset: 0.2, damage: 16, knockback: 4, stun: 0.6, status: { seastone: 4 }, haki: true } }]
     }
   ]);
@@ -98709,7 +98720,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.2,
       recover: 0.5,
       cd: 10,
-      cost: { stamina: 8 },
       say: "Impact!",
       steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.1, offset: 0.2, damage: 42, knockback: 11, stun: 0.9, heavy: true, guardBreak: true, shake: 0.45, impactFrame: 0.06 }, self: { hurt: 0.07 }, vfx: "ring", color: "#fff59d" }]
     },
@@ -98720,7 +98730,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.8,
       cd: 40,
-      cost: { stamina: 20 },
       say: "Reject!",
       steps: [{ hit: { shape: "arc", range: 1.7, arc: 1, offset: 0.2, damage: 160, knockback: 16, stun: 1.6, heavy: true, guardBreak: true, unblockable: true, shake: 1, impactFrame: 0.14 }, self: { hurt: 0.3 }, vfx: "ring", color: "#ffffff" }]
     },
@@ -98731,7 +98740,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.25,
       recover: 0.35,
       cd: 8,
-      cost: { stamina: 6 },
       steps: [0, 0.12, 0.24].map((t) => ({ at: 0.25 + t, hit: { shape: "arc", range: 3.2, arc: 0.7, offset: 0.3, damage: 7, knockback: 1.5, stun: 0.2, element: "fire", status: { burn: 2 } }, vfx: "ring", color: "#ff7043" }))
     },
     {
@@ -98741,7 +98749,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.15,
       recover: 0.3,
       cd: 6,
-      cost: { stamina: 4 },
       steps: [{ hit: { shape: "arc", range: 3.6, arc: 1, offset: 0.3, damage: 2, knockback: 12, stun: 0.3 }, vfx: "ring", color: "#e0f7fa" }]
     },
     {
@@ -98751,7 +98758,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.2,
       recover: 0.3,
       cd: 14,
-      cost: { stamina: 4 },
       steps: [{ hit: { shape: "circle", range: 4.5, damage: 1, knockback: 0, stun: 1.6, unblockable: true, element: "light" }, fx: { flash: 0.8 }, vfx: "ring", color: "#fffde7" }]
     },
     // --------------------------------------------------------- World Government
@@ -98762,7 +98768,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.5,
       cd: 6,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "line", range: 13, width: 0.7, damage: 30, knockback: 5, stun: 0.5, element: "light", heavy: true, hitShips: true, shake: 0.4 }, vfx: "beam", color: "#fff59d" }]
     },
     {
@@ -98772,7 +98777,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 9,
-      cost: { stamina: 10 },
       say: "Pad Ho...",
       steps: [{ proj: { speed: 16, range: 14, radius: 0.7, damage: 28, sprite: "paw", size: 1.8, knockback: 10, heavy: true, pierce: true, color: "#ffffff" } }]
     }
@@ -103108,7 +103112,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 8 },
       say: "Broken-Fu Art!",
       steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 5, knockback: 1, stun: 0.15, duration: 0.6, interval: 0.12 }, vfx: "ring", color: "#ce93d8" }]
     },
@@ -103119,7 +103122,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.35,
       cd: 10,
-      cost: { stamina: 10 },
       steps: [{ proj: { speed: 13, range: 10, radius: 0.5, damage: 6, sprite: "petal", color: "#ce93d8", status: { root: 2 }, stun: 0.4 } }]
     },
     // Machvise (Ton Ton no Mi)
@@ -103130,7 +103132,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.6,
       cd: 8,
-      cost: { stamina: 12 },
       say: "Jutton Vise!",
       steps: [{ zone: { range: 2.4, duration: 0.3, interval: 0.3, damage: 30, atTarget: true, kind: "meteor", color: "#8d6e63" } }]
     },
@@ -103142,7 +103143,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ dash: { dist: 8, time: 0.4, iframes: 0.4, hit: { damage: 14, knockback: 5, stun: 0.5 } } }]
     },
     {
@@ -103152,7 +103152,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       say: "Nekomimi Punch!",
       steps: [{ hit: { shape: "arc", range: 1.6, arc: 1, offset: 0.2, damage: 16, knockback: 6, stun: 0.5 } }]
     },
@@ -103163,7 +103162,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.5,
       cd: 8,
-      cost: { stamina: 10 },
       say: "NyanNyan Suplex!",
       steps: [{ hit: { shape: "arc", range: 1.5, arc: 1.2, offset: 0.2, damage: 22, knockback: 4, stun: 1, heavy: true, guardBreak: true, shake: 0.35 } }]
     },
@@ -103175,7 +103173,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 8 },
       say: "Punc Bala!",
       steps: [{ proj: { speed: 13, range: 11, radius: 0.4, damage: 8, count: 3, spread: 0.4, sprite: "bomb", explode: { range: 1.8, damage: 14 } } }]
     },
@@ -103186,7 +103183,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 10,
-      cost: { stamina: 10 },
       say: "Jirai Punc!",
       steps: [{ zone: { range: 2.4, duration: 1.2, interval: 0.6, damage: 14, atTarget: true, element: "explosion", kind: "field", color: "#ffab40" } }]
     },
@@ -103197,7 +103193,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "circle", range: 2.6, damage: 20, knockback: 8, stun: 0.5, element: "explosion", shake: 0.3 }, vfx: "ring", color: "#ffab40" }]
     },
     // Trebol (Beta Beta no Mi)
@@ -103208,7 +103203,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.3,
       cd: 7,
-      cost: { stamina: 8 },
       say: "Beta Beta Chain!",
       steps: [{ proj: { speed: 16, range: 11, radius: 0.45, damage: 10, sprite: "string", color: "#90caf9", status: { root: 2.2 }, stun: 0.3 } }]
     },
@@ -103219,7 +103213,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 10 },
       say: "Beto Launcher!",
       steps: [{ proj: { speed: 11, range: 11, radius: 0.5, damage: 8, sprite: "orb", color: "#81d4fa", explode: { range: 2.8, damage: 26 } } }]
     },
@@ -103230,7 +103223,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.5,
       cd: 14,
-      cost: { stamina: 12 },
       steps: [{ zone: { range: 3.2, duration: 4, interval: 0.5, damage: 4, atTarget: true, slow: 0.5, color: "#81d4fa", kind: "field" } }]
     },
     // Diamante (Hira Hira no Mi)
@@ -103241,7 +103233,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 10 },
       say: "Hangetsu Glaive!",
       steps: [{ hit: { shape: "arc", range: 3, arc: 2.6, offset: 0.2, damage: 24, knockback: 5, stun: 0.5, slashing: true }, vfx: "slash", color: "#e0e0e0" }]
     },
@@ -103252,7 +103243,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Vipera Glaive!",
       steps: [{ hit: { shape: "line", range: 5.5, width: 1, damage: 26, knockback: 4, stun: 0.5, slashing: true }, vfx: "beam", color: "#ef5350" }]
     },
@@ -103263,7 +103253,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 10,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "circle", range: 3.4, damage: 16, knockback: 10, stun: 0.5 }, vfx: "ring", color: "#b71c1c" }]
     },
     // Pica (Ishi Ishi no Mi)
@@ -103274,7 +103263,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.75,
       recover: 0.5,
       cd: 7,
-      cost: { stamina: 12 },
       say: "Pulpostone!",
       steps: [{ zone: { range: 2.2, duration: 0.4, interval: 0.4, damage: 30, atTarget: true, kind: "fists", color: "#9e9e9e" } }]
     },
@@ -103285,7 +103273,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.5,
       cd: 11,
-      cost: { stamina: 14 },
       say: "Ishiusu!",
       steps: [{ hit: { shape: "circle", range: 3.6, damage: 24, knockback: 8, stun: 0.7, element: "quake", heavy: true, shake: 0.5 }, vfx: "ring", color: "#9e9e9e" }]
     },
@@ -103297,7 +103284,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.2, offset: 0.3, damage: 30, knockback: 8, stun: 0.7, heavy: true, guardBreak: true, haki: true, shake: 0.4 }, vfx: "ring", color: "#6a1b9a" }]
     },
     // Diez Barrels
@@ -103308,7 +103294,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 20, range: 12, radius: 0.25, damage: 9, count: 4, spread: 0.5, sprite: "bullet" } }]
     },
     // Vinsmoke Niji (Raid Suit: Dengeki Blue)
@@ -103319,7 +103304,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.25,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 10 },
       say: "Henry Blazer!",
       steps: [{ dash: { dist: 10, time: 0.18, iframes: 0.2, hit: { damage: 28, knockback: 6, stun: 0.6, element: "lightning", status: { shock: 1.2 } } } }]
     },
@@ -103330,7 +103314,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 26, range: 12, radius: 0.3, damage: 14, sprite: "thunder", element: "lightning", status: { shock: 1 } } }]
     },
     {
@@ -103340,7 +103323,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 12,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "circle", range: 3.4, damage: 20, knockback: 6, stun: 0.8, element: "lightning", status: { shock: 1.5 } }, vfx: "ring", color: "#64b5f6" }]
     },
     // Koni Boakeno
@@ -103351,7 +103333,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.5,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Yokozuna Bomber!",
       steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 26, knockback: 3, stun: 1, heavy: true, guardBreak: true, shake: 0.4 } }]
     },
@@ -103363,7 +103344,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2, arc: 2, offset: 0.2, damage: 20, knockback: 6, stun: 0.5, heavy: true } }]
     },
     {
@@ -103373,7 +103353,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 11,
-      cost: { stamina: 10 },
       say: "Derorinpa!",
       steps: [{ zone: { range: 3.2, duration: 4, interval: 0.5, damage: 5, atTarget: true, element: "water", status: { wet: 3 }, slow: 0.5, color: "#4fc3f7", kind: "field" } }]
     }
@@ -105075,8 +105054,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     wb_noble_horn: { name: "Celestial Hunting Horn", icon: "\u{1F4EF}", type: "key", price: 0, desc: "A gold hunting horn engraved with the crest of the Celestial Dragons. It sounded the start of the hunt on God Valley." },
     wb_rocks_flag: { name: "Scrap of the Rocks Pirates' Flag", icon: "\u{1F3F4}", type: "key", price: 0, desc: "Sun-bleached black cloth from the crew that nearly toppled the world thirty-six years ago." },
     wb_esperian_violin: { name: "Esperian Violin", icon: "\u{1F3BB}", type: "treasure", price: 3e4, desc: "Made in Esperia, the Land of Instrument Makers, before the mist. Collectors pay a fortune for one." },
-    wb_toroa_red: { name: "Toroa Red", icon: "\u{1F377}", type: "food", heal: 25, stamina: 90, price: 260, buff: { id: "toroa_red", name: "Toroa Red", dur: 90, mods: { damage: 1.06, atkSpeed: 1.06 } }, desc: "The Byron family vintage. Musicians swear it keeps time for them." },
-    wb_kano_buns: { name: "Eight Treasures Buns", icon: "\u{1F95F}", type: "food", heal: 90, stamina: 50, price: 150, desc: "Steamed buns from Kano Country with eight different fillings. A Happo Navy ration." },
+    wb_toroa_red: { name: "Toroa Red", icon: "\u{1F377}", type: "food", heal: 25, price: 260, buff: { id: "toroa_red", name: "Toroa Red", dur: 90, mods: { damage: 1.06, atkSpeed: 1.06 } }, desc: "The Byron family vintage. Musicians swear it keeps time for them." },
+    wb_kano_buns: { name: "Eight Treasures Buns", icon: "\u{1F95F}", type: "food", heal: 90, price: 150, desc: "Steamed buns from Kano Country with eight different fillings. A Happo Navy ration." },
     wb_happo_mantle: { name: "Happo Navy Mantle", icon: "\u{1F9E5}", type: "coat", look: { coat: "#2e7d32" }, bonus: { str: 1, end: 1 }, price: 0, unique: true, desc: "The green mantle of the Happo Navy, given to those who pass the Chinjao Family's trials." },
     wb_gangster_hat: { name: "Gangster's Fedora", icon: "\u{1F3A9}", type: "hat", look: { hat: "cowboy", hatColor: "#263238" }, bonus: { wil: 1 }, price: 2400, desc: "The hat of the Five Families of the West. Wear it and waiters stand up straighter." },
     wb_pinstripe_coat: { name: "Pinstripe Coat", icon: "\u{1F9E5}", type: "coat", look: { coat: "#37474f" }, bonus: { agi: 1 }, price: 5200, desc: "Tailored in Las Camp. The lining has a pocket shaped exactly like a pistol." },
@@ -105136,7 +105115,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.35,
       cd: 4,
-      cost: { stamina: 8 },
       say: "Ramen Beam!",
       steps: [{ proj: { speed: 18, range: 10, radius: 0.28, damage: 8, count: 3, spread: 0.3, sprite: "string", color: "#fff59d", knockback: 2, stun: 0.3 } }]
     },
@@ -105147,7 +105125,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Fire Skate!",
       steps: [{ dash: { dist: 6, time: 0.28, trail: "#ff7043", hit: { damage: 14, knockback: 5, stun: 0.4, element: "fire", status: { burn: 2 } } } }]
     },
@@ -105158,7 +105135,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.3,
       cd: 20,
-      cost: { stamina: 10 },
       say: "Men's Formal Suit!",
       steps: [{ buff: { id: "wb_ramen_suit", name: "Ramen Suit", dur: 10, mods: { defMul: 0.7, damage: 1.15 }, aura: "rgba(255,245,157,0.6)" } }]
     },
@@ -105169,7 +105145,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 6,
-      cost: { stamina: 6 },
       steps: [{ proj: { speed: 20, range: 10, radius: 0.25, damage: 9, sprite: "iceshard", color: "#cfd8dc", slashing: true, status: { poison: 3 } } }]
     },
     // Capone Bege — Shiro Shiro no Mi (castle human)
@@ -105180,7 +105155,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.45,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Open the gun ports!",
       steps: [{ proj: { speed: 13, range: 12, radius: 0.4, damage: 10, count: 3, spread: 0.5, sprite: "cannonball", size: 1.2, explode: { range: 1.8, damage: 16 } } }]
     },
@@ -105191,7 +105165,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.4,
       cd: 12,
-      cost: { stamina: 12 },
       say: "Garrison \u2014 volley fire!",
       steps: [{ zone: { range: 3, duration: 1.6, interval: 0.2, damage: 5, color: "#ffcc80", atTarget: true, kind: "field" } }]
     },
@@ -105202,7 +105175,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.3,
       cd: 5,
-      cost: { stamina: 8 },
       steps: [0, 0.1, 0.2, 0.3, 0.4].map((t) => ({ at: 0.35 + t, proj: { speed: 24, range: 12, radius: 0.2, damage: 5, sprite: "bullet", color: "#ffcc80", jitter: 0.15 } }))
     },
     // Fire Tank officers
@@ -105213,7 +105185,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 4,
-      cost: { stamina: 8 },
       say: "Bang, bang.",
       steps: [{ proj: { speed: 26, range: 13, radius: 0.3, damage: 14, count: 2, spread: 0.18, sprite: "bullet", size: 1.4, knockback: 4, stun: 0.3 } }]
     },
@@ -105224,7 +105195,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.45,
       cd: 7,
-      cost: { stamina: 10 },
       steps: [0, 0.08, 0.16, 0.24, 0.32, 0.4, 0.48, 0.56].map((t) => ({ at: 0.6 + t, proj: { speed: 24, range: 11, radius: 0.22, damage: 5, sprite: "bullet", jitter: 0.3 } }))
     },
     // Five Families bosses
@@ -105235,7 +105205,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [0, 0.15].map((t, i) => ({ at: 0.3 + t, angleOffset: i ? 0.3 : -0.3, hit: { shape: "arc", range: 2, arc: 1.2, offset: 0.2, damage: 9, knockback: 2, stun: 0.25, slashing: true, status: { poison: 2 } }, vfx: "slash", color: "#66bb6a" }))
     },
     {
@@ -105245,7 +105214,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 8 },
       say: "Snake eyes!",
       steps: [{ proj: { speed: 12, range: 9, radius: 0.3, damage: 6, count: 2, spread: 0.4, sprite: "bomb", explode: { range: 1.8, damage: 14 } } }]
     },
@@ -105256,7 +105224,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 8 },
       say: "Let's have some music!",
       steps: [0, 0.1, 0.2, 0.3].map((t) => ({ at: 0.45 + t, proj: { speed: 22, range: 11, radius: 0.2, damage: 5, sprite: "bullet", jitter: 0.2 } }))
     },
@@ -105268,7 +105235,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 8 },
       say: "Net!",
       steps: [{ proj: { speed: 12, range: 8, radius: 0.8, damage: 3, sprite: "string", color: "#bcaaa4", size: 2, stun: 1.6, knockback: 0 } }]
     },
@@ -105279,7 +105245,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.25,
       recover: 0.3,
       cd: 5,
-      cost: { stamina: 8 },
       say: "Fooled you!",
       steps: [{ proj: { speed: 30, range: 12, radius: 0.28, damage: 20, sprite: "bullet", size: 1.3, knockback: 5, stun: 0.5 } }]
     },
@@ -105290,7 +105255,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.45,
       cd: 7,
-      cost: { stamina: 10 },
       steps: [{ dash: { dist: 8, time: 0.3, iframes: 0.15, hit: { damage: 22, knockback: 8, stun: 0.6, heavy: true, guardBreak: true } } }]
     },
     {
@@ -105300,7 +105264,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.2, damage: 16, knockback: 5, stun: 0.5, unblockable: true }, vfx: "ring", color: "#80cbc4" }]
     },
     // Longleg kicks
@@ -105311,7 +105274,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "circle", range: 2.3, damage: 13, knockback: 5, stun: 0.45, heavy: true }, vfx: "ring", color: "#d7ccc8" }]
     },
     {
@@ -105321,7 +105283,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 10 },
       say: "Stomp stomp stomp!",
       steps: [{ hit: { shape: "arc", range: 2.3, arc: 1.3, offset: 0.3, damage: 5, knockback: 1.5, stun: 0.2, duration: 0.6, interval: 0.1 }, vfx: "fist", color: "#ffe0b2" }]
     },
@@ -105334,7 +105295,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.18,
       recover: 0.3,
       cd: 5,
-      cost: { stamina: 14 },
       desc: "The Longleg Tribe's signature: a long, lashing kick that hits everything in a wide arc.",
       steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.2, offset: 0.2, damage: 16, knockback: 4, stun: 0.35 }, vfx: "slash", color: "#ffe0b2" }],
       learn: { mastery: 8, price: 4e3 }
@@ -105348,7 +105308,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 8,
-      cost: { stamina: 22 },
       say: "Bujaogen!",
       desc: "Martial Leg Heel: a kick that drives the Hasshoken's vibration straight through any guard. Sai's favourite.",
       steps: [{ hit: { shape: "arc", range: 2, arc: 1.2, offset: 0.3, damage: 30, knockback: 7, stun: 0.6, unblockable: true, heavy: true }, vfx: "ring", color: "#80cbc4" }],
@@ -105702,7 +105661,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 10 },
       say: "Counter Fox Blow!",
       steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.1, offset: 0.2, damage: 15, knockback: 3, stun: 0.7, status: { bleed: 3 } }, vfx: "slash", color: "#b0bec5" }]
     },
@@ -105713,7 +105671,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 12 },
       say: "Jerry Aurora Flicker Jab!",
       steps: [{ hit: { shape: "arc", range: 2.6, arc: 1.2, offset: 0.3, damage: 4, knockback: 0.8, stun: 0.12, duration: 0.8, interval: 0.08 }, vfx: "fist" }]
     },
@@ -105724,7 +105681,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.45,
       cd: 8,
-      cost: { stamina: 12 },
       say: "Screw Drop Kick!",
       steps: [{ dash: { dist: 6, time: 0.3, iframes: 0.15, hit: { damage: 19, knockback: 7, stun: 0.6, heavy: true } } }]
     },
@@ -105736,7 +105692,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 7,
-      cost: { stamina: 10 },
       say: "GOAAAA!",
       steps: [{ dash: { dist: 9, time: 0.35, iframes: 0.25, hit: { damage: 19, knockback: 8, stun: 0.6, heavy: true } } }]
     },
@@ -105747,7 +105702,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 4, arc: 1.6, offset: 0.3, damage: 7, knockback: 12, stun: 0.4 }, vfx: "ring", color: "#e0f7fa" }]
     },
     {
@@ -105757,7 +105711,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 15, range: 11, radius: 0.3, damage: 7, count: 5, spread: 0.6, sprite: "petal", color: "#8d6e63", knockback: 2 } }]
     },
     // Sorbet Kingdom
@@ -105768,7 +105721,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 8 },
       say: "Guards! FIRE!",
       steps: [{ proj: { speed: 18, range: 12, radius: 0.25, damage: 8, count: 4, spread: 0.5, sprite: "bullet", knockback: 2 } }]
     },
@@ -105779,7 +105731,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 2.8, arc: 2.4, offset: 0.2, damage: 16, knockback: 5, stun: 0.4, slashing: true }, vfx: "slash" }]
     },
     {
@@ -105789,7 +105740,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "line", range: 3.4, width: 0.9, damage: 18, knockback: 6, stun: 0.5, slashing: true }, vfx: "beam", color: "#f8bbd0" }]
     },
     // Briss Kingdom
@@ -105800,7 +105750,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.45,
       cd: 5,
-      cost: { stamina: 10 },
       say: "Snip snip!",
       steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.2, damage: 20, knockback: 2, stun: 1, guardBreak: true, status: { bleed: 2 } }, vfx: "slash", color: "#ff7043" }]
     },
@@ -105812,7 +105761,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 10 },
       steps: [{ proj: { speed: 16, range: 10, radius: 0.3, damage: 7, count: 5, spread: 0.8, sprite: "iceshard", color: "#90a4ae", knockback: 3 } }]
     },
     {
@@ -105822,7 +105770,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "circle", range: 2.2, damage: 5, knockback: 2, stun: 0.2, slashing: true, duration: 0.6, interval: 0.1, status: { bleed: 2 } }, vfx: "ring", color: "#cfd8dc" }]
     },
     {
@@ -105832,7 +105779,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.55,
       recover: 0.5,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 2, arc: 1.4, offset: 0.2, damage: 20, knockback: 6, stun: 0.6, heavy: true, slashing: true, guardBreak: true, status: { bleed: 3 } }, vfx: "slash" }]
     },
     {
@@ -105842,7 +105788,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 20, range: 8, radius: 0.22, damage: 6, count: 6, spread: 0.7, sprite: "bullet", knockback: 2 } }]
     },
     // Centaurea
@@ -105853,7 +105798,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.45,
       cd: 6,
-      cost: { stamina: 12 },
       say: "Kubi-hane!",
       steps: [{ hit: { shape: "line", range: 4, width: 1.2, damage: 26, knockback: 5, stun: 0.5, slashing: true, heavy: true, guardBreak: true }, vfx: "beam", color: "#ffe082" }]
     },
@@ -105864,7 +105808,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.45,
       cd: 7,
-      cost: { stamina: 12 },
       say: "For the crown!",
       steps: [
         { dash: { dist: 7, time: 0.3, iframes: 0.2, hit: { damage: 22, knockback: 6, stun: 0.5, slashing: true } } },
@@ -105879,7 +105822,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.5,
       cd: 5,
-      cost: { stamina: 10 },
       say: "Baku Baku!",
       steps: [{ hit: { shape: "arc", range: 1.9, arc: 1.3, offset: 0.2, damage: 24, knockback: 3, stun: 0.9, heavy: true, guardBreak: true }, vfx: "slash", color: "#b0bec5" }]
     },
@@ -105890,7 +105832,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.45,
       cd: 8,
-      cost: { stamina: 10 },
       say: "Bero Cannon!",
       steps: [{ proj: { speed: 11, range: 12, radius: 0.5, damage: 10, sprite: "cannonball", size: 1.5, explode: { range: 2.4, damage: 24 } } }]
     },
@@ -105902,7 +105843,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 13, range: 9, radius: 0.6, damage: 4, sprite: "string", color: "#bcaaa4", status: { root: 1.8 } } }]
     }
   ];
@@ -105915,11 +105855,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     sb_goayu_feather: { name: "Goayu Feather", icon: "\u{1FAB6}", type: "treasure", price: 4e3, desc: "A flight feather as long as a man, shed by the lord of the Great Tree." },
     sb_st_briss_log: { name: "Departure Log of the St. Briss", icon: "\u{1F4DC}", type: "key", price: 0, unique: true, desc: 'A copy from the Royal Archives of Briss: "Two hundred and ten years ago, the exploration ship St. Briss set sail for the Grand Line..."' },
     sb_tar_coating: { name: "Tar Tooth Coating", icon: "\u{1F9B7}", type: "medicine", heal: 5, price: 250, buff: { id: "sb_tar_teeth", name: "Tar-Coated Teeth", dur: 300, mods: { defMul: 0.95 } }, desc: "The old South Blue custom: a coat of tar keeps your teeth for a lifetime. Grit them and take the hit." },
-    sb_conney_pizza: { name: "Conney's Giant Pizza", icon: "\u{1F355}", type: "food", heal: 260, stamina: 140, price: 900, desc: "Baked by the Queen Dowager of Sorbet. As big as a cart wheel." },
-    sb_strawberry_sherbet: { name: "Strawberry Sherbet", icon: "\u{1F367}", type: "food", heal: 30, stamina: 100, price: 90, desc: "The pride of the Sorbet Kingdom \u2014 and Queen Dowager Conney's favourite." },
+    sb_conney_pizza: { name: "Conney's Giant Pizza", icon: "\u{1F355}", type: "food", heal: 260, price: 900, desc: "Baked by the Queen Dowager of Sorbet. As big as a cart wheel." },
+    sb_strawberry_sherbet: { name: "Strawberry Sherbet", icon: "\u{1F367}", type: "food", heal: 30, price: 90, desc: "The pride of the Sorbet Kingdom \u2014 and Queen Dowager Conney's favourite." },
     sb_scrap_flintlock: { name: "Kid's Scrap Flintlock", icon: "\u{1F52B}", type: "weapon", kind: "gun", power: 1.3, price: 0, unique: true, desc: `Built from Grinder Family scrap by a red-haired boy from Kutsukku Island. "Don't die before I beat you."` },
-    sb_curry_udon: { name: "Curry Udon", icon: "\u{1F35C}", type: "food", heal: 95, stamina: 55, price: 160, desc: "Thick noodles in spicy curry broth. Mind your shirt." },
-    sb_moqueca_stew: { name: "Moqueca Stew", icon: "\u{1F372}", type: "food", heal: 150, stamina: 90, price: 260, buff: { id: "sb_samba", name: "Samba Rhythm", dur: 120, mods: { speedMul: 1.08 } }, desc: "Fish, coconut milk and palm oil \u2014 the heartbeat of the Samba Kingdom." },
+    sb_curry_udon: { name: "Curry Udon", icon: "\u{1F35C}", type: "food", heal: 95, price: 160, desc: "Thick noodles in spicy curry broth. Mind your shirt." },
+    sb_moqueca_stew: { name: "Moqueca Stew", icon: "\u{1F372}", type: "food", heal: 150, price: 260, buff: { id: "sb_samba", name: "Samba Rhythm", dur: 120, mods: { speedMul: 1.08 } }, desc: "Fish, coconut milk and palm oil \u2014 the heartbeat of the Samba Kingdom." },
     sb_roshwan_fur: { name: "Roshwan Fur Coat", icon: "\u{1F9E5}", type: "coat", look: { coat: "#8d6e63" }, bonus: { end: 1, vit: 1 }, price: 7500, desc: "A heavy fur coat stitched with two clinking tankards, the crest of Roshwan." },
     sb_wapometal: { name: "Wapometal Ingot", icon: "\u{1F529}", type: "treasure", price: 22e3, desc: "Shape-memory steel from Wapol's Baku Baku Factory. Scientists pay a fortune for it." },
     sb_liberation_armband: { name: "South Army Armband", icon: "\u{1F397}", type: "hat", look: { hat: "bandana", hatColor: "#b71c1c" }, bonus: { wil: 1, agi: 1 }, price: 0, unique: true, desc: "Given by the Revolutionary Army's South Army to those who fought for Centaurea." }
@@ -109479,11 +109419,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             choices: [
               { text: "Dig for an hour.", do: (c) => {
                 if (!c.quest("p1_toto_well")) c.startQuest("p1_toto_well");
-                if (c.player.stamina < 25) {
-                  c.log("You are too exhausted to dig. Rest first.", "#ff8a80");
-                  return "a";
-                }
-                c.player.stamina -= 25;
                 c.game.env.clock += 1;
                 c.char.flags.p1_totoDig = (c.char.flags.p1_totoDig || 0) + 1;
                 if (c.char.flags.p1_totoDig >= 3) c.emit("questEvent", "p1_toto_dug");
@@ -111110,15 +111045,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   var items4 = {
     eternal_pose_alabasta: { name: "Eternal Pose (Alabasta)", icon: "\u{1F9ED}", type: "pose", target: "alabasta", price: 0, desc: "Sent by Mr. 0 to his agent on Little Garden. Its needle always points to Sandy Island \u2014 the Kingdom of Alabasta \u2014 wherever you are." },
     eternal_pose_nanimonai: { name: "Eternal Pose (Nanimonai Island)", icon: "\u{1F9ED}", type: "pose", target: "nanimonai_island", price: 0, desc: 'A gift from Miss All Sunday: "one stop before Alabasta". There is nothing on Nanimonai Island. Nothing at all.' },
-    p1_whisky: { name: "Whisky Peak Whisky", icon: "\u{1F943}", type: "food", heal: 20, stamina: 90, price: 240, buff: { id: "p1_tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.1, defMul: 1.1 } }, desc: "Aged in cactus barrels. Famous for putting pirates to sleep." },
+    p1_whisky: { name: "Whisky Peak Whisky", icon: "\u{1F943}", type: "food", heal: 20, price: 240, buff: { id: "p1_tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.1, defMul: 1.1 } }, desc: "Aged in cactus barrels. Famous for putting pirates to sleep." },
     p1_giant_ale: { name: "Barrel of Giant's Ale", icon: "\u{1F6E2}", type: "key", price: 0, desc: "Brogy's gift for Dorry. Warriors of Elbaf share a drink before battle." },
     p1_sun_flag: { name: "Sun Pirates' Flag", icon: "\u{1F3F4}", type: "key", price: 0, desc: "A red sun on a black field \u2014 the mark Fisher Tiger's crew painted over their slave brands." },
     p1_noland_page: { name: "Vira Harbour Register (copy)", icon: "\u{1F4DC}", type: "key", price: 0, desc: '"Mont Blanc Noland, explorer of Lvneel, departed June 21, 1120." Proof that the storybook liar really sailed.' },
     p1_sakura_powder: { name: "Dr. Hiriluk's Sakura Powder", icon: "\u{1F338}", type: "treasure", price: 2e4, desc: "The quack doctor's life's work: a powder that turns falling snow the colour of cherry blossoms." },
-    p1_yuba_water: { name: "Toto's Water", icon: "\u{1F4A7}", type: "food", heal: 30, stamina: 40, price: 0, buff: { id: "p1_soaked", name: "Soaked", dur: 120, mods: {} }, desc: "The first water Yuba gave in three years. Drink it, pour it over yourself: while you're soaked, your blows can strike a man made of sand." },
+    p1_yuba_water: { name: "Toto's Water", icon: "\u{1F4A7}", type: "food", heal: 30, price: 0, buff: { id: "p1_soaked", name: "Soaked", dur: 120, mods: {} }, desc: "The first water Yuba gave in three years. Drink it, pour it over yourself: while you're soaked, your blows can strike a man made of sand." },
     p1_gold_ball: { name: "Golden Ball of Shandora", icon: "\u{1F7E1}", type: "medicine", heal: 0, price: 0, buff: { id: "p1_golden_arm", name: "Golden Arm", dur: 45, forceArmament: true, mods: { damage: 1.1 }, aura: "rgba(255,213,79,0.85)" }, desc: "A ball of Shandoran gold to swing on your fist. For 45 seconds your blows strike true \u2014 even through lightning or sand." },
     p1_royal_cape: { name: "Cape of the Royal Guard", icon: "\u{1F9E5}", type: "coat", look: { coat: "#fafafa" }, bonus: { end: 1, wil: 1 }, price: 0, unique: true, desc: "Worn by the Royal Guard of Alabasta. A friend of Alabasta is welcome in any port." },
-    p1_ice_cream: { name: "Kyuka Ice Cream", icon: "\u{1F368}", type: "food", heal: 25, stamina: 50, price: 90, desc: "Forty of these went on Mr. 3's bill." },
+    p1_ice_cream: { name: "Kyuka Ice Cream", icon: "\u{1F368}", type: "food", heal: 25, price: 90, desc: "Forty of these went on Mr. 3's bill." },
     p1_nanohana_perfume: { name: "Nanohana Perfume", icon: "\u{1F33A}", type: "treasure", price: 2500, desc: "Nanohana's famous perfume. Overpowering to anyone who isn't used to it." }
   };
   var trainers4 = {
@@ -111170,7 +111105,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 4,
-      cost: { stamina: 8 },
       say: "Nine Bat!",
       steps: [{ dash: { dist: 4, time: 0.2, hit: { damage: 11, knockback: 4, stun: 0.4 } } }]
     },
@@ -111181,7 +111115,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.45,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.3, offset: 0.3, damage: 18, knockback: 8, stun: 0.6, heavy: true, guardBreak: true, shake: 0.3 } }]
     },
     {
@@ -111191,7 +111124,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Ten-thousand-kilo press!",
       steps: [{ zone: { range: 1.8, duration: 0.3, interval: 0.3, damage: 24, color: "#fff176", atTarget: true, kind: "field", status: { root: 0.8 } } }]
     },
@@ -111203,7 +111135,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.4,
       cd: 16,
-      cost: { stamina: 14 },
       say: "Candle Service Set!",
       steps: [{ zone: { range: 3, duration: 4, interval: 0.5, damage: 4, color: "#fff8e1", atTarget: true, kind: "field", slow: 0.5, status: { root: 0.6 } } }]
     },
@@ -111214,7 +111145,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.3,
       cd: 6,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 16, range: 10, radius: 0.35, damage: 7, sprite: "petal", color: "#e53935", stun: 0.8 } }]
     },
     {
@@ -111224,7 +111154,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.3,
       cd: 12,
-      cost: { stamina: 10 },
       steps: [{ proj: { speed: 14, range: 10, radius: 0.4, damage: 4, sprite: "petal", color: "#1e88e5", status: { despair: 1.5 } } }]
     },
     // Drum Island
@@ -111235,7 +111164,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 10 },
       say: "Baku Baku!",
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.3, offset: 0.3, damage: 22, knockback: 1, stun: 0.9, guardBreak: true } }, { at: 0.55, heal: 25 }]
     },
@@ -111246,7 +111174,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.55,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Bero Cannon!",
       steps: [{ proj: { speed: 13, range: 12, radius: 0.5, damage: 10, sprite: "cannonball", size: 1.4, explode: { range: 2.4, damage: 26 } } }]
     },
@@ -111257,7 +111184,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 6 },
       steps: [{ proj: { speed: 22, range: 13, radius: 0.2, damage: 9, count: 3, spread: 0.2, sprite: "iceshard", color: "#8d6e63" } }]
     },
     {
@@ -111267,7 +111193,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 11, range: 9, radius: 0.5, damage: 8, sprite: "darkorb", color: "#212121", status: { root: 1.2 } } }]
     },
     // Alabasta
@@ -111278,7 +111203,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 1.9, arc: 1.2, offset: 0.2, damage: 20, knockback: 3, stun: 0.4, slashing: true, status: { poison: 5 } }, vfx: "slash", color: "#ffd54f" }]
     },
     {
@@ -111288,7 +111212,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.4,
       cd: 16,
-      cost: { stamina: 20 },
       say: "Desert Girasole!",
       steps: [{ zone: { range: 4, duration: 4, interval: 0.4, damage: 8, element: "sand", color: "#d7b56d", atTarget: true, kind: "storm", pull: 3, slow: 0.4 } }]
     },
@@ -111299,7 +111222,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 12 },
       say: "Atomic Spurt.",
       steps: [{ dash: { dist: 9, time: 0.3, iframes: 0.15, hit: { damage: 30, knockback: 6, stun: 0.5, slashing: true } } }]
     },
@@ -111310,7 +111232,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 3.5,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "line", range: 3.2, width: 0.6, damage: 18, knockback: 3, stun: 0.3, status: { bleed: 3 } }, vfx: "beam", color: "#bdbdbd" }]
     },
     {
@@ -111320,7 +111241,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 14 },
       say: "Spider Urchin!",
       steps: [{ hit: { shape: "circle", range: 2.4, damage: 24, knockback: 6, stun: 0.5, status: { bleed: 4 } }, vfx: "ring", color: "#9e9e9e" }]
     },
@@ -111331,7 +111251,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.6,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.4, offset: 0.3, damage: 30, knockback: 10, stun: 0.8, heavy: true, guardBreak: true, shake: 0.5 } }]
     },
     {
@@ -111341,7 +111260,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 9, range: 11, radius: 0.45, damage: 6, sprite: "bomb", explode: { range: 2.4, damage: 28 } } }]
     },
     {
@@ -111351,7 +111269,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 10 },
       say: "Mogura Banana!",
       steps: [{ dash: { dist: 8, time: 0.35, iframes: 0.3, hit: { damage: 20, knockback: 7, stun: 0.6, heavy: true } } }]
     },
@@ -111362,7 +111279,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 4,
-      cost: { stamina: 6 },
       steps: [{ hit: { shape: "arc", range: 1.9, arc: 1.2, offset: 0.3, damage: 20, knockback: 2, stun: 0.6 } }]
     },
     // Ruluka
@@ -111373,7 +111289,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.35,
       cd: 4,
-      cost: { stamina: 8 },
       say: "That'll cost you!",
       steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 14, knockback: 4, stun: 0.4 } }]
     },
@@ -111385,7 +111300,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.25,
       recover: 0.3,
       cd: 5,
-      cost: { stamina: 10 },
       say: "Spring Hopper!",
       steps: [0, 0.22, 0.44].map((t, i) => ({ at: 0.25 + t, angleOffset: (i - 1) * 0.5, dash: { dist: 5, time: 0.18, hit: { damage: 11, knockback: 4, stun: 0.3 } } }))
     },
@@ -111396,7 +111310,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 9,
-      cost: { stamina: 14 },
       say: "Spring... SNIPER!",
       steps: [{ dash: { dist: 11, time: 0.3, iframes: 0.2, hit: { damage: 34, knockback: 9, stun: 0.7, heavy: true, guardBreak: true } } }]
     },
@@ -111407,7 +111320,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.35,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.8, offset: 0.2, damage: 18, knockback: 3, stun: 0.3, slashing: true, status: { bleed: 3 } }, vfx: "slash" }]
     },
     {
@@ -111417,7 +111329,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 4,
-      cost: { stamina: 6 },
       steps: [{ hit: { shape: "line", range: 2, width: 0.5, damage: 12, knockback: 2, stun: 0.3, status: { poison: 3 } } }]
     },
     // Skypiea
@@ -111428,7 +111339,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.3,
       cd: 5,
-      cost: { stamina: 10 },
       say: "Surprise!",
       steps: [{ proj: { speed: 10, range: 11, radius: 0.45, damage: 6, count: 3, spread: 0.6, sprite: "lightorb", color: "#e1f5fe", explode: { range: 1.8, damage: 16 } } }]
     },
@@ -111439,7 +111349,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.35,
       cd: 4,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "line", range: 3.6, width: 0.7, damage: 20, knockback: 4, stun: 0.3, element: "fire", status: { burn: 3 } }, vfx: "beam", color: "#ff7043" }]
     },
     {
@@ -111449,7 +111358,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "arc", range: 4, arc: 0.9, offset: 0.3, damage: 10, knockback: 2, stun: 0.2, element: "fire", status: { burn: 3 }, duration: 0.6, interval: 0.2 }, vfx: "ring", color: "#ff7043" }]
     },
     {
@@ -111459,7 +111367,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 4,
-      cost: { stamina: 10 },
       say: "Jet Punch!",
       steps: [{ proj: { speed: 26, range: 9, radius: 0.4, damage: 22, sprite: "shockwave", color: "#e0f7fa", knockback: 7, stun: 0.5 } }]
     },
@@ -111470,7 +111377,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 12,
-      cost: { stamina: 14 },
       steps: [{ zone: { range: 3, duration: 5, interval: 0.5, damage: 3, color: "#8d6e63", atTarget: true, kind: "field", slow: 0.6, status: { root: 0.5 } } }]
     },
     {
@@ -111480,7 +111386,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 4,
-      cost: { stamina: 10 },
       say: "Eisen Whip.",
       steps: [{ hit: { shape: "line", range: 7, width: 0.8, damage: 22, knockback: 3, stun: 0.3, slashing: true }, vfx: "beam", color: "#b0bec5" }]
     },
@@ -111491,7 +111396,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.4,
       cd: 14,
-      cost: { stamina: 16 },
       steps: [{ zone: { range: 3.4, duration: 4, interval: 0.5, damage: 7, color: "#90a4ae", atTarget: true, kind: "field", slow: 0.5, status: { bleed: 2 } } }]
     },
     {
@@ -111501,7 +111405,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.6,
       cd: 6,
-      cost: { stamina: 12 },
       say: "Mountain Crush!",
       steps: [{ zone: { range: 2.4, duration: 0.3, interval: 0.3, damage: 30, color: "#eceff1", atTarget: true, kind: "field", status: { bleed: 2 } } }]
     },
@@ -111512,7 +111415,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 6,
-      cost: { stamina: 12 },
       say: "Burn Bazooka!",
       steps: [{ hit: { shape: "line", range: 8, width: 1.4, damage: 28, knockback: 6, stun: 0.4, element: "fire", status: { burn: 3 }, heavy: true }, vfx: "beam", color: "#81d4fa" }]
     },
@@ -111524,7 +111426,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.5,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Gorilla Puncher 13!",
       steps: [{ proj: { speed: 20, range: 8, radius: 0.5, damage: 22, sprite: "gomufist", color: "#8d6e63", knockback: 8, stun: 0.5 } }]
     },
@@ -111535,7 +111436,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ dash: { dist: 7, time: 0.3, hit: { damage: 18, knockback: 7, stun: 0.5 } } }]
     },
     {
@@ -111545,7 +111445,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.6,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "circle", range: 2.6, damage: 24, knockback: 8, stun: 0.7, heavy: true, shake: 0.4 }, vfx: "ring", color: "#8d6e63" }]
     }
   ];
@@ -111857,7 +111756,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 6,
-      cost: { stamina: 10 },
       say: "Shigan... Oren!",
       steps: [0, 0.08, 0.16, 0.24, 0.32].map((t) => ({ at: 0.3 + t, hit: { shape: "arc", range: 1.9, arc: 0.9, offset: 0.2, damage: 9, knockback: 1, stun: 0.25, status: { bleed: 2 } } }))
     },
@@ -111868,7 +111766,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 12 },
       say: "Rankyaku: Gaicho!",
       steps: [{ proj: { speed: 19, range: 13, radius: 0.7, damage: 30, sprite: "airslash", size: 1.8, pierce: true, slashing: true, knockback: 5, stun: 0.4 } }]
     },
@@ -111879,7 +111776,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.45,
       cd: 9,
-      cost: { stamina: 14 },
       say: "Rankyaku: Amanedachi!",
       steps: [{ hit: { shape: "circle", range: 4.2, damage: 9, knockback: 3, stun: 0.25, slashing: true, duration: 0.7, interval: 0.14 }, vfx: "ring", color: "#eceff1" }]
     },
@@ -111890,7 +111786,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.45,
       cd: 8,
-      cost: { stamina: 12 },
       say: "Kirinhou!",
       steps: [{ dash: { dist: 9, time: 0.28, iframes: 0.15, hit: { damage: 32, knockback: 9, stun: 0.6, heavy: true, guardBreak: true } } }]
     },
@@ -111901,7 +111796,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 12 },
       say: "Tekkai Kenpo!",
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.3, offset: 0.3, damage: 30, knockback: 7, stun: 0.5, heavy: true, guardBreak: true } }, { buff: { id: "p2_iron_body", name: "Tekkai", dur: 2.5, mods: { defMul: 0.5 } } }]
     },
@@ -111912,7 +111806,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.25,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2, arc: 1.7, offset: 0.2, damage: 18, knockback: 2, stun: 0.3, slashing: true, status: { bleed: 3 } }, vfx: "slash", color: "#8d6e63" }]
     },
     {
@@ -111922,7 +111815,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Shishi... KEBAB! Yoyoi!",
       steps: [{ dash: { dist: 6, time: 0.25, hit: { damage: 28, knockback: 7, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true } } }]
     },
@@ -111933,7 +111825,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 12,
-      cost: { stamina: 12 },
       steps: [{ proj: { speed: 13, range: 10, radius: 0.5, damage: 10, sprite: "string", color: "#f48fb1", homing: 2, status: { root: 2 } } }, { heal: 40, color: "#f8bbd0" }]
     },
     {
@@ -111943,7 +111834,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 10 },
       say: "Chapapa! Jugan Ken!",
       steps: [{ hit: { shape: "arc", range: 2, arc: 1.2, offset: 0.2, damage: 6, knockback: 1, stun: 0.2, duration: 0.8, interval: 0.1 }, vfx: "fist" }]
     },
@@ -111954,7 +111844,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 10,
-      cost: { stamina: 12 },
       say: "Golden Awa!",
       steps: [{ proj: { speed: 9, range: 10, radius: 0.5, damage: 6, count: 5, spread: 0.9, sprite: "orb", color: "#fff9c4", homing: 2, status: { slowmo: 3 } } }]
     },
@@ -111965,7 +111854,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 8 },
       say: "Ibara Road!",
       steps: [{ hit: { shape: "line", range: 5.5, width: 0.9, damage: 20, knockback: 3, stun: 0.35, status: { bleed: 2 } }, vfx: "beam", color: "#bcaaa4" }]
     },
@@ -111976,7 +111864,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.25,
       recover: 0.2,
       cd: 8,
-      cost: { stamina: 10 },
       steps: [{ teleport: { dist: 8, color: "#90a4ae" } }, { at: 0.4, hit: { shape: "arc", range: 1.9, arc: 1.4, offset: 0.2, damage: 24, knockback: 6, stun: 0.5, heavy: true } }]
     },
     {
@@ -111986,7 +111873,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.5,
       cd: 8,
-      cost: { stamina: 8 },
       say: "Go, Funkfreed!",
       steps: [{ dash: { dist: 7, time: 0.35, hit: { damage: 16, knockback: 8, stun: 0.5, slashing: true } } }]
     },
@@ -111998,7 +111884,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.6,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 3.8, arc: 1.4, offset: 0.4, damage: 36, knockback: 11, stun: 0.8, heavy: true, guardBreak: true, shake: 0.6 }, vfx: "ring", color: "#8d6e63" }]
     },
     {
@@ -112008,7 +111893,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 8,
-      cost: { stamina: 10 },
       say: "GUILTY!",
       steps: [{ zone: { range: 2.4, duration: 0.8, interval: 0.4, damage: 26, color: "#ffd54f", atTarget: true, kind: "thunder" } }]
     },
@@ -112019,7 +111903,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Ramen Kenpo!",
       steps: [{ proj: { speed: 14, range: 10, radius: 0.35, damage: 10, count: 4, spread: 0.6, sprite: "string", color: "#ffe082", status: { root: 1.2 } } }]
     },
@@ -112030,7 +111913,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Rope Action!",
       steps: [{ proj: { speed: 16, range: 10, radius: 0.4, damage: 12, sprite: "string", color: "#d7ccc8", status: { root: 1.8 } } }]
     },
@@ -112041,7 +111923,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 10 },
       say: "Strong Right!",
       steps: [{ proj: { speed: 22, range: 8, radius: 0.6, damage: 28, sprite: "gomufist", knockback: 8, stun: 0.5 } }]
     },
@@ -112053,7 +111934,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 12 },
       say: "Kage Kakumei!",
       steps: [{ hit: { shape: "line", range: 9, width: 1.4, damage: 28, knockback: 5, stun: 0.5, heavy: true }, vfx: "beam", color: "#263238" }]
     },
@@ -112064,7 +111944,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 22,
-      cost: { stamina: 14 },
       say: "Kishishishi! Get him, my zombies!",
       steps: [{ summon: { archetype: "zombie", level: 40, count: 3, name: "Soldier Zombie", duration: 25, look: { top: "#4e342e", bottom: "#3e2723", skin: "#9e9d89", scar: true } } }]
     },
@@ -112075,7 +111954,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.4,
       cd: 12,
-      cost: { stamina: 16 },
       say: "Tsuno-Tokage!",
       steps: [{ zone: { range: 1.8, duration: 0.6, interval: 0.3, damage: 42, color: "#37474f", atTarget: true, kind: "field" } }]
     },
@@ -112086,7 +111964,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.4,
       cd: 14,
-      cost: { stamina: 14 },
       say: "Tokuhollow!",
       steps: [{ proj: { speed: 7, range: 10, radius: 1, damage: 10, sprite: "orb", size: 2.2, color: "#e1bee7", homing: 2.5, explode: { range: 3.2, damage: 40, colors: ["#e1bee7", "#ffffff"] } } }]
     },
@@ -112097,7 +111974,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.2, damage: 26, knockback: 2, stun: 0.7, status: { bleed: 3 } } }]
     },
     {
@@ -112107,7 +111983,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.2,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.4, offset: 0.2, damage: 14, knockback: 1, stun: 0.2, slashing: true, status: { bleed: 3 } }, vfx: "slash", color: "#eceff1" }]
     },
     {
@@ -112117,7 +111992,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 17, range: 11, radius: 0.35, damage: 11, count: 4, spread: 0.5, sprite: "star", color: "#fafafa", slashing: true } }]
     },
     {
@@ -112127,7 +112001,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.6,
       cd: 6,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "arc", range: 4.5, arc: 1.3, offset: 0.5, damage: 44, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, shake: 0.8 }, vfx: "ring", color: "#5d4037" }]
     },
     {
@@ -112137,7 +112010,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 12 },
       say: "Shishi Sonson.",
       steps: [{ dash: { dist: 8, time: 0.18, iframes: 0.2, hit: { damage: 38, knockback: 4, stun: 0.5, slashing: true, status: { bleed: 4 } } } }]
     },
@@ -112149,7 +112021,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.45,
       cd: 7,
-      cost: { stamina: 12 },
       say: "Ashigara Dokkoi!",
       steps: [{ hit: { shape: "arc", range: 2.4, arc: 1, offset: 0.3, damage: 34, knockback: 12, stun: 0.6, heavy: true, guardBreak: true, haki: true }, vfx: "ring", color: "#212121" }]
     },
@@ -112160,7 +112031,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.45,
       cd: 5,
-      cost: { stamina: 10 },
       say: "Fist of LOVE!",
       steps: [{ hit: { shape: "arc", range: 2, arc: 1.1, offset: 0.3, damage: 60, knockback: 14, stun: 1, heavy: true, guardBreak: true, haki: true, shake: 0.7, impactFrame: 0.08 } }]
     },
@@ -112171,7 +112041,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ proj: { speed: 20, range: 14, radius: 0.5, damage: 26, count: 3, spread: 0.5, sprite: "cannonball", size: 1.4, explode: { range: 2, damage: 20 } } }]
     },
     {
@@ -112181,7 +112050,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.5,
       cd: 9,
-      cost: { stamina: 14 },
       say: "Daibutsu!",
       steps: [{ proj: { speed: 13, range: 13, radius: 1.3, damage: 55, sprite: "shockwave", size: 3, pierce: true, color: "#ffd54f", knockback: 14, stun: 0.8, heavy: true } }]
     },
@@ -112192,7 +112060,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.2,
       cd: 60,
-      cost: { stamina: 20 },
       steps: [{ buff: { id: "p2_daibutsu", name: "Great Buddha", dur: 25, mods: { damage: 1.5, defMul: 0.7, scale: 1.6 }, aura: "rgba(255,213,79,0.7)" } }]
     },
     {
@@ -112202,7 +112069,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 7,
-      cost: { stamina: 14 },
       steps: [{ proj: { speed: 21, range: 16, radius: 1.1, damage: 70, sprite: "airslash", size: 3, color: "#212121", pierce: true, slashing: true, knockback: 9, stun: 0.6, haki: true, hitShips: true } }]
     },
     {
@@ -112212,7 +112078,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 10 },
       steps: [{ proj: { speed: 18, range: 12, radius: 0.6, damage: 24, sprite: "paw", size: 1.5, knockback: 9, pierce: true } }]
     },
     // Amazon Lily (Mero Mero no Mi is not a player fruit here: Hancock's moves live in this pack)
@@ -112223,7 +112088,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 12 },
       say: "Slave Arrow!",
       steps: [{ proj: { speed: 18, range: 13, radius: 0.35, damage: 12, count: 7, spread: 0.9, sprite: "petal", color: "#f48fb1", status: { freeze: 1.1 } } }]
     },
@@ -112234,7 +112098,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       say: "Pistol Kiss!",
       steps: [{ proj: { speed: 26, range: 12, radius: 0.35, damage: 22, sprite: "petal", color: "#ec407a", status: { freeze: 0.6 } } }]
     },
@@ -112245,7 +112108,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.5,
       cd: 16,
-      cost: { stamina: 16 },
       say: "Mero Mero... Mellow!",
       steps: [{ hit: { shape: "arc", range: 7, arc: 1.1, offset: 0.2, damage: 20, stun: 0.2, status: { freeze: 2.2 }, unblockable: true }, vfx: "beam", color: "#f06292" }]
     },
@@ -112256,7 +112118,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 10 },
       say: "Perfume Femur!",
       steps: [{ hit: { shape: "arc", range: 2.1, arc: 1.3, offset: 0.3, damage: 30, knockback: 8, stun: 0.5, heavy: true, status: { freeze: 0.8 } }, vfx: "slash", color: "#f8bbd0" }]
     },
@@ -112267,7 +112128,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ dash: { dist: 7, time: 0.25, hit: { damage: 24, knockback: 5, stun: 0.5, status: { poison: 3 } } } }]
     },
     {
@@ -112277,7 +112137,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "circle", range: 2.8, damage: 26, knockback: 1, stun: 0.3, status: { root: 1.8 } }, vfx: "ring", color: "#66bb6a" }]
     },
     // Impel Down
@@ -112288,7 +112147,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 3, arc: 2.2, offset: 0.3, damage: 30, knockback: 6, stun: 0.5, slashing: true }, vfx: "slash", color: "#b0bec5" }]
     },
     {
@@ -112298,7 +112156,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "line", range: 6, width: 0.9, damage: 18, knockback: 3, stun: 0.4, status: { bleed: 2 } }, vfx: "beam", color: "#e53935" }]
     },
     {
@@ -112308,7 +112165,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ dash: { dist: 8, time: 0.3, hit: { damage: 30, knockback: 7, stun: 0.6, heavy: true, status: { bleed: 2 } } } }]
     },
     {
@@ -112318,7 +112174,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 3, arc: 1.5, offset: 0.4, damage: 38, knockback: 10, stun: 0.7, heavy: true, guardBreak: true, shake: 0.5 } }]
     },
     {
@@ -112328,16 +112183,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.3,
       cd: 8,
-      cost: { stamina: 12 },
       say: "Hell Wink!",
       steps: [{ hit: { shape: "arc", range: 5, arc: 0.8, offset: 0.2, damage: 30, knockback: 14, stun: 0.5 }, vfx: "ring", color: "#f8bbd0" }]
     }
   ];
   var items5 = {
     p2_salt: { name: "Purifying Salt", icon: "\u{1F9C2}", type: "material", price: 400, desc: "Stuff it in a zombie's mouth and the stolen shadow inside flies back to its owner. The Thriller Bark Victims' Association swears by it." },
-    p2_takoyaki: { name: "Hachi's Takoyaki", icon: "\u{1F419}", type: "food", heal: 95, stamina: 70, price: 160, desc: "Six-armed service at Takoyaki Hachi, Grove 41. The best takoyaki in Sabaody." },
-    p2_gourmet_platter: { name: "Pucci Gourmet Platter", icon: "\u{1F371}", type: "food", heal: 260, stamina: 130, price: 1500, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: "The Gourmet City's pride. Leaves you Well Fed." },
-    p2_attack_cuisine: { name: "Attack Cuisine", icon: "\u{1F372}", type: "food", heal: 160, stamina: 110, price: 2500, buff: { id: "p2_attack_cuisine", name: "Attack Cuisine", dur: 240, mods: { damage: 1.12, defMul: 0.93 } }, desc: "One of the Kamabakka Kingdom's one hundred Attack Recipes: food that makes you stronger." },
+    p2_takoyaki: { name: "Hachi's Takoyaki", icon: "\u{1F419}", type: "food", heal: 95, price: 160, desc: "Six-armed service at Takoyaki Hachi, Grove 41. The best takoyaki in Sabaody." },
+    p2_gourmet_platter: { name: "Pucci Gourmet Platter", icon: "\u{1F371}", type: "food", heal: 260, price: 1500, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: "The Gourmet City's pride. Leaves you Well Fed." },
+    p2_attack_cuisine: { name: "Attack Cuisine", icon: "\u{1F372}", type: "food", heal: 160, price: 2500, buff: { id: "p2_attack_cuisine", name: "Attack Cuisine", dur: 240, mods: { damage: 1.12, defMul: 0.93 } }, desc: "One of the Kamabakka Kingdom's one hundred Attack Recipes: food that makes you stronger." },
     p2_kuja_bow: { name: "Kuja Snake Bow", icon: "\u{1F3F9}", type: "weapon", kind: "gun", power: 1.45, price: 18e4, grade: "Kuja", desc: "A living snake that stiffens into a bow in a Kuja warrior's hands. It seems to like you." },
     p2_shipwright_mallet: { name: "Galley-La Mallet", icon: "\u{1F528}", type: "weapon", kind: "axe", power: 1.3, price: 3e4, desc: "A shipwright's mallet from Water 7. Galley-La foremen fight off pirates with these." },
     p2_funkfreed: { name: "Funkfreed", icon: "\u{1F418}", type: "weapon", kind: "sword", power: 1.4, price: 0, grade: "Unranked (it ate a Zoan)", unique: true, desc: "Spandam's sword, which ate the Elephant-Elephant Fruit. It trumpets when swung." },
@@ -112346,7 +112200,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     p2_sea_train_pass: { name: "Puffing Tom Pass", icon: "\u{1F682}", type: "key", price: 0, desc: 'A lifetime pass for the sea train that links Water 7, St. Poplar, Pucci and San Faldo. Signed "Iceburg \u2014 Nma."' },
     p2_vegapunk_notes: { name: "Vegapunk's Old Notes", icon: "\u{1F4D3}", type: "key", price: 0, desc: 'Schematics from Karakuri Island: an early design for a cyborg soldier with a mouth laser... "Pacifista".' },
     p2_kuja_salve: { name: "Kuja Herbal Salve", icon: "\u{1F33F}", type: "medicine", heal: 140, price: 600, cure: ["poison", "bleed"], desc: "Amazon Lily's warriors swear by it." },
-    p2_cola_barrel: { name: "Franky's Cola", icon: "\u{1F964}", type: "food", heal: 30, stamina: 160, price: 700, desc: "The fuel of a cyborg. SUUUPER sweet." }
+    p2_cola_barrel: { name: "Franky's Cola", icon: "\u{1F964}", type: "food", heal: 30, price: 700, desc: "The fuel of a cyborg. SUUUPER sweet." }
   };
   var trainers5 = {
     p2_heracles: {
@@ -113171,7 +113025,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           const p = c.player;
           if (p?.d) {
             p.hp = Math.min(p.d.maxHp, p.hp + p.d.maxHp * 0.25);
-            p.stamina = p.d.maxStamina;
           }
         }, next: "a" }
       } })
@@ -116257,7 +116110,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 10 },
       say: "Yabusame!",
       steps: [{ proj: { speed: 22, range: 12, radius: 0.25, damage: 9, count: 5, spread: 0.5, sprite: "waterdrop", element: "water", knockback: 2, status: { wet: 4 } } }]
     },
@@ -116268,7 +116120,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.55,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 12 },
       say: "Umidaiko!",
       steps: [{ hit: { shape: "line", range: 7, width: 1.6, damage: 20, knockback: 7, stun: 0.6, heavy: true, element: "water" }, vfx: "beam", color: "#4fc3f7" }]
     },
@@ -116279,7 +116130,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 18, knockback: 1, stun: 0.7, status: { bleed: 4 } } }]
     },
     {
@@ -116289,7 +116139,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.3,
       cd: 3.5,
-      cost: { stamina: 8 },
       say: "Marked!",
       steps: [{ proj: { speed: 13, range: 14, radius: 0.4, damage: 16, homing: 4, sprite: "iceshard", color: "#b0bec5", slashing: true, knockback: 3 } }]
     },
@@ -116300,7 +116149,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 12 },
       steps: [{ proj: { speed: 11, range: 14, radius: 0.35, damage: 9, count: 5, spread: 1.2, homing: 3, sprite: "orb", color: "#f48fb1" } }]
     },
     {
@@ -116310,7 +116158,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 1.4,
       recover: 0.6,
       cd: 40,
-      cost: { stamina: 20 },
       say: "Fall, Noah! Crush them all!",
       steps: [{ zone: { range: 4, duration: 1.3, interval: 1.2, damage: 60, color: "#8d6e63", atTarget: true, kind: "meteor", element: "explosion" } }]
     },
@@ -116321,7 +116168,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.45,
       cd: 4,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.4, offset: 0.3, damage: 18, knockback: 8, stun: 0.6, heavy: true, guardBreak: true } }]
     },
     {
@@ -116331,7 +116177,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 12 },
       say: "Papara Hammer!",
       steps: [{ hit: { shape: "circle", range: 2.6, damage: 7, knockback: 3, stun: 0.2, duration: 0.8, interval: 0.2 }, vfx: "ring" }]
     },
@@ -116342,7 +116187,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ proj: { speed: 16, range: 9, radius: 0.35, damage: 10, sprite: "string", color: "#90a4ae", stun: 0.6, status: { root: 1.5 } } }]
     },
     {
@@ -116352,7 +116196,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.2,
       recover: 0.1,
       cd: 18,
-      cost: { stamina: 8 },
       steps: [{ buff: { id: "nw_camo", name: "Camouflage", dur: 5, mods: { stealth: 1, evade: 0.35 }, alpha: 0.25 } }]
     },
     {
@@ -116362,7 +116205,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ dash: { dist: 7, time: 0.3, hit: { damage: 16, knockback: 4, stun: 0.4, element: "fire", status: { burn: 2 } } } }]
     },
     {
@@ -116372,7 +116214,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.4,
       cd: 12,
-      cost: { stamina: 12 },
       say: "Daruma Otoshi!",
       steps: [{ zone: { range: 3, duration: 2.5, interval: 0.5, damage: 3, color: "#8d6e63", atTarget: true, kind: "field", slow: 0.4, status: { root: 0.5 } } }]
     },
@@ -116383,7 +116224,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 18, range: 10, radius: 0.25, damage: 8, count: 3, spread: 0.3, sprite: "waterdrop", color: "#e0e0e0", status: { slowmo: 1.5 } } }]
     },
     {
@@ -116393,7 +116233,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.3,
       cd: 14,
-      cost: { stamina: 10 },
       steps: [{ zone: { range: 3.5, duration: 4, interval: 0.5, damage: 2, color: "#212121", kind: "dark", slow: 0.5 } }, { buff: { id: "nw_ink_double", name: "Ink Double", dur: 4, mods: { evade: 0.3 } } }]
     },
     {
@@ -116403,7 +116242,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "circle", range: 2.6, damage: 6, knockback: 1.5, stun: 0.15, slashing: true, duration: 0.7, interval: 0.1, status: { poison: 3 } }, vfx: "ring", color: "#26c6da" }]
     },
     {
@@ -116413,7 +116251,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.4, offset: 0.2, damage: 14, knockback: 2, stun: 0.3, slashing: true, element: "poison", status: { poison: 6 } }, vfx: "slash", color: "#26c6da" }]
     },
     // ---- Punk Hazard
@@ -116424,7 +116261,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 12 },
       say: "Gas Robe!",
       steps: [{ zone: { range: 3, duration: 4, interval: 0.5, damage: 5, element: "poison", status: { poison: 3 }, color: "#b39ddb", atTarget: true, kind: "field" } }]
     },
@@ -116435,7 +116271,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.55,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 12 },
       say: "Gastanet!",
       steps: [{ hit: { shape: "arc", range: 3.2, arc: 1.4, offset: 0.4, damage: 26, knockback: 9, stun: 0.6, element: "explosion", heavy: true }, vfx: "ring", color: "#ffab40" }]
     },
@@ -116446,7 +116281,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 12 },
       say: "Gastille!",
       steps: [{ hit: { shape: "line", range: 11, width: 0.9, damage: 24, knockback: 5, stun: 0.4, element: "fire", status: { burn: 2 } }, vfx: "beam", color: "#ce93d8" }]
     },
@@ -116457,7 +116291,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.4,
       cd: 22,
-      cost: { stamina: 14 },
       say: "Karakuni! Not a breath of air for you!",
       steps: [{ zone: { range: 4.5, duration: 3.5, interval: 0.5, damage: 6, element: "gas", color: "#b2dfdb", kind: "storm", slow: 0.5, status: { slowmo: 0.8 } } }]
     },
@@ -116468,7 +116301,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 1,
       recover: 0.5,
       cd: 20,
-      cost: { stamina: 16 },
       say: "SHINOKUNI!",
       steps: [{ zone: { range: 4, duration: 5, interval: 0.5, damage: 8, element: "poison", status: { poison: 4, slowmo: 0.5 }, color: "#9575cd", atTarget: true, kind: "field" } }]
     },
@@ -116479,7 +116311,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 10 },
       say: "Yuki Rabi!",
       steps: [{ proj: { speed: 14, range: 11, radius: 0.35, damage: 8, count: 5, spread: 0.8, sprite: "star", color: "#ffffff", element: "ice", status: { chill: 3 } } }]
     },
@@ -116490,7 +116321,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 14,
-      cost: { stamina: 12 },
       say: "Kamakura.",
       steps: [{ zone: { range: 1.6, duration: 0.5, interval: 0.4, damage: 10, element: "ice", status: { freeze: 1.6 }, color: "#e3f2fd", atTarget: true, kind: "ice" } }]
     },
@@ -116501,7 +116331,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 12 },
       say: "Fubuki!",
       steps: [{ hit: { shape: "arc", range: 5, arc: 0.9, offset: 0.3, damage: 10, knockback: 1, stun: 0.2, element: "snow", status: { chill: 4 }, duration: 0.8, interval: 0.2 }, vfx: "ring", color: "#ffffff" }]
     },
@@ -116512,7 +116341,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.8, offset: 0.2, damage: 18, knockback: 3, stun: 0.3, slashing: true, element: "ice", status: { chill: 2 } }, vfx: "slash", color: "#e3f2fd" }]
     },
     {
@@ -116522,7 +116350,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.5,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ dash: { dist: 6, time: 0.5, hit: { damage: 12, knockback: 4, stun: 0.4, element: "poison", status: { poison: 4 } } } }]
     },
     {
@@ -116532,7 +116359,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 3.5,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.3, offset: 0.3, damage: 20, knockback: 6, stun: 0.5, heavy: true, haki: true } }]
     },
     {
@@ -116542,7 +116368,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.45,
       cd: 8,
-      cost: { stamina: 12 },
       say: "Demon Bamboo.",
       steps: [{ hit: { shape: "line", range: 4.5, width: 1.2, damage: 30, knockback: 8, stun: 0.8, heavy: true, guardBreak: true, haki: true }, vfx: "beam", color: "#263238" }]
     },
@@ -116553,7 +116378,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 5,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.1, offset: 0.2, damage: 24, knockback: 7, stun: 0.6, guardBreak: true, haki: true } }]
     },
     {
@@ -116563,7 +116387,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ dash: { dist: 8, time: 0.35, hit: { damage: 14, knockback: 6, stun: 0.5 } } }]
     },
     // ---- Raijin / Risky Red
@@ -116574,7 +116397,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.45,
       cd: 4,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 2.6, arc: 1.5, offset: 0.3, damage: 24, knockback: 8, stun: 0.6, heavy: true, guardBreak: true } }]
     },
     {
@@ -116584,7 +116406,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.5,
       cd: 9,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "circle", range: 3.6, damage: 20, knockback: 7, stun: 0.6, heavy: true, shake: 0.4 }, vfx: "ring", color: "#ffd54f" }]
     },
     {
@@ -116594,7 +116415,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 3,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.6, offset: 0.2, damage: 18, knockback: 3, stun: 0.3, slashing: true }, vfx: "slash", color: "#d4a373" }]
     },
     {
@@ -116604,7 +116424,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.35,
       cd: 7,
-      cost: { stamina: 10 },
       say: "The odds say... this nail finds your heart.",
       steps: [{ proj: { speed: 18, range: 12, radius: 0.3, damage: 10, homing: 2, sprite: "string", color: "#d4a373", stun: 0.4, status: { bleed: 4, root: 1 } } }]
     },
@@ -116615,7 +116434,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.2,
       cd: 18,
-      cost: { stamina: 10 },
       say: "Straw Man.",
       steps: [{ buff: { id: "nw_straw_man", name: "Straw Effigy", dur: 6, mods: { defMul: 0.4 }, aura: "rgba(212,163,115,0.7)" } }]
     },
@@ -116627,7 +116445,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.25,
       recover: 0.3,
       cd: 3,
-      cost: { stamina: 8 },
       say: "Tamaito.",
       steps: [{ proj: { speed: 26, range: 13, radius: 0.2, damage: 10, count: 3, spread: 0.25, sprite: "string", color: "#f8bbd0", pierce: true } }]
     },
@@ -116638,7 +116455,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 12 },
       say: "Fulbright!",
       steps: [{ zone: { range: 2.2, duration: 0.5, interval: 0.45, damage: 28, color: "#f48fb1", atTarget: true, kind: "cage", element: "string", status: { bleed: 3 } } }]
     },
@@ -116649,7 +116465,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 1.2,
       recover: 0.6,
       cd: 35,
-      cost: { stamina: 20 },
       say: "Sixteen Holy Bullets... God Thread!",
       steps: [{ proj: { speed: 20, range: 14, radius: 0.35, damage: 16, count: 8, spread: 1.4, sprite: "string", color: "#ff80ab", pierce: true, heavy: true, knockback: 4 } }]
     },
@@ -116660,7 +116475,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 25,
-      cost: { stamina: 10 },
       steps: [{ fx: { impact: 0.1, ring: 8, color: "#000000", shake: 0.5 } }, { hit: { shape: "circle", range: 8, damage: 8, knockback: 3, stun: 0.9, unblockable: true, element: "haki" }, vfx: "ring", color: "#212121" }]
     },
     {
@@ -116670,7 +116484,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 1,
       recover: 0.5,
       cd: 12,
-      cost: { stamina: 14 },
       steps: [{ zone: { range: 3, duration: 0.4, interval: 0.35, damage: 40, color: "#9e9e9e", atTarget: true, kind: "meteor" } }]
     },
     {
@@ -116680,7 +116493,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.45,
       cd: 7,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "line", range: 9, width: 1.4, damage: 24, knockback: 6, stun: 0.6, heavy: true }, vfx: "beam", color: "#8d6e63" }]
     },
     {
@@ -116690,7 +116502,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ proj: { speed: 18, range: 11, radius: 0.3, damage: 12, count: 3, spread: 0.4, sprite: "airslash", color: "#cfd8dc", slashing: true } }]
     },
     {
@@ -116700,7 +116511,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.2,
       recover: 0.2,
       cd: 16,
-      cost: { stamina: 8 },
       steps: [{ buff: { id: "nw_steel_cape", name: "Steel Cape", dur: 4, mods: { defMul: 0.35 }, aura: "rgba(176,190,197,0.8)" } }]
     },
     {
@@ -116710,7 +116520,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.3,
       cd: 3.5,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2.8, arc: 1.6, offset: 0.2, damage: 22, knockback: 4, stun: 0.4, slashing: true }, vfx: "slash" }]
     },
     {
@@ -116720,7 +116529,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 7,
-      cost: { stamina: 10 },
       say: "Nee, nee! Beta Beta Chain!",
       steps: [{ proj: { speed: 14, range: 10, radius: 0.5, damage: 8, sprite: "poison", color: "#c5e1a5", element: "swamp", status: { root: 2.2 } } }]
     },
@@ -116731,7 +116539,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.4,
       cd: 11,
-      cost: { stamina: 12 },
       steps: [{ zone: { range: 3, duration: 2, interval: 0.4, damage: 12, element: "fire", status: { burn: 3 }, color: "#ff7043", atTarget: true, kind: "field" } }]
     },
     {
@@ -116741,7 +116548,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.35,
       cd: 7,
-      cost: { stamina: 8 },
       say: "Become a toy!",
       steps: [{ hit: { shape: "arc", range: 1.5, arc: 1.3, offset: 0.2, damage: 4, stun: 0.3, knockback: 0, unblockable: true, onHit: toyTouch } }]
     },
@@ -116752,7 +116558,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 10 },
       steps: [{ proj: { speed: 12, range: 10, radius: 0.3, damage: 6, count: 4, spread: 0.8, homing: 2, sprite: "orb", color: "#212121", status: { slowmo: 1 } } }]
     },
     {
@@ -116762,7 +116567,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ dash: { dist: 8, time: 0.4, iframes: 0.4, hit: { damage: 14, knockback: 5, stun: 0.4 } } }]
     },
     {
@@ -116772,7 +116576,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 3.5,
-      cost: { stamina: 8 },
       say: "G!",
       steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 16, knockback: 8, stun: 0.5 } }]
     },
@@ -116783,7 +116586,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.25,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ dash: { dist: 6, time: 0.25, hit: { damage: 14, knockback: 3, stun: 0.3, status: { bleed: 3 } } } }]
     },
     {
@@ -116793,7 +116595,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.45,
       cd: 7,
-      cost: { stamina: 12 },
       say: "Drill Head!",
       steps: [{ dash: { dist: 7, time: 0.35, hit: { damage: 22, knockback: 8, stun: 0.6, heavy: true, guardBreak: true } } }]
     },
@@ -116804,7 +116605,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.55,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 10 },
       say: "Destruction Cannon!",
       steps: [{ proj: { speed: 20, range: 9, radius: 0.6, damage: 22, sprite: "shockwave", color: "#ffab40", knockback: 9, heavy: true } }]
     },
@@ -116815,7 +116615,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.4,
       cd: 4,
-      cost: { stamina: 8 },
       say: "Spring Snipe!",
       steps: [{ dash: { dist: 9, time: 0.3, hit: { damage: 16, knockback: 6, stun: 0.4 } } }]
     },
@@ -116827,7 +116626,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.45,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 3.2, arc: 2, offset: 0.3, damage: 28, knockback: 10, stun: 0.7, heavy: true, guardBreak: true } }]
     },
     {
@@ -116837,7 +116635,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.5,
       cd: 9,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "circle", range: 4, damage: 30, knockback: 8, stun: 0.8, heavy: true, shake: 0.5 }, vfx: "ring", color: "#8d6e63" }]
     },
     {
@@ -116847,7 +116644,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 8,
-      cost: { stamina: 12 },
       steps: [{ dash: { dist: 9, time: 0.4, hit: { damage: 32, knockback: 10, stun: 0.9, heavy: true, guardBreak: true } } }]
     },
     {
@@ -116857,7 +116653,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 5,
-      cost: { stamina: 10 },
       steps: [{ dash: { dist: 7, time: 0.3, hit: { damage: 18, knockback: 7, stun: 0.5 } } }]
     },
     {
@@ -116867,7 +116662,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2, arc: 1.2, offset: 0.2, damage: 14, knockback: 5, stun: 0.3 } }]
     },
     // ---- Totto Land
@@ -116878,7 +116672,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.5,
       cd: 22,
-      cost: { stamina: 12 },
       say: "LIFE... OR TREATS?!",
       steps: [{ hit: { shape: "circle", range: 6, damage: 14, knockback: 1, stun: 1.2, unblockable: true, element: "dark", status: { despair: 2.5 } }, vfx: "ring", color: "#7e57c2" }]
     },
@@ -116889,7 +116682,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.45,
       cd: 8,
-      cost: { stamina: 12 },
       say: "Prometheus!",
       steps: [{ proj: { speed: 13, range: 13, radius: 1.2, damage: 24, size: 2, sprite: "fireball", element: "fire", status: { burn: 3 }, explode: { range: 3, damage: 28 } } }]
     },
@@ -116900,7 +116692,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.45,
       cd: 10,
-      cost: { stamina: 12 },
       say: "Zeus! Raitei!",
       steps: [{ zone: { range: 2.6, duration: 0.8, interval: 0.7, damage: 45, element: "lightning", status: { shock: 1.5 }, color: "#fff176", atTarget: true, kind: "thunder" } }]
     },
@@ -116911,7 +116702,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 1.1,
       recover: 0.55,
       cd: 16,
-      cost: { stamina: 16 },
       say: "Napoleon! IKOKU!",
       steps: [{ hit: { shape: "line", range: 12, width: 2.2, damage: 50, knockback: 10, stun: 0.9, heavy: true, slashing: true, guardBreak: true, shake: 0.6 }, vfx: "beam", color: "#ffd54f" }]
     },
@@ -116922,7 +116712,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 1.6,
       recover: 0.7,
       cd: 40,
-      cost: { stamina: 20 },
       say: "MASER HO!!",
       steps: [{ hit: { shape: "line", range: 14, width: 3, damage: 70, knockback: 12, stun: 1, heavy: true, element: "light", shake: 0.8, impactFrame: 0.1 }, vfx: "beam", color: "#fff59d" }]
     },
@@ -116933,7 +116722,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "line", range: 4, width: 1, damage: 22, knockback: 5, stun: 0.5, slashing: true }, vfx: "beam", color: "#fff8e1" }]
     },
     {
@@ -116943,7 +116731,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.25,
       recover: 0.3,
       cd: 3,
-      cost: { stamina: 6 },
       steps: [{ proj: { speed: 34, range: 16, radius: 0.18, damage: 14, sprite: "bullet", color: "#ec407a", knockback: 2 } }]
     },
     {
@@ -116953,7 +116740,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.55,
       recover: 0.45,
       cd: 9,
-      cost: { stamina: 12 },
       say: "Buto Mochi!",
       steps: [{ hit: { shape: "arc", range: 3, arc: 1.2, offset: 0.3, damage: 30, knockback: 11, stun: 0.8, heavy: true, guardBreak: true, haki: true }, vfx: "ring", color: "#3e2723" }]
     },
@@ -116964,7 +116750,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 3,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "arc", range: 2.6, arc: 1.8, offset: 0.2, damage: 20, knockback: 4, stun: 0.4, slashing: true }, vfx: "slash", color: "#d7ccc8" }]
     },
     {
@@ -116974,7 +116759,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.45,
       cd: 9,
-      cost: { stamina: 12 },
       say: "Hard Biscuit!",
       steps: [{ zone: { range: 2, duration: 0.4, interval: 0.35, damage: 32, color: "#d7ccc8", atTarget: true, kind: "fists", status: { root: 1.5 } } }]
     },
@@ -116985,7 +116769,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "circle", range: 2.8, damage: 8, knockback: 2, stun: 0.2, slashing: true, duration: 0.9, interval: 0.15 }, vfx: "ring", color: "#d7ccc8" }]
     },
     {
@@ -116995,7 +116778,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.4,
       cd: 24,
-      cost: { stamina: 14 },
       say: "Biscuit Soldiers!",
       steps: [{ summon: { archetype: "brute", level: 60, count: 2, name: "Biscuit Soldier", hpMul: 0.7, duration: 40, color: "#d7ccc8", look: { top: "#d7ccc8", bottom: "#bcaaa4", skin: "#d7ccc8", hat: "horns", hatColor: "#a1887f" } } }]
     },
@@ -117006,7 +116788,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.4,
       cd: 30,
-      cost: { stamina: 14 },
       say: "Children! Homies! Get them!",
       steps: [{ summon: { archetype: "nw_chess_soldier", level: 68, count: 3, name: "Chess Peacekeeper", duration: 35, color: "#fafafa" } }]
     },
@@ -117017,7 +116798,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.35,
       cd: 6,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.2, offset: 0.2, damage: 18, knockback: 1, stun: 0.6, status: { dry: 4 } } }]
     },
     {
@@ -117027,7 +116807,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.3,
       cd: 5,
-      cost: { stamina: 8 },
       steps: [{ hit: { shape: "line", range: 5, width: 1, damage: 20, knockback: 3, stun: 0.3, slashing: true, element: "water" }, vfx: "beam", color: "#ffb74d" }]
     },
     // ---- Sphinx
@@ -117038,7 +116817,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.55,
       recover: 0.45,
       cd: 4,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "arc", range: 3.4, arc: 1.8, offset: 0.3, damage: 30, knockback: 9, stun: 0.7, heavy: true, slashing: true } }]
     },
     {
@@ -117048,7 +116826,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "circle", range: 3.6, damage: 10, knockback: 4, stun: 0.2, slashing: true, duration: 0.8, interval: 0.2 }, vfx: "ring" }]
     },
     {
@@ -117058,7 +116835,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 9,
-      cost: { stamina: 12 },
       say: "Oyaji's treasure is MINE!",
       steps: [{ dash: { dist: 10, time: 0.4, hit: { damage: 30, knockback: 10, stun: 0.8, heavy: true, guardBreak: true } } }]
     }
@@ -117067,9 +116843,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     nw_raijin_umbrella: { name: "Raijin Umbrella", icon: "\u2602", type: "key", price: 9e3, desc: "A rubber-lined umbrella from Kasa's stand on Raijin Island. Carry it and the island's lightning slides away from you." },
     nw_bepo_vivre_card: { name: "Heart Pirates' Vivre Card", icon: "\u{1F4C3}", type: "pose", target: "zou", price: 0, unique: true, desc: "Trafalgar Law's gift. It crawls toward the Heart Pirates, waiting on Zou \u2014 the phantom island on an elephant's back that no Log Pose can find." },
     nw_tea_invitation: { name: "Tea Party Invitation", icon: "\u{1F48C}", type: "key", price: 0, unique: true, desc: "An invitation to Big Mom's tea party at the Whole Cake Chateau. Refusing one is said to be fatal." },
-    nw_doughnut: { name: "Totto Land Doughnut", icon: "\u{1F369}", type: "food", heal: 120, stamina: 90, price: 400, desc: "Charlotte Katakuri's favourite. Best eaten in private." },
-    nw_chocolate: { name: "Chocolat Town Chocolate", icon: "\u{1F36B}", type: "food", heal: 80, stamina: 60, price: 250, desc: "From Cacao Island, where even the fountains flow with chocolate." },
-    nw_chiffon_cake: { name: "Chiffon Cake", icon: "\u{1F370}", type: "food", heal: 260, stamina: 150, price: 2400, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: "Baked by Charlotte Chiffon: a cake good enough to calm an Emperor's hunger pangs." },
+    nw_doughnut: { name: "Totto Land Doughnut", icon: "\u{1F369}", type: "food", heal: 120, price: 400, desc: "Charlotte Katakuri's favourite. Best eaten in private." },
+    nw_chocolate: { name: "Chocolat Town Chocolate", icon: "\u{1F36B}", type: "food", heal: 80, price: 250, desc: "From Cacao Island, where even the fountains flow with chocolate." },
+    nw_chiffon_cake: { name: "Chiffon Cake", icon: "\u{1F370}", type: "food", heal: 260, price: 2400, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: "Baked by Charlotte Chiffon: a cake good enough to calm an Emperor's hunger pangs." },
     nw_healing_dandelion: { name: "Healing Dandelion", icon: "\u{1F33C}", type: "medicine", heal: 600, price: 0, cure: ["bleed", "poison", "burn", "dry"], desc: "Princess Mansherry's Chiyu Chiyu power, stored in a dandelion seed head. Mends any wound at once." }
   };
   var stock6 = {
@@ -121823,7 +121599,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.6,
       cd: 14,
-      cost: { stamina: 20 },
       say: "Ragnaraku!",
       steps: [{ hit: { shape: "circle", range: 5.5, damage: 90, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, impactFrame: true, shake: 1.2 }, vfx: "ring", color: "#b39ddb" }]
     },
@@ -121834,7 +121609,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.6,
       cd: 20,
-      cost: { stamina: 24 },
       say: "Hakai!",
       steps: [{ hit: { shape: "arc", range: 3.2, arc: 1.4, offset: 0.4, damage: 120, knockback: 18, stun: 1.4, heavy: true, unblockable: true, haki: true, impactFrame: true, shake: 1.2 }, vfx: "ring", color: "#000000" }]
     },
@@ -121845,7 +121619,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.5,
       cd: 18,
-      cost: { stamina: 22 },
       steps: [{ zone: { range: 5, duration: 3, interval: 0.3, damage: 14, color: "#90caf9", kind: "storm", pull: 4, atTarget: true } }]
     },
     {
@@ -121855,7 +121628,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.5,
       cd: 16,
-      cost: { stamina: 26 },
       say: "Kaen Daiko!",
       steps: [{ hit: { shape: "line", range: 13, width: 3, damage: 75, knockback: 10, stun: 0.8, element: "fire", status: { burn: 4 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff5722" }]
     },
@@ -121867,7 +121639,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 16 },
       say: "Karyudon!",
       steps: [{ dash: { dist: 9, time: 0.3, iframes: 0.2, air: true, trail: "#ff7043", hit: { damage: 48, knockback: 9, stun: 0.7, element: "fire", status: { burn: 3 }, heavy: true } } }]
     },
@@ -121878,7 +121649,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 10,
-      cost: { stamina: 18 },
       steps: [{ hit: { shape: "circle", range: 3.5, damage: 55, knockback: 12, stun: 1, element: "fire", heavy: true, guardBreak: true, shake: 0.6 }, vfx: "ring", color: "#ff7043" }]
     },
     {
@@ -121888,7 +121658,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 14 },
       steps: [{ hit: { shape: "line", range: 7, width: 1.4, damage: 42, knockback: 6, stun: 0.5, slashing: true, element: "fire" }, vfx: "beam", color: "#ffab40" }]
     },
     // Queen
@@ -121899,7 +121668,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 16 },
       say: "Black Coffee!",
       steps: [{ hit: { shape: "line", range: 12, width: 1.2, damage: 50, knockback: 7, stun: 0.6, element: "light", heavy: true }, vfx: "beam", color: "#8d6e63" }]
     },
@@ -121910,7 +121678,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 9,
-      cost: { stamina: 18 },
       steps: [{ dash: { dist: 8, time: 0.35, hit: { damage: 58, knockback: 12, stun: 0.9, heavy: true, guardBreak: true } } }]
     },
     {
@@ -121920,7 +121687,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 14,
-      cost: { stamina: 14 },
       steps: [{ proj: { speed: 14, range: 11, radius: 0.4, damage: 18, count: 3, spread: 0.5, sprite: "iceshard", color: "#b3e5fc", element: "ice", status: { freeze: 1.2, poison: 3 } } }]
     },
     // Jack
@@ -121931,7 +121697,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.55,
       recover: 0.5,
       cd: 7,
-      cost: { stamina: 16 },
       steps: [{ dash: { dist: 10, time: 0.4, hit: { damage: 52, knockback: 14, stun: 0.9, heavy: true, guardBreak: true } } }]
     },
     {
@@ -121941,7 +121706,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.7,
       recover: 0.5,
       cd: 10,
-      cost: { stamina: 18 },
       steps: [{ hit: { shape: "circle", range: 4.5, damage: 46, knockback: 10, stun: 0.8, heavy: true, shake: 0.8 }, vfx: "ring", color: "#a1887f" }]
     },
     // Tobi Roppo
@@ -121952,7 +121716,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 6,
-      cost: { stamina: 12 },
       steps: [0, 0.08, 0.16, 0.24, 0.32].map((t) => ({ at: 0.3 + t, hit: { shape: "arc", range: 1.8, arc: 0.8, offset: 0.2, damage: 9, knockback: 1, stun: 0.2, status: { bleed: 2 } } }))
     },
     {
@@ -121962,7 +121725,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 12,
-      cost: { stamina: 14 },
       steps: [{ proj: { speed: 13, range: 10, radius: 0.5, damage: 12, sprite: "orb", color: "#f8bbd0", status: { root: 2.5 }, homing: 2 } }]
     },
     {
@@ -121972,7 +121734,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 9,
-      cost: { stamina: 16 },
       steps: [{ dash: { dist: 8, time: 0.35, hit: { damage: 44, knockback: 12, stun: 0.8, heavy: true, guardBreak: true } } }]
     },
     {
@@ -121982,7 +121743,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 7,
-      cost: { stamina: 14 },
       say: "Ul-Zugan!",
       steps: [{ dash: { dist: 7, time: 0.3, hit: { damage: 40, knockback: 10, stun: 1, heavy: true } } }]
     },
@@ -121993,7 +121753,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 6,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.2, offset: 0.3, damage: 34, knockback: 4, stun: 0.6, status: { bleed: 3 } } }]
     },
     // Wano tyrants
@@ -122004,7 +121763,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "arc", range: 4, arc: 0.9, offset: 0.3, damage: 30, knockback: 4, stun: 0.4, element: "fire", status: { burn: 3 } }, vfx: "ring", color: "#ff7043" }]
     },
     {
@@ -122014,7 +121772,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "arc", range: 5, arc: 1.1, offset: 0.3, damage: 22, knockback: 16, stun: 0.6 }, vfx: "ring", color: "#e0f7fa" }]
     },
     {
@@ -122024,7 +121781,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.5,
       cd: 7,
-      cost: { stamina: 14 },
       steps: [0, 0.1, 0.2, 0.3].map((t, i) => ({ at: 0.5 + t, angleOffset: (i % 2 ? 1 : -1) * 0.4, hit: { shape: "arc", range: 3.2, arc: 0.7, offset: 0.3, damage: 14, knockback: 3, stun: 0.3, status: { poison: 2 } } }))
     },
     {
@@ -122034,7 +121790,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.4,
       cd: 11,
-      cost: { stamina: 12 },
       steps: [{ pull: { range: 7, strength: 10, stun: 0.8 } }]
     },
     {
@@ -122044,7 +121799,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.3,
       recover: 0.3,
       cd: 4,
-      cost: { stamina: 8 },
       steps: [{ proj: { speed: 20, range: 10, radius: 0.25, damage: 11, count: 3, spread: 0.35, sprite: "iceshard", color: "#90a4ae", slashing: true } }]
     },
     // Kozuki
@@ -122056,7 +121810,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.35,
       cd: 7,
-      cost: { stamina: 14 },
       steps: [{ hit: { shape: "arc", range: 2.6, arc: 1.8, offset: 0.3, damage: 34, knockback: 5, stun: 0.5, slashing: true, element: "fire" }, vfx: "slash", color: "#ff8a65" }]
     },
     {
@@ -122066,7 +121819,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 16 },
       steps: [{ proj: { speed: 22, range: 12, radius: 0.7, damage: 46, sprite: "shockwave", color: "#e1f5fe", pierce: true, knockback: 8, stun: 0.6, heavy: true } }]
     },
     {
@@ -122076,7 +121828,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.45,
       recover: 0.4,
       cd: 10,
-      cost: { stamina: 18 },
       steps: [{ dash: { dist: 7, time: 0.3, hit: { damage: 44, knockback: 8, stun: 0.6, element: "ice", status: { freeze: 1.5 }, heavy: true } } }]
     },
     // Egghead
@@ -122087,7 +121838,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 12,
-      cost: { stamina: 14 },
       steps: [{ proj: { speed: 18, range: 12, radius: 0.35, damage: 16, count: 5, spread: 0.6, sprite: "orb", color: "#f06292", status: { freeze: 1.2 } } }]
     },
     // Elbaph
@@ -122098,7 +121848,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 10,
-      cost: { stamina: 16 },
       steps: [{ zone: { range: 3.5, duration: 3, interval: 0.4, damage: 14, element: "fire", status: { burn: 2 }, color: "#ff8a65", kind: "field", atTarget: true } }]
     },
     {
@@ -122108,7 +121857,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.5,
       cd: 16,
-      cost: { stamina: 20 },
       steps: [{ zone: { range: 4.5, duration: 4, interval: 0.5, damage: 10, color: "#4a148c", kind: "dark", pull: 3, slow: 0.4, atTarget: true } }]
     },
     // summons: every field is given because game.summon passes unset ones on as undefined
@@ -122119,7 +121867,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.5,
       cd: 28,
-      cost: { stamina: 20 },
       say: "Wake up, my nightmares!",
       steps: [{
         summon: { archetype: "nw2_mma", level: 70, count: 1, name: "MMA \u2014 Nightmare", look: MMA_LOOK, moves: ["brawl_tackle", "nw2_nightmare_roar"], hpMul: 1.6, duration: 25, color: "#7e57c2" },
@@ -122134,7 +121881,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 30,
-      cost: { stamina: 14 },
       say: "Gifters! Eat them!",
       steps: [{
         summon: { archetype: "nw2_gifter", level: 52, count: 2, name: "Gifter", look: GIFTER_LOOK, moves: ["brawl_tackle", "brawl_headbutt"], hpMul: 1.2, duration: 30, color: "#a1887f" },
@@ -122148,7 +121894,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 10,
-      cost: { stamina: 10 },
       steps: [{ hit: { shape: "circle", range: 4, damage: 20, knockback: 8, stun: 0.7 }, vfx: "ring", color: "#7e57c2" }]
     },
     {
@@ -122158,7 +121903,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.4,
       cd: 9,
-      cost: { stamina: 16 },
       steps: [{ proj: { speed: 20, range: 13, radius: 0.8, damage: 60, sprite: "thunder", size: 2, element: "lightning", pierce: true, status: { shock: 1.2 }, knockback: 8, heavy: true } }]
     },
     {
@@ -122168,7 +121912,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.9,
       recover: 0.5,
       cd: 15,
-      cost: { stamina: 24 },
       steps: [{ zone: { range: 3.5, duration: 1, interval: 0.45, damage: 55, element: "lightning", status: { shock: 1.5 }, color: "#fff176", atTarget: true, kind: "thunder" } }]
     },
     {
@@ -122178,7 +121921,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.8,
       recover: 0.5,
       cd: 18,
-      cost: { stamina: 24 },
       steps: [{ hit: { shape: "circle", range: 5, damage: 60, knockback: 6, stun: 0.5, element: "ice", status: { freeze: 2 }, heavy: true }, vfx: "ring", color: "#e1f5fe" }]
     },
     // Blackbeard Pirates
@@ -122189,7 +121931,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.25,
       recover: 0.4,
       cd: 8,
-      cost: { stamina: 14 },
       steps: [{ teleport: { dist: 6, color: "#b0bec5" } }, { at: 0.35, hit: { shape: "arc", range: 2, arc: 1, offset: 0.2, damage: 48, knockback: 5, stun: 0.6, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#b0bec5" }]
     },
     {
@@ -122199,7 +121940,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.6,
       recover: 0.5,
       cd: 8,
-      cost: { stamina: 16 },
       steps: [{ hit: { shape: "arc", range: 3.4, arc: 1.4, offset: 0.4, damage: 50, knockback: 12, stun: 0.8, heavy: true, guardBreak: true, shake: 0.6 }, vfx: "ring", color: "#8d6e63" }]
     },
     {
@@ -122209,7 +121949,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.4,
       recover: 0.3,
       cd: 12,
-      cost: { stamina: 12 },
       steps: [{ teleport: { dist: 7, color: "#ce93d8" } }, { at: 0.3, hit: { shape: "circle", range: 2.5, damage: 20, knockback: 3, stun: 1.2 }, vfx: "ring", color: "#ce93d8" }]
     },
     {
@@ -122219,7 +121958,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.5,
       cd: 8,
-      cost: { stamina: 16 },
       say: "Galleon Lariat!",
       steps: [{ dash: { dist: 8, time: 0.35, hit: { damage: 46, knockback: 12, stun: 0.8, heavy: true } } }]
     },
@@ -122230,7 +121968,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.5,
       recover: 0.6,
       cd: 12,
-      cost: { stamina: 18 },
       steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 60, knockback: 2, stun: 1.4, heavy: true, guardBreak: true, shake: 0.7 } }]
     },
     {
@@ -122240,17 +121977,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       windup: 0.35,
       recover: 0.35,
       cd: 5,
-      cost: { stamina: 12 },
       steps: [{ hit: { shape: "arc", range: 2, arc: 1, offset: 0.3, damage: 36, knockback: 8, stun: 0.5, heavy: true } }]
     }
   ];
   var items7 = {
     wano_katana: { name: "Wano Katana", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.5, price: 32e4, grade: "Wazamono", desc: "Forged in Wano Country, home of the finest swordsmiths in the world." },
-    oden_stew: { name: "Oden", icon: "\u{1F362}", type: "food", heal: 140, stamina: 80, price: 240, desc: "Wano's hearty simmered stew. A certain lord was famously fond of it." },
-    oshiruko: { name: "Oshiruko", icon: "\u{1F963}", type: "food", heal: 90, stamina: 90, price: 180, desc: "Sweet red-bean soup from Okobore Town. An Emperor of the Sea once tore Udon apart for a bowl." },
-    kibi_dango: { name: "Kibi Dango", icon: "\u{1F361}", type: "food", heal: 45, stamina: 40, price: 60, desc: "Tama's millet dumplings. Said to make even the fiercest beasts behave." },
-    wano_sake: { name: "Wano Sake", icon: "\u{1F376}", type: "food", heal: 20, stamina: 120, price: 400, buff: { id: "drunken_courage", name: "Drunken Courage", dur: 90, mods: { damage: 1.12, defMul: 1.05 } }, desc: "Kaido's favourite. Strong enough to make you fight like a dragon \u2014 and about as carefully." },
-    elbaf_mead: { name: "Giant's Mead", icon: "\u{1F37A}", type: "food", heal: 200, stamina: 150, price: 900, desc: "From the Brewers Village of Elbaph. One giant-sized mug feeds a whole crew." },
+    oden_stew: { name: "Oden", icon: "\u{1F362}", type: "food", heal: 140, price: 240, desc: "Wano's hearty simmered stew. A certain lord was famously fond of it." },
+    oshiruko: { name: "Oshiruko", icon: "\u{1F963}", type: "food", heal: 90, price: 180, desc: "Sweet red-bean soup from Okobore Town. An Emperor of the Sea once tore Udon apart for a bowl." },
+    kibi_dango: { name: "Kibi Dango", icon: "\u{1F361}", type: "food", heal: 45, price: 60, desc: "Tama's millet dumplings. Said to make even the fiercest beasts behave." },
+    wano_sake: { name: "Wano Sake", icon: "\u{1F376}", type: "food", heal: 20, price: 400, buff: { id: "drunken_courage", name: "Drunken Courage", dur: 90, mods: { damage: 1.12, defMul: 1.05 } }, desc: "Kaido's favourite. Strong enough to make you fight like a dragon \u2014 and about as carefully." },
+    elbaf_mead: { name: "Giant's Mead", icon: "\u{1F37A}", type: "food", heal: 200, price: 900, desc: "From the Brewers Village of Elbaph. One giant-sized mug feeds a whole crew." },
     elbaf_axe: { name: "Elbaph War Axe", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.7, price: 6e5, desc: "Forged for giants and cut down to human size. Still absurdly heavy." },
     elbaf_helm: { name: "Helm of Elbaph", icon: "\u26D1", type: "hat", look: { hat: "horns" }, bonus: { end: 2, wil: 1 }, price: 3e4, desc: "A horned helm of the Warland. Giants nod when they see it." },
     loki_chain_key: { name: "Key to Loki's Chains", icon: "\u{1F5DD}", type: "key", price: 0, desc: "Found among the bones of a hundred warriors in Aurust Castle." },
@@ -127593,7 +127329,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     "weather clear | rain | storm \u2014 change the weather",
     "give <item> [how many] \u2014 e.g. give meat 5",
     "berries <amount>",
-    "heal \u2014 full health, stamina and air",
+    "heal \u2014 full health and air",
     "spawn <bandit | pirate | marine | brute> [level] \u2014 someone to fight",
     "speed <1-5> \u2014 how fast you fly",
     "creative off \u2014 back to normal play"
@@ -127726,7 +127462,6 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           }
           case "heal":
             p.hp = p.d.maxHp;
-            p.stamina = p.d.maxStamina;
             p.oxygen = p.maxOxygen;
             p.status = {};
             return "Good as new.";

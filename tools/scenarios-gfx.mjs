@@ -367,7 +367,6 @@ export const scenarios = {
         window.OP.teleport(t.plaza.x, t.plaza.y + 10.5);
         g.env.clock = 11.5;
         const v = g.view3d; v.rig.yaw = -Math.PI / 2; v.rig.pitch = -0.12;
-        g.player.stamina = 999;
       });
       for (let i = 0; i < 8; i++) { await step(page, 0.1); await frames(page, 2); }
       await snap('vm-idle');

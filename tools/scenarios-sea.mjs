@@ -69,9 +69,8 @@ export const scenarios = {
     },
   },
   // Drowning: a swimmer holds their breath at depth until it runs out (losing
-  // health, not sinking), swims up and gasps; worn out at the surface they only
-  // slow down. A Devil Fruit user thrashes at the surface until their stamina
-  // is gone, then sinks and drowns.
+  // health, not sinking), swims up and gasps, and swims on (no tiring). A Devil
+  // Fruit user thrashes at the surface for a few seconds, then sinks and drowns.
   drown: {
     async run(page, snap) {
       await page.evaluate(() => localStorage.clear());
@@ -97,7 +96,7 @@ export const scenarios = {
         document.head.appendChild(st);
       });
       await step(page, 0.5);
-      const rec = () => page.evaluate(() => { const p = window.OP.game.player; return { t: +window.OP.game.time.toFixed(1), depth: +p.depth.toFixed(2), o2: +(p.oxygen ?? -1).toFixed(1), hp: Math.round(p.hp), st: Math.round(p.stamina), under: p.under, sink: !!p.sinking, state: p.state }; });
+      const rec = () => page.evaluate(() => { const p = window.OP.game.player; return { t: +window.OP.game.time.toFixed(1), depth: +p.depth.toFixed(2), o2: +(p.oxygen ?? -1).toFixed(1), hp: Math.round(p.hp), struggle: p.struggle == null ? null : +p.struggle.toFixed(1), under: p.under, sink: !!p.sinking, state: p.state }; });
       const log = [];
       // dive for 5 s, then hang there
       await page.evaluate(() => window.OP.key('C', true));
@@ -115,19 +114,19 @@ export const scenarios = {
       await page.evaluate(() => window.OP.key('Space', false));
       await step(page, 1.5);
       log.push(['surfaced', await rec()]);
-      // worn out at the surface: swim on with no stamina (it should only slow you)
-      await page.evaluate(() => { const p = window.OP.game.player; p.stamina = 0; p.hp = p.d.maxHp; window.OP.key('W', true); });
+      // a long swim at the surface: you don't tire
+      await page.evaluate(() => { const p = window.OP.game.player; p.hp = p.d.maxHp; window.OP.key('W', true); });
       const x0 = await page.evaluate(() => window.OP.game.player.x);
       await step(page, 4);
       const x1 = await page.evaluate(() => window.OP.game.player.x);
       await page.evaluate(() => window.OP.key('W', false));
-      log.push(['tired swim 4s', { ...(await rec()), moved: +Math.abs(x1 - x0).toFixed(2) }]);
+      log.push(['swim on 4s', { ...(await rec()), moved: +Math.abs(x1 - x0).toFixed(2) }]);
       // a Devil Fruit user
       await page.evaluate(() => {
         const g = window.OP.game, p = g.player;
         p.leaveWater(g); p.buffs = []; p.recalc();
         g.state.char.fruit = 'gomu'; p.fruit = 'gomu';
-        p.hp = p.d.maxHp; p.stamina = p.d.maxStamina; p.oxygen = p.maxOxygen;
+        p.hp = p.d.maxHp; p.oxygen = p.maxOxygen;
         window.OP.teleport(window.spot.x + 3, window.spot.y);
         p.forcedWater = 0;
       });
@@ -269,7 +268,7 @@ export const scenarios = {
     },
   },
 
-  // diving: out to deep water, swim down, hold the breath, run out of stamina, tread water
+  // diving: out to deep water, swim down, hold the breath, come up, swim on, tread water
   dive: {
     async run(page, snap, args) {
       await page.evaluate(() => localStorage.clear());
@@ -290,7 +289,7 @@ export const scenarios = {
       console.log('sea spot', JSON.stringify(spot));
       await page.evaluate(([x, y]) => window.OP.teleport(x, y), spot);
       for (let i = 0; i < 6; i++) { await step(page, 0.1); await frames(page, 1); }
-      const st = () => page.evaluate(() => { const p = window.OP.game.player; return { water: p.inWater, depth: +p.depth.toFixed(2), under: p.under, o2: p.oxygen == null ? null : +p.oxygen.toFixed(1), sta: +p.stamina.toFixed(1), hp: Math.round(p.hp), floor: +(window.OP.game.seaDepth(p.x, p.y)).toFixed(1) }; });
+      const st = () => page.evaluate(() => { const p = window.OP.game.player; return { water: p.inWater, depth: +p.depth.toFixed(2), under: p.under, o2: p.oxygen == null ? null : +p.oxygen.toFixed(1), hp: Math.round(p.hp), floor: +(window.OP.game.seaDepth(p.x, p.y)).toFixed(1) }; });
       console.log('afloat', JSON.stringify(await st()));
       await page.evaluate((a) => { const v = window.OP.game.view3d; v.rig.yaw = a; v.rig.pitch = -0.15; }, spot[2]);
       await step(page, 0.2); await frames(page, 3);
@@ -328,10 +327,10 @@ export const scenarios = {
       for (let i = 0; i < 80; i++) { await step(page, 0.1); const s = await st(); if (!s.under && s.depth < 0.05) break; }
       await page.evaluate(() => window.OP.key('Space', false));
       console.log('surfaced', JSON.stringify(await st()));
-      // exhausted: keep swimming with no stamina → hurt and sinking; then stop and tread
-      await page.evaluate(() => { const p = window.OP.game.player; p.stamina = 0; p.oxygen = p.maxOxygen; window.OP.key('W', true); });
+      // swim on at the surface for a bit, then stop and tread
+      await page.evaluate(() => { const p = window.OP.game.player; p.oxygen = p.maxOxygen; window.OP.key('W', true); });
       for (let i = 0; i < 20; i++) await step(page, 0.1);
-      console.log('spent swimming 2s', JSON.stringify(await st()));
+      console.log('swimming on 2s', JSON.stringify(await st()));
       await page.evaluate(() => window.OP.key('W', false));
       for (let i = 0; i < 40; i++) await step(page, 0.1);
       console.log('treading 4s', JSON.stringify(await st()));

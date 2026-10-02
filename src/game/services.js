@@ -31,7 +31,7 @@ export class Services {
     const price = this.innPrice(island);
     if (!pay(g, price)) return false;
     c.rest = { x: p.x, y: p.y, name: `${town?.name || island?.name || 'an inn'}`, islandId: island?.id };
-    p.hp = p.d.maxHp; p.stamina = p.d.maxStamina; p.haki = p.hakiUnlocked() ? p.d.maxHaki : 0;
+    p.hp = p.d.maxHp; p.haki = p.hakiUnlocked() ? p.d.maxHaki : 0;
     p.status = {};
     c.getUpCharges = 1 + (p.attrs.wil >= 40 ? 1 : 0) + (p.attrs.wil >= 80 ? 1 : 0);
     c.flags.dLuckUsed = false;

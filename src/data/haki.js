@@ -25,9 +25,9 @@ export const HAKI = {
 };
 
 export const HAKI_ABILITIES = [
-  { id: 'haki_emission', name: 'Armament: Emission', icon: '🌑', hakiType: 'armament', anim: 'punch', windup: 0.3, recover: 0.3, cd: 7, cost: { haki: 18, stamina: 8 }, desc: 'Launch your Haki beyond your body in a shockwave.', learn: { haki: 'armament', level: 35 },
+  { id: 'haki_emission', name: 'Armament: Emission', icon: '🌑', hakiType: 'armament', anim: 'punch', windup: 0.3, recover: 0.3, cd: 7, cost: { haki: 18 }, desc: 'Launch your Haki beyond your body in a shockwave.', learn: { haki: 'armament', level: 35 },
     steps: [{ proj: { speed: 20, range: 11, radius: 0.6, damage: 28, sprite: 'shockwave', color: '#212121', pierce: true, knockback: 7, stun: 0.5, heavy: true } }] },
-  { id: 'haki_ryuo', name: 'Ryuo: Internal Destruction', icon: '💢', hakiType: 'armament', anim: 'heavy', windup: 0.35, recover: 0.35, cd: 10, cost: { haki: 25, stamina: 10 }, desc: 'Flow Haki into the enemy and destroy them from within. Ignores guards and armour. (Taught in Wano.)', learn: { haki: 'armament', level: 55 },
+  { id: 'haki_ryuo', name: 'Ryuo: Internal Destruction', icon: '💢', hakiType: 'armament', anim: 'heavy', windup: 0.35, recover: 0.35, cd: 10, cost: { haki: 25 }, desc: 'Flow Haki into the enemy and destroy them from within. Ignores guards and armour. (Taught in Wano.)', learn: { haki: 'armament', level: 55 },
     steps: [{ hit: { shape: 'arc', range: 1.7, arc: 1.2, offset: 0.3, damage: 60, knockback: 10, stun: 0.9, heavy: true, unblockable: true, haki: true, trueDamage: true, impactFrame: true } }] },
   { id: 'haki_futuresight', name: 'Future Sight', icon: '🔮', hakiType: 'observation', anim: 'cast', windup: 0.2, recover: 0.1, cd: 30, cost: { haki: 30 }, desc: 'See a few seconds into the future: you evade almost everything for a short time.', learn: { haki: 'observation', level: 65 },
     steps: [{ fx: { ring: 2, color: '#ce93d8' } }, { buff: { id: 'future_sight', name: 'Future Sight', dur: 6, mods: { evade: 0.75 }, aura: 'rgba(206,147,216,0.5)' } }] },

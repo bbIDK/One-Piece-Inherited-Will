@@ -66,7 +66,6 @@ export class LivesSystem {
     this.k = null;
     p.state = 'idle';
     p.hp = Math.round(p.d.maxHp * (0.25 + p.attrs.wil * 0.004));
-    p.stamina = p.d.maxStamina * 0.6;
     p.iframes = 1.4;
     p.hitstun = 0;
     g.fx.text(p.x, p.y - 2, "I'M NOT DONE YET!", '#ffeb3b', 0.55, { life: 1.6 });
@@ -190,7 +189,6 @@ export class LivesSystem {
     c.berries -= lost;
     p.state = 'idle';
     p.hp = p.d.maxHp;
-    p.stamina = p.d.maxStamina;
     p.status = {};
     p.buffs = [];
     p.recalc();

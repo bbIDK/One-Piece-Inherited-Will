@@ -12,7 +12,7 @@ import { DREAMS, LEGENDS } from '../data/dreams.js';
 import { Actor } from './actor.js';
 import { baseAttrs, ATTR_KEYS } from './stats.js';
 import { saveChar, saveLegacy, clearChar } from './save.js';
-import { regionAt, SEA_IDS } from '../world/constants.js';
+import { regionAt, SEA_IDS, POS_SCALE, SIZE_SCALE } from '../world/constants.js';
 import { findShore } from './interact.js';
 import { upgradeFleet, recordShip, liveShips } from './fleet.js';
 
@@ -25,7 +25,7 @@ export const TRAITS = {
   sea_legs: { name: 'Sea Legs', rarity: 'common', weight: 10, desc: 'Storms and crashes damage your ship 30% less.' },
   silver_tongue: { name: 'Silver Tongue', rarity: 'common', weight: 10, desc: 'Shops charge you 10% less.' },
   hard_head: { name: 'Hard Head', rarity: 'common', weight: 10, desc: 'You recover from stuns faster.', attrs: { end: 1 } },
-  quick_feet: { name: 'Quick Feet', rarity: 'common', weight: 10, desc: 'Dodges cost less stamina.', attrs: { agi: 1 } },
+  quick_feet: { name: 'Quick Feet', rarity: 'common', weight: 10, desc: 'Your dodge comes back a quarter sooner.', attrs: { agi: 1 } },
   lucky: { name: 'Lucky Star', rarity: 'uncommon', weight: 6, desc: 'Treasure chests hold more.' },
   night_owl: { name: 'Night Owl', rarity: 'uncommon', weight: 6, desc: '+10% damage at night.' },
   born_fighter: { name: 'Born Fighter', rarity: 'uncommon', weight: 6, desc: 'Style mastery grows 15% faster.', attrs: { str: 1 } },
@@ -252,7 +252,6 @@ export function buildPlayer(game, char) {
   a.persistent = true;
   a.recalc();
   a.hp = a.d.maxHp;
-  a.stamina = a.d.maxStamina;
   a.haki = a.hakiUnlocked() ? a.d.maxHaki : 0;
   return a;
 }

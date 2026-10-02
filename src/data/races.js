@@ -33,7 +33,7 @@ export const RACES = {
     origin: 'Born in the Conomi Islands (East Blue), in the shadow of Arlong Park.',
     stats: { str: 4, agi: 0, end: 2, vit: 1, wil: 0 },
     lives: 3,
-    traits: ['Gills: breathe underwater — never drown (unless a Devil Fruit user)', 'Swims 3× faster, no stamina drain', 'Fish-Man Karate affinity: learns it 30% faster', 'Dolphin leap: springs far out of the water'],
+    traits: ['Gills: breathe underwater — never drown (unless a Devil Fruit user)', 'Swims 3× faster', 'Fish-Man Karate affinity: learns it 30% faster', 'Dolphin leap: springs far out of the water'],
     spawnSeas: ['east_blue'], spawnTowns: ['cocoyasi'],
     swim: 3, hpMul: 1.1, gills: true,
     jump: 7.4, charge: 1.4, leap: 1.35,

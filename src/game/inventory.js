@@ -136,7 +136,6 @@ export function useItem(game, id) {
       game.log('Tension Hormones! Your body screams back to full strength — and your lifespan shortens.', '#ff8a80');
     }
     p.hp = Math.min(p.d.maxHp, p.hp + heal);
-    p.stamina = Math.min(p.d.maxStamina, p.stamina + (d.stamina || 0));
     for (const s of d.cure || []) delete p.status[s];
     if (d.buff) p.addBuff({ ...d.buff });
     game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, '#69f0ae', 0.45);

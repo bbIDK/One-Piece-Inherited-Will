@@ -229,7 +229,6 @@ export class Combat {
         if (tgt.blockTime < 0.2 && att && !h.projectileOnly) {
           // PARRY
           att.stagger(0.9);
-          tgt.stamina = Math.min(tgt.d.maxStamina, tgt.stamina + 15);
           if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + 6);
           fx.parry(tgt, att, ang); // flash, ring, "PARRY!", hit-stop and a beat of slow motion
           game.audio?.sfx('parry', tgt);
@@ -238,15 +237,18 @@ export class Combat {
         }
         blocked = true;
         if (tgt.isPlayer) game.emit('playerBlocked', att, h);
-        dmg *= h.guardBreak ? 0.6 : 0.18;
-        tgt.stamina -= (h.guardDmg ?? 10) + h.damage * 0.25;
-        if (tgt.stamina <= 0) {
-          tgt.stamina = 0;
+        if (h.guardBreak) {
+          // a heavy blow smashes the guard aside: staggered, and it can't come
+          // up again for a moment (dodge those — the red glint gives them away)
+          dmg *= 0.6;
           tgt.blocking = false;
+          tgt.guardCd = tgt.guardCooldown();
           tgt.stagger(1.1);
           fx.guardBreak(tgt, att, ang); // shattered guard, "GUARD BREAK", a jolt
           game.audio?.sfx('guardbreak', tgt);
+          if (tgt.isPlayer) game.hint('guardbreak', 'A heavy blow smashes a guard aside — and it can\'t come up again until the F slot fills. Watch for the red glint and dodge (Q) those instead.');
         } else {
+          dmg *= tgt.guardChip();
           game.audio?.sfx('block', tgt);
         }
       }

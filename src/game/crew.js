@@ -11,11 +11,11 @@ export const CREW_ROLES = {
   fighter: { name: 'Combatant', icon: 'skills', desc: 'Fights beside you on land.' },
   swordsman: { name: 'Swordsman', icon: 'sword', desc: 'Fights beside you on land with a blade.' },
   navigator: { name: 'Navigator', icon: 'log_pose', desc: 'Log Pose sets twice as fast, storms are announced early, +10% sailing speed.' },
-  cook: { name: 'Cook', icon: 'food', desc: 'Food heals 50% more; stamina regenerates at sea.' },
+  cook: { name: 'Cook', icon: 'food', desc: 'Food heals 50% more; hot meals at sea heal you while you sail.' },
   doctor: { name: 'Doctor', icon: 'doctor', desc: 'Patches you up after every battle (heals 30% when combat ends).' },
   shipwright: { name: 'Shipwright', icon: 'shipwright', desc: 'Repairs your ship slowly while sailing.' },
   sniper: { name: 'Sniper', icon: 'gun', desc: 'Cannons deal 30% more damage.' },
-  musician: { name: 'Musician', icon: 'bar', desc: 'Stamina regenerates 25% faster.' },
+  musician: { name: 'Musician', icon: 'bar', desc: 'Lifts your spirits: techniques come back 10% sooner.' },
   archaeologist: { name: 'Archaeologist', icon: 'library', desc: 'Can read Poneglyphs.' },
   helmsman: { name: 'Helmsman', icon: 'ship', desc: 'Your ship turns 25% faster.' },
 };
@@ -30,11 +30,11 @@ function computeMods(members) {
     speedMul: has('navigator') ? 1.1 : 1,
     logMul: has('navigator') ? 2 : 1,
     foodMul: has('cook') ? 1.5 : 1,
-    seaStamina: has('cook'),
+    seaMeals: has('cook'),
     doctor: has('doctor'),
     repair: has('shipwright') ? 0.6 : 0,
     cannonMul: has('sniper') ? 1.3 : 1,
-    staminaMul: has('musician') ? 1.25 : 1,
+    cdMul: has('musician') ? 0.9 : 1,
     poneglyphs: has('archaeologist'),
     turnMul: has('helmsman') ? 1.25 : 1,
   };
@@ -208,7 +208,7 @@ export class Crew {
     // at sea: shipwright repairs, cook keeps everyone fed
     if (p.mode === 'sail' && p.ship && !p.ship.sunk) {
       if (mods.repair && p.ship.hull < p.ship.maxHull) p.ship.hull = Math.min(p.ship.maxHull, p.ship.hull + mods.repair * dt);
-      if (mods.seaStamina) p.stamina = Math.min(p.d.maxStamina, p.stamina + 4 * dt);
+      if (mods.seaMeals && !p.inCombat && p.hp < p.d.maxHp) p.hp = Math.min(p.d.maxHp, p.hp + p.d.maxHp * 0.01 * dt);
     }
   }
 }

@@ -62,14 +62,14 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | V | first person / third person | |
 | WASD | move where you look | W/S sails, A/D steer (at a rowboat's oars: W/S set the rowing pace, which she keeps, A/D turn) |
 | Space | jump; at a pier, a bank or a ship's side, climb up | row (works without wind) |
-| Shift | hold to sprint (it drains stamina fast; your everyday run takes a little too, back once you stop or walk), tap to dodge (i-frames) | Coup de Burst (some ships) |
+| Shift | hold to sprint, for as long as you like; tap to dodge (i-frames) | Coup de Burst (some ships) |
 | Left / right click | combo / heavy attack | broadside toward where you aim |
 | X | draw your weapon, or put it back in its sheath. Sheathed, a click is a punch (your fist style); drawn, it's the weapon's moves, listed with their keys at the bottom right (the skills you've learned for it; greyed while they cool down). At the helm or the oars it's always sheathed | |
-| F | block — tap just before a hit to **parry** | |
+| Q | dodge (i-frames); it comes back after a moment — the Q slot left of the hotbar fills up again | |
+| F | block — tap just before a hit to **parry**. A heavy blow (the red glint) smashes a guard aside, and you can't block again until the F slot fills | |
 | 1–9, 0 | hotbar: techniques, food and weapons (a weapon's key draws it from its sheath into your stance, and again puts it back; food goes in your hand: hold the right mouse button to eat it, in bites; a punch or a dodge puts it away) | |
 | R / T / G | Haki, once it has awakened | |
 | E | talk, enter, take the helm or the oars, pick fruit, examine | dive, knock-up, go ashore, leave the helm (under sail she sails on, holding her course, while you walk the deck) |
-| Q | dash | |
 | Tab/I, C, K, J, U, L | inventory, character, skills, journal, crew, quests | |
 | M | world map | |
 | H / Esc | help / pause menu | |
@@ -230,12 +230,27 @@ rearrange them.
 - About 32 **Devil Fruits** (Paramecia, Zoan, Logia), with canon rules:
   - Logia intangibility unless you use Haki, seastone or their weakness;
   - rubber versus lightning;
-  - fruit users can't swim;
+  - fruit users can't swim: they thrash for a few seconds (longer with
+    Endurance; the breath bubbles count them down), then the sea drags them
+    under;
   - you can eat only one. Collect others to sell to the black market (or
     keep them).
 - Haki: Armament (with Emission and Ryuo), Observation (with Future Sight)
   and Conqueror's (with Infusion).
 - Parry, guard breaks, i-frame dodges, finishers and anime impact frames.
+- **No stamina.** Nothing you do drains a bar; everything is paced by
+  cooldowns:
+  - sprint and swim as long as you like;
+  - a dodge comes back after a moment (sooner with Agility, and a quarter
+    sooner with Quick Feet);
+  - every technique has its own cooldown (a Musician in the crew brings
+    them back 10% sooner);
+  - a heavy blow smashes a raised guard aside: staggered, you can't block
+    again for a moment. Endurance shortens that, and lets less of an
+    ordinary blow through your guard;
+  - Gear Second leaves you spent for a few seconds when it wears off.
+  - Everyone else sprints in bursts and eases off between them, so you can
+    win a chase by keeping going.
 - **Footsteps** sound like what you walk on, in time with your feet: a soft
   crush on grass, a gritty shuffle on sand, a crisp tap on stone and
   paving, a hollow knock on decks, piers and floorboards, a squeaky crunch

@@ -34,6 +34,13 @@ const deckY = (dk, time) => shipLift(dk.ship, time, dk.u ?? (dk.t - 0.5) * dk.sh
 
 const smooth01 = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
+// No stamina: what you can do is paced by cooldowns. A dodge comes back after
+// DODGE_CD seconds (less with Agility); a guard broken by a heavy blow can't be
+// raised again for a moment; nobody else sprints flat out for more than
+// SPRINT_BURST seconds before easing off for SPRINT_REST (you can: you're the hero).
+const DODGE_CD = 0.9;
+const SPRINT_BURST = 5, SPRINT_REST = 3;
+
 const STATUS_DEFAULTS = {
   burn: { dps: 0.035, color: '#ff7043' }, poison: { dps: 0.03, color: '#8e24aa' }, bleed: { dps: 0.025, color: '#c62828' }, dry: { dps: 0.04, color: '#d7b56d' },
 };
@@ -65,7 +72,6 @@ export class Actor extends Entity {
     this.buffs = [];
     this.recalc();
     this.hp = o.hp ?? this.d.maxHp;
-    this.stamina = this.d.maxStamina;
     this.haki = this.hakiUnlocked() ? this.d.maxHaki : 0;
     this.facing = o.facing ?? Math.PI / 2;
     this.walk = 0;
@@ -287,7 +293,7 @@ export class Actor extends Entity {
     if (this.combo.window <= 0) this.combo.step = 0;
     const id = chain[this.combo.step % chain.length];
     const def = getAbility(id);
-    if (!def || this.stamina < 1) return false;
+    if (!def) return false;
     startAbility(this, { ...def, m1Chain: true }, game);
     this.combo.step = (this.combo.step + 1) % chain.length;
     this.combo.window = 0.55 + (def.recover || 0.2);
@@ -348,7 +354,7 @@ export class Actor extends Entity {
         else if (def.source?.startsWith('fruit') && this.inWater) game.log('Your Devil Fruit power is useless in the sea!', '#ff8a80');
         else if (def.weapon && this.weapon && !this.drawn && this.weapon.kind === def.weapon) game.log(`Draw your ${this.weapon.kind === 'sword' ? (this.weapon.count > 1 ? 'swords' : 'sword') : 'weapon'} first (X).`, '#ffcc80');
         else if (def.weapon && !this.hasWeapon(def.weapon, def.style)) game.log(`${def.name} needs ${def.weapon === 'sword' ? `${STYLES[def.style || this.style]?.swords || 1} sword(s)` : 'a ' + def.weapon}.`, '#ff8a80');
-        else game.log('Not enough ' + ((def.cost?.haki && this.haki < def.cost.haki) ? (this.hakiUnlocked() ? 'Haki.' : 'strength of will.') : 'stamina.'), '#ff8a80');
+        else if (def.cost?.haki && this.haki < def.cost.haki) game.log(this.hakiUnlocked() ? 'Not enough Haki.' : 'Not enough strength of will.', '#ff8a80');
       }
       return false;
     }
@@ -360,9 +366,6 @@ export class Actor extends Entity {
   tryDodge(game, dx, dy) {
     if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root || this.dodgeCd > 0 || this.climb) return false;
     if (this.action && this.action.t < this.action.total * 0.5 && !this.action.def.m1Chain) return false;
-    const cost = 16;
-    if (this.stamina < cost * 0.6) return false;
-    this.stamina = Math.max(0, this.stamina - cost);
     this.action = null;
     this.blocking = false;
     let len = Math.hypot(dx, dy);
@@ -372,7 +375,7 @@ export class Actor extends Entity {
     const time = 0.22;
     this.dash = { vx: dx / len * dist / time, vy: dy / len * dist / time, t: time, t0: time, dodge: true, ignoreWater: this.race === 'lunarian' };
     this.iframes = Math.max(this.iframes, 0.2 + (this.race === 'mink' ? 0.05 : 0));
-    this.dodgeCd = 0.42 - this.attrs.agi * 0.0015;
+    this.dodgeCd = this.dodgeCdMax = this.dodgeCooldown();
     // visuals: a kick of dust where you pushed off (afterimages follow the dash, see fx.js)
     this._ghostTint = this.race === 'lunarian' ? '#ffab91' : this.race === 'skypiean' ? '#ffffff' : '#b3e5fc';
     game.fx.burst(this.x, this.y, 7, { angle: Math.atan2(-dy, -dx), spread: 1.6, color: ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 2.4, z: 0.08, vz: 0.6, g: 1.2, life: 0.5, kind: 'dust', size: 0.2, grow: 0.45 });
@@ -380,6 +383,37 @@ export class Actor extends Entity {
     if (this.isPlayer) game.emit('playerDodge');
     return R;
   }
+
+  /** Seconds before you can dodge again: quicker the more agile you are, and with Quick Feet. */
+  dodgeCooldown() {
+    const agi = this.attrs?.agi || 0;
+    return DODGE_CD * (1 - Math.min(0.25, agi * 0.0025)) * (this.char?.traits?.includes('quick_feet') ? 0.75 : 1);
+  }
+
+  /** Seconds a Devil Fruit user keeps their head above water before the sea takes their strength. */
+  struggleTime() { return 6 + (this.attrs?.end || 0) * 0.04; }
+
+  /** Seconds a broken guard stays down: shorter the more Endurance you have. */
+  guardCooldown() { return 2 - Math.min(0.8, (this.attrs?.end || 0) * 0.008); }
+
+  /** How much of a blow gets through your guard: less the more Endurance you have. */
+  guardChip() { return 0.18 * (1 - Math.min(0.4, (this.attrs?.end || 0) * 0.004)); }
+
+  /**
+   * Sprinting just now? You can for as long as you like; anyone else (your
+   * crew aside, who keep up with you) runs flat out in bursts, easing off
+   * between them — so a chase can be won by keeping going.
+   */
+  sprintOk(dt) {
+    if (this.isPlayer || this.crewId) return true;
+    if (this.sprintRest > 0) return false;
+    this.sprintT = (this.sprintT || 0) + dt;
+    if (this.sprintT > SPRINT_BURST) { this.sprintT = 0; this.sprintRest = SPRINT_REST; }
+    return true;
+  }
+
+  /** Technique cooldowns run this much of their time (a Musician aboard plays you back into it sooner). */
+  get cdMul() { return this.isPlayer ? this.game?.crewMods?.cdMul || 1 : 1; }
 
   /** Take-off speeds for this body: { v (a plain jump), charge (× for a full charge), leap (out of the water) }. */
   jumpStats() {
@@ -390,7 +424,7 @@ export class Actor extends Entity {
   /** Can you jump right now: on your feet, or at the surface of the water (not a Devil Fruit user). */
   canJump() {
     if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root || this.blocking) return false;
-    if (this.onShip || this.climb || this.stamina < 2) return false;
+    if (this.onShip || this.climb) return false;
     if (this.action && !this.action.def.m1Chain && this.action.t < this.action.total * 0.7) return false;
     if (this.inWater) return !this.under && (this.depth || 0) < 0.15 && !(this.fruit && !this.gills) && this.state === 'idle';
     return !((this.z || 0) > 0.02);
@@ -409,7 +443,7 @@ export class Actor extends Entity {
     const k = clamp(charge, 0, 1);
     // swimming against a ship's side: haul yourself up it and over the rail —
     // or against a pier, a quay or a steep bank: up onto it
-    if ((this.inWater || this.wading) && ((this.isPlayer && game.climbAboard?.(this, k)) || this.climbOut(game))) { this.stamina = Math.max(0, this.stamina - 6); return true; }
+    if ((this.inWater || this.wading) && ((this.isPlayer && game.climbAboard?.(this, k)) || this.climbOut(game))) return true;
     let v = J.v * (1 + (J.charge - 1) * k);
     const fromWater = this.inWater;
     // (wading, you spring off the bottom: the jump starts where your feet are)
@@ -432,7 +466,6 @@ export class Actor extends Entity {
     this.vz = v;
     this.airT = 0;
     this.jumpK = k;
-    this.stamina = Math.max(0, this.stamina - 3 - 7 * k);
     if (this.action?.def.m1Chain) this.action = null;
     if (this.isPlayer) game.emit('playerJump', k);
     return true;
@@ -547,7 +580,7 @@ export class Actor extends Entity {
 
   setBlock(on) {
     if (on && !this.blocking) {
-      if (this.state !== 'idle' || this.action || this.hitstun > 0 || this.status.freeze || this.climb) return;
+      if (this.state !== 'idle' || this.action || this.hitstun > 0 || this.status.freeze || this.climb || this.guardCd > 0) return;
       this.blocking = true;
       this.blockTime = 0;
     } else if (!on) this.blocking = false;
@@ -594,6 +627,9 @@ export class Actor extends Entity {
     this.hitstun = Math.max(0, this.hitstun - dt);
     this.flashT = Math.max(0, this.flashT - dt);
     this.dodgeCd = Math.max(0, (this.dodgeCd || 0) - dt);
+    this.guardCd = Math.max(0, (this.guardCd || 0) - dt);
+    if (this.sprintRest > 0) this.sprintRest -= dt;
+    else if (this.sprintT > 0 && !this.intent.sprint) this.sprintT = Math.max(0, this.sprintT - dt * 0.5);
     this.combo.window = Math.max(0, this.combo.window - dt);
     this.damageShown = Math.max(0, this.damageShown - dt);
     if (this.forcedWater) this.forcedWater = Math.max(0, this.forcedWater - dt);
@@ -700,14 +736,13 @@ export class Actor extends Entity {
   }
 
   updateBuffs(dt, game) {
-    let changed = false;
+    let changed = false, spent = null;
     for (let i = this.buffs.length - 1; i >= 0; i--) {
       const b = this.buffs[i];
       b.t -= dt;
-      if (b.drain) {
-        if (b.drain.stamina) this.stamina -= b.drain.stamina * dt;
-        if (b.drain.haki) this.haki -= b.drain.haki * dt;
-        if (this.stamina < 0 || this.haki < 0) { this.stamina = Math.max(0, this.stamina); this.haki = Math.max(0, this.haki); b.t = 0; }
+      if (b.drain?.haki) {
+        this.haki -= b.drain.haki * dt;
+        if (this.haki < 0) { this.haki = 0; b.t = 0; }
       }
       if (b.steam && Math.random() < dt * 8) game.fx.particle({ x: this.x + (Math.random() - 0.5) * 0.5, y: this.y, z: 1.2, vx: 0, vy: 0, vz: 1.5, g: -0.5, life: 0.7, size: 0.15, grow: 0.3, color: 'rgba(255,255,255,0.6)', kind: 'smoke' });
       if (b.t <= 0) {
@@ -716,22 +751,17 @@ export class Actor extends Entity {
         if (b.forceArmament) this.armament = false;
         if (b.conquerorInfused) this.conquerorInfused = false;
         if (this.isPlayer && b.name) game.log(`${b.name} wore off.`, '#b0bec5');
-        if (b.id === 'gear2' && this.isPlayer) { this.stamina *= 0.5; }
+        // (some powers take it out of you: a spell spent afterwards — Gear Second's pumped blood)
+        if (b.after) (spent ||= []).push(b.after);
       }
     }
+    for (const a of spent || []) this.addBuff(a);
     if (changed) this.recalc();
     this.cdMulBuff = this.buffs.some((b) => b.mods?.cdMul);
   }
 
   updateResources(dt) {
     const d = this.d;
-    // treading water at the surface is a rest (swimming isn't; a Devil Fruit user can't)
-    const swim = this.inWater && !this.gills;
-    const treading = swim && !this.fruit && !this.moving && !this.under && !this.intent.mz;
-    const busy = !!this.action || this.blocking || this.intent.sprint || this.running || (swim && !treading);
-    const regenMul = (this.isPlayer ? this.game?.crewMods?.staminaMul || 1 : 1) * (treading ? 0.6 : 1);
-    if (!busy) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * regenMul * dt);
-    else if (!this.intent.sprint && !this.running && !this.inWater) this.stamina = Math.min(d.maxStamina, this.stamina + d.staminaRegen * 0.25 * dt);
     if (this.hakiUnlocked()) {
       if (this.armament) {
         this.haki -= (1.6 - Math.min(1.0, this.hakiLevel('armament') * 0.012)) * dt;
@@ -1097,24 +1127,17 @@ export class Actor extends Entity {
   updateMovement(dt, game, knocked) {
     const w = game.world;
     let vx = 0, vy = 0;
-    this.running = false;
     if (!knocked) {
       const i = this.intent;
       let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
       if (this.inWater) {
         if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.2;
-        else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1) * (!this.gills && this.stamina <= 0.5 ? 0.45 : 1);
+        else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1);
       }
       else if (this.wading) sp *= 1 - 0.42 * clamp(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
       if (this.charging) sp *= 1 - 0.75 * this.charging;
-      if (i.sprint && !this.eating && this.stamina > 1 && (!this.inWater || this.gills)) { sp *= this.inWater ? 1.35 : 1.55; if (!this.inWater) this.stamina -= 9 * dt; }
-      // (your everyday run takes a little out of you too: the bar dips as you
-      // go and fills again once you stop or slow to a walk — it never stops
-      // you running, but you'll have less left for a sprint or a dodge)
-      this.running = this.isPlayer && this.mode !== 'sail' && !this.inWater && !this.climb && !i.sprint && !this.eating && !this.flying && Math.hypot(i.mx, i.my) > 0.7;
-      if (this.running) this.stamina = Math.max(0, this.stamina - 1.2 * dt);
+      if (i.sprint && (i.mx || i.my) && !this.eating && (!this.inWater || this.gills) && this.sprintOk(dt)) sp *= this.inWater ? 1.35 : 1.55;
       if (this.eating) sp *= 0.45; // (a slow walk with your mouth full)
-      if (this.inWater && !this.gills && (i.mx || i.my || i.mz)) this.stamina = Math.max(0, this.stamina - (this.under ? 4 : 3.5) * dt);
       if (this.blocking) sp *= 0.4;
       if (this.action) sp *= this.action.def.moveMul ?? (this.action.def.m1Chain ? 0.55 : 0.25);
       if (this.hitstun > 0 || this.status.root || this.status.freeze || this.status.despair) sp = 0;
@@ -1267,6 +1290,7 @@ export class Actor extends Entity {
       }
       this.depth = 0;
       this.sinking = false;
+      this.struggle = this.struggleTime();
       // (floating on from where the feet were: at the bottom of the shallows
       // you waded out from, or as deep as a jump in took them)
       this.sinkNow = this.landSink ?? Math.min(this.sinkWant(), wadeWas / (this.look?.scale || 1));
@@ -1286,17 +1310,19 @@ export class Actor extends Entity {
       const maxO2 = this.maxOxygen;
       if (this.oxygen == null || this.oxygen > maxO2) this.oxygen = maxO2;
       const breathless = !this.gills && this.oxygen <= 0;
-      // A Devil Fruit user can't swim: they thrash to keep their head up while
-      // their strength lasts, then the sea takes it and down they go.
-      if (df && !this.sinking && this.stamina <= 0.5) {
-        this.sinking = true;
-        if (this.isPlayer) game.log('Your strength is gone... the sea is dragging you down!', '#ff8a80');
+      // A Devil Fruit user can't swim: they thrash to keep their head up for a
+      // few seconds (longer with Endurance), then the sea takes their strength
+      // and down they go.
+      if (df && !this.sinking) {
+        this.struggle = (this.struggle ?? this.struggleTime()) - dt;
+        if (this.struggle <= 0) {
+          this.sinking = true;
+          if (this.isPlayer) game.log('Your strength is gone... the sea is dragging you down!', '#ff8a80');
+        }
       }
-      // (a swimmer who's worn out just slows to a paddle: tread water to rest)
-      const tired = !df && !this.gills && this.stamina <= 0.5;
       let vz;
       if (df) vz = this.sinking ? 1.15 : this.depth > 0.02 ? -0.6 : 0;
-      else if (iz) vz = -iz * (this.gills ? 3.4 : tired ? 0.9 : 1.7);
+      else if (iz) vz = -iz * (this.gills ? 3.4 : 1.7);
       else vz = this.depth > 0.05 && !this.gills ? -(breathless ? 0.12 : 0.35) : 0;
       if (this.plungeV) {
         // in from a jump or a fall: carried on under, slowing, then buoyed
@@ -1308,10 +1334,6 @@ export class Actor extends Entity {
       }
       this.depth = clamp(this.depth + vz * dt, 0, bottom);
       if (this.depth >= bottom && this.plungeV > 0) this.plungeV = 0;
-      if (tired && (this.moving || iz)) {
-        if (this.isPlayer && !this.spentHint) { this.spentHint = true; game.log('Exhausted! Stop and tread water at the surface to get your strength back.', '#ff8a80'); }
-      } else if (this.stamina > this.d.maxStamina * 0.5) this.spentHint = false;
-      if (df && !this.sinking) this.stamina = Math.max(0, this.stamina - 14 * dt);
       const wasUnder = this.under;
       this.under = this.depth > 0.35;
       // (coming up from a dive, the water parts round your head as it breaks the surface)

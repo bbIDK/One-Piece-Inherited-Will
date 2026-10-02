@@ -218,7 +218,7 @@ function tryCatch(game, S, p) {
     game.fx.burst(best.x, best.y, 10, { color: ['#e1f5fe', '#b3e5fc'], speed: 2, vz: 2, g: -1, life: 0.6, size: 0.08, kind: 'bubble' });
     game.audio?.sfx('splash');
     game.progression?.train?.('agi', 0.4);
-    if (!S.caughtHint) { S.caughtHint = true; game.hint?.('fishing', 'Fish you catch go in your bag — eat them for health and stamina, or sell them. An Elephant Honmaguro from the deep blue is worth a fortune to a cook.'); }
+    if (!S.caughtHint) { S.caughtHint = true; game.hint?.('fishing', 'Fish you catch go in your bag — eat them to heal, or sell them. An Elephant Honmaguro from the deep blue is worth a fortune to a cook.'); }
   } else if (!S.missLog || game.time - S.missLog > 6) {
     S.missLog = game.time;
     game.log(`The ${s.def.name} dart away!`, '#b0bec5');

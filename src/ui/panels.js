@@ -121,7 +121,6 @@ function statLine(d) {
   if (d.armor) parts.push(`Defence +${Math.round(d.armor * 100)}%`);
   if (d.bonus) parts.push(Object.entries(d.bonus).map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${ATTRS[k]?.short || k.toUpperCase()}`).join('  '));
   if (d.heal) parts.push(d.heal > 9999 ? 'Full health' : `+${d.heal} health`);
-  if (d.stamina) parts.push(`+${d.stamina} stamina`);
   if (d.buff) parts.push(`${d.buff.name} for ${d.buff.dur}s`);
   return parts.join(' · ');
 }
@@ -334,7 +333,7 @@ export function openCharacter(game) {
       h('span.nm', ATTRS[k].name), h('span.val', c.attrs[k]),
       h('div.meter.dual', h('i', { style: { width: (100 * c.attrs[k] / ATTR_CAP) + '%' } }), h('u', { style: { width: (100 * (prog?.trainProgress(k) || 0)) + '%' } }))));
     const dd = p.d;
-    const derived = h('div.derived', `Health ${dd.maxHp} · Stamina ${dd.maxStamina}${hakiKnown(c) ? ' · Spirit ' + dd.maxHaki : ''} · Speed ${dd.speed.toFixed(1)} · Damage ×${dd.dmg.toFixed(2)} · Defence ${Math.round(dd.def * 100)}% · Doriki ${p.power().toLocaleString()}`);
+    const derived = h('div.derived', `Health ${dd.maxHp}${hakiKnown(c) ? ' · Spirit ' + dd.maxHaki : ''} · Speed ${dd.speed.toFixed(1)} · Damage ×${dd.dmg.toFixed(2)} · Defence ${Math.round(dd.def * 100)}% · Doriki ${p.power().toLocaleString()}`);
     const wm = c.weaponMastery || {};
     const wmRows = Object.entries(WEAPON_KINDS).map(([k, name]) => h('div.stat-row', { title: `+${((wm[k] || 0) * 0.6).toFixed(0)}% damage with ${name.toLowerCase()}` },
       h('span.nm', name), h('span.val', Math.floor(wm[k] || 0)),
@@ -413,7 +412,7 @@ export function openSkills(game) {
           on: { click: () => pickForHotbar(game, 'skill:' + d.id, render) },
         }, skillImg(d, 40),
         h('div.grow', h('b', d.name), h('div.sub', d.desc || ''),
-          h('div.sub.meta', [d.cd ? `cooldown ${d.cd}s` : null, d.cost?.stamina ? `${d.cost.stamina} stamina` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(' · '))),
+          h('div.sub.meta', [d.cd ? `cooldown ${d.cd}s` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(' · '))),
         onBar ? h('span.tag', `key ${HOTBAR_KEYS[c.hotbar.indexOf(d.id)]}`) : null);
         return dragSource(card, 'skill:' + d.id);
       }))));

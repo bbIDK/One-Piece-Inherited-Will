@@ -124,10 +124,11 @@ function roster(game, body, rerender) {
   if (mods.speedMul > 1) perks.push('+10% sailing speed');
   if (mods.logMul > 1) perks.push('Log Pose sets twice as fast');
   if (mods.foodMul > 1) perks.push('+50% healing from food');
+  if (mods.seaMeals) perks.push('Hot meals heal you at sea');
   if (mods.doctor) perks.push('Healed after every battle');
   if (mods.repair) perks.push('Ship repairs itself at sea');
   if (mods.cannonMul > 1) perks.push('+30% cannon damage');
-  if (mods.staminaMul > 1) perks.push('+25% stamina regeneration');
+  if (mods.cdMul < 1) perks.push('Techniques come back 10% sooner');
   if (mods.poneglyphs) perks.push('Can read Poneglyphs');
   if (mods.turnMul > 1) perks.push('Ship turns 25% faster');
   if (perks.length) add(body, h('h3', 'Crew bonuses'), h('p', perks.join(' · ')));

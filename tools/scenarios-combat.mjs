@@ -51,7 +51,7 @@ function installLab() {
       g.areaZones.length = 0;
       g.spawner.update = () => {};
       p.hidden = false;
-      p.hp = p.d.maxHp; p.stamina = p.d.maxStamina; p.state = 'idle'; p.action = null; p.hitstun = 0; p.iframes = 0; p.buffs = []; p.status = {}; p.cooldowns = {};
+      p.hp = p.d.maxHp; p.state = 'idle'; p.action = null; p.hitstun = 0; p.iframes = 0; p.buffs = []; p.status = {}; p.cooldowns = {};
       p.armament = false; p.observation = false; p.blocking = false; p.dash = null; p.kb.x = 0; p.kb.y = 0; p.conquerorInfused = false;
       p.recalc();
       if (!lab.home) lab.findOpenGround();
@@ -126,7 +126,7 @@ function installLab() {
       a.game = g; g.addActor(a);
       a.controller = null; a.provoked = true;
       a.facing = o.facing ?? 0;
-      a.hp = a.d.maxHp; a.stamina = a.d.maxStamina;
+      a.hp = a.d.maxHp;
       a.hakiSkill = { armament: 60, observation: 60, conqueror: 60 }; a.haki = 999;
       a.masteries = { [a.style]: 100 };
       if (o.weapon === 'sword') a.weapon = { kind: 'sword', power: 1.2, count: o.count || 1 };
@@ -149,7 +149,7 @@ function installLab() {
     },
     refill(who) {
       const p = who || OP.game.player;
-      p.stamina = p.d.maxStamina; p.haki = 999; p.cooldowns = {}; p.hp = p.d.maxHp;
+      p.haki = 999; p.cooldowns = {}; p.hp = p.d.maxHp;
       if (lab.target) { lab.target.hp = lab.target.d.maxHp; lab.target.state = 'idle'; }
     },
     center(dx = 0, dy = 0) {
@@ -378,7 +378,7 @@ export const scenarios = {
         { name: 'crit', o: { crit: true }, start: () => { const g = window.OP.game, p = g.player; p.combo.step = 0; p.combo.window = 0; p.tryM1(g); }, times: [0.07, 0.1, 0.15, 0.3] },
         { name: 'heavy', o: {}, start: () => { const g = window.OP.game, p = g.player; p.tryHeavy(g); }, times: [0.2, 0.32, 0.36, 0.45, 0.6] },
         { name: 'blocked', o: { block: true }, start: () => { const g = window.OP.game, p = g.player; p.combo.step = 0; p.combo.window = 0; p.tryM1(g); }, times: [0.07, 0.1, 0.18] },
-        { name: 'guard break', o: { block: true }, start: () => { const g = window.OP.game, p = g.player, d = window.LAB.target; d.stamina = 1; p.tryHeavy(g); }, times: [0.32, 0.36, 0.45, 0.6] },
+        { name: 'guard break', o: { block: true }, start: () => { const g = window.OP.game, p = g.player, d = window.LAB.target; p.tryHeavy(g); }, times: [0.32, 0.36, 0.45, 0.6] },
         { name: 'parry', o: { block: true, fresh: true }, start: () => { const g = window.OP.game, p = g.player; p.combo.step = 0; p.combo.window = 0; p.tryM1(g); }, times: [0.07, 0.1, 0.2, 0.35] },
       ];
       for (const c of cases) {

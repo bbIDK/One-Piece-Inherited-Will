@@ -74,7 +74,7 @@ export class UI {
     const E = this.el;
     E.name = h('div.hud-name');
     E.sub = h('div.hud-sub');
-    E.hp = bar('hp'); E.st = bar('st'); E.hk = bar('hk');
+    E.hp = bar('hp'); E.hk = bar('hk');
     // breath under water: a row of bubbles that pop as it runs out
     E.o2 = h('div.o2.hidden', { title: 'Breath' });
     E.o2b = [];
@@ -82,11 +82,22 @@ export class UI {
     E.lives = h('div.lives');
     E.bounty = h('div.hud-bounty');
     E.buffs = h('div.buffs');
-    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.st.el, E.o2, E.hk.el, E.lives, E.bounty, E.buffs));
+    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.o2, E.hk.el, E.lives, E.bounty, E.buffs));
     // hotbar: ten slots (1-9, 0). Click a slot to use it; drag slots to
     // rearrange them. With the Inventory or Skills open it's where you drop
     // techniques and food (or click a slot to put what you picked there).
     E.hotbar = h('div.hotbar');
+    // dodging (Q) and blocking (F), left of the hotbar: no stamina, they come
+    // back on cooldowns — a dodge after a moment, a guard smashed aside by a
+    // heavy blow after a little longer
+    E.acts = {};
+    for (const [k, key, name, tip] of [['dodge', 'Q', 'Dodge', 'Dash out of the way, untouchable for an instant. It comes back after a moment.'], ['guard', 'F', 'Block', 'Hold to block (tap just before a hit to parry). A heavy blow smashes a guard aside: it can\'t come up again until this fills.']]) {
+      const a = { el: h('div.slot.toggle.act.' + k, { title: `${name} (${key})\n${tip}` }), cd: h('div.cd') };
+      a.el.append(h('span.ico', uiImg(k, 28)), h('span.k', key), a.cd);
+      if (k === 'dodge') { a.el.classList.add('interactive'); a.el.addEventListener('click', () => { if (!this.blocksInput()) this.game?.player?.controller?.requestDodge?.(); }); }
+      E.acts[k] = a;
+      E.hotbar.appendChild(a.el);
+    }
     E.slots = [];
     for (let i = 0; i < HOTBAR_SIZE; i++) {
       const s = { el: h('div.slot.interactive'), ico: h('span.ico'), k: h('span.k', HOTBAR_KEYS[i]), nm: h('span.nm'), qty: h('span.qty'), cd: h('div.cd'), cdt: h('div.cdt') };
@@ -323,6 +334,12 @@ export class UI {
     el.classList.add('show');
   }
 
+  /** Flash the Q (dodge) or F (block) slot: pressed while it's still coming back. */
+  flashAct(k) {
+    const el = this.el.acts?.[k]?.el;
+    if (el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  }
+
   flashSlot(id) {
     const p = this.game?.player;
     if (!p) return;
@@ -489,9 +506,11 @@ export class UI {
     const title = ch.title || (ch.faction === 'marine' ? `Marine ${ch.marineRank || 'Recruit'}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === 'pirate' ? 'Pirate' : 'Wanderer');
     this.set(E.sub, 'sub', `${raceLabel(p.look)} · ${title} · Doriki ${p.power().toLocaleString()}`);
     E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
-    E.st.set(p.stamina / p.d.maxStamina, `${Math.ceil(p.stamina)}`);
-    const o2max = p.maxOxygen, o2 = p.oxygen;
-    const showO2 = !p.gills && o2 != null && Number.isFinite(o2max) && o2 < o2max - 0.05;
+    // breath — or, for a Devil Fruit user thrashing in the sea, the seconds
+    // before it drags them under
+    const struggling = p.inWater && p.fruit && !p.gills && !p.sinking && p.struggle != null;
+    const o2max = struggling ? p.struggleTime() : p.maxOxygen, o2 = struggling ? Math.max(0, p.struggle) : p.oxygen;
+    const showO2 = !p.gills && o2 != null && Number.isFinite(o2max) && (struggling || o2 < o2max - 0.05);
     if (showO2 !== this.cache.o2on) { E.o2.classList.toggle('hidden', !showO2); this.cache.o2on = showO2; }
     if (showO2) {
       const f = (o2 / o2max) * 10;
@@ -581,6 +600,25 @@ export class UI {
       const txt = cd > 0.05 ? (cd >= 10 ? Math.ceil(cd) : cd.toFixed(1)) : '';
       if (s.cdt.textContent !== String(txt)) s.cdt.textContent = txt;
     }
+    // dodge and guard: their cooldowns sweep down like a technique's; the dodge
+    // gives a pulse when it's back, the guard lights up while it's raised
+    const sea = p.mode === 'sail';
+    if (sea !== this.cache.actSea) { this.cache.actSea = sea; for (const a of Object.values(E.acts)) a.el.classList.toggle('hidden', sea); }
+    const dodge = E.acts.dodge, guard = E.acts.guard;
+    const dcd = p.dodgeCd > 0 ? clamp(p.dodgeCd / (p.dodgeCdMax || 1), 0, 1) : 0;
+    if (dcd !== this.cache.dodgeCd) {
+      if (!dcd && this.cache.dodgeCd) { dodge.el.classList.remove('ready'); void dodge.el.offsetWidth; dodge.el.classList.add('ready'); }
+      this.cache.dodgeCd = dcd;
+      dodge.cd.style.transform = `scaleY(${dcd.toFixed(3)})`;
+      dodge.el.classList.toggle('wait', dcd > 0);
+    }
+    const gcd = p.guardCd > 0 ? clamp(p.guardCd / p.guardCooldown(), 0, 1) : 0;
+    if (gcd !== this.cache.guardCd) {
+      this.cache.guardCd = gcd;
+      guard.cd.style.transform = `scaleY(${gcd.toFixed(3)})`;
+      guard.el.classList.toggle('broken', gcd > 0);
+    }
+    if (!!p.blocking !== this.cache.guardOn) { this.cache.guardOn = !!p.blocking; guard.el.classList.toggle('on', !!p.blocking); }
     for (const t of HAKI_TOGGLES) {
       const el = E.toggles[t.type];
       const lvl = p.hakiLevel(t.type);
