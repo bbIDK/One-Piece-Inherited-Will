@@ -54,6 +54,8 @@ export function colliderOf(o) {
   // a gateway's posts and legs stand solid where they're drawn (render3d/props/
   // landmarks.js); between them you walk through
   if (o.kind === 'torii') return { circles: [[-1.55, 0, 0.3], [1.55, 0, 0.3]] };
+  // (the Baratie: her two masts stand on her deck — render3d/props/baratie.js; the rest of her is round it)
+  if (o.kind === 'baratie') return { circles: [[-18.5, 0, 0.55], [18.5, 0, 0.55]] };
   if (o.kind === 'gate') {
     const k = /justice/i.test(o.name || '') ? 2.2 : 1; // (the Gate of Justice is drawn 2.2 times the size)
     return { circles: [-1, 1].flatMap((sx) => [[sx * 3.5 * k, -0.45 * k, 0.78 * k], [sx * 3.5 * k, 0.45 * k, 0.78 * k]]) };

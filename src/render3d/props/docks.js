@@ -75,6 +75,8 @@ function pierTile(k, i, j, x0, y0, info, { water, pier, floor }) {
   for (const s of [-0.34, 0, 0.34]) {
     k.add(box(alongX ? 0.03 : 1.0, 0.012, alongX ? 1.0 : 0.03), { at: [cx + (alongX ? s + 0.16 : 0), top, cz + (alongX ? 0 : s + 0.16)], color: SEAM });
   }
+  // (a ship's deck — the Baratie's — has her hull round it, not a pier's piles and rails)
+  if (info.deck) return;
   // a row of piles down the middle of the pier, every other tile
   if (!(info.a & 1) && !(info.b & 1) && Math.abs(info.b) < info.hb) {
     const f = floor(cx, cz);

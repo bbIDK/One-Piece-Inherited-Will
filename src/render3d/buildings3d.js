@@ -89,6 +89,10 @@ const STYLE = {
   mink: { wall: 'log', base: '#8d6e63', win: 'round', door: 'plank' },
   giant: { wall: 'timber', beam: '#4e342e', base: '#7f7a72', win: 'cross', door: 'plank', scale: 2.1 },
   ruins: { wall: 'stone', base: '#8d8a82', win: 'hole', door: 'hole' },
+  // the Baratie's restaurant: sea-green walls, white trim and arched windows
+  // framed in white, a gallery right round its upper floor and a golden door
+  // (its roof a red mansard: see mansardRoof)
+  baratie: { wall: 'smooth', trim: '#ffffff', base: '#e9e3d4', win: 'arch', door: 'arch', frame: '#ffffff', glass: '#3f6f8c', cornice: true, gallery: true },
 };
 
 const lit = (b, i) => ((i * 7 + (b.v || 0) * 3) % 5) < 3; // which windows are lit at night
@@ -109,8 +113,8 @@ function B(k, x0, y0, z0, x1, y1, z1, color, o = {}) {
 function windowAt(k, b, S, x, y, w, h, faceZ, litOn, wallCol, flowers, pane = null) {
   k.save();
   k.translate(x, y, faceZ);
-  const frame = S.wall === 'post' ? '#3e2723' : S.wall === 'brick' || S.wall === 'adobe' ? shade(wallCol, 0.35) : shade(wallCol, -0.45);
-  const glass = '#2d4150';
+  const frame = S.frame || (S.wall === 'post' ? '#3e2723' : S.wall === 'brick' || S.wall === 'adobe' ? shade(wallCol, 0.35) : shade(wallCol, -0.45));
+  const glass = S.glass || '#2d4150';
   const glow = litOn ? WARM : null;
   const G = pane ? (pane.m.copy(k.m), pane) : k;
   switch (S.win) {
@@ -286,6 +290,7 @@ function doorFrame(k, dw, dh, yb, t, z0, z1, color) {
 // painted front doors: every house its own colour
 const DOOR_PAINT = ['#5a3a22', '#2e5e4e', '#1f4e79', '#7b2d26', '#6d4c33', '#3d5a3a', '#4a3b5c', '#8a5a2b'];
 function doorWood(b, S) {
+  if (b.style === 'baratie') return '#d6a22a'; // (the Baratie's golden doors)
   if (S.door === 'panel' && (b.style === 'marine' || b.role === 'marine_base')) return '#1b4f72';
   if ((b.role || 'house') === 'house' && ['village', 'town', 'port', 'city', 'noble', 'snow', 'spooky'].includes(b.style)) return DOOR_PAINT[Math.floor(hash(b.x, b.y, 5.3) * DOOR_PAINT.length)];
   return b.style === 'noble' ? '#6d3b1f' : '#5a3a22';
@@ -578,6 +583,7 @@ function buildBuilding0(b, ctx) {
     }
   }
   if (V.balcony) balcony(k, b, S, V.balcony, plinth + storeyH, wallCol, lit(b, wi++));
+  if (S.gallery && storeys >= 2) gallery(k, fw, fd, plinth + storeyH);
   // (a balcony over the door already keeps the rain off it)
   if (V.canopy && !(V.balcony && Math.abs(V.balcony.x - door.x) < (V.balcony.w + dd.dw + 0.9) / 2)) canopy(k, door, dd, V.canopy, roofCol);
 
@@ -585,6 +591,7 @@ function buildBuilding0(b, ctx) {
   let top = H;
   if (!ruined) {
     if (rt === 'flat') top += flatRoof(k, b, S, fw, fd, H, wallCol, roofCol, ex);
+    else if (rt === 'mansard') top += mansardRoof(k, b, S, fw, fd, H, roofCol, wallCol, g, lit(b, 30));
     else if (rt === 'dome' || rt === 'shell') {
       // (its base slab stops short of a neighbour: run 15 cm on into the next
       // house's, the two lay in one plane and flickered)
@@ -1068,6 +1075,83 @@ function jetty(k, S, fw, plinth, storeys, storeyH, H, Hc, j, wallCol, ex) {
   }
 }
 
+/**
+ * A box narrowing as it rises (a truncated pyramid): w0 × d0 at its foot,
+ * w1 × d1 at its top, h higher; centred on its foot's middle. Each face flat.
+ */
+function frustum(w0, d0, w1, d1, h) {
+  const a = w0 / 2, b = d0 / 2, c = w1 / 2, d = d1 / 2;
+  const P = [
+    -a, 0, b, a, 0, b, c, h, d, -a, 0, b, c, h, d, -c, h, d, // front
+    a, 0, -b, -a, 0, -b, -c, h, -d, a, 0, -b, -c, h, -d, c, h, -d, // back
+    a, 0, b, a, 0, -b, c, h, -d, a, 0, b, c, h, -d, c, h, d, // right
+    -a, 0, -b, -a, 0, b, -c, h, d, -a, 0, -b, -c, h, d, -c, h, -d, // left
+    -c, h, d, c, h, d, c, h, -d, -c, h, d, c, h, -d, -c, h, -d, // top
+  ];
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** A mansard roof's measures: its steep lower slopes (w0 × d0 at the eaves, w1 × d1 where they turn, h1 high), the band there, and the low hip over it (rising h2 to a ridge rw long). */
+function mansardDims(fw, fd, g) {
+  const ov = 0.3, inset = 1.2 * g;
+  const w0 = fw + 2 * ov, d0 = fd + 2 * ov, w1 = w0 - 2 * inset, d1 = d0 - 2 * inset;
+  return { ov, inset, w0, d0, w1, d1, h1: 2.5 * g, band: 0.18, h2: Math.min(1.3 * g, d1 * 0.32), rw: Math.max(0.4, w1 - d1 + 0.4) };
+}
+
+/**
+ * A mansard roof (the Baratie's): steep slopes all round from the eaves, a
+ * white band where they turn, a low hip over the top, and dormers with
+ * arched windows along the front and back. Returns how far it rises over H.
+ */
+function mansardRoof(k, b, S, fw, fd, H, roofCol, wallCol, g, litOn) {
+  const M = mansardDims(fw, fd, g), hd = fd / 2;
+  k.add(frustum(M.w0, M.d0, M.w1, M.d1, M.h1), { at: [0, H, -hd], color: roofCol, outline: 0.04 });
+  B(k, -M.w1 / 2 - 0.06, H + M.h1, -hd - M.d1 / 2 - 0.06, M.w1 / 2 + 0.06, H + M.h1 + M.band, -hd + M.d1 / 2 + 0.06, '#ffffff', { outline: 0.02 });
+  k.add(frustum(M.w1, M.d1, M.rw, 0.4, M.h2), { at: [0, H + M.h1 + M.band, -hd], color: roofCol, outline: 0.04 });
+  // dormers along the front and the back slopes, their windows lit at night
+  const n = Math.max(2, Math.floor((fw - 2) / (3.4 * g))), step = (fw - 2.4 * g) / Math.max(1, n - 1);
+  const dw = 1.25 * g, dh = 1.6 * g, y0 = H + 0.3;
+  for (const back of [false, true]) {
+    k.save();
+    if (back) { k.translate(0, 0, -fd); k.rotateY(Math.PI); }
+    for (let i = 0; i < n; i++) {
+      const x = n === 1 ? 0 : -fw / 2 + 1.2 * g + i * step;
+      // (its face just in from the eaves, its body running back into the roof)
+      const zf = M.ov * 0.6, zb = -M.inset - 0.4;
+      B(k, x - dw / 2, y0, zb, x + dw / 2, y0 + dh, zf, wallCol, { outline: 0.03 });
+      k.add(frustum(dw + 0.32, zf - zb + 0.2, 0.06, zf - zb + 0.2, 0.62 * g), { at: [x, y0 + dh, (zf + zb) / 2], color: roofCol, outline: 0.03 });
+      windowAt(k, b, S, x, y0 + dh * 0.5, 0.62 * g, 1.0 * g, zf + 0.005, litOn && i % 2 === 0, wallCol, false);
+    }
+    k.restore();
+  }
+  return M.h1 + M.band + M.h2;
+}
+
+/** The Baratie's gallery: a balcony right round the upper floor at height y, a white railing on white posts. */
+function gallery(k, fw, fd, y, d = 0.95) {
+  const floor = '#efe9dd', white = '#ffffff';
+  // its floor, all round outside the walls
+  B(k, -fw / 2 - d, y - 0.22, 0, fw / 2 + d, y, d, floor, { outline: 0.03 });
+  B(k, -fw / 2 - d, y - 0.22, -fd - d, fw / 2 + d, y, -fd, floor, { outline: 0.03 });
+  for (const sx of [-1, 1]) B(k, sx < 0 ? -fw / 2 - d : fw / 2, y - 0.22, -fd, sx < 0 ? -fw / 2 : fw / 2 + d, y, 0, floor, { outline: 0.03 });
+  // the railing along its edge: posts, a top rail and a lower one
+  const ex = fw / 2 + d - 0.06, ez0 = d - 0.06, ez1 = -fd - d + 0.06;
+  const run = (xa, za, xb, zb) => {
+    const L = Math.hypot(xb - xa, zb - za), n = Math.max(1, Math.round(L / 0.6));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, px = xa + (xb - xa) * t, pz = za + (zb - za) * t;
+      B(k, px - 0.04, y, pz - 0.04, px + 0.04, y + 0.92, pz + 0.04, white);
+    }
+    const alongX = Math.abs(xb - xa) > Math.abs(zb - za);
+    const x0 = Math.min(xa, xb), x1 = Math.max(xa, xb), z0 = Math.min(za, zb), z1 = Math.max(za, zb);
+    for (const [h, t] of [[0.92, 0.07], [0.42, 0.04]]) B(k, x0 - (alongX ? 0.05 : t), y + h - t, z0 - (alongX ? t : 0.05), x1 + (alongX ? 0.05 : t), y + h + t * 0.5, z1 + (alongX ? t : 0.05), white, { outline: 0.012 });
+  };
+  run(-ex, ez0, ex, ez0); run(-ex, ez1, ex, ez1); run(-ex, ez1, -ex, ez0); run(ex, ez1, ex, ez0);
+}
+
 /** A first-floor balcony: a slab on brackets, a railing, and French windows behind. */
 function balcony(k, b, S, V, y, wallCol, litOn) {
   const { x, w, d } = V;
@@ -1350,7 +1434,7 @@ export function farBuilding(k, b, ctx) {
 
   // the windows, lit in the same pattern as the model's
   const winW = 0.85 * g, winH = 1.05 * g;
-  const frame = S.wall === 'post' ? '#3e2723' : S.wall === 'brick' || S.wall === 'adobe' ? shade(wallCol, 0.35) : shade(wallCol, -0.45);
+  const frame = S.frame || (S.wall === 'post' ? '#3e2723' : S.wall === 'brick' || S.wall === 'adobe' ? shade(wallCol, 0.35) : shade(wallCol, -0.45));
   const [glass, glowCol] = PANES[S.win] || [S.win === 'round' && b.style === 'sky' ? '#bde3ff' : '#2d4150', WARM];
   const hh = S.win === 'tall' ? winH * 1.2 : winH;
   const shutter = S.shutters && (S.win === 'cross' || S.win === 'tall') ? ['#2e6b8a', '#4f7d3a', '#8a3b2e', '#6d4c33'][(b.v || 0) % 4] : null;
@@ -1394,7 +1478,13 @@ export function farBuilding(k, b, ctx) {
   if (S.wall === 'column') B(k, x0, H - 0.5, 0.05, x1, H - 0.12, 0.4, '#b03a2e');
 
   // the roof
-  if (rt === 'flat') {
+  if (rt === 'mansard') {
+    const M = mansardDims(fw, fd, g);
+    k.add(frustum(M.w0, M.d0, M.w1, M.d1, M.h1), { at: [0, H, -hd], color: roofCol });
+    B(k, -M.w1 / 2 - 0.05, H + M.h1, -hd - M.d1 / 2 - 0.05, M.w1 / 2 + 0.05, H + M.h1 + M.band, -hd + M.d1 / 2 + 0.05, '#ffffff');
+    k.add(frustum(M.w1, M.d1, M.rw, 0.4, M.h2), { at: [0, H + M.h1 + M.band, -hd], color: roofCol });
+    if (S.gallery && storeys >= 2) B(k, x0 - 0.9, plinth + storeyH - 0.22, z0 - 0.9, x1 + 0.9, plinth + storeyH, z1 + 0.9, '#efe9dd');
+  } else if (rt === 'flat') {
     const pc = b.style === 'marine' ? C('#f5f6fa') : shade(wallCol, -0.06);
     B(k, x0 - 0.07, H - 0.05, z0 - 0.07, x1 + 0.07, H + 0.43, z1 + 0.07, (p, n) => (n.y > 0.5 ? roofCol : pc));
     if (b.style === 'desert' && fw >= 4 && fd >= 3) {

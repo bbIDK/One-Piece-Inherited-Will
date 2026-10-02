@@ -213,6 +213,18 @@ export function generateIsland(world, def, noise, rng) {
     rec.towns.push(t);
   }
 
+  // a ship's deck (the Baratie's): its planks stand a pier's height over the
+  // sea, level with the pier alongside (see render3d/height.js deckTop); her
+  // hull is drawn round it (render3d/props/baratie.js)
+  if (def.shipDeck) {
+    for (let j = 0; j < LH; j++) {
+      for (let i = 0; i < LW; i++) {
+        const x = world.wx(x0 + i), y = y0 + j;
+        if (L[li(i, j)] && world.type(x, y) === T.PLANK && !world.isDock(x, y)) world.markDock(x, y, { deck: true });
+      }
+    }
+  }
+
   // docks ---------------------------------------------------------------------
   const dockDefs = def.docks || (def.towns && def.towns.length ? def.towns.map((t) => ({ near: t.id || t.name, dir: t.dockDir })) : []);
   for (const dd of dockDefs) {

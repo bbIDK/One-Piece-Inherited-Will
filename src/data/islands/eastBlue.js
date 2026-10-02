@@ -132,19 +132,25 @@ export const EAST_BLUE = [
     danger: 1,
   },
   {
-    // The Baratie — a fish-shaped floating restaurant. Built as a wooden
-    // "island" of decking over the sea.
-    id: 'baratie', name: 'Baratie', sea: 'east_blue', x: 2850, y: 570, w: 20, h: 14, climate: 'temperate',
+    // The Baratie, the floating restaurant, as in the anime: a ship shaped
+    // like a great fish (its head the bow, east; its tail the stern), her
+    // deck a pier's height over the sea (shipDeck) — three overlapping
+    // ellipses, 60 m by 20 — with the restaurant standing in the middle of
+    // it: sea-green walls, a gallery right round, a red mansard roof (style
+    // 'baratie'), two masts with striped sails fore and aft of it. (Her hull,
+    // head, tail, masts and signs: render3d/props/baratie.js, which counts on
+    // these measures.)
+    id: 'baratie', name: 'Baratie', sea: 'east_blue', x: 2850, y: 570, w: 27, h: 9, climate: 'temperate',
     ground: T.PLANK, beach: T.PLANK, rough: 0.0, elevRate: 0, noiseScale: 0.01, beachWidth: 0,
-    blobs: [[0, 0, 0.9, 0.8], [1.2, 0, 0.35, 0.55]],
-    paint: [{ op: 'blob', x: -17, y: 0, rx: 4, ry: 6, tile: T.PLANK, rough: 0 }],
+    shipDeck: true,
+    blobs: [[0, 0, 0.78, 1], [0.5, 0, 0.5, 0.82], [-0.5, 0, 0.5, 0.9]],
     treeDensity: 0,
     landmarks: [
-      { kind: 'building', role: 'restaurant', name: 'Baratie — Sea Restaurant', npc: 'zeff', style: 'port', roofType: 'gable', fw: 10, fd: 4, hgt: 3, wall: '#f5e6c4', roof: '#1f618d', dx: 0, dy: -0.05 },
-      { kind: 'lamp', dx: -0.6, dy: 0.5, light: true },
-      { kind: 'lamp', dx: 0.6, dy: 0.5, light: true },
+      { kind: 'baratie', dx: 0, dy: 0, block: false, name: 'The Baratie' },
+      // (its front 5 m south of her middle line: dy × 10.1 m)
+      { kind: 'building', role: 'restaurant', name: 'Baratie — Sea Restaurant', npc: 'zeff', style: 'baratie', roofType: 'mansard', fw: 24, fd: 10, hgt: 3, tall: 1.35, wall: '#7cc2a4', roof: '#7d2c2c', dx: 0, dy: 0.495 },
     ],
-    spots: [{ id: 'baratie_deck', dx: 0, dy: 0.55 }],
+    spots: [{ id: 'baratie_deck', dx: 0, dy: 0.76 }],
     docks: [{ dx: 0, dy: 0.5, dir: 's', len: 4, name: 'Baratie' }],
     danger: 1,
   },

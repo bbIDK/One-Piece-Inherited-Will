@@ -3832,29 +3832,29 @@
       _edge2.subVectors(c, a);
       _normal$1.crossVectors(_edge1, _edge2);
       let DdN = this.direction.dot(_normal$1);
-      let sign3;
+      let sign4;
       if (DdN > 0) {
         if (backfaceCulling) return null;
-        sign3 = 1;
+        sign4 = 1;
       } else if (DdN < 0) {
-        sign3 = -1;
+        sign4 = -1;
         DdN = -DdN;
       } else {
         return null;
       }
       _diff.subVectors(this.origin, a);
-      const DdQxE2 = sign3 * this.direction.dot(_edge2.crossVectors(_diff, _edge2));
+      const DdQxE2 = sign4 * this.direction.dot(_edge2.crossVectors(_diff, _edge2));
       if (DdQxE2 < 0) {
         return null;
       }
-      const DdE1xQ = sign3 * this.direction.dot(_edge1.cross(_diff));
+      const DdE1xQ = sign4 * this.direction.dot(_edge1.cross(_diff));
       if (DdE1xQ < 0) {
         return null;
       }
       if (DdQxE2 + DdE1xQ > DdN) {
         return null;
       }
-      const QdN = -sign3 * _diff.dot(_normal$1);
+      const QdN = -sign4 * _diff.dot(_normal$1);
       if (QdN < 0) {
         return null;
       }
@@ -8441,10 +8441,10 @@
       planes[5].copy(p5);
       return this;
     }
-    copy(frustum) {
+    copy(frustum2) {
       const planes = this.planes;
       for (let i = 0; i < 6; i++) {
-        planes[i].copy(frustum.planes[i]);
+        planes[i].copy(frustum2.planes[i]);
       }
       return this;
     }
@@ -22323,10 +22323,10 @@ void main() {
         const vertex2 = new Vector3();
         let groupCount = 0;
         const radius = top === true ? radiusTop : radiusBottom;
-        const sign3 = top === true ? 1 : -1;
+        const sign4 = top === true ? 1 : -1;
         for (let x = 1; x <= radialSegments; x++) {
-          vertices.push(0, halfHeight * sign3, 0);
-          normals.push(0, sign3, 0);
+          vertices.push(0, halfHeight * sign4, 0);
+          normals.push(0, sign4, 0);
           uvs.push(0.5, 0.5);
           index++;
         }
@@ -22337,12 +22337,12 @@ void main() {
           const cosTheta = Math.cos(theta);
           const sinTheta = Math.sin(theta);
           vertex2.x = radius * sinTheta;
-          vertex2.y = halfHeight * sign3;
+          vertex2.y = halfHeight * sign4;
           vertex2.z = radius * cosTheta;
           vertices.push(vertex2.x, vertex2.y, vertex2.z);
-          normals.push(0, sign3, 0);
+          normals.push(0, sign4, 0);
           uv.x = cosTheta * 0.5 + 0.5;
-          uv.y = sinTheta * 0.5 * sign3 + 0.5;
+          uv.y = sinTheta * 0.5 * sign4 + 0.5;
           uvs.push(uv.x, uv.y);
           index++;
         }
@@ -30829,33 +30829,33 @@ void main() {
       const colorCross = new Color(3355443);
       this.setColors(colorFrustum, colorCone, colorUp, colorTarget, colorCross);
     }
-    setColors(frustum, cone2, up, target2, cross2) {
+    setColors(frustum2, cone2, up, target2, cross2) {
       const geometry = this.geometry;
       const colorAttribute = geometry.getAttribute("color");
-      colorAttribute.setXYZ(0, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(1, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(2, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(3, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(4, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(5, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(6, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(7, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(8, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(9, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(10, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(11, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(12, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(13, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(14, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(15, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(16, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(17, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(18, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(19, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(20, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(21, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(22, frustum.r, frustum.g, frustum.b);
-      colorAttribute.setXYZ(23, frustum.r, frustum.g, frustum.b);
+      colorAttribute.setXYZ(0, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(1, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(2, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(3, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(4, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(5, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(6, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(7, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(8, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(9, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(10, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(11, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(12, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(13, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(14, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(15, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(16, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(17, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(18, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(19, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(20, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(21, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(22, frustum2.r, frustum2.g, frustum2.b);
+      colorAttribute.setXYZ(23, frustum2.r, frustum2.g, frustum2.b);
       colorAttribute.setXYZ(24, cone2.r, cone2.g, cone2.b);
       colorAttribute.setXYZ(25, cone2.r, cone2.g, cone2.b);
       colorAttribute.setXYZ(26, cone2.r, cone2.g, cone2.b);
@@ -35787,6 +35787,7 @@ void main() {
     for (const s of [-0.34, 0, 0.34]) {
       k.add(box(alongX ? 0.03 : 1, 0.012, alongX ? 1 : 0.03), { at: [cx + (alongX ? s + 0.16 : 0), top, cz + (alongX ? 0 : s + 0.16)], color: SEAM });
     }
+    if (info.deck) return;
     if (!(info.a & 1) && !(info.b & 1) && Math.abs(info.b) < info.hb) {
       const f = floor(cx, cz);
       k.add(cyl(0.16, 0.18, top - f - 0.1, 7), { at: [cx, f, cz], color: PILE });
@@ -36251,7 +36252,7 @@ void main() {
           if (OVERLAY[t]) {
             if (w.docks.size && w.isDock(x0 + i, y0 + j)) {
               piers.push(i, j);
-              if (third) piles.push(i, j);
+              if (third && !w.dockAt(x0 + i, y0 + j)?.deck) piles.push(i, j);
               continue;
             }
             decks2.push(i, j);
@@ -55861,7 +55862,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     tribal: { wall: "hut", base: "#8d6e63", win: "none", door: "hide" },
     mink: { wall: "log", base: "#8d6e63", win: "round", door: "plank" },
     giant: { wall: "timber", beam: "#4e342e", base: "#7f7a72", win: "cross", door: "plank", scale: 2.1 },
-    ruins: { wall: "stone", base: "#8d8a82", win: "hole", door: "hole" }
+    ruins: { wall: "stone", base: "#8d8a82", win: "hole", door: "hole" },
+    // the Baratie's restaurant: sea-green walls, white trim and arched windows
+    // framed in white, a gallery right round its upper floor and a golden door
+    // (its roof a red mansard: see mansardRoof)
+    baratie: { wall: "smooth", trim: "#ffffff", base: "#e9e3d4", win: "arch", door: "arch", frame: "#ffffff", glass: "#3f6f8c", cornice: true, gallery: true }
   };
   var lit = (b, i) => (i * 7 + (b.v || 0) * 3) % 5 < 3;
   var WARM = "#ffc766";
@@ -55871,8 +55876,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function windowAt(k, b, S5, x, y, w, h2, faceZ, litOn, wallCol, flowers, pane = null) {
     k.save();
     k.translate(x, y, faceZ);
-    const frame2 = S5.wall === "post" ? "#3e2723" : S5.wall === "brick" || S5.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
-    const glass = "#2d4150";
+    const frame2 = S5.frame || (S5.wall === "post" ? "#3e2723" : S5.wall === "brick" || S5.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45));
+    const glass = S5.glass || "#2d4150";
     const glow3 = litOn ? WARM : null;
     const G3 = pane ? (pane.m.copy(k.m), pane) : k;
     switch (S5.win) {
@@ -56046,6 +56051,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   var DOOR_PAINT = ["#5a3a22", "#2e5e4e", "#1f4e79", "#7b2d26", "#6d4c33", "#3d5a3a", "#4a3b5c", "#8a5a2b"];
   function doorWood(b, S5) {
+    if (b.style === "baratie") return "#d6a22a";
     if (S5.door === "panel" && (b.style === "marine" || b.role === "marine_base")) return "#1b4f72";
     if ((b.role || "house") === "house" && ["village", "town", "port", "city", "noble", "snow", "spooky"].includes(b.style)) return DOOR_PAINT[Math.floor(hash3(b.x, b.y, 5.3) * DOOR_PAINT.length)];
     return b.style === "noble" ? "#6d3b1f" : "#5a3a22";
@@ -56298,10 +56304,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
     if (V5.balcony) balcony(k, b, S5, V5.balcony, plinth + storeyH, wallCol, lit(b, wi++));
+    if (S5.gallery && storeys >= 2) gallery(k, fw, fd, plinth + storeyH);
     if (V5.canopy && !(V5.balcony && Math.abs(V5.balcony.x - door.x) < (V5.balcony.w + dd.dw + 0.9) / 2)) canopy2(k, door, dd, V5.canopy, roofCol);
     let top = H3;
     if (!ruined) {
       if (rt === "flat") top += flatRoof(k, b, S5, fw, fd, H3, wallCol, roofCol, ex);
+      else if (rt === "mansard") top += mansardRoof(k, b, S5, fw, fd, H3, roofCol, wallCol, g, lit(b, 30));
       else if (rt === "dome" || rt === "shell") {
         B2(k, trimX(ex, -1, 0.15, fw), H3 - 0.05, -fd - 0.15, trimX(ex, 1, 0.15, fw), H3 + 0.18, 0.15, shade2(wallCol, -0.12), { outline: 0.03 });
         const r = Math.min(fw, fd) / 2 * 0.98;
@@ -56399,10 +56407,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       let sx = info.door.x + info.dd.dw / 2 + 0.75;
       if (sx > b.fw / 2 - 0.5) sx = info.door.x - info.dd.dw / 2 - 0.75;
       const sy = Math.min(info.H - 0.6, info.dd.top - 0.05);
-      const sign3 = new Mesh(new PlaneGeometry(0.78, 0.78), signMaterial(icon));
-      sign3.position.set(sx, sy, 0.62);
-      sign3.rotation.y = Math.PI / 2 * 0;
-      grp.add(sign3);
+      const sign4 = new Mesh(new PlaneGeometry(0.78, 0.78), signMaterial(icon));
+      sign4.position.set(sx, sy, 0.62);
+      sign4.rotation.y = Math.PI / 2 * 0;
+      grp.add(sign4);
       const bk = new Mesher();
       bk.add(box(0.06, 0.06, 0.7), { at: [sx, sy + 0.42, 0.33], color: "#3e2a1a" });
       bk.add(box(0.02, 0.02, 0.02), { at: [sx, sy + 0.39, 0.62], color: "#3e2a1a" });
@@ -56721,6 +56729,160 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       B2(k, -fw / 2, y, j - 0.02, fw / 2, y + 0.18, j + 0.05, beam2);
     }
   }
+  function frustum(w0, d0, w1, d1, h2) {
+    const a = w0 / 2, b = d0 / 2, c = w1 / 2, d = d1 / 2;
+    const P4 = [
+      -a,
+      0,
+      b,
+      a,
+      0,
+      b,
+      c,
+      h2,
+      d,
+      -a,
+      0,
+      b,
+      c,
+      h2,
+      d,
+      -c,
+      h2,
+      d,
+      // front
+      a,
+      0,
+      -b,
+      -a,
+      0,
+      -b,
+      -c,
+      h2,
+      -d,
+      a,
+      0,
+      -b,
+      -c,
+      h2,
+      -d,
+      c,
+      h2,
+      -d,
+      // back
+      a,
+      0,
+      b,
+      a,
+      0,
+      -b,
+      c,
+      h2,
+      -d,
+      a,
+      0,
+      b,
+      c,
+      h2,
+      -d,
+      c,
+      h2,
+      d,
+      // right
+      -a,
+      0,
+      -b,
+      -a,
+      0,
+      b,
+      -c,
+      h2,
+      d,
+      -a,
+      0,
+      -b,
+      -c,
+      h2,
+      d,
+      -c,
+      h2,
+      -d,
+      // left
+      -c,
+      h2,
+      d,
+      c,
+      h2,
+      d,
+      c,
+      h2,
+      -d,
+      -c,
+      h2,
+      d,
+      c,
+      h2,
+      -d,
+      -c,
+      h2,
+      -d
+      // top
+    ];
+    const geo2 = new BufferGeometry();
+    geo2.setAttribute("position", new Float32BufferAttribute(P4, 3));
+    geo2.computeVertexNormals();
+    return geo2;
+  }
+  function mansardDims(fw, fd, g) {
+    const ov = 0.3, inset = 1.2 * g;
+    const w0 = fw + 2 * ov, d0 = fd + 2 * ov, w1 = w0 - 2 * inset, d1 = d0 - 2 * inset;
+    return { ov, inset, w0, d0, w1, d1, h1: 2.5 * g, band: 0.18, h2: Math.min(1.3 * g, d1 * 0.32), rw: Math.max(0.4, w1 - d1 + 0.4) };
+  }
+  function mansardRoof(k, b, S5, fw, fd, H3, roofCol, wallCol, g, litOn) {
+    const M2 = mansardDims(fw, fd, g), hd = fd / 2;
+    k.add(frustum(M2.w0, M2.d0, M2.w1, M2.d1, M2.h1), { at: [0, H3, -hd], color: roofCol, outline: 0.04 });
+    B2(k, -M2.w1 / 2 - 0.06, H3 + M2.h1, -hd - M2.d1 / 2 - 0.06, M2.w1 / 2 + 0.06, H3 + M2.h1 + M2.band, -hd + M2.d1 / 2 + 0.06, "#ffffff", { outline: 0.02 });
+    k.add(frustum(M2.w1, M2.d1, M2.rw, 0.4, M2.h2), { at: [0, H3 + M2.h1 + M2.band, -hd], color: roofCol, outline: 0.04 });
+    const n = Math.max(2, Math.floor((fw - 2) / (3.4 * g))), step = (fw - 2.4 * g) / Math.max(1, n - 1);
+    const dw = 1.25 * g, dh = 1.6 * g, y0 = H3 + 0.3;
+    for (const back of [false, true]) {
+      k.save();
+      if (back) {
+        k.translate(0, 0, -fd);
+        k.rotateY(Math.PI);
+      }
+      for (let i = 0; i < n; i++) {
+        const x = n === 1 ? 0 : -fw / 2 + 1.2 * g + i * step;
+        const zf = M2.ov * 0.6, zb = -M2.inset - 0.4;
+        B2(k, x - dw / 2, y0, zb, x + dw / 2, y0 + dh, zf, wallCol, { outline: 0.03 });
+        k.add(frustum(dw + 0.32, zf - zb + 0.2, 0.06, zf - zb + 0.2, 0.62 * g), { at: [x, y0 + dh, (zf + zb) / 2], color: roofCol, outline: 0.03 });
+        windowAt(k, b, S5, x, y0 + dh * 0.5, 0.62 * g, 1 * g, zf + 5e-3, litOn && i % 2 === 0, wallCol, false);
+      }
+      k.restore();
+    }
+    return M2.h1 + M2.band + M2.h2;
+  }
+  function gallery(k, fw, fd, y, d = 0.95) {
+    const floor = "#efe9dd", white = "#ffffff";
+    B2(k, -fw / 2 - d, y - 0.22, 0, fw / 2 + d, y, d, floor, { outline: 0.03 });
+    B2(k, -fw / 2 - d, y - 0.22, -fd - d, fw / 2 + d, y, -fd, floor, { outline: 0.03 });
+    for (const sx of [-1, 1]) B2(k, sx < 0 ? -fw / 2 - d : fw / 2, y - 0.22, -fd, sx < 0 ? -fw / 2 : fw / 2 + d, y, 0, floor, { outline: 0.03 });
+    const ex = fw / 2 + d - 0.06, ez0 = d - 0.06, ez1 = -fd - d + 0.06;
+    const run = (xa, za, xb, zb) => {
+      const L2 = Math.hypot(xb - xa, zb - za), n = Math.max(1, Math.round(L2 / 0.6));
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, px2 = xa + (xb - xa) * t, pz2 = za + (zb - za) * t;
+        B2(k, px2 - 0.04, y, pz2 - 0.04, px2 + 0.04, y + 0.92, pz2 + 0.04, white);
+      }
+      const alongX = Math.abs(xb - xa) > Math.abs(zb - za);
+      const x0 = Math.min(xa, xb), x1 = Math.max(xa, xb), z0 = Math.min(za, zb), z1 = Math.max(za, zb);
+      for (const [h2, t] of [[0.92, 0.07], [0.42, 0.04]]) B2(k, x0 - (alongX ? 0.05 : t), y + h2 - t, z0 - (alongX ? t : 0.05), x1 + (alongX ? 0.05 : t), y + h2 + t * 0.5, z1 + (alongX ? t : 0.05), white, { outline: 0.012 });
+    };
+    run(-ex, ez0, ex, ez0);
+    run(-ex, ez1, ex, ez1);
+    run(-ex, ez1, -ex, ez0);
+    run(ex, ez1, ex, ez0);
+  }
   function balcony(k, b, S5, V5, y, wallCol, litOn) {
     const { x, w, d } = V5;
     const rail2 = S5.wall === "adobe" ? "#6d4c33" : S5.wall === "brick" ? "#2d3436" : shade2(wallCol, -0.55);
@@ -56945,7 +57107,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       B2(k, x0, Hc, z0, x1, H3, z1, wallCol);
     } else B2(k, x0, plinth - 0.05, z0, x1, H3, z1, wallCol);
     const winW = 0.85 * g, winH = 1.05 * g;
-    const frame2 = S5.wall === "post" ? "#3e2723" : S5.wall === "brick" || S5.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45);
+    const frame2 = S5.frame || (S5.wall === "post" ? "#3e2723" : S5.wall === "brick" || S5.wall === "adobe" ? shade2(wallCol, 0.35) : shade2(wallCol, -0.45));
     const [glass, glowCol] = PANES[S5.win] || [S5.win === "round" && b.style === "sky" ? "#bde3ff" : "#2d4150", WARM];
     const hh = S5.win === "tall" ? winH * 1.2 : winH;
     const shutter = S5.shutters && (S5.win === "cross" || S5.win === "tall") ? ["#2e6b8a", "#4f7d3a", "#8a3b2e", "#6d4c33"][(b.v || 0) % 4] : null;
@@ -56987,7 +57149,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (S5.engawa) B2(k, x0, -Math.max(0.5, sink), 0, x1, 0.4, 0.88, "#8d6e4a");
     if (b.role === "marine_base" || b.style === "marine" && fw >= 6) B2(k, x0 - 0.01, H3 - 1.15, -0.2, x1 + 0.01, H3 - 0.35, 0.05, "#f5f6fa");
     if (S5.wall === "column") B2(k, x0, H3 - 0.5, 0.05, x1, H3 - 0.12, 0.4, "#b03a2e");
-    if (rt === "flat") {
+    if (rt === "mansard") {
+      const M2 = mansardDims(fw, fd, g);
+      k.add(frustum(M2.w0, M2.d0, M2.w1, M2.d1, M2.h1), { at: [0, H3, -hd], color: roofCol });
+      B2(k, -M2.w1 / 2 - 0.05, H3 + M2.h1, -hd - M2.d1 / 2 - 0.05, M2.w1 / 2 + 0.05, H3 + M2.h1 + M2.band, -hd + M2.d1 / 2 + 0.05, "#ffffff");
+      k.add(frustum(M2.w1, M2.d1, M2.rw, 0.4, M2.h2), { at: [0, H3 + M2.h1 + M2.band, -hd], color: roofCol });
+      if (S5.gallery && storeys >= 2) B2(k, x0 - 0.9, plinth + storeyH - 0.22, z0 - 0.9, x1 + 0.9, plinth + storeyH, z1 + 0.9, "#efe9dd");
+    } else if (rt === "flat") {
       const pc = b.style === "marine" ? C("#f5f6fa") : shade2(wallCol, -0.06);
       B2(k, x0 - 0.07, H3 - 0.05, z0 - 0.07, x1 + 0.07, H3 + 0.43, z1 + 0.07, (p, n) => n.y > 0.5 ? roofCol : pc);
       if (b.style === "desert" && fw >= 4 && fd >= 3) {
@@ -57450,6 +57618,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (TRUNK[o.kind] !== void 0) return TRUNK[o.kind];
     if (o.kind === "boat" && /flagship|perfume/i.test(o.name || "")) return [3.3, 1.15];
     if (o.kind === "torii") return { circles: [[-1.55, 0, 0.3], [1.55, 0, 0.3]] };
+    if (o.kind === "baratie") return { circles: [[-18.5, 0, 0.55], [18.5, 0, 0.55]] };
     if (o.kind === "gate") {
       const k = /justice/i.test(o.name || "") ? 2.2 : 1;
       return { circles: [-1, 1].flatMap((sx) => [[sx * 3.5 * k, -0.45 * k, 0.78 * k], [sx * 3.5 * k, 0.45 * k, 0.78 * k]]) };
@@ -60423,6 +60592,234 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     m.castShadow = false;
     m.receiveShadow = false;
     root2.add(m);
+    return root2;
+  });
+
+  // src/render3d/props/baratie.js
+  var reg3 = (kind, fn) => registerPropBuilder(kind, (o, ctx) => {
+    bindCtx(ctx);
+    return fn(o, ctx);
+  });
+  var MASTS = [18.5, -18.5];
+  var MAST_H = 26;
+  var HOUSE = { fw: 24, fd: 10, g: 1.35, front: 5 };
+  var GREEN = "#3d8c6c";
+  var GREEN_D = "#2b6b51";
+  var WHITE3 = "#fbf8ef";
+  var BELOW = "#23463b";
+  var YELLOW = "#ffcf33";
+  var SAIL_W = "#fffaf0";
+  function deckOutline(o, w, N5 = 144) {
+    const R4 = new Float32Array(N5);
+    const deck = (x, y) => !!w?.dockAt?.(w.wx ? w.wx(x) : x, y)?.deck;
+    for (let i = 0; i < N5; i++) {
+      const a = i / N5 * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+      let r = 0;
+      while (r < 80 && deck(o.x + ca * (r + 0.25), o.y + sa * (r + 0.25))) r += 0.25;
+      R4[i] = r;
+    }
+    if (!R4.some((r) => r > 2)) {
+      const blobs = [[0, 23.7, 10.1], [15.2, 15.2, 8.3], [-15.2, 15.2, 9.1]];
+      for (let i = 0; i < N5; i++) {
+        const a = i / N5 * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+        let r = 0;
+        for (const [bx, rx, ry] of blobs) {
+          const A = ca * ca / (rx * rx) + sa * sa / (ry * ry), B5 = -2 * bx * ca / (rx * rx), Cc = bx * bx / (rx * rx) - 1;
+          const D3 = B5 * B5 - 4 * A * Cc;
+          if (D3 >= 0) r = Math.max(r, (-B5 + Math.sqrt(D3)) / (2 * A));
+        }
+        R4[i] = r;
+      }
+    }
+    for (let pass = 0; pass < 3; pass++) {
+      const S5 = R4.slice();
+      for (let i = 0; i < N5; i++) R4[i] = (S5[(i + N5 - 1) % N5] + 2 * S5[i] + S5[(i + 1) % N5]) / 4;
+    }
+    return R4;
+  }
+  function hullGeometry2(R4) {
+    const N5 = R4.length, top = DOCK_Y + 0.36;
+    const rings2 = [[top, 0.5], [DOCK_Y - 0.12, 0.56], [0.45, 0.5], [-0.55, 0.12], [-2.6, -2.4]];
+    const bands = [WHITE3, GREEN, GREEN_D, BELOW];
+    const pos = [], col = [];
+    const P4 = (i, h2, out) => {
+      const a = i % N5 / N5 * Math.PI * 2, r = Math.max(0.4, R4[i % N5] + out);
+      return [Math.cos(a) * r, h2, Math.sin(a) * r];
+    };
+    const tri = (a, b, c, cc) => {
+      pos.push(...a, ...b, ...c);
+      for (let k = 0; k < 3; k++) col.push(cc.r, cc.g, cc.b);
+    };
+    for (let b = 0; b < bands.length; b++) {
+      const cc = C(bands[b]), [h0, o0] = rings2[b], [h1, o1] = rings2[b + 1];
+      for (let i = 0; i < N5; i++) {
+        const p00 = P4(i, h0, o0), p01 = P4(i + 1, h0, o0), p10 = P4(i, h1, o1), p11 = P4(i + 1, h1, o1);
+        tri(p00, p01, p10, cc);
+        tri(p01, p11, p10, cc);
+      }
+    }
+    const cw = C(WHITE3), ci = C("#e9e2d0");
+    for (let i = 0; i < N5; i++) {
+      const o0 = P4(i, top, 0.5), o1 = P4(i + 1, top, 0.5), n0 = P4(i, top, -0.12), n1 = P4(i + 1, top, -0.12);
+      tri(o0, n1, o1, cw);
+      tri(o0, n0, n1, cw);
+      const d0 = P4(i, DOCK_Y - 0.05, -0.12), d1 = P4(i + 1, DOCK_Y - 0.05, -0.12);
+      tri(n0, d0, n1, ci);
+      tri(n1, d0, d1, ci);
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.setAttribute("color", new Float32BufferAttribute(col, 3));
+    g.computeVertexNormals();
+    return g;
+  }
+  function sail(k, x, yTop, w, h2, belly) {
+    const n = 8, sw2 = w / n;
+    for (let s = 0; s < n; s++) {
+      const geo2 = new PlaneGeometry(sw2, h2, 1, 6);
+      const p = geo2.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const px2 = p.getX(i), py2 = p.getY(i);
+        const across = (s + 0.5) * sw2 - w / 2 + px2;
+        const down = (h2 / 2 - py2) / h2;
+        const b = belly * Math.sin(Math.PI * Math.min(1, down * 0.95 + 0.05)) * Math.cos(across / w * Math.PI * 0.9);
+        p.setXYZ(i, b, py2, (s + 0.5) * sw2 - w / 2 + px2);
+      }
+      geo2.computeVertexNormals();
+      k.add(geo2, { at: [x, yTop - h2 / 2, 0], color: s % 2 ? SAIL_W : YELLOW, double: true });
+    }
+  }
+  function sign3(text2, w, h2, { bg, fg, frame: frame2, font }) {
+    const { ctx: g, tex: tex2 } = canvasTexture(w, h2);
+    g.fillStyle = frame2;
+    g.fillRect(0, 0, w, h2);
+    g.fillStyle = bg;
+    g.fillRect(h2 * 0.08, h2 * 0.08, w - h2 * 0.16, h2 - h2 * 0.16);
+    g.fillStyle = fg;
+    g.font = font;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText(text2, w / 2, h2 / 2 + h2 * 0.04);
+    tex2.needsUpdate = true;
+    return new MeshToonMaterial({ map: tex2, side: DoubleSide });
+  }
+  var FLAG_MAT = null;
+  var SIGN_MATS = null;
+  reg3("baratie", (o, ctx) => {
+    const root2 = new Group();
+    root2.name = "baratie";
+    root2.userData.noGround = true;
+    const R4 = deckOutline(o, ctx?.world);
+    const N5 = R4.length;
+    const rAt = (a) => {
+      const f = (a / (Math.PI * 2) % 1 + 1) % 1 * N5, i = Math.floor(f), t = f - i;
+      return R4[i % N5] * (1 - t) + R4[(i + 1) % N5] * t;
+    };
+    const k = new Mesher();
+    k.add(hullGeometry2(R4), { attrs: true, outline: 0.06 });
+    for (let i = 0; i < N5; i += 3) {
+      const a = i / N5 * Math.PI * 2;
+      if (Math.abs(Math.sin(a)) < 0.55) continue;
+      const r = R4[i] + 0.56, x = Math.cos(a) * r, z = Math.sin(a) * r, yaw = Math.PI / 2 - a;
+      k.add(new CircleGeometry(0.34, 12), { at: [x, 0.95, z], rot: [0, yaw, 0], color: "#1d2b33" });
+      k.add(torus(0.36, 0.07, 5, 14), { at: [x, 0.95, z], rot: [0, yaw, 0], color: WHITE3 });
+    }
+    const hx = rAt(0) + 4.4;
+    const S5 = (r = 1) => new SphereGeometry(r, 28, 18);
+    k.add(S5(), { at: [hx, 4.3, 0], scale: [6.2, 5, 5.3], color: "#f39a26", outline: 0.07 });
+    k.add(S5(), { at: [hx + 0.7, 1.5, 0], scale: [5.7, 3.4, 4.9], color: "#fff0d2", outline: 0.06 });
+    k.add(S5(), { at: [hx + 4.3, 2.9, 0], scale: [3.1, 2.6, 3.3], color: "#f6a63a", outline: 0.05 });
+    k.add(torus(2, 0.55, 8, 22), { at: [hx + 7.3, 2.75, 0], rot: [0, Math.PI / 2, 0], scale: [1, 0.66, 1], color: "#fff4dc", outline: 0.04 });
+    k.add(new CircleGeometry(1.75, 20), { at: [hx + 7.44, 2.75, 0], rot: [0, Math.PI / 2, 0], scale: [1, 0.66, 1], color: "#5a1414" });
+    for (const sz of [-1, 1]) {
+      k.add(S5(1.45), { at: [hx + 2.4, 5.9, sz * 4.3], color: "#ffffff", outline: 0.04 });
+      k.add(S5(0.8), { at: [hx + 2.95, 6, sz * 5.15], color: "#141414" });
+      k.add(S5(0.22), { at: [hx + 3.3, 6.45, sz * 5.6], color: "#ffffff" });
+      k.add(torus(1.5, 0.17, 6, 18), { at: [hx + 2.4, 5.9, sz * 4.45], rot: [0, sz < 0 ? Math.PI : 0, 0], color: "#c96a12" });
+    }
+    k.add(torus(4.6, 0.24, 6, 22, Math.PI), { at: [hx - 2.5, 3.4, 0], rot: [0, Math.PI / 2, 0], color: "#d9781a" });
+    const tail2 = new Shape();
+    tail2.moveTo(0, 0.8);
+    tail2.quadraticCurveTo(-3.5, 2.6, -6.6, 8.6);
+    tail2.quadraticCurveTo(-5.4, 4.6, -4.4, 3.4);
+    tail2.quadraticCurveTo(-6, 0.6, -7.3, -1.6);
+    tail2.quadraticCurveTo(-3.6, -0.6, 0, -0.8);
+    const tg = new ExtrudeGeometry(tail2, { depth: 0.7, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.12, bevelSegments: 1, curveSegments: 10 });
+    k.add(tg, { at: [-rAt(Math.PI) + 0.8, DOCK_Y + 0.7, -0.35], color: YELLOW, outline: 0.05 });
+    for (const sz of [-1, 1]) {
+      for (const [x0, y0, x1, y1] of [[-1, 1.4, -5.6, 7.4], [-1, 0.9, -5, 3.6], [-1, 0.2, -6.2, -1]]) {
+        const L2 = Math.hypot(x1 - x0, y1 - y0);
+        k.add(box(L2, 0.14, 0.04), { at: [-rAt(Math.PI) + 0.8 + (x0 + x1) / 2, DOCK_Y + 0.7 + (y0 + y1) / 2, sz * 0.5], rot: [0, 0, Math.atan2(y1 - y0, x1 - x0)], color: "#ee8a1a" });
+      }
+    }
+    for (const mx of MASTS) {
+      const fore = mx > 0, base2 = DOCK_Y;
+      k.add(cyl(0.3, 0.48, MAST_H, 10), { at: [mx, base2, 0], color: "#6b4426", outline: 0.03 });
+      k.add(cyl(0.38, 0.38, 0.3, 10), { at: [mx, base2 + MAST_H, 0], color: "#3e2716" });
+      const yards = [[12, 12.2, 5.8], [17.6, 9.8, 4.4], [22, 7.2, 3.2]];
+      for (const [yh, w, h2] of yards) {
+        k.add(cyl(0.17, 0.17, w + 0.7, 8), { at: [mx, base2 + yh, 0], rot: [Math.PI / 2, 0, 0], color: "#5a3a22", outline: 0.02 });
+        sail(k, mx + 0.35, base2 + yh - 0.1, w, h2, fore ? 1.1 : 0.9);
+      }
+      let side = 6;
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 180) {
+        const r = rAt(a);
+        if (Math.abs(Math.cos(a) * r - mx) < 0.4) side = Math.max(side, Math.abs(Math.sin(a) * r));
+      }
+      for (const sz of [-1, 1]) {
+        const fx = mx, fy = base2 + 0.36, fz = sz * (side + 0.3), tx = mx, ty = base2 + 20.5, tz = sz * 0.3;
+        for (const dx of [-1.6, -0.55, 0.55, 1.6]) {
+          const a = new Vector3(fx + dx, fy, fz), b = new Vector3(tx + dx * 0.15, ty, tz);
+          const q2 = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), b.clone().sub(a).normalize());
+          const e = new Euler().setFromQuaternion(q2, "YXZ");
+          k.add(cyl(0.035, 0.035, a.distanceTo(b), 4), { at: [a.x, a.y, a.z], rot: [e.x, e.y, e.z], color: "#3a2a1c" });
+        }
+        for (let h2 = 0.7; h2 < 19; h2 += 0.55) {
+          const t = h2 / (ty - fy), z = fz + (tz - fz) * t;
+          k.add(box(3.4 * (1 - t * 0.85), 0.03, 0.03), { at: [mx, fy + h2, z], color: "#4a3524" });
+        }
+      }
+    }
+    root2.add(meshOf(k.build()));
+    if (!FLAG_MAT) {
+      const { ctx: g2, tex: tex2 } = canvasTexture(192, 128);
+      g2.fillStyle = "#c62828";
+      g2.fillRect(0, 0, 192, 128);
+      g2.fillStyle = "#fff6e6";
+      g2.fillRect(58, 26, 76, 76);
+      g2.fillStyle = "#c62828";
+      g2.font = "bold 66px Georgia, serif";
+      g2.textAlign = "center";
+      g2.textBaseline = "middle";
+      g2.fillText("B", 96, 68);
+      tex2.needsUpdate = true;
+      FLAG_MAT = new MeshToonMaterial({ map: tex2, side: DoubleSide });
+    }
+    for (const mx of MASTS) {
+      const f = new Mesh(new PlaneGeometry(3.3, 2.2, 6, 1), FLAG_MAT);
+      const p = f.geometry.attributes.position;
+      for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin((p.getX(i) + 1.65) * 1.9) * 0.18 * (p.getX(i) + 1.65) / 3.3);
+      f.geometry.computeVertexNormals();
+      f.position.set(mx - 1.75, DOCK_Y + MAST_H - 0.9, 0);
+      root2.add(f);
+    }
+    if (!SIGN_MATS) {
+      SIGN_MATS = {
+        name: sign3("BARATIE", 768, 128, { bg: "#24614d", fg: "#ffd34d", frame: "#f4e3a6", font: "bold 88px Georgia, serif" }),
+        rest: sign3("RESTAURANT", 896, 140, { bg: "#fff6e0", fg: "#b3261e", frame: "#3b2a1a", font: "bold 92px Georgia, serif" })
+      };
+    }
+    const g = HOUSE.g, H3 = 0.35 + 3 * g + 2.75 * g, storey = 0.35 + 2.75 * g;
+    const nameBoard3 = new Mesh(new PlaneGeometry(7.2, 1.2), SIGN_MATS.name);
+    nameBoard3.position.set(0, DOCK_Y + storey + 0.5, HOUSE.front + 1.02);
+    root2.add(nameBoard3);
+    const bandTop = DOCK_Y + H3 + 2.5 * g + 0.18, bandZ = HOUSE.front - HOUSE.fd / 2 + (HOUSE.fd + 0.6 - 2.4 * g) / 2;
+    const rest = new Mesh(new PlaneGeometry(9.2, 1.45), SIGN_MATS.rest);
+    rest.position.set(0, bandTop + 1.05, bandZ + 0.1);
+    root2.add(rest);
+    const legs2 = new Mesher();
+    for (const sx of [-3.6, 3.6]) legs2.add(box(0.18, 0.5, 0.18), { at: [sx, bandTop, bandZ], color: "#3b2a1a" });
+    root2.add(meshOf(legs2.build()));
     return root2;
   });
 
@@ -66318,8 +66715,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const TOP2 = o.top;
     const shirtM = 0.45;
     const skinReg = o.fem ? "torsoFem" : o.muscle >= 0.55 ? "torsoMusc" : "torsoLean";
-    const tuv = (reg3) => reg3 ? (s, a) => torsoUV(reg3, a, s) : null;
-    const addT = (rows, pt, col, a0 = -Math.PI, a1 = Math.PI, inward = false, reg3 = null) => add5(band(pt, rows, a0, a1, U3, inward, inward ? null : tuv(reg3)), M(), col, B3.chest);
+    const tuv = (reg4) => reg4 ? (s, a) => torsoUV(reg4, a, s) : null;
+    const addT = (rows, pt, col, a0 = -Math.PI, a1 = Math.PI, inward = false, reg4 = null) => add5(band(pt, rows, a0, a1, U3, inward, inward ? null : tuv(reg4)), M(), col, B3.chest);
     const neckS = TOP2 === "shirt" || TOP2 === "jacket" ? 0.955 : TOP2 === "tank" || TOP2 === "dress" ? 0.84 : 0.93;
     const openKim = TOP2 === "kimono" && !!look.openShirt;
     if (TOP2 === "bare" || TOP2 === "vest" || TOP2 === "open" || openKim || TOP2 === "coat" && !look.top2) {
@@ -69929,9 +70326,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const up = part4(CONE2, white, [0.022, 0.08, 0.022], [L2 * 0.6 + 0.6 - i * 0.09, -0.12, s * (0.16 - i * 0.012)], B5, 0);
         up.rotation.x = Math.PI;
       }
-      const sail = new Mesh(finGeo([0.75, 0.38], [-0.9, 0.34], [-0.1, 1.05], 0.03), fin3);
-      addOutline(sail, 0.025);
-      B5.add(sail);
+      const sail2 = new Mesh(finGeo([0.75, 0.38], [-0.9, 0.34], [-0.1, 1.05], 0.03), fin3);
+      addOutline(sail2, 0.025);
+      B5.add(sail2);
       for (let i = 0; i < 6; i++) part4(CONE2, finD, [0.018, 0.55, 0.018], [0.6 - i * 0.28, 0.4, 0], B5, 0).rotation.z = 0.25;
       for (const s of [-1, 1]) {
         const hinge = new Group();
@@ -76748,6 +77145,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       t.island = rec;
       rec.towns.push(t);
     }
+    if (def.shipDeck) {
+      for (let j = 0; j < LH; j++) {
+        for (let i = 0; i < LW3; i++) {
+          const x = world.wx(x0 + i), y = y0 + j;
+          if (L2[li(i, j)] && world.type(x, y) === T.PLANK && !world.isDock(x, y)) world.markDock(x, y, { deck: true });
+        }
+      }
+    }
     const dockDefs = def.docks || (def.towns && def.towns.length ? def.towns.map((t) => ({ near: t.id || t.name, dir: t.dockDir })) : []);
     for (const dd of dockDefs) {
       let from;
@@ -77727,11 +78132,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     for (let k = 0; k < tries && placed < 640; k++) {
       const x = rng4.range(chart(60), W - chart(60));
       const y = rng4.range(POLAR + chart(40), H - POLAR - chart(40));
-      const reg3 = regionAt(x, y);
-      if (reg3 === REGION.RED_LINE || reg3 === REGION.POLAR) continue;
+      const reg4 = regionAt(x, y);
+      if (reg4 === REGION.RED_LINE || reg4 === REGION.POLAR) continue;
       if (Math.abs(x - RM_X) < REVERSE_MOUNTAIN.rx + chart(40) && Math.abs(y - EQ) < REVERSE_MOUNTAIN.ry + chart(40)) continue;
       if (world.ut[world._b(Math.floor(world.wx(x)), Math.floor(y))] === MIXED) continue;
-      const r = rng4.range(3, reg3 === REGION.PARADISE || reg3 === REGION.NEW_WORLD ? 11 : 9) * SIZE_SCALE;
+      const r = rng4.range(3, reg4 === REGION.PARADISE || reg4 === REGION.NEW_WORLD ? 11 : 9) * SIZE_SCALE;
       let ok = true;
       for (const isl of world.islands) {
         const dd = world.distance(x, y, isl.x, isl.y);
@@ -77746,7 +78151,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         break;
       }
       if (!ok) continue;
-      const calm = reg3 === REGION.CALM_NORTH || reg3 === REGION.CALM_SOUTH;
+      const calm = reg4 === REGION.CALM_NORTH || reg4 === REGION.CALM_SOUTH;
       const cold = y < chart(260) || y > H - chart(260);
       const tropical = !cold && Math.abs(y - EQ) < chart(500);
       const kind = rng4.next();
@@ -77755,7 +78160,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         ground = T.SNOW;
         clim = CLIMATE.WINTER;
         trees = "snowpine";
-      } else if (reg3 === REGION.NEW_WORLD && kind < 0.15) {
+      } else if (reg4 === REGION.NEW_WORLD && kind < 0.15) {
         ground = T.ASH;
         clim = CLIMATE.VOLCANIC;
         trees = "dead";
@@ -77789,7 +78194,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       };
       const rec = generateIsland(world, def, noise, rng4.fork(id));
       if (rec) {
-        world.islets.push({ id, x, y, r, rec, region: reg3 });
+        world.islets.push({ id, x, y, r, rec, region: reg4 });
         world.islands.push(rec);
         placed++;
       }
@@ -78236,15 +78641,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       danger: 1
     },
     {
-      // The Baratie — a fish-shaped floating restaurant. Built as a wooden
-      // "island" of decking over the sea.
+      // The Baratie, the floating restaurant, as in the anime: a ship shaped
+      // like a great fish (its head the bow, east; its tail the stern), her
+      // deck a pier's height over the sea (shipDeck) — three overlapping
+      // ellipses, 60 m by 20 — with the restaurant standing in the middle of
+      // it: sea-green walls, a gallery right round, a red mansard roof (style
+      // 'baratie'), two masts with striped sails fore and aft of it. (Her hull,
+      // head, tail, masts and signs: render3d/props/baratie.js, which counts on
+      // these measures.)
       id: "baratie",
       name: "Baratie",
       sea: "east_blue",
       x: 2850,
       y: 570,
-      w: 20,
-      h: 14,
+      w: 27,
+      h: 9,
       climate: "temperate",
       ground: T.PLANK,
       beach: T.PLANK,
@@ -78252,15 +78663,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       elevRate: 0,
       noiseScale: 0.01,
       beachWidth: 0,
-      blobs: [[0, 0, 0.9, 0.8], [1.2, 0, 0.35, 0.55]],
-      paint: [{ op: "blob", x: -17, y: 0, rx: 4, ry: 6, tile: T.PLANK, rough: 0 }],
+      shipDeck: true,
+      blobs: [[0, 0, 0.78, 1], [0.5, 0, 0.5, 0.82], [-0.5, 0, 0.5, 0.9]],
       treeDensity: 0,
       landmarks: [
-        { kind: "building", role: "restaurant", name: "Baratie \u2014 Sea Restaurant", npc: "zeff", style: "port", roofType: "gable", fw: 10, fd: 4, hgt: 3, wall: "#f5e6c4", roof: "#1f618d", dx: 0, dy: -0.05 },
-        { kind: "lamp", dx: -0.6, dy: 0.5, light: true },
-        { kind: "lamp", dx: 0.6, dy: 0.5, light: true }
+        { kind: "baratie", dx: 0, dy: 0, block: false, name: "The Baratie" },
+        // (its front 5 m south of her middle line: dy × 10.1 m)
+        { kind: "building", role: "restaurant", name: "Baratie \u2014 Sea Restaurant", npc: "zeff", style: "baratie", roofType: "mansard", fw: 24, fd: 10, hgt: 3, tall: 1.35, wall: "#7cc2a4", roof: "#7d2c2c", dx: 0, dy: 0.495 }
       ],
-      spots: [{ id: "baratie_deck", dx: 0, dy: 0.55 }],
+      spots: [{ id: "baratie_deck", dx: 0, dy: 0.76 }],
       docks: [{ dx: 0, dy: 0.5, dir: "s", len: 4, name: "Baratie" }],
       danger: 1
     },
@@ -87170,31 +87581,31 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.ambient = amb;
       if (game.world && game.world.zone === 2) this.ambient = amb.map((v) => v * 0.8);
       const p = game.focus();
-      const reg3 = game.world && game.world.zone === 0 ? regionAt(p.x, p.y) : REGION.EAST_BLUE;
-      this.region = reg3;
+      const reg4 = game.world && game.world.zone === 0 ? regionAt(p.x, p.y) : REGION.EAST_BLUE;
+      this.region = reg4;
       this.weatherTimer -= dt;
-      const gl = isGrandLine(reg3);
+      const gl = isGrandLine(reg4);
       if (this.weatherTimer <= 0) {
         this.weatherTimer = gl ? 25 + Math.random() * 50 : 60 + Math.random() * 120;
-        const stormChance = reg3 === REGION.NEW_WORLD ? 0.4 : gl ? 0.3 : reg3 === REGION.POLAR ? 0.2 : 0.08;
+        const stormChance = reg4 === REGION.NEW_WORLD ? 0.4 : gl ? 0.3 : reg4 === REGION.POLAR ? 0.2 : 0.08;
         this.stormTarget = Math.random() < stormChance ? 0.5 + Math.random() * 0.5 : Math.random() < 0.3 ? 0.25 : 0;
         this.windTarget = gl ? Math.random() * TAU : this.windTarget + (Math.random() - 0.5) * 1.2;
         this.forecast = this.stormTarget > 0.6 ? "Storm" : this.stormTarget > 0.3 ? "Squall" : "Clear";
         if (gl && Math.random() < 0.25 && game.onGrandLineWeather) game.onGrandLineWeather();
       }
-      if (isCalmBelt(reg3)) this.stormTarget = 0;
+      if (isCalmBelt(reg4)) this.stormTarget = 0;
       const onIsland = game.currentIsland && game.player && game.player.mode === "foot";
       const localStorm = onIsland && gl ? this.stormTarget * 0.3 : this.stormTarget;
       this.storm += (localStorm - this.storm) * Math.min(1, dt * 0.25);
       this.rain = this.storm > 0.2 ? this.storm : 0;
       const clim = game.world ? game.world.climate(p.x, p.y) : 0;
-      this.snow = clim === 3 || reg3 === REGION.POLAR ? Math.max(0.3, this.storm) : 0;
+      this.snow = clim === 3 || reg4 === REGION.POLAR ? Math.max(0.3, this.storm) : 0;
       if (this.snow) this.rain = 0;
       const fogRegion = game.inFogRegion ? game.inFogRegion(p.x, p.y) : 0;
       this.fog += (fogRegion - this.fog) * Math.min(1, dt * 0.5);
       this.windAngle += clamp2(angleDiff(this.windAngle, this.windTarget), -0.2, 0.2) * dt * (gl ? 0.5 : 0.15);
       const gust = gl ? 0.85 + Math.sin(this.time * 0.7) * 0.15 : 1;
-      this.windStrength = isCalmBelt(reg3) ? 0 : clamp2((0.8 + this.storm * 0.5) * gust, 0.2, 1.4);
+      this.windStrength = isCalmBelt(reg4) ? 0 : clamp2((0.8 + this.storm * 0.5) * gust, 0.2, 1.4);
       this.windX = Math.cos(this.windAngle) * this.windStrength;
       this.windY = Math.sin(this.windAngle) * this.windStrength;
       if (this.storm > 0.55 && Math.random() < dt * this.storm * 0.12) {
@@ -89978,11 +90389,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           this.emit("enterIsland", isl);
         }
       }
-      const reg3 = this.world.zone === 0 ? regionAt(p.x, p.y) : null;
-      if (reg3 !== this.lastRegion) {
+      const reg4 = this.world.zone === 0 ? regionAt(p.x, p.y) : null;
+      if (reg4 !== this.lastRegion) {
         const prev = this.lastRegion;
-        this.lastRegion = reg3;
-        if (reg3 && prev !== void 0) this.emit("enterRegion", reg3, prev);
+        this.lastRegion = reg4;
+        if (reg4 && prev !== void 0) this.emit("enterRegion", reg4, prev);
       }
     }
     updateCamera(dt) {
@@ -92775,10 +93186,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return rng4.pick(known0 ? LORE : LORE.filter((l) => !/haki/i.test(l)));
     }
     const p = game.player;
-    const reg3 = regionAt(p.x, p.y);
+    const reg4 = regionAt(p.x, p.y);
     const pool = [];
     if (island?.def?.rumors) pool.push(...island.def.rumors, ...island.def.rumors);
-    pool.push(...SEA_TIPS[reg3] || []);
+    pool.push(...SEA_TIPS[reg4] || []);
     if (tavern) pool.push(...LORE.slice(0, 6));
     const fr = game.fruitRumor?.(rng4);
     if (fr && rng4.chance(tavern ? 0.45 : 0.2)) return fr;
@@ -97227,8 +97638,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const onRedLine2 = !isl?.name && game.world.zone === 0 && !p.inWater && p.mode !== "sail" && regionAt(p.x, p.y) === REGION.RED_LINE && !game.world.isLiquid(p.x, p.y);
       const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : rmHere ? "Reverse Mountain" : onRedLine2 ? "The Red Line" : "Open Sea";
       this.set(E.loc, "loc", locName);
-      const reg3 = game.world.zone === 0 ? REGION_INFO[regionAt(p.x, p.y)]?.name || "" : game.world.subtitle || "";
-      this.set(E.locSub, "locSub", reg3);
+      const reg4 = game.world.zone === 0 ? REGION_INFO[regionAt(p.x, p.y)]?.name || "" : game.world.subtitle || "";
+      this.set(E.locSub, "locSub", reg4);
       const env = game.env;
       const wx = env.storm > 0.6 ? "Storm" : env.storm > 0.25 ? "Squall" : env.snow ? "Snow" : env.fog > 0.3 ? "Fog" : env.daylight < 0.35 ? env.fullMoon ? "Full moon" : "Night" : "Clear";
       this.set(E.clock, "clock", `Day ${env.day} \xB7 ${env.clockString()} \xB7 ${wx}`);
@@ -97602,8 +98013,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     p.hp = p.d.maxHp;
     game.snapCamera();
     game.ui.setHudVisible(true);
-    const reg3 = REGION_INFO[regionAt(p.x, p.y)]?.name || "";
-    setTimeout(() => game.ui.banner(char.name, `Generation ${char.generation} \xB7 ${RACES[char.race]?.name}`, `${reg3} \u2014 Day ${game.env.day}`, 4), 300);
+    const reg4 = REGION_INFO[regionAt(p.x, p.y)]?.name || "";
+    setTimeout(() => game.ui.banner(char.name, `Generation ${char.generation} \xB7 ${RACES[char.race]?.name}`, `${reg4} \u2014 Day ${game.env.day}`, 4), 300);
     game.emit("characterStart", { char, isNew: false });
     return p;
   }
@@ -98624,14 +99035,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
       return keep;
     });
-    const reg3 = regionAt(p.x, p.y);
-    if (isCalmBelt(reg3) || game.sea?.rmState || nearRM(w.wx(p.x), p.y)) return;
+    const reg4 = regionAt(p.x, p.y);
+    if (isCalmBelt(reg4) || game.sea?.rmState || nearRM(w.wx(p.x), p.y)) return;
     const nearCoast = w.sd && w.sd(p.x, p.y) < 30;
     const want = p.mode === "sail" ? 3 : nearCoast ? 2 : 0;
-    if (T4.ships.filter((s) => !s.traffic?.raided).length < want) spawnShip(game, T4, p, reg3);
+    if (T4.ships.filter((s) => !s.traffic?.raided).length < want) spawnShip(game, T4, p, reg4);
   }
-  function pickKind(rng4, reg3, game) {
-    const nw = reg3 === REGION.NEW_WORLD, gl = isGrandLine(reg3);
+  function pickKind(rng4, reg4, game) {
+    const nw = reg4 === REGION.NEW_WORLD, gl = isGrandLine(reg4);
     const r = rng4.next();
     const marine2 = wantedTier(game) >= 2 ? 0.34 : 0.22;
     if (nw) return r < 0.42 ? "pirate" : r < 0.42 + marine2 ? "marine" : "merchant";
@@ -98650,15 +99061,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       game.log(`The ${s.name} crowds on sail and runs for it!`, "#b0bec5");
     }
   }
-  function spawnShip(game, T4, p, reg3, force = null) {
+  function spawnShip(game, T4, p, reg4, force = null) {
     const w = game.world;
     const rng4 = new RNG((Math.floor(game.time * 997) ^ T4.ships.length * 7919) >>> 0);
     const S5 = sightRange(game);
     for (let tries = 0; tries < 18; tries++) {
       const a = rng4.range(0, TAU), r = rng4.range(S5 + 20, S5 + 80);
       const x = force ? force.x : w.wx(p.x + Math.cos(a) * r), y = force ? force.y : p.y + Math.sin(a) * r;
-      const kind = force?.kind || pickKind(rng4, reg3, game);
-      const gl = isGrandLine(reg3), nw = reg3 === REGION.NEW_WORLD;
+      const kind = force?.kind || pickKind(rng4, reg4, game);
+      const gl = isGrandLine(reg4), nw = reg4 === REGION.NEW_WORLD;
       const type = force?.type || (kind === "fishing" ? rng4.pick(["dinghy", "sloop"]) : kind === "marine" ? nw ? rng4.pick(["marine_warship", "marine_battleship", "marine_battleship"]) : gl ? rng4.pick(["brigantine", "marine_warship", "marine_battleship"]) : rng4.pick(["sloop", "brigantine", "brigantine", "marine_warship"]) : kind === "merchant" ? rng4.pick(gl ? ["caravel", "brigantine", "galleon", "carrack", "carrack"] : ["sloop", "caravel", "caravel", "carrack"]) : rng4.pick(nw ? ["galleon", "war_galleon", "man_o_war", "man_o_war", "great_galleon"] : gl ? ["caravel", "brigantine", "frigate", "war_galleon"] : ["sloop", "caravel", "sloop", "caravel", "war_galleon"]));
       if (!force && (!w.sailable(x, y) || w.sd(x, y) > -8 - SHIPS[type].length * 0.5 || w.type(x, y) === T.RAPIDS || nearRM(w.wx(x), y))) continue;
       const pass = a + Math.PI + rng4.range(-0.5, 0.5);
@@ -98680,7 +99091,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         if (force) return null;
         continue;
       }
-      const lvl = force?.level || (nw ? rng4.int(45, 70) : gl ? rng4.int(20, 40) : reg3 === REGION.EAST_BLUE ? rng4.int(4, 10) : rng4.int(8, 18));
+      const lvl = force?.level || (nw ? rng4.int(45, 70) : gl ? rng4.int(20, 40) : reg4 === REGION.EAST_BLUE ? rng4.int(4, 10) : rng4.int(8, 18));
       s.level = lvl;
       s.traffic = { kind, dest, level: lvl, crew: null, raided: false, cleared: false, plundered: false };
       s.ai = trafficAI;
@@ -99049,7 +99460,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         this.arrive(isl);
       });
       game.on("poseEquipped", () => this.announce("LOG POSE"));
-      game.on("enterRegion", (reg3, prev) => this.region(reg3, prev));
+      game.on("enterRegion", (reg4, prev) => this.region(reg4, prev));
       game.on("tick", (dt) => this.tick(dt));
       game.on("shipSunk", (s) => this.shipSunk(s));
       game.on("characterStart", () => {
@@ -99075,29 +99486,29 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         if (!inZone) g.surface.reveal(isl.x, isl.y, isl.radius + 10);
         g.progression?.checkDream();
       }
-      const reg3 = inZone ? { name: g.world.name } : REGION_INFO[regionAt(isl.x, isl.y)];
-      g.ui.banner(isl.name, reg3?.name || "", first ? isl.def.tagline || "New island charted!" : isl.def.tagline || "", first ? 5 : 3);
+      const reg4 = inZone ? { name: g.world.name } : REGION_INFO[regionAt(isl.x, isl.y)];
+      g.ui.banner(isl.name, reg4?.name || "", first ? isl.def.tagline || "New island charted!" : isl.def.tagline || "", first ? 5 : 3);
       if (first) g.emit("discovered", isl);
       g.audio?.music(isl.def.music || (isl.towns.length ? "town" : "sea"));
       if (first) persist(g);
     }
-    region(reg3, prev) {
+    region(reg4, prev) {
       const g = this.game;
-      const info = REGION_INFO[reg3];
+      const info = REGION_INFO[reg4];
       if (!info) return;
-      if (isCalmBelt(reg3)) {
+      if (isCalmBelt(reg4)) {
         g.ui.banner("CALM BELT", "Nest of the Sea Kings", "No wind. No current. Something enormous is moving beneath you.", 5);
         g.hint("calm", "The Calm Belt has no wind \u2014 sails are useless. Hold SPACE to row. Sea Kings attack anything that floats here unless its hull is lined with Seastone.");
-      } else if (reg3 === REGION.PARADISE && prev !== REGION.PARADISE && prev !== REGION.NEW_WORLD) {
+      } else if (reg4 === REGION.PARADISE && prev !== REGION.PARADISE && prev !== REGION.NEW_WORLD) {
         g.ui.banner("GRAND LINE", "PARADISE", "The first half of the pirates' graveyard.", 6);
-      } else if (reg3 === REGION.NEW_WORLD && prev !== REGION.NEW_WORLD) {
+      } else if (reg4 === REGION.NEW_WORLD && prev !== REGION.NEW_WORLD) {
         const c = g.state?.char;
         const known = !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
         g.ui.banner("NEW WORLD", "The second half of the Grand Line", known ? "Here, Haki is not optional." : "Only the strongest survive here.", 6);
-      } else if (isBlue(reg3) && !isBlue(prev)) {
+      } else if (isBlue(reg4) && !isBlue(prev)) {
         g.ui.banner(info.name.toUpperCase(), "", "", 3);
       }
-      g.audio?.music(isGrandLine(reg3) ? "grandline" : isCalmBelt(reg3) ? "night" : "sea");
+      g.audio?.music(isGrandLine(reg4) ? "grandline" : isCalmBelt(reg4) ? "night" : "sea");
     }
     // ------------------------------------------------------------ log pose
     // The needle you follow is the pose in your Log Pose slot (see inventory.js):
@@ -99168,12 +99579,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (story) add5(story, "story");
       const from = this.island(lp.last);
       for (const id of lp.options || (from?.def?.logSpins ? null : from?.def?.logNext) || []) add5(id, "needle");
-      const p = g.player, reg3 = regionAt(p.x, p.y);
-      if (isBlue(reg3)) {
+      const p = g.player, reg4 = regionAt(p.x, p.y);
+      if (isBlue(reg4)) {
         const near = [];
         for (const id of c.discovered) {
           const isl = this.island(id);
-          if (isl && isl !== g.currentIsland && !isl.def?.islet && regionAt(isl.x, isl.y) === reg3) near.push([g.world.distance(p.x, p.y, isl.x, isl.y), id]);
+          if (isl && isl !== g.currentIsland && !isl.def?.islet && regionAt(isl.x, isl.y) === reg4) near.push([g.world.distance(p.x, p.y, isl.x, isl.y), id]);
         }
         near.sort((a, b) => a[0] - b[0]);
         for (const [, id] of near) add5(id, "chart");
@@ -99254,21 +99665,21 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const g = this.game, p = g.player, c = this.char;
       if (!c || !p || g.world !== g.surface) return;
       this.updateLog(dt);
-      const reg3 = regionAt(p.x, p.y);
+      const reg4 = regionAt(p.x, p.y);
       const s = p.mode === "sail" ? p.ship : null;
       this.reverseMountain(dt, p, s);
-      if (isCalmBelt(reg3) && (s || p.inWater) && !this.rmState && g.world.type(p.x, p.y) !== T.RAPIDS) {
+      if (isCalmBelt(reg4) && (s || p.inWater) && !this.rmState && g.world.type(p.x, p.y) !== T.RAPIDS) {
         this.kingT -= dt * (s?.def?.seastone || s?.upgrades?.includes("seastone_keel") ? 0.15 : 1);
         if (this.kingT <= 0) {
           this.kingT = 22 + Math.random() * 20;
-          this.spawnSeaKing(p, reg3);
+          this.spawnSeaKing(p, reg4);
         }
       } else this.kingT = Math.max(this.kingT, 6);
       if (s && !g.currentIsland && !this.rmState) {
         this.encT -= dt;
         if (this.encT <= 0) {
-          this.encT = (isGrandLine(reg3) ? 80 : 120) + Math.random() * 80;
-          this.encounter(p, s, reg3);
+          this.encT = (isGrandLine(reg4) ? 80 : 120) + Math.random() * 80;
+          this.encounter(p, s, reg4);
         }
         this.flotsamT -= dt;
         if (this.flotsamT <= 0) {
@@ -99291,7 +99702,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         }
         g.flotsam = g.flotsam.filter((f) => f.alive);
       }
-      if (isCalmBelt(reg3) && p.inWater && Math.random() < dt * 0.1) g.hint("calm_swim", "Swimming in the Calm Belt is suicide. Only Silvers Rayleigh ever did it.");
+      if (isCalmBelt(reg4) && p.inWater && Math.random() < dt * 0.1) g.hint("calm_swim", "Swimming in the Calm Belt is suicide. Only Silvers Rayleigh ever did it.");
     }
     /**
      * Riding Reverse Mountain: into a gate, up the mountain on the current, the
@@ -99337,34 +99748,34 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         g.audio?.music("grandline");
       } else if (!k && st.t > 4 && !st.top) this.rmState = null;
     }
-    spawnSeaKing(p, reg3) {
+    spawnSeaKing(p, reg4) {
       const g = this.game;
       const a = Math.random() * TAU;
       const R4 = 14 + (p.ship?.def.length || 0) * 0.5;
       const x = g.world.wx(p.x + Math.cos(a) * R4), y = p.y + Math.sin(a) * R4 * 0.75;
       if (!g.world.isLiquid(x, y)) return;
-      const lvl = reg3 === REGION.CALM_NORTH || reg3 === REGION.CALM_SOUTH ? Math.abs(p.x - RM_X) < 1e3 && p.x > RM_X ? 40 : 55 : 30;
+      const lvl = reg4 === REGION.CALM_NORTH || reg4 === REGION.CALM_SOUTH ? Math.abs(p.x - RM_X) < 1e3 && p.x > RM_X ? 40 : 55 : 30;
       const k = makeSeaKing(g, x, y, lvl);
       g.addActor(k);
       g.fx.ring(x, y, 1, 6, "#e1f5fe", 1.2, 0.3);
       g.audio?.sfx("seaking");
       g.ui.banner("SEA KING!", "", "A monster rises from the depths!", 3);
     }
-    encounter(p, s, reg3) {
+    encounter(p, s, reg4) {
       const g = this.game, c = this.char;
       const rng4 = new RNG(Math.floor(g.time * 1e3));
       const a = rng4.range(0, TAU);
       const R4 = sightRange(g) + 30;
       const x = g.world.wx(s.x + Math.cos(a) * R4), y = s.y + Math.sin(a) * R4;
       if (!g.world.sailable(x, y)) return;
-      const gl = isGrandLine(reg3);
-      const nw = reg3 === REGION.NEW_WORLD;
+      const gl = isGrandLine(reg4);
+      const nw = reg4 === REGION.NEW_WORLD;
       const roll2 = rng4.next();
       let kind;
       if ((g.wanted?.tier() ?? 0) >= 2 && roll2 < 0.35) kind = "marine";
       else if (roll2 < 0.7) kind = "pirate";
       else kind = "merchant";
-      const lvl = nw ? rng4.int(45, 70) : gl ? rng4.int(22, 40) : isBlue(reg3) && reg3 !== REGION.EAST_BLUE ? rng4.int(10, 18) : rng4.int(5, 12);
+      const lvl = nw ? rng4.int(45, 70) : gl ? rng4.int(22, 40) : isBlue(reg4) && reg4 !== REGION.EAST_BLUE ? rng4.int(10, 18) : rng4.int(5, 12);
       const type = nw ? rng4.pick(["frigate", "galleon", "war_galleon", "man_o_war"]) : gl ? rng4.pick(["brigantine", "caravel", "frigate", "war_galleon"]) : rng4.pick(["sloop", "caravel", "sloop"]);
       const faction = kind === "marine" ? "marine" : kind === "pirate" ? "pirate" : "civilian";
       const spared = kind === "pirate";
@@ -99966,8 +100377,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   };
   function sharks(game, S5, dt, p) {
     const w = game.world;
-    const reg3 = regionAt(p.x, p.y);
-    const out = p.inWater && p.mode !== "sail" && !isCalmBelt(reg3) && (w.sd ? w.sd(p.x, p.y) < -9 : true) && game.seaDepth(p.x, p.y) > 5;
+    const reg4 = regionAt(p.x, p.y);
+    const out = p.inWater && p.mode !== "sail" && !isCalmBelt(reg4) && (w.sd ? w.sd(p.x, p.y) < -9 : true) && game.seaDepth(p.x, p.y) > 5;
     if (!out) {
       S5.sharkT = Math.max(S5.sharkT, 15);
       return;
@@ -99978,12 +100389,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (Math.random() > 0.55) return;
     const count2 = game.actors.filter((a) => a.alive && a.shark).length;
     if (count2 >= 2) return;
-    const kind = isGrandLine(reg3) ? "fightfish" : "seacow";
+    const kind = isGrandLine(reg4) ? "fightfish" : "seacow";
     for (let tries = 0; tries < 8; tries++) {
       const a = Math.random() * TAU;
       const x = w.wx(p.x + Math.cos(a) * 22), y = p.y + Math.sin(a) * 22;
       if (!w.isLiquid(x, y) || w.isOverlay(x, y) || game.seaDepth(x, y) < 3) continue;
-      const lvl = reg3 === REGION.NEW_WORLD ? 55 : isGrandLine(reg3) ? 30 : reg3 === REGION.EAST_BLUE ? 7 : 14;
+      const lvl = reg4 === REGION.NEW_WORLD ? 55 : isGrandLine(reg4) ? 30 : reg4 === REGION.EAST_BLUE ? 7 : 14;
       const k = game.addActor(makeShark(game, x, y, lvl, kind));
       game.log(HUNTERS[kind].arrive, "#ff8a80");
       game.audio?.sfx("reveal");
@@ -125280,9 +125691,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       c.merit = (c.merit || 0) + merit;
       game.log(`Pirate ship sunk: +${merit} merit (${Math.floor(c.merit)})`, "#90caf9");
     });
-    game.on("enterRegion", (reg3) => {
+    game.on("enterRegion", (reg4) => {
       const c = game.state?.char;
-      if (c && isGrandLine(reg3)) c.flags.enteredGrandLine = true;
+      if (c && isGrandLine(reg4)) c.flags.enteredGrandLine = true;
     });
     installFleet2(game);
   }
@@ -128601,15 +129012,15 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       checkRoad();
       const p = game.player;
       if (p && game.world === game.surface) {
-        const reg3 = regionAt(p.x, p.y);
-        if (m.part === 1 && isGrandLine(reg3) && c.flags.enteredGrandLine) {
+        const reg4 = regionAt(p.x, p.y);
+        if (m.part === 1 && isGrandLine(reg4) && c.flags.enteredGrandLine) {
           const cur2 = current(game);
           if (!cur2 || cur2.ch.part === 1) {
             if (cur2 && cur2.ch.gate === "reverse_mountain") {
             } else S5.jumpTo(2, "You crossed Reverse Mountain before your business in the Blues was done. The Blues are behind you now.");
           }
         }
-        if (m.part === 2 && reg3 === REGION.NEW_WORLD) S5.jumpTo(3, "You reached the New World before your story in Paradise was done.");
+        if (m.part === 2 && reg4 === REGION.NEW_WORLD) S5.jumpTo(3, "You reached the New World before your story in Paradise was done.");
       }
       const cur = current(game);
       if (cur && !cur.s && !S5.pending) openChapter();
@@ -128630,8 +129041,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (!L2) return;
       const dx = game.world.dx(L2.x, x);
       if (dx <= 0) return;
-      const reg3 = regionAt(x, y);
-      if (reg3 !== REGION.PARADISE) return;
+      const reg4 = regionAt(x, y);
+      if (reg4 !== REGION.PARADISE) return;
       const f = Math.min(10, 4 + dx / 50);
       const back = Math.atan2(L2.isl.y - y, game.world.dx(x, L2.isl.x));
       out.x += Math.cos(back) * f;
@@ -131247,16 +131658,16 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         pad2.classList.toggle("hidden", !playing());
         stickEl.classList.toggle("hidden", !playing());
         rotate.classList.toggle("hidden", window.innerHeight <= window.innerWidth * 1.05);
-        const sail = p.mode === "sail";
+        const sail2 = p.mode === "sail";
         const knocked = p.state === "knocked";
-        set(B5.attack, sail ? "Fire" : "Attack");
-        B5.attack.classList.toggle("hidden", sail && !p.ship?.def?.cannons && p.ship?.cannonsOverride === void 0);
-        set(B5.jump, knocked ? "Get up" : sail ? "Row" : "Jump");
-        B5.dodge.classList.toggle("hidden", sail || knocked);
-        set(B5.heavy, sail ? "Burst" : "Heavy");
-        B5.heavy.classList.toggle("hidden", sail && !p.ship?.def?.coupDeBurst);
-        B5.block.classList.toggle("hidden", sail);
-        B5.heal.classList.toggle("hidden", sail);
+        set(B5.attack, sail2 ? "Fire" : "Attack");
+        B5.attack.classList.toggle("hidden", sail2 && !p.ship?.def?.cannons && p.ship?.cannonsOverride === void 0);
+        set(B5.jump, knocked ? "Get up" : sail2 ? "Row" : "Jump");
+        B5.dodge.classList.toggle("hidden", sail2 || knocked);
+        set(B5.heavy, sail2 ? "Burst" : "Heavy");
+        B5.heavy.classList.toggle("hidden", sail2 && !p.ship?.def?.coupDeBurst);
+        B5.block.classList.toggle("hidden", sail2);
+        B5.heal.classList.toggle("hidden", sail2);
         B5.use.classList.toggle("hidden", !p.controller?.interaction);
         if (!hinted && game.view3d?.active) {
           hinted = true;
@@ -131468,7 +131879,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     };
     installSession(game, { onReturnToTitle: toTitle });
     const playing = () => !!game.player && !ui.screenEl;
-    let sail = null;
+    let sail2 = null;
     let bootFrames = 0;
     let relockUntil = 0;
     ui.actions = {
@@ -131570,7 +131981,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         onBack: showTitle,
         onDone: (birth, choices) => {
           showBoot("Setting sail\u2026");
-          sail = { t0: performance.now(), frames: 0 };
+          sail2 = { t0: performance.now(), frames: 0 };
           ui.hideScreen();
           startNewCharacter(game, birth, choices);
           audio.music("sea");
@@ -131595,7 +132006,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
             return;
           }
           showBoot("Setting sail\u2026");
-          sail = { t0: performance.now(), frames: 0 };
+          sail2 = { t0: performance.now(), frames: 0 };
           ui.hideScreen();
           resumeCharacter(game, saved);
           audio.music("sea");
@@ -131681,14 +132092,14 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       // (carry on a saved character, as Continue does)
       resume(char) {
         hideBoot(true);
-        sail = null;
+        sail2 = null;
         ui.hideScreen();
         return resumeCharacter(game, char);
       },
       quickStart(race = "human", opts = {}) {
         const birth = { race, traits: opts.traits || ["lucky"], seed: opts.seed || 12345 };
         hideBoot(true);
-        sail = null;
+        sail2 = null;
         ui.hideScreen();
         if (opts.slot) useSlot(opts.slot);
         startNewCharacter(game, birth, { name: opts.name || "Test Pirate", look: null });
@@ -131767,13 +132178,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         if (ui.mapOpen) game.renderMap();
         else game.render();
         prof("render", t1);
-        if (sail) {
-          sail.frames++;
-          const waited = performance.now() - sail.t0;
+        if (sail2) {
+          sail2.frames++;
+          const waited = performance.now() - sail2.t0;
           setBoot(0.3 + 0.7 * Math.min(1, waited / 2500), view3d?.terrain.missing ? "Charting the waters around you\u2026" : "Setting sail\u2026");
-          if (sail.frames > 6 && !view3d?.terrain.missing || waited > 6e3) {
+          if (sail2.frames > 6 && !view3d?.terrain.missing || waited > 6e3) {
             hideBoot();
-            sail = null;
+            sail2 = null;
           }
         }
         profFrame();

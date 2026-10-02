@@ -330,7 +330,7 @@ export class TerrainManager {
         const third = ((x0 + i) % 3 === 0) && ((y0 + j) % 3 === 0);
         if (OVERLAY[t]) {
           // harbour piers stand tall on their own pilings (see props/docks.js); bridges on short posts
-          if (w.docks.size && w.isDock(x0 + i, y0 + j)) { piers.push(i, j); if (third) piles.push(i, j); continue; }
+          if (w.docks.size && w.isDock(x0 + i, y0 + j)) { piers.push(i, j); if (third && !w.dockAt(x0 + i, y0 + j)?.deck) piles.push(i, j); continue; }
           decks.push(i, j);
           if (third) posts.push(i, j);
         } else if (t === T.WALL) walls.push(i, j);

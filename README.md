@@ -524,7 +524,10 @@ player.
 - Alvida and Koby; Captain Morgan and the pirate hunter.
 - Koshiro and Kuina's promise; Buggy's circus; Gaimon.
 - Kuro's plot, which rewards the caravel Going Merry.
-- The Baratie, Don Krieg and a visit from Mihawk.
+- The Baratie (as in the anime: a fish-shaped ship, its head the bow, with a
+  sea-green restaurant under a red mansard roof, a gallery right round it
+  and sails striped yellow and white; walk aboard from its pier), Don Krieg
+  and a visit from Mihawk.
 - Arlong Park.
 - Loguetown, with Roger's execution platform and Smoker.
 
