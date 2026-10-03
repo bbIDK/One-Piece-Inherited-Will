@@ -1151,7 +1151,9 @@ sig('ope_takt', {
     const z = ex.room;
     if (z) fx.ring(z.x, z.y, 0.3, z.r, '#e1f5fe', 0.5, 0.08, { add: true });
     for (const e of ex.lifted || []) {
-      fx.add('cube', { x: e.x, y: e.y, follow: e, z: 0.9, size: 0.6, color: '#81d4fa', life: 1.4, spin: 0.8 });
+      // (the lift raises the cube with the body: room.js updateLift)
+      const c = fx.add('cube', { x: e.x, y: e.y, follow: e, z: 0.9, size: 0.6, color: '#81d4fa', life: (e.lift?.hold ?? 1.1) + 0.45, spin: 0.8 });
+      if (e.lift && c) e.lift.cube = c;
       fx.burst(e.x, e.y, 6, { color: ['#d7ccc8', '#efebe9'], speed: 1.5, g: -0.5, z: 0.1, vz: 2, life: 0.6, kind: 'dust', size: 0.15 });
     }
     sparkle(fx, actor.x, actor.y, 1.9, 4, ['#81d4fa', '#ffffff']);

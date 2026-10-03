@@ -131,6 +131,8 @@ export function updateLift(e, dt, game) {
   if (!L) return;
   if (e.state !== 'idle' || e.alive === false || e.inWater || e.flying) { e.lift = null; delete e.status.lifted; return; }
   L.t += dt;
+  // (the cube that grips the body goes up and down with it: see combatfx's Takt)
+  if (L.cube) L.cube.z = (e.z || 0) + 0.9;
   if (!L.slam) {
     // (up quickly, easing to a stop, and held there)
     const k = Math.min(1, L.t / 0.35);
