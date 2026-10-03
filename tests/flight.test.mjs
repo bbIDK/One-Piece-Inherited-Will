@@ -83,16 +83,18 @@ function fly(g, a) {
   return pc;
 }
 
-test('who flies: the Phoenix and the Dragon once mastered far enough, Logia riders, a Lunarian always — a Skypiean or a plain human never', () => {
+test('who flies: the Phoenix and the Dragon, Logia riders — from the first bite, longer with mastery — a Lunarian always; a Skypiean or a plain human never', () => {
   const g = arena();
   assert.equal(flightOf(body(g, {})), null);
   assert.equal(flightOf(body(g, { race: 'skypiean' })), null, 'a Skypiean\'s wings are too small');
   assert.equal(flightOf(body(g, { race: 'lunarian' })).style, 'wings');
-  assert.equal(flightOf(body(g, { fruit: 'tori_phoenix', mastery: 10 })), null, 'not yet');
-  const S = { tori_phoenix: ['phoenix', 15], uo_seiryu: ['dragon', 35], moku: ['ride', 25], suna: ['ride', 25], zushi: ['ride', 45], pika: ['float', 45], ito: ['float', 40] };
-  for (const [fruit, [style, m]] of Object.entries(S)) {
-    assert.equal(flightOf(body(g, { fruit, mastery: m - 1 })), null, `${fruit} below ${m}`);
-    assert.equal(flightOf(body(g, { fruit, mastery: m })).style, style, `${fruit} at ${m}`);
+  // (a fruit's flight is part of its base set: yours on eating it — its mastery keeps you up longer)
+  const S = { tori_phoenix: 'phoenix', uo_seiryu: 'dragon', moku: 'ride', suna: 'ride', zushi: 'ride', pika: 'float', ito: 'float' };
+  for (const [fruit, style] of Object.entries(S)) {
+    const fresh = flightOf(body(g, { fruit, mastery: 0 })), master = flightOf(body(g, { fruit, mastery: 100 }));
+    assert.equal(fresh.style, style, `${fruit} at mastery 0`);
+    assert.ok(master.gauge > fresh.gauge, `${fruit}: longer once mastered (${fresh.gauge} → ${master.gauge})`);
+    assert.equal(flightOf(body(g, { fruit, mastery: 40 })).gauge, master.gauge, `${fruit}: as long as it gets by 40`);
   }
   assert.equal(flightOf(body(g, { fruit: 'moku' })).ride, 'smoke');
   assert.equal(flightOf(body(g, { fruit: 'zushi' })).ride, 'rock');

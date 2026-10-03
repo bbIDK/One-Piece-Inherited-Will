@@ -10,6 +10,7 @@ import { findShore } from './interact.js';
 import { conquerorBurst } from './abilities.js';
 import { sigOf, colourName } from './haki.js';
 import { standAboard } from './decks.js';
+import { keysOf, keyLabel } from './keys.js';
 
 export class LivesSystem {
   constructor(game) {
@@ -48,6 +49,8 @@ export class LivesSystem {
       this.awaken('knocked', att);
       return;
     }
+    // a mastered Devil Fruit, struck down by a real threat: it awakens instead (progression.js)
+    if (!p.drowned && g.progression?.maybeAwakenFruit(att, 'knocked')) { this.k = null; return; }
     this.k = { t: 0, max: p.drowned ? 2.5 : 6, mash: 0, need: 9 + Math.floor((c.stats.knockdowns || 0) / 3), killer: att, drowned: p.drowned, cause: describe(att, p) };
     g.audio?.sfx('knocked');
     g.fx.impactFrame(0.1);
@@ -123,7 +126,7 @@ export class LivesSystem {
     g.fx.impactFrame(0.25);
     g.fx.flash = 0.4;
     conquerorBurst(p, g, { range: 12, damage: 20 }, 1);
-    g.log(`King's Disposition awakened: Conqueror's Haki, ${colourName(col).toLowerCase()} as your will. Press G to release it.`, col);
+    g.log(`King's Disposition awakened: Conqueror's Haki, ${colourName(col).toLowerCase()} as your will. Press ${keyLabel(keysOf(g.settings).haki[0]) || 'G'} to release it.`, col);
     g.emit('conquerorAwakened', how);
     persist(g);
   }

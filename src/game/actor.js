@@ -23,6 +23,7 @@ import { anyShips } from './ship.js';
 import { plankJoins, PLANK_W } from './gangway.js';
 import { bw } from '../world/bframe.js';
 import { heightsOf } from '../world/interiors.js';
+import { attackSpec, infuse } from './moveset.js';
 
 // what a step sounds like on each kind of ground
 const STEP_SOUND = [];
@@ -88,6 +89,7 @@ export class Actor extends Entity {
     this.style = o.style || 'brawler';
     this.weapon = o.weapon || null; // { kind: 'sword'|'gun'|'staff'|'axe', grade, count }
     this.drawn = false; // the weapon taken in hand (from the hotbar): held ready out of a fight too
+    this.fruitOut = false; // the Devil Fruit taken out (from the hotbar): its skills on the skill keys, its blows on the mouse (moveset.js)
     this.fruit = o.fruit || null;
     this.fruitMastery = o.fruitMastery || 0;
     this.masteries = o.masteries || {};
@@ -244,6 +246,22 @@ export class Actor extends Entity {
     return buff;
   }
 
+  /**
+   * End the form of your fruit that's on (Gear Second..., or the awakened set:
+   * data/fruitForms.js): its buff goes — and an Armament it forced on with it
+   * — and what it leaves you with comes (`after`: spent, exhausted) unless
+   * `spent` is false. True if one was on.
+   */
+  endForm(spent = true) {
+    const b = this.buffs.find((x) => x.form);
+    if (!b) return false;
+    this.buffs = this.buffs.filter((x) => x !== b);
+    if (b.forceArmament) this.armament = false;
+    if (spent && b.after) this.addBuff(b.after);
+    this.recalc();
+    return true;
+  }
+
   addStatus(k, v, src) {
     const cur = this.status[k];
     if (k === 'wet' && this.status.burn) delete this.status.burn;
@@ -365,8 +383,11 @@ export class Actor extends Entity {
     if (style.weapon && !this.hasWeapon(style.weapon)) chain = STYLES.brawler.m1Ids;
     if (this.combo.window <= 0) this.combo.step = 0;
     const id = chain[this.combo.step % chain.length];
-    const def = getAbility(id);
+    let def = getAbility(id);
     if (!def) return false;
+    // (the fruit out: the same chain with its power in every blow — it trains the fruit: moveset.js)
+    const spec = this.fruitOut ? attackSpec(this) : null;
+    if (spec?.m1) def = infuse(def, spec.m1);
     // (swinging lowers your guard; and a foe's follow-up in a combo comes quicker than its opener)
     this.blocking = false;
     startAbility(this, { ...def, m1Chain: true, chained: this.combo.step % chain.length > 0 }, game);
@@ -401,6 +422,12 @@ export class Actor extends Entity {
     if (style.weapon && !this.hasWeapon(style.weapon)) def = getAbility(STYLES.brawler.heavyId);
     // (a weapon's plain moves, its style never learned: no signature heavy)
     else if (style.plainHeavyId && this.masteries[this.style] === undefined) def = getAbility(style.plainHeavyId);
+    // (the fruit out: its own heavy, or its form's — and while that's coming back, your fists' with the fruit's power in it)
+    const spec = this.fruitOut ? attackSpec(this) : null;
+    if (spec) {
+      const fh = spec.heavy ? getAbility(spec.heavy) : null;
+      def = fh && canUse(this, fh) ? fh : infuse(def, spec.m1);
+    }
     // a heavy may cancel the recovery of a basic swing once that swing has landed
     const a = this.action;
     if (a && a.def.m1Chain && a.step >= (a.def.steps || []).length && a.t > (a.def.windup ?? 0.07) + 0.04 && this.state === 'idle' && this.hitstun <= 0 && canUse(this, def)) {
@@ -416,7 +443,7 @@ export class Actor extends Entity {
 
   tryTechnique(id, game, target) {
     // hotbar slots can also hold items (food, medicine, dials…)
-    if (typeof id === 'string' && id.startsWith('item:')) return this.isPlayer && this.state === 'idle' && !!game.useHotbarItem?.(id.slice(5));
+    if (typeof id === 'string' && id.startsWith('item:')) return this.isPlayer && this.state === 'idle' && !!game.useHotbarItem?.(id.slice(5), target);
     const def = getAbility(id);
     if (!def) return false;
     // (a power's own way into the sky: up, or — up there — back down; see flight.js)
@@ -436,6 +463,7 @@ export class Actor extends Entity {
         else if (def.source?.startsWith('fruit') && this.inWater) game.log('Your Devil Fruit power is useless in the sea!', '#ff8a80');
         else if (def.weapon && this.weapon && !this.drawn && this.weapon.kind === def.weapon) game.log(`Draw your ${this.weapon.kind === 'sword' ? (this.weapon.count > 1 ? 'swords' : 'sword') : 'weapon'} first (X).`, '#ffcc80');
         else if (def.weapon && !this.hasWeapon(def.weapon, def.style)) game.log(`${def.name} needs ${def.weapon === 'sword' ? `${STYLES[def.style || this.style]?.swords || 1} sword(s)` : 'a ' + def.weapon}.`, '#ff8a80');
+        else if (def.source?.startsWith('haki') && this.buffs.some((b) => b.noHaki)) game.log('You\'re exhausted: no Haki in you for now.', '#b0bec5');
         else if (def.cost?.haki && this.haki < def.cost.haki) game.log(this.hakiUnlocked() ? 'Not enough Haki.' : 'Not enough strength of will.', '#ff8a80');
         else if (def.room === 'need' && !ownRoom(this, game)) {
           // (a Room technique, out of a Room: the slot flashes, and why)
@@ -940,6 +968,8 @@ export class Actor extends Entity {
       }
     }
     for (const a of spent || []) this.addBuff(a);
+    // (exhausted — Gear Fourth spent: no Haki in you for a while)
+    if ((this.armament || this.observation) && this.buffs.some((b) => b.noHaki)) { this.armament = false; this.observation = false; }
     if (changed) this.recalc();
     this.cdMulBuff = this.buffs.some((b) => b.mods?.cdMul);
   }

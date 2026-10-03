@@ -1,9 +1,11 @@
-// Every Devil Fruit technique, run for real: each one started by someone who
-// has eaten the fruit (mastered it, with Haki to spare — inside a ROOM for a
-// Room technique), next to a foe, on open ground, and played through to the
-// end with the game's own actors, abilities, combat, fields and effects. None
-// may throw, every one must start, and each must do what it's for: hurt or
-// hold the foe, or change its user (a form, a heal, a move, the sky).
+// Every Devil Fruit technique, run for real — its base set, its heavy, its
+// forms' switches and moves (Gum-Gum's Gears...), its awakened set — each one
+// started by someone who has eaten the fruit (mastered it, with Haki to spare
+// — inside a ROOM for a Room technique), next to a foe, on open ground, and
+// played through to the end with the game's own actors, abilities, combat,
+// fields and effects. None may throw, every one must start, and each must do
+// what it's for: hurt or hold the foe, or change its user (a form, a heal, a
+// move, the sky).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -71,11 +73,19 @@ function setup(fid) {
   return { g, you, foe, far };
 }
 
+/** Every technique a fruit brings: its base set, the rest it registers (`more`), its heavy, its forms' and its awakened set's (data/fruitForms.js). */
+function allOf(F) {
+  const aw = F.awakening || {};
+  const ids = [...F.techniques.map((t) => t.id), ...(F.more || []).map((t) => t.id), F.heavy, ...(F.forms || []).flatMap((x) => [x.activate, ...(x.skills || []), x.heavy]), aw.activate, ...(aw.skills || []), aw.heavy];
+  return [...new Set(ids.filter(Boolean))];
+}
+
 const snapshot = (a) => JSON.stringify({ hp: Math.round(a.hp), x: a.x.toFixed(2), y: a.y.toFixed(2), st: Object.keys(a.status).sort(), b: a.buffs.map((b) => b.id).sort(), f: !!a.flying });
 
 for (const [fid, F] of Object.entries(FRUITS)) {
   test(`${F.name}: every technique runs, start to finish`, () => {
-    for (const t of F.techniques) {
+    for (const id of allOf(F)) {
+      const t = { id };
       const { g, you, foe, far } = setup(fid);
       const def = getAbility(t.id);
       assert.ok(def, `${t.id} is registered`);

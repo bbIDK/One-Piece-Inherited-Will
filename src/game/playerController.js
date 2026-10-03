@@ -1,6 +1,12 @@
 // Turns keyboard/mouse input into player actions, on foot, swimming or at
-// the helm of a ship.
-import { HOTBAR_SIZE, HOTBAR_KEYS } from './hotbar.js';
+// the helm of a ship. The number keys take out what's on the hotbar (food, a
+// weapon, your Devil Fruit and its forms: entries.js); the skill keys use the
+// skills of whatever is out, and the Haki keys the Haki techniques (keys.js,
+// moveset.js).
+import { HOTBAR_SIZE, HOTBAR_KEYS, isMoveset } from './hotbar.js';
+import { takeOut, keepEntries } from './entries.js';
+import { movesetOf, hakiGroupOf } from './moveset.js';
+import { keysOf, pressed } from './keys.js';
 import { clamp, angleDiff } from '../core/math.js';
 import { findInteraction } from './interact.js';
 import { ITEMS } from '../data/items.js';
@@ -20,6 +26,7 @@ export class PlayerController {
 
   update(p, dt, game) {
     const inp = game.input;
+    keepEntries(p);
     if (game.ui && game.ui.blocksInput()) {
       p.intent.mx = 0; p.intent.my = 0; p.intent.sprint = false;
       p.setBlock(false);
@@ -148,16 +155,14 @@ export class PlayerController {
           const it = String(id).startsWith('item:') ? ITEMS[id.slice(5)] : null;
           if (!it || !(it.type === 'food' || it.type === 'medicine' || it.type === 'fruit')) this.putAway(p);
         }
-        // (a technique turns you to where you aim; drawing a weapon or taking food doesn't)
-        if (id) { if (!String(id).startsWith('item:')) p.facing = aim; const target = this.aimTarget(p, game, wx, wy); p.tryTechnique(id, game, target || { x: wx, y: wy }); }
+        if (id) this.useEntry(p, game, id, aim, wx, wy);
       }
     }
+    // the skills of what's out on the skill keys, the Haki techniques on theirs
+    // (G, a king's Conqueror's first: hakiGroupOf — nothing at all until a Haki wakes)
+    this.skillKeys(p, game, aim, wx, wy);
     if (inp.wasPressed('R')) this.toggleHaki(p, game, 'armament');
     if (inp.wasPressed('T')) this.toggleHaki(p, game, 'observation');
-    if (inp.wasPressed('G')) {
-      // (nothing happens — and nothing is said — until the power awakens)
-      if (p.hakiLevel('conqueror')) { p.facing = aim; p.tryTechnique('haki_conqueror', game); }
-    }
 
     // interaction
     this.interaction = findInteraction(game, p);
@@ -166,6 +171,53 @@ export class PlayerController {
       p.reachT = 0.45; // (the first-person hand reaches out)
       this.interaction.run();
     }
+  }
+
+  /**
+   * A hotbar entry, used (its key, or a click or tap on it: ui.js useSlot):
+   * a moveset taken out (entries.js), an item used — a Dial fired where you
+   * aim — or a technique still on an old hotbar, at where you aim.
+   */
+  useEntry(p, game, id, aim, wx, wy) {
+    if (isMoveset(id)) return takeOut(game, p, id);
+    const item = String(id).startsWith('item:') ? ITEMS[id.slice(5)] : null;
+    // (a technique or a Dial turns you to where you aim; drawing a weapon or taking food doesn't)
+    if (!item || item.type === 'dial') p.facing = aim;
+    const target = this.aimTarget(p, game, wx, wy);
+    return p.tryTechnique(id, game, target || { x: wx, y: wy });
+  }
+
+  /** The skill keys and the Haki keys, pressed this frame (keys.js). */
+  skillKeys(p, game, aim, wx, wy) {
+    const inp = game.input, K = keysOf(game.settings);
+    for (let i = 0; i < K.skills.length; i++) if (pressed(inp, K.skills[i])) this.useSkill(p, game, i, aim, wx, wy);
+    for (let i = 0; i < K.haki.length; i++) if (pressed(inp, K.haki[i])) this.useHaki(p, game, i, aim, wx, wy);
+  }
+
+  /**
+   * Skill `i` of whatever is out (moveset.js): used at where you aim — or,
+   * one still to learn, what opens it is said.
+   */
+  useSkill(p, game, i, aim, wx, wy) {
+    const s = movesetOf(p).skills[i];
+    if (!s) return false;
+    if (s.locked) {
+      game.ui?.flashSlot?.(s.id);
+      game.log(`${s.def.name}: ${s.why ? s.why[0].toUpperCase() + s.why.slice(1) : 'not learned yet'}.`, '#b0bec5');
+      return false;
+    }
+    p.facing = aim;
+    const target = this.aimTarget(p, game, wx, wy);
+    return p.tryTechnique(s.id, game, target || { x: wx, y: wy });
+  }
+
+  /** Haki technique `i` (the Haki group: moveset.js hakiGroupOf), at where you aim. Nothing until a Haki wakes. */
+  useHaki(p, game, i, aim, wx, wy) {
+    const r = hakiGroupOf(p)?.rows.find((x) => x.slot === i);
+    if (!r) return false;
+    p.facing = aim;
+    const target = this.aimTarget(p, game, wx, wy);
+    return p.tryTechnique(r.id, game, target || { x: wx, y: wy });
   }
 
   /**
@@ -277,6 +329,13 @@ export class PlayerController {
   toggleHaki(p, game, type) {
     if (!p.hakiLevel(type)) return; // hidden until awakened
     const on = type === 'armament' ? !p.armament : !p.observation;
+    // (worn out — Gear Fourth spent: no Haki in you for a while)
+    const tired = on && p.buffs.find((b) => b.noHaki);
+    if (tired) {
+      game.ui?.flashAct?.('haki');
+      game.log(`${tired.name || 'Exhausted'}: no Haki in you for ${Math.ceil(tired.t)}s.`, '#b0bec5');
+      return;
+    }
     if (on && p.haki < 1) {
       game.ui?.flashAct?.('haki');
       game.audio?.sfx('haki_out', p);
@@ -356,13 +415,15 @@ export class PlayerController {
       p.reachT = 0.45; // (the first-person hand reaches out)
       this.interaction.run();
     }
-    // hotbar still usable for ranged techniques from the deck
+    // the hotbar and the skill keys still work from the helm: a fruit's shots across the water
+    const aim = Math.atan2(wy - p.y, game.world.dx(p.x, wx));
     for (let i = 0; i < HOTBAR_SIZE; i++) {
       if (inp.wasPressed(HOTBAR_KEYS[i])) {
         const id = p.hotbar[i];
-        if (id) { p.facing = Math.atan2(wy - p.y, game.world.dx(p.x, wx)); p.tryTechnique(id, game, { x: wx, y: wy }); }
+        if (id) this.useEntry(p, game, id, aim, wx, wy);
       }
     }
+    this.skillKeys(p, game, aim, wx, wy);
     void angleDiff;
   }
 

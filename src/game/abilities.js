@@ -97,6 +97,8 @@ export function canUse(actor, def) {
   const c = def.cost || {};
   if (c.haki && actor.haki < c.haki) return false;
   if (def.source?.startsWith('fruit') && (actor.inWater || actor.seastoned)) return false;
+  // (worn out — Gear Fourth spent: no Haki in you for a while)
+  if (def.source?.startsWith('haki') && actor.buffs?.some((b) => b.noHaki)) return false;
   // (a style's technique needs that style's weapon: Santoryu moves want three swords, whatever you fight with)
   if (def.weapon && !actor.hasWeapon(def.weapon, def.style)) return false;
   if (def.requiresBuff && !actor.hasBuff(def.requiresBuff)) return false;

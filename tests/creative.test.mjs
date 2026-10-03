@@ -147,19 +147,21 @@ test('a Devil Fruit handed out is the only one: taken from where it grows, eaten
   assert.equal(useItem(game, 'fruit_gomu'), false);
   assert.equal(c.fruit, 'hana');
 
+  // (its whole base set is yours on eating it, whatever its mastery: mastery opens its forms — Hana has none)
   const hana = FRUITS.hana.techniques.map((t) => t.id);
-  assert.equal(setFruitMastery(game, 100), hana.length);
   assert.ok(hana.every((id) => c.techniques.includes(id)));
+  assert.equal(setFruitMastery(game, 100), 0);
   setFruitMastery(game, 0);
-  assert.deepEqual(hana.filter((id) => c.techniques.includes(id)), [hana[0]]);
+  assert.ok(hana.every((id) => c.techniques.includes(id)), 'still all of it at mastery 0');
   assert.equal(c.fruitMastery, 0);
   assert.equal(p.fruitMastery, 0);
+  assert.ok(c.hotbar.includes('ms:fruit'), 'its entry on the hotbar');
 
   assert.equal(removeFruit(game), 'hana');
   assert.equal(c.fruit, null);
   assert.equal(p.fruit, null);
   assert.ok(!c.techniques.some((id) => hana.includes(id)), 'its techniques go with it');
-  assert.ok(!c.hotbar.some((id) => hana.includes(id)));
+  assert.ok(!c.hotbar.some((id) => hana.includes(id) || id === 'ms:fruit'), 'and its entry');
   assert.ok(c.world.fruitsTaken.includes('hana'), 'never rolled into the world again: there\'s still only the one');
   assert.equal(fruitWhere(game, 'hana').kind, 'picked');
   assert.equal(removeFruit(game), null);
@@ -182,7 +184,7 @@ test('Haki set to a level is awakened, with the techniques that level opens', ()
   setHaki(game, 'conqueror', 60);
   assert.ok(c.traits.includes('conqueror'), 'born of the King\'s Disposition');
   assert.ok(c.techniques.includes('haki_conqueror') && c.techniques.includes('haki_infusion'));
-  assert.ok(!c.hotbar.includes('haki_conqueror'), '(that one is on G)');
+  assert.ok(!c.hotbar.some((id) => id && id.startsWith('haki_')), '(Haki techniques sit on the Haki keys, not the hotbar)');
   p.armament = true;
   setHaki(game, 'armament', 0);
   assert.equal(c.haki.armament, 0);

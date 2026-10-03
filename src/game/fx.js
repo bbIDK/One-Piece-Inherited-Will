@@ -340,6 +340,8 @@ export class FX {
         if (s.onStart) { s.onStart(s); s.onStart = null; }
       }
       if (s.follow) { const f = s.follow; if (f.alive !== false) { s.x = f.x + (s.ox || 0); s.y = f.y + (s.oy || 0); } }
+      // (a field's look stays on the field — which moves, if it's an awakened surgeon's ROOM)
+      else if (s.zone && s.zone.t > 0) { s.x = s.zone.x; s.y = s.zone.y; }
       s.age += sdt;
       if (s.endT !== undefined) { s.endT -= sdt; if (s.endT <= 0) this.shapes.splice(i, 1); continue; }
       if ((s.until && !s.until(s)) || (s.zone && !(s.zone.t > 0))) { s.endT = 0.35; continue; }

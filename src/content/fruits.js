@@ -10,9 +10,10 @@ import { getAbility } from '../game/abilities.js';
 import { DEVIL, fruitOf, fruitKey, fruitCount, fruitPicked } from '../world/fruitTrees.js';
 
 /**
- * A fruit's techniques as they are now, for a character from before: any
- * its mastery has already opened (a technique added to the fruit since, or
- * one that opens sooner) are known, and any no longer part of it are gone.
+ * A fruit's techniques as they are now, for a character from before: its
+ * whole base set is known (it's all yours on eating now: a technique added to
+ * the fruit since, or one that used to open with mastery), and any no longer
+ * part of it are gone.
  */
 function catchUpFruit(game, c) {
   if (!c?.fruit || !FRUITS[c.fruit]) return;
@@ -21,7 +22,7 @@ function catchUpFruit(game, c) {
   c.hotbar = (c.hotbar || []).map((id) => (stale(id) ? null : id));
   const fresh = unlockedFruitTechniques(c.fruit, c.fruitMastery || 0).filter((id) => !c.techniques.includes(id));
   for (const id of fresh) c.techniques.push(id);
-  if (fresh.length) game.log?.(`Your ${FRUITS[c.fruit].name} holds techniques you hadn't found: ${fresh.map((id) => getAbility(id)?.name).filter(Boolean).join(', ')}. See the Skills tab.`, '#ffab91');
+  if (fresh.length) game.log?.(`The whole of your ${FRUITS[c.fruit].name}'s base set is yours: ${fresh.map((id) => getAbility(id)?.name).filter(Boolean).join(', ')} — on the skill keys while the fruit is out (its key on the hotbar).`, '#ffab91');
 }
 
 /**

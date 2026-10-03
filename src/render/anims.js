@@ -363,7 +363,7 @@ const MAIN = (s) => s.hit || s.proj || s.dash || s.zone || s.teleport || s.pull 
 // Ice Age's palm to the ground, the hand raised for a ROOM, the second sun —
 // and the last hit of a combo that should end it with a flourish
 const TECH_CLIP = {
-  gomu_gear3: 'gigant',
+  gomu_gear3: 'gigant', gomu_gigant_pistol: 'gigant', gomu_king_kong_gun: 'gigant', gomu_bajrang_gun: 'gigant',
   mera_hiken: 'hiken', ryu_hiken: 'hiken', magu_daifunka: 'hiken',
   gura_punch: 'kaishin', gura_kaishin: 'kaishin', haki_emission: 'kaishin', gura_tsunami: 'tilt',
   goro_elthor: 'skyward', clima_thunderbolt: 'skyward', zushi_meteor: 'skyward',
@@ -457,7 +457,7 @@ export function actionClip(def, actor, stanceName) {
 
 function pickClip(def, actor, s, steps, c, wk) {
   if (def.clip && CLIPS[def.clip]) return def.clip;
-  const sig = TECH_CLIP[def.id];
+  const sig = TECH_CLIP[def.id] || (def.base ? TECH_CLIP[def.base] : undefined);
   if (sig && !wk) return sig;
   const a = def.anim || 'punch';
   if (CLIPS[a] && !GENERIC.has(a)) return a;

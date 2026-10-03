@@ -5,7 +5,8 @@ export class Input {
     this.down = new Set();
     this.pressed = new Set();
     this.released = new Set();
-    this.mouse = { x: 0, y: 0, down: [false, false, false], pressed: [false, false, false], released: [false, false, false], wheel: 0 };
+    // (buttons: 0 left, 1 middle, 2 right, 3 back, 4 forward — the last three can be skill keys)
+    this.mouse = { x: 0, y: 0, down: [false, false, false, false, false], pressed: [false, false, false, false, false], released: [false, false, false, false, false], wheel: 0 };
     this.enabled = true;
     this.captureKeys = true;
     this.typing = false; // when a text field has focus
@@ -24,17 +25,24 @@ export class Input {
     };
     window.addEventListener('keydown', kd);
     window.addEventListener('keyup', ku);
-    window.addEventListener('blur', () => { this.down.clear(); this.mouse.down = [false, false, false]; });
+    window.addEventListener('blur', () => { this.down.clear(); this.mouse.down = [false, false, false, false, false]; });
     target.addEventListener('mousemove', (e) => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; });
     target.addEventListener('mousedown', (e) => {
       this.mouse.x = e.clientX; this.mouse.y = e.clientY;
+      if (e.button > 4) return;
       this.mouse.down[e.button] = true;
       this.mouse.pressed[e.button] = true;
+      // (the middle button doesn't start the browser's autoscroll over the game, nor the side ones go back or forward)
+      if (e.button === 1 || e.button >= 3) e.preventDefault();
     });
     window.addEventListener('mouseup', (e) => {
+      if (e.button > 4) return;
       this.mouse.down[e.button] = false;
       this.mouse.released[e.button] = true;
+      // (the side buttons are skill keys here, not the browser's back and forward)
+      if (e.button === 3 || e.button === 4) e.preventDefault();
     });
+    target.addEventListener('auxclick', (e) => { if (e.button !== 2) e.preventDefault(); });
     target.addEventListener('contextmenu', (e) => e.preventDefault());
     target.addEventListener('wheel', (e) => { this.mouse.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
   }
@@ -57,8 +65,8 @@ export class Input {
   endFrame() {
     this.pressed.clear();
     this.released.clear();
-    this.mouse.pressed = [false, false, false];
-    this.mouse.released = [false, false, false];
+    this.mouse.pressed = [false, false, false, false, false];
+    this.mouse.released = [false, false, false, false, false];
     this.mouse.wheel = 0;
   }
 

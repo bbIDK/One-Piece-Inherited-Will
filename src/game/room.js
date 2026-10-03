@@ -3,7 +3,9 @@
 // ROOM (data/fruits.js ope_room) is a zone of kind 'room': a pale blue
 // sphere opened where it was cast, and there it stays — however its surgeon
 // moves about — until it fades, another is cast, or they go down (or into
-// the sea). Inside their own Room the surgeon's techniques work (outside it
+// the sea). Only an awakened surgeon's goes with them: while their awakened
+// set is out, their ROOM follows them about (roomFollows; the canon's K-ROOM,
+// a Room that clings to whoever made it). Inside their own Room the surgeon's techniques work (outside it
 // most don't — `room: 'need'`, see abilities.js canUse — and the rest are
 // half as strong), their blows reach whatever is in the Room (and nothing
 // outside it) and pass through a Logia's body, and they can:
@@ -33,6 +35,17 @@ export function ownRoom(actor, game = actor?.game) {
     if (game.world.distance(z.x, z.y, actor.x, actor.y) <= z.r) return z;
   }
   return null;
+}
+
+/**
+ * Does ROOM zone `z` go where its surgeon goes just now? Only while their
+ * fruit's awakened set is out (a buff with form 'awake': data/fruitForms.js):
+ * cast before, it starts following once they awaken it; switched back, it
+ * stays wherever it then is.
+ */
+export function roomFollows(z) {
+  const o = z?.owner;
+  return !!o && z.kind === 'room' && o.alive !== false && (o.buffs || []).some((b) => b.form === 'awake');
 }
 
 /** Any ROOM of `actor`'s still open, wherever they are (or null). */
