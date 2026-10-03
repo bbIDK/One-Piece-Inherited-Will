@@ -384,7 +384,7 @@ export class Deck {
     this.stopAt = Math.min(this.stopAt, at + sec);
     this.fading = true;
     const bus = this.bus;
-    setTimeout(() => { try { bus.disconnect(); } catch { /* gone */ } }, (at - now + sec + 6) * 1000);
+    this.mu.E.later(() => { try { bus.disconnect(); } catch { /* gone */ } }, at - now + sec + 6);
   }
 
   /** Bring the stems to these levels (0..1), over `sec` from `at`. */

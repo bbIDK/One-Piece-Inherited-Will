@@ -217,6 +217,16 @@ export class Engine {
     if (i >= 0) list.splice(i, 1);
   }
 
+  /**
+   * Run `fn` once `sec` more seconds of sound have played (letting go of a
+   * faded deck's nodes). An offline render (the audio checks) runs ahead of
+   * the wall clock, so there the tidying is left to the end of the render.
+   */
+  later(fn, sec) {
+    if (this.offline) return;
+    setTimeout(fn, Math.max(0, sec) * 1000);
+  }
+
   /** The next of `n` variants of a sound, never the one just played. */
   variant(name, n) {
     if (n <= 1) return 0;

@@ -153,6 +153,10 @@ export class Audio {
   sfx(name, at = null, k0 = null) {
     if (!this.ctx) return;
     if (this.ctx.state !== 'running') { this.ctx.resume?.(); return; }
+    try { this.play(name, at, k0); } catch (e) { if (!this.warned) { this.warned = true; console.warn('sfx', name, e); } }
+  }
+
+  play(name, at, k0) {
     const g = this.game, p = g?.player;
     const k = { ...(k0 || {}) };
     let key = name;
@@ -244,6 +248,10 @@ export class Audio {
    */
   step(surface, loud = 0.6, at = null) {
     if (!this.ready()) return;
+    try { this.foot1(surface, loud, at); } catch (e) { if (!this.warned) { this.warned = true; console.warn('step', e); } }
+  }
+
+  foot1(surface, loud, at) {
     const pl = this.place(at, 16);
     if (!pl) return;
     const p = this.game?.player;

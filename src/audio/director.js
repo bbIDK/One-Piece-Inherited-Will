@@ -297,6 +297,6 @@ export class Director {
       mu.drum(hold, 'timp', bus, 1.2, root - 24);
       mu.drum(hold, 'crash', bus, 1);
     }
-    setTimeout(() => { try { bus.disconnect(); } catch { /* gone */ } }, (at - c.currentTime + dur + 5) * 1000);
+    E.later(() => { try { bus.disconnect(); } catch { /* gone */ } }, at - c.currentTime + dur + 5);
   }
 }

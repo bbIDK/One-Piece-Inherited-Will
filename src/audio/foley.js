@@ -45,21 +45,25 @@ export class Foley {
     if (this.game === game) return;
     this.game = game;
     const A = this.audio;
-    game.on('tick', (dt) => this.tick(dt));
-    game.on('playerLand', (impact) => this.land(impact));
-    game.on('playerClimb', () => { this.climbT = 0; if (!this.game.player?.climb?.ladder) A.sfx('climb', null, { surf: this.surf() }); });
-    game.on('playerHit', () => A.director?.heat(0.05));
-    game.on('playerHurt', () => A.director?.heat(0.07));
-    game.on('knockout', (a) => { if (a && !a.isPlayer && a.faction !== 'player') A.director?.ko(false); });
-    game.on('bossDefeated', () => A.director?.ko(true));
-    game.on('shipSunk', (s) => { if (s?.owner !== 'player') A.director?.ko(false); });
-    game.on('questStarted', () => A.sfx('quest_accept'));
-    game.on('questStage', () => A.sfx('quest_update'));
-    game.on('questDone', () => A.sfx('quest_complete'));
-    game.on('pickup', () => A.sfx('pickup'));
-    game.on('foraged', () => A.sfx('forage'));
-    game.on('logSet', () => A.sfx('logset'));
-    game.on('bountyChanged', (b, first) => {
+    // (every handler guarded: the sound must never take the game down with it)
+    const on = (ev, fn) => game.on(ev, (...a) => {
+      try { if (A.ready()) fn(...a); } catch (e) { if (!this.warned) { this.warned = true; console.warn('foley', ev, e); } }
+    });
+    on('tick', (dt) => this.tick(dt));
+    on('playerLand', (impact) => this.land(impact));
+    on('playerClimb', () => { this.climbT = 0; if (!this.game.player?.climb?.ladder) A.sfx('climb', null, { surf: this.surf() }); });
+    on('playerHit', () => A.director?.heat(0.05));
+    on('playerHurt', () => A.director?.heat(0.07));
+    on('knockout', (a) => { if (a && !a.isPlayer && a.faction !== 'player') A.director?.ko(false); });
+    on('bossDefeated', () => A.director?.ko(true));
+    on('shipSunk', (s) => { if (s?.owner !== 'player') A.director?.ko(false); });
+    on('questStarted', () => A.sfx('quest_accept'));
+    on('questStage', () => A.sfx('quest_update'));
+    on('questDone', () => A.sfx('quest_complete'));
+    on('pickup', () => A.sfx('pickup'));
+    on('foraged', () => A.sfx('forage'));
+    on('logSet', () => A.sfx('logset'));
+    on('bountyChanged', (b, first) => {
       // (a raise worth a poster: the first, or a tenth more)
       if (first || (b > (this.bounty || 0) * 1.1 && b - (this.bounty || 0) > 1e6)) A.sfx('bounty');
       this.bounty = b;
