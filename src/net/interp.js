@@ -1,15 +1,18 @@
 // Smooth motion for the other players. Their states come in a dozen times a
-// second, a little irregularly (the network is never quite even); each player
-// is drawn a short moment in the past, in between the two states either side
-// of that moment, so they glide rather than jump — and are guessed ahead
-// only briefly, along their way, when the next state is late. Pure: the
-// times are passed in (ms, our clock), so it runs the same in the tests.
+// second, a little irregularly (the network is never quite even, and a slow
+// machine sends fewer); each player is drawn a short moment in the past, in
+// between the two states either side of that moment, so they glide rather
+// than jump — and are guessed ahead only briefly, along their way, when the
+// next state is late. Pure: the times are passed in (ms, our clock), so it
+// runs the same in the tests.
 import { angleDiff } from '../core/math.js';
 
 // how each field of a state (see protocol.js readState) is drawn in between two
 const LIN = ['y', 'z', 'vx', 'vy', 'vz', 'sp', 'd', 'wd', 'g', 'du', 'dv', 'dh', 'sy', 'ss', 'sl', 'lv', 'pi', 'c', 'hs', 'mz', 'rl', 'rr'];
 const WRAP = ['x', 'sx']; // east-west: the world wraps round
 const ANG = ['f', 'sh']; // angles: the short way round
+// (the bookkeeping on a state, not for the drawing)
+const OWN = ['_x', '_sx', '_f', '_sh', 'cut', 'ex', 'ey', 'esx', 'esy'];
 
 export class SnapBuffer {
   /**
@@ -18,7 +21,7 @@ export class SnapBuffer {
    * guess past the newest state; jump: metres between two states beyond
    * which it's a leap (a journey to a friend, a zone), not slid across.
    */
-  constructor({ width = 0, minDelay = 90, maxDelay = 450, ahead = 220, jump = 30 } = {}) {
+  constructor({ width = 0, minDelay = 90, maxDelay = 1000, ahead = 220, jump = 30 } = {}) {
     Object.assign(this, { width, minDelay, maxDelay, ahead, jump });
     this.reset();
   }
@@ -30,6 +33,9 @@ export class SnapBuffer {
     this.offset = null;
     this.delay = this.minDelay * 1.4;
     this.lastRecv = -Infinity;
+    this.T = null; // the moment of theirs being drawn (see sample)
+    this.lastNow = null;
+    this.drawn = null; // where they were drawn last ({ x, y, sx, sy })
   }
 
   /** b − a east-west, the short way round the world. */
@@ -51,6 +57,13 @@ export class SnapBuffer {
     for (const k of ANG) if (s[k] !== undefined) s['_' + k] = prev && prev[k] !== undefined ? prev['_' + k] + angleDiff(prev[k], s[k]) : s[k];
     // a leap (a journey across the world, into a zone, onto another ship): not slid across
     if (prev && (s.w !== prev.w || (s.si || '') !== (prev.si || '') || Math.hypot(s._x - prev._x, s.y - prev.y) > this.jump)) s.cut = true;
+    // how fast they really went since the last one, by their clock (to guess ahead with, should
+    // the next be late: their own speed is in their game's time, which can run slow on a slow machine)
+    if (prev && !s.cut && !s.hb && s.t - prev.t < 1500) {
+      const k = 1000 / (s.t - prev.t);
+      s.ex = (s._x - prev._x) * k; s.ey = (s.y - prev.y) * k;
+      if (s.sx !== undefined && prev.sx !== undefined) { s.esx = (s._sx - prev._sx) * k; s.esy = (s.sy - prev.sy) * k; }
+    }
     // their clock against ours: the quickest arrival is the truest (it waited least on the way)
     const est = now - s.t;
     this.offs.push([now, est]);
@@ -85,7 +98,16 @@ export class SnapBuffer {
   sample(now) {
     const B = this.buf;
     if (!B.length) return null;
-    const T = now - this.offset - this.delay;
+    // The moment of theirs to draw: `delay` ms behind their clock as it reads
+    // here. When the delay or the clock's offset is found anew (a late arrival,
+    // a quicker one), that moment isn't jumped to: their time plays on a little
+    // faster or slower until it's caught up — so they never step back, or skip.
+    const want = now - this.offset - this.delay;
+    const dt = this.lastNow === null ? 0 : Math.max(0, now - this.lastNow);
+    if (this.T === null || Math.abs(want - this.T) > 1500) this.T = want;
+    else { const on = this.T + dt; this.T = on + Math.max(-0.4 * dt, Math.min(0.5 * dt, want - on)); }
+    this.lastNow = now;
+    const T = this.T;
     // (the ones from well before that moment aren't needed any more)
     while (B.length > 2 && B[1].t < T - 250) B.shift();
     let i = B.length - 1;
@@ -103,11 +125,28 @@ export class SnapBuffer {
       // late: on along their way for a moment, then held where the last one left them
       // (not after an "all quiet" one: nothing was moving)
       const s = Math.min(T - a.t, this.ahead) / 1000;
-      if (a.vx || a.vy) { out.x = this.wrap(a.x + (a.vx || 0) * s); out.y = a.y + (a.vy || 0) * s; }
-      if (a.ss && a.sh !== undefined) { out.sx = this.wrap(a.sx + Math.cos(a.sh) * a.ss * s); out.sy = a.sy + Math.sin(a.sh) * a.ss * s; }
+      if (a.ex || a.ey) { out.x = this.wrap(a.x + a.ex * s); out.y = a.y + a.ey * s; }
+      if (a.esx || a.esy) { out.sx = this.wrap(a.sx + a.esx * s); out.sy = a.sy + a.esy * s; }
       out.late = T - a.t;
     }
-    for (const f of ['_x', '_sx', '_f', '_sh', 'cut']) delete out[f];
+    // A correction (the guess ahead was off; a late state had them elsewhere) is
+    // eased in, as fast as they could have gone, not jumped to (a leap of more than `jump` is a leap).
+    const d0 = this.drawn;
+    if (d0 && dt > 0) {
+      // (how fast they went either side of the moment drawn)
+      const speed = (fx, fy) => Math.max(Math.hypot(a[fx] || 0, a[fy] || 0), b ? Math.hypot(b[fx] || 0, b[fy] || 0) : 0);
+      const ease = (px, py, x, y, v) => {
+        const ex = this.dx(px, x), ey = y - py, e = Math.hypot(ex, ey);
+        const lim = (v * 1.25 + 1.5) * dt / 1000 + 0.02;
+        if (e <= lim || e > this.jump) return null;
+        return [this.wrap(px + ex * lim / e), py + ey * lim / e];
+      };
+      const p = ease(d0.x, d0.y, out.x, out.y, speed('ex', 'ey'));
+      if (p) [out.x, out.y] = p;
+      if (out.sx !== undefined && d0.sx !== undefined) { const q = ease(d0.sx, d0.sy, out.sx, out.sy, speed('esx', 'esy')); if (q) [out.sx, out.sy] = q; }
+    }
+    this.drawn = { x: out.x, y: out.y, sx: out.sx, sy: out.sy };
+    for (const f of OWN) delete out[f];
     out.T = T;
     return out;
   }

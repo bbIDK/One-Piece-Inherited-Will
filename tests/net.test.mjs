@@ -149,6 +149,42 @@ test('uneven arrivals still glide: no step backwards, none much bigger than the 
   assert.ok(worst < 0.12, `largest step ${worst.toFixed(3)} m`);
 });
 
+test('drawn while states keep coming, very unevenly (a slow machine, a bad line): never a step back, no leaps', () => {
+  // a sender at 2 to 12 states a second, latency spiking now and then; drawn at 60 Hz as they arrive
+  let seed = 11;
+  const rnd = () => ((seed = Math.imul(seed, 1103515245) + 12345 >>> 0) / 4294967296);
+  const buf = new SnapBuffer();
+  const v = 4; // m/s
+  const sent = [];
+  let t = 0;
+  for (let i = 0; t < 12000; i++) {
+    sent.push({ t: 1000 + t, x: v * t / 1000, at: 1000 + t + 30 + (rnd() < 0.15 ? 250 * rnd() : 20 * rnd()) });
+    t += [83, 400, 120, 700, 90, 300][i % 6] * (0.8 + 0.4 * rnd());
+  }
+  // (then they stop where they are: a state saying so, and "all quiet" every half second)
+  const end = sent[sent.length - 1].x;
+  for (let j = 0; j < 6; j++) sent.push({ t: 1000 + t + j * 500, x: end, hb: j > 0, at: 1000 + t + j * 500 + 40 });
+  sent.sort((a, b) => a.at - b.at);
+  let k = 0, prev = null, worst = 0, back = 0;
+  for (let now = 1000; now < 1000 + t + 3500; now += 16) {
+    while (k < sent.length && sent[k].at <= now) { const s = sent[k++]; buf.push({ t: s.t, x: s.x, y: 0, vx: s.hb || s.x === end ? 0 : v * 3, vy: 0, w: '', hb: s.hb }, now); }
+    const s = buf.sample(now);
+    if (!s) continue;
+    if (prev) {
+      const d = s.x - prev;
+      if (d < -1e-9) back++;
+      worst = Math.max(worst, d);
+    }
+    prev = s.x;
+  }
+  assert.equal(back, 0, 'stepped back');
+  // (4 m/s is 0.064 m a frame. Catching up after a state came late is eased in at no more than a
+  // quarter again of their pace and a brisk walk on top; the guess ahead goes by how fast they
+  // really went — not the speed they say, here three times too high)
+  assert.ok(worst <= (4 * 1.25 + 1.5) * 0.016 + 0.02 + 1e-9, `largest step ${worst.toFixed(3)} m`);
+  assert.ok(Math.abs(prev - end) < 0.01, `ended at ${prev}, they stopped at ${end}`);
+});
+
 test('late states: guessed on along the way for a moment, then held', () => {
   const buf = new SnapBuffer({ ahead: 200 });
   feed(buf, { n: 10 });

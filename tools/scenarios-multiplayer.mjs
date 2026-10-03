@@ -132,7 +132,8 @@ export const scenarios = {
         return { x: x + 2, y };
       }, posA);
       console.log('A at', JSON.stringify(posA), 'B to', JSON.stringify(spot));
-      await sleep(1500);
+      // (a leap across the world: drawn there once the state from after it comes round, never slid there)
+      await until(pageA, ({ x, y }) => { const a = window.OP.net.avatars[0]; return a && Math.hypot(a.x - x, a.y - y) < 0.5; }, spot, 60000);
       const seen = await pageA.evaluate(() => {
         const a = window.OP.net.avatars[0], r = [...window.OP.net.remotes.values()][0];
         return { name: a.name, race: a.look.race, kind: a.look.kind, x: +a.x.toFixed(2), y: +a.y.toFixed(2), delay: Math.round(r.buf.delay), offset: Math.round(r.buf.offset), drawn: window.OP.view3d.actorViews.has(a), label: a.showName };
@@ -152,15 +153,32 @@ export const scenarios = {
       await snap('A-sees-B');
       await snapB('B-sees-A');
 
-      // B walks east for 2.5 s; A samples where it draws B, every frame, and B where it really is
-      await pageA.evaluate(() => { window.__trail = []; window.__stop = false; (function f() { const a = (window.OP.net?.avatars || [])[0]; if (a) window.__trail.push([performance.timeOrigin + performance.now(), a.x, a.y]); if (!window.__stop) requestAnimationFrame(f); })(); });
+      // B walks east for 5 s and stops. A notes where it draws B every frame it draws (and, at 60 Hz,
+      // where the smoothing has B — what a quicker machine would draw); B notes where it really is.
+      // (Small pages while measuring: drawing in software is slow, and the frames would be few.)
+      const small = { width: 320, height: 180 };
+      await pageA.setViewportSize(small); await pageB.setViewportSize(small);
+      await frames(pageA, 2); await frames(pageB, 2);
+      await pageA.evaluate(() => {
+        const r = [...window.OP.net.remotes.values()][0];
+        window.__trail = []; window.__smooth = []; window.__stop = false;
+        (function f() { const a = window.OP.net?.avatars[0]; if (a) window.__trail.push([performance.timeOrigin + performance.now(), a.x, a.y]); if (!window.__stop) requestAnimationFrame(f); })();
+        const t = setInterval(() => { if (window.__stop) { clearInterval(t); return; } const s = r.buf.sample(performance.now()); if (s) window.__smooth.push([performance.timeOrigin + performance.now(), s.x, s.y]); }, 16);
+      });
       await pageB.evaluate(() => { window.__trail = []; window.__stop = false; (function f() { const p = window.OP.game.player; window.__trail.push([performance.timeOrigin + performance.now(), p.x, p.y]); if (!window.__stop) requestAnimationFrame(f); })(); window.OP.view3d.rig.yaw = 0; window.OP.key('W', true); });
-      await sleep(2500);
+      await sleep(5000);
       await pageB.evaluate(() => window.OP.key('W', false));
-      await sleep(1500);
+      await sleep(2500);
       const trailA = await pageA.evaluate(() => { window.__stop = true; return window.__trail; });
+      const smoothA = await pageA.evaluate(() => window.__smooth);
       const trailB = await pageB.evaluate(() => { window.__stop = true; return window.__trail; });
-      console.log('motion', JSON.stringify(compareTrails(trailA, trailB)));
+      const rateA = (trailA.length - 1) / ((trailA[trailA.length - 1][0] - trailA[0][0]) / 1000), rateB = (trailB.length - 1) / ((trailB[trailB.length - 1][0] - trailB[0][0]) / 1000);
+      console.log(`frames a second while measuring: A ${rateA.toFixed(1)}, B ${rateB.toFixed(1)}`);
+      console.log('motion as drawn', JSON.stringify(compareTrails(trailA, trailB)));
+      console.log('motion at 60 Hz', JSON.stringify(compareTrails(smoothA, trailB)));
+      const net = await pageA.evaluate(() => { const r = [...window.OP.net.remotes.values()][0]; return { delay: Math.round(r.buf.delay), gaps: r.buf.gaps }; });
+      console.log('smoothing on A', JSON.stringify(net));
+      await pageA.setViewportSize(vp); await pageB.setViewportSize(vp);
       await face(pageA);
       await frames(pageA, 2);
       await snap('A-after-walk');
@@ -175,12 +193,14 @@ export const scenarios = {
           if (++n === 16) p.tryHeavy(g); else if (n < 16) p.tryM1(g);
           const id = p.action?.def.id;
           if (id && window.__swings[window.__swings.length - 1] !== id) window.__swings.push(id);
-          if (n > 22) clearInterval(t);
+          if (n > 22) { clearInterval(t); window.__swingsDone = true; }
         }, 110);
       });
-      await until(pageA, () => !!window.OP.net.avatars[0]?.action, null, 15000);
+      await until(pageA, () => !!window.OP.net.avatars[0]?.action, null, 30000);
+      await face(pageA, 3);
       await snap('A-sees-B-swing');
-      await sleep(2500);
+      await until(pageB, () => window.__swingsDone && !window.OP.game.player.action, null, 120000);
+      await sleep(1500);
       const swings = await pageB.evaluate(() => window.__swings);
       const seenActs = await pageA.evaluate(() => { window.__stop = true; return window.__acts; });
       console.log('B swung', JSON.stringify(swings), '| A saw', JSON.stringify(seenActs));
@@ -232,10 +252,19 @@ export const scenarios = {
         return null;
       });
       console.log('B at the helm of', JSON.stringify(ship));
-      await sleep(3000);
+      await until(pageA, () => window.OP.net.ships.length === 1 && window.OP.net.avatars[0]?.mode === 'sail', null, 60000);
+      // under sail for a few seconds: where A draws her against where she is (small pages while measuring)
+      await pageA.setViewportSize(small); await pageB.setViewportSize(small);
+      await pageA.evaluate(() => { window.__ship = []; window.__stop = false; (function f() { const s = window.OP.net?.ships[0]; if (s) window.__ship.push([performance.timeOrigin + performance.now(), s.x, s.y]); if (!window.__stop) requestAnimationFrame(f); })(); });
+      await pageB.evaluate(() => { window.__ship = []; window.__stop = false; (function f() { const s = window.OP.game.player.ship; if (s) window.__ship.push([performance.timeOrigin + performance.now(), s.x, s.y]); if (!window.__stop) requestAnimationFrame(f); })(); });
+      await sleep(5000);
+      const shipA = await pageA.evaluate(() => { window.__stop = true; return window.__ship; });
+      const shipB = await pageB.evaluate(() => { window.__stop = true; return window.__ship; });
+      console.log('ship as drawn', JSON.stringify(compareTrails(shipA, shipB)));
+      await pageA.setViewportSize(vp); await pageB.setViewportSize(vp);
       const shipSeen = await pageA.evaluate(() => {
         const n = window.OP.net, s = n.ships[0], a = n.avatars[0];
-        return s ? { type: s.type, name: s.name, x: +s.x.toFixed(1), y: +s.y.toFixed(1), heading: +s.heading.toFixed(2), sail: +(s.sailSet || 0).toFixed(2), speed: +(s.speed || 0).toFixed(2), drawn: [...window.OP.view3d.shipViews.keys()].includes(s), helmsman: a?.mode, onDeck: !!a?.deck } : null;
+        return s ? { type: s.type, name: s.name, x: +s.x.toFixed(1), y: +s.y.toFixed(1), heading: +s.heading.toFixed(2), sail: +(s.sailSet || 0).toFixed(2), speed: +(s.speed || 0).toFixed(2), drawn: [...window.OP.view3d.shipViews.keys()].includes(s), helmsman: a?.mode, onDeck: !!a?.deck, atX: +a.x.toFixed(1), atY: +a.y.toFixed(1) } : null;
       });
       const shipReal = await pageB.evaluate(() => { const s = window.OP.game.player.ship; return { x: +s.x.toFixed(1), y: +s.y.toFixed(1), heading: +s.heading.toFixed(2), sail: +s.sailSet.toFixed(2), speed: +s.speed.toFixed(2) }; });
       console.log('A sees B\'s ship', JSON.stringify(shipSeen), 'really', JSON.stringify(shipReal));
@@ -252,7 +281,8 @@ export const scenarios = {
 
       // ---------------------------------------------------------------- env
       await pageA.evaluate(() => { const e = window.OP.env; e.clock = 19.4; e.stormTarget = 0.85; e.forecast = 'Storm'; e.windTarget = 2.2; });
-      await sleep(3500);
+      await until(pageB, () => { const e = window.OP.env; return Math.abs(e.clock - 19.4) < 0.2 && e.stormTarget === 0.85 && e.forecast === 'Storm'; }, null, 30000);
+      await sleep(4000); // (a few seconds on: the guest's clock keeps step with the host's)
       const envA = await pageA.evaluate(() => { const e = window.OP.env; return { day: e.day, clock: +e.clock.toFixed(3), st: e.stormTarget, wt: e.windTarget, fc: e.forecast }; });
       const envB = await pageB.evaluate(() => { const e = window.OP.env; return { day: e.day, clock: +e.clock.toFixed(3), st: e.stormTarget, wt: e.windTarget, fc: e.forecast, timer: e.weatherTimer }; });
       console.log('clock and weather: host', JSON.stringify(envA), 'guest', JSON.stringify(envB));
@@ -303,6 +333,35 @@ export const scenarios = {
         if (errors.length) throw new Error('page B errors: ' + errors.join(' | '));
       }
     },
+  },
+};
+
+// The real line (trystero over the public Nostr relays), from one page: hosting
+// shows whether the relays answer (where they can't be reached — a sandbox, a
+// firewall — the lobby says so, and so does looking for a voyage).
+//   node tools/shot.mjs mprelays [--page=shots/xmp/index.html]
+scenarios.mprelays = {
+  async run(page, snap) {
+    await waitReady(page);
+    await quiet(page);
+    await makePirate(page, 1, 'human', 'Rin Stormwell');
+    await page.click('.mode-tabs button:has-text("Multiplayer")');
+    await page.click('.vy-slot:has-text("Rin Stormwell") button:has-text("Host")');
+    await page.waitForSelector('.vy-lobby .code-letters', { timeout: 30000 });
+    const t0 = Date.now();
+    await page.waitForFunction(() => window.OP.net && (window.OP.net.status === 'open' || window.OP.net.relayWarned), null, { timeout: 60000, polling: 250 });
+    const host = await page.evaluate(() => ({ kind: window.OP.net.kind, status: window.OP.net.status, relays: window.OP.net.relays, line: document.querySelector('.vy-status')?.textContent }));
+    console.log(`hosting over ${host.kind} after ${((Date.now() - t0) / 1000).toFixed(1)} s:`, JSON.stringify(host));
+    await snap('host-relays');
+    await page.click('.vy-lobby button:has-text("Back")');
+    await page.click('.mode-tabs button:has-text("Multiplayer")');
+    await page.fill('.code-in', 'QWERTY');
+    await page.click('.code-row button:has-text("Join")');
+    await page.waitForTimeout(3000);
+    await snap('join-looking');
+    await page.waitForFunction(() => { const t = document.querySelector('.vy-lobby h2')?.textContent; return t && t !== 'Joining a voyage'; }, null, { timeout: 90000, polling: 250 });
+    console.log('joining:', JSON.stringify(await page.evaluate(() => ({ title: document.querySelector('.vy-lobby h2').textContent, text: document.querySelector('.vy-lobby p')?.textContent }))));
+    await snap('join-result');
   },
 };
 
