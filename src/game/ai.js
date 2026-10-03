@@ -235,7 +235,11 @@ export class AIController {
     // Haki users fight with it on, and rest it when the fight is over
     if (a.hakiSkill && !a.isPlayer) {
       const fighting = !!this.target && a.haki > 2;
-      if (a.hakiSkill.armament > 0) a.armament = fighting;
+      if (a.hakiSkill.armament > 0) {
+        // (the coat spreading up their arms, with its clank: render3d/chars/haki.js, audio/sfx.js)
+        if (fighting && !a.armament) game.audio?.sfx('haki', a);
+        a.armament = fighting;
+      }
       if (a.hakiSkill.observation > 0) a.observation = fighting;
     }
     // leash: wandering too far from home (a chase has its own limits, above)

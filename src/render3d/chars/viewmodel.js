@@ -21,6 +21,7 @@ import { holdItem, heldSize } from './helditem.js';
 import { rubberFist, fistState } from './rubber.js';
 import { actorPose, rigOptions, currentLook, weaponOf, stationSpot, stationReach } from './pose.js';
 import { FRUITS } from '../../data/fruits.js';
+import { coatBody } from './haki.js';
 import { shipDims, shipLift } from '../../world/hull.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -174,6 +175,8 @@ class Viewmodel {
     const { pose, P } = actorPose(p, env, look);
     const o = rigOptions(p, pose, P, this.o);
     o.wpn = wpn;
+    // (the blade goes black once the coat has spread down the arm into it)
+    if (o.armament && (this.coat?.arm ?? 1) < 0.17) o.armament = false;
     if (pose.station && pose.station.kind === 'row' && !pose.anim) { this.rowing(p, pose.station, P, o, m, env); return; }
     o.sitK = 0; o.reachL = null;
     o.walkRel = null;
@@ -402,7 +405,7 @@ class Viewmodel {
     this.body.updateMatrix();
     // ---- effects: haki, flash, fruit glow, muzzle flash
     const fx = m.fx;
-    fx.uHaki.value.set(p.armament ? 1 : 0, p.armament ? 1 : 0, pose.armLegs ? 1 : 0, pose.armLegs ? 1 : 0);
+    coatBody(this.coat || (this.coat = {}), p, !!pose.armLegs, env.time, fx);
     fx.uFlash.value = p.flashT > 0 ? Math.min(0.5, p.flashT / 0.12 * 0.6) : 0;
     if (pose.legFx) { fx.uLegFxCol.value.set(pose.legFx); fx.uLegFx.value.set(1, 1); } else fx.uLegFx.value.set(0, 0);
     this.effects(p, pose, A, env);
@@ -436,7 +439,7 @@ class Viewmodel {
     _mB.decompose(this.body.position, this.body.quaternion, this.body.scale);
     this.body.updateMatrix();
     const fx = m.fx;
-    fx.uHaki.value.set(p.armament ? 1 : 0, p.armament ? 1 : 0, 0, 0);
+    coatBody(this.coat || (this.coat = {}), p, false, env.time, fx);
     fx.uFlash.value = p.flashT > 0 ? Math.min(0.5, p.flashT / 0.12 * 0.6) : 0;
     fx.uLegFx.value.set(0, 0);
     for (const g of this.glows) g.sprite.visible = false;

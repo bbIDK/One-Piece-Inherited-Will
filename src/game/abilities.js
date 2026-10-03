@@ -27,6 +27,7 @@ import { tierOf, stretchWindup } from './difficulty.js';
 import { POWERS } from './powers.js';
 import { ownRoom } from './room.js';
 import { flyableAt } from './flight.js';
+import { clashes, FUTURE_SIGHT, sigOf } from './haki.js';
 
 const REG = new Map();
 export function registerAbilities(list, source) {
@@ -135,7 +136,12 @@ export function startAbility(actor, def, game, target) {
   // (a Longarm's second elbow snaps a bare-handed jab back quicker)
   if (actor.race === 'longarm' && def.m1Chain && !def.weapon) actor.action.total *= 0.8;
   // a foe's blow: wound up long enough to read, and the moment it lands shown by a glint
-  if (!actor.isPlayer && actor.faction !== 'player') readable(actor, actor.action, game);
+  if (!actor.isPlayer && actor.faction !== 'player') {
+    readable(actor, actor.action, game);
+    // (Observation Haki hears it coming: their will flagged the moment they start it at you)
+    const p = game.player;
+    if (p?.observation && p !== actor && (target === p || actor.controller?.target === p) && firstBlow(def) >= 0) game.fx.sensed?.(actor, p);
+  }
   if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, '#ffffff', 0.34, { life: 1.2 });
   if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
   if (def.onStart) def.onStart(actor, game);
@@ -191,12 +197,19 @@ function glint(actor, a, game) {
   const k = p.observation ? 1 : T.cue;
   if (!(k > 0)) return;
   game.fx.parryCue?.(actor, a.breaks, k);
+  // (Future Sight: a vision of the blow, the moment before it lands)
+  if (futureSight(p)) game.fx.vision?.(actor, p);
   // (the first of each in a life: the world slows a moment, time to read the hint and act on it)
   const key = a.breaks ? 'redglint' : a.shot ? 'shotglint' : 'parry';
   if (!game.hintsShown?.has(key) && game.settings?.showHints !== false) game.fx.slowmo(1.2, 0.2);
   if (a.breaks) game.hint('redglint', 'A RED glint: that blow smashes any guard (and some go straight through one). Don\'t block it — dodge (Q) just before it lands.');
   else if (a.shot) game.hint('shotglint', 'A glint on a gunman: a shot is coming. Hold F to block it, or sidestep and dodge (Q) — a sword can even turn it aside with a parry.');
   else game.hint('parry', 'A YELLOW glint: the blow is about to land — tap F right then to PARRY it. A parried foe reels, open to a COUNTER. (Hold F to simply block.)');
+}
+
+/** Does Observation show you visions of the blows coming (Future Sight on, or mastered far enough with Observation on)? */
+export function futureSight(p) {
+  return !!p && (!!p.hasBuff?.('future_sight') || (!!p.observation && (p.hakiLevel?.('observation') || 0) >= FUTURE_SIGHT));
 }
 
 function telegraph(actor, def, game) {
@@ -257,7 +270,8 @@ function runStep(actor, s, game, a) {
     const reach = actor.reach ?? 1;
     const hb = {
       owner: actor, x: game.world.wx(actor.x + Math.cos(ang) * off * reach), y: actor.y - 0.4 + Math.sin(ang) * off * reach,
-      shape: h.shape || 'arc', range: (h.range || 1.4) * (h.shape === 'circle' ? 1 : reach), arc: h.arc ?? 1.8, width: h.width, angle: ang,
+      // (Conqueror's Infusion: the black lightning round a blow lands it a little beyond the fist)
+      shape: h.shape || 'arc', range: (h.range || 1.4) * (h.shape === 'circle' ? 1 : reach) + (actor.conquerorInfused && h.shape !== 'circle' && h.shape !== 'ring' ? INFUSED_REACH : 0), arc: h.arc ?? 1.8, width: h.width, angle: ang,
       damage: (h.damage || 5) * mult, knockback: h.knockback, stun: h.stun ?? 0.25, element: h.element || 'physical',
       status: h.status, duration: h.duration ?? 0.1, interval: h.interval, heavy: h.heavy, slashing: h.slashing, guardBreak: h.guardBreak,
       unblockable: h.unblockable, haki: h.haki || (actor.armament && def_isPhysical(h)), critChance: h.crit ?? (actor.critChance || 0.05),
@@ -410,25 +424,90 @@ function trail(p, game, t) {
   game.fx.projTrail(p, t);
 }
 
-/** Conqueror's Haki: weak-willed foes faint, the rest are shaken. */
+/** How much further (m) a blow wreathed in Conqueror's Infusion reaches: it hits without touching. */
+export const INFUSED_REACH = 0.9;
+
+/**
+ * Conqueror's Haki: a king's will let loose. The weak-willed faint where
+ * they stand; the strong are shaken. You it never knocks out — it buckles
+ * your knees — unless you were born a king yourself: then yours answers it
+ * at last (lives.js awaken), or, awakened, the two wills clash. Two kings
+ * (one a boss, or you) clash rather than wash over each other: see clash.
+ * Returns what happened ({ fainted, clash }).
+ */
 export function conquerorBurst(actor, game, c, mult) {
   const lvl = actor.hakiLevel('conqueror') || 20;
   const my = actor.power();
-  game.fx.conqueror(actor, c); // black-red lightning, shockwaves, impact frame, shake
+  // another king within reach: the two wills meet (game/haki.js clashes)
+  let rival = null, rd = Infinity;
+  for (const e of game.actorsNear(actor.x, actor.y, c.range * 1.5)) {
+    if (e === actor || !game.combat.canHit(actor, e, {})) continue;
+    const d = game.world.distance(actor.x, actor.y, e.x, e.y);
+    if (d < rd && clashes(actor, e, d, c.range * 1.5)) { rival = e; rd = d; }
+  }
+  if (rival) { clash(actor, rival, game, c); return { fainted: 0, clash: rival }; }
+  game.fx.conqueror(actor, c); // black lightning in their colour, shockwaves, cracked ground, impact frame, shake
+  game.audio?.sfx('conqueror', actor);
   let fainted = 0;
   for (const e of game.actorsNear(actor.x, actor.y, c.range)) {
     if (e === actor || !game.combat.canHit(actor, e, {})) continue;
-    const ratio = e.power() / Math.max(1, my);
-    const resist = (e.hakiLevel && e.hakiLevel('conqueror') > 0) ? 0.5 : 0;
-    if (ratio < 0.35 + lvl * 0.004 - resist && !e.boss) {
-      e.faint(game);
-      fainted++;
-    } else {
-      e.stagger(0.6 + lvl * 0.01);
-      e.takeDamage(Math.round((c.damage || 0) * mult), actor, { element: 'haki' }, game);
-    }
+    if (e.isPlayer) { underPressure(e, actor, game, c, mult); continue; }
+    if (overwhelms(e, my, lvl)) { e.faint(game); fainted++; continue; }
+    e.stagger(0.6 + lvl * 0.01);
+    e.takeDamage(Math.round((c.damage || 0) * mult), actor, { element: 'haki' }, game);
   }
   if (fainted && actor.isPlayer) game.log(`${fainted} ${fainted === 1 ? 'foe' : 'foes'} fainted before your will.`, '#ef5350');
+  return { fainted, clash: null };
+}
+
+/** Does a king's will (Doriki `my`, Conqueror's `lvl`) knock `e` out cold? The weak-willed, never a boss. */
+function overwhelms(e, my, lvl) {
+  const resist = (e.hakiLevel && e.hakiLevel('conqueror') > 0) ? 0.5 : 0;
+  return !e.boss && e.power() / Math.max(1, my) < 0.35 + lvl * 0.004 - resist;
+}
+
+/** The player under a foe's Conqueror's: a king-to-be wakes to it; a king stands unshaken; anyone else's knees buckle. */
+function underPressure(p, k, game, c, mult) {
+  const ch = p.char;
+  if (ch?.traits?.includes('conqueror') && !p.hakiLevel('conqueror') && game.lives?.awaken) { game.lives.awaken('pressure', k); return; }
+  if (p.hakiLevel('conqueror') > 0) { game.fx.text(p.x, p.y - 1.6, 'UNSHAKEN', sigOf(p).conqueror, 0.36); return; }
+  // (Willpower steadies you)
+  p.stagger(Math.max(0.25, 0.75 - (p.attrs?.wil || 0) * 0.006));
+  p.takeDamage(Math.round((c.damage || 0) * mult * 0.5), k, { element: 'haki' }, game);
+  game.fx.text(p.x, p.y - 1.6, 'PRESSURE!', '#ef9a9a', 0.36);
+  game.log(`${k.name}'s will presses down on you like a weight: Conqueror's Haki. Your knees buckle, but you stay standing.`, '#ef9a9a');
+  game.hintHaki?.();
+}
+
+/**
+ * Two kings' Conqueror's meeting: the colours collide where their wills meet
+ * and the sky splits above it (combatfx.js clashFx); neither gives way —
+ * both are thrown back — and anyone weak-willed caught near is knocked out
+ * cold by the overflow. Returns how many fainted.
+ */
+export function clash(a, b, game, c) {
+  const w = game.world;
+  const dx = w.dx(a.x, b.x), dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+  game.fx.clash?.(a, b);
+  game.audio?.sfx('conqueror_clash', a.isPlayer ? a : b);
+  for (const [x, s] of [[a, -1], [b, 1]]) {
+    x.knock(dx / d * 8 * s, dy / d * 8 * s);
+    if (x.state === 'idle') x.stagger(x.isPlayer ? 0.35 : 0.55);
+  }
+  const strong = Math.max(a.power(), b.power()), lvl = Math.max(a.hakiLevel('conqueror'), b.hakiLevel('conqueror'));
+  const mx = w.wx(a.x + dx / 2), my = a.y + dy / 2;
+  let fainted = 0;
+  for (const e of game.actorsNear(mx, my, (c?.range || 9) + d / 2)) {
+    if (e === a || e === b || e.isPlayer || e.state !== 'idle' || e.faction === 'player') continue;
+    if (overwhelms(e, strong, lvl)) { e.faint(game); fainted++; }
+  }
+  const p = a.isPlayer ? a : b.isPlayer ? b : null;
+  if (p) {
+    const o = p === a ? b : a;
+    game.log(`Your Conqueror's Haki clashes with ${o.name}'s! The sky splits between your two wills.${fainted ? ` ${fainted} ${fainted === 1 ? 'onlooker' : 'onlookers'} fainted.` : ''}`, sigOf(p).conqueror);
+    game.emit?.('conquerorClash', o);
+  }
+  return fainted;
 }
 
 export { clamp };

@@ -8,6 +8,7 @@ import { persist, endLineage, snapshot } from './lineage.js';
 import { formatBerries, roundBounty } from '../core/math.js';
 import { findShore } from './interact.js';
 import { conquerorBurst } from './abilities.js';
+import { sigOf, colourName } from './haki.js';
 import { standAboard } from './decks.js';
 
 export class LivesSystem {
@@ -16,7 +17,26 @@ export class LivesSystem {
     this.k = null;
     game.on('knockout', (a, att) => { if (a.isPlayer) this.onKnocked(att); });
     game.on('playerKnockedTick', (dt) => this.tick(dt));
+    game.on('playerHurt', (att) => this.willTested(att));
     game.knockInfo = () => this.info();
+  }
+
+  /**
+   * King's Disposition, the other moment it can wake (besides being knocked
+   * down by a real threat, and a king's will washing over you: abilities.js
+   * conquerorBurst): holding on at the very edge — a tenth of your health
+   * left, a strong foe or a boss on you, and every one of your crew near
+   * you down.
+   */
+  willTested(att) {
+    const g = this.game, p = g.player, c = p?.char;
+    if (!c || !c.traits.includes('conqueror') || c.haki.conqueror || p.state !== 'idle' || !att || !p.d) return;
+    if (p.hp > p.d.maxHp * 0.12) return;
+    const threat = att.power ? att.power() / Math.max(1, p.power()) : 0;
+    if (!(threat > 0.65 || att.boss)) return;
+    const crew = (g.actorsNear ? g.actorsNear(p.x, p.y, 25) : g.actors || []).filter((a) => a !== p && a.crewId);
+    if (!crew.length || crew.some((a) => a.alive && a.state === 'idle')) return;
+    this.awaken('cornered', att);
   }
 
   onKnocked(att) {
@@ -25,7 +45,7 @@ export class LivesSystem {
     const threat = att && att.power ? att.power() / Math.max(1, p.power()) : 0;
     // King's Disposition: the first real test of your will awakens Conqueror's Haki
     if (c.traits.includes('conqueror') && !c.haki.conqueror && !p.drowned && (threat > 0.65 || att?.boss)) {
-      this.awaken();
+      this.awaken('knocked', att);
       return;
     }
     this.k = { t: 0, max: p.drowned ? 2.5 : 6, mash: 0, need: 9 + Math.floor((c.stats.knockdowns || 0) / 3), killer: att, drowned: p.drowned, cause: describe(att, p) };
@@ -77,21 +97,34 @@ export class LivesSystem {
     g.emit('playerGotUp');
   }
 
-  awaken() {
+  /**
+   * King's Disposition wakes: Conqueror's Haki, in your own colour, bursting
+   * out of you there and then. `how`: 'knocked' (struck down by a real
+   * threat), 'pressure' (a king's will washing over you: yours answers it —
+   * and, theirs still there, the two clash), 'cornered' (holding on at the
+   * edge with your crew down). `by`: who tested you.
+   */
+  awaken(how = 'knocked', by = null) {
     const g = this.game, p = g.player, c = p.char;
     c.haki.conqueror = 5;
     p.hakiSkill = c.haki;
     p.state = 'idle';
-    p.hp = p.d.maxHp;
+    p.hp = Math.max(p.hp, p.d.maxHp * (how === 'knocked' ? 1 : 0.5));
     p.haki = p.d.maxHaki;
     p.iframes = 2;
     this.k = null;
-    g.ui.toast("CONQUEROR'S HAKI", 'Your will overwhelms everything around you!', '#ff5252');
+    const col = sigOf(p).conqueror;
+    const why = {
+      knocked: 'Your will overwhelms everything around you!',
+      pressure: `${by?.name || 'Their'}'s will presses down on you — and yours answers!`,
+      cornered: 'Your crew down, your body failing: your will refuses to break!',
+    }[how] || 'Your will overwhelms everything around you!';
+    g.ui.toast("CONQUEROR'S HAKI", why, col);
     g.fx.impactFrame(0.25);
     g.fx.flash = 0.4;
     conquerorBurst(p, g, { range: 12, damage: 20 }, 1);
-    g.log("King's Disposition awakened: press G to release Conqueror's Haki.", '#ff8a80');
-    g.emit('conquerorAwakened');
+    g.log(`King's Disposition awakened: Conqueror's Haki, ${colourName(col).toLowerCase()} as your will. Press G to release it.`, col);
+    g.emit('conquerorAwakened', how);
     persist(g);
   }
 

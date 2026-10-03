@@ -270,6 +270,18 @@ export class FX {
   explosion(x, y, e, owner) { return this.cfx(() => CFX.explosionFx(this, x, y, e, owner)); }
   projTrail(p, t) { return this.cfx(() => CFX.projTrailFx(this, p, t)); }
   conqueror(actor, c) { return this.cfx(() => CFX.conquerorFx(this, actor, c)); }
+  /** Two kings' Conqueror's colliding: the sky splits. */
+  clash(a, b) { return this.cfx(() => CFX.clashFx(this, a, b)); }
+  /** Armament or Observation switched on (the coat's clank and spread, Observation's sonar pulse). */
+  hakiOn(actor, type) { return this.cfx(() => CFX.hakiOnFx(this, actor, type)); }
+  /** Haki given out, the spirit spent. */
+  hakiSpent(actor, type) { return this.cfx(() => CFX.hakiSpentFx(this, actor, type)); }
+  /** Observation's foresight: a blow read and slipped. */
+  foresight(actor, att) { return this.cfx(() => CFX.foresightFx(this, actor, att)); }
+  /** A foe's will flagged by Observation as they start a blow at `p`. */
+  sensed(att, p) { return this.cfx(() => CFX.sensedFx(this, att, p)); }
+  /** Future Sight: a vision of `att`'s blow at `p` before it lands. */
+  vision(att, p) { return this.cfx(() => CFX.visionFx(this, att, p)); }
   afterimage(actor, o) { return this.cfx(() => CFX.afterimage(this, actor, o)); }
 
   // ------------------------------------------------------------------ update

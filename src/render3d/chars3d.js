@@ -26,6 +26,8 @@ import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stati
 import { blendPose } from '../render/anims.js';
 import { shipBob, shipLift } from '../world/hull.js';
 import { WakeTrail } from './wake3d.js';
+import { coatBody, senseOf } from './chars/haki.js';
+import { sigOf } from '../game/haki.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -149,6 +151,8 @@ class ActorView {
       const look = currentLook(a, this.lookCache);
       const { pose, P } = actorPose(a, env, look);
       const o = rigOptions(a, pose, P, this.o);
+      // (a sword goes black once the coat has spread down the arm into it: past the wrist)
+      if (o.armament && (this.coat?.arm ?? 1) < 0.17) o.armament = false;
       this.easeWalk(a, pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
       o.wpn = this.wpn;
       // in first person, looking down you bow your head (and looking up, tip
@@ -419,8 +423,11 @@ class ActorView {
     const t = env.time;
     // hit flash, armament, legs, freeze
     fx.uFlash.value = a.flashT > 0 ? Math.min(0.78, a.flashT / 0.12 * 0.95) : 0;
-    const arm = a.armament ? 1 : 0;
-    fx.uHaki.value.set(arm, arm, pose.armLegs ? 1 : 0, pose.armLegs ? 1 : 0);
+    // (Armament: the coat spreading up the limbs, chars/haki.js)
+    coatBody(this.coat || (this.coat = {}), a, !!pose.armLegs, t, fx);
+    // sensed by your Observation Haki: their will glowing through the walls
+    const sn = ctx.game ? senseOf(a, ctx.game) : null;
+    m.sense(sn && sn.col, sn ? sn.k : 0);
     if (pose.legFx) {
       fx.uLegFxCol.value.set(pose.legFx);
       const lim = pose.fx && pose.fx.limb;
@@ -510,7 +517,7 @@ class ActorView {
       if (f.limb === 'fB') glow(col, sz, rig.F[1]);
       if (f.limb === 'head') glow(col, sz, rig.headC);
     }
-    if (a.armament && pose.anim && near) glow('#7c4dff', 0.16, rig.E[pose.anim.limb === 'hB' ? 1 : 0]);
+    if (a.armament && pose.anim && near) glow(sigOf(a).armament, 0.13, rig.E[pose.anim.limb === 'hB' ? 1 : 0]);
     for (let i = gi; i < this.glows.length; i++) this.glows[i].sprite.visible = false;
     // slash / strike trails
     if (pose.anim && !pose.noTrails && dist < 30) {

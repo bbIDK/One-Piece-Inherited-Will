@@ -37,6 +37,7 @@ import { tierOf, PARRY } from './difficulty.js';
 import { barrierStops, reflectShot, absorbShot } from './powers.js';
 import { reachesUp, downFlyer } from './flight.js';
 import { raceHit, unshakable } from './racial.js';
+import { hardening, hasRyou, RYOU } from './haki.js';
 
 const ELEMENT_COLORS = {
   physical: '#ffffff', fire: '#ff7b39', ice: '#9be7ff', lightning: '#fff176', sand: '#e1c16e', smoke: '#cfd8dc',
@@ -286,16 +287,20 @@ export class Combat {
       if (!quiet && tgt.isPlayer) game.emit('playerEvaded', att, h);
       return false;
     }
-    // Observation Haki auto-evade
+    // Observation Haki: the blow heard before it comes, and slipped — a step
+    // aside out of its path, an afterimage left standing in it, a beat of slow
+    // motion (FORESIGHT: combatfx.js foresightFx)
     if (tgt.observation && tgt.hakiLevel('observation') > 0 && !h.unblockable) {
       const lvl = tgt.hakiLevel('observation');
       const chance = 0.12 + lvl * 0.0035 - (att?.observation ? 0.15 : 0);
       if (Math.random() < chance && tgt.haki >= 4) {
         tgt.haki -= 4;
         tgt.iframes = 0.2;
-        fx.text(tgt.x, tgt.y - 1.2, 'FORESIGHT', '#e1bee7', 0.3);
-        fx.burst(tgt.x, tgt.y - 0.5, 6, { color: '#ce93d8', speed: 3, g: 0, life: 0.3 });
-        fx.afterimage(tgt, { tint: '#ce93d8', life: 0.35, alpha: 0.5 });
+        const side = ang + (Math.random() < 0.5 ? 1 : -1) * Math.PI / 2;
+        if (tgt.state === 'idle' && !tgt.onShip && !tgt.climb) tgt.knock(Math.cos(side) * 4.5, Math.sin(side) * 4.5);
+        fx.foresight?.(tgt, att);
+        game.audio?.sfx('foresight', tgt);
+        if (tgt.isPlayer) game.emit('playerEvaded', att, h);
         return false;
       }
     }
@@ -308,7 +313,8 @@ export class Combat {
       game.audio?.sfx('block', tgt);
       return false;
     }
-    // Logia intangibility
+    // Logia intangibility (Ryou, a master's Armament pushed into what it hits, reaches one as well)
+    const ryou = !!att && hasRyou(att) && h.vx === undefined && !h.isProj && (!h.element || h.element === 'physical');
     const armed = att && (att.armament || h.haki || h.seastone);
     const lg = tgt.fruitDef && tgt.fruitDef.logia ? tgt.fruitDef : tgt.fakeLogia || null;
     if (lg && !tgt.seastoned && (lg === tgt.fakeLogia ? tgt.state !== 'knocked' && !tgt.inWater && !tgt.status.freeze : tgt.intangibleOK())) {
@@ -342,8 +348,10 @@ export class Combat {
     if (tgt.fruitDef && tgt.fruitDef.weakTo && tgt.fruitDef.weakTo.includes(el)) dmg *= 1.5;
     if (tgt.race === 'lunarian' && tgt.flameLit) dmg *= 0.55;
 
-    // Armament hardening on defence
-    if (tgt.armament) dmg *= 1 - Math.min(0.35, 0.12 + tgt.hakiLevel('armament') * 0.0025);
+    // Armament hardening on defence (game/haki.js)
+    if (tgt.armament) dmg *= 1 - hardening(tgt.hakiLevel('armament'));
+    // Ryou: the Haki goes on into them and breaks them from the inside
+    if (ryou) dmg *= 1 + RYOU.internal;
     // defence stat
     dmg *= 1 - (tgt.d ? tgt.d.def : 0);
     if (tgt.defMul) dmg *= tgt.defMul;
@@ -390,7 +398,8 @@ export class Combat {
             game.hint('guardbreak', 'GUARD BREAK! A red-glint blow smashes a guard aside — and it can\'t come up again until the F slot fills. Dodge (Q) those instead.');
           }
         } else {
-          dmg *= tgt.guardChip();
+          // (Ryou flows through a guard: much of the blow gets in anyway)
+          dmg *= ryou ? Math.max(tgt.guardChip(), RYOU.guard) : tgt.guardChip();
           game.audio?.sfx('block', tgt);
         }
       }
@@ -402,6 +411,8 @@ export class Combat {
     const final = Math.round(dmg);
     tgt.takeDamage(final, att, h, game);
     const w = blowWeight(att, tgt, h, final, crit, counter);
+    // (a blow landed with Armament on sends a ripple through the coat: render3d/chars/haki.js)
+    if (att?.armament && (!h.element || h.element === 'physical' || h.haki)) att.armHitT = now;
 
     // knockback & stun
     if (!blocked) {
@@ -438,7 +449,7 @@ export class Combat {
 
     // feedback: impact star, sparks, hit-stop, camera kick and a combined damage
     // number, all scaled by the weight of the blow (see render/combatfx.js)
-    fx.hit(att, tgt, h, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved, w, counter });
+    fx.hit(att, tgt, h, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved, w, counter, ryou });
     if (att?.isPlayer) game.emit('playerLanded', tgt, { final, crit, blocked, counter });
     const thud = h.slashing ? (h.heavy ? 'slash_heavy' : 'slash_hit') : (h.heavy ? 'punch_heavy' : 'punch');
     game.audio?.sfx(blocked ? 'block' : h.sfxHit || (el === 'physical' ? thud : el), tgt);
