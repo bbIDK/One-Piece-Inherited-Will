@@ -984,7 +984,14 @@ export class Actor extends Entity {
       if (this.forcedWater) return true;
       // (the sea frozen over by an Ice Age: a road while it lasts)
       if (this.game && iceAt(this.game, x, y)) return true;
-      return this.canEnterWater();
+      if (this.canEnterWater()) return true;
+      // A Devil Fruit user won't walk off into the sea, but nothing stops a
+      // jump: over the water between a pier and a ship (or a ship and the
+      // pier), on and off a boat — fall short and the sea has you. Nor is a
+      // ship lying right alongside the sea: a step down onto her deck (or a
+      // stride across the gap to it) is no walk into the water.
+      if ((this.z || 0) > 0.05 || this.vz > 0) return true;
+      return !!this.game?.deckAt?.(x, y, -0.6);
     }
     return false;
   }
