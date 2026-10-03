@@ -11,9 +11,9 @@ import { shipNav } from './crewnav.js';
 import { clearLine, findPath, standable } from './path.js';
 import { interiorRect } from '../world/interiors.js';
 import { bw } from '../world/bframe.js';
-import { getAbility, canUse } from './abilities.js';
+import { getAbility, canUse, breaksGuard } from './abilities.js';
 import { hostile } from './entity.js';
-import { regionAt, REGION, isBlue } from '../world/constants.js';
+import { tierOf } from './difficulty.js';
 
 // Taking turns. Only so many foes go for the player at once (one in the four
 // Blues, where everyone starts; two in Paradise; three in the New World; a
@@ -21,13 +21,18 @@ import { regionAt, REGION, isBlue } from '../world/constants.js';
 // for their turn: a mob that all swings at once isn't a fight a new pirate
 // can win, and it isn't how a brawl looks either. A long turn passes to
 // someone who's waiting, and whoever the player hits gets theirs next.
+//
+// And everyone fights at the pace of the sea they're in (difficulty.js): in
+// the Blues a foe pauses longer between attacks, strings fewer blows
+// together, stands catching their breath after a big move (the moment to
+// punish them), seldom guards and never parries; and their guard-breaking
+// blows (a boss's signature smash, anyone's heavy) come at least a tier's
+// breakGap apart and never twice running.
 const TURN_LONG = 7; // s: a turn this long can be handed on
 const TURN_IDLE = 2.5; // s: …and one spent not getting to grips with them (stuck behind something), sooner
-function turnsAllowed(game, p) {
-  if (game.world !== game.surface) return 2;
-  const r = regionAt(p.x, p.y);
-  return isBlue(r) ? 1 : r === REGION.NEW_WORLD ? 3 : 2;
-}
+const turnsAllowed = (game, p) => tierOf(game, p).turns;
+/** Does this technique smash guards (or go through them)? */
+const smashes = (def) => !!def && (def.steps || []).some(breaksGuard);
 /** May `a` attack the player `t` now? (claims a turn if one's free; `hit`: the player just struck them) */
 function takeTurn(game, a, t, hit = false) {
   if (!t.isPlayer || a.boss) return true;
@@ -260,19 +265,37 @@ export class AIController {
     const up = game.deckRoute?.(a, t.x, t.y, t);
     if (up) { this.moveToward(a, up.x, up.y, game, true); a.intent.sprint = dist > 4; return; }
 
-    // defend against incoming attacks
+    // the pace of the sea we're in (difficulty.js)
+    const T = tierOf(game, a);
+    const now = game.time || 0;
+    // a big move of our own just finished (a technique, a heavy — not one cut
+    // short): a breather, standing our ground — the moment to punish us
+    const was = this.lastAct;
+    this.lastAct = a.action;
+    if (was && !a.action && !was.def.m1Chain && !(a.hitstun > 0) && was.step > 0) this.rest = T.rest;
+    if (this.rest > 0) this.rest -= dt;
+    // (a gunner kept at close quarters, for how long: see below)
+    this.cornered = this.ranged && dist < T.closeShot ? (this.cornered || 0) + dt : 0;
+
+    // defend against incoming attacks (seldom where fights are gentle, never
+    // while catching our breath): one look at each swing of theirs — and a
+    // swing we let come doesn't put off our own attack (or a flurry of jabs
+    // would keep anyone from ever swinging back)
     const ta = t.action;
-    if (ta && dist < 4 && !a.action && ta.t < (ta.def.windup ?? 0.1) + 0.05 && this.think <= 0.35) {
+    if (ta && ta !== this.sawSwing && dist < 4 && !a.action && !(this.rest > 0) && ta.t < (ta.def.windup ?? 0.1) + 0.05 && this.think <= 0.35) {
+      this.sawSwing = ta;
       const roll = Math.random();
-      // (a blow that would smash a guard aside is one to get out of the way of)
-      const breaks = (ta.def.steps || []).some((s) => s.hit?.guardBreak || s.dash?.hit?.guardBreak);
-      if (roll < this.skill * 0.55 && !breaks) { a.facing = ang; a.setBlock(true); if (a.blocking) this.blockT = 0.5; }
-      else if (roll < this.skill * 0.85) { a.tryDodge(game, -dy, dx * this.strafeDir); }
-      this.think = 0.5;
+      // (a blow that would smash a guard aside is one to get out of the way of;
+      // and a guard that parries is the sea's call: never in the Blues)
+      if (roll < this.skill * 0.55 * T.block && !smashes(ta.def)) { a.facing = ang; a.setBlock(true, Math.random() < T.npcParry * (0.5 + this.skill)); if (a.blocking) { this.blockT = 0.5; this.think = 0.5; } }
+      else if (roll < this.skill * 0.85 * T.block && a.tryDodge(game, -dy, dx * this.strafeDir)) this.think = 0.5;
     }
     if (this.blockT > 0) { this.blockT -= dt; a.facing = ang; if (this.blockT <= 0) a.setBlock(false); return; }
 
     a.facing = a.action ? a.facing : ang;
+    if (this.rest > 0 && !a.action) return;
+    // (a parry of ours earned a counter: strike while they reel)
+    if (a.counterOn === t && a.counterLeft > 0) this.think = Math.min(this.think, 0);
     // not our turn yet: hold back a few steps off and circle, facing them
     if (!a.action && !takeTurn(game, a, t)) {
       this.comboLeft = 0;
@@ -289,23 +312,27 @@ export class AIController {
     }
     // choose a technique
     if (!a.action && this.think <= 0) {
-      this.think = (0.35 + (1 - this.aggression) * 0.8) * (0.7 + Math.random() * 0.6);
-      const usable = this.moves.map(getAbility).filter((m) => m && canUse(a, m) && this.inRangeFor(m, dist));
+      this.think = (0.35 + (1 - this.aggression) * 0.8) * (0.7 + Math.random() * 0.6) * T.think;
+      // (a guard-breaking move only once its time has come round again, and never two running)
+      const smashOk = now >= (this.smashT || 0) && !this.smashed;
+      const usable = this.moves.map(getAbility).filter((m) => m && canUse(a, m) && this.inRangeFor(m, dist) && (smashOk || !smashes(m)));
       if (usable.length && Math.random() < 0.55) {
         const m = usable[Math.floor(Math.random() * usable.length)];
         a.facing = ang;
-        a.tryTechnique(m.id, game, t);
+        if (a.tryTechnique(m.id, game, t)) this.used(m, T, now);
         return;
       }
       if (dist < this.meleeRange(a) + 0.3 && !this.ranged) {
         a.facing = ang;
-        if (Math.random() < 0.15 && a.tryHeavy(game)) return;
+        if (Math.random() < 0.15 && smashOk && a.tryHeavy(game)) { this.used(a.action?.def, T, now); return; }
         a.tryM1(game);
-        this.comboLeft = Math.floor(Math.random() * 3);
+        this.smashed = false;
+        this.comboLeft = Math.floor(Math.random() * (T.combo + 1));
         return;
       }
-      // (a gunner opens fire from a few paces further off than they like to stand — not from across the square)
-      if (this.ranged && dist < this.prefRange + 2) { a.facing = ang; a.tryM1(game); return; }
+      // (a gunner opens fire from a few paces further off than they like to stand — not from across the square;
+      // and, where fights are gentle, not point-blank either: they back off first, unless they're cornered)
+      if (this.ranged && dist < this.prefRange + 2 && (dist >= T.closeShot || this.cornered > 1.2)) { a.facing = ang; a.tryM1(game); return; }
     }
     if (this.comboLeft > 0 && !a.action && dist < this.meleeRange(a) + 0.5) { this.comboLeft--; a.tryM1(game); }
 
@@ -327,6 +354,12 @@ export class AIController {
     const l = Math.hypot(mx, my);
     if (l > 0) { a.intent.mx = mx / l; a.intent.my = my / l; }
     this.avoidStuck(a, dt, game);
+  }
+
+  /** A move just used: a guard-breaking one puts the next off a tier's breakGap (and an ordinary one in between). */
+  used(def, T, now) {
+    this.smashed = smashes(def);
+    if (this.smashed) this.smashT = now + T.breakGap;
   }
 
   /** Seen them just now (and, starting a hunt, remember where it began). */

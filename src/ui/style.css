@@ -79,6 +79,11 @@
 .slot.act.guard.on { border-color: #9cc3ea; box-shadow: 0 0 12px rgba(110, 165, 230, .7); }
 .slot.act.guard.broken { border-color: #ff8a80; }
 .slot.act.guard.broken .ico { opacity: .45; filter: grayscale(.6); }
+.slot.act.guard.parried { animation: actparry .45s ease-out; }
+.slot.act.guard.parried.perfect { animation: actperfect .6s ease-out; }
+@keyframes actparry { 0% { box-shadow: 0 0 0 0 rgba(255, 241, 118, .95), 0 3px 8px rgba(0,0,0,.45); border-color: #fff59d; } 100% { box-shadow: 0 0 0 12px rgba(255, 241, 118, 0), 0 3px 8px rgba(0,0,0,.45); } }
+@keyframes actperfect { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 1), 0 3px 8px rgba(0,0,0,.45); border-color: #fff; background-color: rgba(255, 253, 231, .55); } 100% { box-shadow: 0 0 0 16px rgba(255, 255, 255, 0), 0 3px 8px rgba(0,0,0,.45); } }
+.slot.act.guard.counter { border-color: #ffab40; box-shadow: 0 0 14px rgba(255, 171, 64, .85); }
 
 .prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }
 .prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }
@@ -618,6 +623,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .hitmark svg { display: block; }
 .hitmark.crit { color: #ffd54f; }
 .hitmark.blocked { color: #b0bec5; }
+.hitmark.counter { color: #ffab40; }
 .hitmark.show { animation: hitmark .24s ease-out; }
 @keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }
 

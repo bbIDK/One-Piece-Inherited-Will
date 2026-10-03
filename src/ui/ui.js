@@ -77,7 +77,7 @@ export class UI {
     // back on cooldowns — a dodge after a moment, a guard smashed aside by a
     // heavy blow after a little longer
     E.acts = {};
-    for (const [k, key, name, tip] of [['dodge', 'Q', 'Dodge', 'Dash out of the way, untouchable for an instant. It comes back after a moment.'], ['guard', 'F', 'Block', 'Hold to block (tap just before a hit to parry). A heavy blow smashes a guard aside: it can\'t come up again until this fills.']]) {
+    for (const [k, key, name, tip] of [['dodge', 'Q', 'Dodge', 'Dash out of the way, untouchable for an instant. It comes back after a moment.'], ['guard', 'F', 'Block', 'Hold to block. Tap it just as a blow lands to PARRY (a yellow glint shows the moment): they reel, and your next strike is a COUNTER. Mashing it won\'t parry. A red-glint blow smashes a guard aside — dodge those: the guard can\'t come up again until this fills.']]) {
       const a = { el: h('div.slot.toggle.act.' + k, { title: `${name} (${key})\n${tip}` }), cd: h('div.cd') };
       a.el.append(h('span.ico', uiImg(k, 28)), h('span.k', key), a.cd);
       if (k === 'dodge') { a.el.classList.add('interactive'); a.el.addEventListener('click', () => { if (!this.blocksInput()) this.game?.player?.controller?.requestDodge?.(); }); }
@@ -315,9 +315,9 @@ export class UI {
   onPlayerHurt() { this.hurtT = 0.3; }
 
   /** Flash the crosshair's hit marker (first person). */
-  hitMarker({ crit, blocked } = {}) {
+  hitMarker({ crit, blocked, counter } = {}) {
     const el = this.el.hitMark;
-    el.className = 'hitmark' + (crit ? ' crit' : blocked ? ' blocked' : '');
+    el.className = 'hitmark' + (counter ? ' counter' : crit ? ' crit' : blocked ? ' blocked' : '');
     void el.offsetWidth;
     el.classList.add('show');
   }
@@ -614,6 +614,14 @@ export class UI {
       guard.el.classList.toggle('broken', gcd > 0);
     }
     if (!!p.blocking !== this.cache.guardOn) { this.cache.guardOn = !!p.blocking; guard.el.classList.toggle('on', !!p.blocking); }
+    // a parry flashes the guard (white for a perfect one), and it glows orange while the counter it earned is there to land
+    if (p.parryT !== this.cache.parryT) {
+      const seen = this.cache.parryT !== undefined;
+      this.cache.parryT = p.parryT;
+      if (seen) { guard.el.classList.remove('parried', 'perfect'); void guard.el.offsetWidth; guard.el.classList.add('parried'); if (p.parryPerfect) guard.el.classList.add('perfect'); }
+    }
+    const counter = p.counterLeft > 0;
+    if (counter !== this.cache.counter) { this.cache.counter = counter; guard.el.classList.toggle('counter', counter); }
     for (const t of HAKI_TOGGLES) {
       const el = E.toggles[t.type];
       const lvl = p.hakiLevel(t.type);

@@ -252,8 +252,16 @@ export class FX {
   // (these place heights with z themselves: no y-offset guessing for the 3D view inside them)
   cfx(fn) { const was = this._cfx; this._cfx = true; try { return fn(); } finally { this._cfx = was; } }
   hit(att, tgt, h, info) { return this.cfx(() => CFX.hitFeedback(this, att, tgt, h, info)); }
-  parry(tgt, att, ang) { return this.cfx(() => CFX.parryFx(this, tgt, att, ang)); }
+  parry(tgt, att, ang, perfect) { return this.cfx(() => CFX.parryFx(this, tgt, att, ang, perfect)); }
   guardBreak(tgt, att, ang) { return this.cfx(() => CFX.guardBreakFx(this, tgt, att, ang)); }
+  /** A sword turning a shot aside. */
+  deflect(tgt, shot, ang, perfect) { return this.cfx(() => CFX.deflectFx(this, tgt, shot, ang, perfect)); }
+  /** The counter strike after a parry landing. */
+  counter(att, tgt, ang, w) { return this.cfx(() => CFX.counterFx(this, att, tgt, ang, w)); }
+  /** Shaking free of a flurry of blows. */
+  breakFree(a) { return this.cfx(() => CFX.breakFreeFx(this, a)); }
+  /** The glint on a foe (or a shot) the moment before its blow lands: `breaks`, red (dodge it); else yellow (parry it). `k`: how plain, 0..1. */
+  parryCue(at, breaks, k = 1) { return this.cfx(() => CFX.parryCueFx(this, at, breaks, k)); }
   tech(actor, step, action, kind, extra) { return this.cfx(() => CFX.techFx(this, actor, step, action, kind, extra)); }
   zone(zone, spec, actor, action) { return this.cfx(() => CFX.zoneFx(this, zone, spec, actor, action)); }
   explosion(x, y, e, owner) { return this.cfx(() => CFX.explosionFx(this, x, y, e, owner)); }

@@ -4,6 +4,7 @@ import { drawCharacter, drawCharacterTinted, starPath, dir4 } from '../render/ch
 import { actionClip, stanceFor, STANCES, STANCE_ARMED, gunKind, gaitCadence } from '../render/anims.js';
 import { actorVisuals, drawActorExtras } from '../render/combatfx.js';
 import { getAbility, canUse, startAbility, updateAbility } from './abilities.js';
+import { PARRY, tierOf } from './difficulty.js';
 import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
 import { RACES } from '../data/races.js';
@@ -94,6 +95,25 @@ export class Actor extends Entity {
     this.dash = null;
     this.blocking = false;
     this.blockTime = 0;
+    // the guard: whether the one up now came up on a fresh press of F (only
+    // that can parry: see setBlock), and the counter strike a parry earns
+    // (counterOn: the foe it's against, counterLeft: seconds left to land it)
+    this.guardFresh = false;
+    this.counterOn = null;
+    this.counterLeft = 0;
+    // moments for the animations (on game.env.time; -Infinity: never): when
+    // this actor last parried a blow (and whether perfectly), had its own
+    // blow parried (reeling, posture broken), had its guard smashed, was hit
+    // (hitDir: the world angle the blow pushed it toward, hitW: how heavy it
+    // was, ~0..1.5) and landed a counter strike
+    this.parryT = -Infinity;
+    this.parryPerfect = false;
+    this.parriedT = -Infinity;
+    this.guardBrokenT = -Infinity;
+    this.hitT = -Infinity;
+    this.hitDir = 0;
+    this.hitW = 0;
+    this.counterT = -Infinity;
     this.armament = false;
     this.observation = false;
     this.flashT = 0;
@@ -302,7 +322,9 @@ export class Actor extends Entity {
     const id = chain[this.combo.step % chain.length];
     const def = getAbility(id);
     if (!def) return false;
-    startAbility(this, { ...def, m1Chain: true }, game);
+    // (swinging lowers your guard; and a foe's follow-up in a combo comes quicker than its opener)
+    this.blocking = false;
+    startAbility(this, { ...def, m1Chain: true, chained: this.combo.step % chain.length > 0 }, game);
     this.combo.step = (this.combo.step + 1) % chain.length;
     this.combo.window = 0.55 + (def.recover || 0.2);
     this.applyElementBuff();
@@ -619,11 +641,28 @@ export class Actor extends Entity {
     if (this.z <= 0.01 && (i.mz || 0) < 0 && !w.isLiquid(this.x, this.y)) { this.flying = false; this.alt = null; }
   }
 
-  setBlock(on) {
+  /**
+   * Guard up (on) or down — the player's controller says every frame whether
+   * F is held. A guard only parries if it came up on a fresh press: not one
+   * held down (the guard coming back up after a swing), not one pressed again
+   * hard on letting go (PARRY.lockout: mashing F gets you nothing), though a
+   * press made while the guard can't come up yet (mid-swing) still counts if
+   * it comes up within PARRY.buffer. A parry earns the next press a fresh
+   * guard however soon it comes. `fresh` (a foe's AI): whether this guard
+   * can parry, decided for it.
+   */
+  setBlock(on, fresh) {
+    if (on && !this.guardHeld) {
+      this.pressFresh = (this.guardLetGo ?? Infinity) >= PARRY.lockout || !!this.parryEarned;
+      this.pressAge = 0;
+      this.parryEarned = false;
+    } else if (!on && this.guardHeld) this.guardLetGo = 0;
+    this.guardHeld = !!on;
     if (on && !this.blocking) {
       if (this.state !== 'idle' || this.action || this.hitstun > 0 || this.status.freeze || this.climb || this.guardCd > 0) return;
       this.blocking = true;
       this.blockTime = 0;
+      this.guardFresh = fresh ?? (!!this.isPlayer && !!this.pressFresh && (this.pressAge ?? Infinity) <= PARRY.buffer);
     } else if (!on) this.blocking = false;
   }
 
@@ -679,6 +718,10 @@ export class Actor extends Entity {
       if (this.cooldowns[k] <= 0) delete this.cooldowns[k];
     }
     if (this.blocking) this.blockTime += dt;
+    // (the guard's press and let-go, for whether the next one is fresh; the counter a parry earned runs out)
+    if (this.pressAge !== undefined) this.pressAge += dt;
+    if (this.guardLetGo !== undefined && !this.guardHeld) this.guardLetGo += dt;
+    if (this.counterLeft > 0 && (this.counterLeft -= dt) <= 0) { this.counterLeft = 0; this.counterOn = null; }
 
     this.updateStatus(dt, game);
     this.updateBuffs(dt, game);
@@ -764,7 +807,9 @@ export class Actor extends Entity {
         s.acc += dt;
         if (s.acc >= 0.5) {
           s.acc -= 0.5;
-          const dmg = Math.max(1, Math.round(this.d.maxHp * dot.dps * 0.5 * (this.boss ? 0.25 : 1)));
+          // (a foe's burn or bleed on you and your crew is gentler where fights are: see difficulty.js)
+          const src = s.src, foe = src && !src.isPlayer && src.faction !== 'player' && (this.isPlayer || this.faction === 'player');
+          const dmg = Math.max(1, Math.round(this.d.maxHp * dot.dps * 0.5 * (this.boss ? 0.25 : 1) * (foe ? tierOf(game, this).dmg : 1)));
           this.hp -= dmg;
           game.fx.text(this.x, this.y - 1.1, String(dmg), dot.color, 0.3);
           if (k === 'burn') game.fx.burst(this.x, this.y - 0.6, 4, { color: ['#ff7043', '#ffca28'], speed: 1, vz: 2, g: -2, life: 0.4, kind: 'fire', size: 0.15 });
@@ -1679,6 +1724,18 @@ export class Actor extends Entity {
       knockT: this.knockT,
       activity: busy ? busy.pose : null, prop: busy ? busy.prop : null, seatH: busy ? busy.h : 0, station: st,
     };
+    // combat moments, as seconds since (Infinity: never): a parry made (perfect
+    // or not), a blow of its own parried (reeling), its guard smashed, a hit
+    // taken (the way it pushed, relative to where it faces: 0 shoved forward,
+    // ±π straight back; and how heavy) and a counter strike landed
+    pose.parryAge = now - this.parryT;
+    pose.parryPerfect = !!this.parryPerfect;
+    pose.parriedAge = now - this.parriedT;
+    pose.guardBrokenAge = now - this.guardBrokenT;
+    pose.hitAge = now - this.hitT;
+    pose.hitDirRel = angleDiff(this.facing, this.hitDir);
+    pose.hitW = this.hitW;
+    pose.counterAge = now - this.counterT;
     if (this.charging > 0 && !act && !swim) pose.charge = this.charging;
     if (air) pose.air = { up: air === 'up', k: this.jumpK || 0 };
     if (this.blocking) { pose.block = this.blockTime; pose.armedBlock = pose.armed; }
