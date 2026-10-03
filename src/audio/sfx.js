@@ -16,11 +16,29 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const r = () => 0.92 + Math.random() * 0.16;
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
-/** Haki-hardened fists (and a blocked blow off a hardened arm): the GAKIN of struck iron. */
-function hakiClank(v, t, s = 1) {
-  v.noise(t, 0.006, { type: 'highpass', freq: 6000, gain: 0.2 * s, attack: 0.0005 });
-  v.ring(t + 0.002, rnd(600, 700), 0.24 * s, 0.06 * s, [1, 1.49, 2.31, 2.97]);
-  v.crackle(t + 0.01, 0.12, 4, { freq: 2600, gain: 0.04 * s });
+// Each character's Haki has a voice (game/haki.js hakiSignature: `k.voice`,
+// 0..1, worked out by audio.js from who it is): the same sounds pitched and
+// coloured their own way — related, never identical.
+const vo = (k) => clamp(k?.voice ?? 0.5, 0, 1);
+
+/**
+ * Haki-hardened fists (and a blocked blow off a hardened arm): the GAKIN of
+ * struck iron — a hard click, a bright inharmonic ring with a darker one an
+ * octave under it (the chorus of iron), a few sparks — in the striker's voice.
+ */
+function hakiClank(v, t, s = 1, voice = 0.5) {
+  const base = (560 + 200 * voice) * rnd(0.97, 1.03);
+  v.noise(t, 0.006, { type: 'highpass', freq: 6000, gain: 0.24 * s, attack: 0.0005 });
+  v.ring(t + 0.002, base, 0.3 * s, 0.075 * s, [1, 1.47 + 0.06 * voice, 2.31, 2.97]);
+  v.ring(t + 0.004, base * 0.503, 0.22 * s, 0.045 * s, [1, 1.52, 2.4]);
+  v.crackle(t + 0.01, 0.12, 4, { freq: 2600 + 800 * voice, gain: 0.04 * s });
+}
+
+/** Ryou: a master's Haki pushed on into the body — a hollow "dwoom" going through it, a ripple of iron. */
+function ryouLayer(v, t, w = 1, voice = 0.5) {
+  v.thump(t + 0.01, { f0: 95 + 20 * voice, f1: 32, dur: 0.35, gain: 0.32 * w });
+  v.tone(t + 0.02, 0.4, { freq: 180 + 40 * voice, to: 70, type: 'triangle', gain: 0.08, vib: { rate: 22, depth: 18 } });
+  v.ring(t + 0.03, 300 + 80 * voice, 0.4, 0.03, [1, 1.5, 2.2]);
 }
 
 /** A blade singing after the cut: a pair of slightly detuned rings (the anime's chorus on steel). */
@@ -110,7 +128,8 @@ export const SFX = {
         v.thump(0, { f0: (175 - 40 * w) * r(), f1: 46, dur: 0.1 + 0.08 * w, gain: 0.34 + 0.18 * w });
         v.noise(0, 0.08 + 0.1 * w, { type: 'lowpass', freq: 620, sweep: 160, q: 0.7, gain: 0.12 + 0.15 * w });
       }
-      if (k.armament) hakiClank(v, 0.002, 0.7 + 0.4 * w);
+      if (k.armament) hakiClank(v, 0.002, 0.7 + 0.4 * w, vo(k));
+      if (k.ryou) ryouLayer(v, 0.004, 0.8 + 0.3 * w, vo(k));
       if (k.counter) { v.noise(0, 0.03, { freq: 2500, q: 2, gain: 0.2 }); v.thump(0.02, { f0: 80, f1: 34, dur: 0.25, gain: 0.35 }); }
     },
   },
@@ -126,7 +145,8 @@ export const SFX = {
       v.noise(0, 0.3, { color: 'pink', type: 'lowpass', freq: 700, sweep: 110, gain: 0.4 });
       v.thump(0.045, { f0: 72, f1: 28, dur: 0.45, gain: 0.32 + 0.12 * w });
       v.crackle(0.05, 0.3, 10, { freq: 1400, gain: 0.1 });
-      if (k.armament) hakiClank(v, 0.003, 1.2);
+      if (k.armament) hakiClank(v, 0.003, 1.2, vo(k));
+      if (k.ryou) ryouLayer(v, 0.005, 1.2, vo(k));
       if (k.counter) v.noise(0, 0.04, { freq: 2600, q: 2, gain: 0.22 });
     },
   },
@@ -138,7 +158,7 @@ export const SFX = {
       v.noise(0.001, 0.085, { freq: 5200 * r(), sweep: 2200, q: 1.6, gain: 0.3, attack: 0.002 });
       v.thump(0, { f0: 230, f1: 80, dur: 0.07, gain: 0.26 });
       bladeRing(v, 0.004, [1480, 1620, 1360][k.rr] * r(), 0.42, 0.06);
-      if (k.armament) hakiClank(v, 0.003, 0.7);
+      if (k.armament) hakiClank(v, 0.003, 0.7, vo(k));
     },
   },
   /** ZUBAAAN: the air tearing, a deep cut, a long ring. */
@@ -150,7 +170,7 @@ export const SFX = {
       v.noise(0.002, 0.16, { freq: 4200 * r(), sweep: 1500, q: 1.2, gain: 0.34, attack: 0.002 });
       v.thump(0, { f0: 150, f1: 38, dur: 0.26, gain: 0.55 });
       bladeRing(v, 0.008, [1100, 1220, 980][k.rr] * r(), 0.75, 0.08);
-      if (k.armament) hakiClank(v, 0.004, 1);
+      if (k.armament) hakiClank(v, 0.004, 1, vo(k));
     },
   },
   /** A blow taken on the guard: a dull leather DOFF on an arm, a short GAKIN off a blade. */
@@ -167,7 +187,7 @@ export const SFX = {
         v.thump(0, { f0: 130, f1: 70, dur: 0.09, gain: 0.3 });
         v.noise(0.004, 0.04, { freq: 2500, q: 1, gain: 0.08 });
       }
-      if (k.armament) hakiClank(v, 0.002, 0.6);
+      if (k.armament) hakiClank(v, 0.002, 0.6, vo(k));
     },
   },
   /** KIIN! Steel on steel: a hard click, a bright inharmonic ring, a long shimmer (perfect: brighter, longer, a beat of hush). */
@@ -245,42 +265,130 @@ export const SFX = {
     play(v) { [330, 311, 294, 220].forEach((f, i) => v.tone(i * 0.26, 0.6, { freq: f, type: 'triangle', gain: 0.18 })); },
   },
   /**
-   * Armament Haki: a dark, heavy surge of will and the iron "kachin" of the
-   * arm hardening (a hit by Haki itself: a Haki-heavy blow).
+   * Armament Haki hardening (in the user's voice): the low "vrrmm" of will
+   * swelling as the coat spreads up the arm — a growl opening up over a sub —
+   * and, as it sets hard at 0.27 s (when the coat has spread: render3d/chars/
+   * haki.js), the metallic KSHING: a click, a bright swipe, a struck-iron
+   * clank and a dense ringing tail, chorused. (A hit by Haki itself: a
+   * Haki-heavy blow.)
    */
   haki: {
-    prio: 7, cd: 0.08, max: 2, send: 0.3, drive: 2.4,
+    prio: 7, cd: 0.08, max: 2, send: 0.3, drive: 1.2, variants: 3,
     play(v, k) {
       if (k.hit) { SFX.punch_heavy.play(v, { ...k, armament: true }); return; }
-      v.tone(0, 0.5, { freq: 62, to: 124, type: 'sawtooth', gain: 0.17, attack: 0.03 });
-      v.tone(0, 0.45, { freq: 46, to: 38, gain: 0.32, attack: 0.02 });
-      v.zap(0.02, 0.28, { f0: 50, f1: 420, gain: 0.035 });
-      v.noise(0.17, 0.008, { type: 'highpass', freq: 5000, gain: 0.22, attack: 0.0006 });
-      v.ring(0.17, rnd(400, 460), 0.4, 0.07, [1, 1.38, 2.1, 2.9]);
-      v.crackle(0.05, 0.35, 8, { freq: 2400, gain: 0.05 });
+      const V = vo(k), f = 44 + 24 * V;
+      v.tone(0, 0.42, { freq: f, to: f * 1.9, type: 'sawtooth', gain: 0.12, attack: 0.18, curve: 'lin' });
+      v.tone(0, 0.42, { freq: f * 1.012, to: f * 1.93, type: 'square', gain: 0.04, attack: 0.2, curve: 'lin' });
+      v.tone(0, 0.5, { freq: f * 0.5, to: f * 0.62, gain: 0.3, attack: 0.15 });
+      v.noise(0, 0.36, { color: 'pink', type: 'lowpass', freq: 300, sweep: 1600, q: 1.4, gain: 0.1, attack: 0.25, curve: 'lin' });
+      const T = 0.27, base = (420 + 220 * V) * [1, 1.06, 0.95][k.rr];
+      v.noise(T, 0.007, { type: 'highpass', freq: 6500, gain: 0.3, attack: 0.0005 });
+      v.noise(T, 0.07, { freq: 4200 + 1600 * V, sweep: 8500, q: 2.2, gain: 0.15, attack: 0.002 });
+      v.thump(T, { f0: 160, f1: 60, dur: 0.12, gain: 0.22 });
+      v.ring(T + 0.002, base, 0.9, 0.08, [1, 1.38 + 0.08 * V, 2.1, 2.9 - 0.12 * V, 3.7]);
+      v.ring(T + 0.01, base * 1.004, 1.4, 0.034, [1, 2.02, 2.76]);
+      v.ring(T + 0.015, base * 0.497, 1.2, 0.04, [1, 1.5, 2.2]);
+      v.crackle(0.05, 0.3, 6, { freq: 2200 + 900 * V, gain: 0.03 });
     },
   },
-  /** Observation Haki: the heart's "doki", and a high, listening shimmer. */
+  /** Armament or Observation let go: a soft breath of air settling. */
+  haki_off: { prio: 4, cd: 0.1, max: 1, send: 0.1, play: (v, k) => v.whoosh(0, 0.25, { f0: 1500 + 500 * vo(k), f1: 450, q: 1, gain: 0.05, peak: 0.2 }) },
+  /** Haki given out (the spirit spent): a dull clank going flat, the coat fizzling away. */
+  haki_out: {
+    prio: 6, cd: 0.3, max: 1, send: 0.2,
+    play(v, k) {
+      const V = vo(k);
+      v.ring(0, 300 + 120 * V, 0.25, 0.1, [1, 1.4, 2.1]);
+      v.tone(0, 0.4, { freq: 220 + 60 * V, to: 90, type: 'triangle', gain: 0.16 });
+      v.noise(0.02, 0.45, { type: 'lowpass', freq: 2400, sweep: 300, gain: 0.18, attack: 0.01 });
+      v.crackle(0.03, 0.4, 8, { freq: 1800, gain: 0.06 });
+    },
+  },
+  /**
+   * Observation Haki (in the user's voice): the heart's soft "doki-doki",
+   * the pulse going out like sonar (a breath of air, a falling sine) and a
+   * high crystalline TING with a long shimmering tail, its partials beating
+   * slowly against each other.
+   */
   haki_obs: {
-    prio: 7, cd: 0.2, max: 1, send: 0.5,
-    play(v) {
-      v.thump(0, { f0: 70, f1: 45, dur: 0.12, gain: 0.28 });
-      v.thump(0.22, { f0: 62, f1: 40, dur: 0.1, gain: 0.18 });
-      v.tone(0.05, 0.7, { freq: 880, to: 1320, gain: 0.08, attack: 0.04 });
-      v.tone(0.1, 0.6, { freq: 1760, to: 2200, gain: 0.03, attack: 0.05 });
-      v.fm(0.08, 0.9, { freq: 2640, ratio: 2.01, index: 0.6, gain: 0.02 });
+    prio: 7, cd: 0.2, max: 1, send: 0.55, variants: 3,
+    play(v, k) {
+      const V = vo(k), f = (2050 + 1300 * V) * [1, 1.03, 0.97][k.rr];
+      v.thump(0, { f0: 66 - 8 * V, f1: 44, dur: 0.13, gain: 0.32 });
+      v.thump(0.2, { f0: 58 - 6 * V, f1: 40, dur: 0.11, gain: 0.2 });
+      v.whoosh(0.02, 0.5, { f0: 3800, f1: 1600, q: 2.5, gain: 0.05, peak: 0.15 });
+      v.tone(0.03, 0.35, { freq: f * 0.5, to: f * 0.25, gain: 0.045, attack: 0.004 });
+      v.ring(0.04, f, 0.9, 0.14, [1, 2.0, 2.76 + 0.2 * V, 4.07]);
+      v.fm(0.04, 1.6, { freq: f * 1.5, ratio: 2.01 + 0.5 * V, index: 0.8, gain: 0.05, indexDur: 1.2 });
+      v.tone(0.08, 2.2, { freq: f * 2, gain: 0.022, attack: 0.3, vib: { rate: 5 + 3 * V, depth: f * 0.004 } });
+      v.tone(0.1, 2.0, { freq: f * 2 * 1.006, gain: 0.018, attack: 0.35 });
+      v.tone(0.12, 1.8, { freq: f * 3.01, gain: 0.011, attack: 0.4, vib: { rate: 3.5, depth: f * 0.006 } });
     },
   },
-  /** Conqueror's Haki: a DON of will — the air pressing down, black lightning crackling, a rumble. */
+  /** Foresight (Observation slipping a blow): a whoosh played backwards, swelling out of nothing onto a ting. */
+  foresight: {
+    prio: 7, cd: 0.15, max: 2, send: 0.4, variants: 2,
+    play(v, k) {
+      const V = vo(k), f = (2400 + 1200 * V) * [1, 1.04][k.rr];
+      v.whoosh(0, 0.22, { f0: 600, f1: 3200, q: 1.2, gain: 0.42, peak: 0.97, color: 'pink' });
+      v.whoosh(0.02, 0.2, { f0: 1500, f1: 5000, q: 2, gain: 0.14, peak: 0.95 });
+      v.ring(0.22, f, 0.6, 0.12, [1, 2.0, 2.9]);
+      v.fm(0.22, 0.8, { freq: f * 1.5, ratio: 2.01, index: 0.6, gain: 0.035 });
+    },
+  },
+  /** Conqueror's Haki gathering (the wind-up): the air going heavy and still, a growl rising under it. */
+  conqueror_rise: {
+    prio: 8, cd: 0.4, max: 1, send: 0.3,
+    play(v, k) {
+      const V = vo(k), T = Math.max(0.2, k.rel || 0.45);
+      v.noise(0, T, { color: 'brown', type: 'lowpass', freq: 120, sweep: 500, gain: 0.4, attack: T * 0.9, curve: 'lin' });
+      v.tone(0, T + 0.05, { freq: 30 + 8 * V, to: 55 + 10 * V, gain: 0.32, attack: T * 0.85, curve: 'lin' });
+      v.whoosh(0, T, { f0: 200, f1: 900, q: 0.9, gain: 0.16, peak: 0.9 });
+    },
+  },
+  /**
+   * Conqueror's Haki let loose (in the king's voice): the deep rolling DOOON —
+   * a crack, a huge sub falling away under a growling body, thunder rolling on
+   * — the wind of it rushing out past you, and black lightning crackling
+   * (BZZT) through it all.
+   */
   conqueror: {
-    prio: 9, cd: 0.5, max: 1, send: 0.4, drive: 2.5, duck: 0.6,
-    play(v) {
-      v.thump(0, { f0: 90, f1: 28, dur: 0.65, gain: 0.8 });
-      v.noise(0, 0.9, { color: 'pink', type: 'lowpass', freq: 900, sweep: 80, gain: 0.45, attack: 0.01 });
-      v.zap(0.02, 0.45, { f0: 50, f1: 900, gain: 0.12 });
-      v.zap(0.3, 0.35, { f0: 60, f1: 700, gain: 0.08 });
-      v.crackle(0.02, 0.8, 14, { freq: 3000, gain: 0.06 });
-      M.rumble(v, 0.1, 1, 1.6, { lp: 160 });
+    prio: 9, cd: 0.4, max: 1, send: 0.45, drive: 2.2, duck: 0.7, variants: 3,
+    play(v, k) {
+      const V = vo(k), f0 = (60 + 22 * V) * [1, 0.94, 1.06][k.rr];
+      v.noise(0, 0.02, { type: 'highpass', freq: 2200, gain: 0.35, attack: 0.0008 });
+      v.thump(0, { f0: f0 * 1.6, f1: f0 * 0.4, dur: 1.0, gain: 0.85 });
+      v.tone(0, 1.4, { freq: f0, to: f0 * 0.62, glide: 1.2, type: 'sawtooth', gain: 0.13, attack: 0.01 });
+      v.tone(0.01, 1.3, { freq: f0 * 1.005, to: f0 * 0.6, glide: 1.2, type: 'triangle', gain: 0.18, attack: 0.01 });
+      M.rumble(v, 0.08, 1.2, 1.8, { lp: 150 + 60 * V });
+      v.whoosh(0.02, 1.4, { f0: 250 + 150 * V, f1: 1100 + 400 * V, q: 0.8, gain: 0.3, peak: 0.25, color: 'pink' });
+      v.whoosh(0.3, 1.1, { f0: 1400, f1: 500, q: 0.7, gain: 0.11, peak: 0.3 });
+      v.zap(0.03, 0.5, { f0: 50, f1: 900 + 500 * V, gain: 0.1 });
+      v.zap(0.35, 0.4, { f0: 60, f1: 700, gain: 0.07 });
+      v.crackle(0.02, 1.0, 18, { freq: 2600 + 1400 * V, gain: 0.06 });
+      v.noise(0.03, 0.6, { type: 'highpass', freq: 4500, gain: 0.04, attack: 0.01 });
+    },
+  },
+  /**
+   * Two Conqueror's clashing: a sustained, thunderous, grinding crackle — the
+   * two wills' growls beating against each other over a roar of the deep,
+   * black lightning arcing between them the whole while, thunder rolling as
+   * the sky splits, and a last boom as both are thrown back.
+   */
+  conqueror_clash: {
+    prio: 10, cd: 0.8, max: 1, send: 0.5, drive: 2.4, duck: 0.85,
+    play(v, k) {
+      const V = vo(k), L = 2.6;
+      v.noise(0, 0.03, { type: 'highpass', freq: 1800, gain: 0.4, attack: 0.0008 });
+      v.thump(0, { f0: 110, f1: 26, dur: 1.2, gain: 0.8 });
+      v.tone(0, L, { freq: 48 + 10 * V, to: 42, type: 'sawtooth', gain: 0.11, attack: 0.08, hold: L * 0.6 });
+      v.tone(0, L, { freq: 51.5 + 10 * V, to: 45, type: 'sawtooth', gain: 0.11, attack: 0.08, hold: L * 0.6 });
+      v.noise(0, L, { color: 'brown', type: 'lowpass', freq: 380, q: 0.8, gain: 0.38, attack: 0.1, hold: L * 0.55 });
+      for (let i = 0; i < 6; i++) v.zap(0.05 + i * 0.38, 0.4, { f0: 50, f1: 900 + 300 * Math.random(), gain: 0.08 });
+      v.crackle(0.02, L * 0.9, 40, { freq: 2400 + 1200 * V, gain: 0.06 });
+      v.noise(0.05, L, { type: 'highpass', freq: 5000, gain: 0.045, attack: 0.1, hold: L * 0.5 });
+      M.rumble(v, 0.15, 1.4, 2.2, { lp: 200 });
+      v.thump(L * 0.8, { f0: 90, f1: 28, dur: 0.8, gain: 0.5 });
     },
   },
 
@@ -1079,12 +1187,13 @@ function animKind(anim, weapon) {
  * moment the blow lands, the release. `def` the technique, `rel` the seconds
  * to its first blow, `weapon` what it's swung with, `gun` a gun's kind.
  */
-export function techStart(v, def, { rel = 0, weapon = 'fists', gun = null, heavy = false } = {}) {
-  const k = { rel: Math.max(0, rel), def };
+export function techStart(v, def, { rel = 0, weapon = 'fists', gun = null, heavy = false, voice } = {}) {
+  const k = { rel: Math.max(0, rel), def, voice };
   const fr = def.fruit && FRUIT_TECH[def.fruit];
   if (fr) { (fr[def.id] || fr.default || STRETCH)(v, k); return; }
   if (STYLE_TECH[def.id]) { STYLE_TECH[def.id](v, k); return; }
-  if ((def.steps || []).some((s) => s.conqueror)) { SFX.conqueror.play(v, k); return; }
+  // (Conqueror's: the pressure gathering through the wind-up; the DOOON comes with the burst itself — abilities.js)
+  if ((def.steps || []).some((s) => s.conqueror)) { SFX.conqueror_rise.play(v, k); return; }
   if (weapon === 'gun') {
     v.noise(0, 0.02, { freq: 3000, q: 3, gain: 0.1, attack: 0.0006 });
     if (gun === 'slingshot') slingshot(v, k.rel, 1); else gunshot(v, k.rel, heavy ? 1.2 : 1);

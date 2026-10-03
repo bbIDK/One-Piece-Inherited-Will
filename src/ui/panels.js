@@ -5,6 +5,7 @@ import { ITEMS, sellPrice } from '../data/items.js';
 import { STYLES } from '../data/styles.js';
 import { FRUITS, FRUIT_RARITY } from '../data/fruits.js';
 import { HAKI } from '../data/haki.js';
+import { HAKI_HOW, charSignature, colourName, armamentReach, RYOU, FUTURE_SIGHT } from '../game/haki.js';
 import { LEGENDS, LEGEND_IDS } from '../data/dreams.js';
 import { RACES, raceLabel } from '../data/races.js';
 import { TRAITS, refreshPlayer, persist, computeWill, hakiKnown, needsHaki, dChance, equippedLook, armorOf } from '../game/lineage.js';
@@ -384,10 +385,9 @@ export function openCharacter(game) {
     const masteryRows = Object.entries(c.masteries).filter(([s]) => STYLES[s]).map(([s, m]) => h('div.stat-row',
       h('span.nm', STYLES[s]?.name || s), h('span.val', Math.floor(m)),
       h('div.meter', h('i', { style: { width: m + '%', background: 'linear-gradient(90deg,#1565c0,#90caf9)' } }))));
-    const hakiRows = hakiKnown(c) ? Object.entries(HAKI).filter(([k]) => c.haki[k]).map(([k, hk]) => h('div.stat-row', { title: hk.desc },
-      h('span.nm', hk.name.replace(' Haki', '')), h('span.val', Math.floor(c.haki[k])),
-      h('div.meter', h('i', { style: { width: (c.haki[k] || 0) + '%', background: 'linear-gradient(90deg,#4a148c,#ce93d8)' } })))) : [];
-    const traits = c.traits.filter((t) => TRAITS[t] && (!TRAITS[t].hidden || (t === 'conqueror' && c.haki.conqueror)));
+    const hakiRows = hakiSection(c);
+    // (King's Disposition shows once it has woken — or once a Haki master has sensed it in you)
+    const traits = c.traits.filter((t) => TRAITS[t] && (!TRAITS[t].hidden || (t === 'conqueror' && (c.haki.conqueror || c.flags?.kingSensed))));
     const left = h('div',
       h('h3', 'Attributes'),
       h('p.muted', 'Attributes grow by themselves as you train and fight worthy opponents. The thin bar shows how close each one is to rising.'),
@@ -396,16 +396,44 @@ export function openCharacter(game) {
     const right = h('div',
       h('h3', 'Fighting styles'), ...masteryRows,
       c.fruit ? h('div', h('h3', 'Devil Fruit'), h('div.stat-row', h('span.nm', FRUITS[c.fruit].name), h('span.val', Math.floor(c.fruitMastery)), h('div.meter', h('i', { style: { width: c.fruitMastery + '%', background: 'linear-gradient(90deg,#bf360c,#ffab91)' } })))) : null,
-      hakiRows.length ? h('div', h('h3', 'Haki'), ...hakiRows) : null,
+      h('div', h('h3', 'Haki'), ...hakiRows),
       h('h3', 'Traits'),
       ...race.traits.map((t) => h('div.li', t)),
-      ...traits.map((t) => h('div.li', h('b', TRAITS[t].name + ': '), TRAITS[t].desc)),
+      ...traits.map((t) => h('div.li', h('b', TRAITS[t].name + ': '), t === 'conqueror' && !c.haki.conqueror && TRAITS[t].latent ? TRAITS[t].latent : TRAITS[t].desc)),
       h('p.muted', { style: { marginTop: '10px' } }, `Lives ${c.lives}/${c.maxLives} · Second winds ${c.getUpCharges || 0} · ${(c.discovered || []).length} islands charted · ${(c.bosses || []).length} great foes · day ${game.env.day}`),
     );
     add(body, header, h('div.grid2', left, right));
   };
   render();
 }
+/**
+ * The Character panel's Haki: each of the three — awakened, its level and
+ * your own colours (a swatch: Armament's black with its sheen, Observation's
+ * tint, Conqueror's colour, named); not yet, how it's obtained.
+ */
+function hakiSection(c) {
+  const sig = charSignature(c);
+  const sw = (hex, coat) => h('span.haki-sw' + (coat ? '.coat' : ''), { title: colourName(hex), style: coat ? { '--sw': hex } : { background: hex, '--sw': hex } });
+  const rows = [];
+  for (const [k, hk] of Object.entries(HAKI)) {
+    const lvl = c.haki[k] || 0;
+    if (lvl > 0) {
+      const what = k === 'armament' ? `Black as iron (${colourName(sig.armament).toLowerCase()}); covers ${armamentReach(lvl) >= 1 ? 'the whole arms' : armamentReach(lvl) > 0.25 ? 'the forearms' : 'the fists'}${lvl >= RYOU.level ? ' — Ryou: your blows push it on through guards and into them' : ` (Ryou at ${RYOU.level})`}.`
+        : k === 'observation' ? `Your tint: ${colourName(sig.observation)}.${lvl >= FUTURE_SIGHT ? ' Future Sight: you see the blows before they land.' : ` (Visions of the blows coming at ${FUTURE_SIGHT})`}`
+          : `Your colour: ${colourName(sig.conqueror)}.`;
+      rows.push(h('div.stat-row', { title: hk.desc },
+        h('span.nm', hk.name.replace(' Haki', '')), h('span.val', Math.floor(lvl)),
+        h('div.meter', h('i', { style: { width: lvl + '%', background: k === 'conqueror' ? `linear-gradient(90deg,#111,${sig.conqueror})` : 'linear-gradient(90deg,#4a148c,#ce93d8)' } }))));
+      rows.push(h('div.haki-how', k === 'armament' ? sw(sig.armament, true) : sw(k === 'observation' ? sig.observation : sig.conqueror), ' ', what));
+    } else {
+      rows.push(h('div.stat-row.locked', { title: hk.desc }, h('span.nm', hk.name.replace(' Haki', '')), h('span.val', '—'), h('div.meter', h('i', { style: { width: '0%' } }))));
+      const sensed = k === 'conqueror' && c.flags?.kingSensed && c.traits.includes('conqueror');
+      rows.push(h('div.haki-how', sensed ? 'A Haki master sensed the qualities of a king in you: it will wake the day your will is truly tested.' : HAKI_HOW[k]));
+    }
+  }
+  return rows;
+}
+
 const TRAINS_BY = {
   str: 'landing blows on worthy opponents, masters, breakthroughs',
   agi: 'dodging and parrying attacks, fighting with guns, masters',
@@ -767,7 +795,7 @@ export function openTrainer(game, tid, npcName) {
   const render = () => {
     clear(body);
     const tabs = ['styles', 'techniques', 'training'];
-    const hakiTypes = Object.keys(t.haki || {}).filter((k) => c.haki[k]);
+    const hakiTypes = Object.keys(t.haki || {});
     if (hakiTypes.length) tabs.push('haki');
     tabs.push('spar');
     add(body, h('h2', npcName || t.name), h('p', h('i', `"${t.lines?.[0] || 'Let\'s see what you\'ve got.'}"`)),
@@ -811,10 +839,17 @@ export function openTrainer(game, tid, npcName) {
       for (const k of hakiTypes) {
         const cap = t.haki[k];
         const lvl = c.haki[k] || 0;
-        const price = S.hakiTrainPrice(k);
-        list.appendChild(h('div.row-item', uiImg('haki', 30), h('div.grow', h('b', HAKI[k].name), h('div.sub', HAKI[k].desc), h('div.sub', `Level ${Math.floor(lvl)} / ${cap} with this master`)),
+        if (k === 'conqueror' && !lvl) {
+          // (it can't be taught — but a master can tell whether it's in you)
+          list.appendChild(h('div.row-item', uiImg('haki', 30), h('div.grow', h('b', HAKI[k].name), h('div.sub', HAKI_HOW.conqueror)),
+            h('button.btn', { on: { click: () => { S.hakiSense(tid); render(); } } }, 'Ask them to sense it')));
+          continue;
+        }
+        const price = lvl ? S.hakiTrainPrice(k) : S.hakiTrainPrice(k) * 3;
+        list.appendChild(h('div.row-item', uiImg('haki', 30), h('div.grow', h('b', HAKI[k].name), h('div.sub', HAKI[k].desc),
+          h('div.sub', lvl ? `Level ${Math.floor(lvl)} / ${cap} with this master` : `Not awakened. ${t.name} can awaken it in you (Willpower ${k === 'armament' ? 18 : 14}) — or: ${HAKI_HOW[k]}`)),
           h('span.price', formatBerries(price)),
-          h('button.btn.gold', { disabled: c.berries < price || (lvl >= cap), on: { click: () => { S.hakiTrain(tid, k); render(); } } }, 'Train')));
+          h('button.btn.gold', { disabled: c.berries < price || (lvl >= cap), on: { click: () => { S.hakiTrain(tid, k); render(); } } }, lvl ? 'Train' : 'Awaken')));
       }
     } else if (tab === 'spar') {
       const chk = S.canSpar(tid);

@@ -944,10 +944,10 @@ export class Actor extends Entity {
     if (this.hakiUnlocked()) {
       if (this.armament) {
         this.haki -= (1.6 - Math.min(1.0, this.hakiLevel('armament') * 0.012)) * dt;
-        if (this.haki <= 0) { this.haki = 0; this.armament = false; }
+        if (this.haki <= 0) { this.haki = 0; this.armament = false; this.hakiSpent('armament'); }
       } else if (this.observation) {
         this.haki -= (1.0 - Math.min(0.7, this.hakiLevel('observation') * 0.008)) * dt;
-        if (this.haki <= 0) { this.haki = 0; this.observation = false; }
+        if (this.haki <= 0) { this.haki = 0; this.observation = false; this.hakiSpent('observation'); }
       } else this.haki = Math.min(d.maxHaki, this.haki + d.hakiRegen * dt);
     }
     let regen = (this.fruitDef?.passive?.regen || 0) + d.hpRegen * (this.inCombat ? 0.2 : 1);
@@ -956,6 +956,20 @@ export class Actor extends Entity {
     // everyone else only heals once they've been left alone for a good while
     const rested = this.isPlayer || !this.game || (this.game.time || 0) - (this.lastHitT || -999) > 45;
     if (this.hp < d.maxHp && this.state === 'idle' && rested) this.hp = Math.min(d.maxHp, this.hp + regen * dt);
+  }
+
+  /**
+   * Haki given out, the spirit bar empty: the coat of Armament flakes away,
+   * Observation's senses go dull — seen, heard, and (yours) told.
+   */
+  hakiSpent(type) {
+    const g = this.game;
+    if (!g) return;
+    g.fx?.hakiSpent?.(this, type);
+    g.audio?.sfx('haki_out', this);
+    if (!this.isPlayer) return;
+    g.log(`Your ${type === 'armament' ? 'Armament' : 'Observation'} Haki gives out: your spirit is spent. It refills while you let your Haki rest.`, '#b0bec5');
+    g.ui?.flashAct?.('haki');
   }
 
   passable(w, x, y) {
@@ -1814,7 +1828,7 @@ export class Actor extends Entity {
       facing: this.facing, walk: this.walk, moving: this.moving, speed: (this.speed || 0) / (this.look?.scale || 1), time: now + this.seed,
       state: this.state === 'knocked' ? 'knocked' : hurt ? 'hurt' : this.state,
       swimming: this.inWater, swim, swimDir: this.intent.mz || 0, swimRate: this.gills ? 5.5 / 3.6 : 1, alpha: alphaBuff ? alphaBuff.alpha : this.fadeAlpha, aura,
-      anim, stanceP: STANCES[stance], combat, sprint: !!(this.intent.sprint && this.moving),
+      anim, stanceP: STANCES[stance], combat, sprint: !!(this.intent.sprint && this.moving), fainted: !!this.fainted,
       weapon: wpn, armed: !!wpn && (drawn || (combat && !!STANCE_ARMED[stance]) || !!(anim && anim.weapon)), drawn, armament: this.armament,
       knockT: this.knockT,
       activity: busy ? busy.pose : null, prop: busy ? busy.prop : null, seatH: busy ? busy.h : 0, station: st,

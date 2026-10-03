@@ -9,7 +9,7 @@
 // per look signature + level and shared (ref-counted) by every character
 // that looks the same.
 import { Builder, Prim, M, between, mul, grid, lathe, tcap, lin, THREE, EAR_CEN } from './geom.js';
-import { B, dims, bindPose, frameId, RUB, RUB_N } from './bones.js';
+import { B, BONES, dims, bindPose, frameId, RUB, RUBL, RUB_N } from './bones.js';
 import { BLANK_UV } from './detail.js';
 import { buildFigure } from './body.js';
 import { FACE_TOP, FACE_BOTTOM } from './face.js';
@@ -981,10 +981,38 @@ function buildBody0(look, wpn, lod, articulated) {
 
   // everything on the head (hair, hat, ears, nose) is tagged: your own first-person body leaves it out
   for (let i = 0; i < b.bone.length; i++) if (b.bone[i] === B.head || b.bone[i] === B.hairTail) b.part[i] = 5;
+  b.limb = limbReach(b, d);
   const geo = b.build();
   const inv = bind.map((m) => m.clone().invert());
   const used = new Set(b.bone);
   return { geo, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null, skirt: outfit.skirtInfo || null, rubTA: outfit.rubTA };
+}
+
+// which limb each bone belongs to: 1 the right arm, 2 the left, 3 the right leg, 4 the left (0: none)
+const LIMB_OF = new Uint8Array(BONES.length);
+for (const [k, H] of [[1, 'R'], [2, 'L']]) {
+  for (const n of ['uarm', 'farm', 'hand', 'fist', 'palm', 'finger', 'k1', 'k2', 'k3', 'k4', 'j1', 'j2', 'j3', 'j4', 'tb', 'tc']) LIMB_OF[B[n + H]] = k;
+  for (const n of ['thigh', 'shin', 'foot']) LIMB_OF[B[n + H]] = k + 2;
+  for (const i of RUB[k - 1]) LIMB_OF[i] = k;
+  for (const i of RUBL[k - 1]) LIMB_OF[i] = k + 2;
+}
+/**
+ * Every vertex of an arm or a leg: its limb (1..4) plus how far up it the
+ * vertex sits (× 0.98), from the tip (0: the fingertips of the open hand,
+ * the soles) to the joint the limb hangs from (1: the shoulder, the hip) —
+ * read in the rest pose, the limbs hanging straight down. What a coat of
+ * Armament Haki spreads up (mats.js); 0 off the limbs.
+ */
+function limbReach(b, d) {
+  const n = b.count, out = new Float32Array(n), P = b.pos, lo = [0, Infinity, Infinity, Infinity, Infinity];
+  for (let i = 0; i < n; i++) { const L = LIMB_OF[b.bone[i]]; if (L && P[i * 3 + 1] < lo[L]) lo[L] = P[i * 3 + 1]; }
+  const top = [0, d.hip0 + d.shY, d.hip0 + d.shY, d.hip0 - 0.07, d.hip0 - 0.07];
+  for (let i = 0; i < n; i++) {
+    const L = LIMB_OF[b.bone[i]];
+    if (!L) continue;
+    out[i] = L + clampU((P[i * 3 + 1] - lo[L]) / Math.max(0.1, top[L] - lo[L]), 0, 1) * 0.98;
+  }
+  return out;
 }
 
 function minkEars(b, HM, look, pal, hb, q) {

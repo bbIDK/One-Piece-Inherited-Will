@@ -2,6 +2,7 @@
 // viewmodel: the actor's current look and weapon, the 2D rig pose sampled
 // exactly as the 2D renderer does, and the 3D rig options for the frame.
 import * as THREE from 'three';
+import { infusedAura } from '../../game/haki.js';
 import { samplePose, restPose, blendPose } from '../../render/anims.js';
 import { shipDims, oarPoints, rowLean, floorAt } from '../../world/hull.js';
 
@@ -29,7 +30,8 @@ export function weaponOf(a) {
 export function actorPose(a, env, look) {
   const act = a.action;
   const alphaBuff = a.buffs.find((b) => b.alpha !== undefined);
-  const aura = a.buffs.find((b) => b.aura)?.aura || (a.conquerorInfused ? 'rgba(0,0,0,0.8)' : null);
+  // (Conqueror's Infusion: near black, deep in the king's own colour — game/haki.js)
+  const aura = a.conquerorInfused ? infusedAura(a) : a.buffs.find((b) => b.aura)?.aura || null;
   const pose = a.visualPose(env, look, act, aura, alphaBuff);
   // in 3D a dodge rolls when it goes along the facing, else it's a side-step
   if (pose.dodge !== undefined && a.dash) {

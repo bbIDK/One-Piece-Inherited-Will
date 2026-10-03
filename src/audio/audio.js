@@ -21,9 +21,12 @@ import { Music } from './music.js';
 import { Director } from './director.js';
 import { Ambience } from './ambience.js';
 import { Foley } from './foley.js';
+import { hasRyou } from '../game/haki.js';
 
 // blows that land on someone (the target is `at`; what hit them is worked out from it)
 const HITS = { punch: 1, punch_heavy: 1, slash_hit: 1, slash_heavy: 1, fire: 1, magma: 1, ice: 1, snow: 1, lightning: 1, water: 1, swamp: 1, poison: 1, gas: 1, smoke: 1, sand: 1, light: 1, dark: 1, quake: 1, string: 1, explosion: 1, haki: 1 };
+// Haki's own sounds, played in the voice of whoever's Haki it is (game/haki.js)
+const HAKI_VOICED = new Set(['haki', 'haki_obs', 'haki_off', 'haki_out', 'foresight', 'conqueror', 'conqueror_rise', 'conqueror_clash']);
 // the moves done with the legs
 const KICKS = /kick|knee|mouton|jete|arabesque|pirouette|rankyaku|concasse/;
 
@@ -165,6 +168,7 @@ export class Audio {
     let def = SFX[name];
     if (HITS[name] && at && g) this.hitContext(at, k, name);
     if (name === 'haki' && k.hit) key = 'haki_hit';
+    if (HAKI_VOICED.has(name) && k.voice === undefined) k.voice = at?.hakiSig?.voice ?? 0.5;
     if (name === 'block' && at) { k.sword = !!(at.hasWeapon?.('sword') && at.drawn !== false); k.armament = !!at.armament; }
     if (name === 'parry' && at) k.perfect = !!at.parryPerfect;
     if ((name === 'jump' || name === 'jump_big' || name === 'land_heavy' || name === 'ko' || name === 'dodge') && at && at === p) k.surf = this.foley?.surf();
@@ -208,6 +212,9 @@ export class Audio {
     const att = at.lastHitT === g.time ? at.lastHitBy : null;
     if (!att) return;
     k.armament = !!att.armament;
+    // (the striker's Haki voice on an armed blow; Ryou's push through the body)
+    if (att.hakiSig) k.voice = att.hakiSig.voice;
+    k.ryou = hasRyou(att);
     k.counter = att.counterT === now;
     const def = att.action?.def;
     k.kick = KICKS.test(def?.anim || '') || att.style === 'black_leg' || att.style === 'okama_kenpo';
@@ -236,7 +243,7 @@ export class Audio {
     if (!v) return;
     v.pj = 0.97 + Math.random() * 0.06;
     const gun = /sling/i.test(actor.weapon?.name || '') ? 'slingshot' : null;
-    try { techStart(v, def, { rel, weapon: weaponOf(actor, def), gun, heavy: /heavy/.test(def.id || '') }); } catch (e) { if (!this.warned) { this.warned = true; console.warn('tech sound', def.id, e); } }
+    try { techStart(v, def, { rel, weapon: weaponOf(actor, def), gun, heavy: /heavy/.test(def.id || ''), voice: actor.hakiSig?.voice }); } catch (e) { if (!this.warned) { this.warned = true; console.warn('tech sound', def.id, e); } }
     v.end += v.tail || 0;
   }
 

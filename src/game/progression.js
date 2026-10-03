@@ -23,6 +23,7 @@ import { earn } from './inventory.js';
 import { formatBerries, roundBounty } from '../core/math.js';
 import { bountySea } from './reputation.js';
 import { LEGENDS } from '../data/dreams.js';
+import { HAKI_HOW } from './haki.js';
 
 const KEYS = ['str', 'agi', 'end', 'vit', 'wil'];
 export const WEAPON_KINDS = { fists: 'Fists', legs: 'Legs', sword: 'Swords', gun: 'Guns', staff: 'Staffs', axe: 'Axes' };
@@ -37,6 +38,10 @@ export class Progression {
     game.on('parry', (att) => this.onParry(att));
     game.on('playerHurt', (att, n) => this.onHurt(att, n));
     game.on('playerGotUp', () => this.train('wil', 10, true));
+    // how each Haki is obtained, told once: when one first wakes in you, or someone else's first presses on you
+    game.hintHaki = () => game.hint('haki_how', `HAKI, the power of will. Armament: ${HAKI_HOW.armament} Observation: ${HAKI_HOW.observation} Conqueror's: ${HAKI_HOW.conqueror} (Character menu, C: Haki.)`);
+    game.on('hakiAwakened', () => game.hintHaki());
+    game.on('conquerorAwakened', () => game.hintHaki());
     game.on('questDone', () => this.checkDream());
     let t = 0;
     game.on('tick', (dt) => { if ((t += dt) > 5) { t = 0; this.checkDream(); } });

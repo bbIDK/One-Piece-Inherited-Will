@@ -330,7 +330,8 @@ export class UI {
 
   /** Flash the Q (dodge) or F (block) slot: pressed while it's still coming back. */
   flashAct(k) {
-    const el = this.el.acts?.[k]?.el;
+    // ('haki': the spirit bar, spent)
+    const el = k === 'haki' ? this.el.hk?.el : this.el.acts?.[k]?.el;
     if (el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
   }
 

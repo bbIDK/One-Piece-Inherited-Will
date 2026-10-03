@@ -219,7 +219,9 @@ export function tcap(r0, r1, L, rs = 8, cap = 3) {
 /**
  * Accumulates geometry: positions, normals, linear vertex colours, up to two
  * bones per vertex with weights, detail-texture UVs and a "part" tag the body
- * shader uses to recolour forearms/shins (Armament Haki, Diable Jambe).
+ * shader uses to recolour forearms/shins (Diable Jambe) and hide parts in
+ * first person — and, set after building, each limb's "reach" (how far up
+ * the arm or leg a vertex is: how far Armament Haki has spread over it).
  *
  * Parts are made in their bone's own frame (a limb hanging down -Y from its
  * joint). With `bind` (a rest matrix per bone, see bones.js bindPose) they
@@ -230,6 +232,8 @@ export function tcap(r0, r1, L, rs = 8, cap = 3) {
 export class Builder {
   constructor(bind = null, blankUV = [0, 0]) {
     this.pos = []; this.nor = []; this.col = []; this.bone = []; this.bone2 = []; this.w2 = []; this.part = []; this.idx = []; this.uv = [];
+    // (optional, per vertex: which limb, and how far up it — see build.js limbReach)
+    this.limb = null;
     this.x4 = new Map();
     this.bind = bind;
     this.blankUV = blankUV;
@@ -314,6 +318,7 @@ export class Builder {
     g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
     g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
     g.setAttribute('aPart', new THREE.Float32BufferAttribute(this.part, 1));
+    if (this.limb) g.setAttribute('aLimb', new THREE.Float32BufferAttribute(this.limb, 1));
     g.setIndex(n > 65535 ? new THREE.Uint32BufferAttribute(this.idx, 1) : new THREE.Uint16BufferAttribute(this.idx, 1));
     g.computeBoundingSphere();
     return g;

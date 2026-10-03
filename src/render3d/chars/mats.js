@@ -1,8 +1,11 @@
 // Materials for the 3D characters.
 //  * body: cel-shaded (the shared toon ramp) with vertex colours, one
-//    instance per character so it can flash white on a hit, turn the
-//    forearms glossy black (Armament Haki) or the shins to fire (Diable
-//    Jambe), frost over when frozen, and fade; all instances share one shader.
+//    instance per character so it can flash white on a hit, coat the limbs in
+//    Armament Haki (lacquered black iron spreading up from the fingertips —
+//    or the toes — with a bright ripple at its edge, a hard glint and a rim in
+//    the character's own sheen: see chars/haki.js), set the shins on fire
+//    (Diable Jambe), frost over when frozen, and fade; all instances share
+//    one shader.
 //  * outline: the anime ink line — back faces pushed out along the normal
 //    (after skinning), scaled with view depth so it stays ~2 px wide.
 import * as THREE from 'three';
@@ -10,7 +13,7 @@ import { FOG } from '../fog.js';
 import { sunSelf } from '../sunshadow.js';
 import { detailTexture } from './detail.js';
 
-const BODY_KEY = 'op-char-body-5';
+const BODY_KEY = 'op-char-body-6';
 const INK = 0x24160f;
 
 let GRAD = null;
@@ -60,7 +63,10 @@ export const SELF_SHADE = 0.3, SELF_SHADE_VM = 0.7;
 export function bodyMaterial(opts = {}) {
   const u = {
     uFlash: { value: 0 }, uFlashCol: { value: new THREE.Color(1, 1, 1) },
-    uHaki: { value: new THREE.Vector4() }, uHakiCol: { value: new THREE.Color(0x17151d) },
+    // Armament: how far up each limb the coat has spread (right arm, left arm, right leg, left leg:
+    // 0 nothing … 1 the whole limb), the bright ripple at its edge, the coat, and its sheen
+    uHaki: { value: new THREE.Vector4() }, uHakiRip: { value: new THREE.Vector4() },
+    uHakiCol: { value: new THREE.Color(0x0b0a10) }, uHakiSheen: { value: new THREE.Color(0x9d8cff) },
     uLegFx: { value: new THREE.Vector2() }, uLegFxCol: { value: new THREE.Color(1.0, 0.36, 0.0) },
     uFreeze: { value: 0 },
     // your own body seen from your eyes (first person): nothing above the neck, and no arms while the view's own are up
@@ -77,19 +83,24 @@ export function bodyMaterial(opts = {}) {
     Object.assign(sh.uniforms, FOG, u);
     celShading(sh);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aPart;\nvarying float vPart;\nvarying float vObjY;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPart = aPart;')
+      .replace('#include <common>', '#include <common>\nattribute float aPart;\nattribute float aLimb;\nvarying float vPart;\nvarying float vLimb;\nvarying float vObjY;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPart = aPart;\nvLimb = aLimb;')
       .replace('#include <skinning_vertex>', '#include <skinning_vertex>\nvObjY = transformed.y;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-varying float vPart; varying float vObjY;
-uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
+varying float vPart; varying float vLimb; varying float vObjY;
+uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec4 uHakiRip; uniform vec3 uHakiCol; uniform vec3 uHakiSheen;
 uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead; uniform float uNear;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
 float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart) * step(vPart, 4.5), pHead = step(4.5, vPart);
 if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5 || length(vViewPosition) < uNear) discard;
-float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
+// (Armament: coated up to the limb's reach uHaki, a hard edge, the ripple riding it)
+float li = floor(vLimb + 0.001), rc = (vLimb - li) / 0.98;
+vec4 lsel = vec4(step(0.5, li) * step(li, 1.5), step(1.5, li) * step(li, 2.5), step(2.5, li) * step(li, 3.5), step(3.5, li));
+float hcov = dot(lsel, uHaki);
+float hakiK = hcov > 0.001 ? 1.0 - smoothstep(hcov - 0.012, hcov + 0.012, rc) : 0.0;
+float hakiF = hcov > 0.001 ? dot(lsel, uHakiRip) * (1.0 - smoothstep(0.0, 0.07, abs(rc - hcov))) : 0.0;
 float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
 diffuseColor.rgb = mix(diffuseColor.rgb, uLegFxCol, legK * 0.8);
@@ -101,7 +112,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`)
   // the anime rim light: a bright edge along the top and sides of the figure
   float rimUp = smoothstep(-0.25, 0.55, normalize(normal).y);
   totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.96, 0.9) * smoothstep(0.55, 0.9, rim) * rimUp * 0.55 * (1.0 - hakiK);
-  totalEmissiveRadiance += vec3(0.42, 0.28, 0.72) * pow(rim, 2.2) * hakiK * 0.9;
+  // Armament: lacquered black iron — a hard glint where the key light catches it
+  // (two cel bands, no soft gradient), a crisp rim in the character's own sheen,
+  // and a bright ripple running up the limb at the coat's edge as it hardens
+  vec3 hn = normalize(normal);
+  float hs = max(dot(hn, normalize(normalize(vec3(-0.45, 0.62, 0.64)) + normalize(vViewPosition))), 0.0);
+  float glint = smoothstep(0.935, 0.95, hs) + 0.14 * smoothstep(0.86, 0.88, hs);
+  // (not on a surface right against the eye — your own shoulder, in first person: there it would be all rim)
+  float hrim = smoothstep(0.74, 0.8, rim) * (0.4 + 0.6 * rimUp) * smoothstep(0.35, 0.9, length(vViewPosition));
+  totalEmissiveRadiance += (mix(uHakiSheen, vec3(1.0), 0.35) * hrim * 0.5 + uHakiSheen * glint * 0.25 + vec3(glint * 0.55)) * hakiK;
+  totalEmissiveRadiance += mix(uHakiSheen, vec3(1.0), 0.4) * hakiF * 1.7;
   totalEmissiveRadiance += vec3(0.5, 0.75, 1.0) * pow(rim, 1.6) * uFreeze * 0.35;
   totalEmissiveRadiance += uLegFxCol * legK * 0.85 + uFlashCol * uFlash * 0.8;
 }`);
@@ -133,6 +153,39 @@ export function outlineMaterial(width = 0.0105, color = INK, opts = {}) {
 }`);
   };
   m.customProgramCacheKey = () => 'op-char-outline-2';
+  return m;
+}
+
+/**
+ * Observation Haki's sense of a will (one per sensed character, all sharing
+ * one shader): the body drawn again over everything — through walls, round
+ * corners — as a glow round its edge in the senser's tint (`uCol`), `uK`
+ * strong (it swells as they wind up a blow). Additive, no depth: it never
+ * hides anything, it only shows where they are.
+ */
+export function senseMaterial() {
+  const u = { uCol: { value: new THREE.Color(0xd9b8ff) }, uK: { value: 0 } };
+  const m = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  m.userData.u = u;
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, u);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vSenseN;\nvarying vec3 vSenseV;')
+      .replace('#include <project_vertex>', `#include <project_vertex>
+#ifdef USE_SKINNING
+  vSenseN = normalize( transformedNormal );
+#else
+  vSenseN = normalize( normalMatrix * normal );
+#endif
+  vSenseV = -mvPosition.xyz;`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vSenseN;\nvarying vec3 vSenseV;\nuniform vec3 uCol;\nuniform float uK;')
+      .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `float sRim = 1.0 - abs( dot( normalize( vSenseN ), normalize( vSenseV ) ) );
+  // (a faint fill, and a hard bright edge: the shape of them, not a blob)
+  float sA = ( 0.16 + 0.6 * smoothstep( 0.45, 0.62, sRim ) + 0.55 * smoothstep( 0.78, 0.9, sRim ) ) * uK;
+  vec4 diffuseColor = vec4( uCol * 1.7, sA );`);
+  };
+  m.customProgramCacheKey = () => 'op-char-sense-1';
   return m;
 }
 

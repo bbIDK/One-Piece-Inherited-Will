@@ -442,9 +442,10 @@ function bolt(v, x0, y0, z0, x1, y1, z1, hw, amp, seed, c, alpha, branches, c2 =
   perp(Cc, A, B);
   const n = Math.max(5, Math.min(40, Math.ceil(L * 2.4)));
   const R = v.ribbons;
-  // black lightning (Conqueror's Haki) can't add light: it's inked on, crackling red down its middle
+  // black lightning (Conqueror's Haki) can't add light: it's inked on, crackling
+  // down its middle in the king's own colour (given as c2; red if none is)
   const black = luma(c) < 0.05;
-  if (black) c2 = HAKI_RED;
+  if (black && c2 === WHITE) c2 = HAKI_RED;
   const w = black ? 0 : 1;
   R.start(RK.GLOW, RM.FACE, c, alpha, c2, w);
   let bi = 0;
@@ -508,7 +509,8 @@ SHAPES.bolt = {
     const seed = s.seed + Math.floor(v.time * 30);
     const L = Math.hypot(X1 - X0, Y1 - Y0, Z1 - Z0);
     const amp = Math.min(0.35 + (s.amp || 0), L * 0.2) * (L > 4 ? 1.6 : 1);
-    bolt(v, X0, Y0, Z0, X1, Y1, Z1, Math.max(0.05, wd * 2.4), amp, seed, c, fade, s.branches === 0 ? 0 : Math.min(3, s.branches || 2));
+    // (`core`: what crackles down a black bolt's middle — a Conqueror's own colour)
+    bolt(v, X0, Y0, Z0, X1, Y1, Z1, Math.max(0.05, wd * 2.4), amp, seed, c, fade, s.branches === 0 ? 0 : Math.min(3, s.branches || 2), s.core ? col(s.core) : WHITE);
     // a flash where it strikes the ground (or the target): small and brief
     v.sprites.put(SK.GLOW, X1, Y1, Z1, Math.min(0.8, Math.max(0.35, wd * 6)), c, fade * 0.7, WHITE, 1, 0, s.seed, k);
     if (z1 < 0.5 && L > 3) {
@@ -517,6 +519,42 @@ SHAPES.bolt = {
     }
   },
 };
+
+/**
+ * Two Conqueror's clashing (combatfx.js clashFx): from each king a strand of
+ * black lightning cored in their colour drives at the other's, meeting in a
+ * crackle that re-forks every few frames, and a rift of black lightning
+ * splits the sky above the clash — up out of sight, its middle flickering
+ * between the two colours. Holds while the clash lasts, then tears away.
+ */
+SHAPES.clash = {
+  draw(v, s, k, a) {
+    const fade = (k < 0.8 ? Math.min(1, k * 12) : (1 - k) / 0.2) * a;
+    if (fade < 0.01) return;
+    const w = v.world, G = v.groundOf(s);
+    const X = v.lx(s.x), Z = v.lz(s.y), Y = G + 1.15;
+    const cA = col(s.colA || '#ff1a3c'), cB = col(s.colB || '#a64dff'), K = INK_BLACK;
+    const t = Math.floor(v.time * 22);
+    const AX = v.lx(s.x + w.dx(s.x, s.ax)), AZ = v.lz(s.ay), BX = v.lx(s.x + w.dx(s.x, s.bx)), BZ = v.lz(s.by);
+    for (let i = 0; i < 3; i++) {
+      const j = (hash(s.seed + t * 3 + i) - 0.5) * 0.6, jy = (hash(s.seed + t * 5 + i) - 0.5) * 0.5;
+      bolt(v, AX, Y - 0.1, AZ, X + j, Y + jy, Z - j, 0.14 - i * 0.03, 0.5, s.seed + t * 7 + i, K, fade, 1, cA);
+      bolt(v, BX, Y - 0.1, BZ, X - j, Y - jy, Z + j, 0.14 - i * 0.03, 0.5, s.seed + t * 11 + i, K, fade, 1, cB);
+    }
+    // the rift splitting the sky
+    const H = 30 * easeOut(Math.min(1, k * 4));
+    const sway = (hash(s.seed + t) - 0.5) * 2.4;
+    bolt(v, X, Y, Z, X + sway, Y + H, Z - sway * 0.5, 0.85, 3, s.seed + t * 13, K, fade, 3, t % 2 ? cA : cB);
+    bolt(v, X, Y + 0.5, Z, X - sway * 0.7, Y + H * 0.8, Z + sway, 0.45, 2.2, s.seed + t * 17, K, fade * 0.9, 2, t % 2 ? cB : cA);
+    bolt(v, X, Y + 1, Z, X + sway * 1.4, Y + H * 0.55, Z + sway * 0.8, 0.3, 1.6, s.seed + t * 19, K, fade * 0.85, 2, cA);
+    // where the two meet: each colour's glow, under the ink
+    v.sprites.put(SK.GLOW, X, Y, Z, 2.6, cA, fade * 0.5, WHITE, 1, 0, s.seed, k);
+    v.sprites.put(SK.GLOW, X, Y + 0.1, Z, 2.0, cB, fade * 0.5, WHITE, 1, 0, s.seed + 1, k);
+    const patch = v.patch(s, s.x, s.y, 3);
+    v.decal(patch, s.x, s.y, 2.6, 0, SF.GLOW, t % 2 ? cA : cB, fade * 0.35, WHITE, 0.6, k, s.seed, 0, 0, 0, 4);
+  },
+};
+const INK_BLACK = col('#000000');
 
 /** Strings from a point to another (Parasite, Overheat, puppet strings): thin, taut, catching the light. */
 SHAPES.strings = {

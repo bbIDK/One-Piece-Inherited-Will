@@ -1387,7 +1387,7 @@ npcs.push(
   {
     id: 'p2_hancock', name: 'Boa Hancock', title: '"Pirate Empress" — Warlord of the Sea', island: 'amazon_lily', at: { town: 'kuja_village', building: 'Kuja Castle' }, faction: 'pirate', level: 64, boss: true, hpMul: 1.7, ai: 'guard',
     look: { hair: 'long', hairColor: '#212121', top: '#c62828', bottom: '#fafafa', coat: '#8e0000', skin: '#fdeee4' },
-    style: 'black_leg', moves: ['p2_pistol_kiss', 'p2_slave_arrow', 'p2_mero_mellow', 'p2_perfume_femur'], haki: { armament: 60, observation: 55, conqueror: 30 }, skill: 0.7,
+    style: 'black_leg', moves: ['p2_pistol_kiss', 'p2_slave_arrow', 'p2_mero_mellow', 'p2_perfume_femur'], haki: { armament: 60, observation: 55, conqueror: 30 }, hakiSig: { conqueror: '#c24dff' }, skill: 0.7,
     bounty: 80000000, infamy: true, breakthrough: 5, lethal: false, alert: 'Kneel. Even if I insult you, the world will forgive me — because I am beautiful.',
     respawn: true, recover: 12, recoverLine: '"...Enough. I have seen what I needed to see."',
     marker: (c, g) => (S(g, 'p2_amazon_lily') === 'secret' ? '!' : null),

@@ -295,7 +295,7 @@ const npcs = [
   {
     id: 'yamato', name: 'Yamato', title: '"Oni Princess" — Kaido\'s child, who calls himself Kozuki Oden', island: 'wano', at: { spot: 'oden_castle', ox: 4 }, faction: 'neutral',
     look: { hair: 'long', hairColor: '#eceff1', top: '#fafafa', bottom: '#ef6c00', hat: 'horns', hatColor: '#e53935', skin: '#f1c9a0', eyeColor: '#ff8f00' }, level: 92,
-    style: 'brawler', weapon: 'staff', moves: ['nw2_narikabura', 'nw2_namuji_hyoga', 'seiryu_raimei'], haki: { armament: 80, observation: 75, conqueror: 60 },
+    style: 'brawler', weapon: 'staff', moves: ['nw2_narikabura', 'nw2_namuji_hyoga', 'seiryu_raimei'], haki: { armament: 80, observation: 75, conqueror: 60 }, hakiSig: { conqueror: '#eef4ff' },
     recruit: {
       role: 'fighter', requires: (c) => beat(c, 'kaido'),
       pitch: `"I've read Oden's journal a thousand times. He sailed with Whitebeard and Roger to the end of the sea! Now that my father is beaten, nothing chains me here. I am Kozuki Oden — and Oden would go with you!"`,
@@ -341,7 +341,7 @@ const npcs = [
     id: 'kaido', name: 'Kaido of the Beasts', title: 'Emperor of the Sea — "the Strongest Creature in the World"', island: 'onigashima', at: { spot: 'skull_roof' },
     hostile: true, boss: true, hpMul: 3.2, level: 115, faction: 'pirate', style: 'brawler', weapon: 'staff', fruit: 'uo_seiryu', fruitMastery: 100,
     moves: ['seiryu_bolo', 'seiryu_kaifu', 'seiryu_raimei', 'nw2_ragnaraku', 'nw2_hakai', 'nw2_tatsumaki', 'nw2_kaen_daiko'],
-    haki: { armament: 98, observation: 90, conqueror: 95 }, look: L.kaido, bulk: 1.9, scale: 1.8,
+    haki: { armament: 98, observation: 90, conqueror: 95 }, hakiSig: { conqueror: '#2e8bff' }, look: L.kaido, bulk: 1.9, scale: 1.8,
     bounty: 4611100000, infamy: true, breakthrough: 8, skill: 0.75, leash: 26,
     alert: 'Wororororo! You climbed all the way up here to die? Good. Entertain me!', barks: ['Wororo...!', 'Power is everything!', 'Is that all?!', 'Don\'t bore me!'],
     phases: [
@@ -614,7 +614,7 @@ const npcs = [
   {
     id: 'gaban_elbaf', name: 'Scopper Gaban', title: '"Left Hand of the Pirate King"', island: 'elbaf', at: { town: 'western_village', building: "Gaban's Lodge" }, trainer: 'nw2_gaban',
     look: { hair: 'long', hairColor: '#424242', top: '#fafafa', bottom: '#212121', skin: '#e0ac7e', hat: 'bandana', hatColor: '#6d4c41' }, level: 105, style: 'elbaf', weapon: 'axe',
-    haki: { armament: 90, observation: 85, conqueror: 85 },
+    haki: { armament: 90, observation: 85, conqueror: 85 }, hakiSig: { conqueror: '#ffc21a' },
     marker: (c, g) => (!g.quests.state('burn_scar') && !c.flags.rubbing_road_4 && count(c, 'poneglyph_rubbing') >= 1 ? '!' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: {
@@ -660,7 +660,7 @@ const npcs = [
     id: 'loki', name: 'Loki', title: '"The Accursed Prince" of Elbaph', island: 'elbaf', at: { spot: 'loki_chains' }, faction: 'neutral',
     look: { hair: 'long', hairColor: '#e91e63', top: '#4e342e', bottom: '#3e2723', skin: '#e0c2a2', sharpTeeth: true, grin: true, bulk: 1.5 }, scale: 3, level: 108,
     boss: true, respawn: true, hpMul: 2.4, style: 'elbaf', weapon: 'axe', moves: ['nw2_ragna_arrow', 'nw2_thorheim', 'nw2_niflheim', 'elbaf_hakoku'],
-    haki: { armament: 90, observation: 80, conqueror: 90 }, bounty: 2600000000, breakthrough: 7, lethal: false, skill: 0.65, // a friendly duel: no infamy
+    haki: { armament: 90, observation: 80, conqueror: 90 }, hakiSig: { conqueror: '#17e07c' }, bounty: 2600000000, breakthrough: 7, lethal: false, skill: 0.65, // a friendly duel: no infamy
     duel: true, recover: 4, recoverLine: '"Hehehe... not bad, little one. Come here — let\'s talk."',
     alert: 'Show me you\'re worth following, little warrior!', barks: ['Hahahaha!', 'The Sun God will end this world!'],
     marker: (c, g) => (g.quests.stageId('accursed_prince') === 'free' && has(c, 'loki_chain_key') ? '?' : g.quests.stageId('accursed_prince') === 'report' ? '?' : null),
@@ -842,7 +842,7 @@ const npcs = [
     id: 'teach_laugh_tale', name: '"Blackbeard" Marshall D. Teach', title: 'The last rival', island: 'laugh_tale', at: { spot: 'final_duel' },
     hostile: true, boss: true, hpMul: 3.6, level: 120, faction: 'pirate', style: 'brawler', fruit: 'yami', fruitMastery: 100,
     moves: ['yami_kurouzu', 'yami_blackhole', 'yami_nullify', 'yami_liberation', 'gura_punch', 'gura_kaishin', 'gura_wave', 'gura_tsunami'],
-    haki: { armament: 92, observation: 85, conqueror: 60 }, look: L.teach, bulk: 1.7, bounty: 3996000000, infamy: true, breakthrough: 10, skill: 0.78, leash: 30,
+    haki: { armament: 92, observation: 85, conqueror: 60 }, hakiSig: { conqueror: '#7a3cff' }, look: L.teach, bulk: 1.7, bounty: 3996000000, infamy: true, breakthrough: 10, skill: 0.78, leash: 30,
     alert: 'Zehahahaha! So YOU got here first?! Hand it over — the One Piece is MINE!', barks: ['Zehahahaha!', 'Fate is on MY side!', 'The darkness swallows even the sun!'],
     phases: [{ at: 0.4, run: (a, g) => { g.ui?.banner?.('BLACKBEARD', 'Darkness and tremors', '"I won\'t lose — not here! Not NOW!"', 3); a.addBuff({ id: 'teach_rage', name: 'Desperation', dur: 60, mods: { damage: 1.45, atkSpeed: 1.2 } }); } }],
     when: (c, g) => g.quests.stageId('final_rival') === 'duel' && !beat(c, 'teach_laugh_tale'),

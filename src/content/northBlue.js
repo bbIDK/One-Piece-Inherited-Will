@@ -189,7 +189,7 @@ const npcs = [
   {
     id: 'nb_doflamingo', name: 'Donquixote Doflamingo', title: '"Heavenly Yaksha", captain of the Donquixote Pirates', island: 'spider_miles', at: { town: 'dq_hideout', building: 'Donquixote Family Hideout' },
     look: DOFFY_LOOK, scale: 1.35, level: 80, fixedPower: 99999, faction: 'neutral', ai: 'idle',
-    fruit: 'ito', fruitMastery: 90, moves: ['ito_overheat', 'ito_parasite', 'ito_fivecolor'], haki: { armament: 60, observation: 60, conqueror: 40 },
+    fruit: 'ito', fruitMastery: 90, moves: ['ito_overheat', 'ito_parasite', 'ito_fivecolor'], haki: { armament: 60, observation: 60, conqueror: 40 }, hakiSig: { conqueror: '#ff3fd2' },
     dialogue: (ctx) => ({
       start: 'a',
       nodes: {
@@ -857,7 +857,7 @@ const npcs = [
   {
     id: 'nb_doflamingo_minion', name: 'Donquixote Doflamingo', title: '"Heavenly Yaksha"', island: 'minion_island', at: { spot: 'mansion_yard' },
     look: DOFFY_LOOK, scale: 1.35, level: 80, fixedPower: 99999, faction: 'neutral', ai: 'idle',
-    fruit: 'ito', fruitMastery: 90, moves: ['ito_overheat', 'ito_parasite', 'ito_fivecolor', 'ito_birdcage'], haki: { armament: 60, observation: 60, conqueror: 40 },
+    fruit: 'ito', fruitMastery: 90, moves: ['ito_overheat', 'ito_parasite', 'ito_fivecolor', 'ito_birdcage'], haki: { armament: 60, observation: 60, conqueror: 40 }, hakiSig: { conqueror: '#ff3fd2' },
     when: (c, g) => ['birdcage', 'farewell'].includes(stageOf(g, 'nb_ope_ope')),
     dialogue: () => ({ start: 'a', nodes: { a: { text: `"Fuffuffu... you again. My little brother took something from me — somewhere on this island. Nobody leaves until I find it." (He points up. Thin, glittering strings cage the whole sky.) "Birdcage. Go on. Run."` } } }),
   },

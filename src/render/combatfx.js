@@ -8,6 +8,7 @@
 // (see game/fx.js) or draws in the actor's own space; no gameplay state.
 import { drawCharacter, rgba } from './character.js';
 import { actionClip, weaponFor, poseExtras } from './anims.js';
+import { sigOf, senseRange } from '../game/haki.js';
 
 const TAU = Math.PI * 2;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -96,10 +97,10 @@ function sparkle(fx, x, y, z, n, cols) {
 function smoke(fx, x, y, z, n, cols, o = {}) {
   fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU, speed: o.speed ?? 1.6, z, vz: o.vz ?? 0.8, g: -0.4, life: o.life ?? 0.9, size: o.size ?? 0.3, grow: o.grow ?? 0.5, color: cols, kind: 'smoke', drag: 2 });
 }
-function miniBolts(fx, x, y, z, n, r, col) {
+function miniBolts(fx, x, y, z, n, r, col, core) {
   for (let i = 0; i < n; i++) {
     const a = rnd(0, TAU);
-    fx.bolt(x, y, x + Math.cos(a) * r * rnd(0.6, 1), y + Math.sin(a) * r * 0.7 * rnd(0.6, 1), col, 0.14, 0.035, { z0: z, z1: z + rnd(-0.35, 0.35), branches: 0, amp: -0.2 });
+    fx.bolt(x, y, x + Math.cos(a) * r * rnd(0.6, 1), y + Math.sin(a) * r * 0.7 * rnd(0.6, 1), col, 0.14, 0.035, { z0: z, z1: z + rnd(-0.35, 0.35), branches: 0, amp: -0.2, core });
   }
 }
 function vibration(fx, x, y, z, R, col, n = 3) {
@@ -164,11 +165,19 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
       sparkle(fx, cx, cy, z, 5, ['#ffd740', '#fff59d', '#ffffff']);
     }
     if (att && att.conquerorInfused) {
-      miniBolts(fx, cx, cy, z, 3, 0.9, '#d50000');
-      miniBolts(fx, cx, cy, z, 2, 0.8, '#000000');
+      // (Infusion: black lightning in the king's colour, leaping from the fist to the body before it's touched)
+      const kc = sigOf(att).conqueror;
+      const as = (att.look && att.look.scale) || 1;
+      if (!h.sprite && !h.isProj) fx.bolt(att.x, att.y, cx, cy, '#000000', 0.16, 0.06, { z0: 0.95 * as, z1: z, branches: 1, core: kc });
+      miniBolts(fx, cx, cy, z, 3, 0.9, '#000000', kc);
+      miniBolts(fx, cx, cy, z, 2, 0.7, kc);
     } else if (att && att.armament && elem === 'physical') {
-      fx.ring(cx, cy, 0.08, 0.5 + 0.3 * w, '#7c4dff', 0.2, 0.06, { z, flat: 1, noCore: true, add: true });
+      const sh = sigOf(att).armament;
+      fx.ring(cx, cy, 0.08, 0.5 + 0.3 * w, sh, 0.2, 0.06, { z, flat: 1, noCore: true, add: true });
+      sparks(fx, cx, cy, z, ang, 3, ['#0b0a10', '#1a1622', sh], { speed: 6, life: 0.2, size: 0.07 });
     }
+    // Ryou: the Haki pushed on through them — a dark ripple bursting out of their back
+    if (o.ryou) ryouFx(fx, att, tgt, ang, z, w);
     // a manga sound word on the big ones (only in fights the player is in, or
     // on bosses; a counter has its own, see counterFx)
     if ((w >= 0.7 || crit || h.impactFrame || down) && (o.playerInvolved || tgt.boss) && !counter) {
@@ -1460,8 +1469,8 @@ sig('hito_heavy hito_guard hito_monster neko_hybrid seiryu_form mane_disguise do
 // ---- Haki
 sig('haki_emission', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); miniBolts(fx, px, py, 0.8, 3, 0.9, '#7c4dff'); fx.ring(px, py, 0.1, 0.8, '#212121', 0.25, 0.1, { z: 0.8, flat: 1 }); } });
 sig('haki_ryuo', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1.1); for (let i = 0; i < 3; i++) fx.ring(px, py, 0.05, 0.6 + i * 0.3, '#7c4dff', 0.3, 0.06, { z: 0.8, flat: 0.9, wobble: 0.2, delay: i * 0.05, add: true }); } });
-sig('haki_infusion', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); miniBolts(fx, actor.x, actor.y, 1, 6, 1.6, '#d50000'); miniBolts(fx, actor.x, actor.y, 1, 4, 1.6, '#000000'); } });
-sig('haki_futuresight', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); fx.add('flare', { x: actor.x, y: actor.y, z: 1.5, size: 0.9, color: '#ce93d8', life: 0.4 }); } });
+sig('haki_infusion', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); const kc = sigOf(actor).conqueror; miniBolts(fx, actor.x, actor.y, 1, 6, 1.6, kc); miniBolts(fx, actor.x, actor.y, 1, 5, 1.6, '#000000', kc); fx.ring(actor.x, actor.y, 0.2, 2.4, kc, 0.4, 0.08, { add: true }); } });
+sig('haki_futuresight', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); const oc = sigOf(actor).observation; fx.add('flare', { x: actor.x, y: actor.y, z: 1.6, size: 0.9, color: oc, life: 0.4 }); fx.ring(actor.x, actor.y, 0.3, 6, oc, 0.6, 0.05, { flat: 0.5, add: true }); } });
 
 // ------------------------------------------------------------------ zones, explosions, trails, conqueror
 /** Persistent visuals for an area technique (and its opening burst). */
@@ -1523,21 +1532,153 @@ export function projTrailFx(fx, p, t) {
   fx.particle({ x: p.x, y: p.y + 0.5, z: 1.0, vx: (Math.random() - 0.5), vy: (Math.random() - 0.5), vz: 0.4, g: 0, life: t.life || 0.35, size: t.size || 0.18, color: col, kind: t.kind || 'fire', grow: t.grow ?? -0.2 });
 }
 
-/** Conqueror's Haki: black-and-red lightning, shockwaves, an impact frame. */
+/**
+ * Conqueror's Haki, in the king's own colour (game/haki.js): black lightning
+ * — black-cored, its glow theirs — arcing out across the ground and through
+ * the air, a black shockwave and a ring of their colour racing out, the air
+ * round them bending, the ground cracking under them, a heavy shake, focus
+ * lines and the manga's impact frame.
+ */
 export function conquerorFx(fx, actor, c) {
-  const R = c.range;
-  fx.ring(actor.x, actor.y, 0.5, R, '#1a1a1a', 0.7, 0.45);
-  fx.ring(actor.x, actor.y, 0.3, R * 0.8, '#d50000', 0.55, 0.16, { add: true });
+  const R = c.range, col = sigOf(actor).conqueror;
+  const s = (actor.look && actor.look.scale) || 1;
+  fx.ring(actor.x, actor.y, 0.5, R, '#0a090d', 0.7, 0.45);
+  fx.ring(actor.x, actor.y, 0.3, R * 0.85, col, 0.55, 0.14, { add: true });
   fx.ring(actor.x, actor.y, 0.2, R * 1.1, '#000000', 0.9, 0.08, { wobble: 0.08 });
-  for (let k = 0; k < 10; k++) {
-    const a = Math.random() * TAU;
-    fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * R * rnd(0.5, 0.8), actor.y + Math.sin(a) * R * rnd(0.35, 0.55), k % 2 ? '#d50000' : '#000000', 0.4, 0.09, { z0: 0.9, z1: rnd(0, 1.6), branches: 2 });
+  // (the air round the body: a black ring and one of their colour bursting off it)
+  fx.ring(actor.x, actor.y, 0.3, 2.4 * s, '#000000', 0.32, 0.14, { z: 1.0 * s, flat: 1 });
+  fx.ring(actor.x, actor.y, 0.2, 3.2 * s, col, 0.4, 0.08, { z: 1.0 * s, flat: 1, add: true, delay: 0.04 });
+  // black lightning over the ground and up through the air
+  for (let k = 0; k < 14; k++) {
+    const a = (k / 14) * TAU + rnd(-0.2, 0.2), r = R * rnd(0.45, 0.9);
+    fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * r, actor.y + Math.sin(a) * r * 0.75, '#000000', rnd(0.32, 0.5), 0.09, { z0: rnd(0.6, 1.3) * s, z1: k % 3 ? rnd(0, 0.3) : rnd(1, 2.6), branches: 2, core: col, delay: rnd(0, 0.12) });
   }
-  fx.add('pillar', { x: actor.x, y: actor.y, r: 0.6, h: 5, color: '#000000', core: '#d50000', kind: 'dark', life: 0.5 });
-  dust(fx, actor.x, actor.y, 14, { speed: R * 0.8, size: 0.3 });
-  fx.impactFrame(0.12);
-  fx.shake(0.7);
-  fx.focus(actor.x, actor.y, 0.3);
+  for (let k = 0; k < 4; k++) {
+    const a = rnd(0, TAU);
+    fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * R * 0.4, actor.y + Math.sin(a) * R * 0.3, col, 0.22, 0.04, { z0: 1.1 * s, z1: rnd(0.4, 2), branches: 1, delay: rnd(0.05, 0.2) });
+  }
+  fx.add('pillar', { x: actor.x, y: actor.y, r: 0.6, h: 5, color: '#000000', core: col, kind: 'dark', life: 0.5 });
+  fx.crack(actor.x, actor.y, Math.min(4.5, R * 0.4), 3);
+  dust(fx, actor.x, actor.y, 16, { speed: R * 0.8, size: 0.3 });
+  calloutOver(fx, actor, 1.8 * s, 'DOOON!!', col, 0.7);
+  fx.impactFrame(0.14);
+  fx.shake(0.85);
+  fx.focus(actor.x, actor.y, 0.32);
+}
+
+// ------------------------------------------------------------------ Haki
+/**
+ * Haki switched on. Armament: a black ring snapping round the fists, black
+ * flecks flying up the arms as the coat spreads (the coat itself is the
+ * body's: render3d/chars/haki.js), and a glint in its sheen at the fist as
+ * it sets hard. Observation: a sonar pulse — a thin ring of its tint racing
+ * out over the ground as far as it senses, its echo, a glint at the eyes.
+ */
+export function hakiOnFx(fx, a, type) {
+  const sig = sigOf(a), s = (a.look && a.look.scale) || 1;
+  const f = a.facing || 0;
+  if (type === 'armament') {
+    const hx = a.x + Math.cos(f) * 0.3 * s, hy = a.y + Math.sin(f) * 0.2 * s;
+    fx.ring(hx, hy, 0.06, 0.6 * s, '#0b0a10', 0.26, 0.08, { z: 0.95 * s, flat: 1 });
+    fx.burst(a.x, a.y, 10, { color: ['#0b0a10', '#1a1622', sig.armament], speed: 1.8, z: 0.75 * s, vz: 2.4, g: 0, life: 0.3, kind: 'line', size: 0.045, drag: 3 });
+    fx.add('flare', { x: hx, y: hy, z: 0.95 * s, size: 0.55 * s, color: sig.armament, life: 0.2, delay: 0.27 });
+    return;
+  }
+  const R = senseRange(a.hakiLevel ? a.hakiLevel('observation') : 0);
+  fx.ring(a.x, a.y, 0.5, R, sig.observation, 0.7, 0.13, { flat: 0.5, add: true });
+  fx.ring(a.x, a.y, 0.3, R * 0.6, sig.observation, 0.75, 0.07, { flat: 0.5, add: true, delay: 0.16 });
+  fx.add('flare', { x: a.x, y: a.y, z: 1.62 * s, size: 0.7 * s, color: sig.observation, life: 0.32 });
+}
+
+/** Haki given out (the spirit bar empty): the coat flaking away, the senses dulling, "SPENT". */
+export function hakiSpentFx(fx, a, type) {
+  const sig = sigOf(a), s = (a.look && a.look.scale) || 1;
+  const cols = type === 'armament' ? ['#0b0a10', '#1a1622', '#2b2733'] : [sig.observation, '#eceff1'];
+  fx.burst(a.x, a.y, 14, { color: cols, speed: 1.4, z: 0.9 * s, vz: 0.4, g: 3.5, life: 0.65, kind: 'shard', size: 0.05, drag: 2 });
+  calloutOver(fx, a, 1.45 * s, 'HAKI SPENT', '#b0bec5', 0.4);
+}
+
+/**
+ * Observation's foresight: the blow heard before it came and slipped — an
+ * afterimage in your tint left standing where it lands, a trail of them as
+ * you step aside, a glint, a beat of slow motion.
+ */
+export function foresightFx(fx, a, att) {
+  const sig = sigOf(a), s = (a.look && a.look.scale) || 1;
+  afterimage(fx, a, { tint: sig.observation, life: 0.5, alpha: 0.55, add: true });
+  a._ghostT = 0.18; a._ghostTint = sig.observation; a._ghostAdd = true;
+  fx.add('flare', { x: a.x, y: a.y, z: 1.55 * s, size: 0.75, color: sig.observation, life: 0.26 });
+  fx.ring(a.x, a.y, 0.2, 1.2 * s, sig.observation, 0.3, 0.05, { add: true });
+  calloutOver(fx, a, 1.45 * s, 'FORESIGHT', sig.observation, 0.46);
+  if (a.isPlayer || (att && att.isPlayer)) { fx.slowmo(0.3, 0.38); fx.focus(a.x, a.y, 0.16); }
+}
+
+/** A foe's will flagged by Observation as they start a blow at you: a glint of your tint on them. */
+export function sensedFx(fx, att, p) {
+  const s = (att.look && att.look.scale) || 1;
+  fx.add('flare', { x: att.x, y: att.y, z: 1.75 * s, size: 0.42, color: sigOf(p).observation, life: 0.22, follow: att });
+}
+
+/**
+ * Future Sight: a vision of the blow before it lands — the foe's shadow
+ * lunging in ahead of them, in your tint, and a pale star where it will strike.
+ */
+export function visionFx(fx, att, p) {
+  const w = fx.game.world, col = sigOf(p).observation;
+  const dx = w ? w.dx(att.x, p.x) : p.x - att.x, dy = p.y - att.y, d = Math.hypot(dx, dy) || 1;
+  const k = Math.max(0, Math.min(1.4, d - 0.9)) / d;
+  const x = w ? w.wx(att.x + dx * k) : att.x + dx * k, y = att.y + dy * k;
+  afterimage(fx, att, { x, y, tint: col, life: 0.34, alpha: 0.42, add: true });
+  const ps = (p.look && p.look.scale) || 1, ang = Math.atan2(dy, dx);
+  fx.add('impact', { x: p.x - Math.cos(ang) * 0.25, y: p.y - Math.sin(ang) * 0.16, z: 0.85 * ps, angle: ang, size: 0.42, color: col, core: '#ffffff', life: 0.22, spikes: 8, lines: 3 });
+}
+
+/**
+ * Ryou (emission): a master's Armament pushed on into what it hits — a black
+ * shockwave bursting out of the far side of them along the blow, its sheen
+ * round the rim, the air there rippling.
+ */
+function ryouFx(fx, att, tgt, ang, z, w) {
+  const sh = sigOf(att).armament;
+  const s = (tgt.look && tgt.look.scale) || 1;
+  const bx = tgt.x + Math.cos(ang) * 0.35 * s, by = tgt.y + Math.sin(ang) * 0.25 * s;
+  fx.ring(bx, by, 0.1, 1.0 + 0.5 * w, '#0b0a10', 0.3, 0.12, { z, flat: 1 });
+  fx.ring(bx, by, 0.1, 1.3 + 0.6 * w, sh, 0.32, 0.05, { z, flat: 1, noCore: true, add: true, delay: 0.03 });
+  vibration(fx, bx, by, z, 1.1 + 0.4 * w, sh, 2);
+  fx.burst(bx, by, 8, { angle: ang, spread: 0.9, color: ['#0b0a10', '#1a1622', sh], speed: 7, z, vz: 0.6, g: 2, life: 0.3, kind: 'line', size: 0.05, drag: 3 });
+}
+
+/**
+ * Two kings' Conqueror's colliding (abilities.js clash): where the two wills
+ * meet, black lightning cored in each one's colour crackles between them,
+ * and a rift of it splits the sky above (the 3D view's 'clash'), a band of
+ * dark cloud across the heavens; the ground cracks, both are thrown back,
+ * the world slows.
+ */
+export function clashFx(fx, a, b) {
+  const w = fx.game.world;
+  const dx = w ? w.dx(a.x, b.x) : b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+  const mx = w ? w.wx(a.x + dx / 2) : a.x + dx / 2, my = a.y + dy / 2;
+  const ca = sigOf(a).conqueror, cb = sigOf(b).conqueror;
+  fx.add('clash', { x: mx, y: my, ax: a.x, ay: a.y, bx: b.x, by: b.y, colA: ca, colB: cb, life: 1.8 });
+  // the sky splitting: a band of dark cloud across it, over the clash
+  const px = -dy / d, py = dx / d;
+  for (let i = -3; i <= 3; i++) fx.add('cloud', { x: w ? w.wx(mx + px * i * 6) : mx + px * i * 6, y: my + py * i * 6, r: 7.5, z: 10 + Math.abs(i) * 0.8, life: 2.6, color: '#0d0b12' });
+  for (const [k, c] of [[a, ca], [b, cb]]) {
+    fx.ring(k.x, k.y, 0.3, 6, c, 0.6, 0.12, { add: true });
+    fx.ring(k.x, k.y, 0.4, 8, '#0a090d', 0.7, 0.3);
+  }
+  for (let i = 0; i < 6; i++) {
+    const t = rnd(-0.6, 0.6);
+    fx.bolt(mx, my, w ? w.wx(mx + px * t * 6) : mx + px * t * 6, my + py * t * 6, '#000000', 0.5, 0.08, { z0: 1.2, z1: rnd(0, 2.5), branches: 2, core: i % 2 ? ca : cb, delay: rnd(0, 0.5) });
+  }
+  fx.crack(mx, my, 3.5, 3);
+  dust(fx, mx, my, 18, { speed: 6, size: 0.3 });
+  calloutOver(fx, a.isPlayer ? b : a, 2.2, 'GOGOGOGO!!', ca, 0.75);
+  fx.impactFrame(0.2);
+  fx.shake(1.1);
+  fx.slowmo(0.7, 0.3);
+  fx.focus(mx, my, 0.5);
 }
 
 // ------------------------------------------------------------------ afterimages & motion
@@ -1577,6 +1718,15 @@ export function motion(fx, a, dt) {
   } else if (!(a._ghostT > 0)) { a._ghostTint = null; a._ghostAdd = false; }
   // (no dust kicked up behind a runner's feet: puffs dropped every few
   // strides lay a trail of flat ovals behind them, like footprints)
+  // Conqueror's Infusion: black lightning in the king's colour crackling round the body while it's on
+  if (a.conquerorInfused && a.state === 'idle') {
+    a._infAcc = (a._infAcc || 0) + dt;
+    if (a._infAcc > 0.09) {
+      a._infAcc = 0;
+      const s = (a.look && a.look.scale) || 1, kc = sigOf(a).conqueror;
+      miniBolts(fx, a.x + Math.cos(a.facing || 0) * 0.25 * s, a.y + Math.sin(a.facing || 0) * 0.18 * s, rnd(0.7, 1.2) * s, 1, 0.55 * s, Math.random() < 0.6 ? '#000000' : kc, kc);
+    }
+  }
   // skid dust while being knocked back
   const kbm = Math.hypot(a.kb.x, a.kb.y);
   if (kbm > 3.5 && !a.inWater) {

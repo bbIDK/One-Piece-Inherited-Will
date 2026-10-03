@@ -268,15 +268,32 @@ export class PlayerController {
     return best;
   }
 
+  /**
+   * R / T: Armament or Observation on (the other goes off) or off. On: the
+   * coat spreading up the arms with its clank, or the sonar pulse and its
+   * ting (combatfx.js hakiOnFx; the sounds in your own voice: audio/sfx.js).
+   * With no spirit left, nothing comes — and you're told why.
+   */
   toggleHaki(p, game, type) {
     if (!p.hakiLevel(type)) return; // hidden until awakened
-    if (type === 'armament') {
-      p.armament = !p.armament;
-      if (p.armament) { p.observation = false; game.fx.burst(p.x, p.y - 0.8, 10, { color: '#212121', speed: 3, g: 0, life: 0.35, kind: 'line' }); game.audio?.sfx('haki'); }
-    } else {
-      p.observation = !p.observation;
-      if (p.observation) { p.armament = false; game.fx.ring(p.x, p.y, 0.5, 8, '#ce93d8', 0.6, 0.08); game.audio?.sfx('haki_obs'); }
+    const on = type === 'armament' ? !p.armament : !p.observation;
+    if (on && p.haki < 1) {
+      game.ui?.flashAct?.('haki');
+      game.audio?.sfx('haki_out', p);
+      game.log('No spirit left for Haki: let it rest and the bar refills.', '#b0bec5');
+      return;
     }
+    if (type === 'armament') {
+      p.armament = on;
+      if (on) p.observation = false;
+    } else {
+      p.observation = on;
+      if (on) p.armament = false;
+    }
+    if (on) {
+      game.fx.hakiOn?.(p, type);
+      game.audio?.sfx(type === 'armament' ? 'haki' : 'haki_obs', p);
+    } else game.audio?.sfx('haki_off', p, { type });
   }
 
   sail(p, dt, game) {

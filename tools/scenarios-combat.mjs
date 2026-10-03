@@ -528,3 +528,6 @@ export const scenarios = {
     },
   },
 };
+
+// (the lab, for the other combat films: scenarios-haki.mjs)
+export { installLab, boot, sheet };

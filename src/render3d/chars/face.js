@@ -144,6 +144,8 @@ const SHADES = {
 /** What the face shows this frame (same rules as the 2D heads). */
 export function expression(look, pose, P, t) {
   const st = pose && pose.state;
+  // (fainted before a king's will — Conqueror's Haki: the eyes rolled back, the jaw slack)
+  if (st === 'knocked' && pose.fainted) return { eyes: 'rolled', mouth: 'shout', brow: 'worried', small: true };
   if (st === 'knocked' || st === 'dead') return { eyes: 'ko', mouth: 'ko', brow: 'worried', small: false };
   const face = P && P.face;
   // a blow's own faces: wide-eyed and gaping when your attack is beaten aside
@@ -271,7 +273,8 @@ function drawEyes(g, look, X) {
     g.clip(E.white);
     // (the iris fills most of the eye, dark, so the eyes read from across a street)
     const ir = st.iris * (X.small ? 0.8 : 1) * 1.18;
-    const ix = -0.01, iy = 0.05 + st.drop * 0.08;
+    // (rolled back: only a sliver of the iris left under the upper lid)
+    const ix = -0.01, iy = X.eyes === 'rolled' ? E.top - 0.16 * ir : 0.05 + st.drop * 0.08;
     if (st.beady) {
       g.fillStyle = '#16100f'; g.beginPath(); g.ellipse(0, 0.05, 0.05, 0.065, 0, 0, TAU); g.fill();
     } else {

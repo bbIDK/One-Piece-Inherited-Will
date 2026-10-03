@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { BONES, B, PARENT, restOffsets, SKIRT_N, skirtWaist, RUB, RUBL } from './bones.js';
 import { getBody, releaseBody, faceGeo, headLevel } from './build.js';
 import { Rig } from './rig.js';
-import { bodyMaterial, sharedOutline, glowMaterial, SELF_SHADE, SELF_SHADE_VM } from './mats.js';
+import { bodyMaterial, sharedOutline, glowMaterial, senseMaterial, SELF_SHADE, SELF_SHADE_VM } from './mats.js';
 import { faceMaterial, releaseFace, expression } from './face.js';
 import { HeldWeapon } from './weapons.js';
 
@@ -654,10 +654,34 @@ export class CharacterModel {
   /** The body material's effect uniforms (flash, haki, legFx, freeze). */
   get fx() { return this.mat.userData.u; }
 
+  /**
+   * Sensed by Observation Haki: the body glowing through walls in `col` (the
+   * senser's tint), `k` strong; null lets it go (see mats.js senseMaterial).
+   */
+  sense(col, k = 1) {
+    const sm = this.senseMesh;
+    if (!col) { if (sm) sm.visible = false; return; }
+    if (!sm) {
+      this.senseMesh = new THREE.SkinnedMesh(this.body.geo, senseMaterial());
+      this.senseMesh.bind(this.skeleton, IDENT);
+      this.senseMesh.boundingSphere = this.mesh.boundingSphere;
+      // (after the world and the other characters: drawn over them)
+      this.senseMesh.renderOrder = 8;
+      this.group.add(this.senseMesh);
+    }
+    const m = this.senseMesh;
+    if (m.geometry !== this.body.geo) m.geometry = this.body.geo;
+    m.visible = true;
+    const u = m.material.userData.u;
+    if (this.senseCol !== col) { this.senseCol = col; u.uCol.value.set(col); }
+    u.uK.value = k;
+  }
+
   dispose() {
     releaseBody(this.body);
     releaseFace(this.faceE);
     this.mat.dispose();
+    if (this.senseMesh) this.senseMesh.material.dispose();
     if (this.bubble) { this.bubble.geometry.dispose(); this.bubble.material.dispose(); }
     this.skeleton.dispose();
     this.group.removeFromParent();
