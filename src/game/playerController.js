@@ -16,6 +16,8 @@ import { flightOf, takeOff, airStep } from './flight.js';
 // food in hand: how long it takes to get it down (seconds), and between bites
 const EAT_TIME = { food: 1.25, medicine: 0.9, fruit: 1.7 };
 const BITE = 0.36;
+// how long a skill key pressed a moment early waits for the last move to finish (seconds)
+const SKILL_BUFFER = 0.3;
 
 export class PlayerController {
   constructor(game) {
@@ -30,6 +32,7 @@ export class PlayerController {
     if (game.ui && game.ui.blocksInput()) {
       p.intent.mx = 0; p.intent.my = 0; p.intent.sprint = false;
       p.setBlock(false);
+      this.skillBuf = null;
       return;
     }
     if (p.mode === 'sail') return this.sail(p, dt, game);
@@ -160,7 +163,7 @@ export class PlayerController {
     }
     // the skills of what's out on the skill keys, the Haki techniques on theirs
     // (G, a king's Conqueror's first: hakiGroupOf — nothing at all until a Haki wakes)
-    this.skillKeys(p, game, aim, wx, wy);
+    this.skillKeys(p, game, aim, wx, wy, dt);
     if (inp.wasPressed('R')) this.toggleHaki(p, game, 'armament');
     if (inp.wasPressed('T')) this.toggleHaki(p, game, 'observation');
 
@@ -187,11 +190,22 @@ export class PlayerController {
     return p.tryTechnique(id, game, target || { x: wx, y: wy });
   }
 
-  /** The skill keys and the Haki keys, pressed this frame (keys.js). */
-  skillKeys(p, game, aim, wx, wy) {
+  /**
+   * The skill keys and the Haki keys (keys.js). A press a moment early —
+   * the last move still finishing — is kept, as a click is, and fires as
+   * soon as it can (SKILL_BUFFER seconds at most).
+   */
+  skillKeys(p, game, aim, wx, wy, dt = 0) {
     const inp = game.input, K = keysOf(game.settings);
-    for (let i = 0; i < K.skills.length; i++) if (pressed(inp, K.skills[i])) this.useSkill(p, game, i, aim, wx, wy);
-    for (let i = 0; i < K.haki.length; i++) if (pressed(inp, K.haki[i])) this.useHaki(p, game, i, aim, wx, wy);
+    for (let i = 0; i < K.skills.length; i++) if (pressed(inp, K.skills[i])) this.skillBuf = { group: 'skills', i, t: SKILL_BUFFER };
+    for (let i = 0; i < K.haki.length; i++) if (pressed(inp, K.haki[i])) this.skillBuf = { group: 'haki', i, t: SKILL_BUFFER };
+    const b = this.skillBuf;
+    if (!b) return;
+    b.t -= dt;
+    if (!p.canAct() && b.t > 0) return;
+    this.skillBuf = null;
+    if (b.group === 'haki') this.useHaki(p, game, b.i, aim, wx, wy);
+    else this.useSkill(p, game, b.i, aim, wx, wy);
   }
 
   /**
@@ -423,7 +437,7 @@ export class PlayerController {
         if (id) this.useEntry(p, game, id, aim, wx, wy);
       }
     }
-    this.skillKeys(p, game, aim, wx, wy);
+    this.skillKeys(p, game, aim, wx, wy, dt);
     void angleDiff;
   }
 

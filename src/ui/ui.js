@@ -4,15 +4,17 @@ import { getAbility, ownRoom } from '../game/abilities.js';
 import { formatBerries, clamp } from '../core/math.js';
 import { raceLabel } from '../data/races.js';
 import { ITEMS } from '../data/items.js';
-import { STYLES } from '../data/styles.js';
 import { REGION_INFO, regionAt, REGION, RM_X, EQ } from '../world/constants.js';
 import { itemImg, skillImg, uiImg } from './icon.js';
 import { Compass, fmtDist } from './compass.js';
 import { Waypoints } from './waypoints.js';
 import { Minimap } from './minimap.js';
 import { assignHotbar } from './panels.js';
-import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
+import { HOTBAR_SIZE, HOTBAR_KEYS, isMoveset, ENTRY } from '../game/hotbar.js';
 import { syncPause } from './pause.js';
+import { drawSkillsHud, entryView, panelRow } from './skillsHud.js';
+import { captureKey } from './rebind.js';
+import { keysOf, keyLabel } from '../game/keys.js';
 
 // the menu buttons on the right of the screen (below the minimap)
 const SIDEBAR = [
@@ -27,10 +29,11 @@ const SIDEBAR = [
   { id: 'map', label: 'Map', key: 'M', touch: true },
   { id: 'view', label: 'View', key: 'V', touch: true },
 ];
+// (Conqueror's has no switch: its key is the first Haki key, its release — keys.js)
 const HAKI_TOGGLES = [
   { type: 'armament', key: 'R', name: 'Armament Haki', icon: { id: 'toggle_armament', name: 'Armament', hakiType: 'armament', source: 'haki:armament' } },
   { type: 'observation', key: 'T', name: 'Observation Haki', icon: { id: 'toggle_observation', name: 'Observation', hakiType: 'observation', source: 'haki:observation' } },
-  { type: 'conqueror', key: 'G', name: "Conqueror's Haki", icon: { id: 'haki_conqueror', name: "Conqueror's", hakiType: 'conqueror', source: 'haki:conqueror' } },
+  { type: 'conqueror', key: null, name: "Conqueror's Haki", icon: { id: 'haki_conqueror', name: "Conqueror's", hakiType: 'conqueror', source: 'haki:conqueror' } },
 ];
 
 export class UI {
@@ -75,9 +78,10 @@ export class UI {
     E.bounty = h('div.hud-bounty');
     E.buffs = h('div.buffs');
     this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
-    // hotbar: ten slots (1-9, 0). Click a slot to use it; drag slots to
-    // rearrange them. With the Inventory or Skills open it's where you drop
-    // techniques and food (or click a slot to put what you picked there).
+    // hotbar: ten slots (1-9, 0), each something you take out: food, a
+    // weapon, your Devil Fruit, one of its forms (hotbar.js). Click a slot to
+    // use it; drag slots to rearrange them. With the Inventory or Skills open
+    // it's where you drop them (or click a slot to put what you picked there).
     E.hotbar = h('div.hotbar');
     // dodging (Q) and blocking (F), left of the hotbar: no stamina, they come
     // back on cooldowns — a dodge after a moment, a guard smashed aside by a
@@ -120,9 +124,16 @@ export class UI {
     }
     E.toggles = {};
     for (const t of HAKI_TOGGLES) {
-      const el = h('div.slot.toggle.hidden.interactive', h('span.ico', skillImg(t.icon, 28)), h('span.k', t.key));
-      el.addEventListener('click', () => { const inp = this.game?.input; if (inp && !this.blocksInput()) { inp.simKey(t.key, true); inp.simKey(t.key, false); } });
-      E.toggles[t.type] = el;
+      const k = h('span.k', t.key || '');
+      const el = h('div.slot.toggle.hidden.interactive', h('span.ico', skillImg(t.icon, 28)), k);
+      el.addEventListener('click', () => {
+        const inp = this.game?.input;
+        if (!inp || this.blocksInput()) return;
+        // (Conqueror's: its release, as its key would)
+        if (!t.key) { this.useHaki(0); return; }
+        inp.simKey(t.key, true); inp.simKey(t.key, false);
+      });
+      E.toggles[t.type] = { el, k };
       E.hotbar.appendChild(el);
     }
     this.hud.appendChild(E.hotbar);
@@ -160,7 +171,7 @@ export class UI {
     this.hud.appendChild(E.boss);
     E.ship = h('div.shiphud.hidden');
     this.hud.appendChild(E.ship);
-    // your weapon's moves and their keys, while it's drawn (X)
+    // what you have out — its skills on their keys — and the Haki techniques (skillsHud.js)
     E.skills = h('div.skillpanel.hidden');
     this.hud.appendChild(E.skills);
     E.knocked = h('div.knocked-overlay.hidden', h('div', h('h1', 'KNOCKED DOWN'), h('p.kt', ''), h('div.timer', h('i'))));
@@ -250,17 +261,45 @@ export class UI {
     this.onHotbarChange?.();
   }
 
+  /** Where the player aims just now (the crosshair or pointer): [angle, x, y]. */
+  aimNow() {
+    const g = this.game, p = g.player;
+    const mw = p.controller?.mouseWorld;
+    const aim = mw ? Math.atan2(mw.y - (p.y - 0.5), g.world.dx(p.x, mw.x)) : p.facing;
+    return [aim, mw ? mw.x : p.x + Math.cos(aim) * 4, mw ? mw.y : p.y + Math.sin(aim) * 4];
+  }
+
+  /** A hotbar slot clicked or tapped: as its key would (playerController useEntry). */
   useSlot(i) {
     const g = this.game, p = g?.player;
     if (!p || this.blocksInput()) return;
     const id = p.hotbar[i];
     if (!id) return;
-    // aim where the player is aiming (the crosshair / pointer), at a foe there if any
-    const pc = p.controller, mw = pc?.mouseWorld;
-    const aim = mw ? Math.atan2(mw.y - (p.y - 0.5), g.world.dx(p.x, mw.x)) : p.facing;
-    const target = mw && pc.aimTarget ? pc.aimTarget(p, g, mw.x, mw.y) : null;
-    if (p.mode !== 'sail') p.facing = aim;
-    p.tryTechnique(id, g, target || (mw ? { x: mw.x, y: mw.y } : { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 }));
+    const [aim, x, y] = this.aimNow();
+    if (p.controller?.useEntry) p.controller.useEntry(p, g, id, p.mode === 'sail' ? p.facing : aim, x, y);
+    else p.tryTechnique(id, g, { x, y });
+  }
+
+  /** Skill `i` of what's out (a touch button, or a click): as its skill key would. */
+  useSkill(i) {
+    const g = this.game, p = g?.player;
+    if (!p?.controller?.useSkill || this.blocksInput()) return;
+    const [aim, x, y] = this.aimNow();
+    p.controller.useSkill(p, g, i, aim, x, y);
+  }
+
+  /** Haki technique `i` (a touch button, the Conqueror's slot): as its Haki key would. */
+  useHaki(i) {
+    const g = this.game, p = g?.player;
+    if (!p?.controller?.useHaki || this.blocksInput()) return;
+    const [aim, x, y] = this.aimNow();
+    p.controller.useHaki(p, g, i, aim, x, y);
+  }
+
+  /** Change the key of skill slot `i` of `group` ('skills' or 'haki'): the next key pressed (rebind.js). */
+  rebindSlot(group, i, name) {
+    if (!this.game) return;
+    captureKey(this.game, group, i, name, () => { this.cache.skills = null; this.onKeysChange?.(); });
   }
 
   blocksInput() { return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen || !!this.consoleOpen || !!this.chatOpen || this.asking > 0; }
@@ -335,12 +374,18 @@ export class UI {
     if (el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
   }
 
+  /**
+   * Flash what `id` is on: a hotbar slot (an entry, or the form a technique
+   * switches on), or its row on the skills panel.
+   */
   flashSlot(id) {
     const p = this.game?.player;
     if (!p) return;
-    const i = p.hotbar.indexOf(id);
-    if (i < 0) return;
-    const el = this.el.slots[i].el;
+    const d = getAbility(id);
+    const entry = d?.formOf ? (d.formOf === 'awake' ? ENTRY.awake : ENTRY.form(d.formOf)) : id;
+    const i = p.hotbar.indexOf(entry);
+    const el = i >= 0 ? this.el.slots[i].el : panelRow(this, id);
+    if (!el) return;
     el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   }
 
@@ -572,13 +617,16 @@ export class UI {
     if (this.cache.buffs !== buffKey) {
       this.cache.buffs = buffKey;
       clear(E.buffs);
-      for (const b of p.buffs) if (b.name) E.buffs.appendChild(h('span.buff', `${b.name} ${Math.ceil(b.t)}s`));
+      // (one that lasts till it's switched off — an awakened set — has no time on it)
+      for (const b of p.buffs) if (b.name) E.buffs.appendChild(h('span.buff', Number.isFinite(b.t) ? `${b.name} ${Math.ceil(b.t)}s` : b.name));
       for (const s of Object.keys(p.status)) E.buffs.appendChild(h('span.buff', { style: { borderColor: '#ff8a80' } }, s));
     }
     // hotbar
     for (let i = 0; i < HOTBAR_SIZE; i++) {
       const s = E.slots[i];
       const id = p.hotbar[i];
+      // (your fists, your Devil Fruit, its forms, its awakened set: skillsHud.js entryView)
+      if (isMoveset(id)) { this.drawEntry(s, i, p, id); continue; }
       const isItem = typeof id === 'string' && id.startsWith('item:');
       const def = !id ? null : isItem ? ITEMS[id.slice(5)] : getAbility(id);
       const k = 'slot' + i;
@@ -589,8 +637,8 @@ export class UI {
         if (def) s.ico.appendChild(isItem ? itemImg(id.slice(5), 34) : skillImg(def, 34));
         s.nm.textContent = def ? def.name : '';
         s.el.classList.toggle('empty', !def);
-        const use = def?.type === 'weapon' ? 'draw it (again to sheathe it)' : 'use';
-        s.el.title = def ? `${def.name}\n${def.desc || ''}\n\nClick or press ${HOTBAR_KEYS[i]} to ${use} · drag to rearrange` : 'Empty — open Skills (K) or Inventory (Tab) and drag techniques, food or weapons here';
+        const use = def?.type === 'weapon' ? 'draw it — its moves on the skill keys (again to sheathe it)' : def?.type === 'dial' ? 'fire it where you aim' : 'use';
+        s.el.title = def ? `${def.name}\n${def.desc || ''}\n\nClick or press ${HOTBAR_KEYS[i]} to ${use} · drag to rearrange` : 'Empty — open Inventory (Tab) or Skills (K) and drag food, weapons, Dials or your Devil Fruit here';
       }
       if (isItem) {
         const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);
@@ -609,7 +657,7 @@ export class UI {
         continue;
       }
       if (s.qty.textContent) { s.qty.textContent = ''; s.el.classList.remove('none-left'); }
-      s.el.classList.remove('held');
+      s.el.classList.remove('held', 'out');
       // (a Room technique, out of your ROOM: dimmed — it won't work until you're back in one)
       const out = def?.room === 'need' && !ownRoom(p);
       if (s.el.classList.contains('none-left') !== out) s.el.classList.toggle('none-left', out);
@@ -647,12 +695,14 @@ export class UI {
     const counter = p.counterLeft > 0;
     if (counter !== this.cache.counter) { this.cache.counter = counter; guard.el.classList.toggle('counter', counter); }
     for (const t of HAKI_TOGGLES) {
-      const el = E.toggles[t.type];
+      const { el, k } = E.toggles[t.type];
       const lvl = p.hakiLevel(t.type);
       el.classList.toggle('hidden', !lvl);
       if (!lvl) continue;
       el.classList.toggle('on', t.type === 'armament' ? p.armament : t.type === 'observation' ? p.observation : !!p.conquerorInfused);
-      el.title = `${t.name} — level ${Math.floor(lvl)} (${t.key})`;
+      const key = t.key || keyLabel(keysOf(game.settings).haki[0]);
+      if (k.textContent !== key) k.textContent = key;
+      el.title = t.key ? `${t.name} — level ${Math.floor(lvl)} (${key}): its techniques on the Haki keys while it's on` : `${t.name} — level ${Math.floor(lvl)} (${key}: release it)`;
     }
     // prompt (with food in hand and nothing to use nearby: how to eat it)
     let inter = p.controller?.interaction, pKey = 'E';
@@ -710,9 +760,9 @@ export class UI {
       bb.firstChild.style.width = (100 * clamp(boss.hp / boss.d.maxHp, 0, 1)) + '%';
       bb.children[1].style.width = (100 * clamp(boss.hp / boss.d.maxHp, 0, 1)) + '%';
     }
-    // the drawn weapon's moves
+    // what's out, and its skills on their keys
     this.spT = (this.spT || 0) - 1 / 60;
-    if (this.spT <= 0) { this.spT = 0.1; this.drawSkills(game, p); }
+    if (this.spT <= 0) { this.spT = 0.1; drawSkillsHud(this, game, p); }
     // ship hud
     const s = p.mode === 'sail' ? p.ship : null;
     E.ship.classList.toggle('hidden', !s);
@@ -738,32 +788,30 @@ export class UI {
     }
   }
 
-  /**
-   * While your weapon is drawn: its style's moves and the keys that do them
-   * (the click, the right click, and the skills you've learned for it with
-   * their hotbar keys), each greyed with its time left while it's cooling
-   * down. Put away, or with no skills learned for it yet, it isn't shown.
-   */
-  drawSkills(game, p) {
-    const E = this.el, c = game.state?.char;
-    const st = p.drawn && p.weapon && p.mode !== 'sail' && !game.input?.touch?.on ? STYLES[p.style] : null;
-    const learned = st ? (st.techniques || []).filter((t) => (p.techniques || []).includes(t.id)) : [];
-    if (!st || !learned.length) { E.skills.classList.add('hidden'); this.cache.skills = null; return; }
-    const keyOf = (id) => { const i = (p.hotbar || []).indexOf(id); return i >= 0 ? HOTBAR_KEYS[i] : null; };
-    const rows = [['LMB', st.m1?.[0]?.name || 'Strike', 0], ['RMB', st.heavy?.name || 'Heavy blow', p.cooldowns?.[st.heavyId] || 0]];
-    for (const t of learned) rows.push([keyOf(t.id), t.name, p.cooldowns?.[t.id] || 0]);
-    const names = (c?.equipped?.weapons || []).map((id) => ITEMS[id]?.name).filter(Boolean);
-    const key = JSON.stringify([p.style, names, rows.map((r) => [r[0], r[1], Math.ceil(r[2] * 2)])]);
-    E.skills.classList.remove('hidden');
-    if (key === this.cache.skills) return;
-    this.cache.skills = key;
-    clear(E.skills);
-    E.skills.appendChild(h('div.sp-head', h('b', st.name), h('span', names.join(' · '))));
-    for (const [k, name, cd] of rows) {
-      E.skills.appendChild(h('div.sp-row' + (cd > 0 ? '.cd' : '') + (k ? '' : '.unbound'),
-        h('kbd', k || '—'), h('span.sp-n', name), cd > 0 ? h('span.sp-cd', `${cd.toFixed(1)}s`) : null));
+  /** A moveset entry in hotbar slot `s` (`i`): its look, lit while it's out, its cooldown or time left (skillsHud.js entryView). */
+  drawEntry(s, i, p, id) {
+    const v = entryView(p, id);
+    const k = 'slot' + i;
+    if (this.cache[k] !== v.key) {
+      this.cache[k] = v.key;
+      clear(s.ico);
+      const img = v.img?.(34);
+      if (img) s.ico.appendChild(img);
+      s.nm.textContent = v.name;
+      s.el.classList.remove('empty');
+      s.el.title = `${v.tip}\n\nClick or press ${HOTBAR_KEYS[i]} · drag to rearrange`;
     }
-    E.skills.appendChild(h('div.sp-foot', h('kbd', 'X'), ' to sheathe'));
+    if (s.qty.textContent) s.qty.textContent = '';
+    s.el.classList.toggle('held', !!v.on);
+    s.el.classList.toggle('out', !v.on && !!v.out);
+    if (s.el.classList.contains('none-left') !== !!v.dim) s.el.classList.toggle('none-left', !!v.dim);
+    // (on: its time left if it runs out, else nothing — not its switch's cooldown)
+    const cd = v.cd && !v.on ? p.cooldowns[v.cd.id] || 0 : 0;
+    const frac = v.left != null ? 0 : v.cd ? clamp(cd / (v.cd.max * (p.cdMul ?? 1)), 0, 1) : 0;
+    s.cd.style.transform = `scaleY(${frac})`;
+    const txt = v.left != null ? Math.ceil(v.left) + 's' : cd > 0.05 ? (cd >= 10 ? Math.ceil(cd) : cd.toFixed(1)) : '';
+    if (s.cdt.textContent !== String(txt)) s.cdt.textContent = txt;
+    s.cdt.classList.toggle('left', v.left != null);
   }
 
   /** The quest tracker: what to do next in the main story (and where), and the tracked side quests. */

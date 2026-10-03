@@ -138,14 +138,24 @@ function fruitsTab(ctx) {
         h('div.sub', 'Give yourself one below: it goes in your bag. Eat it from the Inventory (Tab) — or put it on your hotbar, take it in hand with its key and hold the right mouse button.')));
       return;
     }
-    const known = () => f.techniques.filter((t) => c.techniques.includes(t.id)).length;
-    const techs = h('span.sub', `${known()} of ${f.techniques.length} techniques`);
+    // (its base set is all yours; mastery opens its forms — on the hotbar as they open)
+    const forms = () => {
+      const open = (f.forms || []).filter((F) => (c.fruitMastery || 0) >= F.mastery).map((F) => F.name);
+      const shut = (f.forms || []).filter((F) => (c.fruitMastery || 0) < F.mastery).map((F) => `${F.name} at ${F.mastery}`);
+      return `${f.techniques.length} techniques${open.length ? ' · open: ' + open.join(', ') : ''}${shut.length ? ' · ' + shut.join(', ') : ''}`;
+    };
+    const techs = h('span.sub', forms());
+    const awake = h('button.btn' + (c.fruitAwakened ? '.gold' : ''), {
+      title: 'Awaken it now (its awakened set goes on the hotbar, to switch on and off) — or take the awakening away again',
+      on: { click: () => { C.setFruitAwakened(!c.fruitAwakened); say(c.fruitAwakened ? `The ${f.name} has awakened: ${f.awakening.name} is on your hotbar.` : `The ${f.name}'s awakening is gone.`); drawYours(); } },
+    }, c.fruitAwakened ? `Awakened: ${f.awakening.name}` : 'Awaken it');
     add(yours, itemImg('fruit_' + c.fruit, 44), h('div.grow',
       h('b', `Your power: ${f.name}`), h('span.tag', { style: { background: FRUIT_TYPE[baseType(f.type)] } }, f.type),
-      slider('Mastery', 0, 100, 1, Math.floor(c.fruitMastery || 0), (v) => { C.setFruitMastery(v); techs.textContent = `${known()} of ${f.techniques.length} techniques`; },
-        { title: 'Fruit techniques open up as mastery grows (some only once Haki awakens).' }),
+      slider('Mastery', 0, 100, 1, Math.floor(c.fruitMastery || 0), (v) => { C.setFruitMastery(v); techs.textContent = forms(); },
+        { title: 'Its base techniques are all yours; mastery makes them hit harder and opens its forms (one that needs Haki, once Haki awakens).' }),
       techs),
-    h('button.btn.red', { title: 'Take the power away, to eat another fruit — or this one again', on: { click: () => { say(C.removeFruit()); drawYours(); drawList(); } } }, 'Remove its power'));
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } }, awake,
+      h('button.btn.red', { title: 'Take the power away, to eat another fruit — or this one again', on: { click: () => { say(C.removeFruit()); drawYours(); drawList(); } } }, 'Remove its power')));
   };
   const drawList = () => {
     clear(list);

@@ -10,6 +10,7 @@ import { LEGENDS } from '../data/dreams.js';
 import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, nameWithD } from '../game/lineage.js';
 import { ITEMS } from '../data/items.js';
 import { FRUITS } from '../data/fruits.js';
+import { keysOf, keyLabel } from '../game/keys.js';
 import { formatBerries } from '../core/math.js';
 import { RNG } from '../core/rng.js';
 import { itemImg, uiImg } from './icon.js';
@@ -458,10 +459,12 @@ export function hallScreen(ui, legacy, { onBack }) {
     h('div', { style: { marginTop: '12px', textAlign: 'right' } }, h('button.btn', { on: { click: onBack } }, 'Back')))));
 }
 
-/** How to Play. Pass the character so powers you haven't discovered stay secret. */
-export function helpContent(char) {
+/** How to Play. Pass the character so powers you haven't discovered stay secret (and `settings`, for the keys as they are). */
+export function helpContent(char, settings) {
   const haki = !!(char && (char.haki?.armament || char.haki?.observation || char.haki?.conqueror));
   const k = (key, text) => h('div', h('kbd', key), text);
+  const K = keysOf(settings);
+  const skillKeys = K.skills.filter(Boolean).slice(0, 5).map(keyLabel).join(' ');
   return h('div',
     h('h2', 'How to Play'),
     h('p', 'Inherited Will is a roguelike set on the whole Blue Planet of One Piece. You are born in one of the four Blues depending on your race. Nobody tells you what to become: sail where you like, climb Reverse Mountain into the Grand Line, cross the Red Line, join the Marines, become a pirate, hunt treasure — or all of it.'),
@@ -472,17 +475,19 @@ export function helpContent(char) {
     h('div.kbd-help',
       k('Mouse', 'look around (click the game to capture the mouse, Esc frees it)'), k('V', 'first person / third person'),
       k('WASD', 'move where you look / steer ship'), k('Space', 'jump; at a pier, a bank or a ship\'s side, climb up (ship: row)'), k('Shift', 'hold to sprint (ship: Coup de Burst); tap in first person to dodge'), k('Ctrl', 'third person: shift lock (the character faces where you look)'), k('Q', 'dash / dodge — it comes back after a moment (the Q slot left of the hotbar fills up again)'), k('Right mouse', 'heavy attack; hold and drag to turn the camera in third person without shift lock'), k('Left click', 'attack combo (ship: cannons)'),
-      k('Right click', 'heavy attack'), k('F', 'hold to block — or tap it just as a blow lands (the yellow glint) to PARRY: they reel, and your next strike is a COUNTER. Mashing it won\'t parry. A red-glint blow smashes a guard aside, so dodge those'), k('1-9, 0', 'hotbar (techniques & items); food goes in your hand — hold the right mouse button to eat it'),
+      k('Right click', 'heavy attack'), k('F', 'hold to block — or tap it just as a blow lands (the yellow glint) to PARRY: they reel, and your next strike is a COUNTER. Mashing it won\'t parry. A red-glint blow smashes a guard aside, so dodge those'), k('1-9, 0', 'hotbar: take out what\'s on it — your Devil Fruit (and its forms), a weapon (again to put it away), food (in your hand: hold the right mouse button to eat it), a Dial'),
+      k(skillKeys || 'Skill keys', 'the skills of whatever is out: your fists\', the drawn weapon\'s, the Devil Fruit\'s — the panel at the bottom right shows them, and what opens next (click a key there, or Settings → Controls, to change it)'),
       haki ? k('R / T', 'Armament / Observation Haki (once awakened)') : null,
-      haki && char.haki?.conqueror ? k('G', "Conqueror's Haki") : null,
+      haki ? k(K.haki.filter(Boolean).map(keyLabel).join(' ') || 'Haki keys', `the techniques of the Haki that's on${char.haki?.conqueror ? " — the first, a king's Conqueror's" : ''}`) : null,
       k('E', 'interact / talk / pick fruit / take the helm or the oars / search a knocked-out foe'),
       k('C / Space (swimming)', 'dive / swim up — or look down and swim'),
-      k('Tab / I', 'inventory & equipment'), k('C', 'character'), k('K', 'skills & hotbar'), k('J', 'journal'),
+      k('Tab / I', 'inventory & equipment'), k('C', 'character'), k('K', 'skills: what you can take out, and where every technique sits'), k('J', 'journal'),
       k('U', 'crew'), k('M', 'world map'), k('Esc', 'pause menu'), k('Mouse wheel', 'camera distance (third person)'), k('H', 'this help'),
       k('Enter', 'multiplayer: chat to the crew (Enter sends, Esc cancels)'), k('P', 'multiplayer: who\'s aboard the voyage, and where'),
       char?.creative ? k('F1', 'the creative panel (creative mode): Devil Fruits, items, races, Haki, foes, ships, the world') : null),
-    h('p.muted', 'The buttons on the right of the screen open the same menus. Open the Inventory or Skills menu and drag techniques, food, Devil Fruits and weapons straight onto your hotbar at the bottom of the screen (a weapon you wear hangs at your hip or on your back: its key draws it, and again sheathes it); drag hotbar slots to rearrange them, right-click one to clear it.'),
-    h('p', h('b', 'On a phone or tablet: '), 'your left thumb moves (push the stick all the way to run; at sea it steers and sets the sails) and your right thumb drags to look around. The round buttons jump, attack, heavy attack, dodge and block; tap Use or the prompt to talk and interact, and tap a hotbar slot to use a technique. The strip at the top opens the menus, the world map and the camera view. Play with the phone held sideways.'),
+    h('p.muted', 'The buttons on the right of the screen open the same menus. Open the Inventory or Skills menu and drag food, weapons, Dials and your Devil Fruit straight onto your hotbar at the bottom of the screen (a weapon you wear hangs at your hip or on your back: its key draws it, and again sheathes it); drag hotbar slots to rearrange them, right-click one to clear it.'),
+    h('p', h('b', 'Devil Fruits: '), 'eat one and all its base techniques are yours at once: take it out with its hotbar key and they\'re on the skill keys, its power in your every blow. Fight worthy foes with it and its mastery grows — its blows hit harder, and its forms open up (Gum-Gum\'s Gears, Amaru, Monster Point...): each goes on the hotbar, switched on with its key, and some leave you spent when they wear off. Master it fully, and a hard fight may awaken it: from then on its awakened set — bigger, stronger, faster — is yours to switch on and off.'),
+    h('p', h('b', 'On a phone or tablet: '), 'your left thumb moves (push the stick all the way to run; at sea it steers and sets the sails) and your right thumb drags to look around. The round buttons jump, attack, heavy attack, dodge and block; tap Use or the prompt to talk and interact, and tap a hotbar slot to take something out — its skills come up as round buttons beside the pad. The strip at the top opens the menus, the world map and the camera view. Play with the phone held sideways.'),
     h('h3', 'Reputation'),
     h('p', 'People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation. Crimes — robbing shops and houses, picking pockets, attacking townsfolk, Marines or merchant ships — put a bounty on your head instead, and bounties grow the way they do in One Piece: a few hundred thousand berries for a petty thief in the East Blue, millions on the Grand Line, far more in the New World. Anyone with a bounty is a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks — all the way to commanding fleets. A Marine who breaks the law loses standing, and is thrown out when nobody trusts them any more.'),
     h('h3', 'Sailing'),

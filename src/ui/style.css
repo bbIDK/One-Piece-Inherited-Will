@@ -64,6 +64,8 @@
 .slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }
 .slot.none-left .ico { opacity: .35; filter: grayscale(1); }
 .slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }
+.slot.out { border-color: rgba(241,196,15,.55); }
+.slot .cdt.left { place-items: end center; font-size: 11px; padding-bottom: 9px; color: #fff3c4; text-shadow: 0 1px 2px #000; }
 .slot.over { border-color: var(--gold); }
 .slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }
 .slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }
@@ -94,7 +96,7 @@
 .prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }
 .prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }
 
-.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }
+.log { position: absolute; left: 14px; bottom: 82px; width: 420px; max-height: clamp(70px, calc(100vh - 550px), 170px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }
 .log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }
 @keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
@@ -125,17 +127,51 @@
 .shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }
 .shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }
 /* the drawn weapon's moves (bottom right, while it's out) */
-.skillpanel { position: absolute; right: 14px; bottom: 14px; min-width: 210px; max-width: 260px; background: rgba(10,20,30,.74); border-radius: 12px; padding: 8px 10px 7px; border: 1px solid var(--border); font-size: 12px; pointer-events: none; }
-.skillpanel .sp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-.skillpanel .sp-head b { font: 400 17px 'Pirata One', serif; color: var(--gold); letter-spacing: .5px; }
-.skillpanel .sp-head span { font-size: 10.5px; opacity: .75; text-align: right; }
-.skillpanel .sp-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
-.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; padding: 1px 5px; font: 800 11px Nunito, sans-serif; color: #fff; }
-.skillpanel .sp-row.unbound kbd { opacity: .45; }
-.skillpanel .sp-row.cd { opacity: .55; }
-.skillpanel .sp-cd { margin-left: auto; color: #ffcc80; font-variant-numeric: tabular-nums; }
-.skillpanel .sp-foot { margin-top: 5px; font-size: 10.5px; opacity: .7; }
-.skillpanel .sp-foot kbd { min-width: 0; padding: 0 5px; }
+/* the skills panel (ui/skillsHud.js): what's out, its skills on their keys; the Haki techniques under it */
+.skillpanel { position: absolute; right: 14px; bottom: 14px; width: 226px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; pointer-events: none; }
+.sp-box { background: rgba(10,20,30,.76); border-radius: 11px; padding: 6px 9px 6px 8px; border: 1px solid rgba(255,255,255,.12); border-left: 3px solid var(--sp-c, var(--gold)); box-shadow: 0 3px 10px rgba(0,0,0,.35); }
+.sp-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 8px; margin-bottom: 3px; }
+.sp-head b { flex: none; max-width: 100%; font: 400 17px 'Pirata One', serif; color: var(--sp-c, var(--gold)); letter-spacing: .4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px #000; }
+.sp-head span { margin-left: auto; font-size: 10px; opacity: .75; text-align: right; white-space: nowrap; }
+.sp-row { display: flex; align-items: center; gap: 6px; min-height: 21px; border-radius: 6px; }
+.sp-row img.icon { width: 20px; height: 20px; flex: none; }
+.sp-row .sp-n { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-row .sp-t { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.1; }
+.sp-row .sp-t .sp-n { flex: none; }
+.sp-row .sp-why { font-size: 9.5px; color: #ffcc80; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-row .sp-cd { color: #ffcc80; font: 800 11px Nunito, sans-serif; font-variant-numeric: tabular-nums; }
+.sp-row.cd .sp-n, .sp-row.cd img.icon { opacity: .5; }
+.sp-row.locked .sp-n, .sp-row.locked img.icon { opacity: .45; }
+.sp-row.locked img.icon { filter: grayscale(1); }
+.sp-row.needs .sp-why { color: #ef9a9a; }
+.sp-row.flash { animation: rowflash .35s; }
+@keyframes rowflash { 40% { background: rgba(255,82,82,.35); } }
+.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.2); border-radius: 5px; padding: 1px 4px; font: 800 11px Nunito, sans-serif; color: #fff; flex: none; }
+.skillpanel kbd.sp-key.interactive { cursor: pointer; }
+.skillpanel kbd.sp-key.interactive:hover { border-color: var(--gold); background: rgba(241,196,15,.22); }
+.skillpanel kbd.sp-key.unbound { opacity: .5; }
+.skillpanel kbd.sp-key.capture { background: var(--gold); color: #1a1205; opacity: 1; animation: keywait 1s infinite; }
+@keyframes keywait { 50% { box-shadow: 0 0 0 3px rgba(241,196,15,.45); } }
+.sp-mouse { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 4px; font-size: 10.5px; opacity: .85; }
+.sp-mouse kbd { min-width: 0; padding: 0 4px; font-size: 9.5px; }
+.sp-mouse .cd { opacity: .6; }
+.sp-mouse i { font-style: normal; color: #ffcc80; }
+.sp-forms { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.sp-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; padding: 1px 5px 1px 2px; border-radius: 9px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); white-space: nowrap; }
+.sp-chip b { background: rgba(255,255,255,.18); border-radius: 7px; padding: 0 4px; font-size: 9.5px; }
+.sp-chip.locked { opacity: .5; padding-left: 5px; }
+.sp-chip.on { background: var(--sp-c, var(--gold)); color: #120c04; border-color: transparent; font-weight: 800; }
+.sp-chip.aw:not(.locked) { border-color: rgba(242,193,78,.8); }
+.sp-next { font-size: 10px; opacity: .78; margin-top: 4px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-next b { color: var(--sp-c, var(--gold)); font-weight: 800; }
+.sp-more { font-size: 10px; opacity: .6; margin: 1px 0 0 2px; }
+.sp-foot { display: flex; gap: 2px 10px; margin-top: 4px; font-size: 10px; opacity: .65; white-space: nowrap; overflow: hidden; }
+.sp-foot kbd { min-width: 0; padding: 0 4px; font-size: 9.5px; }
+.sp-foot .sp-tip { margin-left: auto; font-style: italic; }
+/* changing a key: the prompt while it waits for one (ui/rebind.js) */
+.rebind-cap { position: absolute; left: 50%; top: 34%; transform: translateX(-50%); z-index: 60; background: rgba(10,20,30,.92); border: 2px solid var(--gold); border-radius: 12px; padding: 12px 20px; text-align: center; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 8px 26px rgba(0,0,0,.6); pointer-events: none; }
+.rebind-cap b { font: 400 22px 'Pirata One', serif; color: var(--gold); }
+.rebind-cap small { font-size: 11.5px; opacity: .8; }
 .shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }
 .shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }
 .wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }
@@ -407,6 +443,36 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 .tech .sub { font-size: 12px; opacity: .8; }
 .tech .meta { opacity: .65; }
 h4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }
+.tech.fixed { cursor: default; }
+/* Skills (K): what you take out (cards for the hotbar), the skills of what's out on their keys */
+.ms-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px; }
+.ms-card { display: flex; gap: 9px; align-items: center; background: rgba(255,255,255,.55); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 5px 9px; cursor: grab; }
+.ms-card:hover { border-color: #6d4c33; }
+.ms-card.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }
+.ms-card.onbar { background: rgba(255,243,205,.85); }
+.ms-card.locked { opacity: .55; cursor: default; background: rgba(255,255,255,.3); }
+.ms-card.locked img.icon { filter: grayscale(1); }
+.ms-card .grow { flex: 1; min-width: 0; }
+.ms-card .sub { font-size: 11.5px; opacity: .8; line-height: 1.25; }
+.ms-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 4px 10px; }
+.ms-row { display: flex; gap: 8px; align-items: center; padding: 3px 4px; border-radius: 8px; }
+.ms-row .grow { flex: 1; min-width: 0; }
+.ms-row .sub { font-size: 11.5px; opacity: .78; line-height: 1.25; }
+.ms-row.locked img.icon { filter: grayscale(1); opacity: .5; }
+.ms-row.locked b { opacity: .6; }
+/* a key you can change (Skills, Settings) — click it, then press one */
+.keycap { display: inline-block; min-width: 44px; text-align: center; font: 800 13px Nunito, sans-serif; color: var(--ink); background: #fff8e1; border: 2px solid #8d6e4a; border-bottom-width: 4px; border-radius: 7px; padding: 2px 8px; margin: 0 2px; }
+button.keycap { cursor: pointer; }
+button.keycap:hover { border-color: var(--red); background: #fff; }
+.keycap.unbound { opacity: .55; }
+.key-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 4px 22px; }
+.key-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; border-bottom: 1px dashed rgba(109,76,51,.25); }
+.key-row .nm { font-weight: 800; }
+.key-row .nm small { font-weight: 600; opacity: .7; }
+details.game-keys { margin-top: 8px; }
+details.game-keys summary { cursor: pointer; font-weight: 800; color: #5a2d0c; }
+details.game-keys .key-grid { margin-top: 6px; font-size: 13px; }
+details.game-keys .keycap { min-width: 26px; font-size: 11px; padding: 0 5px; border-bottom-width: 2px; }
 .objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }
 .legend-done { background: rgba(255,236,179,.7); }
 .list.compact { gap: 3px; }
@@ -493,7 +559,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 @media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }
 @media (max-height: 640px) {
   .sidebar { top: 170px; gap: 3px; }
-  .log { max-height: 130px; }
+  .log { max-height: clamp(60px, calc(100vh - 500px), 130px); }
   .side-btn { padding: 3px 8px 3px 6px; }
 }
 
@@ -532,6 +598,13 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }
 .t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }
 .t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }
+/* the skills of what's out (touch.js): left of the pad, clear of the hotbar and the prompt under them */
+.t-skills { display: none; position: absolute; right: calc(max(12px, env(safe-area-inset-right)) + 240px); bottom: 112px; grid-template-columns: repeat(3, 44px); gap: 5px; direction: rtl; pointer-events: none; }
+#ui.touch .t-skills { display: grid; }
+.t-btn.t-sk { position: relative; width: 44px; height: 44px; overflow: hidden; direction: ltr; background: rgba(10,20,30,.62); }
+.t-btn.t-sk img.icon { width: 30px; height: 30px; pointer-events: none; }
+.t-btn.t-sk.haki { border-width: 2px; }
+.t-btn.t-sk .t-cd { position: absolute; inset: 0; background: rgba(0,0,0,.6); transform: scaleY(0); transform-origin: bottom; pointer-events: none; }
 .t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }
 .t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }
 .t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }
@@ -739,6 +812,8 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 
 /* the quest tracker, right of centre */
 .qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }
+/* (squeezed under a tall skills panel on a short screen: just what each quest is) */
+.qtrack.squeezed .qt-obj, .qtrack.squeezed .qt-where, .qtrack.squeezed .qt-alt, .qtrack.squeezed .qt-sub { display: none; }
 .qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }
 .qtrack > .qt-main { border-right-color: #f2c14e; }
 .qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }

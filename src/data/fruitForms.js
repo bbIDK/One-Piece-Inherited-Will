@@ -111,7 +111,7 @@ export const awaken = (id, o = {}) => ({ awaken: id, ...o });
 // Gear Second: blood pumped at speed — faster and stronger, every move a
 // Jet; steam pours off you, and when it wears off you're spent a moment.
 const GEAR2 = {
-  id: 'gear2', name: 'Gear Second', mastery: 25, activate: 'gomu_gear2',
+  id: 'gear2', name: 'Gear Second', short: 'Gear 2', mastery: 25, activate: 'gomu_gear2',
   desc: 'Pump your blood at high speed: faster and stronger, every move a Jet. You\'re spent for a moment when it wears off.',
   heavy: { id: 'gomu_jet_whip', name: 'Jet Whip', anim: 'sweep', windup: 0.14, recover: 0.28, cd: 1.3, desc: 'A leg whipped round faster than the eye can follow.',
     steps: [{ hit: { shape: 'arc', range: 3.4, arc: 2.0, offset: 0.2, damage: 16, knockback: 7, stun: 0.4, heavy: true, guardBreak: true } }] },
@@ -130,7 +130,7 @@ const GEAR2 = {
 };
 // Gear Third: bone balloon — a limb blown up to a giant's, and swung.
 const GEAR3 = {
-  id: 'gear3', name: 'Gear Third', mastery: 45,
+  id: 'gear3', name: 'Gear Third', short: 'Gear 3', mastery: 45,
   desc: 'Blow air into your bones: giant limbs — Gigant Pistol, Elephant Gatling, Gigant Axe. A little slower, a lot heavier.',
   activate: { id: 'gomu_gear3_on', name: 'Gear Third', icon: '🦴', anim: 'flex', windup: 0.35, recover: 0.2, cd: 20, say: 'Gear... Third!', desc: 'Bite your thumb and blow: your bones swell like balloons.',
     steps: [{ fx: { burst: 16, color: '#ffe0b2', kind: 'smoke' } }, { at: 0.35, buff: { id: 'gear3', form: 'gear3', name: 'Gear Third', dur: 25, mods: { damage: 1.1, speedMul: 0.92 }, aura: 'rgba(255,224,178,0.45)' } }] },
@@ -153,7 +153,7 @@ const GEAR3 = {
 // Gear Fourth: Boundman — muscles blown up and coated in Haki, bouncing like
 // a ball; every blow a cannon. It burns Haki, runs out, and leaves you spent.
 const GEAR4 = {
-  id: 'gear4', name: 'Gear Fourth', mastery: 70, needs: 'armament', activate: 'gomu_gear4',
+  id: 'gear4', name: 'Gear Fourth', short: 'Gear 4', mastery: 70, needs: 'armament', activate: 'gomu_gear4',
   desc: 'Boundman: Haki-hardened muscles blown up like a ball — Kong Gun, Rhino Schneider, Culverin, Leo Bazooka. It runs out, and leaves you exhausted.',
   m1: { dmg: 1.4, reach: 1.3 },
   heavy: { id: 'gomu_leo_bazooka', name: 'Leo Bazooka', anim: 'heavy', windup: 0.35, recover: 0.4, cd: 2.2, say: 'Leo Bazooka!', desc: 'Both fists pulled back into the arms, then fired point-blank.',
@@ -174,7 +174,7 @@ const GEAR4 = {
 // Gear Fifth: the fruit's awakening (Hito Hito no Mi, Model: Nika) — a body
 // as free as a cartoon: everything giant, everything a joke, nothing held back.
 const GEAR5 = {
-  name: 'Gear Fifth', desc: 'Awakening: the warrior of liberation. Your body as free as your imagination — Dawn Pistol, Dawn Gatling, Gomu Gomu no Kaminari, Bajrang Gun.',
+  name: 'Gear Fifth', short: 'Gear 5', desc: 'Awakening: the warrior of liberation. Your body as free as your imagination — Dawn Pistol, Dawn Gatling, Gomu Gomu no Kaminari, Bajrang Gun.',
   activate: { id: 'gomu_awaken', name: 'Gear Fifth', icon: '☀', anim: 'cast', windup: 0.9, recover: 0.2, cd: 6, say: '...Drums of Liberation.', desc: 'Your heartbeat drums: Gear Fifth.',
     steps: [{ fx: { ring: 6, color: '#ffffff', flash: 0.5, impact: 0.15, text: 'GEAR 5' } }, { at: 0.9, buff: { id: 'gear5', form: 'awake', name: 'Gear Fifth', dur: Infinity, mods: { damage: 1.3, defMul: 0.8, speedMul: 1.3, atkSpeed: 1.25 }, aura: 'rgba(255,255,255,1)', look: { hairColor: '#ffffff', top: '#ffffff', bottom: '#ffffff', nika: true } } }] },
   m1: { dmg: 1.5, reach: 1.7 },
@@ -259,15 +259,15 @@ export const KITS = {
   ] } },
   goro: {
     m1: { element: 'lightning', status: { shock: 0.4 } },
-    forms: [{ id: 'amaru', name: '200 Million Volt Amaru', mastery: 55, activate: 'goro_amaru', desc: 'A body of thunder, its drums ringing: bigger, faster, every bolt harder.' }],
+    forms: [{ id: 'amaru', name: '200 Million Volt Amaru', short: 'Amaru', mastery: 55, activate: 'goro_amaru', desc: 'A body of thunder, its drums ringing: bigger, faster, every bolt harder.' }],
   },
   suna: { m1: { element: 'sand', status: { dry: 1 } } },
   moku: { m1: { element: 'smoke' } },
   pika: { m1: { element: 'light', dmg: 1.1 } },
   magu: { m1: { element: 'magma', status: { burn: 2 } } },
   yami: { m1: { element: 'dark' } },
-  hito: { m1: { dmg: 1.1 }, forms: [{ id: 'monster', name: 'Monster Point', mastery: 50, activate: 'hito_monster', desc: 'A Rumble Ball overdose: a towering monster, enormous power, barely controlled.', m1: { dmg: 1.5, reach: 1.4 } }] },
-  uo_seiryu: { m1: { dmg: 1.2 }, forms: [{ id: 'dragon', name: 'Azure Dragon Form', mastery: 40, activate: 'seiryu_form', desc: 'Take the Azure Dragon\'s whole shape: bigger and stronger, every breath a furnace.', m1: { dmg: 1.4, reach: 1.4 } }] },
+  hito: { m1: { dmg: 1.1 }, forms: [{ id: 'monster', name: 'Monster Point', short: 'Monster', mastery: 50, activate: 'hito_monster', desc: 'A Rumble Ball overdose: a towering monster, enormous power, barely controlled.', m1: { dmg: 1.5, reach: 1.4 } }] },
+  uo_seiryu: { m1: { dmg: 1.2 }, forms: [{ id: 'dragon', name: 'Azure Dragon Form', short: 'Dragon', mastery: 40, activate: 'seiryu_form', desc: 'Take the Azure Dragon\'s whole shape: bigger and stronger, every breath a furnace.', m1: { dmg: 1.4, reach: 1.4 } }] },
 };
 
 /**
@@ -306,7 +306,7 @@ export function attachKits(FRUITS) {
       return form;
     });
     const A = kit.awakening || {};
-    const aw = { name: A.name || `Awakened ${f.en.replace(/ Fruit.*$/, '')}`, desc: A.desc || `Awakening: every move of the ${f.name} bigger, stronger, faster.`, fruit: fid, m1: A.m1 || f.m1 || null };
+    const aw = { name: A.name || `Awakened ${f.en.replace(/ Fruit.*$/, '')}`, short: A.short || (A.name && A.name.length <= 12 ? A.name : 'Awakened'), desc: A.desc || `Awakening: every move of the ${f.name} bigger, stronger, faster.`, fruit: fid, m1: A.m1 || f.m1 || null };
     aw.activate = one(A.activate || {
       id: fid + '_awaken', name: aw.name, icon: f.techniques[0]?.icon, anim: 'cast', windup: 0.6, recover: 0.2, cd: 6, desc: `Awaken the ${f.name}.`,
       steps: [{ fx: { ring: 4, color: f.color, flash: 0.25, impact: 0.08, text: 'AWAKENED' } }, { at: 0.6, buff: { id: fid + '_awake', form: 'awake', name: aw.name, dur: Infinity, mods: { damage: 1.15, speedMul: 1.1 }, aura: rgba(f.color, 0.8), ...(A.look ? { look: A.look } : {}) } }],

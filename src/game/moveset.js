@@ -86,15 +86,15 @@ export function movesetOf(p) {
     for (const F of f.forms || []) {
       const lack = F.needs && !(p.hakiLevel?.(F.needs) > 0);
       const why = m < F.mastery ? `fruit mastery ${F.mastery}${F.needs ? ` · ${hakiKnown(p) ? hakiName(F.needs) + ' Haki' : 'and a power yet to awaken'}` : ''}` : lack ? `needs ${hakiKnown(p) ? hakiName(F.needs) + ' Haki' : 'a power yet to awaken'}` : '';
-      out.forms.push({ id: F.id, name: F.name, entry: ENTRY.form(F.id), open: m >= F.mastery, why, on: fb?.form === F.id, activate: F.activate });
+      out.forms.push({ id: F.id, name: F.name, short: F.short || F.name, entry: ENTRY.form(F.id), open: m >= F.mastery, why, on: fb?.form === F.id, activate: F.activate });
     }
     const aw = f.awakening;
     if (aw) {
       const ready = !!c.fruitAwakened;
-      out.forms.push({ id: 'awake', name: aw.name, entry: ENTRY.awake, open: ready, awakening: true, on: fb?.form === 'awake', activate: aw.activate,
+      out.forms.push({ id: 'awake', name: aw.name, short: aw.short || aw.name, entry: ENTRY.awake, open: ready, awakening: true, on: fb?.form === 'awake', activate: aw.activate,
         why: ready ? '' : m < AWAKEN_MASTERY ? `awakening: fruit mastery ${AWAKEN_MASTERY}, then a moment in battle` : 'awakening: ready — a hard fight will bring it out' });
     }
-    out.next = out.forms.filter((F) => !F.open).slice(0, 2).map((F) => ({ name: F.name, why: F.why }));
+    out.next = out.forms.filter((F) => !F.open).slice(0, 1).map((F) => ({ name: F.name, why: F.why }));
     return out;
   }
   const st = STYLES[p?.style] || STYLES.brawler;
@@ -115,7 +115,7 @@ export function movesetOf(p) {
       const L = t.learn || {};
       const who = teachers(t.id);
       const at = L.mastery ? `mastery ${L.mastery}` : '';
-      const by = who.length ? `taught by ${who.slice(0, 2).join(', ')}` : '';
+      const by = who.length ? `taught by ${who[0]}` : '';
       why = L.innate ? 'born to it' : L.special === 'full_moon' ? `${at ? at + ' · ' : ''}under a full moon` : [at, by].filter(Boolean).join(' · ') || 'a trainer teaches it';
       if (!learnedStyle) why = `learn ${st.name} first`;
     } else why = needs(p, d);

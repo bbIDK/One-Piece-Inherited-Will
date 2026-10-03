@@ -21,7 +21,12 @@ import { WEAPON_KINDS } from '../game/progression.js';
 import { repTier, stealFromShop, bannedFromShop } from '../game/reputation.js';
 import { itemImg, skillImg, uiImg } from './icon.js';
 import { openJollyRoger } from './crewPanel.js';
-import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
+import { HOTBAR_SIZE, HOTBAR_KEYS, ENTRY, isMoveset, formOfEntry } from '../game/hotbar.js';
+import { movesetOf, hakiGroupOf, skillHome } from '../game/moveset.js';
+import { formLock } from '../game/entries.js';
+import { entryView } from './skillsHud.js';
+import { keysOf, keyLabel, resetKeys, GAME_KEYS, SKILL_SLOTS, HAKI_SLOTS } from '../game/keys.js';
+import { AWAKEN_MASTERY } from '../data/fruits.js';
 import { RENDER_DIST, renderChunks } from '../game/save.js';
 import { openShipwright } from './shipwrightPanel.js';
 import { fmtDist } from './compass.js';
@@ -31,14 +36,20 @@ const berriesLine = (c) => h('div.berries', uiImg('berries', 20), ` ${formatBerr
 const HOTBAR = HOTBAR_SIZE;
 const USABLE = new Set(['food', 'medicine']);
 // what can sit on the hotbar: food, medicine and Devil Fruits (taken in hand
-// and eaten: see main.js useHotbarItem), weapons (taken in hand)
-const ON_HOTBAR = new Set([...USABLE, 'fruit', 'weapon']);
+// and eaten: see main.js useHotbarItem), weapons (taken in hand), Dials
+// (fired where you aim) — and the movesets (hotbar.js: your fists, your
+// fruit's powers, its forms, its awakened set)
+const ON_HOTBAR = new Set([...USABLE, 'fruit', 'weapon', 'dial']);
 const title = (s) => s[0].toUpperCase() + s.slice(1);
 
 // ============================================================== hotbar editor
-/** What a hotbar entry is: a technique id, or `item:<id>`. */
-export function hotbarEntry(id, c) {
+/** What a hotbar entry is: `item:<id>`, a moveset (`ms:...`), or a technique id (an old hotbar's). */
+export function hotbarEntry(id, c, p) {
   if (!id) return null;
+  if (isMoveset(id) && p) {
+    const v = entryView(p, id);
+    return { kind: 'moveset', id, name: v.name, img: (px) => v.img?.(px) || uiImg('skills', px) };
+  }
   if (id.startsWith('item:')) {
     const iid = id.slice(5), d = ITEMS[iid];
     if (!d) return null;
@@ -67,11 +78,20 @@ export function assignHotbar(game, slot, payload) {
     [hb[slot], hb[j]] = [hb[j], hb[slot]];
   } else {
     let id = payload;
-    if (payload.startsWith('skill:')) id = payload.slice(6);
-    else if (payload.startsWith('item:') || payload.startsWith('inv:')) {
+    if (payload.startsWith('skill:')) {
+      // (techniques sit on the skill keys now — a Dial's goes on as the Dial itself)
+      const tid = payload.slice(6);
+      const dial = (c.inventory || []).find((i) => ITEMS[i.id]?.type === 'dial' && ITEMS[i.id].ability === tid)?.id;
+      if (!dial) { game.log(`${getAbility(tid)?.name || 'A technique'} isn't something you take out: it's ${skillHome(tid, game.settings)}.`, '#ff8a80'); return; }
+      id = 'item:' + dial;
+    } else if (isMoveset(payload)) {
+      const why = movesetWhy(game, payload);
+      if (why) { game.log(why, '#ff8a80'); return; }
+      id = payload;
+    } else if (payload.startsWith('item:') || payload.startsWith('inv:')) {
       const iid = payload.slice(payload.indexOf(':') + 1);
       const d = ITEMS[iid];
-      if (!d || !ON_HOTBAR.has(d.type)) { game.log('Only food, medicine, Devil Fruits and weapons can go on the hotbar.', '#ff8a80'); return; }
+      if (!d || !ON_HOTBAR.has(d.type)) { game.log('Only food, medicine, Devil Fruits, Dials and weapons go on the hotbar — and your Devil Fruit\'s powers (Skills, K).', '#ff8a80'); return; }
       id = 'item:' + iid;
     } else return;
     for (let k = 0; k < HOTBAR; k++) if (hb[k] === id) hb[k] = null;
@@ -79,6 +99,16 @@ export function assignHotbar(game, slot, payload) {
   }
   refreshPlayer(game);
   game.audio?.sfx('equip');
+}
+
+/** Why moveset entry `id` can't go on the hotbar (no fruit, a form not open yet...), or ''. */
+function movesetWhy(game, id) {
+  const p = game.player, c = game.state.char;
+  if (id === ENTRY.fists) return '';
+  if (!c.fruit) return 'You have no Devil Fruit power.';
+  if (id === ENTRY.fruit) return '';
+  const formId = id === ENTRY.awake ? 'awake' : formOfEntry(id);
+  return formId ? formLock(p, formId) : 'Nothing there.';
 }
 
 /**
@@ -90,7 +120,7 @@ function hotbarNote(game, what) {
   const pick = game.ui.hotbarPick;
   return h('p.hb-note' + (pick ? '.picking' : ''), pick
     ? `Now click a slot on your hotbar (keys ${HOTBAR_KEYS.join(' ')}) to put ${what || 'it'} there.`
-    : 'Drag techniques, food, Devil Fruits and weapons straight onto your hotbar at the bottom of the screen (keys 1-9 and 0) — or click one, then click a slot. Drag slots to rearrange them; right-click one to clear it.');
+    : 'Drag what you take out — food, weapons, Dials, your Devil Fruit and its forms — straight onto your hotbar at the bottom of the screen (keys 1-9 and 0), or click one, then click a slot. Drag slots to rearrange them; right-click one to clear it.');
 }
 
 /** Pick something to put on the hotbar with a click (the next hotbar slot clicked takes it). */
@@ -184,7 +214,8 @@ export function openInventory(game) {
     const summary = h('div.eq-summary',
       h('div', h('b', 'Health '), dd.maxHp), h('div', h('b', 'Defence '), `${Math.round(dd.def * 100)}%`, armorOf(c) ? h('span.muted', ` (armour ${Math.round(armorOf(c) * 100)}%)`) : null),
       h('div', h('b', 'Damage '), `×${dd.dmg.toFixed(2)}`), h('div', h('b', 'Speed '), dd.speed.toFixed(1)));
-    const fruitNote = c.fruit ? h('div.fruit-note', itemImg('fruit_' + c.fruit, 26), h('div', h('b', FRUITS[c.fruit].name), h('div.sub', `Eaten · mastery ${Math.floor(c.fruitMastery)} · you can never swim again`))) : null;
+    // (its powers go on the hotbar from here too: drag it there)
+    const fruitNote = c.fruit ? dragSource(h('div.fruit-note', { title: 'Drag onto the hotbar: its key takes the fruit\'s powers out' }, itemImg('fruit_' + c.fruit, 26), h('div', h('b', FRUITS[c.fruit].name), h('div.sub', `Eaten · mastery ${Math.floor(c.fruitMastery)} · you can never swim again`))), ENTRY.fruit) : null;
     const left = h('div.inv-left', doll, summary, fruitNote);
 
     // -------------------------------------------------------------- grid
@@ -244,7 +275,7 @@ export function openInventory(game) {
       if (slotKind(sd)) acts.push(h('button.btn' + (worn ? '.red' : '.gold'), { on: { click: () => { equip(game, id); render(); } } }, isPose ? (worn ? 'Put away' : 'Follow its needle') : worn ? 'Take off' : 'Equip'));
       if (USABLE.has(sd.type)) acts.push(h('button.btn.green', { on: { click: () => { useItem(game, id); render(); } } }, sd.type === 'food' ? 'Eat' : 'Use'));
       if (ON_HOTBAR.has(sd.type)) acts.push(h('button.btn' + (game.ui.hotbarPick === 'item:' + id ? '.gold' : ''), { on: { click: () => pickForHotbar(game, 'item:' + id, render) } }, game.ui.hotbarPick === 'item:' + id ? 'Now click a hotbar slot…' : 'Put on hotbar'));
-      if (sd.type === 'dial') acts.push(h('button.btn', { disabled: c.techniques.includes(sd.ability), on: { click: () => { useItem(game, id); render(); } } }, c.techniques.includes(sd.ability) ? 'Learned' : 'Learn to use'));
+      if (sd.type === 'dial') acts.push(h('button.btn', { disabled: c.techniques.includes(sd.ability), on: { click: () => { useItem(game, id); render(); } } }, c.techniques.includes(sd.ability) ? 'Learned: its key fires it' : 'Learn to use'));
       if (sd.type === 'fruit') {
         if (c.fruit) acts.push(h('span.muted', 'You have already eaten a Devil Fruit — a body can only hold one. Keep it, sell it, or give it away.'));
         else acts.push(h('button.btn.red', { on: { click: () => confirmEat(game, id, () => render()) } }, 'Eat…'));
@@ -328,7 +359,8 @@ export function confirmEat(game, itemId, done = () => {}) {
     itemImg(itemId, 72),
     h('h2', f.name),
     fruitInfo(d),
-    h('p', 'Techniques: ' + f.techniques.map((t) => `${t.name} (mastery ${t.mastery})`).join(', ')),
+    h('p', h('b', 'All yours at once: '), f.techniques.map((t) => t.name).join(', '), '.'),
+    f.forms?.length ? h('p', h('b', 'Fighting with it opens: '), f.forms.map((F) => `${F.name} (mastery ${F.mastery})`).join(', '), `, and at mastery ${AWAKEN_MASTERY}, in a hard fight, its awakening.`) : h('p', h('b', 'Fighting with it: '), `its power grows, and at mastery ${AWAKEN_MASTERY}, in a hard fight, it awakens.`),
     h('p', { style: { color: '#b71c1c', fontWeight: 800 } }, 'You will never swim again — the sea becomes your grave if you fall in. And a body can only ever hold ONE Devil Fruit.'),
     h('div', { style: { display: 'flex', gap: '10px', justifyContent: 'center' } },
       h('button.btn.red', { on: { click: () => { game.ui.closePanel(); useItem(game, itemId); done(); } } }, 'Eat it'),
@@ -445,16 +477,66 @@ const TRAINS_BY = {
 function openJollyRogerFromMenu(game) { openJollyRoger(game); }
 
 // ================================================================= skills
+/**
+ * The movesets you can take out, as cards to drag onto the hotbar (or click,
+ * then click a slot): your fists, each weapon you wear, your Devil Fruit, its
+ * forms and its awakened set — those not open yet greyed, with what opens
+ * them.
+ */
+function movesetCards(game, c, p, render) {
+  const pick = game.ui.hotbarPick;
+  const card = (payload, img, name, sub, lock = '') => {
+    const at = (c.hotbar || []).indexOf(payload);
+    const el = h('div.ms-card' + (lock ? '.locked' : '') + (pick === payload ? '.sel' : '') + (at >= 0 ? '.onbar' : ''), {
+      title: lock || 'Drag onto your hotbar, or click and then click a slot on it',
+      on: { click: () => { if (!lock) pickForHotbar(game, payload, render); } },
+    }, img, h('div.grow', h('b', name), h('div.sub', lock || sub)), at >= 0 ? h('span.tag', `key ${HOTBAR_KEYS[at]}`) : null);
+    return lock ? el : dragSource(el, payload);
+  };
+  const out = [card(ENTRY.fists, skillImg({ id: 'ms_fists', name: 'Fists', source: 'style:brawler', style: 'brawler' }, 34), 'Fists', 'Bare hands: the weapon sheathed, the fruit put away')];
+  for (const id of new Set(c.equipped?.weapons || [])) if (ITEMS[id]) out.push(card('item:' + id, itemImg(id, 34), ITEMS[id].name, 'Draws it (and again sheathes it): its style\'s moves'));
+  const f = FRUITS[c.fruit];
+  if (f) {
+    out.push(card(ENTRY.fruit, itemImg('fruit_' + c.fruit, 34), f.name, `Its powers: ${f.techniques.length} techniques · mastery ${Math.floor(c.fruitMastery || 0)}`));
+    for (const F of f.forms || []) {
+      const lock = formLock(p, F.id);
+      // (a form that needs Haki keeps hidden until a Haki wakes)
+      if (lock && needsHaki(getAbility(F.activate)) && !hakiKnown(c)) continue;
+      out.push(card(ENTRY.form(F.id), skillImg(getAbility(F.activate), 34), F.name, F.desc, lock));
+    }
+    const aw = f.awakening;
+    out.push(card(ENTRY.awake, skillImg(getAbility(aw.activate), 34), aw.name, aw.desc, formLock(p, 'awake')));
+  }
+  return out;
+}
+
+/** The skills of what's out now, on their keys (click one to change it), with what opens those still to learn. */
+function movesetNow(game, p) {
+  const ms = movesetOf(p);
+  const K = keysOf(game.settings);
+  const row = (group, i, d, locked, why, k) => h('div.ms-row' + (locked ? '.locked' : ''),
+    i < 0 ? h('span.keycap.unbound', '—') : h('button.keycap' + (k ? '' : '.unbound'), { title: `Click, then press the key you want for ${d.name}`, on: { click: () => game.ui.rebindSlot(group, i, d.name) } }, keyLabel(k)),
+    skillImg(d, 30), h('div.grow', h('b', d.name), h('div.sub', why || d.desc || '')),
+    d.cd ? h('span.sub', `${d.cd}s`) : null);
+  const rows = ms.skills.map((x, i) => row('skills', i, x.def, x.locked, x.locked ? `Not learned yet: ${x.why}` : x.why, K.skills[i]));
+  const hg = hakiGroupOf(p);
+  return h('div',
+    h('div.ms-rows', rows.length ? rows : h('p.muted', 'No techniques for it yet.')),
+    ms.next.length ? h('p.muted', ms.next.map((n) => `Next: ${n.name} — ${n.why}.`).join(' ')) : null,
+    hg ? h('div', h('h4.grp', `${hg.title} — the Haki keys`), h('div.ms-rows', hg.rows.map((r) => row('haki', r.locked ? -1 : r.slot, r.def, r.locked, r.locked ? `Not learned yet: ${r.why}` : '', r.locked ? '' : K.haki[r.slot])))) : null);
+}
+
 export function openSkills(game) {
   const ui = game.ui;
   const c = game.state.char;
   const p = game.player;
   const body = h('div.skills');
-  const entry = ui.openPanel(body, { wide: true, id: 'skills' });
+  const entry = ui.openPanel(body, { wide: true, id: 'skills', onClose: () => { if (ui.onKeysChange === render) ui.onKeysChange = null; } });
   if (!entry) return;
-  const render = () => {
+  function render() {
     clear(body);
     game.ui.onHotbarChange = render;
+    game.ui.onKeysChange = render;
     const styles = Object.keys(c.masteries).filter((s) => STYLES[s]);
     const styleBtns = styles.map((s) => h('button' + (c.style === s ? '.on' : ''), { on: { click: () => { c.style = s; refreshPlayer(game); render(); } }, title: STYLES[s].desc },
       `${STYLES[s].name} (${Math.floor(c.masteries[s])})`));
@@ -474,30 +556,58 @@ export function openSkills(game) {
       const g = src.startsWith('fruit') ? 'Devil Fruit' : src.startsWith('haki') ? 'Haki' : src.startsWith('style:') ? (STYLES[src.slice(6)]?.name || 'Style') : d.style ? (STYLES[d.style]?.name || 'Style') : 'Other';
       (byGroup[g] = byGroup[g] || []).push(d);
     }
+    // (each says where it sits: its key, and with what out)
     const lists = Object.entries(byGroup).map(([g, ds]) => h('div',
       h('h4.grp', g),
-      h('div.tech-grid', ds.map((d) => {
-        const onBar = c.hotbar.includes(d.id);
-        const card = h('div.tech' + (game.ui.hotbarPick === 'skill:' + d.id ? '.sel' : '') + (onBar ? '.onbar' : ''), {
-          title: 'Drag onto your hotbar, or click and then click a slot on it',
-          on: { click: () => pickForHotbar(game, 'skill:' + d.id, render) },
-        }, skillImg(d, 40),
+      h('div.tech-grid', ds.map((d) => h('div.tech.fixed', skillImg(d, 40),
         h('div.grow', h('b', d.name), h('div.sub', d.desc || ''),
-          h('div.sub.meta', [d.cd ? `cooldown ${d.cd}s` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(' · '))),
-        onBar ? h('span.tag', `key ${HOTBAR_KEYS[c.hotbar.indexOf(d.id)]}`) : null);
-        return dragSource(card, 'skill:' + d.id);
-      }))));
-    add(body, 
+          h('div.sub.meta', [skillHome(d.id, game.settings), d.cd ? `cooldown ${d.cd}s` : null, d.cost?.haki && hakiKnown(c) ? `${d.cost.haki} spirit` : null, d.weapon ? `needs ${d.weapon}` : null].filter(Boolean).join(' · '))))))));
+    const ms = movesetOf(p);
+    const pickName = (() => { const x = game.ui.hotbarPick; if (!x) return null; const e = hotbarEntry(x, c, p); return e?.name; })();
+    add(body,
       h('h2', 'Skills'),
+      h('h3', 'What you take out'),
+      h('p.muted', 'The hotbar (1-9, 0) holds what you take out. The skills of whatever is out sit on the skill keys, the same place for the same kind of move in every set — and the mouse swings with it.'),
+      h('div.ms-cards', movesetCards(game, c, p, render)),
+      hotbarNote(game, pickName),
+      h('h3', `Out now: ${ms.title}`, h('small.muted', ` ${ms.sub}`)),
+      movesetNow(game, p),
       h('h3', 'Fighting style'), h('div.tabs', styleBtns),
       styleNote ? h('p', { style: needW ? { color: '#b71c1c' } : null }, styleNote) : null,
       h('p.muted', cur?.desc || ''),
-      hotbarNote(game, getAbility(game.ui.hotbarPick?.slice(6))?.name),
       h('h3', 'Techniques'), techs.length ? h('div', lists) : h('p', 'You know no techniques yet. Find a trainer — or a Devil Fruit.'),
-      hakiKnown(c) ? h('p.muted', `Haki: ${[c.haki.armament && 'R toggles Armament', c.haki.observation && 'T toggles Observation', c.haki.conqueror && "G releases Conqueror's"].filter(Boolean).join(', ')}. Active Haki drains your spirit bar.`) : null,
+      hakiKnown(c) ? h('p.muted', `Haki: ${[c.haki.armament && 'R toggles Armament', c.haki.observation && 'T toggles Observation', c.haki.conqueror && `${keyLabel(keysOf(game.settings).haki[0])} releases Conqueror's`].filter(Boolean).join(', ')}. While one is on, its techniques are on the Haki keys. Active Haki drains your spirit bar.`) : null,
+      h('p.muted', 'Click a key to change it (or in Settings, under Controls).'),
     );
-  };
+  }
   render();
+}
+
+/**
+ * Settings, Controls: the skill keys and the Haki keys (what's on each with
+ * what you have out just now), each changed with a click and a key press
+ * (ui/rebind.js); back to the defaults; and the keys the game keeps.
+ */
+function controlsSection(game, rerender) {
+  const s = game.settings, p = game.player;
+  const K = keysOf(s);
+  const ms = p ? movesetOf(p) : null;
+  const hg = p ? hakiGroupOf(p) : null;
+  const slot = (group, i, label, now) => h('div.key-row', h('span.nm', label, now ? h('small', ` ${now}`) : null),
+    h('button.keycap' + (K[group][i] ? '' : '.unbound'), { title: `Click, then press a key (Esc: leave it, Delete: no key)`, on: { click: () => game.ui.rebindSlot(group, i, label) } }, keyLabel(K[group][i])));
+  // (the game's own keys, those for one thing together)
+  const uses = new Map();
+  for (const [k, what] of GAME_KEYS) uses.set(what, [...(uses.get(what) || []), k]);
+  return h('div',
+    h('h3', 'Controls'),
+    h('p.muted', 'The number keys take out what\'s on your hotbar. The skills of whatever is out sit on the skill keys, slot by slot — and while a Haki is on, its techniques sit on the Haki keys. Click a key to change it, then press the one you want (a mouse button works too). A key the game uses for something else can\'t be taken; one another skill has swaps over.'),
+    h('h4.grp', 'Skill keys'),
+    h('div.key-grid', Array.from({ length: SKILL_SLOTS }, (_, i) => slot('skills', i, `Skill ${i + 1}`, ms?.skills[i] ? `· ${ms.skills[i].def.name}` : ''))),
+    h('h4.grp', 'Haki keys'),
+    h('div.key-grid', Array.from({ length: HAKI_SLOTS }, (_, i) => slot('haki', i, `Haki ${i + 1}`, hg?.rows.find((r) => r.slot === i) ? `· ${hg.rows.find((r) => r.slot === i).def.name}` : i === 0 ? '· a king\'s Conqueror\'s' : ''))),
+    h('div.set-row', h('button.btn', { on: { click: () => { resetKeys(s); game.applySettings(true); game.ui.cache.skills = null; rerender(); } } }, 'Back to the default keys')),
+    h('details.game-keys', h('summary', 'The keys the game keeps'),
+      h('div.key-grid', [...uses].map(([what, ks]) => h('div.key-row', h('span.nm', what[0].toUpperCase() + what.slice(1)), h('span', ks.map((k) => h('kbd.keycap', keyLabel(k)))))))));
 }
 
 // ================================================================ journal
@@ -549,7 +659,7 @@ export function openMenu(game, { onQuit, onRetire, onSave, extra = [] }) {
       btn('check', 'Resume', () => ui.closePanel(), '.gold'),
       ...extra.map((e) => btn(e.icon, e.text, () => { ui.closePanel(); e.fn(); })),
       btn('save', 'Save game', () => { if (onSave()) saved.textContent = `Saved just now (lineage ${game.saveSlot || 1})`; }),
-      btn('help', 'How to Play', () => { ui.closePanel(); ui.openPanel(helpContent(c), { wide: true, id: 'help', pause: true }); }),
+      btn('help', 'How to Play', () => { ui.closePanel(); ui.openPanel(helpContent(c, game.settings), { wide: true, id: 'help', pause: true }); }),
       btn('settings', 'Settings', () => { ui.closePanel(); openSettings(game); }),
       btn('inn', 'Get unstuck: back to your bed', async () => {
         const p = game.player, r = c.rest || c.spawn;
@@ -632,11 +742,13 @@ export function openSettings(game) {
       h('h3', 'Sound & feel'),
       slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),
       check('Show tutorial hints', 'showHints'),
+      controlsSection(game, render),
       h('p.muted', 'Press V in game to switch between first and third person. Settings are saved in this browser.'));
   };
+  game.ui.onKeysChange = render;
   render();
   // (reached from the pause screen, and part of it: the world waits)
-  game.ui.openPanel(body, { onClose: () => game.applySettings(true), id: 'settings', pause: true });
+  game.ui.openPanel(body, { onClose: () => { game.applySettings(true); if (game.ui.onKeysChange === render) game.ui.onKeysChange = null; }, id: 'settings', pause: true });
 }
 
 // =================================================================== shop

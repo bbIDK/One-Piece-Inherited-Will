@@ -5,13 +5,20 @@
 //  * Buttons: attack, heavy, dodge, block, use and heal. At the helm they
 //    become fire, row and Coup de Burst. The Haki toggles on the hotbar are
 //    tappable once awakened.
+//  * The skills of what you have out (game/moveset.js) — your fists', the
+//    weapon's, the Devil Fruit's or its form's — as round buttons left of the
+//    pad, each with its cooldown; the Haki techniques after them while a Haki
+//    is on (in its colour). The hotbar's slots take things out, as its keys do.
 // Touch mode turns on with the first touch (and from the start on phones and
 // tablets), and off again as soon as a real mouse clicks.
-import { h } from './dom.js';
+import { h, clear } from './dom.js';
+import { skillImg } from './icon.js';
+import { movesetOf, hakiGroupOf } from '../game/moveset.js';
 
 const DEAD = 0.14; // stick dead zone
 const RUN = 0.9; // push this far to run
 const R = 54; // stick travel in CSS pixels
+const SKILL_BTNS = 6, HAKI_BTNS = 3; // skill buttons shown at most (the rest: a keyboard, or Skills)
 
 export function installTouch(game, root) {
   const ui = game.ui, inp = game.input;
@@ -33,7 +40,10 @@ export function installTouch(game, root) {
   const knob = h('i');
   const stickEl = h('div.t-stick.idle', knob);
   const rotate = h('div.t-rotate.hidden', 'Turn your phone sideways for the best view');
-  ui.hud.append(stickEl, pad, rotate);
+  // the skills of what's out, and the Haki techniques (rebuilt when they change)
+  const skillsEl = h('div.t-skills');
+  let skillsKey = '', skillBtns = [];
+  ui.hud.append(stickEl, pad, skillsEl, rotate);
 
   // --- input plumbing ----------------------------------------------------------
   const press = (c) => {
@@ -165,6 +175,46 @@ export function installTouch(game, root) {
   }, true);
   setOn(coarse);
 
+  // --- the skill buttons ---------------------------------------------------------------
+  /** The skills of what's out (and the Haki techniques) as buttons: a tap uses one, as its key would. */
+  const drawSkills = (p, show) => {
+    const list = [];
+    if (show) {
+      movesetOf(p).skills.forEach((s, i) => { if (!s.locked && list.length < SKILL_BTNS) list.push({ group: 'skills', i, def: s.def }); });
+      const hg = hakiGroupOf(p);
+      let n = 0;
+      for (const r of hg?.rows || []) if (!r.locked && n++ < HAKI_BTNS) list.push({ group: 'haki', i: r.slot, def: r.def, color: hg.color });
+    }
+    const key = list.map((x) => x.group + x.i + x.def.id).join();
+    if (key !== skillsKey) {
+      skillsKey = key;
+      clear(skillsEl);
+      skillBtns = list.map((x) => {
+        const cd = h('i.t-cd');
+        const el = h('button.t-btn.t-sk' + (x.group === 'haki' ? '.haki' : ''), { type: 'button', title: x.def.name, style: x.color ? { borderColor: x.color } : null }, skillImg(x.def, 30), cd);
+        el.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          el.classList.add('on');
+          if (x.group === 'haki') ui.useHaki(x.i); else ui.useSkill(x.i);
+        });
+        const up = () => el.classList.remove('on');
+        el.addEventListener('pointerup', up);
+        el.addEventListener('pointercancel', up);
+        el.addEventListener('contextmenu', (e) => e.preventDefault());
+        skillsEl.appendChild(el);
+        return { el, cd, def: x.def };
+      });
+    }
+    // (each greyed from the top down while it's coming back)
+    for (const b of skillBtns) {
+      const left = p.cooldowns?.[b.def.id] || 0;
+      const k = left > 0 && b.def.cd ? Math.min(1, left / (b.def.cd * (p.cdMul ?? 1))) : 0;
+      const tf = `scaleY(${k.toFixed(3)})`;
+      if (b.cd.style.transform !== tf) b.cd.style.transform = tf;
+    }
+  };
+
   // --- per frame --------------------------------------------------------------------
   const set = (el, text) => { const b = el.firstChild; if (b.textContent !== text) b.textContent = text; };
   return {
@@ -188,9 +238,10 @@ export function installTouch(game, root) {
       B.block.classList.toggle('hidden', sail);
       B.heal.classList.toggle('hidden', sail);
       B.use.classList.toggle('hidden', !p.controller?.interaction);
+      drawSkills(p, playing() && !sail && !knocked);
       if (!hinted && game.view3d?.active) {
         hinted = true;
-        ui.hint('Left thumb: move (push all the way to run). Right thumb: drag to look around. Jump, dodge and fight with the buttons; tap a hotbar slot to use a technique.', 10);
+        ui.hint('Left thumb: move (push all the way to run). Right thumb: drag to look around. Jump, dodge and fight with the buttons. Tap a hotbar slot to take something out — your Devil Fruit, a weapon — and its skills come up as buttons beside the pad.', 10);
       }
     },
   };
