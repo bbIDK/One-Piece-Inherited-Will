@@ -80,8 +80,8 @@ export function rideStep(a, dt, game) {
   c.t += dt;
   a.airT = 0; a.iframes = Math.max(a.iframes || 0, 0.2);
   if (c.phase === 'wait') {
-    // the empty cabin coming to fetch you
-    const T = rw.len / SPEED;
+    // the empty cabin coming to fetch you (quicker, with nobody in it)
+    const T = rw.len / (SPEED * 2);
     const k = Math.min(1, c.t / T);
     rw.s = s1 + (s0 - s1) * smooth(k);
     if (k >= 1) { rw.at = s0; c.phase = 'in'; c.t = 0; }

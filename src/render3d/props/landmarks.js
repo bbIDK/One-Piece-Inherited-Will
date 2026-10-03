@@ -909,7 +909,7 @@ const towerGeo = (h) => model('tower:' + h, (k) => {
 });
 reg('tower', (o, ctx) => {
   const n = o.name || '';
-  const h = /justice/i.test(n) ? 16 : /impel/i.test(n) ? 12 : /umbrella|lodge/i.test(n) ? 7 : 10;
+  const h = o.h || (/justice/i.test(n) ? 16 : /impel/i.test(n) ? 12 : /umbrella|lodge/i.test(n) ? 7 : 10);
   const s = Math.max(1, (o.fw || 1) / 2.5);
   return simple(o, ctx, 'tower:' + h, towerGeo(h), { yaw: 0, scale: s });
 });

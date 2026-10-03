@@ -289,8 +289,9 @@ export const PARADISE_1 = [
       { kind: 'flagpole', dx: 0.12, dy: -0.46, name: "Dr. Hiriluk's Jolly Roger", spot: 'hiriluk_flag', lore: '(A skull with a cross of cherry blossoms instead of bones.) Dr. Hiriluk said a pirate\'s flag is a symbol of conviction. "When do you think people die? When they are forgotten."' },
       { kind: 'cannon', dx: 0.04, dy: -0.44 }, { kind: 'cannon', dx: 0.2, dy: -0.44 },
       // Drum Castle's towers, at the corners inside its walls
-      { kind: 'tower', name: 'Drum Castle tower', dx: -0.022, dy: -0.34 }, { kind: 'tower', name: 'Drum Castle tower', dx: 0.262, dy: -0.34 },
-      { kind: 'tower', name: 'Drum Castle tower', dx: -0.022, dy: -0.1 }, { kind: 'tower', name: 'Drum Castle tower', dx: 0.262, dy: -0.1 },
+      // (tall enough to stand up over the rim of Drum Rock, seen from the snowfields and the sea below)
+      { kind: 'tower', name: 'Drum Castle tower', h: 24, dx: -0.022, dy: -0.34 }, { kind: 'tower', name: 'Drum Castle tower', h: 24, dx: 0.262, dy: -0.34 },
+      { kind: 'tower', name: 'Drum Castle tower', h: 18, dx: -0.022, dy: -0.1 }, { kind: 'tower', name: 'Drum Castle tower', h: 18, dx: 0.262, dy: -0.1 },
       { kind: 'sign', dx: 0.17, dy: 0.66, name: 'Drum Ropeway', spot: 'castle_road', lore: '"DRUM ROPEWAY — to Drum Castle." (Underneath, freshly painted over a royal decree:) "Open to doctors, patients and peasants alike. By order of the people of Drum." The cable climbs straight up the face of Drum Rock, seventy metres of sheer cliff, to the castle gate.' },
     ],
     spots: [{ id: 'castle_gate', dx: 0.12, dy: -0.04 }, { id: 'lapahn_slope', dx: 0.0, dy: 0.5 }],
