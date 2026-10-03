@@ -509,8 +509,14 @@ function terrainMaterial() {
           if (vPave.x + vPave.y + vPave.z > 0.01) diffuseColor.rgb = paving(diffuseColor.rgb, vTerrainXZ, vPave, broad, grain);
           // steep ground shows bare rock (not on beaches and water edges, which are flat)
           float steep = smoothstep(0.62, 0.42, vTerrainUp);
-          vec3 rock = vec3(0.47, 0.43, 0.39) * (0.85 + grain * 0.3);
-          diffuseColor.rgb = mix(diffuseColor.rgb, rock * (0.7 + 0.3 * diffuseColor.rgb / max(max(diffuseColor.r, diffuseColor.g), 0.2)), steep * 0.75);
+          // (in the snow the rock's a cold blue-grey, streaked white where the
+          // snow's caught in its runnels down the face: the Drum Rockies)
+          float snowy = smoothstep(0.78, 0.92, min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b)));
+          vec3 rock = mix(vec3(0.47, 0.43, 0.39), vec3(0.55, 0.6, 0.68), snowy) * (0.85 + grain * 0.3);
+          rock *= 0.7 + 0.3 * diffuseColor.rgb / max(max(diffuseColor.r, diffuseColor.g), 0.2);
+          float streak = smoothstep(0.5, 0.72, texture2D(uDetail, vTerrainXZ / 5.0).r) * snowy;
+          rock = mix(rock, vec3(0.9, 0.93, 0.97), streak * 0.7);
+          diffuseColor.rgb = mix(diffuseColor.rgb, rock, steep * 0.75);
           // under the sea: bluer with depth, and sunlight rippling across the bottom
           if (vTerrainY < -0.15) {
             float dd = -vTerrainY;
@@ -520,7 +526,7 @@ function terrainMaterial() {
           }
         }`);
   };
-  m.customProgramCacheKey = () => 'terrain-detail-paved-2';
+  m.customProgramCacheKey = () => 'terrain-detail-paved-3';
   return m;
 }
 
