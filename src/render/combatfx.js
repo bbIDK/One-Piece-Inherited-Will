@@ -174,7 +174,7 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
     if ((w >= 0.7 || crit || h.impactFrame || down) && (o.playerInvolved || tgt.boss) && !counter) {
       const blade = !!(att && att.weapon && att.weapon.kind === 'sword') || !!(st && st.arcs);
       const big = crit || h.impactFrame || w >= 1 || down;
-      fx.sfx?.(cx, cy, sfxWord(elem, blade, big, !!(att && att.armament)), sfxColor(elem, blade, col), 0.5 + 0.3 * Math.min(1, w) + (big ? 0.15 : 0), { z: z + 0.45, gap: down ? 0 : undefined });
+      soundOn(fx, tgt, cx, cy, sfxWord(elem, blade, big, !!(att && att.armament)), sfxColor(elem, blade, col), 0.5 + 0.3 * Math.min(1, w) + (big ? 0.15 : 0), { z: z + 0.45, gap: down ? 0 : undefined });
     }
     tgt.hitFx = { t0: game.env ? game.env.time : fx.time, w, ang, prev: tgt.hitFx ? tgt.hitFx.t0 : -9 };
   }
@@ -309,6 +309,73 @@ function styleHit(fx, st, def, tgt, x, y, z, ang, w) {
   if (st.oni && w > 0.6) fx.add('flare', { x, y, z, size: 0.7, color: '#ff1744', life: 0.2 });
 }
 
+/** The player, when the fight is seen through their own eyes (first person); else null. */
+function ownEyes(fx) {
+  const g = fx.game, v = g && g.view3d, p = g && g.player;
+  return v && v.active && v.rig && v.rig.mode === 'first' && v.rig.camera && p && p.mode !== 'sail' ? p : null;
+}
+
+/**
+ * Seen through the player's own eyes: a spot `d` metres out along their view,
+ * `up` metres above its middle and `side` to the right, as [x, y, h] (h above
+ * the ground there, the way effects take it). Wherever the ground slopes or
+ * they look, a word put there reads in the same place on screen. (From their
+ * eyes as they are now, looking the way the camera last did: it looks down
+ * its own -z.)
+ */
+function inView(fx, d, up = 0, side = 0) {
+  const g = fx.game, v = g.view3d, m = v.rig.camera.matrixWorld.elements, w = g.world, p = g.player;
+  const eye = v.ground(p.x, p.y) + 1.72 * ((p.look && p.look.scale) || 1);
+  const dx = -m[8] * d + m[4] * up + m[0] * side, dh = -m[9] * d + m[5] * up + m[1] * side, dy = -m[10] * d + m[6] * up + m[2] * side;
+  const x = w ? w.wx(p.x + dx) : p.x + dx, y = p.y + dy;
+  return [x, y, eye + dh - v.ground(x, y)];
+}
+
+/** How far `a` is from the player (0 for the player). */
+function fromPlayer(fx, p, a) {
+  const w = fx.game.world;
+  return a === p ? 0 : w ? w.distance(p.x, p.y, a.x, a.y) : Math.hypot(a.x - p.x, a.y - p.y);
+}
+
+/**
+ * A callout over `a`, `lift` up the screen (the 2D way: fx.text makes it a
+ * height). Seen through the player's own eyes that misses: a word about the
+ * player would sit behind the camera, and one over the head of someone close
+ * above the top of the view (or too near the eye to draw). There a word
+ * about the player, or anyone close by, floats up from just over the middle
+ * of the view (the overlay draws over everything, so nothing hides it); one
+ * about anyone further off comes down as far as it takes to be seen (to
+ * their chest at most).
+ */
+function calloutOver(fx, a, lift, str, col, size) {
+  const p = ownEyes(fx);
+  if (!p) return fx.callout(a.x, a.y - lift, str, col, size);
+  if (fromPlayer(fx, p, a) < 3) {
+    const [x, y, z] = inView(fx, 2.6, 0.12);
+    return fx.callout(x, y, str, col, size, { z });
+  }
+  const v = fx.game.view3d, s = (a.look && a.look.scale) || 1;
+  let z = 1.6 + lift;
+  while (z > 1.1 * s && v.project(a.x, a.y, z)[1] < v.proj.ch * 0.3) z -= 0.1;
+  return fx.callout(a.x, a.y, str, col, size, { z });
+}
+
+/**
+ * A sound word at a blow on `a` (see fx.sfx). Seen through the player's own
+ * eyes, one on them goes low in front, where their guard is; one on someone
+ * close by, a couple of metres out along the view (at the blow itself it
+ * could end up right against the eye, the moment you lunge in).
+ */
+function soundOn(fx, a, x, y, str, col, size, o) {
+  const p = ownEyes(fx);
+  const d = p ? fromPlayer(fx, p, a) : Infinity;
+  if (d < 3) {
+    const at = a === p ? inView(fx, 2, -0.42, -0.25) : inView(fx, 2.4, -0.12, 0.2);
+    return fx.sfx?.(at[0], at[1], str, col, size, { ...o, z: at[2] });
+  }
+  return fx.sfx?.(x, y, str, col, size, o);
+}
+
 function blockFx(fx, tgt, ang, w, z) {
   const fa = ang + Math.PI;
   const px = tgt.x + Math.cos(fa) * 0.35, py = tgt.y + Math.sin(fa) * 0.22;
@@ -324,7 +391,7 @@ function blockFx(fx, tgt, ang, w, z) {
  * one is whiter and bigger, with a beat of slow motion and focus lines.
  */
 export function parryFx(fx, tgt, att, ang, perfect = false) {
-  fx.sfx?.(tgt.x, tgt.y, perfect ? 'KIIIN!!' : 'KIIN!', perfect ? '#ffffff' : '#e3f2fd', perfect ? 0.7 : 0.55, { z: 1.5, gap: 0 });
+  soundOn(fx, tgt, tgt.x, tgt.y, perfect ? 'KIIIN!!' : 'KIIN!', perfect ? '#ffffff' : '#e3f2fd', perfect ? 0.7 : 0.55, { z: 1.5, gap: 0 });
   const fa = ang + Math.PI;
   const s = (tgt.look && tgt.look.scale) || 1;
   const px = tgt.x + Math.cos(fa) * 0.45, py = tgt.y + Math.sin(fa) * 0.3, z = 0.85 * s;
@@ -336,7 +403,7 @@ export function parryFx(fx, tgt, att, ang, perfect = false) {
   fx.ring(tgt.x, tgt.y, 0.3, perfect ? 2.6 : 2, col, 0.4, 0.12, { add: true });
   if (perfect) fx.ring(px, py, 0.1, 1.2, '#ffffff', 0.3, 0.08, { z, flat: 1, noCore: true, add: true, delay: 0.05 });
   sparks(fx, px, py, z, fa, perfect ? 24 : 16, ['#ffffff', '#fff59d', '#ffe082'], { speed: perfect ? 11 : 9, spread: 2.6, life: 0.35 });
-  fx.callout(tgt.x, tgt.y - 1.45 * s, perfect ? 'PERFECT PARRY!' : 'PARRY!', col, perfect ? 0.58 : 0.5);
+  calloutOver(fx, tgt, 1.45 * s, perfect ? 'PERFECT PARRY!' : 'PARRY!', col, perfect ? 0.58 : 0.5);
   // the attacker rocks back, posture broken: a jolt of sparks off their weapon
   if (att) {
     const as = (att.look && att.look.scale) || 1;
@@ -353,12 +420,12 @@ export function parryFx(fx, tgt, att, ang, perfect = false) {
 
 /** Guard broken: the guard shatters, a jolt and a short slow-down. */
 export function guardBreakFx(fx, tgt, att, ang) {
-  fx.sfx?.(tgt.x, tgt.y, 'GASHAN!!', '#ff8a65', 0.7, { z: 1.4, gap: 0 });
+  soundOn(fx, tgt, tgt.x, tgt.y, 'GASHAN!!', '#ff8a65', 0.7, { z: 1.4, gap: 0 });
   const s = (tgt.look && tgt.look.scale) || 1, z = 0.85 * s;
   fx.burst(tgt.x, tgt.y, 14, { kind: 'shard', color: ['#e3f2fd', '#90caf9', '#ffffff'], speed: 6, z, vz: 3, g: 9, life: 0.55, size: 0.12, drag: 2 });
   fx.add('impact', { x: tgt.x, y: tgt.y, z, angle: ang, size: 0.75, color: '#ff8a65', core: '#ffffff', life: 0.2, spikes: 11 });
   fx.ring(tgt.x, tgt.y, 0.3, 1.6, '#ff7675', 0.35, 0.12, { add: true });
-  fx.callout(tgt.x, tgt.y - 1.4 * s, 'GUARD BREAK', '#ff7675', 0.42);
+  calloutOver(fx, tgt, 1.4 * s, 'GUARD BREAK', '#ff7675', 0.42);
   if (tgt.isPlayer || (att && att.isPlayer)) { fx.slowmo(0.28, 0.4); fx.kick(ang, 7); fx.focus(tgt.x, tgt.y, 0.2); }
 }
 
@@ -367,12 +434,12 @@ export function deflectFx(fx, tgt, shot, ang, perfect = false) {
   const fa = ang + Math.PI;
   const s = (tgt.look && tgt.look.scale) || 1, z = 0.85 * s;
   const px = tgt.x + Math.cos(fa) * 0.5, py = tgt.y + Math.sin(fa) * 0.32;
-  fx.sfx?.(px, py, perfect ? 'KAKIN!!' : 'KIN!', '#e3f2fd', 0.5, { z: 1.3, gap: 0 });
+  soundOn(fx, tgt, px, py, perfect ? 'KAKIN!!' : 'KIN!', '#e3f2fd', 0.5, { z: 1.3, gap: 0 });
   fx.add('crescent', { x: tgt.x, y: tgt.y, angle: fa, radius: 0.8 * s, arc: 2.4, width: 0.22, color: '#e3f2fd', core: '#ffffff', life: 0.22, z, reveal: 0.01, dir: 1, tilt: 0.85 });
   fx.add('flare', { x: px, y: py, z, size: perfect ? 1.2 : 0.9, color: '#fff59d', life: 0.28 });
   // the shot glances off to the side
   sparks(fx, px, py, z, fa + (Math.random() < 0.5 ? 1 : -1) * 0.9, 12, ['#ffffff', '#fff59d', '#ffe082'], { speed: 8, spread: 1.2, life: 0.3 });
-  fx.callout(tgt.x, tgt.y - 1.4 * s, 'DEFLECT!', '#e3f2fd', 0.46);
+  calloutOver(fx, tgt, 1.4 * s, 'DEFLECT!', '#e3f2fd', 0.46);
   fx.stop(0.06);
   if (tgt.isPlayer) { fx.kick(fa, 4); if (perfect) fx.slowmo(0.25, 0.45); }
 }
@@ -386,14 +453,14 @@ export function counterFx(fx, att, tgt, ang, w = 1) {
   const s = (tgt.look && tgt.look.scale) || 1, z = 0.8 * s;
   const cx = tgt.x - Math.cos(ang) * 0.22 * s, cy = tgt.y - Math.sin(ang) * 0.14 * s;
   const blade = !!(att.weapon && att.weapon.kind === 'sword' && att.drawn !== false);
-  fx.sfx?.(cx, cy, blade ? 'ZUBAAAN!!' : 'DOGOOON!!', '#ffab40', 0.85, { z: z + 0.5, gap: 0 });
+  soundOn(fx, tgt, cx, cy, blade ? 'ZUBAAAN!!' : 'DOGOOON!!', '#ffab40', 0.85, { z: z + 0.5, gap: 0 });
   fx.add('impact', { x: cx, y: cy, z, angle: ang, size: 1.1 + 0.3 * Math.min(1, w), color: '#ffab40', core: '#ffffff', life: 0.24, spikes: 14, lines: 10 });
   fx.add('flare', { x: cx, y: cy, z: z + 0.05, size: 1.4, color: '#ffd740', life: 0.32 });
   fx.ring(cx, cy, 0.15, 1.5, '#ffab40', 0.3, 0.1, { z, flat: 1, noCore: true, add: true });
   fx.ring(tgt.x, tgt.y, 0.3, 2.2 * s, 'rgba(255,171,64,0.9)', 0.35, 0.12, { z: 0.06, flat: 0.55, add: true });
   sparks(fx, cx, cy, z, ang, 18, ['#ffffff', '#ffd740', '#ffab40'], { speed: 11, spread: 1.6, life: 0.35 });
   dust(fx, tgt.x, tgt.y + 0.04, 8, { angle: ang, spread: 2, speed: 4 });
-  fx.callout(tgt.x, tgt.y - 1.6 * s, 'COUNTER!', '#ffab40', 0.56);
+  calloutOver(fx, tgt, 1.6 * s, 'COUNTER!', '#ffab40', 0.56);
   if (att.isPlayer || tgt.isPlayer) {
     fx.stop(0.08);
     fx.impactFrame(0.05);
@@ -409,7 +476,7 @@ export function perfectDodgeFx(fx, a, att) {
   a._ghostT = 0.25; a._ghostTint = '#80deea'; a._ghostAdd = true;
   fx.ring(a.x, a.y, 0.2, 1.4 * s, '#80deea', 0.3, 0.08, { add: true });
   fx.add('flare', { x: a.x, y: a.y, z: 1.0 * s, size: 0.9, color: '#b2ebf2', life: 0.25 });
-  fx.callout(a.x, a.y - 1.45 * s, 'PERFECT DODGE!', '#80deea', 0.48);
+  calloutOver(fx, a, 1.45 * s, 'PERFECT DODGE!', '#80deea', 0.48);
   if (a.isPlayer || (att && att.isPlayer)) { fx.slowmo(0.3, 0.45); fx.focus(a.x, a.y, 0.18); }
 }
 
@@ -420,7 +487,7 @@ export function breakFreeFx(fx, a) {
   fx.ring(a.x, a.y, 0.1, 1.2 * s, '#ffffff', 0.25, 0.08, { z: 0.9 * s, flat: 1, noCore: true, add: true });
   fx.burst(a.x, a.y, 12, { color: ['#ffffff', '#e1f5fe', '#b3e5fc'], speed: 5, z: 0.8 * s, vz: 1.5, g: 2, life: 0.4, size: 0.1, kind: 'spark' });
   dust(fx, a.x, a.y + 0.04, 6, { speed: 3 });
-  fx.callout(a.x, a.y - 1.5 * s, 'BREAK FREE!', '#b3e5fc', 0.46);
+  calloutOver(fx, a, 1.5 * s, 'BREAK FREE!', '#b3e5fc', 0.46);
   if (a.isPlayer) fx.kick(-Math.PI / 2, 3);
 }
 
