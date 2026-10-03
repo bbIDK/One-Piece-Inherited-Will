@@ -55,9 +55,11 @@ export class SnapBuffer {
     // continuous east-west places and angles, so the in-betweens go the short way
     for (const k of WRAP) if (s[k] !== undefined) s['_' + k] = prev && prev[k] !== undefined ? prev['_' + k] + this.dx(prev[k], s[k]) : s[k];
     for (const k of ANG) if (s[k] !== undefined) s['_' + k] = prev && prev[k] !== undefined ? prev['_' + k] + angleDiff(prev[k], s[k]) : s[k];
-    // a leap (a journey across the world, into a zone, onto another ship — theirs, or someone else's they stand aboard): not slid across
+    // a leap (a journey across the world, into a zone, onto another ship — theirs, or someone else's
+    // they stand aboard — or their ship brought round to another pier): not slid across
     const other = (k) => (s[k] || '') !== (prev[k] || '');
-    if (prev && (s.w !== prev.w || other('si') || other('ao') || other('ai') || Math.hypot(s._x - prev._x, s.y - prev.y) > this.jump)) s.cut = true;
+    const leapt = (kx, ky) => s[kx] !== undefined && prev[kx] !== undefined && Math.hypot(this.dx(prev[kx], s[kx]), s[ky] - prev[ky]) > this.jump;
+    if (prev && (s.w !== prev.w || other('si') || other('ao') || other('ai') || leapt('x', 'y') || leapt('sx', 'sy'))) s.cut = true;
     // how fast they really went since the last one, by their clock (to guess ahead with, should
     // the next be late: their own speed is in their game's time, which can run slow on a slow machine)
     if (prev && !s.cut && !s.hb && s.t - prev.t < 1500) {
