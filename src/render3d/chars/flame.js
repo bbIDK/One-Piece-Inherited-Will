@@ -8,6 +8,7 @@
 // flames licking up beside it, sparks streaming off the tips and a soft glow
 // round the whole. It leans back off a runner's shoulders and whips about
 // when they stop or are knocked flying (a spring on the way they move).
+// The same fire, blue and gold, makes the Phoenix's wings (PhoenixWings).
 import * as THREE from 'three';
 import { glowSpriteMat } from './fx.js';
 
@@ -151,10 +152,12 @@ function sparkGeo() {
 }
 
 const COLS = { uRim: '#d42a16', uMid: '#ff6a12', uHot: '#ffb52e', uCore: '#fff0b8' };
+// (the Phoenix's: blue flames with a gold heart, as Marco's burn)
+const PHOENIX = { uRim: '#1259c3', uMid: '#1fa2ef', uHot: '#7fdcff', uCore: '#fff3a0' };
 
-function bodyMat(seed) {
+function bodyMat(seed, cols = COLS) {
   const u = { uTime: { value: 0 }, uSeed: { value: seed }, uGrow: { value: 1 }, uAlpha: { value: 1 }, uLean: { value: new THREE.Vector3() } };
-  for (const [k, c] of Object.entries(COLS)) u[k] = { value: new THREE.Color(c) };
+  for (const [k, c] of Object.entries(cols)) u[k] = { value: new THREE.Color(c) };
   return new THREE.ShaderMaterial({ uniforms: u, vertexShader: VERT, fragmentShader: FRAG_BODY, transparent: true, depthWrite: false, side: THREE.DoubleSide });
 }
 function coreMat(seed) {
@@ -239,6 +242,71 @@ export class BackFlame {
     for (const m of this.mats) m.dispose();
     this.sparkMat.dispose(); this.glowMat.dispose();
   }
+}
+
+const _Y = new THREE.Vector3(0, 1, 0), _p = new THREE.Vector3(), _d = new THREE.Vector3();
+
+/**
+ * The Phoenix's wings: each arm a wing of blue flame — a fan of long tongues
+ * set along it from the shoulder to the hand, streaming back off it (the
+ * longest out at the hand, like a bird's primaries) — and a tail of three
+ * more off the small of the back; gold at the heart of every flame. Laid out
+ * afresh each frame from the rig (shoulders, elbows and hands, in the body's
+ * own frame: add the group to the model's), so the wings spread and fold
+ * with the arms; they flare up from nothing and die back the same way.
+ */
+export class PhoenixWings {
+  constructor(seed = 0) {
+    this.group = new THREE.Group();
+    this.tongues = [];
+    for (let side = 0; side < 2; side++) for (let i = 0; i < 6; i++) this.add(seed + side * 13 + i * 2.1, { side, i });
+    for (let i = 0; i < 3; i++) this.add(seed + 50 + i * 3.3, { tail: i });
+    this.grow = 0;
+  }
+
+  add(seed, slot) {
+    const mat = bodyMat(seed, PHOENIX);
+    const m = new THREE.Mesh(flameGeo(), mat);
+    m.renderOrder = 2;
+    this.group.add(m);
+    this.tongues.push({ m, mat, slot });
+  }
+
+  /**
+   * Burn for a frame. `rig`: the body's solved rig (S, J, E: shoulders, elbows,
+   * hands; hip, qChest); `d`: its dims; `trail`: the way the flames stream, in
+   * the body's frame (+x ahead, +y up, +z its right; a unit vector); `lit`:
+   * burning (grows) or going out (dies back).
+   */
+  update(t, dt, rig, d, trail, lit = true) {
+    this.grow += ((lit ? 1 : 0) - this.grow) * Math.min(1, dt * (lit ? 6 : 8));
+    this.group.visible = this.grow > 0.02;
+    if (!this.group.visible) return;
+    for (const { m, mat, slot } of this.tongues) {
+      let len, wide;
+      if (slot.tail !== undefined) {
+        // the tail: off the small of the back, fanned a little, streaming back and down
+        const f = slot.tail - 1;
+        _p.set(-0.12 * d.Bk, d.chestLen * 0.22, f * 0.07).applyQuaternion(rig.qChest).add(rig.hip);
+        _d.copy(trail).addScaledVector(_Y, -0.25);
+        _d.z += f * 0.3;
+        len = 0.95 - Math.abs(f) * 0.18; wide = 0.5;
+      } else {
+        // along the arm, shoulder to elbow to hand, streaming back and out from it
+        const k = slot.i / 5, S = rig.S[slot.side], J = rig.J[slot.side], E = rig.E[slot.side];
+        if (k < 0.5) _p.lerpVectors(S, J, k * 2); else _p.lerpVectors(J, E, (k - 0.5) * 2);
+        _d.copy(trail).addScaledVector(_Y, 0.12 - k * 0.1);
+        _d.z += (slot.side === 0 ? 1 : -1) * (0.25 + k * 0.3);
+        len = 0.45 + 0.7 * k; wide = 0.62 - 0.18 * k;
+      }
+      m.position.copy(_p);
+      m.quaternion.setFromUnitVectors(_Y, _d.normalize());
+      m.scale.set(wide * this.grow, len * (0.4 + 0.6 * this.grow), wide * this.grow);
+      mat.uniforms.uTime.value = t; mat.uniforms.uGrow.value = this.grow;
+    }
+  }
+
+  dispose() { for (const { mat } of this.tongues) mat.dispose(); }
 }
 
 /** World-space drift (x, z: the air going past) into a parent's frame. */
