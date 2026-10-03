@@ -8,6 +8,7 @@ import { regionAt, REGION, REGION_INFO, isCalmBelt } from '../world/constants.js
 import { clamp, lerp, TAU } from '../core/math.js';
 import { PlayerController } from './playerController.js';
 import { Spawner } from './spawner.js';
+import { zoneRules } from './powers.js';
 
 export class Game {
   constructor({ renderer, input, ui, audio, world }) {
@@ -201,9 +202,12 @@ export class Game {
       const z = this.areaZones[i];
       z.t -= dt;
       z.acc += dt;
+      // (a field's own rules: a cage that closes in, a ROOM that goes with its surgeon... see powers.js)
+      if (z.whileOwner || z.shrink || z.cage || z.grounds) zoneRules(this, z, dt);
       const near = this.actorsNear(z.x, z.y, z.r + 1);
+      const at = { zone: z, x: z.x, y: z.y - 0.4 };
       for (const a of near) {
-        if (!this.combat.canHit(z.owner, a, {})) continue;
+        if (!this.combat.canHit(z.owner, a, at)) continue;
         const d = this.world.distance(z.x, z.y, a.x, a.y);
         if (d > z.r) continue;
         if (z.slow) a.zoneSlow = z.slow, a.zoneSlowT = 0.2;
@@ -214,7 +218,9 @@ export class Game {
       }
       if (z.acc >= z.interval && z.damage > 0) {
         z.acc = 0;
-        this.combat.hitbox({ owner: z.owner, x: z.x, y: z.y - 0.4, shape: 'circle', range: z.r, damage: z.damage, element: z.element, status: z.status, knockback: z.kind === 'meteor' ? 6 : 0.5, stun: z.kind === 'thunder' ? 0.5 : 0.1, duration: 0.05, radial: true, heavy: z.kind === 'meteor', hitShips: z.kind === 'meteor' || z.kind === 'thunder' });
+        // (a cage's strings cut at its edge, where they close in — not in the middle of it)
+        const edge = z.cage ? { shape: 'ring', range: Math.max(0.3, z.r - (z.edge || 1) / 2), width: z.edge || 1 } : { shape: 'circle', range: z.r };
+        this.combat.hitbox({ owner: z.owner, x: z.x, y: z.y - 0.4, ...edge, damage: z.damage, element: z.element, status: z.status, knockback: z.kind === 'meteor' ? 6 : 0.5, stun: z.kind === 'thunder' ? 0.5 : 0.1, duration: 0.05, radial: true, heavy: z.kind === 'meteor', hitShips: z.kind === 'meteor' || z.kind === 'thunder', def: z.def, slashing: z.cage });
         this.zoneFx(z, true);
       }
       this.zoneFx(z, false, dt);
@@ -238,7 +244,7 @@ export class Game {
       fx.crack(z.x, z.y, z.r);
       fx.shake(0.6);
       this.audio?.sfx('explosion');
-    } else if (Math.random() < dt * 25) {
+    } else if (z.kind !== 'room' && Math.random() < dt * 25) {
       const a = Math.random() * TAU, rr = Math.sqrt(Math.random()) * z.r;
       const kind = z.kind === 'storm' || z.kind === 'field' || z.kind === 'dark' ? 'smoke' : z.kind === 'ice' ? 'star' : 'spark';
       fx.particle({ x: z.x + Math.cos(a) * rr, y: z.y + Math.sin(a) * rr * 0.7, z: 0.2, vx: z.kind === 'storm' ? -Math.sin(a) * 3 : 0, vy: z.kind === 'storm' ? Math.cos(a) * 3 : 0, vz: 1, g: 0, life: 0.7, size: kind === 'smoke' ? 0.35 : 0.1, grow: 0.3, color: z.color, kind });

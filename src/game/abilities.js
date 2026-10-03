@@ -6,9 +6,16 @@
 //   buff     – timed stat modifiers / auras / transformations
 //   zone     – lingering damaging or slowing area
 //   pull     – drag enemies toward a point (Black Hole, Kurouzu)
-//   teleport – blink forward (Soru, Yata no Kagami)
+//   teleport – blink forward (Soru, Yata no Kagami), or to the target (toTarget)
 //   heal     – restore health (Phoenix flames)
+//   power    – a Devil Fruit's own mechanic, by kind (Shambles, Takt, a
+//              Liberation... see powers.js and room.js)
 //   fx       – purely visual flourish
+//
+// A technique may also be a Room technique (Ope Ope: `room: 'need'` — only
+// inside your own ROOM; `room: 'weak'` — half as strong outside it; its blows
+// reach only what's in the Room, and pass through a Logia's body), or a way
+// of taking to the sky (`flight`: see flight.js — it takes off or lands).
 //
 // A foe's blow is wound up long enough to be read where fights are gentle
 // (see difficulty.js), and just before it lands a glint on them shows the
@@ -17,6 +24,9 @@ import { TAU, clamp } from '../core/math.js';
 import { ELEMENT_COLORS } from './combat.js';
 import { drawProjectile } from '../render/projectiles.js';
 import { tierOf, stretchWindup } from './difficulty.js';
+import { POWERS } from './powers.js';
+import { ownRoom } from './room.js';
+import { flyableAt } from './flight.js';
 
 const REG = new Map();
 export function registerAbilities(list, source) {
@@ -24,6 +34,13 @@ export function registerAbilities(list, source) {
 }
 export const getAbility = (id) => REG.get(id);
 export const allAbilities = () => [...REG.values()];
+export { ownRoom };
+
+/** Is this a kick (for the Longleg Tribe's whip legs)? */
+export function isKick(def) {
+  if (!def) return false;
+  return /kick|sweep|knee|axe_kick|mouton|stomp|jete|ballet|pirouette|arabesque|handstand|rankyaku/.test(def.anim || '') || def.style === 'black_leg' || def.style === 'okama_kenpo';
+}
 
 export function abilityTotal(def) {
   const last = Math.max(0, ...(def.steps || []).map((s) => (s.at ?? def.windup ?? 0) + (s.dash ? s.dash.time : 0) + (s.hit ? s.hit.duration ?? 0.1 : 0)));
@@ -48,6 +65,9 @@ export function powerFor(actor, def) {
     // weapon mastery: the more you fight with a kind of weapon, the harder it hits
     if (actor.weaponMastery) m *= 1 + (actor.weaponMastery[weaponKindOf(actor, def)] || 0) * 0.006;
   }
+  // (a Longleg's legs are whips; a Skypiean knows a Dial as nobody from the Blue Sea does)
+  if (actor.race === 'longleg' && isKick(def)) m *= 1.3;
+  if (actor.race === 'skypiean' && def.id?.startsWith('dial_')) m *= 1.25;
   m *= actor.buffMul('damage');
   if (actor.armament && !src.startsWith('fruit_ranged')) m *= 1.25 + (actor.hakiLevel('armament') || 0) * 0.004;
   if (actor.conquerorInfused) m *= 1.4;
@@ -79,13 +99,15 @@ export function canUse(actor, def) {
   // (a style's technique needs that style's weapon: Santoryu moves want three swords, whatever you fight with)
   if (def.weapon && !actor.hasWeapon(def.weapon, def.style)) return false;
   if (def.requiresBuff && !actor.hasBuff(def.requiresBuff)) return false;
+  // (a Room technique works only inside your own ROOM)
+  if (def.room === 'need' && !ownRoom(actor)) return false;
   return true;
 }
 
-/** Does this step deal damage (a blow, a shot, a charge, a field)? */
-export const isDamaging = (s) => !!(s.hit || s.proj || s.zone || s.dash?.hit);
+/** Does this step deal damage (a blow, a shot, a charge, a field that hurts, a power that does)? */
+export const isDamaging = (s) => !!(s.hit || s.proj || (s.zone && s.zone.damage > 0) || s.dash?.hit || s.power?.blow);
 /** Does this step's blow smash a guard aside, or go straight through one? (the red glint: dodge it) */
-export const breaksGuard = (s) => !!(s.hit?.guardBreak || s.hit?.unblockable || s.dash?.hit?.guardBreak || s.dash?.hit?.unblockable || s.proj?.unblockable);
+export const breaksGuard = (s) => !!(s.hit?.guardBreak || s.hit?.unblockable || s.dash?.hit?.guardBreak || s.dash?.hit?.unblockable || s.proj?.unblockable || s.power?.unblockable);
 /** The first step of a technique that deals damage (its index), or -1. */
 export function firstBlow(def) { return (def.steps || []).findIndex(isDamaging); }
 
@@ -100,6 +122,18 @@ export function startAbility(actor, def, game, target) {
   actor.action = { def, t: 0, step: 0, angle, tx, ty, target, total: abilityTotal(def) / (def.noSpeedup ? 1 : actor.atkSpeed()), mult: powerFor(actor, def) };
   // (begun while a parry's counter is there to land: it stays there till this move is done)
   if (actor.counterLeft > 0) actor.action.counter = true;
+  // a Room technique: its blows reach what's in your ROOM (and only that); a
+  // weaker one used outside a Room is half as strong
+  if (def.room) {
+    const z = ownRoom(actor, game);
+    if (z) actor.action.room = z;
+    else if (def.room === 'weak') {
+      actor.action.mult *= 0.5;
+      if (actor.isPlayer) game.hint?.('roomweak', `${def.name} is only half as strong outside your ROOM. Cast ROOM first, then fight inside it.`);
+    }
+  }
+  // (a Longarm's second elbow snaps a bare-handed jab back quicker)
+  if (actor.race === 'longarm' && def.m1Chain && !def.weapon) actor.action.total *= 0.8;
   // a foe's blow: wound up long enough to read, and the moment it lands shown by a glint
   if (!actor.isPlayer && actor.faction !== 'player') readable(actor, actor.action, game);
   if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, '#ffffff', 0.34, { life: 1.2 });
@@ -169,12 +203,18 @@ function telegraph(actor, def, game) {
   const a = actor.action;
   const wind = (a?.hitAt ?? def.windup ?? 0.2) * (a?.slow || 1) / (def.noSpeedup ? 1 : actor.atkSpeed());
   if (wind < 0.12) return;
-  const first = (def.steps || []).find((s) => s.hit || s.proj || s.dash || s.zone);
+  const first = (def.steps || []).find((s) => s.hit || s.proj || s.dash || (s.zone && s.zone.damage > 0) || s.power?.blow);
   if (!first) return;
   // red: get out of the way (it smashes guards, or it's a blast); amber: a blow you can parry
   const parryable = (first.hit || first.dash?.hit) && !breaksGuard(first) && !first.zone;
   const col = parryable ? 'rgba(255,193,7,1)' : actor.boss ? 'rgba(255,40,80,1)' : 'rgba(255,60,60,1)';
   const life = wind * (actor.game?.player?.observation ? 1.35 : 1);
+  if (first.power) {
+    // (a power over a whole ROOM — Takt: the Room itself lights up)
+    const z = a?.room || ownRoom(actor, game);
+    if (z) game.fx.telegraph(z.x, z.y, 'circle', { r: z.r, life, color: col });
+    return;
+  }
   if (first.hit) {
     const h = first.hit;
     const ox = actor.x + Math.cos(actor.facing) * (h.offset || 0), oy = actor.y + Math.sin(actor.facing) * (h.offset || 0);
@@ -224,6 +264,11 @@ function runStep(actor, s, game, a) {
       follow: h.follow, offX: Math.cos(ang) * off * reach, offY: -0.4 + Math.sin(ang) * off * reach, followAngle: h.followAngle,
       impactFrame: h.impactFrame, trueDamage: h.trueDamage, hitShips: h.hitShips, shipDamage: h.shipDamage, radial: h.radial,
       onHit: h.onHit, forceWater: h.forceWater, hitsAll: h.hitsAll, def: a.def,
+      // (cuts that don't kill — Amputate; an explosion, never parried; a
+      // quake that throws you off your feet; a paw that sends you flying off
+      // the field; a blow that reaches only what's in the ROOM it was struck
+      // in, and passes through no Logia's body)
+      nonLethal: h.nonLethal, blast: h.blast, launch: h.launch, fling: h.fling, room: a.room || null, ignoreLogia: h.ignoreLogia || !!a.room, reachZ: h.reachZ,
     };
     game.combat.hitbox(hb);
     // the technique's look: smears, rings, beams, signatures (render/combatfx.js)
@@ -257,25 +302,34 @@ function runStep(actor, s, game, a) {
   if (s.dash) {
     const d = s.dash;
     const dist = d.dist * (actor.dashMul || 1);
-    actor.dash = { vx: Math.cos(ang) * dist / d.time, vy: Math.sin(ang) * dist / d.time, t: d.time, ignoreWater: d.air };
+    // (`dive`: from the air, the charge comes down on its target — see flight.js)
+    actor.dash = { vx: Math.cos(ang) * dist / d.time, vy: Math.sin(ang) * dist / d.time, t: d.time, ignoreWater: d.air, dive: d.dive };
     if (d.iframes) actor.iframes = Math.max(actor.iframes, d.iframes);
     if (d.hit) {
       game.combat.hitbox({
         owner: actor, x: actor.x, y: actor.y - 0.4, shape: 'circle', range: d.hit.range || 1.1, damage: (d.hit.damage || 5) * mult,
         knockback: d.hit.knockback ?? 4, stun: d.hit.stun ?? 0.3, element: d.hit.element || 'physical', follow: true, offX: 0, offY: -0.4,
         duration: d.time + 0.05, slashing: d.hit.slashing, heavy: d.hit.heavy, status: d.hit.status, radial: true, guardBreak: d.hit.guardBreak,
-        unblockable: d.hit.unblockable, def: a.def,
+        unblockable: d.hit.unblockable, def: a.def, launch: d.hit.launch, ignoreLogia: !!a.room, reachZ: d.dive ? 3.5 : undefined,
       });
     }
     game.fx.tech(actor, s, a, 'dash'); // dust, streaks, afterimages, trail, cut lines
   }
   if (s.teleport) {
     const t = s.teleport;
-    const dist = t.dist;
+    let dist = t.dist, tang = ang;
+    // (to the target: right up in front of them, if they're within reach — the light-speed kick)
+    const who = t.toTarget ? a.target || actor.controller?.target : null;
+    if (who && who.alive !== false && who.x !== undefined) {
+      const dx = game.world.dx(actor.x, who.x), dy = who.y - actor.y, d = Math.hypot(dx, dy);
+      if (d <= dist + 1) { tang = Math.atan2(dy, dx); dist = Math.max(0, d - (t.gap ?? 1.1)); a.angle = tang; actor.facing = tang; }
+    }
+    // (in the air, anywhere you could fly; on foot, somewhere you could stand)
+    const free = (x, y) => (actor.flying ? flyableAt(actor, game, x, y) : actor.canOccupy(game.world, x, y));
     let nx = actor.x, ny = actor.y;
     for (let k = 0; k < 20; k++) {
-      const tx = actor.x + Math.cos(ang) * dist * (1 - k / 20), ty = actor.y + Math.sin(ang) * dist * (1 - k / 20);
-      if (actor.canOccupy(game.world, tx, ty)) { nx = tx; ny = ty; break; }
+      const tx = actor.x + Math.cos(tang) * dist * (1 - k / 20), ty = actor.y + Math.sin(tang) * dist * (1 - k / 20);
+      if (free(tx, ty)) { nx = tx; ny = ty; break; }
     }
     const x0 = actor.x, y0 = actor.y;
     actor.x = game.world.wx(nx); actor.y = ny;
@@ -291,13 +345,29 @@ function runStep(actor, s, game, a) {
     actor.heal(amt, game);
     game.fx.tech(actor, s, a, 'heal');
   }
+  // (the Phoenix's regenerating flames: its hybrid form shows while they burn)
+  if (s.phoenix) actor.phoenixUntil = Math.max(actor.phoenixUntil || 0, (game.env?.time ?? game.time ?? 0) + s.phoenix);
   if (s.zone) {
     const z = s.zone;
     const zx = z.atTarget ? a.tx : actor.x + Math.cos(ang) * (z.offset || 0);
     const zy = z.atTarget ? a.ty : actor.y + Math.sin(ang) * (z.offset || 0);
-    const zone = { owner: actor, x: game.world.wx(zx), y: zy, r: z.range, t: z.duration, interval: z.interval || 0.5, damage: (z.damage || 0) * mult, element: z.element || 'physical', status: z.status, slow: z.slow, color: z.color || col, kind: z.kind || 'field', pull: z.pull };
+    // (`grow`: metres more across for each point of fruit mastery — a ROOM grows with its surgeon)
+    const r = z.range + (z.grow ? z.grow * (actor.fruitMastery || 0) : 0);
+    const zone = {
+      owner: actor, x: game.world.wx(zx), y: zy, r, t: z.duration, interval: z.interval || 0.5, damage: (z.damage || 0) * mult, element: z.element || 'physical', status: z.status, slow: z.slow, color: z.color || col, kind: z.kind || 'field', pull: z.pull,
+      // a field's own rules (powers.js): ice that makes the sea a road, a cage
+      // of strings that closes in and lets no one out, darkness that swallows
+      // shots, gravity that drags fliers down, one that goes when its maker falls
+      freezeWater: z.freezeWater, cage: z.cage, shrink: z.shrink, edge: z.edge, absorb: z.absorb, grounds: z.grounds, whileOwner: z.whileOwner, def: a.def,
+    };
+    // (one of a kind at a time: a new ROOM replaces the last)
+    if (z.single) for (const o of game.areaZones) if (o.owner === actor && o.kind === zone.kind) o.t = 0;
     game.addZone(zone);
     game.fx.zone(zone, z, actor, a); // clouds, vortices, cages, sprouting arms, meteors...
+  }
+  if (s.power) {
+    const fn = POWERS[s.power.kind];
+    if (fn) fn(actor, s.power, game, a, s);
   }
   if (s.pull) {
     for (const e of game.actorsNear(actor.x, actor.y, s.pull.range)) {

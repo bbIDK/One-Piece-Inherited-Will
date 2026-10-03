@@ -3,8 +3,12 @@ import { derive, baseAttrs, doriki } from './stats.js';
 import { drawCharacter, drawCharacterTinted, starPath, dir4 } from '../render/character.js';
 import { actionClip, stanceFor, STANCES, STANCE_ARMED, gunKind, gaitCadence } from '../render/anims.js';
 import { actorVisuals, drawActorExtras } from '../render/combatfx.js';
-import { getAbility, canUse, startAbility, updateAbility } from './abilities.js';
+import { getAbility, canUse, startAbility, updateAbility, ownRoom } from './abilities.js';
 import { PARRY, tierOf } from './difficulty.js';
+import { flyStep, refill, fall as flightFall, toggleFlight } from './flight.js';
+import { updateLift } from './room.js';
+import { iceAt, statusFx } from './powers.js';
+import { raceTick, kbFrame } from './racial.js';
 import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
 import { RACES } from '../data/races.js';
@@ -53,6 +57,17 @@ const SPRINT_BURST = 5, SPRINT_REST = 3;
 const STATUS_DEFAULTS = {
   burn: { dps: 0.035, color: '#ff7043' }, poison: { dps: 0.03, color: '#8e24aa' }, bleed: { dps: 0.025, color: '#c62828' }, dry: { dps: 0.04, color: '#d7b56d' },
 };
+// (a body without its shadow, out in the sun, burns: Kage Kage)
+const SUNBURN = { dps: 0.03, color: '#ffab91' };
+
+// Helpless: frozen solid, sunk in despair, the heart out of the body in a
+// cube (Mes), cut to pieces (Amputate), lifted into the air (Takt), hung on
+// strings (Parasite) — no moving, no swinging, no guard. A boss is held
+// half as long by the ones a power puts on it; you, never for long (the
+// most of each a foe can hold you for, in seconds).
+const HELPLESS = ['freeze', 'despair', 'heartless', 'pieces', 'lifted', 'puppet'];
+const POWER_HOLDS = new Set(['heartless', 'pieces', 'lifted', 'puppet']);
+const PLAYER_CAP = { heartless: 1.8, pieces: 1.6, lifted: 2, puppet: 1.5 };
 
 export class Actor extends Entity {
   constructor(o = {}) {
@@ -147,6 +162,17 @@ export class Actor extends Entity {
 
   get fruitDef() { return this.fruit ? FRUITS[this.fruit] : null; }
   get seastoned() { return !!this.status.seastone; }
+  /** Held helpless by something (frozen, despairing, heartless, in pieces, lifted, puppeted)? */
+  helpless() { const s = this.status; return !!(s.freeze || s.despair || s.heartless || s.pieces || s.lifted || s.puppet); }
+  /**
+   * In the Phoenix's hybrid form just now (blue-flame wings for arms): while
+   * its form is on, or while its regenerating flames burn (see flight.js for
+   * the full bird, flying). The animation reads it.
+   */
+  get phoenixForm() {
+    if (this.fruit !== 'tori_phoenix') return false;
+    return this.buffs.some((b) => b.phoenix) || (this.phoenixUntil || 0) > (this.game?.env?.time ?? 0);
+  }
 
   recalc() {
     const mods = { ...this.baseMods };
@@ -219,10 +245,18 @@ export class Actor extends Entity {
     const cur = this.status[k];
     if (k === 'wet' && this.status.burn) delete this.status.burn;
     if (k === 'burn' && this.status.wet) return;
-    if ((k === 'burn' && this.fruit === 'mera') || (k === 'poison' && this.fruit === 'doku')) return;
-    const dur = typeof v === 'number' ? v : v.t;
-    if (!cur || cur.t < dur) this.status[k] = { t: dur, src, acc: 0 };
-    if (k === 'freeze') { this.action = null; this.blocking = false; }
+    if ((k === 'burn' && (this.fruit === 'mera' || this.fruit === 'magu')) || (k === 'poison' && this.fruit === 'doku')) return;
+    let dur = typeof v === 'number' ? v : v.t;
+    // (a power's hold on a boss is half as long; on you, never long — see HELPLESS)
+    if (POWER_HOLDS.has(k)) {
+      if (this.boss) dur *= 0.5;
+      if (this.isPlayer && PLAYER_CAP[k]) dur = Math.min(dur, PLAYER_CAP[k]);
+    }
+    if (!cur || cur.t < dur) {
+      this.status[k] = { t: dur, src, acc: 0 };
+      if (POWER_HOLDS.has(k) || k === 'shadowless') statusFx(this.game, this, k, dur, src);
+    }
+    if (HELPLESS.includes(k)) { this.action = null; this.blocking = false; this.charging = 0; }
   }
 
   heal(n, game) {
@@ -243,6 +277,8 @@ export class Actor extends Entity {
       return;
     }
     if (this.status.shadowless) n *= 1.25;
+    // (the heart in the surgeon's hand: every blow lands on a body that can't brace)
+    if (this.status.heartless) n *= 1.2;
     if (this.fruitDef?.passive?.damageTaken) n *= this.fruitDef.passive.damageTaken;
     const ev = this.buffs.reduce((a, b) => a + (b.mods?.evade || 0), 0);
     if (ev > 0 && Math.random() < ev && !h?.unblockable) {
@@ -250,6 +286,8 @@ export class Actor extends Entity {
       return;
     }
     this.hp -= n * this.buffMul('defMul');
+    // (a cut that doesn't kill: Amputate leaves them in pieces, but alive)
+    if (h?.nonLethal && this.hp < 1) this.hp = 1;
     this.flashT = 0.12;
     this.lastHitBy = att;
     this.lastHitT = game.time;
@@ -266,6 +304,9 @@ export class Actor extends Entity {
   knockOut(game, att) {
     if (this.state === 'knocked' || this.state === 'dead') return;
     if (this.climb) this.endClimb(game, true);
+    // (out of the sky, out of a Takt's hold)
+    if (this.flying && this.flight) flightFall(this, game);
+    this.lift = null;
     this.state = 'knocked';
     this.knockT = 0;
     this.action = null;
@@ -290,7 +331,7 @@ export class Actor extends Entity {
 
   knock(vx, vy, forceWater) {
     if (this.state === 'dead') return;
-    const m = this.kbResist ?? 1;
+    const m = (this.kbResist ?? 1) * kbFrame(this);
     this.kb.x += vx * m; this.kb.y += vy * m;
     if (forceWater) this.forcedWater = 0.6;
   }
@@ -303,12 +344,13 @@ export class Actor extends Entity {
   }
 
   // --- actions ---------------------------------------------------------------
-  busy() { return !!this.action || this.hitstun > 0 || this.state !== 'idle' || this.status.freeze || this.status.despair || !!this.climb; }
+  // (a Barrier Ball — a power that holds you as much as it shields you — leaves you nothing to do either)
+  busy() { return !!this.action || this.hitstun > 0 || this.state !== 'idle' || this.helpless() || !!this.climb || this.buffs.some((b) => b.hold); }
 
   canAct() { return !this.busy() && !this.blocking; }
 
   tryM1(game) {
-    if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.despair || this.climb) return false;
+    if (this.state !== 'idle' || this.hitstun > 0 || this.helpless() || this.climb) return false;
     if (this.action) {
       // buffer the next combo hit from partway through the current swing
       const a = this.action;
@@ -372,9 +414,16 @@ export class Actor extends Entity {
   tryTechnique(id, game, target) {
     // hotbar slots can also hold items (food, medicine, dials…)
     if (typeof id === 'string' && id.startsWith('item:')) return this.isPlayer && this.state === 'idle' && !!game.useHotbarItem?.(id.slice(5));
-    if (!this.canAct()) return false;
     const def = getAbility(id);
     if (!def) return false;
+    // (a power's own way into the sky: up, or — up there — back down; see flight.js)
+    if (def.flight) {
+      if (this.state !== 'idle' || (this.cooldowns[def.id] || 0) > 0 || this.helpless()) return false;
+      if (def.source?.startsWith('fruit') && (this.inWater || this.seastoned)) { if (this.isPlayer) game.log('Your Devil Fruit power is useless here!', '#ff8a80'); return false; }
+      this.cooldowns[def.id] = 0.6;
+      return toggleFlight(this, game);
+    }
+    if (!this.canAct()) return false;
     if (def.requiresHaki && !this.hakiLevel(def.requiresHaki)) { if (this.isPlayer) game.log(this.hakiUnlocked() ? `${def.name} requires ${def.requiresHaki} Haki.` : `${def.name} is beyond you for now — something in you has yet to awaken.`, '#ff8a80'); return false; }
     if (def.requiresNight && game.env.daylight > 0.35) { if (this.isPlayer) game.log('Only under the night sky...', '#ff8a80'); return false; }
     if (def.requiresFruit && this.fruit !== def.requiresFruit) { if (this.isPlayer) game.log(`${def.name} needs the ${FRUITS[def.requiresFruit]?.name}.`, '#ff8a80'); return false; }
@@ -385,6 +434,12 @@ export class Actor extends Entity {
         else if (def.weapon && this.weapon && !this.drawn && this.weapon.kind === def.weapon) game.log(`Draw your ${this.weapon.kind === 'sword' ? (this.weapon.count > 1 ? 'swords' : 'sword') : 'weapon'} first (X).`, '#ffcc80');
         else if (def.weapon && !this.hasWeapon(def.weapon, def.style)) game.log(`${def.name} needs ${def.weapon === 'sword' ? `${STYLES[def.style || this.style]?.swords || 1} sword(s)` : 'a ' + def.weapon}.`, '#ff8a80');
         else if (def.cost?.haki && this.haki < def.cost.haki) game.log(this.hakiUnlocked() ? 'Not enough Haki.' : 'Not enough strength of will.', '#ff8a80');
+        else if (def.room === 'need' && !ownRoom(this, game)) {
+          // (a Room technique, out of a Room: the slot flashes, and why)
+          game.ui?.flashSlot(id);
+          game.log(`${def.name} works only inside your ROOM — cast ROOM, then fight inside it.`, '#81d4fa');
+          game.hint('room', 'Ope Ope no Mi: your techniques work inside your ROOM — a sphere that stays where you cast it. Cast ROOM, draw the fight into it, and you are the surgeon there: Shambles, Takt, Amputate, Mes...');
+        }
       }
       return false;
     }
@@ -394,7 +449,7 @@ export class Actor extends Entity {
   }
 
   tryDodge(game, dx, dy) {
-    if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root || this.dodgeCd > 0 || this.climb) return false;
+    if (this.state !== 'idle' || this.hitstun > 0 || this.helpless() || this.status.root || this.dodgeCd > 0 || this.climb) return false;
     if (this.action && this.action.t < this.action.total * 0.5 && !this.action.def.m1Chain) return false;
     this.action = null;
     this.blocking = false;
@@ -453,7 +508,7 @@ export class Actor extends Entity {
 
   /** Can you jump right now: on your feet, or at the surface of the water (not a Devil Fruit user). */
   canJump() {
-    if (this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root || this.blocking) return false;
+    if (this.state !== 'idle' || this.hitstun > 0 || this.helpless() || this.status.root || this.status.grounded || this.blocking || this.flying) return false;
     if (this.onShip || this.climb) return false;
     if (this.action && !this.action.def.m1Chain && this.action.t < this.action.total * 0.7) return false;
     if (this.inWater) return !this.under && (this.depth || 0) < 0.15 && !(this.fruit && !this.gills) && this.state === 'idle';
@@ -485,6 +540,12 @@ export class Actor extends Entity {
       this.leaveWater(game, true);
       this.leapT = 0.5;
       this.z = z;
+      // (a Fish-Man swimming hard springs out of the sea like a dolphin, on the way he was going)
+      if (this.gills && this.moving && Math.hypot(this.intent.mx, this.intent.my) > 0.3) {
+        const l = Math.hypot(this.intent.mx, this.intent.my);
+        this.dash = { vx: this.intent.mx / l * 9, vy: this.intent.my / l * 9, t: 0.35, ignoreWater: true };
+        v *= 1.1;
+      }
       game.fx.ripple?.(this.x, this.y, 1 + k * 0.6);
       game.fx.burst(this.x, this.y, 12 + Math.round(k * 8), { color: ['#e1f5fe', '#b3e5fc', '#ffffff'], speed: 2.4, z: 0.1, vz: 5 + k * 2, g: 11, life: 0.7, size: 0.1 });
       game.audio?.sfx('splash_out', this);
@@ -507,7 +568,7 @@ export class Actor extends Entity {
     // (right where you stand — the same spot your height is measured from — not a step ahead)
     const t = game.world.type(this.x, this.y);
     if ((IS_LIQUID[t] !== 1 || OVERLAY[t]) && !this.belowDeck) return 0;
-    if (t === T.LAVA) return 0;
+    if (t === T.LAVA || iceAt(game, this.x, this.y)) return 0;
     return game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
   }
 
@@ -660,7 +721,7 @@ export class Actor extends Entity {
     } else if (!on && this.guardHeld) this.guardLetGo = 0;
     this.guardHeld = !!on;
     if (on && !this.blocking) {
-      if (this.state !== 'idle' || this.action || this.hitstun > 0 || this.status.freeze || this.climb || this.guardCd > 0) return;
+      if (this.state !== 'idle' || this.action || this.hitstun > 0 || this.helpless() || this.climb || this.guardCd > 0) return;
       this.blocking = true;
       this.blockTime = 0;
       this.guardFresh = fresh ?? (!!this.isPlayer && !!this.pressFresh && (this.pressAge ?? Infinity) <= PARRY.buffer);
@@ -730,6 +791,8 @@ export class Actor extends Entity {
     this.updateStatus(dt, game);
     this.updateBuffs(dt, game);
     this.updateResources(dt, game);
+    // (a people's own: a Lunarian's flame, a Mink under the full moon)
+    if (this.race === 'lunarian' || this.race === 'mink') raceTick(this, dt, game);
 
     if (this.action) {
       updateAbility(this, dt, game);
@@ -739,12 +802,19 @@ export class Actor extends Entity {
       }
     }
     if (this.flying) {
+      if (this.flight) {
+        // flying on wings (or flames, or smoke...): see flight.js
+        flyStep(this, dt, game);
+        return;
+      }
       // creative-mode flight: straight through anything, at a steady height
       this.updateFlight(dt, game);
       const fs = Math.hypot(this.vx, this.vy);
       this.moving = fs > 0.4; this.speed = fs;
       return;
     }
+    // (a flier's gauge fills up again on solid ground)
+    if (this.flightGauge < 1) refill(this, dt, game);
     const feet0 = this.bridgeNear(game) ? this.feetH(game) : 0;
     this.roofRef(game);
     this.updateMovement(dt, game, false);
@@ -763,9 +833,16 @@ export class Actor extends Entity {
     } else this.pushT = 0;
     this.updateVertical(dt, game);
     if (this.climb) return;
+    // (held up in the air by a Takt, and slammed down: see room.js)
+    if (this.lift) updateLift(this, dt, game);
     this.updateDeck(game);
     // (in the air — over water too, or leaping out of it — you haven't splashed down yet)
-    if (!this.vz && !(this.z > 0.02)) this.updateWater(dt, game);
+    if (!this.vz && !(this.z > 0.02)) {
+      this.updateWater(dt, game);
+      // (feet back on something: the kicks off the air are there to use again)
+      if (this.airSteps) this.airSteps = 0;
+      if (this.flightStyle === 'geppo') this.flightStyle = null;
+    }
 
     const sp = Math.min(Math.hypot(this.vx, this.vy), this.went ?? Infinity);
     this.moving = sp > 0.4;
@@ -806,7 +883,7 @@ export class Actor extends Entity {
     for (const k of Object.keys(st)) {
       const s = st[k];
       s.t -= dt;
-      const dot = STATUS_DEFAULTS[k];
+      const dot = STATUS_DEFAULTS[k] || (k === 'shadowless' && this.sunlit(game) ? SUNBURN : null);
       if (dot) {
         s.acc += dt;
         if (s.acc >= 0.5) {
@@ -817,14 +894,23 @@ export class Actor extends Entity {
           this.hp -= dmg;
           game.fx.text(this.x, this.y - 1.1, String(dmg), dot.color, 0.3);
           if (k === 'burn') game.fx.burst(this.x, this.y - 0.6, 4, { color: ['#ff7043', '#ffca28'], speed: 1, vz: 2, g: -2, life: 0.4, kind: 'fire', size: 0.15 });
+          // (no shadow, in the sun: the body smokes)
+          if (k === 'shadowless') game.fx.burst(this.x, this.y - 0.6, 5, { color: ['#ffab91', '#eceff1'], speed: 0.8, vz: 1.5, g: -1, life: 0.6, kind: 'smoke', size: 0.2 });
           if (this.hp <= 0) { this.hp = 0; this.knockOut(game, s.src); return; }
         }
       }
       if (k === 'shock' && Math.random() < dt * 3) { this.hitstun = Math.max(this.hitstun, 0.12); game.fx.burst(this.x, this.y - 0.7, 3, { color: '#fff176', speed: 3, g: 0, life: 0.15, kind: 'line' }); }
       if (s.t <= 0) delete st[k];
     }
-    if (st.freeze || st.despair) { this.action = null; this.blocking = false; }
+    if (this.helpless()) { this.action = null; this.blocking = false; }
     if (st.seastone && this.armament && this.fruit) { /* seastone doesn't stop haki */ }
+  }
+
+  /** Out in the daylight (not indoors, not under the sea)? — what a body without a shadow can't bear. */
+  sunlit(game) {
+    if (!game.env || game.env.daylight < 0.45) return false;
+    const w = game.world;
+    return w.zone !== 2 && w.zone !== 3 && !w.interiorAt?.(this.x, this.y) && !this.inWater;
   }
 
   updateBuffs(dt, game) {
@@ -863,7 +949,9 @@ export class Actor extends Entity {
         if (this.haki <= 0) { this.haki = 0; this.observation = false; }
       } else this.haki = Math.min(d.maxHaki, this.haki + d.hakiRegen * dt);
     }
-    const regen = (this.fruitDef?.passive?.regen || 0) + d.hpRegen * (this.inCombat ? 0.2 : 1);
+    let regen = (this.fruitDef?.passive?.regen || 0) + d.hpRegen * (this.inCombat ? 0.2 : 1);
+    // (a form that heals as it fights: the Phoenix's)
+    for (const b of this.buffs) if (b.regen) regen += b.regen;
     // everyone else only heals once they've been left alone for a good while
     const rested = this.isPlayer || !this.game || (this.game.time || 0) - (this.lastHitT || -999) > 45;
     if (this.hp < d.maxHp && this.state === 'idle' && rested) this.hp = Math.min(d.maxHp, this.hp + regen * dt);
@@ -879,6 +967,8 @@ export class Actor extends Entity {
     if (SWIMMABLE[t]) {
       if (this.dash && this.dash.ignoreWater) return true;
       if (this.forcedWater) return true;
+      // (the sea frozen over by an Ice Age: a road while it lasts)
+      if (this.game && iceAt(this.game, x, y)) return true;
       return this.canEnterWater();
     }
     return false;
@@ -1174,8 +1264,8 @@ export class Actor extends Entity {
     if (this.z < 0 && !this.overWater(game)) { this.z = 0; if (this.vz < 0) this.vz = 0; }
   }
 
-  /** Over the open water (not a pier, a bridge or dry land)? */
-  overWater(game) { const t = game.world.type(this.x, this.y); return (IS_LIQUID[t] === 1 && !OVERLAY[t]) || !!this.belowDeck; }
+  /** Over the open water (not a pier, a bridge, dry land — or sea frozen over)? */
+  overWater(game) { const t = game.world.type(this.x, this.y); return ((IS_LIQUID[t] === 1 && !OVERLAY[t]) || !!this.belowDeck) && !iceAt(game, this.x, this.y); }
 
   /** Room to stand at (x, y) on dry ground or a pier (where a climb ends). */
   standsAt(game, x, y) {
@@ -1196,7 +1286,7 @@ export class Actor extends Entity {
    * from above it, or up her ladder: see ladders.js.)
    */
   climbOnto(game, L) {
-    if (L.ship || this.climb || this.state !== 'idle' || this.hitstun > 0 || this.status.freeze || this.status.root) return false;
+    if (L.ship || this.climb || this.state !== 'idle' || this.hitstun > 0 || this.helpless() || this.status.root) return false;
     if (this.inWater && ((this.fruit && !this.gills) || this.under)) return false;
     const s = this.look?.scale || 1;
     const air = (this.z || 0) > 0.05 || !!this.vz;
@@ -1405,7 +1495,7 @@ export class Actor extends Entity {
       if (this.eating) sp *= 0.45; // (a slow walk with your mouth full)
       if (this.blocking) sp *= 0.4;
       if (this.action) sp *= this.action.def.moveMul ?? (this.action.def.m1Chain ? 0.55 : 0.25);
-      if (this.hitstun > 0 || this.status.root || this.status.freeze || this.status.despair) sp = 0;
+      if (this.hitstun > 0 || this.status.root || this.helpless()) sp = 0;
       if (this.status.slowmo) sp *= 0.2;
       if (this.status.chill) sp *= 0.6;
       if (this.zoneSlow) sp *= this.zoneSlow;
@@ -1543,8 +1633,8 @@ export class Actor extends Entity {
     const w = game.world;
     const t = w.type(this.x, this.y);
     const was = this.inWater, wadeWas = this.wading || 0;
-    // (under a high bridge you're in the water it crosses)
-    const liquid = ((IS_LIQUID[t] === 1 && !OVERLAY[t]) || !!this.belowDeck) && !(this.dash && this.dash.ignoreWater) && !this.deck;
+    // (under a high bridge you're in the water it crosses; on an Ice Age's ice, you're not in it at all)
+    const liquid = ((IS_LIQUID[t] === 1 && !OVERLAY[t]) || !!this.belowDeck) && !(this.dash && this.dash.ignoreWater) && !this.deck && !iceAt(game, this.x, this.y);
     // shallow water is waded, feet on the bottom; you swim once it's about chest-deep
     // (lava is always "in"). Leaping out of the sea, you're out of it until you come down.
     const wd = liquid ? (t === T.LAVA ? 99 : game.seaDepth ? game.seaDepth(this.x, this.y) : 99) : 0;
