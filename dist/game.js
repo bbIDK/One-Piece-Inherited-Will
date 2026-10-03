@@ -67156,15 +67156,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     });
   }
   function hangOut(p, crown3) {
-    if (!crown3?.c || crown3.palm) return p;
-    const dx = p[0] - crown3.c[0], dy = p[1] - crown3.c[1], dz = p[2] - crown3.c[2], d = Math.hypot(dx, dy, dz) || 1;
-    return [p[0] + dx / d * 0.16, p[1] + dy / d * 0.16 - 0.1, p[2] + dz / d * 0.16];
+    if (!crown3?.blobs || crown3.palm) return p;
+    const a = Math.atan2(p[2] - crown3.c[2], p[0] - crown3.c[0]), e = -0.62;
+    const q2 = crownPoint(crown3.blobs, crown3.c, [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 0.97, crown3.squash || 1);
+    return [q2[0], q2[1] - 0.26, q2[2], q2[1] + 0.08];
   }
   function devilFruitGeo(sub, v, fruit, i, q2, color, crown3) {
     return cached(`dfruit:${sub}:${(v || 0) % 2}:${fruit}:${i}:${color}`, () => {
       const k = new Mesher();
       const base2 = C(color || "#8e44ad").clone(), swirl = base2.clone().lerp(C("#ffffff"), 0.62), dark = base2.clone().multiplyScalar(0.5);
-      const [x, y, z] = hangOut(q2.p, crown3), s = (q2.s || 1) * 1.2;
+      const [x, y, z, top = y + 0.2] = hangOut(q2.p, crown3), s = (q2.s || 1) * 1.2;
       if (fruit === "banana") {
         k.add(cyl(0.02, 0.025, 0.25, 4, true), { at: [x, y - 0.1, z], color: "#6d8b3a" });
         const band2 = (p) => {
@@ -67183,7 +67184,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           return t > 0.35 ? swirl : t < -0.72 ? dark : base2;
         };
         k.add(new IcosahedronGeometry(r4, 3), { at: [x, y, z], scale: sc, normals: radial(x, y, z, 0), color: col2, outline: 0.016 });
-        k.add(cyl(0.012, 0.014, 0.06, 4, true), { at: [x, y + r4 * 0.9, z], color: "#5d4037" });
+        k.add(cyl(0.012, 0.016, Math.max(0.06, top - (y + r4 * 0.9)), 4, true), { at: [x, y + r4 * 0.9, z], color: "#5d4037" });
         k.add(torus(0.035, 0.011, 4, 8, Math.PI * 1.3), { at: [x + 0.03, y + r4 * 0.9 + 0.075, z], rot: [0, 0, -0.4], color: "#5d4037" });
         k.add(new IcosahedronGeometry(0.045, 0), { at: [x - 0.05, y + r4 * 0.95, z], scale: [1.6, 0.35, 0.9], color: "#2e7d32" });
       }

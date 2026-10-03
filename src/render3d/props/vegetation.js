@@ -521,11 +521,17 @@ function fruitGeo(sub, v, fruit, i, q) {
   });
 }
 
-/** Where a Devil Fruit hangs for fruit point `p`: clear of the leaves, out from the crown's middle and a little down, where it's seen. */
+/**
+ * Where a Devil Fruit hangs for fruit point `p`: under the crown's rim on that
+ * side, on a stalk of its own, clear of the leaves, where it's seen from the
+ * ground (an ordinary fruit sits in among them). [x, y, z, where its stalk
+ * goes up into the leaves].
+ */
 function hangOut(p, crown) {
-  if (!crown?.c || crown.palm) return p;
-  const dx = p[0] - crown.c[0], dy = p[1] - crown.c[1], dz = p[2] - crown.c[2], d = Math.hypot(dx, dy, dz) || 1;
-  return [p[0] + (dx / d) * 0.16, p[1] + (dy / d) * 0.16 - 0.1, p[2] + (dz / d) * 0.16];
+  if (!crown?.blobs || crown.palm) return p;
+  const a = Math.atan2(p[2] - crown.c[2], p[0] - crown.c[0]), e = -0.62;
+  const q = crownPoint(crown.blobs, crown.c, [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 0.97, crown.squash || 1);
+  return [q[0], q[1] - 0.26, q[2], q[1] + 0.08];
 }
 
 /**
@@ -538,7 +544,7 @@ function devilFruitGeo(sub, v, fruit, i, q, color, crown) {
   return cached(`dfruit:${sub}:${(v || 0) % 2}:${fruit}:${i}:${color}`, () => {
     const k = new Mesher();
     const base = C(color || '#8e44ad').clone(), swirl = base.clone().lerp(C('#ffffff'), 0.62), dark = base.clone().multiplyScalar(0.5);
-    const [x, y, z] = hangOut(q.p, crown), s = (q.s || 1) * 1.2;
+    const [x, y, z, top = y + 0.2] = hangOut(q.p, crown), s = (q.s || 1) * 1.2;
     if (fruit === 'banana') {
       k.add(cyl(0.02, 0.025, 0.25, 4, true), { at: [x, y - 0.1, z], color: '#6d8b3a' });
       const band = (p) => { const t = Math.sin((p.y - y) * 70 + Math.atan2(p.z - z, p.x - x) * 2); return t > 0.4 ? swirl : t < -0.8 ? dark : base; };
@@ -553,7 +559,7 @@ function devilFruitGeo(sub, v, fruit, i, q, color, crown) {
       const col = (p) => { const t = Math.sin(Math.atan2(p.z - z, p.x - x) * 3 + ((p.y - y) / r) * 5.5); return t > 0.35 ? swirl : t < -0.72 ? dark : base; };
       k.add(new THREE.IcosahedronGeometry(r, 3), { at: [x, y, z], scale: sc, normals: radial(x, y, z, 0), color: col, outline: 0.016 });
       // the stalk, curled over like a question mark, and its leaf
-      k.add(cyl(0.012, 0.014, 0.06, 4, true), { at: [x, y + r * 0.9, z], color: '#5d4037' });
+      k.add(cyl(0.012, 0.016, Math.max(0.06, top - (y + r * 0.9)), 4, true), { at: [x, y + r * 0.9, z], color: '#5d4037' });
       k.add(torus(0.035, 0.011, 4, 8, Math.PI * 1.3), { at: [x + 0.03, y + r * 0.9 + 0.075, z], rot: [0, 0, -0.4], color: '#5d4037' });
       k.add(new THREE.IcosahedronGeometry(0.045, 0), { at: [x - 0.05, y + r * 0.95, z], scale: [1.6, 0.35, 0.9], color: '#2e7d32' });
     }
