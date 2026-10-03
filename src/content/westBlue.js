@@ -260,7 +260,19 @@ const npcs = [
     // (the chapter in Esperia promises a crewmate who can keep up with you once the convoy is safe)
     id: 'wb_chiara', name: 'Chiara', title: 'Violinist of Cello Port', island: 'esperia', at: { town: 'esperia_town', door: "Instrument Makers' Guild", ox: -1.8 },
     look: { hair: 'long', hairColor: '#4e342e', skin: '#e0ac7e', top: '#7b1fa2', bottom: '#263238', coat: '#311b92', fem: true, swords: 1 }, level: 8, style: 'ittoryu', weapon: 'sword',
-    recruit: { role: 'musician', requires: (c, g) => g.quests.isDone('wb_esperia_convoy'), pitch: `"Grandfather says the captain of the Battle Convoy hummed while he fought, and finished his song with the last gunman down. I've been practising both since I was six. ...Take me to sea. I'll keep your crew on its feet — and your enemies busy."` },
+    recruit: {
+      role: 'musician', requires: (c, g) => g.quests.isDone('wb_esperia_convoy'),
+      intro: `"Chiara, granddaughter of Ottavio of the Instrument Makers' Guild. Violin first, rapier second — Grandfather says it should be the other way round, but he's never heard me play."`,
+      pitch: {
+        pirate: `"Grandfather says the captain of the Battle Convoy hummed while he fought, and finished his song with the last gunman down. I've been practising both since I was six. ...Take me to sea. I'll keep your crew on its feet — and your enemies busy."`,
+        marine: `"A Marine who protects convoys — Grandfather would approve. Take me aboard your ship. I'll play your crew through every watch and fight beside them when the music stops. I'll even learn the salute."`,
+        hunter: `"You hunt the people who rob convoys like ours. Take me along, partner — I'll keep your spirits up and your enemies busy. Grandfather says I'm a terrible influence on bandits."`,
+        free: `"Grandfather says the captain of the Battle Convoy hummed while he fought, and finished his song with the last gunman down. I've been practising both since I was six. ...Take me to sea."`,
+      },
+      again: `"You came back! Wait — let me get my violin. And my other violin. And Grandfather's blessing. ...Two out of three."`,
+      declined: `"Oh. Well — Cello Port is lovely in the spring. I'll be by the Guild, practising. Louder than before."`,
+      aboard: [`(A few bars of something fast drift across the deck.)`, `"A ship without a song is just wood on water."`, `"Grandfather would hate this tune. That's why I love it."`],
+    },
     dialogue: (ctx) => ({
       start: 'a',
       nodes: {
@@ -383,7 +395,16 @@ const npcs = [
     marker: (c, g) => mk(g, 'wb_toroa_slavers', true, 'report'),
     recruit: {
       role: 'musician', fighter: false, requires: (c, g) => g.quests.isDone('wb_toroa_slavers'),
-      pitch: '"Toroa is too small for the songs I want to write. If you\'re sailing for the Grand Line, you\'ll need someone to play while the storms try to drown you. I\'m your musician — and I\'m bringing the wine."',
+      intro: '"Byron, of the musicians of Toroa — my family has played in this hall for longer than anyone remembers. I can make any string sing, and I make a red wine that makes grown sailors weep."',
+      pitch: {
+        pirate: '"Toroa is too small for the songs I want to write. If you\'re sailing for the Grand Line, you\'ll need someone to play while the storms try to drown you. I\'m your musician — and I\'m bringing the wine."',
+        marine: '"The Navy has marching bands. Dreadful things. Let me show your ship\'s company what music is for — I\'ll play them through every storm the Grand Line throws at you, officer. And I\'m bringing the wine."',
+        hunter: '"Hunting pirates sounds like a fine song. Let me write it as it happens — I\'ll play, you hunt, and every tavern from here to the Grand Line will know your name. Partners? I\'m bringing the wine."',
+        free: '"Toroa is too small for the songs I want to write. If you\'re sailing for the Grand Line, you\'ll need someone to play while the storms try to drown you. I\'m your musician — and I\'m bringing the wine."',
+      },
+      again: '"You\'re back! I knew it. I\'d already written the verse where you come back."',
+      declined: '"Ah well. A song without its ending is still a song. You know where the Music Hall is."',
+      aboard: ['(A fiddle strikes up somewhere below deck.)', '"Wine\'s breathing, captain. So am I, thanks to you."', '"Every storm has a rhythm. You just have to find it."'],
     },
     dialogue: (ctx) => ({
       start: 'a',

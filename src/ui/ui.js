@@ -12,6 +12,7 @@ import { Waypoints } from './waypoints.js';
 import { Minimap } from './minimap.js';
 import { assignHotbar } from './panels.js';
 import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
+import { syncPause } from './pause.js';
 
 // the menu buttons on the right of the screen (below the minimap)
 const SIDEBAR = [
@@ -257,7 +258,7 @@ export class UI {
     p.tryTechnique(id, g, target || (mw ? { x: mw.x, y: mw.y } : { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 }));
   }
 
-  blocksInput() { return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen || !!this.consoleOpen || !!this.chatOpen; }
+  blocksInput() { return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen || !!this.consoleOpen || !!this.chatOpen || this.asking > 0; }
 
   log(text, color = '#fff') {
     const d = h('div', { style: { color } }, text);
@@ -369,16 +370,22 @@ export class UI {
   }
 
   // --- panels -----------------------------------------------------------------
-  openPanel(content, { wide = false, onClose, id } = {}) {
+  /**
+   * Open a menu panel. The world goes on behind it (the ship sails, time
+   * passes) unless it's the pause screen or part of it (`pause`: see
+   * pause.js); either way the character takes no input while it's open.
+   */
+  openPanel(content, { wide = false, onClose, id, pause = false } = {}) {
     if (id) { const ex = this.stack.find((s) => s.id === id); if (ex) { this.closePanel(ex); return null; } }
     const close = h('button.close', { title: 'Close (Esc)', on: { click: () => this.closePanel(entry) } }, '×');
     const panel = h('div.panel' + (wide ? '.wide' : ''), close, content);
     const bg = h('div.panel-bg' + (this.hudVisible ? '.side-pad' : ''), panel);
-    bg.addEventListener('mousedown', (e) => { if (e.target === bg) this.closePanel(entry); });
-    const entry = { el: bg, onClose, id, panel };
+    // (a click beside it closes it — and goes no further: it isn't a swing at whoever's in front of you)
+    bg.addEventListener('mousedown', (e) => { if (e.target === bg) { e.stopPropagation(); this.closePanel(entry); } });
+    const entry = { el: bg, onClose, id, panel, pause: !!pause };
     this.stack.push(entry);
     this.panelLayer.appendChild(bg);
-    if (this.game) this.game.paused = true;
+    syncPause(this);
     this.markSidebar();
     return entry;
   }
@@ -389,7 +396,9 @@ export class UI {
     this.stack = this.stack.filter((x) => x !== e);
     e.el.remove();
     if (e.onClose) e.onClose();
-    if (this.game && !this.stack.length && !this.dialogueEl && !this.mapOpen) this.game.paused = false;
+    syncPause(this);
+    // (the click that closed it isn't a swing at whoever's in front of you)
+    this.game?.input?.consumeMouse?.(0);
     this.markSidebar();
   }
 
@@ -409,15 +418,18 @@ export class UI {
    * some embeds). Resolves to true / the typed text, or null when cancelled.
    */
   ask({ title = '', text = '', input, ok = 'OK', cancel = 'Cancel', danger = false } = {}) {
+    // (a question doesn't stop the world any more than the menu it's asked in;
+    // it holds the character's input till it's answered — see blocksInput)
     return new Promise((resolve) => {
       let done = false;
-      const wasPaused = this.game ? this.game.paused : false;
+      this.asking = (this.asking || 0) + 1;
       const field = input !== undefined ? h('input.ask-input#ask-input', { value: input, maxLength: 24, spellcheck: false }) : null;
       const finish = (v) => {
         if (done) return;
         done = true;
         bg.remove();
-        if (this.game && !wasPaused && !this.stack.length && !this.dialogueEl && !this.mapOpen) this.game.paused = false;
+        this.asking = Math.max(0, (this.asking || 0) - 1);
+        this.game?.input?.consumeMouse?.(0);
         resolve(v);
       };
       const okBtn = h('button.btn' + (danger ? '.red' : '.gold'), { on: { click: () => finish(field ? field.value.trim() || null : true) } }, ok);
@@ -427,14 +439,13 @@ export class UI {
         field,
         h('div.ask-row', okBtn, h('button.btn', { on: { click: () => finish(null) } }, cancel)));
       const bg = h('div.panel-bg', panel);
-      bg.addEventListener('mousedown', (e) => { if (e.target === bg) finish(null); });
+      bg.addEventListener('mousedown', (e) => { if (e.target === bg) { e.stopPropagation(); finish(null); } });
       panel.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); okBtn.click(); }
         else if (e.key === 'Escape') { e.preventDefault(); finish(null); }
         e.stopPropagation();
       });
       this.modalLayer.appendChild(bg);
-      if (this.game) this.game.paused = true;
       setTimeout(() => (field || okBtn).focus(), 0);
     });
   }
@@ -773,16 +784,19 @@ export class UI {
     const main = q.main();
     const sub = q.mainSub();
     const side = q.tracked();
-    const key = JSON.stringify([main && [main.id, main.s.stage, q.progress(main.id), where(main.id)], sub && [sub.id, sub.s.stage, q.progress(sub.id)], side.map((x) => [x.id, x.s.stage, q.progress(x.id), where(x.id)]), c.mainIntro || null, (c.stats?.playTime || 0) > 600 && !game.currentIsland]);
+    const key = JSON.stringify([main && [main.id, main.s.stage, q.progress(main.id), where(main.id)], sub && [sub.id, sub.s.stage, q.progress(sub.id)], side.map((x) => [x.id, x.s.stage, q.progress(x.id), where(x.id)]), c.mainIntro || null, !!c.freeSail, (c.stats?.playTime || 0) > 600 && !game.currentIsland]);
     if (key === this.cache.track) return;
     this.cache.track = key;
     clear(E.track);
     if (main) E.track.appendChild(h('div.qt-main', ...card(main, true, sub)));
-    else if (c.mainIntro) {
-      // (after a while away from home, just a reminder)
+    else if (c.mainIntro && !c.freeSail) {
+      // (after a while away from home, just a reminder) — and the fourth way: no road at all
       const brief = (c.stats?.playTime || 0) > 600 && !game.currentIsland;
-      E.track.appendChild(h('div.qt-main', h('div.qt-head', uiImg('quest', 14), 'MAIN STORY'), h('div.qt-title', 'Find your calling'), h('div.qt-obj', brief ? 'Look for the orange ! — or see Quests (L).' : c.mainIntro)));
+      E.track.appendChild(h('div.qt-main', h('div.qt-head', uiImg('quest', 14), 'MAIN STORY'), h('div.qt-title', 'Find your calling'),
+        h('div.qt-obj', brief ? 'Look for the orange ! — or see Quests (L).' : c.mainIntro),
+        h('div.qt-alt', 'Or sail your own way, with no main story (Quests, L).')));
     }
+    // (a free sailor has no story on the tracker: only the side quests they've taken on)
     for (const x of side) E.track.appendChild(h('div.qt-side', ...card(x, false)));
     E.track.classList.toggle('hidden', !E.track.childNodes.length);
   }

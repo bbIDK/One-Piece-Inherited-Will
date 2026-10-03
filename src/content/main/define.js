@@ -25,8 +25,12 @@
 //   after              what they say once the chapter is over
 //   reward             on top of the usual pay for the chapter ({ items, ship, bounty, flag, … })
 //   onDone(game)       anything else that happens when it's over
+//   was: [ids]         the ids of the steps it had before they changed (one
+//                      taken out), so saves made then carry on from the right
+//                      one (game/quests.js reconcile)
 //   start chapters also have: pitch: [lines] (the offer), accept (the answer),
-//   refuse(c) → why this road is closed to you (or null)
+//   refuse(c) → why this road is closed to you (or null), free (what they
+//   say to someone who'd rather sail their own way, with no road at all)
 // Lines are strings or fns (ctx) → string.
 
 import { ISLAND_BY_ID } from '../../data/islands/index.js';
@@ -65,14 +69,19 @@ export function target(def) {
 // ------------------------------------------------------------ tasks
 // (quest stages; ids must be unique within a chapter)
 export const T = {
-  weapon: (desc = 'Get yourself a weapon — buy one, win one or find one.') => ({ id: 'weapon', desc, goal: { type: 'weapon' } }),
   /**
    * Found a pirate crew and raise its Jolly Roger (Crew menu). (The crew
    * itself, not the "pirate" the world calls anyone with a bounty: a price on
    * your head isn't a crew.)
    */
   flag: (desc = 'Raise your own Jolly Roger: found your crew in the Crew menu (U).') => ({ id: 'flag', desc, goal: { type: 'check', fn: (c) => !!c.crewName }, pin: false }),
-  crew: (n = 1, desc = `Recruit ${n > 1 ? n + ' crewmates' : 'a crewmate'} — people who'd follow you anywhere.`) => ({ id: 'crew' + n, desc, goal: { type: 'crew', n } }),
+  /**
+   * Someone who'd sail with you makes you an offer (game/crew.js): the step
+   * is done once it's answered — yes or no, it's yours to choose — so
+   * turning them down never holds the story up (they stay on their island,
+   * and can be asked again). Aboard already, or gone for good: done.
+   */
+  offer: (npc, desc, id = 'o_' + npc) => ({ id, desc, npc, offer: npc, goal: { type: 'check', fn: (c) => !!c.crewOffers?.[npc] || (c.crew || []).some((m) => m.id === npc) || !!c.flags?.['leftCrew_' + npc] } }),
   ship: (desc = 'Get a ship that can survive the Grand Line (a Sloop or bigger).') => ({ id: 'ship', desc, goal: { type: 'ship', grandLine: true } }),
   logPose: (desc = 'Get a Log Pose — no one survives the Grand Line without one.') => ({ id: 'pose', desc, goal: { type: 'item', item: 'log_pose' } }),
   /**

@@ -401,8 +401,9 @@ export class Interactions {
         }
         const m = a.def?.marker;
         if ((!m && !a.npcId) || !a.alive) continue;
-        // (the main story's own marks come first: see content/mainStory.js)
-        try { a.questMarker = game.storyMarker?.(a) || (m ? m(c, game) : null) || null; } catch (e) { a.questMarker = null; }
+        // (the main story's own marks come first: see content/mainStory.js;
+        // then their own; then someone with an offer to sail with you: crew.js)
+        try { a.questMarker = game.storyMarker?.(a) || (m ? m(c, game) : null) || game.crew?.marker?.(a) || null; } catch (e) { a.questMarker = null; }
       }
     });
   }

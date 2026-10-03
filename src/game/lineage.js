@@ -144,10 +144,15 @@ export function createCharacter(legacy, birth, choices) {
     ships: [],
     fleet: [], // every ship you own (see fleet.js); `ships` is where those afloat lie
     crew: [],
+    crewOffers: {}, // offers to sail with you, answered: npc id → { said: 'yes' | 'no', day } (see crew.js)
     discovered: [],
     logPose: { has: false, target: null, last: null, progress: 0, needles: 1 },
     eternalPoses: [],
     quests: {}, flags: {}, defeated: {}, bosses: [], liberated: [],
+    // the main story is there to take up, never forced: sailing your own way
+    // instead ({ day, from }), chosen at birth or later (content/mainStory.js)
+    freeSail: choices.story === 'free' ? { day: 1, from: 'birth' } : null,
+    mainShelf: null, // a road set aside, to take up again where it was left
     trained: {},
     stats: { playTime: 0, sailed: 0, kills: 0, knockdowns: 0, deathsAvoided: 0 },
     world: { day: 1, clock: 8.5, chests: {}, npc: {}, fruitSpawns: null },
@@ -317,6 +322,15 @@ export function upgradeChar(c) {
   c.legends = c.legends || [];
   if (c.crewName === undefined) c.crewName = c.faction === 'pirate' && c.jr ? `${c.name.split(' ')[0]} Pirates` : null;
   if (!c.crewName) c.jr = null;
+  // (from before the main story could be turned down: everyone was looking for a calling, or on a road)
+  if (c.freeSail === undefined) c.freeSail = null;
+  if (c.mainShelf === undefined) c.mainShelf = null;
+  if (c.main) c.freeSail = null;
+  // (from before crewmates asked first: everyone aboard said yes)
+  if (!c.crewOffers) {
+    c.crewOffers = {};
+    for (const m of c.crew || []) c.crewOffers[m.id] = { said: 'yes', day: m.joined || 1 };
+  }
   // the ships you had are the ships you own
   upgradeFleet(c);
   // attribute points from the old breakthrough system are spent automatically

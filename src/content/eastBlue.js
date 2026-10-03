@@ -333,7 +333,18 @@ const npcs = [
   {
     id: 'johnny', name: 'Johnny', title: 'Bounty hunter', island: 'baratie', at: { spot: 'baratie_deck', ox: -5 }, level: 7, style: 'ittoryu', weapon: 'sword',
     look: { hair: 'short', hairColor: '#212121', top: '#8d6e63', bottom: '#3e2723', goggles: true, swords: 1 },
-    recruit: { role: 'swordsman', fighter: true, requires: (c) => !!c.flags.yosakuCured, pitch: '"Aniki! You saved Yosaku\'s life! Johnny and Yosaku, the pirate-hunting duo — we\'ll follow you anywhere!"' },
+    recruit: {
+      role: 'swordsman', fighter: true, requires: (c) => !!c.flags.yosakuCured,
+      pitch: {
+        pirate: '"Aniki! You saved Yosaku\'s life! We hunt pirates for a living... but for you? Johnny and Yosaku will follow a pirate anywhere! Just don\'t tell anyone back home."',
+        marine: '"Aniki! You saved Yosaku\'s life! A Marine, huh? We\'ve never taken orders from the Navy — but from you, we will! Johnny and Yosaku, at your command!"',
+        hunter: '"Aniki! You saved Yosaku\'s life! A hunter, like us! Johnny and Yosaku, the pirate-hunting duo — make it a trio! Partners, aniki!"',
+        free: '"Aniki! You saved Yosaku\'s life! Johnny and Yosaku, the pirate-hunting duo — we\'ll follow you anywhere!"',
+      },
+      again: '"Aniki! You changed your mind? Yosaku, pack the bags — we\'re sailing!"',
+      declined: '"Aww... alright, aniki. We\'ll be right here on the deck if you need a blade. Or two!"',
+      aboard: ['"I\'m keeping an eye out for bounties, aniki!"', '"Yosaku eats his fruit every day now. Every. Day."'],
+    },
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: () => ctx.flag('yosakuCured') ? '"Yosaku\'s back on his feet! We owe you big, aniki!"' : '"H-hey! You there! My partner Yosaku collapsed — his teeth are falling out and his old wounds opened up! Is this some kind of plague?!"',
         choices: [
@@ -346,13 +357,36 @@ const npcs = [
   {
     id: 'yosaku', name: 'Yosaku', title: 'Bounty hunter', island: 'baratie', at: { spot: 'baratie_deck', ox: -6.5 }, level: 7, style: 'ittoryu', weapon: 'sword',
     look: { hair: 'short', hairColor: '#6d4c41', top: '#43a047', bottom: '#2e7d32', hat: 'bandana', hatColor: '#1b5e20', swords: 1 },
-    recruit: { role: 'swordsman', fighter: true, requires: (c) => !!c.flags.yosakuCured, pitch: '"You cured me with a piece of fruit... I thought I was done for. Take me along — I\'m handy with a blade!"' },
+    recruit: {
+      role: 'swordsman', fighter: true, requires: (c) => !!c.flags.yosakuCured,
+      pitch: {
+        pirate: '"You cured me with a piece of fruit... I thought I was done for. Hunting pirates or sailing with one — what\'s the difference, if it\'s you? Take me along — I\'m handy with a blade!"',
+        marine: '"You cured me with a piece of fruit... I thought I was done for. I\'ll serve under a Marine if it\'s you. Take me along — I\'m handy with a blade!"',
+        hunter: '"You cured me with a piece of fruit... I thought I was done for. Another hunter! Take me along — I\'m handy with a blade, partner!"',
+        free: '"You cured me with a piece of fruit... I thought I was done for. Take me along — I\'m handy with a blade!"',
+      },
+      again: '"You came back for me? I knew eating my fruit would pay off!"',
+      declined: '"Fair enough. I\'ll be here, eating tangerines. Lots of tangerines."',
+      aboard: ['"Fruit, fruit, every day. I\'m never getting scurvy again."', '"Quiet sea. Johnny says that\'s when the big ones come."'],
+    },
     dialogue: (ctx) => ({ start: 'a', nodes: { a: { text: () => ctx.flag('yosakuCured') ? '"Never felt better! Scurvy, huh? I\'ll never skip my fruit again."' : '"(Yosaku lies pale on the deck, groaning. His gums are bleeding.)"' } } }),
   },
   {
     id: 'patty', name: 'Patty', title: 'Cook of the Baratie', island: 'baratie', at: { spot: 'baratie_deck', ox: 2 }, level: 9,
     look: { hair: 'bald', skin: '#e0ac7e', top: '#fafafa', bottom: '#212121', hat: 'captain', hatColor: '#fafafa', bulk: 1.2 },
-    recruit: { role: 'cook', fighter: false, requires: (c, g) => g.quests.isDone('baratie_krieg'), pitch: '"The old geezer says a cook who\'s never seen the Grand Line is only half a cook. Fine! I\'ll cook for your crew — and you\'d better eat every bite!"' },
+    recruit: {
+      role: 'cook', fighter: false, requires: (c, g) => g.quests.isDone('baratie_krieg'),
+      intro: '"Patty, cook of the Baratie! Old Zeff kicks us when we waste food and kicks us harder when we don\'t fight. I can do both. Mostly the cooking."',
+      pitch: {
+        pirate: '"The old geezer says a cook who\'s never seen the Grand Line is only half a cook. Fine! I\'ll cook for your crew — and you\'d better eat every bite!"',
+        marine: '"A Navy galley, eh? The old geezer says a cook feeds whoever\'s hungry, flag or no flag. Fine! I\'ll cook for your ship, Marine — but I don\'t salute anybody with a ladle in my hand!"',
+        hunter: '"The old geezer says a cook who\'s never seen the Grand Line is only half a cook. You hunt, I cook — and you\'d better eat every bite, partner!"',
+        free: '"The old geezer says a cook who\'s never seen the Grand Line is only half a cook. Fine! I\'ll cook for your ship — and you\'d better eat every bite!"',
+      },
+      again: '"Changed your mind, eh? The old geezer already packed my knives. He says I eat too much."',
+      declined: '"Hmph! Your loss, you lousy customer. The kitchen\'s always open — come back when you\'re hungry."',
+      aboard: ['"Dinner\'s on! Eat it all, or don\'t come back to my galley!"', '"Nobody goes hungry on a ship I cook for. Nobody!"', '"Fish stew again. Complain and it\'s fish stew forever."'],
+    },
     dialogue: (ctx) => ({ start: 'a', nodes: { a: { text: () => ctx.game.quests.isDone('baratie_krieg') ? '"You fought for this restaurant like one of us. Hungry? Of course you are."' : '"Welcome, you shitty customer! Sit down, eat, pay, get out!"' } } }),
   },
   { id: 'krieg', name: 'Don Krieg', title: 'Admiral of the Krieg Pirate Armada', island: 'baratie', at: { spot: 'baratie_deck', ox: -3 }, hostile: true, boss: true, hpMul: 1.1, faction: 'pirate', level: 15,

@@ -32,10 +32,323 @@ const HELPERS = `
     },
     actor(id) { return this.g().actors.find((a) => a.alive && a.npcId === id) || null; },
     main() { const c = this.c(); const q = this.g().quests.main(); return { path: c.main?.path, part: c.main?.part, at: c.main?.at, chain: c.main?.chain, route: c.main?.route, quest: q?.id || null, stage: q ? this.g().quests.stageId(q.id) : null, log: c.logPose?.target || null }; },
+    /** open a conversation (and finish typing its first line): what's said and the choices on offer */
+    open(a) { const g = this.g(); g.dialogue.open(a, a.def.dialogue); return this.now(); },
+    now() { const d = this.g().dialogue.active; if (!d) return null; if (d.typing < d.full.length) this.g().dialogue.advance(); return { text: d.full, choices: d.choices.map((c) => c.label) }; },
+    /** take the choice matching the pattern (or, with none on offer, carry on) */
+    pick(re) { const g = this.g(), d = g.dialogue.active; if (!d) return null; this.now(); if (!d.choices.length) { g.dialogue.advance(); return this.now(); } const i = d.choices.findIndex((c) => new RegExp(re, 'i').test(c.label)); if (i < 0) return { missing: re, choices: d.choices.map((c) => c.label) }; g.dialogue.choose(i); return this.now(); },
+    /** click a button on screen by its words */
+    click(re, scope = document) { const b = [...scope.querySelectorAll('button')].find((x) => new RegExp(re, 'i').test(x.innerText)); if (b) b.click(); return !!b; },
+    text(sel) { return document.querySelector(sel)?.innerText || null; },
+    /** the home island's three, as they stand (and the marks over their heads) */
+    trio() { const g = this.g(); return g.actors.filter((a) => a.alive && /^mq_home_/.test(a.npcId || '')).map((a) => ({ id: a.npcId, marker: a.questMarker || null })); },
   };
 `;
 
+/** Stand in front of someone, facing them, in the third-person view (for a picture of a conversation): on open ground, with room behind for the camera. */
+const besideIn = (page, id) => page.evaluate((id) => {
+  const g = window.OP.game, p = g.player, a = window.__st.actor(id), w = g.world;
+  if (!a) return false;
+  const clear = (x, y) => w.walkable(x, y) && !w.isBlocked?.(x, y);
+  let at = null;
+  for (let k = 0; k < 24 && !at; k++) {
+    const ang = (a.facing ?? Math.PI / 2) + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (Math.PI / 12);
+    const x = w.wx(a.x + Math.cos(ang) * 2.4), y = a.y + Math.sin(ang) * 2.4;
+    const bx = w.wx(a.x + Math.cos(ang) * 6), by = a.y + Math.sin(ang) * 6;
+    if (clear(x, y) && clear(bx, by)) at = { x, y };
+  }
+  at = at || { x: a.x + 1.6, y: a.y + 0.6 };
+  p.x = at.x; p.y = at.y; p.deck = null;
+  g.snapCamera?.();
+  const rig = g.view3d?.rig;
+  if (rig) { rig.yaw = Math.atan2(a.y - p.y, w.dx(p.x, a.x)); rig.pitch = -0.12; }
+  return true;
+}, id);
+
 export const scenarios = {
+  // menus don't stop the world: at the helm, with the inventory or the chart
+  // open, the ship sails on (holding her course: the keys don't steer her
+  // meanwhile) and the day goes on; the pause screen stops both
+  // (not "menus": that's the UI scenarios' tour of the menus, scenarios-ui.mjs)
+  //   node tools/shot.mjs worldbehind --page=shots/<build>/index.html
+  worldbehind: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human', { seed: 12345 }); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 11; g.env.storm = 0; g.env.stormTarget = 0; document.querySelector('.look-hint')?.remove(); });
+      await step(page, 1);
+      // a sloop off the pier, at her helm, sails set
+      const setup = await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, isl = g.currentIsland;
+        const dock = isl.docks[0];
+        const s = g.giveShip('sloop', dock.moor.x, dock.moor.y, 'Menu Runner');
+        window.OP.voyage.board(s);
+        s.sail = 1; s.anchored = false;
+        window.OP.step(4);
+        return { mode: p.mode, at: p.ship === s, speed: +s.speed.toFixed(2) };
+      });
+      console.log('at the helm', JSON.stringify(setup));
+      const measure = async (open, label) => {
+        const r = await page.evaluate((open) => {
+          const g = window.OP.game, s = g.player.ship;
+          if (open === 'inventory' || open === 'quests') g.ui.sideAction(open);
+          if (open === 'map') g.openMap();
+          if (open === 'menu') g.ui.openMenu();
+          const t0 = g.time, c0 = g.env.clock, x0 = s.x, y0 = s.y, h0 = s.heading;
+          // (and a key held for the helm while it's open: she isn't steered by it)
+          window.OP.key('A', true);
+          for (let i = 0; i < 4; i++) window.OP.step(0.5);
+          window.OP.key('A', false);
+          return { open, paused: g.paused, blocks: g.ui.blocksInput(), timePassed: +(g.time - t0).toFixed(2), clockMoved: +(g.env.clock - c0).toFixed(4), sailed: +Math.hypot(g.world.dx(x0, s.x), s.y - y0).toFixed(2), turned: +(s.heading - h0).toFixed(3) };
+        }, open);
+        console.log(label, JSON.stringify(r));
+        await snap(label);
+        await page.evaluate(() => { const g = window.OP.game; if (g.ui.mapOpen) g.closeMap(); g.ui.closeAll(); });
+        await step(page, 0.3);
+        return r;
+      };
+      await measure('inventory', 'behind-01-inventory-open');
+      await measure('map', 'behind-02-map-open');
+      await measure('quests', 'behind-03-quests-open');
+      await measure('menu', 'behind-04-pause-menu');
+      const after = await page.evaluate(() => { const g = window.OP.game; return { paused: g.paused, blocks: g.ui.blocksInput() }; });
+      console.log('all closed', JSON.stringify(after));
+    },
+  },
+
+  // crewmates are offered, never forced: on the main story in one Blue, the
+  // crew stop's offer (taken), then the last port's (turned down — the
+  // chapter goes on — then asked again and taken), and the ship holding them
+  //   node tools/shot.mjs storycrew --home=dawn_island --path=pirate [--tag=eb]
+  storycrew: {
+    async run(page, snap, args) {
+      const home = String(args.home || 'dawn_island'), path = String(args.path || 'pirate');
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human', { seed: 12345 }); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 11; g.env.storm = 0; g.env.stormTarget = 0; document.querySelector('.look-hint')?.remove(); });
+      await page.evaluate(HELPERS);
+      await step(page, 1);
+      const began = await page.evaluate(({ home, path }) => {
+        const g = window.OP.game, c = g.state.char;
+        // (a pirate needs a flag for the road to fit; a Marine is sworn in by the first chapter)
+        if (path === 'pirate') { c.crewName = 'Offer Pirates'; c.faction = 'pirate'; }
+        g.story.begin(`home_${home}`, path);
+        return window.__st.main();
+      }, { home, path });
+      console.log('began', JSON.stringify(began));
+      // ---- through the story to a chapter that makes an offer; then to its offer
+      const toOffer = async (role) => page.evaluate(async (role) => {
+        const g = window.OP.game, c = g.state.char, S = window.__st;
+        const seen = [];
+        for (let n = 0; n < 12; n++) {
+          const q = g.quests.main();
+          if (!q) { window.OP.step(3); continue; }
+          const def = q.def, st = def.stages.find((s) => s.offer);
+          const ch = g.story.current()?.ch;
+          if (st && ch?.role === role) {
+            // (the island's trouble dealt with: its side quest done, the chapter at the offer)
+            for (const s of def.stages) if (s.goal?.type === 'quest' && !c.quests[s.goal.quest]?.done) c.quests[s.goal.quest] = { stage: 0, done: true, day: 1 };
+            g.quests.setStage(q.id, st.id);
+            return { seen, chapter: q.id, stage: g.quests.stageId(q.id), offer: st.offer, desc: st.desc };
+          }
+          seen.push(q.id);
+          g.quests.complete(q.id);
+          window.OP.step(3);
+        }
+        return { seen, missing: role };
+      }, role);
+      // ---- go to them, and hear the offer
+      const visit = async (id) => page.evaluate(async (id) => {
+        const g = window.OP.game, p = g.player;
+        const m = g.quests.marker(g.quests.main().id);
+        if (!m) return { error: 'no waypoint' };
+        p.mode = 'foot'; p.ship = null; p.deck = null;
+        p.x = m.x + 1.5; p.y = m.y + 1.5;
+        g.snapCamera?.();
+        for (let i = 0; i < 8 && !window.__st.actor(id); i++) window.OP.step(1);
+        const a = window.__st.actor(id);
+        return { at: m.place, here: g.currentIsland?.id || null, found: !!a, marker: a?.questMarker || null };
+      }, id);
+      const offer1 = await toOffer('crew');
+      console.log('first offer', JSON.stringify(offer1));
+      const v1 = await visit(offer1.offer);
+      console.log('visit', JSON.stringify(v1));
+      await besideIn(page, offer1.offer);
+      await step(page, 0.6);
+      const o1 = await page.evaluate((id) => window.__st.open(window.__st.actor(id)), offer1.offer);
+      console.log('offer 1', JSON.stringify(o1, null, 1));
+      await snap('crew-01-first-offer');
+      const yes1 = await page.evaluate(() => window.__st.pick('^Welcome aboard|^Partners|^Welcome aboard\\.'));
+      console.log('took them', JSON.stringify(yes1));
+      await step(page, 1.2);
+      const after1 = await page.evaluate(() => ({ crew: window.OP.game.crew.members().map((m) => `${m.name} (${m.role})`), main: window.__st.main() }));
+      console.log('after the first', JSON.stringify(after1));
+      // ---- the last port: turn them down first
+      const offer2 = await toOffer('last');
+      console.log('second offer', JSON.stringify(offer2));
+      const v2 = await visit(offer2.offer);
+      console.log('visit', JSON.stringify(v2));
+      await besideIn(page, offer2.offer);
+      await step(page, 0.6);
+      const o2 = await page.evaluate((id) => window.__st.open(window.__st.actor(id)), offer2.offer);
+      console.log('offer 2', JSON.stringify(o2, null, 1));
+      await snap('crew-02-second-offer');
+      const no2 = await page.evaluate(() => window.__st.pick('^Not this time'));
+      console.log('turned down', JSON.stringify(no2));
+      await snap('crew-03-turned-down');
+      await page.evaluate(() => window.OP.game.dialogue.close());
+      await step(page, 1.2);
+      const after2 = await page.evaluate((id) => { const g = window.OP.game, c = g.state.char, a = window.__st.actor(id); return { said: c.crewOffers?.[id], marker: a?.questMarker || null, crew: g.crew.count(), main: window.__st.main() }; }, offer2.offer);
+      console.log('after the no', JSON.stringify(after2));
+      // ---- asked again: yes
+      const o3 = await page.evaluate((id) => window.__st.open(window.__st.actor(id)), offer2.offer);
+      console.log('asked again', JSON.stringify(o3, null, 1));
+      await snap('crew-04-ask-again');
+      const ask = await page.evaluate(() => window.__st.pick('^"(Join my crew|Serve under|Partner up|Sail with me)'));
+      console.log('ask', JSON.stringify(ask));
+      await snap('crew-05-again-pitch');
+      const yes2 = await page.evaluate(() => window.__st.pick('^Welcome aboard|^Partners'));
+      console.log('took them', JSON.stringify(yes2), 'dialogue boxes on screen:', await page.evaluate(() => document.querySelectorAll('.dialogue').length));
+      await step(page, 1.2);
+      // ---- the report goes on either way
+      const rep = await page.evaluate(() => {
+        const g = window.OP.game, S = window.__st;
+        if (g.dialogue.active) g.dialogue.close();
+        const q = g.quests.main();
+        const done = q?.def.stages.find((s) => s.id === 'report') ? (g.quests.complete(q.id), true) : false;
+        window.OP.step(3);
+        return { reported: done, crew: g.crew.members().map((m) => `${m.name} (${m.role}${m.fighter ? ', fighter' : ''})`), next: S.main() };
+      });
+      console.log('two aboard', JSON.stringify(rep, null, 1));
+      // ---- the ship holds them: aboard a caravel at the pier, at their stations
+      const ship = await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, c = g.state.char, isl = g.currentIsland;
+        const dock = isl?.docks?.[0];
+        const s = g.giveShip('caravel', dock ? dock.moor.x : p.x + 8, dock ? dock.moor.y : p.y + 8, 'Offer Taker');
+        c.activeShip = s.uid;
+        window.OP.debug.onDeck(s, 0.55, 0);
+        p.mode = 'foot';
+        for (let i = 0; i < 6; i++) window.OP.step(0.5);
+        const hands = g.actors.filter((a) => a.alive && a.handOf === s).map((a) => ({ name: a.name, onDeck: a.deck?.ship === s, title: a.title }));
+        const followers = g.actors.filter((a) => a.alive && a.crewId && a.controller?.kind === 'follower').map((a) => ({ name: a.name, onDeck: a.deck?.ship === s }));
+        const rig = g.view3d?.rig;
+        if (rig) { rig.yaw = s.heading + Math.PI; rig.pitch = -0.35; }
+        return { ship: s.name, hands, followers };
+      });
+      console.log('aboard', JSON.stringify(ship, null, 1), 'dialogue boxes on screen:', await page.evaluate(() => document.querySelectorAll('.dialogue').length));
+      await step(page, 0.5);
+      await snap('crew-06-aboard');
+      // ---- a word from the deck
+      const word = await page.evaluate(() => { const g = window.OP.game, a = g.actors.find((x) => x.alive && x.handOf); if (!a) return null; g.dialogue.open(a, a.def.dialogue); return window.__st.now(); });
+      console.log('a word', JSON.stringify(word));
+      if (word) await snap('crew-07-a-word');
+      await page.evaluate(() => window.OP.game.dialogue.close());
+      await page.evaluate(() => window.OP.game.ui.sideAction('crew'));
+      await step(page, 0.3);
+      await snap('crew-08-crew-menu');
+    },
+  },
+
+  // the main story is optional: born to sail your own way (the creation
+  // screen), the Quests menu's way back to a calling, the fourth choice with a
+  // contact, the journal, and a road set aside and taken up again
+  //   node tools/shot.mjs storyfree --page=shots/<build>/index.html
+  storyfree: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(HELPERS);
+      // ---- the creation screen: the story, or none
+      // (the loading screen may still be fading over the title: out of the way)
+      await page.evaluate(() => { document.getElementById('boot')?.classList.add('hidden'); window.OP.game.debugBirth = { race: 'human', traits: ['lucky'], seed: 12345 }; window.__st.click('Begin a Lineage'); });
+      await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /Accept my fate/.test(b.innerText)), null, { timeout: 60000 });
+      await page.waitForTimeout(2400);
+      await page.evaluate(() => window.__st.click('Accept my fate'));
+      await page.waitForFunction(() => !!document.querySelector('.story-pick'), null, { timeout: 60000 });
+      await page.waitForTimeout(1500);
+      await snap('free-01-creation-calling');
+      await page.evaluate(() => window.__st.click('Sail your own way', document.querySelector('.story-pick')));
+      await page.waitForTimeout(400);
+      await snap('free-02-creation-free');
+      console.log('creation', JSON.stringify(await page.evaluate(() => window.__st.text('.story-pick'))));
+      await page.evaluate(() => window.__st.click('^Set Sail$'));
+      await page.waitForFunction(() => !!window.OP.game.player && !!window.OP.game.state?.char, null, { timeout: 180000, polling: 250 });
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 11; g.env.storm = 0; g.env.stormTarget = 0; document.querySelector('.look-hint')?.remove(); });
+      await step(page, 2);
+      const born = await page.evaluate(() => {
+        const g = window.OP.game, c = g.state.char, S = window.__st;
+        return { free: c.freeSail, intro: c.mainIntro, road: c.main?.path || null, home: g.currentIsland?.id || null, trio: S.trio(), storyPins: (g.storyPins?.() || []).filter((p) => p.main).length, track: S.text('.qtrack') };
+      });
+      console.log('born free', JSON.stringify(born, null, 1));
+      await snap('free-03-hud');
+      // ---- side content is all still there: side quests' marks, the chart's pins
+      const side = await page.evaluate(() => {
+        const g = window.OP.game;
+        window.OP.step(1);
+        return { marks: g.actors.filter((a) => a.alive && a.questMarker).map((a) => `${a.name}:${a.questMarker}`), pins: (g.storyPins?.() || []).map((p) => `${p.side ? 'side' : 'main'}:${p.label}`).slice(0, 8), trainers: g.actors.filter((a) => a.alive && a.def?.trainer).map((a) => a.name) };
+      });
+      console.log('side content', JSON.stringify(side, null, 1));
+      // ---- the Quests menu: sailing your own way, and the way back to a calling
+      await page.evaluate(() => window.OP.game.ui.sideAction('quests'));
+      await step(page, 0.3);
+      await snap('free-04-quests-free');
+      await page.evaluate(() => window.__st.click('Look for a calling after all', document.querySelector('.quests')));
+      await step(page, 1.2);
+      await snap('free-05-quests-calling');
+      const seeking = await page.evaluate(() => { const g = window.OP.game, c = g.state.char, S = window.__st; return { free: c.freeSail, intro: c.mainIntro, trio: S.trio(), quests: S.text('.quests')?.slice(0, 600) }; });
+      console.log('seeking', JSON.stringify(seeking, null, 1));
+      await page.evaluate(() => window.OP.game.ui.closeAll());
+      await step(page, 1);
+      await snap('free-06-tracker-calling');
+      console.log('tracker', JSON.stringify(await page.evaluate(() => window.__st.text('.qtrack'))));
+      // ---- a contact: the fourth choice, in conversation
+      const pid = (await page.evaluate(() => window.__st.trio().find((t) => /_pirate$/.test(t.id))?.id)) || null;
+      if (!pid) { console.log('NO PIRATE CONTACT about'); return; }
+      await besideIn(page, pid);
+      await step(page, 0.5);
+      const talk1 = await page.evaluate((pid) => { const S = window.__st; const out = [S.open(S.actor(pid))]; for (let i = 0; i < 4 && !(out[out.length - 1]?.choices || []).length; i++) out.push(S.pick('.')); return out; }, pid);
+      console.log('contact', JSON.stringify(talk1, null, 1));
+      await snap('free-07-contact-choices');
+      const talk2 = await page.evaluate(() => window.__st.pick('sail my own way'));
+      console.log('chose', JSON.stringify(talk2));
+      await snap('free-08-contact-farewell');
+      await page.evaluate(() => window.OP.game.dialogue.close());
+      await step(page, 1.2);
+      const free2 = await page.evaluate(() => { const g = window.OP.game, c = g.state.char, S = window.__st; return { free: c.freeSail, intro: c.mainIntro, trio: S.trio(), track: S.text('.qtrack') }; });
+      console.log('free again', JSON.stringify(free2, null, 1));
+      // ---- the journal shows it too
+      await page.evaluate(() => window.OP.game.ui.sideAction('journal'));
+      await step(page, 0.3);
+      await snap('free-09-journal');
+      console.log('journal', JSON.stringify(await page.evaluate(() => window.__st.text('.journal-road'))));
+      await page.evaluate(() => window.OP.game.ui.closeAll());
+      // ---- a road after all (the offer stands), then set aside and taken up again
+      const mid = pid.replace(/_pirate$/, '_marine');
+      const took = await page.evaluate((mid) => { const S = window.__st; const a = S.actor(mid); if (!a) return 'no marine contact'; return S.talk(a, ['marines', 'leave it']); }, mid);
+      console.log('took a road', JSON.stringify(took));
+      await step(page, 1);
+      await page.evaluate(() => window.OP.game.ui.sideAction('quests'));
+      await step(page, 0.3);
+      await snap('free-10-quests-road');
+      await page.evaluate(() => window.__st.click('Set the story aside', document.querySelector('.quests')));
+      await page.waitForTimeout(300);
+      await snap('free-11-set-aside-ask');
+      await page.evaluate(() => window.__st.click('^Set it aside$', document.querySelector('.panel.ask')));
+      await page.waitForTimeout(300);
+      await step(page, 1);
+      await snap('free-12-set-aside');
+      const aside = await page.evaluate(() => { const g = window.OP.game, c = g.state.char, S = window.__st; return { shelf: !!c.mainShelf, road: c.main?.path || null, main: g.quests.main()?.id || null, free: c.freeSail, track: S.text('.qtrack') }; });
+      console.log('set aside', JSON.stringify(aside, null, 1));
+      await page.evaluate(() => window.__st.click('Take your story up again', document.querySelector('.quests')));
+      await step(page, 2);
+      const back = await page.evaluate(() => { const g = window.OP.game, c = g.state.char, S = window.__st; return { shelf: !!c.mainShelf, road: c.main?.path || null, main: g.quests.main()?.id || null, stage: S.main().stage, free: c.freeSail }; });
+      console.log('taken up again', JSON.stringify(back, null, 1));
+      await page.evaluate(() => window.OP.game.ui.closeAll());
+      await step(page, 1);
+      await snap('free-13-taken-up');
+    },
+  },
+
   story: {
     async run(page, snap, args) {
       const path = String(args.path || 'pirate');
@@ -70,8 +383,7 @@ export const scenarios = {
         const g = window.OP.game, c = g.state.char, S = window.__st, dbg = window.OP.debug;
         const out = [];
         if (path === 'pirate') {
-          dbg.addItem(g, 'cutlass', 1);
-          window.OP.step(1);
+          // (no blade to get: the first step is the flag)
           out.push(S.main().stage);
           c.crewName = 'Test Pirates'; c.jr = { skull: 'classic', bones: 'cross', accessory: 'none', color: '#fff', name: 'Test Pirates' }; c.faction = 'pirate'; g.emit('crewFounded', c.crewName);
           window.OP.step(1);

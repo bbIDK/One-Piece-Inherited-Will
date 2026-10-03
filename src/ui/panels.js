@@ -24,6 +24,7 @@ import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
 import { RENDER_DIST, renderChunks } from '../game/save.js';
 import { openShipwright } from './shipwrightPanel.js';
 import { fmtDist } from './compass.js';
+import { storyChoice } from './questsPanel.js';
 
 const berriesLine = (c) => h('div.berries', uiImg('berries', 20), ` ${formatBerries(c.berries)}`);
 const HOTBAR = HOTBAR_SIZE;
@@ -478,9 +479,18 @@ export function openJournal(game) {
   const body = h('div.journal');
   const entry = ui.openPanel(body, { wide: true, id: 'journal' });
   if (!entry) return;
-  // (quests have a menu of their own now: Quests, L)
+  // (quests have a menu of their own now: Quests, L) — and your road, with the
+  // choice that goes with it: sail your own way, or take a road (up again)
+  const road = h('div.journal-road');
+  const drawRoad = () => {
+    clear(road);
+    const ch = storyChoice(game, drawRoad);
+    add(road, uiImg(ch.state === 'free' || ch.state === 'shelved' ? 'ship' : 'wp_main', 18), h('span', ch.text), ch.button);
+  };
+  drawRoad();
   add(body, h('h2', 'Journal'),
     h('div.journal-quests', uiImg('quest', 18), h('span', ' Your main story and side quests are in the Quests menu.'), h('button.btn.small', { on: { click: () => ui.sideAction?.('quests') } }, 'Open Quests (L)')),
+    road,
     h('h3', 'Legends'),
     h('p.muted', 'Nobody chooses your destiny. But the sea remembers those who do the impossible — every legend you write adds to your Inherited Will.'));
   const list = h('div.list');
@@ -511,7 +521,7 @@ export function openMenu(game, { onQuit, onRetire, onSave, extra = [] }) {
       btn('check', 'Resume', () => ui.closePanel(), '.gold'),
       ...extra.map((e) => btn(e.icon, e.text, () => { ui.closePanel(); e.fn(); })),
       btn('save', 'Save game', () => { if (onSave()) saved.textContent = `Saved just now (lineage ${game.saveSlot || 1})`; }),
-      btn('help', 'How to Play', () => { ui.closePanel(); ui.openPanel(helpContent(c), { wide: true, id: 'help' }); }),
+      btn('help', 'How to Play', () => { ui.closePanel(); ui.openPanel(helpContent(c), { wide: true, id: 'help', pause: true }); }),
       btn('settings', 'Settings', () => { ui.closePanel(); openSettings(game); }),
       btn('inn', 'Get unstuck: back to your bed', async () => {
         const p = game.player, r = c.rest || c.spawn;
@@ -546,7 +556,8 @@ export function openMenu(game, { onQuit, onRetire, onSave, extra = [] }) {
     ),
     saved,
     h('p.muted', 'The game also saves by itself every minute, at every milestone, and when you close the page. Death is written immediately.'));
-  ui.openPanel(body, { id: 'menu' });
+  // (the pause screen: the one menu that stops the world — see pause.js)
+  ui.openPanel(body, { id: 'menu', pause: true });
 }
 
 const fullscreenOK = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
@@ -596,7 +607,8 @@ export function openSettings(game) {
       h('p.muted', 'Press V in game to switch between first and third person. Settings are saved in this browser.'));
   };
   render();
-  game.ui.openPanel(body, { onClose: () => game.applySettings(true), id: 'settings' });
+  // (reached from the pause screen, and part of it: the world waits)
+  game.ui.openPanel(body, { onClose: () => game.applySettings(true), id: 'settings', pause: true });
 }
 
 // =================================================================== shop

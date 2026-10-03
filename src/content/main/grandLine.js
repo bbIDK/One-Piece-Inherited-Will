@@ -23,6 +23,8 @@ chapter('gl_twin_cape', { part: 2, island: 'twin_cape', opensStory: true, noLog:
     ],
     tasks: [T.quest('p1_laboon_promise', 'Hear the story of Laboon, the whale who waits, and make him a promise (Crocus).', 'p1_crocus')],
     wait: 'Laboon is waiting. He\'s always waiting.',
+    // (to someone who'd rather sail their own way: see mainStory.js)
+    free: 'Then sail your own way. The Grand Line doesn\'t care why you came — only whether you can live through it. Laboon and I will be here.',
     done: [
       'Laboon hasn\'t rammed the Red Line since you left. A promise is a powerful thing.',
       'Listen well. Every island here has its own magnetism, and the Log Pose follows it. From this cape, seven roads lead into the Grand Line. Your needle will choose one of them.',

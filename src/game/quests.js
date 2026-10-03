@@ -1,5 +1,7 @@
 // Quest engine. Definitions live in the content packs. Progress is stored on
-// the character: char.quests[id] = { stage, done, day }.
+// the character: char.quests[id] = { stage, sid, done, day } (stage: the
+// index of the step under way; sid: that step's id, so a save still finds
+// its step when a quest's steps change — see reconcile).
 // Auto-tracked goals: defeat (npcId), reach (island [+ spot]), item, flag,
 // event, quest (another quest done), weapon (carry one), ship ({ grandLine }),
 // crew (n aboard), faction, bounty (at least n), reachXY, days.
@@ -36,7 +38,34 @@ export class Quests {
     game.on('itemGained', (id) => this.event('item', id));
     game.on('questEvent', (name, arg) => this.event('event', name, arg));
     game.on('tick', (dt) => this.tick(dt));
+    game.on('characterStart', () => this.reconcile());
     this.t = 0;
+  }
+
+  /**
+   * Keep every quest under way on the step it was on, by the step's id: a
+   * quest whose steps have changed since the save (one taken out, one put
+   * in) carries on where it was — or, that step gone, at the next one it
+   * still has. A quest saved before steps were remembered by id is read by
+   * the steps it had then (its def's `was`: the old list of step ids), if
+   * they've changed since.
+   */
+  reconcile() {
+    const c = this.char;
+    if (!c) return;
+    for (const [id, s] of Object.entries(c.quests || {})) {
+      const d = DEFS.get(id);
+      if (!d || !s || s.done || !d.stages.length) continue;
+      const at = (sid) => d.stages.findIndex((x) => x.id === sid);
+      const sid = s.sid || (d.was ? d.was[s.stage] : d.stages[s.stage]?.id);
+      let i = sid ? at(sid) : -1;
+      // (taken out: on to the next of the old steps that's still there)
+      const old = d.was || [];
+      for (let k = old.indexOf(sid) + 1; i < 0 && k > 0 && k < old.length; k++) i = at(old[k]);
+      if (i < 0) i = Math.max(0, Math.min(s.stage | 0, d.stages.length - 1));
+      s.stage = i;
+      s.sid = d.stages[i].id;
+    }
   }
 
   get char() { return this.game.state?.char; }
@@ -130,7 +159,7 @@ export class Quests {
     const d = DEFS.get(id);
     const c = this.char;
     if (!d || c.quests[id]) return false;
-    c.quests[id] = { stage: 0, done: false, day: this.game.env.day, started: Date.now() };
+    c.quests[id] = { stage: 0, sid: d.stages[0]?.id, done: false, day: this.game.env.day, started: Date.now() };
     if (d.kind === 'main') this.game.ui.toast(d.part ? `MAIN STORY · PART ${d.part}` : 'MAIN STORY', d.name, '#ffd54f');
     else this.game.ui.toast('NEW QUEST', d.name, '#90caf9');
     this.game.log(`${d.kind === 'main' ? 'Main story' : 'Quest started'}: ${d.name} — ${d.stages[0]?.desc || ''}`, d.kind === 'main' ? '#ffe082' : '#90caf9');
@@ -151,6 +180,7 @@ export class Quests {
     cur?.onComplete?.(this.ctx(), this.game);
     if (idx >= d.stages.length) return this.complete(id);
     s.stage = idx;
+    s.sid = d.stages[idx].id;
     s.stageDay = this.game.env.day;
     const st = d.stages[idx];
     this.game.log(`${d.name}: ${st.desc}`, '#90caf9');

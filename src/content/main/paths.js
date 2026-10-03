@@ -5,6 +5,9 @@ export const PATHS = {
   hunter: { id: 'hunter', name: 'Bounty Hunter', color: '#6d4c41', tagline: 'Every pirate has a price. Your name is your fortune.' },
 };
 
+/** Not a road at all: sailing your own way, with no main story (see mainStory.js). */
+export const OWN_WAY = { id: 'free', name: 'Your Own Way', color: '#00897b', tagline: 'No road but the sea: side quests, trainers, bounties and the whole Blue Planet, at your own pace.' };
+
 export const PART_NAMES = { 1: 'The Blues', 2: 'The Grand Line', 3: 'The New World' };
 
 /** A value given per path ({ pirate, marine, hunter } or { all }) or for everyone. */

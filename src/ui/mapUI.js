@@ -114,8 +114,8 @@ export function installMap(game) {
   game.openMap = () => {
     if (ui.mapOpen) return;
     help.textContent = game.creative?.on ? 'Click anywhere to travel there · drag to pan · wheel to zoom · M or Esc to close' : 'Drag to pan · wheel to zoom · M or Esc to close';
+    // (the world goes on while you read the chart: the ship holds her course — see pause.js)
     ui.mapOpen = true;
-    game.paused = true;
     const p = game.player;
     const r = game.renderer;
     const isl = game.currentIsland;
@@ -150,7 +150,8 @@ export function installMap(game) {
     ui.root.classList.remove('map-open');
     ui.hud.classList.toggle('hidden', !ui.hudVisible);
     ui.el.side.classList.toggle('hidden', !ui.hudVisible);
-    if (!ui.stack.length && !ui.dialogueEl) game.paused = false;
+    // (the click that closed it isn't a broadside at the sea)
+    game.input?.consumeMouse?.(0);
   };
   ui.keyHandlers.push({ key: 'M', fn: () => (ui.mapOpen ? game.closeMap() : game.openMap()) });
 

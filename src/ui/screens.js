@@ -126,13 +126,14 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
   let rerolls = perkLevel(legacy, 'reroll');
   let birth = rollBirth(legacy, Math.floor(Math.random() * 1e9));
   if (ui.game?.debugBirth) birth = { ...birth, ...ui.game.debugBirth }; // test harness only
-  const state = { name: '', look: null };
+  // (story: 'calling' — the three people on your home island can set you on a road — or 'free': sail your own way, no main story)
+  const state = { name: '', look: null, story: 'calling' };
   const root = h('div.screen');
   ui.showScreen(root);
   let raf = 0;
   let timers = [];
   let previewCleanup = null;
-  const stopAnim = () => { cancelAnimationFrame(raf); for (const t of timers) clearTimeout(t); timers = []; previewCleanup?.(); previewCleanup = null; };
+  const stopAnim = () => { window.cancelAnimationFrame(raf); for (const t of timers) clearTimeout(t); timers = []; previewCleanup?.(); previewCleanup = null; };
   const later = (ms, fn) => timers.push(setTimeout(fn, ms));
   const hasD = () => birth.traits.includes('will_of_d');
 
@@ -243,9 +244,20 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       renderGender();
     };
     renderGender();
+    // the main story, or none: the three roads, or a journey of your own (it can be changed later, in the Quests menu)
+    const storyEl = h('div.story-pick');
+    const renderStory = () => {
+      clear(storyEl);
+      const opt = (v, label) => h('button.chip' + (state.story === v ? '.on' : ''), { on: { click: () => { state.story = v; renderStory(); } } }, label);
+      storyEl.append(row('Your story', h('div.swatches', opt('calling', 'Find your calling'), opt('free', 'Sail your own way'))),
+        h('p.muted.story-note', state.story === 'free'
+          ? 'No main story: sail off into the seas and start your own journey — no chapters, no story markers, just the sea, its side quests, trainers and bounties, and the people you meet. You can still take up a road later (Quests, L).'
+          : 'Three people on your home island can set you on a road — Pirate, Marine or Bounty Hunter — and the main story follows it through the Blues, the Grand Line and the New World. Or you can turn them all down and sail your own way.'));
+    };
+    renderStory();
     const right = h('div',
       row('Name', h('div', { style: { display: 'flex', gap: '6px' } }, nameInput, h('button.btn', { on: { click: () => { state.name = randomCharName(); nameInput.value = state.name; updateName(); } } }, 'Random'))),
-      finalName, genderEl, tabsEl, optsEl,
+      finalName, genderEl, storyEl, tabsEl, optsEl,
       h('p.muted', { style: { marginTop: '12px' } }, 'No destiny is chosen for you. Pirate, Marine, adventurer, bounty hunter or none of these — the sea is free, and what you become is up to you. You can found your own pirate crew and raise your Jolly Roger later, from the Crew menu.'),
     );
     const born = RACES[birth.race];
@@ -254,7 +266,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
         h('div.muted', `${raceLabel(L)} · born in ${born.spawnSeas.length > 1 ? 'one of the four Blues' : 'the ' + SEA_NAMES[born.spawnSeas[0]]}`),
         h('div', { style: { display: 'flex', gap: '10px' } },
           h('button.btn', { on: { click: () => stepRoll(false) } }, 'Back'),
-          h('button.btn.red.big', { on: { click: () => { stopAnim(); onDone(birth, { name: (state.name || '').trim() || 'Nameless', look: state.look }); } } }, 'Set Sail'))));
+          h('button.btn.red.big', { on: { click: () => { stopAnim(); onDone(birth, { name: (state.name || '').trim() || 'Nameless', look: state.look, story: state.story }); } } }, 'Set Sail'))));
     root.appendChild(panel);
     applyLook(L, race);
     let preview = null;

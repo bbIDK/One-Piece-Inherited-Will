@@ -1,13 +1,47 @@
 // The Quests menu (L): the main story — the chapter you're on, what's left
 // of it and the story so far — side quests you can track or give up, and
-// everything you've finished. The main story can't be abandoned.
+// everything you've finished. The main story is never forced: before taking
+// a road you can sail your own way instead, and a road under way can be set
+// aside and taken up again where it was left (content/mainStory.js).
 import { h, clear } from './dom.js';
 import { uiImg } from './icon.js';
 import { fmtDist } from './compass.js';
 import { questDef } from '../game/quests.js';
-import { PATHS } from '../content/main/paths.js';
+import { PATHS, OWN_WAY, PART_NAMES } from '../content/main/paths.js';
 
 const add = (el, ...kids) => { for (const k of kids) if (k) el.appendChild(k); return el; };
+
+/**
+ * Your road, and the choice that goes with where you are on it (the Quests
+ * menu and the Journal both show it): looking for a calling — or sail your
+ * own way; sailing your own way — or look for a calling after all; a road
+ * set aside — take it up again; a road under way — set it aside.
+ * { state, text, button } (the button may be null).
+ */
+export function storyChoice(game, rerender) {
+  const c = game.state.char, S = game.story, ui = game.ui;
+  const btn = (cls, label, fn) => h('button.btn' + cls, { on: { click: async () => { if (await fn()) rerender(); } } }, label);
+  if (c.main && !c.main.finished) {
+    const path = PATHS[c.main.path];
+    return { state: 'road', text: `The road of the ${path.name}. Want to sail free for a while? Set the story aside — it waits for you, chapter and all.`,
+      button: btn('.small', 'Set the story aside', async () => (await ui.ask({ title: 'Set your story aside?', text: `The road of the ${path.name} stops where it is: no chapter, no markers, nothing steering your Log Pose, and the Grand Line won't hold you to an island. Take it up again here whenever you like — it carries on where you left it.`, ok: 'Set it aside' })) && S?.setAside()) };
+  }
+  if (c.mainShelf) {
+    const sh = c.mainShelf, path = PATHS[sh.main.path];
+    const d = sh.quest && questDef(sh.quest.id);
+    return { state: 'shelved', text: `The road of the ${path.name} waits where you left it${d ? ` — "${d.name}"` : ''} (Part ${sh.main.part}, ${PART_NAMES[sh.main.part]}).`,
+      button: btn('.gold.small', 'Take your story up again', () => S?.takeUp()) };
+  }
+  if (c.freeSail) {
+    return { state: 'free', text: `You're sailing your own way${c.freeSail.day > 1 ? ` (since day ${c.freeSail.day})` : ''}: no main story, just the sea. Changed your mind? Look for a calling — the people who can set you on a road will be marked again.`,
+      button: btn('.small', 'Look for a calling after all', () => S?.seekCalling()) };
+  }
+  if (c.mainIntro || !c.main) {
+    return { state: 'calling', text: 'Three roads — Pirate, Marine, Bounty Hunter — or a fourth: sail off into the seas and start your own journey, with no main story at all. Side quests, trainers, shops and bounties are the same either way.',
+      button: btn('.small', 'Sail your own way (no main story)', async () => (await ui.ask({ title: 'Sail your own way?', text: 'No road and no main story: no chapters, no orange markers, nothing steering your Log Pose. Side quests, trainers, shops, bounties and the whole sea stay open — and you can still take up a road later, from here or from anyone who could set you on one.', ok: 'Sail my own way' })) && S?.sailFree('quests')) };
+  }
+  return { state: 'done', text: 'Your story is told.', button: null };
+}
 
 function stageRows(game, id) {
   const q = game.quests, s = q.state(id), d = questDef(id);
@@ -44,7 +78,8 @@ export function openQuests(game, first = 'main') {
     add(body, h('h2', 'Quests'), tabs);
     if (tab === 'main') {
       const main = q.main();
-      const path = PATHS[c.main?.path];
+      const ch = storyChoice(game, render);
+      const path = PATHS[c.main?.path] || (ch.state === 'free' || ch.state === 'shelved' ? OWN_WAY : null);
       add(body, h('div.q-pathline', path ? h('span.q-path', { style: { background: path.color } }, path.name) : null, h('span.muted', path ? path.tagline : 'Your story hasn\'t begun yet.')));
       if (main) {
         const d = main.def;
@@ -54,13 +89,20 @@ export function openQuests(game, first = 'main') {
           d.summary ? h('p', d.summary) : null,
           stageRows(game, main.id),
           whereLine(game, main.id),
-          h('p.muted.q-note', 'The main story can\'t be abandoned — the sea keeps its promises.')));
+          h('div.q-choice', h('p.muted.q-note', ch.text), ch.button)));
+      } else if (ch.state === 'shelved' || ch.state === 'free') {
+        add(body, h('div.card.q-main.q-own',
+          h('div.q-kicker', ch.state === 'shelved' ? 'The story waits' : 'No main story'),
+          h('h3', 'Sailing your own way'),
+          h('p', ch.state === 'shelved' ? 'Your road is set aside: no chapter, no story markers, nothing steering your Log Pose. The side quests you take on are below (Side quests), and the whole sea is yours.' : 'No road, no chapters, no story markers — side quests, trainers, shops, bounties, the Marines, a flag of your own and the Grand Line are all still out there.'),
+          h('div.q-choice', h('p.muted.q-note', ch.text), ch.button)));
       } else if (c.mainIntro) {
-        add(body, h('div.card.q-main', h('div.q-kicker', 'Prologue'), h('h3', 'Find your calling'), h('p', c.mainIntro)));
+        add(body, h('div.card.q-main', h('div.q-kicker', 'Prologue'), h('h3', 'Find your calling'), h('p', c.mainIntro),
+          h('div.q-choice', h('p.muted.q-note', ch.text), ch.button)));
       } else {
         add(body, h('p.muted', 'No chapter under way.'));
       }
-      const told = (c.main?.done || []).map((id) => questDef(id)).filter(Boolean).reverse();
+      const told = (c.main?.done || c.mainShelf?.main?.done || []).map((id) => questDef(id)).filter(Boolean).reverse();
       if (told.length) {
         add(body, h('h3', 'The story so far'), h('div.list.compact', ...told.map((d) => h('div.row-item', uiImg('check', 18), h('div.grow', h('b', d.name), h('div.sub', `Part ${d.part} · ${d.partName || ''}${d.islandName ? ` — ${d.islandName}` : ''}`))))));
       }

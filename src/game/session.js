@@ -41,6 +41,10 @@ export function installSession(game, { onReturnToTitle }) {
 
   game.on('lifeLost', ({ cause, lives }) => {
     setTimeout(() => {
+      // (the world doesn't wait behind the menus: whatever was open goes, for the screen)
+      game.ui.closeAll?.();
+      if (game.ui.mapOpen) game.closeMap?.();
+      if (game.dialogue?.active) game.dialogue.close();
       game.paused = true;
       lifeLostScreen(game.ui, {
         cause, lives,
@@ -51,6 +55,9 @@ export function installSession(game, { onReturnToTitle }) {
 
   game.on('lineageEnded', ({ cause, will }) => {
     setTimeout(() => {
+      game.ui.closeAll?.();
+      if (game.ui.mapOpen) game.closeMap?.();
+      if (game.dialogue?.active) game.dialogue.close();
       game.paused = true;
       const legacy = game.state.legacy;
       lineageEndScreen(game.ui, {
@@ -141,7 +148,11 @@ export function startNewCharacter(game, birth, choices) {
   game.ui.setHudVisible(true);
   const seaName = REGION_INFO[SEA_IDS[spawn.sea]]?.name || '';
   setTimeout(() => game.ui.banner(spawn.town ? spawn.town.name : 'An Uncharted Islet', seaName, `${char.name} begins their journey. The sea is yours to choose.`, 5), 400);
-  setTimeout(() => { if (game.state?.char === char) game.hint('menus', 'Your menus are on the left: Inventory, Character, Skills, Journal, Crew and Quests (or Tab, C, K, J, U, L). Esc pauses and saves. People with an orange ! over their heads can start your story — as a pirate, a Marine or a bounty hunter.'); }, 6500);
+  // (a free sailor isn't sent looking for the people who start the story)
+  const story = char.freeSail
+    ? 'You\'re sailing your own way, with no main story — if you change your mind, the Quests menu (L) can set you looking for a calling.'
+    : 'People with an orange ! over their heads can start your story — as a pirate, a Marine or a bounty hunter — or you can sail your own way (Quests, L).';
+  setTimeout(() => { if (game.state?.char === char) game.hint('menus', `Your menus are on the left: Inventory, Character, Skills, Journal, Crew and Quests (or Tab, C, K, J, U, L). Esc pauses and saves. ${story}`); }, 6500);
   game.emit('characterStart', { char, isNew: true, spawn });
   persist(game);
   return p;
