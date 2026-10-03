@@ -426,8 +426,9 @@ async function start() {
     const v = startVoyage(game, { role: 'guest', code });
     voyageHud.attach(v);
     const remember = (s) => saveNet({ ...loadNet(s), joined: { code, host: v.hostName, at: Date.now() } }, s);
-    // (before you're in the world, what went wrong takes the screen; in it, the HUD says so)
-    v.on('failed', (err) => { if (!game.player) voyageError(ui, err, { code, host: v.hostName, onRetry: () => joinVoyage(code), onBack: showTitle }); });
+    // (while looking for it or choosing a pirate, what went wrong takes the screen; anywhere
+    // else — making a pirate, in the world — it's said over what you're doing: voyageHud.js)
+    v.on('failed', (err) => { if (!game.player && ui.screenEl?.querySelector('.vy-lobby')) voyageError(ui, err, { code, host: v.hostName, onRetry: () => joinVoyage(code), onBack: showTitle }); });
     v.on('joined', () => joinPick(ui, v, {
       slots: allSlots(),
       // (the lineage that came aboard this voyage last time, marked)

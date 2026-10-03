@@ -30,7 +30,7 @@ export const ERRORS = {
   full: ['The voyage is full', `${MAX_PLAYERS} players are aboard already.`],
   taken: ['That code is already in use', 'Another game is hosting with this code — is this lineage open in another tab? Close it there, or host with a new code.'],
   relays: ['Can\'t reach the meeting place', 'Players find each other through public relays on the internet, and none of them answered. Check your connection (some firewalls and VPNs block them), then try again.'],
-  hostLeft: ['The host has left', 'The voyage is over: {host} has left it. Your character is saved; you can sail on alone.'],
+  hostLeft: ['The host has left', 'The voyage is over: {host} has left it. You sail on alone, in your own world; nothing of yours is lost.'],
   transport: ['Multiplayer couldn\'t start', '{detail}'],
 };
 export function errorText(err, ctx = {}) {

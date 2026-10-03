@@ -212,11 +212,15 @@ export function installVoyageHud(game, ui) {
       }),
       v.on('note', (text, color) => { if (game.player && text) logLine(null, text, color || '#b0bec5'); }),
       v.on('failed', (err) => {
+        const { title, text } = errorText(err, { code: showCode(v?.code), host: v?.hostName });
         if (game.player) {
-          const { title, text } = errorText(err, { code: showCode(v?.code), host: v?.hostName });
           ui.toast(title.toUpperCase(), text, '#ffab91', 'voyage');
           logLine(null, text, '#ffab91');
           persist(game);
+        } else if (!ui.screenEl?.querySelector('.vy-lobby')) {
+          // (making a pirate: said over it, and they carry on — alone, once they're done;
+          // the lobby screens say it themselves: main.js, voyage.js)
+          ui.toast(title.toUpperCase(), text, '#ffab91', 'voyage');
         }
         attach(null);
       }),
