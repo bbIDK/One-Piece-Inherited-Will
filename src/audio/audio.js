@@ -27,6 +27,8 @@ import { hasRyou } from '../game/haki.js';
 const HITS = { punch: 1, punch_heavy: 1, slash_hit: 1, slash_heavy: 1, fire: 1, magma: 1, ice: 1, snow: 1, lightning: 1, water: 1, swamp: 1, poison: 1, gas: 1, smoke: 1, sand: 1, light: 1, dark: 1, quake: 1, string: 1, explosion: 1, haki: 1 };
 // Haki's own sounds, played in the voice of whoever's Haki it is (game/haki.js)
 const HAKI_VOICED = new Set(['haki', 'haki_obs', 'haki_off', 'haki_out', 'foresight', 'conqueror', 'conqueror_rise', 'conqueror_clash']);
+// footsteps' level among the rest (a step should sit some 15–20 dB under a punch, not 30)
+const STEP = 3.8;
 // the moves done with the legs
 const KICKS = /kick|knee|mouton|jete|arabesque|pirouette|rankyaku|concasse/;
 
@@ -271,7 +273,7 @@ export class Audio {
     const p = this.game?.player;
     this.foot = -this.foot;
     const hard = surface === 'wood' || surface === 'stone' || surface === 'metal' || surface === 'ice';
-    const v = this.E.open('step', { vol: pl.vol * (0.75 + 0.45 * loud), pan: pl.pan + this.foot * 0.06, lp: pl.lp, send: hard ? 0.05 : 0.015, prio: 4, max: 3 });
+    const v = this.E.open('step', { kind: 'move', vol: pl.vol * (0.75 + 0.45 * loud) * STEP, pan: pl.pan + this.foot * 0.06, lp: pl.lp, send: hard ? 0.05 : 0.015, prio: 4, max: 3 });
     if (!v) return;
     v.pj = 0.98 + Math.random() * 0.04;
     footstep(v, surface, loud, { foot: this.foot, deck: !!p?.deck, wet: this.foley?.wet() || 0 });
