@@ -37571,6 +37571,7 @@ void main() {
     return RM.top * smooth((s - (c.len - RM.climb)) / RM.climb);
   }
   var HIT = { canal: null, i: 0, d: 0, s: 0, level: 0, fx: 0, fy: 0, side: 0, pool: false };
+  var POOL_CURL = 0.2;
   function canalAt(x, y, reach = 40, out = HIT) {
     const dxs = x - RM.x, dys = y - RM.y;
     if (Math.abs(dxs) > 1400 || Math.abs(dys) > 2200) return null;
@@ -37582,9 +37583,11 @@ void main() {
       out.s = 0;
       out.level = RM.top;
       out.pool = true;
-      out.fx = pd > 1 ? -dxs / pd * 0.3 + 0.95 : 1;
-      out.fy = pd > 1 ? -dys / pd * 0.3 : 0;
-      const f = Math.hypot(out.fx, out.fy);
+      const c2 = pd > 1e-3 ? dxs / pd : 1;
+      const a = smooth((pd - 3) / 7) * (1 - smooth((c2 - 0.7) / 0.27));
+      out.fx = (pd > 1e-3 ? -dxs / pd * a : 0) + (1 - a);
+      out.fy = (pd > 1e-3 ? -dys / pd * a : 0) - (1 - a) * dys * POOL_CURL;
+      const f = Math.hypot(out.fx, out.fy) || 1;
       out.fx /= f;
       out.fy /= f;
       out.side = 0;
@@ -58504,7 +58507,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.pitch = (this.pitch || 0) + (pitchT - (this.pitch || 0)) * Math.min(1, dt * 3);
       let vx = Math.cos(this.heading) * this.speed + cur.x;
       let vy = Math.sin(this.heading) * this.speed + cur.y;
-      if (cur.steer) this.heading += clamp2(angleDiff(this.heading, Math.atan2(cur.y, cur.x)), -1, 1) * dt * cur.steer;
+      if (cur.steer) {
+        const turn = clamp2(angleDiff(this.heading, Math.atan2(cur.y, cur.x)), -1, 1) * dt * cur.steer;
+        for (const f of [1, 0.5, 0.25]) {
+          if (this.fits(w, this.x, this.y, this.heading + turn * f)) {
+            this.heading += turn * f;
+            break;
+          }
+        }
+      }
       const nx = w.wx(this.x + vx * dt), ny = this.y + vy * dt;
       const ok = (x, y) => this.fits(w, x, y, this.heading) && !this.shipIn(game, x, y, this.heading);
       if (ok(nx, ny)) {
@@ -58526,7 +58537,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           game.audio?.sfx("crash", this);
           if (cur.steer) game.log(this.unbreakable ? "CRASH! Steer with the current \u2014 keep to the middle of the canal!" : "CRASH! Steer with the current \u2014 hit the canal walls and you will sink!", "#ff8a80");
         }
-        this.speed *= -0.25;
+        this.speed *= cur.steer ? 0.5 : -0.25;
         if (!this.fits(w, this.x, this.y, this.heading)) this.unstick(w);
       }
       if (game.ships.length > 1) this.separate(game, dt);
