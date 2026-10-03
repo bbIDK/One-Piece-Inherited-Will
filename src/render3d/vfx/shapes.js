@@ -579,19 +579,34 @@ SHAPES.dome = {
     const grow = easeOut(Math.min(1, (s.age || 0) / 0.35));
     const R = s.r * grow;
     if (R < 0.05) return;
+    if (s.kind === 'room') { room(v, s, R, a); return; }
     const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s);
     const c = col(s.color || '#ffffff');
     const hk = (s.hk ?? 0.55) * 1.6;
     v.shells.put(VK.DOME, X, G, Z, R, 0, 1, 0, 1, c, a, WHITE, 0.35, s.kind === 'cage' ? 1 : 0, s.seed, hk);
     const patch = v.patch(s, s.x, s.y, R + 0.3);
     v.groundRing(patch, s.x, s.y, R, 0.07, c, a * 0.85, WHITE, 1, 0.6, 0, 0, 0, 9, 0, s.seed, 0);
-    if (s.kind === 'room') {
-      // a slow scanning ring sweeping out across the floor of the Room
-      const ph = (v.time * 0.5) % 1;
-      v.groundRing(patch, s.x, s.y, R * ph, 0.035, c, a * 0.45 * (1 - ph), WHITE, 1, 0.5, 0, 0, 0, 9, 0, s.seed, 0);
-    }
   },
 };
+
+/**
+ * The Room (Ope Ope): a translucent pale-blue dome where it was cast, a thin
+ * bright rim round its skin and where it meets the ground, lines over it, a
+ * faint square grid on its floor and a scan ring sweeping out across it.
+ * Drawn for a 'dome' or a 'zone' of kind 'room', wherever the shape is
+ * (a zone stays where it was put).
+ */
+function room(v, s, R, a) {
+  const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s);
+  const c = col(s.color || '#81d4fa');
+  // (lines and rim a pale ice blue, the skin tinting what's inside rather than lighting it up)
+  v.shells.put(VK.DOME, X, G, Z, R, 0, 1, 0, 1, c, a, ROOM_LINE, 0.2, 0, s.seed, (s.hk ?? 0.55) * 1.6);
+  const patch = v.patch(s, s.x, s.y, R + 0.3);
+  v.decal(patch, s.x, s.y, R, 0, SF.ZONE, c, a, WHITE, 0.3, 0, s.seed, ZK.room, 0, 0, 10);
+  v.groundRing(patch, s.x, s.y, R, 0.07, c, a * 0.85, WHITE, 1, 0.6, 0, 0, 0, 9, 0, s.seed, 0);
+  const ph = (v.time * 0.5) % 1;
+  v.groundRing(patch, s.x, s.y, R * ph, 0.035, c, a * 0.45 * (1 - ph), WHITE, 1, 0.5, 0, 0, 0, 9, 0, s.seed, 0);
+}
 
 /** A hex-celled barrier wall curving round the front of an actor (Bari Bari). */
 SHAPES.barrier = {
@@ -938,6 +953,7 @@ const SKID = [-0.14, 0.14];
 
 // ------------------------------------------------------------------ zones
 const DARKNESS = col('#311b92');
+const ROOM_LINE = col('#e1f5fe');
 const ZONE_COL = { dark: ['#7e57c2', '#12001c'], ice: ['#e1f5fe', '#ffffff'], storm: ['#e1c16e', '#fff3c4'], gravity: ['#b39ddb', '#ede7f6'] };
 /**
  * Area techniques: the floor of the area (a black hole's arms, gravity
@@ -950,6 +966,7 @@ SHAPES.zone = {
     const R = s.r * easeOut(Math.min(1, (s.age || 0) / 0.3));
     if (R < 0.05) return;
     const kind = s.kind || 'field';
+    if (kind === 'room') { room(v, s, R, a); return; }
     const zc = ZONE_COL[kind];
     const c = col(zc ? zc[0] : s.color || '#ffffff'), c2 = col(zc ? zc[1] : s.color || '#ffffff');
     const patch = v.patch(s, s.x, s.y, s.r);

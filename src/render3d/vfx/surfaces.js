@@ -11,7 +11,7 @@ import { VS_COMMON, FS_COMMON, vfxMaterial, dynAttr, upload } from './kit.js';
 
 export const SF = { SMEAR: 0, BAND: 1, WALL: 2, STAIN: 3, SCORCH: 4, GLOW: 5, TELE: 6, ZONE: 7, SWIRL: 8, PANEL: 9, FILL: 10, FROST: 11 };
 /** Zone floor patterns (SF.ZONE's parameter). */
-export const ZK = { field: 0, plant: 1, smoke: 2, dark: 3, gravity: 4, ice: 5, storm: 6, thunder: 7, meteor: 7, fists: 7, arms: 7, cage: 7 };
+export const ZK = { field: 0, plant: 1, smoke: 2, dark: 3, gravity: 4, ice: 5, storm: 6, thunder: 7, meteor: 7, fists: 7, arms: 7, cage: 7, room: 8 };
 
 const VS = /* glsl */`
   ${VS_COMMON}
@@ -170,6 +170,16 @@ const FS = /* glsl */`
           float rim = 1.0 - smoothstep(0.0, 0.05, abs(r - 0.97));
           a = (1.0 - smoothstep(0.96, 1.0, r)) * 0.22 + rim * 0.6 + ripple * 0.5;
           c = mix(vCol.rgb, vCol2.rgb * 1.6, max(rim, ripple));
+        } else if (zk == ${ZK.room}) {
+          // the Room's floor: a faint square grid (the cube-cutting feel of
+          // the Ope Ope), a bright rim where the dome meets the ground
+          vec2 g = abs(fract(q * 4.0 + 0.5) - 0.5);
+          float line = 1.0 - smoothstep(0.012, 0.03, min(g.x, g.y));
+          float inside = 1.0 - smoothstep(0.95, 0.99, r);
+          float rim = 1.0 - smoothstep(0.0, 0.035, abs(r - 0.975));
+          a = inside * (0.05 + 0.2 * line) + rim * 0.6;
+          c = mix(vCol.rgb, vCol2.rgb * 1.3, max(rim, line * 0.5));
+          w = 0.3 + 0.3 * rim;
         } else if (zk == ${ZK.ice}) {
           float cell = texture2D(uNoise, q * 1.1 + seed).a;
           float edge = 1.0 - smoothstep(0.02, 0.08, cell);

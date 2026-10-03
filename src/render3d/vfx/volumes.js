@@ -104,7 +104,7 @@ const SHELL_FS = /* glsl */`
       float base = 1.0 - smoothstep(0.0, 0.2, vY);
       // (seen from inside — the camera in the Room — it's only a faint skin)
       float inside = gl_FrontFacing ? 1.0 : 0.22;
-      a = (0.04 + rim * 0.4 + max(lm, lp * 0.6) * 0.22 + scan * 0.18 + base * 0.2) * inside;
+      a = (0.07 + rim * 0.4 + max(lm, lp * 0.6) * 0.22 + scan * 0.18 + base * 0.2) * inside;
       c = mix(vCol.rgb * 0.9, vCol2.rgb * 1.3, max(rim, max(lm, scan) * 0.6));
     } else if (kind == ${VK.DARK}) {
       float sw = texture2D(uNoise, vUv * vec2(3.0, 1.5) + vec2(uTime * 0.4, 0.0)).g;

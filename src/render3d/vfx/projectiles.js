@@ -1,10 +1,12 @@
 // Projectiles in 3D, by their sprite: a Fire Fist is a boiling ball of
-// cel-shaded flame dragging a long tongue of fire; a rubber punch is a real
-// fist on the end of a stretched arm reaching back to its owner; ice shards
-// are crystals with frost streaming off them; bullets are tracers; flying
-// slashes are crescents of light; orbs glow and leave a fading trail. Each
-// projectile remembers where it has been (a few frames of positions, in a
-// pooled record) for its trail. Cannonballs keep their iron-ball mesh.
+// cel-shaded flame dragging a long tongue of fire; a thrown sun is a sun;
+// ice shards are crystals with frost streaming off them; bullets are
+// tracers; flying slashes are crescents of light; orbs glow and leave a
+// fading trail. Each projectile remembers where it has been (a few frames of
+// positions, in a pooled record) for its trail. Cannonballs keep their
+// iron-ball mesh. A stretching punch (Gomu Gomu) has no body here at all:
+// the arm on the character's rig is the punch, and it gets only speed lines
+// whipping along that arm.
 import { col, hash, luma, TAU } from './kit.js';
 import { SK } from './sprites.js';
 import { RK, RM } from './ribbons.js';
@@ -139,26 +141,14 @@ function draw(v, pr, r, Y, sc) {
     case 'gomufist':
     case 'barafist': {
       const o = pr.stretch;
-      const look = (o && o.look) || {};
-      const skin = col(pr.sprite === 'barafist' ? (pr.color && pr.color !== '#ffccbc' ? pr.color : '#f1c9a0') : look.skin || '#f1c9a0');
-      const dark = o && o.armament;
+      // a stretching punch: the arm reaching out is the character's own (its
+      // rig); here only the rubbery whip of speed lines along it
+      if (o) { rubberLines(v, o, X, Y, Z, dx, dz, s, seed, t); break; }
+      // a fist flying on its own (Bara Bara): a fist, a streak behind it
       const R = 0.24 * s;
-      putAlong(v.solids.blocks, X, Y, Z, dx, 0, dz, R * 1.7, R * 1.7, 0, dark ? col('#1c1a24') : skin, OK.SKIN, 0, seed, dark ? 0.05 : 0);
-      if (o && o.alive !== false && pr.sprite === 'gomufist') {
-        // the arm, stretched back to the shoulder it came from, a little slack in it
-        const ox = v.world.dx(v.ox, o.x), oz = o.y - v.oy;
-        const sc = (o.look && o.look.scale) || 1;
-        const oy = v.ground(o.x, o.y) + (o.z || 0) + 1.3 * sc;
-        const sx = ox + dx * 0.25, sz = oz + dz * 0.25;
-        const sleeve = col(dark ? '#1c1a24' : look.sleeve || look.skin || '#f1c9a0');
-        const wd = Math.min(0.13 * s, 0.09 + 0.02 * s);
-        v.ribbons.start(RK.TUBE, RM.FACE, sleeve, 1, col('#2a1a18'), 0);
-        for (let i = 0; i <= 10; i++) {
-          const q = i / 10, sag = Math.sin(q * Math.PI) * (0.1 + Math.sin(t * 30) * 0.04);
-          v.ribbons.point(X + (sx - X) * q - dx * R * 0.6 * (1 - q), Y + (oy - Y) * q - sag, Z + (sz - Z) * q - dz * R * 0.6 * (1 - q), wd);
-        }
-        v.ribbons.finish();
-      } else trail(v, r, RK.SPEED, WHITE, 0.7, WHITE, 0.3, R * 0.5, 0.1, 6);
+      const skin = col(pr.sprite === 'barafist' && pr.color && pr.color !== '#ffccbc' ? pr.color : '#f1c9a0');
+      putAlong(v.solids.blocks, X, Y, Z, dx, 0, dz, R * 1.7, R * 1.7, 0, skin, OK.SKIN, 0, seed, 0);
+      trail(v, r, RK.SPEED, WHITE, 0.7, WHITE, 0.3, R * 0.5, 0.1, 6);
       if (sp > 10) speedLines(v, X, Y, Z, dx, dz, R, seed, t);
       break;
     }
@@ -405,6 +395,37 @@ function fireBird(v, r, X, Y, Z, R, dx, dz, c, seed, t) {
   }
   v.sprites.put(SK.GLOW, X, Y, Z, R * 1.4, c, 0.4, HOT, 1, 0, seed, 0);
   trail(v, r, RK.FIRE, c, 1, HOT, 0.6, 0.35 * R, 0.1, 12);
+}
+
+/**
+ * A rubber punch's whip: speed lines running back along the stretched arm
+ * from the fist to the shoulder, wavering as the rubber does, and a faint
+ * smear of motion down its length. (The arm itself is the character's.)
+ */
+function rubberLines(v, o, X, Y, Z, dx, dz, s, seed, t) {
+  if (o.alive === false) return;
+  const sc = (o.look && o.look.scale) || 1;
+  const sx = v.world.dx(v.ox, o.x) + dx * 0.25, sz = o.y - v.oy + dz * 0.25;
+  const sy = v.ground(o.x, o.y) + (o.z || 0) + 1.3 * sc;
+  const ax = X - sx, ay = Y - sy, az = Z - sz, L = Math.hypot(ax, ay, az);
+  if (L < 0.6) return;
+  const lx = -dz, lz = dx, f = Math.floor(t * 30);
+  // the smear: a soft band of motion down the arm, brightest toward the fist
+  v.ribbons.start(RK.SPEED, RM.FACE, WHITE, 0.32, WHITE, 0.2)
+    .point(sx + ax * 0.15, sy + ay * 0.15, sz + az * 0.15, 0.05 * s)
+    .point(X - dx * 0.15, Y, Z - dz * 0.15, 0.2 * s)
+    .finish();
+  for (let i = 0; i < 6; i++) {
+    const th = hash(seed + i * 7 + f) * TAU, rr = (0.16 + 0.12 * hash(seed + i)) * s;
+    const ox = lx * Math.cos(th) * rr, oy = Math.sin(th) * rr, oz = lz * Math.cos(th) * rr;
+    const q0 = 0.08 + 0.12 * hash(seed + i * 3 + f), q1 = Math.min(0.95, q0 + 0.35 + 0.45 * hash(seed + i * 5 + f));
+    const wob = Math.sin(t * 40 + i * 1.7) * 0.05 * s;
+    v.ribbons.start(RK.SPEED, RM.FACE, WHITE, 0.75, WHITE, 0.35)
+      .point(X - ax * q0 + ox, Y - ay * q0 + oy, Z - az * q0 + oz, 0.018 * s)
+      .point(X - ax * (q0 + q1) * 0.5 + ox + lx * wob, Y - ay * (q0 + q1) * 0.5 + oy + wob, Z - az * (q0 + q1) * 0.5 + oz + lz * wob, 0.014 * s)
+      .point(X - ax * q1 + ox, Y - ay * q1 + oy, Z - az * q1 + oz, 0.003)
+      .finish();
+  }
 }
 
 /** Speed lines streaking back past a fast punch. */

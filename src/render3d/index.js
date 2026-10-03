@@ -1117,10 +1117,11 @@ export class Renderer3D {
       this.detach(v.root); v.dispose?.();
       this.shipViews.delete(s);
     }
-    // projectiles (the effects layer draws all but cannonballs: see vfx/projectiles.js)
+    // projectiles (the effects layer draws all but cannonballs: see vfx/projectiles.js;
+    // a stretching punch has no body of its own: the arm on the character's rig is it)
     const seenP = new Set();
     for (const pr of game.combat.projectiles) {
-      if (pr.delay > 0 || this.vfx.proj.owns(pr)) continue;
+      if (pr.delay > 0 || pr.stretch || this.vfx.proj.owns(pr)) continue;
       seenP.add(pr);
       let m = this.projViews.get(pr);
       if (!m) { m = projectileMesh(pr); this.projViews.set(pr, m); this.ents.add(m); }
