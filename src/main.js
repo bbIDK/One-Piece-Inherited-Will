@@ -22,8 +22,13 @@ import { UI } from './ui/ui.js';
 import './data/styles.js';
 import './data/fruits.js';
 import './data/haki.js';
-import { loadChar, loadLegacy, loadSettings, saveSettings, clearChar, saveLegacy, setSlot, slotInfo, clearSlot, defaultLegacy, SLOT_COUNT, renderChunks } from './game/save.js';
+import { loadChar, loadLegacy, loadSettings, saveSettings, clearChar, saveLegacy, setSlot, slotInfo, clearSlot, defaultLegacy, SLOT_COUNT, renderChunks, loadNet, saveNet } from './game/save.js';
 import { titleScreen, creationScreen, hallScreen, helpContent, legacyShopScreen } from './ui/screens.js';
+import { installNet, startVoyage } from './net/session.js';
+import { netKind } from './net/transport.js';
+import { newCode, showCode } from './net/code.js';
+import { multiplayerPane, hostLobby, joinSearch, joinPick, voyageError } from './ui/voyage.js';
+import { installVoyageHud } from './ui/voyageHud.js';
 import { installSession, startNewCharacter, resumeCharacter } from './game/session.js';
 import { LivesSystem } from './game/lives.js';
 import { Progression } from './game/progression.js';
@@ -31,6 +36,7 @@ import { Dialogue } from './game/dialogue.js';
 import { Quests, allQuests } from './game/quests.js';
 import { Services } from './game/services.js';
 import { Interactions, npcBuilder, npcDef, makeNPC, allNpcDefs, standingHeight } from './game/npcs.js';
+import { board } from './game/interact.js';
 import { installMap } from './ui/mapUI.js';
 import { openInventory, openCharacter, openSkills, openJournal, openMenu, openSettings, confirmEat } from './ui/panels.js';
 import { openCreative } from './ui/creativePanel.js';
@@ -258,9 +264,14 @@ async function start() {
   installSeaLife(game);
   installForaging(game);
   installContent(game);
+  // multiplayer: nothing at all until a voyage is hosted or joined (see net/session.js)
+  installNet(game);
+  const voyageHud = installVoyageHud(game, ui);
 
   const toTitle = (afterDeath, next) => {
     if (!afterDeath && game.player && game.state?.char && !game.state.char.dead) persist(game);
+    // (a voyage ends at the title — but waits while a lineage's next generation is born)
+    if (next === 'create') game.net?.leftWorld(); else game.net?.close('quit');
     game.player = null;
     game.actors = [];
     game.ships = [];
@@ -317,6 +328,10 @@ async function start() {
     { key: 'NumpadSubtract', when: playing, fn: () => ui.minimapZoom(game, 1) },
     { key: 'Equal', when: playing, fn: () => ui.minimapZoom(game, -1) },
     { key: 'NumpadAdd', when: playing, fn: () => ui.minimapZoom(game, -1) },
+    // in a multiplayer voyage: Enter to chat, P for who's aboard and where
+    { key: 'Enter', when: () => playing() && !ui.stack.length && !!game.net?.open, fn: () => voyageHud.openChat() },
+    { key: 'NumpadEnter', when: () => playing() && !ui.stack.length && !!game.net?.open, fn: () => voyageHud.openChat() },
+    { key: 'P', when: () => playing() && !!game.net, fn: () => { const open = ui.stack.some((e) => e.id === 'voyage'); ui.closeAll(); if (!open) voyageHud.openList(); } },
   );
   game.on('saved', () => ui.savedNote());
   // (at the helm or the oars your hands are on the wheel: the weapon goes back in its sheath)
@@ -355,6 +370,7 @@ async function start() {
     ui.closeAll();
     openMenu(game, {
       onSave: saveNow,
+      extra: game.net ? [{ icon: 'crew', text: `The voyage ${showCode(game.net.code)} · ${game.net.crew().length} aboard`, fn: () => voyageHud.openList() }] : [],
       onQuit: () => toTitle(false),
       onRetire: () => {
         const will = endLineage(game, `Retired as a living legend. ${game.state.char.name}'s journey is complete.`);
@@ -370,19 +386,70 @@ async function start() {
     });
   };
   const useSlot = (s) => { setSlot(s); game.saveSlot = s; };
-
-  const showTitle = () => {
+  const allSlots = () => {
     const slots = [];
     for (let s = 1; s <= SLOT_COUNT; s++) slots.push(slotInfo(s));
+    return slots;
+  };
+  // into the world with a saved character
+  const enter = (saved) => {
+    showBoot('Setting sail…'); sail = { t0: performance.now(), frames: 0 };
+    ui.hideScreen(); resumeCharacter(game, saved); audio.music('sea');
+    relockUntil = performance.now() + 2500;
+  };
+  // lineage s into the world: its pirate, or (none living) a new one born first
+  const play = (s) => {
+    useSlot(s);
+    const saved = loadChar();
+    if (saved && !saved.dead) enter(saved); else openCreation();
+  };
+
+  // ---- multiplayer: hosting a voyage, and joining one (see net/session.js, ui/voyage.js)
+  // the voyages your lineages have joined, newest first (for Rejoin)
+  const recentVoyages = () => {
+    const seen = new Set();
+    return allSlots().map((s) => loadNet(s.slot).joined).filter((j) => j?.code && !seen.has(j.code) && seen.add(j.code)).sort((a, b) => b.at - a.at);
+  };
+  const hostVoyage = (s, fresh = false) => {
+    // (a lineage hosts with the same code each time, so friends can come back with it)
+    const mem = loadNet(s);
+    const code = (!fresh && mem.hostCode) || newCode();
+    if (code !== mem.hostCode) saveNet({ ...mem, hostCode: code }, s);
+    const info = slotInfo(s);
+    const v = startVoyage(game, { role: 'host', code, slot: s, name: info.char?.name || '' });
+    voyageHud.attach(v);
+    hostLobby(ui, v, { info, onSail: () => play(s), onNewCode: () => hostVoyage(s, true), onBack: showTitle });
+  };
+  const joinVoyage = (code) => {
+    const v = startVoyage(game, { role: 'guest', code });
+    voyageHud.attach(v);
+    const remember = (s) => saveNet({ ...loadNet(s), joined: { code, host: v.hostName, at: Date.now() } }, s);
+    // (before you're in the world, what went wrong takes the screen; in it, the HUD says so)
+    v.on('failed', (err) => { if (!game.player) voyageError(ui, err, { code, host: v.hostName, onRetry: () => joinVoyage(code), onBack: showTitle }); });
+    v.on('joined', () => joinPick(ui, v, {
+      slots: allSlots(),
+      onBring: (s) => { remember(s); v.slot = s; play(s); },
+      onNew: (s) => { remember(s); v.slot = s; useSlot(s); openCreation(); },
+      onBack: showTitle,
+    }));
+    joinSearch(ui, v, { onBack: showTitle });
+  };
+
+  let titleTab = 'single';
+  const showTitle = () => {
+    // (the title is out of any voyage)
+    game.net?.close('title');
+    const slots = allSlots();
     titleScreen(ui, {
       slots,
+      tab: titleTab,
+      onTab: (t) => { titleTab = t; showTitle(); },
+      multiplayer: () => multiplayerPane({ slots, recent: recentVoyages(), local: netKind() === 'local', onHost: hostVoyage, onJoin: joinVoyage }),
       onPlay: (s) => {
         useSlot(s);
         const saved = loadChar();
         if (!saved) { showTitle(); return; }
-        showBoot('Setting sail…'); sail = { t0: performance.now(), frames: 0 };
-        ui.hideScreen(); resumeCharacter(game, saved); audio.music('sea');
-        relockUntil = performance.now() + 2500;
+        enter(saved);
       },
       onNew: async (s) => {
         useSlot(s);
@@ -418,6 +485,8 @@ async function start() {
 
   Object.assign(debug, {
     get view3d() { return game.view3d; },
+    // the multiplayer screens' doings, for the tests (OP.net, below, is the voyage itself)
+    voyage: { host: (s) => hostVoyage(s), join: (code) => joinVoyage(code), hud: voyageHud, play: (s) => play(s), board: (s) => board(game, game.player, s), toTitle: () => toTitle(false) },
     THREE,
     touch,
     world, renderer, game, input, ui,
@@ -452,6 +521,8 @@ async function start() {
       } },
     ready: true,
   });
+  // (a live getter: Object.assign above would copy only what it was at boot)
+  Object.defineProperty(debug, 'net', { get: () => game.net, enumerable: true });
 
   showTitle();
 
@@ -465,6 +536,8 @@ async function start() {
       const t0 = performance.now();
       // (OP.hold: tests stepping the game frame by frame keep the live loop from advancing it)
       if (!debug.hold) game.update(dt);
+      // (a multiplayer voyage: what we send, the others as they are now, the host's clock)
+      game.net?.frame(dt);
       prof('sim', t0);
       // menus and dialogue need the mouse back; closing them (a click or a key:
       // the browser allows a capture then) takes it again where the view wants it
@@ -492,6 +565,8 @@ async function start() {
     } else {
       attract.t += dt;
       game.env.update(dt, game);
+      // (the host's lobby, or looking for a friend's voyage)
+      game.net?.frame(dt);
       // a slow 3D flyover of Dawn Island behind the title
       if (!attract.failed) {
         try {

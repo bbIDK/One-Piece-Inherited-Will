@@ -758,3 +758,88 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }
 .quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }
 .quests .q-btns { display: flex; gap: 6px; }
+
+/* ---------- multiplayer: the title's tabs and pane (ui/voyage.js) ---------- */
+.mode-tabs { display: inline-flex; margin: 0 auto 16px; border-radius: 12px; overflow: hidden; border: 3px solid #6d4c33; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+.mode-tabs button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 22px 7px; border: 0; background: rgba(236,221,186,.94); color: #5a2d0c; font: 400 23px 'Pirata One', serif; letter-spacing: .5px; cursor: pointer; }
+.mode-tabs button + button { border-left: 2px solid #6d4c33; }
+.mode-tabs button.on { background: linear-gradient(#b03a2e, #7b1f16); color: var(--parch); cursor: default; }
+.mode-tabs button:hover:not(.on) { background: #fff3d6; }
+.vy-pane { width: min(840px, 94vw); margin: 0 auto 16px; }
+.vy-cards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.vy-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 12px 14px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 6px; }
+.vy-head { display: flex; align-items: center; gap: 8px; font: 400 27px/1.1 'Pirata One', serif; color: #5a2d0c; }
+.vy-card p { margin: 0; font-size: 13.5px; line-height: 1.4; }
+.vy-sub { font: 800 11px Nunito, sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: #6d4c33; margin-top: 6px; }
+.vy-slots { display: flex; flex-direction: column; gap: 6px; }
+.vy-slot { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }
+.vy-slot .portrait, .vy-blank { flex: none; border-radius: 8px; border: 2px solid #8d6e4a; background: radial-gradient(#fff8e1, #e2cc9c); }
+.vy-blank { width: 40px; height: 46px; display: grid; place-items: center; opacity: .75; box-sizing: border-box; }
+.vy-who { flex: 1; min-width: 0; }
+.vy-who small { display: block; font: 800 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; opacity: .65; }
+.vy-who b { display: block; font: 400 19px/1.08 'Pirata One', serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vy-who .sub { font-size: 11.5px; opacity: .8; }
+.vy-slot .btn { flex: none; }
+.vy-slot.busy { opacity: .6; }
+.code-row { display: flex; gap: 8px; margin-top: 2px; }
+.code-in { flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font: 400 34px/1.1 'Pirata One', serif; letter-spacing: 9px; text-transform: uppercase; text-align: center; padding: 4px 8px; border-radius: 10px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; }
+.code-in::placeholder { color: rgba(59,42,26,.22); }
+.code-in:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }
+.code-row .btn { font-size: 18px; padding: 6px 22px; }
+.code-hint { min-height: 17px; font-size: 12.5px; font-weight: 700; color: #b71c1c; }
+.vy-recent { display: flex; flex-direction: column; gap: 5px; }
+.vy-rec { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 9px; border-radius: 9px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }
+.vy-rec b { font: 400 19px 'Pirata One', serif; letter-spacing: 2px; }
+.vy-rec .sub { font-size: 11.5px; opacity: .8; }
+.vy-small { margin-top: auto !important; padding-top: 8px; font-size: 12px !important; opacity: .75; }
+.vy-foot { font-size: 12px; opacity: .78; margin: 12px auto 0; max-width: 700px; line-height: 1.45; text-shadow: 0 1px 2px #000; }
+/* the lobby, looking for a voyage, choosing your pirate */
+.panel.vy-lobby { width: min(640px, 94vw); text-align: center; }
+.vy-lobby h3 { text-align: left; }
+.vy-lobby > p { margin-left: auto; margin-right: auto; max-width: 540px; }
+.code-plate { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 14px auto 10px; flex-wrap: wrap; }
+.code-letters { display: inline-flex; gap: 6px; padding: 10px 18px; border-radius: 12px; background: linear-gradient(#1c2a38, #0e1823); border: 3px solid #c8a060; box-shadow: inset 0 2px 8px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.35); user-select: text; }
+.code-letters span { width: 34px; font: 400 48px/1 'Pirata One', serif; color: #f7e7c1; text-align: center; text-shadow: 0 2px 0 #000; }
+.code-letters span.gap { margin-left: 16px; }
+.code-plate.small .code-letters { padding: 6px 14px; }
+.code-plate.small .code-letters span { width: 24px; font-size: 32px; }
+.code-plate .btn { font-size: 16px; padding: 8px 18px; }
+.vy-status { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 6px auto; max-width: 540px; font-weight: 800; font-size: 14px; }
+.vy-status i { flex: none; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; }
+.vy-status.ok { color: #1b5e20; }
+.vy-status.ok i { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.25); }
+.vy-status.bad { color: #8e1b16; }
+.vy-status.bad i { background: #c62828; }
+.vy-status.wait { color: #5a3a1c; }
+.vy-status.wait i { border: 3px solid rgba(109,76,51,.28); border-top-color: #6d4c33; animation: vyspin .9s linear infinite; }
+@keyframes vyspin { to { transform: rotate(360deg); } }
+.vy-crew { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+.vy-mate { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }
+.vy-mate b { font: 400 19px 'Pirata One', serif; }
+.vy-mate .sub { margin-left: auto; font-size: 12px; opacity: .75; }
+.vy-mate.you { background: rgba(255,243,205,.7); }
+.vy-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #bcaaa4; }
+.vy-dot.on { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.22); }
+.vy-btns { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+.vy-note { margin-top: 12px !important; }
+.vy-slots.wide { text-align: left; }
+@media (max-width: 900px) { .vy-cards { grid-template-columns: 1fr; } }
+/* in the world: the badge under the clock, the chat, the voyage list (ui/voyageHud.js) */
+.vy-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 3px 10px 3px 7px; border-radius: 999px; background: rgba(10,20,30,.74); border: 1px solid rgba(143,233,245,.55); color: #e0f7fa; font: 800 12px Nunito, sans-serif; cursor: pointer; pointer-events: auto; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+.vy-badge span { letter-spacing: 1.5px; }
+.vy-badge small { font: 700 11px Nunito, sans-serif; opacity: .8; }
+.vy-badge:hover { border-color: #8fe9f5; }
+.chat-box { position: absolute; left: 14px; bottom: 14px; z-index: 45; width: min(460px, calc(100vw - 28px)); pointer-events: auto; background: rgba(8,16,24,.88); border: 1px solid rgba(143,233,245,.5); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font-size: 13px; }
+.chat-lines { max-height: 210px; overflow: hidden; padding: 7px 11px 3px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
+.chat-lines div { text-shadow: 0 1px 1px #000; line-height: 1.35; }
+.chat-lines .sys { font-style: italic; }
+.chat-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(143,233,245,.3); background: transparent; color: #fff; padding: 9px 12px; font: 600 14px Nunito, sans-serif; outline: none; }
+.chat-in::placeholder { color: rgba(224,247,250,.45); }
+#ui.chatting .log { visibility: hidden; }
+.log b { font-weight: 800; }
+.vy-code-line { display: flex; align-items: center; gap: 10px; }
+.vy-code-line b { font: 400 26px 'Pirata One', serif; letter-spacing: 3px; color: #5a2d0c; }
+.vy-row b { font: 400 19px 'Pirata One', serif; margin-right: 4px; }
+.vy-row .tag { margin-left: 2px; }
+.compass .pin.mate small { color: #8fe9f5; }
+#ui.touch .chat-box { bottom: auto; top: 30%; }

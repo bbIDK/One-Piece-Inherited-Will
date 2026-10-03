@@ -84,6 +84,8 @@ simple blocks merged per 32 m of ground, so whole towns stay in view cheaply.
 | − / + | zoom the minimap out / in (it's the world map's chart, round you, gliding under you as you go, with its icons: inns, shops, doctors, harbours, your quests, the Log Pose's island) | |
 | H / Esc | help / pause menu | |
 | F1 | the creative panel (in creative mode: see below) | |
+| Enter | multiplayer: chat to the crew (Enter again sends, Esc cancels) | the same |
+| P | multiplayer: who's aboard the voyage and where (and Go to them) | the same |
 
 The same menus are on the **sidebar** under the minimap. Press a menu's key
 again (or Esc) to close it. Drag techniques, food, Devil Fruits and weapons onto
@@ -107,6 +109,46 @@ it's open:
   real one keeps their place in the story), ships sailing past or coming for
   you, Sea Kings, Sea Cows, Fighting Fish and schools of fish.
 - **World**: any island or zone, the hour and the weather.
+
+### Multiplayer
+
+Sail the Blue Planet with friends, over the internet, straight from the
+GitHub Pages site: no account, and no server of our own.
+
+- **Host:** on the title screen choose **Multiplayer**, then **Host** beside
+  one of your lineages (or **Begin & host** beside an empty one). Your world
+  becomes the shared one: its days, its hours and its weather are everyone's.
+  You're given a six-letter **room code** (**Copy** puts it on the clipboard):
+  send it to your friends, then **Set sail**. A lineage keeps its code, so
+  friends can come back with the same one whenever you host it again (**New
+  code** changes it). Friends can join while you play, too: the code is in
+  the pause menu and in the voyage list (**P**).
+- **Join:** **Multiplayer**, type the code under **Join a voyage**, then
+  **Join**. Once the host's game answers, choose which of your pirates comes
+  aboard (or begin a new lineage in an empty slot). The voyages you've joined
+  are listed there afterwards, with **Rejoin**.
+- Up to eight players. Everyone keeps their own character and their own save:
+  what you find, earn and learn is yours. You see each other (with your names
+  over your heads, on the compass and on the minimap), each other's ships, and
+  each other's fights; but foes, townsfolk and the ships at sea are each
+  player's own, and so are quests. Blows don't land between players (no PvP).
+  The places beyond the surface — Skypiea, Fish-Man Island, Impel Down — are
+  worlds of their own: you see whoever's in the same one as you.
+- **Enter** opens the chat (Enter again sends it, Esc cancels). **P** lists
+  who's aboard and where they are, and **Go to them** puts you beside a friend
+  who's ashore in the same world (on a phone, the badge under the clock opens
+  the list, and the chat from it).
+- When the host leaves, the voyage is over and everyone sails on alone, saved.
+- How it works: the games find each other through public
+  [Nostr](https://nostr.com) relays (using
+  [trystero](https://github.com/dmotz/trystero)), then talk directly, browser
+  to browser, over WebRTC (encrypted). A few networks — strict firewalls,
+  some mobile carriers — don't allow a direct connection; joining then fails
+  (a TURN relay would get round that: none is configured). Both players need
+  the same version of the game (reload the page if one is older).
+- `?net=local` (say <http://localhost:8080/?net=local>) plays a voyage between
+  tabs of one browser instead, with no network at all; the automated tests
+  use it.
 
 ## What's in it
 
@@ -644,6 +686,7 @@ node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's st
 node tools/shot.mjs storydrift | storyswitch               # the Grand Line's currents; the story following a change of road
 node tools/shot.mjs rmride       # rides Reverse Mountain from the East Blue gate to the Grand Line
 node tools/shot.mjs creative     # the creative panel (F1): fruits given and eaten, races changed (third person), foes, a boss, a ship and a Sea King called up, travel, a small window
+node tools/shot.mjs mp [--upto=menu|avatars|chat|ship|env|leave]   # multiplayer: two pages on a voyage over ?net=local — hosting from the title, joining with the code, each drawing the other (and how closely and smoothly), chat both ways, a ship under sail, the host's clock and weather, leaving and rejoining, the host leaving
 ```
 
 In the page, `window.OP.prof` is a frame profiler: set `OP.prof.PROF.on = true`
@@ -668,6 +711,11 @@ frame separately.
   draws every icon.
 - `src/data/`: races, styles, fruits, items, ships, trainers, and island data
   per sea.
+- `src/net/`: multiplayer — room codes, the wire format and its checks, the
+  smoothing of the other players' motion, the transport (trystero, or a
+  BroadcastChannel with `?net=local`), the voyage itself (`session.js`) and
+  the other players' stand-ins (`remote.js`). Its screens are
+  `src/ui/voyage.js` and `src/ui/voyageHud.js`.
 - `src/content/`: NPCs, bosses, quests and events per sea. See
   [docs/CONTENT_GUIDE.md](docs/CONTENT_GUIDE.md) for how to write content.
 - `src/content/mainStory.js` and `src/content/main/`: the main story. The

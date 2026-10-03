@@ -257,7 +257,7 @@ export class UI {
     p.tryTechnique(id, g, target || (mw ? { x: mw.x, y: mw.y } : { x: p.x + Math.cos(aim) * 4, y: p.y + Math.sin(aim) * 4 }));
   }
 
-  blocksInput() { return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen || !!this.consoleOpen; }
+  blocksInput() { return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen || !!this.consoleOpen || !!this.chatOpen; }
 
   log(text, color = '#fff') {
     const d = h('div', { style: { color } }, text);

@@ -90,6 +90,15 @@ export class Compass {
       const s = game.ships.find((x) => x.owner === 'player' && !x.sunk);
       if (s) mark('ship', 'ship', 'ship', s.x, s.y, s.name || 'Your ship');
     }
+    // the other players in a multiplayer voyage: who, and how far (to find each other by)
+    const mates = game.net?.avatars;
+    if (mates) for (const a of mates) {
+      const key = 'mate:' + a.id;
+      mark(key, 'mate', 'crew', a.x, a.y, a.name);
+      const pin = this.pins.get(key), d = w.distance(p.x, p.y, a.x, a.y);
+      const txt = d < 4 ? a.name : `${a.name} · ${fmtDist(d)}`;
+      if (pin.dist.textContent !== txt) pin.dist.textContent = txt;
+    }
     // forget pins that weren't refreshed this frame
     for (const [k, pin] of this.pins) {
       if (pin.seen === this.t) continue;

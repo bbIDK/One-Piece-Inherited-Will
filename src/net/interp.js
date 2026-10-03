@@ -99,8 +99,9 @@ export class SnapBuffer {
       for (const f of WRAP) if (a[f] !== undefined && b[f] !== undefined) out[f] = this.wrap(a['_' + f] + (b['_' + f] - a['_' + f]) * k);
       for (const f of ANG) if (a[f] !== undefined && b[f] !== undefined) out[f] = a['_' + f] + (b['_' + f] - a['_' + f]) * k;
       out.k = k;
-    } else if (!b && T > a.t) {
+    } else if (!b && T > a.t && !a.hb) {
       // late: on along their way for a moment, then held where the last one left them
+      // (not after an "all quiet" one: nothing was moving)
       const s = Math.min(T - a.t, this.ahead) / 1000;
       if (a.vx || a.vy) { out.x = this.wrap(a.x + (a.vx || 0) * s); out.y = a.y + (a.vy || 0) * s; }
       if (a.ss && a.sh !== undefined) { out.sx = this.wrap(a.sx + Math.cos(a.sh) * a.ss * s); out.sy = a.sy + Math.sin(a.sh) * a.ss * s; }

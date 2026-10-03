@@ -54,7 +54,12 @@ export const saveLegacy = (l, s = slot) => write(key(s, 'legacy'), l);
 export const loadChar = (s = slot) => read(key(s, 'char'));
 export const saveChar = (c, s = slot) => write(key(s, 'char'), c);
 export const clearChar = (s = slot) => remove(key(s, 'char'));
-export function clearSlot(s) { remove(key(s, 'char')); remove(key(s, 'legacy')); }
+export function clearSlot(s) { remove(key(s, 'char')); remove(key(s, 'legacy')); remove(key(s, 'net')); }
+// A lineage's voyages (multiplayer): the room code it hosts with (the same
+// one each time, so friends can come back with it) and the last voyage it
+// joined — { hostCode, joined: { code, host, at } }.
+export const loadNet = (s = slot) => read(key(s, 'net')) || {};
+export const saveNet = (v, s = slot) => write(key(s, 'net'), v);
 
 /** What the title screen shows for a slot. */
 export function slotInfo(s) {

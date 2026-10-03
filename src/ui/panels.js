@@ -499,15 +499,17 @@ export function openJournal(game) {
 }
 
 // =================================================================== menu
-export function openMenu(game, { onQuit, onRetire, onSave }) {
+export function openMenu(game, { onQuit, onRetire, onSave, extra = [] }) {
   const ui = game.ui;
   const c = game.state.char;
   const saved = h('p.muted.save-note', c.lastSaved ? `Last saved ${new Date(c.lastSaved).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not saved yet');
   const btn = (icon, text, fn, cls = '') => h('button.btn.menu-btn' + cls, { on: { click: fn } }, uiImg(icon, 20), text);
   const body = h('div.pause',
-    h('h2', 'Paused'),
+    // (in a multiplayer voyage the world goes on: only your own game waits)
+    h('h2', game.net ? 'Menu' : 'Paused'),
     h('div.menu-list',
       btn('check', 'Resume', () => ui.closePanel(), '.gold'),
+      ...extra.map((e) => btn(e.icon, e.text, () => { ui.closePanel(); e.fn(); })),
       btn('save', 'Save game', () => { if (onSave()) saved.textContent = `Saved just now (lineage ${game.saveSlot || 1})`; }),
       btn('help', 'How to Play', () => { ui.closePanel(); ui.openPanel(helpContent(c), { wide: true, id: 'help' }); }),
       btn('settings', 'Settings', () => { ui.closePanel(); openSettings(game); }),

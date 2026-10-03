@@ -62,10 +62,11 @@ async function trysteroTransport(code, h, opts) {
 /**
  * Pages in the one browser, over a BroadcastChannel. Each says hello on
  * joining ('join'; whoever's there answers 'here'), beats every `beat` ms,
- * and is taken for gone after `timeout` ms without a word (a closed tab says
- * nothing) — or at once when it says goodbye.
+ * and is taken for gone at once when it says goodbye (closing, it does) — or
+ * after `timeout` ms without a word (a page that crashed). That's long: a
+ * page busy setting sail into the world can say nothing for a good while.
  */
-export function localTransport(code, h = {}, { beat = 1000, timeout = 3500, Channel = globalThis.BroadcastChannel } = {}) {
+export function localTransport(code, h = {}, { beat = 1000, timeout = 20000, Channel = globalThis.BroadcastChannel } = {}) {
   if (!Channel) throw new Error('BroadcastChannel is not available here');
   const selfId = 'L' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
   const bc = new Channel(`${APP_ID}:${ROOM(code)}`);

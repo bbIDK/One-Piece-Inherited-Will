@@ -182,6 +182,22 @@ export class Minimap {
       g.strokeStyle = 'rgba(40,26,14,.9)'; g.lineWidth = 1;
       g.beginPath(); g.arc(dx, dy, a.questMarker ? 3.2 : 2.4, 0, Math.PI * 2); g.fill(); g.stroke();
     }
+    // the other players in a multiplayer voyage (and their ships), in their colour
+    const net = game.net;
+    if (net) {
+      for (const s of net.ships) {
+        const dx = w.dx(p.x, s.x) * z, dy = (s.y - p.y) * z;
+        if (Math.hypot(dx, dy) > r) continue;
+        g.fillStyle = '#8fe9f5'; g.strokeStyle = 'rgba(20,50,60,.9)'; g.lineWidth = 1;
+        g.beginPath(); g.ellipse(dx, dy, Math.max(3, s.def.length * z / 2), Math.max(2.2, s.def.beam * z / 2), s.heading || 0, 0, Math.PI * 2); g.fill(); g.stroke();
+      }
+      for (const a of net.avatars) {
+        const dx = w.dx(p.x, a.x) * z, dy = (a.y - p.y) * z;
+        if (Math.hypot(dx, dy) > r) continue;
+        g.fillStyle = '#8fe9f5'; g.strokeStyle = '#fff'; g.lineWidth = 1.5;
+        g.beginPath(); g.arc(dx, dy, 3.6, 0, Math.PI * 2); g.fill(); g.stroke();
+      }
+    }
     g.setTransform(1, 0, 0, 1, 0, 0);
     // the round frame
     g.globalCompositeOperation = 'destination-in';

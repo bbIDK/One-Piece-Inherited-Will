@@ -52,13 +52,19 @@ export function portrait(look, w = 96, hgt = 110, bg = null) {
 }
 
 // ---------------------------------------------------------------- title
-export function titleScreen(ui, { slots, onPlay, onNew, onDelete, onHall, onWill, onHelp, onSettings }) {
-  const cards = slots.map((s) => slotCard(s, { onPlay, onNew, onDelete, onHall, onWill }));
+export function titleScreen(ui, { slots, onPlay, onNew, onDelete, onHall, onWill, onHelp, onSettings, tab = 'single', onTab, multiplayer }) {
+  // Singleplayer (your lineages, as ever) or Multiplayer (a voyage with
+  // friends: see voyage.js multiplayerPane)
+  const multi = tab === 'multi' && !!multiplayer;
+  const tabs = onTab ? h('div.mode-tabs',
+    h('button' + (multi ? '' : '.on'), { on: { click: () => onTab('single') } }, uiImg('character', 20), 'Singleplayer'),
+    h('button' + (multi ? '.on' : ''), { on: { click: () => onTab('multi') } }, uiImg('crew', 20), 'Multiplayer')) : null;
   const el = h('div.screen.title-screen',
     h('div.title',
       h('h1', 'Inherited Will'),
       h('h2', 'A One Piece Roguelike'),
-      h('div.slots', cards),
+      tabs,
+      multi ? multiplayer() : h('div.slots', slots.map((s) => slotCard(s, { onPlay, onNew, onDelete, onHall, onWill }))),
       h('div.title-links',
         h('button.btn', { on: { click: onHelp } }, uiImg('help', 18), 'How to Play'),
         h('button.btn', { on: { click: onSettings } }, uiImg('settings', 18), 'Settings')),
@@ -461,6 +467,7 @@ export function helpContent(char) {
       k('C / Space (swimming)', 'dive / swim up — or look down and swim'),
       k('Tab / I', 'inventory & equipment'), k('C', 'character'), k('K', 'skills & hotbar'), k('J', 'journal'),
       k('U', 'crew'), k('M', 'world map'), k('Esc', 'pause menu'), k('Mouse wheel', 'camera distance (third person)'), k('H', 'this help'),
+      k('Enter', 'multiplayer: chat to the crew (Enter sends, Esc cancels)'), k('P', 'multiplayer: who\'s aboard the voyage, and where'),
       char?.creative ? k('F1', 'the creative panel (creative mode): Devil Fruits, items, races, Haki, foes, ships, the world') : null),
     h('p.muted', 'The buttons on the right of the screen open the same menus. Open the Inventory or Skills menu and drag techniques, food, Devil Fruits and weapons straight onto your hotbar at the bottom of the screen (a weapon you wear hangs at your hip or on your back: its key draws it, and again sheathes it); drag hotbar slots to rearrange them, right-click one to clear it.'),
     h('p', h('b', 'On a phone or tablet: '), 'your left thumb moves (push the stick all the way to run; at sea it steers and sets the sails) and your right thumb drags to look around. The round buttons jump, attack, heavy attack, dodge and block; tap Use or the prompt to talk and interact, and tap a hotbar slot to use a technique. The strip at the top opens the menus, the world map and the camera view. Play with the phone held sideways.'),
@@ -476,6 +483,8 @@ export function helpContent(char) {
     h('p', 'Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government — and those it permits.'),
     h('h3', 'Crew and the One Piece'),
     h('p', 'Found your own pirate crew and design your Jolly Roger from the Crew menu (U); it flies from your ship\'s sails. Recruit companions you meet along the way. Poneglyphs can only be read by an archaeologist. Four Road Poneglyphs point the way to Laugh Tale. Pick fruit and coconuts from trees when you are hungry.'),
+    h('h3', 'Sailing with friends'),
+    h('p', 'Multiplayer, on the title screen: one of you hosts a voyage with one of their lineages and passes on the six-letter code; the others join with it, each bringing a pirate from their own lineages (or a newborn one). Everyone sails the same world — the host\'s days, hours and weather are everyone\'s — and keeps their own save. You see each other, your ships and your fights; foes and townsfolk are each your own. Press Enter to chat, and P for who\'s aboard and where (and to go and stand beside a friend who\'s ashore).'),
   );
 }
 

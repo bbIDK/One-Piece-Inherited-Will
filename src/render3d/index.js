@@ -1005,9 +1005,11 @@ export class Renderer3D {
     const w = this.world;
     const p = game.player;
     const seen = new Set();
-    // characters
+    // characters (in a multiplayer voyage, the other players too: drawn like
+    // anyone else, as their games say they are — see net/remote.js)
     const near = [];
-    for (const a of game.actors) {
+    const mates = game.net?.avatars;
+    for (const a of mates?.length ? game.actors.concat(mates) : game.actors) {
       if (!a.alive || a.hidden) continue;
       // (in first person too: your own body is drawn — below the neck — see chars3d ownBody)
       if (a.onShip && a !== p) continue;
@@ -1069,7 +1071,9 @@ export class Renderer3D {
     // ships, out to the render distance (they're big: a hull's end comes into view before its middle)
     const seenS = new Set();
     const SR = this.viewDist(!p || p.mode === 'sail') + 30;
-    for (const s of game.ships) {
+    // (and the other players' ships)
+    const theirs = game.net?.ships;
+    for (const s of theirs?.length ? game.ships.concat(theirs) : game.ships) {
       const dx = w.dx(ox, s.x), dy = s.y - oy;
       const d2 = dx * dx + dy * dy;
       if (!s.alive || (d2 > SR * SR && (d2 > (SR + 40) ** 2 || !this.shipViews.has(s)))) continue;
