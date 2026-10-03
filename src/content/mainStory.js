@@ -223,7 +223,6 @@ export function installMainStory(game) {
     game,
     pending: 0, // seconds until the next chapter opens
     t: 0,
-    driftMsg: 0,
   };
   game.story = S;
   const C = () => game.state?.char;
@@ -498,42 +497,12 @@ export function installMainStory(game) {
     if (cur) pointTheWay();
   }
 
-  // ------------------------------------------------ the Grand Line keeps you on your road
-  // You can't sail on past the island your story is on: without its log the
-  // Grand Line's currents turn you round (the needle is set on it, and the
-  // story won't let the log settle anywhere else till you're done there).
-  // They only stop you making way on past it — a ship lying still there lies
-  // still: nothing drifts at sea but in Reverse Mountain's canals.
-  S.limit = () => {
-    const cur = current(game);
-    if (!cur || cur.ch.part !== 2 || !cur.ch.island || cur.ch.free) return null;
-    const isl = ISLAND_BY_ID[cur.ch.island];
-    if (!isl || isl.sea !== 'paradise') return null;
-    return { isl, x: isl.x + 700 };
-  };
-  game.storyCurrent = (x, y, out, who) => {
-    const p = game.player;
-    if (!p || game.world !== game.surface || (who !== p.ship && who !== p)) return;
-    const L = S.limit();
-    if (!L) return;
-    const dx = game.world.dx(L.x, x); // (how far past the line, east)
-    if (dx <= 0) return;
-    const reg = regionAt(x, y);
-    if (reg !== REGION.PARADISE) return;
-    // (as much way as she's making on past it is taken off her, and her head's
-    // turned back; a swimmer's only ever carried by a canal: see actor.js)
-    if (who === p) return;
-    const back = Math.atan2(L.isl.y - y, game.world.dx(x, L.isl.x)), bx = Math.cos(back), by = Math.sin(back);
-    const v = who.speed || 0, away = -(Math.cos(who.heading) * v * bx + Math.sin(who.heading) * v * by);
-    if (away <= 0.05) return;
-    out.x += bx * away;
-    out.y += by * away;
-    out.steer = Math.max(out.steer || 0, 0.5);
-    if (game.time > S.driftMsg) {
-      S.driftMsg = game.time + 25;
-      game.ui.banner('LOST WITHOUT A LOG', L.isl.name, `Your Log Pose is locked on ${L.isl.name} — and without its log the Grand Line's currents turn you round. Your story continues there.`, 5);
-    }
-  };
+  // ------------------------------------------------ no current turns you round
+  // (Sailing on past your story's island used to take your way off you and
+  // turn your head round — a ship dragged about by nothing you could see.
+  // The Log Pose still points to your story's island; the sea leaves you be.)
+  game.storyCurrent = null;
+
   /**
    * Should the log hold off on this island? While the story is on an island
    * of the Grand Line it won't settle anywhere else: not on the island itself

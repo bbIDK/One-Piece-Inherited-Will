@@ -342,6 +342,17 @@ export class Ship extends Entity {
       }
       return false;
     }
+    // (a nudge — her hull scraping a rock, a root, a quay — eases her the least
+    // way out of it, astern first, then either side: never a jump across the water)
+    if (!far) {
+      const back = this.heading + Math.PI;
+      for (let r = 0.25; r <= (big ? 4 : 2.5); r += 0.25) {
+        for (const da of [0, 0.4, -0.4, 0.8, -0.8, 1.25, -1.25, 1.7, -1.7, 2.3, -2.3, Math.PI]) {
+          const x = w.wx(this.x + Math.cos(back + da) * r), y = this.y + Math.sin(back + da) * r;
+          if (this.fits(w, x, y, this.heading) && !(this.game && this.shipIn(this.game, x, y, this.heading))) { this.x = x; this.y = y; return true; }
+        }
+      }
+    }
     const R = big ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big ? 1.5 : 0.5;
     const hs = big ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
     for (const h of hs) {
