@@ -10965,9 +10965,9 @@
         }];
       }
       for (let i = 0, il = groups9.length; i < il; ++i) {
-        const group4 = groups9[i];
-        const start4 = group4.start;
-        const count2 = group4.count;
+        const group6 = groups9[i];
+        const start4 = group6.start;
+        const count2 = group6.count;
         for (let j = start4, jl = start4 + count2; j < jl; j += 3) {
           handleTriangle(
             index.getX(j + 0),
@@ -10990,9 +10990,9 @@
         tangentAttribute.setXYZW(v, tmp2.x, tmp2.y, tmp2.z, w);
       }
       for (let i = 0, il = groups9.length; i < il; ++i) {
-        const group4 = groups9[i];
-        const start4 = group4.start;
-        const count2 = group4.count;
+        const group6 = groups9[i];
+        const start4 = group6.start;
+        const count2 = group6.count;
         for (let j = start4, jl = start4 + count2; j < jl; j += 3) {
           handleVertex(index.getX(j + 0));
           handleVertex(index.getX(j + 1));
@@ -11107,8 +11107,8 @@
       geometry2.morphTargetsRelative = this.morphTargetsRelative;
       const groups9 = this.groups;
       for (let i = 0, l = groups9.length; i < l; i++) {
-        const group4 = groups9[i];
-        geometry2.addGroup(group4.start, group4.count, group4.materialIndex);
+        const group6 = groups9[i];
+        geometry2.addGroup(group6.start, group6.count, group6.materialIndex);
       }
       return geometry2;
     }
@@ -11208,8 +11208,8 @@
       this.morphTargetsRelative = source.morphTargetsRelative;
       const groups9 = source.groups;
       for (let i = 0, l = groups9.length; i < l; i++) {
-        const group4 = groups9[i];
-        this.addGroup(group4.start, group4.count, group4.materialIndex);
+        const group6 = groups9[i];
+        this.addGroup(group6.start, group6.count, group6.materialIndex);
       }
       const boundingBox = source.boundingBox;
       if (boundingBox !== null) {
@@ -11335,10 +11335,10 @@
       if (index !== null) {
         if (Array.isArray(material2)) {
           for (let i = 0, il = groups9.length; i < il; i++) {
-            const group4 = groups9[i];
-            const groupMaterial = material2[group4.materialIndex];
-            const start4 = Math.max(group4.start, drawRange.start);
-            const end = Math.min(index.count, Math.min(group4.start + group4.count, drawRange.start + drawRange.count));
+            const group6 = groups9[i];
+            const groupMaterial = material2[group6.materialIndex];
+            const start4 = Math.max(group6.start, drawRange.start);
+            const end = Math.min(index.count, Math.min(group6.start + group6.count, drawRange.start + drawRange.count));
             for (let j = start4, jl = end; j < jl; j += 3) {
               const a = index.getX(j);
               const b = index.getX(j + 1);
@@ -11346,7 +11346,7 @@
               intersection = checkGeometryIntersection(this, groupMaterial, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
               if (intersection) {
                 intersection.faceIndex = Math.floor(j / 3);
-                intersection.face.materialIndex = group4.materialIndex;
+                intersection.face.materialIndex = group6.materialIndex;
                 intersects2.push(intersection);
               }
             }
@@ -11368,10 +11368,10 @@
       } else if (position !== void 0) {
         if (Array.isArray(material2)) {
           for (let i = 0, il = groups9.length; i < il; i++) {
-            const group4 = groups9[i];
-            const groupMaterial = material2[group4.materialIndex];
-            const start4 = Math.max(group4.start, drawRange.start);
-            const end = Math.min(position.count, Math.min(group4.start + group4.count, drawRange.start + drawRange.count));
+            const group6 = groups9[i];
+            const groupMaterial = material2[group6.materialIndex];
+            const start4 = Math.max(group6.start, drawRange.start);
+            const end = Math.min(position.count, Math.min(group6.start + group6.count, drawRange.start + drawRange.count));
             for (let j = start4, jl = end; j < jl; j += 3) {
               const a = j;
               const b = j + 1;
@@ -11379,7 +11379,7 @@
               intersection = checkGeometryIntersection(this, groupMaterial, raycaster, rayLocalSpace, uv, uv1, normal, a, b, c);
               if (intersection) {
                 intersection.faceIndex = Math.floor(j / 3);
-                intersection.face.materialIndex = group4.materialIndex;
+                intersection.face.materialIndex = group6.materialIndex;
                 intersects2.push(intersection);
               }
             }
@@ -17095,7 +17095,7 @@
       transmissive.length = 0;
       transparent.length = 0;
     }
-    function getNextRenderItem(object, geometry, material2, groupOrder, z, group4) {
+    function getNextRenderItem(object, geometry, material2, groupOrder, z, group6) {
       let renderItem = renderItems[renderItemsIndex];
       if (renderItem === void 0) {
         renderItem = {
@@ -17106,7 +17106,7 @@
           groupOrder,
           renderOrder: object.renderOrder,
           z,
-          group: group4
+          group: group6
         };
         renderItems[renderItemsIndex] = renderItem;
       } else {
@@ -17117,13 +17117,13 @@
         renderItem.groupOrder = groupOrder;
         renderItem.renderOrder = object.renderOrder;
         renderItem.z = z;
-        renderItem.group = group4;
+        renderItem.group = group6;
       }
       renderItemsIndex++;
       return renderItem;
     }
-    function push(object, geometry, material2, groupOrder, z, group4) {
-      const renderItem = getNextRenderItem(object, geometry, material2, groupOrder, z, group4);
+    function push(object, geometry, material2, groupOrder, z, group6) {
+      const renderItem = getNextRenderItem(object, geometry, material2, groupOrder, z, group6);
       if (material2.transmission > 0) {
         transmissive.push(renderItem);
       } else if (material2.transparent === true) {
@@ -17132,8 +17132,8 @@
         opaque.push(renderItem);
       }
     }
-    function unshift(object, geometry, material2, groupOrder, z, group4) {
-      const renderItem = getNextRenderItem(object, geometry, material2, groupOrder, z, group4);
+    function unshift(object, geometry, material2, groupOrder, z, group6) {
+      const renderItem = getNextRenderItem(object, geometry, material2, groupOrder, z, group6);
       if (material2.transmission > 0) {
         transmissive.unshift(renderItem);
       } else if (material2.transparent === true) {
@@ -17467,8 +17467,8 @@
       state.ambient[0] = r4;
       state.ambient[1] = g;
       state.ambient[2] = b;
-      const hash14 = state.hash;
-      if (hash14.directionalLength !== directionalLength || hash14.pointLength !== pointLength || hash14.spotLength !== spotLength || hash14.rectAreaLength !== rectAreaLength || hash14.hemiLength !== hemiLength || hash14.numDirectionalShadows !== numDirectionalShadows || hash14.numPointShadows !== numPointShadows || hash14.numSpotShadows !== numSpotShadows || hash14.numSpotMaps !== numSpotMaps || hash14.numLightProbes !== numLightProbes) {
+      const hash15 = state.hash;
+      if (hash15.directionalLength !== directionalLength || hash15.pointLength !== pointLength || hash15.spotLength !== spotLength || hash15.rectAreaLength !== rectAreaLength || hash15.hemiLength !== hemiLength || hash15.numDirectionalShadows !== numDirectionalShadows || hash15.numPointShadows !== numPointShadows || hash15.numSpotShadows !== numSpotShadows || hash15.numSpotMaps !== numSpotMaps || hash15.numLightProbes !== numLightProbes) {
         state.directional.length = directionalLength;
         state.spot.length = spotLength;
         state.rectArea.length = rectAreaLength;
@@ -17486,16 +17486,16 @@
         state.spotLightMap.length = numSpotMaps;
         state.numSpotLightShadowsWithMaps = numSpotShadowsWithMaps;
         state.numLightProbes = numLightProbes;
-        hash14.directionalLength = directionalLength;
-        hash14.pointLength = pointLength;
-        hash14.spotLength = spotLength;
-        hash14.rectAreaLength = rectAreaLength;
-        hash14.hemiLength = hemiLength;
-        hash14.numDirectionalShadows = numDirectionalShadows;
-        hash14.numPointShadows = numPointShadows;
-        hash14.numSpotShadows = numSpotShadows;
-        hash14.numSpotMaps = numSpotMaps;
-        hash14.numLightProbes = numLightProbes;
+        hash15.directionalLength = directionalLength;
+        hash15.pointLength = pointLength;
+        hash15.spotLength = spotLength;
+        hash15.rectAreaLength = rectAreaLength;
+        hash15.hemiLength = hemiLength;
+        hash15.numDirectionalShadows = numDirectionalShadows;
+        hash15.numPointShadows = numPointShadows;
+        hash15.numSpotShadows = numSpotShadows;
+        hash15.numSpotMaps = numSpotMaps;
+        hash15.numLightProbes = numLightProbes;
         state.version = nextVersion++;
       }
     }
@@ -17858,13 +17858,13 @@
           if (Array.isArray(material2)) {
             const groups9 = geometry.groups;
             for (let k = 0, kl = groups9.length; k < kl; k++) {
-              const group4 = groups9[k];
-              const groupMaterial = material2[group4.materialIndex];
+              const group6 = groups9[k];
+              const groupMaterial = material2[group6.materialIndex];
               if (groupMaterial && groupMaterial.visible) {
                 const depthMaterial = getDepthMaterial(object, groupMaterial, light, type);
-                object.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group4);
-                renderer.renderBufferDirect(shadowCamera, null, geometry, depthMaterial, object, group4);
-                object.onAfterShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group4);
+                object.onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group6);
+                renderer.renderBufferDirect(shadowCamera, null, geometry, depthMaterial, object, group6);
+                object.onAfterShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group6);
               }
             }
           } else if (material2.visible) {
@@ -20683,18 +20683,18 @@ void main() {
         pose = frame3.getViewerPose(customReferenceSpace || referenceSpace);
         xrFrame = frame3;
         if (pose !== null) {
-          const views3 = pose.views;
+          const views5 = pose.views;
           if (glBaseLayer !== null) {
             renderer.setRenderTargetFramebuffer(newRenderTarget, glBaseLayer.framebuffer);
             renderer.setRenderTarget(newRenderTarget);
           }
           let cameraXRNeedsUpdate = false;
-          if (views3.length !== cameraXR.cameras.length) {
+          if (views5.length !== cameraXR.cameras.length) {
             cameraXR.cameras.length = 0;
             cameraXRNeedsUpdate = true;
           }
-          for (let i = 0; i < views3.length; i++) {
-            const view = views3[i];
+          for (let i = 0; i < views5.length; i++) {
+            const view = views5[i];
             let viewport = null;
             if (glBaseLayer !== null) {
               viewport = glBaseLayer.getViewport(view);
@@ -20732,7 +20732,7 @@ void main() {
           }
           const enabledFeatures = session.enabledFeatures;
           if (enabledFeatures && enabledFeatures.includes("depth-sensing")) {
-            const depthData = glBinding.getDepthInformation(views3[0]);
+            const depthData = glBinding.getDepthInformation(views5[0]);
             if (depthData && depthData.isValid && depthData.texture) {
               depthSensing.init(renderer, depthData, session.renderState);
             }
@@ -21649,7 +21649,7 @@ void main() {
           }
         }
       }
-      this.renderBufferDirect = function(camera, scene, geometry, material2, object, group4) {
+      this.renderBufferDirect = function(camera, scene, geometry, material2, object, group6) {
         if (scene === null) scene = _emptyScene;
         const frontFaceCW = object.isMesh && object.matrixWorld.determinant() < 0;
         const program2 = setProgram(camera, scene, geometry, material2, object);
@@ -21665,9 +21665,9 @@ void main() {
         const position = geometry.attributes.position;
         let drawStart = drawRange.start * rangeFactor;
         let drawEnd = (drawRange.start + drawRange.count) * rangeFactor;
-        if (group4 !== null) {
-          drawStart = Math.max(drawStart, group4.start * rangeFactor);
-          drawEnd = Math.min(drawEnd, (group4.start + group4.count) * rangeFactor);
+        if (group6 !== null) {
+          drawStart = Math.max(drawStart, group6.start * rangeFactor);
+          drawEnd = Math.min(drawEnd, (group6.start + group6.count) * rangeFactor);
         }
         if (index !== null) {
           drawStart = Math.max(drawStart, 0);
@@ -21969,10 +21969,10 @@ void main() {
               if (Array.isArray(material2)) {
                 const groups9 = geometry.groups;
                 for (let i = 0, l = groups9.length; i < l; i++) {
-                  const group4 = groups9[i];
-                  const groupMaterial = material2[group4.materialIndex];
+                  const group6 = groups9[i];
+                  const groupMaterial = material2[group6.materialIndex];
                   if (groupMaterial && groupMaterial.visible) {
-                    currentRenderList.push(object, geometry, groupMaterial, groupOrder, _vector4.z, group4);
+                    currentRenderList.push(object, geometry, groupMaterial, groupOrder, _vector4.z, group6);
                   }
                 }
               } else if (material2.visible) {
@@ -22044,12 +22044,12 @@ void main() {
             const object = renderItem.object;
             const geometry = renderItem.geometry;
             const material2 = renderItem.material;
-            const group4 = renderItem.group;
+            const group6 = renderItem.group;
             if (material2.side === DoubleSide && object.layers.test(camera.layers)) {
               const currentSide = material2.side;
               material2.side = BackSide;
               material2.needsUpdate = true;
-              renderObject(object, scene, camera, geometry, material2, group4);
+              renderObject(object, scene, camera, geometry, material2, group6);
               material2.side = currentSide;
               material2.needsUpdate = true;
               renderTargetNeedsUpdate = true;
@@ -22072,29 +22072,29 @@ void main() {
           const object = renderItem.object;
           const geometry = renderItem.geometry;
           const material2 = overrideMaterial === null ? renderItem.material : overrideMaterial;
-          const group4 = renderItem.group;
+          const group6 = renderItem.group;
           if (object.layers.test(camera.layers)) {
-            renderObject(object, scene, camera, geometry, material2, group4);
+            renderObject(object, scene, camera, geometry, material2, group6);
           }
         }
       }
-      function renderObject(object, scene, camera, geometry, material2, group4) {
-        object.onBeforeRender(_this, scene, camera, geometry, material2, group4);
+      function renderObject(object, scene, camera, geometry, material2, group6) {
+        object.onBeforeRender(_this, scene, camera, geometry, material2, group6);
         object.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, object.matrixWorld);
         object.normalMatrix.getNormalMatrix(object.modelViewMatrix);
-        material2.onBeforeRender(_this, scene, camera, geometry, object, group4);
+        material2.onBeforeRender(_this, scene, camera, geometry, object, group6);
         if (material2.transparent === true && material2.side === DoubleSide && material2.forceSinglePass === false) {
           material2.side = BackSide;
           material2.needsUpdate = true;
-          _this.renderBufferDirect(camera, scene, geometry, material2, object, group4);
+          _this.renderBufferDirect(camera, scene, geometry, material2, object, group6);
           material2.side = FrontSide;
           material2.needsUpdate = true;
-          _this.renderBufferDirect(camera, scene, geometry, material2, object, group4);
+          _this.renderBufferDirect(camera, scene, geometry, material2, object, group6);
           material2.side = DoubleSide;
         } else {
-          _this.renderBufferDirect(camera, scene, geometry, material2, object, group4);
+          _this.renderBufferDirect(camera, scene, geometry, material2, object, group6);
         }
-        object.onAfterRender(_this, scene, camera, geometry, material2, group4);
+        object.onAfterRender(_this, scene, camera, geometry, material2, group6);
       }
       function getProgram(material2, scene, object) {
         if (scene.isScene !== true) scene = _emptyScene;
@@ -22373,9 +22373,9 @@ void main() {
         if (material2.isShaderMaterial || material2.isRawShaderMaterial) {
           const groups9 = material2.uniformsGroups;
           for (let i = 0, l = groups9.length; i < l; i++) {
-            const group4 = groups9[i];
-            uniformsGroups.update(group4, program2);
-            uniformsGroups.bind(group4, program2);
+            const group6 = groups9[i];
+            uniformsGroups.update(group6, program2);
+            uniformsGroups.bind(group6, program2);
           }
         }
         return program2;
@@ -26584,7 +26584,7 @@ void main() {
             const vecHash1 = hashes2[jNext];
             const v0 = _triangle[vertKeys[j]];
             const v1 = _triangle[vertKeys[jNext]];
-            const hash14 = `${vecHash0}_${vecHash1}`;
+            const hash15 = `${vecHash0}_${vecHash1}`;
             const reverseHash = `${vecHash1}_${vecHash0}`;
             if (reverseHash in edgeData && edgeData[reverseHash]) {
               if (_normal.dot(edgeData[reverseHash].normal) <= thresholdDot) {
@@ -26592,8 +26592,8 @@ void main() {
                 vertices.push(v1.x, v1.y, v1.z);
               }
               edgeData[reverseHash] = null;
-            } else if (!(hash14 in edgeData)) {
-              edgeData[hash14] = {
+            } else if (!(hash15 in edgeData)) {
+              edgeData[hash15] = {
                 index0: indexArr[j],
                 index1: indexArr[jNext],
                 normal: _normal.clone()
@@ -28190,9 +28190,9 @@ void main() {
             groups9 = [{ start: 0, count: indices.count, materialIndex: 0 }];
           }
           for (let o = 0, ol = groups9.length; o < ol; ++o) {
-            const group4 = groups9[o];
-            const groupStart = group4.start;
-            const groupCount = group4.count;
+            const group6 = groups9[o];
+            const groupStart = group6.start;
+            const groupCount = group6.count;
             for (let i = groupStart, l = groupStart + groupCount; i < l; i += 3) {
               for (let j = 0; j < 3; j++) {
                 const index1 = indices.getX(i + j);
@@ -31123,8 +31123,8 @@ void main() {
       const groups9 = json.data.groups || json.data.drawcalls || json.data.offsets;
       if (groups9 !== void 0) {
         for (let i = 0, n = groups9.length; i !== n; ++i) {
-          const group4 = groups9[i];
-          geometry.addGroup(group4.start, group4.count, group4.materialIndex);
+          const group6 = groups9[i];
+          geometry.addGroup(group6.start, group6.count, group6.materialIndex);
         }
       }
       const boundingSphere = json.data.boundingSphere;
@@ -38369,6 +38369,45 @@ void main() {
     }
   };
 
+  // src/world/drums.js
+  function drumR(d, a) {
+    return d.R * (1 + 0.028 * Math.sin(a * 5 + d.seed) + 0.016 * Math.sin(a * 11 + d.seed * 2.3) + 9e-3 * Math.sin(a * 23 + d.seed * 0.7));
+  }
+  function inDrum(world, d, x, y) {
+    const dx = world.dx(d.x, x), dy = y - d.y, m = d.R * 1.06;
+    if (dx > m || dx < -m || dy > m || dy < -m) return false;
+    return dx * dx + dy * dy < drumR(d, Math.atan2(dy, dx)) ** 2;
+  }
+  function drumAt(world, x, y) {
+    const ds = world.drums;
+    if (!ds?.length || world.zone !== 0) return null;
+    for (const d of ds) if (inDrum(world, d, x, y)) return d;
+    return null;
+  }
+  function nearDrum(world, x, y, pad2 = 2) {
+    const ds = world.drums;
+    if (!ds?.length || world.zone !== 0) return null;
+    for (const d of ds) {
+      const dx = world.dx(d.x, x), dy = y - d.y, m = d.R * 1.06 + pad2;
+      if (dx <= m && dx >= -m && dy <= m && dy >= -m) return d;
+    }
+    return null;
+  }
+  function drumTop(world, d, x, y) {
+    const dx = world.dx(d.x, x), dy = y - d.y, k = Math.min(1, Math.hypot(dx, dy) / d.R);
+    const drift = Math.sin(x * 0.21 + d.seed) * Math.sin(y * 0.17 - d.seed) * 0.25;
+    return d.H + (1 - k * k) * Math.min(1.6, d.R * 0.03) + drift;
+  }
+  function drumTile(world, d, x, y) {
+    let n = 0;
+    for (const [i, j] of [[0, 0], [1, 0], [0, 1], [1, 1]]) if (inDrum(world, d, x + i, y + j)) n++;
+    return n === 4 ? 2 : n ? 1 : 0;
+  }
+  function drumFace(world, x, y) {
+    const d = nearDrum(world, x + 0.5, y + 0.5, 1);
+    return !!d && drumTile(world, d, Math.floor(x), Math.floor(y)) === 1;
+  }
+
   // src/render3d/height.js
   var SEA_Y = 0;
   var DECK_Y = 0.55;
@@ -38471,17 +38510,23 @@ void main() {
     return h2;
   }
   function naturalHeight(world, cx, cy) {
+    const nd = world.drums?.length && world.zone === 0 ? nearDrum(world, cx, cy, 2) : null;
+    if (nd) {
+      const d = drumAt(world, cx, cy);
+      if (d) return drumTop(world, d, cx, cy);
+    }
     let sum = 0, n = 0, walls = 0, tall = 0, rapids = 0;
     for (let j = -1; j <= 0; j++) {
       for (let i = -1; i <= 0; i++) {
         const x = cx + i, y = cy + j;
-        const t = world.type(x, y);
+        let t = world.type(x, y);
         if (t === T.RAPIDS) rapids++;
         if (IS_LIQUID[t] || OVERLAY[t]) continue;
         if (t === T.WALL) {
           walls++;
           continue;
         }
+        if (nd && t === T.SNOWROCK && drumTile(world, nd, x, y) === 1) t = T.SNOW;
         const h2 = landHeight(world, x, y, t, world.elev(x, y));
         sum += h2;
         n++;
@@ -38844,12 +38889,12 @@ void main() {
         if (!shore.has(k)) shore.set(k, { x: nx, y: ny, dx, dy });
       }
     }
-    const ends = [], group4 = /* @__PURE__ */ new Map();
+    const ends = [], group6 = /* @__PURE__ */ new Map();
     for (const [k0, s0] of shore) {
-      if (group4.has(k0)) continue;
+      if (group6.has(k0)) continue;
       const e = { tiles: [], h: DECK_Y, rise: [] };
       const q2 = [s0];
-      group4.set(k0, e);
+      group6.set(k0, e);
       while (q2.length) {
         const s = q2.pop();
         e.tiles.push([s.x, s.y]);
@@ -38858,8 +38903,8 @@ void main() {
         for (let j = -1; j <= 1; j++) {
           for (let i = -1; i <= 1; i++) {
             const nk = key2(w.wx(s.x + i), s.y + j);
-            if (!group4.has(nk) && shore.has(nk)) {
-              group4.set(nk, e);
+            if (!group6.has(nk) && shore.has(nk)) {
+              group6.set(nk, e);
               q2.push(shore.get(nk));
             }
           }
@@ -38872,7 +38917,7 @@ void main() {
     const dist = ends.map((e) => {
       const D4 = /* @__PURE__ */ new Map(), q2 = [];
       for (const [x, y] of tiles) {
-        for (const [dx, dy] of N4) if (group4.get(key2(w.wx(x + dx), y + dy)) === e) {
+        for (const [dx, dy] of N4) if (group6.get(key2(w.wx(x + dx), y + dy)) === e) {
           D4.set(key2(x, y), 0.5);
           q2.push([x, y]);
           break;
@@ -40250,8 +40295,14 @@ void main() {
           if (vPave.x + vPave.y + vPave.z > 0.01) diffuseColor.rgb = paving(diffuseColor.rgb, vTerrainXZ, vPave, broad, grain);
           // steep ground shows bare rock (not on beaches and water edges, which are flat)
           float steep = smoothstep(0.62, 0.42, vTerrainUp);
-          vec3 rock = vec3(0.47, 0.43, 0.39) * (0.85 + grain * 0.3);
-          diffuseColor.rgb = mix(diffuseColor.rgb, rock * (0.7 + 0.3 * diffuseColor.rgb / max(max(diffuseColor.r, diffuseColor.g), 0.2)), steep * 0.75);
+          // (in the snow the rock's a cold blue-grey, streaked white where the
+          // snow's caught in its runnels down the face: the Drum Rockies)
+          float snowy = smoothstep(0.78, 0.92, min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b)));
+          vec3 rock = mix(vec3(0.47, 0.43, 0.39), vec3(0.55, 0.6, 0.68), snowy) * (0.85 + grain * 0.3);
+          rock *= 0.7 + 0.3 * diffuseColor.rgb / max(max(diffuseColor.r, diffuseColor.g), 0.2);
+          float streak = smoothstep(0.5, 0.72, texture2D(uDetail, vTerrainXZ / 5.0).r) * snowy;
+          rock = mix(rock, vec3(0.9, 0.93, 0.97), streak * 0.7);
+          diffuseColor.rgb = mix(diffuseColor.rgb, rock, steep * 0.75);
           // under the sea: bluer with depth, and sunlight rippling across the bottom
           if (vTerrainY < -0.15) {
             float dd = -vTerrainY;
@@ -40261,7 +40312,7 @@ void main() {
           }
         }`);
     };
-    m.customProgramCacheKey = () => "terrain-detail-paved-2";
+    m.customProgramCacheKey = () => "terrain-detail-paved-3";
     return m;
   }
   function boxes(list, sx, sy, sz, cy, mat, inset = 0, spans = null) {
@@ -42117,6 +42168,8 @@ ${GLSL}
     if (poop) flight(tp, tp + run(hp) / L3, yp, yq, "poop", "quarter");
     const qs = d.stairs.find((s) => s.la === "quarter" && s.lb === "main"), fs = d.stairs.find((s) => s.lb === "fore");
     const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
+    d.mainT0 = mainT0;
+    d.mainT1 = mainT1;
     const holdY = deckY2 - Math.max(2.25, Math.min(2.7, 1.9 + B5 * 0.045));
     d.holdY = holdY;
     const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
@@ -42486,14 +42539,14 @@ ${GLSL}
       }
       return n >= 2;
     });
-    P6.rug = (group4) => {
-      if (!group4) return null;
-      const b = group4.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
+    P6.rug = (group6) => {
+      if (!group6) return null;
+      const b = group6.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
       for (let pad2 = 0.35; pad2 > -0.2; pad2 -= 0.05) {
         const rug = { kind: "rug", u: (b.u0 + b.u1) / 2, v: (b.v0 + b.v1) / 2, w: b.u1 - b.u0 + 2 * pad2, dp: b.v1 - b.v0 + 2 * pad2, h: 0.02, rot: 0, ghost: true, room: r4.kind, floor: r4.floor };
         const fp = footprint(rug);
         if (fp.u0 < ua || fp.u1 > ub || [fp.u0, fp.u1].some((u) => P6.reach(u, 0, 0.02) < Math.max(-fp.v0, fp.v1))) continue;
-        if (P6.items.some((o) => !group4.includes(o) && !o.y && !o.wall && hits(fp, footprint(o)))) continue;
+        if (P6.items.some((o) => !group6.includes(o) && !o.y && !o.wall && hits(fp, footprint(o)))) continue;
         P6.items.push(rug);
         return rug;
       }
@@ -57675,15 +57728,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const R4 = f.reach || 0.34;
         const out = (x) => 1 - (1 - x) ** 2;
         const n = Math.floor(ph), sc = f.scatter || 0;
-        const hash14 = (i, j) => {
+        const hash15 = (i, j) => {
           const v = Math.sin(i * 127.1 + j * 311.7) * 43758.5;
           return v - Math.floor(v) - 0.5;
         };
         const nF = n - n % 2, nB = n - (n + 1) % 2;
-        P6.hF = [0.12 + R4 * out(tri) * (1 + 0.15 * sc * hash14(nF, 3)), -0.04 + 0.06 * (1 - tri) + 0.32 * sc * hash14(nF, 1) * tri];
-        P6.hB = [0.12 + R4 * out(1 - tri) * (1 + 0.15 * sc * hash14(nB, 4)), 0.02 + 0.05 * tri + 0.32 * sc * hash14(nB, 2) * (1 - tri)];
-        P6.zF = (P6.zF || 0) + 0.4 * sc * hash14(nF, 5) * tri;
-        P6.zB = (P6.zB || 0) + 0.4 * sc * hash14(nB, 6) * (1 - tri);
+        P6.hF = [0.12 + R4 * out(tri) * (1 + 0.15 * sc * hash15(nF, 3)), -0.04 + 0.06 * (1 - tri) + 0.32 * sc * hash15(nF, 1) * tri];
+        P6.hB = [0.12 + R4 * out(1 - tri) * (1 + 0.15 * sc * hash15(nB, 4)), 0.02 + 0.05 * tri + 0.32 * sc * hash15(nB, 2) * (1 - tri)];
+        P6.zF = (P6.zF || 0) + 0.4 * sc * hash15(nF, 5) * tri;
+        P6.zB = (P6.zB || 0) + 0.4 * sc * hash15(nB, 6) * (1 - tri);
         P6.tw = (P6.tw || 0) + 0.3 * (tri - 0.5);
         P6.hp = (P6.hp || 0) + 0.1 * (tri - 0.5);
         P6.smF = 0.08 * tri;
@@ -61756,28 +61809,45 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return false;
     }
     /**
-     * A big ship berths alongside a pier head, bow out to sea: her waist (the
-     * main deck, where her rail's lowest: a jump from the planks) alongside the
-     * head — or, where the water's too shallow for that, as near it as she'll lie.
+     * A big ship berths at a pier head with her waist to its planks — the main
+     * deck, where her rail's lowest: a jump from the pier — never her tall
+     * quarterdeck while there's a berth that keeps her waist there. Alongside
+     * the head, bow out to sea, as far out as that lets her lie; or, where the
+     * water by the pier's too shallow for her stern, across the end of the head
+     * out in the deep water, her waist (and her ladder) to its face; or bow in.
+     * Only when none of those will take her, alongside further out.
      */
     berth(w, dock) {
-      const L3 = this.def.length, B5 = this.def.beam, d = shipDims(this.def);
+      const B5 = this.def.beam, d = shipDims(this.def);
       const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
-      const end = dock.end || dock;
-      const qs = d.big ? d.stairs.find((s) => s.la === "quarter" && s.lb === "main") : null;
-      const waist = Math.min(L3 * 0.5 - 5, qs ? -xAt(d, qs.tb) - 3.2 : Infinity);
-      for (let k = 0; k < 26; k++) {
-        for (const sg of [1, -1]) {
-          const along = waist + k * 2, off = sg * (B5 * 0.5 + (dock.headHalf ?? 1) + 1.4);
-          const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
-          if (this.fits(w, x, y, hd)) {
-            this.x = x;
-            this.y = y;
-            this.heading = hd;
-            return true;
-          }
+      const end = dock.end || dock, hh = dock.headHalf ?? 1, ex = end.x + 0.5, ey = end.y + 0.5;
+      const m0 = xAt(d, d.mainT0 ?? 0.3) + 0.8, m12 = xAt(d, d.mainT1 ?? 0.84) - 0.8;
+      const lie = (x, y, h2) => {
+        if (!this.fits(w, x, y, h2) || this.game && this.shipIn(this.game, x, y, h2)) return false;
+        this.x = x;
+        this.y = y;
+        this.heading = h2;
+        return true;
+      };
+      const off = B5 * 0.5 + hh + 1.4;
+      const beside = (along, h2) => [1, -1].some((sg) => lie(w.wx(ex + dx * along - dy * sg * off), ey + dy * along + dx * sg * off, h2));
+      for (let along = -m0 - 2.5; along >= 0.5 - m12; along -= 0.5) if (beside(along, hd)) return true;
+      for (let along = m12 - 2.5; along >= m0 + 0.5; along -= 0.5) if (beside(along, hd + Math.PI)) return true;
+      for (let along = -m0 - 2; along <= -m0 - 0.5; along += 0.5) if (beside(along, hd)) return true;
+      for (let along = m12 - 2; along <= m12 - 0.5; along += 0.5) if (beside(along, hd + Math.PI)) return true;
+      const mid = (m0 + m12) / 2, face = hh + 0.5;
+      const out = 0.5 + 0.9 + B5 * 0.5;
+      for (const sd of [1, -1]) {
+        const h2 = Math.atan2(dx, -dy) + (sd > 0 ? 0 : Math.PI), fx = Math.cos(h2), fy = Math.sin(h2);
+        const lad = d.ladders?.find((l) => l.s === sd);
+        const cs = lad && lad.u > m0 - face + 2.5 && lad.u < m12 + face - 2.5 ? [lad.u] : [];
+        for (let k = 0; k < 40; k++) {
+          const c = mid + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.5;
+          if (Math.min(c + face, m12) - Math.max(c - face, m0) >= 2.5) cs.push(c);
         }
+        for (const c of cs) if (lie(w.wx(ex + dx * out - fx * c), ey + dy * out - fy * c, h2)) return true;
       }
+      for (let k = 1; k < 26; k++) if (beside(-m0 - 2.5 + k * 2, hd)) return true;
       return false;
     }
     /**
@@ -61787,19 +61857,28 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     moorAlongside(w, dock) {
       const L3 = this.def.length, B5 = this.def.beam;
       const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
-      const end = dock.end || dock, edge = (dock.headHalf ?? 1) + 0.5;
+      const end = dock.end || dock, ex = end.x + 0.5, ey = end.y + 0.5;
+      const lie = (x, y, h2) => {
+        if (!this.fits(w, x, y, h2) || this.game && this.shipIn(this.game, x, y, h2)) return false;
+        this.x = x;
+        this.y = y;
+        this.heading = h2;
+        return true;
+      };
       for (const gap of [0.3, 0.6, 1]) {
         for (let k = 0; k < 6; k++) {
+          const along = 0.3 - L3 / 2 - k * 1.2;
+          const edge = (along + L3 / 2 > -2.5 ? dock.headHalf ?? 1 : dock.half ?? 1) + 0.5;
           for (const sg of [1, -1]) {
-            const along = 0.3 - L3 / 2 - k * 1.2, off = sg * (edge + gap + B5 / 2);
-            const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
-            if (this.fits(w, x, y, hd) && !(this.game && this.shipIn(this.game, x, y, hd))) {
-              this.x = x;
-              this.y = y;
-              this.heading = hd;
-              return true;
-            }
+            const off = sg * (edge + gap + B5 / 2);
+            if (lie(w.wx(ex + dx * along - dy * off), ey + dy * along + dx * off, hd)) return true;
           }
+        }
+      }
+      for (const gap of [0.3, 0.6, 1]) {
+        for (const sd of [1, -1]) {
+          const h2 = Math.atan2(dx, -dy) + (sd > 0 ? 0 : Math.PI), out = 0.5 + gap + B5 / 2;
+          for (const c of [0, 1.5, -1.5, 3, -3]) if (lie(w.wx(ex + dx * out - Math.cos(h2) * c), ey + dy * out - Math.sin(h2) * c, h2)) return true;
         }
       }
       return false;
@@ -64343,10 +64422,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.recs = /* @__PURE__ */ new Map();
     }
     /** A building's model is up: its grid is made when first asked for. `group` stands at height `y0`. */
-    add(b, group4, y0) {
+    add(b, group6, y0) {
       this.remove(b);
       const f = bfoot(b);
-      const r4 = { b, group: group4, y0, x0: f.x0 - PAD, x1: f.x1 + PAD, y0w: f.y0 - PAD, y1w: f.y1 + PAD, grid: null, keys: [] };
+      const r4 = { b, group: group6, y0, x0: f.x0 - PAD, x1: f.x1 + PAD, y0w: f.y0 - PAD, y1w: f.y1 + PAD, grid: null, keys: [] };
       for (let cy = Math.floor(r4.y0w / HASH); cy <= Math.floor(r4.y1w / HASH); cy++) {
         for (let cx = Math.floor(r4.x0 / HASH); cx <= Math.floor(r4.x1 / HASH); cx++) {
           const k = this.key(cx, cy);
@@ -67300,7 +67379,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   });
   reg2("tower", (o, ctx) => {
     const n = o.name || "";
-    const h2 = /justice/i.test(n) ? 16 : /impel/i.test(n) ? 12 : /umbrella|lodge/i.test(n) ? 7 : 10;
+    const h2 = o.h || (/justice/i.test(n) ? 16 : /impel/i.test(n) ? 12 : /umbrella|lodge/i.test(n) ? 7 : 10);
     const s = Math.max(1, (o.fw || 1) / 2.5);
     return simple(o, ctx, "tower:" + h2, towerGeo(h2), { yaw: 0, scale: s });
   });
@@ -74566,6 +74645,156 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     s.plainHeavyId = s.plainHeavy?.id;
   }
 
+  // src/game/ropeway.js
+  var HANG = 4.2;
+  var FLOOR = 0.3;
+  var SPEED2 = 7.5;
+  var STEP_T = 1.2;
+  var smooth4 = (k) => k * k * (3 - 2 * k);
+  function rigRopeway(game, rw) {
+    if (rw.ha !== void 0) return rw;
+    const v = game.view3d;
+    if (!v) return null;
+    rw.fa = v.ground(rw.aExit.x, rw.aExit.y) + FLOOR;
+    rw.fb = v.ground(rw.bExit.x, rw.bExit.y) + FLOOR;
+    rw.ha = rw.fa + HANG;
+    rw.hb = rw.fb + HANG;
+    const w = game.world, run = Math.hypot(w.dx(rw.a.x, rw.b.x), rw.b.y - rw.a.y);
+    rw.len = Math.hypot(run, rw.hb - rw.ha);
+    rw.sag = Math.min(3, rw.len * 0.025);
+    return rw;
+  }
+  function cableAt(rw, s) {
+    return rw.ha + (rw.hb - rw.ha) * s - rw.sag * 4 * s * (1 - s);
+  }
+  function cableXY(world, rw, s) {
+    return { x: world.wx(rw.a.x + world.dx(rw.a.x, rw.b.x) * s), y: rw.a.y + (rw.b.y - rw.a.y) * s };
+  }
+  var busyRope = (game, rw) => (game.actors || []).some((a) => a.climb?.ride === rw);
+  function startRide(game, a, rw, from) {
+    if (!rigRopeway(game, rw) || a.climb || a.onShip) return false;
+    const up = from === "a";
+    const fetch2 = rw.at !== void 0 && rw.at !== (up ? 0 : 1);
+    if (a.deck) {
+      a.deck.ship.aboard?.delete(a);
+      a.deck = null;
+    }
+    a.climb = { ride: rw, up, phase: fetch2 ? "wait" : "in", t: 0, to: {}, x0: a.x, y0: a.y, h0: a.feetH(game) };
+    a.vx = 0;
+    a.vy = 0;
+    a.vz = 0;
+    a.kb.x = 0;
+    a.kb.y = 0;
+    a.dash = null;
+    a.blocking = false;
+    a.charging = 0;
+    a.lastG = null;
+    if (a.isPlayer) {
+      game.audio?.sfx("bell", a);
+      game.log(up ? "You step into the cabin. The bell rings, and the cable takes up the strain." : "You step into the cabin for the long drop down the face of Drum Rock.", "#b3e5fc");
+    }
+    return true;
+  }
+  function rideStep(a, dt, game) {
+    const c = a.climb, rw = c.ride, w = game.world;
+    const [s0, s1] = c.up ? [0, 1] : [1, 0];
+    const bay0 = c.up ? rw.a : rw.b, bay1 = c.up ? rw.b : rw.a;
+    const exit1 = c.up ? rw.bExit : rw.aExit;
+    const floor0 = c.up ? rw.fa : rw.fb, floor1 = c.up ? rw.fb : rw.fa;
+    const place = (x, y, h2) => {
+      a.x = w.wx(x);
+      a.y = y;
+      a.z = h2 - a.groundAt(game, a.x, a.y);
+    };
+    c.t += dt;
+    a.airT = 0;
+    a.iframes = Math.max(a.iframes || 0, 0.2);
+    if (c.phase === "wait") {
+      const T5 = rw.len / (SPEED2 * 2);
+      const k2 = Math.min(1, c.t / T5);
+      rw.s = s1 + (s0 - s1) * smooth4(k2);
+      if (k2 >= 1) {
+        rw.at = s0;
+        c.phase = "in";
+        c.t = 0;
+      }
+      return;
+    }
+    if (c.phase === "in") {
+      const k2 = Math.min(1, c.t / STEP_T), e2 = smooth4(k2);
+      rw.s = s0;
+      place(c.x0 + w.dx(c.x0, bay0.x) * e2, c.y0 + (bay0.y - c.y0) * e2, c.h0 + (floor0 - c.h0) * e2);
+      a.facing = Math.atan2(bay0.y - c.y0, w.dx(c.x0, bay0.x)) || a.facing;
+      a.moving = k2 < 1;
+      if (k2 >= 1) {
+        c.phase = "go";
+        c.t = 0;
+        c.T = rw.len / SPEED2 + 1.2;
+        rw.at = void 0;
+        if (a.isPlayer) game.audio?.sfx("anchor_weigh", a);
+      }
+      return;
+    }
+    if (c.phase === "go") {
+      const k2 = Math.min(1, c.t / c.T), e2 = smooth4(k2);
+      const s = s0 + (s1 - s0) * e2;
+      rw.s = s;
+      const p = cableXY(w, rw, s);
+      place(p.x, p.y, cableAt(rw, s) - HANG);
+      a.facing = Math.atan2(bay1.y - bay0.y, w.dx(bay0.x, bay1.x));
+      a.moving = false;
+      if (k2 >= 1) {
+        rw.at = s1;
+        c.phase = "out";
+        c.t = 0;
+        if (a.isPlayer) game.audio?.sfx("hull_creak", a);
+      }
+      return;
+    }
+    const k = Math.min(1, c.t / STEP_T), e = smooth4(k);
+    rw.s = s1;
+    const g1 = floor1 - FLOOR;
+    place(bay1.x + w.dx(bay1.x, exit1.x) * e, bay1.y + (exit1.y - bay1.y) * e, floor1 + (g1 - floor1) * e);
+    a.facing = Math.atan2(exit1.y - bay1.y, w.dx(bay1.x, exit1.x)) || a.facing;
+    a.moving = k < 1;
+    if (k >= 1) endRide(a, game);
+  }
+  function endRide(a, game) {
+    const c = a.climb;
+    if (!c?.ride) return;
+    const rw = c.ride;
+    a.climb = null;
+    const done6 = c.phase === "out";
+    const ex = done6 ? c.up ? rw.bExit : rw.aExit : c.up && c.phase !== "wait" ? rw.bExit : rw.aExit;
+    a.x = game.world.wx(ex.x);
+    a.y = ex.y;
+    a.z = 0;
+    a.vz = 0;
+    a.lastG = null;
+    a.airT = 0;
+    a.moving = false;
+    a.lastLanded = game.time || 0;
+    if (!done6) rw.at = c.up && c.phase !== "wait" ? 1 : 0;
+    if (a.isPlayer && done6) game.emit?.("ropewayArrived", { rw, up: c.up });
+  }
+  function installRopeways(game) {
+    game.interactions.onObject("ropeway", (o) => {
+      const p = game.player, rw = game.world.ropeways?.find((r4) => r4.id === o.rope);
+      if (!p || !rw) return;
+      if (busyRope(game, rw)) {
+        game.log("The cabin is out on the cable. Wait for it to come in.", "#b0bec5");
+        return;
+      }
+      startRide(game, p, rw, o.end);
+    });
+    game.on("characterStart", () => {
+      for (const rw of game.world?.ropeways || []) {
+        rw.s = void 0;
+        rw.at = void 0;
+      }
+    });
+  }
+
   // src/game/gangway.js
   var PLANK_W = 0.8;
   var PLANK_RAMP = 1.5;
@@ -76018,8 +76247,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     passable(w, x, y) {
       if (w.solid(x, y)) return false;
       const t = w.type(x, y);
-      if (WALKABLE[t]) return !(this.isPlayer && this.redLineRise(w, x, y) > 0.9);
+      if (WALKABLE[t]) return !(this.isPlayer && (this.redLineRise(w, x, y) > 0.9 || this.drumRise(w, x, y) > 0.9));
       if ((t === T.RED_ROCK || t === T.SNOWROCK) && this.redLineRise(w, x, y) <= 0.5) return true;
+      if (t === T.SNOWROCK && this.isPlayer && this.drumRise(w, x, y) <= 0.5) return true;
       if (SWIMMABLE[t]) {
         if (this.dash && this.dash.ignoreWater) return true;
         if (this.forcedWater) return true;
@@ -76042,6 +76272,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!g?.view3d || w !== g.surface || !w.base?.type) return -Infinity;
       const bt = w.base.type(w.wx(Math.floor(x)), Math.floor(y));
       if (bt !== T.RED_ROCK && bt !== T.SNOWROCK) return -Infinity;
+      return g.view3d.ground(x, y) - this.feetH(g);
+    }
+    /**
+     * How far the ground at (x, y) by one of the Drum Rockies stands over your
+     * feet (away from them: -Infinity): its face is a cliff from below, and its
+     * edge a drop from the top.
+     */
+    drumRise(w, x, y) {
+      const g = this.game;
+      if (!g?.view3d || w !== g.surface || !w.drums?.length || !nearDrum(w, x, y, 1.5)) return -Infinity;
       return g.view3d.ground(x, y) - this.feetH(g);
     }
     canEnterWater() {
@@ -76425,6 +76665,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     /** Up the side, over the top and onto your feet (the start and the end ride along on a ship). */
     updateClimb(dt, game) {
+      if (this.climb.ride) {
+        rideStep(this, dt, game);
+        return;
+      }
       const c = this.climb, w = game.world, to = c.to;
       if (to.ship && (to.ship.sunk || to.ship.alive === false)) {
         this.endClimb(game, true);
@@ -76498,6 +76742,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     /** On your feet at the top — or, knocked off it, falling back from where you were. */
     endClimb(game, fall2 = false) {
+      if (this.climb?.ride) {
+        endRide(this, game);
+        return;
+      }
       const c = this.climb;
       this.climb = null;
       if (!c) return;
@@ -76879,7 +77127,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       const busy = this.act3d && !act2 && !combat && !this.moving && this.state === "idle" ? this.act3d : null;
       const swim = !this.inWater ? null : this.fruit && !this.gills ? this.sinking ? "sink" : "struggle" : this.under ? this.moving || this.intent.mz ? "dive" : "float" : this.moving ? "crawl" : "tread";
-      const air = this.climb ? "up" : !swim && !act2 && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? this.vz > 0 ? "up" : "down" : null;
+      const air = this.climb ? this.climb.ride ? null : "up" : !swim && !act2 && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? this.vz > 0 ? "up" : "down" : null;
       const st = !act2 ? this.station() : null;
       const mode = act2 || `${this.state}${drawn ? "w" : ""}${this.blocking ? "b" : ""}${dodging ? "d" : ""}${hurt ? "h" : ""}${this.moving ? "m" : ""}${combat ? "c" : ""}${this.intent.sprint ? "s" : ""}${swim || ""}${busy ? busy.pose : ""}${this.charging > 0 ? "k" : ""}${air || ""}${st ? st.kind : ""}`;
       if (mode !== this._mode) {
@@ -81020,7 +81268,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var _t2 = new Vector3();
   var DOWN = new Vector3(0, -1, 0);
   var _dr = Array.from({ length: 8 }, () => new Vector3());
-  var smooth4 = (x) => x * x * (3 - 2 * x);
+  var smooth5 = (x) => x * x * (3 - 2 * x);
   var TAU17 = Math.PI * 2;
   var LEG3 = [[B4.thighR, B4.shinR, B4.footR], [B4.thighL, B4.shinL, B4.footL]];
   var SKIRT_T = [0.4, 0.7, 1, 0.35, 0.7, 1];
@@ -81573,13 +81821,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const k = D4.out ? D4.k : 1 - D4.k;
       const rest = _dr[4].set(S6.x + 0.04, S6.y - (d.A1 + d.A2) * 0.9, S6.z + 0.03 * (S6.z > 0 ? 1 : -1));
       const T5 = _dr[5];
-      if (k < 0.42) T5.lerpVectors(rest, G4, smooth4(k / 0.42));
-      else if (k < 0.78) T5.copy(G4).addScaledVector(out, smooth4((k - 0.42) / 0.36) * len);
-      else T5.copy(G4).addScaledVector(out, len).lerp(stanceHand, smooth4((k - 0.78) / 0.22));
+      if (k < 0.42) T5.lerpVectors(rest, G4, smooth5(k / 0.42));
+      else if (k < 0.78) T5.copy(G4).addScaledVector(out, smooth5((k - 0.42) / 0.36) * len);
+      else T5.copy(G4).addScaledVector(out, len).lerp(stanceHand, smooth5((k - 0.78) / 0.22));
       o.reachR = T5;
       if (k >= 0.42) {
         const b = _dr[6].copy(out).negate();
-        o.drawBlade = k < 0.78 ? b : b.lerp(stanceBlade, smooth4((k - 0.78) / 0.22)).normalize();
+        o.drawBlade = k < 0.78 ? b : b.lerp(stanceBlade, smooth5((k - 0.78) / 0.22)).normalize();
       }
       o.drawHold2 = k > 0.86;
     }
@@ -85710,7 +85958,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      * kind, 4 or just 1 for sparse ones (each wedge in view is a draw call);
      * pad: the model's size (m), for the bounds; setup(mesh): shadows and such.
      */
-    constructor(group4, name, { geo: geo2, farGeo = geo2, mat, capNear, capFar, near, wedges = 8, pad: pad2 = 1, share = 0.3, setup = null }) {
+    constructor(group6, name, { geo: geo2, farGeo = geo2, mat, capNear, capFar, near, wedges = 8, pad: pad2 = 1, share = 0.3, setup = null }) {
       this.n2 = near * near;
       this.wedgeOf = WEDGE[wedges];
       this.capFar = capFar;
@@ -85727,7 +85975,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         m.userData.cap = cap3;
         m.userData.box = new Float32Array(6);
         if (setup) setup(m);
-        group4.add(m);
+        group6.add(m);
         this.meshes.push(m);
         return m;
       };
@@ -86346,7 +86594,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     h2 ^= h2 >>> 16;
     return (h2 >>> 0) / 4294967296;
   }
-  var smooth5 = (a, b, x) => {
+  var smooth6 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
@@ -86362,7 +86610,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (world.zone !== 0) w = world.zone === 2 ? 0.9 : 0.5;
     else {
       const lat = Math.abs(y - EQ) / (H / 2);
-      w = 1 - smooth5(0.2, 0.72, lat);
+      w = 1 - smooth6(0.2, 0.72, lat);
       const isl = world.nearestIsland ? world.nearestIsland(x, y, 260) : null;
       if (isl) {
         const c = world.climate(isl.x, isl.y);
@@ -86411,7 +86659,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     };
   }
-  var smooth6 = (a, b, x) => {
+  var smooth7 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
@@ -86710,7 +86958,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             put2("seagrass", x + a, y + b, a * 40, 0.8 + b * 0.7, 1 + depth * 0.05, rgb([0.36 + b * 0.1, 0.56 + a * 0.08, 0.26]));
           }
         }
-        const reefK = reefTile ? 1.2 : reefy && depth > 0.8 && depth < 20 ? smooth6(0.36, 0.62, patch3) * (1 - smooth6(14, 20, depth)) * 1.4 : 0;
+        const reefK = reefTile ? 1.2 : reefy && depth > 0.8 && depth < 20 ? smooth7(0.36, 0.62, patch3) * (1 - smooth7(14, 20, depth)) * 1.4 : 0;
         if (reefK > 0) {
           for (let q2 = 0; q2 < 3; q2++) {
             const a = hash9(x, y, 130 + q2), b = hash9(x, y, 140 + q2), c = hash9(x, y, 150 + q2);
@@ -86988,7 +87236,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 `
   );
   var FADE_N = 25;
-  var smooth7 = (t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  var smooth8 = (t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
   var CanalWater = class {
     constructor(scene) {
       this.group = new Group();
@@ -87041,7 +87289,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             uv[o * 2 + 1] = c.s[i];
             slope[o] = sl;
             speed2[o] = sp;
-            fade2[o] = c.exit ? 1 - smooth7((i - land2 - 1) / (FADE_N - 1)) : smooth7((i - (land2 - FADE_N)) / (FADE_N - 1));
+            fade2[o] = c.exit ? 1 - smooth8((i - land2 - 1) / (FADE_N - 1)) : smooth8((i - (land2 - FADE_N)) / (FADE_N - 1));
           }
         }
         const idx = [];
@@ -87428,7 +87676,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       side: DoubleSide,
       fog: false
     });
-    const group4 = new Group();
+    const group6 = new Group();
     const list = [];
     for (let i = 0; i < N7; i++) {
       const w = 1.2 + Math.random() * 2.6, h2 = 34;
@@ -87438,11 +87686,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const m = new Mesh(g, mat);
       m.frustumCulled = false;
       m.renderOrder = 5;
-      group4.add(m);
+      group6.add(m);
       list.push({ m, bx: Math.random() * B5, bz: Math.random() * B5, tilt: 0.12 + Math.random() * 0.1 });
     }
     return {
-      group: group4,
+      group: group6,
       uStr,
       uCol,
       uT,
@@ -87529,8 +87777,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         m.instanceMatrix.needsUpdate = true;
         if (m.instanceColor) m.instanceColor.needsUpdate = true;
       }
-      for (const [s, views3] of this.critters) if (!seen.has(s)) {
-        for (const v2 of views3) v2.root.removeFromParent();
+      for (const [s, views5] of this.critters) if (!seen.has(s)) {
+        for (const v2 of views5) v2.root.removeFromParent();
         this.critters.delete(s);
       }
       const under = !!v.isUnder;
@@ -87551,18 +87799,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     /** The bigger animals: a model each (a trunked tuna, a baby Sea King, a Sea Cat, a Yagara Bull). */
     animals(s, w, ox, oy, env2, S6) {
-      let views3 = this.critters.get(s);
-      if (!views3) {
-        views3 = s.fish.map((f) => {
+      let views5 = this.critters.get(s);
+      if (!views5) {
+        views5 = s.fish.map((f) => {
           const v = VIEWS2[s.def.shape](f.col || s.def.colors[0]);
           v.root.scale.setScalar(f.size || s.def.size);
           this.group.add(v.root);
           return v;
         });
-        this.critters.set(s, views3);
+        this.critters.set(s, views5);
       }
       s.fish.forEach((f, i) => {
-        const v = views3[i];
+        const v = views5[i];
         v.root.visible = f.alive;
         if (!f.alive) return;
         S6.fishPos(s, f, this.P);
@@ -88194,6 +88442,235 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
   });
+
+  // src/render3d/ropeway3d.js
+  var TIMBER = "#6d4c33";
+  var DARK2 = "#4e3524";
+  var PLANK = "#8d6748";
+  var STONE2 = "#8e9aa3";
+  var IRON3 = "#37474f";
+  var SNOW2 = "#f4f8fb";
+  var RED = "#a23b2c";
+  var GLASS = "#1e3240";
+  function stationGeo(top, reach2, edge) {
+    return model(`ropeway:${top ? 1 : 0}:${reach2.toFixed(1)}:${edge.toFixed(1)}`, (k) => {
+      const L3 = reach2 + 2.2, W4 = 4.2;
+      k.add(box(L3, 0.22, W4), { at: [L3 / 2, FLOOR - 0.22, 0], color: PLANK, outline: 0.03 });
+      for (let x = 0.4; x < L3; x += 0.9) k.add(box(0.06, 0.03, W4 - 0.1), { at: [x, FLOOR, 0], color: DARK2 });
+      for (const z of [-1, 1]) k.add(box(L3, 0.3, 0.18), { at: [L3 / 2, FLOOR - 0.5, z * (W4 / 2 - 0.1)], color: TIMBER });
+      if (top) {
+        k.add(box(Math.max(1.2, edge - 0.3), 1.4, W4 + 0.6), { at: [Math.max(0.6, (edge - 0.3) / 2), -1.2, 0], color: STONE2, outline: 0.04 });
+        for (const z of [-1, 1]) {
+          const x0 = L3 - 0.3, y0 = FLOOR - 0.5, x1 = edge + 0.15, y1 = -6.5;
+          const len = Math.hypot(x0 - x1, y0 - y1), a = Math.atan2(y0 - y1, x0 - x1);
+          k.add(box(len, 0.24, 0.24), { at: [(x0 + x1) / 2, (y0 + y1) / 2 - 0.12, z * (W4 / 2 - 0.2)], rot: [0, 0, a], color: TIMBER, outline: 0.03 });
+          k.add(box(0.5, 0.6, 0.5), { at: [x1, y1 - 0.3, z * (W4 / 2 - 0.2)], color: IRON3 });
+        }
+      } else {
+        for (let x = 0.3; x < L3; x += 2.2) for (const z of [-1, 1]) k.add(box(0.22, 1.2, 0.22), { at: [x, FLOOR - 1.4, z * (W4 / 2 - 0.15)], color: TIMBER });
+      }
+      for (const z of [-1, 1]) {
+        k.add(box(reach2 - 1.2, 0.08, 0.08), { at: [(reach2 - 1.2) / 2, FLOOR + 1, z * (W4 / 2 - 0.05)], color: TIMBER });
+        for (let x = 0.1; x < reach2 - 1.1; x += 1.2) k.add(box(0.1, 1, 0.1), { at: [x, FLOOR, z * (W4 / 2 - 0.05)], color: TIMBER });
+      }
+      const bx = reach2, H4 = HANG + 1.5;
+      for (const sx of [-1.6, 1.6]) for (const z of [-1, 1]) k.add(box(0.26, H4, 0.26), { at: [bx + sx, FLOOR, z * (W4 / 2 - 0.15)], color: TIMBER, outline: 0.03 });
+      for (const z of [-1, 1]) k.add(box(3.6, 0.3, 0.3), { at: [bx, FLOOR + H4, z * (W4 / 2 - 0.15)], color: DARK2 });
+      for (const s of [-1, 1]) {
+        k.add(box(4.4, 0.16, W4 / 2 + 0.5), { at: [bx, FLOOR + H4 + 0.55, s * (W4 / 4 + 0.1)], rot: [s * 0.42, 0, 0], color: RED, outline: 0.03 });
+        k.add(box(4.5, 0.12, W4 / 2 + 0.4), { at: [bx, FLOOR + H4 + 0.68, s * (W4 / 4 + 0.05)], rot: [s * 0.42, 0, 0], color: SNOW2 });
+      }
+      k.add(torus(1.25, 0.09, 6, 20), { at: [bx, FLOOR + HANG, 0], rot: [Math.PI / 2, 0, 0], color: IRON3 });
+      k.add(cyl(0.18, 0.18, 0.5, 8), { at: [bx, FLOOR + HANG - 0.25, 0], color: IRON3 });
+      k.add(box(0.2, H4 - HANG + 0.2, 0.2), { at: [bx, FLOOR + HANG, 0], color: IRON3 });
+      k.add(box(0.5, 0.15, 2.2), { at: [-0.25, FLOOR - 0.3, 0], color: PLANK });
+      k.add(box(0.5, 0.3, 2.2), { at: [0.2, FLOOR - 0.3, 0], color: PLANK });
+      const hx = top ? -0.9 : reach2 * 0.45, hz = -(W4 / 2 + 1.9);
+      k.add(box(3.2, 2.6, 3.4), { at: [hx, -0.2, hz], color: TIMBER, outline: 0.04 });
+      for (const s of [-1, 1]) {
+        k.add(box(2.2, 0.14, 3.8), { at: [hx + s * 0.95, 2.55, hz], rot: [0, 0, -s * 0.5], color: RED, outline: 0.03 });
+        k.add(box(2.1, 0.1, 3.9), { at: [hx + s * 0.93, 2.66, hz], rot: [0, 0, -s * 0.5], color: SNOW2 });
+      }
+      k.add(box(1.1, 1.9, 0.05), { at: [hx, -0.2, hz + 1.72], color: DARK2 });
+      k.add(box(0.8, 0.6, 0.06), { at: [hx, 1, hz - 1.72], color: GLASS, glow: "#ffcc80" });
+      k.add(cyl(0.12, 0.12, 1.2, 6), { at: [hx - 0.9, 2.5, hz - 0.8], color: IRON3 });
+      k.add(box(0.2, 0.3, 0.2), { at: [hx + 0.75, 1.7, hz + 1.8], color: "#ffe082", glow: "#ffcc80" });
+    });
+  }
+  registerPropBuilder("ropeway", (o, ctx) => {
+    bindCtx(ctx);
+    const root2 = new Group();
+    root2.name = "ropeway-station";
+    root2.add(meshOf(stationGeo(o.end === "b", o.reach || 7, o.edge || 4)));
+    root2.rotation.y = -(o.face || 0);
+    return root2;
+  });
+  function cabinGeo() {
+    const k = new Mesher();
+    const L3 = 2.5, W4 = 1.9;
+    k.add(box(L3, 0.18, W4), { at: [0, -0.18, 0], color: IRON3, outline: 0.03 });
+    k.add(box(L3, 0.95, W4), { at: [0, 0, 0], color: RED, outline: 0.03 });
+    for (const s of [-1, 1]) {
+      for (const t of [-1, 1]) k.add(box(0.12, 0.9, 0.12), { at: [s * (L3 / 2 - 0.06), 0.92, t * (W4 / 2 - 0.06)], color: TIMBER });
+      k.add(box(0.07, 0.85, 0.07), { at: [0, 0.95, s * (W4 / 2 - 0.035)], color: TIMBER });
+      k.add(box(L3, 0.07, 0.07), { at: [0, 0.95, s * (W4 / 2 - 0.035)], color: DARK2 });
+      k.add(box(0.07, 0.07, W4), { at: [s * (L3 / 2 - 0.035), 0.95, 0], color: DARK2 });
+    }
+    k.add(box(L3, 0.2, W4), { at: [0, 1.8, 0], color: TIMBER, outline: 0.03 });
+    k.add(box(L3 + 0.3, 0.16, W4 + 0.3), { at: [0, 2, 0], color: RED, outline: 0.03 });
+    k.add(box(L3 + 0.1, 0.1, W4 + 0.1), { at: [0, 2.16, 0], color: SNOW2 });
+    k.add(box(0.14, 0.18, 0.14), { at: [L3 / 2 + 0.06, 1.8, 0], color: "#ffe082", glow: "#ffcc80" });
+    const top = HANG - 0.25;
+    for (const s of [-1, 1]) k.add(box(0.1, top - 2.16, 0.1), { at: [s * 0.55, 2.16, 0], color: IRON3 });
+    k.add(box(1.2, 0.12, 0.12), { at: [0, top - 0.12, 0], color: IRON3 });
+    k.add(box(0.12, 0.3, 0.12), { at: [0, top, 0], color: IRON3 });
+    k.add(box(1.4, 0.26, 0.3), { at: [0, top + 0.1, 0], color: IRON3, outline: 0.02 });
+    for (const s of [-1, 1]) k.add(cyl(0.16, 0.16, 0.12, 10), { at: [s * 0.5, HANG + 0.02, -0.06], rot: [Math.PI / 2, 0, 0], color: "#546e7a" });
+    return k.build();
+  }
+  var views3 = /* @__PURE__ */ new Map();
+  var group4 = null;
+  var cabinG = null;
+  var ROPE_MAT = new MeshLambertMaterial({ color: "#2b2b2b" });
+  function cableMesh(world, v, rw) {
+    const pts = [];
+    for (let i = 0; i <= 40; i++) {
+      const s = i / 40, p = cableXY(world, rw, s);
+      pts.push(new Vector3(world.dx(rw.a.x, p.x), cableAt(rw, s), p.y - rw.a.y));
+    }
+    const g = new TubeGeometry(new CatmullRomCurve3(pts), 80, 0.08, 5, false);
+    const m = new Mesh(g, ROPE_MAT);
+    m.castShadow = false;
+    return m;
+  }
+  registerFrameHook((env2, ctx) => {
+    const game = ctx.game, v = game?.view3d, w = ctx.world;
+    if (!group4) {
+      group4 = new Group();
+      group4.name = "ropeways";
+      ctx.scene.add(group4);
+    }
+    const list = w && w === game?.world && w.ropeways || [];
+    for (const [rw, view] of views3) {
+      if (list.includes(rw)) continue;
+      view.root.removeFromParent();
+      view.cable.geometry.dispose();
+      views3.delete(rw);
+    }
+    if (!v || !list.length) return;
+    for (const rw of list) {
+      const px2 = game.player?.x ?? v.ox, py2 = game.player?.y ?? v.oy;
+      const near = w.distance(px2, py2, rw.a.x, rw.a.y) < 420 || w.distance(px2, py2, rw.b.x, rw.b.y) < 420;
+      let view = views3.get(rw);
+      if (!near) {
+        if (view) view.root.visible = false;
+        continue;
+      }
+      if (!rigRopeway(game, rw)) continue;
+      if (!view) {
+        cabinG || (cabinG = cabinGeo());
+        const root2 = new Group();
+        root2.name = "ropeway";
+        const cable = cableMesh(w, v, rw);
+        const cabin = new Mesh(cabinG, vcMat());
+        cabin.castShadow = true;
+        cabin.receiveShadow = true;
+        root2.add(cable, cabin);
+        view = { root: root2, cable, cabin };
+        views3.set(rw, view);
+        group4.add(root2);
+      }
+      view.root.visible = true;
+      view.cable.position.set(w.dx(v.ox, rw.a.x), 0, rw.a.y - v.oy);
+      const s = rw.s ?? rw.at ?? 0, p = cableXY(w, rw, s);
+      const sway = Math.sin((game.time || 0) * 1.3) * 0.015 * Math.sin(Math.PI * s);
+      view.cabin.position.set(w.dx(v.ox, p.x), cableAt(rw, s) - HANG, p.y - v.oy);
+      view.cabin.rotation.set(0, -Math.atan2(rw.b.y - rw.a.y, w.dx(rw.a.x, rw.b.x)), sway, "YXZ");
+    }
+  }, "ropeways");
+
+  // src/render3d/drums3d.js
+  var views4 = /* @__PURE__ */ new Map();
+  var group5 = null;
+  var hash10 = (i, s) => {
+    const v = Math.sin(i * 127.1 + s * 311.7) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  function capGeometry(d) {
+    const n = Math.max(48, Math.round(Math.PI * 2 * d.R / 1.1));
+    const rows = (depth) => [[-1.3, -0.25], [-0.6, 0.22], [0.15, 0.42], [0.42, 0.1], [0.4, -0.7], [0.36, -depth * 0.55], [0.3, -depth]];
+    const R4 = rows(0).length;
+    const pos = new Float32Array(n * R4 * 3), col2 = new Float32Array(n * R4 * 3);
+    const white = new Color("#f7fbff"), blue = new Color("#cfdcec"), shade4 = new Color();
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2, r4 = drumR(d, a), c = Math.cos(a), s = Math.sin(a);
+      const tongue = 0.5 + 0.5 * Math.sin(a * 7 + d.seed * 3) * Math.sin(a * 3.1 - d.seed);
+      const drip = hash10(i, d.seed) > 0.82 ? 1.6 + hash10(i + 7, d.seed) * 2.4 : 0;
+      const depth = 1.5 + tongue * 2.6 + drip;
+      rows(depth).forEach(([dr, dy], j) => {
+        const k = (i * R4 + j) * 3;
+        pos[k] = c * (r4 + dr);
+        pos[k + 1] = d.H + dy;
+        pos[k + 2] = s * (r4 + dr);
+        shade4.copy(white).lerp(blue, Math.min(1, Math.max(0, -dy / Math.max(1, depth)) * 0.7 + (j >= 4 ? 0.15 : 0)));
+        col2[k] = shade4.r;
+        col2[k + 1] = shade4.g;
+        col2[k + 2] = shade4.b;
+      });
+    }
+    const idx = [];
+    for (let i = 0; i < n; i++) {
+      const i2 = (i + 1) % n;
+      for (let j = 0; j < R4 - 1; j++) {
+        const a = i * R4 + j, b = i2 * R4 + j, c2 = i * R4 + j + 1, e = i2 * R4 + j + 1;
+        idx.push(a, b, c2, b, e, c2);
+      }
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new BufferAttribute(pos, 3));
+    g.setAttribute("color", new BufferAttribute(col2, 3));
+    g.setAttribute("tint", new BufferAttribute(new Float32Array(n * R4), 1));
+    g.setAttribute("glow", new BufferAttribute(new Float32Array(n * R4 * 4), 4));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    g.computeBoundingSphere();
+    return g;
+  }
+  registerFrameHook((env2, ctx) => {
+    const game = ctx.game, v = game?.view3d, w = ctx.world;
+    if (!group5) {
+      group5 = new Group();
+      group5.name = "drum-caps";
+      ctx.scene.add(group5);
+    }
+    const list = w && w === game?.world && w.zone === 0 && w.drums || [];
+    for (const [d, m] of views4) {
+      if (list.includes(d)) continue;
+      m.removeFromParent();
+      m.geometry.dispose();
+      views4.delete(d);
+    }
+    if (!v || !list.length) return;
+    const px2 = game.player?.x ?? v.ox, py2 = game.player?.y ?? v.oy;
+    for (const d of list) {
+      let m = views4.get(d);
+      const near = w.distance(px2, py2, d.x, d.y) < 700;
+      if (!near) {
+        if (m) m.visible = false;
+        continue;
+      }
+      if (!m) {
+        m = new Mesh(capGeometry(d), vcMat());
+        m.castShadow = true;
+        m.receiveShadow = true;
+        m.name = "drum-cap";
+        views4.set(d, m);
+        group5.add(m);
+      }
+      m.visible = true;
+      m.position.set(w.dx(v.ox, d.x), 0, d.y - v.oy);
+    }
+  }, "drum-caps");
 
   // src/ui/preview3d.js
   var shared = null;
@@ -89770,6 +90247,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       });
       rec.landmarks.push({ type: "mountain", name: f.name, x: c.x, y: c.y, r: r4 });
     }
+    for (const f of def.drums || []) {
+      const c = P6(f);
+      const d = { name: f.name, x: c.x, y: c.y, R: rel(f.r ?? 0.1, Math.max(hw, hh)), H: f.h ?? 40, seed: ((f.name || "").length * 1.7 + c.x * 0.013) % 6.283, island: def.id };
+      (world.drums || (world.drums = [])).push(d);
+      (rec.drums || (rec.drums = [])).push(d);
+      stampDrum(world, d, clim);
+      rec.landmarks.push({ type: "mountain", name: f.name, x: c.x, y: c.y, r: d.R, drum: true });
+    }
     for (const f of def.areas || []) {
       const c = P6(f);
       const rx = rel(f.rx ?? f.r ?? 0.3, hw), ry = rel(f.ry ?? f.r ?? 0.3, hh);
@@ -89852,10 +90337,26 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
     for (const t of rec.towns.slice(1)) {
+      if ((def.towns || []).find((d) => (d.id || d.name) === (t.id || t.name))?.noRoad) continue;
       const a = rec.towns[0].plaza, b = t.plaza;
       if (!walkable(world, rec.landBox, a.x, a.y + 2, b.x, b.y + 2)) connectRoad(world, a.x, a.y, b.x, b.y, t.roadTile || T.DIRT);
     }
+    for (const d of rec.drums || []) stampDrum(world, d, clim, true);
     rec.clearings = [];
+    for (const f of def.ropeways || []) {
+      const d = (rec.drums || []).find((q2) => q2.name === f.drum);
+      if (!d) continue;
+      const a = P6({ dx: f.from[0], dy: f.from[1] });
+      const th = Math.atan2(a.y - d.y, world.dx(d.x, a.x)), ux = Math.cos(th), uy = Math.sin(th), Rf = drumR(d, th);
+      const at4 = (x, y, k) => ({ x: world.wx(x + ux * k), y: y + uy * k });
+      const rw = { id: f.id, name: f.name, island: def.id, a: { x: a.x, y: a.y }, b: at4(d.x, d.y, Rf + 3.2), aExit: at4(a.x, a.y, 4.5), bExit: at4(d.x, d.y, Rf - 4.5) };
+      (world.ropeways || (world.ropeways = [])).push(rw);
+      placeObject(world, { kind: "ropeway", rope: f.id, end: "a", x: rw.aExit.x, y: rw.aExit.y, face: th + Math.PI, reach: 4.5, block: false, name: f.name, interact: `Ride the ropeway up to ${f.top || "the summit"}`, use: "ropeway", interactRange: 3.4 });
+      placeObject(world, { kind: "ropeway", rope: f.id, end: "b", x: rw.bExit.x, y: rw.bExit.y, face: th, reach: 7.7, edge: 4.5, block: false, name: f.name, interact: `Ride the ropeway down to ${f.foot || "the foot of the mountain"}`, use: "ropeway", interactRange: 3.4 });
+      rec.spots[`${f.id}_foot`] = { ...rw.aExit };
+      rec.spots[`${f.id}_top`] = { ...rw.bExit };
+      rec.clearings.push({ x: rw.aExit.x, y: rw.aExit.y, r: 8 }, { x: rw.bExit.x, y: rw.bExit.y, r: 7 });
+    }
     for (const lm of def.landmarks || []) {
       const c = P6(lm);
       const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
@@ -90326,6 +90827,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
     }
   }
+  function stampDrum(world, d, clim, faceOnly = false) {
+    const m = Math.ceil(d.R * 1.06) + 1;
+    for (let y = Math.floor(d.y - m); y <= Math.ceil(d.y + m); y++) {
+      for (let i = Math.floor(-m); i <= m; i++) {
+        const x = world.wx(Math.floor(d.x) + i);
+        const k = drumTile(world, d, x, y);
+        if (!k || world.isLiquid(x, y) || world.isOverlay(x, y)) continue;
+        if (k === 1) world.setTile(x, y, T.SNOWROCK, void 0, clim);
+        else if (!faceOnly) world.setTile(x, y, T.SNOW, 250, clim);
+      }
+    }
+  }
   function placeObject(world, o) {
     if (!world.objects) return null;
     return world.objects.add(o);
@@ -90445,7 +90958,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const centre = (x, y) => (corner(x, y) + corner(x + 1, y + 1)) / 2;
     const N42 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     const gentle = (x, y) => {
-      if (!hard.has(world.type(x, y)) || redLine(x, y)) return false;
+      if (!hard.has(world.type(x, y)) || redLine(x, y) || drumFace(world, x, y)) return false;
       let h2 = null;
       for (const [i, j] of N42) {
         if (!world.walkable(x + i, y + j)) continue;
@@ -94294,8 +94807,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       music: "grandline"
     },
     // ------------------------------------------------------------ Drum Island
-    // A winter island crowned by the Drum Rockies; Drum Castle stands on the
-    // tallest. Bighorn lies by the river where ships dock.
+    // A winter island of drum-shaped mountains: the Drum Rockies, sheer-sided
+    // cylinders of rock standing straight up out of the snow, their flat tops
+    // capped white (see world/drums.js). The tallest, Drum Rock, stands in the
+    // middle of the island with Drum Castle on its summit, and the Drum
+    // Ropeway's cable runs up its face to the castle gate — the only way up,
+    // short of climbing the cliff. Bighorn lies by the river where ships dock;
+    // Gyasta by its frozen lake.
     {
       id: "drum_island",
       name: "Drum Island",
@@ -94307,12 +94825,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       climate: "winter",
       rough: 0.2,
       blobs: [[0, 0, 0.92, 0.9], [-0.5, 0.45, 0.4, 0.35]],
-      mountains: [
-        { name: "Drum Rock", dx: 0.12, dy: -0.18, r: 0.14, h: 0.6, cliff: 260 },
-        { name: "Drum Rockies", dx: 0.5, dy: -0.5, r: 0.08, h: 1.4 },
-        { dx: -0.15, dy: -0.52, r: 0.07, h: 1.35 },
-        { dx: 0.55, dy: 0.05, r: 0.07, h: 1.35 },
-        { dx: -0.3, dy: -0.15, r: 0.06, h: 1.3 }
+      drums: [
+        { name: "Drum Rock", dx: 0.12, dy: -0.2, r: 0.27, h: 72 },
+        { name: "Drum Rockies", dx: 0.5, dy: -0.5, r: 0.1, h: 46 },
+        { name: "Drum Rockies (west)", dx: -0.3, dy: -0.5, r: 0.09, h: 40 },
+        { name: "Drum Rockies (east)", dx: 0.6, dy: 0, r: 0.08, h: 37 },
+        { name: "Drum Rockies (Bighorn)", dx: -0.42, dy: -0.12, r: 0.075, h: 33 },
+        { name: "Drum Rockies (north)", dx: 0.32, dy: -0.66, r: 0.07, h: 30 },
+        { name: "Drum Rockies (far west)", dx: -0.62, dy: -0.38, r: 0.06, h: 27 }
       ],
       rivers: [{ points: [[-1.1, 0.15], [-0.6, 0.12], [-0.25, 0.02]], width: 5, meander: 0.5 }],
       lakes: [{ name: "Gyasta lake", dx: 0.45, dy: 0.5, rx: 0.1, ry: 0.07, tile: T.ICE }],
@@ -94335,19 +94855,22 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           houses: 12
         },
         {
+          // (on the summit of Drum Rock: up the ropeway, no road)
           id: "drum_castle",
           name: "Drum Castle",
           dx: 0.12,
-          dy: -0.2,
-          w: 34,
-          h: 24,
+          dy: -0.22,
+          w: 22,
+          h: 16,
           style: "snow",
           walls: true,
-          dockDir: "n",
+          mainDir: "v",
           plaza: "flagpole",
+          noRoad: true,
+          // (an icy-looking castle: pale stone walls, slate-blue roofs, round towers at its corners)
           buildings: [
-            { role: "palace", name: "Drum Castle", w: 12, d: 7 },
-            { role: "doctor", name: "Dr. Kureha's Clinic", npc: "p1_kureha" }
+            { role: "palace", name: "Drum Castle", w: 12, d: 7, hgt: 8, style: "noble", wall: "#dfe9f1", roof: "#4b6b8c", roofType: "mansard" },
+            { role: "doctor", name: "Dr. Kureha's Clinic", npc: "p1_kureha", style: "noble", wall: "#e3ebf2", roof: "#4b6b8c" }
           ],
           houses: 0
         },
@@ -94365,19 +94888,26 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           houses: 6
         }
       ],
+      ropeways: [{ id: "drum_ropeway", name: "Drum Ropeway", drum: "Drum Rock", from: [0.12, 0.61], top: "Drum Castle", foot: "the foot of Drum Rock" }],
       landmarks: [
-        { kind: "flagpole", dx: 0.12, dy: -0.47, name: "Dr. Hiriluk's Jolly Roger", spot: "hiriluk_flag", lore: `(A skull with a cross of cherry blossoms instead of bones.) Dr. Hiriluk said a pirate's flag is a symbol of conviction. "When do you think people die? When they are forgotten."` },
-        { kind: "cannon", dx: 0.02, dy: -0.47 },
-        { kind: "cannon", dx: 0.22, dy: -0.47 },
-        { kind: "sign", dx: -0.1, dy: 0.05, name: "Drum Ropeway (closed by royal decree)", spot: "castle_road", lore: '"DRUM ROPEWAY \u2014 closed by order of King Wapol. Doctors and peasants may not visit the castle." The cable is cut. The only way up Drum Rock is to climb.' }
+        { kind: "flagpole", dx: 0.12, dy: -0.46, name: "Dr. Hiriluk's Jolly Roger", spot: "hiriluk_flag", lore: `(A skull with a cross of cherry blossoms instead of bones.) Dr. Hiriluk said a pirate's flag is a symbol of conviction. "When do you think people die? When they are forgotten."` },
+        { kind: "cannon", dx: 0.04, dy: -0.44 },
+        { kind: "cannon", dx: 0.2, dy: -0.44 },
+        // Drum Castle's towers, at the corners inside its walls
+        // (tall enough to stand up over the rim of Drum Rock, seen from the snowfields and the sea below)
+        { kind: "tower", name: "Drum Castle tower", h: 24, dx: -0.022, dy: -0.34 },
+        { kind: "tower", name: "Drum Castle tower", h: 24, dx: 0.262, dy: -0.34 },
+        { kind: "tower", name: "Drum Castle tower", h: 18, dx: -0.022, dy: -0.1 },
+        { kind: "tower", name: "Drum Castle tower", h: 18, dx: 0.262, dy: -0.1 },
+        { kind: "sign", dx: 0.17, dy: 0.66, name: "Drum Ropeway", spot: "castle_road", lore: '"DRUM ROPEWAY \u2014 to Drum Castle." (Underneath, freshly painted over a royal decree:) "Open to doctors, patients and peasants alike. By order of the people of Drum." The cable climbs straight up the face of Drum Rock, seventy metres of sheer cliff, to the castle gate.' }
       ],
-      spots: [{ id: "castle_gate", dx: 0.12, dy: -0.02 }, { id: "lapahn_slope", dx: -0.35, dy: -0.45 }],
+      spots: [{ id: "castle_gate", dx: 0.12, dy: -0.04 }, { id: "lapahn_slope", dx: 0, dy: 0.5 }],
       docks: [{ near: "bighorn", dir: "w", name: "Bighorn River Mouth" }, { near: "gyasta", dir: "se", name: "Gyasta" }],
       weather: { snow: 0.55 },
       logNext: ["alabasta", "nanimonai_island"],
       logTime: 2,
       danger: 4,
-      tagline: "A kingdom without doctors, snowed under \u2014 and a castle on a drum-shaped peak.",
+      tagline: "A kingdom without doctors, snowed under \u2014 and a castle on top of a drum-shaped mountain.",
       music: "town"
     },
     // ------------------------------------------------------------ Nanimonai Island
@@ -97173,7 +97703,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var TAU23 = Math.PI * 2;
   var easeOut2 = (k) => 1 - (1 - k) ** 3;
   var clamp018 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
-  function hash10(n) {
+  function hash11(n) {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
   }
@@ -97185,7 +97715,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.beginPath();
     for (let i = 0; i < n * 2; i++) {
       const a = i / (n * 2) * TAU23;
-      const rr = i % 2 ? R4 * (0.26 + 0.08 * hash10(seed + i)) : R4 * (0.62 + 0.55 * hash10(seed + i * 3.1));
+      const rr = i % 2 ? R4 * (0.26 + 0.08 * hash11(seed + i)) : R4 * (0.62 + 0.55 * hash11(seed + i * 3.1));
       const x = Math.cos(a) * rr * sx, y = Math.sin(a) * rr;
       if (i) g.lineTo(x, y);
       else g.moveTo(x, y);
@@ -97198,7 +97728,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     g.moveTo(x0, y0);
     for (let i = 1; i < n; i++) {
       const t = i / n;
-      const j = (hash10(seed + i * 7.3) - 0.5) * 2 * amp * Math.sin(t * Math.PI);
+      const j = (hash11(seed + i * 7.3) - 0.5) * 2 * amp * Math.sin(t * Math.PI);
       g.lineTo(x0 + dx * t + nx * j, y0 + dy * t + ny * j);
     }
     g.lineTo(x1, y1);
@@ -97281,18 +97811,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const ang = i / n * TAU23 + s.seed + (hash10(s.seed + i) - 0.5) * 0.5;
+          const ang = i / n * TAU23 + s.seed + (hash11(s.seed + i) - 0.5) * 0.5;
           let px2 = 0, py2 = 0;
           g.moveTo(0, 0);
-          const len = s.r * (0.6 + 0.5 * hash10(s.seed * 3 + i));
+          const len = s.r * (0.6 + 0.5 * hash11(s.seed * 3 + i));
           for (let j = 1; j <= 4; j++) {
             const rr = len * j / 4;
-            const off = (hash10(s.seed + i * 13 + j) - 0.5) * 0.6;
+            const off = (hash11(s.seed + i * 13 + j) - 0.5) * 0.6;
             px2 = Math.cos(ang + off) * rr;
             py2 = Math.sin(ang + off) * rr * 0.7;
             g.lineTo(px2, py2);
-            if (j === 2 && hash10(s.seed + i * 5) > 0.45) {
-              const b = ang + (hash10(s.seed + i * 9) > 0.5 ? 0.7 : -0.7);
+            if (j === 2 && hash11(s.seed + i * 5) > 0.45) {
+              const b = ang + (hash11(s.seed + i * 9) > 0.5 ? 0.7 : -0.7);
               g.moveTo(px2, py2);
               g.lineTo(px2 + Math.cos(b) * len * 0.3, py2 + Math.sin(b) * len * 0.21);
               g.moveTo(px2, py2);
@@ -97482,8 +98012,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.beginPath();
       const n = s.lines ?? 5;
       for (let i = 0; i < n; i++) {
-        const th = (hash10(s.seed + i * 17) - 0.5) * 2.2;
-        const r0 = R4 * (0.9 + 0.5 * k), r1 = R4 * (1.5 + 0.9 * hash10(s.seed + i) + k * 0.8);
+        const th = (hash11(s.seed + i * 17) - 0.5) * 2.2;
+        const r0 = R4 * (0.9 + 0.5 * k), r1 = R4 * (1.5 + 0.9 * hash11(s.seed + i) + k * 0.8);
         g.moveTo(Math.cos(th) * r0, Math.sin(th) * r0 * 0.8);
         g.lineTo(Math.cos(th) * r1, Math.sin(th) * r1 * 0.8);
       }
@@ -97578,13 +98108,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const segs = Math.max(4, Math.round(L3 * 3));
       for (let i = 1; i <= segs; i++) {
         const x = i / segs * L3;
-        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 - c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash10(s.seed + i + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
+        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 - c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash11(s.seed + i + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
         g.lineTo(x, -wd / 2 - ripple2);
       }
       g.lineTo(L3 + wd * 0.3, 0);
       for (let i = segs; i >= 1; i--) {
         const x = i / segs * L3;
-        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 + c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash10(s.seed + i * 3 + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
+        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 + c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash11(s.seed + i * 3 + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
         g.lineTo(x, wd / 2 + ripple2);
       }
       g.lineTo(0, wd / 2);
@@ -97625,7 +98155,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fillStyle = "#e1f5fe";
         const n = Math.max(3, Math.round(L3 * 1.5));
         for (let i = 0; i < n; i++) {
-          const x = (i + 0.5) / n * L3, sd = hash10(s.seed + i) > 0.5 ? 1 : -1, h2 = wd * (0.5 + hash10(s.seed + i * 3) * 0.6);
+          const x = (i + 0.5) / n * L3, sd = hash11(s.seed + i) > 0.5 ? 1 : -1, h2 = wd * (0.5 + hash11(s.seed + i * 3) * 0.6);
           g.beginPath();
           g.moveTo(x - 0.12, sd * wd * 0.35);
           g.lineTo(x, sd * (wd * 0.35 + h2));
@@ -97687,10 +98217,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         const nb = s.branches || 2;
         for (let b = 0; b < nb; b++) {
-          const t0 = 0.25 + hash10(seed + b) * 0.5;
+          const t0 = 0.25 + hash11(seed + b) * 0.5;
           const bx = dx * t0, by = (dy - z1 + z0) * t0 - z0;
-          const ba = Math.atan2(dy - z1 + z0, dx) + (hash10(seed + b * 3) - 0.5) * 2;
-          const bl2 = 0.4 + hash10(seed + b * 5) * 0.8;
+          const ba = Math.atan2(dy - z1 + z0, dx) + (hash11(seed + b * 3) - 0.5) * 2;
+          const bl2 = 0.4 + hash11(seed + b * 5) * 0.8;
           jagged(g, bx, by, bx + Math.cos(ba) * bl2, by + Math.sin(ba) * bl2, seed + b * 11, 0.15, 4);
         }
         g.stroke();
@@ -97718,12 +98248,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU23 + (hash10(s.seed + i) - 0.5) * 0.5;
+          const th = i / n * TAU23 + (hash11(s.seed + i) - 0.5) * 0.5;
           let x = 0, y = 0;
           g.moveTo(0, 0);
-          const L3 = R4 * (0.6 + 0.5 * hash10(s.seed + i * 3));
+          const L3 = R4 * (0.6 + 0.5 * hash11(s.seed + i * 3));
           for (let j = 1; j <= 3; j++) {
-            const r4 = L3 * j / 3, o = (hash10(s.seed + i * 7 + j) - 0.5) * 0.5;
+            const r4 = L3 * j / 3, o = (hash11(s.seed + i * 7 + j) - 0.5) * 0.5;
             x = Math.cos(th + o) * r4;
             y = Math.sin(th + o) * r4;
             g.lineTo(x, y);
@@ -97761,12 +98291,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const segs = 10;
         for (let i = 1; i <= segs; i++) {
           const y = -H4 * (i / segs);
-          const wob = s.kind === "fire" ? Math.sin(i * 1.7 - c.t * 18 + layer) * w * 0.25 : s.kind === "lightning" ? (hash10(s.seed + i + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
+          const wob = s.kind === "fire" ? Math.sin(i * 1.7 - c.t * 18 + layer) * w * 0.25 : s.kind === "lightning" ? (hash11(s.seed + i + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
           g.lineTo(-w * (1 - 0.3 * i / segs) + wob, y);
         }
         for (let i = segs; i >= 1; i--) {
           const y = -H4 * (i / segs);
-          const wob = s.kind === "fire" ? Math.sin(i * 1.3 + c.t * 16 + layer) * w * 0.25 : s.kind === "lightning" ? (hash10(s.seed + i * 3 + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
+          const wob = s.kind === "fire" ? Math.sin(i * 1.3 + c.t * 16 + layer) * w * 0.25 : s.kind === "lightning" ? (hash11(s.seed + i * 3 + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
           g.lineTo(w * (1 - 0.3 * i / segs) + wob, y);
         }
         g.lineTo(w, 0);
@@ -97947,7 +98477,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         for (let i = 0; i < n; i++) {
           const th = i / n * TAU23;
           const x = Math.cos(th) * R4 * 0.75 + Math.sin(c.t * 0.8 + i) * 0.1, y = Math.sin(th) * R4 * 0.28;
-          const rr = R4 * (0.38 + 0.12 * hash10(s.seed + i));
+          const rr = R4 * (0.38 + 0.12 * hash11(s.seed + i));
           g.globalAlpha = a * (pass ? 0.9 : 0.5);
           g.fillStyle = pass ? s.color || "#37474f" : "#263238";
           g.beginPath();
@@ -97960,7 +98490,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.globalAlpha = a * 0.5;
         g.fillStyle = s.glow || "#fff59d";
         g.beginPath();
-        g.arc((hash10(Math.floor(c.t * 8) + s.seed) - 0.5) * R4, 0, R4 * 0.35, 0, TAU23);
+        g.arc((hash11(Math.floor(c.t * 8) + s.seed) - 0.5) * R4, 0, R4 * 0.35, 0, TAU23);
         g.fill();
       }
     }
@@ -98113,7 +98643,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.beginPath();
         for (let i = 0; i < 9; i++) {
           const th = i / 9 * TAU23;
-          const rr = R4 * (0.8 + 0.3 * hash10(s.seed + i));
+          const rr = R4 * (0.8 + 0.3 * hash11(s.seed + i));
           g.lineTo(Math.cos(th) * rr, Math.sin(th) * rr);
         }
         g.closePath();
@@ -98230,8 +98760,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.lineCap = "round";
       g.beginPath();
       for (let i = 0; i < 7; i++) {
-        const y = (hash10(s.seed + i) - 0.5) * 1.4 - 0.7;
-        const x0 = -0.4 - hash10(s.seed + i * 3 + Math.floor(c.t * 30)) * 0.4, x1 = x0 - 0.6 - hash10(s.seed + i * 5) * 0.9;
+        const y = (hash11(s.seed + i) - 0.5) * 1.4 - 0.7;
+        const x0 = -0.4 - hash11(s.seed + i * 3 + Math.floor(c.t * 30)) * 0.4, x1 = x0 - 0.6 - hash11(s.seed + i * 5) * 0.9;
         g.moveTo(x0, y * 0.9);
         g.lineTo(x1, y * 0.9);
       }
@@ -98247,9 +98777,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       for (let i = 0; i < n; i++) {
         const ph = (c.t * 7 + i / n) % 1;
         const seed = Math.floor(c.t * 7 + i / n) * 13 + i;
-        const d = 0.8 + hash10(seed) * (s.range || 2.6);
-        const th = ang + (hash10(seed + 3) - 0.5) * (s.arc || 0.9);
-        const x = Math.cos(th) * d, y = Math.sin(th) * d * 0.8 - 0.75 - (hash10(seed + 7) - 0.5) * 0.5;
+        const d = 0.8 + hash11(seed) * (s.range || 2.6);
+        const th = ang + (hash11(seed + 3) - 0.5) * (s.arc || 0.9);
+        const x = Math.cos(th) * d, y = Math.sin(th) * d * 0.8 - 0.75 - (hash11(seed + 7) - 0.5) * 0.5;
         const pop2 = Math.sin(ph * Math.PI);
         g.globalAlpha = a * pop2 * 0.95;
         g.strokeStyle = "rgba(255,255,255,0.7)";
@@ -98283,7 +98813,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const R4 = s.r || 2.4;
       for (let i = 0; i < n; i++) {
         const th = c.t * (2.5 + i % 3) + i * 2.39;
-        const r4 = R4 * (0.35 + 0.65 * hash10(s.seed + i));
+        const r4 = R4 * (0.35 + 0.65 * hash11(s.seed + i));
         const x = Math.cos(th) * r4, y = Math.sin(th) * r4 * 0.62 - 0.6 - Math.sin(c.t * 7 + i) * 0.25;
         g.globalAlpha = a * Math.min(1, (1 - k) * 4);
         g.save();
@@ -98465,8 +98995,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             s.pts = [];
             const n = Math.max(3, Math.round(R4 * 3));
             for (let i = 0; i < n; i++) {
-              const th = i / n * TAU23 + hash10(s.seed + i);
-              const rr = R4 * (0.3 + 0.6 * hash10(s.seed + i * 3));
+              const th = i / n * TAU23 + hash11(s.seed + i);
+              const rr = R4 * (0.3 + 0.6 * hash11(s.seed + i * 3));
               s.pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, L: 0.9, ang: th, delay: i * 0.03, seed: i });
             }
           }
@@ -98480,7 +99010,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           g.lineCap = "round";
           g.beginPath();
           for (let i = 0; i < 8; i++) {
-            const x = (hash10(s.seed + i) - 0.5) * R4 * 1.6, y0 = -3 + (c.t * 3 + hash10(s.seed + i * 3)) % 1 * 3;
+            const x = (hash11(s.seed + i) - 0.5) * R4 * 1.6, y0 = -3 + (c.t * 3 + hash11(s.seed + i * 3)) % 1 * 3;
             g.moveTo(x, y0 - 0.6);
             g.lineTo(x, y0);
           }
@@ -98489,8 +99019,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         case "field": {
           for (let i = 0; i < 5; i++) {
-            const ph = (c.t * 0.8 + hash10(s.seed + i)) % 1;
-            const x = (hash10(s.seed + i * 7 + Math.floor(c.t * 0.8 + hash10(s.seed + i))) - 0.5) * R4 * 1.4, y = (hash10(s.seed + i * 11) - 0.5) * R4 * 0.8;
+            const ph = (c.t * 0.8 + hash11(s.seed + i)) % 1;
+            const x = (hash11(s.seed + i * 7 + Math.floor(c.t * 0.8 + hash11(s.seed + i))) - 0.5) * R4 * 1.4, y = (hash11(s.seed + i * 11) - 0.5) * R4 * 0.8;
             g.globalAlpha = a * (1 - ph) * 0.7;
             g.strokeStyle = s.color;
             g.lineWidth = 0.025;
@@ -102280,6 +102810,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     c.world.day = game.env.day;
     c.world.clock = game.env.clock;
     c.pos = { x: p.x, y: p.y, zone: game.world.id, mode: p.mode };
+    const rw = p.climb?.ride;
+    if (rw) {
+      const ex = p.climb.up && p.climb.phase !== "wait" ? rw.bExit : rw.aExit;
+      c.pos.x = ex.x;
+      c.pos.y = ex.y;
+    }
     const dk3 = p.deck, at4 = dk3?.plank ? dk3.plank.footA() : dk3;
     if (p.mode !== "sail" && dk3?.ship?.uid && !dk3.ship.sunk) c.pos.deck = { uid: dk3.ship.uid, t: at4.t, v: at4.v, h: at4.h };
     const afloat = liveShips(game);
@@ -103946,11 +104482,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     dead: [[140, 120, 92], [96, 80, 60]]
   };
   var TREE_DEFAULT = [[96, 146, 78], [58, 98, 50]];
-  var smooth8 = (a, b, x) => {
+  var smooth9 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
-  var hash11 = (x, y) => {
+  var hash12 = (x, y) => {
     let h2 = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) | 0;
     h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
     return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
@@ -103958,7 +104494,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function vnoise4(x, y) {
     const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
     const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
-    const a = hash11(ix, iy), b = hash11(ix + 1, iy), c = hash11(ix, iy + 1), d = hash11(ix + 1, iy + 1);
+    const a = hash12(ix, iy), b = hash12(ix + 1, iy), c = hash12(ix, iy + 1), d = hash12(ix + 1, iy + 1);
     return (a + (b - a) * ux) * (1 - uy) + (c + (d - c) * ux) * uy;
   }
   function chartSea(world, x, y) {
@@ -104007,7 +104543,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
      */
     draw(g, v) {
       this.t++;
-      const a = v.alpha ?? smooth8(0.3, 0.7, v.zoom);
+      const a = v.alpha ?? smooth9(0.3, 0.7, v.zoom);
       if (a <= 0) return;
       const { world, dpr, zoom } = v;
       const t0 = performance.now();
@@ -104027,7 +104563,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.imageSmoothingEnabled = true;
         const [cx, cy] = v.toS(c.x0, c.y0);
         g.drawImage(c.canvas, cx * dpr, cy * dpr, c.cw / c.px * zoom * dpr, c.ch / c.px * zoom * dpr);
-        if (zoom > 0.45) drawBuildings(g, c, v, a * smooth8(0.45, 0.8, zoom));
+        if (zoom > 0.45) drawBuildings(g, c, v, a * smooth9(0.45, 0.8, zoom));
       }
       todo.sort((p, q2) => Math.hypot(p.mx - v.px, p.my - v.py) - Math.hypot(q2.mx - v.px, q2.my - v.py));
       const budget = v.budget ?? BUDGET;
@@ -104147,7 +104683,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const tt = type[tk];
       let r4, g, b, a = 255;
       const edge = Math.min(pi, pj, c.cw - 1 - pi, c.ch - 1 - pj) / px2;
-      const out = smooth8(0, 6, edge) * (1 - smooth8(MARGIN - 9, MARGIN - 1, -sd));
+      const out = smooth9(0, 6, edge) * (1 - smooth9(MARGIN - 9, MARGIN - 1, -sd));
       if (OVERLAY[tt]) {
         const L3 = LAND2[tt];
         const plank = Math.floor(wx * 2) + Math.floor(wy * 2) & 1 ? 0.94 : 1.04;
@@ -104163,24 +104699,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           cg = liq[1];
           cb = liq[2];
         } else {
-          const w = 0.55 * (1 - smooth8(0, 16, d));
+          const w = 0.55 * (1 - smooth9(0, 16, d));
           cr += (WASH[0] - cr) * w;
           cg += (WASH[1] - cg) * w;
           cb += (WASH[2] - cb) * w;
           for (const L3 of DEPTHS) {
-            const ln2 = (1 - smooth8(lw * 0.5, lw * 1.5, Math.abs(d - L3))) * 0.32 * (1 - L3 / 20);
+            const ln2 = (1 - smooth9(lw * 0.5, lw * 1.5, Math.abs(d - L3))) * 0.32 * (1 - L3 / 20);
             cr += (60 - cr) * ln2;
             cg += (100 - cg) * ln2;
             cb += (118 - cb) * ln2;
           }
         }
-        const ink2 = 1 - smooth8(0, lw * 1.6, d);
+        const ink2 = 1 - smooth9(0, lw * 1.6, d);
         r4 = cr + (SEPIA[0] - cr) * ink2;
         g = cg + (SEPIA[1] - cg) * ink2;
         b = cb + (SEPIA[2] - cb) * ink2;
         a = 255 * Math.max(out, ink2);
       } else {
-        const sx = smooth8(0.3, 0.7, fx), sy = smooth8(0.3, 0.7, fy);
+        const sx = smooth9(0.3, 0.7, fx), sy = smooth9(0.3, 0.7, fy);
         B42.r = B42.g = B42.b = B42.w = 0;
         blend(type[k00], (1 - sx) * (1 - sy));
         blend(type[k10], sx * (1 - sy));
@@ -104211,12 +104747,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const grad2 = Math.sqrt(ex * ex + ey * ey);
         if (grad2 > 0.6 && !MANMADE[tt]) {
           const cd = Math.abs(e - Math.round(e / 26) * 26) / grad2;
-          const cl = (1 - smooth8(lw * 0.4, lw * 1.2, cd)) * 0.22;
+          const cl = (1 - smooth9(lw * 0.4, lw * 1.2, cd)) * 0.22;
           r4 += (SEPIA[0] - r4) * cl;
           g += (SEPIA[1] - g) * cl;
           b += (SEPIA[2] - b) * cl;
         }
-        const ink2 = 1 - smooth8(lw * 0.3, lw * 1.9, sd);
+        const ink2 = 1 - smooth9(lw * 0.3, lw * 1.9, sd);
         r4 += (SEPIA[0] - r4) * ink2;
         g += (SEPIA[1] - g) * ink2;
         b += (SEPIA[2] - b) * ink2;
@@ -104685,11 +105221,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var PARCH2 = [240, 224, 186];
   var BLANK = [PARCH2[0] * 0.98, PARCH2[1] * 0.96, PARCH2[2] * 0.92];
   var INK4 = [71, 51, 31];
-  var smooth9 = (a, b, x) => {
+  var smooth10 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
-  var hash12 = (x, y) => {
+  var hash13 = (x, y) => {
     let h2 = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) | 0;
     h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
     return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
@@ -104799,7 +105335,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         toS,
         px: p.x,
         py: p.y,
-        alpha: smooth9(0.07, 0.2, z),
+        alpha: smooth10(0.07, 0.2, z),
         budget: 3,
         known: (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland || seenIsland(w, isl)
       });
@@ -105000,20 +105536,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const mj = j0 + j, fy = Math.floor((mj + 0.5) * my / F5);
       for (let i = 0; i < cw; i++) {
         const mi = i0 + i, o = (mj * m.w + mi) * 4, q2 = (j * cw + i) * 4;
-        const n = 0.92 + 0.08 * hash12(mi >> 2, mj >> 2);
+        const n = 0.92 + 0.08 * hash13(mi >> 2, mj >> 2);
         let r4 = PARCH2[0] * n, gg = PARCH2[1] * n, b = PARCH2[2] * n;
         r4 += (m.data[o] - r4) * 0.62;
         gg += (m.data[o + 1] - gg) * 0.62;
         b += (m.data[o + 2] - b) * 0.62;
         if (m.dist) {
           const sd = (m.dist[mj * m.w + mi] - 128) * 0.25;
-          const ink2 = (1 - smooth9(0, mx * 0.9 + 0.25, Math.abs(sd))) * 0.85;
+          const ink2 = (1 - smooth10(0, mx * 0.9 + 0.25, Math.abs(sd))) * 0.85;
           r4 += (INK4[0] - r4) * ink2;
           gg += (INK4[1] - gg) * ink2;
           b += (INK4[2] - b) * ink2;
         }
         const fog = w.fog ? w.fog[fy * w.fogW + Math.floor((mi + 0.5) * mx / F5)] / 255 : 1;
-        const k = smooth9(0.05, 0.6, fog) * 0.85 + seen;
+        const k = smooth10(0.05, 0.6, fog) * 0.85 + seen;
         const kk = Math.min(1, k);
         d[q2] = BLANK[0] + (r4 - BLANK[0]) * kk;
         d[q2 + 1] = BLANK[1] + (gg - BLANK[1]) * kk;
@@ -129998,7 +130534,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       kind: "story",
       summary: 'Drum Island has no doctors but one "witch". And its runaway king, "Tin-Plate" Wapol, has come home to take his castle back.',
       stages: [
-        { id: "climb", desc: "Climb to Drum Castle on the summit of Drum Rock and find Dr. Kureha. Beware the Lapahn on the slopes.", goal: { type: "reach", island: "drum_island", spot: "castle_gate", r: 8 } },
+        { id: "climb", desc: "Ride the Drum Ropeway up the face of Drum Rock to Drum Castle on its summit, and find Dr. Kureha. Beware the Lapahn in the snowfields below.", goal: { type: "reach", island: "drum_island", spot: "castle_gate", r: 8 } },
         {
           id: "bliking",
           desc: '"Tin-Plate" Wapol has returned with his Bliking Pirates to retake the castle! Defeat Chess and Kuromarimo at the castle gate.',
@@ -148997,7 +149533,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   };
   var STYLE3 = { marine: "marine", wano: "wano", chinese: "kano", desert: "alabasta", snow: "drum", fishman: "fishman", future: "future", candy: "totland", tribal: "shandia", giant: "elbaf", ruins: "flevance" };
   var HINT = { night: "night", battle: "arlong", title: "laugh_tale", grandline: "grandline", town: "town", sea: null };
-  function hash13(s) {
+  function hash14(s) {
     let h2 = 2166136261;
     for (let i = 0; i < s.length; i++) {
       h2 ^= s.charCodeAt(i);
@@ -149033,7 +149569,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (cl.drums) out.drums = cl.drums;
       if (cl.bpm) out.bpm += cl.bpm;
     }
-    const h2 = hash13(def.id);
+    const h2 = hash14(def.id);
     out.key += [0, 2, -2, 5, -3, 3][Math.floor(h2 * 6)];
     out.bpm = Math.round(out.bpm + (h2 * 8 - 4));
     out.id = key2;
@@ -149117,7 +149653,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   // src/audio/director.js
   var HOLD = { title: 0, under: 0.6, surface: 1.5, rm: 0.3, zone: 0.5, town: 2, isl: 3, sea: 4, holy: 3 };
   var LAYERS = [["perc", 0], ["bass", 0.15], ["pad", 0.2], ["arp", 0.3], ["perc2", 0.4], ["lead", 0.5], ["brass", 0.72]];
-  var smooth10 = (a, b, x) => {
+  var smooth11 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
@@ -149345,8 +149881,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     /** The intensity's layers: each stem eases in around its threshold (the boss layer only for a boss). */
     layers(k, boss) {
       const out = {};
-      for (const [s, th] of LAYERS) out[s] = th <= 0 ? 1 : smooth10(th - 0.1, th + 0.06, k);
-      out.boss = boss ? smooth10(0.55, 0.75, k) : 0;
+      for (const [s, th] of LAYERS) out[s] = th <= 0 ? 1 : smooth11(th - 0.1, th + 0.06, k);
+      out.boss = boss ? smooth11(0.55, 0.75, k) : 0;
       return out;
     }
     /** A fight begins: the battle theme on the next beat, a taiko hit and a cymbal swell into it. */
@@ -151787,6 +152323,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     installTraffic(game);
     installLadders(game);
     installGangways(game);
+    installRopeways(game);
     installFleet(game);
     installWanted(game);
     installLoot(game);
