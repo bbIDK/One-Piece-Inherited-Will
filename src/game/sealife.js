@@ -93,13 +93,7 @@ function tick(game, S, dt) {
   S.lastAct = act;
   if (live) sharks(game, S, dt, p);
   rescue(game, S, dt, p);
-  // under the surface the music turns dreamy (and comes back when you surface)
-  const au = game.audio;
-  if (au) {
-    if (p.under && au.theme !== 'underwater' && au.theme !== 'battle') { S.prevTheme = au.theme; au.music('underwater'); }
-    else if (!p.under && au.theme === 'underwater') { S.surfT = (S.surfT || 0) + dt; if (S.surfT > 1.5) { S.surfT = 0; au.music(S.prevTheme || 'sea'); } }
-    else S.surfT = 0;
-  }
+  // (under the surface the music turns dreamy, and comes back when you surface: see audio/director.js)
   // swimming and holding your breath build endurance
   if (p.inWater && !p.gills && !p.fruit && (p.moving || p.under)) {
     S.trainT = (S.trainT || 0) + dt;

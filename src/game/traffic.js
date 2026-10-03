@@ -471,7 +471,8 @@ function startRaid(game, T, s) {
   // (adrift, with nobody left standing on her deck, she's yours already)
   const up = tr.crew.some((a) => standing(a, s));
   game.ui.banner('BOARDED!', s.name, up ? `The helmsman is coming for you. Beat ${who} — then the hold is yours.` : 'Nobody aboard her is left standing.', 3);
-  if (up && game.audio && game.audio.theme !== 'battle') { tr.prevTheme = game.audio.theme; game.audio.music('battle'); }
+  // (the fight's music comes up at once: see audio/director.js)
+  if (up) game.audio?.hint?.('battle', 10);
   // any Marine ship in sight joins in
   for (const o of T.ships) if (o !== s && o.traffic?.kind === 'marine' && game.world.distance(o.x, o.y, s.x, s.y) < 80) o.provoked = true;
 }
@@ -480,7 +481,6 @@ function checkCleared(game, s) {
   const tr = s.traffic;
   if ((tr.crew || []).some((a) => standing(a, s))) return;
   tr.cleared = true;
-  if (game.audio?.theme === 'battle') game.audio.music(tr.prevTheme || 'sea');
   game.ui.toast('THE DECK IS YOURS', `${s.name}: plunder her hold (down the hatch amidships — the chest at the foot of the ladder).`, '#ffd54f');
   game.log(`The crew of the ${s.name} is beaten!`, '#ffe082');
 }
