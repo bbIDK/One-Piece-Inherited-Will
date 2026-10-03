@@ -26,9 +26,11 @@ export const TIERS = {
     // how much less often they guard, and their parries (chance a guard is one)
     think: 1.8, combo: 1, rest: 0.9, block: 0.5, npcParry: 0,
     // what their blows do to you (×), a boss's guard-breaking blows at least this
-    // far apart (s), and how close a gunner will still shoot you from (nearer, they back off first)
-    dmg: 0.62, breakGap: 6, closeShot: 2.4,
-    // a flurry: after this many blows in a row (or this long held stunned) you break free;
+    // far apart (s), how close a gunner will still shoot you from (nearer, they
+    // back off first) and how fast they back off (× their pace)
+    dmg: 0.62, breakGap: 6, closeShot: 2.4, backpedal: 0.55,
+    // a flurry: after this many blows in a row (or this long held stunned — the
+    // longest any one blow can stun you, too) you break free;
     // a smashed guard staggers you this long (s); this many foes may go for you at once
     stunHits: 3, stunCap: 1, gbStun: 0.6, turns: 1,
   },
@@ -37,7 +39,7 @@ export const TIERS = {
     parry: 0.25, perfect: 0.07, cue: 0.6, cueLead: 0.3,
     windupMin: 0.26, windupMul: 1.08, windupAdd: 0.03, chainWindup: 0.14,
     think: 1.2, combo: 2, rest: 0.5, block: 0.8, npcParry: 0.15,
-    dmg: 0.9, breakGap: 3.5, closeShot: 1.6,
+    dmg: 0.9, breakGap: 3.5, closeShot: 1.6, backpedal: 0.75,
     stunHits: 4, stunCap: 1.4, gbStun: 0.85, turns: 2,
   },
   newWorld: {
@@ -45,7 +47,7 @@ export const TIERS = {
     parry: 0.21, perfect: 0.06, cue: 0.35, cueLead: 0.26,
     windupMin: 0.16, windupMul: 1, windupAdd: 0, chainWindup: 0.07,
     think: 1, combo: 2, rest: 0.25, block: 1, npcParry: 0.3,
-    dmg: 1, breakGap: 1.5, closeShot: 0,
+    dmg: 1, breakGap: 1.5, closeShot: 0, backpedal: 0.9,
     stunHits: 5, stunCap: 1.8, gbStun: 1.1, turns: 3,
   },
 };

@@ -113,7 +113,9 @@ export function startAbility(actor, def, game, target) {
  * (the move's clock runs slow until its first blow: see updateAbility), and
  * the moment the blow lands worked out for the glint — `cueT`, on the move's
  * own clock, a tier's cueLead before it lands (a charge's run in to you
- * counted). A shot gets its glint in flight instead (combat.js).
+ * counted). A shot glints a cueLead before it's fired (`shot`): the moment
+ * to get your guard up or get out of its way (a sword wielder's parry gets
+ * a glint on the shot itself as it reaches them instead: combat.js).
  */
 function readable(actor, a, game) {
   const def = a.def, i = firstBlow(def);
@@ -126,8 +128,9 @@ function readable(actor, a, game) {
   const want = stretchWindup(T, w, !!def.chained);
   a.hitAt = at;
   a.slow = w > 0.001 && want > w ? want / w : 1;
-  a.breaks = breaksGuard(s);
-  if (s.proj && !a.breaks) return;
+  // (a field of something — gas, lightning — is no blow to parry either: get out of it)
+  a.breaks = breaksGuard(s) || !!s.zone;
+  a.shot = !!s.proj;
   // (a charge lands once it reaches you)
   const who = a.target || actor.controller?.target;
   let travel = 0;
@@ -147,14 +150,18 @@ function glint(actor, a, game) {
   const p = game.player;
   if (!p || p === actor || p.state !== 'idle') return;
   const who = a.target || actor.controller?.target;
-  if (who !== p || game.world.distance(actor.x, actor.y, p.x, p.y) > 10) return;
+  if (who !== p || game.world.distance(actor.x, actor.y, p.x, p.y) > (a.shot ? 14 : 10)) return;
+  // (a sword wielder's glint for a shot is on the shot itself)
+  if (a.shot && !a.breaks && p.hasWeapon?.('sword')) return;
   const T = tierOf(game, p);
   const k = p.observation ? 1 : T.cue;
   if (!(k > 0)) return;
   game.fx.parryCue?.(actor, a.breaks, k);
   // (the first of each in a life: the world slows a moment, time to read the hint and act on it)
-  if (!game.hintsShown?.has(a.breaks ? 'redglint' : 'parry') && game.settings?.showHints !== false) game.fx.slowmo(1.2, 0.2);
+  const key = a.breaks ? 'redglint' : a.shot ? 'shotglint' : 'parry';
+  if (!game.hintsShown?.has(key) && game.settings?.showHints !== false) game.fx.slowmo(1.2, 0.2);
   if (a.breaks) game.hint('redglint', 'A RED glint: that blow smashes any guard (and some go straight through one). Don\'t block it — dodge (Q) just before it lands.');
+  else if (a.shot) game.hint('shotglint', 'A glint on a gunman: a shot is coming. Hold F to block it, or sidestep and dodge (Q) — a sword can even turn it aside with a parry.');
   else game.hint('parry', 'A YELLOW glint: the blow is about to land — tap F right then to PARRY it. A parried foe reels, open to a COUNTER. (Hold F to simply block.)');
 }
 

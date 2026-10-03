@@ -370,8 +370,9 @@ export class Combat {
     if (!blocked) {
       const kb = (h.knockback ?? 2) * (tgt.kbResist ?? 1);
       if (kb > 0) tgt.knock(Math.cos(kbAng) * kb, Math.sin(kbAng) * kb, h.forceWater);
-      // (a counter staggers through a boss's poise)
-      const stun = counter ? Math.max(h.stun || 0, PARRY.counterStun) : h.stun;
+      // (a counter staggers through a boss's poise; and no one blow holds you longer than a flurry may)
+      let stun = counter ? Math.max(h.stun || 0, PARRY.counterStun) : h.stun;
+      if (tgt.isPlayer && stun > T.stunCap) stun = T.stunCap;
       if (stun && (counter || !(tgt.poise && !h.guardBreak && stun < 0.6))) tgt.stagger(stun * (tgt.stunResist ?? 1));
       if (h.status) for (const [k, v] of Object.entries(h.status)) tgt.addStatus(k, v, att);
       if (h.onHit) h.onHit(tgt, att, game, h);

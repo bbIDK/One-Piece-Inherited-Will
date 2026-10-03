@@ -346,13 +346,14 @@ export class AIController {
       const wp = this.steer(a, t.x, t.y, game);
       if (wp.x !== t.x || wp.y !== t.y) { this.moveToward(a, wp.x, wp.y, game, true); a.intent.sprint = dist > 4; return; }
     }
-    let mx = 0, my = 0;
+    let mx = 0, my = 0, pace = 1;
     if (dist > want + 0.4) { mx = dx / dist; my = dy / dist; a.intent.sprint = dist > 6; }
-    else if (dist < want - 0.8 && this.ranged) { mx = -dx / dist; my = -dy / dist; }
+    // (a gunner backs off walking backwards — slower where fights are gentle: run them down)
+    else if (dist < want - 0.8 && this.ranged) { mx = -dx / dist; my = -dy / dist; pace = T.backpedal; }
     else if (Math.random() < 0.02) this.strafeDir *= -1;
     if (dist < want + 1.5) { mx += -dy / dist * this.strafeDir * 0.5; my += dx / dist * this.strafeDir * 0.5; }
     const l = Math.hypot(mx, my);
-    if (l > 0) { a.intent.mx = mx / l; a.intent.my = my / l; }
+    if (l > 0) { a.intent.mx = mx / l * pace; a.intent.my = my / l * pace; }
     this.avoidStuck(a, dt, game);
   }
 

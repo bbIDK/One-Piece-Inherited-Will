@@ -343,6 +343,24 @@ test('a foe\'s wind-up is stretched where fights are gentle (never yours), and t
   assert.equal(stretchWindup(TIERS.newWorld, 0.3, false), 0.3);
 });
 
+test('a gunman glints before he fires (a sword wielder sees it on the shot instead); a field of gas glints red', () => {
+  const cues = (id, o = {}) => {
+    const { g, you, foe } = duel('blue', { you: o.you, foe: { dx: 5, ...(o.foe || {}) } });
+    if (o.gun) foe.weapon = { kind: 'gun', power: 1, count: 1 };
+    foe.controller = { target: you, update() {} };
+    const seen = [];
+    g.fx.parryCue = (at, breaks) => seen.push({ on: at === foe ? 'foe' : 'shot', breaks });
+    foe.cooldowns = {};
+    assert.equal(foe.tryTechnique(id, g, you), true, id);
+    for (let t = 0; t < 2 && seen.length === 0; t += 1 / 60) { g.time += 1 / 60; g.env.time += 1 / 60; foe.update(1 / 60, g); g.combat.update(1 / 60); }
+    return seen;
+  };
+  assert.deepEqual(cues('snipe_explode', { gun: true }), [{ on: 'foe', breaks: false }]);
+  assert.deepEqual(cues('snipe_explode', { gun: true, you: { sword: true } }), []);
+  assert.deepEqual(cues('itto_pound', { foe: { sword: true }, you: { sword: true } }).map((c) => c.on), ['shot']);
+  assert.deepEqual(cues('krieg_mh5'), [{ on: 'foe', breaks: true }]);
+});
+
 test('a foe spaces out its guard-breaking blows, and never throws two running', () => {
   const ai = new AIController({ kind: 'hostile' });
   const smash = getAbility('alvida_mace');
