@@ -69,8 +69,9 @@ export const scenarios = {
   // menus don't stop the world: at the helm, with the inventory or the chart
   // open, the ship sails on (holding her course: the keys don't steer her
   // meanwhile) and the day goes on; the pause screen stops both
-  //   node tools/shot.mjs menus --page=shots/<build>/index.html
-  menus: {
+  // (not "menus": that's the UI scenarios' tour of the menus, scenarios-ui.mjs)
+  //   node tools/shot.mjs worldbehind --page=shots/<build>/index.html
+  worldbehind: {
     async run(page, snap) {
       await page.evaluate(() => localStorage.clear());
       await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
@@ -106,10 +107,10 @@ export const scenarios = {
         await step(page, 0.3);
         return r;
       };
-      await measure('inventory', 'menus-01-inventory-open');
-      await measure('map', 'menus-02-map-open');
-      await measure('quests', 'menus-03-quests-open');
-      await measure('menu', 'menus-04-pause-menu');
+      await measure('inventory', 'behind-01-inventory-open');
+      await measure('map', 'behind-02-map-open');
+      await measure('quests', 'behind-03-quests-open');
+      await measure('menu', 'behind-04-pause-menu');
       const after = await page.evaluate(() => { const g = window.OP.game; return { paused: g.paused, blocks: g.ui.blocksInput() }; });
       console.log('all closed', JSON.stringify(after));
     },
