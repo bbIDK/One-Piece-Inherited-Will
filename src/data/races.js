@@ -14,7 +14,10 @@ export const RARITY = {
 };
 
 // jump: take-off speed (m/s); charge: how much faster a fully charged jump
-// springs; leap: how hard you spring out of the water.
+// springs; leap: how hard you spring out of the water. flight: a people who
+// fly (see game/flight.js: style, gauge in seconds, speeds in m/s, ceiling
+// in m, ×drain over the open sea, seconds to refill). What the traits do in
+// a fight is game/racial.js (and abilities.js / combat.js where noted).
 export const RACES = {
   human: {
     name: 'Human', rarity: 'common', weight: 52,
@@ -33,7 +36,7 @@ export const RACES = {
     origin: 'Born in the Conomi Islands (East Blue), in the shadow of Arlong Park.',
     stats: { str: 4, agi: 0, end: 2, vit: 1, wil: 0 },
     lives: 3,
-    traits: ['Gills: breathe underwater — never drown (unless a Devil Fruit user)', 'Swims 3× faster', 'Fish-Man Karate affinity: learns it 30% faster', 'Dolphin leap: springs far out of the water'],
+    traits: ['Gills: breathe underwater — never drown (unless a Devil Fruit user)', 'Swims 3× faster', 'Fish-Man Karate affinity: learns it 30% faster', 'Dolphin leap: springs far out of the water — and, swimming hard, on forward like a dolphin'],
     spawnSeas: ['east_blue'], spawnTowns: ['cocoyasi'],
     swim: 3, hpMul: 1.1, gills: true,
     jump: 7.4, charge: 1.4, leap: 1.35,
@@ -44,7 +47,7 @@ export const RACES = {
     origin: 'Born among wandering Mink traders who settled in the wilds of the South Blue.',
     stats: { str: 1, agi: 4, end: 1, vit: 0, wil: 0 },
     lives: 3,
-    traits: ['Electro: basic attacks can shock (innate)', 'Keen senses: +10% dodge window', 'Sulong: awakened under the full moon (hidden)', 'Springy: jumps high, and a charged leap goes higher still'],
+    traits: ['Electro: bare-handed basic attacks crackle, and now and then shock (innate)', 'Keen senses: a dodge leaves you untouchable a little longer', 'Sulong: in a fight under the full moon, at night, you become a battle beast (hidden)', 'Springy: jumps high, and a charged leap goes higher still'],
     spawnSeas: ['south_blue'], spawnTowns: ['torino_village', 'karate_dojo_town'],
     swim: 1, hpMul: 1, electro: true,
     jump: 8.6, charge: 1.65, leap: 1,
@@ -55,7 +58,7 @@ export const RACES = {
     origin: 'Fell from a sky island; raised in Lvneel (North Blue).',
     stats: { str: 0, agi: 2, end: 0, vit: 0, wil: 3 },
     lives: 3,
-    traits: ['Mantra: once their sixth sense awakens, it grows twice as fast', 'Light-footed: dodge travels 30% further', 'Dial-savvy: dials are 25% stronger'],
+    traits: ['Mantra: once their sixth sense awakens, it grows twice as fast', 'Light-footed: dodge travels 30% further', 'Dial-savvy: dials hit 25% harder', 'Little wings: not for flying — no Skypiean can'],
     spawnSeas: ['north_blue'], spawnTowns: ['lvneel_town'],
     swim: 0.9, hpMul: 0.95,
     jump: 8.6, charge: 1.5, leap: 1,
@@ -66,7 +69,7 @@ export const RACES = {
     origin: 'Born in a Longarm enclave at Notice (North Blue).',
     stats: { str: 3, agi: 0, end: 1, vit: 0, wil: 0 },
     lives: 3,
-    traits: ['Long reach: +45% melee range', 'Double-jointed: punches hit twice as fast at max reach'],
+    traits: ['Long reach: +45% melee range', 'Double-jointed: bare-handed basic strikes snap back 20% quicker'],
     spawnSeas: ['north_blue'], spawnTowns: ['notice_town'],
     swim: 1, hpMul: 1, reach: 1.45,
     jump: 7.6, charge: 1.45, leap: 1,
@@ -88,7 +91,7 @@ export const RACES = {
     origin: 'Born in the Sorbet Kingdom (South Blue).',
     stats: { str: 5, agi: -2, end: 5, vit: 4, wil: 0 },
     lives: 3,
-    traits: ['Huge frame: +35% HP', 'Unshakable: cannot be staggered by light attacks', 'Slow: -8% move speed'],
+    traits: ['Huge frame: +35% HP', 'Unshakable: light blows can\'t stagger you, and knockback barely moves you', 'Slow: -8% move speed'],
     spawnSeas: ['south_blue'], spawnTowns: ['sorbet_town'],
     swim: 0.9, hpMul: 1.35, scale: 1.3,
     jump: 6.6, charge: 1.55, leap: 1,
@@ -99,7 +102,7 @@ export const RACES = {
     origin: 'Born among the scholars sheltering in the ruins of Ohara (West Blue).',
     stats: { str: 0, agi: 1, end: 0, vit: 0, wil: 6 },
     lives: 3,
-    traits: ['Third Eye: Observation Haki from birth', 'Voice of All Things: can read Poneglyphs without an archaeologist'],
+    traits: ['Third Eye: Observation Haki from birth', 'Voice of All Things: once the Third Eye has grown (Observation 20), reads Poneglyphs without an archaeologist'],
     spawnSeas: ['west_blue'], spawnTowns: ['ohara_camp'],
     swim: 1, hpMul: 1,
     jump: 7.4, charge: 1.4, leap: 1,
@@ -110,10 +113,11 @@ export const RACES = {
     origin: 'Washed up alone on an uncharted islet in one of the Blues.',
     stats: { str: 2, agi: 1, end: 5, vit: 5, wil: 2 },
     lives: 4,
-    traits: ['Ignition: attacks can burn; flame on your back halves damage taken while lit', 'Tremendous vitality: +1 life', 'Wings: dodge becomes a short flight'],
+    traits: ['Ignition: bare blows can set foes alight, and while the flame on your back burns, harm done to you is halved — the sea puts it out, and it lights again once you\'re dry', 'Tremendous vitality: +1 life', 'Wings: fly (Space again in the air) — and a dodge is a wing-beat that carries you further, even over water'],
     spawnSeas: ['east_blue', 'north_blue', 'west_blue', 'south_blue'], spawnIslet: true,
     swim: 1, hpMul: 1.15,
     jump: 8.2, charge: 1.55, leap: 1,
+    flight: { style: 'wings', gauge: 22, speed: 10, climb: 6, ceiling: 40, sea: 3.5, refill: 6, color: '#ff7043' },
   },
 };
 

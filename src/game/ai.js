@@ -11,9 +11,17 @@ import { shipNav } from './crewnav.js';
 import { clearLine, findPath, standable } from './path.js';
 import { interiorRect } from '../world/interiors.js';
 import { bw } from '../world/bframe.js';
-import { getAbility, canUse, breaksGuard } from './abilities.js';
+import { getAbility, canUse, breaksGuard, ownRoom } from './abilities.js';
 import { hostile } from './entity.js';
 import { tierOf } from './difficulty.js';
+import { aiFlight, feetOf } from './flight.js';
+
+/** Does this technique open a ROOM (Ope Ope)? */
+const opensRoom = (def) => !!def && (def.steps || []).some((s) => s.zone?.kind === 'room');
+/** Does this technique need its target about level with the one using it (a blow, a charge — not a shot, a beam or a field)? */
+const reachesOnlyLevel = (def) => !!def && (def.steps || []).some((s) => (s.hit && s.hit.shape !== 'line') || s.dash?.hit) && !(def.steps || []).some((s) => s.proj || s.zone || s.hit?.shape === 'line');
+/** How far apart two fighters are up and down (m) — a flier above a foe on the ground. */
+const heightGap = (game, a, t) => (a.flying || t.flying ? Math.abs(feetOf(a, game) - feetOf(t, game)) : 0);
 
 // Taking turns. Only so many foes go for the player at once (one in the four
 // Blues, where everyone starts; two in Paradise; three in the New World; a
@@ -244,6 +252,8 @@ export class AIController {
       return;
     }
     if (!this.target) {
+      // (nobody left to fight: a flier comes down)
+      if (a.flying && a.flight) a.flight.landing = true;
       // (some of a crew at ease stroll about where they are; the rest stay put)
       if (this.kind === 'patrol' || (this.kind === 'hostile' && this.home && (this.roams ??= Math.random() < 0.3))) this.wander(a, dt, game, true);
       return;
@@ -268,6 +278,14 @@ export class AIController {
     // the pace of the sea we're in (difficulty.js)
     const T = tierOf(game, a);
     const now = game.time || 0;
+    // (those who can fly take to the air after a target that has, or now and then to fight from up there: flight.js)
+    if (a.fruit || a.race === 'lunarian') {
+      this.sorties ??= this.moves.some((id) => (getAbility(id)?.steps || []).some((s) => s.proj || s.zone || s.hit?.shape === 'line' || s.dash?.hit));
+      aiFlight(a, this, t, dist, game, this.sorties);
+    }
+    // (a target up in the air, out of reach of a blow: only shots, beams and fields will do)
+    const gap = heightGap(game, a, t);
+    const high = gap > 2.4 * (a.look?.scale || 1);
     // a big move of our own just finished (a technique, a heavy — not one cut
     // short): a breather, standing our ground — the moment to punish us
     const was = this.lastAct;
@@ -315,14 +333,24 @@ export class AIController {
       this.think = (0.35 + (1 - this.aggression) * 0.8) * (0.7 + Math.random() * 0.6) * T.think;
       // (a guard-breaking move only once its time has come round again, and never two running)
       const smashOk = now >= (this.smashT || 0) && !this.smashed;
-      const usable = this.moves.map(getAbility).filter((m) => m && canUse(a, m) && this.inRangeFor(m, dist) && (smashOk || !smashes(m)));
+      const room = ownRoom(a, game);
+      const usable = this.moves.map(getAbility).filter((m) => m && !m.flight && canUse(a, m) && this.inRangeFor(m, dist, a, game) && (smashOk || !smashes(m))
+        && !(high && reachesOnlyLevel(m)) && !(room && opensRoom(m)));
+      // a surgeon opens a ROOM before anything else (the rest of the Ope Ope needs one)
+      const opener = usable.find(opensRoom);
+      if (opener && dist < 7) {
+        a.facing = ang;
+        if (a.tryTechnique(opener.id, game, t)) this.used(opener, T, now);
+        return;
+      }
       if (usable.length && Math.random() < 0.55) {
         const m = usable[Math.floor(Math.random() * usable.length)];
         a.facing = ang;
         if (a.tryTechnique(m.id, game, t)) this.used(m, T, now);
         return;
       }
-      if (dist < this.meleeRange(a) + 0.3 && !this.ranged) {
+      // (out of reach up there, no blow will do: wait for them below)
+      if (dist < this.meleeRange(a) + 0.3 && !this.ranged && !high) {
         a.facing = ang;
         if (Math.random() < 0.15 && smashOk && a.tryHeavy(game)) { this.used(a.action?.def, T, now); return; }
         a.tryM1(game);
@@ -334,7 +362,7 @@ export class AIController {
       // and, where fights are gentle, not point-blank either: they back off first, unless they're cornered)
       if (this.ranged && dist < this.prefRange + 2 && (dist >= T.closeShot || this.cornered > 1.2)) { a.facing = ang; a.tryM1(game); return; }
     }
-    if (this.comboLeft > 0 && !a.action && dist < this.meleeRange(a) + 0.5) { this.comboLeft--; a.tryM1(game); }
+    if (this.comboLeft > 0 && !a.action && dist < this.meleeRange(a) + 0.5 && !high) { this.comboLeft--; a.tryM1(game); }
 
     // movement: approach to preferred range, strafe when close
     const want = this.ranged ? this.prefRange : this.meleeRange(a) * 0.8;
@@ -379,9 +407,17 @@ export class AIController {
 
   meleeRange(a) { return 1.3 * (a.reach || 1) * (a.look?.scale || 1); }
 
-  inRangeFor(m, dist) {
+  inRangeFor(m, dist, a = null, game = null) {
+    // (a Room technique: the target has to be in the Room — Shambles to come at them from across it, Takt anywhere in it)
+    const pw = (m.steps || []).find((x) => x.power && (x.power.kind === 'shambles' || x.power.kind === 'takt'));
+    if (pw && a && game) {
+      const z = ownRoom(a, game), t = this.target;
+      if (!z || !t || game.world.distance(z.x, z.y, t.x, t.y) > z.r) return false;
+      return pw.power.kind === 'shambles' ? dist > 2.5 : true;
+    }
     const s = (m.steps || []).find((x) => x.hit || x.proj || x.dash || x.zone || x.teleport || x.pull || x.buff || x.conqueror);
     if (!s) return dist < 3;
+    if (s.zone?.kind === 'room') return dist < 7;
     if (s.buff || s.heal) return dist < 12;
     if (s.hit) return dist < (s.hit.range || 1.5) + (s.hit.offset || 0) + 0.6;
     if (s.proj) return dist < (s.proj.range || 10) * 0.85 && dist > 1.5;

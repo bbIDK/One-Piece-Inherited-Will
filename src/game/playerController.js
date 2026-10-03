@@ -5,6 +5,7 @@ import { clamp, angleDiff } from '../core/math.js';
 import { findInteraction } from './interact.js';
 import { ITEMS } from '../data/items.js';
 import { count, useItem } from './inventory.js';
+import { flightOf, takeOff, airStep } from './flight.js';
 
 // food in hand: how long it takes to get it down (seconds), and between bites
 const EAT_TIME = { food: 1.25, medicine: 0.9, fruit: 1.7 };
@@ -49,12 +50,15 @@ export class PlayerController {
     // swimming: Space rises, C dives — and swimming forward follows the view up or down
     p.intent.mz = 0;
     // creative mode: double-tap Space to take off or land; flying, Space rises and C sinks
+    // (those who fly in earnest — wings, flames, smoke... — take off the same
+    // way: Space again in the air; see airPress)
     const cr = game.creative;
+    let spaceUsed = false;
     if (cr?.on && inp.wasPressed('Space')) {
       const now = game.time || 0;
       if (now - (this.spaceT ?? -9) < 0.3) { cr.fly(); this.spaceT = -9; this.jumpHold = null; p.charging = 0; }
       else this.spaceT = now;
-    }
+    } else if (inp.wasPressed('Space')) spaceUsed = this.airPress(p, game);
     if (p.flying) p.intent.mz = inp.isDown('Space') ? 1 : inp.isDown('C') ? -1 : 0;
     if (p.inWater) {
       if (inp.isDown('Space')) p.intent.mz = 1;
@@ -112,13 +116,17 @@ export class PlayerController {
     // jumping: a tap hops; holding Space crouches and charges a higher spring (how
     // high, and how much more a charge gives, depends on your race). A press in the
     // air still jumps if you land within a moment.
-    if (inp.wasPressed('Space') && !p.flying) { if (p.canJump()) this.jumpHold = { t: 0 }; else buf.jump = 0.14; }
+    if (inp.wasPressed('Space') && !p.flying && !spaceUsed) { if (p.canJump()) this.jumpHold = { t: 0 }; else buf.jump = 0.14; }
     if (inp.wasPressed('Slash') || inp.wasPressed('NumpadDivide') || inp.wasPressed('Backquote')) game.creative?.openConsole();
     if (buf.dodge > 0 && p.tryDodge(game, mx, my)) { buf.dodge = 0; buf.m1 = 0; }
     if (this.jumpHold) {
       if (!p.canJump()) { this.jumpHold = null; p.charging = 0; }
       else if (inp.isDown('Space')) { this.jumpHold.t += dt; p.charging = clamp((this.jumpHold.t - 0.16) / 0.75, 0, 1); }
-      else { p.tryJump(game, p.charging); this.jumpHold = null; p.charging = 0; buf.jump = 0; }
+      else {
+        // (a body that can fly learns how on its first jump)
+        if (p.tryJump(game, p.charging) && flightOf(p)) game.hint?.('takeoff', 'You can fly! Press Space again in the air (a double tap) to take off.');
+        this.jumpHold = null; p.charging = 0; buf.jump = 0;
+      }
     } else if (buf.jump > 0 && p.tryJump(game, 0)) buf.jump = 0;
     if (buf.heavy > 0) {
       const prev = p.facing;
@@ -158,6 +166,26 @@ export class PlayerController {
       p.reachT = 0.45; // (the first-person hand reaches out)
       this.interaction.run();
     }
+  }
+
+  /**
+   * Space pressed with your feet off the ground (or flying): take off if you
+   * can fly (wings, flames, smoke...), or kick off the air if you know Geppo;
+   * flying, a double tap comes down to land (holding it climbs). True if the
+   * press was spent on that (and isn't a jump).
+   */
+  airPress(p, game) {
+    const now = game.time || 0;
+    const dbl = now - (this.airTapT ?? -9) < 0.32;
+    this.airTapT = now;
+    if (p.flying) {
+      if (p.flight && dbl) { p.flight.landing = true; this.airTapT = -9; }
+      return true;
+    }
+    const air = ((p.z || 0) > 0.3 || p.vz > 0.5) && !p.inWater && !p.climb && !p.onShip && p.mode !== 'sail';
+    if (!air) return false;
+    if (flightOf(p) && takeOff(p, game)) { this.jumpHold = null; p.charging = 0; this.airTapT = -9; return true; }
+    return airStep(p, game);
   }
 
   /** The food (or medicine, or Devil Fruit) in your hand, if you still have one. */

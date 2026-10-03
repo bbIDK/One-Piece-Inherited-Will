@@ -1045,6 +1045,14 @@ sig('gomu_gatling', {
   },
 });
 sig('gomu_rocket', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#ffcdd2'; fx.ring(actor.x, actor.y, 0.1, 1, '#ffffff', 0.25, 0.08, { add: true }); } });
+sig('gomu_balloon', {
+  // puffed up round: a bounce ring while the shots come back off it
+  buff(fx, actor, s, a, ex) {
+    fx.ring(actor.x, actor.y, 0.3, 1.6, '#ffcdd2', 0.35, 0.1, { z: 0.9, add: true });
+    smoke(fx, actor.x, actor.y, 0.9, 8, ['#ffffff', '#ffebee'], { speed: 2, size: 0.3 });
+    fx.add('dome', { x: actor.x, y: actor.y, follow: actor, r: 1.4, kind: 'barrier', color: '#ffcdd2', hk: 0.9, life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(ex.buff) });
+  },
+});
 sig('gomu_bazooka', {
   hit(fx, actor, s, a, hb) {
     const [px, py] = fwd(actor, hb.angle, 1.6);
@@ -1100,21 +1108,55 @@ sig('gura_kaishin gura_tsunami', {
   },
 });
 
-// ---- Ope Ope
-sig('ope_room', {
-  fx(fx, actor, s, a) { if (!s.fx.ring) return DEFAULTS.fx(fx, actor, s, a); fx.ring(actor.x, actor.y, 0.3, s.fx.ring, '#81d4fa', 0.5, 0.1, { add: true }); },
-  buff(fx, actor, s, a, ex) {
-    const b = ex.buff;
-    fx.add('dome', { x: actor.x, y: actor.y, follow: actor, r: 7, kind: 'room', color: '#81d4fa', life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(b) });
+sig('gura_tsunami', {
+  // (and the ground goes on shaking: cracks in the air over a field that heaves)
+  zone(fx, actor, spec, a, zone) {
+    fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'quake', color: '#e0f7fa', zone, life: 1e6 });
+    for (let i = 0; i < 6; i++) { const th = rnd(0, TAU), rr = zone.r * rnd(0.3, 0.9); fx.add('aircrack', { x: zone.x + Math.cos(th) * rr, y: zone.y + Math.sin(th) * rr * 0.6, z: rnd(0.4, 1.4), size: rnd(0.6, 1.1), life: 0.6, delay: 0.3 + i * 0.25 }); }
+    fx.crack(zone.x, zone.y, zone.r * 0.8, zone.t + 1);
+    return true;
   },
 });
+
+// ---- Ope Ope
+sig('ope_room', {
+  // ROOM: a translucent pale blue sphere where it was cast — it stays there
+  // (no follow) and fades when the Room does
+  zone(fx, actor, spec, a, zone) {
+    fx.add('dome', { x: zone.x, y: zone.y, r: zone.r, kind: 'room', color: '#81d4fa', hk: 0.62, zone, life: 1e6 });
+    fx.ring(zone.x, zone.y, 0.3, zone.r, '#81d4fa', 0.55, 0.1, { add: true });
+    fx.ring(zone.x, zone.y, 0.2, zone.r * 0.55, '#e1f5fe', 0.45, 0.06, { delay: 0.08, add: true });
+    fx.burst(actor.x, actor.y, 12, { color: ['#81d4fa', '#e1f5fe'], speed: 3, g: 0, z: 1, life: 0.5, kind: 'line', size: 0.05 });
+    return true;
+  },
+  // (the Room's own chip on the HUD: nothing to show for it here)
+  buff() {},
+});
+const shamblesCube = (fx, x, y) => {
+  fx.add('cube', { x, y, z: 0.85, size: 0.55, color: '#81d4fa', life: 0.45, spin: 3 });
+  fx.ring(x, y, 0.1, 1.1, '#81d4fa', 0.3, 0.07, { add: true });
+};
 sig('ope_shambles', {
-  teleport(fx, actor, s, a, ex) {
-    for (const [x, y] of [[ex.x0, ex.y0], [actor.x, actor.y]]) {
-      fx.add('cube', { x, y, z: 0.85, size: 0.55, color: '#81d4fa', life: 0.4, spin: 3 });
-      fx.ring(x, y, 0.1, 1.1, '#81d4fa', 0.3, 0.07, { add: true });
-    }
+  // the two places traded (or the spot moved to), each in a spinning wireframe cube
+  power(fx, actor, s, a, ex) {
+    shamblesCube(fx, ex.x0, ex.y0);
+    shamblesCube(fx, actor.x, actor.y);
+    if (ex.swapped) fx.add('cutline', { x: ex.x0, y: ex.y0, x1: actor.x, y1: actor.y, z: 0.9, color: '#b3e5fc', life: 0.3 });
     fx.flashScreen(0.04, 'rgba(129,212,250,1)');
+  },
+});
+sig('ope_takt', {
+  // a finger raised: the Room pulses, and a cube grips each body as it rises
+  power(fx, actor, s, a, ex) {
+    const z = ex.room;
+    if (z) fx.ring(z.x, z.y, 0.3, z.r, '#e1f5fe', 0.5, 0.08, { add: true });
+    for (const e of ex.lifted || []) {
+      // (the lift raises the cube with the body: room.js updateLift)
+      const c = fx.add('cube', { x: e.x, y: e.y, follow: e, z: 0.9, size: 0.6, color: '#81d4fa', life: (e.lift?.hold ?? 1.1) + 0.45, spin: 0.8 });
+      if (e.lift && c) e.lift.cube = c;
+      fx.burst(e.x, e.y, 6, { color: ['#d7ccc8', '#efebe9'], speed: 1.5, g: -0.5, z: 0.1, vz: 2, life: 0.6, kind: 'dust', size: 0.15 });
+    }
+    sparkle(fx, actor.x, actor.y, 1.9, 4, ['#81d4fa', '#ffffff']);
   },
 });
 sig('ope_amputate', {
@@ -1125,8 +1167,39 @@ sig('ope_amputate', {
     for (let i = 0; i < 3; i++) { const [px, py] = fwd(actor, hb.angle + rnd(-0.5, 0.5), rnd(1, R * 0.8)); fx.add('cube', { x: px, y: py, z: rnd(0.5, 1.2), size: 0.2, color: '#81d4fa', life: 0.5, delay: 0.05 * i }); }
   },
 });
-sig('ope_mes', { hit(fx, actor, s, a, hb) { const [px, py] = fwd(actor, hb.angle, 1.1); fx.add('cube', { x: px, y: py, z: 1.0, size: 0.3, color: '#81d4fa', heart: true, life: 0.8, spin: 1.5 }); } });
+sig('ope_mes', { hit(fx, actor, s, a, hb) { const [px, py] = fwd(actor, hb.angle, 1.1); fx.add('cube', { x: px, y: py, z: 1.0, size: 0.3, color: '#81d4fa', life: 0.5, spin: 1.5 }); fx.ring(px, py, 0.05, 0.5, '#81d4fa', 0.25, 0.05, { z: 1, flat: 1, add: true }); } });
 sig('ope_counter', { hit(fx, actor, s, a, hb) { const [px, py] = fwd(actor, hb.angle, 0.9); miniBolts(fx, px, py, 0.8, 6, 1.2, '#fff176'); glow(fx, px, py, 0.8, 1, '#fff59d', 0.2); } });
+sig('ope_injection', {
+  dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    actor._ghostTint = '#81d4fa';
+    const x0 = actor.x, y0 = actor.y;
+    fx.add('cutline', { x: x0, y: y0, x1: x0, y1: y0, z: 0.8, color: '#b3e5fc', life: 0.45, delay: s.dash.time, onStart: (sh) => { sh.x1 = actor.x; sh.y1 = actor.y; } });
+  },
+});
+sig('ope_gamma', {
+  hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    // (nothing outside: a glow deep inside whatever it passed through)
+    const [px, py] = fwd(actor, hb.angle, 2);
+    glow(fx, px, py, 0.9, 1.1, '#b388ff', 0.35);
+  },
+});
+sig('ope_radio', {
+  hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const R = (s.hit.range || 4) * (actor.reach ?? 1);
+    for (let i = 0; i < 4; i++) { const [px, py] = fwd(actor, hb.angle + rnd(-0.7, 0.7), rnd(1, R * 0.85)); miniBolts(fx, px, py, 0.8, 2, 0.8, '#fff176'); }
+  },
+});
+sig('ope_shockwille', {
+  hit(fx, actor, s, a, hb) {
+    const [px, py] = fwd(actor, hb.angle, 1.4);
+    fx.add('cube', { x: px, y: py, z: 0.9, size: 0.5, color: '#81d4fa', life: 0.35, spin: 4 });
+    for (let i = 0; i < 3; i++) fx.ring(px, py, 0.05, 0.8 + i * 0.6, i ? '#81d4fa' : '#ffffff', 0.35, 0.08, { z: 0.9, flat: 0.8, delay: 0.1 + i * 0.05, add: true });
+    fx.add('impact', { x: px, y: py, z: 0.9, angle: hb.angle, size: 1, color: '#81d4fa', core: '#ffffff', life: 0.2, spikes: 12, lines: 6, delay: 0.1 });
+  },
+});
 
 // ---- Paramecia (misc)
 sig('bara_festival', { hit(fx, actor, s, a) { const l = lastLook(actor); fx.add('pieces', { x: actor.x, y: actor.y, follow: actor, r: 2.6, skin: l.skin, top: l.top, bottom: l.bottom, life: s.hit.duration || 1.2 }); } });
@@ -1151,25 +1224,56 @@ sig('hana_mil', {
 sig('ito_parasite', { proj(fx, actor, s, a) { const tx = a.tx ?? actor.x + Math.cos(a.angle) * 6, ty = a.ty ?? actor.y + Math.sin(a.angle) * 6; fx.add('strings', { x: actor.x, y: actor.y, x1: tx, y1: ty, color: '#f8bbd0', n: 5, life: 0.6 }); } });
 sig('ito_fivecolor', { hit(fx, actor, s, a, hb) { const R = (s.hit.range || 3.4) * (actor.reach ?? 1); for (let i = 0; i < 5; i++) fx.add('crescent', { x: actor.x, y: actor.y, angle: hb.angle + (i - 2) * 0.08, radius: R * (0.95 - i * 0.05), arc: 1.4, width: 0.05, color: ['#f48fb1', '#ce93d8', '#90caf9', '#a5d6a7', '#fff59d'][i], dir: 1, life: 0.28, delay: i * 0.02, z: 0.5 + i * 0.1 }); } });
 sig('ito_overheat', { beam: 'string' });
+sig('ito_birdcage', {
+  // the cage of strings — kept on the field so it can close in (powers.js zoneRules)
+  zone(fx, actor, spec, a, zone) {
+    zone.shape = fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'cage', color: zone.color, zone, life: 1e6 });
+    for (let i = 0; i < 12; i++) { const th = (i / 12) * TAU; fx.add('strings', { x: actor.x, y: actor.y, x1: zone.x + Math.cos(th) * zone.r, y1: zone.y + Math.sin(th) * zone.r * 0.62, color: '#f8bbd0', n: 1, life: 0.7 }); }
+    return true;
+  },
+});
 sig('mochi_zangiri', { beam: 'mochi' });
 sig('noro_beam', { beam: 'light', hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const L = (s.hit.range || 9); for (let i = 0; i < 6; i++) { const [px, py] = fwd(actor, hb.angle, rnd(0.5, L), 1); sparkle(fx, px, py, 0.7, 1, ['#80deea', '#ffffff']); } } });
 sig('zushi_blade', { beam: 'gravity' });
 sig('bari_barrier', { buff(fx, actor, s, a, ex) { const b = ex.buff; fx.add('barrier', { x: actor.x, y: actor.y, follow: actor, color: '#b3e5fc', life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(b) }); } });
 sig('bari_crash', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); fx.add('barrier', { x: actor.x, y: actor.y, follow: actor, color: '#b3e5fc', life: s.dash.time + 0.15 }); } });
+sig('bari_ball', { buff(fx, actor, s, a, ex) { const b = ex.buff; fx.add('dome', { x: actor.x, y: actor.y, follow: actor, r: 1.2, kind: 'barrier', color: '#b3e5fc', hk: 1, life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(b) }); fx.ring(actor.x, actor.y, 0.2, 1.3, '#e1f5fe', 0.3, 0.08, { z: 0.9, add: true }); } });
 sig('suke_vanish', { buff(fx, actor) { fx.ring(actor.x, actor.y, 1.4, 0.1, '#eceff1', 0.5, 0.05, { add: true }); sparkle(fx, actor.x, actor.y, 0.9, 5, ['#ffffff', '#eceff1']); } });
 sig('sube_slide', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#fce4ec'; sparkle(fx, actor.x, actor.y, 0.6, 4, ['#ffffff', '#fce4ec']); } });
 sig('supa_sparkling', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); for (let i = 0; i < 4; i++) fx.add('crescent', { x: actor.x, y: actor.y, angle: hb.angle + i * 1.57, radius: 1.5, arc: 1.6, width: 0.12, color: '#eceff1', dir: 1, life: 0.2, delay: i * 0.03, z: 0.7 }); } });
-sig('nikyu_repel', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); for (let i = 0; i < 6; i++) fx.burst(actor.x, actor.y, 1, { kind: 'bubble', color: '#ffffff', speed: 4, z: 0.8, vz: 0.5, g: 0, life: 0.6, size: 0.25 }); } });
-sig('nikyu_travel', { teleport(fx, actor, s, a, ex) { DEFAULTS.teleport(fx, actor, s, a, ex); fx.burst(ex.x0, ex.y0, 6, { kind: 'bubble', color: '#ffffff', speed: 2, z: 0.8, vz: 1, g: -1, life: 0.8, size: 0.2 }); } });
+sig('nikyu_repel', {
+  hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); for (let i = 0; i < 6; i++) fx.burst(actor.x, actor.y, 1, { kind: 'bubble', color: '#ffffff', speed: 4, z: 0.8, vz: 0.5, g: 0, life: 0.6, size: 0.25 }); },
+  // (shots are turned back while it holds: a faint shell round the paws)
+  buff(fx, actor, s, a, ex) { fx.add('dome', { x: actor.x, y: actor.y, follow: actor, r: 2.2, kind: 'barrier', color: '#ffffff', hk: 0.6, life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(ex.buff) }); },
+});
+sig('nikyu_travel', {
+  // a paw-print of pressed air, and the target gone over the horizon
+  hit(fx, actor, s, a, hb) {
+    const [px, py] = fwd(actor, hb.angle, 1.2);
+    fx.ring(px, py, 0.05, 1.2, '#ffffff', 0.3, 0.1, { z: 0.9, flat: 0.8, add: true });
+    fx.burst(px, py, 8, { kind: 'bubble', color: '#ffffff', speed: 3, z: 0.9, vz: 0.5, g: 0, life: 0.7, size: 0.22 });
+    fx.add('streaks', { x: px, y: py, angle: hb.angle, life: 0.35, color: '#ffffff' });
+  },
+});
+sig('nikyu_pain', { heal(fx, actor, s, a) { DEFAULTS.heal(fx, actor, s, a); fx.burst(actor.x, actor.y, 1, { kind: 'bubble', color: '#ffffff', speed: 0.3, z: 1.2, vz: 1.2, g: -0.6, life: 1.4, size: 0.5 }); } });
 sig('nikyu_ursus', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.ring(px, py, 0.2, 2, '#ffffff', 0.4, 0.12, { z: 0.8, add: true }); smoke(fx, px, py, 0.8, 10, ['#ffffff', '#e0f7fa'], { speed: 3 }); } });
 sig('kage_steal', { hit(fx, actor, s, a, hb) { const [px, py] = fwd(actor, hb.angle, 1.6); fx.add('claw', { x: px, y: py, z: 0.1, angle: hb.angle, size: 1.1, color: '#263238', life: 0.5, n: 2, tilt: 0 }); smoke(fx, px, py, 0.3, 8, ['#263238', '#37474f', '#000000'], { speed: 1.5 }); } });
 sig('kage_doppelman', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); smoke(fx, actor.x, actor.y, 0.6, 12, ['#263238', '#000000'], { speed: 2 }); } });
+sig('kage_tsuno', {
+  // the shadow runs to them and bursts up as a horn under their feet
+  zone(fx, actor, spec, a, zone) {
+    ringSpikes(fx, zone.x, zone.y, zone.r * 0.5, 7, 'rock', '#263238');
+    smoke(fx, zone.x, zone.y, 0.3, 8, ['#263238', '#000000'], { speed: 1.5 });
+    return false;
+  },
+});
 sig('doku_fist', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); fx.burst(px, py, 10, { kind: 'drop', color: ['#8e24aa', '#ab47bc'], speed: 4, z: 0.8, vz: 2, g: 9, life: 0.5, size: 0.1 }); } });
 sig('doku_hydra', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); smoke(fx, px, py, 0.8, 10, ['#6a1b9a', '#8e24aa', '#4a148c'], { speed: 2.5, size: 0.3 }); } });
 
 // ---- Logia
 sig('mera_hiken ryu_hiken', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.7); flames(fx, px, py, 0.8, 16, ELEM.fire.spark, { speed: 3, angle: a.angle, spread: 1.6 }); glow(fx, px, py, 0.8, 1.2, '#ff9100', 0.25); fx.ring(px, py, 0.1, 0.9, '#ffab40', 0.22, 0.08, { z: 0.8, flat: 1, add: true }); } });
 sig('mera_hidaruma', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.5); fx.burst(px, py, 10, { kind: 'glow', color: ['#aeea00', '#ffab40'], speed: 2, z: 0.9, vz: 0.5, g: 0, life: 0.5, size: 0.2 }); } });
+sig('mera_higan', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); flames(fx, px, py, 0.85, 6, ELEM.fire.spark, { speed: 2.5, angle: a.angle, spread: 0.6 }); glow(fx, px, py, 0.85, 0.6, '#ff9100', 0.12); } });
 sig('mera_enkai', {
   hit(fx, actor, s, a, hb) {
     DEFAULTS.hit(fx, actor, s, a, hb);
@@ -1212,6 +1316,20 @@ sig('goro_raigo', {
     return true;
   },
 });
+sig('goro_mamaragan', {
+  // bolts out of a low sky, all around and over and over (the field pulses do the harm)
+  zone(fx, actor, spec, a, zone) {
+    fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'thunder', color: zone.color, zone, life: 1e6 });
+    fx.add('cloud', { x: zone.x, y: zone.y, r: zone.r * 0.8, z: 7, life: zone.t + 0.4, color: '#263238', glow: '#fff176' });
+    const n = Math.max(6, Math.round(zone.t / 0.15));
+    for (let i = 0; i < n; i++) {
+      const th = rnd(0, TAU), rr = Math.sqrt(Math.random()) * zone.r, px = zone.x + Math.cos(th) * rr, py = zone.y + Math.sin(th) * rr;
+      fx.bolt(px, py - 0.01, px, py, '#fff176', 0.22, 0.1, { z0: 8, z1: 0.1, branches: 2, delay: i * (zone.t / n) });
+    }
+    fx.flashScreen(0.06, 'rgba(255,253,231,1)');
+    return true;
+  },
+});
 sig('goro_amaru', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); fx.add('pillar', { x: actor.x, y: actor.y, r: 0.8, h: 7, color: '#fff176', core: '#ffffff', life: 0.5, kind: 'lightning' }); miniBolts(fx, actor.x, actor.y, 1, 8, 2, '#fff176'); } });
 sig('suna_barjan', { proj(fx, actor, s, a) { fx.add('crescent', { x: actor.x, y: actor.y, angle: a.angle, radius: 1.1, arc: 1.8, width: 0.2, color: '#e1c16e', dir: 1, life: 0.2, z: 0.7, add: false }); } });
 sig('suna_sables', {
@@ -1219,6 +1337,14 @@ sig('suna_sables', {
     fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'storm', color: '#e1c16e', zone, life: 1e6 });
     fx.add('vortex', { x: zone.x, y: zone.y, r: zone.r * 0.85, h: zone.r * 2.2, kind: 'sand', color: '#d7b56d', color2: '#fff3c4', life: zone.t, spin: 9 });
     return true;
+  },
+});
+sig('suna_grip', {
+  // the right hand closes, and the water goes out of them as dust
+  hit(fx, actor, s, a, hb) {
+    const [px, py] = fwd(actor, hb.angle, 1.1);
+    fx.burst(px, py, 14, { kind: 'sand', color: ['#e1c16e', '#d7b56d', '#fff3c4'], speed: 1.6, z: 1, vz: 1.5, g: -0.4, life: 0.8, size: 0.08 });
+    fx.add('vortex', { x: px, y: py, r: 0.6, h: 1.6, kind: 'sand', color: '#d7b56d', color2: '#fff3c4', life: 0.6, spin: 12 });
   },
 });
 sig('suna_dry', { zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'field', color: '#d7b56d', zone, life: 1e6 }); fx.crack(zone.x, zone.y, zone.r * 0.9, zone.t); return true; } });
@@ -1234,9 +1360,34 @@ sig('pika_yata', {
     fx.flashScreen(0.05, 'rgba(255,253,231,1)');
   },
 });
+sig('pika_kick', {
+  // there in a streak of light — and the kick lands with the weight of it
+  teleport(fx, actor, s, a, ex) {
+    const w = fx.game.world;
+    const dx = w ? w.dx(ex.x0, actor.x) : actor.x - ex.x0, dy = actor.y - ex.y0;
+    fx.beam(ex.x0, ex.y0, Math.atan2(dy, dx), Math.hypot(dx, dy), 0.3, '#fff59d', 0.2, '#ffffff', { style: 'light', z: 0.8 });
+    ghostsAlong(fx, actor, ex.x0, ex.y0, 3, '#fff59d', { add: true });
+  },
+  hit(fx, actor, s, a, hb) {
+    const [px, py] = fwd(actor, hb.angle, 1.1);
+    fx.add('impact', { x: px, y: py, z: 0.6, angle: hb.angle, size: 1.1, color: '#fff59d', core: '#ffffff', life: 0.2, spikes: 14, lines: 8 });
+    glow(fx, px, py, 0.6, 1.4, '#fff9c4', 0.25);
+    fx.flashScreen(0.05, 'rgba(255,253,231,1)');
+  },
+});
 sig('pika_yasakani', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); glow(fx, px, py, 0.9, 1.3, '#fff59d', 0.3); fx.add('flare', { x: px, y: py, z: 0.9, size: 0.9, color: '#fff9c4', life: 0.2 }); } });
 sig('pika_amaterasu', { charge: { kind: 'glow', color: '#fff59d', size: 0.35 }, hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); fx.flashScreen(0.1, 'rgba(255,253,231,1)'); } });
 sig('magu_daifunka', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.7); flames(fx, px, py, 0.8, 10, ['#ff6f00', '#bf360c', '#ffab40'], { speed: 2.5 }); embers(fx, px, py, 0.8, 8); smoke(fx, px, py, 1, 4, ['#4e342e', '#5d4037'], { size: 0.3 }); } });
+sig('magu_inugami', {
+  // a hound's head of magma lunging along the ground: fire down the line, scorched earth after
+  hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const L = s.hit.range || 9;
+    for (let i = 1; i <= 4; i++) { const [px, py] = fwd(actor, hb.angle, (i / 4.5) * L, 1); fx.add('scorch', { x: px, y: py, r: 0.7, life: 3, delay: i * 0.04 }); embers(fx, px, py, 0.5, 4); }
+    const [hx, hy] = fwd(actor, hb.angle, L * 0.9, 1);
+    fx.add('pillar', { x: hx, y: hy, r: 0.9, h: 2.6, color: '#ff5722', core: '#ffab40', life: 0.5, kind: 'fire', delay: 0.12 });
+  },
+});
 sig('magu_meigo', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#ff7043'; const x0 = actor.x, y0 = actor.y; fx.add('scorch', { x: x0, y: y0, r: 0.6, life: 3 }); embers(fx, x0, y0, 0.6, 10); } });
 sig('magu_ryusei zushi_meteor mochi_chikara hana_gigante hana_clutch', {
   zone(fx, actor, spec, a, zone) {
@@ -1263,7 +1414,15 @@ sig('magu_ryusei zushi_meteor mochi_chikara hana_gigante hana_clutch', {
 });
 sig('yami_kurouzu', { charge: { kind: 'dark' } });
 sig('yami_blackhole', { charge: { kind: 'dark' }, zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'dark', color: '#311b92', zone, life: 1e6 }); smoke(fx, actor.x, actor.y, 0.3, 12, ['#12001c', '#311b92'], { speed: 3 }); return true; } });
-sig('yami_liberation', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); smoke(fx, actor.x, actor.y, 0.8, 20, ['#12001c', '#311b92', '#4a148c'], { speed: 5, size: 0.4 }); fx.add('pillar', { x: actor.x, y: actor.y, r: 1, h: 5, color: '#311b92', core: '#b388ff', life: 0.5, kind: 'dark' }); } });
+sig('yami_liberation', {
+  hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); smoke(fx, actor.x, actor.y, 0.8, 20, ['#12001c', '#311b92', '#4a148c'], { speed: 5, size: 0.4 }); fx.add('pillar', { x: actor.x, y: actor.y, r: 1, h: 5, color: '#311b92', core: '#b388ff', life: 0.5, kind: 'dark' }); },
+  // (what the darkness swallowed, all coming back out at once)
+  power(fx, actor, s, a) {
+    for (let i = 0; i < 3; i++) fx.ring(actor.x, actor.y, 0.4, 5.5 * (0.6 + i * 0.25), i ? '#7e57c2' : '#12001c', 0.5, 0.18, { delay: i * 0.06, add: !!i });
+    fx.burst(actor.x, actor.y, 18, { color: ['#b388ff', '#ffffff', '#7e57c2'], speed: 7, g: 0, z: 0.9, life: 0.5, kind: 'line', size: 0.08 });
+    fx.shake(0.5);
+  },
+});
 sig('yami_nullify', { hit(fx, actor, s, a, hb) { const [px, py] = fwd(actor, hb.angle, 1); fx.add('vortex', { x: px, y: py, r: 0.6, kind: 'dark', life: 0.4, spin: -10 }); smoke(fx, px, py, 0.8, 6, ['#12001c', '#311b92'], { speed: 1 }); } });
 
 // ---- Zoan
@@ -1275,10 +1434,18 @@ sig('phoenix_fly phoenix_brand', {
   },
 });
 sig('phoenix_rebirth', { heal(fx, actor, s, a) { DEFAULTS.heal(fx, actor, s, a); fx.add('pillar', { x: actor.x, y: actor.y, r: 1, h: 5, color: '#4dd0e1', core: '#e0f7fa', life: 0.7, kind: 'fire' }); } });
+sig('phoenix_form', {
+  // the arms catch light: blue flames bloom out along them (the wings are the animation's)
+  buff(fx, actor, s, a, ex) {
+    flames(fx, actor.x, actor.y, 1.1, 20, ['#4dd0e1', '#80deea', '#fff59d'], { speed: 3, vz: 2, life: 0.8, size: 0.2 });
+    fx.ring(actor.x, actor.y, 0.2, 2, '#4dd0e1', 0.45, 0.12, { add: true });
+    fx.add('pillar', { x: actor.x, y: actor.y, r: 0.7, h: 3.2, color: '#4dd0e1', core: '#fff59d', life: 0.45, kind: 'fire' });
+  },
+});
 sig('seiryu_bolo', { beam: 'fire' });
 sig('seiryu_kaifu', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.burst(px, py, 8, { angle: a.angle, spread: 1, speed: 7, kind: 'line', color: '#e3f2fd', z: 1, g: 0, life: 0.25, size: 0.05 }); } });
 sig('seiryu_raimei', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1.8); miniBolts(fx, px, py, 0.8, 6, 2, '#fff176'); fx.bolt(px, py - 0.01, px, py, '#fff176', 0.3, 0.14, { z0: 8, z1: 0.3, branches: 3 }); } });
-sig('hito_heavy hito_monster neko_hybrid seiryu_form mane_disguise doru_armor supa_spider', {
+sig('hito_heavy hito_guard hito_monster neko_hybrid seiryu_form mane_disguise doru_armor supa_spider', {
   buff(fx, actor, s, a, ex) {
     DEFAULTS.buff(fx, actor, s, a, ex);
     smoke(fx, actor.x, actor.y, 0.8, 14, ['#ffffff', '#eceff1', '#cfd8dc'], { speed: 3, size: 0.4 });

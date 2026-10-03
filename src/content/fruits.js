@@ -1,11 +1,27 @@
 // Devil Fruit distribution for a run: a handful of fruits hidden around the
 // world, rumoured about in taverns. Also used by bosses, barrels and chests.
-import { FRUITS, FRUIT_IDS } from '../data/fruits.js';
+import { FRUITS, FRUIT_IDS, unlockedFruitTechniques } from '../data/fruits.js';
 import { RNG } from '../core/rng.js';
 import { regionAt, REGION_INFO } from '../world/constants.js';
 import { placeObject } from '../world/islandgen.js';
 import { addItem } from '../game/inventory.js';
 import { allNpcDefs } from '../game/npcs.js';
+import { getAbility } from '../game/abilities.js';
+
+/**
+ * A fruit's techniques as they are now, for a character from before: any
+ * its mastery has already opened (a technique added to the fruit since, or
+ * one that opens sooner) are known, and any no longer part of it are gone.
+ */
+function catchUpFruit(game, c) {
+  if (!c?.fruit || !FRUITS[c.fruit]) return;
+  const stale = (id) => typeof id === 'string' && /^(gomu|gura|ope|bara|bomu|hana|ito|mochi|horo|kage|doku|noro|bari|suke|sube|doru|supa|nikyu|mane|zushi|hito|neko|phoenix|seiryu|mera|hie|goro|suna|moku|pika|magu|yami)_/.test(id) && !getAbility(id);
+  c.techniques = (c.techniques || []).filter((id) => !stale(id));
+  c.hotbar = (c.hotbar || []).map((id) => (stale(id) ? null : id));
+  const fresh = unlockedFruitTechniques(c.fruit, c.fruitMastery || 0).filter((id) => !c.techniques.includes(id));
+  for (const id of fresh) c.techniques.push(id);
+  if (fresh.length) game.log?.(`Your ${FRUITS[c.fruit].name} holds techniques you hadn't found: ${fresh.map((id) => getAbility(id)?.name).filter(Boolean).join(', ')}. See the Skills tab.`, '#ffab91');
+}
 
 /**
  * Every Devil Fruit exists once: fruits already eaten (by you or a canon
@@ -43,6 +59,7 @@ export function installFruits(game) {
     return precise ? `"A fruit with strange swirling patterns grows on ${isl.name}. Nobody dares to eat it."` : `"They say a Devil Fruit was spotted somewhere in the ${sea}... ${isl.name.split(' ')[0].slice(0, 2)}-something island, I think."`;
   };
   game.on('characterStart', ({ char, isNew }) => {
+    if (!isNew) catchUpFruit(game, char);
     if (!char.world.fruitSpawns) {
       const rng = new RNG(char.runSeed + ':fruits');
       const isles = game.surface.islands.filter((i) => i.name && !i.def.noFruit && i.def.sea);

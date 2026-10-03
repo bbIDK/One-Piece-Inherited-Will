@@ -3,8 +3,16 @@
 // Canon rules implemented here:
 //  * Logia users are intangible: physical hits pass through them unless the
 //    attacker uses Armament Haki, Seastone, or the Logia's elemental weakness
-//    (water for Crocodile's sand, rubber vs lightning, magma beats fire...).
+//    (water for Crocodile's sand, rubber vs lightning — Luffy's fists land on
+//    Enel —, magma beats fire...). Nor does a Logia's body escape the
+//    surgeon inside his ROOM, or a blow that ruins it from the inside.
+//  * A Special Paramecia that acts like a Logia (Katakuri's mochi) lets some
+//    blows pass through a hole it makes in itself.
 //  * Rubber (Gomu Gomu) shrugs off blunt force and lightning.
+//  * A barrier (Bari Bari) stops anything that comes at its front; Repel and
+//    Balloon send shots back; a Black Hole swallows them (powers.js).
+//  * Up in the air (flight.js): shots and beams reach a flier, a blow only
+//    one about level with it; a heavy blow knocks it out of the sky.
 //
 // Guarding (the numbers are in difficulty.js, by where the fight is):
 //  * Holding block (F) takes a blow from the front for a little chip damage.
@@ -26,6 +34,9 @@ import { angleDiff, clamp, TAU } from '../core/math.js';
 import { hullGap, BIG_SHIP } from '../world/hull.js';
 import { hostile } from './entity.js';
 import { tierOf, PARRY } from './difficulty.js';
+import { barrierStops, reflectShot, absorbShot } from './powers.js';
+import { reachesUp, downFlyer } from './flight.js';
+import { raceHit, unshakable } from './racial.js';
 
 const ELEMENT_COLORS = {
   physical: '#ffffff', fire: '#ff7b39', ice: '#9be7ff', lightning: '#fff176', sand: '#e1c16e', smoke: '#cfd8dc',
@@ -148,6 +159,9 @@ export class Combat {
         const t = game.world.type(p.x, p.y);
         if (game.world.solid(p.x, p.y) || game.world.hitsProp(p.x, p.y, 0.04, true) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
       }
+      // (swallowed by a Black Hole; sent back by a Repel or a Balloon)
+      if (!dead && game.areaZones?.length && absorbShot(game, p)) dead = true;
+      if (!dead) reflectShot(game, p, actors);
       if (!dead) {
         for (const a of actors) {
           if (p.hit.has(a.id) || !this.canHit(p.owner, a, p)) continue;
@@ -155,7 +169,8 @@ export class Combat {
           p.hit.add(a.id);
           p.angle = Math.atan2(p.vy, p.vx);
           this.applyHit(p.owner, a, p);
-          if (!p.pierce) { dead = true; break; }
+          // (a barrier stops even a shot that goes through people)
+          if (!p.pierce || p.stopped) { dead = true; break; }
         }
         if (p.hitShips && !dead) {
           for (const s of game.ships) {
@@ -203,6 +218,10 @@ export class Combat {
     if (owner.deck && target.deck && owner.deck.ship === target.deck.ship && h.vx === undefined && !h.radial) {
       if (Math.abs(owner.deck.h + (owner.z || 0) - target.deck.h - (target.z || 0)) > 1.6) return false;
     }
+    // (a Room technique reaches what's inside the ROOM, nothing beyond it)
+    if (h.room && this.game.world.distance(h.room.x, h.room.y, target.x, target.y) > h.room.r + (target.r || 0.3)) return false;
+    // (up in the air: a blow reaches only what's about level with it)
+    if ((owner.flying || target.flying) && !reachesUp(owner, target, h, this.game)) return false;
     return hostile(owner, target) || (owner.isPlayer && target.provoked) || (target.isPlayer && owner.provoked) || h.hitsAll;
   }
 
@@ -281,18 +300,36 @@ export class Combat {
       }
     }
 
+    // a barrier: whatever comes at its front stops dead
+    if (barrierStops(game, tgt, att, h)) {
+      h.stopped = true;
+      fx.ring(tgt.x + Math.cos(tgt.facing) * 0.6, tgt.y + Math.sin(tgt.facing) * 0.45, 0.1, 1, '#b3e5fc', 0.25, 0.08, { z: 0.9, flat: 0.4, add: true });
+      if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, 'BARRIER', '#b3e5fc', 0.32);
+      game.audio?.sfx('block', tgt);
+      return false;
+    }
     // Logia intangibility
     const armed = att && (att.armament || h.haki || h.seastone);
     const lg = tgt.fruitDef && tgt.fruitDef.logia ? tgt.fruitDef : tgt.fakeLogia || null;
     if (lg && !tgt.seastoned && (lg === tgt.fakeLogia ? tgt.state !== 'knocked' && !tgt.inWater && !tgt.status.freeze : tgt.intangibleOK())) {
       const weakness = lg.weakTo || [];
-      const counters = weakness.includes(el) || (el === 'water' && tgt.status.wet) || (att && att.status.wet && weakness.includes('water'));
-      if (!armed && !counters && !h.trueDamage) {
+      // (an elemental weakness; sea water on them, or on the hands hitting
+      // a sand body; a rubber body — what lightning can't touch can touch it)
+      const counters = weakness.includes(el) || (el === 'water' && tgt.status.wet) || (att && att.status.wet && weakness.includes('water')) || (!!att?.fruitDef?.rubber && weakness.includes('rubber'));
+      if (!armed && !counters && !h.trueDamage && !h.ignoreLogia) {
         fx.burst(tgt.x, tgt.y - 0.7, 8, { color: lg.color || '#fff', speed: 3, g: 0, life: 0.35, kind: 'smoke', size: 0.2 });
         if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, 'INTANGIBLE', lg.color || '#fff', 0.3);
         if (att && att.isPlayer) game.hint('logia', att.hakiUnlocked?.() ? 'Logia users are intangible. Use Armament Haki, Seastone, or their elemental weakness to hit them.' : 'Your blows pass straight through them! Logia users are intangible — Seastone or their elemental weakness can still reach them.');
         return false;
       }
+    }
+    // a body that behaves like a Logia's (Katakuri's mochi): some blows pass through a hole it makes
+    const lk = tgt.fruitDef?.passive;
+    if (lk?.logiaLike && !tgt.seastoned && !armed && !h.trueDamage && !h.ignoreLogia && tgt.state === 'idle' && !tgt.inWater && !tgt.status.freeze
+      && !(lk.weakTo || []).includes(el) && Math.random() < (lk.intangible || 0)) {
+      fx.burst(tgt.x, tgt.y - 0.7, 6, { color: tgt.fruitDef.color || '#fff8e1', speed: 2.5, g: 0, life: 0.3, kind: 'smoke', size: 0.2 });
+      if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, 'MOCHI!', tgt.fruitDef.color || '#fff8e1', 0.3);
+      return false;
     }
     // Rubber: blunt force and lightning barely work
     let dmg = h.damage;
@@ -370,12 +407,25 @@ export class Combat {
     if (!blocked) {
       const kb = (h.knockback ?? 2) * (tgt.kbResist ?? 1);
       if (kb > 0) tgt.knock(Math.cos(kbAng) * kb, Math.sin(kbAng) * kb, h.forceWater);
-      // (a counter staggers through a boss's poise; and no one blow holds you longer than a flurry may)
+      // (a counter staggers through a boss's poise — and a Buccaneer's frame; and no one blow holds you longer than a flurry may)
       let stun = counter ? Math.max(h.stun || 0, PARRY.counterStun) : h.stun;
       if (tgt.isPlayer && stun > T.stunCap) stun = T.stunCap;
-      if (stun && (counter || !(tgt.poise && !h.guardBreak && stun < 0.6))) tgt.stagger(stun * (tgt.stunResist ?? 1));
+      if (stun && (counter || !(unshakable(tgt) && !h.guardBreak && stun < 0.6))) tgt.stagger(stun * (tgt.stunResist ?? 1));
       if (h.status) for (const [k, v] of Object.entries(h.status)) tgt.addStatus(k, v, att);
+      // (a quake throws them off their feet; a heavy blow knocks a flier out of the sky)
+      if (h.launch && !tgt.flying && !tgt.inWater && !tgt.climb && !tgt.onShip && !((tgt.z || 0) > 0.3) && tgt.state === 'idle') {
+        tgt.vz = Math.max(tgt.vz || 0, h.launch * (tgt.boss ? 0.5 : 1));
+        tgt.z = Math.max(tgt.z || 0, 0.02); tgt.airT = 0; tgt.jumpK = 0;
+      }
+      if (tgt.flying && tgt.flight && (h.heavy || h.guardBreak || (h.stun || 0) >= 0.6 || h.fling)) downFlyer(tgt, game);
+      // (a paw that repels them clean off the field: Kuma's "trip")
+      if (h.fling && tgt.state === 'idle' && !tgt.onShip && !tgt.climb) {
+        const sp = h.fling * (tgt.boss ? 0.35 : 1);
+        tgt.dash = { vx: Math.cos(kbAng) * sp, vy: Math.sin(kbAng) * sp, t: 1.1, ignoreWater: true, flung: true };
+        tgt.vz = Math.max(tgt.vz || 0, 8); tgt.z = Math.max(tgt.z || 0, 0.02); tgt.airT = 0;
+      }
       if (h.onHit) h.onHit(tgt, att, game, h);
+      raceHit(att, tgt, h, game);
       if (final > 0 || h.trueDamage) { tgt.hitT = now; tgt.hitDir = kbAng; tgt.hitW = w; }
       if (tgt.isPlayer && tgt.state === 'idle') this.flurry(tgt, att, kbAng, T);
     }
