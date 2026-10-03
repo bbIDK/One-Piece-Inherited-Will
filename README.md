@@ -225,8 +225,15 @@ GitHub Pages site: no account, and no server of our own.
 - **Part 3, The New World**: Fish-Man Island and on to Laugh Tale for pirates,
   New Marineford and Blackbeard's fortress for the Navy and the hunters.
 - **How it works:**
-  - One chapter at a time, and the main story can't be abandoned. Side
-    quests can be.
+  - One chapter at a time. The main story is optional: at creation, with
+    any of the three contacts, or from Quests and the Journal you can choose
+    to **sail your own way** (no chapters, markers or story waypoint;
+    everything else stays open), and take up a calling again later. A road
+    under way can be set aside and resumed where you left it. Side quests
+    can be abandoned too.
+  - Crewmates the story brings are offers: accept, decline, or ask again
+    later. Each Blue has a second offer at its last port, so two can sail
+    with you into the Grand Line.
   - Return to whoever gave you a chapter for pay that grows as the story goes
     on.
   - If your road changes, the story follows you: a Marine who deserts turns

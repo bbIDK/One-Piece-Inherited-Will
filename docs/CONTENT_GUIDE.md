@@ -326,8 +326,12 @@ Registry ids are global, so prefix anything that might collide.
     `bob`, `ponytail`, `twintails`, `braid`, `bun`, `topknot`, `curly`,
     `afro`, `mohawk`, `buzz`, `bald`.
 - **Fight-only villains** need no dialogue, just `hostile: true`.
-- **Crew recruits.** `recruit` adds a "Join my crew" choice to their dialogue
-  automatically. The roles are `fighter`, `swordsman`, `navigator`, `cook`,
+- **Crew recruits.** `recruit` makes them an offer: once they'd sail with
+  you, a yellow ! goes over them and their conversation opens with it
+  (Welcome aboard / Tell me about yourself first / Not this time), worded
+  for the player's road ("Join my crew!", "Serve under my command!",
+  "Partner up with me!", "Sail with me!"). A refusal is remembered and they
+  can be asked again. The roles are `fighter`, `swordsman`, `navigator`, `cook`,
   `doctor`, `shipwright`, `sniper`, `musician`, `archaeologist` and
   `helmsman`.
   - Prefer canon minor characters who plausibly would join, for example
@@ -442,9 +446,10 @@ warns about quests that nothing starts.
 **Rewards.** `points` are breakthrough attribute points; 1–3 for story
 quests. `liberate` adds a town to the "liberation" dream counter.
 
-**Kinds.** `kind: 'main'` is the main story (below): one at a time, and it
-can't be abandoned. Any other quest can be abandoned from the Quests menu
-and taken up again from its giver.
+**Kinds.** `kind: 'main'` is the main story (below): one chapter at a time.
+The story itself is optional (a player can choose to sail their own way, or
+set a road aside and take it up again). Any other quest can be abandoned
+from the Quests menu and taken up again from its giver.
 
 ### The main story
 
@@ -467,7 +472,8 @@ chapter('gl_drum', { part: 2, island: 'drum_island' }, {
 - `contact`: a new person (`{ name, title, look, at, … }`) or one already in
   the world (`{ npc: 'kaya' }`). The story adds itself to their
   conversation.
-- `tasks`: ordinary stages; `T.weapon()`, `T.flag()`, `T.crew(n)`,
+- `tasks`: ordinary stages; `T.flag()`, `T.offer(npc, desc)` (a crewmate's
+  offer: a yes or a no both complete it — the story never forces a recruit),
   `T.ship()`, `T.logPose()`, `T.quest(id, desc, giver, stageId, { alt, autoStart })`,
   `T.defeat(npc, desc)`, `T.talk(npc, desc, lines)`, `T.check(id, desc, fn)`…
 - `target({...})` defines someone to hunt, who only appears while a chapter
