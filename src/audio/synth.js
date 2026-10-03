@@ -269,6 +269,28 @@ export class Voice {
     this.done(t + dur + 0.05);
   }
 
+  /**
+   * A swirl (the anime's "shing" of hardening steel): noise through a comb
+   * whose tooth spacing sweeps (a flanger — a short delay fed back on itself,
+   * its time gliding `d0` → `d1` → `d2` ms), so the colour sweeps in arcs.
+   */
+  swirl(dt, dur, { color = 'white', lp = 9000, hp = 300, d0 = 0.6, d1 = 5, d2 = 1.5, fb = 0.75, gain = 0.1, attack = 0.004, hold = 0, dest } = {}) {
+    const c = this.c, t = this.at(dt);
+    const src = c.createBufferSource(); src.buffer = this.E.noiseBuf(color); src.loop = true;
+    const h = c.createBiquadFilter(); h.type = 'highpass'; h.frequency.value = hp;
+    const l = c.createBiquadFilter(); l.type = 'lowpass'; l.frequency.value = lp;
+    const d = c.createDelay(0.05), fg = c.createGain(), mix = c.createGain(), g = c.createGain();
+    d.delayTime.setValueAtTime(d0 / 1000, t);
+    d.delayTime.linearRampToValueAtTime(d1 / 1000 / this.pj, t + dur * 0.45);
+    d.delayTime.linearRampToValueAtTime(d2 / 1000, t + dur);
+    fg.gain.value = fb;
+    src.connect(h); h.connect(l); l.connect(mix); l.connect(d); d.connect(fg); fg.connect(d); d.connect(mix);
+    env(g.gain, t, attack, hold, dur, gain, 'exp');
+    mix.connect(g); g.connect(dest || this.in);
+    src.start(t, Math.random() * 1.9); src.stop(t + dur + 0.05);
+    this.done(t + dur + 0.08);
+  }
+
   /** Breath, or a voice far off: noise through two vowel formants (`f1`, `f2`), which may slide. */
   formant(dt, dur, { f1 = 700, f2 = 1200, to1, to2, q = 5, gain = 0.1, attack = 0.04, color = 'pink', dest } = {}) {
     const c = this.c, t = this.at(dt);

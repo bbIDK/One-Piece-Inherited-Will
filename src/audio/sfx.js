@@ -196,10 +196,12 @@ export const SFX = {
         v.ring(0.001, [900, 980, 840][k.rr] * r(), 0.28, 0.07, [1, 1.62, 2.4, 3.3]);
         v.thump(0, { f0: 300, f1: 120, dur: 0.05, gain: 0.2 });
       } else {
-        v.noise(0, 0.07, { freq: 620 * r(), q: 2, gain: 0.6, attack: 0.001 });
-        v.noise(0, 0.035, { freq: 1500 * r(), q: 1.5, gain: 0.28, attack: 0.001 });
-        v.thump(0, { f0: 130, f1: 70, dur: 0.09, gain: 0.3 });
-        v.noise(0.004, 0.04, { freq: 2500, q: 1, gain: 0.08 });
+        // the arm takes it: a dull DOFF — a short crack, the leather smack, the bone behind it
+        v.noise(0, 0.008, { type: 'highpass', freq: 2000, gain: 0.45, attack: 0.0006 });
+        v.noise(0, 0.06, { freq: [850, 760, 950][k.rr] * r(), q: 1.2, gain: 0.75, attack: 0.001 });
+        v.noise(0, 0.035, { freq: 1800 * r(), q: 1.4, gain: 0.32, attack: 0.001 });
+        v.tone(0.003, 0.09, { freq: 150, to: 75, gain: 0.35, attack: 0.003 });
+        v.noise(0.004, 0.05, { freq: 2600, q: 1, gain: 0.1 });
       }
       if (k.armament) hakiClank(v, 0.002, 0.6, vo(k));
     },
@@ -279,30 +281,42 @@ export const SFX = {
     play(v) { [330, 311, 294, 220].forEach((f, i) => v.tone(i * 0.26, 0.6, { freq: f, type: 'triangle', gain: 0.18 })); },
   },
   /**
-   * Armament Haki hardening (in the user's voice): the low "vrrmm" of will
-   * swelling as the coat spreads up the arm — a growl opening up over a sub —
-   * and, as it sets hard at 0.27 s (when the coat has spread: render3d/chars/
-   * haki.js), the metallic KSHING: a click, a bright swipe, a struck-iron
-   * clank and a dense ringing tail, chorused. (A hit by Haki itself: a
-   * Haki-heavy blow.)
+   * Armament Haki hardening (in the user's voice) — as the player hears it,
+   * and as the anime's own clip measures: a deep, resonant rumble swelling as
+   * the black coat spreads up the arm, then, as it sets hard (0.27 s, when the
+   * coat has spread: render3d/chars/haki.js), a sharp metallic ring — the
+   * crack of it, a dense cluster of struck-steel partials beating against each
+   * other, swirling as the anime's "shing" does — with its lows held under it
+   * and a long resonant tail (the clip rings 1.6 s before it's 20 dB down).
+   * Each character's own: pitched and coloured a few per cent their way.
+   * (A hit by Haki itself: a Haki-heavy blow.)
    */
   haki: {
-    prio: 7, cd: 0.08, max: 2, send: 0.3, drive: 1.2, variants: 3,
+    prio: 7, cd: 0.08, max: 2, send: 0.3, drive: 0.6, variants: 3, side: 0.5, hold: 0.5,
     play(v, k) {
       if (k.hit) { SFX.punch_heavy.play(v, { ...k, armament: true }); return; }
-      const V = vo(k), f = 44 + 24 * V;
-      v.tone(0, 0.42, { freq: f, to: f * 1.9, type: 'sawtooth', gain: 0.12, attack: 0.18, curve: 'lin' });
-      v.tone(0, 0.42, { freq: f * 1.012, to: f * 1.93, type: 'square', gain: 0.04, attack: 0.2, curve: 'lin' });
-      v.tone(0, 0.5, { freq: f * 0.5, to: f * 0.62, gain: 0.3, attack: 0.15 });
-      v.noise(0, 0.36, { color: 'pink', type: 'lowpass', freq: 300, sweep: 1600, q: 1.4, gain: 0.1, attack: 0.25, curve: 'lin' });
-      const T = 0.27, base = (420 + 220 * V) * [1, 1.06, 0.95][k.rr];
-      v.noise(T, 0.007, { type: 'highpass', freq: 6500, gain: 0.3, attack: 0.0005 });
-      v.noise(T, 0.07, { freq: 4200 + 1600 * V, sweep: 8500, q: 2.2, gain: 0.15, attack: 0.002 });
-      v.thump(T, { f0: 160, f1: 60, dur: 0.12, gain: 0.22 });
-      v.ring(T + 0.002, base, 0.9, 0.08, [1, 1.38 + 0.08 * V, 2.1, 2.9 - 0.12 * V, 3.7]);
-      v.ring(T + 0.01, base * 1.004, 1.4, 0.034, [1, 2.02, 2.76]);
-      v.ring(T + 0.015, base * 0.497, 1.2, 0.04, [1, 1.5, 2.2]);
-      v.crackle(0.05, 0.3, 6, { freq: 2200 + 900 * V, gain: 0.03 });
+      const V = vo(k), T = 0.27, p = (1 + 0.08 * (V - 0.5)) * [1, 1.03, 0.97][k.rr];
+      // the rumble: a sub swelling, a growl over it, the resonance of the body
+      v.tone(0, T + 1.1, { freq: 46 * p, to: 39 * p, gain: 0.34, attack: T * 0.9, curve: 'lin' });
+      v.tone(0, T + 0.6, { freq: 92 * p, to: 78 * p, type: 'triangle', gain: 0.1, attack: T * 0.85, curve: 'lin', vib: { rate: 11, depth: 3 } });
+      v.noise(0, T + 0.8, { color: 'brown', type: 'bandpass', freq: 130 * p, q: 2.5, gain: 0.45, attack: T * 0.9, curve: 'lin' });
+      // the set: a crack, the struck-steel clank
+      v.noise(T, 0.006, { type: 'highpass', freq: 2000, gain: 0.55, attack: 0.0005 });
+      v.noise(T, 0.05, { freq: 3800 * p, q: 1, gain: 0.25, attack: 0.001 });
+      v.thump(T, { f0: 170 * p, f1: 70, dur: 0.2, gain: 0.35 });
+      // the ring: inharmonic partials of a struck plate, each beating against its twin, the high ones dying first
+      const base = 410 * p * (1 + 0.04 * (V - 0.5));
+      [1, 1.47, 1.99, 2.37, 2.76, 3.18, 3.63, 4.11, 4.66, 5.25].forEach((m, i) => {
+        const f = base * m * (1 + 0.01 * (Math.random() - 0.5)), d = 4 * Math.pow(0.86, i), g = 0.05 / (1 + i * 0.35);
+        v.tone(T + 0.001, d, { freq: f, gain: g, attack: 0.002 });
+        v.tone(T + 0.002, d * 0.8, { freq: f * (1.003 + 0.002 * V), gain: g * 0.6, attack: 0.003 });
+      });
+      // the swirl of it (the anime's shing), and the air shimmering
+      v.swirl(T, 2.4, { lp: 9000, hp: 600, d0: 0.5, d1: 4.2 + V, d2: 1.4, fb: 0.8, gain: 0.1, hold: 0.3 });
+      v.noise(T + 0.01, 0.9, { type: 'highpass', freq: 5000, gain: 0.03, attack: 0.02 });
+      // ringing on round it
+      const e = v.echo(0.14, 0.3, 2500, 0.25);
+      v.noise(T, 0.25, { freq: 1600, q: 0.8, gain: 0.12, dest: e });
     },
   },
   /** Armament or Observation let go: a soft breath of air settling. */
@@ -319,24 +333,26 @@ export const SFX = {
     },
   },
   /**
-   * Observation Haki (in the user's voice): the heart's soft "doki-doki",
-   * the pulse going out like sonar (a breath of air, a falling sine) and a
-   * high crystalline TING with a long shimmering tail, its partials beating
-   * slowly against each other.
+   * Observation Haki (in the user's voice): the heart's soft "doki-doki", the
+   * sense going out like sonar (a breath of air, a falling sine), and the world
+   * heard — a crystalline ringing held a long moment, its high partials beating
+   * slowly, a low hum under it (as the anime's clip: steady high tones over a
+   * low bed, near two seconds long).
    */
   haki_obs: {
-    prio: 7, cd: 0.2, max: 1, send: 0.55, variants: 3,
+    prio: 7, cd: 0.2, max: 1, send: 0.55, variants: 3, side: 0.3, hold: 0.4,
     play(v, k) {
-      const V = vo(k), f = (2050 + 1300 * V) * [1, 1.03, 0.97][k.rr];
+      const V = vo(k), f = (2050 + 900 * V) * [1, 1.03, 0.97][k.rr];
       v.thump(0, { f0: 66 - 8 * V, f1: 44, dur: 0.13, gain: 0.32 });
       v.thump(0.2, { f0: 58 - 6 * V, f1: 40, dur: 0.11, gain: 0.2 });
       v.whoosh(0.02, 0.5, { f0: 3800, f1: 1600, q: 2.5, gain: 0.05, peak: 0.15 });
       v.tone(0.03, 0.35, { freq: f * 0.5, to: f * 0.25, gain: 0.045, attack: 0.004 });
-      v.ring(0.04, f, 0.9, 0.14, [1, 2.0, 2.76 + 0.2 * V, 4.07]);
-      v.fm(0.04, 1.6, { freq: f * 1.5, ratio: 2.01 + 0.5 * V, index: 0.8, gain: 0.05, indexDur: 1.2 });
-      v.tone(0.08, 2.2, { freq: f * 2, gain: 0.022, attack: 0.3, vib: { rate: 5 + 3 * V, depth: f * 0.004 } });
-      v.tone(0.1, 2.0, { freq: f * 2 * 1.006, gain: 0.018, attack: 0.35 });
-      v.tone(0.12, 1.8, { freq: f * 3.01, gain: 0.011, attack: 0.4, vib: { rate: 3.5, depth: f * 0.006 } });
+      v.ring(0.04, f, 1.6, 0.11, [1, 2.0, 2.76 + 0.2 * V, 4.07]);
+      for (const [m, g, a] of [[1, 0.03, 0.08], [1.5, 0.02, 0.15], [2, 0.025, 0.1], [3.01, 0.012, 0.2]]) {
+        v.tone(0.05, 2, { freq: f * m, gain: g, attack: a, hold: 0.6, vib: { rate: 4 + 3 * V, depth: f * m * 0.003 } });
+        v.tone(0.06, 1.9, { freq: f * m * 1.004, gain: g * 0.7, attack: a + 0.05, hold: 0.5 });
+      }
+      v.tone(0.05, 1.8, { freq: 72 + 10 * V, gain: 0.05, attack: 0.2, hold: 0.6 });
     },
   },
   /** Foresight (Observation slipping a blow): a whoosh played backwards, swelling out of nothing onto a ting. */
@@ -361,26 +377,30 @@ export const SFX = {
     },
   },
   /**
-   * Conqueror's Haki let loose (in the king's voice): the deep rolling DOOON —
-   * a crack, a huge sub falling away under a growling body, thunder rolling on
-   * — the wind of it rushing out past you, and black lightning crackling
-   * (BZZT) through it all.
+   * Conqueror's Haki let loose (in the king's voice): a heavy, echoing
+   * shockwave — as the player hears it, and as the anime's clip measures (a
+   * broadband burst with falling sweeps through it and a tail that rings on
+   * for seconds): the crack, the blast of air and a huge low boom falling away,
+   * sweeps falling through it (the VWOOOM), black lightning crackling, the
+   * shockwave coming back again and again off the world round you, and the
+   * deep rumble rolling on.
    */
   conqueror: {
-    prio: 9, cd: 0.4, max: 1, send: 0.45, drive: 2.2, duck: 0.7, variants: 3,
+    prio: 9, cd: 0.4, max: 1, send: 0.45, drive: 1.6, duck: 0.7, side: 1, hold: 1.2, variants: 3,
     play(v, k) {
-      const V = vo(k), f0 = (60 + 22 * V) * [1, 0.94, 1.06][k.rr];
-      v.noise(0, 0.02, { type: 'highpass', freq: 2200, gain: 0.35, attack: 0.0008 });
-      v.thump(0, { f0: f0 * 1.6, f1: f0 * 0.4, dur: 1.0, gain: 0.85 });
-      v.tone(0, 1.4, { freq: f0, to: f0 * 0.62, glide: 1.2, type: 'sawtooth', gain: 0.13, attack: 0.01 });
-      v.tone(0.01, 1.3, { freq: f0 * 1.005, to: f0 * 0.6, glide: 1.2, type: 'triangle', gain: 0.18, attack: 0.01 });
-      M.rumble(v, 0.08, 1.2, 1.8, { lp: 150 + 60 * V });
-      v.whoosh(0.02, 1.4, { f0: 250 + 150 * V, f1: 1100 + 400 * V, q: 0.8, gain: 0.3, peak: 0.25, color: 'pink' });
-      v.whoosh(0.3, 1.1, { f0: 1400, f1: 500, q: 0.7, gain: 0.11, peak: 0.3 });
-      v.zap(0.03, 0.5, { f0: 50, f1: 900 + 500 * V, gain: 0.1 });
-      v.zap(0.35, 0.4, { f0: 60, f1: 700, gain: 0.07 });
-      v.crackle(0.02, 1.0, 18, { freq: 2600 + 1400 * V, gain: 0.06 });
-      v.noise(0.03, 0.6, { type: 'highpass', freq: 4500, gain: 0.04, attack: 0.01 });
+      const V = vo(k), p = (1 + 0.08 * (V - 0.5)) * [1, 0.97, 1.03][k.rr];
+      const e = v.echo(0.32, 0.45, 900, 0.55);
+      v.noise(0, 0.012, { type: 'highpass', freq: 1500, gain: 0.6, attack: 0.0006 });
+      v.noise(0, 0.6, { color: 'pink', type: 'lowpass', freq: 2500, sweep: 220, gain: 0.55, attack: 0.004 });
+      v.noise(0, 0.5, { color: 'pink', type: 'lowpass', freq: 1800, sweep: 200, gain: 0.35, attack: 0.004, dest: e });
+      v.thump(0, { f0: 85 * p, f1: 26, dur: 1.4, gain: 0.85 });
+      v.tone(0.01, 1.6, { freq: 62 * p, to: 38 * p, glide: 1.4, type: 'sawtooth', gain: 0.08, attack: 0.01 });
+      v.thump(0.02, { f0: 70 * p, f1: 30, dur: 1, gain: 0.4, dest: e });
+      for (const [t0, f0, f1, d, g] of [[0.02, 2600, 380, 1.6, 0.16], [0.12, 1800, 260, 2, 0.13], [0.3, 3400, 700, 1.4, 0.08]]) v.noise(t0, d, { freq: f0 * p, sweep: f1 * p, q: 3, gain: g, attack: 0.02 });
+      v.whoosh(0.02, 1.6, { f0: 900, f1: 200, q: 0.7, gain: 0.28, peak: 0.12, color: 'pink' });
+      v.zap(0.03, 0.45, { f0: 50, f1: 700 + 400 * V, gain: 0.07 });
+      v.crackle(0.02, 1, 16, { freq: 2600 + 1000 * V, gain: 0.05 });
+      M.rumble(v, 0.1, 1.2, 2.6, { lp: 170 });
     },
   },
   /**
@@ -407,15 +427,22 @@ export const SFX = {
   },
 
   // ---- the elements (a Devil Fruit's blows sound like what they're made of)
-  fire: { prio: 6, cd: 0.07, max: 3, send: 0.15, drive: 0.8, play: (v, k) => { v.thump(0, { f0: 140, f1: 70, dur: 0.1, gain: 0.12 + 0.1 * (k.w || 0.5) }); M.flame(v, 0, 0.8 + 0.4 * (k.w || 0.5)); } },
+  /** A fire blow: the crack of it landing, then the flame's roaring FWOOMP (see motifs.js flame). */
+  fire: {
+    prio: 6, cd: 0.07, max: 3, send: 0.15, drive: 0.8,
+    play: (v, k) => { v.noise(0, 0.01, { type: 'highpass', freq: 2000, gain: 0.45, attack: 0.0006 }); v.thump(0, { f0: 140, f1: 70, dur: 0.1, gain: 0.15 + 0.1 * (k.w || 0.5) }); M.flame(v, 0, 1.25 + 0.4 * (k.w || 0.5), { dur: 0.5 }); },
+  },
   magma: { prio: 7, cd: 0.08, max: 3, send: 0.2, drive: 2, play: (v) => { v.thump(0, { f0: 90, f1: 30, dur: 0.4, gain: 0.55 }); M.lava(v, 0, 1); } },
-  ice: { prio: 6, cd: 0.06, max: 3, send: 0.3, play: (v) => { v.thump(0, { f0: 220, f1: 110, dur: 0.06, gain: 0.2 }); M.ice(v, 0, 1); } },
+  /** An ice blow: PAKIN — the crack and crunch, the freeze crackling out over the body (see motifs.js ice). */
+  ice: { prio: 6, cd: 0.06, max: 3, send: 0.3, drive: 0.8, play: (v) => M.ice(v, 0, 1.1) },
   snow: {
     prio: 5, cd: 0.06, max: 3, send: 0.25,
     play(v) { v.noise(0, 0.25, { freq: 3000, q: 0.5, sweep: 1200, gain: 0.14, attack: 0.01 }); v.ring(0.01, 3100, 0.3, 0.02, [1, 1.5]); v.crackle(0, 0.2, 6, { freq: 5000, gain: 0.02 }); },
   },
-  lightning: { prio: 6, cd: 0.1, max: 3, send: 0.2, drive: 1.8, play: (v) => { M.zapBurst(v, 0, 1, 0.3); v.tone(0, 0.2, { freq: 1800, to: 600, type: 'sawtooth', gain: 0.02 }); M.rumble(v, 0.05, 0.8, 0.7); } },
-  thunder_small: { prio: 6, cd: 0.14, max: 3, send: 0.25, drive: 1.6, duck: 0.2, play: (v) => { M.zapBurst(v, 0, 1.1, 0.22); M.rumble(v, 0.02, 1, 0.9); } },
+  /** A lightning blow: a strike, not a ping — the crack of the air torn open, the blast, the sizzle, thunder rolling off. */
+  lightning: { prio: 6, cd: 0.1, max: 3, send: 0.2, drive: 1.6, play: (v) => M.strike(v, 0, 0.9, 1.2) },
+  /** A bolt called down (Enel's, the Clima-Tact's): the same, bigger, the thunder rolling on longer. */
+  thunder_small: { prio: 6, cd: 0.14, max: 3, send: 0.25, drive: 1.6, duck: 0.25, side: 0.8, play: (v) => M.strike(v, 0, 1.1, 2) },
   /**
    * Weather thunder: the flash first, the sound after it (a near strike a
    * sharp clap at once, a far one a dull roll seconds later) — a few strikes
@@ -424,12 +451,12 @@ export const SFX = {
   thunder: {
     prio: 5, cd: 1, max: 2, send: 0.4, drive: 1, duck: 0.15,
     play(v, k) {
-      const far = k.far ?? Math.random(), d = 0.08 + far * 2.2, s = 1 - far * 0.45;
-      if (far < 0.5) for (const [at, g] of [[0, 0.4], [0.03, 0.25], [0.08, 0.3], [0.17, 0.15]]) v.noise(d + at, 0.04, { type: 'highpass', freq: 1500, gain: g * s * (1 - far), attack: 0.001 });
-      v.noise(d, 0.15, { freq: 3000 - far * 2000, sweep: 700, gain: 0.25 * s, attack: 0.003 });
-      M.rumble(v, d + 0.05, 1.5 * s, 2.4, { lp: 300 - far * 150 });
+      // (as thunder is recorded: a near one the crack and then 63–500 Hz rolling on for seconds; a far one only the low roll)
+      const far = k.far ?? Math.random(), d = 0.08 + far * 2.4, s = 1 - far * 0.5;
+      if (far < 0.45) M.strike(v, d, 0.9 - far, 3 + far * 2);
+      else { v.noise(d, 0.3, { color: 'pink', type: 'lowpass', freq: 600 - far * 300, gain: 0.2 * s, attack: 0.06 }); M.rumble(v, d + 0.05, 1.3 * s, 3.2, { lp: 260 - far * 120 }); }
       const e = v.echo(0.55, 0.3, 400, 0.4);
-      v.noise(d + 0.1, 1.2, { color: 'brown', type: 'lowpass', freq: 200, gain: 0.3 * s, dest: e });
+      v.noise(d + 0.1, 1.4, { color: 'brown', type: 'lowpass', freq: 200, gain: 0.3 * s, dest: e });
     },
   },
   water: { prio: 5, cd: 0.07, max: 3, send: 0.12, play: (v) => { v.thump(0, { f0: 140, f1: 60, dur: 0.08, gain: 0.2 }); M.splash(v, 0, 0.9); } },
@@ -478,13 +505,16 @@ export const SFX = {
   },
   /** GOGOGO: the air cracks like glass, then the DOGOON and the shaking ground. */
   quake: {
-    prio: 8, cd: 0.1, max: 2, send: 0.3, drive: 2.5, duck: 0.5,
+    prio: 8, cd: 0.1, max: 2, send: 0.3, drive: 2.5, duck: 0.5, side: 1, hold: 0.4,
     play(v) {
+      // the air cracking like glass; the ground's own deep crack — stone giving way — and the boom; the rumble shaking on
       M.glassCrack(v, 0, 1);
-      M.boom(v, 0.01, 1, { f0: 90, f1: 26, dur: 0.7 });
-      v.tone(0.05, 0.9, { freq: 48, to: 30, gain: 0.45, vib: { rate: 14, depth: 6 } });
-      v.noise(0.05, 0.9, { color: 'brown', type: 'lowpass', freq: 300, gain: 0.4 });
-      v.crackle(0.1, 0.7, 10, { freq: 800, gain: 0.08 });
+      v.noise(0.004, 0.09, { freq: 520, q: 0.8, gain: 0.5, attack: 0.002 });
+      v.crackle(0.006, 0.25, 14, { freq: 900, spread: 1, q: 1.5, gain: 0.18, len: 0.02 });
+      M.boom(v, 0.01, 1, { f0: 100, f1: 30, dur: 0.75 });
+      v.tone(0.05, 1.4, { freq: 52, to: 32, gain: 0.4, vib: { rate: 13, depth: 7 } });
+      M.rumble(v, 0.08, 1.1, 1.6, { lp: 240 });
+      v.crackle(0.15, 1, 12, { freq: 1100, gain: 0.07 });
     },
   },
   /** PIN: a wire-thin string — a twang, the whip of it. */
@@ -1121,7 +1151,7 @@ export const FRUIT_TECH = {
   tori_phoenix: { default: (v, k) => { M.flame(v, 0, 0.7, { dur: 0.6, low: 500, high: 1800 }); M.chime(v, 0.15, 0.7, [1318, 1760, 2637]); if (k.rel > 0.1) swing(v, k.rel, 'legs', 1); } },
   uo_seiryu: {
     seiryu_bolo: (v, k) => { M.roar(v, 0, 1, Math.max(0.4, k.rel), 80); M.flame(v, k.rel, 1.6, { dur: 0.9 }); },
-    seiryu_raimei: (v, k) => { swing(v, 0, 'heavy', 1.3); M.zapBurst(v, k.rel, 1.2, 0.3); },
+    seiryu_raimei: (v, k) => { swing(v, 0, 'heavy', 1.3); M.strike(v, k.rel, 1.2, 1.8); },
     default: (v, k) => { M.roar(v, 0, 1, 0.9, 70); v.whoosh(k.rel, 0.4, { f0: 300, f1: 2000, gain: 0.1 }); },
   },
   mera: {
@@ -1133,8 +1163,9 @@ export const FRUIT_TECH = {
     default: (v, k) => { v.noise(0, Math.max(0.15, k.rel), { type: 'highpass', freq: 3500, gain: 0.05, attack: 0.1, curve: 'lin' }); v.crackle(0, Math.max(0.15, k.rel), 5, { freq: 7000, gain: 0.02, q: 5 }); M.ice(v, k.rel, 0.8); },
   },
   goro: {
-    goro_elthor: (v, k) => { v.zap(0, Math.max(0.5, k.rel), { f0: 40, f1: 200, gain: 0.04 }); M.rumble(v, 0, 0.6, Math.max(0.5, k.rel), { lp: 180 }); },
-    goro_raigo: (v, k) => { M.rumble(v, 0, 1.4, Math.max(1, k.rel) + 1, { lp: 140 }); v.zap(0.3, 1, { f0: 40, f1: 160, gain: 0.03 }); },
+    // (El Thor and Raigo: the charge gathering, then a strike from the sky — the crack and the thunder rolling on)
+    goro_elthor: (v, k) => { v.zap(0, Math.max(0.5, k.rel), { f0: 40, f1: 200, gain: 0.04 }); M.rumble(v, 0, 0.6, Math.max(0.5, k.rel), { lp: 180 }); M.strike(v, k.rel, 1.3, 2.4); },
+    goro_raigo: (v, k) => { M.rumble(v, 0, 1.4, Math.max(1, k.rel) + 1, { lp: 140 }); v.zap(0.3, 1, { f0: 40, f1: 160, gain: 0.03 }); M.strike(v, Math.max(1, k.rel), 1.4, 3); },
     default: (v, k) => {
       // static gathering (the hair on your neck), then VARI
       v.zap(0, Math.max(0.15, k.rel), { f0: 40, f1: 220, gain: 0.03, step: 0.02 });
@@ -1173,10 +1204,10 @@ export const STYLE_TECH = {
   fmk_vagabond: (v, k) => { v.whoosh(0, Math.max(0.3, k.rel) + 0.3, { f0: 300, f1: 1200, q: 0.7, gain: 0.16, peak: 0.7, flutter: 18, color: 'pink' }); M.splash(v, k.rel, 0.8); },
   elec_discharge: (v, k) => M.zapBurst(v, k.rel, 1, 0.35),
   elec_garchu: (v, k) => M.zapBurst(v, k.rel, 0.8, 0.2),
-  clima_thunderbolt: (v, k) => { v.zap(0, Math.max(0.3, k.rel), { f0: 40, f1: 150, gain: 0.03 }); M.zapBurst(v, k.rel, 1.2, 0.3); M.rumble(v, k.rel, 0.8, 0.8); },
+  clima_thunderbolt: (v, k) => { v.zap(0, Math.max(0.3, k.rel), { f0: 40, f1: 150, gain: 0.03 }); M.strike(v, k.rel, 1.1, 1.6); },
   clima_cyclone: (v, k) => v.whoosh(k.rel, 0.9, { f0: 300, f1: 1100, q: 0.6, gain: 0.16, peak: 0.4, flutter: 5, color: 'pink' }),
   clima_mirage: (v) => M.shimmer(v, 0, 0.8, 0.6, false),
-  clima_zeus: (v, k) => { M.zapBurst(v, k.rel, 1.3, 0.4); M.rumble(v, k.rel, 1, 1); },
+  clima_zeus: (v, k) => M.strike(v, k.rel, 1.3, 2.2),
   hassho_bushin: (v, k) => { v.tone(0, Math.max(0.2, k.rel) + 0.2, { freq: 42, gain: 0.25, attack: 0.08, vib: { rate: 18, depth: 6 } }); v.whoosh(k.rel, 0.3, { f0: 200, f1: 900, gain: 0.12, color: 'pink' }); },
   okama_pirouette: (v) => { for (let i = 0; i < 3; i++) swing(v, i * 0.12, 'legs', 0.8); },
   okama_hell_wink: (v, k) => { v.tone(k.rel, 0.3, { freq: 1400, to: 2800, gain: 0.04 }); M.pop(v, k.rel, 0.8, 600); },
