@@ -39089,19 +39089,19 @@ void main() {
   function cbox(w, h2, d) {
     return new BoxGeometry(w, h2, d);
   }
-  function cyl(rTop, rBot, h2, seg = 8, open = false, hSeg = 1) {
-    const g = new CylinderGeometry(rTop, rBot, h2, seg, hSeg, open);
+  function cyl(rTop, rBot, h2, seg2 = 8, open = false, hSeg = 1) {
+    const g = new CylinderGeometry(rTop, rBot, h2, seg2, hSeg, open);
     g.translate(0, h2 / 2, 0);
     return g;
   }
-  function cone(r, h2, seg = 8, open = false, hSeg = 1) {
-    return cyl(0, r, h2, seg, open, hSeg);
+  function cone(r, h2, seg2 = 8, open = false, hSeg = 1) {
+    return cyl(0, r, h2, seg2, open, hSeg);
   }
   function blob(r, detail = 1) {
     return new IcosahedronGeometry(r, detail);
   }
-  function lathe(pts, seg = 10) {
-    return new LatheGeometry(pts.map(([r, y]) => new Vector2(Math.max(1e-4, r), y)), seg);
+  function lathe(pts, seg2 = 10) {
+    return new LatheGeometry(pts.map(([r, y]) => new Vector2(Math.max(1e-4, r), y)), seg2);
   }
   function torus(R4, r, rs = 6, ts = 12, arc = Math.PI * 2) {
     return new TorusGeometry(R4, r, rs, ts, arc);
@@ -43084,9 +43084,9 @@ ${GLSL}
     k.add(cyl(r * 0.55, r * 0.55, cw + 0.08, 8), { at: [-(cw + 0.08) / 2, ay, zc], rot: [0, 0, -Math.PI / 2], color: iron });
     return { muzzle: zc + zb + s * Lb, ay };
   }
-  function shotPile(k, P5, r = 0.075, seg = 8) {
+  function shotPile(k, P5, r = 0.075, seg2 = 8) {
     k.add(box(r * 7.4, 0.08, r * 5.4), { color: P5.wood, outline: 8e-3 });
-    const ball = new SphereGeometry(r, seg, Math.max(4, seg - 2));
+    const ball = new SphereGeometry(r, seg2, Math.max(4, seg2 - 2));
     let y = 0.08 + r;
     for (let layer = 0, n = 3; n > 0; layer++, n--) {
       for (let i = 0; i < n + 1; i++) for (let j = 0; j < n; j++) {
@@ -48706,8 +48706,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     tf(I2, { r: 0.6 }, () => {
       tube2(I2, "M32 66 L32 34", col, 5.6);
       part(I2, rrect(28.5, 50, 7, 8, 1.6), trim, { sd: 0.6, hd: 0.4 });
-      const arms = "M32 39 C21 37 14.5 28 14.5 16 C14.5 11 16 7 18.5 3.5 C20 9 21 16 24.5 22 C26.5 25.5 29 27 32 27 C35 27 37.5 25.5 39.5 22 C43 16 44 9 45.5 3.5 C48 7 49.5 11 49.5 16 C49.5 28 43 37 32 39 Z";
-      part(I2, arms, col, { sd: 2, hd: 1.4 });
+      const arms2 = "M32 39 C21 37 14.5 28 14.5 16 C14.5 11 16 7 18.5 3.5 C20 9 21 16 24.5 22 C26.5 25.5 29 27 32 27 C35 27 37.5 25.5 39.5 22 C43 16 44 9 45.5 3.5 C48 7 49.5 11 49.5 16 C49.5 28 43 37 32 39 Z";
+      part(I2, arms2, col, { sd: 2, hd: 1.4 });
       ln(I2, "M18.8 6 L32 21 L45.2 6", OUT2, 2.4);
       ln(I2, "M18.8 6 L32 21 L45.2 6", "#e6d2a8", 1.2);
       part(I2, circle(32, 33, 5.2), trim, { sd: 1, hd: 0.8 });
@@ -54242,18 +54242,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
 
   // src/render/anims.js
   var TAU8 = Math.PI * 2;
-  var STAND = { b: [0, 0], l: 0, r: 0, z: 0, sp: 0, ht: 0, hF: [0.05, 0.4], hB: [-0.03, 0.4], eF: 1, eB: 1, fF: [0.05, 0], fB: [-0.05, 0], wF: null, wB: null, m: 0.15, hand: "fist", handB: "fist", face: null, stretch: false };
-  var GUARD = { ...STAND, b: [0, 0.035], l: 0.07, hF: [0.21, 0.02], hB: [0.13, 0.08], fF: [0.16, 0], fB: [-0.13, 0] };
-  var PALMS = { ...GUARD, hF: [0.24, 0], hB: [0.12, 0.1], hand: "palm", handB: "palm", b: [0, 0.07], fF: [0.2, 0], fB: [-0.16, 0] };
-  var SWORD2 = { ...STAND, b: [0, 0.045], l: 0.06, hF: [0.2, 0.12], hB: [0.13, 0.15], wF: -0.75, fF: [0.19, 0], fB: [-0.14, 0] };
+  var STAND = { b: [0, 0], l: 0, r: 0, z: 0, sp: 0, ht: 0, hF: [0.05, 0.4], hB: [-0.03, 0.4], eF: 1, eB: 1, fF: [0.05, 0], fB: [-0.05, 0], wF: null, wB: null, m: 0.15, hand: "fist", handB: "fist", face: null, stretch: false, tw: 0, hp: 0, ls: 0, hy: 0, hr: 0, zF: 0, zB: 0, zfF: 0, zfB: 0, wt: 0, sm: 0, smF: 0, smB: 0, smfF: 0, smfB: 0 };
+  var GUARD = { ...STAND, b: [0, 0.045], l: 0.09, ht: 0.04, hF: [0.2, -0.01], hB: [0.12, 0.04], fF: [0.17, 0], fB: [-0.14, 0], tw: 0.08, hp: 0.04 };
+  var PALMS = { ...GUARD, hF: [0.25, -0.01], hB: [0.1, 0.12], hand: "palm", handB: "palm", b: [0, 0.09], l: 0.05, fF: [0.21, 0], fB: [-0.17, 0], zfF: 0.03, zfB: 0.03, tw: 0.12 };
+  var SWORD2 = { ...STAND, b: [0, 0.045], l: 0.06, hF: [0.2, 0.12], hB: [0.13, 0.15], wF: -0.75, fF: [0.19, 0], fB: [-0.14, 0], tw: 0.06 };
   var SWORD22 = { ...SWORD2, hF: [0.22, 0.1], hB: [0.1, 0.12], wF: -0.55, wB: -1.05 };
   var GUN = { ...STAND, hF: [0.26, 0.16], wF: 0.35, hB: [0, 0.34], fF: [0.12, 0], fB: [-0.1, 0] };
   var HEAVYW = { ...SWORD2, hF: [0.16, 0.14], hB: [0.1, 0.17], wF: -1.1 };
   var STAFF = { ...SWORD2, wF: -1.2 };
-  var POCKETS = { ...STAND, b: [0, 0.03], l: -0.05, hF: [-0.02, 0.33], hB: [-0.08, 0.32], eF: -1, eB: -1, fF: [0.17, 0], fB: [-0.13, 0] };
-  var BALLET = { ...GUARD, b: [0, 0.02], l: 0.02, hF: [0.3, -0.12], hB: [-0.26, -0.1], hand: "palm", handB: "palm", fF: [0.08, 0], fB: [-0.1, 0] };
-  var CLAWS = { ...GUARD, hand: "claw", handB: "claw", b: [0, 0.06], l: 0.14, hF: [0.25, -0.04], hB: [0.13, 0.04] };
-  var FINGER = { ...GUARD, b: [0, 0.02], l: 0.03, hF: [0.2, 0.04], hB: [-0.05, 0.3], hand: "finger", fF: [0.14, 0], fB: [-0.11, 0] };
+  var POCKETS = { ...STAND, b: [0, 0.03], l: -0.05, ht: -0.03, hF: [-0.02, 0.33], hB: [-0.08, 0.32], eF: -1, eB: -1, fF: [0.17, 0], fB: [-0.13, 0], tw: 0.1 };
+  var BALLET = { ...GUARD, b: [0, 0.02], l: 0.02, ht: -0.06, hF: [0.3, -0.12], hB: [-0.26, -0.1], zF: 0.06, zB: 0.06, hand: "palm", handB: "palm", fF: [0.08, 0], fB: [-0.1, 0], tw: 0, hp: 0 };
+  var CLAWS = { ...GUARD, hand: "claw", handB: "claw", b: [0, 0.07], l: 0.16, ht: -0.04, hF: [0.25, -0.05], hB: [0.13, 0.03], zF: 0.04, zB: 0.04 };
+  var FINGER = { ...GUARD, b: [0, 0.025], l: 0.03, ht: 0, hF: [0.2, 0.02], hB: [-0.1, 0.27], zB: -0.04, hand: "finger", fF: [0.15, 0], fB: [-0.12, 0], tw: 0.18, hp: 0.06 };
   var STANCES = { guard: GUARD, palms: PALMS, sword: SWORD2, sword2: SWORD22, gun: GUN, heavyw: HEAVYW, staff: STAFF, legs: POCKETS, ballet: BALLET, claw: CLAWS, finger: FINGER, stand: STAND };
   var STANCE_ARMED = { sword: "sword", sword2: "sword", gun: "gun", heavyw: "axe", staff: "staff" };
   var STYLE_STANCE = {
@@ -54308,125 +54308,199 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (typeof a === "boolean" || typeof b === "boolean") return k < 0.5 ? a : b;
     return k < 0.35 ? a : b;
   }
+  function lerpPose(A, B5, k) {
+    const P5 = {};
+    for (const key2 in B5) P5[key2] = lerpVal(A[key2], B5[key2], k);
+    return P5;
+  }
   function finalize(keys2) {
     let prev = STAND;
     for (const k of keys2) {
-      k.P = { ...prev, ...k.p };
+      const base2 = k.from ? lerpPose(k.from[0].P, k.from[1].P, k.from[2]) : prev;
+      k.P = { ...base2, ...k.p };
       prev = k.P;
     }
     return keys2;
   }
+  var NO_SMEAR = { sm: 0, smF: 0, smB: 0, smfF: 0, smfB: 0 };
+  var SETTLE = 0.022;
   function strike(w, T4, o) {
     const st = o.stance || GUARD;
     const tLoad = Math.max(0.016, Math.min(w * (o.loadAt ?? 0.64), w - 0.014));
     const tHit = Math.max(tLoad + 0.014, w);
     const rest = Math.max(0.04, T4 - tHit);
     const tHold = tHit + Math.min(o.holdT ?? 0.055, rest * (o.holdK ?? 0.4));
-    const keys2 = [
-      { t: 0, p: st },
-      { t: tLoad, p: o.load, e: o.loadEase || "out" },
-      { t: tHit, p: o.hit, e: o.hitEase || "snap" },
-      { t: tHold, p: o.hold || o.hit, e: "lin" }
-    ];
-    if (o.follow) keys2.push({ t: tHold + (Math.max(T4, tHold + 0.05) - tHold) * (o.followAt ?? 0.4), p: o.follow, e: "out" });
-    keys2.push({ t: Math.max(T4, tHold + 0.05), p: o.end || st, e: "inout" });
+    const tEnd = Math.max(T4, tHold + 0.05);
+    const K0 = { t: 0, p: st };
+    const keys2 = [K0];
+    if (o.antic && tLoad >= 0.12) keys2.push({ t: tLoad * (o.anticAt ?? 0.38), p: o.antic, e: "inout" });
+    const KL = { t: tLoad, p: o.load, e: o.loadEase || "out" };
+    keys2.push(KL);
+    if (tHit - tLoad >= 0.1 && o.coil !== false) keys2.push(o.coil ? { t: tLoad + (tHit - tLoad) * 0.7, p: o.coil, e: "inout" } : { t: tLoad + (tHit - tLoad) * 0.7, p: {}, from: [K0, KL, 1.12], e: "inout" });
+    const h2 = o.hit;
+    keys2.push({ t: tHit, p: h2, e: o.hitEase || "snap" });
+    keys2.push({ t: tHold, p: { sm: (h2.sm || 0) * 0.3, smF: (h2.smF || 0) * 0.3, smB: (h2.smB || 0) * 0.3, smfF: (h2.smfF || 0) * 0.3, smfB: (h2.smfB || 0) * 0.3, ...o.hold || {} }, e: "lin" });
+    let tPrev = tHold;
+    if (o.follow) {
+      const tf2 = tHold + (tEnd - tHold) * (o.followAt ?? 0.4);
+      keys2.push({ t: tf2, p: { ...NO_SMEAR, ...o.follow }, e: "out" });
+      tPrev = tf2;
+    }
+    const end = o.end || st;
+    if (o.settle !== false && tEnd - tPrev > 0.08) keys2.push({ t: tPrev + (tEnd - tPrev) * 0.55, p: { ...end, ...NO_SMEAR, b: [end.b[0], end.b[1] + SETTLE], l: (end.l || 0) + 0.03 }, e: "inout" });
+    keys2.push({ t: tEnd, p: end, e: "inout" });
     return finalize(keys2);
   }
   var S2 = (c, o) => ({ ...o, stance: o.stance || c.stance, holdT: c.dashT ? Math.max(o.holdT ?? 0.055, c.dashT) : o.holdT, holdK: c.dashT ? 0.9 : o.holdK });
   var sw = (c) => c.two ? SWORD22 : SWORD2;
   var spun = (c, base2) => ({ ...c.stance || base2 || GUARD, sp: 1 });
+  var arms = (c, o) => (c.stance || GUARD) === POCKETS ? {} : o;
   var CLIPS = {
     // ---------------------------------------------------------------- fists
-    jab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.05], l: 0.02, hF: [0.12, 0.07] }, hit: { b: [0.1, 0.02], l: 0.18, hF: [0.46, -0.07], hB: [0.1, 0.1], fF: [0.22, 0], fB: [-0.14, 0], face: "fierce" } })) }),
-    cross: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.06, hB: [0.04, 0.1], hF: [0.18, 0.02] }, hit: { b: [0.13, 0.02], l: 0.3, hB: [0.48, -0.08], hF: [0.08, 0.12], fF: [0.24, 0], fB: [-0.16, -0.02], face: "fierce" } })) }),
-    hook: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.06], l: -0.18, hF: [-0.12, 0.02], eF: 1 }, hit: { b: [0.08, 0.03], l: 0.26, hF: [0.34, -0.1], eF: -0.9, hB: [0.1, 0.1], face: "fierce" }, follow: { l: 0.32, hF: [0.22, -0.02], eF: -0.4 } })) }),
-    uppercut: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.16], l: 0.22, hF: [0.12, 0.3], eF: 1, fF: [0.2, 0], fB: [-0.16, 0] }, hit: { b: [0.08, -0.06], z: 0.08, l: -0.16, hF: [0.2, -0.46], eF: 0.5, hB: [0.14, 0.14], fF: [0.18, -0.03], fB: [-0.12, -0.12], face: "shout" }, follow: { z: 0, l: -0.1 } })), legs: true }),
-    haymaker: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.72, load: { b: [-0.1, 0.08], l: -0.34, hF: [-0.36, -0.12], eF: 0.9, hB: [0.2, 0], fF: [0.24, 0], fB: [-0.18, 0], face: "fierce" }, hit: { b: [0.24, 0.03], l: 0.42, hF: [0.5, -0.03], eF: 0.2, hB: [-0.12, 0.2], fF: [0.34, 0], fB: [-0.14, -0.06], face: "shout" }, follow: { b: [0.26, 0.06], l: 0.46, hF: [0.44, 0.1] } })), jitter: 0.012 }),
-    palm: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, load: { b: [-0.02, 0.08], l: 0, hF: [0.1, 0.1] }, hit: { b: [0.12, 0.05], l: 0.22, hF: [0.48, -0.02], hB: [0.08, 0.14], fF: [0.26, 0], face: "fierce" } })) }),
-    palm2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, load: { b: [-0.03, 0.08], l: -0.08, hB: [0, 0.12], hF: [0.2, 0.04] }, hit: { b: [0.14, 0.05], l: 0.3, hB: [0.5, -0.03], hF: [0.06, 0.14], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    palm_double: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, loadAt: 0.7, load: { b: [-0.08, 0.12], l: -0.2, hF: [-0.12, 0.14], hB: [-0.16, 0.18] }, hit: { b: [0.22, 0.06], l: 0.32, hF: [0.5, -0.06], hB: [0.46, 0.06], fF: [0.32, 0], fB: [-0.18, -0.03], face: "shout" }, follow: { l: 0.36 } })), jitter: 0.01 }),
-    shigan: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.06, hF: [0.04, 0.1], hand: "finger" }, hit: { b: [0.16, 0.02], l: 0.32, hF: [0.52, -0.06], hand: "finger", hB: [-0.08, 0.2], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    shigan2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.08, hB: [0, 0.12], handB: "finger" }, hit: { b: [0.17, 0.02], l: 0.34, hB: [0.52, -0.06], handB: "finger", hF: [0.06, 0.16], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    claw: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.12, hF: [0.02, -0.38], hand: "claw", eF: 1 }, hit: { l: 0.28, b: [0.1, 0.05], hF: [0.34, 0.26], hand: "claw", face: "fierce" } })) }),
-    claw2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: 0.12, b: [0, 0.08], hB: [0.02, 0.32], handB: "claw" }, hit: { l: -0.12, b: [0.1, 0], hB: [0.36, -0.32], handB: "claw", hF: [0.12, 0.12], face: "fierce" } })) }),
-    claw_x: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.04], hF: [0, -0.4], hB: [-0.06, -0.36], hand: "claw", handB: "claw", face: "fierce" }, hit: { l: 0.36, b: [0.18, 0.08], hF: [0.36, 0.28], hB: [0.3, 0.32], hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 8e-3 }),
-    grab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.06], l: -0.08, hF: [0.1, 0.02], hand: "claw" }, hit: { b: [0.12, 0.03], l: 0.26, hF: [0.5, -0.05], hand: "claw", face: "fierce" }, follow: { hand: "fist", hF: [0.4, -0.02], l: 0.18 } })) }),
-    grab2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.06], l: -0.1, hB: [0.02, 0.06], handB: "claw" }, hit: { b: [0.13, 0.03], l: 0.3, hB: [0.5, -0.04], handB: "claw", hF: [0.08, 0.14], face: "fierce" }, follow: { handB: "fist", hB: [0.4, 0] } })) }),
-    chop: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.14, b: [-0.02, 0.04], hF: { a: -2.1, r: 0.36 }, hand: "palm" }, hit: { l: 0.26, b: [0.12, 0.06], hF: { a: 0.55, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
-    chop2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: 0.12, b: [0, 0.08], hF: { a: 2, r: 0.34 }, hand: "palm" }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
-    thrust: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.05, 0.09], l: -0.06, hF: [0.08, 0.06] }, hit: { b: [0.14, 0.04], l: 0.46, hF: [0.44, 0], hB: [-0.22, 0.16], fF: [0.26, 0], fB: [-0.32, -0.08], face: "shout" } })) }),
-    charge: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.06, 0.12], l: 0.1, hF: [0.1, 0.18], hB: [-0.1, 0.2] }, hit: { b: [0.12, 0.08], l: 0.58, hF: [0.18, 0.2], hB: [-0.2, 0.2], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
-    headbutt: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.4, b: [-0.06, 0.02], hF: [0.1, 0.25], hB: [0.02, 0.28] }, hit: { l: 0.52, b: [0.18, 0.06], ht: 0.3, face: "shout" } })) }),
+    // the lead fist snapped straight out from the chin, the lead foot stepping in under it; the other fist never leaves the chin
+    jab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.06], l: 0.05, tw: -0.12, hp: -0.04, ht: 0.08, hF: [0.13, 0], hB: [0.11, -0.01], face: "fierce" }, hit: { b: [0.1, 0.035], l: 0.2, tw: 0.36, hp: 0.14, ht: 0.02, hF: [0.47, -0.05], hB: [0.1, -0.03], fF: [0.25, 0], fB: [-0.12, -0.01], sm: 0.1, face: "fierce" }, follow: { hF: [0.36, -0.02], tw: 0.28, l: 0.17 } })) }),
+    // the rear hand: the hips whip round and drive the shoulder through, the back heel up, the lead fist pulled home
+    cross: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.04, 0.06], l: 0.02, tw: 0.22, hp: 0.12, ht: 0.06, hB: [0.05, 0], hF: [0.22, -0.03], face: "fierce" }, hit: { b: [0.13, 0.04], l: 0.28, tw: -0.62, hp: -0.42, ht: 0, hB: [0.49, -0.05], hF: [0.1, 0], fF: [0.25, 0], fB: [-0.14, -0.05], sm: 0.12, face: "shout" }, follow: { tw: -0.72, l: 0.3, hB: [0.42, -0.02] } })) }),
+    // wide and flat: the elbow up, the fist swung round from the side as the whole body turns into it
+    hook: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.08], l: 0.06, tw: -0.4, hp: -0.12, ht: 0.06, hF: [0.1, -0.02], zF: 0.2, eF: -1, hB: [0.12, -0.01], face: "fierce" }, hit: { b: [0.08, 0.06], l: 0.2, tw: 0.62, hp: 0.32, ht: 0.03, hF: [0.36, -0.06], zF: -0.04, eF: -0.8, hB: [0.1, 0], fF: [0.21, 0], fB: [-0.15, -0.04], sm: 0.06, face: "shout" }, follow: { tw: 0.8, l: 0.24, hF: [0.3, -0.03], zF: -0.12, eF: -0.7 } })) }),
+    // the finisher: dropped low and coiled, then up off the ground behind the fist
+    uppercut: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.13], l: 0.26, tw: -0.32, hp: -0.16, ht: 0.12, hF: [0.12, 0.3], eF: 1, hB: [0.12, -0.02], fF: [0.2, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.07, -0.07], z: 0.11, l: -0.06, tw: 0.5, hp: 0.28, ht: -0.24, hF: [0.3, -0.33], eF: 0.5, hB: [0.06, 0.1], fF: [0.2, -0.05], fB: [-0.08, -0.18], sm: 0.08, face: "shout" }, follow: { z: 0.05, l: -0.03, hF: [0.27, -0.3] } })), legs: true }),
+    // a dip forward, the arm swung right back with the whole trunk wound up behind it, then everything thrown through it
+    haymaker: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.66, antic: { b: [0.03, 0.07], l: 0.16, tw: 0.12, hF: [0.24, 0], ht: 0.1 }, load: { b: [-0.1, 0.07], l: -0.28, tw: -0.8, hp: -0.32, ht: -0.04, hF: [-0.32, -0.12], zF: 0.06, eF: 0.9, hB: [0.24, -0.02], handB: "palm", fF: [0.24, 0], fB: [-0.19, 0], face: "grit" }, hit: { b: [0.25, 0.05], l: 0.44, tw: 0.78, hp: 0.48, ht: -0.12, hF: [0.5, -0.03], eF: 0.2, hB: [-0.14, 0.16], zB: 0.1, handB: "fist", fF: [0.36, 0], fB: [-0.12, -0.08], sm: 0.14, face: "shout" }, follow: { b: [0.28, 0.08], l: 0.5, tw: 0.9, hF: [0.44, 0.06] } })), jitter: 0.012 }),
+    // Fish-Man Karate: the palm from the hip, the other hand pulled back to its hip as it goes (and the kiai)
+    palm: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, load: { b: [-0.02, 0.11], l: 0.02, tw: -0.28, hp: -0.1, hF: [0.03, 0.19], hB: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.13, 0.08], l: 0.18, tw: 0.46, hp: 0.22, hF: [0.49, -0.03], hB: [-0.02, 0.2], hand: "palm", handB: "fist", fF: [0.27, 0], fB: [-0.18, -0.02], sm: 0.08, face: "shout" }, follow: { hF: [0.45, -0.01], l: 0.2 } })) }),
+    palm2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, load: { b: [-0.03, 0.11], l: 0, tw: 0.3, hp: 0.12, hB: [0, 0.2], hF: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.14, 0.08], l: 0.24, tw: -0.55, hp: -0.3, hB: [0.5, -0.03], hF: [-0.02, 0.2], hand: "fist", handB: "palm", fF: [0.27, 0], fB: [-0.18, -0.03], sm: 0.08, face: "shout" }, follow: { hB: [0.45, -0.01], l: 0.25 } })) }),
+    // both palms gathered at one hip, the body wound round them, then driven out together (the Shark Tile Fist)
+    palm_double: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.1, hF: [0.3, 0], hB: [0.28, 0.04] }, load: { b: [-0.08, 0.14], l: -0.16, tw: -0.5, hp: -0.2, hF: [-0.06, 0.2], hB: [-0.1, 0.17], hand: "palm", handB: "palm", fF: [0.23, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.23, 0.08], l: 0.3, tw: 0.2, hp: 0.25, hF: [0.5, -0.07], hB: [0.47, 0.07], hand: "palm", handB: "palm", fF: [0.33, 0], fB: [-0.19, -0.04], smF: 0.1, smB: 0.1, face: "shout" }, follow: { l: 0.34, b: [0.25, 0.1] } })), jitter: 0.01 }),
+    // Shigan: a fencer's lunge behind one stabbing finger, the other hand kept at the small of the back
+    shigan: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.04, tw: -0.15, hp: -0.06, hF: [0.03, -0.06], hand: "finger", face: "fierce" }, hit: { b: [0.18, 0.05], l: 0.3, tw: 0.6, hp: 0.36, hF: [0.53, -0.07], hand: "finger", hB: [-0.14, 0.26], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hF: [0.46, -0.05] } })) }),
+    shigan2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.06, tw: 0.25, hp: 0.1, hB: [0, -0.05], handB: "finger", hF: [0.18, 0.02], face: "fierce" }, hit: { b: [0.19, 0.05], l: 0.32, tw: -0.66, hp: -0.4, hB: [0.53, -0.07], handB: "finger", hF: [-0.1, 0.24], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hB: [0.46, -0.05] } })) }),
+    // a claw raked down from high behind the head (and back up, and both crossing)
+    claw: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.08, b: [-0.02, 0.05], tw: -0.35, ls: -0.08, hF: { a: -2.15, r: 0.38 }, zF: 0.08, hand: "claw", eF: 1, face: "fierce" }, hit: { l: 0.32, b: [0.12, 0.08], tw: 0.5, ls: 0.08, hF: { a: 0.75, r: 0.43 }, zF: -0.08, hand: "claw", fF: [0.24, 0], fB: [-0.15, -0.02], sm: 0.06, face: "shout" }, follow: { hF: { a: 1.15, r: 0.4 }, zF: -0.14, tw: 0.62 } })) }),
+    claw2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: 0.18, b: [0, 0.1], tw: 0.32, hB: { a: 1.7, r: 0.36 }, zB: 0.06, handB: "claw", face: "fierce" }, hit: { l: -0.1, b: [0.1, 0], tw: -0.55, hB: { a: -0.95, r: 0.43 }, zB: -0.06, handB: "claw", hF: [0.12, 0.1], sm: 0.06, face: "shout" }, follow: { hB: { a: -1.25, r: 0.41 } } })) }),
+    claw_x: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.68, antic: { b: [0, 0.1], l: 0.2, hF: [0.2, 0.15], hB: [0.15, 0.18] }, load: { l: -0.24, b: [-0.04, 0.03], ht: -0.12, hF: { a: -2, r: 0.42 }, hB: { a: -1.85, r: 0.4 }, zF: 0.12, zB: 0.12, hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.4, b: [0.18, 0.1], ht: 0.1, hF: { a: 0.95, r: 0.43 }, hB: { a: 0.8, r: 0.42 }, zF: -0.12, zB: -0.12, hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, -0.02], smF: 0.07, smB: 0.07, face: "shout" }, follow: { l: 0.44, b: [0.2, 0.12] } })), jitter: 8e-3 }),
+    // Ryusoken: the claw cocked by the ear, lunged out open, then crushed shut on what it caught
+    grab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.07], l: -0.06, tw: -0.32, hF: [0.02, -0.12], zF: 0.06, hand: "claw", eF: -0.6, face: "fierce" }, hit: { b: [0.14, 0.04], l: 0.28, tw: 0.5, hp: 0.25, hF: [0.5, -0.06], hand: "claw", fF: [0.26, 0], fB: [-0.15, -0.02], sm: 0.1, face: "shout" }, follow: { hand: "fist", hF: [0.43, -0.02], hr: 0.08, l: 0.22 } })) }),
+    grab2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.07], l: -0.08, tw: 0.3, hB: [0, -0.1], zB: 0.06, handB: "claw", eB: -0.6, face: "fierce" }, hit: { b: [0.15, 0.04], l: 0.3, tw: -0.58, hp: -0.3, hB: [0.5, -0.05], handB: "claw", hF: [0.08, 0.12], sm: 0.1, face: "shout" }, follow: { handB: "fist", hB: [0.43, -0.01], hr: -0.08 } })) }),
+    chop: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.14, b: [-0.02, 0.04], tw: -0.3, hF: { a: -2.15, r: 0.37 }, hand: "palm", face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.42, hp: 0.2, hF: { a: 0.6, r: 0.43 }, hand: "palm", fF: [0.24, 0], sm: 0.06, face: "fierce" }, follow: { hF: { a: 0.9, r: 0.42 }, tw: 0.5 } })) }),
+    chop2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: 0.12, b: [0, 0.08], tw: 0.25, hF: { a: 2, r: 0.34 }, hand: "palm", face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.3, hF: { a: -0.62, r: 0.43 }, hand: "palm", sm: 0.06, face: "fierce" }, follow: { hF: { a: -0.9, r: 0.42 } } })) }),
+    // a long lunging thrust of one arm, the other flung back behind for the reach
+    thrust: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.06, 0.1], l: -0.06, tw: -0.4, hp: -0.15, hF: [0.04, 0.06], hB: [0.2, 0], face: "grit" }, hit: { b: [0.16, 0.05], l: 0.46, tw: 0.6, hp: 0.3, hF: [0.47, -0.01], hB: [-0.22, 0.16], fF: [0.28, 0], fB: [-0.33, -0.08], sm: 0.14, face: "shout" } })) }),
+    // head down, the shoulder first, arms tucked: a battering ram
+    charge: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.06, 0.13], l: 0.12, tw: -0.2, hF: [0.1, 0.18], hB: [-0.1, 0.2], face: "grit" }, hit: { b: [0.12, 0.09], l: 0.6, tw: 0.55, hp: 0.25, ht: -0.25, hF: [0.12, 0.15], hB: [-0.24, 0.18], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
+    // hands on the other's collar, reared right back, then the brow brought down into them
+    headbutt: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.42, b: [-0.07, 0.03], ht: -0.2, hF: [0.32, -0.02], hB: [0.3, 0.02], hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.55, b: [0.19, 0.06], ht: 0.32, hF: [0.24, 0.06], hB: [0.22, 0.1], hand: "fist", handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], face: "shout" } })) }),
     // ---------------------------------------------------------------- kicks
-    kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.1, fF: [0.12, -0.3], hF: [0.18, 0.04], hB: [0.06, 0.14] }, hit: { l: -0.22, b: [0.05, -0.02], fF: [0.68, -0.42], fB: [-0.08, 0], hF: [0.1, 0.12], hB: [-0.12, 0.16], face: "fierce" } })), legs: true }),
-    kick_high: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.18, fF: [0.02, -0.36], fB: [-0.05, 0] }, hit: { l: -0.44, b: [0.02, -0.02], fF: [0.58, -0.84], fB: [-0.06, 0], hF: [-0.16, 0.12], hB: [0.26, -0.06], face: "fierce" }, follow: { l: -0.3, fF: [0.44, -0.6] } })), legs: true }),
-    kick_low: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.2], l: 0.08, fF: [-0.1, -0.05], fB: [-0.12, 0] }, hit: { b: [0.05, 0.27], l: 0.2, fF: [0.74, -0.06], fB: [-0.22, 0], hF: [0.26, 0.34], hB: [0, 0.3], face: "fierce" } })), legs: true }),
-    kick_spin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { sp: 0, fF: [0.05, -0.22], l: -0.06 }, hit: { sp: 1, fF: [0.7, -0.54], fB: [-0.06, 0], l: -0.32, hF: [-0.1, 0.15], hB: [0.22, -0.05], face: "shout" }, hitEase: "out", end: spun(c) })), legs: true }),
-    sweep: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.22], l: 0.22, fF: [0.06, -0.04], hF: [0.22, 0.3], hB: [-0.04, 0.3] }, hit: { sp: 1, b: [0.02, 0.3], l: 0.3, fF: [0.8, -0.05], fB: [-0.2, 0], hF: [0.26, 0.42], hB: [-0.1, 0.36], face: "fierce" }, hitEase: "out", end: spun(c) })), legs: true }),
-    knee: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { fF: [0.1, -0.1], l: 0.05, b: [0, 0.06] }, hit: { fF: [0.26, -0.42], l: 0.12, b: [0.08, -0.05], z: 0.06, hF: [0.32, 0.04], hB: [0.26, 0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
-    axe_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.75, load: { z: 0.55, l: -0.32, fF: [0.2, -0.95], fB: [-0.1, -0.12], hF: [-0.1, -0.1], hB: [0.2, -0.2] }, hit: { z: 0, b: [0.1, 0.08], l: 0.3, fF: [0.58, -0.06], fB: [-0.16, 0], hF: [-0.1, 0.2], hB: [0.1, 0.15], face: "shout" } })), legs: true }),
-    rise_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.18], l: 0.14, fF: [0.28, -0.04], hF: [0.1, 0.3] }, hit: { b: [0, -0.04], z: 0.18, l: -0.52, fF: [0.3, -1.02], fB: [-0.04, 0], hF: [-0.22, 0.1], hB: [0.12, 0.2], face: "shout" }, follow: { z: 0.05 } })), legs: true }),
-    mouton: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.7, load: { l: -0.32, z: 0.08, fF: [-0.05, -0.46], hF: [0.1, -0.1] }, hit: { l: -0.78, b: [0.26, 0], z: 0.16, fF: [0.88, -0.56], fB: [-0.12, -0.12], hF: [-0.36, 0.25], hB: [-0.32, 0.3], face: "shout" }, follow: { z: 0, l: -0.4 } })), legs: true }),
+    // a snap kick: the knee chambered high, the leg whipped out level, the hips turned over into it and the body back to balance it
+    kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.06], l: -0.12, hp: -0.12, fF: [0.13, -0.32], fB: [-0.07, 0], ...arms(c, { hF: [0.18, 0.02], hB: [0.08, 0.1] }), face: "fierce" }, hit: { b: [0.05, -0.02], l: -0.26, hp: 0.35, tw: -0.1, ht: 0.1, fF: [0.68, -0.42], fB: [-0.09, 0], sm: 0.1, ...arms(c, { hF: [0.08, 0.14], hB: [-0.16, 0.14] }), face: "fierce" }, follow: { fF: [0.6, -0.36], l: -0.22 } })), legs: true }),
+    kick_high: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.07], l: -0.16, hp: -0.15, fF: [0.04, -0.38], fB: [-0.05, 0], ...arms(c, { hF: [0.16, 0], hB: [0.1, 0.06] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.46, hp: 0.42, ls: -0.06, ht: 0.2, fF: [0.57, -0.85], fB: [-0.06, 0], sm: 0.1, ...arms(c, { hF: [-0.18, 0.1], hB: [0.28, -0.04] }), face: "fierce" }, follow: { l: -0.32, fF: [0.46, -0.62] } })), legs: true }),
+    // a whirling kick: a turn the other way, the leg whipped round, and the body spun on through after it
+    kick_spin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { followAt: 0.35, load: { sp: -0.06, b: [0, 0.07], l: -0.08, hp: -0.25, fF: [0.06, -0.24], ...arms(c, { hF: [0.2, 0], hB: [0, 0.1] }), face: "fierce" }, hit: { sp: 0, b: [0.03, -0.01], l: -0.3, hp: 0.5, ls: -0.1, fF: [0.7, -0.55], fB: [-0.06, 0], sm: 0.12, ...arms(c, { hF: [-0.12, 0.12], hB: [0.24, -0.06] }), face: "shout" }, follow: { sp: 0.55, fF: [0.36, -0.38], l: -0.18 }, end: spun(c) })), legs: true }),
+    sweep: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { followAt: 0.35, load: { b: [0, 0.24], l: 0.24, fF: [0.06, -0.04], ...arms(c, { hF: [0.22, 0.32], hB: [-0.04, 0.32] }), face: "fierce" }, hit: { b: [0.02, 0.31], l: 0.32, hp: 0.4, fF: [0.82, -0.05], fB: [-0.2, 0], sm: 0.08, ...arms(c, { hF: [0.26, 0.44], hB: [-0.1, 0.38] }), face: "fierce" }, follow: { sp: 0.5, fF: [0.5, -0.04] }, end: spun(c) })), legs: true }),
+    // the Rankyaku finisher: a hop and the leg swept up and over in a crescent, the arms flung out to balance it
+    rankyaku: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { followAt: 0.3, load: { b: [0, 0.12], l: 0.08, hp: -0.25, fF: [0.12, -0.18], fB: [-0.08, 0], ...arms(c, { hF: [0.18, 0.06], hB: [0.06, 0.12] }), face: "grit" }, hit: { b: [0.02, -0.04], z: 0.12, l: -0.55, hp: 0.5, ls: -0.16, ht: 0.25, fF: [0.42, -0.98], fB: [-0.06, -0.06], sm: 0.12, ...arms(c, { hF: [-0.12, -0.04], hB: [0.24, -0.16], zF: 0.18, zB: 0.12 }), face: "shout" }, follow: { z: 0.04, l: -0.38, fF: [0.66, -0.48] } })), legs: true }),
+    // Hasshoken: the palm driven in and stopped dead against the body, the whole arm shuddering as the blow goes on through it
+    vibe_palm: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.66, load: { b: [-0.03, 0.09], l: 0, tw: -0.4, hp: -0.15, hF: [0.02, 0.16], hand: "palm", hB: [0.28, -0.02], handB: "palm", face: "grit" }, hit: { b: [0.14, 0.07], l: 0.22, tw: 0.5, hp: 0.3, hF: [0.44, -0.03], hand: "palm", hB: [0, 0.18], handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], sm: 0.05, face: "shout" }, holdT: 0.16, holdK: 0.6 })), shake: { a: 0.014, t: 0.18 } }),
+    // both hands on the other's head, pulling it down onto the knee driven up to meet it
+    knee: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.07], l: 0.04, hp: -0.1, fF: [0.1, -0.1], hF: [0.3, -0.04], hB: [0.26, 0], hand: "claw", handB: "claw", face: "fierce" }, hit: { b: [0.08, -0.05], z: 0.07, l: 0.16, hp: 0.3, fF: [0.26, -0.44], fB: [-0.08, -0.02], hF: [0.3, 0.1], hB: [0.27, 0.13], hand: "fist", handB: "fist", ht: 0.15, face: "shout" }, follow: { z: 0 } })), legs: true }),
+    axe_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.75, load: { z: 0.55, l: -0.34, hp: 0.2, ht: -0.1, fF: [0.18, -0.98], fB: [-0.1, -0.14], ...arms(c, { hF: [-0.12, -0.1], hB: [0.22, -0.22] }), face: "grit" }, hit: { z: 0, b: [0.1, 0.1], l: 0.32, hp: 0, ht: 0.15, fF: [0.58, -0.04], fB: [-0.17, 0], smfF: 0.08, ...arms(c, { hF: [-0.1, 0.22], hB: [0.1, 0.16] }), face: "shout" } })), legs: true }),
+    // Collier: crouched, then up off the ground with the leg swung in an arc to the throat
+    rise_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.19], l: 0.16, hp: -0.15, fF: [0.28, -0.03], fB: [-0.12, 0], ...arms(c, { hF: [0.1, 0.28], hB: [0, 0.26] }), face: "grit" }, hit: { b: [0.02, -0.05], z: 0.16, l: -0.5, hp: 0.3, ht: 0.2, fF: [0.38, -0.98], fB: [-0.05, -0.04], sm: 0.12, ...arms(c, { hF: [-0.22, 0.1], hB: [0.14, 0.2] }), face: "shout" }, follow: { z: 0.06, fF: [0.42, -0.85] } })), legs: true }),
+    // Mouton Shot: a dip, the knee drawn right up to the chest, then the sole driven out straight with a hop behind it
+    mouton: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.66, antic: { b: [0, 0.1], l: 0.12, fF: [0.2, 0] }, load: { l: -0.36, z: 0.08, hp: -0.2, b: [-0.04, 0.04], ht: 0.12, fF: [-0.05, -0.48], fB: [-0.04, 0], ...arms(c, { hF: [0.1, -0.1] }), face: "grit" }, hit: { l: -0.78, b: [0.27, 0], z: 0.17, hp: 0.35, ht: 0.35, fF: [0.9, -0.56], fB: [-0.12, -0.13], smfF: 0.12, ...arms(c, { hF: [-0.36, 0.25], hB: [-0.32, 0.3] }), face: "shout" }, follow: { z: 0, l: -0.42 } })), legs: true }),
     handstand: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
-    flying_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0] }, hit: { z: 0.3, l: -0.34, fF: [0.78, -0.46], fB: [-0.06, -0.3], hF: [-0.2, 0.05], hB: [0.2, -0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
-    stomp: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { fF: [0.18, -0.55], l: -0.1, hF: [0.2, -0.1], hB: [-0.1, -0.1] }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
+    flying_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0], face: "grit" }, hit: { z: 0.3, l: -0.34, hp: 0.3, fF: [0.78, -0.46], fB: [-0.06, -0.3], smfF: 0.08, ...arms(c, { hF: [-0.2, 0.05], hB: [0.2, -0.1] }), face: "shout" }, follow: { z: 0 } })), legs: true }),
+    stomp: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { fF: [0.18, -0.55], l: -0.1, ...arms(c, { hF: [0.2, -0.1], hB: [-0.1, -0.1] }), face: "grit" }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
     // Okama Kenpo: ballet
-    ballet_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.24], hB: [-0.08, 0.24] }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.03], hF: [0.34, -0.24], hB: [-0.36, -0.22], face: "fierce" } })), legs: true }),
-    pirouette: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 1, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hF: [0.14, -0.44], hB: [0, -0.46], face: "fierce" }, hitEase: "out", end: { ...BALLET, sp: 1 } })), legs: true }),
-    jete: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], face: "fierce" }, follow: { z: 0 } })), legs: true }),
-    arabesque: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], face: "fierce" } })), legs: true }),
+    ballet_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.11], hF: [0.14, 0.24], hB: [-0.08, 0.24], zF: 0.08, zB: 0.08 }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.04], hp: 0.25, hF: [0.34, -0.24], hB: [-0.36, -0.22], zF: 0.12, zB: 0.12, sm: 0.06, face: "fierce" } })), legs: true }),
+    pirouette: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, followAt: 0.35, load: { b: [0, 0.1], sp: -0.05, hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 0, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hp: 0.3, hF: [0.14, -0.44], hB: [0, -0.46], zF: 0.05, zB: 0.05, sm: 0.08, face: "fierce" }, follow: { sp: 0.6 }, end: { ...BALLET, sp: 1 } })), legs: true }),
+    jete: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], zF: 0.1, zB: 0.1, smfF: 0.06, face: "fierce" }, follow: { z: 0 } })), legs: true }),
+    arabesque: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], zB: 0.1, smfB: 0.08, face: "fierce" } })), legs: true }),
     // ---------------------------------------------------------------- blades
-    slash: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.04], hF: { a: -2.1, r: 0.34 }, wF: -2.55, hB: [-0.04, 0.18] }, hit: { l: 0.27, b: [0.13, 0.08], hF: { a: 0.55, r: 0.43 }, wF: 0.8, hB: [0.2, 0.16], fF: [0.3, 0], fB: [-0.17, 0], face: "fierce" }, follow: { l: 0.3, hF: { a: 0.9, r: 0.42 }, wF: 1.15 } })) }),
-    slash2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, face: "fierce" }, follow: { hF: { a: -0.95, r: 0.42 }, wF: -1.35 } })) }),
-    rise_slash: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.15], l: 0.26, hF: { a: 1.85, r: 0.36 }, wF: 2.5, hB: [0, 0.22], face: "fierce" }, hit: { b: [0.12, -0.03], z: 0.04, l: -0.22, hF: { a: -1.2, r: 0.43 }, wF: -1.5, hB: [-0.1, 0.12], fF: [0.26, 0], fB: [-0.16, -0.04], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.8, l: -0.26 } })) }),
-    slash3: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), loadAt: 0.7, load: { l: -0.22, b: [-0.04, 0.08], hF: { a: 2.7, r: 0.36 }, wF: 3, sp: 0 }, hit: { sp: 1, l: 0.22, b: [0.16, 0.06], hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, hitEase: "out", end: { ...sw(c), sp: 1 } })) }),
-    stab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.14, b: [-0.08, 0.06], hF: [-0.02, 0.08], wF: 0, hB: [-0.06, 0.1] }, hit: { l: 0.32, b: [0.22, 0.04], hF: [0.46, -0.03], wF: -0.03, hB: [-0.2, 0.16], fF: [0.36, 0], fB: [-0.22, -0.03], face: "shout" } })) }),
-    cleave: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.72, load: { l: -0.24, b: [-0.06, 0], hF: { a: -1.85, r: 0.36 }, hB: { a: -1.75, r: 0.33 }, wF: -2.25, face: "fierce" }, hit: { l: 0.4, b: [0.22, 0.15], hF: { a: 0.78, r: 0.4 }, hB: { a: 0.88, r: 0.35 }, wF: 1, fF: [0.36, 0], fB: [-0.22, 0], face: "shout" }, follow: { l: 0.44, b: [0.24, 0.17] } })), jitter: 0.01 }),
-    iai: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: { ...SWORD2, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.16], l: 0.34, hF: [0.02, 0.3], wF: 2.7, face: "fierce" }, hit: { l: 0.5, b: [0.2, 0.08], hF: [0.46, 0.04], wF: 0.1, fB: [-0.36, -0.12], face: "shout" }, follow: { l: 0.2, hF: [0.1, 0.28], wF: 2.6 } })) }),
+    // the blade raised back over the shoulder, the body wound away, then cut down through with the hips behind it
+    slash: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.05], tw: -0.42, hp: -0.15, hF: { a: -2.15, r: 0.35 }, wF: -2.6, hB: [-0.04, 0.18], face: "fierce" }, hit: { l: 0.3, b: [0.14, 0.08], tw: 0.5, hp: 0.3, hF: { a: 0.6, r: 0.43 }, wF: 0.85, hB: [0.16, 0.18], fF: [0.31, 0], fB: [-0.17, -0.02], face: "shout" }, follow: { l: 0.34, tw: 0.62, hF: { a: 0.95, r: 0.42 }, wF: 1.25 } })) }),
+    slash2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: 0.14, b: [0, 0.1], tw: 0.3, hp: 0.1, hF: { a: 2.05, r: 0.34 }, wF: 2.5, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.03], tw: -0.35, hp: -0.15, hF: { a: -0.62, r: 0.43 }, wF: -1, face: "fierce" }, follow: { hF: { a: -1, r: 0.42 }, wF: -1.45, tw: -0.42 } })) }),
+    rise_slash: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.17], l: 0.28, tw: -0.4, hp: -0.12, hF: { a: 1.9, r: 0.36 }, wF: 2.55, hB: [0, 0.22], face: "grit" }, hit: { b: [0.12, -0.04], z: 0.06, l: -0.22, tw: 0.42, hp: 0.25, hF: { a: -1.2, r: 0.43 }, wF: -1.55, hB: [-0.12, 0.1], fF: [0.26, 0], fB: [-0.16, -0.06], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.85, l: -0.26 } })) }),
+    slash3: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), loadAt: 0.7, followAt: 0.35, load: { l: -0.22, b: [-0.04, 0.08], tw: -0.5, hF: { a: 2.7, r: 0.36 }, wF: 3, sp: -0.05, face: "grit" }, hit: { sp: 0, l: 0.22, b: [0.16, 0.06], tw: 0.55, hp: 0.3, hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, follow: { sp: 0.55, wF: 0.3 }, end: { ...sw(c), sp: 1 } })) }),
+    // a deep lunge behind the point, the free hand laid along to aim it
+    stab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.14, b: [-0.09, 0.07], tw: -0.45, hp: -0.2, hF: [-0.04, 0.06], wF: 0, hB: [0.14, -0.04], handB: "palm", face: "grit" }, hit: { l: 0.34, b: [0.23, 0.05], tw: 0.55, hp: 0.4, hF: [0.47, -0.03], wF: -0.03, hB: [-0.22, 0.14], handB: "fist", fF: [0.37, 0], fB: [-0.23, -0.03], face: "shout" } })) }),
+    cleave: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.12, hF: [0.2, 0.18], wF: -0.4 }, load: { l: -0.26, b: [-0.06, 0], tw: -0.25, ht: -0.1, hF: { a: -1.85, r: 0.38 }, hB: { a: -1.75, r: 0.34 }, wF: -2.3, face: "grit" }, hit: { l: 0.4, b: [0.23, 0.13], tw: 0.3, hp: 0.3, ht: 0.2, hF: { a: 0.72, r: 0.41 }, hB: { a: 0.82, r: 0.36 }, wF: 0.78, fF: [0.37, 0], fB: [-0.23, 0], face: "shout" }, follow: { l: 0.44, b: [0.25, 0.15], wF: 0.86 } })), jitter: 0.01 }),
+    // the quick draw: crouched low with the hand on the hilt at the hip, the cut drawn out through the dash, and the blade slid home after
+    iai: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: { ...SWORD2, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.17], l: 0.36, tw: -0.5, hp: -0.2, ht: -0.15, hF: [-0.02, 0.32], zF: -0.12, wF: 2.75, hB: [0.02, 0.3], face: "grit" }, hit: { l: 0.5, b: [0.22, 0.09], tw: 0.6, hp: 0.4, hF: [0.47, 0.03], wF: 0.08, hB: [-0.1, 0.24], fB: [-0.37, -0.12], face: "shout" }, follow: { l: 0.2, tw: 0.2, hF: [0.12, 0.27], zF: -0.08, wF: 2.6 } })) }),
     // two blades (Nitoryu): alternating cuts, then an X
-    dual1: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.16, hF: { a: -2.1, r: 0.34 }, wF: -2.55 }, hit: { l: 0.26, b: [0.12, 0.07], hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" } })) }),
-    dual2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.14, hB: { a: -2.2, r: 0.33 }, wB: -2.6 }, hit: { l: 0.28, b: [0.13, 0.07], hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" } })) }),
-    dual3: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
-    dualx: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, face: "fierce" }, hit: { l: 0.32, b: [0.18, 0.1], hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, face: "shout" } })) }),
-    dual_stab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.16, b: [-0.1, 0.07], hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "fierce" }, hit: { l: 0.36, b: [0.24, 0.05], hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
-    tora: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, loadAt: 0.72, load: { z: 0.4, l: -0.32, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "fierce" }, hit: { z: 0, l: 0.46, b: [0.24, 0.15], hF: { a: 0.9, r: 0.4 }, hB: { a: 1.1, r: 0.38 }, wF: 1, wB: 1.2, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
-    bladespin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], hF: { a: 2.6, r: 0.38 }, wF: 2.9 }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
-    // big weapons
-    axe: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "fierce" }, hit: { l: 0.36, b: [0.2, 0.12], hF: { a: 0.7, r: 0.42 }, hB: { a: 0.9, r: 0.36 }, wF: 1, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4 } })) }),
-    axe2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6 }, hit: { l: -0.2, b: [0.16, 0.02], hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" } })) }),
-    axe_slam: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "fierce" }, hit: { z: 0, l: 0.52, b: [0.24, 0.24], hF: { a: 1.05, r: 0.42 }, hB: { a: 1.15, r: 0.36 }, wF: 1.35, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.5, b: [0.24, 0.24] } })), jitter: 0.012 }),
-    staff: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: -0.14, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2] }, hit: { l: 0.24, b: [0.1, 0.05], hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" } })) }),
-    staff2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], hF: { a: 1.9, r: 0.34 }, wF: 2.3 }, hit: { l: -0.12, b: [0.1, 0.02], hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" } })) }),
-    staff_jab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], hF: [0, 0.06], wF: 0.02 }, hit: { l: 0.3, b: [0.2, 0.04], hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
+    dual1: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.16, tw: -0.4, hF: { a: -2.1, r: 0.34 }, wF: -2.55, face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.45, hp: 0.25, hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" }, follow: { tw: 0.55, wF: 1.1 } })) }),
+    dual2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.14, tw: 0.35, hB: { a: -2.2, r: 0.33 }, wB: -2.6, face: "fierce" }, hit: { l: 0.3, b: [0.13, 0.07], tw: -0.5, hp: -0.25, hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" }, follow: { tw: -0.6, wB: 1.15 } })) }),
+    dual3: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: 0.12, b: [0, 0.1], tw: 0.2, hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.25, hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
+    dualx: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], ht: -0.08, hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, zF: 0.06, zB: 0.06, face: "grit" }, hit: { l: 0.34, b: [0.18, 0.1], ht: 0.12, hp: 0.2, hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, zF: -0.08, zB: -0.08, fF: [0.31, 0], fB: [-0.2, -0.02], face: "shout" }, follow: { l: 0.38 } })) }),
+    dual_stab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.16, b: [-0.1, 0.07], tw: -0.3, hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "grit" }, hit: { l: 0.36, b: [0.24, 0.05], tw: 0.3, hp: 0.3, hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
+    // Tora Gari: up off the ground with the blades raised high, and down through the landing in one cut
+    tora: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, loadAt: 0.72, load: { z: 0.4, l: -0.32, ht: -0.1, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "grit" }, hit: { z: 0, l: 0.42, b: [0.24, 0.12], ht: 0.18, hp: 0.25, hF: { a: 0.75, r: 0.4 }, hB: { a: 0.9, r: 0.38 }, wF: 0.72, wB: 0.86, zF: 0.08, zB: 0.08, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
+    bladespin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], tw: -0.4, hF: { a: 2.6, r: 0.38 }, wF: 2.9, face: "grit" }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, zF: 0.1, zB: 0.1, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
+    // big weapons: swung with the whole body; the head comes down on the ground in front, not through it
+    axe: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], tw: -0.35, hp: -0.15, ht: -0.1, hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "grit" }, hit: { l: 0.36, b: [0.2, 0.1], tw: 0.3, hp: 0.25, ht: 0.15, hF: { a: 0.62, r: 0.42 }, hB: { a: 0.8, r: 0.36 }, wF: 0.72, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4, wF: 0.8 } })) }),
+    axe2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], tw: 0.3, hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6, face: "grit" }, hit: { l: -0.2, b: [0.16, 0.02], tw: -0.3, hp: -0.2, hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" }, follow: { wF: -1.4, tw: -0.4 } })) }),
+    axe_slam: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], ht: -0.15, hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "grit" }, hit: { z: 0, l: 0.46, b: [0.24, 0.16], ht: 0.2, hF: { a: 0.62, r: 0.43 }, hB: { a: 0.74, r: 0.38 }, wF: 0.58, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.48, b: [0.24, 0.17], wF: 0.64 } })), jitter: 0.012 }),
+    staff: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: -0.14, tw: -0.35, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2], face: "fierce" }, hit: { l: 0.26, b: [0.1, 0.05], tw: 0.4, hp: 0.2, hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" }, follow: { tw: 0.5, wF: 0.85 } })) }),
+    staff2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], tw: 0.3, hF: { a: 1.9, r: 0.34 }, wF: 2.3, face: "fierce" }, hit: { l: -0.12, b: [0.1, 0.02], tw: -0.35, hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" }, follow: { wF: -1.1 } })) }),
+    staff_jab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], tw: -0.35, hF: [0, 0.06], wF: 0.02, face: "grit" }, hit: { l: 0.3, b: [0.2, 0.04], tw: 0.45, hp: 0.3, hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
     // ---------------------------------------------------------------- guns & throws
-    shoot: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.42, -0.04], wF: 0, hB: c.sling ? [0.02, -0.04] : [0.3, 0.05], l: 0.03 }, hit: { hF: [0.34, -0.13], wF: -0.4, hB: c.sling ? [0.34, -0.02] : [0.26, 0.04], l: -0.1, b: [-0.07, 0] }, follow: { hF: [0.4, -0.06], wF: -0.1, l: 0 } })) }),
-    aim: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, hB: c.sling ? [-0.02, -0.06] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02] }, hit: { hF: [0.3, -0.24], wF: -0.7, hB: c.sling ? [0.36, -0.04] : [0.24, 0.02], l: -0.16, b: [-0.14, 0.02] } })) }),
-    flick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { hF: [0.02, 0.2], l: -0.06 }, hit: { hF: [0.46, -0.1], l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
-    throw: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { hF: { a: -2.4, r: 0.4 }, l: -0.16, b: [-0.04, 0.04] }, hit: { hF: { a: 0.15, r: 0.43 }, l: 0.26, b: [0.1, 0.04], hand: "palm", face: "fierce" } })) }),
+    // a pistol held out and fired, the recoil kicking the hand up; a slingshot's band
+    // drawn back to the cheek and let go, the drawing hand springing open
+    shoot: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.43, -0.04], wF: 0, tw: 0.3, ht: 0.06, hB: c.sling ? [-0.02, -0.07] : [0.3, 0.05], l: 0.04, face: "fierce" }, hit: { hF: c.sling ? [0.42, -0.1] : [0.35, -0.13], wF: c.sling ? -0.15 : -0.45, tw: 0.25, hB: c.sling ? [-0.07, -0.09] : [0.26, 0.04], handB: c.sling ? "palm" : "fist", l: c.sling ? -0.02 : -0.12, b: [-0.08, 0] }, follow: { hF: [0.41, -0.06], wF: -0.12, l: 0, handB: "fist" } })) }),
+    // a long aim, the eye down the barrel (or along the band), then the shot: a gun's recoil throws the arm up, a slingshot's band snaps the hand open
+    aim: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, tw: 0.35, hr: 0.14, hB: c.sling ? [-0.03, -0.07] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: c.sling ? { hF: [0.42, -0.1], wF: -0.15, l: -0.04, b: [-0.05, 0.05], hr: 0.06 } : { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02], hr: 0 }, hit: c.sling ? { hF: [0.42, -0.1], wF: -0.15, hB: [-0.09, -0.1], handB: "palm", l: -0.04, b: [-0.05, 0.05], face: "shout" } : { hF: [0.3, -0.24], wF: -0.7, hB: [0.24, 0.02], l: -0.16, b: [-0.14, 0.02], face: "shout" } })) }),
+    flick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { hF: [0.02, 0.2], tw: -0.25, l: -0.06 }, hit: { hF: [0.46, -0.1], tw: 0.35, l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
+    throw: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { hF: { a: -2.4, r: 0.4 }, tw: -0.45, hp: -0.2, l: -0.16, b: [-0.04, 0.04], hB: [0.3, -0.06], handB: "palm", face: "fierce" }, hit: { hF: { a: 0.15, r: 0.43 }, tw: 0.5, hp: 0.3, l: 0.26, b: [0.1, 0.04], hB: [-0.1, 0.16], handB: "fist", hand: "palm", fF: [0.24, 0], fB: [-0.15, -0.03], face: "fierce" } })) }),
     // ---------------------------------------------------------------- casting
-    push: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.04, 0.1], l: -0.14, hF: [-0.12, 0.18], hB: [-0.16, 0.2], hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.16, 0], face: "fierce" }, hit: { b: [0.1, 0.04], l: 0.22, hF: [0.47, -0.06], hB: [0.43, 0.03], hand: "palm", handB: "palm", fF: [0.28, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 6e-3 }),
-    point: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.1, 0.1], l: -0.06, face: "fierce" }, hit: { hF: [0.48, -0.12], hand: "finger", l: 0.1, hB: [-0.05, 0.3], fF: [0.18, 0], fB: [-0.12, 0] } })) }),
-    raise: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.14, b: [0.04, 0.04], face: "shout" } })), jitter: 4e-3 }),
-    summon: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.1], l: 0.18, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, -0.02], l: -0.16, hF: [0.18, -0.5], hB: [-0.16, -0.48], hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
-    powerup: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.16], l: 0.26, hF: [0.02, 0.27], hB: [-0.06, 0.29], fF: [0.2, 0], fB: [-0.2, 0], face: "fierce" }, hit: { b: [0, -0.03], l: -0.18, hF: [0.3, -0.34], hB: [-0.28, -0.34], hand: "palm", handB: "palm", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.14 })), jitter: 0.012 }),
-    spread: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], hF: [0.1, 0.26], hB: [0, 0.26], l: 0.22, face: "fierce" }, hit: { b: [0, -0.02], hF: [0.4, -0.14], hB: [-0.38, -0.14], hand: "palm", handB: "palm", l: -0.1, fF: [0.2, 0], fB: [-0.2, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
-    hana: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85 })) }),
-    slam: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, hF: [0.14, -0.46], hB: [0.06, -0.46], l: -0.22, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "fierce" }, hit: { z: 0, b: [0.1, 0.26], l: 0.48, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.26, 0], fB: [-0.2, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
-    quake: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.72, load: { b: [-0.06, 0.08], l: -0.26, hF: [-0.24, -0.04], hB: [0.2, 0.05], face: "fierce" }, hit: { b: [0.2, 0.05], l: 0.36, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 0.014 }),
-    pray: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
+    // both palms driven out together behind a beam
+    push: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.05, 0.11], l: -0.16, tw: -0.25, hF: [-0.12, 0.18], hB: [-0.15, 0.2], hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.12, 0.05], l: 0.24, tw: 0.15, hF: [0.48, -0.07], hB: [0.44, 0.04], hand: "palm", handB: "palm", fF: [0.29, 0], fB: [-0.19, -0.02], face: "shout" } })), jitter: 6e-3 }),
+    // the arm thrown out to point, the body turned side-on behind it
+    point: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.08, 0.06], tw: -0.2, l: -0.06, hB: [0, 0.3], face: "fierce" }, hit: { hF: [0.49, -0.12], hand: "finger", tw: 0.4, hp: 0.15, l: 0.1, hB: [-0.08, 0.3], fF: [0.19, 0], fB: [-0.13, 0], face: "fierce" } })) }),
+    // a hand raised high, then flung forward to send it
+    raise: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, ht: -0.15, tw: -0.25, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.16, tw: 0.35, b: [0.05, 0.04], ht: 0, face: "shout" } })), jitter: 4e-3 }),
+    // both arms swept up to the sky
+    summon: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.12], l: 0.2, ht: 0.2, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.3, hF: { a: -1.75, r: 0.43 }, hB: { a: -1.4, r: 0.43 }, zF: 0.12, zB: 0.12, hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
+    // a transformation: hunched over clenched fists, gathering it in, then thrown open with the head back — the roar
+    powerup: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.78, load: { b: [0, 0.17], l: 0.3, ht: 0.25, hF: [0.04, 0.28], hB: [-0.04, 0.3], zF: 0.06, zB: 0.06, fF: [0.21, 0], fB: [-0.21, 0], zfF: 0.04, zfB: 0.04, face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.25, hF: [0.18, -0.08], hB: [-0.16, -0.06], zF: 0.22, zB: 0.22, hand: "fist", handB: "fist", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.16 })), jitter: 0.012 }),
+    // arms crossed before the chest, coiled, then flung wide: a burst from the hands
+    spread: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], l: 0.2, hF: [0.18, 0.06], hB: [0.16, 0.08], zF: -0.12, zB: -0.12, face: "grit" }, hit: { b: [0, -0.02], l: -0.1, hF: [0.36, -0.14], hB: [-0.36, -0.14], zF: 0.14, zB: 0.14, hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.21, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
+    hana: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85, settle: false })) }),
+    slam: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, l: -0.24, ht: -0.15, hF: [0.12, -0.46], hB: [0.05, -0.46], zF: 0.03, zB: 0.03, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "grit" }, hit: { z: 0, b: [0.1, 0.27], l: 0.5, ht: 0.25, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.27, 0], fB: [-0.21, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
+    // a punch at the air itself: the fist cocked back, driven out, stopped dead and shuddering
+    quake: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.7, antic: { b: [0.02, 0.07], l: 0.12 }, load: { b: [-0.06, 0.09], l: -0.24, tw: -0.6, hp: -0.25, hF: [-0.24, -0.06], hB: [0.22, 0.04], face: "grit" }, hit: { b: [0.2, 0.06], l: 0.36, tw: 0.6, hp: 0.4, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], sm: 0.06, face: "shout" }, holdT: 0.14 })), jitter: 0.014, shake: { a: 0.012, t: 0.14 } }),
+    pray: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], zF: -0.06, zB: -0.06, hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
     blink: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
-    will: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.1], hF: [0, 0.32], hB: [-0.04, 0.32], l: 0.1, ht: 0.15, face: "fierce" }, hit: { b: [0, -0.04], l: -0.12, ht: -0.12, hF: [0.14, 0.36], hB: [-0.1, 0.36], face: "shout" }, holdT: 0.2 })), jitter: 0.01 }),
-    guardup: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUARD, load: { b: [0, 0.07], hF: [0.14, -0.1], hB: [0.2, -0.02], eB: -1 }, hit: { b: [0, 0.06], hF: [0.16, -0.12], hB: [0.2, -0.02], eB: -1, face: "fierce" }, holdT: 0.3 })) }),
-    flex: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { b: [0, 0.1], hF: [0.18, -0.2], hB: [-0.18, -0.2], eF: 1, eB: 1, face: "fierce" }, hit: { b: [0, 0.12], hF: [0.2, -0.24], hB: [-0.2, -0.24], face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
-    breath: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "fierce" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
-    pull: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
-    // ---------------------------------------------------------------- rubber
-    pistol: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.22, b: [-0.06, 0.05], hF: [-0.56, -0.02], stretch: true, face: "fierce" }, hit: { l: 0.26, b: [0.12, 0.02], hF: [0.47, -0.05], stretch: true, face: "shout" }, holdT: 0.12 })) }),
-    bazooka: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.74, load: { b: [-0.06, 0.07], l: -0.3, hF: [-0.66, 0], hB: [-0.7, 0.08], hand: "palm", handB: "palm", stretch: true, face: "fierce" }, hit: { b: [0.22, 0.04], l: 0.32, hF: [0.52, -0.04], hB: [0.5, 0.07], hand: "palm", handB: "palm", stretch: true, face: "shout" }, holdT: 0.1 })) }),
-    gatling: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.12, hF: [-0.14, 0.04], hB: [-0.16, 0.08], face: "fierce" }, hit: { l: 0.2, b: [0.08, 0.04], hF: [0.4, -0.02], hB: [0.36, 0.05], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
-    kneel: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
-    rocket: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.12], l: -0.26, hF: [-0.54, 0.08], hB: [-0.56, 0.12], stretch: true }, hit: { l: 0.62, z: 0.16, hF: [0.46, 0], hB: [0.44, 0.06], fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" } })), legs: true }),
-    fly: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true })
+    // Conqueror's Haki: no wind-up to speak of, only stillness — standing tall, chin up, fists at the sides, and a glare
+    will: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.85, load: { b: [-0.02, 0], l: -0.1, ht: -0.16, hF: [0.03, 0.36], hB: [-0.05, 0.36], zF: 0.05, zB: 0.05, face: "glare" }, hit: { b: [0, -0.02], l: -0.14, ht: -0.22, hF: [0.06, 0.34], hB: [-0.08, 0.34], zF: 0.12, zB: 0.12, face: "glare" }, holdT: 0.35, settle: false })) }),
+    // braced like iron: the guard locked tight, the feet planted wide
+    guardup: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUARD, load: { b: [0, 0.08], hF: [0.15, -0.1], hB: [0.2, -0.02], eB: -1, zF: -0.05 }, hit: { b: [0, 0.1], hF: [0.16, -0.12], hB: [0.2, -0.03], eB: -1, zF: -0.06, zB: -0.04, zfF: 0.05, zfB: 0.05, face: "grit" }, holdT: 0.3, settle: false })) }),
+    flex: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.12, hF: [0.12, 0.2], hB: [-0.1, 0.22], face: "grit" }, hit: { b: [0, 0.1], l: -0.06, ht: -0.12, hF: [0.12, -0.24], hB: [-0.14, -0.24], zF: 0.2, zB: 0.2, eF: 1, eB: 1, face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
+    breath: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "grit" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
+    pull: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", tw: 0.3, l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", tw: -0.3, l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
+    // ---------------------------------------------------------------- Devil Fruit signatures
+    // Gum-Gum Pistol: the arm wound far back on its rubber, the body twisted away from it and the other hand aiming — then let go
+    pistol: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.24, b: [-0.07, 0.06], tw: -0.75, hp: -0.3, hF: [-0.62, -0.03], zF: 0.05, stretch: true, hB: [0.3, -0.04], handB: "palm", fF: [0.25, 0], fB: [-0.18, 0], face: "grit" }, hit: { l: 0.28, b: [0.14, 0.03], tw: 0.65, hp: 0.4, hF: [0.47, -0.05], stretch: true, hB: [-0.05, 0.12], handB: "fist", fF: [0.29, 0], fB: [-0.15, -0.05], face: "shout" }, holdT: 0.12 })) }),
+    // Gum-Gum Bazooka: both arms stretched back behind, then the two palms slammed out together
+    bazooka: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.7, antic: { b: [0.02, 0.09], l: 0.14, hF: [0.25, 0.05], hB: [0.24, 0.08] }, load: { b: [-0.08, 0.09], l: -0.32, tw: -0.3, hF: [-0.7, 0], hB: [-0.72, 0.08], zF: 0.04, zB: 0.04, hand: "palm", handB: "palm", stretch: true, fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.23, 0.05], l: 0.33, tw: 0.15, hp: 0.2, hF: [0.53, -0.05], hB: [0.51, 0.07], hand: "palm", handB: "palm", stretch: true, fF: [0.34, 0], fB: [-0.16, -0.05], face: "shout" }, holdT: 0.1 })) }),
+    // a flurry: the stance wide, leaning in behind fists that blur (see samplePose)
+    gatling: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.14, b: [-0.04, 0.08], tw: -0.2, hF: [-0.16, 0.02], hB: [-0.2, 0.06], fF: [0.26, 0], fB: [-0.2, 0], face: "grit" }, hit: { l: 0.24, b: [0.08, 0.07], ht: 0.05, hF: [0.42, -0.02], hB: [0.38, 0.04], fF: [0.28, 0], fB: [-0.2, -0.02], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
+    kneel: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "grit" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
+    rocket: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.12], l: -0.26, hF: [-0.54, 0.08], hB: [-0.56, 0.12], stretch: true, face: "grit" }, hit: { l: 0.62, z: 0.16, hF: [0.46, 0], hB: [0.44, 0.06], fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" } })), legs: true }),
+    fly: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true }),
+    // Hiken: the fist pulled back to the hip in its fire, the body wound round it and the other hand out to aim — then thrown with everything behind it
+    hiken: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.62, antic: { b: [0.02, 0.07], l: 0.1, hF: [0.26, 0] }, load: { b: [-0.08, 0.1], l: -0.12, tw: -0.7, hp: -0.3, ht: 0.05, hF: [-0.2, 0.12], eF: 1, hB: [0.34, -0.06], handB: "palm", fF: [0.27, 0], fB: [-0.21, 0], face: "grit" }, hit: { b: [0.24, 0.06], l: 0.36, tw: 0.75, hp: 0.5, ht: -0.08, hF: [0.5, -0.04], hB: [-0.1, 0.18], handB: "fist", fF: [0.38, 0], fB: [-0.15, -0.07], sm: 0.14, face: "shout" }, follow: { l: 0.4, b: [0.27, 0.08], hF: [0.45, -0.02] }, holdT: 0.14 })), jitter: 6e-3 }),
+    // Gura Gura: the fist cocked high by the ear, the elbow up and back, then punched into the empty air in front — where it stops dead and the air cracks
+    kaishin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.66, antic: { b: [0.02, 0.08], l: 0.12 }, load: { b: [-0.06, 0.12], l: -0.12, tw: -0.62, hp: -0.25, hF: [-0.12, -0.16], eF: -0.5, zF: 0.06, hB: [0.22, 0.04], fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.17, 0.08], l: 0.3, tw: 0.55, hp: 0.4, hF: [0.42, -0.06], eF: 0.6, hB: [-0.08, 0.16], fF: [0.33, 0], fB: [-0.17, -0.04], sm: 0.04, face: "shout" }, holdT: 0.18, holdK: 0.6 })), jitter: 0.016, shake: { a: 0.016, t: 0.2 } }),
+    // Seaquake: both hands up gripping the air itself, then the whole body wrenching it round and down — the world tilts
+    tilt: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.6, load: { b: [0, 0.06], l: -0.1, ht: -0.12, hF: [0.3, -0.18], hB: [0.28, -0.2], zF: 0.18, zB: 0.18, hand: "claw", handB: "claw", fF: [0.24, 0], fB: [-0.2, 0], zfF: 0.05, zfB: 0.05, face: "grit" }, hit: { b: [0.04, 0.14], l: 0.2, ls: 0.35, tw: 0.4, ht: 0.05, hF: [0.32, 0.05], hB: [0.3, -0.25], zF: 0.1, zB: 0.12, hand: "fist", handB: "fist", face: "shout" }, holdT: 0.3 })), jitter: 0.012, shake: { a: 0.012, t: 0.3 } }),
+    // El Thor: the arm thrust up at the sky, the finger raised — and swept down at the target as the bolt falls
+    skyward: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.45, load: { b: [0, 0.03], l: -0.1, ht: -0.25, tw: -0.15, hF: { a: -1.5, r: 0.43 }, hand: "finger", hB: [0.02, 0.32], zB: 0.04, face: "fierce" }, hit: { b: [0.04, 0.07], l: 0.12, ht: 0.05, tw: 0.3, hF: [0.42, 0.12], hand: "finger", hB: [-0.05, 0.3], face: "shout" }, holdT: 0.2 })), jitter: 5e-3 }),
+    // Ice Age: the palm raised high, then down onto one knee and slapped flat on the ground (it freezes out from there)
+    groundpalm: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, -0.02], z: 0.02, l: -0.08, ht: -0.1, tw: -0.2, hF: { a: -1.3, r: 0.4 }, hand: "palm", hB: [0.05, 0.3], face: "fierce" }, hit: { b: [0.08, 0.34], l: 0.74, ht: -0.32, tw: 0.2, hF: [0.24, 0.72], hand: "palm", hB: [-0.12, 0.25], fF: [0.31, 0], fB: [-0.24, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.3, holdK: 0.8 })), legs: true }),
+    // ROOM: a hand held up before the face, open as if round a sphere, as the dome spreads out from it
+    room: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.05], l: 0.04, tw: -0.1, hF: [0.16, 0.06], hand: "claw", hB: [0, 0.32], face: "fierce" }, hit: { b: [0, 0.06], l: -0.04, ht: -0.08, tw: 0.15, hF: [0.24, -0.17], zF: 0.03, hand: "claw", eF: 1, hB: [-0.02, 0.32], face: "fierce" }, holdT: 0.28, settle: false })) }),
+    // Dai Enkai: both hands raised high under the second sun, then one arm hurling it down at them
+    sunraise: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [0, 0.04], l: -0.18, ht: -0.25, hF: { a: -1.55, r: 0.42 }, hB: { a: -1.45, r: 0.42 }, zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.18, 0], face: "grit" }, hit: { b: [0.16, 0.06], l: 0.32, tw: 0.4, ht: 0, hF: [0.47, -0.08], hB: [-0.1, 0.12], hand: "palm", handB: "fist", fF: [0.3, 0], fB: [-0.17, -0.04], face: "shout" }, holdT: 0.15 })), jitter: 8e-3 })
   };
   var LIMB = {
     cross: "hB",
@@ -54479,6 +54553,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var SWEEP = { slash: 1, slash2: -1, rise_slash: -1, slash3: 1, cleave: 1, dual1: 1, dual2: 1, dual3: -1, dualx: 1, tora: 1, axe: 1, axe2: -1, axe_slam: 1, staff: 1, staff2: -1, chop: 1, chop2: -1, claw: 1, claw2: -1, claw_x: 1, bladespin: 1, kick_spin: -1, sweep: -1, pirouette: -1, iai: 1 };
   var FLURRY = /* @__PURE__ */ new Set(["gatling", "jab", "cross", "shigan", "shigan2", "palm", "claw", "grab", "kick", "thrust"]);
   var SPINS = /* @__PURE__ */ new Set(["kick_spin", "pirouette", "bladespin", "handstand", "sweep", "slash3"]);
+  var SM_CH = { hF: "smF", hB: "smB", fF: "smfF", fB: "smfB" };
   function buildClip(name, w, T4, c = {}) {
     const key2 = CLIPS[name] ? name : ALIAS[name] || "jab";
     const f = CLIPS[key2];
@@ -54490,13 +54565,36 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     clip2.limb = LIMB[key2] || (clip2.legs ? "fF" : "hF");
     clip2.sweep = SWEEP[key2] || 0;
     const K = clip2.keys;
-    clip2.trailFrom = K[1] ? K[1].t : 0;
-    clip2.trailTo = Math.max((K[3] ? K[3].t : w) + 0.07, c.flurry ? c.flurry.t1 : 0, c.spin ? c.spin.t1 : 0);
+    const hi = K.findIndex((k) => k.t >= w - 1e-4);
+    clip2.trailFrom = hi > 0 ? K[hi - 1].t : K[1] ? K[1].t : 0;
+    const hold = K.find((k) => k.t > w + 1e-4);
+    clip2.trailTo = Math.max((hold ? hold.t : w) + 0.07, c.flurry ? c.flurry.t1 : 0, c.spin ? c.spin.t1 : 0);
     return clip2;
   }
   var ALIAS = { punch: "cross", heavy: "haymaker", cast: "push", block: "guardup", slashing: "slash", kick: "kick", grab: "grab" };
   var GENERIC = /* @__PURE__ */ new Set(["punch", "heavy", "slash", "thrust", "kick", "grab", "cast", "shoot", "block"]);
   var MAIN = (s) => s.hit || s.proj || s.dash || s.zone || s.teleport || s.pull || s.conqueror || s.heal || s.buff || s.summon;
+  var TECH_CLIP = {
+    mera_hiken: "hiken",
+    ryu_hiken: "hiken",
+    magu_daifunka: "hiken",
+    gura_punch: "kaishin",
+    gura_kaishin: "kaishin",
+    haki_emission: "kaishin",
+    gura_tsunami: "tilt",
+    goro_elthor: "skyward",
+    clima_thunderbolt: "skyward",
+    zushi_meteor: "skyward",
+    hie_ageand: "groundpalm",
+    suna_dry: "groundpalm",
+    suna_spada: "groundpalm",
+    ope_room: "room",
+    mera_entei: "sunraise",
+    roku_3: "rankyaku",
+    elec_3: "kick_spin",
+    hassho_3: "vibe_palm",
+    hassho_heavy: "vibe_palm"
+  };
   function defTotal(def) {
     const last = Math.max(0, ...(def.steps || []).map((s) => (s.at ?? def.windup ?? 0) + (s.dash ? s.dash.time : 0) + (s.hit ? s.hit.duration ?? 0.1 : 0)));
     return Math.max((def.windup ?? 0) + (def.active ?? 0.1), last) + (def.recover ?? 0.2);
@@ -54525,7 +54623,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (wk === "gun" && gunKind(actor.weapon) === "sling") c.sling = true;
     const name = pickClip(def, actor, main2, steps, c, wk);
     if (c.hitDur) {
-      if (FLURRY.has(name) && !SPINS.has(name)) c.flurry = { t0: w, t1: w + c.hitDur, rate: 12, legs: name.startsWith("kick") };
+      const rubber = !!actor && actor.fruit === "gomu" && (def.source || "").startsWith("fruit");
+      if (FLURRY.has(name) && !SPINS.has(name)) c.flurry = { t0: w, t1: w + c.hitDur, rate: 12, legs: name.startsWith("kick"), reach: rubber ? 0.6 : 0.34, stretch: rubber };
       if (SPINS.has(name) && name !== "handstand") c.spin = { t0: w, t1: w + c.hitDur, turns: Math.max(1, Math.round(c.hitDur * 5)) };
     }
     const clip2 = buildClip(name, w, T4, c);
@@ -54534,6 +54633,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function pickClip(def, actor, s, steps, c, wk) {
     if (def.clip && CLIPS[def.clip]) return def.clip;
+    const sig2 = TECH_CLIP[def.id];
+    if (sig2 && !wk) return sig2;
     const a = def.anim || "punch";
     if (CLIPS[a] && !GENERIC.has(a)) return a;
     const hit = s.hit, dash = s.dash, proj = s.proj;
@@ -54552,7 +54653,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (wk === "staff") return "staff";
         if (wk === "gun") return "aim";
         if (dash) return "charge";
-        if (rubber) return proj ? "bazooka" : "bazooka";
+        if (rubber) return "bazooka";
         if (hit && (hit.shape === "circle" || hit.shape === "ring")) return "slam";
         if (s.zone) return "slam";
         if (hit && hit.shape === "line") return "quake";
@@ -54569,7 +54670,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (dash) return wk === "sword" ? "iai" : rubber ? "rocket" : "charge";
         if (wk === "sword") return c.two ? "dual_stab" : "stab";
         if (wk === "staff") return "staff_jab";
-        if (proj) return "thrust";
         return "thrust";
       case "kick":
         if (hit && (hit.shape === "circle" || hit.shape === "ring")) return multi ? "handstand" : "kick_spin";
@@ -54593,7 +54693,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (buffy && !hit && !proj && !s.zone) return "powerup";
         if (s.zone) return s.zone.atTarget ? "point" : "spread";
         if (s.pull) return "pull";
-        if (hit && (hit.shape === "circle" || hit.shape === "ring")) return multi ? "spread" : "spread";
+        if (hit && (hit.shape === "circle" || hit.shape === "ring")) return "spread";
         if (hit && hit.shape === "line") return "push";
         if (proj) return proj.count > 3 ? "spread" : "push";
         return "powerup";
@@ -54607,21 +54707,45 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         return "cross";
     }
   }
-  function samplePose(A, t, pose) {
-    const keys2 = A.keys;
+  var LEAD = 0.024;
+  var LAG = 0.032;
+  var HEAD = ["ht", "hy", "hr"];
+  var _seg = { a: null, b: null, k: 0 };
+  function seg(keys2, t) {
     let i = 0;
     while (i < keys2.length - 2 && t >= keys2[i + 1].t) i++;
     const k0 = keys2[i], k1 = keys2[i + 1] || k0;
     const span2 = k1.t - k0.t;
     let k = span2 > 0 ? (t - k0.t) / span2 : 1;
     k = k < 0 ? 0 : k > 1 ? 1 : k;
-    k = (EASE[k1.e] || EASE.inout)(k);
-    const A0 = k0.P, A1 = k1.P;
+    _seg.a = k0.P;
+    _seg.b = k1.P;
+    _seg.k = (EASE[k1.e] || EASE.inout)(k);
+    return _seg;
+  }
+  function samplePose(A, t, pose) {
+    const keys2 = A.keys;
+    const s0 = seg(keys2, t);
+    const A0 = s0.a, A1 = s0.b, k = s0.k;
     const P5 = {};
     for (const key2 in A0) P5[key2] = lerpVal(A0[key2], A1[key2], k);
+    if (keys2.length > 2) {
+      const L3 = seg(keys2, Math.min(keys2[keys2.length - 1].t, t + LEAD));
+      P5.b = lerpVal(L3.a.b, L3.b.b, L3.k);
+      P5.hp = lerpVal(L3.a.hp, L3.b.hp, L3.k);
+      const G4 = seg(keys2, Math.max(0, t - LAG));
+      for (const key2 of HEAD) P5[key2] = lerpVal(G4.a[key2], G4.b[key2], G4.k);
+    }
     if (A.jitter && t < (A.w ?? keys2[2]?.t ?? 0)) {
       const amp = A.jitter * Math.min(1, t / 0.2);
       P5.b = [P5.b[0] + Math.sin(t * 91) * amp, P5.b[1] + Math.cos(t * 77) * amp];
+    }
+    const sh = A.shake;
+    if (sh && t >= A.w && t < A.w + sh.t) {
+      const amp = sh.a * (1 - (t - A.w) / sh.t);
+      P5.b = [P5.b[0] + Math.sin(t * 97) * amp, P5.b[1] + Math.cos(t * 83) * amp * 0.6];
+      const h2 = toXY(P5.hF);
+      P5.hF = [h2[0] + Math.sin(t * 131) * amp * 0.8, h2[1] + Math.cos(t * 113) * amp * 0.8];
     }
     const f = A.flurry;
     if (f && t >= f.t0 && t <= f.t1) {
@@ -54630,14 +54754,34 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (f.legs) {
         P5.fF = [0.12 + 0.52 * tri, -0.3 - 0.2 * tri];
         P5.fB = [-0.05, 0];
+        P5.smfF = 0.06 * tri;
       } else {
-        P5.hF = [0.12 + 0.34 * tri, -0.04 + 0.06 * (1 - tri)];
-        P5.hB = [0.12 + 0.34 * (1 - tri), 0.02 + 0.05 * tri];
+        const R4 = f.reach || 0.34;
+        P5.hF = [0.12 + R4 * tri, -0.04 + 0.06 * (1 - tri)];
+        P5.hB = [0.12 + R4 * (1 - tri), 0.02 + 0.05 * tri];
+        P5.tw = (P5.tw || 0) + 0.3 * (tri - 0.5);
+        P5.hp = (P5.hp || 0) + 0.1 * (tri - 0.5);
+        P5.smF = 0.08 * tri;
+        P5.smB = 0.08 * (1 - tri);
+        if (f.stretch) P5.stretch = true;
       }
     }
     const s = A.spin;
     if (s && t >= s.t0 && t <= s.t1) P5.sp = (P5.sp || 0) + (t - s.t0) / Math.max(0.05, s.t1 - s.t0) * s.turns;
+    if (P5.sm) {
+      const ch = SM_CH[A.limb];
+      if (ch) P5[ch] = Math.max(P5[ch] || 0, P5.sm);
+    }
     if (pose && pose.moving && !A.legs) walkLegs(P5, pose);
+    if (pose) {
+      flinch(P5, pose, 0.45);
+      const ca = pose.counterAge;
+      if (ca >= 0 && ca < 0.22) {
+        const e = Math.sin(ca / 0.22 * Math.PI);
+        P5.l = (P5.l || 0) + 0.1 * e;
+        P5.b = [P5.b[0] + 0.04 * e, P5.b[1] + 0.02 * e];
+      }
+    }
     return P5;
   }
   function walkLegs(P5, pose) {
@@ -55038,82 +55182,357 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       P5.eB = 1;
     }
     if (pose.swimming) swimPose(P5, pose.swim || "tread", t * (pose.swimRate || 1), pose.swimDir || 0);
-    if (pose.block !== void 0) {
-      const fresh = Math.max(0, 1 - pose.block / 0.2);
-      P5.hF = [0.2 + fresh * 0.04, -0.13 - fresh * 0.03];
-      P5.hB = [0.23, -0.03];
-      P5.eF = 1;
-      P5.eB = -0.8;
-      P5.b = [-0.02 * fresh, 0.08];
-      P5.l = 0.14;
-      P5.fF = [0.21, 0];
-      P5.fB = [-0.19, 0];
-      P5.hand = "fist";
-      P5.handB = "fist";
-      if (base2.wF !== null && pose.armedBlock) {
-        P5.wF = -1.35;
-        P5.hF = [0.2, -0.05];
-      } else P5.wF = null;
-      P5.wB = null;
-      P5.face = "fierce";
+    if (pose.block !== void 0) blockPose(P5, pose);
+    if (pose.armOn !== void 0 && !pose.swimming) hardenPose(P5, pose.armOn, t);
+    if (pose.parryAge !== void 0) parryPose(P5, pose);
+    if (!(parriedPose(P5, pose) || guardBrokenPose(P5, pose))) {
+      if (pose.state === "hurt") hurtPose(P5, pose, t);
+      flinch(P5, pose, 1);
     }
-    if (pose.state === "hurt") {
-      const k = pose.hurtK ?? 1;
-      P5.l = -0.4 * k;
-      P5.b = [-0.07 * k, 0.05];
-      P5.hF = [-0.2, 0.08];
-      P5.hB = [0.2, 0];
-      P5.eF = 0.3;
-      P5.eB = 0.3;
-      P5.fF = [0.12, 0];
-      P5.fB = [-0.14, -0.02];
-      P5.ht = -0.24;
-      P5.wF = null;
-      P5.wB = null;
-    }
-    if (pose.dodge !== void 0) {
-      const k = pose.dodge;
-      const dir = pose.dodgeDir ?? 1;
-      if (Math.abs(dir) > 0.35) {
-        P5.r = Math.sign(dir) * k * TAU8;
-        P5.b = [0, 0.22 * Math.sin(k * Math.PI)];
-        P5.hF = [0.2, 0.18];
-        P5.hB = [0.16, 0.2];
-        P5.fF = [0.18, -0.26 * Math.sin(k * Math.PI)];
-        P5.fB = [0.06, -0.3 * Math.sin(k * Math.PI)];
-        P5.l = 0.4 * Math.sin(k * Math.PI);
-      } else {
-        const e = Math.sin(k * Math.PI);
-        P5.b = [0, 0.16 * e];
-        P5.l = 0.2 * e;
-        P5.fF = [0.28, 0];
-        P5.fB = [-0.3, -0.04];
-        P5.hF = [0.26, 0.1];
-        P5.hB = [-0.2, 0.16];
-      }
-      P5.wF = null;
-      P5.wB = null;
-    }
-    if (pose.getUp !== void 0) {
-      const k = pose.getUp;
-      const e = 1 - (1 - k) * (1 - k);
-      P5.b = [0, 0.3 * (1 - e)];
-      P5.l = 0.55 * (1 - e);
-      P5.hF = [0.22, 0.46 * (1 - e) + 0.08];
-      P5.hB = [0.12, 0.42 - 0.1 * e];
-      P5.fF = [0.24 * (1 - e) + 0.06, 0];
-      P5.fB = [-0.2, -0.02 * (1 - e)];
-      P5.ht = 0.2 * (1 - e);
-    }
-    if (pose.launch) {
-      P5.r = -pose.launch * 0.9;
-      P5.hF = [-0.1, -0.3];
-      P5.hB = [0.14, -0.26];
-      P5.fF = [0.3, -0.25];
-      P5.fB = [0.12, -0.12];
-      P5.ht = -0.3;
-    }
+    if (pose.counterAge !== void 0 && pose.state !== "hurt") counterPose(P5, pose);
+    if (pose.dodge !== void 0) dodgePose(P5, pose);
+    if (pose.getUp !== void 0) getUpPose(P5, pose.getUp, t);
+    if (pose.launch) launchPose(P5, pose.launch);
     return P5;
+  }
+  var sm01 = (x) => {
+    const k = x < 0 ? 0 : x > 1 ? 1 : x;
+    return k * k * (3 - 2 * k);
+  };
+  var mixP = (a, b, k) => {
+    const A = toXY(a || [0, 0.4]), B5 = toXY(b);
+    return [A[0] + (B5[0] - A[0]) * k, A[1] + (B5[1] - A[1]) * k];
+  };
+  var armedStance = (pose) => {
+    const st = pose.stanceP || GUARD;
+    return !!pose.armed && st.wF !== null && st.wF !== void 0 ? st : null;
+  };
+  function blockPose(P5, pose) {
+    const bt = pose.block;
+    const over = bt < 0.18 ? Math.sin(Math.min(1, bt / 0.18) * Math.PI) : 0;
+    P5.hF = [0.2 + 0.03 * over, -0.13 - 0.04 * over];
+    P5.hB = [0.19, -0.07 - 0.02 * over];
+    P5.eF = 1;
+    P5.eB = 1;
+    P5.zF = -0.03;
+    P5.zB = -0.02;
+    P5.b = [-0.02 * over, 0.08];
+    P5.l = 0.15;
+    P5.ht = 0.12;
+    P5.fF = [0.21, 0];
+    P5.fB = [-0.19, 0];
+    P5.zfF = 0.02;
+    P5.zfB = 0.02;
+    P5.tw = 0.12;
+    P5.hp = 0.08;
+    P5.hand = "fist";
+    P5.handB = "fist";
+    const st = pose.armedBlock ? armedStance(pose) : null;
+    if (st) {
+      P5.hF = [0.22, -0.06];
+      P5.wF = -1.45;
+      P5.wt = 1.1;
+      if (st.wB !== null && st.wB !== void 0) {
+        P5.hB = [0.2, -0.04];
+        P5.wB = -1.45;
+      } else P5.wB = null;
+    } else {
+      P5.wF = null;
+      P5.wB = null;
+    }
+    P5.face = "fierce";
+    const ha = pose.blockHitAge;
+    if (ha >= 0 && ha < 0.24) {
+      const e = ha < 0.03 ? ha / 0.03 : Math.max(0, 1 - (ha - 0.03) / 0.21);
+      const hF = toXY(P5.hF), hB = toXY(P5.hB);
+      P5.hF = [hF[0] - 0.06 * e, hF[1] + 0.02 * e];
+      P5.hB = [hB[0] - 0.05 * e, hB[1] + 0.02 * e];
+      P5.l -= 0.14 * e;
+      P5.b = [P5.b[0] - 0.05 * e, P5.b[1] + 0.03 * e];
+      P5.ht -= 0.08 * e;
+      P5.face = "grit";
+    }
+  }
+  function parryPose(P5, pose) {
+    const a = pose.parryAge;
+    if (!(a >= 0) || a > 0.42) return;
+    const big2 = pose.parryPerfect ? 1.3 : 1;
+    const k = a < 0.045 ? sm01(a / 0.045) : 1 - sm01((a - 0.12) / 0.28);
+    const st = armedStance(pose);
+    P5.hF = mixP(P5.hF, st ? [0.3, -0.04] : [0.3, -0.1], k);
+    P5.zF = mixN(P5.zF || 0, 0.2 * big2, k);
+    P5.eF = mixN(P5.eF ?? 1, st ? 1 : -0.5, k);
+    P5.tw = (P5.tw || 0) - 0.32 * big2 * k;
+    P5.hp = (P5.hp || 0) - 0.1 * k;
+    P5.l = (P5.l || 0) - 0.08 * k;
+    P5.b = [P5.b[0] - 0.035 * k, P5.b[1] + 0.02 * k];
+    P5.ht = (P5.ht || 0) - 0.05 * k;
+    if (st) {
+      P5.wF = mixN(P5.wF ?? st.wF, -0.35, k);
+      P5.wt = mixN(P5.wt || 0, -0.5 * big2, k);
+    }
+    if (pose.parryPerfect) {
+      P5.hB = mixP(P5.hB, [0, 0.04], k);
+      P5.handB = "fist";
+    }
+    P5.face = "fierce";
+  }
+  function parriedPose(P5, pose) {
+    const a = pose.parriedAge;
+    if (!(a >= 0) || a > 0.95) return false;
+    const open = a < 0.07 ? sm01(a / 0.07) : 1 - sm01((a - 0.5) / 0.42);
+    const deep = 1 - sm01((a - 0.55) / 0.4);
+    const s1 = sm01((a - 0.07) / 0.15), s2 = sm01((a - 0.24) / 0.18);
+    const lift1 = a > 0.07 && a < 0.22 ? Math.sin((a - 0.07) / 0.15 * Math.PI) : 0;
+    const lift2 = a > 0.24 && a < 0.42 ? Math.sin((a - 0.24) / 0.18 * Math.PI) : 0;
+    P5.hF = mixP(P5.hF, [-0.02, -0.2], open);
+    P5.hB = mixP(P5.hB, [-0.08, -0.16], open);
+    P5.zF = mixN(P5.zF || 0, 0.36, open);
+    P5.zB = mixN(P5.zB || 0, 0.34, open);
+    P5.eF = mixN(P5.eF ?? 1, 0.3, open);
+    P5.eB = mixN(P5.eB ?? 1, 0.3, open);
+    if (open > 0.35) {
+      P5.hand = "palm";
+      P5.handB = "palm";
+    }
+    P5.l = mixN(P5.l || 0, -0.36, open);
+    P5.ht = mixN(P5.ht || 0, -0.32, open);
+    P5.tw = mixN(P5.tw || 0, 0, open);
+    P5.hp = mixN(P5.hp || 0, 0, open);
+    P5.ls = 0;
+    P5.b = [mixN(P5.b[0], -0.1, deep * sm01(a / 0.1)), mixN(P5.b[1], 0.06, deep)];
+    const fB = toXY(P5.fB), fF = toXY(P5.fF);
+    P5.fB = [mixN(fB[0], -0.3, s1 * deep), fB[1] - 0.08 * lift1];
+    P5.fF = [mixN(fF[0], 0.05, s2 * deep), fF[1] - 0.07 * lift2];
+    const st = armedStance(pose);
+    if (st) {
+      P5.wF = mixN(P5.wF ?? st.wF, -2.3, open);
+      if (st.wB !== null && st.wB !== void 0) P5.wB = mixN(P5.wB ?? st.wB, -2.1, open);
+    }
+    P5.sm = 0;
+    P5.smF = 0;
+    P5.smB = 0;
+    P5.smfF = 0;
+    P5.smfB = 0;
+    P5.face = open > 0.3 ? "shock" : "fierce";
+    return true;
+  }
+  function guardBrokenPose(P5, pose) {
+    const a = pose.guardBrokenAge;
+    if (!(a >= 0) || a > 1.15) return false;
+    const smash = a < 0.05 ? sm01(a / 0.05) : 1 - sm01((a - 0.07) / 0.2);
+    const daze = sm01((a - 0.08) / 0.22) * (1 - sm01((a - 0.62) / 0.5));
+    const any = Math.max(smash, daze);
+    const s1 = sm01((a - 0.1) / 0.16), s2 = sm01((a - 0.3) / 0.16);
+    const lift1 = a > 0.1 && a < 0.26 ? Math.sin((a - 0.1) / 0.16 * Math.PI) : 0;
+    const lift2 = a > 0.3 && a < 0.46 ? Math.sin((a - 0.3) / 0.16 * Math.PI) : 0;
+    P5.hF = mixP(mixP(P5.hF, [0.14, 0.3], daze), [0.08, -0.16], smash);
+    P5.hB = mixP(mixP(P5.hB, [0.08, 0.32], daze), [-0.02, -0.1], smash);
+    P5.zF = mixN(mixN(P5.zF || 0, 0.05, daze), 0.32, smash);
+    P5.zB = mixN(mixN(P5.zB || 0, 0.04, daze), 0.32, smash);
+    P5.eF = mixN(P5.eF ?? 1, 0.4, any);
+    P5.eB = mixN(P5.eB ?? 1, 0.4, any);
+    if (any > 0.3) {
+      P5.hand = "palm";
+      P5.handB = "palm";
+    }
+    P5.l = mixN(mixN(P5.l || 0, 0.32, daze), -0.32, smash);
+    P5.ht = mixN(mixN(P5.ht || 0, 0.28, daze), -0.3, smash);
+    P5.tw = mixN(P5.tw || 0, -0.25, smash);
+    P5.hp = mixN(P5.hp || 0, 0, any);
+    P5.hr = (P5.hr || 0) + Math.sin(a * 9) * 0.1 * daze;
+    P5.b = [mixN(P5.b[0], -0.06, any), mixN(P5.b[1], 0.1, any)];
+    const fB = toXY(P5.fB), fF = toXY(P5.fF), back = 1 - sm01((a - 0.7) / 0.4);
+    P5.fB = [mixN(fB[0], -0.28, s1 * back), fB[1] - 0.07 * lift1];
+    P5.fF = [mixN(fF[0], 0.04, s2 * back), fF[1] - 0.06 * lift2];
+    const st = armedStance(pose);
+    if (st) {
+      P5.wF = mixN(P5.wF ?? st.wF, 0.9, any);
+      if (st.wB !== null && st.wB !== void 0) P5.wB = mixN(P5.wB ?? st.wB, 1.1, any);
+    }
+    P5.sm = 0;
+    P5.smF = 0;
+    P5.smB = 0;
+    P5.smfF = 0;
+    P5.smfB = 0;
+    P5.face = smash > 0.3 ? "shock" : daze > 0.2 ? "hurt" : P5.face;
+    return true;
+  }
+  function hurtPose(P5, pose, t) {
+    const k = pose.hurtK ?? 1;
+    const blind = pose.stunBlind ? 1 : 0;
+    const sway = Math.sin(t * 7) * 0.025 * k;
+    P5.l = (P5.l || 0) * (1 - k) + (0.06 - 0.36 * blind) * k + sway;
+    P5.b = [P5.b[0] * (1 - k) - 0.06 * k * blind, P5.b[1] * (1 - k) + 0.045 * k];
+    P5.hF = mixP(P5.hF, blind ? [-0.2, 0.08] : [0.17, 0.2], k);
+    P5.hB = mixP(P5.hB, blind ? [0.2, 0] : [0.08, 0.25], k);
+    P5.eF = 0.5;
+    P5.eB = 0.5;
+    P5.zF = 0.04 * k;
+    P5.zB = 0.04 * k;
+    P5.fF = [0.13, 0];
+    P5.fB = [-0.15, -0.02];
+    P5.ht = (P5.ht || 0) * (1 - k) + (blind ? -0.24 : 0.08) * k;
+    P5.tw = (P5.tw || 0) * (1 - k);
+    P5.hp = (P5.hp || 0) * (1 - k);
+    P5.wF = null;
+    P5.wB = null;
+    P5.hand = "fist";
+    P5.handB = "fist";
+    P5.face = "hurt";
+  }
+  function flinch(P5, pose, scale) {
+    const fl2 = pose.flinch;
+    const age = pose.hitAge ?? (fl2 ? fl2.age : void 0);
+    if (!(age >= 0) || age > 0.75) return;
+    const rel3 = pose.hitDirRel ?? (fl2 ? fl2.rel : Math.PI);
+    const w = Math.min(1.5, pose.hitW ?? (fl2 ? fl2.w : 0.5));
+    const amp = Math.min(1.3, 0.3 + 0.8 * w) * scale;
+    const tau = 0.07 + 0.1 * Math.min(1, w);
+    const env = (x) => x < 0 ? 0 : x < 0.035 ? Math.sin(x / 0.035 * Math.PI / 2) : Math.exp(-(x - 0.035) / tau) * Math.cos((x - 0.035) * 8);
+    const e = env(age) * amp, eh = env(age - 0.03) * amp;
+    if (Math.abs(e) < 4e-3 && Math.abs(eh) < 4e-3) return;
+    const back = -Math.cos(rel3), right = Math.sin(rel3);
+    P5.l = (P5.l || 0) - 0.5 * back * e;
+    P5.b = [P5.b[0] - 0.07 * back * e, P5.b[1] + 0.04 * Math.abs(e)];
+    P5.tw = (P5.tw || 0) + 0.45 * right * e;
+    P5.ls = (P5.ls || 0) + 0.42 * right * e;
+    P5.ht = (P5.ht || 0) - 0.45 * back * eh;
+    P5.hr = (P5.hr || 0) + 0.42 * right * eh;
+    P5.hy = (P5.hy || 0) - 0.3 * right * eh;
+    const hF = toXY(P5.hF), hB = toXY(P5.hB);
+    P5.hF = [hF[0] + 0.1 * back * e, hF[1] - 0.09 * Math.abs(back) * e];
+    P5.hB = [hB[0] + 0.08 * back * e, hB[1] - 0.07 * Math.abs(back) * e];
+    P5.zF = (P5.zF || 0) + (0.07 + 0.08 * Math.max(0, right)) * Math.abs(e);
+    P5.zB = (P5.zB || 0) + (0.07 + 0.08 * Math.max(0, -right)) * Math.abs(e);
+    if (e > 0.25 * amp && scale > 0.5) P5.face = "hurt";
+  }
+  function counterPose(P5, pose) {
+    const a = pose.counterAge;
+    if (!(a >= 0) || a > 0.32) return;
+    const k = a < 0.05 ? sm01(a / 0.05) : 1 - sm01((a - 0.1) / 0.22);
+    if (armedStance(pose)) {
+      P5.hF = mixP(P5.hF, [0.46, -0.02], k);
+      P5.wF = mixN(P5.wF ?? 0, -0.05, k);
+      P5.tw = (P5.tw || 0) + 0.5 * k;
+      P5.hp = (P5.hp || 0) + 0.3 * k;
+    } else {
+      P5.hB = mixP(P5.hB, [0.48, -0.04], k);
+      P5.tw = (P5.tw || 0) - 0.6 * k;
+      P5.hp = (P5.hp || 0) - 0.3 * k;
+      P5.smB = a < 0.08 ? 0.1 * k : 0;
+    }
+    P5.l = (P5.l || 0) + 0.2 * k;
+    P5.b = [P5.b[0] + 0.08 * k, P5.b[1] + 0.02 * k];
+    P5.face = "shout";
+  }
+  function hardenPose(P5, a, t) {
+    if (!(a >= 0) || a > 0.55) return;
+    const e = a < 0.1 ? sm01(a / 0.1) : 1 - sm01((a - 0.3) / 0.25);
+    const tr = Math.sin(t * 83) * 6e-3 * e;
+    P5.hF = mixP(P5.hF, [0.17 + tr, -0.1], e);
+    P5.eF = 1;
+    P5.zF = mixN(P5.zF || 0, -0.02, e);
+    P5.hB = mixP(P5.hB, [0.17, 0.02], e);
+    P5.zB = mixN(P5.zB || 0, -0.1, e);
+    P5.eB = 1;
+    if (e > 0.4) {
+      P5.hand = "fist";
+      P5.handB = "claw";
+      P5.face = "grit";
+    }
+    P5.ht = (P5.ht || 0) + 0.06 * e;
+    P5.tw = (P5.tw || 0) + 0.15 * e;
+  }
+  function dodgePose(P5, pose) {
+    const k = pose.dodge, dir = pose.dodgeDir ?? 1;
+    if (dir > 0.35) {
+      const rk = sm01(k / 0.8), tuck = Math.sin(Math.min(1, k / 0.8) * Math.PI), land = sm01((k - 0.62) / 0.2);
+      P5.r = rk * TAU8;
+      P5.b = [0.02 * tuck + 0.03 * land, 0.2 * tuck + 0.12 * land];
+      P5.l = 0.45 * tuck + 0.12 + 0.12 * land;
+      P5.ht = 0.3 * tuck - 0.05 * land;
+      P5.hF = mixP([0.2, 0.16 + 0.06 * tuck], [0.22, -0.02], land);
+      P5.hB = mixP([0.16, 0.2], [0.14, 0.03], land);
+      P5.eF = 1;
+      P5.eB = 1;
+      P5.fF = [0.18 + 0.04 * land, -0.28 * tuck];
+      P5.fB = [0.06 - 0.22 * land, -0.32 * tuck];
+    } else if (dir < -0.35) {
+      const e = Math.sin(k * Math.PI), land = sm01((k - 0.65) / 0.35);
+      P5.z = 0.15 * e;
+      P5.b = [-0.05 * e, 0.04 + 0.06 * land];
+      P5.l = -0.16 * e + 0.12 * land;
+      P5.ht = 0.06;
+      P5.fF = [0.2 - 0.06 * e, -0.14 * e];
+      P5.fB = [-0.16 - 0.04 * e, -0.06 * e];
+      P5.hF = [0.2, -0.05];
+      P5.hB = [0.13, 0];
+      P5.eF = 1;
+      P5.eB = 1;
+      P5.tw = 0.1;
+      P5.hp = 0.04;
+    } else {
+      const e = Math.sin(k * Math.PI), s = (pose.dodgeSide ?? 1) >= 0 ? 1 : -1;
+      P5.b = [0, 0.17 * e];
+      P5.l = 0.12 * e;
+      P5.fF = [0.08, 0];
+      P5.fB = [-0.06, 0];
+      P5.zfF = (s > 0 ? 0.05 : 0.3) * e;
+      P5.zfB = (s > 0 ? 0.3 : 0.05) * e;
+      P5.hF = [0.22, -0.02];
+      P5.hB = [0.14, 0.03];
+      P5.ht = 0.04;
+    }
+    P5.wF = null;
+    P5.wB = null;
+    P5.face = "fierce";
+  }
+  function getUpPose(P5, k, t) {
+    const SIT = { b: [0, 0.34], l: 0.95, ht: 0.2, hF: [0.24, 0.32], hB: [0.2, 0.34], fF: [0.1, -0.16], fB: [-0.02, -0.08] };
+    const KNEE = { b: [0.03, 0.31], l: 0.42, ht: 0.22, hF: [0.25, 0.3], hB: [0.02, 0.33], fF: [0.22, 0], fB: [-0.2, 0] };
+    const s = sm01(k / 0.32), up = sm01((k - 0.6) / 0.4);
+    const from = s < 1 ? lerpPose(SIT, KNEE, s) : KNEE;
+    const G4 = { b: P5.b, l: P5.l || 0, ht: P5.ht || 0, hF: P5.hF, hB: P5.hB, fF: P5.fF, fB: P5.fB };
+    const X2 = lerpPose(from, G4, up);
+    P5.b = X2.b;
+    P5.l = X2.l;
+    P5.ht = X2.ht;
+    P5.hF = X2.hF;
+    P5.hB = X2.hB;
+    P5.fF = X2.fF;
+    P5.fB = X2.fB;
+    P5.eF = 1;
+    P5.eB = 1;
+    P5.tw = (P5.tw || 0) * up;
+    P5.hp = (P5.hp || 0) * up;
+    P5.hy = Math.sin(t * 22) * 0.12 * sm01((k - 0.55) / 0.15) * (1 - up);
+    P5.hand = "palm";
+    P5.handB = "fist";
+    P5.wF = up > 0.6 ? P5.wF : null;
+    P5.wB = up > 0.6 ? P5.wB : null;
+  }
+  function launchPose(P5, L3) {
+    P5.r = -0.85 * L3;
+    P5.l = 0.4 * L3;
+    P5.b = [-0.04 * L3, 0.06 * L3];
+    P5.hF = mixP(P5.hF, [0.32, -0.08], L3);
+    P5.hB = mixP(P5.hB, [0.28, 0], L3);
+    P5.eF = 0.35;
+    P5.eB = 0.35;
+    P5.zF = 0.12 * L3;
+    P5.zB = 0.12 * L3;
+    P5.hand = "palm";
+    P5.handB = "palm";
+    P5.fF = [0.32, -0.24 * L3];
+    P5.fB = [0.2, -0.14 * L3];
+    P5.ht = 0.28 * L3;
+    P5.tw = 0;
+    P5.hp = 0;
+    P5.ls = 0;
+    P5.face = "hurt";
+    P5.wF = null;
+    P5.wB = null;
   }
 
   // src/render/charart.js
@@ -56168,8 +56587,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function expression(look, pose, P5, t) {
     const st = pose && pose.state;
     if (st === "knocked" || st === "dead") return { eyes: "ko", mouth: "ko", brow: "worried" };
-    if (st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried" };
     const face = P5 && P5.face;
+    if (face === "shock") return { eyes: "open", mouth: "shout", brow: "worried", small: true };
+    if (face === "hurt" || st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried" };
+    if (face === "grit") return { eyes: "fierce", mouth: "grimace", brow: "fierce" };
+    if (face === "glare") return { eyes: "fierce", mouth: "neutral", brow: "fierce" };
     const fierce = face === "fierce" || face === "shout";
     const s = (look.seed || 0) * 0.6180339 % 1 * 0.9 + 0.1;
     const blink = pose && typeof pose.blink === "boolean" ? pose.blink : !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;
@@ -58471,7 +58893,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     upper(() => drawLimb(g, [[0, shoulderY + 0.04], [0, headY + headR * 0.55]], [0.075, 0.068], skin, ghost ? null : dk2(skin, -0.2), ghost ? null : sd));
     upper(() => {
       g.save();
-      const tilt = (P5.ht || 0) + (pose.state === "hurt" ? -0.25 : 0);
+      const tilt = (P5.ht || 0) + (pose.state === "hurt" && pose.stunBlind ? -0.25 : 0);
       if (tilt) {
         g.translate(0, headY + headR);
         g.rotate(tilt);
@@ -60847,9 +61269,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function ruinWalls(k, b, fw, fd, H3, wallCol) {
     const stone = C(wallCol);
     const R4 = (i) => hash3(b.x, b.y, i);
-    const seg = Math.max(2, Math.round(fw / 1.2));
-    for (let i = 0; i < seg; i++) {
-      const x0 = -fw / 2 + i * fw / seg, x1 = x0 + fw / seg;
+    const seg2 = Math.max(2, Math.round(fw / 1.2));
+    for (let i = 0; i < seg2; i++) {
+      const x0 = -fw / 2 + i * fw / seg2, x1 = x0 + fw / seg2;
       const h2 = 0.8 + R4(i) * (H3 - 0.8) * 0.9;
       const dz = i % 2 ? 0.015 : 0;
       B2(k, x0, -1, -0.45 + dz, x1 + 0.01, h2, dz, i % 2 ? shade2(stone, -0.08) : stone, { outline: 0.03 });
@@ -62699,14 +63121,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     return [c[0] + d[0] * best, c[1] + d[1] * best, c[2] + d[2] * best];
   }
-  function limb2(k, a, b, r0, r1, seg, o) {
+  function limb2(k, a, b, r0, r1, seg2, o) {
     const d = new Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     const len = d.length();
     d.normalize();
     const m = new Matrix4().compose(new Vector3(a[0], a[1], a[2]), new Quaternion().setFromUnitVectors(UP, d), ONE);
     k.save();
     k.transform(m);
-    k.add(cyl(r1, r0, len, seg, o.open !== false), o);
+    k.add(cyl(r1, r0, len, seg2, o.open !== false), o);
     k.restore();
   }
   function branches(k, R4, pos, dir, len, r, depth, o, tips) {
@@ -62815,8 +63237,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         for (let v = 0; v < P5.count; v++) {
           if (Math.abs(P5.getY(v)) > 1e-4) continue;
           const a = Math.atan2(P5.getZ(v), P5.getX(v));
-          const seg = Math.round(a / (Math.PI * 2) * 12 + 12) % 2;
-          if (seg && Math.hypot(P5.getX(v), P5.getZ(v)) > 1e-3) {
+          const seg2 = Math.round(a / (Math.PI * 2) * 12 + 12) % 2;
+          if (seg2 && Math.hypot(P5.getX(v), P5.getZ(v)) > 1e-3) {
             P5.setX(v, P5.getX(v) * 0.8);
             P5.setZ(v, P5.getZ(v) * 0.8);
             P5.setY(v, 0.12);
@@ -62924,16 +63346,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return cached("tree:lollipop", () => {
       const k = new Mesher();
       k.add(cyl(0.05, 0.06, 2.3, 6, true), { color: "#fdfefe", outline: 0.02 });
-      const R4 = 0.78, th = 0.22, seg = 16;
+      const R4 = 0.78, th = 0.22, seg2 = 16;
       k.save();
       k.translate(0, 2.25 + R4, 0);
       k.rotateX(Math.PI / 2);
-      const side = cyl(R4, R4, th, seg, true);
+      const side = cyl(R4, R4, th, seg2, true);
       k.add(side, { at: [0, -th / 2, 0], color: "#ffffff", tint: 1, outline: 0.035 });
       for (const face of [1, -1]) {
         const pos = [];
-        for (let i = 0; i < seg; i++) {
-          const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+        for (let i = 0; i < seg2; i++) {
+          const a0 = i / seg2 * Math.PI * 2, a1 = (i + 1) / seg2 * Math.PI * 2;
           const tw = 0.9;
           pos.push(0, face * th / 2, 0, Math.cos(a1 + tw) * R4 * 0.45, face * th / 2, Math.sin(a1 + tw) * R4 * 0.45, Math.cos(a0 + tw) * R4 * 0.45, face * th / 2, Math.sin(a0 + tw) * R4 * 0.45);
           pos.push(Math.cos(a0 + tw) * R4 * 0.45, face * th / 2, Math.sin(a0 + tw) * R4 * 0.45, Math.cos(a1 + tw) * R4 * 0.45, face * th / 2, Math.sin(a1 + tw) * R4 * 0.45, Math.cos(a1) * R4, face * th / 2, Math.sin(a1) * R4);
@@ -66761,6 +67183,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (actor.armament && (actor.style === "black_leg" || actor.style === "okama_kenpo")) out.armLegs = true;
     if (bufs.some((b) => b.id === "gear4")) out.bounce = true;
     if (bufs.some((b) => b.id === "gear5")) out.toon = true;
+    const now3 = actor.game?.env?.time;
+    if (now3 !== void 0) {
+      if (actor.blocking && actor._blockFlash !== void 0 && now3 - actor._blockFlash >= 0 && now3 - actor._blockFlash < 0.3) out.blockHitAge = now3 - actor._blockFlash;
+      if (actor.armament && actor._armWas === false) actor._armOnT = now3;
+      actor._armWas = !!actor.armament;
+      if (actor._armOnT !== void 0 && now3 - actor._armOnT < 0.6) out.armOn = now3 - actor._armOnT;
+      const hf = actor.hitFx;
+      if (hf && now3 - hf.t0 >= 0 && now3 - hf.t0 < 0.8) out.flinch = { age: now3 - hf.t0, rel: Math.atan2(Math.sin(hf.ang - (actor.facing || 0)), Math.cos(hf.ang - (actor.facing || 0))), w: hf.w };
+      const stunned = actor.hitstun > 0;
+      if (stunned && !actor._stunWas) {
+        const ago2 = (t0) => t0 !== void 0 && now3 - t0 >= 0 ? now3 - t0 : Infinity;
+        actor._stunBlind = !(Math.min(ago2(actor.hitT), ago2(hf && hf.t0)) < 0.2);
+      }
+      actor._stunWas = stunned;
+      if (stunned && actor._stunBlind) out.stunBlind = true;
+    }
     if (!act2 || !clip2) return out;
     const def = act2.def;
     const w = def.windup ?? 0.1;
@@ -66852,7 +67290,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     name: o.name || "Strike",
     style,
     anim,
-    windup: o.windup ?? 0.07,
+    windup: o.windup ?? 0.08,
     recover: o.recover ?? 0.16,
     weapon: o.weapon,
     telegraph: false,
@@ -66865,10 +67303,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       weapon: null,
       desc: "Fists, elbows and headbutts. Every fighter starts somewhere.",
       m1: [
-        m1("brawl_1", "brawler", "jab", 5, { windup: 0.06, recover: 0.13 }),
-        m1("brawl_2", "brawler", "cross", 5, { windup: 0.06, recover: 0.13 }),
+        m1("brawl_1", "brawler", "jab", 5, { windup: 0.08, recover: 0.13 }),
+        m1("brawl_2", "brawler", "cross", 5, { windup: 0.08, recover: 0.13 }),
         m1("brawl_3", "brawler", "hook", 7, { windup: 0.08, recover: 0.15, stun: 0.28 }),
-        m1("brawl_4", "brawler", "uppercut", 9, { name: "Uppercut", windup: 0.09, kb: 3.5, stun: 0.35, recover: 0.3 })
+        m1("brawl_4", "brawler", "uppercut", 9, { name: "Uppercut", windup: 0.11, kb: 3.5, stun: 0.35, recover: 0.3 })
       ],
       heavy: { id: "brawl_heavy", name: "Haymaker", anim: "haymaker", windup: 0.32, recover: 0.35, cd: 1.3, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.5, offset: 0.3, damage: 15, knockback: 6, stun: 0.5, heavy: true, guardBreak: true } }] },
       techniques: [
@@ -66920,7 +67358,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("itto_1", "ittoryu", "slash", 8, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2 }),
         m1("itto_2", "ittoryu", "slash2", 8, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2 }),
         m1("itto_4", "ittoryu", "rise_slash", 9, { name: "Rising Cut", weapon: "sword", slashing: true, range: 1.7, arc: 2, windup: 0.08, stun: 0.3 }),
-        m1("itto_3", "ittoryu", "stab", 12, { name: "Thrust", weapon: "sword", slashing: true, range: 1.9, arc: 2.4, kb: 3.5, recover: 0.32, vfx: "stab" })
+        m1("itto_3", "ittoryu", "stab", 12, { name: "Thrust", windup: 0.1, weapon: "sword", slashing: true, range: 1.9, arc: 2.4, kb: 3.5, recover: 0.32, vfx: "stab" })
       ],
       heavy: { id: "itto_heavy", name: "Downward Cleave", anim: "cleave", weapon: "sword", windup: 0.34, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: "line", range: 2.6, width: 1, damage: 20, knockback: 5, stun: 0.5, heavy: true, slashing: true, guardBreak: true } }] },
       techniques: [
@@ -66975,10 +67413,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       swords: 2,
       desc: "Twice the blades, twice the fury. Requires two swords.",
       m1: [
-        m1("nito_1", "nitoryu", "dual1", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.06, recover: 0.12 }),
-        m1("nito_2", "nitoryu", "dual2", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.06, recover: 0.12 }),
-        m1("nito_3", "nitoryu", "dual3", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.06, recover: 0.12 }),
-        m1("nito_4", "nitoryu", "dualx", 12, { weapon: "sword", slashing: true, range: 1.9, arc: 2.6, kb: 4, recover: 0.3 })
+        m1("nito_1", "nitoryu", "dual1", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.08, recover: 0.12 }),
+        m1("nito_2", "nitoryu", "dual2", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.08, recover: 0.12 }),
+        m1("nito_3", "nitoryu", "dual3", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.08, recover: 0.12 }),
+        m1("nito_4", "nitoryu", "dualx", 12, { windup: 0.11, weapon: "sword", slashing: true, range: 1.9, arc: 2.6, kb: 4, recover: 0.3 })
       ],
       heavy: { id: "nito_heavy", name: "Rashomon", anim: "tora", weapon: "sword", windup: 0.35, recover: 0.35, cd: 1.6, steps: [{ hit: { shape: "line", range: 3, width: 1.2, damage: 24, knockback: 5, stun: 0.5, heavy: true, slashing: true, guardBreak: true } }] },
       techniques: [
@@ -67021,7 +67459,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("santo_1", "santoryu", "dual1", 8, { weapon: "sword", slashing: true, range: 1.8, arc: 2.4 }),
         m1("santo_2", "santoryu", "dual3", 8, { weapon: "sword", slashing: true, range: 1.8, arc: 2.4 }),
-        m1("santo_3", "santoryu", "dualx", 15, { weapon: "sword", slashing: true, range: 2, arc: 2.8, kb: 4.5, recover: 0.3 })
+        m1("santo_3", "santoryu", "dualx", 15, { windup: 0.11, weapon: "sword", slashing: true, range: 2, arc: 2.8, kb: 4.5, recover: 0.3 })
       ],
       heavy: { id: "santo_heavy", name: "Tora Gari", anim: "tora", weapon: "sword", windup: 0.4, recover: 0.35, cd: 1.6, say: "Tora Gari!", steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.6, offset: 0.4, damage: 30, knockback: 6, stun: 0.6, heavy: true, slashing: true, guardBreak: true, impactFrame: true } }] },
       techniques: [
@@ -67093,8 +67531,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("bleg_1", "black_leg", "kick", 7, { range: 1.6 }),
         m1("bleg_2", "black_leg", "kick_high", 7, { range: 1.6 }),
-        m1("bleg_3", "black_leg", "kick_spin", 7, { range: 1.6 }),
-        m1("bleg_4", "black_leg", "rise_kick", 12, { range: 1.8, kb: 4.5, recover: 0.3, name: "Collier" })
+        m1("bleg_3", "black_leg", "kick_spin", 7, { range: 1.6, windup: 0.12, recover: 0.22 }),
+        m1("bleg_4", "black_leg", "rise_kick", 12, { windup: 0.11, range: 1.8, kb: 4.5, recover: 0.3, name: "Collier" })
       ],
       heavy: { id: "bleg_heavy", name: "Mouton Shot", anim: "mouton", windup: 0.32, recover: 0.35, cd: 1.4, say: "Mouton Shot!", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.3, damage: 20, knockback: 9, stun: 0.5, heavy: true, guardBreak: true } }] },
       techniques: [
@@ -67172,7 +67610,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("fmk_1", "fishman_karate", "palm", 7, { element: "water" }),
         m1("fmk_2", "fishman_karate", "palm2", 7, { element: "water" }),
-        m1("fmk_3", "fishman_karate", "palm_double", 12, { kb: 5, recover: 0.3, element: "water", stun: 0.4 })
+        m1("fmk_3", "fishman_karate", "palm_double", 12, { windup: 0.11, kb: 5, recover: 0.3, element: "water", stun: 0.4 })
       ],
       heavy: { id: "fmk_heavy", name: "Shark Tile Fist", anim: "palm_double", windup: 0.3, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.3, damage: 18, knockback: 7, stun: 0.5, heavy: true, guardBreak: true, element: "water" } }] },
       techniques: [
@@ -67237,7 +67675,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("roku_1", "rokushiki", "shigan", 7, { name: "Shigan", range: 1.5, arc: 0.9 }),
         m1("roku_2", "rokushiki", "shigan2", 7, { name: "Shigan", range: 1.5, arc: 0.9 }),
-        m1("roku_3", "rokushiki", "kick_high", 11, { kb: 4, recover: 0.28, name: "Rankyaku Kick" })
+        m1("roku_3", "rokushiki", "kick_high", 11, { windup: 0.1, kb: 4, recover: 0.28, name: "Rankyaku Kick" })
       ],
       heavy: { id: "roku_heavy", name: "Shigan: Bachi", anim: "shigan", windup: 0.3, recover: 0.3, cd: 1.5, steps: [{ hit: { shape: "arc", range: 1.6, arc: 0.8, offset: 0.2, damage: 6, knockback: 1, stun: 0.12, duration: 0.45, interval: 0.07, guardBreak: true } }] },
       techniques: [
@@ -67415,7 +67853,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("okama_1", "okama_kenpo", "ballet_kick", 7, { range: 1.7 }),
         m1("okama_2", "okama_kenpo", "pirouette", 7, { range: 1.7 }),
-        m1("okama_3", "okama_kenpo", "jete", 13, { range: 1.9, kb: 4, recover: 0.3 })
+        m1("okama_3", "okama_kenpo", "jete", 13, { windup: 0.11, range: 1.9, kb: 4, recover: 0.3 })
       ],
       heavy: { id: "okama_heavy", name: "Swan Arabesque", anim: "arabesque", windup: 0.3, recover: 0.35, cd: 1.4, say: "Swan Arabesque!", steps: [{ hit: { shape: "line", range: 2.4, width: 0.8, damage: 20, knockback: 6, stun: 0.5, heavy: true, guardBreak: true } }] },
       techniques: [
@@ -67445,7 +67883,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("elec_1", "electro", "claw", 6, { element: "lightning" }),
         m1("elec_2", "electro", "claw2", 6, { element: "lightning" }),
-        m1("elec_3", "electro", "kick_high", 11, { element: "lightning", kb: 4, stun: 0.45, recover: 0.28, status: { shock: 0.6 } })
+        m1("elec_3", "electro", "kick_high", 11, { windup: 0.1, element: "lightning", kb: 4, stun: 0.45, recover: 0.28, status: { shock: 0.6 } })
       ],
       heavy: { id: "elec_heavy", name: "Electrical Claw", anim: "claw_x", windup: 0.3, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.8, offset: 0.2, damage: 17, knockback: 5, stun: 0.6, heavy: true, element: "lightning", status: { shock: 1 }, slashing: true }, vfx: "slash", color: "#fff176" }] },
       techniques: [
@@ -67496,7 +67934,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("hassho_1", "hasshoken", "jab", 7, { stun: 0.25 }),
         m1("hassho_2", "hasshoken", "cross", 7, { stun: 0.25 }),
-        m1("hassho_3", "hasshoken", "palm", 12, { kb: 4.5, recover: 0.3 })
+        m1("hassho_3", "hasshoken", "palm", 12, { windup: 0.1, kb: 4.5, recover: 0.3 })
       ],
       heavy: { id: "hassho_heavy", name: "Vibrating Palm", anim: "palm_double", windup: 0.35, recover: 0.35, cd: 1.5, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 20, knockback: 6, stun: 0.6, heavy: true, unblockable: true } }] },
       techniques: [
@@ -67512,7 +67950,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("clima_1", "weather_science", "staff", 6, { weapon: "staff", range: 1.7 }),
         m1("clima_2", "weather_science", "staff2", 6, { weapon: "staff", range: 1.7 }),
-        m1("clima_3", "weather_science", "staff_jab", 9, { weapon: "staff", range: 1.9, kb: 3.5, recover: 0.3 })
+        m1("clima_3", "weather_science", "staff_jab", 9, { windup: 0.1, weapon: "staff", range: 1.9, kb: 3.5, recover: 0.3 })
       ],
       heavy: { id: "clima_heavy", name: "Heat Egg", anim: "raise", weapon: "staff", windup: 0.35, recover: 0.3, cd: 2, steps: [{ proj: { speed: 10, range: 10, radius: 0.35, damage: 15, sprite: "orb", color: "#ff8a65", element: "fire", explode: { range: 1.5, damage: 10, element: "fire" } } }] },
       // (a plain staff swung by someone who never learned the science throws no Heat Egg)
@@ -69059,14 +69497,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      * held down (the guard coming back up after a swing), not one pressed again
      * hard on letting go (PARRY.lockout: mashing F gets you nothing), though a
      * press made while the guard can't come up yet (mid-swing) still counts if
-     * it comes up within PARRY.buffer. A parry earns the next press a fresh
-     * guard however soon it comes. `fresh` (a foe's AI): whether this guard
-     * can parry, decided for it.
+     * it comes up within PARRY.buffer of the swing's end. A parry earns the
+     * next press a fresh guard however soon it comes. `fresh` (a foe's AI):
+     * whether this guard can parry, decided for it.
      */
     setBlock(on, fresh) {
       if (on && !this.guardHeld) {
         this.pressFresh = (this.guardLetGo ?? Infinity) >= PARRY.lockout || !!this.parryEarned;
         this.pressAge = 0;
+        this.pressPending = true;
         this.parryEarned = false;
       } else if (!on && this.guardHeld) this.guardLetGo = 0;
       this.guardHeld = !!on;
@@ -69075,6 +69514,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.blocking = true;
         this.blockTime = 0;
         this.guardFresh = fresh ?? (!!this.isPlayer && !!this.pressFresh && (this.pressAge ?? Infinity) <= PARRY.buffer);
+        this.pressPending = false;
       } else if (!on) this.blocking = false;
     }
     // --- update ------------------------------------------------------------------
@@ -69127,7 +69567,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (this.cooldowns[k] <= 0) delete this.cooldowns[k];
       }
       if (this.blocking) this.blockTime += dt;
-      if (this.pressAge !== void 0) this.pressAge += dt;
+      if (this.pressAge !== void 0 && !(this.pressPending && this.guardHeld && this.action)) this.pressAge += dt;
       if (this.guardLetGo !== void 0 && !this.guardHeld) this.guardLetGo += dt;
       if (this.counterLeft > 0 && !this.action?.counter && (this.counterLeft -= dt) <= 0) {
         this.counterLeft = 0;
@@ -71398,8 +71838,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return r;
     };
   }
-  function limbSeg(rf, L3, rs, rows, seg) {
-    const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining: lining2 = false, bulge = 0, capK = 1, uv = null, side = 1 } = seg;
+  function limbSeg(rf, L3, rs, rows, seg2) {
+    const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining: lining2 = false, bulge = 0, capK = 1, uv = null, side = 1 } = seg2;
     const U3 = Math.max(6, rs);
     const R4 = (t, th) => rf(t, th) + off;
     const P5 = [];
@@ -71883,7 +72323,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       // your own body seen from your eyes (first person): nothing above the neck, and no arms while the view's own are up
       uClipY: { value: 1e6 },
       uHideArms: { value: 0 },
-      uHideHead: { value: 0 }
+      uHideHead: { value: 0 },
+      // (and nothing nearer your eyes than uNear: the view rides your head a
+      // beat behind it, and a blow thrown back or a kick's lean left it out in
+      // front of your own collar, looking down into it)
+      uNear: { value: 0 }
     };
     const m = new MeshToonMaterial({ vertexColors: true, map: detailTexture2(), gradientMap: charGradient(), fog: opts.fog ?? true });
     m.defines = { ...m.defines, SUN_SELF: sunSelf(opts.self ?? SELF_SHADE) };
@@ -71895,10 +72339,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
 varying float vPart; varying float vObjY;
 uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
-uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead;`).replace("#include <color_fragment>", `#include <color_fragment>
+uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead; uniform float uNear;`).replace("#include <color_fragment>", `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
 float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart) * step(vPart, 4.5), pHead = step(4.5, vPart);
-if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5) discard;
+if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5 || length(vViewPosition) < uNear) discard;
 float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
 float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
@@ -72105,8 +72549,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function expression2(look, pose, P5, t) {
     const st = pose && pose.state;
     if (st === "knocked" || st === "dead") return { eyes: "ko", mouth: "ko", brow: "worried", small: false };
-    if (st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried", small: false };
     const face = P5 && P5.face;
+    if (face === "shock") return { eyes: "open", mouth: "shout", brow: "worried", small: true };
+    if (face === "hurt" || st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried", small: false };
+    if (face === "grit") return { eyes: "fierce", mouth: "grimace", brow: "fierce", small: false };
+    if (face === "glare") return { eyes: "fierce", mouth: look.muzzle || look.race === "mink" ? "animal" : "flat", brow: "stern", small: false };
     const fierce = face === "fierce" || face === "shout";
     const s = (look.seed || 0) * 0.6180339 % 1 * 0.9 + 0.1;
     const blink = !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;
@@ -72590,10 +73037,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return d;
   }
-  var HEAD = null;
+  var HEAD2 = null;
   var HEAD_R = /* @__PURE__ */ new Map();
   function headRay(dx, dy, dz, outer = false) {
-    const H3 = HEAD || headOf({});
+    const H3 = HEAD2 || headOf({});
     const ck = outer ? "cacheO" : "cache";
     let cache4 = H3[ck];
     if (!cache4) {
@@ -72711,7 +73158,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var HEADS = /* @__PURE__ */ new Map();
   function headGeo(level) {
     const G4 = HEAD_GRID[level];
-    const key2 = HEAD.key + "|" + level;
+    const key2 = HEAD2.key + "|" + level;
     let g = HEADS.get(key2);
     if (!g) {
       const V5 = G4.rows.length - 1;
@@ -72731,9 +73178,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var FACE_GEO = /* @__PURE__ */ new Map();
   function faceGeo(look = {}, level = "near") {
-    const was = HEAD;
-    HEAD = headOf(look);
-    const key2 = HEAD.key + "|" + level;
+    const was = HEAD2;
+    HEAD2 = headOf(look);
+    const key2 = HEAD2.key + "|" + level;
     let g = FACE_GEO.get(key2);
     if (!g) {
       const G4 = HEAD_GRID[level];
@@ -72769,7 +73216,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (FACE_GEO.size > 300) FACE_GEO.clear();
       FACE_GEO.set(key2, g);
     }
-    HEAD = was;
+    HEAD2 = was;
     return g;
   }
   function capGeo(rs, thF, thS, thB, zig = null, U3 = 16, V5 = 6) {
@@ -72817,12 +73264,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (s && ALIAS3[s]) return ALIAS3[s];
     return "short";
   }
-  function spike(h2, a, b, wide, thin = wide, seg, anchor2 = a) {
-    h2.add(Prim.cone(seg || h2.q.cone), between(a, b, thin, wide), h2.col, h2.bone, 0, anchor2);
+  function spike(h2, a, b, wide, thin = wide, seg2, anchor2 = a) {
+    h2.add(Prim.cone(seg2 || h2.q.cone), between(a, b, thin, wide), h2.col, h2.bone, 0, anchor2);
   }
-  function blob3(h2, c, r, rot = [0, 0, 0], seg) {
+  function blob3(h2, c, r, rot = [0, 0, 0], seg2) {
     const rr = Array.isArray(r) ? r : [r, r, r];
-    const s = seg || h2.q.blob;
+    const s = seg2 || h2.q.blob;
     h2.add(Prim.sphere(s[0], s[1]), M(c[0], c[1], c[2], rot[0], rot[1], rot[2], rr), h2.col, h2.bone, 0, c);
   }
   var add3 = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
@@ -73327,12 +73774,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     ].join("|");
   }
   function buildBody(look, wpn, lod = 0, articulated = false) {
-    const was = HEAD;
-    HEAD = headOf(look);
+    const was = HEAD2;
+    HEAD2 = headOf(look);
     try {
       return buildBody0(look, wpn, lod, articulated);
     } finally {
-      HEAD = was;
+      HEAD2 = was;
     }
   }
   function buildBody0(look, wpn, lod, articulated) {
@@ -73399,7 +73846,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       b.add(Prim.cyl(4), HM(between(a, t, 0.035)), pal.skin, hb);
       b.add(Prim.sphere(q2.sph[0], q2.sph[1]), HM(M(t[0], t[1], t[2], 0, 0, 0, 0.09)), pal.skin, hb);
     }
-    const hp = HEAD.hp;
+    const hp = HEAD2.hp;
     if (hp.nose === "long") b.add(Prim.frustum(0.75, 6), HM(between([0.88, -0.24, 0], [1.95, -0.2, 0], 0.075)), pal.face, hb);
     else if (hp.nose === "red") b.add(Prim.sphere(q2.sph[0] + 2, q2.sph[1] + 2), HM(M(1, -0.34, 0, 0, 0, 0, 0.17)), "#e53935", hb);
     if (look.kind === "Saw Shark") {
@@ -73682,11 +74129,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const hip = this.hip;
       const hF = toXY3(P5.hF, [0.05, 0.4]), hB = toXY3(P5.hB, [-0.03, 0.4]);
       const fF = P5.fF || [0.05, 0], fB = P5.fB || [-0.05, 0];
-      const twist = clamp4((hF[0] - hB[0]) * 0.85, -0.5, 0.5) * (o.twistK ?? 1);
-      const ptw = clamp4((fF[0] - fB[0]) * 0.45, -0.3, 0.3) * (o.twistK ?? 1);
+      const tk = o.twistK ?? 1;
+      const twist = clamp4(clamp4((hF[0] - hB[0]) * 0.85, -0.5, 0.5) + (P5.tw || 0), -1.35, 1.35) * tk;
+      const ptw = clamp4(clamp4((fF[0] - fB[0]) * 0.45, -0.3, 0.3) + (P5.hp || 0), -1.1, 1.1) * tk;
+      const bend = P5.ls || 0;
       this.qLean.setFromAxisAngle(Z, -l);
+      if (bend) this.qLean.multiply(_qa.setFromAxisAngle(X, bend));
       this.qChest.setFromAxisAngle(Y, twist).multiply(this.qLean);
       this.qPelvis.setFromAxisAngle(Y, ptw).multiply(_qa.setFromAxisAngle(Z, -l * 0.25));
+      if (bend) this.qPelvis.multiply(_qa.setFromAxisAngle(X, bend * 0.3));
       this.pos[B3.hips].copy(hip);
       this.quat[B3.hips].copy(this.qPelvis);
       this.pos[B3.chest].copy(hip);
@@ -73694,9 +74145,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.neck.set(0, d.chestLen + d.neck, 0).applyQuaternion(this.qChest).add(hip);
       const tilt = (P5.ht || 0) + (o.tiltAdd || 0);
       this.qHead.copy(this.qChest);
-      if (o.lookYaw) this.qHead.multiply(_qb.setFromAxisAngle(Y, o.lookYaw));
+      const yaw = (o.lookYaw || 0) + (P5.hy || 0) - twist * 0.75, roll2 = (o.headRoll || 0) + (P5.hr || 0);
+      if (yaw) this.qHead.multiply(_qb.setFromAxisAngle(Y, yaw));
       this.qHead.multiply(_qa.setFromAxisAngle(Z, -tilt));
-      if (o.headRoll) this.qHead.multiply(_qb.setFromAxisAngle(X, o.headRoll));
+      if (roll2) this.qHead.multiply(_qb.setFromAxisAngle(X, roll2));
       this.pos[B3.head].copy(this.neck);
       this.quat[B3.head].copy(this.qHead);
       this.headC.set(d.hx || 0, d.hc, 0).applyQuaternion(this.qHead).add(this.neck);
@@ -73716,7 +74168,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const hx = h2[0], hy = h2[1];
           const fwdK = clamp4(hx / 0.43, 0, 1);
           const restK = clamp4(1 - hx / 0.2, 0, 1) * clamp4(hy / 0.3, 0, 1);
-          const lat = side * (-d.shW * 0.74 * fwdK + 0.075 * restK + (o.spread || 0));
+          const out = (k === 0 ? P5.zF : P5.zB) || 0;
+          const lat = side * (-d.shW * 0.74 * fwdK * clamp4(1 - out * 3, 0, 1) + 0.075 * restK + (o.spread || 0) + out * d.kA);
           T4.set(hx * d.kA, -hy * d.kA, lat);
           if (tiltA) T4.applyAxisAngle(X, tiltA * side);
           T4.applyQuaternion(this.qLean).add(S5);
@@ -73731,6 +74184,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           }
           if (k === 1 && o.grip2 && o.grip2K > 0) T4.lerp(_g2.copy(this.E[0]).addScaledVector(this.blade[0], o.grip2), o.grip2K);
         }
+        let stretch = !!P5.stretch || !!reach;
+        const sm = (k === 0 ? P5.smF : P5.smB) || 0;
+        if (sm > 0 && !stretch) {
+          _t.subVectors(T4, S5);
+          const L3 = d.A1 + d.A2, dist = _t.length();
+          const out = clamp4((dist / L3 - 0.8) / 0.2, 0, 1);
+          if (out > 0 && dist > 1e-4) {
+            T4.copy(S5).addScaledVector(_t, L3 * (1 + sm * out) / dist);
+            stretch = true;
+          }
+        }
         const e = k === 0 ? P5.eF ?? 1 : P5.eB ?? 1;
         _t.subVectors(T4, S5);
         const lxy = Math.hypot(_t.x, _t.y) || 1;
@@ -73738,7 +74202,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this._pole.set(_t.y / lxy * sg, -_t.x / lxy * sg, side * 0.42);
         if (reach) this._pole.set(-0.75, -0.65, side * 0.45);
         if (o.att && o.attK > 0 && !reach && !(k === 1 && (broom || o.grip2 && o.grip2K > 0.5))) this._pole.lerp(_attP, o.attK);
-        ik2(S5, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P5.stretch || !!reach, J, E);
+        ik2(S5, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, stretch, J, E);
         const U3 = k === 0 ? B3.uarmR : B3.uarmL, F4 = k === 0 ? B3.farmR : B3.farmL, Hd = k === 0 ? B3.handR : B3.handL;
         this.pos[U3].copy(S5);
         aimNegY(this.quat[U3], _t.subVectors(J, S5), this._pole);
@@ -73766,6 +74230,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             this.blade[k].applyAxisAngle(X, tiltA * side);
             this.plane[k].applyAxisAngle(X, tiltA * side);
           }
+          if (P5.wt) {
+            this.blade[k].applyAxisAngle(X, -P5.wt * side);
+            this.plane[k].applyAxisAngle(X, -P5.wt * side);
+          }
           this.blade[k].applyQuaternion(this.qLean);
           this.plane[k].applyQuaternion(this.qLean);
           this.bladeOn[k] = true;
@@ -73789,7 +74257,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const f = k === 0 ? fF : fB;
         const Hj = _c.set(0, -0.07, side * d.hipW).applyQuaternion(this.qPelvis).add(hip);
         const T4 = this._T;
-        let fx = f[0] * d.kL, fz = side * (d.hipW + 0.012 + (o.legSpread || 0));
+        let fx = f[0] * d.kL, fz = side * (d.hipW + 0.012 + (o.legSpread || 0) + ((k === 0 ? P5.zfF : P5.zfB) || 0) * d.kL);
         if (walk !== void 0 && walk !== null) {
           fz += fx * Math.sin(walk) * 0.8;
           fx *= Math.cos(walk);
@@ -73797,17 +74265,28 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         T4.set(hip.x + fx, d.hA + Math.max(0, -f[1] * d.kL), fz);
         _t.subVectors(T4, Hj);
+        const sm = (k === 0 ? P5.smfF : P5.smfB) || 0;
+        let reachOut = false;
+        if (sm > 0) {
+          const L3 = d.T1 + d.T2, dist = _t.length();
+          const out = clamp4((dist / L3 - 0.8) / 0.2, 0, 1);
+          if (out > 0 && dist > 1e-4) {
+            T4.copy(Hj).addScaledVector(_t, L3 * (1 + sm * out) / dist);
+            _t.subVectors(T4, Hj);
+            reachOut = true;
+          }
+        }
         const lxy = Math.hypot(_t.x, _t.y) || 1;
         this._pole.set(-_t.y / lxy, _t.x / lxy, side * 0.12);
         const Kn = this.K[k], Ft = this.F[k];
         const Hs = this.pos[k === 0 ? B3.thighR : B3.thighL].copy(Hj);
-        ik2(Hs, T4, d.T1, d.T2, this._pole, 1, false, Kn, Ft);
+        ik2(Hs, T4, d.T1, d.T2, this._pole, 1, reachOut, Kn, Ft);
         const Th = k === 0 ? B3.thighR : B3.thighL, Sh = k === 0 ? B3.shinR : B3.shinL, Fo = k === 0 ? B3.footR : B3.footL;
         aimNegY(this.quat[Th], _t.subVectors(Kn, Hs), this._pole);
         this.pos[Sh].copy(Kn);
         aimNegY(this.quat[Sh], _t.subVectors(Ft, Kn), this._pole);
-        this.len[Th] = 1;
-        this.len[Sh] = 1;
+        this.len[Th] = reachOut ? clamp4(Hs.distanceTo(Kn) / d.T1, 1, 1.5) : 1;
+        this.len[Sh] = reachOut ? clamp4(Kn.distanceTo(Ft) / d.T2, 1, 1.5) : 1;
         _u.subVectors(Ft, Kn).normalize();
         const raise = clamp4((Ft.y - d.hA) / 0.28, 0, 1);
         const toe = 0.12 + ptw * 0.5 * side;
@@ -74920,11 +75399,56 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return new Mesh(ROOT.g, ROOT.m);
   }
   var SHIM = null;
+  var SHIM_VERT = (
+    /* glsl */
+    `
+  varying vec2 vUv;
+  varying vec3 vN, vV;
+  void main() {
+    vUv = uv;
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+  );
+  var SHIM_FRAG = (
+    /* glsl */
+    `
+  uniform vec3 uColor;
+  uniform float uOpacity, uTime;
+  varying vec2 vUv;
+  varying vec3 vN, vV;
+  void main() {
+    // a curved sheet of light, soft all round its edges, brightest where it
+    // turns away from you, a faint pulse running up it
+    float edge = smoothstep(0.0, 0.22, vUv.x) * smoothstep(1.0, 0.78, vUv.x) * smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+    float rim = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);
+    float pulse = 0.5 + 0.5 * sin(vUv.y * 18.0 - uTime * 7.0);
+    float a = (0.4 + rim * 0.7 + pulse * 0.12) * edge * uOpacity;
+    gl_FragColor = vec4(uColor * (0.9 + rim * 0.6) * a, a);
+  }
+`
+  );
   function guardShimmer() {
-    if (!SHIM) SHIM = new CylinderGeometry(0.62, 0.62, 1.3, 14, 1, true, -1.05 + Math.PI / 2, 2.1).translate(0, 0.65, 0);
-    const m = new MeshBasicMaterial({ color: 9489145, transparent: true, opacity: 0.3, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
+    if (!SHIM) SHIM = new CylinderGeometry(0.62, 0.62, 1.3, 24, 1, true, -1.05 + Math.PI / 2, 2.1).translate(0, 0.65, 0);
+    const m = new ShaderMaterial({
+      uniforms: { uColor: { value: new Color(9489145) }, uOpacity: { value: 0.3 }, uTime: { value: 0 } },
+      vertexShader: SHIM_VERT,
+      fragmentShader: SHIM_FRAG,
+      transparent: true,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      side: DoubleSide
+    });
+    m.color = m.uniforms.uColor.value;
     const mesh = new Mesh(SHIM, m);
     mesh.renderOrder = 3;
+    mesh.onBeforeRender = () => {
+      m.uniforms.uOpacity.value = m.opacity;
+      m.uniforms.uTime.value = performance.now() / 1e3;
+    };
     return mesh;
   }
 
@@ -75326,6 +75850,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       const col = pose.fx && (pose.fx.trail || pose.fx.color) || "#ffffff";
       _c2.set(col);
+      const wide = 0.1 + Math.min(0.12, (A.w || 0.1) * 0.3);
       this.mat.blending = pose.fx && pose.fx.additive ? AdditiveBlending : NormalBlending;
       const P32 = this.pos, C4 = this.col;
       for (let r = 0; r < 2; r++) {
@@ -75341,7 +75866,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             const nx = this.tips[0][Math.min(n - 1, j + 1)];
             _w.subVectors(tip, nx);
             const up = _v6.set(0, 1, 0).addScaledVector(_w.normalize(), -_w.y).normalize();
-            inner = up.multiplyScalar(-0.13 * (1 - u)).add(tip);
+            inner = up.multiplyScalar(-wide * (1 - u)).add(tip);
             tip.addScaledVector(up, 0);
           }
           P32.set([tip.x, tip.y, tip.z], vi * 3);
@@ -75948,7 +76473,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     o.headRoll = 0;
     o.grip2 = 0;
     o.grip2K = 1;
-    if (pose.state === "hurt") o.tiltAdd = -0.25;
+    if (pose.state === "hurt" && pose.stunBlind) o.tiltAdd = -0.25;
+    if (pose.getUp !== void 0 && pose.state !== "knocked") {
+      const k = Math.max(0, 1 - pose.getUp / 0.3);
+      o.lying = k * k * 0.9;
+    }
     if (pose.swimming && (pose.swim === "tread" || !pose.swim)) o.leanAdd = 0.2;
     if (pose.swimming && P5.spread) o.spread = P5.spread;
     if (pose.swimming && P5.legSpread) o.legSpread = P5.legSpread;
@@ -75981,7 +76510,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 
   // src/render3d/chars/viewmodel.js
   var clamp5 = (v, a, b) => v < a ? a : v > b ? b : v;
-  var FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16 };
+  var FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16, low: 0.07 };
   var FPW = { xmin: 0.22, c: 0.06, top: -0.04, bottom: 0.1, aside: 0.08 };
   var FP_HOLD = [0.2, -0.22, 0.36];
   var FP_EAT = [0.05, -0.2, 0.27];
@@ -76001,16 +76530,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return new Viewmodel(ctx);
   }
   var NEAR_CUT = 0.15;
-  function nearCut(mat) {
+  var NEAR_CUT_INK = 0.22;
+  function nearCut(mat, cut3 = NEAR_CUT) {
     const prev = mat.onBeforeCompile;
     mat.onBeforeCompile = (sh, r) => {
       prev?.call(mat, sh, r);
       sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying float vEyeZ;").replace("#include <project_vertex>", "#include <project_vertex>\nvEyeZ = -mvPosition.z;");
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vEyeZ;").replace("void main() {", `void main() {
-  if (vEyeZ < ${NEAR_CUT.toFixed(3)}) discard;`);
+  if (vEyeZ < ${cut3.toFixed(3)}) discard;`);
     };
     const key2 = mat.customProgramCacheKey ? mat.customProgramCacheKey.bind(mat) : () => "";
-    mat.customProgramCacheKey = () => key2() + "|vm-near";
+    mat.customProgramCacheKey = () => key2() + "|vm-near" + cut3;
     return mat;
   }
   function fpStrike(h0) {
@@ -76018,7 +76548,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const T4 = FP, h2 = xy(h0);
     const k = clamp5(h2[0] / 0.43, 0, 1);
     let x = h2[0] > T4.x0 ? T4.x0 + (h2[0] - T4.x0) * T4.xs : h2[0] >= 0 ? Math.max(T4.xmin, h2[0]) : h2[0];
-    const y = h2[1] - T4.c - T4.L * k;
+    const y = h2[1] - T4.c - T4.L * k + T4.low * (1 - k) + clamp5(0.1 - h2[0], 0, 0.5) * 1.6;
     if (y < 0 && h2[0] > 0) x = Math.max(x, T4.xmin + (T4.xhigh - T4.xmin) * clamp5(-y / 0.3, 0, 1));
     return [x, Math.max(T4.top, y)];
   }
@@ -76048,7 +76578,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lastActT = -1;
       this.cleared = -1;
       this.frame = 0;
-      this.outlineMat = nearCut(outlineMaterial2(22e-4, 3810328, { fog: false }));
+      this.outlineMat = nearCut(outlineMaterial2(22e-4, 3810328, { fog: false }), NEAR_CUT_INK);
       this.outlineMat.transparent = true;
       this.weaponMat = nearCut(new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false }));
       this.weaponMat.defines = { ...this.weaponMat.defines, SUN_SELF: sunSelf(SELF_SHADE_VM) };
@@ -76058,6 +76588,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const m = new CharacterModel(look, wpn, { viewmodel: true, lod: -1, fog: false, outline: this.outlineMat, weaponOpts: { material: this.weaponMat, outline: this.outlineMat, noShadow: true } });
       m.mat.transparent = true;
       m.mat.fog = false;
+      m.fx.uNear.value = NEAR_CUT;
       m.visibleParts = HIDE.map((i) => [i, false]);
       m.face.visible = false;
       if (m.bubble) m.bubble.visible = false;
@@ -76225,13 +76756,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             o.spread = (o.spread || 0) + 0.08;
           }
         } else PP = { ...PP, hF: fpStrike(PP.hF), hB: fpStrike(PP.hB) };
+      } else if (!swimming && (busy || pose.counterAge < 0.32)) {
+        if (pose.counterAge >= 0 && pose.counterAge < 0.32) PP = { ...PP, hF: fpStrike(PP.hF), hB: fpStrike(PP.hB) };
+        else {
+          const keep = (h2) => {
+            const q2 = xy(h2, [0.1, 0.3]);
+            return [Math.max(0.2, q2[0]), Math.max(-0.15, q2[1])];
+          };
+          PP = { ...PP, hF: keep(PP.hF), hB: keep(PP.hB), zF: Math.min(0.06, PP.zF || 0), zB: Math.min(0.06, PP.zB || 0) };
+        }
       }
       if (PP.b && (PP.b[0] || PP.b[1])) PP = { ...PP, b: [0, 0] };
-      o.leanAdd = -(PP.l || 0) * 0.55;
+      if (PP.ls) PP = { ...PP, ls: PP.ls * 0.3 };
+      if (PP.tw || PP.hp) {
+        const reachTw = clamp5((xy(PP.hF, [0.05, 0.4])[0] - xy(PP.hB, [-0.03, 0.4])[0]) * 0.85, -0.5, 0.5);
+        PP = { ...PP, tw: clamp5(reachTw + (PP.tw || 0) * 0.3, -0.5, 0.5) - reachTw, hp: (PP.hp || 0) * 0.3 };
+      }
+      o.leanAdd = -(PP.l || 0) * ((PP.l || 0) < 0 ? 1 : 0.55);
       o.lift = 0;
       o.roll = 0;
       o.squash = 1;
+      o.lying = 0;
       o.reachR = holdAt || (p.fruit === "gomu" ? this.stretch(p, ctx) : null);
+      const kLimb = A && A.legs ? A.limb === "fF" ? "fF" : A.limb === "fB" ? "fB" : null : null;
+      const kf = kLimb ? xy(PP[kLimb], [0, 0]) : null;
+      const kick = !!kf && kf[0] > 0.3;
+      if (kick) PP = { ...PP, [kLimb]: [Math.max(0.62, kf[0]), Math.max(-0.62, kf[1])] };
       m.pose(PP, o);
       const hw0 = m.held?.[0];
       if (hw0 && hw0.kind === "staff") hw0.group.position.addScaledVector(_ax.set(1, 0, 0).applyQuaternion(hw0.group.quaternion), 0.3);
@@ -76241,8 +76791,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         heldSize(m, e ? 1 - 0.55 * Math.min(1, e.t / e.dur) : 1);
       }
       this.fixup();
-      const kick = A && (A.limb === "fF" || A.limb === "fB") && A.legs;
-      for (const i of LEGS) m.showBone(i, !!kick);
+      for (const i of LEGS) m.showBone(i, kick);
       const d = m.d;
       const eyeY = d.hip0 + d.chestLen + d.neck + d.hc * 0.95;
       const dt = Math.min(0.05, Math.max(1e-3, env.time - (this.lastT ?? env.time) || 0.016));
@@ -76327,7 +76876,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dx = w ? w.dx(p.x, pr.x) : pr.x - p.x, dy = pr.y - (p.y - 0.5);
       const f = p.facing || 0;
       const fx = dx * Math.cos(f) + dy * Math.sin(f), fz = -dx * Math.sin(f) + dy * Math.cos(f);
-      return (this._reach || (this._reach = new Vector3())).set(fx, 1.3, fz * 0.6 + 0.05);
+      return (this._reach || (this._reach = new Vector3())).set(Math.max(0.55, fx), 1.3, fz * 0.6 + 0.05);
     }
     effects(p, pose, A, env) {
       const m = this.model, rig = m.rig;
@@ -76343,7 +76892,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         if (g.sprite.parent !== m.group) m.group.add(g.sprite);
         g.sprite.visible = true;
-        g.set(col, size, pos);
+        const near = _v23.copy(pos).applyMatrix4(m.group.matrix).applyMatrix4(this.body.matrix).length();
+        g.set(col, size * clamp5((near - 0.25) / 0.3, 0, 1), pos);
         gi++;
       };
       const t = env.time;
@@ -76398,6 +76948,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var _eyeQ = new Quaternion();
   var _fq = new Quaternion();
   var _fq2 = new Quaternion();
+  var FALLING = { ...LYING2, l: -0.32, ht: -0.4, hF: [0, -0.33], hB: [-0.08, -0.29], eF: 0.5, eB: 0.5, fF: [0.17, -0.07], fB: [0.03, -0.02], face: "hurt" };
   function lodFor(dist, cur) {
     const near = cur === 0 ? 10.5 : 7.5, mid = cur === 1 ? 22 : 25.5;
     return dist < near ? 0 : dist < mid ? 2 : 1;
@@ -76495,6 +77046,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (a.isPlayer && ctx.mode === "first") {
           const pt = ctx.pitch || 0;
           o.tiltAdd += pt < 0 ? -pt * 0.55 : -pt * 0.3;
+          if ((P5.l || 0) < 0 && pose.state !== "knocked") o.leanAdd = (o.leanAdd || 0) - P5.l;
+          o.lift *= 0.3;
         }
         this.drawing(pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
         const dtv = this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT);
@@ -76514,12 +77067,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         } else if (a.fruit === "gomu") o.reachR = this.stretchTarget(a, ctx, s);
         const knocked = pose.state === "knocked" || pose.state === "dead";
         let PP = P5;
+        if (a.isPlayer && ctx.mode === "first" && P5.b && P5.b[0] < 0) PP = { ...P5, b: [P5.b[0] * 0.3, P5.b[1]] };
         if (knocked) {
           const kt = pose.knockT ?? 1;
           const fall = Math.min(1, kt / 0.28);
-          PP = LYING2;
+          const bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) : 0;
+          if (pose.state === "knocked") PP = fall < 1 ? blendPose(FALLING, LYING2, fall * fall) : bounce > 0 ? blendPose(LYING2, FALLING, bounce * 0.3) : LYING2;
+          else PP = LYING2;
           o.lying = fall * fall;
-          o.bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) * 0.1 : 0;
+          o.bounce = bounce * 0.1;
           o.spread = 0.32 * fall;
           o.legSpread = 0.06 * fall;
           o.lift = 0;
@@ -76585,6 +77141,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.root.updateMatrixWorld(true);
       }
       if (fp) this.eyeOffset(a, pose, ctx, env);
+      const lag = fp && ctx.camera && !pose.station ? ctx.camera.position.distanceTo(_eyeP) : 0;
+      u.uNear.value = fp ? 0.2 + clamp6(lag * 1.5, 0, 0.25) : 0;
     }
     /** Where the eyes are on the posed body, in the scene (into _eyeP). */
     eyeAt() {
@@ -79011,10 +79569,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var UP2 = new Vector3(0, 1, 0);
   var V3 = (x, y, z) => new Vector3(x, y, z);
-  function limb3(a, b, r0, r1, seg = 4) {
+  function limb3(a, b, r0, r1, seg2 = 4) {
     const dir = new Vector3().subVectors(b, a);
     const len = dir.length();
-    const g = new CylinderGeometry(r1, r0, len, seg, 1, true);
+    const g = new CylinderGeometry(r1, r0, len, seg2, 1, true);
     g.translate(0, len / 2, 0);
     g.applyQuaternion(new Quaternion().setFromUnitVectors(UP2, dir.normalize()));
     g.translate(a.x, a.y, a.z);
@@ -79165,9 +79723,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function starGeo() {
     const pos = [];
-    const arms = 5, ro = 0.13, ri = 0.05, hc2 = 0.03;
-    for (let i = 0; i < arms * 2; i++) {
-      const a0 = i / (arms * 2) * TAU20, a1 = (i + 1) / (arms * 2) * TAU20;
+    const arms2 = 5, ro = 0.13, ri = 0.05, hc2 = 0.03;
+    for (let i = 0; i < arms2 * 2; i++) {
+      const a0 = i / (arms2 * 2) * TAU20, a1 = (i + 1) / (arms2 * 2) * TAU20;
       const r0 = i % 2 ? ri : ro, r1 = i % 2 ? ro : ri;
       pos.push(0, hc2, 0, Math.cos(a1) * r1, 8e-3, Math.sin(a1) * r1, Math.cos(a0) * r0, 8e-3, Math.sin(a0) * r0);
     }
@@ -79677,8 +80235,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render3d/sealife3d.js
   var TAU21 = Math.PI * 2;
   var MAX_FISH = 260;
-  function sphereInto(pos, eye, cx, cy, cz, r, tag2, seg = 6) {
-    const g = new SphereGeometry(r, seg, Math.max(3, seg - 2)).toNonIndexed();
+  function sphereInto(pos, eye, cx, cy, cz, r, tag2, seg2 = 6) {
+    const g = new SphereGeometry(r, seg2, Math.max(3, seg2 - 2)).toNonIndexed();
     const p = g.attributes.position;
     for (let i = 0; i < p.count; i++) {
       pos.push(p.getX(i) + cx, p.getY(i) + cy, p.getZ(i) + cz);
@@ -80575,7 +81133,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const bx = cam.position.x + Math.cos(a) * dist, bz = cam.position.z + Math.sin(a) * dist;
       const pos = [];
       const toCam = new Vector3();
-      const seg = (x0, y0, z0, x1, y1, z1, wd) => {
+      const seg2 = (x0, y0, z0, x1, y1, z1, wd) => {
         toCam.set(cam.position.x - (x0 + x1) / 2, cam.position.y - (y0 + y1) / 2, cam.position.z - (z0 + z1) / 2).normalize();
         const d = new Vector3(x1 - x0, y1 - y0, z1 - z0).normalize();
         const s = new Vector3().crossVectors(d, toCam).normalize().multiplyScalar(wd);
@@ -80588,7 +81146,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         for (let i = 0; i < steps && y > 0; i++) {
           const l = len / steps;
           const nx = x + (dx + (Math.random() - 0.5) * 0.9) * l, ny = y - l * (0.8 + Math.random() * 0.4), nz = z + (dz + (Math.random() - 0.5) * 0.9) * l;
-          seg(x, y, z, nx, Math.max(0, ny), nz, wd);
+          seg2(x, y, z, nx, Math.max(0, ny), nz, wd);
           if (depth < 2 && Math.random() < 0.28) bolt2(nx, ny, nz, len * 0.35, wd * 0.55, depth + 1);
           x = nx;
           y = ny;
@@ -82761,12 +83319,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const { vx, vy } = best;
     const px2 = -vy, py2 = vx;
     const W4 = Math.max(3, dd.width ?? 5) | 1;
-    const half2 = (W4 - 1) / 2, headHalf = half2 + 2, HEAD3 = 3;
+    const half2 = (W4 - 1) / 2, headHalf = half2 + 2, HEAD4 = 3;
     const L3 = Math.max(6, Math.round(len * 1.5));
     const at4 = (a, b) => ({ x: world.wx(best.x + vx * a + px2 * b), y: best.y + vy * a + py2 * b });
     let lastA = 0;
     for (let a = 0; a < L3; a++) {
-      const head = a >= L3 - HEAD3, hb = head ? headHalf : half2;
+      const head = a >= L3 - HEAD4, hb = head ? headHalf : half2;
       let placed = false;
       for (let b = -hb; b <= hb; b++) {
         const { x, y } = at4(a, b);
@@ -90464,15 +91022,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fill();
       }
       g.lineCap = "round";
-      const arms = s.arms || 5;
-      for (let i = 0; i < arms; i++) {
+      const arms2 = s.arms || 5;
+      for (let i = 0; i < arms2; i++) {
         g.globalAlpha = 0.6 * a;
         g.strokeStyle = s.kind === "dark" ? i % 2 ? "#7e57c2" : "#311b92" : s.color;
         g.lineWidth = 0.08;
         g.beginPath();
         for (let j = 0; j <= 16; j++) {
           const u = j / 16;
-          const th = spin + i / arms * TAU22 + u * 3.2;
+          const th = spin + i / arms2 * TAU22 + u * 3.2;
           const r = R4 * (1 - u * 0.85);
           const x = Math.cos(th) * r, y = Math.sin(th) * r * 0.62;
           if (j) g.lineTo(x, y);
@@ -91439,9 +91997,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (L3 < 0.05) return;
     const h2 = s.z ?? 0.7;
     const x1 = s.x + Math.cos(s.angle) * L3, y1 = s.y + Math.sin(s.angle) * L3;
-    const seg = clipSeg(r, s.x, s.y, h2, x1, y1, h2);
-    if (!seg || !seg.A || !seg.B) return;
-    const A = seg.A, B5 = seg.B;
+    const seg2 = clipSeg(r, s.x, s.y, h2, x1, y1, h2);
+    if (!seg2 || !seg2.A || !seg2.B) return;
+    const A = seg2.A, B5 = seg2.B;
     const sc = (A.sc + B5.sc) / 2;
     const Ls = Math.hypot(B5.x - A.x, B5.y - A.y);
     const d = r.dpr;
@@ -91462,9 +92020,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     const w = c.fx.game.world;
     const X1 = x0 + w.dx(x0, x1);
-    const seg = clipSeg(r, x0, y0, h0, X1, y1, h1);
-    if (!seg || !seg.A || !seg.B) return;
-    const A = seg.A, B5 = seg.B;
+    const seg2 = clipSeg(r, x0, y0, h0, X1, y1, h1);
+    if (!seg2 || !seg2.A || !seg2.B) return;
+    const A = seg2.A, B5 = seg2.B;
     const sc = (A.sc + B5.sc) / 2;
     const d = r.dpr;
     g.setTransform(sc * d, 0, 0, sc * d, A.x * d, A.y * d);
@@ -96251,7 +96809,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var RING_Y = 0.36;
   var RING_SIDE = 300;
   var NEAR4 = 160;
-  var HEAD2 = 3.8;
+  var HEAD3 = 3.8;
   var Waypoints = class _Waypoints {
     constructor(parent) {
       this.el = h("div.wpmarks.hidden");
@@ -96300,7 +96858,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const d = w.distance(p.x, p.y, m.x, m.y);
         const mk3 = this.mark(id, kind);
         const fade2 = Math.max(0, Math.min(1, (d - 10) / 12));
-        const gy = d < NEAR4 ? v3.ground(m.x, m.y) + HEAD2 : cam.position.y;
+        const gy = d < NEAR4 ? v3.ground(m.x, m.y) + HEAD3 : cam.position.y;
         V4.set(w.dx(v3.ox, m.x), gy, m.y - v3.oy).applyMatrix4(cam.matrixWorldInverse);
         let sx, sy, edge;
         if (V4.z < -0.1) {
