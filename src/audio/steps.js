@@ -65,12 +65,14 @@ export function footstep(v, surf, loud, k = {}) {
     case 'wood': // boards: a hollow knock (a deck booms under it, and creaks now and then)
       v.tone(0, 0.1, { freq: 215 * r(), to: 165, gain: 0.08 * L, attack: 0.002 });
       v.tone(0, 0.05, { freq: 430 * r(), to: 360, gain: 0.03, attack: 0.002 });
-      v.noise(0, 0.04, { freq: 1000 * r(), q: 1.3, gain: 0.07, attack: 0.002 });
-      v.noise(0, 0.01, { freq: 3000 * r(), q: 0.8, type: 'highpass', gain: 0.03 * L, attack: 0.0008 });
-      v.noise(roll, 0.03, { freq: 1300 * r(), q: 1.5, gain: 0.03, attack: 0.002 });
+      v.noise(0, 0.04, { freq: 1000 * r(), q: 1.3, gain: 0.1, attack: 0.002 });
+      v.noise(0, 0.01, { freq: 2800 * r(), q: 0.8, type: 'highpass', gain: 0.07 * L, attack: 0.0008 });
+      v.noise(roll, 0.03, { freq: 1500 * r(), q: 1.5, gain: 0.05, attack: 0.002 });
       if (k.deck) {
         v.tone(0, 0.16, { freq: 118 * r(), to: 92, gain: 0.05 * L, attack: 0.003 });
-        if (Math.random() < 0.18) v.creak(0.03, rnd(0.18, 0.35), { rate: rnd(60, 110), rate1: rnd(40, 90), freqs: [250, 395, 560], gain: 0.03 });
+        // (out at sea a deck's boards answer every step, and creak under it now and then)
+        v.noise(0.004, 0.05, { freq: 1700 * r(), q: 2, gain: 0.05 * L, attack: 0.002 });
+        if (Math.random() < 0.22) v.creak(0.03, rnd(0.18, 0.35), { rate: rnd(60, 110), rate1: rnd(40, 90), freqs: [250, 395, 560, 900], gain: 0.04 });
       }
       break;
     case 'snow': // a squeaky crunch

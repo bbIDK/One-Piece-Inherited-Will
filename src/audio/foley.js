@@ -114,7 +114,7 @@ export class Foley {
         const tempo = 0.55 + 0.45 * Math.min(1, Math.max(Math.abs(s.rowL), Math.abs(s.rowR)));
         for (const [pull, side] of [[s.rowL, -1], [s.rowR, 1]]) {
           if (!pull) continue;
-          const k = { s: 0.6 + 0.4 * Math.abs(pull), pan: sidePan(side) };
+          const k = { s: 0.6 + 0.4 * Math.abs(pull), pan: sidePan(side), side };
           if (crossed(prev, ph, 0.02)) A.sfx('oar_catch', null, k);
           if (crossed(prev, ph, 0.1)) A.sfx('oar_pull', null, { ...k, dur: 0.44 * 1.15 / tempo });
           if (crossed(prev, ph, 0.53)) A.sfx('oar_release', null, k);
@@ -130,7 +130,7 @@ export class Foley {
         this.sweepPh = ((this.sweepPh ?? -0.01) + dt / 1.6);
         if (this.sweepPh >= 1 || this.sweepPh < 0) {
           this.sweepPh = this.sweepPh >= 1 ? this.sweepPh - 1 : 0;
-          for (const side of [-1, 1]) { A.sfx('oar_catch', null, { s: 0.8, pan: sidePan(side) }); A.sfx('oar_pull', null, { s: 0.7, pan: sidePan(side), dur: 0.7 }); }
+          for (const side of [-1, 1]) { A.sfx('oar_catch', null, { s: 0.8, pan: sidePan(side), side }); A.sfx('oar_pull', null, { s: 0.7, pan: sidePan(side), dur: 0.7, side }); }
         }
       } else this.sweepPh = null;
       // the wheel: a spoke's click for every tenth of a radian she turns under you
@@ -293,7 +293,9 @@ export class Foley {
     // the boat under you: the water past her hull (with her speed), the wind in her canvas
     if (ship) {
       const sp = Math.abs(ship.speed || 0);
-      L.hull = Math.min(0.75, 0.08 + sp / 11) * (inside ? 0.6 : 1);
+      // (a rowboat's little hull chuckles; a ship's rushes)
+      const small = ship.def.oarsOnly || (ship.def.length || 6) < 6;
+      L.hull = Math.min(0.75, 0.08 + sp / 11) * (inside ? 0.6 : 1) * (small ? 0.4 : 1);
       if (!ship.def.oarsOnly && (ship.sailSet || 0) > 0.05) {
         L.sails = Math.min(0.55, (ship.sailSet || 0) * (wind + storm * 0.5) * 0.45);
         // (luffing: the wind from ahead and the canvas flogging)

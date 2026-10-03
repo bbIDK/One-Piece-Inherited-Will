@@ -190,12 +190,15 @@ export class Audio {
     if (!def) def = { prio: 3, cd: 0.02, play: (v) => v.noise(0, 0.05, { freq: 1500, gain: 0.05 }) };
     const t = this.E.now();
     const cd = def.cd ?? 0.02;
-    if (this.last[key] && t - this.last[key] < cd) return;
+    // (a sound on one side — an oar, a foot — keeps its own time: the two oars' catches land together)
+    const cdKey = k.side ? key + ':' + k.side : key;
+    if (this.last[cdKey] && t - this.last[cdKey] < cd) return;
     const pl = def.bus === 'ui' ? { vol: 1, pan: 0, lp: 0, far: 0 } : this.place(at);
     if (!pl) return;
-    this.last[key] = t;
+    this.last[cdKey] = t;
     // (yours — your own doing, or a blow of your fight — or someone else's: theirs sit under yours)
-    const mine = !at || at === p || at.isPlayer || at.lastHitBy === p || at.captain === p || at === p?.ship;
+    // (a foe's own swing isn't yours, even one you've hit before: only a blow of yours landing on them now is)
+    const mine = !at || at === p || at.isPlayer || at.captain === p || at === p?.ship || (!!HITS[name] && ((at.lastHitBy === p && at.lastHitT === g?.time) || (!!p?.action && pl.vol > 0.9)));
     const prio = (def.prio ?? 5) + (mine ? 2 : 0) - Math.round(pl.far * 3);
     const v = this.E.open(key, {
       bus: def.bus || (mine ? 'sfx' : 'npc'), vol: pl.vol * (k.vol ?? 1), pan: pl.pan + (k.pan || 0), lp: pl.lp,
