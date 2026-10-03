@@ -85,6 +85,9 @@ const FRAG = /* glsl */`
   uniform float uDay;
   uniform float uZone;
   uniform float uStorm;
+  uniform float uOvercast;  // a grey sky over it (0..1)
+  uniform float uGlass;     // the Calm Belt's glassy stillness
+  uniform float uRain;
   uniform float uDetail;
   uniform float uUnder;
   uniform vec4 uHull;   // the hull you're aboard: its middle (render space x, z), cos and sin of its heading
@@ -188,7 +191,8 @@ const FRAG = /* glsl */`
     float crestFade = 1.0 - smoothstep(crestReach * 0.35, crestReach, length(vView));
     float e = 0.3;
     float r0 = ripples(p, t);
-    vec2 rip = vec2(ripples(p + vec2(e, 0.0), t) - r0, ripples(p + vec2(0.0, e), t) - r0) / e * (0.09 + uStorm * 0.22);
+    // (rougher in a storm and in the rain; glassy in a calm)
+    vec2 rip = vec2(ripples(p + vec2(e, 0.0), t) - r0, ripples(p + vec2(0.0, e), t) - r0) / e * (0.09 + uStorm * 0.22 + uRain * 0.05) * (1.0 - uGlass * 0.8);
     vec3 n = normalize(vec3(-sw.x - rip.x, 1.0, -sw.y - rip.y));
     vec3 v = normalize(vView);
     float ndv = max(dot(n, v), 0.0);
@@ -198,6 +202,14 @@ const FRAG = /* glsl */`
     // water colour by depth: lagoon, turquoise, blue, deep ocean
     vec3 deep = vec3(0.006, 0.07, 0.24), mid = vec3(0.01, 0.2, 0.44), shallow = vec3(0.03, 0.52, 0.56), lagoon = vec3(0.18, 0.74, 0.64);
     if (uZone > 1.5 && uZone < 2.5) { deep = vec3(0.01, 0.06, 0.18); mid = vec3(0.02, 0.14, 0.32); shallow = vec3(0.04, 0.32, 0.5); lagoon = shallow; }
+    // under a grey sky the sea turns a dark grey-green; in a storm, slate
+    else if (uOvercast > 0.0) {
+      vec3 og = mix(vec3(0.028, 0.085, 0.1), vec3(0.012, 0.033, 0.045), uStorm);
+      deep = mix(deep, og * 0.75, uOvercast * (0.7 + 0.2 * uStorm));
+      mid = mix(mid, og * 1.25, uOvercast * (0.65 + 0.25 * uStorm));
+      shallow = mix(shallow, vec3(0.06, 0.2, 0.2) * (1.0 - uStorm * 0.4), uOvercast * 0.5);
+      lagoon = mix(lagoon, vec3(0.12, 0.3, 0.27) * (1.0 - uStorm * 0.4), uOvercast * 0.5);
+    }
     vec3 col = mix(deep, mid, exp(-depth * 0.07));
     col = mix(col, shallow, exp(-depth * 0.32));
     col = mix(col, lagoon, exp(-depth * 1.1) * 0.7);
@@ -218,7 +230,7 @@ const FRAG = /* glsl */`
     // sunlight rippling on the sand under the shallows
     if (water && uDetail > 0.5 && depth < 6.0) {
       float c = caustic(p * 0.42 + vec2(t * 0.03, t * 0.02), t) + caustic(p * 0.71 - vec2(t * 0.02, -t * 0.03) + 3.1, t * 1.3) * 0.6;
-      col += vec3(0.55, 0.95, 0.85) * c * exp(-depth * 0.45) * 0.28 * uDay * (1.0 - uStorm);
+      col += vec3(0.55, 0.95, 0.85) * c * exp(-depth * 0.45) * 0.28 * uDay * (1.0 - uStorm) * (1.0 - uOvercast * 0.8);
     }
     // the sky, mirrored at a glance
     vec3 rd = reflect(-v, n);
@@ -227,7 +239,7 @@ const FRAG = /* glsl */`
     // the sun: a hard highlight, and sparkles along its path
     vec3 hlf = normalize(uSunDir + v);
     float nh = max(dot(n, hlf), 0.0);
-    float sunUp = smoothstep(-0.05, 0.1, uSunDir.y) * (1.0 - uStorm * 0.85);
+    float sunUp = smoothstep(-0.05, 0.1, uSunDir.y) * (1.0 - max(uStorm * 0.85, uOvercast * 0.92));
     col += uSunCol * (pow(nh, 320.0) * 3.2 + pow(nh, 42.0) * 0.12) * sunUp;
     if (uDetail > 0.5) {
       vec2 cell = floor(p * 2.6);
@@ -252,6 +264,8 @@ const FRAG = /* glsl */`
       // further off, a storm's whitecaps are scattered where the noise says
       float capsFar = smoothstep(0.72, 0.84, sFbm(p * 0.09 + vec2(t * 0.05, 0.0)) * 0.6 + sFbm(p * 0.023 - t * 0.01) * 0.4) * uStorm * 0.8;
       caps = mix(capsFar, caps, crestFade);
+      // (broken up into streaks and flecks, not smooth white ovals)
+      if (uStorm > 0.05) caps *= smoothstep(0.38, 0.6, noise(p * vec2(0.9, 2.3) + vec2(t * 0.4, 0.0)) * 0.65 + noise(p * 3.1 - t * 0.6) * 0.35);
       foam = clamp(max(edge, line * band * 0.9) + caps, 0.0, 1.0);
     } else if (kind == 7.0) {
       foam = smoothstep(-0.6, -0.1, sd) * 0.6;
@@ -320,6 +334,9 @@ export class Water {
         uDay: { value: 1 },
         uZone: { value: 0 },
         uStorm: { value: 0 },
+        uOvercast: { value: 0 },
+        uGlass: { value: 0 },
+        uRain: { value: 0 },
         uDetail: { value: 1 },
         uUnder: { value: 0 },
         uWin: { value: new THREE.Vector2(-1e9, -1e9) },
@@ -476,7 +493,7 @@ export class Water {
     this.uniforms.uWin.value.set(this.win.cx, this.win.cy);
   }
 
-  update(ox, oy, env, sunDir, sunCol, sky, skyTop) {
+  update(ox, oy, env, sunDir, sunCol, sky, skyTop, overcast = 0) {
     const u = this.uniforms;
     if (this.world) this.follow(ox, oy);
     // (once three.js has made the texture, strips go up on their own)
@@ -493,9 +510,12 @@ export class Water {
     u.uRipT.value = this.ripT;
     u.uDay.value = env.daylight;
     u.uStorm.value = env.storm;
-    // calm swells on a fine day, heavy ones in a storm; still water indoors and under the sea
+    u.uOvercast.value = overcast;
+    u.uGlass.value = env.calm || 0;
+    u.uRain.value = env.rain || 0;
+    // calm swells on a fine day, heavy ones in a storm, none in the Calm Belt; still water indoors and under the sea
     const zone = u.uZone.value;
-    u.uAmp.value = swellAmp(env.storm, zone);
+    u.uAmp.value = swellAmp(env.storm, zone, env.calm);
     setSwell(env.time, u.uAmp.value, this.world, ox, oy);
     if (sunDir) u.uSunDir.value.copy(sunDir);
     if (sunCol) u.uSunCol.value.copy(sunCol);

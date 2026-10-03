@@ -78,8 +78,8 @@ export function swells(x, y, t) {
   return (Math.sin(a1) * g1 + Math.sin(a2) * 0.6 * g2 + Math.sin(a3) * 0.35 * g3) / 1.95;
 }
 
-/** How big the swells are: calm on a fine day, heavy in a storm, still water indoors and under the sea. */
-export const swellAmp = (storm, zone) => (zone >= 2 ? 0 : 0.14 + storm * 0.34);
+/** How big the swells are: calm on a fine day, heavy in a storm, all but none in the Calm Belt, still water indoors and under the sea. */
+export const swellAmp = (storm, zone, calm = 0) => (zone >= 2 ? 0 : (0.14 + storm * 0.34) * (1 - calm * 0.85));
 
 const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 // how much of the swell a liquid has (the sea all of it, a lake half, lava and the like a little)
