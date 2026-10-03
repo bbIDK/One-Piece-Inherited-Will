@@ -29,7 +29,8 @@
 //                      taken out), so saves made then carry on from the right
 //                      one (game/quests.js reconcile)
 //   start chapters also have: pitch: [lines] (the offer), accept (the answer),
-//   refuse(c) → why this road is closed to you (or null)
+//   refuse(c) → why this road is closed to you (or null), free (what they
+//   say to someone who'd rather sail their own way, with no road at all)
 // Lines are strings or fns (ctx) → string.
 
 import { ISLAND_BY_ID } from '../../data/islands/index.js';

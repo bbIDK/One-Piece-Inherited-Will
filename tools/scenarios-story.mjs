@@ -32,10 +32,130 @@ const HELPERS = `
     },
     actor(id) { return this.g().actors.find((a) => a.alive && a.npcId === id) || null; },
     main() { const c = this.c(); const q = this.g().quests.main(); return { path: c.main?.path, part: c.main?.part, at: c.main?.at, chain: c.main?.chain, route: c.main?.route, quest: q?.id || null, stage: q ? this.g().quests.stageId(q.id) : null, log: c.logPose?.target || null }; },
+    /** open a conversation (and finish typing its first line): what's said and the choices on offer */
+    open(a) { const g = this.g(); g.dialogue.open(a, a.def.dialogue); return this.now(); },
+    now() { const d = this.g().dialogue.active; if (!d) return null; if (d.typing < d.full.length) this.g().dialogue.advance(); return { text: d.full, choices: d.choices.map((c) => c.label) }; },
+    /** take the choice matching the pattern (or, with none on offer, carry on) */
+    pick(re) { const g = this.g(), d = g.dialogue.active; if (!d) return null; this.now(); if (!d.choices.length) { g.dialogue.advance(); return this.now(); } const i = d.choices.findIndex((c) => new RegExp(re, 'i').test(c.label)); if (i < 0) return { missing: re, choices: d.choices.map((c) => c.label) }; g.dialogue.choose(i); return this.now(); },
+    /** click a button on screen by its words */
+    click(re, scope = document) { const b = [...scope.querySelectorAll('button')].find((x) => new RegExp(re, 'i').test(x.innerText)); if (b) b.click(); return !!b; },
+    text(sel) { return document.querySelector(sel)?.innerText || null; },
+    /** the home island's three, as they stand (and the marks over their heads) */
+    trio() { const g = this.g(); return g.actors.filter((a) => a.alive && /^mq_home_/.test(a.npcId || '')).map((a) => ({ id: a.npcId, marker: a.questMarker || null })); },
   };
 `;
 
+/** Stand beside someone, facing them, in the third-person view (for a picture of a conversation). */
+const besideIn = (page, id) => page.evaluate((id) => {
+  const g = window.OP.game, p = g.player, a = window.__st.actor(id);
+  if (!a) return false;
+  p.x = a.x + 1.6; p.y = a.y + 0.6; p.deck = null;
+  g.snapCamera?.();
+  const rig = g.view3d?.rig;
+  if (rig) { rig.yaw = Math.atan2(a.y - p.y, g.world.dx(p.x, a.x)); rig.pitch = -0.12; }
+  return true;
+}, id);
+
 export const scenarios = {
+  // the main story is optional: born to sail your own way (the creation
+  // screen), the Quests menu's way back to a calling, the fourth choice with a
+  // contact, the journal, and a road set aside and taken up again
+  //   node tools/shot.mjs storyfree --page=shots/<build>/index.html
+  storyfree: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(HELPERS);
+      // ---- the creation screen: the story, or none
+      await page.evaluate(() => { window.OP.game.debugBirth = { race: 'human', traits: ['lucky'], seed: 12345 }; window.__st.click('Begin a Lineage'); });
+      await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /Accept my fate/.test(b.innerText)), null, { timeout: 60000 });
+      await page.waitForTimeout(2400);
+      await page.evaluate(() => window.__st.click('Accept my fate'));
+      await page.waitForFunction(() => !!document.querySelector('.story-pick'), null, { timeout: 60000 });
+      await page.waitForTimeout(1500);
+      await snap('free-01-creation-calling');
+      await page.evaluate(() => window.__st.click('Sail your own way', document.querySelector('.story-pick')));
+      await page.waitForTimeout(400);
+      await snap('free-02-creation-free');
+      console.log('creation', JSON.stringify(await page.evaluate(() => window.__st.text('.story-pick'))));
+      await page.evaluate(() => window.__st.click('^Set Sail$'));
+      await page.waitForFunction(() => !!window.OP.game.player && !!window.OP.game.state?.char, null, { timeout: 180000, polling: 250 });
+      await page.evaluate(() => { const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 11; g.env.storm = 0; g.env.stormTarget = 0; document.querySelector('.look-hint')?.remove(); });
+      await step(page, 2);
+      const born = await page.evaluate(() => {
+        const g = window.OP.game, c = g.state.char, S = window.__st;
+        return { free: c.freeSail, intro: c.mainIntro, road: c.main?.path || null, home: g.currentIsland?.id || null, trio: S.trio(), storyPins: (g.storyPins?.() || []).filter((p) => p.main).length, track: S.text('.qtrack') };
+      });
+      console.log('born free', JSON.stringify(born, null, 1));
+      await snap('free-03-hud');
+      // ---- side content is all still there: side quests' marks, the chart's pins
+      const side = await page.evaluate(() => {
+        const g = window.OP.game;
+        window.OP.step(1);
+        return { marks: g.actors.filter((a) => a.alive && a.questMarker).map((a) => `${a.name}:${a.questMarker}`), pins: (g.storyPins?.() || []).map((p) => `${p.side ? 'side' : 'main'}:${p.label}`).slice(0, 8), trainers: g.actors.filter((a) => a.alive && a.def?.trainer).map((a) => a.name) };
+      });
+      console.log('side content', JSON.stringify(side, null, 1));
+      // ---- the Quests menu: sailing your own way, and the way back to a calling
+      await page.evaluate(() => window.OP.game.ui.sideAction('quests'));
+      await step(page, 0.3);
+      await snap('free-04-quests-free');
+      await page.evaluate(() => window.__st.click('Look for a calling after all', document.querySelector('.quests')));
+      await step(page, 1.2);
+      await snap('free-05-quests-calling');
+      const seeking = await page.evaluate(() => { const g = window.OP.game, c = g.state.char, S = window.__st; return { free: c.freeSail, intro: c.mainIntro, trio: S.trio(), quests: S.text('.quests')?.slice(0, 600) }; });
+      console.log('seeking', JSON.stringify(seeking, null, 1));
+      await page.evaluate(() => window.OP.game.ui.closeAll());
+      await step(page, 1);
+      await snap('free-06-tracker-calling');
+      console.log('tracker', JSON.stringify(await page.evaluate(() => window.__st.text('.qtrack'))));
+      // ---- a contact: the fourth choice, in conversation
+      const pid = (await page.evaluate(() => window.__st.trio().find((t) => /_pirate$/.test(t.id))?.id)) || null;
+      if (!pid) { console.log('NO PIRATE CONTACT about'); return; }
+      await besideIn(page, pid);
+      await step(page, 0.5);
+      const talk1 = await page.evaluate((pid) => { const S = window.__st; const out = [S.open(S.actor(pid))]; for (let i = 0; i < 4 && !(out[out.length - 1]?.choices || []).length; i++) out.push(S.pick('.')); return out; }, pid);
+      console.log('contact', JSON.stringify(talk1, null, 1));
+      await snap('free-07-contact-choices');
+      const talk2 = await page.evaluate(() => window.__st.pick('sail my own way'));
+      console.log('chose', JSON.stringify(talk2));
+      await snap('free-08-contact-farewell');
+      await page.evaluate(() => window.OP.game.dialogue.close());
+      await step(page, 1.2);
+      const free2 = await page.evaluate(() => { const g = window.OP.game, c = g.state.char, S = window.__st; return { free: c.freeSail, intro: c.mainIntro, trio: S.trio(), track: S.text('.qtrack') }; });
+      console.log('free again', JSON.stringify(free2, null, 1));
+      // ---- the journal shows it too
+      await page.evaluate(() => window.OP.game.ui.sideAction('journal'));
+      await step(page, 0.3);
+      await snap('free-09-journal');
+      console.log('journal', JSON.stringify(await page.evaluate(() => window.__st.text('.journal-road'))));
+      await page.evaluate(() => window.OP.game.ui.closeAll());
+      // ---- a road after all (the offer stands), then set aside and taken up again
+      const mid = pid.replace(/_pirate$/, '_marine');
+      const took = await page.evaluate((mid) => { const S = window.__st; const a = S.actor(mid); if (!a) return 'no marine contact'; return S.talk(a, ['marines', 'leave it']); }, mid);
+      console.log('took a road', JSON.stringify(took));
+      await step(page, 1);
+      await page.evaluate(() => window.OP.game.ui.sideAction('quests'));
+      await step(page, 0.3);
+      await snap('free-10-quests-road');
+      await page.evaluate(() => window.__st.click('Set the story aside', document.querySelector('.quests')));
+      await page.waitForTimeout(300);
+      await snap('free-11-set-aside-ask');
+      await page.evaluate(() => window.__st.click('^Set it aside$', document.querySelector('.panel.ask')));
+      await page.waitForTimeout(300);
+      await step(page, 1);
+      await snap('free-12-set-aside');
+      const aside = await page.evaluate(() => { const g = window.OP.game, c = g.state.char, S = window.__st; return { shelf: !!c.mainShelf, road: c.main?.path || null, main: g.quests.main()?.id || null, free: c.freeSail, track: S.text('.qtrack') }; });
+      console.log('set aside', JSON.stringify(aside, null, 1));
+      await page.evaluate(() => window.__st.click('Take your story up again', document.querySelector('.quests')));
+      await step(page, 2);
+      const back = await page.evaluate(() => { const g = window.OP.game, c = g.state.char, S = window.__st; return { shelf: !!c.mainShelf, road: c.main?.path || null, main: g.quests.main()?.id || null, stage: S.main().stage, free: c.freeSail }; });
+      console.log('taken up again', JSON.stringify(back, null, 1));
+      await page.evaluate(() => window.OP.game.ui.closeAll());
+      await step(page, 1);
+      await snap('free-13-taken-up');
+    },
+  },
+
   story: {
     async run(page, snap, args) {
       const path = String(args.path || 'pirate');

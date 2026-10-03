@@ -773,16 +773,19 @@ export class UI {
     const main = q.main();
     const sub = q.mainSub();
     const side = q.tracked();
-    const key = JSON.stringify([main && [main.id, main.s.stage, q.progress(main.id), where(main.id)], sub && [sub.id, sub.s.stage, q.progress(sub.id)], side.map((x) => [x.id, x.s.stage, q.progress(x.id), where(x.id)]), c.mainIntro || null, (c.stats?.playTime || 0) > 600 && !game.currentIsland]);
+    const key = JSON.stringify([main && [main.id, main.s.stage, q.progress(main.id), where(main.id)], sub && [sub.id, sub.s.stage, q.progress(sub.id)], side.map((x) => [x.id, x.s.stage, q.progress(x.id), where(x.id)]), c.mainIntro || null, !!c.freeSail, (c.stats?.playTime || 0) > 600 && !game.currentIsland]);
     if (key === this.cache.track) return;
     this.cache.track = key;
     clear(E.track);
     if (main) E.track.appendChild(h('div.qt-main', ...card(main, true, sub)));
-    else if (c.mainIntro) {
-      // (after a while away from home, just a reminder)
+    else if (c.mainIntro && !c.freeSail) {
+      // (after a while away from home, just a reminder) — and the fourth way: no road at all
       const brief = (c.stats?.playTime || 0) > 600 && !game.currentIsland;
-      E.track.appendChild(h('div.qt-main', h('div.qt-head', uiImg('quest', 14), 'MAIN STORY'), h('div.qt-title', 'Find your calling'), h('div.qt-obj', brief ? 'Look for the orange ! — or see Quests (L).' : c.mainIntro)));
+      E.track.appendChild(h('div.qt-main', h('div.qt-head', uiImg('quest', 14), 'MAIN STORY'), h('div.qt-title', 'Find your calling'),
+        h('div.qt-obj', brief ? 'Look for the orange ! — or see Quests (L).' : c.mainIntro),
+        h('div.qt-alt', 'Or sail your own way, with no main story (Quests, L).')));
     }
+    // (a free sailor has no story on the tracker: only the side quests they've taken on)
     for (const x of side) E.track.appendChild(h('div.qt-side', ...card(x, false)));
     E.track.classList.toggle('hidden', !E.track.childNodes.length);
   }

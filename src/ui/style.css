@@ -460,6 +460,9 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }
 .opt-row { margin: 6px 0; }
 .opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }
+.story-pick { margin: 4px 0 8px; padding: 6px 10px 2px; border-radius: 8px; background: rgba(0, 137, 123, .07); border: 1px solid rgba(0, 137, 123, .25); }
+.story-pick .opt-row { margin: 2px 0; }
+.story-pick .story-note { margin: 3px 0 6px; font-size: 12px; line-height: 1.35; }
 .swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }
 .swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }
 .creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }
@@ -739,10 +742,13 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }
 .qt-n { color: #ffd54f; font-weight: 800; }
 .qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }
+.qt-alt { text-align: right; font-size: 11px; color: #9fd8cf; margin-top: 3px; font-style: italic; }
 @media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }
 
 .journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }
 .journal-quests span { flex: 1; }
+.journal-road { display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin: -4px 0 12px; border-radius: 8px; background: rgba(0, 137, 123, .08); border: 1px solid rgba(0, 137, 123, .3); font-size: 13px; }
+.journal-road span { flex: 1; }
 
 /* ---- Quests menu (L) */
 .quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }
@@ -760,6 +766,11 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .quests .q-steps .qt-n { color: #b9651b; }
 .quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }
 .quests .q-note { margin: 6px 0 0; font-size: 12px; }
+.quests .q-own { border-left-color: #00897b; }
+.quests .q-own .q-kicker { color: #00695c; }
+.q-choice { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(109,76,51,.3); }
+.q-choice .q-note { flex: 1; margin: 0; }
+.q-choice .btn { flex: none; }
 .quests .q-side { padding: 10px 14px; }
 .quests .q-side.tracked { border-left: 4px solid #5dade2; }
 .quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }

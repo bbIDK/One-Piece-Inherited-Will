@@ -233,18 +233,91 @@ export function installMainStory(game) {
   S.begin = (chId, path) => {
     const c = C();
     const ch = CHAPTERS.get(chId);
-    if (!c || !ch || c.main) return false;
+    // (a road set aside is taken up again, not begun over: see S.takeUp)
+    if (!c || !ch || c.main || c.mainShelf) return false;
     const part = ch.part;
     c.main = { path, part, chain: PLANS[part](c, path, ch, game), at: 0, done: [], skipped: [], route: null, sworn: false, began: game.env.day, home: ch.kind === 'start' ? ch.island : null };
     if (ch.kind !== 'start' && c.main.chain[0] !== ch.id) c.main.chain.unshift(ch.id);
     c.main.route = c.main.route || c.mainRoute || null;
     c.mainIntro = null;
+    c.freeSail = null;
     game.ui.banner(PATHS[path].name.toUpperCase(), `Part ${part} · ${PART_NAMES[part]}`, PATHS[path].tagline, 5);
     game.log(`You take up the road of the ${PATHS[path].name}.`, PATHS[path].color);
     // (no road asks for a sword: a word on fighting your own way, once)
     setTimeout(() => { if (game.state?.char === c) game.hint?.('fightstyle', 'Fight however suits you: fists, legs, a blade or a gun all win fights. Weapon shops sell blades and pistols, and trainers and dojos teach styles — your Skills (K) show what you know.'); }, 7000);
     openChapter();
     persist(game);
+    return true;
+  };
+
+  // ------------------------------------------------ sailing your own way
+  // The story is there to be taken up, never forced. Instead of a road, a
+  // character can sail off into the seas on their own (c.freeSail: { day,
+  // from }): no chapter, no orange markers, no story on the chart, nothing
+  // steering the Log Pose — and everything else the same (side quests,
+  // trainers, shops, bounties, the Marines, a flag of your own, Reverse
+  // Mountain). It can be undone: talk to anyone who could set you on a road,
+  // or look for a calling again from the Quests menu. A road already under
+  // way can be set aside the same way (c.mainShelf keeps it, chapter and
+  // all) and taken up again where it was left.
+  S.free = () => !!C()?.freeSail;
+  S.shelved = () => C()?.mainShelf || null;
+  // (the tracker catches up at once, and anyone who cares hears of it)
+  const changed = (what) => { if (game.ui) game.ui.qtT = 0; game.emit('storyChanged', what); persist(game); };
+  /** Sail your own way, before any road is taken (from: 'contact' | 'quests' | 'birth'). */
+  S.sailFree = (from = 'quests') => {
+    const c = C();
+    if (!c || c.main || c.freeSail) return false;
+    c.freeSail = { day: game.env.day, from };
+    c.mainIntro = null;
+    game.ui.banner('YOUR OWN WAY', 'No road but the sea', 'You sail off into the seas to start a journey of your own. Side quests, trainers, bounties — the whole Blue Planet is still yours.', 5);
+    game.log('You choose no road: you\'ll sail your own way. (Changed your mind? The Quests menu, L, or anyone who could set you on a road.)', '#80cbc4');
+    changed('free');
+    return true;
+  };
+  /** A free sailor looks for a calling after all: the story's three are marked again (on the nearest home island, or Crocus in the Grand Line). */
+  S.seekCalling = () => {
+    const c = C();
+    if (!c || c.main || c.mainShelf || !c.freeSail) return false;
+    c.freeSail = null;
+    c.mainIntro = introFor(game, c, { island: game.currentIsland });
+    game.ui.toast('FIND YOUR CALLING', 'Look for the orange ! — or see Quests (L).', '#ffd54f');
+    game.log(`You'll look for a calling after all. ${c.mainIntro}`, '#ffe082');
+    changed('calling');
+    return true;
+  };
+  /** Set the road under way aside — chapter and all — and sail your own way for now. */
+  S.setAside = () => {
+    const c = C(), m = c?.main;
+    if (!m || m.finished) return false;
+    const cur = current(game);
+    const shelf = { main: m, quest: null, day: game.env.day };
+    // (the chapter under way goes with it, just as it stands)
+    if (cur?.s && !cur.s.done) { shelf.quest = { id: cur.qid, s: cur.s }; delete c.quests[cur.qid]; }
+    c.mainShelf = shelf;
+    c.main = null;
+    c.mainIntro = null;
+    c.freeSail = { day: game.env.day, from: 'aside' };
+    S.pending = 0;
+    game.ui.banner('THE STORY WAITS', `The road of the ${PATHS[m.path].name}`, 'You set your story aside and sail your own way for now. Take it up again from the Quests menu (L) whenever you like.', 5);
+    game.log(`You set the road of the ${PATHS[m.path].name} aside. (Quests, L, takes it up again.)`, '#80cbc4');
+    changed('aside');
+    return true;
+  };
+  /** Take a road that was set aside up again, where it was left. */
+  S.takeUp = () => {
+    const c = C(), sh = c?.mainShelf;
+    if (!sh || c.main) return false;
+    c.main = sh.main;
+    if (sh.quest && !c.quests[sh.quest.id]) c.quests[sh.quest.id] = sh.quest.s;
+    c.mainShelf = null;
+    c.freeSail = null;
+    c.mainIntro = null;
+    game.ui.banner(PATHS[c.main.path].name.toUpperCase(), `Part ${c.main.part} · ${PART_NAMES[c.main.part]}`, 'You take your story up again, where you left it.', 5);
+    game.log(`You take up the road of the ${PATHS[c.main.path].name} again.`, PATHS[c.main.path].color);
+    // (the chapter opens again on the next beat: the tick sees to it, and to anything the world did meanwhile)
+    S.pending = 0.5;
+    changed('road');
     return true;
   };
 
@@ -386,7 +459,9 @@ export function installMainStory(game) {
     S.pending = 0;
     const c = char || C();
     if (!c) return;
-    if (!c.main && !c.mainIntro) c.mainIntro = introFor(game, c, spawn);
+    // (a free sailor isn't told to go and find a calling)
+    if (!c.main && !c.mainIntro && !c.freeSail) c.mainIntro = introFor(game, c, spawn);
+    if (c.freeSail) c.mainIntro = null;
     if (c.main && !c.main.finished) S.pending = 1.5; // (resume: make sure the chapter is open)
     void isNew;
   });
@@ -481,7 +556,9 @@ export function installMainStory(game) {
     const roles = CONTACTS.get(a.npcId);
     if (roles) {
       if (!m) {
-        // no road yet: the home islands' three can start you on one
+        // no road yet: the home islands' three can start you on one (not
+        // marked for a free sailor: they're there if you go and talk to them)
+        if (c.freeSail || c.mainShelf) return null;
         if (roles.some(({ ch }) => ch.kind === 'start')) return 'M!';
         if (roles.some(({ ch }) => ch.opensStory)) return 'M!';
       } else {
@@ -512,7 +589,7 @@ export function installMainStory(game) {
     const out = [];
     if (!c) return out;
     const disc = new Set(c.discovered || []);
-    if (!c.main) {
+    if (!c.main && !c.freeSail && !c.mainShelf) {
       for (const [islId, chId] of PROLOGUES) {
         if (!disc.has(islId)) continue;
         const ch = CHAPTERS.get(chId);
@@ -647,8 +724,10 @@ function storyNodes(ctx, npcId) {
     nodes.mq_w2 = { text: () => `(${obj()})`, next: 'mq_w' };
     return { kind: 'wait', nodes, start: 'mq_w', label: d?.name };
   }
-  // a road on offer (no road chosen yet): the home island's three, or Crocus for latecomers
-  const offers = !m ? roles.filter(({ ch }) => ch.kind === 'start' || ch.opensStory) : [];
+  // a road on offer (no road chosen yet): the home island's three, or Crocus
+  // for latecomers — and, instead of any road, sailing your own way. (A free
+  // sailor can still take one: the offer stands, it just isn't marked.)
+  const offers = !m && !c.mainShelf ? roles.filter(({ ch }) => ch.kind === 'start' || ch.opensStory) : [];
   if (offers.length) {
     const { ch, path } = offers[0];
     const v = ch.v[path];
@@ -661,10 +740,22 @@ function storyNodes(ctx, npcId) {
         ...offers.map((o) => ({ text: () => `(The road of the ${PATHS[o.path].name} is closed to you: ${roadClosed(c, o.path)})`, if: () => !!roadClosed(c, o.path), next: pitchEnd })),
         { text: 'Are there other roads?', if: () => others.length > 0, next: 'mq_o' },
         ...extraChoices(v.contact, 'mq_p0'),
+        { text: 'I\'ll sail my own way — no road for me. (No main story)', if: () => !c.freeSail, next: 'mq_free' },
         { text: 'Not yet.', end: true },
       ],
     }));
-    nodes.mq_o = { text: `(You could also find ${others.join(' or ')}. You can only walk one road — choose one, and the others close.)`, next: pitchEnd };
+    nodes.mq_o = { text: `(You could also find ${others.join(' or ')}. You can only walk one road — choose one, and the others close. Or walk none: sail off into the seas on a journey of your own, with no main story at all.)`, next: pitchEnd };
+    // turning every road down: the sea is yours (the contact sees you off)
+    nodes.mq_free = {
+      text: () => say(v.free || FREE_LINE[path], ctx),
+      onEnter: () => S.sailFree('contact'),
+      choices: [{ text: 'Farewell.', end: true }],
+    };
+    if (c.freeSail) {
+      // (a free sailor who comes back: the offer still stands)
+      const who = shortName(contactOf(ch, path)?.name) || 'They';
+      nodes.mq_fr = { text: `(You've been sailing your own way. ${who} could still set you on the road of the ${offers.map((o) => PATHS[o.path].name).join(' or the ')}, if you've changed your mind.)`, next: 'mq_p0' };
+    }
     for (const o of offers) {
       const ov = o.ch.v[o.path];
       nodes['mq_ok_' + o.path] = { text: '', onEnter: () => S.begin(o.ch.id, o.path), redirect: 'mq_s_' + o.path + '0' };
@@ -673,7 +764,7 @@ function storyNodes(ctx, npcId) {
         choices: [{ text: 'Leave it to me.', end: true }],
       }));
     }
-    return { kind: 'offer', nodes, start: 'mq_p0' };
+    return { kind: 'offer', nodes, start: c.freeSail ? 'mq_fr' : 'mq_p0' };
   }
   // someone you're sent to talk to
   for (const t of TALKS.get(npcId) || []) {
@@ -700,6 +791,13 @@ function extraChoices(ct, back) {
   return (ct?.choices || []).map((ch) => ({ ...ch, next: ch.next || (ch.end ? undefined : back) }));
 }
 
+// what whoever could have set you on a road says when you'd rather sail your own way
+const FREE_LINE = {
+  pirate: 'No flag, then? Ha! The sea doesn\'t ask anyone for papers. Go and see it — and if you ever want a Jolly Roger after all, you know where to find me.',
+  marine: 'No oath, then. The sea is free, citizen — the law isn\'t. Mind it and you\'ll have no trouble from the Navy. Our door stays open.',
+  hunter: 'Freelance, is it? Suit yourself. The posters will still be on the wall if you ever want a cut.',
+};
+
 function otherRoad(mine, theirs) {
   if (mine === 'marine') return theirs === 'pirate' ? '"A pirate. Hmph. Mind your manners in my town — I\'ll be watching you."' : '"Hunting pirates for money, are you? Just remember who the law is around here."';
   if (mine === 'pirate') return theirs === 'marine' ? '"Look at you in that Navy cap. Well — every sea needs someone to chase us."' : '"A bounty hunter. Heh. Just don\'t go looking for my old poster."';
@@ -721,6 +819,19 @@ function decorate(tree, npc, ctx) {
   if (!r || r.kind === 'idle') return tree;
   const home = tree.start || 'start';
   const nodes = { ...tree.nodes, ...r.nodes };
+  if (r.kind === 'offer' && ctx.char.freeSail) {
+    // (a free sailor gets their usual talk: the road is there to ask about, not pressed on them)
+    const s0 = nodes[home];
+    if (!s0) return tree;
+    nodes[home] = { ...s0, choices: [{ text: '(Main story) Could you set me on a road after all?', next: r.start }, ...(s0.choices || [])] };
+    for (const k of Object.keys(r.nodes)) {
+      const n = nodes[k];
+      if (!n.choices?.some((ch) => ch.end) || n.choices.some((ch) => ch.next === home)) continue;
+      const i = n.choices.findIndex((ch) => ch.end);
+      n.choices = [...n.choices.slice(0, i), { text: 'About something else...', next: home }, ...n.choices.slice(i)];
+    }
+    return { ...tree, nodes };
+  }
   if (r.kind === 'wait') {
     // their usual talk, with a word about the job
     const s0 = nodes[home];

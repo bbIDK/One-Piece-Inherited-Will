@@ -24,6 +24,7 @@ import { HOTBAR_SIZE, HOTBAR_KEYS } from '../game/hotbar.js';
 import { RENDER_DIST, renderChunks } from '../game/save.js';
 import { openShipwright } from './shipwrightPanel.js';
 import { fmtDist } from './compass.js';
+import { storyChoice } from './questsPanel.js';
 
 const berriesLine = (c) => h('div.berries', uiImg('berries', 20), ` ${formatBerries(c.berries)}`);
 const HOTBAR = HOTBAR_SIZE;
@@ -478,9 +479,18 @@ export function openJournal(game) {
   const body = h('div.journal');
   const entry = ui.openPanel(body, { wide: true, id: 'journal' });
   if (!entry) return;
-  // (quests have a menu of their own now: Quests, L)
+  // (quests have a menu of their own now: Quests, L) — and your road, with the
+  // choice that goes with it: sail your own way, or take a road (up again)
+  const road = h('div.journal-road');
+  const drawRoad = () => {
+    clear(road);
+    const ch = storyChoice(game, drawRoad);
+    add(road, uiImg(ch.state === 'free' || ch.state === 'shelved' ? 'ship' : 'wp_main', 18), h('span', ch.text), ch.button);
+  };
+  drawRoad();
   add(body, h('h2', 'Journal'),
     h('div.journal-quests', uiImg('quest', 18), h('span', ' Your main story and side quests are in the Quests menu.'), h('button.btn.small', { on: { click: () => ui.sideAction?.('quests') } }, 'Open Quests (L)')),
+    road,
     h('h3', 'Legends'),
     h('p.muted', 'Nobody chooses your destiny. But the sea remembers those who do the impossible — every legend you write adds to your Inherited Will.'));
   const list = h('div.list');
