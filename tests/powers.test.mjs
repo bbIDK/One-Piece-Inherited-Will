@@ -473,3 +473,27 @@ test('a Fish-Man swimming hard leaps out of the sea like a dolphin', () => {
   assert.ok(fm.tryJump(g, 1));
   assert.ok(fm.dash && fm.dash.vx > 5, 'on forward, out of the water');
 });
+
+test('a Logia body: no blow or shot without Haki lands on it — yours on theirs, or theirs on yours; Armament does', () => {
+  // you, a Logia (smoke), and a foe with no Haki: his fists and his shots go through you
+  const a = duel({ fruit: 'moku', gap: 2 });
+  let hp = a.you.hp;
+  a.g.combat.applyHit(a.foe, a.you, blow(a.foe, a.you));
+  assert.equal(a.you.hp, hp, 'a fist through smoke');
+  const shot = a.g.combat.projectile({ owner: a.foe, x: a.foe.x - 0.5, y: Y0 - 0.5, vx: -20, vy: 0, range: 8, radius: 0.3, damage: 30, element: 'physical', isProj: true });
+  step(a.g, 0.4);
+  assert.equal(a.you.hp, hp, 'a bullet through smoke');
+  assert.equal(shot.alive === false || shot.traveled > 1.5, true);
+  // with Armament on, his blow lands
+  a.foe.armament = true;
+  a.g.combat.applyHit(a.foe, a.you, blow(a.foe, a.you));
+  assert.ok(a.you.hp < hp, 'Armament reaches the Logia');
+  // you, no Haki, on a Logia foe (fire): through; with Armament: it lands
+  const b = duel({ foeFruit: 'mera', gap: 2 });
+  hp = b.foe.hp;
+  b.g.combat.applyHit(b.you, b.foe, blow(b.you, b.foe));
+  assert.equal(b.foe.hp, hp, 'your fist through fire');
+  b.you.armament = true;
+  b.g.combat.applyHit(b.you, b.foe, blow(b.you, b.foe));
+  assert.ok(b.foe.hp < hp, 'your Armament lands on fire');
+});
