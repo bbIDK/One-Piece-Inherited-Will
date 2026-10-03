@@ -14,7 +14,7 @@
 //  * The look of the helpless states a power leaves (Mes: a heart in a cube;
 //    Amputate: a body in pieces; Parasite: strings; a stolen shadow).
 import { angleDiff } from '../core/math.js';
-import { shambles, takt } from './room.js';
+import { shambles, takt, roomFollows } from './room.js';
 
 /**
  * Liberation (Yami): let out everything the darkness swallowed — the shots
@@ -51,6 +51,8 @@ export function iceAt(game, x, y) {
 export function zoneRules(game, z, dt) {
   const o = z.owner;
   if (z.whileOwner && (!o || o.alive === false || o.state !== 'idle' || o.inWater)) { z.t = 0; return; }
+  // (an awakened surgeon's ROOM goes where they go: room.js)
+  if (z.kind === 'room' && roomFollows(z)) { z.x = o.x; z.y = o.y; }
   if (z.shrink) {
     // (the Birdcage closes in: to (1 - shrink) of its size by the end)
     z.r0 = z.r0 ?? z.r;
