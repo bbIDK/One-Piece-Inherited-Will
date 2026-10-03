@@ -3,6 +3,13 @@
 // rank, or a reputation) and the last port before the mountain — and then
 // the ride itself. Each Blue has its own road; a stop on your home island is
 // swapped for a neighbour so you always sail somewhere new.
+//
+// Crewmates are offered, never forced (see game/crew.js): on every road,
+// someone at the "crew" stop asks to sail with you once the island's trouble
+// is dealt with, and someone at the last port asks too — so a captain (or
+// an officer, or a hunter) can cross the mountain with two aboard. Yes or no,
+// the story goes on; whoever's turned down stays where they are, and can be
+// asked again. (The last ports' people are in ../crewmates.js.)
 import './homes.js';
 import { chapter, target, T, LOOK, PLANS, PROLOGUES, CHAPTERS, onward, PATHS3 } from './define.js';
 import { ISLAND_BY_ID } from '../../data/islands/index.js';
@@ -12,6 +19,12 @@ import { ownsShip } from '../../game/fleet.js';
 /** Somebody's home-island people (the stop reuses them). */
 const homeNpc = (island, path) => ({ npc: `mq_home_${island}_${path}` });
 const hc = (island, path, where) => ({ npc: `mq_home_${island}_${path}`, where });
+
+// (did they come aboard? the offer was theirs to make and yours to answer)
+const aboard = (ctx, id) => (ctx.char.crew || []).some((m) => m.id === id);
+// someone's offer to sail with you, as each road hears it: { pirate, marine, hunter } → the steps
+const YOUR_CALL = ' (Yes or no — your call.)';
+const offerOf = (id, says) => Object.fromEntries(Object.entries(says).map(([road, desc]) => [road, T.offer(id, desc + YOUR_CALL)]));
 
 // A Grand Line ship for pirates and hunters at the "ship" stops (the Marines get theirs from the Navy).
 // (one you own counts, afloat or laid up in the yards: see game/fleet.js)
@@ -99,18 +112,20 @@ chapter('eb_orange', { part: 1, island: 'organ_islands', place: 'Orange Town (Or
   },
 });
 
+const PATTY = offerOf('patty', {
+  pirate: 'Patty, the Baratie\'s cook, wants to cook for a crew bound for the Grand Line — hear him out.',
+  marine: 'Patty, the Baratie\'s cook, wants to sign on to your ship\'s galley — hear him out.',
+  hunter: 'Patty, the Baratie\'s cook, wants to come along and cook for you — hear him out.',
+});
 chapter('eb_baratie', { part: 1, island: 'baratie', place: 'the Baratie', role: 'crew' }, {
   pirate: {
     name: 'The Sea Restaurant', lure: 'there\'s a floating restaurant out there with a cook worth stealing',
     summary: 'The Baratie is a restaurant at sea, run by "Red Leg" Zeff and a kitchen full of fighting cooks. Every crew needs a cook.',
     contact: { npc: 'zeff', where: 'on the deck of the Baratie' },
     meet: ['A pirate looking for a cook, eh? My kitchen isn\'t a recruiting office, brat.', 'But I\'ll tell you what. Don Krieg\'s armada is out there, starving. If he comes here, I\'ll need every hand. Help me, and maybe one of my cooks will want to see the sea.'],
-    tasks: [
-      T.quest('baratie_krieg', 'Defend the Baratie from Don Krieg\'s armada ("Red Leg" Zeff).', 'zeff'),
-      T.crew(1, 'Recruit a crewmate — a cook, a swordsman, anyone who\'d follow you (Patty, Johnny and Yosaku are right here).'),
-    ],
+    tasks: [T.quest('baratie_krieg', 'Defend the Baratie from Don Krieg\'s armada ("Red Leg" Zeff).', 'zeff'), PATTY.pirate],
     wait: 'Krieg won\'t knock. Keep your eyes on the horizon.',
-    done: ['You fought for this restaurant like it was your own. Take care of your crew, brat. Feed them first.', (ctx) => onward(ctx.char, 'If you\'re going to the Grand Line, stop at')],
+    done: [(ctx) => (aboard(ctx, 'patty') ? 'You fought for this restaurant like it was your own — and you\'re taking Patty with you. Feed your crew first, brat. Always.' : 'You fought for this restaurant like it was your own. Patty stays in my kitchen, then — your call, and his loss. Take care of your crew, brat. Feed them first.'), (ctx) => onward(ctx.char, 'If you\'re going to the Grand Line, stop at')],
     after: 'Come back and eat sometime. On the house — once.',
   },
   marine: {
@@ -118,7 +133,7 @@ chapter('eb_baratie', { part: 1, island: 'baratie', place: 'the Baratie', role: 
     summary: 'Don Krieg\'s armada — the biggest fleet in the East Blue — was seen heading for the Baratie. Lieutenant Fullbody is already there, having dinner.',
     contact: { name: 'Lieutenant Fullbody', title: '"Ironfist", 153rd Branch', look: LOOK.officer({ hair: 'short', hairColor: '#5d4037', coat: '#fafafa' }), faction: 'marine', at: { spot: 'baratie_deck', ox: 4 }, where: 'on the deck of the Baratie', level: 14, style: 'brawler' },
     meet: ['A recruit? Good. Stand there and look useful. I am having dinner with a lady.', '...Fine. Don Krieg escaped from the Navy\'s last net, and his men are starving. If they come here, they\'ll take the restaurant. Old Zeff wants help. Go and help him.'],
-    tasks: [T.quest('baratie_krieg', 'Defend the Baratie from Don Krieg\'s armada ("Red Leg" Zeff).', 'zeff')],
+    tasks: [T.quest('baratie_krieg', 'Defend the Baratie from Don Krieg\'s armada ("Red Leg" Zeff).', 'zeff'), PATTY.marine],
     wait: 'I would help, but my soup is getting cold.',
     done: ['Don Krieg — defeated! By... a recruit. Hmph. I\'ll mention you in my report. Near the bottom.', (ctx) => onward(ctx.char, 'Next, report to')],
   },
@@ -127,12 +142,17 @@ chapter('eb_baratie', { part: 1, island: 'baratie', place: 'the Baratie', role: 
     summary: 'Johnny and Yosaku are pirate hunters who followed Don Krieg\'s trail to the Baratie. Seventeen million berries is a lot to split two ways. Three ways is fine.',
     contact: { npc: 'johnny', where: 'on the deck of the Baratie' },
     meet: ['Aniki! — no, you\'re not Aniki. But you look like a hunter! Don Krieg — seventeen million — his armada got smashed in the Grand Line and his ship\'s coming this way!', 'Old Zeff\'s going to fight him. We\'re going to help — and split the bounty. You in?'],
-    tasks: [T.quest('baratie_krieg', 'Take down Don Krieg when he comes for the Baratie ("Red Leg" Zeff).', 'zeff')],
+    tasks: [T.quest('baratie_krieg', 'Take down Don Krieg when he comes for the Baratie ("Red Leg" Zeff).', 'zeff'), PATTY.hunter],
     wait: 'Krieg\'s coming. I can feel it in my sunglasses.',
     done: ['SEVENTEEN MILLION! Aniki would be proud. Here\'s your share!', (ctx) => onward(ctx.char, 'We heard the next good hunting is at')],
   },
 });
 
+const ISLA = offerOf('eb_isla', {
+  pirate: 'Isla Mercator, the Old Navigator\'s apprentice, wants to navigate for a crew bound for the Grand Line — hear her out (by Navigator Supplies).',
+  marine: 'Isla Mercator, the Old Navigator\'s apprentice, wants to sign on as navigator aboard your cutter — hear her out (by Navigator Supplies).',
+  hunter: 'Isla Mercator, the Old Navigator\'s apprentice, would navigate for a hunter crossing the Grand Line — hear her out (by Navigator Supplies).',
+});
 chapter('eb_logue', { part: 1, island: 'polestar_islands', place: 'Loguetown (Polestar Islands)', role: 'last' }, {
   pirate: {
     name: 'The Town of the Beginning and the End', lure: 'every crew that means it stops at Loguetown before the mountain',
@@ -142,10 +162,10 @@ chapter('eb_logue', { part: 1, island: 'polestar_islands', place: 'Loguetown (Po
     tasks: [
       T.event('saw_platform', 'Stand before the execution platform in the square, where Gol D. Roger died.'),
       T.defeat('mq_eb_dunn', 'Beat Captain "Anchor" Dunn at the harbour before he sinks you.'),
-      T.ship(), T.logPose(),
+      T.ship(), T.logPose(), ISLA.pirate,
     ],
     wait: 'Ship, Log Pose, and Dunn out of the way. Then the mountain.',
-    done: ['Dunn\'s crew are drinking to your health, now that he\'s in a Marine cell. And look — your first poster is already on the wall.', 'Reverse Mountain is southwest of here. The current runs UP the mountain, rookie. Stay in the middle of the canal, and don\'t look back.'],
+    done: ['Dunn\'s crew are drinking to your health, now that he\'s in a Marine cell. And look — your first poster is already on the wall.', (ctx) => `${aboard(ctx, 'eb_isla') ? 'And Isla\'s going with you? Good. That girl can read a Log Pose in her sleep. ' : ''}Reverse Mountain is southwest of here. The current runs UP the mountain, rookie. Stay in the middle of the canal, and don't look back.`],
     reward: { bounty: 8000000 },
   },
   marine: {
@@ -156,9 +176,10 @@ chapter('eb_logue', { part: 1, island: 'polestar_islands', place: 'Loguetown (Po
     tasks: [
       T.event('saw_platform', 'Stand before the execution platform in the square, where Gol D. Roger died.'),
       T.defeat('mq_eb_dunn', 'Arrest Captain "Anchor" Dunn at the harbour before he sails for the Grand Line.'),
+      ISLA.marine,
     ],
     wait: 'Dunn is at the harbour. Every hour he is free, he gets a head start.',
-    done: ['Dunn is in a cell. Good work — the kind of work that gets noticed.', 'The Navy is lending you a cutter for the crossing. Ride the current over Reverse Mountain and report to G-8 at Navarone. Good luck, Marine.'],
+    done: ['Dunn is in a cell. Good work — the kind of work that gets noticed.', (ctx) => `The Navy is lending you a cutter for the crossing${aboard(ctx, 'eb_isla') ? ' — and the Mercator girl has her papers to sail as your navigator. I signed them myself' : ''}. Ride the current over Reverse Mountain and report to G-8 at Navarone. Good luck, Marine.`],
     reward: navyShip,
   },
   hunter: {
@@ -169,10 +190,10 @@ chapter('eb_logue', { part: 1, island: 'polestar_islands', place: 'Loguetown (Po
     tasks: [
       T.event('saw_platform', 'Stand before the execution platform in the square, where Gol D. Roger died.'),
       T.defeat('mq_eb_dunn', 'Bring in Captain "Anchor" Dunn (฿6,000,000) at the harbour.'),
-      T.ship(), T.logPose(),
+      T.ship(), T.logPose(), ISLA.hunter,
     ],
     wait: 'Dunn\'s at the harbour. Don\'t let him reach the mountain.',
-    done: ['Six million — the office thanks you. You\'ve outgrown the East Blue.', 'Reverse Mountain is southwest of here. The real money is on the other side of it.'],
+    done: ['Six million — the office thanks you. You\'ve outgrown the East Blue.', (ctx) => `Reverse Mountain is southwest of here. The real money is on the other side of it${aboard(ctx, 'eb_isla') ? ' — and with a navigator like Isla, you might even find it' : ''}.`],
   },
 });
 rival('mq_eb_dunn', 'polestar_islands', 'loguetown', 'Captain "Anchor" Dunn', 'Captain of the Anchor Pirates', 6000000, { hair: 'short', hairColor: '#212121', top: '#263238', bottom: '#37474f', hat: 'tricorne', hatColor: '#212121', beard: true, bulk: 1.2 }, { alert: 'Only one crew rides the mountain this week. Mine.' });
@@ -240,22 +261,29 @@ chapter('nb_rakesh', { part: 1, island: 'rakesh', role: 'ship' }, {
   },
 });
 
+const SOLVEIG = offerOf('nb_solveig', {
+  pirate: 'Solveig Brandt watched you take Bacca\'s crew apart and wants to sail with you — hear her out (in the town square).',
+  marine: 'Solveig Brandt watched you take Bacca\'s crew apart and wants to serve aboard your ship — hear her out (in the town square).',
+  hunter: 'Solveig Brandt watched you take Bacca\'s crew apart and wants to hunt with you — hear her out (in the town square).',
+});
+const BACCA = T.quest('nb_bacca', 'Help Rudd stop the Bacca Pirates terrorising Swallow Island (police station).', 'nb_rudd');
 chapter('nb_swallow', { part: 1, island: 'swallow_island', role: 'crew' }, {
-  all: { name: 'The Flying Undersea Swallow', tasks: [T.quest('nb_bacca', 'Help Rudd stop the Bacca Pirates terrorising Swallow Island (police station).', 'nb_rudd')] },
+  all: { name: 'The Flying Undersea Swallow' },
   pirate: {
     lure: 'a pirate crew terrorising Swallow Island has a captain worth humbling — and the island has people worth recruiting',
     summary: 'The Bacca Pirates are squeezing Swallow Island. Beat them, and maybe someone there will want to sail with you.',
     contact: hc('swallow_island', 'pirate', 'outside the Swallow Town bar'),
-    meet: ['The Bacca Pirates think this island is theirs. The police can\'t stop them. Rudd at the station is at his wits\' end.', 'A crew is made of people who\'ve seen you fight for something. Go and fight for Swallow Island — then find someone to sail with.'],
-    tasks: [T.quest('nb_bacca', 'Help Rudd stop the Bacca Pirates terrorising Swallow Island (police station).', 'nb_rudd'), T.crew(1, 'Recruit a crewmate — someone who\'s seen what you can do.')],
-    wait: 'Bacca first. Then a crew.',
-    done: ['Now you look like a captain. A crew behind you — that\'s the thing the Grand Line can\'t take away.', (ctx) => onward(ctx.char, 'Last stop before the mountain:')],
+    meet: ['The Bacca Pirates think this island is theirs. The police can\'t stop them. Rudd at the station is at his wits\' end.', 'A crew is made of people who\'ve seen you fight for something. Go and fight for Swallow Island — and someone who saw it might ask to sail with you.'],
+    tasks: [BACCA, SOLVEIG.pirate],
+    wait: 'Bacca first.',
+    done: [(ctx) => (aboard(ctx, 'nb_solveig') ? 'Now you look like a captain. A crew behind you — that\'s the thing the Grand Line can\'t take away.' : 'Bacca\'s finished, and the island will remember you. No crewmate yet? Your call. The ones worth having will ask again.'), (ctx) => onward(ctx.char, 'Last stop before the mountain:')],
   },
   marine: {
     lure: 'the Swallow Island post is overrun by the Bacca Pirates',
     summary: 'Lieutenant Halvard\'s post can\'t handle the Bacca Pirates alone.',
     contact: hc('swallow_island', 'marine', 'at the Swallow Island Marine post'),
     meet: ['The Bacca Pirates have the island by the throat. The police chief, Rudd, is a good man — help him.', 'Bacca is twenty-six million. Take him, and you\'ll never pay for a drink in this town again.'],
+    tasks: [BACCA, SOLVEIG.marine],
     wait: 'Rudd is at the police station.',
     done: ['Bacca in irons. The whole North Blue branch is talking about you.', (ctx) => onward(ctx.char, 'Report to')],
   },
@@ -264,27 +292,35 @@ chapter('nb_swallow', { part: 1, island: 'swallow_island', role: 'crew' }, {
     summary: 'Bacca: twenty-six million berries. Koni, his first mate: a tidy sum on top.',
     contact: hc('swallow_island', 'hunter', 'outside the Swallow Town inn'),
     meet: ['Twenty-six million for Bacca. That\'s a real poster. Rudd at the police station will help you find him.', 'I\'ll take my usual cut. You\'ll take the rest — and a name for yourself.'],
+    tasks: [BACCA, SOLVEIG.hunter],
     wait: 'Tracks lead to the old temple. Bacca\'s men go that way.',
     done: ['Twenty-six million. You\'ve outgrown this island, hunter.', (ctx) => onward(ctx.char, 'Next:')],
   },
 });
 
+const OTTO = offerOf('nb_otto', {
+  pirate: 'Otto the champion has dreamed of the sea since he was a boy, and wants to sail with you — hear him out (by the ring).',
+  marine: 'Otto the champion wants to enlist and serve under you — hear him out (by the ring).',
+  hunter: 'Otto the champion wants to come along as your partner — hear him out (by the ring).',
+});
+const CUP = T.quest('nb_notice_cup', 'Win the Notice Cup at the Longarm Boxing Club (Ulrich).', 'nb_ulrich');
 chapter('nb_notice', { part: 1, island: 'notice', role: 'crew' }, {
-  all: { name: 'The Notice Cup', tasks: [T.quest('nb_notice_cup', 'Win the Notice Cup at the Longarm Boxing Club (Ulrich).', 'nb_ulrich')] },
+  all: { name: 'The Notice Cup' },
   pirate: {
     lure: 'the Notice Cup is the best place in the North Blue to find a fighter for your crew',
     summary: 'The Notice Cup is where the North Blue\'s toughest fists meet. The winner gets a purse; you might get a crewmate.',
     contact: hc('notice', 'pirate', 'outside the Notice bar'),
-    meet: ['The Cup\'s on. Otto, the champion, has never been beaten — and he\'s been dreaming of the sea since he was a boy.', 'Beat him, and ask him to sail with you. That\'s how the good crews start.'],
-    tasks: [T.quest('nb_notice_cup', 'Win the Notice Cup at the Longarm Boxing Club (Ulrich).', 'nb_ulrich'), T.crew(1, 'Recruit a crewmate — Otto the champion dreams of the sea.')],
+    meet: ['The Cup\'s on. Otto, the champion, has never been beaten — and he\'s been dreaming of the sea since he was a boy.', 'Beat him, and he might just ask to sail with you. That\'s how the good crews start.'],
+    tasks: [CUP, OTTO.pirate],
     wait: 'The Longarm Boxing Club. Ulrich runs the Cup.',
-    done: ['You beat Otto AND took him to sea. Notice will be talking about that for years.', (ctx) => onward(ctx.char, 'Last stop before the mountain:')],
+    done: [(ctx) => (aboard(ctx, 'nb_otto') ? 'You beat Otto AND took him to sea. Notice will be talking about that for years.' : 'You beat Otto, and left him on the dock. Your call — but he\'ll be asking every captain who comes through now.'), (ctx) => onward(ctx.char, 'Last stop before the mountain:')],
   },
   marine: {
     lure: 'the Notice Cup draws fighters the Navy would like to recruit',
     summary: 'The Navy scouts the Notice Cup for fighters. Lieutenant Garm wants to see what you can do.',
     contact: hc('notice', 'marine', 'at the Notice Marine post'),
     meet: ['The Cup is the best fighting in the North Blue. Enter it. Show the town what a Marine can do.', 'Win, and the recruiters in Deul will know your name.'],
+    tasks: [CUP, OTTO.marine],
     wait: 'Ulrich at the Longarm Boxing Club takes the entries.',
     done: ['Champion of Notice — and a Marine. I\'ll write to Deul tonight.', (ctx) => onward(ctx.char, 'Report to')],
   },
@@ -293,20 +329,26 @@ chapter('nb_notice', { part: 1, island: 'notice', role: 'crew' }, {
     summary: 'The Notice Cup purse is big, honest money — and every bounty broker in the North Blue watches the winner.',
     contact: hc('notice', 'hunter', 'outside the Notice bank'),
     meet: ['The Cup purse, and the brokers\' attention. Both worth having.', 'Win, and I\'ll have better posters for you.'],
+    tasks: [CUP, OTTO.hunter],
     wait: 'Go and win.',
     done: ['Champion! The brokers in Deul are already asking about you.', (ctx) => onward(ctx.char, 'Next:')],
   },
 });
 
+const INGRID = offerOf('nb_ingrid', {
+  pirate: 'Dr. Ingrid Falk, the Army Hospital\'s surgeon, wants to be ship\'s doctor to a crew bound for the Grand Line — hear her out (at the Army Hospital).',
+  marine: 'Dr. Ingrid Falk, the Army Hospital\'s surgeon, wants to serve as ship\'s surgeon under your command — hear her out (at the Army Hospital).',
+  hunter: 'Dr. Ingrid Falk, the Army Hospital\'s surgeon, wants to partner a hunter going over the mountain — hear her out (at the Army Hospital).',
+});
 chapter('nb_deul', { part: 1, island: 'deul', role: 'last' }, {
   pirate: {
     name: 'The Last Port of the North', lure: 'Deul is the last big port before the mountain — and a rival crew is racing you there',
     summary: 'Deul, capital of the North, is the last port before Reverse Mountain. Captain Olav "Frost-Beard" means to ride the mountain first — and he sinks anyone who tries to beat him.',
     contact: { name: 'Skarn the Fence', title: 'Harbour Fence', look: { hair: 'long', hairColor: '#9e9e9e', top: '#263238', bottom: '#212121', hat: 'beanie', hatColor: '#37474f', scarEye: true }, at: { town: 'deul_capital', door: 'inn' }, where: 'outside the Eagle Barracks Inn' },
     meet: ['A rookie crew bound for the mountain? Then you\'ve got a problem. Olav Frost-Beard is in the harbour, and he sinks anyone who might beat him up the canal.', 'Deal with Olav. And don\'t even think about the Grand Line without a real ship and a Log Pose.'],
-    tasks: [T.defeat('mq_nb_olav', 'Beat Captain Olav "Frost-Beard" at the Deul harbour.'), T.ship(), T.logPose()],
+    tasks: [T.defeat('mq_nb_olav', 'Beat Captain Olav "Frost-Beard" at the Deul harbour.'), T.ship(), T.logPose(), INGRID.pirate],
     wait: 'Olav\'s still in port. Ship, Log Pose, Olav.',
-    done: ['Frost-Beard, beaten. The Marines will have your face on a poster by morning — congratulations.', 'Reverse Mountain is southeast of here, where the Red Line meets the Grand Line. Stay in the middle of the canal, and don\'t fight the current.'],
+    done: ['Frost-Beard, beaten. The Marines will have your face on a poster by morning — congratulations.', (ctx) => `${aboard(ctx, 'nb_ingrid') ? 'And you\'ve talked the Army\'s surgeon into sailing with you. The King will be furious. Good. ' : ''}Reverse Mountain is southeast of here, where the Red Line meets the Grand Line. Stay in the middle of the canal, and don't fight the current.`],
     reward: { bounty: 9000000 },
   },
   marine: {
@@ -314,9 +356,9 @@ chapter('nb_deul', { part: 1, island: 'deul', role: 'last' }, {
     summary: 'Lieutenant Hask of the North Blue branch has orders for you — and a pirate to stop first.',
     contact: { npc: 'nb_hask', where: 'at the North Blue Marine Branch, Deul' },
     meet: ['So you\'re the one. Headquarters wants you in the Grand Line — G-8, at Navarone.', 'But first: Olav Frost-Beard is in our harbour, planning to ride the mountain. Arrest him. Then take the cutter we\'re lending you, and go.'],
-    tasks: [T.defeat('mq_nb_olav', 'Arrest Captain Olav "Frost-Beard" at the Deul harbour.')],
+    tasks: [T.defeat('mq_nb_olav', 'Arrest Captain Olav "Frost-Beard" at the Deul harbour.'), INGRID.marine],
     wait: 'Olav is at the harbour.',
-    done: ['Olav in irons. You\'re ready. The cutter is at the pier.', 'Ride the current over Reverse Mountain and report to G-8. Justice goes with you.'],
+    done: ['Olav in irons. You\'re ready. The cutter is at the pier.', (ctx) => `${aboard(ctx, 'nb_ingrid') ? 'Dr. Falk\'s transfer papers came through — she sails as your ship\'s surgeon. ' : ''}Ride the current over Reverse Mountain and report to G-8. Justice goes with you.`],
     reward: navyShip,
   },
   hunter: {
@@ -324,9 +366,9 @@ chapter('nb_deul', { part: 1, island: 'deul', role: 'last' }, {
     summary: 'Captain Olav "Frost-Beard": seven million, in port, planning to ride Reverse Mountain.',
     contact: { name: 'Registrar Voll', title: 'Deul Bounty Office', look: { hair: 'short', hairColor: '#eceff1', top: '#37474f', bottom: '#263238', glasses: true }, at: { town: 'deul_capital', door: 'bounty' }, where: 'outside the Deul Bounty Office' },
     meet: ['Olav Frost-Beard. Seven million, and he\'s in our harbour. Catch him before he reaches the mountain.', 'Beyond the mountain the posters get bigger. So do the pirates. Get a ship that can take the Grand Line, and a Log Pose.'],
-    tasks: [T.defeat('mq_nb_olav', 'Bring in Captain Olav "Frost-Beard" (฿7,000,000) at the Deul harbour.'), T.ship(), T.logPose()],
+    tasks: [T.defeat('mq_nb_olav', 'Bring in Captain Olav "Frost-Beard" (฿7,000,000) at the Deul harbour.'), T.ship(), T.logPose(), INGRID.hunter],
     wait: 'Olav\'s at the harbour.',
-    done: ['Seven million. The North Blue is too small for you now.', 'Reverse Mountain is southeast of here. The Grand Line pays better — and bites harder.'],
+    done: ['Seven million. The North Blue is too small for you now.', (ctx) => `Reverse Mountain is southeast of here. The Grand Line pays better — and bites harder${aboard(ctx, 'nb_ingrid') ? '. Good thing you\'re taking a doctor' : ''}.`],
   },
 });
 rival('mq_nb_olav', 'deul', 'deul_capital', 'Captain Olav "Frost-Beard"', 'Captain of the Frost Pirates', 7000000, { hair: 'long', hairColor: '#e0f7fa', top: '#37474f', bottom: '#263238', hat: 'beanie', hatColor: '#0d47a1', bulk: 1.3 }, { style: 'brawler', weapon: undefined, alert: 'The mountain is MINE this year!' });
@@ -392,22 +434,29 @@ chapter('wb_ilisia', { part: 1, island: 'ilisia', role: 'ship' }, {
   },
 });
 
+const BYRON = offerOf('wb_byron', {
+  pirate: 'Byron has always wanted to play for a pirate crew — hear him out (at the Music Hall).',
+  marine: 'Byron wants to play for your ship\'s company — the Navy could use a song — hear him out (at the Music Hall).',
+  hunter: 'Byron wants to come along and play while you hunt — hear him out (at the Music Hall).',
+});
+const SLAVERS = T.quest('wb_toroa_slavers', 'Stop the slavers preying on Toroa\'s musicians (Byron, at the Music Hall).', 'wb_byron');
 chapter('wb_toroa', { part: 1, island: 'toroa', role: 'crew' }, {
-  all: { name: 'A Long Line of Musicians', tasks: [T.quest('wb_toroa_slavers', 'Stop the slavers preying on Toroa\'s musicians (Byron, at the Music Hall).', 'wb_byron')] },
+  all: { name: 'A Long Line of Musicians' },
   pirate: {
     lure: 'slavers are snatching Toroa\'s musicians — and a crew needs a musician',
     summary: 'Slavers are snatching Toroa\'s musicians. Byron the fiddler is next on their list — and every crew needs a musician.',
     contact: hc('toroa', 'pirate', 'outside the Toroa bar'),
-    meet: ['Slavers. They\'re taking musicians off the street and shipping them to Sabaody. Byron at the Music Hall is trying to stop them alone.', 'Stop them. And a crew without a song is just a boat full of people. Find yourself a crewmate.'],
-    tasks: [T.quest('wb_toroa_slavers', 'Stop the slavers preying on Toroa\'s musicians (Byron, at the Music Hall).', 'wb_byron'), T.crew(1, 'Recruit a crewmate — Byron has always wanted to play for a pirate crew.')],
+    meet: ['Slavers. They\'re taking musicians off the street and shipping them to Sabaody. Byron at the Music Hall is trying to stop them alone.', 'Stop them. And remember: a crew without a song is just a boat full of people.'],
+    tasks: [SLAVERS, BYRON.pirate],
     wait: 'The slavers first. The Music Hall.',
-    done: ['A crew, and a song for it. Now you\'re a pirate crew.', (ctx) => onward(ctx.char, 'Last stop before the mountain:')],
+    done: [(ctx) => (aboard(ctx, 'wb_byron') ? 'A crew, and a song for it. Now you\'re a pirate crew.' : 'The slavers are finished. Byron\'s still playing in the Hall — your call. The song keeps.'), (ctx) => onward(ctx.char, 'Last stop before the mountain:')],
   },
   marine: {
     lure: 'slavers are operating out of Toroa',
     summary: 'Slavers are taking people off the streets of Toroa. Lieutenant Corra wants them stopped.',
     contact: hc('toroa', 'marine', 'at the Toroa Marine post'),
     meet: ['Slavers. On the Navy\'s watch. Byron at the Music Hall has been tracking them.', 'Help him. Justice isn\'t only for those with a price on their heads.'],
+    tasks: [SLAVERS, BYRON.marine],
     wait: 'The Music Hall.',
     done: ['The slavers are finished. The musicians are home. That\'s Justice.', (ctx) => onward(ctx.char, 'Report to')],
   },
@@ -416,27 +465,35 @@ chapter('wb_toroa', { part: 1, island: 'toroa', role: 'crew' }, {
     summary: 'The families of Toroa pooled their savings for the slavers\' capture.',
     contact: hc('toroa', 'hunter', 'outside the Toroa inn'),
     meet: ['Slavers. The worst kind. The whole town chipped in.', 'Byron at the Music Hall knows where they are.'],
+    tasks: [SLAVERS, BYRON.hunter],
     wait: 'Byron. The Music Hall.',
     done: ['The families wept. They paid, too. Good work.', (ctx) => onward(ctx.char, 'Next:')],
   },
 });
 
+const CHIARA = offerOf('wb_chiara', {
+  pirate: 'Chiara, Old Ottavio\'s granddaughter, wants to see the sea with you — hear her out (by the Instrument Makers\' Guild).',
+  marine: 'Chiara, Old Ottavio\'s granddaughter, wants to serve aboard your ship — hear her out (by the Instrument Makers\' Guild).',
+  hunter: 'Chiara, Old Ottavio\'s granddaughter, wants to hunt with you — hear her out (by the Instrument Makers\' Guild).',
+});
+const CONVOY = T.quest('wb_esperia_convoy', 'Deal with the bandits robbing the instrument convoy (Old Ottavio, Instrument Makers\' Guild).', 'wb_ottavio');
 chapter('wb_esperia', { part: 1, island: 'esperia', role: 'crew' }, {
-  all: { name: 'The Humming Swordsman', tasks: [T.quest('wb_esperia_convoy', 'Deal with the bandits robbing the instrument convoy (Old Ottavio, Instrument Makers\' Guild).', 'wb_ottavio')] },
+  all: { name: 'The Humming Swordsman' },
   pirate: {
     lure: 'Esperia\'s instrument makers need a protector — and pay in favours',
     summary: 'Bandits are robbing Esperia\'s instrument convoys. Help Old Ottavio, then find a crewmate who can keep up with you.',
     contact: hc('esperia', 'pirate', 'outside the Esperia bar'),
-    meet: ['The instrument makers are losing their convoys to bandits. Old Ottavio at the Guild wants them stopped.', 'Help him. Then find a crewmate — the Grand Line is no place to sail alone.'],
-    tasks: [T.quest('wb_esperia_convoy', 'Deal with the bandits robbing the instrument convoy (Old Ottavio).', 'wb_ottavio'), T.crew(1, 'Recruit a crewmate — the Grand Line is no place to sail alone.')],
+    meet: ['The instrument makers are losing their convoys to bandits. Old Ottavio at the Guild wants them stopped.', 'Help him. And keep your eyes open — the Grand Line is no place to sail alone.'],
+    tasks: [CONVOY, CHIARA.pirate],
     wait: 'Ottavio first.',
-    done: ['A crew, and a town that sings your name. Good.', (ctx) => onward(ctx.char, 'Last stop before the mountain:')],
+    done: [(ctx) => (aboard(ctx, 'wb_chiara') ? 'A crew, and a town that sings your name. Good.' : 'A town that sings your name, anyway. Chiara will keep — she\'s waited this long.'), (ctx) => onward(ctx.char, 'Last stop before the mountain:')],
   },
   marine: {
     lure: 'bandits are robbing the Esperia convoys',
     summary: 'Esperia\'s convoys are being robbed. The Navy protects trade.',
     contact: hc('esperia', 'marine', 'at the Esperia Marine post'),
     meet: ['The convoys. Robbed again. See Old Ottavio at the Guild.', 'The Navy protects trade. Go.'],
+    tasks: [CONVOY, CHIARA.marine],
     wait: 'Ottavio. The Guild.',
     done: ['The convoys are safe. Well done.', (ctx) => onward(ctx.char, 'Report to')],
   },
@@ -445,29 +502,35 @@ chapter('wb_esperia', { part: 1, island: 'esperia', role: 'crew' }, {
     summary: 'The convoy bandits\' leader has a poster. Rosso the agent wants him.',
     contact: hc('esperia', 'hunter', 'outside the Esperia inn'),
     meet: ['The convoy bandits. Their leader has a poster. See Ottavio at the Guild.', 'Timing, darling.'],
+    tasks: [CONVOY, CHIARA.hunter],
     wait: 'Ottavio. The Guild.',
     done: ['Perfect timing. Here\'s your fee.', (ctx) => onward(ctx.char, 'Next:')],
   },
 });
 
+const FIORA = offerOf('wb_fiora', {
+  pirate: 'Fiora Vespa, the sharpshooter of Gunsmith Row, wants out of Las Camp — on a crew bound for the Grand Line. Hear her out (on Gunsmith Row).',
+  marine: 'Fiora Vespa, the sharpshooter of Gunsmith Row, wants to sign on under the only honest badge in Las Camp — yours. Hear her out (on Gunsmith Row).',
+  hunter: 'Fiora Vespa, the sharpshooter of Gunsmith Row, wants to partner up: your posters, her rifle. Hear her out (on Gunsmith Row).',
+});
 chapter('wb_lascamp', { part: 1, island: 'las_camp', role: 'last' }, {
   pirate: {
     name: 'A Job for the Gang', lure: 'Capone "Gang" Bege is recruiting in Las Camp, and a job for him is a ticket to the Grand Line',
     summary: 'Capone "Gang" Bege runs Las Camp from a fortress of a restaurant. He\'s about to take his Fire Tank Pirates into the Grand Line — and he\'s hiring.',
     contact: hc('las_camp', 'pirate', 'outside the Las Camp inn'),
     meet: ['Bege is heading for the Grand Line, and he wants a job done before he goes. Do it, and every gang in the West Blue will know your name.', 'Get a ship that can take the Grand Line, and a Log Pose. Then see Bege at the Ristorante Castello.'],
-    tasks: [T.quest('wb_bege_job', 'Do a job for Capone "Gang" Bege (Ristorante Castello).', 'wb_bege'), T.ship(), T.logPose()],
+    tasks: [T.quest('wb_bege_job', 'Do a job for Capone "Gang" Bege (Ristorante Castello).', 'wb_bege'), T.ship(), T.logPose(), FIORA.pirate],
     wait: 'Bege, a ship, a Log Pose.',
-    done: ['Bege says you\'re "family". Coming from him, that\'s a compliment — and a poster.', 'Reverse Mountain is northeast of here. Ride the current up — and don\'t look back.'],
+    done: ['Bege says you\'re "family". Coming from him, that\'s a compliment — and a poster.', (ctx) => `${aboard(ctx, 'wb_fiora') ? 'And the Vespa girl\'s sailing with you? Vito will be furious. Wonderful. ' : ''}Reverse Mountain is northeast of here. Ride the current up — and don't look back.`],
   },
   marine: {
     name: 'The Fire Tank Family', lure: 'the Las Camp police want the Fire Tank Family brought down before it reaches the Grand Line',
     summary: 'Commissioner Gordo has been trying to bring down Capone Bege\'s Fire Tank Family for years. The Navy is finally helping.',
     contact: hc('las_camp', 'marine', 'at the Las Camp Marine post'),
     meet: ['Bege is about to take the Fire Tank Family into the Grand Line. Commissioner Gordo wants him first.', 'Help Gordo. Then take the cutter we\'re lending you and report to G-8, at the foot of Reverse Mountain.'],
-    tasks: [T.quest('wb_fire_tank_bust', 'Help Commissioner Gordo bring down the Fire Tank Family (Police Headquarters).', 'wb_gordo')],
+    tasks: [T.quest('wb_fire_tank_bust', 'Help Commissioner Gordo bring down the Fire Tank Family (Police Headquarters).', 'wb_gordo'), FIORA.marine],
     wait: 'Gordo, at Police Headquarters.',
-    done: ['The Fire Tank Family, broken. Headquarters wants you in the Grand Line.', 'The cutter is at the pier. Reverse Mountain is northeast. Report to G-8.'],
+    done: ['The Fire Tank Family, broken. Headquarters wants you in the Grand Line.', (ctx) => `The cutter is at the pier${aboard(ctx, 'wb_fiora') ? ', and Miss Vespa has signed on as your sharpshooter — Gordo says she\'s the best shot in the city' : ''}. Reverse Mountain is northeast. Report to G-8.`],
     reward: navyShip,
   },
   hunter: {
@@ -475,31 +538,36 @@ chapter('wb_lascamp', { part: 1, island: 'las_camp', role: 'last' }, {
     summary: 'Vito, Gotti and Capone Bege himself — the Fire Tank Family\'s posters are the richest in the West Blue.',
     contact: hc('las_camp', 'hunter', 'outside the bounty office'),
     meet: ['The boss finally approved it. The Fire Tank Family: every one of them. See Commissioner Gordo at Police Headquarters.', 'And get a ship that can take the Grand Line, and a Log Pose. After this, you won\'t be welcome in Las Camp.'],
-    tasks: [T.quest('wb_fire_tank_bust', 'Help Commissioner Gordo bring down the Fire Tank Family (Police Headquarters).', 'wb_gordo'), T.ship(), T.logPose()],
+    tasks: [T.quest('wb_fire_tank_bust', 'Help Commissioner Gordo bring down the Fire Tank Family (Police Headquarters).', 'wb_gordo'), T.ship(), T.logPose(), FIORA.hunter],
     wait: 'Gordo, a ship, a Log Pose.',
-    done: ['The whole Fire Tank Family. The office has never paid out this much.', 'Reverse Mountain is northeast of here. The Grand Line pays better.'],
+    done: ['The whole Fire Tank Family. The office has never paid out this much.', (ctx) => `Reverse Mountain is northeast of here. The Grand Line pays better${aboard(ctx, 'wb_fiora') ? ' — and Fiora never misses' : ''}.`],
   },
 });
 
+const TAVO = offerOf('wb_tavo', {
+  pirate: 'Tavo "Reef-Runner" Corrales can steer through anything that floats, and wants to take your wheel — hear him out (at the Snake Eyes Inn).',
+  marine: 'Tavo "Reef-Runner" Corrales wants to swear the oath and take your cutter\'s wheel — hear him out (at the Snake Eyes Inn).',
+  hunter: 'Tavo "Reef-Runner" Corrales knows every shallow pirates run for, and wants to partner up — hear him out (at the Snake Eyes Inn).',
+});
 chapter('wb_soja', { part: 1, island: 'soja_island', role: 'last' }, {
-  all: { name: 'The Velvet Sable', tasks: [T.defeat('mq_wb_sable', 'Beat Captain "Velvet" Sable at the Soja pier.'), T.ship(), T.logPose()] },
+  all: { name: 'The Velvet Sable', tasks: [T.defeat('mq_wb_sable', 'Beat Captain "Velvet" Sable at the Soja pier.'), T.ship(), T.logPose(), TAVO.pirate] },
   pirate: {
     lure: 'Soja is the last quiet port before the mountain — though a rival crew is there already',
     summary: 'Captain Velvet Sable is in Soja, and she sinks anyone who might beat her up the mountain.',
     contact: hc('soja_island', 'pirate', 'outside the Soja bar'),
     meet: ['Velvet Sable\'s in port. She\'s sunk three rookie crews this season.', 'Beat her. Get a ship that can take it, and a Log Pose.'],
     wait: 'Sable, a ship, a Log Pose.',
-    done: ['Sable\'s beaten, and you\'ve a poster. Welcome to piracy.', 'Reverse Mountain is northeast. Don\'t look back.'],
+    done: ['Sable\'s beaten, and you\'ve a poster. Welcome to piracy.', (ctx) => `${aboard(ctx, 'wb_tavo') ? 'Tavo at your wheel? You\'ll make the mountain in record time. ' : ''}Reverse Mountain is northeast. Don't look back.`],
     reward: { bounty: 9000000 },
   },
   marine: {
     lure: 'a pirate captain who sinks rookie crews is in port at Soja',
     summary: 'Captain Velvet Sable sinks rookie crews on their way to the mountain. Arrest her.',
     contact: hc('soja_island', 'marine', 'at the Soja Marine post'),
-    tasks: [T.defeat('mq_wb_sable', 'Arrest Captain "Velvet" Sable at the Soja pier.')],
+    tasks: [T.defeat('mq_wb_sable', 'Arrest Captain "Velvet" Sable at the Soja pier.'), TAVO.marine],
     meet: ['Velvet Sable. In port. Arrest her.', 'Then take the cutter and report to G-8, beyond the mountain.'],
     wait: 'Sable is at the pier.',
-    done: ['Sable in irons. The cutter is yours. Report to G-8.', 'Reverse Mountain is northeast.'],
+    done: ['Sable in irons. The cutter is yours. Report to G-8.', (ctx) => `Reverse Mountain is northeast.${aboard(ctx, 'wb_tavo') ? ' Corrales has sworn in — he\'ll take the wheel.' : ''}`],
     reward: navyShip,
   },
   hunter: {
@@ -507,6 +575,7 @@ chapter('wb_soja', { part: 1, island: 'soja_island', role: 'last' }, {
     summary: 'Captain Velvet Sable: seven million berries.',
     contact: hc('soja_island', 'hunter', 'outside the Soja bank'),
     meet: ['Sable. Seven million. At the pier.', 'Then a ship, and a Log Pose. The Grand Line waits.'],
+    tasks: [T.defeat('mq_wb_sable', 'Beat Captain "Velvet" Sable at the Soja pier.'), T.ship(), T.logPose(), TAVO.hunter],
     wait: 'Sable, a ship, a Log Pose.',
     done: ['Seven million. The Grand Line is next.', 'Reverse Mountain is northeast.'],
   },
@@ -514,22 +583,29 @@ chapter('wb_soja', { part: 1, island: 'soja_island', role: 'last' }, {
 rival('mq_wb_sable', 'soja_island', 'soja_village', 'Captain "Velvet" Sable', 'Captain of the Velvet Pirates', 7000000, { hair: 'long', hairColor: '#212121', top: '#4a148c', bottom: '#212121', hat: 'tricorne', hatColor: '#4a148c', fem: true }, { alert: 'Another rookie for the bottom of the sea.' });
 
 // ================================================================= SOUTH BLUE
+const YAGUARA = offerOf('sb_yaguara', {
+  pirate: 'Yaguara the Mink fights like a storm and wants to see the sea at your side — hear him out (in the town square).',
+  marine: 'Yaguara the Mink wants to fight under your command — hear him out (in the town square).',
+  hunter: 'Yaguara the Mink wants to hunt at your side — hear him out (in the town square).',
+});
+const OPEN = T.quest('sb_karate_open', 'Win the Karate Island Open (Grandmaster Ippon\'s dojo; the entry fee is ฿500).', 'sb_ippon', undefined, { manual: true });
 chapter('sb_karate', { part: 1, island: 'karate_island', role: 'crew' }, {
-  all: { name: 'The Karate Island Open', tasks: [T.quest('sb_karate_open', 'Win the Karate Island Open (Grandmaster Ippon\'s dojo; the entry fee is ฿500).', 'sb_ippon', undefined, { manual: true })] },
+  all: { name: 'The Karate Island Open' },
   pirate: {
     lure: 'the Karate Island Open is where the South Blue\'s fighters show off — good crew material',
     summary: 'The Karate Island Open is on. Win it — and maybe someone you beat will want to sail with you.',
     contact: hc('karate_island', 'pirate', 'outside the Karate Island restaurant'),
     meet: ['The Open. Every dojo on the island sends its best. Win it, and you\'ll have your pick of fighters for a crew.', 'Grandmaster Ippon takes the entries. Five hundred berries.'],
-    tasks: [T.quest('sb_karate_open', 'Win the Karate Island Open (Grandmaster Ippon; entry ฿500).', 'sb_ippon', undefined, { manual: true }), T.crew(1, 'Recruit a crewmate — Yaguara fights like a storm and wants to see the sea.')],
-    wait: 'The Open first. Then a crew.',
-    done: ['Champion AND captain. The dojos will be talking about you for a generation.', (ctx) => onward(ctx.char, 'Next, sail for')],
+    tasks: [OPEN, YAGUARA.pirate],
+    wait: 'The Open first.',
+    done: [(ctx) => (aboard(ctx, 'sb_yaguara') ? 'Champion AND captain. The dojos will be talking about you for a generation.' : 'Champion of the Open! The Mink\'s still in the square, if you ever want a storm on your side.'), (ctx) => onward(ctx.char, 'Next, sail for')],
   },
   marine: {
     lure: 'the Navy scouts the Karate Island Open for recruits — and wants a Marine to win it',
     summary: 'The Navy wants a Marine to win the Open. Lieutenant Kenta is watching.',
     contact: hc('karate_island', 'marine', 'at the Karate Island Marine post'),
     meet: ['A Marine hasn\'t won the Open in twelve years. Change that.', 'Grandmaster Ippon takes entries. Five hundred berries.'],
+    tasks: [OPEN, YAGUARA.marine],
     wait: 'The Open. Go.',
     done: ['A Marine champion! The recruiters will line up now.', (ctx) => onward(ctx.char, 'Report to')],
   },
@@ -538,34 +614,42 @@ chapter('sb_karate', { part: 1, island: 'karate_island', role: 'crew' }, {
     summary: 'The Open\'s purse, and the attention of every broker in the South Blue.',
     contact: hc('karate_island', 'hunter', 'outside the Karate Island inn'),
     meet: ['The purse is big. The attention is bigger. Win it.', 'Grandmaster Ippon takes the entries.'],
+    tasks: [OPEN, YAGUARA.hunter],
     wait: 'Win it.',
     done: ['Champion! Mama Pim is proud.', (ctx) => onward(ctx.char, 'Next:')],
   },
 });
 
+const KILLA = offerOf('sb_killa', {
+  pirate: 'Killa, the rebels\' sharpshooter, would rather shoot for your crew than wait for the next war — hear her out (by the Rebel Command).',
+  marine: 'Killa, the rebels\' sharpshooter, will shoot for a Marine who fought for Tumi — hear her out (by the Rebel Command).',
+  hunter: 'Killa, the rebels\' sharpshooter, wants to hunt with you — hear her out (by the Rebel Command).',
+});
+const TOWER = T.quest('sb_tumi_tower', 'Help Inti\'s rebels take back the Tower of Tumi.', 'sb_inti');
 chapter('sb_tumi', { part: 1, island: 'tumi', role: 'crew' }, {
   all: {
     name: 'The Tower of Tumi', contact: { npc: 'sb_inti', where: 'at the Rebel Command in Tumi' },
-    tasks: [T.quest('sb_tumi_tower', 'Help Inti\'s rebels take back the Tower of Tumi.', 'sb_inti')],
     wait: 'The tower. We go when you\'re ready.',
   },
   pirate: {
     lure: 'the rebels of Tumi need fighters — and fighters make crewmates',
     summary: 'Inti\'s rebels are trying to take back the Tower of Tumi from a bandit lord.',
     meet: ['You\'re a pirate? Good. We need fighters, not saints.', 'Help us take the tower. Some of my people might follow you to sea afterwards.'],
-    tasks: [T.quest('sb_tumi_tower', 'Help Inti\'s rebels take back the Tower of Tumi.', 'sb_inti'), T.crew(1, 'Recruit a crewmate.')],
+    tasks: [TOWER, KILLA.pirate],
     done: ['The tower is ours. Tumi is free. Go well, captain.', (ctx) => onward(ctx.char, 'Next, sail for')],
   },
   marine: {
     lure: 'a bandit lord holds the Tower of Tumi',
     summary: 'A bandit lord holds the Tower of Tumi, and the rebels are trying to take it back. The Navy should help.',
     meet: ['A Marine? We don\'t usually trust Marines. But the bandit lord in the tower is worse.', 'Help us take it.'],
+    tasks: [TOWER, KILLA.marine],
     done: ['The tower is ours. Maybe the Navy isn\'t so bad.', (ctx) => onward(ctx.char, 'Report to')],
   },
   hunter: {
     lure: 'the bandit lord of Tumi has a poster',
     summary: 'The bandit lord in the Tower of Tumi has a price on his head.',
     meet: ['A hunter? The man in the tower has a poster. We just want him gone.', 'Help us take the tower.'],
+    tasks: [TOWER, KILLA.hunter],
     done: ['The tower is ours. Take his poster, hunter — you earned it.', (ctx) => onward(ctx.char, 'Next:')],
   },
 });
@@ -628,10 +712,16 @@ chapter('sb_samba', { part: 1, island: 'samba_kingdom', role: 'ship' }, {
   },
 });
 
+const AUGIE = offerOf('sb_augie', {
+  pirate: 'Augie "Adze" Tarbell, the shipyard\'s youngest apprentice, wants to keep your ship afloat in the Grand Line — hear him out (at the St. Briss Shipyard).',
+  marine: 'Augie "Adze" Tarbell, the shipyard\'s youngest apprentice, wants to sign on as shipwright aboard your ship — hear him out (at the St. Briss Shipyard).',
+  hunter: 'Augie "Adze" Tarbell, the shipyard\'s youngest apprentice, wants to come along and fix whatever your hunting breaks — hear him out (at the St. Briss Shipyard).',
+});
+const GYRO = T.quest('sb_crab_hand', 'Deal with Crab-Hand Gyro, who has been raiding the St. Briss Shipyard (Master Carvel).', 'sb_carvel');
 chapter('sb_briss', { part: 1, island: 'briss_kingdom', role: 'last' }, {
   all: {
     name: 'The St. Briss Shipyard',
-    tasks: [T.quest('sb_crab_hand', 'Deal with Crab-Hand Gyro, who has been raiding the St. Briss Shipyard (Master Carvel).', 'sb_carvel'), T.ship(), T.logPose()],
+    tasks: [GYRO, T.ship(), T.logPose(), AUGIE.pirate],
   },
   pirate: {
     lure: 'Briss is the last port before the mountain — and the St. Briss Shipyard is in trouble',
@@ -639,17 +729,17 @@ chapter('sb_briss', { part: 1, island: 'briss_kingdom', role: 'last' }, {
     contact: hc('briss_kingdom', 'pirate', 'outside the Briss bar'),
     meet: ['Crab-Hand Gyro raids the shipyard every week. Master Carvel would give anything to be rid of him.', 'Deal with Gyro, get a ship that can take the Grand Line and a Log Pose — and you\'re ready.'],
     wait: 'Gyro, a ship, a Log Pose.',
-    done: ['Gyro beaten, a ship from Carvel, and a poster with your face. Welcome to piracy.', 'Reverse Mountain is northwest of here. Ride the current — and don\'t look back.'],
+    done: ['Gyro beaten, a ship from Carvel, and a poster with your face. Welcome to piracy.', (ctx) => `${aboard(ctx, 'sb_augie') ? 'And Carvel\'s let his best apprentice go with you. Look after the boy — and he\'ll look after your hull. ' : ''}Reverse Mountain is northwest of here. Ride the current — and don't look back.`],
     reward: { bounty: 9000000 },
   },
   marine: {
     lure: 'the St. Briss Shipyard is being raided by pirates',
     summary: 'Crab-Hand Gyro is raiding the St. Briss Shipyard. Lieutenant Albrecht wants him stopped before you go.',
     contact: hc('briss_kingdom', 'marine', 'at the Briss Marine post'),
-    tasks: [T.quest('sb_crab_hand', 'Deal with Crab-Hand Gyro, who has been raiding the St. Briss Shipyard (Master Carvel).', 'sb_carvel')],
+    tasks: [GYRO, AUGIE.marine],
     meet: ['Headquarters wants you in the Grand Line — G-8, at Navarone. But Gyro first: he raids the shipyard every week.', 'Master Carvel will help you find him.'],
     wait: 'Gyro. Master Carvel knows where.',
-    done: ['Gyro in irons. Carvel gave you a ship, I hear — the Navy will add its own. Report to G-8.', 'Reverse Mountain is northwest of here.'],
+    done: ['Gyro in irons. Carvel gave you a ship, I hear — the Navy will add its own. Report to G-8.', (ctx) => `Reverse Mountain is northwest of here.${aboard(ctx, 'sb_augie') ? ' Young Tarbell signed on as your shipwright — keep him busy.' : ''}`],
     reward: navyShip,
   },
   hunter: {
@@ -657,30 +747,36 @@ chapter('sb_briss', { part: 1, island: 'briss_kingdom', role: 'last' }, {
     summary: 'Crab-Hand Gyro: sixteen million berries.',
     contact: hc('briss_kingdom', 'hunter', 'outside the Briss inn'),
     meet: ['Gyro. Sixteen million. Master Carvel at the shipyard wants him gone.', 'Then a ship and a Log Pose. The Grand Line is next door.'],
+    tasks: [GYRO, T.ship(), T.logPose(), AUGIE.hunter],
     wait: 'Gyro, a ship, a Log Pose.',
     done: ['Sixteen million! The Grand Line is next.', 'Reverse Mountain is northwest of here.'],
   },
 });
 
+const DELPHINE = offerOf('sb_delphine', {
+  pirate: 'Delphine Larkspur, who drew the Royal Army\'s maps until she saw what they were for, wants to navigate for you — hear her out (at the Blue Bloom Inn).',
+  marine: 'Delphine Larkspur, the army cartographer who walked out, would navigate for a Marine who protects people — hear her out (at the Blue Bloom Inn).',
+  hunter: 'Delphine Larkspur drew the roads the war\'s worst men ride, and wants to help you hunt them — hear her out (at the Blue Bloom Inn).',
+});
 chapter('sb_centaurea', { part: 1, island: 'centaurea', role: 'last' }, {
-  all: { name: 'Mad Maxi', tasks: [T.defeat('mq_sb_maxi', 'Beat Captain "Mad" Maxi at the Centaurea pier.'), T.ship(), T.logPose()] },
+  all: { name: 'Mad Maxi', tasks: [T.defeat('mq_sb_maxi', 'Beat Captain "Mad" Maxi at the Centaurea pier.'), T.ship(), T.logPose(), DELPHINE.pirate] },
   pirate: {
     lure: 'Centaurea is the last port before the mountain — though a rival crew is there already',
     summary: 'Captain Mad Maxi is in Centaurea, and he sinks anyone who might beat him up the mountain.',
     contact: hc('centaurea', 'pirate', 'outside the Centaurea bar'),
     meet: ['Mad Maxi\'s in port. He burns rival ships at anchor.', 'Beat him. And get a real ship and a Log Pose.'],
     wait: 'Maxi, a ship, a Log Pose.',
-    done: ['Maxi\'s beaten, and you\'ve a poster. Welcome to piracy.', 'Reverse Mountain is northwest. Don\'t look back.'],
+    done: ['Maxi\'s beaten, and you\'ve a poster. Welcome to piracy.', (ctx) => `${aboard(ctx, 'sb_delphine') ? 'The schoolteacher from the Blue Bloom\'s going with you? Funny — she reads a chart like a soldier. ' : ''}Reverse Mountain is northwest. Don't look back.`],
     reward: { bounty: 9000000 },
   },
   marine: {
     lure: 'a pirate who burns rival ships at anchor is in port at Centaurea',
     summary: 'Captain Mad Maxi burns ships at anchor. Arrest him.',
     contact: hc('centaurea', 'marine', 'at the Centaurea Marine post'),
-    tasks: [T.defeat('mq_sb_maxi', 'Arrest Captain "Mad" Maxi at the Centaurea pier.')],
+    tasks: [T.defeat('mq_sb_maxi', 'Arrest Captain "Mad" Maxi at the Centaurea pier.'), DELPHINE.marine],
     meet: ['Mad Maxi. In port. Arrest him.', 'Then take the cutter and report to G-8, beyond the mountain.'],
     wait: 'Maxi is at the pier.',
-    done: ['Maxi in irons. The cutter is yours. Report to G-8.', 'Reverse Mountain is northwest.'],
+    done: ['Maxi in irons. The cutter is yours. Report to G-8.', (ctx) => `Reverse Mountain is northwest.${aboard(ctx, 'sb_delphine') ? ' And your new navigator\'s papers are in order — I didn\'t ask what her old name was.' : ''}`],
     reward: navyShip,
   },
   hunter: {
@@ -688,6 +784,7 @@ chapter('sb_centaurea', { part: 1, island: 'centaurea', role: 'last' }, {
     summary: 'Captain Mad Maxi: seven million berries.',
     contact: hc('centaurea', 'hunter', 'outside the Centaurea inn'),
     meet: ['Maxi. Seven million. At the pier.', 'Then a ship, and a Log Pose.'],
+    tasks: [T.defeat('mq_sb_maxi', 'Beat Captain "Mad" Maxi at the Centaurea pier.'), T.ship(), T.logPose(), DELPHINE.hunter],
     wait: 'Maxi, a ship, a Log Pose.',
     done: ['Seven million. The Grand Line is next.', 'Reverse Mountain is northwest.'],
   },

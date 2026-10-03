@@ -1,7 +1,7 @@
 // Crew menu: found your own pirate crew (name + Jolly Roger), the roster of
 // companions ("nakama"), and — for Marines — the fleet under your command.
 import { h, clear, add } from './dom.js';
-import { CREW_ROLES } from '../game/crew.js';
+import { CREW_ROLES, crewWords } from '../game/crew.js';
 import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { persist } from '../game/lineage.js';
 import { uiImg } from './icon.js';
@@ -100,9 +100,10 @@ function fleetInfo(game) {
 
 function roster(game, body, rerender) {
   const crew = game.crew.members();
-  add(body, h('h3', 'Nakama'));
-  add(body, h('p.muted', 'Companions you recruit in the world. Look for "Join my crew!" when you talk to people — a navigator, a cook, a doctor… Up to two fighters follow you on land; everyone else stays with the ship and helps from there.'));
-  if (!crew.length) add(body, h('p', 'Your crew is just you, for now. Every great pirate started alone.'));
+  const W = crewWords(game.state.char);
+  add(body, h('h3', W.list));
+  add(body, h('p.muted', `People you meet in the world who'd sail with you — a navigator, a cook, a doctor… Someone with a yellow ! over their head has an offer to make: yes or no, it's your call, and anyone you turn down can be asked again later (${W.ask}). Up to two fighters follow you on land; everyone else stays with the ship, at their station on deck when you're aboard.`));
+  if (!crew.length) add(body, h('p', W.list === 'Nakama' ? 'Your crew is just you, for now. Every great pirate started alone.' : 'It\'s just you, for now. Everyone starts out alone.'));
   const list = h('div.list');
   for (const m of crew) {
     const role = CREW_ROLES[m.role] || CREW_ROLES.fighter;

@@ -22,9 +22,10 @@ import paradise2 from './paradise2.js';
 import newWorld from './newWorld.js';
 import newWorld2 from './newWorld2.js';
 import redLine from './redLine.js';
+import crewmates from './crewmates.js';
 import mainStory from './mainStory.js';
 
-export const PACKS = [eastBlue, northBlue, westBlue, southBlue, paradise1, paradise2, newWorld, newWorld2, redLine, mainStory];
+export const PACKS = [eastBlue, northBlue, westBlue, southBlue, paradise1, paradise2, newWorld, newWorld2, redLine, crewmates, mainStory];
 
 for (const p of PACKS) {
   if (p.abilities) registerAbilities(p.abilities, 'npc');

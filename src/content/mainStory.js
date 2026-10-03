@@ -574,11 +574,12 @@ export function installMainStory(game) {
     }
     const talks = TALKS.get(a.npcId);
     if (talks) for (const t of talks) if (stageOf(game, t.qid) === t.stage) return 'M!';
-    // (someone who can start the side quest the story needs)
+    // (someone who can start the side quest the story needs — or who'd sail with you, and is waiting for your answer)
     const cur = current(game);
     if (cur?.s && !cur.s.done) {
       const d = questDef(cur.qid), st = d?.stages[cur.s.stage];
       if (st?.goal?.type === 'quest' && st.npc === a.npcId && !game.quests.state(st.goal.quest)) return 'M!';
+      if (st?.offer && st.offer === a.npcId && !a.crewId) return 'M!';
     }
     return null;
   };
@@ -610,6 +611,14 @@ export function installMainStory(game) {
       if (d.when && !safe(() => d.when(c, game))) continue;
       const pos = approxPos(game, d);
       if (pos) out.push({ ...pos, label: shortName(d.name), color: '#ffd54f', side: true });
+    }
+    // people who'd sail with you, waiting to ask (game/crew.js)
+    for (const d of allNpcDefs()) {
+      if (!d.recruit || !d.island || !disc.has(d.island) || !safe(() => game.crew?.offerPending?.(d))) continue;
+      if (d.when && !safe(() => d.when(c, game))) continue;
+      if (d.marker && safe(() => d.marker(c, game)) === '!') continue; // (pinned already, for their own quest)
+      const pos = approxPos(game, d);
+      if (pos) out.push({ ...pos, label: `${shortName(d.name)} — would sail with you`, color: '#ffd54f', side: true, crew: true });
     }
     return out;
   };

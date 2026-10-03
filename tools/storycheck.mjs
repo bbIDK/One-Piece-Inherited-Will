@@ -70,6 +70,26 @@ for (const ch of CHAPTERS.values()) {
 }
 for (const d of TARGETS) checkAt(`target ${d.id}`, d.island, d.at);
 
+// ---- crewmates are offered, never forced: every crew stop and last port of
+// the Blues has someone who'd sail with you ask, on every road (and nobody's
+// story is held up waiting for a crewmate)
+let offers = 0;
+for (const ch of CHAPTERS.values()) {
+  for (const path of PATHS) {
+    const q = questDef(`mq:${ch.id}:${path}`);
+    if (!q) continue;
+    for (const st of q.stages) {
+      if (st.goal?.type === 'crew') err(`${q.id}: step ${st.id} forces a crewmate (make it an offer: T.offer)`);
+      if (!st.offer) continue;
+      offers++;
+      const d = npcDef(st.offer);
+      if (!d?.recruit) err(`${q.id}: offer from ${st.offer}, who'd never join (no recruit)`);
+      else if (d.island !== ch.island) err(`${q.id}: offer from ${st.offer}, who lives on ${d.island} (the chapter is on ${ch.island})`);
+    }
+    if (ch.part === 1 && (ch.role === 'crew' || ch.role === 'last') && !q.stages.some((s) => s.offer)) err(`${q.id}: a ${ch.role} stop with no crewmate's offer`);
+  }
+}
+
 // ---- the plans
 const seen = new Set();
 const fakeChar = (home) => ({ runSeed: 12345, flags: {}, quests: {}, bosses: [], defeated: {}, main: { home, done: [] } });
@@ -114,5 +134,5 @@ for (const [isl] of PROLOGUES) {
   const I = ISLAND_BY_ID[isl];
   if (!I) err(`home ${isl}: no island`);
 }
-console.log(`\n${CHAPTERS.size} chapters, ${PROLOGUES.size} home islands, ${TARGETS.length} targets — ${errors} error(s), ${warns} warning(s)`);
+console.log(`\n${CHAPTERS.size} chapters, ${PROLOGUES.size} home islands, ${TARGETS.length} targets, ${offers} crewmates' offers — ${errors} error(s), ${warns} warning(s)`);
 process.exit(errors ? 1 : 0);

@@ -76,6 +76,13 @@ export const T = {
    */
   flag: (desc = 'Raise your own Jolly Roger: found your crew in the Crew menu (U).') => ({ id: 'flag', desc, goal: { type: 'check', fn: (c) => !!c.crewName }, pin: false }),
   crew: (n = 1, desc = `Recruit ${n > 1 ? n + ' crewmates' : 'a crewmate'} — people who'd follow you anywhere.`) => ({ id: 'crew' + n, desc, goal: { type: 'crew', n } }),
+  /**
+   * Someone who'd sail with you makes you an offer (game/crew.js): the step
+   * is done once it's answered — yes or no, it's yours to choose — so
+   * turning them down never holds the story up (they stay on their island,
+   * and can be asked again). Aboard already, or gone for good: done.
+   */
+  offer: (npc, desc, id = 'o_' + npc) => ({ id, desc, npc, offer: npc, goal: { type: 'check', fn: (c) => !!c.crewOffers?.[npc] || (c.crew || []).some((m) => m.id === npc) || !!c.flags?.['leftCrew_' + npc] } }),
   ship: (desc = 'Get a ship that can survive the Grand Line (a Sloop or bigger).') => ({ id: 'ship', desc, goal: { type: 'ship', grandLine: true } }),
   logPose: (desc = 'Get a Log Pose — no one survives the Grand Line without one.') => ({ id: 'pose', desc, goal: { type: 'item', item: 'log_pose' } }),
   /**

@@ -45,18 +45,160 @@ const HELPERS = `
   };
 `;
 
-/** Stand beside someone, facing them, in the third-person view (for a picture of a conversation). */
+/** Stand in front of someone, facing them, in the third-person view (for a picture of a conversation): on open ground, with room behind for the camera. */
 const besideIn = (page, id) => page.evaluate((id) => {
-  const g = window.OP.game, p = g.player, a = window.__st.actor(id);
+  const g = window.OP.game, p = g.player, a = window.__st.actor(id), w = g.world;
   if (!a) return false;
-  p.x = a.x + 1.6; p.y = a.y + 0.6; p.deck = null;
+  const clear = (x, y) => w.walkable(x, y) && !w.isBlocked?.(x, y);
+  let at = null;
+  for (let k = 0; k < 24 && !at; k++) {
+    const ang = (a.facing ?? Math.PI / 2) + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (Math.PI / 12);
+    const x = w.wx(a.x + Math.cos(ang) * 2.4), y = a.y + Math.sin(ang) * 2.4;
+    const bx = w.wx(a.x + Math.cos(ang) * 6), by = a.y + Math.sin(ang) * 6;
+    if (clear(x, y) && clear(bx, by)) at = { x, y };
+  }
+  at = at || { x: a.x + 1.6, y: a.y + 0.6 };
+  p.x = at.x; p.y = at.y; p.deck = null;
   g.snapCamera?.();
   const rig = g.view3d?.rig;
-  if (rig) { rig.yaw = Math.atan2(a.y - p.y, g.world.dx(p.x, a.x)); rig.pitch = -0.12; }
+  if (rig) { rig.yaw = Math.atan2(a.y - p.y, w.dx(p.x, a.x)); rig.pitch = -0.12; }
   return true;
 }, id);
 
 export const scenarios = {
+  // crewmates are offered, never forced: on the main story in one Blue, the
+  // crew stop's offer (taken), then the last port's (turned down — the
+  // chapter goes on — then asked again and taken), and the ship holding them
+  //   node tools/shot.mjs storycrew --home=dawn_island --path=pirate [--tag=eb]
+  storycrew: {
+    async run(page, snap, args) {
+      const home = String(args.home || 'dawn_island'), path = String(args.path || 'pirate');
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human', { seed: 12345 }); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 11; g.env.storm = 0; g.env.stormTarget = 0; document.querySelector('.look-hint')?.remove(); });
+      await page.evaluate(HELPERS);
+      await step(page, 1);
+      const began = await page.evaluate(({ home, path }) => {
+        const g = window.OP.game, c = g.state.char;
+        // (a pirate needs a flag for the road to fit; a Marine is sworn in by the first chapter)
+        if (path === 'pirate') { c.crewName = 'Offer Pirates'; c.faction = 'pirate'; }
+        g.story.begin(`home_${home}`, path);
+        return window.__st.main();
+      }, { home, path });
+      console.log('began', JSON.stringify(began));
+      // ---- through the story to a chapter that makes an offer; then to its offer
+      const toOffer = async (role) => page.evaluate(async (role) => {
+        const g = window.OP.game, c = g.state.char, S = window.__st;
+        const seen = [];
+        for (let n = 0; n < 12; n++) {
+          const q = g.quests.main();
+          if (!q) { window.OP.step(3); continue; }
+          const def = q.def, st = def.stages.find((s) => s.offer);
+          const ch = g.story.current()?.ch;
+          if (st && ch?.role === role) {
+            // (the island's trouble dealt with: its side quest done, the chapter at the offer)
+            for (const s of def.stages) if (s.goal?.type === 'quest' && !c.quests[s.goal.quest]?.done) c.quests[s.goal.quest] = { stage: 0, done: true, day: 1 };
+            g.quests.setStage(q.id, st.id);
+            return { seen, chapter: q.id, stage: g.quests.stageId(q.id), offer: st.offer, desc: st.desc };
+          }
+          seen.push(q.id);
+          g.quests.complete(q.id);
+          window.OP.step(3);
+        }
+        return { seen, missing: role };
+      }, role);
+      // ---- go to them, and hear the offer
+      const visit = async (id) => page.evaluate(async (id) => {
+        const g = window.OP.game, p = g.player;
+        const m = g.quests.marker(g.quests.main().id);
+        if (!m) return { error: 'no waypoint' };
+        p.mode = 'foot'; p.ship = null; p.deck = null;
+        p.x = m.x + 1.5; p.y = m.y + 1.5;
+        g.snapCamera?.();
+        for (let i = 0; i < 8 && !window.__st.actor(id); i++) window.OP.step(1);
+        const a = window.__st.actor(id);
+        return { at: m.place, here: g.currentIsland?.id || null, found: !!a, marker: a?.questMarker || null };
+      }, id);
+      const offer1 = await toOffer('crew');
+      console.log('first offer', JSON.stringify(offer1));
+      const v1 = await visit(offer1.offer);
+      console.log('visit', JSON.stringify(v1));
+      await besideIn(page, offer1.offer);
+      await step(page, 0.6);
+      const o1 = await page.evaluate((id) => window.__st.open(window.__st.actor(id)), offer1.offer);
+      console.log('offer 1', JSON.stringify(o1, null, 1));
+      await snap('crew-01-first-offer');
+      const yes1 = await page.evaluate(() => window.__st.pick('^Welcome aboard|^Partners|^Welcome aboard\\.'));
+      console.log('took them', JSON.stringify(yes1));
+      await step(page, 1.2);
+      const after1 = await page.evaluate(() => ({ crew: window.OP.game.crew.members().map((m) => `${m.name} (${m.role})`), main: window.__st.main() }));
+      console.log('after the first', JSON.stringify(after1));
+      // ---- the last port: turn them down first
+      const offer2 = await toOffer('last');
+      console.log('second offer', JSON.stringify(offer2));
+      const v2 = await visit(offer2.offer);
+      console.log('visit', JSON.stringify(v2));
+      await besideIn(page, offer2.offer);
+      await step(page, 0.6);
+      const o2 = await page.evaluate((id) => window.__st.open(window.__st.actor(id)), offer2.offer);
+      console.log('offer 2', JSON.stringify(o2, null, 1));
+      await snap('crew-02-second-offer');
+      const no2 = await page.evaluate(() => window.__st.pick('^Not this time'));
+      console.log('turned down', JSON.stringify(no2));
+      await snap('crew-03-turned-down');
+      await page.evaluate(() => window.OP.game.dialogue.close());
+      await step(page, 1.2);
+      const after2 = await page.evaluate((id) => { const g = window.OP.game, c = g.state.char, a = window.__st.actor(id); return { said: c.crewOffers?.[id], marker: a?.questMarker || null, crew: g.crew.count(), main: window.__st.main() }; }, offer2.offer);
+      console.log('after the no', JSON.stringify(after2));
+      // ---- asked again: yes
+      const o3 = await page.evaluate((id) => window.__st.open(window.__st.actor(id)), offer2.offer);
+      console.log('asked again', JSON.stringify(o3, null, 1));
+      await snap('crew-04-ask-again');
+      const ask = await page.evaluate(() => window.__st.pick('^"(Join my crew|Serve under|Partner up|Sail with me)'));
+      console.log('ask', JSON.stringify(ask));
+      await snap('crew-05-again-pitch');
+      const yes2 = await page.evaluate(() => window.__st.pick('^Welcome aboard|^Partners'));
+      console.log('took them', JSON.stringify(yes2));
+      await step(page, 1.2);
+      // ---- the report goes on either way
+      const rep = await page.evaluate(() => {
+        const g = window.OP.game, S = window.__st;
+        if (g.dialogue.active) g.dialogue.close();
+        const q = g.quests.main();
+        const done = q?.def.stages.find((s) => s.id === 'report') ? (g.quests.complete(q.id), true) : false;
+        window.OP.step(3);
+        return { reported: done, crew: g.crew.members().map((m) => `${m.name} (${m.role}${m.fighter ? ', fighter' : ''})`), next: S.main() };
+      });
+      console.log('two aboard', JSON.stringify(rep, null, 1));
+      // ---- the ship holds them: aboard a caravel at the pier, at their stations
+      const ship = await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, c = g.state.char, isl = g.currentIsland;
+        const dock = isl?.docks?.[0];
+        const s = g.giveShip('caravel', dock ? dock.moor.x : p.x + 8, dock ? dock.moor.y : p.y + 8, 'Offer Taker');
+        c.activeShip = s.uid;
+        window.OP.debug.onDeck(s, 0.55, 0);
+        p.mode = 'foot';
+        for (let i = 0; i < 6; i++) window.OP.step(0.5);
+        const hands = g.actors.filter((a) => a.alive && a.handOf === s).map((a) => ({ name: a.name, onDeck: a.deck?.ship === s, title: a.title }));
+        const followers = g.actors.filter((a) => a.alive && a.crewId && a.controller?.kind === 'follower').map((a) => ({ name: a.name, onDeck: a.deck?.ship === s }));
+        const rig = g.view3d?.rig;
+        if (rig) { rig.yaw = s.heading + Math.PI; rig.pitch = -0.35; }
+        return { ship: s.name, hands, followers };
+      });
+      console.log('aboard', JSON.stringify(ship, null, 1));
+      await step(page, 0.5);
+      await snap('crew-06-aboard');
+      // ---- a word from the deck
+      const word = await page.evaluate(() => { const g = window.OP.game, a = g.actors.find((x) => x.alive && x.handOf); if (!a) return null; g.dialogue.open(a, a.def.dialogue); return window.__st.now(); });
+      console.log('a word', JSON.stringify(word));
+      if (word) await snap('crew-07-a-word');
+      await page.evaluate(() => window.OP.game.dialogue.close());
+      await page.evaluate(() => window.OP.game.ui.sideAction('crew'));
+      await step(page, 0.3);
+      await snap('crew-08-crew-menu');
+    },
+  },
+
   // the main story is optional: born to sail your own way (the creation
   // screen), the Quests menu's way back to a calling, the fourth choice with a
   // contact, the journal, and a road set aside and taken up again
@@ -67,7 +209,8 @@ export const scenarios = {
       await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
       await page.evaluate(HELPERS);
       // ---- the creation screen: the story, or none
-      await page.evaluate(() => { window.OP.game.debugBirth = { race: 'human', traits: ['lucky'], seed: 12345 }; window.__st.click('Begin a Lineage'); });
+      // (the loading screen may still be fading over the title: out of the way)
+      await page.evaluate(() => { document.getElementById('boot')?.classList.add('hidden'); window.OP.game.debugBirth = { race: 'human', traits: ['lucky'], seed: 12345 }; window.__st.click('Begin a Lineage'); });
       await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /Accept my fate/.test(b.innerText)), null, { timeout: 60000 });
       await page.waitForTimeout(2400);
       await page.evaluate(() => window.__st.click('Accept my fate'));

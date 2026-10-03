@@ -460,7 +460,19 @@ const npcs = [
     id: 'sb_yaguara', name: 'Yaguara', title: 'Mink karateka', island: 'karate_island', at: { town: 'karate_dojo_town', plaza: true, ox: 3 }, race: 'mink', lethal: false, named: true,
     look: { ...MINK_JAGUAR, top: '#fafafa', bottom: '#fafafa', belt: '#212121' }, level: 11, style: 'electro', moves: ['elec_discharge', 'elec_garchu', 'brawl_knee'], skill: 0.45,
     alert: 'Garchu! Show me your karate!',
-    recruit: { role: 'fighter', requires: (c, g) => g.quests.isDone('sb_karate_open'), pitch: '"You beat me fair — and then you beat the champion. A Mink follows the one who is stronger. Garchu! I\'ll fight at your side, captain."' },
+    recruit: {
+      role: 'fighter', requires: (c, g) => g.quests.isDone('sb_karate_open'),
+      intro: '"Yaguara, of the Mink Tribe of Zou! I crossed half the sea to learn human karate. Electro is lightning; karate is patience. I came for the patience. I\'m still learning it."',
+      pitch: {
+        pirate: '"You beat me fair — and then you beat the champion. A Mink follows the one who is stronger. Garchu! I\'ll fight at your side, captain."',
+        marine: '"You beat me fair — and then you beat the champion. A Mink follows the one who is stronger, even into the Navy. Garchu! Command me, and I\'ll fight at your side."',
+        hunter: '"You beat me fair — and then you beat the champion. A Mink follows the one who is stronger. Hunting together? Garchu! My Electro and your nerve — good partners."',
+        free: '"You beat me fair — and then you beat the champion. A Mink follows the one who is stronger. Garchu! Take me to sea with you."',
+      },
+      again: '"Garchu! I knew the stronger one would come back. My bag is three bananas and a headband. I\'m ready."',
+      declined: '"Hm. Then I will stay and learn more patience. Garchu — but don\'t make me wait too long."',
+      aboard: ['"Garchu! The sea smells like home."', '"My fur stands up before a storm. It\'s standing up now. Mostly."'],
+    },
     marker: (c, g) => (stageOf(g, 'sb_karate_open') === 'r2' ? '!' : null),
     dialogue: (ctx) => ({
       start: 'a',
@@ -1200,7 +1212,19 @@ const npcs = [
     // (the chapter on Tumi promises that some of Inti's people might follow you to sea)
     id: 'sb_killa', name: 'Killa', title: 'Rebel sharpshooter of Tumi', island: 'tumi', at: { town: 'tumi_town', door: 'Rebel Command', ox: -1.8 }, faction: 'revolutionary',
     look: { hair: 'long', hairColor: '#212121', skin: '#a1693f', top: '#bf360c', bottom: '#4e342e', coat: '#6d4c41', hat: 'bandana', hatColor: '#f9a825', fem: true }, level: 9, style: 'sniper', weapon: 'gun',
-    recruit: { role: 'sniper', requires: (c, g) => g.quests.isDone('sb_tumi_tower'), pitch: '"The tower is ours, and Inti doesn\'t need another rifle now. You do. I can hit a gull on the wing from the top of the Sun Gate. Let me prove it on the Grand Line, captain."' },
+    recruit: {
+      role: 'sniper', requires: (c, g) => g.quests.isDone('sb_tumi_tower'),
+      intro: '"Killa. Three years I shot at that tower from behind laundry lines. I\'m the best rifle the rebels had — Inti says so, and Inti never says anything nice."',
+      pitch: {
+        pirate: '"The tower is ours, and Inti doesn\'t need another rifle now. You do. I can hit a gull on the wing from the top of the Sun Gate. Let me prove it on the Grand Line, captain."',
+        marine: '"I don\'t love the Navy. But you fought for Tumi when nobody else would. Put me on your ship\'s guns, officer — I\'ll answer to you, not to a uniform."',
+        hunter: '"The tower is ours, and Inti doesn\'t need another rifle now. You do. You bring them in; I make sure they don\'t run. Partners?"',
+        free: '"The tower is ours, and Inti doesn\'t need another rifle now. You do. I can hit a gull on the wing from the top of the Sun Gate. Let me prove it on the Grand Line."',
+      },
+      again: '"Asking twice? Smart. I don\'t miss twice either."',
+      declined: '"Fine. Somebody has to keep the peace here. You know where the Rebel Command is."',
+      aboard: ['"Powder\'s dry. Guns are run out. Say the word."', '"I can hit a gull on that yardarm from here. I won\'t. Probably."'],
+    },
     dialogue: (ctx) => ({
       start: 'a',
       nodes: {

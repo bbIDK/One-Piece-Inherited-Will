@@ -572,7 +572,19 @@ const npcs = [
     id: 'nb_otto', name: 'Otto', title: 'Longarm boxer, champion of Notice', island: 'notice', race: 'longarm', at: { spot: 'notice_ring' }, faction: 'civilian', level: 9, named: true, lethal: false, duel: true,
     look: { hair: 'spiky', hairColor: '#ff7043', top: '#1565c0', bottom: '#212121', skin: '#f1c9a0' }, style: 'brawler', moves: ['brawl_tackle', 'brawl_knee'], skill: 0.4,
     alert: 'Friend Elbow! Lover Elbow! Here I come!',
-    recruit: { role: 'fighter', requires: (c, g) => g.quests.isDone('nb_notice_cup'), pitch: `"You beat me fair and square. ...Take me to sea! The Bellamy boys left this boring town to be pirates and everyone laughed. Nobody's laughing now. My turn!"` },
+    recruit: {
+      role: 'fighter', requires: (c, g) => g.quests.isDone('nb_notice_cup'),
+      intro: `"Otto, champion of the Notice Cup — well, I was. Longarm boxing: two elbows on each arm, and I use all four. Notice is banks and gardens and tea at four. I've been dreaming of the sea since I could make a fist."`,
+      pitch: {
+        pirate: `"You beat me fair and square. ...Take me to sea! The Bellamy boys left this boring town to be pirates and everyone laughed. Nobody's laughing now. My turn!"`,
+        marine: `"You beat me fair and square — and you wear the Navy's cap. Take me with you! I'll enlist, I'll salute, I'll polish whatever needs polishing. Anything to get out of Notice and hit something that deserves it."`,
+        hunter: `"You beat me fair and square. Hunting pirates, eh? I can hit harder than any poster you've ever cashed. Take me along — partners!"`,
+        free: `"You beat me fair and square. ...Take me to sea! Anywhere but here. I'll throw the punches, you pick the direction."`,
+      },
+      again: `"You're asking? YES. I've been shadow-boxing on the pier every day, waiting for this."`,
+      declined: `"...Yeah. Alright. I'll keep training. Next time you're in Notice, I'll be stronger — and I'll ask again."`,
+      aboard: [`"Four elbows, one ship. Anything comes aboard, I've got it."`, `"Is that a Sea King? ...No? Pity."`],
+    },
     dialogue: (ctx) => ({
       start: 'a',
       nodes: {
@@ -929,7 +941,19 @@ const npcs = [
     // (the chapter on Swallow Island promises someone who'll sail with you once Bacca is beaten)
     id: 'nb_solveig', name: 'Solveig Brandt', title: 'Ice-fisher of Pleasure Town', island: 'swallow_island', at: { town: 'swallow_town', plaza: true, ox: -2.5 },
     look: { hair: 'ponytail', hairColor: '#fff3e0', skin: '#f1d3c0', top: '#455a64', bottom: '#37474f', coat: '#6d4c41', hat: 'bandana', hatColor: '#90a4ae', fem: true }, level: 8, style: 'brawler',
-    recruit: { role: 'fighter', requires: (c, g) => g.quests.isDone('nb_bacca'), pitch: `"I watched you take Bacca's crew apart from behind the fish racks. ...This island's too small for me now. Take me along — I can gut a fish or a pirate, whichever comes first."` },
+    recruit: {
+      role: 'fighter', requires: (c, g) => g.quests.isDone('nb_bacca'),
+      intro: `"Solveig Brandt. I fish the ice off Pleasure Town — harpoon, net, bare hands if I have to. My father fished here, and his father. I'd like to be the first Brandt who sees what's past the horizon."`,
+      pitch: {
+        pirate: `"I watched you take Bacca's crew apart from behind the fish racks. ...This island's too small for me now. Take me along — I can gut a fish or a pirate, whichever comes first."`,
+        marine: `"I watched you take Bacca's crew apart from behind the fish racks. A Marine who actually helps — I didn't think you existed. Sign me on. I'll serve under you, if it means I'm the one doing the helping next time."`,
+        hunter: `"I watched you take Bacca's crew apart from behind the fish racks. Pirates with prices on their heads, and you collect? I can hold a harpoon steady. Partners."`,
+        free: `"I watched you take Bacca's crew apart from behind the fish racks. ...This island's too small for me now. Take me along — I can gut a fish or a pirate, whichever comes first."`,
+      },
+      again: `"Took you long enough. My harpoon's been by the door since the day you sailed off without me."`,
+      declined: `"Your call. The cod won't gut themselves. ...If you ever want a harpoon on your side, I'll be in the square."`,
+      aboard: [`"Shoal off the port bow. Dinner, if anyone's asking."`, `"Colder up here than the ice. I like it."`],
+    },
     dialogue: (ctx) => ({
       start: 'a',
       nodes: {

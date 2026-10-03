@@ -144,6 +144,7 @@ export function createCharacter(legacy, birth, choices) {
     ships: [],
     fleet: [], // every ship you own (see fleet.js); `ships` is where those afloat lie
     crew: [],
+    crewOffers: {}, // offers to sail with you, answered: npc id → { said: 'yes' | 'no', day } (see crew.js)
     discovered: [],
     logPose: { has: false, target: null, last: null, progress: 0, needles: 1 },
     eternalPoses: [],
@@ -325,6 +326,11 @@ export function upgradeChar(c) {
   if (c.freeSail === undefined) c.freeSail = null;
   if (c.mainShelf === undefined) c.mainShelf = null;
   if (c.main) c.freeSail = null;
+  // (from before crewmates asked first: everyone aboard said yes)
+  if (!c.crewOffers) {
+    c.crewOffers = {};
+    for (const m of c.crew || []) c.crewOffers[m.id] = { said: 'yes', day: m.joined || 1 };
+  }
   // the ships you had are the ships you own
   upgradeFleet(c);
   // attribute points from the old breakthrough system are spent automatically
