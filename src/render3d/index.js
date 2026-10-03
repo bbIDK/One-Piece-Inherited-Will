@@ -27,6 +27,7 @@ import { COLLIDE } from '../world/objects.js';
 import { PROP_BUILDERS, VIEWS, FRAME_HOOKS, registerPropBuilder } from './registry.js';
 import { fadeProp, fadeWarmUp } from './props/instancer.js';
 import { instancerStats } from './props3d.js';
+import { VFX } from './vfx/index.js';
 import './chars3d.js';
 
 registerPropBuilder('building', (o, ctx) => buildBuilding(o, ctx));
@@ -211,7 +212,11 @@ export class Renderer3D {
       get firstPerson() { return self.rig.mode === 'first'; },
       get yaw() { return self.rig.yaw; },
       get pitch() { return self.rig.pitch; },
+      /** The 3D effects layer: what it draws, the overlay doesn't. */
+      get vfx() { return self.vfx; },
     };
+    // the combat effects, drawn in 3D (render/fx3d.js leaves out what's drawn there)
+    this.vfx = new VFX(this);
     this.setQuality(this.quality);
     this.terrain.setReach(this.viewChunks, this.seaChunks());
     this.parallelCompile = !!this.renderer.extensions.has('KHR_parallel_shader_compile');
@@ -232,6 +237,7 @@ export class Renderer3D {
     this.sky.sun.castShadow = q !== 'low';
     this.terrain.setDetail?.(q);
     this.water.setDetail?.(q);
+    this.vfx?.setQuality(q);
     // post-processing (ink outlines, grading, bloom, FXAA) on 'high'; on 'low', straight to
     // the screen, or through FXAA alone if the screen has no multisampling of its own
     const want = q !== 'low' ? 'full' : this.msaa ? null : 'lite';
@@ -364,6 +370,7 @@ export class Renderer3D {
     this.shipViews.clear();
     for (const m of this.projViews.values()) this.ents.remove(m);
     this.projViews.clear();
+    this.vfx?.clear();
     this.propOrigin = null;
   }
 
@@ -451,6 +458,8 @@ export class Renderer3D {
     prof('r.entities', t0); t0 = performance.now();
     this.updateViewmodel(game, env);
     prof('r.viewmodel', t0); t0 = performance.now();
+    try { this.vfx.update(game, dt); } catch (e) { if (!this.vfxWarned) { this.vfxWarned = true; console.warn('3D effects failed', e); } this.vfx.hide(); }
+    t0 = performance.now();
 
     const amb = env.ambient || [1, 1, 1];
     tintSprites(Math.min(1, amb[0] * 1.05), Math.min(1, amb[1] * 1.05), Math.min(1, amb[2] * 1.05));
@@ -589,6 +598,7 @@ export class Renderer3D {
     this.tickProps(env, 1 / 60);
     this.updateEntities(game, ox, oy, env, camYaw3);
     if (this.vm) this.vm.root.visible = false;
+    this.vfx.hide();
     const amb = env.ambient || [1, 1, 1];
     tintSprites(Math.min(1, amb[0] * 1.05), Math.min(1, amb[1] * 1.05), Math.min(1, amb[2] * 1.05));
     setNightWindows(Math.max(0, 0.9 - env.daylight));
@@ -1001,6 +1011,16 @@ export class Renderer3D {
     obj.removeFromParent();
   }
 
+  /**
+   * How high a projectile flies: on the 2D "chest line" (y - 0.5), so its
+   * ground point is y + 0.5; a ship's cannonball arcs from her gunport down
+   * into the sea at the end of its range.
+   */
+  projY(pr) {
+    if (pr.arc) { const f = Math.min(1, (pr.traveled || 0) / (pr.range || 1)); return pr.arc.h0 * (1 - f) + pr.arc.apex * 4 * f * (1 - f) - f * 0.2; }
+    return Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5)) + (pr.sprite === 'cannonball' ? 1.3 : 1.15) + (pr.z || 0);
+  }
+
   updateEntities(game, ox, oy, env, camYaw3) {
     const w = this.world;
     const p = game.player;
@@ -1094,20 +1114,14 @@ export class Renderer3D {
       this.detach(v.root); v.dispose?.();
       this.shipViews.delete(s);
     }
-    // projectiles
+    // projectiles (the effects layer draws all but cannonballs: see vfx/projectiles.js)
     const seenP = new Set();
     for (const pr of game.combat.projectiles) {
-      if (pr.delay > 0) continue;
+      if (pr.delay > 0 || this.vfx.proj.owns(pr)) continue;
       seenP.add(pr);
       let m = this.projViews.get(pr);
       if (!m) { m = projectileMesh(pr); this.projViews.set(pr, m); this.ents.add(m); }
-      const h = pr.sprite === 'cannonball' ? 1.3 : 1.15;
-      // projectiles fly on the 2D "chest line" (y - 0.5): their ground point is y + 0.5
-      // (a ship's cannonball arcs from her gunport down into the sea at the end of its range)
-      let y3;
-      if (pr.arc) { const f = Math.min(1, (pr.traveled || 0) / (pr.range || 1)); y3 = pr.arc.h0 * (1 - f) + pr.arc.apex * 4 * f * (1 - f) - f * 0.2; }
-      else y3 = Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5)) + h + (pr.z || 0);
-      m.position.set(w.dx(ox, pr.x), y3, pr.y + 0.5 - oy);
+      m.position.set(w.dx(ox, pr.x), this.projY(pr), pr.y + 0.5 - oy);
     }
     for (const [pr, m] of this.projViews) {
       if (seenP.has(pr)) continue;

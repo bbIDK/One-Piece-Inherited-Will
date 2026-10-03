@@ -18,6 +18,11 @@
 // screen); instead, first person gets screen-space extras: a light swing
 // smear for the player's own attacks, an aura tint at the screen edges and a
 // flash on the side a hit came from.
+//
+// Most shapes and every particle are drawn as real 3D by the effects layer
+// (render3d/vfx/: r.vfx): whatever it claims is left out here, and this
+// overlay keeps the rest — the floating numbers and sound words, the
+// first-person screen extras, and any shape it hasn't taken over.
 import { drawShapeLayer, hasLayer } from './fxshapes.js';
 import { rgba } from './character.js';
 import { actionClip, stanceFor, gunKind } from './anims.js';
@@ -393,9 +398,10 @@ function seg3d(g, r, s, k, c) {
 /** All shapes, ground layer first (the 3D view has no separate underlay pass). */
 export function drawShapes3d(fx, g, r) {
   const c = fx.shapeCtx(r);
+  const V = r.vfx;
   for (const layer of ['ground', 'air']) {
     for (const s of fx.shapes) {
-      if (s.delay > 0) continue;
+      if (s.delay > 0 || (V && V.claims(s, layer))) continue;
       const k = s.max > 0 ? Math.min(1, Math.max(0, 1 - s.life / s.max)) : 0;
       c.s = s;
       g.save();
@@ -411,6 +417,8 @@ export function drawShapes3d(fx, g, r) {
 /** Particles as depth-scaled billboards; velocity streaks follow the projected motion. */
 export function drawParticles3d(fx, g, r, additive, drawPart) {
   const d = r.dpr;
+  const V = r.vfx;
+  if (V && V.on) return; // (all drawn in 3D)
   for (const p of fx.parts) {
     if (!!p.add !== additive) continue;
     // (a diver's bubbles are down under the surface, as deep as the diver was)
