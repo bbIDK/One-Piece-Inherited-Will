@@ -35,7 +35,7 @@ export function installSession(game, { onReturnToTitle }) {
       if (!(dock && s.berth(game.world, dock)) && !s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
     } else if (dock && s.moorAlongside(game.world, dock)) {
       // (a small one ties up right alongside it: step down off the pier onto her deck)
-    } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, !!s.def.big);
+    } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
     return s;
   };
 
@@ -131,9 +131,9 @@ export function startNewCharacter(game, birth, choices) {
     if (dock) { game.giveShip(shipType, dock.moor.x, dock.moor.y, shipType === 'dinghy' ? 'Little Rowboat' : 'Sea Sparrow'); placed = true; }
   }
   if (!placed) {
-    // washed-up castaways: drag a boat onto the nearest beach
-    const s = game.giveShip(shipType, spawn.x, spawn.y + 4, 'Driftwood Raft');
-    s.unstick(world);
+    // castaways: their raft afloat just off the beach they wake on, bow out to sea
+    const s = game.giveShip(shipType, spawn.x, spawn.y, 'Driftwood Raft', { heading: spawn.seaward ?? Math.PI / 2 });
+    if (!s.launchFrom(world, spawn.x, spawn.y, spawn.seaward)) s.unstick(world, true);
   }
   if (isl && isl.id && !char.discovered.includes(isl.id) && isl.name) char.discovered.push(isl.id);
   char.getUpCharges = 1;

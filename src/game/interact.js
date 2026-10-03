@@ -113,6 +113,12 @@ export function findInteraction(game, p) {
   return cands[0];
 }
 
+/** Is there room to stand at (x, y): open ground, clear of walls and props, with a little room behind? */
+export function standable(w, x, y) {
+  if (!WALKABLE[w.type(x, y)] || w.isBlocked(x, y) || w.hitsProp(x, y, 0.4)) return false;
+  return !!WALKABLE[w.type(x, y - 0.4)] && !w.isBlocked(x, y - 0.4);
+}
+
 export function findShore(w, x, y, r) {
   let best = null, bd = Infinity;
   for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
@@ -120,10 +126,7 @@ export function findShore(w, x, y, r) {
       const d = Math.hypot(dx, dy);
       if (d > r || d >= bd) continue;
       const tx = x + dx, ty = y + dy;
-      const t = w.type(tx, ty);
-      if (!WALKABLE[t] || w.isBlocked(tx, ty) || w.hitsProp(tx, ty, 0.4)) continue;
-      // need a little standing room
-      if (!WALKABLE[w.type(tx, ty - 0.4)] || w.isBlocked(tx, ty - 0.4)) continue;
+      if (!standable(w, tx, ty)) continue;
       bd = d; best = { x: Math.floor(tx) + 0.5, y: Math.floor(ty) + 0.8 };
     }
   }

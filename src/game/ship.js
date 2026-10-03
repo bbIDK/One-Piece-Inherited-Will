@@ -297,6 +297,19 @@ export class Ship extends Entity {
     // (already clear where she lies — a boat just moored alongside a pier: leave her be)
     if (!far && this.fits(w, this.x, this.y, this.heading) && !(this.game && this.shipIn(this.game, this.x, this.y, this.heading))) return true;
     const big = this.def.length >= BIG_SHIP;
+    if (far && !big) {
+      // (a small boat found up on the land: to the nearest water she'll float in, any way round)
+      for (let r = 0.5; r < 40; r += 0.5) {
+        for (let a = 0; a < TAU; a += Math.min(0.5, 1.5 / r)) {
+          const x = w.wx(this.x + Math.cos(a) * r), y = this.y + Math.sin(a) * r;
+          for (let k = 0; k < 4; k++) {
+            const h = this.heading + (k * Math.PI) / 2;
+            if (this.fits(w, x, y, h) && !(this.game && this.shipIn(this.game, x, y, h))) { this.x = x; this.y = y; this.heading = h; return true; }
+          }
+        }
+      }
+      return false;
+    }
     const R = big ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big ? 1.5 : 0.5;
     const hs = big ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
     for (const h of hs) {
@@ -308,6 +321,22 @@ export class Ship extends Entity {
         }
       }
       if (!far) break;
+    }
+    return false;
+  }
+
+  /**
+   * Afloat off a beach: the nearest spot out from (x, y) toward bearing `dir`
+   * (or a little either side of it) where her whole hull's in the water, her
+   * bow out to sea. False if there's none within 40 m.
+   */
+  launchFrom(w, x, y, dir) {
+    if (dir === null || dir === undefined) return false;
+    for (let r = this.def.length * 0.5; r < this.def.length * 0.5 + 40; r += 0.5) {
+      for (const da of [0, 0.2, -0.2, 0.45, -0.45, 0.75, -0.75]) {
+        const h = dir + da, px = w.wx(x + Math.cos(h) * r), py = y + Math.sin(h) * r;
+        if (this.fits(w, px, py, h) && !(this.game && this.shipIn(this.game, px, py, h))) { this.x = px; this.y = py; this.heading = h; return true; }
+      }
     }
     return false;
   }

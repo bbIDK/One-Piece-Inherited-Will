@@ -13,7 +13,7 @@ import { Actor } from './actor.js';
 import { baseAttrs, ATTR_KEYS } from './stats.js';
 import { saveChar, saveLegacy, clearChar } from './save.js';
 import { regionAt, SEA_IDS, POS_SCALE, SIZE_SCALE } from '../world/constants.js';
-import { findShore } from './interact.js';
+import { findShore, standable } from './interact.js';
 import { upgradeFleet, recordShip, liveShips } from './fleet.js';
 
 // --------------------------------------------------------------- birth traits
@@ -205,6 +205,29 @@ export function townAt(world, x, y, ids) {
   return null;
 }
 
+/**
+ * Where a castaway wakes on islet `o`: on its beach, open water before them —
+ * the last dry ground with room to stand out along a bearing from its middle,
+ * with water beyond it a boat can float in. Bearings tried round from `a0`;
+ * { x, y, dir (the bearing, out to sea) }, or null if none will do.
+ */
+function isletBeach(world, o, a0) {
+  for (let k = 0; k < 16; k++) {
+    const a = a0 + (k * Math.PI * 2) / 16, c = Math.cos(a), s = Math.sin(a);
+    let beach = null;
+    for (let r = 0; r <= o.r + 30; r += 0.5) {
+      const x = world.wx(o.x + c * r), y = o.y + s * r;
+      if (world.sailable(x, y)) {
+        // (and the sea out past it, not a pool in the rocks)
+        if (beach && world.sailable(world.wx(o.x + c * (r + 8)), o.y + s * (r + 8))) return { ...beach, dir: a };
+        break;
+      }
+      if (standable(world, x, y)) beach = { x: Math.floor(x) + 0.5, y: Math.floor(y) + 0.8 };
+    }
+  }
+  return null;
+}
+
 export function resolveSpawn(world, char, avoid = new Set()) {
   const rng = new RNG(char.runSeed + ':spawn');
   const race = RACES[char.race];
@@ -217,8 +240,10 @@ export function resolveSpawn(world, char, avoid = new Set()) {
     const cands = world.islets.filter((o) => o.region === seaRegion && o.r >= 5);
     if (cands.length) {
       const o = rng.pick(cands);
-      const spot = findShore(world, o.x, o.y, o.r + 2) || { x: o.x, y: o.y };
-      return { x: spot.x, y: spot.y, island: o.rec, town: null, sea, name: 'an uncharted islet' };
+      // (a castaway wakes on its beach, the sea before them, their raft drawn up just off it: see session.js)
+      const beach = isletBeach(world, o, rng.next() * Math.PI * 2);
+      const spot = beach || findShore(world, o.x, o.y, o.r + 2) || { x: o.x, y: o.y };
+      return { x: spot.x, y: spot.y, island: o.rec, town: null, sea, name: 'an uncharted islet', seaward: beach ? beach.dir : null };
     }
   }
   const wanted = race.spawnTowns || HUMAN_STARTERS[sea] || [];
