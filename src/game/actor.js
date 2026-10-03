@@ -524,6 +524,9 @@ export class Actor extends Entity {
    * you leap clean out of the water, leaving a ring on it.
    */
   tryJump(game, charge = 0) {
+    // (a Devil Fruit user still thrashing at the surface, right at the edge of
+    // a pier, a quay or a bank, can haul themselves out — no swimming, no leap)
+    if (this.inWater && this.fruit && !this.gills && !this.sinking && !this.under && this.state === 'idle' && !(this.hitstun > 0) && this.climbOut(game)) return true;
     if (!this.canJump()) return false;
     const J = this.jumpStats();
     const k = clamp(charge, 0, 1);
@@ -985,11 +988,10 @@ export class Actor extends Entity {
       // (the sea frozen over by an Ice Age: a road while it lasts)
       if (this.game && iceAt(this.game, x, y)) return true;
       if (this.canEnterWater()) return true;
-      // A Devil Fruit user won't walk off into the sea, but nothing stops a
-      // jump: over the water between a pier and a ship (or a ship and the
-      // pier), on and off a boat — fall short and the sea has you. Nor is a
-      // ship lying right alongside the sea: a step down onto her deck (or a
-      // stride across the gap to it) is no walk into the water.
+      // (folk with a Devil Fruit keep out of the sea on foot — but nothing
+      // stops a jump: over the water between a pier and a ship, on and off a
+      // boat; nor is a ship lying right alongside the sea: a step down onto
+      // her deck, or a stride across the gap to it, is no walk into the water)
       if ((this.z || 0) > 0.05 || this.vz > 0) return true;
       return !!this.game?.deckAt?.(x, y, -0.6);
     }
@@ -1011,7 +1013,10 @@ export class Actor extends Entity {
   }
 
   canEnterWater() {
-    if (this.fruit && !this.inWater) return false; // Devil Fruit users won't walk into the sea
+    // (folk with a Devil Fruit keep out of the sea; you're free to walk into
+    // it — no invisible wall round every shore — and the sea takes your
+    // strength: get out before it drags you down)
+    if (this.fruit && !this.inWater && !this.isPlayer) return false;
     return this.swimmer !== false;
   }
   /** The body is a circle around (x, y) (the 3D model stands centred on it). */
@@ -1316,7 +1321,8 @@ export class Actor extends Entity {
    */
   climbOnto(game, L) {
     if (L.ship || this.climb || this.state !== 'idle' || this.hitstun > 0 || this.helpless() || this.status.root) return false;
-    if (this.inWater && ((this.fruit && !this.gills) || this.under)) return false;
+    // (a Devil Fruit user can still grab the edge while they're thrashing at the surface — not once the sea's taken their strength)
+    if (this.inWater && ((this.fruit && !this.gills && this.sinking) || this.under)) return false;
     const s = this.look?.scale || 1;
     const air = (this.z || 0) > 0.05 || !!this.vz;
     const from = this.inWater ? this.groundAt(game, this.x, this.y) : this.feetH(game);
@@ -1515,7 +1521,8 @@ export class Actor extends Entity {
       const i = this.intent;
       let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
       if (this.inWater) {
-        if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.2;
+        // (a Devil Fruit user thrashes their way along, enough to reach an edge close by)
+        if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.3;
         else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1);
       }
       else if (this.wading) sp *= 1 - 0.42 * clamp(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);

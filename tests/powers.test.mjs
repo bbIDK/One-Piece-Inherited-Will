@@ -276,7 +276,12 @@ test('Ice Age freezes the sea into a road; when it thaws, a Devil Fruit user is 
   const g = arena({ seaFrom: X0 + 2 });
   const you = body(g, { player: true, fruit: 'hie' });
   you.x = X0 + 1;
-  assert.ok(!you.canOccupy(g.world, X0 + 4, Y0), 'a Devil Fruit user won\'t walk into the sea');
+  // (no invisible wall round the sea for you — you may walk into it, and the sea takes your strength — but folk with a fruit keep out of it)
+  assert.ok(you.canOccupy(g.world, X0 + 4, Y0), 'you can walk into the sea');
+  const local = body(g, { fruit: 'hie' });
+  local.x = X0 + 1;
+  assert.ok(!local.canOccupy(g.world, X0 + 4, Y0), 'a Devil Fruit user of the world won\'t walk into the sea');
+  local.alive = false;
   use(g, you, 'hie_ageand');
   assert.ok(iceAt(g, X0 + 4, Y0), 'ice over the water');
   assert.ok(you.canOccupy(g.world, X0 + 4, Y0), 'a road of ice');

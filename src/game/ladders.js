@@ -17,10 +17,10 @@ export function ladderFoot(ship, l) {
   return { x: p.x, y: p.y, deck: { t: l.t, v: l.s * (hbAt(l.t, d.B) * d.walk - 0.5) } };
 }
 
-/** Can `a` climb a ladder now? On their feet, or swimming at the surface (the sea takes a Devil Fruit user's strength: no climbing out of it). */
+/** Can `a` climb a ladder now? On their feet, or swimming at the surface (a Devil Fruit user only while still thrashing there: once the sea's taken their strength, no). */
 export function canClimb(a) {
   if (a.state !== 'idle' || a.climb || a.onShip || a.mode === 'sail' || a.hitstun > 0 || a.status?.freeze || a.status?.root) return false;
-  if (a.inWater && (a.under || (a.fruit && !a.gills))) return false;
+  if (a.inWater && (a.under || (a.fruit && !a.gills && a.sinking))) return false;
   return !((a.z || 0) > 0.3);
 }
 
