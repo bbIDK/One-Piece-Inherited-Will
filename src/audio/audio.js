@@ -175,6 +175,10 @@ export class Audio {
     if (name === 'parry' && at) k.perfect = !!at.parryPerfect;
     if ((name === 'jump' || name === 'jump_big' || name === 'land_heavy' || name === 'ko' || name === 'dodge') && at && at === p) k.surf = this.foley?.surf();
     if (name === 'door' && /chest/i.test(p?.controller?.interaction?.label || '')) k.chest = true;
+    // (a fruit picked off a tree: its own rustle and snap comes with the 'foraged' event — see foley.js — not a buckle's clink)
+    if (name === 'equip' && /^Pick (?!up)/.test(p?.controller?.interaction?.label || '')) return;
+    // (into the water: how hard it was hit, for the size of the splash)
+    if ((name === 'splash' || name === 'splash_big') && at && at.vz < -1 && k.v === undefined) k.v = -at.vz;
     if (name === 'equip' && p && !!p.drawn !== this.lastDrawn) {
       // (the weapon drawn or put away)
       const kind = p.weapon?.kind;

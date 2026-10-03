@@ -359,6 +359,8 @@ function cases() {
     ['parry@perfect', 'parry', { perfect: true }], ['block@sword', 'block', { sword: true }], ['door@chest', 'door', { chest: true }],
     ['equip@draw', 'equip', { draw: 'sword' }], ['equip@sheathe', 'equip', { draw: 'sheathe' }], ['thunder@near', 'thunder', { far: 0 }], ['thunder@far', 'thunder', { far: 1 }],
     ['jump@sand', 'jump', { surf: 'sand' }], ['jump@wood', 'jump', { surf: 'wood' }], ['land@stone', 'land', { surf: 'stone', s: 0.9 }], ['land@snow', 'land', { surf: 'snow', s: 0.9 }],
+    // (into the water by how hard: a step in, a hop, two metres down, off a ship's deck, off a mast)
+    ['splash@step', 'splash', { v: 3 }], ['splash@hop', 'splash', { v: 6 }], ['splash@2m', 'splash', { v: 9.4 }], ['splash@deck', 'splash_big', { v: 14 }], ['splash@mast', 'splash_big', { v: 19 }],
   ];
   for (const [id, name, k] of ctx) out.push({ id, play: (a) => a.sfx(name, null, k) });
   // Haki, each in three voices (game/haki.js hakiSignature: the same sound, each character's own way)

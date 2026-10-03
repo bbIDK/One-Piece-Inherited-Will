@@ -61,6 +61,12 @@ export function surfaceHit(v, t, surf, s = 1) {
   }
 }
 
+/**
+ * How big a splash is: from `k.v` (how fast you hit the water, m/s — a hop in
+ * ~4, two metres down ~9, off a ship's deck 13 or more), else `dflt`.
+ */
+const splashSize = (k, dflt) => (k.v ? clamp((k.v - 2) / 10, 0.25, 1.7) : dflt);
+
 /** How long each kind of swing lasts at size 1 (seconds: see swing). */
 const SWING_LEN = { fists: 0.15, sword: 0.15, legs: 0.2, heavy: 0.3, staff: 0.22, axe: 0.36 };
 
@@ -614,26 +620,27 @@ export const SFX = {
       v.crackle(0.01, 0.15, 5, { freq: 1200, gain: 0.05 });
     },
   },
-  /** Into the water: the surface breaks, the plunge, bubbles, spray falling back. */
-  splash: { prio: 5, cd: 0.18, max: 2, send: 0.08, play: (v) => M.splash(v, 0, 1) },
-  /** Into the water from a height (or something big in it). */
-  splash_big: {
-    prio: 6, cd: 0.25, max: 2, send: 0.15, duck: 0.15,
-    play(v) {
-      v.noise(0, 0.75, { type: 'lowpass', freq: 950, q: 0.4, sweep: 140, gain: 0.45 });
-      v.thump(0, { f0: 90, f1: 42, dur: 0.3, gain: 0.3 });
-      v.noise(0.05, 0.4, { freq: 2600, q: 0.6, sweep: 900, gain: 0.1 });
-      v.bubbles(0.05, 0.5, 14, { f: 260, spread: 0.9, gain: 0.07 });
-      M.drips(v, 0.2, 0.7, 8, 1.2);
-    },
-  },
-  /** Leaping out of the water: it parts with a bloop, then the drips. */
+  /**
+   * Into the water — sized by how hard you hit it (`k.v`, metres a second:
+   * a step in, a hop, a dive off a ship's deck): see motifs.js plunge.
+   */
+  splash: { prio: 5, cd: 0.18, max: 2, send: 0.08, play: (v, k) => M.plunge(v, 0, splashSize(k, 0.45)) },
+  /** Into the water from a height (or something big in it): the same, bigger, its spray raining back for a second and more. */
+  splash_big: { prio: 6, cd: 0.25, max: 2, send: 0.15, duck: 0.15, side: 0.6, play: (v, k) => M.plunge(v, 0, splashSize(k, 1)) },
+  /**
+   * Out of the water (leaping out, or hauling yourself out onto a ledge or a
+   * deck): the water letting go of you with a sucking shloop, and pouring off
+   * — a stream at first, then drips, fewer and fewer.
+   */
   splash_out: {
     prio: 5, cd: 0.2, max: 2,
     play(v) {
-      v.noise(0, 0.35, { freq: 1300, q: 0.5, sweep: 420, gain: 0.24 });
-      v.tone(0.04, 0.12, { freq: 300, to: 620, gain: 0.07 });
-      M.drips(v, 0.15, 0.6, 6, 1);
+      v.noise(0, 0.3, { type: 'lowpass', freq: 300, sweep: 1400, gain: 0.55, attack: 0.08 });
+      v.tone(0.06, 0.12, { freq: 260, to: 560, gain: 0.13, attack: 0.01 });
+      v.noise(0.12, 0.7, { freq: 2200, q: 0.6, sweep: 1400, gain: 0.25, attack: 0.03 });
+      v.bubbles(0.1, 0.25, 5, { f: 900, spread: 0.9, gain: 0.06 });
+      // (drips: dense as the water streams off, thinning out)
+      for (let i = 0; i < 18; i++) v.bubble(0.15 + Math.pow(Math.random(), 1.8) * 1.1, { f: rnd(1300, 3200), rise: rnd(1.3, 1.9), dur: rnd(0.015, 0.03), gain: rnd(0.03, 0.07) });
     },
   },
   /** Wading: water sloshing round the legs. */
@@ -1035,13 +1042,41 @@ export const SFX = {
       v.noise(0.12, 0.2, { type: 'highpass', freq: 3000, gain: 0.03 });
     },
   },
-  /** A wild fruit picked: leaves rustle, the stalk pops. */
+  /**
+   * A fruit picked off a tree: the leaves rustling as the hand goes in among
+   * them, the stalk snapping (a sharp crack, a few splinters), the branch
+   * springing back with a swish and a last shiver of leaves, the fruit in the
+   * hand.
+   */
   forage: {
-    prio: 5, cd: 0.2, max: 1,
-    play(v) { v.noise(0, 0.18, { type: 'highpass', freq: 2500, gain: 0.05, attack: 0.02 }); M.pop(v, 0.12, 0.6, 520); },
+    prio: 5, cd: 0.2, max: 1, variants: 3,
+    play(v, k) {
+      const T = [0.2, 0.24, 0.17][k.rr];
+      v.noise(0, T + 0.05, { freq: 4200, q: 0.7, gain: 0.1, attack: T * 0.6, curve: 'lin' });
+      v.crackle(0.02, T, 10, { freq: 4500, spread: 1, gain: 0.07, q: 1.5 });
+      // the snap
+      v.noise(T, 0.005, { type: 'highpass', freq: 1800, gain: 0.6, attack: 0.0005 });
+      v.crackle(T + 0.002, 0.03, 4, { freq: 2800, spread: 0.8, gain: 0.2, len: 0.008 });
+      v.tone(T, 0.03, { freq: 900, to: 600, gain: 0.04 });
+      // the branch springing back, its leaves shivering
+      v.whoosh(T + 0.03, 0.22, { f0: 1500, f1: 3500, q: 0.8, gain: 0.08, peak: 0.3 });
+      v.crackle(T + 0.06, 0.35, 12, { freq: 5000, spread: 1, gain: 0.035, q: 1.5 });
+      // the fruit in the hand
+      v.thump(T + 0.05, { f0: 260, f1: 160, dur: 0.05, gain: 0.08 });
+    },
   },
-  /** Something picked up off the ground. */
-  pickup: { prio: 5, cd: 0.1, max: 1, play: (v) => { v.noise(0, 0.05, { freq: 1800, q: 1, gain: 0.08 }); v.tone(0.03, 0.08, { freq: 880, to: 1320, type: 'triangle', gain: 0.05 }); } },
+  /** Something picked up off the ground: a rustle of the clothes as you bend, the hand closing on it, into the bag. */
+  pickup: {
+    prio: 5, cd: 0.1, max: 1,
+    play(v) {
+      v.whoosh(0, 0.2, { f0: 900, f1: 2200, q: 0.7, gain: 0.12, peak: 0.5, flutter: 20 });
+      v.noise(0.12, 0.03, { freq: 1400, q: 1.2, gain: 0.4, attack: 0.002 });
+      v.thump(0.12, { f0: 320, f1: 200, dur: 0.04, gain: 0.15 });
+      v.noise(0.3, 0.09, { type: 'lowpass', freq: 900, gain: 0.3, attack: 0.006 });
+      v.thump(0.3, { f0: 180, f1: 110, dur: 0.06, gain: 0.18 });
+      v.ring(0.31, rnd(2400, 3000), 0.08, 0.02, [1, 2.4]);
+    },
+  },
   /** A Log Pose needle settling: a small magnetic chime. */
   logset: { prio: 6, cd: 1, max: 1, bus: 'ui', send: 0.3, play: (v) => { v.tone(0, 0.3, { freq: 2200, to: 2600, gain: 0.01 }); M.chime(v, 0.05, 0.7, [1760, 2637], 0.8); } },
   /** A low-health heartbeat (doki... doki...). */

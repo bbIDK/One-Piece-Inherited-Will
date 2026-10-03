@@ -180,6 +180,33 @@ export function drips(v, t, span, n, s = 1) {
   for (let i = 0; i < n; i++) v.bubble(t + Math.random() * span, { f: rnd(1500, 2900), rise: rnd(1.3, 1.9), dur: rnd(0.018, 0.035), gain: rnd(0.015, 0.035) * s });
 }
 
+/**
+ * A body going into the water, sized `s` (0.25 a step in … 1 a fall of a few
+ * metres … 1.7 off a mast), as such splashes are recorded: a slap you hear
+ * land (broadband, strongest at 125 Hz–1 kHz), the plunge rushing down into
+ * the hole torn open behind you, its collapse a deep gloop and a burst of
+ * bubbles, and the spray thrown up raining back — longer the bigger it was
+ * (half a second for a hop in, near two for a big one).
+ */
+export function plunge(v, t, s = 1) {
+  const q = Math.pow(s, 0.75);
+  // the slap of the surface
+  v.noise(t, 0.012, { type: 'highpass', freq: 700, gain: 0.6 * q, attack: 0.0008 });
+  v.noise(t, 0.06 + 0.04 * s, { freq: 700, q: 0.5, gain: 0.8 * q, attack: 0.002 });
+  v.thump(t, { f0: 150, f1: 55, dur: 0.12 + 0.1 * s, gain: 0.45 * q });
+  // the plunge: the water thrown up and rushing down into the hole behind you (it holds a while: a splash's body is half a second and more)
+  const P = 0.5 + 1.0 * s;
+  v.noise(t + 0.005, P, { color: 'pink', type: 'lowpass', freq: 2200, sweep: 300, gain: 1.4 * q, attack: 0.008, hold: P * 0.25 });
+  v.noise(t + 0.01, P * 0.8, { freq: 1300, q: 0.6, sweep: 600, gain: 0.5 * q, attack: 0.01, hold: P * 0.2 });
+  // the hole closing: a deep gloop, and its bubbles
+  v.tone(t + 0.08 + 0.06 * s, 0.14, { freq: 140 / q, to: 380 / q, gain: 0.2 * q, attack: 0.01 });
+  v.bubbles(t + 0.06, 0.3 + 0.3 * s, Math.round(6 + 12 * s), { f: 520, spread: 1, gain: 0.09 * q, dur: 0.06 });
+  // the spray raining back
+  const R = 0.3 + 1.1 * s;
+  v.noise(t + 0.12, R, { freq: 3000, q: 0.5, sweep: 2200, gain: 0.35 * q, attack: R * 0.2 });
+  for (let i = 0, n = Math.round(6 + 24 * s); i < n; i++) v.bubble(t + 0.15 + Math.pow(Math.random(), 1.4) * R, { f: rnd(1300, 3400), rise: rnd(1.3, 2), dur: rnd(0.012, 0.03), gain: rnd(0.03, 0.07) * q });
+}
+
 /** A splash: the hit of the surface, the plunge, bubbles, the spray coming down. */
 export function splash(v, t, s = 1) {
   v.noise(t, 0.38 * s, { type: 'lowpass', freq: 1800, sweep: 300, gain: 0.3 * s, attack: 0.003 });
