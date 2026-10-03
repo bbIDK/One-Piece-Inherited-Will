@@ -25,6 +25,23 @@ const OAR_REST = { a: -1.15, b: 0.12, f: 1 };
  */
 const SEA_PACE = 2;
 
+const NONE = [];
+/**
+ * The other players' ships as they're drawn here just now, in a multiplayer
+ * voyage (stand-ins: see net/remote.js) — else none. Here they're as solid as
+ * any ship: her side a wall, her decks to stand on and her ladders to climb,
+ * and no hull passes through hers. Nothing of theirs is simulated, though:
+ * their own game sails them, and nobody here takes her helm or her guns.
+ */
+export function theirShips(game) { return game.net?.ships || NONE; }
+/** Every ship there is to stand on or run into: the game's own, and the other players'. */
+export function allShips(game) {
+  const theirs = theirShips(game);
+  return theirs.length ? game.ships.concat(theirs) : game.ships;
+}
+/** Any ship here at all, of anyone's? */
+export function anyShips(game) { return game.ships.length > 0 || theirShips(game).length > 0; }
+
 export class Ship extends Entity {
   constructor(o) {
     super({ ...o, kind: 'ship' });
@@ -199,21 +216,35 @@ export class Ship extends Entity {
     }
     // hulls that overlap (launched on top of each other, shoved together by a
     // current, a collision at speed) ease apart instead of sticking
-    if (game.ships.length > 1) this.separate(game, dt);
+    if (game.ships.length + theirShips(game).length > 1) this.separate(game, dt);
     // (the wake is drawn on the water by the 3D view: see render3d/ships3d.js WakeTrail)
     // carry the crew (and whoever's at the helm, so the view rides with her exactly)
     for (const p of this.passengers) { p.x = this.x; p.y = this.y + 0.01; }
     if (this.captain) { this.captain.x = this.x; this.captain.y = this.y; }
     // and everyone standing on the deck, turning with the ship
-    if (this.aboard && this.aboard.size) {
-      const dh = this.heading - h0, c = Math.cos(dh), sn = Math.sin(dh);
-      for (const a of this.aboard) {
-        if (!a.alive || !a.deck || a.deck.ship !== this) { this.aboard.delete(a); continue; }
-        const rx = w.dx(x0, a.x), ry = a.y - y0;
-        a.x = w.wx(this.x + rx * c - ry * sn); a.y = this.y + rx * sn + ry * c;
-        if (dh) a.facing += dh;
-      }
+    this.carry(w, x0, y0, h0);
+  }
+
+  /**
+   * Everyone standing on her deck rides with her, from where she was (x0, y0,
+   * heading h0) to where she is now: each stays just where they stood on her,
+   * turned as she's turned — and `also`, someone on their way up her side.
+   * (As she sails, in her update; another player's ship, as she's drawn
+   * here: see net/remote.js.)
+   */
+  carry(w, x0, y0, h0, also = null) {
+    if (!this.aboard?.size && !also) return;
+    const dh = angleDiff(h0, this.heading), c = Math.cos(dh), sn = Math.sin(dh);
+    const ride = (a) => {
+      const rx = w.dx(x0, a.x), ry = a.y - y0;
+      a.x = w.wx(this.x + rx * c - ry * sn); a.y = this.y + rx * sn + ry * c;
+      if (dh) a.facing += dh;
+    };
+    for (const a of this.aboard || []) {
+      if (!a.alive || !a.deck || a.deck.ship !== this) { this.aboard.delete(a); continue; }
+      ride(a);
     }
+    if (also) ride(also);
   }
 
   /**
@@ -238,11 +269,11 @@ export class Ship extends Entity {
     this.drive = stroking ? oarDrive(this.rowPh) : 0;
   }
 
-  /** Another ship's hull where this one's would be at (x, y, h), if any. */
+  /** Another ship's hull where this one's would be at (x, y, h), if any (another player's among them). */
   shipIn(game, x, y, h) {
     const w = game.world;
     let pts = null;
-    for (const o of game.ships) {
+    for (const o of allShips(game)) {
       if (o === this || o.sunk || o.alive === false) continue;
       const reach = (this.def.length + o.def.length) * 0.5 + 1;
       const dx = w.dx(o.x, x), dy = y - o.y;
@@ -264,12 +295,13 @@ export class Ship extends Entity {
    * isn't shoved along by it (nothing moves a ship but her sails, her oars
    * and Reverse Mountain's currents); two lying on top of each other — just
    * launched so — both ease apart, unless one's yours: the other gives way.
+   * (Another player's ship is never moved here: their game sails her.)
    */
   separate(game, dt) {
     const w = game.world;
     let pts = null;
     const still = this.still, mine = this.owner === 'player';
-    for (const o of game.ships) {
+    for (const o of allShips(game)) {
       if (o === this || o.sunk || o.alive === false || (still && (!o.still || (mine && o.owner !== 'player')))) continue;
       const reach = (this.def.length + o.def.length) * 0.5 + 1;
       const dx = w.dx(o.x, this.x), dy = this.y - o.y;

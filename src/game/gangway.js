@@ -1,5 +1,6 @@
 // Gangways. Lie your ship alongside another — a Marine's, one you're
-// fighting, a merchantman that's struck to you — both of you stopped, and
+// fighting, a merchantman that's struck to you, a friend's on a voyage
+// together (as her game has her lying there) — both of you stopped, and
 // your crew run a plank across from your rail to hers: steps up from your
 // deck, across the water at the height of the rails, and down onto hers,
 // with a rope along each side. It's walked like a deck — by you, your crew
@@ -7,6 +8,7 @@
 // they drift apart. (game.planks; game.deckAt finds them: see decks.js.)
 import { shipDims, deckPoint, deckToWorld, hbAt, topAt, floorAt, shipLift, xAt } from '../world/hull.js';
 import { angleDiff } from '../core/math.js';
+import { allShips } from './ship.js';
 
 /** A gangway's width (it fits between two guns' carriages), and the run of the steps at each end, from the deck up to the rail. */
 export const PLANK_W = 0.8, PLANK_RAMP = 1.5;
@@ -198,10 +200,10 @@ export function installGangways(game) {
       game.planks.splice(i, 1);
       if (near(P) && !P.a.sunk && !P.b.sunk) game.log(`The plank to the ${P.b.name} is hauled in.`, '#b0bec5');
     }
-    // run out when one of your ships lies stopped alongside another
+    // run out when one of your ships lies stopped alongside another (another player's too)
     for (const a of game.ships) {
       if (a.owner !== 'player' || a.sunk || a.alive === false || !stopped(a)) continue;
-      for (const b of game.ships) {
+      for (const b of allShips(game)) {
         if (b === a || b.owner === 'player' || b.sunk || b.alive === false || !stopped(b)) continue;
         if (w.distance(a.x, a.y, b.x, b.y) > (a.def.length + b.def.length) / 2 + 2 || game.planks.some((P) => P.a === a && P.b === b)) continue;
         const was = tried.get(b), now = game.time || 0;
