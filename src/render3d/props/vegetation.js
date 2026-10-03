@@ -521,17 +521,24 @@ function fruitGeo(sub, v, fruit, i, q) {
   });
 }
 
+/** Where a Devil Fruit hangs for fruit point `p`: clear of the leaves, out from the crown's middle and a little down, where it's seen. */
+function hangOut(p, crown) {
+  if (!crown?.c || crown.palm) return p;
+  const dx = p[0] - crown.c[0], dy = p[1] - crown.c[1], dz = p[2] - crown.c[2], d = Math.hypot(dx, dy, dz) || 1;
+  return [p[0] + (dx / d) * 0.16, p[1] + (dy / d) * 0.16 - 0.1, p[2] + (dz / d) * 0.16];
+}
+
 /**
  * A Devil Fruit hanging among the tree's own: the shape of the fruit it grows
  * (an apple, a mango, a coconut, a hand of bananas — cherries swell into one
  * fat fruit), a little bigger, in the Devil Fruit's own colour and swirled
  * all over, its stalk curled.
  */
-function devilFruitGeo(sub, v, fruit, i, q, color) {
+function devilFruitGeo(sub, v, fruit, i, q, color, crown) {
   return cached(`dfruit:${sub}:${(v || 0) % 2}:${fruit}:${i}:${color}`, () => {
     const k = new Mesher();
-    const base = C(color || '#8e44ad').clone(), swirl = base.clone().lerp(C('#ffffff'), 0.5), dark = base.clone().multiplyScalar(0.62);
-    const [x, y, z] = q.p, s = (q.s || 1) * 1.2;
+    const base = C(color || '#8e44ad').clone(), swirl = base.clone().lerp(C('#ffffff'), 0.62), dark = base.clone().multiplyScalar(0.5);
+    const [x, y, z] = hangOut(q.p, crown), s = (q.s || 1) * 1.2;
     if (fruit === 'banana') {
       k.add(cyl(0.02, 0.025, 0.25, 4, true), { at: [x, y - 0.1, z], color: '#6d8b3a' });
       const band = (p) => { const t = Math.sin((p.y - y) * 70 + Math.atan2(p.z - z, p.x - x) * 2); return t > 0.4 ? swirl : t < -0.8 ? dark : base; };
@@ -543,8 +550,8 @@ function devilFruitGeo(sub, v, fruit, i, q, color) {
       const r = (fruit === 'cherry' ? 0.11 : FRUIT_LOOK[fruit].r) * s;
       const sc = fruit === 'mango' ? [0.85, 1.15, 0.85] : [1, 0.96, 1];
       // (the famous swirls: spirals winding round it from the stalk down)
-      const col = (p) => { const t = Math.sin(Math.atan2(p.z - z, p.x - x) * 3 + ((p.y - y) / r) * 5.5); return t > 0.42 ? swirl : t < -0.78 ? dark : base; };
-      k.add(new THREE.IcosahedronGeometry(r, 2), { at: [x, y, z], scale: sc, normals: radial(x, y, z, 0), color: col, outline: 0.016 });
+      const col = (p) => { const t = Math.sin(Math.atan2(p.z - z, p.x - x) * 3 + ((p.y - y) / r) * 5.5); return t > 0.35 ? swirl : t < -0.72 ? dark : base; };
+      k.add(new THREE.IcosahedronGeometry(r, 3), { at: [x, y, z], scale: sc, normals: radial(x, y, z, 0), color: col, outline: 0.016 });
       // the stalk, curled over like a question mark, and its leaf
       k.add(cyl(0.012, 0.014, 0.06, 4, true), { at: [x, y + r * 0.9, z], color: '#5d4037' });
       k.add(torus(0.035, 0.011, 4, 8, Math.PI * 1.3), { at: [x + 0.03, y + r * 0.9 + 0.075, z], rot: [0, 0, -0.4], color: '#5d4037' });
@@ -662,13 +669,13 @@ function buildTree(o, ctx, sub) {
     const df = devilOn(ctx?.world?.id, o), dfi = df ? df.slot % pts.length : -1;
     // (the fruit isn't drawn far off: see instancer.js)
     const fps = pts.map((q, i) => (i === dfi
-      ? { key: `df:${sub}:${v % 2}:${fr}:${i}:${df.color}`, geo: devilFruitGeo(sub, v, fr, i, q, df.color), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }
+      ? { key: `df:${sub}:${v % 2}:${fr}:${i}:${df.color}`, geo: devilFruitGeo(sub, v, fr, i, q, df.color, model.crown), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }
       : { key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }));
     o._devil = df ? dfi : -1;
     parts.push(...fps);
     dyn = (oo, env, c, u) => { for (let i = 0; i < fps.length; i++) setPartVisible(u, fps[i], !fruitPicked(c.world?.id, oo, i, env.day)); };
     // where each fruit is, for aiming at it (see game/forage.js)
-    o._fruitPts = pts.map((q) => q.p);
+    o._fruitPts = pts.map((q, i) => (i === dfi ? hangOut(q.p, model.crown) : q.p));
     o._fruitN = pts.length;
     o._yaw = yaw;
     o._gy = ctx?.ground ? ctx.ground(o.x, o.y) : 0;

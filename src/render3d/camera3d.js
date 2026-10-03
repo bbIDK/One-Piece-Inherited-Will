@@ -12,6 +12,9 @@ import { shipBob, shipLift, shipDims, rowLean, deckLift } from '../world/hull.js
 import { waterLevel } from './height.js';
 import { swellAt } from './swell.js';
 
+// how close the wheel brings the third-person camera (any closer and it's first person)
+const TP_MIN = 1.1;
+
 const TAU = Math.PI * 2;
 
 // The solid core of a prop the third-person camera won't pass through: its
@@ -86,10 +89,27 @@ export class CameraRig {
     document.addEventListener('mouseup', (e) => {
       if (e.button === 2 && this.drag) { this.lastDrag = { ...this.drag, end: performance.now() }; this.drag = null; }
     });
-    // the mouse wheel pulls the third-person camera in and out
+    // the mouse wheel pulls the third-person camera in and out — in past the
+    // closest it goes and you're looking out of your own eyes; out again from
+    // there and it's behind you (onZoom: main.js switches the view). A
+    // trackpad's little nudges add up to a notch before they switch it.
     canvas.addEventListener('wheel', (e) => {
-      if (!this.active || this.mode !== 'third') return;
-      this.tp.dist = Math.max(2.2, Math.min(9, this.tp.dist * (e.deltaY > 0 ? 1.12 : 0.89)));
+      if (!this.active) return;
+      const now = performance.now();
+      if (now - (this.wheelT || 0) > 350) this.wheelAcc = 0;
+      this.wheelT = now;
+      this.wheelAcc = (this.wheelAcc || 0) + e.deltaY;
+      if (this.mode === 'first') {
+        if (this.wheelAcc > 60 && this.onZoom) { this.wheelAcc = 0; this.tp.dist = TP_MIN * 1.3; this.onZoom('third'); }
+        return;
+      }
+      if (this.mode !== 'third') return;
+      if (e.deltaY < 0 && this.tp.dist <= TP_MIN + 1e-3) {
+        if (this.wheelAcc < -60 && this.onZoom) { this.wheelAcc = 0; this.onZoom('first'); }
+        return;
+      }
+      this.tp.dist = Math.max(TP_MIN, Math.min(12, this.tp.dist * (e.deltaY > 0 ? 1.12 : 0.89)));
+      if (this.tp.dist <= TP_MIN + 1e-3) this.wheelAcc = 0;
     }, { passive: true });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === this.canvas;

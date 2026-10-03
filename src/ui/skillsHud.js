@@ -140,9 +140,11 @@ export function drawSkillsHud(ui, game, p) {
     if (!shown.length) box.appendChild(h('div.sp-more', ms.kind === 'weapon' ? 'No techniques for it yet: a trainer teaches them.' : 'No techniques yet: trainers teach them, a Devil Fruit gives them.'));
     box.appendChild(h('div.sp-mouse', h('span', h('kbd', 'LMB'), ' ', m1Name), h('span' + (heavyCd > 0 ? '.cd' : ''), h('kbd', 'RMB'), ' ', heavyName, heavyCd > 0 ? h('i', ' ' + fmt(heavyCd)) : null)));
     if (ms.forms.length) {
-      box.appendChild(h('div.sp-forms', ms.forms.map((F) => {
+      // (the form key — Z — goes through them in turn; one on the hotbar has its own key too)
+      const fk = keyLabel(K.form[0]);
+      box.appendChild(h('div.sp-forms', K.form[0] ? h('b.sp-fk', { title: `${fk}: the next form (and back to the base set)` }, fk) : null, ms.forms.map((F) => {
         const k = hotKey(p, F.entry);
-        return h('span.sp-chip' + (F.on ? '.on' : '') + (F.open ? '' : '.locked') + (F.awakening ? '.aw' : ''), { title: F.open ? `${F.name}: ${k ? `press ${k}` : 'put it on the hotbar (Skills, K)'} to switch it on and off` : `${F.name}: ${F.why}` },
+        return h('span.sp-chip' + (F.on ? '.on' : '') + (F.open ? '' : '.locked') + (F.awakening ? '.aw' : ''), { title: F.open ? `${F.name}: ${fk} goes through the forms${k ? `, ${k} switches this one` : ''}` : `${F.name}: ${F.why}` },
           k && F.open ? h('b', k) : null, F.short);
       })));
     }

@@ -28,7 +28,7 @@ await import('../src/content/index.js');
 const { Progression } = await import('../src/game/progression.js');
 const { PlayerController } = await import('../src/game/playerController.js');
 const { movesetOf, hakiGroupOf, movesetKind, attackSpec, awakenedOn, formBuff, skillHome } = await import('../src/game/moveset.js');
-const { takeOut, keepEntries } = await import('../src/game/entries.js');
+const { takeOut, keepEntries, cycleForm } = await import('../src/game/entries.js');
 const { ENTRY, HOTBAR_SIZE } = await import('../src/game/hotbar.js');
 const { keysOf, rebind, resetKeys, gameUse, GAME_KEYS, DEFAULT_KEYS, keyFromEvent, pressed } = await import('../src/game/keys.js');
 const { roomFollows, ownRoom } = await import('../src/game/room.js');
@@ -338,17 +338,37 @@ test('the Haki techniques have their own group and keys: a king\'s Conqueror\'s 
   assert.ok(inf.locked && inf.slot === -1 && /Conqueror's 50/.test(inf.why), `still to learn: ${inf.why}`);
   // (and a technique learned says where it sits)
   assert.match(skillHome('haki_emission', g.settings), /Haki keys while Armament/);
-  assert.match(skillHome('gomu_pistol', g.settings), /on Z with the Gomu Gomu no Mi out/);
+  assert.match(skillHome('gomu_pistol', g.settings), /on B with the Gomu Gomu no Mi out/);
+});
+
+test('the form key (Z) goes through the forms unlocked in turn, and back to the base set', () => {
+  const { g, p } = setup();
+  eat(g, 'gomu');
+  // (nothing to switch to yet: said, nothing happens)
+  assert.equal(cycleForm(g, p), false);
+  assert.match(g.logLines.at(-1).text, /No form/);
+  g.progression.addFruitMastery(50);
+  const seen = [];
+  for (let i = 0; i < 4; i++) {
+    p.cooldowns = {}; p.buffs = p.buffs.filter((b) => !/_spent$/.test(b.id));
+    cycleForm(g, p);
+    step(g, 1.0);
+    seen.push(formBuff(p)?.form || 'base');
+  }
+  // (Gear Second and Third open by 50; Fourth wants Armament: not on the way round)
+  assert.deepEqual(seen, ['gear2', 'gear3', 'base', 'gear2']);
+  assert.equal(movesetKind(p), 'fruit', 'the fruit out all the while');
 });
 
 // ------------------------------------------------------------------ keys
 test('skill keys: defaults nothing else uses; a key the game keeps is refused, one another skill has is swapped, and it\'s saved', () => {
   const s = {};
   const K = keysOf(s);
-  assert.deepEqual(K.skills.slice(0, 5), DEFAULT_KEYS.skills);
+  assert.deepEqual(K.skills.slice(0, 4), DEFAULT_KEYS.skills);
   assert.equal(K.skills.length, 8);
-  assert.deepEqual(K.skills.slice(5), ['', '', ''], 'slots past the defaults start without a key');
-  for (const k of [...DEFAULT_KEYS.skills, ...DEFAULT_KEYS.haki]) assert.equal(gameUse(k), '', `${k} is free`);
+  assert.deepEqual(K.skills.slice(4), ['', '', '', ''], 'slots past the defaults start without a key');
+  assert.deepEqual(K.form, ['Z'], 'Z switches the fruit\'s form');
+  for (const k of [...DEFAULT_KEYS.skills, ...DEFAULT_KEYS.haki, ...DEFAULT_KEYS.form]) assert.equal(gameUse(k), '', `${k} is free`);
   // every key the game uses is on the list (a sample of what the controller, the menus and the map read)
   for (const k of ['W', 'A', 'S', 'D', 'Space', 'Shift', 'Control', 'Q', 'F', 'E', 'R', 'T', 'X', 'C', 'V', 'Tab', 'I', 'K', 'J', 'H', 'U', 'L', 'M', 'P', 'Escape', 'Enter', 'Mouse1', 'Mouse2', '1', '0']) assert.ok(gameUse(k), `${k} is the game's`);
   assert.equal(new Set(GAME_KEYS.map(([k]) => k)).size, GAME_KEYS.length, 'each listed once');
@@ -360,11 +380,17 @@ test('skill keys: defaults nothing else uses; a key the game keeps is refused, o
   assert.equal(rebind(s, 'skills', 0, 'Meta').ok, false, 'the browser\'s');
   assert.equal(s.keys, undefined, 'nothing saved for a refusal');
   // onto another skill's key: the two swap
-  r = rebind(s, 'skills', 0, 'B');
+  r = rebind(s, 'skills', 0, 'N');
   assert.ok(r.ok);
-  assert.deepEqual(r.swapped, { group: 'skills', slot: 1, key: 'Z' });
-  assert.equal(keysOf(s).skills[0], 'B');
-  assert.equal(keysOf(s).skills[1], 'Z');
+  assert.deepEqual(r.swapped, { group: 'skills', slot: 1, key: 'B' });
+  assert.equal(keysOf(s).skills[0], 'N');
+  assert.equal(keysOf(s).skills[1], 'B');
+  // (the form key's too: Z onto a skill leaves the form key with that skill's old one)
+  r = rebind(s, 'skills', 2, 'Z');
+  assert.ok(r.ok);
+  assert.deepEqual(r.swapped, { group: 'form', slot: 0, key: 'Y' });
+  assert.equal(keysOf(s).form[0], 'Y');
+  assert.ok(rebind(s, 'form', 0, 'Z').ok, 'and back');
   // across the groups too, and onto a slot with no key yet
   r = rebind(s, 'skills', 6, 'G');
   assert.ok(r.ok);

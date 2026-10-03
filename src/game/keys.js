@@ -8,7 +8,8 @@
 //
 // The defaults are keys nothing else uses (GAME_KEYS lists everything the game
 // itself keeps — playerController, ui.js, main.js, the map, creative mode):
-// Z and B under the left hand, N and Y a stretch from them, O for a fifth;
+// Z under the left hand switches the fruit's form (the Gears, the awakened
+// set); B, N, Y and O hold the skills;
 // G (the Haki row: R, T, G), the middle mouse button and the two side buttons
 // for Haki techniques — G stays Conqueror's for a king, whose release always
 // comes first (a mouse without side buttons: move those to keys). Any of
@@ -35,8 +36,12 @@ const GAME = new Map(GAME_KEYS);
 /** What the game uses `key` for, or '' if nothing. */
 export const gameUse = (key) => GAME.get(key) || '';
 
-/** The default keys: the moveset's skill slots, then the Haki techniques'. */
-export const DEFAULT_KEYS = { skills: ['Z', 'B', 'N', 'Y', 'O'], haki: ['G', 'Mouse3', 'Mouse4', 'Mouse5'] };
+/**
+ * The default keys: the moveset's skill slots, the Haki techniques', and the
+ * one that switches the fruit's form (Z: base → each Gear or form unlocked →
+ * the awakened set → base again; entries.js cycleForm).
+ */
+export const DEFAULT_KEYS = { skills: ['B', 'N', 'Y', 'O'], haki: ['G', 'Mouse3', 'Mouse4', 'Mouse5'], form: ['Z'] };
 /** How many skill slots a moveset can have keys for (past the defaults they start unbound). */
 export const SKILL_SLOTS = 8;
 export const HAKI_SLOTS = 4;
@@ -48,7 +53,7 @@ const NEVER = new Set(['Meta', 'OSLeft', 'OSRight', 'ContextMenu', 'F5', 'F11', 
 export function keysOf(settings) {
   const k = settings?.keys || {};
   const fill = (list, def, n) => Array.from({ length: n }, (_, i) => (Array.isArray(list) && list[i] !== undefined ? list[i] || '' : def[i] || ''));
-  return { skills: fill(k.skills, DEFAULT_KEYS.skills, SKILL_SLOTS), haki: fill(k.haki, DEFAULT_KEYS.haki, HAKI_SLOTS) };
+  return { skills: fill(k.skills, DEFAULT_KEYS.skills, SKILL_SLOTS), haki: fill(k.haki, DEFAULT_KEYS.haki, HAKI_SLOTS), form: fill(k.form, DEFAULT_KEYS.form, 1) };
 }
 
 /**
@@ -69,13 +74,13 @@ export function rebind(settings, group, i, key) {
   if (key === old) return { ok: true };
   let swapped = null;
   if (key) {
-    for (const g of ['skills', 'haki']) {
+    for (const g of ['skills', 'haki', 'form']) {
       const j = K[g].indexOf(key);
       if (j >= 0 && !(g === group && j === i)) { K[g][j] = old; swapped = { group: g, slot: j, key: old }; }
     }
   }
   K[group][i] = key;
-  settings.keys = { skills: K.skills.slice(), haki: K.haki.slice() };
+  settings.keys = { skills: K.skills.slice(), haki: K.haki.slice(), form: K.form.slice() };
   return { ok: true, swapped };
 }
 

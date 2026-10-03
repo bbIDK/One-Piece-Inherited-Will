@@ -7,7 +7,7 @@
 import { h } from './dom.js';
 import { rebind, keyFromEvent, keyLabel } from '../game/keys.js';
 
-const slotName = (s) => (s.group === 'haki' ? `Haki technique ${s.slot + 1}` : `skill ${s.slot + 1}`);
+const slotName = (s) => (s.group === 'haki' ? `Haki technique ${s.slot + 1}` : s.group === 'form' ? 'switching form' : `skill ${s.slot + 1}`);
 // (after a mouse button is taken: how long its own click, and the menu a right button opens, go nowhere)
 const AFTER_CLICK = 250;
 

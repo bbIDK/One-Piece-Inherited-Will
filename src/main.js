@@ -194,13 +194,15 @@ async function start() {
       view3d.rig.baseFov = Math.round(60 + (settings.fov ?? 0.5) * 35);
       view3d.rig.bobOn = settings.bob !== false;
       view3d.rig.shiftLock = !!settings.shiftLock;
+      // (zoomed all the way in, first person; out again, third: camera3d.js)
+      view3d.rig.onZoom = (mode) => { if (settings.view !== mode) game.cycleView(true); };
       if (view3d.quality !== settings.quality) view3d.setQuality(settings.quality || 'high');
       view3d.setRenderDistance(renderChunks(settings));
       applyView();
     }
     if (save) saveSettings(settings);
   };
-  game.cycleView = () => {
+  game.cycleView = (quiet) => {
     settings.view = settings.view === 'first' ? 'third' : 'first';
     applyView();
     saveSettings(settings);
@@ -209,6 +211,7 @@ async function start() {
       if (view3d.rig.freeMouse) view3d.rig.releaseLock();
       else if (!view3d.rig.locked && !view3d.rig.lockFailed) view3d.rig.requestLock();
     }
+    if (quiet) return;
     ui.toast(settings.view === 'first' ? 'FIRST PERSON' : 'THIRD PERSON', input.touch?.on ? 'Tap View to switch' : settings.view === 'third' ? (settings.shiftLock ? 'Shift lock is on (tap Ctrl to free the mouse) · V switches views' : 'Hold the right mouse button to turn the camera · tap Ctrl for shift lock · V switches views') : 'Press V to switch views', '#ffe082', 'view');
   };
   // start looking down the longest clear line of sight (not at a wall)

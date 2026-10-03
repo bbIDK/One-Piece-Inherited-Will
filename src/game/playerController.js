@@ -4,7 +4,7 @@
 // skills of whatever is out, and the Haki keys the Haki techniques (keys.js,
 // moveset.js).
 import { HOTBAR_SIZE, HOTBAR_KEYS, isMoveset } from './hotbar.js';
-import { takeOut, keepEntries } from './entries.js';
+import { takeOut, keepEntries, cycleForm } from './entries.js';
 import { movesetOf, hakiGroupOf } from './moveset.js';
 import { keysOf, pressed } from './keys.js';
 import { clamp, angleDiff } from '../core/math.js';
@@ -199,6 +199,8 @@ export class PlayerController {
     const inp = game.input, K = keysOf(game.settings);
     for (let i = 0; i < K.skills.length; i++) if (pressed(inp, K.skills[i])) this.skillBuf = { group: 'skills', i, t: SKILL_BUFFER };
     for (let i = 0; i < K.haki.length; i++) if (pressed(inp, K.haki[i])) this.skillBuf = { group: 'haki', i, t: SKILL_BUFFER };
+    // (the fruit's next form: Z — the Gears, the awakened set)
+    if (pressed(inp, K.form[0])) cycleForm(game, p);
     const b = this.skillBuf;
     if (!b) return;
     b.t -= dt;

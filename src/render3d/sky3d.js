@@ -462,8 +462,10 @@ export class Sky {
     const dust = wx ? env.dust || 0 : 0, heat = wx ? env.heat || 0 : 0, odd = wx ? env.odd || 0 : 0;
     this.overcast = ov;
     // ---- the clear sky's colours: day, dusk and night…
-    let top = lerp3([0.02, 0.04, 0.12], [0.2, 0.47, 0.86], day);
-    let hor = lerp3([0.06, 0.09, 0.2], [0.68, 0.84, 0.97], day);
+    // (by day the anime's: a deep cerulean overhead, still blue down to the
+    // horizon, so the white cumulus stand out against it)
+    let top = lerp3([0.02, 0.04, 0.12], [0.055, 0.26, 0.76], day);
+    let hor = lerp3([0.06, 0.09, 0.2], [0.36, 0.62, 0.91], day);
     hor = lerp3(hor, [1.0, 0.62, 0.38], dusk * 0.75 * (1 - ov * 0.7));
     top = lerp3(top, [0.35, 0.33, 0.6], dusk * 0.35 * (1 - ov * 0.7));
     // …a deeper blue in the heat…

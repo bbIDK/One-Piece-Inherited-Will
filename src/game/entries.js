@@ -110,6 +110,24 @@ export function takeOut(game, p, id) {
 }
 
 /**
+ * The form key (Z, keys.js): the fruit's forms in turn — out of its base set
+ * into the first form unlocked, on through the rest (the awakened set last),
+ * and back to the base set. With the fruit not out, it comes out in the first.
+ */
+export function cycleForm(game, p) {
+  const f = FRUITS[p?.fruit];
+  if (!f) { game.log('You have no Devil Fruit power.', '#ff8a80'); return false; }
+  const order = [...(f.forms || []).map((F) => F.id), ...(f.awakening ? ['awake'] : [])].filter((id) => !formLock(p, id));
+  if (!order.length) { game.log(`No form of the ${f.name} to switch to yet: they open with mastery (Skills, K).`, '#ffab91'); return false; }
+  const cur = movesetKind(p) === 'fruit' ? formBuff(p)?.form || null : null;
+  const i = cur ? order.indexOf(cur) : -1;
+  // (the last one on: back to the base set)
+  if (cur && i === order.length - 1) { p.endForm(); return true; }
+  const next = order[i + 1];
+  return takeOut(game, p, next === 'awake' ? ENTRY.awake : ENTRY.form(next));
+}
+
+/**
  * Each frame: a form of the fruit goes with the fruit being out. One switched
  * on some other way (an old hotbar's technique) takes the fruit out with it —
  * unless there's a weapon in your hands, when it ends.
