@@ -9,7 +9,7 @@
 // per look signature + level and shared (ref-counted) by every character
 // that looks the same.
 import { Builder, Prim, M, between, mul, grid, lathe, tcap, lin, THREE, EAR_CEN } from './geom.js';
-import { B, dims, bindPose, frameId } from './bones.js';
+import { B, dims, bindPose, frameId, RUB, RUB_N } from './bones.js';
 import { BLANK_UV } from './detail.js';
 import { buildFigure } from './body.js';
 import { FACE_TOP, FACE_BOTTOM } from './face.js';
@@ -853,6 +853,13 @@ function buildBody0(look, wpn, lod, articulated) {
 
   // ---- pelvis, torso, arms, legs, feet and clothes (body.js)
   const outfit = buildFigure(add, look, d, pal, q);
+  // (a rubber arm's chain starts where its bare arm comes out of the sleeve)
+  for (let k = 0; k < 2; k++) {
+    const tA = outfit.rubTA[k];
+    if (!tA) continue;
+    const s = k === 0 ? 1 : -1;
+    for (let i = 1; i <= RUB_N; i++) bind[RUB[k][i - 1]] = new THREE.Matrix4().makeTranslation(0, d.hip0 + d.shY - d.A1 - (tA + (1 - tA) * (i / RUB_N)) * d.A2, s * d.shW);
+  }
 
   // ---- head (+ ears, race features, hair, hat)
   const R = d.headR;
@@ -977,7 +984,7 @@ function buildBody0(look, wpn, lod, articulated) {
   const geo = b.build();
   const inv = bind.map((m) => m.clone().invert());
   const used = new Set(b.bone);
-  return { geo, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null, skirt: outfit.skirtInfo || null };
+  return { geo, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null, skirt: outfit.skirtInfo || null, rubTA: outfit.rubTA };
 }
 
 function minkEars(b, HM, look, pal, hb, q) {

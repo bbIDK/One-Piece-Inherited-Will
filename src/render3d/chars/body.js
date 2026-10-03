@@ -20,7 +20,7 @@
 // pelvis on the hips bone, limbs hang along -Y from their joints.
 import { Prim, M, mul, grid, lathe, between, lin, THREE } from './geom.js';
 import { atlasUV, torsoUV, BLANK_UV } from './detail.js';
-import { B, frameOf, frameId, SKIRT_N, skirtShape } from './bones.js';
+import { B, frameOf, frameId, SKIRT_N, skirtShape, RUB, RUBL } from './bones.js';
 import { shade, mixHex } from '../../core/math.js';
 
 const TAU = Math.PI * 2;
@@ -422,6 +422,26 @@ function limbBlend(L, up, down) {
     return null;
   };
 }
+/**
+ * A rubber limb's skin (every body has the bones: chars/bones.js RUB; at
+ * rest they sit where the forearm, or the shin, has them, and nothing
+ * moves): past `tA` along it — where the bare arm comes out of a long
+ * sleeve, or from the elbow — each ring follows the chain down to the wrist
+ * or the ankle in even steps, so a Gum-Gum arm stretches out of its sleeve
+ * and keeps its girth (chars/rig.js solveRubber); near the joint above it,
+ * some of it follows the bone above, as the limb does.
+ */
+function rubberSkin(L, tA, bone, chain, up) {
+  const N = chain.length;
+  return (x, y) => {
+    const t = clamp(-y / L, 0, 1);
+    if (t <= tA + 1e-4) return null;
+    const f = ((t - tA) / (1 - tA)) * N, i = Math.min(N - 1, Math.floor(f)), w = Math.min(1, f - i);
+    const b0 = i === 0 ? bone : chain[i - 1], b1 = chain[i];
+    const uw = up && -y < up[2] ? up[1] * (1 - sstep(0, up[2], -y)) : 0;
+    return uw > 1e-3 ? [b0, b1, up[0], 0, (1 - uw) * w, uw, 0] : [b0, b1, w];
+  };
+}
 const torus = (q) => Prim.torus(0.2, 3, q.cloth ? 12 : 7);
 /** Matrix for a torus(0.2) ring around the Y axis at height y: radii rx (front) × rz (side), `thick` tall. */
 const ringAt = (y, rx, rz, thick = 0.014) => M(0, y, 0, Math.PI / 2, 0, 0, [rx, rz, thick / 0.2]);
@@ -658,7 +678,11 @@ export function buildFigure(add0, look, d, pal, q) {
   // ---- arms (skin weights blend across the shoulder into the chest and across the elbow)
   const armCol = pal.sleeve || (TOP === 'coat' ? look.coat || pal.top : TOP === 'jacket' ? pal.top : TOP === 'striped' ? pal.top : pal.top);
   const Lk = Math.sqrt(d.Am);
-  for (const [s, Ub, Fb, part] of [[1, B.uarmR, B.farmR, 1], [-1, B.uarmL, B.farmL, 2]]) {
+  // (the bare forearm in more rings near to: a rubber arm stretched far
+  // keeps its curve; where the bare arm starts, for the rubber chain)
+  const frows = bd === 2 ? 12 : lrows;
+  const rubTA = [0, 0];
+  for (const [s, Ub, Fb, part, k] of [[1, B.uarmR, B.farmR, 1, 0], [-1, B.uarmL, B.farmL, 2, 1]]) {
     const sl = o.sleeves;
     // (sleeves hang over the muscles: only a little of them shows through)
     const mA = sl === 'long' || sl === 'wide' ? o.muscle * 0.35 : o.muscle;
@@ -666,19 +690,24 @@ export function buildFigure(add0, look, d, pal, q) {
     const ua = limbFn('uarm', oA, d, s), fa = limbFn('farm', oA, d, s);
     const U1 = { blend: limbBlend(d.A1, [B.chest, 0.3, 0.07 * Lk], [Fb, 0.5, 0.075 * Lk]) };
     const F1 = { blend: limbBlend(d.A2, [Ub, 0.5, 0.075 * Lk], null) };
+    // (the bare arm, from where it comes out of the sleeve, is rubber; the sleeve itself stays as it is)
+    const long = sl === 'long' || sl === 'wide', tA = long ? 0.8 : 0;
+    rubTA[k] = tA;
+    const FR = { blend: F1.blend, skin: rubberSkin(d.A2, tA, Fb, RUB[k], [Ub, 0.5, 0.075 * Lk]) };
     const skU = o.fem ? null : 'uarm', skF = o.fem ? null : 'farm';
     const up = (g, col, m = M()) => add(g, m, col, Ub, 0, U1), fore = (g, col, m = M()) => add(g, m, col, Fb, part, F1);
+    const bare = (g, col, m = M()) => add(g, m, col, Fb, part, FR);
     if (sl === 'none') {
       up(limbSeg(ua, d.A1, rs, lrows, { capTop: true, capBot: true, capK: 0.6, uv: skU, side: s }), skin);
-      fore(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skF, side: s }), skin);
+      bare(limbSeg(fa, d.A2, rs, frows, { capTop: true, capBot: true, capK: 0.7, uv: skF, side: s }), skin);
     } else if (sl === 'short') {
       up(limbSeg(ua, d.A1, rs, lrows, { t1: 0.5, off: 0.008, capTop: true, capK: 0.45, flare: 0.012, lining: cloth, uv: 'sleeve', side: s }), armCol);
       up(limbSeg(ua, d.A1, rs, lrows, { t0: 0.42, capBot: true, uv: skU, side: s }), skin);
-      fore(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skF, side: s }), skin);
+      bare(limbSeg(fa, d.A2, rs, frows, { capTop: true, capBot: true, capK: 0.7, uv: skF, side: s }), skin);
     } else if (sl === 'rolled') {
       up(limbSeg(ua, d.A1, rs, lrows, { off: 0.01, capTop: true, capK: 0.5, capBot: true, uv: 'sleeve', side: s }), armCol);
       if (cloth) up(torus(q), shade(armCol, -0.12), ringAt(-d.A1 * 0.96, ua(0.96) + 0.02, ua(0.96) + 0.02, 0.03));
-      fore(limbSeg(fa, d.A2, rs, lrows, { capTop: true, capBot: true, capK: 0.7, uv: skF, side: s }), skin);
+      bare(limbSeg(fa, d.A2, rs, frows, { capTop: true, capBot: true, capK: 0.7, uv: skF, side: s }), skin);
     } else {
       // long and wide sleeves down to the wrist
       const wide = sl === 'wide';
@@ -686,10 +715,10 @@ export function buildFigure(add0, look, d, pal, q) {
       up(limbSeg(ua, d.A1, rs, lrows, { t0: wide ? 0.07 : 0, off: wide ? 0.015 : 0.01, capTop: true, capK: 0.5, capBot: true, uv: 'sleeve', side: s }), armCol);
       fore(limbSeg(fa, d.A2, rs, lrows, { off: wide ? 0.022 : 0.011, capTop: true, capK: 0.6, flare: wide ? 0.075 : 0.008, lining: cloth, t1: wide ? 1.02 : 0.98, uv: 'sleeve', side: s }), armCol);
       if (cloth && !wide) fore(torus(q), shade(armCol, -0.15), ringAt(-d.A2 * 0.95, fa(0.95) + 0.018, fa(0.95) + 0.018, 0.022));
-      fore(limbSeg(fa, d.A2, rs, 2, { t0: 0.8, capBot: true }), skin);
+      bare(limbSeg(fa, d.A2, rs, bd === 2 ? 12 : 2, { t0: 0.8, capBot: true }), skin);
     }
     // (the long-armed folk's second elbow, halfway down the forearm)
-    if (d.Am > 1.2) fore(Prim.sphere(q.sph[0], q.sph[1]), sl === 'long' || sl === 'wide' ? armCol : skin, M(0, -d.A2 * 0.5, 0, 0, 0, 0, fa(0.5) * 1.08));
+    if (d.Am > 1.2) (long ? fore : bare)(Prim.sphere(q.sph[0], q.sph[1]), long ? armCol : skin, M(0, -d.A2 * 0.5, 0, 0, 0, 0, fa(0.5) * 1.08));
     // the point of the elbow on bare arms
     if (cloth && (sl === 'none' || sl === 'short')) up(Prim.sphere(q.sph[0], q.sph[1]), skin, M(ua(1) * 0.55, -d.A1 * 0.985, 0, 0, 0, 0, [0.022 * d.Bk, 0.026 * d.Bk, 0.024 * d.Bk]));
   }
@@ -700,7 +729,8 @@ export function buildFigure(add0, look, d, pal, q) {
   for (const [T, S, Ft, part, s] of [[B.thighR, B.shinR, B.footR, 3, 1], [B.thighL, B.shinL, B.footL, 4, -1]]) {
     const th = limbFn('thigh', o, d, s), sn = limbFn('shin', o, d, s);
     const T1 = { blend: limbBlend(d.T1, [B.hips, 0.35, 0.09], [S, 0.5, 0.09]) };
-    const S1 = { blend: limbBlend(d.T2, [T, 0.5, 0.09], null) };
+    // (the whole shin is rubber, trouser leg and all: chars/rig.js solveRubber)
+    const S1 = { blend: limbBlend(d.T2, [T, 0.5, 0.09], null), skin: rubberSkin(d.T2, 0, S, RUBL[s > 0 ? 0 : 1], [T, 0.5, 0.09]) };
     const skT = o.fem ? null : 'thigh', skS = o.fem ? null : 'shin';
     const thigh = (g, col, m = M()) => add(g, m, col, T, 0, T1), shin = (g, col, m = M()) => add(g, m, col, S, part, S1);
     const boots = o.shoes === 'boots';
@@ -754,7 +784,7 @@ export function buildFigure(add0, look, d, pal, q) {
   // ---- a coat over the shoulders (coat colour), the tail swings from the waist
   if (look.coat && TOP !== 'coat' || TOP === 'coat' && !look.top2 && look.coat) coat(add, sh, look.coat, TR, U, cloth, d, q);
   else if (TOP === 'coat') coatTail(add, sh, look.coat || pal.top, U, cloth, d, 0.03);
-  return skirtInfo ? { ...o, skirtInfo } : o;
+  return { ...o, skirtInfo, rubTA };
 }
 
 /**

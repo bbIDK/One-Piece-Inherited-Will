@@ -7,7 +7,7 @@
 // Everything here only spawns effects through the FX instance passed in
 // (see game/fx.js) or draws in the actor's own space; no gameplay state.
 import { drawCharacter, rgba } from './character.js';
-import { actionClip, weaponFor } from './anims.js';
+import { actionClip, weaponFor, poseExtras } from './anims.js';
 
 const TAU = Math.PI * 2;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -1628,6 +1628,8 @@ export function actorVisuals(actor, act, clip) {
   if (bufs.some((b) => b.id === 'gear4')) out.bounce = true;
   if (bufs.some((b) => b.id === 'gear5')) out.toon = true;
   const now = actor.game?.env?.time;
+  // (the body's weight, its race's dodge, a Gear, a flight: render/anims.js)
+  poseExtras(actor, out, now);
   if (now !== undefined) {
     if (actor.blocking && actor._blockFlash !== undefined && now - actor._blockFlash >= 0 && now - actor._blockFlash < 0.3) out.blockHitAge = now - actor._blockFlash;
     // (switched on, not there from the start: someone who always wears it doesn't flex at you)

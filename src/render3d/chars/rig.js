@@ -19,8 +19,16 @@
 // its own side (2D units, + outward: a hook swung wide, arms flung open);
 // smF / smB / smfF / smfB a limb's smear — the blow overreaching itself by
 // that share of its length for a frame or two, the snap of a strike.
+//
+// A rubber limb (the Gum-Gum stretch: P.stretch for the arms, P.stretchL for
+// the legs, or a reach target past arm's length) doesn't scale its bones: the
+// upper arm keeps its length and aims at the target, and the bare forearm
+// runs out to the fist along a curve through a chain of bones (bones.js RUB),
+// so it keeps its girth, its sleeve and its hand — bowed by its slack, a wave
+// travelling along it (see solveRubber; the model keeps the rubber's motion
+// from frame to frame: model.js rubberMotion).
 import * as THREE from 'three';
-import { B } from './bones.js';
+import { B, RUB, RUBL, RUB_N } from './bones.js';
 
 const V = () => new THREE.Vector3();
 const Q = () => new THREE.Quaternion();
@@ -31,7 +39,7 @@ const toXY = (h, fb) => (!h ? fb : Array.isArray(h) ? h : [Math.cos(h.a) * h.r, 
 const _m = new THREE.Matrix4();
 const _a = V(), _b = V(), _c = V(), _d = V(), _u = V(), _p = V(), _t = V();
 const _qa = Q(), _qb = Q(), _qc = Q();
-const _att = V(), _attP = V(), _g2 = V();
+const _att = V(), _attP = V(), _g2 = V(), _att2 = V();
 
 /**
  * An idle attitude's hand target (model space) and elbow pole for arm k:
@@ -107,6 +115,93 @@ export class Rig {
     this.blade = [V(), V()]; this.plane = [V(), V()]; this.bladeOn = [false, false];
     this.qLean = Q(); this.qChest = Q(); this.qPelvis = Q(); this.qHead = Q();
     this._pole = V(); this._T = V(); this._ref = V();
+    // rubber limbs: where each limb's bare part starts along it (the arms: per
+    // body, build.js), whether it's stretched this frame, how long the rubber
+    // runs, and the chain's own stretch along its bones when it isn't
+    this.tA = [0, 0];
+    this.rubOn = [false, false]; this.rubLen = [0, 0]; this.rubSY = [1, 1];
+    this.rubOnL = [false, false]; this.rubLenL = [0, 0]; this.rubSYL = [1, 1];
+    this.endDir = [V(), V()];
+    this._pts = Array.from({ length: RUB_N + 1 }, V);
+    this._rv = Array.from({ length: 6 }, V);
+  }
+
+  /**
+   * A rubber limb stretched past its length, from the root S (shoulder or
+   * hip) to the end T (wrist or ankle): the upper bone keeps its length,
+   * aimed at T and bent a touch toward `pole`; from `tA` along the lower bone
+   * (where the bare skin starts) the chain runs out to T along a curve — on
+   * from the upper bone, arriving along R.dir (the way the fist is flying) —
+   * bowed down by R.sag (its slack) and rippled by R.amp (a wave of R.k half
+   * lengths, at phase R.ph). Writes the joint J, the end E, the two bones,
+   * the chain, and the end's direction (for the hand or foot).
+   */
+  solveRubber(S, T, L1, L2, tA, pole, R, J, E, upper, lower, chain, endDir) {
+    const pts = this._pts, [up, dF, axis, n1, n2, tmp] = this._rv;
+    tmp.subVectors(T, S).normalize();
+    up.copy(pole).addScaledVector(tmp, -pole.dot(tmp));
+    if (up.lengthSq() < 1e-8) up.set(0, -1, 0).addScaledVector(tmp, -tmp.y);
+    up.normalize();
+    // the upper bone: its own length, along the reach, a touch of bend at the joint
+    up.multiplyScalar(0.17).addScaledVector(tmp, 0.985).normalize();
+    J.copy(S).addScaledVector(up, L1);
+    this.pos[upper].copy(S); aimNegY(this.quat[upper], up, pole); this.len[upper] = 1;
+    // the lower bone, on from it, its own length too (the sleeve stays a sleeve)
+    tmp.subVectors(T, J).normalize();
+    dF.copy(up).lerp(tmp, 0.5).normalize();
+    this.pos[lower].copy(J); aimNegY(this.quat[lower], dF, pole); this.len[lower] = 1;
+    // the curve: from where the bare part starts to the end
+    const C0 = pts[0].copy(J).addScaledVector(dF, tA * L2);
+    axis.subVectors(T, C0);
+    const span = axis.length() || 1e-4;
+    axis.divideScalar(span);
+    const dEnd = endDir.copy(R && R.dir && R.dir.lengthSq() > 0.5 ? R.dir : axis);
+    // (the wave's plane: across the limb, level with the ground first — it
+    // ripples side to side, and a little up and down as R.tilt has it)
+    n1.crossVectors(axis, tmp.set(0, 1, 0));
+    if (n1.lengthSq() < 1e-6) n1.set(0, 0, 1);
+    n1.normalize();
+    n2.crossVectors(n1, axis).normalize();
+    const amp = R ? Math.min(R.amp || 0, span * 0.05) : 0, sag = (R ? R.sag ?? 0.02 : 0.02) * span;
+    const K = R && R.k ? R.k : 2.5, ph = R ? R.ph || 0 : 0;
+    const tilt = R ? R.tilt || 0 : 0, ct = Math.cos(tilt), st = Math.sin(tilt);
+    const l0 = span * 0.32, l1 = span * 0.28;
+    for (let i = 1; i <= RUB_N; i++) {
+      const s = i / RUB_N, m = 1 - s;
+      // a cubic from C0 (leaving along dF) to T (arriving along dEnd)
+      const b0 = m * m * m, b1 = 3 * m * m * s, b2 = 3 * m * s * s, b3 = s * s * s;
+      const q = pts[i];
+      q.set(
+        C0.x * (b0 + b1) + dF.x * l0 * b1 + T.x * (b2 + b3) - dEnd.x * l1 * b2,
+        C0.y * (b0 + b1) + dF.y * l0 * b1 + T.y * (b2 + b3) - dEnd.y * l1 * b2,
+        C0.z * (b0 + b1) + dF.z * l0 * b1 + T.z * (b2 + b3) - dEnd.z * l1 * b2,
+      );
+      if (i < RUB_N) {
+        const env = Math.sin(Math.PI * s);
+        const w = amp * Math.pow(env, 0.8) * Math.sin(K * Math.PI * s - ph);
+        q.addScaledVector(n1, w * ct).addScaledVector(n2, w * st - sag * env);
+      }
+    }
+    E.copy(T);
+    // each link of the chain along the curve, all framed off the same pole (no twist down it)
+    for (let i = 1; i <= RUB_N; i++) {
+      const a = pts[i - 1], b = pts[Math.min(RUB_N, i + 1)];
+      tmp.subVectors(b, a);
+      const bone = chain[i - 1];
+      this.pos[bone].copy(pts[i]);
+      aimNegY(this.quat[bone], tmp, pole);
+    }
+    endDir.subVectors(pts[RUB_N], pts[RUB_N - 1]).normalize();
+    return span;
+  }
+
+  /** The chain at rest along the lower bone (J → E), its links framed as the bone is. */
+  restChain(J, E, tA, quat, chain) {
+    for (let i = 1; i <= RUB_N; i++) {
+      const u = tA + (1 - tA) * (i / RUB_N);
+      this.pos[chain[i - 1]].copy(J).lerp(E, u);
+      this.quat[chain[i - 1]].copy(quat);
+    }
   }
 
   /**
@@ -193,8 +288,18 @@ export class Rig {
         // and off by o.grip2K
         if (k === 1 && o.grip2 && o.grip2K > 0) T.lerp(_g2.copy(this.E[0]).addScaledVector(this.blade[0], o.grip2), o.grip2K);
       }
-      // a blow at full stretch overreaches itself for a frame or two (its smear)
-      let stretch = !!P.stretch || !!reach;
+      // (a reach target held only part of the way: a rubber fist snapping back to where the pose has it)
+      const rk = reach ? (k === 0 ? o.reachRK : o.reachLK) ?? 1 : 1;
+      if (reach && rk < 1) {
+        const hx = h[0], hy = h[1], fwdK = clamp(hx / 0.43, 0, 1), restK = clamp(1 - hx / 0.2, 0, 1) * clamp(hy / 0.3, 0, 1);
+        const out = (k === 0 ? P.zF : P.zB) || 0;
+        _g2.set(hx * d.kA, -hy * d.kA, side * (-d.shW * 0.74 * fwdK * clamp(1 - out * 3, 0, 1) + 0.075 * restK + (o.spread || 0) + out * d.kA)).applyQuaternion(this.qLean).add(S);
+        T.lerpVectors(_g2, reach, rk);
+      }
+      // a blow at full stretch overreaches itself for a frame or two (its smear);
+      // a rubber arm goes as far as it's sent (P.stretch, or a fist in flight)
+      const rubbery = (!!P.stretch || !!reach) && o.rubber !== false;
+      let stretch = rubbery;
       const sm = (k === 0 ? P.smF : P.smB) || 0;
       if (sm > 0 && !stretch) {
         _t.subVectors(T, S);
@@ -213,14 +318,22 @@ export class Rig {
       // would flip over as the body bobs, and the whole arm and the palm with it)
       if (reach) this._pole.set(-0.75, -0.65, side * 0.45);
       if (o.att && o.attK > 0 && !reach && !(k === 1 && (broom || (o.grip2 && o.grip2K > 0.5)))) this._pole.lerp(_attP, o.attK);
-      ik(S, T, d.A1, d.A2, this._pole, e === 0 ? 0 : e, stretch, J, E);
       const U = k === 0 ? B.uarmR : B.uarmL, F = k === 0 ? B.farmR : B.farmL, Hd = k === 0 ? B.handR : B.handL;
-      this.pos[U].copy(S); aimNegY(this.quat[U], _t.subVectors(J, S), this._pole);
-      this.len[U] = clamp(S.distanceTo(J) / d.A1, 0.5, 8);
-      this.pos[F].copy(J); aimNegY(this.quat[F], _t.subVectors(E, J), this._pole);
-      this.len[F] = clamp(J.distanceTo(E) / d.A2, 0.5, 8);
-      // hand: fingers continue the forearm, back of the hand up/outward
-      _u.subVectors(E, J).normalize();
+      if (rubbery && S.distanceTo(T) > (d.A1 + d.A2) * 1.002) {
+        this.rubLen[k] = this.solveRubber(S, T, d.A1, d.A2, this.tA[k], this._pole, o.rub ? o.rub[k] : null, J, E, U, F, RUB[k], this.endDir[k]);
+        this.rubOn[k] = true; this.rubSY[k] = 1;
+        _u.copy(this.endDir[k]);
+      } else {
+        ik(S, T, d.A1, d.A2, this._pole, e === 0 ? 0 : e, stretch, J, E);
+        this.pos[U].copy(S); aimNegY(this.quat[U], _t.subVectors(J, S), this._pole);
+        this.len[U] = clamp(S.distanceTo(J) / d.A1, 0.5, 8);
+        this.pos[F].copy(J); aimNegY(this.quat[F], _t.subVectors(E, J), this._pole);
+        this.len[F] = clamp(J.distanceTo(E) / d.A2, 0.5, 8);
+        this.restChain(J, E, this.tA[k], this.quat[F], RUB[k]);
+        this.rubOn[k] = false; this.rubLen[k] = 0; this.rubSY[k] = this.len[F];
+        // hand: fingers continue the forearm, back of the hand up/outward
+        _u.subVectors(E, J).normalize();
+      }
       const shape = o.shape ? o.shape[k] : 'fist';
       // (a flat hand — swimming — keeps its fingers in line and its back up)
       if (shape === 'flat') this._ref.set(0.1, 1, side * 0.35);
@@ -291,15 +404,25 @@ export class Rig {
       const lxy = Math.hypot(_t.x, _t.y) || 1;
       this._pole.set(-_t.y / lxy, _t.x / lxy, side * 0.12);
       const Kn = this.K[k], Ft = this.F[k];
-      const Hs = this.pos[k === 0 ? B.thighR : B.thighL].copy(Hj);
-      ik(Hs, T, d.T1, d.T2, this._pole, 1, reachOut, Kn, Ft);
       const Th = k === 0 ? B.thighR : B.thighL, Sh = k === 0 ? B.shinR : B.shinL, Fo = k === 0 ? B.footR : B.footL;
-      aimNegY(this.quat[Th], _t.subVectors(Kn, Hs), this._pole);
-      this.pos[Sh].copy(Kn); aimNegY(this.quat[Sh], _t.subVectors(Ft, Kn), this._pole);
-      this.len[Th] = reachOut ? clamp(Hs.distanceTo(Kn) / d.T1, 1, 1.5) : 1;
-      this.len[Sh] = reachOut ? clamp(Kn.distanceTo(Ft) / d.T2, 1, 1.5) : 1;
-      // foot: flat on the ground, following the shin when raised (pointed kicks)
-      _u.subVectors(Ft, Kn).normalize();
+      const Hs = this.pos[Th].copy(Hj);
+      // (a rubber leg — a Gum-Gum whip — runs out as far as it's sent, along its chain)
+      const rubL = (P.stretchL === true || P.stretchL === (k === 0 ? 'F' : 'B')) && o.rubber !== false;
+      if (rubL && Hs.distanceTo(T) > (d.T1 + d.T2) * 1.002) {
+        this.rubLenL[k] = this.solveRubber(Hs, T, d.T1, d.T2, 0, this._pole, o.rubL ? o.rubL[k] : null, Kn, Ft, Th, Sh, RUBL[k], _att2);
+        this.rubOnL[k] = true; this.rubSYL[k] = 1;
+        _u.copy(_att2);
+      } else {
+        ik(Hs, T, d.T1, d.T2, this._pole, 1, reachOut, Kn, Ft);
+        aimNegY(this.quat[Th], _t.subVectors(Kn, Hs), this._pole);
+        this.pos[Sh].copy(Kn); aimNegY(this.quat[Sh], _t.subVectors(Ft, Kn), this._pole);
+        this.len[Th] = reachOut ? clamp(Hs.distanceTo(Kn) / d.T1, 1, 1.5) : 1;
+        this.len[Sh] = reachOut ? clamp(Kn.distanceTo(Ft) / d.T2, 1, 1.5) : 1;
+        this.restChain(Kn, Ft, 0, this.quat[Sh], RUBL[k]);
+        this.rubOnL[k] = false; this.rubLenL[k] = 0; this.rubSYL[k] = this.len[Sh];
+        // foot: flat on the ground, following the shin when raised (pointed kicks)
+        _u.subVectors(Ft, Kn).normalize();
+      }
       const raise = clamp((Ft.y - d.hA) / 0.28, 0, 1);
       const toe = 0.12 + ptw * 0.5 * side;
       _a.set(Math.cos(toe), 0, side * Math.sin(toe));

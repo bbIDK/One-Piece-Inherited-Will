@@ -18,6 +18,7 @@ import { bodyMaterial, outlineMaterial, glowMaterial, charGradient, SELF_SHADE_V
 import { sunSelf } from '../sunshadow.js';
 import { Glow } from './fx.js';
 import { holdItem, heldSize } from './helditem.js';
+import { rubberFist, fistState } from './rubber.js';
 import { actorPose, rigOptions, currentLook, weaponOf, stationSpot, stationReach } from './pose.js';
 import { FRUITS } from '../../data/fruits.js';
 import { shipDims, shipLift } from '../../world/hull.js';
@@ -350,8 +351,9 @@ class Viewmodel {
     // eyes, and the inside of your own collar filled the view)
     o.leanAdd = -(PP.l || 0) * ((PP.l || 0) < 0 ? 1 : 0.55);
     o.lift = 0; o.roll = 0; o.squash = 1; o.lying = 0;
-    // Gum-Gum: the arm stretches out to the fist in flight
-    o.reachR = holdAt || (p.fruit === 'gomu' ? this.stretch(p, ctx) : null);
+    // Gum-Gum: the arm stretches out to the fist in flight, and snaps back after it
+    o.reachR = holdAt; o.reachRK = 1; o.reachLK = 1;
+    if (!holdAt && p.fruit === 'gomu') this.stretch(p, ctx, o, dtv);
     // The legs show only while a kick is out in front (not the knee chambered
     // up under your chin on the way out, which filled the view); and a kick
     // seen from your own eyes drives out low into the view, not up past your
@@ -440,18 +442,20 @@ class Viewmodel {
     for (const g of this.glows) g.sprite.visible = false;
   }
 
-  /** The Gum-Gum fist projectile in flight, in body space. */
-  stretch(p, ctx) {
-    const g = ctx.game;
-    const pr = g && g.combat && g.combat.projectiles.find((q) => q.stretch === p && !(q.delay > 0));
-    if (!pr) return null;
-    const w = ctx.world;
-    const dx = w ? w.dx(p.x, pr.x) : pr.x - p.x, dy = pr.y - (p.y - 0.5);
-    const f = p.facing || 0;
-    const fx = dx * Math.cos(f) + dy * Math.sin(f), fz = -dx * Math.sin(f) + dy * Math.cos(f);
+  /**
+   * The Gum-Gum fist in flight, in body space: your arm runs out ahead of you
+   * to it, down the middle of the view, and snaps back once it's spent
+   * (chars/rubber.js).
+   */
+  stretch(p, ctx, o, dt) {
+    const F = this.fist || (this.fist = fistState());
+    const f = p.facing || 0, c = Math.cos(f), sn = Math.sin(f);
+    const d = this.model.d, sh = d.hip0 + d.shY;
     // (never nearer your eye than an arm held out: just launched, the fist —
-    // and its glow — filled the view)
-    return (this._reach || (this._reach = new THREE.Vector3())).set(Math.max(0.55, fx), 1.3, fz * 0.6 + 0.05);
+    // and its glow — filled the view; and it flies off level with your
+    // shoulder, a little in toward the middle of the view)
+    const k = rubberFist(F, p, ctx, dt, (out, dx, dy) => { const fx = dx * c + dy * sn, fz = -dx * sn + dy * c; out.set(Math.max(0.55, fx), sh - 0.08 + Math.min(0.12, fx * 0.012), fz * 0.6 + 0.05); });
+    if (k > 0) { o.reachR = F.at; o.reachRK = k; }
   }
 
   effects(p, pose, A, env) {

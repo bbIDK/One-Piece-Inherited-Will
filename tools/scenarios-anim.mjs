@@ -11,6 +11,9 @@
 //   node tools/shot.mjs anim-react [--views=side,front] [--only=hurt,parry,...]
 //   node tools/shot.mjs anim-fp --moves=brawler:m1,black_leg:m1.0,ittoryu:heavy,mera_hiken [--every=2] [--n=10]
 //   node tools/shot.mjs anim-pose --js=<file>   (a function body given g, OP, LAB: pose the row yourself)
+//   node tools/shot.mjs anim-live --moves=gomu_pistol,gomu_bazooka [--views=side,back,3q] [--every=2] [--n=12] [--fw=400]
+//   node tools/shot.mjs anim-dodge [--races=human,skypiean,lunarian,mink,buccaneer,longleg] [--dirs=f,fr,r,br,b] [--views=side,back]
+//   node tools/shot.mjs anim-fly [--styles=wings,phoenix,dragon,ride,float,geppo,none] [--views=side,back,3q]
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -363,6 +366,78 @@ async function filmReact(page, key, views, rows) {
   }
 }
 
+// ------------------------------------------------------------------ dodges
+// A dash in one direction (from the facing: f forward, b back, r / l to the
+// right or left, and the diagonals), by one race: the row is the dash frozen
+// at its moments.
+const DODGE_DIRS = { f: [1, 0], fr: [0.707, 0.707], r: [0, 1], br: [-0.707, 0.707], b: [-1, 0], bl: [-0.707, -0.707], l: [0, -1], fl: [0.707, -0.707] };
+const DODGE_TS = [0, 0.02, 0.045, 0.07, 0.1, 0.13, 0.16, 0.19, 0.215];
+async function filmDodge(page, race, dir, views, rows) {
+  for (const view of views) {
+    await page.evaluate(({ race, d, ts, facing }) => {
+      const L = window.LAB;
+      L.spawnRow(ts.length, { race });
+      L.row.forEach((a, i) => {
+        L.equip(a, {});
+        a.facing = facing; a.__combat = true;
+        const c = Math.cos(facing), s = Math.sin(facing);
+        const wx = d[0] * c - d[1] * s, wy = d[0] * s + d[1] * c, v = 3.2 / 0.22;
+        a.dash = { vx: wx * v, vy: wy * v, t: Math.max(0.001, 0.22 - ts[i]), t0: 0.22, dodge: true };
+      });
+      L.frame();
+      L.draw(); L.draw();
+    }, { race, d: DODGE_DIRS[dir], ts: DODGE_TS, facing: VIEWS[view] ?? 0 });
+    const clip = await stripClip(page);
+    rows.push({ label: `dodge ${dir} — ${race} — ${view} — t = ${DODGE_TS.map((t) => t.toFixed(2)).join(' ')}`, buf: await page.screenshot({ clip }) });
+  }
+}
+
+// ------------------------------------------------------------------ flight
+// One flight style through its states, a fighter frozen in each: hovering,
+// cruising (slow, fast, flat out), climbing, diving, banking either way, the
+// take-off and the landing. (game/actor.js flying and flightStyle, the
+// velocity, the altitude; render/anim/flight.js flightState keeps the rest
+// on the actor: set here as it would be mid-flight.)
+const FLY_STATES = [
+  { n: 'hover', v: 0, t: 0.3 }, { n: 'hover+', v: 0, t: 0.62 }, { n: 'slow', v: 4 }, { n: 'cruise', v: 9 }, { n: 'flat out', v: 22 },
+  { n: 'climb', v: 7, climb: 5 }, { n: 'dive', v: 9, climb: -8 }, { n: 'bank R', v: 10, bank: 0.6 }, { n: 'bank L', v: 10, bank: -0.6 },
+  { n: 'strafe R', v: 0, side: 7 }, { n: 'back', v: -5 },
+  { n: 'take-off .05', v: 0, up: 0.05, z: 0.05 }, { n: 'take-off .15', v: 0, up: 0.15, z: 0.3 }, { n: 'take-off .3', v: 0, up: 0.3, z: 1.2 },
+  { n: 'land .03', down: 0.03 }, { n: 'land .12', down: 0.12 }, { n: 'land .25', down: 0.25 },
+];
+async function filmFly(page, style, views, rows, race) {
+  for (const view of views) {
+    await page.evaluate(({ style, S, facing, race }) => {
+      const L = window.LAB, g = window.OP.game, now = g.env.time;
+      L.spacing = 2.3;
+      L.spawnRow(S.length, { race });
+      L.row.forEach((a, i) => {
+        const st = S[i];
+        L.equip(a, {});
+        a.facing = facing;
+        const c = Math.cos(facing), s = Math.sin(facing);
+        const fwd = st.v || 0, side = st.side || 0;
+        a.vx = fwd * c - side * s; a.vy = fwd * s + side * c;
+        a.moving = Math.hypot(a.vx, a.vy) > 0.4; a.speed = Math.hypot(a.vx, a.vy);
+        if (st.down !== undefined) {
+          a.flying = false; a.z = 0; a.vx = 0; a.vy = 0; a.moving = false;
+          a._fly = { on: false, upT: now - 9, downT: now - st.down, t0: now - 9, h: null, bank: 0, alt: null, climb: 0, last: now, style: style === 'none' ? null : style };
+        } else {
+          a.flying = true; a.flightStyle = style === 'none' ? undefined : style;
+          a.z = st.z ?? 2.2; a.alt = null;
+          const up = st.up ?? 9;
+          a._fly = { on: true, upT: now - up, downT: now - 9, t0: now - (st.t ?? up), h: Math.atan2(a.vy, a.vx), bank: st.bank || 0, alt: a.z, climb: st.climb || 0, last: now, style: style === 'none' ? null : style };
+        }
+      });
+      L.frame(undefined, 2.4, 0.03);
+      L.draw(); L.draw();
+      L.spacing = 1.7;
+    }, { style, S: FLY_STATES, facing: VIEWS[view] ?? 0, race });
+    const clip = await page.evaluate(() => ({ x: 0, y: Math.round(innerHeight * 0.08), width: innerWidth, height: Math.round(innerHeight * 0.84) }));
+    rows.push({ label: `flight: ${style}${race ? ' (' + race + ')' : ''} — ${view} — ${FLY_STATES.map((x) => x.n).join(' | ')}`, buf: await page.screenshot({ clip }) });
+  }
+}
+
 // ------------------------------------------------------------------ first person
 async function filmFP(page, m, every, n, rows) {
   const frames = [];
@@ -416,43 +491,48 @@ async function filmFP(page, m, every, n, rows) {
 
 // ------------------------------------------------------------------ live
 // One fighter against a dummy, the game really running (projectiles, a
-// Gum-Gum arm stretching after its fist, the effects): side-on through the
-// long lens, a frame every `every` sixtieths of a second.
-async function filmLive(page, m, every, n, rows) {
+// Gum-Gum arm stretching after its fist, the effects): through the long
+// lens from the side (or from behind the fighter, in front of it, three-
+// quarter), a frame every `every` sixtieths of a second.
+async function filmLive(page, m, every, n, rows, view = 'side') {
   const frames = [];
-  await page.evaluate((m) => {
+  await page.evaluate(({ m, facing }) => {
     const L = window.LAB, g = window.OP.game;
     L.spacing = 1.7;
     L.spawnRow(1, { style: m.style });
     const a = L.row[0];
     L.equip(a, { style: m.style, ...m.kit, fruit: m.fruit });
-    a.x = L.home.x - 1.8; a.facing = 0;
-    const d = window.OP.debug.makeNPC({ name: 'Dummy', id: 'animdummy', faction: 'marine', level: 30, hpMul: 400, look: { hair: 'bald', top: '#8d6e63', bottom: '#5d4037' } }, L.home.x + (m.ranged ? 3.2 : 0.1), L.home.y);
-    d.controller = null; d.game = g; d.facing = Math.PI; d.showName = false; d.hideBar = true; d.invulnerable = true; g.addActor(d); L.row.push(d);
+    const c = Math.cos(facing), s = Math.sin(facing), off = m.ranged ? 3.2 : 0.1;
+    a.x = L.home.x - c * 1.8; a.y = L.home.y - s * 1.8; a.facing = facing;
+    const d = window.OP.debug.makeNPC({ name: 'Dummy', id: 'animdummy', faction: 'marine', level: 30, hpMul: 400, look: { hair: 'bald', top: '#8d6e63', bottom: '#5d4037' } }, L.home.x + c * off, L.home.y + s * off);
+    d.controller = null; d.game = g; d.facing = facing + Math.PI; d.showName = false; d.hideBar = true; d.invulnerable = true; g.addActor(d); L.row.push(d);
+    L.liveAt = [[a.x, a.y], [d.x, d.y]];
     if (m.night) g.env.clock = 0; else g.env.clock = 11;
     L.frame(7.5, 1.0, 0.04);
     for (let i = 0; i < 3; i++) { g.update(1 / 60); g.render(); }
     L.startAt(a, m, 0);
-    a.action.t = 0; a.action.step = 0;
+    // (at the move's own pace: a foe's wind-up is slowed for you to read in the gentler seas)
+    a.action.t = 0; a.action.step = 0; a.action.slow = 1;
     a.__combat = true;
-  }, m);
+  }, { m, facing: VIEWS[view] ?? 0 });
   for (let i = 0; i < n; i++) {
     await page.evaluate((every) => {
       const g = window.OP.game, L = window.LAB;
       for (let k = 0; k < every; k++) g.update(1 / 60);
-      const a = L.row[0]; a.y = L.home.y; L.row[1].y = L.home.y;
+      // (the fighter stays where it stands: no drifting out of the frame on a lunge)
+      if (!L.liveDrift) L.row.forEach((x, j) => { x.x = L.liveAt[j][0]; x.y = L.liveAt[j][1]; });
       if (g.view3d.groundCover) g.view3d.groundCover.group.visible = false;
       g.render();
     }, every);
     frames.push(await page.screenshot({ clip: await page.evaluate(() => ({ x: Math.round(innerWidth * 0.12), y: Math.round(innerHeight * 0.08), width: Math.round(innerWidth * 0.76), height: Math.round(innerHeight * 0.84) })) }));
   }
-  rows.push({ label: `${m.label} (live, every ${every}/60 s)`, frames });
+  rows.push({ label: `${m.label} (live, ${view}, every ${every}/60 s)`, frames });
 }
 
-async function fpSheet(page, file, rows, title) {
+async function fpSheet(page, file, rows, title, fw = 300) {
   mkdirSync(outDir, { recursive: true });
   const p2 = await page.context().browser().newPage({ viewport: { width: 800, height: 600 } });
-  const html = rows.map((r) => `<div style="padding:2px 4px">${r.label}</div><div style="display:flex;gap:2px">${r.frames.map((b) => `<img style="width:300px" src="data:image/png;base64,${b.toString('base64')}">`).join('')}</div>`).join('');
+  const html = rows.map((r) => `<div style="padding:2px 4px">${r.label}</div><div style="display:flex;gap:2px">${r.frames.map((b) => `<img style="width:${fw}px" src="data:image/png;base64,${b.toString('base64')}">`).join('')}</div>`).join('');
   await p2.setContent(`<html><body style="margin:0;background:#111;color:#eee;font:13px monospace">${title ? `<div style="padding:4px 6px;font-size:15px">${title}</div>` : ''}<div style="width:max-content">${html}</div></body></html>`);
   await p2.waitForTimeout(50);
   const path = join(outDir, file);
@@ -512,11 +592,44 @@ export const scenarios = {
     async run(page, snap, args) {
       await boot(page);
       const specs = String(args.moves || 'gomu_pistol').split(',');
+      const views = String(args.views || 'side').split(',');
       const every = Number(args.every || 3), n = Number(args.n || 10);
       const rows = [];
-      for (const spec of specs) for (const m of moveInfo(spec)) await filmLive(page, m, every, n, rows);
+      for (const spec of specs) for (const m of moveInfo(spec)) for (const v of views) await filmLive(page, m, every, n, rows, v);
       const tag = args.tag ? '-' + args.tag : '';
-      await fpSheet(page, `anim-live${tag}.png`, rows, `live ${tag}`);
+      await fpSheet(page, `anim-live${tag}.png`, rows, `live ${tag}`, Number(args.fw || 300));
+    },
+  },
+  'anim-dodge': {
+    async run(page, snap, args) {
+      await boot(page);
+      const races = String(args.races || 'human').split(',');
+      const dirs = String(args.dirs || 'f,fr,r,br,b').split(',');
+      const views = String(args.views || 'side').split(',');
+      const per = Number(args.per || 6);
+      const tag = args.tag ? '-' + args.tag : '';
+      let rows = [], part = 0;
+      for (const race of races) for (const dir of dirs) {
+        await filmDodge(page, race, dir, views, rows);
+        if (rows.length >= per) { await sheet(page, `anim-dodge${tag}-${++part}.png`, rows, `dodges ${tag}`); rows = []; }
+      }
+      if (rows.length) await sheet(page, `anim-dodge${tag}-${++part}.png`, rows, `dodges ${tag}`);
+    },
+  },
+  'anim-fly': {
+    async run(page, snap, args) {
+      await boot(page);
+      const styles = String(args.styles || 'wings,phoenix,dragon,ride,float,geppo,none').split(',');
+      const views = String(args.views || 'side').split(',');
+      const per = Number(args.per || 4);
+      const tag = args.tag ? '-' + args.tag : '';
+      let rows = [], part = 0;
+      for (const style of styles) {
+        // (wings fly on wings: a Lunarian's)
+        await filmFly(page, style, views, rows, args.race || (style === 'wings' ? 'lunarian' : 'human'));
+        if (rows.length >= per) { await sheet(page, `anim-fly${tag}-${++part}.png`, rows, `flight ${tag}`); rows = []; }
+      }
+      if (rows.length) await sheet(page, `anim-fly${tag}-${++part}.png`, rows, `flight ${tag}`);
     },
   },
   'anim-pose': {

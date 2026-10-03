@@ -3,7 +3,7 @@
 // texture per expression) and held weapons. `pose(P, o)` applies a sampled
 // 2D-rig pose through the 3D rig; the caller turns the model to its facing.
 import * as THREE from 'three';
-import { BONES, B, PARENT, restOffsets, SKIRT_N, skirtWaist } from './bones.js';
+import { BONES, B, PARENT, restOffsets, SKIRT_N, skirtWaist, RUB, RUBL } from './bones.js';
 import { getBody, releaseBody, faceGeo, headLevel } from './build.js';
 import { Rig } from './rig.js';
 import { bodyMaterial, sharedOutline, glowMaterial, SELF_SHADE, SELF_SHADE_VM } from './mats.js';
@@ -15,6 +15,10 @@ const ZERO = new THREE.Vector3(0, 0, 0), ONE = new THREE.Vector3(1, 1, 1);
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3();
 const AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), AZ = new THREE.Vector3(0, 0, 1);
 const LIMBS = [B.uarmR, B.farmR, B.uarmL, B.farmL, B.thighR, B.shinR, B.thighL, B.shinL];
+// the bones the rig places in the model's own space each frame
+const POSED = [B.hips, B.chest, B.head, B.uarmR, B.farmR, B.handR, B.uarmL, B.farmL, B.handL, B.thighR, B.shinR, B.footR, B.thighL, B.shinL, B.footL, ...RUB[0], ...RUB[1], ...RUBL[0], ...RUBL[1]];
+/** A rubber limb's motion between frames (see CharacterModel.rubberMotion). */
+const rubberState = () => ({ amp: 0, ph: 0, sag: 0.02, k: 2.5, tilt: 0, len: 0, v: 0, dir: new THREE.Vector3(), prev: new THREE.Vector3(), has: false });
 const SHAPES = ['fist', 'palm', 'finger'];
 // Articulated hands (the first-person view): per hand shape, how far each
 // finger bends at the knuckle (a) and the middle joint (b), index…little, in
@@ -146,6 +150,10 @@ export class CharacterModel {
     // they rest on a floor or a deck instead of sinking into it)
     this.soleLift = soleLift(this.body, this.d);
     this.rig = new Rig(this.d);
+    this.rig.tA = this.body.rubTA || [0, 0];
+    // (each rubber limb's ripple and slack, carried from frame to frame)
+    this.rub = [rubberState(), rubberState()];
+    this.rubL = [rubberState(), rubberState()];
     this.group = new THREE.Group();
     this.group.name = 'char';
     this.bones = BONES.map((n) => { const b = new THREE.Bone(); b.name = n; return b; });
@@ -278,6 +286,7 @@ export class CharacterModel {
     this.mesh.geometry = nb.geo;
     this.outline.geometry = nb.geo;
     for (let i = 0; i < nb.inv.length; i++) this.skeleton.boneInverses[i].copy(nb.inv[i]);
+    this.rig.tA = nb.rubTA || [0, 0];
     this.restFingers();
     this.face.geometry = faceGeo(this.look, headLevel(lod));
     this.dangles = null;
@@ -326,7 +335,12 @@ export class CharacterModel {
     o.shape = this.shape;
     o.drawBlade = null; o.drawHold2 = true;
     if (o.draw && o.wpn) this.drawPath(P, o);
+    o.rub = this.rub; o.rubL = this.rubL;
     rig.solve(P, o);
+    // (how long since the last pose: the rubber's ripple and slack run on it)
+    const rdt = this.poseT === undefined ? 0 : Math.max(0, Math.min(0.1, t - this.poseT));
+    this.poseT = t;
+    this.rubberMotion(rdt);
     // hand/weapon grips: armed hands close into fists
     const armed = !!o.armed && !!o.wpn;
     for (let k = 0; k < 2; k++) {
@@ -344,11 +358,24 @@ export class CharacterModel {
       for (const sh of SHAPES) this.showBone(B[sh + H], sh === s);
     }
     // top-level bones from the rig
-    for (const i of [B.hips, B.chest, B.head, B.uarmR, B.farmR, B.handR, B.uarmL, B.farmL, B.handL, B.thighR, B.shinR, B.footR, B.thighL, B.shinL, B.footL]) {
+    for (const i of POSED) {
       bones[i].position.copy(rig.pos[i]);
       bones[i].quaternion.copy(rig.quat[i]);
     }
     for (const i of LIMBS) bones[i].scale.set(1, rig.len[i], 1);
+    // the rubber chains: stretched along with the forearm (or shin) at rest, their own length when it runs out
+    for (let k = 0; k < 2; k++) {
+      // (Gear Third: an arm blown up like a balloon, the fist huge)
+      const inf = (k === 0 ? P.inF : P.inB) || 0, g = 1 + 1.4 * inf;
+      for (const i of RUB[k]) bones[i].scale.set(g, rig.rubSY[k], g);
+      for (const i of RUBL[k]) bones[i].scale.set(1, rig.rubSYL[k], 1);
+      if (inf > 0) {
+        const U = k === 0 ? B.uarmR : B.uarmL, F = k === 0 ? B.farmR : B.farmL;
+        bones[U].scale.set(1 + 0.9 * inf, rig.len[U], 1 + 0.9 * inf);
+        bones[F].scale.set(g, rig.len[F], g);
+        bones[k === 0 ? B.handR : B.handL].scale.setScalar(1 + 2.2 * inf);
+      } else bones[k === 0 ? B.handR : B.handL].scale.setScalar(1);
+    }
     if (this.body.skirt) this.skirtPanels(o.dt);
     if (this.visibleParts) for (const [i, on] of this.visibleParts) this.showBone(i, on);
     if (this.fing) for (let k = 0; k < 2; k++) this.poseFingers(k, this.shape[k], t);
@@ -363,10 +390,7 @@ export class CharacterModel {
         .multiply(_q.setFromAxisAngle(AZ, -flow * 0.6 + Math.sin(t * 2.4) * 0.03));
     }
     bones[B.tail].quaternion.setFromAxisAngle(AY, Math.sin(t * 3.2) * 0.35).multiply(_q.setFromAxisAngle(AZ, Math.sin(t * 2.1) * 0.12 - flow * 0.5));
-    const lunar = this.look.wings === 'lunar';
-    const flap = Math.sin(t * (lunar ? 2.4 : 3.2)) * (lunar ? 0.1 : 0.14) + (o.moving ? 0.12 : 0);
-    bones[B.wingR].quaternion.setFromAxisAngle(AY, -0.35 - flap * 0.5).multiply(_q.setFromAxisAngle(AX, -0.25 + flap));
-    bones[B.wingL].quaternion.setFromAxisAngle(AY, 0.35 + flap * 0.5).multiply(_q.setFromAxisAngle(AX, 0.25 - flap));
+    this.poseWings(P, o, t);
 
     // weapons: in hand when armed, sheathed otherwise
     const w = o.wpn;
@@ -418,7 +442,78 @@ export class CharacterModel {
       g.position.y += 0.13 * k + (o.bounce || 0);
       g.position.x += 0.1 * k;
     }
+    // banked into a turn (in flight): rolled about the body's length, round the hips
+    const bk = P.bk || 0;
+    if (bk) {
+      _q.setFromAxisAngle(AX, bk);
+      _v.set(0, pivot + (o.lift || 0) + this.soleLift, 0);
+      g.position.sub(_v).applyQuaternion(_q).add(_v);
+      g.quaternion.premultiply(_q);
+    }
     if (o.squash && o.squash !== 1) g.scale.set(1 / Math.sqrt(o.squash), o.squash, 1 / Math.sqrt(o.squash)); else g.scale.set(1, 1, 1);
+  }
+
+  /**
+   * A rubber limb's life between frames: how fast it's stretching (out, or
+   * snapping back), which way its end is flying, and from that the ripple
+   * running along it and its slack — taut and barely rippling as the fist
+   * flies out, a twang where it turns back, slack and whipping as it snaps
+   * home. (The rig shapes the limb from these: rig.js solveRubber.)
+   */
+  rubberMotion(dt) {
+    const rig = this.rig;
+    for (let j = 0; j < 4; j++) {
+      const leg = j >= 2, k = j % 2;
+      const R = leg ? this.rubL[k] : this.rub[k];
+      const on = leg ? rig.rubOnL[k] : rig.rubOn[k], len = leg ? rig.rubLenL[k] : rig.rubLen[k];
+      const E = leg ? rig.F[k] : rig.E[k];
+      if (!on) { R.amp *= Math.exp(-dt * 14); R.len = 0; R.v = 0; R.has = false; R.dir.set(0, 0, 0); continue; }
+      if (!R.has || dt <= 0) {
+        // (just stretched: a fresh ripple, in its own plane)
+        R.has = true; R.prev.copy(E); R.len = len; R.v = 0;
+        R.ph = 0; R.amp = Math.max(R.amp, 0.02 + 0.012 * len); R.sag = 0.02;
+        R.tilt = (k ? -0.5 : 0.5) + Math.sin(len * 13.7) * 0.4;
+        R.k = 2 + (len % 1);
+        continue;
+      }
+      const v = (len - R.len) / dt;
+      _v.subVectors(E, R.prev).divideScalar(dt);
+      const sp = _v.length();
+      if (sp > 2.5) R.dir.copy(_v).divideScalar(sp); else R.dir.set(0, 0, 0);
+      R.prev.copy(E);
+      // the twang where it stops going out and starts coming back
+      if (R.v > 1.5 && v < -1.5) R.amp += 0.05 + 0.025 * Math.min(len, 6);
+      const want = Math.min(0.09, 0.008 * Math.sqrt(Math.abs(v)) * Math.min(1, len / 1.5));
+      R.amp += (want - R.amp) * Math.min(1, dt * (R.amp > want ? 5 : 10));
+      // the ripple runs out along it as it stretches, back down it as it comes home
+      R.ph += dt * (v >= -0.5 ? 22 : -30);
+      R.sag += ((v < -1 ? 0.07 : 0.018) - R.sag) * Math.min(1, dt * 8);
+      R.len = len; R.v = v;
+    }
+  }
+
+  /**
+   * Wings on the back (a Lunarian's, a Skypiean's): at rest half folded,
+   * stirring; driven by the pose (P.ws spread, P.wg the beat: −1 up … +1
+   * down, P.wf swept back) they open out to the sides and beat — a little
+   * bigger spread wide, as a flight feather fans.
+   */
+  poseWings(P, o, t) {
+    const bones = this.bones, lunar = this.look.wings === 'lunar';
+    let yaw, roll, sc = 1;
+    if (P.ws !== undefined && P.ws !== null) {
+      const sp = Math.max(0, Math.min(1, P.ws)), beat = P.wg || 0, back = P.wf || 0;
+      // (folded: swept back along the body and drooping; spread: straight out, beating about the shoulder)
+      yaw = -0.95 + 0.85 * sp - 0.75 * back;
+      roll = 0.3 * (1 - sp) - 0.12 * sp + beat * 0.72 * sp;
+      sc = 1 + 0.35 * sp;
+    } else {
+      const flap = Math.sin(t * (lunar ? 2.4 : 3.2)) * (lunar ? 0.1 : 0.14) + (o.moving ? 0.12 : 0);
+      yaw = -0.35 - flap * 0.5; roll = -0.25 + flap;
+    }
+    bones[B.wingR].quaternion.setFromAxisAngle(AY, yaw).multiply(_q.setFromAxisAngle(AX, roll));
+    bones[B.wingL].quaternion.setFromAxisAngle(AY, -yaw).multiply(_q.setFromAxisAngle(AX, -roll));
+    bones[B.wingR].scale.setScalar(sc); bones[B.wingL].scale.setScalar(sc);
   }
 
   /**
