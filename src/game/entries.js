@@ -99,8 +99,13 @@ export function takeOut(game, p, id) {
     return p.tryTechnique(def.id, game);
   }
   fruitOut(game, p);
-  // (from one form straight into another: the first ends, and what it leaves you with comes)
-  if (fb && fb.form !== formId) p.endForm();
+  // (from one form straight into another: the first ends, and what it leaves you with comes —
+  // too worn out by it to go on, after Gear Fourth, and the next one can't come)
+  if (fb && fb.form !== formId) {
+    p.endForm();
+    const worn = p.buffs.find((b) => b.noForms);
+    if (worn) { game.log(`${fb.name} ends — and leaves you exhausted: no ${F.name} for ${Math.ceil(worn.t)}s.`, '#ff8a80'); return true; }
+  }
   return p.tryTechnique(def.id, game);
 }
 

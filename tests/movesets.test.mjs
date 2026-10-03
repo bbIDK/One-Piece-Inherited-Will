@@ -252,6 +252,15 @@ test('Gear Fourth changes the moveset, runs out, and leaves you exhausted: no Ge
   assert.ok(!p.buffs.some((b) => b.noHaki), 'it passes');
   pc.toggleHaki(p, g, 'armament');
   assert.equal(p.armament, true);
+  // (straight from Gear Fourth into another form: it ends — and the exhaustion stops the next one)
+  p.haki = 1e6; p.cooldowns = {};
+  assert.ok(takeOut(g, p, ENTRY.form('gear4')));
+  step(g, 1.3);
+  assert.equal(formBuff(p)?.form, 'gear4');
+  assert.ok(takeOut(g, p, ENTRY.form('gear2')));
+  step(g, 1);
+  assert.equal(formBuff(p), null, 'no Gear Second after it');
+  assert.ok(p.buffs.some((b) => b.id === 'gear4_spent'), 'exhausted');
 });
 
 test('a form switches on and, pressed again, off — straight from one into another too; the awakened set toggles at will', () => {
