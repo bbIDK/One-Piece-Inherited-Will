@@ -21,6 +21,7 @@ import { Trail } from './chars/trail.js';
 import { BackFlame, driftInto } from './chars/flame.js';
 import { createViewmodel } from './chars/viewmodel.js';
 import { holdItem, heldSize } from './chars/helditem.js';
+import { rubberFist, fistState } from './chars/rubber.js';
 import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
 import { blendPose } from '../render/anims.js';
 import { shipBob, shipLift } from '../world/hull.js';
@@ -172,14 +173,14 @@ class ActorView {
       o.dt = dtv; // (a skirt's panels settle back at their own pace, however often this one is drawn)
       o.sitY = (this.sitH || 0) / s;
       // the hands on the oar grips (or the wheel's rim) — or a rubber punch in
-      // flight: the arm stretches out to the fist
-      o.reachR = null; o.reachL = null;
+      // flight: the arm stretches out to the fist, and snaps back after it
+      o.reachR = null; o.reachL = null; o.reachRK = 1; o.reachLK = 1;
       if (pose.station) {
         const st = pose.station, R = this._grips || (this._grips = [new THREE.Vector3(), new THREE.Vector3()]);
         const hipY = m.d.hip0 + ((o.sitY ?? m.d.hA) + 0.07 - m.d.hip0) * o.sitK;
         stationReach(st, stationSpot(st), m.d, s, (this.visF ?? a.facing) - st.ship.heading, P.l || 0, hipY, R);
         o.reachR = R[0]; o.reachL = R[1];
-      } else if (a.fruit === 'gomu') o.reachR = this.stretchTarget(a, ctx, s);
+      } else if (a.fruit === 'gomu') this.stretchTarget(a, ctx, s, o, dtv);
       const knocked = pose.state === 'knocked' || pose.state === 'dead';
       let PP = P;
       if (a.isPlayer && ctx.mode === 'first' && P.b && P.b[0] < 0) PP = { ...P, b: [P.b[0] * 0.3, P.b[1]] };
@@ -400,17 +401,17 @@ class ActorView {
     return this.headYaw;
   }
 
-  /** Where a Gum-Gum fist in flight is, in this model's pose frame. */
-  stretchTarget(a, ctx, s) {
-    const g = ctx.game;
-    const pr = g && g.combat && g.combat.projectiles.find((p) => p.stretch === a && !(p.delay > 0));
-    if (!pr) return null;
-    const w = ctx.world;
-    const dx = w ? w.dx(a.x, pr.x) : pr.x - a.x, dy = pr.y - (a.y - 0.5);
-    const f = a.facing || 0;
-    const fx = dx * Math.cos(f) + dy * Math.sin(f), fz = -dx * Math.sin(f) + dy * Math.cos(f);
-    _v.set(fx / s, 1.28, fz / s);
-    return this._reach ? this._reach.copy(_v) : (this._reach = _v.clone());
+  /**
+   * A Gum-Gum fist in flight, in this model's pose frame (turned as the
+   * model is drawn, at the height of the shoulder it flies from): the right
+   * arm runs out to it, and once it's spent snaps back (chars/rubber.js).
+   */
+  stretchTarget(a, ctx, s, o, dt) {
+    const F = this.fist || (this.fist = fistState());
+    const f = this.visF ?? a.facing ?? 0, c = Math.cos(f), sn = Math.sin(f);
+    const sh = this.model.rig.S[0].y - 0.05;
+    const k = rubberFist(F, a, ctx, dt, (out, dx, dy) => out.set((dx * c + dy * sn) / s, sh, (-dx * sn + dy * c) / s));
+    if (k > 0) { o.reachR = F.at; o.reachRK = k; }
   }
 
   effects(a, pose, P, o, env, ctx, camYaw3, dist, s) {

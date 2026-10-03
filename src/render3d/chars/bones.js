@@ -17,8 +17,15 @@
 //                 toward the right; each swings out about its own
 //                 horizontal axis to clear the legs (model.js skirtPanels);
 //   skirtK0..5    and a long skirt's lower panels, bending from them at the knee
+//   raR1..raR12, raL1..raL12 a rubber arm: the bare forearm in twelve rings
+//                 down to the wrist (the Gum-Gum stretch, chars/rig.js
+//                 solveRubber); at rest each sits where the forearm has it
+//   rlR1..rlR12, rlL1..rlL12 and a rubber leg's shin, down to the ankle
 import * as THREE from 'three';
 
+/** Bones in a rubber limb's chain (from the elbow, or the knee, to the wrist or ankle). */
+export const RUB_N = 12;
+const chain = (p) => ['R', 'L'].flatMap((H) => Array.from({ length: RUB_N }, (_, i) => `${p}${H}${i + 1}`));
 export const BONES = [
   'hips', 'chest', 'head',
   'uarmR', 'farmR', 'handR', 'fistR', 'palmR', 'fingerR',
@@ -28,9 +35,13 @@ export const BONES = [
   ...['R', 'L'].flatMap((H) => ['k1', 'k2', 'k3', 'k4', 'j1', 'j2', 'j3', 'j4', 'tb', 'tc'].map((n) => n + H)),
   'skirt0', 'skirt1', 'skirt2', 'skirt3', 'skirt4', 'skirt5',
   'skirtK0', 'skirtK1', 'skirtK2', 'skirtK3', 'skirtK4', 'skirtK5',
+  ...chain('ra'), ...chain('rl'),
 ];
 export const SKIRT_N = 6;
 export const B = Object.fromEntries(BONES.map((n, i) => [n, i]));
+/** A limb's rubber chain, wrist- or ankle-ward: RUB[k] for the arms (0 right, 1 left), RUBL[k] the legs. */
+export const RUB = ['R', 'L'].map((H) => Array.from({ length: RUB_N }, (_, i) => B[`ra${H}${i + 1}`]));
+export const RUBL = ['R', 'L'].map((H) => Array.from({ length: RUB_N }, (_, i) => B[`rl${H}${i + 1}`]));
 export const PARENT = {
   fistR: 'handR', palmR: 'handR', fingerR: 'handR', fistL: 'handL', palmL: 'handL', fingerL: 'handL',
   coatTail: 'chest', wingR: 'chest', wingL: 'chest', backWpn: 'chest', tail: 'hips', sheath: 'hips', hilts: 'hips', hairTail: 'head',
@@ -160,6 +171,12 @@ export function bindPose(d) {
     m[B['thigh' + H]] = T(0, yh, zl);
     m[B['shin' + H]] = T(0, yh - d.T1, zl);
     m[B['foot' + H]] = T(0, yh - d.T1 - d.T2, zl);
+    // (the rubber chains, evenly down the forearm and the shin: a body whose
+    // bare arm starts further down its sleeve moves its arm's — build.js)
+    for (let i = 1; i <= RUB_N; i++) {
+      m[B[`ra${H}${i}`]] = T(0, ys - d.A1 - (i / RUB_N) * d.A2, z);
+      m[B[`rl${H}${i}`]] = T(0, yh - d.T1 - (i / RUB_N) * d.T2, zl);
+    }
   }
   const R = restOffsets(d);
   const child = (n, parent, off = [0, 0, 0]) => { m[B[n]] = m[B[parent]].clone().multiply(T(off[0], off[1], off[2])); };
