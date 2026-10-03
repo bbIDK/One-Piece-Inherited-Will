@@ -218,16 +218,22 @@ function installLab() {
     P.__lab = true;
     const orig = P.visualPose;
     P.visualPose = function (env, look, act, aura, alphaBuff) {
-      const pose = orig.call(this, env, look, act, aura, alphaBuff);
       const L = this.__react;
+      // (kept on the actor as the combat code keeps them, for when it reads them itself)
+      if (L) {
+        for (const k of ['parryT', 'parryPerfect', 'parriedT', 'guardBrokenT', 'hitT', 'counterT']) if (L[k] !== undefined) this[k] = L[k];
+        if (L.hitT !== undefined) { this.hitDir = (this.facing || 0) + (L.hitDirRel ?? 0); this.hitW = L.hitW ?? 0.5; }
+      }
+      const pose = orig.call(this, env, look, act, aura, alphaBuff);
       if (L) {
         const now = env.time;
-        const age = (k) => (L[k] === undefined ? undefined : now - L[k]);
-        if (pose.parryAge === undefined && L.parryT !== undefined) { pose.parryAge = age('parryT'); pose.parryPerfect = !!L.parryPerfect; }
-        if (pose.parriedAge === undefined && L.parriedT !== undefined) pose.parriedAge = age('parriedT');
-        if (pose.guardBrokenAge === undefined && L.guardBrokenT !== undefined) pose.guardBrokenAge = age('guardBrokenT');
-        if (pose.counterAge === undefined && L.counterT !== undefined) pose.counterAge = age('counterT');
-        if (pose.hitAge === undefined && L.hitT !== undefined) { pose.hitAge = age('hitT'); pose.hitDirRel = L.hitDirRel ?? 0; pose.hitW = L.hitW ?? 0.5; }
+        const age = (k) => now - L[k];
+        const unset = (v) => v === undefined || v === Infinity;
+        if (unset(pose.parryAge) && L.parryT !== undefined) { pose.parryAge = age('parryT'); pose.parryPerfect = !!L.parryPerfect; }
+        if (unset(pose.parriedAge) && L.parriedT !== undefined) pose.parriedAge = age('parriedT');
+        if (unset(pose.guardBrokenAge) && L.guardBrokenT !== undefined) pose.guardBrokenAge = age('guardBrokenT');
+        if (unset(pose.counterAge) && L.counterT !== undefined) pose.counterAge = age('counterT');
+        if (unset(pose.hitAge) && L.hitT !== undefined) { pose.hitAge = age('hitT'); pose.hitDirRel = L.hitDirRel ?? 0; pose.hitW = L.hitW ?? 0.5; }
       }
       return pose;
     };
@@ -305,6 +311,7 @@ const REACT = {
   parried: { label: 'parried: the attacker reels, wide open', ts: [0, 0.04, 0.1, 0.18, 0.3, 0.45, 0.65, 0.85], set: 'parried' },
   guard_break: { label: 'guard broken: the stumble', ts: [0, 0.04, 0.1, 0.2, 0.35, 0.55, 0.8, 1.0], set: 'guardbreak' },
   launch: { label: 'knock-back launch', ts: [0, 0.05, 0.1, 0.2, 0.3, 0.45], set: 'launch' },
+  knockdown: { label: 'knocked down: the fall and the bounce', ts: [0, 0.05, 0.1, 0.16, 0.22, 0.28, 0.36, 0.45], set: 'knocked' },
   getup: { label: 'get-up', ts: [0, 0.08, 0.16, 0.24, 0.32, 0.4, 0.48], set: 'getup' },
   block: { label: 'block (fresh, then held; armed)', ts: [0, 0.03, 0.07, 0.12, 0.2, 0.5], set: 'block' },
   dodge_fwd: { label: 'dodge forward (roll)', ts: [0, 0.03, 0.06, 0.1, 0.14, 0.18, 0.22], set: 'dodge:1,0' },
@@ -337,6 +344,7 @@ async function filmReact(page, key, views, rows) {
         else if (kind === 'guardbreak') { a.hitstun = Math.max(0, 1.1 - t); a.__react = { guardBrokenT: now - t }; }
         else if (kind === 'launch') { a.hitstun = 0.5; const k = 14 * Math.exp(-t * 4); a.kb.x = -Math.cos(facing) * k; a.kb.y = -Math.sin(facing) * k; a.__react = { hitT: now - t, hitDirRel: Math.PI, hitW: 1.1 }; }
         else if (kind === 'getup') { a._getUpT = Math.max(0.001, 0.5 - t); a._wasDown = false; }
+        else if (kind === 'knocked') { a.state = 'knocked'; a.knockT = t; a.__combat = false; }
         else if (kind === 'block') { a.blocking = true; a.blockTime = t; }
         else if (kind === 'dodge') {
           const [dx, dy] = arg.split(',').map(Number);
@@ -344,6 +352,8 @@ async function filmReact(page, key, views, rows) {
           const wx = dx * c - dy * s, wy = dx * s + dy * c, v = 3.2 / 0.22;
           a.dash = { vx: wx * v, vy: wy * v, t: Math.max(0.001, 0.22 - t), t0: 0.22, dodge: true };
         } else if (kind === 'counter') { a.__react = { counterT: now - t }; }
+        // (filmed partway into it: the stagger began with its blow, or with none)
+        a._stunWas = a.hitstun > 0; a._stunBlind = kind === 'stun';
       });
       L.frame();
       L.draw(); L.draw();
@@ -378,7 +388,7 @@ async function filmFP(page, m, every, n, rows) {
   // start it, then step frame by frame
   await page.evaluate((m) => {
     const L = window.LAB, g = window.OP.game, p = g.player;
-    p.action = null; p.cooldowns = {}; p.haki = 999; p.hitstun = 0; p.__react = null;
+    p.action = null; p.cooldowns = {}; p.haki = 999; p.hitstun = 0; p.__react = null; p._stunWas = false;
     const r = g.view3d.rig; r.yaw = 0; r.pitch = -0.08; p.facing = 0;
     if (m.react) {
       // (the guard is held with the real key; the reaction's clock starts now)
@@ -515,7 +525,8 @@ export const scenarios = {
       const body = readFileSync(String(args.js), 'utf8');
       const out = await page.evaluate((body) => new Function('g', 'OP', 'LAB', body)(window.OP.game, window.OP, window.LAB), body);
       if (out) console.log('pose', JSON.stringify(out));
-      await page.evaluate(() => { window.LAB.frame(); window.LAB.draw(); window.LAB.draw(); });
+      // (a body that leaves the view as it should be filmed — first person, say — returns { asIs: true })
+      if (!out || !out.asIs) await page.evaluate(() => { window.LAB.frame(); window.LAB.draw(); window.LAB.draw(); });
       await snap('pose');
     },
   },

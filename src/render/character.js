@@ -780,7 +780,10 @@ function drawAura(g, color, t, headY, bulk, bright) {
  *         fx: { color, trail, elem, limb, k, additive, claw }, blade/bladeB/bladeLen,
  *         legFx, charge: { kind, color, k, at }, flurry, combat, sprint, block,
  *         dodge, dodgeDir, getUp, launch, hurtK, z, roll, squash, toon, bounce,
- *         knockT, ghost, noShadow, noTrails }
+ *         knockT, ghost, noShadow, noTrails,
+ *         the reactions' clocks (see anims.js): parryAge, parryPerfect, parriedAge,
+ *         guardBrokenAge, hitAge, hitDirRel, hitW, counterAge, blockHitAge, armOn,
+ *         flinch, stunBlind }
  */
 export function drawCharacter(g, look, pose) {
   const s = look.scale || 1;
@@ -1186,7 +1189,7 @@ export function drawCharacter(g, look, pose) {
   // --- head (with its own small tilt)
   upper(() => {
     g.save();
-    const tilt = (P.ht || 0) + (pose.state === 'hurt' ? -0.25 : 0);
+    const tilt = (P.ht || 0) + (pose.state === 'hurt' && pose.stunBlind ? -0.25 : 0);
     if (tilt) { g.translate(0, headY + headR); g.rotate(tilt); g.translate(0, -headY - headR); }
     drawHead(g, look, headY, headR, d, pose, t, P);
     // Santoryu: the third blade in the mouth

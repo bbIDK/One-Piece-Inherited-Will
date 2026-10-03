@@ -73,6 +73,8 @@ export class Trail {
     if (moved < (bladed ? 0.3 : 0.25)) { this.hide(); return; }
     const col = (pose.fx && (pose.fx.trail || pose.fx.color)) || '#ffffff';
     _c.set(col);
+    // (a fist's or a foot's smear: broader behind a big wound-up blow than a jab's)
+    const wide = 0.1 + Math.min(0.12, (A.w || 0.1) * 0.3);
     this.mat.blending = pose.fx && pose.fx.additive ? THREE.AdditiveBlending : THREE.NormalBlending;
     const P3 = this.pos, C4 = this.col;
     for (let r = 0; r < 2; r++) {
@@ -90,7 +92,7 @@ export class Trail {
           const nx = this.tips[0][Math.min(n - 1, j + 1)];
           _w.subVectors(tip, nx);
           const up = _v.set(0, 1, 0).addScaledVector(_w.normalize(), -_w.y).normalize();
-          inner = up.multiplyScalar(-0.13 * (1 - u)).add(tip);
+          inner = up.multiplyScalar(-wide * (1 - u)).add(tip);
           tip.addScaledVector(up, 0);
         }
         P3.set([tip.x, tip.y, tip.z], vi * 3);

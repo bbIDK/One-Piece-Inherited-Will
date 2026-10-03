@@ -308,7 +308,7 @@ const CLIPS = {
   // El Thor: the arm thrust up at the sky, the finger raised — and swept down at the target as the bolt falls
   skyward: (w, T, c) => ({ keys: strike(w, T, S(c, { stance: STAND, loadAt: 0.45, load: { b: [0, 0.03], l: -0.1, ht: -0.25, tw: -0.15, hF: { a: -1.5, r: 0.43 }, hand: 'finger', hB: [0.02, 0.32], zB: 0.04, face: 'fierce' }, hit: { b: [0.04, 0.07], l: 0.12, ht: 0.05, tw: 0.3, hF: [0.42, 0.12], hand: 'finger', hB: [-0.05, 0.3], face: 'shout' }, holdT: 0.2 })), jitter: 0.005 }),
   // Ice Age: the palm raised high, then down onto one knee and slapped flat on the ground (it freezes out from there)
-  groundpalm: (w, T, c) => ({ keys: strike(w, T, S(c, { stance: STAND, loadAt: 0.55, load: { b: [0, -0.02], z: 0.02, l: -0.08, ht: -0.1, tw: -0.2, hF: { a: -1.3, r: 0.4 }, hand: 'palm', hB: [0.05, 0.3], face: 'fierce' }, hit: { b: [0.08, 0.32], l: 0.62, ht: -0.25, tw: 0.2, hF: [0.3, 0.62], hand: 'palm', hB: [-0.12, 0.25], fF: [0.31, 0], fB: [-0.24, 0.0], face: 'shout' }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.3, holdK: 0.8 })), legs: true }),
+  groundpalm: (w, T, c) => ({ keys: strike(w, T, S(c, { stance: STAND, loadAt: 0.55, load: { b: [0, -0.02], z: 0.02, l: -0.08, ht: -0.1, tw: -0.2, hF: { a: -1.3, r: 0.4 }, hand: 'palm', hB: [0.05, 0.3], face: 'fierce' }, hit: { b: [0.08, 0.34], l: 0.74, ht: -0.32, tw: 0.2, hF: [0.24, 0.72], hand: 'palm', hB: [-0.12, 0.25], fF: [0.31, 0], fB: [-0.24, 0.0], face: 'shout' }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.3, holdK: 0.8 })), legs: true }),
   // ROOM: a hand held up before the face, open as if round a sphere, as the dome spreads out from it
   room: (w, T, c) => ({ keys: strike(w, T, S(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.05], l: 0.04, tw: -0.1, hF: [0.16, 0.06], hand: 'claw', hB: [0.0, 0.32], face: 'fierce' }, hit: { b: [0, 0.06], l: -0.04, ht: -0.08, tw: 0.15, hF: [0.24, -0.17], zF: 0.03, hand: 'claw', eF: 1, hB: [-0.02, 0.32], face: 'fierce' }, holdT: 0.28, settle: false })) }),
   // Dai Enkai: both hands raised high under the second sun, then one arm hurling it down at them
@@ -1127,11 +1127,12 @@ function guardBrokenPose(P, pose) {
 /**
  * Staggered for as long as the hitstun holds: the guard dropped, the knees
  * gone soft, swaying. (The blow itself is the flinch laid over it; with no
- * blow to tell where from — a Conqueror's stagger, say — knocked back.)
+ * blow to tell where from — a Conqueror's stagger, say: pose.stunBlind —
+ * knocked back.)
  */
 function hurtPose(P, pose, t) {
   const k = pose.hurtK ?? 1;
-  const blind = pose.hitAge === undefined && !pose.flinch ? 1 : 0;
+  const blind = pose.stunBlind ? 1 : 0;
   const sway = Math.sin(t * 7) * 0.025 * k;
   P.l = (P.l || 0) * (1 - k) + (0.06 - 0.36 * blind) * k + sway;
   P.b = [P.b[0] * (1 - k) - 0.06 * k * blind, P.b[1] * (1 - k) + 0.045 * k];

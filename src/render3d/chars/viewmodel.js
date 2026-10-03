@@ -25,8 +25,9 @@ import { shipDims, shipLift } from '../../world/hull.js';
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 // first-person strikes (see update): reach kept to x0 + xs of the rest (and never pulled in closer than
 // xmin: a wind-up stays in view), hands raised c, and L more at full reach, never above top (an
-// uppercut ends up in the middle of the view, not over it)
-const FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16 };
+// uppercut ends up in the middle of the view, not over it); a hand that isn't out on a blow (the
+// guard, the other fist at the chin) let down by up to low, so you see over your fists
+const FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16, low: 0.07 };
 // a weapon's swing (see update): the hand kept at least xmin out in front of
 // the shoulder (it never folds back past your head, and never comes up big in
 // your face), raised c, and held between top (about the shoulder: no arm laid
@@ -48,9 +49,12 @@ export function createViewmodel(ctx) { return new Viewmodel(ctx); }
 
 // Nothing of the view's own weapon (or the ink round it, or round the arms) is
 // drawn closer to the eye than this: a staff's far end, a pommel, a gun's
-// butt swung back toward you would fill the view from the inside.
-const NEAR_CUT = 0.15;
-function nearCut(mat) {
+// butt swung back toward you would fill the view from the inside. Nor of the
+// body itself: a shoulder turned back past your eye, the collar round your
+// own neck. (The ink goes a little sooner, or a fist swung close past the eye
+// left its outline behind, a black blot, where the fist itself was cut away.)
+const NEAR_CUT = 0.15, NEAR_CUT_INK = 0.22;
+function nearCut(mat, cut = NEAR_CUT) {
   const prev = mat.onBeforeCompile;
   mat.onBeforeCompile = (sh, r) => {
     prev?.call(mat, sh, r);
@@ -59,10 +63,10 @@ function nearCut(mat) {
       .replace('#include <project_vertex>', '#include <project_vertex>\nvEyeZ = -mvPosition.z;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying float vEyeZ;')
-      .replace('void main() {', `void main() {\n  if (vEyeZ < ${NEAR_CUT.toFixed(3)}) discard;`);
+      .replace('void main() {', `void main() {\n  if (vEyeZ < ${cut.toFixed(3)}) discard;`);
   };
   const key = mat.customProgramCacheKey ? mat.customProgramCacheKey.bind(mat) : () => '';
-  mat.customProgramCacheKey = () => key() + '|vm-near';
+  mat.customProgramCacheKey = () => key() + '|vm-near' + cut;
   return mat;
 }
 
@@ -77,9 +81,12 @@ export function fpStrike(h0) {
   if (!h0) return h0;
   const T = FP, h = xy(h0);
   const k = clamp(h[0] / 0.43, 0, 1);
-  // (a hand drawn back for a swing is left where it is: it winds up out of sight)
+  // (a hand drawn back for a swing is left where it is: it winds up out of
+  // sight — and low, down at your side: held back as high as your eyes, a
+  // haymaker's fist came round past your ear and through right in front of
+  // your face)
   let x = h[0] > T.x0 ? T.x0 + (h[0] - T.x0) * T.xs : h[0] >= 0 ? Math.max(T.xmin, h[0]) : h[0];
-  const y = h[1] - T.c - T.L * k;
+  const y = h[1] - T.c - T.L * k + T.low * (1 - k) + clamp(0.1 - h[0], 0, 0.5) * 1.6;
   // (a fist going up in front of the face is kept further out, so it stays in view)
   if (y < 0 && h[0] > 0) x = Math.max(x, T.xmin + (T.xhigh - T.xmin) * clamp(-y / 0.3, 0, 1));
   return [x, Math.max(T.top, y)];
@@ -117,7 +124,7 @@ class Viewmodel {
     this.lastActT = -1;
     this.cleared = -1;
     this.frame = 0;
-    this.outlineMat = nearCut(outlineMaterial(0.0022, 0x3a2418, { fog: false }));
+    this.outlineMat = nearCut(outlineMaterial(0.0022, 0x3a2418, { fog: false }), NEAR_CUT_INK);
     this.outlineMat.transparent = true;
     this.weaponMat = nearCut(new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false }));
     this.weaponMat.defines = { ...this.weaponMat.defines, SUN_SELF: sunSelf(SELF_SHADE_VM) };
@@ -128,6 +135,7 @@ class Viewmodel {
     const m = new CharacterModel(look, wpn, { viewmodel: true, lod: -1, fog: false, outline: this.outlineMat, weaponOpts: { material: this.weaponMat, outline: this.outlineMat, noShadow: true } });
     m.mat.transparent = true;
     m.mat.fog = false;
+    m.fx.uNear.value = NEAR_CUT;
     m.visibleParts = HIDE.map((i) => [i, false]);
     m.face.visible = false;
     if (m.bubble) m.bubble.visible = false;
@@ -309,6 +317,17 @@ class Viewmodel {
         // thrust out to the middle of the view)
         if (pistol) { PP.hF = [PP.hF[0], Math.max(PP.hF[1], 0.04)]; o.spread = (o.spread || 0) + 0.08; }
       } else PP = { ...PP, hF: fpStrike(PP.hF), hB: fpStrike(PP.hB) };
+    } else if (!swimming && (busy || pose.counterAge < 0.32)) {
+      // A reaction from your own eyes (a parry's sweep, your arms flung open
+      // by a blow beaten aside, the guard smashed apart, a flinch) is kept in
+      // front of you where you can see it, not thrown out past the edges of
+      // the view or up behind your head; a counter off a parry is punched out
+      // like any other blow.
+      if (pose.counterAge >= 0 && pose.counterAge < 0.32) PP = { ...PP, hF: fpStrike(PP.hF), hB: fpStrike(PP.hB) };
+      else {
+        const keep = (h) => { const q = xy(h, [0.1, 0.3]); return [Math.max(0.2, q[0]), Math.max(-0.15, q[1])]; };
+        PP = { ...PP, hF: keep(PP.hF), hB: keep(PP.hB), zF: Math.min(0.06, PP.zF || 0), zB: Math.min(0.06, PP.zB || 0) };
+      }
     }
     // The view rides your eyes, and your eyes your head: a lunge, a crouch or
     // a leap already carries it. The arms hang from the eyes, so the body's
@@ -318,11 +337,30 @@ class Viewmodel {
     // (and the trunk's sideways bend — a flinch, a reel — would roll your arms
     // round your line of sight: only a little of it reaches them)
     if (PP.ls) PP = { ...PP, ls: PP.ls * 0.3 };
-    // the body lean mostly stays out of first person
-    o.leanAdd = -(PP.l || 0) * 0.55;
+    // (nor the trunk's own turn, much: it swung the striking shoulder round in
+    // front of your face — a haymaker's fist came at your eye instead of out
+    // at them — and the other one back past your eye. A little of it, kept
+    // within the turn a reach alone gives)
+    if (PP.tw || PP.hp) {
+      const reachTw = clamp((xy(PP.hF, [0.05, 0.4])[0] - xy(PP.hB, [-0.03, 0.4])[0]) * 0.85, -0.5, 0.5);
+      PP = { ...PP, tw: clamp(reachTw + (PP.tw || 0) * 0.3, -0.5, 0.5) - reachTw, hp: (PP.hp || 0) * 0.3 };
+    }
+    // the body lean mostly stays out of first person (and leaning back, all of
+    // it: a kick's or a wind-up's lean carried your shoulders back past your
+    // eyes, and the inside of your own collar filled the view)
+    o.leanAdd = -(PP.l || 0) * ((PP.l || 0) < 0 ? 1 : 0.55);
     o.lift = 0; o.roll = 0; o.squash = 1; o.lying = 0;
     // Gum-Gum: the arm stretches out to the fist in flight
     o.reachR = holdAt || (p.fruit === 'gomu' ? this.stretch(p, ctx) : null);
+    // The legs show only while a kick is out in front (not the knee chambered
+    // up under your chin on the way out, which filled the view); and a kick
+    // seen from your own eyes drives out low into the view, not up past your
+    // face — a high kick, or one rising, stood your leg up in front of you,
+    // and you lost them behind it
+    const kLimb = A && A.legs ? (A.limb === 'fF' ? 'fF' : A.limb === 'fB' ? 'fB' : null) : null;
+    const kf = kLimb ? xy(PP[kLimb], [0, 0]) : null;
+    const kick = !!kf && kf[0] > 0.3;
+    if (kick) PP = { ...PP, [kLimb]: [Math.max(0.62, kf[0]), Math.max(-0.62, kf[1])] };
     m.pose(PP, o);
     // (a staff is held near its end from your own eyes, not by the middle: its
     // other half swung back at your face)
@@ -331,9 +369,7 @@ class Viewmodel {
     const held = holdItem(m, holding ? p.held : null, { viewmodel: true });
     if (held) { const e = p.eating && p.eating.id === p.held ? p.eating : null; heldSize(m, e ? 1 - 0.55 * Math.min(1, e.t / e.dur) : 1); }
     this.fixup();
-    // show the legs only while a kick is out in front
-    const kick = A && (A.limb === 'fF' || A.limb === 'fB') && A.legs;
-    for (const i of LEGS) m.showBone(i, !!kick);
+    for (const i of LEGS) m.showBone(i, kick);
     // ---- place in camera space: body x → -z, z → +x; eye at the origin
     const d = m.d;
     const eyeY = d.hip0 + d.chestLen + d.neck + d.hc * 0.95;
@@ -413,7 +449,9 @@ class Viewmodel {
     const dx = w ? w.dx(p.x, pr.x) : pr.x - p.x, dy = pr.y - (p.y - 0.5);
     const f = p.facing || 0;
     const fx = dx * Math.cos(f) + dy * Math.sin(f), fz = -dx * Math.sin(f) + dy * Math.cos(f);
-    return (this._reach || (this._reach = new THREE.Vector3())).set(fx, 1.3, fz * 0.6 + 0.05);
+    // (never nearer your eye than an arm held out: just launched, the fist —
+    // and its glow — filled the view)
+    return (this._reach || (this._reach = new THREE.Vector3())).set(Math.max(0.55, fx), 1.3, fz * 0.6 + 0.05);
   }
 
   effects(p, pose, A, env) {
@@ -429,7 +467,9 @@ class Viewmodel {
       }
       if (g.sprite.parent !== m.group) m.group.add(g.sprite);
       g.sprite.visible = true;
-      g.set(col, size, pos);
+      // (fading out right up at your eye: a fist swung past it, glowing, filled the view)
+      const near = _v2.copy(pos).applyMatrix4(m.group.matrix).applyMatrix4(this.body.matrix).length();
+      g.set(col, size * clamp((near - 0.25) / 0.3, 0, 1), pos);
       gi++;
     };
     const t = env.time;

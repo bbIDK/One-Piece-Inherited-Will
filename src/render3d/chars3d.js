@@ -22,6 +22,7 @@ import { BackFlame, driftInto } from './chars/flame.js';
 import { createViewmodel } from './chars/viewmodel.js';
 import { holdItem, heldSize } from './chars/helditem.js';
 import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
+import { blendPose } from '../render/anims.js';
 import { shipBob, shipLift } from '../world/hull.js';
 import { WakeTrail } from './wake3d.js';
 
@@ -29,6 +30,9 @@ const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _eyeP = new THREE.Vector3(), _eyeQ = new THREE.Quaternion();
 const _fq = new THREE.Quaternion(), _fq2 = new THREE.Quaternion();
+// knocked off your feet, on the way down (see ActorView.update): arched back
+// with the arms thrown up over the head, the legs going out from under you
+const FALLING = { ...LYING, l: -0.32, ht: -0.4, hF: [0.0, -0.33], hB: [-0.08, -0.29], eF: 0.5, eB: 0.5, fF: [0.17, -0.07], fB: [0.03, -0.02], face: 'hurt' };
 
 // ------------------------------------------------------------------ actor view
 /**
@@ -152,6 +156,12 @@ class ActorView {
       if (a.isPlayer && ctx.mode === 'first') {
         const pt = ctx.pitch || 0;
         o.tiltAdd += pt < 0 ? -pt * 0.55 : -pt * 0.3;
+        // (and a blow's own lean back, its step back and its hop barely move
+        // it: the view rides your head a beat behind, and a kick thrown
+        // leaning back left it out in front of your neck, looking down your
+        // own collar)
+        if ((P.l || 0) < 0 && pose.state !== 'knocked') o.leanAdd = (o.leanAdd || 0) - P.l;
+        o.lift *= 0.3;
       }
       this.drawing(pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
       // sit down (and get up) over a moment
@@ -172,12 +182,18 @@ class ActorView {
       } else if (a.fruit === 'gomu') o.reachR = this.stretchTarget(a, ctx, s);
       const knocked = pose.state === 'knocked' || pose.state === 'dead';
       let PP = P;
+      if (a.isPlayer && ctx.mode === 'first' && P.b && P.b[0] < 0) PP = { ...P, b: [P.b[0] * 0.3, P.b[1]] };
       if (knocked) {
         const kt = pose.knockT ?? 1;
         const fall = Math.min(1, kt / 0.28);
-        PP = LYING;
+        const bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) : 0;
+        // (going over: thrown back with the arms flung up and the knees giving,
+        // flat out by the time it hits the ground, the limbs flopping up off
+        // it with the bounce)
+        if (pose.state === 'knocked') PP = fall < 1 ? blendPose(FALLING, LYING, fall * fall) : bounce > 0 ? blendPose(LYING, FALLING, bounce * 0.3) : LYING;
+        else PP = LYING;
         o.lying = fall * fall;
-        o.bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) * 0.1 : 0;
+        o.bounce = bounce * 0.1;
         o.spread = 0.32 * fall; o.legSpread = 0.06 * fall;
         o.lift = 0; o.armed = false;
       }
@@ -266,6 +282,12 @@ class ActorView {
       this.root.updateMatrixWorld(true);
     }
     if (fp) this.eyeOffset(a, pose, ctx, env);
+    // (nor anything right up against your eyes — and while the view is still
+    // catching up with your head, a little further out: it rides it a beat
+    // behind, and a blow's lunge or a kick thrown leaning back left it behind
+    // your neck or out in front of it, looking down your own collar)
+    const lag = fp && ctx.camera && !pose.station ? ctx.camera.position.distanceTo(_eyeP) : 0;
+    u.uNear.value = fp ? 0.2 + clamp(lag * 1.5, 0, 0.25) : 0;
   }
 
   /** Where the eyes are on the posed body, in the scene (into _eyeP). */

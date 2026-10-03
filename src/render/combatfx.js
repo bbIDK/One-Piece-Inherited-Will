@@ -1443,9 +1443,9 @@ function defaultCharge(def, actor, elem, st) {
  * limb, energy blades, charge-ups, flurries, Diable Jambe legs, Haki legs,
  * Gear 4 bounce and Gear 5 toon wobble — and the clocks of what the body
  * reacts to (render/anims.js): a blow taken on the guard (blockHitAge),
- * Armament Haki just coated on (armOn), and where the last blow came from
+ * Armament Haki just coated on (armOn), where the last blow came from
  * (flinch: { age, rel, w }, the hit's own record, for when the pose has no
- * hitAge of its own).
+ * hitAge of its own) and a stagger with no blow behind it (stunBlind).
  */
 export function actorVisuals(actor, act, clip) {
   const out = {};
@@ -1465,6 +1465,15 @@ export function actorVisuals(actor, act, clip) {
     if (actor._armOnT !== undefined && now - actor._armOnT < 0.6) out.armOn = now - actor._armOnT;
     const hf = actor.hitFx;
     if (hf && now - hf.t0 >= 0 && now - hf.t0 < 0.8) out.flinch = { age: now - hf.t0, rel: Math.atan2(Math.sin(hf.ang - (actor.facing || 0)), Math.cos(hf.ang - (actor.facing || 0))), w: hf.w };
+    // (a stagger with no blow behind it to tell where it came from — a
+    // Conqueror's, say — is told apart when it starts, and stays so)
+    const stunned = actor.hitstun > 0;
+    if (stunned && !actor._stunWas) {
+      const ago = (t0) => (t0 !== undefined && now - t0 >= 0 ? now - t0 : Infinity);
+      actor._stunBlind = !(Math.min(ago(actor.hitT), ago(hf && hf.t0)) < 0.2);
+    }
+    actor._stunWas = stunned;
+    if (stunned && actor._stunBlind) out.stunBlind = true;
   }
   if (!act || !clip) return out;
   const def = act.def;
