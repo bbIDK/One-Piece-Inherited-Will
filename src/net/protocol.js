@@ -15,7 +15,16 @@
 //   say  a line of chat
 //   gone you've left the world (back to the title, or your lineage ended)
 //   bye  you've left the voyage
+//
+// Games of another version (PROTO) aren't let aboard each other's voyages.
+// What's been added since without changing anything an older game reads is
+// counted by REV (in the hello; an older game's says nothing: 0) — a game
+// that doesn't know a field ignores it, and draws you as it always did:
+//   1  `ab` in a state: standing aboard another player's ship — whose she
+//      is, which, and where on her deck — so that everyone draws you on her
+//      as they draw her (an older game: where you are, at the deck's height)
 export const PROTO = 1;
+export const REV = 1;
 /** States sent a second while anything changes; and every IDLE_MS regardless (all quiet), to say you're still there. */
 export const SEND_HZ = 12;
 export const IDLE_MS = 500;
@@ -38,6 +47,8 @@ const int = (v, lo, hi, d = 0) => (finite(v) ? Math.round(num(v, lo, hi, d)) : d
 const ID = /^[A-Za-z0-9_]{1,32}$/;
 /** An identifier (a race, a style, an item, a technique…), or `d`. */
 export const ident = (v, d = null) => (typeof v === 'string' && ID.test(v) ? v : d);
+/** A player's id on the line (the transport's: letters and digits), or null. */
+export const peerId = (v) => (typeof v === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(v) ? v : null);
 /** Text, without control characters, trimmed and cut to `max` characters (or `d` when empty). */
 export function cleanText(v, max, d = '') {
   if (typeof v !== 'string') return d;
@@ -73,13 +84,14 @@ const r3 = (v) => Math.round((v || 0) * 1000) / 1000;
 export { r2, r3 };
 
 // --------------------------------------------------------------- messages in
-/** A hello: { v, role, sig, since, name, slot, prof, play } or null. */
+/** A hello: { v, rev, role, sig, since, name, slot, prof, play } or null. */
 export function readHello(m) {
   if (!m || m.k !== 'hi') return null;
   const role = m.role === 'host' ? 'host' : m.role === 'guest' ? 'guest' : null;
   if (!role) return null;
   return {
     v: int(m.v, 0, 1e6, 0),
+    rev: int(m.rev, 0, 1e6, 0),
     role,
     sig: typeof m.sig === 'string' ? m.sig.slice(0, 32) : '',
     since: num(m.since, 0, 1e15, 0),
@@ -193,6 +205,13 @@ export function readState(m) {
     s.ss = num(m.s[3], -500, 500); s.sl = num(m.s[4], 0, 1);
     s.lv = num(m.s[5], -2000, 5000); s.pi = num(m.s[6], -1.5, 1.5);
     s.rl = num(m.s[7], -1, 1); s.rr = num(m.s[8], -1, 1);
+  }
+  // aboard another player's ship (REV 1): whose she is (their id on the line),
+  // which (her id, as theirs says), and where on her deck — u along her from
+  // the middle, v across, h the height of the floor there
+  if (Array.isArray(m.ab) && m.ab.length === 5 && peerId(m.ab[0]) && typeof m.ab[1] === 'string' && m.ab[1] && m.ab.slice(2).every(finite)) {
+    s.ao = m.ab[0]; s.ai = m.ab[1].slice(0, 40);
+    s.au = num(m.ab[2], -400, 400); s.av = num(m.ab[3], -100, 100); s.ah = num(m.ab[4], -50, 200);
   }
   // (a technique under way: which one, how far into it, how fast they move, and whether it's a basic swing of a combo)
   if (Array.isArray(m.a) && (m.a.length === 4 || m.a.length === 5)) {

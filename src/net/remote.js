@@ -1,12 +1,15 @@
 // Another player in the voyage, as this game sees them: who they are (their
 // hello and their look), the states coming in (smoothed: interp.js), and the
 // stand-ins drawn for them — a character, posed as they are, and the ship
-// they sail. The stand-ins are only drawn (render3d/index.js draws them with
-// everyone else): they're in no list the game's own systems go through, so
-// nobody here fights them, talks to them, steers round their ship or boards
-// her, and nothing of theirs is simulated (their own game does that).
+// they sail. The stand-ins are drawn (render3d/index.js draws them with
+// everyone else), but they're in no list the game's own systems go through:
+// nobody here fights them or talks to them, and nothing of theirs is
+// simulated (their own game does that). Their ship is solid, though, and
+// walkable, as she's drawn (see game/ship.js theirShips): you can climb
+// aboard her and stand on her deck, and you ride with her as she sails.
 import { Actor } from '../game/actor.js';
 import { Ship } from '../game/ship.js';
+import { shipGone } from '../game/decks.js';
 import { getAbility, abilityTotal } from '../game/abilities.js';
 import { SHIPS } from '../data/ships.js';
 import { RACES } from '../data/races.js';
@@ -45,7 +48,7 @@ export class Remote {
     this.role = h.role;
     if (h.name) this.name = h.name;
     this.play = h.play;
-    this.slot = h.slot; this.prof = h.prof; this.v = h.v; this.sig = h.sig; this.since = h.since;
+    this.slot = h.slot; this.prof = h.prof; this.v = h.v; this.rev = h.rev; this.sig = h.sig; this.since = h.since;
   }
 
   /**
@@ -90,7 +93,8 @@ export class Remote {
 
   applyShip(S) {
     if (!S.id || !SHIPS[S.type]) { this.shipInfo = null; this.ship = null; return; }
-    const same = this.ship && this.shipInfo?.id === S.id && this.shipInfo.type === S.type && String(this.shipInfo.upgrades) === String(S.upgrades);
+    const was = this.ship, refit = was && this.shipInfo?.id === S.id && this.shipInfo.type === S.type;
+    const same = refit && String(this.shipInfo.upgrades) === String(S.upgrades);
     this.shipInfo = S;
     if (same) {
       // (her name, flag or coating changed: the 3D view sees a new flag or coat and rebuilds her)
@@ -99,8 +103,16 @@ export class Remote {
     }
     const s = new Ship({ type: S.type, x: 0, y: 0, heading: 0, owner: 'remote', faction: S.faction === 'marine' ? 'marine' : 'player', name: S.name, jr: S.jr, upgrades: S.upgrades, coated: S.coated });
     s.netRemote = true;
+    s.netOwner = this.id;
     s.uid = S.id;
     s.anchored = false;
+    if (refit) {
+      // (the same ship refitted — built afresh, for the 3D view: whoever stands on her stays aboard, just where she lies)
+      Object.assign(s, { x: was.x, y: was.y, heading: was.heading, speed: was.speed, sailSet: was.sailSet, lvl: was.lvl, pitch: was.pitch, seed: was.seed });
+      for (const a of was.aboard || []) if (a.deck?.ship === was) { a.deck.ship = s; (s.aboard ||= new Set()).add(a); }
+      was.aboard?.clear();
+      for (const a of this.voyage.game.actors || []) if (a.climb?.to?.ship === was) a.climb.to.ship = s;
+    }
     this.ship = s;
   }
 
@@ -118,25 +130,51 @@ export class Remote {
     if (this.actor) { this.actor.action = null; this.actor.dash = null; }
   }
 
-  /** This frame: where they are and what they're doing, onto the stand-ins. `world`: our world's key ('' at the surface, else the zone). */
+  /**
+   * This frame: whether they're drawn (`world`: our world's key — '' at the
+   * surface, else the zone), and their ship where she is just now. Whoever
+   * stands on her here rides with her, just as she's drawn. (Their character
+   * is posed afterwards, once every ship's where she is: see pose.)
+   */
   update(game, now, dt, world) {
     if (this.pendingLook && now - this.lookT >= 250) this.setLook(this.pendingLook, now);
     if (this.pendingShip && now - this.shipT >= 250) this.setShip(this.pendingShip, now);
     const s = this.play && this.info ? this.buf.sample(now) : null;
     this.now = s;
     this.visible = !!s && s.w === world && !!this.actor;
+    this.shipShown = null;
     if (!this.visible) return;
-    const a = this.actor, w = game.world;
-    // their ship first (whoever's aboard stands on her as she's drawn)
+    const w = game.world;
     const sh = this.ship && s.si === this.shipInfo?.id && s.sx !== undefined ? this.ship : null;
     this.shipShown = sh;
-    if (sh) {
-      sh.x = w.wx(s.sx); sh.y = s.sy; sh.heading = s.sh; sh.speed = s.ss; sh.sailSet = s.sl;
-      sh.lvl = s.lv || 0; sh.pitch = s.pi || 0; sh.rowL = Math.round(s.rl || 0); sh.rowR = Math.round(s.rr || 0);
-      sh.captain = s.b & BIT.helm ? a : null;
-      if (sh.oars) sh.updateOars(Math.min(0.1, dt));
+    if (!sh) return;
+    const x0 = sh.x, y0 = sh.y, h0 = sh.heading;
+    sh.x = w.wx(s.sx); sh.y = s.sy; sh.heading = s.sh; sh.speed = s.ss; sh.sailSet = s.sl;
+    sh.lvl = s.lv || 0; sh.pitch = s.pi || 0; sh.rowL = Math.round(s.rl || 0); sh.rowR = Math.round(s.rr || 0);
+    sh.captain = s.b & BIT.helm ? this.actor : null;
+    if (sh.oars) sh.updateOars(Math.min(0.1, dt));
+    // whoever stands on her here (you, your crew) rides with her, where they
+    // stood on her deck (and you on your way up her side) — unless she's
+    // leapt (out of sight and back somewhere else, brought round to another
+    // pier): then she's gone from under them
+    const up = game.player?.climb?.to?.ship === sh ? game.player : null;
+    if (sh.aboard?.size || up) {
+      const went = w.distance(x0, y0, sh.x, sh.y), could = Math.abs(sh.speed || 0) * Math.max(dt, (now - (this.shipNow ?? now)) / 1000);
+      if (went <= this.buf.jump + could) sh.carry(w, x0, y0, h0, up);
+      else shipGone(game, sh);
     }
-    poseActor(a, s, dt, sh, w);
+    this.shipNow = now;
+  }
+
+  /**
+   * Their character as they are this frame (after every ship's been placed:
+   * see Voyage.frame) — at their helm, on their own deck, or standing aboard
+   * someone else's ship, ours among them, as she's drawn here.
+   */
+  pose(game, dt) {
+    const s = this.now, a = this.actor;
+    const on = s.ai ? this.voyage.shipOf(s.ao, s.ai) : null;
+    poseActor(a, s, dt, this.shipShown, game.world, on);
     this.cues(game, a, s, dt);
   }
 
@@ -190,8 +228,12 @@ function makeActor(L) {
   return a;
 }
 
-/** Their state onto the character drawn for them: place, motion, what they're doing, and where on their ship. */
-function poseActor(a, s, dt, ship, w) {
+/**
+ * Their state onto the character drawn for them: place, motion, what they're
+ * doing, and where on their ship — or on `on`, the ship of someone else's
+ * they stand aboard.
+ */
+function poseActor(a, s, dt, ship, w, on = null) {
   const B = s.b, sc = a.look?.scale || 1;
   a.x = w.wx(s.x); a.y = s.y; a.z = s.z || 0; a.facing = s.f;
   a.vx = s.vx || 0; a.vy = s.vy || 0; a.vz = s.vz || 0; a.speed = s.sp || 0;
@@ -229,10 +271,14 @@ function poseActor(a, s, dt, ship, w) {
     return;
   }
   a.mode = 'foot'; a.ship = null;
-  // standing aboard her: on her deck where they are on it, as she's drawn here
-  if (ship && s.du !== undefined) {
-    const c = Math.cos(ship.heading), sn = Math.sin(ship.heading);
-    a.x = w.wx(ship.x + s.du * c - s.dv * sn); a.y = ship.y + s.du * sn + s.dv * c;
-    a.deck = { ship, u: s.du, v: s.dv, h: s.dh };
-  } else a.deck = null;
+  // standing aboard her, or another player's ship: on her deck where they are
+  // on it, as she's drawn here (not where their game has her: a moment behind)
+  const dk = ship && s.du !== undefined ? { ship, u: s.du, v: s.dv, h: s.dh } : on ? { ship: on, u: s.au, v: s.av, h: s.ah } : null;
+  if (dk) {
+    const S = dk.ship, c = Math.cos(S.heading), sn = Math.sin(S.heading);
+    a.x = w.wx(S.x + dk.u * c - dk.v * sn); a.y = S.y + dk.u * sn + dk.v * c;
+    // (on her planks: not at the height they gave with it, which is for a game that doesn't know whose she is)
+    a.roofed = false; a.lastG = null;
+  }
+  a.deck = dk;
 }

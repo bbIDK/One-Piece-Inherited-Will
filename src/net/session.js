@@ -4,13 +4,17 @@
 // game simulates its own world (the islands are the same everywhere: they're
 // generated from the same seed) and sends the others where its player is and
 // what they're doing; the others are drawn as they come in (remote.js).
+// Their ships are solid here, as they're drawn: you can go aboard a friend's
+// and stand on her deck as she sails, and everyone draws you there (each on
+// her as they draw her: the real one on her captain's screen).
 //
 // game.net is the voyage while there is one (null otherwise: singleplayer
 // never opens a connection, and nothing here runs).
 import { openTransport, netKind } from './transport.js';
-import { PROTO, SEND_HZ, IDLE_MS, MAX_PLAYERS, NAME_MAX, CHAT_MAX, BIT, readHello, readEnv, readLook, readShip, readState, readSay, stateChanged, worldSig, cleanText, r2, r3 } from './protocol.js';
+import { PROTO, REV, SEND_HZ, IDLE_MS, MAX_PLAYERS, NAME_MAX, CHAT_MAX, BIT, readHello, readEnv, readLook, readShip, readState, readSay, stateChanged, worldSig, cleanText, r2, r3 } from './protocol.js';
 import { Remote, MATE_COLOR } from './remote.js';
 import { deckLift } from '../world/hull.js';
+import { shipGone } from '../game/decks.js';
 import { angleDiff } from '../core/math.js';
 
 // how long to look for the host before giving up (the relays can take a while to put two games in touch)
@@ -21,6 +25,8 @@ const ENV_MS = 2000; // the host's clock and weather, this often (and whenever t
 const PROFILE_KEY = 'op-inherited-will:profile';
 // buffs that change how you're drawn without a look of their own (see render/combatfx.js actorVisuals)
 const VIS_BUFFS = new Set(['diable', 'gear4', 'gear5']);
+/** A ship's id on the line (one of yours: the others know her by it). */
+export const shipId = (s) => String(s.uid || 's' + s.id);
 
 /** What went wrong, for the screens: [title, text] ({code}, {host} and {detail} filled in). */
 export const ERRORS = {
@@ -131,7 +137,7 @@ export class Voyage {
   send(msg, to) { if (this.tr && !this.over) this.tr.send(msg, to); }
 
   hello() {
-    return { k: 'hi', v: PROTO, role: this.role, sig: this.sig, since: this.since, name: this.inWorld ? this.myName() : this.name, slot: this.slot, prof: this.prof, play: this.inWorld };
+    return { k: 'hi', v: PROTO, rev: REV, role: this.role, sig: this.sig, since: this.since, name: this.inWorld ? this.myName() : this.name, slot: this.slot, prof: this.prof, play: this.inWorld };
   }
   sayHello(to) { this.helloSent.add(to); this.send(this.hello(), to); }
 
@@ -253,6 +259,8 @@ export class Voyage {
   shutdown(status) {
     this.setStatus(status);
     try { this.tr?.leave(); } catch { /* (already) */ }
+    // (anyone standing on one of the others' ships here is set down where they stood)
+    for (const s of this.ships) { s.alive = false; shipGone(this.game, s); }
     this.remotes.clear();
     this.avatars.length = 0; this.ships.length = 0;
     // (a guest's own weather takes over again, a little later)
@@ -276,15 +284,41 @@ export class Voyage {
       this.sendState(now);
       if (this.role === 'host') this.sendEnv(now);
     }
-    // the others, as they are just now (drawn by render3d/index.js with everyone else)
-    const world = g.inZone?.() || '';
-    this.avatars.length = 0; this.ships.length = 0;
+    // the others, as they are just now (drawn by render3d/index.js with
+    // everyone else): their ships first — whoever stands on one here rides
+    // with her — then each of them, someone aboard another's ship on her
+    // where she is now
+    const world = g.inZone?.() || '', was = this.ships, ships = [];
+    this.avatars.length = 0;
     for (const r of this.remotes.values()) {
       r.update(g, now, Math.min(0.1, dt), world);
       if (!r.visible) continue;
       this.avatars.push(r.actor);
-      if (r.shipShown) this.ships.push(r.shipShown);
+      if (r.shipShown) { r.shipShown.alive = true; ships.push(r.shipShown); }
     }
+    this.ships = ships;
+    for (const r of this.remotes.values()) if (r.visible) r.pose(g, Math.min(0.1, dt));
+    // a ship of theirs that's gone from here (sailed into another world, laid
+    // up, sunk, another taken in her place — or they've left): whoever stood
+    // on her is set down where they stood
+    for (const s of was) if (!ships.includes(s)) { s.alive = false; shipGone(g, s); }
+  }
+
+  /**
+   * The ship of `owner` (a player's id on the line) with the id `id`, as
+   * she's here: ours (one of your ships, by her id), or the one drawn for
+   * theirs — or null if she isn't (not here, or not yet).
+   */
+  shipOf(owner, id) {
+    if (owner === this.selfId) return this.ownShip(id);
+    const r = this.remotes.get(owner);
+    return r?.visible && r.shipShown && r.shipInfo?.id === id ? r.shipShown : null;
+  }
+
+  /** One of your ships afloat here, by her id on the line. */
+  ownShip(id) {
+    for (const s of this.game.ships) if (s.owner === 'player' && !s.sunk && s.alive !== false && shipId(s) === id) return s;
+    return null;
   }
 
   /** The relays coming up (or not), and a guest giving up looking. */
@@ -329,12 +363,20 @@ export class Voyage {
     if (this.inWorld && this.name !== m.n) { this.name = m.n; this.send(this.hello()); }
   }
 
-  /** The ship to show the others: the one you sail or stand aboard — else yours lying close by. */
+  /**
+   * The ship to show the others: the one you sail or stand aboard — else one
+   * of yours a crewmate stands aboard (she stays in sight, wherever you are),
+   * else yours lying close by.
+   */
   shipShown() {
     const g = this.game, p = g.player;
     if (p.mode === 'sail' && p.ship && !p.ship.sunk) return p.ship;
     const dk = p.deck?.ship;
     if (dk && dk.owner === 'player' && !dk.sunk) return dk;
+    for (const r of this.remotes.values()) {
+      const s = r.visible ? r.buf.latest() : null, o = s?.ao === this.selfId ? this.ownShip(s.ai) : null;
+      if (o) return o;
+    }
     let best = null, bd = 250 * 250;
     for (const s of g.ships) {
       if (s.owner !== 'player' || s.sunk || s.alive === false) continue;
@@ -347,7 +389,7 @@ export class Voyage {
   packShip(s) {
     if (!s) return { k: 'sh', id: null };
     const c = this.game.state.char;
-    return { k: 'sh', id: String(s.uid || 's' + s.id), ty: s.type, n: s.name, jr: s.jr || null, co: !!s.coated, up: s.upgrades || [], fa: c.faction === 'marine' ? 'marine' : 'player' };
+    return { k: 'sh', id: shipId(s), ty: s.type, n: s.name, jr: s.jr || null, co: !!s.coated, up: s.upgrades || [], fa: c.faction === 'marine' ? 'marine' : 'player' };
   }
 
   sendShip(s, to) {
@@ -384,15 +426,22 @@ export class Voyage {
     if (p.hitstun > 0) m.hs = r2(p.hitstun);
     if (p.charging > 0) m.c = r2(p.charging);
     // what they stand on: their ship's deck (where on her: drawn on her as she rides
-    // there), or another deck, a gangway, a roof — the height of it
+    // there), or another deck, a gangway, a roof — the height of it; and on
+    // another player's ship, whose she is, which, and where on her (REV 1:
+    // drawn on her by everyone, as each draws her — the height's for a game
+    // that doesn't know of it, which draws you where you are)
     const dk = p.deck;
     if (p.mode === 'sail' && ship === p.ship) b |= BIT.helm;
     else if (dk && ship && dk.ship === ship && !dk.plank) m.dk = [r2(dk.u ?? (dk.t - 0.5) * ship.def.length), r2(dk.v || 0), r2(dk.h || 0)];
-    else if (dk) { m.g = r2(deckLift(dk, g.env.time)); b |= BIT.roofed; }
+    else if (dk) {
+      m.g = r2(deckLift(dk, g.env.time)); b |= BIT.roofed;
+      const o = dk.ship;
+      if (o.netOwner && !dk.plank) m.ab = [o.netOwner, o.uid, r2(dk.u ?? (dk.t - 0.5) * o.def.length), r2(dk.v || 0), r2(dk.h || 0)];
+    }
     else if (p.roofed && p.lastG != null) { m.g = r2(p.lastG); b |= BIT.roofed; }
     else if (p.belowDeck) { m.g = r2(p.groundAt(g, p.x, p.y)); b |= BIT.roofed; }
     m.b = b;
-    if (ship) { m.si = String(ship.uid || 's' + ship.id); m.s = [r2(ship.x), r2(ship.y), r3(ship.heading), r2(ship.speed), r2(ship.sailSet), r2(ship.lvl || 0), r3(ship.pitch || 0), ship.rowL || 0, ship.rowR || 0]; }
+    if (ship) { m.si = shipId(ship); m.s = [r2(ship.x), r2(ship.y), r3(ship.heading), r2(ship.speed), r2(ship.sailSet), r2(ship.lvl || 0), r3(ship.pitch || 0), ship.rowL || 0, ship.rowR || 0]; }
     // a technique under way (numbered, so the same one twice is two), and a dodge
     const act = p.action;
     if (act) {
