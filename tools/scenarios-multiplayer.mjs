@@ -6,7 +6,8 @@
 // sees B glide along the same path a moment later (no jumps), chat both ways,
 // B sails and A sees B's ship (and B at her helm), A's clock and weather
 // reach B, B leaves and rejoins with the remembered code, a code nobody hosts
-// is reported as such, and the host leaving ends the voyage for B.
+// is reported as such, and the host leaving ends the voyage for B (in the
+// world, and again while B is making a new pirate, who carries on alone).
 //
 //   node tools/shot.mjs mp [--page=shots/xmp/index.html] [--upto=menu|avatars|chat|ship|env|leave]
 //
@@ -183,7 +184,12 @@ export const scenarios = {
       await frames(pageA, 2);
       await snap('A-after-walk');
       // B swings away (a combo, then a heavy blow) for a couple of seconds: A sees each move begin
-      await pageA.evaluate(() => { window.__acts = []; window.__stop = false; (function f() { const a = window.OP.net?.avatars[0]; const id = a?.action?.def.id; if (id && window.__acts[window.__acts.length - 1] !== id) window.__acts.push(id); if (!window.__stop) requestAnimationFrame(f); })(); });
+      // (noted as A's game starts drawing it, however few frames a second it manages)
+      await pageA.evaluate(() => {
+        window.__acts = [];
+        const r = [...window.OP.net.remotes.values()][0], cues = r.cues;
+        r.cues = function (game, a, s, dt) { const n = this.actN; cues.call(this, game, a, s, dt); if (this.actN !== n && s.aid) window.__acts.push(s.aid); };
+      });
       await pageB.evaluate(() => {
         const g = window.OP.game, p = g.player, a = window.OP.net.avatars[0];
         p.facing = Math.atan2(a.y - p.y, g.world.dx(p.x, a.x)) + 0.6;
@@ -196,14 +202,14 @@ export const scenarios = {
           if (n > 22) { clearInterval(t); window.__swingsDone = true; }
         }, 110);
       });
-      await until(pageA, () => !!window.OP.net.avatars[0]?.action, null, 30000);
+      await until(pageA, () => window.__acts.length > 0, null, 90000);
       await face(pageA, 3);
       await snap('A-sees-B-swing');
       await until(pageB, () => window.__swingsDone && !window.OP.game.player.action, null, 120000);
       await sleep(1500);
       const swings = await pageB.evaluate(() => window.__swings);
-      const seenActs = await pageA.evaluate(() => { window.__stop = true; return window.__acts; });
-      console.log('B swung', JSON.stringify(swings), '| A saw', JSON.stringify(seenActs));
+      const seenActs = await pageA.evaluate(() => window.__acts);
+      console.log('B swung', JSON.stringify(swings), '| A drew', seenActs.length, 'moves begin:', JSON.stringify(seenActs.filter((id, i) => id !== seenActs[i - 1])));
       // B wanders off across the island; the voyage list (P) says where everyone is, and Go to them brings B back to A
       const away = await pageB.evaluate(() => {
         const g = window.OP.game, w = g.world, p = g.player;
@@ -370,6 +376,22 @@ export const scenarios = {
       console.log('host left: B', JSON.stringify(hostLeft));
       await frames(pageB, 2);
       await snapB('host-left');
+      // the host leaving while B makes a new pirate: said over the making, which carries on
+      await pageA.click('.mode-tabs button:has-text("Multiplayer")');
+      await pageA.click('.vy-slot:has-text("Rin Stormwell") button:has-text("Host")');
+      await until(pageA, () => window.OP.net?.status === 'open');
+      await pageB.evaluate(() => window.OP.voyage.toTitle());
+      await pageB.click('.mode-tabs button:has-text("Multiplayer")');
+      await pageB.click('.vy-rec button:has-text("Rejoin")');
+      await pageB.waitForSelector('button[data-slot="3"]', { timeout: 30000 });
+      await pageB.click('button[data-slot="3"]');
+      await pageB.waitForSelector('.race-roll', { timeout: 30000 });
+      await pageB.evaluate(() => window.OP.net.on('failed', (e) => { window.__ended = { code: e.code, toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent) }; }));
+      await pageA.evaluate(() => window.OP.voyage.toTitle());
+      await until(pageB, () => !window.OP.net, null, 20000);
+      const making = await pageB.evaluate(() => ({ ended: window.__ended, making: !!document.querySelector('.screen .race-roll'), lobby: !!document.querySelector('.vy-lobby'), net: window.OP.net, playing: !!window.OP.game.player }));
+      console.log('host left while B makes a pirate:', JSON.stringify(making));
+      await snapB('host-left-while-making');
       return finish();
 
       function finish() {
