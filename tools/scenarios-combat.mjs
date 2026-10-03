@@ -11,6 +11,7 @@
 //   node tools/shot.mjs combat-hit                        hit feel: sparks, crit, heavy, block, guard break, parry
 //   node tools/shot.mjs combat-move                       dodge, sprint, block, knockdown & get-up
 //   node tools/shot.mjs combat-3d [--mode=first|third] [--ids=a,b]   the same effects in the 3D view
+//        (third person: --side=<radians> turns the camera off the line to the target, --dist=<m> brings it nearer)
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync } from 'node:fs';
@@ -439,23 +440,25 @@ export const scenarios = {
     async run(page, snap, args) {
       await boot(page);
       const mode = args.mode === 'third' ? 'third' : 'first';
-      await page.evaluate((mode) => {
+      const side = mode === 'third' ? Number(args.side || 0) : 0, dist = Number(args.dist || 0);
+      await page.evaluate(({ mode, side, dist }) => {
         const L = window.LAB, g = window.OP.game;
         L.view3d = true;
         L.arena();
         if (g.settings) g.settings.view = mode;
         g.view3d.setMode(mode); g.view3d.setActive(true);
+        if (dist) g.view3d.rig.tp.dist = dist;
         // updates only between captures: a 3D frame costs a lot under SwiftShader
         L.run = (n) => { for (let i = 0; i < n; i++) g.update(1 / 60); g.render(); };
         L.look = () => {
           const p = g.player, d = L.target, v = g.view3d;
           const a = Math.atan2(d.y - p.y, g.world.dx(p.x, d.x));
-          v.rig.yaw = (a + Math.PI * 2) % (Math.PI * 2); v.rig.pitch = mode === 'first' ? -0.12 : -0.05;
+          v.rig.yaw = (a + side + Math.PI * 2) % (Math.PI * 2); v.rig.pitch = mode === 'first' ? -0.12 : -0.05;
           p.facing = a;
           window.OP.input.mouse.x = window.innerWidth / 2; window.OP.input.mouse.y = window.innerHeight / 2;
         };
         for (let i = 0; i < 6; i++) L.run(4);
-      }, mode);
+      }, { mode, side, dist });
       const clip = { x: 0, y: 0, width: 1280, height: 720 };
       const film = async (frames, label, setup, start, times) => {
         await page.evaluate(setup);

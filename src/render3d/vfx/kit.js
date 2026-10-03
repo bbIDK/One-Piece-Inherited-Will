@@ -113,7 +113,7 @@ export const SHARED = {
   uNoise: { value: null },
   uTime: { value: 0 },
   uNearA: { value: 0.35 }, // m from the camera: invisible this close…
-  uNearB: { value: 1.1 }, //  …fully there from here (first person: your own body)
+  uNearB: { value: 1.1 }, //  …fully there from here (first person: your own hands and body)
   uSunV: { value: new THREE.Vector3(0.3, 0.8, 0.5) }, // the sun in view space (puffs, solids)
   uSunW: { value: new THREE.Vector3(0.3, 0.8, 0.5) }, // …and in the world
   uSunCol: { value: new THREE.Color(1, 0.95, 0.85) },
@@ -139,7 +139,8 @@ export const VS_COMMON = /* glsl */`
   // fog as the world's own materials have it (render3d/fog.js), and the fade
   // that keeps effects from filling the view when they're on top of the camera
   void vfxFogNear(vec4 mv) {
-    vNear = smoothstep(uNearA, uNearB, -mv.z);
+    // (by distance, not depth: what's at your feet is well away, what's at your hand isn't)
+    vNear = smoothstep(uNearA, uNearB, length(mv.xyz));
     vFog = 0.0;
     vFogCol = vec3(0.0);
     #ifdef USE_FOG

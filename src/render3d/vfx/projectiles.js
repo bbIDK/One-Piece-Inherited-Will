@@ -5,17 +5,18 @@
 // slashes are crescents of light; orbs glow and leave a fading trail. Each
 // projectile remembers where it has been (a few frames of positions, in a
 // pooled record) for its trail. Cannonballs keep their iron-ball mesh.
-import { col, hash, TAU } from './kit.js';
+import { col, hash, luma, TAU } from './kit.js';
 import { SK } from './sprites.js';
 import { RK, RM } from './ribbons.js';
 import { SF } from './surfaces.js';
 import { VK } from './volumes.js';
 import { OK, putAlong } from './solids.js';
-import { bolt } from './shapes.js';
+import { bolt, crown } from './shapes.js';
 
 const H = 18; // positions remembered
 const WHITE = col('#ffffff');
 const HOT = col('#fff3c4');
+const DARK_RED = col('#c62828');
 
 class Rec {
   constructor() { this.frame = 0; this.hist = new Float32Array(H * 3); this.n = 0; this.head = 0; }
@@ -57,7 +58,22 @@ export class Projectiles {
         r.frame = this.frame;
         const y3 = view.projY ? view.projY(pr) : view.ground(pr.x, pr.y + 0.5) + 1.15;
         r.push(pr.x, pr.y + 0.5, y3);
-        try { draw(v, pr, r, y3); } catch (e) { if (!this.warned) { this.warned = true; console.warn('vfx projectile', pr.sprite, e); } }
+        // first person: your own shot leaves from your chest, inside the
+        // camera — it swells to its full size and fades in as it gets away
+        // from you (a thrown sun doesn't swallow the screen)
+        let sc = 1, fin = 1;
+        if (v.fp && pr.owner === v.player) {
+          const d = Math.hypot(v.world.dx(v.ox, pr.x) - v.cp[0], y3 - v.cp[1], pr.y + 0.5 - v.oy - v.cp[2]);
+          fin = Math.min(1, (d - 0.6) / 1.4);
+          if (fin <= 0) continue;
+          sc = Math.min(1, Math.max(0.12, ((d - 0.45) * 0.7) / reach(pr)));
+        }
+        const s0 = v.sprites.n, r0 = v.ribbons.nv, f0 = v.surf.nv, h0 = v.shells.n, t0 = v.tubes.n, b0 = v.solids.blocks.n, d0 = v.solids.shards.n;
+        try { draw(v, pr, r, y3, sc); } catch (e) { if (!this.warned) { this.warned = true; console.warn('vfx projectile', pr.sprite, e); } }
+        if (fin < 1) {
+          v.sprites.fade(s0, fin); v.ribbons.fade(r0, fin); v.surf.fade(f0, fin); v.shells.fade(h0, fin); v.tubes.fade(t0, fin);
+          v.solids.blocks.fade(b0, fin); v.solids.shards.fade(d0, fin);
+        }
       }
     }
     this.recs.forEach(this._sweep);
@@ -82,17 +98,21 @@ function trail(v, r, kind, c, alpha, c2, w, hw, tail = 0.05, n = 10, minLen = 0)
   if (len >= minLen) R.finish();
 }
 
-function draw(v, pr, r, Y) {
-  const X = v.world.dx(v.ox, pr.x), Z = pr.y + 0.5 - v.oy;
-  const s = pr.size || 1, t = pr.t || 0;
-  // first person: your own shot leaves from your chest, inside the camera —
-  // it comes into view as it gets away from you (solids crumble in)
-  let fin = 1;
-  if (v.fp && pr.owner === v.player) {
-    const d = Math.hypot(X - v.cp[0], Y - v.cp[1], Z - v.cp[2]);
-    fin = Math.min(1, Math.max(0, (d - 1.1) / 1.2));
-    if (fin <= 0) return;
+/** About how far a projectile's look reaches from its centre (m). */
+function reach(pr) {
+  const s = pr.size || 1;
+  switch (pr.sprite) {
+    case 'fireball': case 'firefist': return s >= 3 ? 0.8 * s : 0.7 * s;
+    case 'airslash': case 'sandblade': return 0.9 * s;
+    case 'bird': return 2.1 * Math.max(0.55, pr.radius || 0.5) * s;
+    case 'thunder': return 0.5 * s;
+    default: return Math.max(0.3, 0.45 * s);
   }
+}
+
+function draw(v, pr, r, Y, sc) {
+  const X = v.world.dx(v.ox, pr.x), Z = pr.y + 0.5 - v.oy;
+  const s = (pr.size || 1) * sc, t = pr.t || 0;
   const sp = Math.hypot(pr.vx, pr.vy) || 1;
   const dx = pr.vx / sp, dz = pr.vy / sp;
   const c = col(pr.color || '#ffffff');
@@ -101,18 +121,17 @@ function draw(v, pr, r, Y) {
     case 'fireball':
     case 'firefist': {
       const fist = pr.sprite === 'firefist';
-      const big = s >= 3;
-      const R = big ? 0.55 * s : (fist ? 0.42 : 0.34) * s;
       const fc = col('#ff7a1a');
-      v.shells.put(VK.FIRE, X, Y, Z, R, dx, 0, dz, fist ? 1.7 : 1.3, fc, fin, HOT, 0.6, 0, seed);
-      if (big) v.shells.put(VK.FIRE, X, Y, Z, R * 1.35, dx, 0, dz, 1.15, col('#ff4400'), 0.7 * fin, HOT, 0.8, 0.3, seed + 3);
-      v.sprites.put(SK.GLOW, X, Y, Z, R * 2.2, fc, 0.55 * fin, HOT, 1, 0, seed, 0);
-      trail(v, r, RK.FIRE, fc, fin, HOT, 0.6, R * 0.95, 0.15, big ? 16 : 12);
+      if ((pr.size || 1) >= 3) { sun(v, r, X, Y, Z, 0.55 * s, dx, dz, fc, seed, t); break; }
+      const R = (fist ? 0.42 : 0.34) * s;
+      v.shells.put(VK.FIRE, X, Y, Z, R, dx, 0, dz, fist ? 1.7 : 1.3, fc, 1, HOT, 0.6, 0, seed);
+      v.sprites.put(SK.GLOW, X, Y, Z, R * 2.2, fc, 0.55, HOT, 1, 0, seed, 0);
+      trail(v, r, RK.FIRE, fc, 1, HOT, 0.6, R * 0.95, 0.15, 12);
       break;
     }
     case 'magmafist': {
       const R = 0.38 * s;
-      putAlong(v.solids.blocks, X, Y, Z, dx, 0, dz, R * 1.8, R * 1.8, t * 3, col('#4e342e'), OK.MAGMA, 1 - fin, seed, 1);
+      putAlong(v.solids.blocks, X, Y, Z, dx, 0, dz, R * 1.8, R * 1.8, t * 3, col('#4e342e'), OK.MAGMA, 0, seed, 1);
       v.sprites.put(SK.GLOW, X, Y, Z, R * 2.4, col('#ff6f00'), 0.6, HOT, 1, 0, seed, 0);
       trail(v, r, RK.FIRE, col('#ff5722'), 1, HOT, 0.5, R * 1.1, 0.1, 12);
       break;
@@ -124,7 +143,7 @@ function draw(v, pr, r, Y) {
       const skin = col(pr.sprite === 'barafist' ? (pr.color && pr.color !== '#ffccbc' ? pr.color : '#f1c9a0') : look.skin || '#f1c9a0');
       const dark = o && o.armament;
       const R = 0.24 * s;
-      putAlong(v.solids.blocks, X, Y, Z, dx, 0, dz, R * 1.7, R * 1.7, 0, dark ? col('#1c1a24') : skin, OK.SKIN, 1 - fin, seed, dark ? 0.05 : 0);
+      putAlong(v.solids.blocks, X, Y, Z, dx, 0, dz, R * 1.7, R * 1.7, 0, dark ? col('#1c1a24') : skin, OK.SKIN, 0, seed, dark ? 0.05 : 0);
       if (o && o.alive !== false && pr.sprite === 'gomufist') {
         // the arm, stretched back to the shoulder it came from, a little slack in it
         const ox = v.world.dx(v.ox, o.x), oz = o.y - v.oy;
@@ -145,7 +164,7 @@ function draw(v, pr, r, Y) {
     }
     case 'iceshard': {
       const ic = col(pr.color || '#b3e5fc');
-      putAlong(v.solids.shards, X, Y, Z, dx, 0, dz, 0.5 * s, 0.22 * s, t * 8, ic, OK.ICE, 1 - fin, seed, 0.15);
+      putAlong(v.solids.shards, X, Y, Z, dx, 0, dz, 0.5 * s, 0.22 * s, t * 8, ic, OK.ICE, 0, seed, 0.15);
       v.sprites.put(SK.STAR, X + dx * 0.3 * s, Y, Z + dz * 0.3 * s, 0.25 * s, ic, 0.7, WHITE, 1, t * 6, seed, 0);
       trail(v, r, RK.SMOKE, col('#e1f5fe'), 0.7, WHITE, 0, 0.16 * s, 0.3, 8);
       break;
@@ -169,15 +188,28 @@ function draw(v, pr, r, Y) {
     }
     case 'thunder': {
       const lc = col('#fff176');
-      if (s >= 2) {
-        // Sango: a dragon of lightning — strands writhing back along its path from a blazing head
-        const m = Math.min(r.n, 14);
+      if ((pr.size || 1) >= 2) {
+        // Sango: a dragon of lightning — a serpent body of light writhing
+        // back along its path, strands crackling round it, a blazing head
+        // with forked jaws reaching ahead
+        const m = Math.min(r.n, 16), lx = -dz, lz = dx, fl = Math.floor(t * 20);
         if (m >= 3) {
+          const Rb = v.ribbons;
+          Rb.start(RK.GLOW, RM.FACE, lc, 0.95, WHITE, 1);
+          for (let i = 0; i < m; i++) {
+            r.back(i, P);
+            const q = i / (m - 1), ph = i * 0.8 - t * 16, wv = Math.sin(ph) * 0.3 * s * q;
+            Rb.point(v.world.dx(v.ox, P[0]) + lx * wv, P[2] + Math.cos(ph) * 0.15 * s * q, P[1] - v.oy + lz * wv, 0.3 * s * (1 - 0.7 * q));
+          }
+          Rb.finish();
           r.back(m - 1, P);
           const tx = v.world.dx(v.ox, P[0]), tz = P[1] - v.oy;
-          for (let i = 0; i < 3; i++) bolt(v, X, Y, Z, tx, P[2] + (i - 1) * 0.2 * s, tz, 0.12 * s * (1 - i * 0.25), 0.3 * s, seed + i * 17 + Math.floor(t * 20), lc, 1, 1);
+          for (let i = 0; i < 3; i++) bolt(v, X, Y, Z, tx, P[2] + (i - 1) * 0.2 * s, tz, 0.06 * s * (1 - i * 0.25), 0.35 * s, seed + i * 17 + fl, lc, 0.9, 1);
         }
-        v.sprites.put(SK.GLOW, X, Y, Z, 0.4 * s, lc, 0.7, WHITE, 1, 0, seed, 0);
+        for (let j = -1; j <= 1; j += 2) {
+          bolt(v, X, Y, Z, X + dx * 0.6 * s + lx * j * 0.22 * s, Y + j * 0.12 * s, Z + dz * 0.6 * s + lz * j * 0.22 * s, 0.05 * s, 0.08 * s, seed + 40 + j + fl, lc, 1, 0);
+        }
+        v.sprites.put(SK.GLOW, X, Y, Z, 0.45 * s, lc, 0.7, WHITE, 1, 0, seed, 0);
       } else {
         const fl = Math.floor(t * 20);
         for (let i = 0; i < 4; i++) {
@@ -254,10 +286,12 @@ function draw(v, pr, r, Y) {
     }
     case 'shockwave': {
       const sc = col(pr.color || '#e0f7fa');
+      // (a black one — Haki — is inked on, red at its heart, rather than adding light)
+      const dark = luma(sc) < 0.05, rc = dark ? DARK_RED : WHITE;
       for (let i = 0; i < 4; i++) {
         const ph = (t * 3 + i * 0.25) % 1;
         const rr = (0.4 + i * 0.12) * s, back = i * 0.22 * s;
-        v.planeRing(X - dx * back, Y, Z - dz * back, 0, 1, 0, -dz, 0, dx, rr, 0.05 * Math.max(1, s * 0.8), i ? sc : WHITE, (1 - i * 0.2) * (0.6 + 0.4 * Math.sin(ph * Math.PI)), WHITE, 1, 0.6, seed + i, 0, 28);
+        v.planeRing(X - dx * back, Y, Z - dz * back, 0, 1, 0, -dz, 0, dx, rr, 0.05 * Math.max(1, s * 0.8), i || dark ? sc : WHITE, (1 - i * 0.2) * (0.6 + 0.4 * Math.sin(ph * Math.PI)), rc, dark ? 0.1 : 1, 0.6, seed + i, 0, 28);
       }
       break;
     }
@@ -285,16 +319,10 @@ function draw(v, pr, r, Y) {
     }
     case 'bird': {
       const bc = col(pr.color || '#b3e5fc');
-      const flap = Math.sin(t * 20) * 0.5;
-      v.shells.put(VK.ORB, X, Y, Z, 0.16 * s, dx, 0, dz, 2.2, bc, 1, WHITE, 0.8, 0, seed);
-      for (let i = -1; i <= 1; i += 2) {
-        v.ribbons.start(RK.GLOW, RM.FACE, bc, 0.9, WHITE, 1)
-          .point(X, Y, Z, 0.08 * s)
-          .point(X - dx * 0.25 * s - dz * i * 0.35 * s, Y + flap * 0.3 * s, Z - dz * 0.25 * s + dx * i * 0.35 * s, 0.06 * s)
-          .point(X - dx * 0.55 * s - dz * i * 0.6 * s, Y + flap * 0.55 * s, Z - dz * 0.55 * s + dx * i * 0.6 * s, 0.01)
-          .finish();
-      }
-      trail(v, r, RK.GLOW, bc, 0.6, WHITE, 1, 0.12 * s, 0.1, 10);
+      // (bigger than what it hits with: a bird you can see coming)
+      const R = Math.max(0.55, pr.radius || 0.5) * 1.3 * s;
+      if (pr.element === 'ice') iceBird(v, r, X, Y, Z, R, dx, dz, bc, seed, t);
+      else fireBird(v, r, X, Y, Z, R, dx, dz, bc, seed, t);
       break;
     }
     default: {
@@ -305,6 +333,78 @@ function draw(v, pr, r, Y) {
       trail(v, r, RK.GLOW, c, 0.75, WHITE, 1, R * 0.7, 0.05, 10);
     }
   }
+}
+
+/**
+ * A thrown sun (Entei): a great ball of fire rolling slowly (big boiling
+ * bumps would read as shards at this size), a crown of flame tongues licking
+ * out all round its edge as seen, a heat glow, a broad wake of fire.
+ */
+function sun(v, r, X, Y, Z, R, dx, dz, fc, seed, t) {
+  // (its heart a deep gold rather than white: a sun, not a flash)
+  v.shells.put(VK.FIRE, X, Y, Z, R, dx, 0, dz, 1.1, fc, 1, SUN_CORE, 0.55, 0.12, seed, 0.35);
+  v.shells.put(VK.FIRE, X, Y, Z, R * 1.12, dx, 0, dz, 1.12, col('#ff4400'), 0.75, SUN_CORE, 0.6, 0.35, seed + 3, 0.5);
+  crown(v, X, Y, Z, R, fc, SUN_CORE, 1, seed, t, 14);
+  v.sprites.put(SK.GLOW, X, Y, Z, R * 1.7, fc, 0.28, SUN_CORE, 1, 0, seed, 0);
+  trail(v, r, RK.FIRE, fc, 1, HOT, 0.6, R * 0.9, 0.2, 16);
+}
+const SUN_CORE = col('#ffd04a');
+
+/**
+ * Pheasant Beak: a great bird of ice — a crystal body and beak, wings of
+ * long ice feathers beating, a train of tail feathers, frost mist streaming
+ * off it, glints. R is about half its wingspan over 1.6.
+ */
+function iceBird(v, r, X, Y, Z, R, dx, dz, c, seed, t) {
+  const S = v.solids.shards, lx = -dz, lz = dx;
+  const flap = Math.sin(t * 13 + seed) * 0.45;
+  const HALF = Math.PI / 2;
+  // body and head
+  putAlong(S, X, Y, Z, dx, 0.04, dz, 0.8 * R, 1.15 * R, HALF, c, OK.ICE, 0, seed, 0.2);
+  putAlong(S, X + dx * 0.95 * R, Y + 0.1 * R, Z + dz * 0.95 * R, dx, -0.12, dz, 0.36 * R, 0.62 * R, 0, c, OK.ICE, 0, seed + 1, 0.3);
+  // wings: four feathers a side, swept back, beating
+  for (let sd = -1; sd <= 1; sd += 2) {
+    const rx = X + lx * sd * 0.12 * R + dx * 0.15 * R, ry = Y + 0.12 * R, rz = Z + lz * sd * 0.12 * R + dz * 0.15 * R;
+    for (let i = 0; i < 4; i++) {
+      const b = 0.22 + i * 0.3, ph = flap * (1 + i * 0.12) - i * 0.05;
+      const cb = Math.cos(b), sb = Math.sin(b), cp = Math.cos(ph), spp = Math.sin(ph);
+      const ex = cb * cp * lx * sd - sb * dx, ey = cb * spp, ez = cb * cp * lz * sd - sb * dz;
+      const L = R * (0.95 - i * 0.13);
+      putAlong(S, rx + ex * L, ry + ey * L, rz + ez * L, ex, ey, ez, L, 0.85 * R, HALF, c, OK.ICE, 0, seed + 3 + i + sd * 5, 0.15);
+    }
+  }
+  // the tail: long feathers trailing, fanned a little
+  for (let j = -1; j <= 1; j++) {
+    const ex = -dx + lx * j * 0.2, ez = -dz + lz * j * 0.2, L = R * (0.95 - Math.abs(j) * 0.2);
+    putAlong(S, X - dx * 0.7 * R + ex * L, Y - 0.05 * R, Z - dz * 0.7 * R + ez * L, ex, 0.06, ez, L, 0.7 * R, HALF, c, OK.ICE, 0, seed + 20 + j, 0.15);
+  }
+  const fr = col('#e1f5fe');
+  v.sprites.put(SK.GLOW, X, Y, Z, R * 1.3, c, 0.3, WHITE, 0.6, 0, seed, 0);
+  v.sprites.put(SK.STAR, X + dx * 1.2 * R, Y + 0.1 * R, Z + dz * 1.2 * R, 0.3 * R, c, 0.85, WHITE, 1, t * 5, seed, 0);
+  trail(v, r, RK.SMOKE, fr, 0.75, WHITE, 0, 0.55 * R, 0.4, 12);
+  const f = Math.floor(t * 24);
+  for (let i = 0; i < 6; i++) {
+    const ph = (t * 3 + i / 6) % 1, sd = i % 2 ? 1 : -1, off = (0.4 + hash(seed + i + f) * 1.1) * R * sd;
+    v.sprites.put(SK.SPECK, X - dx * ph * 2.5 * R + lx * off, Y + (hash(seed + i * 3) - 0.3) * 0.6 * R - ph * 0.3, Z - dz * ph * 2.5 * R + lz * off, 0.035, fr, 1 - ph, WHITE, 0.4, f + i, seed + i, 0);
+  }
+}
+
+/** A bird of fire: a burning body, wings of flame beating, a wake of fire. */
+function fireBird(v, r, X, Y, Z, R, dx, dz, c, seed, t) {
+  const lx = -dz, lz = dx;
+  const flap = Math.sin(t * 13 + seed) * 0.5;
+  v.shells.put(VK.FIRE, X, Y, Z, 0.32 * R, dx, 0, dz, 2.2, c, 1, HOT, 0.6, 0, seed);
+  for (let sd = -1; sd <= 1; sd += 2) {
+    const p1 = flap, p2 = flap * 1.35;
+    const c1 = Math.cos(p1), s1 = Math.sin(p1), c2 = Math.cos(p2), s2 = Math.sin(p2);
+    v.ribbons.start(RK.FIRE, RM.FACE, c, 1, HOT, 0.6)
+      .point(X + lx * sd * 0.1 * R, Y + 0.05 * R, Z + lz * sd * 0.1 * R, 0.3 * R)
+      .point(X + (lx * sd * c1) * 0.8 * R - dx * 0.25 * R, Y + s1 * 0.8 * R, Z + (lz * sd * c1) * 0.8 * R - dz * 0.25 * R, 0.24 * R)
+      .point(X + (lx * sd * c2) * 1.6 * R - dx * 0.7 * R, Y + s2 * 1.6 * R, Z + (lz * sd * c2) * 1.6 * R - dz * 0.7 * R, 0.05 * R)
+      .finish();
+  }
+  v.sprites.put(SK.GLOW, X, Y, Z, R * 1.4, c, 0.4, HOT, 1, 0, seed, 0);
+  trail(v, r, RK.FIRE, c, 1, HOT, 0.6, 0.35 * R, 0.1, 12);
 }
 
 /** Speed lines streaking back past a fast punch. */

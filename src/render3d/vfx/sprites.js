@@ -20,6 +20,7 @@ const VS = /* glsl */`
   attribute vec4 iPos, iCol, iCol2, iPrm, iVel;
   varying vec2 vUv;
   varying vec4 vCol, vCol2, vPrm, vX;
+  varying float vTame;
   void main() {
     int kind = int(iPrm.x + 0.5);
     vec4 mv = viewMatrix * vec4(iPos.xyz, 1.0);
@@ -39,7 +40,8 @@ const VS = /* glsl */`
       // hit flashes are pulled toward the camera (keeping their size on
       // screen), so a body in between — your own, from behind — doesn't hide them
       if (iVel.w > 0.0 && kind != ${SK.RING}) {
-        float d0 = length(mv.xyz), d1 = max(0.45, d0 - iVel.w);
+        // (never into the near fade, nor past where it was)
+        float d0 = length(mv.xyz), d1 = min(d0, max(uNearB + 0.05, d0 - iVel.w));
         mv.xyz *= d1 / d0;
         size *= d1 / d0;
       }
@@ -49,10 +51,13 @@ const VS = /* glsl */`
       // ground doesn't slice through the bottom of a puff
       if (kind == ${SK.SMOKE} || kind == ${SK.DUST} || kind == ${SK.CLOUD} || kind == ${SK.GLOW} || kind == ${SK.FIRE} || kind == ${SK.FLASH}) {
         float d = length(mv.xyz);
-        mv.xyz -= mv.xyz / max(d, 1e-4) * min(size * 0.55, max(0.0, d - 0.6));
+        mv.xyz -= mv.xyz / max(d, 1e-4) * min(size * 0.55, max(0.0, d - uNearB));
       }
     }
     mv.xy += off;
+    // a sprite filling much of the view gives up its overbright heart and
+    // most of the light it adds (no white-out when a fireball is in your face)
+    vTame = smoothstep(0.35, 1.1, size * projectionMatrix[1][1] / max(-mv.z, 0.05));
     vCol = iCol; vCol2 = iCol2; vPrm = iPrm; vX = iVel;
     vfxFogNear(mv);
     gl_Position = projectionMatrix * mv;
@@ -64,6 +69,7 @@ const FS = /* glsl */`
   uniform vec3 uSunV;
   varying vec2 vUv;
   varying vec4 vCol, vCol2, vPrm, vX;
+  varying float vTame;
   const float TAU = 6.2831853;
   float puffLight(vec2 p, float r, float bump) {
     // a billow lit from the sun's side: two tones, cel-shaded
@@ -149,6 +155,18 @@ const FS = /* glsl */`
       vec3 hi = cloud ? vCol.rgb * 1.9 + 0.1 : vCol.rgb * 1.18 + 0.08;
       c = mix(vCol.rgb * shade, hi, lit);
       a = m * (cloud ? 0.95 : dust ? 0.6 : 0.78);
+      // darkness (deep, strongly coloured smoke — the Yami Yami's): not a
+      // billow but a void, near black, its fraying edge lit in its colour
+      float lum = dot(vCol.rgb, vec3(0.3, 0.59, 0.11));
+      float hiC = max(vCol.r, max(vCol.g, vCol.b));
+      float sat = (hiC - min(vCol.r, min(vCol.g, vCol.b))) / max(hiC, 1e-3);
+      float dk = cloud || dust ? 0.0 : (1.0 - smoothstep(0.035, 0.09, lum)) * smoothstep(0.5, 0.8, sat);
+      if (dk > 0.0) {
+        float edge = 1.0 - smoothstep(th + 0.03, th + 0.2, d);
+        c = mix(c, mix(vec3(0.008, 0.002, 0.016), vCol.rgb * 2.6 + vec3(0.03, 0.0, 0.06), edge), dk);
+        w = mix(w, edge * 0.35, dk);
+        a = mix(a, m * 0.92, dk);
+      }
     } else if (kind == ${SK.STREAK}) {
       // a spark: a spindle, white-hot along its middle, tapering off behind
       float t = p.x * 0.5 + 0.5;
@@ -204,6 +222,9 @@ const FS = /* glsl */`
       a = m;
       c = vCol.rgb * 1.3;
     }
+    c = mix(c, min(c, vec3(0.92)), vTame);
+    w *= 1.0 - 0.7 * vTame;
+    a *= 1.0 - 0.35 * vTame;
     if (a < 0.004) discard;
     gl_FragColor = vfxOut(c, a * vCol.a, w);
     #include <colorspace_fragment>
@@ -257,6 +278,12 @@ export class Sprites {
     if (i < 0) return;
     const o = i * 4, V = this.V;
     V[o] = a; V[o + 1] = b; V[o + 2] = c; V[o + 3] = d;
+  }
+
+  /** Scale the alpha of every sprite put since index `from`. */
+  fade(from, m) {
+    const C = this.C;
+    for (let i = from; i < this.n; i++) C[i * 4 + 3] *= m;
   }
 
   end() {

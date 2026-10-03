@@ -194,6 +194,12 @@ export class Ribbons {
     }
   }
 
+  /** Scale the alpha of every vertex written since vertex `from`. */
+  fade(from, m) {
+    const C = this.col.array;
+    for (let i = from; i < this.nv; i++) C[i * 4 + 3] *= m;
+  }
+
   end() {
     const nv = this.nv, ni = this.ni;
     this.geo.setDrawRange(0, ni);

@@ -964,6 +964,8 @@ export class Renderer3D {
     }
     const faded = fadeWarmUp();
     zoo.add(faded);
+    // (the effects layer's batches too, hidden while empty)
+    this.vfx.warmBegin();
     // (the ships' materials aren't disposed: that would drop the compiled shaders again)
     try {
       if (this.parallelCompile) {
@@ -974,6 +976,7 @@ export class Renderer3D {
         this.renderer.compile(zoo, this.rig.camera, this.scene);
       }
     } catch (e) { console.warn('shader warm-up failed', e); }
+    this.vfx.warmEnd();
     faded.userData.spare();
   }
 

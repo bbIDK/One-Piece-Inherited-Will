@@ -137,6 +137,24 @@ export class Ghosts {
 
   end() { this.live.forEach(this._sweep); }
 
+  /** A ghost of a body, invisible, so its shaders compile with the warm-up. */
+  warm(view) {
+    const src = view.model && view.model.mesh;
+    if (!src || !src.isSkinnedMesh || !src.skeleton || this.warming) return;
+    const g = this.pool.pop() || new Ghost();
+    g.take(src, 0, 0, 0);
+    g.mat.uniforms.uAlpha.value = 0;
+    this.group.add(g.mesh);
+    this.warming = g;
+  }
+  unwarm() {
+    const g = this.warming;
+    if (!g) return;
+    g.mesh.removeFromParent();
+    this.pool.push(g);
+    this.warming = null;
+  }
+
   clear() {
     this.live.forEach((g) => { if (g.mesh) g.mesh.removeFromParent(); this.pool.push(g); });
     this.live.clear();

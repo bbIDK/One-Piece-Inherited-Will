@@ -4,7 +4,7 @@
 // two-tone billows lit from the sun's side that fray away as they thin,
 // shards real tumbling splinters (ice, wax, a broken guard), drops little
 // streaks of water, sand grains, petals turning as they fall.
-import { col, hash, TAU } from './kit.js';
+import { col, hash, luma, TAU } from './kit.js';
 import { SK } from './sprites.js';
 import { OK, putAlong } from './solids.js';
 
@@ -24,7 +24,9 @@ export function drawParticles(v, parts) {
     const h = p.under !== undefined ? p.z - p.under : p.z;
     const X = w.dx(v.ox, p.x), Z = p.y - v.oy, Y = v.ground(p.x, p.y) + h;
     const sz = p.size || 0.1;
-    const add = p.add ? 1 : 0;
+    // (black can't add light: dark sparks and glows — Haki's — are inked on instead)
+    const lit = luma(c) >= 0.04 ? 1 : 0;
+    const add = p.add ? lit : 0;
     switch (p.kind) {
       case 'spark':
       case 'line': {
@@ -50,13 +52,13 @@ export function drawParticles(v, parts) {
         S.put(SK.FIRE, X, Y, Z, sz * (0.75 + 0.55 * life) * 1.6, c, Math.min(1, al * 1.2), HOT, add ? 0.7 : 0.2, 0, (p.max * 71.9) % 50, k);
         break;
       case 'glow':
-        S.put(SK.GLOW, X, Y, Z, sz, c, al, WHITE, 1, 0, 0, k);
+        S.put(SK.GLOW, X, Y, Z, sz, c, al, lit ? WHITE : c, lit, 0, 0, k);
         break;
       case 'ember':
-        S.put(SK.EMBER, X, Y, Z, Math.max(0.03, sz * 0.6), c, al, WHITE, 1, 0, (p.max * 31.7) % 50, k);
+        S.put(SK.EMBER, X, Y, Z, Math.max(0.03, sz * 0.6), c, al, WHITE, lit, 0, (p.max * 31.7) % 50, k);
         break;
       case 'star':
-        S.put(SK.STAR, X, Y, Z, sz * 1.4, c, al, WHITE, 1, p.rot || 0, 0, k);
+        S.put(SK.STAR, X, Y, Z, sz * 1.4, c, al, lit ? WHITE : c, lit, p.rot || 0, 0, k);
         break;
       case 'petal':
       case 'leaf':

@@ -19,7 +19,7 @@ const SHELL_VS = /* glsl */`
   varying vec4 vCol, vCol2, vPrm;
   varying vec3 vN, vV, vObj;
   varying vec2 vUv;
-  varying float vY;
+  varying float vY, vTame;
   void main() {
     int kind = int(iPrm.x + 0.5);
     vec3 n = position;
@@ -31,7 +31,7 @@ const SHELL_VS = /* glsl */`
       vec2 nuv = uv * vec2(4.0, 2.0) + vec2(iPrm.z * 0.13, -uTime * 0.7);
       float d = textureLod(uNoise, nuv, 0.0).g - 0.5;
       float d2 = textureLod(uNoise, nuv * 2.1 + 0.37, 0.0).b - 0.5;
-      p += n * (d * 0.55 + d2 * 0.25);
+      p += n * (d * 0.55 + d2 * 0.25) * iPrm.w;
       // flames lick back, away from where it's going
       p -= ax * max(0.0, -along) * (0.25 + 0.4 * (d + 0.5)) * (iAxis.w - 0.9);
     } else if (kind == ${VK.WATER} || kind == ${VK.GOO}) {
@@ -47,6 +47,9 @@ const SHELL_VS = /* glsl */`
     vObj = n;
     vUv = uv;
     vY = wp.y - iPos.y;
+    // (a ball filling the view gives up its overbright heart and most of its added light)
+    float dc = -(viewMatrix * vec4(iPos.xyz, 1.0)).z;
+    vTame = smoothstep(0.45, 1.3, iPos.w * max(1.0, iAxis.w) * projectionMatrix[1][1] / max(dc, 0.05));
     vCol = iCol; vCol2 = iCol2; vPrm = iPrm;
     vfxFogNear(mv);
     gl_Position = projectionMatrix * mv;
@@ -58,7 +61,7 @@ const SHELL_FS = /* glsl */`
   varying vec4 vCol, vCol2, vPrm;
   varying vec3 vN, vV, vObj;
   varying vec2 vUv;
-  varying float vY;
+  varying float vY, vTame;
   void main() {
     int kind = int(vPrm.x + 0.5);
     float k = vPrm.y, seed = vPrm.z;
@@ -111,7 +114,7 @@ const SHELL_FS = /* glsl */`
       w = rim * 0.6;
     } else if (kind == ${VK.ORB}) {
       // a coloured ball, a small white-hot heart, a bright rim
-      float core = pow(ndv, 5.0);
+      float core = pow(ndv, 8.0) * 0.85;
       c = mix(vCol.rgb * 1.05, vCol2.rgb * 1.8, core);
       a = 0.55 + 0.45 * core + pow(fr, 4.0) * 0.5;
       w = mix(w, 1.0, core);
@@ -130,6 +133,8 @@ const SHELL_FS = /* glsl */`
       a = 1.0;
       w = 0.0;
     }
+    c = mix(c, min(c, vec3(0.92)), vTame);
+    w *= 1.0 - 0.7 * vTame;
     if (a < 0.004) discard;
     gl_FragColor = vfxOut(c, a * vCol.a, w);
     #include <colorspace_fragment>
@@ -233,7 +238,7 @@ const TUBE_FS = /* glsl */`
       float rim = smoothstep(0.62, 0.92, 1.0 - ndv + (n - 0.5) * 0.45);
       float hole = smoothstep(0.4, 0.55, n);
       c = mix(vec3(0.03, 0.0, 0.06), vCol2.rgb * 1.4, rim);
-      a = (0.55 + 0.4 * hole + 0.3 * rim) * (1.0 - smoothstep(0.55, 1.0, y + (n - 0.5) * 0.3));
+      a = (0.75 + 0.25 * hole + 0.3 * rim) * (1.0 - smoothstep(0.55, 1.0, y + (n - 0.5) * 0.3));
       w = rim * 0.55;
     }
     if (a < 0.004) discard;
@@ -261,6 +266,8 @@ class Instanced {
   begin() { this.n = 0; }
   next() { return this.n < this.max ? this.n++ : -1; }
   set(slot, i, a, b, c, d) { const A = this.arr[slot], o = i * 4; A[o] = a; A[o + 1] = b; A[o + 2] = c; A[o + 3] = d; }
+  /** Scale the alpha of every instance put since index `from`. */
+  fade(from, m) { const A = this.arr[2]; for (let i = from; i < this.n; i++) A[i * 4 + 3] *= m; }
   end() {
     const n = this.n;
     this.geo.instanceCount = n;
@@ -276,7 +283,8 @@ export class Shells extends Instanced {
   }
   /**
    * A shell: kind, centre, radius, stretch along an axis (unit vector; 1 = round),
-   * colour + alpha, rim/core colour + additive weight, age, seed, extra (a dome's height factor).
+   * colour + alpha, rim/core colour + additive weight, age, seed, extra (a dome's
+   * height factor; how hard a ball of fire boils).
    */
   put(kind, x, y, z, R, ax, ay, az, stretch, c, alpha, c2, w, k = 0, seed = 0, extra = 1) {
     if (!(alpha > 0.003) || !(R > 0.001)) return -1;

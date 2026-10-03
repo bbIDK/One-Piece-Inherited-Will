@@ -145,11 +145,18 @@ const FS = /* glsl */`
           float body = (1.0 - smoothstep(0.75, 1.0, r)) * smoothstep(0.0, 0.12, r);
           bool dark = zk == ${ZK.dark} || prm < -0.5;
           if (dark) {
+            // a pool of darkness: near black, the spiral faintly lit in it,
+            // a ragged edge with a thin bright fringe, pitch black at the heart
+            float n = texture2D(uNoise, q * 0.6 + vec2(uTime * 0.05, seed)).r;
+            float rr = r + (n - 0.5) * 0.18;
+            float pool = 1.0 - smoothstep(0.8, 0.97, rr);
+            float rim = 1.0 - smoothstep(0.0, 0.045, abs(rr - 0.87));
             float hole = 1.0 - smoothstep(0.28, 0.4, r);
-            c = mix(vCol2.rgb, vCol.rgb * 1.5, arm);
+            c = mix(vCol2.rgb, vCol.rgb * 1.25, arm * 0.8);
             c = mix(c, vec3(0.0), hole);
-            a = max(body * mix(0.4, 0.95, arm), hole);
-            w = arm * 0.5 * (1.0 - hole);
+            c = mix(c, vCol.rgb * 1.8, rim);
+            a = max(max(pool * mix(0.8, 0.97, arm), hole), rim * 0.9);
+            w = (arm * 0.3 + rim * 0.6) * (1.0 - hole);
           } else {
             a = body * (0.16 + 0.55 * arm);
             c = mix(vCol.rgb, vCol2.rgb * 1.3, arm);
@@ -254,6 +261,12 @@ export class Surfaces {
         I[this.ni++] = b; I[this.ni++] = c; I[this.ni++] = d;
       }
     }
+  }
+
+  /** Scale the alpha of every vertex written since vertex `from`. */
+  fade(from, m) {
+    const C = this.col.array;
+    for (let i = from; i < this.nv; i++) C[i * 4 + 3] *= m;
   }
 
   end() {

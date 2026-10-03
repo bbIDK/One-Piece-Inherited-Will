@@ -313,7 +313,8 @@ SHAPES.ring = {
     if (alpha < 0.01) return;
     const c = col(s.color || '#ffffff');
     const dark = luma(c) < 0.06;
-    const w = s.add ? 0.65 : dark ? 0 : 0.35;
+    // (a dark ring can't add light: it's inked on, whatever it asked for)
+    const w = dark ? 0 : s.add ? 0.65 : 0.35;
     const core = s.noCore ? 0 : dark ? 0 : 0.75;
     const c2 = dark ? c : WHITE;
     const width = Math.max(0.03, (s.width || 0.15) * (1 - k * 0.6));
@@ -365,7 +366,7 @@ SHAPES.beam = {
     norm3(D);
     const c = col(s.color || '#ffffff'), c2 = col(s.core || BEAM_CORE[style] || '#ffffff');
     // (in first person your own beam starts at your chest: begin it a little way out)
-    const st = v.fp && v.onSelf(s, z) ? Math.min(0.9, L3 * 0.5) : 0;
+    const st = v.fp && v.onSelf(s, z) ? Math.min(1.4, L3 * 0.5) : 0;
     const bx = X0 + D[0] * st, by = Y0 + D[1] * st, bz = Z0 + D[2] * st, BL = L3 - st;
     if (style === 'lightning') {
       perp(D, A, B);
@@ -373,14 +374,33 @@ SHAPES.beam = {
       v.tubes.put(TK.BEAM, bx, by, bz, D[0], D[1], D[2], BL, wd * 0.5, wd * 0.5, c, fade * 0.18, c2, 1, k, s.seed);
     } else if (style === 'string') {
       perp(D, A, B);
-      for (let i = 0; i < 5; i++) {
-        const sp = (i / 4 - 0.5) * wd;
-        v.ribbons.start(RK.THIN, RM.FACE, c, fade, WHITE, 0.6)
-          .point(bx + A[0] * sp * 0.3, by + A[1] * sp * 0.3, bz + A[2] * sp * 0.3, 0.014)
-          .point(X1 + A[0] * sp, Y1 + A[1] * sp, Z1 + A[2] * sp, 0.012)
-          .finish();
+      if (!(c[0] > 0.5 && c[0] > c[2] * 1.6)) {
+        for (let i = 0; i < 5; i++) {
+          const sp = (i / 4 - 0.5) * wd;
+          v.ribbons.start(RK.THIN, RM.FACE, c, fade, WHITE, 0.6)
+            .point(bx + A[0] * sp * 0.3, by + A[1] * sp * 0.3, bz + A[2] * sp * 0.3, 0.014)
+            .point(X1 + A[0] * sp, Y1 + A[1] * sp, Z1 + A[2] * sp, 0.012)
+            .finish();
+        }
+        return;
       }
-      return;
+      // Overheat: a rope of strings heated red-hot, three strands twisting
+      // round a glowing core, pinched at the ends, shedding embers
+      v.tubes.put(TK.BEAM, bx, by, bz, D[0], D[1], D[2], BL, wd * 0.2, wd * 0.26, c, fade * 0.85, ROPE_HOT, 0.8, k, s.seed);
+      const n = Math.max(8, Math.min(40, Math.round(BL * 4)));
+      for (let j = 0; j < 3; j++) {
+        v.ribbons.start(RK.LINE, RM.FACE, c, fade, ROPE_HOT, 0.6);
+        for (let i = 0; i <= n; i++) {
+          const t = i / n, ph = (j * TAU) / 3 + t * BL * 4.5 - v.time * 14;
+          const rr = wd * 0.3 * (0.45 + 0.55 * Math.sin(t * PI)), ca = Math.cos(ph) * rr, sa = Math.sin(ph) * rr;
+          v.ribbons.point(bx + D[0] * BL * t + A[0] * ca + B[0] * sa, by + D[1] * BL * t + A[1] * ca + B[1] * sa, bz + D[2] * BL * t + A[2] * ca + B[2] * sa, wd * 0.09);
+        }
+        v.ribbons.finish();
+      }
+      for (let i = 0; i < 8; i++) {
+        const t = hash(s.seed + i * 3 + Math.floor(v.time * 12)), up = ((v.time * 2 + hash(s.seed + i)) % 1) * 0.4;
+        v.sprites.put(SK.EMBER, bx + D[0] * BL * t, by + D[1] * BL * t + up, bz + D[2] * BL * t, 0.035, ROPE_EMBER, fade, WHITE, 1, 0, s.seed + i, 0);
+      }
     } else if (style === 'fire') {
       v.tubes.put(TK.FIRE, bx, by, bz, D[0], D[1], D[2], BL, wd * 0.45, wd * 0.95, c, fade, c2, 0.6, k, s.seed);
       v.tubes.put(TK.BEAM, bx, by, bz, D[0], D[1], D[2], BL, wd * 0.18, wd * 0.3, c2, fade * 0.9, c2, 1, k, s.seed + 3);
@@ -420,7 +440,11 @@ function bolt(v, x0, y0, z0, x1, y1, z1, hw, amp, seed, c, alpha, branches, c2 =
   perp(Cc, A, B);
   const n = Math.max(5, Math.min(40, Math.ceil(L * 2.4)));
   const R = v.ribbons;
-  R.start(RK.GLOW, RM.FACE, c, alpha, c2, 1);
+  // black lightning (Conqueror's Haki) can't add light: it's inked on, crackling red down its middle
+  const black = luma(c) < 0.05;
+  if (black) c2 = HAKI_RED;
+  const w = black ? 0 : 1;
+  R.start(RK.GLOW, RM.FACE, c, alpha, c2, w);
   let bi = 0;
   const bt = BT;
   bt[0] = 0.3 + hash(seed + 1) * 0.2; bt[1] = 0.55 + hash(seed + 2) * 0.25; bt[2] = 0.75 + hash(seed + 3) * 0.15;
@@ -437,7 +461,7 @@ function bolt(v, x0, y0, z0, x1, y1, z1, hw, amp, seed, c, alpha, branches, c2 =
     const ba = hash(seed + b * 3) * TAU, bl = (0.35 + hash(seed + b * 5) * 0.6) * Math.min(2.5, L * 0.35);
     const fx = FORK[b * 3], fy = FORK[b * 3 + 1], fz = FORK[b * 3 + 2];
     const ex = fx + (Cc[0] * 0.6 + A[0] * Math.cos(ba) + B[0] * Math.sin(ba)) * bl, ey = fy + (Cc[1] * 0.6 + A[1] * Math.cos(ba) + B[1] * Math.sin(ba)) * bl, ez = fz + (Cc[2] * 0.6 + A[2] * Math.cos(ba) + B[2] * Math.sin(ba)) * bl;
-    R.start(RK.GLOW, RM.FACE, c, alpha * 0.85, c2, 1);
+    R.start(RK.GLOW, RM.FACE, c, alpha * 0.85, c2, w);
     for (let i = 0; i <= 4; i++) {
       const t = i / 4, j = (hash(seed + b * 13 + i * 5.1) - 0.5) * bl * 0.35 * Math.sin(t * PI);
       R.point(fx + (ex - fx) * t + A[0] * j, fy + (ey - fy) * t + B[1] * j, fz + (ez - fz) * t + A[2] * j, hw * 0.6 * (1 - t * 0.7));
@@ -446,7 +470,26 @@ function bolt(v, x0, y0, z0, x1, y1, z1, hw, amp, seed, c, alpha, branches, c2 =
   }
 }
 const FORK = new Float32Array(9), BT = new Float32Array(3);
-export { bolt };
+const ROPE_HOT = col('#ffe0b2'), ROPE_EMBER = col('#ffab40');
+
+/**
+ * A crown of flame round a ball of fire: tongues licking out all round its
+ * edge as the camera sees it (n of them, about R out from the centre).
+ */
+function crown(v, X, Y, Z, R, c, c2, alpha, seed, t, n, k = 0.15) {
+  const cr = v.cr, cu = v.cu;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU + Math.sin(t * 1.7 + i * 1.7) * 0.12 + hash(seed + i) * 0.3;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const rr = R * (0.86 + 0.08 * hash(seed + i * 3));
+    const sz = R * (0.32 + 0.16 * hash(seed + i * 5)) * (0.85 + 0.15 * Math.sin(t * 9 + i * 2.3));
+    v.sprites.put(SK.FIRE, X + (cr[0] * ca + cu[0] * sa) * rr, Y + (cr[1] * ca + cu[1] * sa) * rr, Z + (cr[2] * ca + cu[2] * sa) * rr,
+      sz, i % 3 ? c : DEEP_FIRE, alpha, c2, 0.5, a - PI / 2, seed + i * 7, k);
+  }
+}
+const DEEP_FIRE = col('#ff5a12');
+const HAKI_RED = col('#ff1744');
+export { bolt, crown };
 
 /** Lightning between two points (or out of the sky): jagged strands, forks, a flash where it strikes. */
 SHAPES.bolt = {
@@ -592,9 +635,9 @@ SHAPES.vortex = {
     }
     if (s.kind !== 'sand' && s.kind !== 'wind' && s.kind !== 'smoke' && s.kind !== 'water') return;
     const H = (s.h || s.r * 1.6) * grow;
-    const add = s.kind === 'wind' || s.kind === 'water' ? 0.7 : 0;
+    const add = s.kind === 'wind' || s.kind === 'water' ? 0.4 : 0;
     v.tubes.put(TK.FUNNEL, X, G - 0.05, Z, 0, 1, 0, H, R * 0.22, R, c, a * 0.9, c2, add, k, s.seed);
-    v.tubes.put(TK.FUNNEL, X, G - 0.05, Z, 0, 1, 0, H * 0.85, R * 0.12, R * 0.7, c2, a * 0.7, c, add, k, s.seed + 0.37);
+    v.tubes.put(TK.FUNNEL, X, G - 0.05, Z, 0, 1, 0, H * 0.85, R * 0.12, R * 0.7, c2, a * (add ? 0.45 : 0.7), c, add, k, s.seed + 0.37);
   },
 };
 
@@ -643,10 +686,15 @@ SHAPES.spikes = {
     const c = col(s.color || (s.kind === 'ice' ? '#b3e5fc' : s.kind === 'sand' ? '#d7b56d' : '#8d6e63'));
     const sq = s.sq || 1;
     const r = v.rec(s);
-    // (the spread of the points, for the frost under them: worked out once)
-    if (!(r.n > 0)) {
+    // (the spread of the points, for the frost under them, and the ground
+    // under each: worked out once)
+    if (!(r.n > 0) || !r.data || r.data.length !== pts.length) {
       let mx = 0;
-      for (let i = 0; i < pts.length; i++) mx = Math.max(mx, Math.hypot(pts[i].dx, pts[i].dy / sq));
+      r.data = new Float32Array(pts.length);
+      for (let i = 0; i < pts.length; i++) {
+        mx = Math.max(mx, Math.hypot(pts[i].dx, pts[i].dy / sq));
+        r.data[i] = v.ground(s.x + pts[i].dx, s.y + pts[i].dy / sq);
+      }
       r.n = mx + 0.6;
     }
     const batch = kind === OK.ROCK ? v.solids.rocks : v.solids.crystals;
@@ -663,7 +711,7 @@ SHAPES.spikes = {
       const rl = Math.hypot(dx, dy) || 1;
       const lean = 0.18 + Math.abs(p.lean || 0) * 0.8;
       const ldx = (dx / rl) * lean + (hash(s.seed + i * 3) - 0.5) * 0.25, ldz = (dy / rl) * lean + (hash(s.seed + i * 5) - 0.5) * 0.25;
-      const G = v.ground(wx, wy) - 0.12;
+      const G = r.data[i] - 0.12;
       putAlong(batch, v.lx(wx), G, v.lz(wy), ldx, 1, ldz, h, wd, hash(s.seed + i) * TAU, c, kind, dissolve, hash(s.seed + i * 7) * 10, kind === OK.ICE ? 0.08 : 0);
     }
     if (s.kind === 'ice' && !v.low) {
@@ -889,6 +937,7 @@ SHAPES.skid = {
 const SKID = [-0.14, 0.14];
 
 // ------------------------------------------------------------------ zones
+const DARKNESS = col('#311b92');
 const ZONE_COL = { dark: ['#7e57c2', '#12001c'], ice: ['#e1f5fe', '#ffffff'], storm: ['#e1c16e', '#fff3c4'], gravity: ['#b39ddb', '#ede7f6'] };
 /**
  * Area techniques: the floor of the area (a black hole's arms, gravity
@@ -914,7 +963,12 @@ SHAPES.zone = {
     } else if (kind === 'cage') {
       v.shells.put(VK.DOME, X, G, Z, R, 0, 1, 0, 1, col(s.color || '#f8bbd0'), a, WHITE, 0.35, 1, s.seed, 0.96);
     } else if (kind === 'dark') {
-      v.shells.put(VK.DARK, X, G + 0.3 * R, Z, R * 0.24, 0, 1, 0, 1, c, a, col('#b388ff'), 0, k, s.seed);
+      // darkness welling up out of the pool
+      for (let i = 0; i < 7; i++) {
+        const ph = (v.time * 0.55 + hash(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.55 + hash(s.seed + i));
+        const th = hash(s.seed + i * 7 + cyc) * TAU, rr = Math.sqrt(hash(s.seed + i * 11 + cyc)) * R * 0.75;
+        v.sprites.put(SK.SMOKE, X + Math.cos(th) * rr, G + 0.1 + ph * 1.1, Z + Math.sin(th) * rr, 0.25 + 0.35 * ph, DARKNESS, a * Math.sin(ph * PI) * 0.9, DARKNESS, 0, ph * 2, s.seed + i, 0.15 + ph * 0.6);
+      }
     } else if (kind === 'gravity') {
       // the air pressing down: lines falling through the area
       for (let i = 0; i < 10; i++) {
@@ -959,8 +1013,11 @@ SHAPES.blast = {
     const grow = easeOut(Math.min(1, k / 0.35));
     const c = col(s.color || '#ff9100'), c2 = col(s.core || '#fff3c4');
     const rr = R * (0.35 + 0.45 * grow);
-    // (it rises a little as it burns out)
-    v.shells.put(VK.FIRE, X, G + rr * 0.55 + k * R * 0.3, Z, rr, 0, 1, 0, 1.15, c, a * (1 - k * 0.3), c2, 0.55, 0.15 + k * 0.85, s.seed);
+    // (it rises a little as it burns out; a big one boils in gentler bumps —
+    // big ones read as shards — and licks flame out round its edge)
+    const Y = G + rr * 0.55 + k * R * 0.3;
+    v.shells.put(VK.FIRE, X, Y, Z, rr, 0, 1, 0, 1.15, c, a * (1 - k * 0.3), c2, 0.55, 0.15 + k * 0.85, s.seed, Math.max(0.4, Math.min(1, 2.4 / R)));
+    if (R > 2 && k < 0.75) crown(v, X, Y, Z, rr * 0.95, c, c2, a * (1 - k / 0.75), s.seed, v.time, 12, 0.15 + k);
     const sk = Math.min(1, k * 2.2);
     if (sk < 1) v.shells.put(VK.BUBBLE, X, G + 0.2, Z, R * (0.4 + 1.1 * easeOut(sk)), 0, 1, 0, 1, c, a * (1 - sk) * 0.6, WHITE, 0.4, sk, s.seed);
   },

@@ -179,6 +179,11 @@ class SolidBatch {
     R[q] = kind; R[q + 1] = dissolve; R[q + 2] = seed; R[q + 3] = glow;
     return i;
   }
+  /** Crumble every object put since index `from` at least (1 − m) of the way. */
+  fade(from, m) {
+    const R = this.R;
+    for (let i = from; i < this.n; i++) R[i * 4 + 1] = Math.max(R[i * 4 + 1], 1 - m);
+  }
   end() {
     const n = this.n;
     this.mesh.count = n;
