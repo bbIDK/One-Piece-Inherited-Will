@@ -61703,6 +61703,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
         return false;
       }
+      if (!far) {
+        const back = this.heading + Math.PI;
+        for (let r4 = 0.25; r4 <= (big2 ? 4 : 2.5); r4 += 0.25) {
+          for (const da of [0, 0.4, -0.4, 0.8, -0.8, 1.25, -1.25, 1.7, -1.7, 2.3, -2.3, Math.PI]) {
+            const x = w.wx(this.x + Math.cos(back + da) * r4), y = this.y + Math.sin(back + da) * r4;
+            if (this.fits(w, x, y, this.heading) && !(this.game && this.shipIn(this.game, x, y, this.heading))) {
+              this.x = x;
+              this.y = y;
+              return true;
+            }
+          }
+        }
+      }
       const R4 = big2 ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big2 ? 1.5 : 0.5;
       const hs = big2 ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
       for (const h2 of hs) {
@@ -75562,6 +75575,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      * you leap clean out of the water, leaving a ring on it.
      */
     tryJump(game, charge = 0) {
+      if (this.inWater && this.fruit && !this.gills && !this.sinking && !this.under && this.state === "idle" && !(this.hitstun > 0) && this.climbOut(game)) return true;
       if (!this.canJump()) return false;
       const J = this.jumpStats();
       const k = clamp2(charge, 0, 1);
@@ -76031,7 +76045,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return g.view3d.ground(x, y) - this.feetH(g);
     }
     canEnterWater() {
-      if (this.fruit && !this.inWater) return false;
+      if (this.fruit && !this.inWater && !this.isPlayer) return false;
       return this.swimmer !== false;
     }
     /** The body is a circle around (x, y) (the 3D model stands centred on it). */
@@ -76303,7 +76317,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      */
     climbOnto(game, L3) {
       if (L3.ship || this.climb || this.state !== "idle" || this.hitstun > 0 || this.helpless() || this.status.root) return false;
-      if (this.inWater && (this.fruit && !this.gills || this.under)) return false;
+      if (this.inWater && (this.fruit && !this.gills && this.sinking || this.under)) return false;
       const s = this.look?.scale || 1;
       const air = (this.z || 0) > 0.05 || !!this.vz;
       const from = this.inWater ? this.groundAt(game, this.x, this.y) : this.feetH(game);
@@ -76555,7 +76569,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const i = this.intent;
         let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
         if (this.inWater) {
-          if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.2;
+          if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.3;
           else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1);
         } else if (this.wading) sp *= 1 - 0.42 * clamp2(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
         if (this.charging) sp *= 1 - 0.75 * this.charging;
@@ -100379,7 +100393,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function canClimb(a) {
     if (a.state !== "idle" || a.climb || a.onShip || a.mode === "sail" || a.hitstun > 0 || a.status?.freeze || a.status?.root) return false;
-    if (a.inWater && (a.under || a.fruit && !a.gills)) return false;
+    if (a.inWater && (a.under || a.fruit && !a.gills && a.sinking)) return false;
     return !((a.z || 0) > 0.3);
   }
   function ladderAt(game, a, reach2 = 1.5, only = null) {
@@ -145069,8 +145083,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       game,
       pending: 0,
       // seconds until the next chapter opens
-      t: 0,
-      driftMsg: 0
+      t: 0
     };
     game.story = S6;
     const C3 = () => game.state?.char;
@@ -145332,34 +145345,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       else if (cur?.s?.done && !S6.pending) advance(cur.qid, true);
       if (cur) pointTheWay();
     }
-    S6.limit = () => {
-      const cur = current(game);
-      if (!cur || cur.ch.part !== 2 || !cur.ch.island || cur.ch.free) return null;
-      const isl = ISLAND_BY_ID[cur.ch.island];
-      if (!isl || isl.sea !== "paradise") return null;
-      return { isl, x: isl.x + 700 };
-    };
-    game.storyCurrent = (x, y, out, who) => {
-      const p = game.player;
-      if (!p || game.world !== game.surface || who !== p.ship && who !== p) return;
-      const L3 = S6.limit();
-      if (!L3) return;
-      const dx = game.world.dx(L3.x, x);
-      if (dx <= 0) return;
-      const reg4 = regionAt(x, y);
-      if (reg4 !== REGION.PARADISE) return;
-      if (who === p) return;
-      const back = Math.atan2(L3.isl.y - y, game.world.dx(x, L3.isl.x)), bx = Math.cos(back), by = Math.sin(back);
-      const v = who.speed || 0, away = -(Math.cos(who.heading) * v * bx + Math.sin(who.heading) * v * by);
-      if (away <= 0.05) return;
-      out.x += bx * away;
-      out.y += by * away;
-      out.steer = Math.max(out.steer || 0, 0.5);
-      if (game.time > S6.driftMsg) {
-        S6.driftMsg = game.time + 25;
-        game.ui.banner("LOST WITHOUT A LOG", L3.isl.name, `Your Log Pose is locked on ${L3.isl.name} \u2014 and without its log the Grand Line's currents turn you round. Your story continues there.`, 5);
-      }
-    };
+    game.storyCurrent = null;
     game.storyLogHold = (isl) => {
       if (C3()?.logPose?.own) return false;
       const cur = current(game);
