@@ -107,6 +107,8 @@ export function canalLevel(c, s) {
 }
 
 const HIT = { canal: null, i: 0, d: 0, s: 0, level: 0, fx: 0, fy: 0, side: 0, pool: false };
+// (how hard the pool's current, heading out, turns onto the torrent's line: a metre off it)
+const POOL_CURL = 0.2;
 /**
  * The canal nearest (x, y) within `reach` metres of its middle — { canal, d
  * (from the middle line), s (along it), level, fx, fy (the way it flows),
@@ -119,9 +121,16 @@ export function canalAt(x, y, reach = 40, out = HIT) {
   const pd = Math.hypot(dxs, dys);
   if (pd < RM.poolR) {
     out.canal = CANALS[4]; out.i = 0; out.d = 0; out.s = 0; out.level = RM.top; out.pool = true;
-    // the four currents swirl in and pour out east
-    out.fx = pd > 1 ? -dxs / pd * 0.3 + 0.95 : 1; out.fy = pd > 1 ? -dys / pd * 0.3 : 0;
-    const f = Math.hypot(out.fx, out.fy); out.fx /= f; out.fy /= f;
+    // the four currents meet in the middle and pour out east into the
+    // torrent: in to the middle first (so even the longest ship has her whole
+    // length in the pool, clear of the canal she came up, before she turns),
+    // then out along the torrent's line — never round the rim, where a ship
+    // carried in from the north or the south would scrape the rock
+    const c = pd > 1e-3 ? dxs / pd : 1;
+    const a = smooth((pd - 3) / 7) * (1 - smooth((c - 0.7) / 0.27));
+    out.fx = (pd > 1e-3 ? -dxs / pd * a : 0) + (1 - a);
+    out.fy = (pd > 1e-3 ? -dys / pd * a : 0) - (1 - a) * dys * POOL_CURL;
+    const f = Math.hypot(out.fx, out.fy) || 1; out.fx /= f; out.fy /= f;
     out.side = 0;
     return out;
   }

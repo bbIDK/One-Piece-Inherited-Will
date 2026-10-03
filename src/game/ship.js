@@ -165,8 +165,13 @@ export class Ship extends Entity {
     this.pitch = (this.pitch || 0) + (pitchT - (this.pitch || 0)) * Math.min(1, dt * 3);
     let vx = Math.cos(this.heading) * this.speed + cur.x;
     let vy = Math.sin(this.heading) * this.speed + cur.y;
-    // heading follows strong currents a little (Reverse Mountain)
-    if (cur.steer) this.heading += clamp(angleDiff(this.heading, Math.atan2(cur.y, cur.x)), -1, 1) * dt * cur.steer;
+    // heading follows strong currents a little (Reverse Mountain) — as far
+    // as her hull has room to swing (a long ship's ends sweep wide: turned
+    // into the rock, she'd be stuck there, and shoved out of it)
+    if (cur.steer) {
+      const turn = clamp(angleDiff(this.heading, Math.atan2(cur.y, cur.x)), -1, 1) * dt * cur.steer;
+      for (const f of [1, 0.5, 0.25]) { if (this.fits(w, this.x, this.y, this.heading + turn * f)) { this.heading += turn * f; break; } }
+    }
     const nx = w.wx(this.x + vx * dt), ny = this.y + vy * dt;
     // (hulls don't pass through each other: a ship alongside is as solid as a quay)
     const ok = (x, y) => this.fits(w, x, y, this.heading) && !this.shipIn(game, x, y, this.heading);
@@ -187,7 +192,8 @@ export class Ship extends Entity {
         game.audio?.sfx('crash', this);
         if (cur.steer) game.log(this.unbreakable ? 'CRASH! Steer with the current — keep to the middle of the canal!' : 'CRASH! Steer with the current — hit the canal walls and you will sink!', '#ff8a80');
       }
-      this.speed *= -0.25;
+      // (riding a canal's current she loses way at the wall, not bouncing back against the flow)
+      this.speed *= cur.steer ? 0.5 : -0.25;
       // nudge out of the wall
       if (!this.fits(w, this.x, this.y, this.heading)) this.unstick(w);
     }
