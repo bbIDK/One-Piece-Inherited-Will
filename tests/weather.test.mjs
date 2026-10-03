@@ -76,6 +76,19 @@ test("near a charted island its own climate takes over, and holds a little farth
   assert.equal(placeAt(w, P.x + edge, P.y, inside.key).climate, 'winter');
 });
 
+test('ashore, a strong climate in the ground has the last word (Punk Hazard burns on one side and freezes on the other)', () => {
+  const P = NEW_WORLD;
+  const ph = island('punk_hazard', 'volcanic', P.x, P.y, 300);
+  const w = world([ph]);
+  w.isLiquid = () => false;
+  w.climate = (x) => (x < P.x ? 3 : 5); // (winter tiles to the west, volcanic to the east)
+  assert.equal(placeAt(w, P.x + 50, P.y).climate, 'volcanic');
+  assert.equal(placeAt(w, P.x - 50, P.y).climate, 'winter');
+  // the volcano's own weather: ash
+  const ash = weatherTargets('ash', 1, 'volcanic');
+  assert.ok(ash.ash > 0.5 && ash.rain === 0);
+});
+
 test('the East Blue is mild and mostly fair; the Grand Line erratic; the New World extreme', () => {
   const eb = odds('east_blue'), gl = odds('paradise'), nw = odds('new_world');
   const fine = (o) => sum(o, ['clear', 'fair', 'cloudy']);
@@ -204,6 +217,25 @@ test('a story or an island that wants a storm still gets one, clouds, rain and a
   run(env, g, 1, 0.1, (e) => { e.stormTarget = Math.max(e.stormTarget, 0.85); });
   run(env, g, 60, 0.1, (e) => { e.stormTarget = Math.max(e.stormTarget, 0.85); });
   assert.ok(env.storm > 0.8 && env.cloud > 0.95 && env.rain > 0.6, JSON.stringify({ storm: env.storm, cloud: env.cloud, rain: env.rain }));
+});
+
+test('code that sets env.storm outright gets its clouds and rain at once (the tools and the story do)', () => {
+  const env = new Env(), g = game(EAST_BLUE.x, EAST_BLUE.y);
+  env.update(0.1, g);
+  env.setWeather('fair', { now: true, hold: true });
+  run(env, g, 2);
+  env.storm = env.stormTarget = 0.85;
+  env.update(1 / 30, g);
+  assert.ok(env.cloud > 0.9 && env.rain > 0.8, JSON.stringify({ cloud: env.cloud, rain: env.rain }));
+  // the New World's dry lightning: bolts, and not a drop
+  const nw = new Env(), gn = game(NEW_WORLD.x, NEW_WORLD.y);
+  nw.update(0.1, gn);
+  nw.setWeather('violet', { now: true, hold: true });
+  const strikes = new Set();
+  let wet = 0;
+  run(nw, gn, 60, 1 / 30, (e) => { strikes.add(e.strike.t); wet = Math.max(wet, e.rain); });
+  assert.equal(wet, 0, 'it rained under the dry lightning');
+  assert.ok(strikes.size > 2, `${strikes.size - 1} bolts of dry lightning`);
 });
 
 test('lightning: bolts in a thunderstorm, flickering in strokes, none on a fine day', () => {

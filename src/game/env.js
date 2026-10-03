@@ -24,6 +24,7 @@ const NIGHT = [0.21, 0.25, 0.46]; // moonlit blue, dark enough for lamplight to 
 const DAY = [1, 1, 1];
 const DUSK = [1.0, 0.72, 0.55];
 const FLASH = [0.92, 0.96, 1.1]; // a lightning flash: a cold white
+const DUSTY = [1.06, 0.9, 0.7]; // the light through blowing sand
 
 export class Env {
   constructor() {
@@ -78,6 +79,7 @@ export class Env {
     this.flashT = 4;
     this.flashExt = 0;
     this.lightOut = 0;
+    this.stormOut = 0;
   }
 
   get moonPhase() { return ((this.day % 8) / 8); }
@@ -114,18 +116,28 @@ export class Env {
     // ---- every field toward the weather's wants, raised by whatever wants a
     // storm here (an island's own, the story's)
     const W = this.wt, st = this.stormTarget;
+    // (code that sets env.storm outright gets its clouds and its rain at once)
+    const jumped = this.storm > this.stormOut + 0.02;
     this.storm = ease(this.storm, st, dt, TAU_STORM);
-    const stormy = Math.max(st, this.storm);
-    const cloudT = Math.max(W.cloud, Math.min(1, stormy * 1.6));
-    // (never thinner than the storm: code that sets env.storm outright gets its clouds at once)
-    this.cloud = Math.max(ease(this.cloud, cloudT, dt, cloudT > this.cloud ? TAU_CLOUD : TAU_CLEAR), Math.min(1, this.storm * 1.1));
+    // (a storm beyond this weather's own brings its clouds: a sandstorm's is sand)
+    const stormy = Math.max(st, this.storm), own = W.storm + 0.02;
+    const cloudT = Math.max(W.cloud, stormy > own ? Math.min(1, stormy * 1.6) : 0);
+    // (never thinner than such a storm: code that sets env.storm outright gets its clouds at once)
+    this.cloud = Math.max(ease(this.cloud, cloudT, dt, cloudT > this.cloud ? TAU_CLOUD : TAU_CLEAR), this.storm > own ? Math.min(1, this.storm * 1.1) : 0);
     // rain and snow wait for the clouds (a sun-shower doesn't), and stop before they clear
     const gate = W.gate ? smoothstep(0.55, 0.85, this.cloud) : 1;
-    let precip = Math.max(W.rain + W.snow, st > 0.2 ? st : 0) * gate;
-    if (CLIMATES[this.climate]?.dry) precip *= 0.15; // (a storm over the desert: a few drops)
+    // (a storm raised past this weather's own — an island's, a story's — rains
+    // too; dry lightning and a sandstorm don't; over the desert, a few drops)
+    const dry = CLIMATES[this.climate]?.dry ? 0.15 : 1;
+    const ext = st > W.storm + 0.02 && st > 0.2 ? st : 0;
+    const precip = Math.max(W.rain + W.snow, ext) * gate * dry;
     const asSnow = this.cold || (W.snow > 0 && !W.rain);
     this.rain = ease(this.rain, asSnow ? 0 : precip, dt, TAU_PRECIP);
     this.snow = ease(this.snow, asSnow ? precip : 0, dt, TAU_PRECIP);
+    if (jumped && this.storm > 0.2) {
+      const now = this.storm * gate * dry;
+      if (asSnow) this.snow = Math.max(this.snow, now); else this.rain = Math.max(this.rain, now);
+    }
     if (this.rain < 0.003) this.rain = 0;
     if (this.snow < 0.003) this.snow = 0;
     this.dust = ease(this.dust, W.dust, dt, TAU_SLOW);
@@ -144,6 +156,7 @@ export class Env {
     // ---- wind
     this.windAngle += clamp(angleDiff(this.windAngle, this.windTarget), -0.2, 0.2) * dt * (gl ? 0.5 : 0.15);
     const gust = gl ? 0.85 + Math.sin(this.time * 0.7) * 0.15 : 1;
+    this.stormOut = this.storm;
     this.windK = ease(this.windK, W.wind, dt, 8);
     this.windStrength = isCalmBelt(reg) ? 0 : clamp((0.8 + this.storm * 0.5) * gust * this.windK, 0.2, 1.4);
     this.windX = Math.cos(this.windAngle) * this.windStrength;
@@ -158,11 +171,14 @@ export class Env {
 
     // ---- lightning: in a thunderstorm (and under the New World's violet sky),
     // now and then a bolt — mostly flashes inside the clouds, sometimes a fork
-    // down to the sea — each a few strokes flickering in quick succession
-    const th = Math.max(this.thunder, smoothstep(0.55, 0.9, this.storm));
+    // down to the sea — each a few strokes flickering in quick succession; a
+    // storm on its way flickers far off in its tower before it arrives
+    const coming = Math.max(0, this.front - this.storm);
+    const th = Math.max(this.thunder, smoothstep(0.55, 0.9, this.storm), coming * 0.6);
     if (th > 0.05 && (this.flashT -= dt) <= 0) {
       this.flashT = lerp(16, 4.5, th) * (0.4 + Math.random() * 1.2) * (reg === REGION.NEW_WORLD ? 0.7 : 1);
-      this.bolt(game, { ground: Math.random() < 0.3 + th * 0.3 });
+      const far = coming > 0.25 && this.storm < 0.55;
+      this.bolt(game, far ? { angle: this.frontAngle + (Math.random() - 0.5) * 0.6, dist: 1500 + Math.random() * 1100, ground: Math.random() < 0.3 } : { ground: Math.random() < 0.25 + th * 0.2 });
     }
     // (other code raises env.lightning for a flash of its own: that fades as it always has)
     if (this.lightning > this.lightOut + 1e-6) this.flashExt = this.lightning;
@@ -181,8 +197,9 @@ export class Env {
     const amb = this.ambient;
     for (let i = 0; i < 3; i++) {
       let v = lerp(lerp(NIGHT[i], DAY[i], this.daylight), DUSK[i], duskAmt) * (1 - dark);
-      // (an odd sky's colour on everything)
+      // (an odd sky's colour on everything; a sandstorm's ochre)
       if (this.odd > 0.01) v *= lerp(1, 0.45 + 0.55 * this.tint[i], this.odd * 0.6);
+      if (this.dust > 0.01) v *= lerp(1, DUSTY[i], this.dust * 0.45);
       if (this.lightning > 0) v = Math.min(1.6, v + this.lightning * 1.2 * FLASH[i]);
       amb[i] = w && w.zone === 2 ? v * 0.8 : v;
     }
@@ -234,8 +251,8 @@ export class Env {
     if (now) {
       this.snapT = this.time; // (for what eases on its own: the mists)
       const W = this.wt;
-      this.storm = W.storm;
-      this.cloud = Math.max(W.cloud, Math.min(1, W.storm * 1.6));
+      this.storm = this.stormOut = W.storm;
+      this.cloud = W.cloud;
       const precip = W.rain + W.snow, asSnow = this.cold || (W.snow > 0 && !W.rain);
       this.rain = asSnow ? 0 : precip;
       this.snow = asSnow ? precip : 0;
