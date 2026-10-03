@@ -1040,6 +1040,13 @@ export class Actor extends Entity {
         if (above) return false;
       }
     }
+    // (crouched to spring — charging a jump — you don't creep off an edge: off
+    // a pier, a roof or a bank into the sea; you spring from where you are)
+    if (this.charging > 0 && !(this.z > 0.05) && !this.vz && !this.deck && this.game?.view3d && this.game.world === w) {
+      const gm = this.game, there = this.groundAt(gm, x, y);
+      if (this.groundAt(gm, this.x, this.y) - there > 0.5) return false;
+      if (SWIMMABLE[w.type(x, y)] && !WALKABLE[w.type(x, y)] && !gm.deckAt?.(x, y, -0.6) && !iceAt(gm, x, y)) return false;
+    }
     // ship decks: walk anywhere on your deck; her bulwark keeps you aboard
     // until you're up over it (it's a low wall: a jump clears it), and nobody
     // swims or walks through a hull
