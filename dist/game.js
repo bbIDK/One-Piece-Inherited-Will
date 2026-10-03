@@ -89320,7 +89320,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     } else if (s.def.oarsOnly) placeOnDeck(game, p, s, hs.t - 0.12, 0);
     else placeOnDeck(game, p, s, hs.t, 0);
     game.emit("disembark", s, null);
-    game.hint?.("deck", s.def.oarsOnly ? "Stand in your boat, and jump over her side to go ashore or for a swim (from the water, a jump brings you back in over her low side). Press E at the seat to take the oars again." : "Walk your deck freely \u2014 she keeps the sails you set and sails on straight ahead. Jump over the rail to go ashore or for a swim (her ladder amidships brings you back up: E at its foot), and press E at the wheel to take the helm again: steer, or lower the sails (S) to stop.");
+    game.hint?.("deck", s.def.oarsOnly ? "Stand in your boat, and jump over her side to go ashore or for a swim (from the water, a jump brings you back in over her low side). Press E at the seat to take the oars again." : "Walk your deck freely \u2014 she keeps the sails you set and sails on straight ahead. Jump over the rail to go ashore or for a swim (her ladder amidships brings you back up: E at its foot). To board a ship lying alongside, hold Space for a charged leap across \u2014 or stop beside her, and your crew run a plank over. Press E at the wheel to take the helm again: steer, or lower the sails (S) to stop.");
   }
   function hauledAboard(game, p, s) {
     const spot = boardingSpot(game, s, p.x, p.y);
@@ -99859,7 +99859,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         return direct;
       }
       const moved = R4?.pts ? w.distance(R4.gx, R4.gy, gx, gy) : Infinity;
-      if (!R4?.pts || moved > Math.max(30, w.distance(s.x, s.y, gx, gy) * 0.15) || now2 >= R4.replan) {
+      if (!R4?.pts || moved > Math.max(30, w.distance(s.x, s.y, gx, gy) * 0.15) || moved > 4 && now2 >= R4.replan) {
         const pts = planRoute(w, s.x, s.y, gx, gy, room);
         R4 = s.route = { pts, i: 0, gx, gy, check: now2 + (pts ? 1 : 3), replan: now2 + 8, adv: 0 };
       } else R4.check = now2 + 1;
