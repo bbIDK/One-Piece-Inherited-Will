@@ -65,6 +65,10 @@ export function bodyMaterial(opts = {}) {
     uFreeze: { value: 0 },
     // your own body seen from your eyes (first person): nothing above the neck, and no arms while the view's own are up
     uClipY: { value: 1e6 }, uHideArms: { value: 0 }, uHideHead: { value: 0 },
+    // (and nothing nearer your eyes than uNear: the view rides your head a
+    // beat behind it, and a blow thrown back or a kick's lean left it out in
+    // front of your own collar, looking down into it)
+    uNear: { value: 0 },
   };
   const m = new THREE.MeshToonMaterial({ vertexColors: true, map: detailTexture(), gradientMap: charGradient(), fog: opts.fog ?? true });
   m.defines = { ...m.defines, SUN_SELF: sunSelf(opts.self ?? SELF_SHADE) };
@@ -80,11 +84,11 @@ export function bodyMaterial(opts = {}) {
       .replace('#include <common>', `#include <common>
 varying float vPart; varying float vObjY;
 uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
-uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead;`)
+uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead; uniform float uNear;`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
 float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart) * step(vPart, 4.5), pHead = step(4.5, vPart);
-if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5) discard;
+if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5 || length(vViewPosition) < uNear) discard;
 float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
 float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);

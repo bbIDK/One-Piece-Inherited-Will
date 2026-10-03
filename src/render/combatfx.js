@@ -114,36 +114,42 @@ const lastLook = (a) => a._lastLook || a.look;
 // ------------------------------------------------------------------ hit feedback
 /**
  * Called by combat.js for every landed (or blocked) hit. `o`: { final, crit,
- * blocked, el, ang, playerInvolved }. Scales sparks, hit-stop, kick and
- * rings by the weight of the blow: tiny on jabs, big on heavies/finishers.
+ * blocked, el, ang, playerInvolved, w (the blow's weight: combat.js
+ * blowWeight), counter }. Scales sparks, hit-stop, kick and rings by the
+ * weight of the blow: tiny on jabs, big on heavies, finishers and counters.
+ * A crit flashes gold; a blow that drops a boss — or the last foe standing —
+ * slows the world for a beat.
  */
 export function hitFeedback(fx, att, tgt, h, o = {}) {
   const game = fx.game;
-  const final = o.final || 0, crit = !!o.crit, blocked = !!o.blocked;
+  const final = o.final || 0, crit = !!o.crit, blocked = !!o.blocked, counter = !!o.counter;
   const elem = o.el || 'physical';
   const E = elemOf(elem);
   const ang = o.ang ?? 0;
   const def = h.def || (att && att.action ? att.action.def : null);
   const st = att && !h.sprite ? styleOf(def, att) : null;
-  const m1 = !!(def && def.m1Chain && !h.sprite);
-  let w = m1 ? 0.22 : h.sprite ? 0.35 : 0.45;
-  if (m1 && (h.knockback ?? 0) >= 3.2) w = 0.52;
-  if (h.heavy) w = Math.max(w, 0.72);
-  if (h.guardBreak) w += 0.06;
-  if (h.impactFrame) w = Math.max(w, 1);
-  const maxHp = tgt.d ? tgt.d.maxHp : 100;
-  w += Math.min(0.3, (final / maxHp) * 1.2);
-  if (crit) w += 0.22;
-  if (h.interval) w *= 0.55;
+  let w = o.w;
+  if (w === undefined) {
+    const m1 = !!(def && def.m1Chain && !h.sprite);
+    w = m1 ? 0.22 : h.sprite ? 0.35 : 0.45;
+    if (m1 && (h.knockback ?? 0) >= 3.2) w = 0.52;
+    if (h.heavy) w = Math.max(w, 0.72);
+    if (h.guardBreak) w += 0.06;
+    if (h.impactFrame) w = Math.max(w, 1);
+    w += Math.min(0.3, (final / (tgt.d ? tgt.d.maxHp : 100)) * 1.2);
+    if (crit) w += 0.22;
+    if (h.interval) w *= 0.55;
+  }
   w = Math.min(1.25, w);
   const scale = (tgt.look && tgt.look.scale) || 1;
   const z = 0.78 * scale;
   const cx = tgt.x - Math.cos(ang) * 0.22 * scale, cy = tgt.y - Math.sin(ang) * 0.14 * scale;
+  const down = final > 0 && tgt.state === 'knocked';
   if (blocked) blockFx(fx, tgt, ang, w, z);
   else if (final > 0 || h.trueDamage) {
     const col = st ? st.spark[1] || st.spark[0] : E.c;
-    fx.add('impact', { x: cx, y: cy, z, angle: ang, size: 0.24 + 0.42 * w, color: col, core: '#ffffff', life: 0.1 + 0.09 * w, spikes: 8 + Math.round(w * 5), lines: 2 + Math.round(w * 5) });
-    sparks(fx, cx, cy, z, ang, Math.round(3 + 9 * w), st ? st.spark : E.spark, { speed: 5 + 6 * w, life: 0.2 + 0.14 * w, size: 0.07 + 0.05 * w });
+    fx.add('impact', { x: cx, y: cy, z, angle: ang, size: 0.24 + 0.42 * w, color: crit ? '#ffd740' : col, core: '#ffffff', life: 0.1 + 0.09 * w, spikes: 8 + Math.round(w * 5), lines: 2 + Math.round(w * 5) });
+    sparks(fx, cx, cy, z, ang, Math.round(3 + 9 * w), crit ? ['#ffd740', '#fff59d', '#ffffff'] : st ? st.spark : E.spark, { speed: 5 + 6 * w, life: 0.2 + 0.14 * w, size: 0.07 + 0.05 * w });
     elemHit(fx, elem, E, cx, cy, z, ang, w);
     if (st) styleHit(fx, st, def, tgt, cx, cy, z, ang, w);
     if (w >= 0.68) {
@@ -152,8 +158,10 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
       if ((h.knockback ?? 2) * (tgt.kbResist ?? 1) >= 4) fx.add('skid', { x: tgt.x, y: tgt.y, angle: ang + Math.PI, length: 0.7 + 0.7 * w, life: 1.4 });
     }
     if (crit) {
+      // a crit reads gold: a glint, a gold ring snapping out, a sparkle
       fx.add('flare', { x: cx, y: cy, z: z + 0.08, size: 0.8 + 0.3 * w, color: '#ffd740', life: 0.3 });
-      sparkle(fx, cx, cy, z, 4, ['#ffd740', '#fff59d', '#ffffff']);
+      fx.ring(cx, cy, 0.1, 0.75 + 0.35 * w, '#ffd740', 0.22, 0.07, { z, flat: 1, noCore: true, add: true });
+      sparkle(fx, cx, cy, z, 5, ['#ffd740', '#fff59d', '#ffffff']);
     }
     if (att && att.conquerorInfused) {
       miniBolts(fx, cx, cy, z, 3, 0.9, '#d50000');
@@ -161,23 +169,50 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
     } else if (att && att.armament && elem === 'physical') {
       fx.ring(cx, cy, 0.08, 0.5 + 0.3 * w, '#7c4dff', 0.2, 0.06, { z, flat: 1, noCore: true, add: true });
     }
-    // a manga sound word on the big ones (only in fights the player is in, or on bosses)
-    if ((w >= 0.7 || crit || h.impactFrame) && (o.playerInvolved || tgt.boss)) {
+    // a manga sound word on the big ones (only in fights the player is in, or
+    // on bosses; a counter has its own, see counterFx)
+    if ((w >= 0.7 || crit || h.impactFrame || down) && (o.playerInvolved || tgt.boss) && !counter) {
       const blade = !!(att && att.weapon && att.weapon.kind === 'sword') || !!(st && st.arcs);
-      const big = crit || h.impactFrame || w >= 1;
-      fx.sfx?.(cx, cy, sfxWord(elem, blade, big, !!(att && att.armament)), sfxColor(elem, blade, col), 0.5 + 0.3 * Math.min(1, w) + (big ? 0.15 : 0), { z: z + 0.45 });
+      const big = crit || h.impactFrame || w >= 1 || down;
+      soundOn(fx, tgt, cx, cy, sfxWord(elem, blade, big, !!(att && att.armament)), sfxColor(elem, blade, col), 0.5 + 0.3 * Math.min(1, w) + (big ? 0.15 : 0), { z: z + 0.45, gap: down ? 0 : undefined });
     }
     tgt.hitFx = { t0: game.env ? game.env.time : fx.time, w, ang, prev: tgt.hitFx ? tgt.hitFx.t0 : -9 };
   }
-  if (final > 0) fx.damage(tgt, final, { crit, blocked, toPlayer: tgt.isPlayer });
+  if (final > 0) fx.damage(tgt, final, { crit, blocked, toPlayer: tgt.isPlayer, color: counter ? '#ffab40' : undefined });
   if (o.playerInvolved) {
-    const stop = blocked ? 0.035 : h.interval ? 0.018 : 0.028 + 0.075 * Math.min(1, w) + (crit ? 0.02 : 0);
+    const stop = blocked ? 0.035 : h.interval ? 0.018 : 0.028 + 0.075 * Math.min(1, w) + (crit ? 0.03 : 0) + (counter ? 0.05 : 0);
     fx.stop(stop);
     fx.kick(ang, blocked ? 2.5 : 1.5 + 8 * Math.min(1, w));
     if (!blocked && w >= 0.7) fx.shake(0.12 + 0.25 * (w - 0.7));
     if (!blocked && h.impactFrame) { fx.impactFrame(0.07); fx.focus(tgt.x, tgt.y, 0.22); }
     else if (!blocked && (crit || w >= 0.95)) fx.focus(tgt.x, tgt.y, 0.14);
   }
+  if (down && att && att.isPlayer) finishingBlow(fx, att, tgt, ang);
+}
+
+/**
+ * The blow that drops someone, by your hand: a boss (or a named foe) goes
+ * down in a long beat of slow motion with an impact frame; the last foe
+ * standing in a shorter one; anyone else with a heavier hit-stop.
+ */
+function finishingBlow(fx, att, tgt, ang) {
+  const game = fx.game;
+  let last = true;
+  for (const a of game.actorsNear ? game.actorsNear(tgt.x, tgt.y, 14) : []) {
+    if (a === tgt || a === att || !a.alive || a.state !== 'idle' || a.isPlayer || a.faction === 'player') continue;
+    if (a.controller?.target === att || (a.provoked && a.aggroPlayer)) { last = false; break; }
+  }
+  if (tgt.boss || tgt.named) {
+    fx.stop(0.14);
+    fx.slowmo(0.9, 0.22);
+    fx.impactFrame(0.08);
+    fx.focus(tgt.x, tgt.y, 0.32);
+    fx.shake(0.45, ang);
+  } else if (last) {
+    fx.stop(0.1);
+    fx.slowmo(0.5, 0.35);
+    fx.focus(tgt.x, tgt.y, 0.2);
+  } else fx.stop(0.06);
 }
 
 // manga sound words by what hit (romaji, the way the English releases letter them)
@@ -274,6 +309,73 @@ function styleHit(fx, st, def, tgt, x, y, z, ang, w) {
   if (st.oni && w > 0.6) fx.add('flare', { x, y, z, size: 0.7, color: '#ff1744', life: 0.2 });
 }
 
+/** The player, when the fight is seen through their own eyes (first person); else null. */
+function ownEyes(fx) {
+  const g = fx.game, v = g && g.view3d, p = g && g.player;
+  return v && v.active && v.rig && v.rig.mode === 'first' && v.rig.camera && p && p.mode !== 'sail' ? p : null;
+}
+
+/**
+ * Seen through the player's own eyes: a spot `d` metres out along their view,
+ * `up` metres above its middle and `side` to the right, as [x, y, h] (h above
+ * the ground there, the way effects take it). Wherever the ground slopes or
+ * they look, a word put there reads in the same place on screen. (From their
+ * eyes as they are now, looking the way the camera last did: it looks down
+ * its own -z.)
+ */
+function inView(fx, d, up = 0, side = 0) {
+  const g = fx.game, v = g.view3d, m = v.rig.camera.matrixWorld.elements, w = g.world, p = g.player;
+  const eye = v.ground(p.x, p.y) + 1.72 * ((p.look && p.look.scale) || 1);
+  const dx = -m[8] * d + m[4] * up + m[0] * side, dh = -m[9] * d + m[5] * up + m[1] * side, dy = -m[10] * d + m[6] * up + m[2] * side;
+  const x = w ? w.wx(p.x + dx) : p.x + dx, y = p.y + dy;
+  return [x, y, eye + dh - v.ground(x, y)];
+}
+
+/** How far `a` is from the player (0 for the player). */
+function fromPlayer(fx, p, a) {
+  const w = fx.game.world;
+  return a === p ? 0 : w ? w.distance(p.x, p.y, a.x, a.y) : Math.hypot(a.x - p.x, a.y - p.y);
+}
+
+/**
+ * A callout over `a`, `lift` up the screen (the 2D way: fx.text makes it a
+ * height). Seen through the player's own eyes that misses: a word about the
+ * player would sit behind the camera, and one over the head of someone close
+ * above the top of the view (or too near the eye to draw). There a word
+ * about the player, or anyone close by, floats up from just over the middle
+ * of the view (the overlay draws over everything, so nothing hides it); one
+ * about anyone further off comes down as far as it takes to be seen (to
+ * their chest at most).
+ */
+function calloutOver(fx, a, lift, str, col, size) {
+  const p = ownEyes(fx);
+  if (!p) return fx.callout(a.x, a.y - lift, str, col, size);
+  if (fromPlayer(fx, p, a) < 3) {
+    const [x, y, z] = inView(fx, 2.6, 0.12);
+    return fx.callout(x, y, str, col, size, { z });
+  }
+  const v = fx.game.view3d, s = (a.look && a.look.scale) || 1;
+  let z = 1.6 + lift;
+  while (z > 1.1 * s && v.project(a.x, a.y, z)[1] < v.proj.ch * 0.3) z -= 0.1;
+  return fx.callout(a.x, a.y, str, col, size, { z });
+}
+
+/**
+ * A sound word at a blow on `a` (see fx.sfx). Seen through the player's own
+ * eyes, one on them goes low in front, where their guard is; one on someone
+ * close by, a couple of metres out along the view (at the blow itself it
+ * could end up right against the eye, the moment you lunge in).
+ */
+function soundOn(fx, a, x, y, str, col, size, o) {
+  const p = ownEyes(fx);
+  const d = p ? fromPlayer(fx, p, a) : Infinity;
+  if (d < 3) {
+    const at = a === p ? inView(fx, 2, -0.42, -0.25) : inView(fx, 2.4, -0.12, 0.2);
+    return fx.sfx?.(at[0], at[1], str, col, size, { ...o, z: at[2] });
+  }
+  return fx.sfx?.(x, y, str, col, size, o);
+}
+
 function blockFx(fx, tgt, ang, w, z) {
   const fa = ang + Math.PI;
   const px = tgt.x + Math.cos(fa) * 0.35, py = tgt.y + Math.sin(fa) * 0.22;
@@ -282,35 +384,128 @@ function blockFx(fx, tgt, ang, w, z) {
   tgt._blockFlash = fx.game.env ? fx.game.env.time : fx.time;
 }
 
-/** A perfect parry: a clean flash, a ring, focus lines and a beat of slow motion. */
-export function parryFx(fx, tgt, att, ang) {
-  fx.sfx?.(tgt.x, tgt.y, 'KIIN!', '#e3f2fd', 0.55, { z: 1.5 });
+/**
+ * A parry: steel ringing on steel — a bright glint where the blow was met,
+ * a ring, sparks flying back along the blow, "PARRY!" and a hit-stop, and
+ * the attacker rocked back (their reel is posed from parriedT). A perfect
+ * one is whiter and bigger, with a beat of slow motion and focus lines.
+ */
+export function parryFx(fx, tgt, att, ang, perfect = false) {
+  soundOn(fx, tgt, tgt.x, tgt.y, perfect ? 'KIIIN!!' : 'KIIN!', perfect ? '#ffffff' : '#e3f2fd', perfect ? 0.7 : 0.55, { z: 1.5, gap: 0 });
   const fa = ang + Math.PI;
   const s = (tgt.look && tgt.look.scale) || 1;
   const px = tgt.x + Math.cos(fa) * 0.45, py = tgt.y + Math.sin(fa) * 0.3, z = 0.85 * s;
-  fx.add('flare', { x: px, y: py, z, size: 1.3, color: '#fff59d', life: 0.36 });
-  fx.add('impact', { x: px, y: py, z, angle: fa, size: 0.8, color: '#fff59d', core: '#ffffff', life: 0.2, spikes: 12, lines: 8 });
-  fx.ring(tgt.x, tgt.y, 0.3, 2, '#fff59d', 0.4, 0.12, { add: true });
-  sparks(fx, px, py, z, fa, 16, ['#ffffff', '#fff59d', '#ffe082'], { speed: 9, spread: 2.6, life: 0.35 });
-  fx.callout(tgt.x, tgt.y - 1.45, 'PARRY!', '#fff59d', 0.5);
-  fx.stop(0.12);
+  const col = perfect ? '#fffde7' : '#fff59d';
+  fx.add('flare', { x: px, y: py, z, size: perfect ? 1.8 : 1.3, color: col, life: perfect ? 0.45 : 0.36 });
+  fx.add('impact', { x: px, y: py, z, angle: fa, size: perfect ? 1.05 : 0.8, color: col, core: '#ffffff', life: 0.2, spikes: perfect ? 14 : 12, lines: perfect ? 10 : 8 });
+  // the guard's arc, flashing where it met the blow
+  fx.add('crescent', { x: tgt.x, y: tgt.y, angle: fa, radius: 0.7 * s, arc: 2.2, width: 0.2, color: col, core: '#ffffff', life: 0.24, z, reveal: 0.01, dir: 1, tilt: 0.85 });
+  fx.ring(tgt.x, tgt.y, 0.3, perfect ? 2.6 : 2, col, 0.4, 0.12, { add: true });
+  if (perfect) fx.ring(px, py, 0.1, 1.2, '#ffffff', 0.3, 0.08, { z, flat: 1, noCore: true, add: true, delay: 0.05 });
+  sparks(fx, px, py, z, fa, perfect ? 24 : 16, ['#ffffff', '#fff59d', '#ffe082'], { speed: perfect ? 11 : 9, spread: 2.6, life: 0.35 });
+  calloutOver(fx, tgt, 1.45 * s, perfect ? 'PERFECT PARRY!' : 'PARRY!', col, perfect ? 0.58 : 0.5);
+  // the attacker rocks back, posture broken: a jolt of sparks off their weapon
+  if (att) {
+    const as = (att.look && att.look.scale) || 1;
+    sparks(fx, att.x, att.y, 1.0 * as, ang + Math.PI, 6, ['#ffe082', '#ffffff'], { speed: 4, spread: 1.4, life: 0.25 });
+    fx.ring(att.x, att.y, 0.2, 1.1 * as, '#ffe082', 0.3, 0.06, { z: 1.1 * as, flat: 1, noCore: true, add: true });
+  }
+  fx.stop(perfect ? 0.14 : 0.1);
   if (tgt.isPlayer || (att && att.isPlayer)) {
-    fx.slowmo(0.45, 0.3);
-    fx.flashScreen(0.05);
-    fx.kick(fa, 6);
-    fx.focus(px, py, 0.28);
+    if (perfect) { fx.slowmo(0.45, 0.28); fx.flashScreen(0.06); fx.focus(px, py, 0.32); }
+    else { fx.slowmo(0.2, 0.6); fx.flashScreen(0.03); fx.focus(px, py, 0.2); }
+    fx.kick(fa, perfect ? 7 : 5);
   }
 }
 
 /** Guard broken: the guard shatters, a jolt and a short slow-down. */
 export function guardBreakFx(fx, tgt, att, ang) {
-  fx.sfx?.(tgt.x, tgt.y, 'GASHAN!!', '#ff8a65', 0.7, { z: 1.4, gap: 0 });
+  soundOn(fx, tgt, tgt.x, tgt.y, 'GASHAN!!', '#ff8a65', 0.7, { z: 1.4, gap: 0 });
   const s = (tgt.look && tgt.look.scale) || 1, z = 0.85 * s;
   fx.burst(tgt.x, tgt.y, 14, { kind: 'shard', color: ['#e3f2fd', '#90caf9', '#ffffff'], speed: 6, z, vz: 3, g: 9, life: 0.55, size: 0.12, drag: 2 });
   fx.add('impact', { x: tgt.x, y: tgt.y, z, angle: ang, size: 0.75, color: '#ff8a65', core: '#ffffff', life: 0.2, spikes: 11 });
   fx.ring(tgt.x, tgt.y, 0.3, 1.6, '#ff7675', 0.35, 0.12, { add: true });
-  fx.callout(tgt.x, tgt.y - 1.4, 'GUARD BREAK', '#ff7675', 0.42);
+  calloutOver(fx, tgt, 1.4 * s, 'GUARD BREAK', '#ff7675', 0.42);
   if (tgt.isPlayer || (att && att.isPlayer)) { fx.slowmo(0.28, 0.4); fx.kick(ang, 7); fx.focus(tgt.x, tgt.y, 0.2); }
+}
+
+/** A sword turning a shot aside: a bright cut through the air in front, sparks off the blade, "DEFLECT!". */
+export function deflectFx(fx, tgt, shot, ang, perfect = false) {
+  const fa = ang + Math.PI;
+  const s = (tgt.look && tgt.look.scale) || 1, z = 0.85 * s;
+  const px = tgt.x + Math.cos(fa) * 0.5, py = tgt.y + Math.sin(fa) * 0.32;
+  soundOn(fx, tgt, px, py, perfect ? 'KAKIN!!' : 'KIN!', '#e3f2fd', 0.5, { z: 1.3, gap: 0 });
+  fx.add('crescent', { x: tgt.x, y: tgt.y, angle: fa, radius: 0.8 * s, arc: 2.4, width: 0.22, color: '#e3f2fd', core: '#ffffff', life: 0.22, z, reveal: 0.01, dir: 1, tilt: 0.85 });
+  fx.add('flare', { x: px, y: py, z, size: perfect ? 1.2 : 0.9, color: '#fff59d', life: 0.28 });
+  // the shot glances off to the side
+  sparks(fx, px, py, z, fa + (Math.random() < 0.5 ? 1 : -1) * 0.9, 12, ['#ffffff', '#fff59d', '#ffe082'], { speed: 8, spread: 1.2, life: 0.3 });
+  calloutOver(fx, tgt, 1.4 * s, 'DEFLECT!', '#e3f2fd', 0.46);
+  fx.stop(0.06);
+  if (tgt.isPlayer) { fx.kick(fa, 4); if (perfect) fx.slowmo(0.25, 0.45); }
+}
+
+/**
+ * The counter strike after a parry: the blow lands with everything behind
+ * it — "COUNTER!", a gold-orange burst and shockwave, an impact frame, focus
+ * lines and a heavy hit-stop (on top of hitFeedback's).
+ */
+export function counterFx(fx, att, tgt, ang, w = 1) {
+  const s = (tgt.look && tgt.look.scale) || 1, z = 0.8 * s;
+  const cx = tgt.x - Math.cos(ang) * 0.22 * s, cy = tgt.y - Math.sin(ang) * 0.14 * s;
+  const blade = !!(att.weapon && att.weapon.kind === 'sword' && att.drawn !== false);
+  soundOn(fx, tgt, cx, cy, blade ? 'ZUBAAAN!!' : 'DOGOOON!!', '#ffab40', 0.85, { z: z + 0.5, gap: 0 });
+  fx.add('impact', { x: cx, y: cy, z, angle: ang, size: 1.1 + 0.3 * Math.min(1, w), color: '#ffab40', core: '#ffffff', life: 0.24, spikes: 14, lines: 10 });
+  fx.add('flare', { x: cx, y: cy, z: z + 0.05, size: 1.4, color: '#ffd740', life: 0.32 });
+  fx.ring(cx, cy, 0.15, 1.5, '#ffab40', 0.3, 0.1, { z, flat: 1, noCore: true, add: true });
+  fx.ring(tgt.x, tgt.y, 0.3, 2.2 * s, 'rgba(255,171,64,0.9)', 0.35, 0.12, { z: 0.06, flat: 0.55, add: true });
+  sparks(fx, cx, cy, z, ang, 18, ['#ffffff', '#ffd740', '#ffab40'], { speed: 11, spread: 1.6, life: 0.35 });
+  dust(fx, tgt.x, tgt.y + 0.04, 8, { angle: ang, spread: 2, speed: 4 });
+  calloutOver(fx, tgt, 1.6 * s, 'COUNTER!', '#ffab40', 0.56);
+  if (att.isPlayer || tgt.isPlayer) {
+    fx.stop(0.08);
+    fx.impactFrame(0.05);
+    fx.focus(tgt.x, tgt.y, 0.26);
+    fx.shake(0.3, ang);
+  }
+}
+
+/** A perfect dodge: a trail of cyan afterimages, "PERFECT DODGE!", a short slow-down. */
+export function perfectDodgeFx(fx, a, att) {
+  const s = (a.look && a.look.scale) || 1;
+  afterimage(fx, a, { tint: '#80deea', life: 0.45, alpha: 0.6, add: true });
+  a._ghostT = 0.25; a._ghostTint = '#80deea'; a._ghostAdd = true;
+  fx.ring(a.x, a.y, 0.2, 1.4 * s, '#80deea', 0.3, 0.08, { add: true });
+  fx.add('flare', { x: a.x, y: a.y, z: 1.0 * s, size: 0.9, color: '#b2ebf2', life: 0.25 });
+  calloutOver(fx, a, 1.45 * s, 'PERFECT DODGE!', '#80deea', 0.48);
+  if (a.isPlayer || (att && att.isPlayer)) { fx.slowmo(0.3, 0.45); fx.focus(a.x, a.y, 0.18); }
+}
+
+/** Shaking free of a flurry of blows: a burst of will round you, "BREAK FREE!". */
+export function breakFreeFx(fx, a) {
+  const s = (a.look && a.look.scale) || 1;
+  fx.ring(a.x, a.y, 0.2, 1.8 * s, '#e1f5fe', 0.35, 0.12, { add: true });
+  fx.ring(a.x, a.y, 0.1, 1.2 * s, '#ffffff', 0.25, 0.08, { z: 0.9 * s, flat: 1, noCore: true, add: true });
+  fx.burst(a.x, a.y, 12, { color: ['#ffffff', '#e1f5fe', '#b3e5fc'], speed: 5, z: 0.8 * s, vz: 1.5, g: 2, life: 0.4, size: 0.1, kind: 'spark' });
+  dust(fx, a.x, a.y + 0.04, 6, { speed: 3 });
+  calloutOver(fx, a, 1.5 * s, 'BREAK FREE!', '#b3e5fc', 0.46);
+  if (a.isPlayer) fx.kick(-Math.PI / 2, 3);
+}
+
+/**
+ * The glint before a foe's blow lands (see abilities.js): a four-point star
+ * on them at head height — yellow for a blow to parry, red for one that
+ * smashes guards (with "!!" over them where fights are gentlest). `k`, 0..1:
+ * how plain (smaller and briefer further out on the seas). `at`: the
+ * attacker, or { x, y, z, follow } for a shot in flight.
+ */
+export function parryCueFx(fx, at, breaks, k = 1) {
+  const s = (at.look && at.look.scale) || 1;
+  const z = at.z !== undefined && !at.look ? at.z : 1.3 * s;
+  const follow = at.follow || at;
+  const col = breaks ? '#ff1744' : '#ffee58';
+  fx.add('flare', { x: at.x, y: at.y, z, size: (0.45 + 0.6 * k) * (breaks ? 1.15 : 1), color: col, life: 0.14 + 0.14 * k, follow, rot: 0 });
+  if (k >= 0.55) fx.ring(at.x, at.y, 0.15, (0.6 + 0.5 * k) * s, col, 0.2, 0.05, { z: z - 0.2, flat: 1, noCore: true, add: true, follow });
+  if (breaks && k >= 0.9 && at.look) fx.sfx?.(at.x, at.y, '!!', '#ff1744', 0.8, { z: 2.15 * s, gap: 0, life: 0.55 });
 }
 
 // ------------------------------------------------------------------ technique visuals
@@ -1250,7 +1445,11 @@ function defaultCharge(def, actor, elem, st) {
 /**
  * Renderer extras for an actor this frame: element glow on the striking
  * limb, energy blades, charge-ups, flurries, Diable Jambe legs, Haki legs,
- * Gear 4 bounce and Gear 5 toon wobble.
+ * Gear 4 bounce and Gear 5 toon wobble — and the clocks of what the body
+ * reacts to (render/anims.js): a blow taken on the guard (blockHitAge),
+ * Armament Haki just coated on (armOn), where the last blow came from
+ * (flinch: { age, rel, w }, the hit's own record, for when the pose has no
+ * hitAge of its own) and a stagger with no blow behind it (stunBlind).
  */
 export function actorVisuals(actor, act, clip) {
   const out = {};
@@ -1261,6 +1460,25 @@ export function actorVisuals(actor, act, clip) {
   if (actor.armament && (actor.style === 'black_leg' || actor.style === 'okama_kenpo')) out.armLegs = true;
   if (bufs.some((b) => b.id === 'gear4')) out.bounce = true;
   if (bufs.some((b) => b.id === 'gear5')) out.toon = true;
+  const now = actor.game?.env?.time;
+  if (now !== undefined) {
+    if (actor.blocking && actor._blockFlash !== undefined && now - actor._blockFlash >= 0 && now - actor._blockFlash < 0.3) out.blockHitAge = now - actor._blockFlash;
+    // (switched on, not there from the start: someone who always wears it doesn't flex at you)
+    if (actor.armament && actor._armWas === false) actor._armOnT = now;
+    actor._armWas = !!actor.armament;
+    if (actor._armOnT !== undefined && now - actor._armOnT < 0.6) out.armOn = now - actor._armOnT;
+    const hf = actor.hitFx;
+    if (hf && now - hf.t0 >= 0 && now - hf.t0 < 0.8) out.flinch = { age: now - hf.t0, rel: Math.atan2(Math.sin(hf.ang - (actor.facing || 0)), Math.cos(hf.ang - (actor.facing || 0))), w: hf.w };
+    // (a stagger with no blow behind it to tell where it came from — a
+    // Conqueror's, say — is told apart when it starts, and stays so)
+    const stunned = actor.hitstun > 0;
+    if (stunned && !actor._stunWas) {
+      const ago = (t0) => (t0 !== undefined && now - t0 >= 0 ? now - t0 : Infinity);
+      actor._stunBlind = !(Math.min(ago(actor.hitT), ago(hf && hf.t0)) < 0.2);
+    }
+    actor._stunWas = stunned;
+    if (stunned && actor._stunBlind) out.stunBlind = true;
+  }
   if (!act || !clip) return out;
   const def = act.def;
   const w = def.windup ?? 0.1;

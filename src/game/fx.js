@@ -160,11 +160,12 @@ export class FX {
   /**
    * Floating text. Numbers pop and drift; words are callouts ("PARRY!",
    * technique names): identical callouts on the same spot are merged and
-   * texts stack upward instead of piling on top of each other.
+   * texts stack upward instead of piling on top of each other. `o.z`: a
+   * height to start at, as it is (no lifting over whoever's beneath).
    */
   text(x, y, str, color = '#fff', size = 0.42, o = {}) {
     str = String(str);
-    const lift = this.lift3d(x, y, true); // (words always float over someone)
+    const lift = o.z === undefined ? this.lift3d(x, y, true) : 0; // (words always float over someone)
     if (lift) y += lift;
     const num = NUMERIC.test(str);
     if (!num) {
@@ -176,7 +177,7 @@ export class FX {
     for (const t of this.texts) if (!t.dmg && Math.abs(t.x - x) < 1.2 && Math.abs(t.y - y) < 0.6 && t.age < 0.3) bump++;
     const life = o.life ?? (num ? 0.8 : 0.95);
     const t = {
-      x: x + (Math.random() - 0.5) * (num ? 0.5 : 0.15), y, z: 1.6 + bump * 0.34 + lift, str, color, size, life, max: life, vz: num ? 2.4 : 2.0,
+      x: x + (Math.random() - 0.5) * (num ? 0.5 : 0.15), y, z: (o.z ?? 1.6) + bump * 0.34 + lift, str, color, size, life, max: life, vz: num ? 2.4 : 2.0,
       crit: o.crit, pop: 0, age: 0, kind: num ? 'num' : 'call',
     };
     this.texts.push(t);
@@ -252,8 +253,18 @@ export class FX {
   // (these place heights with z themselves: no y-offset guessing for the 3D view inside them)
   cfx(fn) { const was = this._cfx; this._cfx = true; try { return fn(); } finally { this._cfx = was; } }
   hit(att, tgt, h, info) { return this.cfx(() => CFX.hitFeedback(this, att, tgt, h, info)); }
-  parry(tgt, att, ang) { return this.cfx(() => CFX.parryFx(this, tgt, att, ang)); }
+  parry(tgt, att, ang, perfect) { return this.cfx(() => CFX.parryFx(this, tgt, att, ang, perfect)); }
   guardBreak(tgt, att, ang) { return this.cfx(() => CFX.guardBreakFx(this, tgt, att, ang)); }
+  /** A sword turning a shot aside. */
+  deflect(tgt, shot, ang, perfect) { return this.cfx(() => CFX.deflectFx(this, tgt, shot, ang, perfect)); }
+  /** The counter strike after a parry landing. */
+  counter(att, tgt, ang, w) { return this.cfx(() => CFX.counterFx(this, att, tgt, ang, w)); }
+  /** Slipping a heavy blow at the last instant. */
+  perfectDodge(a, att) { return this.cfx(() => CFX.perfectDodgeFx(this, a, att)); }
+  /** Shaking free of a flurry of blows. */
+  breakFree(a) { return this.cfx(() => CFX.breakFreeFx(this, a)); }
+  /** The glint on a foe (or a shot) the moment before its blow lands: `breaks`, red (dodge it); else yellow (parry it). `k`: how plain, 0..1. */
+  parryCue(at, breaks, k = 1) { return this.cfx(() => CFX.parryCueFx(this, at, breaks, k)); }
   tech(actor, step, action, kind, extra) { return this.cfx(() => CFX.techFx(this, actor, step, action, kind, extra)); }
   zone(zone, spec, actor, action) { return this.cfx(() => CFX.zoneFx(this, zone, spec, actor, action)); }
   explosion(x, y, e, owner) { return this.cfx(() => CFX.explosionFx(this, x, y, e, owner)); }

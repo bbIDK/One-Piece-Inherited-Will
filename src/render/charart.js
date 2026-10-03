@@ -10,7 +10,7 @@
 //     pose: state ('hurt' | 'knocked' | …), flash, ghost, moving, walk, and an
 //     optional blink (true/false forces the eyes shut/open, for previews);
 //     t: time (blinks, sway, Nika's flames);
-//     P: sampled rig pose (P.face: null | 'fierce' | 'shout').
+//     P: sampled rig pose (P.face: null | 'fierce' | 'shout' | 'grit' | 'shock' | 'glare' | 'hurt').
 //   drawHair(g, style, col, hy, r, d, nikaT)   both hair layers, standalone
 //     (used by the knocked-down pose, whose face is a plain circle).
 //   drawHat(g, hat, hy, r, d, look)            the hat alone.
@@ -918,8 +918,12 @@ function spiral() {
 function expression(look, pose, P, t) {
   const st = pose && pose.state;
   if (st === 'knocked' || st === 'dead') return { eyes: 'ko', mouth: 'ko', brow: 'worried' };
-  if (st === 'hurt') return { eyes: 'hurt', mouth: 'grimace', brow: 'worried' };
   const face = P && P.face;
+  // (a blow's own faces, as the 3D heads show them: see render3d/chars/face.js)
+  if (face === 'shock') return { eyes: 'open', mouth: 'shout', brow: 'worried', small: true };
+  if (face === 'hurt' || st === 'hurt') return { eyes: 'hurt', mouth: 'grimace', brow: 'worried' };
+  if (face === 'grit') return { eyes: 'fierce', mouth: 'grimace', brow: 'fierce' };
+  if (face === 'glare') return { eyes: 'fierce', mouth: 'neutral', brow: 'fierce' };
   const fierce = face === 'fierce' || face === 'shout';
   const s = (((look.seed || 0) * 0.6180339) % 1) * 0.9 + 0.1;
   // blink ~every 3.4 s for ~0.12 s; never at t = 1 (the still portraits)

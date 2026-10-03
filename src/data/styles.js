@@ -5,7 +5,7 @@
 import { registerAbilities } from '../game/abilities.js';
 
 const m1 = (id, style, anim, dmg, o = {}) => ({
-  id, name: o.name || 'Strike', style, anim, windup: o.windup ?? 0.07, recover: o.recover ?? 0.16,
+  id, name: o.name || 'Strike', style, anim, windup: o.windup ?? 0.08, recover: o.recover ?? 0.16,
   weapon: o.weapon, telegraph: false,
   steps: [{ hit: { shape: o.shape || 'arc', range: o.range ?? 1.35, arc: o.arc ?? 1.7, offset: o.offset ?? 0.2, damage: dmg, knockback: o.kb ?? 1.2, stun: o.stun ?? 0.22, slashing: o.slashing, element: o.element, status: o.status, width: o.width }, vfx: o.vfx }],
 });
@@ -15,10 +15,10 @@ export const STYLES = {
     name: 'Street Brawling', icon: '👊', weapon: null,
     desc: 'Fists, elbows and headbutts. Every fighter starts somewhere.',
     m1: [
-      m1('brawl_1', 'brawler', 'jab', 5, { windup: 0.06, recover: 0.13 }),
-      m1('brawl_2', 'brawler', 'cross', 5, { windup: 0.06, recover: 0.13 }),
+      m1('brawl_1', 'brawler', 'jab', 5, { windup: 0.08, recover: 0.13 }),
+      m1('brawl_2', 'brawler', 'cross', 5, { windup: 0.08, recover: 0.13 }),
       m1('brawl_3', 'brawler', 'hook', 7, { windup: 0.08, recover: 0.15, stun: 0.28 }),
-      m1('brawl_4', 'brawler', 'uppercut', 9, { name: 'Uppercut', windup: 0.09, kb: 3.5, stun: 0.35, recover: 0.3 }),
+      m1('brawl_4', 'brawler', 'uppercut', 9, { name: 'Uppercut', windup: 0.11, kb: 3.5, stun: 0.35, recover: 0.3 }),
     ],
     heavy: { id: 'brawl_heavy', name: 'Haymaker', anim: 'haymaker', windup: 0.32, recover: 0.35, cd: 1.3, steps: [{ hit: { shape: 'arc', range: 1.6, arc: 1.5, offset: 0.3, damage: 15, knockback: 6, stun: 0.5, heavy: true, guardBreak: true } }] },
     techniques: [
@@ -38,7 +38,7 @@ export const STYLES = {
       m1('itto_1', 'ittoryu', 'slash', 8, { weapon: 'sword', slashing: true, range: 1.7, arc: 2.2 }),
       m1('itto_2', 'ittoryu', 'slash2', 8, { weapon: 'sword', slashing: true, range: 1.7, arc: 2.2 }),
       m1('itto_4', 'ittoryu', 'rise_slash', 9, { name: 'Rising Cut', weapon: 'sword', slashing: true, range: 1.7, arc: 2.0, windup: 0.08, stun: 0.3 }),
-      m1('itto_3', 'ittoryu', 'stab', 12, { name: 'Thrust', weapon: 'sword', slashing: true, range: 1.9, arc: 2.4, kb: 3.5, recover: 0.32, vfx: 'stab' }),
+      m1('itto_3', 'ittoryu', 'stab', 12, { name: 'Thrust', windup: 0.1, weapon: 'sword', slashing: true, range: 1.9, arc: 2.4, kb: 3.5, recover: 0.32, vfx: 'stab' }),
     ],
     heavy: { id: 'itto_heavy', name: 'Downward Cleave', anim: 'cleave', weapon: 'sword', windup: 0.34, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: 'line', range: 2.6, width: 1.0, damage: 20, knockback: 5, stun: 0.5, heavy: true, slashing: true, guardBreak: true } }] },
     techniques: [
@@ -55,10 +55,10 @@ export const STYLES = {
     name: 'Two Sword Style', icon: '⚔', weapon: 'sword', swords: 2,
     desc: 'Twice the blades, twice the fury. Requires two swords.',
     m1: [
-      m1('nito_1', 'nitoryu', 'dual1', 7, { weapon: 'sword', slashing: true, range: 1.7, arc: 2.2, windup: 0.06, recover: 0.12 }),
-      m1('nito_2', 'nitoryu', 'dual2', 7, { weapon: 'sword', slashing: true, range: 1.7, arc: 2.2, windup: 0.06, recover: 0.12 }),
-      m1('nito_3', 'nitoryu', 'dual3', 7, { weapon: 'sword', slashing: true, range: 1.7, arc: 2.2, windup: 0.06, recover: 0.12 }),
-      m1('nito_4', 'nitoryu', 'dualx', 12, { weapon: 'sword', slashing: true, range: 1.9, arc: 2.6, kb: 4, recover: 0.3 }),
+      m1('nito_1', 'nitoryu', 'dual1', 7, { weapon: 'sword', slashing: true, range: 1.7, arc: 2.2, windup: 0.08, recover: 0.12 }),
+      m1('nito_2', 'nitoryu', 'dual2', 7, { weapon: 'sword', slashing: true, range: 1.7, arc: 2.2, windup: 0.08, recover: 0.12 }),
+      m1('nito_3', 'nitoryu', 'dual3', 7, { weapon: 'sword', slashing: true, range: 1.7, arc: 2.2, windup: 0.08, recover: 0.12 }),
+      m1('nito_4', 'nitoryu', 'dualx', 12, { windup: 0.11, weapon: 'sword', slashing: true, range: 1.9, arc: 2.6, kb: 4, recover: 0.3 }),
     ],
     heavy: { id: 'nito_heavy', name: 'Rashomon', anim: 'tora', weapon: 'sword', windup: 0.35, recover: 0.35, cd: 1.6, steps: [{ hit: { shape: 'line', range: 3.0, width: 1.2, damage: 24, knockback: 5, stun: 0.5, heavy: true, slashing: true, guardBreak: true } }] },
     techniques: [
@@ -75,7 +75,7 @@ export const STYLES = {
     m1: [
       m1('santo_1', 'santoryu', 'dual1', 8, { weapon: 'sword', slashing: true, range: 1.8, arc: 2.4 }),
       m1('santo_2', 'santoryu', 'dual3', 8, { weapon: 'sword', slashing: true, range: 1.8, arc: 2.4 }),
-      m1('santo_3', 'santoryu', 'dualx', 15, { weapon: 'sword', slashing: true, range: 2.0, arc: 2.8, kb: 4.5, recover: 0.3 }),
+      m1('santo_3', 'santoryu', 'dualx', 15, { windup: 0.11, weapon: 'sword', slashing: true, range: 2.0, arc: 2.8, kb: 4.5, recover: 0.3 }),
     ],
     heavy: { id: 'santo_heavy', name: 'Tora Gari', anim: 'tora', weapon: 'sword', windup: 0.4, recover: 0.35, cd: 1.6, say: 'Tora Gari!', steps: [{ hit: { shape: 'arc', range: 2.4, arc: 1.6, offset: 0.4, damage: 30, knockback: 6, stun: 0.6, heavy: true, slashing: true, guardBreak: true, impactFrame: true } }] },
     techniques: [
@@ -97,8 +97,8 @@ export const STYLES = {
     m1: [
       m1('bleg_1', 'black_leg', 'kick', 7, { range: 1.6 }),
       m1('bleg_2', 'black_leg', 'kick_high', 7, { range: 1.6 }),
-      m1('bleg_3', 'black_leg', 'kick_spin', 7, { range: 1.6 }),
-      m1('bleg_4', 'black_leg', 'rise_kick', 12, { range: 1.8, kb: 4.5, recover: 0.3, name: 'Collier' }),
+      m1('bleg_3', 'black_leg', 'kick_spin', 7, { range: 1.6, windup: 0.12, recover: 0.22 }),
+      m1('bleg_4', 'black_leg', 'rise_kick', 12, { windup: 0.11, range: 1.8, kb: 4.5, recover: 0.3, name: 'Collier' }),
     ],
     heavy: { id: 'bleg_heavy', name: 'Mouton Shot', anim: 'mouton', windup: 0.32, recover: 0.35, cd: 1.4, say: 'Mouton Shot!', steps: [{ hit: { shape: 'arc', range: 1.8, arc: 1.2, offset: 0.3, damage: 20, knockback: 9, stun: 0.5, heavy: true, guardBreak: true } }] },
     techniques: [
@@ -121,7 +121,7 @@ export const STYLES = {
     m1: [
       m1('fmk_1', 'fishman_karate', 'palm', 7, { element: 'water' }),
       m1('fmk_2', 'fishman_karate', 'palm2', 7, { element: 'water' }),
-      m1('fmk_3', 'fishman_karate', 'palm_double', 12, { kb: 5, recover: 0.3, element: 'water', stun: 0.4 }),
+      m1('fmk_3', 'fishman_karate', 'palm_double', 12, { windup: 0.11, kb: 5, recover: 0.3, element: 'water', stun: 0.4 }),
     ],
     heavy: { id: 'fmk_heavy', name: 'Shark Tile Fist', anim: 'palm_double', windup: 0.3, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: 'arc', range: 1.7, arc: 1.2, offset: 0.3, damage: 18, knockback: 7, stun: 0.5, heavy: true, guardBreak: true, element: 'water' } }] },
     techniques: [
@@ -142,7 +142,7 @@ export const STYLES = {
     m1: [
       m1('roku_1', 'rokushiki', 'shigan', 7, { name: 'Shigan', range: 1.5, arc: 0.9 }),
       m1('roku_2', 'rokushiki', 'shigan2', 7, { name: 'Shigan', range: 1.5, arc: 0.9 }),
-      m1('roku_3', 'rokushiki', 'kick_high', 11, { kb: 4, recover: 0.28, name: 'Rankyaku Kick' }),
+      m1('roku_3', 'rokushiki', 'kick_high', 11, { windup: 0.1, kb: 4, recover: 0.28, name: 'Rankyaku Kick' }),
     ],
     heavy: { id: 'roku_heavy', name: 'Shigan: Bachi', anim: 'shigan', windup: 0.3, recover: 0.3, cd: 1.5, steps: [{ hit: { shape: 'arc', range: 1.6, arc: 0.8, offset: 0.2, damage: 6, knockback: 1, stun: 0.12, duration: 0.45, interval: 0.07, guardBreak: true } }] },
     techniques: [
@@ -189,7 +189,7 @@ export const STYLES = {
     m1: [
       m1('okama_1', 'okama_kenpo', 'ballet_kick', 7, { range: 1.7 }),
       m1('okama_2', 'okama_kenpo', 'pirouette', 7, { range: 1.7 }),
-      m1('okama_3', 'okama_kenpo', 'jete', 13, { range: 1.9, kb: 4, recover: 0.3 }),
+      m1('okama_3', 'okama_kenpo', 'jete', 13, { windup: 0.11, range: 1.9, kb: 4, recover: 0.3 }),
     ],
     heavy: { id: 'okama_heavy', name: 'Swan Arabesque', anim: 'arabesque', windup: 0.3, recover: 0.35, cd: 1.4, say: 'Swan Arabesque!', steps: [{ hit: { shape: 'line', range: 2.4, width: 0.8, damage: 20, knockback: 6, stun: 0.5, heavy: true, guardBreak: true } }] },
     techniques: [
@@ -207,7 +207,7 @@ export const STYLES = {
     m1: [
       m1('elec_1', 'electro', 'claw', 6, { element: 'lightning' }),
       m1('elec_2', 'electro', 'claw2', 6, { element: 'lightning' }),
-      m1('elec_3', 'electro', 'kick_high', 11, { element: 'lightning', kb: 4, stun: 0.45, recover: 0.28, status: { shock: 0.6 } }),
+      m1('elec_3', 'electro', 'kick_high', 11, { windup: 0.1, element: 'lightning', kb: 4, stun: 0.45, recover: 0.28, status: { shock: 0.6 } }),
     ],
     heavy: { id: 'elec_heavy', name: 'Electrical Claw', anim: 'claw_x', windup: 0.3, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: 'arc', range: 1.8, arc: 1.8, offset: 0.2, damage: 17, knockback: 5, stun: 0.6, heavy: true, element: 'lightning', status: { shock: 1 }, slashing: true }, vfx: 'slash', color: '#fff176' }] },
     techniques: [
@@ -227,7 +227,7 @@ export const STYLES = {
     m1: [
       m1('hassho_1', 'hasshoken', 'jab', 7, { stun: 0.25 }),
       m1('hassho_2', 'hasshoken', 'cross', 7, { stun: 0.25 }),
-      m1('hassho_3', 'hasshoken', 'palm', 12, { kb: 4.5, recover: 0.3 }),
+      m1('hassho_3', 'hasshoken', 'palm', 12, { windup: 0.1, kb: 4.5, recover: 0.3 }),
     ],
     heavy: { id: 'hassho_heavy', name: 'Vibrating Palm', anim: 'palm_double', windup: 0.35, recover: 0.35, cd: 1.5, steps: [{ hit: { shape: 'arc', range: 1.6, arc: 1.2, offset: 0.2, damage: 20, knockback: 6, stun: 0.6, heavy: true, unblockable: true } }] },
     techniques: [
@@ -242,7 +242,7 @@ export const STYLES = {
     m1: [
       m1('clima_1', 'weather_science', 'staff', 6, { weapon: 'staff', range: 1.7 }),
       m1('clima_2', 'weather_science', 'staff2', 6, { weapon: 'staff', range: 1.7 }),
-      m1('clima_3', 'weather_science', 'staff_jab', 9, { weapon: 'staff', range: 1.9, kb: 3.5, recover: 0.3 }),
+      m1('clima_3', 'weather_science', 'staff_jab', 9, { windup: 0.1, weapon: 'staff', range: 1.9, kb: 3.5, recover: 0.3 }),
     ],
     heavy: { id: 'clima_heavy', name: 'Heat Egg', anim: 'raise', weapon: 'staff', windup: 0.35, recover: 0.3, cd: 2, steps: [{ proj: { speed: 10, range: 10, radius: 0.35, damage: 15, sprite: 'orb', color: '#ff8a65', element: 'fire', explode: { range: 1.5, damage: 10, element: 'fire' } } }] },
     // (a plain staff swung by someone who never learned the science throws no Heat Egg)

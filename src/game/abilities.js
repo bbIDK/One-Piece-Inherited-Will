@@ -9,9 +9,14 @@
 //   teleport – blink forward (Soru, Yata no Kagami)
 //   heal     – restore health (Phoenix flames)
 //   fx       – purely visual flourish
+//
+// A foe's blow is wound up long enough to be read where fights are gentle
+// (see difficulty.js), and just before it lands a glint on them shows the
+// moment: yellow, parry it (F); red, it smashes guards — dodge it (Q).
 import { TAU, clamp } from '../core/math.js';
 import { ELEMENT_COLORS } from './combat.js';
 import { drawProjectile } from '../render/projectiles.js';
+import { tierOf, stretchWindup } from './difficulty.js';
 
 const REG = new Map();
 export function registerAbilities(list, source) {
@@ -77,6 +82,13 @@ export function canUse(actor, def) {
   return true;
 }
 
+/** Does this step deal damage (a blow, a shot, a charge, a field)? */
+export const isDamaging = (s) => !!(s.hit || s.proj || s.zone || s.dash?.hit);
+/** Does this step's blow smash a guard aside, or go straight through one? (the red glint: dodge it) */
+export const breaksGuard = (s) => !!(s.hit?.guardBreak || s.hit?.unblockable || s.dash?.hit?.guardBreak || s.dash?.hit?.unblockable || s.proj?.unblockable);
+/** The first step of a technique that deals damage (its index), or -1. */
+export function firstBlow(def) { return (def.steps || []).findIndex(isDamaging); }
+
 export function startAbility(actor, def, game, target) {
   const c = def.cost || {};
   if (c.haki) actor.haki -= c.haki;
@@ -86,21 +98,83 @@ export function startAbility(actor, def, game, target) {
   const tx = target ? target.x : actor.x + Math.cos(angle) * 5;
   const ty = target ? target.y : actor.y + Math.sin(angle) * 5;
   actor.action = { def, t: 0, step: 0, angle, tx, ty, target, total: abilityTotal(def) / (def.noSpeedup ? 1 : actor.atkSpeed()), mult: powerFor(actor, def) };
+  // (begun while a parry's counter is there to land: it stays there till this move is done)
+  if (actor.counterLeft > 0) actor.action.counter = true;
+  // a foe's blow: wound up long enough to read, and the moment it lands shown by a glint
+  if (!actor.isPlayer && actor.faction !== 'player') readable(actor, actor.action, game);
   if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, '#ffffff', 0.34, { life: 1.2 });
   if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
   if (def.onStart) def.onStart(actor, game);
   game.audio?.sfx(def.sfxStart || 'whoosh', actor);
 }
 
+/**
+ * Make a foe's move readable: its wind-up stretched to what the sea allows
+ * (the move's clock runs slow until its first blow: see updateAbility), and
+ * the moment the blow lands worked out for the glint — `cueT`, on the move's
+ * own clock, a tier's cueLead before it lands (a charge's run in to you
+ * counted). A shot glints a cueLead before it's fired (`shot`): the moment
+ * to get your guard up or get out of its way (a sword wielder's parry gets
+ * a glint on the shot itself as it reaches them instead: combat.js).
+ */
+function readable(actor, a, game) {
+  const def = a.def, i = firstBlow(def);
+  if (i < 0) return;
+  const s = def.steps[i];
+  const T = tierOf(game, actor);
+  const speed = def.noSpeedup ? 1 : actor.atkSpeed();
+  const at = s.at ?? def.windup ?? 0;
+  const w = at / speed;
+  const want = stretchWindup(T, w, !!def.chained);
+  a.hitAt = at;
+  a.slow = w > 0.001 && want > w ? want / w : 1;
+  // (a field of something — gas, lightning — is no blow to parry either: get out of it)
+  a.breaks = breaksGuard(s) || !!s.zone;
+  a.shot = !!s.proj;
+  // (a charge lands once it reaches you)
+  const who = a.target || actor.controller?.target;
+  let travel = 0;
+  if (s.dash && who) travel = Math.max(0, game.world.distance(actor.x, actor.y, who.x, who.y) - 1) / Math.max(1, s.dash.dist / s.dash.time);
+  const real = Math.max(0, want + travel - T.cueLead);
+  a.cueT = want > 0 && real <= want ? real / want * at : at + Math.max(0, real - want) * speed;
+}
+
+/**
+ * The glint: on a foe whose blow is about to land on you, a tier's cueLead
+ * before it does — yellow for one to parry, red (and "!!" in the Blues) for
+ * one that smashes guards. Plain in the Blues, fainter further out, and
+ * plain again anywhere with Observation Haki on. Taught once, the first
+ * time a foe swings at you.
+ */
+function glint(actor, a, game) {
+  const p = game.player;
+  if (!p || p === actor || p.state !== 'idle') return;
+  const who = a.target || actor.controller?.target;
+  if (who !== p || game.world.distance(actor.x, actor.y, p.x, p.y) > (a.shot ? 14 : 10)) return;
+  // (a sword wielder's glint for a shot is on the shot itself)
+  if (a.shot && !a.breaks && p.hasWeapon?.('sword')) return;
+  const T = tierOf(game, p);
+  const k = p.observation ? 1 : T.cue;
+  if (!(k > 0)) return;
+  game.fx.parryCue?.(actor, a.breaks, k);
+  // (the first of each in a life: the world slows a moment, time to read the hint and act on it)
+  const key = a.breaks ? 'redglint' : a.shot ? 'shotglint' : 'parry';
+  if (!game.hintsShown?.has(key) && game.settings?.showHints !== false) game.fx.slowmo(1.2, 0.2);
+  if (a.breaks) game.hint('redglint', 'A RED glint: that blow smashes any guard (and some go straight through one). Don\'t block it — dodge (Q) just before it lands.');
+  else if (a.shot) game.hint('shotglint', 'A glint on a gunman: a shot is coming. Hold F to block it, or sidestep and dodge (Q) — a sword can even turn it aside with a parry.');
+  else game.hint('parry', 'A YELLOW glint: the blow is about to land — tap F right then to PARRY it. A parried foe reels, open to a COUNTER. (Hold F to simply block.)');
+}
+
 function telegraph(actor, def, game) {
-  const wind = def.windup ?? 0.2;
+  const a = actor.action;
+  const wind = (a?.hitAt ?? def.windup ?? 0.2) * (a?.slow || 1) / (def.noSpeedup ? 1 : actor.atkSpeed());
   if (wind < 0.12) return;
   const first = (def.steps || []).find((s) => s.hit || s.proj || s.dash || s.zone);
   if (!first) return;
-  const col = actor.boss ? 'rgba(255,40,80,1)' : 'rgba(255,60,60,1)';
+  // red: get out of the way (it smashes guards, or it's a blast); amber: a blow you can parry
+  const parryable = (first.hit || first.dash?.hit) && !breaksGuard(first) && !first.zone;
+  const col = parryable ? 'rgba(255,193,7,1)' : actor.boss ? 'rgba(255,40,80,1)' : 'rgba(255,60,60,1)';
   const life = wind * (actor.game?.player?.observation ? 1.35 : 1);
-  // an anime glint on the attacker for big wind-ups (read it, then dodge)
-  if (wind >= 0.35) game.fx.add('flare', { x: actor.x, y: actor.y, z: 1.35 * (actor.look?.scale || 1), size: 0.55, color: '#ff5252', life: Math.min(0.3, wind * 0.6), follow: actor });
   if (first.hit) {
     const h = first.hit;
     const ox = actor.x + Math.cos(actor.facing) * (h.offset || 0), oy = actor.y + Math.sin(actor.facing) * (h.offset || 0);
@@ -118,7 +192,9 @@ function telegraph(actor, def, game) {
 export function updateAbility(actor, dt, game) {
   const a = actor.action;
   const def = a.def;
-  a.t += dt * (def.noSpeedup ? 1 : actor.atkSpeed());
+  // (a foe's wind-up runs slow where fights are gentle: see readable)
+  a.t += dt * (def.noSpeedup ? 1 : actor.atkSpeed()) / (a.slow > 1 && a.t < a.hitAt ? a.slow : 1);
+  if (a.cueT !== undefined && !a.cued && a.t >= a.cueT) { a.cued = true; glint(actor, a, game); }
   const steps = def.steps || [];
   if (def.track && a.t < (def.windup ?? 0)) a.angle = actor.facing; // aim during windup
   while (a.step < steps.length && a.t >= (steps[a.step].at ?? def.windup ?? 0)) {
@@ -147,7 +223,7 @@ function runStep(actor, s, game, a) {
       unblockable: h.unblockable, haki: h.haki || (actor.armament && def_isPhysical(h)), critChance: h.crit ?? (actor.critChance || 0.05),
       follow: h.follow, offX: Math.cos(ang) * off * reach, offY: -0.4 + Math.sin(ang) * off * reach, followAngle: h.followAngle,
       impactFrame: h.impactFrame, trueDamage: h.trueDamage, hitShips: h.hitShips, shipDamage: h.shipDamage, radial: h.radial,
-      onHit: h.onHit, forceWater: h.forceWater, hitsAll: h.hitsAll,
+      onHit: h.onHit, forceWater: h.forceWater, hitsAll: h.hitsAll, def: a.def,
     };
     game.combat.hitbox(hb);
     // the technique's look: smears, rings, beams, signatures (render/combatfx.js)
@@ -168,7 +244,9 @@ function runStep(actor, s, game, a) {
         knockback: p.knockback ?? 2, stun: p.stun ?? 0.2, status: p.status, pierce: p.pierce, homing: p.homing,
         target: a.target, sprite: p.sprite || 'orb', color: p.color || col, size: p.size || 1, haki: actor.armament && p.element === undefined,
         stretch: p.stretch ? actor : null, passWalls: p.passWalls, hitShips: p.hitShips ?? true, shipDamage: p.shipDamage,
-        slashing: p.slashing, heavy: p.heavy, critChance: 0.05, unblockable: p.unblockable,
+        slashing: p.slashing, heavy: p.heavy, critChance: 0.05, unblockable: p.unblockable, def: a.def,
+        // (a shot, not a blow: a sword can turn it aside with a parry — unless it goes off on impact)
+        isProj: true, explodes: !!p.explode,
         onEnd: p.explode ? (pr, g) => explode(pr, g, p.explode, mult) : null,
         trail: p.trail ? (pr, g) => trail(pr, g, p.trail) : null,
         draw: drawProjectile,
@@ -186,6 +264,7 @@ function runStep(actor, s, game, a) {
         owner: actor, x: actor.x, y: actor.y - 0.4, shape: 'circle', range: d.hit.range || 1.1, damage: (d.hit.damage || 5) * mult,
         knockback: d.hit.knockback ?? 4, stun: d.hit.stun ?? 0.3, element: d.hit.element || 'physical', follow: true, offX: 0, offY: -0.4,
         duration: d.time + 0.05, slashing: d.hit.slashing, heavy: d.hit.heavy, status: d.hit.status, radial: true, guardBreak: d.hit.guardBreak,
+        unblockable: d.hit.unblockable, def: a.def,
       });
     }
     game.fx.tech(actor, s, a, 'dash'); // dust, streaks, afterimages, trail, cut lines
@@ -251,7 +330,8 @@ function runStep(actor, s, game, a) {
 function def_isPhysical(h) { return !h.element || h.element === 'physical'; }
 
 function explode(p, game, e, mult) {
-  game.combat.hitbox({ owner: p.owner, x: p.x, y: p.y, shape: 'circle', range: e.range || 1.8, damage: (e.damage || 10) * mult, knockback: e.knockback ?? 6, stun: e.stun ?? 0.4, element: e.element || 'explosion', duration: 0.1, radial: true, heavy: true, hitShips: true, status: e.status });
+  // (a blast: blocked, perhaps, but never parried)
+  game.combat.hitbox({ owner: p.owner, x: p.x, y: p.y, shape: 'circle', range: e.range || 1.8, damage: (e.damage || 10) * mult, knockback: e.knockback ?? 6, stun: e.stun ?? 0.4, element: e.element || 'explosion', duration: 0.1, radial: true, heavy: true, hitShips: true, status: e.status, blast: true });
   game.fx.explosion(p.x, p.y, e, p.owner); // fireball, shock ring, smoke, debris, scorch, shake
   game.audio?.sfx('explosion', p);
 }

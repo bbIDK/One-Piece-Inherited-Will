@@ -75,9 +75,10 @@ const npcs = [
     }),
   },
   {
-    id: 'bluejam', name: 'Bluejam', title: 'Pirate Captain of the Gray Terminal', island: 'dawn_island', at: { dx: 0.42, dy: 0.35 }, hostile: true, boss: true, hpMul: 0.9,
+    id: 'bluejam', name: 'Bluejam', title: 'Pirate Captain of the Gray Terminal', island: 'dawn_island', at: { dx: 0.42, dy: 0.35 }, hostile: true, boss: true, hpMul: 0.65,
     look: { hair: 'spiky', hairColor: '#1a237e', top: '#1565c0', bottom: '#263238', hat: 'tricorne', hatColor: '#0d47a1' }, level: 8, style: 'sniper', weapon: 'gun', ranged: true,
-    faction: 'pirate', moves: ['snipe_explode'], skill: 0.3, alert: 'Garbage belongs in the Gray Terminal. So do you.', bounty: 12000000, infamy: true, breakthrough: 2,
+    // (Dawn Island's second fight, and the first gunman: his shots sting rather than maim)
+    faction: 'pirate', moves: ['snipe_explode'], skill: 0.3, dmgMul: 1.25, alert: 'Garbage belongs in the Gray Terminal. So do you.', bounty: 12000000, infamy: true, breakthrough: 2,
     when: (c) => !c.bosses.includes('bluejam'),
   },
   {
@@ -354,7 +355,7 @@ const npcs = [
     recruit: { role: 'cook', fighter: false, requires: (c, g) => g.quests.isDone('baratie_krieg'), pitch: '"The old geezer says a cook who\'s never seen the Grand Line is only half a cook. Fine! I\'ll cook for your crew — and you\'d better eat every bite!"' },
     dialogue: (ctx) => ({ start: 'a', nodes: { a: { text: () => ctx.game.quests.isDone('baratie_krieg') ? '"You fought for this restaurant like one of us. Hungry? Of course you are."' : '"Welcome, you shitty customer! Sit down, eat, pay, get out!"' } } }),
   },
-  { id: 'krieg', name: 'Don Krieg', title: 'Admiral of the Krieg Pirate Armada', island: 'baratie', at: { spot: 'baratie_deck', ox: -3 }, hostile: true, boss: true, hpMul: 1.4, faction: 'pirate', level: 15,
+  { id: 'krieg', name: 'Don Krieg', title: 'Admiral of the Krieg Pirate Armada', island: 'baratie', at: { spot: 'baratie_deck', ox: -3 }, hostile: true, boss: true, hpMul: 1.1, faction: 'pirate', level: 15,
     look: { hair: 'short', hairColor: '#212121', top: '#ffd54f', bottom: '#5d4037', skin: '#e0ac7e', bulk: 1.5, coat: '#b71c1c' }, bulk: 1.5, defMul: 0.8, moves: ['krieg_mh5', 'krieg_spears', 'krieg_cape'],
     bounty: 17000000, infamy: true, breakthrough: 3, skill: 0.4, alert: 'I am the strongest! Give me your ship and your food!',
     when: (c, g) => g.quests.stageId('baratie_krieg') === 'krieg' },
@@ -408,11 +409,11 @@ const npcs = [
     look: { hair: 'curly', hairColor: '#e53935', skin: '#ef9a9a', top: '#ffeb3b', bottom: '#5d4037', swords: 2 }, style: 'nitoryu', weapon: 'sword', moves: ['hatchan_six'],
     hostile: true, bounty: 7000000, infamy: true, when: (c) => !c.defeated.hatchan },
   {
-    id: 'arlong', name: 'Arlong the Saw', title: 'Captain of the Arlong Pirates', island: 'conomi_islands', at: { town: 'arlong_park', building: 'Arlong Park Tower' }, faction: 'pirate', level: 17, boss: true, hpMul: 1.6, race: 'fishman',
+    id: 'arlong', name: 'Arlong the Saw', title: 'Captain of the Arlong Pirates', island: 'conomi_islands', at: { town: 'arlong_park', building: 'Arlong Park Tower' }, faction: 'pirate', level: 17, boss: true, hpMul: 1.2, race: 'fishman',
     look: { hair: 'spiky', hairColor: '#212121', skin: '#546e7a', top: '#fafafa', bottom: '#1a237e', fin: true, grin: true, sharpTeeth: true, bulk: 1.3, nose: 'long' }, bulk: 1.3,
     style: 'fishman_karate', moves: ['arlong_darts', 'arlong_kiribachi', 'arlong_bite'], skill: 0.45, bounty: 20000000, infamy: true, breakthrough: 4,
     hostile: true, alert: 'Shahahaha! A lowly human thinks they can stand against a Fish-Man?!', barks: ['Know your place, human!', 'Shahahaha!'],
-    phases: [{ at: 0.5, run: (a, g) => { g.fx.text(a.x, a.y - 2.4, 'KIRIBACHI!', '#ff5252', 0.6); a.addBuff({ id: 'arlong_rage', name: 'Rage', dur: 60, mods: { damage: 1.35, atkSpeed: 1.2 } }); } }],
+    phases: [{ at: 0.5, run: (a, g) => { g.fx.text(a.x, a.y - 2.4, 'KIRIBACHI!', '#ff5252', 0.6); a.addBuff({ id: 'arlong_rage', name: 'Rage', dur: 60, mods: { damage: 1.25, atkSpeed: 1.15 } }); } }],
     when: (c) => !c.bosses.includes('arlong'),
   },
 

@@ -1,6 +1,6 @@
 // Per-character extras in 3D: floating name labels with NPC health bars,
-// quest markers ('!' gold, '?' blue), buff auras (flickering flame
-// silhouettes), energy glows (charge-ups, element glows on the striking
+// quest markers ('!' gold, '?' blue), buff auras (shells of energy round
+// the body), energy glows (charge-ups, element glows on the striking
 // limb, muzzle flashes), the ice shell of a frozen character, dazed stars,
 // root vines, the guard shimmer and the Lunarian back flame.
 // Textures are drawn once and shared; labels redraw only when they change.
@@ -133,62 +133,169 @@ export class Glow {
 }
 
 // ------------------------------------------------------------------ auras
-const AURA = new Map();
-/** Flickering flame silhouette (4 frames in a strip) for an aura colour. */
-function auraTex(color) {
-  let t = AURA.get(color);
-  if (t) return t;
-  const W = 96, H = 128, F = 4;
-  const c = canvas(W, H * F), g = c.getContext('2d');
-  const { c: col, a } = parseCol(color);
-  for (let f = 0; f < F; f++) {
-    g.save(); g.translate(0, f * H);
-    for (let layer = 0; layer < 2; layer++) {
-      const sc = layer ? 0.8 : 1;
-      g.globalAlpha = (layer ? 0.9 : 0.55) * Math.min(1, a + 0.15);
-      g.fillStyle = layer ? '#ffffff' : col;
-      if (layer) { g.globalCompositeOperation = 'source-atop'; g.globalAlpha = 0.25; }
-      g.beginPath();
-      const w = W * 0.42 * sc, cx = W / 2, base = H - 4;
-      g.moveTo(cx - w, base);
-      for (let k = 0; k <= 10; k++) {
-        const x = cx - w + (k / 10) * 2 * w;
-        const env = Math.sin((k / 10) * Math.PI);
-        const tip = (k % 2 ? 6 : 16 + 8 * Math.sin(f * 1.7 + k * 1.9)) * sc;
-        g.quadraticCurveTo(x - 4, base - H * (0.5 + 0.3 * env) * sc, x, base - H * (0.42 + 0.46 * env) * sc - tip);
-      }
-      g.lineTo(cx + w, base); g.closePath(); g.fill();
-      g.globalCompositeOperation = 'source-over';
-    }
-    g.restore();
+// A power-up aura in 3D, the way the anime draws one: a shell of energy
+// standing round the whole body, brightest at its edges (where you look
+// through the most of it) and clear in the middle, so the figure inside reads;
+// streaks running up it, its top torn into tongues by rising noise, licking
+// and swelling with the beat of the power; motes drifting up off it. Bright
+// colours glow (added on); dark ones (an Asura's shadow, a Shadow-fruit's
+// gloom) are laid over as a smoke instead.
+const AURA_NOISE = /* glsl */`
+  float ahash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float anoise(vec3 x) {
+    vec3 i = floor(x), f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(ahash(i), ahash(i + vec3(1, 0, 0)), f.x), mix(ahash(i + vec3(0, 1, 0)), ahash(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(ahash(i + vec3(0, 0, 1)), ahash(i + vec3(1, 0, 1)), f.x), mix(ahash(i + vec3(0, 1, 1)), ahash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
   }
-  t = tex(c);
-  t.repeat.set(1, 1 / F);
-  AURA.set(color, t);
-  return t;
+`;
+const AURA_VERT = /* glsl */`
+  uniform float uTime, uSpeed;
+  varying float vH, vA;
+  varying vec3 vN, vV;
+  ${AURA_NOISE}
+  void main() {
+    vec3 p = position;
+    float h = clamp(p.y, 0.0, 1.0), t = uTime * uSpeed;
+    float a = atan(p.z, p.x);
+    // tongues licking up off the top, the whole shell breathing
+    float n = anoise(vec3(a * 2.0, h * 3.0 - t * 2.6, t * 0.4)) - 0.5;
+    p.xz *= 1.0 + n * 0.7 * h * h + 0.05 * sin(t * 9.0 + h * 6.0);
+    p.y *= 1.0 + 0.07 * sin(t * 7.3) + n * 0.25 * h * h;
+    vH = h; vA = a;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+const AURA_FRAG = /* glsl */`
+  uniform float uTime, uSpeed, uAlpha, uAdd;
+  uniform vec3 uColor;
+  varying float vH, vA;
+  varying vec3 vN, vV;
+  ${AURA_NOISE}
+  void main() {
+    float t = uTime * uSpeed;
+    float rim = 1.0 - abs(dot(normalize(vN), normalize(vV)));
+    // the top torn into tongues of flame, streaks running up the sides
+    float n = anoise(vec3(vA * 3.0, vH * 3.5 - t * 3.4, t * 0.6));
+    float s = anoise(vec3(vA * 9.0, vH * 1.6 - t * 2.4, 3.0));
+    float tongue = vH + (n - 0.5) * 0.7 * smoothstep(0.25, 1.0, vH);
+    if (tongue > 0.9) discard;
+    float a = pow(rim, 1.25) * 0.95 + 0.1 + smoothstep(0.55, 0.9, s) * 0.5;
+    a *= (1.0 - smoothstep(0.62, 0.9, tongue)) * smoothstep(0.0, 0.12, vH);
+    a *= uAlpha * (0.85 + 0.15 * sin(t * 12.0));
+    vec3 col = mix(uColor, vec3(1.0), (pow(rim, 3.0) * 0.5 + smoothstep(0.7, 0.95, s) * 0.35) * uAdd);
+    gl_FragColor = uAdd > 0.5 ? vec4(col * a * 1.6, a) : vec4(col, min(1.0, a * 1.3));
+  }
+`;
+const MOTE_VERT = /* glsl */`
+  attribute vec3 seed;
+  uniform float uTime, uPx, uH, uR;
+  varying float vLife;
+  void main() {
+    float life = fract(uTime * (0.35 + seed.z * 0.3) + seed.x);
+    float a = seed.y + life * 1.2;
+    vec3 p = vec3(cos(a) * uR * (0.75 + seed.z * 0.4), life * uH * 1.1, sin(a) * uR * (0.75 + seed.z * 0.4));
+    vLife = life;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    gl_PointSize = uPx * 0.07 * (1.0 - life * 0.6) / max(0.2, -mv.z);
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+const MOTE_FRAG = /* glsl */`
+  uniform vec3 uColor;
+  uniform float uAlpha, uAdd;
+  varying float vLife;
+  void main() {
+    float d = length(gl_PointCoord - 0.5) * 2.0;
+    if (d > 1.0) discard;
+    float a = (1.0 - d * d) * sin(vLife * 3.14159) * uAlpha;
+    vec3 c = mix(uColor, vec3(1.0), 0.35 * uAdd);
+    gl_FragColor = uAdd > 0.5 ? vec4(c * a * 1.4, a) : vec4(c, a * 0.8);
+  }
+`;
+let AURA_GEO = null, MOTES = null;
+/** The shell: wide through the shoulders, narrowing over the head (1 high, 1 across at the widest). */
+function auraGeo() {
+  if (AURA_GEO) return AURA_GEO;
+  const pts = [];
+  for (let i = 0; i <= 16; i++) {
+    const y = i / 16;
+    const r = 0.5 * (0.72 + 0.28 * Math.sin(Math.PI * Math.min(1, y * 1.25))) * (1 - 0.55 * y ** 3);
+    pts.push(new THREE.Vector2(Math.max(0.01, r), y));
+  }
+  AURA_GEO = new THREE.LatheGeometry(pts, 20);
+  return AURA_GEO;
 }
-const PLANE = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0);
+function moteGeo() {
+  if (MOTES) return MOTES;
+  const n = 16, seed = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { seed[i * 3] = (i * 0.618) % 1; seed[i * 3 + 1] = i * 2.399; seed[i * 3 + 2] = (i * 0.381) % 1; }
+  MOTES = new THREE.BufferGeometry();
+  MOTES.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+  MOTES.setAttribute('seed', new THREE.BufferAttribute(seed, 3));
+  MOTES.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 3);
+  return MOTES;
+}
+const _sz = new THREE.Vector2();
 export class Aura {
   constructor() {
-    this.mat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true });
-    this.mesh = new THREE.Mesh(PLANE, this.mat);
-    this.mesh.renderOrder = 2;
+    // (the shell and its motes sit in an inner group, centred on the body
+    // whatever offset the caller gives the outer one: see set)
+    this.mesh = new THREE.Group();
+    this.inner = new THREE.Group();
+    this.mesh.add(this.inner);
+    const u = { uTime: { value: 0 }, uSpeed: { value: 1 }, uAlpha: { value: 0.7 }, uAdd: { value: 1 }, uColor: { value: new THREE.Color() } };
+    this.mat = new THREE.ShaderMaterial({ uniforms: u, vertexShader: AURA_VERT, fragmentShader: AURA_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    this.shell = new THREE.Mesh(auraGeo(), this.mat);
+    this.shell.renderOrder = 2;
+    // (a second, looser shell outside it, fainter and quicker: depth to the blaze)
+    this.mat2 = this.mat.clone();
+    this.mat2.uniforms.uTime = u.uTime; this.mat2.uniforms.uColor = u.uColor; this.mat2.uniforms.uAdd = u.uAdd;
+    this.mat2.uniforms.uSpeed.value = 1.45;
+    this.outer = new THREE.Mesh(auraGeo(), this.mat2);
+    this.outer.renderOrder = 2;
+    this.moteMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: u.uTime, uAlpha: u.uAlpha, uAdd: u.uAdd, uColor: u.uColor, uPx: { value: 800 }, uH: { value: 2 }, uR: { value: 0.4 } },
+      vertexShader: MOTE_VERT, fragmentShader: MOTE_FRAG, transparent: true, depthWrite: false,
+    });
+    this.motes = new THREE.Points(moteGeo(), this.moteMat);
+    this.motes.frustumCulled = false;
+    this.motes.renderOrder = 3;
+    this.motes.onBeforeRender = (r, sc, cam) => {
+      r.getDrawingBufferSize(_sz);
+      this.moteMat.uniforms.uPx.value = _sz.y / (2 * Math.tan(((cam.fov || 60) * Math.PI) / 360));
+    };
+    this.inner.add(this.shell, this.outer, this.motes);
     this.color = null;
   }
+  /** color: the aura's css colour (its alpha how strong); height and width in the body's units; camYaw3: the camera's yaw. */
   set(color, t, height, width, camYaw3) {
     if (color !== this.color) {
       this.color = color;
-      this.mat.map = auraTex(color);
-      this.mat.blending = brightness(color) > 0.45 ? THREE.AdditiveBlending : THREE.NormalBlending;
-      this.mat.needsUpdate = true;
+      const { c, a } = parseCol(color);
+      this.mat.uniforms.uColor.value.set(c);
+      const add = brightness(color) > 0.45;
+      this.mat.uniforms.uAdd.value = add ? 1 : 0;
+      this.mat.uniforms.uAlpha.value = Math.min(1, 0.5 + a * 0.5);
+      this.mat2.uniforms.uAlpha.value = this.mat.uniforms.uAlpha.value * 0.45;
+      const bl = add ? THREE.AdditiveBlending : THREE.NormalBlending;
+      if (this.mat.blending !== bl) {
+        for (const m of [this.mat, this.mat2, this.moteMat]) { m.blending = bl; m.needsUpdate = true; }
+      }
     }
-    const f = Math.floor(t * 12) % 4;
-    this.mat.map.offset.set(0, f / 4);
-    this.mat.opacity = 0.55 + 0.2 * Math.sin(t * 10);
-    this.mesh.scale.set(width * (1 + 0.04 * Math.sin(t * 13)), height * (1 + 0.05 * Math.sin(t * 9)), 1);
-    this.mesh.rotation.set(0, camYaw3, 0);
+    this.mat.uniforms.uTime.value = t;
+    this.shell.scale.set(width * 0.62, height * 1.08, width * 0.62);
+    this.outer.scale.set(width * 0.74, height * 1.22, width * 0.74);
+    this.moteMat.uniforms.uH.value = height;
+    this.moteMat.uniforms.uR.value = width * 0.3;
+    // (the caller sets the outer group a little toward the camera, as it did a
+    // flat card's: the shell goes back round the body)
+    this.inner.position.set(Math.sin(camYaw3) * 0.3, 0.05, Math.cos(camYaw3) * 0.3);
   }
-  dispose() { this.mat.dispose(); }
+  dispose() { this.mat.dispose(); this.mat2.dispose(); this.moteMat.dispose(); }
 }
 
 // ------------------------------------------------------------------ status
@@ -247,12 +354,45 @@ export function rootRing() {
 }
 
 let SHIM = null;
-/** The curved guard shimmer in front of a blocking character. */
+const SHIM_VERT = /* glsl */`
+  varying vec2 vUv;
+  varying vec3 vN, vV;
+  void main() {
+    vUv = uv;
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+const SHIM_FRAG = /* glsl */`
+  uniform vec3 uColor;
+  uniform float uOpacity, uTime;
+  varying vec2 vUv;
+  varying vec3 vN, vV;
+  void main() {
+    // a curved sheet of light, soft all round its edges, brightest where it
+    // turns away from you, a faint pulse running up it
+    float edge = smoothstep(0.0, 0.22, vUv.x) * smoothstep(1.0, 0.78, vUv.x) * smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+    float rim = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);
+    float pulse = 0.5 + 0.5 * sin(vUv.y * 18.0 - uTime * 7.0);
+    float a = (0.4 + rim * 0.7 + pulse * 0.12) * edge * uOpacity;
+    gl_FragColor = vec4(uColor * (0.9 + rim * 0.6) * a, a);
+  }
+`;
+/** The curved guard shimmer in front of a blocking character (set its material's color and opacity). */
 export function guardShimmer() {
-  if (!SHIM) SHIM = new THREE.CylinderGeometry(0.62, 0.62, 1.3, 14, 1, true, -1.05 + Math.PI / 2, 2.1).translate(0, 0.65, 0);
-  const m = new THREE.MeshBasicMaterial({ color: 0x90caf9, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  if (!SHIM) SHIM = new THREE.CylinderGeometry(0.62, 0.62, 1.3, 24, 1, true, -1.05 + Math.PI / 2, 2.1).translate(0, 0.65, 0);
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color(0x90caf9) }, uOpacity: { value: 0.3 }, uTime: { value: 0 } },
+    vertexShader: SHIM_VERT, fragmentShader: SHIM_FRAG,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+  // (the caller sets .color and .opacity, as on a plain material: they're fed to the shader as it's drawn)
+  m.color = m.uniforms.uColor.value;
   const mesh = new THREE.Mesh(SHIM, m);
   mesh.renderOrder = 3;
+  mesh.onBeforeRender = () => { m.uniforms.uOpacity.value = m.opacity; m.uniforms.uTime.value = performance.now() / 1000; };
   return mesh;
 }
 

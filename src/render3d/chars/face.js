@@ -145,8 +145,14 @@ const SHADES = {
 export function expression(look, pose, P, t) {
   const st = pose && pose.state;
   if (st === 'knocked' || st === 'dead') return { eyes: 'ko', mouth: 'ko', brow: 'worried', small: false };
-  if (st === 'hurt') return { eyes: 'hurt', mouth: 'grimace', brow: 'worried', small: false };
   const face = P && P.face;
+  // a blow's own faces: wide-eyed and gaping when your attack is beaten aside
+  // or your guard smashed, screwed up at a blow landing, teeth gritted
+  // through a wind-up, a cold glare for Conqueror's Haki
+  if (face === 'shock') return { eyes: 'open', mouth: 'shout', brow: 'worried', small: true };
+  if (face === 'hurt' || st === 'hurt') return { eyes: 'hurt', mouth: 'grimace', brow: 'worried', small: false };
+  if (face === 'grit') return { eyes: 'fierce', mouth: 'grimace', brow: 'fierce', small: false };
+  if (face === 'glare') return { eyes: 'fierce', mouth: look.muzzle || look.race === 'mink' ? 'animal' : 'flat', brow: 'stern', small: false };
   const fierce = face === 'fierce' || face === 'shout';
   const s = (((look.seed || 0) * 0.6180339) % 1) * 0.9 + 0.1;
   const blink = !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;

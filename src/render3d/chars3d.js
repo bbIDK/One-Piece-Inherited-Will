@@ -18,15 +18,21 @@ import { Label, Marker, Glow, Aura, iceShell, Stars, rootRing, guardShimmer } fr
 import { SeaKingView } from './chars/seaking.js';
 import { SeaCowView, FightingFishView } from './chars/seacreature.js';
 import { Trail } from './chars/trail.js';
+import { BackFlame, driftInto } from './chars/flame.js';
 import { createViewmodel } from './chars/viewmodel.js';
 import { holdItem, heldSize } from './chars/helditem.js';
 import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
+import { blendPose } from '../render/anims.js';
 import { shipBob, shipLift } from '../world/hull.js';
 import { WakeTrail } from './wake3d.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _eyeP = new THREE.Vector3(), _eyeQ = new THREE.Quaternion();
+const _fq = new THREE.Quaternion(), _fq2 = new THREE.Quaternion();
+// knocked off your feet, on the way down (see ActorView.update): arched back
+// with the arms thrown up over the head, the legs going out from under you
+const FALLING = { ...LYING, l: -0.32, ht: -0.4, hF: [0.0, -0.33], hB: [-0.08, -0.29], eF: 0.5, eB: 0.5, fF: [0.17, -0.07], fB: [0.03, -0.02], face: 'hurt' };
 
 // ------------------------------------------------------------------ actor view
 /**
@@ -150,6 +156,12 @@ class ActorView {
       if (a.isPlayer && ctx.mode === 'first') {
         const pt = ctx.pitch || 0;
         o.tiltAdd += pt < 0 ? -pt * 0.55 : -pt * 0.3;
+        // (and a blow's own lean back, its step back and its hop barely move
+        // it: the view rides your head a beat behind, and a kick thrown
+        // leaning back left it out in front of your neck, looking down your
+        // own collar)
+        if ((P.l || 0) < 0 && pose.state !== 'knocked') o.leanAdd = (o.leanAdd || 0) - P.l;
+        o.lift *= 0.3;
       }
       this.drawing(pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
       // sit down (and get up) over a moment
@@ -170,12 +182,18 @@ class ActorView {
       } else if (a.fruit === 'gomu') o.reachR = this.stretchTarget(a, ctx, s);
       const knocked = pose.state === 'knocked' || pose.state === 'dead';
       let PP = P;
+      if (a.isPlayer && ctx.mode === 'first' && P.b && P.b[0] < 0) PP = { ...P, b: [P.b[0] * 0.3, P.b[1]] };
       if (knocked) {
         const kt = pose.knockT ?? 1;
         const fall = Math.min(1, kt / 0.28);
-        PP = LYING;
+        const bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) : 0;
+        // (going over: thrown back with the arms flung up and the knees giving,
+        // flat out by the time it hits the ground, the limbs flopping up off
+        // it with the bounce)
+        if (pose.state === 'knocked') PP = fall < 1 ? blendPose(FALLING, LYING, fall * fall) : bounce > 0 ? blendPose(LYING, FALLING, bounce * 0.3) : LYING;
+        else PP = LYING;
         o.lying = fall * fall;
-        o.bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) * 0.1 : 0;
+        o.bounce = bounce * 0.1;
         o.spread = 0.32 * fall; o.legSpread = 0.06 * fall;
         o.lift = 0; o.armed = false;
       }
@@ -264,6 +282,12 @@ class ActorView {
       this.root.updateMatrixWorld(true);
     }
     if (fp) this.eyeOffset(a, pose, ctx, env);
+    // (nor anything right up against your eyes — and while the view is still
+    // catching up with your head, a little further out: it rides it a beat
+    // behind, and a blow's lunge or a kick thrown leaning back left it behind
+    // your neck or out in front of it, looking down your own collar)
+    const lag = fp && ctx.camera && !pose.station ? ctx.camera.position.distanceTo(_eyeP) : 0;
+    u.uNear.value = fp ? 0.2 + clamp(lag * 1.5, 0, 0.25) : 0;
   }
 
   /** Where the eyes are on the posed body, in the scene (into _eyeP). */
@@ -409,20 +433,38 @@ class ActorView {
     m.mat.opacity = alpha;
     this.alpha = alpha;
     const near = dist < 45;
-    // aura
-    if (pose.aura && near) {
+    // aura (not round your own eyes in first person: the view's edges take its tint instead)
+    if (pose.aura && near && !(a.isPlayer && ctx.mode === 'first')) {
       if (!this.aura) { this.aura = new Aura(); this.root.add(this.aura.mesh); }
       this.aura.mesh.visible = true;
       this.aura.set(pose.aura, t, 2.25 * (1 + (m.d.hip0 - 0.93) * 0.5), 1.45 * m.d.Bk, camYaw3);
       this.aura.mesh.position.set(-Math.sin(camYaw3) * 0.3, -0.05 + o.lift, -Math.cos(camYaw3) * 0.3);
     } else if (this.aura) this.aura.mesh.visible = false;
-    // Lunarian back flame
-    if (this.look.backFlame && a.flameLit !== false && near) {
-      if (!this.backFlame) { this.backFlame = new Aura(); this.yaw.add(this.backFlame.mesh); }
-      this.backFlame.mesh.visible = true;
-      this.backFlame.set('rgba(255,112,40,0.95)', t + 1.3, 0.62, 0.62, camYaw3 - this.yaw.rotation.y);
-      this.backFlame.mesh.position.set(-0.24 * m.d.Bk, m.d.hip0 + m.d.chestLen * 0.72 + o.lift, 0);
-    } else if (this.backFlame) this.backFlame.mesh.visible = false;
+    // the Lunarian flame on the back, between the wings (out in the sea, and
+    // not over your own shoulders in first person: you'd be looking out of it)
+    const lit = !!this.look.backFlame && a.flameLit !== false && !a.inWater && !(a.isPlayer && ctx.mode === 'first');
+    if ((lit || this.backFlame?.grow > 0.02) && near) {
+      const chest = m.bones[B.chest];
+      if (!this.backFlame) this.backFlame = new BackFlame(a.seed || 0);
+      if (this.backFlame.group.parent !== chest) chest.add(this.backFlame.group);
+      // (rooted between the shoulder blades, riding the chest as it leans and
+      // turns — but fire burns upward, however the body's bent: the chest's
+      // lean and roll undone, the way they face kept)
+      this.backFlame.group.position.set(-0.15 * m.d.Bk, m.d.chestLen * 0.6, 0);
+      chest.updateWorldMatrix(true, false);
+      chest.getWorldQuaternion(_fq).invert();
+      this.backFlame.group.quaternion.copy(_fq).multiply(this.yaw.getWorldQuaternion(_fq2));
+      const fdt = Math.min(0.1, Math.max(0, t - (this.flameT ?? t)));
+      this.flameT = t;
+      // (the air going past: the way they're moving, from where they were a frame ago)
+      const w = ctx.world, px = this.flameX ?? a.x, py = this.flameY ?? a.y;
+      const k = fdt > 0 ? 1 / fdt : 0, mvx = (w ? w.dx(px, a.x) : a.x - px) * k, mvy = (a.y - py) * k;
+      this.flameX = a.x; this.flameY = a.y;
+      const sp = Math.hypot(mvx, mvy), lim = sp > 9 ? 9 / sp : 1;
+      driftInto(this.yaw, -mvx * lim * 0.05, -mvy * lim * 0.05, _v2);
+      _v2.x -= 0.08; // (and a little back off the shoulders even standing still)
+      this.backFlame.update(t, fdt, 1.1 * m.d.Bk, _v2, lit);
+    } else if (this.backFlame) this.backFlame.group.visible = false;
     // energy: charge-ups and element glows on the striking limb
     let gi = 0;
     const glow = (col, size, pos) => {

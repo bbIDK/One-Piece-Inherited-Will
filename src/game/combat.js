@@ -4,17 +4,69 @@
 //  * Logia users are intangible: physical hits pass through them unless the
 //    attacker uses Armament Haki, Seastone, or the Logia's elemental weakness
 //    (water for Crocodile's sand, rubber vs lightning, magma beats fire...).
-//  * Blocking reduces damage from the front; a well-timed block is a parry.
 //  * Rubber (Gomu Gomu) shrugs off blunt force and lightning.
+//
+// Guarding (the numbers are in difficulty.js, by where the fight is):
+//  * Holding block (F) takes a blow from the front for a little chip damage.
+//  * A PARRY: the guard raised on a fresh press of F just before the blow
+//    lands (within the tier's window; mashing F doesn't count — see
+//    Actor.setBlock). The attacker reels, posture broken, whatever else of
+//    that move was swinging stops, and your next blow on them within the reel
+//    is a COUNTER: more damage, through any guard, staggering even a boss.
+//    The first sliver of the window is a PERFECT parry: a beat of slow
+//    motion, a longer reel, a harder counter, and health and Haki back.
+//  * Guard-breaking blows (the red glint) smash a guard aside instead — they
+//    can't be parried: dodge them. Unblockable ones go straight through it.
+//    A blast (an explosion, a field of something) can be blocked, never parried.
+//  * A sword can turn a shot aside with a parry (one that doesn't go off).
+//  * A dodge at the last instant through a heavy blow is a PERFECT DODGE: a
+//    lesser counter on the foe who overreached.
+//  * No stun-locks: after a few blows in a row you break free for a moment.
 import { angleDiff, clamp, TAU } from '../core/math.js';
 import { hullGap, BIG_SHIP } from '../world/hull.js';
 import { hostile } from './entity.js';
+import { tierOf, PARRY } from './difficulty.js';
 
 const ELEMENT_COLORS = {
   physical: '#ffffff', fire: '#ff7b39', ice: '#9be7ff', lightning: '#fff176', sand: '#e1c16e', smoke: '#cfd8dc',
   light: '#fff9c4', magma: '#ff5722', dark: '#7e57c2', quake: '#e0f7fa', poison: '#aed581', water: '#4fc3f7', haki: '#9c27b0',
   slash: '#ecf0f1', explosion: '#ffab40', gas: '#b2dfdb', string: '#f8bbd0', wax: '#fff8e1', snow: '#ffffff', swamp: '#6d4c41',
 };
+
+// A flurry: blows landing on you each within FLURRY_GAP seconds of the last.
+// Breaking free of one leaves you untouchable for BREAK_IFRAMES.
+const FLURRY_GAP = 0.8;
+const BREAK_IFRAMES = 0.6;
+
+/**
+ * How long after a guard comes up a blow from `att` can still be parried by
+ * `tgt` (s), and the start of that which is perfect: the tier's, a little
+ * tighter against a far stronger foe (and wider against a weaker one), a
+ * little wider with Observation Haki on.
+ */
+export function parryWindow(game, att, tgt) {
+  const T = tierOf(game, tgt);
+  const ratio = att?.power && tgt.power ? att.power() / Math.max(1, tgt.power()) : 1;
+  const k = clamp(1.1 - 0.1 * ratio, 0.85, 1.1);
+  return { window: T.parry * k + (tgt.observation ? PARRY.observation : 0), perfect: T.perfect };
+}
+
+/** How heavy a blow is, ~0 (a jab) to 1.5 (a counter strike): what hit-stop, sparks and flinches are scaled by. */
+export function blowWeight(att, tgt, h, final, crit, counter) {
+  const def = h.def || (att && att.action ? att.action.def : null);
+  const m1 = !!(def && def.m1Chain && !h.sprite);
+  let w = m1 ? 0.22 : h.sprite ? 0.35 : 0.45;
+  if (m1 && (h.knockback ?? 0) >= 3.2) w = 0.52;
+  if (h.heavy) w = Math.max(w, 0.72);
+  if (h.guardBreak) w += 0.06;
+  if (h.impactFrame) w = Math.max(w, 1);
+  const maxHp = tgt.d ? tgt.d.maxHp : 100;
+  w += Math.min(0.3, (final / maxHp) * 1.2);
+  if (crit) w += 0.22;
+  if (h.interval) w *= 0.55;
+  w = Math.min(1.25, w);
+  return counter ? Math.min(1.5, w + 0.3) : w;
+}
 
 export class Combat {
   constructor(game) {
@@ -43,17 +95,24 @@ export class Combat {
     return p;
   }
 
+  /** Stop whatever of `a`'s blows are still swinging (a parried move: the rest of it never lands). */
+  cancelBlows(a) {
+    for (const h of this.hitboxes) if (h.owner === a && !h.blast) h.cancelled = true;
+  }
+
   update(dt) {
     const game = this.game;
     const actors = game.actorsNear(game.player ? game.player.x : 0, game.player ? game.player.y : 0, 60);
     for (let i = this.hitboxes.length - 1; i >= 0; i--) {
       const h = this.hitboxes[i];
+      if (h.cancelled) { this.hitboxes.splice(i, 1); continue; }
       h.t += dt;
       if (h.follow && h.owner && h.owner.alive) {
         h.x = h.owner.x + (h.offX || 0); h.y = h.owner.y + (h.offY || 0);
         if (h.followAngle) h.angle = h.owner.facing;
       }
       for (const a of actors) {
+        if (h.cancelled) break;
         if (!this.canHit(h.owner, a, h)) continue;
         if (!this.overlaps(h, a)) continue;
         if (h.interval) {
@@ -66,7 +125,7 @@ export class Combat {
         }
         this.applyHit(h.owner, a, h);
       }
-      if (h.hitShips) this.hitShips(h);
+      if (h.hitShips && !h.cancelled) this.hitShips(h);
       if (h.t >= h.duration) this.hitboxes.splice(i, 1);
     }
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -83,6 +142,7 @@ export class Combat {
       p.x = game.world.wx(p.x + sx); p.y += sy;
       p.traveled += Math.hypot(sx, sy);
       if (p.trail) p.trail(p, game);
+      if (p.isProj && !p.cued) this.shotGlint(p);
       let dead = p.traveled >= p.range || p.t > (p.life ?? 6);
       if (!p.passWalls && !dead) {
         const t = game.world.type(p.x, p.y);
@@ -111,6 +171,24 @@ export class Combat {
         this.projectiles.splice(i, 1);
       }
     }
+  }
+
+  /**
+   * A foe's shot about to reach you while you hold a sword: a glint on it,
+   * a tier's cueLead before it gets to you — the moment to turn it aside.
+   */
+  shotGlint(p) {
+    const game = this.game, pl = game.player, o = p.owner;
+    if (!pl || !o || o.isPlayer || o.faction === 'player' || p.explodes || p.unblockable || pl.state !== 'idle') return;
+    if (!pl.hasWeapon?.('sword') || !this.canHit(o, pl, p)) return;
+    const dx = game.world.dx(p.x, pl.x), dy = pl.y - 0.5 - p.y, d = Math.hypot(dx, dy);
+    const sp = Math.hypot(p.vx, p.vy) || 1;
+    if ((dx * p.vx + dy * p.vy) / (d * sp || 1) < 0.85) return;
+    const T = tierOf(game, pl);
+    if (d / sp > T.cueLead) return;
+    p.cued = true;
+    const k = pl.observation ? 1 : T.cue;
+    if (k > 0) game.fx.parryCue?.({ x: p.x, y: p.y, z: 0.9, follow: p }, false, k * 0.8);
   }
 
   canHit(owner, target, h) {
@@ -166,15 +244,27 @@ export class Combat {
   applyHit(att, tgt, h) {
     const game = this.game;
     const fx = game.fx;
+    const now = game.env ? game.env.time : game.time;
     const el = h.element || 'physical';
     const isPlayerInvolved = (att && att.isPlayer) || tgt.isPlayer;
     const ang = h.angle ?? (att ? Math.atan2(tgt.y - att.y, game.world.dx(att.x, tgt.x)) : 0);
     const kbAng = h.shape === 'circle' || h.radial ? Math.atan2(tgt.y - h.y, game.world.dx(h.x, tgt.x)) : ang;
 
-    // dodge i-frames
+    // dodge i-frames (and the moment after a parry or breaking free: nothing gets through, quietly)
     if (tgt.iframes > 0) {
-      if (tgt.isPlayer || att?.isPlayer) fx.text(tgt.x, tgt.y - 1.2, 'DODGE', '#b2ebf2', 0.32);
-      if (tgt.isPlayer) game.emit('playerEvaded', att, h);
+      const quiet = (game.time || 0) < (tgt.quietUntil ?? -1);
+      // a dodge at the last instant through a heavy, guard-smashing blow: the
+      // foe overreaches, and your next blow on them is a counter (a lesser one;
+      // foes earn it too, but never in the Blues)
+      const d = tgt.dash;
+      const perfect = !quiet && !!att && !!d?.dodge && d.t0 - d.t <= PARRY.dodgeWindow && (h.guardBreak || h.unblockable || h.heavy) && h.vx === undefined && !h.blast
+        && att.state === 'idle' && game.world.distance(att.x, att.y, tgt.x, tgt.y) < 4 && (tgt.isPlayer || tierOf(game, tgt).npcParry > 0);
+      if (perfect) {
+        tgt.counterOn = att; tgt.counterLeft = PARRY.dodgeCounter; tgt.counterMul = PARRY.dodgeCounterMul;
+        fx.perfectDodge?.(tgt, att);
+        if (tgt.isPlayer) game.hint('perfectdodge', 'PERFECT DODGE! Slipping a heavy blow at the last instant leaves them overreaching — your next strike is a COUNTER.');
+      } else if (!quiet && (tgt.isPlayer || att?.isPlayer)) fx.text(tgt.x, tgt.y - 1.2, 'DODGE', '#b2ebf2', 0.32);
+      if (!quiet && tgt.isPlayer) game.emit('playerEvaded', att, h);
       return false;
     }
     // Observation Haki auto-evade
@@ -220,21 +310,32 @@ export class Combat {
     // defence stat
     dmg *= 1 - (tgt.d ? tgt.d.def : 0);
     if (tgt.defMul) dmg *= tgt.defMul;
+    // how hard the fight is where it happens: a foe's blows land softer on you
+    // (and your crew) in the gentler seas
+    const T = tierOf(game, tgt);
+    if (att && !att.isPlayer && att.faction !== 'player' && (tgt.isPlayer || tgt.faction === 'player')) dmg *= T.dmg;
+
+    // a counter strike: the first blow you land on a foe reeling from your parry
+    const counter = !!att && att.counterOn === tgt && att.counterLeft > 0;
+    if (counter) dmg *= att.counterMul || PARRY.counterMul;
 
     // block / parry
     let blocked = false;
-    if (tgt.blocking && !h.unblockable) {
+    if (tgt.blocking && !h.unblockable && !counter) {
       const facingDiff = Math.abs(angleDiff(tgt.facing, ang + Math.PI));
       if (facingDiff < 1.9) {
-        if (tgt.blockTime < 0.2 && att && !h.projectileOnly) {
-          // PARRY
-          att.stagger(0.9);
-          if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + 6);
-          fx.parry(tgt, att, ang); // flash, ring, "PARRY!", hit-stop and a beat of slow motion
-          game.audio?.sfx('parry', tgt);
-          if (tgt.isPlayer) game.onPlayerParry(att);
+        const pw = parryWindow(game, att, tgt);
+        const inWindow = tgt.blockTime <= pw.window;
+        // (a blast can't be parried, nor a guard-breaking blow; a shot only by
+        // a sword, and only one that doesn't go off)
+        const blast = h.blast || (h.radial && !h.follow);
+        const shot = h.isProj || h.vx !== undefined;
+        const parryable = !!att && !blast && !h.guardBreak && (!shot || (!h.explodes && !h.onEnd && !!tgt.hasWeapon?.('sword')));
+        if (parryable && inWindow && tgt.guardFresh) {
+          this.parry(att, tgt, h, ang, tgt.blockTime <= pw.perfect);
           return false;
         }
+        if (tgt.isPlayer && parryable && inWindow && !tgt.guardFresh) game.hint('mash', 'Not a parry — that guard wasn\'t fresh. A parry takes one clean press of F as the blow lands: not mashed, not held through your own swing.');
         blocked = true;
         if (tgt.isPlayer) game.emit('playerBlocked', att, h);
         if (h.guardBreak) {
@@ -243,10 +344,14 @@ export class Combat {
           dmg *= 0.6;
           tgt.blocking = false;
           tgt.guardCd = tgt.guardCooldown();
-          tgt.stagger(1.1);
+          tgt.guardBrokenT = now;
+          tgt.stagger(tgt.isPlayer ? T.gbStun : 1.1);
           fx.guardBreak(tgt, att, ang); // shattered guard, "GUARD BREAK", a jolt
           game.audio?.sfx('guardbreak', tgt);
-          if (tgt.isPlayer) game.hint('guardbreak', 'A heavy blow smashes a guard aside — and it can\'t come up again until the F slot fills. Watch for the red glint and dodge (Q) those instead.');
+          if (tgt.isPlayer) {
+            game.emit('playerGuardBroken', att, h);
+            game.hint('guardbreak', 'GUARD BREAK! A red-glint blow smashes a guard aside — and it can\'t come up again until the F slot fills. Dodge (Q) those instead.');
+          }
         } else {
           dmg *= tgt.guardChip();
           game.audio?.sfx('block', tgt);
@@ -259,23 +364,106 @@ export class Combat {
     if (crit) dmg *= 1.6;
     const final = Math.round(dmg);
     tgt.takeDamage(final, att, h, game);
+    const w = blowWeight(att, tgt, h, final, crit, counter);
 
     // knockback & stun
     if (!blocked) {
       const kb = (h.knockback ?? 2) * (tgt.kbResist ?? 1);
       if (kb > 0) tgt.knock(Math.cos(kbAng) * kb, Math.sin(kbAng) * kb, h.forceWater);
-      if (h.stun && !(tgt.poise && !h.guardBreak && h.stun < 0.6)) tgt.stagger(h.stun * (tgt.stunResist ?? 1));
+      // (a counter staggers through a boss's poise; and no one blow holds you longer than a flurry may)
+      let stun = counter ? Math.max(h.stun || 0, PARRY.counterStun) : h.stun;
+      if (tgt.isPlayer && stun > T.stunCap) stun = T.stunCap;
+      if (stun && (counter || !(tgt.poise && !h.guardBreak && stun < 0.6))) tgt.stagger(stun * (tgt.stunResist ?? 1));
       if (h.status) for (const [k, v] of Object.entries(h.status)) tgt.addStatus(k, v, att);
       if (h.onHit) h.onHit(tgt, att, game, h);
+      if (final > 0 || h.trueDamage) { tgt.hitT = now; tgt.hitDir = kbAng; tgt.hitW = w; }
+      if (tgt.isPlayer && tgt.state === 'idle') this.flurry(tgt, att, kbAng, T);
+    }
+    if (counter) {
+      att.counterOn = null; att.counterLeft = 0;
+      att.counterT = now;
+      fx.counter?.(att, tgt, kbAng, w);
+      if (att.isPlayer) game.emit('playerCounter', tgt, final);
     }
 
     // feedback: impact star, sparks, hit-stop, camera kick and a combined damage
     // number, all scaled by the weight of the blow (see render/combatfx.js)
-    fx.hit(att, tgt, h, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved });
-    if (att?.isPlayer) game.emit('playerLanded', tgt, { final, crit, blocked });
+    fx.hit(att, tgt, h, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved, w, counter });
+    if (att?.isPlayer) game.emit('playerLanded', tgt, { final, crit, blocked, counter });
     const thud = h.slashing ? (h.heavy ? 'slash_heavy' : 'slash_hit') : (h.heavy ? 'punch_heavy' : 'punch');
     game.audio?.sfx(blocked ? 'block' : h.sfxHit || (el === 'physical' ? thud : el), tgt);
     return true;
+  }
+
+  /**
+   * `tgt` parries `att`'s blow: `att` reels, posture broken (the rest of the
+   * move stops), and `tgt`'s next blow on them while they reel is a counter.
+   * A sword against a shot turns it aside instead (nobody reels: the shooter
+   * is over there). A perfect parry reels them longer, makes the counter
+   * harder and gives back health and Haki.
+   */
+  parry(att, tgt, h, ang, perfect) {
+    const game = this.game, fx = game.fx;
+    const now = game.env ? game.env.time : game.time;
+    tgt.parryT = now;
+    tgt.parryPerfect = perfect;
+    // (the next press of F is fresh however soon; and nothing else of this blow gets through)
+    tgt.parryEarned = true;
+    tgt.iframes = Math.max(tgt.iframes, 0.12);
+    tgt.quietUntil = (game.time || 0) + 0.12;
+    if (h.isProj || h.vx !== undefined) {
+      fx.deflect?.(tgt, h, ang, perfect);
+      game.audio?.sfx('parry', tgt);
+      if (tgt.isPlayer) game.onPlayerParry(att);
+      return;
+    }
+    const reel = (att.isPlayer ? PARRY.playerReel : PARRY.reel * (att.boss ? PARRY.bossReel : 1)) + (perfect ? PARRY.perfectReel : 0);
+    this.cancelBlows(att);
+    att.dash = null;
+    att.parriedT = now;
+    att.stagger(reel);
+    // (the blow rebounds: a shove back the way it came)
+    const back = ang + Math.PI;
+    att.knock(Math.cos(back) * 2.5, Math.sin(back) * 2.5);
+    tgt.counterOn = att;
+    tgt.counterLeft = reel;
+    tgt.counterMul = perfect ? PARRY.perfectCounterMul : PARRY.counterMul;
+    if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + (perfect ? PARRY.haki : PARRY.parryHaki));
+    if (perfect && tgt.d) tgt.heal(Math.max(1, Math.round(tgt.d.maxHp * PARRY.heal)), game);
+    fx.parry(tgt, att, ang, perfect); // flash, ring, "PARRY!", hit-stop (and, perfect, a beat of slow motion)
+    game.audio?.sfx('parry', tgt);
+    if (tgt.isPlayer) {
+      game.onPlayerParry(att);
+      game.hint('parried', 'PARRIED! They reel — strike now: your next blow is a COUNTER, harder and through any guard. Parry at the very last instant for a PERFECT parry.');
+    }
+    if (att.isPlayer) {
+      game.emit('playerParried', tgt);
+      game.hint('foeparry', 'Your blow was PARRIED — you reel, wide open. Out past the Blues, foes read your swings too: don\'t hammer at a guard that has just come up.');
+    }
+  }
+
+  /**
+   * No stun-locks: blows landing on you one after another (each within
+   * FLURRY_GAP of the last) are a flurry. After a tier's stunHits of them,
+   * or stunCap seconds of it with you still reeling, you break free: the
+   * stagger shaken off, a moment untouchable, shoved a step clear.
+   */
+  flurry(tgt, att, ang, T) {
+    const game = this.game, now = game.time || 0;
+    const f = tgt.flurryRun || (tgt.flurryRun = { n: 0, t0: now, last: -Infinity });
+    if (now - f.last > FLURRY_GAP) { f.n = 0; f.t0 = now; }
+    f.n++; f.last = now;
+    if (!(tgt.hitstun > 0) || (f.n < T.stunHits && now - f.t0 < T.stunCap)) return;
+    f.n = 0; f.t0 = now; f.last = -Infinity;
+    tgt.hitstun = 0;
+    tgt.iframes = Math.max(tgt.iframes, BREAK_IFRAMES);
+    tgt.quietUntil = now + BREAK_IFRAMES;
+    tgt.knock(Math.cos(ang) * 3, Math.sin(ang) * 3);
+    game.fx.breakFree?.(tgt);
+    if (tgt.isPlayer) {
+      game.emit('playerBrokeFree', att);
+      game.hint('breakfree', 'You shook free of the flurry! Nobody can keep you pinned for long — use the moment to dodge clear or hit back.');
+    }
   }
 }
 

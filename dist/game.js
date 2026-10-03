@@ -39089,19 +39089,19 @@ void main() {
   function cbox(w, h2, d) {
     return new BoxGeometry(w, h2, d);
   }
-  function cyl(rTop, rBot, h2, seg = 8, open = false, hSeg = 1) {
-    const g = new CylinderGeometry(rTop, rBot, h2, seg, hSeg, open);
+  function cyl(rTop, rBot, h2, seg2 = 8, open = false, hSeg = 1) {
+    const g = new CylinderGeometry(rTop, rBot, h2, seg2, hSeg, open);
     g.translate(0, h2 / 2, 0);
     return g;
   }
-  function cone(r, h2, seg = 8, open = false, hSeg = 1) {
-    return cyl(0, r, h2, seg, open, hSeg);
+  function cone(r, h2, seg2 = 8, open = false, hSeg = 1) {
+    return cyl(0, r, h2, seg2, open, hSeg);
   }
   function blob(r, detail = 1) {
     return new IcosahedronGeometry(r, detail);
   }
-  function lathe(pts, seg = 10) {
-    return new LatheGeometry(pts.map(([r, y]) => new Vector2(Math.max(1e-4, r), y)), seg);
+  function lathe(pts, seg2 = 10) {
+    return new LatheGeometry(pts.map(([r, y]) => new Vector2(Math.max(1e-4, r), y)), seg2);
   }
   function torus(R4, r, rs = 6, ts = 12, arc = Math.PI * 2) {
     return new TorusGeometry(R4, r, rs, ts, arc);
@@ -43084,9 +43084,9 @@ ${GLSL}
     k.add(cyl(r * 0.55, r * 0.55, cw + 0.08, 8), { at: [-(cw + 0.08) / 2, ay, zc], rot: [0, 0, -Math.PI / 2], color: iron });
     return { muzzle: zc + zb + s * Lb, ay };
   }
-  function shotPile(k, P5, r = 0.075, seg = 8) {
+  function shotPile(k, P5, r = 0.075, seg2 = 8) {
     k.add(box(r * 7.4, 0.08, r * 5.4), { color: P5.wood, outline: 8e-3 });
-    const ball = new SphereGeometry(r, seg, Math.max(4, seg - 2));
+    const ball = new SphereGeometry(r, seg2, Math.max(4, seg2 - 2));
     let y = 0.08 + r;
     for (let layer = 0, n = 3; n > 0; layer++, n--) {
       for (let i = 0; i < n + 1; i++) for (let j = 0; j < n; j++) {
@@ -45611,6 +45611,135 @@ ${GLSL}
     return fa && fa.has(b.faction) || fb && fb.has(a.faction) || false;
   }
 
+  // src/game/difficulty.js
+  var TIERS = {
+    blue: {
+      id: "blue",
+      // the parry: how long after the guard comes up a blow can still be parried
+      // (s), the start of that which is a perfect parry, and how plain the glint
+      // that shows the moment is (1: unmissable; Observation Haki makes it so anywhere)
+      parry: 0.3,
+      perfect: 0.09,
+      cue: 1,
+      cueLead: 0.36,
+      // foes' wind-ups (s): the first blow of a string at least windupMin, a
+      // longer one stretched (× windupMul + windupAdd); a follow-up in a combo at least chainWindup
+      windupMin: 0.46,
+      windupMul: 1.15,
+      windupAdd: 0.05,
+      chainWindup: 0.26,
+      // pacing: the pause between a foe's attacks (×), how many more blows they
+      // may string onto one (at most), the gap they leave after a big move (s),
+      // how much less often they guard, and their parries (chance a guard is one)
+      think: 1.8,
+      combo: 1,
+      rest: 0.9,
+      block: 0.5,
+      npcParry: 0,
+      // what their blows do to you (×), a boss's guard-breaking blows at least this
+      // far apart (s), how close a gunner will still shoot you from (nearer, they
+      // back off first) and how fast they back off (× their pace)
+      dmg: 0.62,
+      breakGap: 6,
+      closeShot: 2.4,
+      backpedal: 0.55,
+      // a flurry: after this many blows in a row (or this long held stunned — the
+      // longest any one blow can stun you, too) you break free;
+      // a smashed guard staggers you this long (s); this many foes may go for you at once
+      stunHits: 3,
+      stunCap: 1,
+      gbStun: 0.6,
+      turns: 1
+    },
+    paradise: {
+      id: "paradise",
+      parry: 0.25,
+      perfect: 0.07,
+      cue: 0.6,
+      cueLead: 0.3,
+      windupMin: 0.26,
+      windupMul: 1.08,
+      windupAdd: 0.03,
+      chainWindup: 0.14,
+      think: 1.2,
+      combo: 2,
+      rest: 0.5,
+      block: 0.8,
+      npcParry: 0.15,
+      dmg: 0.9,
+      breakGap: 3.5,
+      closeShot: 1.6,
+      backpedal: 0.75,
+      stunHits: 4,
+      stunCap: 1.4,
+      gbStun: 0.85,
+      turns: 2
+    },
+    newWorld: {
+      id: "newWorld",
+      parry: 0.21,
+      perfect: 0.06,
+      cue: 0.35,
+      cueLead: 0.26,
+      windupMin: 0.16,
+      windupMul: 1,
+      windupAdd: 0,
+      chainWindup: 0.07,
+      think: 1,
+      combo: 2,
+      rest: 0.25,
+      block: 1,
+      npcParry: 0.3,
+      dmg: 1,
+      breakGap: 1.5,
+      closeShot: 0,
+      backpedal: 0.9,
+      stunHits: 5,
+      stunCap: 1.8,
+      gbStun: 1.1,
+      turns: 3
+    }
+  };
+  var PARRY = {
+    lockout: 0.35,
+    // s: a guard raised again sooner than this after F was let go has no parry in it (mashing doesn't work)
+    buffer: 0.3,
+    // s: a press made while the guard can't come up yet (a basic swing's follow-through) still counts if it comes up this soon
+    observation: 0.04,
+    // s more to parry in with Observation Haki on
+    reel: 1,
+    // s a parried foe reels, posture broken (a boss for 0.7 of it; a perfect parry adds perfectReel)
+    perfectReel: 0.3,
+    bossReel: 0.7,
+    playerReel: 0.6,
+    // s you reel when a foe parries you
+    counterMul: 1.5,
+    perfectCounterMul: 1.8,
+    // the counter strike's damage
+    counterStun: 0.5,
+    // s it staggers them (through a boss's poise)
+    heal: 0.05,
+    haki: 8,
+    parryHaki: 3,
+    // a perfect parry gives back this much health (of the max) and Haki; a parry, Haki
+    // a perfect dodge: a heavy, guard-smashing blow slipped within this long of
+    // starting the dodge (s) earns a counter of this long and this much
+    dodgeWindow: 0.1,
+    dodgeCounter: 0.8,
+    dodgeCounterMul: 1.3
+  };
+  function tierAt(game, x, y) {
+    if (!game?.world || game.surface && game.world !== game.surface) return TIERS.paradise;
+    const r = regionAt(x, y);
+    return isBlue(r) ? TIERS.blue : r === REGION.NEW_WORLD ? TIERS.newWorld : TIERS.paradise;
+  }
+  var tierOf = (game, a) => tierAt(game, a.x, a.y);
+  function stretchWindup(T4, w, chained) {
+    if (!(w > 0)) return w;
+    if (chained) return Math.max(T4.chainWindup, w);
+    return Math.max(T4.windupMin, w * T4.windupMul + T4.windupAdd);
+  }
+
   // src/game/combat.js
   var ELEMENT_COLORS = {
     physical: "#ffffff",
@@ -45634,6 +45763,29 @@ ${GLSL}
     snow: "#ffffff",
     swamp: "#6d4c41"
   };
+  var FLURRY_GAP = 0.8;
+  var BREAK_IFRAMES = 0.6;
+  function parryWindow(game, att, tgt) {
+    const T4 = tierOf(game, tgt);
+    const ratio = att?.power && tgt.power ? att.power() / Math.max(1, tgt.power()) : 1;
+    const k = clamp2(1.1 - 0.1 * ratio, 0.85, 1.1);
+    return { window: T4.parry * k + (tgt.observation ? PARRY.observation : 0), perfect: T4.perfect };
+  }
+  function blowWeight(att, tgt, h2, final, crit, counter) {
+    const def = h2.def || (att && att.action ? att.action.def : null);
+    const m12 = !!(def && def.m1Chain && !h2.sprite);
+    let w = m12 ? 0.22 : h2.sprite ? 0.35 : 0.45;
+    if (m12 && (h2.knockback ?? 0) >= 3.2) w = 0.52;
+    if (h2.heavy) w = Math.max(w, 0.72);
+    if (h2.guardBreak) w += 0.06;
+    if (h2.impactFrame) w = Math.max(w, 1);
+    const maxHp = tgt.d ? tgt.d.maxHp : 100;
+    w += Math.min(0.3, final / maxHp * 1.2);
+    if (crit) w += 0.22;
+    if (h2.interval) w *= 0.55;
+    w = Math.min(1.25, w);
+    return counter ? Math.min(1.5, w + 0.3) : w;
+  }
   var Combat = class {
     constructor(game) {
       this.game = game;
@@ -45658,11 +45810,19 @@ ${GLSL}
       this.projectiles.push(p);
       return p;
     }
+    /** Stop whatever of `a`'s blows are still swinging (a parried move: the rest of it never lands). */
+    cancelBlows(a) {
+      for (const h2 of this.hitboxes) if (h2.owner === a && !h2.blast) h2.cancelled = true;
+    }
     update(dt) {
       const game = this.game;
       const actors = game.actorsNear(game.player ? game.player.x : 0, game.player ? game.player.y : 0, 60);
       for (let i = this.hitboxes.length - 1; i >= 0; i--) {
         const h2 = this.hitboxes[i];
+        if (h2.cancelled) {
+          this.hitboxes.splice(i, 1);
+          continue;
+        }
         h2.t += dt;
         if (h2.follow && h2.owner && h2.owner.alive) {
           h2.x = h2.owner.x + (h2.offX || 0);
@@ -45670,6 +45830,7 @@ ${GLSL}
           if (h2.followAngle) h2.angle = h2.owner.facing;
         }
         for (const a of actors) {
+          if (h2.cancelled) break;
           if (!this.canHit(h2.owner, a, h2)) continue;
           if (!this.overlaps(h2, a)) continue;
           if (h2.interval) {
@@ -45682,7 +45843,7 @@ ${GLSL}
           }
           this.applyHit(h2.owner, a, h2);
         }
-        if (h2.hitShips) this.hitShips(h2);
+        if (h2.hitShips && !h2.cancelled) this.hitShips(h2);
         if (h2.t >= h2.duration) this.hitboxes.splice(i, 1);
       }
       for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -45701,6 +45862,7 @@ ${GLSL}
         p.y += sy;
         p.traveled += Math.hypot(sx, sy);
         if (p.trail) p.trail(p, game);
+        if (p.isProj && !p.cued) this.shotGlint(p);
         let dead = p.traveled >= p.range || p.t > (p.life ?? 6);
         if (!p.passWalls && !dead) {
           const t = game.world.type(p.x, p.y);
@@ -45736,6 +45898,23 @@ ${GLSL}
           this.projectiles.splice(i, 1);
         }
       }
+    }
+    /**
+     * A foe's shot about to reach you while you hold a sword: a glint on it,
+     * a tier's cueLead before it gets to you — the moment to turn it aside.
+     */
+    shotGlint(p) {
+      const game = this.game, pl = game.player, o = p.owner;
+      if (!pl || !o || o.isPlayer || o.faction === "player" || p.explodes || p.unblockable || pl.state !== "idle") return;
+      if (!pl.hasWeapon?.("sword") || !this.canHit(o, pl, p)) return;
+      const dx = game.world.dx(p.x, pl.x), dy = pl.y - 0.5 - p.y, d = Math.hypot(dx, dy);
+      const sp = Math.hypot(p.vx, p.vy) || 1;
+      if ((dx * p.vx + dy * p.vy) / (d * sp || 1) < 0.85) return;
+      const T4 = tierOf(game, pl);
+      if (d / sp > T4.cueLead) return;
+      p.cued = true;
+      const k = pl.observation ? 1 : T4.cue;
+      if (k > 0) game.fx.parryCue?.({ x: p.x, y: p.y, z: 0.9, follow: p }, false, k * 0.8);
     }
     canHit(owner, target2, h2) {
       if (!target2.alive || target2 === owner) return false;
@@ -45786,13 +45965,23 @@ ${GLSL}
     applyHit(att, tgt, h2) {
       const game = this.game;
       const fx = game.fx;
+      const now3 = game.env ? game.env.time : game.time;
       const el = h2.element || "physical";
       const isPlayerInvolved = att && att.isPlayer || tgt.isPlayer;
       const ang = h2.angle ?? (att ? Math.atan2(tgt.y - att.y, game.world.dx(att.x, tgt.x)) : 0);
       const kbAng = h2.shape === "circle" || h2.radial ? Math.atan2(tgt.y - h2.y, game.world.dx(h2.x, tgt.x)) : ang;
       if (tgt.iframes > 0) {
-        if (tgt.isPlayer || att?.isPlayer) fx.text(tgt.x, tgt.y - 1.2, "DODGE", "#b2ebf2", 0.32);
-        if (tgt.isPlayer) game.emit("playerEvaded", att, h2);
+        const quiet = (game.time || 0) < (tgt.quietUntil ?? -1);
+        const d = tgt.dash;
+        const perfect = !quiet && !!att && !!d?.dodge && d.t0 - d.t <= PARRY.dodgeWindow && (h2.guardBreak || h2.unblockable || h2.heavy) && h2.vx === void 0 && !h2.blast && att.state === "idle" && game.world.distance(att.x, att.y, tgt.x, tgt.y) < 4 && (tgt.isPlayer || tierOf(game, tgt).npcParry > 0);
+        if (perfect) {
+          tgt.counterOn = att;
+          tgt.counterLeft = PARRY.dodgeCounter;
+          tgt.counterMul = PARRY.dodgeCounterMul;
+          fx.perfectDodge?.(tgt, att);
+          if (tgt.isPlayer) game.hint("perfectdodge", "PERFECT DODGE! Slipping a heavy blow at the last instant leaves them overreaching \u2014 your next strike is a COUNTER.");
+        } else if (!quiet && (tgt.isPlayer || att?.isPlayer)) fx.text(tgt.x, tgt.y - 1.2, "DODGE", "#b2ebf2", 0.32);
+        if (!quiet && tgt.isPlayer) game.emit("playerEvaded", att, h2);
         return false;
       }
       if (tgt.observation && tgt.hakiLevel("observation") > 0 && !h2.unblockable) {
@@ -45832,28 +46021,38 @@ ${GLSL}
       if (tgt.armament) dmg *= 1 - Math.min(0.35, 0.12 + tgt.hakiLevel("armament") * 25e-4);
       dmg *= 1 - (tgt.d ? tgt.d.def : 0);
       if (tgt.defMul) dmg *= tgt.defMul;
+      const T4 = tierOf(game, tgt);
+      if (att && !att.isPlayer && att.faction !== "player" && (tgt.isPlayer || tgt.faction === "player")) dmg *= T4.dmg;
+      const counter = !!att && att.counterOn === tgt && att.counterLeft > 0;
+      if (counter) dmg *= att.counterMul || PARRY.counterMul;
       let blocked = false;
-      if (tgt.blocking && !h2.unblockable) {
+      if (tgt.blocking && !h2.unblockable && !counter) {
         const facingDiff = Math.abs(angleDiff(tgt.facing, ang + Math.PI));
         if (facingDiff < 1.9) {
-          if (tgt.blockTime < 0.2 && att && !h2.projectileOnly) {
-            att.stagger(0.9);
-            if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + 6);
-            fx.parry(tgt, att, ang);
-            game.audio?.sfx("parry", tgt);
-            if (tgt.isPlayer) game.onPlayerParry(att);
+          const pw = parryWindow(game, att, tgt);
+          const inWindow = tgt.blockTime <= pw.window;
+          const blast = h2.blast || h2.radial && !h2.follow;
+          const shot = h2.isProj || h2.vx !== void 0;
+          const parryable = !!att && !blast && !h2.guardBreak && (!shot || !h2.explodes && !h2.onEnd && !!tgt.hasWeapon?.("sword"));
+          if (parryable && inWindow && tgt.guardFresh) {
+            this.parry(att, tgt, h2, ang, tgt.blockTime <= pw.perfect);
             return false;
           }
+          if (tgt.isPlayer && parryable && inWindow && !tgt.guardFresh) game.hint("mash", "Not a parry \u2014 that guard wasn't fresh. A parry takes one clean press of F as the blow lands: not mashed, not held through your own swing.");
           blocked = true;
           if (tgt.isPlayer) game.emit("playerBlocked", att, h2);
           if (h2.guardBreak) {
             dmg *= 0.6;
             tgt.blocking = false;
             tgt.guardCd = tgt.guardCooldown();
-            tgt.stagger(1.1);
+            tgt.guardBrokenT = now3;
+            tgt.stagger(tgt.isPlayer ? T4.gbStun : 1.1);
             fx.guardBreak(tgt, att, ang);
             game.audio?.sfx("guardbreak", tgt);
-            if (tgt.isPlayer) game.hint("guardbreak", "A heavy blow smashes a guard aside \u2014 and it can't come up again until the F slot fills. Watch for the red glint and dodge (Q) those instead.");
+            if (tgt.isPlayer) {
+              game.emit("playerGuardBroken", att, h2);
+              game.hint("guardbreak", "GUARD BREAK! A red-glint blow smashes a guard aside \u2014 and it can't come up again until the F slot fills. Dodge (Q) those instead.");
+            }
           } else {
             dmg *= tgt.guardChip();
             game.audio?.sfx("block", tgt);
@@ -45865,18 +46064,107 @@ ${GLSL}
       if (crit) dmg *= 1.6;
       const final = Math.round(dmg);
       tgt.takeDamage(final, att, h2, game);
+      const w = blowWeight(att, tgt, h2, final, crit, counter);
       if (!blocked) {
         const kb = (h2.knockback ?? 2) * (tgt.kbResist ?? 1);
         if (kb > 0) tgt.knock(Math.cos(kbAng) * kb, Math.sin(kbAng) * kb, h2.forceWater);
-        if (h2.stun && !(tgt.poise && !h2.guardBreak && h2.stun < 0.6)) tgt.stagger(h2.stun * (tgt.stunResist ?? 1));
+        let stun = counter ? Math.max(h2.stun || 0, PARRY.counterStun) : h2.stun;
+        if (tgt.isPlayer && stun > T4.stunCap) stun = T4.stunCap;
+        if (stun && (counter || !(tgt.poise && !h2.guardBreak && stun < 0.6))) tgt.stagger(stun * (tgt.stunResist ?? 1));
         if (h2.status) for (const [k, v] of Object.entries(h2.status)) tgt.addStatus(k, v, att);
         if (h2.onHit) h2.onHit(tgt, att, game, h2);
+        if (final > 0 || h2.trueDamage) {
+          tgt.hitT = now3;
+          tgt.hitDir = kbAng;
+          tgt.hitW = w;
+        }
+        if (tgt.isPlayer && tgt.state === "idle") this.flurry(tgt, att, kbAng, T4);
       }
-      fx.hit(att, tgt, h2, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved });
-      if (att?.isPlayer) game.emit("playerLanded", tgt, { final, crit, blocked });
+      if (counter) {
+        att.counterOn = null;
+        att.counterLeft = 0;
+        att.counterT = now3;
+        fx.counter?.(att, tgt, kbAng, w);
+        if (att.isPlayer) game.emit("playerCounter", tgt, final);
+      }
+      fx.hit(att, tgt, h2, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved, w, counter });
+      if (att?.isPlayer) game.emit("playerLanded", tgt, { final, crit, blocked, counter });
       const thud = h2.slashing ? h2.heavy ? "slash_heavy" : "slash_hit" : h2.heavy ? "punch_heavy" : "punch";
       game.audio?.sfx(blocked ? "block" : h2.sfxHit || (el === "physical" ? thud : el), tgt);
       return true;
+    }
+    /**
+     * `tgt` parries `att`'s blow: `att` reels, posture broken (the rest of the
+     * move stops), and `tgt`'s next blow on them while they reel is a counter.
+     * A sword against a shot turns it aside instead (nobody reels: the shooter
+     * is over there). A perfect parry reels them longer, makes the counter
+     * harder and gives back health and Haki.
+     */
+    parry(att, tgt, h2, ang, perfect) {
+      const game = this.game, fx = game.fx;
+      const now3 = game.env ? game.env.time : game.time;
+      tgt.parryT = now3;
+      tgt.parryPerfect = perfect;
+      tgt.parryEarned = true;
+      tgt.iframes = Math.max(tgt.iframes, 0.12);
+      tgt.quietUntil = (game.time || 0) + 0.12;
+      if (h2.isProj || h2.vx !== void 0) {
+        fx.deflect?.(tgt, h2, ang, perfect);
+        game.audio?.sfx("parry", tgt);
+        if (tgt.isPlayer) game.onPlayerParry(att);
+        return;
+      }
+      const reel = (att.isPlayer ? PARRY.playerReel : PARRY.reel * (att.boss ? PARRY.bossReel : 1)) + (perfect ? PARRY.perfectReel : 0);
+      this.cancelBlows(att);
+      att.dash = null;
+      att.parriedT = now3;
+      att.stagger(reel);
+      const back = ang + Math.PI;
+      att.knock(Math.cos(back) * 2.5, Math.sin(back) * 2.5);
+      tgt.counterOn = att;
+      tgt.counterLeft = reel;
+      tgt.counterMul = perfect ? PARRY.perfectCounterMul : PARRY.counterMul;
+      if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + (perfect ? PARRY.haki : PARRY.parryHaki));
+      if (perfect && tgt.d) tgt.heal(Math.max(1, Math.round(tgt.d.maxHp * PARRY.heal)), game);
+      fx.parry(tgt, att, ang, perfect);
+      game.audio?.sfx("parry", tgt);
+      if (tgt.isPlayer) {
+        game.onPlayerParry(att);
+        game.hint("parried", "PARRIED! They reel \u2014 strike now: your next blow is a COUNTER, harder and through any guard. Parry at the very last instant for a PERFECT parry.");
+      }
+      if (att.isPlayer) {
+        game.emit("playerParried", tgt);
+        game.hint("foeparry", "Your blow was PARRIED \u2014 you reel, wide open. Out past the Blues, foes read your swings too: don't hammer at a guard that has just come up.");
+      }
+    }
+    /**
+     * No stun-locks: blows landing on you one after another (each within
+     * FLURRY_GAP of the last) are a flurry. After a tier's stunHits of them,
+     * or stunCap seconds of it with you still reeling, you break free: the
+     * stagger shaken off, a moment untouchable, shoved a step clear.
+     */
+    flurry(tgt, att, ang, T4) {
+      const game = this.game, now3 = game.time || 0;
+      const f = tgt.flurryRun || (tgt.flurryRun = { n: 0, t0: now3, last: -Infinity });
+      if (now3 - f.last > FLURRY_GAP) {
+        f.n = 0;
+        f.t0 = now3;
+      }
+      f.n++;
+      f.last = now3;
+      if (!(tgt.hitstun > 0) || f.n < T4.stunHits && now3 - f.t0 < T4.stunCap) return;
+      f.n = 0;
+      f.t0 = now3;
+      f.last = -Infinity;
+      tgt.hitstun = 0;
+      tgt.iframes = Math.max(tgt.iframes, BREAK_IFRAMES);
+      tgt.quietUntil = now3 + BREAK_IFRAMES;
+      tgt.knock(Math.cos(ang) * 3, Math.sin(ang) * 3);
+      game.fx.breakFree?.(tgt);
+      if (tgt.isPlayer) {
+        game.emit("playerBrokeFree", att);
+        game.hint("breakfree", "You shook free of the flurry! Nobody can keep you pinned for long \u2014 use the moment to dodge clear or hit back.");
+      }
     }
   };
 
@@ -46713,6 +47001,11 @@ ${GLSL}
     if (def.requiresBuff && !actor.hasBuff(def.requiresBuff)) return false;
     return true;
   }
+  var isDamaging = (s) => !!(s.hit || s.proj || s.zone || s.dash?.hit);
+  var breaksGuard = (s) => !!(s.hit?.guardBreak || s.hit?.unblockable || s.dash?.hit?.guardBreak || s.dash?.hit?.unblockable || s.proj?.unblockable);
+  function firstBlow(def) {
+    return (def.steps || []).findIndex(isDamaging);
+  }
   function startAbility(actor, def, game, target2) {
     const c = def.cost || {};
     if (c.haki) actor.haki -= c.haki;
@@ -46722,19 +47015,57 @@ ${GLSL}
     const tx = target2 ? target2.x : actor.x + Math.cos(angle) * 5;
     const ty = target2 ? target2.y : actor.y + Math.sin(angle) * 5;
     actor.action = { def, t: 0, step: 0, angle, tx, ty, target: target2, total: abilityTotal(def) / (def.noSpeedup ? 1 : actor.atkSpeed()), mult: powerFor(actor, def) };
+    if (actor.counterLeft > 0) actor.action.counter = true;
+    if (!actor.isPlayer && actor.faction !== "player") readable(actor, actor.action, game);
     if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, "#ffffff", 0.34, { life: 1.2 });
     if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
     if (def.onStart) def.onStart(actor, game);
     game.audio?.sfx(def.sfxStart || "whoosh", actor);
   }
+  function readable(actor, a, game) {
+    const def = a.def, i = firstBlow(def);
+    if (i < 0) return;
+    const s = def.steps[i];
+    const T4 = tierOf(game, actor);
+    const speed2 = def.noSpeedup ? 1 : actor.atkSpeed();
+    const at4 = s.at ?? def.windup ?? 0;
+    const w = at4 / speed2;
+    const want = stretchWindup(T4, w, !!def.chained);
+    a.hitAt = at4;
+    a.slow = w > 1e-3 && want > w ? want / w : 1;
+    a.breaks = breaksGuard(s) || !!s.zone;
+    a.shot = !!s.proj;
+    const who = a.target || actor.controller?.target;
+    let travel2 = 0;
+    if (s.dash && who) travel2 = Math.max(0, game.world.distance(actor.x, actor.y, who.x, who.y) - 1) / Math.max(1, s.dash.dist / s.dash.time);
+    const real = Math.max(0, want + travel2 - T4.cueLead);
+    a.cueT = want > 0 && real <= want ? real / want * at4 : at4 + Math.max(0, real - want) * speed2;
+  }
+  function glint(actor, a, game) {
+    const p = game.player;
+    if (!p || p === actor || p.state !== "idle") return;
+    const who = a.target || actor.controller?.target;
+    if (who !== p || game.world.distance(actor.x, actor.y, p.x, p.y) > (a.shot ? 14 : 10)) return;
+    if (a.shot && !a.breaks && p.hasWeapon?.("sword")) return;
+    const T4 = tierOf(game, p);
+    const k = p.observation ? 1 : T4.cue;
+    if (!(k > 0)) return;
+    game.fx.parryCue?.(actor, a.breaks, k);
+    const key2 = a.breaks ? "redglint" : a.shot ? "shotglint" : "parry";
+    if (!game.hintsShown?.has(key2) && game.settings?.showHints !== false) game.fx.slowmo(1.2, 0.2);
+    if (a.breaks) game.hint("redglint", "A RED glint: that blow smashes any guard (and some go straight through one). Don't block it \u2014 dodge (Q) just before it lands.");
+    else if (a.shot) game.hint("shotglint", "A glint on a gunman: a shot is coming. Hold F to block it, or sidestep and dodge (Q) \u2014 a sword can even turn it aside with a parry.");
+    else game.hint("parry", "A YELLOW glint: the blow is about to land \u2014 tap F right then to PARRY it. A parried foe reels, open to a COUNTER. (Hold F to simply block.)");
+  }
   function telegraph(actor, def, game) {
-    const wind = def.windup ?? 0.2;
+    const a = actor.action;
+    const wind = (a?.hitAt ?? def.windup ?? 0.2) * (a?.slow || 1) / (def.noSpeedup ? 1 : actor.atkSpeed());
     if (wind < 0.12) return;
     const first = (def.steps || []).find((s) => s.hit || s.proj || s.dash || s.zone);
     if (!first) return;
-    const col = actor.boss ? "rgba(255,40,80,1)" : "rgba(255,60,60,1)";
+    const parryable = (first.hit || first.dash?.hit) && !breaksGuard(first) && !first.zone;
+    const col = parryable ? "rgba(255,193,7,1)" : actor.boss ? "rgba(255,40,80,1)" : "rgba(255,60,60,1)";
     const life2 = wind * (actor.game?.player?.observation ? 1.35 : 1);
-    if (wind >= 0.35) game.fx.add("flare", { x: actor.x, y: actor.y, z: 1.35 * (actor.look?.scale || 1), size: 0.55, color: "#ff5252", life: Math.min(0.3, wind * 0.6), follow: actor });
     if (first.hit) {
       const h2 = first.hit;
       const ox = actor.x + Math.cos(actor.facing) * (h2.offset || 0), oy = actor.y + Math.sin(actor.facing) * (h2.offset || 0);
@@ -46751,7 +47082,11 @@ ${GLSL}
   function updateAbility(actor, dt, game) {
     const a = actor.action;
     const def = a.def;
-    a.t += dt * (def.noSpeedup ? 1 : actor.atkSpeed());
+    a.t += dt * (def.noSpeedup ? 1 : actor.atkSpeed()) / (a.slow > 1 && a.t < a.hitAt ? a.slow : 1);
+    if (a.cueT !== void 0 && !a.cued && a.t >= a.cueT) {
+      a.cued = true;
+      glint(actor, a, game);
+    }
     const steps = def.steps || [];
     if (def.track && a.t < (def.windup ?? 0)) a.angle = actor.facing;
     while (a.step < steps.length && a.t >= (steps[a.step].at ?? def.windup ?? 0)) {
@@ -46804,7 +47139,8 @@ ${GLSL}
         radial: h2.radial,
         onHit: h2.onHit,
         forceWater: h2.forceWater,
-        hitsAll: h2.hitsAll
+        hitsAll: h2.hitsAll,
+        def: a.def
       };
       game.combat.hitbox(hb);
       game.fx.tech(actor, s, a, "hit", hb);
@@ -46846,6 +47182,10 @@ ${GLSL}
           heavy: p.heavy,
           critChance: 0.05,
           unblockable: p.unblockable,
+          def: a.def,
+          // (a shot, not a blow: a sword can turn it aside with a parry — unless it goes off on impact)
+          isProj: true,
+          explodes: !!p.explode,
           onEnd: p.explode ? (pr, g) => explode(pr, g, p.explode, mult) : null,
           trail: p.trail ? (pr, g) => trail(pr, g, p.trail) : null,
           draw: drawProjectile
@@ -46877,7 +47217,9 @@ ${GLSL}
           heavy: d.hit.heavy,
           status: d.hit.status,
           radial: true,
-          guardBreak: d.hit.guardBreak
+          guardBreak: d.hit.guardBreak,
+          unblockable: d.hit.unblockable,
+          def: a.def
         });
       }
       game.fx.tech(actor, s, a, "dash");
@@ -46947,7 +47289,7 @@ ${GLSL}
     return !h2.element || h2.element === "physical";
   }
   function explode(p, game, e, mult) {
-    game.combat.hitbox({ owner: p.owner, x: p.x, y: p.y, shape: "circle", range: e.range || 1.8, damage: (e.damage || 10) * mult, knockback: e.knockback ?? 6, stun: e.stun ?? 0.4, element: e.element || "explosion", duration: 0.1, radial: true, heavy: true, hitShips: true, status: e.status });
+    game.combat.hitbox({ owner: p.owner, x: p.x, y: p.y, shape: "circle", range: e.range || 1.8, damage: (e.damage || 10) * mult, knockback: e.knockback ?? 6, stun: e.stun ?? 0.4, element: e.element || "explosion", duration: 0.1, radial: true, heavy: true, hitShips: true, status: e.status, blast: true });
     game.fx.explosion(p.x, p.y, e, p.owner);
     game.audio?.sfx("explosion", p);
   }
@@ -48364,8 +48706,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     tf(I2, { r: 0.6 }, () => {
       tube2(I2, "M32 66 L32 34", col, 5.6);
       part(I2, rrect(28.5, 50, 7, 8, 1.6), trim, { sd: 0.6, hd: 0.4 });
-      const arms = "M32 39 C21 37 14.5 28 14.5 16 C14.5 11 16 7 18.5 3.5 C20 9 21 16 24.5 22 C26.5 25.5 29 27 32 27 C35 27 37.5 25.5 39.5 22 C43 16 44 9 45.5 3.5 C48 7 49.5 11 49.5 16 C49.5 28 43 37 32 39 Z";
-      part(I2, arms, col, { sd: 2, hd: 1.4 });
+      const arms2 = "M32 39 C21 37 14.5 28 14.5 16 C14.5 11 16 7 18.5 3.5 C20 9 21 16 24.5 22 C26.5 25.5 29 27 32 27 C35 27 37.5 25.5 39.5 22 C43 16 44 9 45.5 3.5 C48 7 49.5 11 49.5 16 C49.5 28 43 37 32 39 Z";
+      part(I2, arms2, col, { sd: 2, hd: 1.4 });
       ln(I2, "M18.8 6 L32 21 L45.2 6", OUT2, 2.4);
       ln(I2, "M18.8 6 L32 21 L45.2 6", "#e6d2a8", 1.2);
       part(I2, circle(32, 33, 5.2), trim, { sd: 1, hd: 0.8 });
@@ -53900,18 +54242,18 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
 
   // src/render/anims.js
   var TAU8 = Math.PI * 2;
-  var STAND = { b: [0, 0], l: 0, r: 0, z: 0, sp: 0, ht: 0, hF: [0.05, 0.4], hB: [-0.03, 0.4], eF: 1, eB: 1, fF: [0.05, 0], fB: [-0.05, 0], wF: null, wB: null, m: 0.15, hand: "fist", handB: "fist", face: null, stretch: false };
-  var GUARD = { ...STAND, b: [0, 0.035], l: 0.07, hF: [0.21, 0.02], hB: [0.13, 0.08], fF: [0.16, 0], fB: [-0.13, 0] };
-  var PALMS = { ...GUARD, hF: [0.24, 0], hB: [0.12, 0.1], hand: "palm", handB: "palm", b: [0, 0.07], fF: [0.2, 0], fB: [-0.16, 0] };
-  var SWORD2 = { ...STAND, b: [0, 0.045], l: 0.06, hF: [0.2, 0.12], hB: [0.13, 0.15], wF: -0.75, fF: [0.19, 0], fB: [-0.14, 0] };
+  var STAND = { b: [0, 0], l: 0, r: 0, z: 0, sp: 0, ht: 0, hF: [0.05, 0.4], hB: [-0.03, 0.4], eF: 1, eB: 1, fF: [0.05, 0], fB: [-0.05, 0], wF: null, wB: null, m: 0.15, hand: "fist", handB: "fist", face: null, stretch: false, tw: 0, hp: 0, ls: 0, hy: 0, hr: 0, zF: 0, zB: 0, zfF: 0, zfB: 0, wt: 0, sm: 0, smF: 0, smB: 0, smfF: 0, smfB: 0 };
+  var GUARD = { ...STAND, b: [0, 0.045], l: 0.09, ht: 0.04, hF: [0.2, -0.01], hB: [0.12, 0.04], fF: [0.17, 0], fB: [-0.14, 0], tw: 0.08, hp: 0.04 };
+  var PALMS = { ...GUARD, hF: [0.25, -0.01], hB: [0.1, 0.12], hand: "palm", handB: "palm", b: [0, 0.09], l: 0.05, fF: [0.21, 0], fB: [-0.17, 0], zfF: 0.03, zfB: 0.03, tw: 0.12 };
+  var SWORD2 = { ...STAND, b: [0, 0.045], l: 0.06, hF: [0.2, 0.12], hB: [0.13, 0.15], wF: -0.75, fF: [0.19, 0], fB: [-0.14, 0], tw: 0.06 };
   var SWORD22 = { ...SWORD2, hF: [0.22, 0.1], hB: [0.1, 0.12], wF: -0.55, wB: -1.05 };
   var GUN = { ...STAND, hF: [0.26, 0.16], wF: 0.35, hB: [0, 0.34], fF: [0.12, 0], fB: [-0.1, 0] };
   var HEAVYW = { ...SWORD2, hF: [0.16, 0.14], hB: [0.1, 0.17], wF: -1.1 };
   var STAFF = { ...SWORD2, wF: -1.2 };
-  var POCKETS = { ...STAND, b: [0, 0.03], l: -0.05, hF: [-0.02, 0.33], hB: [-0.08, 0.32], eF: -1, eB: -1, fF: [0.17, 0], fB: [-0.13, 0] };
-  var BALLET = { ...GUARD, b: [0, 0.02], l: 0.02, hF: [0.3, -0.12], hB: [-0.26, -0.1], hand: "palm", handB: "palm", fF: [0.08, 0], fB: [-0.1, 0] };
-  var CLAWS = { ...GUARD, hand: "claw", handB: "claw", b: [0, 0.06], l: 0.14, hF: [0.25, -0.04], hB: [0.13, 0.04] };
-  var FINGER = { ...GUARD, b: [0, 0.02], l: 0.03, hF: [0.2, 0.04], hB: [-0.05, 0.3], hand: "finger", fF: [0.14, 0], fB: [-0.11, 0] };
+  var POCKETS = { ...STAND, b: [0, 0.03], l: -0.05, ht: -0.03, hF: [-0.02, 0.33], hB: [-0.08, 0.32], eF: -1, eB: -1, fF: [0.17, 0], fB: [-0.13, 0], tw: 0.1 };
+  var BALLET = { ...GUARD, b: [0, 0.02], l: 0.02, ht: -0.06, hF: [0.3, -0.12], hB: [-0.26, -0.1], zF: 0.06, zB: 0.06, hand: "palm", handB: "palm", fF: [0.08, 0], fB: [-0.1, 0], tw: 0, hp: 0 };
+  var CLAWS = { ...GUARD, hand: "claw", handB: "claw", b: [0, 0.07], l: 0.16, ht: -0.04, hF: [0.25, -0.05], hB: [0.13, 0.03], zF: 0.04, zB: 0.04 };
+  var FINGER = { ...GUARD, b: [0, 0.025], l: 0.03, ht: 0, hF: [0.2, 0.02], hB: [-0.1, 0.27], zB: -0.04, hand: "finger", fF: [0.15, 0], fB: [-0.12, 0], tw: 0.18, hp: 0.06 };
   var STANCES = { guard: GUARD, palms: PALMS, sword: SWORD2, sword2: SWORD22, gun: GUN, heavyw: HEAVYW, staff: STAFF, legs: POCKETS, ballet: BALLET, claw: CLAWS, finger: FINGER, stand: STAND };
   var STANCE_ARMED = { sword: "sword", sword2: "sword", gun: "gun", heavyw: "axe", staff: "staff" };
   var STYLE_STANCE = {
@@ -53966,125 +54308,199 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (typeof a === "boolean" || typeof b === "boolean") return k < 0.5 ? a : b;
     return k < 0.35 ? a : b;
   }
+  function lerpPose(A, B5, k) {
+    const P5 = {};
+    for (const key2 in B5) P5[key2] = lerpVal(A[key2], B5[key2], k);
+    return P5;
+  }
   function finalize(keys2) {
     let prev = STAND;
     for (const k of keys2) {
-      k.P = { ...prev, ...k.p };
+      const base2 = k.from ? lerpPose(k.from[0].P, k.from[1].P, k.from[2]) : prev;
+      k.P = { ...base2, ...k.p };
       prev = k.P;
     }
     return keys2;
   }
+  var NO_SMEAR = { sm: 0, smF: 0, smB: 0, smfF: 0, smfB: 0 };
+  var SETTLE = 0.022;
   function strike(w, T4, o) {
     const st = o.stance || GUARD;
     const tLoad = Math.max(0.016, Math.min(w * (o.loadAt ?? 0.64), w - 0.014));
     const tHit = Math.max(tLoad + 0.014, w);
     const rest = Math.max(0.04, T4 - tHit);
     const tHold = tHit + Math.min(o.holdT ?? 0.055, rest * (o.holdK ?? 0.4));
-    const keys2 = [
-      { t: 0, p: st },
-      { t: tLoad, p: o.load, e: o.loadEase || "out" },
-      { t: tHit, p: o.hit, e: o.hitEase || "snap" },
-      { t: tHold, p: o.hold || o.hit, e: "lin" }
-    ];
-    if (o.follow) keys2.push({ t: tHold + (Math.max(T4, tHold + 0.05) - tHold) * (o.followAt ?? 0.4), p: o.follow, e: "out" });
-    keys2.push({ t: Math.max(T4, tHold + 0.05), p: o.end || st, e: "inout" });
+    const tEnd = Math.max(T4, tHold + 0.05);
+    const K0 = { t: 0, p: st };
+    const keys2 = [K0];
+    if (o.antic && tLoad >= 0.12) keys2.push({ t: tLoad * (o.anticAt ?? 0.38), p: o.antic, e: "inout" });
+    const KL = { t: tLoad, p: o.load, e: o.loadEase || "out" };
+    keys2.push(KL);
+    if (tHit - tLoad >= 0.1 && o.coil !== false) keys2.push(o.coil ? { t: tLoad + (tHit - tLoad) * 0.7, p: o.coil, e: "inout" } : { t: tLoad + (tHit - tLoad) * 0.7, p: {}, from: [K0, KL, 1.12], e: "inout" });
+    const h2 = o.hit;
+    keys2.push({ t: tHit, p: h2, e: o.hitEase || "snap" });
+    keys2.push({ t: tHold, p: { sm: (h2.sm || 0) * 0.3, smF: (h2.smF || 0) * 0.3, smB: (h2.smB || 0) * 0.3, smfF: (h2.smfF || 0) * 0.3, smfB: (h2.smfB || 0) * 0.3, ...o.hold || {} }, e: "lin" });
+    let tPrev = tHold;
+    if (o.follow) {
+      const tf2 = tHold + (tEnd - tHold) * (o.followAt ?? 0.4);
+      keys2.push({ t: tf2, p: { ...NO_SMEAR, ...o.follow }, e: "out" });
+      tPrev = tf2;
+    }
+    const end = o.end || st;
+    if (o.settle !== false && tEnd - tPrev > 0.08) keys2.push({ t: tPrev + (tEnd - tPrev) * 0.55, p: { ...end, ...NO_SMEAR, b: [end.b[0], end.b[1] + SETTLE], l: (end.l || 0) + 0.03 }, e: "inout" });
+    keys2.push({ t: tEnd, p: end, e: "inout" });
     return finalize(keys2);
   }
   var S2 = (c, o) => ({ ...o, stance: o.stance || c.stance, holdT: c.dashT ? Math.max(o.holdT ?? 0.055, c.dashT) : o.holdT, holdK: c.dashT ? 0.9 : o.holdK });
   var sw = (c) => c.two ? SWORD22 : SWORD2;
   var spun = (c, base2) => ({ ...c.stance || base2 || GUARD, sp: 1 });
+  var arms = (c, o) => (c.stance || GUARD) === POCKETS ? {} : o;
   var CLIPS = {
     // ---------------------------------------------------------------- fists
-    jab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.05], l: 0.02, hF: [0.12, 0.07] }, hit: { b: [0.1, 0.02], l: 0.18, hF: [0.46, -0.07], hB: [0.1, 0.1], fF: [0.22, 0], fB: [-0.14, 0], face: "fierce" } })) }),
-    cross: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.06, hB: [0.04, 0.1], hF: [0.18, 0.02] }, hit: { b: [0.13, 0.02], l: 0.3, hB: [0.48, -0.08], hF: [0.08, 0.12], fF: [0.24, 0], fB: [-0.16, -0.02], face: "fierce" } })) }),
-    hook: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.06], l: -0.18, hF: [-0.12, 0.02], eF: 1 }, hit: { b: [0.08, 0.03], l: 0.26, hF: [0.34, -0.1], eF: -0.9, hB: [0.1, 0.1], face: "fierce" }, follow: { l: 0.32, hF: [0.22, -0.02], eF: -0.4 } })) }),
-    uppercut: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.16], l: 0.22, hF: [0.12, 0.3], eF: 1, fF: [0.2, 0], fB: [-0.16, 0] }, hit: { b: [0.08, -0.06], z: 0.08, l: -0.16, hF: [0.2, -0.46], eF: 0.5, hB: [0.14, 0.14], fF: [0.18, -0.03], fB: [-0.12, -0.12], face: "shout" }, follow: { z: 0, l: -0.1 } })), legs: true }),
-    haymaker: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.72, load: { b: [-0.1, 0.08], l: -0.34, hF: [-0.36, -0.12], eF: 0.9, hB: [0.2, 0], fF: [0.24, 0], fB: [-0.18, 0], face: "fierce" }, hit: { b: [0.24, 0.03], l: 0.42, hF: [0.5, -0.03], eF: 0.2, hB: [-0.12, 0.2], fF: [0.34, 0], fB: [-0.14, -0.06], face: "shout" }, follow: { b: [0.26, 0.06], l: 0.46, hF: [0.44, 0.1] } })), jitter: 0.012 }),
-    palm: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, load: { b: [-0.02, 0.08], l: 0, hF: [0.1, 0.1] }, hit: { b: [0.12, 0.05], l: 0.22, hF: [0.48, -0.02], hB: [0.08, 0.14], fF: [0.26, 0], face: "fierce" } })) }),
-    palm2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, load: { b: [-0.03, 0.08], l: -0.08, hB: [0, 0.12], hF: [0.2, 0.04] }, hit: { b: [0.14, 0.05], l: 0.3, hB: [0.5, -0.03], hF: [0.06, 0.14], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    palm_double: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, loadAt: 0.7, load: { b: [-0.08, 0.12], l: -0.2, hF: [-0.12, 0.14], hB: [-0.16, 0.18] }, hit: { b: [0.22, 0.06], l: 0.32, hF: [0.5, -0.06], hB: [0.46, 0.06], fF: [0.32, 0], fB: [-0.18, -0.03], face: "shout" }, follow: { l: 0.36 } })), jitter: 0.01 }),
-    shigan: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.06, hF: [0.04, 0.1], hand: "finger" }, hit: { b: [0.16, 0.02], l: 0.32, hF: [0.52, -0.06], hand: "finger", hB: [-0.08, 0.2], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    shigan2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.08, hB: [0, 0.12], handB: "finger" }, hit: { b: [0.17, 0.02], l: 0.34, hB: [0.52, -0.06], handB: "finger", hF: [0.06, 0.16], fF: [0.26, 0], fB: [-0.18, -0.02], face: "fierce" } })) }),
-    claw: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.12, hF: [0.02, -0.38], hand: "claw", eF: 1 }, hit: { l: 0.28, b: [0.1, 0.05], hF: [0.34, 0.26], hand: "claw", face: "fierce" } })) }),
-    claw2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: 0.12, b: [0, 0.08], hB: [0.02, 0.32], handB: "claw" }, hit: { l: -0.12, b: [0.1, 0], hB: [0.36, -0.32], handB: "claw", hF: [0.12, 0.12], face: "fierce" } })) }),
-    claw_x: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.04], hF: [0, -0.4], hB: [-0.06, -0.36], hand: "claw", handB: "claw", face: "fierce" }, hit: { l: 0.36, b: [0.18, 0.08], hF: [0.36, 0.28], hB: [0.3, 0.32], hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 8e-3 }),
-    grab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.06], l: -0.08, hF: [0.1, 0.02], hand: "claw" }, hit: { b: [0.12, 0.03], l: 0.26, hF: [0.5, -0.05], hand: "claw", face: "fierce" }, follow: { hand: "fist", hF: [0.4, -0.02], l: 0.18 } })) }),
-    grab2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.06], l: -0.1, hB: [0.02, 0.06], handB: "claw" }, hit: { b: [0.13, 0.03], l: 0.3, hB: [0.5, -0.04], handB: "claw", hF: [0.08, 0.14], face: "fierce" }, follow: { handB: "fist", hB: [0.4, 0] } })) }),
-    chop: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.14, b: [-0.02, 0.04], hF: { a: -2.1, r: 0.36 }, hand: "palm" }, hit: { l: 0.26, b: [0.12, 0.06], hF: { a: 0.55, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
-    chop2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: 0.12, b: [0, 0.08], hF: { a: 2, r: 0.34 }, hand: "palm" }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, hand: "palm", face: "fierce" } })) }),
-    thrust: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.05, 0.09], l: -0.06, hF: [0.08, 0.06] }, hit: { b: [0.14, 0.04], l: 0.46, hF: [0.44, 0], hB: [-0.22, 0.16], fF: [0.26, 0], fB: [-0.32, -0.08], face: "shout" } })) }),
-    charge: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.06, 0.12], l: 0.1, hF: [0.1, 0.18], hB: [-0.1, 0.2] }, hit: { b: [0.12, 0.08], l: 0.58, hF: [0.18, 0.2], hB: [-0.2, 0.2], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
-    headbutt: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.4, b: [-0.06, 0.02], hF: [0.1, 0.25], hB: [0.02, 0.28] }, hit: { l: 0.52, b: [0.18, 0.06], ht: 0.3, face: "shout" } })) }),
+    // the lead fist snapped straight out from the chin, the lead foot stepping in under it; the other fist never leaves the chin
+    jab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.06], l: 0.05, tw: -0.12, hp: -0.04, ht: 0.08, hF: [0.13, 0], hB: [0.11, -0.01], face: "fierce" }, hit: { b: [0.1, 0.035], l: 0.2, tw: 0.36, hp: 0.14, ht: 0.02, hF: [0.47, -0.05], hB: [0.1, -0.03], fF: [0.25, 0], fB: [-0.12, -0.01], sm: 0.1, face: "fierce" }, follow: { hF: [0.36, -0.02], tw: 0.28, l: 0.17 } })) }),
+    // the rear hand: the hips whip round and drive the shoulder through, the back heel up, the lead fist pulled home
+    cross: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.04, 0.06], l: 0.02, tw: 0.22, hp: 0.12, ht: 0.06, hB: [0.05, 0], hF: [0.22, -0.03], face: "fierce" }, hit: { b: [0.13, 0.04], l: 0.28, tw: -0.62, hp: -0.42, ht: 0, hB: [0.49, -0.05], hF: [0.1, 0], fF: [0.25, 0], fB: [-0.14, -0.05], sm: 0.12, face: "shout" }, follow: { tw: -0.72, l: 0.3, hB: [0.42, -0.02] } })) }),
+    // wide and flat: the elbow up, the fist swung round from the side as the whole body turns into it
+    hook: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.08], l: 0.06, tw: -0.4, hp: -0.12, ht: 0.06, hF: [0.1, -0.02], zF: 0.2, eF: -1, hB: [0.12, -0.01], face: "fierce" }, hit: { b: [0.08, 0.06], l: 0.2, tw: 0.62, hp: 0.32, ht: 0.03, hF: [0.36, -0.06], zF: -0.04, eF: -0.8, hB: [0.1, 0], fF: [0.21, 0], fB: [-0.15, -0.04], sm: 0.06, face: "shout" }, follow: { tw: 0.8, l: 0.24, hF: [0.3, -0.03], zF: -0.12, eF: -0.7 } })) }),
+    // the finisher: dropped low and coiled, then up off the ground behind the fist
+    uppercut: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.13], l: 0.26, tw: -0.32, hp: -0.16, ht: 0.12, hF: [0.12, 0.3], eF: 1, hB: [0.12, -0.02], fF: [0.2, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.07, -0.07], z: 0.11, l: -0.06, tw: 0.5, hp: 0.28, ht: -0.24, hF: [0.3, -0.33], eF: 0.5, hB: [0.06, 0.1], fF: [0.2, -0.05], fB: [-0.08, -0.18], sm: 0.08, face: "shout" }, follow: { z: 0.05, l: -0.03, hF: [0.27, -0.3] } })), legs: true }),
+    // a dip forward, the arm swung right back with the whole trunk wound up behind it, then everything thrown through it
+    haymaker: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.66, antic: { b: [0.03, 0.07], l: 0.16, tw: 0.12, hF: [0.24, 0], ht: 0.1 }, load: { b: [-0.1, 0.07], l: -0.28, tw: -0.8, hp: -0.32, ht: -0.04, hF: [-0.32, -0.12], zF: 0.06, eF: 0.9, hB: [0.24, -0.02], handB: "palm", fF: [0.24, 0], fB: [-0.19, 0], face: "grit" }, hit: { b: [0.25, 0.05], l: 0.44, tw: 0.78, hp: 0.48, ht: -0.12, hF: [0.5, -0.03], eF: 0.2, hB: [-0.14, 0.16], zB: 0.1, handB: "fist", fF: [0.36, 0], fB: [-0.12, -0.08], sm: 0.14, face: "shout" }, follow: { b: [0.28, 0.08], l: 0.5, tw: 0.9, hF: [0.44, 0.06] } })), jitter: 0.012 }),
+    // Fish-Man Karate: the palm from the hip, the other hand pulled back to its hip as it goes (and the kiai)
+    palm: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, load: { b: [-0.02, 0.11], l: 0.02, tw: -0.28, hp: -0.1, hF: [0.03, 0.19], hB: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.13, 0.08], l: 0.18, tw: 0.46, hp: 0.22, hF: [0.49, -0.03], hB: [-0.02, 0.2], hand: "palm", handB: "fist", fF: [0.27, 0], fB: [-0.18, -0.02], sm: 0.08, face: "shout" }, follow: { hF: [0.45, -0.01], l: 0.2 } })) }),
+    palm2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, load: { b: [-0.03, 0.11], l: 0, tw: 0.3, hp: 0.12, hB: [0, 0.2], hF: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.14, 0.08], l: 0.24, tw: -0.55, hp: -0.3, hB: [0.5, -0.03], hF: [-0.02, 0.2], hand: "fist", handB: "palm", fF: [0.27, 0], fB: [-0.18, -0.03], sm: 0.08, face: "shout" }, follow: { hB: [0.45, -0.01], l: 0.25 } })) }),
+    // both palms gathered at one hip, the body wound round them, then driven out together (the Shark Tile Fist)
+    palm_double: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: PALMS, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.1, hF: [0.3, 0], hB: [0.28, 0.04] }, load: { b: [-0.08, 0.14], l: -0.16, tw: -0.5, hp: -0.2, hF: [-0.06, 0.2], hB: [-0.1, 0.17], hand: "palm", handB: "palm", fF: [0.23, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.23, 0.08], l: 0.3, tw: 0.2, hp: 0.25, hF: [0.5, -0.07], hB: [0.47, 0.07], hand: "palm", handB: "palm", fF: [0.33, 0], fB: [-0.19, -0.04], smF: 0.1, smB: 0.1, face: "shout" }, follow: { l: 0.34, b: [0.25, 0.1] } })), jitter: 0.01 }),
+    // Shigan: a fencer's lunge behind one stabbing finger, the other hand kept at the small of the back
+    shigan: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.04, tw: -0.15, hp: -0.06, hF: [0.03, -0.06], hand: "finger", face: "fierce" }, hit: { b: [0.18, 0.05], l: 0.3, tw: 0.6, hp: 0.36, hF: [0.53, -0.07], hand: "finger", hB: [-0.14, 0.26], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hF: [0.46, -0.05] } })) }),
+    shigan2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.03, 0.05], l: -0.06, tw: 0.25, hp: 0.1, hB: [0, -0.05], handB: "finger", hF: [0.18, 0.02], face: "fierce" }, hit: { b: [0.19, 0.05], l: 0.32, tw: -0.66, hp: -0.4, hB: [0.53, -0.07], handB: "finger", hF: [-0.1, 0.24], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hB: [0.46, -0.05] } })) }),
+    // a claw raked down from high behind the head (and back up, and both crossing)
+    claw: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.08, b: [-0.02, 0.05], tw: -0.35, ls: -0.08, hF: { a: -2.15, r: 0.38 }, zF: 0.08, hand: "claw", eF: 1, face: "fierce" }, hit: { l: 0.32, b: [0.12, 0.08], tw: 0.5, ls: 0.08, hF: { a: 0.75, r: 0.43 }, zF: -0.08, hand: "claw", fF: [0.24, 0], fB: [-0.15, -0.02], sm: 0.06, face: "shout" }, follow: { hF: { a: 1.15, r: 0.4 }, zF: -0.14, tw: 0.62 } })) }),
+    claw2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: 0.18, b: [0, 0.1], tw: 0.32, hB: { a: 1.7, r: 0.36 }, zB: 0.06, handB: "claw", face: "fierce" }, hit: { l: -0.1, b: [0.1, 0], tw: -0.55, hB: { a: -0.95, r: 0.43 }, zB: -0.06, handB: "claw", hF: [0.12, 0.1], sm: 0.06, face: "shout" }, follow: { hB: { a: -1.25, r: 0.41 } } })) }),
+    claw_x: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.68, antic: { b: [0, 0.1], l: 0.2, hF: [0.2, 0.15], hB: [0.15, 0.18] }, load: { l: -0.24, b: [-0.04, 0.03], ht: -0.12, hF: { a: -2, r: 0.42 }, hB: { a: -1.85, r: 0.4 }, zF: 0.12, zB: 0.12, hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.4, b: [0.18, 0.1], ht: 0.1, hF: { a: 0.95, r: 0.43 }, hB: { a: 0.8, r: 0.42 }, zF: -0.12, zB: -0.12, hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, -0.02], smF: 0.07, smB: 0.07, face: "shout" }, follow: { l: 0.44, b: [0.2, 0.12] } })), jitter: 8e-3 }),
+    // Ryusoken: the claw cocked by the ear, lunged out open, then crushed shut on what it caught
+    grab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.07], l: -0.06, tw: -0.32, hF: [0.02, -0.12], zF: 0.06, hand: "claw", eF: -0.6, face: "fierce" }, hit: { b: [0.14, 0.04], l: 0.28, tw: 0.5, hp: 0.25, hF: [0.5, -0.06], hand: "claw", fF: [0.26, 0], fB: [-0.15, -0.02], sm: 0.1, face: "shout" }, follow: { hand: "fist", hF: [0.43, -0.02], hr: 0.08, l: 0.22 } })) }),
+    grab2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.02, 0.07], l: -0.08, tw: 0.3, hB: [0, -0.1], zB: 0.06, handB: "claw", eB: -0.6, face: "fierce" }, hit: { b: [0.15, 0.04], l: 0.3, tw: -0.58, hp: -0.3, hB: [0.5, -0.05], handB: "claw", hF: [0.08, 0.12], sm: 0.1, face: "shout" }, follow: { handB: "fist", hB: [0.43, -0.01], hr: -0.08 } })) }),
+    chop: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.14, b: [-0.02, 0.04], tw: -0.3, hF: { a: -2.15, r: 0.37 }, hand: "palm", face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.42, hp: 0.2, hF: { a: 0.6, r: 0.43 }, hand: "palm", fF: [0.24, 0], sm: 0.06, face: "fierce" }, follow: { hF: { a: 0.9, r: 0.42 }, tw: 0.5 } })) }),
+    chop2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: 0.12, b: [0, 0.08], tw: 0.25, hF: { a: 2, r: 0.34 }, hand: "palm", face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.3, hF: { a: -0.62, r: 0.43 }, hand: "palm", sm: 0.06, face: "fierce" }, follow: { hF: { a: -0.9, r: 0.42 } } })) }),
+    // a long lunging thrust of one arm, the other flung back behind for the reach
+    thrust: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.06, 0.1], l: -0.06, tw: -0.4, hp: -0.15, hF: [0.04, 0.06], hB: [0.2, 0], face: "grit" }, hit: { b: [0.16, 0.05], l: 0.46, tw: 0.6, hp: 0.3, hF: [0.47, -0.01], hB: [-0.22, 0.16], fF: [0.28, 0], fB: [-0.33, -0.08], sm: 0.14, face: "shout" } })) }),
+    // head down, the shoulder first, arms tucked: a battering ram
+    charge: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [-0.06, 0.13], l: 0.12, tw: -0.2, hF: [0.1, 0.18], hB: [-0.1, 0.2], face: "grit" }, hit: { b: [0.12, 0.09], l: 0.6, tw: 0.55, hp: 0.25, ht: -0.25, hF: [0.12, 0.15], hB: [-0.24, 0.18], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
+    // hands on the other's collar, reared right back, then the brow brought down into them
+    headbutt: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.42, b: [-0.07, 0.03], ht: -0.2, hF: [0.32, -0.02], hB: [0.3, 0.02], hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.55, b: [0.19, 0.06], ht: 0.32, hF: [0.24, 0.06], hB: [0.22, 0.1], hand: "fist", handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], face: "shout" } })) }),
     // ---------------------------------------------------------------- kicks
-    kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.1, fF: [0.12, -0.3], hF: [0.18, 0.04], hB: [0.06, 0.14] }, hit: { l: -0.22, b: [0.05, -0.02], fF: [0.68, -0.42], fB: [-0.08, 0], hF: [0.1, 0.12], hB: [-0.12, 0.16], face: "fierce" } })), legs: true }),
-    kick_high: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.18, fF: [0.02, -0.36], fB: [-0.05, 0] }, hit: { l: -0.44, b: [0.02, -0.02], fF: [0.58, -0.84], fB: [-0.06, 0], hF: [-0.16, 0.12], hB: [0.26, -0.06], face: "fierce" }, follow: { l: -0.3, fF: [0.44, -0.6] } })), legs: true }),
-    kick_low: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.2], l: 0.08, fF: [-0.1, -0.05], fB: [-0.12, 0] }, hit: { b: [0.05, 0.27], l: 0.2, fF: [0.74, -0.06], fB: [-0.22, 0], hF: [0.26, 0.34], hB: [0, 0.3], face: "fierce" } })), legs: true }),
-    kick_spin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { sp: 0, fF: [0.05, -0.22], l: -0.06 }, hit: { sp: 1, fF: [0.7, -0.54], fB: [-0.06, 0], l: -0.32, hF: [-0.1, 0.15], hB: [0.22, -0.05], face: "shout" }, hitEase: "out", end: spun(c) })), legs: true }),
-    sweep: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.22], l: 0.22, fF: [0.06, -0.04], hF: [0.22, 0.3], hB: [-0.04, 0.3] }, hit: { sp: 1, b: [0.02, 0.3], l: 0.3, fF: [0.8, -0.05], fB: [-0.2, 0], hF: [0.26, 0.42], hB: [-0.1, 0.36], face: "fierce" }, hitEase: "out", end: spun(c) })), legs: true }),
-    knee: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { fF: [0.1, -0.1], l: 0.05, b: [0, 0.06] }, hit: { fF: [0.26, -0.42], l: 0.12, b: [0.08, -0.05], z: 0.06, hF: [0.32, 0.04], hB: [0.26, 0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
-    axe_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.75, load: { z: 0.55, l: -0.32, fF: [0.2, -0.95], fB: [-0.1, -0.12], hF: [-0.1, -0.1], hB: [0.2, -0.2] }, hit: { z: 0, b: [0.1, 0.08], l: 0.3, fF: [0.58, -0.06], fB: [-0.16, 0], hF: [-0.1, 0.2], hB: [0.1, 0.15], face: "shout" } })), legs: true }),
-    rise_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.18], l: 0.14, fF: [0.28, -0.04], hF: [0.1, 0.3] }, hit: { b: [0, -0.04], z: 0.18, l: -0.52, fF: [0.3, -1.02], fB: [-0.04, 0], hF: [-0.22, 0.1], hB: [0.12, 0.2], face: "shout" }, follow: { z: 0.05 } })), legs: true }),
-    mouton: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.7, load: { l: -0.32, z: 0.08, fF: [-0.05, -0.46], hF: [0.1, -0.1] }, hit: { l: -0.78, b: [0.26, 0], z: 0.16, fF: [0.88, -0.56], fB: [-0.12, -0.12], hF: [-0.36, 0.25], hB: [-0.32, 0.3], face: "shout" }, follow: { z: 0, l: -0.4 } })), legs: true }),
+    // a snap kick: the knee chambered high, the leg whipped out level, the hips turned over into it and the body back to balance it
+    kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.06], l: -0.12, hp: -0.12, fF: [0.13, -0.32], fB: [-0.07, 0], ...arms(c, { hF: [0.18, 0.02], hB: [0.08, 0.1] }), face: "fierce" }, hit: { b: [0.05, -0.02], l: -0.26, hp: 0.35, tw: -0.1, ht: 0.1, fF: [0.68, -0.42], fB: [-0.09, 0], sm: 0.1, ...arms(c, { hF: [0.08, 0.14], hB: [-0.16, 0.14] }), face: "fierce" }, follow: { fF: [0.6, -0.36], l: -0.22 } })), legs: true }),
+    kick_high: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.07], l: -0.16, hp: -0.15, fF: [0.04, -0.38], fB: [-0.05, 0], ...arms(c, { hF: [0.16, 0], hB: [0.1, 0.06] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.46, hp: 0.42, ls: -0.06, ht: 0.2, fF: [0.57, -0.85], fB: [-0.06, 0], sm: 0.1, ...arms(c, { hF: [-0.18, 0.1], hB: [0.28, -0.04] }), face: "fierce" }, follow: { l: -0.32, fF: [0.46, -0.62] } })), legs: true }),
+    // a whirling kick: a turn the other way, the leg whipped round, and the body spun on through after it
+    kick_spin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { followAt: 0.35, load: { sp: -0.06, b: [0, 0.07], l: -0.08, hp: -0.25, fF: [0.06, -0.24], ...arms(c, { hF: [0.2, 0], hB: [0, 0.1] }), face: "fierce" }, hit: { sp: 0, b: [0.03, -0.01], l: -0.3, hp: 0.5, ls: -0.1, fF: [0.7, -0.55], fB: [-0.06, 0], sm: 0.12, ...arms(c, { hF: [-0.12, 0.12], hB: [0.24, -0.06] }), face: "shout" }, follow: { sp: 0.55, fF: [0.36, -0.38], l: -0.18 }, end: spun(c) })), legs: true }),
+    sweep: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { followAt: 0.35, load: { b: [0, 0.24], l: 0.24, fF: [0.06, -0.04], ...arms(c, { hF: [0.22, 0.32], hB: [-0.04, 0.32] }), face: "fierce" }, hit: { b: [0.02, 0.31], l: 0.32, hp: 0.4, fF: [0.82, -0.05], fB: [-0.2, 0], sm: 0.08, ...arms(c, { hF: [0.26, 0.44], hB: [-0.1, 0.38] }), face: "fierce" }, follow: { sp: 0.5, fF: [0.5, -0.04] }, end: spun(c) })), legs: true }),
+    // the Rankyaku finisher: a hop and the leg swept up and over in a crescent, the arms flung out to balance it
+    rankyaku: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { followAt: 0.3, load: { b: [0, 0.12], l: 0.08, hp: -0.25, fF: [0.12, -0.18], fB: [-0.08, 0], ...arms(c, { hF: [0.18, 0.06], hB: [0.06, 0.12] }), face: "grit" }, hit: { b: [0.02, -0.04], z: 0.12, l: -0.55, hp: 0.5, ls: -0.16, ht: 0.25, fF: [0.42, -0.98], fB: [-0.06, -0.06], sm: 0.12, ...arms(c, { hF: [-0.12, -0.04], hB: [0.24, -0.16], zF: 0.18, zB: 0.12 }), face: "shout" }, follow: { z: 0.04, l: -0.38, fF: [0.66, -0.48] } })), legs: true }),
+    // Hasshoken: the palm driven in and stopped dead against the body, the whole arm shuddering as the blow goes on through it
+    vibe_palm: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.66, load: { b: [-0.03, 0.09], l: 0, tw: -0.4, hp: -0.15, hF: [0.02, 0.16], hand: "palm", hB: [0.28, -0.02], handB: "palm", face: "grit" }, hit: { b: [0.14, 0.07], l: 0.22, tw: 0.5, hp: 0.3, hF: [0.44, -0.03], hand: "palm", hB: [0, 0.18], handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], sm: 0.05, face: "shout" }, holdT: 0.16, holdK: 0.6 })), shake: { a: 0.014, t: 0.18 } }),
+    // both hands on the other's head, pulling it down onto the knee driven up to meet it
+    knee: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.07], l: 0.04, hp: -0.1, fF: [0.1, -0.1], hF: [0.3, -0.04], hB: [0.26, 0], hand: "claw", handB: "claw", face: "fierce" }, hit: { b: [0.08, -0.05], z: 0.07, l: 0.16, hp: 0.3, fF: [0.26, -0.44], fB: [-0.08, -0.02], hF: [0.3, 0.1], hB: [0.27, 0.13], hand: "fist", handB: "fist", ht: 0.15, face: "shout" }, follow: { z: 0 } })), legs: true }),
+    axe_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.75, load: { z: 0.55, l: -0.34, hp: 0.2, ht: -0.1, fF: [0.18, -0.98], fB: [-0.1, -0.14], ...arms(c, { hF: [-0.12, -0.1], hB: [0.22, -0.22] }), face: "grit" }, hit: { z: 0, b: [0.1, 0.1], l: 0.32, hp: 0, ht: 0.15, fF: [0.58, -0.04], fB: [-0.17, 0], smfF: 0.08, ...arms(c, { hF: [-0.1, 0.22], hB: [0.1, 0.16] }), face: "shout" } })), legs: true }),
+    // Collier: crouched, then up off the ground with the leg swung in an arc to the throat
+    rise_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.19], l: 0.16, hp: -0.15, fF: [0.28, -0.03], fB: [-0.12, 0], ...arms(c, { hF: [0.1, 0.28], hB: [0, 0.26] }), face: "grit" }, hit: { b: [0.02, -0.05], z: 0.16, l: -0.5, hp: 0.3, ht: 0.2, fF: [0.38, -0.98], fB: [-0.05, -0.04], sm: 0.12, ...arms(c, { hF: [-0.22, 0.1], hB: [0.14, 0.2] }), face: "shout" }, follow: { z: 0.06, fF: [0.42, -0.85] } })), legs: true }),
+    // Mouton Shot: a dip, the knee drawn right up to the chest, then the sole driven out straight with a hop behind it
+    mouton: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.66, antic: { b: [0, 0.1], l: 0.12, fF: [0.2, 0] }, load: { l: -0.36, z: 0.08, hp: -0.2, b: [-0.04, 0.04], ht: 0.12, fF: [-0.05, -0.48], fB: [-0.04, 0], ...arms(c, { hF: [0.1, -0.1] }), face: "grit" }, hit: { l: -0.78, b: [0.27, 0], z: 0.17, hp: 0.35, ht: 0.35, fF: [0.9, -0.56], fB: [-0.12, -0.13], smfF: 0.12, ...arms(c, { hF: [-0.36, 0.25], hB: [-0.32, 0.3] }), face: "shout" }, follow: { z: 0, l: -0.42 } })), legs: true }),
     handstand: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
-    flying_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0] }, hit: { z: 0.3, l: -0.34, fF: [0.78, -0.46], fB: [-0.06, -0.3], hF: [-0.2, 0.05], hB: [0.2, -0.1], face: "shout" }, follow: { z: 0 } })), legs: true }),
-    stomp: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { fF: [0.18, -0.55], l: -0.1, hF: [0.2, -0.1], hB: [-0.1, -0.1] }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
+    flying_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0], face: "grit" }, hit: { z: 0.3, l: -0.34, hp: 0.3, fF: [0.78, -0.46], fB: [-0.06, -0.3], smfF: 0.08, ...arms(c, { hF: [-0.2, 0.05], hB: [0.2, -0.1] }), face: "shout" }, follow: { z: 0 } })), legs: true }),
+    stomp: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { fF: [0.18, -0.55], l: -0.1, ...arms(c, { hF: [0.2, -0.1], hB: [-0.1, -0.1] }), face: "grit" }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
     // Okama Kenpo: ballet
-    ballet_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.24], hB: [-0.08, 0.24] }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.03], hF: [0.34, -0.24], hB: [-0.36, -0.22], face: "fierce" } })), legs: true }),
-    pirouette: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 1, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hF: [0.14, -0.44], hB: [0, -0.46], face: "fierce" }, hitEase: "out", end: { ...BALLET, sp: 1 } })), legs: true }),
-    jete: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], face: "fierce" }, follow: { z: 0 } })), legs: true }),
-    arabesque: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], face: "fierce" } })), legs: true }),
+    ballet_kick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.11], hF: [0.14, 0.24], hB: [-0.08, 0.24], zF: 0.08, zB: 0.08 }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.04], hp: 0.25, hF: [0.34, -0.24], hB: [-0.36, -0.22], zF: 0.12, zB: 0.12, sm: 0.06, face: "fierce" } })), legs: true }),
+    pirouette: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, followAt: 0.35, load: { b: [0, 0.1], sp: -0.05, hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 0, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hp: 0.3, hF: [0.14, -0.44], hB: [0, -0.46], zF: 0.05, zB: 0.05, sm: 0.08, face: "fierce" }, follow: { sp: 0.6 }, end: { ...BALLET, sp: 1 } })), legs: true }),
+    jete: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], zF: 0.1, zB: 0.1, smfF: 0.06, face: "fierce" }, follow: { z: 0 } })), legs: true }),
+    arabesque: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], zB: 0.1, smfB: 0.08, face: "fierce" } })), legs: true }),
     // ---------------------------------------------------------------- blades
-    slash: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.04], hF: { a: -2.1, r: 0.34 }, wF: -2.55, hB: [-0.04, 0.18] }, hit: { l: 0.27, b: [0.13, 0.08], hF: { a: 0.55, r: 0.43 }, wF: 0.8, hB: [0.2, 0.16], fF: [0.3, 0], fB: [-0.17, 0], face: "fierce" }, follow: { l: 0.3, hF: { a: 0.9, r: 0.42 }, wF: 1.15 } })) }),
-    slash2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, face: "fierce" }, follow: { hF: { a: -0.95, r: 0.42 }, wF: -1.35 } })) }),
-    rise_slash: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.15], l: 0.26, hF: { a: 1.85, r: 0.36 }, wF: 2.5, hB: [0, 0.22], face: "fierce" }, hit: { b: [0.12, -0.03], z: 0.04, l: -0.22, hF: { a: -1.2, r: 0.43 }, wF: -1.5, hB: [-0.1, 0.12], fF: [0.26, 0], fB: [-0.16, -0.04], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.8, l: -0.26 } })) }),
-    slash3: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), loadAt: 0.7, load: { l: -0.22, b: [-0.04, 0.08], hF: { a: 2.7, r: 0.36 }, wF: 3, sp: 0 }, hit: { sp: 1, l: 0.22, b: [0.16, 0.06], hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, hitEase: "out", end: { ...sw(c), sp: 1 } })) }),
-    stab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.14, b: [-0.08, 0.06], hF: [-0.02, 0.08], wF: 0, hB: [-0.06, 0.1] }, hit: { l: 0.32, b: [0.22, 0.04], hF: [0.46, -0.03], wF: -0.03, hB: [-0.2, 0.16], fF: [0.36, 0], fB: [-0.22, -0.03], face: "shout" } })) }),
-    cleave: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.72, load: { l: -0.24, b: [-0.06, 0], hF: { a: -1.85, r: 0.36 }, hB: { a: -1.75, r: 0.33 }, wF: -2.25, face: "fierce" }, hit: { l: 0.4, b: [0.22, 0.15], hF: { a: 0.78, r: 0.4 }, hB: { a: 0.88, r: 0.35 }, wF: 1, fF: [0.36, 0], fB: [-0.22, 0], face: "shout" }, follow: { l: 0.44, b: [0.24, 0.17] } })), jitter: 0.01 }),
-    iai: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: { ...SWORD2, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.16], l: 0.34, hF: [0.02, 0.3], wF: 2.7, face: "fierce" }, hit: { l: 0.5, b: [0.2, 0.08], hF: [0.46, 0.04], wF: 0.1, fB: [-0.36, -0.12], face: "shout" }, follow: { l: 0.2, hF: [0.1, 0.28], wF: 2.6 } })) }),
+    // the blade raised back over the shoulder, the body wound away, then cut down through with the hips behind it
+    slash: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.05], tw: -0.42, hp: -0.15, hF: { a: -2.15, r: 0.35 }, wF: -2.6, hB: [-0.04, 0.18], face: "fierce" }, hit: { l: 0.3, b: [0.14, 0.08], tw: 0.5, hp: 0.3, hF: { a: 0.6, r: 0.43 }, wF: 0.85, hB: [0.16, 0.18], fF: [0.31, 0], fB: [-0.17, -0.02], face: "shout" }, follow: { l: 0.34, tw: 0.62, hF: { a: 0.95, r: 0.42 }, wF: 1.25 } })) }),
+    slash2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: 0.14, b: [0, 0.1], tw: 0.3, hp: 0.1, hF: { a: 2.05, r: 0.34 }, wF: 2.5, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.03], tw: -0.35, hp: -0.15, hF: { a: -0.62, r: 0.43 }, wF: -1, face: "fierce" }, follow: { hF: { a: -1, r: 0.42 }, wF: -1.45, tw: -0.42 } })) }),
+    rise_slash: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.17], l: 0.28, tw: -0.4, hp: -0.12, hF: { a: 1.9, r: 0.36 }, wF: 2.55, hB: [0, 0.22], face: "grit" }, hit: { b: [0.12, -0.04], z: 0.06, l: -0.22, tw: 0.42, hp: 0.25, hF: { a: -1.2, r: 0.43 }, wF: -1.55, hB: [-0.12, 0.1], fF: [0.26, 0], fB: [-0.16, -0.06], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.85, l: -0.26 } })) }),
+    slash3: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), loadAt: 0.7, followAt: 0.35, load: { l: -0.22, b: [-0.04, 0.08], tw: -0.5, hF: { a: 2.7, r: 0.36 }, wF: 3, sp: -0.05, face: "grit" }, hit: { sp: 0, l: 0.22, b: [0.16, 0.06], tw: 0.55, hp: 0.3, hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, follow: { sp: 0.55, wF: 0.3 }, end: { ...sw(c), sp: 1 } })) }),
+    // a deep lunge behind the point, the free hand laid along to aim it
+    stab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.14, b: [-0.09, 0.07], tw: -0.45, hp: -0.2, hF: [-0.04, 0.06], wF: 0, hB: [0.14, -0.04], handB: "palm", face: "grit" }, hit: { l: 0.34, b: [0.23, 0.05], tw: 0.55, hp: 0.4, hF: [0.47, -0.03], wF: -0.03, hB: [-0.22, 0.14], handB: "fist", fF: [0.37, 0], fB: [-0.23, -0.03], face: "shout" } })) }),
+    cleave: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.12, hF: [0.2, 0.18], wF: -0.4 }, load: { l: -0.26, b: [-0.06, 0], tw: -0.25, ht: -0.1, hF: { a: -1.85, r: 0.38 }, hB: { a: -1.75, r: 0.34 }, wF: -2.3, face: "grit" }, hit: { l: 0.4, b: [0.23, 0.13], tw: 0.3, hp: 0.3, ht: 0.2, hF: { a: 0.72, r: 0.41 }, hB: { a: 0.82, r: 0.36 }, wF: 0.78, fF: [0.37, 0], fB: [-0.23, 0], face: "shout" }, follow: { l: 0.44, b: [0.25, 0.15], wF: 0.86 } })), jitter: 0.01 }),
+    // the quick draw: crouched low with the hand on the hilt at the hip, the cut drawn out through the dash, and the blade slid home after
+    iai: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: { ...SWORD2, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.17], l: 0.36, tw: -0.5, hp: -0.2, ht: -0.15, hF: [-0.02, 0.32], zF: -0.12, wF: 2.75, hB: [0.02, 0.3], face: "grit" }, hit: { l: 0.5, b: [0.22, 0.09], tw: 0.6, hp: 0.4, hF: [0.47, 0.03], wF: 0.08, hB: [-0.1, 0.24], fB: [-0.37, -0.12], face: "shout" }, follow: { l: 0.2, tw: 0.2, hF: [0.12, 0.27], zF: -0.08, wF: 2.6 } })) }),
     // two blades (Nitoryu): alternating cuts, then an X
-    dual1: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.16, hF: { a: -2.1, r: 0.34 }, wF: -2.55 }, hit: { l: 0.26, b: [0.12, 0.07], hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" } })) }),
-    dual2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.14, hB: { a: -2.2, r: 0.33 }, wB: -2.6 }, hit: { l: 0.28, b: [0.13, 0.07], hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" } })) }),
-    dual3: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: 0.12, b: [0, 0.1], hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6 }, hit: { l: -0.14, b: [0.12, 0.02], hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
-    dualx: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, face: "fierce" }, hit: { l: 0.32, b: [0.18, 0.1], hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, face: "shout" } })) }),
-    dual_stab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.16, b: [-0.1, 0.07], hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "fierce" }, hit: { l: 0.36, b: [0.24, 0.05], hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
-    tora: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, loadAt: 0.72, load: { z: 0.4, l: -0.32, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "fierce" }, hit: { z: 0, l: 0.46, b: [0.24, 0.15], hF: { a: 0.9, r: 0.4 }, hB: { a: 1.1, r: 0.38 }, wF: 1, wB: 1.2, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
-    bladespin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], hF: { a: 2.6, r: 0.38 }, wF: 2.9 }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
-    // big weapons
-    axe: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "fierce" }, hit: { l: 0.36, b: [0.2, 0.12], hF: { a: 0.7, r: 0.42 }, hB: { a: 0.9, r: 0.36 }, wF: 1, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4 } })) }),
-    axe2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6 }, hit: { l: -0.2, b: [0.16, 0.02], hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" } })) }),
-    axe_slam: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "fierce" }, hit: { z: 0, l: 0.52, b: [0.24, 0.24], hF: { a: 1.05, r: 0.42 }, hB: { a: 1.15, r: 0.36 }, wF: 1.35, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.5, b: [0.24, 0.24] } })), jitter: 0.012 }),
-    staff: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: -0.14, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2] }, hit: { l: 0.24, b: [0.1, 0.05], hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" } })) }),
-    staff2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], hF: { a: 1.9, r: 0.34 }, wF: 2.3 }, hit: { l: -0.12, b: [0.1, 0.02], hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" } })) }),
-    staff_jab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], hF: [0, 0.06], wF: 0.02 }, hit: { l: 0.3, b: [0.2, 0.04], hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
+    dual1: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.16, tw: -0.4, hF: { a: -2.1, r: 0.34 }, wF: -2.55, face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.45, hp: 0.25, hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" }, follow: { tw: 0.55, wF: 1.1 } })) }),
+    dual2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.14, tw: 0.35, hB: { a: -2.2, r: 0.33 }, wB: -2.6, face: "fierce" }, hit: { l: 0.3, b: [0.13, 0.07], tw: -0.5, hp: -0.25, hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" }, follow: { tw: -0.6, wB: 1.15 } })) }),
+    dual3: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: 0.12, b: [0, 0.1], tw: 0.2, hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.25, hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
+    dualx: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], ht: -0.08, hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, zF: 0.06, zB: 0.06, face: "grit" }, hit: { l: 0.34, b: [0.18, 0.1], ht: 0.12, hp: 0.2, hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, zF: -0.08, zB: -0.08, fF: [0.31, 0], fB: [-0.2, -0.02], face: "shout" }, follow: { l: 0.38 } })) }),
+    dual_stab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, load: { l: -0.16, b: [-0.1, 0.07], tw: -0.3, hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "grit" }, hit: { l: 0.36, b: [0.24, 0.05], tw: 0.3, hp: 0.3, hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
+    // Tora Gari: up off the ground with the blades raised high, and down through the landing in one cut
+    tora: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: SWORD22, loadAt: 0.72, load: { z: 0.4, l: -0.32, ht: -0.1, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "grit" }, hit: { z: 0, l: 0.42, b: [0.24, 0.12], ht: 0.18, hp: 0.25, hF: { a: 0.75, r: 0.4 }, hB: { a: 0.9, r: 0.38 }, wF: 0.72, wB: 0.86, zF: 0.08, zB: 0.08, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
+    bladespin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], tw: -0.4, hF: { a: 2.6, r: 0.38 }, wF: 2.9, face: "grit" }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, zF: 0.1, zB: 0.1, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
+    // big weapons: swung with the whole body; the head comes down on the ground in front, not through it
+    axe: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], tw: -0.35, hp: -0.15, ht: -0.1, hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "grit" }, hit: { l: 0.36, b: [0.2, 0.1], tw: 0.3, hp: 0.25, ht: 0.15, hF: { a: 0.62, r: 0.42 }, hB: { a: 0.8, r: 0.36 }, wF: 0.72, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4, wF: 0.8 } })) }),
+    axe2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], tw: 0.3, hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6, face: "grit" }, hit: { l: -0.2, b: [0.16, 0.02], tw: -0.3, hp: -0.2, hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" }, follow: { wF: -1.4, tw: -0.4 } })) }),
+    axe_slam: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], ht: -0.15, hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "grit" }, hit: { z: 0, l: 0.46, b: [0.24, 0.16], ht: 0.2, hF: { a: 0.62, r: 0.43 }, hB: { a: 0.74, r: 0.38 }, wF: 0.58, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.48, b: [0.24, 0.17], wF: 0.64 } })), jitter: 0.012 }),
+    staff: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: -0.14, tw: -0.35, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2], face: "fierce" }, hit: { l: 0.26, b: [0.1, 0.05], tw: 0.4, hp: 0.2, hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" }, follow: { tw: 0.5, wF: 0.85 } })) }),
+    staff2: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], tw: 0.3, hF: { a: 1.9, r: 0.34 }, wF: 2.3, face: "fierce" }, hit: { l: -0.12, b: [0.1, 0.02], tw: -0.35, hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" }, follow: { wF: -1.1 } })) }),
+    staff_jab: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], tw: -0.35, hF: [0, 0.06], wF: 0.02, face: "grit" }, hit: { l: 0.3, b: [0.2, 0.04], tw: 0.45, hp: 0.3, hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
     // ---------------------------------------------------------------- guns & throws
-    shoot: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.42, -0.04], wF: 0, hB: c.sling ? [0.02, -0.04] : [0.3, 0.05], l: 0.03 }, hit: { hF: [0.34, -0.13], wF: -0.4, hB: c.sling ? [0.34, -0.02] : [0.26, 0.04], l: -0.1, b: [-0.07, 0] }, follow: { hF: [0.4, -0.06], wF: -0.1, l: 0 } })) }),
-    aim: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, hB: c.sling ? [-0.02, -0.06] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02] }, hit: { hF: [0.3, -0.24], wF: -0.7, hB: c.sling ? [0.36, -0.04] : [0.24, 0.02], l: -0.16, b: [-0.14, 0.02] } })) }),
-    flick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { hF: [0.02, 0.2], l: -0.06 }, hit: { hF: [0.46, -0.1], l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
-    throw: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { hF: { a: -2.4, r: 0.4 }, l: -0.16, b: [-0.04, 0.04] }, hit: { hF: { a: 0.15, r: 0.43 }, l: 0.26, b: [0.1, 0.04], hand: "palm", face: "fierce" } })) }),
+    // a pistol held out and fired, the recoil kicking the hand up; a slingshot's band
+    // drawn back to the cheek and let go, the drawing hand springing open
+    shoot: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.43, -0.04], wF: 0, tw: 0.3, ht: 0.06, hB: c.sling ? [-0.02, -0.07] : [0.3, 0.05], l: 0.04, face: "fierce" }, hit: { hF: c.sling ? [0.42, -0.1] : [0.35, -0.13], wF: c.sling ? -0.15 : -0.45, tw: 0.25, hB: c.sling ? [-0.07, -0.09] : [0.26, 0.04], handB: c.sling ? "palm" : "fist", l: c.sling ? -0.02 : -0.12, b: [-0.08, 0] }, follow: { hF: [0.41, -0.06], wF: -0.12, l: 0, handB: "fist" } })) }),
+    // a long aim, the eye down the barrel (or along the band), then the shot: a gun's recoil throws the arm up, a slingshot's band snaps the hand open
+    aim: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, tw: 0.35, hr: 0.14, hB: c.sling ? [-0.03, -0.07] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: c.sling ? { hF: [0.42, -0.1], wF: -0.15, l: -0.04, b: [-0.05, 0.05], hr: 0.06 } : { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02], hr: 0 }, hit: c.sling ? { hF: [0.42, -0.1], wF: -0.15, hB: [-0.09, -0.1], handB: "palm", l: -0.04, b: [-0.05, 0.05], face: "shout" } : { hF: [0.3, -0.24], wF: -0.7, hB: [0.24, 0.02], l: -0.16, b: [-0.14, 0.02], face: "shout" } })) }),
+    flick: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { hF: [0.02, 0.2], tw: -0.25, l: -0.06 }, hit: { hF: [0.46, -0.1], tw: 0.35, l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
+    throw: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { hF: { a: -2.4, r: 0.4 }, tw: -0.45, hp: -0.2, l: -0.16, b: [-0.04, 0.04], hB: [0.3, -0.06], handB: "palm", face: "fierce" }, hit: { hF: { a: 0.15, r: 0.43 }, tw: 0.5, hp: 0.3, l: 0.26, b: [0.1, 0.04], hB: [-0.1, 0.16], handB: "fist", hand: "palm", fF: [0.24, 0], fB: [-0.15, -0.03], face: "fierce" } })) }),
     // ---------------------------------------------------------------- casting
-    push: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.04, 0.1], l: -0.14, hF: [-0.12, 0.18], hB: [-0.16, 0.2], hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.16, 0], face: "fierce" }, hit: { b: [0.1, 0.04], l: 0.22, hF: [0.47, -0.06], hB: [0.43, 0.03], hand: "palm", handB: "palm", fF: [0.28, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 6e-3 }),
-    point: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.1, 0.1], l: -0.06, face: "fierce" }, hit: { hF: [0.48, -0.12], hand: "finger", l: 0.1, hB: [-0.05, 0.3], fF: [0.18, 0], fB: [-0.12, 0] } })) }),
-    raise: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.14, b: [0.04, 0.04], face: "shout" } })), jitter: 4e-3 }),
-    summon: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.1], l: 0.18, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, -0.02], l: -0.16, hF: [0.18, -0.5], hB: [-0.16, -0.48], hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
-    powerup: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.16], l: 0.26, hF: [0.02, 0.27], hB: [-0.06, 0.29], fF: [0.2, 0], fB: [-0.2, 0], face: "fierce" }, hit: { b: [0, -0.03], l: -0.18, hF: [0.3, -0.34], hB: [-0.28, -0.34], hand: "palm", handB: "palm", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.14 })), jitter: 0.012 }),
-    spread: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], hF: [0.1, 0.26], hB: [0, 0.26], l: 0.22, face: "fierce" }, hit: { b: [0, -0.02], hF: [0.4, -0.14], hB: [-0.38, -0.14], hand: "palm", handB: "palm", l: -0.1, fF: [0.2, 0], fB: [-0.2, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
-    hana: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85 })) }),
-    slam: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, hF: [0.14, -0.46], hB: [0.06, -0.46], l: -0.22, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "fierce" }, hit: { z: 0, b: [0.1, 0.26], l: 0.48, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.26, 0], fB: [-0.2, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
-    quake: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.72, load: { b: [-0.06, 0.08], l: -0.26, hF: [-0.24, -0.04], hB: [0.2, 0.05], face: "fierce" }, hit: { b: [0.2, 0.05], l: 0.36, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], face: "shout" } })), jitter: 0.014 }),
-    pray: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
+    // both palms driven out together behind a beam
+    push: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.05, 0.11], l: -0.16, tw: -0.25, hF: [-0.12, 0.18], hB: [-0.15, 0.2], hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.12, 0.05], l: 0.24, tw: 0.15, hF: [0.48, -0.07], hB: [0.44, 0.04], hand: "palm", handB: "palm", fF: [0.29, 0], fB: [-0.19, -0.02], face: "shout" } })), jitter: 6e-3 }),
+    // the arm thrown out to point, the body turned side-on behind it
+    point: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.08, 0.06], tw: -0.2, l: -0.06, hB: [0, 0.3], face: "fierce" }, hit: { hF: [0.49, -0.12], hand: "finger", tw: 0.4, hp: 0.15, l: 0.1, hB: [-0.08, 0.3], fF: [0.19, 0], fB: [-0.13, 0], face: "fierce" } })) }),
+    // a hand raised high, then flung forward to send it
+    raise: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, ht: -0.15, tw: -0.25, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.16, tw: 0.35, b: [0.05, 0.04], ht: 0, face: "shout" } })), jitter: 4e-3 }),
+    // both arms swept up to the sky
+    summon: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.12], l: 0.2, ht: 0.2, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.3, hF: { a: -1.75, r: 0.43 }, hB: { a: -1.4, r: 0.43 }, zF: 0.12, zB: 0.12, hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
+    // a transformation: hunched over clenched fists, gathering it in, then thrown open with the head back — the roar
+    powerup: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.78, load: { b: [0, 0.17], l: 0.3, ht: 0.25, hF: [0.04, 0.28], hB: [-0.04, 0.3], zF: 0.06, zB: 0.06, fF: [0.21, 0], fB: [-0.21, 0], zfF: 0.04, zfB: 0.04, face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.25, hF: [0.18, -0.08], hB: [-0.16, -0.06], zF: 0.22, zB: 0.22, hand: "fist", handB: "fist", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.16 })), jitter: 0.012 }),
+    // arms crossed before the chest, coiled, then flung wide: a burst from the hands
+    spread: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], l: 0.2, hF: [0.18, 0.06], hB: [0.16, 0.08], zF: -0.12, zB: -0.12, face: "grit" }, hit: { b: [0, -0.02], l: -0.1, hF: [0.36, -0.14], hB: [-0.36, -0.14], zF: 0.14, zB: 0.14, hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.21, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
+    hana: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85, settle: false })) }),
+    slam: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, l: -0.24, ht: -0.15, hF: [0.12, -0.46], hB: [0.05, -0.46], zF: 0.03, zB: 0.03, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "grit" }, hit: { z: 0, b: [0.1, 0.27], l: 0.5, ht: 0.25, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.27, 0], fB: [-0.21, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
+    // a punch at the air itself: the fist cocked back, driven out, stopped dead and shuddering
+    quake: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.7, antic: { b: [0.02, 0.07], l: 0.12 }, load: { b: [-0.06, 0.09], l: -0.24, tw: -0.6, hp: -0.25, hF: [-0.24, -0.06], hB: [0.22, 0.04], face: "grit" }, hit: { b: [0.2, 0.06], l: 0.36, tw: 0.6, hp: 0.4, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], sm: 0.06, face: "shout" }, holdT: 0.14 })), jitter: 0.014, shake: { a: 0.012, t: 0.14 } }),
+    pray: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], zF: -0.06, zB: -0.06, hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
     blink: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
-    will: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.8, load: { b: [0, 0.1], hF: [0, 0.32], hB: [-0.04, 0.32], l: 0.1, ht: 0.15, face: "fierce" }, hit: { b: [0, -0.04], l: -0.12, ht: -0.12, hF: [0.14, 0.36], hB: [-0.1, 0.36], face: "shout" }, holdT: 0.2 })), jitter: 0.01 }),
-    guardup: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUARD, load: { b: [0, 0.07], hF: [0.14, -0.1], hB: [0.2, -0.02], eB: -1 }, hit: { b: [0, 0.06], hF: [0.16, -0.12], hB: [0.2, -0.02], eB: -1, face: "fierce" }, holdT: 0.3 })) }),
-    flex: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { b: [0, 0.1], hF: [0.18, -0.2], hB: [-0.18, -0.2], eF: 1, eB: 1, face: "fierce" }, hit: { b: [0, 0.12], hF: [0.2, -0.24], hB: [-0.2, -0.24], face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
-    breath: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "fierce" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
-    pull: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
-    // ---------------------------------------------------------------- rubber
-    pistol: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.22, b: [-0.06, 0.05], hF: [-0.56, -0.02], stretch: true, face: "fierce" }, hit: { l: 0.26, b: [0.12, 0.02], hF: [0.47, -0.05], stretch: true, face: "shout" }, holdT: 0.12 })) }),
-    bazooka: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.74, load: { b: [-0.06, 0.07], l: -0.3, hF: [-0.66, 0], hB: [-0.7, 0.08], hand: "palm", handB: "palm", stretch: true, face: "fierce" }, hit: { b: [0.22, 0.04], l: 0.32, hF: [0.52, -0.04], hB: [0.5, 0.07], hand: "palm", handB: "palm", stretch: true, face: "shout" }, holdT: 0.1 })) }),
-    gatling: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.12, hF: [-0.14, 0.04], hB: [-0.16, 0.08], face: "fierce" }, hit: { l: 0.2, b: [0.08, 0.04], hF: [0.4, -0.02], hB: [0.36, 0.05], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
-    kneel: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
-    rocket: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.12], l: -0.26, hF: [-0.54, 0.08], hB: [-0.56, 0.12], stretch: true }, hit: { l: 0.62, z: 0.16, hF: [0.46, 0], hB: [0.44, 0.06], fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" } })), legs: true }),
-    fly: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true })
+    // Conqueror's Haki: no wind-up to speak of, only stillness — standing tall, chin up, fists at the sides, and a glare
+    will: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.85, load: { b: [-0.02, 0], l: -0.1, ht: -0.16, hF: [0.03, 0.36], hB: [-0.05, 0.36], zF: 0.05, zB: 0.05, face: "glare" }, hit: { b: [0, -0.02], l: -0.14, ht: -0.22, hF: [0.06, 0.34], hB: [-0.08, 0.34], zF: 0.12, zB: 0.12, face: "glare" }, holdT: 0.35, settle: false })) }),
+    // braced like iron: the guard locked tight, the feet planted wide
+    guardup: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: GUARD, load: { b: [0, 0.08], hF: [0.15, -0.1], hB: [0.2, -0.02], eB: -1, zF: -0.05 }, hit: { b: [0, 0.1], hF: [0.16, -0.12], hB: [0.2, -0.03], eB: -1, zF: -0.06, zB: -0.04, zfF: 0.05, zfB: 0.05, face: "grit" }, holdT: 0.3, settle: false })) }),
+    flex: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.12, hF: [0.12, 0.2], hB: [-0.1, 0.22], face: "grit" }, hit: { b: [0, 0.1], l: -0.06, ht: -0.12, hF: [0.12, -0.24], hB: [-0.14, -0.24], zF: 0.2, zB: 0.2, eF: 1, eB: 1, face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
+    breath: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "grit" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
+    pull: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", tw: 0.3, l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", tw: -0.3, l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
+    // ---------------------------------------------------------------- Devil Fruit signatures
+    // Gum-Gum Pistol: the arm wound far back on its rubber, the body twisted away from it and the other hand aiming — then let go
+    pistol: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.24, b: [-0.07, 0.06], tw: -0.75, hp: -0.3, hF: [-0.62, -0.03], zF: 0.05, stretch: true, hB: [0.3, -0.04], handB: "palm", fF: [0.25, 0], fB: [-0.18, 0], face: "grit" }, hit: { l: 0.28, b: [0.14, 0.03], tw: 0.65, hp: 0.4, hF: [0.47, -0.05], stretch: true, hB: [-0.05, 0.12], handB: "fist", fF: [0.29, 0], fB: [-0.15, -0.05], face: "shout" }, holdT: 0.12 })) }),
+    // Gum-Gum Bazooka: both arms stretched back behind, then the two palms slammed out together
+    bazooka: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.7, antic: { b: [0.02, 0.09], l: 0.14, hF: [0.25, 0.05], hB: [0.24, 0.08] }, load: { b: [-0.08, 0.09], l: -0.32, tw: -0.3, hF: [-0.7, 0], hB: [-0.72, 0.08], zF: 0.04, zB: 0.04, hand: "palm", handB: "palm", stretch: true, fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.23, 0.05], l: 0.33, tw: 0.15, hp: 0.2, hF: [0.53, -0.05], hB: [0.51, 0.07], hand: "palm", handB: "palm", stretch: true, fF: [0.34, 0], fB: [-0.16, -0.05], face: "shout" }, holdT: 0.1 })) }),
+    // a flurry: the stance wide, leaning in behind fists that blur (see samplePose)
+    gatling: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { l: -0.14, b: [-0.04, 0.08], tw: -0.2, hF: [-0.16, 0.02], hB: [-0.2, 0.06], fF: [0.26, 0], fB: [-0.2, 0], face: "grit" }, hit: { l: 0.24, b: [0.08, 0.07], ht: 0.05, hF: [0.42, -0.02], hB: [0.38, 0.04], fF: [0.28, 0], fB: [-0.2, -0.02], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
+    kneel: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "grit" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
+    rocket: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { load: { b: [0, 0.12], l: -0.26, hF: [-0.54, 0.08], hB: [-0.56, 0.12], stretch: true, face: "grit" }, hit: { l: 0.62, z: 0.16, hF: [0.46, 0], hB: [0.44, 0.06], fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" } })), legs: true }),
+    fly: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true }),
+    // Hiken: the fist pulled back to the hip in its fire, the body wound round it and the other hand out to aim — then thrown with everything behind it
+    hiken: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.62, antic: { b: [0.02, 0.07], l: 0.1, hF: [0.26, 0] }, load: { b: [-0.08, 0.1], l: -0.12, tw: -0.7, hp: -0.3, ht: 0.05, hF: [-0.2, 0.12], eF: 1, hB: [0.34, -0.06], handB: "palm", fF: [0.27, 0], fB: [-0.21, 0], face: "grit" }, hit: { b: [0.24, 0.06], l: 0.36, tw: 0.75, hp: 0.5, ht: -0.08, hF: [0.5, -0.04], hB: [-0.1, 0.18], handB: "fist", fF: [0.38, 0], fB: [-0.15, -0.07], sm: 0.14, face: "shout" }, follow: { l: 0.4, b: [0.27, 0.08], hF: [0.45, -0.02] }, holdT: 0.14 })), jitter: 6e-3 }),
+    // Gura Gura: the fist cocked high by the ear, the elbow up and back, then punched into the empty air in front — where it stops dead and the air cracks
+    kaishin: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.66, antic: { b: [0.02, 0.08], l: 0.12 }, load: { b: [-0.06, 0.12], l: -0.12, tw: -0.62, hp: -0.25, hF: [-0.12, -0.16], eF: -0.5, zF: 0.06, hB: [0.22, 0.04], fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.17, 0.08], l: 0.3, tw: 0.55, hp: 0.4, hF: [0.42, -0.06], eF: 0.6, hB: [-0.08, 0.16], fF: [0.33, 0], fB: [-0.17, -0.04], sm: 0.04, face: "shout" }, holdT: 0.18, holdK: 0.6 })), jitter: 0.016, shake: { a: 0.016, t: 0.2 } }),
+    // Seaquake: both hands up gripping the air itself, then the whole body wrenching it round and down — the world tilts
+    tilt: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { loadAt: 0.6, load: { b: [0, 0.06], l: -0.1, ht: -0.12, hF: [0.3, -0.18], hB: [0.28, -0.2], zF: 0.18, zB: 0.18, hand: "claw", handB: "claw", fF: [0.24, 0], fB: [-0.2, 0], zfF: 0.05, zfB: 0.05, face: "grit" }, hit: { b: [0.04, 0.14], l: 0.2, ls: 0.35, tw: 0.4, ht: 0.05, hF: [0.32, 0.05], hB: [0.3, -0.25], zF: 0.1, zB: 0.12, hand: "fist", handB: "fist", face: "shout" }, holdT: 0.3 })), jitter: 0.012, shake: { a: 0.012, t: 0.3 } }),
+    // El Thor: the arm thrust up at the sky, the finger raised — and swept down at the target as the bolt falls
+    skyward: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.45, load: { b: [0, 0.03], l: -0.1, ht: -0.25, tw: -0.15, hF: { a: -1.5, r: 0.43 }, hand: "finger", hB: [0.02, 0.32], zB: 0.04, face: "fierce" }, hit: { b: [0.04, 0.07], l: 0.12, ht: 0.05, tw: 0.3, hF: [0.42, 0.12], hand: "finger", hB: [-0.05, 0.3], face: "shout" }, holdT: 0.2 })), jitter: 5e-3 }),
+    // Ice Age: the palm raised high, then down onto one knee and slapped flat on the ground (it freezes out from there)
+    groundpalm: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, -0.02], z: 0.02, l: -0.08, ht: -0.1, tw: -0.2, hF: { a: -1.3, r: 0.4 }, hand: "palm", hB: [0.05, 0.3], face: "fierce" }, hit: { b: [0.08, 0.34], l: 0.74, ht: -0.32, tw: 0.2, hF: [0.24, 0.72], hand: "palm", hB: [-0.12, 0.25], fF: [0.31, 0], fB: [-0.24, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.3, holdK: 0.8 })), legs: true }),
+    // ROOM: a hand held up before the face, open as if round a sphere, as the dome spreads out from it
+    room: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.05], l: 0.04, tw: -0.1, hF: [0.16, 0.06], hand: "claw", hB: [0, 0.32], face: "fierce" }, hit: { b: [0, 0.06], l: -0.04, ht: -0.08, tw: 0.15, hF: [0.24, -0.17], zF: 0.03, hand: "claw", eF: 1, hB: [-0.02, 0.32], face: "fierce" }, holdT: 0.28, settle: false })) }),
+    // Dai Enkai: both hands raised high under the second sun, then one arm hurling it down at them
+    sunraise: (w, T4, c) => ({ keys: strike(w, T4, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [0, 0.04], l: -0.18, ht: -0.25, hF: { a: -1.55, r: 0.42 }, hB: { a: -1.45, r: 0.42 }, zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.18, 0], face: "grit" }, hit: { b: [0.16, 0.06], l: 0.32, tw: 0.4, ht: 0, hF: [0.47, -0.08], hB: [-0.1, 0.12], hand: "palm", handB: "fist", fF: [0.3, 0], fB: [-0.17, -0.04], face: "shout" }, holdT: 0.15 })), jitter: 8e-3 })
   };
   var LIMB = {
     cross: "hB",
@@ -54137,6 +54553,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var SWEEP = { slash: 1, slash2: -1, rise_slash: -1, slash3: 1, cleave: 1, dual1: 1, dual2: 1, dual3: -1, dualx: 1, tora: 1, axe: 1, axe2: -1, axe_slam: 1, staff: 1, staff2: -1, chop: 1, chop2: -1, claw: 1, claw2: -1, claw_x: 1, bladespin: 1, kick_spin: -1, sweep: -1, pirouette: -1, iai: 1 };
   var FLURRY = /* @__PURE__ */ new Set(["gatling", "jab", "cross", "shigan", "shigan2", "palm", "claw", "grab", "kick", "thrust"]);
   var SPINS = /* @__PURE__ */ new Set(["kick_spin", "pirouette", "bladespin", "handstand", "sweep", "slash3"]);
+  var SM_CH = { hF: "smF", hB: "smB", fF: "smfF", fB: "smfB" };
   function buildClip(name, w, T4, c = {}) {
     const key2 = CLIPS[name] ? name : ALIAS[name] || "jab";
     const f = CLIPS[key2];
@@ -54148,13 +54565,36 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     clip2.limb = LIMB[key2] || (clip2.legs ? "fF" : "hF");
     clip2.sweep = SWEEP[key2] || 0;
     const K = clip2.keys;
-    clip2.trailFrom = K[1] ? K[1].t : 0;
-    clip2.trailTo = Math.max((K[3] ? K[3].t : w) + 0.07, c.flurry ? c.flurry.t1 : 0, c.spin ? c.spin.t1 : 0);
+    const hi = K.findIndex((k) => k.t >= w - 1e-4);
+    clip2.trailFrom = hi > 0 ? K[hi - 1].t : K[1] ? K[1].t : 0;
+    const hold = K.find((k) => k.t > w + 1e-4);
+    clip2.trailTo = Math.max((hold ? hold.t : w) + 0.07, c.flurry ? c.flurry.t1 : 0, c.spin ? c.spin.t1 : 0);
     return clip2;
   }
   var ALIAS = { punch: "cross", heavy: "haymaker", cast: "push", block: "guardup", slashing: "slash", kick: "kick", grab: "grab" };
   var GENERIC = /* @__PURE__ */ new Set(["punch", "heavy", "slash", "thrust", "kick", "grab", "cast", "shoot", "block"]);
   var MAIN = (s) => s.hit || s.proj || s.dash || s.zone || s.teleport || s.pull || s.conqueror || s.heal || s.buff || s.summon;
+  var TECH_CLIP = {
+    mera_hiken: "hiken",
+    ryu_hiken: "hiken",
+    magu_daifunka: "hiken",
+    gura_punch: "kaishin",
+    gura_kaishin: "kaishin",
+    haki_emission: "kaishin",
+    gura_tsunami: "tilt",
+    goro_elthor: "skyward",
+    clima_thunderbolt: "skyward",
+    zushi_meteor: "skyward",
+    hie_ageand: "groundpalm",
+    suna_dry: "groundpalm",
+    suna_spada: "groundpalm",
+    ope_room: "room",
+    mera_entei: "sunraise",
+    roku_3: "rankyaku",
+    elec_3: "kick_spin",
+    hassho_3: "vibe_palm",
+    hassho_heavy: "vibe_palm"
+  };
   function defTotal(def) {
     const last = Math.max(0, ...(def.steps || []).map((s) => (s.at ?? def.windup ?? 0) + (s.dash ? s.dash.time : 0) + (s.hit ? s.hit.duration ?? 0.1 : 0)));
     return Math.max((def.windup ?? 0) + (def.active ?? 0.1), last) + (def.recover ?? 0.2);
@@ -54183,7 +54623,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (wk === "gun" && gunKind(actor.weapon) === "sling") c.sling = true;
     const name = pickClip(def, actor, main2, steps, c, wk);
     if (c.hitDur) {
-      if (FLURRY.has(name) && !SPINS.has(name)) c.flurry = { t0: w, t1: w + c.hitDur, rate: 12, legs: name.startsWith("kick") };
+      const rubber = !!actor && actor.fruit === "gomu" && (def.source || "").startsWith("fruit");
+      if (FLURRY.has(name) && !SPINS.has(name)) c.flurry = { t0: w, t1: w + c.hitDur, rate: 12, legs: name.startsWith("kick"), reach: rubber ? 0.6 : 0.34, stretch: rubber };
       if (SPINS.has(name) && name !== "handstand") c.spin = { t0: w, t1: w + c.hitDur, turns: Math.max(1, Math.round(c.hitDur * 5)) };
     }
     const clip2 = buildClip(name, w, T4, c);
@@ -54192,6 +54633,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
   function pickClip(def, actor, s, steps, c, wk) {
     if (def.clip && CLIPS[def.clip]) return def.clip;
+    const sig2 = TECH_CLIP[def.id];
+    if (sig2 && !wk) return sig2;
     const a = def.anim || "punch";
     if (CLIPS[a] && !GENERIC.has(a)) return a;
     const hit = s.hit, dash = s.dash, proj = s.proj;
@@ -54210,7 +54653,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (wk === "staff") return "staff";
         if (wk === "gun") return "aim";
         if (dash) return "charge";
-        if (rubber) return proj ? "bazooka" : "bazooka";
+        if (rubber) return "bazooka";
         if (hit && (hit.shape === "circle" || hit.shape === "ring")) return "slam";
         if (s.zone) return "slam";
         if (hit && hit.shape === "line") return "quake";
@@ -54227,7 +54670,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (dash) return wk === "sword" ? "iai" : rubber ? "rocket" : "charge";
         if (wk === "sword") return c.two ? "dual_stab" : "stab";
         if (wk === "staff") return "staff_jab";
-        if (proj) return "thrust";
         return "thrust";
       case "kick":
         if (hit && (hit.shape === "circle" || hit.shape === "ring")) return multi ? "handstand" : "kick_spin";
@@ -54251,7 +54693,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (buffy && !hit && !proj && !s.zone) return "powerup";
         if (s.zone) return s.zone.atTarget ? "point" : "spread";
         if (s.pull) return "pull";
-        if (hit && (hit.shape === "circle" || hit.shape === "ring")) return multi ? "spread" : "spread";
+        if (hit && (hit.shape === "circle" || hit.shape === "ring")) return "spread";
         if (hit && hit.shape === "line") return "push";
         if (proj) return proj.count > 3 ? "spread" : "push";
         return "powerup";
@@ -54265,21 +54707,45 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         return "cross";
     }
   }
-  function samplePose(A, t, pose) {
-    const keys2 = A.keys;
+  var LEAD = 0.024;
+  var LAG = 0.032;
+  var HEAD = ["ht", "hy", "hr"];
+  var _seg = { a: null, b: null, k: 0 };
+  function seg(keys2, t) {
     let i = 0;
     while (i < keys2.length - 2 && t >= keys2[i + 1].t) i++;
     const k0 = keys2[i], k1 = keys2[i + 1] || k0;
     const span2 = k1.t - k0.t;
     let k = span2 > 0 ? (t - k0.t) / span2 : 1;
     k = k < 0 ? 0 : k > 1 ? 1 : k;
-    k = (EASE[k1.e] || EASE.inout)(k);
-    const A0 = k0.P, A1 = k1.P;
+    _seg.a = k0.P;
+    _seg.b = k1.P;
+    _seg.k = (EASE[k1.e] || EASE.inout)(k);
+    return _seg;
+  }
+  function samplePose(A, t, pose) {
+    const keys2 = A.keys;
+    const s0 = seg(keys2, t);
+    const A0 = s0.a, A1 = s0.b, k = s0.k;
     const P5 = {};
     for (const key2 in A0) P5[key2] = lerpVal(A0[key2], A1[key2], k);
+    if (keys2.length > 2) {
+      const L3 = seg(keys2, Math.min(keys2[keys2.length - 1].t, t + LEAD));
+      P5.b = lerpVal(L3.a.b, L3.b.b, L3.k);
+      P5.hp = lerpVal(L3.a.hp, L3.b.hp, L3.k);
+      const G4 = seg(keys2, Math.max(0, t - LAG));
+      for (const key2 of HEAD) P5[key2] = lerpVal(G4.a[key2], G4.b[key2], G4.k);
+    }
     if (A.jitter && t < (A.w ?? keys2[2]?.t ?? 0)) {
       const amp = A.jitter * Math.min(1, t / 0.2);
       P5.b = [P5.b[0] + Math.sin(t * 91) * amp, P5.b[1] + Math.cos(t * 77) * amp];
+    }
+    const sh = A.shake;
+    if (sh && t >= A.w && t < A.w + sh.t) {
+      const amp = sh.a * (1 - (t - A.w) / sh.t);
+      P5.b = [P5.b[0] + Math.sin(t * 97) * amp, P5.b[1] + Math.cos(t * 83) * amp * 0.6];
+      const h2 = toXY(P5.hF);
+      P5.hF = [h2[0] + Math.sin(t * 131) * amp * 0.8, h2[1] + Math.cos(t * 113) * amp * 0.8];
     }
     const f = A.flurry;
     if (f && t >= f.t0 && t <= f.t1) {
@@ -54288,14 +54754,34 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (f.legs) {
         P5.fF = [0.12 + 0.52 * tri, -0.3 - 0.2 * tri];
         P5.fB = [-0.05, 0];
+        P5.smfF = 0.06 * tri;
       } else {
-        P5.hF = [0.12 + 0.34 * tri, -0.04 + 0.06 * (1 - tri)];
-        P5.hB = [0.12 + 0.34 * (1 - tri), 0.02 + 0.05 * tri];
+        const R4 = f.reach || 0.34;
+        P5.hF = [0.12 + R4 * tri, -0.04 + 0.06 * (1 - tri)];
+        P5.hB = [0.12 + R4 * (1 - tri), 0.02 + 0.05 * tri];
+        P5.tw = (P5.tw || 0) + 0.3 * (tri - 0.5);
+        P5.hp = (P5.hp || 0) + 0.1 * (tri - 0.5);
+        P5.smF = 0.08 * tri;
+        P5.smB = 0.08 * (1 - tri);
+        if (f.stretch) P5.stretch = true;
       }
     }
     const s = A.spin;
     if (s && t >= s.t0 && t <= s.t1) P5.sp = (P5.sp || 0) + (t - s.t0) / Math.max(0.05, s.t1 - s.t0) * s.turns;
+    if (P5.sm) {
+      const ch = SM_CH[A.limb];
+      if (ch) P5[ch] = Math.max(P5[ch] || 0, P5.sm);
+    }
     if (pose && pose.moving && !A.legs) walkLegs(P5, pose);
+    if (pose) {
+      flinch(P5, pose, 0.45);
+      const ca = pose.counterAge;
+      if (ca >= 0 && ca < 0.22) {
+        const e = Math.sin(ca / 0.22 * Math.PI);
+        P5.l = (P5.l || 0) + 0.1 * e;
+        P5.b = [P5.b[0] + 0.04 * e, P5.b[1] + 0.02 * e];
+      }
+    }
     return P5;
   }
   function walkLegs(P5, pose) {
@@ -54696,82 +55182,357 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       P5.eB = 1;
     }
     if (pose.swimming) swimPose(P5, pose.swim || "tread", t * (pose.swimRate || 1), pose.swimDir || 0);
-    if (pose.block !== void 0) {
-      const fresh = Math.max(0, 1 - pose.block / 0.2);
-      P5.hF = [0.2 + fresh * 0.04, -0.13 - fresh * 0.03];
-      P5.hB = [0.23, -0.03];
-      P5.eF = 1;
-      P5.eB = -0.8;
-      P5.b = [-0.02 * fresh, 0.08];
-      P5.l = 0.14;
-      P5.fF = [0.21, 0];
-      P5.fB = [-0.19, 0];
-      P5.hand = "fist";
-      P5.handB = "fist";
-      if (base2.wF !== null && pose.armedBlock) {
-        P5.wF = -1.35;
-        P5.hF = [0.2, -0.05];
-      } else P5.wF = null;
-      P5.wB = null;
-      P5.face = "fierce";
+    if (pose.block !== void 0) blockPose(P5, pose);
+    if (pose.armOn !== void 0 && !pose.swimming) hardenPose(P5, pose.armOn, t);
+    if (pose.parryAge !== void 0) parryPose(P5, pose);
+    if (!(parriedPose(P5, pose) || guardBrokenPose(P5, pose))) {
+      if (pose.state === "hurt") hurtPose(P5, pose, t);
+      flinch(P5, pose, 1);
     }
-    if (pose.state === "hurt") {
-      const k = pose.hurtK ?? 1;
-      P5.l = -0.4 * k;
-      P5.b = [-0.07 * k, 0.05];
-      P5.hF = [-0.2, 0.08];
-      P5.hB = [0.2, 0];
-      P5.eF = 0.3;
-      P5.eB = 0.3;
-      P5.fF = [0.12, 0];
-      P5.fB = [-0.14, -0.02];
-      P5.ht = -0.24;
-      P5.wF = null;
-      P5.wB = null;
-    }
-    if (pose.dodge !== void 0) {
-      const k = pose.dodge;
-      const dir = pose.dodgeDir ?? 1;
-      if (Math.abs(dir) > 0.35) {
-        P5.r = Math.sign(dir) * k * TAU8;
-        P5.b = [0, 0.22 * Math.sin(k * Math.PI)];
-        P5.hF = [0.2, 0.18];
-        P5.hB = [0.16, 0.2];
-        P5.fF = [0.18, -0.26 * Math.sin(k * Math.PI)];
-        P5.fB = [0.06, -0.3 * Math.sin(k * Math.PI)];
-        P5.l = 0.4 * Math.sin(k * Math.PI);
-      } else {
-        const e = Math.sin(k * Math.PI);
-        P5.b = [0, 0.16 * e];
-        P5.l = 0.2 * e;
-        P5.fF = [0.28, 0];
-        P5.fB = [-0.3, -0.04];
-        P5.hF = [0.26, 0.1];
-        P5.hB = [-0.2, 0.16];
-      }
-      P5.wF = null;
-      P5.wB = null;
-    }
-    if (pose.getUp !== void 0) {
-      const k = pose.getUp;
-      const e = 1 - (1 - k) * (1 - k);
-      P5.b = [0, 0.3 * (1 - e)];
-      P5.l = 0.55 * (1 - e);
-      P5.hF = [0.22, 0.46 * (1 - e) + 0.08];
-      P5.hB = [0.12, 0.42 - 0.1 * e];
-      P5.fF = [0.24 * (1 - e) + 0.06, 0];
-      P5.fB = [-0.2, -0.02 * (1 - e)];
-      P5.ht = 0.2 * (1 - e);
-    }
-    if (pose.launch) {
-      P5.r = -pose.launch * 0.9;
-      P5.hF = [-0.1, -0.3];
-      P5.hB = [0.14, -0.26];
-      P5.fF = [0.3, -0.25];
-      P5.fB = [0.12, -0.12];
-      P5.ht = -0.3;
-    }
+    if (pose.counterAge !== void 0 && pose.state !== "hurt") counterPose(P5, pose);
+    if (pose.dodge !== void 0) dodgePose(P5, pose);
+    if (pose.getUp !== void 0) getUpPose(P5, pose.getUp, t);
+    if (pose.launch) launchPose(P5, pose.launch);
     return P5;
+  }
+  var sm01 = (x) => {
+    const k = x < 0 ? 0 : x > 1 ? 1 : x;
+    return k * k * (3 - 2 * k);
+  };
+  var mixP = (a, b, k) => {
+    const A = toXY(a || [0, 0.4]), B5 = toXY(b);
+    return [A[0] + (B5[0] - A[0]) * k, A[1] + (B5[1] - A[1]) * k];
+  };
+  var armedStance = (pose) => {
+    const st = pose.stanceP || GUARD;
+    return !!pose.armed && st.wF !== null && st.wF !== void 0 ? st : null;
+  };
+  function blockPose(P5, pose) {
+    const bt = pose.block;
+    const over = bt < 0.18 ? Math.sin(Math.min(1, bt / 0.18) * Math.PI) : 0;
+    P5.hF = [0.2 + 0.03 * over, -0.13 - 0.04 * over];
+    P5.hB = [0.19, -0.07 - 0.02 * over];
+    P5.eF = 1;
+    P5.eB = 1;
+    P5.zF = -0.03;
+    P5.zB = -0.02;
+    P5.b = [-0.02 * over, 0.08];
+    P5.l = 0.15;
+    P5.ht = 0.12;
+    P5.fF = [0.21, 0];
+    P5.fB = [-0.19, 0];
+    P5.zfF = 0.02;
+    P5.zfB = 0.02;
+    P5.tw = 0.12;
+    P5.hp = 0.08;
+    P5.hand = "fist";
+    P5.handB = "fist";
+    const st = pose.armedBlock ? armedStance(pose) : null;
+    if (st) {
+      P5.hF = [0.22, -0.06];
+      P5.wF = -1.45;
+      P5.wt = 1.1;
+      if (st.wB !== null && st.wB !== void 0) {
+        P5.hB = [0.2, -0.04];
+        P5.wB = -1.45;
+      } else P5.wB = null;
+    } else {
+      P5.wF = null;
+      P5.wB = null;
+    }
+    P5.face = "fierce";
+    const ha = pose.blockHitAge;
+    if (ha >= 0 && ha < 0.24) {
+      const e = ha < 0.03 ? ha / 0.03 : Math.max(0, 1 - (ha - 0.03) / 0.21);
+      const hF = toXY(P5.hF), hB = toXY(P5.hB);
+      P5.hF = [hF[0] - 0.06 * e, hF[1] + 0.02 * e];
+      P5.hB = [hB[0] - 0.05 * e, hB[1] + 0.02 * e];
+      P5.l -= 0.14 * e;
+      P5.b = [P5.b[0] - 0.05 * e, P5.b[1] + 0.03 * e];
+      P5.ht -= 0.08 * e;
+      P5.face = "grit";
+    }
+  }
+  function parryPose(P5, pose) {
+    const a = pose.parryAge;
+    if (!(a >= 0) || a > 0.42) return;
+    const big2 = pose.parryPerfect ? 1.3 : 1;
+    const k = a < 0.045 ? sm01(a / 0.045) : 1 - sm01((a - 0.12) / 0.28);
+    const st = armedStance(pose);
+    P5.hF = mixP(P5.hF, st ? [0.3, -0.04] : [0.3, -0.1], k);
+    P5.zF = mixN(P5.zF || 0, 0.2 * big2, k);
+    P5.eF = mixN(P5.eF ?? 1, st ? 1 : -0.5, k);
+    P5.tw = (P5.tw || 0) - 0.32 * big2 * k;
+    P5.hp = (P5.hp || 0) - 0.1 * k;
+    P5.l = (P5.l || 0) - 0.08 * k;
+    P5.b = [P5.b[0] - 0.035 * k, P5.b[1] + 0.02 * k];
+    P5.ht = (P5.ht || 0) - 0.05 * k;
+    if (st) {
+      P5.wF = mixN(P5.wF ?? st.wF, -0.35, k);
+      P5.wt = mixN(P5.wt || 0, -0.5 * big2, k);
+    }
+    if (pose.parryPerfect) {
+      P5.hB = mixP(P5.hB, [0, 0.04], k);
+      P5.handB = "fist";
+    }
+    P5.face = "fierce";
+  }
+  function parriedPose(P5, pose) {
+    const a = pose.parriedAge;
+    if (!(a >= 0) || a > 0.95) return false;
+    const open = a < 0.07 ? sm01(a / 0.07) : 1 - sm01((a - 0.5) / 0.42);
+    const deep = 1 - sm01((a - 0.55) / 0.4);
+    const s1 = sm01((a - 0.07) / 0.15), s2 = sm01((a - 0.24) / 0.18);
+    const lift1 = a > 0.07 && a < 0.22 ? Math.sin((a - 0.07) / 0.15 * Math.PI) : 0;
+    const lift2 = a > 0.24 && a < 0.42 ? Math.sin((a - 0.24) / 0.18 * Math.PI) : 0;
+    P5.hF = mixP(P5.hF, [-0.02, -0.2], open);
+    P5.hB = mixP(P5.hB, [-0.08, -0.16], open);
+    P5.zF = mixN(P5.zF || 0, 0.36, open);
+    P5.zB = mixN(P5.zB || 0, 0.34, open);
+    P5.eF = mixN(P5.eF ?? 1, 0.3, open);
+    P5.eB = mixN(P5.eB ?? 1, 0.3, open);
+    if (open > 0.35) {
+      P5.hand = "palm";
+      P5.handB = "palm";
+    }
+    P5.l = mixN(P5.l || 0, -0.36, open);
+    P5.ht = mixN(P5.ht || 0, -0.32, open);
+    P5.tw = mixN(P5.tw || 0, 0, open);
+    P5.hp = mixN(P5.hp || 0, 0, open);
+    P5.ls = 0;
+    P5.b = [mixN(P5.b[0], -0.1, deep * sm01(a / 0.1)), mixN(P5.b[1], 0.06, deep)];
+    const fB = toXY(P5.fB), fF = toXY(P5.fF);
+    P5.fB = [mixN(fB[0], -0.3, s1 * deep), fB[1] - 0.08 * lift1];
+    P5.fF = [mixN(fF[0], 0.05, s2 * deep), fF[1] - 0.07 * lift2];
+    const st = armedStance(pose);
+    if (st) {
+      P5.wF = mixN(P5.wF ?? st.wF, -2.3, open);
+      if (st.wB !== null && st.wB !== void 0) P5.wB = mixN(P5.wB ?? st.wB, -2.1, open);
+    }
+    P5.sm = 0;
+    P5.smF = 0;
+    P5.smB = 0;
+    P5.smfF = 0;
+    P5.smfB = 0;
+    P5.face = open > 0.3 ? "shock" : "fierce";
+    return true;
+  }
+  function guardBrokenPose(P5, pose) {
+    const a = pose.guardBrokenAge;
+    if (!(a >= 0) || a > 1.15) return false;
+    const smash = a < 0.05 ? sm01(a / 0.05) : 1 - sm01((a - 0.07) / 0.2);
+    const daze = sm01((a - 0.08) / 0.22) * (1 - sm01((a - 0.62) / 0.5));
+    const any = Math.max(smash, daze);
+    const s1 = sm01((a - 0.1) / 0.16), s2 = sm01((a - 0.3) / 0.16);
+    const lift1 = a > 0.1 && a < 0.26 ? Math.sin((a - 0.1) / 0.16 * Math.PI) : 0;
+    const lift2 = a > 0.3 && a < 0.46 ? Math.sin((a - 0.3) / 0.16 * Math.PI) : 0;
+    P5.hF = mixP(mixP(P5.hF, [0.14, 0.3], daze), [0.08, -0.16], smash);
+    P5.hB = mixP(mixP(P5.hB, [0.08, 0.32], daze), [-0.02, -0.1], smash);
+    P5.zF = mixN(mixN(P5.zF || 0, 0.05, daze), 0.32, smash);
+    P5.zB = mixN(mixN(P5.zB || 0, 0.04, daze), 0.32, smash);
+    P5.eF = mixN(P5.eF ?? 1, 0.4, any);
+    P5.eB = mixN(P5.eB ?? 1, 0.4, any);
+    if (any > 0.3) {
+      P5.hand = "palm";
+      P5.handB = "palm";
+    }
+    P5.l = mixN(mixN(P5.l || 0, 0.32, daze), -0.32, smash);
+    P5.ht = mixN(mixN(P5.ht || 0, 0.28, daze), -0.3, smash);
+    P5.tw = mixN(P5.tw || 0, -0.25, smash);
+    P5.hp = mixN(P5.hp || 0, 0, any);
+    P5.hr = (P5.hr || 0) + Math.sin(a * 9) * 0.1 * daze;
+    P5.b = [mixN(P5.b[0], -0.06, any), mixN(P5.b[1], 0.1, any)];
+    const fB = toXY(P5.fB), fF = toXY(P5.fF), back = 1 - sm01((a - 0.7) / 0.4);
+    P5.fB = [mixN(fB[0], -0.28, s1 * back), fB[1] - 0.07 * lift1];
+    P5.fF = [mixN(fF[0], 0.04, s2 * back), fF[1] - 0.06 * lift2];
+    const st = armedStance(pose);
+    if (st) {
+      P5.wF = mixN(P5.wF ?? st.wF, 0.9, any);
+      if (st.wB !== null && st.wB !== void 0) P5.wB = mixN(P5.wB ?? st.wB, 1.1, any);
+    }
+    P5.sm = 0;
+    P5.smF = 0;
+    P5.smB = 0;
+    P5.smfF = 0;
+    P5.smfB = 0;
+    P5.face = smash > 0.3 ? "shock" : daze > 0.2 ? "hurt" : P5.face;
+    return true;
+  }
+  function hurtPose(P5, pose, t) {
+    const k = pose.hurtK ?? 1;
+    const blind = pose.stunBlind ? 1 : 0;
+    const sway = Math.sin(t * 7) * 0.025 * k;
+    P5.l = (P5.l || 0) * (1 - k) + (0.06 - 0.36 * blind) * k + sway;
+    P5.b = [P5.b[0] * (1 - k) - 0.06 * k * blind, P5.b[1] * (1 - k) + 0.045 * k];
+    P5.hF = mixP(P5.hF, blind ? [-0.2, 0.08] : [0.17, 0.2], k);
+    P5.hB = mixP(P5.hB, blind ? [0.2, 0] : [0.08, 0.25], k);
+    P5.eF = 0.5;
+    P5.eB = 0.5;
+    P5.zF = 0.04 * k;
+    P5.zB = 0.04 * k;
+    P5.fF = [0.13, 0];
+    P5.fB = [-0.15, -0.02];
+    P5.ht = (P5.ht || 0) * (1 - k) + (blind ? -0.24 : 0.08) * k;
+    P5.tw = (P5.tw || 0) * (1 - k);
+    P5.hp = (P5.hp || 0) * (1 - k);
+    P5.wF = null;
+    P5.wB = null;
+    P5.hand = "fist";
+    P5.handB = "fist";
+    P5.face = "hurt";
+  }
+  function flinch(P5, pose, scale) {
+    const fl2 = pose.flinch;
+    const age = pose.hitAge ?? (fl2 ? fl2.age : void 0);
+    if (!(age >= 0) || age > 0.75) return;
+    const rel3 = pose.hitDirRel ?? (fl2 ? fl2.rel : Math.PI);
+    const w = Math.min(1.5, pose.hitW ?? (fl2 ? fl2.w : 0.5));
+    const amp = Math.min(1.3, 0.3 + 0.8 * w) * scale;
+    const tau = 0.07 + 0.1 * Math.min(1, w);
+    const env = (x) => x < 0 ? 0 : x < 0.035 ? Math.sin(x / 0.035 * Math.PI / 2) : Math.exp(-(x - 0.035) / tau) * Math.cos((x - 0.035) * 8);
+    const e = env(age) * amp, eh = env(age - 0.03) * amp;
+    if (Math.abs(e) < 4e-3 && Math.abs(eh) < 4e-3) return;
+    const back = -Math.cos(rel3), right = Math.sin(rel3);
+    P5.l = (P5.l || 0) - 0.5 * back * e;
+    P5.b = [P5.b[0] - 0.07 * back * e, P5.b[1] + 0.04 * Math.abs(e)];
+    P5.tw = (P5.tw || 0) + 0.45 * right * e;
+    P5.ls = (P5.ls || 0) + 0.42 * right * e;
+    P5.ht = (P5.ht || 0) - 0.45 * back * eh;
+    P5.hr = (P5.hr || 0) + 0.42 * right * eh;
+    P5.hy = (P5.hy || 0) - 0.3 * right * eh;
+    const hF = toXY(P5.hF), hB = toXY(P5.hB);
+    P5.hF = [hF[0] + 0.1 * back * e, hF[1] - 0.09 * Math.abs(back) * e];
+    P5.hB = [hB[0] + 0.08 * back * e, hB[1] - 0.07 * Math.abs(back) * e];
+    P5.zF = (P5.zF || 0) + (0.07 + 0.08 * Math.max(0, right)) * Math.abs(e);
+    P5.zB = (P5.zB || 0) + (0.07 + 0.08 * Math.max(0, -right)) * Math.abs(e);
+    if (e > 0.25 * amp && scale > 0.5) P5.face = "hurt";
+  }
+  function counterPose(P5, pose) {
+    const a = pose.counterAge;
+    if (!(a >= 0) || a > 0.32) return;
+    const k = a < 0.05 ? sm01(a / 0.05) : 1 - sm01((a - 0.1) / 0.22);
+    if (armedStance(pose)) {
+      P5.hF = mixP(P5.hF, [0.46, -0.02], k);
+      P5.wF = mixN(P5.wF ?? 0, -0.05, k);
+      P5.tw = (P5.tw || 0) + 0.5 * k;
+      P5.hp = (P5.hp || 0) + 0.3 * k;
+    } else {
+      P5.hB = mixP(P5.hB, [0.48, -0.04], k);
+      P5.tw = (P5.tw || 0) - 0.6 * k;
+      P5.hp = (P5.hp || 0) - 0.3 * k;
+      P5.smB = a < 0.08 ? 0.1 * k : 0;
+    }
+    P5.l = (P5.l || 0) + 0.2 * k;
+    P5.b = [P5.b[0] + 0.08 * k, P5.b[1] + 0.02 * k];
+    P5.face = "shout";
+  }
+  function hardenPose(P5, a, t) {
+    if (!(a >= 0) || a > 0.55) return;
+    const e = a < 0.1 ? sm01(a / 0.1) : 1 - sm01((a - 0.3) / 0.25);
+    const tr = Math.sin(t * 83) * 6e-3 * e;
+    P5.hF = mixP(P5.hF, [0.17 + tr, -0.1], e);
+    P5.eF = 1;
+    P5.zF = mixN(P5.zF || 0, -0.02, e);
+    P5.hB = mixP(P5.hB, [0.17, 0.02], e);
+    P5.zB = mixN(P5.zB || 0, -0.1, e);
+    P5.eB = 1;
+    if (e > 0.4) {
+      P5.hand = "fist";
+      P5.handB = "claw";
+      P5.face = "grit";
+    }
+    P5.ht = (P5.ht || 0) + 0.06 * e;
+    P5.tw = (P5.tw || 0) + 0.15 * e;
+  }
+  function dodgePose(P5, pose) {
+    const k = pose.dodge, dir = pose.dodgeDir ?? 1;
+    if (dir > 0.35) {
+      const rk = sm01(k / 0.8), tuck = Math.sin(Math.min(1, k / 0.8) * Math.PI), land = sm01((k - 0.62) / 0.2);
+      P5.r = rk * TAU8;
+      P5.b = [0.02 * tuck + 0.03 * land, 0.2 * tuck + 0.12 * land];
+      P5.l = 0.45 * tuck + 0.12 + 0.12 * land;
+      P5.ht = 0.3 * tuck - 0.05 * land;
+      P5.hF = mixP([0.2, 0.16 + 0.06 * tuck], [0.22, -0.02], land);
+      P5.hB = mixP([0.16, 0.2], [0.14, 0.03], land);
+      P5.eF = 1;
+      P5.eB = 1;
+      P5.fF = [0.18 + 0.04 * land, -0.28 * tuck];
+      P5.fB = [0.06 - 0.22 * land, -0.32 * tuck];
+    } else if (dir < -0.35) {
+      const e = Math.sin(k * Math.PI), land = sm01((k - 0.65) / 0.35);
+      P5.z = 0.15 * e;
+      P5.b = [-0.05 * e, 0.04 + 0.06 * land];
+      P5.l = -0.16 * e + 0.12 * land;
+      P5.ht = 0.06;
+      P5.fF = [0.2 - 0.06 * e, -0.14 * e];
+      P5.fB = [-0.16 - 0.04 * e, -0.06 * e];
+      P5.hF = [0.2, -0.05];
+      P5.hB = [0.13, 0];
+      P5.eF = 1;
+      P5.eB = 1;
+      P5.tw = 0.1;
+      P5.hp = 0.04;
+    } else {
+      const e = Math.sin(k * Math.PI), s = (pose.dodgeSide ?? 1) >= 0 ? 1 : -1;
+      P5.b = [0, 0.17 * e];
+      P5.l = 0.12 * e;
+      P5.fF = [0.08, 0];
+      P5.fB = [-0.06, 0];
+      P5.zfF = (s > 0 ? 0.05 : 0.3) * e;
+      P5.zfB = (s > 0 ? 0.3 : 0.05) * e;
+      P5.hF = [0.22, -0.02];
+      P5.hB = [0.14, 0.03];
+      P5.ht = 0.04;
+    }
+    P5.wF = null;
+    P5.wB = null;
+    P5.face = "fierce";
+  }
+  function getUpPose(P5, k, t) {
+    const SIT = { b: [0, 0.34], l: 0.95, ht: 0.2, hF: [0.24, 0.32], hB: [0.2, 0.34], fF: [0.1, -0.16], fB: [-0.02, -0.08] };
+    const KNEE = { b: [0.03, 0.31], l: 0.42, ht: 0.22, hF: [0.25, 0.3], hB: [0.02, 0.33], fF: [0.22, 0], fB: [-0.2, 0] };
+    const s = sm01(k / 0.32), up = sm01((k - 0.6) / 0.4);
+    const from = s < 1 ? lerpPose(SIT, KNEE, s) : KNEE;
+    const G4 = { b: P5.b, l: P5.l || 0, ht: P5.ht || 0, hF: P5.hF, hB: P5.hB, fF: P5.fF, fB: P5.fB };
+    const X2 = lerpPose(from, G4, up);
+    P5.b = X2.b;
+    P5.l = X2.l;
+    P5.ht = X2.ht;
+    P5.hF = X2.hF;
+    P5.hB = X2.hB;
+    P5.fF = X2.fF;
+    P5.fB = X2.fB;
+    P5.eF = 1;
+    P5.eB = 1;
+    P5.tw = (P5.tw || 0) * up;
+    P5.hp = (P5.hp || 0) * up;
+    P5.hy = Math.sin(t * 22) * 0.12 * sm01((k - 0.55) / 0.15) * (1 - up);
+    P5.hand = "palm";
+    P5.handB = "fist";
+    P5.wF = up > 0.6 ? P5.wF : null;
+    P5.wB = up > 0.6 ? P5.wB : null;
+  }
+  function launchPose(P5, L3) {
+    P5.r = -0.85 * L3;
+    P5.l = 0.4 * L3;
+    P5.b = [-0.04 * L3, 0.06 * L3];
+    P5.hF = mixP(P5.hF, [0.32, -0.08], L3);
+    P5.hB = mixP(P5.hB, [0.28, 0], L3);
+    P5.eF = 0.35;
+    P5.eB = 0.35;
+    P5.zF = 0.12 * L3;
+    P5.zB = 0.12 * L3;
+    P5.hand = "palm";
+    P5.handB = "palm";
+    P5.fF = [0.32, -0.24 * L3];
+    P5.fB = [0.2, -0.14 * L3];
+    P5.ht = 0.28 * L3;
+    P5.tw = 0;
+    P5.hp = 0;
+    P5.ls = 0;
+    P5.face = "hurt";
+    P5.wF = null;
+    P5.wB = null;
   }
 
   // src/render/charart.js
@@ -55826,8 +56587,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function expression(look, pose, P5, t) {
     const st = pose && pose.state;
     if (st === "knocked" || st === "dead") return { eyes: "ko", mouth: "ko", brow: "worried" };
-    if (st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried" };
     const face = P5 && P5.face;
+    if (face === "shock") return { eyes: "open", mouth: "shout", brow: "worried", small: true };
+    if (face === "hurt" || st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried" };
+    if (face === "grit") return { eyes: "fierce", mouth: "grimace", brow: "fierce" };
+    if (face === "glare") return { eyes: "fierce", mouth: "neutral", brow: "fierce" };
     const fierce = face === "fierce" || face === "shout";
     const s = (look.seed || 0) * 0.6180339 % 1 * 0.9 + 0.1;
     const blink = pose && typeof pose.blink === "boolean" ? pose.blink : !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;
@@ -58129,7 +58893,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     upper(() => drawLimb(g, [[0, shoulderY + 0.04], [0, headY + headR * 0.55]], [0.075, 0.068], skin, ghost ? null : dk2(skin, -0.2), ghost ? null : sd));
     upper(() => {
       g.save();
-      const tilt = (P5.ht || 0) + (pose.state === "hurt" ? -0.25 : 0);
+      const tilt = (P5.ht || 0) + (pose.state === "hurt" && pose.stunBlind ? -0.25 : 0);
       if (tilt) {
         g.translate(0, headY + headR);
         g.rotate(tilt);
@@ -58643,6 +59407,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     unstick(w, far = false) {
       if (!far && this.fits(w, this.x, this.y, this.heading) && !(this.game && this.shipIn(this.game, this.x, this.y, this.heading))) return true;
       const big2 = this.def.length >= BIG_SHIP;
+      if (far && !big2) {
+        for (let r = 0.5; r < 40; r += 0.5) {
+          for (let a = 0; a < TAU; a += Math.min(0.5, 1.5 / r)) {
+            const x = w.wx(this.x + Math.cos(a) * r), y = this.y + Math.sin(a) * r;
+            for (let k = 0; k < 4; k++) {
+              const h2 = this.heading + k * Math.PI / 2;
+              if (this.fits(w, x, y, h2) && !(this.game && this.shipIn(this.game, x, y, h2))) {
+                this.x = x;
+                this.y = y;
+                this.heading = h2;
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      }
       const R4 = big2 ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big2 ? 1.5 : 0.5;
       const hs = big2 ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
       for (const h2 of hs) {
@@ -58659,6 +59440,26 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           }
         }
         if (!far) break;
+      }
+      return false;
+    }
+    /**
+     * Afloat off a beach: the nearest spot out from (x, y) toward bearing `dir`
+     * (or a little either side of it) where her whole hull's in the water, her
+     * bow out to sea. False if there's none within 40 m.
+     */
+    launchFrom(w, x, y, dir) {
+      if (dir === null || dir === void 0) return false;
+      for (let r = this.def.length * 0.5; r < this.def.length * 0.5 + 40; r += 0.5) {
+        for (const da of [0, 0.2, -0.2, 0.45, -0.45, 0.75, -0.75]) {
+          const h2 = dir + da, px2 = w.wx(x + Math.cos(h2) * r), py2 = y + Math.sin(h2) * r;
+          if (this.fits(w, px2, py2, h2) && !(this.game && this.shipIn(this.game, px2, py2, h2))) {
+            this.x = px2;
+            this.y = py2;
+            this.heading = h2;
+            return true;
+          }
+        }
       }
       return false;
     }
@@ -60468,9 +61269,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function ruinWalls(k, b, fw, fd, H3, wallCol) {
     const stone = C(wallCol);
     const R4 = (i) => hash3(b.x, b.y, i);
-    const seg = Math.max(2, Math.round(fw / 1.2));
-    for (let i = 0; i < seg; i++) {
-      const x0 = -fw / 2 + i * fw / seg, x1 = x0 + fw / seg;
+    const seg2 = Math.max(2, Math.round(fw / 1.2));
+    for (let i = 0; i < seg2; i++) {
+      const x0 = -fw / 2 + i * fw / seg2, x1 = x0 + fw / seg2;
       const h2 = 0.8 + R4(i) * (H3 - 0.8) * 0.9;
       const dz = i % 2 ? 0.015 : 0;
       B2(k, x0, -1, -0.45 + dz, x1 + 0.01, h2, dz, i % 2 ? shade2(stone, -0.08) : stone, { outline: 0.03 });
@@ -62320,14 +63121,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     return [c[0] + d[0] * best, c[1] + d[1] * best, c[2] + d[2] * best];
   }
-  function limb2(k, a, b, r0, r1, seg, o) {
+  function limb2(k, a, b, r0, r1, seg2, o) {
     const d = new Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
     const len = d.length();
     d.normalize();
     const m = new Matrix4().compose(new Vector3(a[0], a[1], a[2]), new Quaternion().setFromUnitVectors(UP, d), ONE);
     k.save();
     k.transform(m);
-    k.add(cyl(r1, r0, len, seg, o.open !== false), o);
+    k.add(cyl(r1, r0, len, seg2, o.open !== false), o);
     k.restore();
   }
   function branches(k, R4, pos, dir, len, r, depth, o, tips) {
@@ -62436,8 +63237,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         for (let v = 0; v < P5.count; v++) {
           if (Math.abs(P5.getY(v)) > 1e-4) continue;
           const a = Math.atan2(P5.getZ(v), P5.getX(v));
-          const seg = Math.round(a / (Math.PI * 2) * 12 + 12) % 2;
-          if (seg && Math.hypot(P5.getX(v), P5.getZ(v)) > 1e-3) {
+          const seg2 = Math.round(a / (Math.PI * 2) * 12 + 12) % 2;
+          if (seg2 && Math.hypot(P5.getX(v), P5.getZ(v)) > 1e-3) {
             P5.setX(v, P5.getX(v) * 0.8);
             P5.setZ(v, P5.getZ(v) * 0.8);
             P5.setY(v, 0.12);
@@ -62545,16 +63346,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     return cached("tree:lollipop", () => {
       const k = new Mesher();
       k.add(cyl(0.05, 0.06, 2.3, 6, true), { color: "#fdfefe", outline: 0.02 });
-      const R4 = 0.78, th = 0.22, seg = 16;
+      const R4 = 0.78, th = 0.22, seg2 = 16;
       k.save();
       k.translate(0, 2.25 + R4, 0);
       k.rotateX(Math.PI / 2);
-      const side = cyl(R4, R4, th, seg, true);
+      const side = cyl(R4, R4, th, seg2, true);
       k.add(side, { at: [0, -th / 2, 0], color: "#ffffff", tint: 1, outline: 0.035 });
       for (const face of [1, -1]) {
         const pos = [];
-        for (let i = 0; i < seg; i++) {
-          const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+        for (let i = 0; i < seg2; i++) {
+          const a0 = i / seg2 * Math.PI * 2, a1 = (i + 1) / seg2 * Math.PI * 2;
           const tw = 0.9;
           pos.push(0, face * th / 2, 0, Math.cos(a1 + tw) * R4 * 0.45, face * th / 2, Math.sin(a1 + tw) * R4 * 0.45, Math.cos(a0 + tw) * R4 * 0.45, face * th / 2, Math.sin(a0 + tw) * R4 * 0.45);
           pos.push(Math.cos(a0 + tw) * R4 * 0.45, face * th / 2, Math.sin(a0 + tw) * R4 * 0.45, Math.cos(a1 + tw) * R4 * 0.45, face * th / 2, Math.sin(a1 + tw) * R4 * 0.45, Math.cos(a1) * R4, face * th / 2, Math.sin(a1) * R4);
@@ -64845,31 +65646,34 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var lastLook = (a) => a._lastLook || a.look;
   function hitFeedback(fx, att, tgt, h2, o = {}) {
     const game = fx.game;
-    const final = o.final || 0, crit = !!o.crit, blocked = !!o.blocked;
+    const final = o.final || 0, crit = !!o.crit, blocked = !!o.blocked, counter = !!o.counter;
     const elem = o.el || "physical";
     const E = elemOf(elem);
     const ang = o.ang ?? 0;
     const def = h2.def || (att && att.action ? att.action.def : null);
     const st = att && !h2.sprite ? styleOf(def, att) : null;
-    const m12 = !!(def && def.m1Chain && !h2.sprite);
-    let w = m12 ? 0.22 : h2.sprite ? 0.35 : 0.45;
-    if (m12 && (h2.knockback ?? 0) >= 3.2) w = 0.52;
-    if (h2.heavy) w = Math.max(w, 0.72);
-    if (h2.guardBreak) w += 0.06;
-    if (h2.impactFrame) w = Math.max(w, 1);
-    const maxHp = tgt.d ? tgt.d.maxHp : 100;
-    w += Math.min(0.3, final / maxHp * 1.2);
-    if (crit) w += 0.22;
-    if (h2.interval) w *= 0.55;
+    let w = o.w;
+    if (w === void 0) {
+      const m12 = !!(def && def.m1Chain && !h2.sprite);
+      w = m12 ? 0.22 : h2.sprite ? 0.35 : 0.45;
+      if (m12 && (h2.knockback ?? 0) >= 3.2) w = 0.52;
+      if (h2.heavy) w = Math.max(w, 0.72);
+      if (h2.guardBreak) w += 0.06;
+      if (h2.impactFrame) w = Math.max(w, 1);
+      w += Math.min(0.3, final / (tgt.d ? tgt.d.maxHp : 100) * 1.2);
+      if (crit) w += 0.22;
+      if (h2.interval) w *= 0.55;
+    }
     w = Math.min(1.25, w);
     const scale = tgt.look && tgt.look.scale || 1;
     const z = 0.78 * scale;
     const cx = tgt.x - Math.cos(ang) * 0.22 * scale, cy = tgt.y - Math.sin(ang) * 0.14 * scale;
+    const down = final > 0 && tgt.state === "knocked";
     if (blocked) blockFx(fx, tgt, ang, w, z);
     else if (final > 0 || h2.trueDamage) {
       const col = st ? st.spark[1] || st.spark[0] : E.c;
-      fx.add("impact", { x: cx, y: cy, z, angle: ang, size: 0.24 + 0.42 * w, color: col, core: "#ffffff", life: 0.1 + 0.09 * w, spikes: 8 + Math.round(w * 5), lines: 2 + Math.round(w * 5) });
-      sparks(fx, cx, cy, z, ang, Math.round(3 + 9 * w), st ? st.spark : E.spark, { speed: 5 + 6 * w, life: 0.2 + 0.14 * w, size: 0.07 + 0.05 * w });
+      fx.add("impact", { x: cx, y: cy, z, angle: ang, size: 0.24 + 0.42 * w, color: crit ? "#ffd740" : col, core: "#ffffff", life: 0.1 + 0.09 * w, spikes: 8 + Math.round(w * 5), lines: 2 + Math.round(w * 5) });
+      sparks(fx, cx, cy, z, ang, Math.round(3 + 9 * w), crit ? ["#ffd740", "#fff59d", "#ffffff"] : st ? st.spark : E.spark, { speed: 5 + 6 * w, life: 0.2 + 0.14 * w, size: 0.07 + 0.05 * w });
       elemHit(fx, elem, E, cx, cy, z, ang, w);
       if (st) styleHit(fx, st, def, tgt, cx, cy, z, ang, w);
       if (w >= 0.68) {
@@ -64879,7 +65683,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       if (crit) {
         fx.add("flare", { x: cx, y: cy, z: z + 0.08, size: 0.8 + 0.3 * w, color: "#ffd740", life: 0.3 });
-        sparkle2(fx, cx, cy, z, 4, ["#ffd740", "#fff59d", "#ffffff"]);
+        fx.ring(cx, cy, 0.1, 0.75 + 0.35 * w, "#ffd740", 0.22, 0.07, { z, flat: 1, noCore: true, add: true });
+        sparkle2(fx, cx, cy, z, 5, ["#ffd740", "#fff59d", "#ffffff"]);
       }
       if (att && att.conquerorInfused) {
         miniBolts(fx, cx, cy, z, 3, 0.9, "#d50000");
@@ -64887,16 +65692,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       } else if (att && att.armament && elem === "physical") {
         fx.ring(cx, cy, 0.08, 0.5 + 0.3 * w, "#7c4dff", 0.2, 0.06, { z, flat: 1, noCore: true, add: true });
       }
-      if ((w >= 0.7 || crit || h2.impactFrame) && (o.playerInvolved || tgt.boss)) {
+      if ((w >= 0.7 || crit || h2.impactFrame || down) && (o.playerInvolved || tgt.boss) && !counter) {
         const blade2 = !!(att && att.weapon && att.weapon.kind === "sword") || !!(st && st.arcs);
-        const big2 = crit || h2.impactFrame || w >= 1;
-        fx.sfx?.(cx, cy, sfxWord(elem, blade2, big2, !!(att && att.armament)), sfxColor(elem, blade2, col), 0.5 + 0.3 * Math.min(1, w) + (big2 ? 0.15 : 0), { z: z + 0.45 });
+        const big2 = crit || h2.impactFrame || w >= 1 || down;
+        soundOn(fx, tgt, cx, cy, sfxWord(elem, blade2, big2, !!(att && att.armament)), sfxColor(elem, blade2, col), 0.5 + 0.3 * Math.min(1, w) + (big2 ? 0.15 : 0), { z: z + 0.45, gap: down ? 0 : void 0 });
       }
       tgt.hitFx = { t0: game.env ? game.env.time : fx.time, w, ang, prev: tgt.hitFx ? tgt.hitFx.t0 : -9 };
     }
-    if (final > 0) fx.damage(tgt, final, { crit, blocked, toPlayer: tgt.isPlayer });
+    if (final > 0) fx.damage(tgt, final, { crit, blocked, toPlayer: tgt.isPlayer, color: counter ? "#ffab40" : void 0 });
     if (o.playerInvolved) {
-      const stop2 = blocked ? 0.035 : h2.interval ? 0.018 : 0.028 + 0.075 * Math.min(1, w) + (crit ? 0.02 : 0);
+      const stop2 = blocked ? 0.035 : h2.interval ? 0.018 : 0.028 + 0.075 * Math.min(1, w) + (crit ? 0.03 : 0) + (counter ? 0.05 : 0);
       fx.stop(stop2);
       fx.kick(ang, blocked ? 2.5 : 1.5 + 8 * Math.min(1, w));
       if (!blocked && w >= 0.7) fx.shake(0.12 + 0.25 * (w - 0.7));
@@ -64905,6 +65710,29 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         fx.focus(tgt.x, tgt.y, 0.22);
       } else if (!blocked && (crit || w >= 0.95)) fx.focus(tgt.x, tgt.y, 0.14);
     }
+    if (down && att && att.isPlayer) finishingBlow(fx, att, tgt, ang);
+  }
+  function finishingBlow(fx, att, tgt, ang) {
+    const game = fx.game;
+    let last = true;
+    for (const a of game.actorsNear ? game.actorsNear(tgt.x, tgt.y, 14) : []) {
+      if (a === tgt || a === att || !a.alive || a.state !== "idle" || a.isPlayer || a.faction === "player") continue;
+      if (a.controller?.target === att || a.provoked && a.aggroPlayer) {
+        last = false;
+        break;
+      }
+    }
+    if (tgt.boss || tgt.named) {
+      fx.stop(0.14);
+      fx.slowmo(0.9, 0.22);
+      fx.impactFrame(0.08);
+      fx.focus(tgt.x, tgt.y, 0.32);
+      fx.shake(0.45, ang);
+    } else if (last) {
+      fx.stop(0.1);
+      fx.slowmo(0.5, 0.35);
+      fx.focus(tgt.x, tgt.y, 0.2);
+    } else fx.stop(0.06);
   }
   var SFX = {
     punch: ["DON!", "BAM!", "DOGA!", "BAKI!", "GOSHA!", "DOKA!"],
@@ -65013,6 +65841,42 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     if (st.oni && w > 0.6) fx.add("flare", { x, y, z, size: 0.7, color: "#ff1744", life: 0.2 });
   }
+  function ownEyes(fx) {
+    const g = fx.game, v = g && g.view3d, p = g && g.player;
+    return v && v.active && v.rig && v.rig.mode === "first" && v.rig.camera && p && p.mode !== "sail" ? p : null;
+  }
+  function inView(fx, d, up = 0, side = 0) {
+    const g = fx.game, v = g.view3d, m = v.rig.camera.matrixWorld.elements, w = g.world, p = g.player;
+    const eye = v.ground(p.x, p.y) + 1.72 * (p.look && p.look.scale || 1);
+    const dx = -m[8] * d + m[4] * up + m[0] * side, dh = -m[9] * d + m[5] * up + m[1] * side, dy = -m[10] * d + m[6] * up + m[2] * side;
+    const x = w ? w.wx(p.x + dx) : p.x + dx, y = p.y + dy;
+    return [x, y, eye + dh - v.ground(x, y)];
+  }
+  function fromPlayer(fx, p, a) {
+    const w = fx.game.world;
+    return a === p ? 0 : w ? w.distance(p.x, p.y, a.x, a.y) : Math.hypot(a.x - p.x, a.y - p.y);
+  }
+  function calloutOver(fx, a, lift, str, col, size) {
+    const p = ownEyes(fx);
+    if (!p) return fx.callout(a.x, a.y - lift, str, col, size);
+    if (fromPlayer(fx, p, a) < 3) {
+      const [x, y, z2] = inView(fx, 2.6, 0.12);
+      return fx.callout(x, y, str, col, size, { z: z2 });
+    }
+    const v = fx.game.view3d, s = a.look && a.look.scale || 1;
+    let z = 1.6 + lift;
+    while (z > 1.1 * s && v.project(a.x, a.y, z)[1] < v.proj.ch * 0.3) z -= 0.1;
+    return fx.callout(a.x, a.y, str, col, size, { z });
+  }
+  function soundOn(fx, a, x, y, str, col, size, o) {
+    const p = ownEyes(fx);
+    const d = p ? fromPlayer(fx, p, a) : Infinity;
+    if (d < 3) {
+      const at4 = a === p ? inView(fx, 2, -0.42, -0.25) : inView(fx, 2.4, -0.12, 0.2);
+      return fx.sfx?.(at4[0], at4[1], str, col, size, { ...o, z: at4[2] });
+    }
+    return fx.sfx?.(x, y, str, col, size, o);
+  }
   function blockFx(fx, tgt, ang, w, z) {
     const fa = ang + Math.PI;
     const px2 = tgt.x + Math.cos(fa) * 0.35, py2 = tgt.y + Math.sin(fa) * 0.22;
@@ -65020,36 +65884,116 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     sparks(fx, px2, py2, z, fa, 4 + Math.round(3 * w), ["#e3f2fd", "#90caf9", "#ffffff"], { speed: 5, life: 0.2 });
     tgt._blockFlash = fx.game.env ? fx.game.env.time : fx.time;
   }
-  function parryFx(fx, tgt, att, ang) {
-    fx.sfx?.(tgt.x, tgt.y, "KIIN!", "#e3f2fd", 0.55, { z: 1.5 });
+  function parryFx(fx, tgt, att, ang, perfect = false) {
+    soundOn(fx, tgt, tgt.x, tgt.y, perfect ? "KIIIN!!" : "KIIN!", perfect ? "#ffffff" : "#e3f2fd", perfect ? 0.7 : 0.55, { z: 1.5, gap: 0 });
     const fa = ang + Math.PI;
     const s = tgt.look && tgt.look.scale || 1;
     const px2 = tgt.x + Math.cos(fa) * 0.45, py2 = tgt.y + Math.sin(fa) * 0.3, z = 0.85 * s;
-    fx.add("flare", { x: px2, y: py2, z, size: 1.3, color: "#fff59d", life: 0.36 });
-    fx.add("impact", { x: px2, y: py2, z, angle: fa, size: 0.8, color: "#fff59d", core: "#ffffff", life: 0.2, spikes: 12, lines: 8 });
-    fx.ring(tgt.x, tgt.y, 0.3, 2, "#fff59d", 0.4, 0.12, { add: true });
-    sparks(fx, px2, py2, z, fa, 16, ["#ffffff", "#fff59d", "#ffe082"], { speed: 9, spread: 2.6, life: 0.35 });
-    fx.callout(tgt.x, tgt.y - 1.45, "PARRY!", "#fff59d", 0.5);
-    fx.stop(0.12);
+    const col = perfect ? "#fffde7" : "#fff59d";
+    fx.add("flare", { x: px2, y: py2, z, size: perfect ? 1.8 : 1.3, color: col, life: perfect ? 0.45 : 0.36 });
+    fx.add("impact", { x: px2, y: py2, z, angle: fa, size: perfect ? 1.05 : 0.8, color: col, core: "#ffffff", life: 0.2, spikes: perfect ? 14 : 12, lines: perfect ? 10 : 8 });
+    fx.add("crescent", { x: tgt.x, y: tgt.y, angle: fa, radius: 0.7 * s, arc: 2.2, width: 0.2, color: col, core: "#ffffff", life: 0.24, z, reveal: 0.01, dir: 1, tilt: 0.85 });
+    fx.ring(tgt.x, tgt.y, 0.3, perfect ? 2.6 : 2, col, 0.4, 0.12, { add: true });
+    if (perfect) fx.ring(px2, py2, 0.1, 1.2, "#ffffff", 0.3, 0.08, { z, flat: 1, noCore: true, add: true, delay: 0.05 });
+    sparks(fx, px2, py2, z, fa, perfect ? 24 : 16, ["#ffffff", "#fff59d", "#ffe082"], { speed: perfect ? 11 : 9, spread: 2.6, life: 0.35 });
+    calloutOver(fx, tgt, 1.45 * s, perfect ? "PERFECT PARRY!" : "PARRY!", col, perfect ? 0.58 : 0.5);
+    if (att) {
+      const as = att.look && att.look.scale || 1;
+      sparks(fx, att.x, att.y, 1 * as, ang + Math.PI, 6, ["#ffe082", "#ffffff"], { speed: 4, spread: 1.4, life: 0.25 });
+      fx.ring(att.x, att.y, 0.2, 1.1 * as, "#ffe082", 0.3, 0.06, { z: 1.1 * as, flat: 1, noCore: true, add: true });
+    }
+    fx.stop(perfect ? 0.14 : 0.1);
     if (tgt.isPlayer || att && att.isPlayer) {
-      fx.slowmo(0.45, 0.3);
-      fx.flashScreen(0.05);
-      fx.kick(fa, 6);
-      fx.focus(px2, py2, 0.28);
+      if (perfect) {
+        fx.slowmo(0.45, 0.28);
+        fx.flashScreen(0.06);
+        fx.focus(px2, py2, 0.32);
+      } else {
+        fx.slowmo(0.2, 0.6);
+        fx.flashScreen(0.03);
+        fx.focus(px2, py2, 0.2);
+      }
+      fx.kick(fa, perfect ? 7 : 5);
     }
   }
   function guardBreakFx(fx, tgt, att, ang) {
-    fx.sfx?.(tgt.x, tgt.y, "GASHAN!!", "#ff8a65", 0.7, { z: 1.4, gap: 0 });
+    soundOn(fx, tgt, tgt.x, tgt.y, "GASHAN!!", "#ff8a65", 0.7, { z: 1.4, gap: 0 });
     const s = tgt.look && tgt.look.scale || 1, z = 0.85 * s;
     fx.burst(tgt.x, tgt.y, 14, { kind: "shard", color: ["#e3f2fd", "#90caf9", "#ffffff"], speed: 6, z, vz: 3, g: 9, life: 0.55, size: 0.12, drag: 2 });
     fx.add("impact", { x: tgt.x, y: tgt.y, z, angle: ang, size: 0.75, color: "#ff8a65", core: "#ffffff", life: 0.2, spikes: 11 });
     fx.ring(tgt.x, tgt.y, 0.3, 1.6, "#ff7675", 0.35, 0.12, { add: true });
-    fx.callout(tgt.x, tgt.y - 1.4, "GUARD BREAK", "#ff7675", 0.42);
+    calloutOver(fx, tgt, 1.4 * s, "GUARD BREAK", "#ff7675", 0.42);
     if (tgt.isPlayer || att && att.isPlayer) {
       fx.slowmo(0.28, 0.4);
       fx.kick(ang, 7);
       fx.focus(tgt.x, tgt.y, 0.2);
     }
+  }
+  function deflectFx(fx, tgt, shot, ang, perfect = false) {
+    const fa = ang + Math.PI;
+    const s = tgt.look && tgt.look.scale || 1, z = 0.85 * s;
+    const px2 = tgt.x + Math.cos(fa) * 0.5, py2 = tgt.y + Math.sin(fa) * 0.32;
+    soundOn(fx, tgt, px2, py2, perfect ? "KAKIN!!" : "KIN!", "#e3f2fd", 0.5, { z: 1.3, gap: 0 });
+    fx.add("crescent", { x: tgt.x, y: tgt.y, angle: fa, radius: 0.8 * s, arc: 2.4, width: 0.22, color: "#e3f2fd", core: "#ffffff", life: 0.22, z, reveal: 0.01, dir: 1, tilt: 0.85 });
+    fx.add("flare", { x: px2, y: py2, z, size: perfect ? 1.2 : 0.9, color: "#fff59d", life: 0.28 });
+    sparks(fx, px2, py2, z, fa + (Math.random() < 0.5 ? 1 : -1) * 0.9, 12, ["#ffffff", "#fff59d", "#ffe082"], { speed: 8, spread: 1.2, life: 0.3 });
+    calloutOver(fx, tgt, 1.4 * s, "DEFLECT!", "#e3f2fd", 0.46);
+    fx.stop(0.06);
+    if (tgt.isPlayer) {
+      fx.kick(fa, 4);
+      if (perfect) fx.slowmo(0.25, 0.45);
+    }
+  }
+  function counterFx(fx, att, tgt, ang, w = 1) {
+    const s = tgt.look && tgt.look.scale || 1, z = 0.8 * s;
+    const cx = tgt.x - Math.cos(ang) * 0.22 * s, cy = tgt.y - Math.sin(ang) * 0.14 * s;
+    const blade2 = !!(att.weapon && att.weapon.kind === "sword" && att.drawn !== false);
+    soundOn(fx, tgt, cx, cy, blade2 ? "ZUBAAAN!!" : "DOGOOON!!", "#ffab40", 0.85, { z: z + 0.5, gap: 0 });
+    fx.add("impact", { x: cx, y: cy, z, angle: ang, size: 1.1 + 0.3 * Math.min(1, w), color: "#ffab40", core: "#ffffff", life: 0.24, spikes: 14, lines: 10 });
+    fx.add("flare", { x: cx, y: cy, z: z + 0.05, size: 1.4, color: "#ffd740", life: 0.32 });
+    fx.ring(cx, cy, 0.15, 1.5, "#ffab40", 0.3, 0.1, { z, flat: 1, noCore: true, add: true });
+    fx.ring(tgt.x, tgt.y, 0.3, 2.2 * s, "rgba(255,171,64,0.9)", 0.35, 0.12, { z: 0.06, flat: 0.55, add: true });
+    sparks(fx, cx, cy, z, ang, 18, ["#ffffff", "#ffd740", "#ffab40"], { speed: 11, spread: 1.6, life: 0.35 });
+    dust(fx, tgt.x, tgt.y + 0.04, 8, { angle: ang, spread: 2, speed: 4 });
+    calloutOver(fx, tgt, 1.6 * s, "COUNTER!", "#ffab40", 0.56);
+    if (att.isPlayer || tgt.isPlayer) {
+      fx.stop(0.08);
+      fx.impactFrame(0.05);
+      fx.focus(tgt.x, tgt.y, 0.26);
+      fx.shake(0.3, ang);
+    }
+  }
+  function perfectDodgeFx(fx, a, att) {
+    const s = a.look && a.look.scale || 1;
+    afterimage(fx, a, { tint: "#80deea", life: 0.45, alpha: 0.6, add: true });
+    a._ghostT = 0.25;
+    a._ghostTint = "#80deea";
+    a._ghostAdd = true;
+    fx.ring(a.x, a.y, 0.2, 1.4 * s, "#80deea", 0.3, 0.08, { add: true });
+    fx.add("flare", { x: a.x, y: a.y, z: 1 * s, size: 0.9, color: "#b2ebf2", life: 0.25 });
+    calloutOver(fx, a, 1.45 * s, "PERFECT DODGE!", "#80deea", 0.48);
+    if (a.isPlayer || att && att.isPlayer) {
+      fx.slowmo(0.3, 0.45);
+      fx.focus(a.x, a.y, 0.18);
+    }
+  }
+  function breakFreeFx(fx, a) {
+    const s = a.look && a.look.scale || 1;
+    fx.ring(a.x, a.y, 0.2, 1.8 * s, "#e1f5fe", 0.35, 0.12, { add: true });
+    fx.ring(a.x, a.y, 0.1, 1.2 * s, "#ffffff", 0.25, 0.08, { z: 0.9 * s, flat: 1, noCore: true, add: true });
+    fx.burst(a.x, a.y, 12, { color: ["#ffffff", "#e1f5fe", "#b3e5fc"], speed: 5, z: 0.8 * s, vz: 1.5, g: 2, life: 0.4, size: 0.1, kind: "spark" });
+    dust(fx, a.x, a.y + 0.04, 6, { speed: 3 });
+    calloutOver(fx, a, 1.5 * s, "BREAK FREE!", "#b3e5fc", 0.46);
+    if (a.isPlayer) fx.kick(-Math.PI / 2, 3);
+  }
+  function parryCueFx(fx, at4, breaks, k = 1) {
+    const s = at4.look && at4.look.scale || 1;
+    const z = at4.z !== void 0 && !at4.look ? at4.z : 1.3 * s;
+    const follow2 = at4.follow || at4;
+    const col = breaks ? "#ff1744" : "#ffee58";
+    fx.add("flare", { x: at4.x, y: at4.y, z, size: (0.45 + 0.6 * k) * (breaks ? 1.15 : 1), color: col, life: 0.14 + 0.14 * k, follow: follow2, rot: 0 });
+    if (k >= 0.55) fx.ring(at4.x, at4.y, 0.15, (0.6 + 0.5 * k) * s, col, 0.2, 0.05, { z: z - 0.2, flat: 1, noCore: true, add: true, follow: follow2 });
+    if (breaks && k >= 0.9 && at4.look) fx.sfx?.(at4.x, at4.y, "!!", "#ff1744", 0.8, { z: 2.15 * s, gap: 0, life: 0.55 });
   }
   function techFx(fx, actor, s, a, kind, extra = {}) {
     const def = a && a.def || {};
@@ -66239,6 +67183,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (actor.armament && (actor.style === "black_leg" || actor.style === "okama_kenpo")) out.armLegs = true;
     if (bufs.some((b) => b.id === "gear4")) out.bounce = true;
     if (bufs.some((b) => b.id === "gear5")) out.toon = true;
+    const now3 = actor.game?.env?.time;
+    if (now3 !== void 0) {
+      if (actor.blocking && actor._blockFlash !== void 0 && now3 - actor._blockFlash >= 0 && now3 - actor._blockFlash < 0.3) out.blockHitAge = now3 - actor._blockFlash;
+      if (actor.armament && actor._armWas === false) actor._armOnT = now3;
+      actor._armWas = !!actor.armament;
+      if (actor._armOnT !== void 0 && now3 - actor._armOnT < 0.6) out.armOn = now3 - actor._armOnT;
+      const hf = actor.hitFx;
+      if (hf && now3 - hf.t0 >= 0 && now3 - hf.t0 < 0.8) out.flinch = { age: now3 - hf.t0, rel: Math.atan2(Math.sin(hf.ang - (actor.facing || 0)), Math.cos(hf.ang - (actor.facing || 0))), w: hf.w };
+      const stunned = actor.hitstun > 0;
+      if (stunned && !actor._stunWas) {
+        const ago2 = (t0) => t0 !== void 0 && now3 - t0 >= 0 ? now3 - t0 : Infinity;
+        actor._stunBlind = !(Math.min(ago2(actor.hitT), ago2(hf && hf.t0)) < 0.2);
+      }
+      actor._stunWas = stunned;
+      if (stunned && actor._stunBlind) out.stunBlind = true;
+    }
     if (!act2 || !clip2) return out;
     const def = act2.def;
     const w = def.windup ?? 0.1;
@@ -66330,7 +67290,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     name: o.name || "Strike",
     style,
     anim,
-    windup: o.windup ?? 0.07,
+    windup: o.windup ?? 0.08,
     recover: o.recover ?? 0.16,
     weapon: o.weapon,
     telegraph: false,
@@ -66343,10 +67303,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       weapon: null,
       desc: "Fists, elbows and headbutts. Every fighter starts somewhere.",
       m1: [
-        m1("brawl_1", "brawler", "jab", 5, { windup: 0.06, recover: 0.13 }),
-        m1("brawl_2", "brawler", "cross", 5, { windup: 0.06, recover: 0.13 }),
+        m1("brawl_1", "brawler", "jab", 5, { windup: 0.08, recover: 0.13 }),
+        m1("brawl_2", "brawler", "cross", 5, { windup: 0.08, recover: 0.13 }),
         m1("brawl_3", "brawler", "hook", 7, { windup: 0.08, recover: 0.15, stun: 0.28 }),
-        m1("brawl_4", "brawler", "uppercut", 9, { name: "Uppercut", windup: 0.09, kb: 3.5, stun: 0.35, recover: 0.3 })
+        m1("brawl_4", "brawler", "uppercut", 9, { name: "Uppercut", windup: 0.11, kb: 3.5, stun: 0.35, recover: 0.3 })
       ],
       heavy: { id: "brawl_heavy", name: "Haymaker", anim: "haymaker", windup: 0.32, recover: 0.35, cd: 1.3, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.5, offset: 0.3, damage: 15, knockback: 6, stun: 0.5, heavy: true, guardBreak: true } }] },
       techniques: [
@@ -66398,7 +67358,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         m1("itto_1", "ittoryu", "slash", 8, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2 }),
         m1("itto_2", "ittoryu", "slash2", 8, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2 }),
         m1("itto_4", "ittoryu", "rise_slash", 9, { name: "Rising Cut", weapon: "sword", slashing: true, range: 1.7, arc: 2, windup: 0.08, stun: 0.3 }),
-        m1("itto_3", "ittoryu", "stab", 12, { name: "Thrust", weapon: "sword", slashing: true, range: 1.9, arc: 2.4, kb: 3.5, recover: 0.32, vfx: "stab" })
+        m1("itto_3", "ittoryu", "stab", 12, { name: "Thrust", windup: 0.1, weapon: "sword", slashing: true, range: 1.9, arc: 2.4, kb: 3.5, recover: 0.32, vfx: "stab" })
       ],
       heavy: { id: "itto_heavy", name: "Downward Cleave", anim: "cleave", weapon: "sword", windup: 0.34, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: "line", range: 2.6, width: 1, damage: 20, knockback: 5, stun: 0.5, heavy: true, slashing: true, guardBreak: true } }] },
       techniques: [
@@ -66453,10 +67413,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       swords: 2,
       desc: "Twice the blades, twice the fury. Requires two swords.",
       m1: [
-        m1("nito_1", "nitoryu", "dual1", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.06, recover: 0.12 }),
-        m1("nito_2", "nitoryu", "dual2", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.06, recover: 0.12 }),
-        m1("nito_3", "nitoryu", "dual3", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.06, recover: 0.12 }),
-        m1("nito_4", "nitoryu", "dualx", 12, { weapon: "sword", slashing: true, range: 1.9, arc: 2.6, kb: 4, recover: 0.3 })
+        m1("nito_1", "nitoryu", "dual1", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.08, recover: 0.12 }),
+        m1("nito_2", "nitoryu", "dual2", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.08, recover: 0.12 }),
+        m1("nito_3", "nitoryu", "dual3", 7, { weapon: "sword", slashing: true, range: 1.7, arc: 2.2, windup: 0.08, recover: 0.12 }),
+        m1("nito_4", "nitoryu", "dualx", 12, { windup: 0.11, weapon: "sword", slashing: true, range: 1.9, arc: 2.6, kb: 4, recover: 0.3 })
       ],
       heavy: { id: "nito_heavy", name: "Rashomon", anim: "tora", weapon: "sword", windup: 0.35, recover: 0.35, cd: 1.6, steps: [{ hit: { shape: "line", range: 3, width: 1.2, damage: 24, knockback: 5, stun: 0.5, heavy: true, slashing: true, guardBreak: true } }] },
       techniques: [
@@ -66499,7 +67459,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("santo_1", "santoryu", "dual1", 8, { weapon: "sword", slashing: true, range: 1.8, arc: 2.4 }),
         m1("santo_2", "santoryu", "dual3", 8, { weapon: "sword", slashing: true, range: 1.8, arc: 2.4 }),
-        m1("santo_3", "santoryu", "dualx", 15, { weapon: "sword", slashing: true, range: 2, arc: 2.8, kb: 4.5, recover: 0.3 })
+        m1("santo_3", "santoryu", "dualx", 15, { windup: 0.11, weapon: "sword", slashing: true, range: 2, arc: 2.8, kb: 4.5, recover: 0.3 })
       ],
       heavy: { id: "santo_heavy", name: "Tora Gari", anim: "tora", weapon: "sword", windup: 0.4, recover: 0.35, cd: 1.6, say: "Tora Gari!", steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.6, offset: 0.4, damage: 30, knockback: 6, stun: 0.6, heavy: true, slashing: true, guardBreak: true, impactFrame: true } }] },
       techniques: [
@@ -66571,8 +67531,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("bleg_1", "black_leg", "kick", 7, { range: 1.6 }),
         m1("bleg_2", "black_leg", "kick_high", 7, { range: 1.6 }),
-        m1("bleg_3", "black_leg", "kick_spin", 7, { range: 1.6 }),
-        m1("bleg_4", "black_leg", "rise_kick", 12, { range: 1.8, kb: 4.5, recover: 0.3, name: "Collier" })
+        m1("bleg_3", "black_leg", "kick_spin", 7, { range: 1.6, windup: 0.12, recover: 0.22 }),
+        m1("bleg_4", "black_leg", "rise_kick", 12, { windup: 0.11, range: 1.8, kb: 4.5, recover: 0.3, name: "Collier" })
       ],
       heavy: { id: "bleg_heavy", name: "Mouton Shot", anim: "mouton", windup: 0.32, recover: 0.35, cd: 1.4, say: "Mouton Shot!", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.3, damage: 20, knockback: 9, stun: 0.5, heavy: true, guardBreak: true } }] },
       techniques: [
@@ -66650,7 +67610,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("fmk_1", "fishman_karate", "palm", 7, { element: "water" }),
         m1("fmk_2", "fishman_karate", "palm2", 7, { element: "water" }),
-        m1("fmk_3", "fishman_karate", "palm_double", 12, { kb: 5, recover: 0.3, element: "water", stun: 0.4 })
+        m1("fmk_3", "fishman_karate", "palm_double", 12, { windup: 0.11, kb: 5, recover: 0.3, element: "water", stun: 0.4 })
       ],
       heavy: { id: "fmk_heavy", name: "Shark Tile Fist", anim: "palm_double", windup: 0.3, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.3, damage: 18, knockback: 7, stun: 0.5, heavy: true, guardBreak: true, element: "water" } }] },
       techniques: [
@@ -66715,7 +67675,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("roku_1", "rokushiki", "shigan", 7, { name: "Shigan", range: 1.5, arc: 0.9 }),
         m1("roku_2", "rokushiki", "shigan2", 7, { name: "Shigan", range: 1.5, arc: 0.9 }),
-        m1("roku_3", "rokushiki", "kick_high", 11, { kb: 4, recover: 0.28, name: "Rankyaku Kick" })
+        m1("roku_3", "rokushiki", "kick_high", 11, { windup: 0.1, kb: 4, recover: 0.28, name: "Rankyaku Kick" })
       ],
       heavy: { id: "roku_heavy", name: "Shigan: Bachi", anim: "shigan", windup: 0.3, recover: 0.3, cd: 1.5, steps: [{ hit: { shape: "arc", range: 1.6, arc: 0.8, offset: 0.2, damage: 6, knockback: 1, stun: 0.12, duration: 0.45, interval: 0.07, guardBreak: true } }] },
       techniques: [
@@ -66893,7 +67853,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("okama_1", "okama_kenpo", "ballet_kick", 7, { range: 1.7 }),
         m1("okama_2", "okama_kenpo", "pirouette", 7, { range: 1.7 }),
-        m1("okama_3", "okama_kenpo", "jete", 13, { range: 1.9, kb: 4, recover: 0.3 })
+        m1("okama_3", "okama_kenpo", "jete", 13, { windup: 0.11, range: 1.9, kb: 4, recover: 0.3 })
       ],
       heavy: { id: "okama_heavy", name: "Swan Arabesque", anim: "arabesque", windup: 0.3, recover: 0.35, cd: 1.4, say: "Swan Arabesque!", steps: [{ hit: { shape: "line", range: 2.4, width: 0.8, damage: 20, knockback: 6, stun: 0.5, heavy: true, guardBreak: true } }] },
       techniques: [
@@ -66923,7 +67883,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("elec_1", "electro", "claw", 6, { element: "lightning" }),
         m1("elec_2", "electro", "claw2", 6, { element: "lightning" }),
-        m1("elec_3", "electro", "kick_high", 11, { element: "lightning", kb: 4, stun: 0.45, recover: 0.28, status: { shock: 0.6 } })
+        m1("elec_3", "electro", "kick_high", 11, { windup: 0.1, element: "lightning", kb: 4, stun: 0.45, recover: 0.28, status: { shock: 0.6 } })
       ],
       heavy: { id: "elec_heavy", name: "Electrical Claw", anim: "claw_x", windup: 0.3, recover: 0.35, cd: 1.4, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.8, offset: 0.2, damage: 17, knockback: 5, stun: 0.6, heavy: true, element: "lightning", status: { shock: 1 }, slashing: true }, vfx: "slash", color: "#fff176" }] },
       techniques: [
@@ -66974,7 +67934,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("hassho_1", "hasshoken", "jab", 7, { stun: 0.25 }),
         m1("hassho_2", "hasshoken", "cross", 7, { stun: 0.25 }),
-        m1("hassho_3", "hasshoken", "palm", 12, { kb: 4.5, recover: 0.3 })
+        m1("hassho_3", "hasshoken", "palm", 12, { windup: 0.1, kb: 4.5, recover: 0.3 })
       ],
       heavy: { id: "hassho_heavy", name: "Vibrating Palm", anim: "palm_double", windup: 0.35, recover: 0.35, cd: 1.5, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 20, knockback: 6, stun: 0.6, heavy: true, unblockable: true } }] },
       techniques: [
@@ -66990,7 +67950,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       m1: [
         m1("clima_1", "weather_science", "staff", 6, { weapon: "staff", range: 1.7 }),
         m1("clima_2", "weather_science", "staff2", 6, { weapon: "staff", range: 1.7 }),
-        m1("clima_3", "weather_science", "staff_jab", 9, { weapon: "staff", range: 1.9, kb: 3.5, recover: 0.3 })
+        m1("clima_3", "weather_science", "staff_jab", 9, { windup: 0.1, weapon: "staff", range: 1.9, kb: 3.5, recover: 0.3 })
       ],
       heavy: { id: "clima_heavy", name: "Heat Egg", anim: "raise", weapon: "staff", windup: 0.35, recover: 0.3, cd: 2, steps: [{ proj: { speed: 10, range: 10, radius: 0.35, damage: 15, sprite: "orb", color: "#ff8a65", element: "fire", explode: { range: 1.5, damage: 10, element: "fire" } } }] },
       // (a plain staff swung by someone who never learned the science throws no Heat Egg)
@@ -67974,6 +68934,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.dash = null;
       this.blocking = false;
       this.blockTime = 0;
+      this.guardFresh = false;
+      this.counterOn = null;
+      this.counterLeft = 0;
+      this.parryT = -Infinity;
+      this.parryPerfect = false;
+      this.parriedT = -Infinity;
+      this.guardBrokenT = -Infinity;
+      this.hitT = -Infinity;
+      this.hitDir = 0;
+      this.hitW = 0;
+      this.counterT = -Infinity;
       this.armament = false;
       this.observation = false;
       this.flashT = 0;
@@ -68196,7 +69167,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const id = chain2[this.combo.step % chain2.length];
       const def = getAbility(id);
       if (!def) return false;
-      startAbility(this, { ...def, m1Chain: true }, game);
+      this.blocking = false;
+      startAbility(this, { ...def, m1Chain: true, chained: this.combo.step % chain2.length > 0 }, game);
       this.combo.step = (this.combo.step + 1) % chain2.length;
       this.combo.window = 0.55 + (def.recover || 0.2);
       this.applyElementBuff();
@@ -68519,11 +69491,30 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         this.alt = null;
       }
     }
-    setBlock(on) {
+    /**
+     * Guard up (on) or down — the player's controller says every frame whether
+     * F is held. A guard only parries if it came up on a fresh press: not one
+     * held down (the guard coming back up after a swing), not one pressed again
+     * hard on letting go (PARRY.lockout: mashing F gets you nothing), though a
+     * press made while the guard can't come up yet (mid-swing) still counts if
+     * it comes up within PARRY.buffer of the swing's end. A parry earns the
+     * next press a fresh guard however soon it comes. `fresh` (a foe's AI):
+     * whether this guard can parry, decided for it.
+     */
+    setBlock(on, fresh) {
+      if (on && !this.guardHeld) {
+        this.pressFresh = (this.guardLetGo ?? Infinity) >= PARRY.lockout || !!this.parryEarned;
+        this.pressAge = 0;
+        this.pressPending = true;
+        this.parryEarned = false;
+      } else if (!on && this.guardHeld) this.guardLetGo = 0;
+      this.guardHeld = !!on;
       if (on && !this.blocking) {
         if (this.state !== "idle" || this.action || this.hitstun > 0 || this.status.freeze || this.climb || this.guardCd > 0) return;
         this.blocking = true;
         this.blockTime = 0;
+        this.guardFresh = fresh ?? (!!this.isPlayer && !!this.pressFresh && (this.pressAge ?? Infinity) <= PARRY.buffer);
+        this.pressPending = false;
       } else if (!on) this.blocking = false;
     }
     // --- update ------------------------------------------------------------------
@@ -68576,6 +69567,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (this.cooldowns[k] <= 0) delete this.cooldowns[k];
       }
       if (this.blocking) this.blockTime += dt;
+      if (this.pressAge !== void 0 && !(this.pressPending && this.guardHeld && this.action)) this.pressAge += dt;
+      if (this.guardLetGo !== void 0 && !this.guardHeld) this.guardLetGo += dt;
+      if (this.counterLeft > 0 && !this.action?.counter && (this.counterLeft -= dt) <= 0) {
+        this.counterLeft = 0;
+        this.counterOn = null;
+      }
       this.updateStatus(dt, game);
       this.updateBuffs(dt, game);
       this.updateResources(dt, game);
@@ -68648,7 +69645,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           s.acc += dt;
           if (s.acc >= 0.5) {
             s.acc -= 0.5;
-            const dmg = Math.max(1, Math.round(this.d.maxHp * dot.dps * 0.5 * (this.boss ? 0.25 : 1)));
+            const src = s.src, foe = src && !src.isPlayer && src.faction !== "player" && (this.isPlayer || this.faction === "player");
+            const dmg = Math.max(1, Math.round(this.d.maxHp * dot.dps * 0.5 * (this.boss ? 0.25 : 1) * (foe ? tierOf(game, this).dmg : 1)));
             this.hp -= dmg;
             game.fx.text(this.x, this.y - 1.1, String(dmg), dot.color, 0.3);
             if (k === "burn") game.fx.burst(this.x, this.y - 0.6, 4, { color: ["#ff7043", "#ffca28"], speed: 1, vz: 2, g: -2, life: 0.4, kind: "fire", size: 0.15 });
@@ -69616,6 +70614,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         seatH: busy ? busy.h : 0,
         station: st
       };
+      pose.parryAge = now3 - this.parryT;
+      pose.parryPerfect = !!this.parryPerfect;
+      pose.parriedAge = now3 - this.parriedT;
+      pose.guardBrokenAge = now3 - this.guardBrokenT;
+      pose.hitAge = now3 - this.hitT;
+      pose.hitDirRel = angleDiff(this.facing, this.hitDir);
+      pose.hitW = this.hitW;
+      pose.counterAge = now3 - this.counterT;
       if (this.charging > 0 && !act2 && !swim) pose.charge = this.charging;
       if (air) pose.air = { up: air === "up", k: this.jumpK || 0 };
       if (this.blocking) {
@@ -70832,8 +71838,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return r;
     };
   }
-  function limbSeg(rf, L3, rs, rows, seg) {
-    const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining: lining2 = false, bulge = 0, capK = 1, uv = null, side = 1 } = seg;
+  function limbSeg(rf, L3, rs, rows, seg2) {
+    const { t0 = 0, t1 = 1, off = 0, capTop = false, capBot = false, flare = 0, flareTop = 0, lining: lining2 = false, bulge = 0, capK = 1, uv = null, side = 1 } = seg2;
     const U3 = Math.max(6, rs);
     const R4 = (t, th) => rf(t, th) + off;
     const P5 = [];
@@ -71317,7 +72323,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       // your own body seen from your eyes (first person): nothing above the neck, and no arms while the view's own are up
       uClipY: { value: 1e6 },
       uHideArms: { value: 0 },
-      uHideHead: { value: 0 }
+      uHideHead: { value: 0 },
+      // (and nothing nearer your eyes than uNear: the view rides your head a
+      // beat behind it, and a blow thrown back or a kick's lean left it out in
+      // front of your own collar, looking down into it)
+      uNear: { value: 0 }
     };
     const m = new MeshToonMaterial({ vertexColors: true, map: detailTexture2(), gradientMap: charGradient(), fog: opts.fog ?? true });
     m.defines = { ...m.defines, SUN_SELF: sunSelf(opts.self ?? SELF_SHADE) };
@@ -71329,10 +72339,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
 varying float vPart; varying float vObjY;
 uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
-uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead;`).replace("#include <color_fragment>", `#include <color_fragment>
+uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead; uniform float uNear;`).replace("#include <color_fragment>", `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
 float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart) * step(vPart, 4.5), pHead = step(4.5, vPart);
-if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5) discard;
+if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5 || length(vViewPosition) < uNear) discard;
 float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
 float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
@@ -71539,8 +72549,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function expression2(look, pose, P5, t) {
     const st = pose && pose.state;
     if (st === "knocked" || st === "dead") return { eyes: "ko", mouth: "ko", brow: "worried", small: false };
-    if (st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried", small: false };
     const face = P5 && P5.face;
+    if (face === "shock") return { eyes: "open", mouth: "shout", brow: "worried", small: true };
+    if (face === "hurt" || st === "hurt") return { eyes: "hurt", mouth: "grimace", brow: "worried", small: false };
+    if (face === "grit") return { eyes: "fierce", mouth: "grimace", brow: "fierce", small: false };
+    if (face === "glare") return { eyes: "fierce", mouth: look.muzzle || look.race === "mink" ? "animal" : "flat", brow: "stern", small: false };
     const fierce = face === "fierce" || face === "shout";
     const s = (look.seed || 0) * 0.6180339 % 1 * 0.9 + 0.1;
     const blink = !fierce && ((t * 0.29 + s - 0.29) % 1 + 1) % 1 < 0.035;
@@ -72024,10 +73037,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return d;
   }
-  var HEAD = null;
+  var HEAD2 = null;
   var HEAD_R = /* @__PURE__ */ new Map();
   function headRay(dx, dy, dz, outer = false) {
-    const H3 = HEAD || headOf({});
+    const H3 = HEAD2 || headOf({});
     const ck = outer ? "cacheO" : "cache";
     let cache4 = H3[ck];
     if (!cache4) {
@@ -72145,7 +73158,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var HEADS = /* @__PURE__ */ new Map();
   function headGeo(level) {
     const G4 = HEAD_GRID[level];
-    const key2 = HEAD.key + "|" + level;
+    const key2 = HEAD2.key + "|" + level;
     let g = HEADS.get(key2);
     if (!g) {
       const V5 = G4.rows.length - 1;
@@ -72165,9 +73178,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var FACE_GEO = /* @__PURE__ */ new Map();
   function faceGeo(look = {}, level = "near") {
-    const was = HEAD;
-    HEAD = headOf(look);
-    const key2 = HEAD.key + "|" + level;
+    const was = HEAD2;
+    HEAD2 = headOf(look);
+    const key2 = HEAD2.key + "|" + level;
     let g = FACE_GEO.get(key2);
     if (!g) {
       const G4 = HEAD_GRID[level];
@@ -72203,7 +73216,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (FACE_GEO.size > 300) FACE_GEO.clear();
       FACE_GEO.set(key2, g);
     }
-    HEAD = was;
+    HEAD2 = was;
     return g;
   }
   function capGeo(rs, thF, thS, thB, zig = null, U3 = 16, V5 = 6) {
@@ -72251,12 +73264,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (s && ALIAS3[s]) return ALIAS3[s];
     return "short";
   }
-  function spike(h2, a, b, wide, thin = wide, seg, anchor2 = a) {
-    h2.add(Prim.cone(seg || h2.q.cone), between(a, b, thin, wide), h2.col, h2.bone, 0, anchor2);
+  function spike(h2, a, b, wide, thin = wide, seg2, anchor2 = a) {
+    h2.add(Prim.cone(seg2 || h2.q.cone), between(a, b, thin, wide), h2.col, h2.bone, 0, anchor2);
   }
-  function blob3(h2, c, r, rot = [0, 0, 0], seg) {
+  function blob3(h2, c, r, rot = [0, 0, 0], seg2) {
     const rr = Array.isArray(r) ? r : [r, r, r];
-    const s = seg || h2.q.blob;
+    const s = seg2 || h2.q.blob;
     h2.add(Prim.sphere(s[0], s[1]), M(c[0], c[1], c[2], rot[0], rot[1], rot[2], rr), h2.col, h2.bone, 0, c);
   }
   var add3 = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
@@ -72761,12 +73774,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     ].join("|");
   }
   function buildBody(look, wpn, lod = 0, articulated = false) {
-    const was = HEAD;
-    HEAD = headOf(look);
+    const was = HEAD2;
+    HEAD2 = headOf(look);
     try {
       return buildBody0(look, wpn, lod, articulated);
     } finally {
-      HEAD = was;
+      HEAD2 = was;
     }
   }
   function buildBody0(look, wpn, lod, articulated) {
@@ -72833,7 +73846,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       b.add(Prim.cyl(4), HM(between(a, t, 0.035)), pal.skin, hb);
       b.add(Prim.sphere(q2.sph[0], q2.sph[1]), HM(M(t[0], t[1], t[2], 0, 0, 0, 0.09)), pal.skin, hb);
     }
-    const hp = HEAD.hp;
+    const hp = HEAD2.hp;
     if (hp.nose === "long") b.add(Prim.frustum(0.75, 6), HM(between([0.88, -0.24, 0], [1.95, -0.2, 0], 0.075)), pal.face, hb);
     else if (hp.nose === "red") b.add(Prim.sphere(q2.sph[0] + 2, q2.sph[1] + 2), HM(M(1, -0.34, 0, 0, 0, 0, 0.17)), "#e53935", hb);
     if (look.kind === "Saw Shark") {
@@ -73116,11 +74129,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const hip = this.hip;
       const hF = toXY3(P5.hF, [0.05, 0.4]), hB = toXY3(P5.hB, [-0.03, 0.4]);
       const fF = P5.fF || [0.05, 0], fB = P5.fB || [-0.05, 0];
-      const twist = clamp4((hF[0] - hB[0]) * 0.85, -0.5, 0.5) * (o.twistK ?? 1);
-      const ptw = clamp4((fF[0] - fB[0]) * 0.45, -0.3, 0.3) * (o.twistK ?? 1);
+      const tk = o.twistK ?? 1;
+      const twist = clamp4(clamp4((hF[0] - hB[0]) * 0.85, -0.5, 0.5) + (P5.tw || 0), -1.35, 1.35) * tk;
+      const ptw = clamp4(clamp4((fF[0] - fB[0]) * 0.45, -0.3, 0.3) + (P5.hp || 0), -1.1, 1.1) * tk;
+      const bend = P5.ls || 0;
       this.qLean.setFromAxisAngle(Z, -l);
+      if (bend) this.qLean.multiply(_qa.setFromAxisAngle(X, bend));
       this.qChest.setFromAxisAngle(Y, twist).multiply(this.qLean);
       this.qPelvis.setFromAxisAngle(Y, ptw).multiply(_qa.setFromAxisAngle(Z, -l * 0.25));
+      if (bend) this.qPelvis.multiply(_qa.setFromAxisAngle(X, bend * 0.3));
       this.pos[B3.hips].copy(hip);
       this.quat[B3.hips].copy(this.qPelvis);
       this.pos[B3.chest].copy(hip);
@@ -73128,9 +74145,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.neck.set(0, d.chestLen + d.neck, 0).applyQuaternion(this.qChest).add(hip);
       const tilt = (P5.ht || 0) + (o.tiltAdd || 0);
       this.qHead.copy(this.qChest);
-      if (o.lookYaw) this.qHead.multiply(_qb.setFromAxisAngle(Y, o.lookYaw));
+      const yaw = (o.lookYaw || 0) + (P5.hy || 0) - twist * 0.75, roll2 = (o.headRoll || 0) + (P5.hr || 0);
+      if (yaw) this.qHead.multiply(_qb.setFromAxisAngle(Y, yaw));
       this.qHead.multiply(_qa.setFromAxisAngle(Z, -tilt));
-      if (o.headRoll) this.qHead.multiply(_qb.setFromAxisAngle(X, o.headRoll));
+      if (roll2) this.qHead.multiply(_qb.setFromAxisAngle(X, roll2));
       this.pos[B3.head].copy(this.neck);
       this.quat[B3.head].copy(this.qHead);
       this.headC.set(d.hx || 0, d.hc, 0).applyQuaternion(this.qHead).add(this.neck);
@@ -73150,7 +74168,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           const hx = h2[0], hy = h2[1];
           const fwdK = clamp4(hx / 0.43, 0, 1);
           const restK = clamp4(1 - hx / 0.2, 0, 1) * clamp4(hy / 0.3, 0, 1);
-          const lat = side * (-d.shW * 0.74 * fwdK + 0.075 * restK + (o.spread || 0));
+          const out = (k === 0 ? P5.zF : P5.zB) || 0;
+          const lat = side * (-d.shW * 0.74 * fwdK * clamp4(1 - out * 3, 0, 1) + 0.075 * restK + (o.spread || 0) + out * d.kA);
           T4.set(hx * d.kA, -hy * d.kA, lat);
           if (tiltA) T4.applyAxisAngle(X, tiltA * side);
           T4.applyQuaternion(this.qLean).add(S5);
@@ -73165,6 +74184,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           }
           if (k === 1 && o.grip2 && o.grip2K > 0) T4.lerp(_g2.copy(this.E[0]).addScaledVector(this.blade[0], o.grip2), o.grip2K);
         }
+        let stretch = !!P5.stretch || !!reach;
+        const sm = (k === 0 ? P5.smF : P5.smB) || 0;
+        if (sm > 0 && !stretch) {
+          _t.subVectors(T4, S5);
+          const L3 = d.A1 + d.A2, dist = _t.length();
+          const out = clamp4((dist / L3 - 0.8) / 0.2, 0, 1);
+          if (out > 0 && dist > 1e-4) {
+            T4.copy(S5).addScaledVector(_t, L3 * (1 + sm * out) / dist);
+            stretch = true;
+          }
+        }
         const e = k === 0 ? P5.eF ?? 1 : P5.eB ?? 1;
         _t.subVectors(T4, S5);
         const lxy = Math.hypot(_t.x, _t.y) || 1;
@@ -73172,7 +74202,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this._pole.set(_t.y / lxy * sg, -_t.x / lxy * sg, side * 0.42);
         if (reach) this._pole.set(-0.75, -0.65, side * 0.45);
         if (o.att && o.attK > 0 && !reach && !(k === 1 && (broom || o.grip2 && o.grip2K > 0.5))) this._pole.lerp(_attP, o.attK);
-        ik2(S5, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P5.stretch || !!reach, J, E);
+        ik2(S5, T4, d.A1, d.A2, this._pole, e === 0 ? 0 : e, stretch, J, E);
         const U3 = k === 0 ? B3.uarmR : B3.uarmL, F4 = k === 0 ? B3.farmR : B3.farmL, Hd = k === 0 ? B3.handR : B3.handL;
         this.pos[U3].copy(S5);
         aimNegY(this.quat[U3], _t.subVectors(J, S5), this._pole);
@@ -73200,6 +74230,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             this.blade[k].applyAxisAngle(X, tiltA * side);
             this.plane[k].applyAxisAngle(X, tiltA * side);
           }
+          if (P5.wt) {
+            this.blade[k].applyAxisAngle(X, -P5.wt * side);
+            this.plane[k].applyAxisAngle(X, -P5.wt * side);
+          }
           this.blade[k].applyQuaternion(this.qLean);
           this.plane[k].applyQuaternion(this.qLean);
           this.bladeOn[k] = true;
@@ -73223,7 +74257,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const f = k === 0 ? fF : fB;
         const Hj = _c.set(0, -0.07, side * d.hipW).applyQuaternion(this.qPelvis).add(hip);
         const T4 = this._T;
-        let fx = f[0] * d.kL, fz = side * (d.hipW + 0.012 + (o.legSpread || 0));
+        let fx = f[0] * d.kL, fz = side * (d.hipW + 0.012 + (o.legSpread || 0) + ((k === 0 ? P5.zfF : P5.zfB) || 0) * d.kL);
         if (walk !== void 0 && walk !== null) {
           fz += fx * Math.sin(walk) * 0.8;
           fx *= Math.cos(walk);
@@ -73231,17 +74265,28 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         T4.set(hip.x + fx, d.hA + Math.max(0, -f[1] * d.kL), fz);
         _t.subVectors(T4, Hj);
+        const sm = (k === 0 ? P5.smfF : P5.smfB) || 0;
+        let reachOut = false;
+        if (sm > 0) {
+          const L3 = d.T1 + d.T2, dist = _t.length();
+          const out = clamp4((dist / L3 - 0.8) / 0.2, 0, 1);
+          if (out > 0 && dist > 1e-4) {
+            T4.copy(Hj).addScaledVector(_t, L3 * (1 + sm * out) / dist);
+            _t.subVectors(T4, Hj);
+            reachOut = true;
+          }
+        }
         const lxy = Math.hypot(_t.x, _t.y) || 1;
         this._pole.set(-_t.y / lxy, _t.x / lxy, side * 0.12);
         const Kn = this.K[k], Ft = this.F[k];
         const Hs = this.pos[k === 0 ? B3.thighR : B3.thighL].copy(Hj);
-        ik2(Hs, T4, d.T1, d.T2, this._pole, 1, false, Kn, Ft);
+        ik2(Hs, T4, d.T1, d.T2, this._pole, 1, reachOut, Kn, Ft);
         const Th = k === 0 ? B3.thighR : B3.thighL, Sh = k === 0 ? B3.shinR : B3.shinL, Fo = k === 0 ? B3.footR : B3.footL;
         aimNegY(this.quat[Th], _t.subVectors(Kn, Hs), this._pole);
         this.pos[Sh].copy(Kn);
         aimNegY(this.quat[Sh], _t.subVectors(Ft, Kn), this._pole);
-        this.len[Th] = 1;
-        this.len[Sh] = 1;
+        this.len[Th] = reachOut ? clamp4(Hs.distanceTo(Kn) / d.T1, 1, 1.5) : 1;
+        this.len[Sh] = reachOut ? clamp4(Kn.distanceTo(Ft) / d.T2, 1, 1.5) : 1;
         _u.subVectors(Ft, Kn).normalize();
         const raise = clamp4((Ft.y - d.hA) / 0.28, 0, 1);
         const toe = 0.12 + ptw * 0.5 * side;
@@ -74109,68 +75154,187 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (pos) this.sprite.position.copy(pos);
     }
   };
-  var AURA = /* @__PURE__ */ new Map();
-  function auraTex(color) {
-    let t = AURA.get(color);
-    if (t) return t;
-    const W4 = 96, H3 = 128, F4 = 4;
-    const c = canvas(W4, H3 * F4), g = c.getContext("2d");
-    const { c: col, a } = parseCol(color);
-    for (let f = 0; f < F4; f++) {
-      g.save();
-      g.translate(0, f * H3);
-      for (let layer = 0; layer < 2; layer++) {
-        const sc = layer ? 0.8 : 1;
-        g.globalAlpha = (layer ? 0.9 : 0.55) * Math.min(1, a + 0.15);
-        g.fillStyle = layer ? "#ffffff" : col;
-        if (layer) {
-          g.globalCompositeOperation = "source-atop";
-          g.globalAlpha = 0.25;
-        }
-        g.beginPath();
-        const w = W4 * 0.42 * sc, cx = W4 / 2, base2 = H3 - 4;
-        g.moveTo(cx - w, base2);
-        for (let k = 0; k <= 10; k++) {
-          const x = cx - w + k / 10 * 2 * w;
-          const env = Math.sin(k / 10 * Math.PI);
-          const tip = (k % 2 ? 6 : 16 + 8 * Math.sin(f * 1.7 + k * 1.9)) * sc;
-          g.quadraticCurveTo(x - 4, base2 - H3 * (0.5 + 0.3 * env) * sc, x, base2 - H3 * (0.42 + 0.46 * env) * sc - tip);
-        }
-        g.lineTo(cx + w, base2);
-        g.closePath();
-        g.fill();
-        g.globalCompositeOperation = "source-over";
-      }
-      g.restore();
-    }
-    t = tex(c);
-    t.repeat.set(1, 1 / F4);
-    AURA.set(color, t);
-    return t;
+  var AURA_NOISE = (
+    /* glsl */
+    `
+  float ahash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float anoise(vec3 x) {
+    vec3 i = floor(x), f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(ahash(i), ahash(i + vec3(1, 0, 0)), f.x), mix(ahash(i + vec3(0, 1, 0)), ahash(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(ahash(i + vec3(0, 0, 1)), ahash(i + vec3(1, 0, 1)), f.x), mix(ahash(i + vec3(0, 1, 1)), ahash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
   }
-  var PLANE2 = new PlaneGeometry(1, 1).translate(0, 0.5, 0);
+`
+  );
+  var AURA_VERT = (
+    /* glsl */
+    `
+  uniform float uTime, uSpeed;
+  varying float vH, vA;
+  varying vec3 vN, vV;
+  ${AURA_NOISE}
+  void main() {
+    vec3 p = position;
+    float h = clamp(p.y, 0.0, 1.0), t = uTime * uSpeed;
+    float a = atan(p.z, p.x);
+    // tongues licking up off the top, the whole shell breathing
+    float n = anoise(vec3(a * 2.0, h * 3.0 - t * 2.6, t * 0.4)) - 0.5;
+    p.xz *= 1.0 + n * 0.7 * h * h + 0.05 * sin(t * 9.0 + h * 6.0);
+    p.y *= 1.0 + 0.07 * sin(t * 7.3) + n * 0.25 * h * h;
+    vH = h; vA = a;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+  );
+  var AURA_FRAG = (
+    /* glsl */
+    `
+  uniform float uTime, uSpeed, uAlpha, uAdd;
+  uniform vec3 uColor;
+  varying float vH, vA;
+  varying vec3 vN, vV;
+  ${AURA_NOISE}
+  void main() {
+    float t = uTime * uSpeed;
+    float rim = 1.0 - abs(dot(normalize(vN), normalize(vV)));
+    // the top torn into tongues of flame, streaks running up the sides
+    float n = anoise(vec3(vA * 3.0, vH * 3.5 - t * 3.4, t * 0.6));
+    float s = anoise(vec3(vA * 9.0, vH * 1.6 - t * 2.4, 3.0));
+    float tongue = vH + (n - 0.5) * 0.7 * smoothstep(0.25, 1.0, vH);
+    if (tongue > 0.9) discard;
+    float a = pow(rim, 1.25) * 0.95 + 0.1 + smoothstep(0.55, 0.9, s) * 0.5;
+    a *= (1.0 - smoothstep(0.62, 0.9, tongue)) * smoothstep(0.0, 0.12, vH);
+    a *= uAlpha * (0.85 + 0.15 * sin(t * 12.0));
+    vec3 col = mix(uColor, vec3(1.0), (pow(rim, 3.0) * 0.5 + smoothstep(0.7, 0.95, s) * 0.35) * uAdd);
+    gl_FragColor = uAdd > 0.5 ? vec4(col * a * 1.6, a) : vec4(col, min(1.0, a * 1.3));
+  }
+`
+  );
+  var MOTE_VERT = (
+    /* glsl */
+    `
+  attribute vec3 seed;
+  uniform float uTime, uPx, uH, uR;
+  varying float vLife;
+  void main() {
+    float life = fract(uTime * (0.35 + seed.z * 0.3) + seed.x);
+    float a = seed.y + life * 1.2;
+    vec3 p = vec3(cos(a) * uR * (0.75 + seed.z * 0.4), life * uH * 1.1, sin(a) * uR * (0.75 + seed.z * 0.4));
+    vLife = life;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    gl_PointSize = uPx * 0.07 * (1.0 - life * 0.6) / max(0.2, -mv.z);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+  );
+  var MOTE_FRAG = (
+    /* glsl */
+    `
+  uniform vec3 uColor;
+  uniform float uAlpha, uAdd;
+  varying float vLife;
+  void main() {
+    float d = length(gl_PointCoord - 0.5) * 2.0;
+    if (d > 1.0) discard;
+    float a = (1.0 - d * d) * sin(vLife * 3.14159) * uAlpha;
+    vec3 c = mix(uColor, vec3(1.0), 0.35 * uAdd);
+    gl_FragColor = uAdd > 0.5 ? vec4(c * a * 1.4, a) : vec4(c, a * 0.8);
+  }
+`
+  );
+  var AURA_GEO2 = null;
+  var MOTES = null;
+  function auraGeo() {
+    if (AURA_GEO2) return AURA_GEO2;
+    const pts = [];
+    for (let i = 0; i <= 16; i++) {
+      const y = i / 16;
+      const r = 0.5 * (0.72 + 0.28 * Math.sin(Math.PI * Math.min(1, y * 1.25))) * (1 - 0.55 * y ** 3);
+      pts.push(new Vector2(Math.max(0.01, r), y));
+    }
+    AURA_GEO2 = new LatheGeometry(pts, 20);
+    return AURA_GEO2;
+  }
+  function moteGeo() {
+    if (MOTES) return MOTES;
+    const n = 16, seed = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      seed[i * 3] = i * 0.618 % 1;
+      seed[i * 3 + 1] = i * 2.399;
+      seed[i * 3 + 2] = i * 0.381 % 1;
+    }
+    MOTES = new BufferGeometry();
+    MOTES.setAttribute("position", new BufferAttribute(new Float32Array(n * 3), 3));
+    MOTES.setAttribute("seed", new BufferAttribute(seed, 3));
+    MOTES.boundingSphere = new Sphere(new Vector3(0, 1, 0), 3);
+    return MOTES;
+  }
+  var _sz = new Vector2();
   var Aura = class {
     constructor() {
-      this.mat = new MeshBasicMaterial({ transparent: true, depthWrite: false, side: DoubleSide, fog: true });
-      this.mesh = new Mesh(PLANE2, this.mat);
-      this.mesh.renderOrder = 2;
+      this.mesh = new Group();
+      this.inner = new Group();
+      this.mesh.add(this.inner);
+      const u = { uTime: { value: 0 }, uSpeed: { value: 1 }, uAlpha: { value: 0.7 }, uAdd: { value: 1 }, uColor: { value: new Color() } };
+      this.mat = new ShaderMaterial({ uniforms: u, vertexShader: AURA_VERT, fragmentShader: AURA_FRAG, transparent: true, depthWrite: false, side: DoubleSide });
+      this.shell = new Mesh(auraGeo(), this.mat);
+      this.shell.renderOrder = 2;
+      this.mat2 = this.mat.clone();
+      this.mat2.uniforms.uTime = u.uTime;
+      this.mat2.uniforms.uColor = u.uColor;
+      this.mat2.uniforms.uAdd = u.uAdd;
+      this.mat2.uniforms.uSpeed.value = 1.45;
+      this.outer = new Mesh(auraGeo(), this.mat2);
+      this.outer.renderOrder = 2;
+      this.moteMat = new ShaderMaterial({
+        uniforms: { uTime: u.uTime, uAlpha: u.uAlpha, uAdd: u.uAdd, uColor: u.uColor, uPx: { value: 800 }, uH: { value: 2 }, uR: { value: 0.4 } },
+        vertexShader: MOTE_VERT,
+        fragmentShader: MOTE_FRAG,
+        transparent: true,
+        depthWrite: false
+      });
+      this.motes = new Points(moteGeo(), this.moteMat);
+      this.motes.frustumCulled = false;
+      this.motes.renderOrder = 3;
+      this.motes.onBeforeRender = (r, sc, cam) => {
+        r.getDrawingBufferSize(_sz);
+        this.moteMat.uniforms.uPx.value = _sz.y / (2 * Math.tan((cam.fov || 60) * Math.PI / 360));
+      };
+      this.inner.add(this.shell, this.outer, this.motes);
       this.color = null;
     }
+    /** color: the aura's css colour (its alpha how strong); height and width in the body's units; camYaw3: the camera's yaw. */
     set(color, t, height, width, camYaw3) {
       if (color !== this.color) {
         this.color = color;
-        this.mat.map = auraTex(color);
-        this.mat.blending = brightness2(color) > 0.45 ? AdditiveBlending : NormalBlending;
-        this.mat.needsUpdate = true;
+        const { c, a } = parseCol(color);
+        this.mat.uniforms.uColor.value.set(c);
+        const add5 = brightness2(color) > 0.45;
+        this.mat.uniforms.uAdd.value = add5 ? 1 : 0;
+        this.mat.uniforms.uAlpha.value = Math.min(1, 0.5 + a * 0.5);
+        this.mat2.uniforms.uAlpha.value = this.mat.uniforms.uAlpha.value * 0.45;
+        const bl2 = add5 ? AdditiveBlending : NormalBlending;
+        if (this.mat.blending !== bl2) {
+          for (const m of [this.mat, this.mat2, this.moteMat]) {
+            m.blending = bl2;
+            m.needsUpdate = true;
+          }
+        }
       }
-      const f = Math.floor(t * 12) % 4;
-      this.mat.map.offset.set(0, f / 4);
-      this.mat.opacity = 0.55 + 0.2 * Math.sin(t * 10);
-      this.mesh.scale.set(width * (1 + 0.04 * Math.sin(t * 13)), height * (1 + 0.05 * Math.sin(t * 9)), 1);
-      this.mesh.rotation.set(0, camYaw3, 0);
+      this.mat.uniforms.uTime.value = t;
+      this.shell.scale.set(width * 0.62, height * 1.08, width * 0.62);
+      this.outer.scale.set(width * 0.74, height * 1.22, width * 0.74);
+      this.moteMat.uniforms.uH.value = height;
+      this.moteMat.uniforms.uR.value = width * 0.3;
+      this.inner.position.set(Math.sin(camYaw3) * 0.3, 0.05, Math.cos(camYaw3) * 0.3);
     }
     dispose() {
       this.mat.dispose();
+      this.mat2.dispose();
+      this.moteMat.dispose();
     }
   };
   var ICE = null;
@@ -74235,11 +75399,56 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return new Mesh(ROOT.g, ROOT.m);
   }
   var SHIM = null;
+  var SHIM_VERT = (
+    /* glsl */
+    `
+  varying vec2 vUv;
+  varying vec3 vN, vV;
+  void main() {
+    vUv = uv;
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+  );
+  var SHIM_FRAG = (
+    /* glsl */
+    `
+  uniform vec3 uColor;
+  uniform float uOpacity, uTime;
+  varying vec2 vUv;
+  varying vec3 vN, vV;
+  void main() {
+    // a curved sheet of light, soft all round its edges, brightest where it
+    // turns away from you, a faint pulse running up it
+    float edge = smoothstep(0.0, 0.22, vUv.x) * smoothstep(1.0, 0.78, vUv.x) * smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+    float rim = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);
+    float pulse = 0.5 + 0.5 * sin(vUv.y * 18.0 - uTime * 7.0);
+    float a = (0.4 + rim * 0.7 + pulse * 0.12) * edge * uOpacity;
+    gl_FragColor = vec4(uColor * (0.9 + rim * 0.6) * a, a);
+  }
+`
+  );
   function guardShimmer() {
-    if (!SHIM) SHIM = new CylinderGeometry(0.62, 0.62, 1.3, 14, 1, true, -1.05 + Math.PI / 2, 2.1).translate(0, 0.65, 0);
-    const m = new MeshBasicMaterial({ color: 9489145, transparent: true, opacity: 0.3, blending: AdditiveBlending, depthWrite: false, side: DoubleSide });
+    if (!SHIM) SHIM = new CylinderGeometry(0.62, 0.62, 1.3, 24, 1, true, -1.05 + Math.PI / 2, 2.1).translate(0, 0.65, 0);
+    const m = new ShaderMaterial({
+      uniforms: { uColor: { value: new Color(9489145) }, uOpacity: { value: 0.3 }, uTime: { value: 0 } },
+      vertexShader: SHIM_VERT,
+      fragmentShader: SHIM_FRAG,
+      transparent: true,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      side: DoubleSide
+    });
+    m.color = m.uniforms.uColor.value;
     const mesh = new Mesh(SHIM, m);
     mesh.renderOrder = 3;
+    mesh.onBeforeRender = () => {
+      m.uniforms.uOpacity.value = m.opacity;
+      m.uniforms.uTime.value = performance.now() / 1e3;
+    };
     return mesh;
   }
 
@@ -74641,6 +75850,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       const col = pose.fx && (pose.fx.trail || pose.fx.color) || "#ffffff";
       _c2.set(col);
+      const wide = 0.1 + Math.min(0.12, (A.w || 0.1) * 0.3);
       this.mat.blending = pose.fx && pose.fx.additive ? AdditiveBlending : NormalBlending;
       const P32 = this.pos, C4 = this.col;
       for (let r = 0; r < 2; r++) {
@@ -74656,7 +75866,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             const nx = this.tips[0][Math.min(n - 1, j + 1)];
             _w.subVectors(tip, nx);
             const up = _v6.set(0, 1, 0).addScaledVector(_w.normalize(), -_w.y).normalize();
-            inner = up.multiplyScalar(-0.13 * (1 - u)).add(tip);
+            inner = up.multiplyScalar(-wide * (1 - u)).add(tip);
             tip.addScaledVector(up, 0);
           }
           P32.set([tip.x, tip.y, tip.z], vi * 3);
@@ -74677,6 +75887,253 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.mat.dispose();
     }
   };
+
+  // src/render3d/chars/flame.js
+  var NOISE = (
+    /* glsl */
+    `
+  float fhash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float fnoise(vec3 x) {
+    vec3 i = floor(x), f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(fhash(i), fhash(i + vec3(1, 0, 0)), f.x), mix(fhash(i + vec3(0, 1, 0)), fhash(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(fhash(i + vec3(0, 0, 1)), fhash(i + vec3(1, 0, 1)), f.x), mix(fhash(i + vec3(0, 1, 1)), fhash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+  }
+  float ffbm(vec3 p) { return fnoise(p) * 0.55 + fnoise(p * 2.03 + 7.1) * 0.3 + fnoise(p * 4.1 + 3.7) * 0.15; }
+`
+  );
+  var VERT3 = (
+    /* glsl */
+    `
+  uniform float uTime, uSeed, uGrow;
+  uniform vec3 uLean;
+  varying float vH;
+  varying vec3 vP, vN, vV;
+  ${NOISE}
+  void main() {
+    vec3 p = position;
+    float h = clamp(p.y, 0.0, 1.0), t = uTime + uSeed;
+    // the surface boils: rising turbulence swells and pinches it, more toward the tip
+    float n = fnoise(vec3(p.x * 3.2, p.y * 2.4 - t * 2.8, p.z * 3.2)) - 0.5;
+    p.xz *= 1.0 + n * 0.85 * h + 0.09 * sin(t * 11.0 + h * 8.0) * h;
+    // the tip sways and licks up and down
+    p.x += (sin(t * 4.7 + h * 3.1) * 0.07 + sin(t * 9.3 + h * 6.0) * 0.035) * h * h;
+    p.z += (cos(t * 5.3 + h * 2.7) * 0.07 + sin(t * 8.1 + h * 5.0) * 0.035) * h * h;
+    p.y *= (1.0 + 0.09 * sin(t * 6.3) + 0.05 * sin(t * 13.7)) * uGrow;
+    p.xz *= mix(0.6, 1.0, uGrow);
+    // blown back by the way they're moving
+    p += uLean * h * h;
+    vH = h; vP = position;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+  );
+  var FRAG_BODY = (
+    /* glsl */
+    `
+  uniform float uTime, uSeed, uAlpha;
+  uniform vec3 uRim, uMid, uHot, uCore;
+  varying float vH;
+  varying vec3 vP, vN, vV;
+  ${NOISE}
+  void main() {
+    float t = uTime + uSeed;
+    float face = abs(dot(normalize(vN), normalize(vV)));
+    // tongues: noise streaming up the flame eats it away from the top
+    float n = ffbm(vec3(vP.x * 4.6, vP.y * 3.3 - t * 3.6, vP.z * 4.6));
+    float body = (1.0 - vH) * 1.22 + face * 0.2 - n * 0.9;
+    if (body < 0.16) discard;
+    float heat = body + (face - 0.55) * 0.4 - vH * 0.15;
+    vec3 col = mix(uRim, uMid, smoothstep(0.4, 0.46, heat));
+    col = mix(col, uHot, smoothstep(0.7, 0.76, heat));
+    col = mix(col, uCore, smoothstep(0.95, 1.0, heat));
+    float a = smoothstep(0.16, 0.24, body) * uAlpha;
+    gl_FragColor = vec4(col, a);
+  }
+`
+  );
+  var FRAG_CORE = (
+    /* glsl */
+    `
+  uniform float uTime, uSeed, uAlpha;
+  uniform vec3 uCore;
+  varying float vH;
+  varying vec3 vP, vN, vV;
+  ${NOISE}
+  void main() {
+    float t = uTime + uSeed;
+    float face = abs(dot(normalize(vN), normalize(vV)));
+    float n = ffbm(vec3(vP.x * 5.0, vP.y * 3.6 - t * 4.0, vP.z * 5.0));
+    float body = (1.0 - vH) * 1.05 + face * 0.35 - n * 0.75;
+    if (body < 0.35) discard;
+    float a = smoothstep(0.35, 0.7, body) * face * uAlpha * 0.7;
+    gl_FragColor = vec4(uCore * 1.3 * a, a);
+  }
+`
+  );
+  var SPARK_VERT = (
+    /* glsl */
+    `
+  attribute vec3 seed;
+  uniform float uTime, uPx, uGrow;
+  uniform vec3 uLean;
+  varying float vLife;
+  void main() {
+    float life = fract(uTime * (0.6 + seed.z * 0.55) + seed.x);
+    vec3 p = vec3(cos(seed.y) * 0.1, 0.25 + seed.z * 0.2, sin(seed.y) * 0.1);
+    p.y += life * 1.25 * uGrow;
+    p.x += sin(uTime * 3.1 + seed.y * 5.0) * 0.14 * life;
+    p.z += cos(uTime * 2.7 + seed.x * 7.0) * 0.14 * life;
+    p += uLean * life * 1.7;
+    vLife = life;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    gl_PointSize = uPx * 0.035 * (1.0 - life * 0.7) / max(0.2, -mv.z);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+  );
+  var SPARK_FRAG = (
+    /* glsl */
+    `
+  uniform float uAlpha;
+  varying float vLife;
+  void main() {
+    float d = length(gl_PointCoord - 0.5) * 2.0;
+    if (d > 1.0) discard;
+    float a = (1.0 - d) * (1.0 - vLife) * uAlpha;
+    gl_FragColor = vec4(mix(vec3(1.0, 0.9, 0.55), vec3(1.0, 0.36, 0.08), vLife) * 1.5 * a, a);
+  }
+`
+  );
+  var GEO3 = null;
+  function flameGeo2() {
+    if (GEO3) return GEO3;
+    const pts = [];
+    for (let i = 0; i <= 18; i++) {
+      const y = i / 18;
+      const foot = Math.sin(Math.min(1, y / 0.2) * Math.PI / 2);
+      const r = 0.25 * Math.sqrt(foot) * Math.pow(1 - y, 1.1) * (1 - 0.1 * y);
+      pts.push(new Vector2(Math.max(1e-3, r), y));
+    }
+    GEO3 = new LatheGeometry(pts, 16);
+    return GEO3;
+  }
+  var SPARKS = null;
+  function sparkGeo() {
+    if (SPARKS) return SPARKS;
+    const n = 18, seed = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      seed[i * 3] = i * 0.618 % 1;
+      seed[i * 3 + 1] = i * 2.399;
+      seed[i * 3 + 2] = i * 0.381 % 1;
+    }
+    SPARKS = new BufferGeometry();
+    SPARKS.setAttribute("position", new BufferAttribute(new Float32Array(n * 3), 3));
+    SPARKS.setAttribute("seed", new BufferAttribute(seed, 3));
+    SPARKS.boundingSphere = new Sphere(new Vector3(0, 0.8, 0), 3);
+    return SPARKS;
+  }
+  var COLS = { uRim: "#d42a16", uMid: "#ff6a12", uHot: "#ffb52e", uCore: "#fff0b8" };
+  function bodyMat(seed) {
+    const u = { uTime: { value: 0 }, uSeed: { value: seed }, uGrow: { value: 1 }, uAlpha: { value: 1 }, uLean: { value: new Vector3() } };
+    for (const [k, c] of Object.entries(COLS)) u[k] = { value: new Color(c) };
+    return new ShaderMaterial({ uniforms: u, vertexShader: VERT3, fragmentShader: FRAG_BODY, transparent: true, depthWrite: false, side: DoubleSide });
+  }
+  function coreMat(seed) {
+    const u = { uTime: { value: 0 }, uSeed: { value: seed }, uGrow: { value: 1 }, uAlpha: { value: 1 }, uLean: { value: new Vector3() }, uCore: { value: new Color("#ffe9a8") } };
+    return new ShaderMaterial({ uniforms: u, vertexShader: VERT3, fragmentShader: FRAG_CORE, transparent: true, depthWrite: false, blending: AdditiveBlending });
+  }
+  var _q4 = new Quaternion();
+  var _v7 = new Vector3();
+  var _sz2 = new Vector2();
+  var BackFlame = class {
+    constructor(seed = Math.random() * 100) {
+      this.group = new Group();
+      this.mats = [];
+      const add5 = (mat, sc, x, z, ry = 0, order = 2) => {
+        const m = new Mesh(flameGeo2(), mat);
+        m.scale.set(sc[0], sc[1], sc[0]);
+        m.position.set(x, 0, z);
+        m.rotation.y = ry;
+        m.renderOrder = order;
+        this.group.add(m);
+        this.mats.push(mat);
+        return m;
+      };
+      add5(bodyMat(seed), [1, 1], 0, 0);
+      add5(bodyMat(seed + 3.7), [0.62, 0.72], -0.05, 0.1, 0.4);
+      add5(bodyMat(seed + 7.3), [0.58, 0.64], -0.04, -0.11, -0.5);
+      add5(coreMat(seed + 1.9), [0.55, 0.62], 0.02, 0, 0, 3);
+      this.sparkMat = new ShaderMaterial({
+        uniforms: { uTime: { value: 0 }, uPx: { value: 800 }, uGrow: { value: 1 }, uAlpha: { value: 1 }, uLean: { value: new Vector3() } },
+        vertexShader: SPARK_VERT,
+        fragmentShader: SPARK_FRAG,
+        transparent: true,
+        depthWrite: false,
+        blending: AdditiveBlending
+      });
+      this.sparks = new Points(sparkGeo(), this.sparkMat);
+      this.sparks.frustumCulled = false;
+      this.sparks.renderOrder = 3;
+      this.sparks.onBeforeRender = (r, sc, cam) => {
+        r.getDrawingBufferSize(_sz2);
+        this.sparkMat.uniforms.uPx.value = _sz2.y / (2 * Math.tan((cam.fov || 60) * Math.PI / 360));
+      };
+      this.group.add(this.sparks);
+      this.glowMat = glowSpriteMat("#ff6d2a").clone();
+      this.glowMat.opacity = 0.42;
+      this.glow = new Sprite(this.glowMat);
+      this.glow.position.set(0, 0.42, 0);
+      this.glow.renderOrder = 1;
+      this.group.add(this.glow);
+      this.lean = new Vector3();
+      this.leanV = new Vector3();
+      this.grow = 0;
+    }
+    /**
+     * Burn for a frame. `t`: seconds; `dt`: since the last; `size`: the flame's
+     * height (the group's own units); `drift`: the way the air's going past it
+     * (the group's frame — the opposite of the way they're moving), which the
+     * flame leans into on a spring; `lit`: burning (grows) or going out (shrinks).
+     */
+    update(t, dt, size, drift, lit2 = true) {
+      this.grow += ((lit2 ? 1 : 0) - this.grow) * Math.min(1, dt * (lit2 ? 5 : 8));
+      this.group.visible = this.grow > 0.02;
+      if (!this.group.visible) return;
+      const k = 60, c = 9;
+      this.leanV.x += ((drift.x - this.lean.x) * k - this.leanV.x * c) * dt;
+      this.leanV.y += ((drift.y - this.lean.y) * k - this.leanV.y * c) * dt;
+      this.leanV.z += ((drift.z - this.lean.z) * k - this.leanV.z * c) * dt;
+      this.lean.addScaledVector(this.leanV, dt);
+      this.group.scale.setScalar(size);
+      _v7.copy(this.lean).divideScalar(Math.max(0.01, size));
+      for (const m of this.mats) {
+        const u = m.uniforms;
+        u.uTime.value = t;
+        u.uGrow.value = this.grow;
+        u.uLean.value.copy(_v7);
+      }
+      const s = this.sparkMat.uniforms;
+      s.uTime.value = t;
+      s.uGrow.value = this.grow;
+      s.uLean.value.copy(_v7);
+      s.uAlpha.value = this.grow;
+      const fl2 = 0.85 + 0.1 * Math.sin(t * 17.3) + 0.05 * Math.sin(t * 29.1);
+      this.glow.scale.setScalar(1.1 * this.grow * fl2);
+    }
+    dispose() {
+      for (const m of this.mats) m.dispose();
+      this.sparkMat.dispose();
+      this.glowMat.dispose();
+    }
+  };
+  function driftInto(parent, wx, wz, out) {
+    parent.getWorldQuaternion(_q4).invert();
+    return out.set(wx, 0, wz).applyQuaternion(_q4);
+  }
 
   // src/render3d/chars/helditem.js
   var cache3 = /* @__PURE__ */ new Map();
@@ -75016,7 +76473,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     o.headRoll = 0;
     o.grip2 = 0;
     o.grip2K = 1;
-    if (pose.state === "hurt") o.tiltAdd = -0.25;
+    if (pose.state === "hurt" && pose.stunBlind) o.tiltAdd = -0.25;
+    if (pose.getUp !== void 0 && pose.state !== "knocked") {
+      const k = Math.max(0, 1 - pose.getUp / 0.3);
+      o.lying = k * k * 0.9;
+    }
     if (pose.swimming && (pose.swim === "tread" || !pose.swim)) o.leanAdd = 0.2;
     if (pose.swimming && P5.spread) o.spread = P5.spread;
     if (pose.swimming && P5.legSpread) o.legSpread = P5.legSpread;
@@ -75049,7 +76510,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 
   // src/render3d/chars/viewmodel.js
   var clamp5 = (v, a, b) => v < a ? a : v > b ? b : v;
-  var FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16 };
+  var FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16, low: 0.07 };
   var FPW = { xmin: 0.22, c: 0.06, top: -0.04, bottom: 0.1, aside: 0.08 };
   var FP_HOLD = [0.2, -0.22, 0.36];
   var FP_EAT = [0.05, -0.2, 0.27];
@@ -75057,10 +76518,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var mix23 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   var HIDE = [B3.hips, B3.chest, B3.head, B3.sheath, B3.hilts, B3.tail];
   var LEGS = [B3.thighR, B3.shinR, B3.footR, B3.thighL, B3.shinL, B3.footL];
-  var _v7 = new Vector3();
+  var _v8 = new Vector3();
   var _v23 = new Vector3();
   var _ax = new Vector3();
-  var _q4 = new Quaternion();
+  var _q5 = new Quaternion();
   var _up2 = new Vector3(0, 1, 0);
   var _one2 = new Vector3(1, 1, 1);
   var _mA = new Matrix4();
@@ -75069,16 +76530,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return new Viewmodel(ctx);
   }
   var NEAR_CUT = 0.15;
-  function nearCut(mat) {
+  var NEAR_CUT_INK = 0.22;
+  function nearCut(mat, cut3 = NEAR_CUT) {
     const prev = mat.onBeforeCompile;
     mat.onBeforeCompile = (sh, r) => {
       prev?.call(mat, sh, r);
       sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying float vEyeZ;").replace("#include <project_vertex>", "#include <project_vertex>\nvEyeZ = -mvPosition.z;");
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vEyeZ;").replace("void main() {", `void main() {
-  if (vEyeZ < ${NEAR_CUT.toFixed(3)}) discard;`);
+  if (vEyeZ < ${cut3.toFixed(3)}) discard;`);
     };
     const key2 = mat.customProgramCacheKey ? mat.customProgramCacheKey.bind(mat) : () => "";
-    mat.customProgramCacheKey = () => key2() + "|vm-near";
+    mat.customProgramCacheKey = () => key2() + "|vm-near" + cut3;
     return mat;
   }
   function fpStrike(h0) {
@@ -75086,7 +76548,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const T4 = FP, h2 = xy(h0);
     const k = clamp5(h2[0] / 0.43, 0, 1);
     let x = h2[0] > T4.x0 ? T4.x0 + (h2[0] - T4.x0) * T4.xs : h2[0] >= 0 ? Math.max(T4.xmin, h2[0]) : h2[0];
-    const y = h2[1] - T4.c - T4.L * k;
+    const y = h2[1] - T4.c - T4.L * k + T4.low * (1 - k) + clamp5(0.1 - h2[0], 0, 0.5) * 1.6;
     if (y < 0 && h2[0] > 0) x = Math.max(x, T4.xmin + (T4.xhigh - T4.xmin) * clamp5(-y / 0.3, 0, 1));
     return [x, Math.max(T4.top, y)];
   }
@@ -75116,7 +76578,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lastActT = -1;
       this.cleared = -1;
       this.frame = 0;
-      this.outlineMat = nearCut(outlineMaterial2(22e-4, 3810328, { fog: false }));
+      this.outlineMat = nearCut(outlineMaterial2(22e-4, 3810328, { fog: false }), NEAR_CUT_INK);
       this.outlineMat.transparent = true;
       this.weaponMat = nearCut(new MeshToonMaterial({ vertexColors: true, gradientMap: charGradient(), transparent: true, fog: false }));
       this.weaponMat.defines = { ...this.weaponMat.defines, SUN_SELF: sunSelf(SELF_SHADE_VM) };
@@ -75126,6 +76588,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const m = new CharacterModel(look, wpn, { viewmodel: true, lod: -1, fog: false, outline: this.outlineMat, weaponOpts: { material: this.weaponMat, outline: this.outlineMat, noShadow: true } });
       m.mat.transparent = true;
       m.mat.fog = false;
+      m.fx.uNear.value = NEAR_CUT;
       m.visibleParts = HIDE.map((i) => [i, false]);
       m.face.visible = false;
       if (m.bubble) m.bubble.visible = false;
@@ -75293,13 +76756,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             o.spread = (o.spread || 0) + 0.08;
           }
         } else PP = { ...PP, hF: fpStrike(PP.hF), hB: fpStrike(PP.hB) };
+      } else if (!swimming && (busy || pose.counterAge < 0.32)) {
+        if (pose.counterAge >= 0 && pose.counterAge < 0.32) PP = { ...PP, hF: fpStrike(PP.hF), hB: fpStrike(PP.hB) };
+        else {
+          const keep = (h2) => {
+            const q2 = xy(h2, [0.1, 0.3]);
+            return [Math.max(0.2, q2[0]), Math.max(-0.15, q2[1])];
+          };
+          PP = { ...PP, hF: keep(PP.hF), hB: keep(PP.hB), zF: Math.min(0.06, PP.zF || 0), zB: Math.min(0.06, PP.zB || 0) };
+        }
       }
       if (PP.b && (PP.b[0] || PP.b[1])) PP = { ...PP, b: [0, 0] };
-      o.leanAdd = -(PP.l || 0) * 0.55;
+      if (PP.ls) PP = { ...PP, ls: PP.ls * 0.3 };
+      if (PP.tw || PP.hp) {
+        const reachTw = clamp5((xy(PP.hF, [0.05, 0.4])[0] - xy(PP.hB, [-0.03, 0.4])[0]) * 0.85, -0.5, 0.5);
+        PP = { ...PP, tw: clamp5(reachTw + (PP.tw || 0) * 0.3, -0.5, 0.5) - reachTw, hp: (PP.hp || 0) * 0.3 };
+      }
+      o.leanAdd = -(PP.l || 0) * ((PP.l || 0) < 0 ? 1 : 0.55);
       o.lift = 0;
       o.roll = 0;
       o.squash = 1;
+      o.lying = 0;
       o.reachR = holdAt || (p.fruit === "gomu" ? this.stretch(p, ctx) : null);
+      const kLimb = A && A.legs ? A.limb === "fF" ? "fF" : A.limb === "fB" ? "fB" : null : null;
+      const kf = kLimb ? xy(PP[kLimb], [0, 0]) : null;
+      const kick = !!kf && kf[0] > 0.3;
+      if (kick) PP = { ...PP, [kLimb]: [Math.max(0.62, kf[0]), Math.max(-0.62, kf[1])] };
       m.pose(PP, o);
       const hw0 = m.held?.[0];
       if (hw0 && hw0.kind === "staff") hw0.group.position.addScaledVector(_ax.set(1, 0, 0).applyQuaternion(hw0.group.quaternion), 0.3);
@@ -75309,8 +76791,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         heldSize(m, e ? 1 - 0.55 * Math.min(1, e.t / e.dur) : 1);
       }
       this.fixup();
-      const kick = A && (A.limb === "fF" || A.limb === "fB") && A.legs;
-      for (const i of LEGS) m.showBone(i, !!kick);
+      for (const i of LEGS) m.showBone(i, kick);
       const d = m.d;
       const eyeY = d.hip0 + d.chestLen + d.neck + d.hc * 0.95;
       const dt = Math.min(0.05, Math.max(1e-3, env.time - (this.lastT ?? env.time) || 0.016));
@@ -75374,9 +76855,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lastT = env.time;
       const cam = this.ctx.camera, h2 = s.heading, w = this.ctx.world;
       const dx = w ? w.dx(p.x, s.x) : s.x - p.x, dy = s.y - p.y;
-      _v7.set(dx + Math.cos(h2) * spot.u, shipLift(s, env.time, spot.u, 0, spot.floor), dy + Math.sin(h2) * spot.u);
-      _q4.setFromAxisAngle(_up2, -h2);
-      _mA.compose(_v7, _q4, _one2);
+      _v8.set(dx + Math.cos(h2) * spot.u, shipLift(s, env.time, spot.u, 0, spot.floor), dy + Math.sin(h2) * spot.u);
+      _q5.setFromAxisAngle(_up2, -h2);
+      _mA.compose(_v8, _q5, _one2);
       _mB.copy(cam.matrixWorld).invert().multiply(_mA);
       _mB.decompose(this.body.position, this.body.quaternion, this.body.scale);
       this.body.updateMatrix();
@@ -75395,7 +76876,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dx = w ? w.dx(p.x, pr.x) : pr.x - p.x, dy = pr.y - (p.y - 0.5);
       const f = p.facing || 0;
       const fx = dx * Math.cos(f) + dy * Math.sin(f), fz = -dx * Math.sin(f) + dy * Math.cos(f);
-      return (this._reach || (this._reach = new Vector3())).set(fx, 1.3, fz * 0.6 + 0.05);
+      return (this._reach || (this._reach = new Vector3())).set(Math.max(0.55, fx), 1.3, fz * 0.6 + 0.05);
     }
     effects(p, pose, A, env) {
       const m = this.model, rig = m.rig;
@@ -75411,7 +76892,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         if (g.sprite.parent !== m.group) m.group.add(g.sprite);
         g.sprite.visible = true;
-        g.set(col, size, pos);
+        const near = _v23.copy(pos).applyMatrix4(m.group.matrix).applyMatrix4(this.body.matrix).length();
+        g.set(col, size * clamp5((near - 0.25) / 0.3, 0, 1), pos);
         gi++;
       };
       const t = env.time;
@@ -75443,9 +76925,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       } else this.lastActT = -1;
       if (this.flashT > 0) {
         this.flashT -= 1 / 60;
-        _v7.copy(rig.E[0]).addScaledVector(rig.blade[0], 0.45);
-        glow3("#ffd54f", 0.22 + Math.random() * 0.08, _v7);
-        glow3("#ffffff", 0.1, _v7);
+        _v8.copy(rig.E[0]).addScaledVector(rig.blade[0], 0.45);
+        glow3("#ffd54f", 0.22 + Math.random() * 0.08, _v8);
+        glow3("#ffffff", 0.1, _v8);
       }
       for (let i = gi; i < this.glows.length; i++) this.glows[i].sprite.visible = false;
     }
@@ -75460,10 +76942,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render3d/chars3d.js
   var TAU19 = Math.PI * 2;
   var clamp6 = (v, a, b) => v < a ? a : v > b ? b : v;
-  var _v8 = new Vector3();
+  var _v9 = new Vector3();
   var _v24 = new Vector3();
   var _eyeP = new Vector3();
   var _eyeQ = new Quaternion();
+  var _fq = new Quaternion();
+  var _fq2 = new Quaternion();
+  var FALLING = { ...LYING2, l: -0.32, ht: -0.4, hF: [0, -0.33], hB: [-0.08, -0.29], eF: 0.5, eB: 0.5, fF: [0.17, -0.07], fB: [0.03, -0.02], face: "hurt" };
   function lodFor(dist, cur) {
     const near = cur === 0 ? 10.5 : 7.5, mid = cur === 1 ? 22 : 25.5;
     return dist < near ? 0 : dist < mid ? 2 : 1;
@@ -75544,7 +77029,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
       if (a.isPlayer && !helm && cam && ctx.mode === "third" && dist < 3) {
         const r = this.root.position;
-        if (cam.position.distanceTo(_v8.set(r.x, r.y + 1.55 * (this.look.scale || 1), r.z)) < 0.45) this.root.visible = false;
+        if (cam.position.distanceTo(_v9.set(r.x, r.y + 1.55 * (this.look.scale || 1), r.z)) < 0.45) this.root.visible = false;
       }
       this.frame++;
       const every = dist < 22 ? 1 : dist < 45 ? 2 : 3;
@@ -75561,6 +77046,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (a.isPlayer && ctx.mode === "first") {
           const pt = ctx.pitch || 0;
           o.tiltAdd += pt < 0 ? -pt * 0.55 : -pt * 0.3;
+          if ((P5.l || 0) < 0 && pose.state !== "knocked") o.leanAdd = (o.leanAdd || 0) - P5.l;
+          o.lift *= 0.3;
         }
         this.drawing(pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT));
         const dtv = this.lastT < 0 ? 1 : Math.min(0.2, env.time - this.lastT);
@@ -75580,12 +77067,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         } else if (a.fruit === "gomu") o.reachR = this.stretchTarget(a, ctx, s);
         const knocked = pose.state === "knocked" || pose.state === "dead";
         let PP = P5;
+        if (a.isPlayer && ctx.mode === "first" && P5.b && P5.b[0] < 0) PP = { ...P5, b: [P5.b[0] * 0.3, P5.b[1]] };
         if (knocked) {
           const kt = pose.knockT ?? 1;
           const fall = Math.min(1, kt / 0.28);
-          PP = LYING2;
+          const bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) : 0;
+          if (pose.state === "knocked") PP = fall < 1 ? blendPose(FALLING, LYING2, fall * fall) : bounce > 0 ? blendPose(LYING2, FALLING, bounce * 0.3) : LYING2;
+          else PP = LYING2;
           o.lying = fall * fall;
-          o.bounce = kt > 0.28 && kt < 0.5 ? Math.sin((kt - 0.28) / 0.22 * Math.PI) * 0.1 : 0;
+          o.bounce = bounce * 0.1;
           o.spread = 0.32 * fall;
           o.legSpread = 0.06 * fall;
           o.lift = 0;
@@ -75651,6 +77141,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.root.updateMatrixWorld(true);
       }
       if (fp) this.eyeOffset(a, pose, ctx, env);
+      const lag = fp && ctx.camera && !pose.station ? ctx.camera.position.distanceTo(_eyeP) : 0;
+      u.uNear.value = fp ? 0.2 + clamp6(lag * 1.5, 0, 0.25) : 0;
     }
     /** Where the eyes are on the posed body, in the scene (into _eyeP). */
     eyeAt() {
@@ -75658,8 +77150,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.root.updateMatrixWorld(true);
       hb.getWorldPosition(_eyeP);
       hb.getWorldQuaternion(_eyeQ);
-      _v8.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
-      return _eyeP.add(_v8);
+      _v9.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
+      return _eyeP.add(_v9);
     }
     /**
      * The way the legs step (o.walkRel: where you're going, from where you
@@ -75775,8 +77267,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dx = w ? w.dx(a.x, pr.x) : pr.x - a.x, dy = pr.y - (a.y - 0.5);
       const f = a.facing || 0;
       const fx = dx * Math.cos(f) + dy * Math.sin(f), fz = -dx * Math.sin(f) + dy * Math.cos(f);
-      _v8.set(fx / s, 1.28, fz / s);
-      return this._reach ? this._reach.copy(_v8) : this._reach = _v8.clone();
+      _v9.set(fx / s, 1.28, fz / s);
+      return this._reach ? this._reach.copy(_v9) : this._reach = _v9.clone();
     }
     effects(a, pose, P5, o, env, ctx, camYaw3, dist, s) {
       const m = this.model, fx = m.fx, rig = m.rig;
@@ -75800,7 +77292,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       m.mat.opacity = alpha2;
       this.alpha = alpha2;
       const near = dist < 45;
-      if (pose.aura && near) {
+      if (pose.aura && near && !(a.isPlayer && ctx.mode === "first")) {
         if (!this.aura) {
           this.aura = new Aura();
           this.root.add(this.aura.mesh);
@@ -75809,15 +77301,26 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.aura.set(pose.aura, t, 2.25 * (1 + (m.d.hip0 - 0.93) * 0.5), 1.45 * m.d.Bk, camYaw3);
         this.aura.mesh.position.set(-Math.sin(camYaw3) * 0.3, -0.05 + o.lift, -Math.cos(camYaw3) * 0.3);
       } else if (this.aura) this.aura.mesh.visible = false;
-      if (this.look.backFlame && a.flameLit !== false && near) {
-        if (!this.backFlame) {
-          this.backFlame = new Aura();
-          this.yaw.add(this.backFlame.mesh);
-        }
-        this.backFlame.mesh.visible = true;
-        this.backFlame.set("rgba(255,112,40,0.95)", t + 1.3, 0.62, 0.62, camYaw3 - this.yaw.rotation.y);
-        this.backFlame.mesh.position.set(-0.24 * m.d.Bk, m.d.hip0 + m.d.chestLen * 0.72 + o.lift, 0);
-      } else if (this.backFlame) this.backFlame.mesh.visible = false;
+      const lit2 = !!this.look.backFlame && a.flameLit !== false && !a.inWater && !(a.isPlayer && ctx.mode === "first");
+      if ((lit2 || this.backFlame?.grow > 0.02) && near) {
+        const chest = m.bones[B3.chest];
+        if (!this.backFlame) this.backFlame = new BackFlame(a.seed || 0);
+        if (this.backFlame.group.parent !== chest) chest.add(this.backFlame.group);
+        this.backFlame.group.position.set(-0.15 * m.d.Bk, m.d.chestLen * 0.6, 0);
+        chest.updateWorldMatrix(true, false);
+        chest.getWorldQuaternion(_fq).invert();
+        this.backFlame.group.quaternion.copy(_fq).multiply(this.yaw.getWorldQuaternion(_fq2));
+        const fdt = Math.min(0.1, Math.max(0, t - (this.flameT ?? t)));
+        this.flameT = t;
+        const w = ctx.world, px2 = this.flameX ?? a.x, py2 = this.flameY ?? a.y;
+        const k = fdt > 0 ? 1 / fdt : 0, mvx = (w ? w.dx(px2, a.x) : a.x - px2) * k, mvy = (a.y - py2) * k;
+        this.flameX = a.x;
+        this.flameY = a.y;
+        const sp = Math.hypot(mvx, mvy), lim = sp > 9 ? 9 / sp : 1;
+        driftInto(this.yaw, -mvx * lim * 0.05, -mvy * lim * 0.05, _v24);
+        _v24.x -= 0.08;
+        this.backFlame.update(t, fdt, 1.1 * m.d.Bk, _v24, lit2);
+      } else if (this.backFlame) this.backFlame.group.visible = false;
       let gi = 0;
       const glow3 = (col, size, pos) => {
         if (!near) return;
@@ -75834,7 +77337,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (ch && ch.k > 0) {
         const k = Math.min(1, ch.k);
         const hand = ch.at === "hB" ? rig.E[1] : rig.E[0];
-        if (ch.kind === "sun") glow3("#ff9100", 0.3 + k * 1.6, _v8.copy(hand).add(_v24.set(0, 0.5 + k * 0.9, 0)));
+        if (ch.kind === "sun") glow3("#ff9100", 0.3 + k * 1.6, _v9.copy(hand).add(_v24.set(0, 0.5 + k * 0.9, 0)));
         else if (ch.kind === "dark") glow3("#4a148c", 0.2 + k * 0.4, hand);
         else if (ch.kind === "oni") glow3("#b71c1c", 0.4 + k * 0.5, rig.headC);
         else glow3(ch.color || "#ffffff", 0.12 + (ch.size || 0.22) * k * 1.4 * (0.9 + 0.1 * Math.sin(t * 30)), hand);
@@ -75884,8 +77387,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         this.stars.group.visible = true;
         m.group.updateMatrix();
-        _v8.copy(rig.headC).applyMatrix4(m.group.matrix);
-        this.stars.group.position.set(_v8.x, _v8.y + m.d.headR * (knocked ? 1.5 : 1.35), _v8.z);
+        _v9.copy(rig.headC).applyMatrix4(m.group.matrix);
+        this.stars.group.position.set(_v9.x, _v9.y + m.d.headR * (knocked ? 1.5 : 1.35), _v9.z);
         this.stars.update(t, 0.3);
       } else if (this.stars) this.stars.group.visible = false;
       if (a.blocking && near) {
@@ -78066,10 +79569,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   var UP2 = new Vector3(0, 1, 0);
   var V3 = (x, y, z) => new Vector3(x, y, z);
-  function limb3(a, b, r0, r1, seg = 4) {
+  function limb3(a, b, r0, r1, seg2 = 4) {
     const dir = new Vector3().subVectors(b, a);
     const len = dir.length();
-    const g = new CylinderGeometry(r1, r0, len, seg, 1, true);
+    const g = new CylinderGeometry(r1, r0, len, seg2, 1, true);
     g.translate(0, len / 2, 0);
     g.applyQuaternion(new Quaternion().setFromUnitVectors(UP2, dir.normalize()));
     g.translate(a.x, a.y, a.z);
@@ -78220,9 +79723,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function starGeo() {
     const pos = [];
-    const arms = 5, ro = 0.13, ri = 0.05, hc2 = 0.03;
-    for (let i = 0; i < arms * 2; i++) {
-      const a0 = i / (arms * 2) * TAU20, a1 = (i + 1) / (arms * 2) * TAU20;
+    const arms2 = 5, ro = 0.13, ri = 0.05, hc2 = 0.03;
+    for (let i = 0; i < arms2 * 2; i++) {
+      const a0 = i / (arms2 * 2) * TAU20, a1 = (i + 1) / (arms2 * 2) * TAU20;
       const r0 = i % 2 ? ri : ro, r1 = i % 2 ? ro : ri;
       pos.push(0, hc2, 0, Math.cos(a1) * r1, 8e-3, Math.sin(a1) * r1, Math.cos(a0) * r0, 8e-3, Math.sin(a0) * r0);
     }
@@ -78500,7 +80003,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }, "seabed");
 
   // src/render3d/rmCanals3d.js
-  var VERT3 = (
+  var VERT4 = (
     /* glsl */
     `
   attribute float aSlope;
@@ -78624,7 +80127,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
       ]);
       const mat = (pool) => {
-        const m = new ShaderMaterial({ uniforms: { ...this.uniforms, uPool: { value: pool ? 1 : 0 } }, vertexShader: VERT3, fragmentShader: FRAG3, fog: true, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        const m = new ShaderMaterial({ uniforms: { ...this.uniforms, uPool: { value: pool ? 1 : 0 } }, vertexShader: VERT4, fragmentShader: FRAG3, fog: true, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
         for (const k of Object.keys(this.uniforms)) if (k !== "uPool") m.uniforms[k] = this.uniforms[k];
         return m;
       };
@@ -78732,8 +80235,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render3d/sealife3d.js
   var TAU21 = Math.PI * 2;
   var MAX_FISH = 260;
-  function sphereInto(pos, eye, cx, cy, cz, r, tag2, seg = 6) {
-    const g = new SphereGeometry(r, seg, Math.max(3, seg - 2)).toNonIndexed();
+  function sphereInto(pos, eye, cx, cy, cz, r, tag2, seg2 = 6) {
+    const g = new SphereGeometry(r, seg2, Math.max(3, seg2 - 2)).toNonIndexed();
     const p = g.attributes.position;
     for (let i = 0; i < p.count; i++) {
       pos.push(p.getX(i) + cx, p.getY(i) + cy, p.getZ(i) + cz);
@@ -79630,7 +81133,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const bx = cam.position.x + Math.cos(a) * dist, bz = cam.position.z + Math.sin(a) * dist;
       const pos = [];
       const toCam = new Vector3();
-      const seg = (x0, y0, z0, x1, y1, z1, wd) => {
+      const seg2 = (x0, y0, z0, x1, y1, z1, wd) => {
         toCam.set(cam.position.x - (x0 + x1) / 2, cam.position.y - (y0 + y1) / 2, cam.position.z - (z0 + z1) / 2).normalize();
         const d = new Vector3(x1 - x0, y1 - y0, z1 - z0).normalize();
         const s = new Vector3().crossVectors(d, toCam).normalize().multiplyScalar(wd);
@@ -79643,7 +81146,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         for (let i = 0; i < steps && y > 0; i++) {
           const l = len / steps;
           const nx = x + (dx + (Math.random() - 0.5) * 0.9) * l, ny = y - l * (0.8 + Math.random() * 0.4), nz = z + (dz + (Math.random() - 0.5) * 0.9) * l;
-          seg(x, y, z, nx, Math.max(0, ny), nz, wd);
+          seg2(x, y, z, nx, Math.max(0, ny), nz, wd);
           if (depth < 2 && Math.random() < 0.28) bolt2(nx, ny, nz, len * 0.35, wd * 0.55, depth + 1);
           x = nx;
           y = ny;
@@ -81816,12 +83319,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     const { vx, vy } = best;
     const px2 = -vy, py2 = vx;
     const W4 = Math.max(3, dd.width ?? 5) | 1;
-    const half2 = (W4 - 1) / 2, headHalf = half2 + 2, HEAD3 = 3;
+    const half2 = (W4 - 1) / 2, headHalf = half2 + 2, HEAD4 = 3;
     const L3 = Math.max(6, Math.round(len * 1.5));
     const at4 = (a, b) => ({ x: world.wx(best.x + vx * a + px2 * b), y: best.y + vy * a + py2 * b });
     let lastA = 0;
     for (let a = 0; a < L3; a++) {
-      const head = a >= L3 - HEAD3, hb = head ? headHalf : half2;
+      const head = a >= L3 - HEAD4, hb = head ? headHalf : half2;
       let placed = false;
       for (let b = -hb; b <= hb; b++) {
         const { x, y } = at4(a, b);
@@ -89519,15 +91022,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         g.fill();
       }
       g.lineCap = "round";
-      const arms = s.arms || 5;
-      for (let i = 0; i < arms; i++) {
+      const arms2 = s.arms || 5;
+      for (let i = 0; i < arms2; i++) {
         g.globalAlpha = 0.6 * a;
         g.strokeStyle = s.kind === "dark" ? i % 2 ? "#7e57c2" : "#311b92" : s.color;
         g.lineWidth = 0.08;
         g.beginPath();
         for (let j = 0; j <= 16; j++) {
           const u = j / 16;
-          const th = spin + i / arms * TAU22 + u * 3.2;
+          const th = spin + i / arms2 * TAU22 + u * 3.2;
           const r = R4 * (1 - u * 0.85);
           const x = Math.cos(th) * r, y = Math.sin(th) * r * 0.62;
           if (j) g.lineTo(x, y);
@@ -90494,9 +91997,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (L3 < 0.05) return;
     const h2 = s.z ?? 0.7;
     const x1 = s.x + Math.cos(s.angle) * L3, y1 = s.y + Math.sin(s.angle) * L3;
-    const seg = clipSeg(r, s.x, s.y, h2, x1, y1, h2);
-    if (!seg || !seg.A || !seg.B) return;
-    const A = seg.A, B5 = seg.B;
+    const seg2 = clipSeg(r, s.x, s.y, h2, x1, y1, h2);
+    if (!seg2 || !seg2.A || !seg2.B) return;
+    const A = seg2.A, B5 = seg2.B;
     const sc = (A.sc + B5.sc) / 2;
     const Ls = Math.hypot(B5.x - A.x, B5.y - A.y);
     const d = r.dpr;
@@ -90517,9 +92020,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     const w = c.fx.game.world;
     const X1 = x0 + w.dx(x0, x1);
-    const seg = clipSeg(r, x0, y0, h0, X1, y1, h1);
-    if (!seg || !seg.A || !seg.B) return;
-    const A = seg.A, B5 = seg.B;
+    const seg2 = clipSeg(r, x0, y0, h0, X1, y1, h1);
+    if (!seg2 || !seg2.A || !seg2.B) return;
+    const A = seg2.A, B5 = seg2.B;
     const sc = (A.sc + B5.sc) / 2;
     const d = r.dpr;
     g.setTransform(sc * d, 0, 0, sc * d, A.x * d, A.y * d);
@@ -91144,11 +92647,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     /**
      * Floating text. Numbers pop and drift; words are callouts ("PARRY!",
      * technique names): identical callouts on the same spot are merged and
-     * texts stack upward instead of piling on top of each other.
+     * texts stack upward instead of piling on top of each other. `o.z`: a
+     * height to start at, as it is (no lifting over whoever's beneath).
      */
     text(x, y, str, color = "#fff", size = 0.42, o = {}) {
       str = String(str);
-      const lift = this.lift3d(x, y, true);
+      const lift = o.z === void 0 ? this.lift3d(x, y, true) : 0;
       if (lift) y += lift;
       const num2 = NUMERIC.test(str);
       if (!num2) {
@@ -91166,7 +92670,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const t = {
         x: x + (Math.random() - 0.5) * (num2 ? 0.5 : 0.15),
         y,
-        z: 1.6 + bump * 0.34 + lift,
+        z: (o.z ?? 1.6) + bump * 0.34 + lift,
         str,
         color,
         size,
@@ -91305,11 +92809,31 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     hit(att, tgt, h2, info) {
       return this.cfx(() => hitFeedback(this, att, tgt, h2, info));
     }
-    parry(tgt, att, ang) {
-      return this.cfx(() => parryFx(this, tgt, att, ang));
+    parry(tgt, att, ang, perfect) {
+      return this.cfx(() => parryFx(this, tgt, att, ang, perfect));
     }
     guardBreak(tgt, att, ang) {
       return this.cfx(() => guardBreakFx(this, tgt, att, ang));
+    }
+    /** A sword turning a shot aside. */
+    deflect(tgt, shot, ang, perfect) {
+      return this.cfx(() => deflectFx(this, tgt, shot, ang, perfect));
+    }
+    /** The counter strike after a parry landing. */
+    counter(att, tgt, ang, w) {
+      return this.cfx(() => counterFx(this, att, tgt, ang, w));
+    }
+    /** Slipping a heavy blow at the last instant. */
+    perfectDodge(a, att) {
+      return this.cfx(() => perfectDodgeFx(this, a, att));
+    }
+    /** Shaking free of a flurry of blows. */
+    breakFree(a) {
+      return this.cfx(() => breakFreeFx(this, a));
+    }
+    /** The glint on a foe (or a shot) the moment before its blow lands: `breaks`, red (dodge it); else yellow (parry it). `k`: how plain, 0..1. */
+    parryCue(at4, breaks, k = 1) {
+      return this.cfx(() => parryCueFx(this, at4, breaks, k));
     }
     tech(actor, step, action, kind, extra) {
       return this.cfx(() => techFx(this, actor, step, action, kind, extra));
@@ -92316,11 +93840,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/game/ai.js
   var TURN_LONG = 7;
   var TURN_IDLE = 2.5;
-  function turnsAllowed(game, p) {
-    if (game.world !== game.surface) return 2;
-    const r = regionAt(p.x, p.y);
-    return isBlue(r) ? 1 : r === REGION.NEW_WORLD ? 3 : 2;
-  }
+  var turnsAllowed = (game, p) => tierOf(game, p).turns;
+  var smashes = (def) => !!def && (def.steps || []).some(breaksGuard);
   function takeTurn(game, a, t, hit = false) {
     if (!t.isPlayer || a.boss) return true;
     const T4 = game.turns || (game.turns = /* @__PURE__ */ new Map());
@@ -92553,18 +94074,25 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         a.intent.sprint = dist > 4;
         return;
       }
+      const T4 = tierOf(game, a);
+      const now3 = game.time || 0;
+      const was = this.lastAct;
+      this.lastAct = a.action;
+      if (was && !a.action && !was.def.m1Chain && !(a.hitstun > 0) && was.step > 0) this.rest = T4.rest;
+      if (this.rest > 0) this.rest -= dt;
+      this.cornered = this.ranged && dist < T4.closeShot ? (this.cornered || 0) + dt : 0;
       const ta = t.action;
-      if (ta && dist < 4 && !a.action && ta.t < (ta.def.windup ?? 0.1) + 0.05 && this.think <= 0.35) {
+      if (ta && ta !== this.sawSwing && dist < 4 && !a.action && !(this.rest > 0) && ta.t < (ta.def.windup ?? 0.1) + 0.05 && this.think <= 0.35) {
+        this.sawSwing = ta;
         const roll2 = Math.random();
-        const breaks = (ta.def.steps || []).some((s) => s.hit?.guardBreak || s.dash?.hit?.guardBreak);
-        if (roll2 < this.skill * 0.55 && !breaks) {
+        if (roll2 < this.skill * 0.55 * T4.block && !smashes(ta.def)) {
           a.facing = ang;
-          a.setBlock(true);
-          if (a.blocking) this.blockT = 0.5;
-        } else if (roll2 < this.skill * 0.85) {
-          a.tryDodge(game, -dy, dx * this.strafeDir);
-        }
-        this.think = 0.5;
+          a.setBlock(true, Math.random() < T4.npcParry * (0.5 + this.skill));
+          if (a.blocking) {
+            this.blockT = 0.5;
+            this.think = 0.5;
+          }
+        } else if (roll2 < this.skill * 0.85 * T4.block && a.tryDodge(game, -dy, dx * this.strafeDir)) this.think = 0.5;
       }
       if (this.blockT > 0) {
         this.blockT -= dt;
@@ -92573,6 +94101,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return;
       }
       a.facing = a.action ? a.facing : ang;
+      if (this.rest > 0 && !a.action) return;
+      if (a.counterOn === t && a.counterLeft > 0) this.think = Math.min(this.think, 0);
       if (!a.action && !takeTurn(game, a, t)) {
         this.comboLeft = 0;
         const ring4 = 3.4 + a.id % 5 * 0.25;
@@ -92599,22 +94129,27 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         return;
       }
       if (!a.action && this.think <= 0) {
-        this.think = (0.35 + (1 - this.aggression) * 0.8) * (0.7 + Math.random() * 0.6);
-        const usable = this.moves.map(getAbility).filter((m) => m && canUse(a, m) && this.inRangeFor(m, dist));
+        this.think = (0.35 + (1 - this.aggression) * 0.8) * (0.7 + Math.random() * 0.6) * T4.think;
+        const smashOk = now3 >= (this.smashT || 0) && !this.smashed;
+        const usable = this.moves.map(getAbility).filter((m) => m && canUse(a, m) && this.inRangeFor(m, dist) && (smashOk || !smashes(m)));
         if (usable.length && Math.random() < 0.55) {
           const m = usable[Math.floor(Math.random() * usable.length)];
           a.facing = ang;
-          a.tryTechnique(m.id, game, t);
+          if (a.tryTechnique(m.id, game, t)) this.used(m, T4, now3);
           return;
         }
         if (dist < this.meleeRange(a) + 0.3 && !this.ranged) {
           a.facing = ang;
-          if (Math.random() < 0.15 && a.tryHeavy(game)) return;
+          if (Math.random() < 0.15 && smashOk && a.tryHeavy(game)) {
+            this.used(a.action?.def, T4, now3);
+            return;
+          }
           a.tryM1(game);
-          this.comboLeft = Math.floor(Math.random() * 3);
+          this.smashed = false;
+          this.comboLeft = Math.floor(Math.random() * (T4.combo + 1));
           return;
         }
-        if (this.ranged && dist < this.prefRange + 2) {
+        if (this.ranged && dist < this.prefRange + 2 && (dist >= T4.closeShot || this.cornered > 1.2)) {
           a.facing = ang;
           a.tryM1(game);
           return;
@@ -92639,7 +94174,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
           return;
         }
       }
-      let mx = 0, my = 0;
+      let mx = 0, my = 0, pace = 1;
       if (dist > want + 0.4) {
         mx = dx / dist;
         my = dy / dist;
@@ -92647,6 +94182,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       } else if (dist < want - 0.8 && this.ranged) {
         mx = -dx / dist;
         my = -dy / dist;
+        pace = T4.backpedal;
       } else if (Math.random() < 0.02) this.strafeDir *= -1;
       if (dist < want + 1.5) {
         mx += -dy / dist * this.strafeDir * 0.5;
@@ -92654,10 +94190,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       const l = Math.hypot(mx, my);
       if (l > 0) {
-        a.intent.mx = mx / l;
-        a.intent.my = my / l;
+        a.intent.mx = mx / l * pace;
+        a.intent.my = my / l * pace;
       }
       this.avoidStuck(a, dt, game);
+    }
+    /** A move just used: a guard-breaking one puts the next off a tier's breakGap (and an ordinary one in between). */
+    used(def, T4, now3) {
+      this.smashed = smashes(def);
+      if (this.smashed) this.smashT = now3 + T4.breakGap;
     }
     /** Seen them just now (and, starting a hunt, remember where it began). */
     sawAt(t, game, a = null) {
@@ -93092,6 +94633,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     cands.sort((a, b) => a.d - b.d);
     return cands[0];
   }
+  function standable2(w, x, y) {
+    if (!WALKABLE[w.type(x, y)] || w.isBlocked(x, y) || w.hitsProp(x, y, 0.4)) return false;
+    return !!WALKABLE[w.type(x, y - 0.4)] && !w.isBlocked(x, y - 0.4);
+  }
   function findShore(w, x, y, r) {
     let best = null, bd = Infinity;
     for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
@@ -93099,9 +94644,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const d = Math.hypot(dx, dy);
         if (d > r || d >= bd) continue;
         const tx = x + dx, ty = y + dy;
-        const t = w.type(tx, ty);
-        if (!WALKABLE[t] || w.isBlocked(tx, ty) || w.hitsProp(tx, ty, 0.4)) continue;
-        if (!WALKABLE[w.type(tx, ty - 0.4)] || w.isBlocked(tx, ty - 0.4)) continue;
+        if (!standable2(w, tx, ty)) continue;
         bd = d;
         best = { x: Math.floor(tx) + 0.5, y: Math.floor(ty) + 0.8 };
       }
@@ -93601,6 +95144,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return null;
   }
+  function isletBeach(world, o, a0) {
+    for (let k = 0; k < 16; k++) {
+      const a = a0 + k * Math.PI * 2 / 16, c = Math.cos(a), s = Math.sin(a);
+      let beach = null;
+      for (let r = 0; r <= o.r + 30; r += 0.5) {
+        const x = world.wx(o.x + c * r), y = o.y + s * r;
+        if (world.sailable(x, y)) {
+          if (beach && world.sailable(world.wx(o.x + c * (r + 8)), o.y + s * (r + 8))) return { ...beach, dir: a };
+          break;
+        }
+        if (standable2(world, x, y)) beach = { x: Math.floor(x) + 0.5, y: Math.floor(y) + 0.8 };
+      }
+    }
+    return null;
+  }
   function resolveSpawn(world, char, avoid = /* @__PURE__ */ new Set()) {
     const rng4 = new RNG(char.runSeed + ":spawn");
     const race = RACES[char.race];
@@ -93613,8 +95171,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const cands = world.islets.filter((o) => o.region === seaRegion && o.r >= 5);
       if (cands.length) {
         const o = rng4.pick(cands);
-        const spot = findShore(world, o.x, o.y, o.r + 2) || { x: o.x, y: o.y };
-        return { x: spot.x, y: spot.y, island: o.rec, town: null, sea, name: "an uncharted islet" };
+        const beach = isletBeach(world, o, rng4.next() * Math.PI * 2);
+        const spot = beach || findShore(world, o.x, o.y, o.r + 2) || { x: o.x, y: o.y };
+        return { x: spot.x, y: spot.y, island: o.rec, town: null, sea, name: "an uncharted islet", seaward: beach ? beach.dir : null };
       }
     }
     const wanted2 = race.spawnTowns || HUMAN_STARTERS[sea] || [];
@@ -95143,7 +96702,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/ui/style.css
-  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n.slot.act { cursor: default; }\n.slot.act.interactive { cursor: pointer; }\n.slot.act.guard { margin-right: 8px; }\n.slot.act.wait .ico { opacity: .5; }\n.slot.act.ready { animation: actready .4s ease-out; }\n@keyframes actready { 0% { box-shadow: 0 0 0 0 rgba(140, 205, 250, .95), 0 3px 8px rgba(0,0,0,.45); border-color: #bfe6ff; } 100% { box-shadow: 0 0 0 10px rgba(140, 205, 250, 0), 0 3px 8px rgba(0,0,0,.45); } }\n.slot.act.guard.on { border-color: #9cc3ea; box-shadow: 0 0 12px rgba(110, 165, 230, .7); }\n.slot.act.guard.broken { border-color: #ff8a80; }\n.slot.act.guard.broken .ico { opacity: .45; filter: grayscale(.6); }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #e9dab4; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n/* the drawn weapon's moves (bottom right, while it's out) */\n.skillpanel { position: absolute; right: 14px; bottom: 14px; min-width: 210px; max-width: 260px; background: rgba(10,20,30,.74); border-radius: 12px; padding: 8px 10px 7px; border: 1px solid var(--border); font-size: 12px; pointer-events: none; }\n.skillpanel .sp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }\n.skillpanel .sp-head b { font: 400 17px 'Pirata One', serif; color: var(--gold); letter-spacing: .5px; }\n.skillpanel .sp-head span { font-size: 10.5px; opacity: .75; text-align: right; }\n.skillpanel .sp-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }\n.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; padding: 1px 5px; font: 800 11px Nunito, sans-serif; color: #fff; }\n.skillpanel .sp-row.unbound kbd { opacity: .45; }\n.skillpanel .sp-row.cd { opacity: .55; }\n.skillpanel .sp-cd { margin-left: auto; color: #ffcc80; font-variant-numeric: tabular-nums; }\n.skillpanel .sp-foot { margin-top: 5px; font-size: 10.5px; opacity: .7; }\n.skillpanel .sp-foot kbd { min-width: 0; padding: 0 5px; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n/* (a link that looks like a button: the way to the game's own site) */\na.btn { display: inline-block; text-decoration: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.dive { color: #0d5f8a; font-style: italic; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #1f5f86; font-size: 18px; }\n.wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label.town { font: 700 13px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #4a3320; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; z-index: 1; }\n.wm-label.isle { color: #2f2012; letter-spacing: 1px; text-shadow: 0 0 4px #f5e6c4, 0 0 8px #f5e6c4; z-index: 1; }\n.wm-label.landmark { font: italic 600 12px Nunito, sans-serif; color: #5b4026; }\n/* markers standing on their spot: the icon's middle on it, the name beside it */\n.wm-pin { position: absolute; width: 0; height: 0; display: flex; align-items: center; z-index: 2; }\n.wm-pin > img { flex: none; transform: translate(-50%, 0); filter: drop-shadow(0 1px 1.5px rgba(40,24,10,.6)); }\n.wm-pin > span { margin-left: -4px; white-space: nowrap; font: 400 16px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; }\n.wm-pin.quest > span { color: #1f5f86; font-size: 17px; }\n.wm-pin.quest.main { z-index: 4; }\n.wm-pin.quest.main > span { color: #a33a00; font-size: 19px; }\n.wm-pin.poi > img { box-sizing: content-box; padding: 2px; border-radius: 50%; background: rgba(246,234,206,.96); box-shadow: 0 0 0 1.5px #5b4026, 0 1px 3px rgba(40,24,10,.45); filter: none; }\n.wm-pin.poi.dock > img { background: rgba(214,232,240,.96); }\n.wm-pin.poi > span { font: 700 11px Nunito, sans-serif; color: #4a3320; }\n.wm-pin.lp > span { color: #8e2c1c; }\n/* you: an arrow the way you face, ringed */\n.wm-me { position: absolute; width: 0; height: 0; z-index: 5; }\n.wm-me::before { content: ''; position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(192,57,43,.75); animation: wmping 1.8s ease-out infinite; }\n.wm-me i { position: absolute; left: -10px; top: -12px; width: 20px; height: 24px; }\n.wm-me i::before { content: ''; position: absolute; inset: 0; background: #c0392b; clip-path: polygon(50% 0, 100% 100%, 50% 74%, 0 100%); filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }\n@keyframes wmping { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }\n.wm-scale { position: absolute; left: 22px; bottom: 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; pointer-events: none; }\n.wm-scale i { display: block; height: 7px; border: 2px solid #4a3320; border-top: 0; background: repeating-linear-gradient(90deg, #4a3320 0 25%, #f2e3c2 25% 50%); background-size: 100% 3px; background-repeat: no-repeat; background-position: bottom; box-shadow: 0 0 0 1px rgba(245,230,196,.8); }\n.wm-scale span { font: 700 13px Nunito, sans-serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; }\n.wm-rose { position: absolute; right: 20px; bottom: 20px; pointer-events: none; opacity: .9; filter: drop-shadow(0 0 4px rgba(245,230,196,.9)); }\n/* (the chart has the screen to itself: no banners or toasts over it) */\n#ui.map-open .banner, #ui.map-open .toast { visibility: hidden; }\n#ui.touch .wm-rose { transform: scale(.7); transform-origin: right bottom; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n/* the Log Pose in its slot: where the needle points, and where else it can (panels.js coursePicker) */\n.lp-course { margin-top: 10px; border-top: 1px dashed rgba(109,76,51,.45); padding-top: 8px; }\n.lp-course h5 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font: 800 11.5px Nunito, sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: #6d4c33; }\n.lp-course h5 small { margin-left: auto; font: 700 11px Nunito, sans-serif; letter-spacing: 0; text-transform: none; color: #8a6c55; }\n.lp-opts { display: flex; flex-direction: column; gap: 4px; max-height: 214px; overflow-y: auto; padding-right: 3px; }\n.lp-opt { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 78px; align-items: center; gap: 9px; text-align: left; padding: 5px 9px; border-radius: 8px; border: 1px solid rgba(109,76,51,.32); background: rgba(255,250,240,.7); cursor: pointer; font: 800 13px Nunito, sans-serif; color: #3e2a1c; transition: border-color .12s, background .12s; }\n.lp-opt:hover { border-color: #6d4c33; background: #fffaf0; }\n.lp-opt.on { border-color: var(--red); background: #fff3e0; box-shadow: inset 3px 0 0 var(--red); cursor: default; }\n.lp-name { display: flex; flex-direction: column; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.lp-name small { font: 700 10.5px Nunito, sans-serif; color: #7a5c45; letter-spacing: .2px; }\n.lp-opt.story .lp-name small { color: #a86b00; }\n.lp-way { font: 700 12px Nunito, sans-serif; color: #5d4433; white-space: nowrap; font-variant-numeric: tabular-nums; }\n.lp-cur { font: 900 10.5px Nunito, sans-serif; color: var(--red); text-align: right; letter-spacing: .6px; text-transform: uppercase; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n/* the shipwright's menus: your ships and the ships for sale */\n.sw-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }\n.sw-head h2 { margin: 0; }\n.row-item.cant { opacity: .6; }\n.row-item.here { outline: 2px solid #b8860b; }\n.row-item .sub.warn { color: #b71c1c; opacity: 1; font-weight: 700; }\n.price.short { color: #b71c1c; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-pins { position: absolute; left: 0; top: 0; pointer-events: none; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.85)); }\n.compass .pin img { display: block; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: 1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.main { z-index: 2; }\n.compass .pin.main small { color: #ffc940; }\n.compass .pin.side small { color: #a6dcf5; }\n.compass .pin.ship small { color: #e3f2fd; }\n/* the markers over the world (see waypoints.js): where the quests on the tracker are */\n.wpmarks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wpm { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; width: 0; transition: opacity .2s; will-change: transform; }\n.wpm > img { margin-top: -17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)) drop-shadow(0 0 5px rgba(0,0,0,.35)); }\n.wpm.side > img { margin-top: -14px; }\n.wpm.main { z-index: 2; }\n.wpm small { margin-top: 1px; font: 800 12px Nunito, sans-serif; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 3px #000; }\n.wpm.main small { color: #ffd66b; }\n.wpm.side small { color: #b9e4f8; }\n.wpm.lp > img { margin-top: -13px; }\n.wpm.lp small { color: #ffb4a8; }\n.wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }\n.wpm.look .wpm-name { opacity: 1; transform: none; }\n.wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }\n.wpm-arrow::after { content: ''; position: absolute; left: 25px; top: 3px; border: 6px solid transparent; border-left: 10px solid #fff; filter: drop-shadow(0 0 1.5px #000); }\n.wpm.main .wpm-arrow::after { border-left-color: #ffc940; }\n.wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }\n.wpm.lp .wpm-arrow::after { border-left-color: #ff8a80; }\n.wpm.edge .wpm-arrow { display: block; }\n.wpm.edge > img { transform: scale(.85); }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* ---------- creative panel (F1) ---------- */\n/* (a parchment of its own height: the tabs and the note stay put, the middle scrolls) */\n.panel.cr-wrap { display: flex; flex-direction: column; height: min(780px, 88vh); overflow: hidden; padding-bottom: 10px; box-sizing: border-box; }\n.cr { display: flex; flex-direction: column; flex: 1; min-height: 0; }\n.cr-head { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; padding-right: 40px; }\n.cr-head h2 { display: flex; align-items: center; gap: 8px; margin: 0; }\n.cr-head .muted { font-size: 12px; }\n.cr-tabs { margin: 8px 0; }\n.cr-main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 2px 4px 6px 1px; }\n.cr-note { flex: none; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(43,29,18,.08); border: 1px solid rgba(109,76,51,.3); font-size: 13px; font-weight: 700; min-height: 18px; }\n.cr-note.flash { animation: crnote 1s ease-out; }\n@keyframes crnote { 0% { background: rgba(241,196,15,.6); } 100% { background: rgba(43,29,18,.08); } }\n.cr-bar { display: flex; gap: 8px 12px; align-items: flex-start; flex-wrap: wrap; margin: 2px 0 10px; }\n.cr-bar > div { flex: 1 1 300px; min-width: 0; }\n.cr-search, .cr-num { box-sizing: border-box; font: 700 14px Nunito, sans-serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; }\n.cr-search { flex: 1 1 240px; min-width: 0; max-width: 420px; width: 100%; }\n.cr-num { width: 140px; }\n.cr-search:focus-visible, .cr-num:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n.cr-chips { display: flex; flex-wrap: wrap; gap: 5px; }\n.cr-chip { background: rgba(109,76,51,.12); color: var(--ink); border: 2px solid rgba(109,76,51,.45); border-radius: 999px; padding: 3px 11px; font: 800 12.5px Nunito, sans-serif; cursor: pointer; white-space: nowrap; }\n.cr-chip:hover { border-color: #6d4c33; background: rgba(109,76,51,.2); }\n.cr-chip.on { background: var(--red); border-color: #7b1f16 !important; color: #fff; }\n.cr-row-wrap { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 6px 0; }\n.cr-row-wrap .lbl { font-weight: 800; font-size: 13px; }\n.cr-row-wrap > .cr-slider { flex: 1 1 320px; }\n.cr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }\n.cr-grid.foes { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }\n.cr-card, .cr-item, .cr-yours { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.35); border-radius: 9px; padding: 7px 9px; min-width: 0; }\n.cr-card .grow, .cr-item .grow, .cr-yours .grow { flex: 1; min-width: 0; }\n.cr-card b, .cr-item b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.cr-card .sub, .cr-item .sub, .cr-yours .sub { font-size: 12px; opacity: .8; line-height: 1.3; }\n.cr-card .tags { margin: 3px 0 1px; }\n.cr-card .tags .tag { margin: 0 4px 0 0; }\n.cr-card.have { background: rgba(255,243,205,.85); }\n.cr-card .btn, .cr-item .btn { flex: none; }\n.sub.where { color: #7a4a06; font-weight: 800; opacity: 1 !important; }\n.cr-yours { margin-bottom: 10px; padding: 9px 12px; background: rgba(255,250,240,.75); border-width: 2px; }\n.cr-yours .tag { margin-left: 8px; }\n.cr-foe { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.35); border-radius: 9px; padding: 6px 10px; font: 700 13px Nunito, sans-serif; color: var(--ink); cursor: pointer; min-width: 0; }\n.cr-foe:hover { border-color: var(--red); background: rgba(255,236,179,.6); }\n.cr-foe b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.cr-foe .sub { font-size: 11.5px; opacity: .75; }\n.cr-sec { background: rgba(255,255,255,.38); border: 1px solid rgba(109,76,51,.35); border-radius: 10px; padding: 8px 12px 10px; margin-bottom: 10px; min-width: 0; }\n.cr-sec h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; flex-wrap: wrap; }\n.cr-sec p.muted { margin: 6px 0 0; }\n.cr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }\n.cr-col { min-width: 0; }\n.cr-slider { display: flex; align-items: center; gap: 8px; margin: 3px 0; min-width: 0; }\n.cr-slider .nm { width: 96px; font-weight: 800; font-size: 13px; flex: none; }\n.cr-slider input { flex: 1; min-width: 60px; accent-color: #8e1b16; }\n.cr-slider .val { min-width: 48px; text-align: right; font-weight: 800; font-size: 13px; }\n.cr-race { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }\n.cr-race .portrait { flex: none; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 10px; }\n.cr-race-name { font: 400 22px 'Pirata One', serif; color: #5a2d0c; margin-bottom: 2px; }\n.cr-body { margin-top: 6px; color: #3b2a1a; font-weight: 700; opacity: 1 !important; font-size: 12px; }\n.cr-lv { font-weight: 900; font-size: 12px; color: #7a4a06; white-space: nowrap; }\n.cr-list { display: flex; flex-direction: column; gap: 5px; max-height: 380px; overflow-y: auto; margin: 8px 0; padding-right: 2px; }\n.cr-item.here { outline: 2px solid #b8860b; }\n.cr-purse { font: 400 22px 'Pirata One', serif; color: #7a4a06; margin-left: 6px; }\n.cr-money { padding-bottom: 6px; }\n.check-row.off { opacity: .55; cursor: default; }\n@media (max-width: 900px) { .cr-cols { grid-template-columns: 1fr; } }\n@media (max-width: 600px) {\n  .panel.cr-wrap { padding: 12px 12px 8px; }\n  .cr-grid, .cr-grid.foes { grid-template-columns: 1fr; }\n  .cr-head .muted { display: none; }\n  .cr-slider .nm { width: 76px; }\n  .cr-race .portrait { width: 72px !important; height: 84px !important; }\n}\n@media (max-height: 560px) {\n  .panel.cr-wrap { height: 94vh; max-height: 94vh; padding-top: 10px; }\n  .cr-head h2 { font-size: 26px; }\n  .cr-head .muted { display: none; }\n  .cr-tabs { margin: 4px 0; }\n  .cr-tabs button { padding: 4px 10px; }\n  .cr-note { margin-top: 4px; padding: 3px 10px; }\n  .cr-yours { margin-bottom: 6px; padding: 5px 10px; }\n  .cr-list { max-height: none; }\n}\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-sub { text-align: right; font: 700 11.5px Nunito, sans-serif; color: #ffd98a; margin-top: 1px; letter-spacing: 0.02em; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n\n/* ---------- multiplayer: the title's tabs and pane (ui/voyage.js) ---------- */\n.mode-tabs { display: inline-flex; margin: 0 auto 16px; border-radius: 12px; overflow: hidden; border: 3px solid #6d4c33; box-shadow: 0 6px 18px rgba(0,0,0,.45); }\n.mode-tabs button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 22px 7px; border: 0; background: rgba(236,221,186,.94); color: #5a2d0c; font: 400 23px 'Pirata One', serif; letter-spacing: .5px; cursor: pointer; }\n.mode-tabs button + button { border-left: 2px solid #6d4c33; }\n.mode-tabs button.on { background: linear-gradient(#b03a2e, #7b1f16); color: var(--parch); cursor: default; }\n.mode-tabs button:hover:not(.on) { background: #fff3d6; }\n.vy-pane { width: min(840px, 94vw); margin: 0 auto 16px; }\n.vy-cards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }\n.vy-cards.one { grid-template-columns: minmax(0, 540px); justify-content: center; }\n.vy-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 12px 14px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 6px; }\n.vy-head { display: flex; align-items: center; gap: 8px; font: 400 27px/1.1 'Pirata One', serif; color: #5a2d0c; }\n.vy-card p { margin: 0; font-size: 13.5px; line-height: 1.4; }\n.vy-sub { font: 800 11px Nunito, sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: #6d4c33; margin-top: 6px; }\n.vy-slots { display: flex; flex-direction: column; gap: 6px; }\n.vy-slot { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-slot .portrait, .vy-blank { flex: none; border-radius: 8px; border: 2px solid #8d6e4a; background: radial-gradient(#fff8e1, #e2cc9c); }\n.vy-blank { width: 40px; height: 46px; display: grid; place-items: center; opacity: .75; box-sizing: border-box; }\n.vy-who { flex: 1; min-width: 0; }\n.vy-who small { display: block; font: 800 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; opacity: .65; }\n.vy-who b { display: block; font: 400 19px/1.08 'Pirata One', serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vy-who .sub { font-size: 11.5px; opacity: .8; }\n.vy-slot .btn { flex: none; }\n.vy-slot.busy { opacity: .6; }\n.code-row { display: flex; gap: 8px; margin-top: 2px; }\n.code-in { flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font: 400 34px/1.1 'Pirata One', serif; letter-spacing: 9px; text-transform: uppercase; text-align: center; padding: 4px 8px; border-radius: 10px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; }\n.code-in::placeholder { color: rgba(59,42,26,.22); }\n.code-in:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n.code-row .btn { font-size: 18px; padding: 6px 22px; }\n.code-hint { min-height: 17px; font-size: 12.5px; font-weight: 700; color: #b71c1c; }\n.vy-recent { display: flex; flex-direction: column; gap: 5px; }\n.vy-rec { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 9px; border-radius: 9px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-rec b { font: 400 19px 'Pirata One', serif; letter-spacing: 2px; }\n.vy-rec .sub { font-size: 11.5px; opacity: .8; }\n.vy-small { margin-top: auto !important; padding-top: 8px; font-size: 12px !important; opacity: .75; }\n.vy-foot { font-size: 12px; opacity: .78; margin: 12px auto 0; max-width: 700px; line-height: 1.45; text-shadow: 0 1px 2px #000; }\n/* the lobby, looking for a voyage, choosing your pirate */\n.panel.vy-lobby { width: min(640px, 94vw); text-align: center; }\n.vy-lobby h3 { text-align: left; }\n.vy-lobby > p { margin-left: auto; margin-right: auto; max-width: 540px; }\n.code-plate { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 14px auto 10px; flex-wrap: wrap; }\n.code-letters { display: inline-flex; gap: 6px; padding: 10px 18px; border-radius: 12px; background: linear-gradient(#1c2a38, #0e1823); border: 3px solid #c8a060; box-shadow: inset 0 2px 8px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.35); user-select: text; }\n.code-letters span { width: 34px; font: 400 48px/1 'Pirata One', serif; color: #f7e7c1; text-align: center; text-shadow: 0 2px 0 #000; }\n.code-letters span.gap { margin-left: 16px; }\n.code-plate.small .code-letters { padding: 6px 14px; }\n.code-plate.small .code-letters span { width: 24px; font-size: 32px; }\n.code-plate .btn { font-size: 16px; padding: 8px 18px; }\n.vy-status { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 6px auto; max-width: 540px; font-weight: 800; font-size: 14px; }\n.vy-status i { flex: none; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; }\n.vy-status.ok { color: #1b5e20; }\n.vy-status.ok i { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.25); }\n.vy-status.bad { color: #8e1b16; }\n.vy-status.bad i { background: #c62828; }\n.vy-status.wait { color: #5a3a1c; }\n.vy-status.wait i { border: 3px solid rgba(109,76,51,.28); border-top-color: #6d4c33; animation: vyspin .9s linear infinite; }\n@keyframes vyspin { to { transform: rotate(360deg); } }\n.vy-crew { display: flex; flex-direction: column; gap: 5px; text-align: left; }\n.vy-mate { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-mate b { font: 400 19px 'Pirata One', serif; }\n.vy-mate .sub { margin-left: auto; font-size: 12px; opacity: .75; }\n.vy-mate.you { background: rgba(255,243,205,.7); }\n.vy-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #bcaaa4; }\n.vy-dot.on { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.22); }\n.vy-btns { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }\n.vy-note { margin-top: 12px !important; }\n.vy-slots.wide { text-align: left; }\n@media (max-width: 900px) { .vy-cards { grid-template-columns: 1fr; } }\n/* in the world: the Voyage button on the sidebar (how many aboard), the chat, the voyage list (ui/voyageHud.js) */\n.vy-side .vy-n { min-width: 18px; padding: 0 5px; border-radius: 999px; background: rgba(143,233,245,.18); border: 1px solid rgba(143,233,245,.55); color: #b2ebf2; font: 800 11px/16px Nunito, sans-serif; text-align: center; }\n.chat-box { position: absolute; left: 14px; bottom: 14px; z-index: 45; width: min(460px, calc(100vw - 28px)); pointer-events: auto; background: rgba(8,16,24,.88); border: 1px solid rgba(143,233,245,.5); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font-size: 13px; }\n.chat-lines { max-height: 210px; overflow: hidden; padding: 7px 11px 3px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }\n.chat-lines div { text-shadow: 0 1px 1px #000; line-height: 1.35; }\n.chat-lines .sys { font-style: italic; }\n.chat-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(143,233,245,.3); background: transparent; color: #fff; padding: 9px 12px; font: 600 14px Nunito, sans-serif; outline: none; }\n.chat-in::placeholder { color: rgba(224,247,250,.45); }\n#ui.chatting .log { visibility: hidden; }\n.log b { font-weight: 800; }\n.vy-code-line { display: flex; align-items: center; gap: 10px; }\n.vy-code-line b { font: 400 26px 'Pirata One', serif; letter-spacing: 3px; color: #5a2d0c; }\n.vy-row b { font: 400 19px 'Pirata One', serif; margin-right: 4px; }\n.vy-row .tag { margin-left: 2px; }\n.compass .pin.mate small { color: #8fe9f5; }\n#ui.touch .chat-box { bottom: auto; top: 30%; }\n#ui.touch .vy-side { position: relative; }\n#ui.touch .vy-side .vy-n { position: absolute; right: -5px; top: -5px; min-width: 15px; padding: 0 3px; background: #0e2a33; font-size: 10px; line-height: 14px; }\n.vy-last { margin-left: 6px; padding: 0 6px; border-radius: 4px; background: #2e7d32; color: #fff; font: 800 9.5px Nunito, sans-serif; letter-spacing: .4px; text-transform: none; vertical-align: 1px; }\n.panel.vy-panel { width: min(640px, 94vw); }\n";
+  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n.slot.act { cursor: default; }\n.slot.act.interactive { cursor: pointer; }\n.slot.act.guard { margin-right: 8px; }\n.slot.act.wait .ico { opacity: .5; }\n.slot.act.ready { animation: actready .4s ease-out; }\n@keyframes actready { 0% { box-shadow: 0 0 0 0 rgba(140, 205, 250, .95), 0 3px 8px rgba(0,0,0,.45); border-color: #bfe6ff; } 100% { box-shadow: 0 0 0 10px rgba(140, 205, 250, 0), 0 3px 8px rgba(0,0,0,.45); } }\n.slot.act.guard.on { border-color: #9cc3ea; box-shadow: 0 0 12px rgba(110, 165, 230, .7); }\n.slot.act.guard.broken { border-color: #ff8a80; }\n.slot.act.guard.broken .ico { opacity: .45; filter: grayscale(.6); }\n.slot.act.guard.parried { animation: actparry .45s ease-out; }\n.slot.act.guard.parried.perfect { animation: actperfect .6s ease-out; }\n@keyframes actparry { 0% { box-shadow: 0 0 0 0 rgba(255, 241, 118, .95), 0 3px 8px rgba(0,0,0,.45); border-color: #fff59d; } 100% { box-shadow: 0 0 0 12px rgba(255, 241, 118, 0), 0 3px 8px rgba(0,0,0,.45); } }\n@keyframes actperfect { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 1), 0 3px 8px rgba(0,0,0,.45); border-color: #fff; background-color: rgba(255, 253, 231, .55); } 100% { box-shadow: 0 0 0 16px rgba(255, 255, 255, 0), 0 3px 8px rgba(0,0,0,.45); } }\n.slot.act.guard.counter { border-color: #ffab40; box-shadow: 0 0 14px rgba(255, 171, 64, .85); }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #e9dab4; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n/* the drawn weapon's moves (bottom right, while it's out) */\n.skillpanel { position: absolute; right: 14px; bottom: 14px; min-width: 210px; max-width: 260px; background: rgba(10,20,30,.74); border-radius: 12px; padding: 8px 10px 7px; border: 1px solid var(--border); font-size: 12px; pointer-events: none; }\n.skillpanel .sp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }\n.skillpanel .sp-head b { font: 400 17px 'Pirata One', serif; color: var(--gold); letter-spacing: .5px; }\n.skillpanel .sp-head span { font-size: 10.5px; opacity: .75; text-align: right; }\n.skillpanel .sp-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }\n.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; padding: 1px 5px; font: 800 11px Nunito, sans-serif; color: #fff; }\n.skillpanel .sp-row.unbound kbd { opacity: .45; }\n.skillpanel .sp-row.cd { opacity: .55; }\n.skillpanel .sp-cd { margin-left: auto; color: #ffcc80; font-variant-numeric: tabular-nums; }\n.skillpanel .sp-foot { margin-top: 5px; font-size: 10.5px; opacity: .7; }\n.skillpanel .sp-foot kbd { min-width: 0; padding: 0 5px; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n/* (a link that looks like a button: the way to the game's own site) */\na.btn { display: inline-block; text-decoration: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.dive { color: #0d5f8a; font-style: italic; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #1f5f86; font-size: 18px; }\n.wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label.town { font: 700 13px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #4a3320; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; z-index: 1; }\n.wm-label.isle { color: #2f2012; letter-spacing: 1px; text-shadow: 0 0 4px #f5e6c4, 0 0 8px #f5e6c4; z-index: 1; }\n.wm-label.landmark { font: italic 600 12px Nunito, sans-serif; color: #5b4026; }\n/* markers standing on their spot: the icon's middle on it, the name beside it */\n.wm-pin { position: absolute; width: 0; height: 0; display: flex; align-items: center; z-index: 2; }\n.wm-pin > img { flex: none; transform: translate(-50%, 0); filter: drop-shadow(0 1px 1.5px rgba(40,24,10,.6)); }\n.wm-pin > span { margin-left: -4px; white-space: nowrap; font: 400 16px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; }\n.wm-pin.quest > span { color: #1f5f86; font-size: 17px; }\n.wm-pin.quest.main { z-index: 4; }\n.wm-pin.quest.main > span { color: #a33a00; font-size: 19px; }\n.wm-pin.poi > img { box-sizing: content-box; padding: 2px; border-radius: 50%; background: rgba(246,234,206,.96); box-shadow: 0 0 0 1.5px #5b4026, 0 1px 3px rgba(40,24,10,.45); filter: none; }\n.wm-pin.poi.dock > img { background: rgba(214,232,240,.96); }\n.wm-pin.poi > span { font: 700 11px Nunito, sans-serif; color: #4a3320; }\n.wm-pin.lp > span { color: #8e2c1c; }\n/* you: an arrow the way you face, ringed */\n.wm-me { position: absolute; width: 0; height: 0; z-index: 5; }\n.wm-me::before { content: ''; position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(192,57,43,.75); animation: wmping 1.8s ease-out infinite; }\n.wm-me i { position: absolute; left: -10px; top: -12px; width: 20px; height: 24px; }\n.wm-me i::before { content: ''; position: absolute; inset: 0; background: #c0392b; clip-path: polygon(50% 0, 100% 100%, 50% 74%, 0 100%); filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }\n@keyframes wmping { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }\n.wm-scale { position: absolute; left: 22px; bottom: 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; pointer-events: none; }\n.wm-scale i { display: block; height: 7px; border: 2px solid #4a3320; border-top: 0; background: repeating-linear-gradient(90deg, #4a3320 0 25%, #f2e3c2 25% 50%); background-size: 100% 3px; background-repeat: no-repeat; background-position: bottom; box-shadow: 0 0 0 1px rgba(245,230,196,.8); }\n.wm-scale span { font: 700 13px Nunito, sans-serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; }\n.wm-rose { position: absolute; right: 20px; bottom: 20px; pointer-events: none; opacity: .9; filter: drop-shadow(0 0 4px rgba(245,230,196,.9)); }\n/* (the chart has the screen to itself: no banners or toasts over it) */\n#ui.map-open .banner, #ui.map-open .toast { visibility: hidden; }\n#ui.touch .wm-rose { transform: scale(.7); transform-origin: right bottom; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n/* the Log Pose in its slot: where the needle points, and where else it can (panels.js coursePicker) */\n.lp-course { margin-top: 10px; border-top: 1px dashed rgba(109,76,51,.45); padding-top: 8px; }\n.lp-course h5 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font: 800 11.5px Nunito, sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: #6d4c33; }\n.lp-course h5 small { margin-left: auto; font: 700 11px Nunito, sans-serif; letter-spacing: 0; text-transform: none; color: #8a6c55; }\n.lp-opts { display: flex; flex-direction: column; gap: 4px; max-height: 214px; overflow-y: auto; padding-right: 3px; }\n.lp-opt { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 78px; align-items: center; gap: 9px; text-align: left; padding: 5px 9px; border-radius: 8px; border: 1px solid rgba(109,76,51,.32); background: rgba(255,250,240,.7); cursor: pointer; font: 800 13px Nunito, sans-serif; color: #3e2a1c; transition: border-color .12s, background .12s; }\n.lp-opt:hover { border-color: #6d4c33; background: #fffaf0; }\n.lp-opt.on { border-color: var(--red); background: #fff3e0; box-shadow: inset 3px 0 0 var(--red); cursor: default; }\n.lp-name { display: flex; flex-direction: column; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.lp-name small { font: 700 10.5px Nunito, sans-serif; color: #7a5c45; letter-spacing: .2px; }\n.lp-opt.story .lp-name small { color: #a86b00; }\n.lp-way { font: 700 12px Nunito, sans-serif; color: #5d4433; white-space: nowrap; font-variant-numeric: tabular-nums; }\n.lp-cur { font: 900 10.5px Nunito, sans-serif; color: var(--red); text-align: right; letter-spacing: .6px; text-transform: uppercase; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n/* the shipwright's menus: your ships and the ships for sale */\n.sw-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }\n.sw-head h2 { margin: 0; }\n.row-item.cant { opacity: .6; }\n.row-item.here { outline: 2px solid #b8860b; }\n.row-item .sub.warn { color: #b71c1c; opacity: 1; font-weight: 700; }\n.price.short { color: #b71c1c; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-pins { position: absolute; left: 0; top: 0; pointer-events: none; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.85)); }\n.compass .pin img { display: block; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: 1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.main { z-index: 2; }\n.compass .pin.main small { color: #ffc940; }\n.compass .pin.side small { color: #a6dcf5; }\n.compass .pin.ship small { color: #e3f2fd; }\n/* the markers over the world (see waypoints.js): where the quests on the tracker are */\n.wpmarks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wpm { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; width: 0; transition: opacity .2s; will-change: transform; }\n.wpm > img { margin-top: -17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)) drop-shadow(0 0 5px rgba(0,0,0,.35)); }\n.wpm.side > img { margin-top: -14px; }\n.wpm.main { z-index: 2; }\n.wpm small { margin-top: 1px; font: 800 12px Nunito, sans-serif; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 3px #000; }\n.wpm.main small { color: #ffd66b; }\n.wpm.side small { color: #b9e4f8; }\n.wpm.lp > img { margin-top: -13px; }\n.wpm.lp small { color: #ffb4a8; }\n.wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }\n.wpm.look .wpm-name { opacity: 1; transform: none; }\n.wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }\n.wpm-arrow::after { content: ''; position: absolute; left: 25px; top: 3px; border: 6px solid transparent; border-left: 10px solid #fff; filter: drop-shadow(0 0 1.5px #000); }\n.wpm.main .wpm-arrow::after { border-left-color: #ffc940; }\n.wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }\n.wpm.lp .wpm-arrow::after { border-left-color: #ff8a80; }\n.wpm.edge .wpm-arrow { display: block; }\n.wpm.edge > img { transform: scale(.85); }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.counter { color: #ffab40; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* ---------- creative panel (F1) ---------- */\n/* (a parchment of its own height: the tabs and the note stay put, the middle scrolls) */\n.panel.cr-wrap { display: flex; flex-direction: column; height: min(780px, 88vh); overflow: hidden; padding-bottom: 10px; box-sizing: border-box; }\n.cr { display: flex; flex-direction: column; flex: 1; min-height: 0; }\n.cr-head { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; padding-right: 40px; }\n.cr-head h2 { display: flex; align-items: center; gap: 8px; margin: 0; }\n.cr-head .muted { font-size: 12px; }\n.cr-tabs { margin: 8px 0; }\n.cr-main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 2px 4px 6px 1px; }\n.cr-note { flex: none; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(43,29,18,.08); border: 1px solid rgba(109,76,51,.3); font-size: 13px; font-weight: 700; min-height: 18px; }\n.cr-note.flash { animation: crnote 1s ease-out; }\n@keyframes crnote { 0% { background: rgba(241,196,15,.6); } 100% { background: rgba(43,29,18,.08); } }\n.cr-bar { display: flex; gap: 8px 12px; align-items: flex-start; flex-wrap: wrap; margin: 2px 0 10px; }\n.cr-bar > div { flex: 1 1 300px; min-width: 0; }\n.cr-search, .cr-num { box-sizing: border-box; font: 700 14px Nunito, sans-serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; }\n.cr-search { flex: 1 1 240px; min-width: 0; max-width: 420px; width: 100%; }\n.cr-num { width: 140px; }\n.cr-search:focus-visible, .cr-num:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n.cr-chips { display: flex; flex-wrap: wrap; gap: 5px; }\n.cr-chip { background: rgba(109,76,51,.12); color: var(--ink); border: 2px solid rgba(109,76,51,.45); border-radius: 999px; padding: 3px 11px; font: 800 12.5px Nunito, sans-serif; cursor: pointer; white-space: nowrap; }\n.cr-chip:hover { border-color: #6d4c33; background: rgba(109,76,51,.2); }\n.cr-chip.on { background: var(--red); border-color: #7b1f16 !important; color: #fff; }\n.cr-row-wrap { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 6px 0; }\n.cr-row-wrap .lbl { font-weight: 800; font-size: 13px; }\n.cr-row-wrap > .cr-slider { flex: 1 1 320px; }\n.cr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }\n.cr-grid.foes { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }\n.cr-card, .cr-item, .cr-yours { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.35); border-radius: 9px; padding: 7px 9px; min-width: 0; }\n.cr-card .grow, .cr-item .grow, .cr-yours .grow { flex: 1; min-width: 0; }\n.cr-card b, .cr-item b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.cr-card .sub, .cr-item .sub, .cr-yours .sub { font-size: 12px; opacity: .8; line-height: 1.3; }\n.cr-card .tags { margin: 3px 0 1px; }\n.cr-card .tags .tag { margin: 0 4px 0 0; }\n.cr-card.have { background: rgba(255,243,205,.85); }\n.cr-card .btn, .cr-item .btn { flex: none; }\n.sub.where { color: #7a4a06; font-weight: 800; opacity: 1 !important; }\n.cr-yours { margin-bottom: 10px; padding: 9px 12px; background: rgba(255,250,240,.75); border-width: 2px; }\n.cr-yours .tag { margin-left: 8px; }\n.cr-foe { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.35); border-radius: 9px; padding: 6px 10px; font: 700 13px Nunito, sans-serif; color: var(--ink); cursor: pointer; min-width: 0; }\n.cr-foe:hover { border-color: var(--red); background: rgba(255,236,179,.6); }\n.cr-foe b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.cr-foe .sub { font-size: 11.5px; opacity: .75; }\n.cr-sec { background: rgba(255,255,255,.38); border: 1px solid rgba(109,76,51,.35); border-radius: 10px; padding: 8px 12px 10px; margin-bottom: 10px; min-width: 0; }\n.cr-sec h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; flex-wrap: wrap; }\n.cr-sec p.muted { margin: 6px 0 0; }\n.cr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }\n.cr-col { min-width: 0; }\n.cr-slider { display: flex; align-items: center; gap: 8px; margin: 3px 0; min-width: 0; }\n.cr-slider .nm { width: 96px; font-weight: 800; font-size: 13px; flex: none; }\n.cr-slider input { flex: 1; min-width: 60px; accent-color: #8e1b16; }\n.cr-slider .val { min-width: 48px; text-align: right; font-weight: 800; font-size: 13px; }\n.cr-race { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }\n.cr-race .portrait { flex: none; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 10px; }\n.cr-race-name { font: 400 22px 'Pirata One', serif; color: #5a2d0c; margin-bottom: 2px; }\n.cr-body { margin-top: 6px; color: #3b2a1a; font-weight: 700; opacity: 1 !important; font-size: 12px; }\n.cr-lv { font-weight: 900; font-size: 12px; color: #7a4a06; white-space: nowrap; }\n.cr-list { display: flex; flex-direction: column; gap: 5px; max-height: 380px; overflow-y: auto; margin: 8px 0; padding-right: 2px; }\n.cr-item.here { outline: 2px solid #b8860b; }\n.cr-purse { font: 400 22px 'Pirata One', serif; color: #7a4a06; margin-left: 6px; }\n.cr-money { padding-bottom: 6px; }\n.check-row.off { opacity: .55; cursor: default; }\n@media (max-width: 900px) { .cr-cols { grid-template-columns: 1fr; } }\n@media (max-width: 600px) {\n  .panel.cr-wrap { padding: 12px 12px 8px; }\n  .cr-grid, .cr-grid.foes { grid-template-columns: 1fr; }\n  .cr-head .muted { display: none; }\n  .cr-slider .nm { width: 76px; }\n  .cr-race .portrait { width: 72px !important; height: 84px !important; }\n}\n@media (max-height: 560px) {\n  .panel.cr-wrap { height: 94vh; max-height: 94vh; padding-top: 10px; }\n  .cr-head h2 { font-size: 26px; }\n  .cr-head .muted { display: none; }\n  .cr-tabs { margin: 4px 0; }\n  .cr-tabs button { padding: 4px 10px; }\n  .cr-note { margin-top: 4px; padding: 3px 10px; }\n  .cr-yours { margin-bottom: 6px; padding: 5px 10px; }\n  .cr-list { max-height: none; }\n}\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-sub { text-align: right; font: 700 11.5px Nunito, sans-serif; color: #ffd98a; margin-top: 1px; letter-spacing: 0.02em; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n\n/* ---------- multiplayer: the title's tabs and pane (ui/voyage.js) ---------- */\n.mode-tabs { display: inline-flex; margin: 0 auto 16px; border-radius: 12px; overflow: hidden; border: 3px solid #6d4c33; box-shadow: 0 6px 18px rgba(0,0,0,.45); }\n.mode-tabs button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 22px 7px; border: 0; background: rgba(236,221,186,.94); color: #5a2d0c; font: 400 23px 'Pirata One', serif; letter-spacing: .5px; cursor: pointer; }\n.mode-tabs button + button { border-left: 2px solid #6d4c33; }\n.mode-tabs button.on { background: linear-gradient(#b03a2e, #7b1f16); color: var(--parch); cursor: default; }\n.mode-tabs button:hover:not(.on) { background: #fff3d6; }\n.vy-pane { width: min(840px, 94vw); margin: 0 auto 16px; }\n.vy-cards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }\n.vy-cards.one { grid-template-columns: minmax(0, 540px); justify-content: center; }\n.vy-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 12px 14px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 6px; }\n.vy-head { display: flex; align-items: center; gap: 8px; font: 400 27px/1.1 'Pirata One', serif; color: #5a2d0c; }\n.vy-card p { margin: 0; font-size: 13.5px; line-height: 1.4; }\n.vy-sub { font: 800 11px Nunito, sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: #6d4c33; margin-top: 6px; }\n.vy-slots { display: flex; flex-direction: column; gap: 6px; }\n.vy-slot { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-slot .portrait, .vy-blank { flex: none; border-radius: 8px; border: 2px solid #8d6e4a; background: radial-gradient(#fff8e1, #e2cc9c); }\n.vy-blank { width: 40px; height: 46px; display: grid; place-items: center; opacity: .75; box-sizing: border-box; }\n.vy-who { flex: 1; min-width: 0; }\n.vy-who small { display: block; font: 800 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; opacity: .65; }\n.vy-who b { display: block; font: 400 19px/1.08 'Pirata One', serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vy-who .sub { font-size: 11.5px; opacity: .8; }\n.vy-slot .btn { flex: none; }\n.vy-slot.busy { opacity: .6; }\n.code-row { display: flex; gap: 8px; margin-top: 2px; }\n.code-in { flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font: 400 34px/1.1 'Pirata One', serif; letter-spacing: 9px; text-transform: uppercase; text-align: center; padding: 4px 8px; border-radius: 10px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; }\n.code-in::placeholder { color: rgba(59,42,26,.22); }\n.code-in:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n.code-row .btn { font-size: 18px; padding: 6px 22px; }\n.code-hint { min-height: 17px; font-size: 12.5px; font-weight: 700; color: #b71c1c; }\n.vy-recent { display: flex; flex-direction: column; gap: 5px; }\n.vy-rec { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 9px; border-radius: 9px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-rec b { font: 400 19px 'Pirata One', serif; letter-spacing: 2px; }\n.vy-rec .sub { font-size: 11.5px; opacity: .8; }\n.vy-small { margin-top: auto !important; padding-top: 8px; font-size: 12px !important; opacity: .75; }\n.vy-foot { font-size: 12px; opacity: .78; margin: 12px auto 0; max-width: 700px; line-height: 1.45; text-shadow: 0 1px 2px #000; }\n/* the lobby, looking for a voyage, choosing your pirate */\n.panel.vy-lobby { width: min(640px, 94vw); text-align: center; }\n.vy-lobby h3 { text-align: left; }\n.vy-lobby > p { margin-left: auto; margin-right: auto; max-width: 540px; }\n.code-plate { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 14px auto 10px; flex-wrap: wrap; }\n.code-letters { display: inline-flex; gap: 6px; padding: 10px 18px; border-radius: 12px; background: linear-gradient(#1c2a38, #0e1823); border: 3px solid #c8a060; box-shadow: inset 0 2px 8px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.35); user-select: text; }\n.code-letters span { width: 34px; font: 400 48px/1 'Pirata One', serif; color: #f7e7c1; text-align: center; text-shadow: 0 2px 0 #000; }\n.code-letters span.gap { margin-left: 16px; }\n.code-plate.small .code-letters { padding: 6px 14px; }\n.code-plate.small .code-letters span { width: 24px; font-size: 32px; }\n.code-plate .btn { font-size: 16px; padding: 8px 18px; }\n.vy-status { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 6px auto; max-width: 540px; font-weight: 800; font-size: 14px; }\n.vy-status i { flex: none; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; }\n.vy-status.ok { color: #1b5e20; }\n.vy-status.ok i { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.25); }\n.vy-status.bad { color: #8e1b16; }\n.vy-status.bad i { background: #c62828; }\n.vy-status.wait { color: #5a3a1c; }\n.vy-status.wait i { border: 3px solid rgba(109,76,51,.28); border-top-color: #6d4c33; animation: vyspin .9s linear infinite; }\n@keyframes vyspin { to { transform: rotate(360deg); } }\n.vy-crew { display: flex; flex-direction: column; gap: 5px; text-align: left; }\n.vy-mate { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-mate b { font: 400 19px 'Pirata One', serif; }\n.vy-mate .sub { margin-left: auto; font-size: 12px; opacity: .75; }\n.vy-mate.you { background: rgba(255,243,205,.7); }\n.vy-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #bcaaa4; }\n.vy-dot.on { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.22); }\n.vy-btns { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }\n.vy-note { margin-top: 12px !important; }\n.vy-slots.wide { text-align: left; }\n@media (max-width: 900px) { .vy-cards { grid-template-columns: 1fr; } }\n/* in the world: the Voyage button on the sidebar (how many aboard), the chat, the voyage list (ui/voyageHud.js) */\n.vy-side .vy-n { min-width: 18px; padding: 0 5px; border-radius: 999px; background: rgba(143,233,245,.18); border: 1px solid rgba(143,233,245,.55); color: #b2ebf2; font: 800 11px/16px Nunito, sans-serif; text-align: center; }\n.chat-box { position: absolute; left: 14px; bottom: 14px; z-index: 45; width: min(460px, calc(100vw - 28px)); pointer-events: auto; background: rgba(8,16,24,.88); border: 1px solid rgba(143,233,245,.5); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font-size: 13px; }\n.chat-lines { max-height: 210px; overflow: hidden; padding: 7px 11px 3px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }\n.chat-lines div { text-shadow: 0 1px 1px #000; line-height: 1.35; }\n.chat-lines .sys { font-style: italic; }\n.chat-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(143,233,245,.3); background: transparent; color: #fff; padding: 9px 12px; font: 600 14px Nunito, sans-serif; outline: none; }\n.chat-in::placeholder { color: rgba(224,247,250,.45); }\n#ui.chatting .log { visibility: hidden; }\n.log b { font-weight: 800; }\n.vy-code-line { display: flex; align-items: center; gap: 10px; }\n.vy-code-line b { font: 400 26px 'Pirata One', serif; letter-spacing: 3px; color: #5a2d0c; }\n.vy-row b { font: 400 19px 'Pirata One', serif; margin-right: 4px; }\n.vy-row .tag { margin-left: 2px; }\n.compass .pin.mate small { color: #8fe9f5; }\n#ui.touch .chat-box { bottom: auto; top: 30%; }\n#ui.touch .vy-side { position: relative; }\n#ui.touch .vy-side .vy-n { position: absolute; right: -5px; top: -5px; min-width: 15px; padding: 0 3px; background: #0e2a33; font-size: 10px; line-height: 14px; }\n.vy-last { margin-left: 6px; padding: 0 6px; border-radius: 4px; background: #2e7d32; color: #fff; font: 800 9.5px Nunito, sans-serif; letter-spacing: .4px; text-transform: none; vertical-align: 1px; }\n.panel.vy-panel { width: min(640px, 94vw); }\n";
 
   // src/ui/icon.js
   var img = (canvas2, px2, cls = "") => h("img.icon" + cls, { src: iconURL(canvas2), width: px2, height: px2, draggable: false, alt: "" });
@@ -95250,7 +96809,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var RING_Y = 0.36;
   var RING_SIDE = 300;
   var NEAR4 = 160;
-  var HEAD2 = 3.8;
+  var HEAD3 = 3.8;
   var Waypoints = class _Waypoints {
     constructor(parent) {
       this.el = h("div.wpmarks.hidden");
@@ -95299,7 +96858,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const d = w.distance(p.x, p.y, m.x, m.y);
         const mk3 = this.mark(id, kind);
         const fade2 = Math.max(0, Math.min(1, (d - 10) / 12));
-        const gy = d < NEAR4 ? v3.ground(m.x, m.y) + HEAD2 : cam.position.y;
+        const gy = d < NEAR4 ? v3.ground(m.x, m.y) + HEAD3 : cam.position.y;
         V4.set(w.dx(v3.ox, m.x), gy, m.y - v3.oy).applyMatrix4(cam.matrixWorldInverse);
         let sx, sy, edge;
         if (V4.z < -0.1) {
@@ -97455,13 +99014,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             if (v === "coat" && !L3.coat) L3.coat = "#5d4037";
             if (v !== "coat" && L3.coat && !L3.keepCoat) L3.coat = void 0;
           };
-          const COLS = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#a0522d", "#ffffff"];
+          const COLS2 = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#a0522d", "#ffffff"];
           const under = L3.fem && (o.top === "vest" || o.top === "open");
           const two = under || ["striped", "jacket", "kimono", "coat"].includes(o.top);
           add2(
             optsEl,
             row("Top", chips2(o.top, TOPS3.map((t) => t[0]), TOPS3.map((t) => t[1]), setTop)),
-            o.top !== "bare" ? row(o.top === "coat" ? "Coat colour" : "Colour", o.top === "coat" ? swatch("coat", ["#5d4037", "#37474f", "#1b5e20", "#4a148c", "#b71c1c", "#fafafa", "#212121", "#0d47a1"]) : swatch("top", COLS)) : null,
+            o.top !== "bare" ? row(o.top === "coat" ? "Coat colour" : "Colour", o.top === "coat" ? swatch("coat", ["#5d4037", "#37474f", "#1b5e20", "#4a148c", "#b71c1c", "#fafafa", "#212121", "#0d47a1"]) : swatch("top", COLS2)) : null,
             two ? row(o.top === "striped" ? "Stripes" : o.top === "kimono" ? "Collar" : under ? "Top under" : "Shirt under", swatch("top2", ["#f5f5f5", "#fff8e1", "#90caf9", "#212121", "#c62828", "#fce4ec", "#ffd54f"])) : null,
             row("Bottoms", chips2(o.skirt && !L3.fem ? "trousers" : o.bottom, BOTS.map((t) => t[0]), BOTS.map((t) => t[1]), (v) => {
               L3.bottomStyle = v;
@@ -97641,7 +99200,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         k("Right mouse", "heavy attack; hold and drag to turn the camera in third person without shift lock"),
         k("Left click", "attack combo (ship: cannons)"),
         k("Right click", "heavy attack"),
-        k("F", "block \u2014 tap just before a hit to PARRY; a heavy blow (the red glint) smashes a guard aside, so dodge those"),
+        k("F", "hold to block \u2014 or tap it just as a blow lands (the yellow glint) to PARRY: they reel, and your next strike is a COUNTER. Mashing it won't parry. A red-glint blow smashes a guard aside, so dodge those"),
         k("1-9, 0", "hotbar (techniques & items); food goes in your hand \u2014 hold the right mouse button to eat it"),
         haki ? k("R / T", "Armament / Observation Haki (once awakened)") : null,
         haki && char.haki?.conqueror ? k("G", "Conqueror's Haki") : null,
@@ -101595,7 +103154,7 @@ Trains by: ${TRAINS_BY[k]}` },
       this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.hp.el, E.o2, E.hk.el, E.lives, E.bounty, E.buffs));
       E.hotbar = h("div.hotbar");
       E.acts = {};
-      for (const [k, key2, name, tip] of [["dodge", "Q", "Dodge", "Dash out of the way, untouchable for an instant. It comes back after a moment."], ["guard", "F", "Block", "Hold to block (tap just before a hit to parry). A heavy blow smashes a guard aside: it can't come up again until this fills."]]) {
+      for (const [k, key2, name, tip] of [["dodge", "Q", "Dodge", "Dash out of the way, untouchable for an instant. It comes back after a moment."], ["guard", "F", "Block", "Hold to block. Tap it just as a blow lands to PARRY (a yellow glint shows the moment): they reel, and your next strike is a COUNTER. Mashing it won't parry. A red-glint blow smashes a guard aside \u2014 dodge those: the guard can't come up again until this fills."]]) {
         const a = { el: h("div.slot.toggle.act." + k, { title: `${name} (${key2})
 ${tip}` }), cd: h("div.cd") };
         a.el.append(h("span.ico", uiImg(k, 28)), h("span.k", key2), a.cd);
@@ -101862,9 +103421,9 @@ ${tip}` }), cd: h("div.cd") };
       this.hurtT = 0.3;
     }
     /** Flash the crosshair's hit marker (first person). */
-    hitMarker({ crit, blocked } = {}) {
+    hitMarker({ crit, blocked, counter } = {}) {
       const el = this.el.hitMark;
-      el.className = "hitmark" + (crit ? " crit" : blocked ? " blocked" : "");
+      el.className = "hitmark" + (counter ? " counter" : crit ? " crit" : blocked ? " blocked" : "");
       void el.offsetWidth;
       el.classList.add("show");
     }
@@ -102202,6 +103761,21 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (!!p.blocking !== this.cache.guardOn) {
         this.cache.guardOn = !!p.blocking;
         guard2.el.classList.toggle("on", !!p.blocking);
+      }
+      if (p.parryT !== this.cache.parryT) {
+        const seen = this.cache.parryT !== void 0;
+        this.cache.parryT = p.parryT;
+        if (seen) {
+          guard2.el.classList.remove("parried", "perfect");
+          void guard2.el.offsetWidth;
+          guard2.el.classList.add("parried");
+          if (p.parryPerfect) guard2.el.classList.add("perfect");
+        }
+      }
+      const counter = p.counterLeft > 0;
+      if (counter !== this.cache.counter) {
+        this.cache.counter = counter;
+        guard2.el.classList.toggle("counter", counter);
       }
       for (const t of HAKI_TOGGLES) {
         const el = E.toggles[t.type];
@@ -104301,7 +105875,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (s.def.big && extra.heading === void 0) {
         if (!(dock && s.berth(game.world, dock)) && !s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
       } else if (dock && s.moorAlongside(game.world, dock)) {
-      } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, !!s.def.big);
+      } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
       return s;
     };
     game.on("lifeLost", ({ cause, lives }) => {
@@ -104416,8 +105990,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
     }
     if (!placed) {
-      const s = game.giveShip(shipType, spawn.x, spawn.y + 4, "Driftwood Raft");
-      s.unstick(world);
+      const s = game.giveShip(shipType, spawn.x, spawn.y, "Driftwood Raft", { heading: spawn.seaward ?? Math.PI / 2 });
+      if (!s.launchFrom(world, spawn.x, spawn.y, spawn.seaward)) s.unstick(world, true);
     }
     if (isl && isl.id && !char.discovered.includes(isl.id) && isl.name) char.discovered.push(isl.id);
     char.getUpCharges = 1;
@@ -105396,8 +106970,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (a === p || a.faction !== "marine" || !a.controller || a.state !== "idle" || a.controller.kind === "follower") continue;
       if (a.provoked) continue;
       const d = game.world.distance(a.x, a.y, p.x, p.y);
-      const inView = tier >= 2 && !aboard2 && d < range && (!game.world.interiorAt || sameSpace(game, a, p));
-      if (!inView) {
+      const inView2 = tier >= 2 && !aboard2 && d < range && (!game.world.interiorAt || sameSpace(game, a, p));
+      if (!inView2) {
         a.suspect = Math.max(0, (a.suspect || 0) - step * 0.4);
         continue;
       }
@@ -109721,33 +111295,34 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       cd: 7,
       steps: [{ hit: { shape: "line", range: 3.2, width: 1.2, damage: 22, knockback: 8, stun: 0.6, heavy: true, guardBreak: true, element: "explosion" }, vfx: "beam", color: "#ffab40" }]
     },
+    // (the East Blue's last boss: his big three hit hard, but each leaves him open a while)
     {
       id: "arlong_darts",
       name: "Shark on Darts",
       anim: "thrust",
       windup: 0.55,
-      recover: 0.5,
-      cd: 7,
+      recover: 0.6,
+      cd: 8,
       say: "Shark on Darts!",
-      steps: [{ dash: { dist: 10, time: 0.35, iframes: 0.2, hit: { damage: 24, knockback: 7, stun: 0.6, heavy: true, guardBreak: true } } }]
+      steps: [{ dash: { dist: 10, time: 0.35, iframes: 0.2, hit: { damage: 22, knockback: 7, stun: 0.6, heavy: true, guardBreak: true } } }]
     },
     {
       id: "arlong_kiribachi",
       name: "Kiribachi Saw",
       anim: "slash",
       windup: 0.5,
-      recover: 0.4,
-      cd: 5,
-      steps: [{ hit: { shape: "arc", range: 2.6, arc: 2.2, offset: 0.3, damage: 20, knockback: 4, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#b0bec5" }]
+      recover: 0.5,
+      cd: 6.5,
+      steps: [{ hit: { shape: "arc", range: 2.6, arc: 2.2, offset: 0.3, damage: 17, knockback: 4, stun: 0.4, slashing: true, status: { bleed: 3 } }, vfx: "slash", color: "#b0bec5" }]
     },
     {
       id: "arlong_bite",
       name: "Shark Tooth",
       anim: "grab",
       windup: 0.35,
-      recover: 0.4,
-      cd: 4,
-      steps: [{ hit: { shape: "arc", range: 1.5, arc: 1.2, offset: 0.2, damage: 18, knockback: 1, stun: 0.8, status: { bleed: 3 } } }]
+      recover: 0.5,
+      cd: 5.5,
+      steps: [{ hit: { shape: "arc", range: 1.5, arc: 1.2, offset: 0.2, damage: 15, knockback: 1, stun: 0.5, status: { bleed: 2 } } }]
     },
     {
       id: "hatchan_six",
@@ -109974,15 +111549,17 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       at: { dx: 0.42, dy: 0.35 },
       hostile: true,
       boss: true,
-      hpMul: 0.9,
+      hpMul: 0.65,
       look: { hair: "spiky", hairColor: "#1a237e", top: "#1565c0", bottom: "#263238", hat: "tricorne", hatColor: "#0d47a1" },
       level: 8,
       style: "sniper",
       weapon: "gun",
       ranged: true,
+      // (Dawn Island's second fight, and the first gunman: his shots sting rather than maim)
       faction: "pirate",
       moves: ["snipe_explode"],
       skill: 0.3,
+      dmgMul: 1.25,
       alert: "Garbage belongs in the Gray Terminal. So do you.",
       bounty: 12e6,
       infamy: true,
@@ -110544,7 +112121,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       at: { spot: "baratie_deck", ox: -3 },
       hostile: true,
       boss: true,
-      hpMul: 1.4,
+      hpMul: 1.1,
       faction: "pirate",
       level: 15,
       look: { hair: "short", hairColor: "#212121", top: "#ffd54f", bottom: "#5d4037", skin: "#e0ac7e", bulk: 1.5, coat: "#b71c1c" },
@@ -110714,7 +112291,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       faction: "pirate",
       level: 17,
       boss: true,
-      hpMul: 1.6,
+      hpMul: 1.2,
       race: "fishman",
       look: { hair: "spiky", hairColor: "#212121", skin: "#546e7a", top: "#fafafa", bottom: "#1a237e", fin: true, grin: true, sharpTeeth: true, bulk: 1.3, nose: "long" },
       bulk: 1.3,
@@ -110729,7 +112306,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       barks: ["Know your place, human!", "Shahahaha!"],
       phases: [{ at: 0.5, run: (a, g) => {
         g.fx.text(a.x, a.y - 2.4, "KIRIBACHI!", "#ff5252", 0.6);
-        a.addBuff({ id: "arlong_rage", name: "Rage", dur: 60, mods: { damage: 1.35, atkSpeed: 1.2 } });
+        a.addBuff({ id: "arlong_rage", name: "Rage", dur: 60, mods: { damage: 1.25, atkSpeed: 1.15 } });
       } }],
       when: (c) => !c.bosses.includes("arlong")
     },
@@ -137829,11 +139406,11 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     game.interactions.onObject("poneglyph", (o) => {
       const c = game.state.char;
       const id = o.poneglyph || `${Math.round(o.x)}_${Math.round(o.y)}`;
-      const readable = canRead();
+      const readable2 = canRead();
       const seen = c.flags.poneglyphsSeen = c.flags.poneglyphsSeen || [];
       if (!seen.includes(id)) seen.push(id);
       let text2;
-      if (!readable) {
+      if (!readable2) {
         text2 = `(A perfect cube of indestructible stone, covered in an ancient script.${o.road ? " It is red." : ""} You can't read a single word. An archaeologist could \u2014 though the World Government executes anyone who tries.)`;
       } else {
         const read2 = c.flags.poneglyphsReadIds = c.flags.poneglyphsReadIds || [];
