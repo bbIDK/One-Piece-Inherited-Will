@@ -108,16 +108,13 @@ function buildQuest(ch, path) {
   // (names of people already in the world are looked up when they're needed: their packs register them later)
   const who = () => shortName(contactOf(ch, path)?.name);
   if (ch.kind !== 'start' && ct) stages.push({ id: 'meet', get desc() { return v.find || `Find ${who()}${ct.where ? ' ' + ct.where : ''}.`; }, goal: { type: 'flag', flag: `mq_met_${ch.id}_${path}` }, npc: cid });
-  for (const t of v.tasks || []) {
-    const st = prepTask(t, qid);
-    // (a blade to get: the contact has a few old ones for sale — start there)
-    if (t.goal?.type === 'weapon' && cid && !st.npc) st.npc = cid;
-    stages.push(st);
-  }
+  for (const t of v.tasks || []) stages.push(prepTask(t, qid));
   if (ct && (v.tasks || []).length && !v.noReport) stages.push({ id: 'report', get desc() { return v.report || `Report back to ${who()}${ct.where ? ' ' + ct.where : ''}.`; }, goal: { type: 'flag', flag: `mq_done_${ch.id}_${path}` }, npc: cid });
   if (!stages.length) throw new Error(`chapter ${ch.id} (${path}) has nothing to do`);
   return {
     id: qid, kind: 'main', part: ch.part, partName: PART_NAMES[ch.part], name: v.name, summary: v.summary, island: ch.island, islandName: place, path, chapterId: ch.id, stages,
+    // (the steps a chapter had before it changed, for saves made then: quests.js reconcile)
+    was: v.was,
     rewards: (ctx, g) => {
       const m = g.state.char.main;
       const k = m ? m.at : 0;
@@ -244,6 +241,8 @@ export function installMainStory(game) {
     c.mainIntro = null;
     game.ui.banner(PATHS[path].name.toUpperCase(), `Part ${part} · ${PART_NAMES[part]}`, PATHS[path].tagline, 5);
     game.log(`You take up the road of the ${PATHS[path].name}.`, PATHS[path].color);
+    // (no road asks for a sword: a word on fighting your own way, once)
+    setTimeout(() => { if (game.state?.char === c) game.hint?.('fightstyle', 'Fight however suits you: fists, legs, a blade or a gun all win fights. Weapon shops sell blades and pistols, and trainers and dojos teach styles — your Skills (K) show what you know.'); }, 7000);
     openChapter();
     persist(game);
     return true;

@@ -25,6 +25,9 @@
 //   after              what they say once the chapter is over
 //   reward             on top of the usual pay for the chapter ({ items, ship, bounty, flag, … })
 //   onDone(game)       anything else that happens when it's over
+//   was: [ids]         the ids of the steps it had before they changed (one
+//                      taken out), so saves made then carry on from the right
+//                      one (game/quests.js reconcile)
 //   start chapters also have: pitch: [lines] (the offer), accept (the answer),
 //   refuse(c) → why this road is closed to you (or null)
 // Lines are strings or fns (ctx) → string.
@@ -65,7 +68,6 @@ export function target(def) {
 // ------------------------------------------------------------ tasks
 // (quest stages; ids must be unique within a chapter)
 export const T = {
-  weapon: (desc = 'Get yourself a weapon — buy one, win one or find one.') => ({ id: 'weapon', desc, goal: { type: 'weapon' } }),
   /**
    * Found a pirate crew and raise its Jolly Roger (Crew menu). (The crew
    * itself, not the "pirate" the world calls anyone with a bounty: a price on

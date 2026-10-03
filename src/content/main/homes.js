@@ -1,6 +1,7 @@
 // Part 1, chapter 1: home. On every island the Blues' young set out from,
 // three people can set you on your road:
-//   * an old sea dog who knows what a pirate needs (a blade and a flag),
+//   * an old sea dog who knows what a pirate needs (a flag of their own —
+//     and a word on fighting whichever way suits you),
 //   * the officer of the island's Marine post, who'll swear you in once
 //     you've proved yourself on the local troublemaker,
 //   * a bounty broker with a first poster — the same troublemaker.
@@ -9,12 +10,38 @@ import { chapter, target, T, LOOK, onward } from './define.js';
 import { count } from '../../game/inventory.js';
 import { enlistNow } from '../../game/factions.js';
 import { formatBerries } from '../../core/math.js';
+import { ISLAND_BY_ID } from '../../data/islands/index.js';
+import { allNpcDefs } from '../../game/npcs.js';
+import { TRAINERS } from '../../data/trainers.js';
 
 // a Log Pose for the road (unless you've one already)
 const logPose = (g) => (count(g.state.char, 'log_pose') ? {} : { items: [['log_pose', 1]] });
 const firstName = (c) => String(c.name || '').split(' ')[0];
 
 const blades = (name) => ({ text: 'Show me those old blades.', do: (c) => c.open('shop', { shop: 'weapons_blue', building: { name: `${name}'s old blades`, role: 'weapons', shop: 'weapons_blue' } }) });
+
+/**
+ * What the old sea dog tells a new pirate about fighting: nobody has to
+ * carry a sword — fists, feet, a blade or a gun all win fights — and where
+ * on this island to get one or learn one (the town's weapon shop, and a
+ * trainer who lives here). Worked out when it's said: the island's people
+ * are all known by then.
+ */
+function fightTip(island, town) {
+  return () => {
+    const isl = ISLAND_BY_ID[island];
+    const t = (isl?.towns || []).find((x) => x.id === town) || isl?.towns?.[0];
+    const shop = (t?.buildings || []).find((b) => b.role === 'weapons')?.name;
+    const teacher = allNpcDefs().find((d) => d.island === island && d.trainer && TRAINERS[d.trainer]);
+    // (who they are and where, without the bracketed asides: "Kano Country (West Blue)" is Kano Country here)
+    const plain = (s) => String(s || '').replace(/\s*\([^)]*\)/g, '').replace(/^"[^"]*"\s*/, '').trim();
+    const where = teacher && plain(TRAINERS[teacher.trainer].where);
+    const shopName = shop && !/\s|'/.test(shop) ? `The ${shop}` : shop;
+    const buy = shop ? `${shopName} will sell you a weapon if you want one, and I've a few old blades in the back if you've the berries.` : 'I\'ve a few old blades in the back if you want steel — no shame in a pair of good fists, though.';
+    const learn = teacher ? ` ${plain(teacher.name)}${where ? ` — ${where} —` : ''} will teach you a thing or two, if you'd rather learn than buy.` : ' Trainers and dojos all over the Blues will teach you a style, if you go looking.';
+    return `${buy}${learn}`;
+  };
+}
 const posters = { text: 'Show me the posters.', do: (c) => c.open('bounty', {}) };
 const navy = (post) => ({ text: 'Marine business.', if: (c) => c.char.faction === 'marine', do: (c) => c.emit('marineOffice', { name: post, role: 'marine_base' }), end: true });
 
@@ -38,17 +65,20 @@ function home(island, sea, o) {
   const kind = V.faction === 'pirate' || !V.faction ? 'pirate' : V.faction === 'rival' ? 'swordsman' : 'crook';
   chapter(`home_${island}`, { part: 1, island, kind: 'start', sea, town: o.town }, {
     pirate: {
-      name: P.chapter || 'A Blade and a Flag',
-      summary: `Every pirate starts with a blade and a flag. ${P.name} in ${o.townName} will see you off once you've got both.`,
+      name: P.chapter || 'A Flag of Your Own',
+      summary: `Every pirate crew starts with a name and a flag. ${P.name} in ${o.townName} will see you off once yours is flying.`,
       contact: { name: P.name, title: P.title, look: P.look, race: P.race, at: P.at, where: P.where, level: 12, choices: [blades(P.name)] },
       pitch: P.pitch,
       accept: 'I\'m going to be a pirate.',
       meet: [
-        P.first || 'Ha! Then listen close. No pirate ever sailed without a blade — or a fist hard enough to count as one. Buy one, win one, find one. I\'ve a few old ones in the back, if you\'ve the berries.',
-        'And a pirate without a flag is just a sailor who\'s lost his job. Give your crew a name and raise a Jolly Roger of your own. (Crew menu — U.)',
+        P.first || 'Ha! Then listen close. Fight however suits you — fists, feet, a blade or a pistol. The sea doesn\'t care which, so long as you\'re the one standing.',
+        fightTip(island, o.town),
+        'But a pirate without a flag is just a sailor who\'s lost his job. Give your crew a name and raise a Jolly Roger of your own. (Crew menu — U.)',
       ],
-      tasks: [T.weapon(), T.flag()],
-      wait: P.wait || 'A blade and a flag. You can\'t sail without either — well, you can, but you won\'t be a pirate.',
+      tasks: [T.flag()],
+      // (saved before the blade was let go: the steps this chapter had then — see quests.js reconcile)
+      was: ['weapon', 'flag', 'report'],
+      wait: P.wait || 'A flag, captain. Name your crew and raise your Jolly Roger — until then you\'re just a sailor with a boat.',
       done: [
         (ctx) => `${P.done || 'Now THAT is a Jolly Roger.'} The ${ctx.char.crewName || 'new crew'}... I'll remember that name. So will the Marines, soon enough.`,
         (ctx) => `Here — my old Log Pose. ${onward(ctx.char)} A crew needs more than one pirate, and your little boat won't last a day in the Grand Line. Get stronger on the way.`,

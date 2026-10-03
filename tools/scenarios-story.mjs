@@ -70,8 +70,7 @@ export const scenarios = {
         const g = window.OP.game, c = g.state.char, S = window.__st, dbg = window.OP.debug;
         const out = [];
         if (path === 'pirate') {
-          dbg.addItem(g, 'cutlass', 1);
-          window.OP.step(1);
+          // (no blade to get: the first step is the flag)
           out.push(S.main().stage);
           c.crewName = 'Test Pirates'; c.jr = { skull: 'classic', bones: 'cross', accessory: 'none', color: '#fff', name: 'Test Pirates' }; c.faction = 'pirate'; g.emit('crewFounded', c.crewName);
           window.OP.step(1);
