@@ -423,7 +423,10 @@ export class Combat {
       game.onPlayerParry(att);
       game.hint('parried', 'PARRIED! They reel — strike now: your next blow is a COUNTER, harder and through any guard. Parry at the very last instant for a PERFECT parry.');
     }
-    if (att.isPlayer) game.emit('playerParried', tgt);
+    if (att.isPlayer) {
+      game.emit('playerParried', tgt);
+      game.hint('foeparry', 'Your blow was PARRIED — you reel, wide open. Out past the Blues, foes read your swings too: don\'t hammer at a guard that has just come up.');
+    }
   }
 
   /**

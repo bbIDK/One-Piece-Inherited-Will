@@ -427,7 +427,7 @@ export function parryCueFx(fx, at, breaks, k = 1) {
   const col = breaks ? '#ff1744' : '#ffee58';
   fx.add('flare', { x: at.x, y: at.y, z, size: (0.45 + 0.6 * k) * (breaks ? 1.15 : 1), color: col, life: 0.14 + 0.14 * k, follow, rot: 0 });
   if (k >= 0.55) fx.ring(at.x, at.y, 0.15, (0.6 + 0.5 * k) * s, col, 0.2, 0.05, { z: z - 0.2, flat: 1, noCore: true, add: true, follow });
-  if (breaks && k >= 0.9 && at.look) fx.callout(at.x, at.y - 2 * s, '!!', '#ff5252', 0.55, { life: 0.55 });
+  if (breaks && k >= 0.9 && at.look) fx.sfx?.(at.x, at.y, '!!', '#ff1744', 0.8, { z: 2.15 * s, gap: 0, life: 0.55 });
 }
 
 // ------------------------------------------------------------------ technique visuals

@@ -98,6 +98,8 @@ export function startAbility(actor, def, game, target) {
   const tx = target ? target.x : actor.x + Math.cos(angle) * 5;
   const ty = target ? target.y : actor.y + Math.sin(angle) * 5;
   actor.action = { def, t: 0, step: 0, angle, tx, ty, target, total: abilityTotal(def) / (def.noSpeedup ? 1 : actor.atkSpeed()), mult: powerFor(actor, def) };
+  // (begun while a parry's counter is there to land: it stays there till this move is done)
+  if (actor.counterLeft > 0) actor.action.counter = true;
   // a foe's blow: wound up long enough to read, and the moment it lands shown by a glint
   if (!actor.isPlayer && actor.faction !== 'player') readable(actor, actor.action, game);
   if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, '#ffffff', 0.34, { life: 1.2 });
@@ -150,6 +152,8 @@ function glint(actor, a, game) {
   const k = p.observation ? 1 : T.cue;
   if (!(k > 0)) return;
   game.fx.parryCue?.(actor, a.breaks, k);
+  // (the first of each in a life: the world slows a moment, time to read the hint and act on it)
+  if (!game.hintsShown?.has(a.breaks ? 'redglint' : 'parry') && game.settings?.showHints !== false) game.fx.slowmo(1.2, 0.2);
   if (a.breaks) game.hint('redglint', 'A RED glint: that blow smashes any guard (and some go straight through one). Don\'t block it — dodge (Q) just before it lands.');
   else game.hint('parry', 'A YELLOW glint: the blow is about to land — tap F right then to PARRY it. A parried foe reels, open to a COUNTER. (Hold F to simply block.)');
 }

@@ -721,7 +721,8 @@ export class Actor extends Entity {
     // (the guard's press and let-go, for whether the next one is fresh; the counter a parry earned runs out)
     if (this.pressAge !== undefined) this.pressAge += dt;
     if (this.guardLetGo !== undefined && !this.guardHeld) this.guardLetGo += dt;
-    if (this.counterLeft > 0 && (this.counterLeft -= dt) <= 0) { this.counterLeft = 0; this.counterOn = null; }
+    // (a strike begun while the counter was there keeps it until that strike is done)
+    if (this.counterLeft > 0 && !this.action?.counter && (this.counterLeft -= dt) <= 0) { this.counterLeft = 0; this.counterOn = null; }
 
     this.updateStatus(dt, game);
     this.updateBuffs(dt, game);

@@ -109,6 +109,20 @@ test('a fresh press just before the blow lands parries it: no damage, the attack
   assert.ok(again - foe.hp < dealt);
 });
 
+test('a counter strike begun while the foe reels still counts if it lands just after', () => {
+  const { g, you, foe } = duel();
+  guardUp(you, 0.15);
+  g.combat.applyHit(foe, you, blow(foe, you));
+  you.setBlock(false);
+  you.counterLeft = 0.05;
+  assert.equal(you.tryHeavy(g), true);
+  for (let i = 0; i < 20; i++) step(you, 1 / 60, g);
+  assert.equal(you.counterOn, foe, 'the counter waits on the heavy');
+  you.action = null;
+  for (let i = 0; i < 6; i++) step(you, 1 / 60, g);
+  assert.equal(you.counterOn, null, 'and runs out once it has been and gone');
+});
+
 test('a perfect parry: at the very start of the window — a longer reel, a harder counter, health and Haki back', () => {
   const { g, you, foe } = duel();
   you.hakiSkill = { observation: 5 };
