@@ -44,7 +44,7 @@ layer adds the cores and rims. Hex values are the body colours.
 | Slashing (swords) | `#e3f2fd` (Santoryu `#e8f5e9`, oni `#ff1744`) | white | crisp crescent smear, solid body fraying at its inner edge, a hot leading edge line, a thin cut line, sparks | soft wide trails |
 | Fire (Mera) | `#ff7043` | gold `#fff3c4` | cel flame tongues in three hard bands (red rim, orange body, gold heart), embers rising, scorch with cooling embers; big fire is a ball rolling in gentle bumps with a crown of tongues round its edge (Entei is a sun, gold heart) | white-out, smooth gradients |
 | Magma (Magu) | `#ff5722` | `#ffab40` | dark rock crust with glowing cracks, red-orange fire, black smoke | clean bright fire |
-| Lightning (Goro) | `#fff176` | white | jagged strands zig-zagging in 3D with forks, a flash where they strike, crackle round the body; Sango is a serpent of light | straight lines, blobs |
+| Lightning (Goro) | `#fff176` | white | jagged strands zig-zagging in 3D with forks, a small flash where they strike, crackle round the body; Sango is a serpent of light; El Thor is a storm cloud high above (wide, dark, roiling, lit from inside), a bundle of jagged bolts out of it, a shock ring over the ground and a scorched crater | straight lines, blobs, columns of white light |
 | Light (Pika) | `#fff59d` | white | beams as tubes with energy streaming down them, star glints, a flare where they leave | smoke |
 | Ice (Hie) | `#b3e5fc` | white glint | faceted crystals: deep-blue shadows, pale sunlit facets, cyan rim, one hard glint; frost decals, frost mist, tumbling shards; Pheasant Beak is a bird of ice feathers | additive glowing ice |
 | Darkness (Yami) | `#311b92`, `#7e57c2` | none | voids: near black, the fraying edge lit purple; the Black Hole is a black pool with a ragged bright fringe and darkness welling up | additive purple, matte purple balls |
@@ -53,9 +53,9 @@ layer adds the cores and rims. Hex values are the body colours.
 | Water, fish-man | `#4fc3f7` | white highlight | drops as streaks, glossy shells, ripples | — |
 | String (Ito) | `#f8bbd0` | white | taut thin threads fanning out; Overheat is a red-hot rope of three twisting strands shedding embers | thick glow |
 | Haki | black `#1a1a1a`, red `#d50000` | red `#ff1744` | black lightning inked with a red heart, dark rings, red crackle | additive black |
-| Ope (Room) | `#81d4fa` | white rim | a translucent pale-blue dome where it was cast, a thin bright rim at its skin and base, lines over it, a faint square grid on its floor, a scan ring sweeping out | following the caster |
-| Smoke, gas, dust | as given | — | round billows, two tones lit from the sun's side, fraying away as they thin | flat discs |
-| Gomu (rubber) | white lines | — | the arm is the character's own (its rig); the effect is only speed lines whipping along the stretched arm, and the impact | a fist or arm drawn by the effect |
+| Ope (Room) | `#81d4fa` | ice-blue rim and lines `#e1f5fe` | a translucent pale-blue dome where it was cast, a thin bright rim at its skin and base, lines over it, a faint square grid on its floor, a scan ring sweeping out | following the caster |
+| Smoke, gas, dust, storm clouds | as given (storm `#37474f`, underside `#263238`) | — | round billows, two tones lit from the sun's side, fraying away as they thin; storm clouds wide and flat, high up | flat discs, boulders hanging low |
+| Gomu (rubber) | white lines, cream `#fff3e0` | white | the arm is the character's own (its rig); the effect is speed lines whipping along the stretched arm, and where it lands a DON: an inked star with a white-hot heart, a rubbery wobbling shock ring, speed lines rushing in on the line of the punch | a fist or arm drawn by the effect |
 
 ## 4. Timing: fast attack, slow decay
 
@@ -130,6 +130,20 @@ must not try to fake them.
   shard particles.
 - **Failure is contained:** a shape type whose drawing throws is switched off
   (and logged once) and falls back to the 2D overlay; the rest carry on.
+- **Measured** (third person, an open field, the game stepped at a fixed
+  1/60 s under a steady storm of impacts, sparks, dust, rings, smears, beams,
+  lightning, fire, smoke, shards, ice spikes, a Room and projectiles; JS time
+  per frame for all the effects, the 3D layer on against the same build with
+  it switched off so the 2D overlay draws everything as before):
+
+  | Storm | Shapes / particles | Effects JS, 3D layer | Effects JS, 2D overlay | Draw calls |
+  |---|---|---|---|---|
+  | light | 13 / 115 | 1.09 ms (layer 1.02 + overlay 0.07) | 1.52 ms | 354 vs 336 |
+  | heavy (×4) | 48 / 460 | 1.47 ms (layer 1.40 + overlay 0.06) | 5.74 ms | 332 vs 367 |
+
+  In a busy town with no fighting the layer costs 0.05 ms a frame. (GPU time
+  under the headless software renderer isn't comparable with a real GPU;
+  compare draw calls and JS time.)
 
 ## 8. What stays 2D
 

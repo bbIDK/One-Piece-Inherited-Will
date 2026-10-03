@@ -5,6 +5,8 @@
 // The anime language throughout: a white-hot core inside a coloured rim,
 // crisp edges, a fast attack and a slower fade, and a bit of everything
 // flung outward on the heavy moments (shock rings, speed lines, debris).
+// The rules (colours by element, timing, erosion, budgets) are written down
+// in docs/VFX.md: a handler that breaks them is the one that's wrong.
 //
 // Heights: a shape's `z` is metres over the ground at its spot (as in the
 // 2D overlay). Directions: `angle` is atan2(dy, dx) on the ground plane,
@@ -507,11 +509,11 @@ SHAPES.bolt = {
     const L = Math.hypot(X1 - X0, Y1 - Y0, Z1 - Z0);
     const amp = Math.min(0.35 + (s.amp || 0), L * 0.2) * (L > 4 ? 1.6 : 1);
     bolt(v, X0, Y0, Z0, X1, Y1, Z1, Math.max(0.05, wd * 2.4), amp, seed, c, fade, s.branches === 0 ? 0 : Math.min(3, s.branches || 2));
-    // a flash where it strikes the ground (or the target)
-    v.sprites.put(SK.GLOW, X1, Y1, Z1, Math.max(0.35, wd * 6), c, fade * 0.8, WHITE, 1, 0, s.seed, k);
+    // a flash where it strikes the ground (or the target): small and brief
+    v.sprites.put(SK.GLOW, X1, Y1, Z1, Math.min(0.8, Math.max(0.35, wd * 6)), c, fade * 0.7, WHITE, 1, 0, s.seed, k);
     if (z1 < 0.5 && L > 3) {
       const patch = v.patch(s, s.x1, s.y1, 1.5);
-      v.decal(patch, s.x1, s.y1, 1.4, 0, SF.GLOW, c, fade * 0.8, WHITE, 1, k, s.seed, 0, 0, 0, 4);
+      v.decal(patch, s.x1, s.y1, 1.2, 0, SF.GLOW, c, fade * 0.5, WHITE, 0.7, k, s.seed, 0, 0, 0, 4);
     }
   },
 };
@@ -555,21 +557,31 @@ SHAPES.pillar = {
       v.tubes.put(TK.PILLAR, X, G, Z, 0, 1, 0, H * 0.8, R * 0.45, R * 0.2, c2, fade * 0.8, c2, 1, k, s.seed + 2);
     } else if (kind === 'dark') {
       v.tubes.put(TK.DARK, X, G - 0.1, Z, 0, 1, 0, H, R * 1.1, R * 0.7, c, fade, col(s.core || '#b388ff'), 0, k, s.seed);
-    } else {
-      const lt = kind === 'lightning';
-      v.tubes.put(TK.PILLAR, X, G - 0.1, Z, 0, 1, 0, H, R * 1.35, R * 1.0, c, fade * (lt ? 0.18 : 0.4), c2, 0.6, k, s.seed);
-      v.tubes.put(TK.PILLAR, X, G - 0.1, Z, 0, 1, 0, H * 1.05, R * (lt ? 0.22 : 0.34), R * (lt ? 0.16 : 0.24), c2, fade * (lt ? 0.45 : 0.85), c2, 0.85, k, s.seed + 7);
-      if (kind === 'lightning') {
-        const t = Math.floor(v.time * 24);
-        for (let i = 0; i < 3; i++) {
-          const th = hash(s.seed + i * 3 + t) * TAU, rr = R * (0.3 + 0.5 * hash(s.seed + i + t));
-          bolt(v, X + Math.cos(th) * rr, G + H * 1.02, Z + Math.sin(th) * rr, X + Math.cos(th + 1) * rr * 0.6, G + 0.1, Z + Math.sin(th + 1) * rr * 0.6, 0.14, R * 0.6, s.seed + i * 17 + t, c, fade, 1);
-        }
+    } else if (kind === 'lightning') {
+      // a strike out of the sky: a bundle of jagged bolts re-forking every
+      // few frames round a thin hot core, not a column of light (readable,
+      // not a white-out); a shock ring racing out over the ground
+      const t = Math.floor(v.time * 20);
+      for (let i = 0; i < 5; i++) {
+        const th = hash(s.seed + i * 3 + t) * TAU, rr = R * (0.1 + 0.6 * hash(s.seed + i + t));
+        const th2 = th + (hash(s.seed + i * 7 + t) - 0.5) * 1.6, rr2 = R * 0.35 * hash(s.seed + i * 11 + t);
+        bolt(v, X + Math.cos(th) * rr, G + H, Z + Math.sin(th) * rr, X + Math.cos(th2) * rr2, G + 0.05, Z + Math.sin(th2) * rr2,
+          i ? 0.1 : 0.2, R * 0.55, s.seed + i * 17 + t, c, fade * (i ? 0.8 : 1), i < 2 ? 2 : 1);
       }
+      v.tubes.put(TK.BEAM, X, G, Z, 0, 1, 0, H, R * 0.07, R * 0.05, c2, fade * 0.5, c2, 0.8, k, s.seed + 7);
+      if (k < 0.7) {
+        const rk = easeOut(k / 0.7), patch = v.patch(s, s.x, s.y, R * 3);
+        v.groundRing(patch, s.x, s.y, R * (0.4 + 2.4 * rk), 0.04 + 0.12 * (1 - rk), c, fade * (1 - rk), WHITE, 1, 0.8, v.low ? 0 : 0.5 * (1 - rk), 0.5, 0, 9, 0, s.seed, rk);
+      }
+    } else {
+      v.tubes.put(TK.PILLAR, X, G - 0.1, Z, 0, 1, 0, H, R * 1.35, R * 1.0, c, fade * 0.4, c2, 0.6, k, s.seed);
+      v.tubes.put(TK.PILLAR, X, G - 0.1, Z, 0, 1, 0, H * 1.05, R * 0.34, R * 0.24, c2, fade * 0.85, c2, 0.85, k, s.seed + 7);
     }
-    // the ground lit up round its foot
-    const patch = v.patch(s, s.x, s.y, R * 2.2);
-    v.decal(patch, s.x, s.y, R * 2.2, 0, SF.GLOW, kind === 'dark' ? col('#4a148c') : c, fade * (kind === 'dark' ? 0.5 : 0.75), c2, kind === 'dark' ? 0.3 : 1, k, s.seed, 0, 0, 0, 4);
+    // the ground lit up round its foot (a strike of lightning only briefly
+    // and tightly: the bolts are the thing to see, not a wash of light)
+    const lt = kind === 'lightning', gr = lt ? R * 1.3 : R * 2.2;
+    const patch = v.patch(s, s.x, s.y, gr);
+    v.decal(patch, s.x, s.y, gr, 0, SF.GLOW, kind === 'dark' ? col('#4a148c') : c, fade * (kind === 'dark' ? 0.5 : lt ? 0.4 * (1 - k) : 0.75), c2, kind === 'dark' ? 0.3 : lt ? 0.6 : 1, k, s.seed, 0, 0, 0, 4);
   },
 };
 
@@ -662,25 +674,38 @@ SHAPES.cloud = {
     const grow = easeOut(Math.min(1, (s.age || 0) / 0.4));
     const R = s.r * grow;
     if (R < 0.05) return;
-    const X = v.lx(s.x), Z = v.lz(s.y), Y = v.groundOf(s) + (s.z ?? 5);
-    const c = col(s.color || '#37474f');
-    cloud(v, X, Y, Z, R, c, a, s.seed);
-    if (s.flicker !== false && Math.sin(v.time * 23 + s.seed) > 0.6) {
-      const g = col(s.glow || '#fff59d'), q = Math.floor(v.time * 8);
-      v.sprites.put(SK.GLOW, X + (hash(q + s.seed) - 0.5) * R, Y - R * 0.1, Z + (hash(q * 3 + s.seed) - 0.5) * R * 0.6, R * 0.55, g, a * 0.7, WHITE, 1, 0, s.seed, k);
-    }
+    // (high over its spot and wide, whatever height it asked for: a storm, not a rock in the air)
+    const X = v.lx(s.x), Z = v.lz(s.y), Y = v.groundOf(s) + Math.max(8.5, s.z ?? 5);
+    cloud(v, X, Y, Z, Math.max(3, R * 1.4), col(s.color || '#37474f'), a, s.seed, s.flicker === false ? null : col(s.glow || '#fff59d'));
   },
 };
-function cloud(v, X, Y, Z, R, c, a, seed) {
-  for (let i = 0; i < 9; i++) {
-    const th = (i / 9) * TAU + seed;
-    const rr = R * (0.55 + 0.25 * hash(seed + i * 2));
-    const x = X + Math.cos(th) * rr + Math.sin(v.time * 0.8 + i) * 0.1, z = Z + Math.sin(th) * rr * 0.75;
-    const y = Y + (hash(seed + i * 5) - 0.5) * R * 0.25;
-    v.sprites.put(SK.CLOUD, x, y, z, R * (0.42 + 0.14 * hash(seed + i)), c, a * 0.95, c, 0, hash(seed + i * 9) * TAU, seed + i, 0);
+/**
+ * A storm cloud (thunder zones, El Thor, Raigo): a wide, flat, dark mass of
+ * soft billows high up, roiling slowly, darker underneath, lightning
+ * flickering inside it and now and then crackling out of its underside.
+ */
+function cloud(v, X, Y, Z, R, c, a, seed, flash = STORM_FLASH) {
+  const t = v.time;
+  for (let i = 0; i < 18; i++) {
+    const th = hash(seed + i * 3.7) * TAU + t * 0.05 * (i % 2 ? 1 : -1);
+    const rr = R * Math.sqrt(hash(seed + i * 5.3)) * 0.92;
+    const x = X + Math.cos(th) * rr, z = Z + Math.sin(th) * rr;
+    const y = Y + (hash(seed + i * 7.1) - 0.5) * R * 0.16 + Math.sin(t * 0.9 + i * 1.3) * R * 0.03;
+    v.sprites.put(SK.SMOKE, x, y, z, R * (0.3 + 0.2 * hash(seed + i * 2.9)), i < 7 ? STORM_LOW : c, a, c, 0, t * 0.12 * ((i % 3) - 1) + i, seed + i, 0.1);
   }
-  v.sprites.put(SK.CLOUD, X, Y + R * 0.15, Z, R * 0.62, c, a * 0.95, c, 0, seed, seed + 11, 0);
+  v.sprites.put(SK.SMOKE, X, Y + R * 0.08, Z, R * 0.6, c, a, c, 0, t * 0.05, seed + 31, 0.08);
+  if (!flash) return;
+  // lightning inside it: a billow lit from within, now here, now there
+  const f = Math.floor(t * 9);
+  for (let j = 0; j < 3; j++) {
+    if (hash(seed + j * 13 + f) < 0.55) continue;
+    const th = hash(seed + j * 17 + f) * TAU, rr = R * 0.6 * hash(seed + j * 19 + f);
+    const x = X + Math.cos(th) * rr, z = Z + Math.sin(th) * rr;
+    v.sprites.put(SK.GLOW, x, Y - R * 0.05, z, R * 0.4, flash, a * 0.6, WHITE, 1, 0, seed + j, 0);
+    if (!j) bolt(v, x, Y - R * 0.1, z, x + (hash(seed + f) - 0.5) * R * 0.8, Y - R * 0.5, z + (hash(seed + f * 3) - 0.5) * R * 0.8, 0.05, R * 0.1, seed + f, flash, a * 0.9, 1);
+  }
 }
+const STORM_LOW = col('#263238'), STORM_FLASH = col('#e1f5fe');
 export { cloud };
 
 // ------------------------------------------------------------------ spikes & solids
@@ -953,6 +978,7 @@ const SKID = [-0.14, 0.14];
 
 // ------------------------------------------------------------------ zones
 const DARKNESS = col('#311b92');
+const SCORCH_COL = col('rgba(30,18,12,1)'), BOLT_EMBER = col('#ffd54f');
 const ROOM_LINE = col('#e1f5fe');
 const ZONE_COL = { dark: ['#7e57c2', '#12001c'], ice: ['#e1f5fe', '#ffffff'], storm: ['#e1c16e', '#fff3c4'], gravity: ['#b39ddb', '#ede7f6'] };
 /**
@@ -974,7 +1000,11 @@ SHAPES.zone = {
     const spin = v.time * (kind === 'dark' ? -3 : 5);
     v.decal(patch, s.x, s.y, R, 0, SF.ZONE, c, a, c2, kind === 'dark' ? 0.2 : 0.4, k, s.seed, zk, kind === 'dark' ? 6 : 5, spin, 10);
     const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s);
-    if (kind === 'thunder') cloud(v, X, G + 4.5 + R * 0.3, Z, Math.max(1.4, R * 0.9), col('#37474f'), a, s.seed);
+    if (kind === 'thunder') {
+      cloud(v, X, G + 9 + R * 0.2, Z, Math.max(3.2, R * 1.5), col('#37474f'), a, s.seed);
+      // the scorched crater where it struck, cooling
+      v.decal(patch, s.x, s.y, Math.min(R * 0.55, 2.5), s.seed, SF.SCORCH, SCORCH_COL, a * 0.9, BOLT_EMBER, 0, Math.min(1, (s.age || 0) / 2.5), s.seed, 0, 0, 0, 7);
+    }
     else if (kind === 'storm') {
       v.tubes.put(TK.FUNNEL, X, G - 0.05, Z, 0, 1, 0, R * 1.3, R * 0.25, R, c, a * 0.75, c2, 0, k, s.seed);
     } else if (kind === 'cage') {

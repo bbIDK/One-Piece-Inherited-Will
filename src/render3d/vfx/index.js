@@ -136,8 +136,8 @@ export class VFX {
       const amb = game.env?.ambient || [1, 1, 1];
       SHARED.uAmb.value.setRGB(amb[0] * 0.62, amb[1] * 0.64, amb[2] * 0.72);
     }
-    // first person: your own body's effects don't fill the view
-    // (first person: nothing within about a metre of the eye — your own hands, a shot just leaving them)
+    // the near fade (first person: nothing within about a metre of the eye —
+    // your own hands, a shot just leaving them) and the flash cap (docs/VFX.md)
     SHARED.uNearA.value = this.fp ? 0.75 : 0.25;
     SHARED.uNearB.value = this.fp ? 1.3 : 0.8;
     SHARED.uFlashMax.value = this.fp ? 0.45 : 0.9;

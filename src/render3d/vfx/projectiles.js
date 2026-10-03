@@ -7,7 +7,7 @@
 // iron-ball mesh. A stretching punch (Gomu Gomu) has no body here at all:
 // the arm on the character's rig is the punch, and it gets only speed lines
 // whipping along that arm.
-import { col, hash, luma, TAU } from './kit.js';
+import { col, hash, luma, easeOut, TAU } from './kit.js';
 import { SK } from './sprites.js';
 import { RK, RM } from './ribbons.js';
 import { SF } from './surfaces.js';
@@ -39,13 +39,32 @@ class Rec {
 }
 const P = new Float32Array(3);
 
+const LAND = 8, LF = 8; // landings remembered, floats each (x, y, h, dx, dz, t0, size, seed)
+const LAND_LIFE = 0.32;
+
 export class Projectiles {
-  constructor(v) { this.v = v; this.recs = new Map(); this.pool = []; this.frame = 0; this._sweep = (r, p) => { if (r.frame !== this.frame) { r.reset(); this.pool.push(r); this.recs.delete(p); } }; }
+  constructor(v) {
+    this.v = v; this.recs = new Map(); this.pool = []; this.frame = 0;
+    // a stretching punch that connected leaves its landing here (drawn a moment after it's gone)
+    this.land = new Float32Array(LAND * LF).fill(-1e9); this.landI = 0;
+    this._sweep = (r, p) => {
+      if (r.frame === this.frame) return;
+      if (p.stretch && p.hit && p.hit.size > 0 && r.n) this.landing(p, r);
+      r.reset(); this.pool.push(r); this.recs.delete(p);
+    };
+  }
+
+  landing(p, r) {
+    r.back(0, P);
+    const L = this.land, o = (this.landI++ % LAND) * LF, sp = Math.hypot(p.vx, p.vy) || 1;
+    L[o] = P[0]; L[o + 1] = P[1]; L[o + 2] = P[2]; L[o + 3] = p.vx / sp; L[o + 4] = p.vy / sp;
+    L[o + 5] = this.v.time; L[o + 6] = p.size || 1; L[o + 7] = (hash(P[0] * 3.1 + P[1] * 7.7) * 100) | 0;
+  }
 
   /** Is this projectile drawn here (not as a plain mesh)? */
   owns(pr) { return this.v.on && pr.sprite !== 'cannonball'; }
 
-  clear() { this.recs.forEach((r) => { r.reset(); this.pool.push(r); }); this.recs.clear(); }
+  clear() { this.recs.forEach((r) => { r.reset(); this.pool.push(r); }); this.recs.clear(); this.land.fill(-1e9); }
 
   update(game) {
     const v = this.v, view = v.view;
@@ -79,8 +98,38 @@ export class Projectiles {
       }
     }
     this.recs.forEach(this._sweep);
+    const L = this.land;
+    for (let i = 0; i < LAND; i++) {
+      const o = i * LF, age = v.time - L[o + 5];
+      if (age >= 0 && age < LAND_LIFE) rubberLanding(v, L[o], L[o + 1], L[o + 2], L[o + 3], L[o + 4], age / LAND_LIFE, L[o + 6], L[o + 7]);
+    }
   }
 }
+
+/**
+ * Where a rubber punch lands: a DON — an inked star punched out big and
+ * fast round a white-hot heart, a rubbery shock ring wobbling out across
+ * the blow, and speed lines rushing in on the line of the punch.
+ */
+function rubberLanding(v, x, y, Y, dx, dz, k, s, seed) {
+  const X = v.world.dx(v.ox, x), Z = y - v.oy, fade = 1 - k;
+  const pop = easeOut(Math.min(1, k / 0.2));
+  const R = 0.75 * s * (0.55 + 0.6 * pop);
+  v.sprites.vel(v.sprites.put(SK.GLOW, X, Y, Z, R * 1.5, LAND_WARM, fade * 0.35, WHITE, 1, 0, seed, k), 0, 0, 0, v.pull);
+  v.sprites.vel(v.sprites.put(SK.BURST, X, Y, Z, R * 1.15, LAND_CREAM, fade, WHITE, 0.55, seed, seed, k), 11, 0, 0, v.pull);
+  const j = v.sprites.put(SK.RING, X, Y, Z, (0.35 + 1.7 * easeOut(k)) * s, WHITE, fade * 0.9, WHITE, 0.6, 0, seed, k);
+  v.sprites.vel(j, 0.04 + 0.12 * fade, 0.14 * fade, 7, 0.8);
+  const lx = -dz, lz = dx, bx = X - dx * 0.4, bz = Z - dz * 0.4;
+  for (let n = 0; n < 8; n++) {
+    const th = (n / 8) * TAU + hash(seed + n) * 0.5, ca = Math.cos(th), sa = Math.sin(th);
+    const r1 = (1.9 - 1.1 * k) * s, r0 = r1 * (0.45 + 0.15 * hash(seed + n * 3));
+    v.ribbons.start(RK.SPEED, RM.FACE, WHITE, fade * 0.85, WHITE, 0.4)
+      .point(bx + lx * ca * r1, Y + sa * r1, bz + lz * ca * r1, 0.03 * s)
+      .point(bx + lx * ca * r0, Y + sa * r0, bz + lz * ca * r0, 0.004)
+      .finish();
+  }
+}
+const LAND_WARM = col('#ffe0b2'), LAND_CREAM = col('#fff3e0');
 
 /** A trail back through where it's been: `n` points, half-width hw at the head tapering to tail × hw. */
 function trail(v, r, kind, c, alpha, c2, w, hw, tail = 0.05, n = 10, minLen = 0) {
