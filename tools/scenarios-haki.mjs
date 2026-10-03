@@ -35,7 +35,15 @@ export const scenarios = {
         };
         // (a film may take the player's controls away to hold a pose: every new one gives them back)
         const arena0 = L.arena;
-        L.arena = () => { const p = g.player; if (L.ctl) p.controller = L.ctl; p.blocking = false; window.OP.key('F', false); arena0(); };
+        L.arena = () => {
+          const p = g.player;
+          if (L.ctl) p.controller = L.ctl;
+          p.blocking = false; window.OP.key('F', false);
+          arena0();
+          // (the last film's leftovers settle — a coat falling away, a blow's last words — before the next)
+          for (let i = 0; i < 24; i++) g.update(1 / 60);
+          g.fx.reset();
+        };
         L.still = () => { const p = g.player; L.ctl = L.ctl || p.controller; p.controller = null; };
         L.haki = (o = {}) => {
           const p = g.player, c = g.state.char;

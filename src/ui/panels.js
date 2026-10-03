@@ -422,9 +422,9 @@ function hakiSection(c) {
         : k === 'observation' ? `Your tint: ${colourName(sig.observation)}.${lvl >= FUTURE_SIGHT ? ' Future Sight: you see the blows before they land.' : ` (Visions of the blows coming at ${FUTURE_SIGHT})`}`
           : `Your colour: ${colourName(sig.conqueror)}.`;
       rows.push(h('div.stat-row', { title: hk.desc },
-        h('span.nm', k === 'armament' ? sw(sig.armament, true) : sw(k === 'observation' ? sig.observation : sig.conqueror), ' ', hk.name.replace(' Haki', '')), h('span.val', Math.floor(lvl)),
+        h('span.nm', hk.name.replace(' Haki', '')), h('span.val', Math.floor(lvl)),
         h('div.meter', h('i', { style: { width: lvl + '%', background: k === 'conqueror' ? `linear-gradient(90deg,#111,${sig.conqueror})` : 'linear-gradient(90deg,#4a148c,#ce93d8)' } }))));
-      rows.push(h('div.haki-how', what));
+      rows.push(h('div.haki-how', k === 'armament' ? sw(sig.armament, true) : sw(k === 'observation' ? sig.observation : sig.conqueror), ' ', what));
     } else {
       rows.push(h('div.stat-row.locked', { title: hk.desc }, h('span.nm', hk.name.replace(' Haki', '')), h('span.val', '—'), h('div.meter', h('i', { style: { width: '0%' } }))));
       const sensed = k === 'conqueror' && c.flags?.kingSensed && c.traits.includes('conqueror');

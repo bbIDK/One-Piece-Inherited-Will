@@ -168,7 +168,7 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
       // (Infusion: black lightning in the king's colour, leaping from the fist to the body before it's touched)
       const kc = sigOf(att).conqueror;
       const as = (att.look && att.look.scale) || 1;
-      fx.bolt(att.x, att.y, cx, cy, '#000000', 0.16, 0.06, { z0: 0.95 * as, z1: z, branches: 1, core: kc });
+      if (!h.sprite && !h.isProj) fx.bolt(att.x, att.y, cx, cy, '#000000', 0.16, 0.06, { z0: 0.95 * as, z1: z, branches: 1, core: kc });
       miniBolts(fx, cx, cy, z, 3, 0.9, '#000000', kc);
       miniBolts(fx, cx, cy, z, 2, 0.7, kc);
     } else if (att && att.armament && elem === 'physical') {

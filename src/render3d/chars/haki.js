@@ -1,5 +1,5 @@
 // Armament Haki on a 3D body (the coat itself is the body shader's: mats.js).
-// Switched on, the black spreads up from the fingertips — and the toes, for
+// Switched on, the black spreads up from the fingertips — or the toes, for
 // a kicker — over COAT.spread seconds, as far as the level reaches (the fists,
 // the forearms, the whole arms), a bright ripple riding its edge as it
 // hardens; let go (or spent), it falls away quicker than it came. Every
@@ -22,18 +22,19 @@ export function coatBody(st, a, legs, now, u) {
   st.t = now;
   const on = !!a.armament;
   const reach = on ? Math.max(0.2, armamentReach((a.hakiLevel && a.hakiLevel('armament')) || 30)) : 0;
-  st.arm = step(st.arm || 0, reach, reach, dt);
+  // (a kicker's hands are kept out of it — a cook's hands are his life: the legs coat instead)
+  st.arm = step(st.arm || 0, legs ? 0 : reach, reach, dt);
   st.leg = step(st.leg || 0, legs ? reach : 0, reach, dt);
   // the ripple: bright while the coat climbs, dying away once it's there;
   // and again for a moment with every blow it lands (combat.js: armHitT)
-  const climbing = on && (st.arm < reach - 1e-3 || (legs && st.leg < reach - 1e-3));
+  const climbing = on && (legs ? st.leg : st.arm) < reach - 1e-3;
   st.rip = climbing ? 1 : (st.rip || 0) * Math.exp(-dt * 7);
   const hitAge = now - (a.armHitT ?? -9);
   const hit = on && hitAge >= 0 && hitAge < 0.22 ? 1 - hitAge / 0.22 : 0;
   const rip = Math.max(st.rip, hit);
   u.uHaki.value.set(st.arm, st.arm, st.leg, st.leg);
-  u.uHakiRip.value.set(rip, rip, legs ? rip : 0, legs ? rip : 0);
-  if (on || st.arm > 0) {
+  u.uHakiRip.value.set(legs ? 0 : rip, legs ? 0 : rip, legs ? rip : 0, legs ? rip : 0);
+  if (on || st.arm > 0 || st.leg > 0) {
     const sheen = sigOf(a).armament;
     if (st.sheen !== sheen) { st.sheen = sheen; u.uHakiSheen.value.set(sheen); }
   }

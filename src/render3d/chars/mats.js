@@ -117,9 +117,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`)
   // and a bright ripple running up the limb at the coat's edge as it hardens
   vec3 hn = normalize(normal);
   float hs = max(dot(hn, normalize(normalize(vec3(-0.45, 0.62, 0.64)) + normalize(vViewPosition))), 0.0);
-  float glint = smoothstep(0.93, 0.95, hs) + 0.3 * smoothstep(0.8, 0.83, hs);
-  float hrim = smoothstep(0.6, 0.67, rim) * (0.45 + 0.55 * rimUp);
-  totalEmissiveRadiance += (uHakiSheen * (hrim * 0.6 + glint * 0.3) + vec3(glint * 0.6)) * hakiK;
+  float glint = smoothstep(0.935, 0.95, hs) + 0.14 * smoothstep(0.86, 0.88, hs);
+  float hrim = smoothstep(0.74, 0.8, rim) * (0.4 + 0.6 * rimUp);
+  totalEmissiveRadiance += (mix(uHakiSheen, vec3(1.0), 0.35) * hrim * 0.5 + uHakiSheen * glint * 0.25 + vec3(glint * 0.55)) * hakiK;
   totalEmissiveRadiance += mix(uHakiSheen, vec3(1.0), 0.4) * hakiF * 1.7;
   totalEmissiveRadiance += vec3(0.5, 0.75, 1.0) * pow(rim, 1.6) * uFreeze * 0.35;
   totalEmissiveRadiance += uLegFxCol * legK * 0.85 + uFlashCol * uFlash * 0.8;
