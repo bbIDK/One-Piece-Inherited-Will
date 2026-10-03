@@ -382,7 +382,8 @@ export function airStep(a, game) {
   a.airSteps = (a.airSteps || 0) + 1;
   a.flightStyle = 'geppo';
   a.airStepT = timeOf(game);
-  for (let k = 0; k < 2; k++) game.fx.add('ring', { x: a.x, y: a.y, r0: 0.1, r1: 0.7 + k * 0.3, color: '#ffffff', width: 0.07, life: 0.3, z: Math.max(0.05, a.z || 0), flat: 0.5, add: true, delay: k * 0.05 });
+  // (a burst of air where the foot kicked off it, up there at the feet — not a ring on the ground)
+  for (let k = 0; k < 2; k++) game.fx.add('ring', { x: a.x, y: a.y, r0: 0.1, r1: 0.7 + k * 0.3, color: '#ffffff', width: 0.07, life: 0.3, z: Math.max(0.05, a.z || 0), flat: 0.8, add: true, delay: k * 0.05 });
   game.audio?.sfx('jump', a);
   return true;
 }
@@ -424,8 +425,9 @@ function trailFx(a, game, S, dt) {
       fx.particle({ x: a.x + r() * 0.6, y: a.y + r() * 0.4, z: Math.max(0, z - 0.15), ...back, vz: -0.4, g: 0, life: 0.8, size: S.ride === 'rock' ? 0.12 : 0.35, grow: S.ride === 'rock' ? 0 : 0.4, color: S.color || '#eceff1', kind: S.ride === 'sand' ? 'sand' : S.ride === 'rock' ? 'dust' : 'smoke' });
       break;
     case 'float':
-      if (S.ride === 'strings') fx.particle({ x: a.x + r() * 0.4, y: a.y + r() * 0.2, z: z + 1.6, vx: 0, vy: 0, vz: 7, g: 0, life: 0.3, size: 0.04, color: '#f8bbd0', kind: 'line' });
-      else fx.particle({ x: a.x + r() * 0.8, y: a.y + r() * 0.5, z: z + 0.4 + Math.random(), ...back, vz: 0.2, g: 0, life: 0.4, size: 0.14, color: S.color || '#fff59d', kind: 'glow' });
+      // (strings running up from the hands to the clouds; a body of light shedding light)
+      if (S.ride === 'strings') for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r() * 0.5, y: a.y + r() * 0.25, z: z + 1.4, vx: 0, vy: 0, vz: 12, g: 0, life: 0.4, size: 0.05, color: '#f8bbd0', kind: 'line' });
+      else for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r() * 0.8, y: a.y + r() * 0.5, z: z + 0.4 + Math.random(), ...back, vz: 0.2, g: 0, life: 0.45, size: 0.2, color: k ? '#ffffff' : S.color || '#fff59d', kind: 'glow' });
       break;
     default: break;
   }
