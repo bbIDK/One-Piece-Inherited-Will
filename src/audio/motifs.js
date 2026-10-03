@@ -103,7 +103,7 @@ export function suction(v, t, dur = 0.6, s = 1) {
 /** A ghost's wail (Perona's Hollows: horo horo horo). */
 export function wail(v, t, s = 1, dur = 0.7) {
   v.tone(t, dur, { freq: rnd(620, 720), to: 380, gain: 0.05 * s, attack: 0.15, curve: 'lin', vib: { rate: 5, depth: 40 } });
-  v.formant(t, dur, { f1: 500, f2: 900, to1: 380, to2: 700, q: 7, gain: 0.05 * s, attack: 0.12 });
+  v.formant(t, dur, { f1: 500, f2: 900, to1: 380, to2: 700, q: 6, gain: 0.3 * s, attack: 0.12 });
 }
 
 /** A beast's roar or growl (a Zoan changing, a dragon, a Sea King). */

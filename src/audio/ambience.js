@@ -20,7 +20,7 @@ const BEDS = {
   rain: { layers: [['white', 'highpass', 2800, 0.5, 0.18], ['pink', 'lowpass', 650, 0.5, 0.35]], lfo: [['g1', 0.05, 0.08]] },
   torrent: { layers: [['brown', 'lowpass', 900, 0.5, 0.9], ['pink', 'bandpass', 1400, 0.6, 0.35], ['white', 'highpass', 3500, 0.5, 0.06]], lfo: [['g1', 0.3, 0.1], ['f0', 0.11, 200]] },
   deep: { layers: [['brown', 'lowpass', 220, 0.7, 0.9]], lfo: [['f0', 0.05, 80], ['g0', 0.08, 0.25]] },
-  town: { layers: [['pink', 'bandpass', 520, 3, 0.35], ['pink', 'bandpass', 1150, 4, 0.25], ['pink', 'bandpass', 2400, 5, 0.12]], lfo: [['g0', 3.1, 0.18], ['g1', 4.7, 0.14], ['g2', 5.9, 0.06], ['f1', 0.4, 150]] },
+  town: { layers: [['pink', 'bandpass', 520, 3, 0.9], ['pink', 'bandpass', 1150, 4, 0.65], ['pink', 'bandpass', 2400, 5, 0.3]], lfo: [['g0', 3.1, 0.45], ['g1', 4.7, 0.35], ['g2', 5.9, 0.15], ['f1', 0.4, 150]] },
   cicada: { layers: [['white', 'bandpass', 5400, 3, 0.18]], lfo: [['g0', 46, 0.17], ['g0', 0.2, 0.07]] },
   cricket: { layers: [['white', 'bandpass', 4600, 12, 0.3]], lfo: [['g0', 18, 0.2], ['g0', 0.6, 0.08]] },
   leaves: { layers: [['white', 'highpass', 2600, 0.5, 0.12]], lfo: [['g0', 0.19, 0.06], ['g0', 0.07, 0.04]] },
@@ -105,22 +105,22 @@ const SPOTS = {
   /** An owl: hoo... hoo-hoo. */
   owl(v) { for (const [t, d] of [[0, 0.35], [0.6, 0.18], [0.82, 0.3]]) v.tone(t, d, { freq: rnd(370, 400), to: 350, gain: 0.03, attack: 0.05, curve: 'lin' }); },
   /** A frog's croak. */
-  frog(v) { for (let i = 0; i < 2; i++) v.tone(i * 0.18, 0.12, { freq: rnd(180, 240), to: 150, type: 'sawtooth', gain: 0.02, attack: 0.01, vib: { rate: 30, depth: 25 } }); },
+  frog(v) { for (let i = 0; i < 2; i++) v.tone(i * 0.18, 0.12, { freq: rnd(180, 240), to: 150, type: 'sawtooth', gain: 0.03, attack: 0.01, vib: { rate: 30, depth: 25 } }); },
   /** A voice in the street: a few syllables, the vowel sliding. */
   voice(v) {
     let t = 0;
     for (let i = 0; i < 2 + Math.floor(Math.random() * 4); i++) {
       const d = rnd(0.08, 0.2), f1 = rnd(350, 750), f2 = rnd(900, 2000);
-      v.formant(t, d, { f1, f2, to1: f1 * rnd(0.8, 1.2), to2: f2 * rnd(0.8, 1.2), q: 8, gain: 0.05, attack: 0.02 });
+      v.formant(t, d, { f1, f2, to1: f1 * rnd(0.8, 1.2), to2: f2 * rnd(0.8, 1.2), q: 6, gain: 0.45, attack: 0.02 });
       t += d + rnd(0.02, 0.1);
     }
   },
   /** Laughter across the square: ha-ha-ha. */
-  laugh(v) { for (let i = 0; i < 4; i++) v.formant(i * 0.13, 0.09, { f1: 750, f2: 1250, q: 6, gain: 0.04 * (1 - i * 0.15), attack: 0.01 }); },
+  laugh(v) { for (let i = 0; i < 4; i++) v.formant(i * 0.13, 0.09, { f1: 750, f2: 1250, q: 5, gain: 0.35 * (1 - i * 0.15), attack: 0.01 }); },
   /** A hammer on an anvil (or a cooper at a barrel). */
   clink(v) { for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) v.ring(i * rnd(0.35, 0.5), rnd(1200, 1700), 0.25, 0.02, [1, 2.4, 3.9]); },
   /** A dog barking. */
-  dog(v) { for (let i = 0; i < 1 + Math.floor(Math.random() * 3); i++) v.formant(i * 0.32, 0.12, { f1: 650, f2: 1300, to1: 450, to2: 1000, q: 4, gain: 0.07, attack: 0.008 }); },
+  dog(v) { for (let i = 0; i < 1 + Math.floor(Math.random() * 3); i++) v.formant(i * 0.32, 0.12, { f1: 650, f2: 1300, to1: 450, to2: 1000, q: 4, gain: 0.5, attack: 0.008 }); },
   /** A Sea King's moan, far down. */
   moan(v) { v.formant(0, 2.5, { f1: 160, f2: 420, to1: 120, to2: 300, q: 5, gain: 0.12, attack: 0.8, color: 'brown' }); v.tone(0, 2.5, { freq: 55, to: 42, type: 'sawtooth', gain: 0.03, attack: 0.8, curve: 'lin' }); },
   /** Whale song. */
@@ -128,13 +128,13 @@ const SPOTS = {
   /** A drip into a pool, in a cave or a cell. */
   drip(v) { v.bubble(0, { f: rnd(1300, 2200), rise: 1.6, dur: 0.05, gain: 0.04 }); },
   /** Chains, far off (Impel Down). */
-  chains(v) { for (let i = 0; i < 6; i++) v.ring(i * rnd(0.05, 0.1), rnd(900, 1500), 0.15, 0.01, [1, 2.7]); },
+  chains(v) { for (let i = 0; i < 6; i++) v.ring(i * rnd(0.05, 0.1), rnd(900, 1500), 0.15, 0.025, [1, 2.7]); },
   /** Bubbles rising past you. */
   bubbles(v) { v.bubbles(0, 0.6, 6, { f: 500, spread: 0.9, gain: 0.03 }); },
   /** A burst of crackling embers. */
-  embers(v) { v.crackle(0, 0.5, 8, { freq: 2600, gain: 0.04 }); },
+  embers(v) { v.crackle(0, 0.5, 8, { freq: 2600, gain: 0.12 }); },
   /** Rain drops on something near: a few patters. */
-  drops(v) { v.crackle(0, 0.4, 6, { freq: 3500, gain: 0.03, q: 3 }); },
+  drops(v) { v.crackle(0, 0.4, 6, { freq: 3500, gain: 0.09, q: 3 }); },
   /** A wave breaking on the shore: the surge, the crash, the hiss of it running back. */
   surf(v, k) {
     const s = k.s || 1;

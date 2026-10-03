@@ -509,7 +509,7 @@ export const SFX = {
     play(v) {
       for (let i = 0; i < 5; i++) v.tone(i * 0.07 * r(), 0.08, { freq: 170 + Math.random() * 140, to: 420 + Math.random() * 200, gain: 0.12 });
       v.noise(0, 0.35, { type: 'lowpass', freq: 380, gain: 0.12 });
-      v.formant(0.1, 0.18, { f1: 400, f2: 800, q: 3, gain: 0.08, attack: 0.01 });
+      v.formant(0.1, 0.18, { f1: 400, f2: 800, q: 3, gain: 0.3, attack: 0.01 });
     },
   },
   // ---- swimming (played in time with the strokes: see foley.js)
@@ -560,7 +560,7 @@ export const SFX = {
     play(v) {
       v.noise(0, 0.22, { freq: 1500, sweep: 600, q: 0.6, gain: 0.08 });
       M.drips(v, 0.05, 0.4, 4, 0.8);
-      v.formant(0.06, 0.16, { f1: 600, f2: 1100, q: 4, gain: 0.035, attack: 0.01 });
+      v.formant(0.06, 0.16, { f1: 600, f2: 1100, q: 4, gain: 0.15, attack: 0.01 });
     },
   },
   /** A scramble up a ledge: hands slapping on, boots scraping, the clothes. */
@@ -762,7 +762,7 @@ export const SFX = {
     play(v) {
       for (const t of [0, 0.13, 0.24]) { v.noise(t, 0.07, { freq: rnd(900, 1400), q: 1.2, gain: 0.16 }); v.crackle(t, 0.05, 3, { freq: 2600, gain: 0.04 }); }
       v.tone(0.4, 0.12, { freq: 300, to: 120, gain: 0.08 });
-      v.formant(0.4, 0.1, { f1: 300, f2: 700, q: 3, gain: 0.04, attack: 0.01 });
+      v.formant(0.4, 0.1, { f1: 300, f2: 700, q: 3, gain: 0.15, attack: 0.01 });
     },
   },
   /** CHOMP: teeth through something crisp, a little crunch after. */
