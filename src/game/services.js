@@ -1,5 +1,6 @@
 // Town services: inns, doctors, shipwrights, shops, trainers, sparring.
 import { addToHotbar } from './hotbar.js';
+import { sigOf } from './haki.js';
 import { TRAINERS } from '../data/trainers.js';
 import { STYLES } from '../data/styles.js';
 import { SHIPS, SHIP_UPGRADES } from '../data/ships.js';
@@ -223,6 +224,26 @@ export class Services {
     g.fx.burst(g.player.x, g.player.y - 0.8, 12, { color: '#fff59d', speed: 3, g: 2, life: 0.5, kind: 'star' });
     persist(g);
     return true;
+  }
+  /**
+   * Ask a Haki master to sense Conqueror's Haki in you. It can't be taught,
+   * but they can tell: the qualities of a king (King's Disposition, revealed
+   * — it shows in the Character panel from now on), or honestly none.
+   */
+  hakiSense(tid) {
+    const g = this.game, c = this.char, t = TRAINERS[tid];
+    c.flags = c.flags || {};
+    if (c.haki.conqueror) { g.log(`${t.name}: "You already know. I felt it the moment you walked in."`, sigOf(g.player).conqueror); return 'awake'; }
+    if (c.traits.includes('conqueror')) {
+      const first = !c.flags.kingSensed;
+      c.flags.kingSensed = true;
+      g.log(`${t.name} looks at you a long moment. "You have the qualities of a king. It's asleep in you yet — it will wake the day your will is truly tested. Don't go looking for that day."`, '#ffd54f');
+      if (first) g.ui?.toast("KING'S DISPOSITION", 'A Haki master has sensed the qualities of a king in you.', '#ffd54f');
+      persist(g);
+      return 'king';
+    }
+    g.log(`${t.name}: "I sense nothing of the kind in you, and I won't pretend otherwise. One in millions is born with it — and most of the strongest people alive never were. Armament and Observation are no less."`, '#b0bec5');
+    return 'none';
   }
   hakiTrainPrice(type) { return Math.round((2000 + (this.char.haki[type] || 0) * 1500) * (type === 'conqueror' ? 2 : 1)); }
   hakiTrain(tid, type) {
