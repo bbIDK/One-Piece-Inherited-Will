@@ -967,8 +967,10 @@ export class Renderer3D {
     }
     const faded = fadeWarmUp();
     zoo.add(faded);
-    // (the effects layer's batches too, hidden while empty)
+    // (the effects layer's batches too, hidden while empty, and the weather's rain, snow, sand, mist and lightning)
     this.vfx.warmBegin();
+    this.precip?.warm(true);
+    this.mist?.warm(true);
     // (the ships' materials aren't disposed: that would drop the compiled shaders again)
     try {
       if (this.parallelCompile) {
@@ -980,6 +982,8 @@ export class Renderer3D {
       }
     } catch (e) { console.warn('shader warm-up failed', e); }
     this.vfx.warmEnd();
+    this.precip?.warm(false);
+    this.mist?.warm(false);
     faded.userData.spare();
   }
 

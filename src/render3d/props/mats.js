@@ -11,6 +11,7 @@
 // the shared uniforms and the animated props (flags, windmills, fires…).
 import * as THREE from 'three';
 import { toonGradient } from '../materials.js';
+import { FOG } from '../fog.js';
 import { registerFrameHook } from '../registry.js';
 
 export const U = {
@@ -75,6 +76,8 @@ function toonMat(opts, fade) {
   const sway = !!opts.sway;
   const uFade = fade ? { value: 1 } : null;
   m.onBeforeCompile = (sh) => {
+    // (the world's haze and the weather's mists, like everything else: fog.js)
+    Object.assign(sh.uniforms, FOG);
     sh.uniforms.uTime = U.time;
     sh.uniforms.uNight = U.night;
     sh.uniforms.uWind = U.wind;
