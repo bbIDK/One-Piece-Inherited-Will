@@ -3,27 +3,45 @@
 // noise the effects are carved from and the echoes they ring in are generated
 // once, when the sound first comes on.
 //
-//   effects ── sfx bus ───────────────┐
-//   beds ───── ambience bus ── shelter ┤── muffle (under water) ── clipper ── speakers
-//   music ──── music bus ── duck ──────┘                              │
-//   menus ──── ui bus ──────────────────────────────────────────────────┘ (never muffled)
+//   yours ─── sfx bus ─────────────────────────┐
+//   others ── npc bus ── duck ─────────────────┤
+//   beds ──── ambience bus ── duck ── shelter ─┤── muffle (under water) ── limiter ── clipper ── speakers
+//   music ─── music bus ── duck ───────────────┘                                  │
+//   menus ─── ui bus ──────────────────────────────────────────────────────────────┘ (never muffled)
+//
+// The mix has a pecking order, as a game's must (the loudest, most important
+// thing is the one you hear; HDR audio in Frostbite and Wwise): your own
+// actions and the blows of your fight on top; other people's below; the music
+// under them; the beds at the bottom. A blow, an impact or an ability dips the
+// beds (and the music and the others a little) for a moment — a side-chain
+// duck, down in a hundredth of a second, back up over a third — so its crack
+// and its weight get through, and a flurry holds them down instead of pumping.
 //
 // Each effect is a voice (see synth.js): a little chain of oscillators and
-// filtered noise with one gain at its end. The mixer counts them, and when it
-// is full a new sound either takes the place of a quieter, less important
-// one (faded out over a few milliseconds, never cut) or isn't played at all.
+// filtered noise with one gain at its end. Each kind of sound (blows, moves,
+// abilities, foley, the world's) has its own share of the voices, so a storm's
+// creaks can never crowd out a punch: when a share is full the least important
+// of that kind makes way (faded out over a few milliseconds, never cut), and a
+// landed blow is never refused — at worst an older blow's tail makes room.
 import { Voice } from './synth.js';
 
-// how many effects may sound at once (a phone gets fewer)
-const CAP = { sfx: 26, amb: 10, ui: 6 };
-const CAP_LOW = { sfx: 16, amb: 6, ui: 4 };
+// how many voices each bus may have at once, and each kind of effect (a phone gets fewer)
+const CAP = { sfx: 28, npc: 10, amb: 12, ui: 6 };
+const CAP_LOW = { sfx: 18, npc: 6, amb: 7, ui: 4 };
+const KIND = { hit: 9, tech: 6, move: 6, foley: 6, world: 5 };
+const KIND_LOW = { hit: 6, tech: 4, move: 4, foley: 4, world: 3 };
+// a blow's first moments are its own: nothing may take its voice before this (seconds)
+const HIT_GUARD = 0.14;
 // the soft clipper's reach: input up to ±1.4 is rounded into ±0.98
 const CLIP_HEAD = 1.4, CEIL = 0.98;
+// the limiter: catches pile-ups a few dB under the clipper, lets go gently (no pumping)
+const LIM = { threshold: -6, knee: 4, ratio: 14, attack: 0.002, release: 0.28 };
 
 export class Engine {
   constructor(ctx, { low = false } = {}) {
     this.ctx = ctx;
     this.cap = low ? CAP_LOW : CAP;
+    this.kindCap = low ? KIND_LOW : KIND;
     const c = ctx;
     // the last stop: a soft clipper that leaves everything below about 0.7
     // alone and rounds off what would otherwise clip (the shaper reads its
@@ -33,24 +51,39 @@ export class Engine {
     // (no oversampling here: its filter rings past the ceiling on the very peaks it's there to catch)
     this.clip.oversample = 'none';
     this.clip.connect(c.destination);
-    this.master = c.createGain(); this.master.gain.value = 1 / CLIP_HEAD;
-    this.master.connect(this.clip);
+    // before it, a limiter (a compressor at a high ratio with a fast attack and
+    // a slow, smooth release); its automatic make-up gain is taken back off
+    // first, so below its threshold the mix passes through untouched
+    this.limiter = c.createDynamicsCompressor ? c.createDynamicsCompressor() : null;
+    const head = c.createGain(); head.gain.value = 1 / CLIP_HEAD;
+    if (this.limiter) {
+      for (const k of Object.keys(LIM)) this.limiter[k].value = LIM[k];
+      head.gain.value = 1 / (CLIP_HEAD * makeup(LIM));
+      head.connect(this.limiter); this.limiter.connect(this.clip);
+    } else head.connect(this.clip);
+    this.master = c.createGain();
+    this.master.connect(head);
     // under water the whole mix goes dull (see setMuffle)
     this.muffle = c.createBiquadFilter();
     this.muffle.type = 'lowpass'; this.muffle.frequency.value = 20000; this.muffle.Q.value = 0.6;
     this.muffle.connect(this.master);
+    // your own sounds; other people's (ducked under yours)
     this.sfx = c.createGain(); this.sfx.connect(this.muffle);
+    this.npcDuck = c.createGain(); this.npcDuck.connect(this.muffle);
+    this.npc = c.createGain(); this.npc.connect(this.npcDuck);
     // the beds have a shelter of their own: indoors, or below decks, the sea and the rain outside go muffled
     this.shelter = c.createBiquadFilter();
     this.shelter.type = 'lowpass'; this.shelter.frequency.value = 20000; this.shelter.Q.value = 0.5;
     this.shelter.connect(this.muffle);
-    this.amb = c.createGain(); this.amb.connect(this.shelter);
+    this.ambDuck = c.createGain(); this.ambDuck.connect(this.shelter);
+    this.amb = c.createGain(); this.amb.connect(this.ambDuck);
     this.music = c.createGain();
     this.duckGain = c.createGain();
     this.music.connect(this.duckGain); this.duckGain.connect(this.muffle);
     this.ui = c.createGain(); this.ui.connect(this.master);
-    this.voices = { sfx: [], amb: [], ui: [] };
+    this.voices = { sfx: [], npc: [], amb: [], ui: [] };
     this.rr = {}; // round-robin counters by sound
+    this.ducks = new Map();
     this.makeNoise();
     this.makeRooms();
   }
@@ -60,7 +93,7 @@ export class Engine {
   /** Volumes from the settings: effects (and the beds with them), and music (`sec` 0: at once). */
   setVolumes(sfx, music, sec = 0.05) {
     const t = this.now();
-    for (const [p, v] of [[this.sfx.gain, sfx * 0.6], [this.amb.gain, sfx * 0.3], [this.ui.gain, sfx * 0.6], [this.music.gain, music * 0.28]]) {
+    for (const [p, v] of [[this.sfx.gain, sfx * 0.6], [this.npc.gain, sfx * 0.5], [this.amb.gain, sfx * 0.3], [this.ui.gain, sfx * 0.6], [this.music.gain, music * 0.28]]) {
       if (sec > 0) ramp(p, v, t, sec); else { p.cancelScheduledValues(t); p.setValueAtTime(v, t); }
     }
   }
@@ -93,16 +126,44 @@ export class Engine {
    * down by `depth` (0..1) almost at once, back over `release` seconds.
    */
   duck(depth = 0.35, hold = 0.12, release = 0.7) {
-    const g = this.duckGain.gain, t = this.now();
-    const to = Math.max(0.2, 1 - depth);
-    // (a deeper duck already under way isn't made shallower)
-    if (this.duckUntil > t && this.duckTo <= to) return;
-    this.duckUntil = t + hold + release; this.duckTo = to;
-    g.cancelScheduledValues(t);
-    g.setValueAtTime(g.value, t);
-    g.linearRampToValueAtTime(to, t + 0.03);
-    g.setValueAtTime(to, t + 0.03 + hold);
-    g.linearRampToValueAtTime(1, t + 0.03 + hold + release);
+    this.dip(this.duckGain.gain, Math.max(0.2, 1 - depth), 0.03, hold, release);
+  }
+
+  /**
+   * The side-chain: a blow, an impact or an ability of `k` (0..1, how big)
+   * dips the beds (to about −8 dB at the biggest), others' sounds (−5 dB) and
+   * the music (−3 dB) — in at once, held through the hit, back up smoothly.
+   * Overlapping dips don't stack: the deepest wins and the latest holds.
+   */
+  sidechain(k = 0.5, hold = 0.12) {
+    if (!(k > 0.01)) return;
+    k = Math.min(1, k);
+    const rel = 0.3 + 0.35 * k;
+    this.dip(this.ambDuck.gain, 1 - 0.6 * k, 0.012, hold, rel);
+    this.dip(this.npcDuck.gain, 1 - 0.45 * k, 0.012, hold, rel);
+    this.dip(this.duckGain.gain, 1 - 0.3 * k, 0.02, hold, rel + 0.2);
+  }
+
+  /**
+   * Bring gain `p` down to `to` in `att`, hold it `hold`, and let it back up to
+   * 1 over about `rel`. A dip coming while another holds or lets go never
+   * bobs the level up and down: it carries on from where the level is (or goes
+   * deeper) and holds a little longer — a flurry keeps the beds down.
+   */
+  dip(p, to, att, hold, rel) {
+    const t = this.now();
+    let d = this.ducks.get(p);
+    if (!d) this.ducks.set(p, d = { to: 1, until: 0, rel: 0.3 });
+    // (where the level is now: held down, or on its way back up)
+    const cur = t < d.until ? d.to : 1 - (1 - d.to) * Math.exp(-(t - d.until) / (d.rel / 4));
+    if (cur < 0.995) { to = Math.min(to, cur); hold += 0.08; }
+    const until = t + att + hold;
+    if (t < d.until && to >= d.to && until <= d.until) return;
+    d.to = to; d.until = Math.max(until, d.until); d.rel = rel;
+    if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t);
+    else { p.cancelScheduledValues(t); p.setValueAtTime(p.value, t); }
+    p.setTargetAtTime(to, t, att / 3);
+    p.setTargetAtTime(1, d.until, rel / 4);
   }
 
   // ------------------------------------------------------------ the material
@@ -158,27 +219,30 @@ export class Engine {
 
   // ------------------------------------------------------------ voices
   /**
-   * A new voice on `bus` ('sfx', 'amb' or 'ui'): `vol` its level, `pan` −1..1,
-   * `lp` a low-pass for a sound far off (the air takes the top off it), `send`
-   * how much rings in the room, `drive` grit through the soft clipper. `prio`
-   * says how much it matters (a blow on you beats one across the harbour) and
-   * `max` how many of the same sound may overlap. Null: the mix is full.
+   * A new voice on `bus` ('sfx' your own, 'npc' others', 'amb' or 'ui'): `vol`
+   * its level, `pan` −1..1, `lp` a low-pass for a sound far off (the air takes
+   * the top off it), `send` how much rings in the room, `drive` grit through the
+   * soft clipper. `kind` is what sort of sound it is (hit, tech, move, foley,
+   * world: each has its share of the voices), `prio` how much it matters (a blow
+   * on you beats one across the harbour) and `max` how many of the same sound
+   * may overlap. Null: there's no room for it (never so for a blow).
    */
-  open(name, { bus = 'sfx', vol = 1, pan = 0, lp = 0, send = 0, drive: drv = 0, prio = 5, max = 4, at = null } = {}) {
+  open(name, { bus = 'sfx', vol = 1, pan = 0, lp = 0, send = 0, drive: drv = 0, prio = 5, max = 4, at = null, kind = 'foley' } = {}) {
     const c = this.ctx, t = at ?? this.now();
     const list = this.voices[bus];
     // (forget the ones that have finished)
     for (let i = list.length - 1; i >= 0; i--) if (list[i].end < t) list.splice(i, 1);
+    const hit = kind === 'hit';
     let same = 0, oldest = null;
     for (const v of list) if (v.name === name) { same++; if (!oldest || v.t0 < oldest.t0) oldest = v; }
-    if (same >= max && oldest) this.steal(oldest, t, list);
-    if (list.length >= this.cap[bus]) {
-      // the least important (and, among equals, the quietest) makes way — or the new one isn't heard
-      let worst = null;
-      for (const v of list) if (!worst || v.prio < worst.prio || (v.prio === worst.prio && v.vol < worst.vol)) worst = v;
-      if (!worst || worst.prio > prio || (worst.prio === prio && worst.vol > vol)) return null;
-      this.steal(worst, t, list);
+    if (same >= max && oldest && this.mayTake(oldest, hit, prio, vol, t, true)) this.steal(oldest, t, list);
+    // its kind's share full: the least of that kind makes way; the bus full: the least of all
+    const kc = bus === 'sfx' || bus === 'npc' ? this.kindCap[kind] : 0;
+    if (kc) {
+      let n = 0; for (const v of list) if (v.kind === kind) n++;
+      if (n >= kc && !this.makeRoom(list, t, hit, prio, vol, (v) => v.kind === kind) && !hit) return null;
     }
+    if (list.length >= this.cap[bus] && !this.makeRoom(list, t, hit, prio, vol) && !(hit && list.length < this.cap[bus] + 6)) return null;
     const out = c.createGain();
     out.gain.value = vol;
     let tail = out;
@@ -202,8 +266,35 @@ export class Engine {
       input = pre;
     }
     const v = new Voice(this, input, t, { name, prio, vol, out });
+    v.kind = kind;
     list.push(v);
     return v;
+  }
+
+  /**
+   * May a newcomer (a blow or not, of `prio` and `vol`) take voice `v`? Never
+   * a blow's first moments; never a blow at all for anything but another blow;
+   * otherwise only one less important (or as important and quieter) — or, for
+   * the same sound overlapping itself, an older one.
+   */
+  mayTake(v, hit, prio, vol, t, same = false) {
+    if (v.kind === 'hit' && (!hit || t - v.t0 < HIT_GUARD)) return false;
+    if (same || (hit && v.kind === 'hit')) return true;
+    return v.prio < prio || (v.prio === prio && v.vol <= vol);
+  }
+
+  /** Steal the least important voice (of those `which` allows) that the newcomer may take; false if there's none. */
+  makeRoom(list, t, hit, prio, vol, which = null) {
+    let worst = null;
+    for (const v of list) {
+      if (which && !which(v)) continue;
+      if (!this.mayTake(v, hit, prio, vol, t)) continue;
+      // (the least important first; among equals the quietest, then the oldest)
+      if (!worst || v.prio < worst.prio || (v.prio === worst.prio && (v.vol < worst.vol - 1e-6 || (Math.abs(v.vol - worst.vol) < 1e-6 && v.t0 < worst.t0)))) worst = v;
+    }
+    if (!worst) return false;
+    this.steal(worst, t, list);
+    return true;
   }
 
   /** Fade a voice out in a few milliseconds (no click) and let it go. */
@@ -249,6 +340,27 @@ export function ramp(p, v, t, sec) {
   p.cancelScheduledValues(t);
   p.setValueAtTime(p.value, t);
   p.linearRampToValueAtTime(v, t + Math.max(0.005, sec));
+}
+
+/**
+ * The make-up gain a WebAudio compressor adds by itself, worked out as the
+ * browsers do (WebKit's kernel, in Chrome, Safari and Firefox alike: the
+ * inverse of its gain at full scale through its knee and ratio, to the power
+ * 0.6), so that it can be taken back off and quiet sounds pass untouched.
+ */
+export function makeup({ threshold, knee, ratio }) {
+  const lin = (db) => Math.pow(10, db / 20), dbOf = (x) => 20 * Math.log10(x);
+  const t0 = lin(threshold);
+  const kneeCurve = (x, k) => (x < t0 ? x : t0 + (1 - Math.exp(-k * (x - t0))) / k);
+  const slopeAt = (x, k) => (x < t0 ? 1 : (dbOf(kneeCurve(x * 1.001, k)) - dbOf(kneeCurve(x, k))) / (dbOf(x * 1.001) - dbOf(x)));
+  // (the knee's sharpness that meets the ratio at its top: a bisection, fifteen steps)
+  const xk = lin(threshold + knee);
+  let lo = 0.1, hi = 10000, k = 5;
+  for (let i = 0; i < 15; i++) { if (slopeAt(xk, k) < 1 / ratio) hi = k; else lo = k; k = Math.sqrt(lo * hi); }
+  const yk = dbOf(kneeCurve(xk, k));
+  // (full scale: past the knee, the ratio; inside it, the knee)
+  const full = xk <= 1 ? lin(yk + (0 - (threshold + knee)) / ratio) : kneeCurve(1, k);
+  return Math.pow(1 / full, 0.6);
 }
 
 /** A stereo impulse response: noise shaped by `env(t)` (a little different in each ear). */

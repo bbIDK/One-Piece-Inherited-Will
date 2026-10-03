@@ -52,7 +52,7 @@ export class Voice {
    * Filtered noise: `color` white/pink/brown, through a `type` filter at
    * `freq` (sweeping to `sweep`), shaped by an attack, a hold and a decay.
    */
-  noise(dt, dur, { color = 'white', type = 'bandpass', freq = 1000, q = 1, sweep, gain = 0.5, attack = 0.005, hold = 0, curve = 'exp', dest, rate = 1 } = {}) {
+  noise(dt, dur, { color = 'white', type = 'bandpass', freq = 1000, q = 1, sweep, gain = 0.5, attack = 0.005, hold = 0, curve = 'exp', dest, rate = 1, am } = {}) {
     const c = this.c, t = this.at(dt);
     const src = c.createBufferSource();
     src.buffer = this.E.noiseBuf(color);
@@ -63,7 +63,14 @@ export class Voice {
     if (sweep) f.frequency.exponentialRampToValueAtTime(minF(sweep * this.pj), t + dur);
     const g = c.createGain();
     env(g.gain, t, attack, hold, dur, gain, curve);
-    src.connect(f); f.connect(g); g.connect(dest || this.in);
+    src.connect(f); f.connect(g);
+    if (am) {
+      // (pulsing: an insect's chirrup, a flag's flap — the level beating at `am.rate`, `am.depth` deep)
+      const m = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+      m.gain.value = 1 - am.depth / 2; lfo.type = am.type || 'sine'; lfo.frequency.value = am.rate * this.pj; lg.gain.value = am.depth / 2;
+      lfo.connect(lg); lg.connect(m.gain); g.connect(m); m.connect(dest || this.in);
+      lfo.start(t); lfo.stop(t + dur + 0.05);
+    } else g.connect(dest || this.in);
     src.start(t, Math.random() * 1.9); src.stop(t + dur + 0.05);
     this.done(t + dur + 0.05);
     return g;
@@ -123,7 +130,7 @@ export class Voice {
     f.type = 'bandpass'; f.Q.value = q;
     f.frequency.setValueAtTime(minF(f0 * this.pj), t);
     f.frequency.exponentialRampToValueAtTime(minF(f1 * this.pj), t + dur);
-    const g = c.createGain();
+    const g = c.createGain(); g.gain.value = 0;
     const p = Math.max(0.01, dur * peak);
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(gain, t + p);
@@ -164,6 +171,7 @@ export class Voice {
     if (rate1) src.playbackRate.linearRampToValueAtTime(rate1 / 90, t + dur);
     // (the resonances pass only a sliver of each click: made up here so `gain` is about the peak heard)
     const g = c.createGain(), mk = 18;
+    g.gain.value = 0;
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(gain * mk, t + dur * attack);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -184,7 +192,7 @@ export class Voice {
   zap(dt, dur, { f0 = 70, f1 = 600, gain = 0.12, step = 0.012, type = 'square', hp = 300, dest } = {}) {
     const c = this.c, t = this.at(dt);
     const o = c.createOscillator(); o.type = type;
-    const g = c.createGain();
+    const g = c.createGain(); g.gain.value = 0;
     const h = c.createBiquadFilter(); h.type = 'highpass'; h.frequency.value = hp;
     g.gain.setValueAtTime(0.0001, t);
     for (let k = 0; k * step < dur; k++) {
@@ -228,13 +236,59 @@ export class Voice {
       m.frequency.value = warble; mg.gain.value = f0 * 0.06;
       m.connect(mg); mg.connect(o.frequency); m.start(t); m.stop(t + dur + 0.02);
     }
-    const g = c.createGain();
+    const g = c.createGain(); g.gain.value = 0;
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(gain, t + dur * 0.3);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g); g.connect(dest || this.in);
     o.start(t); o.stop(t + dur + 0.03);
     this.done(t + dur + 0.03);
+  }
+
+  /**
+   * A voice across the street: a throat buzzing at `f0` (sliding to `to0`, as
+   * speech does) through two vowel formants (`f1`, `f2`, sliding too) — a
+   * voiced syllable, not a whisper.
+   */
+  vox(dt, dur, { f0 = 150, to0, f1 = 600, f2 = 1300, to1, to2, q = 6, gain = 0.1, attack = 0.03, dest } = {}) {
+    const c = this.c, t = this.at(dt);
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(minF(f0 * this.pj), t);
+    if (to0) o.frequency.linearRampToValueAtTime(minF(to0 * this.pj), t + dur);
+    const g = c.createGain();
+    env(g.gain, t, attack, dur * 0.25, dur, gain, 'lin');
+    for (const [a, b, w] of [[f1, to1, 1], [f2, to2, 0.55]]) {
+      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = q;
+      f.frequency.setValueAtTime(minF(a * this.pj), t);
+      if (b) f.frequency.linearRampToValueAtTime(minF(b * this.pj), t + dur);
+      const fg = c.createGain(); fg.gain.value = w;
+      o.connect(f); f.connect(fg); fg.connect(g);
+    }
+    g.connect(dest || this.in);
+    o.start(t); o.stop(t + dur + 0.05);
+    this.done(t + dur + 0.05);
+  }
+
+  /**
+   * A swirl (the anime's "shing" of hardening steel): noise through a comb
+   * whose tooth spacing sweeps (a flanger — a short delay fed back on itself,
+   * its time gliding `d0` → `d1` → `d2` ms), so the colour sweeps in arcs.
+   */
+  swirl(dt, dur, { color = 'white', lp = 9000, hp = 300, d0 = 0.6, d1 = 5, d2 = 1.5, fb = 0.75, gain = 0.1, attack = 0.004, hold = 0, dest } = {}) {
+    const c = this.c, t = this.at(dt);
+    const src = c.createBufferSource(); src.buffer = this.E.noiseBuf(color); src.loop = true;
+    const h = c.createBiquadFilter(); h.type = 'highpass'; h.frequency.value = hp;
+    const l = c.createBiquadFilter(); l.type = 'lowpass'; l.frequency.value = lp;
+    const d = c.createDelay(0.05), fg = c.createGain(), mix = c.createGain(), g = c.createGain();
+    d.delayTime.setValueAtTime(d0 / 1000, t);
+    d.delayTime.linearRampToValueAtTime(d1 / 1000 / this.pj, t + dur * 0.45);
+    d.delayTime.linearRampToValueAtTime(d2 / 1000, t + dur);
+    fg.gain.value = fb;
+    src.connect(h); h.connect(l); l.connect(mix); l.connect(d); d.connect(fg); fg.connect(d); d.connect(mix);
+    env(g.gain, t, attack, hold, dur, gain, 'exp');
+    mix.connect(g); g.connect(dest || this.in);
+    src.start(t, Math.random() * 1.9); src.stop(t + dur + 0.05);
+    this.done(t + dur + 0.08);
   }
 
   /** Breath, or a voice far off: noise through two vowel formants (`f1`, `f2`), which may slide. */
@@ -258,6 +312,9 @@ export class Voice {
 /** An envelope on gain `p`: up in `attack` (exponential or linear), held, then down to nothing by `dur`. */
 export function env(p, t, attack, hold, dur, gain, curve = 'exp') {
   const a = Math.max(0.0008, Math.min(attack, dur * 0.9));
+  // (silent until it starts: a gain's default is 1, and a source starting between
+  // two samples can slip one frame out before the envelope's first event — a click)
+  p.value = 0;
   p.setValueAtTime(0.0001, t);
   if (curve === 'lin') p.linearRampToValueAtTime(gain, t + a);
   else p.exponentialRampToValueAtTime(Math.max(0.00011, gain), t + a);

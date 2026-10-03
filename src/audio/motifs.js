@@ -10,12 +10,19 @@
 // crackles as it forms (PAKIN), Kizaru's light whines up and goes PYUN.
 const rnd = (a, b) => a + Math.random() * (b - a);
 
-/** A flame catching and roaring: ignition, a fluttering roar, embers popping. */
+/**
+ * A flame catching and roaring, as fire is recorded: the low FWOOMP of the
+ * air catching (its energy at 60–150 Hz, not up in the hiss), the roar
+ * fluttering as the flame flickers, the rush of it, embers crackling on top.
+ */
 export function flame(v, t, s = 1, { dur = 0.5, low = 380, high = 1400 } = {}) {
-  v.whoosh(t, 0.12 * s + 0.04, { f0: 380, f1: 2200, q: 0.8, gain: 0.14 * s });
-  v.whoosh(t + 0.02, dur * s, { f0: high, f1: low * 1.3, q: 0.6, gain: 0.26 * Math.sqrt(s), peak: 0.15, flutter: rnd(11, 16) });
-  v.whoosh(t + 0.02, dur * s * 0.8, { f0: high * 0.6, f1: low, q: 0.6, gain: 0.14 * Math.sqrt(s), peak: 0.2, flutter: rnd(8, 12), color: 'pink' });
-  v.crackle(t + 0.03, dur * s * 0.9, Math.round(10 * s), { freq: 2400, gain: 0.05, q: 3 });
+  const q = Math.sqrt(s), L = dur * s;
+  v.thump(t, { f0: 95, f1: 42, dur: 0.18 * q + 0.08, gain: 0.3 * q });
+  v.noise(t, L + 0.12, { color: 'brown', type: 'lowpass', freq: 280, sweep: 140, gain: 0.5 * q, attack: 0.03, am: { rate: rnd(8, 13), depth: 0.45 } });
+  v.noise(t + 0.01, L, { color: 'pink', type: 'lowpass', freq: 1200, sweep: 450, gain: 0.42 * q, attack: 0.03, am: { rate: rnd(11, 16), depth: 0.5 } });
+  v.whoosh(t, 0.1 * s + 0.12, { f0: low, f1: high, q: 0.7, gain: 0.24 * s, peak: 0.3, color: 'pink' });
+  v.crackle(t + 0.04, L * 0.9, Math.round(10 * s), { freq: 2600, gain: 0.06, q: 3 });
+  v.noise(t + 0.03, L * 0.8, { type: 'highpass', freq: 5000, gain: 0.02, attack: 0.05 });
 }
 
 /** Magma: a heavy roar, thick low bubbles, the sizzle of what it touches (JUUU). */
@@ -27,30 +34,66 @@ export function lava(v, t, s = 1, dur = 0.6) {
   v.crackle(t + 0.05, dur * s * 0.9, Math.round(12 * s), { freq: 3200, gain: 0.025, q: 3 });
 }
 
-/** Ice forming and cracking: a sharp crack, crackling "pakiki", a crystal ring. */
-export function ice(v, t, s = 1, spreadDur = 0.3) {
-  v.noise(t, 0.015, { type: 'highpass', freq: 5200, gain: 0.34 * s, attack: 0.0008 });
-  // (more pops at first, thinning out as the ice spreads)
-  for (let i = 0; i < Math.round(14 * s); i++) {
+/**
+ * Ice forming and cracking (PAKIN), as ice breaking is recorded: a hard
+ * crack and a crunch of crystals under it, then the freeze spreading — a
+ * crackle dense at first and thinning out ("pakiki"), a frosty hiss — and a
+ * crystal ring over it.
+ */
+export function ice(v, t, s = 1, spreadDur = 0.35) {
+  v.noise(t, 0.012, { type: 'highpass', freq: 1500, gain: 0.95 * s, attack: 0.0006 });
+  v.noise(t + 0.002, 0.08, { freq: 2600, q: 0.8, gain: 0.6 * s, attack: 0.002 });
+  // (the crunch has a body: a recording of ice breaking is as strong at 500 Hz–1 kHz as up top)
+  v.noise(t + 0.002, 0.1, { freq: 850, q: 0.9, gain: 0.85 * s, attack: 0.002 });
+  v.crackle(t + 0.01, 0.12, Math.round(8 * s), { freq: 1100, spread: 0.8, q: 2, gain: 0.2 * s });
+  v.thump(t, { f0: 190, f1: 95, dur: 0.07, gain: 0.25 * s });
+  // (more breaks at first, fewer as the ice spreads)
+  for (let i = 0; i < Math.round(22 * s); i++) {
     const k = Math.pow(Math.random(), 1.8);
-    v.noise(t + k * spreadDur * s, 0.008 + Math.random() * 0.012, { freq: rnd(4500, 8500), q: 4, gain: 0.07 * (1 - k * 0.6), attack: 0.0008 });
+    v.noise(t + k * spreadDur * s, 0.006 + Math.random() * 0.01, { freq: rnd(2500, 8000), q: 3, gain: 0.13 * (1 - k * 0.6) * s, attack: 0.0006 });
   }
-  v.ring(t + 0.002, rnd(2250, 2600), 0.5 * s, 0.055, [1, 1.34, 1.87, 2.51]);
-  v.fm(t + 0.004, 0.4 * s, { freq: rnd(3100, 3500), ratio: 1.73, index: 1.2, gain: 0.018 });
+  v.noise(t + 0.01, spreadDur * s + 0.25, { type: 'highpass', freq: 4200, gain: 0.06 * s, attack: 0.05, curve: 'lin' });
+  v.ring(t + 0.003, rnd(2250, 2600), 0.45 * s, 0.05, [1, 1.34, 1.87, 2.51]);
+  v.fm(t + 0.004, 0.4 * s, { freq: rnd(3100, 3500), ratio: 1.73, index: 1.2, gain: 0.015 });
 }
 
-/** Electricity: the crack, the buzz jumping about, the hiss, a rumble under it (BZZZT, GORO GORO). */
+/**
+ * Electricity: the crack of a discharge and its sparks spitting, the buzz
+ * jumping about, the hiss, a thump of air (BZZZT).
+ */
 export function zapBurst(v, t, s = 1, dur = 0.3) {
-  v.noise(t, 0.012, { type: 'highpass', freq: 2500, gain: 0.5 * s, attack: 0.0006 });
-  v.zap(t, dur * s, { f0: 70, f1: 800, gain: 0.11 * s, step: 0.01 });
-  v.zap(t + 0.01, dur * 0.8 * s, { f0: 900, f1: 2600, gain: 0.03 * s, step: 0.007, type: 'sawtooth', hp: 900 });
-  v.noise(t, dur * s, { type: 'highpass', freq: 4200, gain: 0.1 * s, attack: 0.003 });
+  v.noise(t, 0.008, { type: 'highpass', freq: 1500, gain: 0.6 * s, attack: 0.0005 });
+  v.crackle(t, dur * 0.5 * s, Math.round(10 * s), { freq: 3000, spread: 1, gain: 0.22 * s, q: 1.2, len: 0.006 });
+  v.zap(t, dur * s, { f0: 60, f1: 600, gain: 0.08 * s, step: 0.01 });
+  v.noise(t, dur * s, { type: 'highpass', freq: 4200, gain: 0.08 * s, attack: 0.003 });
+  v.thump(t, { f0: 120, f1: 45, dur: 0.15, gain: 0.25 * s });
 }
 
-/** Thunder rolling off: a low, uneven rumble (several rolls overlapping). */
+/**
+ * A lightning strike (Goro Goro, a thunderbolt) — not a little ping: the
+ * crack of the air torn open (a split second, broadband and loud, then a
+ * tearing crackle thinning out over a tenth of a second), the blast of it,
+ * the charge sizzling, and the thunder rolling away under it all for `roll`
+ * seconds (as a near strike is recorded: the crack, then 63–500 Hz rolling on).
+ */
+export function strike(v, t, s = 1, roll = 1.6) {
+  v.noise(t, 0.006, { type: 'highpass', freq: 1200, gain: 0.85 * s, attack: 0.0004 });
+  v.noise(t, 0.03, { freq: 3500, q: 0.6, gain: 0.45 * s, attack: 0.0006 });
+  v.crackle(t + 0.004, 0.12, Math.round(16 * s), { freq: 2600, spread: 1.2, gain: 0.4 * s, q: 0.9, len: 0.006 });
+  v.thump(t + 0.002, { f0: 115, f1: 38, dur: 0.35, gain: 0.55 * s });
+  v.noise(t + 0.002, 0.28, { color: 'pink', type: 'lowpass', freq: 1500, sweep: 220, gain: 0.38 * s });
+  v.zap(t + 0.01, 0.16 * s, { f0: 60, f1: 500, gain: 0.05 * s, step: 0.008 });
+  v.noise(t + 0.01, 0.5, { type: 'highpass', freq: 5000, gain: 0.07 * s, attack: 0.004 });
+  rumble(v, t + 0.1, s, roll, { lp: 230 });
+}
+
+/**
+ * Thunder rolling off: a low, uneven rumble — the far parts of the bolt
+ * arriving later, each roll a swell of its own (several overlapping).
+ */
 export function rumble(v, t, s = 1, dur = 0.8, { lp = 260 } = {}) {
-  v.noise(t, dur * s, { color: 'brown', type: 'lowpass', freq: lp, sweep: 70, gain: 0.4 * s, attack: 0.02 });
-  for (let i = 0; i < 2 + Math.round(s); i++) v.noise(t + rnd(0.05, dur * 0.6) * s, rnd(0.3, 0.7) * dur * s, { color: 'brown', type: 'lowpass', freq: lp * 0.8, gain: rnd(0.12, 0.3) * s, attack: 0.04 });
+  v.noise(t, dur * s, { color: 'brown', type: 'lowpass', freq: lp, sweep: lp * 0.45, gain: 0.4 * s, attack: 0.02 });
+  for (let i = 0; i < 2 + Math.round(s * 2); i++) v.noise(t + rnd(0.06, dur * 0.65) * s, rnd(0.3, 0.7) * dur * s, { color: 'brown', type: 'lowpass', freq: lp * rnd(0.7, 1.2), gain: rnd(0.14, 0.3) * s, attack: rnd(0.04, 0.16), curve: 'lin' });
 }
 
 /** The air cracking like glass (the Gura Gura no Mi): a hard crack, shards, a tinkle. */
@@ -135,6 +178,33 @@ export function chain(v, t, dur, n, s = 1) {
 /** Droplets falling back into the water. */
 export function drips(v, t, span, n, s = 1) {
   for (let i = 0; i < n; i++) v.bubble(t + Math.random() * span, { f: rnd(1500, 2900), rise: rnd(1.3, 1.9), dur: rnd(0.018, 0.035), gain: rnd(0.015, 0.035) * s });
+}
+
+/**
+ * A body going into the water, sized `s` (0.25 a step in … 1 a fall of a few
+ * metres … 1.7 off a mast), as such splashes are recorded: a slap you hear
+ * land (broadband, strongest at 125 Hz–1 kHz), the plunge rushing down into
+ * the hole torn open behind you, its collapse a deep gloop and a burst of
+ * bubbles, and the spray thrown up raining back — longer the bigger it was
+ * (half a second for a hop in, near two for a big one).
+ */
+export function plunge(v, t, s = 1) {
+  const q = Math.pow(s, 0.75);
+  // the slap of the surface
+  v.noise(t, 0.012, { type: 'highpass', freq: 700, gain: 0.6 * q, attack: 0.0008 });
+  v.noise(t, 0.06 + 0.04 * s, { freq: 700, q: 0.5, gain: 0.8 * q, attack: 0.002 });
+  v.thump(t, { f0: 150, f1: 55, dur: 0.12 + 0.1 * s, gain: 0.45 * q });
+  // the plunge: the water thrown up and rushing down into the hole behind you (it holds a while: a splash's body is half a second and more)
+  const P = 0.5 + 1.0 * s;
+  v.noise(t + 0.005, P, { color: 'pink', type: 'lowpass', freq: 2200, sweep: 300, gain: 1.4 * q, attack: 0.008, hold: P * 0.25 });
+  v.noise(t + 0.01, P * 0.8, { freq: 1300, q: 0.6, sweep: 600, gain: 0.5 * q, attack: 0.01, hold: P * 0.2 });
+  // the hole closing: a deep gloop, and its bubbles
+  v.tone(t + 0.08 + 0.06 * s, 0.14, { freq: 140 / q, to: 380 / q, gain: 0.2 * q, attack: 0.01 });
+  v.bubbles(t + 0.06, 0.3 + 0.3 * s, Math.round(6 + 12 * s), { f: 520, spread: 1, gain: 0.09 * q, dur: 0.06 });
+  // the spray raining back
+  const R = 0.3 + 1.1 * s;
+  v.noise(t + 0.12, R, { freq: 3000, q: 0.5, sweep: 2200, gain: 0.35 * q, attack: R * 0.2 });
+  for (let i = 0, n = Math.round(6 + 24 * s); i < n; i++) v.bubble(t + 0.15 + Math.pow(Math.random(), 1.4) * R, { f: rnd(1300, 3400), rise: rnd(1.3, 2), dur: rnd(0.012, 0.03), gain: rnd(0.03, 0.07) * q });
 }
 
 /** A splash: the hit of the surface, the plunge, bubbles, the spray coming down. */

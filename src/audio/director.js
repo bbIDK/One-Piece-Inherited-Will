@@ -278,7 +278,7 @@ export class Director {
       // the cymbal swelling up into the downbeat
       const src = c.createBufferSource(); src.buffer = E.white; src.loop = true;
       const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 4500;
-      const g = c.createGain();
+      const g = c.createGain(); g.gain.value = 0;
       g.gain.setValueAtTime(0.0001, Math.max(c.currentTime, at - 0.55));
       g.gain.linearRampToValueAtTime(0.05, at);
       g.gain.exponentialRampToValueAtTime(0.0001, at + 0.5);

@@ -27,6 +27,8 @@ import { hasRyou } from '../game/haki.js';
 const HITS = { punch: 1, punch_heavy: 1, slash_hit: 1, slash_heavy: 1, fire: 1, magma: 1, ice: 1, snow: 1, lightning: 1, water: 1, swamp: 1, poison: 1, gas: 1, smoke: 1, sand: 1, light: 1, dark: 1, quake: 1, string: 1, explosion: 1, haki: 1 };
 // Haki's own sounds, played in the voice of whoever's Haki it is (game/haki.js)
 const HAKI_VOICED = new Set(['haki', 'haki_obs', 'haki_off', 'haki_out', 'foresight', 'conqueror', 'conqueror_rise', 'conqueror_clash']);
+// footsteps' level among the rest (a step should sit some 15–20 dB under a punch, not 30)
+const STEP = 3.8;
 // the moves done with the legs
 const KICKS = /kick|knee|mouton|jete|arabesque|pirouette|rankyaku|concasse/;
 
@@ -167,12 +169,16 @@ export class Audio {
     if (name === 'whoosh' && at?.action?.def && at.action.t === 0) return this.tech(at);
     let def = SFX[name];
     if (HITS[name] && at && g) this.hitContext(at, k, name);
-    if (name === 'haki' && k.hit) key = 'haki_hit';
+    if (name === 'haki' && k.hit) { key = 'haki_hit'; def = { ...def, kind: 'hit' }; }
     if (HAKI_VOICED.has(name) && k.voice === undefined) k.voice = at?.hakiSig?.voice ?? 0.5;
     if (name === 'block' && at) { k.sword = !!(at.hasWeapon?.('sword') && at.drawn !== false); k.armament = !!at.armament; }
     if (name === 'parry' && at) k.perfect = !!at.parryPerfect;
     if ((name === 'jump' || name === 'jump_big' || name === 'land_heavy' || name === 'ko' || name === 'dodge') && at && at === p) k.surf = this.foley?.surf();
     if (name === 'door' && /chest/i.test(p?.controller?.interaction?.label || '')) k.chest = true;
+    // (a fruit picked off a tree: its own rustle and snap comes with the 'foraged' event — see foley.js — not a buckle's clink)
+    if (name === 'equip' && /^Pick (?!up)/.test(p?.controller?.interaction?.label || '')) return;
+    // (into the water: how hard it was hit, for the size of the splash)
+    if ((name === 'splash' || name === 'splash_big') && at && at.vz < -1 && k.v === undefined) k.v = -at.vz;
     if (name === 'equip' && p && !!p.drawn !== this.lastDrawn) {
       // (the weapon drawn or put away)
       const kind = p.weapon?.kind;
@@ -184,15 +190,19 @@ export class Audio {
     if (!def) def = { prio: 3, cd: 0.02, play: (v) => v.noise(0, 0.05, { freq: 1500, gain: 0.05 }) };
     const t = this.E.now();
     const cd = def.cd ?? 0.02;
-    if (this.last[key] && t - this.last[key] < cd) return;
+    // (a sound on one side — an oar, a foot — keeps its own time: the two oars' catches land together)
+    const cdKey = k.side ? key + ':' + k.side : key;
+    if (this.last[cdKey] && t - this.last[cdKey] < cd) return;
     const pl = def.bus === 'ui' ? { vol: 1, pan: 0, lp: 0, far: 0 } : this.place(at);
     if (!pl) return;
-    this.last[key] = t;
-    const mine = !at || at === p || at.isPlayer || at.lastHitBy === p || at.captain === p || at === p?.ship;
+    this.last[cdKey] = t;
+    // (yours — your own doing, or a blow of your fight — or someone else's: theirs sit under yours)
+    // (a foe's own swing isn't yours, even one you've hit before: only a blow of yours landing on them now is)
+    const mine = !at || at === p || at.isPlayer || at.captain === p || at === p?.ship || (!!HITS[name] && ((at.lastHitBy === p && at.lastHitT === g?.time) || (!!p?.action && pl.vol > 0.9)));
     const prio = (def.prio ?? 5) + (mine ? 2 : 0) - Math.round(pl.far * 3);
     const v = this.E.open(key, {
-      bus: def.bus || 'sfx', vol: pl.vol * (k.vol ?? 1), pan: pl.pan + (k.pan || 0), lp: pl.lp,
-      send: (def.send || 0) + pl.far * 0.2, drive: def.drive || 0, prio, max: def.max ?? 4,
+      bus: def.bus || (mine ? 'sfx' : 'npc'), vol: pl.vol * (k.vol ?? 1), pan: pl.pan + (k.pan || 0), lp: pl.lp,
+      send: (def.send || 0) + pl.far * 0.2, drive: def.drive || 0, prio, max: def.max ?? 4, kind: def.kind || 'foley',
     });
     if (!v) return;
     v.pj = 0.97 + Math.random() * 0.06;
@@ -200,7 +210,11 @@ export class Audio {
     def.play(v, k);
     if (k.fruit && FLAVOUR[k.fruit]) FLAVOUR[k.fruit](v, k);
     v.end += v.tail || 0;
-    if (def.duck) this.E.duck(def.duck * Math.min(1, pl.vol * 1.3));
+    // the side-chain: a blow of your fight (or a big moment near you) dips the beds, the others and the music under it
+    const near = Math.min(1, pl.vol * 1.3);
+    if (mine && def.kind === 'hit') this.E.sidechain((def.side ?? 0.3 + 0.35 * Math.min(1.2, k.w ?? 0.5)) * near, def.hold ?? 0.12);
+    else if (def.side) this.E.sidechain(def.side * near * (mine ? 1 : 0.6), def.hold ?? 0.12);
+    if (def.duck) this.E.duck(def.duck * near);
   }
 
   /** What landed the blow on `at`, and how: its weight, a kick, Haki, a counter, the Devil Fruit behind it. */
@@ -239,12 +253,14 @@ export class Audio {
     const speed = def.noSpeedup ? 1 : actor.atkSpeed?.() || 1;
     const rel = (at / speed) * (a.slow || 1);
     const mine = actor === p;
-    const v = this.E.open(key, { vol: pl.vol, pan: pl.pan, lp: pl.lp, send: 0.08 + pl.far * 0.2, prio: (def.fruit ? 6 : 5) + (mine ? 2 : 0) - Math.round(pl.far * 3), max: 3 });
+    const v = this.E.open(key, { bus: mine ? 'sfx' : 'npc', kind: 'tech', vol: pl.vol, pan: pl.pan, lp: pl.lp, send: 0.08 + pl.far * 0.2, prio: (def.fruit ? 6 : 5) + (mine ? 2 : 0) - Math.round(pl.far * 3), max: 3 });
     if (!v) return;
     v.pj = 0.97 + Math.random() * 0.06;
     const gun = /sling/i.test(actor.weapon?.name || '') ? 'slingshot' : null;
     try { techStart(v, def, { rel, weapon: weaponOf(actor, def), gun, heavy: /heavy/.test(def.id || ''), voice: actor.hakiSig?.voice }); } catch (e) { if (!this.warned) { this.warned = true; console.warn('tech sound', def.id, e); } }
     v.end += v.tail || 0;
+    // (your own ability: the beds make room from its wind-up through its release)
+    if (mine && (def.fruit || def.cost || /heavy/.test(def.id || ''))) this.E.sidechain(def.fruit ? 0.55 : 0.4, Math.min(1.5, rel + 0.15));
   }
 
   /**
@@ -264,7 +280,7 @@ export class Audio {
     const p = this.game?.player;
     this.foot = -this.foot;
     const hard = surface === 'wood' || surface === 'stone' || surface === 'metal' || surface === 'ice';
-    const v = this.E.open('step', { vol: pl.vol * (0.75 + 0.45 * loud), pan: pl.pan + this.foot * 0.06, lp: pl.lp, send: hard ? 0.05 : 0.015, prio: 4, max: 3 });
+    const v = this.E.open('step', { kind: 'move', vol: pl.vol * (0.75 + 0.45 * loud) * STEP, pan: pl.pan + this.foot * 0.06, lp: pl.lp, send: hard ? 0.05 : 0.015, prio: 4, max: 3 });
     if (!v) return;
     v.pj = 0.98 + Math.random() * 0.04;
     footstep(v, surface, loud, { foot: this.foot, deck: !!p?.deck, wet: this.foley?.wet() || 0 });
