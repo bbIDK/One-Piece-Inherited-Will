@@ -24,6 +24,7 @@
 //    *_slot icons are flat silhouettes meant to be shown at low opacity.
 // canvas.dataset.icon names the drawer used (handy in tests and contact sheets:
 // node tools/icons-sheet.mjs, or node tools/shot.mjs icons).
+/* global DOMMatrix */
 import { ITEMS } from '../data/items.js';
 import { FRUITS } from '../data/fruits.js';
 
@@ -2987,6 +2988,13 @@ const SKILL_MAP = {
   // Gomu
   gomu_pistol: ['stretch', { burst: '#ffd23f' }], gomu_gatling: ['multi'], gomu_rocket: ['rocket'], gomu_bazooka: ['palms', { burst: '#ffd23f' }],
   gomu_gear2: ['cog'], gomu_gear3: ['fist', { s: 1.08, x: 0, y: 2, burst: '#ffd23f', lines: false }], gomu_gear4: ['spring'], gomu_gear5: ['sun', { c: '#fbf8f0', ray: '#ffffff', face: true }],
+  gomu_whip: ['kick', { r: 0.4, x: 2, y: -2 }], gomu_gear3_on: ['fist', { s: 1.08, x: 0, y: 2, lines: false }], gomu_awaken: ['sun', { c: '#fbf8f0', ray: '#ffffff', face: true }],
+  // (the Gears: Jet, Gigant, Boundman — and Gear Fifth's Dawn)
+  gomu_jet_pistol: ['stretch', { burst: '#ff8a80' }], gomu_jet_gatling: ['multi', { burst: '#ff8a80' }], gomu_jet_rocket: ['rocket'], gomu_jet_bazooka: ['palms', { burst: '#ff8a80' }], gomu_jet_spear: ['kick', { burst: '#ff8a80' }], gomu_jet_whip: ['kick', { r: 0.4, x: 2, y: -2, burst: '#ff8a80' }],
+  gomu_gigant_pistol: ['fist', { s: 1.12, x: 0, y: 2, burst: '#ffd23f', lines: false }], gomu_elephant_gatling: ['multi', { burst: '#ffd23f' }], gomu_gigant_axe: ['kick', { r: 1.2, x: 2, y: 2, burst: '#ffd23f' }], gomu_gigant_bazooka: ['palms', { burst: '#ffd23f' }], gomu_gigant_balloon: ['impact', { c: '#f4c08a' }], gomu_gigant_stamp: ['kick', { burst: '#ffd23f' }],
+  gomu_kong_gun: ['fist', { c: BLACKFIST, burst: '#e53935', line: '#ff8a80' }], gomu_kong_organ: ['multi', { burst: '#e53935' }], gomu_rhino_schneider: ['kick', { c: BLACKFIST, burst: '#e53935' }], gomu_culverin: ['stretch', { burst: '#e53935' }], gomu_king_kong_gun: ['fist', { c: BLACKFIST, s: 1.12, x: 0, y: 2, burst: '#e53935', lines: false }], gomu_leo_bazooka: ['palms', { burst: '#e53935' }],
+  gomu_dawn_pistol: ['stretch', { burst: '#ffffff' }], gomu_dawn_gatling: ['multi', { burst: '#ffffff' }], gomu_dawn_rocket: ['rocket'], gomu_kaminari: ['bolt', { two: true }], gomu_bajrang_gun: ['sun', { c: '#fbf8f0', ray: '#ffffff' }], gomu_dawn_whip: ['kick', { r: 0.4, x: 2, y: -2, burst: '#ffffff' }],
+  ope_puncture_wille: ['beam', { c: '#81d4fa' }], mera_jujika: ['flame', { pillar: true }], mera_shiranui: ['fireballs'], hie_partisan: ['ice', { flake: true }], gura_kabutowari: ['fist', { fx: 'cracks' }], ito_nami_shiraito: ['strings', { five: true }],
   // Gura
   gura_punch: ['fist', { fx: 'cracks' }], gura_kaishin: ['cracks'], gura_wave: ['wave', { c: '#9fd9ef', fx: 'cracks' }], gura_tsunami: ['wave', { c: '#4fb3e8', fx: 'cracks' }],
   // Ope
@@ -3097,7 +3105,8 @@ function resolveSkill(def) {
   if (kind === 'fruit') badge = FRUIT_BADGE[key] || FRUITS[key]?.color || badge;
   const haki = def?.hakiType || (kind === 'haki' ? key : null);
   if (haki && HAKI_BADGE[haki]) badge = HAKI_BADGE[haki];
-  let m = SKILL_MAP[id];
+  // (an awakened move, or any made from another, looks like the one it was made from)
+  let m = SKILL_MAP[id] || (def?.base ? SKILL_MAP[def.base] : undefined);
   if (!m && haki) m = SKILL_MAP['toggle_' + haki] || SKILL_MAP.haki_conqueror;
   if (!m && kind === 'style' && /^strike$/i.test(def?.name || '')) m = STYLE_SK[key]?.[1];
   if (!m) { const r = SKILL_RULES.find(([re]) => re.test(name)); if (r) m = [r[1], r[2]]; }
@@ -3446,6 +3455,8 @@ export function skillIcon(def, size = 48) {
       I.inBadge = false;
     });
     skillFrame(I, c);
+    // (awakened: a gold rim)
+    if (def?.awakened) { const ring = new Path2D(); ring.addPath(circle(32, 32, 30.5)); ring.addPath(circle(32, 32, 27.6)); part(I, ring, '#f2c14e', { rule: 'evenodd', sd: 0.6, hd: 0.8, hi: '#fff3c4', sh: '#9a6b12', ol: I.ol }); }
   }, { tag: r.motif, halo: false });
 }
 

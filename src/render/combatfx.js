@@ -526,17 +526,29 @@ export function parryCueFx(fx, at, breaks, k = 1) {
  */
 export function techFx(fx, actor, s, a, kind, extra = {}) {
   const def = (a && a.def) || {};
-  const f = SIG[def.id] && SIG[def.id][kind];
+  const sg = sigFor(def);
+  const f = sg && sg[kind];
   try {
     if (f) f(fx, actor, s, a, extra);
     else if (DEFAULTS[kind]) DEFAULTS[kind](fx, actor, s, a, extra);
+    // (an awakened move: the fruit's own colour bursting off its user as it goes, on top of its usual look — once a move)
+    if (def.awakened && a && !a._awFx && kind !== 'fx') { a._awFx = true; awakenedFx(fx, actor, def); }
   } catch (e) {
     if (!fx._techWarned) { fx._techWarned = true; console.warn('technique fx', def.id, kind, e); }
   }
 }
 
+/** An awakened move's mark: a ring and sparks of the fruit's colour, white at the heart, and a short glare. */
+function awakenedFx(fx, actor, def) {
+  const col = def.awColor || '#ffe082';
+  fx.ring(actor.x, actor.y, 0.25, 2.4, col, 0.35, 0.14, { z: 0.08, flat: 0.6, add: true });
+  fx.ring(actor.x, actor.y, 0.15, 1.5, '#ffffff', 0.22, 0.08, { z: 0.9, add: true });
+  fx.burst(actor.x, actor.y - 0.6, 12, { color: [col, '#ffffff', '#fff3c4'], speed: 4.5, g: 0, z: 0.9, vz: 1.2, life: 0.45, kind: 'star', size: 0.13, drag: 2 });
+  fx.add('flare', { x: actor.x, y: actor.y, z: 1.0, size: 1.1, color: col, life: 0.18, follow: actor, rot: 0 });
+}
+
 function beamStyle(el, def) {
-  const s = SIG[def.id] && SIG[def.id].beam;
+  const s = sigFor(def)?.beam;
   if (s) return s;
   return { lightning: 'lightning', fire: 'fire', magma: 'fire', explosion: 'fire', light: 'light', ice: 'ice', snow: 'ice', sand: 'sand', quake: 'quake', string: 'string', dark: 'dark', water: 'water', smoke: 'wind', gas: 'wind' }[el] || 'energy';
 }
@@ -775,6 +787,8 @@ const DEFAULTS = {
 // ------------------------------------------------------------------ signatures
 const SIG = {};
 function sig(ids, o) { for (const id of ids.split(/\s+/)) if (id) SIG[id] = { ...(SIG[id] || {}), ...o }; }
+/** A technique's signature look — or, for an awakened version (or any made from another: `base`), the original's. */
+function sigFor(def) { return SIG[def?.id] || (def?.base ? SIG[def.base] : null) || null; }
 const fwd = (actor, ang, d, zy = 0.8) => [actor.x + Math.cos(ang) * d, actor.y + Math.sin(ang) * d * zy];
 
 // ---- swords
@@ -1039,10 +1053,12 @@ sig('snipe_popgreen', {
   },
 });
 
-// ---- Gomu Gomu
-sig('gomu_pistol gomu_gear3', {
+// ---- Gomu Gomu (and its Gears: the Jet, Gigant, Kong and Dawn moves look like the moves they grew from — data/fruitForms.js)
+sig('gomu_pistol gomu_gear3 gomu_jet_pistol gomu_gigant_pistol gomu_kong_gun gomu_king_kong_gun gomu_culverin gomu_dawn_pistol gomu_bajrang_gun', {
   proj(fx, actor, s, a) {
-    const big = a.def.id === 'gomu_gear3';
+    const big = a.def.id === 'gomu_gear3' || (s.proj.size || 1) >= 2.2;
+    // (Jet: steam whips off the arm as it goes)
+    if (/jet/.test(a.def.id)) smoke(fx, actor.x, actor.y, 1.1, 5, ['#ffffff', '#ffebee'], { speed: 2, size: 0.22, vz: 1.2 });
     // the air the arm punches through as it leaves: a ring round it, out past
     // the shoulder, at the shoulder's height (the fist flies from there)
     const sc = (actor.look && actor.look.scale) || 1, d = (big ? 1.4 : 0.9) * sc;
@@ -1052,13 +1068,15 @@ sig('gomu_pistol gomu_gear3', {
     if (big) { smoke(fx, px, py, 0.8, 8, ['#ffffff', '#eceff1'], { speed: 2.5, size: 0.35 }); fx.shake(0.2, a.angle); }
   },
 });
-sig('gomu_gatling', {
+sig('gomu_gatling gomu_jet_gatling gomu_elephant_gatling gomu_kong_organ gomu_dawn_gatling', {
   hit(fx, actor, s, a, hb) {
-    fx.add('gatling', { x: actor.x, y: actor.y, follow: actor, range: (s.hit.range || 3.2) * 0.85, arc: 0.9, skin: (lastLook(actor)).skin, dark: !!actor.armament, life: s.hit.duration || 0.9 });
+    // (Gear Fourth's fists are coated black)
+    fx.add('gatling', { x: actor.x, y: actor.y, follow: actor, range: (s.hit.range || 3.2) * 0.85, arc: s.hit.arc || 0.9, skin: (lastLook(actor)).skin, dark: !!actor.armament || /kong/.test(a.def.id), life: s.hit.duration || 0.9 });
+    if (/jet/.test(a.def.id)) smoke(fx, actor.x, actor.y, 1.1, 6, ['#ffffff', '#ffebee'], { speed: 2, size: 0.22, vz: 1.2 });
   },
 });
-sig('gomu_rocket', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#ffcdd2'; fx.ring(actor.x, actor.y, 0.1, 1, '#ffffff', 0.25, 0.08, { add: true }); } });
-sig('gomu_balloon', {
+sig('gomu_rocket gomu_jet_rocket gomu_dawn_rocket gomu_rhino_schneider', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#ffcdd2'; fx.ring(actor.x, actor.y, 0.1, 1, '#ffffff', 0.25, 0.08, { add: true }); } });
+sig('gomu_balloon gomu_gigant_balloon', {
   // puffed up round: a bounce ring while the shots come back off it
   buff(fx, actor, s, a, ex) {
     fx.ring(actor.x, actor.y, 0.3, 1.6, '#ffcdd2', 0.35, 0.1, { z: 0.9, add: true });
@@ -1066,7 +1084,7 @@ sig('gomu_balloon', {
     fx.add('dome', { x: actor.x, y: actor.y, follow: actor, r: 1.4, kind: 'barrier', color: '#ffcdd2', hk: 0.9, life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(ex.buff) });
   },
 });
-sig('gomu_bazooka', {
+sig('gomu_bazooka gomu_jet_bazooka gomu_gigant_bazooka gomu_leo_bazooka', {
   hit(fx, actor, s, a, hb) {
     const [px, py] = fwd(actor, hb.angle, 1.6);
     fx.add('impact', { x: px, y: py, z: 0.8, angle: hb.angle, size: 1.2, color: '#ffffff', core: '#ffffff', life: 0.2, spikes: 14, lines: 8 });
@@ -1074,7 +1092,7 @@ sig('gomu_bazooka', {
     dust(fx, px, py, 8, { speed: 3 });
   },
 });
-sig('gomu_gear2', {
+sig('gomu_gear2 gomu_gear3_on', {
   fx(fx, actor, s, a) { DEFAULTS.fx(fx, actor, s, a); smoke(fx, actor.x, actor.y, 0.8, 16, ['#ffffff', '#ffebee', '#ffcdd2'], { speed: 2.5, size: 0.35, vz: 2 }); },
   buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); fx.flashScreen(0.05, 'rgba(255,205,210,1)'); },
 });
@@ -1476,7 +1494,7 @@ sig('haki_futuresight', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s
 /** Persistent visuals for an area technique (and its opening burst). */
 export function zoneFx(fx, zone, spec, actor, a) {
   const def = (a && a.def) || {};
-  const f = SIG[def.id] && SIG[def.id].zone;
+  const f = sigFor(def)?.zone;
   try { if (f && f(fx, actor, spec, a, zone) === true) return; } catch (e) { if (!fx._techWarned) { fx._techWarned = true; console.warn('zone fx', def.id, e); } }
   const kind = zone.kind || 'field';
   fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind, color: zone.color, zone, life: 1e6 });
@@ -1809,7 +1827,7 @@ export function actorVisuals(actor, act, clip) {
   const steps = def.steps || [];
   const main = steps.find((s) => s.hit || s.proj || s.dash || s.zone) || {};
   const elem = main.hit?.element || main.proj?.element || main.dash?.hit?.element || main.zone?.element || (elemBuff ? elemBuff.element : null);
-  const sg = SIG[def.id] || {};
+  const sg = sigFor(def) || {};
   const st = styleOf(def, actor);
   const E = elem ? elemOf(elem) : null;
   const k = t < w ? clamp01(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
@@ -1817,7 +1835,7 @@ export function actorVisuals(actor, act, clip) {
   const fxElem = sg.elem || (elem && elem !== 'physical' ? elem : st && st.elem) || null;
   out.fx = { elem: fxElem, color: E ? E.c : trail, trail, limb: sg.limb || clip.limb, k, additive: !!(E && E.add), claw: st && st.claw };
   if (diable && (clip.limb === 'fF' || clip.limb === 'fB')) { out.fx.elem = 'fire'; out.fx.trail = '#ff9800'; out.fx.additive = true; }
-  const blade = sg.blade || BLADES[def.id];
+  const blade = sg.blade || BLADES[def.id] || (def.base ? BLADES[def.base] : null);
   if (blade) { out.blade = blade; out.bladeLen = 1.0; }
   if (t < w && w >= 0.3 && !def.m1Chain) {
     const ch = sg.charge !== undefined ? sg.charge : defaultCharge(def, actor, elem, st);

@@ -3,8 +3,13 @@
 // When a user dies, their fruit is reborn inside an ordinary fruit somewhere
 // in the world (canon), which the game tracks as a rumour.
 //
-// Techniques unlock with fruit mastery (0-100). Mastery grows by fighting
-// worthy opponents with the fruit and by training — not by farming.
+// A fruit's base techniques (`techniques`) are all yours the moment you eat
+// it, as in the anime. Fighting worthy opponents with it raises its mastery
+// (0-100): its blows grow stronger, and it opens up the fruit's forms (Gum-Gum's
+// Gears...) and at last its awakening — see data/fruitForms.js. (The number in
+// `T(n, ...)` is from when techniques unlocked one by one: it's only an order
+// now. `more` holds techniques that aren't part of the base set — a form's
+// activation, a heavy — registered all the same, for NPCs who use them too.)
 //
 // Each fruit plays as the anime shows it: a technique is data (steps of the
 // primitives in game/abilities.js), and what goes beyond a blow, a shot or a
@@ -14,6 +19,7 @@
 // flight.js. The Logia, Paramecia and Zoan rules (intangibility and what gets
 // through it, rubber, blades that can't cut) are in game/combat.js.
 import { registerAbilities } from '../game/abilities.js';
+import { attachKits, AWAKEN_MASTERY } from './fruitForms.js';
 
 const T = (mastery, a) => ({ ...a, mastery });
 // (a look that's all shadow: Moria's Doppelman)
@@ -28,15 +34,20 @@ export const FRUITS = {
     techniques: [
       T(0, { id: 'gomu_pistol', name: 'Gum-Gum Pistol', icon: '👊', anim: 'punch', windup: 0.12, recover: 0.25, cd: 2.5, say: 'Gomu Gomu no... Pistol!', steps: [{ proj: { speed: 26, range: 8, radius: 0.35, damage: 16, sprite: 'gomufist', stretch: true, knockback: 5, stun: 0.3 } }] }),
       T(10, { id: 'gomu_gatling', name: 'Gum-Gum Gatling', icon: '🔫', anim: 'punch', windup: 0.2, recover: 0.3, cd: 6, say: 'Gomu Gomu no... Gatling!', steps: [{ hit: { shape: 'arc', range: 3.2, arc: 0.9, offset: 0.3, damage: 5, knockback: 0.8, stun: 0.15, duration: 0.9, interval: 0.08 }, vfx: 'fist' }] }),
-      T(15, { id: 'gomu_balloon', name: 'Gum-Gum Balloon', anim: 'flex', windup: 0.1, recover: 0.25, cd: 9, say: 'Gomu Gomu no... Balloon!', desc: 'Blow yourself up like a balloon: bullets and cannonballs bounce off you and fly back the way they came.',
-        steps: [{ buff: { id: 'balloon', name: 'Balloon', dur: 1.8, mods: { speedMul: 0.35 }, reflect: 1.8, reflectWord: 'BOING!', look: { bulk: 1.9 } } }] }),
       T(20, { id: 'gomu_rocket', name: 'Gum-Gum Rocket', icon: '🚀', anim: 'thrust', windup: 0.15, recover: 0.2, cd: 4, desc: 'Launch yourself like a slingshot.', steps: [{ dash: { dist: 9, time: 0.3, iframes: 0.25, air: true, hit: { damage: 14, knockback: 6, stun: 0.4 } } }] }),
       T(30, { id: 'gomu_bazooka', name: 'Gum-Gum Bazooka', icon: '💥', anim: 'heavy', windup: 0.35, recover: 0.35, cd: 8, say: 'Gomu Gomu no... BAZOOKA!', steps: [{ hit: { shape: 'arc', range: 2.4, arc: 1.2, offset: 0.4, damage: 36, knockback: 14, stun: 0.8, heavy: true, guardBreak: true, impactFrame: true, hitShips: true } }] }),
-      T(45, { id: 'gomu_gear2', name: 'Gear Second', icon: '♨', anim: 'kneel', windup: 0.4, recover: 0.1, cd: 35, say: 'Gear... Second!', desc: 'Pump blood at high speed: faster and stronger, at a cost.',
-        steps: [{ fx: { burst: 20, color: '#ffcdd2', kind: 'smoke' } }, { at: 0.4, buff: { id: 'gear2', name: 'Gear Second', dur: 16, mods: { speedMul: 1.35, damage: 1.35, atkSpeed: 1.3 }, aura: 'rgba(255,138,128,0.7)', steam: true, look: { skin: '#f4a39c' }, after: { id: 'gear2_spent', name: 'Spent', dur: 8, mods: { speedMul: 0.85, atkSpeed: 0.85 } } } }] }),
+      T(15, { id: 'gomu_balloon', name: 'Gum-Gum Balloon', anim: 'flex', windup: 0.1, recover: 0.25, cd: 9, say: 'Gomu Gomu no... Balloon!', desc: 'Blow yourself up like a balloon: bullets and cannonballs bounce off you and fly back the way they came.',
+        steps: [{ buff: { id: 'balloon', name: 'Balloon', dur: 1.8, mods: { speedMul: 0.35 }, reflect: 1.8, reflectWord: 'BOING!', look: { bulk: 1.9 } } }] }),
+    ],
+    // (the Gears: Second and Fourth are switched on by these — see data/fruitForms.js — and so is Third by
+    // its own; the old Gear Third and Gear Fifth stay for whoever uses them as single moves)
+    more: [
+      T(45, { id: 'gomu_gear2', name: 'Gear Second', icon: '♨', anim: 'kneel', windup: 0.4, recover: 0.1, cd: 30, say: 'Gear... Second!', desc: 'Pump blood at high speed: faster and stronger, every move a Jet — at a cost when it wears off.',
+        steps: [{ fx: { burst: 20, color: '#ffcdd2', kind: 'smoke' } }, { at: 0.4, buff: { id: 'gear2', form: 'gear2', name: 'Gear Second', dur: 25, mods: { speedMul: 1.35, damage: 1.25, atkSpeed: 1.3 }, aura: 'rgba(255,138,128,0.7)', steam: true, look: { skin: '#f4a39c' }, after: { id: 'gear2_spent', name: 'Spent', dur: 6, mods: { speedMul: 0.85, atkSpeed: 0.85 } } } }] }),
       T(60, { id: 'gomu_gear3', name: 'Gear Third: Gigant Pistol', icon: '🦴', anim: 'pistol', windup: 0.7, recover: 0.5, cd: 18, say: 'Gear Third... Gigant Pistol!', steps: [{ proj: { speed: 16, range: 10, radius: 1.6, damage: 80, sprite: 'gomufist', size: 4, stretch: true, pierce: true, knockback: 14, stun: 1, heavy: true, hitShips: true, shipDamage: 200 } }] }),
-      T(80, { id: 'gomu_gear4', name: 'Gear Fourth: Boundman', icon: '🎈', anim: 'cast', windup: 0.8, recover: 0.2, cd: 90, cost: { haki: 40 }, requiresHaki: 'armament', say: 'Gear... FOURTH!', desc: 'Inflate your Haki-hardened muscles. Enormous power for a short time.',
-        steps: [{ fx: { ring: 3, color: '#b71c1c', impact: 0.1 } }, { at: 0.8, buff: { id: 'gear4', name: 'Boundman', dur: 20, mods: { damage: 2.2, defMul: 0.6, speedMul: 1.2 }, aura: 'rgba(183,28,28,0.9)', forceArmament: true, look: { bulk: 1.45, boundman: true }, drain: { haki: 1.5 } } }] }),
+      T(80, { id: 'gomu_gear4', name: 'Gear Fourth: Boundman', icon: '🎈', anim: 'cast', windup: 0.8, recover: 0.2, cd: 60, cost: { haki: 40 }, requiresHaki: 'armament', say: 'Gear... FOURTH!', desc: 'Inflate your Haki-hardened muscles and bounce: enormous power for a short time — then you\'re exhausted.',
+        steps: [{ fx: { ring: 3, color: '#b71c1c', impact: 0.1 } }, { at: 0.8, buff: { id: 'gear4', form: 'gear4', name: 'Boundman', dur: 22, mods: { damage: 2.2, defMul: 0.6, speedMul: 1.2 }, aura: 'rgba(183,28,28,0.9)', forceArmament: true, look: { bulk: 1.45, boundman: true }, drain: { haki: 1.5 },
+          after: { id: 'gear4_spent', name: 'Exhausted', dur: 12, mods: { speedMul: 0.7, atkSpeed: 0.75, damage: 0.8 }, noHaki: true, noForms: true } } }] }),
       T(100, { id: 'gomu_gear5', name: 'Gear Fifth', icon: '☀', anim: 'cast', windup: 1.0, recover: 0.2, cd: 180, cost: { haki: 60 }, requiresHaki: 'conqueror', say: '...Drums of Liberation.', desc: 'The fruit\'s true name is Hito Hito no Mi, Model: Nika. The warrior of liberation, bringer of joy.',
         steps: [{ fx: { ring: 6, color: '#ffffff', flash: 0.6, impact: 0.2, text: 'SUN GOD NIKA' } }, { at: 1.0, buff: { id: 'gear5', name: 'Gear Fifth', dur: 30, mods: { damage: 3, defMul: 0.45, speedMul: 1.4, atkSpeed: 1.4 }, aura: 'rgba(255,255,255,1)', look: { hairColor: '#ffffff', top: '#ffffff', bottom: '#ffffff', nika: true } } }] }),
     ],
@@ -56,6 +67,8 @@ export const FRUITS = {
   ope: {
     name: 'Ope Ope no Mi', en: 'Op-Op Fruit', type: 'Paramecia', rarity: 'legendary', color: '#81d4fa', weight: 0.4,
     desc: 'Open a ROOM — a sphere of space that stays where you cast it — and inside it you are a surgeon: you can swap, lift, cut and remove whatever is in it, and your blows pass through any body. Its ultimate technique grants eternal youth, at the cost of the user\'s life.',
+    // (ROOM, Shambles, Amputate, Mes and Takt on the first five skill keys; the rest of the surgeon's
+    // base on keys of your choosing — the skills panel, or Skills (K))
     techniques: [
       T(0, { id: 'ope_room', name: 'ROOM', icon: '🔵', anim: 'raise', windup: 0.35, recover: 0.25, cd: 18, say: 'ROOM.',
         desc: 'Open a ROOM: a pale blue sphere that stays where you cast it (it grows with your mastery). Your other techniques work inside it — draw the fight in.',
@@ -66,15 +79,12 @@ export const FRUITS = {
       T(20, { id: 'ope_amputate', name: 'Amputate', icon: '🗡', anim: 'slash', windup: 0.25, recover: 0.3, cd: 7, room: 'need', say: 'Amputate!',
         desc: 'In your Room: a vast slash through everything in front of you. It cuts without killing — the pieces live, helpless, for a while.',
         steps: [{ hit: { shape: 'arc', range: 4.2, arc: 2.4, offset: 0.2, damage: 22, knockback: 1, stun: 0.3, slashing: true, nonLethal: true, status: { pieces: 2.4 } }, vfx: 'slash', color: '#81d4fa' }] }),
-      T(30, { id: 'ope_takt', name: 'Takt', anim: 'raise', windup: 0.35, recover: 0.35, cd: 12, room: 'need', say: 'Takt.',
-        desc: 'In your Room: raise a finger, and everyone in the Room is lifted into the air, held there helpless — and slammed back down.',
-        steps: [{ power: { kind: 'takt', h: 2.6, hold: 1.1, damage: 26, blow: true, unblockable: true } }] }),
       T(40, { id: 'ope_mes', name: 'Mes', icon: '💙', anim: 'thrust', windup: 0.18, recover: 0.3, cd: 14, room: 'need', say: 'Mes.',
         desc: 'In your Room: push a hand into the target and take their heart out in a cube. Without it they can do nothing for a long while — and every blow lands harder.',
         steps: [{ hit: { shape: 'arc', range: 1.9, arc: 1.0, offset: 0.2, damage: 12, knockback: 0, stun: 0.3, unblockable: true, status: { heartless: 3.5 } } }] }),
-      T(55, { id: 'ope_counter', name: 'Counter Shock', icon: '⚡', anim: 'palm', windup: 0.2, recover: 0.3, cd: 10, room: 'weak', say: 'Counter Shock!',
-        desc: 'A hand on the target and a shock like a defibrillator\'s. Half as strong outside your Room.',
-        steps: [{ hit: { shape: 'arc', range: 1.6, arc: 1.2, offset: 0.2, damage: 42, knockback: 3, stun: 1.0, element: 'lightning', status: { shock: 1.5 } }, vfx: 'ring', color: '#fff176' }] }),
+      T(30, { id: 'ope_takt', name: 'Takt', anim: 'raise', windup: 0.35, recover: 0.35, cd: 12, room: 'need', say: 'Takt.',
+        desc: 'In your Room: raise a finger, and everyone in the Room is lifted into the air, held there helpless — and slammed back down.',
+        steps: [{ power: { kind: 'takt', h: 2.6, hold: 1.1, damage: 26, blow: true, unblockable: true } }] }),
       T(65, { id: 'ope_injection', name: 'Injection Shot', anim: 'thrust', windup: 0.25, recover: 0.35, cd: 9, room: 'weak', say: 'Injection Shot!',
         desc: 'Charge in a blur and run the target through with your sword. Half as strong outside your Room.',
         steps: [{ dash: { dist: 7, time: 0.18, iframes: 0.15, hit: { damage: 58, knockback: 7, stun: 0.6, slashing: true, guardBreak: true } } }] }),
@@ -84,6 +94,12 @@ export const FRUITS = {
       T(85, { id: 'ope_radio', name: 'Radio Knife', anim: 'slash', windup: 0.4, recover: 0.4, cd: 20, room: 'need', say: 'Radio Knife!',
         desc: 'In your Room: an electrified slash that cuts the target to pieces — and the shock keeps the pieces from coming back together for a long while.',
         steps: [{ hit: { shape: 'arc', range: 4, arc: 2.2, offset: 0.2, damage: 64, knockback: 2, stun: 0.5, slashing: true, status: { pieces: 3, shock: 2 } }, vfx: 'slash', color: '#fff176' }] }),
+    ],
+    // (Counter Shock is the surgeon's heavy blow; Shock Wille belongs to the awakened K-ROOM)
+    more: [
+      T(55, { id: 'ope_counter', name: 'Counter Shock', icon: '⚡', anim: 'palm', windup: 0.2, recover: 0.3, cd: 10, room: 'weak', say: 'Counter Shock!',
+        desc: 'A hand on the target and a shock like a defibrillator\'s. Half as strong outside your Room.',
+        steps: [{ hit: { shape: 'arc', range: 1.6, arc: 1.2, offset: 0.2, damage: 42, knockback: 3, stun: 1.0, element: 'lightning', status: { shock: 1.5 } }, vfx: 'ring', color: '#fff176' }] }),
       T(100, { id: 'ope_shockwille', name: 'K-Room: Shock Wille', anim: 'thrust', windup: 0.5, recover: 0.5, cd: 45, cost: { haki: 35 }, requiresHaki: 'armament', say: 'K-Room... Shock Wille!',
         desc: 'A Room coated in Haki, opened inside the target\'s own body on your sword\'s point — and a shockwave set off within it. Needs no other Room.',
         steps: [{ hit: { shape: 'arc', range: 2.0, arc: 0.9, offset: 0.2, damage: 130, knockback: 12, stun: 1.2, unblockable: true, trueDamage: true, heavy: true, impactFrame: true, shake: 0.7 }, vfx: 'ring', color: '#81d4fa' }] }),
@@ -268,7 +284,10 @@ export const FRUITS = {
       T(0, { id: 'hito_heavy', name: 'Heavy Point', icon: '💪', anim: 'flex', windup: 0.4, recover: 0.1, cd: 25, steps: [{ buff: { id: 'heavy_point', name: 'Heavy Point', dur: 15, mods: { damage: 1.4, defMul: 0.8, scale: 1.3 }, look: { hat: 'antlers', bulk: 1.3 } } }] }),
       T(10, { id: 'hito_guard', name: 'Guard Point', anim: 'block', windup: 0.1, recover: 0.1, cd: 14, desc: 'Puff up into a great ball of fur: blows bounce off the fluff (but you can hardly move).', steps: [{ buff: { id: 'guard_point', name: 'Guard Point', dur: 3.5, mods: { defMul: 0.25, speedMul: 0.4 }, look: { bulk: 1.9 } } }] }),
       T(20, { id: 'hito_horn', name: 'Horn Point: Kokutei Roseo', icon: '🦌', anim: 'thrust', windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
-      T(50, { id: 'hito_monster', name: 'Monster Point', icon: '👹', anim: 'flex', windup: 0.8, recover: 0.1, cd: 90, desc: 'A Rumble Ball overdose: enormous power, barely controllable.', steps: [{ buff: { id: 'monster', name: 'Monster Point', dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, aura: 'rgba(121,85,72,0.8)', look: { hat: 'antlers', bulk: 1.45, sleeve: '#8d6e63' } } }] }),
+    ],
+    // (Monster Point is a form, opened by fighting: data/fruitForms.js)
+    more: [
+      T(50, { id: 'hito_monster', name: 'Monster Point', icon: '👹', anim: 'flex', windup: 0.8, recover: 0.1, cd: 90, desc: 'A Rumble Ball overdose: enormous power, barely controllable.', steps: [{ buff: { id: 'monster', form: 'monster', name: 'Monster Point', dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, aura: 'rgba(121,85,72,0.8)', look: { hat: 'antlers', bulk: 1.45, sleeve: '#8d6e63' } } }] }),
     ],
   },
   neko_leopard: {
@@ -303,7 +322,10 @@ export const FRUITS = {
       T(35, { id: 'seiryu_fly', name: 'Azure Dragon Flight', desc: 'Take the Azure Dragon\'s shape and fly on the clouds it makes. Fly, or land again (or press Space again in the air).',
         flight: { style: 'dragon', ride: 'cloud', gauge: 40, speed: 11, climb: 6, ceiling: 60, drain: 0.6, sea: 3, refill: 6, color: '#90caf9' } }),
       T(50, { id: 'seiryu_raimei', name: 'Raimei Hakke', icon: '⚡', anim: 'heavy', windup: 0.6, recover: 0.5, cd: 14, desc: 'Thunder Bagua: a club blow that shakes the heavens.', steps: [{ hit: { shape: 'arc', range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: 'lightning', impactFrame: true, shake: 0.9 } }] }),
-      T(80, { id: 'seiryu_form', name: 'Dragon Form', icon: '🐲', anim: 'cast', windup: 1.0, recover: 0.1, cd: 120, steps: [{ buff: { id: 'dragon', name: 'Azure Dragon', dur: 25, mods: { damage: 2, defMul: 0.4, scale: 1.6 }, aura: 'rgba(66,165,245,0.8)', look: { dragonForm: true } } }] }),
+    ],
+    // (the whole Azure Dragon is a form, opened by fighting: data/fruitForms.js)
+    more: [
+      T(80, { id: 'seiryu_form', name: 'Dragon Form', icon: '🐲', anim: 'cast', windup: 1.0, recover: 0.1, cd: 120, steps: [{ buff: { id: 'dragon', form: 'dragon', name: 'Azure Dragon', dur: 25, mods: { damage: 2, defMul: 0.4, scale: 1.6 }, aura: 'rgba(66,165,245,0.8)', look: { dragonForm: true } } }] }),
     ],
   },
 
@@ -343,8 +365,11 @@ export const FRUITS = {
       T(15, { id: 'goro_sango', name: 'Sango', icon: '🐉', anim: 'cast', windup: 0.4, recover: 0.3, cd: 8, desc: 'A great bolt in the shape of a dragon.', steps: [{ proj: { speed: 20, range: 14, radius: 0.9, damage: 34, sprite: 'thunder', size: 2, element: 'lightning', pierce: true, status: { shock: 1.2 } } }] }),
       T(35, { id: 'goro_elthor', name: 'El Thor', icon: '🌩', anim: 'raise', windup: 0.7, recover: 0.4, cd: 14, desc: 'A pillar of divine lightning straight down from the sky.', say: 'El Thor!', steps: [{ zone: { range: 2.8, duration: 0.8, interval: 0.4, damage: 45, element: 'lightning', status: { shock: 1.5 }, color: '#fff176', atTarget: true, kind: 'thunder' } }] }),
       T(45, { id: 'goro_mamaragan', name: 'Mamaragan', anim: 'raise', windup: 0.6, recover: 0.4, cd: 16, say: 'Mamaragan!', desc: 'Lightning falls from the sky all around you, again and again.', steps: [{ zone: { range: 6, duration: 1.6, interval: 0.25, damage: 12, element: 'lightning', status: { shock: 0.8 }, color: '#fff176', kind: 'thunder' } }] }),
-      T(55, { id: 'goro_amaru', name: '200 Million Volt Amaru', icon: '👺', anim: 'cast', windup: 0.8, recover: 0.2, cd: 60, steps: [{ buff: { id: 'amaru', name: 'Amaru', dur: 18, mods: { damage: 1.9, speedMul: 1.25, scale: 1.3 }, element: 'lightning', aura: 'rgba(255,241,118,0.9)', look: { drums: true } } }] }),
       T(85, { id: 'goro_raigo', name: 'Raigo', icon: '🌑', anim: 'summon', windup: 1.4, recover: 0.6, cd: 90, desc: 'A thundercloud large enough to erase an island.', steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: 'lightning', status: { shock: 0.5 }, color: '#fff176', kind: 'thunder' } }] }),
+    ],
+    // (Amaru is a form, opened by fighting: data/fruitForms.js)
+    more: [
+      T(55, { id: 'goro_amaru', name: '200 Million Volt Amaru', icon: '👺', anim: 'cast', windup: 0.8, recover: 0.2, cd: 60, steps: [{ buff: { id: 'amaru', form: 'amaru', name: 'Amaru', dur: 18, mods: { damage: 1.9, speedMul: 1.25, scale: 1.3 }, element: 'lightning', aura: 'rgba(255,241,118,0.9)', look: { drums: true } } }] }),
     ],
   },
   suna: {
@@ -418,7 +443,7 @@ export const FRUITS = {
 export const FRUIT_IDS = Object.keys(FRUITS);
 
 for (const [fid, f] of Object.entries(FRUITS)) {
-  registerAbilities(f.techniques.map((t) => ({ ...t, source: 'fruit:' + fid, fruit: fid })), 'fruit:' + fid);
+  registerAbilities([...f.techniques, ...(f.more || [])].map((t) => ({ ...t, source: 'fruit:' + fid, fruit: fid })), 'fruit:' + fid);
   // derive runtime passive flags
   f.logia = !!(f.passive && f.passive.logia);
   f.rubber = !!(f.passive && f.passive.rubber);
@@ -434,8 +459,19 @@ export const FRUIT_RARITY = {
   mythical: { label: 'Mythical', color: '#ff7675' },
 };
 
+// every fruit's forms, awakening, heavy and M1 (data/fruitForms.js)
+attachKits(FRUITS);
+
 export function unlockedFruitTechniques(fruitId, mastery) {
   const f = FRUITS[fruitId];
   if (!f) return [];
   return f.techniques.filter((t) => mastery >= t.mastery).map((t) => t.id);
 }
+
+/** The forms of a fruit its mastery has opened up (and those still to come). */
+export function fruitForms(fruitId, mastery = 0) {
+  const f = FRUITS[fruitId];
+  return (f?.forms || []).map((F) => ({ ...F, open: mastery >= F.mastery }));
+}
+
+export { AWAKEN_MASTERY };
