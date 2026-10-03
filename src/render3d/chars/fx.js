@@ -354,12 +354,45 @@ export function rootRing() {
 }
 
 let SHIM = null;
-/** The curved guard shimmer in front of a blocking character. */
+const SHIM_VERT = /* glsl */`
+  varying vec2 vUv;
+  varying vec3 vN, vV;
+  void main() {
+    vUv = uv;
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+const SHIM_FRAG = /* glsl */`
+  uniform vec3 uColor;
+  uniform float uOpacity, uTime;
+  varying vec2 vUv;
+  varying vec3 vN, vV;
+  void main() {
+    // a curved sheet of light, soft all round its edges, brightest where it
+    // turns away from you, a faint pulse running up it
+    float edge = smoothstep(0.0, 0.22, vUv.x) * smoothstep(1.0, 0.78, vUv.x) * smoothstep(0.0, 0.25, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+    float rim = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.0);
+    float pulse = 0.5 + 0.5 * sin(vUv.y * 18.0 - uTime * 7.0);
+    float a = (0.4 + rim * 0.7 + pulse * 0.12) * edge * uOpacity;
+    gl_FragColor = vec4(uColor * (0.9 + rim * 0.6) * a, a);
+  }
+`;
+/** The curved guard shimmer in front of a blocking character (set its material's color and opacity). */
 export function guardShimmer() {
-  if (!SHIM) SHIM = new THREE.CylinderGeometry(0.62, 0.62, 1.3, 14, 1, true, -1.05 + Math.PI / 2, 2.1).translate(0, 0.65, 0);
-  const m = new THREE.MeshBasicMaterial({ color: 0x90caf9, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  if (!SHIM) SHIM = new THREE.CylinderGeometry(0.62, 0.62, 1.3, 24, 1, true, -1.05 + Math.PI / 2, 2.1).translate(0, 0.65, 0);
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color(0x90caf9) }, uOpacity: { value: 0.3 }, uTime: { value: 0 } },
+    vertexShader: SHIM_VERT, fragmentShader: SHIM_FRAG,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+  // (the caller sets .color and .opacity, as on a plain material: they're fed to the shader as it's drawn)
+  m.color = m.uniforms.uColor.value;
   const mesh = new THREE.Mesh(SHIM, m);
   mesh.renderOrder = 3;
+  mesh.onBeforeRender = () => { m.uniforms.uOpacity.value = m.opacity; m.uniforms.uTime.value = performance.now() / 1000; };
   return mesh;
 }
 
