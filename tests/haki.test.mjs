@@ -303,3 +303,27 @@ test("a king-to-be wakes to another's Conqueror's; two kings' Conqueror's clash"
   lord.state = 'knocked';
   assert.ok(!H.clashes(y3, lord, 5, 13.5));
 });
+
+test('a Haki master can sense a king (revealing the hidden trait), or honestly says there\'s none; Conqueror\'s is never taught', async () => {
+  const { Services } = await import('../src/game/services.js');
+  const at = (traits) => {
+    const legacy = defaultLegacy();
+    const char = createCharacter(legacy, { race: 'human', traits, seed: 5 }, { name: 'Tester' });
+    char.dead = true;
+    const logs = [];
+    const nop = () => {};
+    const game = { state: { char, legacy }, log: (t) => logs.push(t), ui: { toast: nop }, emit: nop, on: nop, env: { day: 1 } };
+    game.player = buildPlayer(game, char);
+    return { S: new Services(game), char, logs };
+  };
+  const king = at(['lucky', 'conqueror']);
+  assert.equal(king.S.hakiSense('rayleigh'), 'king');
+  assert.ok(king.char.flags.kingSensed);
+  assert.match(king.logs.at(-1), /qualities of a king/);
+  const none = at(['lucky']);
+  assert.equal(none.S.hakiSense('rayleigh'), 'none');
+  assert.ok(!none.char.flags.kingSensed);
+  assert.match(none.logs.at(-1), /nothing of the kind/);
+  assert.equal(none.S.hakiTrain('rayleigh', 'conqueror'), false);
+  assert.match(none.logs.at(-1), /cannot be taught/i);
+});
