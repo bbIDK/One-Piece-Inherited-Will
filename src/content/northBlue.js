@@ -102,7 +102,7 @@ const npcs = [
     when: (c, g) => stageOf(g, 'nb_rakesh_raid') === 'harbour',
   },
   {
-    id: 'nb_senor_pink', name: 'Senor Pink', title: 'Donquixote Pirates officer ("Sui Sui no Mi")', island: 'rakesh', at: { spot: 'rakesh_warehouse' }, hostile: true, boss: true, hpMul: 0.9, faction: 'pirate', level: 12,
+    id: 'nb_senor_pink', name: 'Senor Pink', title: 'Donquixote Pirates officer ("Sui Sui no Mi")', island: 'rakesh', at: { spot: 'rakesh_warehouse' }, hostile: true, boss: true, hpMul: 0.9, faction: 'pirate', level: 10,
     look: { hair: 'short', hairColor: '#3e2723', top: '#f48fb1', bottom: '#212121', coat: '#263238', goggles: true, skin: '#e0ac7e' }, style: 'brawler', moves: ['nb_terra_swim', 'nb_nekomimi_punch', 'nb_nyannyan_suplex'], skill: 0.4,
     bounty: 18000000, infamy: true, breakthrough: 3,
     alert: 'A man doesn\'t explain himself. He just swims.', barks: ['Hard-boiled...', 'The ground is my sea.'],
@@ -1008,7 +1008,7 @@ const npcs = [
     }),
   },
   {
-    id: 'nb_koni', name: 'Koni Boakeno', title: 'Sumo brute of the Bacca Pirates', island: 'swallow_island', at: { spot: 'sea_god_temple', ox: -2 }, hostile: true, boss: true, hpMul: 1.2, faction: 'pirate', level: 13,
+    id: 'nb_koni', name: 'Koni Boakeno', title: 'Sumo brute of the Bacca Pirates', island: 'swallow_island', at: { spot: 'sea_god_temple', ox: -2 }, hostile: true, boss: true, hpMul: 1.0, faction: 'pirate', level: 10,
     look: { hair: 'bun', hairColor: '#212121', top: '#e0ac7e', bottom: '#fafafa', skin: '#e0ac7e' }, bulk: 1.8,
     style: 'brawler', moves: ['nb_yokozuna_bomber', 'brawl_tackle'], skill: 0.3, breakthrough: 2,
     alert: 'Nobody lasts more than two of my blows. Let\'s see if you make three!', barks: ['Dosukoi!', 'Heh... still standing?'],
@@ -1318,7 +1318,7 @@ const abilities = [
     steps: [{ hit: { shape: 'circle', range: 3.4, damage: 20, knockback: 6, stun: 0.8, element: 'lightning', status: { shock: 1.5 } }, vfx: 'ring', color: '#64b5f6' }] },
   // Koni Boakeno
   { id: 'nb_yokozuna_bomber', name: 'Yokozuna Bomber', anim: 'grab', windup: 0.5, recover: 0.5, cd: 7, say: 'Yokozuna Bomber!',
-    steps: [{ hit: { shape: 'arc', range: 1.6, arc: 1.2, offset: 0.2, damage: 26, knockback: 3, stun: 1.0, heavy: true, guardBreak: true, shake: 0.4 } }] },
+    steps: [{ hit: { shape: 'arc', range: 1.6, arc: 1.2, offset: 0.2, damage: 22, knockback: 3, stun: 1.0, heavy: true, guardBreak: true, shake: 0.4 } }] },
   // Artur Bacca (Dero Dero no Mi)
   { id: 'nb_bacca_maces', name: 'Twin Mace Crush', anim: 'heavy', windup: 0.4, recover: 0.4, cd: 4,
     steps: [{ hit: { shape: 'arc', range: 2.0, arc: 2.0, offset: 0.2, damage: 20, knockback: 6, stun: 0.5, heavy: true } }] },

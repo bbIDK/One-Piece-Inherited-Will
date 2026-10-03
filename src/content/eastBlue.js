@@ -238,7 +238,7 @@ const npcs = [
   { id: 'cabaji', name: 'Acrobat Cabaji', title: 'Chief of Staff, Buggy Pirates', island: 'organ_islands', at: { town: 'orange_town', plaza: true, ox: 4 }, hostile: true, calm: true, named: true, faction: 'pirate', level: 9,
     look: { hair: 'long', hairColor: '#212121', top: '#1a237e', bottom: '#fafafa', scarEye: true }, style: 'ittoryu', weapon: 'sword', moves: ['cabaji_fire', 'cabaji_dash'], bounty: 5000000, infamy: true, skill: 0.35, when: (c) => !c.defeated.cabaji },
   {
-    id: 'buggy', name: 'Buggy the Clown', title: 'Captain of the Buggy Pirates', island: 'organ_islands', at: { town: 'orange_town', building: 'Buggy Pirates HQ (Tavern)' }, hostile: true, boss: true, hpMul: 1.1, faction: 'pirate', level: 11,
+    id: 'buggy', name: 'Buggy the Clown', title: 'Captain of the Buggy Pirates', island: 'organ_islands', at: { town: 'orange_town', building: 'Buggy Pirates HQ (Tavern)' }, hostile: true, boss: true, hpMul: 0.95, faction: 'pirate', level: 11,
     look: { hair: 'long', hairColor: '#1976d2', top: '#e53935', bottom: '#1565c0', skin: '#fafafa', nose: 'red', hat: 'captain', hatColor: '#6d4c41', coat: '#e53935' },
     fruit: 'bara', fruitMastery: 45, moves: ['bara_cannon', 'bara_festival', 'buggy_ball', 'buggy_knives'], bounty: 15000000, infamy: true, breakthrough: 3, skill: 0.3,
     alert: 'Who are you calling a big red nose?!', barks: ['Flashy!', 'Gyahahaha!'],

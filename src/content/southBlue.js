@@ -192,8 +192,8 @@ const abilities = [
   { id: 'sb_goayu_feathers', name: 'Feather Volley', anim: 'shoot', windup: 0.45, recover: 0.35, cd: 6,
     steps: [{ proj: { speed: 15, range: 11, radius: 0.3, damage: 7, count: 5, spread: 0.6, sprite: 'petal', color: '#8d6e63', knockback: 2 } }] },
   // Sorbet Kingdom
-  { id: 'sb_bekori_volley', name: 'Royal Volley', anim: 'shoot', windup: 0.5, recover: 0.4, cd: 6, say: 'Guards! FIRE!',
-    steps: [{ proj: { speed: 18, range: 12, radius: 0.25, damage: 8, count: 4, spread: 0.5, sprite: 'bullet', knockback: 2 } }] },
+  { id: 'sb_bekori_volley', name: 'Royal Volley', anim: 'shoot', windup: 0.6, recover: 0.5, cd: 8, say: 'Guards! FIRE!',
+    steps: [{ proj: { speed: 18, range: 12, radius: 0.25, damage: 6, count: 3, spread: 0.5, sprite: 'bullet', knockback: 2 } }] },
   { id: 'sb_halberd_sweep', name: 'Halberd Sweep', anim: 'slash', windup: 0.45, recover: 0.4, cd: 5,
     steps: [{ hit: { shape: 'arc', range: 2.8, arc: 2.4, offset: 0.2, damage: 16, knockback: 5, stun: 0.4, slashing: true }, vfx: 'slash' }] },
   { id: 'sb_halberd_thrust', name: 'Halberd Thrust', anim: 'thrust', windup: 0.4, recover: 0.4, cd: 4,
@@ -762,8 +762,8 @@ const npcs = [
     when: (c, g) => stageOf(g, 'sb_solo_revolution') === 'castle',
   },
   {
-    id: 'sb_bekori', name: 'King Bekori', title: 'King of Sorbet', island: 'sorbet_kingdom', at: { town: 'sorbet_town', building: 'Sorbet Royal Palace' }, hostile: true, boss: true, hpMul: 1.2,
-    faction: 'bandit', level: 11, style: 'sniper', weapon: 'gun', moves: ['sb_bekori_volley', 'snipe_explode'], ranged: true, prefRange: 7, skill: 0.35, breakthrough: 3,
+    id: 'sb_bekori', name: 'King Bekori', title: 'King of Sorbet', island: 'sorbet_kingdom', at: { town: 'sorbet_town', building: 'Sorbet Royal Palace' }, hostile: true, boss: true, hpMul: 0.9,
+    faction: 'bandit', level: 9, style: 'sniper', weapon: 'gun', moves: ['sb_bekori_volley'], ranged: true, prefRange: 5, skill: 0.3, breakthrough: 3,
     look: { hair: 'long', hairColor: '#d7ccc8', hat: 'crown', hatColor: '#fdd835', top: '#263238', bottom: '#263238', coat: '#4a148c', skin: '#f1c9a0', nose: 'red' }, bulk: 1.4,
     alert: '"A wise king must sometimes steel his heart and enact cruel reforms!"', barks: ['Guards! GUARDS!', 'Do you know what the Heavenly Tribute costs?!'],
     when: (c, g) => stageOf(g, 'sb_solo_revolution') === 'bekori' && !c.bosses.includes('sb_bekori'),
