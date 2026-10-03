@@ -1267,7 +1267,7 @@ const npcs = [
   {
     id: 'nw_doflamingo', name: 'Donquixote Doflamingo', title: '"Heavenly Yaksha", King of Dressrosa', island: 'dressrosa', at: { spot: 'palace_top' },
     level: 92, boss: true, hostile: true, hpMul: 1.4, faction: 'pirate', fruit: 'ito', fruitMastery: 90, style: 'black_leg', scale: 1.25, skill: 0.65,
-    bounty: 340000000, infamy: true, breakthrough: 5, haki: { armament: 80, observation: 70, conqueror: 60 },
+    bounty: 340000000, infamy: true, breakthrough: 5, haki: { armament: 80, observation: 70, conqueror: 60 }, hakiSig: { conqueror: '#ff3fd2' },
     look: { hair: 'short', hairColor: '#fdd835', skin: '#f1c9a0', top: '#fafafa', bottom: '#ffb74d', coat: '#f48fb1', goggles: true, grin: true },
     moves: ['ito_overheat', 'ito_parasite', 'ito_fivecolor', 'nw_dofla_tamaito', 'nw_dofla_fulbright', 'bleg_party'],
     alert: 'Fufufufu! Justice will prevail, you say? Of course it will! Whoever wins... is justice!', barks: ['Fufufufu!', 'You\'re all my puppets.', 'Kneel!'],
@@ -1523,7 +1523,7 @@ const npcs = [
   {
     id: 'nw_big_mom', name: 'Charlotte Linlin', title: '"Big Mom", Emperor of the Sea, Queen of Totto Land', island: 'whole_cake_island', at: { town: 'sweet_city', building: 'Whole Cake Chateau' },
     level: 110, boss: true, hpMul: 1.6, style: 'brawler', weapon: 'sword', scale: 2, bulk: 1.8, skill: 0.55,
-    bounty: 4388000000, infamy: true, breakthrough: 6, haki: { armament: 90, observation: 70, conqueror: 85 },
+    bounty: 4388000000, infamy: true, breakthrough: 6, haki: { armament: 90, observation: 70, conqueror: 85 }, hakiSig: { conqueror: '#ff4fa8' },
     look: { hair: 'curly', hairColor: '#f06292', skin: '#f9dcc4', top: '#f48fb1', bottom: '#f8bbd0', coat: '#b71c1c', hat: 'tricorne', hatColor: '#212121', grin: true },
     moves: ['nw_soul_pocus', 'nw_heavenly_fire', 'nw_raitei', 'nw_ikoku', 'nw_bm_homies'],
     alert: 'Mamamamama! You want to fight ME, at my own tea table?!', barks: ['Mamamamama!', 'LIFE OR TREATS?!', 'CROQUEMBOUCHE!'],

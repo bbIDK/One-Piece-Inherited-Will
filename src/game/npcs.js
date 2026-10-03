@@ -17,6 +17,7 @@ import { layoutOf, interiorRect, doorLocalX, styleScale } from '../world/interio
 import { dims } from '../render3d/chars/bones.js';
 import { formatBerries } from '../core/math.js';
 import { bw } from '../world/bframe.js';
+import { npcHakiSig } from './haki.js';
 
 const NPC_DEFS = new Map();
 const GROUPS = []; // enemy groups: { island, spot|dx/dy, enemies: [archetype...], when }
@@ -128,8 +129,12 @@ export function makeNPC(def, x, y, extra = {}) {
     ...extra,
   });
   a.npcId = def.id || null;
+  // their Haki's colours and voice (an Emperor's own, from their definition; anyone else's from who they are)
+  a.hakiSig = npcHakiSig(def);
   a.masteries = { [a.style]: def.mastery ?? Math.min(100, L * 1.5) };
-  a.techniques = def.moves || [];
+  // (a boss born a king lets their Conqueror's loose in a fight: see abilities.js conquerorBurst)
+  const moves = def.boss && def.haki?.conqueror > 0 && !(def.moves || []).includes('haki_conqueror') ? [...(def.moves || []), 'haki_conqueror'] : def.moves || [];
+  a.techniques = moves;
   a.tier = def.tier || Math.max(1, Math.round(L / 12));
   a.named = !!def.named || !!def.boss;
   a.bountyValue = def.bounty;
@@ -150,7 +155,7 @@ export function makeNPC(def, x, y, extra = {}) {
   a.nameColor = def.boss ? '#ff8a80' : def.dialogue ? '#ffe082' : '#fff';
   const kind = def.ai || (def.hostile ? 'hostile' : def.dialogue ? 'guard' : 'wander');
   a.controller = new AIController({
-    kind, home: { x, y }, skill: def.skill ?? (def.boss ? 0.55 : 0.25), moves: def.moves || [], aggroRange: def.aggroRange ?? (def.boss ? 12 : 8),
+    kind, home: { x, y }, skill: def.skill ?? (def.boss ? 0.55 : 0.25), moves, aggroRange: def.aggroRange ?? (def.boss ? 12 : 8),
     ranged: def.ranged, leash: def.leash ?? (def.boss ? 18 : 16), phases: def.phases, barks: def.barks,
   });
   if (kind === 'guard' || kind === 'idle') { a.stationary = true; a.faceHome = Math.PI / 2; }

@@ -15,12 +15,13 @@ import { saveChar, saveLegacy, clearChar } from './save.js';
 import { regionAt, SEA_IDS, POS_SCALE, SIZE_SCALE } from '../world/constants.js';
 import { findShore, standable } from './interact.js';
 import { upgradeFleet, recordShip, liveShips } from './fleet.js';
+import { hakiSignature, charSignature, kingChance } from './haki.js';
 
 // --------------------------------------------------------------- birth traits
 export const TRAITS = {
   will_of_d: { name: 'Will of D.', rarity: 'legendary', weight: 0, desc: 'Your name carries a hidden "D." — the mark of those who laugh in the face of death. Fate bends around you, and the world\'s powers will come to fear the name.', attrs: { wil: 3 } },
   // hidden: never shown until it awakens
-  conqueror: { name: "King's Disposition", rarity: 'legendary', weight: 0, hidden: true, desc: 'One in several million is born with the qualities of a king. It awakened the first time your will was truly tested.' },
+  conqueror: { name: "King's Disposition", rarity: 'legendary', weight: 0, hidden: true, desc: 'One in several million is born with the qualities of a king. It awakened the first time your will was truly tested.', latent: 'A Haki master sensed it in you: the qualities of a king. It will wake the day your will is truly tested.' },
   iron_stomach: { name: 'Iron Stomach', rarity: 'common', weight: 10, desc: 'Food heals 30% more.' },
   sea_legs: { name: 'Sea Legs', rarity: 'common', weight: 10, desc: 'Storms and crashes damage your ship 30% less.' },
   silver_tongue: { name: 'Silver Tongue', rarity: 'common', weight: 10, desc: 'Shops charge you 10% less.' },
@@ -44,7 +45,7 @@ export const PERKS = {
   chart: { name: "Grandfather's Chart", desc: 'Every island your ancestors discovered starts charted on your map.', costs: [30], icon: 'map' },
   haki: { name: 'Latent Spirit', desc: 'Hidden powers, once awakened, grow 25% faster per level.', costs: [80, 160], icon: 'character' },
   will_of_d: { name: 'Will of D.', desc: 'Triples the chance to be born with the hidden "D." (5% → 15%).', costs: [90], icon: 'journal' },
-  kings_blood: { name: 'Kingly Bloodline', desc: 'Much higher chance to be born with the qualities of a king.', costs: [150], icon: 'crew' },
+  kings_blood: { name: 'Kingly Bloodline', desc: 'Four times the chance to be born with the qualities of a king (4% → 16%; with the Will of D., certain).', costs: [150], icon: 'crew' },
   rare_races: { name: 'Distant Relatives', desc: 'Rare, epic and legendary races are twice as likely.', costs: [100], icon: 'character' },
 };
 
@@ -82,8 +83,8 @@ export function rollBirth(legacy, seed) {
   traits.push(rng.weighted(pool));
   if (rng.chance(0.25)) { const t2 = rng.weighted(pool); if (!traits.includes(t2)) traits.push(t2); }
   if (rng.chance(dChance(legacy))) traits.push('will_of_d');
-  const kChance = (traits.includes('will_of_d') ? 0.25 : 0.015) * (perkLevel(legacy, 'kings_blood') ? 4 : 1);
-  if (rng.chance(kChance)) traits.push('conqueror');
+  // (the qualities of a king: see haki.js KING — rare, likelier with the "D.", and the bloodline multiplies either)
+  if (rng.chance(kingChance(traits.includes('will_of_d'), perkLevel(legacy, 'kings_blood') > 0))) traits.push('conqueror');
   return { race, traits, seed };
 }
 
@@ -162,6 +163,8 @@ export function createCharacter(legacy, birth, choices) {
     createdAt: Date.now(),
   };
   if (perkLevel(legacy, 'chart')) char.discovered = (legacy.charted || []).slice();
+  // their Haki's own colours and voice, from their birth (see haki.js)
+  char.hakiSig = hakiSignature(char.runSeed);
   return char;
 }
 
@@ -276,6 +279,7 @@ export function buildPlayer(game, char) {
   a.fruit = char.fruit;
   a.fruitMastery = char.fruitMastery;
   a.hakiSkill = char.haki;
+  a.hakiSig = charSignature(char);
   a.weapon = weaponFromChar(char);
   a.weaponMastery = char.weaponMastery;
   a.baseMods.armor = armorOf(char);
@@ -331,6 +335,8 @@ export function upgradeChar(c) {
     c.crewOffers = {};
     for (const m of c.crew || []) c.crewOffers[m.id] = { said: 'yes', day: m.joined || 1 };
   }
+  // (from before every Haki had its own colours: made from the seed they have, as a new character's are)
+  if (!c.hakiSig) c.hakiSig = charSignature(c);
   // the ships you had are the ships you own
   upgradeFleet(c);
   // attribute points from the old breakthrough system are spent automatically
@@ -430,6 +436,7 @@ export function refreshPlayer(game) {
   p.fruit = c.fruit;
   p.fruitMastery = c.fruitMastery;
   p.hakiSkill = c.haki;
+  p.hakiSig = charSignature(c);
   p.techniques = c.techniques;
   p.hotbar = c.hotbar;
   p.weaponMastery = c.weaponMastery;
