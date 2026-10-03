@@ -348,6 +348,9 @@ export class CameraRig {
     const side = !sailing ? ((p.vx || 0) * -Math.sin(this.yaw) + (p.vy || 0) * Math.cos(this.yaw)) : 0;
     let roll = this.bobOn ? -side * 0.006 : 0;
     if (p.state === 'knocked') roll = 0.35;
+    // flying, the view leans into a banked turn with you (render/anim/flight.js flightState)
+    const fly = p.flying && p._fly ? p._fly : null;
+    if (fly) roll = -(fly.bank || 0) * (this.mode === 'first' ? 0.28 : 0.12);
     // crouching to spring for a charged jump
     this.crouch = (this.crouch || 0) + ((p.charging || 0) - (this.crouch || 0)) * Math.min(1, dt * 12);
     eyeH -= this.crouch * 0.34 * scale;
@@ -363,6 +366,8 @@ export class CameraRig {
       // oars, your ship, from further out the bigger she is (the mouse wheel
       // still pulls it in and out)
       let ox = 0, oz = 0, oy = gh + eyeH * 0.9, d = this.tp.dist, own = null;
+      // (flying fast, the camera hangs further back: the speed reads, and so does the body laid out flat)
+      if (fly) d *= 1 + 0.3 * Math.min(1, Math.hypot(p.vx || 0, p.vy || 0) / 14);
       if (sailing) {
         const s = p.ship, dd = shipDims(s.def);
         own = s;
@@ -469,7 +474,7 @@ export class CameraRig {
         if (cy < under) cy = under;
       }
       cam.position.set(cx, cy, cz);
-      cam.rotation.set(this.pitch * 0.8 - 0.12 - this.tilt + this.shake.y, yaw3 + this.shake.x, 0);
+      cam.rotation.set(this.pitch * 0.8 - 0.12 - this.tilt + this.shake.y, yaw3 + this.shake.x, fly ? this.roll : 0);
     } else {
       let ex = gx + Math.cos(this.yaw + Math.PI / 2) * bobX, ey = gh + eyeH + bobY, ez = gz + Math.sin(this.yaw + Math.PI / 2) * bobX;
       // The eye rides your head (chars3d.js ActorView.eyeOffset), on your
@@ -518,9 +523,10 @@ export class CameraRig {
       cam.rotation.set(this.pitch + this.shake.y + (sailing ? this.seaPitch || 0 : 0), yaw3 + this.shake.x, this.roll + rollSea);
     }
     const sprint = !sailing && p.intent?.sprint && moving;
-    // a quick widening of the view during dodges and dashes
+    // a quick widening of the view during dodges and dashes (and with a flight's speed)
     const dashing = !!p.dash;
-    const fov = this.baseFov + (sprint ? 7 : 0) + (dashing ? 6 : 0);
+    const flyFov = fly ? 9 * Math.min(1, Math.hypot(p.vx || 0, p.vy || 0) / 16) : 0;
+    const fov = this.baseFov + (sprint ? 7 : 0) + (dashing ? 6 : 0) + flyFov;
     if (Math.abs(cam.fov - fov) > 0.05) { cam.fov += (fov - cam.fov) * Math.min(1, dt * 6); cam.updateProjectionMatrix(); }
     // (tests: a camera set down anywhere — rig.shot = { from: [x, y, h], at:
     // [x, y, h] }, in world tiles and metres — to look at something closely)

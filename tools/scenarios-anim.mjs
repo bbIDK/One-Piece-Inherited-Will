@@ -13,7 +13,7 @@
 //   node tools/shot.mjs anim-pose --js=<file>   (a function body given g, OP, LAB: pose the row yourself)
 //   node tools/shot.mjs anim-live --moves=gomu_pistol,gomu_bazooka [--views=side,back,3q] [--every=2] [--n=12] [--fw=400]
 //   node tools/shot.mjs anim-dodge [--races=human,skypiean,lunarian,mink,buccaneer,longleg] [--dirs=f,fr,r,br,b] [--views=side,back]
-//   node tools/shot.mjs anim-fly [--styles=wings,phoenix,dragon,ride,float,geppo,none] [--views=side,back,3q]
+//   node tools/shot.mjs anim-fly [--styles=wings,phoenix,dragon,ride,float,geppo,none] [--views=side,back,3q] [--states=air|ground|all]
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -405,7 +405,9 @@ const FLY_STATES = [
   { n: 'take-off .05', v: 0, up: 0.05, z: 0.05 }, { n: 'take-off .15', v: 0, up: 0.15, z: 0.3 }, { n: 'take-off .3', v: 0, up: 0.3, z: 1.2 },
   { n: 'land .03', down: 0.03 }, { n: 'land .12', down: 0.12 }, { n: 'land .25', down: 0.25 },
 ];
-async function filmFly(page, style, views, rows, race) {
+async function filmFly(page, style, views, rows, race, which = 'all') {
+  // (the states in the air, or the take-off and landing on the ground: or both, side by side)
+  const S0 = FLY_STATES.filter((x) => which === 'all' || (which === 'air') === (x.up === undefined && x.down === undefined));
   for (const view of views) {
     await page.evaluate(({ style, S, facing, race }) => {
       const L = window.LAB, g = window.OP.game, now = g.env.time;
@@ -429,12 +431,12 @@ async function filmFly(page, style, views, rows, race) {
           a._fly = { on: true, upT: now - up, downT: now - 9, t0: now - (st.t ?? up), h: Math.atan2(a.vy, a.vx), bank: st.bank || 0, alt: a.z, climb: st.climb || 0, last: now, style: style === 'none' ? null : style };
         }
       });
-      L.frame(undefined, 2.4, 0.03);
+      L.frame(undefined, S.every((x) => x.down !== undefined || x.up !== undefined) ? 1.2 : 2.4, 0.03);
       L.draw(); L.draw();
       L.spacing = 1.7;
-    }, { style, S: FLY_STATES, facing: VIEWS[view] ?? 0, race });
+    }, { style, S: S0, facing: VIEWS[view] ?? 0, race });
     const clip = await page.evaluate(() => ({ x: 0, y: Math.round(innerHeight * 0.08), width: innerWidth, height: Math.round(innerHeight * 0.84) }));
-    rows.push({ label: `flight: ${style}${race ? ' (' + race + ')' : ''} — ${view} — ${FLY_STATES.map((x) => x.n).join(' | ')}`, buf: await page.screenshot({ clip }) });
+    rows.push({ label: `flight: ${style}${race ? ' (' + race + ')' : ''} — ${view} — ${S0.map((x) => x.n).join(' | ')}`, buf: await page.screenshot({ clip }) });
   }
 }
 
@@ -626,7 +628,7 @@ export const scenarios = {
       let rows = [], part = 0;
       for (const style of styles) {
         // (wings fly on wings: a Lunarian's)
-        await filmFly(page, style, views, rows, args.race || (style === 'wings' ? 'lunarian' : 'human'));
+        await filmFly(page, style, views, rows, args.race || (style === 'wings' ? 'lunarian' : 'human'), args.states || 'all');
         if (rows.length >= per) { await sheet(page, `anim-fly${tag}-${++part}.png`, rows, `flight ${tag}`); rows = []; }
       }
       if (rows.length) await sheet(page, `anim-fly${tag}-${++part}.png`, rows, `flight ${tag}`);

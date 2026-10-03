@@ -267,14 +267,25 @@ const CLIPS = {
   breath: (w, T, c) => ({ keys: strike(w, T, S(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: 'grit' }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: 'shout', hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
   pull: (w, T, c) => ({ keys: strike(w, T, S(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: 'claw', tw: 0.3, l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: 'fist', tw: -0.3, l: -0.22, b: [-0.08, 0.06], face: 'shout' } })) }),
   // ---------------------------------------------------------------- Devil Fruit signatures
-  // Gum-Gum Pistol: the arm wound far back on its rubber, the body twisted away from it and the other hand aiming — then let go
-  pistol: (w, T, c) => ({ keys: strike(w, T, S(c, { load: { l: -0.24, b: [-0.07, 0.06], tw: -0.75, hp: -0.3, hF: [-0.62, -0.03], zF: 0.05, stretch: true, hB: [0.3, -0.04], handB: 'palm', fF: [0.25, 0], fB: [-0.18, 0], face: 'grit' }, hit: { l: 0.28, b: [0.14, 0.03], tw: 0.65, hp: 0.4, hF: [0.47, -0.05], stretch: true, hB: [-0.05, 0.12], handB: 'fist', fF: [0.29, 0], fB: [-0.15, -0.05], face: 'shout' }, holdT: 0.12 })) }),
-  // Gum-Gum Bazooka: both arms stretched back behind, then the two palms slammed out together
-  bazooka: (w, T, c) => ({ keys: strike(w, T, S(c, { loadAt: 0.7, antic: { b: [0.02, 0.09], l: 0.14, hF: [0.25, 0.05], hB: [0.24, 0.08] }, load: { b: [-0.08, 0.09], l: -0.32, tw: -0.3, hF: [-0.7, 0.0], hB: [-0.72, 0.08], zF: 0.04, zB: 0.04, hand: 'palm', handB: 'palm', stretch: true, fF: [0.27, 0], fB: [-0.2, 0], face: 'grit' }, hit: { b: [0.23, 0.05], l: 0.33, tw: 0.15, hp: 0.2, hF: [0.53, -0.05], hB: [0.51, 0.07], hand: 'palm', handB: 'palm', stretch: true, fF: [0.34, 0], fB: [-0.16, -0.05], face: 'shout' }, holdT: 0.1 })) }),
+  // Gum-Gum Pistol: the arm wound far back on its rubber (past where an arm
+  // could reach: it stretches), the body twisted away from it and the other
+  // hand aiming — then let go
+  pistol: (w, T, c) => ({ keys: strike(w, T, S(c, { load: { l: -0.24, b: [-0.07, 0.06], tw: -0.75, hp: -0.3, hF: [-1.15, 0.0], zF: 0.07, stretch: true, hB: [0.3, -0.04], handB: 'palm', fF: [0.25, 0], fB: [-0.18, 0], face: 'grit' }, hit: { l: 0.28, b: [0.14, 0.03], tw: 0.65, hp: 0.4, hF: [0.47, -0.05], stretch: true, hB: [-0.05, 0.12], handB: 'fist', fF: [0.29, 0], fB: [-0.15, -0.05], face: 'shout' }, holdT: 0.12 })) }),
+  // Gum-Gum Bazooka: both arms stretched far back behind on their rubber, then
+  // the two palms slammed out together, the arms running out to them (and
+  // snapping home after)
+  bazooka: (w, T, c) => ({ keys: strike(w, T, S(c, { loadAt: 0.7, antic: { b: [0.02, 0.09], l: 0.14, hF: [0.25, 0.05], hB: [0.24, 0.08] }, load: { b: [-0.08, 0.09], l: -0.32, tw: -0.3, hF: [-1.05, 0.02], hB: [-1.08, 0.1], zF: 0.04, zB: 0.04, hand: 'palm', handB: 'palm', stretch: true, fF: [0.27, 0], fB: [-0.2, 0], face: 'grit' }, hit: { b: [0.23, 0.05], l: 0.33, tw: 0.15, hp: 0.2, hF: [1.75, -0.04], hB: [1.72, 0.07], zF: -0.08, zB: -0.08, hand: 'palm', handB: 'palm', stretch: true, fF: [0.34, 0], fB: [-0.16, -0.05], face: 'shout' }, hold: { hF: [1.62, -0.03], hB: [1.6, 0.07] }, follow: { hF: [0.3, 0.0], hB: [0.28, 0.08], zF: 0, zB: 0, stretch: true }, holdT: 0.12, followAt: 0.3 })) }),
+  // Gear Third: the thumb bitten and blown into — the arm swelling like a
+  // balloon as it's wound back — then the giant fist thrown (it flies on its
+  // rubber: the projectile has the arm), the arm going down again after
+  gigant: (w, T, c) => ({ keys: strike(w, T, S(c, { loadAt: 0.62, antic: { b: [0, 0.05], l: 0.1, ht: 0.1, hF: [0.08, -0.22], eF: 1, hB: [0.1, 0.1], inF: 0.25, face: 'grit' }, anticAt: 0.45, load: { b: [-0.07, 0.1], l: -0.22, tw: -0.8, hp: -0.3, ht: 0.06, hF: [-0.62, -0.06], zF: 0.06, stretch: true, hB: [0.3, -0.04], handB: 'palm', fF: [0.27, 0], fB: [-0.21, 0], inF: 1, face: 'grit' }, hit: { b: [0.16, 0.05], l: 0.3, tw: 0.7, hp: 0.42, hF: [0.5, -0.05], stretch: true, hB: [-0.06, 0.13], handB: 'fist', fF: [0.31, 0], fB: [-0.16, -0.05], inF: 1, face: 'shout' }, hold: { inF: 1 }, follow: { inF: 0.5 }, holdT: 0.14 })), jitter: 0.008 }),
   // a flurry: the stance wide, leaning in behind fists that blur (see samplePose)
   gatling: (w, T, c) => ({ keys: strike(w, T, S(c, { load: { l: -0.14, b: [-0.04, 0.08], tw: -0.2, hF: [-0.16, 0.02], hB: [-0.2, 0.06], fF: [0.26, 0], fB: [-0.2, 0], face: 'grit' }, hit: { l: 0.24, b: [0.08, 0.07], ht: 0.05, hF: [0.42, -0.02], hB: [0.38, 0.04], fF: [0.28, 0], fB: [-0.2, -0.02], face: 'shout' }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
   kneel: (w, T, c) => ({ keys: strike(w, T, S(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: 'grit' }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: 'fierce' }, holdT: 0.12 })), legs: true }),
-  rocket: (w, T, c) => ({ keys: strike(w, T, S(c, { load: { b: [0, 0.12], l: -0.26, hF: [-0.54, 0.08], hB: [-0.56, 0.12], stretch: true, face: 'grit' }, hit: { l: 0.62, z: 0.16, hF: [0.46, 0.0], hB: [0.44, 0.06], fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: 'shout' } })), legs: true }),
+  // Gum-Gum Rocket: both arms shot out far ahead to grab hold, the body
+  // leaning back against the pull — then let go of the ground and flung
+  // after them, the arms shortening as it flies in
+  rocket: (w, T, c) => ({ keys: strike(w, T, S(c, { loadAt: 0.75, load: { b: [-0.06, 0.12], l: -0.3, ht: -0.1, hF: [2.3, -0.3], hB: [2.25, -0.24], zF: -0.06, zB: -0.06, hand: 'claw', handB: 'claw', stretch: true, fF: [0.3, 0], fB: [-0.22, 0], face: 'grit' }, hit: { l: 0.62, z: 0.16, ht: -0.4, hF: [1.1, -0.12], hB: [1.06, -0.06], hand: 'fist', handB: 'fist', stretch: true, fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: 'shout' }, hold: { hF: [0.55, -0.06], hB: [0.52, 0.0] }, follow: { stretch: false } })), legs: true }),
   fly: (w, T, c) => ({ keys: strike(w, T, S(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true }),
   // Hiken: the fist pulled back to the hip in its fire, the body wound round it and the other hand out to aim — then thrown with everything behind it
   hiken: (w, T, c) => ({ keys: strike(w, T, S(c, { loadAt: 0.62, antic: { b: [0.02, 0.07], l: 0.1, hF: [0.26, 0.0] }, load: { b: [-0.08, 0.1], l: -0.12, tw: -0.7, hp: -0.3, ht: 0.05, hF: [-0.2, 0.12], eF: 1, hB: [0.34, -0.06], handB: 'palm', fF: [0.27, 0], fB: [-0.21, 0], face: 'grit' }, hit: { b: [0.24, 0.06], l: 0.36, tw: 0.75, hp: 0.5, ht: -0.08, hF: [0.5, -0.04], hB: [-0.1, 0.18], handB: 'fist', fF: [0.38, 0], fB: [-0.15, -0.07], sm: 0.14, face: 'shout' }, follow: { l: 0.4, b: [0.27, 0.08], hF: [0.45, -0.02] }, holdT: 0.14 })), jitter: 0.006 }),
@@ -294,6 +305,7 @@ const CLIPS = {
 
 // which limb (or blade) lands the blow — drives element glows and smears
 const LIMB = {
+  gigant: 'hF', bazooka: 'hF',
   cross: 'hB', palm2: 'hB', shigan2: 'hB', claw2: 'hB', grab2: 'hB', dual2: 'wB',
   kick: 'fF', kick_high: 'fF', kick_low: 'fF', kick_spin: 'fF', sweep: 'fF', knee: 'fF', axe_kick: 'fF', rise_kick: 'fF', mouton: 'fF', handstand: 'fF', flying_kick: 'fF', stomp: 'fF',
   ballet_kick: 'fF', pirouette: 'fF', jete: 'fF', arabesque: 'fB', rocket: 'hF',
@@ -314,7 +326,7 @@ const CLIP_WEIGHT = {
   light: 'jab cross palm palm2 shigan shigan2 claw claw2 grab grab2 chop chop2 kick slash slash2 dual1 dual2 dual3 staff staff2 shoot flick ballet_kick pirouette',
   medium: 'hook kick_high kick_spin sweep rise_slash stab dual_stab staff_jab thrust throw point push raise room pull pray hana spread guardup flex blink jete knee rise_kick pistol skyward breath',
   heavy: 'uppercut haymaker palm_double claw_x headbutt charge mouton axe_kick flying_kick stomp arabesque cleave iai dualx tora bladespin axe axe2 aim slam rankyaku vibe_palm rocket fly hiken groundpalm summon powerup tilt bazooka gatling kneel quake handstand slash3',
-  massive: 'axe_slam kaishin sunraise will',
+  massive: 'axe_slam kaishin sunraise will gigant',
 };
 const WEIGHT_OF = {};
 for (const [k, v] of Object.entries(CLIP_WEIGHT)) for (const n of v.split(' ')) WEIGHT_OF[n] = k;
@@ -351,6 +363,7 @@ const MAIN = (s) => s.hit || s.proj || s.dash || s.zone || s.teleport || s.pull 
 // Ice Age's palm to the ground, the hand raised for a ROOM, the second sun —
 // and the last hit of a combo that should end it with a flourish
 const TECH_CLIP = {
+  gomu_gear3: 'gigant',
   mera_hiken: 'hiken', ryu_hiken: 'hiken', magu_daifunka: 'hiken',
   gura_punch: 'kaishin', gura_kaishin: 'kaishin', haki_emission: 'kaishin', gura_tsunami: 'tilt',
   goro_elthor: 'skyward', clima_thunderbolt: 'skyward', zushi_meteor: 'skyward',
@@ -434,7 +447,7 @@ export function actionClip(def, actor, stanceName) {
   if (c.hitDur) {
     // (Gum-Gum fists blur out far past where an arm could reach)
     const rubber = !!actor && actor.fruit === 'gomu' && (def.source || '').startsWith('fruit');
-    if (FLURRY.has(name) && !SPINS.has(name)) c.flurry = { t0: w, t1: w + c.hitDur, rate: 12, legs: name.startsWith('kick'), reach: rubber ? 0.6 : 0.34, stretch: rubber };
+    if (FLURRY.has(name) && !SPINS.has(name)) c.flurry = { t0: w, t1: w + c.hitDur, rate: rubber ? 14 : 12, legs: name.startsWith('kick'), reach: rubber ? Math.min(2.2, (main.hit?.range || 2.4) / 1.35) : 0.34, stretch: rubber, scatter: rubber ? 1 : 0.3 };
     if (SPINS.has(name) && name !== 'handstand') c.spin = { t0: w, t1: w + c.hitDur, turns: Math.max(1, Math.round(c.hitDur * 5)) };
   }
   const clip = buildClip(name, w, T, c);
@@ -565,10 +578,15 @@ export function samplePose(A, t, pose) {
       P.smfF = 0.06 * tri;
     } else {
       const R = f.reach || 0.34;
-      // (each fist snaps out and comes back slower: most of the beat is the blow arriving)
+      // (each fist snaps out and comes back slower: most of the beat is the blow
+      // arriving — and each to its own spot, a barrage, not a piston)
       const out = (x) => 1 - (1 - x) ** 2;
-      P.hF = [0.12 + R * out(tri), -0.04 + 0.06 * (1 - tri)];
-      P.hB = [0.12 + R * out(1 - tri), 0.02 + 0.05 * tri];
+      const n = Math.floor(ph), sc = f.scatter || 0;
+      const hash = (i, j) => { const v = Math.sin(i * 127.1 + j * 311.7) * 43758.5; return v - Math.floor(v) - 0.5; };
+      const nF = n - (n % 2), nB = n - ((n + 1) % 2);
+      P.hF = [0.12 + R * out(tri) * (1 + 0.15 * sc * hash(nF, 3)), -0.04 + 0.06 * (1 - tri) + 0.32 * sc * hash(nF, 1) * tri];
+      P.hB = [0.12 + R * out(1 - tri) * (1 + 0.15 * sc * hash(nB, 4)), 0.02 + 0.05 * tri + 0.32 * sc * hash(nB, 2) * (1 - tri)];
+      P.zF = (P.zF || 0) + 0.4 * sc * hash(nF, 5) * tri; P.zB = (P.zB || 0) + 0.4 * sc * hash(nB, 6) * (1 - tri);
       P.tw = (P.tw || 0) + 0.3 * (tri - 0.5);
       P.hp = (P.hp || 0) + 0.1 * (tri - 0.5);
       P.smF = 0.08 * tri; P.smB = 0.08 * (1 - tri);

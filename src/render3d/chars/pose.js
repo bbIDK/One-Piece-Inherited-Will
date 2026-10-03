@@ -189,7 +189,7 @@ export function rigOptions(a, pose, P, o = {}) {
   if (pose.swimming && P.spread) o.spread = P.spread;
   if (pose.swimming && P.legSpread) o.legSpread = P.legSpread; // (the frog kick's knees and feet apart)
   if (pose.swimming) o.walkRel = null; // the legs kick, they don't walk
-  o.roll = 0;
+  o.roll = 0; o.infR = 0;
   o.lift = ((P.z || 0) + (pose.z || 0)) * 1.3;
   o.squash = (pose.squash || 1) * (P.sq || 1);
   if (pose.toon) o.squash *= 1 + Math.sin((pose.time || 0) * 9) * 0.05;

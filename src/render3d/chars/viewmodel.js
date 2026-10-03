@@ -317,6 +317,11 @@ class Viewmodel {
         // (a pistol is fired from low on the right, as in any shooter: not
         // thrust out to the middle of the view)
         if (pistol) { PP.hF = [PP.hF[0], Math.max(PP.hF[1], 0.04)]; o.spread = (o.spread || 0) + 0.08; }
+      } else if (PP.stretch) {
+        // (a rubber arm sent out past its length goes all the way, down the middle of
+        // the view — a Bazooka's palms, a Gatling's barrage — at the height a blow has)
+        const far = (h0) => { const h = xy(h0, [0.2, 0]), q = fpStrike(h); return h[0] > 0.6 ? [h[0], q[1]] : q; };
+        PP = { ...PP, hF: far(PP.hF), hB: far(PP.hB), zF: (PP.zF || 0) * 0.5, zB: (PP.zB || 0) * 0.5 };
       } else PP = { ...PP, hF: fpStrike(PP.hF), hB: fpStrike(PP.hB) };
     } else if (!swimming && (busy || pose.counterAge < 0.32)) {
       // A reaction from your own eyes (a parry's sweep, your arms flung open
@@ -455,7 +460,7 @@ class Viewmodel {
     // and its glow — filled the view; and it flies off level with your
     // shoulder, a little in toward the middle of the view)
     const k = rubberFist(F, p, ctx, dt, (out, dx, dy) => { const fx = dx * c + dy * sn, fz = -dx * sn + dy * c; out.set(Math.max(0.55, fx), sh - 0.08 + Math.min(0.12, fx * 0.012), fz * 0.6 + 0.05); });
-    if (k > 0) { o.reachR = F.at; o.reachRK = k; }
+    if (k > 0) { o.reachR = F.at; o.reachRK = k; if (F.big) o.infR = 1; }
   }
 
   effects(p, pose, A, env) {

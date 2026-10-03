@@ -455,7 +455,9 @@ function rubberLines(v, o, X, Y, Z, dx, dz, s, seed, t) {
   if (o.alive === false) return;
   const sc = (o.look && o.look.scale) || 1;
   const sx = v.world.dx(v.ox, o.x) + dx * 0.25, sz = o.y - v.oy + dz * 0.25;
-  const sy = v.ground(o.x, o.y) + (o.z || 0) + 1.3 * sc;
+  // (from the shoulder the arm leaves, as its model has it: index.js fistY)
+  const ov = v.view.actorViews && v.view.actorViews.get(o);
+  const sy = ov && ov.shoulderY != null ? ov.shoulderY : v.ground(o.x, o.y) + (o.z || 0) + 1.3 * sc;
   const ax = X - sx, ay = Y - sy, az = Z - sz, L = Math.hypot(ax, ay, az);
   if (L < 0.6) return;
   const lx = -dz, lz = dx, f = Math.floor(t * 30);

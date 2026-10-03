@@ -366,14 +366,15 @@ export class CharacterModel {
     // the rubber chains: stretched along with the forearm (or shin) at rest, their own length when it runs out
     for (let k = 0; k < 2; k++) {
       // (Gear Third: an arm blown up like a balloon, the fist huge)
-      const inf = (k === 0 ? P.inF : P.inB) || 0, g = 1 + 1.4 * inf;
+      // (o.infR: a giant fist still out on its rubber keeps the arm blown up till it's home)
+      const inf = Math.max((k === 0 ? P.inF : P.inB) || 0, k === 0 ? o.infR || 0 : 0), g = 1 + 1.6 * inf;
       for (const i of RUB[k]) bones[i].scale.set(g, rig.rubSY[k], g);
       for (const i of RUBL[k]) bones[i].scale.set(1, rig.rubSYL[k], 1);
       if (inf > 0) {
         const U = k === 0 ? B.uarmR : B.uarmL, F = k === 0 ? B.farmR : B.farmL;
         bones[U].scale.set(1 + 0.9 * inf, rig.len[U], 1 + 0.9 * inf);
         bones[F].scale.set(g, rig.len[F], g);
-        bones[k === 0 ? B.handR : B.handL].scale.setScalar(1 + 2.2 * inf);
+        bones[k === 0 ? B.handR : B.handL].scale.setScalar(1 + 3.4 * inf);
       } else bones[k === 0 ? B.handR : B.handL].scale.setScalar(1);
     }
     if (this.body.skirt) this.skirtPanels(o.dt);
@@ -511,8 +512,12 @@ export class CharacterModel {
       const flap = Math.sin(t * (lunar ? 2.4 : 3.2)) * (lunar ? 0.1 : 0.14) + (o.moving ? 0.12 : 0);
       yaw = -0.35 - flap * 0.5; roll = -0.25 + flap;
     }
-    bones[B.wingR].quaternion.setFromAxisAngle(AY, yaw).multiply(_q.setFromAxisAngle(AX, roll));
-    bones[B.wingL].quaternion.setFromAxisAngle(AY, -yaw).multiply(_q.setFromAxisAngle(AX, -roll));
+    // (spread to fly, the wings beat up and down in the world however the body
+    // is pitched: their root turned back against the chest's pitch)
+    const pitch = P.ws ? ((P.r || 0) + (P.l || 0) + (o.leanAdd || 0)) * Math.max(0, Math.min(1, P.ws)) : 0;
+    _q2.setFromAxisAngle(AZ, pitch);
+    bones[B.wingR].quaternion.copy(_q2).multiply(_q.setFromAxisAngle(AY, yaw)).multiply(_q.setFromAxisAngle(AX, roll));
+    bones[B.wingL].quaternion.copy(_q2).multiply(_q.setFromAxisAngle(AY, -yaw)).multiply(_q.setFromAxisAngle(AX, -roll));
     bones[B.wingR].scale.setScalar(sc); bones[B.wingL].scale.setScalar(sc);
   }
 

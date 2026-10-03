@@ -1034,8 +1034,12 @@ sig('snipe_popgreen', {
 sig('gomu_pistol gomu_gear3', {
   proj(fx, actor, s, a) {
     const big = a.def.id === 'gomu_gear3';
-    const [px, py] = fwd(actor, a.angle, 0.4);
-    fx.ring(px, py, 0.05, big ? 1.4 : 0.6, '#ffffff', 0.2, big ? 0.12 : 0.06, { z: 0.8, flat: 1, add: true });
+    // the air the arm punches through as it leaves: a ring round it, out past
+    // the shoulder, at the shoulder's height (the fist flies from there)
+    const sc = (actor.look && actor.look.scale) || 1, d = (big ? 1.4 : 0.9) * sc;
+    const px = actor.x + Math.cos(a.angle) * d, py = actor.y + Math.sin(a.angle) * d;
+    // (not through your own eyes: an arm's length out it would fill the view — the arm going is enough)
+    if (ownEyes(fx) !== actor) fx.ring(px, py, 0.05, big ? 1.4 : 0.6, '#ffffff', 0.2, big ? 0.12 : 0.06, { z: (actor.z || 0) + 1.3 * sc, flat: 1, add: true });
     if (big) { smoke(fx, px, py, 0.8, 8, ['#ffffff', '#eceff1'], { speed: 2.5, size: 0.35 }); fx.shake(0.2, a.angle); }
   },
 });

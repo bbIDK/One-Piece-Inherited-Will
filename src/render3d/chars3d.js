@@ -174,7 +174,7 @@ class ActorView {
       o.sitY = (this.sitH || 0) / s;
       // the hands on the oar grips (or the wheel's rim) — or a rubber punch in
       // flight: the arm stretches out to the fist, and snaps back after it
-      o.reachR = null; o.reachL = null; o.reachRK = 1; o.reachLK = 1;
+      o.reachR = null; o.reachL = null; o.reachRK = 1; o.reachLK = 1; o.infR = 0;
       if (pose.station) {
         const st = pose.station, R = this._grips || (this._grips = [new THREE.Vector3(), new THREE.Vector3()]);
         const hipY = m.d.hip0 + ((o.sitY ?? m.d.hA) + 0.07 - m.d.hip0) * o.sitK;
@@ -265,7 +265,8 @@ class ActorView {
     // helm or the oars looking back over your shoulder further than a neck
     // turns (you'd have turned round), or while the view is held back behind
     // your eyes: a lunge up against a wall, and the head goes on without it.)
-    const away = a.state === 'knocked' || a.state === 'dead' || (!!pose.station && (this.lookPast || 0) > 0.4) || (a._eye3?.held || 0) > 0.15;
+    // (nor flying: the body's laid out along the flight under eyes that stay level)
+    const away = a.state === 'knocked' || a.state === 'dead' || (!!pose.station && (this.lookPast || 0) > 0.4) || (a._eye3?.held || 0) > 0.15 || !!a.flying;
     u.uClipY.value = fp && away ? -1e6 : 1e6;
     u.uHideHead.value = fp ? 1 : 0;
     u.uHideArms.value = fp && busy ? 1 : 0;
@@ -409,9 +410,14 @@ class ActorView {
   stretchTarget(a, ctx, s, o, dt) {
     const F = this.fist || (this.fist = fistState());
     const f = this.visF ?? a.facing ?? 0, c = Math.cos(f), sn = Math.sin(f);
-    const sh = this.model.rig.S[0].y - 0.05;
-    const k = rubberFist(F, a, ctx, dt, (out, dx, dy) => out.set((dx * c + dy * sn) / s, sh, (-dx * sn + dy * c) / s));
-    if (k > 0) { o.reachR = F.at; o.reachRK = k; }
+    const sh = this.model.rig.S[0].y - 0.05, base = this.root.position.y;
+    // (where the fist flies from, in the world: index.js fistY)
+    this.shoulderY = base + sh * s;
+    const k = rubberFist(F, a, ctx, dt, (out, dx, dy, pr) => {
+      const y = ctx.projY ? (ctx.projY(pr) - base) / s : sh;
+      out.set((dx * c + dy * sn) / s, y, (-dx * sn + dy * c) / s);
+    });
+    if (k > 0) { o.reachR = F.at; o.reachRK = k; if (F.big) o.infR = 1; }
   }
 
   effects(a, pose, P, o, env, ctx, camYaw3, dist, s) {

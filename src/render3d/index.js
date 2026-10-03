@@ -184,6 +184,7 @@ export class Renderer3D {
     this.ctx = {
       THREE, scene: this.scene, game,
       ground: (x, y) => this.ground(x, y),
+      projY: (pr) => this.projY(pr),
       terrain: (x, y) => this.terrain.terrainAt(x, y),
       landDrawn: (x, y) => this.terrain.landDrawn(x, y),
     };
@@ -1021,7 +1022,29 @@ export class Renderer3D {
    */
   projY(pr) {
     if (pr.arc) { const f = Math.min(1, (pr.traveled || 0) / (pr.range || 1)); return pr.arc.h0 * (1 - f) + pr.arc.apex * 4 * f * (1 - f) - f * 0.2; }
+    if (pr.stretch) return this.fistY(pr);
     return Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5)) + (pr.sprite === 'cannonball' ? 1.3 : 1.15) + (pr.z || 0);
+  }
+
+  /**
+   * How high a Gum-Gum fist flies (the arm running out to it: chars/rubber.js):
+   * level with the shoulder it's thrown from, rising or falling to the chest of
+   * what it's thrown at as it gets there — never steeper than a punch would
+   * go — not riding the ground's ups and downs under it.
+   */
+  fistY(pr) {
+    const o = pr.stretch, ov = this.actorViews.get(o);
+    const sh = ov && ov.shoulderY != null ? ov.shoulderY : this.ground(o.x, o.y) + (o.z || 0) + 1.3 * ((o.look && o.look.scale) || 1);
+    const t = pr.target;
+    if (!t || t.alive === false || t === o) return sh;
+    const tv = this.actorViews.get(t);
+    const chest = (tv ? tv.root.position.y : this.ground(t.x, t.y) + (t.z || 0)) + 1.2 * ((t.look && t.look.scale) || 1);
+    // (the shot flies on the chest line: its ground point is half a tile on)
+    const gone = pr.traveled || 0, rem = Math.hypot(this.world.dx(pr.x, t.x), t.y - (pr.y + 0.5));
+    // (how far along to it: once past, it stays there)
+    pr.fistK = Math.max(pr.fistK || 0, gone / Math.max(0.01, gone + rem));
+    const lim = 0.4 * (gone + rem);
+    return sh + Math.max(-lim, Math.min(lim, chest - sh)) * pr.fistK;
   }
 
   updateEntities(game, ox, oy, env, camYaw3) {

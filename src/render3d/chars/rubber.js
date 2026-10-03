@@ -9,8 +9,8 @@ import * as THREE from 'three';
 export const RETRACT = 0.15;
 
 /**
- * Where a Gum-Gum fist is (in a model's own frame: `toLocal(dx, dy)` turns
- * a world offset from the actor into it), or — once it's spent — the arm
+ * Where a Gum-Gum fist is (in a model's own frame: `place(out, dx, dy, shot)`
+ * turns a world offset from the actor into it), or — once it's spent — the arm
  * snapping back from where it got to: accelerating home, as rubber does.
  * Keeps its state in `F` (one per arm). Returns the share of the way the
  * hand is out to `F.at` (1: all the way; 0: home), or 0 when there's nothing.
@@ -22,8 +22,9 @@ export function rubberFist(F, a, ctx, dt, place) {
     const w = ctx.world;
     // (the shot is launched half a tile "up" the old flat view's screen from the feet: taken back off)
     const dx = w ? w.dx(a.x, pr.x) : pr.x - a.x, dy = pr.y - (a.y - 0.5);
-    place(F.at, dx, dy);
-    F.out = true; F.back = 0;
+    place(F.at, dx, dy, pr);
+    // (a Gear Third fist: the arm stays blown up until it's back)
+    F.out = true; F.back = 0; F.big = (pr.size || 1) >= 2.5;
     return 1;
   }
   if (F.out) { F.out = false; F.back = 1e-4; }
@@ -38,4 +39,4 @@ export function rubberFist(F, a, ctx, dt, place) {
 }
 
 /** A fresh state for rubberFist. */
-export const fistState = () => ({ at: new THREE.Vector3(), out: false, back: 0 });
+export const fistState = () => ({ at: new THREE.Vector3(), out: false, back: 0, big: false });

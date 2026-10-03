@@ -56,7 +56,7 @@ export function flightPose(P, pose) {
   (STYLE[style] || STYLE.hero)(P, F, A, t);
   // pitched by the speed, rolled into the turn (and toward a sideways drift)
   if (style !== 'ride') P.r = (P.r || 0) + A.r;
-  P.bk = clamp((F.bank || 0) + side * 0.35, -0.85, 0.85) * (style === 'float' ? 0.5 : 1);
+  P.bk = clamp((F.bank || 0) + side * 0.35, -0.85, 0.85) * (style === 'float' || style === 'ride' ? 0.5 : 1);
   P.ht = (P.ht || 0) - (P.r || 0) * 0.62; // (the head stays up, looking where it goes)
   P.hand = P.hand || 'fist'; P.handB = P.handB || 'fist';
   takeoffLanding(P, F);
@@ -86,9 +86,11 @@ const STYLE = {
     const dive = Math.max(0, -A.climb) * A.cruise;
     const ph = (t * hz) % 1;
     const beat = ph < 0.45 ? -1 + 2 * sm01(ph / 0.45) : 1 - 2 * sm01((ph - 0.45) / 0.55);
-    // (up: the hands high over the shoulders; down: below them, sweeping forward a little)
-    const y = mixN(-0.2, 0.16, (beat + 1) / 2) * (1 - 0.6 * dive) + 0.12 * dive;
-    const x = 0.04 + 0.06 * Math.max(0, beat) - 0.12 * dive;
+    // (the beat goes up and down in the world however the body is pitched:
+    // world up, in the body's own side plane, is (−sin r, −cos r); level with
+    // the shoulders between beats, swept back toward the feet in a dive)
+    const up = -beat * (0.18 - 0.08 * dive), ur = A.r;
+    const x = 0.04 - Math.sin(ur) * up, y = -Math.cos(ur) * up + 0.02 + 0.14 * dive;
     P.hF = [x, y]; P.hB = [x, y];
     P.zF = 0.48 - 0.2 * dive; P.zB = 0.48 - 0.2 * dive;
     P.eF = 0.25; P.eB = 0.25; P.hand = 'palm'; P.handB = 'palm';
@@ -107,7 +109,9 @@ const STYLE = {
     P.hp = -0.8 * amp * Math.sin(w - 1.8);
     P.hy = -0.5 * amp * Math.sin(w + 0.6);
     P.l = 0.05 + 0.04 * Math.sin(w * 2);
-    P.hF = [0.3, 0.04 - 0.06 * Math.sin(w)]; P.hB = [0.27, 0.08 + 0.06 * Math.sin(w)];
+    // (the claws reach where it goes: out in front hovering, on ahead along the body laid out flat)
+    P.hF = mixP([0.3, 0.04 - 0.06 * Math.sin(w)], [0.14, -0.34 - 0.04 * Math.sin(w)], A.cruise);
+    P.hB = mixP([0.27, 0.08 + 0.06 * Math.sin(w)], [0.1, -0.3 + 0.04 * Math.sin(w)], A.cruise);
     P.zF = 0.08; P.zB = 0.08; P.eF = 0.7; P.eB = 0.7;
     P.hand = 'claw'; P.handB = 'claw';
     // (the legs together, the feet sweeping side to side behind like a tail)
@@ -168,7 +172,8 @@ const STYLE = {
     P.l = 0.04 * A.cruise;
     // hovering: easy, a knee bent; at speed: laid out, arms along the sides — at full tilt a fist out front
     const tilt = sm01(((F.fwd || 0) - CRUISE * 1.1) / (CRUISE * 0.8));
-    P.hF = mixP(mixP([0.07, 0.34], [-0.02, 0.38], A.cruise), [0.46, -0.1], tilt); P.hB = mixP([-0.02, 0.35], [-0.06, 0.38], A.cruise);
+    // (the fist out ahead along the flight: over the head, in the body's own frame, laid out flat)
+    P.hF = mixP(mixP([0.07, 0.34], [-0.02, 0.38], A.cruise), [0.1, -0.42], tilt); P.hB = mixP([-0.02, 0.35], [-0.06, 0.38], A.cruise);
     P.zF = 0.08 * (1 - A.cruise); P.zB = 0.08 * (1 - A.cruise); P.eF = 0.5; P.eB = 0.5;
     P.hand = tilt > 0.5 ? 'fist' : 'relaxed'; P.handB = 'relaxed';
     P.z = 0.02 * Math.sin(w) * (1 - A.cruise);

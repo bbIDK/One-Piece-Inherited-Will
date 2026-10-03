@@ -11,7 +11,8 @@
 //   node tools/shot.mjs combat-hit                        hit feel: sparks, crit, heavy, block, guard break, parry
 //   node tools/shot.mjs combat-move                       dodge, sprint, block, knockdown & get-up
 //   node tools/shot.mjs combat-3d [--mode=first|third] [--ids=a,b]   the same effects in the 3D view
-//        (third person: --side=<radians> turns the camera off the line to the target, --dist=<m> brings it nearer)
+//        (third person: --side=<radians> turns the camera off the line to the target, --dist=<m> brings it nearer;
+//         --cam=<around>,<dist>,<height>[,<ahead>] sets it down beside the player instead; --times=a,b,c films techniques then)
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync } from 'node:fs';
@@ -441,13 +442,20 @@ export const scenarios = {
       await boot(page);
       const mode = args.mode === 'third' ? 'third' : 'first';
       const side = mode === 'third' ? Number(args.side || 0) : 0, dist = Number(args.dist || 0);
-      await page.evaluate(({ mode, side, dist }) => {
+      await page.evaluate(({ mode, side, dist, cam }) => {
         const L = window.LAB, g = window.OP.game;
         L.view3d = true;
         L.arena();
         if (g.settings) g.settings.view = mode;
         g.view3d.setMode(mode); g.view3d.setActive(true);
         if (dist) g.view3d.rig.tp.dist = dist;
+        // (a camera turned off the line to the target — or set down beside the
+        // player — still has them aim at it: a move tracks the aim through its
+        // wind-up, and the aim is where the middle of the view meets the world)
+        if (side || cam) {
+          const toWorld = g.renderer.toWorld.bind(g.renderer);
+          g.renderer.toWorld = (w, x, y) => (L.target && L.target.alive !== false ? [L.target.x, L.target.y - 0.5] : toWorld(w, x, y));
+        }
         // updates only between captures: a 3D frame costs a lot under SwiftShader
         L.run = (n) => { for (let i = 0; i < n; i++) g.update(1 / 60); g.render(); };
         L.look = () => {
@@ -458,17 +466,38 @@ export const scenarios = {
           window.OP.input.mouse.x = window.innerWidth / 2; window.OP.input.mouse.y = window.innerHeight / 2;
         };
         for (let i = 0; i < 6; i++) L.run(4);
-      }, { mode, side, dist });
+      }, { mode, side, dist, cam: !!args.cam });
       const clip = { x: 0, y: 0, width: 1280, height: 720 };
+      // --cam=<around>,<dist>,<height>[,<ahead>]: a camera set down beside the
+      // player, looking at a point <ahead> m in front of them (1.5)
+      // (around: radians off the way they face; π/2 is square side-on)
+      const cam = args.cam ? String(args.cam).split(',').map(Number) : null;
+      const place = () => page.evaluate((cam) => {
+        if (!cam) return;
+        const g = window.OP.game, p = g.player, rig = g.view3d.rig;
+        const gh = g.view3d.ground ? g.view3d.ground(p.x, p.y) : 0;
+        const a = p.facing + cam[0], d = cam[1], h = cam[2];
+        // (looking at a point a little ahead of them, where the blow goes)
+        const ahead = cam[3] ?? 1.5, ax = p.x + Math.cos(p.facing) * ahead, ay = p.y + Math.sin(p.facing) * ahead;
+        rig.shot = { from: [ax + Math.cos(a) * d, ay + Math.sin(a) * d, gh + h], at: [ax, ay, gh + 1.3] };
+      }, cam);
       const film = async (frames, label, setup, start, times) => {
         await page.evaluate(setup);
         await page.evaluate(() => { window.LAB.look(); window.LAB.run(1); });
+        await place();
         await page.evaluate(start);
         let t = 0;
         for (const at of times) {
           const n = Math.max(0, Math.round((at - t) * 60));
           await page.evaluate((n) => window.LAB.run(n), n);
           t += n / 60;
+          if (args.verbose) {
+            console.log(label, t.toFixed(2), JSON.stringify(await page.evaluate(() => {
+              const g = window.OP.game, p = g.player, v = g.view3d.actorViews && g.view3d.actorViews.get(p), rig = v && v.model && v.model.rig;
+              const d = window.LAB.target, q = g.combat.projectiles.find((q) => q.stretch === p);
+              return { proj: q ? [+q.x.toFixed(2), +q.y.toFixed(2), +(g.view3d.projY ? g.view3d.projY(q) : 0).toFixed(2)] : 0, me: [+p.x.toFixed(2), +p.y.toFixed(2), +p.facing.toFixed(2)], tgt: d ? [+d.x.toFixed(2), +d.y.toFixed(2), Math.round(d.hp)] : null, rub: rig ? [rig.rubOn[0], +(rig.rubLen[0] || 0).toFixed(2)] : null, act: p.action && p.action.def && p.action.def.id };
+            })));
+          }
           frames.push({ label: `${label} ${t.toFixed(2)}s`, buf: await page.screenshot({ clip, scale: 'css' }) });
         }
       };
@@ -493,7 +522,7 @@ export const scenarios = {
         const w = info.w;
         await film(tf, id, `(() => { const L = window.LAB; L.arena(); L.equip({ fruit: ${JSON.stringify(fruit)}, style: 'brawler' }); L.dummy(${info.ranged ? 5 : 2.2}, 0, { hpMul: 400 }); })()`,
           `(() => { const L = window.LAB, g = window.OP.game; L.refill(); if (!g.player.tryTechnique(${JSON.stringify(id)}, g, L.target)) console.log('technique refused ${id}'); })()`,
-          [w * 0.6, w + 0.05, w + 0.2, w + 0.45].map((x) => Math.round(x * 60) / 60));
+          (args.times ? String(args.times).split(',').map(Number) : [w * 0.6, w + 0.05, w + 0.2, w + 0.45]).map((x) => Math.round(x * 60) / 60));
       }
       await sheet(page, `combat-3d-${mode}-techs.png`, tf, 4, `3D (${mode}): techniques`);
     },
