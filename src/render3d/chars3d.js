@@ -27,6 +27,7 @@ import { blendPose } from '../render/anims.js';
 import { shipBob, shipLift } from '../world/hull.js';
 import { WakeTrail } from './wake3d.js';
 import { coatBody, senseOf } from './chars/haki.js';
+import { gearOf, formRig, formBody, shadowRise } from './chars/forms.js';
 import { sigOf } from '../game/haki.js';
 
 const TAU = Math.PI * 2;
@@ -145,6 +146,8 @@ class ActorView {
     const scaleBuff = a.buffs.find((b) => b.mods?.scale);
     const s = (this.look.scale || 1) * (scaleBuff ? scaleBuff.mods.scale : 1);
     this.root.scale.setScalar(s);
+    // (a living shadow rises up out of the ground, and sinks back into it)
+    if (a.look?.shadow) this.root.scale.y *= shadowRise(a, env.time);
     if (full) {
       const look = currentLook(a, this.lookCache);
       const { pose, P } = actorPose(a, env, look);
@@ -217,6 +220,10 @@ class ActorView {
         o.lookYaw = clamp(want, -1.45, 1.45);
         this.lookPast = Math.abs(want - o.lookYaw);
       }
+      // (Gear Third's fist blowing up through a punch: chars/forms.js)
+      const gear = a.fruit === 'gomu' ? gearOf(a) : 0;
+      formRig(a, pose, o, gear);
+      this.gear = gear;
       m.pose(PP, o);
       // turning: eased, so people swing round rather than snap (quickly for
       // you and anyone mid-technique, more gently for folk walking about)
@@ -429,6 +436,8 @@ class ActorView {
     fx.uFlash.value = a.flashT > 0 ? Math.min(0.78, a.flashT / 0.12 * 0.95) : 0;
     // (Armament: the coat spreading up the limbs, chars/haki.js)
     coatBody(this.coat || (this.coat = {}), a, !!pose.armLegs, t, fx);
+    // (the Gears, a living shadow, Future Sight: chars/forms.js)
+    formBody(this, a, m, o, t, this.gear || 0, a.isPlayer && ctx.mode === 'first');
     // sensed by your Observation Haki: their will glowing through the walls
     const sn = ctx.game ? senseOf(a, ctx.game) : null;
     m.sense(sn && sn.col, sn ? sn.k : 0);
@@ -594,6 +603,7 @@ class ActorView {
     this.wake?.dispose();
     this.label?.dispose();
     this.aura?.dispose();
+    this.collar?.dispose();
     this.backFlame?.dispose();
     this.wings?.dispose();
     this.trail?.dispose();

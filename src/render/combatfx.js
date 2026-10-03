@@ -767,10 +767,11 @@ const DEFAULTS = {
   },
   buff(fx, actor, s, a, ex) {
     const b = (ex && ex.buff) || s.buff || {};
-    const col = b.aura || '#ffffff';
+    const col = b.aura || b.fpTint || '#ffffff';
     fx.ring(actor.x, actor.y, 0.2, 1.8, col, 0.45, 0.14, { add: true });
     fx.burst(actor.x, actor.y, 16, { color: [col, '#ffffff'], speed: 4, z: 0.7, vz: 2, g: 2, life: 0.5, kind: 'spark' });
-    fx.add('pillar', { x: actor.x, y: actor.y, r: 0.5, h: 2.6, color: col, life: 0.35, kind: 'light' });
+    // (a pillar of light only for a power that glows: a Gear, Future Sight have their own looks)
+    if (b.aura) fx.add('pillar', { x: actor.x, y: actor.y, r: 0.5, h: 2.6, color: col, life: 0.35, kind: 'light' });
   },
   fx(fx, actor, s) {
     const f = s.fx;
@@ -1071,7 +1072,11 @@ sig('gomu_pistol gomu_gear3 gomu_jet_pistol gomu_gigant_pistol gomu_kong_gun gom
 sig('gomu_gatling gomu_jet_gatling gomu_elephant_gatling gomu_kong_organ gomu_dawn_gatling', {
   hit(fx, actor, s, a, hb) {
     // (Gear Fourth's fists are coated black)
-    fx.add('gatling', { x: actor.x, y: actor.y, follow: actor, range: (s.hit.range || 3.2) * 0.85, arc: s.hit.arc || 0.9, skin: (lastLook(actor)).skin, dark: !!actor.armament || /kong/.test(a.def.id), life: s.hit.duration || 0.9 });
+    // (Elephant: giant fists, in Armament's black once you have it; Kong Organ: black and swollen; Dawn: cartoon-giant)
+    const id = a.def.id, eleph = /elephant/.test(id);
+    const big = eleph ? 2.6 : /dawn/.test(id) ? 2.2 : /kong/.test(id) ? 1.7 : 1;
+    const dark = !!actor.armament || /kong/.test(id) || (eleph && (actor.hakiLevel?.('armament') || 0) > 0);
+    fx.add('gatling', { x: actor.x, y: actor.y, follow: actor, range: (s.hit.range || 3.2) * 0.85, arc: s.hit.arc || 0.9, skin: (lastLook(actor)).skin, dark, big, jet: /jet/.test(id), life: s.hit.duration || 0.9 });
     if (/jet/.test(a.def.id)) smoke(fx, actor.x, actor.y, 1.1, 6, ['#ffffff', '#ffebee'], { speed: 2, size: 0.22, vz: 1.2 });
   },
 });
@@ -1093,15 +1098,17 @@ sig('gomu_bazooka gomu_jet_bazooka gomu_gigant_bazooka gomu_leo_bazooka', {
   },
 });
 sig('gomu_gear2 gomu_gear3_on', {
-  fx(fx, actor, s, a) { DEFAULTS.fx(fx, actor, s, a); smoke(fx, actor.x, actor.y, 0.8, 16, ['#ffffff', '#ffebee', '#ffcdd2'], { speed: 2.5, size: 0.35, vz: 2 }); },
+  // (a burst of steam off the skin as the blood starts pumping — gone in a moment)
+  fx(fx, actor, s, a) { DEFAULTS.fx(fx, actor, s, a); smoke(fx, actor.x, actor.y, 0.9, 10, ['#ffffff', '#ffebee', '#ffcdd2'], { speed: 2.2, size: 0.2, vz: 2, life: 0.6, grow: 0.8 }); },
   buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); fx.flashScreen(0.05, 'rgba(255,205,210,1)'); },
 });
 sig('gomu_gear4', {
-  fx(fx, actor, s, a) { DEFAULTS.fx(fx, actor, s, a); smoke(fx, actor.x, actor.y, 0.8, 18, ['#ffffff', '#eceff1', '#b71c1c'], { speed: 3.5, size: 0.4 }); },
+  // (blowing air into the muscles: steam bursting off them as they swell)
+  fx(fx, actor, s, a) { DEFAULTS.fx(fx, actor, s, a); smoke(fx, actor.x, actor.y, 0.9, 10, ['#ffffff', '#eceff1'], { speed: 3, size: 0.24, life: 0.6, grow: 0.8 }); },
   buff(fx, actor, s, a, ex) {
     DEFAULTS.buff(fx, actor, s, a, ex);
     fx.ring(actor.x, actor.y, 0.5, 3.2, '#b71c1c', 0.5, 0.25);
-    smoke(fx, actor.x, actor.y, 1, 14, ['#ffffff', '#f5f5f5'], { speed: 4, size: 0.5 });
+    smoke(fx, actor.x, actor.y, 1.2, 10, ['#ffffff', '#f5f5f5'], { speed: 3.5, size: 0.3, life: 0.7, grow: 0.8 });
     fx.shake(0.4); fx.focus(actor.x, actor.y, 0.25);
   },
 });
@@ -1289,7 +1296,19 @@ sig('nikyu_travel', {
 sig('nikyu_pain', { heal(fx, actor, s, a) { DEFAULTS.heal(fx, actor, s, a); fx.burst(actor.x, actor.y, 1, { kind: 'bubble', color: '#ffffff', speed: 0.3, z: 1.2, vz: 1.2, g: -0.6, life: 1.4, size: 0.5 }); } });
 sig('nikyu_ursus', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.ring(px, py, 0.2, 2, '#ffffff', 0.4, 0.12, { z: 0.8, add: true }); smoke(fx, px, py, 0.8, 10, ['#ffffff', '#e0f7fa'], { speed: 3 }); } });
 sig('kage_steal', { hit(fx, actor, s, a, hb) { const [px, py] = fwd(actor, hb.angle, 1.6); fx.add('claw', { x: px, y: py, z: 0.1, angle: hb.angle, size: 1.1, color: '#263238', life: 0.5, n: 2, tilt: 0 }); smoke(fx, px, py, 0.3, 8, ['#263238', '#37474f', '#000000'], { speed: 1.5 }); } });
-sig('kage_doppelman', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); smoke(fx, actor.x, actor.y, 0.6, 12, ['#263238', '#000000'], { speed: 2 }); } });
+// Doppelman: the caster's own shadow peels up off the ground beside them and
+// stands — a pool of dark spreading from their feet to where it rises, the
+// dark lifting off it in wisps (the body's own rise: render3d/chars/forms.js)
+sig('kage_doppelman', {
+  buff(fx, actor, s, a, ex) {
+    const g = fx.game, d = g.actors.find((o) => o.summonedBy === actor && o.look?.shadow && o.alive !== false);
+    const x = d ? d.x : actor.x, y = d ? d.y : actor.y;
+    fx.add('decal', { x: actor.x, y: actor.y, r: 0.9, color: 'rgba(8,4,14,1)', life: 0.9, seed: 3 });
+    fx.add('decal', { x, y, r: 1.25, color: 'rgba(8,4,14,1)', life: 1.1, seed: 7 });
+    smoke(fx, x, y, 0.25, 14, ['#120a1a', '#000000', '#2a1838'], { speed: 1.2, size: 0.3, vz: 1.6 });
+    fx.burst(x, y, 10, { color: ['#3a2350', '#120a1a'], speed: 1.5, z: 0.2, vz: 2.6, g: -0.4, life: 0.7, kind: 'smoke', size: 0.16, grow: 0.4 });
+  },
+});
 sig('kage_tsuno', {
   // the shadow runs to them and bursts up as a horn under their feet
   zone(fx, actor, spec, a, zone) {
@@ -1488,7 +1507,19 @@ sig('hito_heavy hito_guard hito_monster neko_hybrid seiryu_form mane_disguise do
 sig('haki_emission', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); miniBolts(fx, px, py, 0.8, 3, 0.9, '#7c4dff'); fx.ring(px, py, 0.1, 0.8, '#212121', 0.25, 0.1, { z: 0.8, flat: 1 }); } });
 sig('haki_ryuo', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1.1); for (let i = 0; i < 3; i++) fx.ring(px, py, 0.05, 0.6 + i * 0.3, '#7c4dff', 0.3, 0.06, { z: 0.8, flat: 0.9, wobble: 0.2, delay: i * 0.05, add: true }); } });
 sig('haki_infusion', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); const kc = sigOf(actor).conqueror; miniBolts(fx, actor.x, actor.y, 1, 6, 1.6, kc); miniBolts(fx, actor.x, actor.y, 1, 5, 1.6, '#000000', kc); fx.ring(actor.x, actor.y, 0.2, 2.4, kc, 0.4, 0.08, { add: true }); } });
-sig('haki_futuresight', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); const oc = sigOf(actor).observation; fx.add('flare', { x: actor.x, y: actor.y, z: 1.6, size: 0.9, color: oc, life: 0.4 }); fx.ring(actor.x, actor.y, 0.3, 6, oc, 0.6, 0.05, { flat: 0.5, add: true }); } });
+// Future Sight switched on: the eyes catch red (the outline round the body is
+// the body's own: render3d/chars/forms.js), a pulse of the seer's tint going
+// out, and through your own eyes a blink of the world drained of colour
+sig('haki_futuresight', {
+  buff(fx, actor, s, a, ex) {
+    const oc = sigOf(actor).observation, sc = (actor.look && actor.look.scale) || 1;
+    fx.add('flare', { x: actor.x, y: actor.y, z: 1.62 * sc, size: 0.55 * sc, color: '#ff2b3d', life: 0.35 });
+    fx.ring(actor.x, actor.y, 0.3, 6, oc, 0.6, 0.05, { flat: 0.5, add: true });
+    fx.ring(actor.x, actor.y, 0.2, 3.5, '#ff2b3d', 0.4, 0.04, { flat: 0.5, add: true, delay: 0.12 });
+    actor._visionT = fx.game.env?.time;
+    if (actor.isPlayer) fx.visionFlash(0.4, oc);
+  },
+});
 
 // ------------------------------------------------------------------ zones, explosions, trails, conqueror
 /** Persistent visuals for an area technique (and its opening burst). */
@@ -1551,37 +1582,41 @@ export function projTrailFx(fx, p, t) {
 }
 
 /**
- * Conqueror's Haki, in the king's own colour (game/haki.js): black lightning
- * — black-cored, its glow theirs — arcing out across the ground and through
- * the air, a black shockwave and a ring of their colour racing out, the air
- * round them bending, the ground cracking under them, a heavy shake, focus
- * lines and the manga's impact frame.
+ * Conqueror's Haki, in the king's own colour (game/haki.js), the way the anime
+ * draws it: a wave of will blasting out to the edge of its reach — a dark dome
+ * whose edge burns in their colour, a black ring racing over the ground —
+ * thick black lightning, black-cored and glowing theirs, crackling round the
+ * body on and on for a moment, a few bolts flung out along the ground to the
+ * edge of it; the ground cracking, the dust thrown back; and the view itself
+ * hit: a two-tone impact frame (black and their colour), the air rippling out
+ * from them, the edges of the view closing in dark and heavy.
  */
 export function conquerorFx(fx, actor, c) {
   const R = c.range, col = sigOf(actor).conqueror;
   const s = (actor.look && actor.look.scale) || 1;
-  fx.ring(actor.x, actor.y, 0.5, R, '#0a090d', 0.7, 0.45);
-  fx.ring(actor.x, actor.y, 0.3, R * 0.85, col, 0.55, 0.14, { add: true });
-  fx.ring(actor.x, actor.y, 0.2, R * 1.1, '#000000', 0.9, 0.08, { wobble: 0.08 });
-  // (the air round the body: a black ring and one of their colour bursting off it)
-  fx.ring(actor.x, actor.y, 0.3, 2.4 * s, '#000000', 0.32, 0.14, { z: 1.0 * s, flat: 1 });
-  fx.ring(actor.x, actor.y, 0.2, 3.2 * s, col, 0.4, 0.08, { z: 1.0 * s, flat: 1, add: true, delay: 0.04 });
-  // black lightning over the ground and up through the air
-  for (let k = 0; k < 14; k++) {
-    const a = (k / 14) * TAU + rnd(-0.2, 0.2), r = R * rnd(0.45, 0.9);
-    fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * r, actor.y + Math.sin(a) * r * 0.75, '#000000', rnd(0.32, 0.5), 0.09, { z0: rnd(0.6, 1.3) * s, z1: k % 3 ? rnd(0, 0.3) : rnd(1, 2.6), branches: 2, core: col, delay: rnd(0, 0.12) });
+  const x = actor.x, y = actor.y;
+  fx.add('haoshoku', { x, y, r: R, color: col, life: 0.95, seed: Math.floor(rnd(0, 97)) });
+  // black lightning round the body: a burst, then it keeps crackling
+  for (let wave = 0; wave < 4; wave++) {
+    const n = wave ? 4 : 10;
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * TAU + rnd(-0.35, 0.35), r0 = 0.25 * s, r1 = rnd(1.3, 3.2) * s * (wave ? 0.7 : 1);
+      fx.bolt(x + Math.cos(a) * r0, y + Math.sin(a) * r0 * 0.75, x + Math.cos(a) * r1, y + Math.sin(a) * r1 * 0.75, '#000000', rnd(0.22, 0.36), 0.13, { z0: rnd(0.7, 1.6) * s, z1: rnd(0.2, 2.8) * s, branches: 2, core: col, delay: wave * 0.24 + rnd(0, 0.1) });
+    }
   }
-  for (let k = 0; k < 4; k++) {
-    const a = rnd(0, TAU);
-    fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * R * 0.4, actor.y + Math.sin(a) * R * 0.3, col, 0.22, 0.04, { z0: 1.1 * s, z1: rnd(0.4, 2), branches: 1, delay: rnd(0.05, 0.2) });
+  // …and a few flung out along the ground to the edge of its reach
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * TAU + rnd(-0.3, 0.3), r = R * rnd(0.55, 0.85);
+    fx.bolt(x, y, x + Math.cos(a) * r, y + Math.sin(a) * r * 0.75, '#000000', rnd(0.3, 0.45), 0.1, { z0: 0.8 * s, z1: rnd(0, 0.4), branches: 2, core: col, delay: rnd(0.02, 0.14) });
   }
-  fx.add('pillar', { x: actor.x, y: actor.y, r: 0.6, h: 5, color: '#000000', core: col, kind: 'dark', life: 0.5 });
-  fx.crack(actor.x, actor.y, Math.min(4.5, R * 0.4), 3);
-  dust(fx, actor.x, actor.y, 16, { speed: R * 0.8, size: 0.3 });
+  fx.crack(x, y, Math.min(4.5, R * 0.4), 3);
+  dust(fx, x, y, 22, { speed: R * 1.1, size: 0.34 });
   calloutOver(fx, actor, 1.8 * s, 'DOOON!!', col, 0.7);
-  fx.impactFrame(0.14);
+  fx.impactFrame(0.07, col);
+  fx.screenShock(x, y, 1.1 * s, 0.8, 1);
+  fx.pressure(1.4, col, 0.85);
   fx.shake(0.85);
-  fx.focus(actor.x, actor.y, 0.32);
+  fx.focus(x, y, 0.32);
 }
 
 // ------------------------------------------------------------------ Haki
@@ -1617,6 +1652,40 @@ export function hakiSpentFx(fx, a, type) {
 }
 
 /**
+ * What comes off a body in a form, every moment it lasts (game/actor.js):
+ * Gear Second's steam pouring off the skin, thickest off the shoulders and
+ * the arms; Boundman's pouring up and back off the shoulders (its collar:
+ * render3d/chars/forms.js); Nika's hair licking up like white flame; a living
+ * shadow's dark coming off it in wisps. In your own eyes, only what's off
+ * your arms (it would smoke the view up).
+ */
+const STEAM_AT = [[0, 0.22, 1.36], [0, -0.22, 1.36], [0.02, 0.28, 1.15], [0.02, -0.28, 1.15], [0.12, 0.3, 0.92], [0.12, -0.3, 0.92], [-0.12, 0.08, 1.3], [-0.12, -0.08, 1.3], [0.02, 0.1, 0.62], [0.02, -0.1, 0.62], [0.02, 0.1, 0.32], [0.02, -0.1, 0.32]];
+export function bodyFx(fx, a, dt) {
+  const g = fx.game, p = g.player, w = g.world;
+  if (a.hidden || a.alive === false || (p && a !== p && w && w.distance(a.x, a.y, p.x, p.y) > 40)) return;
+  const own = a === p && g.settings?.view === 'first';
+  const s = (a.look && a.look.scale) || 1, f = a.facing || 0, cf = Math.cos(f), sf = Math.sin(f);
+  const puff = (at, o) => {
+    const [fw, sd, z] = at;
+    fx.particle({ x: a.x + (cf * fw - sf * sd) * s, y: a.y + (sf * fw + cf * sd) * s, z: (a.z || 0) + z * s, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3, drag: 1.2, kind: 'smoke', ...o });
+  };
+  const rate = (n) => Math.random() < dt * n;
+  for (const b of a.buffs) {
+    if (b.steam === true) {
+      // (Gear Second: a steady pour off the whole body)
+      const n = own ? 10 : 30;
+      for (let k = 0; k < 2; k++) if (rate(n / 2)) puff(own ? STEAM_AT[4 + (Math.random() * 2 | 0)] : STEAM_AT[Math.random() * STEAM_AT.length | 0], { vz: own ? 0.5 : 1.0 + Math.random() * 0.5, g: -0.3, life: own ? 0.45 : 0.55 + Math.random() * 0.25, size: (0.05 + Math.random() * 0.03) * s, grow: 0.9, color: 'rgba(255,255,255,0.3)' });
+    } else if (b.steam === 'collar' && !own && rate(12)) {
+      // (Boundman: up and back off the shoulders)
+      const sd = (Math.random() < 0.5 ? 1 : -1) * 0.2;
+      puff([-0.08, sd, 1.5], { vx: -cf * 0.9, vy: -sf * 0.9, vz: 0.7, g: -0.2, life: 0.7, size: 0.08 * s, grow: 0.9, color: 'rgba(255,255,255,0.35)' });
+    }
+    if (b.wisps && !own && rate(8)) puff([0, (Math.random() - 0.5) * 0.14, 1.9], { vz: 0.6, g: -0.15, life: 0.5, size: 0.06 * s, grow: 0.7, color: 'rgba(255,255,255,0.45)' });
+  }
+  if (a.look && a.look.shadow && rate(14)) puff(STEAM_AT[Math.random() * STEAM_AT.length | 0], { vz: 0.65, g: -0.2, life: 0.8, size: 0.13 * s, grow: 0.5, color: 'rgba(22,12,30,0.6)' });
+}
+
+/**
  * Observation's foresight: the blow heard before it came and slipped — an
  * afterimage in your tint left standing where it lands, a trail of them as
  * you step aside, a glint, a beat of slow motion.
@@ -1638,17 +1707,27 @@ export function sensedFx(fx, att, p) {
 }
 
 /**
- * Future Sight: a vision of the blow before it lands — the foe's shadow
- * lunging in ahead of them, in your tint, and a pale star where it will strike.
+ * Future Sight: a vision of the blow before it lands — the way the anime
+ * shows it, a broken-up flash of what's coming: the foe flickering in ahead
+ * of themselves in your tint, three frames of it closing on you, scanlined
+ * and torn (render3d/vfx/ghosts.js), a pale star where it will strike; the red
+ * outline flaring round you (render3d/chars/forms.js), a glint at your eyes,
+ * and, through your own eyes, the world drained of its colour a moment.
  */
 export function visionFx(fx, att, p) {
-  const w = fx.game.world, col = sigOf(p).observation;
+  const g = fx.game, w = g.world, col = sigOf(p).observation;
   const dx = w ? w.dx(att.x, p.x) : p.x - att.x, dy = p.y - att.y, d = Math.hypot(dx, dy) || 1;
   const k = Math.max(0, Math.min(1.4, d - 0.9)) / d;
-  const x = w ? w.wx(att.x + dx * k) : att.x + dx * k, y = att.y + dy * k;
-  afterimage(fx, att, { x, y, tint: col, life: 0.34, alpha: 0.42, add: true });
+  for (let i = 0; i < 3; i++) {
+    const u = (i + 1) / 3;
+    const x = w ? w.wx(att.x + dx * k * u) : att.x + dx * k * u, y = att.y + dy * k * u;
+    afterimage(fx, att, { x, y, tint: col, life: 0.3 + 0.06 * i, alpha: 0.2 + 0.22 * u, add: true, vision: true, delay: i * 0.035 });
+  }
   const ps = (p.look && p.look.scale) || 1, ang = Math.atan2(dy, dx);
   fx.add('impact', { x: p.x - Math.cos(ang) * 0.25, y: p.y - Math.sin(ang) * 0.16, z: 0.85 * ps, angle: ang, size: 0.42, color: col, core: '#ffffff', life: 0.22, spikes: 8, lines: 3 });
+  p._visionT = g.env?.time;
+  fx.add('flare', { x: p.x, y: p.y, z: 1.6 * ps, size: 0.45 * ps, color: '#ff2b3d', life: 0.2 });
+  if (p.isPlayer) fx.visionFlash(0.32, col);
 }
 
 /**
@@ -1717,7 +1796,7 @@ export function afterimage(fx, a, o = {}) {
     // (actor: the 3D view copies its body's pose for the afterimage)
     x: o.x ?? a.x, y: o.y ?? a.y, actor: a, look: ghostLook(lastLook(a), tint),
     pose: { facing: P.facing, P: P.P, time: P.time, state: P.state === 'hurt' ? 'idle' : P.state, swimming: P.swimming, z: P.z, squash: P.squash },
-    life: o.life ?? 0.24, alpha: o.alpha ?? 0.45, add: o.add,
+    life: o.life ?? 0.24, alpha: o.alpha ?? 0.45, add: o.add, vision: o.vision, delay: o.delay,
   });
 }
 
@@ -1731,7 +1810,9 @@ export function motion(fx, a, dt) {
     const every = dash && dash.dodge ? 0.035 : 0.03;
     if (a._ghostAcc >= every) {
       a._ghostAcc = 0;
-      afterimage(fx, a, { tint: a._ghostTint || (dash && dash.dodge ? '#b3e5fc' : '#e3f2fd'), life: 0.22, alpha: 0.42, add: a._ghostAdd });
+      // (a living shadow leaves dark ones)
+      const dark = a.look && a.look.shadow;
+      afterimage(fx, a, { tint: dark ? '#2a1838' : a._ghostTint || (dash && dash.dodge ? '#b3e5fc' : '#e3f2fd'), life: 0.22, alpha: dark ? 0.6 : 0.42, add: dark ? false : a._ghostAdd });
     }
   } else if (!(a._ghostT > 0)) { a._ghostTint = null; a._ghostAdd = false; }
   // (no dust kicked up behind a runner's feet: puffs dropped every few

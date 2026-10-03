@@ -95,6 +95,9 @@ function ringWait(g, stage, announce = true) {
   const corner = { x: ring.x, y: ring.y - 1.5 * s };
   const a = findActor(g, R[0]) || spawnNow(g, R[0], corner);
   if (!a) return null;
+  // (where they stood about before the bout: one who might join your crew goes back there after it)
+  const C = a.controller;
+  if (!a._preBout) a._preBout = { home: C?.home ? { ...C.home } : { x: a.x, y: a.y }, kind: C?.kind, stationary: a.stationary, faceHome: a.faceHome, leash: C?.leash, pursuit: C?.pursuit, patience: C?.patience };
   a.x = corner.x; a.y = corner.y; a.vx = a.vy = 0; a.kb.x = a.kb.y = 0;
   a.hp = a.d.maxHp; a.state = 'idle';
   a.provoked = false; a.aggroPlayer = false; a.stationary = true;
@@ -105,6 +108,27 @@ function ringWait(g, stage, announce = true) {
   g.karateBout = { npc: R[0], stage, a, started: false, out: 0, readyAt: g.time + 1.2 };
   if (announce) g.ui.banner(R[1], 'Karate Island Open', R[2] + ' Step into the ring when you are ready.', 5);
   return a;
+}
+
+/**
+ * A bout's loser who isn't leaving the island: up again in a moment (npcs.js
+ * recovery), no longer anyone's opponent, and back to where they stood
+ * before the bout.
+ */
+function afterBout(a) {
+  const pre = a._preBout;
+  a.recoverAfter = 2.5;
+  a.spar = null;
+  a.stationary = pre ? pre.stationary : false;
+  a.faceHome = pre ? pre.faceHome : a.faceHome;
+  if (a.controller) {
+    const C = a.controller;
+    if (pre?.kind) C.kind = pre.kind;
+    if (pre?.home) C.home = { ...pre.home };
+    // (the bell took away how far they'd chase and for how long: given back)
+    C.leash = pre?.leash ?? 22; C.patience = pre?.patience ?? 7; C.pursuit = pre?.pursuit ?? Math.max(36, C.leash * 2.2);
+  }
+  a._preBout = null;
 }
 
 /** The bell: the bout begins. */
@@ -1721,11 +1745,14 @@ function install(game) {
     const B = game.karateBout;
     if (!B || !B.started) return;
     if (a === B.a) {
-      // he's down: off he goes, and the next one climbs in (the quest moves on)
+      // he's down: off he goes, and the next one climbs in (the quest moves on) —
+      // or, if he'd sail with whoever beat him (Yaguara), he picks himself up and
+      // goes back to where he stood about, to be found there after the Open
       B.started = false;
       game.karateBout = null;
       if (game.bossTarget === a) game.bossTarget = null;
-      setTimeout(() => { if (a.state === 'knocked') a.alive = false; }, 2400);
+      if (a.def?.recruit) afterBout(a);
+      else setTimeout(() => { if (a.state === 'knocked') a.alive = false; }, 2400);
       if (B.stage !== 'final') game.ui.banner('K.O.!', 'Karate Island Open', 'The crowd roars! Stay in the ring — your next opponent is on his way.', 3);
     } else if (a.isPlayer) loseBout(game, 'Knocked down — the bout is lost.');
   });

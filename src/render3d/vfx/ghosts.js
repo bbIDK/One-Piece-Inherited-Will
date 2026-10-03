@@ -12,9 +12,12 @@ import { col } from './kit.js';
 const MAX = 28;
 const IDENT = new THREE.Matrix4();
 
+// (a vision — Future Sight — is broken up as the anime shows one: torn
+// sideways in bands that jump about, scanlined, flickering: uGlitch)
 const VS = /* glsl */`
   #include <common>
   #include <skinning_pars_vertex>
+  uniform float uGlitch, uTime;
   varying vec3 vN, vV;
   void main() {
     #include <skinbase_vertex>
@@ -26,16 +29,28 @@ const VS = /* glsl */`
     vN = normalize(normalMatrix * objectNormal);
     vV = normalize(-mv.xyz);
     gl_Position = projectionMatrix * mv;
+    if (uGlitch > 0.0) {
+      float band = floor((gl_Position.y / gl_Position.w) * 14.0);
+      float h = fract(sin(band * 91.7 + floor(uTime * 22.0) * 13.1) * 43758.5);
+      gl_Position.x += (h - 0.5) * 0.09 * uGlitch * gl_Position.w * step(0.6, h);
+    }
   }
 `;
 const FS = /* glsl */`
   uniform vec3 uTint;
-  uniform float uAlpha, uAdd;
+  uniform float uAlpha, uAdd, uGlitch, uTime;
   varying vec3 vN, vV;
   void main() {
     float fr = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 1.6);
     vec3 c = uTint * (0.45 + 1.1 * fr);
     float a = uAlpha * (0.3 + 0.7 * fr);
+    if (uGlitch > 0.0) {
+      // scanlines, whole bands dropping out, the edge flickering white
+      float row = floor(gl_FragCoord.y / 3.0);
+      a *= mix(1.0, 0.55 + 0.45 * step(0.5, fract(row * 0.5)), uGlitch);
+      if (fract(sin(floor(gl_FragCoord.y / 9.0) * 12.9898 + floor(uTime * 18.0) * 7.31) * 43758.5) < 0.16 * uGlitch) discard;
+      c = mix(c, vec3(1.0), fr * 0.5 * uGlitch * step(0.5, fract(uTime * 11.0)));
+    }
     gl_FragColor = vec4(c * a, a * (1.0 - uAdd));
     #include <colorspace_fragment>
   }
@@ -44,7 +59,7 @@ const FS = /* glsl */`
 class Ghost {
   constructor() {
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { uTint: { value: new THREE.Color(1, 1, 1) }, uAlpha: { value: 0.5 }, uAdd: { value: 0.5 } },
+      uniforms: { uTint: { value: new THREE.Color(1, 1, 1) }, uAlpha: { value: 0.5 }, uAdd: { value: 0.5 }, uGlitch: { value: 0 }, uTime: { value: 0 } },
       vertexShader: VS, fragmentShader: FS,
       transparent: true, depthWrite: false,
       blending: THREE.CustomBlending, blendEquation: THREE.AddEquation,
@@ -132,6 +147,8 @@ export class Ghosts {
     g.mat.uniforms.uTint.value.setRGB(c[0], c[1], c[2]);
     g.mat.uniforms.uAlpha.value = Math.min(1, (s.alpha ?? 0.5) * 1.3) * (1 - k) * a;
     g.mat.uniforms.uAdd.value = s.add ? 0.9 : 0.45;
+    g.mat.uniforms.uGlitch.value = s.vision ? 1 : 0;
+    g.mat.uniforms.uTime.value = v.time || 0;
     return true;
   }
 

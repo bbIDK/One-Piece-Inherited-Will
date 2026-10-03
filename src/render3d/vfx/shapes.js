@@ -442,36 +442,45 @@ function bolt(v, x0, y0, z0, x1, y1, z1, hw, amp, seed, c, alpha, branches, c2 =
   perp(Cc, A, B);
   const n = Math.max(5, Math.min(40, Math.ceil(L * 2.4)));
   const R = v.ribbons;
-  // black lightning (Conqueror's Haki) can't add light: it's inked on, crackling
-  // down its middle in the king's own colour (given as c2; red if none is)
+  // black lightning (Conqueror's Haki) can't add light: it's inked on — a
+  // black strand with the king's own colour glowing round it, as the anime
+  // draws it (the colour given as c2; red if none is), the glow laid down
+  // first and the black over it. Any other bolt is light, white-hot down its middle.
   const black = luma(c) < 0.05;
   if (black && c2 === WHITE) c2 = HAKI_RED;
-  const w = black ? 0 : 1;
-  R.start(RK.GLOW, RM.FACE, c, alpha, c2, w);
   let bi = 0;
   const bt = BT;
   bt[0] = 0.3 + hash(seed + 1) * 0.2; bt[1] = 0.55 + hash(seed + 2) * 0.25; bt[2] = 0.75 + hash(seed + 3) * 0.15;
   for (let i = 0; i <= n; i++) {
     const t = i / n, env = Math.sin(t * PI);
     const j1 = (hash(seed + i * 7.3) - 0.5) * 2 * amp * env, j2 = (hash(seed + i * 3.7 + 11) - 0.5) * 2 * amp * env;
-    const px = x0 + dx * t + A[0] * j1 + B[0] * j2, py = y0 + dy * t + A[1] * j1 + B[1] * j2, pz = z0 + dz * t + A[2] * j1 + B[2] * j2;
-    R.point(px, py, pz, hw * (0.75 + 0.25 * env));
+    const k = i * 4;
+    PTS[k] = x0 + dx * t + A[0] * j1 + B[0] * j2; PTS[k + 1] = y0 + dy * t + A[1] * j1 + B[1] * j2; PTS[k + 2] = z0 + dz * t + A[2] * j1 + B[2] * j2;
+    PTS[k + 3] = hw * (0.75 + 0.25 * env);
     // (forks are drawn after this strand: remember where)
-    if (bi < branches && t >= bt[bi]) { FORK[bi * 3] = px; FORK[bi * 3 + 1] = py; FORK[bi * 3 + 2] = pz; bi++; }
+    if (bi < branches && t >= bt[bi]) { FORK[bi * 3] = PTS[k]; FORK[bi * 3 + 1] = PTS[k + 1]; FORK[bi * 3 + 2] = PTS[k + 2]; bi++; }
   }
-  R.finish();
-  for (let b = 0; b < bi; b++) {
-    const ba = hash(seed + b * 3) * TAU, bl = (0.35 + hash(seed + b * 5) * 0.6) * Math.min(2.5, L * 0.35);
-    const fx = FORK[b * 3], fy = FORK[b * 3 + 1], fz = FORK[b * 3 + 2];
-    const ex = fx + (Cc[0] * 0.6 + A[0] * Math.cos(ba) + B[0] * Math.sin(ba)) * bl, ey = fy + (Cc[1] * 0.6 + A[1] * Math.cos(ba) + B[1] * Math.sin(ba)) * bl, ez = fz + (Cc[2] * 0.6 + A[2] * Math.cos(ba) + B[2] * Math.sin(ba)) * bl;
-    R.start(RK.GLOW, RM.FACE, c, alpha * 0.85, c2, w);
-    for (let i = 0; i <= 4; i++) {
-      const t = i / 4, j = (hash(seed + b * 13 + i * 5.1) - 0.5) * bl * 0.35 * Math.sin(t * PI);
-      R.point(fx + (ex - fx) * t + A[0] * j, fy + (ey - fy) * t + B[1] * j, fz + (ez - fz) * t + A[2] * j, hw * 0.6 * (1 - t * 0.7));
-    }
+  for (let pass = black ? 0 : 1; pass < 2; pass++) {
+    // (pass 0: a black bolt's halo, wide and added on; pass 1: the bolt itself)
+    const halo = pass === 0;
+    const cc = halo ? c2 : c, cc2 = halo ? c2 : black ? INK : c2, w = halo ? 1 : black ? 0 : 1, wk = halo ? 1.75 : black ? 1.25 : 1, al = halo ? alpha * 0.55 : alpha;
+    R.start(RK.GLOW, RM.FACE, cc, al, cc2, w);
+    for (let i = 0; i <= n; i++) { const k = i * 4; R.point(PTS[k], PTS[k + 1], PTS[k + 2], PTS[k + 3] * wk); }
     R.finish();
+    for (let b = 0; b < bi; b++) {
+      const ba = hash(seed + b * 3) * TAU, bl = (0.35 + hash(seed + b * 5) * 0.6) * Math.min(2.5, L * 0.35);
+      const fx = FORK[b * 3], fy = FORK[b * 3 + 1], fz = FORK[b * 3 + 2];
+      const ex = fx + (Cc[0] * 0.6 + A[0] * Math.cos(ba) + B[0] * Math.sin(ba)) * bl, ey = fy + (Cc[1] * 0.6 + A[1] * Math.cos(ba) + B[1] * Math.sin(ba)) * bl, ez = fz + (Cc[2] * 0.6 + A[2] * Math.cos(ba) + B[2] * Math.sin(ba)) * bl;
+      R.start(RK.GLOW, RM.FACE, cc, al * 0.85, cc2, w);
+      for (let i = 0; i <= 4; i++) {
+        const t = i / 4, j = (hash(seed + b * 13 + i * 5.1) - 0.5) * bl * 0.35 * Math.sin(t * PI);
+        R.point(fx + (ex - fx) * t + A[0] * j, fy + (ey - fy) * t + B[1] * j, fz + (ez - fz) * t + A[2] * j, hw * 0.6 * (1 - t * 0.7) * wk);
+      }
+      R.finish();
+    }
   }
 }
+const PTS = new Float32Array(41 * 4), INK = col('#000000');
 const FORK = new Float32Array(9), BT = new Float32Array(3);
 const ROPE_HOT = col('#ffe0b2'), ROPE_EMBER = col('#ffab40');
 
@@ -636,6 +645,24 @@ SHAPES.dome = {
     v.shells.put(VK.DOME, X, G, Z, R, 0, 1, 0, 1, c, a, WHITE, 0.35, s.kind === 'cage' ? 1 : 0, s.seed, hk);
     const patch = v.patch(s, s.x, s.y, R + 0.3);
     v.groundRing(patch, s.x, s.y, R, 0.07, c, a * 0.85, WHITE, 1, 0.6, 0, 0, 0, 9, 0, s.seed, 0);
+  },
+};
+
+/**
+ * Conqueror's Haki going out: a wave of will — a dark, near-clear dome
+ * blasting out from the king to the edge of its reach and thinning as it
+ * goes, its edge burning in their own colour; a black ring racing over the
+ * ground under it.
+ */
+SHAPES.haoshoku = {
+  draw(v, s, k, a) {
+    const R = s.r * easeOut(Math.min(1, k * 1.7));
+    if (R < 0.1) return;
+    const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s);
+    const c = col(s.color || '#d50000');
+    v.shells.put(VK.HAKI, X, G, Z, R, 0, 1, 0, 1, c, a, c, 0.85, k, s.seed || 0, 0.62);
+    const patch = v.patch(s, s.x, s.y, R + 0.4);
+    v.groundRing(patch, s.x, s.y, R, 0.14, col('#060309'), a * (1 - k) * 0.85, c, 0.5, 0.7, 0, 0, 0, 9, 0, s.seed || 0, 0);
   },
 };
 
@@ -1110,8 +1137,12 @@ SHAPES.blast = {
 
 // ------------------------------------------------------------------ bodies
 /**
- * Gatling: fists hammering all over a cone in front of the actor — real
- * fists on blurred, stretched arms, a burst where each one lands.
+ * Gatling: the rubber arms themselves, fired out from both shoulders faster
+ * than the eye can follow — each one a stretched arm in the body's own skin
+ * (black with Armament for Kong Organ, giant for Elephant and Dawn), a fist on
+ * its end, and two fainter copies of it trailing the way it swung (the
+ * anime's blur of a dozen arms at once), speed lines off the fists and a burst
+ * where each lands.
  */
 SHAPES.gatling = {
   draw(v, s, k, a) {
@@ -1119,29 +1150,42 @@ SHAPES.gatling = {
     const ang = f ? f.facing : s.angle || 0;
     const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s);
     const sc = (f && f.look && f.look.scale) || 1;
-    const skin = col(s.dark ? '#1c1a24' : s.skin || '#f1c9a0');
+    const big = s.big || 1;
+    const skin = col(s.dark ? '#16141c' : s.skin || '#f1c9a0');
     const ink = col('#3a2a24');
-    const t = v.time;
-    const sx = X + Math.cos(ang) * 0.25 * sc, sy = G + 1.25 * sc, sz = Z + Math.sin(ang) * 0.25 * sc;
-    for (let i = 0; i < 9; i++) {
-      const ph = (t * 7 + i / 9) % 1;
-      const seed = Math.floor(t * 7 + i / 9) * 13 + i;
+    const t = v.time, rate = s.jet ? 11 : 7.5, N = s.jet ? 12 : 10;
+    const ca = Math.cos(ang), sa = Math.sin(ang);
+    for (let i = 0; i < N; i++) {
+      const ph = (t * rate + i / N) % 1;
       const pop = Math.sin(ph * PI);
-      const d = (0.8 + hash(seed) * (s.range || 2.6)) * (0.55 + 0.45 * pop);
-      const th = ang + (hash(seed + 3) - 0.5) * (s.arc || 0.9);
+      if (pop < 0.06) continue;
+      const seed = Math.floor(t * rate + i / N) * 13 + i;
+      const side = i % 2 ? 1 : -1;
+      // (from its own shoulder)
+      const shx = X + (ca * 0.04 - sa * side * 0.2) * sc, shy = G + 1.32 * sc, shz = Z + (sa * 0.04 + ca * side * 0.2) * sc;
+      // where its fist lands: over the cone in front, chest-high or so
+      // (giant fists keep to a narrower cone: they'd sweep the whole field)
+      const d = (0.9 + hash(seed) * (s.range || 2.6) * (big > 1.5 ? 0.8 : 1)) * (0.35 + 0.65 * pop);
+      const th = ang + (hash(seed + 3) - 0.5) * (s.arc || 0.9) * (big > 1.5 ? 0.6 : 1);
       const ct = Math.cos(th), st = Math.sin(th);
-      const px = X + ct * d, pz = Z + st * d, py = G + (1.05 + (hash(seed + 7) - 0.5) * 0.6) * sc;
-      const R = 0.15 * (0.75 + pop * 0.4) * sc;
-      // the arm, a blur back to the shoulder
-      v.ribbons.start(RK.TUBE, RM.FACE, skin, a * 0.55 * pop, ink, 0)
-        .point(sx, sy, sz, 0.06 * sc).point(px - ct * R, py, pz - st * R, 0.075 * sc).finish();
-      putAlong(v.solids.blocks, px, py, pz, ct, 0, st, R * 2, R * 2, seed, skin, OK.SKIN, 0, seed, 0);
-      // speed lines streaming off it
+      const px = X + ct * d, pz = Z + st * d, py = G + (1.1 + (hash(seed + 7) - 0.5) * 0.7) * sc;
+      const R = 0.12 * big * sc;
+      const w0 = 0.075 * sc * Math.min(big, 1.7), w1 = 0.062 * sc * Math.min(big, 2);
+      for (let b = 0; b < 3; b++) {
+        // (the blur: copies trailing back the way it swung, fainter each)
+        const off = b * 0.14 * sc * side, al = a * pop * (b === 0 ? 0.92 : b === 1 ? 0.34 : 0.15);
+        const ox = -st * off, oz = ct * off;
+        const ex = px - ct * R + ox, ez = pz - st * R + oz;
+        v.ribbons.start(RK.TUBE, RM.FACE, skin, al, ink, 0)
+          .point(shx, shy, shz, w0).point((shx + ex) * 0.5, (shy + py) * 0.5 + 0.03 * sc, (shz + ez) * 0.5, (w0 + w1) * 0.5).point(ex, py, ez, w1).finish();
+        putAlong(v.solids.blocks, px + ox, py, pz + oz, ct, 0, st, R * 2.1, R * 1.9, seed, skin, OK.SKIN, b === 0 ? 0 : b === 1 ? 0.6 : 0.82, seed, 0);
+      }
+      // speed lines streaming off the fist
       v.ribbons.start(RK.SPEED, RM.FACE, WHITE, a * 0.75 * pop, WHITE, 0.4)
         .point(px - ct * R * 1.2, py + R * 0.5, pz - st * R * 1.2, 0.02)
-        .point(px - ct * (R + 0.55 * pop), py + R * 0.5, pz - st * (R + 0.55 * pop), 0.01).finish();
+        .point(px - ct * (R + 0.6 * pop), py + R * 0.5, pz - st * (R + 0.6 * pop), 0.01).finish();
       if (ph > 0.45 && ph < 0.62) {
-        const j = v.sprites.put(SK.BURST, px + ct * R, py, pz + st * R, 0.3 * sc, col('#fff8e1'), a, WHITE, 0.6, seed, seed, (ph - 0.45) / 0.17);
+        const j = v.sprites.put(SK.BURST, px + ct * R, py, pz + st * R, 0.3 * sc * Math.sqrt(big), col('#fff8e1'), a, WHITE, 0.6, seed, seed, (ph - 0.45) / 0.17);
         v.sprites.vel(j, 7, 0, 0, 0);
       }
     }

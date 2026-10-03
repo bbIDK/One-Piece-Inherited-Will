@@ -22,8 +22,6 @@ import { registerAbilities } from '../game/abilities.js';
 import { attachKits, AWAKEN_MASTERY } from './fruitForms.js';
 
 const T = (mastery, a) => ({ ...a, mastery });
-// (a look that's all shadow: Moria's Doppelman)
-const SHADOW = { skin: '#263238', top: '#263238', bottom: '#212121', hairColor: '#212121', shoes: '#212121', hand: '#263238', hair: 'spiky', eyeColor: '#ff5252' };
 
 export const FRUITS = {
   // ------------------------------------------------------------- PARAMECIA
@@ -43,13 +41,13 @@ export const FRUITS = {
     // its own; the old Gear Third and Gear Fifth stay for whoever uses them as single moves)
     more: [
       T(45, { id: 'gomu_gear2', name: 'Gear Second', icon: '♨', anim: 'kneel', windup: 0.4, recover: 0.1, cd: 30, say: 'Gear... Second!', desc: 'Pump blood at high speed: faster and stronger, every move a Jet — at a cost when it wears off.',
-        steps: [{ fx: { burst: 20, color: '#ffcdd2', kind: 'smoke' } }, { at: 0.4, buff: { id: 'gear2', form: 'gear2', name: 'Gear Second', dur: 25, mods: { speedMul: 1.35, damage: 1.25, atkSpeed: 1.3 }, aura: 'rgba(255,138,128,0.7)', steam: true, look: { skin: '#f4a39c' }, after: { id: 'gear2_spent', name: 'Spent', dur: 6, mods: { speedMul: 0.85, atkSpeed: 0.85 } } } }] }),
+        steps: [{ fx: { burst: 20, color: '#ffcdd2', kind: 'smoke' } }, { at: 0.4, buff: { id: 'gear2', form: 'gear2', name: 'Gear Second', dur: 25, mods: { speedMul: 1.35, damage: 1.25, atkSpeed: 1.3 }, fpTint: 'rgba(255,138,128,0.7)', steam: true, look: { skin: '#f4a39c' }, after: { id: 'gear2_spent', name: 'Spent', dur: 6, mods: { speedMul: 0.85, atkSpeed: 0.85 } } } }] }),
       T(60, { id: 'gomu_gear3', name: 'Gear Third: Gigant Pistol', icon: '🦴', anim: 'pistol', windup: 0.7, recover: 0.5, cd: 18, say: 'Gear Third... Gigant Pistol!', steps: [{ proj: { speed: 16, range: 10, radius: 1.6, damage: 80, sprite: 'gomufist', size: 4, stretch: true, pierce: true, knockback: 14, stun: 1, heavy: true, hitShips: true, shipDamage: 200 } }] }),
       T(80, { id: 'gomu_gear4', name: 'Gear Fourth: Boundman', icon: '🎈', anim: 'cast', windup: 0.8, recover: 0.2, cd: 60, cost: { haki: 40 }, requiresHaki: 'armament', say: 'Gear... FOURTH!', desc: 'Inflate your Haki-hardened muscles and bounce: enormous power for a short time — then you\'re exhausted.',
-        steps: [{ fx: { ring: 3, color: '#b71c1c', impact: 0.1 } }, { at: 0.8, buff: { id: 'gear4', form: 'gear4', name: 'Boundman', dur: 22, mods: { damage: 2.2, defMul: 0.6, speedMul: 1.2 }, aura: 'rgba(183,28,28,0.9)', forceArmament: true, look: { bulk: 1.45, boundman: true }, drain: { haki: 1.5 },
+        steps: [{ fx: { ring: 3, color: '#b71c1c', impact: 0.1 } }, { at: 0.8, buff: { id: 'gear4', form: 'gear4', name: 'Boundman', dur: 22, mods: { damage: 2.2, defMul: 0.6, speedMul: 1.2 }, fpTint: 'rgba(183,28,28,0.9)', forceArmament: true, steam: 'collar', look: { bulk: 1.85, muscle: 1.2, boundman: true, hair: 'spiky' }, drain: { haki: 1.5 },
           after: { id: 'gear4_spent', name: 'Exhausted', dur: 12, mods: { speedMul: 0.7, atkSpeed: 0.75, damage: 0.8 }, noHaki: true, noForms: true } } }] }),
       T(100, { id: 'gomu_gear5', name: 'Gear Fifth', icon: '☀', anim: 'cast', windup: 1.0, recover: 0.2, cd: 180, cost: { haki: 60 }, requiresHaki: 'conqueror', say: '...Drums of Liberation.', desc: 'The fruit\'s true name is Hito Hito no Mi, Model: Nika. The warrior of liberation, bringer of joy.',
-        steps: [{ fx: { ring: 6, color: '#ffffff', flash: 0.6, impact: 0.2, text: 'SUN GOD NIKA' } }, { at: 1.0, buff: { id: 'gear5', name: 'Gear Fifth', dur: 30, mods: { damage: 3, defMul: 0.45, speedMul: 1.4, atkSpeed: 1.4 }, aura: 'rgba(255,255,255,1)', look: { hairColor: '#ffffff', top: '#ffffff', bottom: '#ffffff', nika: true } } }] }),
+        steps: [{ fx: { ring: 6, color: '#ffffff', flash: 0.6, impact: 0.2, text: 'SUN GOD NIKA' } }, { at: 1.0, buff: { id: 'gear5', name: 'Gear Fifth', dur: 30, mods: { damage: 3, defMul: 0.45, speedMul: 1.4, atkSpeed: 1.4 }, fpTint: 'rgba(255,255,255,0.8)', wisps: true, look: { hairColor: '#ffffff', top: '#ffffff', bottom: '#ffffff', eyeColor: '#ff4d7e', belt: '#7b3fa0', nika: true } } }] }),
     ],
   },
   gura: {
@@ -173,7 +171,7 @@ export const FRUITS = {
       T(0, { id: 'kage_brickbat', name: 'Brick Bat', icon: '🦇', anim: 'cast', windup: 0.25, recover: 0.3, cd: 4, desc: 'Your shadow breaks into a swarm of bats.', steps: [{ proj: { speed: 14, range: 11, radius: 0.3, damage: 7, count: 5, spread: 0.6, sprite: 'bat', color: '#263238', homing: 2 } }] }),
       T(20, { id: 'kage_steal', name: 'Shadow Steal', icon: '🌑', anim: 'grab', windup: 0.35, recover: 0.3, cd: 16, desc: 'Cut away the target\'s shadow: without it they take more harm — and out in the sunlight they burn.', steps: [{ hit: { shape: 'arc', range: 2.6, arc: 1.0, offset: 0.2, damage: 18, stun: 0.8, status: { shadowless: 12 }, unblockable: true } }] }),
       T(40, { id: 'kage_doppelman', name: 'Doppelman', icon: '👤', anim: 'cast', windup: 0.3, recover: 0.2, cd: 30, desc: 'Your shadow peels away and fights beside you as a body of its own.',
-        steps: [{ summon: { archetype: 'brute', count: 1, name: 'Doppelman', duration: 18, color: '#263238', look: SHADOW, moves: ['brawl_tackle'], hpMul: 0.8 } }, { buff: { id: 'doppel', name: 'Doppelman', dur: 18, mods: { damage: 1.15 }, aura: 'rgba(38,50,56,0.6)' } }] }),
+        steps: [{ summon: { archetype: 'brute', count: 1, name: 'Doppelman', duration: 18, look: 'shadow', at: 'shadow', moves: ['brawl_tackle'], hpMul: 0.8 } }, { buff: { id: 'doppel', name: 'Doppelman', dur: 18, mods: { damage: 1.15 } } }] }),
       T(60, { id: 'kage_tsuno', name: 'Tsuno-Tokage', anim: 'cast', windup: 0.6, recover: 0.4, cd: 12, desc: 'Horned Lizard: your shadow runs along the ground to the target and bursts up as a spike under them.', steps: [{ zone: { range: 1.8, duration: 0.6, interval: 0.3, damage: 40, color: '#37474f', atTarget: true, kind: 'field' } }] }),
     ],
   },

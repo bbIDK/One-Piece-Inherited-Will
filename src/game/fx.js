@@ -64,6 +64,12 @@ export class FX {
     this.impactColor = null;
     this.flash = 0;
     this.flashColor = null;
+    // whole-view effects the 3D view's post pass draws (render3d/post.js): a
+    // shockwave rippling out through the air from a point, the air gone heavy
+    // (Conqueror's), a flash-forward drained of colour (Future Sight)
+    this.shock = null; // { x, y, z, t, max, k }
+    this.press = null; // { t, max, color, k }
+    this.vis = null; // { t, max, color }
     this.maxParts = 600;
     this.maxShapes = 260;
     this.time = 0;
@@ -91,6 +97,12 @@ export class FX {
   stop(t) { this.hitstop = Math.max(this.hitstop, t); }
   impactFrame(t = 0.08, color = null) { this.impact = Math.max(this.impact, t); this.impactColor = color; }
   flashScreen(t = 0.1, color = null) { this.flash = Math.max(this.flash, t); this.flashColor = color; }
+  /** A shockwave rippling out through the air from world point (x, y), `z` up, over `t` seconds, `k` strong. */
+  screenShock(x, y, z = 1, t = 0.7, k = 1) { this.shock = { x, y, z, t, max: t, k }; }
+  /** The air gone heavy: the view darkening toward its edges, in `color`, over `t` seconds. */
+  pressure(t = 1.2, color = '#000000', k = 1) { this.press = { t, max: t, color, k }; }
+  /** A flash-forward: the view drained of colour and washed in `color` a moment. */
+  visionFlash(t = 0.3, color = '#ce93d8') { this.vis = { t, max: t, color }; }
   /** Slow the whole simulation to `scale` for `t` seconds (ramps back to normal). */
   slowmo(t = 0.3, scale = 0.35) {
     if (this.slow && this.slow.t > t && this.slow.scale <= scale) return;
@@ -282,12 +294,15 @@ export class FX {
   sensed(att, p) { return this.cfx(() => CFX.sensedFx(this, att, p)); }
   /** Future Sight: a vision of `att`'s blow at `p` before it lands. */
   vision(att, p) { return this.cfx(() => CFX.visionFx(this, att, p)); }
+  /** What comes off a body in a form while it lasts: Gear Second's steam, Nika's hair, a living shadow's wisps. */
+  bodyFx(actor, dt) { return this.cfx(() => CFX.bodyFx(this, actor, dt)); }
   afterimage(actor, o) { return this.cfx(() => CFX.afterimage(this, actor, o)); }
 
   // ------------------------------------------------------------------ update
   update(dt) {
     this.time += dt;
     this.hookCamera();
+    for (const k of ['shock', 'press', 'vis']) { const e = this[k]; if (e && (e.t -= dt) <= 0) this[k] = null; }
     this.trauma = Math.max(0, this.trauma - dt * 1.8);
     this.impact = Math.max(0, this.impact - dt);
     this.flash = Math.max(0, this.flash - dt);
@@ -635,6 +650,7 @@ export class FX {
   reset() {
     this.parts.length = 0; this.texts.length = 0; this.shapes.length = 0; this.nums.clear();
     this.trauma = 0; this.hitstop = 0; this.impact = 0; this.flash = 0; this.focusT = 0; this.kickX = 0; this.kickY = 0;
+    this.shock = null; this.press = null; this.vis = null;
     if (this.slow) { this.slow = null; this.game.slowmo = 1; this._slowOwned = false; }
   }
 }

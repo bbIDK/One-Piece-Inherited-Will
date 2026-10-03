@@ -24,7 +24,7 @@ const LOOK_MS = 250; // how often your look is checked for changes
 const ENV_MS = 2000; // the host's clock and weather, this often (and whenever the weather turns)
 const PROFILE_KEY = 'op-inherited-will:profile';
 // buffs that change how you're drawn without a look of their own (see render/combatfx.js actorVisuals)
-const VIS_BUFFS = new Set(['diable', 'gear4', 'gear5']);
+const VIS_BUFFS = new Set(['diable', 'gear2', 'gear3', 'gear4', 'gear5', 'doppel', 'future_sight']);
 /** A ship's id on the line (one of yours: the others know her by it). */
 export const shipId = (s) => String(s.uid || 's' + s.id);
 

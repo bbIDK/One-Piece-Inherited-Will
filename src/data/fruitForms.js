@@ -133,7 +133,7 @@ const GEAR3 = {
   id: 'gear3', name: 'Gear Third', short: 'Gear 3', mastery: 45,
   desc: 'Blow air into your bones: giant limbs — Gigant Pistol, Elephant Gatling, Gigant Axe. A little slower, a lot heavier.',
   activate: { id: 'gomu_gear3_on', name: 'Gear Third', icon: '🦴', anim: 'flex', windup: 0.35, recover: 0.2, cd: 20, say: 'Gear... Third!', desc: 'Bite your thumb and blow: your bones swell like balloons.',
-    steps: [{ fx: { burst: 16, color: '#ffe0b2', kind: 'smoke' } }, { at: 0.35, buff: { id: 'gear3', form: 'gear3', name: 'Gear Third', dur: 25, mods: { damage: 1.1, speedMul: 0.92 }, aura: 'rgba(255,224,178,0.45)' } }] },
+    steps: [{ fx: { burst: 16, color: '#ffe0b2', kind: 'smoke' } }, { at: 0.35, buff: { id: 'gear3', form: 'gear3', name: 'Gear Third', dur: 25, mods: { damage: 1.1, speedMul: 0.92 }, fpTint: 'rgba(255,224,178,0.45)' } }] },
   m1: { dmg: 1.3, reach: 1.35 },
   heavy: { id: 'gomu_gigant_stamp', name: 'Gigant Stamp', anim: 'kick_high', windup: 0.4, recover: 0.4, cd: 2.4, desc: 'A giant\'s sole driven straight out.',
     steps: [{ hit: { shape: 'line', range: 4.5, width: 1.8, damage: 36, knockback: 12, stun: 0.6, heavy: true, guardBreak: true, shake: 0.4 } }] },
@@ -176,7 +176,7 @@ const GEAR4 = {
 const GEAR5 = {
   name: 'Gear Fifth', short: 'Gear 5', desc: 'Awakening: the warrior of liberation. Your body as free as your imagination — Dawn Pistol, Dawn Gatling, Gomu Gomu no Kaminari, Bajrang Gun.',
   activate: { id: 'gomu_awaken', name: 'Gear Fifth', icon: '☀', anim: 'cast', windup: 0.9, recover: 0.2, cd: 6, say: '...Drums of Liberation.', desc: 'Your heartbeat drums: Gear Fifth.',
-    steps: [{ fx: { ring: 6, color: '#ffffff', flash: 0.5, impact: 0.15, text: 'GEAR 5' } }, { at: 0.9, buff: { id: 'gear5', form: 'awake', name: 'Gear Fifth', dur: Infinity, mods: { damage: 1.3, defMul: 0.8, speedMul: 1.3, atkSpeed: 1.25 }, aura: 'rgba(255,255,255,1)', look: { hairColor: '#ffffff', top: '#ffffff', bottom: '#ffffff', nika: true } } }] },
+    steps: [{ fx: { ring: 6, color: '#ffffff', flash: 0.5, impact: 0.15, text: 'GEAR 5' } }, { at: 0.9, buff: { id: 'gear5', form: 'awake', name: 'Gear Fifth', dur: Infinity, mods: { damage: 1.3, defMul: 0.8, speedMul: 1.3, atkSpeed: 1.25 }, fpTint: 'rgba(255,255,255,0.8)', wisps: true, look: { hairColor: '#ffffff', top: '#ffffff', bottom: '#ffffff', eyeColor: '#ff4d7e', belt: '#7b3fa0', nika: true } } }] },
   m1: { dmg: 1.5, reach: 1.7 },
   heavy: { id: 'gomu_dawn_whip', name: 'Dawn Whip', anim: 'sweep', windup: 0.2, recover: 0.35, cd: 1.8, desc: 'A leg stretched across the whole field and swept.',
     steps: [{ hit: { shape: 'arc', range: 4.6, arc: 2.4, offset: 0.2, damage: 30, knockback: 18, stun: 0.6, heavy: true, guardBreak: true } }] },

@@ -69,6 +69,15 @@ export function bodyMaterial(opts = {}) {
     uHakiCol: { value: new THREE.Color(0x0b0a10) }, uHakiSheen: { value: new THREE.Color(0x9d8cff) },
     uLegFx: { value: new THREE.Vector2() }, uLegFxCol: { value: new THREE.Color(1.0, 0.36, 0.0) },
     uFreeze: { value: 0 },
+    // Boundman (Gear Fourth): the coat's edge licking out across the skin in
+    // tongues of flame (0 a clean line … 1), and the coat over the chest and
+    // shoulders — from the height x (model metres) up to the shoulders' y,
+    // out from the middle to z either side; w how strong (0 none)
+    uFlame: { value: 0 }, uTorso: { value: new THREE.Vector4(0, 0, 0, 0) },
+    // a coloured edge round the whole figure (Future Sight's red outline): rgb, and how strong
+    uRimFx: { value: new THREE.Vector4(0, 0, 0, 0) },
+    // a living shadow (Doppelman): the body flat black, a dim violet edge round it
+    uShadow: { value: 0 },
     // your own body seen from your eyes (first person): nothing above the neck, and no arms while the view's own are up
     uClipY: { value: 1e6 }, uHideArms: { value: 0 }, uHideHead: { value: 0 },
     // (and nothing nearer your eyes than uNear: the view rides your head a
@@ -83,14 +92,22 @@ export function bodyMaterial(opts = {}) {
     Object.assign(sh.uniforms, FOG, u);
     celShading(sh);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aPart;\nattribute float aLimb;\nvarying float vPart;\nvarying float vLimb;\nvarying float vObjY;')
+      .replace('#include <common>', '#include <common>\nattribute float aPart;\nattribute float aLimb;\nvarying float vPart;\nvarying float vLimb;\nvarying float vObjY;\nvarying vec3 vObjP;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPart = aPart;\nvLimb = aLimb;')
-      .replace('#include <skinning_vertex>', '#include <skinning_vertex>\nvObjY = transformed.y;');
+      .replace('#include <skinning_vertex>', '#include <skinning_vertex>\nvObjY = transformed.y;\nvObjP = transformed;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-varying float vPart; varying float vLimb; varying float vObjY;
+varying float vPart; varying float vLimb; varying float vObjY; varying vec3 vObjP;
 uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec4 uHakiRip; uniform vec3 uHakiCol; uniform vec3 uHakiSheen;
-uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead; uniform float uNear;`)
+uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead; uniform float uNear;
+uniform float uFlame; uniform vec4 uTorso; uniform vec4 uRimFx; uniform float uShadow;
+float bhash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float bnoise(vec3 x) {
+  vec3 i = floor(x), f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(bhash(i), bhash(i + vec3(1, 0, 0)), f.x), mix(bhash(i + vec3(0, 1, 0)), bhash(i + vec3(1, 1, 0)), f.x), f.y),
+             mix(mix(bhash(i + vec3(0, 0, 1)), bhash(i + vec3(1, 0, 1)), f.x), mix(bhash(i + vec3(0, 1, 1)), bhash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
 float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart) * step(vPart, 4.5), pHead = step(4.5, vPart);
@@ -99,13 +116,22 @@ if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5 || 
 float li = floor(vLimb + 0.001), rc = (vLimb - li) / 0.98;
 vec4 lsel = vec4(step(0.5, li) * step(li, 1.5), step(1.5, li) * step(li, 2.5), step(2.5, li) * step(li, 3.5), step(3.5, li));
 float hcov = dot(lsel, uHaki);
-float hakiK = hcov > 0.001 ? 1.0 - smoothstep(hcov - 0.012, hcov + 0.012, rc) : 0.0;
+// (Boundman: tongues of flame — long ones licking up the limb, fine ones between)
+float flame = uFlame > 0.0 ? ((bnoise(vObjP * vec3(7.0, 3.0, 7.0)) - 0.5) * 0.3 + (bnoise(vObjP * vec3(19.0, 9.0, 19.0)) - 0.5) * 0.12) * uFlame : 0.0;
+float hakiK = hcov > 0.001 ? 1.0 - smoothstep(hcov - 0.012, hcov + 0.012, rc + flame) : 0.0;
+// (…and over the shoulders and the top of the chest, out from the sides: the breastbone and the belly left bare)
+if (uTorso.w > 0.0 && vPart < 0.5) {
+  float up = (vObjY - uTorso.x) / max(0.01, uTorso.y - uTorso.x), side = abs(vObjP.z) / max(0.01, uTorso.z);
+  float cov = up * 0.85 + side * 0.8 - 0.62 + flame * 2.2;
+  hakiK = max(hakiK, smoothstep(-0.02, 0.02, cov) * uTorso.w);
+}
 float hakiF = hcov > 0.001 ? dot(lsel, uHakiRip) * (1.0 - smoothstep(0.0, 0.07, abs(rc - hcov))) : 0.0;
 float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
 diffuseColor.rgb = mix(diffuseColor.rgb, uLegFxCol, legK * 0.8);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.7, 0.88, 1.0), uFreeze * 0.55);
-diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`)
+diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 {
   float rim = 1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
@@ -124,6 +150,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`)
   totalEmissiveRadiance += mix(uHakiSheen, vec3(1.0), 0.4) * hakiF * 1.7;
   totalEmissiveRadiance += vec3(0.5, 0.75, 1.0) * pow(rim, 1.6) * uFreeze * 0.35;
   totalEmissiveRadiance += uLegFxCol * legK * 0.85 + uFlashCol * uFlash * 0.8;
+  // a coloured outline round the figure (Future Sight), and a living shadow's dim violet edge
+  totalEmissiveRadiance += uRimFx.rgb * smoothstep(0.5, 0.82, rim) * uRimFx.w;
+  totalEmissiveRadiance += vec3(0.3, 0.14, 0.5) * smoothstep(0.62, 0.95, rim) * uShadow * 0.8;
 }`);
   };
   m.customProgramCacheKey = () => BODY_KEY;

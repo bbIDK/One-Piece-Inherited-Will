@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { VS_COMMON, FS_COMMON, vfxMaterial, dynAttr, upload } from './kit.js';
 
-export const VK = { BUBBLE: 0, FIRE: 1, DOME: 2, DARK: 3, ORB: 4, WATER: 5, GOO: 6 };
+export const VK = { BUBBLE: 0, FIRE: 1, DOME: 2, DARK: 3, ORB: 4, WATER: 5, GOO: 6, HAKI: 7 };
 export const TK = { BEAM: 0, PILLAR: 1, FUNNEL: 2, FIRE: 3, DARK: 4 };
 
 // ------------------------------------------------------------------ shells
@@ -38,6 +38,11 @@ const SHELL_VS = /* glsl */`
       float d = textureLod(uNoise, uv * vec2(3.0, 2.0) + vec2(uTime * 0.25, iPrm.z * 0.1), 0.0).r - 0.5;
       p += n * d * 0.18;
     } else if (kind == ${VK.DOME}) {
+      p.y *= iPrm.w;
+    } else if (kind == ${VK.HAKI}) {
+      // (a wave of will: squat, its skin rippling as it goes)
+      float d = textureLod(uNoise, uv * vec2(5.0, 2.0) + vec2(uTime * 0.5, iPrm.z * 0.1), 0.0).r - 0.5;
+      p += n * d * 0.07;
       p.y *= iPrm.w;
     }
     vec3 wp = iPos.xyz + p * iPos.w;
@@ -106,6 +111,19 @@ const SHELL_FS = /* glsl */`
       float inside = gl_FrontFacing ? 1.0 : 0.22;
       a = (0.07 + rim * 0.4 + max(lm, lp * 0.6) * 0.22 + scan * 0.18 + base * 0.2) * inside;
       c = mix(vCol.rgb * 0.9, vCol2.rgb * 1.3, max(rim, max(lm, scan) * 0.6));
+    } else if (kind == ${VK.HAKI}) {
+      // Conqueror's going out: clear in the middle, a band of black at its
+      // skin, the king's own colour burning along its very edge, torn by the
+      // noise; thinning as it spreads (k: how far through it is). Cut at the ground.
+      if (vY < -0.02) discard;
+      float sw = texture2D(uNoise, vUv * vec2(7.0, 2.0) + vec2(uTime * 0.9, seed * 0.1)).g;
+      float f2 = fr + (sw - 0.5) * 0.3;
+      float edge = smoothstep(0.88, 0.98, f2);
+      c = mix(vec3(0.012, 0.0, 0.02), vCol2.rgb * 1.6, edge);
+      // (seen from inside it — it's gone past the camera — only a faint skin)
+      float inside = gl_FrontFacing ? 1.0 : 0.2;
+      a = smoothstep(0.55, 0.86, f2) * 0.65 * (1.0 - k * k) * inside;
+      w = edge * 0.9;
     } else if (kind == ${VK.DARK}) {
       float sw = texture2D(uNoise, vUv * vec2(3.0, 1.5) + vec2(uTime * 0.4, 0.0)).g;
       float rim = smoothstep(0.55, 0.95, fr + (sw - 0.5) * 0.3);

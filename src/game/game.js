@@ -316,7 +316,10 @@ export class Game {
     this.drawWeather(g, r);
     try { this.fx.drawScreen(g, proj); } catch (e) { /* ignore */ }
     const root = r.root;
-    const want = this.fx.impact > 0 ? 'invert(1) grayscale(1) contrast(1.6)' : '';
+    // (the impact frame: the 3D view's post pass draws its own — inked, and in a
+    // colour when it has one — so the page-wide filter is only for when there's
+    // no post pass; on top of it, it would turn it back and wash the colour out)
+    const want = this.fx.impact > 0 && !v.post?.scenePass ? 'invert(1) grayscale(1) contrast(1.6)' : '';
     if (root.style.filter !== want) root.style.filter = want;
     this.ui?.render(this);
   }

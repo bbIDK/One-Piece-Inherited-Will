@@ -19,6 +19,16 @@ import { formatBerries } from '../core/math.js';
 import { bw } from '../world/bframe.js';
 import { npcHakiSig } from './haki.js';
 
+/**
+ * Its owner's shadow stood up as a body (Kage Kage's Doppelman): their own
+ * shape — build, hair, clothes — all in the dark (and drawn flat black with
+ * no face: render3d/chars/forms.js).
+ */
+function shadowLook(L) {
+  const k = '#120c18';
+  return { ...L, shadow: true, skin: k, top: k, bottom: k, hairColor: k, shoes: k, hand: k, hatColor: k, belt: k, sleeve: k, eyeColor: k, coat: L.coat ? k : undefined, vest: L.vest ? k : undefined, fur: L.fur ? k : undefined, wings: undefined, backFlame: false };
+}
+
 const NPC_DEFS = new Map();
 const GROUPS = []; // enemy groups: { island, spot|dx/dy, enemies: [archetype...], when }
 export function registerNPCs(list) { for (const n of list) NPC_DEFS.set(n.id, n); }
@@ -393,10 +403,16 @@ export class Interactions {
     game.summon = (owner, spec) => {
       const n = spec.count || 1;
       for (let i = 0; i < n; i++) {
-        const ang = Math.random() * Math.PI * 2;
-        const p = game.spawner.findFree(owner.x + Math.cos(ang) * 2, owner.y + Math.sin(ang) * 2, 3) || { x: owner.x, y: owner.y + 1 };
-        const a = makeEnemy(spec.archetype || 'pirate', spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: spec.look, moves: spec.moves, hpMul: spec.hpMul });
+        // (a shadow stands up just behind whoever it belongs to — where it lay on the ground)
+        const ang = spec.at === 'shadow' ? (owner.facing || 0) + Math.PI + (i - (n - 1) / 2) * 0.6 : Math.random() * Math.PI * 2;
+        const r = spec.at === 'shadow' ? 1.1 : 2;
+        const p = game.spawner.findFree(owner.x + Math.cos(ang) * r, owner.y + Math.sin(ang) * r, 3) || { x: owner.x, y: owner.y + 1 };
+        const a = makeEnemy(spec.archetype || 'pirate', spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: spec.look === 'shadow' ? undefined : spec.look, moves: spec.moves, hpMul: spec.hpMul });
         a.game = game;
+        a.bornT = game.env.time;
+        if (spec.at === 'shadow') a.facing = owner.facing || 0;
+        // (exactly its owner's shape — not an archetype's build on top)
+        if (spec.look === 'shadow') a.look = shadowLook(owner.look || {});
         a.faction = owner.faction;
         a.summonedBy = owner;
         a.summonT = spec.duration || 30;
@@ -404,14 +420,20 @@ export class Interactions {
         if (owner.isPlayer || owner.faction === 'player') { a.aggroPlayer = false; a.controller = new AIController({ kind: 'follower', skill: 0.3, moves: spec.moves || [] }); }
         else if (owner.controller?.target) { a.controller.target = owner.controller.target; a.controller.state = 'chase'; }
         game.addActor(a);
-        game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || '#eeeeee', speed: 3, g: 0, life: 0.4, kind: 'smoke', size: 0.3 });
+        // (a shadow's rise has its own: combatfx.js kage_doppelman)
+        if (spec.look !== 'shadow') game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || '#eeeeee', speed: 3, g: 0, life: 0.4, kind: 'smoke', size: 0.3 });
       }
     };
     game.on('tick', (dt) => {
       for (const a of game.actors) {
         if (!a.summonedBy) continue;
         a.summonT -= dt;
-        if (a.summonT <= 0 || !a.summonedBy.alive || a.summonedBy.state === 'knocked') { a.alive = false; game.fx.burst(a.x, a.y - 0.6, 8, { color: '#eeeeee', speed: 2, g: 0, life: 0.3, kind: 'smoke' }); }
+        if (a.summonT <= 0 || !a.summonedBy.alive || a.summonedBy.state === 'knocked') {
+          a.alive = false;
+          // (a shadow sinks back into the ground — render3d/chars/forms.js — and leaves its dark behind)
+          if (a.look?.shadow) game.fx.burst(a.x, a.y, 8, { color: ['#120a1a', '#2a1838'], speed: 1, z: 0.1, vz: 1.2, g: 0, life: 0.5, kind: 'smoke', size: 0.22 });
+          else game.fx.burst(a.x, a.y - 0.6, 8, { color: '#eeeeee', speed: 2, g: 0, life: 0.3, kind: 'smoke' });
+        }
       }
     });
     this.onObject('lore', (o) => {

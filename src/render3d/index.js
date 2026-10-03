@@ -32,6 +32,7 @@ import './chars3d.js';
 
 registerPropBuilder('building', (o, ctx) => buildBuilding(o, ctx));
 
+const _shockV = new THREE.Vector3();
 const RES_STEPS = [1, 0.88, 0.77, 0.67, 0.58]; // automatic resolution: shares of the full pixel ratio
 // (people are only moved within ~70 m of the player, and are a few pixels
 // tall beyond: they aren't drawn out to the render distance)
@@ -469,11 +470,35 @@ export class Renderer3D {
     // effects layer scale: pixels per metre at arm's length in front of the camera
     const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
     this.proj.cam.zoom = f / 7;
-    if (this.post) { this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor); this.post.setGrade(this.sky.grade); }
+    if (this.post) { this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor); this.post.setGrade(this.sky.grade); this.screenFx(game.fx, cam); }
     this.fadeCameraProps(dt);
     prof('r.misc', t0); t0 = performance.now();
     this.draw(cam);
     prof('r.draw', t0);
+  }
+
+  /**
+   * The whole-view effects (game/fx.js shock, press, vis) for the post pass:
+   * a shockwave rippling out through the air from where it went off (on
+   * screen, growing as it goes), the air gone heavy, a flash-forward.
+   */
+  screenFx(fx, cam) {
+    if (!fx || !this.post?.setScreenFx) return;
+    const sh = fx.shock, pr = fx.press, vi = fx.vis;
+    let sx = 0.5, sy = 0.5, r = 0, k = 0;
+    if (sh) {
+      const w = this.game?.world;
+      _shockV.set(w ? w.dx(this.ox, sh.x) : sh.x - this.ox, this.ground(sh.x, sh.y) + sh.z, sh.y - this.oy).project(cam);
+      if (_shockV.z < 1) {
+        const u = 1 - sh.t / sh.max;
+        sx = _shockV.x * 0.5 + 0.5; sy = _shockV.y * 0.5 + 0.5;
+        r = 0.04 + (1 - (1 - u) * (1 - u)) * 0.95;
+        k = sh.k * (1 - u);
+      }
+    }
+    const pk = pr ? pr.k * Math.min(1, (pr.max - pr.t) / 0.08) * Math.min(1, pr.t / (pr.max * 0.6)) : 0;
+    const vk = vi ? Math.min(1, (vi.max - vi.t) / 0.04) * Math.min(1, vi.t / (vi.max * 0.7)) : 0;
+    this.post.setScreenFx(sx, sy, r, k, pr && pr.color, pk, vi && vi.color, vk);
   }
 
   /**

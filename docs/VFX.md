@@ -310,3 +310,29 @@ Foosha's pier, a lightning strike, a storm coming up, the night sky and the
 moon, Drum in snow and Alabasta in dust; `--looks=kind@clock:view,…` for any
 other, `--quality=low` for the plain sky) and `weather`; the rules are tested
 in `tests/weather.test.mjs`.
+
+## 11. Forms, Haki and the screen
+
+Transformations and the big Haki moments follow the anime's own looks rather
+than a generic glow. A power-up aura (the lathe shell in `chars/fx.js` Aura)
+is for powers that really glow; a form that doesn't gets `fpTint` on its buff
+instead (it still tints the edges of your own view in first person) and its
+look on the body: `src/render3d/chars/forms.js`.
+
+| What | How it reads |
+|---|---|
+| Gear Second | skin flushed pink (the buff's look), a steady pour of thin steam off shoulders, arms, back and legs (`combatfx.js bodyFx`), the Enies Lobby crouch |
+| Gear Third | every punch thrown on a fist blown up like a balloon (`formRig` → `o.infR / o.infL`), in Armament's black once the user has it |
+| Gear Fourth (Boundman) | a huge round muscular upper body (`bulk 1.85, muscle 1.2`), arms and legs coated, the coat licking out over shoulders and chest in tongues of flame (`uFlame`, `uTorso` in `chars/mats.js`), hair on end, a collar of steam pouring back off the shoulders (`Collar` 'steam'), the bounce (`anims.js gear4Bounce`) |
+| Gear Fifth | white hair, clothes, a purple sash, red eyes; a fat ring of cel-shaded cloud round the neck (`Collar` 'cloud'), wisps off the hair |
+| Doppelman | the owner's own shape (`npcs.js shadowLook`), drawn flat black with a dim violet edge and no face (`uShadow`), rising out of the ground and sinking back (`shadowRise`), dark wisps and afterimages; the owner casts no shadow while it's out |
+| Future Sight | a red outline round the seer (`uRimFx`); each vision: the foe flickering in ahead of themselves in the seer's tint, scanlined and torn (`ghosts.js` uGlitch), a star where it lands, and the view drained of colour a blink (`fx.visionFlash`) |
+| Conqueror's | a dark dome of will blasting out to its reach, its edge burning in the king's colour (`SHAPES.haoshoku`, shell `VK.HAKI`), black lightning with that colour glowing round it (two passes: halo, then the black strand) crackling on round the body, the ground cracked; a two-tone impact frame in black and that colour, the air rippling out from them (`fx.screenShock`) and the edges of the view closing in dark (`fx.pressure`) |
+| Gatling | real rubber arms from both shoulders, fists on their ends, two fainter copies trailing each (the blur of a dozen arms); giant for Elephant and Dawn, Armament-black for Kong Organ |
+
+The whole-view effects live in the post pass (`render3d/post.js`:
+`uShock`, `uPress`, `uVision`, the impact frame); the page-wide CSS impact
+filter is only the fallback with no post pass.
+
+Look at them with `node tools/shot.mjs haki-3d`, `combat-3d --ids=…` and the
+form looks in third person close up.

@@ -16,6 +16,8 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 
+const _c = new THREE.Color();
+
 const InkGradeShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -31,6 +33,13 @@ const InkGradeShader = {
     uVignette: { value: 0.28 },
     uImpact: { value: 0 },
     uImpactCol: { value: new THREE.Color(1, 1, 1) },
+    uImpactTwo: { value: 0 },
+    // a shockwave rippling out through the air (centre uv, radius in screen
+    // heights, strength), the air gone heavy (tint, how much), a flash-forward
+    // drained of colour (tint, how much): game/fx.js shock, press, vis
+    uShock: { value: new THREE.Vector4() },
+    uPress: { value: new THREE.Vector4() },
+    uVision: { value: new THREE.Vector4() },
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -40,15 +49,25 @@ const InkGradeShader = {
     uniform sampler2D tDiffuse;
     uniform sampler2D tDepth;
     uniform vec2 uRes;
-    uniform float uNear, uFar, uInk, uInkFar, uSat, uContrast, uVignette, uImpact;
+    uniform float uNear, uFar, uInk, uInkFar, uSat, uContrast, uVignette, uImpact, uImpactTwo;
     uniform vec3 uInkColor, uImpactCol;
+    uniform vec4 uShock, uPress, uVision;
     varying vec2 vUv;
     float linDepth(vec2 uv) {
       float z = texture2D(tDepth, uv).x * 2.0 - 1.0;
       return (2.0 * uNear * uFar) / (uFar + uNear - z * (uFar - uNear));
     }
     void main() {
-      vec4 c = texture2D(tDiffuse, vUv);
+      // (a shockwave through the air: the picture bent outward along its ring)
+      vec2 suv = vUv;
+      if (uShock.w > 0.0) {
+        vec2 asp = vec2(uRes.x / uRes.y, 1.0);
+        vec2 dd = (vUv - uShock.xy) * asp;
+        float r = length(dd);
+        float ring = 1.0 - smoothstep(0.0, 0.07, abs(r - uShock.z));
+        suv -= (dd / max(r, 1e-4)) / asp * ring * uShock.w * 0.035;
+      }
+      vec4 c = texture2D(tDiffuse, suv);
       // ink where the depth jumps, relative to how far away it is
       vec2 px = 1.0 / uRes;
       float d = linDepth(vUv);
@@ -71,11 +90,28 @@ const InkGradeShader = {
       // vignette
       vec2 q = vUv - 0.5;
       c.rgb *= 1.0 - uVignette * dot(q, q) * 1.6;
+      // the air gone heavy (Conqueror's): the whole view dimmed, its edges
+      // closing in dark and tinted with the king's colour
+      if (uPress.w > 0.0) {
+        vec2 q2 = vUv - 0.5;
+        float edge = smoothstep(0.05, 0.42, dot(q2, q2) * 1.8);
+        c.rgb = mix(c.rgb, c.rgb * 0.45 + uPress.rgb * 0.12, uPress.w * (0.22 + 0.78 * edge));
+      }
+      // a flash-forward (Future Sight): the colour drained out of the world, washed in the seer's tint
+      if (uVision.w > 0.0) {
+        float vl = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
+        vec3 mono = uVision.rgb * (0.08 + vl * 0.9) + vec3(vl) * 0.45;
+        c.rgb = mix(c.rgb, mono, uVision.w * 0.75);
+      }
       // the anime impact frame: a hard-inked negative for a blink on the biggest blows
+      // (two-tone in a colour when it's given one: Conqueror's, black and the king's colour)
       if (uImpact > 0.0) {
         float il = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
         vec3 neg = vec3(1.0 - smoothstep(0.16, 0.24, il));
-        c.rgb = mix(c.rgb, mix(neg, neg * uImpactCol, 0.4), uImpact);
+        // (in a colour: the figures in it, everything else black — Conqueror's)
+        // (otherwise the manga's flash: the page gone white, the figures inked dark on it)
+        vec3 tone = uImpactTwo > 0.5 ? mix(vec3(0.015, 0.0, 0.02), uImpactCol, neg.x) : vec3(1.0) - neg * 0.82;
+        c.rgb = mix(c.rgb, tone, uImpact);
       }
       gl_FragColor = c;
     }
@@ -171,6 +207,20 @@ export class Post {
     const u = this.scenePass.material.uniforms;
     u.uImpact.value = k;
     if (color) u.uImpactCol.value.set(color); else u.uImpactCol.value.setRGB(1, 1, 1);
+    u.uImpactTwo.value = color ? 1 : 0;
+  }
+
+  /**
+   * The whole-view effects (game/fx.js): a shockwave at screen point (sx, sy)
+   * (uv) of radius r (screen heights), k strong; the air heavy in `pcol`, pk;
+   * a flash-forward in `vcol`, vk.
+   */
+  setScreenFx(sx, sy, r, k, pcol, pk, vcol, vk) {
+    if (!this.scenePass) return;
+    const u = this.scenePass.material.uniforms;
+    u.uShock.value.set(sx, sy, r, k);
+    if (pk > 0 && pcol) { _c.set(pcol); u.uPress.value.set(_c.r, _c.g, _c.b, pk); } else u.uPress.value.w = 0;
+    if (vk > 0 && vcol) { _c.set(vcol); u.uVision.value.set(_c.r, _c.g, _c.b, vk); } else u.uVision.value.w = 0;
   }
 
   render(camera) {

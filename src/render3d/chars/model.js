@@ -366,8 +366,9 @@ export class CharacterModel {
     // the rubber chains: stretched along with the forearm (or shin) at rest, their own length when it runs out
     for (let k = 0; k < 2; k++) {
       // (Gear Third: an arm blown up like a balloon, the fist huge)
-      // (o.infR: a giant fist still out on its rubber keeps the arm blown up till it's home)
-      const inf = Math.max((k === 0 ? P.inF : P.inB) || 0, k === 0 ? o.infR || 0 : 0), g = 1 + 1.6 * inf;
+      // (o.infR: a giant fist still out on its rubber keeps the arm blown up till it's home;
+      // o.infR / o.infL: a punch thrown in Gear Third — chars/forms.js)
+      const inf = Math.max((k === 0 ? P.inF : P.inB) || 0, (k === 0 ? o.infR : o.infL) || 0), g = 1 + 1.6 * inf;
       for (const i of RUB[k]) bones[i].scale.set(g, rig.rubSY[k], g);
       for (const i of RUBL[k]) bones[i].scale.set(1, rig.rubSYL[k], 1);
       if (inf > 0) {

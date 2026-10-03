@@ -593,7 +593,9 @@ function swingSmear(fx, g, r, p) {
 /** Edge vignettes: the player's aura, and a flash on the side a hit came from. */
 function edges(fx, g, r, p) {
   const W = r.cw * r.dpr, H = r.ch * r.dpr;
-  const aura = (p.buffs || []).find((b) => b.aura)?.aura || (p.conquerorInfused ? 'rgba(20,0,20,0.9)' : null);
+  // (a form with no glow round the body — the Gears — still tints the edges of your own view: fpTint)
+  const ab = (p.buffs || []).find((b) => b.aura || b.fpTint);
+  const aura = (ab && (ab.aura || ab.fpTint)) || (p.conquerorInfused ? 'rgba(20,0,20,0.9)' : null);
   g.setTransform(1, 0, 0, 1, 0, 0);
   if (aura) {
     const pulse = 0.14 + 0.05 * Math.sin(fx.time * 7);

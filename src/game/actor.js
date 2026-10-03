@@ -956,7 +956,6 @@ export class Actor extends Entity {
         this.haki -= b.drain.haki * dt;
         if (this.haki < 0) { this.haki = 0; b.t = 0; }
       }
-      if (b.steam && Math.random() < dt * 8) game.fx.particle({ x: this.x + (Math.random() - 0.5) * 0.5, y: this.y, z: 1.2, vx: 0, vy: 0, vz: 1.5, g: -0.5, life: 0.7, size: 0.15, grow: 0.3, color: 'rgba(255,255,255,0.6)', kind: 'smoke' });
       if (b.t <= 0) {
         this.buffs.splice(i, 1);
         changed = true;
@@ -972,6 +971,8 @@ export class Actor extends Entity {
     if ((this.armament || this.observation) && this.buffs.some((b) => b.noHaki)) { this.armament = false; this.observation = false; }
     if (changed) this.recalc();
     this.cdMulBuff = this.buffs.some((b) => b.mods?.cdMul);
+    // (what comes off a body in a form: Gear Second's steam, Nika's hair, a living shadow's wisps)
+    if ((this.buffs.length || this.look?.shadow) && game.fx?.bodyFx) game.fx.bodyFx(this, dt);
   }
 
   updateResources(dt) {
