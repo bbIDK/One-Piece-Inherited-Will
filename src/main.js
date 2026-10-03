@@ -151,6 +151,8 @@ async function start() {
   // sounds out in the world fade with distance from the player
   audio.ear = () => game.player;
   audio.dxOf = (a, b) => (game.world?.dx ? game.world.dx(a, b) : b - a);
+  // the music, the ambience and the foley follow the game (see audio/director.js, audio/foley.js)
+  audio.attach(game);
   // phones and tablets start on the fast graphics setting unless the player picked one
   const phone = !!window.matchMedia?.('(hover: none) and (pointer: coarse)')?.matches;
   if (phone && !settings.qualityPicked) settings.quality = 'low';
@@ -386,7 +388,7 @@ async function start() {
   const openCreation = () => {
     creationScreen(ui, loadLegacy(), {
       onBack: showTitle,
-      onDone: (birth, choices) => { showBoot('Setting sail…'); sail = { t0: performance.now(), frames: 0 }; ui.hideScreen(); startNewCharacter(game, birth, choices); audio.music('sea'); relockUntil = performance.now() + 2500; },
+      onDone: (birth, choices) => { showBoot('Setting sail…'); sail = { t0: performance.now(), frames: 0 }; ui.hideScreen(); startNewCharacter(game, birth, choices); relockUntil = performance.now() + 2500; },
     });
   };
   const useSlot = (s) => { setSlot(s); game.saveSlot = s; };
@@ -398,7 +400,7 @@ async function start() {
   // into the world with a saved character
   const enter = (saved) => {
     showBoot('Setting sail…'); sail = { t0: performance.now(), frames: 0 };
-    ui.hideScreen(); resumeCharacter(game, saved); audio.music('sea');
+    ui.hideScreen(); resumeCharacter(game, saved);
     relockUntil = performance.now() + 2500;
   };
   // lineage s into the world: its pirate, or (none living) a new one born first
@@ -481,7 +483,6 @@ async function start() {
       onHelp: () => { ui.hideScreen(); ui.openPanel(helpContent(null), { wide: true, onClose: showTitle }); },
       onSettings: () => { ui.hideScreen(); openSettings(game); const s = ui.stack[ui.stack.length - 1]; if (s) s.onClose = () => { game.applySettings(true); showTitle(); }; },
     });
-    audio.music('title');
   };
 
   // attract-mode camera for the title screen

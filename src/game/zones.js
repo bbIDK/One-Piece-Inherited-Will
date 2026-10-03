@@ -115,7 +115,6 @@ export function installZones(game) {
       if (!opts.dive) game.ui.banner(z.name, z.altitude || '', z.kind === 'sky' ? 'Above the clouds, the sea is white.' : z.kind === 'undersea' ? '10,000 metres beneath the waves, a bubble of air and light.' : 'The Great Underwater Prison.', 5);
       persist(game);
     }
-    game.audio?.music(z.kind === 'prison' ? 'night' : z.kind === 'sky' ? 'town' : 'grandline');
     return true;
   };
 

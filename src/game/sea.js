@@ -62,7 +62,7 @@ class SeaSystem {
     const reg = inZone ? { name: g.world.name } : REGION_INFO[regionAt(isl.x, isl.y)];
     g.ui.banner(isl.name, reg?.name || '', first ? (isl.def.tagline || 'New island charted!') : isl.def.tagline || '', first ? 5 : 3);
     if (first) g.emit('discovered', isl);
-    g.audio?.music(isl.def.music || (isl.towns.length ? 'town' : 'sea'));
+    // (the island's music: the audio director hears the arrival itself — see audio/director.js)
     if (first) persist(g);
   }
 
@@ -82,7 +82,6 @@ class SeaSystem {
     } else if (isBlue(reg) && !isBlue(prev)) {
       g.ui.banner(info.name.toUpperCase(), '', '', 3);
     }
-    g.audio?.music(isGrandLine(reg) ? 'grandline' : isCalmBelt(reg) ? 'night' : 'sea');
   }
 
   // ------------------------------------------------------------ log pose
@@ -300,7 +299,6 @@ class SeaSystem {
     if (k && !this.rmState) {
       this.rmState = { t: 0, from: k.exit ? null : k.id, top: false };
       g.ui.banner('REVERSE MOUNTAIN', 'The gateway to the Grand Line', k.exit ? 'Down the torrent into the Grand Line!' : 'The sea is running UP the mountain — and it has you! Keep to the middle of the canal!', 5);
-      g.audio?.music('battle');
       if (s && !s.def.grandLine) g.log('Your little boat creaks in the current... The Grand Line will not be kind to it.', '#ff8a80');
       if (!s) g.log('The current tears you off your feet and sweeps you up the canal!', '#ff8a80');
     }
@@ -326,7 +324,6 @@ class SeaSystem {
       }
       g.emit('questEvent', 'entered_grand_line');
       persist(g);
-      g.audio?.music('grandline');
     } else if (!k && st.t > 4 && !st.top) this.rmState = null; // (swept back out to sea at a gate)
   }
 
