@@ -1533,7 +1533,7 @@ const quests = [
   { id: 'p1_drum_kingdom', name: "Hiriluk's Cherry Blossoms", island: 'drum_island', kind: 'story',
     summary: 'Drum Island has no doctors but one "witch". And its runaway king, "Tin-Plate" Wapol, has come home to take his castle back.',
     stages: [
-      { id: 'climb', desc: 'Climb to Drum Castle on the summit of Drum Rock and find Dr. Kureha. Beware the Lapahn on the slopes.', goal: { type: 'reach', island: 'drum_island', spot: 'castle_gate', r: 8 } },
+      { id: 'climb', desc: 'Ride the Drum Ropeway up the face of Drum Rock to Drum Castle on its summit, and find Dr. Kureha. Beware the Lapahn in the snowfields below.', goal: { type: 'reach', island: 'drum_island', spot: 'castle_gate', r: 8 } },
       { id: 'bliking', desc: '"Tin-Plate" Wapol has returned with his Bliking Pirates to retake the castle! Defeat Chess and Kuromarimo at the castle gate.', goal: { type: 'defeat', any: ['p1_chess', 'p1_kuromarimo'], count: 2 },
         onStart: (ctx, g) => {
           banner(g, 'WAPOL RETURNS', 'Drum Castle', '"Mahahaha! My castle! My country! Chess, Kuromarimo — throw these peasants off my mountain!"', 5);

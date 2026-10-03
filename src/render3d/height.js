@@ -13,6 +13,7 @@ import { RM_X, RL_HALF, chart } from '../world/constants.js';
 import { RM, canalAt, coneAt, nearRM } from '../world/reverseMountain.js';
 import { PLINTH, STEPS_MAX } from '../world/interiors.js';
 import { bw, bl, bfoot } from '../world/bframe.js';
+import { drumAt, drumTop, nearDrum, drumTile } from '../world/drums.js';
 
 export const SEA_Y = 0;
 export const DECK_Y = 0.55; // top of bridges (and sea-train tracks)
@@ -162,14 +163,22 @@ function quayRamp(world, cx, cy, h, pads) {
 
 /** Height at a tile corner before anything is built on it. */
 function naturalHeight(world, cx, cy) {
+  // (on top of one of the Drum Rockies: its own height — its face a sheer wall a tile thick, see drums.js)
+  const nd = world.drums?.length && world.zone === 0 ? nearDrum(world, cx, cy, 2) : null;
+  if (nd) {
+    const d = drumAt(world, cx, cy);
+    if (d) return drumTop(world, d, cx, cy);
+  }
   let sum = 0, n = 0, walls = 0, tall = 0, rapids = 0;
   for (let j = -1; j <= 0; j++) {
     for (let i = -1; i <= 0; i++) {
       const x = cx + i, y = cy + j;
-      const t = world.type(x, y);
+      let t = world.type(x, y);
       if (t === T.RAPIDS) rapids++;
       if (IS_LIQUID[t] || OVERLAY[t]) continue;
       if (t === T.WALL) { walls++; continue; }
+      // (the foot of a drum's face is the land's own: no scree of rock piled against it)
+      if (nd && t === T.SNOWROCK && drumTile(world, nd, x, y) === 1) t = T.SNOW;
       const h = landHeight(world, x, y, t, world.elev(x, y));
       sum += h; n++;
       if (h > tall) tall = h;

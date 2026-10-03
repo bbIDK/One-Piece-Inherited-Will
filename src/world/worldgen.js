@@ -14,6 +14,7 @@ import { hexToRgb, clamp } from '../core/math.js';
 import { generateIsland, carvePath, placeObject } from './islandgen.js';
 import { generateTown } from './towngen.js';
 import { cornerHeight } from '../render3d/height.js';
+import { drumFace } from './drums.js';
 
 /** Reverse Mountain (see reverseMountain.js): the massif, its canals and the summit pool. */
 export const REVERSE_MOUNTAIN = RM;
@@ -89,6 +90,7 @@ function openGentleRock(world) {
   const hard = new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK, T.RED_ROCK]);
   // (the Red Line's own rock stays as it is: only islands' crags)
   const redLine = (x, y) => { const t = world.base?.type(world.wx(x), y); return t === T.RED_ROCK || t === T.SNOWROCK; };
+  // (nor a Drum Rock's face: a cliff a tile thick, however level its foot or its top)
   const W1 = world.width + 1, heights = new Map();
   const key = (x, y) => y * W1 + world.wx(x);
   const corner = (x, y) => { const k = key(x, y); let h = heights.get(k); if (h === undefined) heights.set(k, (h = cornerHeight(world, x, y))); return h; };
@@ -96,7 +98,7 @@ function openGentleRock(world) {
   const centre = (x, y) => (corner(x, y) + corner(x + 1, y + 1)) / 2;
   const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const gentle = (x, y) => {
-    if (!hard.has(world.type(x, y)) || redLine(x, y)) return false;
+    if (!hard.has(world.type(x, y)) || redLine(x, y) || drumFace(world, x, y)) return false;
     let h = null;
     for (const [i, j] of N4) {
       if (!world.walkable(x + i, y + j)) continue;

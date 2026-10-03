@@ -13,6 +13,8 @@ import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
 import { RACES } from '../data/races.js';
 import { WALKABLE, SWIMMABLE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
+import { nearDrum } from '../world/drums.js';
+import { rideStep, endRide } from './ropeway.js';
 import { HIGH_DECK } from '../render3d/height.js';
 import { clamp, TAU, angleDiff } from '../core/math.js';
 import { shipDims, hbAt, deckToWorld, shipLift, sideAt, topAt, floorAt, xAt, deckLift, deckPoint } from '../world/hull.js';
@@ -980,8 +982,10 @@ export class Actor extends Entity {
     const t = w.type(x, y);
     // (on the Red Line, ground rising faster than a stair is its face: where a
     // Red Port's quay meets the wall, its last stones ramp up the cliff)
-    if (WALKABLE[t]) return !(this.isPlayer && this.redLineRise(w, x, y) > 0.9);
+    if (WALKABLE[t]) return !(this.isPlayer && (this.redLineRise(w, x, y) > 0.9 || this.drumRise(w, x, y) > 0.9));
     if ((t === T.RED_ROCK || t === T.SNOWROCK) && this.redLineRise(w, x, y) <= 0.5) return true;
+    // (over the edge of one of the Drum Rockies, from its top: you fall — and nobody walks up its face)
+    if (t === T.SNOWROCK && this.isPlayer && this.drumRise(w, x, y) <= 0.5) return true;
     if (SWIMMABLE[t]) {
       if (this.dash && this.dash.ignoreWater) return true;
       if (this.forcedWater) return true;
@@ -1009,6 +1013,17 @@ export class Actor extends Entity {
     if (!g?.view3d || w !== g.surface || !w.base?.type) return -Infinity;
     const bt = w.base.type(w.wx(Math.floor(x)), Math.floor(y));
     if (bt !== T.RED_ROCK && bt !== T.SNOWROCK) return -Infinity;
+    return g.view3d.ground(x, y) - this.feetH(g);
+  }
+
+  /**
+   * How far the ground at (x, y) by one of the Drum Rockies stands over your
+   * feet (away from them: -Infinity): its face is a cliff from below, and its
+   * edge a drop from the top.
+   */
+  drumRise(w, x, y) {
+    const g = this.game;
+    if (!g?.view3d || w !== g.surface || !w.drums?.length || !nearDrum(w, x, y, 1.5)) return -Infinity;
     return g.view3d.ground(x, y) - this.feetH(g);
   }
 
@@ -1411,6 +1426,8 @@ export class Actor extends Entity {
 
   /** Up the side, over the top and onto your feet (the start and the end ride along on a ship). */
   updateClimb(dt, game) {
+    // (riding a ropeway's cabin: see ropeway.js)
+    if (this.climb.ride) { rideStep(this, dt, game); return; }
     const c = this.climb, w = game.world, to = c.to;
     if (to.ship && (to.ship.sunk || to.ship.alive === false)) { this.endClimb(game, true); return; }
     c.t += dt;
@@ -1466,6 +1483,7 @@ export class Actor extends Entity {
 
   /** On your feet at the top — or, knocked off it, falling back from where you were. */
   endClimb(game, fall = false) {
+    if (this.climb?.ride) { endRide(this, game); return; }
     const c = this.climb;
     this.climb = null;
     if (!c) return;
@@ -1828,7 +1846,7 @@ export class Actor extends Entity {
           : this.moving ? 'crawl' : 'tread';
     // in the air from a jump (not a knock-back launch): up with the knees, then reaching for the ground
     // (hauling yourself up onto a ledge: knees up, arms reaching over the top)
-    const air = this.climb ? 'up' : !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
+    const air = this.climb ? (this.climb.ride ? null : 'up') : !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
     // at a ship's station: rowing a rowboat, or at the wheel
     const st = !act ? this.station() : null;
     const mode = act || `${this.state}${drawn ? 'w' : ''}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}${this.charging > 0 ? 'k' : ''}${air || ''}${st ? st.kind : ''}`;

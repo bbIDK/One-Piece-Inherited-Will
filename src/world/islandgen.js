@@ -9,6 +9,7 @@ import { clamp, lerp } from '../core/math.js';
 import { generateTown } from './towngen.js';
 import { bw } from './bframe.js';
 import { COLLIDE } from './objects.js';
+import { drumTile, drumR } from './drums.js';
 
 export const CLIMATES = {
   temperate: { ground: T.GRASS, beach: T.SAND, clim: CLIMATE.TEMPERATE, trees: ['oak', 'oak', 'pine', 'bush'], density: 0.05 },
@@ -160,6 +161,17 @@ export function generateIsland(world, def, noise, rng) {
     rec.landmarks.push({ type: 'mountain', name: f.name, x: c.x, y: c.y, r });
   }
 
+  // the Drum Rockies (see drums.js): sheer cylinders of rock, flat-topped and
+  // capped with snow — the plateau on top walkable, its face a cliff
+  for (const f of def.drums || []) {
+    const c = P(f);
+    const d = { name: f.name, x: c.x, y: c.y, R: rel(f.r ?? 0.1, Math.max(hw, hh)), H: f.h ?? 40, seed: ((f.name || '').length * 1.7 + c.x * 0.013) % 6.283, island: def.id };
+    (world.drums ||= []).push(d);
+    (rec.drums ||= []).push(d);
+    stampDrum(world, d, clim);
+    rec.landmarks.push({ type: 'mountain', name: f.name, x: c.x, y: c.y, r: d.R, drum: true });
+  }
+
   for (const f of def.areas || []) {
     // paint an organic patch of a ground type (forest, desert, farmland...)
     const c = P(f);
@@ -251,13 +263,37 @@ export function generateIsland(world, def, noise, rng) {
     if (dock) { dock.name = def.name; rec.docks.push(dock); }
   }
   // every town can be walked to from the first: a road to any that can't
+  // (but none up the face of a Drum Rock: its castle is reached by ropeway)
   for (const t of rec.towns.slice(1)) {
+    if ((def.towns || []).find((d) => (d.id || d.name) === (t.id || t.name))?.noRoad) continue;
     const a = rec.towns[0].plaza, b = t.plaza;
     if (!walkable(world, rec.landBox, a.x, a.y + 2, b.x, b.y + 2)) connectRoad(world, a.x, a.y, b.x, b.y, t.roadTile || T.DIRT);
   }
 
+  // (a drum's face stays a cliff, whatever was laid across it since)
+  for (const d of rec.drums || []) stampDrum(world, d, clim, true);
+
   // landmarks & props -------------------------------------------------------
   rec.clearings = [];
+
+  // ropeways (see game/ropeway.js): a cabin on a cable from a station on the
+  // snow up to the top of a drum — its top station's platform run out over
+  // the edge of the cliff, the cabin's bay at its end
+  for (const f of def.ropeways || []) {
+    const d = (rec.drums || []).find((q) => q.name === f.drum);
+    if (!d) continue;
+    const a = P({ dx: f.from[0], dy: f.from[1] });
+    const th = Math.atan2(a.y - d.y, world.dx(d.x, a.x)), ux = Math.cos(th), uy = Math.sin(th), Rf = drumR(d, th);
+    const at = (x, y, k) => ({ x: world.wx(x + ux * k), y: y + uy * k });
+    const rw = { id: f.id, name: f.name, island: def.id, a: { x: a.x, y: a.y }, b: at(d.x, d.y, Rf + 3.2), aExit: at(a.x, a.y, 4.5), bExit: at(d.x, d.y, Rf - 4.5) };
+    (world.ropeways ||= []).push(rw);
+    placeObject(world, { kind: 'ropeway', rope: f.id, end: 'a', x: rw.aExit.x, y: rw.aExit.y, face: th + Math.PI, reach: 4.5, block: false, name: f.name, interact: `Ride the ropeway up to ${f.top || 'the summit'}`, use: 'ropeway', interactRange: 3.4 });
+    placeObject(world, { kind: 'ropeway', rope: f.id, end: 'b', x: rw.bExit.x, y: rw.bExit.y, face: th, reach: 7.7, edge: 4.5, block: false, name: f.name, interact: `Ride the ropeway down to ${f.foot || 'the foot of the mountain'}`, use: 'ropeway', interactRange: 3.4 });
+    rec.spots[`${f.id}_foot`] = { ...rw.aExit };
+    rec.spots[`${f.id}_top`] = { ...rw.bExit };
+    // (no tree grows in either station)
+    rec.clearings.push({ x: rw.aExit.x, y: rw.aExit.y, r: 8 }, { x: rw.bExit.x, y: rw.bExit.y, r: 7 });
+  }
   for (const lm of def.landmarks || []) {
     const c = P(lm);
     const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
@@ -741,6 +777,24 @@ export function connectRoad(world, ax, ay, bx, by, tile) {
       if (cur === T.COBBLE || cur === T.STONE || cur === T.MARBLE || cur === T.PLANK || cur === T.FARM) continue;
       if (world.isBlocked(x + i, y + j)) continue;
       world.setType(x + i, y + j, tile);
+    }
+  }
+}
+
+/**
+ * Lay a drum's tiles: its top deep snow (or whatever's been built on it),
+ * its face snow-rock. `faceOnly`: just its face again (after towns and roads).
+ */
+function stampDrum(world, d, clim, faceOnly = false) {
+  const m = Math.ceil(d.R * 1.06) + 1;
+  for (let y = Math.floor(d.y - m); y <= Math.ceil(d.y + m); y++) {
+    for (let i = Math.floor(-m); i <= m; i++) {
+      const x = world.wx(Math.floor(d.x) + i);
+      const k = drumTile(world, d, x, y);
+      if (!k || world.isLiquid(x, y) || world.isOverlay(x, y)) continue;
+      // (the face keeps the land's own height at its foot: see render3d/height.js)
+      if (k === 1) world.setTile(x, y, T.SNOWROCK, undefined, clim);
+      else if (!faceOnly) world.setTile(x, y, T.SNOW, 250, clim);
     }
   }
 }
