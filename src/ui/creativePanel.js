@@ -65,7 +65,8 @@ export function openCreative(game, tab) {
   if (!C?.on || !game.player || !game.state?.char) return null;
   if (tab) S.tab = tab;
   const body = h('div.cr');
-  const entry = ui.openPanel(body, { wide: true, id: 'creative' });
+  // (the world waits while you pick what to try out)
+  const entry = ui.openPanel(body, { wide: true, id: 'creative', pause: true });
   if (!entry) return null;
   entry.panel.classList.add('cr-wrap');
   const close = () => ui.closePanel(entry);

@@ -66,6 +66,55 @@ const besideIn = (page, id) => page.evaluate((id) => {
 }, id);
 
 export const scenarios = {
+  // menus don't stop the world: at the helm, with the inventory or the chart
+  // open, the ship sails on (holding her course: the keys don't steer her
+  // meanwhile) and the day goes on; the pause screen stops both
+  //   node tools/shot.mjs menus --page=shots/<build>/index.html
+  menus: {
+    async run(page, snap) {
+      await page.evaluate(() => localStorage.clear());
+      await page.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 240000, polling: 250 });
+      await page.evaluate(() => { window.OP.quickStart('human', { seed: 12345 }); const g = window.OP.game; g.settings.view = 'third'; g.applySettings(); g.env.clock = 11; g.env.storm = 0; g.env.stormTarget = 0; document.querySelector('.look-hint')?.remove(); });
+      await step(page, 1);
+      // a sloop off the pier, at her helm, sails set
+      const setup = await page.evaluate(() => {
+        const g = window.OP.game, p = g.player, isl = g.currentIsland;
+        const dock = isl.docks[0];
+        const s = g.giveShip('sloop', dock.moor.x, dock.moor.y, 'Menu Runner');
+        window.OP.voyage.board(s);
+        s.sail = 1; s.anchored = false;
+        window.OP.step(4);
+        return { mode: p.mode, at: p.ship === s, speed: +s.speed.toFixed(2) };
+      });
+      console.log('at the helm', JSON.stringify(setup));
+      const measure = async (open, label) => {
+        const r = await page.evaluate((open) => {
+          const g = window.OP.game, s = g.player.ship;
+          if (open === 'inventory' || open === 'quests') g.ui.sideAction(open);
+          if (open === 'map') g.openMap();
+          if (open === 'menu') g.ui.openMenu();
+          const t0 = g.time, c0 = g.env.clock, x0 = s.x, y0 = s.y, h0 = s.heading;
+          // (and a key held for the helm while it's open: she isn't steered by it)
+          window.OP.key('A', true);
+          for (let i = 0; i < 4; i++) window.OP.step(0.5);
+          window.OP.key('A', false);
+          return { open, paused: g.paused, blocks: g.ui.blocksInput(), timePassed: +(g.time - t0).toFixed(2), clockMoved: +(g.env.clock - c0).toFixed(4), sailed: +Math.hypot(g.world.dx(x0, s.x), s.y - y0).toFixed(2), turned: +(s.heading - h0).toFixed(3) };
+        }, open);
+        console.log(label, JSON.stringify(r));
+        await snap(label);
+        await page.evaluate(() => { const g = window.OP.game; if (g.ui.mapOpen) g.closeMap(); g.ui.closeAll(); });
+        await step(page, 0.3);
+        return r;
+      };
+      await measure('inventory', 'menus-01-inventory-open');
+      await measure('map', 'menus-02-map-open');
+      await measure('quests', 'menus-03-quests-open');
+      await measure('menu', 'menus-04-pause-menu');
+      const after = await page.evaluate(() => { const g = window.OP.game; return { paused: g.paused, blocks: g.ui.blocksInput() }; });
+      console.log('all closed', JSON.stringify(after));
+    },
+  },
+
   // crewmates are offered, never forced: on the main story in one Blue, the
   // crew stop's offer (taken), then the last port's (turned down — the
   // chapter goes on — then asked again and taken), and the ship holding them
@@ -158,7 +207,7 @@ export const scenarios = {
       console.log('ask', JSON.stringify(ask));
       await snap('crew-05-again-pitch');
       const yes2 = await page.evaluate(() => window.__st.pick('^Welcome aboard|^Partners'));
-      console.log('took them', JSON.stringify(yes2));
+      console.log('took them', JSON.stringify(yes2), 'dialogue boxes on screen:', await page.evaluate(() => document.querySelectorAll('.dialogue').length));
       await step(page, 1.2);
       // ---- the report goes on either way
       const rep = await page.evaluate(() => {
@@ -185,7 +234,7 @@ export const scenarios = {
         if (rig) { rig.yaw = s.heading + Math.PI; rig.pitch = -0.35; }
         return { ship: s.name, hands, followers };
       });
-      console.log('aboard', JSON.stringify(ship, null, 1));
+      console.log('aboard', JSON.stringify(ship, null, 1), 'dialogue boxes on screen:', await page.evaluate(() => document.querySelectorAll('.dialogue').length));
       await step(page, 0.5);
       await snap('crew-06-aboard');
       // ---- a word from the deck

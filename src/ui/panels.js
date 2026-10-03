@@ -521,7 +521,7 @@ export function openMenu(game, { onQuit, onRetire, onSave, extra = [] }) {
       btn('check', 'Resume', () => ui.closePanel(), '.gold'),
       ...extra.map((e) => btn(e.icon, e.text, () => { ui.closePanel(); e.fn(); })),
       btn('save', 'Save game', () => { if (onSave()) saved.textContent = `Saved just now (lineage ${game.saveSlot || 1})`; }),
-      btn('help', 'How to Play', () => { ui.closePanel(); ui.openPanel(helpContent(c), { wide: true, id: 'help' }); }),
+      btn('help', 'How to Play', () => { ui.closePanel(); ui.openPanel(helpContent(c), { wide: true, id: 'help', pause: true }); }),
       btn('settings', 'Settings', () => { ui.closePanel(); openSettings(game); }),
       btn('inn', 'Get unstuck: back to your bed', async () => {
         const p = game.player, r = c.rest || c.spawn;
@@ -556,7 +556,8 @@ export function openMenu(game, { onQuit, onRetire, onSave, extra = [] }) {
     ),
     saved,
     h('p.muted', 'The game also saves by itself every minute, at every milestone, and when you close the page. Death is written immediately.'));
-  ui.openPanel(body, { id: 'menu' });
+  // (the pause screen: the one menu that stops the world — see pause.js)
+  ui.openPanel(body, { id: 'menu', pause: true });
 }
 
 const fullscreenOK = () => !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
@@ -606,7 +607,8 @@ export function openSettings(game) {
       h('p.muted', 'Press V in game to switch between first and third person. Settings are saved in this browser.'));
   };
   render();
-  game.ui.openPanel(body, { onClose: () => game.applySettings(true), id: 'settings' });
+  // (reached from the pause screen, and part of it: the world waits)
+  game.ui.openPanel(body, { onClose: () => game.applySettings(true), id: 'settings', pause: true });
 }
 
 // =================================================================== shop

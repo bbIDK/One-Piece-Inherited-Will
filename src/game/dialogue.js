@@ -120,7 +120,7 @@ export class Dialogue {
   advance() {
     const a = this.active;
     if (!a) return;
-    if (a.typing < a.full.length) { cancelAnimationFrame(a.raf); a.typing = a.full.length; a.textEl.textContent = a.full; this.showChoices(); return; }
+    if (a.typing < a.full.length) { window.cancelAnimationFrame(a.raf); a.typing = a.full.length; a.textEl.textContent = a.full; this.showChoices(); return; }
     if (a.choices.length) return;
     const n = a.node.next;
     const next = typeof n === 'function' ? n(a.ctx) : n;
@@ -150,10 +150,11 @@ export class Dialogue {
   close() {
     const a = this.active;
     const ui = this.game.ui;
-    if (a) cancelAnimationFrame(a.raf);
+    if (a) window.cancelAnimationFrame(a.raf);
     this.active = null;
     if (ui.dialogueEl) { ui.dialogueEl.remove(); ui.dialogueEl = null; }
-    if (!ui.stack.length && !ui.screenEl && !ui.mapOpen) this.game.paused = false;
+    // (the world goes on again — unless the pause screen is up: menus and the chart don't stop it, see ui/pause.js)
+    if (!ui.stack.some((e) => e.pause) && !ui.screenEl) this.game.paused = false;
     if (a?.tree?.onClose) a.tree.onClose(a.ctx);
   }
 }

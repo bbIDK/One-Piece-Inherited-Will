@@ -41,6 +41,10 @@ export function installSession(game, { onReturnToTitle }) {
 
   game.on('lifeLost', ({ cause, lives }) => {
     setTimeout(() => {
+      // (the world doesn't wait behind the menus: whatever was open goes, for the screen)
+      game.ui.closeAll?.();
+      if (game.ui.mapOpen) game.closeMap?.();
+      if (game.dialogue?.active) game.dialogue.close();
       game.paused = true;
       lifeLostScreen(game.ui, {
         cause, lives,
@@ -51,6 +55,9 @@ export function installSession(game, { onReturnToTitle }) {
 
   game.on('lineageEnded', ({ cause, will }) => {
     setTimeout(() => {
+      game.ui.closeAll?.();
+      if (game.ui.mapOpen) game.closeMap?.();
+      if (game.dialogue?.active) game.dialogue.close();
       game.paused = true;
       const legacy = game.state.legacy;
       lineageEndScreen(game.ui, {
