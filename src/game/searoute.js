@@ -135,8 +135,8 @@ export function planRoute(w, sx, sy, tx, ty, room) {
  * The heading for ship `s` to sail for (gx, gy) by sea: straight at it while
  * the water between is open, else along a route round the land (planned when
  * it's needed and kept on `s.route`; planned afresh once the end's moved on —
- * a ship she's chasing — or every so often). `room`: the open water she wants
- * each side.
+ * a ship she's chasing — and she's stuck, or lost it). `room`: the open water
+ * she wants each side.
  */
 export function seaHeading(game, s, gx, gy, room) {
   const w = game.world, now = game.time || 0;
@@ -145,8 +145,11 @@ export function seaHeading(game, s, gx, gy, room) {
   // (every second or so: is the way straight there open? then there's no need of a route)
   if (!R || now >= R.check) {
     if (seaClear(w, s.x, s.y, gx, gy, room)) { s.route = { pts: null, check: now + 1 }; return direct; }
+    // (planned afresh only once where she's bound has moved on — a ship she's
+    // chasing — never on a whim: a fresh plan from where she's got to can
+    // choose the other way round an island and turn her back on her wake)
     const moved = R?.pts ? w.distance(R.gx, R.gy, gx, gy) : Infinity;
-    if (!R?.pts || moved > Math.max(30, w.distance(s.x, s.y, gx, gy) * 0.15) || now >= R.replan) {
+    if (!R?.pts || moved > Math.max(30, w.distance(s.x, s.y, gx, gy) * 0.15) || (moved > 4 && now >= R.replan)) {
       const pts = planRoute(w, s.x, s.y, gx, gy, room);
       // (none in reach: straight at it, and the coast-hugging below — asked again in a while)
       R = s.route = { pts, i: 0, gx, gy, check: now + (pts ? 1 : 3), replan: now + 8, adv: 0 };

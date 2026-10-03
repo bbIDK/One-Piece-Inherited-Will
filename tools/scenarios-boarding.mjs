@@ -200,7 +200,8 @@ export const scenarios = {
             OP.key('W', true); OP.key('Shift', true);
             for (let i = 0; i < n; i++) {
               this.look(this.toward(target));
-              if (!this.jumped && p.deck && p.deck.ship !== target && p.deck.edge < 0.26) { OP.key('Space', true); this.jumped = 1; } else if (this.jumped === 1) { OP.key('Space', false); this.jumped = 2; }
+              // (Space at her rail, held for a charged leap: a tap clears your own rail, not hers as well)
+              if (!this.jumped && p.deck && p.deck.ship !== target && p.deck.edge < 0.95) { OP.key('Space', true); this.jumped = 1; this.held = 0; } else if (this.jumped === 1 && ++this.held >= 14) { OP.key('Space', false); this.jumped = 2; }
               this.frame();
               trace.push(`${this.where()} ${this.feet()}`);
               if (until === 'air' && !p.deck && !p.climb && (p.z || 0) > 0.5) return;
@@ -225,7 +226,8 @@ export const scenarios = {
               this.frame();
             }
             OP.key('W', false);
-            this.frame(8);
+            // (then, as a player would, E once the prompt shows — come up from the splash first)
+            for (let k = 0; k < 60 && !/^Climb/.test(p.controller.interaction?.label || ''); k++) this.frame();
             const prompt = p.controller.interaction?.label || null;
             OP.key('E', true); this.frame(); OP.key('E', false);
             this.frame(up);
@@ -310,12 +312,14 @@ export const scenarios = {
       });
       console.log('the newcomer left be', JSON.stringify(spared));
 
-      // ---- wanted: she comes after you; stop rowing and she heaves to alongside
+      // ---- wanted: a Marine comes after you (pirates keep to their own
+      // business unless you start it); stop rowing and she heaves to alongside
       const wanted = await page.evaluate(() => {
         const g = window.OP.game, w = g.world, p = g.player, c = g.state.char, B = window.__b, s = window.__boat;
-        c.bounty = 3000000;
+        // (wanted in any of the Blues: a poster the Marines know on sight)
+        c.bounty = 5000000;
         const a = s.heading + Math.PI / 2;
-        const pir = g.traffic.spawn({ kind: 'pirate', type: 'sloop', x: w.wx(s.x + Math.cos(a) * 30), y: s.y + Math.sin(a) * 30, heading: a + Math.PI, level: 6 });
+        const pir = g.traffic.spawn({ kind: 'marine', type: 'sloop', x: w.wx(s.x + Math.cos(a) * 30), y: s.y + Math.sin(a) * 30, heading: a + Math.PI, level: 6 });
         if (!pir) return null;
         window.__pir = pir;
         const t0 = g.time, track = [];
@@ -323,8 +327,10 @@ export const scenarios = {
         window.OP.key('W', true);
         for (let i = 0; i < 12 * 30; i++) { B.frame(); if (i % 60 === 0) track.push(`rowing ${w.distance(pir.x, pir.y, s.x, s.y).toFixed(1)}m her ${pir.speed.toFixed(1)} us ${s.speed.toFixed(1)}`); }
         window.OP.key('W', false);
+        // (at the oars you set a pace: S eases it off to a stop)
+        window.OP.key('S', true); B.frame(27); window.OP.key('S', false);
         let i = 0;
-        for (; i < 30 * 30; i++) { B.frame(); if (i % 60 === 0) track.push(`stopped ${w.distance(pir.x, pir.y, s.x, s.y).toFixed(1)}m her ${pir.speed.toFixed(1)}${pir.heaveTo ? ' hove to' : ''}`); if (pir.heaveTo && Math.abs(pir.speed) < 0.2 && i > 60) break; }
+        for (; i < 30 * 30; i++) { B.frame(); if (i % 60 === 0) track.push(`stopped ${w.distance(pir.x, pir.y, s.x, s.y).toFixed(1)}m her ${pir.speed.toFixed(1)} us ${s.speed.toFixed(1)}${pir.heaveTo ? ' hove to' : ''}`); if (pir.heaveTo && Math.abs(pir.speed) < 0.2 && i > 60) break; }
         B.frame(30);
         B.look(B.toward(pir) + 0.5, -0.25, 4.2);
         return { attacked: !!pir.traffic.warned, heaveTo: !!pir.heaveTo, after: `${(i / 30).toFixed(1)} s`, gapBetweenHulls: +(w.distance(pir.x, pir.y, s.x, s.y) - (pir.def.beam + s.def.beam) / 2).toFixed(2), her: +pir.speed.toFixed(2), hpLost: 5000 - Math.round(p.hp), track, log: B.logs(t0).slice(0, 4) };
@@ -355,7 +361,9 @@ export const scenarios = {
       await frames(page, 2);
       await snap('boarded-pirate');
 
-      // ---- a running jump from our sloop's deck onto a merchant's, 1.85 m of water between
+      // ---- a running jump from our sloop's deck onto a merchant sloop's, 1.4 m of
+      // water between (a taller ship's rail is a charged jump's, her ladder's or
+      // a plank's work)
       const spot = await openWater(page);
       console.log('spot', JSON.stringify(spot));
       const across = await page.evaluate((sp) => {
@@ -363,11 +371,14 @@ export const scenarios = {
         pir.alive = false; for (const a of pir.traffic.crew || []) a.alive = false;
         g.state.char.bounty = 0;
         const mine = g.giveShip('sloop', sp.x, sp.y, 'Test Sloop', { heading: 0 });
-        const o = g.traffic.spawn({ kind: 'merchant', type: 'caravel', x: sp.x, y: sp.y + 12, heading: 0, level: 6, dest: { x: sp.x + 400, y: sp.y + 12 } });
-        o.y = sp.y + (mine.def.beam + o.def.beam) / 2 + 1.85;
+        const o = g.traffic.spawn({ kind: 'merchant', type: 'sloop', x: sp.x, y: sp.y + 12, heading: 0, level: 6, dest: { x: sp.x + 400, y: sp.y + 12 } });
+        o.y = sp.y + (mine.def.beam + o.def.beam) / 2 + 1.4;
         o.traffic.surrender = true;
         window.__mine = mine; window.__o = o;
-        window.OP.debug.onDeck(mine, 0.5, 0);
+        // (whatever went before, a clean start: on her deck, aft of the mast, standing)
+        if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
+        p.climb = null; p.state = 'idle'; p.vx = p.vy = 0; p.vz = 0; p.z = 0;
+        window.OP.debug.onDeck(mine, 0.4, 0);
         p.mode = 'foot';
         B.frame(10);
         B.trace = [];
@@ -391,6 +402,7 @@ export const scenarios = {
         const g = window.OP.game, p = g.player, B = window.__b, o = window.__o;
         for (const a of o.traffic.crew || []) a.alive = false;
         if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
+        p.climb = null; p.state = 'idle'; p.mode = 'foot'; p.vx = p.vy = 0;
         p.x = o.x + 4; p.y = o.y + o.def.beam / 2 + 1.2; p.z = 0; p.vz = 0;
         B.frame(20);
         B.look(-Math.PI / 2, -0.1, 3.4);
@@ -416,6 +428,7 @@ export const scenarios = {
         if (!m) return 'no marine ship';
         m.traffic.surrender = true; // (lying still, for the test)
         if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
+        p.climb = null; p.state = 'idle'; p.mode = 'foot'; p.vx = p.vy = 0;
         p.x = m.x + 3; p.y = m.y + m.def.beam / 2 + 1.2; p.z = 0; p.vz = 0;
         B.frame(20);
         const t0 = g.time;

@@ -153,7 +153,7 @@ export function leaveHelm(game, p, s) {
   game.emit('disembark', s, null);
   game.hint?.('deck', s.def.oarsOnly
     ? 'Stand in your boat, and jump over her side to go ashore or for a swim (from the water, a jump brings you back in over her low side). Press E at the seat to take the oars again.'
-    : 'Walk your deck freely — she keeps the sails you set and sails on straight ahead. Jump over the rail to go ashore or for a swim (her ladder amidships brings you back up: E at its foot), and press E at the wheel to take the helm again: steer, or lower the sails (S) to stop.');
+    : 'Walk your deck freely — she keeps the sails you set and sails on straight ahead. Jump over the rail to go ashore or for a swim (her ladder amidships brings you back up: E at its foot). To board a ship lying alongside, hold Space for a charged leap across — or stop beside her, and your crew run a plank over. Press E at the wheel to take the helm again: steer, or lower the sails (S) to stop.');
 }
 
 /** A Devil Fruit user in the sea, hauled up onto the deck on a line thrown from it. */
