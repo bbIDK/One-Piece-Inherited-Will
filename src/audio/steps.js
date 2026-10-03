@@ -79,8 +79,8 @@ export function footstep(v, surf, loud, k = {}) {
       v.ring(roll, 700 * r(), 0.08, 0.012, [1, 2.2]);
       break;
     default: // soft: a rug, tatami, cloud
-      v.noise(0, 0.08, { freq: 420 * r(), q: 0.6, type: 'lowpass', gain: 0.07, attack: 0.006 });
-      thud(0, 70, 0.035);
+      v.noise(0, 0.08, { freq: 420 * r(), q: 0.6, type: 'lowpass', gain: 0.1, attack: 0.006 });
+      thud(0, 70, 0.05);
       v.noise(roll, 0.06, { freq: 300 * r(), type: 'lowpass', gain: 0.03, attack: 0.006 });
   }
   // running: the sole drags a little as it pushes off

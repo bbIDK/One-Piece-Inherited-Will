@@ -162,9 +162,10 @@ export class Voice {
     src.buffer = this.E.creakBuf; src.loop = true;
     src.playbackRate.setValueAtTime(rate / 90, t);
     if (rate1) src.playbackRate.linearRampToValueAtTime(rate1 / 90, t + dur);
-    const g = c.createGain();
+    // (the resonances pass only a sliver of each click: made up here so `gain` is about the peak heard)
+    const g = c.createGain(), mk = 18;
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(gain, t + dur * attack);
+    g.gain.linearRampToValueAtTime(gain * mk, t + dur * attack);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     for (const fr of freqs) {
       const f = c.createBiquadFilter();

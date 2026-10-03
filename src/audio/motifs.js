@@ -89,9 +89,9 @@ export function pop(v, t, s = 1, f = 260) {
 /** A bright shimmer (light, a barrier, a vanishing). `up` false runs it downward. */
 export function shimmer(v, t, s = 1, dur = 0.5, up = true) {
   const f = rnd(2400, 2800);
-  v.fm(t, dur, { freq: f, ratio: 1.5, index: 0.8, gain: 0.035 * s });
-  v.tone(t, dur, { freq: up ? f * 0.6 : f * 1.4, to: up ? f * 1.4 : f * 0.6, gain: 0.03 * s, attack: dur * 0.3, curve: 'lin' });
-  v.crackle(t, dur, Math.round(6 * s), { freq: 7000, gain: 0.025, q: 5 });
+  v.fm(t, dur, { freq: f, ratio: 1.5, index: 0.8, gain: 0.06 * s });
+  v.tone(t, dur, { freq: up ? f * 0.6 : f * 1.4, to: up ? f * 1.4 : f * 0.6, gain: 0.055 * s, attack: dur * 0.3, curve: 'lin' });
+  v.crackle(t, dur, Math.round(6 * s), { freq: 7000, gain: 0.045, q: 5 });
 }
 
 /** A rush of air dragged inwards (darkness, a vortex, a gravity well). */

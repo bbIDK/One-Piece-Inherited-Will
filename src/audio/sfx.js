@@ -47,26 +47,27 @@ export function surfaceHit(v, t, surf, s = 1) {
 export function swing(v, t, kind = 'fists', s = 1) {
   switch (kind) {
     case 'sword': // a thin, bright swish
-      v.whoosh(t, 0.15 * s, { f0: 2400, f1: 6200, q: 2.2, gain: 0.11 * s, peak: 0.55 });
-      v.whoosh(t + 0.01, 0.12 * s, { f0: 900, f1: 1600, q: 0.8, gain: 0.05 * s, peak: 0.5 });
+      v.whoosh(t, 0.15 * s, { f0: 2400, f1: 6200, q: 2.2, gain: 0.3 * s, peak: 0.55 });
+      v.whoosh(t + 0.01, 0.12 * s, { f0: 900, f1: 1600, q: 0.8, gain: 0.13 * s, peak: 0.5 });
       break;
     case 'legs': // a fuller, lower sweep — and the trouser leg flapping
-      v.whoosh(t, 0.2 * s, { f0: 300, f1: 1100, q: 0.9, gain: 0.16 * s, peak: 0.5, color: 'pink', flutter: 24 });
+      v.whoosh(t, 0.2 * s, { f0: 300, f1: 1100, q: 0.9, gain: 0.5 * s, peak: 0.5, color: 'pink', flutter: 24 });
+      v.whoosh(t + 0.02, 0.15 * s, { f0: 900, f1: 1800, q: 1, gain: 0.12 * s, peak: 0.5 });
       break;
     case 'heavy': // a big wind-up thrown hard
-      v.whoosh(t, 0.3 * s, { f0: 220, f1: 950, q: 0.8, gain: 0.19 * s, peak: 0.6, color: 'pink' });
-      v.whoosh(t + 0.08, 0.2 * s, { f0: 1400, f1: 700, q: 0.9, gain: 0.05 * s });
+      v.whoosh(t, 0.3 * s, { f0: 220, f1: 950, q: 0.8, gain: 0.55 * s, peak: 0.6, color: 'pink' });
+      v.whoosh(t + 0.08, 0.2 * s, { f0: 1400, f1: 700, q: 0.9, gain: 0.14 * s });
       break;
     case 'staff': // wood through the air: a hollow whirr
-      v.whoosh(t, 0.22 * s, { f0: 500, f1: 1500, q: 2.5, gain: 0.12 * s, peak: 0.5 });
-      v.whoosh(t + 0.04, 0.16 * s, { f0: 800, f1: 2000, q: 2.5, gain: 0.05 * s, peak: 0.5 });
+      v.whoosh(t, 0.22 * s, { f0: 500, f1: 1500, q: 2.5, gain: 0.34 * s, peak: 0.5 });
+      v.whoosh(t + 0.04, 0.16 * s, { f0: 800, f1: 2000, q: 2.5, gain: 0.14 * s, peak: 0.5 });
       break;
     case 'axe': // a great slow weight
-      v.whoosh(t, 0.36 * s, { f0: 180, f1: 700, q: 0.9, gain: 0.2 * s, peak: 0.65, color: 'pink' });
+      v.whoosh(t, 0.36 * s, { f0: 180, f1: 700, q: 0.9, gain: 0.6 * s, peak: 0.65, color: 'pink' });
       break;
     default: // fists: short and punchy
-      v.whoosh(t, 0.15 * s, { f0: 500, f1: 1800, q: 1.1, gain: 0.13 * s, peak: 0.45 });
-      v.whoosh(t + 0.03, 0.11 * s, { f0: 1600, f1: 900, q: 0.9, gain: 0.04 * s, peak: 0.5 });
+      v.whoosh(t, 0.15 * s, { f0: 500, f1: 1800, q: 1.1, gain: 0.34 * s, peak: 0.45 });
+      v.whoosh(t + 0.03, 0.11 * s, { f0: 1600, f1: 900, q: 0.9, gain: 0.1 * s, peak: 0.5 });
   }
 }
 
@@ -487,8 +488,8 @@ export const SFX = {
   wade: {
     prio: 3, cd: 0.18, max: 2, variants: 3,
     play(v, k) {
-      v.noise(0, 0.2, { freq: [1400, 1200, 1650][k.rr] * r(), q: 0.8, sweep: 600, gain: 0.06 });
-      v.noise(0, 0.16, { type: 'lowpass', freq: 500, gain: 0.05, attack: 0.02 });
+      v.noise(0, 0.2, { freq: [1400, 1200, 1650][k.rr] * r(), q: 0.8, sweep: 600, gain: 0.09 });
+      v.noise(0, 0.16, { type: 'lowpass', freq: 500, gain: 0.08, attack: 0.02 });
       v.bubbles(0.02, 0.12, 2, { f: 700, gain: 0.025 });
     },
   },
@@ -496,9 +497,9 @@ export const SFX = {
   gasp: {
     prio: 7, cd: 1, max: 1,
     play(v) {
-      v.noise(0, 0.1, { freq: 1200, sweep: 500, gain: 0.08 });
-      v.formant(0.03, 0.5, { f1: 800, f2: 1600, to1: 1100, to2: 2300, q: 4, gain: 0.16, attack: 0.08 });
-      v.formant(0.6, 0.3, { f1: 700, f2: 1200, to1: 500, to2: 900, q: 4, gain: 0.06, attack: 0.04 });
+      v.noise(0, 0.1, { freq: 1200, sweep: 500, gain: 0.12 });
+      v.formant(0.03, 0.5, { f1: 800, f2: 1600, to1: 1100, to2: 2300, q: 3, gain: 0.45, attack: 0.08 });
+      v.formant(0.6, 0.3, { f1: 700, f2: 1200, to1: 500, to2: 900, q: 3, gain: 0.18, attack: 0.04 });
       M.drips(v, 0.05, 0.5, 4, 0.8);
     },
   },
@@ -516,9 +517,9 @@ export const SFX = {
   swim_pull: {
     prio: 4, cd: 0.25, max: 2, variants: 3,
     play(v, k) {
-      v.whoosh(0, 0.36, { f0: [520, 460, 600][k.rr], f1: 300, q: 0.8, gain: 0.07, peak: 0.4, color: 'pink' });
-      v.noise(0.03, 0.16, { type: 'lowpass', freq: 1600, sweep: 600, gain: 0.04 });
-      v.bubbles(0.05, 0.2, 2, { f: 480, gain: 0.02 });
+      v.whoosh(0, 0.36, { f0: [520, 460, 600][k.rr], f1: 300, q: 0.8, gain: 0.2, peak: 0.4, color: 'pink' });
+      v.noise(0.03, 0.16, { type: 'lowpass', freq: 1600, sweep: 600, gain: 0.08 });
+      v.bubbles(0.05, 0.2, 2, { f: 480, gain: 0.03 });
     },
   },
   /** The frog kick: the water shoved back, a splash at the heels. */
@@ -531,14 +532,14 @@ export const SFX = {
     },
   },
   /** The breath at the top of the stroke. */
-  swim_breath: { prio: 3, cd: 0.6, max: 1, play: (v) => v.formant(0, 0.13, { f1: 700, f2: 1250, to1: 600, to2: 1100, q: 4, gain: 0.025, attack: 0.02 }) },
+  swim_breath: { prio: 3, cd: 0.6, max: 1, play: (v) => v.formant(0, 0.13, { f1: 700, f2: 1250, to1: 600, to2: 1100, q: 3, gain: 0.15, attack: 0.02 }) },
   /** A stroke under water: a muffled sweep and a few bubbles. */
   swim_under: {
     prio: 4, cd: 0.3, max: 2,
-    play(v) { v.whoosh(0, 0.42, { f0: 320, f1: 180, q: 0.7, gain: 0.09, peak: 0.45, color: 'pink' }); v.bubbles(0.05, 0.3, 3, { f: 420, gain: 0.03 }); },
+    play(v) { v.whoosh(0, 0.42, { f0: 320, f1: 180, q: 0.7, gain: 0.25, peak: 0.45, color: 'pink' }); v.bubbles(0.05, 0.3, 3, { f: 420, gain: 0.05 }); },
   },
   /** Treading water: a gentle slosh. */
-  tread: { prio: 3, cd: 0.6, max: 1, play: (v) => { v.noise(0, 0.26, { type: 'lowpass', freq: 900, sweep: 500, gain: 0.04, attack: 0.04 }); v.bubble(0.08, { f: rnd(400, 600), gain: 0.015 }); } },
+  tread: { prio: 3, cd: 0.6, max: 1, play: (v) => { v.noise(0, 0.26, { type: 'lowpass', freq: 900, sweep: 500, gain: 0.08, attack: 0.04 }); v.bubble(0.08, { f: rnd(400, 600), gain: 0.03 }); } },
   /** Thrashing at the surface (a Devil Fruit user who can't swim). */
   thrash: {
     prio: 5, cd: 0.15, max: 2,
@@ -609,9 +610,9 @@ export const SFX = {
     prio: 4, cd: 0.1, max: 3,
     play(v, k) {
       const s = k.s || 1, d = k.dur || 0.45;
-      v.whoosh(0, d, { f0: 400, f1: 260, q: 0.8, gain: 0.08 * s, peak: 0.45, color: 'pink' });
-      v.bubbles(0.05, d * 0.8, 4, { f: 300, gain: 0.025 * s });
-      v.creak(0, 0.18, { rate: 140, rate1: 90, freqs: [600, 950, 1400], q: 8, gain: 0.045 * s });
+      v.whoosh(0, d, { f0: 400, f1: 260, q: 0.8, gain: 0.24 * s, peak: 0.45, color: 'pink' });
+      v.bubbles(0.05, d * 0.8, 4, { f: 300, gain: 0.04 * s });
+      v.creak(0, 0.18, { rate: 140, rate1: 90, freqs: [600, 950, 1400], q: 8, gain: 0.1 * s });
     },
   },
   /** The blade lifting out: a swish, drips running off it, the oar knocking in its lock on the return. */
@@ -661,7 +662,7 @@ export const SFX = {
     },
   },
   /** The wheel turning: a spoke clicking past the pawl. */
-  helm: { prio: 3, cd: 0.05, max: 2, play: (v) => { v.noise(0, 0.015, { freq: 1800 * r(), q: 4, gain: 0.06, attack: 0.0006 }); v.tone(0, 0.025, { freq: 620 * r(), to: 520, gain: 0.025 }); } },
+  helm: { prio: 3, cd: 0.05, max: 2, play: (v) => { v.noise(0, 0.015, { freq: 1800 * r(), q: 4, gain: 0.1, attack: 0.0006 }); v.tone(0, 0.025, { freq: 620 * r(), to: 520, gain: 0.04 }); } },
   /** The hull groaning on a swell (stick-slip in the timbers). */
   hull_creak: {
     prio: 2, cd: 0.4, max: 2, send: 0.1,
@@ -832,7 +833,7 @@ export const SFX = {
   },
 
   // ---- menus and milestones (on the ui bus: never muffled, never far away)
-  ui_hover: { prio: 2, cd: 0.04, max: 2, bus: 'ui', play: (v) => { v.noise(0, 0.012, { freq: 4200, q: 3, gain: 0.025, attack: 0.0006 }); v.tone(0, 0.02, { freq: 2400, gain: 0.008 }); } },
+  ui_hover: { prio: 2, cd: 0.04, max: 2, bus: 'ui', play: (v) => { v.noise(0, 0.012, { freq: 4200, q: 3, gain: 0.05, attack: 0.0006 }); v.tone(0, 0.02, { freq: 2400, gain: 0.016 }); } },
   ui_click: { prio: 4, cd: 0.03, max: 2, bus: 'ui', play: (v) => { v.tone(0, 0.035, { freq: 900, to: 700, gain: 0.05 }); v.noise(0, 0.015, { freq: 2500, q: 2, gain: 0.05, attack: 0.0006 }); } },
   ui_open: { prio: 4, cd: 0.08, max: 1, bus: 'ui', play: (v) => { v.whoosh(0, 0.12, { f0: 900, f1: 2400, gain: 0.05, peak: 0.6 }); v.tone(0.05, 0.07, { freq: 520, to: 480, type: 'triangle', gain: 0.04 }); } },
   ui_close: { prio: 4, cd: 0.08, max: 1, bus: 'ui', play: (v) => { v.whoosh(0, 0.1, { f0: 2200, f1: 800, gain: 0.04, peak: 0.3 }); v.tone(0, 0.06, { freq: 440, to: 400, type: 'triangle', gain: 0.035 }); } },
@@ -952,7 +953,7 @@ export const FRUIT_TECH = {
   mochi: { default: (v, k) => { v.tone(0, Math.max(0.15, k.rel), { freq: 150, to: 230, gain: 0.08, vib: { rate: 8, depth: 20 } }); v.noise(0, Math.max(0.15, k.rel), { type: 'lowpass', freq: 400, gain: 0.12, attack: 0.05 }); v.thump(k.rel, { f0: 180, f1: 70, dur: 0.1, gain: 0.2 }); v.bubble(k.rel, { f: 220, rise: 1.8, dur: 0.08, gain: 0.08 }); } },
   horo: { default: (v) => { M.wail(v, 0, 1, 0.8); v.whoosh(0.2, 0.5, { f0: 600, f1: 1500, gain: 0.05, flutter: 6 }); } },
   kage: {
-    kage_brickbat: (v, k) => { for (let i = 0; i < 10; i++) v.whoosh(k.rel + Math.random() * 0.25, 0.06, { f0: 900, f1: 1500, q: 1.5, gain: 0.04, flutter: 40 }); },
+    kage_brickbat: (v, k) => { for (let i = 0; i < 10; i++) v.whoosh(k.rel + Math.random() * 0.25, 0.06, { f0: 900, f1: 1500, q: 1.5, gain: 0.14, flutter: 40 }); },
     kage_steal: (v, k) => { for (const t of [0, 0.08]) { v.noise(k.rel + t, 0.01, { type: 'highpass', freq: 5000, gain: 0.2, attack: 0.0006 }); v.ring(k.rel + t, 3000, 0.08, 0.02, [1, 1.7]); } },
     default: (v) => { M.suction(v, 0, 0.5, 0.6); v.formant(0, 0.5, { f1: 300, f2: 600, q: 6, gain: 0.05 }); },
   },
@@ -961,7 +962,7 @@ export const FRUIT_TECH = {
   bari: { default: (v, k) => { v.fm(k.rel, 0.6, { freq: 1600, ratio: 1.5, index: 1.4, gain: 0.05 }); v.ring(k.rel, 2400, 0.5, 0.03, [1, 1.34, 1.87]); v.tone(k.rel, 0.6, { freq: 220, gain: 0.04, attack: 0.05 }); } },
   suke: { default: (v) => M.shimmer(v, 0, 1, 0.6, false) },
   sube: { default: (v, k) => { v.tone(0, 0.08, { freq: 900, to: 1400, gain: 0.04 }); swing(v, k.rel, 'fists', 1); } },
-  doru: { default: (v, k) => { v.noise(0, 0.25, { type: 'lowpass', freq: 500, gain: 0.12, attack: 0.05 }); for (let i = 0; i < 4; i++) v.noise(k.rel + i * 0.05, 0.01, { freq: 2200, q: 4, gain: 0.08, attack: 0.0006 }); } },
+  doru: { default: (v, k) => { v.noise(0, 0.25, { type: 'lowpass', freq: 500, gain: 0.3, attack: 0.05 }); v.bubble(0.05, { f: 180, rise: 1.6, dur: 0.1, gain: 0.08 }); for (let i = 0; i < 4; i++) v.noise(k.rel + i * 0.05, 0.012, { freq: 2200, q: 4, gain: 0.25, attack: 0.0006 }); } },
   supa: { default: (v, k) => { v.noise(0, 0.2, { freq: 3500, sweep: 6000, q: 3, gain: 0.06, attack: 0.05 }); v.ring(0.15, 2200, 0.4, 0.03, [1, 2.04, 2.75]); swing(v, k.rel, 'sword', 1.2); } },
   nikyu: {
     nikyu_ursus: (v, k) => { v.tone(0, Math.max(0.5, k.rel), { freq: 60, to: 240, gain: 0.14, attack: Math.max(0.4, k.rel) * 0.8, curve: 'lin' }); M.suction(v, 0, Math.max(0.5, k.rel), 0.8); M.pop(v, k.rel, 1.6, 180); },
@@ -999,7 +1000,7 @@ export const FRUIT_TECH = {
     },
   },
   suna: { default: (v, k) => { v.whoosh(0, Math.max(0.2, k.rel) + 0.2, { f0: 600, f1: 2200, q: 0.5, gain: 0.12, peak: 0.6 }); v.crackle(0, Math.max(0.2, k.rel) + 0.2, 20, { freq: 4500, gain: 0.03, q: 2.5 }); } },
-  moku: { default: (v, k) => { for (let i = 0; i < 3; i++) v.noise(i * 0.08, 0.3, { type: 'lowpass', freq: 600, sweep: 250, gain: 0.12, attack: 0.04 }); v.whoosh(k.rel, 0.3, { f0: 300, f1: 1000, gain: 0.1, color: 'pink' }); } },
+  moku: { default: (v, k) => { for (let i = 0; i < 3; i++) v.noise(i * 0.08, 0.3, { type: 'lowpass', freq: 600, sweep: 250, gain: 0.25, attack: 0.04 }); v.whoosh(k.rel, 0.3, { f0: 300, f1: 1000, gain: 0.3, color: 'pink' }); } },
   pika: {
     pika_yata: (v) => { M.shimmer(v, 0, 1, 0.25); v.whoosh(0.02, 0.12, { f0: 3000, f1: 8000, q: 1.5, gain: 0.1, peak: 0.2 }); },
     default: (v, k) => {
