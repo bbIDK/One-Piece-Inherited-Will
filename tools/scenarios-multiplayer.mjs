@@ -14,6 +14,7 @@
 // (Screenshots of A come out as mp-A-NN-*.png, of B as mp-B-NN-*.png, in shots/.)
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { startRelay } from './nostr-relay.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const waitReady = (pg) => pg.waitForFunction(() => window.OP && window.OP.ready, null, { timeout: 300000, polling: 250 });
@@ -399,6 +400,117 @@ export const scenarios = {
         if (errors.length) throw new Error('page B errors: ' + errors.join(' | '));
       }
     },
+  },
+};
+
+// The real line, end to end, on this machine: trystero meeting through a
+// Nostr relay of our own (tools/nostr-relay.mjs, named with ?relay=) and then
+// talking over WebRTC data channels between two pages — the same code as over
+// the internet, only the relay nearer. A hosts, B joins with the code, both
+// sail, each draws the other, a line of chat each way, then B leaves.
+// (The relay counts what passes through it: only the meeting does; the
+// states, the chat and the rest go page to page.)
+//   node tools/shot.mjs mprtc [--page=shots/xmp/index.html]
+scenarios.mprtc = {
+  async run(page, _snap, args) {
+    const errors = [];
+    const t0 = Date.now();
+    const say = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s]`, ...a);
+    const relay = await startRelay(0);
+    say('relay on port', relay.port);
+    const url = page.url().replace(/\?.*$/, '') + `?debug=1&relay=ws://127.0.0.1:${relay.port}`, browser = page.context().browser();
+    await page.close();
+    const ctx = await browser.newContext({ viewport: { width: Number(args.w || 640), height: Number(args.h || 360) } });
+    const pageA = await ctx.newPage(), pageB = await ctx.newPage();
+    const shots = { A: 0, B: 0 };
+    for (const [tag, pg] of [['A', pageA], ['B', pageB]]) {
+      pg.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log(`[${tag} ${m.type()}] ${m.text()}`); if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(`${tag}: ${m.text()}`); });
+      pg.on('pageerror', (e) => { console.log(`[${tag} pageerror] ${e.stack || e.message}`); errors.push(`${tag}: ${e.message}`); });
+    }
+    const shot = async (tag, pg, label) => { const file = join(root, 'shots', `mprtc-${tag}-${String(++shots[tag]).padStart(2, '0')}-${label}.png`); await pg.screenshot({ path: file, timeout: 180000 }); console.log(`shot → ${file}`); };
+    try {
+      await pageA.goto(url);
+      await pageB.goto(url);
+      await Promise.all([waitReady(pageA), waitReady(pageB)]);
+      await quiet(pageA); await quiet(pageB);
+      await makePirate(pageA, 1, 'human', 'Rin Stormwell');
+      await makePirate(pageB, 2, 'mink', 'Kaito Kurogane');
+      say('pirates made; A hosts');
+      await pageA.click('.mode-tabs button:has-text("Multiplayer")');
+      await pageA.click('.vy-slot:has-text("Rin Stormwell") button:has-text("Host")');
+      await until(pageA, () => window.OP.net?.status === 'open', null, 60000);
+      // (every message A's game takes in, by kind: what came page to page)
+      await pageA.evaluate(() => { const v = window.OP.net, take = v.receive; window.__kinds = {}; v.receive = function (m, from) { const k = m?.k || '?'; window.__kinds[k] = (window.__kinds[k] || 0) + 1; return take.call(this, m, from); }; });
+      const lobby = await pageA.evaluate(() => ({ kind: window.OP.net.kind, code: window.OP.net.code, relays: window.OP.net.relays, line: document.querySelector('.vy-status')?.textContent }));
+      say('hosting:', JSON.stringify(lobby));
+      await frames(pageA, 2);
+      await shot('A', pageA, 'lobby-open');
+      const tJoin = Date.now();
+      await pageB.click('.mode-tabs button:has-text("Multiplayer")');
+      await pageB.fill('.code-in', lobby.code);
+      await pageB.click('.code-row button:has-text("Join")');
+      // (how the search goes, every few seconds, till B is aboard or gives up)
+      for (let i = 0; ; i++) {
+        const b = await pageB.evaluate(() => { const v = window.OP.net; return { status: v?.status, error: v?.error?.code, relays: v?.relays, peers: v?.tr?.peers().length, screen: document.querySelector('.vy-lobby h2')?.textContent }; });
+        const a = await pageA.evaluate(() => ({ peers: window.OP.net?.tr?.peers().length, crew: window.OP.net?.remotes.size }));
+        say('B', JSON.stringify(b), '| A', JSON.stringify(a), '| relay', JSON.stringify(relay.stats));
+        if (/Aboard/.test(b.screen || '')) break;
+        if (b.status === 'failed' || i > 40) throw new Error('B could not join: ' + JSON.stringify(b));
+        await sleep(3000);
+      }
+      say(`B found the voyage and was welcomed in ${((Date.now() - tJoin) / 1000).toFixed(1)} s`);
+      await until(pageA, () => document.querySelectorAll('.vy-mate').length === 2, null, 30000);
+      await frames(pageA, 2);
+      await shot('A', pageA, 'lobby-with-guest');
+      await pageA.click('.vy-lobby button:has-text("Set sail")');
+      await pageB.click('button[data-slot="2"]');
+      await Promise.all([until(pageA, () => !!window.OP.game.player, null, 120000), until(pageB, () => !!window.OP.game.player, null, 120000)]);
+      await until(pageA, () => window.OP.net?.avatars.length === 1, null, 60000);
+      await until(pageB, () => window.OP.net?.avatars.length === 1, null, 60000);
+      say('both in the world, each drawing the other');
+      const posA = await pageA.evaluate(() => ({ x: window.OP.game.player.x, y: window.OP.game.player.y }));
+      const spot = await pageB.evaluate(({ x, y }) => {
+        const w = window.OP.world;
+        for (const [dx, dy] of [[3, 0], [-3, 0], [0, 3], [0, -3], [2.5, 2.5], [-2.5, -2.5]]) if (w.walkable(x + dx, y + dy) && !w.isBlocked(x + dx, y + dy)) { window.OP.teleport(x + dx, y + dy); return { x: x + dx, y: y + dy }; }
+        window.OP.teleport(x + 2, y);
+        return { x: x + 2, y };
+      }, posA);
+      await until(pageA, ({ x, y }) => { const a = window.OP.net.avatars[0]; return a && Math.hypot(a.x - x, a.y - y) < 0.5; }, spot, 60000);
+      // A looks at B
+      await pageA.evaluate(() => {
+        const g = window.OP.game, p = g.player, a = window.OP.net.avatars[0], v = window.OP.view3d;
+        const yaw = Math.atan2(a.y - p.y, g.world.dx(p.x, a.x));
+        v.rig.yaw = yaw - 0.5; v.rig.pitch = -0.18; if (v.rig.tp) v.rig.tp.dist = 5;
+        p.facing = yaw;
+      });
+      // B walks a few steps (states flowing), then a line of chat each way
+      await pageB.evaluate(() => { window.OP.view3d.rig.yaw = 0; window.OP.key('W', true); });
+      await sleep(3000);
+      await pageB.evaluate(() => window.OP.key('W', false));
+      await pageB.evaluate(() => window.OP.net.say('Can you see me? This came straight from my browser.'));
+      await pageA.evaluate(() => window.OP.net.say('Clear as day — welcome aboard!'));
+      await until(pageA, () => [...document.querySelectorAll('.log div')].some((d) => /straight from my browser/.test(d.textContent)), null, 30000);
+      await until(pageB, () => [...document.querySelectorAll('.log div')].some((d) => /welcome aboard/.test(d.textContent)), null, 30000);
+      await frames(pageA, 3);
+      await shot('A', pageA, 'A-sees-B');
+      const seen = await pageA.evaluate(() => {
+        const a = window.OP.net.avatars[0], r = [...window.OP.net.remotes.values()][0];
+        return { name: a.name, race: a.look.race, drawn: window.OP.view3d.actorViews.has(a), delayMs: Math.round(r.buf.delay), gapsMs: r.buf.gaps.slice(-8), log: [...document.querySelectorAll('.log div')].map((d) => d.textContent).slice(-2) };
+      });
+      say('A sees B over WebRTC:', JSON.stringify(seen));
+      const kinds = await pageA.evaluate(() => window.__kinds);
+      const line = await pageA.evaluate(() => { const pc = window.OP.net.tr.peers(); return { peers: pc.length }; });
+      say('messages A took in from B, by kind:', JSON.stringify(kinds), '| peers', JSON.stringify(line), '| through the relay:', JSON.stringify(relay.stats));
+      // B leaves the voyage; A hears of it
+      await pageB.evaluate(() => window.OP.voyage.toTitle());
+      await until(pageA, () => window.OP.net?.avatars.length === 0 && window.OP.net.remotes.size === 0, null, 30000);
+      const left = await pageA.evaluate(() => [...document.querySelectorAll('.log div')].map((d) => d.textContent).filter((t) => /left the voyage/.test(t)));
+      say('B left; A says', JSON.stringify(left));
+    } finally {
+      relay.close();
+    }
+    say('done');
+    if (errors.length) throw new Error('page errors: ' + errors.join(' | '));
   },
 };
 

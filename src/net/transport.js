@@ -3,8 +3,9 @@
 //
 //  - trystero: WebRTC, straight from browser to browser, the games finding
 //    each other through public Nostr relays (no server of our own, so it
-//    works from GitHub Pages or any static host). Only the meeting goes
-//    through the relays; what's said afterwards goes peer to peer, encrypted.
+//    works from GitHub Pages or any static host; ?relay= names others). Only
+//    the meeting goes through the relays; what's said afterwards goes peer
+//    to peer, encrypted.
 //  - local: a BroadcastChannel between pages of this site open in the one
 //    browser — for the automated tests (a sandbox may not reach the relays)
 //    and for trying a voyage out in two tabs. ?net=local picks it.
@@ -23,6 +24,21 @@ export function netKind(search = globalThis.location?.search || '') {
   return n === 'local' ? 'local' : 'trystero';
 }
 
+/**
+ * Nostr relays the page asks to meet through instead of the public ones
+ * trystero picks (?relay=wss://one.example,wss://two.example): a relay of
+ * your own, say, where the public ones are blocked — or one on this machine,
+ * for the tests (tools/nostr-relay.mjs). null when none are asked for.
+ */
+export function relayUrls(search = globalThis.location?.search || '') {
+  const m = /[?&]relay=([^&#]*)/.exec(String(search));
+  if (!m) return null;
+  let list;
+  try { list = decodeURIComponent(m[1]); } catch { return null; }
+  const urls = list.split(',').map((u) => u.trim()).filter((u) => /^wss?:\/\/[^\s/?#]+[^\s]*$/i.test(u));
+  return urls.length ? urls.slice(0, 8) : null;
+}
+
 export function openTransport(kind, code, handlers = {}, opts = {}) {
   return kind === 'local' ? Promise.resolve(localTransport(code, handlers, opts)) : trysteroTransport(code, handlers, opts);
 }
@@ -30,7 +46,8 @@ export function openTransport(kind, code, handlers = {}, opts = {}) {
 // ------------------------------------------------------------------ trystero
 async function trysteroTransport(code, h, opts) {
   const T = await import('trystero');
-  const room = T.joinRoom({ appId: APP_ID, relayConfig: { warnOnRelayFailure: false }, ...(opts.config || {}) }, ROOM(code), {
+  const urls = opts.relays || relayUrls();
+  const room = T.joinRoom({ appId: APP_ID, relayConfig: { warnOnRelayFailure: false, ...(urls ? { urls } : {}) }, ...(opts.config || {}) }, ROOM(code), {
     // (two games that met but couldn't open a line to each other: usually a
     // network that won't let browsers talk directly — see the README)
     onJoinError: (d) => h.onError?.(String(d?.error || 'could not connect')),

@@ -146,6 +146,10 @@ GitHub Pages site: no account, and no server of our own.
   some mobile carriers — don't allow a direct connection; joining then fails
   (a TURN relay would get round that: none is configured). Both players need
   the same version of the game (reload the page if one is older).
+- `?relay=wss://your.relay.example` meets through Nostr relays of your
+  choosing instead of the public ones (several, comma-separated): handy where
+  those are blocked. `node tools/nostr-relay.mjs` runs a small one for
+  testing on your own machine (`?relay=ws://localhost:7777`).
 - `?net=local` (say <http://localhost:8080/?net=local>) plays a voyage between
   tabs of one browser instead, with no network at all; the automated tests
   use it.
@@ -687,6 +691,7 @@ node tools/shot.mjs storydrift | storyswitch               # the Grand Line's cu
 node tools/shot.mjs rmride       # rides Reverse Mountain from the East Blue gate to the Grand Line
 node tools/shot.mjs creative     # the creative panel (F1): fruits given and eaten, races changed (third person), foes, a boss, a ship and a Sea King called up, travel, a small window
 node tools/shot.mjs mp [--upto=menu|avatars|chat|ship|env|leave]   # multiplayer: two pages on a voyage over ?net=local — hosting from the title, joining with the code, each drawing the other (and how closely and smoothly), techniques, the voyage list and Go to them, chat both ways, a ship under sail, the host's clock and weather, leaving and rejoining, a code nobody hosts, the host leaving
+node tools/shot.mjs mprtc        # multiplayer over the real line on this machine: trystero meeting through a Nostr relay of our own (tools/nostr-relay.mjs), then WebRTC between two pages — hosting, joining, each drawing the other, chat, leaving
 node tools/shot.mjs mprelays     # multiplayer over the real relays from one page: hosting and looking for a voyage (where the relays can't be reached, both say so)
 ```
 

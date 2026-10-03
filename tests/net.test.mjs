@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { newCode, normalizeCode, showCode, CODE_ABC, CODE_LEN } from '../src/net/code.js';
 import { readHello, readLook, readShip, readState, readSay, readEnv, stateChanged, flat, cleanText, worldSig, BIT, PROTO } from '../src/net/protocol.js';
 import { SnapBuffer } from '../src/net/interp.js';
-import { localTransport, netKind } from '../src/net/transport.js';
+import { localTransport, netKind, relayUrls } from '../src/net/transport.js';
 
 test('room codes: six letters without I or O, typed in any case with spaces or dashes', () => {
   const seen = new Set();
@@ -246,6 +246,19 @@ test('netKind: ?net=local picks the local transport, anything else the real one'
   assert.equal(netKind('?debug=1&net=local'), 'local');
   assert.equal(netKind(''), 'trystero');
   assert.equal(netKind('?net=carrier-pigeon'), 'trystero');
+});
+
+test('relayUrls: ?relay= names the relays to meet through (wss:// or ws:// only), else the public ones', () => {
+  assert.equal(relayUrls(''), null);
+  assert.equal(relayUrls('?debug=1'), null);
+  assert.deepEqual(relayUrls('?relay=wss://relay.example.org'), ['wss://relay.example.org']);
+  assert.deepEqual(relayUrls('?debug=1&relay=ws://127.0.0.1:7777&net=x'), ['ws://127.0.0.1:7777']);
+  assert.deepEqual(relayUrls('?relay=' + encodeURIComponent('wss://a.example, wss://b.example/nostr')), ['wss://a.example', 'wss://b.example/nostr']);
+  // (anything that isn't a WebSocket address is left out; nothing left, the public ones)
+  assert.deepEqual(relayUrls('?relay=javascript:alert(1),https://x.example,wss://ok.example'), ['wss://ok.example']);
+  assert.equal(relayUrls('?relay=ftp://nope'), null);
+  assert.equal(relayUrls('?relay=%E0%A4%A'), null);
+  assert.equal(relayUrls('?relay=' + Array.from({ length: 12 }, (_, i) => `wss://r${i}.example`).join(',')).length, 8);
 });
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
