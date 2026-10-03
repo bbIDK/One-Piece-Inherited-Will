@@ -1,6 +1,6 @@
 import { h, clear } from './dom.js';
 import CSS from './style.css';
-import { getAbility } from '../game/abilities.js';
+import { getAbility, ownRoom } from '../game/abilities.js';
 import { formatBerries, clamp } from '../core/math.js';
 import { raceLabel } from '../data/races.js';
 import { ITEMS } from '../data/items.js';
@@ -65,10 +65,15 @@ export class UI {
     E.o2 = h('div.o2.hidden', { title: 'Breath' });
     E.o2b = [];
     for (let i = 0; i < 10; i++) { const b = h('i'); E.o2b.push(b); E.o2.appendChild(b); }
+    // flight (wings, flames, smoke...: game/flight.js): the gauge, shown while it's not full
+    E.fly = bar('fly');
+    E.fly.el.classList.add('hidden');
+    E.fly.el.title = 'Flight — drains in the air (fast over the open sea), fills up on solid ground';
+    E.fly.el.querySelector('i').style.background = 'linear-gradient(#e1f5fe, #4fc3f7)';
     E.lives = h('div.lives');
     E.bounty = h('div.hud-bounty');
     E.buffs = h('div.buffs');
-    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.o2, E.hk.el, E.lives, E.bounty, E.buffs));
+    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
     // hotbar: ten slots (1-9, 0). Click a slot to use it; drag slots to
     // rearrange them. With the Inventory or Skills open it's where you drop
     // techniques and food (or click a slot to put what you picked there).
@@ -516,6 +521,10 @@ export class UI {
         E.o2.classList.toggle('low', f < 2.5);
       }
     }
+    // flight: the gauge while you're up there (or it's still filling again)
+    const flyOn = (!!p.flight || p.flightGauge < 1) && p.flightGauge !== undefined;
+    if (flyOn !== this.cache.flyOn) { E.fly.el.classList.toggle('hidden', !flyOn); this.cache.flyOn = flyOn; }
+    if (flyOn) E.fly.set(p.flightGauge, p.flightTired ? 'tired' : '');
     // the spirit (Haki) bar doesn't exist until Haki awakens
     const hakiOn = p.hakiUnlocked();
     E.hk.el.classList.toggle('hidden', !hakiOn);
@@ -589,6 +598,9 @@ export class UI {
       }
       if (s.qty.textContent) { s.qty.textContent = ''; s.el.classList.remove('none-left'); }
       s.el.classList.remove('held');
+      // (a Room technique, out of your ROOM: dimmed — it won't work until you're back in one)
+      const out = def?.room === 'need' && !ownRoom(p);
+      if (s.el.classList.contains('none-left') !== out) s.el.classList.toggle('none-left', out);
       const cd = def ? p.cooldowns[def.id] || 0 : 0;
       const frac = def && def.cd ? clamp(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
       s.cd.style.transform = `scaleY(${frac})`;
