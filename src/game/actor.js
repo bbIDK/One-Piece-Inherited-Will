@@ -647,14 +647,15 @@ export class Actor extends Entity {
    * held down (the guard coming back up after a swing), not one pressed again
    * hard on letting go (PARRY.lockout: mashing F gets you nothing), though a
    * press made while the guard can't come up yet (mid-swing) still counts if
-   * it comes up within PARRY.buffer. A parry earns the next press a fresh
-   * guard however soon it comes. `fresh` (a foe's AI): whether this guard
-   * can parry, decided for it.
+   * it comes up within PARRY.buffer of the swing's end. A parry earns the
+   * next press a fresh guard however soon it comes. `fresh` (a foe's AI):
+   * whether this guard can parry, decided for it.
    */
   setBlock(on, fresh) {
     if (on && !this.guardHeld) {
       this.pressFresh = (this.guardLetGo ?? Infinity) >= PARRY.lockout || !!this.parryEarned;
       this.pressAge = 0;
+      this.pressPending = true;
       this.parryEarned = false;
     } else if (!on && this.guardHeld) this.guardLetGo = 0;
     this.guardHeld = !!on;
@@ -663,6 +664,7 @@ export class Actor extends Entity {
       this.blocking = true;
       this.blockTime = 0;
       this.guardFresh = fresh ?? (!!this.isPlayer && !!this.pressFresh && (this.pressAge ?? Infinity) <= PARRY.buffer);
+      this.pressPending = false;
     } else if (!on) this.blocking = false;
   }
 
@@ -719,7 +721,8 @@ export class Actor extends Entity {
     }
     if (this.blocking) this.blockTime += dt;
     // (the guard's press and let-go, for whether the next one is fresh; the counter a parry earned runs out)
-    if (this.pressAge !== undefined) this.pressAge += dt;
+    // (a press made mid-swing waits on the swing, however long it runs, and only then starts to go stale)
+    if (this.pressAge !== undefined && !(this.pressPending && this.guardHeld && this.action)) this.pressAge += dt;
     if (this.guardLetGo !== undefined && !this.guardHeld) this.guardLetGo += dt;
     // (a strike begun while the counter was there keeps it until that strike is done)
     if (this.counterLeft > 0 && !this.action?.counter && (this.counterLeft -= dt) <= 0) { this.counterLeft = 0; this.counterOn = null; }
