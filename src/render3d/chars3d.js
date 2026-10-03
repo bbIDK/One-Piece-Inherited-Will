@@ -18,7 +18,7 @@ import { Label, Marker, Glow, Aura, iceShell, Stars, rootRing, guardShimmer } fr
 import { SeaKingView } from './chars/seaking.js';
 import { SeaCowView, FightingFishView } from './chars/seacreature.js';
 import { Trail } from './chars/trail.js';
-import { BackFlame, driftInto } from './chars/flame.js';
+import { BackFlame, PhoenixWings, driftInto } from './chars/flame.js';
 import { createViewmodel } from './chars/viewmodel.js';
 import { holdItem, heldSize } from './chars/helditem.js';
 import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
@@ -465,6 +465,20 @@ class ActorView {
       _v2.x -= 0.08; // (and a little back off the shoulders even standing still)
       this.backFlame.update(t, fdt, 1.1 * m.d.Bk, _v2, lit);
     } else if (this.backFlame) this.backFlame.group.visible = false;
+    // the Phoenix's wings of blue flame: flying as the Phoenix, or while its form is on
+    const phoenix = (a.flying && a.flightStyle === 'phoenix') || !!a.phoenixForm;
+    if ((phoenix || this.wings?.grow > 0.02) && near && !(a.isPlayer && ctx.mode === 'first')) {
+      if (!this.wings) { this.wings = new PhoenixWings(a.seed || 0); m.group.add(this.wings.group); }
+      const wdt = Math.min(0.1, Math.max(0, t - (this.wingT ?? t)));
+      this.wingT = t;
+      // (streaming back off the arms, and the more so the faster they go)
+      const w = ctx.world, px = this.wingX ?? a.x, py = this.wingY ?? a.y, k = wdt > 0 ? 1 / wdt : 0;
+      const mvx = (w ? w.dx(px, a.x) : a.x - px) * k, mvy = (a.y - py) * k;
+      this.wingX = a.x; this.wingY = a.y;
+      driftInto(this.yaw, -mvx * 0.06, -mvy * 0.06, _v2);
+      _v2.x -= 0.8; _v2.y += 0.15;
+      this.wings.update(t, wdt, rig, m.d, _v2.normalize(), phoenix);
+    } else if (this.wings) this.wings.group.visible = false;
     // energy: charge-ups and element glows on the striking limb
     let gi = 0;
     const glow = (col, size, pos) => {
@@ -569,6 +583,7 @@ class ActorView {
     this.label?.dispose();
     this.aura?.dispose();
     this.backFlame?.dispose();
+    this.wings?.dispose();
     this.trail?.dispose();
     this.shimmer?.material.dispose();
     this.root.removeFromParent();
