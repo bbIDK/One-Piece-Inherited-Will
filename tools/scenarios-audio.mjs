@@ -201,6 +201,12 @@ function cases() {
     ['jump@sand', 'jump', { surf: 'sand' }], ['jump@wood', 'jump', { surf: 'wood' }], ['land@stone', 'land', { surf: 'stone', s: 0.9 }], ['land@snow', 'land', { surf: 'snow', s: 0.9 }],
   ];
   for (const [id, name, k] of ctx) out.push({ id, play: (a) => a.sfx(name, null, k) });
+  // Haki, each in three voices (game/haki.js hakiSignature: the same sound, each character's own way)
+  for (const name of ['haki', 'haki_obs', 'foresight', 'conqueror_rise', 'conqueror', 'conqueror_clash', 'haki_out']) {
+    for (const voice of [0, 0.5, 1]) out.push({ id: name + '@v' + voice, play: (a) => a.sfx(name, null, { voice }) });
+  }
+  for (const voice of [0, 0.5, 1]) out.push({ id: 'punch@haki-v' + voice, play: (a) => a.sfx('punch', null, { w: 0.6, armament: true, voice }) });
+  out.push({ id: 'punch@ryou', play: (a) => a.sfx('punch', null, { w: 0.8, armament: true, ryou: true }) }, { id: 'punch_heavy@ryou', play: (a) => a.sfx('punch_heavy', null, { armament: true, ryou: true }) });
   // footsteps
   for (const s of ['grass', 'sand', 'dirt', 'gravel', 'mud', 'stone', 'wood', 'snow', 'ice', 'soft', 'metal']) {
     out.push({ id: 'step:' + s, play: (a) => a.step(s, 0.5) });

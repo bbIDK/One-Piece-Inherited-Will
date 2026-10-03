@@ -99,6 +99,12 @@ export function colourName(hex) {
   return h;
 }
 
+/** The aura of a body wreathed in Conqueror's Infusion: near black, deep in the king's own colour. */
+export function infusedAura(a) {
+  const h = sigOf(a).conqueror, n = parseInt(h.slice(1), 16);
+  return `rgba(${Math.round(((n >> 16) & 255) * 0.32)},${Math.round(((n >> 8) & 255) * 0.32)},${Math.round((n & 255) * 0.32)},0.85)`;
+}
+
 // ------------------------------------------------------------------ Armament
 /**
  * How far a coat of Armament spreads, 0 (nothing) to 1 (the whole limb), as

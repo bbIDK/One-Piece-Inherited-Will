@@ -93,6 +93,24 @@ Rankyaku, Tekkai, Diable Jambe, Uchimizu, Vagabond Drill, the Electro and
 Clima-Tact moves, Okama spins, Asura. A fruit's blows also carry its touch
 (`FLAVOUR`: Gomu's boing, Mochi's squelch, Supa's ring...).
 
+### Haki
+Every character's Haki has a voice (`game/haki.js` hakiSignature `voice`,
+0..1, from their seed): the same sounds pitched and coloured their own way —
+related, never identical. Armament hardening: a low "vrrmm" swelling as the
+coat spreads (a growl opening up over a sub), then, as it sets at 0.27 s, the
+KSHING — a click, a bright swipe, a struck-iron clank and a dense chorused
+ringing tail; armed blows carry a harder iron "GAKIN" in the striker's voice,
+Ryou a hollow "dwoom" through the body. Observation: a soft heartbeat, a
+sonar breath and a high crystalline TING with a long shimmering tail; its
+foresight a whoosh played backwards onto a ting. Conqueror's: the pressure
+gathering through the wind-up, then the deep rolling DOOON (a crack, a huge
+sub falling away under a growling body, thunder), the wind rushing out and
+black lightning crackling; two kings clashing, a sustained thunderous grind
+(two growls beating, a roar of the deep, arcs the whole while) and a last
+boom. Haki spent: a dull clank going flat, a fizzle.
+`node tools/shot.mjs sfx --only=haki@,haki_obs@,conqueror@ --tag=haki`
+renders each in three voices.
+
 ### Elements (what a blow is made of)
 fire (ignition, fluttering roar, embers), magma (heavy roar, thick bubbles,
 sizzle), ice (crack, "pakiki" crackle thinning out, crystal ring), lightning

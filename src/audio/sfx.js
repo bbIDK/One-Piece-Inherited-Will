@@ -298,10 +298,10 @@ export const SFX = {
     prio: 6, cd: 0.3, max: 1, send: 0.2,
     play(v, k) {
       const V = vo(k);
-      v.ring(0, 300 + 120 * V, 0.25, 0.04, [1, 1.4, 2.1]);
-      v.tone(0, 0.4, { freq: 220 + 60 * V, to: 90, type: 'triangle', gain: 0.07 });
-      v.noise(0.02, 0.45, { type: 'lowpass', freq: 2400, sweep: 300, gain: 0.08, attack: 0.01 });
-      v.crackle(0.03, 0.4, 8, { freq: 1800, gain: 0.03 });
+      v.ring(0, 300 + 120 * V, 0.25, 0.1, [1, 1.4, 2.1]);
+      v.tone(0, 0.4, { freq: 220 + 60 * V, to: 90, type: 'triangle', gain: 0.16 });
+      v.noise(0.02, 0.45, { type: 'lowpass', freq: 2400, sweep: 300, gain: 0.18, attack: 0.01 });
+      v.crackle(0.03, 0.4, 8, { freq: 1800, gain: 0.06 });
     },
   },
   /**
@@ -314,15 +314,15 @@ export const SFX = {
     prio: 7, cd: 0.2, max: 1, send: 0.55, variants: 3,
     play(v, k) {
       const V = vo(k), f = (2050 + 1300 * V) * [1, 1.03, 0.97][k.rr];
-      v.thump(0, { f0: 66 - 8 * V, f1: 44, dur: 0.13, gain: 0.26 });
-      v.thump(0.2, { f0: 58 - 6 * V, f1: 40, dur: 0.11, gain: 0.16 });
-      v.whoosh(0.02, 0.5, { f0: 3800, f1: 1600, q: 2.5, gain: 0.03, peak: 0.15 });
-      v.tone(0.03, 0.35, { freq: f * 0.5, to: f * 0.25, gain: 0.025, attack: 0.004 });
-      v.ring(0.04, f, 0.9, 0.07, [1, 2.0, 2.76 + 0.2 * V, 4.07]);
-      v.fm(0.04, 1.6, { freq: f * 1.5, ratio: 2.01 + 0.5 * V, index: 0.8, gain: 0.025, indexDur: 1.2 });
-      v.tone(0.08, 2.2, { freq: f * 2, gain: 0.012, attack: 0.3, vib: { rate: 5 + 3 * V, depth: f * 0.004 } });
-      v.tone(0.1, 2.0, { freq: f * 2 * 1.006, gain: 0.01, attack: 0.35 });
-      v.tone(0.12, 1.8, { freq: f * 3.01, gain: 0.006, attack: 0.4, vib: { rate: 3.5, depth: f * 0.006 } });
+      v.thump(0, { f0: 66 - 8 * V, f1: 44, dur: 0.13, gain: 0.32 });
+      v.thump(0.2, { f0: 58 - 6 * V, f1: 40, dur: 0.11, gain: 0.2 });
+      v.whoosh(0.02, 0.5, { f0: 3800, f1: 1600, q: 2.5, gain: 0.05, peak: 0.15 });
+      v.tone(0.03, 0.35, { freq: f * 0.5, to: f * 0.25, gain: 0.045, attack: 0.004 });
+      v.ring(0.04, f, 0.9, 0.14, [1, 2.0, 2.76 + 0.2 * V, 4.07]);
+      v.fm(0.04, 1.6, { freq: f * 1.5, ratio: 2.01 + 0.5 * V, index: 0.8, gain: 0.05, indexDur: 1.2 });
+      v.tone(0.08, 2.2, { freq: f * 2, gain: 0.022, attack: 0.3, vib: { rate: 5 + 3 * V, depth: f * 0.004 } });
+      v.tone(0.1, 2.0, { freq: f * 2 * 1.006, gain: 0.018, attack: 0.35 });
+      v.tone(0.12, 1.8, { freq: f * 3.01, gain: 0.011, attack: 0.4, vib: { rate: 3.5, depth: f * 0.006 } });
     },
   },
   /** Foresight (Observation slipping a blow): a whoosh played backwards, swelling out of nothing onto a ting. */
@@ -330,10 +330,10 @@ export const SFX = {
     prio: 7, cd: 0.15, max: 2, send: 0.4, variants: 2,
     play(v, k) {
       const V = vo(k), f = (2400 + 1200 * V) * [1, 1.04][k.rr];
-      v.whoosh(0, 0.22, { f0: 600, f1: 3200, q: 1.2, gain: 0.2, peak: 0.97, color: 'pink' });
-      v.whoosh(0.02, 0.2, { f0: 1500, f1: 5000, q: 2, gain: 0.07, peak: 0.95 });
-      v.ring(0.22, f, 0.6, 0.05, [1, 2.0, 2.9]);
-      v.fm(0.22, 0.8, { freq: f * 1.5, ratio: 2.01, index: 0.6, gain: 0.015 });
+      v.whoosh(0, 0.22, { f0: 600, f1: 3200, q: 1.2, gain: 0.42, peak: 0.97, color: 'pink' });
+      v.whoosh(0.02, 0.2, { f0: 1500, f1: 5000, q: 2, gain: 0.14, peak: 0.95 });
+      v.ring(0.22, f, 0.6, 0.12, [1, 2.0, 2.9]);
+      v.fm(0.22, 0.8, { freq: f * 1.5, ratio: 2.01, index: 0.6, gain: 0.035 });
     },
   },
   /** Conqueror's Haki gathering (the wind-up): the air going heavy and still, a growl rising under it. */
@@ -341,9 +341,9 @@ export const SFX = {
     prio: 8, cd: 0.4, max: 1, send: 0.3,
     play(v, k) {
       const V = vo(k), T = Math.max(0.2, k.rel || 0.45);
-      v.noise(0, T, { color: 'brown', type: 'lowpass', freq: 120, sweep: 500, gain: 0.3, attack: T * 0.9, curve: 'lin' });
-      v.tone(0, T + 0.05, { freq: 30 + 8 * V, to: 55 + 10 * V, gain: 0.25, attack: T * 0.85, curve: 'lin' });
-      v.whoosh(0, T, { f0: 200, f1: 900, q: 0.9, gain: 0.1, peak: 0.9 });
+      v.noise(0, T, { color: 'brown', type: 'lowpass', freq: 120, sweep: 500, gain: 0.4, attack: T * 0.9, curve: 'lin' });
+      v.tone(0, T + 0.05, { freq: 30 + 8 * V, to: 55 + 10 * V, gain: 0.32, attack: T * 0.85, curve: 'lin' });
+      v.whoosh(0, T, { f0: 200, f1: 900, q: 0.9, gain: 0.16, peak: 0.9 });
     },
   },
   /**
@@ -383,7 +383,7 @@ export const SFX = {
       v.thump(0, { f0: 110, f1: 26, dur: 1.2, gain: 0.8 });
       v.tone(0, L, { freq: 48 + 10 * V, to: 42, type: 'sawtooth', gain: 0.11, attack: 0.08, hold: L * 0.6 });
       v.tone(0, L, { freq: 51.5 + 10 * V, to: 45, type: 'sawtooth', gain: 0.11, attack: 0.08, hold: L * 0.6 });
-      v.noise(0, L, { color: 'brown', type: 'lowpass', freq: 380, q: 0.8, gain: 0.45, attack: 0.1, hold: L * 0.55 });
+      v.noise(0, L, { color: 'brown', type: 'lowpass', freq: 380, q: 0.8, gain: 0.38, attack: 0.1, hold: L * 0.55 });
       for (let i = 0; i < 6; i++) v.zap(0.05 + i * 0.38, 0.4, { f0: 50, f1: 900 + 300 * Math.random(), gain: 0.08 });
       v.crackle(0.02, L * 0.9, 40, { freq: 2400 + 1200 * V, gain: 0.06 });
       v.noise(0.05, L, { type: 'highpass', freq: 5000, gain: 0.045, attack: 0.1, hold: L * 0.5 });

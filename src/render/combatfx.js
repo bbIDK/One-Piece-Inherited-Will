@@ -1581,8 +1581,8 @@ export function hakiOnFx(fx, a, type) {
     return;
   }
   const R = senseRange(a.hakiLevel ? a.hakiLevel('observation') : 0);
-  fx.ring(a.x, a.y, 0.5, R, sig.observation, 0.7, 0.07, { flat: 0.5, add: true });
-  fx.ring(a.x, a.y, 0.3, R * 0.6, sig.observation, 0.75, 0.04, { flat: 0.5, add: true, delay: 0.16 });
+  fx.ring(a.x, a.y, 0.5, R, sig.observation, 0.7, 0.13, { flat: 0.5, add: true });
+  fx.ring(a.x, a.y, 0.3, R * 0.6, sig.observation, 0.75, 0.07, { flat: 0.5, add: true, delay: 0.16 });
   fx.add('flare', { x: a.x, y: a.y, z: 1.62 * s, size: 0.7 * s, color: sig.observation, life: 0.32 });
 }
 
@@ -1659,7 +1659,7 @@ export function clashFx(fx, a, b) {
   fx.add('clash', { x: mx, y: my, ax: a.x, ay: a.y, bx: b.x, by: b.y, colA: ca, colB: cb, life: 1.8 });
   // the sky splitting: a band of dark cloud across it, over the clash
   const px = -dy / d, py = dx / d;
-  for (let i = -2; i <= 2; i++) fx.add('cloud', { x: w ? w.wx(mx + px * i * 7) : mx + px * i * 7, y: my + py * i * 7, r: 6, z: 16 + Math.abs(i) * 1.5, life: 2.4, color: '#0d0b12' });
+  for (let i = -3; i <= 3; i++) fx.add('cloud', { x: w ? w.wx(mx + px * i * 6) : mx + px * i * 6, y: my + py * i * 6, r: 7.5, z: 10 + Math.abs(i) * 0.8, life: 2.6, color: '#0d0b12' });
   for (const [k, c] of [[a, ca], [b, cb]]) {
     fx.ring(k.x, k.y, 0.3, 6, c, 0.6, 0.12, { add: true });
     fx.ring(k.x, k.y, 0.4, 8, '#0a090d', 0.7, 0.3);

@@ -538,17 +538,18 @@ SHAPES.clash = {
     const AX = v.lx(s.x + w.dx(s.x, s.ax)), AZ = v.lz(s.ay), BX = v.lx(s.x + w.dx(s.x, s.bx)), BZ = v.lz(s.by);
     for (let i = 0; i < 3; i++) {
       const j = (hash(s.seed + t * 3 + i) - 0.5) * 0.6, jy = (hash(s.seed + t * 5 + i) - 0.5) * 0.5;
-      bolt(v, AX, Y - 0.1, AZ, X + j, Y + jy, Z - j, 0.08 - i * 0.02, 0.45, s.seed + t * 7 + i, K, fade, 1, cA);
-      bolt(v, BX, Y - 0.1, BZ, X - j, Y - jy, Z + j, 0.08 - i * 0.02, 0.45, s.seed + t * 11 + i, K, fade, 1, cB);
+      bolt(v, AX, Y - 0.1, AZ, X + j, Y + jy, Z - j, 0.14 - i * 0.03, 0.5, s.seed + t * 7 + i, K, fade, 1, cA);
+      bolt(v, BX, Y - 0.1, BZ, X - j, Y - jy, Z + j, 0.14 - i * 0.03, 0.5, s.seed + t * 11 + i, K, fade, 1, cB);
     }
     // the rift splitting the sky
     const H = 30 * easeOut(Math.min(1, k * 4));
     const sway = (hash(s.seed + t) - 0.5) * 2.4;
-    bolt(v, X, Y, Z, X + sway, Y + H, Z - sway * 0.5, 0.42, 2.4, s.seed + t * 13, K, fade, 3, t % 2 ? cA : cB);
-    bolt(v, X, Y + 0.5, Z, X - sway * 0.7, Y + H * 0.75, Z + sway, 0.2, 1.8, s.seed + t * 17, K, fade * 0.9, 2, t % 2 ? cB : cA);
-    // where the two meet: each colour's glow, small, under the ink
-    v.sprites.put(SK.GLOW, X, Y, Z, 1.5, cA, fade * 0.45, WHITE, 1, 0, s.seed, k);
-    v.sprites.put(SK.GLOW, X, Y + 0.1, Z, 1.15, cB, fade * 0.45, WHITE, 1, 0, s.seed + 1, k);
+    bolt(v, X, Y, Z, X + sway, Y + H, Z - sway * 0.5, 0.85, 3, s.seed + t * 13, K, fade, 3, t % 2 ? cA : cB);
+    bolt(v, X, Y + 0.5, Z, X - sway * 0.7, Y + H * 0.8, Z + sway, 0.45, 2.2, s.seed + t * 17, K, fade * 0.9, 2, t % 2 ? cB : cA);
+    bolt(v, X, Y + 1, Z, X + sway * 1.4, Y + H * 0.55, Z + sway * 0.8, 0.3, 1.6, s.seed + t * 19, K, fade * 0.85, 2, cA);
+    // where the two meet: each colour's glow, under the ink
+    v.sprites.put(SK.GLOW, X, Y, Z, 2.6, cA, fade * 0.5, WHITE, 1, 0, s.seed, k);
+    v.sprites.put(SK.GLOW, X, Y + 0.1, Z, 2.0, cB, fade * 0.5, WHITE, 1, 0, s.seed + 1, k);
     const patch = v.patch(s, s.x, s.y, 3);
     v.decal(patch, s.x, s.y, 2.6, 0, SF.GLOW, t % 2 ? cA : cB, fade * 0.35, WHITE, 0.6, k, s.seed, 0, 0, 0, 4);
   },

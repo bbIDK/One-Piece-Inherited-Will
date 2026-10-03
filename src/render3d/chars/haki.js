@@ -64,5 +64,5 @@ export function senseOf(a, game) {
   const act = a.action;
   const winding = act && (act.target === p || a.controller?.target === p) && act.t < (act.hitAt ?? act.def?.windup ?? 0.2) ? 1 : 0;
   const now = game.env?.time ?? 0;
-  return { col: sigOf(p).observation, k: edge * (0.5 + 0.08 * Math.sin(now * 5 + (a.seed || 0)) + 0.6 * winding) };
+  return { col: sigOf(p).observation, k: edge * (0.7 + 0.1 * Math.sin(now * 5 + (a.seed || 0)) + 0.6 * winding) };
 }

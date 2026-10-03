@@ -181,8 +181,8 @@ export function senseMaterial() {
       .replace('#include <common>', '#include <common>\nvarying vec3 vSenseN;\nvarying vec3 vSenseV;\nuniform vec3 uCol;\nuniform float uK;')
       .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `float sRim = 1.0 - abs( dot( normalize( vSenseN ), normalize( vSenseV ) ) );
   // (a faint fill, and a hard bright edge: the shape of them, not a blob)
-  float sA = ( 0.1 + 0.55 * smoothstep( 0.45, 0.62, sRim ) + 0.5 * smoothstep( 0.78, 0.9, sRim ) ) * uK;
-  vec4 diffuseColor = vec4( uCol * 1.4, sA );`);
+  float sA = ( 0.16 + 0.6 * smoothstep( 0.45, 0.62, sRim ) + 0.55 * smoothstep( 0.78, 0.9, sRim ) ) * uK;
+  vec4 diffuseColor = vec4( uCol * 1.7, sA );`);
   };
   m.customProgramCacheKey = () => 'op-char-sense-1';
   return m;
