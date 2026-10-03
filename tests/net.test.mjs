@@ -2,13 +2,23 @@
 // wire format and its checks on what comes in (protocol.js), the smooth
 // in-between drawing of the other players (interp.js), and the local
 // transport between pages of one browser (transport.js, over Node's own
-// BroadcastChannel).
+// BroadcastChannel). And going aboard another player's ship: her stand-in
+// solid and walkable here (game/decks.js, ladders.js), riding her as she
+// sails and turns (Ship.carry), set down safely when she's gone, and three
+// games over the local transport each drawing you on her as they draw her.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newCode, normalizeCode, showCode, CODE_ABC, CODE_LEN } from '../src/net/code.js';
-import { readHello, readLook, readShip, readState, readSay, readEnv, stateChanged, flat, cleanText, worldSig, BIT, PROTO } from '../src/net/protocol.js';
+import { readHello, readLook, readShip, readState, readSay, readEnv, stateChanged, flat, cleanText, worldSig, BIT, PROTO, REV } from '../src/net/protocol.js';
 import { SnapBuffer } from '../src/net/interp.js';
 import { localTransport, netKind, relayUrls } from '../src/net/transport.js';
+import { Voyage, shipId } from '../src/net/session.js';
+import { Ship, anyShips, allShips } from '../src/game/ship.js';
+import { installDecks, placeOnDeck, shipGone } from '../src/game/decks.js';
+import { installLadders, ladderFoot } from '../src/game/ladders.js';
+import { Actor } from '../src/game/actor.js';
+import { T } from '../src/world/tiles.js';
+import { shipDims, deckToWorld, deckLift, topAt } from '../src/world/hull.js';
 
 test('room codes: six letters without I or O, typed in any case with spaces or dashes', () => {
   const seen = new Set();
@@ -315,4 +325,322 @@ test('the local transport: a page gone silent is taken for gone after the timeou
   bc.close();
   await until(() => left.includes('ghost'), 2000);
   a.leave();
+});
+
+// ------------------------------------------------------------ aboard another player's ship
+
+test('aboard another player\'s ship (REV 1): whose she is, which, and where on her — checked; an older game reads you where you are', () => {
+  assert.ok(REV >= 1);
+  assert.equal(readHello({ k: 'hi', v: PROTO, role: 'guest' }).rev, 0, 'an older game\'s hello says nothing: 0');
+  assert.equal(readHello({ k: 'hi', v: PROTO, rev: REV, role: 'guest' }).rev, REV);
+  const base = { k: 'st', t: 1000, x: 310.5, y: 262.25, z: 0.3, b: BIT.roofed, g: 2.15 };
+  const s = readState({ ...base, ab: ['Lpeer01abc', 'sA1', 4.5, -1.25, 1.9] });
+  assert.deepEqual([s.ao, s.ai, s.au, s.av, s.ah], ['Lpeer01abc', 'sA1', 4.5, -1.25, 1.9]);
+  // (anything else is no ship at all: a bad id, a number missing or not one, no list)
+  for (const ab of [['bad id!', 'sA1', 0, 0, 0], ['L1', '', 0, 0, 0], ['L1', 'sA1', 0, NaN, 0], ['L1', 'sA1', 0, 0], 'L1', [7, 'sA1', 0, 0, 0], ['L1', { x: 1 }, 0, 0, 0], ['x'.repeat(65), 'sA1', 0, 0, 0]]) {
+    const r = readState({ ...base, ab });
+    assert.equal(r.ai, undefined, JSON.stringify(ab));
+    assert.equal(r.au, undefined);
+  }
+  // (cut short, and kept to her size)
+  const far = readState({ ...base, ab: ['L1', 'x'.repeat(90), 1e9, -1e9, 1e9] });
+  assert.equal(far.ai.length, 40);
+  assert.deepEqual([far.au, far.av, far.ah], [400, -100, 200]);
+  // an older game knows nothing of `ab`: it reads where you are, and the height of the deck you're on
+  const old = readState(base);
+  assert.deepEqual([old.x, old.y, old.g, !!(old.b & BIT.roofed), old.ai], [310.5, 262.25, 2.15, true, undefined]);
+  // (a state only counts as changed when where you stand on her does)
+  const m = { ...base, ab: ['L1', 'sA1', 4.5, -1.25, 1.9] };
+  assert.equal(stateChanged(m, { ...m, ab: ['L1', 'sA1', 4.5, -1.25, 1.9] }), false);
+  assert.equal(stateChanged(m, { ...m, ab: ['L1', 'sA1', 4.51, -1.25, 1.9] }), true);
+  assert.equal(stateChanged(m, base), true);
+});
+
+test('in between: where they stand aboard her glides; aboard another ship (or none) is a leap', () => {
+  const buf = new SnapBuffer();
+  feed(buf, { n: 20, v: 0, extra: (i) => ({ ao: 'L1', ai: 'sA1', au: i * 0.1, av: -1, ah: 1.9 }) });
+  const t9 = 1000 + 9 * 83, t10 = 1000 + 10 * 83;
+  const s = buf.sample((t9 + t10) / 2 + buf.offset + buf.delay);
+  assert.ok(Math.abs(s.au - 0.95) < 1e-6, `au ${s.au}`);
+  assert.equal(s.ai, 'sA1');
+  const b2 = new SnapBuffer();
+  feed(b2, { n: 4, v: 0, extra: (i) => (i < 2 ? { ao: 'L1', ai: 'sA1', au: 1, av: 0, ah: 1 } : i < 3 ? { ao: 'L2', ai: 'sA1', au: 5, av: 0, ah: 1 } : {}) });
+  assert.deepEqual(b2.buf.map((x) => !!x.cut), [false, false, true, true]);
+});
+
+/** A sea (and a pier along it, east of x = pierX): just enough of a world for hulls, decks and the bodies on them. */
+function seaWorld(pierX = Infinity) {
+  const W = 4000;
+  return {
+    width: W, height: 4000, zone: 0, islands: [], quays: new Set(),
+    wx: (x) => ((x % W) + W) % W,
+    dx: (a, b) => { const d = b - a; return ((((d + W / 2) % W) + W) % W) - W / 2; },
+    dist2(ax, ay, bx, by) { const dx = this.dx(ax, bx), dy = by - ay; return dx * dx + dy * dy; },
+    distance(ax, ay, bx, by) { return Math.sqrt(this.dist2(ax, ay, bx, by)); },
+    type(x) { return this.wx(x) >= pierX ? T.PLANK : T.SEA; },
+    isLiquid(x, y) { return this.type(x, y) === T.SEA; },
+    isOverlay(x, y) { return this.type(x, y) === T.PLANK; },
+    solid: () => false, isBlocked: () => false, hitsProp: () => false, speedAt: () => 1, roomOf: () => null, interiorAt: () => null, floorRec: () => null, isQuay: () => false,
+  };
+}
+/** Just enough of a game for decks, ladders and the bodies on them, and a voyage (no 3D view: the sea's surface is at 0). */
+function seaGame(world = seaWorld()) {
+  const g = {
+    world, surface: world, ships: [], actors: [], planks: [], net: null, player: null, state: null, time: 0, paused: false, logs: [],
+    env: { time: 0, day: 1, clock: 8.5, stormTarget: 0, windTarget: 0.4, windAngle: 0.4, forecast: 'Clear', weatherTimer: 30, update(dt) { this.clock += dt * 24 / 960; } },
+    fx: { ripple() {}, burst() {}, text() {}, shake() {}, particle() {} },
+    on() {}, emit() {}, log(t) { this.logs.push(t); }, inZone: () => null, onNewDay() {},
+  };
+  installDecks(g); installLadders(g);
+  return g;
+}
+const body = (g, name, x = 0, y = 0) => { const a = new Actor({ name, look: { race: 'human', hair: 'short' } }); Object.assign(a, { game: g, x, y, mode: 'foot' }); g.actors.push(a); return a; };
+/** A friend's ship as this game draws her (see net/remote.js applyShip). */
+function standIn(x, y, heading, owner = 'Lfriend') {
+  const s = new Ship({ type: 'sloop', x, y, heading, owner: 'remote', faction: 'player', name: 'Going Merry' });
+  Object.assign(s, { netRemote: true, netOwner: owner, uid: 'sA1', anchored: false });
+  return s;
+}
+/** Where `a` stands in ship `s`'s own frame: [u along her, v across]. */
+function onHer(w, s, a) {
+  const dx = w.dx(s.x, a.x), dy = a.y - s.y, c = Math.cos(s.heading), sn = Math.sin(s.heading);
+  return [dx * c + dy * sn, -dx * sn + dy * c];
+}
+const near = (a, b, eps, what) => { for (let i = 0; i < a.length; i++) assert.ok(Math.abs(a[i] - b[i]) <= eps, `${what}: ${a.map((v) => v.toFixed(4))} vs ${b.map((v) => v.toFixed(4))}`); };
+
+test('riding a ship: each aboard stays just where they stood on her deck as she sails and turns (across the world\'s seam, and through ±π)', () => {
+  const g = seaGame(), w = g.world, s = standIn(3990, 500, 3.0);
+  g.net = { ships: [s] };
+  const a = body(g, 'Kaito'), b = body(g, 'Rin');
+  placeOnDeck(g, a, s, 0.62, 1.4); placeOnDeck(g, b, s, 0.3, -2);
+  const a0 = onHer(w, s, a), b0 = onHer(w, s, b), f0 = a.facing;
+  // (and someone on their way up her side: carried too)
+  const up = { x: w.wx(s.x + 3), y: s.y - 4.4, facing: 0 }, up0 = onHer(w, s, up);
+  let turned = 0;
+  for (let i = 0; i < 150; i++) {
+    const x0 = s.x, y0 = s.y, h0 = s.heading;
+    // east across the seam at 12 m/s or so, turning to port through ±π (her heading kept in (−π, π], as a game might send it)
+    s.x = w.wx(s.x + Math.cos(h0) * 0.1 + 0.3); s.y += Math.sin(h0) * 0.1;
+    s.heading = Math.atan2(Math.sin(h0 + 0.004), Math.cos(h0 + 0.004));
+    turned += 0.004;
+    s.carry(w, x0, y0, h0, up);
+    assert.ok(a.x >= 0 && a.x < w.width && up.x >= 0 && up.x < w.width);
+  }
+  assert.ok(s.x < 100, 'across the seam');
+  assert.ok(s.heading < 0, 'through ±π');
+  near(onHer(w, s, a), a0, 1e-6, 'Kaito on her deck');
+  near(onHer(w, s, b), b0, 1e-6, 'Rin on her deck');
+  near(onHer(w, s, up), up0, 1e-6, 'up her side');
+  assert.ok(Math.abs(a.facing - f0 - turned) < 1e-9, `turned with her: ${a.facing - f0} vs ${turned}`);
+  // someone no longer on her deck stays where they are, and isn't aboard any more
+  b.deck = null;
+  const bx = b.x, x0 = s.x;
+  s.x = w.wx(s.x + 2);
+  s.carry(w, x0, s.y, s.heading);
+  assert.equal(b.x, bx);
+  assert.ok(!s.aboard.has(b) && s.aboard.has(a));
+});
+
+test('another player\'s ship, as she\'s drawn here: her deck underfoot, her side a wall, her ladder climbed, and no hull through hers', () => {
+  const g = seaGame(), w = g.world, s = standIn(500, 500, 0.7);
+  const a = body(g, 'Kaito');
+  const mid = deckToWorld(s, 0.5, 1);
+  // (she's in no list the game's own systems go through: only the voyage's, while she's drawn)
+  assert.equal(g.deckAt(mid.x, mid.y), null, 'no voyage: nothing there');
+  assert.equal(anyShips(g), false);
+  g.net = { ships: [s] };
+  assert.ok(anyShips(g));
+  assert.deepEqual(allShips(g), [s]);
+  assert.equal(g.ships.length, 0);
+  assert.equal(g.deckAt(mid.x, mid.y)?.ship, s, 'her deck');
+  assert.equal(g.hullAt(mid.x, mid.y)?.ship, s, 'her hull');
+  // swimming alongside: clear water beside her, but her side's a wall
+  const d = shipDims(s.def), c = Math.cos(s.heading), sn = Math.sin(s.heading), half = d.B / 2;
+  const off = (v) => ({ x: s.x - sn * v, y: s.y + c * v });
+  const out = off(half + 1.5), into = off(half - 0.4);
+  Object.assign(a, out, { inWater: true, depth: 0 });
+  assert.ok(a.canOccupy(w, out.x + 0.1, out.y), 'clear water beside her');
+  assert.equal(a.canOccupy(w, into.x, into.y), false, 'not into her side');
+  assert.equal(a.blocked?.ship, s);
+  // at the foot of her ladder: E climbs it
+  const f = ladderFoot(s, d.ladders[0]);
+  Object.assign(a, { x: f.x, y: f.y });
+  assert.equal(g.ladderAt(a)?.ship, s);
+  assert.match(g.footInteraction(a)?.label || '', /^Climb the ladder \(the Going Merry\)/);
+  // on her deck: walked on, kept aboard by her bulwark, and found underfoot as you go
+  a.inWater = false;
+  placeOnDeck(g, a, s, 0.5, 0);
+  const along = deckToWorld(s, 0.52, 0.3), over = off(half + 0.7);
+  assert.ok(a.canOccupy(w, along.x, along.y), 'along her deck');
+  assert.equal(a.canOccupy(w, over.x, over.y), false, 'not over her rail on foot');
+  Object.assign(a, { x: along.x, y: along.y });
+  a.updateDeck(g);
+  assert.equal(a.deck?.ship, s);
+  assert.ok(s.aboard.has(a));
+  // a ship of yours alongside: no hull passes through hers
+  const mine = new Ship({ type: 'sloop', ...off(10), heading: s.heading, owner: 'player' });
+  mine.game = g; g.ships.push(mine);
+  assert.equal(mine.shipIn(g, mine.x, mine.y, mine.heading), null, 'clear alongside');
+  const o = off(5);
+  assert.equal(mine.shipIn(g, o.x, o.y, mine.heading), s, 'not through her');
+});
+
+test('her deck gone from under you: set down where you stood — on the pier there, in the water — and a Devil Fruit user never left to drown', () => {
+  // a pier a step off her side (her bow north: across her, +v, is east)
+  const half = shipDims(standIn(0, 0, 0).def).B / 2;
+  const g = seaGame(seaWorld(500 + half + 1.5)), w = g.world, s = standIn(500, 500, -Math.PI / 2);
+  g.net = { ships: [s] };
+  const swimmer = body(g, 'Kaito'), df = body(g, 'Luffy'), climber = body(g, 'Zoro');
+  g.player = swimmer;
+  df.fruit = 'gomu';
+  placeOnDeck(g, swimmer, s, 0.5, half - 1.2); placeOnDeck(g, df, s, 0.4, half - 1);
+  const at = { x: swimmer.x, y: swimmer.y }, deckH = deckLift(swimmer.deck, 0);
+  climber.climb = { t: 0.2, T: 1, h0: 0, to: { ship: s, t: 0.5, v: 0 }, x0: 0, y0: 0 };
+  g.planks.push({ a: {}, b: s });
+  assert.equal(w.type(at.x, at.y), T.SEA, 'over the water, by the pier');
+  g.net.ships = [];
+  shipGone(g, s);
+  assert.equal(s.aboard.size, 0);
+  assert.equal(swimmer.deck, null);
+  assert.deepEqual([swimmer.x, swimmer.y], [at.x, at.y], 'where they stood');
+  assert.ok(Math.abs(swimmer.z - deckH) < 1e-9 && swimmer.vz < 0, `dropping from her deck's height into the water: z ${swimmer.z} vz ${swimmer.vz}`);
+  assert.equal(df.deck, null);
+  assert.equal(w.type(df.x, df.y), T.PLANK, 'the Devil Fruit user: onto the pier');
+  assert.ok(w.distance(df.x, df.y, at.x, at.y) < 6);
+  assert.equal(climber.climb, null, 'off her ladder');
+  assert.ok(climber.vz < 0);
+  assert.equal(g.planks.length, 0, 'the plank to her gone with her');
+  assert.ok(g.logs.some((t) => /The Going Merry is gone from under your feet/.test(t)), g.logs.join(' | '));
+  // at sea, nowhere to stand: a ship of their own (their crew fish them out) — with none, the sea
+  const g2 = seaGame(), s2 = standIn(500, 500, 0);
+  g2.net = { ships: [] };
+  const own = new Ship({ type: 'sloop', x: 900, y: 650, heading: 1, owner: 'player', name: 'Thousand Sunny' });
+  own.game = g2;
+  const luffy = body(g2, 'Luffy'), chopper = body(g2, 'Chopper');
+  luffy.fruit = 'gomu'; chopper.fruit = 'hito';
+  placeOnDeck(g2, luffy, s2, 0.5, 0); placeOnDeck(g2, chopper, s2, 0.6, 0);
+  goneFrom(g2, s2, [luffy]);
+  assert.equal(luffy.deck, null, 'no ship of his own about: the sea');
+  g2.ships.push(own);
+  goneFrom(g2, s2, [chopper]);
+  assert.equal(chopper.deck?.ship, own, 'aboard his own ship');
+});
+/** (her deck gone from under just these) */
+function goneFrom(g, s, who) { const keep = [...s.aboard].filter((a) => !who.includes(a)); for (const a of keep) s.aboard.delete(a); shipGone(g, s); for (const a of keep) s.aboard.add(a); }
+
+// ---- games over the local transport: A sails her, B stands aboard, C looks on
+/** A pirate in the world (a body of the game's own: see Actor), at (x, y). */
+function enter(g, name, x, y) {
+  g.state = { char: { name, race: 'human', faction: 'pirate', crewName: null, jr: null } };
+  g.player = body(g, name, x, y);
+  g.player.isPlayer = true;
+  return g.player;
+}
+/** A voyage over the local transport (closed when the test `t` is over, however it went: a page left open keeps the run alive). */
+async function voyage(t, g, opts) { const v = new Voyage(g, { kind: 'local', ...opts }); g.net = v; t.after(() => v.close()); await v.start(); return v; }
+/** Every voyage's frame for `ms` of real time (`each`: before each frame, with its dt). */
+async function sail(voyages, ms, each) {
+  const t0 = Date.now();
+  let last = performance.now();
+  while (Date.now() - t0 < ms) {
+    await wait(16);
+    const now = performance.now(), dt = (now - last) / 1000;
+    last = now;
+    each?.(dt);
+    for (const v of voyages) v.frame(dt);
+  }
+}
+
+test('aboard a friend\'s ship: you ride her as she sails, and everyone draws you on her as they draw her — the real one on her captain\'s screen', async (t) => {
+  const code = 'D' + Math.random().toString(36).slice(2, 7).toUpperCase();
+  const gA = seaGame(), gB = seaGame(), gC = seaGame();
+  const pA = enter(gA, 'Rin', 300, 300), pB = enter(gB, 'Kaito', 330, 310);
+  enter(gC, 'Nami', 280, 330);
+  // A's ship, moored, and A at her helm
+  const ship = new Ship({ type: 'sloop', x: 300, y: 300, heading: 0.4, owner: 'player', name: 'Going Merry' });
+  ship.uid = 'sA1'; ship.game = gA; gA.ships.push(ship);
+  Object.assign(pA, { mode: 'sail', ship, onShip: true });
+  ship.captain = pA;
+  const A = await voyage(t, gA, { role: 'host', code }), B = await voyage(t, gB, { role: 'guest', code }), C = await voyage(t, gC, { role: 'guest', code });
+  await sail([A, B, C], 700);
+  assert.equal(B.status, 'joined');
+  const herB = B.shipOf(A.selfId, 'sA1'), herC = C.shipOf(A.selfId, 'sA1');
+  assert.ok(herB && herC, 'B and C draw her');
+  assert.equal(B.remotes.get(A.selfId).rev, REV);
+  assert.equal(shipId(ship), 'sA1');
+  // B comes aboard (up her ladder, say: on her deck, in the end)
+  placeOnDeck(gB, pB, herB, 0.66, -1.3);
+  assert.ok(herB.aboard.has(pB));
+  const uv = onHer(gB.world, herB, pB);
+  // A sails off, turning; B rides her, just where they stood, as B's game draws her
+  const seenA = () => A.avatars.find((a) => a.name === 'Kaito'), seenC = () => C.avatars.find((a) => a.name === 'Kaito');
+  let worst = 0, frames = 0, onA = 0, onC = 0;
+  await sail([A, B, C], 2200, (dt) => {
+    // (each game as it drew its last frame: B where B's game drew her, A's drawing of B on her where she was then)
+    if (pB.deck?.ship === herB) {
+      frames++;
+      worst = Math.max(worst, Math.hypot(...onHer(gB.world, herB, pB).map((v, i) => v - uv[i])));
+      // on A's screen: on her (the real one); on C's, on C's drawing of her
+      const a = seenA(), c = seenC();
+      if (a?.deck?.ship === ship) { onA++; near(onHer(gA.world, ship, a), uv, 0.02, 'drawn on A\'s ship'); }
+      if (c?.deck?.ship === herC) { onC++; near(onHer(gC.world, herC, c), uv, 0.02, 'drawn on C\'s drawing of her'); }
+    }
+    // A's game sails her on (then each game's frame)
+    ship.sail = 1; ship.sailSet = 1; ship.speed = 9; ship.anchored = false;
+    ship.x = gA.world.wx(ship.x + Math.cos(ship.heading) * 9 * dt); ship.y += Math.sin(ship.heading) * 9 * dt;
+    ship.heading += 0.3 * dt;
+    pA.x = ship.x; pA.y = ship.y;
+  });
+  assert.equal(pB.deck?.ship, herB, 'still aboard');
+  assert.ok(frames > 60, `${frames} frames`);
+  assert.ok(worst < 1e-6, `B slid ${worst} m on her deck`);
+  assert.ok(gB.world.distance(herB.x, herB.y, 300, 300) > 10, 'and she did sail');
+  assert.ok(onA > frames * 0.8 && onC > frames * 0.8, `drawn aboard on A ${onA}, on C ${onC} of ${frames} frames`);
+  // what B sends: whose ship, which, where on her — and, for an older game, where B is at the deck's height
+  const st = B.packState(performance.now(), B.shipShown());
+  assert.deepEqual(st.ab.slice(0, 2), [A.selfId, 'sA1']);
+  near(st.ab.slice(2, 4), uv, 0.006, 'sent');
+  assert.ok(st.b & BIT.roofed && Math.abs(st.g - deckLift(pB.deck, 0)) < 0.01 && Math.abs(st.x - pB.x) < 0.01);
+  // she's brought round to another pier (a leap): B rides her till B's game draws her leap, and
+  // isn't carried off with her then, but set down just where B stood that moment
+  ship.x = gA.world.wx(ship.x + 600);
+  let last = null;
+  await sail([A, B, C], 900, () => { if (pB.deck) last = { x: pB.x, y: pB.y }; });
+  assert.equal(pB.deck, null, 'set down');
+  assert.ok(last && gB.world.distance(pB.x, pB.y, last.x, last.y) < 1e-9, 'where B stood');
+  assert.ok(gB.world.distance(pB.x, pB.y, herB.x, herB.y) > 500, 'not off with her');
+  assert.ok(!herB.aboard.has(pB));
+  // aboard again; then A leaves the voyage: her stand-in's gone, and B with it into the water where B stood
+  await sail([A, B, C], 300);
+  placeOnDeck(gB, pB, herB, 0.5, 0);
+  const at = { x: pB.x, y: pB.y };
+  A.close('left');
+  await sail([B, C], 300);
+  assert.equal(pB.deck, null);
+  assert.ok(gB.world.distance(pB.x, pB.y, at.x, at.y) < 0.01, 'where B stood');
+  assert.equal(B.ships.length, 0);
+  assert.equal(herB.alive, false);
+});
+
+test('two friends, each aboard the other\'s ship: each drawn on the real one by her captain', async (t) => {
+  const code = 'E' + Math.random().toString(36).slice(2, 7).toUpperCase();
+  const gA = seaGame(), gB = seaGame();
+  const pA = enter(gA, 'Rin', 300, 300), pB = enter(gB, 'Kaito', 330, 310);
+  const mk = (g, uid, x, y, name) => { const s = new Ship({ type: 'sloop', x, y, heading: 0, owner: 'player', name }); s.uid = uid; s.game = g; g.ships.push(s); return s; };
+  const shipA = mk(gA, 'sA1', 300, 300, 'Going Merry'), shipB = mk(gB, 'sB1', 300, 312, 'Thousand Sunny');
+  const A = await voyage(t, gA, { role: 'host', code }), B = await voyage(t, gB, { role: 'guest', code });
+  await sail([A, B], 700);
+  const herA = B.shipOf(A.selfId, 'sA1'), herB = A.shipOf(B.selfId, 'sB1');
+  assert.ok(herA && herB, 'each draws the other\'s ship (lying close by)');
+  placeOnDeck(gA, pA, herB, 0.4, 1); placeOnDeck(gB, pB, herA, 0.7, -1);
+  const uvA = onHer(gA.world, herB, pA), uvB = onHer(gB.world, herA, pB);
+  await sail([A, B], 700);
+  const seenB = A.avatars[0], seenA = B.avatars[0];
+  assert.equal(seenB.deck?.ship, shipA, 'A draws B on A\'s own ship');
+  assert.equal(seenA.deck?.ship, shipB, 'B draws A on B\'s own ship');
+  near(onHer(gA.world, shipA, seenB), uvB, 0.02, 'B on A\'s ship');
+  near(onHer(gB.world, shipB, seenA), uvA, 0.02, 'A on B\'s ship');
+  // (and each keeps their own ship in the other's sight, standing on the other's)
+  assert.equal(A.shipShown(), shipA);
+  assert.equal(B.shipShown(), shipB);
 });
