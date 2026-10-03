@@ -380,4 +380,88 @@ export const scenarios = {
       await page.evaluate(() => { window.OP.key('F', false); });
     },
   },
+  // The sky and the weather (render3d/sky3d.js, game/weather.js): from the end
+  // of Foosha's pier, each kind of weather at its time of day, a lightning
+  // strike, a storm coming up (its tower on the horizon first), the night sky
+  // and the moon; then each island's own (Drum in snow, Alabasta in dust).
+  //   node tools/shot.mjs skyweather [--looks=fair@11:sea,storm@15.5:sea!,...] [--quality=low]
+  // A look is kind@clock:view (views: sea, up, town, front — toward the storm —
+  // and moon); '!' adds a lightning strike; 'approach' is a storm on its way.
+  skyweather: {
+    async run(page, snap, args) {
+      await page.evaluate(() => localStorage.clear());
+      await waitReady(page);
+      await page.evaluate((q) => {
+        window.OP.quickStart('human');
+        const g = window.OP.game;
+        g.settings.view = 'third'; g.settings.shiftLock = false;
+        if (q) g.settings.quality = q;
+        g.applySettings();
+        document.querySelector('.look-hint')?.remove();
+        const ui = document.getElementById('ui'); if (ui) ui.style.visibility = 'hidden';
+        const w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island'), d = isl.docks[0], t = isl.towns[0];
+        const ex = d.end.x + 0.5, ey = d.end.y + 0.5;
+        window.__sky = {
+          sea: { from: [ex - d.dirX * 4, ey - d.dirY * 4, 4.2], at: [ex + d.dirX * 160 + d.dirY * 30, ey + d.dirY * 160 - d.dirX * 30, 22] },
+          up: { from: [ex - d.dirX * 4, ey - d.dirY * 4, 3], at: [ex + d.dirX * 60, ey + d.dirY * 60, 60] },
+          town: { from: [ex + d.dirX, ey + d.dirY, 5.5], at: [t.plaza.x, t.plaza.y, 6] },
+        };
+      }, args.quality || null);
+      // a camera set down at (x, y, h) looking at (x, y, h); the player behind it, out of sight
+      const view = (name) => page.evaluate((name) => {
+        const g = window.OP.game, w = g.world, V = window.__sky;
+        let f = V.sea.from, a = V[name]?.at;
+        if (name === 'up') f = V.up.from;
+        if (name === 'town') f = V.town.from;
+        if (name === 'front') { const fa = g.env.frontAngle ?? 0; a = [f[0] + Math.cos(fa) * 160, f[1] + Math.sin(fa) * 160, 26]; }
+        if (name === 'moon') { const m = g.view3d.sky.moonDir; a = [f[0] + m.x * 100, f[1] + m.z * 100, f[2] + m.y * 100 - 20]; }
+        const dx = w.dx(f[0], a[0]), dy = a[1] - f[1], L = Math.hypot(dx, dy) || 1;
+        window.OP.teleport(w.wx(f[0] - dx / L * 6), f[1] - dy / L * 6);
+        g.view3d.rig.shot = { from: f, at: a };
+      }, name);
+      const settle = async (s) => { for (let i = 0; i < 4; i++) { await step(page, s / 4); await frames(page, 2); } };
+      const held = async (label) => { await page.evaluate(() => { window.OP.hold = true; }); await frames(page, 3); await snap(label); await page.evaluate(() => { window.OP.hold = false; }); };
+      await view('sea');
+      await settle(1.2);
+      const looks = String(args.looks || 'fair@11:sea,fair@11:town,cloudy@11:sea,rain@11:sea,rain@11:town,storm@15.5:sea!,approach@13:front,fair@18.8:sea,clear@22.5:up,clear@22.5:moon,overcast@22.5:up');
+      for (const look of looks.split(',')) {
+        const m = look.match(/^([a-z]+)@([0-9.]+):([a-z]+)(!?)$/);
+        if (!m) { console.log('bad look', look); continue; }
+        const [, kind, clock, at, bolt] = m;
+        await page.evaluate(([kind, clock]) => {
+          const e = window.OP.game.env;
+          e.clock = clock; e.fog = 0;
+          if (kind === 'approach') { e.setWeather('fair', { now: true, hold: true }); e.setWeather('storm', { hold: true }); } else e.setWeather(kind, { now: true, hold: true });
+        }, [kind, +clock]);
+        if (kind === 'approach') await settle(6);
+        await view(at);
+        await settle(1);
+        await held(`${kind}-${clock}-${at}`);
+        if (bolt) {
+          await page.evaluate(() => { window.OP.hold = true; const g = window.OP.game; g.env.strikeNow({ near: true, angle: g.view3d.rig.yaw + 0.25 }); g.env.update(0.075, g); });
+          await frames(page, 3);
+          await snap(`${kind}-${clock}-${at}-lightning`);
+          await page.evaluate(() => { window.OP.hold = false; });
+        }
+      }
+      // the islands' own climates, from the end of their piers
+      for (const [id, kinds] of [['drum_island', ['snow', 'blizzard']], ['alabasta', ['dust', 'sandstorm']]]) {
+        if (args.looks) break;
+        await page.evaluate((id) => {
+          const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === id), d = isl.docks[0];
+          const ex = d.end.x + 0.5 + d.dirX * 1.5, ey = d.end.y + 0.5 + d.dirY * 1.5;
+          const t = isl.towns.slice().sort((a, b) => w.distance(ex, ey, a.plaza.x, a.plaza.y) - w.distance(ex, ey, b.plaza.x, b.plaza.y))[0];
+          window.OP.teleport(ex - d.dirX * 6, ey - d.dirY * 6);
+          const h = Math.max(0, g.view3d.ground(ex, ey));
+          g.view3d.rig.shot = { from: [ex, ey, h + 5.5], at: [t.plaza.x, t.plaza.y, h + 7] };
+        }, id);
+        await settle(2);
+        for (const k of kinds) {
+          await page.evaluate((k) => { const e = window.OP.game.env; e.clock = 11.5; e.setWeather(k, { now: true, hold: true }); }, k);
+          await settle(2);
+          await held(`${id}-${k}`);
+        }
+      }
+    },
+  },
 };

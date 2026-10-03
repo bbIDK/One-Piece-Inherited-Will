@@ -187,6 +187,19 @@ test('a winter island snows, a desert island blows with dust, each fading in as 
   assert.ok(env.rain < 0.2, `rain in the desert ${env.rain}`);
 });
 
+test("an island's own snow (Drum's) falls from its own grey sky, not out of a clear one", () => {
+  const P = PARADISE;
+  const drum = island('drum', 'winter', P.x, P.y, 250);
+  const env = new Env(), g = game(P.x, P.y, [drum]);
+  env.update(0.1, g);
+  env.setWeather('clear', { now: true, hold: true });
+  // (news.js sets it every tick while you're on the island)
+  run(env, g, 60, 0.1, (e) => { e.ownSnow = 0.55; });
+  assert.ok(env.snow > 0.5 && env.cloud > 0.85, JSON.stringify({ snow: env.snow, cloud: env.cloud }));
+  run(env, g, 90, 0.1, (e) => { e.ownSnow = 0; });
+  assert.ok(env.snow === 0 && env.cloud < 0.1, JSON.stringify({ snow: env.snow, cloud: env.cloud }));
+});
+
 test('weather changes smoothly: clouds before the rain, the rain stops before the sky clears', () => {
   const env = new Env(), g = game(EAST_BLUE.x, EAST_BLUE.y);
   env.update(0.1, g);

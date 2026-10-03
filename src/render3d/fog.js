@@ -30,7 +30,7 @@ export const FOG = {
   // thins with height (per metre), z how patchy it is, w how much of it there is
   fogMist: { value: new THREE.Vector4(0, 0.2, 0, 0) },
   fogMistCol: { value: new THREE.Color(0.8, 0.8, 0.8) },
-  fogMistBase: { value: 0 }, // the height it lies on (the ground where you are)
+  fogMistBase: { value: 0 }, // the height it lies on (the low ground round you)
   fogMistO: { value: new THREE.Vector4() }, // where the view sits in the world (wrapped), and the drift
   fogNoise: { value: null }, // (the sky's noise: skynoise.js)
 };
@@ -88,11 +88,17 @@ THREE.ShaderChunk.fog_fragment = /* glsl */`
   float fogSun = pow(max(dot(fogDir, fogSunDir), 0.0), 6.0);
   vec3 fogCol = mix(fogColor, fogSunColor, fogSun * 0.5);
   gl_FragColor.rgb = mix(gl_FragColor.rgb, fogCol, clamp(fogFactor, 0.0, 1.0));
-  // the weather's mist, low on the ground, in drifting banks
+  // the weather's mist: lying on the low ground round you (fogMistBase),
+  // thinning above it, no thicker below it, in drifting banks. Along the ray:
+  // the share of it above the floor at its mean density there, the rest at
+  // the floor's.
   if (fogMist.w > 0.0) {
-    float mKdy = fogMist.y * vFogRay.y;
-    float mHf = abs(mKdy) > 1e-3 ? (1.0 - exp(-mKdy)) / mKdy : 1.0;
-    float mOpt = fogMist.x * exp(-fogMist.y * max(cameraPosition.y - fogMistBase, -20.0)) * mHf * fogDist;
+    float mH0 = cameraPosition.y - fogMistBase, mH1 = mH0 + vFogRay.y;
+    float mA0 = max(mH0, 0.0), mA1 = max(mH1, 0.0);
+    float mSpan = abs(mH1 - mH0), mUp = abs(mA1 - mA0);
+    float mAbove = mSpan > 1e-3 ? mUp / mSpan : step(0.0, mH0);
+    float mMean = mUp > 1e-3 ? (exp(-fogMist.y * min(mA0, mA1)) - exp(-fogMist.y * max(mA0, mA1))) / (fogMist.y * mUp) : exp(-fogMist.y * mA0);
+    float mOpt = fogMist.x * (mAbove * mMean + 1.0 - mAbove) * fogDist;
     if (fogMist.z > 0.0) {
       vec2 mP = (cameraPosition.xz + vFogRay.xz + fogMistO.xy) / 96.0 + fogMistO.zw;
       float mN = texture2D(fogNoise, mP).r * 0.6 + texture2D(fogNoise, mP * 3.0 + 0.37).g * 0.4;

@@ -1,9 +1,10 @@
 // The weather's mists, in the world (never laid over the screen): sand blown
 // on the desert wind, snow blowing in a whiteout, the grey murk of heavy rain,
 // spray torn off the crests in a storm at sea. Two parts:
-//  * a low layer in the fog (fog.js fogMist): thickest at the ground, thinning
-//    a few metres up, tinted the mist's own colour and broken into banks that
-//    drift with the wind;
+//  * a low layer in the fog (fog.js fogMist): lying on the low ground round
+//    you (the snowfields, the valley floor, the sea) and thinning as it climbs
+//    — up the Drum Rockies' cliffs, a plateau standing up out of it — tinted
+//    the mist's own colour and broken into banks that drift with the wind;
 //  * soft cards of mist drifting along the ground round you (a few dozen,
 //    one draw call): streaky for sand, round puffs for snow, tall veils for
 //    rain, low and quick over the water for spray.
@@ -24,8 +25,8 @@ const PERIOD = 96; // m: the fog's mist noise repeats this often (fog.js)
 // and how fast it thins with height (/m), the cards' size (w, h), their
 // height off the ground, how fast they ride the wind, streakiness
 const KIND = {
-  dust: { lit: [0.86, 0.68, 0.46], shade: [0.6, 0.43, 0.27], dens: 0.045, k: 0.06, w: 15, h: 7, lift: -0.5, speed: 1, streak: 1, alpha: 1 },
-  snow: { lit: [0.94, 0.96, 1.0], shade: [0.7, 0.75, 0.84], dens: 0.036, k: 0.05, w: 13, h: 9, lift: -0.5, speed: 0.75, streak: 0.25, alpha: 0.85 },
+  dust: { lit: [0.86, 0.68, 0.46], shade: [0.6, 0.43, 0.27], dens: 0.04, k: 0.03, w: 15, h: 7, lift: -0.5, speed: 1, streak: 1, alpha: 1 },
+  snow: { lit: [0.94, 0.96, 1.0], shade: [0.7, 0.75, 0.84], dens: 0.034, k: 0.045, w: 13, h: 9, lift: -0.5, speed: 0.75, streak: 0.25, alpha: 0.85 },
   rain: { lit: [0.62, 0.66, 0.7], shade: [0.42, 0.46, 0.5], dens: 0.012, k: 0.045, w: 22, h: 14, lift: -1, speed: 0.4, streak: 0.1, alpha: 0.4 },
   spray: { lit: [0.9, 0.94, 0.96], shade: [0.62, 0.7, 0.74], dens: 0.02, k: 0.35, w: 9, h: 3.5, lift: -0.3, speed: 1.3, streak: 0.4, alpha: 0.65 },
 };
@@ -111,6 +112,8 @@ class Mist {
     this.m4 = new THREE.Matrix4();
     this.amount = 0; // (eased: the mist comes and goes; inside, it fades away)
     this.base = 0;
+    this.floorWant = null;
+    this.floorT = 0;
     this.drift = new THREE.Vector2();
     this.mix = { lit: [0, 0, 0], shade: [0, 0, 0], dens: 0, k: 0, w: 0, h: 0, lift: 0, speed: 0, streak: 0, alpha: 0 };
     this.low = false;
@@ -169,11 +172,24 @@ class Mist {
     if (a < 0.01 || v.isUnder) {
       F.fogMist.value.w = 0;
     } else {
-      // (the layer's floor: the ground under you, smoothed as you go over hills; at sea, the sea)
-      const g = atSea ? 0 : Math.max(0, ctx.ground(w.wx(wx), wy));
-      this.base += (g - this.base) * Math.min(1, dt * 1.5);
+      // (the layer's floor: the low ground round you — the snowfields, the
+      // valley floor, the sea — so it lies there and climbs the cliffs from
+      // there, and a plateau stands up out of it; looked for a few times a
+      // second, eased as you go)
+      if ((this.floorT -= dt) <= 0 || this.floorWant === null) {
+        this.floorT = 0.4;
+        let lo = atSea ? 0 : Math.max(0, ctx.ground(w.wx(wx), wy));
+        for (let i = 0; i < 16 && lo > 0; i++) {
+          const r = i < 8 ? 30 : 70, t = (i % 8) * Math.PI / 4 + (i < 8 ? 0 : Math.PI / 8);
+          lo = Math.min(lo, Math.max(0, ctx.ground(w.wx(wx + Math.cos(t) * r), wy + Math.sin(t) * r)));
+        }
+        const snap = this.floorWant === null;
+        this.floorWant = lo;
+        if (snap) this.base = lo;
+      }
+      this.base += (this.floorWant - this.base) * Math.min(1, dt * 1.2);
       F.fogMist.value.set(M.dens * Math.min(1.2, a), M.k, this.low ? 0 : 0.85, Math.min(1, a * 1.4));
-      F.fogMistBase.value = this.base - 1;
+      F.fogMistBase.value = this.base;
       F.fogMistCol.value.setRGB(fc.r * 0.4 + (M.lit[0] * 0.55 + M.shade[0] * 0.45) * light * 0.6, fc.g * 0.4 + (M.lit[1] * 0.55 + M.shade[1] * 0.45) * light * 0.6, fc.b * 0.4 + (M.lit[2] * 0.55 + M.shade[2] * 0.45) * light * 0.6);
       // (it drifts with the wind; the noise is anchored in the world, wrapped so it never loses precision)
       const d = this.drift;

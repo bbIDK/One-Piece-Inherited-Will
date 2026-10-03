@@ -80,12 +80,11 @@ export function installWorld(game) {
     if (env.freakSnow > 0) { env.freakSnow -= dt; env.snow = Math.max(env.snow, 0.6); }
     // no storms above the clouds or under the sea
     if (game.world !== game.surface) { env.stormTarget = 0; env.storm = Math.min(env.storm, 0.1); }
-    // islands with their own permanent weather (Evil Black Drum, Punk Hazard…)
+    // islands with their own permanent weather (Evil Black Drum, Punk Hazard…):
+    // their storm, and their snow (the env brings the clouds it falls from)
     const wx = game.currentIsland?.def?.weather;
-    if (wx) {
-      if (wx.storm) env.stormTarget = Math.max(env.stormTarget, wx.storm);
-      if (wx.snow) env.snow = Math.max(env.snow, wx.snow);
-    }
+    env.ownSnow = wx?.snow || 0;
+    if (wx?.storm) env.stormTarget = Math.max(env.stormTarget, wx.storm);
   });
 
   // ---------------------------------------------------------- fog banks

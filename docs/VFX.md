@@ -1,7 +1,7 @@
 # VFX style bible and spec
 
 How combat effects look in this game, and the technical rules they are built
-to. Every effect in the 3D view is drawn by one layer, `src/render3d/vfx/`,
+to (and, in section 10, the sky and the weather). Every effect in the 3D view is drawn by one layer, `src/render3d/vfx/`,
 from the state the fx engine keeps (`game.fx.shapes`, `game.fx.parts`, the
 combat projectiles). Gameplay code says *what* happens (`fx.add('impact', …)`,
 `fx.burst(…)`, `fx.ring(…)`); this layer decides how it looks. If an effect
@@ -163,3 +163,150 @@ doesn't claim, and everything in the top-down 2D view.
 4. No allocations in `draw`; respect `v.low`; dark colours never add.
 5. Look at it in both views, at several moments: `node tools/shot.mjs
    combat-3d --mode=first|third [--ids=…]` and `combat-parry`.
+
+## 10. Sky and weather
+
+The sky, the light, the sea and the weather's effects are one system, driven
+by the weather in `game/env.js` (which is the place's: `game/weather.js`).
+The sky is drawn by `render3d/sky3d.js`, the rain, snow, ash, blown sand and
+lightning by `precip3d.js`, the mists by `mist3d.js` and `fog.js`, the sea by
+`water3d.js`.
+
+### The look
+
+Anime skies, not photographs: a clean blue gradient; fair-weather cumulus cut
+crisp out of the shared noise and cel-shaded in three flat tones (sunlit white
+tops, blue-lavender shade, a flat darker base), a silver lining toward the
+sun; and weather that takes the whole sky over. References: the One Piece
+anime's Grand Line skies (big white cumulus over a deep blue sea; slate storm
+masses with jagged white lightning; Wano's red skies; Egghead's clean, pale,
+shadowless light); The Wind Waker (cel bands, a sky that turns grey-purple in
+a storm); Sea of Thieves (storms you see coming as a dark mass on the horizon,
+rain hanging under it, the sea darkening and rising inside it, lightning
+animated as a leader then a stroke; distant clouds alpha-cut crisp, nearer
+ones softer — SIGGRAPH 2018 "The Technical Art of Sea of Thieves"); Breath of
+the Wild (the world split into areas tied to climates, each with its own odds
+for every kind of weather; rain turns to snow where it's cold; rainy skies
+cast almost no shadow); Genshin Impact (hard-edged, vector-clean shapes over
+soft gradients).
+
+### Layers, back to front (one pass over the sky's own pixels)
+
+| Layer | When | How |
+|---|---|---|
+| Gradient | always | zenith to horizon, by time of day; greyed by the overcast (soft grey in rain, slate in a storm), browned low by dust, whitened by snow, deeper blue in the heat |
+| Sun | by day | a hard disc and glow; under cloud the disc goes and a broad pale glow is left; dust reddens and dims it |
+| Stars | at night, clear | three layers on a sphere turning round the pole (many faint, some brighter, a few bright and HDR), each a 1–2 pixel point sized by the pixel's footprint, gently twinkling (more near the horizon), tinted blue-white to warm; fading at dusk, behind cloud and in overcast, and near the moon |
+| Milky Way | at night, clear | a soft clumpy band round a great circle with a dark rift, more stars in it |
+| Moon | at night | a disc lit in its phase (`env.moonPhase`: full every eighth day), the dark side faint with earthshine, darker seas, a halo; its light dims with the phase |
+| Aurora | the New World's and the poles' nights | green-to-violet curtains low in the north |
+| Horizon banks | always | distant cloud banks: flat bases, lumpy tops, melting into the haze |
+| Cumulonimbus | a storm (and before it arrives) | a dark tower on the horizon upwind (`env.front`, `env.frontAngle`) spreading into an anvil, lit from inside by its lightning; it rises first, the deck then spreads across the sky from its side, and its body stays in sight under the deck until the storm is overhead |
+| Cumulus | fair to cloudy | the fair-weather layer, cover from `env.cloud`, drifting on the wind (a frame at a time: a change of wind never makes them jump) |
+| Deck | overcast | a soft grey sheet in the rain with faint billows; in a storm one dark mass — heavy billows cel-shaded in slate (storm `#37474f`, underside `#263238`), dark bodies with their tops rimmed in what light there is, an even dark between them |
+| Scud | a storm | low, ragged, dark fragments racing under the deck |
+| Rain shafts | rain far off, under a storm's tower | grey curtains hanging to the sea |
+| Lightning | a storm, dry lightning | the bolt's direction and strength (`env.strike`, `env.lightning`) light the clouds from inside, those toward it most |
+
+Above the clouds (the sky islands) a sea of cloud lies below the horizon and
+only cirrus overhead. Under the sea and in the prison there's no weather.
+
+### Weather and the rest of the world
+
+- **Light**: under cloud the sun dims (×(1 − 0.72 × overcast)) and its
+  shadows fade away (shadow intensity to 0.15); the hemisphere light rises a
+  little so it's grey, not black. `env.ambient` darkens with the storm, cloud,
+  fog, dust and ash, and takes an odd sky's colour.
+- **Grading** (on 'high'): flatter and cooler under cloud (saturation down to
+  −14 %, −8 % more in a storm), richer in the heat.
+- **Sea**: under a grey sky it turns a dark grey-green, slate in a storm;
+  caustics and the sun's glitter go; rougher in rain. In the Calm Belt it goes
+  glassy: the swell all but gone (×0.15), the ripples ×0.2, a mirror for the sky.
+- **Fog**: closes in with the storm, rain, snow and dust.
+- **Lightning**: a few strokes flickering in quick succession (`env.pulses`);
+  mostly flashes in the cloud, now and then a fork to the sea — a jagged main
+  channel (midpoint displacement) and branches dying in the air, a white-hot
+  HDR core and a violet-blue glow, the leader running down in 0.07 s before
+  the stroke flashes. A near strike lights the world (the ambient), a far one
+  only its clouds. The thunder's delay and dullness come from the distance.
+- **Precipitation**: rain (drizzle to downpour, slanted by the wind), snow
+  (a whiteout in a blizzard), ash (the snow's flakes, grey), and sand blowing
+  along the ground in streaks on a desert wind.
+
+### Mists
+
+The weather's mists are in the world, never laid over the screen, and come
+and go with it (`env.mistDust`, `env.mistSnow`, `env.mistRain`; spray from the
+storm and wind at sea):
+
+| Mist | Colour | Thickness at the ground | Thins with height | Cards |
+|---|---|---|---|---|
+| Desert dust (dust, sandstorm) | warm ochre | 0.04 /m | 0.03 /m | wide, low, streaky, fast on the wind; sand streaks along the ground; the whole sky veiled ochre, the light warmed |
+| Snow fog (snow, blizzard) | white-blue | 0.034 /m | 0.045 /m | round puffs blowing |
+| Rain mist (heavy rain, storms) | grey | 0.012 /m | 0.045 /m | tall veils, slow |
+| Sea spray (a storm at sea) | white | 0.02 /m | 0.35 /m | low and quick, only over the water |
+
+Two parts: a second layer in the fog (`fog.js` `fogMist`), integrated along
+each ray like the haze — thinning with height above its floor, never thicker
+below it — and broken into banks drifting with the wind (two taps of the
+sky's noise where the ray ends); and soft cards of mist drifting along the
+ground round you (up to 40, one draw call, faded near the eye and far off).
+The layer's floor is the low ground round you (the lowest of 16 points
+30–70 m out, looked for a few times a second, eased): it lies on the
+snowfields and in the valleys and climbs the cliffs from there, so under
+the Drum Rockies the snow fog reads up their faces, and from the top of
+Drum Rock you look down on it lying over the land. None indoors, below
+decks or under the sea. An island's own permanent snow (Drum's
+`weather.snow`) falls from its own grey sky: the env brings the clouds.
+
+### Regional weather (`game/weather.js`)
+
+Each sea and each charted island has a climate: the odds of each kind of
+weather, how long it lasts, how hard it comes. Near a charted island (230 m
+past its coast, let go at 300 m) its own climate takes over; the little
+uncharted islets keep the sea's. Crossing between mild climates keeps the
+weather; anything else rolls the new place's at once, and every field still
+eases over (clouds in ~14 s, out in ~22 s; rain and snow follow the clouds
+and stop before they clear; storms in ~9 s; a storm's tower shows on the
+horizon first).
+
+| Climate | Weather | Lasts |
+|---|---|---|
+| East Blue | mild: mostly clear and fair, cloudy days, the odd shower or squall, rarely a storm | 2–4 min |
+| North Blue | greyer: cloud, rain, fog, flurries | 2–4 min |
+| West / South Blue | fair; the South warmer, with squalls and sun-showers | 2–4 min |
+| Paradise | erratic: any weather after any other — sudden storms and squalls, sun-showers, snow from a clear sky (and the Grand Line's tricks: the wind swinging round, rogue waves) | 25–80 s |
+| New World | extreme: violent storms most of all, a red sky at noon, dry lightning under violet cloud, the aurora by night | 20–65 s |
+| Calm Belt | dead calm: no wind at all, no waves, a glassy sea | — |
+| Winter island | snow, flurries, blizzards, grey days, a clear cold one now and then | |
+| Summer island | hot and clear, tropical squalls | |
+| Desert island | heat, blowing dust, sandstorms; never rain | |
+| Spring / autumn | fair and mild / grey and wet, foggy | |
+| Volcanic | ashfall, smoky grey | |
+| Gloom (Thriller Bark…) | fog and overcast | |
+| Sky island | above the clouds: always clear | |
+
+`env` keeps the fields the rest of the game reads (`rain`, `snow`, `storm`,
+`stormTarget`, `fog`, `windStrength`, `windAngle`, `lightning`, `ambient`,
+`clock`…) and adds `weather` (the kind), `forecast` (its name), `climate`,
+`island`, `cloud`, `dust`, `heat`, `ash`, `calm`, `odd` + `tint`, `aurora`,
+`front` + `frontAngle`, `strike`, and the mists. Anything that wants a storm
+still raises `stormTarget` and gets clouds, rain and lightning with it; a test
+or a multiplayer guest pins the weather with `weatherTimer = 1e9` (the guest
+takes the host's kind). `env.setWeather(kind, { now, hold })` sets it outright
+(creative mode: `weather <kind>`).
+
+### Budgets
+
+PERF_TABLE
+
+'low' quality: the sky's LOW define leaves out the scud, rain shafts, the
+tower's fine detail, the Milky Way, the aurora and two of the three star
+layers, and lights the deck's billows flat; the mist's layer is unbroken and
+it has 40 % of the cards; rain, snow and sand have half the drops.
+
+Look at it with `node tools/shot.mjs skyweather` (each kind of weather from
+Foosha's pier, a lightning strike, a storm coming up, the night sky and the
+moon, Drum in snow and Alabasta in dust; `--looks=kind@clock:view,…` for any
+other, `--quality=low` for the plain sky) and `weather`; the rules are tested
+in `tests/weather.test.mjs`.

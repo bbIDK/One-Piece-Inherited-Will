@@ -71,6 +71,7 @@ export class Env {
     this.frontAngle = this.windAngle + Math.PI; // …this way (radians, world x/y: it comes up from upwind)
     this.thunder = 0; // lightning without a storm (dry lightning under the New World's violet sky)
     this.windK = 1;
+    this.ownSnow = 0; // (an island's own snow, whatever the weather: news.js — Drum's, say)
     // the mists the weather raises (drawn in the world: render3d/mist3d.js)
     this.mistDust = 0; this.mistSnow = 0; this.mistRain = 0; this.mist = 0;
     // ---- lightning: the last bolt (for the sky, the fork and the thunder)
@@ -120,8 +121,8 @@ export class Env {
     const jumped = this.storm > this.stormOut + 0.02;
     this.storm = ease(this.storm, st, dt, TAU_STORM);
     // (a storm beyond this weather's own brings its clouds: a sandstorm's is sand)
-    const stormy = Math.max(st, this.storm), own = W.storm + 0.02;
-    const cloudT = Math.max(W.cloud, stormy > own ? Math.min(1, stormy * 1.6) : 0);
+    const stormy = Math.max(st, this.storm), own = W.storm + 0.02, ownSnow = this.ownSnow || 0;
+    const cloudT = Math.max(W.cloud, stormy > own ? Math.min(1, stormy * 1.6) : 0, ownSnow ? 0.62 + ownSnow * 0.5 : 0);
     // (never thinner than such a storm: code that sets env.storm outright gets its clouds at once)
     this.cloud = Math.max(ease(this.cloud, cloudT, dt, cloudT > this.cloud ? TAU_CLOUD : TAU_CLEAR), this.storm > own ? Math.min(1, this.storm * 1.1) : 0);
     // rain and snow wait for the clouds (a sun-shower doesn't), and stop before they clear
@@ -130,8 +131,8 @@ export class Env {
     // too; dry lightning and a sandstorm don't; over the desert, a few drops)
     const dry = CLIMATES[this.climate]?.dry ? 0.15 : 1;
     const ext = st > W.storm + 0.02 && st > 0.2 ? st : 0;
-    const precip = Math.max(W.rain + W.snow, ext) * gate * dry;
-    const asSnow = this.cold || (W.snow > 0 && !W.rain);
+    const precip = Math.max(W.rain + W.snow, ext, ownSnow) * gate * dry;
+    const asSnow = this.cold || ownSnow > 0 || (W.snow > 0 && !W.rain);
     this.rain = ease(this.rain, asSnow ? 0 : precip, dt, TAU_PRECIP);
     this.snow = ease(this.snow, asSnow ? precip : 0, dt, TAU_PRECIP);
     if (jumped && this.storm > 0.2) {
