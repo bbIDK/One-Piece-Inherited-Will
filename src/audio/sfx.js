@@ -994,6 +994,17 @@ export const SFX = {
   heartbeat: { prio: 6, cd: 0.4, max: 1, bus: 'ui', play: (v) => { v.thump(0, { f0: 62, f1: 40, dur: 0.11, gain: 0.18 }); v.thump(0.2, { f0: 55, f1: 38, dur: 0.1, gain: 0.12 }); } },
 };
 
+// What sort of sound each is: its share of the voices (engine.js) — and a
+// blow ('hit') of your fight dips the beds under it (audio.js). The world's
+// own sounds (thunder, the boat working) have a share of their own.
+const KINDS = {
+  hit: ['punch', 'punch_heavy', 'slash_hit', 'slash_heavy', 'block', 'parry', 'guardbreak', 'ko', 'fire', 'magma', 'ice', 'snow', 'lightning', 'thunder_small', 'water', 'swamp', 'poison', 'gas', 'smoke', 'sand', 'light', 'dark', 'quake', 'string', 'explosion', 'cannon', 'crash', 'doorbreak'],
+  tech: ['whoosh', 'dodge', 'haki', 'haki_off', 'haki_out', 'haki_obs', 'foresight', 'conqueror_rise', 'conqueror', 'conqueror_clash', 'knocked', 'getup', 'dry'],
+  move: ['step', 'jump', 'jump_big', 'land', 'land_heavy', 'splash', 'splash_big', 'splash_out', 'wade', 'gasp', 'choke', 'swim_pull', 'swim_kick', 'swim_breath', 'swim_under', 'tread', 'thrash', 'dive', 'surface', 'climb', 'board', 'oar_catch', 'oar_pull', 'oar_release'],
+  world: ['thunder', 'hull_creak', 'rigging', 'hull_slap', 'bell', 'seaking'],
+};
+for (const [kind, names] of Object.entries(KINDS)) for (const n of names) if (SFX[n]) SFX[n].kind = kind;
+
 // ------------------------------------------------------------ techniques
 // A technique's start: the wind-up, and (at `rel` seconds, when its first blow
 // or shot goes) the release. The fruits sound like themselves; the styles

@@ -167,7 +167,7 @@ export class Audio {
     if (name === 'whoosh' && at?.action?.def && at.action.t === 0) return this.tech(at);
     let def = SFX[name];
     if (HITS[name] && at && g) this.hitContext(at, k, name);
-    if (name === 'haki' && k.hit) key = 'haki_hit';
+    if (name === 'haki' && k.hit) { key = 'haki_hit'; def = { ...def, kind: 'hit' }; }
     if (HAKI_VOICED.has(name) && k.voice === undefined) k.voice = at?.hakiSig?.voice ?? 0.5;
     if (name === 'block' && at) { k.sword = !!(at.hasWeapon?.('sword') && at.drawn !== false); k.armament = !!at.armament; }
     if (name === 'parry' && at) k.perfect = !!at.parryPerfect;
@@ -188,11 +188,12 @@ export class Audio {
     const pl = def.bus === 'ui' ? { vol: 1, pan: 0, lp: 0, far: 0 } : this.place(at);
     if (!pl) return;
     this.last[key] = t;
+    // (yours — your own doing, or a blow of your fight — or someone else's: theirs sit under yours)
     const mine = !at || at === p || at.isPlayer || at.lastHitBy === p || at.captain === p || at === p?.ship;
     const prio = (def.prio ?? 5) + (mine ? 2 : 0) - Math.round(pl.far * 3);
     const v = this.E.open(key, {
-      bus: def.bus || 'sfx', vol: pl.vol * (k.vol ?? 1), pan: pl.pan + (k.pan || 0), lp: pl.lp,
-      send: (def.send || 0) + pl.far * 0.2, drive: def.drive || 0, prio, max: def.max ?? 4,
+      bus: def.bus || (mine ? 'sfx' : 'npc'), vol: pl.vol * (k.vol ?? 1), pan: pl.pan + (k.pan || 0), lp: pl.lp,
+      send: (def.send || 0) + pl.far * 0.2, drive: def.drive || 0, prio, max: def.max ?? 4, kind: def.kind || 'foley',
     });
     if (!v) return;
     v.pj = 0.97 + Math.random() * 0.06;
@@ -200,7 +201,11 @@ export class Audio {
     def.play(v, k);
     if (k.fruit && FLAVOUR[k.fruit]) FLAVOUR[k.fruit](v, k);
     v.end += v.tail || 0;
-    if (def.duck) this.E.duck(def.duck * Math.min(1, pl.vol * 1.3));
+    // the side-chain: a blow of your fight (or a big moment near you) dips the beds, the others and the music under it
+    const near = Math.min(1, pl.vol * 1.3);
+    if (mine && def.kind === 'hit') this.E.sidechain((def.side ?? 0.3 + 0.35 * Math.min(1.2, k.w ?? 0.5)) * near, def.hold ?? 0.12);
+    else if (def.side) this.E.sidechain(def.side * near * (mine ? 1 : 0.6), def.hold ?? 0.12);
+    if (def.duck) this.E.duck(def.duck * near);
   }
 
   /** What landed the blow on `at`, and how: its weight, a kick, Haki, a counter, the Devil Fruit behind it. */
@@ -239,12 +244,14 @@ export class Audio {
     const speed = def.noSpeedup ? 1 : actor.atkSpeed?.() || 1;
     const rel = (at / speed) * (a.slow || 1);
     const mine = actor === p;
-    const v = this.E.open(key, { vol: pl.vol, pan: pl.pan, lp: pl.lp, send: 0.08 + pl.far * 0.2, prio: (def.fruit ? 6 : 5) + (mine ? 2 : 0) - Math.round(pl.far * 3), max: 3 });
+    const v = this.E.open(key, { bus: mine ? 'sfx' : 'npc', kind: 'tech', vol: pl.vol, pan: pl.pan, lp: pl.lp, send: 0.08 + pl.far * 0.2, prio: (def.fruit ? 6 : 5) + (mine ? 2 : 0) - Math.round(pl.far * 3), max: 3 });
     if (!v) return;
     v.pj = 0.97 + Math.random() * 0.06;
     const gun = /sling/i.test(actor.weapon?.name || '') ? 'slingshot' : null;
     try { techStart(v, def, { rel, weapon: weaponOf(actor, def), gun, heavy: /heavy/.test(def.id || ''), voice: actor.hakiSig?.voice }); } catch (e) { if (!this.warned) { this.warned = true; console.warn('tech sound', def.id, e); } }
     v.end += v.tail || 0;
+    // (your own ability: the beds make room from its wind-up through its release)
+    if (mine && (def.fruit || def.cost || /heavy/.test(def.id || ''))) this.E.sidechain(def.fruit ? 0.55 : 0.4, Math.min(1.5, rel + 0.15));
   }
 
   /**
