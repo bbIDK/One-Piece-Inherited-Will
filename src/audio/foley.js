@@ -261,7 +261,7 @@ export class Foley {
       L.ocean = (atSea ? 0.55 : this.coast * 0.5) * (calm ? 0.4 : 1) * (1 + storm * 0.6);
       L.wind = calm ? 0.04 : ((env.windStrength || 1) * 0.18 + storm * 0.35) * (atSea ? 1.2 : 0.75);
       L.howl = storm > 0.5 ? (storm - 0.5) * 0.9 : 0;
-      L.rain = (env.rain || 0) * 0.75;
+      L.rain = (env.rain || 0) * 0.4;
       if (env.snow > 0.05) L.wind += env.snow * 0.15;
     }
     if (zone === 'sky') { L.sky = 0.45; L.wind = 0.12; }
@@ -277,15 +277,15 @@ export class Foley {
     if (isl && !atSea) {
       const leafy = LEAFY[clim];
       if (w.town) {
-        L.town = (night ? 0.18 : 0.55);
+        L.town = (night ? 0.07 : 0.2);
         S.voice = night ? 3 : 10; S.laugh = night ? 1 : 2; S.clink = night ? 0 : 2; S.dog = 0.8;
       } else if (leafy) {
-        L.leaves = 0.2 * (env.windStrength || 1);
-        if (!night) { S.bird = clim === 'jungle' || clim === 'tropical' ? 3 : 6; if (clim === 'jungle' || clim === 'tropical' || clim === 'prehistoric') { S.tropical = 3; L.cicada = 0.3; } }
-        else { L.cricket = 0.28; S.owl = 1.2; if (clim === 'marsh' || clim === 'jungle' || clim === 'mangrove') S.frog = 3; }
+        L.leaves = 0.12 * (env.windStrength || 1);
+        if (!night) { S.bird = clim === 'jungle' || clim === 'tropical' ? 3 : 6; if (clim === 'jungle' || clim === 'tropical' || clim === 'prehistoric') { S.tropical = 3; L.cicada = 0.1; } }
+        else { L.cricket = 0.1; S.owl = 1.2; if (clim === 'marsh' || clim === 'jungle' || clim === 'mangrove') S.frog = 3; }
       }
       if (clim === 'volcanic') { L.fire = 0.25; S.embers = 3; }
-      if (night && w.town && LEAFY[clim]) L.cricket = 0.15;
+      if (night && w.town && LEAFY[clim]) L.cricket = 0.05;
     }
     // gulls over the coasts of the Blues and Paradise by day
     if (zone === 'surface' && !night && !calm && !p.under && (this.coast > 0.1 || (atSea && isl)) && w.seaId !== 'new_world') S.gull = 3 + this.coast * 4;

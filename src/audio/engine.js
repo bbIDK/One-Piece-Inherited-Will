@@ -60,7 +60,7 @@ export class Engine {
   /** Volumes from the settings: effects (and the beds with them), and music (`sec` 0: at once). */
   setVolumes(sfx, music, sec = 0.05) {
     const t = this.now();
-    for (const [p, v] of [[this.sfx.gain, sfx * 0.6], [this.amb.gain, sfx * 0.55], [this.ui.gain, sfx * 0.6], [this.music.gain, music * 0.28]]) {
+    for (const [p, v] of [[this.sfx.gain, sfx * 0.6], [this.amb.gain, sfx * 0.3], [this.ui.gain, sfx * 0.6], [this.music.gain, music * 0.28]]) {
       if (sec > 0) ramp(p, v, t, sec); else { p.cancelScheduledValues(t); p.setValueAtTime(v, t); }
     }
   }
