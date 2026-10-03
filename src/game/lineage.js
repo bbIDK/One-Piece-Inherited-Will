@@ -16,6 +16,8 @@ import { regionAt, SEA_IDS, POS_SCALE, SIZE_SCALE } from '../world/constants.js'
 import { findShore, standable } from './interact.js';
 import { upgradeFleet, recordShip, liveShips } from './fleet.js';
 import { hakiSignature, charSignature, kingChance } from './haki.js';
+import { getAbility } from './abilities.js';
+import { HOTBAR_SIZE, ENTRY, addToHotbar } from './hotbar.js';
 
 // --------------------------------------------------------------- birth traits
 export const TRAITS = {
@@ -137,7 +139,8 @@ export function createCharacter(legacy, birth, choices) {
     bounty: 0,
     faction: 'civilian',
     marineRank: null, merit: 0,
-    style, masteries, techniques, hotbar: techniques.slice(0, 6),
+    // (the hotbar holds what you take out — food, weapons, your Devil Fruit; techniques are on the skill keys: keys.js)
+    style, masteries, techniques, hotbar: [], hotbarV: 2,
     fruit: null, fruitMastery: 0, fruitsEaten: 0,
     haki: { armament: 0, observation: birth.race === 'three_eye' ? 8 : 0, conqueror: 0 },
     getUpCharges: 1,
@@ -339,12 +342,50 @@ export function upgradeChar(c) {
   if (!c.hakiSig) c.hakiSig = charSignature(c);
   // the ships you had are the ships you own
   upgradeFleet(c);
+  // (from when techniques sat on the hotbar)
+  migrateHotbar(c);
   // attribute points from the old breakthrough system are spent automatically
   if (c.unspent > 0) {
     const keys = ['str', 'agi', 'end', 'vit', 'wil'];
     for (let i = 0; i < c.unspent; i++) { const k = keys[i % keys.length]; c.attrs[k] = Math.min(100, c.attrs[k] + 1); }
     c.unspent = 0;
   }
+  return c;
+}
+
+/**
+ * The hotbar from when techniques sat on it (now it holds what you take out,
+ * and techniques are on the skill keys: keys.js): techniques come off it — a
+ * Dial's goes back to the Dial itself — and your Devil Fruit gets an entry
+ * where its first technique was, with the forms its mastery has opened and
+ * its awakened set. The techniques stay yours, a fruit's whole base set with
+ * them: nothing is lost.
+ */
+export function migrateHotbar(c) {
+  if (!c || (c.hotbarV || 1) >= 2) return c;
+  const hb = (c.hotbar || []).slice(0, HOTBAR_SIZE);
+  while (hb.length < HOTBAR_SIZE) hb.push(null);
+  c.techniques = c.techniques || [];
+  const dialOf = (id) => (c.inventory || []).find((i) => ITEMS[i.id]?.type === 'dial' && ITEMS[i.id].ability === id)?.id;
+  let fruitAt = -1;
+  for (let i = 0; i < HOTBAR_SIZE; i++) {
+    const id = hb[i];
+    if (!id || id.startsWith('item:') || id.startsWith('ms:')) continue;
+    const dial = dialOf(id);
+    if (dial && !hb.includes('item:' + dial)) { hb[i] = 'item:' + dial; continue; }
+    if (fruitAt < 0 && c.fruit && getAbility(id)?.source === 'fruit:' + c.fruit) fruitAt = i;
+    hb[i] = null;
+  }
+  c.hotbar = hb;
+  const f = FRUITS[c.fruit];
+  if (f) {
+    for (const id of unlockedFruitTechniques(c.fruit, c.fruitMastery || 0)) if (!c.techniques.includes(id)) c.techniques.push(id);
+    if (fruitAt >= 0) hb[fruitAt] = ENTRY.fruit;
+    else addToHotbar(c, ENTRY.fruit);
+    for (const F of f.forms || []) if ((c.fruitMastery || 0) >= F.mastery) addToHotbar(c, ENTRY.form(F.id));
+    if (c.fruitAwakened) addToHotbar(c, ENTRY.awake);
+  }
+  c.hotbarV = 2;
   return c;
 }
 
@@ -418,6 +459,12 @@ export function setDrawn(game, on) {
   if (!!p.drawn === on) return false;
   p.drawn = on;
   if (on && p.held) { p.held = null; p.eating = null; } // (food goes back in the bag)
+  // (and the Devil Fruit is put away: a form of it ends — entries.js)
+  if (on && (p.fruitOut || p.buffs?.some((b) => b.form))) {
+    p.fruitOut = false;
+    if (p.action?.def?.formOf) p.action = null;
+    p.endForm?.();
+  }
   p.style = handStyle(p);
   game.audio?.sfx('equip');
   game.emit?.('weaponDrawn', on);
@@ -433,6 +480,7 @@ export function refreshPlayer(game) {
   p.weapon = weaponFromChar(c);
   if (!p.weapon) p.drawn = false;
   p.style = handStyle(p);
+  if (!c.fruit) p.fruitOut = false;
   p.fruit = c.fruit;
   p.fruitMastery = c.fruitMastery;
   p.hakiSkill = c.haki;

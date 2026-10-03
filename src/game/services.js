@@ -1,5 +1,5 @@
 // Town services: inns, doctors, shipwrights, shops, trainers, sparring.
-import { addToHotbar } from './hotbar.js';
+import { skillHome } from './moveset.js';
 import { sigOf } from './haki.js';
 import { TRAINERS } from '../data/trainers.js';
 import { STYLES } from '../data/styles.js';
@@ -203,9 +203,10 @@ export class Services {
     if (!pay(g, this.techPrice(id))) return false;
     c.techniques.push(id);
     const d = getAbility(id);
-    addToHotbar(c, id);
     refreshPlayer(g);
     g.ui.toast('TECHNIQUE LEARNED', d.name, '#90caf9');
+    // (techniques sit on the skill keys of their moveset: keys.js)
+    g.log(`${d.name} learned: it's ${skillHome(id, g.settings)}.`, '#90caf9');
     persist(g);
     return true;
   }

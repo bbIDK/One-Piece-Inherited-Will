@@ -6,7 +6,7 @@
 // it all with a click, and more besides: any Devil Fruit, another race, Haki,
 // attributes, bosses, ships and Sea Kings — everything there is to try out.
 import { ITEMS } from '../data/items.js';
-import { FRUITS, unlockedFruitTechniques } from '../data/fruits.js';
+import { FRUITS } from '../data/fruits.js';
 import { RACES, makeLook, MINK_KINDS, FISHMAN_KINDS } from '../data/races.js';
 import { HAKI_ABILITIES } from '../data/haki.js';
 import { SHIPS } from '../data/ships.js';
@@ -16,7 +16,7 @@ import { makeEnemy, makeNPC, npcDef, allNpcDefs, ARCHETYPES } from './npcs.js';
 import { findShore } from './interact.js';
 import { refreshPlayer, hakiKnown, needsHaki } from './lineage.js';
 import { getAbility } from './abilities.js';
-import { addToHotbar } from './hotbar.js';
+import { addToHotbar, dropFromHotbar, ENTRY, isMoveset } from './hotbar.js';
 import { makeSeaKing } from './sea.js';
 import { FISH } from './sealife.js';
 import { aggro } from '../content/helpers.js';
@@ -32,6 +32,8 @@ const HELP = [
   'weather clear | rain | storm — change the weather',
   'give <item> [how many] — e.g. give meat 5',
   'fruit <name> — a Devil Fruit, e.g. fruit gomu',
+  'mastery <0-100> — your Devil Fruit\'s mastery (its forms open with it)',
+  'awaken — awaken your Devil Fruit (again: take it away)',
   'race <name> — become another race, e.g. race mink',
   'berries <amount>',
   'heal — full health and air',
@@ -86,9 +88,10 @@ export function giveFruit(game, id) {
 
 /**
  * Take your Devil Fruit's power away again (to eat another, or the same one
- * afresh): its techniques, the buffs they left on you, the hold it had on the
- * sea. (The world's count of fruits is left as it was: one that grew out
- * there is never rolled into the world again — see content/fruits.js.)
+ * afresh): its techniques, its entries on the hotbar (the fruit, its forms,
+ * its awakened set), the buffs it left on you, the hold it had on the sea.
+ * (The world's count of fruits is left as it was: one that grew out there is
+ * never rolled into the world again — see content/fruits.js.)
  */
 export function removeFruit(game) {
   const c = game.state?.char, p = game.player;
@@ -96,35 +99,63 @@ export function removeFruit(game) {
   if (!fid || !p) return null;
   const its = (id) => typeof id === 'string' && getAbility(id)?.fruit === fid;
   c.techniques = c.techniques.filter((id) => !its(id));
-  c.hotbar = (c.hotbar || []).map((id) => (its(id) ? null : id));
+  c.hotbar = (c.hotbar || []).map((id) => (its(id) || (isMoveset(id) && id !== ENTRY.fists) ? null : id));
   c.fruit = null;
   c.fruitMastery = 0;
   c.fruitsEaten = 0;
-  p.buffs = p.buffs.filter((b) => !its(b.source));
+  c.fruitAwakened = false;
+  c.formsShown = [];
+  p.buffs = p.buffs.filter((b) => !its(b.source) && !b.form);
+  p.fruitOut = false;
   refreshPlayer(game);
   return fid;
 }
 
 /**
- * Set your Devil Fruit's mastery: you know just the techniques it opens up
- * (those that need Haki come out of hiding once it awakens, as ever).
+ * Set your Devil Fruit's mastery. Its base techniques are yours whatever it
+ * is; what changes is how hard they hit and which of its forms are open — on
+ * the hotbar from there (one that needs Haki only once a Haki has woken), off
+ * it below theirs. Returns how many forms are open.
  */
 export function setFruitMastery(game, v) {
   const c = game.state?.char, p = game.player;
-  if (!c?.fruit || !p) return 0;
+  const f = FRUITS[c?.fruit];
+  if (!f || !p) return 0;
   v = clamp(Math.round(v), 0, 100);
-  const open = new Set(unlockedFruitTechniques(c.fruit, v));
-  const its = (id) => typeof id === 'string' && getAbility(id)?.fruit === c.fruit;
-  c.techniques = c.techniques.filter((id) => !its(id) || open.has(id));
-  c.hotbar = (c.hotbar || []).map((id) => (its(id) && !open.has(id) ? null : id));
-  for (const id of open) {
-    if (c.techniques.includes(id)) continue;
-    c.techniques.push(id);
-    if (!(needsHaki(getAbility(id)) && !hakiKnown(c))) addToHotbar(c, id);
-  }
   c.fruitMastery = p.fruitMastery = v;
+  c.formsShown = c.formsShown || [];
+  let open = 0;
+  for (const F of f.forms || []) {
+    if (v >= F.mastery) {
+      open++;
+      if (needsHaki(getAbility(F.activate)) && !hakiKnown(c)) continue;
+      if (!c.formsShown.includes(F.id)) c.formsShown.push(F.id);
+      addToHotbar(c, ENTRY.form(F.id));
+    } else {
+      dropFromHotbar(c, ENTRY.form(F.id));
+      c.formsShown = c.formsShown.filter((x) => x !== F.id);
+      if (p.buffs.some((b) => b.form === F.id)) p.endForm(false);
+    }
+  }
   refreshPlayer(game);
-  return open.size;
+  return open;
+}
+
+/**
+ * Awaken your Devil Fruit there and then (or take its awakening away again):
+ * its awakened set on the hotbar, to switch on and off.
+ */
+export function setFruitAwakened(game, on) {
+  const c = game.state?.char, p = game.player;
+  if (!FRUITS[c?.fruit] || !p) return false;
+  c.fruitAwakened = !!on;
+  if (on) addToHotbar(c, ENTRY.awake);
+  else {
+    dropFromHotbar(c, ENTRY.awake);
+    if (p.buffs.some((b) => b.form === 'awake')) p.endForm(false);
+  }
+  refreshPlayer(game);
+  return true;
 }
 
 // ------------------------------------------------------------------ races
@@ -155,7 +186,7 @@ export function raceLook(look, race, seed) {
 /** A style the race is born knowing (lineage.js createCharacter), and its first technique. */
 function innateStyle(c, style, mastery, tech) {
   c.masteries[style] = Math.max(c.masteries[style] || 0, mastery);
-  if (!c.techniques.includes(tech)) { c.techniques.push(tech); addToHotbar(c, tech); }
+  if (!c.techniques.includes(tech)) c.techniques.push(tech);
 }
 
 /**
@@ -210,8 +241,9 @@ export function setKind(game, name) {
 // -------------------------------------------------------------- Haki, body
 /**
  * Set a Haki to a level (0: not awakened). The techniques that level opens
- * are yours too, as a master would teach them; Conqueror's comes with the
- * King's Disposition it's born of.
+ * are yours too, as a master would teach them (on the Haki keys while that
+ * Haki is on: moveset.js); Conqueror's comes with the King's Disposition it's
+ * born of.
  */
 export function setHaki(game, type, lvl) {
   const c = game.state?.char, p = game.player;
@@ -227,7 +259,6 @@ export function setHaki(game, type, lvl) {
   for (const d of HAKI_ABILITIES) {
     if (d.hakiType !== type || lvl < (d.learn?.level || 1) || c.techniques.includes(d.id)) continue;
     c.techniques.push(d.id);
-    if (d.id !== 'haki_conqueror') addToHotbar(c, d.id); // (that one is G)
   }
   refreshPlayer(game);
   if (!spirit && p.hakiUnlocked()) p.haki = p.d.maxHaki;
@@ -381,7 +412,8 @@ export function installCreative(game) {
       game.ui?.toast('POWER GONE', `${FRUITS[fid].name} — you could swim again.`, '#80deea');
       return `The ${FRUITS[fid].name}'s power has left you.`;
     },
-    setFruitMastery(v) { setFruitMastery(game, v); },
+    setFruitMastery(v) { return setFruitMastery(game, v); },
+    setFruitAwakened(on) { return setFruitAwakened(game, on); },
     setRace(race) {
       if (!changeRace(game, race)) return '';
       game.audio?.sfx('reveal');
@@ -599,6 +631,18 @@ export function installCreative(game) {
           const id = FRUITS[q] ? q : Object.keys(FRUITS).find((k) => k.includes(q) || FRUITS[k].name.toLowerCase().includes(q) || FRUITS[k].en.toLowerCase().includes(q));
           if (!q || !id) return `No Devil Fruit like "${q}".`;
           return C.giveFruit(id);
+        }
+        case 'mastery': {
+          const v = +args[0];
+          if (!c.fruit) return 'You have no Devil Fruit power.';
+          if (!(v >= 0 && v <= 100)) return 'mastery <0-100>';
+          const n = C.setFruitMastery(v);
+          return `${FRUITS[c.fruit].name} mastery ${Math.round(v)}${n ? ` — ${n} form${n > 1 ? 's' : ''} open` : ''}.`;
+        }
+        case 'awaken': {
+          if (!c.fruit) return 'You have no Devil Fruit power.';
+          C.setFruitAwakened(!c.fruitAwakened);
+          return c.fruitAwakened ? `The ${FRUITS[c.fruit].name} has awakened: ${FRUITS[c.fruit].awakening.name} is on your hotbar.` : 'Its awakening is gone.';
         }
         case 'race': {
           const q = args.join(' ').toLowerCase().replace(/[\s-]+/g, '_');

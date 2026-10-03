@@ -53,21 +53,26 @@ const LOW = 3.5; // m over the ground below which walls, trees and the like are 
 
 const helpless = (a) => !!(a.status && (a.status.freeze || a.status.despair || a.status.heartless || a.status.pieces || a.status.lifted || a.status.puppet));
 const timeOf = (game) => game.env?.time ?? game.time ?? 0;
+/** Fruit mastery by which a fruit's flight lasts as long as it ever will. */
+export const FLY_MASTERY = 40;
 
 /**
  * How `a` flies, if they can just now: { style, gauge (s), speed, climb,
  * dive (m/s), ceiling (m over the ground), drain (×), sea (× out over the
  * open sea), refill (s from empty), ride, fruit (it's a fruit's: Seastone and
- * the sea take it) } — the best of their fruit's (mastered far enough) and
- * their race's — or null.
+ * the sea take it) } — the best of their fruit's and their race's — or null.
+ * A fruit's flight is yours from the first bite, like all its base set; its
+ * mastery keeps you up longer (FLY_MASTERY: from 60% of the gauge to all of it).
  */
 export function flightOf(a) {
   let best = null;
   const f = a?.fruitDef;
   if (f) {
+    const k = 0.6 + 0.4 * Math.min(1, (a.fruitMastery || 0) / FLY_MASTERY);
     for (const t of f.techniques) {
-      if (!t.flight || (a.fruitMastery || 0) < t.mastery) continue;
+      if (!t.flight) continue;
       const s = { ...DEF, ...t.flight, fruit: true, tech: t.id };
+      s.gauge = Math.round(s.gauge * k * 10) / 10;
       if (!best || s.gauge > best.gauge) best = s;
     }
   }

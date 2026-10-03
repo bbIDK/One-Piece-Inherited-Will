@@ -92,7 +92,9 @@ const TIPS = [
   "A Devil Fruit user can't swim. Fall in and thrash back to shore before your strength gives out.",
   'Rest at an inn and that is where you wake if you fall.',
   'Homes are locked: knock, or kick the door in — a crime, unless it is a pirates\' den.',
-  'Drag techniques and food straight onto your hotbar from the Inventory or Skills menu.',
+  'The number keys take things out — food, a weapon, your Devil Fruit; the skills of what is out are on Z, B, N, Y and O.',
+  'Click a key on the skills panel (bottom right) to change it — or in Settings, under Controls.',
+  'Fight worthy foes with your Devil Fruit: its mastery opens its forms, and at its height it can awaken.',
   'Tap Ctrl in third person for shift lock; V switches between first and third person.',
   'Out of air under water? Swim for the surface — your lungs will not wait.',
   'Enemies hunt you by sight. Break the line of sight and they will lose you.',
@@ -307,7 +309,7 @@ async function start() {
     crew: () => openCrew(game),
     quests: () => openQuests(game),
     menu: () => ui.openMenu(),
-    help: () => ui.openPanel(helpContent(game.state?.char), { wide: true, id: 'help' }),
+    help: () => ui.openPanel(helpContent(game.state?.char, game.settings), { wide: true, id: 'help' }),
     map: () => game.openMap(),
     view: () => game.cycleView(),
     // (creative mode only: F1, or the pause menu)
@@ -345,8 +347,8 @@ async function start() {
   // (the quest tracker catches up the moment a quest moves on)
   for (const ev of ['questStarted', 'questStage', 'questDone', 'questAbandoned']) game.on(ev, () => { ui.qtT = 0; });
   game.on('playerLanded', (tgt, info) => { if (view3d?.active) ui.hitMarker(info); });
-  // food and medicine on the hotbar
-  game.useHotbarItem = (id) => {
+  // food and medicine on the hotbar (and a Dial, fired at `target`)
+  game.useHotbarItem = (id, target) => {
     const c = game.state?.char;
     if (!c) return false;
     if (!c.inventory.some((i) => i.id === id)) { game.log(`You have no ${ITEMS[id]?.name || id} left.`, '#ff8a80'); return false; }
@@ -354,6 +356,8 @@ async function start() {
     // eat; again to put it away). On a touch screen they're eaten at once — a
     // Devil Fruit after the same last warning as in the Inventory.
     const d = ITEMS[id], p = game.player;
+    // (a Dial: learned the first time, and fired where you aim)
+    if (d?.type === 'dial' && d.ability && p) { useItem(game, id); return p.tryTechnique(d.ability, game, target); }
     if (d?.type === 'fruit' && input.touch?.on) { if (!game.state.char.fruit) confirmEat(game, id); else useItem(game, id); return true; }
     if (d && (d.type === 'food' || d.type === 'medicine' || d.type === 'fruit') && !input.touch?.on && p) {
       if (p.held === id) p.controller?.putAway?.(p);
@@ -480,7 +484,7 @@ async function start() {
         const legacy = loadLegacy();
         legacyShopScreen(ui, legacy, { save: () => saveLegacy(legacy), onDone: showTitle, doneLabel: 'Back' });
       },
-      onHelp: () => { ui.hideScreen(); ui.openPanel(helpContent(null), { wide: true, onClose: showTitle }); },
+      onHelp: () => { ui.hideScreen(); ui.openPanel(helpContent(null, game.settings), { wide: true, onClose: showTitle }); },
       onSettings: () => { ui.hideScreen(); openSettings(game); const s = ui.stack[ui.stack.length - 1]; if (s) s.onClose = () => { game.applySettings(true); showTitle(); }; },
     });
   };

@@ -462,10 +462,12 @@ export const FRUIT_RARITY = {
 // every fruit's forms, awakening, heavy and M1 (data/fruitForms.js)
 attachKits(FRUITS);
 
+/** The techniques you have with a fruit: its whole base set, the moment it's eaten (`mastery` no longer matters). */
 export function unlockedFruitTechniques(fruitId, mastery) {
+  void mastery;
   const f = FRUITS[fruitId];
   if (!f) return [];
-  return f.techniques.filter((t) => mastery >= t.mastery).map((t) => t.id);
+  return f.techniques.map((t) => t.id);
 }
 
 /** The forms of a fruit its mastery has opened up (and those still to come). */

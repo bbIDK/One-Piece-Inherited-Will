@@ -6,19 +6,23 @@
 //    real threat count — beating up weaklings teaches nothing.
 //  * Weapon mastery: the more you fight with fists, legs, swords, guns,
 //    staffs or axes, the harder that kind of weapon hits.
-//  * Style mastery unlocks techniques; Devil Fruit mastery unlocks fruit moves.
+//  * Style mastery unlocks techniques. A Devil Fruit's base techniques are
+//    all yours on eating it; its mastery makes them stronger and opens up its
+//    forms (Gum-Gum's Gears...), and at its height, in a hard fight, its
+//    awakening (data/fruitForms.js).
 //  * Great victories (bosses, story quests, spars) are BREAKTHROUGHS: your
 //    body surges in the directions you have been training.
 //  * Haki is never taught to a nobody: Armament stirs in those who have grown
 //    strong enough, Observation in those who have learned to read attacks —
 //    at a random moment of a hard fight, like in the stories.
 //  * Legends: great feats the world remembers.
-import { addToHotbar } from './hotbar.js';
+import { addToHotbar, ENTRY } from './hotbar.js';
 import { threatFactor, ATTR_CAP, ATTRS } from './stats.js';
-import { unlockedFruitTechniques, FRUITS } from '../data/fruits.js';
+import { FRUITS, AWAKEN_MASTERY } from '../data/fruits.js';
+import { keysOf, keyLabel } from './keys.js';
 import { getAbility, weaponKindOf } from './abilities.js';
 import { STYLES } from '../data/styles.js';
-import { persist, refreshPlayer, hakiKnown, needsHaki } from './lineage.js';
+import { persist, refreshPlayer, hakiKnown, needsHaki, setDrawn } from './lineage.js';
 import { earn } from './inventory.js';
 import { formatBerries, roundBounty } from '../core/math.js';
 import { bountySea } from './reputation.js';
@@ -26,6 +30,8 @@ import { LEGENDS } from '../data/dreams.js';
 import { HAKI_HOW } from './haki.js';
 
 const KEYS = ['str', 'agi', 'end', 'vit', 'wil'];
+/** The key of hotbar slot `i` ('1'...'9', '0'). */
+const hotbarKey = (i) => String((i + 1) % 10);
 export const WEAPON_KINDS = { fists: 'Fists', legs: 'Legs', sword: 'Swords', gun: 'Guns', staff: 'Staffs', axe: 'Axes' };
 
 export class Progression {
@@ -40,8 +46,8 @@ export class Progression {
     game.on('playerGotUp', () => this.train('wil', 10, true));
     // how each Haki is obtained, told once: when one first wakes in you, or someone else's first presses on you
     game.hintHaki = () => game.hint('haki_how', `HAKI, the power of will. Armament: ${HAKI_HOW.armament} Observation: ${HAKI_HOW.observation} Conqueror's: ${HAKI_HOW.conqueror} (Character menu, C: Haki.)`);
-    game.on('hakiAwakened', () => game.hintHaki());
-    game.on('conquerorAwakened', () => game.hintHaki());
+    game.on('hakiAwakened', () => { game.hintHaki(); this.openForms(); });
+    game.on('conquerorAwakened', () => { game.hintHaki(); this.openForms(); });
     game.on('questDone', () => this.checkDream());
     let t = 0;
     game.on('tick', (dt) => { if ((t += dt) > 5) { t = 0; this.checkDream(); } });
@@ -118,6 +124,8 @@ export class Progression {
     const tf = att ? this.worth(att) : 0.5;
     if (tf <= 0 || !p.d) return;
     this.train('vit', Math.min(0.4, n / p.d.maxHp) * 45 * tf);
+    // (a mastered fruit, its user at the edge against a worthy foe: it may awaken)
+    if (p.state === 'idle' && p.hp <= p.d.maxHp * 0.25) this.maybeAwakenFruit(att, 'edge');
   }
 
   // ------------------------------------------------------------ training
@@ -175,22 +183,85 @@ export class Progression {
     if (Math.floor(after / 5) > Math.floor(before / 5)) this.game.log(`${WEAPON_KINDS[kind] || kind} mastery ${Math.floor(after)} — your ${(WEAPON_KINDS[kind] || kind).toLowerCase()} hit harder`, '#90caf9');
   }
 
+  /**
+   * Fruit mastery: its blows grow stronger (abilities.js powerFor), and at
+   * its marks the fruit's forms open up (openForms); at its height it's ready
+   * to awaken, the next time a hard fight brings it out (maybeAwakenFruit).
+   */
   addFruitMastery(amt) {
     const g = this.game, p = g.player, c = this.char;
+    const f = FRUITS[c?.fruit];
+    if (!f) return;
     const before = p.fruitMastery;
     const after = Math.min(100, before + amt);
     p.fruitMastery = after;
     c.fruitMastery = after;
-    const had = new Set(unlockedFruitTechniques(c.fruit, before));
-    for (const id of unlockedFruitTechniques(c.fruit, after)) {
-      if (had.has(id)) continue;
-      if (!c.techniques.includes(id)) c.techniques.push(id);
-      const d = getAbility(id);
-      if (needsHaki(d) && !hakiKnown(c)) continue; // it reveals itself once Haki awakens
-      g.ui.toast('NEW TECHNIQUE', d.name, '#ffab91');
-      g.log(`Your mastery of the ${FRUITS[c.fruit].name} reveals a new technique: ${d.name}. Put it on your hotbar from the Skills tab.`, '#ffab91');
-      addToHotbar(c, id);
+    if (Math.floor(after / 10) > Math.floor(before / 10)) g.log(`${f.name} mastery ${Math.floor(after)}: its power grows.`, '#ffab91');
+    this.openForms();
+    if (before < AWAKEN_MASTERY && after >= AWAKEN_MASTERY && !c.fruitAwakened) {
+      g.ui.toast('MASTERED', `The ${f.name} stirs: a hard fight may awaken it`, f.color);
+      g.log(`You have mastered the ${f.name}. Something deep in it stirs — the next hard fight against a worthy foe may awaken it.`, '#ffab91');
     }
+  }
+
+  /**
+   * The forms of your fruit its mastery has opened (data/fruitForms.js), each
+   * told once and put on the hotbar to switch on. One that needs Haki keeps
+   * hidden until a Haki wakes (that's when this runs again).
+   */
+  openForms() {
+    const g = this.game, c = this.char;
+    const f = FRUITS[c?.fruit];
+    if (!f) return;
+    c.formsShown = c.formsShown || [];
+    for (const F of f.forms || []) {
+      if ((c.fruitMastery || 0) < F.mastery || c.formsShown.includes(F.id)) continue;
+      if (needsHaki(getAbility(F.activate)) && !hakiKnown(c)) continue;
+      c.formsShown.push(F.id);
+      const at = addToHotbar(c, ENTRY.form(F.id));
+      g.ui.toast(F.name.toUpperCase(), `A new form of the ${f.name}`, f.color);
+      g.log(`Your mastery of the ${f.name} opens up ${F.name}. ${F.desc} ${at >= 0 ? `Press ${hotbarKey(at)} to switch it on (and again to switch it off).` : 'Put it on your hotbar from Skills (K) to switch it on.'}`, '#ffab91');
+      g.audio?.sfx('breakthrough');
+    }
+  }
+
+  /**
+   * The fruit awakens: mastered (AWAKEN_MASTERY), the moment a hard fight
+   * against a worthy foe or a boss brings you down ('knocked': lives.js) or
+   * to the edge (a quarter of your health left: 'edge'). Back on your feet,
+   * the awakened set switched on there and then, and an entry on the hotbar
+   * to switch it at will from now on. True if it did.
+   */
+  maybeAwakenFruit(att, how = 'knocked') {
+    const g = this.game, p = g.player, c = this.char;
+    const f = FRUITS[c?.fruit];
+    if (!f || !p || c.fruitAwakened || (p.fruitMastery || 0) < AWAKEN_MASTERY || !att || att.spar || p.drowned) return false;
+    if (p.inWater || p.seastoned) return false;
+    const threat = att.power ? att.power() / Math.max(1, p.power()) : 0;
+    if (!(threat > 0.65 || att.boss)) return false;
+    c.fruitAwakened = true;
+    // (back up — a knockdown undone — with the fruit out and its awakened set coming on)
+    p.state = 'idle';
+    p.hitstun = 0;
+    p.action = null;
+    p.hp = Math.max(p.hp, p.d.maxHp * (how === 'knocked' ? 0.6 : 0.4));
+    p.iframes = Math.max(p.iframes || 0, 2.2);
+    p.endForm?.(false);
+    if (p.drawn) setDrawn(g, false);
+    p.fruitOut = true;
+    const at = addToHotbar(c, ENTRY.awake);
+    const aw = f.awakening;
+    g.ui.toast('AWAKENING', `${aw.name} — the ${f.name} awakens!`, f.color);
+    g.fx.impactFrame?.(0.25);
+    g.fx.flash = 0.45;
+    g.fx.ring?.(p.x, p.y, 0.3, 6, f.color, 0.9, 0.3);
+    g.fx.burst?.(p.x, p.y - 0.8, 40, { color: [f.color, '#ffffff'], speed: 7, g: 0, life: 0.9, kind: 'star' });
+    g.fx.shake?.(0.6);
+    p.tryTechnique(aw.activate, g);
+    g.log(`The ${f.name} has awakened! ${aw.desc} ${at >= 0 ? `Press ${hotbarKey(at)} to switch the awakened set on and off.` : 'Put it on your hotbar from Skills (K) to switch it on and off.'}`, f.color);
+    g.emit('fruitAwakened', c.fruit, how);
+    persist(g);
+    return true;
   }
 
   // ---------------------------------------------------------------- haki
@@ -234,7 +305,8 @@ export class Progression {
     const names = { armament: 'ARMAMENT HAKI', observation: 'OBSERVATION HAKI', conqueror: "CONQUEROR'S HAKI" };
     g.ui.toast(names[type], how || 'Your will takes shape.', type === 'conqueror' ? '#ff5252' : '#ce93d8');
     g.fx.impactFrame?.(0.12);
-    g.log(`${names[type]} awakened. Press ${type === 'armament' ? 'R' : type === 'observation' ? 'T' : 'G'} to use it.${first ? ' Haki draws on a new spirit bar under your health; it refills when you rest it.' : ''}`, '#ce93d8');
+    const key = type === 'armament' ? 'R' : type === 'observation' ? 'T' : keyLabel(keysOf(g.settings).haki[0]);
+    g.log(`${names[type]} awakened. Press ${key} to use it${type === 'conqueror' ? '' : ` — while it's on, its techniques are on the Haki keys (${keysOf(g.settings).haki.filter(Boolean).map(keyLabel).join(', ')})`}.${first ? ' Haki draws on a new spirit bar under your health; it refills when you rest it.' : ''}`, '#ce93d8');
     g.emit('hakiAwakened', type);
     persist(g);
     return true;

@@ -1,7 +1,8 @@
 // Inventory helpers operating on the character record.
-import { addToHotbar } from './hotbar.js';
+import { addToHotbar, ENTRY } from './hotbar.js';
 import { ITEMS } from '../data/items.js';
-import { FRUITS } from '../data/fruits.js';
+import { FRUITS, unlockedFruitTechniques } from '../data/fruits.js';
+import { keysOf, keyLabel } from './keys.js';
 import { refreshPlayer, persist, setDrawn } from './lineage.js';
 
 export function count(char, id) {
@@ -94,7 +95,9 @@ export function equip(game, id, { slot } = {}) {
     if (ws.includes(id) && ws.filter((w) => w === id).length >= count(c, id)) eq.weapons = ws.filter((w) => w !== id);
     else if (d.kind === 'sword' && ws.length && ITEMS[ws[0]]?.kind === 'sword' && ws.length < 3) eq.weapons = [...ws, id];
     else eq.weapons = [id];
-    if (eq.weapons.length) game.hint?.('draw', 'X draws your weapon, and puts it back in its sheath. Sheathed, you fight with your fists; drawn, its moves and their keys show at the bottom right.');
+    // (on the hotbar, if there's room: its key draws it, and again puts it away)
+    if (eq.weapons.includes(id)) addToHotbar(c, 'item:' + id);
+    if (eq.weapons.length) game.hint?.('draw', 'X — or the weapon\'s key on the hotbar — draws your weapon, and puts it back in its sheath. Sheathed, you fight with your fists; drawn, its moves and their keys show at the bottom right.');
     if (id === 'sandai_kitetsu' && !c.flags.kitetsuTested) {
       c.flags.kitetsuTested = true;
       game.log('You toss the cursed Kitetsu into the air and hold out your arm… it spins down and misses you by a hair. The blade accepts you.', '#ef9a9a');
@@ -168,9 +171,14 @@ export function useItem(game, id) {
     if (c.equipped.pose !== id) equip(game, id);
     return true;
   }
+  // a Dial: learn to use it (the first time), and on the hotbar its key fires it (main.js useHotbarItem)
   if (d.type === 'dial' && d.ability) {
     const learned = c.techniques.includes(d.ability);
-    if (!learned) { c.techniques.push(d.ability); game.log(`You can now use the ${d.name} as a technique — assign it in Skills (K).`, '#80deea'); }
+    if (!learned) {
+      c.techniques.push(d.ability);
+      const at = addToHotbar(c, 'item:' + id);
+      game.log(`You can use the ${d.name} now${at >= 0 ? ` — its key on the hotbar (${at === 9 ? 0 : at + 1}) fires it` : ' — put it on the hotbar to fire it'}.`, '#80deea');
+    }
     return true;
   }
   return false;
@@ -191,14 +199,17 @@ export function eatFruit(game, itemId) {
   c.fruit = fid;
   c.fruitMastery = 0;
   c.fruitsEaten = 1;
-  const first = f.techniques[0];
-  if (first && !c.techniques.includes(first.id)) c.techniques.push(first.id);
-  if (first) addToHotbar(c, first.id);
+  c.fruitAwakened = false;
+  // (the whole base set is yours at once, as in the anime; the fruit gets its entry on the hotbar, and comes out)
+  for (const tid of unlockedFruitTechniques(fid, 0)) if (!c.techniques.includes(tid)) c.techniques.push(tid);
+  const at = addToHotbar(c, ENTRY.fruit);
   refreshPlayer(game);
+  if (p) { if (p.drawn) setDrawn(game, false); p.fruitOut = true; }
   game.ui.toast(f.name.toUpperCase(), `${f.en} — ${f.type}. It tastes horrible.`, '#ffab91');
   game.fx.ring(p.x, p.y, 0.3, 4, f.color, 0.8, 0.25);
   game.fx.burst(p.x, p.y - 0.8, 30, { color: [f.color, '#ffffff'], speed: 5, g: 0, life: 0.8, kind: 'star' });
-  game.log(`You ate the ${f.name}! You can never swim again. Fruit techniques unlock as your mastery grows (fight worthy foes, train).`, '#ffab91');
+  const K = keysOf(game.settings).skills.filter(Boolean).slice(0, Math.min(5, f.techniques.length)).map(keyLabel).join(' ');
+  game.log(`You ate the ${f.name}! You can never swim again. Its powers are yours: out now, its techniques are on ${K}${at >= 0 ? ` — ${at === 9 ? 0 : at + 1} on the hotbar takes it out or puts it away` : ''}. Fighting worthy foes with it opens up the rest.`, '#ffab91');
   game.emit('fruitEaten', fid);
   persist(game);
   return true;
