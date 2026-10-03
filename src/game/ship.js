@@ -342,6 +342,17 @@ export class Ship extends Entity {
       }
       return false;
     }
+    // (a nudge — her hull scraping a rock, a root, a quay — eases her the least
+    // way out of it, astern first, then either side: never a jump across the water)
+    if (!far) {
+      const back = this.heading + Math.PI;
+      for (let r = 0.25; r <= (big ? 4 : 2.5); r += 0.25) {
+        for (const da of [0, 0.4, -0.4, 0.8, -0.8, 1.25, -1.25, 1.7, -1.7, 2.3, -2.3, Math.PI]) {
+          const x = w.wx(this.x + Math.cos(back + da) * r), y = this.y + Math.sin(back + da) * r;
+          if (this.fits(w, x, y, this.heading) && !(this.game && this.shipIn(this.game, x, y, this.heading))) { this.x = x; this.y = y; return true; }
+        }
+      }
+    }
     const R = big ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big ? 1.5 : 0.5;
     const hs = big ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
     for (const h of hs) {
@@ -374,25 +385,59 @@ export class Ship extends Entity {
   }
 
   /**
-   * A big ship berths alongside a pier head, bow out to sea: her waist (the
-   * main deck, where her rail's lowest: a jump from the planks) alongside the
-   * head — or, where the water's too shallow for that, as near it as she'll lie.
+   * A big ship berths at a pier head with her waist to its planks — the main
+   * deck, where her rail's lowest: a jump from the pier — never her tall
+   * quarterdeck while there's a berth that keeps her waist there. Alongside
+   * the head, bow out to sea, as far out as that lets her lie; or, where the
+   * water by the pier's too shallow for her stern, across the end of the head
+   * out in the deep water, her waist (and her ladder) to its face; or bow in.
+   * Only when none of those will take her, alongside further out.
    */
   berth(w, dock) {
-    const L = this.def.length, B = this.def.beam, d = shipDims(this.def);
+    const B = this.def.beam, d = shipDims(this.def);
     const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
-    const end = dock.end || dock;
-    // (the head's planks, from 2.5 m short of its end, alongside her main deck just forward of the stairs up to her quarterdeck)
-    const qs = d.big ? d.stairs.find((s) => s.la === 'quarter' && s.lb === 'main') : null;
-    const waist = Math.min(L * 0.5 - 5, qs ? -xAt(d, qs.tb) - 3.2 : Infinity);
-    for (let k = 0; k < 26; k++) {
-      for (const sg of [1, -1]) {
-        // (alongside the pier's T-head, clear of it)
-        const along = waist + k * 2, off = sg * (B * 0.5 + (dock.headHalf ?? 1) + 1.4);
-        const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
-        if (this.fits(w, x, y, hd)) { this.x = x; this.y = y; this.heading = hd; return true; }
+    const end = dock.end || dock, hh = dock.headHalf ?? 1, ex = end.x + 0.5, ey = end.y + 0.5;
+    // (her main deck along her, from amidships: clear of the stairs at either end)
+    const m0 = xAt(d, d.mainT0 ?? 0.3) + 0.8, m1 = xAt(d, d.mainT1 ?? 0.84) - 0.8;
+    const lie = (x, y, h) => {
+      if (!this.fits(w, x, y, h) || (this.game && this.shipIn(this.game, x, y, h))) return false;
+      this.x = x; this.y = y; this.heading = h;
+      return true;
+    };
+    // alongside the head (its planks run from 0.5 m past the end tile's middle
+    // to 2.5 m short of it), her side 0.9 m off its edge; `along`: her middle
+    // out from the end tile's
+    const off = B * 0.5 + hh + 1.4;
+    const beside = (along, h) => [1, -1].some((sg) => lie(w.wx(ex + dx * along - dy * sg * off), ey + dy * along + dx * sg * off, h));
+    // 1. bow out, the whole head beside her main deck (u = -along - 2.5 .. -along + 0.5)
+    for (let along = -m0 - 2.5; along >= 0.5 - m1; along -= 0.5) if (beside(along, hd)) return true;
+    // 2. bow in, the whole head beside her main deck (u = along - 0.5 .. along +
+    // 2.5): she lies further out so, her stern in the deep water and her bow
+    // tapering in toward the shallows
+    for (let along = m1 - 2.5; along >= m0 + 0.5; along -= 0.5) if (beside(along, hd + Math.PI)) return true;
+    // 3. bow out, a metre or more of the head's end beside her main deck at
+    // least (jumped from there: off her, onto the head's breadth of planks)
+    for (let along = -m0 - 2; along <= -m0 - 0.5; along += 0.5) if (beside(along, hd)) return true;
+    // (or bow in, the head's end beside the forward end of her main deck)
+    for (let along = m1 - 2; along <= m1 - 0.5; along += 0.5) if (beside(along, hd + Math.PI)) return true;
+    // 4. across the end of the head: her side 0.9 m off its face, the middle
+    // of the face (the pier's walkway behind it) at her ladder on that side, or
+    // the middle of her main deck, or as near it as she'll lie with 2.5 m of
+    // her waist at the face
+    const mid = (m0 + m1) / 2, face = hh + 0.5;
+    const out = 0.5 + 0.9 + B * 0.5;
+    for (const sd of [1, -1]) {
+      const h = Math.atan2(dx, -dy) + (sd > 0 ? 0 : Math.PI), fx = Math.cos(h), fy = Math.sin(h);
+      const lad = d.ladders?.find((l) => l.s === sd);
+      const cs = lad && lad.u > m0 - face + 2.5 && lad.u < m1 + face - 2.5 ? [lad.u] : [];
+      for (let k = 0; k < 40; k++) {
+        const c = mid + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.5;
+        if (Math.min(c + face, m1) - Math.max(c - face, m0) >= 2.5) cs.push(c);
       }
+      for (const c of cs) if (lie(w.wx(ex + dx * out - fx * c), ey + dy * out - fy * c, h)) return true;
     }
+    // 5. alongside further out, as near the head as she'll lie
+    for (let k = 1; k < 26; k++) if (beside(-m0 - 2.5 + k * 2, hd)) return true;
     return false;
   }
 
@@ -403,14 +448,29 @@ export class Ship extends Entity {
   moorAlongside(w, dock) {
     const L = this.def.length, B = this.def.beam;
     const dx = dock.dirX ?? 0, dy = dock.dirY ?? 1, hd = Math.atan2(dy, dx);
-    const end = dock.end || dock, edge = (dock.headHalf ?? 1) + 0.5;
+    const end = dock.end || dock, ex = end.x + 0.5, ey = end.y + 0.5;
+    const lie = (x, y, h) => {
+      if (!this.fits(w, x, y, h) || (this.game && this.shipIn(this.game, x, y, h))) return false;
+      this.x = x; this.y = y; this.heading = h;
+      return true;
+    };
     for (const gap of [0.3, 0.6, 1]) {
       for (let k = 0; k < 6; k++) {
+        // (beside the head — its planks from 0.5 m past the end tile's middle to
+        // 2.5 m short of it — or, lying further in, the narrower pier's edge)
+        const along = 0.3 - L / 2 - k * 1.2;
+        const edge = (along + L / 2 > -2.5 ? dock.headHalf ?? 1 : dock.half ?? 1) + 0.5;
         for (const sg of [1, -1]) {
-          const along = 0.3 - L / 2 - k * 1.2, off = sg * (edge + gap + B / 2);
-          const x = w.wx(end.x + 0.5 + dx * along - dy * off), y = end.y + 0.5 + dy * along + dx * off;
-          if (this.fits(w, x, y, hd) && !(this.game && this.shipIn(this.game, x, y, hd))) { this.x = x; this.y = y; this.heading = hd; return true; }
+          const off = sg * (edge + gap + B / 2);
+          if (lie(w.wx(ex + dx * along - dy * off), ey + dy * along + dx * off, hd)) return true;
         }
+      }
+    }
+    // (no room beside it: across the end of the head, her side to its face)
+    for (const gap of [0.3, 0.6, 1]) {
+      for (const sd of [1, -1]) {
+        const h = Math.atan2(dx, -dy) + (sd > 0 ? 0 : Math.PI), out = 0.5 + gap + B / 2;
+        for (const c of [0, 1.5, -1.5, 3, -3]) if (lie(w.wx(ex + dx * out - Math.cos(h) * c), ey + dy * out - Math.sin(h) * c, h)) return true;
       }
     }
     return false;

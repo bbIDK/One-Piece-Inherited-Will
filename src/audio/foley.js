@@ -277,8 +277,10 @@ export class Foley {
     if (isl && !atSea) {
       const leafy = LEAFY[clim];
       if (w.town) {
-        L.town = (night ? 0.07 : 0.2);
-        S.voice = night ? 3 : 10; S.laugh = night ? 1 : 2; S.clink = night ? 0 : 2; S.dog = 0.8;
+        // (no bed under a town — any steady wash read as a machine, a saw or a
+        // train: its life is all in its moments, a hammer, a voice, a clink)
+        L.town = 0;
+        S.voice = night ? 3 : 10; S.laugh = night ? 1 : 2; S.clink = night ? 0 : 3; S.dog = 0.8;
       } else if (leafy) {
         L.leaves = 0.12 * (env.windStrength || 1);
         if (!night) { S.bird = clim === 'jungle' || clim === 'tropical' ? 3 : 6; if (clim === 'jungle' || clim === 'tropical' || clim === 'prehistoric') { S.tropical = 3; L.cicada = 0.1; } }

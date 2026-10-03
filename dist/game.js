@@ -6433,10 +6433,10 @@
     angleTo(q2) {
       return 2 * Math.acos(Math.abs(clamp(this.dot(q2), -1, 1)));
     }
-    rotateTowards(q2, step) {
+    rotateTowards(q2, step2) {
       const angle = this.angleTo(q2);
       if (angle === 0) return this;
-      const t = Math.min(1, step / angle);
+      const t = Math.min(1, step2 / angle);
       this.slerp(q2, t);
       return this;
     }
@@ -24548,14 +24548,14 @@ void main() {
       _ray$1.copy(raycaster.ray).applyMatrix4(_inverseMatrix$1);
       const localThreshold = threshold / ((this.scale.x + this.scale.y + this.scale.z) / 3);
       const localThresholdSq = localThreshold * localThreshold;
-      const step = this.isLineSegments ? 2 : 1;
+      const step2 = this.isLineSegments ? 2 : 1;
       const index = geometry.index;
       const attributes = geometry.attributes;
       const positionAttribute = attributes.position;
       if (index !== null) {
         const start4 = Math.max(0, drawRange.start);
         const end = Math.min(index.count, drawRange.start + drawRange.count);
-        for (let i = start4, l = end - 1; i < l; i += step) {
+        for (let i = start4, l = end - 1; i < l; i += step2) {
           const a = index.getX(i);
           const b = index.getX(i + 1);
           const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, a, b);
@@ -24574,7 +24574,7 @@ void main() {
       } else {
         const start4 = Math.max(0, drawRange.start);
         const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
-        for (let i = start4, l = end - 1; i < l; i += step) {
+        for (let i = start4, l = end - 1; i < l; i += step2) {
           const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, i, i + 1);
           if (intersect2) {
             intersects2.push(intersect2);
@@ -34425,10 +34425,10 @@ void main() {
       color1 = new Color(color1);
       color2 = new Color(color2);
       const center = divisions / 2;
-      const step = size / divisions;
+      const step2 = size / divisions;
       const halfSize = size / 2;
       const vertices = [], colors = [];
-      for (let i = 0, j = 0, k = -halfSize; i <= divisions; i++, k += step) {
+      for (let i = 0, j = 0, k = -halfSize; i <= divisions; i++, k += step2) {
         vertices.push(-halfSize, 0, k, halfSize, 0, k);
         vertices.push(k, 0, -halfSize, k, 0, halfSize);
         const color = i === center ? color1 : color2;
@@ -37509,13 +37509,13 @@ void main() {
   ];
   var STEP = 4;
   var CELL = 32;
-  function catmull(pts, step) {
+  function catmull(pts, step2) {
     const out = [];
     const P6 = [pts[0], ...pts, pts[pts.length - 1]];
     for (let i = 1; i < P6.length - 2; i++) {
       const [p0, p1, p2, p3] = [P6[i - 1], P6[i], P6[i + 1], P6[i + 2]];
       const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
-      const n = Math.max(1, Math.ceil(len / step));
+      const n = Math.max(1, Math.ceil(len / step2));
       for (let k = 0; k < n; k++) {
         const t = k / n, t2 = t * t, t3 = t2 * t;
         const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
@@ -39963,15 +39963,15 @@ void main() {
       const g = this.hf.grid(cx, cy);
       const x0 = cx * CHUNK, y0 = cy * CHUNK;
       const N7 = CHUNK + 1;
-      const step = lod;
-      const n = CHUNK / step + 1;
+      const step2 = lod;
+      const n = CHUNK / step2 + 1;
       const pos = new Float32Array(n * n * 3);
       const col2 = new Float32Array(n * n * 3);
       const pave = new Float32Array(n * n * 3);
       let minH = Infinity;
       for (let j = 0; j < n; j++) {
         for (let i = 0; i < n; i++) {
-          const gi = i * step, gj = j * step;
+          const gi = i * step2, gj = j * step2;
           const h2 = g[gj * N7 + gi];
           if (h2 < minH) minH = h2;
           const k = (j * n + i) * 3;
@@ -42109,8 +42109,8 @@ ${GLSL}
     const edge = (t) => hbAt(t, B5) * d.walk - 0.22;
     d.stairs = [];
     const flight = (ta, tb, ha, hb, la, lb) => {
-      const vo = Math.min(edge(ta), edge(tb)), vi = vo - W4;
-      for (const s of sides2) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo, vb: s > 0 ? vo : -vi });
+      const vo2 = Math.min(edge(ta), edge(tb)), vi = vo2 - W4;
+      for (const s of sides2) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo2, vb: s > 0 ? vo2 : -vi });
     };
     flight(tq, tq + run(hq) / L3, yq, deckY2, "quarter", "main");
     if (fore) flight(tf2 - run(hf) / L3, tf2, deckY2, yf, "main", "fore");
@@ -43168,9 +43168,9 @@ ${GLSL}
     const w = innerAt(d, t, y + 0.5);
     const segs = [];
     let z = -w;
-    const step = 0.28;
+    const step2 = 0.28;
     let run = null;
-    for (; z <= w + 1e-6; z += step) {
+    for (; z <= w + 1e-6; z += step2) {
       const open = skipFn(z);
       if (!open) {
         k.add(cyl(0.04, 0.05, 0.9, 5, true), { at: [x, y, z], color: shade2(P6.front, 0.35) });
@@ -45766,7 +45766,7 @@ ${GLSL}
       swim: 1,
       hpMul: 1,
       jump: 7.6,
-      charge: 1.45,
+      charge: 1.6,
       leap: 1
     },
     fishman: {
@@ -45784,7 +45784,7 @@ ${GLSL}
       hpMul: 1.1,
       gills: true,
       jump: 7.4,
-      charge: 1.4,
+      charge: 1.65,
       leap: 1.35
     },
     mink: {
@@ -45802,7 +45802,7 @@ ${GLSL}
       hpMul: 1,
       electro: true,
       jump: 8.6,
-      charge: 1.65,
+      charge: 1.7,
       leap: 1
     },
     skypiean: {
@@ -45819,7 +45819,7 @@ ${GLSL}
       swim: 0.9,
       hpMul: 0.95,
       jump: 8.6,
-      charge: 1.5,
+      charge: 1.55,
       leap: 1
     },
     longarm: {
@@ -45837,7 +45837,7 @@ ${GLSL}
       hpMul: 1,
       reach: 1.45,
       jump: 7.6,
-      charge: 1.45,
+      charge: 1.6,
       leap: 1
     },
     longleg: {
@@ -45855,7 +45855,7 @@ ${GLSL}
       hpMul: 1,
       stride: 1.18,
       jump: 9.2,
-      charge: 1.6,
+      charge: 1.65,
       leap: 1
     },
     buccaneer: {
@@ -45873,7 +45873,7 @@ ${GLSL}
       hpMul: 1.35,
       scale: 1.3,
       jump: 6.6,
-      charge: 1.55,
+      charge: 1.85,
       leap: 1
     },
     three_eye: {
@@ -45890,7 +45890,7 @@ ${GLSL}
       swim: 1,
       hpMul: 1,
       jump: 7.4,
-      charge: 1.4,
+      charge: 1.65,
       leap: 1
     },
     lunarian: {
@@ -45907,7 +45907,7 @@ ${GLSL}
       swim: 1,
       hpMul: 1.15,
       jump: 8.2,
-      charge: 1.55,
+      charge: 1.6,
       leap: 1,
       flight: { style: "wings", gauge: 22, speed: 10, climb: 6, ceiling: 40, sea: 3.5, refill: 6, color: "#ff7043" }
     }
@@ -46856,6 +46856,113 @@ ${GLSL}
   var unshakable = (a) => !!a.poise || a.race === "buccaneer";
   var kbFrame = (a) => a.race === "buccaneer" ? 0.7 : 1;
 
+  // src/game/haki.js
+  var CONQUEROR_COLOURS = [
+    { id: "crimson", name: "Crimson", hex: "#ff1a3c", w: 28 },
+    { id: "violet", name: "Violet", hex: "#a64dff", w: 15 },
+    { id: "gold", name: "Gold", hex: "#ffc21a", w: 10 },
+    { id: "azure", name: "Azure", hex: "#2e8bff", w: 10 },
+    { id: "amber", name: "Amber", hex: "#ff7417", w: 9 },
+    { id: "rose", name: "Rose", hex: "#ff4fa8", w: 8 },
+    { id: "emerald", name: "Emerald", hex: "#17e07c", w: 8 },
+    { id: "white", name: "White", hex: "#eef4ff", w: 6 },
+    { id: "cyan", name: "Cyan", hex: "#21e3f0", w: 6 }
+  ];
+  var OBSERVATION_TINTS = [
+    { id: "lilac", name: "Lilac", hex: "#d9b8ff" },
+    { id: "ice", name: "Ice", hex: "#b8ecff" },
+    { id: "mint", name: "Mint", hex: "#bfffe0" },
+    { id: "pearl", name: "Pearl", hex: "#f2f0ff" },
+    { id: "blush", name: "Blush", hex: "#ffc9e2" },
+    { id: "honey", name: "Honey", hex: "#fff0b8" }
+  ];
+  var ARMAMENT_SHEENS = [
+    { id: "violet", name: "Violet sheen", hex: "#9d8cff" },
+    { id: "steel", name: "Steel sheen", hex: "#8fb8ff" },
+    { id: "bronze", name: "Bronze sheen", hex: "#ffc78a" },
+    { id: "jade", name: "Jade sheen", hex: "#9dffd6" },
+    { id: "silver", name: "Silver sheen", hex: "#e8ecf5" },
+    { id: "wine", name: "Wine sheen", hex: "#ff8aa8" }
+  ];
+  var pickW = (rng4, list) => {
+    let t = 0;
+    for (const c of list) t += c.w || 1;
+    let r4 = rng4.next() * t;
+    for (const c of list) if ((r4 -= c.w || 1) < 0) return c;
+    return list[list.length - 1];
+  };
+  function hakiSignature(seed) {
+    const rng4 = new RNG(`${seed}:haki`);
+    const conqueror = pickW(rng4, CONQUEROR_COLOURS).hex;
+    const observation = OBSERVATION_TINTS[Math.floor(rng4.next() * OBSERVATION_TINTS.length)].hex;
+    const armament = ARMAMENT_SHEENS[Math.floor(rng4.next() * ARMAMENT_SHEENS.length)].hex;
+    const voice = Math.round(rng4.next() * 1e3) / 1e3;
+    return { conqueror, observation, armament, voice };
+  }
+  function charSignature(c) {
+    if (!c) return hakiSignature("nobody");
+    return c.hakiSig || hakiSignature(c.runSeed ?? hashString(String(c.id || c.name || "nobody")));
+  }
+  function npcHakiSig(def) {
+    const base2 = hakiSignature(def?.id || def?.name || "npc");
+    return def?.hakiSig ? { ...base2, ...def.hakiSig } : base2;
+  }
+  var FALLBACK = /* @__PURE__ */ new WeakMap();
+  function sigOf(a) {
+    if (!a) return hakiSignature("nobody");
+    if (a.hakiSig) return a.hakiSig;
+    let s = FALLBACK.get(a);
+    if (!s) {
+      s = hakiSignature(a.npcId || a.name || "someone");
+      FALLBACK.set(a, s);
+    }
+    return s;
+  }
+  function colourName(hex3) {
+    const h2 = String(hex3 || "").toLowerCase();
+    for (const L3 of [CONQUEROR_COLOURS, OBSERVATION_TINTS, ARMAMENT_SHEENS]) for (const c of L3) if (c.hex === h2) return c.name;
+    return h2;
+  }
+  function infusedAura(a) {
+    const h2 = sigOf(a).conqueror, n = parseInt(h2.slice(1), 16);
+    return `rgba(${Math.round((n >> 16 & 255) * 0.32)},${Math.round((n >> 8 & 255) * 0.32)},${Math.round((n & 255) * 0.32)},0.85)`;
+  }
+  function armamentReach(lvl) {
+    const L3 = Math.max(0, lvl || 0);
+    if (L3 <= 0) return 0;
+    if (L3 < 15) return 0.2;
+    if (L3 < 40) return 0.2 + (L3 - 15) / 25 * 0.36;
+    return Math.min(1.02, 0.56 + (L3 - 40) / 30 * 0.46);
+  }
+  var COAT = { spread: 0.3, fall: 0.16 };
+  function hardening(lvl) {
+    return Math.min(0.4, 0.12 + (lvl || 0) * 3e-3);
+  }
+  var RYOU = { level: 60, internal: 0.15, guard: 0.55 };
+  function hasRyou(a) {
+    return !!(a && a.armament && (a.hakiLevel?.("armament") || 0) >= RYOU.level);
+  }
+  function senseRange(lvl) {
+    return 14 + Math.min(100, lvl || 0) * 0.16;
+  }
+  var FUTURE_SIGHT = 65;
+  var KING = { base: 0.04, withD: 0.4, bloodline: 4 };
+  function kingChance(hasD, bloodline) {
+    return Math.min(1, (hasD ? KING.withD : KING.base) * (bloodline ? KING.bloodline : 1));
+  }
+  function clashes(a, b, dist, range) {
+    if (!a || !b || a === b) return false;
+    if (!((a.hakiLevel?.("conqueror") || 0) > 0 && (b.hakiLevel?.("conqueror") || 0) > 0)) return false;
+    if (b.state && b.state !== "idle") return false;
+    if (!(a.isPlayer || a.boss) || !(b.isPlayer || b.boss)) return false;
+    return dist <= range;
+  }
+  var HAKI_HOW = {
+    armament: "Hardened in hard fights (Strength 22+, or weapon mastery 35+) \u2014 or taught by a Haki master.",
+    observation: "Sharpened by dodging danger (Agility 22+, or many dodges) \u2014 or taught.",
+    conqueror: "Cannot be taught. One in millions is born with the qualities of a king; if it's in you, it wakes the day your will is truly tested."
+  };
+
   // src/game/combat.js
   var ELEMENT_COLORS = {
     physical: "#ffffff",
@@ -47110,9 +47217,11 @@ ${GLSL}
         if (Math.random() < chance && tgt.haki >= 4) {
           tgt.haki -= 4;
           tgt.iframes = 0.2;
-          fx.text(tgt.x, tgt.y - 1.2, "FORESIGHT", "#e1bee7", 0.3);
-          fx.burst(tgt.x, tgt.y - 0.5, 6, { color: "#ce93d8", speed: 3, g: 0, life: 0.3 });
-          fx.afterimage(tgt, { tint: "#ce93d8", life: 0.35, alpha: 0.5 });
+          const side = ang + (Math.random() < 0.5 ? 1 : -1) * Math.PI / 2;
+          if (tgt.state === "idle" && !tgt.onShip && !tgt.climb) tgt.knock(Math.cos(side) * 4.5, Math.sin(side) * 4.5);
+          fx.foresight?.(tgt, att);
+          game.audio?.sfx("foresight", tgt);
+          if (tgt.isPlayer) game.emit("playerEvaded", att, h2);
           return false;
         }
       }
@@ -47123,6 +47232,7 @@ ${GLSL}
         game.audio?.sfx("block", tgt);
         return false;
       }
+      const ryou = !!att && hasRyou(att) && h2.vx === void 0 && !h2.isProj && (!h2.element || h2.element === "physical");
       const armed = att && (att.armament || h2.haki || h2.seastone);
       const lg2 = tgt.fruitDef && tgt.fruitDef.logia ? tgt.fruitDef : tgt.fakeLogia || null;
       if (lg2 && !tgt.seastoned && (lg2 === tgt.fakeLogia ? tgt.state !== "knocked" && !tgt.inWater && !tgt.status.freeze : tgt.intangibleOK())) {
@@ -47151,7 +47261,8 @@ ${GLSL}
       if (tgt.fruitDef && tgt.fruitDef.resist && tgt.fruitDef.resist.includes(el)) dmg *= 0.25;
       if (tgt.fruitDef && tgt.fruitDef.weakTo && tgt.fruitDef.weakTo.includes(el)) dmg *= 1.5;
       if (tgt.race === "lunarian" && tgt.flameLit) dmg *= 0.55;
-      if (tgt.armament) dmg *= 1 - Math.min(0.35, 0.12 + tgt.hakiLevel("armament") * 25e-4);
+      if (tgt.armament) dmg *= 1 - hardening(tgt.hakiLevel("armament"));
+      if (ryou) dmg *= 1 + RYOU.internal;
       dmg *= 1 - (tgt.d ? tgt.d.def : 0);
       if (tgt.defMul) dmg *= tgt.defMul;
       const T5 = tierOf(game, tgt);
@@ -47187,7 +47298,7 @@ ${GLSL}
               game.hint("guardbreak", "GUARD BREAK! A red-glint blow smashes a guard aside \u2014 and it can't come up again until the F slot fills. Dodge (Q) those instead.");
             }
           } else {
-            dmg *= tgt.guardChip();
+            dmg *= ryou ? Math.max(tgt.guardChip(), RYOU.guard) : tgt.guardChip();
             game.audio?.sfx("block", tgt);
           }
         }
@@ -47198,6 +47309,7 @@ ${GLSL}
       const final = Math.round(dmg);
       tgt.takeDamage(final, att, h2, game);
       const w = blowWeight(att, tgt, h2, final, crit, counter2);
+      if (att?.armament && (!h2.element || h2.element === "physical" || h2.haki)) att.armHitT = now3;
       if (!blocked) {
         const kb = (h2.knockback ?? 2) * (tgt.kbResist ?? 1);
         if (kb > 0) tgt.knock(Math.cos(kbAng) * kb, Math.sin(kbAng) * kb, h2.forceWater);
@@ -47235,7 +47347,7 @@ ${GLSL}
         fx.counter?.(att, tgt, kbAng, w);
         if (att.isPlayer) game.emit("playerCounter", tgt, final);
       }
-      fx.hit(att, tgt, h2, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved, w, counter: counter2 });
+      fx.hit(att, tgt, h2, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved, w, counter: counter2, ryou });
       if (att?.isPlayer) game.emit("playerLanded", tgt, { final, crit, blocked, counter: counter2 });
       const thud = h2.slashing ? h2.heavy ? "slash_heavy" : "slash_hit" : h2.heavy ? "punch_heavy" : "punch";
       game.audio?.sfx(blocked ? "block" : h2.sfxHit || (el === "physical" ? thud : el), tgt);
@@ -48180,7 +48292,11 @@ ${GLSL}
       }
     }
     if (actor.race === "longarm" && def.m1Chain && !def.weapon) actor.action.total *= 0.8;
-    if (!actor.isPlayer && actor.faction !== "player") readable(actor, actor.action, game);
+    if (!actor.isPlayer && actor.faction !== "player") {
+      readable(actor, actor.action, game);
+      const p = game.player;
+      if (p?.observation && p !== actor && (target2 === p || actor.controller?.target === p) && firstBlow(def) >= 0) game.fx.sensed?.(actor, p);
+    }
     if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, "#ffffff", 0.34, { life: 1.2 });
     if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
     if (def.onStart) def.onStart(actor, game);
@@ -48215,11 +48331,15 @@ ${GLSL}
     const k = p.observation ? 1 : T5.cue;
     if (!(k > 0)) return;
     game.fx.parryCue?.(actor, a.breaks, k);
+    if (futureSight(p)) game.fx.vision?.(actor, p);
     const key2 = a.breaks ? "redglint" : a.shot ? "shotglint" : "parry";
     if (!game.hintsShown?.has(key2) && game.settings?.showHints !== false) game.fx.slowmo(1.2, 0.2);
     if (a.breaks) game.hint("redglint", "A RED glint: that blow smashes any guard (and some go straight through one). Don't block it \u2014 dodge (Q) just before it lands.");
     else if (a.shot) game.hint("shotglint", "A glint on a gunman: a shot is coming. Hold F to block it, or sidestep and dodge (Q) \u2014 a sword can even turn it aside with a parry.");
     else game.hint("parry", "A YELLOW glint: the blow is about to land \u2014 tap F right then to PARRY it. A parried foe reels, open to a COUNTER. (Hold F to simply block.)");
+  }
+  function futureSight(p) {
+    return !!p && (!!p.hasBuff?.("future_sight") || !!p.observation && (p.hakiLevel?.("observation") || 0) >= FUTURE_SIGHT);
   }
   function telegraph(actor, def, game) {
     const a = actor.action;
@@ -48279,8 +48399,9 @@ ${GLSL}
         owner: actor,
         x: game.world.wx(actor.x + Math.cos(ang) * off * reach2),
         y: actor.y - 0.4 + Math.sin(ang) * off * reach2,
+        // (Conqueror's Infusion: the black lightning round a blow lands it a little beyond the fist)
         shape: h2.shape || "arc",
-        range: (h2.range || 1.4) * (h2.shape === "circle" ? 1 : reach2),
+        range: (h2.range || 1.4) * (h2.shape === "circle" ? 1 : reach2) + (actor.conquerorInfused && h2.shape !== "circle" && h2.shape !== "ring" ? INFUSED_REACH : 0),
         arc: h2.arc ?? 1.8,
         width: h2.width,
         angle: ang,
@@ -48524,24 +48645,89 @@ ${GLSL}
   function trail(p, game, t) {
     game.fx.projTrail(p, t);
   }
+  var INFUSED_REACH = 0.9;
   function conquerorBurst(actor, game, c, mult) {
     const lvl = actor.hakiLevel("conqueror") || 20;
     const my = actor.power();
+    let rival2 = null, rd = Infinity;
+    for (const e of game.actorsNear(actor.x, actor.y, c.range * 1.5)) {
+      if (e === actor || !game.combat.canHit(actor, e, {})) continue;
+      const d = game.world.distance(actor.x, actor.y, e.x, e.y);
+      if (d < rd && clashes(actor, e, d, c.range * 1.5)) {
+        rival2 = e;
+        rd = d;
+      }
+    }
+    if (rival2) {
+      clash(actor, rival2, game, c);
+      return { fainted: 0, clash: rival2 };
+    }
     game.fx.conqueror(actor, c);
+    game.audio?.sfx("conqueror", actor);
     let fainted = 0;
     for (const e of game.actorsNear(actor.x, actor.y, c.range)) {
       if (e === actor || !game.combat.canHit(actor, e, {})) continue;
-      const ratio = e.power() / Math.max(1, my);
-      const resist = e.hakiLevel && e.hakiLevel("conqueror") > 0 ? 0.5 : 0;
-      if (ratio < 0.35 + lvl * 4e-3 - resist && !e.boss) {
+      if (e.isPlayer) {
+        underPressure(e, actor, game, c, mult);
+        continue;
+      }
+      if (overwhelms(e, my, lvl)) {
         e.faint(game);
         fainted++;
-      } else {
-        e.stagger(0.6 + lvl * 0.01);
-        e.takeDamage(Math.round((c.damage || 0) * mult), actor, { element: "haki" }, game);
+        continue;
       }
+      e.stagger(0.6 + lvl * 0.01);
+      e.takeDamage(Math.round((c.damage || 0) * mult), actor, { element: "haki" }, game);
     }
     if (fainted && actor.isPlayer) game.log(`${fainted} ${fainted === 1 ? "foe" : "foes"} fainted before your will.`, "#ef5350");
+    return { fainted, clash: null };
+  }
+  function overwhelms(e, my, lvl) {
+    const resist = e.hakiLevel && e.hakiLevel("conqueror") > 0 ? 0.5 : 0;
+    return !e.boss && e.power() / Math.max(1, my) < 0.35 + lvl * 4e-3 - resist;
+  }
+  function underPressure(p, k, game, c, mult) {
+    const ch = p.char;
+    if (ch?.traits?.includes("conqueror") && !p.hakiLevel("conqueror") && game.lives?.awaken) {
+      game.lives.awaken("pressure", k);
+      return;
+    }
+    if (p.hakiLevel("conqueror") > 0) {
+      game.fx.text(p.x, p.y - 1.6, "UNSHAKEN", sigOf(p).conqueror, 0.36);
+      return;
+    }
+    p.stagger(Math.max(0.25, 0.75 - (p.attrs?.wil || 0) * 6e-3));
+    p.takeDamage(Math.round((c.damage || 0) * mult * 0.5), k, { element: "haki" }, game);
+    game.fx.text(p.x, p.y - 1.6, "PRESSURE!", "#ef9a9a", 0.36);
+    game.log(`${k.name}'s will presses down on you like a weight: Conqueror's Haki. Your knees buckle, but you stay standing.`, "#ef9a9a");
+    game.hintHaki?.();
+  }
+  function clash(a, b, game, c) {
+    const w = game.world;
+    const dx = w.dx(a.x, b.x), dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+    game.fx.clash?.(a, b);
+    game.audio?.sfx("conqueror_clash", a.isPlayer ? a : b);
+    for (const [x, s] of [[a, -1], [b, 1]]) {
+      x.knock(dx / d * 8 * s, dy / d * 8 * s);
+      if (x.state === "idle") x.stagger(x.isPlayer ? 0.35 : 0.55);
+    }
+    const strong = Math.max(a.power(), b.power()), lvl = Math.max(a.hakiLevel("conqueror"), b.hakiLevel("conqueror"));
+    const mx = w.wx(a.x + dx / 2), my = a.y + dy / 2;
+    let fainted = 0;
+    for (const e of game.actorsNear(mx, my, (c?.range || 9) + d / 2)) {
+      if (e === a || e === b || e.isPlayer || e.state !== "idle" || e.faction === "player") continue;
+      if (overwhelms(e, strong, lvl)) {
+        e.faint(game);
+        fainted++;
+      }
+    }
+    const p = a.isPlayer ? a : b.isPlayer ? b : null;
+    if (p) {
+      const o = p === a ? b : a;
+      game.log(`Your Conqueror's Haki clashes with ${o.name}'s! The sky splits between your two wills.${fainted ? ` ${fainted} ${fainted === 1 ? "onlooker" : "onlookers"} fainted.` : ""}`, sigOf(p).conqueror);
+      game.emit?.("conquerorClash", o);
+    }
+    return fainted;
   }
 
   // src/data/fruits.js
@@ -51374,10 +51560,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const sheet = rrect(12, 13, 40, 38, 0.5);
     part(I2, sheet, red, { sd: 2, hd: 1.2 });
     clip(I2, sheet, () => {
-      const n = I2.small ? 3 : 4, step = 32 / n;
+      const n = I2.small ? 3 : 4, step2 = 32 / n;
       let k = 0;
       for (let r4 = 0; r4 < n; r4++) for (let c = 0; c < n; c++) {
-        const x = 16 + c * step, y = 17 + r4 * (30 / n), w = step - 2.6, h2 = 30 / n - 2.4, q2 = hash5("pg" + k++);
+        const x = 16 + c * step2, y = 17 + r4 * (30 / n), w = step2 - 2.6, h2 = 30 / n - 2.4, q2 = hash5("pg" + k++);
         fl(I2, rrect(x, y, w, h2, 1), dk(red, 0.55));
         if (!I2.small) {
           if (q2 & 1) fl(I2, rrect(x + 1 + (q2 >> 3 & 3), y + 1, 1.3, h2 - 2, 0.4), lt(red, 0.25));
@@ -51992,10 +52178,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function swirls(I2, path2, box2, col2, rr, seed) {
     const dark = lum(col2) < 0.32;
     const sw2 = dark ? lt(col2, 0.42) : dk(col2, 0.45), hi = dark ? dk(col2, 0.5) : lt(col2, 0.55), [x0, y0, x1, y1] = box2;
-    const w = I2.small ? 2.3 : 1.9, step = rr * 2.1;
+    const w = I2.small ? 2.3 : 1.9, step2 = rr * 2.1;
     clip(I2, path2, () => {
       let k = 0;
-      for (let y = y0; y <= y1; y += step * 0.86) for (let x = x0 + (Math.round((y - y0) / (step * 0.86)) % 2 ? step / 2 : 0); x <= x1; x += step) {
+      for (let y = y0; y <= y1; y += step2 * 0.86) for (let x = x0 + (Math.round((y - y0) / (step2 * 0.86)) % 2 ? step2 / 2 : 0); x <= x1; x += step2) {
         const q2 = hash5(seed + ":" + k++), jx = ((q2 & 15) / 15 - 0.5) * rr * 0.45, jy = ((q2 >> 4 & 15) / 15 - 0.5) * rr * 0.45, rot = (q2 >> 8 & 63) / 63 * TAU6, dir = q2 & 4096 ? 1 : -1;
         const sp = spiral(x + jx, y + jy, rr, I2.small ? 1.2 : 1.45, rot, dir);
         if (!I2.small) ln(I2, xf(sp, { x: -0.6, y: -0.6 }), hi, w * 0.5, { a: 0.75 });
@@ -56849,15 +57035,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     // stepping on the air: a stamp down and back, the other knee up, arms pumping
     geppo(P6, F5, A2, t) {
       const hz = mixN(1.6, 2.7, Math.max(A2.cruise, Math.max(0, A2.climb)));
-      const ph = t * hz % 1, step = ph < 0.5 ? 0 : 1, u = ph % 0.5 / 0.5;
+      const ph = t * hz % 1, step2 = ph < 0.5 ? 0 : 1, u = ph % 0.5 / 0.5;
       const kick = u < 0.25 ? sm01(u / 0.25) : 1 - sm01((u - 0.45) / 0.55);
       const tuck = 1 - kick;
       const down = [-0.12 - 0.06 * kick, -0.04 + 0.04 * kick];
       const up = [0.16, -0.3 - 0.04 * tuck];
-      const [a, b] = step ? [up, down] : [down, up];
+      const [a, b] = step2 ? [up, down] : [down, up];
       P6.fF = mixP(a, [0.04, -0.2], 0.25 * (1 - kick));
       P6.fB = mixP(b, [0.04, -0.2], 0.25 * (1 - kick));
-      const swing2 = step ? 1 : -1;
+      const swing2 = step2 ? 1 : -1;
       P6.hF = [0.06 + 0.14 * swing2 * kick, 0.18 - 0.08 * kick * Math.max(0, swing2)];
       P6.hB = [0.06 - 0.14 * swing2 * kick, 0.18 - 0.08 * kick * Math.max(0, -swing2)];
       P6.eF = 1;
@@ -59125,7 +59311,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     K.lru.set(key2, e);
     return e;
   }
-  var q = (v, step) => Math.round(v / step) * step;
+  var q = (v, step2) => Math.round(v / step2) * step2;
   function headState(look, v, pose, P6, t, sx) {
     const style = look.nika ? "nika" : styleId(look.hair);
     const S6 = STYLES[style][v];
@@ -61517,6 +61703,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
         return false;
       }
+      if (!far) {
+        const back = this.heading + Math.PI;
+        for (let r4 = 0.25; r4 <= (big2 ? 4 : 2.5); r4 += 0.25) {
+          for (const da of [0, 0.4, -0.4, 0.8, -0.8, 1.25, -1.25, 1.7, -1.7, 2.3, -2.3, Math.PI]) {
+            const x = w.wx(this.x + Math.cos(back + da) * r4), y = this.y + Math.sin(back + da) * r4;
+            if (this.fits(w, x, y, this.heading) && !(this.game && this.shipIn(this.game, x, y, this.heading))) {
+              this.x = x;
+              this.y = y;
+              return true;
+            }
+          }
+        }
+      }
       const R4 = big2 ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big2 ? 1.5 : 0.5;
       const hs = big2 ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
       for (const h2 of hs) {
@@ -63617,7 +63816,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     k.add(frustum(M3.w0, M3.d0, M3.w1, M3.d1, M3.h1), { at: [0, H4, -hd], color: roofCol, outline: 0.04 });
     B2(k, -M3.w1 / 2 - 0.06, H4 + M3.h1, -hd - M3.d1 / 2 - 0.06, M3.w1 / 2 + 0.06, H4 + M3.h1 + M3.band, -hd + M3.d1 / 2 + 0.06, "#ffffff", { outline: 0.02 });
     k.add(frustum(M3.w1, M3.d1, M3.rw, 0.4, M3.h2), { at: [0, H4 + M3.h1 + M3.band, -hd], color: roofCol, outline: 0.04 });
-    const n = Math.max(2, Math.floor((fw - 2) / (3.4 * g))), step = (fw - 2.4 * g) / Math.max(1, n - 1);
+    const n = Math.max(2, Math.floor((fw - 2) / (3.4 * g))), step2 = (fw - 2.4 * g) / Math.max(1, n - 1);
     const dw = 1.25 * g, dh = 1.6 * g, y0 = H4 + 0.3;
     for (const back of [false, true]) {
       k.save();
@@ -63626,7 +63825,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         k.rotateY(Math.PI);
       }
       for (let i = 0; i < n; i++) {
-        const x = n === 1 ? 0 : -fw / 2 + 1.2 * g + i * step;
+        const x = n === 1 ? 0 : -fw / 2 + 1.2 * g + i * step2;
         const zf = M3.ov * 0.6, zb = -M3.inset - 0.4;
         B2(k, x - dw / 2, y0, zb, x + dw / 2, y0 + dh, zf, wallCol, { outline: 0.03 });
         k.add(frustum(dw + 0.32, zf - zb + 0.2, 0.06, zf - zb + 0.2, 0.62 * g), { at: [x, y0 + dh, (zf + zb) / 2], color: roofCol, outline: 0.03 });
@@ -65079,13 +65278,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
     const n = dynList.length;
     if (!n || !env2) return;
-    const step = Math.max(1, Math.ceil(n / 20));
-    for (let i = 0; i < step; i++) {
+    const step2 = Math.max(1, Math.ceil(n / 20));
+    for (let i = 0; i < step2; i++) {
       const mk3 = dynList[(dynAt + i) % n];
       const u = mk3.userData;
       if (u.live) u.dyn(u.o, env2, ctx, u);
     }
-    dynAt = (dynAt + step) % n;
+    dynAt = (dynAt + step2) % n;
   }
   registerFrameHook(frame, "instancer");
   function setPartVisible(u, part5, on) {
@@ -68739,9 +68938,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.x = x;
       this.y = y;
       this.R = R4;
-      const n = this.n, h2 = this.h, step = 2 * R4 / (n - 1);
+      const n = this.n, h2 = this.h, step2 = 2 * R4 / (n - 1);
       for (let j = 0; j < n; j++) {
-        for (let i = 0; i < n; i++) h2[j * n + i] = view.ground(w.wx(x - R4 + i * step), y - R4 + j * step);
+        for (let i = 0; i < n; i++) h2[j * n + i] = view.ground(w.wx(x - R4 + i * step2), y - R4 + j * step2);
       }
       return this;
     }
@@ -69712,7 +69911,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const n = Math.max(5, Math.min(40, Math.ceil(L3 * 2.4)));
     const R4 = v.ribbons;
     const black = luma(c) < 0.05;
-    if (black) c2 = HAKI_RED;
+    if (black && c2 === WHITE4) c2 = HAKI_RED;
     const w = black ? 0 : 1;
     R4.start(RK.GLOW, RM2.FACE, c, alpha2, c2, w);
     let bi = 0;
@@ -69788,7 +69987,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const seed = s.seed + Math.floor(v.time * 30);
       const L3 = Math.hypot(X1 - X0, Y1 - Y0, Z1 - Z0);
       const amp = Math.min(0.35 + (s.amp || 0), L3 * 0.2) * (L3 > 4 ? 1.6 : 1);
-      bolt2(v, X0, Y0, Z0, X1, Y1, Z1, Math.max(0.05, wd * 2.4), amp, seed, c, fade2, s.branches === 0 ? 0 : Math.min(3, s.branches || 2));
+      bolt2(v, X0, Y0, Z0, X1, Y1, Z1, Math.max(0.05, wd * 2.4), amp, seed, c, fade2, s.branches === 0 ? 0 : Math.min(3, s.branches || 2), s.core ? col(s.core) : WHITE4);
       v.sprites.put(SK2.GLOW, X1, Y1, Z1, Math.min(0.8, Math.max(0.35, wd * 6)), c, fade2 * 0.7, WHITE4, 1, 0, s.seed, k);
       if (z1 < 0.5 && L3 > 3) {
         const patch3 = v.patch(s, s.x1, s.y1, 1.5);
@@ -69796,6 +69995,32 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
     }
   };
+  SHAPES.clash = {
+    draw(v, s, k, a) {
+      const fade2 = (k < 0.8 ? Math.min(1, k * 12) : (1 - k) / 0.2) * a;
+      if (fade2 < 0.01) return;
+      const w = v.world, G4 = v.groundOf(s);
+      const X2 = v.lx(s.x), Z2 = v.lz(s.y), Y2 = G4 + 1.15;
+      const cA = col(s.colA || "#ff1a3c"), cB = col(s.colB || "#a64dff"), K = INK_BLACK;
+      const t = Math.floor(v.time * 22);
+      const AX2 = v.lx(s.x + w.dx(s.x, s.ax)), AZ2 = v.lz(s.ay), BX = v.lx(s.x + w.dx(s.x, s.bx)), BZ = v.lz(s.by);
+      for (let i = 0; i < 3; i++) {
+        const j = (hash7(s.seed + t * 3 + i) - 0.5) * 0.6, jy = (hash7(s.seed + t * 5 + i) - 0.5) * 0.5;
+        bolt2(v, AX2, Y2 - 0.1, AZ2, X2 + j, Y2 + jy, Z2 - j, 0.14 - i * 0.03, 0.5, s.seed + t * 7 + i, K, fade2, 1, cA);
+        bolt2(v, BX, Y2 - 0.1, BZ, X2 - j, Y2 - jy, Z2 + j, 0.14 - i * 0.03, 0.5, s.seed + t * 11 + i, K, fade2, 1, cB);
+      }
+      const H4 = 30 * easeOut(Math.min(1, k * 4));
+      const sway = (hash7(s.seed + t) - 0.5) * 2.4;
+      bolt2(v, X2, Y2, Z2, X2 + sway, Y2 + H4, Z2 - sway * 0.5, 0.85, 3, s.seed + t * 13, K, fade2, 3, t % 2 ? cA : cB);
+      bolt2(v, X2, Y2 + 0.5, Z2, X2 - sway * 0.7, Y2 + H4 * 0.8, Z2 + sway, 0.45, 2.2, s.seed + t * 17, K, fade2 * 0.9, 2, t % 2 ? cB : cA);
+      bolt2(v, X2, Y2 + 1, Z2, X2 + sway * 1.4, Y2 + H4 * 0.55, Z2 + sway * 0.8, 0.3, 1.6, s.seed + t * 19, K, fade2 * 0.85, 2, cA);
+      v.sprites.put(SK2.GLOW, X2, Y2, Z2, 2.6, cA, fade2 * 0.5, WHITE4, 1, 0, s.seed, k);
+      v.sprites.put(SK2.GLOW, X2, Y2 + 0.1, Z2, 2, cB, fade2 * 0.5, WHITE4, 1, 0, s.seed + 1, k);
+      const patch3 = v.patch(s, s.x, s.y, 3);
+      v.decal(patch3, s.x, s.y, 2.6, 0, SF.GLOW, t % 2 ? cA : cB, fade2 * 0.35, WHITE4, 0.6, k, s.seed, 0, 0, 0, 4);
+    }
+  };
+  var INK_BLACK = col("#000000");
   SHAPES.strings = {
     draw(v, s, k, a) {
       const fade2 = (1 - k) * a;
@@ -71628,10 +71853,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   function smoke(fx, x, y, z, n, cols, o = {}) {
     fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU12, speed: o.speed ?? 1.6, z, vz: o.vz ?? 0.8, g: -0.4, life: o.life ?? 0.9, size: o.size ?? 0.3, grow: o.grow ?? 0.5, color: cols, kind: "smoke", drag: 2 });
   }
-  function miniBolts(fx, x, y, z, n, r4, col2) {
+  function miniBolts(fx, x, y, z, n, r4, col2, core) {
     for (let i = 0; i < n; i++) {
       const a = rnd(0, TAU12);
-      fx.bolt(x, y, x + Math.cos(a) * r4 * rnd(0.6, 1), y + Math.sin(a) * r4 * 0.7 * rnd(0.6, 1), col2, 0.14, 0.035, { z0: z, z1: z + rnd(-0.35, 0.35), branches: 0, amp: -0.2 });
+      fx.bolt(x, y, x + Math.cos(a) * r4 * rnd(0.6, 1), y + Math.sin(a) * r4 * 0.7 * rnd(0.6, 1), col2, 0.14, 0.035, { z0: z, z1: z + rnd(-0.35, 0.35), branches: 0, amp: -0.2, core });
     }
   }
   function vibration(fx, x, y, z, R4, col2, n = 3) {
@@ -71685,11 +71910,17 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         sparkle2(fx, cx, cy, z, 5, ["#ffd740", "#fff59d", "#ffffff"]);
       }
       if (att && att.conquerorInfused) {
-        miniBolts(fx, cx, cy, z, 3, 0.9, "#d50000");
-        miniBolts(fx, cx, cy, z, 2, 0.8, "#000000");
+        const kc = sigOf(att).conqueror;
+        const as = att.look && att.look.scale || 1;
+        if (!h2.sprite && !h2.isProj) fx.bolt(att.x, att.y, cx, cy, "#000000", 0.16, 0.06, { z0: 0.95 * as, z1: z, branches: 1, core: kc });
+        miniBolts(fx, cx, cy, z, 3, 0.9, "#000000", kc);
+        miniBolts(fx, cx, cy, z, 2, 0.7, kc);
       } else if (att && att.armament && elem === "physical") {
-        fx.ring(cx, cy, 0.08, 0.5 + 0.3 * w, "#7c4dff", 0.2, 0.06, { z, flat: 1, noCore: true, add: true });
+        const sh = sigOf(att).armament;
+        fx.ring(cx, cy, 0.08, 0.5 + 0.3 * w, sh, 0.2, 0.06, { z, flat: 1, noCore: true, add: true });
+        sparks(fx, cx, cy, z, ang, 3, ["#0b0a10", "#1a1622", sh], { speed: 6, life: 0.2, size: 0.07 });
       }
+      if (o.ryou) ryouFx(fx, att, tgt, ang, z, w);
       if ((w >= 0.7 || crit || h2.impactFrame || down) && (o.playerInvolved || tgt.boss) && !counter2) {
         const blade2 = !!(att && att.weapon && att.weapon.kind === "sword") || !!(st && st.arcs);
         const big2 = crit || h2.impactFrame || w >= 1 || down;
@@ -73189,12 +73420,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   } });
   sig("haki_infusion", { buff(fx, actor, s, a, ex) {
     DEFAULTS.buff(fx, actor, s, a, ex);
-    miniBolts(fx, actor.x, actor.y, 1, 6, 1.6, "#d50000");
-    miniBolts(fx, actor.x, actor.y, 1, 4, 1.6, "#000000");
+    const kc = sigOf(actor).conqueror;
+    miniBolts(fx, actor.x, actor.y, 1, 6, 1.6, kc);
+    miniBolts(fx, actor.x, actor.y, 1, 5, 1.6, "#000000", kc);
+    fx.ring(actor.x, actor.y, 0.2, 2.4, kc, 0.4, 0.08, { add: true });
   } });
   sig("haki_futuresight", { buff(fx, actor, s, a, ex) {
     DEFAULTS.buff(fx, actor, s, a, ex);
-    fx.add("flare", { x: actor.x, y: actor.y, z: 1.5, size: 0.9, color: "#ce93d8", life: 0.4 });
+    const oc = sigOf(actor).observation;
+    fx.add("flare", { x: actor.x, y: actor.y, z: 1.6, size: 0.9, color: oc, life: 0.4 });
+    fx.ring(actor.x, actor.y, 0.3, 6, oc, 0.6, 0.05, { flat: 0.5, add: true });
   } });
   function zoneFx(fx, zone, spec, actor, a) {
     const def = a && a.def || {};
@@ -73259,19 +73494,109 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     fx.particle({ x: p.x, y: p.y + 0.5, z: 1, vx: Math.random() - 0.5, vy: Math.random() - 0.5, vz: 0.4, g: 0, life: t.life || 0.35, size: t.size || 0.18, color: col2, kind: t.kind || "fire", grow: t.grow ?? -0.2 });
   }
   function conquerorFx(fx, actor, c) {
-    const R4 = c.range;
-    fx.ring(actor.x, actor.y, 0.5, R4, "#1a1a1a", 0.7, 0.45);
-    fx.ring(actor.x, actor.y, 0.3, R4 * 0.8, "#d50000", 0.55, 0.16, { add: true });
+    const R4 = c.range, col2 = sigOf(actor).conqueror;
+    const s = actor.look && actor.look.scale || 1;
+    fx.ring(actor.x, actor.y, 0.5, R4, "#0a090d", 0.7, 0.45);
+    fx.ring(actor.x, actor.y, 0.3, R4 * 0.85, col2, 0.55, 0.14, { add: true });
     fx.ring(actor.x, actor.y, 0.2, R4 * 1.1, "#000000", 0.9, 0.08, { wobble: 0.08 });
-    for (let k = 0; k < 10; k++) {
-      const a = Math.random() * TAU12;
-      fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * R4 * rnd(0.5, 0.8), actor.y + Math.sin(a) * R4 * rnd(0.35, 0.55), k % 2 ? "#d50000" : "#000000", 0.4, 0.09, { z0: 0.9, z1: rnd(0, 1.6), branches: 2 });
+    fx.ring(actor.x, actor.y, 0.3, 2.4 * s, "#000000", 0.32, 0.14, { z: 1 * s, flat: 1 });
+    fx.ring(actor.x, actor.y, 0.2, 3.2 * s, col2, 0.4, 0.08, { z: 1 * s, flat: 1, add: true, delay: 0.04 });
+    for (let k = 0; k < 14; k++) {
+      const a = k / 14 * TAU12 + rnd(-0.2, 0.2), r4 = R4 * rnd(0.45, 0.9);
+      fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * r4, actor.y + Math.sin(a) * r4 * 0.75, "#000000", rnd(0.32, 0.5), 0.09, { z0: rnd(0.6, 1.3) * s, z1: k % 3 ? rnd(0, 0.3) : rnd(1, 2.6), branches: 2, core: col2, delay: rnd(0, 0.12) });
     }
-    fx.add("pillar", { x: actor.x, y: actor.y, r: 0.6, h: 5, color: "#000000", core: "#d50000", kind: "dark", life: 0.5 });
-    dust(fx, actor.x, actor.y, 14, { speed: R4 * 0.8, size: 0.3 });
-    fx.impactFrame(0.12);
-    fx.shake(0.7);
-    fx.focus(actor.x, actor.y, 0.3);
+    for (let k = 0; k < 4; k++) {
+      const a = rnd(0, TAU12);
+      fx.bolt(actor.x, actor.y, actor.x + Math.cos(a) * R4 * 0.4, actor.y + Math.sin(a) * R4 * 0.3, col2, 0.22, 0.04, { z0: 1.1 * s, z1: rnd(0.4, 2), branches: 1, delay: rnd(0.05, 0.2) });
+    }
+    fx.add("pillar", { x: actor.x, y: actor.y, r: 0.6, h: 5, color: "#000000", core: col2, kind: "dark", life: 0.5 });
+    fx.crack(actor.x, actor.y, Math.min(4.5, R4 * 0.4), 3);
+    dust(fx, actor.x, actor.y, 16, { speed: R4 * 0.8, size: 0.3 });
+    calloutOver(fx, actor, 1.8 * s, "DOOON!!", col2, 0.7);
+    fx.impactFrame(0.14);
+    fx.shake(0.85);
+    fx.focus(actor.x, actor.y, 0.32);
+  }
+  function hakiOnFx(fx, a, type) {
+    const sig2 = sigOf(a), s = a.look && a.look.scale || 1;
+    const f = a.facing || 0;
+    if (type === "armament") {
+      const hx = a.x + Math.cos(f) * 0.3 * s, hy = a.y + Math.sin(f) * 0.2 * s;
+      fx.ring(hx, hy, 0.06, 0.6 * s, "#0b0a10", 0.26, 0.08, { z: 0.95 * s, flat: 1 });
+      fx.burst(a.x, a.y, 10, { color: ["#0b0a10", "#1a1622", sig2.armament], speed: 1.8, z: 0.75 * s, vz: 2.4, g: 0, life: 0.3, kind: "line", size: 0.045, drag: 3 });
+      fx.add("flare", { x: hx, y: hy, z: 0.95 * s, size: 0.55 * s, color: sig2.armament, life: 0.2, delay: 0.27 });
+      return;
+    }
+    const R4 = senseRange(a.hakiLevel ? a.hakiLevel("observation") : 0);
+    fx.ring(a.x, a.y, 0.5, R4, sig2.observation, 0.7, 0.13, { flat: 0.5, add: true });
+    fx.ring(a.x, a.y, 0.3, R4 * 0.6, sig2.observation, 0.75, 0.07, { flat: 0.5, add: true, delay: 0.16 });
+    fx.add("flare", { x: a.x, y: a.y, z: 1.62 * s, size: 0.7 * s, color: sig2.observation, life: 0.32 });
+  }
+  function hakiSpentFx(fx, a, type) {
+    const sig2 = sigOf(a), s = a.look && a.look.scale || 1;
+    const cols = type === "armament" ? ["#0b0a10", "#1a1622", "#2b2733"] : [sig2.observation, "#eceff1"];
+    fx.burst(a.x, a.y, 14, { color: cols, speed: 1.4, z: 0.9 * s, vz: 0.4, g: 3.5, life: 0.65, kind: "shard", size: 0.05, drag: 2 });
+    calloutOver(fx, a, 1.45 * s, "HAKI SPENT", "#b0bec5", 0.4);
+  }
+  function foresightFx(fx, a, att) {
+    const sig2 = sigOf(a), s = a.look && a.look.scale || 1;
+    afterimage(fx, a, { tint: sig2.observation, life: 0.5, alpha: 0.55, add: true });
+    a._ghostT = 0.18;
+    a._ghostTint = sig2.observation;
+    a._ghostAdd = true;
+    fx.add("flare", { x: a.x, y: a.y, z: 1.55 * s, size: 0.75, color: sig2.observation, life: 0.26 });
+    fx.ring(a.x, a.y, 0.2, 1.2 * s, sig2.observation, 0.3, 0.05, { add: true });
+    calloutOver(fx, a, 1.45 * s, "FORESIGHT", sig2.observation, 0.46);
+    if (a.isPlayer || att && att.isPlayer) {
+      fx.slowmo(0.3, 0.38);
+      fx.focus(a.x, a.y, 0.16);
+    }
+  }
+  function sensedFx(fx, att, p) {
+    const s = att.look && att.look.scale || 1;
+    fx.add("flare", { x: att.x, y: att.y, z: 1.75 * s, size: 0.42, color: sigOf(p).observation, life: 0.22, follow: att });
+  }
+  function visionFx(fx, att, p) {
+    const w = fx.game.world, col2 = sigOf(p).observation;
+    const dx = w ? w.dx(att.x, p.x) : p.x - att.x, dy = p.y - att.y, d = Math.hypot(dx, dy) || 1;
+    const k = Math.max(0, Math.min(1.4, d - 0.9)) / d;
+    const x = w ? w.wx(att.x + dx * k) : att.x + dx * k, y = att.y + dy * k;
+    afterimage(fx, att, { x, y, tint: col2, life: 0.34, alpha: 0.42, add: true });
+    const ps = p.look && p.look.scale || 1, ang = Math.atan2(dy, dx);
+    fx.add("impact", { x: p.x - Math.cos(ang) * 0.25, y: p.y - Math.sin(ang) * 0.16, z: 0.85 * ps, angle: ang, size: 0.42, color: col2, core: "#ffffff", life: 0.22, spikes: 8, lines: 3 });
+  }
+  function ryouFx(fx, att, tgt, ang, z, w) {
+    const sh = sigOf(att).armament;
+    const s = tgt.look && tgt.look.scale || 1;
+    const bx = tgt.x + Math.cos(ang) * 0.35 * s, by = tgt.y + Math.sin(ang) * 0.25 * s;
+    fx.ring(bx, by, 0.1, 1 + 0.5 * w, "#0b0a10", 0.3, 0.12, { z, flat: 1 });
+    fx.ring(bx, by, 0.1, 1.3 + 0.6 * w, sh, 0.32, 0.05, { z, flat: 1, noCore: true, add: true, delay: 0.03 });
+    vibration(fx, bx, by, z, 1.1 + 0.4 * w, sh, 2);
+    fx.burst(bx, by, 8, { angle: ang, spread: 0.9, color: ["#0b0a10", "#1a1622", sh], speed: 7, z, vz: 0.6, g: 2, life: 0.3, kind: "line", size: 0.05, drag: 3 });
+  }
+  function clashFx(fx, a, b) {
+    const w = fx.game.world;
+    const dx = w ? w.dx(a.x, b.x) : b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+    const mx = w ? w.wx(a.x + dx / 2) : a.x + dx / 2, my = a.y + dy / 2;
+    const ca = sigOf(a).conqueror, cb = sigOf(b).conqueror;
+    fx.add("clash", { x: mx, y: my, ax: a.x, ay: a.y, bx: b.x, by: b.y, colA: ca, colB: cb, life: 1.8 });
+    const px2 = -dy / d, py2 = dx / d;
+    for (let i = -3; i <= 3; i++) fx.add("cloud", { x: w ? w.wx(mx + px2 * i * 6) : mx + px2 * i * 6, y: my + py2 * i * 6, r: 7.5, z: 10 + Math.abs(i) * 0.8, life: 2.6, color: "#0d0b12" });
+    for (const [k, c] of [[a, ca], [b, cb]]) {
+      fx.ring(k.x, k.y, 0.3, 6, c, 0.6, 0.12, { add: true });
+      fx.ring(k.x, k.y, 0.4, 8, "#0a090d", 0.7, 0.3);
+    }
+    for (let i = 0; i < 6; i++) {
+      const t = rnd(-0.6, 0.6);
+      fx.bolt(mx, my, w ? w.wx(mx + px2 * t * 6) : mx + px2 * t * 6, my + py2 * t * 6, "#000000", 0.5, 0.08, { z0: 1.2, z1: rnd(0, 2.5), branches: 2, core: i % 2 ? ca : cb, delay: rnd(0, 0.5) });
+    }
+    fx.crack(mx, my, 3.5, 3);
+    dust(fx, mx, my, 18, { speed: 6, size: 0.3 });
+    calloutOver(fx, a.isPlayer ? b : a, 2.2, "GOGOGOGO!!", ca, 0.75);
+    fx.impactFrame(0.2);
+    fx.shake(1.1);
+    fx.slowmo(0.7, 0.3);
+    fx.focus(mx, my, 0.5);
   }
   function ghostLook(look, c) {
     return {
@@ -73328,6 +73653,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     } else if (!(a._ghostT > 0)) {
       a._ghostTint = null;
       a._ghostAdd = false;
+    }
+    if (a.conquerorInfused && a.state === "idle") {
+      a._infAcc = (a._infAcc || 0) + dt;
+      if (a._infAcc > 0.09) {
+        a._infAcc = 0;
+        const s = a.look && a.look.scale || 1, kc = sigOf(a).conqueror;
+        miniBolts(fx, a.x + Math.cos(a.facing || 0) * 0.25 * s, a.y + Math.sin(a.facing || 0) * 0.18 * s, rnd(0.7, 1.2) * s, 1, 0.55 * s, Math.random() < 0.6 ? "#000000" : kc, kc);
+      }
     }
     const kbm = Math.hypot(a.kb.x, a.kb.y);
     if (kbm > 3.5 && !a.inWater) {
@@ -75242,6 +75575,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      * you leap clean out of the water, leaving a ring on it.
      */
     tryJump(game, charge = 0) {
+      if (this.inWater && this.fruit && !this.gills && !this.sinking && !this.under && this.state === "idle" && !(this.hitstun > 0) && this.climbOut(game)) return true;
       if (!this.canJump()) return false;
       const J = this.jumpStats();
       const k = clamp2(charge, 0, 1);
@@ -75652,12 +75986,14 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           if (this.haki <= 0) {
             this.haki = 0;
             this.armament = false;
+            this.hakiSpent("armament");
           }
         } else if (this.observation) {
           this.haki -= (1 - Math.min(0.7, this.hakiLevel("observation") * 8e-3)) * dt;
           if (this.haki <= 0) {
             this.haki = 0;
             this.observation = false;
+            this.hakiSpent("observation");
           }
         } else this.haki = Math.min(d.maxHaki, this.haki + d.hakiRegen * dt);
       }
@@ -75665,6 +76001,19 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       for (const b of this.buffs) if (b.regen) regen += b.regen;
       const rested = this.isPlayer || !this.game || (this.game.time || 0) - (this.lastHitT || -999) > 45;
       if (this.hp < d.maxHp && this.state === "idle" && rested) this.hp = Math.min(d.maxHp, this.hp + regen * dt);
+    }
+    /**
+     * Haki given out, the spirit bar empty: the coat of Armament flakes away,
+     * Observation's senses go dull — seen, heard, and (yours) told.
+     */
+    hakiSpent(type) {
+      const g = this.game;
+      if (!g) return;
+      g.fx?.hakiSpent?.(this, type);
+      g.audio?.sfx("haki_out", this);
+      if (!this.isPlayer) return;
+      g.log(`Your ${type === "armament" ? "Armament" : "Observation"} Haki gives out: your spirit is spent. It refills while you let your Haki rest.`, "#b0bec5");
+      g.ui?.flashAct?.("haki");
     }
     passable(w, x, y) {
       if (w.solid(x, y)) return false;
@@ -75675,7 +76024,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         if (this.dash && this.dash.ignoreWater) return true;
         if (this.forcedWater) return true;
         if (this.game && iceAt(this.game, x, y)) return true;
-        return this.canEnterWater();
+        if (this.canEnterWater()) return true;
+        if ((this.z || 0) > 0.05 || this.vz > 0) return true;
+        return !!this.game?.deckAt?.(x, y, -0.6);
       }
       return false;
     }
@@ -75694,7 +76045,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       return g.view3d.ground(x, y) - this.feetH(g);
     }
     canEnterWater() {
-      if (this.fruit && !this.inWater) return false;
+      if (this.fruit && !this.inWater && !this.isPlayer) return false;
       return this.swimmer !== false;
     }
     /** The body is a circle around (x, y) (the 3D model stands centred on it). */
@@ -75714,6 +76065,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           }
           if (above) return false;
         }
+      }
+      if (this.charging > 0 && !(this.z > 0.05) && !this.vz && !this.deck && this.game?.view3d && this.game.world === w) {
+        const gm = this.game, there = this.groundAt(gm, x, y);
+        if (this.groundAt(gm, this.x, this.y) - there > 0.5) return false;
+        if (SWIMMABLE[w.type(x, y)] && !WALKABLE[w.type(x, y)] && !gm.deckAt?.(x, y, -0.6) && !iceAt(gm, x, y)) return false;
       }
       const g = this.game;
       if (g && g.deckAt && this.deck && anyShips(g)) {
@@ -75961,7 +76317,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
      */
     climbOnto(game, L3) {
       if (L3.ship || this.climb || this.state !== "idle" || this.hitstun > 0 || this.helpless() || this.status.root) return false;
-      if (this.inWater && (this.fruit && !this.gills || this.under)) return false;
+      if (this.inWater && (this.fruit && !this.gills && this.sinking || this.under)) return false;
       const s = this.look?.scale || 1;
       const air = (this.z || 0) > 0.05 || !!this.vz;
       const from = this.inWater ? this.groundAt(game, this.x, this.y) : this.feetH(game);
@@ -76213,7 +76569,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         const i = this.intent;
         let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
         if (this.inWater) {
-          if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.2;
+          if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.3;
           else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1);
         } else if (this.wading) sp *= 1 - 0.42 * clamp2(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
         if (this.charging) sp *= 1 - 0.75 * this.charging;
@@ -76554,6 +76910,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         stanceP: STANCES[stance],
         combat,
         sprint: !!(this.intent.sprint && this.moving),
+        fainted: !!this.fainted,
         weapon: wpn,
         armed: !!wpn && (drawn || combat && !!STANCE_ARMED[stance] || !!(anim && anim.weapon)),
         drawn,
@@ -77135,6 +77492,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.part = [];
       this.idx = [];
       this.uv = [];
+      this.limb = null;
       this.x4 = /* @__PURE__ */ new Map();
       this.bind = bind;
       this.blankUV = blankUV;
@@ -77232,6 +77590,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       g.setAttribute("skinIndex", new Uint16BufferAttribute(si, 4));
       g.setAttribute("skinWeight", new Float32BufferAttribute(sw2, 4));
       g.setAttribute("aPart", new Float32BufferAttribute(this.part, 1));
+      if (this.limb) g.setAttribute("aLimb", new Float32BufferAttribute(this.limb, 1));
       g.setIndex(n > 65535 ? new Uint32BufferAttribute(this.idx, 1) : new Uint16BufferAttribute(this.idx, 1));
       g.computeBoundingSphere();
       return g;
@@ -78263,7 +78622,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   }
 
   // src/render3d/chars/mats.js
-  var BODY_KEY = "op-char-body-5";
+  var BODY_KEY = "op-char-body-6";
   var INK2 = 2364943;
   var GRAD = null;
   function charGradient() {
@@ -78292,8 +78651,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const u = {
       uFlash: { value: 0 },
       uFlashCol: { value: new Color(1, 1, 1) },
+      // Armament: how far up each limb the coat has spread (right arm, left arm, right leg, left leg:
+      // 0 nothing … 1 the whole limb), the bright ripple at its edge, the coat, and its sheen
       uHaki: { value: new Vector4() },
-      uHakiCol: { value: new Color(1512733) },
+      uHakiRip: { value: new Vector4() },
+      uHakiCol: { value: new Color(723472) },
+      uHakiSheen: { value: new Color(10325247) },
       uLegFx: { value: new Vector2() },
       uLegFxCol: { value: new Color(1, 0.36, 0) },
       uFreeze: { value: 0 },
@@ -78312,15 +78675,20 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, FOG, u);
       celShading(sh);
-      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aPart;\nvarying float vPart;\nvarying float vObjY;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvPart = aPart;").replace("#include <skinning_vertex>", "#include <skinning_vertex>\nvObjY = transformed.y;");
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nattribute float aPart;\nattribute float aLimb;\nvarying float vPart;\nvarying float vLimb;\nvarying float vObjY;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvPart = aPart;\nvLimb = aLimb;").replace("#include <skinning_vertex>", "#include <skinning_vertex>\nvObjY = transformed.y;");
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
-varying float vPart; varying float vObjY;
-uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec3 uHakiCol;
+varying float vPart; varying float vLimb; varying float vObjY;
+uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec4 uHakiRip; uniform vec3 uHakiCol; uniform vec3 uHakiSheen;
 uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead; uniform float uNear;`).replace("#include <color_fragment>", `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);
 float lR = step(2.5, vPart) * step(vPart, 3.5), lL = step(3.5, vPart) * step(vPart, 4.5), pHead = step(4.5, vPart);
 if (vObjY > uClipY || uHideArms * (pR + pL) > 0.5 || uHideHead * pHead > 0.5 || length(vViewPosition) < uNear) discard;
-float hakiK = pR * uHaki.x + pL * uHaki.y + lR * uHaki.z + lL * uHaki.w;
+// (Armament: coated up to the limb's reach uHaki, a hard edge, the ripple riding it)
+float li = floor(vLimb + 0.001), rc = (vLimb - li) / 0.98;
+vec4 lsel = vec4(step(0.5, li) * step(li, 1.5), step(1.5, li) * step(li, 2.5), step(2.5, li) * step(li, 3.5), step(3.5, li));
+float hcov = dot(lsel, uHaki);
+float hakiK = hcov > 0.001 ? 1.0 - smoothstep(hcov - 0.012, hcov + 0.012, rc) : 0.0;
+float hakiF = hcov > 0.001 ? dot(lsel, uHakiRip) * (1.0 - smoothstep(0.0, 0.07, abs(rc - hcov))) : 0.0;
 float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
 diffuseColor.rgb = mix(diffuseColor.rgb, uLegFxCol, legK * 0.8);
@@ -78331,7 +78699,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // the anime rim light: a bright edge along the top and sides of the figure
   float rimUp = smoothstep(-0.25, 0.55, normalize(normal).y);
   totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.96, 0.9) * smoothstep(0.55, 0.9, rim) * rimUp * 0.55 * (1.0 - hakiK);
-  totalEmissiveRadiance += vec3(0.42, 0.28, 0.72) * pow(rim, 2.2) * hakiK * 0.9;
+  // Armament: lacquered black iron \u2014 a hard glint where the key light catches it
+  // (two cel bands, no soft gradient), a crisp rim in the character's own sheen,
+  // and a bright ripple running up the limb at the coat's edge as it hardens
+  vec3 hn = normalize(normal);
+  float hs = max(dot(hn, normalize(normalize(vec3(-0.45, 0.62, 0.64)) + normalize(vViewPosition))), 0.0);
+  float glint = smoothstep(0.935, 0.95, hs) + 0.14 * smoothstep(0.86, 0.88, hs);
+  // (not on a surface right against the eye \u2014 your own shoulder, in first person: there it would be all rim)
+  float hrim = smoothstep(0.74, 0.8, rim) * (0.4 + 0.6 * rimUp) * smoothstep(0.35, 0.9, length(vViewPosition));
+  totalEmissiveRadiance += (mix(uHakiSheen, vec3(1.0), 0.35) * hrim * 0.5 + uHakiSheen * glint * 0.25 + vec3(glint * 0.55)) * hakiK;
+  totalEmissiveRadiance += mix(uHakiSheen, vec3(1.0), 0.4) * hakiF * 1.7;
   totalEmissiveRadiance += vec3(0.5, 0.75, 1.0) * pow(rim, 1.6) * uFreeze * 0.35;
   totalEmissiveRadiance += uLegFxCol * legK * 0.85 + uFlashCol * uFlash * 0.8;
 }`);
@@ -78359,6 +78736,27 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
 }`);
     };
     m.customProgramCacheKey = () => "op-char-outline-2";
+    return m;
+  }
+  function senseMaterial() {
+    const u = { uCol: { value: new Color(14268671) }, uK: { value: 0 } };
+    const m = new MeshBasicMaterial({ color: 16777215, transparent: true, depthTest: false, depthWrite: false, blending: AdditiveBlending, fog: false });
+    m.userData.u = u;
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, u);
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vSenseN;\nvarying vec3 vSenseV;").replace("#include <project_vertex>", `#include <project_vertex>
+#ifdef USE_SKINNING
+  vSenseN = normalize( transformedNormal );
+#else
+  vSenseN = normalize( normalMatrix * normal );
+#endif
+  vSenseV = -mvPosition.xyz;`);
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vSenseN;\nvarying vec3 vSenseV;\nuniform vec3 uCol;\nuniform float uK;").replace("vec4 diffuseColor = vec4( diffuse, opacity );", `float sRim = 1.0 - abs( dot( normalize( vSenseN ), normalize( vSenseV ) ) );
+  // (a faint fill, and a hard bright edge: the shape of them, not a blob)
+  float sA = ( 0.16 + 0.6 * smoothstep( 0.45, 0.62, sRim ) + 0.55 * smoothstep( 0.78, 0.9, sRim ) ) * uK;
+  vec4 diffuseColor = vec4( uCol * 1.7, sA );`);
+    };
+    m.customProgramCacheKey = () => "op-char-sense-1";
     return m;
   }
   var SHARED_OUTLINE = {};
@@ -78525,6 +78923,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   };
   function expression2(look, pose, P6, t) {
     const st = pose && pose.state;
+    if (st === "knocked" && pose.fainted) return { eyes: "rolled", mouth: "shout", brow: "worried", small: true };
     if (st === "knocked" || st === "dead") return { eyes: "ko", mouth: "ko", brow: "worried", small: false };
     const face = P6 && P6.face;
     if (face === "shock") return { eyes: "open", mouth: "shout", brow: "worried", small: true };
@@ -78638,7 +79037,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       g.save();
       g.clip(E.white);
       const ir = st.iris * (X2.small ? 0.8 : 1) * 1.18;
-      const ix = -0.01, iy = 0.05 + st.drop * 0.08;
+      const ix = -0.01, iy = X2.eyes === "rolled" ? E.top - 0.16 * ir : 0.05 + st.drop * 0.08;
       if (st.beady) {
         g.fillStyle = "#16100f";
         g.beginPath();
@@ -79893,10 +80292,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (wpn.kind === "axe") add7(Prim.box(), M(a[0] - 0.02, a[1] + 0.1, a[2] + 0.05, 0.9, 0, 0, [0.015, 0.12, 0.16]), "#cfd8dc", B4.backWpn);
     }
     for (let i = 0; i < b.bone.length; i++) if (b.bone[i] === B4.head || b.bone[i] === B4.hairTail) b.part[i] = 5;
+    b.limb = limbReach(b, d);
     const geo2 = b.build();
     const inv = bind.map((m) => m.clone().invert());
     const used = new Set(b.bone);
     return { geo: geo2, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null, skirt: outfit.skirtInfo || null, rubTA: outfit.rubTA };
+  }
+  var LIMB_OF = new Uint8Array(BONES.length);
+  for (const [k, H4] of [[1, "R"], [2, "L"]]) {
+    for (const n of ["uarm", "farm", "hand", "fist", "palm", "finger", "k1", "k2", "k3", "k4", "j1", "j2", "j3", "j4", "tb", "tc"]) LIMB_OF[B4[n + H4]] = k;
+    for (const n of ["thigh", "shin", "foot"]) LIMB_OF[B4[n + H4]] = k + 2;
+    for (const i of RUB[k - 1]) LIMB_OF[i] = k;
+    for (const i of RUBL[k - 1]) LIMB_OF[i] = k + 2;
+  }
+  function limbReach(b, d) {
+    const n = b.count, out = new Float32Array(n), P6 = b.pos, lo = [0, Infinity, Infinity, Infinity, Infinity];
+    for (let i = 0; i < n; i++) {
+      const L3 = LIMB_OF[b.bone[i]];
+      if (L3 && P6[i * 3 + 1] < lo[L3]) lo[L3] = P6[i * 3 + 1];
+    }
+    const top = [0, d.hip0 + d.shY, d.hip0 + d.shY, d.hip0 - 0.07, d.hip0 - 0.07];
+    for (let i = 0; i < n; i++) {
+      const L3 = LIMB_OF[b.bone[i]];
+      if (!L3) continue;
+      out[i] = L3 + clampU((P6[i * 3 + 1] - lo[L3]) / Math.max(0.1, top[L3] - lo[L3]), 0, 1) * 0.98;
+    }
+    return out;
   }
   function minkEars2(b, HM, look, pal, hb, q2) {
     const fur = pal.fur, inner = look.kind === "Panda" ? "#2b2b2b" : mixHex(fur, "#f48fb1", 0.55);
@@ -81181,10 +81602,38 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     get fx() {
       return this.mat.userData.u;
     }
+    /**
+     * Sensed by Observation Haki: the body glowing through walls in `col` (the
+     * senser's tint), `k` strong; null lets it go (see mats.js senseMaterial).
+     */
+    sense(col2, k = 1) {
+      const sm = this.senseMesh;
+      if (!col2) {
+        if (sm) sm.visible = false;
+        return;
+      }
+      if (!sm) {
+        this.senseMesh = new SkinnedMesh(this.body.geo, senseMaterial());
+        this.senseMesh.bind(this.skeleton, IDENT2);
+        this.senseMesh.boundingSphere = this.mesh.boundingSphere;
+        this.senseMesh.renderOrder = 8;
+        this.group.add(this.senseMesh);
+      }
+      const m = this.senseMesh;
+      if (m.geometry !== this.body.geo) m.geometry = this.body.geo;
+      m.visible = true;
+      const u = m.material.userData.u;
+      if (this.senseCol !== col2) {
+        this.senseCol = col2;
+        u.uCol.value.set(col2);
+      }
+      u.uK.value = k;
+    }
     dispose() {
       releaseBody(this.body);
       releaseFace(this.faceE);
       this.mat.dispose();
+      if (this.senseMesh) this.senseMesh.material.dispose();
       if (this.bubble) {
         this.bubble.geometry.dispose();
         this.bubble.material.dispose();
@@ -82639,7 +83088,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   function actorPose(a, env2, look) {
     const act2 = a.action;
     const alphaBuff = a.buffs.find((b) => b.alpha !== void 0);
-    const aura = a.buffs.find((b) => b.aura)?.aura || (a.conquerorInfused ? "rgba(0,0,0,0.8)" : null);
+    const aura = a.conquerorInfused ? infusedAura(a) : a.buffs.find((b) => b.aura)?.aura || null;
     const pose = a.visualPose(env2, look, act2, aura, alphaBuff);
     if (pose.dodge !== void 0 && a.dash) {
       const d = a.dash, dl = Math.hypot(d.vx, d.vy) || 1;
@@ -82800,6 +83249,49 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     return o;
   }
 
+  // src/render3d/chars/haki.js
+  function coatBody(st, a, legs3, now3, u) {
+    const dt = Math.min(0.2, Math.max(0, now3 - (st.t ?? now3)));
+    st.t = now3;
+    const on = !!a.armament;
+    const reach2 = on ? Math.max(0.2, armamentReach(a.hakiLevel && a.hakiLevel("armament") || 30)) : 0;
+    st.arm = step(st.arm || 0, legs3 ? 0 : reach2, reach2, dt);
+    st.leg = step(st.leg || 0, legs3 ? reach2 : 0, reach2, dt);
+    const climbing = on && (legs3 ? st.leg : st.arm) < reach2 - 1e-3;
+    st.rip = climbing ? 1 : (st.rip || 0) * Math.exp(-dt * 7);
+    const hitAge = now3 - (a.armHitT ?? -9);
+    const hit = on && hitAge >= 0 && hitAge < 0.22 ? 1 - hitAge / 0.22 : 0;
+    const rip = Math.max(st.rip, hit);
+    u.uHaki.value.set(st.arm, st.arm, st.leg, st.leg);
+    u.uHakiRip.value.set(legs3 ? 0 : rip, legs3 ? 0 : rip, legs3 ? rip : 0, legs3 ? rip : 0);
+    if (on || st.arm > 0 || st.leg > 0) {
+      const sheen = sigOf(a).armament;
+      if (st.sheen !== sheen) {
+        st.sheen = sheen;
+        u.uHakiSheen.value.set(sheen);
+      }
+    }
+    return st.arm;
+  }
+  function step(cur, want, reach2, dt) {
+    if (cur < want) return Math.min(want, cur + dt * Math.max(0.2, reach2) / COAT.spread);
+    if (cur > want) return Math.max(want, cur - dt * Math.max(0.5, cur) / COAT.fall);
+    return cur;
+  }
+  function senseOf(a, game) {
+    const p = game?.player;
+    if (!p || !p.observation || a === p || a.isPlayer || !a.alive || a.state !== "idle" || a.hidden) return null;
+    if (!(hostile(p, a) || a.provoked || a.controller?.target === p) || a.faction === "player") return null;
+    const w = game.world, d = w ? w.distance(p.x, p.y, a.x, a.y) : Math.hypot(a.x - p.x, a.y - p.y);
+    const R4 = senseRange(p.hakiLevel("observation"));
+    if (d > R4) return null;
+    const edge = Math.min(1, (R4 - d) / 3);
+    const act2 = a.action;
+    const winding = act2 && (act2.target === p || a.controller?.target === p) && act2.t < (act2.hitAt ?? act2.def?.windup ?? 0.2) ? 1 : 0;
+    const now3 = game.env?.time ?? 0;
+    return { col: sigOf(p).observation, k: edge * (0.7 + 0.1 * Math.sin(now3 * 5 + (a.seed || 0)) + 0.6 * winding) };
+  }
+
   // src/render3d/chars/viewmodel.js
   var clamp6 = (v, a, b) => v < a ? a : v > b ? b : v;
   var FP = { x0: 0.2, xs: 0.2, c: 0.14, L: -0.12, xmin: 0.2, xhigh: 0.42, top: -0.16, low: 0.07 };
@@ -82925,6 +83417,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const { pose, P: P6 } = actorPose(p, env2, look);
       const o = rigOptions(p, pose, P6, this.o);
       o.wpn = wpn;
+      if (o.armament && (this.coat?.arm ?? 1) < 0.17) o.armament = false;
       if (pose.station && pose.station.kind === "row" && !pose.anim) {
         this.rowing(p, pose.station, P6, o, m, env2);
         return;
@@ -83120,7 +83613,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.body.position.set(this.sway.x + bx + FPW.aside * this.windAside, -0.1 + 0.26 * use - eyeY + this.sway.y + by, -0.06);
       this.body.updateMatrix();
       const fx = m.fx;
-      fx.uHaki.value.set(p.armament ? 1 : 0, p.armament ? 1 : 0, pose.armLegs ? 1 : 0, pose.armLegs ? 1 : 0);
+      coatBody(this.coat || (this.coat = {}), p, !!pose.armLegs, env2.time, fx);
       fx.uFlash.value = p.flashT > 0 ? Math.min(0.5, p.flashT / 0.12 * 0.6) : 0;
       if (pose.legFx) {
         fx.uLegFxCol.value.set(pose.legFx);
@@ -83163,7 +83656,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       _mB.decompose(this.body.position, this.body.quaternion, this.body.scale);
       this.body.updateMatrix();
       const fx = m.fx;
-      fx.uHaki.value.set(p.armament ? 1 : 0, p.armament ? 1 : 0, 0, 0);
+      coatBody(this.coat || (this.coat = {}), p, false, env2.time, fx);
       fx.uFlash.value = p.flashT > 0 ? Math.min(0.5, p.flashT / 0.12 * 0.6) : 0;
       fx.uLegFx.value.set(0, 0);
       for (const g of this.glows) g.sprite.visible = false;
@@ -83350,6 +83843,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const look = currentLook(a, this.lookCache);
         const { pose, P: P6 } = actorPose(a, env2, look);
         const o = rigOptions(a, pose, P6, this.o);
+        if (o.armament && (this.coat?.arm ?? 1) < 0.17) o.armament = false;
         this.easeWalk(a, pose, o, this.lastT < 0 ? 1 : Math.min(0.2, env2.time - this.lastT));
         o.wpn = this.wpn;
         if (a.isPlayer && ctx.mode === "first") {
@@ -83594,8 +84088,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const m = this.model, fx = m.fx, rig = m.rig;
       const t = env2.time;
       fx.uFlash.value = a.flashT > 0 ? Math.min(0.78, a.flashT / 0.12 * 0.95) : 0;
-      const arm = a.armament ? 1 : 0;
-      fx.uHaki.value.set(arm, arm, pose.armLegs ? 1 : 0, pose.armLegs ? 1 : 0);
+      coatBody(this.coat || (this.coat = {}), a, !!pose.armLegs, t, fx);
+      const sn = ctx.game ? senseOf(a, ctx.game) : null;
+      m.sense(sn && sn.col, sn ? sn.k : 0);
       if (pose.legFx) {
         fx.uLegFxCol.value.set(pose.legFx);
         const lim = pose.fx && pose.fx.limb;
@@ -83690,7 +84185,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (f.limb === "fB") glow3(col2, sz, rig.F[1]);
         if (f.limb === "head") glow3(col2, sz, rig.headC);
       }
-      if (a.armament && pose.anim && near) glow3("#7c4dff", 0.16, rig.E[pose.anim.limb === "hB" ? 1 : 0]);
+      if (a.armament && pose.anim && near) glow3(sigOf(a).armament, 0.13, rig.E[pose.anim.limb === "hB" ? 1 : 0]);
       for (let i = gi; i < this.glows.length; i++) this.glows[i].sprite.visible = false;
       if (pose.anim && !pose.noTrails && dist < 30) {
         if (!this.trail) {
@@ -84360,10 +84855,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         if (!r4) fades.set(v, r4 = { f: 1, hold: 0 });
         r4.hold = FADE_HOLD;
       }
-      const step = (1 - FADE_TO) / FADE_TIME * dt;
+      const step2 = (1 - FADE_TO) / FADE_TIME * dt;
       for (const [v, r4] of fades) {
         const to = want.has(v) || (r4.hold -= dt) > 0 ? FADE_TO : 1;
-        r4.f = r4.f > to ? Math.max(to, r4.f - step) : Math.min(to, r4.f + step);
+        r4.f = r4.f > to ? Math.max(to, r4.f - step2) : Math.min(to, r4.f + step2);
         if (!fadeProp(v, r4.f) || r4.f >= 1) fades.delete(v);
       }
     }
@@ -89004,9 +89499,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     if (S6.lamps) {
       for (const st of streets) {
         const len = st.dir === "h" ? st.x1 - st.x0 + 1 : st.y1 - st.y0 + 1;
-        const step = st.rank === 0 ? 7 : 9;
-        for (let i = 2 + rng4.int(0, 2); i < len - 1; i += step) {
-          const side = (i / step | 0) % 2 ? 1 : -1;
+        const step2 = st.rank === 0 ? 7 : 9;
+        for (let i = 2 + rng4.int(0, 2); i < len - 1; i += step2) {
+          const side = (i / step2 | 0) % 2 ? 1 : -1;
           const x = st.dir === "h" ? st.x0 + i + 0.5 : side < 0 ? st.x0 - 0.35 : st.x1 + 1.35;
           const y = st.dir === "h" ? side < 0 ? st.y0 - 0.35 : st.y1 + 1.35 : st.y0 + i + 0.5;
           if (!okLand(x, y) || nearDoor(x, y, 1.6) || world.hitsProp(x, y, 0.9)) continue;
@@ -99222,8 +99717,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     parryCue(at4, breaks, k = 1) {
       return this.cfx(() => parryCueFx(this, at4, breaks, k));
     }
-    tech(actor, step, action, kind, extra) {
-      return this.cfx(() => techFx(this, actor, step, action, kind, extra));
+    tech(actor, step2, action, kind, extra) {
+      return this.cfx(() => techFx(this, actor, step2, action, kind, extra));
     }
     zone(zone, spec, actor, action) {
       return this.cfx(() => zoneFx(this, zone, spec, actor, action));
@@ -99236,6 +99731,30 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     conqueror(actor, c) {
       return this.cfx(() => conquerorFx(this, actor, c));
+    }
+    /** Two kings' Conqueror's colliding: the sky splits. */
+    clash(a, b) {
+      return this.cfx(() => clashFx(this, a, b));
+    }
+    /** Armament or Observation switched on (the coat's clank and spread, Observation's sonar pulse). */
+    hakiOn(actor, type) {
+      return this.cfx(() => hakiOnFx(this, actor, type));
+    }
+    /** Haki given out, the spirit spent. */
+    hakiSpent(actor, type) {
+      return this.cfx(() => hakiSpentFx(this, actor, type));
+    }
+    /** Observation's foresight: a blow read and slipped. */
+    foresight(actor, att) {
+      return this.cfx(() => foresightFx(this, actor, att));
+    }
+    /** A foe's will flagged by Observation as they start a blow at `p`. */
+    sensed(att, p) {
+      return this.cfx(() => sensedFx(this, att, p));
+    }
+    /** Future Sight: a vision of `att`'s blow at `p` before it lands. */
+    vision(att, p) {
+      return this.cfx(() => visionFx(this, att, p));
     }
     afterimage(actor, o) {
       return this.cfx(() => afterimage(this, actor, o));
@@ -99874,7 +100393,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
   function canClimb(a) {
     if (a.state !== "idle" || a.climb || a.onShip || a.mode === "sail" || a.hitstun > 0 || a.status?.freeze || a.status?.root) return false;
-    if (a.inWater && (a.under || a.fruit && !a.gills)) return false;
+    if (a.inWater && (a.under || a.fruit && !a.gills && a.sinking)) return false;
     return !((a.z || 0) > 0.3);
   }
   function ladderAt(game, a, reach2 = 1.5, only = null) {
@@ -100424,7 +100943,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       if (a.hakiSkill && !a.isPlayer) {
         const fighting = !!this.target && a.haki > 2;
-        if (a.hakiSkill.armament > 0) a.armament = fighting;
+        if (a.hakiSkill.armament > 0) {
+          if (fighting && !a.armament) game.audio?.sfx("haki", a);
+          a.armament = fighting;
+        }
         if (a.hakiSkill.observation > 0) a.observation = fighting;
       }
       if (!this.target && this.home && this.leash && w.distance(a.x, a.y, this.home.x, this.home.y) > this.leash && this.state !== "return") {
@@ -101364,7 +101886,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var TRAITS = {
     will_of_d: { name: "Will of D.", rarity: "legendary", weight: 0, desc: `Your name carries a hidden "D." \u2014 the mark of those who laugh in the face of death. Fate bends around you, and the world's powers will come to fear the name.`, attrs: { wil: 3 } },
     // hidden: never shown until it awakens
-    conqueror: { name: "King's Disposition", rarity: "legendary", weight: 0, hidden: true, desc: "One in several million is born with the qualities of a king. It awakened the first time your will was truly tested." },
+    conqueror: { name: "King's Disposition", rarity: "legendary", weight: 0, hidden: true, desc: "One in several million is born with the qualities of a king. It awakened the first time your will was truly tested.", latent: "A Haki master sensed it in you: the qualities of a king. It will wake the day your will is truly tested." },
     iron_stomach: { name: "Iron Stomach", rarity: "common", weight: 10, desc: "Food heals 30% more." },
     sea_legs: { name: "Sea Legs", rarity: "common", weight: 10, desc: "Storms and crashes damage your ship 30% less." },
     silver_tongue: { name: "Silver Tongue", rarity: "common", weight: 10, desc: "Shops charge you 10% less." },
@@ -101386,7 +101908,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     chart: { name: "Grandfather's Chart", desc: "Every island your ancestors discovered starts charted on your map.", costs: [30], icon: "map" },
     haki: { name: "Latent Spirit", desc: "Hidden powers, once awakened, grow 25% faster per level.", costs: [80, 160], icon: "character" },
     will_of_d: { name: "Will of D.", desc: 'Triples the chance to be born with the hidden "D." (5% \u2192 15%).', costs: [90], icon: "journal" },
-    kings_blood: { name: "Kingly Bloodline", desc: "Much higher chance to be born with the qualities of a king.", costs: [150], icon: "crew" },
+    kings_blood: { name: "Kingly Bloodline", desc: "Four times the chance to be born with the qualities of a king (4% \u2192 16%; with the Will of D., certain).", costs: [150], icon: "crew" },
     rare_races: { name: "Distant Relatives", desc: "Rare, epic and legendary races are twice as likely.", costs: [100], icon: "character" }
   };
   var hakiKnown = (c) => !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
@@ -101421,8 +101943,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (!traits.includes(t2)) traits.push(t2);
     }
     if (rng4.chance(dChance(legacy))) traits.push("will_of_d");
-    const kChance = (traits.includes("will_of_d") ? 0.25 : 0.015) * (perkLevel(legacy, "kings_blood") ? 4 : 1);
-    if (rng4.chance(kChance)) traits.push("conqueror");
+    if (rng4.chance(kingChance(traits.includes("will_of_d"), perkLevel(legacy, "kings_blood") > 0))) traits.push("conqueror");
     return { race, traits, seed };
   }
   function createCharacter(legacy, birth, choices) {
@@ -101522,6 +102043,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       createdAt: Date.now()
     };
     if (perkLevel(legacy, "chart")) char.discovered = (legacy.charted || []).slice();
+    char.hakiSig = hakiSignature(char.runSeed);
     return char;
   }
   var HUMAN_STARTERS = {
@@ -101616,6 +102138,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     a.fruit = char.fruit;
     a.fruitMastery = char.fruitMastery;
     a.hakiSkill = char.haki;
+    a.hakiSig = charSignature(char);
     a.weapon = weaponFromChar(char);
     a.weaponMastery = char.weaponMastery;
     a.baseMods.armor = armorOf(char);
@@ -101662,6 +102185,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       c.crewOffers = {};
       for (const m of c.crew || []) c.crewOffers[m.id] = { said: "yes", day: m.joined || 1 };
     }
+    if (!c.hakiSig) c.hakiSig = charSignature(c);
     upgradeFleet(c);
     if (c.unspent > 0) {
       const keys2 = ["str", "agi", "end", "vit", "wil"];
@@ -101738,6 +102262,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     p.fruit = c.fruit;
     p.fruitMastery = c.fruitMastery;
     p.hakiSkill = c.haki;
+    p.hakiSig = charSignature(c);
     p.techniques = c.techniques;
     p.hotbar = c.hotbar;
     p.weaponMastery = c.weaponMastery;
@@ -102411,23 +102936,32 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       }
       return best;
     }
+    /**
+     * R / T: Armament or Observation on (the other goes off) or off. On: the
+     * coat spreading up the arms with its clank, or the sonar pulse and its
+     * ting (combatfx.js hakiOnFx; the sounds in your own voice: audio/sfx.js).
+     * With no spirit left, nothing comes — and you're told why.
+     */
     toggleHaki(p, game, type) {
       if (!p.hakiLevel(type)) return;
-      if (type === "armament") {
-        p.armament = !p.armament;
-        if (p.armament) {
-          p.observation = false;
-          game.fx.burst(p.x, p.y - 0.8, 10, { color: "#212121", speed: 3, g: 0, life: 0.35, kind: "line" });
-          game.audio?.sfx("haki");
-        }
-      } else {
-        p.observation = !p.observation;
-        if (p.observation) {
-          p.armament = false;
-          game.fx.ring(p.x, p.y, 0.5, 8, "#ce93d8", 0.6, 0.08);
-          game.audio?.sfx("haki_obs");
-        }
+      const on = type === "armament" ? !p.armament : !p.observation;
+      if (on && p.haki < 1) {
+        game.ui?.flashAct?.("haki");
+        game.audio?.sfx("haki_out", p);
+        game.log("No spirit left for Haki: let it rest and the bar refills.", "#b0bec5");
+        return;
       }
+      if (type === "armament") {
+        p.armament = on;
+        if (on) p.observation = false;
+      } else {
+        p.observation = on;
+        if (on) p.armament = false;
+      }
+      if (on) {
+        game.fx.hakiOn?.(p, type);
+        game.audio?.sfx(type === "armament" ? "haki" : "haki_obs", p);
+      } else game.audio?.sfx("haki_off", p, { type });
     }
     sail(p, dt, game) {
       const inp = game.input;
@@ -103158,7 +103692,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }
 
   // src/ui/style.css
-  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n.slot.act { cursor: default; }\n.slot.act.interactive { cursor: pointer; }\n.slot.act.guard { margin-right: 8px; }\n.slot.act.wait .ico { opacity: .5; }\n.slot.act.ready { animation: actready .4s ease-out; }\n@keyframes actready { 0% { box-shadow: 0 0 0 0 rgba(140, 205, 250, .95), 0 3px 8px rgba(0,0,0,.45); border-color: #bfe6ff; } 100% { box-shadow: 0 0 0 10px rgba(140, 205, 250, 0), 0 3px 8px rgba(0,0,0,.45); } }\n.slot.act.guard.on { border-color: #9cc3ea; box-shadow: 0 0 12px rgba(110, 165, 230, .7); }\n.slot.act.guard.broken { border-color: #ff8a80; }\n.slot.act.guard.broken .ico { opacity: .45; filter: grayscale(.6); }\n.slot.act.guard.parried { animation: actparry .45s ease-out; }\n.slot.act.guard.parried.perfect { animation: actperfect .6s ease-out; }\n@keyframes actparry { 0% { box-shadow: 0 0 0 0 rgba(255, 241, 118, .95), 0 3px 8px rgba(0,0,0,.45); border-color: #fff59d; } 100% { box-shadow: 0 0 0 12px rgba(255, 241, 118, 0), 0 3px 8px rgba(0,0,0,.45); } }\n@keyframes actperfect { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 1), 0 3px 8px rgba(0,0,0,.45); border-color: #fff; background-color: rgba(255, 253, 231, .55); } 100% { box-shadow: 0 0 0 16px rgba(255, 255, 255, 0), 0 3px 8px rgba(0,0,0,.45); } }\n.slot.act.guard.counter { border-color: #ffab40; box-shadow: 0 0 14px rgba(255, 171, 64, .85); }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #e9dab4; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n/* the drawn weapon's moves (bottom right, while it's out) */\n.skillpanel { position: absolute; right: 14px; bottom: 14px; min-width: 210px; max-width: 260px; background: rgba(10,20,30,.74); border-radius: 12px; padding: 8px 10px 7px; border: 1px solid var(--border); font-size: 12px; pointer-events: none; }\n.skillpanel .sp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }\n.skillpanel .sp-head b { font: 400 17px 'Pirata One', serif; color: var(--gold); letter-spacing: .5px; }\n.skillpanel .sp-head span { font-size: 10.5px; opacity: .75; text-align: right; }\n.skillpanel .sp-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }\n.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; padding: 1px 5px; font: 800 11px Nunito, sans-serif; color: #fff; }\n.skillpanel .sp-row.unbound kbd { opacity: .45; }\n.skillpanel .sp-row.cd { opacity: .55; }\n.skillpanel .sp-cd { margin-left: auto; color: #ffcc80; font-variant-numeric: tabular-nums; }\n.skillpanel .sp-foot { margin-top: 5px; font-size: 10.5px; opacity: .7; }\n.skillpanel .sp-foot kbd { min-width: 0; padding: 0 5px; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n/* (a link that looks like a button: the way to the game's own site) */\na.btn { display: inline-block; text-decoration: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.dive { color: #0d5f8a; font-style: italic; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #1f5f86; font-size: 18px; }\n.wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label.town { font: 700 13px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #4a3320; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; z-index: 1; }\n.wm-label.isle { color: #2f2012; letter-spacing: 1px; text-shadow: 0 0 4px #f5e6c4, 0 0 8px #f5e6c4; z-index: 1; }\n.wm-label.landmark { font: italic 600 12px Nunito, sans-serif; color: #5b4026; }\n/* markers standing on their spot: the icon's middle on it, the name beside it */\n.wm-pin { position: absolute; width: 0; height: 0; display: flex; align-items: center; z-index: 2; }\n.wm-pin > img { flex: none; transform: translate(-50%, 0); filter: drop-shadow(0 1px 1.5px rgba(40,24,10,.6)); }\n.wm-pin > span { margin-left: -4px; white-space: nowrap; font: 400 16px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; }\n.wm-pin.quest > span { color: #1f5f86; font-size: 17px; }\n.wm-pin.quest.main { z-index: 4; }\n.wm-pin.quest.main > span { color: #a33a00; font-size: 19px; }\n.wm-pin.poi > img { box-sizing: content-box; padding: 2px; border-radius: 50%; background: rgba(246,234,206,.96); box-shadow: 0 0 0 1.5px #5b4026, 0 1px 3px rgba(40,24,10,.45); filter: none; }\n.wm-pin.poi.dock > img { background: rgba(214,232,240,.96); }\n.wm-pin.poi > span { font: 700 11px Nunito, sans-serif; color: #4a3320; }\n.wm-pin.lp > span { color: #8e2c1c; }\n/* you: an arrow the way you face, ringed */\n.wm-me { position: absolute; width: 0; height: 0; z-index: 5; }\n.wm-me::before { content: ''; position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(192,57,43,.75); animation: wmping 1.8s ease-out infinite; }\n.wm-me i { position: absolute; left: -10px; top: -12px; width: 20px; height: 24px; }\n.wm-me i::before { content: ''; position: absolute; inset: 0; background: #c0392b; clip-path: polygon(50% 0, 100% 100%, 50% 74%, 0 100%); filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }\n@keyframes wmping { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }\n.wm-scale { position: absolute; left: 22px; bottom: 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; pointer-events: none; }\n.wm-scale i { display: block; height: 7px; border: 2px solid #4a3320; border-top: 0; background: repeating-linear-gradient(90deg, #4a3320 0 25%, #f2e3c2 25% 50%); background-size: 100% 3px; background-repeat: no-repeat; background-position: bottom; box-shadow: 0 0 0 1px rgba(245,230,196,.8); }\n.wm-scale span { font: 700 13px Nunito, sans-serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; }\n.wm-rose { position: absolute; right: 20px; bottom: 20px; pointer-events: none; opacity: .9; filter: drop-shadow(0 0 4px rgba(245,230,196,.9)); }\n/* (the chart has the screen to itself: no banners or toasts over it) */\n#ui.map-open .banner, #ui.map-open .toast { visibility: hidden; }\n#ui.touch .wm-rose { transform: scale(.7); transform-origin: right bottom; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n/* the Log Pose in its slot: where the needle points, and where else it can (panels.js coursePicker) */\n.lp-course { margin-top: 10px; border-top: 1px dashed rgba(109,76,51,.45); padding-top: 8px; }\n.lp-course h5 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font: 800 11.5px Nunito, sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: #6d4c33; }\n.lp-course h5 small { margin-left: auto; font: 700 11px Nunito, sans-serif; letter-spacing: 0; text-transform: none; color: #8a6c55; }\n.lp-opts { display: flex; flex-direction: column; gap: 4px; max-height: 214px; overflow-y: auto; padding-right: 3px; }\n.lp-opt { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 78px; align-items: center; gap: 9px; text-align: left; padding: 5px 9px; border-radius: 8px; border: 1px solid rgba(109,76,51,.32); background: rgba(255,250,240,.7); cursor: pointer; font: 800 13px Nunito, sans-serif; color: #3e2a1c; transition: border-color .12s, background .12s; }\n.lp-opt:hover { border-color: #6d4c33; background: #fffaf0; }\n.lp-opt.on { border-color: var(--red); background: #fff3e0; box-shadow: inset 3px 0 0 var(--red); cursor: default; }\n.lp-name { display: flex; flex-direction: column; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.lp-name small { font: 700 10.5px Nunito, sans-serif; color: #7a5c45; letter-spacing: .2px; }\n.lp-opt.story .lp-name small { color: #a86b00; }\n.lp-way { font: 700 12px Nunito, sans-serif; color: #5d4433; white-space: nowrap; font-variant-numeric: tabular-nums; }\n.lp-cur { font: 900 10.5px Nunito, sans-serif; color: var(--red); text-align: right; letter-spacing: .6px; text-transform: uppercase; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n/* the shipwright's menus: your ships and the ships for sale */\n.sw-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }\n.sw-head h2 { margin: 0; }\n.row-item.cant { opacity: .6; }\n.row-item.here { outline: 2px solid #b8860b; }\n.row-item .sub.warn { color: #b71c1c; opacity: 1; font-weight: 700; }\n.price.short { color: #b71c1c; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.story-pick { margin: 4px 0 8px; padding: 6px 10px 2px; border-radius: 8px; background: rgba(0, 137, 123, .07); border: 1px solid rgba(0, 137, 123, .25); }\n.story-pick .opt-row { margin: 2px 0; }\n.story-pick .story-note { margin: 3px 0 6px; font-size: 12px; line-height: 1.35; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-pins { position: absolute; left: 0; top: 0; pointer-events: none; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.85)); }\n.compass .pin img { display: block; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: 1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.main { z-index: 2; }\n.compass .pin.main small { color: #ffc940; }\n.compass .pin.side small { color: #a6dcf5; }\n.compass .pin.ship small { color: #e3f2fd; }\n/* the markers over the world (see waypoints.js): where the quests on the tracker are */\n.wpmarks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wpm { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; width: 0; transition: opacity .2s; will-change: transform; }\n.wpm > img { margin-top: -17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)) drop-shadow(0 0 5px rgba(0,0,0,.35)); }\n.wpm.side > img { margin-top: -14px; }\n.wpm.main { z-index: 2; }\n.wpm small { margin-top: 1px; font: 800 12px Nunito, sans-serif; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 3px #000; }\n.wpm.main small { color: #ffd66b; }\n.wpm.side small { color: #b9e4f8; }\n.wpm.lp > img { margin-top: -13px; }\n.wpm.lp small { color: #ffb4a8; }\n.wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }\n.wpm.look .wpm-name { opacity: 1; transform: none; }\n.wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }\n.wpm-arrow::after { content: ''; position: absolute; left: 25px; top: 3px; border: 6px solid transparent; border-left: 10px solid #fff; filter: drop-shadow(0 0 1.5px #000); }\n.wpm.main .wpm-arrow::after { border-left-color: #ffc940; }\n.wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }\n.wpm.lp .wpm-arrow::after { border-left-color: #ff8a80; }\n.wpm.edge .wpm-arrow { display: block; }\n.wpm.edge > img { transform: scale(.85); }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.counter { color: #ffab40; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* ---------- creative panel (F1) ---------- */\n/* (a parchment of its own height: the tabs and the note stay put, the middle scrolls) */\n.panel.cr-wrap { display: flex; flex-direction: column; height: min(780px, 88vh); overflow: hidden; padding-bottom: 10px; box-sizing: border-box; }\n.cr { display: flex; flex-direction: column; flex: 1; min-height: 0; }\n.cr-head { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; padding-right: 40px; }\n.cr-head h2 { display: flex; align-items: center; gap: 8px; margin: 0; }\n.cr-head .muted { font-size: 12px; }\n.cr-tabs { margin: 8px 0; }\n.cr-main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 2px 4px 6px 1px; }\n.cr-note { flex: none; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(43,29,18,.08); border: 1px solid rgba(109,76,51,.3); font-size: 13px; font-weight: 700; min-height: 18px; }\n.cr-note.flash { animation: crnote 1s ease-out; }\n@keyframes crnote { 0% { background: rgba(241,196,15,.6); } 100% { background: rgba(43,29,18,.08); } }\n.cr-bar { display: flex; gap: 8px 12px; align-items: flex-start; flex-wrap: wrap; margin: 2px 0 10px; }\n.cr-bar > div { flex: 1 1 300px; min-width: 0; }\n.cr-search, .cr-num { box-sizing: border-box; font: 700 14px Nunito, sans-serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; }\n.cr-search { flex: 1 1 240px; min-width: 0; max-width: 420px; width: 100%; }\n.cr-num { width: 140px; }\n.cr-search:focus-visible, .cr-num:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n.cr-chips { display: flex; flex-wrap: wrap; gap: 5px; }\n.cr-chip { background: rgba(109,76,51,.12); color: var(--ink); border: 2px solid rgba(109,76,51,.45); border-radius: 999px; padding: 3px 11px; font: 800 12.5px Nunito, sans-serif; cursor: pointer; white-space: nowrap; }\n.cr-chip:hover { border-color: #6d4c33; background: rgba(109,76,51,.2); }\n.cr-chip.on { background: var(--red); border-color: #7b1f16 !important; color: #fff; }\n.cr-row-wrap { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 6px 0; }\n.cr-row-wrap .lbl { font-weight: 800; font-size: 13px; }\n.cr-row-wrap > .cr-slider { flex: 1 1 320px; }\n.cr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }\n.cr-grid.foes { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }\n.cr-card, .cr-item, .cr-yours { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.35); border-radius: 9px; padding: 7px 9px; min-width: 0; }\n.cr-card .grow, .cr-item .grow, .cr-yours .grow { flex: 1; min-width: 0; }\n.cr-card b, .cr-item b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.cr-card .sub, .cr-item .sub, .cr-yours .sub { font-size: 12px; opacity: .8; line-height: 1.3; }\n.cr-card .tags { margin: 3px 0 1px; }\n.cr-card .tags .tag { margin: 0 4px 0 0; }\n.cr-card.have { background: rgba(255,243,205,.85); }\n.cr-card .btn, .cr-item .btn { flex: none; }\n.sub.where { color: #7a4a06; font-weight: 800; opacity: 1 !important; }\n.cr-yours { margin-bottom: 10px; padding: 9px 12px; background: rgba(255,250,240,.75); border-width: 2px; }\n.cr-yours .tag { margin-left: 8px; }\n.cr-foe { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.35); border-radius: 9px; padding: 6px 10px; font: 700 13px Nunito, sans-serif; color: var(--ink); cursor: pointer; min-width: 0; }\n.cr-foe:hover { border-color: var(--red); background: rgba(255,236,179,.6); }\n.cr-foe b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.cr-foe .sub { font-size: 11.5px; opacity: .75; }\n.cr-sec { background: rgba(255,255,255,.38); border: 1px solid rgba(109,76,51,.35); border-radius: 10px; padding: 8px 12px 10px; margin-bottom: 10px; min-width: 0; }\n.cr-sec h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; flex-wrap: wrap; }\n.cr-sec p.muted { margin: 6px 0 0; }\n.cr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }\n.cr-col { min-width: 0; }\n.cr-slider { display: flex; align-items: center; gap: 8px; margin: 3px 0; min-width: 0; }\n.cr-slider .nm { width: 96px; font-weight: 800; font-size: 13px; flex: none; }\n.cr-slider input { flex: 1; min-width: 60px; accent-color: #8e1b16; }\n.cr-slider .val { min-width: 48px; text-align: right; font-weight: 800; font-size: 13px; }\n.cr-race { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }\n.cr-race .portrait { flex: none; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 10px; }\n.cr-race-name { font: 400 22px 'Pirata One', serif; color: #5a2d0c; margin-bottom: 2px; }\n.cr-body { margin-top: 6px; color: #3b2a1a; font-weight: 700; opacity: 1 !important; font-size: 12px; }\n.cr-lv { font-weight: 900; font-size: 12px; color: #7a4a06; white-space: nowrap; }\n.cr-list { display: flex; flex-direction: column; gap: 5px; max-height: 380px; overflow-y: auto; margin: 8px 0; padding-right: 2px; }\n.cr-item.here { outline: 2px solid #b8860b; }\n.cr-purse { font: 400 22px 'Pirata One', serif; color: #7a4a06; margin-left: 6px; }\n.cr-money { padding-bottom: 6px; }\n.check-row.off { opacity: .55; cursor: default; }\n@media (max-width: 900px) { .cr-cols { grid-template-columns: 1fr; } }\n@media (max-width: 600px) {\n  .panel.cr-wrap { padding: 12px 12px 8px; }\n  .cr-grid, .cr-grid.foes { grid-template-columns: 1fr; }\n  .cr-head .muted { display: none; }\n  .cr-slider .nm { width: 76px; }\n  .cr-race .portrait { width: 72px !important; height: 84px !important; }\n}\n@media (max-height: 560px) {\n  .panel.cr-wrap { height: 94vh; max-height: 94vh; padding-top: 10px; }\n  .cr-head h2 { font-size: 26px; }\n  .cr-head .muted { display: none; }\n  .cr-tabs { margin: 4px 0; }\n  .cr-tabs button { padding: 4px 10px; }\n  .cr-note { margin-top: 4px; padding: 3px 10px; }\n  .cr-yours { margin-bottom: 6px; padding: 5px 10px; }\n  .cr-list { max-height: none; }\n}\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-sub { text-align: right; font: 700 11.5px Nunito, sans-serif; color: #ffd98a; margin-top: 1px; letter-spacing: 0.02em; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n.qt-alt { text-align: right; font-size: 11px; color: #9fd8cf; margin-top: 3px; font-style: italic; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n.journal-road { display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin: -4px 0 12px; border-radius: 8px; background: rgba(0, 137, 123, .08); border: 1px solid rgba(0, 137, 123, .3); font-size: 13px; }\n.journal-road span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-own { border-left-color: #00897b; }\n.quests .q-own .q-kicker { color: #00695c; }\n.q-choice { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(109,76,51,.3); }\n.q-choice .q-note { flex: 1; margin: 0; }\n.q-choice .btn { flex: none; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n\n/* ---------- multiplayer: the title's tabs and pane (ui/voyage.js) ---------- */\n.mode-tabs { display: inline-flex; margin: 0 auto 16px; border-radius: 12px; overflow: hidden; border: 3px solid #6d4c33; box-shadow: 0 6px 18px rgba(0,0,0,.45); }\n.mode-tabs button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 22px 7px; border: 0; background: rgba(236,221,186,.94); color: #5a2d0c; font: 400 23px 'Pirata One', serif; letter-spacing: .5px; cursor: pointer; }\n.mode-tabs button + button { border-left: 2px solid #6d4c33; }\n.mode-tabs button.on { background: linear-gradient(#b03a2e, #7b1f16); color: var(--parch); cursor: default; }\n.mode-tabs button:hover:not(.on) { background: #fff3d6; }\n.vy-pane { width: min(840px, 94vw); margin: 0 auto 16px; }\n.vy-cards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }\n.vy-cards.one { grid-template-columns: minmax(0, 540px); justify-content: center; }\n.vy-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 12px 14px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 6px; }\n.vy-head { display: flex; align-items: center; gap: 8px; font: 400 27px/1.1 'Pirata One', serif; color: #5a2d0c; }\n.vy-card p { margin: 0; font-size: 13.5px; line-height: 1.4; }\n.vy-sub { font: 800 11px Nunito, sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: #6d4c33; margin-top: 6px; }\n.vy-slots { display: flex; flex-direction: column; gap: 6px; }\n.vy-slot { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-slot .portrait, .vy-blank { flex: none; border-radius: 8px; border: 2px solid #8d6e4a; background: radial-gradient(#fff8e1, #e2cc9c); }\n.vy-blank { width: 40px; height: 46px; display: grid; place-items: center; opacity: .75; box-sizing: border-box; }\n.vy-who { flex: 1; min-width: 0; }\n.vy-who small { display: block; font: 800 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; opacity: .65; }\n.vy-who b { display: block; font: 400 19px/1.08 'Pirata One', serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vy-who .sub { font-size: 11.5px; opacity: .8; }\n.vy-slot .btn { flex: none; }\n.vy-slot.busy { opacity: .6; }\n.code-row { display: flex; gap: 8px; margin-top: 2px; }\n.code-in { flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font: 400 34px/1.1 'Pirata One', serif; letter-spacing: 9px; text-transform: uppercase; text-align: center; padding: 4px 8px; border-radius: 10px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; }\n.code-in::placeholder { color: rgba(59,42,26,.22); }\n.code-in:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n.code-row .btn { font-size: 18px; padding: 6px 22px; }\n.code-hint { min-height: 17px; font-size: 12.5px; font-weight: 700; color: #b71c1c; }\n.vy-recent { display: flex; flex-direction: column; gap: 5px; }\n.vy-rec { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 9px; border-radius: 9px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-rec b { font: 400 19px 'Pirata One', serif; letter-spacing: 2px; }\n.vy-rec .sub { font-size: 11.5px; opacity: .8; }\n.vy-small { margin-top: auto !important; padding-top: 8px; font-size: 12px !important; opacity: .75; }\n.vy-foot { font-size: 12px; opacity: .78; margin: 12px auto 0; max-width: 700px; line-height: 1.45; text-shadow: 0 1px 2px #000; }\n/* the lobby, looking for a voyage, choosing your pirate */\n.panel.vy-lobby { width: min(640px, 94vw); text-align: center; }\n.vy-lobby h3 { text-align: left; }\n.vy-lobby > p { margin-left: auto; margin-right: auto; max-width: 540px; }\n.code-plate { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 14px auto 10px; flex-wrap: wrap; }\n.code-letters { display: inline-flex; gap: 6px; padding: 10px 18px; border-radius: 12px; background: linear-gradient(#1c2a38, #0e1823); border: 3px solid #c8a060; box-shadow: inset 0 2px 8px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.35); user-select: text; }\n.code-letters span { width: 34px; font: 400 48px/1 'Pirata One', serif; color: #f7e7c1; text-align: center; text-shadow: 0 2px 0 #000; }\n.code-letters span.gap { margin-left: 16px; }\n.code-plate.small .code-letters { padding: 6px 14px; }\n.code-plate.small .code-letters span { width: 24px; font-size: 32px; }\n.code-plate .btn { font-size: 16px; padding: 8px 18px; }\n.vy-status { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 6px auto; max-width: 540px; font-weight: 800; font-size: 14px; }\n.vy-status i { flex: none; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; }\n.vy-status.ok { color: #1b5e20; }\n.vy-status.ok i { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.25); }\n.vy-status.bad { color: #8e1b16; }\n.vy-status.bad i { background: #c62828; }\n.vy-status.wait { color: #5a3a1c; }\n.vy-status.wait i { border: 3px solid rgba(109,76,51,.28); border-top-color: #6d4c33; animation: vyspin .9s linear infinite; }\n@keyframes vyspin { to { transform: rotate(360deg); } }\n.vy-crew { display: flex; flex-direction: column; gap: 5px; text-align: left; }\n.vy-mate { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-mate b { font: 400 19px 'Pirata One', serif; }\n.vy-mate .sub { margin-left: auto; font-size: 12px; opacity: .75; }\n.vy-mate.you { background: rgba(255,243,205,.7); }\n.vy-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #bcaaa4; }\n.vy-dot.on { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.22); }\n.vy-btns { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }\n.vy-note { margin-top: 12px !important; }\n.vy-slots.wide { text-align: left; }\n@media (max-width: 900px) { .vy-cards { grid-template-columns: 1fr; } }\n/* in the world: the Voyage button on the sidebar (how many aboard), the chat, the voyage list (ui/voyageHud.js) */\n.vy-side .vy-n { min-width: 18px; padding: 0 5px; border-radius: 999px; background: rgba(143,233,245,.18); border: 1px solid rgba(143,233,245,.55); color: #b2ebf2; font: 800 11px/16px Nunito, sans-serif; text-align: center; }\n.chat-box { position: absolute; left: 14px; bottom: 14px; z-index: 45; width: min(460px, calc(100vw - 28px)); pointer-events: auto; background: rgba(8,16,24,.88); border: 1px solid rgba(143,233,245,.5); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font-size: 13px; }\n.chat-lines { max-height: 210px; overflow: hidden; padding: 7px 11px 3px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }\n.chat-lines div { text-shadow: 0 1px 1px #000; line-height: 1.35; }\n.chat-lines .sys { font-style: italic; }\n.chat-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(143,233,245,.3); background: transparent; color: #fff; padding: 9px 12px; font: 600 14px Nunito, sans-serif; outline: none; }\n.chat-in::placeholder { color: rgba(224,247,250,.45); }\n#ui.chatting .log { visibility: hidden; }\n.log b { font-weight: 800; }\n.vy-code-line { display: flex; align-items: center; gap: 10px; }\n.vy-code-line b { font: 400 26px 'Pirata One', serif; letter-spacing: 3px; color: #5a2d0c; }\n.vy-row b { font: 400 19px 'Pirata One', serif; margin-right: 4px; }\n.vy-row .tag { margin-left: 2px; }\n.compass .pin.mate small { color: #8fe9f5; }\n#ui.touch .chat-box { bottom: auto; top: 30%; }\n#ui.touch .vy-side { position: relative; }\n#ui.touch .vy-side .vy-n { position: absolute; right: -5px; top: -5px; min-width: 15px; padding: 0 3px; background: #0e2a33; font-size: 10px; line-height: 14px; }\n.vy-last { margin-left: 6px; padding: 0 6px; border-radius: 4px; background: #2e7d32; color: #fff; font: 800 9.5px Nunito, sans-serif; letter-spacing: .4px; text-transform: none; vertical-align: 1px; }\n.panel.vy-panel { width: min(640px, 94vw); }\n";
+  var style_default = ":root {\n  --parch: #f5e6c4;\n  --parch-dark: #e2cc9c;\n  --ink: #2b1d12;\n  --navy: #0e2233;\n  --navy2: #16324a;\n  --red: #c0392b;\n  --gold: #f1c40f;\n  --hp: #e53935;\n  --haki: #7e57c2;\n  --panel: rgba(12, 24, 36, 0.86);\n  --border: rgba(241, 196, 15, 0.55);\n}\n#ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; color: #fff; user-select: none; z-index: 10; }\n#ui .interactive, #ui button, #ui input, #ui select { pointer-events: auto; }\n#ui .hidden { display: none !important; }\n\n/* ---------- HUD ---------- */\n.hud-player { position: absolute; left: 14px; top: 12px; width: 300px; }\n.hud-name { font: 400 24px 'Pirata One', serif; text-shadow: 0 2px 0 #000, 0 0 8px rgba(0,0,0,.6); letter-spacing: .5px; line-height: 1; }\n.hud-sub { font-size: 12px; opacity: .85; margin: 2px 0 6px; text-shadow: 0 1px 2px #000; }\n.bar { position: relative; height: 13px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); border-radius: 7px; overflow: hidden; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }\n.bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 7px; transition: width .12s linear; }\n.bar > b { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.5); border-radius: 7px; transition: width .6s ease .25s; }\n.bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }\n.bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }\n.bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }\n.bar.hk.locked { opacity: .35; }\n.bar.hk.flash { animation: hkspent .7s ease-out; }\n@keyframes hkspent { 0%, 40% { border-color: #ff5252; box-shadow: 0 0 10px #ff5252; } }\n.haki-sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin: 0 2px -2px 0; border: 1px solid rgba(255,255,255,.55); box-shadow: 0 0 6px var(--sw, transparent); }\n.haki-sw.coat { background: #0b0a10; border-color: var(--sw); }\n.stat-row.locked .nm, .stat-row.locked .val { opacity: .45; }\n.haki-how { font-size: 11px; opacity: .75; margin: -2px 0 6px; line-height: 1.3; }\n.o2 { display: flex; gap: 3px; margin: 1px 0 4px 2px; height: 13px; }\n.o2 > i { width: 12px; height: 12px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0 16%, #d7f3ff 22%, #6fcff7 58%, #1f7fb8 100%); box-shadow: 0 0 0 1px rgba(8, 40, 70, .6), 0 1px 2px rgba(0, 0, 0, .35); transition: transform .18s ease-out, opacity .22s; }\n.o2 > i.half { transform: scale(.72); opacity: .7; }\n.o2 > i.pop { transform: scale(.2); opacity: 0; }\n.o2.low > i { animation: o2low .45s ease-in-out infinite alternate; }\n@keyframes o2low { to { filter: hue-rotate(150deg) saturate(2.2); } }\n.lives { display: flex; gap: 5px; margin: 6px 0 0; align-items: flex-end; }\n.vivre { width: 20px; height: 26px; background: linear-gradient(#fffdf5, #efe6cf); border-radius: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.6); position: relative; transform: rotate(-4deg); }\n.vivre:nth-child(2n) { transform: rotate(5deg); }\n.vivre::after { content: ''; position: absolute; left: 3px; right: 3px; top: 5px; height: 2px; background: #d7c9a7; box-shadow: 0 5px 0 #d7c9a7, 0 10px 0 #d7c9a7; }\n.vivre.burnt { background: linear-gradient(#5d4037, #1b1b1b); opacity: .45; transform: scale(.7) rotate(-15deg); }\n.vivre.burnt::after { display: none; }\n.vivre.burning { animation: burn 1.2s ease-in forwards; }\n@keyframes burn { 0% { filter: none; } 40% { filter: brightness(1.6) sepia(1) hue-rotate(-20deg); } 100% { filter: brightness(.3); transform: scale(.6) rotate(-20deg); opacity: .4; } }\n.hud-bounty { margin-top: 6px; font: 400 17px 'Pirata One', serif; color: var(--gold); text-shadow: 0 2px 0 #000; display: flex; align-items: center; gap: 8px; }\n.hud-bounty .bty { display: inline-flex; align-items: center; gap: 4px; }\n.hud-bounty .heat { font: 800 10px Nunito, sans-serif; letter-spacing: .08em; padding: 1px 6px; border-radius: 3px; background: rgba(0, 0, 0, .55); color: #ef9a9a; border: 1px solid rgba(239, 154, 154, .5); }\n.hud-bounty .heat.hooded { color: #cfd8dc; border-color: rgba(207, 216, 220, .45); }\n.hud-bounty .heat.watched { color: #fff59d; border-color: rgba(255, 245, 157, .6); }\n.hud-bounty .heat.spotted { color: #fff; background: #c62828; border-color: #ff8a80; animation: heatPulse .6s ease-in-out infinite alternate; }\n@keyframes heatPulse { to { box-shadow: 0 0 10px #ff5252; } }\n.hud-bounty small { font-family: Nunito; font-size: 12px; font-weight: 700; color: #eee; display: inline-flex; align-items: center; gap: 3px; }\n.buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }\n.buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }\n\n.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }\n.slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: pointer; }\n.slot .ico { display: grid; place-items: center; }\n.slot .ico img { display: block; }\n.slot .qty { position: absolute; right: 4px; top: 1px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }\n.slot.none-left .ico { opacity: .35; filter: grayscale(1); }\n.slot.held { border-color: var(--gold); box-shadow: 0 0 10px rgba(241,196,15,.55), 0 3px 8px rgba(0,0,0,.45); }\n.slot.over { border-color: var(--gold); }\n.slot:hover:not(.empty) { border-color: rgba(255,255,255,.5); }\n.slot .k { position: absolute; left: 4px; top: 1px; font-size: 11px; font-weight: 800; opacity: .8; }\n.slot .nm { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; text-align: center; opacity: .85; white-space: nowrap; overflow: hidden; }\n.slot .cd { position: absolute; inset: 0; background: rgba(0,0,0,.65); transform-origin: bottom; }\n.slot .cdt { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; }\n.slot.flash { animation: slotflash .3s; }\n@keyframes slotflash { 50% { border-color: #ff5252; } }\n.slot.empty { opacity: .45; }\n.slot.toggle { width: 42px; height: 42px; font-size: 18px; cursor: default; }\n.slot.toggle.on { border-color: #b388ff; box-shadow: 0 0 12px #7e57c2; }\n.slot.toggle.lock { opacity: .3; }\n.slot.act { cursor: default; }\n.slot.act.interactive { cursor: pointer; }\n.slot.act.guard { margin-right: 8px; }\n.slot.act.wait .ico { opacity: .5; }\n.slot.act.ready { animation: actready .4s ease-out; }\n@keyframes actready { 0% { box-shadow: 0 0 0 0 rgba(140, 205, 250, .95), 0 3px 8px rgba(0,0,0,.45); border-color: #bfe6ff; } 100% { box-shadow: 0 0 0 10px rgba(140, 205, 250, 0), 0 3px 8px rgba(0,0,0,.45); } }\n.slot.act.guard.on { border-color: #9cc3ea; box-shadow: 0 0 12px rgba(110, 165, 230, .7); }\n.slot.act.guard.broken { border-color: #ff8a80; }\n.slot.act.guard.broken .ico { opacity: .45; filter: grayscale(.6); }\n.slot.act.guard.parried { animation: actparry .45s ease-out; }\n.slot.act.guard.parried.perfect { animation: actperfect .6s ease-out; }\n@keyframes actparry { 0% { box-shadow: 0 0 0 0 rgba(255, 241, 118, .95), 0 3px 8px rgba(0,0,0,.45); border-color: #fff59d; } 100% { box-shadow: 0 0 0 12px rgba(255, 241, 118, 0), 0 3px 8px rgba(0,0,0,.45); } }\n@keyframes actperfect { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 1), 0 3px 8px rgba(0,0,0,.45); border-color: #fff; background-color: rgba(255, 253, 231, .55); } 100% { box-shadow: 0 0 0 16px rgba(255, 255, 255, 0), 0 3px 8px rgba(0,0,0,.45); } }\n.slot.act.guard.counter { border-color: #ffab40; box-shadow: 0 0 14px rgba(255, 171, 64, .85); }\n\n.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }\n.prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }\n\n.log { position: absolute; left: 14px; bottom: 14px; width: 420px; max-height: 190px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }\n.log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }\n@keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }\n\n.minimap-wrap { position: absolute; right: 14px; top: 12px; width: 190px; text-align: right; }\n.minimap { width: 190px; height: 190px; border-radius: 50%; border: 3px solid #c8a060; box-shadow: 0 0 0 2px #3b2a1a, 0 4px 14px rgba(0,0,0,.6); background: #e9dab4; display: block; }\n.loc-name { font: 400 20px/24px 'Pirata One', serif; text-shadow: 0 2px 0 #000; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.loc-sub { font-size: 12px; line-height: 16px; opacity: .85; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.clock { font-size: 12px; line-height: 16px; margin-top: 2px; text-shadow: 0 1px 2px #000; white-space: nowrap; }\n.logpose { position: absolute; left: -64px; top: 118px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(#e3f2fd, #90caf9 70%, #1565c0); border: 3px solid #b0bec5; box-shadow: 0 2px 8px rgba(0,0,0,.6); }\n.logpose i { position: absolute; left: 50%; top: 50%; width: 3px; height: 22px; margin-left: -1.5px; margin-top: -22px; background: linear-gradient(#e53935 50%, #263238 50%); transform-origin: 50% 100%; border-radius: 2px; }\n.logpose span { position: absolute; bottom: -16px; left: -30px; right: -30px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }\n\n.banner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; transition: opacity .8s; }\n.banner.show { opacity: 1; }\n.banner h1 { font: 400 64px 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0,0,0,.8); letter-spacing: 2px; }\n.banner h2 { font: 400 22px 'Bangers', sans-serif; margin: 0; letter-spacing: 3px; color: var(--gold); text-shadow: 0 2px 0 #000; }\n.banner p { margin: 4px 0 0; font-size: 14px; text-shadow: 0 1px 3px #000; opacity: .9; }\n\n.hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); transition: opacity .5s; display: flex; gap: 10px; align-items: center; }\n.hint img.icon { flex: none; }\n\n.bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }\n.bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }\n.bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }\n.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }\n.bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }\n\n.shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }\n.shiphud .row { display: flex; justify-content: space-between; margin: 2px 0; }\n/* the drawn weapon's moves (bottom right, while it's out) */\n.skillpanel { position: absolute; right: 14px; bottom: 14px; min-width: 210px; max-width: 260px; background: rgba(10,20,30,.74); border-radius: 12px; padding: 8px 10px 7px; border: 1px solid var(--border); font-size: 12px; pointer-events: none; }\n.skillpanel .sp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 4px; }\n.skillpanel .sp-head b { font: 400 17px 'Pirata One', serif; color: var(--gold); letter-spacing: .5px; }\n.skillpanel .sp-head span { font-size: 10.5px; opacity: .75; text-align: right; }\n.skillpanel .sp-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }\n.skillpanel kbd { min-width: 30px; text-align: center; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); border-radius: 5px; padding: 1px 5px; font: 800 11px Nunito, sans-serif; color: #fff; }\n.skillpanel .sp-row.unbound kbd { opacity: .45; }\n.skillpanel .sp-row.cd { opacity: .55; }\n.skillpanel .sp-cd { margin-left: auto; color: #ffcc80; font-variant-numeric: tabular-nums; }\n.skillpanel .sp-foot { margin-top: 5px; font-size: 10.5px; opacity: .7; }\n.skillpanel .sp-foot kbd { min-width: 0; padding: 0 5px; }\n.shiphud .bar.hull > i { background: linear-gradient(#ffcc80, #ef6c00); }\n.shiphud .bar.sail > i { background: linear-gradient(#e3f2fd, #90caf9); }\n.wind { display: inline-block; width: 14px; height: 10px; position: relative; vertical-align: middle; transition: transform .5s; }\n.wind i { position: absolute; left: 0; top: 4px; width: 9px; height: 2px; background: #fff; }\n.wind i::after { content: ''; position: absolute; right: -5px; top: -4px; border: 5px solid transparent; border-left: 6px solid #fff; border-right: 0; }\n\n.knocked-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(transparent 30%, rgba(80,0,0,.55)); }\n.knocked-overlay div { text-align: center; }\n.knocked-overlay h1 { font: 400 56px 'Bangers', sans-serif; letter-spacing: 3px; margin: 0; color: #ff5252; text-shadow: 0 3px 0 #000; }\n.knocked-overlay p { font-size: 16px; font-weight: 700; text-shadow: 0 1px 3px #000; }\n.knocked-overlay .timer { width: 260px; height: 8px; background: rgba(0,0,0,.6); border-radius: 4px; margin: 8px auto; overflow: hidden; }\n.knocked-overlay .timer i { display: block; height: 100%; background: #ff5252; }\n\n/* ---------- panels ---------- */\n.panel-bg { position: absolute; inset: 0; background: rgba(5,10,18,.55); display: grid; place-items: center; pointer-events: auto; backdrop-filter: blur(2px); }\n.panel { background: var(--parch); color: var(--ink); border-radius: 14px; border: 3px solid #6d4c33; box-shadow: 0 10px 40px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,52,.25); width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 22px; position: relative; }\n.panel.wide { width: min(1080px, 96vw); }\n.panel h2 { font: 400 34px 'Pirata One', serif; margin: 0 0 6px; color: #5a2d0c; }\n.panel h3 { font: 400 22px 'Pirata One', serif; margin: 12px 0 6px; color: #5a2d0c; }\n.panel .close { position: absolute; right: 12px; top: 10px; border: none; background: #6d4c33; color: var(--parch); border-radius: 50%; width: 30px; height: 30px; font: 800 20px/28px Nunito, sans-serif; cursor: pointer; z-index: 2; }\n.panel .close:hover { background: var(--red); }\n.panel p { margin: 6px 0; line-height: 1.45; }\n.tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }\n.tabs button, .btn { background: #6d4c33; color: var(--parch); border: 2px solid #4e342e; border-radius: 8px; padding: 6px 12px; font: 700 14px Nunito; cursor: pointer; }\n.tabs button.on { background: var(--red); border-color: #7b1f16; }\n.btn:hover, .tabs button:hover { filter: brightness(1.15); }\n.btn.gold { background: #b8860b; border-color: #7a5a06; }\n.btn.red { background: var(--red); border-color: #7b1f16; }\n.btn.green { background: #2e7d32; border-color: #1b5e20; }\n.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }\n/* (a link that looks like a button: the way to the game's own site) */\na.btn { display: inline-block; text-decoration: none; }\n.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }\n.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }\n.card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }\n.card h4 { margin: 0 0 4px; font-size: 16px; }\n.card .meta { font-size: 12px; opacity: .8; }\n.list { display: flex; flex-direction: column; gap: 6px; }\n.row-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); border-radius: 8px; padding: 7px 10px; }\n.row-item .ico { font-size: 22px; width: 30px; text-align: center; }\n.row-item img.ico { width: 34px; height: 34px; }\n.row-item.picked { outline: 3px solid var(--red); }\n.row-item .grow { flex: 1; }\n.row-item .sub { font-size: 12px; opacity: .8; }\n.price { font-weight: 800; color: #7a4a06; white-space: nowrap; }\n.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 9px; background: #6d4c33; color: var(--parch); margin-left: 6px; vertical-align: middle; }\n.stat-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }\n.stat-row .nm { width: 110px; font-weight: 800; }\n.stat-row .val { width: 34px; text-align: right; font-weight: 800; }\n.stat-row .meter { flex: 1; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.stat-row .meter i { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #f39c12); }\n.muted { opacity: .7; font-size: 13px; }\n.berries { font: 400 22px 'Pirata One', serif; color: #7a4a06; }\n\n/* dialogue */\n.dialogue { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(820px, 94vw); background: var(--parch); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.6); pointer-events: auto; }\n.dialogue .who { position: absolute; top: -18px; left: 18px; background: var(--red); color: #fff; font: 400 20px 'Pirata One', serif; padding: 2px 14px; border-radius: 8px; border: 2px solid #7b1f16; }\n.dialogue .who small { font: 600 11px Nunito; opacity: .85; margin-left: 6px; }\n.dialogue .text { font-size: 16px; line-height: 1.5; min-height: 48px; white-space: pre-wrap; }\n.dialogue .choices { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }\n.dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: pointer; }\n.dialogue .choices button:hover { background: rgba(192,57,43,.2); }\n.dialogue .choices button .n { color: var(--red); margin-right: 8px; }\n.dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }\n\n/* wanted poster */\n.poster { width: 300px; background: #f3e3bc; padding: 16px 18px; border: 1px solid #9c7b4f; box-shadow: 0 8px 26px rgba(0,0,0,.6); color: #3b2a1a; text-align: center; font-family: 'Pirata One', serif; transform: rotate(-1.5deg); }\n.poster .w { font-size: 64px; line-height: .9; letter-spacing: 2px; }\n.poster canvas { width: 240px; height: 200px; border: 3px solid #5d4037; background: #e8d5a8; display: block; margin: 6px auto; }\n.poster .doa { font-size: 20px; letter-spacing: 3px; }\n.poster .nm { font-size: 30px; line-height: 1; }\n.poster .amt { font-size: 30px; }\n.poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }\n\n/* title & creation */\n.screen { position: absolute; inset: 0; pointer-events: auto; display: flex; flex-direction: column; overflow-y: auto; background: radial-gradient(ellipse at center, rgba(10,30,50,.25), rgba(3,8,14,.85)); }\n/* centred while it fits, scrollable from the top when it doesn't (small screens) */\n.screen > * { margin: auto; }\n.title { text-align: center; }\n.title h1 { font: 400 clamp(52px, 9vw, 110px) 'Pirata One', serif; margin: 0; color: var(--parch); text-shadow: 0 6px 0 #3b2a1a, 0 0 30px rgba(0,0,0,.7); letter-spacing: 3px; line-height: .95; }\n.title h2 { font: 400 clamp(16px, 2.4vw, 26px) 'Bangers', sans-serif; letter-spacing: 6px; color: var(--gold); margin: 6px 0 22px; text-shadow: 0 2px 0 #000; }\n.title .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }\n.title .menu .btn { min-width: 260px; font-size: 18px; padding: 10px 20px; }\n.title .foot { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; opacity: .6; }\n.race-roll { text-align: center; }\n.race-roll .race { font: 400 54px 'Pirata One', serif; margin: 4px 0; text-shadow: 0 2px 0 rgba(43,29,18,.35), 0 0 1px rgba(43,29,18,.6); }\n.race-roll .rarity { text-shadow: 0 1px 0 rgba(43,29,18,.4); }\n.race-roll .rarity { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; }\n.creation-grid { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }\n.preview { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 12px; border: 2px solid #8d6e4a; height: 300px; }\n.swatches { display: flex; gap: 5px; flex-wrap: wrap; }\n.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0,0,0,.3); cursor: pointer; }\n.swatches button.on { border-color: #000; box-shadow: 0 0 0 2px #fff; }\ninput.name { font: 400 26px 'Pirata One', serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; width: 100%; box-sizing: border-box; }\n\n.worldmap-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wm-label { position: absolute; transform: translate(-50%, -50%); font: 400 15px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; white-space: nowrap; }\n.wm-label.sea { font-size: 30px; color: rgba(59,42,26,.55); letter-spacing: 4px; text-shadow: none; }\n.wm-label.dive { color: #0d5f8a; font-style: italic; }\n.wm-label.me { font-size: 22px; color: #c0392b; }\n.wm-label.quest { color: #1f5f86; font-size: 18px; }\n.wm-label.quest.main { color: #b04000; font-size: 20px; z-index: 3; }\n.wm-label.giver { color: #5d4037; font-size: 13px; z-index: 2; }\n.wm-label.giver.main { color: #3b2a1a; }\n.wm-label.town { font: 700 13px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #4a3320; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; z-index: 1; }\n.wm-label.isle { color: #2f2012; letter-spacing: 1px; text-shadow: 0 0 4px #f5e6c4, 0 0 8px #f5e6c4; z-index: 1; }\n.wm-label.landmark { font: italic 600 12px Nunito, sans-serif; color: #5b4026; }\n/* markers standing on their spot: the icon's middle on it, the name beside it */\n.wm-pin { position: absolute; width: 0; height: 0; display: flex; align-items: center; z-index: 2; }\n.wm-pin > img { flex: none; transform: translate(-50%, 0); filter: drop-shadow(0 1px 1.5px rgba(40,24,10,.6)); }\n.wm-pin > span { margin-left: -4px; white-space: nowrap; font: 400 16px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4, 0 0 9px #f5e6c4; }\n.wm-pin.quest > span { color: #1f5f86; font-size: 17px; }\n.wm-pin.quest.main { z-index: 4; }\n.wm-pin.quest.main > span { color: #a33a00; font-size: 19px; }\n.wm-pin.poi > img { box-sizing: content-box; padding: 2px; border-radius: 50%; background: rgba(246,234,206,.96); box-shadow: 0 0 0 1.5px #5b4026, 0 1px 3px rgba(40,24,10,.45); filter: none; }\n.wm-pin.poi.dock > img { background: rgba(214,232,240,.96); }\n.wm-pin.poi > span { font: 700 11px Nunito, sans-serif; color: #4a3320; }\n.wm-pin.lp > span { color: #8e2c1c; }\n/* you: an arrow the way you face, ringed */\n.wm-me { position: absolute; width: 0; height: 0; z-index: 5; }\n.wm-me::before { content: ''; position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(192,57,43,.75); animation: wmping 1.8s ease-out infinite; }\n.wm-me i { position: absolute; left: -10px; top: -12px; width: 20px; height: 24px; }\n.wm-me i::before { content: ''; position: absolute; inset: 0; background: #c0392b; clip-path: polygon(50% 0, 100% 100%, 50% 74%, 0 100%); filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }\n@keyframes wmping { 0% { transform: scale(.55); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }\n.wm-scale { position: absolute; left: 22px; bottom: 22px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; pointer-events: none; }\n.wm-scale i { display: block; height: 7px; border: 2px solid #4a3320; border-top: 0; background: repeating-linear-gradient(90deg, #4a3320 0 25%, #f2e3c2 25% 50%); background-size: 100% 3px; background-repeat: no-repeat; background-position: bottom; box-shadow: 0 0 0 1px rgba(245,230,196,.8); }\n.wm-scale span { font: 700 13px Nunito, sans-serif; color: #3b2a1a; text-shadow: 0 0 3px #f5e6c4, 0 0 6px #f5e6c4; }\n.wm-rose { position: absolute; right: 20px; bottom: 20px; pointer-events: none; opacity: .9; filter: drop-shadow(0 0 4px rgba(245,230,196,.9)); }\n/* (the chart has the screen to itself: no banners or toasts over it) */\n#ui.map-open .banner, #ui.map-open .toast { visibility: hidden; }\n#ui.touch .wm-rose { transform: scale(.7); transform-origin: right bottom; }\n.wm-label .pin { display: inline-block; width: 15px; height: 15px; border-radius: 50%; color: #fff; font: 700 11px/15px system-ui, sans-serif; text-align: center; text-shadow: none; box-shadow: 0 0 0 2px #fff8e1, 0 1px 3px rgba(0,0,0,.4); vertical-align: 1px; }\n.wm-help { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(245,230,196,.92); color: #3b2a1a; padding: 6px 14px; border-radius: 16px; font-size: 13px; font-weight: 700; pointer-events: none; }\n.wm-title { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 400 36px 'Pirata One', serif; color: #3b2a1a; text-shadow: 0 0 6px #f5e6c4; pointer-events: none; }\n.toast { position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); font: 400 44px 'Bangers', sans-serif; letter-spacing: 3px; color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); pointer-events: none; animation: toast 2.6s forwards; text-align: center; transition: margin-top .18s ease-out; }\n.toast small { display: block; font: 700 16px Nunito; color: #fff; letter-spacing: 0; }\n@keyframes toast { 0% { transform: translate(-50%, -50%) scale(.6); opacity: 0; } 10% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 18% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }\n.fade-black { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .8s; pointer-events: none; }\n.fade-black.on { opacity: 1; }\n.kbd-help { columns: 2; font-size: 14px; }\n.kbd-help div { margin: 3px 0; }\n.kbd-help kbd { display: inline-block; min-width: 20px; text-align: center; background: #6d4c33; color: var(--parch); border-radius: 5px; padding: 1px 6px; margin-right: 6px; font-family: Nunito; font-weight: 800; }\n@media (max-width: 720px) { .log { width: 60vw; } .hud-player { width: 220px; } .minimap-wrap { width: 130px; } .minimap { width: 130px; height: 130px; } .banner h1 { font-size: 40px; } .creation-grid { grid-template-columns: 1fr; } }\n\n.panel.ask { max-width: 420px; }\n.panel.ask p { line-height: 1.5; }\n.ask-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }\n.ask-input { width: 100%; box-sizing: border-box; font: 700 16px 'Nunito', system-ui, sans-serif; padding: 8px 10px; border-radius: 6px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; pointer-events: auto; }\n.ask-input:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n\n/* ---------- icons ---------- */\nimg.icon { vertical-align: middle; image-rendering: auto; }\n.btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }\n.icon.ghost { opacity: .32; }\n\n/* ---------- sidebar ---------- */\n.sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }\n.side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }\n.side-btn .lbl { flex: 1; letter-spacing: .3px; }\n.side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }\n.side-btn:hover { border-color: var(--gold); transform: translateX(2px); }\n.side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }\n.panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }\n.panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }\n.panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }\n.saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }\n.saved-note.show { animation: savednote 2.4s forwards; }\n@keyframes savednote { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }\n\n/* ---------- hotbar editor (in menus) ---------- */\n.hotbar-edit { background: rgba(43,29,18,.1); border: 1px dashed rgba(109,76,51,.5); border-radius: 12px; padding: 10px 12px 8px; }\n/* with the Inventory or Skills open, the real hotbar sits above the menu and takes drops */\n#ui.hb-edit .hotbar { z-index: 40; padding: 6px 8px; border-radius: 14px; background: rgba(20,12,6,.55); box-shadow: 0 0 0 2px rgba(241,196,15,.55), 0 6px 22px rgba(0,0,0,.5); }\n#ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }\n#ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }\n#ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }\n.hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }\n.hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }\n.hb-row { display: flex; gap: 8px; flex-wrap: wrap; }\n.hb-slot { position: relative; width: 104px; height: 62px; border-radius: 10px; background: #2b2018; border: 2px solid #6d4c33; color: var(--parch); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: border-color .12s, transform .12s; }\n.hb-slot.empty { background: rgba(43,32,24,.35); border-style: dashed; }\n.hb-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.45); }\n.hb-slot.over { border-color: var(--gold); transform: scale(1.04); }\n.hb-slot.dragging { opacity: .4; }\n.hb-slot .k { position: absolute; left: 6px; top: 3px; font-size: 11px; font-weight: 800; opacity: .75; }\n.hb-slot .nm { font-size: 10px; font-weight: 700; max-width: 96px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.hb-slot .qty { position: absolute; right: 7px; top: 3px; font-size: 11px; font-weight: 800; }\n.hb-slot .x { position: absolute; right: 2px; bottom: 2px; width: 18px; height: 18px; border-radius: 50%; border: none; background: rgba(255,255,255,.12); color: #fff; font: 800 13px/16px Nunito; cursor: pointer; display: none; }\n.hb-slot:hover .x { display: block; }\n.hb-hint { font-size: 12px; opacity: .75; margin-top: 6px; }\n\n/* ---------- inventory ---------- */\n.inv-cols { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }\n.doll { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; padding: 10px; }\n.doll-col { display: flex; flex-direction: column; gap: 6px; align-items: center; }\n.doll-mid { display: grid; place-items: center; }\n.eq-slot { width: 88px; height: 62px; border-radius: 10px; border: 2px solid rgba(109,76,51,.55); background: rgba(255,255,255,.55); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color .12s, transform .12s; }\n.eq-slot .lbl { font-size: 10px; font-weight: 800; max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }\n.eq-slot.filled { background: #fffaf0; border-color: #6d4c33; }\n.eq-slot.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.eq-slot.over { border-color: var(--gold); transform: scale(1.05); }\n.eq-slot.disabled { opacity: .45; }\n.eq-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin: 8px 2px; }\n.fruit-note { display: flex; gap: 8px; align-items: center; background: rgba(191,54,12,.1); border: 1px solid rgba(191,54,12,.35); border-radius: 8px; padding: 6px 8px; font-size: 13px; }\n.fruit-note .sub { font-size: 12px; opacity: .8; }\n.purse h3 { margin-bottom: 0; }\n.purse .berries { display: flex; align-items: center; gap: 6px; }\n.icon-tabs button { display: inline-flex; align-items: center; }\n.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; max-height: 250px; overflow: auto; padding: 4px; background: rgba(43,29,18,.08); border-radius: 10px; min-height: 70px; align-content: start; }\n.inv-tile { position: relative; height: 58px; border-radius: 9px; background: #fffaf0; border: 2px solid rgba(109,76,51,.35); display: grid; place-items: center; cursor: grab; transition: border-color .1s, transform .1s; }\n.inv-tile:hover { border-color: #6d4c33; transform: translateY(-1px); }\n.inv-tile.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.35); }\n.inv-tile.worn { background: #fff3cd; }\n.inv-tile .qty { position: absolute; right: 4px; bottom: 1px; font-size: 11px; font-weight: 800; }\n.inv-tile .worn-tag { position: absolute; left: 3px; top: 2px; font-size: 9px; font-weight: 900; background: #6d4c33; color: var(--parch); border-radius: 4px; padding: 0 4px; }\n.inv-tile .heir { position: absolute; right: 4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: #b8860b; }\n.inv-details { margin-top: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; min-height: 96px; }\n.inv-details.empty { display: grid; place-items: center; }\n.det-head { display: flex; gap: 12px; align-items: center; }\n.det-head h4 { margin: 0; font: 400 24px 'Pirata One', serif; color: #5a2d0c; }\n.det-head .sub { font-size: 12px; opacity: .8; }\n.det-stats { font-weight: 800; color: #2e7d32; margin: 6px 0 2px; font-size: 13px; }\n.det-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }\n/* the Log Pose in its slot: where the needle points, and where else it can (panels.js coursePicker) */\n.lp-course { margin-top: 10px; border-top: 1px dashed rgba(109,76,51,.45); padding-top: 8px; }\n.lp-course h5 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font: 800 11.5px Nunito, sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: #6d4c33; }\n.lp-course h5 small { margin-left: auto; font: 700 11px Nunito, sans-serif; letter-spacing: 0; text-transform: none; color: #8a6c55; }\n.lp-opts { display: flex; flex-direction: column; gap: 4px; max-height: 214px; overflow-y: auto; padding-right: 3px; }\n.lp-opt { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 78px; align-items: center; gap: 9px; text-align: left; padding: 5px 9px; border-radius: 8px; border: 1px solid rgba(109,76,51,.32); background: rgba(255,250,240,.7); cursor: pointer; font: 800 13px Nunito, sans-serif; color: #3e2a1c; transition: border-color .12s, background .12s; }\n.lp-opt:hover { border-color: #6d4c33; background: #fffaf0; }\n.lp-opt.on { border-color: var(--red); background: #fff3e0; box-shadow: inset 3px 0 0 var(--red); cursor: default; }\n.lp-name { display: flex; flex-direction: column; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.lp-name small { font: 700 10.5px Nunito, sans-serif; color: #7a5c45; letter-spacing: .2px; }\n.lp-opt.story .lp-name small { color: #a86b00; }\n.lp-way { font: 700 12px Nunito, sans-serif; color: #5d4433; white-space: nowrap; font-variant-numeric: tabular-nums; }\n.lp-cur { font: 900 10.5px Nunito, sans-serif; color: var(--red); text-align: right; letter-spacing: .6px; text-transform: uppercase; }\n\n/* ---------- character ---------- */\n.char-head { display: grid; grid-template-columns: auto 1fr 300px; gap: 16px; align-items: start; margin-bottom: 6px; }\n.char-head .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 12px; }\n.char-id h2 { margin-bottom: 2px; }\n.bounty-line { font: 400 18px 'Pirata One', serif; color: #7a4a06; display: flex; align-items: center; gap: 4px; margin-top: 4px; }\n.rep { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; flex-wrap: wrap; }\n.rep .lbl { font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }\n.rep-bar { position: relative; width: 170px; height: 10px; background: rgba(0,0,0,.15); border-radius: 5px; overflow: hidden; }\n.rep-bar i { position: absolute; top: 0; bottom: 0; }\n.rep-bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #3b2a1a; }\n.rep-name { font-weight: 800; }\n.char-btns { display: flex; gap: 8px; flex-wrap: wrap; }\n.will-box { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 8px 12px; font-size: 13px; }\n.will-box h4 { margin: 0 0 4px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.will-box .sub { font-size: 11px; opacity: .75; margin: 4px 0; }\n.d-line { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(109,76,51,.4); font-size: 12px; }\n.d-line.has { color: #8e1b16; font-weight: 800; }\n.d-line b { font: 400 20px 'Pirata One', serif; }\n.meter.dual { position: relative; }\n.meter.dual u { position: absolute; left: 0; bottom: 0; height: 3px; background: #fff59d; box-shadow: 0 0 3px #f9a825; text-decoration: none; }\n.derived { font-size: 12px; opacity: .8; margin: 6px 0; }\n.li { margin: 3px 0; font-size: 13px; }\n.li::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #8d6e4a; margin-right: 8px; vertical-align: middle; }\n\n/* ---------- skills / journal / menu ---------- */\n.tech-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px; }\n.tech { display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 6px 10px; cursor: grab; }\n.tech:hover { border-color: #6d4c33; }\n.tech.sel { border-color: var(--red); box-shadow: 0 0 0 2px rgba(192,57,43,.3); }\n.tech.onbar { background: rgba(255,243,205,.8); }\n.tech .grow { flex: 1; }\n.tech .sub { font-size: 12px; opacity: .8; }\n.tech .meta { opacity: .65; }\nh4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }\n.objective { margin-top: 4px; font-weight: 800; padding-left: 10px; border-left: 3px solid var(--red); }\n.legend-done { background: rgba(255,236,179,.7); }\n.list.compact { gap: 3px; }\n.list.compact .row-item { padding: 4px 10px; }\n.pause { text-align: center; min-width: 300px; }\n.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }\n.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }\n.save-note { margin-top: 10px; }\n.check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }\n.shop-top { display: flex; justify-content: space-between; align-items: center; }\n/* the shipwright's menus: your ships and the ships for sale */\n.sw-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }\n.sw-head h2 { margin: 0; }\n.row-item.cant { opacity: .6; }\n.row-item.here { outline: 2px solid #b8860b; }\n.row-item .sub.warn { color: #b71c1c; opacity: 1; font-weight: 700; }\n.price.short { color: #b71c1c; }\n.btn.steal { background: #37474f; border-color: #263238; }\n.btn.small { padding: 4px 9px; font-size: 12px; }\n.btn.big { font-size: 18px; padding: 8px 22px; }\nbutton.link { background: none; border: none; color: #ffab91; font: 700 12px Nunito; cursor: pointer; text-decoration: underline; padding: 0; }\n\n/* ---------- title: lineage slots ---------- */\n.slots { display: grid; grid-template-columns: repeat(3, 260px); gap: 14px; justify-content: center; margin: 0 auto 16px; }\n.slot-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); min-height: 230px; }\n.slot-card.empty { background: rgba(236,221,186,.94); border-style: dashed; }\n.slot-head { display: flex; justify-content: space-between; align-items: center; font: 400 20px 'Pirata One', serif; color: #5a2d0c; }\n.slot-head button.link { color: #8e1b16; }\n.slot-body { display: flex; gap: 10px; align-items: center; flex: 1; }\n.slot-body .portrait { background: radial-gradient(#fff8e1, #e2cc9c); border-radius: 10px; border: 2px solid #8d6e4a; flex: none; }\n.slot-info .nm { font: 400 22px 'Pirata One', serif; line-height: 1.05; }\n.slot-info .sub { font-size: 12px; opacity: .85; margin-top: 2px; }\n.slot-info .faint { opacity: .55; }\n.slot-empty { flex: 1; display: grid; place-items: center; text-align: center; }\n.slot-empty .big { font: 400 30px 'Pirata One', serif; opacity: .55; }\n.slot-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 800; color: #6d4c33; }\n.slot-meta span { display: inline-flex; align-items: center; gap: 3px; }\n.slot-actions { display: flex; gap: 6px; flex-wrap: wrap; }\n.slot-actions .btn { padding: 5px 10px; font-size: 13px; }\n.slot-actions .btn:first-child { flex: 1; }\n.title-links { display: flex; gap: 10px; justify-content: center; }\n.title-links .btn { display: inline-flex; align-items: center; }\n\n/* ---------- creation ---------- */\n.roll-info { transition: opacity .6s; }\n.roll-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; text-align: left; max-width: 760px; margin: 8px auto; }\n.roll-btns { display: flex; gap: 10px; justify-content: center; margin-top: 12px; transition: opacity .5s; }\n.will-line { margin-top: 12px; font-size: 13px; opacity: .8; }\n.d-reveal { min-height: 26px; margin: 6px auto; max-width: 620px; opacity: 0; transition: opacity .6s; }\n.d-reveal.show { opacity: 1; }\n.d-reveal.hit { padding: 8px; border-radius: 12px; background: radial-gradient(rgba(142,27,22,.16), transparent 70%); }\n.d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }\n.d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }\n@keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }\n.d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }\n.final-name { margin: 2px 0 8px; font-size: 14px; }\n.final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }\n.opt-row { margin: 6px 0; }\n.opt-label { font-weight: 800; font-size: 13px; margin-bottom: 3px; }\n.story-pick { margin: 4px 0 8px; padding: 6px 10px 2px; border-radius: 8px; background: rgba(0, 137, 123, .07); border: 1px solid rgba(0, 137, 123, .25); }\n.story-pick .opt-row { margin: 2px 0; }\n.story-pick .story-note { margin: 3px 0 6px; font-size: 12px; line-height: 1.35; }\n.swatches button.chip { width: auto; height: auto; border-radius: 6px; padding: 3px 9px; background: #6d4c33; color: #fff; font: 700 12px Nunito; border: 2px solid #4e342e; }\n.swatches button.chip.on { background: var(--red); border-color: #000; box-shadow: none; }\n.creation-foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 12px; }\n\n/* ---------- crew & flags ---------- */\n.crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }\n.flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }\n.jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }\n.card.found h3 { margin-top: 2px; }\n.jolly { text-align: left; }\n.jolly > .flag { display: block; margin: 8px auto; }\n\n@media (max-width: 900px) {\n  .sidebar { width: 50px; top: 170px; }\n  .side-btn .lbl, .side-btn .key { display: none; }\n  .side-btn { justify-content: center; padding: 5px; }\n  .panel-bg.side-pad { padding-left: 70px; }\n  .inv-cols, .char-head { grid-template-columns: 1fr; }\n  .slots { grid-template-columns: 1fr; }\n  .roll-cols { grid-template-columns: 1fr; }\n}\n@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }\n@media (max-height: 640px) {\n  .sidebar { top: 170px; gap: 3px; }\n  .log { max-height: 130px; }\n  .side-btn { padding: 3px 8px 3px 6px; }\n}\n\n.wm-label img.icon { vertical-align: -5px; }\n.me-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #c0392b; border: 2px solid #fff; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px #3b2a1a; }\n\n.panel-top { display: flex; justify-content: space-between; align-items: center; padding-right: 44px; }\n.panel-top .berries { display: flex; align-items: center; gap: 6px; }\n.eq-slot { height: 58px; }\n\n/* ---------- first person ---------- */\n.crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none; }\n.crosshair i, .crosshair b { position: absolute; background: rgba(255,255,255,.9); box-shadow: 0 0 2px rgba(0,0,0,.9); }\n.crosshair i { left: 10px; top: 2px; width: 2px; height: 18px; }\n.crosshair b { top: 10px; left: 2px; height: 2px; width: 18px; }\n.look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }\n.look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }\n.set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }\n.set-row .nm { width: 130px; font-weight: 800; }\n\n/* ---------- touch (phones and tablets) ---------- */\n#ui .t-only { display: none; }\n#ui.touch .t-only { display: flex; }\n.touch-pad, .t-stick, .t-rotate { display: none; }\n#ui.touch .touch-pad, #ui.touch .t-stick, #ui.touch .t-rotate { display: block; }\n#game { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }\n#ui button, #ui .interactive { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }\n.touch-pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 10px; width: 232px; height: 200px; pointer-events: none; }\n.t-btn { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,.38); background: rgba(10,20,30,.52); color: #fff; font: 800 12px Nunito, system-ui, sans-serif; display: grid; place-items: center; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; box-shadow: 0 3px 10px rgba(0,0,0,.35); transition: transform .06s, background .1s; }\n.t-btn b { pointer-events: none; letter-spacing: .3px; text-shadow: 0 1px 2px #000; }\n.t-btn.on { background: rgba(192,57,43,.78); border-color: var(--gold); transform: scale(.93); }\n.t-btn.attack { right: 0; bottom: 0; width: 88px; height: 88px; font-size: 15px; background: rgba(176,58,46,.58); border-color: rgba(241,196,15,.75); }\n.t-btn.heavy { right: 98px; bottom: 4px; width: 62px; height: 62px; }\n.t-btn.jump { right: 12px; bottom: 98px; width: 62px; height: 62px; background: rgba(21,101,192,.55); border-color: rgba(144,202,249,.8); }\n.t-btn.dodge { right: 84px; bottom: 136px; width: 50px; height: 50px; font-size: 11px; }\n.t-btn.block { right: 84px; bottom: 76px; width: 54px; height: 54px; }\n.t-btn.use { right: 150px; bottom: 76px; width: 64px; height: 64px; background: rgba(46,125,50,.68); border-color: rgba(165,214,167,.85); font-size: 14px; }\n.t-btn.heal { right: 164px; bottom: 6px; width: 48px; height: 48px; font-size: 11px; }\n.t-stick { position: absolute; width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; background: rgba(10,20,30,.28); border: 2px solid rgba(255,255,255,.3); pointer-events: none; }\n.t-stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(245,230,196,.55); border: 2px solid rgba(255,255,255,.6); box-shadow: 0 2px 8px rgba(0,0,0,.4); }\n.t-stick.idle { left: max(96px, calc(env(safe-area-inset-left) + 84px)); top: calc(100% - 96px); opacity: .45; }\n.t-rotate { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); background: rgba(10,20,30,.85); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; font-weight: 800; font-size: 14px; text-align: center; max-width: 80vw; pointer-events: none; }\n#ui.touch .hud-player { transform: scale(.72); transform-origin: top left; left: max(10px, env(safe-area-inset-left)); top: 8px; }\n#ui.touch .minimap-wrap { width: 104px; right: max(10px, env(safe-area-inset-right)); top: 8px; }\n#ui.touch .minimap { width: 104px; height: 104px; }\n#ui.touch .loc-name { font-size: 15px; line-height: 18px; }\n#ui.touch .loc-sub, #ui.touch .clock { font-size: 10px; line-height: 13px; }\n#ui.touch .logpose { transform: scale(.7); left: -50px; top: 56px; }\n#ui.touch .minimap { pointer-events: auto; }\n#ui.touch .sidebar { top: 8px; left: auto; right: calc(max(10px, env(safe-area-inset-right)) + 114px); width: auto; flex-direction: row; gap: 4px; }\n#ui.touch .side-btn { width: 38px; height: 38px; padding: 0; justify-content: center; border-radius: 9px; }\n#ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }\n#ui.touch .side-btn:hover { transform: none; }\n#ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }\n#ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }\n#ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }\n#ui.touch .slot .ico img { width: 30px; height: 30px; }\n#ui.touch .slot .nm { display: none; }\n#ui.touch .slot.toggle { width: 38px; height: 38px; }\n#ui.touch .prompt { bottom: 62px; transform: translateX(calc(-50% - 60px)); font-size: 15px; padding: 9px 16px; }\n#ui.touch .prompt kbd { display: none; }\n#ui.touch .log { bottom: auto; top: 44%; width: 36vw; font-size: 11px; max-height: 110px; left: max(10px, env(safe-area-inset-left)); }\n#ui.touch .shiphud { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 128px; width: 170px; font-size: 11px; padding: 6px 8px; }\n#ui.touch .bossbar { top: 52px; width: min(420px, 52vw); }\n#ui.touch .bossbar h3 { font-size: 19px; }\n#ui.touch .hint { top: 108px; max-width: 64vw; font-size: 12px; padding: 7px 12px; }\n#ui.touch .banner h1 { font-size: 40px; }\n#ui.touch .knocked-overlay h1 { font-size: 38px; }\n.wm-close { position: absolute; right: 14px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #6d4c33; background: rgba(245,230,196,.92); display: grid; place-items: center; cursor: pointer; padding: 0; pointer-events: auto; }\n@media (max-height: 520px) {\n  .dialogue { max-height: 74vh; overflow: auto; padding: 10px 14px 8px; bottom: 10px; }\n  .dialogue .text { font-size: 14px; line-height: 1.4; min-height: 0; }\n  .dialogue .choices button { padding: 6px 10px; font-size: 13px; }\n  .panel { max-height: 92vh; padding: 12px 16px; }\n  .panel h2 { font-size: 28px; }\n  .slots { grid-template-columns: repeat(3, minmax(0, 230px)); gap: 10px; }\n  .slot-card { min-height: 0; padding: 8px 10px; gap: 6px; }\n  .title h1 { font-size: clamp(40px, 7vw, 64px); }\n  .title h2 { margin: 2px 0 10px; }\n  /* a phone held sideways is wide enough for two columns */\n  .inv-cols { grid-template-columns: 290px 1fr; gap: 12px; }\n  .char-head { grid-template-columns: auto 1fr; }\n  .eq-slot { width: 74px; height: 50px; }\n  .doll { padding: 6px; gap: 6px; }\n}\n\n/* ---------- 3D view: compass and turning minimap ---------- */\n.mm-box { position: relative; }\n.mm-pins { position: absolute; left: 0; top: 0; pointer-events: none; }\n.mm-arrow { position: absolute; left: 50%; top: 50%; width: 16px; height: 18px; margin: -9px 0 0 -8px; pointer-events: none; }\n.mm-arrow svg { display: block; }\n.mm-north { position: absolute; transform: translate(-50%, -50%); font: 400 16px/1 'Pirata One', serif; color: #ff8a80; text-shadow: 0 1px 2px #000, 0 0 3px #000; pointer-events: none; }\n.compass { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(460px, 42vw); height: 26px; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(10,20,30,.5) 18%, rgba(10,20,30,.5) 82%, transparent); border-radius: 6px; }\n.compass::after { content: ''; position: absolute; left: 50%; top: -2px; margin-left: -5px; border: 5px solid transparent; border-top: 7px solid var(--gold); }\n.combat-tag { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 13px 3px 9px; border-radius: 999px; background: linear-gradient(rgba(160,28,20,.92), rgba(104,14,9,.92)); border: 1.5px solid rgba(255,196,128,.75); color: #fff3e0; font: 800 12px Nunito, sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 1px 1px #000; box-shadow: 0 2px 10px rgba(0,0,0,.45); pointer-events: none; white-space: nowrap; transition: opacity .25s, transform .25s; animation: combatpulse 1.6s ease-in-out infinite; }\n.combat-tag.off { opacity: 0; transform: translateX(-50%) translateY(-6px); animation: none; }\n@keyframes combatpulse { 50% { box-shadow: 0 2px 14px rgba(255,60,40,.55); } }\n.compass .cp { position: absolute; top: 6px; transform: translateX(-50%); font: 800 11px Nunito, sans-serif; color: rgba(255,255,255,.72); text-shadow: 0 1px 2px #000; }\n.compass .cp.major { top: 2px; font: 400 19px/1 'Pirata One', serif; color: #fff; }\n.compass .cp.major.n { color: #ff8a80; }\n.compass .tick { position: absolute; top: 17px; width: 1px; height: 6px; margin-left: -.5px; background: rgba(255,255,255,.45); }\n.compass .pin { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.85)); }\n.compass .pin img { display: block; }\n.compass .pin small { font-size: 10px; font-weight: 800; text-shadow: 0 1px 2px #000, 0 0 3px #000; white-space: nowrap; margin-top: 1px; }\n.compass .pin.lp small { color: #ff8a80; }\n.compass .pin.main { z-index: 2; }\n.compass .pin.main small { color: #ffc940; }\n.compass .pin.side small { color: #a6dcf5; }\n.compass .pin.ship small { color: #e3f2fd; }\n/* the markers over the world (see waypoints.js): where the quests on the tracker are */\n.wpmarks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }\n.wpm { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; width: 0; transition: opacity .2s; will-change: transform; }\n.wpm > img { margin-top: -17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.8)) drop-shadow(0 0 5px rgba(0,0,0,.35)); }\n.wpm.side > img { margin-top: -14px; }\n.wpm.main { z-index: 2; }\n.wpm small { margin-top: 1px; font: 800 12px Nunito, sans-serif; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 3px #000; }\n.wpm.main small { color: #ffd66b; }\n.wpm.side small { color: #b9e4f8; }\n.wpm.lp > img { margin-top: -13px; }\n.wpm.lp small { color: #ffb4a8; }\n.wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }\n.wpm.look .wpm-name { opacity: 1; transform: none; }\n.wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }\n.wpm-arrow::after { content: ''; position: absolute; left: 25px; top: 3px; border: 6px solid transparent; border-left: 10px solid #fff; filter: drop-shadow(0 0 1.5px #000); }\n.wpm.main .wpm-arrow::after { border-left-color: #ffc940; }\n.wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }\n.wpm.lp .wpm-arrow::after { border-left-color: #ff8a80; }\n.wpm.edge .wpm-arrow { display: block; }\n.wpm.edge > img { transform: scale(.85); }\n#ui.v3 .bossbar { top: 64px; }\n#ui.v3 .hint { top: 118px; }\n#ui.touch .compass { top: 52px; width: min(320px, 40vw); }\n#ui.touch.v3 .bossbar { top: 104px; }\n#ui.touch.v3 .hint { top: 150px; }\n.hitmark { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; color: #fff; opacity: 0; filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9)); }\n.hitmark svg { display: block; }\n.hitmark.crit { color: #ffd54f; }\n.hitmark.blocked { color: #b0bec5; }\n.hitmark.counter { color: #ffab40; }\n.hitmark.show { animation: hitmark .24s ease-out; }\n@keyframes hitmark { 0% { opacity: 1; transform: scale(.75); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0; transform: scale(1.15); } }\n\n/* ---------- character creation: live 3D preview ---------- */\n.preview3d { height: 340px; border-radius: 12px; border: 2px solid #8d6e4a; background: radial-gradient(ellipse at 50% 38%, #fffaf0, #e2cc9c 78%); position: relative; overflow: hidden; }\n.preview3d canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }\n.preview3d canvas:active { cursor: grabbing; }\n.look-tabs { margin: 10px 0 6px; }\n.look-opts { min-height: 150px; max-height: min(430px, 52vh); overflow-y: auto; padding-right: 4px; }\n.look-opts .opt-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; margin: 5px 0; }\n.look-opts .opt-label { margin: 0; }\n@media (max-width: 720px) { .look-opts { max-height: none; } .look-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }\n.build-row { display: flex; align-items: center; gap: 8px; }\n.build-slider { flex: 1; accent-color: #8e1b16; }\n@media (max-height: 520px) { .preview3d { height: 220px; } }\n\n.row-end { display: flex; justify-content: flex-end; margin-top: 10px; }\n\n/* ---------- creative mode command line (/) ---------- */\n.cmd-box { position: absolute; left: 14px; bottom: 14px; width: min(560px, calc(100vw - 28px)); z-index: 60; pointer-events: auto; background: rgba(8,14,22,.9); border: 1px solid rgba(128,222,234,.55); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font: 600 13px/1.45 ui-monospace, Menlo, Consolas, monospace; }\n.cmd-out { max-height: 240px; overflow-y: auto; padding: 8px 12px 2px; color: #d6f4f8; white-space: pre-wrap; }\n.cmd-out .me { color: #80deea; }\n.cmd-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(128,222,234,.3); background: transparent; color: #fff; padding: 9px 12px; font: inherit; outline: none; }\n\n/* ---------- creative panel (F1) ---------- */\n/* (a parchment of its own height: the tabs and the note stay put, the middle scrolls) */\n.panel.cr-wrap { display: flex; flex-direction: column; height: min(780px, 88vh); overflow: hidden; padding-bottom: 10px; box-sizing: border-box; }\n.cr { display: flex; flex-direction: column; flex: 1; min-height: 0; }\n.cr-head { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; padding-right: 40px; }\n.cr-head h2 { display: flex; align-items: center; gap: 8px; margin: 0; }\n.cr-head .muted { font-size: 12px; }\n.cr-tabs { margin: 8px 0; }\n.cr-main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 2px 4px 6px 1px; }\n.cr-note { flex: none; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(43,29,18,.08); border: 1px solid rgba(109,76,51,.3); font-size: 13px; font-weight: 700; min-height: 18px; }\n.cr-note.flash { animation: crnote 1s ease-out; }\n@keyframes crnote { 0% { background: rgba(241,196,15,.6); } 100% { background: rgba(43,29,18,.08); } }\n.cr-bar { display: flex; gap: 8px 12px; align-items: flex-start; flex-wrap: wrap; margin: 2px 0 10px; }\n.cr-bar > div { flex: 1 1 300px; min-width: 0; }\n.cr-search, .cr-num { box-sizing: border-box; font: 700 14px Nunito, sans-serif; padding: 6px 10px; border-radius: 8px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; }\n.cr-search { flex: 1 1 240px; min-width: 0; max-width: 420px; width: 100%; }\n.cr-num { width: 140px; }\n.cr-search:focus-visible, .cr-num:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n.cr-chips { display: flex; flex-wrap: wrap; gap: 5px; }\n.cr-chip { background: rgba(109,76,51,.12); color: var(--ink); border: 2px solid rgba(109,76,51,.45); border-radius: 999px; padding: 3px 11px; font: 800 12.5px Nunito, sans-serif; cursor: pointer; white-space: nowrap; }\n.cr-chip:hover { border-color: #6d4c33; background: rgba(109,76,51,.2); }\n.cr-chip.on { background: var(--red); border-color: #7b1f16 !important; color: #fff; }\n.cr-row-wrap { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 6px 0; }\n.cr-row-wrap .lbl { font-weight: 800; font-size: 13px; }\n.cr-row-wrap > .cr-slider { flex: 1 1 320px; }\n.cr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; }\n.cr-grid.foes { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }\n.cr-card, .cr-item, .cr-yours { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.5); border: 1px solid rgba(109,76,51,.35); border-radius: 9px; padding: 7px 9px; min-width: 0; }\n.cr-card .grow, .cr-item .grow, .cr-yours .grow { flex: 1; min-width: 0; }\n.cr-card b, .cr-item b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.cr-card .sub, .cr-item .sub, .cr-yours .sub { font-size: 12px; opacity: .8; line-height: 1.3; }\n.cr-card .tags { margin: 3px 0 1px; }\n.cr-card .tags .tag { margin: 0 4px 0 0; }\n.cr-card.have { background: rgba(255,243,205,.85); }\n.cr-card .btn, .cr-item .btn { flex: none; }\n.sub.where { color: #7a4a06; font-weight: 800; opacity: 1 !important; }\n.cr-yours { margin-bottom: 10px; padding: 9px 12px; background: rgba(255,250,240,.75); border-width: 2px; }\n.cr-yours .tag { margin-left: 8px; }\n.cr-foe { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; background: rgba(255,255,255,.5); border: 2px solid rgba(109,76,51,.35); border-radius: 9px; padding: 6px 10px; font: 700 13px Nunito, sans-serif; color: var(--ink); cursor: pointer; min-width: 0; }\n.cr-foe:hover { border-color: var(--red); background: rgba(255,236,179,.6); }\n.cr-foe b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.cr-foe .sub { font-size: 11.5px; opacity: .75; }\n.cr-sec { background: rgba(255,255,255,.38); border: 1px solid rgba(109,76,51,.35); border-radius: 10px; padding: 8px 12px 10px; margin-bottom: 10px; min-width: 0; }\n.cr-sec h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; font: 400 20px 'Pirata One', serif; color: #5a2d0c; flex-wrap: wrap; }\n.cr-sec p.muted { margin: 6px 0 0; }\n.cr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }\n.cr-col { min-width: 0; }\n.cr-slider { display: flex; align-items: center; gap: 8px; margin: 3px 0; min-width: 0; }\n.cr-slider .nm { width: 96px; font-weight: 800; font-size: 13px; flex: none; }\n.cr-slider input { flex: 1; min-width: 60px; accent-color: #8e1b16; }\n.cr-slider .val { min-width: 48px; text-align: right; font-weight: 800; font-size: 13px; }\n.cr-race { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }\n.cr-race .portrait { flex: none; background: radial-gradient(#fff8e1, #e2cc9c); border: 2px solid #8d6e4a; border-radius: 10px; }\n.cr-race-name { font: 400 22px 'Pirata One', serif; color: #5a2d0c; margin-bottom: 2px; }\n.cr-body { margin-top: 6px; color: #3b2a1a; font-weight: 700; opacity: 1 !important; font-size: 12px; }\n.cr-lv { font-weight: 900; font-size: 12px; color: #7a4a06; white-space: nowrap; }\n.cr-list { display: flex; flex-direction: column; gap: 5px; max-height: 380px; overflow-y: auto; margin: 8px 0; padding-right: 2px; }\n.cr-item.here { outline: 2px solid #b8860b; }\n.cr-purse { font: 400 22px 'Pirata One', serif; color: #7a4a06; margin-left: 6px; }\n.cr-money { padding-bottom: 6px; }\n.check-row.off { opacity: .55; cursor: default; }\n@media (max-width: 900px) { .cr-cols { grid-template-columns: 1fr; } }\n@media (max-width: 600px) {\n  .panel.cr-wrap { padding: 12px 12px 8px; }\n  .cr-grid, .cr-grid.foes { grid-template-columns: 1fr; }\n  .cr-head .muted { display: none; }\n  .cr-slider .nm { width: 76px; }\n  .cr-race .portrait { width: 72px !important; height: 84px !important; }\n}\n@media (max-height: 560px) {\n  .panel.cr-wrap { height: 94vh; max-height: 94vh; padding-top: 10px; }\n  .cr-head h2 { font-size: 26px; }\n  .cr-head .muted { display: none; }\n  .cr-tabs { margin: 4px 0; }\n  .cr-tabs button { padding: 4px 10px; }\n  .cr-note { margin-top: 4px; padding: 3px 10px; }\n  .cr-yours { margin-bottom: 6px; padding: 5px 10px; }\n  .cr-list { max-height: none; }\n}\n\n/* the quest tracker, right of centre */\n.qtrack { position: absolute; right: 14px; top: 50%; transform: translateY(-46%); width: 262px; display: flex; flex-direction: column; gap: 7px; pointer-events: none; font: 600 12.5px Nunito, sans-serif; color: #f2ede4; text-shadow: 0 1px 2px rgba(0,0,0,.9); }\n.qtrack > div { background: linear-gradient(90deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 6px 10px 7px 34px; border-radius: 8px; border-right: 3px solid rgba(144,202,249,.75); }\n.qtrack > .qt-main { border-right-color: #f2c14e; }\n.qt-head { display: flex; align-items: center; justify-content: flex-end; gap: 5px; font: 800 10.5px Nunito, sans-serif; letter-spacing: 1.6px; color: #f2c14e; }\n.qt-title { text-align: right; font: 800 14px Nunito, sans-serif; color: #fff; margin-top: 1px; }\n.qt-side .qt-title { font-size: 12.5px; color: #cfe3f6; }\n.qt-sub { text-align: right; font: 700 11.5px Nunito, sans-serif; color: #ffd98a; margin-top: 1px; letter-spacing: 0.02em; }\n.qt-obj { text-align: right; line-height: 1.25; margin-top: 2px; color: #ece3d2; }\n.qt-n { color: #ffd54f; font-weight: 800; }\n.qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }\n.qt-alt { text-align: right; font-size: 11px; color: #9fd8cf; margin-top: 3px; font-style: italic; }\n@media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }\n\n.journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }\n.journal-quests span { flex: 1; }\n.journal-road { display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin: -4px 0 12px; border-radius: 8px; background: rgba(0, 137, 123, .08); border: 1px solid rgba(0, 137, 123, .3); font-size: 13px; }\n.journal-road span { flex: 1; }\n\n/* ---- Quests menu (L) */\n.quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }\n.quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }\n.quests .q-pathline .muted { font-style: italic; }\n.quests .q-main { border-left: 4px solid #e67e22; padding: 12px 16px 10px; }\n.quests .q-kicker { font: 800 11px Nunito, sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: #b9651b; }\n.quests .q-main h3 { margin: 2px 0 6px; font-size: 24px; }\n.quests .q-steps { list-style: none; padding: 0; margin: 10px 0 8px; display: flex; flex-direction: column; gap: 5px; }\n.quests .q-steps li { display: flex; align-items: flex-start; gap: 8px; color: #8a7a66; line-height: 1.3; }\n.quests .q-steps li .dot { flex: none; width: 9px; height: 9px; margin: 5px 3px 0 3px; border-radius: 50%; border: 2px solid #b8a78e; }\n.quests .q-steps li.done { color: #7c8c6a; text-decoration: line-through; text-decoration-color: rgba(124,140,106,.5); }\n.quests .q-steps li.cur { color: #3b2a1a; font-weight: 700; }\n.quests .q-steps li.cur .dot { border-color: #e67e22; background: #f39c12; box-shadow: 0 0 0 3px rgba(243,156,18,.25); }\n.quests .q-steps .qt-n { color: #b9651b; }\n.quests .q-where { display: flex; align-items: center; gap: 4px; color: #5d4a36; font-weight: 700; }\n.quests .q-note { margin: 6px 0 0; font-size: 12px; }\n.quests .q-own { border-left-color: #00897b; }\n.quests .q-own .q-kicker { color: #00695c; }\n.q-choice { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(109,76,51,.3); }\n.q-choice .q-note { flex: 1; margin: 0; }\n.q-choice .btn { flex: none; }\n.quests .q-side { padding: 10px 14px; }\n.quests .q-side.tracked { border-left: 4px solid #5dade2; }\n.quests .q-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }\n.quests .q-top h4 { margin: 0; display: flex; align-items: center; gap: 4px; }\n.quests .q-top .tag { margin-left: 6px; font: 700 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: rgba(59,42,26,.1); color: #6d5a44; }\n.quests .q-btns { display: flex; gap: 6px; }\n\n/* ---------- multiplayer: the title's tabs and pane (ui/voyage.js) ---------- */\n.mode-tabs { display: inline-flex; margin: 0 auto 16px; border-radius: 12px; overflow: hidden; border: 3px solid #6d4c33; box-shadow: 0 6px 18px rgba(0,0,0,.45); }\n.mode-tabs button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 22px 7px; border: 0; background: rgba(236,221,186,.94); color: #5a2d0c; font: 400 23px 'Pirata One', serif; letter-spacing: .5px; cursor: pointer; }\n.mode-tabs button + button { border-left: 2px solid #6d4c33; }\n.mode-tabs button.on { background: linear-gradient(#b03a2e, #7b1f16); color: var(--parch); cursor: default; }\n.mode-tabs button:hover:not(.on) { background: #fff3d6; }\n.vy-pane { width: min(840px, 94vw); margin: 0 auto 16px; }\n.vy-cards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }\n.vy-cards.one { grid-template-columns: minmax(0, 540px); justify-content: center; }\n.vy-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 12px 14px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 6px; }\n.vy-head { display: flex; align-items: center; gap: 8px; font: 400 27px/1.1 'Pirata One', serif; color: #5a2d0c; }\n.vy-card p { margin: 0; font-size: 13.5px; line-height: 1.4; }\n.vy-sub { font: 800 11px Nunito, sans-serif; letter-spacing: 1.4px; text-transform: uppercase; color: #6d4c33; margin-top: 6px; }\n.vy-slots { display: flex; flex-direction: column; gap: 6px; }\n.vy-slot { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-slot .portrait, .vy-blank { flex: none; border-radius: 8px; border: 2px solid #8d6e4a; background: radial-gradient(#fff8e1, #e2cc9c); }\n.vy-blank { width: 40px; height: 46px; display: grid; place-items: center; opacity: .75; box-sizing: border-box; }\n.vy-who { flex: 1; min-width: 0; }\n.vy-who small { display: block; font: 800 10px Nunito, sans-serif; letter-spacing: 1px; text-transform: uppercase; opacity: .65; }\n.vy-who b { display: block; font: 400 19px/1.08 'Pirata One', serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.vy-who .sub { font-size: 11.5px; opacity: .8; }\n.vy-slot .btn { flex: none; }\n.vy-slot.busy { opacity: .6; }\n.code-row { display: flex; gap: 8px; margin-top: 2px; }\n.code-in { flex: 1; min-width: 0; width: 100%; box-sizing: border-box; font: 400 34px/1.1 'Pirata One', serif; letter-spacing: 9px; text-transform: uppercase; text-align: center; padding: 4px 8px; border-radius: 10px; border: 2px solid #8d6e4a; background: #fffaf0; color: #3b2a1a; }\n.code-in::placeholder { color: rgba(59,42,26,.22); }\n.code-in:focus-visible { outline: 3px solid #ffd54f; outline-offset: 1px; }\n.code-row .btn { font-size: 18px; padding: 6px 22px; }\n.code-hint { min-height: 17px; font-size: 12.5px; font-weight: 700; color: #b71c1c; }\n.vy-recent { display: flex; flex-direction: column; gap: 5px; }\n.vy-rec { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 9px; border-radius: 9px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-rec b { font: 400 19px 'Pirata One', serif; letter-spacing: 2px; }\n.vy-rec .sub { font-size: 11.5px; opacity: .8; }\n.vy-small { margin-top: auto !important; padding-top: 8px; font-size: 12px !important; opacity: .75; }\n.vy-foot { font-size: 12px; opacity: .78; margin: 12px auto 0; max-width: 700px; line-height: 1.45; text-shadow: 0 1px 2px #000; }\n/* the lobby, looking for a voyage, choosing your pirate */\n.panel.vy-lobby { width: min(640px, 94vw); text-align: center; }\n.vy-lobby h3 { text-align: left; }\n.vy-lobby > p { margin-left: auto; margin-right: auto; max-width: 540px; }\n.code-plate { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 14px auto 10px; flex-wrap: wrap; }\n.code-letters { display: inline-flex; gap: 6px; padding: 10px 18px; border-radius: 12px; background: linear-gradient(#1c2a38, #0e1823); border: 3px solid #c8a060; box-shadow: inset 0 2px 8px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.35); user-select: text; }\n.code-letters span { width: 34px; font: 400 48px/1 'Pirata One', serif; color: #f7e7c1; text-align: center; text-shadow: 0 2px 0 #000; }\n.code-letters span.gap { margin-left: 16px; }\n.code-plate.small .code-letters { padding: 6px 14px; }\n.code-plate.small .code-letters span { width: 24px; font-size: 32px; }\n.code-plate .btn { font-size: 16px; padding: 8px 18px; }\n.vy-status { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 6px auto; max-width: 540px; font-weight: 800; font-size: 14px; }\n.vy-status i { flex: none; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; }\n.vy-status.ok { color: #1b5e20; }\n.vy-status.ok i { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.25); }\n.vy-status.bad { color: #8e1b16; }\n.vy-status.bad i { background: #c62828; }\n.vy-status.wait { color: #5a3a1c; }\n.vy-status.wait i { border: 3px solid rgba(109,76,51,.28); border-top-color: #6d4c33; animation: vyspin .9s linear infinite; }\n@keyframes vyspin { to { transform: rotate(360deg); } }\n.vy-crew { display: flex; flex-direction: column; gap: 5px; text-align: left; }\n.vy-mate { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.35); }\n.vy-mate b { font: 400 19px 'Pirata One', serif; }\n.vy-mate .sub { margin-left: auto; font-size: 12px; opacity: .75; }\n.vy-mate.you { background: rgba(255,243,205,.7); }\n.vy-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #bcaaa4; }\n.vy-dot.on { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.22); }\n.vy-btns { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }\n.vy-note { margin-top: 12px !important; }\n.vy-slots.wide { text-align: left; }\n@media (max-width: 900px) { .vy-cards { grid-template-columns: 1fr; } }\n/* in the world: the Voyage button on the sidebar (how many aboard), the chat, the voyage list (ui/voyageHud.js) */\n.vy-side .vy-n { min-width: 18px; padding: 0 5px; border-radius: 999px; background: rgba(143,233,245,.18); border: 1px solid rgba(143,233,245,.55); color: #b2ebf2; font: 800 11px/16px Nunito, sans-serif; text-align: center; }\n.chat-box { position: absolute; left: 14px; bottom: 14px; z-index: 45; width: min(460px, calc(100vw - 28px)); pointer-events: auto; background: rgba(8,16,24,.88); border: 1px solid rgba(143,233,245,.5); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font-size: 13px; }\n.chat-lines { max-height: 210px; overflow: hidden; padding: 7px 11px 3px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }\n.chat-lines div { text-shadow: 0 1px 1px #000; line-height: 1.35; }\n.chat-lines .sys { font-style: italic; }\n.chat-in { display: block; width: 100%; box-sizing: border-box; border: 0; border-top: 1px solid rgba(143,233,245,.3); background: transparent; color: #fff; padding: 9px 12px; font: 600 14px Nunito, sans-serif; outline: none; }\n.chat-in::placeholder { color: rgba(224,247,250,.45); }\n#ui.chatting .log { visibility: hidden; }\n.log b { font-weight: 800; }\n.vy-code-line { display: flex; align-items: center; gap: 10px; }\n.vy-code-line b { font: 400 26px 'Pirata One', serif; letter-spacing: 3px; color: #5a2d0c; }\n.vy-row b { font: 400 19px 'Pirata One', serif; margin-right: 4px; }\n.vy-row .tag { margin-left: 2px; }\n.compass .pin.mate small { color: #8fe9f5; }\n#ui.touch .chat-box { bottom: auto; top: 30%; }\n#ui.touch .vy-side { position: relative; }\n#ui.touch .vy-side .vy-n { position: absolute; right: -5px; top: -5px; min-width: 15px; padding: 0 3px; background: #0e2a33; font-size: 10px; line-height: 14px; }\n.vy-last { margin-left: 6px; padding: 0 6px; border-radius: 4px; background: #2e7d32; color: #fff; font: 800 9.5px Nunito, sans-serif; letter-spacing: .4px; text-transform: none; vertical-align: 1px; }\n.panel.vy-panel { width: min(640px, 94vw); }\n";
 
   // src/ui/icon.js
   var img = (canvas2, px2, cls = "") => h("img.icon" + cls, { src: iconURL(canvas2), width: px2, height: px2, draggable: false, alt: "" });
@@ -105929,8 +106463,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       ...extra
     });
     a.npcId = def.id || null;
+    a.hakiSig = npcHakiSig(def);
     a.masteries = { [a.style]: def.mastery ?? Math.min(100, L3 * 1.5) };
-    a.techniques = def.moves || [];
+    const moves = def.boss && def.haki?.conqueror > 0 && !(def.moves || []).includes("haki_conqueror") ? [...def.moves || [], "haki_conqueror"] : def.moves || [];
+    a.techniques = moves;
     a.tier = def.tier || Math.max(1, Math.round(L3 / 12));
     a.named = !!def.named || !!def.boss;
     a.bountyValue = def.bounty;
@@ -105953,7 +106489,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       kind,
       home: { x, y },
       skill: def.skill ?? (def.boss ? 0.55 : 0.25),
-      moves: def.moves || [],
+      moves,
       aggroRange: def.aggroRange ?? (def.boss ? 12 : 8),
       ranged: def.ranged,
       leash: def.leash ?? (def.boss ? 18 : 16),
@@ -107680,6 +108216,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       game.on("parry", (att) => this.onParry(att));
       game.on("playerHurt", (att, n) => this.onHurt(att, n));
       game.on("playerGotUp", () => this.train("wil", 10, true));
+      game.hintHaki = () => game.hint("haki_how", `HAKI, the power of will. Armament: ${HAKI_HOW.armament} Observation: ${HAKI_HOW.observation} Conqueror's: ${HAKI_HOW.conqueror} (Character menu, C: Haki.)`);
+      game.on("hakiAwakened", () => game.hintHaki());
+      game.on("conquerorAwakened", () => game.hintHaki());
       game.on("questDone", () => this.checkDream());
       let t = 0;
       game.on("tick", (dt) => {
@@ -109294,14 +109833,8 @@ Trains by: ${TRAINS_BY[k]}` },
         h("span.val", Math.floor(m)),
         h("div.meter", h("i", { style: { width: m + "%", background: "linear-gradient(90deg,#1565c0,#90caf9)" } }))
       ));
-      const hakiRows = hakiKnown(c) ? Object.entries(HAKI).filter(([k]) => c.haki[k]).map(([k, hk]) => h(
-        "div.stat-row",
-        { title: hk.desc },
-        h("span.nm", hk.name.replace(" Haki", "")),
-        h("span.val", Math.floor(c.haki[k])),
-        h("div.meter", h("i", { style: { width: (c.haki[k] || 0) + "%", background: "linear-gradient(90deg,#4a148c,#ce93d8)" } }))
-      )) : [];
-      const traits = c.traits.filter((t) => TRAITS[t] && (!TRAITS[t].hidden || t === "conqueror" && c.haki.conqueror));
+      const hakiRows = hakiSection(c);
+      const traits = c.traits.filter((t) => TRAITS[t] && (!TRAITS[t].hidden || t === "conqueror" && (c.haki.conqueror || c.flags?.kingSensed)));
       const left = h(
         "div",
         h("h3", "Attributes"),
@@ -109317,15 +109850,39 @@ Trains by: ${TRAINS_BY[k]}` },
         h("h3", "Fighting styles"),
         ...masteryRows,
         c.fruit ? h("div", h("h3", "Devil Fruit"), h("div.stat-row", h("span.nm", FRUITS[c.fruit].name), h("span.val", Math.floor(c.fruitMastery)), h("div.meter", h("i", { style: { width: c.fruitMastery + "%", background: "linear-gradient(90deg,#bf360c,#ffab91)" } })))) : null,
-        hakiRows.length ? h("div", h("h3", "Haki"), ...hakiRows) : null,
+        h("div", h("h3", "Haki"), ...hakiRows),
         h("h3", "Traits"),
         ...race.traits.map((t) => h("div.li", t)),
-        ...traits.map((t) => h("div.li", h("b", TRAITS[t].name + ": "), TRAITS[t].desc)),
+        ...traits.map((t) => h("div.li", h("b", TRAITS[t].name + ": "), t === "conqueror" && !c.haki.conqueror && TRAITS[t].latent ? TRAITS[t].latent : TRAITS[t].desc)),
         h("p.muted", { style: { marginTop: "10px" } }, `Lives ${c.lives}/${c.maxLives} \xB7 Second winds ${c.getUpCharges || 0} \xB7 ${(c.discovered || []).length} islands charted \xB7 ${(c.bosses || []).length} great foes \xB7 day ${game.env.day}`)
       );
       add4(body, header, h("div.grid2", left, right));
     };
     render2();
+  }
+  function hakiSection(c) {
+    const sig2 = charSignature(c);
+    const sw2 = (hex3, coat2) => h("span.haki-sw" + (coat2 ? ".coat" : ""), { title: colourName(hex3), style: coat2 ? { "--sw": hex3 } : { background: hex3, "--sw": hex3 } });
+    const rows = [];
+    for (const [k, hk] of Object.entries(HAKI)) {
+      const lvl = c.haki[k] || 0;
+      if (lvl > 0) {
+        const what = k === "armament" ? `Black as iron (${colourName(sig2.armament).toLowerCase()}); covers ${armamentReach(lvl) >= 1 ? "the whole arms" : armamentReach(lvl) > 0.25 ? "the forearms" : "the fists"}${lvl >= RYOU.level ? " \u2014 Ryou: your blows push it on through guards and into them" : ` (Ryou at ${RYOU.level})`}.` : k === "observation" ? `Your tint: ${colourName(sig2.observation)}.${lvl >= FUTURE_SIGHT ? " Future Sight: you see the blows before they land." : ` (Visions of the blows coming at ${FUTURE_SIGHT})`}` : `Your colour: ${colourName(sig2.conqueror)}.`;
+        rows.push(h(
+          "div.stat-row",
+          { title: hk.desc },
+          h("span.nm", hk.name.replace(" Haki", "")),
+          h("span.val", Math.floor(lvl)),
+          h("div.meter", h("i", { style: { width: lvl + "%", background: k === "conqueror" ? `linear-gradient(90deg,#111,${sig2.conqueror})` : "linear-gradient(90deg,#4a148c,#ce93d8)" } }))
+        ));
+        rows.push(h("div.haki-how", k === "armament" ? sw2(sig2.armament, true) : sw2(k === "observation" ? sig2.observation : sig2.conqueror), " ", what));
+      } else {
+        rows.push(h("div.stat-row.locked", { title: hk.desc }, h("span.nm", hk.name.replace(" Haki", "")), h("span.val", "\u2014"), h("div.meter", h("i", { style: { width: "0%" } }))));
+        const sensed = k === "conqueror" && c.flags?.kingSensed && c.traits.includes("conqueror");
+        rows.push(h("div.haki-how", sensed ? "A Haki master sensed the qualities of a king in you: it will wake the day your will is truly tested." : HAKI_HOW[k]));
+      }
+    }
+    return rows;
   }
   var TRAINS_BY = {
     str: "landing blows on worthy opponents, masters, breakthroughs",
@@ -109838,7 +110395,7 @@ Trains by: ${TRAINS_BY[k]}` },
     const render2 = () => {
       clear(body);
       const tabs = ["styles", "techniques", "training"];
-      const hakiTypes = Object.keys(t.haki || {}).filter((k) => c.haki[k]);
+      const hakiTypes = Object.keys(t.haki || {});
       if (hakiTypes.length) tabs.push("haki");
       tabs.push("spar");
       add4(
@@ -109911,16 +110468,33 @@ Trains by: ${TRAINS_BY[k]}` },
         for (const k of hakiTypes) {
           const cap3 = t.haki[k];
           const lvl = c.haki[k] || 0;
-          const price = S6.hakiTrainPrice(k);
+          if (k === "conqueror" && !lvl) {
+            list.appendChild(h(
+              "div.row-item",
+              uiImg("haki", 30),
+              h("div.grow", h("b", HAKI[k].name), h("div.sub", HAKI_HOW.conqueror)),
+              h("button.btn", { on: { click: () => {
+                S6.hakiSense(tid);
+                render2();
+              } } }, "Ask them to sense it")
+            ));
+            continue;
+          }
+          const price = lvl ? S6.hakiTrainPrice(k) : S6.hakiTrainPrice(k) * 3;
           list.appendChild(h(
             "div.row-item",
             uiImg("haki", 30),
-            h("div.grow", h("b", HAKI[k].name), h("div.sub", HAKI[k].desc), h("div.sub", `Level ${Math.floor(lvl)} / ${cap3} with this master`)),
+            h(
+              "div.grow",
+              h("b", HAKI[k].name),
+              h("div.sub", HAKI[k].desc),
+              h("div.sub", lvl ? `Level ${Math.floor(lvl)} / ${cap3} with this master` : `Not awakened. ${t.name} can awaken it in you (Willpower ${k === "armament" ? 18 : 14}) \u2014 or: ${HAKI_HOW[k]}`)
+            ),
             h("span.price", formatBerries(price)),
             h("button.btn.gold", { disabled: c.berries < price || lvl >= cap3, on: { click: () => {
               S6.hakiTrain(tid, k);
               render2();
-            } } }, "Train")
+            } } }, lvl ? "Train" : "Awaken")
           ));
         }
       } else if (tab === "spar") {
@@ -110285,7 +110859,7 @@ ${tip}` }), cd: h("div.cd") };
     }
     /** Flash the Q (dodge) or F (block) slot: pressed while it's still coming back. */
     flashAct(k) {
-      const el = this.el.acts?.[k]?.el;
+      const el = k === "haki" ? this.el.hk?.el : this.el.acts?.[k]?.el;
       if (el) {
         el.classList.remove("flash");
         void el.offsetWidth;
@@ -113059,14 +113633,32 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         if (a.isPlayer) this.onKnocked(att);
       });
       game.on("playerKnockedTick", (dt) => this.tick(dt));
+      game.on("playerHurt", (att) => this.willTested(att));
       game.knockInfo = () => this.info();
+    }
+    /**
+     * King's Disposition, the other moment it can wake (besides being knocked
+     * down by a real threat, and a king's will washing over you: abilities.js
+     * conquerorBurst): holding on at the very edge — a tenth of your health
+     * left, a strong foe or a boss on you, and every one of your crew near
+     * you down.
+     */
+    willTested(att) {
+      const g = this.game, p = g.player, c = p?.char;
+      if (!c || !c.traits.includes("conqueror") || c.haki.conqueror || p.state !== "idle" || !att || !p.d) return;
+      if (p.hp > p.d.maxHp * 0.12) return;
+      const threat = att.power ? att.power() / Math.max(1, p.power()) : 0;
+      if (!(threat > 0.65 || att.boss)) return;
+      const crew = (g.actorsNear ? g.actorsNear(p.x, p.y, 25) : g.actors || []).filter((a) => a !== p && a.crewId);
+      if (!crew.length || crew.some((a) => a.alive && a.state === "idle")) return;
+      this.awaken("cornered", att);
     }
     onKnocked(att) {
       const g = this.game, p = g.player, c = p.char;
       c.stats.knockdowns = (c.stats.knockdowns || 0) + 1;
       const threat = att && att.power ? att.power() / Math.max(1, p.power()) : 0;
       if (c.traits.includes("conqueror") && !c.haki.conqueror && !p.drowned && (threat > 0.65 || att?.boss)) {
-        this.awaken();
+        this.awaken("knocked", att);
         return;
       }
       this.k = { t: 0, max: p.drowned ? 2.5 : 6, mash: 0, need: 9 + Math.floor((c.stats.knockdowns || 0) / 3), killer: att, drowned: p.drowned, cause: describe(att, p) };
@@ -113119,21 +113711,34 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       c.stats.deathsAvoided = (c.stats.deathsAvoided || 0) + 1;
       g.emit("playerGotUp");
     }
-    awaken() {
+    /**
+     * King's Disposition wakes: Conqueror's Haki, in your own colour, bursting
+     * out of you there and then. `how`: 'knocked' (struck down by a real
+     * threat), 'pressure' (a king's will washing over you: yours answers it —
+     * and, theirs still there, the two clash), 'cornered' (holding on at the
+     * edge with your crew down). `by`: who tested you.
+     */
+    awaken(how = "knocked", by = null) {
       const g = this.game, p = g.player, c = p.char;
       c.haki.conqueror = 5;
       p.hakiSkill = c.haki;
       p.state = "idle";
-      p.hp = p.d.maxHp;
+      p.hp = Math.max(p.hp, p.d.maxHp * (how === "knocked" ? 1 : 0.5));
       p.haki = p.d.maxHaki;
       p.iframes = 2;
       this.k = null;
-      g.ui.toast("CONQUEROR'S HAKI", "Your will overwhelms everything around you!", "#ff5252");
+      const col2 = sigOf(p).conqueror;
+      const why = {
+        knocked: "Your will overwhelms everything around you!",
+        pressure: `${by?.name || "Their"}'s will presses down on you \u2014 and yours answers!`,
+        cornered: "Your crew down, your body failing: your will refuses to break!"
+      }[how] || "Your will overwhelms everything around you!";
+      g.ui.toast("CONQUEROR'S HAKI", why, col2);
       g.fx.impactFrame(0.25);
       g.fx.flash = 0.4;
       conquerorBurst(p, g, { range: 12, damage: 20 }, 1);
-      g.log("King's Disposition awakened: press G to release Conqueror's Haki.", "#ff8a80");
-      g.emit("conquerorAwakened");
+      g.log(`King's Disposition awakened: Conqueror's Haki, ${colourName(col2).toLowerCase()} as your will. Press G to release it.`, col2);
+      g.emit("conquerorAwakened", how);
       persist(g);
     }
     resolve(finisher) {
@@ -113771,6 +114376,29 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       persist(g);
       return true;
     }
+    /**
+     * Ask a Haki master to sense Conqueror's Haki in you. It can't be taught,
+     * but they can tell: the qualities of a king (King's Disposition, revealed
+     * — it shows in the Character panel from now on), or honestly none.
+     */
+    hakiSense(tid) {
+      const g = this.game, c = this.char, t = TRAINERS[tid];
+      c.flags = c.flags || {};
+      if (c.haki.conqueror) {
+        g.log(`${t.name}: "You already know. I felt it the moment you walked in."`, sigOf(g.player).conqueror);
+        return "awake";
+      }
+      if (c.traits.includes("conqueror")) {
+        const first = !c.flags.kingSensed;
+        c.flags.kingSensed = true;
+        g.log(`${t.name} looks at you a long moment. "You have the qualities of a king. It's asleep in you yet \u2014 it will wake the day your will is truly tested. Don't go looking for that day."`, "#ffd54f");
+        if (first) g.ui?.toast("KING'S DISPOSITION", "A Haki master has sensed the qualities of a king in you.", "#ffd54f");
+        persist(g);
+        return "king";
+      }
+      g.log(`${t.name}: "I sense nothing of the kind in you, and I won't pretend otherwise. One in millions is born with it \u2014 and most of the strongest people alive never were. Armament and Observation are no less."`, "#b0bec5");
+      return "none";
+    }
     hakiTrainPrice(type) {
       return Math.round((2e3 + (this.char.haki[type] || 0) * 1500) * (type === "conqueror" ? 2 : 1));
     }
@@ -113936,8 +114564,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     W4.spotted = Math.max(0, W4.spotted - dt);
     W4.t -= dt;
     if (W4.t > 0) return;
-    const step = 0.25;
-    W4.t = step;
+    const step2 = 0.25;
+    W4.t = step2;
     let watched = 0;
     const R4 = tier >= 3 ? 16 : 10;
     const range = hood ? tier >= 3 ? 4 : 2.5 : R4;
@@ -113948,12 +114576,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const d = game.world.distance(a.x, a.y, p.x, p.y);
       const inView2 = tier >= 2 && !aboard3 && d < range && (!game.world.interiorAt || sameSpace(game, a, p));
       if (!inView2) {
-        a.suspect = Math.max(0, (a.suspect || 0) - step * 0.4);
+        a.suspect = Math.max(0, (a.suspect || 0) - step2 * 0.4);
         continue;
       }
       const rate = (tier >= 3 ? 1.1 : 0.6) * (1 - d / range * 0.6) * (hood ? 0.4 : 1);
       const before = a.suspect || 0;
-      a.suspect = before + rate * step;
+      a.suspect = before + rate * step2;
       if (a.suspect > 0.2) watched++;
       if (before < 0.3 && a.suspect >= 0.3) game.fx.text(a.x, a.y - 2.2, "?", "#fff59d", 0.55, { life: 1.2 });
       if (a.suspect >= 1) recognise(game, a, p);
@@ -116549,9 +117177,9 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     on: { input: (e) => set(e.target.value), keydown: ctx.keys }
   });
   var chips = (opts, cur, pick5, cls = "") => h("div.cr-chips" + cls, opts.map(([v, label, style]) => h("button.cr-chip" + (v === cur ? ".on" : ""), { style, on: { click: () => pick5(v) } }, label)));
-  function slider(name, min2, max, step, value, set, { fmt = (v) => v, done: done6 = null, title: title2 = "" } = {}) {
+  function slider(name, min2, max, step2, value, set, { fmt = (v) => v, done: done6 = null, title: title2 = "" } = {}) {
     const val = h("span.val", String(fmt(value)));
-    const input = h("input", { type: "range", min: min2, max, step, value, on: {
+    const input = h("input", { type: "range", min: min2, max, step: step2, value, on: {
       input: (e) => {
         const v = Number(e.target.value);
         set(v);
@@ -117100,6 +117728,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     const B5 = {
       near: [],
       t: 0,
+      questIn: /* @__PURE__ */ new Set(),
+      // (the buildings your quests' objectives are in: see update)
       key(b) {
         return `${game.world.id}:${Math.round(b.x * 2)}:${Math.round(b.y * 2)}`;
       },
@@ -117119,6 +117749,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       /** Locked right now? (homes; shops outside their hours; pirate hideouts) */
       isLocked(b) {
         if (B5.isBroken(b)) return false;
+        if (B5.questIn.has(b)) return false;
         const c = game.state?.char;
         const role = b.role || "house";
         const t = game.env.clock;
@@ -117155,6 +117786,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           B5.near = w.objects.near(p.x, p.y, 45, (o) => o.enterable);
           for (const b of B5.near) w.objects.addFurniture(b);
           B5.guardBases(p);
+          B5.questIn.clear();
+          for (const q2 of game.quests?.active?.() || []) {
+            const m = game.quests.marker(q2.id);
+            if (!m || !Number.isFinite(m.x) || (m.zone ? m.zone !== w.id : w !== game.surface)) continue;
+            const b = w.interiorAt(m.x, m.y);
+            if (b) B5.questIn.add(b);
+          }
         }
         for (const b of B5.near) B5.door(b, p, dt);
         const room2 = w.roomOf(p);
@@ -117313,8 +117951,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         for (const b of B5.near) {
           const d = B5.doorPts(b);
           if (!inB && b.doorLocked && !b.doorOpen) {
-            const step = bw(b, d.lx, 0.55);
-            const dist = w.distance(p.x, p.y, step.x, step.y);
+            const step2 = bw(b, d.lx, 0.55);
+            const dist = w.distance(p.x, p.y, step2.x, step2.y);
             if (dist < 1.4) {
               const house = (b.role || "house") === "house";
               const label = house || b.pirate ? "Knock on the door" : `${b.name || "Closed"} \u2014 closed until ${B5.opensAt(b)}:00`;
@@ -117372,6 +118010,12 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     };
     game.buildings = B5;
     game.on("tick", (dt) => B5.update(dt));
+    game.on("rested", () => {
+      const doors = game.state?.char?.world?.doors;
+      if (!doors || !Object.keys(doors).length) return;
+      for (const k of Object.keys(doors)) delete doors[k];
+      game.log?.("By morning the doors you broke in have been mended.", "#b0bec5");
+    });
     game.on("characterStart", () => {
       B5.near = [];
       B5.t = 0;
@@ -120024,6 +120668,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       fruitMastery: 90,
       moves: ["ito_overheat", "ito_parasite", "ito_fivecolor"],
       haki: { armament: 60, observation: 60, conqueror: 40 },
+      hakiSig: { conqueror: "#ff3fd2" },
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
@@ -120999,6 +121644,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       fruitMastery: 90,
       moves: ["ito_overheat", "ito_parasite", "ito_fivecolor", "ito_birdcage"],
       haki: { armament: 60, observation: 60, conqueror: 40 },
+      hakiSig: { conqueror: "#ff3fd2" },
       when: (c, g) => ["birdcage", "farewell"].includes(stageOf(g, "nb_ope_ope")),
       dialogue: () => ({ start: "a", nodes: { a: { text: `"Fuffuffu... you again. My little brother took something from me \u2014 somewhere on this island. Nobody leaves until I find it." (He points up. Thin, glittering strings cage the whole sky.) "Birdcage. Go on. Run."` } } })
     },
@@ -133076,6 +133722,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       style: "black_leg",
       moves: ["p2_pistol_kiss", "p2_slave_arrow", "p2_mero_mellow", "p2_perfume_femur"],
       haki: { armament: 60, observation: 55, conqueror: 30 },
+      hakiSig: { conqueror: "#c24dff" },
       skill: 0.7,
       bounty: 8e7,
       infamy: true,
@@ -137013,6 +137660,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       infamy: true,
       breakthrough: 5,
       haki: { armament: 80, observation: 70, conqueror: 60 },
+      hakiSig: { conqueror: "#ff3fd2" },
       look: { hair: "short", hairColor: "#fdd835", skin: "#f1c9a0", top: "#fafafa", bottom: "#ffb74d", coat: "#f48fb1", goggles: true, grin: true },
       moves: ["ito_overheat", "ito_parasite", "ito_fivecolor", "nw_dofla_tamaito", "nw_dofla_fulbright", "bleg_party"],
       alert: "Fufufufu! Justice will prevail, you say? Of course it will! Whoever wins... is justice!",
@@ -137431,6 +138079,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       infamy: true,
       breakthrough: 6,
       haki: { armament: 90, observation: 70, conqueror: 85 },
+      hakiSig: { conqueror: "#ff4fa8" },
       look: { hair: "curly", hairColor: "#f06292", skin: "#f9dcc4", top: "#f48fb1", bottom: "#f8bbd0", coat: "#b71c1c", hat: "tricorne", hatColor: "#212121", grin: true },
       moves: ["nw_soul_pocus", "nw_heavenly_fire", "nw_raitei", "nw_ikoku", "nw_bm_homies"],
       alert: "Mamamamama! You want to fight ME, at my own tea table?!",
@@ -138658,6 +139307,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       weapon: "staff",
       moves: ["nw2_narikabura", "nw2_namuji_hyoga", "seiryu_raimei"],
       haki: { armament: 80, observation: 75, conqueror: 60 },
+      hakiSig: { conqueror: "#eef4ff" },
       recruit: {
         role: "fighter",
         requires: (c) => beat3(c, "kaido"),
@@ -138768,6 +139418,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       fruitMastery: 100,
       moves: ["seiryu_bolo", "seiryu_kaifu", "seiryu_raimei", "nw2_ragnaraku", "nw2_hakai", "nw2_tatsumaki", "nw2_kaen_daiko"],
       haki: { armament: 98, observation: 90, conqueror: 95 },
+      hakiSig: { conqueror: "#2e8bff" },
       look: L2.kaido,
       bulk: 1.9,
       scale: 1.8,
@@ -139313,6 +139964,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       style: "elbaf",
       weapon: "axe",
       haki: { armament: 90, observation: 85, conqueror: 85 },
+      hakiSig: { conqueror: "#ffc21a" },
       marker: (c, g) => !g.quests.state("burn_scar") && !c.flags.rubbing_road_4 && count(c, "poneglyph_rubbing") >= 1 ? "!" : null,
       dialogue: (ctx) => ({ start: "a", nodes: {
         a: {
@@ -139385,6 +140037,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       weapon: "axe",
       moves: ["nw2_ragna_arrow", "nw2_thorheim", "nw2_niflheim", "elbaf_hakoku"],
       haki: { armament: 90, observation: 80, conqueror: 90 },
+      hakiSig: { conqueror: "#17e07c" },
       bounty: 26e8,
       breakthrough: 7,
       lethal: false,
@@ -139716,6 +140369,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       fruitMastery: 100,
       moves: ["yami_kurouzu", "yami_blackhole", "yami_nullify", "yami_liberation", "gura_punch", "gura_kaishin", "gura_wave", "gura_tsunami"],
       haki: { armament: 92, observation: 85, conqueror: 60 },
+      hakiSig: { conqueror: "#7a3cff" },
       look: L2.teach,
       bulk: 1.7,
       bounty: 3996e6,
@@ -144429,8 +145083,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       game,
       pending: 0,
       // seconds until the next chapter opens
-      t: 0,
-      driftMsg: 0
+      t: 0
     };
     game.story = S6;
     const C3 = () => game.state?.char;
@@ -144692,34 +145345,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       else if (cur?.s?.done && !S6.pending) advance(cur.qid, true);
       if (cur) pointTheWay();
     }
-    S6.limit = () => {
-      const cur = current(game);
-      if (!cur || cur.ch.part !== 2 || !cur.ch.island || cur.ch.free) return null;
-      const isl = ISLAND_BY_ID[cur.ch.island];
-      if (!isl || isl.sea !== "paradise") return null;
-      return { isl, x: isl.x + 700 };
-    };
-    game.storyCurrent = (x, y, out, who) => {
-      const p = game.player;
-      if (!p || game.world !== game.surface || who !== p.ship && who !== p) return;
-      const L3 = S6.limit();
-      if (!L3) return;
-      const dx = game.world.dx(L3.x, x);
-      if (dx <= 0) return;
-      const reg4 = regionAt(x, y);
-      if (reg4 !== REGION.PARADISE) return;
-      if (who === p) return;
-      const back = Math.atan2(L3.isl.y - y, game.world.dx(x, L3.isl.x)), bx = Math.cos(back), by = Math.sin(back);
-      const v = who.speed || 0, away = -(Math.cos(who.heading) * v * bx + Math.sin(who.heading) * v * by);
-      if (away <= 0.05) return;
-      out.x += bx * away;
-      out.y += by * away;
-      out.steer = Math.max(out.steer || 0, 0.5);
-      if (game.time > S6.driftMsg) {
-        S6.driftMsg = game.time + 25;
-        game.ui.banner("LOST WITHOUT A LOG", L3.isl.name, `Your Log Pose is locked on ${L3.isl.name} \u2014 and without its log the Grand Line's currents turn you round. Your story continues there.`, 5);
-      }
-    };
+    game.storyCurrent = null;
     game.storyLogHold = (isl) => {
       if (C3()?.logPose?.own) return false;
       const cur = current(game);
@@ -145254,7 +145880,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
      * Electricity: a buzz that jumps about in pitch every few milliseconds
      * between `f0` and `f1`, flickering as it goes.
      */
-    zap(dt, dur, { f0 = 70, f1 = 600, gain = 0.12, step = 0.012, type = "square", hp = 300, dest } = {}) {
+    zap(dt, dur, { f0 = 70, f1 = 600, gain = 0.12, step: step2 = 0.012, type = "square", hp = 300, dest } = {}) {
       const c = this.c, t = this.at(dt);
       const o = c.createOscillator();
       o.type = type;
@@ -145263,10 +145889,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       h2.type = "highpass";
       h2.frequency.value = hp;
       g.gain.setValueAtTime(1e-4, t);
-      for (let k = 0; k * step < dur; k++) {
-        const at4 = t + k * step * (0.6 + Math.random() * 0.8);
+      for (let k = 0; k * step2 < dur; k++) {
+        const at4 = t + k * step2 * (0.6 + Math.random() * 0.8);
         o.frequency.setValueAtTime(minF((f0 + Math.random() * (f1 - f0)) * this.pj), at4);
-        const fall2 = 1 - k * step / dur;
+        const fall2 = 1 - k * step2 / dur;
         g.gain.setValueAtTime(gain * fall2 * (Math.random() < 0.25 ? 0.15 : 0.5 + Math.random() * 0.5), at4);
       }
       g.gain.setValueAtTime(gain * 0.1, t + dur);
@@ -145405,7 +146031,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     /** Volumes from the settings: effects (and the beds with them), and music (`sec` 0: at once). */
     setVolumes(sfx, music, sec = 0.05) {
       const t = this.now();
-      for (const [p, v] of [[this.sfx.gain, sfx * 0.6], [this.amb.gain, sfx * 0.55], [this.ui.gain, sfx * 0.6], [this.music.gain, music * 0.28]]) {
+      for (const [p, v] of [[this.sfx.gain, sfx * 0.6], [this.amb.gain, sfx * 0.3], [this.ui.gain, sfx * 0.6], [this.music.gain, music * 0.28]]) {
         if (sec > 0) ramp(p, v, t, sec);
         else {
           p.cancelScheduledValues(t);
@@ -145743,10 +146369,18 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
   var rnd3 = (a, b) => a + Math.random() * (b - a);
   var r = () => 0.92 + Math.random() * 0.16;
   var clamp8 = (x, a, b) => Math.max(a, Math.min(b, x));
-  function hakiClank(v, t, s = 1) {
-    v.noise(t, 6e-3, { type: "highpass", freq: 6e3, gain: 0.2 * s, attack: 5e-4 });
-    v.ring(t + 2e-3, rnd3(600, 700), 0.24 * s, 0.06 * s, [1, 1.49, 2.31, 2.97]);
-    v.crackle(t + 0.01, 0.12, 4, { freq: 2600, gain: 0.04 * s });
+  var vo = (k) => clamp8(k?.voice ?? 0.5, 0, 1);
+  function hakiClank(v, t, s = 1, voice = 0.5) {
+    const base2 = (560 + 200 * voice) * rnd3(0.97, 1.03);
+    v.noise(t, 6e-3, { type: "highpass", freq: 6e3, gain: 0.24 * s, attack: 5e-4 });
+    v.ring(t + 2e-3, base2, 0.3 * s, 0.075 * s, [1, 1.47 + 0.06 * voice, 2.31, 2.97]);
+    v.ring(t + 4e-3, base2 * 0.503, 0.22 * s, 0.045 * s, [1, 1.52, 2.4]);
+    v.crackle(t + 0.01, 0.12, 4, { freq: 2600 + 800 * voice, gain: 0.04 * s });
+  }
+  function ryouLayer(v, t, w = 1, voice = 0.5) {
+    v.thump(t + 0.01, { f0: 95 + 20 * voice, f1: 32, dur: 0.35, gain: 0.32 * w });
+    v.tone(t + 0.02, 0.4, { freq: 180 + 40 * voice, to: 70, type: "triangle", gain: 0.08, vib: { rate: 22, depth: 18 } });
+    v.ring(t + 0.03, 300 + 80 * voice, 0.4, 0.03, [1, 1.5, 2.2]);
   }
   function bladeRing(v, t, base2, dur, gain) {
     v.ring(t, base2, dur, gain, [1, 2.04, 2.75, 3.6]);
@@ -145851,7 +146485,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           v.thump(0, { f0: (175 - 40 * w) * r(), f1: 46, dur: 0.1 + 0.08 * w, gain: 0.34 + 0.18 * w });
           v.noise(0, 0.08 + 0.1 * w, { type: "lowpass", freq: 620, sweep: 160, q: 0.7, gain: 0.12 + 0.15 * w });
         }
-        if (k.armament) hakiClank(v, 2e-3, 0.7 + 0.4 * w);
+        if (k.armament) hakiClank(v, 2e-3, 0.7 + 0.4 * w, vo(k));
+        if (k.ryou) ryouLayer(v, 4e-3, 0.8 + 0.3 * w, vo(k));
         if (k.counter) {
           v.noise(0, 0.03, { freq: 2500, q: 2, gain: 0.2 });
           v.thump(0.02, { f0: 80, f1: 34, dur: 0.25, gain: 0.35 });
@@ -145876,7 +146511,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         v.noise(0, 0.3, { color: "pink", type: "lowpass", freq: 700, sweep: 110, gain: 0.4 });
         v.thump(0.045, { f0: 72, f1: 28, dur: 0.45, gain: 0.32 + 0.12 * w });
         v.crackle(0.05, 0.3, 10, { freq: 1400, gain: 0.1 });
-        if (k.armament) hakiClank(v, 3e-3, 1.2);
+        if (k.armament) hakiClank(v, 3e-3, 1.2, vo(k));
+        if (k.ryou) ryouLayer(v, 5e-3, 1.2, vo(k));
         if (k.counter) v.noise(0, 0.04, { freq: 2600, q: 2, gain: 0.22 });
       }
     },
@@ -145893,7 +146529,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         v.noise(1e-3, 0.085, { freq: 5200 * r(), sweep: 2200, q: 1.6, gain: 0.3, attack: 2e-3 });
         v.thump(0, { f0: 230, f1: 80, dur: 0.07, gain: 0.26 });
         bladeRing(v, 4e-3, [1480, 1620, 1360][k.rr] * r(), 0.42, 0.06);
-        if (k.armament) hakiClank(v, 3e-3, 0.7);
+        if (k.armament) hakiClank(v, 3e-3, 0.7, vo(k));
       }
     },
     /** ZUBAAAN: the air tearing, a deep cut, a long ring. */
@@ -145911,7 +146547,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         v.noise(2e-3, 0.16, { freq: 4200 * r(), sweep: 1500, q: 1.2, gain: 0.34, attack: 2e-3 });
         v.thump(0, { f0: 150, f1: 38, dur: 0.26, gain: 0.55 });
         bladeRing(v, 8e-3, [1100, 1220, 980][k.rr] * r(), 0.75, 0.08);
-        if (k.armament) hakiClank(v, 4e-3, 1);
+        if (k.armament) hakiClank(v, 4e-3, 1, vo(k));
       }
     },
     /** A blow taken on the guard: a dull leather DOFF on an arm, a short GAKIN off a blade. */
@@ -145933,7 +146569,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           v.thump(0, { f0: 130, f1: 70, dur: 0.09, gain: 0.3 });
           v.noise(4e-3, 0.04, { freq: 2500, q: 1, gain: 0.08 });
         }
-        if (k.armament) hakiClank(v, 2e-3, 0.6);
+        if (k.armament) hakiClank(v, 2e-3, 0.6, vo(k));
       }
     },
     /** KIIN! Steel on steel: a hard click, a bright inharmonic ring, a long shimmer (perfect: brighter, longer, a beat of hush). */
@@ -146042,57 +146678,163 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
     },
     /**
-     * Armament Haki: a dark, heavy surge of will and the iron "kachin" of the
-     * arm hardening (a hit by Haki itself: a Haki-heavy blow).
+     * Armament Haki hardening (in the user's voice): the low "vrrmm" of will
+     * swelling as the coat spreads up the arm — a growl opening up over a sub —
+     * and, as it sets hard at 0.27 s (when the coat has spread: render3d/chars/
+     * haki.js), the metallic KSHING: a click, a bright swipe, a struck-iron
+     * clank and a dense ringing tail, chorused. (A hit by Haki itself: a
+     * Haki-heavy blow.)
      */
     haki: {
       prio: 7,
       cd: 0.08,
       max: 2,
       send: 0.3,
-      drive: 2.4,
+      drive: 1.2,
+      variants: 3,
       play(v, k) {
         if (k.hit) {
           SFX2.punch_heavy.play(v, { ...k, armament: true });
           return;
         }
-        v.tone(0, 0.5, { freq: 62, to: 124, type: "sawtooth", gain: 0.17, attack: 0.03 });
-        v.tone(0, 0.45, { freq: 46, to: 38, gain: 0.32, attack: 0.02 });
-        v.zap(0.02, 0.28, { f0: 50, f1: 420, gain: 0.035 });
-        v.noise(0.17, 8e-3, { type: "highpass", freq: 5e3, gain: 0.22, attack: 6e-4 });
-        v.ring(0.17, rnd3(400, 460), 0.4, 0.07, [1, 1.38, 2.1, 2.9]);
-        v.crackle(0.05, 0.35, 8, { freq: 2400, gain: 0.05 });
+        const V5 = vo(k), f = 44 + 24 * V5;
+        v.tone(0, 0.42, { freq: f, to: f * 1.9, type: "sawtooth", gain: 0.12, attack: 0.18, curve: "lin" });
+        v.tone(0, 0.42, { freq: f * 1.012, to: f * 1.93, type: "square", gain: 0.04, attack: 0.2, curve: "lin" });
+        v.tone(0, 0.5, { freq: f * 0.5, to: f * 0.62, gain: 0.3, attack: 0.15 });
+        v.noise(0, 0.36, { color: "pink", type: "lowpass", freq: 300, sweep: 1600, q: 1.4, gain: 0.1, attack: 0.25, curve: "lin" });
+        const T5 = 0.27, base2 = (420 + 220 * V5) * [1, 1.06, 0.95][k.rr];
+        v.noise(T5, 7e-3, { type: "highpass", freq: 6500, gain: 0.3, attack: 5e-4 });
+        v.noise(T5, 0.07, { freq: 4200 + 1600 * V5, sweep: 8500, q: 2.2, gain: 0.15, attack: 2e-3 });
+        v.thump(T5, { f0: 160, f1: 60, dur: 0.12, gain: 0.22 });
+        v.ring(T5 + 2e-3, base2, 0.9, 0.08, [1, 1.38 + 0.08 * V5, 2.1, 2.9 - 0.12 * V5, 3.7]);
+        v.ring(T5 + 0.01, base2 * 1.004, 1.4, 0.034, [1, 2.02, 2.76]);
+        v.ring(T5 + 0.015, base2 * 0.497, 1.2, 0.04, [1, 1.5, 2.2]);
+        v.crackle(0.05, 0.3, 6, { freq: 2200 + 900 * V5, gain: 0.03 });
       }
     },
-    /** Observation Haki: the heart's "doki", and a high, listening shimmer. */
+    /** Armament or Observation let go: a soft breath of air settling. */
+    haki_off: { prio: 4, cd: 0.1, max: 1, send: 0.1, play: (v, k) => v.whoosh(0, 0.25, { f0: 1500 + 500 * vo(k), f1: 450, q: 1, gain: 0.05, peak: 0.2 }) },
+    /** Haki given out (the spirit spent): a dull clank going flat, the coat fizzling away. */
+    haki_out: {
+      prio: 6,
+      cd: 0.3,
+      max: 1,
+      send: 0.2,
+      play(v, k) {
+        const V5 = vo(k);
+        v.ring(0, 300 + 120 * V5, 0.25, 0.1, [1, 1.4, 2.1]);
+        v.tone(0, 0.4, { freq: 220 + 60 * V5, to: 90, type: "triangle", gain: 0.16 });
+        v.noise(0.02, 0.45, { type: "lowpass", freq: 2400, sweep: 300, gain: 0.18, attack: 0.01 });
+        v.crackle(0.03, 0.4, 8, { freq: 1800, gain: 0.06 });
+      }
+    },
+    /**
+     * Observation Haki (in the user's voice): the heart's soft "doki-doki",
+     * the pulse going out like sonar (a breath of air, a falling sine) and a
+     * high crystalline TING with a long shimmering tail, its partials beating
+     * slowly against each other.
+     */
     haki_obs: {
       prio: 7,
       cd: 0.2,
       max: 1,
-      send: 0.5,
-      play(v) {
-        v.thump(0, { f0: 70, f1: 45, dur: 0.12, gain: 0.28 });
-        v.thump(0.22, { f0: 62, f1: 40, dur: 0.1, gain: 0.18 });
-        v.tone(0.05, 0.7, { freq: 880, to: 1320, gain: 0.08, attack: 0.04 });
-        v.tone(0.1, 0.6, { freq: 1760, to: 2200, gain: 0.03, attack: 0.05 });
-        v.fm(0.08, 0.9, { freq: 2640, ratio: 2.01, index: 0.6, gain: 0.02 });
+      send: 0.55,
+      variants: 3,
+      play(v, k) {
+        const V5 = vo(k), f = (2050 + 1300 * V5) * [1, 1.03, 0.97][k.rr];
+        v.thump(0, { f0: 66 - 8 * V5, f1: 44, dur: 0.13, gain: 0.32 });
+        v.thump(0.2, { f0: 58 - 6 * V5, f1: 40, dur: 0.11, gain: 0.2 });
+        v.whoosh(0.02, 0.5, { f0: 3800, f1: 1600, q: 2.5, gain: 0.05, peak: 0.15 });
+        v.tone(0.03, 0.35, { freq: f * 0.5, to: f * 0.25, gain: 0.045, attack: 4e-3 });
+        v.ring(0.04, f, 0.9, 0.14, [1, 2, 2.76 + 0.2 * V5, 4.07]);
+        v.fm(0.04, 1.6, { freq: f * 1.5, ratio: 2.01 + 0.5 * V5, index: 0.8, gain: 0.05, indexDur: 1.2 });
+        v.tone(0.08, 2.2, { freq: f * 2, gain: 0.022, attack: 0.3, vib: { rate: 5 + 3 * V5, depth: f * 4e-3 } });
+        v.tone(0.1, 2, { freq: f * 2 * 1.006, gain: 0.018, attack: 0.35 });
+        v.tone(0.12, 1.8, { freq: f * 3.01, gain: 0.011, attack: 0.4, vib: { rate: 3.5, depth: f * 6e-3 } });
       }
     },
-    /** Conqueror's Haki: a DON of will — the air pressing down, black lightning crackling, a rumble. */
+    /** Foresight (Observation slipping a blow): a whoosh played backwards, swelling out of nothing onto a ting. */
+    foresight: {
+      prio: 7,
+      cd: 0.15,
+      max: 2,
+      send: 0.4,
+      variants: 2,
+      play(v, k) {
+        const V5 = vo(k), f = (2400 + 1200 * V5) * [1, 1.04][k.rr];
+        v.whoosh(0, 0.22, { f0: 600, f1: 3200, q: 1.2, gain: 0.42, peak: 0.97, color: "pink" });
+        v.whoosh(0.02, 0.2, { f0: 1500, f1: 5e3, q: 2, gain: 0.14, peak: 0.95 });
+        v.ring(0.22, f, 0.6, 0.12, [1, 2, 2.9]);
+        v.fm(0.22, 0.8, { freq: f * 1.5, ratio: 2.01, index: 0.6, gain: 0.035 });
+      }
+    },
+    /** Conqueror's Haki gathering (the wind-up): the air going heavy and still, a growl rising under it. */
+    conqueror_rise: {
+      prio: 8,
+      cd: 0.4,
+      max: 1,
+      send: 0.3,
+      play(v, k) {
+        const V5 = vo(k), T5 = Math.max(0.2, k.rel || 0.45);
+        v.noise(0, T5, { color: "brown", type: "lowpass", freq: 120, sweep: 500, gain: 0.4, attack: T5 * 0.9, curve: "lin" });
+        v.tone(0, T5 + 0.05, { freq: 30 + 8 * V5, to: 55 + 10 * V5, gain: 0.32, attack: T5 * 0.85, curve: "lin" });
+        v.whoosh(0, T5, { f0: 200, f1: 900, q: 0.9, gain: 0.16, peak: 0.9 });
+      }
+    },
+    /**
+     * Conqueror's Haki let loose (in the king's voice): the deep rolling DOOON —
+     * a crack, a huge sub falling away under a growling body, thunder rolling on
+     * — the wind of it rushing out past you, and black lightning crackling
+     * (BZZT) through it all.
+     */
     conqueror: {
       prio: 9,
-      cd: 0.5,
+      cd: 0.4,
       max: 1,
-      send: 0.4,
-      drive: 2.5,
-      duck: 0.6,
-      play(v) {
-        v.thump(0, { f0: 90, f1: 28, dur: 0.65, gain: 0.8 });
-        v.noise(0, 0.9, { color: "pink", type: "lowpass", freq: 900, sweep: 80, gain: 0.45, attack: 0.01 });
-        v.zap(0.02, 0.45, { f0: 50, f1: 900, gain: 0.12 });
-        v.zap(0.3, 0.35, { f0: 60, f1: 700, gain: 0.08 });
-        v.crackle(0.02, 0.8, 14, { freq: 3e3, gain: 0.06 });
-        rumble(v, 0.1, 1, 1.6, { lp: 160 });
+      send: 0.45,
+      drive: 2.2,
+      duck: 0.7,
+      variants: 3,
+      play(v, k) {
+        const V5 = vo(k), f0 = (60 + 22 * V5) * [1, 0.94, 1.06][k.rr];
+        v.noise(0, 0.02, { type: "highpass", freq: 2200, gain: 0.35, attack: 8e-4 });
+        v.thump(0, { f0: f0 * 1.6, f1: f0 * 0.4, dur: 1, gain: 0.85 });
+        v.tone(0, 1.4, { freq: f0, to: f0 * 0.62, glide: 1.2, type: "sawtooth", gain: 0.13, attack: 0.01 });
+        v.tone(0.01, 1.3, { freq: f0 * 1.005, to: f0 * 0.6, glide: 1.2, type: "triangle", gain: 0.18, attack: 0.01 });
+        rumble(v, 0.08, 1.2, 1.8, { lp: 150 + 60 * V5 });
+        v.whoosh(0.02, 1.4, { f0: 250 + 150 * V5, f1: 1100 + 400 * V5, q: 0.8, gain: 0.3, peak: 0.25, color: "pink" });
+        v.whoosh(0.3, 1.1, { f0: 1400, f1: 500, q: 0.7, gain: 0.11, peak: 0.3 });
+        v.zap(0.03, 0.5, { f0: 50, f1: 900 + 500 * V5, gain: 0.1 });
+        v.zap(0.35, 0.4, { f0: 60, f1: 700, gain: 0.07 });
+        v.crackle(0.02, 1, 18, { freq: 2600 + 1400 * V5, gain: 0.06 });
+        v.noise(0.03, 0.6, { type: "highpass", freq: 4500, gain: 0.04, attack: 0.01 });
+      }
+    },
+    /**
+     * Two Conqueror's clashing: a sustained, thunderous, grinding crackle — the
+     * two wills' growls beating against each other over a roar of the deep,
+     * black lightning arcing between them the whole while, thunder rolling as
+     * the sky splits, and a last boom as both are thrown back.
+     */
+    conqueror_clash: {
+      prio: 10,
+      cd: 0.8,
+      max: 1,
+      send: 0.5,
+      drive: 2.4,
+      duck: 0.85,
+      play(v, k) {
+        const V5 = vo(k), L3 = 2.6;
+        v.noise(0, 0.03, { type: "highpass", freq: 1800, gain: 0.4, attack: 8e-4 });
+        v.thump(0, { f0: 110, f1: 26, dur: 1.2, gain: 0.8 });
+        v.tone(0, L3, { freq: 48 + 10 * V5, to: 42, type: "sawtooth", gain: 0.11, attack: 0.08, hold: L3 * 0.6 });
+        v.tone(0, L3, { freq: 51.5 + 10 * V5, to: 45, type: "sawtooth", gain: 0.11, attack: 0.08, hold: L3 * 0.6 });
+        v.noise(0, L3, { color: "brown", type: "lowpass", freq: 380, q: 0.8, gain: 0.38, attack: 0.1, hold: L3 * 0.55 });
+        for (let i = 0; i < 6; i++) v.zap(0.05 + i * 0.38, 0.4, { f0: 50, f1: 900 + 300 * Math.random(), gain: 0.08 });
+        v.crackle(0.02, L3 * 0.9, 40, { freq: 2400 + 1200 * V5, gain: 0.06 });
+        v.noise(0.05, L3, { type: "highpass", freq: 5e3, gain: 0.045, attack: 0.1, hold: L3 * 0.5 });
+        rumble(v, 0.15, 1.4, 2.2, { lp: 200 });
+        v.thump(L3 * 0.8, { f0: 90, f1: 28, dur: 0.8, gain: 0.5 });
       }
     },
     // ---- the elements (a Devil Fruit's blows sound like what they're made of)
@@ -147371,8 +148113,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     if (/heavy|haymaker|slam|headbutt|charge|axe_slam|palm_double/.test(anim || "")) return "heavy";
     return "fists";
   }
-  function techStart(v, def, { rel: rel3 = 0, weapon = "fists", gun = null, heavy = false } = {}) {
-    const k = { rel: Math.max(0, rel3), def };
+  function techStart(v, def, { rel: rel3 = 0, weapon = "fists", gun = null, heavy = false, voice } = {}) {
+    const k = { rel: Math.max(0, rel3), def, voice };
     const fr = def.fruit && FRUIT_TECH[def.fruit];
     if (fr) {
       (fr[def.id] || fr.default || STRETCH)(v, k);
@@ -147383,7 +148125,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       return;
     }
     if ((def.steps || []).some((s) => s.conqueror)) {
-      SFX2.conqueror.play(v, k);
+      SFX2.conqueror_rise.play(v, k);
       return;
     }
     if (weapon === "gun") {
@@ -148678,13 +149420,13 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         mu.drum(at4, "taiko", bus, 1.2);
         mu.drum(at4, "crash", bus, 0.8);
       } else {
-        const step = Math.min(0.12, S6.eighth * 0.6);
-        [0, 4, 7].forEach((iv, i) => mu.inst("brass", at4 + i * step, step * 0.9, root2 + iv, 0.045, bus));
-        const hold = at4 + 3 * step;
+        const step2 = Math.min(0.12, S6.eighth * 0.6);
+        [0, 4, 7].forEach((iv, i) => mu.inst("brass", at4 + i * step2, step2 * 0.9, root2 + iv, 0.045, bus));
+        const hold = at4 + 3 * step2;
         for (const iv of [0, 4, 7, 12]) mu.inst("brass", hold, dur - 0.8, root2 + iv, 0.03, bus);
         for (const iv of [0, 7]) mu.inst("strings", hold, dur - 0.4, root2 - 12 + iv, 0.03, bus);
         if (kind === "victory_boss") for (const iv of [0, 4, 7]) mu.inst("choir", hold, dur, root2 + iv, 0.018, bus);
-        for (let i = 0; i < 6; i++) mu.drum(at4 + i * step * 0.5, "timp", bus, 0.5 + i * 0.08, root2 - 24);
+        for (let i = 0; i < 6; i++) mu.drum(at4 + i * step2 * 0.5, "timp", bus, 0.5 + i * 0.08, root2 - 24);
         mu.drum(hold, "timp", bus, 1.2, root2 - 24);
         mu.drum(hold, "crash", bus, 1);
       }
@@ -148703,10 +149445,10 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
     ocean: { layers: [["pink", "lowpass", 420, 0.6, 0.5], ["white", "bandpass", 2400, 0.5, 0.09]], lfo: [["f0", 0.083, 260], ["g0", 0.137, 0.22], ["g1", 0.111, 0.06], ["f1", 0.07, 700]] },
     wind: { layers: [["pink", "bandpass", 520, 0.8, 0.55]], lfo: [["f0", 0.07, 260], ["g0", 0.05, 0.25], ["g0", 0.17, 0.12]] },
     howl: { layers: [["white", "bandpass", 1300, 14, 0.4], ["white", "bandpass", 1900, 16, 0.25]], lfo: [["f0", 0.09, 260], ["f1", 0.13, 320], ["g0", 0.11, 0.2]] },
-    rain: { layers: [["white", "highpass", 2800, 0.5, 0.18], ["pink", "lowpass", 650, 0.5, 0.35]], lfo: [["g1", 0.05, 0.08]] },
+    rain: { layers: [["pink", "bandpass", 1700, 0.6, 0.12], ["pink", "lowpass", 520, 0.5, 0.3]], lfo: [["g0", 0.07, 0.03], ["g1", 0.05, 0.06]] },
     torrent: { layers: [["brown", "lowpass", 900, 0.5, 0.9], ["pink", "bandpass", 1400, 0.6, 0.35], ["white", "highpass", 3500, 0.5, 0.06]], lfo: [["g1", 0.3, 0.1], ["f0", 0.11, 200]] },
     deep: { layers: [["brown", "lowpass", 220, 0.7, 0.9]], lfo: [["f0", 0.05, 80], ["g0", 0.08, 0.25]] },
-    town: { layers: [["pink", "bandpass", 520, 3, 0.9], ["pink", "bandpass", 1150, 4, 0.65], ["pink", "bandpass", 2400, 5, 0.3]], lfo: [["g0", 3.1, 0.45], ["g1", 4.7, 0.35], ["g2", 5.9, 0.15], ["f1", 0.4, 150]] },
+    town: { layers: [["pink", "lowpass", 620, 0.5, 0.34], ["pink", "bandpass", 1250, 1.2, 0.06]], lfo: [["g0", 0.23, 0.08], ["g1", 0.9, 0.025], ["f0", 0.07, 120]] },
     cicada: { layers: [["white", "bandpass", 5400, 3, 0.18]], lfo: [["g0", 46, 0.17], ["g0", 0.2, 0.07]] },
     cricket: { layers: [["white", "bandpass", 4600, 12, 0.3]], lfo: [["g0", 18, 0.2], ["g0", 0.6, 0.08]] },
     leaves: { layers: [["white", "highpass", 2600, 0.5, 0.12]], lfo: [["g0", 0.19, 0.06], ["g0", 0.07, 0.04]] },
@@ -149185,7 +149927,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         L3.ocean = (atSea ? 0.55 : this.coast * 0.5) * (calm ? 0.4 : 1) * (1 + storm * 0.6);
         L3.wind = calm ? 0.04 : ((env2.windStrength || 1) * 0.18 + storm * 0.35) * (atSea ? 1.2 : 0.75);
         L3.howl = storm > 0.5 ? (storm - 0.5) * 0.9 : 0;
-        L3.rain = (env2.rain || 0) * 0.75;
+        L3.rain = (env2.rain || 0) * 0.4;
         if (env2.snow > 0.05) L3.wind += env2.snow * 0.15;
       }
       if (zone === "sky") {
@@ -149219,21 +149961,21 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (isl && !atSea) {
         const leafy = LEAFY[clim];
         if (w.town) {
-          L3.town = night ? 0.18 : 0.55;
+          L3.town = 0;
           S6.voice = night ? 3 : 10;
           S6.laugh = night ? 1 : 2;
-          S6.clink = night ? 0 : 2;
+          S6.clink = night ? 0 : 3;
           S6.dog = 0.8;
         } else if (leafy) {
-          L3.leaves = 0.2 * (env2.windStrength || 1);
+          L3.leaves = 0.12 * (env2.windStrength || 1);
           if (!night) {
             S6.bird = clim === "jungle" || clim === "tropical" ? 3 : 6;
             if (clim === "jungle" || clim === "tropical" || clim === "prehistoric") {
               S6.tropical = 3;
-              L3.cicada = 0.3;
+              L3.cicada = 0.1;
             }
           } else {
-            L3.cricket = 0.28;
+            L3.cricket = 0.1;
             S6.owl = 1.2;
             if (clim === "marsh" || clim === "jungle" || clim === "mangrove") S6.frog = 3;
           }
@@ -149242,7 +149984,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           L3.fire = 0.25;
           S6.embers = 3;
         }
-        if (night && w.town && LEAFY[clim]) L3.cricket = 0.15;
+        if (night && w.town && LEAFY[clim]) L3.cricket = 0.05;
       }
       if (zone === "surface" && !night && !calm && !p.under && (this.coast > 0.1 || atSea && isl) && w.seaId !== "new_world") S6.gull = 3 + this.coast * 4;
       if (calm && atSea) S6.moan = 0.5;
@@ -149290,6 +150032,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
 
   // src/audio/audio.js
   var HITS = { punch: 1, punch_heavy: 1, slash_hit: 1, slash_heavy: 1, fire: 1, magma: 1, ice: 1, snow: 1, lightning: 1, water: 1, swamp: 1, poison: 1, gas: 1, smoke: 1, sand: 1, light: 1, dark: 1, quake: 1, string: 1, explosion: 1, haki: 1 };
+  var HAKI_VOICED = /* @__PURE__ */ new Set(["haki", "haki_obs", "haki_off", "haki_out", "foresight", "conqueror", "conqueror_rise", "conqueror_clash"]);
   var KICKS = /kick|knee|mouton|jete|arabesque|pirouette|rankyaku|concasse/;
   function weaponOf2(actor, def) {
     if (def.weapon) return def.weapon;
@@ -149443,6 +150186,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       let def = SFX2[name];
       if (HITS[name] && at4 && g) this.hitContext(at4, k, name);
       if (name === "haki" && k.hit) key2 = "haki_hit";
+      if (HAKI_VOICED.has(name) && k.voice === void 0) k.voice = at4?.hakiSig?.voice ?? 0.5;
       if (name === "block" && at4) {
         k.sword = !!(at4.hasWeapon?.("sword") && at4.drawn !== false);
         k.armament = !!at4.armament;
@@ -149493,6 +150237,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const att = at4.lastHitT === g.time ? at4.lastHitBy : null;
       if (!att) return;
       k.armament = !!att.armament;
+      if (att.hakiSig) k.voice = att.hakiSig.voice;
+      k.ryou = hasRyou(att);
       k.counter = att.counterT === now3;
       const def = att.action?.def;
       k.kick = KICKS.test(def?.anim || "") || att.style === "black_leg" || att.style === "okama_kenpo";
@@ -149519,7 +150265,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       v.pj = 0.97 + Math.random() * 0.06;
       const gun = /sling/i.test(actor.weapon?.name || "") ? "slingshot" : null;
       try {
-        techStart(v, def, { rel: rel3, weapon: weaponOf2(actor, def), gun, heavy: /heavy/.test(def.id || "") });
+        techStart(v, def, { rel: rel3, weapon: weaponOf2(actor, def), gun, heavy: /heavy/.test(def.id || ""), voice: actor.hakiSig?.voice });
       } catch (e) {
         if (!this.warned) {
           this.warned = true;
@@ -149551,7 +150297,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       const p = this.game?.player;
       this.foot = -this.foot;
       const hard = surface === "wood" || surface === "stone" || surface === "metal" || surface === "ice";
-      const v = this.E.open("step", { vol: pl.vol * (0.5 + 0.5 * loud), pan: pl.pan + this.foot * 0.06, lp: pl.lp, send: hard ? 0.05 : 0.015, prio: 4, max: 3 });
+      const v = this.E.open("step", { vol: pl.vol * (0.75 + 0.45 * loud), pan: pl.pan + this.foot * 0.06, lp: pl.lp, send: hard ? 0.05 : 0.015, prio: 4, max: 3 });
       if (!v) return;
       v.pj = 0.98 + Math.random() * 0.04;
       footstep(v, surface, loud, { foot: this.foot, deck: !!p?.deck, wet: this.foley?.wet() || 0 });

@@ -13,6 +13,8 @@ import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
 import { RACES } from '../data/races.js';
 import { WALKABLE, SWIMMABLE, IS_LIQUID, OVERLAY, T } from '../world/tiles.js';
+import { nearDrum } from '../world/drums.js';
+import { rideStep, endRide } from './ropeway.js';
 import { HIGH_DECK } from '../render3d/height.js';
 import { clamp, TAU, angleDiff } from '../core/math.js';
 import { shipDims, hbAt, deckToWorld, shipLift, sideAt, topAt, floorAt, xAt, deckLift, deckPoint } from '../world/hull.js';
@@ -524,6 +526,9 @@ export class Actor extends Entity {
    * you leap clean out of the water, leaving a ring on it.
    */
   tryJump(game, charge = 0) {
+    // (a Devil Fruit user still thrashing at the surface, right at the edge of
+    // a pier, a quay or a bank, can haul themselves out — no swimming, no leap)
+    if (this.inWater && this.fruit && !this.gills && !this.sinking && !this.under && this.state === 'idle' && !(this.hitstun > 0) && this.climbOut(game)) return true;
     if (!this.canJump()) return false;
     const J = this.jumpStats();
     const k = clamp(charge, 0, 1);
@@ -977,14 +982,22 @@ export class Actor extends Entity {
     const t = w.type(x, y);
     // (on the Red Line, ground rising faster than a stair is its face: where a
     // Red Port's quay meets the wall, its last stones ramp up the cliff)
-    if (WALKABLE[t]) return !(this.isPlayer && this.redLineRise(w, x, y) > 0.9);
+    if (WALKABLE[t]) return !(this.isPlayer && (this.redLineRise(w, x, y) > 0.9 || this.drumRise(w, x, y) > 0.9));
     if ((t === T.RED_ROCK || t === T.SNOWROCK) && this.redLineRise(w, x, y) <= 0.5) return true;
+    // (over the edge of one of the Drum Rockies, from its top: you fall — and nobody walks up its face)
+    if (t === T.SNOWROCK && this.isPlayer && this.drumRise(w, x, y) <= 0.5) return true;
     if (SWIMMABLE[t]) {
       if (this.dash && this.dash.ignoreWater) return true;
       if (this.forcedWater) return true;
       // (the sea frozen over by an Ice Age: a road while it lasts)
       if (this.game && iceAt(this.game, x, y)) return true;
-      return this.canEnterWater();
+      if (this.canEnterWater()) return true;
+      // (folk with a Devil Fruit keep out of the sea on foot — but nothing
+      // stops a jump: over the water between a pier and a ship, on and off a
+      // boat; nor is a ship lying right alongside the sea: a step down onto
+      // her deck, or a stride across the gap to it, is no walk into the water)
+      if ((this.z || 0) > 0.05 || this.vz > 0) return true;
+      return !!this.game?.deckAt?.(x, y, -0.6);
     }
     return false;
   }
@@ -1003,8 +1016,22 @@ export class Actor extends Entity {
     return g.view3d.ground(x, y) - this.feetH(g);
   }
 
+  /**
+   * How far the ground at (x, y) by one of the Drum Rockies stands over your
+   * feet (away from them: -Infinity): its face is a cliff from below, and its
+   * edge a drop from the top.
+   */
+  drumRise(w, x, y) {
+    const g = this.game;
+    if (!g?.view3d || w !== g.surface || !w.drums?.length || !nearDrum(w, x, y, 1.5)) return -Infinity;
+    return g.view3d.ground(x, y) - this.feetH(g);
+  }
+
   canEnterWater() {
-    if (this.fruit && !this.inWater) return false; // Devil Fruit users won't walk into the sea
+    // (folk with a Devil Fruit keep out of the sea; you're free to walk into
+    // it — no invisible wall round every shore — and the sea takes your
+    // strength: get out before it drags you down)
+    if (this.fruit && !this.inWater && !this.isPlayer) return false;
     return this.swimmer !== false;
   }
   /** The body is a circle around (x, y) (the 3D model stands centred on it). */
@@ -1032,6 +1059,13 @@ export class Actor extends Entity {
         }
         if (above) return false;
       }
+    }
+    // (crouched to spring — charging a jump — you don't creep off an edge: off
+    // a pier, a roof or a bank into the sea; you spring from where you are)
+    if (this.charging > 0 && !(this.z > 0.05) && !this.vz && !this.deck && this.game?.view3d && this.game.world === w) {
+      const gm = this.game, there = this.groundAt(gm, x, y);
+      if (this.groundAt(gm, this.x, this.y) - there > 0.5) return false;
+      if (SWIMMABLE[w.type(x, y)] && !WALKABLE[w.type(x, y)] && !gm.deckAt?.(x, y, -0.6) && !iceAt(gm, x, y)) return false;
     }
     // ship decks: walk anywhere on your deck; her bulwark keeps you aboard
     // until you're up over it (it's a low wall: a jump clears it), and nobody
@@ -1302,7 +1336,8 @@ export class Actor extends Entity {
    */
   climbOnto(game, L) {
     if (L.ship || this.climb || this.state !== 'idle' || this.hitstun > 0 || this.helpless() || this.status.root) return false;
-    if (this.inWater && ((this.fruit && !this.gills) || this.under)) return false;
+    // (a Devil Fruit user can still grab the edge while they're thrashing at the surface — not once the sea's taken their strength)
+    if (this.inWater && ((this.fruit && !this.gills && this.sinking) || this.under)) return false;
     const s = this.look?.scale || 1;
     const air = (this.z || 0) > 0.05 || !!this.vz;
     const from = this.inWater ? this.groundAt(game, this.x, this.y) : this.feetH(game);
@@ -1391,6 +1426,8 @@ export class Actor extends Entity {
 
   /** Up the side, over the top and onto your feet (the start and the end ride along on a ship). */
   updateClimb(dt, game) {
+    // (riding a ropeway's cabin: see ropeway.js)
+    if (this.climb.ride) { rideStep(this, dt, game); return; }
     const c = this.climb, w = game.world, to = c.to;
     if (to.ship && (to.ship.sunk || to.ship.alive === false)) { this.endClimb(game, true); return; }
     c.t += dt;
@@ -1446,6 +1483,7 @@ export class Actor extends Entity {
 
   /** On your feet at the top — or, knocked off it, falling back from where you were. */
   endClimb(game, fall = false) {
+    if (this.climb?.ride) { endRide(this, game); return; }
     const c = this.climb;
     this.climb = null;
     if (!c) return;
@@ -1501,7 +1539,8 @@ export class Actor extends Entity {
       const i = this.intent;
       let sp = this.d.speed * (w.speedAt(this.x, this.y - 0.1) || 1);
       if (this.inWater) {
-        if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.2;
+        // (a Devil Fruit user thrashes their way along, enough to reach an edge close by)
+        if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.3;
         else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1);
       }
       else if (this.wading) sp *= 1 - 0.42 * clamp(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
@@ -1807,7 +1846,7 @@ export class Actor extends Entity {
           : this.moving ? 'crawl' : 'tread';
     // in the air from a jump (not a knock-back launch): up with the knees, then reaching for the ground
     // (hauling yourself up onto a ledge: knees up, arms reaching over the top)
-    const air = this.climb ? 'up' : !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
+    const air = this.climb ? (this.climb.ride ? null : 'up') : !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
     // at a ship's station: rowing a rowboat, or at the wheel
     const st = !act ? this.station() : null;
     const mode = act || `${this.state}${drawn ? 'w' : ''}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}${this.charging > 0 ? 'k' : ''}${air || ''}${st ? st.kind : ''}`;

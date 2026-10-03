@@ -13,6 +13,8 @@ import './render3d/sealife3d.js';
 import './render3d/lamplight.js';
 import './render3d/precip3d.js';
 import './render3d/gangway3d.js';
+import './render3d/ropeway3d.js';
+import './render3d/drums3d.js';
 import { renderPortrait } from './ui/preview3d.js';
 import { generateWorld } from './world/worldgen.js';
 import { ALL_ISLANDS } from './data/islands/index.js';
@@ -59,6 +61,7 @@ import { installDecks, hatchSpot, helmSpot, placeOnDeck } from './game/decks.js'
 import { deckToWorld, shipDims } from './world/hull.js';
 import { installTraffic } from './game/traffic.js';
 import { installLadders } from './game/ladders.js';
+import { installRopeways } from './game/ropeway.js';
 import { installGangways } from './game/gangway.js';
 import { installFleet, launchShip } from './game/fleet.js';
 import { shipwrightBuilder } from './game/shipwrights.js';
@@ -250,6 +253,7 @@ async function start() {
   installTraffic(game);
   installLadders(game);
   installGangways(game);
+  installRopeways(game);
   installFleet(game);
   installWanted(game);
   installLoot(game);

@@ -457,6 +457,9 @@ export function snapshot(game) {
   c.world.day = game.env.day;
   c.world.clock = game.env.clock;
   c.pos = { x: p.x, y: p.y, zone: game.world.id, mode: p.mode };
+  // (riding a ropeway's cabin: saved at the station it's making for, not hanging in the air)
+  const rw = p.climb?.ride;
+  if (rw) { const ex = p.climb.up && p.climb.phase !== 'wait' ? rw.bExit : rw.aExit; c.pos.x = ex.x; c.pos.y = ex.y; }
   // (on one of your ships' decks, or down in her: where on her, to stand there again — see session.js)
   // (on a gangway, the foot of its steps on her deck)
   const dk = p.deck, at = dk?.plank ? dk.plank.footA() : dk;

@@ -175,6 +175,8 @@ function bigDims(def) {
   if (poop) flight(tp, tp + run(hp) / L, yp, yq, 'poop', 'quarter');
   const qs = d.stairs.find((s) => s.la === 'quarter' && s.lb === 'main'), fs = d.stairs.find((s) => s.lb === 'fore');
   const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
+  // (her main deck, along her: where a pier's planks want to be when she berths — see Ship.berth)
+  d.mainT0 = mainT0; d.mainT1 = mainT1;
   // ---- below: the hold (on the ships with a dozen guns or more, the gun deck), a storey under the main deck
   const holdY = deckY - Math.max(2.25, Math.min(2.7, 1.9 + B * 0.045));
   d.holdY = holdY;

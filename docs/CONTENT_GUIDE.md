@@ -103,6 +103,8 @@ The validator enforces all of these:
   ring: 0.45,                             // lagoon hole in the middle (atolls, Sabaody's ring)
   ground: T.X, beach: T.X,                // override the climate's tiles (import { T } from '../../world/tiles.js')
   mountains: [{ name: 'Cactus rock', dx: 0.1, dy: -0.2, r: 0.25, h: 0.9 }],
+  drums: [{ name: 'Drum Rock', dx: 0.12, dy: -0.2, r: 0.27, h: 72 }], // sheer cylinders, flat snowy tops h m up (see world/drums.js)
+  ropeways: [{ id: 'drum_ropeway', name: 'Drum Ropeway', drum: 'Drum Rock', from: [0.12, 0.61], top: 'Drum Castle', foot: 'the foot of Drum Rock' }],
   areas: [{ name: 'Graveyard', tile: T.GRAVEL, dx: 0.3, dy: 0.2, rx: 0.2, ry: 0.15 }],
   lakes: [{ dx: 0, dy: 0, rx: 0.1, ry: 0.1, tile: T.POND }],   // tile may be T.LAVA, T.ACID…
   rivers: [{ points: [[0,-0.3],[0.1,0.2],[0.2,0.9]], width: 3 }],
@@ -143,6 +145,15 @@ The validator enforces all of these:
   - A landmark with `spot: 'x'` also defines spot `x` just in front of it.
 - **Spots** are named positions for NPCs, enemy groups, quests and events.
   They may sit offshore; use that for sea events.
+- **Drums** (`drums`) are mountains shaped like drums: a sheer cliff all the
+  way round (a wall nobody walks up; off the top you fall) and a flat, snowy
+  top `h` metres over the sea that is walked like any ground. A town can stand
+  on one: give it `noRoad: true` (no road is cut up the cliff to it) and size
+  it to fit inside the top with a few metres to spare.
+- **Ropeways** (`ropeways`) hang a cabin on a cable from a station at `from`
+  up to a station at the edge of the drum named `drum`, its platform run out
+  over the cliff. E at either station rides it (game/ropeway.js). They add
+  the spots `<id>_foot` and `<id>_top`.
 
 ### Special ids the engine looks for
 

@@ -236,16 +236,25 @@ export const PARADISE_1 = [
   },
 
   // ------------------------------------------------------------ Drum Island
-  // A winter island crowned by the Drum Rockies; Drum Castle stands on the
-  // tallest. Bighorn lies by the river where ships dock.
+  // A winter island of drum-shaped mountains: the Drum Rockies, sheer-sided
+  // cylinders of rock standing straight up out of the snow, their flat tops
+  // capped white (see world/drums.js). The tallest, Drum Rock, stands in the
+  // middle of the island with Drum Castle on its summit, and the Drum
+  // Ropeway's cable runs up its face to the castle gate — the only way up,
+  // short of climbing the cliff. Bighorn lies by the river where ships dock;
+  // Gyasta by its frozen lake.
   {
     id: 'drum_island', name: 'Drum Island', sea: 'paradise', x: 2690, y: 1126, w: 132, h: 112,
     climate: 'winter', rough: 0.2,
     blobs: [[0, 0, 0.92, 0.9], [-0.5, 0.45, 0.4, 0.35]],
-    mountains: [
-      { name: 'Drum Rock', dx: 0.12, dy: -0.18, r: 0.14, h: 0.6, cliff: 260 },
-      { name: 'Drum Rockies', dx: 0.5, dy: -0.5, r: 0.08, h: 1.4 },
-      { dx: -0.15, dy: -0.52, r: 0.07, h: 1.35 }, { dx: 0.55, dy: 0.05, r: 0.07, h: 1.35 }, { dx: -0.3, dy: -0.15, r: 0.06, h: 1.3 },
+    drums: [
+      { name: 'Drum Rock', dx: 0.12, dy: -0.2, r: 0.27, h: 72 },
+      { name: 'Drum Rockies', dx: 0.5, dy: -0.5, r: 0.1, h: 46 },
+      { name: 'Drum Rockies (west)', dx: -0.3, dy: -0.5, r: 0.09, h: 40 },
+      { name: 'Drum Rockies (east)', dx: 0.6, dy: 0.0, r: 0.08, h: 37 },
+      { name: 'Drum Rockies (Bighorn)', dx: -0.42, dy: -0.12, r: 0.075, h: 33 },
+      { name: 'Drum Rockies (north)', dx: 0.32, dy: -0.66, r: 0.07, h: 30 },
+      { name: 'Drum Rockies (far west)', dx: -0.62, dy: -0.38, r: 0.06, h: 27 },
     ],
     rivers: [{ points: [[-1.1, 0.15], [-0.6, 0.12], [-0.25, 0.02]], width: 5, meander: 0.5 }],
     lakes: [{ name: 'Gyasta lake', dx: 0.45, dy: 0.5, rx: 0.1, ry: 0.07, tile: T.ICE }],
@@ -260,10 +269,12 @@ export const PARADISE_1 = [
         houses: 12,
       },
       {
-        id: 'drum_castle', name: 'Drum Castle', dx: 0.12, dy: -0.2, w: 34, h: 24, style: 'snow', walls: true, dockDir: 'n', plaza: 'flagpole',
+        // (on the summit of Drum Rock: up the ropeway, no road)
+        id: 'drum_castle', name: 'Drum Castle', dx: 0.12, dy: -0.22, w: 22, h: 16, style: 'snow', walls: true, mainDir: 'v', plaza: 'flagpole', noRoad: true,
+        // (an icy-looking castle: pale stone walls, slate-blue roofs, round towers at its corners)
         buildings: [
-          { role: 'palace', name: 'Drum Castle', w: 12, d: 7 },
-          { role: 'doctor', name: "Dr. Kureha's Clinic", npc: 'p1_kureha' },
+          { role: 'palace', name: 'Drum Castle', w: 12, d: 7, hgt: 8, style: 'noble', wall: '#dfe9f1', roof: '#4b6b8c', roofType: 'mansard' },
+          { role: 'doctor', name: "Dr. Kureha's Clinic", npc: 'p1_kureha', style: 'noble', wall: '#e3ebf2', roof: '#4b6b8c' },
         ],
         houses: 0,
       },
@@ -273,16 +284,20 @@ export const PARADISE_1 = [
         houses: 6,
       },
     ],
+    ropeways: [{ id: 'drum_ropeway', name: 'Drum Ropeway', drum: 'Drum Rock', from: [0.12, 0.61], top: 'Drum Castle', foot: 'the foot of Drum Rock' }],
     landmarks: [
-      { kind: 'flagpole', dx: 0.12, dy: -0.47, name: "Dr. Hiriluk's Jolly Roger", spot: 'hiriluk_flag', lore: '(A skull with a cross of cherry blossoms instead of bones.) Dr. Hiriluk said a pirate\'s flag is a symbol of conviction. "When do you think people die? When they are forgotten."' },
-      { kind: 'cannon', dx: 0.02, dy: -0.47 }, { kind: 'cannon', dx: 0.22, dy: -0.47 },
-      { kind: 'sign', dx: -0.1, dy: 0.05, name: 'Drum Ropeway (closed by royal decree)', spot: 'castle_road', lore: '"DRUM ROPEWAY — closed by order of King Wapol. Doctors and peasants may not visit the castle." The cable is cut. The only way up Drum Rock is to climb.' },
+      { kind: 'flagpole', dx: 0.12, dy: -0.46, name: "Dr. Hiriluk's Jolly Roger", spot: 'hiriluk_flag', lore: '(A skull with a cross of cherry blossoms instead of bones.) Dr. Hiriluk said a pirate\'s flag is a symbol of conviction. "When do you think people die? When they are forgotten."' },
+      { kind: 'cannon', dx: 0.04, dy: -0.44 }, { kind: 'cannon', dx: 0.2, dy: -0.44 },
+      // Drum Castle's towers, at the corners inside its walls
+      { kind: 'tower', name: 'Drum Castle tower', dx: -0.022, dy: -0.34 }, { kind: 'tower', name: 'Drum Castle tower', dx: 0.262, dy: -0.34 },
+      { kind: 'tower', name: 'Drum Castle tower', dx: -0.022, dy: -0.1 }, { kind: 'tower', name: 'Drum Castle tower', dx: 0.262, dy: -0.1 },
+      { kind: 'sign', dx: 0.17, dy: 0.66, name: 'Drum Ropeway', spot: 'castle_road', lore: '"DRUM ROPEWAY — to Drum Castle." (Underneath, freshly painted over a royal decree:) "Open to doctors, patients and peasants alike. By order of the people of Drum." The cable climbs straight up the face of Drum Rock, seventy metres of sheer cliff, to the castle gate.' },
     ],
-    spots: [{ id: 'castle_gate', dx: 0.12, dy: -0.02 }, { id: 'lapahn_slope', dx: -0.35, dy: -0.45 }],
+    spots: [{ id: 'castle_gate', dx: 0.12, dy: -0.04 }, { id: 'lapahn_slope', dx: 0.0, dy: 0.5 }],
     docks: [{ near: 'bighorn', dir: 'w', name: 'Bighorn River Mouth' }, { near: 'gyasta', dir: 'se', name: 'Gyasta' }],
     weather: { snow: 0.55 },
     logNext: ['alabasta', 'nanimonai_island'], logTime: 2,
-    danger: 4, tagline: 'A kingdom without doctors, snowed under — and a castle on a drum-shaped peak.', music: 'town',
+    danger: 4, tagline: 'A kingdom without doctors, snowed under — and a castle on top of a drum-shaped mountain.', music: 'town',
   },
 
   // ------------------------------------------------------------ Nanimonai Island
