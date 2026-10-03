@@ -19,7 +19,8 @@
 //   reader   has learnt the rule: taps F as a blow lands to parry it, dodges (Q)
 //            the ones that smash guards, and strikes back after a parry
 // Every pilot reacts in human time (a reaction delay and a timing error on
-// each press, from a seeded random stream), so trials differ but repeat.
+// each press, from a seeded random stream), so trials differ but repeat; and
+// all but the masher walk out of a field their foe lays down (a gas cloud).
 //
 // --root runs the same duels against another checkout of the game (the code
 // as it was, say), for a before-and-after; --log prints one fight blow by blow.
@@ -214,7 +215,15 @@ class Pilot {
     }
     p.setBlock(wantBlock);
     if (!p.action || p.action.t < (p.action.def.windup ?? 0.1)) p.facing = ang;
-    // closing in (running them down when they keep their distance)
+    // closing in (running them down when they keep their distance) — but out
+    // of a field of something they've laid down first (anyone but the masher)
+    const field = P.defend !== 'none' && game.areaZones.find((z) => z.owner === b && z.damage > 0 && w.distance(z.x, z.y, p.x, p.y) < z.r + 0.6);
+    if (field) {
+      const fx = w.dx(field.x, p.x), fy = p.y - field.y, fl = Math.hypot(fx, fy) || 1;
+      p.intent.mx = fx / fl; p.intent.my = fy / fl; p.intent.sprint = true;
+      p.setBlock(false);
+      return;
+    }
     if (dist > 1.25) { p.intent.mx = dx / dist; p.intent.my = dy / dist; p.intent.sprint = dist > 2.2; }
     // striking: the masher always; the blocker whenever nothing's coming; the
     // reader in short bursts (two or three blows, then a look) and at once
