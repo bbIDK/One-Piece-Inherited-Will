@@ -154,8 +154,18 @@ export class Voyage {
         break;
       }
       case 'env': if (from === this.hostId) this.applyEnv(readEnv(m)); break;
-      case 'say': { const t = readSay(m); if (t) this.emit('chat', { name: r.label, text: t, color: MATE_COLOR, from }); break; }
-      case 'gone': if (r.play) { r.gone(); this.emit('note', `${r.label} has gone back to port for now.`, '#b0bec5'); this.emit('roster'); } break;
+      case 'say': {
+        const t = readSay(m);
+        if (!t) break;
+        // (a flood from one game is cut short: five lines in three seconds at most)
+        const now = performance.now(), q = r.said || (r.said = []);
+        while (q.length && q[0] < now - 3000) q.shift();
+        if (q.length >= 5) break;
+        q.push(now);
+        this.emit('chat', { name: r.label, text: t, color: MATE_COLOR, from });
+        break;
+      }
+      case 'gone': if (r.play) { r.gone(); this.emit('note', `${r.label}'s journey has ended. The next of their line is on the way.`, '#b0bec5'); this.emit('roster'); } break;
       case 'bye': this.drop(from); break;
       default: break;
     }
@@ -179,9 +189,8 @@ export class Voyage {
       if (this.hostId && this.hostId !== from) return; // (a second host on the code: not ours)
       this.hostId = from;
       if (bad) { this.fail(bad); return; }
-    } else if (!this.hostId && fresh) {
-      // (another guest, met before the host: fine — they're aboard the same voyage)
     }
+    // (another guest, even met before the host, is aboard the same voyage)
     if (fresh) { r = new Remote(from, this); this.remotes.set(from, r); }
     r.hello(h);
     if (fresh) {

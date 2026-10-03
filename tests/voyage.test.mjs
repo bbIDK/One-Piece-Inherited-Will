@@ -182,6 +182,32 @@ test('two hosts on one code (a lineage hosted in two tabs): the later gives way'
   a.close();
 });
 
+test('a game that floods (chat, looks): cut short, never rebuilt more than a few times a second', async () => {
+  const c = code();
+  const gh = game('Rin');
+  const host = await open(gh, { role: 'host', code: c });
+  const lines = [];
+  host.on('chat', (m) => lines.push(m.text));
+  const { localTransport } = await import('../src/net/transport.js');
+  const { PROTO, worldSig } = await import('../src/net/protocol.js');
+  const raw = localTransport(c, {});
+  await sleep(50);
+  raw.send({ k: 'hi', v: PROTO, role: 'guest', sig: worldSig(gh.surface), name: 'Spammer', play: true });
+  await run([host], 100);
+  for (let i = 0; i < 20; i++) raw.send({ k: 'say', text: `line ${i}` });
+  for (let i = 0; i < 20; i++) raw.send({ k: 'lk', n: 'Spammer', r: 'human', look: { race: 'human', top: `#00000${i % 10}` } });
+  await run([host], 80);
+  const r = [...host.remotes.values()][0];
+  assert.ok(r.pendingLook, 'the latest look waits its turn');
+  const first = r.actor.look;
+  await run([host], 400);
+  assert.equal(lines.length, 5, lines.join(' | '));
+  assert.notEqual(r.actor.look, first);
+  assert.equal(r.actor.look.top, '#000009', 'and the latest is the one drawn');
+  raw.leave();
+  host.close();
+});
+
 test('a guest leaving: gone from the host\'s crew at once', async () => {
   const c = code();
   const host = await open(game('Rin'), { role: 'host', code: c });

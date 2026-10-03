@@ -204,6 +204,32 @@ export const scenarios = {
       const swings = await pageB.evaluate(() => window.__swings);
       const seenActs = await pageA.evaluate(() => { window.__stop = true; return window.__acts; });
       console.log('B swung', JSON.stringify(swings), '| A saw', JSON.stringify(seenActs));
+      // B wanders off across the island; the voyage list (P) says where everyone is, and Go to them brings B back to A
+      const away = await pageB.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player;
+        for (let r = 40; r < 120; r += 5) {
+          for (let k = 0; k < 16; k++) {
+            const a = k / 16 * Math.PI * 2, x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
+            if (w.walkable(x, y) && !w.isBlocked(x, y) && !w.isLiquid(x, y)) { window.OP.teleport(x, y); return { x: +x.toFixed(1), y: +y.toFixed(1), r }; }
+          }
+        }
+        return null;
+      });
+      await until(pageA, ({ x, y }) => { const a = window.OP.net.avatars[0]; return a && Math.hypot(a.x - x, a.y - y) < 1; }, away, 60000);
+      await pageA.keyboard.press('KeyP');
+      await pageA.waitForSelector('.vy-list .vy-row', { timeout: 30000 });
+      await frames(pageA, 2);
+      const listA = await pageA.evaluate(() => [...document.querySelectorAll('.vy-list .vy-row')].map((r) => r.textContent));
+      console.log('A\'s voyage list', JSON.stringify(listA));
+      await snap('voyage-list');
+      await pageA.keyboard.press('Escape');
+      await pageB.keyboard.press('KeyP');
+      await pageB.waitForSelector('.vy-list .vy-row button:has-text("Go to them")', { timeout: 30000 });
+      await pageB.click('.vy-list .vy-row button:has-text("Go to them")');
+      await pageB.click('.panel.ask .btn.gold');
+      await until(pageB, () => { const p = window.OP.game.player, a = window.OP.net.avatars[0]; return a && window.OP.world.distance(p.x, p.y, a.x, a.y) < 4; }, null, 60000);
+      const met = await pageB.evaluate(() => { const p = window.OP.game.player, a = window.OP.net.avatars[0]; return { apart: +window.OP.world.distance(p.x, p.y, a.x, a.y).toFixed(2), log: [...document.querySelectorAll('.log div')].map((d) => d.textContent).slice(-1) }; });
+      console.log('B went to A from', away?.r, 'm away:', JSON.stringify(met));
       if (!at('chat')) return finish();
 
       // ---------------------------------------------------------------- chat
@@ -268,10 +294,26 @@ export const scenarios = {
       });
       const shipReal = await pageB.evaluate(() => { const s = window.OP.game.player.ship; return { x: +s.x.toFixed(1), y: +s.y.toFixed(1), heading: +s.heading.toFixed(2), sail: +s.sailSet.toFixed(2), speed: +s.speed.toFixed(2) }; });
       console.log('A sees B\'s ship', JSON.stringify(shipSeen), 'really', JSON.stringify(shipReal));
+      // A goes down to the water's edge to look out at her (from in town, the houses are in the way)
+      const shore = await pageA.evaluate(() => {
+        const g = window.OP.game, w = g.world, p = g.player, s = window.OP.net.ships[0], v = window.OP.view3d;
+        if (!s) return null;
+        const dx = w.dx(s.x, p.x), dy = p.y - s.y, L = Math.hypot(dx, dy);
+        for (let d = 8; d < L; d += 0.5) {
+          const x = s.x + dx / L * d, y = s.y + dy / L * d;
+          if (w.walkable(x, y) && !w.isBlocked(x, y) && w.walkable(x + dx / L * 2, y + dy / L * 2)) {
+            window.OP.teleport(x + dx / L * 2, y + dy / L * 2);
+            break;
+          }
+        }
+        v.rig.yaw = Math.atan2(s.y - p.y, w.dx(p.x, s.x)) - 0.25; v.rig.pitch = -0.05; if (v.rig.tp) v.rig.tp.dist = 5;
+        return { x: +p.x.toFixed(1), y: +p.y.toFixed(1), toShip: +w.distance(p.x, p.y, s.x, s.y).toFixed(1) };
+      });
+      console.log('A on the shore', JSON.stringify(shore));
+      await sleep(1500);
       await pageA.evaluate(() => {
         const g = window.OP.game, p = g.player, s = window.OP.net.ships[0], v = window.OP.view3d;
-        if (!s) return;
-        v.rig.yaw = Math.atan2(s.y - p.y, g.world.dx(p.x, s.x)); v.rig.pitch = -0.08; if (v.rig.tp) v.rig.tp.dist = 6;
+        if (s) v.rig.yaw = Math.atan2(s.y - p.y, g.world.dx(p.x, s.x)) - 0.25;
       });
       await frames(pageA, 3);
       await snap('A-sees-B-ship');
@@ -320,9 +362,11 @@ export const scenarios = {
       await pageB.click('button[data-slot="2"]');
       await until(pageB, () => !!window.OP.game.player && window.OP.net?.status === 'joined', null, 60000);
       await until(pageA, () => window.OP.net?.avatars.length === 1, null, 60000);
+      // (what B shows the moment the voyage ends: noted then, as the toast fades in a couple of seconds)
+      await pageB.evaluate(() => window.OP.net.on('failed', (e) => { window.__ended = { code: e.code, toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent) }; }));
       await pageA.evaluate(() => window.OP.voyage.toTitle());
       await until(pageB, () => !window.OP.net, null, 20000);
-      const hostLeft = await pageB.evaluate(() => ({ toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent), net: window.OP.net, playing: !!window.OP.game.player }));
+      const hostLeft = await pageB.evaluate(() => ({ ended: window.__ended, log: [...document.querySelectorAll('.log div')].map((d) => d.textContent).slice(-1), net: window.OP.net, playing: !!window.OP.game.player }));
       console.log('host left: B', JSON.stringify(hostLeft));
       await frames(pageB, 2);
       await snapB('host-left');
@@ -338,7 +382,9 @@ export const scenarios = {
 
 // The real line (trystero over the public Nostr relays), from one page: hosting
 // shows whether the relays answer (where they can't be reached — a sandbox, a
-// firewall — the lobby says so, and so does looking for a voyage).
+// firewall — the lobby says so, and so does looking for a voyage; the browser
+// then logs each failed relay connection as an error of its own, which the
+// harness counts).
 //   node tools/shot.mjs mprelays [--page=shots/xmp/index.html]
 scenarios.mprelays = {
   async run(page, snap) {

@@ -54,14 +54,14 @@ function codePlate(code, small = false) {
 }
 
 /** One of your lineages, as a row to pick (a portrait, who, where they are). */
-function slotRow(info, button) {
+function slotRow(info, button, note = null) {
   const c = info.char, last = info.legacy?.hall?.[0];
   const gen = info.legacy?.generation || c?.generation || 1;
   const who = c ? c.name : info.empty ? 'An empty lineage' : `Generation ${gen}`;
   const sub = c ? `${RACES[c.race]?.name || c.race} · Day ${c.world?.day || 1} · Generation ${gen}` : info.empty ? 'A new bloodline, waiting to be born' : last ? `${last.name} fell; the next is ready to be born` : 'Ready to be born';
   return h('div.vy-slot' + (button.disabled ? '.busy' : ''),
     c ? portrait(c.look, 40, 46) : h('div.vy-blank', uiImg('legacy', 22)),
-    h('div.vy-who', h('small', `Lineage ${info.slot}`), h('b', who), h('div.sub', sub)),
+    h('div.vy-who', h('small', `Lineage ${info.slot}`, note ? h('span.vy-last', note) : null), h('b', who), h('div.sub', sub)),
     button);
 }
 
@@ -169,7 +169,7 @@ export function joinSearch(ui, v, { onBack }) {
 }
 
 /** Aboard (the host has welcomed you): which of your pirates comes along. */
-export function joinPick(ui, v, { slots, onBring, onNew, onBack }) {
+export function joinPick(ui, v, { slots, last = 0, onBring, onNew, onBack }) {
   const head = h('p.muted'), list = h('div.vy-slots.wide');
   const el = h('div.screen', h('div.panel.vy-lobby',
     h('h2', `Aboard ${v.hostName || 'the host'}'s voyage`),
@@ -197,7 +197,7 @@ export function joinPick(ui, v, { slots, onBring, onNew, onBack }) {
       btn.dataset.slot = String(s.slot);
       btn.disabled = used;
       if (used) btn.title = 'Being played in another tab of this browser';
-      list.appendChild(slotRow(s, btn));
+      list.appendChild(slotRow(s, btn, s.slot === last ? 'came aboard last time' : null));
     }
   });
 }

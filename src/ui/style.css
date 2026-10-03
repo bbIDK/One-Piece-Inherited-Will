@@ -843,3 +843,6 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .vy-row .tag { margin-left: 2px; }
 .compass .pin.mate small { color: #8fe9f5; }
 #ui.touch .chat-box { bottom: auto; top: 30%; }
+#ui.touch .vy-badge small { display: none; }
+.vy-last { margin-left: 6px; padding: 0 6px; border-radius: 4px; background: #2e7d32; color: #fff; font: 800 9.5px Nunito, sans-serif; letter-spacing: .4px; text-transform: none; vertical-align: 1px; }
+.panel.vy-panel { width: min(640px, 94vw); }

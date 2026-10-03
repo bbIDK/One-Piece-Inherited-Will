@@ -124,45 +124,72 @@ export function installVoyageHud(game, ui) {
     }, 450);
   };
 
+  /** A crewmate's row as it is just now: what they are, where, and whether you can go to them. */
+  const rowNow = (m) => {
+    const r = m.remote, L = r?.info;
+    const race = m.you ? RACES[game.state?.char?.race]?.name : L ? RACES[L.race]?.name : '';
+    const where = m.you ? 'you' : whereOf(r);
+    const can = !m.you && !!r?.play && r.visible && (r.now ? !(r.now.b & (BIT.helm | BIT.water | BIT.flying)) && r.now.du === undefined : false);
+    return { sub: [race, where].filter(Boolean).join(' · '), can, on: m.you ? v.inWorld : m.play };
+  };
+
   /** The voyage list (P, the badge, or the pause menu): who's aboard and where, the code, leaving. */
   function openList() {
     if (!v || !game.player) return;
     const body = h('div.vy-list');
-    const draw = () => {
-      clear(body);
-      if (!v) { body.appendChild(h('p', 'The voyage is over.')); return; }
-      const copy = h('button.btn.gold.small', { on: { click: () => copyCode(v.code, copy) } }, 'Copy code');
-      body.append(
-        h('div.panel-top', h('h2', 'The voyage'), h('div.vy-code-line', h('b', showCode(v.code)), copy)),
-        h('p.muted', v.role === 'host' ? 'You\'re hosting: your world\'s days, hours and weather are everyone\'s. Pass the code on and friends can join while you play.' : `You're aboard ${v.hostName || 'the host'}'s voyage: their world sets the day, the hour and the weather. Your pirate and their save are your own.`));
-      const rows = h('div.list');
-      for (const m of v.crew()) {
-        const r = m.remote, L = r?.info;
-        const race = m.you ? RACES[game.state?.char?.race]?.name : L ? RACES[L.race]?.name : '';
-        const where = m.you ? 'you' : whereOf(r);
-        const can = !m.you && r?.play && r.visible && (r.now ? !(r.now.b & (BIT.helm | BIT.water | BIT.flying)) && r.now.du === undefined : false);
-        rows.appendChild(h('div.row-item.vy-row',
-          h('i.vy-dot' + ((m.you ? v.inWorld : m.play) ? '.on' : '')),
-          h('div.grow', h('b', m.name), m.host ? h('span.tag', 'host') : null, h('div.sub', [race, where].filter(Boolean).join(' · '))),
-          !m.you && r?.play ? h('button.btn.small' + (can ? '.gold' : ''), { disabled: !can, title: can ? `Go and stand beside ${m.name}` : 'Only while they\'re ashore, in the same world as you', on: { click: () => goTo(r) } }, 'Go to them') : null));
+    const rows = h('div.list');
+    let key = '';
+    const refs = new Map(); // crewmate → their row's parts
+    const copy = h('button.btn.gold.small', { on: { click: () => copyCode(v.code, copy) } }, 'Copy code');
+    // (on a phone there's no Enter: the chat opens from here)
+    const chat = h('button.btn.gold', { title: 'Say something to the crew (Enter)', on: { click: () => { ui.closeAll(); openChat(); } } }, 'Say something');
+    const leave = h('button.btn.red', { on: { click: async () => {
+      const was = v, hosting = was?.role === 'host';
+      if (!was) return;
+      if (!(await ui.ask({ title: hosting ? 'End the voyage?' : 'Leave the voyage?', text: hosting ? 'Everyone aboard goes on alone, in their own worlds. Your game carries on.' : 'You sail on alone, in your own world. Your pirate is saved.', ok: hosting ? 'End it' : 'Leave', danger: true }))) return;
+      ui.closeAll();
+      was.close('left');
+      persist(game);
+      game.log(hosting ? 'The voyage is over: you sail on alone.' : 'You leave the voyage and sail on alone.', '#b0bec5');
+    } } }, v.role === 'host' ? 'End the voyage' : 'Leave the voyage');
+    body.append(
+      h('div.panel-top', h('h2', 'The voyage'), h('div.vy-code-line', h('b', showCode(v.code)), copy)),
+      h('p.muted', v.role === 'host' ? 'You\'re hosting: your world\'s days, hours and weather are everyone\'s. Pass the code on and friends can join while you play.' : `You're aboard ${v.hostName || 'the host'}'s voyage: their world sets the day, the hour and the weather. Your pirate and their save are your own.`),
+      rows,
+      h('div.row-end.vy-btns', chat, leave));
+    // the rows are made again only when who's aboard changes; their words and buttons,
+    // every second, in place (a button rebuilt under the pointer would miss its click)
+    const update = () => {
+      if (!v) { clear(body); body.appendChild(h('p', 'The voyage is over.')); return; }
+      const crew = v.crew(), k = crew.map((m) => m.id + ':' + m.name + (m.play ? '+' : '-')).join(',');
+      if (k !== key) {
+        key = k;
+        clear(rows); refs.clear();
+        for (const m of crew) {
+          const now = rowNow(m);
+          const dot = h('i.vy-dot' + (now.on ? '.on' : '')), sub = h('div.sub', now.sub);
+          const btn = !m.you && m.remote?.play ? h('button.btn.small', { on: { click: () => goTo(m.remote) } }, 'Go to them') : null;
+          refs.set(m.id, { m, dot, sub, btn });
+          rows.appendChild(h('div.row-item.vy-row', dot, h('div.grow', h('b', m.name), m.host ? h('span.tag', 'host') : null, sub), btn));
+        }
       }
-      body.appendChild(rows);
-      // (on a phone there's no Enter: the chat opens from here)
-      const chat = h('button.btn.gold', { title: 'Say something to the crew (Enter)', on: { click: () => { ui.closeAll(); openChat(); } } }, 'Say something');
-      body.appendChild(h('div.row-end.vy-btns', chat, h('button.btn.red', { on: { click: async () => {
-        const was = v, hosting = was.role === 'host';
-        if (!(await ui.ask({ title: hosting ? 'End the voyage?' : 'Leave the voyage?', text: hosting ? 'Everyone aboard goes on alone, in their own worlds. Your game carries on.' : 'You sail on alone, in your own world. Your pirate is saved.', ok: hosting ? 'End it' : 'Leave', danger: true }))) return;
-        ui.closeAll();
-        was.close('left');
-        persist(game);
-        game.log(hosting ? 'The voyage is over: you sail on alone.' : 'You leave the voyage and sail on alone.', '#b0bec5');
-      } } }, v.role === 'host' ? 'End the voyage' : 'Leave the voyage')));
+      for (const { m, dot, sub, btn } of refs.values()) {
+        const now = rowNow(m);
+        if (sub.textContent !== now.sub) sub.textContent = now.sub;
+        dot.classList.toggle('on', now.on);
+        if (btn) {
+          btn.disabled = !now.can;
+          btn.classList.toggle('gold', now.can);
+          btn.title = now.can ? `Go and stand beside ${m.name}` : 'Only while they\'re ashore, in the same world as you';
+        }
+      }
     };
-    draw();
+    update();
     const entry = ui.openPanel(body, { id: 'voyage' });
     if (!entry) return;
+    entry.panel.classList.add('vy-panel');
     // (the crew's whereabouts kept up to date while it's open)
-    const timer = setInterval(() => { if (!body.isConnected) { clearInterval(timer); return; } draw(); }, 1000);
+    const timer = setInterval(() => { if (!body.isConnected) { clearInterval(timer); return; } update(); }, 1000);
   }
 
   /** A voyage begins (or ends: null). */

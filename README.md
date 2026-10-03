@@ -686,7 +686,8 @@ node tools/shot.mjs story [--path=pirate|marine|hunter]   # plays the story's st
 node tools/shot.mjs storydrift | storyswitch               # the Grand Line's currents; the story following a change of road
 node tools/shot.mjs rmride       # rides Reverse Mountain from the East Blue gate to the Grand Line
 node tools/shot.mjs creative     # the creative panel (F1): fruits given and eaten, races changed (third person), foes, a boss, a ship and a Sea King called up, travel, a small window
-node tools/shot.mjs mp [--upto=menu|avatars|chat|ship|env|leave]   # multiplayer: two pages on a voyage over ?net=local — hosting from the title, joining with the code, each drawing the other (and how closely and smoothly), chat both ways, a ship under sail, the host's clock and weather, leaving and rejoining, the host leaving
+node tools/shot.mjs mp [--upto=menu|avatars|chat|ship|env|leave]   # multiplayer: two pages on a voyage over ?net=local — hosting from the title, joining with the code, each drawing the other (and how closely and smoothly), techniques, the voyage list and Go to them, chat both ways, a ship under sail, the host's clock and weather, leaving and rejoining, a code nobody hosts, the host leaving
+node tools/shot.mjs mprelays     # multiplayer over the real relays from one page: hosting and looking for a voyage (where the relays can't be reached, both say so)
 ```
 
 In the page, `window.OP.prof` is a frame profiler: set `OP.prof.PROF.on = true`

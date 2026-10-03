@@ -272,6 +272,8 @@ async function start() {
     if (!afterDeath && game.player && game.state?.char && !game.state.char.dead) persist(game);
     // (a voyage ends at the title — but waits while a lineage's next generation is born)
     if (next === 'create') game.net?.leftWorld(); else game.net?.close('quit');
+    // (back out of the world before its loading screen had gone: it goes now)
+    if (sail) { sail = null; hideBoot(true); }
     game.player = null;
     game.actors = [];
     game.ships = [];
@@ -428,6 +430,8 @@ async function start() {
     v.on('failed', (err) => { if (!game.player) voyageError(ui, err, { code, host: v.hostName, onRetry: () => joinVoyage(code), onBack: showTitle }); });
     v.on('joined', () => joinPick(ui, v, {
       slots: allSlots(),
+      // (the lineage that came aboard this voyage last time, marked)
+      last: allSlots().find((s) => loadNet(s.slot).joined?.code === code)?.slot || 0,
       onBring: (s) => { remember(s); v.slot = s; play(s); },
       onNew: (s) => { remember(s); v.slot = s; useSlot(s); openCreation(); },
       onBack: showTitle,

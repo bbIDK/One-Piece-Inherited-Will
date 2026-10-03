@@ -82,6 +82,8 @@ export class SnapBuffer {
     const want = Math.min(this.maxDelay, Math.max(this.minDelay, gap + (worst - off) + 20));
     this.delay += (want - this.delay) * 0.15;
     this.buf.push(s);
+    // (while nothing's drawn of them — you in a menu, them in another world — the old ones go here)
+    if (this.buf.length > 90) this.buf.splice(0, this.buf.length - 90);
     this.lastRecv = now;
     return true;
   }

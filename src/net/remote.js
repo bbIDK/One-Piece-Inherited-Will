@@ -48,8 +48,23 @@ export class Remote {
     this.slot = h.slot; this.prof = h.prof; this.v = h.v; this.sig = h.sig; this.since = h.since;
   }
 
-  /** Their look changed (or came for the first time): the character drawn for them follows. */
-  setLook(L) {
+  /**
+   * Their look changed (or came for the first time): the character drawn for
+   * them follows — rebuilt four times a second at most, however often a game
+   * sends one (an honest one sends it only when it changes).
+   */
+  setLook(L, now = performance.now()) {
+    if (now - (this.lookT ?? -1e9) < 250) { this.pendingLook = L; return; }
+    this.lookT = now;
+    this.pendingLook = null;
+    this.applyLook(L);
+  }
+
+  applyLook(L) {
+    // (the same look again — a newcomer's introduction crossing the usual one — changes nothing)
+    const key = JSON.stringify(L);
+    if (key === this.lookKey && this.actor) return;
+    this.lookKey = key;
     this.info = L;
     this.name = L.name;
     const a = this.actor || (this.actor = makeActor(L));
@@ -65,8 +80,15 @@ export class Remote {
     a.buffs = L.buffs.map((b) => ({ ...b, mods: b.scale ? { scale: b.scale } : undefined, t: 1e9 }));
   }
 
-  /** The ship they're with: built afresh when it's another one (or another type), kept when it's the same. */
-  setShip(S) {
+  /** The ship they're with: built afresh when it's another one (or another type), kept when it's the same (four times a second at most, as a look). */
+  setShip(S, now = performance.now()) {
+    if (now - (this.shipT ?? -1e9) < 250) { this.pendingShip = S; return; }
+    this.shipT = now;
+    this.pendingShip = null;
+    this.applyShip(S);
+  }
+
+  applyShip(S) {
     if (!S.id || !SHIPS[S.type]) { this.shipInfo = null; this.ship = null; return; }
     const same = this.ship && this.shipInfo?.id === S.id && this.shipInfo.type === S.type && String(this.shipInfo.upgrades) === String(S.upgrades);
     this.shipInfo = S;
@@ -98,6 +120,8 @@ export class Remote {
 
   /** This frame: where they are and what they're doing, onto the stand-ins. `world`: our world's key ('' at the surface, else the zone). */
   update(game, now, dt, world) {
+    if (this.pendingLook && now - this.lookT >= 250) this.setLook(this.pendingLook, now);
+    if (this.pendingShip && now - this.shipT >= 250) this.setShip(this.pendingShip, now);
     const s = this.play && this.info ? this.buf.sample(now) : null;
     this.now = s;
     this.visible = !!s && s.w === world && !!this.actor;
