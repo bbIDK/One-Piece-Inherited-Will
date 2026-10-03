@@ -145,7 +145,9 @@ GitHub Pages site: no account, and no server of our own.
   to browser, over WebRTC (encrypted). A few networks — strict firewalls,
   some mobile carriers — don't allow a direct connection; joining then fails
   (a TURN relay would get round that: none is configured). Both players need
-  the same version of the game (reload the page if one is older).
+  the same version of the game (reload the page if one is older). The copy
+  of the game shown on claude.ai can't open these connections (its page
+  won't let it): its Multiplayer tab points you to the GitHub Pages site.
 - `?relay=wss://your.relay.example` meets through Nostr relays of your
   choosing instead of the public ones (several, comma-separated): handy where
   those are blocked. `node tools/nostr-relay.mjs` runs a small one for

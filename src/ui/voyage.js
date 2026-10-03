@@ -65,11 +65,26 @@ function slotRow(info, button, note = null) {
     button);
 }
 
+/** The game's own site, where voyages sail from (see `offsite` below). */
+export const PLAY_URL = 'https://bbidk.github.io/One-Piece-Inherited-Will/';
+
 /**
  * The title's Multiplayer pane. slots: slotInfo for each lineage; recent:
- * [{ code, host, at }] — the voyages you've joined, newest first.
+ * [{ code, host, at }] — the voyages you've joined, newest first. offsite:
+ * this copy of the game is shown inside another site's page (claude.ai),
+ * which won't let it open the connections a voyage needs — it says so, and
+ * where to play together instead.
  */
-export function multiplayerPane({ slots, recent = [], local = false, onHost, onJoin }) {
+export function multiplayerPane({ slots, recent = [], local = false, offsite = false, onHost, onJoin }) {
+  if (offsite) {
+    return h('div.vy-pane',
+      h('div.vy-cards.one', h('div.vy-card',
+        h('div.vy-head', uiImg('crew', 26), h('span', 'Voyages with friends')),
+        h('p', 'This copy of the game is shown inside another site\'s page, which won\'t let it open the direct connections a voyage needs. Play together on the game\'s own site — your friends too:'),
+        h('div.code-row', h('a.btn.gold', { href: PLAY_URL, target: '_blank', rel: 'noopener' }, 'Open the game\'s site')),
+        h('p.vy-small', PLAY_URL),
+        h('p.vy-small', 'Your lineages here are saved in this copy only: a pirate made on the game\'s site starts afresh there.'))));
+  }
   const input = h('input.code-in', { maxLength: CODE_LEN + 2, size: CODE_LEN + 2, placeholder: 'ABCDEF', spellcheck: false, autocomplete: 'off', autocapitalize: 'characters', 'aria-label': 'Room code' });
   const hint = h('div.code-hint', '');
   const join = () => {

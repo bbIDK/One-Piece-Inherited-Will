@@ -451,7 +451,7 @@ async function start() {
       slots,
       tab: titleTab,
       onTab: (t) => { titleTab = t; showTitle(); },
-      multiplayer: () => multiplayerPane({ slots, recent: recentVoyages(), local: netKind() === 'local', onHost: hostVoyage, onJoin: joinVoyage }),
+      multiplayer: () => multiplayerPane({ slots, recent: recentVoyages(), local: netKind() === 'local', offsite: globalThis.IW_HOST === 'artifact', onHost: hostVoyage, onJoin: joinVoyage }),
       onPlay: (s) => {
         useSlot(s);
         const saved = loadChar();

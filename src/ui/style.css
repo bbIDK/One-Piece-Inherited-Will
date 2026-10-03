@@ -155,6 +155,8 @@
 .btn.red { background: var(--red); border-color: #7b1f16; }
 .btn.green { background: #2e7d32; border-color: #1b5e20; }
 .btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+/* (a link that looks like a button: the way to the game's own site) */
+a.btn { display: inline-block; text-decoration: none; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .card { background: rgba(255,255,255,.45); border: 1px solid rgba(109,76,51,.4); border-radius: 10px; padding: 10px 12px; }
@@ -767,6 +769,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .mode-tabs button:hover:not(.on) { background: #fff3d6; }
 .vy-pane { width: min(840px, 94vw); margin: 0 auto 16px; }
 .vy-cards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.vy-cards.one { grid-template-columns: minmax(0, 540px); justify-content: center; }
 .vy-card { background: rgba(245,230,196,.95); color: var(--ink); border: 3px solid #6d4c33; border-radius: 14px; padding: 12px 14px; text-align: left; box-shadow: 0 8px 26px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 6px; }
 .vy-head { display: flex; align-items: center; gap: 8px; font: 400 27px/1.1 'Pirata One', serif; color: #5a2d0c; }
 .vy-card p { margin: 0; font-size: 13.5px; line-height: 1.4; }

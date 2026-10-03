@@ -63,6 +63,8 @@ function writeArtifactPage(code) {
     // the loading screen, as in index.html
     (html.match(/<style id="boot-css">[\s\S]*?<\/style>/) || [''])[0],
     (html.match(/<div id="boot">[\s\S]*?<!--\/boot-->/) || ['<div id="boot">Loading the Blue Planet…</div>'])[0],
+    // (shown inside another site's page: no voyages from here — see ui/voyage.js multiplayerPane)
+    '<script>window.IW_HOST = \'artifact\';</script>',
     `<script>${code.replace(/<\/script/gi, '<\\/script')}</script>`,
   ].join('\n');
   writeFileSync(join(root, 'dist/artifact.html'), out);
