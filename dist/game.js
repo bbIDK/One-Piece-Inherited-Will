@@ -58643,6 +58643,23 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     unstick(w, far = false) {
       if (!far && this.fits(w, this.x, this.y, this.heading) && !(this.game && this.shipIn(this.game, this.x, this.y, this.heading))) return true;
       const big2 = this.def.length >= BIG_SHIP;
+      if (far && !big2) {
+        for (let r = 0.5; r < 40; r += 0.5) {
+          for (let a = 0; a < TAU; a += Math.min(0.5, 1.5 / r)) {
+            const x = w.wx(this.x + Math.cos(a) * r), y = this.y + Math.sin(a) * r;
+            for (let k = 0; k < 4; k++) {
+              const h2 = this.heading + k * Math.PI / 2;
+              if (this.fits(w, x, y, h2) && !(this.game && this.shipIn(this.game, x, y, h2))) {
+                this.x = x;
+                this.y = y;
+                this.heading = h2;
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      }
       const R4 = big2 ? this.def.length * (far ? 1.6 : 0.5) : 6, dr = big2 ? 1.5 : 0.5;
       const hs = big2 ? [this.heading, this.heading + Math.PI / 2, this.heading - Math.PI / 2, this.heading + Math.PI] : [this.heading];
       for (const h2 of hs) {
@@ -58659,6 +58676,26 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           }
         }
         if (!far) break;
+      }
+      return false;
+    }
+    /**
+     * Afloat off a beach: the nearest spot out from (x, y) toward bearing `dir`
+     * (or a little either side of it) where her whole hull's in the water, her
+     * bow out to sea. False if there's none within 40 m.
+     */
+    launchFrom(w, x, y, dir) {
+      if (dir === null || dir === void 0) return false;
+      for (let r = this.def.length * 0.5; r < this.def.length * 0.5 + 40; r += 0.5) {
+        for (const da of [0, 0.2, -0.2, 0.45, -0.45, 0.75, -0.75]) {
+          const h2 = dir + da, px2 = w.wx(x + Math.cos(h2) * r), py2 = y + Math.sin(h2) * r;
+          if (this.fits(w, px2, py2, h2) && !(this.game && this.shipIn(this.game, px2, py2, h2))) {
+            this.x = px2;
+            this.y = py2;
+            this.heading = h2;
+            return true;
+          }
+        }
       }
       return false;
     }
@@ -74109,68 +74146,187 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (pos) this.sprite.position.copy(pos);
     }
   };
-  var AURA = /* @__PURE__ */ new Map();
-  function auraTex(color) {
-    let t = AURA.get(color);
-    if (t) return t;
-    const W4 = 96, H3 = 128, F4 = 4;
-    const c = canvas(W4, H3 * F4), g = c.getContext("2d");
-    const { c: col, a } = parseCol(color);
-    for (let f = 0; f < F4; f++) {
-      g.save();
-      g.translate(0, f * H3);
-      for (let layer = 0; layer < 2; layer++) {
-        const sc = layer ? 0.8 : 1;
-        g.globalAlpha = (layer ? 0.9 : 0.55) * Math.min(1, a + 0.15);
-        g.fillStyle = layer ? "#ffffff" : col;
-        if (layer) {
-          g.globalCompositeOperation = "source-atop";
-          g.globalAlpha = 0.25;
-        }
-        g.beginPath();
-        const w = W4 * 0.42 * sc, cx = W4 / 2, base2 = H3 - 4;
-        g.moveTo(cx - w, base2);
-        for (let k = 0; k <= 10; k++) {
-          const x = cx - w + k / 10 * 2 * w;
-          const env = Math.sin(k / 10 * Math.PI);
-          const tip = (k % 2 ? 6 : 16 + 8 * Math.sin(f * 1.7 + k * 1.9)) * sc;
-          g.quadraticCurveTo(x - 4, base2 - H3 * (0.5 + 0.3 * env) * sc, x, base2 - H3 * (0.42 + 0.46 * env) * sc - tip);
-        }
-        g.lineTo(cx + w, base2);
-        g.closePath();
-        g.fill();
-        g.globalCompositeOperation = "source-over";
-      }
-      g.restore();
-    }
-    t = tex(c);
-    t.repeat.set(1, 1 / F4);
-    AURA.set(color, t);
-    return t;
+  var AURA_NOISE = (
+    /* glsl */
+    `
+  float ahash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float anoise(vec3 x) {
+    vec3 i = floor(x), f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(ahash(i), ahash(i + vec3(1, 0, 0)), f.x), mix(ahash(i + vec3(0, 1, 0)), ahash(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(ahash(i + vec3(0, 0, 1)), ahash(i + vec3(1, 0, 1)), f.x), mix(ahash(i + vec3(0, 1, 1)), ahash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
   }
-  var PLANE2 = new PlaneGeometry(1, 1).translate(0, 0.5, 0);
+`
+  );
+  var AURA_VERT = (
+    /* glsl */
+    `
+  uniform float uTime, uSpeed;
+  varying float vH, vA;
+  varying vec3 vN, vV;
+  ${AURA_NOISE}
+  void main() {
+    vec3 p = position;
+    float h = clamp(p.y, 0.0, 1.0), t = uTime * uSpeed;
+    float a = atan(p.z, p.x);
+    // tongues licking up off the top, the whole shell breathing
+    float n = anoise(vec3(a * 2.0, h * 3.0 - t * 2.6, t * 0.4)) - 0.5;
+    p.xz *= 1.0 + n * 0.7 * h * h + 0.05 * sin(t * 9.0 + h * 6.0);
+    p.y *= 1.0 + 0.07 * sin(t * 7.3) + n * 0.25 * h * h;
+    vH = h; vA = a;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+  );
+  var AURA_FRAG = (
+    /* glsl */
+    `
+  uniform float uTime, uSpeed, uAlpha, uAdd;
+  uniform vec3 uColor;
+  varying float vH, vA;
+  varying vec3 vN, vV;
+  ${AURA_NOISE}
+  void main() {
+    float t = uTime * uSpeed;
+    float rim = 1.0 - abs(dot(normalize(vN), normalize(vV)));
+    // the top torn into tongues of flame, streaks running up the sides
+    float n = anoise(vec3(vA * 3.0, vH * 3.5 - t * 3.4, t * 0.6));
+    float s = anoise(vec3(vA * 9.0, vH * 1.6 - t * 2.4, 3.0));
+    float tongue = vH + (n - 0.5) * 0.7 * smoothstep(0.25, 1.0, vH);
+    if (tongue > 0.9) discard;
+    float a = pow(rim, 1.25) * 0.95 + 0.1 + smoothstep(0.55, 0.9, s) * 0.5;
+    a *= (1.0 - smoothstep(0.62, 0.9, tongue)) * smoothstep(0.0, 0.12, vH);
+    a *= uAlpha * (0.85 + 0.15 * sin(t * 12.0));
+    vec3 col = mix(uColor, vec3(1.0), (pow(rim, 3.0) * 0.5 + smoothstep(0.7, 0.95, s) * 0.35) * uAdd);
+    gl_FragColor = uAdd > 0.5 ? vec4(col * a * 1.6, a) : vec4(col, min(1.0, a * 1.3));
+  }
+`
+  );
+  var MOTE_VERT = (
+    /* glsl */
+    `
+  attribute vec3 seed;
+  uniform float uTime, uPx, uH, uR;
+  varying float vLife;
+  void main() {
+    float life = fract(uTime * (0.35 + seed.z * 0.3) + seed.x);
+    float a = seed.y + life * 1.2;
+    vec3 p = vec3(cos(a) * uR * (0.75 + seed.z * 0.4), life * uH * 1.1, sin(a) * uR * (0.75 + seed.z * 0.4));
+    vLife = life;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    gl_PointSize = uPx * 0.07 * (1.0 - life * 0.6) / max(0.2, -mv.z);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+  );
+  var MOTE_FRAG = (
+    /* glsl */
+    `
+  uniform vec3 uColor;
+  uniform float uAlpha, uAdd;
+  varying float vLife;
+  void main() {
+    float d = length(gl_PointCoord - 0.5) * 2.0;
+    if (d > 1.0) discard;
+    float a = (1.0 - d * d) * sin(vLife * 3.14159) * uAlpha;
+    vec3 c = mix(uColor, vec3(1.0), 0.35 * uAdd);
+    gl_FragColor = uAdd > 0.5 ? vec4(c * a * 1.4, a) : vec4(c, a * 0.8);
+  }
+`
+  );
+  var AURA_GEO2 = null;
+  var MOTES = null;
+  function auraGeo() {
+    if (AURA_GEO2) return AURA_GEO2;
+    const pts = [];
+    for (let i = 0; i <= 16; i++) {
+      const y = i / 16;
+      const r = 0.5 * (0.72 + 0.28 * Math.sin(Math.PI * Math.min(1, y * 1.25))) * (1 - 0.55 * y ** 3);
+      pts.push(new Vector2(Math.max(0.01, r), y));
+    }
+    AURA_GEO2 = new LatheGeometry(pts, 20);
+    return AURA_GEO2;
+  }
+  function moteGeo() {
+    if (MOTES) return MOTES;
+    const n = 16, seed = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      seed[i * 3] = i * 0.618 % 1;
+      seed[i * 3 + 1] = i * 2.399;
+      seed[i * 3 + 2] = i * 0.381 % 1;
+    }
+    MOTES = new BufferGeometry();
+    MOTES.setAttribute("position", new BufferAttribute(new Float32Array(n * 3), 3));
+    MOTES.setAttribute("seed", new BufferAttribute(seed, 3));
+    MOTES.boundingSphere = new Sphere(new Vector3(0, 1, 0), 3);
+    return MOTES;
+  }
+  var _sz = new Vector2();
   var Aura = class {
     constructor() {
-      this.mat = new MeshBasicMaterial({ transparent: true, depthWrite: false, side: DoubleSide, fog: true });
-      this.mesh = new Mesh(PLANE2, this.mat);
-      this.mesh.renderOrder = 2;
+      this.mesh = new Group();
+      this.inner = new Group();
+      this.mesh.add(this.inner);
+      const u = { uTime: { value: 0 }, uSpeed: { value: 1 }, uAlpha: { value: 0.7 }, uAdd: { value: 1 }, uColor: { value: new Color() } };
+      this.mat = new ShaderMaterial({ uniforms: u, vertexShader: AURA_VERT, fragmentShader: AURA_FRAG, transparent: true, depthWrite: false, side: DoubleSide });
+      this.shell = new Mesh(auraGeo(), this.mat);
+      this.shell.renderOrder = 2;
+      this.mat2 = this.mat.clone();
+      this.mat2.uniforms.uTime = u.uTime;
+      this.mat2.uniforms.uColor = u.uColor;
+      this.mat2.uniforms.uAdd = u.uAdd;
+      this.mat2.uniforms.uSpeed.value = 1.45;
+      this.outer = new Mesh(auraGeo(), this.mat2);
+      this.outer.renderOrder = 2;
+      this.moteMat = new ShaderMaterial({
+        uniforms: { uTime: u.uTime, uAlpha: u.uAlpha, uAdd: u.uAdd, uColor: u.uColor, uPx: { value: 800 }, uH: { value: 2 }, uR: { value: 0.4 } },
+        vertexShader: MOTE_VERT,
+        fragmentShader: MOTE_FRAG,
+        transparent: true,
+        depthWrite: false
+      });
+      this.motes = new Points(moteGeo(), this.moteMat);
+      this.motes.frustumCulled = false;
+      this.motes.renderOrder = 3;
+      this.motes.onBeforeRender = (r, sc, cam) => {
+        r.getDrawingBufferSize(_sz);
+        this.moteMat.uniforms.uPx.value = _sz.y / (2 * Math.tan((cam.fov || 60) * Math.PI / 360));
+      };
+      this.inner.add(this.shell, this.outer, this.motes);
       this.color = null;
     }
+    /** color: the aura's css colour (its alpha how strong); height and width in the body's units; camYaw3: the camera's yaw. */
     set(color, t, height, width, camYaw3) {
       if (color !== this.color) {
         this.color = color;
-        this.mat.map = auraTex(color);
-        this.mat.blending = brightness2(color) > 0.45 ? AdditiveBlending : NormalBlending;
-        this.mat.needsUpdate = true;
+        const { c, a } = parseCol(color);
+        this.mat.uniforms.uColor.value.set(c);
+        const add5 = brightness2(color) > 0.45;
+        this.mat.uniforms.uAdd.value = add5 ? 1 : 0;
+        this.mat.uniforms.uAlpha.value = Math.min(1, 0.5 + a * 0.5);
+        this.mat2.uniforms.uAlpha.value = this.mat.uniforms.uAlpha.value * 0.45;
+        const bl2 = add5 ? AdditiveBlending : NormalBlending;
+        if (this.mat.blending !== bl2) {
+          for (const m of [this.mat, this.mat2, this.moteMat]) {
+            m.blending = bl2;
+            m.needsUpdate = true;
+          }
+        }
       }
-      const f = Math.floor(t * 12) % 4;
-      this.mat.map.offset.set(0, f / 4);
-      this.mat.opacity = 0.55 + 0.2 * Math.sin(t * 10);
-      this.mesh.scale.set(width * (1 + 0.04 * Math.sin(t * 13)), height * (1 + 0.05 * Math.sin(t * 9)), 1);
-      this.mesh.rotation.set(0, camYaw3, 0);
+      this.mat.uniforms.uTime.value = t;
+      this.shell.scale.set(width * 0.62, height * 1.08, width * 0.62);
+      this.outer.scale.set(width * 0.74, height * 1.22, width * 0.74);
+      this.moteMat.uniforms.uH.value = height;
+      this.moteMat.uniforms.uR.value = width * 0.3;
+      this.inner.position.set(Math.sin(camYaw3) * 0.3, 0.05, Math.cos(camYaw3) * 0.3);
     }
     dispose() {
       this.mat.dispose();
+      this.mat2.dispose();
+      this.moteMat.dispose();
     }
   };
   var ICE = null;
@@ -74678,6 +74834,253 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
   };
 
+  // src/render3d/chars/flame.js
+  var NOISE = (
+    /* glsl */
+    `
+  float fhash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float fnoise(vec3 x) {
+    vec3 i = floor(x), f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(fhash(i), fhash(i + vec3(1, 0, 0)), f.x), mix(fhash(i + vec3(0, 1, 0)), fhash(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(fhash(i + vec3(0, 0, 1)), fhash(i + vec3(1, 0, 1)), f.x), mix(fhash(i + vec3(0, 1, 1)), fhash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+  }
+  float ffbm(vec3 p) { return fnoise(p) * 0.55 + fnoise(p * 2.03 + 7.1) * 0.3 + fnoise(p * 4.1 + 3.7) * 0.15; }
+`
+  );
+  var VERT3 = (
+    /* glsl */
+    `
+  uniform float uTime, uSeed, uGrow;
+  uniform vec3 uLean;
+  varying float vH;
+  varying vec3 vP, vN, vV;
+  ${NOISE}
+  void main() {
+    vec3 p = position;
+    float h = clamp(p.y, 0.0, 1.0), t = uTime + uSeed;
+    // the surface boils: rising turbulence swells and pinches it, more toward the tip
+    float n = fnoise(vec3(p.x * 3.2, p.y * 2.4 - t * 2.8, p.z * 3.2)) - 0.5;
+    p.xz *= 1.0 + n * 0.85 * h + 0.09 * sin(t * 11.0 + h * 8.0) * h;
+    // the tip sways and licks up and down
+    p.x += (sin(t * 4.7 + h * 3.1) * 0.07 + sin(t * 9.3 + h * 6.0) * 0.035) * h * h;
+    p.z += (cos(t * 5.3 + h * 2.7) * 0.07 + sin(t * 8.1 + h * 5.0) * 0.035) * h * h;
+    p.y *= (1.0 + 0.09 * sin(t * 6.3) + 0.05 * sin(t * 13.7)) * uGrow;
+    p.xz *= mix(0.6, 1.0, uGrow);
+    // blown back by the way they're moving
+    p += uLean * h * h;
+    vH = h; vP = position;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    vN = normalize(normalMatrix * normal);
+    vV = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+  );
+  var FRAG_BODY = (
+    /* glsl */
+    `
+  uniform float uTime, uSeed, uAlpha;
+  uniform vec3 uRim, uMid, uHot, uCore;
+  varying float vH;
+  varying vec3 vP, vN, vV;
+  ${NOISE}
+  void main() {
+    float t = uTime + uSeed;
+    float face = abs(dot(normalize(vN), normalize(vV)));
+    // tongues: noise streaming up the flame eats it away from the top
+    float n = ffbm(vec3(vP.x * 4.6, vP.y * 3.3 - t * 3.6, vP.z * 4.6));
+    float body = (1.0 - vH) * 1.22 + face * 0.2 - n * 0.9;
+    if (body < 0.16) discard;
+    float heat = body + (face - 0.55) * 0.4 - vH * 0.15;
+    vec3 col = mix(uRim, uMid, smoothstep(0.4, 0.46, heat));
+    col = mix(col, uHot, smoothstep(0.7, 0.76, heat));
+    col = mix(col, uCore, smoothstep(0.95, 1.0, heat));
+    float a = smoothstep(0.16, 0.24, body) * uAlpha;
+    gl_FragColor = vec4(col, a);
+  }
+`
+  );
+  var FRAG_CORE = (
+    /* glsl */
+    `
+  uniform float uTime, uSeed, uAlpha;
+  uniform vec3 uCore;
+  varying float vH;
+  varying vec3 vP, vN, vV;
+  ${NOISE}
+  void main() {
+    float t = uTime + uSeed;
+    float face = abs(dot(normalize(vN), normalize(vV)));
+    float n = ffbm(vec3(vP.x * 5.0, vP.y * 3.6 - t * 4.0, vP.z * 5.0));
+    float body = (1.0 - vH) * 1.05 + face * 0.35 - n * 0.75;
+    if (body < 0.35) discard;
+    float a = smoothstep(0.35, 0.7, body) * face * uAlpha * 0.7;
+    gl_FragColor = vec4(uCore * 1.3 * a, a);
+  }
+`
+  );
+  var SPARK_VERT = (
+    /* glsl */
+    `
+  attribute vec3 seed;
+  uniform float uTime, uPx, uGrow;
+  uniform vec3 uLean;
+  varying float vLife;
+  void main() {
+    float life = fract(uTime * (0.6 + seed.z * 0.55) + seed.x);
+    vec3 p = vec3(cos(seed.y) * 0.1, 0.25 + seed.z * 0.2, sin(seed.y) * 0.1);
+    p.y += life * 1.25 * uGrow;
+    p.x += sin(uTime * 3.1 + seed.y * 5.0) * 0.14 * life;
+    p.z += cos(uTime * 2.7 + seed.x * 7.0) * 0.14 * life;
+    p += uLean * life * 1.7;
+    vLife = life;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    gl_PointSize = uPx * 0.035 * (1.0 - life * 0.7) / max(0.2, -mv.z);
+    gl_Position = projectionMatrix * mv;
+  }
+`
+  );
+  var SPARK_FRAG = (
+    /* glsl */
+    `
+  uniform float uAlpha;
+  varying float vLife;
+  void main() {
+    float d = length(gl_PointCoord - 0.5) * 2.0;
+    if (d > 1.0) discard;
+    float a = (1.0 - d) * (1.0 - vLife) * uAlpha;
+    gl_FragColor = vec4(mix(vec3(1.0, 0.9, 0.55), vec3(1.0, 0.36, 0.08), vLife) * 1.5 * a, a);
+  }
+`
+  );
+  var GEO3 = null;
+  function flameGeo2() {
+    if (GEO3) return GEO3;
+    const pts = [];
+    for (let i = 0; i <= 18; i++) {
+      const y = i / 18;
+      const foot = Math.sin(Math.min(1, y / 0.2) * Math.PI / 2);
+      const r = 0.25 * Math.sqrt(foot) * Math.pow(1 - y, 1.1) * (1 - 0.1 * y);
+      pts.push(new Vector2(Math.max(1e-3, r), y));
+    }
+    GEO3 = new LatheGeometry(pts, 16);
+    return GEO3;
+  }
+  var SPARKS = null;
+  function sparkGeo() {
+    if (SPARKS) return SPARKS;
+    const n = 18, seed = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      seed[i * 3] = i * 0.618 % 1;
+      seed[i * 3 + 1] = i * 2.399;
+      seed[i * 3 + 2] = i * 0.381 % 1;
+    }
+    SPARKS = new BufferGeometry();
+    SPARKS.setAttribute("position", new BufferAttribute(new Float32Array(n * 3), 3));
+    SPARKS.setAttribute("seed", new BufferAttribute(seed, 3));
+    SPARKS.boundingSphere = new Sphere(new Vector3(0, 0.8, 0), 3);
+    return SPARKS;
+  }
+  var COLS = { uRim: "#d42a16", uMid: "#ff6a12", uHot: "#ffb52e", uCore: "#fff0b8" };
+  function bodyMat(seed) {
+    const u = { uTime: { value: 0 }, uSeed: { value: seed }, uGrow: { value: 1 }, uAlpha: { value: 1 }, uLean: { value: new Vector3() } };
+    for (const [k, c] of Object.entries(COLS)) u[k] = { value: new Color(c) };
+    return new ShaderMaterial({ uniforms: u, vertexShader: VERT3, fragmentShader: FRAG_BODY, transparent: true, depthWrite: false, side: DoubleSide });
+  }
+  function coreMat(seed) {
+    const u = { uTime: { value: 0 }, uSeed: { value: seed }, uGrow: { value: 1 }, uAlpha: { value: 1 }, uLean: { value: new Vector3() }, uCore: { value: new Color("#ffe9a8") } };
+    return new ShaderMaterial({ uniforms: u, vertexShader: VERT3, fragmentShader: FRAG_CORE, transparent: true, depthWrite: false, blending: AdditiveBlending });
+  }
+  var _q4 = new Quaternion();
+  var _v7 = new Vector3();
+  var _sz2 = new Vector2();
+  var BackFlame = class {
+    constructor(seed = Math.random() * 100) {
+      this.group = new Group();
+      this.mats = [];
+      const add5 = (mat, sc, x, z, ry = 0, order = 2) => {
+        const m = new Mesh(flameGeo2(), mat);
+        m.scale.set(sc[0], sc[1], sc[0]);
+        m.position.set(x, 0, z);
+        m.rotation.y = ry;
+        m.renderOrder = order;
+        this.group.add(m);
+        this.mats.push(mat);
+        return m;
+      };
+      add5(bodyMat(seed), [1, 1], 0, 0);
+      add5(bodyMat(seed + 3.7), [0.62, 0.72], -0.05, 0.1, 0.4);
+      add5(bodyMat(seed + 7.3), [0.58, 0.64], -0.04, -0.11, -0.5);
+      add5(coreMat(seed + 1.9), [0.55, 0.62], 0.02, 0, 0, 3);
+      this.sparkMat = new ShaderMaterial({
+        uniforms: { uTime: { value: 0 }, uPx: { value: 800 }, uGrow: { value: 1 }, uAlpha: { value: 1 }, uLean: { value: new Vector3() } },
+        vertexShader: SPARK_VERT,
+        fragmentShader: SPARK_FRAG,
+        transparent: true,
+        depthWrite: false,
+        blending: AdditiveBlending
+      });
+      this.sparks = new Points(sparkGeo(), this.sparkMat);
+      this.sparks.frustumCulled = false;
+      this.sparks.renderOrder = 3;
+      this.sparks.onBeforeRender = (r, sc, cam) => {
+        r.getDrawingBufferSize(_sz2);
+        this.sparkMat.uniforms.uPx.value = _sz2.y / (2 * Math.tan((cam.fov || 60) * Math.PI / 360));
+      };
+      this.group.add(this.sparks);
+      this.glowMat = glowSpriteMat("#ff6d2a").clone();
+      this.glowMat.opacity = 0.42;
+      this.glow = new Sprite(this.glowMat);
+      this.glow.position.set(0, 0.42, 0);
+      this.glow.renderOrder = 1;
+      this.group.add(this.glow);
+      this.lean = new Vector3();
+      this.leanV = new Vector3();
+      this.grow = 0;
+    }
+    /**
+     * Burn for a frame. `t`: seconds; `dt`: since the last; `size`: the flame's
+     * height (the group's own units); `drift`: the way the air's going past it
+     * (the group's frame — the opposite of the way they're moving), which the
+     * flame leans into on a spring; `lit`: burning (grows) or going out (shrinks).
+     */
+    update(t, dt, size, drift, lit2 = true) {
+      this.grow += ((lit2 ? 1 : 0) - this.grow) * Math.min(1, dt * (lit2 ? 5 : 8));
+      this.group.visible = this.grow > 0.02;
+      if (!this.group.visible) return;
+      const k = 60, c = 9;
+      this.leanV.x += ((drift.x - this.lean.x) * k - this.leanV.x * c) * dt;
+      this.leanV.y += ((drift.y - this.lean.y) * k - this.leanV.y * c) * dt;
+      this.leanV.z += ((drift.z - this.lean.z) * k - this.leanV.z * c) * dt;
+      this.lean.addScaledVector(this.leanV, dt);
+      this.group.scale.setScalar(size);
+      _v7.copy(this.lean).divideScalar(Math.max(0.01, size));
+      for (const m of this.mats) {
+        const u = m.uniforms;
+        u.uTime.value = t;
+        u.uGrow.value = this.grow;
+        u.uLean.value.copy(_v7);
+      }
+      const s = this.sparkMat.uniforms;
+      s.uTime.value = t;
+      s.uGrow.value = this.grow;
+      s.uLean.value.copy(_v7);
+      s.uAlpha.value = this.grow;
+      const fl2 = 0.85 + 0.1 * Math.sin(t * 17.3) + 0.05 * Math.sin(t * 29.1);
+      this.glow.scale.setScalar(1.1 * this.grow * fl2);
+    }
+    dispose() {
+      for (const m of this.mats) m.dispose();
+      this.sparkMat.dispose();
+      this.glowMat.dispose();
+    }
+  };
+  function driftInto(parent, wx, wz, out) {
+    parent.getWorldQuaternion(_q4).invert();
+    return out.set(wx, 0, wz).applyQuaternion(_q4);
+  }
+
   // src/render3d/chars/helditem.js
   var cache3 = /* @__PURE__ */ new Map();
   var sph = (w = 10, h2 = 7) => new SphereGeometry(1, w, h2);
@@ -75057,10 +75460,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   var mix23 = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
   var HIDE = [B3.hips, B3.chest, B3.head, B3.sheath, B3.hilts, B3.tail];
   var LEGS = [B3.thighR, B3.shinR, B3.footR, B3.thighL, B3.shinL, B3.footL];
-  var _v7 = new Vector3();
+  var _v8 = new Vector3();
   var _v23 = new Vector3();
   var _ax = new Vector3();
-  var _q4 = new Quaternion();
+  var _q5 = new Quaternion();
   var _up2 = new Vector3(0, 1, 0);
   var _one2 = new Vector3(1, 1, 1);
   var _mA = new Matrix4();
@@ -75374,9 +75777,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.lastT = env.time;
       const cam = this.ctx.camera, h2 = s.heading, w = this.ctx.world;
       const dx = w ? w.dx(p.x, s.x) : s.x - p.x, dy = s.y - p.y;
-      _v7.set(dx + Math.cos(h2) * spot.u, shipLift(s, env.time, spot.u, 0, spot.floor), dy + Math.sin(h2) * spot.u);
-      _q4.setFromAxisAngle(_up2, -h2);
-      _mA.compose(_v7, _q4, _one2);
+      _v8.set(dx + Math.cos(h2) * spot.u, shipLift(s, env.time, spot.u, 0, spot.floor), dy + Math.sin(h2) * spot.u);
+      _q5.setFromAxisAngle(_up2, -h2);
+      _mA.compose(_v8, _q5, _one2);
       _mB.copy(cam.matrixWorld).invert().multiply(_mA);
       _mB.decompose(this.body.position, this.body.quaternion, this.body.scale);
       this.body.updateMatrix();
@@ -75443,9 +75846,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       } else this.lastActT = -1;
       if (this.flashT > 0) {
         this.flashT -= 1 / 60;
-        _v7.copy(rig.E[0]).addScaledVector(rig.blade[0], 0.45);
-        glow3("#ffd54f", 0.22 + Math.random() * 0.08, _v7);
-        glow3("#ffffff", 0.1, _v7);
+        _v8.copy(rig.E[0]).addScaledVector(rig.blade[0], 0.45);
+        glow3("#ffd54f", 0.22 + Math.random() * 0.08, _v8);
+        glow3("#ffffff", 0.1, _v8);
       }
       for (let i = gi; i < this.glows.length; i++) this.glows[i].sprite.visible = false;
     }
@@ -75460,10 +75863,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   // src/render3d/chars3d.js
   var TAU19 = Math.PI * 2;
   var clamp6 = (v, a, b) => v < a ? a : v > b ? b : v;
-  var _v8 = new Vector3();
+  var _v9 = new Vector3();
   var _v24 = new Vector3();
   var _eyeP = new Vector3();
   var _eyeQ = new Quaternion();
+  var _fq = new Quaternion();
+  var _fq2 = new Quaternion();
   function lodFor(dist, cur) {
     const near = cur === 0 ? 10.5 : 7.5, mid = cur === 1 ? 22 : 25.5;
     return dist < near ? 0 : dist < mid ? 2 : 1;
@@ -75544,7 +75949,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
       if (a.isPlayer && !helm && cam && ctx.mode === "third" && dist < 3) {
         const r = this.root.position;
-        if (cam.position.distanceTo(_v8.set(r.x, r.y + 1.55 * (this.look.scale || 1), r.z)) < 0.45) this.root.visible = false;
+        if (cam.position.distanceTo(_v9.set(r.x, r.y + 1.55 * (this.look.scale || 1), r.z)) < 0.45) this.root.visible = false;
       }
       this.frame++;
       const every = dist < 22 ? 1 : dist < 45 ? 2 : 3;
@@ -75658,8 +76063,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       this.root.updateMatrixWorld(true);
       hb.getWorldPosition(_eyeP);
       hb.getWorldQuaternion(_eyeQ);
-      _v8.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
-      return _eyeP.add(_v8);
+      _v9.set(d.hx + d.headR * 0.7, d.hc + d.headR * 0.12, 0).multiplyScalar(this.root.scale.x).applyQuaternion(_eyeQ);
+      return _eyeP.add(_v9);
     }
     /**
      * The way the legs step (o.walkRel: where you're going, from where you
@@ -75775,8 +76180,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const dx = w ? w.dx(a.x, pr.x) : pr.x - a.x, dy = pr.y - (a.y - 0.5);
       const f = a.facing || 0;
       const fx = dx * Math.cos(f) + dy * Math.sin(f), fz = -dx * Math.sin(f) + dy * Math.cos(f);
-      _v8.set(fx / s, 1.28, fz / s);
-      return this._reach ? this._reach.copy(_v8) : this._reach = _v8.clone();
+      _v9.set(fx / s, 1.28, fz / s);
+      return this._reach ? this._reach.copy(_v9) : this._reach = _v9.clone();
     }
     effects(a, pose, P5, o, env, ctx, camYaw3, dist, s) {
       const m = this.model, fx = m.fx, rig = m.rig;
@@ -75800,7 +76205,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       m.mat.opacity = alpha2;
       this.alpha = alpha2;
       const near = dist < 45;
-      if (pose.aura && near) {
+      if (pose.aura && near && !(a.isPlayer && ctx.mode === "first")) {
         if (!this.aura) {
           this.aura = new Aura();
           this.root.add(this.aura.mesh);
@@ -75809,15 +76214,26 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         this.aura.set(pose.aura, t, 2.25 * (1 + (m.d.hip0 - 0.93) * 0.5), 1.45 * m.d.Bk, camYaw3);
         this.aura.mesh.position.set(-Math.sin(camYaw3) * 0.3, -0.05 + o.lift, -Math.cos(camYaw3) * 0.3);
       } else if (this.aura) this.aura.mesh.visible = false;
-      if (this.look.backFlame && a.flameLit !== false && near) {
-        if (!this.backFlame) {
-          this.backFlame = new Aura();
-          this.yaw.add(this.backFlame.mesh);
-        }
-        this.backFlame.mesh.visible = true;
-        this.backFlame.set("rgba(255,112,40,0.95)", t + 1.3, 0.62, 0.62, camYaw3 - this.yaw.rotation.y);
-        this.backFlame.mesh.position.set(-0.24 * m.d.Bk, m.d.hip0 + m.d.chestLen * 0.72 + o.lift, 0);
-      } else if (this.backFlame) this.backFlame.mesh.visible = false;
+      const lit2 = !!this.look.backFlame && a.flameLit !== false && !a.inWater && !(a.isPlayer && ctx.mode === "first");
+      if ((lit2 || this.backFlame?.grow > 0.02) && near) {
+        const chest = m.bones[B3.chest];
+        if (!this.backFlame) this.backFlame = new BackFlame(a.seed || 0);
+        if (this.backFlame.group.parent !== chest) chest.add(this.backFlame.group);
+        this.backFlame.group.position.set(-0.15 * m.d.Bk, m.d.chestLen * 0.6, 0);
+        chest.updateWorldMatrix(true, false);
+        chest.getWorldQuaternion(_fq).invert();
+        this.backFlame.group.quaternion.copy(_fq).multiply(this.yaw.getWorldQuaternion(_fq2));
+        const fdt = Math.min(0.1, Math.max(0, t - (this.flameT ?? t)));
+        this.flameT = t;
+        const w = ctx.world, px2 = this.flameX ?? a.x, py2 = this.flameY ?? a.y;
+        const k = fdt > 0 ? 1 / fdt : 0, mvx = (w ? w.dx(px2, a.x) : a.x - px2) * k, mvy = (a.y - py2) * k;
+        this.flameX = a.x;
+        this.flameY = a.y;
+        const sp = Math.hypot(mvx, mvy), lim = sp > 9 ? 9 / sp : 1;
+        driftInto(this.yaw, -mvx * lim * 0.05, -mvy * lim * 0.05, _v24);
+        _v24.x -= 0.08;
+        this.backFlame.update(t, fdt, 1.1 * m.d.Bk, _v24, lit2);
+      } else if (this.backFlame) this.backFlame.group.visible = false;
       let gi = 0;
       const glow3 = (col, size, pos) => {
         if (!near) return;
@@ -75834,7 +76250,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       if (ch && ch.k > 0) {
         const k = Math.min(1, ch.k);
         const hand = ch.at === "hB" ? rig.E[1] : rig.E[0];
-        if (ch.kind === "sun") glow3("#ff9100", 0.3 + k * 1.6, _v8.copy(hand).add(_v24.set(0, 0.5 + k * 0.9, 0)));
+        if (ch.kind === "sun") glow3("#ff9100", 0.3 + k * 1.6, _v9.copy(hand).add(_v24.set(0, 0.5 + k * 0.9, 0)));
         else if (ch.kind === "dark") glow3("#4a148c", 0.2 + k * 0.4, hand);
         else if (ch.kind === "oni") glow3("#b71c1c", 0.4 + k * 0.5, rig.headC);
         else glow3(ch.color || "#ffffff", 0.12 + (ch.size || 0.22) * k * 1.4 * (0.9 + 0.1 * Math.sin(t * 30)), hand);
@@ -75884,8 +76300,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
         this.stars.group.visible = true;
         m.group.updateMatrix();
-        _v8.copy(rig.headC).applyMatrix4(m.group.matrix);
-        this.stars.group.position.set(_v8.x, _v8.y + m.d.headR * (knocked ? 1.5 : 1.35), _v8.z);
+        _v9.copy(rig.headC).applyMatrix4(m.group.matrix);
+        this.stars.group.position.set(_v9.x, _v9.y + m.d.headR * (knocked ? 1.5 : 1.35), _v9.z);
         this.stars.update(t, 0.3);
       } else if (this.stars) this.stars.group.visible = false;
       if (a.blocking && near) {
@@ -78500,7 +78916,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
   }, "seabed");
 
   // src/render3d/rmCanals3d.js
-  var VERT3 = (
+  var VERT4 = (
     /* glsl */
     `
   attribute float aSlope;
@@ -78624,7 +79040,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         }
       ]);
       const mat = (pool) => {
-        const m = new ShaderMaterial({ uniforms: { ...this.uniforms, uPool: { value: pool ? 1 : 0 } }, vertexShader: VERT3, fragmentShader: FRAG3, fog: true, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        const m = new ShaderMaterial({ uniforms: { ...this.uniforms, uPool: { value: pool ? 1 : 0 } }, vertexShader: VERT4, fragmentShader: FRAG3, fog: true, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
         for (const k of Object.keys(this.uniforms)) if (k !== "uPool") m.uniforms[k] = this.uniforms[k];
         return m;
       };
@@ -93092,6 +93508,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     cands.sort((a, b) => a.d - b.d);
     return cands[0];
   }
+  function standable2(w, x, y) {
+    if (!WALKABLE[w.type(x, y)] || w.isBlocked(x, y) || w.hitsProp(x, y, 0.4)) return false;
+    return !!WALKABLE[w.type(x, y - 0.4)] && !w.isBlocked(x, y - 0.4);
+  }
   function findShore(w, x, y, r) {
     let best = null, bd = Infinity;
     for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) {
@@ -93099,9 +93519,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
         const d = Math.hypot(dx, dy);
         if (d > r || d >= bd) continue;
         const tx = x + dx, ty = y + dy;
-        const t = w.type(tx, ty);
-        if (!WALKABLE[t] || w.isBlocked(tx, ty) || w.hitsProp(tx, ty, 0.4)) continue;
-        if (!WALKABLE[w.type(tx, ty - 0.4)] || w.isBlocked(tx, ty - 0.4)) continue;
+        if (!standable2(w, tx, ty)) continue;
         bd = d;
         best = { x: Math.floor(tx) + 0.5, y: Math.floor(ty) + 0.8 };
       }
@@ -93601,6 +94019,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
     }
     return null;
   }
+  function isletBeach(world, o, a0) {
+    for (let k = 0; k < 16; k++) {
+      const a = a0 + k * Math.PI * 2 / 16, c = Math.cos(a), s = Math.sin(a);
+      let beach = null;
+      for (let r = 0; r <= o.r + 30; r += 0.5) {
+        const x = world.wx(o.x + c * r), y = o.y + s * r;
+        if (world.sailable(x, y)) {
+          if (beach && world.sailable(world.wx(o.x + c * (r + 8)), o.y + s * (r + 8))) return { ...beach, dir: a };
+          break;
+        }
+        if (standable2(world, x, y)) beach = { x: Math.floor(x) + 0.5, y: Math.floor(y) + 0.8 };
+      }
+    }
+    return null;
+  }
   function resolveSpawn(world, char, avoid = /* @__PURE__ */ new Set()) {
     const rng4 = new RNG(char.runSeed + ":spawn");
     const race = RACES[char.race];
@@ -93613,8 +94046,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
       const cands = world.islets.filter((o) => o.region === seaRegion && o.r >= 5);
       if (cands.length) {
         const o = rng4.pick(cands);
-        const spot = findShore(world, o.x, o.y, o.r + 2) || { x: o.x, y: o.y };
-        return { x: spot.x, y: spot.y, island: o.rec, town: null, sea, name: "an uncharted islet" };
+        const beach = isletBeach(world, o, rng4.next() * Math.PI * 2);
+        const spot = beach || findShore(world, o.x, o.y, o.r + 2) || { x: o.x, y: o.y };
+        return { x: spot.x, y: spot.y, island: o.rec, town: null, sea, name: "an uncharted islet", seaward: beach ? beach.dir : null };
       }
     }
     const wanted2 = race.spawnTowns || HUMAN_STARTERS[sea] || [];
@@ -97455,13 +97889,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`).replace("#include
             if (v === "coat" && !L3.coat) L3.coat = "#5d4037";
             if (v !== "coat" && L3.coat && !L3.keepCoat) L3.coat = void 0;
           };
-          const COLS = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#a0522d", "#ffffff"];
+          const COLS2 = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#a0522d", "#ffffff"];
           const under = L3.fem && (o.top === "vest" || o.top === "open");
           const two = under || ["striped", "jacket", "kimono", "coat"].includes(o.top);
           add2(
             optsEl,
             row("Top", chips2(o.top, TOPS3.map((t) => t[0]), TOPS3.map((t) => t[1]), setTop)),
-            o.top !== "bare" ? row(o.top === "coat" ? "Coat colour" : "Colour", o.top === "coat" ? swatch("coat", ["#5d4037", "#37474f", "#1b5e20", "#4a148c", "#b71c1c", "#fafafa", "#212121", "#0d47a1"]) : swatch("top", COLS)) : null,
+            o.top !== "bare" ? row(o.top === "coat" ? "Coat colour" : "Colour", o.top === "coat" ? swatch("coat", ["#5d4037", "#37474f", "#1b5e20", "#4a148c", "#b71c1c", "#fafafa", "#212121", "#0d47a1"]) : swatch("top", COLS2)) : null,
             two ? row(o.top === "striped" ? "Stripes" : o.top === "kimono" ? "Collar" : under ? "Top under" : "Shirt under", swatch("top2", ["#f5f5f5", "#fff8e1", "#90caf9", "#212121", "#c62828", "#fce4ec", "#ffd54f"])) : null,
             row("Bottoms", chips2(o.skirt && !L3.fem ? "trousers" : o.bottom, BOTS.map((t) => t[0]), BOTS.map((t) => t[1]), (v) => {
               L3.bottomStyle = v;
@@ -104301,7 +104735,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       if (s.def.big && extra.heading === void 0) {
         if (!(dock && s.berth(game.world, dock)) && !s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
       } else if (dock && s.moorAlongside(game.world, dock)) {
-      } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, !!s.def.big);
+      } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
       return s;
     };
     game.on("lifeLost", ({ cause, lives }) => {
@@ -104416,8 +104850,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
       }
     }
     if (!placed) {
-      const s = game.giveShip(shipType, spawn.x, spawn.y + 4, "Driftwood Raft");
-      s.unstick(world);
+      const s = game.giveShip(shipType, spawn.x, spawn.y, "Driftwood Raft", { heading: spawn.seaward ?? Math.PI / 2 });
+      if (!s.launchFrom(world, spawn.x, spawn.y, spawn.seaward)) s.unstick(world, true);
     }
     if (isl && isl.id && !char.discovered.includes(isl.id) && isl.name) char.discovered.push(isl.id);
     char.getUpCharges = 1;
