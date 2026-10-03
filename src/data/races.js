@@ -102,7 +102,7 @@ export const RACES = {
     origin: 'Born among the scholars sheltering in the ruins of Ohara (West Blue).',
     stats: { str: 0, agi: 1, end: 0, vit: 0, wil: 6 },
     lives: 3,
-    traits: ['Third Eye: Observation Haki from birth', 'Voice of All Things: can read Poneglyphs without an archaeologist'],
+    traits: ['Third Eye: Observation Haki from birth', 'Voice of All Things: once the Third Eye has grown (Observation 20), reads Poneglyphs without an archaeologist'],
     spawnSeas: ['west_blue'], spawnTowns: ['ohara_camp'],
     swim: 1, hpMul: 1,
     jump: 7.4, charge: 1.4, leap: 1,
