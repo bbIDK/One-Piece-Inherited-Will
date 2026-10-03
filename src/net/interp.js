@@ -8,7 +8,7 @@
 import { angleDiff } from '../core/math.js';
 
 // how each field of a state (see protocol.js readState) is drawn in between two
-const LIN = ['y', 'z', 'vx', 'vy', 'vz', 'sp', 'd', 'wd', 'g', 'du', 'dv', 'dh', 'sy', 'ss', 'sl', 'lv', 'pi', 'c', 'hs', 'mz', 'rl', 'rr'];
+const LIN = ['y', 'z', 'vx', 'vy', 'vz', 'sp', 'd', 'wd', 'g', 'du', 'dv', 'dh', 'au', 'av', 'ah', 'sy', 'ss', 'sl', 'lv', 'pi', 'c', 'hs', 'mz', 'rl', 'rr'];
 const WRAP = ['x', 'sx']; // east-west: the world wraps round
 const ANG = ['f', 'sh']; // angles: the short way round
 // (the bookkeeping on a state, not for the drawing)
@@ -55,8 +55,11 @@ export class SnapBuffer {
     // continuous east-west places and angles, so the in-betweens go the short way
     for (const k of WRAP) if (s[k] !== undefined) s['_' + k] = prev && prev[k] !== undefined ? prev['_' + k] + this.dx(prev[k], s[k]) : s[k];
     for (const k of ANG) if (s[k] !== undefined) s['_' + k] = prev && prev[k] !== undefined ? prev['_' + k] + angleDiff(prev[k], s[k]) : s[k];
-    // a leap (a journey across the world, into a zone, onto another ship): not slid across
-    if (prev && (s.w !== prev.w || (s.si || '') !== (prev.si || '') || Math.hypot(s._x - prev._x, s.y - prev.y) > this.jump)) s.cut = true;
+    // a leap (a journey across the world, into a zone, onto another ship — theirs, or someone else's
+    // they stand aboard — or their ship brought round to another pier): not slid across
+    const other = (k) => (s[k] || '') !== (prev[k] || '');
+    const leapt = (kx, ky) => s[kx] !== undefined && prev[kx] !== undefined && Math.hypot(this.dx(prev[kx], s[kx]), s[ky] - prev[ky]) > this.jump;
+    if (prev && (s.w !== prev.w || other('si') || other('ao') || other('ai') || leapt('x', 'y') || leapt('sx', 'sy'))) s.cut = true;
     // how fast they really went since the last one, by their clock (to guess ahead with, should
     // the next be late: their own speed is in their game's time, which can run slow on a slow machine)
     if (prev && !s.cut && !s.hb && s.t - prev.t < 1500) {

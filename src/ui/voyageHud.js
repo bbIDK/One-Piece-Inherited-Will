@@ -109,7 +109,8 @@ export function installVoyageHud(game, ui) {
   const goTo = async (r) => {
     const s = r.now || r.buf.latest(), p = game.player;
     if (!s || !p) return;
-    const ashore = !(s.b & (BIT.helm | BIT.water | BIT.flying)) && s.du === undefined;
+    // (aboard a ship — their own, or someone else's — they're at sea, as far as this goes)
+    const ashore = !(s.b & (BIT.helm | BIT.water | BIT.flying)) && s.du === undefined && s.ai === undefined;
     if (!ashore) { game.log(`${r.name} is at sea or in the water just now — try when they're ashore.`, '#ffab91'); return; }
     if (p.mode === 'sail') { game.log('Leave the helm first (E).', '#ffab91'); return; }
     const back = (s.f || 0) + Math.PI;
@@ -134,7 +135,7 @@ export function installVoyageHud(game, ui) {
     const r = m.remote, L = r?.info;
     const race = m.you ? RACES[game.state?.char?.race]?.name : L ? RACES[L.race]?.name : '';
     const where = m.you ? 'you' : whereOf(r);
-    const can = !m.you && !!r?.play && r.visible && (r.now ? !(r.now.b & (BIT.helm | BIT.water | BIT.flying)) && r.now.du === undefined : false);
+    const can = !m.you && !!r?.play && r.visible && (r.now ? !(r.now.b & (BIT.helm | BIT.water | BIT.flying)) && r.now.du === undefined && r.now.ai === undefined : false);
     return { sub: [race, where].filter(Boolean).join(' · '), can, on: m.you ? v.inWorld : m.play };
   };
 

@@ -3,9 +3,14 @@
 // along as the ship sails or turns; the bulwarks keep you aboard unless you
 // jump over the rail, and a hull's side is a wall to anyone outside her, up
 // to her rail: you come aboard from above it (a jump from a pier or another
-// deck), or up her ladder from the water.
-import { deckPoint, deckToWorld, helmPoint, shipDims, hullSolid, shipLift, hullPoint, hbAt, levelAt, topAt, sideAt, floorAt } from '../world/hull.js';
+// deck), or up her ladder from the water. In a multiplayer voyage the other
+// players' ships are all of that too, as they're drawn here (see ship.js
+// theirShips) — and when one's gone from under you, you're set down where you
+// stood (shipGone).
+import { deckPoint, deckToWorld, helmPoint, shipDims, hullSolid, shipLift, hullPoint, hbAt, levelAt, topAt, sideAt, floorAt, deckLift } from '../world/hull.js';
+import { IS_LIQUID, OVERLAY } from '../world/tiles.js';
 import { plankDeck } from './gangway.js';
+import { allShips } from './ship.js';
 
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
@@ -30,7 +35,7 @@ export function installDecks(game) {
     // underfoot wherever it is, over the decks at its ends too: you walk up
     // its steps, not under them; `only`: one laid to or from that ship)
     if (game.planks?.length) { const pk = plankDeck(game, x, y, margin, only, hRef); if (pk) return pk; }
-    for (const s of game.ships) {
+    for (const s of allShips(game)) {
       if (s.sunk || (only && s !== only)) continue;
       const r = s.def.length * 0.56;
       const dx = w.dx(s.x, x), dy = y - s.y;
@@ -47,7 +52,7 @@ export function installDecks(game) {
    */
   game.hullAt = (x, y, pad = 0) => {
     const w = game.world, time = game.env?.time || 0;
-    for (const s of game.ships) {
+    for (const s of allShips(game)) {
       if (s.sunk || s.alive === false) continue;
       const r = s.def.length * 0.56 + pad;
       const dx = w.dx(s.x, x), dy = y - s.y;
@@ -80,7 +85,7 @@ export function installDecks(game) {
   game.hullWall = (a, x, y, only = null) => {
     const w = game.world, time = game.env?.time || 0, r = a.r ?? 0.28, sc = a.look?.scale || 1;
     let feet = null;
-    for (const s of game.ships) {
+    for (const s of allShips(game)) {
       if (s.sunk || s.alive === false || s === a.deck?.ship || (only && s !== only)) continue;
       const d = shipDims(s.def), R = d.L * 0.56 + r + 1;
       const dx = w.dx(s.x, x), dy = y - s.y;
@@ -123,8 +128,8 @@ export function installDecks(game) {
     }
     return false;
   };
-  /** The same, for any ship (`except`: not that one). */
-  game.shipSolidAt = (x, y, h, sails = false, except = null) => game.ships.some((s) => s !== except && game.inShip(s, x, y, h, sails));
+  /** The same, for any ship (`except`: not that one) — another player's among them. */
+  game.shipSolidAt = (x, y, h, sails = false, except = null) => allShips(game).some((s) => s !== except && game.inShip(s, x, y, h, sails));
 }
 
 /** Put an actor on a ship's deck at (t along, v across), facing the bow. */
@@ -152,6 +157,87 @@ export function standAboard(game, a, ship, at) {
   if (dk) { a.deck = dk; dk.ship = ship; }
   a.mode = 'foot';
   return true;
+}
+
+/**
+ * A ship gone from under whoever stood on her: another player's (see
+ * net/session.js) — sailed off into another world, laid up or gone to the
+ * bottom, another taken in her place, or her captain gone from the voyage.
+ * Each aboard her is set down where they stood (see stepOff), anyone on her
+ * ladder lets go of it, and a gangway laid to her is gone with her.
+ */
+export function shipGone(game, s) {
+  const p = game.player;
+  if (p && (p.deck?.ship === s || p.climb?.to?.ship === s)) game.log?.(`The ${s.name} is gone from under your feet.`, '#b0bec5');
+  for (const a of [...(s.aboard || [])]) stepOff(game, a, s);
+  s.aboard?.clear();
+  for (const a of game.actors || []) if (a.climb?.to?.ship === s) a.endClimb(game, true);
+  if (game.planks?.length) game.planks = game.planks.filter((P) => P.a !== s && P.b !== s);
+}
+
+/**
+ * Off a deck that's no longer there (see shipGone), just where you stood on
+ * it — as if you'd stepped off her side: down onto the pier or the beach
+ * there, or into the water (from the height of her deck: a drop, and a
+ * splash). Someone the sea would drown, a Devil Fruit user, is set down on dry
+ * land close by instead — or, with none, aboard a ship of their own (her crew
+ * fish them out); with neither, the sea it is. Never inside anything.
+ */
+export function stepOff(game, a, s) {
+  const w = game.world, dk = a.deck;
+  s.aboard?.delete(a);
+  if (!dk || dk.ship !== s) return;
+  const feet = deckLift(dk, game.env?.time || 0) + Math.max(0, a.z || 0), t = w.type(a.x, a.y);
+  a.deck = null;
+  if (IS_LIQUID[t] === 1 && !OVERLAY[t] && a.fruit && !a.gills) {
+    const land = dryLand(game, a, a.x, a.y, 12);
+    if (land) { a.x = land.x; a.y = land.y; } else {
+      let own = null, bd = Infinity;
+      for (const o of game.ships) {
+        if (o.owner !== 'player' || o.sunk || o.alive === false) continue;
+        const d = w.distance(a.x, a.y, o.x, o.y);
+        if (d < bd) { bd = d; own = o; }
+      }
+      if (own) {
+        const sp = boardingSpot(game, own, a.x, a.y);
+        placeOnDeck(game, a, own, sp.t, sp.v);
+        if (a.isPlayer) game.log?.(`Your crew fish you out of the sea: you're aboard the ${own.name}.`, '#81d4fa');
+        return;
+      }
+    }
+  }
+  clearOf(game, a);
+  // (from down in her hold, below the waterline: at the surface)
+  const g = a.groundAt(game, a.x, a.y);
+  a.z = Math.max(0, feet - g);
+  if (!a.vz && a.z > 0) a.vz = -0.01;
+  a.lastG = g; a.lastGX = a.x; a.lastGY = a.y;
+}
+
+/** The nearest spot within `r` of (x, y) where `a` can stand out of the water (a pier, a quay, the beach), or null. */
+function dryLand(game, a, x, y, r) {
+  const w = game.world;
+  for (let d = 0; d <= r; d += 0.5) {
+    const n = Math.max(1, Math.ceil(d * 3));
+    for (let k = 0; k < n; k++) {
+      const ang = (k / n) * Math.PI * 2, px = w.wx(x + Math.cos(ang) * d), py = y + Math.sin(ang) * d, t = w.type(px, py);
+      if ((IS_LIQUID[t] !== 1 || OVERLAY[t]) && a.standsAt(game, px, py)) return { x: px, y: py };
+    }
+  }
+  return null;
+}
+
+/** Out of anything solid where `a` is (a post on a pier, a rock in the shallows) to the nearest clear spot. */
+function clearOf(game, a) {
+  const w = game.world, r = (a.r ?? 0.28) * 0.9;
+  const free = (x, y) => !w.solid(x, y) && !w.hitsProp(x, y, r);
+  if (free(a.x, a.y)) return;
+  for (let d = 0.25; d <= 4; d += 0.25) {
+    for (let k = 0; k < 16; k++) {
+      const ang = (k / 16) * Math.PI * 2, x = w.wx(a.x + Math.cos(ang) * d), y = a.y + Math.sin(ang) * d;
+      if (free(x, y)) { a.x = x; a.y = y; return; }
+    }
+  }
 }
 
 /** Where you take the helm: just aft of the wheel (on the big ships, of the double wheel; at a rowboat's oars, her thwart). */

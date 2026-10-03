@@ -13,6 +13,7 @@ import { HIGH_DECK } from '../render3d/height.js';
 import { clamp, TAU, angleDiff } from '../core/math.js';
 import { shipDims, hbAt, deckToWorld, shipLift, sideAt, topAt, floorAt, xAt, deckLift, deckPoint } from '../world/hull.js';
 import { placeOnDeck, RAIL_CLEAR } from './decks.js';
+import { anyShips } from './ship.js';
 import { plankJoins, PLANK_W } from './gangway.js';
 import { bw } from '../world/bframe.js';
 import { heightsOf } from '../world/interiors.js';
@@ -932,7 +933,7 @@ export class Actor extends Entity {
     // until you're up over it (it's a low wall: a jump clears it), and nobody
     // swims or walks through a hull
     const g = this.game;
-    if (g && g.deckAt && g.ships.length && this.deck) {
+    if (g && g.deckAt && this.deck && anyShips(g)) {
       const ref = this.deckRef(), sh = this.deck.ship;
       const dk = g.deckAt(x, y, r * 0.7, ref, sh) || g.deckAt(x, y, r * 0.7);
       // (her deck — or a gangway laid to or from her, and the deck at its other end)
@@ -1091,7 +1092,7 @@ export class Actor extends Entity {
     // a hull: her side is solid to anyone outside her, from her keel up to her
     // rail (from a deck, another ship's) — already up against her (where she
     // came alongside you, say), you can still get clear of her
-    if (g.ships.length && g.hullWall) {
+    if (g.hullWall && anyShips(g)) {
       const hk = g.hullWall(this, x, y);
       if (hk) {
         const here = g.hullWall(this, this.x, this.y, hk.ship);
@@ -1468,7 +1469,7 @@ export class Actor extends Entity {
    */
   updateDeck(game) {
     const was = this.deck;
-    let dk = game.deckAt && game.ships.length ? (was ? game.deckAt(this.x, this.y, 0, this.deckRef(), was.ship) : null) || game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
+    let dk = game.deckAt && anyShips(game) ? (was ? game.deckAt(this.x, this.y, 0, this.deckRef(), was.ship) : null) || game.deckAt(this.x, this.y, was ? 0 : 0.1) : null;
     // (a gangway is only underfoot once your feet come down on it: under it,
     // in the water, it's over your head)
     if (dk?.plank && !was && this.feetH(game) < deckY(dk, game.env?.time || 0) - 0.4) dk = null;
@@ -1486,7 +1487,7 @@ export class Actor extends Entity {
     }
     // (come down on a ship's rail, or alongside her below it: onto her deck if
     // you're on your way in over it, else down her side — see overSide)
-    if (!dk && !was && game.hullWall && game.ships.length) dk = this.overSide(game);
+    if (!dk && !was && game.hullWall && anyShips(game)) dk = this.overSide(game);
     if (dk && was && dk.ship === was.ship) {
       // off the edge of an upper deck: drop to the one below (stairs are gentler than this)
       const drop = was.h - dk.h;

@@ -5,6 +5,7 @@ import { placeOnDeck, helmSpot, boardingSpot, freeDeckSpot } from './decks.js';
 import { shipDims, deckToWorld, footprint } from '../world/hull.js';
 import { bfront } from '../world/bframe.js';
 import { canSee } from './ai.js';
+import { allShips } from './ship.js';
 
 export function findInteraction(game, p) {
   const w = game.world;
@@ -28,9 +29,10 @@ export function findInteraction(game, p) {
   // the water; a big ship's ladder is climbed at its foot: see ladders.js)
   const cands = [];
   if (p.inWater && p.fruit && !p.gills && !p.climb) {
-    // a Devil Fruit user in the sea can't climb, but can grab a line thrown from the deck
-    for (const s of game.ships) {
-      if (s.sunk || s.owner !== 'player') continue;
+    // a Devil Fruit user in the sea can't climb, but can grab a line thrown
+    // from the deck (of a ship of yours, or a friend's on a voyage together)
+    for (const s of allShips(game)) {
+      if (s.sunk || (s.owner !== 'player' && !s.netRemote)) continue;
       const d = w.distance(p.x, p.y, s.x, s.y);
       if (d < s.def.length * 0.55 + 6) cands.push({ d: d - 1, x: s.x, y: s.y, label: `Grab the line from the ${s.name}`, run: () => hauledAboard(game, p, s) });
     }
@@ -163,7 +165,7 @@ export function leaveHelm(game, p, s) {
 export function hauledAboard(game, p, s) {
   const spot = boardingSpot(game, s, p.x, p.y);
   p.startClimb(game, { ship: s, t: spot.t, v: spot.v });
-  game.log(`Your crew haul you up the side of the ${s.name} on a line, dripping and weak.`, '#81d4fa');
+  game.log(s.netRemote ? `A line from the ${s.name}: you're hauled up her side, dripping and weak.` : `Your crew haul you up the side of the ${s.name} on a line, dripping and weak.`, '#81d4fa');
 }
 
 export function board(game, p, s) {

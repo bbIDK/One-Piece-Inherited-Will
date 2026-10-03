@@ -134,6 +134,13 @@ GitHub Pages site: no account, and no server of our own.
   player's own, and so are quests. Blows don't land between players (no PvP).
   The places beyond the surface — Skypiea, Fish-Man Island, Impel Down — are
   worlds of their own: you see whoever's in the same one as you.
+- **Aboard a friend's ship:** her decks are as solid as your own. Climb her
+  ladder from the water (**E** at its foot), leap across onto her deck, or lie
+  your ship stopped alongside hers and your crew run a plank over; walk her
+  decks, go below, and ride with her as she sails, where everyone sees you.
+  She stays her captain's (her helm and her guns are theirs). Should she go
+  from under you — her captain leaves, takes another ship, or sails into
+  another world — you're set down where you stood.
 - **Enter** opens the chat (Enter again sends it, Esc cancels). **P** (or
   **Voyage** on the sidebar, with how many are aboard) lists who's aboard and
   where they are, and **Go to them** puts you beside a friend who's ashore in
@@ -693,6 +700,7 @@ node tools/shot.mjs storydrift | storyswitch               # the Grand Line's cu
 node tools/shot.mjs rmride       # rides Reverse Mountain from the East Blue gate to the Grand Line
 node tools/shot.mjs creative     # the creative panel (F1): fruits given and eaten, races changed (third person), foes, a boss, a ship and a Sea King called up, travel, a small window
 node tools/shot.mjs mp [--upto=menu|avatars|chat|ship|env|leave]   # multiplayer: two pages on a voyage over ?net=local — hosting from the title, joining with the code, each drawing the other (and how closely and smoothly), techniques, the voyage list and Go to them, chat both ways, a ship under sail, the host's clock and weather, leaving and rejoining, a code nobody hosts, the host leaving
+node tools/shot.mjs mpaboard     # multiplayer aboard a friend's ship over ?net=local: B climbs A's ladder, walks her deck and rides her as A sails and turns her (drawn aboard on both screens), dives off and climbs back, and is set down in the water when A leaves
 node tools/shot.mjs mprtc        # multiplayer over the real line on this machine: trystero meeting through a Nostr relay of our own (tools/nostr-relay.mjs), then WebRTC between two pages — hosting, joining, each drawing the other, chat, leaving
 node tools/shot.mjs mprelays     # multiplayer over the real relays from one page: hosting and looking for a voyage (where the relays can't be reached, both say so)
 ```

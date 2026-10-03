@@ -4,6 +4,7 @@
 // lies at — E climbs it, up her side and over the rail onto her deck. Your
 // crew climb it after you (see ai.js).
 import { shipDims, deckToWorld, sideAt, hbAt, shipLift, topAt } from '../world/hull.js';
+import { allShips } from './ship.js';
 
 /**
  * The foot of a ship's ladder: where you swim (or stand) to climb it (x, y,
@@ -26,13 +27,13 @@ export function canClimb(a) {
 /**
  * The ladder `a` can climb from where they are: within reach of its foot,
  * with their feet below her rail (in the water, a boat or on a quay), and not
- * already aboard her — { ship, l, foot, d } (the nearest), or null. `only`:
- * just that ship's.
+ * already aboard her — { ship, l, foot, d } (the nearest, another player's
+ * ship's too), or null. `only`: just that ship's.
  */
 export function ladderAt(game, a, reach = 1.5, only = null) {
   const w = game.world, time = game.env?.time || 0;
   let best = null;
-  for (const s of game.ships) {
+  for (const s of allShips(game)) {
     if (s.sunk || s.alive === false || a.deck?.ship === s || (only && s !== only)) continue;
     const d = shipDims(s.def);
     if (!d.ladders?.length || w.distance(a.x, a.y, s.x, s.y) > d.L * 0.6 + reach + 2) continue;

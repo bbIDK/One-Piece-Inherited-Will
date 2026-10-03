@@ -405,6 +405,246 @@ export const scenarios = {
   },
 };
 
+// Aboard a friend's ship: two pages on a voyage, as in mp (?net=local). A
+// takes the helm of a sloop lying in open water off Dawn Island; B swims to
+// her ladder and climbs it (E at its foot), and walks her deck. A raises her
+// sails and turns her: B rides her just where B stands — on the ship as B's
+// game draws her — and A's game draws B there, on A's own ship (both pages
+// note where on her deck B is, every frame they draw). Then A lowers her
+// sails, B dives off her rail into the sea and climbs back up her ladder, and
+// A leaves the voyage with B on her deck: she's gone from B's world, and B is
+// set down in the water where B stood.
+//   node tools/shot.mjs mpaboard [--page=shots/net/index.html]
+// (Screenshots of A come out as mpaboard-A-NN-*.png, of B as mpaboard-B-NN-*.png, in shots/.)
+scenarios.mpaboard = {
+  query: '?debug=1&net=local',
+  async run(page, _snap, args) {
+    const errors = [], fails = [];
+    const t0 = Date.now();
+    const say = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s]`, ...a);
+    const check = (ok, what) => { if (!ok) fails.push(what); console.log(ok ? 'ok  ' : 'FAIL', what); };
+    const vp = { width: Number(args.w || 960), height: Number(args.h || 540) };
+    // (two pages that talk must share a browser context: the harness's own page sits this one out)
+    const url = page.url(), browser = page.context().browser();
+    await page.close();
+    const ctx = await browser.newContext({ viewport: vp });
+    const pageA = await ctx.newPage(), pageB = await ctx.newPage();
+    const shots = { A: 0, B: 0 };
+    for (const [tag, pg] of [['A', pageA], ['B', pageB]]) {
+      pg.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log(`[${tag} ${m.type()}] ${m.text()}`); if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(`${tag}: ${m.text()}`); });
+      pg.on('pageerror', (e) => { console.log(`[${tag} pageerror] ${e.stack || e.message}`); errors.push(`${tag}: ${e.message}`); });
+    }
+    const shot = async (tag, pg, label) => { const file = join(root, 'shots', `mpaboard-${tag}-${String(++shots[tag]).padStart(2, '0')}-${label}.png`); await pg.screenshot({ path: file, timeout: 180000 }); console.log(`shot → ${file}`); };
+    await pageA.goto(url);
+    await pageB.goto(url);
+    await Promise.all([waitReady(pageA), waitReady(pageB)]);
+    await quiet(pageA); await quiet(pageB);
+    await makePirate(pageA, 1, 'human', 'Rin Stormwell');
+    await makePirate(pageB, 2, 'mink', 'Kaito Kurogane');
+    // A hosts; B joins with the code; both set sail into the world (a page drawing its title
+    // in software can be busy for a while: each is clicked once it's drawing frames again)
+    // (small pages meanwhile: their titles drawn in software are slow, and a guest only looks for the host a few seconds)
+    const click = async (pg, sel) => { await frames(pg, 2); await pg.click(sel, { timeout: 180000 }); };
+    const small = { width: 320, height: 180 };
+    await pageA.setViewportSize(small); await pageB.setViewportSize(small);
+    await click(pageA, '.mode-tabs button:has-text("Multiplayer")');
+    await click(pageA, '.vy-slot:has-text("Rin Stormwell") button:has-text("Host")');
+    await until(pageA, () => window.OP.net?.status === 'open');
+    const code = await pageA.evaluate(() => window.OP.net.code);
+    for (let tries = 1; ; tries++) {
+      await click(pageB, '.mode-tabs button:has-text("Multiplayer")');
+      await pageB.fill('.code-in', code, { timeout: 180000 });
+      await click(pageB, '.code-row button:has-text("Join")');
+      await pageB.waitForFunction(() => { const t = document.querySelector('.vy-lobby h2')?.textContent || ''; return /Aboard/.test(t) || (t && !/Joining/.test(t)); }, null, { timeout: 120000, polling: 250 });
+      const h2 = await pageB.evaluate(() => document.querySelector('.vy-lobby h2').textContent);
+      if (/Aboard/.test(h2)) break;
+      say(`B's join (try ${tries}): "${h2}"`);
+      if (tries >= 4) throw new Error('B could not join: ' + h2);
+      await click(pageB, '.vy-lobby button:has-text("Back")');
+    }
+    await until(pageA, () => document.querySelectorAll('.vy-mate').length === 2, null, 120000);
+    await click(pageA, '.vy-lobby button:has-text("Set sail")');
+    await click(pageB, 'button[data-slot="2"]');
+    await Promise.all([until(pageA, () => !!window.OP.game.player, null, 120000), until(pageB, () => !!window.OP.game.player, null, 120000)]);
+    await until(pageA, () => window.OP.net?.avatars.length === 1, null, 60000);
+    await until(pageB, () => window.OP.net?.avatars.length === 1, null, 60000);
+    say('both in the world, on voyage', code);
+    // (the pages stay small while things happen — two drawn in software manage a frame or two a
+    // second, and each frame is at most 0.05 s of the game — and grow for each screenshot)
+    const snapAt = async (tag, pg, label, setup) => {
+      await pg.setViewportSize(vp);
+      if (setup) await setup();
+      await frames(pg, 2);
+      await shot(tag, pg, label);
+      await pg.setViewportSize(small);
+    };
+
+    // ---- A at the helm of a sloop in open water off Dawn Island, her sails furled (a clear midday, a fair breeze)
+    const ship = await pageA.evaluate(() => {
+      const g = window.OP.game, w = g.world, p = g.player, e = g.env;
+      e.clock = 12; e.storm = 0; e.stormTarget = 0; e.fog = 0; e.forecast = 'Clear'; e.windStrength = Math.max(1, e.windStrength || 0);
+      for (let r = 30; r < 500; r += 6) {
+        for (let k = 0; k < 24; k++) {
+          const a = k / 24 * Math.PI * 2, x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
+          let ok = w.sd(x, y) < -24;
+          for (let j = -28; j <= 28 && ok; j += 4) for (let i = -28; i <= 28 && ok; i += 4) if (!w.sailable(x + i, y + j)) ok = false;
+          if (!ok) continue;
+          const s = g.giveShip('sloop', x, y, 'Going Merry', { heading: a });
+          window.OP.voyage.board(s);
+          window.OP.teleport(s.x, s.y);
+          s.sail = 0; s.anchored = true;
+          window.__ship = s;
+          return { type: s.type, name: s.name, uid: s.uid, x: +s.x.toFixed(1), y: +s.y.toFixed(1), heading: +s.heading.toFixed(2), sd: +w.sd(x, y).toFixed(1) };
+        }
+      }
+      return null;
+    });
+    say('A at the helm of', JSON.stringify(ship));
+    if (!ship) throw new Error('no open water for her');
+    await until(pageB, () => window.OP.net.ships.length === 1 && window.OP.net.avatars[0]?.mode === 'sail', null, 120000);
+    const seenB = await pageB.evaluate(() => { const s = window.OP.net.ships[0]; return { uid: s.uid, name: s.name, owner: s.netOwner, x: +s.x.toFixed(1), y: +s.y.toFixed(1) }; });
+    say('B draws her:', JSON.stringify(seenB));
+
+    // ---- B swims to the foot of her ladder, and climbs it (E there, as anyone would)
+    const toLadder = () => pageB.evaluate(() => {
+      const g = window.OP.game, p = g.player, s = window.OP.net.ships[0], d = window.OP.debug.dims(s), v3 = g.view3d;
+      // (into the sea off her side — wherever B is — then to the foot of her nearest ladder)
+      if (!p.inWater) {
+        const off = window.OP.debug.deckToWorld(s, d.ladders[0].t, d.ladders[0].s * (d.B / 2 + 2.5));
+        p.deck?.ship?.aboard?.delete(p); p.deck = null; p.z = 0; p.vz = 0;
+        window.OP.teleport(off.x, off.y);
+      }
+      const lad = g.ladderAt(p, 12, s);
+      if (!lad) return null;
+      window.OP.teleport(lad.foot.x, lad.foot.y);
+      v3.rig.yaw = Math.atan2(s.y - p.y, g.world.dx(p.x, s.x)) + 0.9; v3.rig.pitch = -0.08; v3.rig.tp.dist = 4.2;
+      return { side: lad.l.s > 0 ? 'starboard' : 'port', foot: [+lad.foot.x.toFixed(1), +lad.foot.y.toFixed(1)] };
+    });
+    const climb = async (label) => {
+      const at = await toLadder();
+      await until(pageB, () => /^Climb the ladder/.test(window.OP.game.player.controller.interaction?.label || ''), null, 120000);
+      const prompt = await pageB.evaluate(() => window.OP.game.player.controller.interaction.label);
+      await pageB.evaluate(() => window.OP.key('E', true));
+      await until(pageB, () => !!window.OP.game.player.climb, null, 120000);
+      await pageB.evaluate(() => window.OP.key('E', false));
+      say(`B at her ladder (${at?.side}): "${prompt}" — climbing`);
+      if (label) { await until(pageB, () => { const p = window.OP.game.player; return !p.climb || p.climb.t > p.climb.T * 0.4; }, null, 120000); await snapAt('B', pageB, label); }
+      await until(pageB, () => { const p = window.OP.game.player; return !p.climb && p.deck?.ship === window.OP.net.ships[0]; }, null, 300000);
+      return prompt;
+    };
+    const prompt = await climb('climbing-her-ladder');
+    check(/the Going Merry/.test(prompt), `the prompt names her: "${prompt}"`);
+    // on her deck: B walks a few steps along it, toward her bow
+    const t0Deck = await pageB.evaluate(() => { const g = window.OP.game, s = window.OP.net.ships[0], r = g.view3d.rig; r.yaw = s.heading; r.pitch = -0.12; window.OP.key('W', true); return g.player.deck.t; });
+    await until(pageB, (t0) => { const p = window.OP.game.player; return !p.deck || Math.abs(p.deck.t - t0) * p.deck.ship.def.length > 1.5; }, t0Deck, 180000).catch(() => {});
+    await pageB.evaluate(() => window.OP.key('W', false));
+    await frames(pageB, 3);
+    const onDeck = await pageB.evaluate((t0) => {
+      const g = window.OP.game, p = g.player, s = window.OP.net.ships[0];
+      return { aboard: p.deck?.ship === s, walked: +(Math.abs((p.deck?.t ?? t0) - t0) * s.def.length).toFixed(2), lvl: typeof p.deck?.lvl === 'string' ? p.deck.lvl : 'stairs', t: +(p.deck?.t ?? -1).toFixed(2), v: +(p.deck?.v ?? 0).toFixed(2), inWater: p.inWater, inHerList: !!s.aboard?.has(p) };
+    }, t0Deck);
+    say('B on her deck:', JSON.stringify(onDeck));
+    check(onDeck.aboard && onDeck.inHerList && !onDeck.inWater && onDeck.walked > 1, 'B climbed aboard her and walked her deck');
+    // (B looking along her deck; A, at her helm, looking out over it at B)
+    const lookAtB = () => pageA.evaluate(() => {
+      const g = window.OP.game, s = window.__ship, a = window.OP.net.avatars[0], r = g.view3d.rig;
+      r.yaw = Math.atan2(a.y - s.y, g.world.dx(s.x, a.x)); r.pitch = -0.32; r.tp.dist = 1.3;
+    });
+    const lookB = (turn) => pageB.evaluate((turn) => { const g = window.OP.game, s = window.OP.net.ships[0], r = g.view3d.rig; r.yaw = s.heading + turn; r.pitch = -0.16; r.tp.dist = 4.6; }, turn);
+    await until(pageA, () => window.OP.net.avatars[0]?.deck?.ship === window.__ship, null, 120000);
+    await snapAt('A', pageA, 'A-sees-B-on-her-deck', lookAtB);
+    await snapAt('B', pageB, 'B-on-her-deck', () => lookB(0.5));
+
+    // ---- A sets her sails and turns her; both pages note where B is on her deck, every frame drawn
+    await pageB.evaluate(() => {
+      window.__ride = []; window.__stopRide = false;
+      (function f() {
+        const g = window.OP.game, p = g.player, s = window.OP.net?.ships[0];
+        if (s && p) { const dx = g.world.dx(s.x, p.x), dy = p.y - s.y, c = Math.cos(s.heading), sn = Math.sin(s.heading); window.__ride.push([performance.now(), dx * c + dy * sn, -dx * sn + dy * c, p.deck?.ship === s ? 1 : 0, s.x, s.y, s.heading, p.x, p.y]); }
+        if (!window.__stopRide) requestAnimationFrame(f);
+      })();
+    });
+    await pageA.evaluate(() => {
+      window.__ride = []; window.__stopRide = false;
+      (function f() {
+        const g = window.OP.game, s = window.__ship, a = window.OP.net?.avatars[0];
+        if (s && a) { const dx = g.world.dx(s.x, a.x), dy = a.y - s.y, c = Math.cos(s.heading), sn = Math.sin(s.heading); window.__ride.push([performance.now(), dx * c + dy * sn, -dx * sn + dy * c, a.deck?.ship === s ? 1 : 0, s.x, s.y, s.heading]); }
+        if (!window.__stopRide) requestAnimationFrame(f);
+      })();
+    });
+    // (her sails set all at once, as W at the helm sets them over a second of the game; and D to turn her)
+    const from = await pageA.evaluate(() => { const s = window.__ship; s.sail = 1; s.sailSet = 1; s.anchored = false; s.speed = Math.max(s.speed, 5); window.OP.key('D', true); return { x: s.x, y: s.y, h: s.heading }; });
+    await until(pageA, (f) => Math.abs(window.__ship.heading - f.h) > 0.3, from, 300000);
+    await snapAt('A', pageA, 'A-sails-B-aboard', lookAtB);
+    await snapAt('B', pageB, 'B-rides-her', () => lookB(0.35));
+    await until(pageA, (f) => Math.abs(window.__ship.heading - f.h) > 0.7, from, 300000);
+    await pageA.evaluate(() => window.OP.key('D', false));
+    await until(pageA, (f) => window.OP.game.world.distance(window.__ship.x, window.__ship.y, f.x, f.y) > 20, from, 300000);
+    await sleep(1500);
+    const rideB = await pageB.evaluate(() => { window.__stopRide = true; return window.__ride; });
+    const rideA = await pageA.evaluate(() => { window.__stopRide = true; return window.__ride; });
+    const sum = (R) => {
+      const on = R.filter((r) => r[3]);
+      if (on.length < 3) return { frames: R.length, aboard: on.length };
+      let du = 0, dv = 0, path = 0, step = 0;
+      const u0 = on[0][1], v0 = on[0][2];
+      for (let i = 0; i < on.length; i++) {
+        du = Math.max(du, Math.abs(on[i][1] - u0)); dv = Math.max(dv, Math.abs(on[i][2] - v0));
+        if (i) {
+          const sx = on[i][4] - on[i - 1][4], sy = on[i][5] - on[i - 1][5], d = Math.hypot(sx, sy);
+          path += d; step = Math.max(step, d);
+        }
+      }
+      const secs = (R[R.length - 1][0] - R[0][0]) / 1000;
+      return { frames: R.length, aboard: on.length, fps: +(R.length / secs).toFixed(1), sailed: +path.toFixed(1), turned: +(on[on.length - 1][6] - on[0][6]).toFixed(2), biggestStep: +step.toFixed(3), slidAlong: +du.toFixed(4), slidAcross: +dv.toFixed(4) };
+    };
+    const sB = sum(rideB), sA = sum(rideA);
+    console.log('B riding her, as B\'s game draws her:', JSON.stringify(sB));
+    console.log('B on her, as A\'s game draws them:', JSON.stringify(sA));
+    check(sB.aboard === sB.frames && sB.sailed > 10 && Math.abs(sB.turned) > 0.5, `B aboard every frame B drew while she sailed ${sB.sailed} m and turned ${sB.turned} rad`);
+    check(sB.slidAlong < 1e-3 && sB.slidAcross < 1e-3, `B stays just where B stood on her (slid ${sB.slidAlong} m along, ${sB.slidAcross} m across)`);
+    check(sA.aboard >= sA.frames * 0.95 && sA.slidAlong < 0.05 && sA.slidAcross < 0.05, `A draws B on A's own ship, just where B stands (${sA.aboard}/${sA.frames} frames; ${sA.slidAlong}, ${sA.slidAcross} m)`);
+
+    // ---- A lowers her sails and she loses way; B dives off her rail into the sea, and climbs back up her ladder
+    await pageA.evaluate(() => { window.__ship.sail = 0; });
+    await until(pageA, () => Math.abs(window.__ship.speed) < 0.6, null, 300000);
+    const dive = await pageB.evaluate(() => {
+      const g = window.OP.game, p = g.player, s = window.OP.net.ships[0], sg = p.deck.v >= 0 ? 1 : -1;
+      // (out over her side, the side B stands nearer)
+      g.view3d.rig.yaw = s.heading + sg * Math.PI / 2;
+      window.OP.key('W', true);
+      return { side: sg > 0 ? 'starboard' : 'port', t: +p.deck.t.toFixed(2) };
+    });
+    await until(pageB, () => { const p = window.OP.game.player; return !p.deck || p.deck.edge < 0.45; }, null, 180000).catch(() => {});
+    await pageB.evaluate(() => window.OP.key('Space', true));
+    await until(pageB, () => (window.OP.game.player.charging || 0) > 0.1 || !window.OP.game.player.deck, null, 60000).catch(() => {});
+    await pageB.evaluate(() => window.OP.key('Space', false));
+    await until(pageB, () => window.OP.game.player.inWater, null, 180000).catch(() => {});
+    await pageB.evaluate(() => window.OP.key('W', false));
+    const wet = await pageB.evaluate(() => { const g = window.OP.game, p = g.player, s = window.OP.net.ships[0]; return { inWater: p.inWater, deck: !!p.deck, apart: +g.world.distance(p.x, p.y, s.x, s.y).toFixed(1), inHull: !!g.hullAt(p.x, p.y) }; });
+    say('B over her rail', dive.side, '→', JSON.stringify(wet));
+    check(wet.inWater && !wet.deck && !wet.inHull, 'B dived off her rail into the sea (clear of her hull)');
+    await snapAt('B', pageB, 'B-in-the-sea-beside-her', () => pageB.evaluate(() => { const g = window.OP.game, p = g.player, s = window.OP.net.ships[0], r = g.view3d.rig; r.yaw = Math.atan2(s.y - p.y, g.world.dx(p.x, s.x)) + 0.5; r.pitch = -0.05; }));
+    await climb(null);
+    check(await pageB.evaluate(() => window.OP.game.player.deck?.ship === window.OP.net.ships[0]), 'and back up her ladder');
+
+    // ---- A leaves the voyage with B on her deck: she's gone from B's world, and B's set down where B stood
+    const before = await pageB.evaluate(() => { const p = window.OP.game.player; return { x: p.x, y: p.y }; });
+    await pageA.evaluate(() => window.OP.voyage.toTitle());
+    await until(pageB, () => !window.OP.game.player.deck && !window.OP.net, null, 120000);
+    await until(pageB, () => window.OP.game.player.inWater, null, 180000).catch(() => {});
+    const after = await pageB.evaluate((b) => {
+      const g = window.OP.game, p = g.player;
+      return { moved: +g.world.distance(p.x, p.y, b.x, b.y).toFixed(2), inWater: p.inWater, deck: !!p.deck, inHull: !!g.hullAt(p.x, p.y), z: +(p.z || 0).toFixed(2), log: g.logLines.slice(-3).map((l) => l.text) };
+    }, before);
+    say('A left: B', JSON.stringify(after));
+    check(!after.deck && after.inWater && after.moved < 1 && !after.inHull, 'B set down in the water where B stood when she was gone');
+    await snapAt('B', pageB, 'B-set-down-A-left', () => pageB.evaluate(() => { const r = window.OP.game.view3d.rig; r.pitch = -0.2; }));
+    say('done');
+    if (errors.length || fails.length) throw new Error([...fails.map((f) => 'failed: ' + f), ...errors].join(' | '));
+  },
+};
+
 // The real line, end to end, on this machine: trystero meeting through a
 // Nostr relay of our own (tools/nostr-relay.mjs, named with ?relay=) and then
 // talking over WebRTC data channels between two pages — the same code as over

@@ -6,6 +6,7 @@
 // a hull's ends, never in under her.
 import { shipDims, deckPoint, deckToWorld, hbAt, topAt, shipLift, xAt, deckLift } from '../world/hull.js';
 import { ladderFoot, ladderAt, canClimb } from './ladders.js';
+import { allShips } from './ship.js';
 
 // (a running jump: how fast they're going as they leave the deck — a little
 // under a sprint, to be sure of it — and how it falls: see actor.js)
@@ -121,7 +122,7 @@ function atRail(game, a, gx, gy) {
 function roundHulls(game, a, gx, gy) {
   const w = game.world, dx = w.dx(a.x, gx), dy = gy - a.y, len = Math.hypot(dx, dy);
   const n = Math.ceil(len / 0.8);
-  for (const s of game.ships) {
+  for (const s of allShips(game)) {
     if (s.sunk || s.alive === false) continue;
     const d = shipDims(s.def), c = Math.cos(s.heading), sn = Math.sin(s.heading);
     if (w.distance(s.x, s.y, a.x, a.y) > len + d.L) continue;
