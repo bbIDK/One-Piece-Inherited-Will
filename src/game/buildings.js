@@ -26,6 +26,7 @@ export function installBuildings(game) {
   const B = {
     near: [],
     t: 0,
+    questIn: new Set(), // (the buildings your quests' objectives are in: see update)
     key(b) { return `${game.world.id}:${Math.round(b.x * 2)}:${Math.round(b.y * 2)}`; },
     /** World points of the door: out front, in the doorway, just inside (and its local x). */
     doorPts(b) {
@@ -40,6 +41,9 @@ export function installBuildings(game) {
     /** Locked right now? (homes; shops outside their hours; pirate hideouts) */
     isLocked(b) {
       if (B.isBroken(b)) return false;
+      // (what a quest sends you to — someone to see, something to find — is
+      // behind a door that's open to you: no breaking in to do as you're asked)
+      if (B.questIn.has(b)) return false;
       const c = game.state?.char;
       const role = b.role || 'house';
       const t = game.env.clock;
@@ -74,6 +78,13 @@ export function installBuildings(game) {
         B.near = w.objects.near(p.x, p.y, 45, (o) => o.enterable);
         for (const b of B.near) w.objects.addFurniture(b);
         B.guardBases(p);
+        B.questIn.clear();
+        for (const q of game.quests?.active?.() || []) {
+          const m = game.quests.marker(q.id);
+          if (!m || !Number.isFinite(m.x) || (m.zone ? m.zone !== w.id : w !== game.surface)) continue;
+          const b = w.interiorAt(m.x, m.y);
+          if (b) B.questIn.add(b);
+        }
       }
       for (const b of B.near) B.door(b, p, dt);
       // walking in and out
@@ -282,6 +293,13 @@ export function installBuildings(game) {
   };
   game.buildings = B;
   game.on('tick', (dt) => B.update(dt));
+  // a night's sleep: by morning the doors broken in are mended
+  game.on('rested', () => {
+    const doors = game.state?.char?.world?.doors;
+    if (!doors || !Object.keys(doors).length) return;
+    for (const k of Object.keys(doors)) delete doors[k];
+    game.log?.('By morning the doors you broke in have been mended.', '#b0bec5');
+  });
   game.on('characterStart', () => { B.near = []; B.t = 0; });
   game.spawner.addBuilder((ctx) => populate(game, ctx));
 }
