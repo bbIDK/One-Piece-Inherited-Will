@@ -75,7 +75,6 @@ export const T = {
    * your head isn't a crew.)
    */
   flag: (desc = 'Raise your own Jolly Roger: found your crew in the Crew menu (U).') => ({ id: 'flag', desc, goal: { type: 'check', fn: (c) => !!c.crewName }, pin: false }),
-  crew: (n = 1, desc = `Recruit ${n > 1 ? n + ' crewmates' : 'a crewmate'} — people who'd follow you anywhere.`) => ({ id: 'crew' + n, desc, goal: { type: 'crew', n } }),
   /**
    * Someone who'd sail with you makes you an offer (game/crew.js): the step
    * is done once it's answered — yes or no, it's yours to choose — so

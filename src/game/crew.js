@@ -313,7 +313,8 @@ export class Crew {
     a.npcId = null; // (no quest goes by them while they're aboard)
     a.crewId = m.id;
     a.handOf = ship;
-    a.faction = 'player';
+    // (at their posts, out of the fighting — nobody comes aboard to pick on the cook — and none the worse for it)
+    a.faction = 'neutral';
     a.invulnerable = true;
     a.stationary = true;
     a.persistent = true;
