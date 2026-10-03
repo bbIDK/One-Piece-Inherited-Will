@@ -52,7 +52,7 @@ export class Voice {
    * Filtered noise: `color` white/pink/brown, through a `type` filter at
    * `freq` (sweeping to `sweep`), shaped by an attack, a hold and a decay.
    */
-  noise(dt, dur, { color = 'white', type = 'bandpass', freq = 1000, q = 1, sweep, gain = 0.5, attack = 0.005, hold = 0, curve = 'exp', dest, rate = 1 } = {}) {
+  noise(dt, dur, { color = 'white', type = 'bandpass', freq = 1000, q = 1, sweep, gain = 0.5, attack = 0.005, hold = 0, curve = 'exp', dest, rate = 1, am } = {}) {
     const c = this.c, t = this.at(dt);
     const src = c.createBufferSource();
     src.buffer = this.E.noiseBuf(color);
@@ -63,7 +63,14 @@ export class Voice {
     if (sweep) f.frequency.exponentialRampToValueAtTime(minF(sweep * this.pj), t + dur);
     const g = c.createGain();
     env(g.gain, t, attack, hold, dur, gain, curve);
-    src.connect(f); f.connect(g); g.connect(dest || this.in);
+    src.connect(f); f.connect(g);
+    if (am) {
+      // (pulsing: an insect's chirrup, a flag's flap — the level beating at `am.rate`, `am.depth` deep)
+      const m = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+      m.gain.value = 1 - am.depth / 2; lfo.type = am.type || 'sine'; lfo.frequency.value = am.rate * this.pj; lg.gain.value = am.depth / 2;
+      lfo.connect(lg); lg.connect(m.gain); g.connect(m); m.connect(dest || this.in);
+      lfo.start(t); lfo.stop(t + dur + 0.05);
+    } else g.connect(dest || this.in);
     src.start(t, Math.random() * 1.9); src.stop(t + dur + 0.05);
     this.done(t + dur + 0.05);
     return g;
@@ -236,6 +243,30 @@ export class Voice {
     o.connect(g); g.connect(dest || this.in);
     o.start(t); o.stop(t + dur + 0.03);
     this.done(t + dur + 0.03);
+  }
+
+  /**
+   * A voice across the street: a throat buzzing at `f0` (sliding to `to0`, as
+   * speech does) through two vowel formants (`f1`, `f2`, sliding too) — a
+   * voiced syllable, not a whisper.
+   */
+  vox(dt, dur, { f0 = 150, to0, f1 = 600, f2 = 1300, to1, to2, q = 6, gain = 0.1, attack = 0.03, dest } = {}) {
+    const c = this.c, t = this.at(dt);
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(minF(f0 * this.pj), t);
+    if (to0) o.frequency.linearRampToValueAtTime(minF(to0 * this.pj), t + dur);
+    const g = c.createGain();
+    env(g.gain, t, attack, dur * 0.25, dur, gain, 'lin');
+    for (const [a, b, w] of [[f1, to1, 1], [f2, to2, 0.55]]) {
+      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = q;
+      f.frequency.setValueAtTime(minF(a * this.pj), t);
+      if (b) f.frequency.linearRampToValueAtTime(minF(b * this.pj), t + dur);
+      const fg = c.createGain(); fg.gain.value = w;
+      o.connect(f); f.connect(fg); fg.connect(g);
+    }
+    g.connect(dest || this.in);
+    o.start(t); o.stop(t + dur + 0.05);
+    this.done(t + dur + 0.05);
   }
 
   /** Breath, or a voice far off: noise through two vowel formants (`f1`, `f2`), which may slide. */

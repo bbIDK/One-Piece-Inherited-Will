@@ -257,12 +257,12 @@ export class Foley {
       this.coast = wet / 8;
     }
     const calm = w.seaId === 'calm_belt' && zone === 'surface';
+    const wind = env.windStrength ?? 1, leafy = !!LEAFY[clim];
     if (zone === 'surface') {
-      L.ocean = (atSea ? 0.55 : this.coast * 0.5) * (calm ? 0.4 : 1) * (1 + storm * 0.6);
-      L.wind = calm ? 0.04 : ((env.windStrength || 1) * 0.18 + storm * 0.35) * (atSea ? 1.2 : 0.75);
-      L.howl = storm > 0.5 ? (storm - 0.5) * 0.9 : 0;
-      L.rain = (env.rain || 0) * 0.4;
-      if (env.snow > 0.05) L.wind += env.snow * 0.15;
+      L.ocean = (atSea ? 0.5 : this.coast * 0.45) * (calm ? 0.4 : 1) * (1 + storm * 0.6);
+      L.wind = calm ? 0.03 : (wind * 0.13 + storm * 0.3) * (atSea ? 1.15 : 0.65);
+      L.howl = storm > 0.5 ? (storm - 0.5) * 0.8 : 0;
+      if (env.snow > 0.05) L.wind += env.snow * 0.12;
     }
     if (zone === 'sky') { L.sky = 0.45; L.wind = 0.12; }
     if (zone === 'undersea') { L.deep = 0.35; S.bubbles = 4; S.whale = 0.8; }
@@ -272,31 +272,30 @@ export class Foley {
       if (/level5/.test(isl?.id || '')) L.howl = 0.25;
     }
     if (w.rm) L.torrent = 0.9;
-    if (p.under) { L.deep = 0.7; S.bubbles = 10; L.ocean = 0; L.wind = 0; L.rain = 0; L.howl = 0; }
-    // land: towns, forests, jungles
+    // land: a town's life is its spots (no bed: a hum under a town reads as a machine);
+    // forests and jungles their leaves, birds and insects — the insects in waves and calls, never a whine
     if (isl && !atSea) {
-      const leafy = LEAFY[clim];
       if (w.town) {
-        L.town = (night ? 0.07 : 0.2);
-        S.voice = night ? 3 : 10; S.laugh = night ? 1 : 2; S.clink = night ? 0 : 2; S.dog = 0.8;
+        if (!night) { S.voice = 6; S.laugh = 1.2; S.clink = 1.5; S.hammer = 1; S.dog = 0.5; S.door = 0.8; S.cart = 0.4; } else { S.voice = 1.5; S.laugh = 0.4; S.dog = 0.4; S.door = 0.3; }
+        if (night && leafy) S.cricket = 2;
       } else if (leafy) {
-        L.leaves = 0.12 * (env.windStrength || 1);
-        if (!night) { S.bird = clim === 'jungle' || clim === 'tropical' ? 3 : 6; if (clim === 'jungle' || clim === 'tropical' || clim === 'prehistoric') { S.tropical = 3; L.cicada = 0.1; } }
-        else { L.cricket = 0.1; S.owl = 1.2; if (clim === 'marsh' || clim === 'jungle' || clim === 'mangrove') S.frog = 3; }
+        L.leaves = 0.1 * wind;
+        const hot = clim === 'jungle' || clim === 'tropical' || clim === 'prehistoric' || clim === 'mangrove';
+        if (!night) { S.bird = hot ? 3 : 6; if (hot) { S.tropical = 3; S.cicada = 3; } }
+        else { S.cricket = 4; S.owl = 1.2; if (clim === 'marsh' || clim === 'jungle' || clim === 'mangrove') S.frog = 3; }
       }
       if (clim === 'volcanic') { L.fire = 0.25; S.embers = 3; }
-      if (night && w.town && LEAFY[clim]) L.cricket = 0.05;
     }
     // gulls over the coasts of the Blues and Paradise by day
     if (zone === 'surface' && !night && !calm && !p.under && (this.coast > 0.1 || (atSea && isl)) && w.seaId !== 'new_world') S.gull = 3 + this.coast * 4;
     if (calm && atSea) S.moan = 0.5;
     if (isl?.id === 'twin_cape') S.whale = 1;
-    // the boat under you
+    // the boat under you: the water past her hull (with her speed), the wind in her canvas
     if (ship) {
       const sp = Math.abs(ship.speed || 0);
-      L.hull = Math.min(0.7, sp / 14) * (inside ? 0.6 : 1);
+      L.hull = Math.min(0.75, 0.08 + sp / 11) * (inside ? 0.6 : 1);
       if (!ship.def.oarsOnly && (ship.sailSet || 0) > 0.05) {
-        L.sails = Math.min(0.5, (ship.sailSet || 0) * (env.windStrength || 0) * 0.4);
+        L.sails = Math.min(0.55, (ship.sailSet || 0) * (wind + storm * 0.5) * 0.45);
         // (luffing: the wind from ahead and the canvas flogging)
         const rel = Math.cos(wrap(ship.heading - (env.windAngle || 0)));
         amb.luff(Math.max(0, -rel));
@@ -307,8 +306,16 @@ export class Foley {
       this.surfT -= dt;
       if (this.surfT <= 0) { this.surfT = rnd(6, 11) / (1 + storm); amb.spot('surf', { s: Math.min(1, this.coast * 1.6) * (1 + storm * 0.5), pan: rnd(-0.5, 0.5), far: 0.2 }); }
     }
-    if ((env.rain || 0) > 0.4 && !inside) S.drops = 6 * env.rain;
-    amb.update(L, S, dt);
+    // wind in weather: gusts going by (the leaves thrashing on land, the rigging singing at sea)
+    if (zone === 'surface' && !inside && !calm && (storm > 0.3 || wind > 1.15)) S.gust = storm * 5 + Math.max(0, wind - 1) * 8;
+    // the rain: how hard, and on what — the sea, a deck, leaves, a town's roofs, the ground, or the roof over you
+    let rain = null;
+    if ((env.rain || 0) > 0.02 && zone === 'surface') {
+      const where = inside ? 'inside' : ship ? 'deck' : atSea || p.inWater ? 'sea' : w.town ? 'town' : leafy ? 'leaves' : 'ground';
+      rain = { r: env.rain, storm, where, level: 0.6 };
+    }
+    if (p.under) { L.deep = 0.7; S.bubbles = 10; L.ocean = 0; L.wind = 0; L.howl = 0; rain = null; }
+    amb.update(L, S, dt, 1.2, rain);
   }
 
   setShelter(k) {
