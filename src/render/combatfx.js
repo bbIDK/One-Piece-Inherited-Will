@@ -589,7 +589,8 @@ function ringSpikes(fx, x, y, R, n, kind, col) {
   const pts = [];
   for (let i = 0; i < n; i++) { const th = (i / n) * TAU + rnd(-0.2, 0.2); const rr = R * rnd(0.55, 1); pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, h: rnd(0.5, 1.1), w: rnd(0.12, 0.2), delay: rr / R * 0.12, lean: Math.cos(th) * 0.25 }); }
   pts.sort((p, q) => p.dy - q.dy);
-  fx.add('spikes', { x, y, pts, kind, color: col || (kind === 'ice' ? '#b3e5fc' : kind === 'sand' ? '#d7b56d' : '#8d6e63'), edge: kind === 'ice' ? '#e1f5fe' : '#5d4037', life: 1.1 });
+  // (sq: the ring is squashed for the top-down view; the 3D view rounds it out again)
+  fx.add('spikes', { x, y, pts, kind, color: col || (kind === 'ice' ? '#b3e5fc' : kind === 'sand' ? '#d7b56d' : '#8d6e63'), edge: kind === 'ice' ? '#e1f5fe' : '#5d4037', life: 1.1, sq: 0.62 });
 }
 function lineSpikes(fx, x, y, ang, L, kind, col, width = 0.6) {
   const pts = [];
@@ -1143,7 +1144,7 @@ sig('hana_mil', {
     for (let i = 0; i < 12; i++) { const th = rnd(0, TAU), rr = rnd(0.8, 3.2); pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, L: rnd(0.7, 1.1), ang: th, delay: i * 0.05, seed: i }); }
     pts.sort((p, q) => p.dy - q.dy);
     const l = lastLook(actor);
-    fx.add('arms', { x: actor.x, y: actor.y, pts, skin: l.skin, sleeve: l.top || '#7e57c2', life: (s.hit.duration || 1) + 0.2 });
+    fx.add('arms', { x: actor.x, y: actor.y, pts, skin: l.skin, sleeve: l.top || '#7e57c2', life: (s.hit.duration || 1) + 0.2, sq: 0.62 });
     fx.burst(actor.x, actor.y, 16, { kind: 'petal', color: ['#f48fb1', '#f8bbd0', '#ffffff'], speed: 3, z: 0.6, vz: 1.5, g: 1, life: 0.9, size: 0.1 });
   },
 });
@@ -1331,6 +1332,8 @@ export function explosionFx(fx, x, y, e, owner, small) {
   const cols = e.colors || (el === 'explosion' ? ['#ffab40', '#ff7043', '#fff176', '#616161'] : E.spark);
   const gy = y + 0.45; // the projectile flies at chest height; the blast sits on the ground
   glow(fx, x, gy, 0.5, R * 1.1, cols[0], 0.3);
+  // (the ball of fire itself: only the 3D view draws a 'blast')
+  if (el === 'explosion' || el === 'fire' || el === 'magma') fx.add('blast', { x, y: gy, r: R, color: el === 'magma' ? '#ff5722' : cols[0], life: 0.5 + R * 0.05 });
   fx.add('impact', { x, y: gy, z: 0.5, angle: 0, size: R * 0.55, color: cols[0], core: '#ffffff', life: 0.22, spikes: 12, lines: 6 });
   fx.ring(x, gy, 0.2, R, e.color || cols[0], 0.35, 0.3, { add: true });
   fx.burst(x, gy, Math.round(10 + R * 5), { color: cols, speed: 3 + R * 2, g: 3, z: 0.4, vz: 3, life: 0.6, kind: el === 'explosion' || el === 'fire' ? 'fire' : E.kind, size: 0.22 + R * 0.03 });
@@ -1381,7 +1384,8 @@ export function afterimage(fx, a, o = {}) {
   if (!P || !P.P) return null;
   const tint = o.tint || '#e3f2fd';
   return fx.add('ghost', {
-    x: o.x ?? a.x, y: o.y ?? a.y, look: ghostLook(lastLook(a), tint),
+    // (actor: the 3D view copies its body's pose for the afterimage)
+    x: o.x ?? a.x, y: o.y ?? a.y, actor: a, look: ghostLook(lastLook(a), tint),
     pose: { facing: P.facing, P: P.P, time: P.time, state: P.state === 'hurt' ? 'idle' : P.state, swimming: P.swimming, z: P.z, squash: P.squash },
     life: o.life ?? 0.24, alpha: o.alpha ?? 0.45, add: o.add,
   });
