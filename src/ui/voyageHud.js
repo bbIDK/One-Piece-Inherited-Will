@@ -1,5 +1,5 @@
-// In the world, while there's a voyage: a badge under the clock with the
-// room code and how many are aboard (click it, or P, for the voyage list),
+// In the world, while there's a voyage: a Voyage button with the menus on
+// the sidebar, with how many are aboard (it, or P, opens the voyage list),
 // the chat (Enter to say something, Enter again to send it, Esc to think
 // better of it), and in the log what's said and who comes and goes. None of
 // it exists until a voyage is hosted or joined.
@@ -19,13 +19,18 @@ import { persist } from '../game/lineage.js';
 const DIRS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
 
 export function installVoyageHud(game, ui) {
-  let v = null, offs = [], badge = null, box = null, lines = null, input = null;
+  let v = null, offs = [], side = null, count = null, box = null, lines = null, input = null;
   const history = []; // the chat (and comings and goings), for the box while it's open
 
   const build = () => {
-    if (badge) return;
-    badge = h('button.vy-badge.interactive', { title: 'The voyage (P)', on: { click: (e) => { e.currentTarget.blur(); openList(); } } });
-    (ui.el.saved?.parentNode || ui.hud).appendChild(badge);
+    if (side) return;
+    // (on the sidebar after Menu, as the menus are: lit while its list is open — ui.js)
+    count = h('span.vy-n');
+    side = h('button.side-btn.vy-side', { title: 'The voyage (P)', on: { click: (e) => { e.currentTarget.blur(); ui.sideAction('voyage'); } } },
+      uiImg('jolly_roger', 22), h('span.lbl', 'Voyage'), count, h('span.key', 'P'));
+    const menu = ui.el.sideBtns?.menu;
+    if (menu) menu.after(side); else (ui.el.side || ui.hud).appendChild(side);
+    if (ui.el.sideBtns) ui.el.sideBtns.voyage = side;
     lines = h('div.chat-lines');
     input = h('input.chat-in', { type: 'text', maxLength: CHAT_MAX, spellcheck: false, autocomplete: 'off', placeholder: 'Say something to the crew — Enter sends, Esc cancels' });
     box = h('div.chat-box.hidden', lines, input);
@@ -59,11 +64,11 @@ export function installVoyageHud(game, ui) {
     for (const l of history.slice(-10)) lines.appendChild(l.name ? h('div', h('b', { style: { color: l.color } }, l.name + ': '), h('span', l.text)) : h('div.sys', { style: { color: l.color } }, l.text));
   };
 
-  const setBadge = () => {
-    if (!badge || !v) return;
+  const setCount = () => {
+    if (!side || !v) return;
     const n = v.crew().length;
-    clear(badge);
-    badge.append(uiImg('crew', 16), h('span', showCode(v.code)), h('small', `${n} aboard`));
+    count.textContent = String(n);
+    side.title = `The voyage ${showCode(v.code)} · ${n} aboard (P)`;
   };
 
   function openChat() {
@@ -133,7 +138,7 @@ export function installVoyageHud(game, ui) {
     return { sub: [race, where].filter(Boolean).join(' · '), can, on: m.you ? v.inWorld : m.play };
   };
 
-  /** The voyage list (P, the badge, or the pause menu): who's aboard and where, the code, leaving. */
+  /** The voyage list (P, the Voyage button, or the pause menu): who's aboard and where, the code, leaving. */
   function openList() {
     if (!v || !game.player) return;
     const body = h('div.vy-list');
@@ -198,13 +203,13 @@ export function installVoyageHud(game, ui) {
     offs = [];
     closeChat();
     v = voyage;
-    if (!v) { if (badge) badge.classList.add('hidden'); return; }
+    if (!v) { if (side) side.classList.add('hidden'); return; }
     build();
-    badge.classList.remove('hidden');
-    setBadge();
+    side.classList.remove('hidden');
+    setCount();
     offs.push(
-      v.on('roster', setBadge),
-      v.on('status', setBadge),
+      v.on('roster', setCount),
+      v.on('status', setCount),
       v.on('chat', ({ name, text, color, self }) => {
         if (!game.player) return;
         logLine(name, text, color || '#ffe082');

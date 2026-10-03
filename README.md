@@ -134,10 +134,10 @@ GitHub Pages site: no account, and no server of our own.
   player's own, and so are quests. Blows don't land between players (no PvP).
   The places beyond the surface — Skypiea, Fish-Man Island, Impel Down — are
   worlds of their own: you see whoever's in the same one as you.
-- **Enter** opens the chat (Enter again sends it, Esc cancels). **P** lists
-  who's aboard and where they are, and **Go to them** puts you beside a friend
-  who's ashore in the same world (on a phone, the badge under the clock opens
-  the list, and the chat from it).
+- **Enter** opens the chat (Enter again sends it, Esc cancels). **P** (or
+  **Voyage** on the sidebar, with how many are aboard) lists who's aboard and
+  where they are, and **Go to them** puts you beside a friend who's ashore in
+  the same world (on a phone, the chat opens from that list too).
 - When the host leaves, the voyage is over and everyone sails on alone, saved.
 - How it works: the games find each other through public
   [Nostr](https://nostr.com) relays (using

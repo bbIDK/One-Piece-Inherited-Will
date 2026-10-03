@@ -824,11 +824,8 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .vy-note { margin-top: 12px !important; }
 .vy-slots.wide { text-align: left; }
 @media (max-width: 900px) { .vy-cards { grid-template-columns: 1fr; } }
-/* in the world: the badge under the clock, the chat, the voyage list (ui/voyageHud.js) */
-.vy-badge { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 3px 10px 3px 7px; border-radius: 999px; background: rgba(10,20,30,.74); border: 1px solid rgba(143,233,245,.55); color: #e0f7fa; font: 800 12px Nunito, sans-serif; cursor: pointer; pointer-events: auto; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
-.vy-badge span { letter-spacing: 1.5px; }
-.vy-badge small { font: 700 11px Nunito, sans-serif; opacity: .8; }
-.vy-badge:hover { border-color: #8fe9f5; }
+/* in the world: the Voyage button on the sidebar (how many aboard), the chat, the voyage list (ui/voyageHud.js) */
+.vy-side .vy-n { min-width: 18px; padding: 0 5px; border-radius: 999px; background: rgba(143,233,245,.18); border: 1px solid rgba(143,233,245,.55); color: #b2ebf2; font: 800 11px/16px Nunito, sans-serif; text-align: center; }
 .chat-box { position: absolute; left: 14px; bottom: 14px; z-index: 45; width: min(460px, calc(100vw - 28px)); pointer-events: auto; background: rgba(8,16,24,.88); border: 1px solid rgba(143,233,245,.5); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.5); font-size: 13px; }
 .chat-lines { max-height: 210px; overflow: hidden; padding: 7px 11px 3px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
 .chat-lines div { text-shadow: 0 1px 1px #000; line-height: 1.35; }
@@ -843,6 +840,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .vy-row .tag { margin-left: 2px; }
 .compass .pin.mate small { color: #8fe9f5; }
 #ui.touch .chat-box { bottom: auto; top: 30%; }
-#ui.touch .vy-badge small { display: none; }
+#ui.touch .vy-side { position: relative; }
+#ui.touch .vy-side .vy-n { position: absolute; right: -5px; top: -5px; min-width: 15px; padding: 0 3px; background: #0e2a33; font-size: 10px; line-height: 14px; }
 .vy-last { margin-left: 6px; padding: 0 6px; border-radius: 4px; background: #2e7d32; color: #fff; font: 800 9.5px Nunito, sans-serif; letter-spacing: .4px; text-transform: none; vertical-align: 1px; }
 .panel.vy-panel { width: min(640px, 94vw); }

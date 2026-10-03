@@ -310,6 +310,8 @@ async function start() {
     view: () => game.cycleView(),
     // (creative mode only: F1, or the pause menu)
     creative: () => openCreative(game),
+    // (a multiplayer voyage only: P, or its button on the sidebar)
+    voyage: () => voyageHud.openList(),
   };
   const touch = installTouch(game, root);
   ui.keyHandlers.push(
@@ -333,7 +335,7 @@ async function start() {
     // in a multiplayer voyage: Enter to chat, P for who's aboard and where
     { key: 'Enter', when: () => playing() && !ui.stack.length && !!game.net?.open, fn: () => voyageHud.openChat() },
     { key: 'NumpadEnter', when: () => playing() && !ui.stack.length && !!game.net?.open, fn: () => voyageHud.openChat() },
-    { key: 'P', when: () => playing() && !!game.net, fn: () => { const open = ui.stack.some((e) => e.id === 'voyage'); ui.closeAll(); if (!open) voyageHud.openList(); } },
+    { key: 'P', when: () => playing() && !!game.net, fn: () => ui.sideAction('voyage') },
   );
   game.on('saved', () => ui.savedNote());
   // (at the helm or the oars your hands are on the wheel: the weapon goes back in its sheath)

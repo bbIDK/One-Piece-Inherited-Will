@@ -230,8 +230,10 @@ export const scenarios = {
       console.log('A\'s voyage list', JSON.stringify(listA));
       await snap('voyage-list');
       await pageA.keyboard.press('Escape');
-      await pageB.keyboard.press('KeyP');
+      // (B opens it with the Voyage button on the sidebar, which is lit while it's open)
+      await pageB.click('.sidebar .vy-side');
       await pageB.waitForSelector('.vy-list .vy-row button:has-text("Go to them")', { timeout: 30000 });
+      console.log('B\'s Voyage button', JSON.stringify(await pageB.evaluate(() => { const b = document.querySelector('.sidebar .vy-side'); return { text: b.textContent, lit: b.classList.contains('on'), title: b.title }; })));
       await pageB.click('.vy-list .vy-row button:has-text("Go to them")');
       await pageB.click('.panel.ask .btn.gold');
       await until(pageB, () => { const p = window.OP.game.player, a = window.OP.net.avatars[0]; return a && window.OP.world.distance(p.x, p.y, a.x, a.y) < 4; }, null, 60000);
