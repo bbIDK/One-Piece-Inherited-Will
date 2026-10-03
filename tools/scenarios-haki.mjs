@@ -40,9 +40,9 @@ export const scenarios = {
           if (L.ctl) p.controller = L.ctl;
           p.blocking = false; window.OP.key('F', false);
           arena0();
-          // (the last film's leftovers settle — a coat falling away, a blow's last words — before the next)
-          for (let i = 0; i < 24; i++) g.update(1 / 60);
-          g.fx.reset();
+          // (the last film's leftovers die away of themselves — a coat falling, a blow's last words — before the next:
+          // cleared all at once, the overlay would keep showing the words it drew last)
+          for (let i = 0; i < 80; i++) g.update(1 / 60);
         };
         L.still = () => { const p = g.player; L.ctl = L.ctl || p.controller; p.controller = null; };
         L.haki = (o = {}) => {

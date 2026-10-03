@@ -118,7 +118,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);`)
   vec3 hn = normalize(normal);
   float hs = max(dot(hn, normalize(normalize(vec3(-0.45, 0.62, 0.64)) + normalize(vViewPosition))), 0.0);
   float glint = smoothstep(0.935, 0.95, hs) + 0.14 * smoothstep(0.86, 0.88, hs);
-  float hrim = smoothstep(0.74, 0.8, rim) * (0.4 + 0.6 * rimUp);
+  // (not on a surface right against the eye — your own shoulder, in first person: there it would be all rim)
+  float hrim = smoothstep(0.74, 0.8, rim) * (0.4 + 0.6 * rimUp) * smoothstep(0.35, 0.9, length(vViewPosition));
   totalEmissiveRadiance += (mix(uHakiSheen, vec3(1.0), 0.35) * hrim * 0.5 + uHakiSheen * glint * 0.25 + vec3(glint * 0.55)) * hakiK;
   totalEmissiveRadiance += mix(uHakiSheen, vec3(1.0), 0.4) * hakiF * 1.7;
   totalEmissiveRadiance += vec3(0.5, 0.75, 1.0) * pow(rim, 1.6) * uFreeze * 0.35;
