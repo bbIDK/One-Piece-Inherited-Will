@@ -402,6 +402,17 @@ export function counterFx(fx, att, tgt, ang, w = 1) {
   }
 }
 
+/** A perfect dodge: a trail of cyan afterimages, "PERFECT DODGE!", a short slow-down. */
+export function perfectDodgeFx(fx, a, att) {
+  const s = (a.look && a.look.scale) || 1;
+  afterimage(fx, a, { tint: '#80deea', life: 0.45, alpha: 0.6, add: true });
+  a._ghostT = 0.25; a._ghostTint = '#80deea'; a._ghostAdd = true;
+  fx.ring(a.x, a.y, 0.2, 1.4 * s, '#80deea', 0.3, 0.08, { add: true });
+  fx.add('flare', { x: a.x, y: a.y, z: 1.0 * s, size: 0.9, color: '#b2ebf2', life: 0.25 });
+  fx.callout(a.x, a.y - 1.45 * s, 'PERFECT DODGE!', '#80deea', 0.48);
+  if (a.isPlayer || (att && att.isPlayer)) { fx.slowmo(0.3, 0.45); fx.focus(a.x, a.y, 0.18); }
+}
+
 /** Shaking free of a flurry of blows: a burst of will round you, "BREAK FREE!". */
 export function breakFreeFx(fx, a) {
   const s = (a.look && a.look.scale) || 1;

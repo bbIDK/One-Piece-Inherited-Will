@@ -202,7 +202,7 @@ class Pilot {
       }
     }
     if (P.defend === 'hold' && act && now >= this.seen) this.holdTill = Math.max(this.holdTill, now + 0.15);
-    const countering = now < this.counterUntil;
+    const countering = now < this.counterUntil || p.counterLeft > 0;
     // (a string of blows not parried: the guard stays up while they keep swinging)
     if (P.defend === 'read' && !countering && act && now < this.holdTill) this.holdTill = Math.max(this.holdTill, now + 0.3);
     let wantBlock = now < this.holdTill && !countering;

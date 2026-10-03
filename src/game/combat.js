@@ -19,6 +19,8 @@
 //    can't be parried: dodge them. Unblockable ones go straight through it.
 //    A blast (an explosion, a field of something) can be blocked, never parried.
 //  * A sword can turn a shot aside with a parry (one that doesn't go off).
+//  * A dodge at the last instant through a heavy blow is a PERFECT DODGE: a
+//    lesser counter on the foe who overreached.
 //  * No stun-locks: after a few blows in a row you break free for a moment.
 import { angleDiff, clamp, TAU } from '../core/math.js';
 import { hullGap, BIG_SHIP } from '../world/hull.js';
@@ -251,7 +253,17 @@ export class Combat {
     // dodge i-frames (and the moment after a parry or breaking free: nothing gets through, quietly)
     if (tgt.iframes > 0) {
       const quiet = (game.time || 0) < (tgt.quietUntil ?? -1);
-      if (!quiet && (tgt.isPlayer || att?.isPlayer)) fx.text(tgt.x, tgt.y - 1.2, 'DODGE', '#b2ebf2', 0.32);
+      // a dodge at the last instant through a heavy, guard-smashing blow: the
+      // foe overreaches, and your next blow on them is a counter (a lesser one;
+      // foes earn it too, but never in the Blues)
+      const d = tgt.dash;
+      const perfect = !quiet && !!att && !!d?.dodge && d.t0 - d.t <= PARRY.dodgeWindow && (h.guardBreak || h.unblockable || h.heavy) && h.vx === undefined && !h.blast
+        && att.state === 'idle' && game.world.distance(att.x, att.y, tgt.x, tgt.y) < 4 && (tgt.isPlayer || tierOf(game, tgt).npcParry > 0);
+      if (perfect) {
+        tgt.counterOn = att; tgt.counterLeft = PARRY.dodgeCounter; tgt.counterMul = PARRY.dodgeCounterMul;
+        fx.perfectDodge?.(tgt, att);
+        if (tgt.isPlayer) game.hint('perfectdodge', 'PERFECT DODGE! Slipping a heavy blow at the last instant leaves them overreaching — your next strike is a COUNTER.');
+      } else if (!quiet && (tgt.isPlayer || att?.isPlayer)) fx.text(tgt.x, tgt.y - 1.2, 'DODGE', '#b2ebf2', 0.32);
       if (!quiet && tgt.isPlayer) game.emit('playerEvaded', att, h);
       return false;
     }

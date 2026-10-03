@@ -62,6 +62,9 @@ export const PARRY = {
   counterMul: 1.5, perfectCounterMul: 1.8, // the counter strike's damage
   counterStun: 0.5, // s it staggers them (through a boss's poise)
   heal: 0.05, haki: 8, parryHaki: 3, // a perfect parry gives back this much health (of the max) and Haki; a parry, Haki
+  // a perfect dodge: a heavy, guard-smashing blow slipped within this long of
+  // starting the dodge (s) earns a counter of this long and this much
+  dodgeWindow: 0.1, dodgeCounter: 0.8, dodgeCounterMul: 1.3,
 };
 
 /** The tier of a fight at (x, y): the Blues, Paradise (and the Grand Line's other worlds, the Red Line, the Calm Belts), or the New World. */

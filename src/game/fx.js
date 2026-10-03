@@ -258,6 +258,8 @@ export class FX {
   deflect(tgt, shot, ang, perfect) { return this.cfx(() => CFX.deflectFx(this, tgt, shot, ang, perfect)); }
   /** The counter strike after a parry landing. */
   counter(att, tgt, ang, w) { return this.cfx(() => CFX.counterFx(this, att, tgt, ang, w)); }
+  /** Slipping a heavy blow at the last instant. */
+  perfectDodge(a, att) { return this.cfx(() => CFX.perfectDodgeFx(this, a, att)); }
   /** Shaking free of a flurry of blows. */
   breakFree(a) { return this.cfx(() => CFX.breakFreeFx(this, a)); }
   /** The glint on a foe (or a shot) the moment before its blow lands: `breaks`, red (dodge it); else yellow (parry it). `k`: how plain, 0..1. */

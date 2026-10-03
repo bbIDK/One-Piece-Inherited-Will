@@ -248,6 +248,22 @@ test('a blast can be blocked but never parried; a sword turns a shot aside, fist
   assert.ok(d.you.hp < h0);
 });
 
+test('a perfect dodge: slipping a heavy blow at the last instant earns a lesser counter — a late dodge just dodges', () => {
+  for (const [late, perfect] of [[0.05, true], [0.15, false]]) {
+    const { g, you, foe } = duel();
+    you.tryDodge(g, 0, 1);
+    you.dash.t = you.dash.t0 - late;
+    assert.equal(g.combat.applyHit(foe, you, blow(foe, you, { guardBreak: true, heavy: true })), false);
+    assert.equal(you.counterOn === foe, perfect, `${late}s into the dodge`);
+    if (perfect) assert.equal(you.counterMul, PARRY.dodgeCounterMul);
+  }
+  // (a jab slipped is just a dodge)
+  const { g, you, foe } = duel();
+  you.tryDodge(g, 0, 1);
+  g.combat.applyHit(foe, you, blow(foe, you));
+  assert.equal(you.counterOn, null);
+});
+
 test('a foe never parries in the Blues; elsewhere its guard parries only when its AI says so', () => {
   const { g, you, foe } = duel();
   foe.setBlock(true);
