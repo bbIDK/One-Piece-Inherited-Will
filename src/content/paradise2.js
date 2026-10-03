@@ -566,7 +566,7 @@ const npcs = [
   },
   {
     id: 'p2_spandam', name: 'Spandam', title: 'Director of CP9', island: 'enies_lobby', at: { spot: 'tower_of_justice' }, faction: 'cp', level: 30, named: true,
-    look: { hair: 'short', hairColor: '#9c27b0', top: '#fafafa', bottom: '#fafafa', coat: '#fafafa', skin: '#f1c9a0' }, style: 'ittoryu', weapon: 'sword', moves: ['p2_funkfreed'], skill: 0.2, lethal: false, bounty: 20000000,
+    look: { hair: 'short', hairColor: '#9c27b0', top: '#fafafa', bottom: '#fafafa', coat: '#fafafa', skin: '#f1c9a0' }, style: 'ittoryu', weapon: 'sword', blades: ['p2_funkfreed'], moves: ['p2_funkfreed'], skill: 0.2, lethal: false, bounty: 20000000,
     when: (c, g) => ON(g, 'p2_enies_lobby') && !c.flags.p2_funkfreed,
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: '"Wa ha ha ha! A rookie pirate on MY island? Do you know who I am? Spandam, Director of CP9! I have the Golden Den Den Mushi — one call and ten battleships and five Vice Admirals erase this entire island! Justice is on MY side!"',
@@ -732,7 +732,7 @@ npcs.push(
   },
   {
     id: 'p2_ryuma', name: 'Ryuma', title: 'General Zombie — the legendary samurai of Wano', island: 'thriller_bark', at: { spot: 'dead_forest' }, faction: 'zombie', level: 52, boss: true, hpMul: 1.3,
-    look: { skin: '#e0e0e0', hair: 'topknot', hairColor: '#212121', top: '#37474f', bottom: '#263238', swords: 1 }, style: 'ittoryu', weapon: 'sword', weaponPower: 1.75,
+    look: { skin: '#e0e0e0', hair: 'topknot', hairColor: '#212121', top: '#37474f', bottom: '#263238', swords: 1 }, style: 'ittoryu', weapon: 'sword', blades: ['shusui'], weaponPower: 1.75,
     moves: ['p2_shishi_sonson', 'itto_iai', 'itto_whirl', 'itto_pound'], skill: 0.65, breakthrough: 4, alert: 'Draw.', duel: true,
     marker: (c, g) => (!g.quests.state('p2_ryuma_duel') && /ittoryu|nitoryu|santoryu/.test(c.style || '') ? '!' : null),
     when: (c, g) => !D(g, 'p2_ryuma_duel'),
@@ -1157,7 +1157,7 @@ npcs.push(
   {
     id: 'p2_momonga', name: 'Vice Admiral Momonga', title: 'Marine Headquarters', island: 'marineford', at: { spot: 'oris_plaza' }, faction: 'marine', level: 60, boss: true, hpMul: 1.5, hostile: true,
     look: { hair: 'short', hairColor: '#212121', top: '#fafafa', bottom: '#1b4f72', coat: '#fafafa', coatText: 'JUSTICE', skin: '#f1c9a0' },
-    style: 'ittoryu', weapon: 'sword', moves: ['itto_iai', 'itto_whirl', 'roku_soru', 'roku_rankyaku'], haki: { armament: 40 }, skill: 0.6, lethal: false, breakthrough: 4, bounty: 60000000,
+    style: 'ittoryu', weapon: 'sword', blades: ['fine_katana'], moves: ['itto_iai', 'itto_whirl', 'roku_soru', 'roku_rankyaku'], haki: { armament: 40 }, skill: 0.6, lethal: false, breakthrough: 4, bounty: 60000000,
     alert: 'Not one step closer to the platform!', when: (c, g) => warOn(g, 'vice_admiral') && !marine(c),
   },
   {
@@ -1177,7 +1177,7 @@ npcs.push(
   {
     id: 'mihawk', name: 'Dracule Mihawk', title: '"Hawk-Eyes" — the World\'s Greatest Swordsman', island: 'kuraigana', trainer: 'mihawk',
     look: { hair: 'short', hairColor: '#212121', top: '#212121', bottom: '#3e2723', coat: '#212121', hat: 'captain', hatColor: '#212121', eyeColor: '#fbc02d', swords: 1, skin: '#f1c9a0' },
-    level: 120, boss: true, hpMul: 3, faction: 'rival', ai: 'guard', style: 'ittoryu', weapon: 'sword', weaponPower: 2.3,
+    level: 120, boss: true, hpMul: 3, faction: 'rival', ai: 'guard', style: 'ittoryu', weapon: 'sword', blades: ['yoru'], weaponPower: 2.3,
     moves: ['p2_yoru_slash', 'itto_iai', 'itto_whirl', 'itto_pound'], haki: { armament: 95, observation: 85 }, skill: 0.95, lethal: false, breakthrough: 10,
     duel: true, respawn: true, recover: 10, recoverLine: '"...So. You have surpassed me. I will wait for you to do it again."',
     alert: 'Show me the weight of your blade.',
@@ -1192,9 +1192,12 @@ npcs.push(
           { text: 'The Humandrill chieftain is defeated.', if: () => at(ctx, 'p2_kuraigana_trial', 'report'), next: 'done' },
           { text: 'Train with Mihawk', if: () => ctx.game.quests.isDone('p2_kuraigana_trial'), do: (c) => c.open('trainer', { trainer: 'mihawk' }) },
           { ...challenge('mihawk', 'Challenge the World\'s Greatest Swordsman. (Extremely dangerous)') },
+          // (stand over him once, and the black blade is yours to carry: the legend's own sword)
+          { text: 'Your sword. Yoru.', if: () => (ctx.game.state?.char?.defeated?.mihawk || 0) > 0 && !ctx.has('yoru') && !ctx.flag('p2_yoru_given'), next: 'yoru' },
           { text: 'Leave', end: true },
         ],
       },
+      yoru: { text: '"(He is silent for a long time, then rises and lifts the great black blade from his back.) Yoru is not a trophy. It is the weight of standing where no one stands above you. You stood over me. Carry it — until the day I come to take it back." (He holds it out to you, cross-hilt first.)', onEnter: (c) => { c.setFlag('p2_yoru_given'); c.give('yoru', 1); }, next: 'a' },
       ask: { text: '"You would ask a stranger to teach you? ...Very well. The Humandrills in the western woods copy every swordsman they have ever watched. Their chieftain fights like an army. Defeat it, and I will consider you."', onEnter: (c) => c.startQuest('p2_kuraigana_trial') },
       done: { text: '"Hm. You defeated an animal that fights like a hundred men, without becoming an animal yourself. I will train you. Come back as often as you like — as long as you surpass what you were the day before."', onEnter: (c) => c.complete('p2_kuraigana_trial'), next: 'a' },
     } }),

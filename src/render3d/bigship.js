@@ -1236,7 +1236,16 @@ export function bigInterior(def, d) {
     cannon(k, P, g.s, gs);
     k.restore();
   }
-  // the furniture (the rugs, the lanterns on the walls, and all)
-  for (const it of d.furniture) furniture(k, d, P, it);
+  // the furniture (the rugs, the lanterns on the walls, and all) — but the
+  // treasure chest in the hold, each ship's own (plundered, it's gone: ships3d.js)
+  for (const it of d.furniture) if (!it.treasure) furniture(k, d, P, it);
   return { k, overhead };
+}
+/** The treasure chest in a big ship's hold, on its own (or null), and where it stands: { k, at: [u, floor, v] }. */
+export function bigTreasure(def, d) {
+  const it = d.furniture.find((f) => f.treasure);
+  if (!it) return null;
+  const k = new Mesher();
+  furniture(k, d, bigPalette(def), it);
+  return { k, at: [it.u, it.floor + (it.y || 0), it.v] };
 }

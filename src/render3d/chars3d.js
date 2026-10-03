@@ -22,7 +22,7 @@ import { BackFlame, PhoenixWings, driftInto } from './chars/flame.js';
 import { createViewmodel } from './chars/viewmodel.js';
 import { holdItem, heldSize } from './chars/helditem.js';
 import { rubberFist, fistState } from './chars/rubber.js';
-import { currentLook, weaponOf, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
+import { currentLook, weaponOf, weaponKey, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
 import { blendPose } from '../render/anims.js';
 import { shipBob, shipLift } from '../world/hull.js';
 import { WakeTrail } from './wake3d.js';
@@ -77,7 +77,7 @@ class ActorView {
     const bl = a.buffs.find((b) => b.look);
     this.buffLookObj = bl ? bl.look : null;
     this.wpn = weaponOf(a);
-    this.wpnKey = this.wpn ? `${this.wpn.kind}${this.wpn.count}${this.wpn.gun || ''}` : '';
+    this.wpnKey = weaponKey(this.wpn);
     this.root = new THREE.Group();
     this.yaw = new THREE.Group();
     this.root.add(this.yaw);
@@ -97,9 +97,7 @@ class ActorView {
     const bl = a.buffs.find((b) => b.look);
     // a new look object (equipment, content scripts) or a transformation's look
     if (a.look !== this.baseLook || (bl ? bl.look : null) !== this.buffLookObj) return true;
-    const w = weaponOf(a);
-    const k = w ? `${w.kind}${w.count}${w.gun || ''}` : '';
-    return k !== this.wpnKey;
+    return weaponKey(weaponOf(a)) !== this.wpnKey;
   }
 
   update(a, env, ctx, { camYaw3, redraw }) {

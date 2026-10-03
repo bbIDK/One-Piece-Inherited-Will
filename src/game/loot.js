@@ -51,9 +51,11 @@ function pocketOf(game, a) {
     const w = a.weapon?.kind;
     if (w && r() < (a.named || a.boss ? 0.6 : 0.3)) {
       const high = lvl >= 25, mid = lvl >= 12;
-      const id = w === 'sword' ? (f === 'marine' ? 'marine_saber' : high ? 'fine_katana' : mid ? 'cutlass' : 'rusty_katana')
+      // (the sword you saw in their hand, if it's one anyone could own)
+      const held = a.weapon.ids?.[0], own = held && ITEMS[held] && !ITEMS[held].unique && ITEMS[held].kind === w ? held : null;
+      const id = own || (w === 'sword' ? (f === 'marine' ? 'marine_saber' : high ? 'fine_katana' : mid ? 'cutlass' : 'rusty_katana')
         : w === 'gun' ? (f === 'marine' ? 'marine_rifle' : 'flintlock')
-          : w === 'staff' ? 'bo_staff' : w === 'axe' ? 'woodsman_axe' : null;
+          : w === 'staff' ? 'bo_staff' : w === 'axe' ? 'woodsman_axe' : null);
       if (id) give(id);
     }
     if (r() < 0.4) give(f === 'marine' ? 'rice_ball' : r() < 0.5 ? 'meat' : 'sake');

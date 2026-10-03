@@ -7,6 +7,7 @@ import { placeObject } from '../world/islandgen.js';
 import { addItem } from '../game/inventory.js';
 import { allNpcDefs } from '../game/npcs.js';
 import { getAbility } from '../game/abilities.js';
+import { DEVIL, fruitOf, fruitKey, fruitCount, fruitPicked } from '../world/fruitTrees.js';
 
 /**
  * A fruit's techniques as they are now, for a character from before: any
@@ -34,6 +35,52 @@ function takenFruits(game) {
   for (const it of c?.inventory || []) if (it.id && it.id.startsWith('fruit_')) t.add(it.id.slice(6));
   for (const d of allNpcDefs()) if (d.fruit && FRUITS[d.fruit]) t.add(d.fruit);
   return t;
+}
+
+/** The nearest fruit tree to (x, y) on the surface within `r` tiles, or null. */
+function fruitTreeNear(game, x, y, r, skip) {
+  const w = game.surface;
+  if (!w?.objects) return null;
+  let best = null, bd = Infinity;
+  for (const o of w.objects.near(x, y, r, (o) => o.kind === 'tree' && !!fruitOf(o))) {
+    if (skip?.has(fruitKey(w.id, o))) continue;
+    const d = w.distance(x, y, o.x, o.y);
+    if (d < bd) { bd = d; best = o; }
+  }
+  return best;
+}
+
+/**
+ * Hang the run's Devil Fruits in the trees: each one not yet found, on the
+ * fruit tree nearest where it was rolled to be (recorded in the save, so it's
+ * the same tree every time), among that tree's own fruit — a swirled apple,
+ * banana or coconut you can pick (forage.js). One with no fruit tree near
+ * enough stays on the ground where it fell. Re-drawn on any tree already
+ * built.
+ */
+function hangFruits(game) {
+  const c = game.state?.char, w = game.surface;
+  DEVIL.clear();
+  if (!c || !w) return;
+  const used = new Set();
+  for (const f of c.world.fruitSpawns || []) {
+    if (f.taken) continue;
+    if (f.tx === undefined) {
+      const o = fruitTreeNear(game, f.x, f.y, 70, used);
+      if (o) { f.tx = o.x; f.ty = o.y; f.slot = Math.floor(((o.x * 7.31 + o.y * 3.17) % 1 + 1) % 1 * 97) % Math.max(1, fruitCount(o)); } else f.tx = null;
+    }
+    if (f.tx === null) continue;
+    const key = fruitKey(w.id, { x: f.tx, y: f.ty });
+    used.add(key);
+    DEVIL.set(key, { fruit: f.fruit, slot: f.slot || 0, spawn: f, color: FRUITS[f.fruit]?.color || '#8e44ad' });
+  }
+  redraw(game);
+}
+/** Trees already built are built again, with (or without) their Devil Fruit. */
+function redraw(game) {
+  const v3 = game.view3d, w = game.surface;
+  if (!v3?.built || !w) return;
+  for (const [o, v] of v3.built) if (o.kind === 'tree' && (o._devil >= 0) !== !!DEVIL.get(fruitKey(w.id, o))) { v3.dropProp(o, v); v3.propsDirty = true; }
 }
 
 export function installFruits(game) {
@@ -78,12 +125,45 @@ export function installFruits(game) {
       }
       char.world.fruitSpawns = spawns;
     }
+    hangFruits(game);
+  });
+  game.hangFruits = () => hangFruits(game);
+  // a Devil Fruit picked from its tree (forage.js): yours, and the tree's just a tree again
+  game.devilPicked = (o, df) => {
+    const f = df.spawn;
+    if (!f || f.taken) return false;
+    if (!addItem(game, 'fruit_' + f.fruit, 1, { silent: true })) return false;
+    f.taken = true;
+    DEVIL.delete(fruitKey(game.surface.id, o));
+    game.ui.toast('A DEVIL FRUIT!', `${FRUITS[f.fruit].name} — hanging among the ordinary fruit, swirled all over.`, '#ffab91');
+    game.log('You pick the strange swirled fruit. The patterns on its skin are unmistakable: a Devil Fruit.', '#ffab91');
+    redraw(game);
+    return true;
+  };
+  // now and then a fruit tree on an island bears one too: the first time you
+  // set foot on an island, a chance one of its trees has a Devil Fruit among
+  // its own (the same for the same run)
+  game.on('enterIsland', (isl) => {
+    const c = game.state?.char;
+    if (!c || !isl?.id || game.world !== game.surface || isl.def?.noFruit) return;
+    const seen = (c.world.fruitIsles ||= {});
+    if (seen[isl.id]) return;
+    seen[isl.id] = 1;
+    const rng = new RNG(`${c.runSeed}:tree-fruit:${isl.id}`);
+    if (!rng.chance(0.18)) return;
+    const o = fruitTreeNear(game, isl.x + rng.range(-isl.def.w / 4, isl.def.w / 4), isl.y + rng.range(-isl.def.h / 4, isl.def.h / 4), Math.max(isl.def.w, isl.def.h) / 2);
+    if (!o || DEVIL.get(fruitKey(game.surface.id, o)) || fruitPicked(game.surface.id, o, 0, game.env.day)) return;
+    const fid = game.rollFruit(rng);
+    if (!fid) return;
+    (c.world.fruitSpawns ||= []).push({ island: isl.id, fruit: fid, x: o.x, y: o.y, tx: o.x, ty: o.y, slot: 0, taken: false, tree: true });
+    hangFruits(game);
   });
   // place fruit pickups when an island is populated
   game.spawner.addBuilder(({ island, game: g, spawner }) => {
     const c = g.state?.char;
     for (const f of c?.world?.fruitSpawns || []) {
-      if (f.taken || f.island !== island.id) continue;
+      // (one hanging in a tree is picked from it: see hangFruits)
+      if (f.taken || f.island !== island.id || f.tx) continue;
       const p = spawner.findFree(f.x, f.y, 8) || { x: f.x, y: f.y };
       g.groundItems = g.groundItems || [];
       if (!g.groundItems.some((it) => it.fruitSpawn === f)) g.groundItems.push({ x: p.x, y: p.y, id: 'fruit_' + f.fruit, label: 'a strange swirled fruit', fruitSpawn: f });

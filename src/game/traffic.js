@@ -12,13 +12,12 @@
 // Piece bounties do.
 import { makeNPC, ARCHETYPES } from './npcs.js';
 import { crime } from './reputation.js';
-import { earn, addItem } from './inventory.js';
 import { board } from './interact.js';
 import { regionAt, REGION, isGrandLine, isCalmBelt, isBlue } from '../world/constants.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
 import { RNG } from '../core/rng.js';
 import { placeOnDeck, helmSpot, hatchSpot, deckDist, freeDeckSpot } from './decks.js';
-import { shipDims } from '../world/hull.js';
+import { shipDims, deckToWorld } from '../world/hull.js';
 import { SHIPS } from '../data/ships.js';
 import { wantedTier } from './wanted.js';
 import { T as TT } from '../world/tiles.js';
@@ -501,31 +500,44 @@ function welcomeAboard(game, s) {
   game.log(`The crew of the ${s.name} salute as you come aboard.`, '#90caf9');
 }
 
-/** Plunder what's in the hold. */
+/**
+ * Plunder what's in the hold: her treasure chest opened in front of you,
+ * what's in it shown thing by thing — her takings, her cargo, and now and
+ * then (more often in a pirate's hold) a Devil Fruit. Once you've emptied
+ * it, the chest's gone (render3d/ships3d.js: it sinks away into the hold).
+ */
+let holdSeq = 0;
 function plunder(game, s) {
   const tr = s.traffic;
-  tr.plundered = true;
-  const rng = new RNG(Math.floor(s.x * 31 + s.y * 7) >>> 0);
-  earn(game, s.loot || 1000, `the hold of the ${s.name}`);
+  const key = `hold:${(s.holdKey ||= `${s.name}:${++holdSeq}:${Math.round(s.x)},${Math.round(s.y)}`)}`;
   const goods = tr.kind === 'fishing' ? ['fresh_fish', 'fresh_fish', 'fresh_fish', 'elephant_tuna']
     : tr.kind === 'marine' ? ['bandage', 'bandage', 'meat', 'rumble_ball', 'seastone']
       : tr.kind === 'pirate' ? ['gold_coins', 'jewels', 'sake', 'meat']
         : ['gold_coins', 'sake', 'meat', 'fish_stew', 'cola', 'jewels'];
-  const n = tr.kind === 'fishing' ? rng.int(3, 6) : rng.int(2, 4);
-  for (let i = 0; i < n; i++) {
-    const id = rng.pick(goods);
-    if (id === 'seastone' && !rng.chance(0.15)) continue;
-    addItem(game, id, 1);
-  }
-  // her powder and shot, carried across to your own ship (as much as she'll hold)
-  const mine = game.ships.find((o) => o.owner === 'player' && !o.sunk && o.shotCap > o.shot && game.world.distance(o.x, o.y, s.x, s.y) < 60);
-  if (mine && s.shot > 0) {
-    const take = Math.min(s.shot, mine.shotCap - mine.shot);
-    mine.shot += take; s.shot -= take;
-    if (take) game.log(`You carry ${take} cannonballs across to the ${mine.name}.`, '#a5d6a7');
-  }
-  game.audio?.sfx('coin');
-  if (tr.kind !== 'pirate' && !tr.plunderCrime) { tr.plunderCrime = true; crime(game, 300000, 'plundered a ship\'s hold', { rep: 3, quiet: true }); }
+  const rng = new RNG(Math.floor(s.x * 31 + s.y * 7) >>> 0);
+  game.containers.open(key, 'ship', {
+    title: `The hold of the ${s.name}`,
+    sub: tr.kind === 'pirate' ? 'Their plunder, heaped in an iron-bound chest.' : tr.kind === 'fishing' ? 'Her catch, packed in the hold.' : 'Her strongbox and her cargo.',
+    o: { berries: s.loot || 1000, goods, n: tr.kind === 'fishing' ? rng.int(3, 6) : rng.int(2, 4), devil: tr.kind === 'pirate' ? 0.08 : tr.kind === 'marine' ? 0.02 : 0.04 },
+    onTake: () => {
+      // (taking a ship's goods is piracy, unless she's a pirate)
+      if (tr.kind !== 'pirate' && !tr.plunderCrime) { tr.plunderCrime = true; crime(game, 300000, 'plundered a ship\'s hold', { rep: 3, quiet: true }); }
+      // her powder and shot, carried across to your own ship (as much as she'll hold)
+      const mine = game.ships.find((o) => o.owner === 'player' && !o.sunk && o.shotCap > o.shot && game.world.distance(o.x, o.y, s.x, s.y) < 60);
+      if (mine && s.shot > 0) {
+        const take = Math.min(s.shot, mine.shotCap - mine.shot);
+        mine.shot += take; s.shot -= take;
+        if (take) game.log(`You carry ${take} cannonballs across to the ${mine.name}.`, '#a5d6a7');
+      }
+    },
+    onEmpty: () => {
+      tr.plundered = true;
+      s.chestGone = game.time;
+      game.containers.forget(key);
+      const hs = hatchSpot(s), p = deckToWorld(s, hs.t, hs.v);
+      game.fx.burst(p.x, p.y, 16, { z: 0.6, color: ['#ffd54f', '#d7ccc8'], speed: 2.4, vz: 1.5, g: 5, life: 0.7, kind: 'star', size: 0.1 });
+    },
+  });
 }
 
 // ------------------------------------------------------------ E prompts

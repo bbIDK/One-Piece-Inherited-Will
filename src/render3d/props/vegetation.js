@@ -7,10 +7,10 @@
 // Fruit trees carry their fruit as a separate instanced part that is hidden
 // while the tree is picked.
 import * as THREE from 'three';
-import { Mesher, cyl, cone, box, ribbon, tube, slab, C, shade, hash, rng, radial, KIT } from './kit.js';
+import { Mesher, cyl, cone, box, ribbon, tube, slab, torus, C, shade, hash, rng, radial, KIT } from './kit.js';
 import { instanced, setPartVisible } from './instancer.js';
 import { registerPropBuilder } from '../registry.js';
-import { fruitOf, fruitSpots, isPicked, fruitPicked } from '../../world/fruitTrees.js';
+import { fruitOf, fruitSpots, isPicked, fruitPicked, devilOn } from '../../world/fruitTrees.js';
 import { T, CLIMATE } from '../../world/tiles.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -521,6 +521,39 @@ function fruitGeo(sub, v, fruit, i, q) {
   });
 }
 
+/**
+ * A Devil Fruit hanging among the tree's own: the shape of the fruit it grows
+ * (an apple, a mango, a coconut, a hand of bananas — cherries swell into one
+ * fat fruit), a little bigger, in the Devil Fruit's own colour and swirled
+ * all over, its stalk curled.
+ */
+function devilFruitGeo(sub, v, fruit, i, q, color) {
+  return cached(`dfruit:${sub}:${(v || 0) % 2}:${fruit}:${i}:${color}`, () => {
+    const k = new Mesher();
+    const base = C(color || '#8e44ad').clone(), swirl = base.clone().lerp(C('#ffffff'), 0.5), dark = base.clone().multiplyScalar(0.62);
+    const [x, y, z] = q.p, s = (q.s || 1) * 1.2;
+    if (fruit === 'banana') {
+      k.add(cyl(0.02, 0.025, 0.25, 4, true), { at: [x, y - 0.1, z], color: '#6d8b3a' });
+      const band = (p) => { const t = Math.sin((p.y - y) * 70 + Math.atan2(p.z - z, p.x - x) * 2); return t > 0.4 ? swirl : t < -0.8 ? dark : base; };
+      for (let j = 0; j < 5; j++) {
+        const a = j / 5 * Math.PI * 2;
+        limb(k, [x + Math.cos(a) * 0.05, y - 0.05, z + Math.sin(a) * 0.05], [x + Math.cos(a) * 0.14, y - 0.3, z + Math.sin(a) * 0.14], 0.04 * s, 0.025 * s, 6, { color: band, outline: 0.012, open: false });
+      }
+    } else {
+      const r = (fruit === 'cherry' ? 0.11 : FRUIT_LOOK[fruit].r) * s;
+      const sc = fruit === 'mango' ? [0.85, 1.15, 0.85] : [1, 0.96, 1];
+      // (the famous swirls: spirals winding round it from the stalk down)
+      const col = (p) => { const t = Math.sin(Math.atan2(p.z - z, p.x - x) * 3 + ((p.y - y) / r) * 5.5); return t > 0.42 ? swirl : t < -0.78 ? dark : base; };
+      k.add(new THREE.IcosahedronGeometry(r, 2), { at: [x, y, z], scale: sc, normals: radial(x, y, z, 0), color: col, outline: 0.016 });
+      // the stalk, curled over like a question mark, and its leaf
+      k.add(cyl(0.012, 0.014, 0.06, 4, true), { at: [x, y + r * 0.9, z], color: '#5d4037' });
+      k.add(torus(0.035, 0.011, 4, 8, Math.PI * 1.3), { at: [x + 0.03, y + r * 0.9 + 0.075, z], rot: [0, 0, -0.4], color: '#5d4037' });
+      k.add(new THREE.IcosahedronGeometry(0.045, 0), { at: [x - 0.05, y + r * 0.95, z], scale: [1.6, 0.35, 0.9], color: '#2e7d32' });
+    }
+    return k.build();
+  });
+}
+
 // ------------------------------------------------------------ bushes & rocks
 
 function bushModel(sub, v) {
@@ -625,8 +658,13 @@ function buildTree(o, ctx, sub) {
   const yaw = hash(o.x, o.y) * Math.PI * 2;
   if (fr && model.crown) {
     const pts = fruitPoints(sub, v, fr, model);
+    // (one of them may be a Devil Fruit: world/fruitTrees.js devilOn)
+    const df = devilOn(ctx?.world?.id, o), dfi = df ? df.slot % pts.length : -1;
     // (the fruit isn't drawn far off: see instancer.js)
-    const fps = pts.map((q, i) => ({ key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }));
+    const fps = pts.map((q, i) => (i === dfi
+      ? { key: `df:${sub}:${v % 2}:${fr}:${i}:${df.color}`, geo: devilFruitGeo(sub, v, fr, i, q, df.color), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }
+      : { key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }));
+    o._devil = df ? dfi : -1;
     parts.push(...fps);
     dyn = (oo, env, c, u) => { for (let i = 0; i < fps.length; i++) setPartVisible(u, fps[i], !fruitPicked(c.world?.id, oo, i, env.day)); };
     // where each fruit is, for aiming at it (see game/forage.js)

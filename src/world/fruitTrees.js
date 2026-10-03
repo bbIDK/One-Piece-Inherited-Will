@@ -33,6 +33,14 @@ export function fruitOf(o) {
 
 export const fruitKey = (worldId, o) => `${worldId || 's'}:${Math.round(o.x * 10)},${Math.round(o.y * 10)}`;
 
+// Devil Fruits hanging among a tree's own fruit (content/fruits.js hangs the
+// run's there): tree key → { fruit: the Devil Fruit's id, slot: which of the
+// tree's fruits it is, spawn: its record in the save, color: its skin's }. Drawn swirled, in the
+// shape of the tree's own fruit (render3d/props/vegetation.js); picked like any.
+export const DEVIL = new Map();
+/** The Devil Fruit hanging on this tree, if one is: { fruit, slot, spawn } or null. */
+export const devilOn = (worldId, o) => (DEVIL.size ? DEVIL.get(fruitKey(worldId, o)) || null : null);
+
 // picked fruit: key → the day it's back ("<tree>#<i>" for one fruit; a bare
 // tree key — from older saves — means the whole tree was stripped)
 export const PICKED = new Map();

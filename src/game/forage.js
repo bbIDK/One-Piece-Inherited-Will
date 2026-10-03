@@ -1,6 +1,6 @@
 // Foraging: pick coconuts, bananas, mangoes, apples and cherries from the
 // trees that bear them (E next to the tree). Fruit grows back in two days.
-import { fruitOf, fruitKey, isPicked, fruitPicked, fruitCount, PICKED, REGROW_DAYS } from '../world/fruitTrees.js';
+import { fruitOf, fruitKey, isPicked, fruitPicked, fruitCount, PICKED, REGROW_DAYS, devilOn } from '../world/fruitTrees.js';
 import { addItem } from './inventory.js';
 import { ITEMS } from '../data/items.js';
 
@@ -58,13 +58,31 @@ export function installForaging(game) {
     }
     if (!best) return other;
     const one = best.i >= 0;
-    const mine = { d: best.score * 0.4, x: best.x, y: best.y, label: one ? `Pick the ${NAME[best.fr] || best.fr}` : `Pick ${PLURAL[best.fr] || best.fr}`, run: () => pick(game, best.o, best.fr, best.i, best.h) };
+    // (the one with the strange swirls)
+    const devil = one && best.o._devil === best.i && devilOn(w.id, best.o);
+    const label = devil ? `Pick the strange swirled ${SWIRLED[best.fr] || 'fruit'}` : one ? `Pick the ${NAME[best.fr] || best.fr}` : `Pick ${PLURAL[best.fr] || best.fr}`;
+    const mine = { d: best.score * 0.4, x: best.x, y: best.y, label, run: () => (devil ? pickDevil(game, best.o, devil, best.i, best.h) : pick(game, best.o, best.fr, best.i, best.h)) };
     return !other || mine.d < other.d ? mine : other;
   };
 }
 
 // one fruit — or, for bananas and cherries, one bunch
 const NAME = { coconut: 'coconut', banana: 'bunch of bananas', mango: 'mango', apple: 'apple', cherry: 'cherries' };
+const SWIRLED = { coconut: 'coconut', banana: 'bananas', mango: 'mango', apple: 'apple', cherry: 'fruit' };
+
+/** Picking the Devil Fruit hanging in a tree: game.devilPicked (content/fruits.js) takes it from there. */
+function pickDevil(game, o, df, i, h) {
+  const p = game.player, w = game.world;
+  if (!game.devilPicked?.(o, df)) return;
+  // (its place on the branch is bare until a fruit grows back there)
+  const c = game.state.char, back = game.env.day + REGROW_DAYS, key = fruitKey(w.id, o) + '#' + i;
+  PICKED.set(key, back);
+  (c.world.picked ||= {})[key] = back;
+  p.facing = Math.atan2(o.y - 1.5 - p.y, w.dx(p.x, o.x));
+  const z = h !== null ? Math.max(0.5, h - (o._gy || 0)) : 2;
+  game.fx.burst(o.x, o.y, 14, { z, color: ['#ce93d8', '#fff59d', '#aed581'], speed: 3, vz: 1.4, g: 5, life: 0.8, kind: 'star', size: 0.12 });
+  game.audio?.sfx('equip');
+}
 const YIELD = { banana: 2, cherry: 2 };
 
 function pick(game, o, fruit, i = -1, h = null) {

@@ -14,6 +14,8 @@ import './render3d/lamplight.js';
 import './render3d/precip3d.js';
 import './render3d/gangway3d.js';
 import './render3d/ropeway3d.js';
+import { swordGeo } from './render3d/chars/swords.js';
+import { weaponMaterial } from './render3d/chars/mats.js';
 import './render3d/drums3d.js';
 import { renderPortrait } from './ui/preview3d.js';
 import { generateWorld } from './world/worldgen.js';
@@ -519,7 +521,7 @@ async function start() {
       return game.player;
     },
     prof: { PROF, reset: profReset },
-    debug: { persist: () => persist(game), THREE, npcDef, allNpcDefs, standingHeight, allQuests, VIEWS, builders: PROP_BUILDERS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, launchShip, openShipwright, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld,
+    debug: { persist: () => persist(game), THREE, swordGeo, weaponMaterial, npcDef, allNpcDefs, standingHeight, allQuests, VIEWS, builders: PROP_BUILDERS, makeNPC, addItem, fruitOf, fruitPicked, clamAt, regionAt, layoutOf, bw, bl, bfront, portrait: renderPortrait, launchShip, openShipwright, deckSpot: (s, which) => { const sp = which === 'hatch' ? hatchSpot(s) : helmSpot(s); return deckToWorld(s, sp.t, sp.v); }, onDeck: (s, t, v = 0) => placeOnDeck(game, game.player, s, t, v), dims: (s) => shipDims(s.def), deckToWorld,
       // stand in one of a ship's rooms ('cabin', 'captain', 'forecastle', 'hold'), f of the way along it
       inRoom: (s, kind, f = 0.5, v = 0) => {
         const r = shipDims(s.def).rooms.find((x) => x.kind === kind);

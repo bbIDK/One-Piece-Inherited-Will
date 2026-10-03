@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import { infusedAura } from '../../game/haki.js';
 import { samplePose, restPose, blendPose } from '../../render/anims.js';
 import { shipDims, oarPoints, rowLean, floorAt } from '../../world/hull.js';
+import { ITEMS } from '../../data/items.js';
+import { swordLook } from './swords.js';
 
 // ------------------------------------------------------------------ pose
 /** The look an actor shows right now (buff looks merged; cached per buff). */
@@ -16,11 +18,28 @@ export function currentLook(a, cache) {
   if (cache) { cache.base = a.look; cache.buff = buffLook; cache.look = look; }
   return look;
 }
+/**
+ * What an actor fights with, as the models need it: { kind, count, gun,
+ * ids, back } — for swords, which ones, in the order they're worn (each is
+ * drawn as itself: swords.js), and whether the first is carried on the back
+ * (Yoru).
+ */
 export function weaponOf(a) {
   if (!a.weapon) return null;
   const w = a.weapon;
   const gun = w.kind === 'gun' && (w.ids || []).some((id) => /sling|kabuto/.test(id)) ? 'sling' : w.gun;
-  return { kind: w.kind, count: w.count || 1, gun };
+  const count = w.count || 1;
+  let ids = null;
+  if (w.kind === 'sword') {
+    // (the equipped list holds every weapon: the swords among it; an NPC's are all swords)
+    if (!w._swords || w._swordsOf !== w.ids) { w._swordsOf = w.ids; w._swords = (w.ids || []).filter((id) => !ITEMS[id] || ITEMS[id].kind === 'sword'); }
+    ids = w._swords.length > count ? w._swords.slice(0, count) : w._swords;
+  }
+  return { kind: w.kind, count, gun, ids, back: !!(ids && ids[0] && swordLook(ids[0]).onBack) };
+}
+/** A key that changes when the weapon's models would (kind, count, gun, which swords). */
+export function weaponKey(w) {
+  return w ? `${w.kind}${w.count}${w.gun || ''}${w.ids ? ':' + w.ids.join(',') : ''}` : '';
 }
 
 /**

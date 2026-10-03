@@ -50,14 +50,27 @@ function roll(kind, rng, tier, o = {}) {
     put(items, rng.pick(['gold_coins', 'gold_coins', 'jewels']));
     if (rng.chance(0.35)) put(items, rng.pick(['jewels', 'gold_coins', 'golden_statue']));
     for (let i = rng.int(1, 2); i > 0; i--) put(items, weighted(rng, HOARD_EXTRA));
+  } else if (kind === 'ship') {
+    // a ship's hold: her takings (o.berries) and her cargo (o.goods, o.n of them)
+    berries = o.berries || 0;
+    for (let i = 0; i < (o.n || 2); i++) { const id = rng.pick(o.goods || ['gold_coins']); if (id !== 'seastone' || rng.chance(0.15)) put(items, id); }
   } else {
     // a treasure chest out in the world
     berries = Math.round(rng.range(300, 1200) * (o.tier || 1) * (o.luck || 1));
     if (o.item) put(items, o.item);
     else if (rng.chance(0.35 * (o.luck || 1))) put(items, rng.pick((o.tier || 1) > 2 ? ['jewels', 'gold_coins', 'golden_statue', 'rumble_ball'] : ['gold_coins', 'meat', 'bandage', 'jewels']));
   }
+  // now and then, a Devil Fruit (o.devil: the chance; o.rollDevil rolls which,
+  // and keeps it for this chest — game.rollFruit marks it found, so nothing
+  // else ever rolls it: see the guard in open)
+  if (kind !== 'home' && o.rollDevil && rng.chance(o.devil ?? 0.04)) {
+    const fid = o.rollDevil(rng);
+    if (fid) items.push({ id: 'fruit_' + fid, qty: 1, kept: true });
+  }
   return { berries, items };
 }
+// (a Devil Fruit's chance, by what holds it)
+const DEVIL = { treasure: 0.06, hoard: 0.05, ship: 0.04 };
 
 export function installContainers(game) {
   const store = () => {
@@ -76,7 +89,7 @@ export function installContainers(game) {
     let e = S[key];
     if (!e || (kind === 'home' && e.p !== period)) {
       const rng = new RNG(`${key}:${period}:${c.runSeed}`);
-      e = { ...roll(kind, rng, o.tier ?? tierHere(), o), p: period };
+      e = { ...roll(kind, rng, o.tier ?? tierHere(), { devil: DEVIL[kind], rollDevil: (r) => game.rollFruit?.(r), ...o }), p: period };
       S[key] = e;
     }
     return e;
@@ -102,9 +115,12 @@ export function installContainers(game) {
         const list = which === 'all' ? e.items.slice() : e.items.filter((x) => x.id === which);
         for (const it of list) {
           // (a Devil Fruit already eaten by someone else has rotted away)
-          if (it.id.startsWith('fruit_') && game.fruitTaken?.(it.id.slice(6))) { game.log('The fruit in here has rotted away...', '#b0bec5'); e.items = e.items.filter((x) => x !== it); continue; }
+          if (it.id.startsWith('fruit_') && !it.kept && game.fruitTaken?.(it.id.slice(6))) { game.log('The fruit in here has rotted away...', '#b0bec5'); e.items = e.items.filter((x) => x !== it); continue; }
           addItem(game, it.id, it.qty);
-          if (it.id.startsWith('fruit_')) game.state.char.world.fruitsTaken = [...new Set([...(game.state.char.world.fruitsTaken || []), it.id.slice(6)])];
+          if (it.id.startsWith('fruit_')) {
+            game.state.char.world.fruitsTaken = [...new Set([...(game.state.char.world.fruitsTaken || []), it.id.slice(6)])];
+            game.ui?.toast?.('A DEVIL FRUIT!', 'A strange swirled fruit, packed away among the rest.', '#ffab91');
+          }
           e.items = e.items.filter((x) => x !== it);
         }
         game.audio?.sfx(kind === 'home' ? 'coin' : 'treasure');
@@ -114,5 +130,12 @@ export function installContainers(game) {
     });
   }
 
-  game.containers = { open, contents, isEmpty: (key, kind, o) => isEmpty(contents(key, kind, o)) };
+  // (a chest you emptied stays open: the world's chests are made new on loading, shut)
+  game.on('characterStart', () => {
+    const done = game.state?.char?.world?.chests, objs = game.surface?.objects?.byId;
+    if (!done || !objs) return;
+    for (const o of objs.values()) if (o.kind === 'chest' && done['chest_' + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`)]) o.opened = true;
+  });
+
+  game.containers = { open, contents, isEmpty: (key, kind, o) => isEmpty(contents(key, kind, o)), forget: (key) => { delete store()[key]; } };
 }

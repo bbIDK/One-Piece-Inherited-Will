@@ -396,10 +396,12 @@ export class CharacterModel {
     // weapons: in hand when armed, sheathed otherwise
     const w = o.wpn;
     this.showBone(B.hilts, !(armed && w && (w.kind === 'sword' || w.kind === 'gun')));
-    this.showBone(B.backWpn, !(armed && w && (w.kind === 'axe' || w.kind === 'staff')));
-    const want0 = o.blade ? 'energy:' + o.blade : armed ? `${w.kind}:main:${w.gun || ''}:${o.armament ? 1 : 0}` : o.prop ? `prop:${o.prop}` : '';
-    const want1 = o.bladeB ? 'energy:' + o.bladeB : armed && o.drawHold2 && w.kind === 'sword' && (w.count || 1) >= 2 ? `sword:second::${o.armament ? 1 : 0}` : '';
-    const want2 = armed && o.drawHold2 && w.kind === 'sword' && (w.count || 1) >= 3 ? `sword:mouth::${o.armament ? 1 : 0}` : '';
+    this.showBone(B.backWpn, !(armed && w && (w.kind === 'axe' || w.kind === 'staff' || w.kind === 'sword')));
+    // (each sword its own model: which one is in which hand — swords.js)
+    const hk = o.armament ? 1 : 0, ids = w?.ids || [];
+    const want0 = o.blade ? 'energy:' + o.blade : armed ? `${w.kind}:main:${w.gun || ''}:${hk}:${ids[0] || ''}` : o.prop ? `prop:${o.prop}` : '';
+    const want1 = o.bladeB ? 'energy:' + o.bladeB : armed && o.drawHold2 && w.kind === 'sword' && (w.count || 1) >= 2 ? `sword:second::${hk}:${ids[1] || ''}` : '';
+    const want2 = armed && o.drawHold2 && w.kind === 'sword' && (w.count || 1) >= 3 ? `sword:mouth::${hk}:${ids[2] || ''}` : '';
     this.setHeld(0, want0, o);
     this.setHeld(1, want1, o);
     this.setHeld(2, want2, o);
@@ -593,8 +595,8 @@ export class CharacterModel {
 
   /**
    * Drawing a weapon: the right hand goes to its grip — a sword's hilt at the
-   * left hip, a pistol's butt at the right, a staff's end over the right
-   * shoulder — takes hold, draws it out along its sheath and brings it up
+   * left hip, a pistol's butt at the right, a staff's end (or Yoru's hilt)
+   * over the right shoulder — takes hold, draws it out along its sheath and brings it up
    * into the stance; putting it away runs the same the other way.
    */
   drawPath(P, o) {
@@ -605,7 +607,7 @@ export class CharacterModel {
     const S = rig.S[0];
     const G = _dr[2], out = _dr[3];
     let len;
-    if (w.kind === 'sword') {
+    if (w.kind === 'sword' && !w.back) {
       const z = -(d.hipOut + 0.012);
       const ax = 0.1, ay = 0.02, ex = -0.62, ey = -0.4;
       out.set(ax - ex, ay - ey, 0.1).normalize();
@@ -620,7 +622,7 @@ export class CharacterModel {
       const a = _dr[4].set(-0.16 * d.Bk, d.chestLen - 0.02, 0.22), e = _dr[5].set(-0.17 * d.Bk, 0.05, -0.28);
       out.subVectors(a, e).normalize().applyQuaternion(rig.qChest);
       G.copy(a).applyQuaternion(rig.qChest).add(rig.hip);
-      len = 0.55;
+      len = w.kind === 'sword' ? 0.68 : 0.55;
     }
     // (putting it away runs the draw backwards)
     const k = D.out ? D.k : 1 - D.k;
@@ -644,8 +646,8 @@ export class CharacterModel {
     const old = this.held[k];
     if (old) { old.group.parent?.remove(old.group); this.held[k] = null; }
     if (!want) return;
-    const [kind, variant, gun, haki] = want.split(':');
-    const opts = kind === 'energy' ? { color: variant } : { variant, gun, haki: haki === '1', ...(this.opts.weaponOpts || {}) };
+    const [kind, variant, gun, haki, id] = want.split(':');
+    const opts = kind === 'energy' ? { color: variant } : { variant, gun, haki: haki === '1', id: id || null, ...(this.opts.weaponOpts || {}) };
     const hw = new HeldWeapon(kind, opts);
     this.held[k] = hw;
     (k === 2 ? this.bones[B.head] : this.group).add(hw.group);

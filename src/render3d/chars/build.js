@@ -14,6 +14,7 @@ import { BLANK_UV } from './detail.js';
 import { buildFigure } from './body.js';
 import { FACE_TOP, FACE_BOTTOM } from './face.js';
 import { shade, mixHex } from '../../core/math.js';
+import { swordLook, swordGeo, addBuilt } from './swords.js';
 
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
@@ -828,7 +829,7 @@ export function geoKey(look, wpn, lod = 0) {
   const L = look;
   return [lod, L.race, L.skin, L.hair, L.hairColor, L.top, L.bottom, L.shoes, L.hat, L.hatColor, L.coat, L.openShirt ? 1 : 0, L.sleeve, L.noSleeves ? 1 : 0,
     L.hand, L.arms, L.legs, L.bulk, L.ears, L.fur, L.furFace ? 1 : 0, L.furWhite ? 1 : 0, L.tail, L.fin ? 1 : 0, L.wings, L.nose, L.kind, L.vest, L.belt,
-    L.sandals ?? ((L.seed || 0) % 4 === 0 ? 's' : 'b'), L.neck, L.nika ? 1 : 0, L.drums ? 1 : 0, L.seed || 0, wpn ? `${wpn.kind}${wpn.count}` : '-',
+    L.sandals ?? ((L.seed || 0) % 4 === 0 ? 's' : 'b'), L.neck, L.nika ? 1 : 0, L.drums ? 1 : 0, L.seed || 0, wpn ? `${wpn.kind}${wpn.count}${wpn.ids ? ':' + wpn.ids.join(',') : ''}` : '-',
     L.fem ? 1 : 0, L.topStyle, L.bottomStyle, L.waist, L.waistCol, L.shoeStyle, L.top2, L.inner, L.sleeves, L.muscle, L.bust, L.tie, L.tucked, L.buckle, frameId(L),
     headKey(headParams(L))].join('|');
 }
@@ -957,14 +958,12 @@ function buildBody0(look, wpn, lod, articulated) {
 
   // ---- sheathed weapons
   if (wpn && wpn.kind === 'sword') {
-    const cols = ['#ecf0f1', '#2c3e50', '#c0392b'];
+    // each in its own saya, in its own colours (swords.js); Yoru across the back
+    let j = 0;
     for (let k = 0; k < Math.min(3, wpn.count || 1); k++) {
-      const z = -(d.hipOut + 0.012 + k * 0.035);
-      const a = [0.1 - k * 0.03, 0.02 + k * 0.01, z], e = [-0.62 - k * 0.04, -0.4 + k * 0.03, z - 0.1];
-      add(Prim.cyl(5), between(a, e, 0.019), cols[k], B.sheath);
-      const dir = norm([a[0] - e[0], a[1] - e[1], a[2] - e[2]]);
-      add(Prim.cyl(6), between(add3(a, dir, -0.01), add3(a, dir, 0.012), 0.036), GOLD, B.hilts);
-      add(Prim.cyl(5), between(add3(a, dir, 0.012), add3(a, dir, 0.23), 0.017), k === 2 ? '#fafafa' : '#2d2a32', B.hilts);
+      const SL = swordLook(wpn.ids?.[k], k);
+      if (SL.onBack) { backSword(add, wpn.ids[k], k, d, Bk); continue; }
+      hipSword(add, SL, j++, d);
     }
   } else if (wpn && wpn.kind === 'gun') {
     // a leather holster on the right hip, on a loop from the belt, the pistol's butt standing out of it
@@ -1088,6 +1087,74 @@ function hands(b, H, s, col, Bk, part, q, kMul = 1) {
 // ------------------------------------------------------------------ cache
 const BODIES = new Map();
 /** A shared built body for a look (ref-counted; call releaseBody when done). */
+/**
+ * A sword at the left hip (`j`th from the body out): its saya the length of
+ * its blade, in its own lacquer (two-tone, banded, with blossoms, flowers or
+ * crosses on its outer face as the look has them), and its hilt standing out
+ * in front — guard, wrap, pommel (a cutlass's or saber's shell and bow). The
+ * hilt hides when the sword's drawn (B.hilts); the saya stays.
+ */
+function hipSword(add, SL, j, d) {
+  const z = -(d.hipOut + 0.012 + j * 0.035);
+  const a = [0.1 - j * 0.03, 0.02 + j * 0.01, z];
+  const into = norm([-0.72 - j * 0.04, -0.42 + j * 0.02, -0.1]);
+  const len = SL.len + 0.03, e = add3(a, into, len), out = [-into[0], -into[1], -into[2]];
+  const r = SL.shape === 'cutlass' ? 0.023 : SL.shape === 'yoru' ? 0.03 : 0.019;
+  // (the outer face of the saya: away from the hip)
+  const side = norm(add3([0, 0, -1], into, into[2]));
+  if (SL.saya) {
+    if (SL.saya2) {
+      add(Prim.cyl(6), between(a, add3(a, into, len * 0.5), r), SL.saya, B.sheath);
+      add(Prim.cyl(6), between(add3(a, into, len * 0.5), e, r * 0.97), SL.saya2, B.sheath);
+    } else add(Prim.cyl(6), between(a, e, r, r, 0), SL.saya, B.sheath);
+    // its mouth and end fittings
+    add(Prim.cyl(6), between(a, add3(a, into, 0.022), r * 1.12), SL.fit, B.sheath);
+    add(Prim.sphere(6, 4), M(e[0], e[1], e[2], 0, 0, 0, r * 1.1), SL.fit, B.sheath);
+    for (const t of SL.bands || []) add(Prim.cyl(6), between(add3(a, into, len * t - 0.007), add3(a, into, len * t + 0.007), r * 1.1), SL.fit, B.sheath);
+    if (SL.rope) add(Prim.cyl(6), between(add3(a, into, 0.05), add3(a, into, 0.068), r * 1.18), SL.rope, B.sheath);
+    const dots = SL.blossoms || SL.flowers || SL.crosses || SL.dots;
+    if (dots) {
+      const n = Math.round(len / 0.11);
+      for (let i = 0; i < n; i++) {
+        const p = add3(add3(a, into, len * (0.12 + 0.8 * (i + 0.5) / n)), side, r * 0.92);
+        if (SL.crosses) for (const s of [1, -1]) add(Prim.box(), mul(M(p[0], p[1], p[2]), mul(M(0, 0, 0, 0, 0, s * 0.8), M(0, 0, 0, 0, 0, 0, [0.004, 0.014, 0.003]))), dots, B.sheath);
+        else add(Prim.sphere(5, 3), M(p[0], p[1], p[2], 0, 0, 0, SL.blossoms ? 0.008 : 0.0065), dots, B.sheath);
+      }
+    }
+  } else {
+    // (a bokken has no saya: the wooden blade itself, through the sash)
+    add(Prim.cyl(6), between(a, add3(a, into, SL.len), 0.016, 0.012), SL.blade, B.sheath);
+  }
+  // the hilt, out in front
+  if (SL.shape === 'cutlass' || SL.shape === 'saber') {
+    add(Prim.sphere(8, 5), M(a[0], a[1], a[2], 0, 0, 0, [0.03, 0.03, 0.026]), SL.guard, B.hilts);
+    add(Prim.cyl(6), between(add3(a, out, 0.01), add3(a, out, SL.hilt), 0.016), SL.wrap, B.hilts);
+    add(Prim.sphere(6, 4), M(...add3(a, out, SL.hilt + 0.008), 0, 0, 0, 0.015), SL.guard, B.hilts);
+    // (the knuckle bow, from the shell to the pommel, along the outside)
+    add(Prim.cyl(5), between(add3(add3(a, out, 0.012), [0, 1, 0], 0.03), add3(add3(a, out, SL.hilt), [0, 1, 0], 0.012), 0.005), SL.guard, B.hilts);
+  } else {
+    const tr = SL.tsubaShape === 'fur' ? 0.045 : SL.tsubaShape === 'round' ? 0.038 : 0.036;
+    add(Prim.cyl(8), between(add3(a, out, -0.006), add3(a, out, 0.008), tr), SL.tsubaShape === 'fur' ? SL.fur : SL.tsuba, B.hilts);
+    add(Prim.cyl(6), between(add3(a, out, 0.008), add3(a, out, SL.hilt), 0.017), SL.wrap, B.hilts);
+    add(Prim.cyl(6), between(add3(a, out, SL.hilt), add3(a, out, SL.hilt + 0.012), 0.018), SL.kashira, B.hilts);
+    if (SL.rings) for (const t of [0.35, 0.65]) add(Prim.cyl(6), between(add3(a, out, SL.hilt * t), add3(a, out, SL.hilt * t + 0.012), 0.0185), SL.rings, B.hilts);
+  }
+}
+/**
+ * A great sword on the back (Yoru, as Mihawk wears it): its hilt up behind
+ * the right shoulder, the cross guard spread across the shoulders, the black
+ * blade down the back to behind the left leg, flat against it. Hidden while
+ * it's in hand (B.backWpn).
+ */
+function backSword(add, id, k, d, Bk) {
+  const g = swordGeo(id, k);
+  const top = new THREE.Vector3(-0.2 * Bk, d.chestLen + 0.02, 0.17), down = new THREE.Vector3(-0.08, -1, -0.34).normalize();
+  const flat = new THREE.Vector3(-1, 0, 0).addScaledVector(down, down.x).normalize();
+  const y = new THREE.Vector3().crossVectors(flat, down);
+  const m = new THREE.Matrix4().makeBasis(down, y, flat).setPosition(top.addScaledVector(down, -0.02));
+  addBuilt(add, g, m, B.backWpn);
+}
+
 export function getBody(look, wpn, lod = 0, fingers = false) {
   const key = geoKey(look, wpn, lod) + (fingers && lod === 0 ? '|fingers' : '');
   let e = BODIES.get(key);

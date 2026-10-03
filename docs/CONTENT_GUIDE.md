@@ -298,6 +298,7 @@ Registry ids are global, so prefix anything that might collide.
   faction: 'civilian'|'pirate'|'marine'|'bandit'|'baroque'|'cp'|'beast'|'rival'|'zombie'|'revolutionary',
   style: 'brawler'|'ittoryu'|'nitoryu'|'santoryu'|'black_leg'|'fishman_karate'|'rokushiki'|'sniper'|'okama_kenpo'|'electro'|'hasshoken'|'weather_science'|'elbaf'|'ryusoken',
   weapon: 'sword'|'gun'|'staff'|'axe',
+  blades: ['yoru'],                 // a swordsman's own swords, in hand order (item ids, or a look only they carry: 'kikoku'); each drawn as itself (render3d/chars/swords.js SWORD_LOOKS). Left out: their kind's — a Marine's saber, a pirate's cutlass, a Wano katana — and the one they drop
   fruit: 'hana', fruitMastery: 60,  // see src/data/fruits.js ids
   moves: ['bara_cannon', ...],      // ability ids (style, fruit, haki, bossMoves or your pack's abilities)
   haki: { armament: 40, observation: 30, conqueror: 0 },

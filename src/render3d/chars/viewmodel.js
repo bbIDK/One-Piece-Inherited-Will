@@ -19,7 +19,7 @@ import { sunSelf } from '../sunshadow.js';
 import { Glow } from './fx.js';
 import { holdItem, heldSize } from './helditem.js';
 import { rubberFist, fistState } from './rubber.js';
-import { actorPose, rigOptions, currentLook, weaponOf, stationSpot, stationReach } from './pose.js';
+import { actorPose, rigOptions, currentLook, weaponOf, weaponKey, stationSpot, stationReach } from './pose.js';
 import { FRUITS } from '../../data/fruits.js';
 import { coatBody } from './haki.js';
 import { shipDims, shipLift } from '../../world/hull.js';
@@ -165,7 +165,7 @@ class Viewmodel {
     this.frame++;
     const look = currentLook(p, this.lookCache);
     const wpn = weaponOf(p);
-    const key = `${look === p.look ? '' : JSON.stringify(look)}|${wpn ? wpn.kind + wpn.count + (wpn.gun || '') : ''}`;
+    const key = `${look === p.look ? '' : JSON.stringify(look)}|${weaponKey(wpn)}`;
     if (!this.model || key !== this.key || this.baseLook !== p.look) { this.key = key; this.baseLook = p.look; this.build(p, look, wpn); }
     const m = this.model;
     m.setShaded(!ctx?.world?.roomOf?.(p));

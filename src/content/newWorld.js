@@ -806,7 +806,7 @@ const npcs = [
   // ================================================================ PUNK HAZARD
   {
     id: 'nw_law', invulnerable: true, name: 'Trafalgar Law', title: '"Surgeon of Death", Warlord of the Sea', island: 'punk_hazard', at: { spot: 'law_camp' },
-    level: 78, fruit: 'ope', fruitMastery: 85, style: 'ittoryu', weapon: 'sword', ai: 'idle', haki: { armament: 60, observation: 55 },
+    level: 78, fruit: 'ope', fruitMastery: 85, style: 'ittoryu', weapon: 'sword', blades: ['kikoku'], ai: 'idle', haki: { armament: 60, observation: 55 },
     look: { hair: 'short', hairColor: '#212121', skin: '#e0ac7e', top: '#212121', bottom: '#90caf9', coat: '#212121', hat: 'beanie', hatColor: '#fafafa', swords: 1 },
     doctor: { line: '"Sit still. I\'m a doctor. They call me the Surgeon of Death, but I\'ve never lost a patient I wanted to keep."' },
     marker: (c, g) => (stageIs(g, 'nw_punk_hazard', 'law') || stageIs(g, 'nw_punk_hazard', 'report') ? '?' : null),
@@ -934,7 +934,7 @@ const npcs = [
   },
   {
     id: 'nw_tashigi_ph', invulnerable: true, name: 'Captain Tashigi', title: 'G-5 (currently in Smoker\'s body)', island: 'punk_hazard', at: { spot: 'g5_camp', ox: 2.5 },
-    level: 44, faction: 'marine', style: 'ittoryu', weapon: 'sword', ai: 'idle',
+    level: 44, faction: 'marine', style: 'ittoryu', weapon: 'sword', blades: ['shigure'], ai: 'idle',
     look: { hair: 'short', hairColor: '#eceff1', skin: '#e0ac7e', top: '#37474f', bottom: '#263238', coat: '#fafafa', coatText: 'JUSTICE', swords: 1 },
     dialogue: () => ({ start: 'a', nodes: { a: { text: '"(Smoker\'s huge body sits hugging its knees.) Please stop staring... I keep reaching for my glasses and poking myself in the eye. Vice Admiral Smoker is VERY angry. He\'s using my body to be angry. It\'s very confusing."' } } }),
   },

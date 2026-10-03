@@ -116,6 +116,35 @@ export function sizeBuildingsForOccupants(world) {
   }
 }
 
+const WANO = new Set(['wano', 'onigashima']);
+/**
+ * The sword an NPC's kind carries, when their definition names none: a
+ * Marine's (or a royal guard's) saber, a samurai's Wano blade, a pirate's
+ * cutlass, a katana as fine as they are good — the one they drop when beaten
+ * (loot.js). The same for the same NPC every time.
+ */
+function defaultBlade(def, k) {
+  const f = def.faction || 'civilian', lvl = def.level ?? 6, who = `${def.name || ''} ${def.title || ''}`;
+  if (f === 'marine' || /guard|knight|fencer|soldier|royal/i.test(who)) return 'marine_saber';
+  if (WANO.has(def.island) || /samurai|ronin/i.test(who)) return 'wano_katana';
+  if (f === 'beast' || f === 'zombie') return 'rusty_katana';
+  const h = hashSeed(def.id || def.name || '') + k;
+  if (f === 'pirate' || f === 'bandit') return (lvl >= 40 ? ['cutlass', 'fine_katana'] : ['cutlass', 'cutlass', 'rusty_katana'])[h % (lvl >= 40 ? 2 : 3)];
+  return lvl >= 12 ? 'fine_katana' : 'rusty_katana';
+}
+/**
+ * An NPC's weapon: { kind, power, count, ids } — for a swordsman, the swords
+ * they carry, each drawn as itself (render3d/chars/swords.js): their own
+ * (`blades` in their definition: Mihawk's Yoru, Tashigi's Shigure, Ryuma's
+ * Shusui), else what their kind would carry.
+ */
+export function npcWeapon(def) {
+  const count = STYLES[def.style]?.swords || 1;
+  const w = { kind: def.weapon, power: def.weaponPower || 1.2, count };
+  if (def.weapon === 'sword') w.ids = Array.from({ length: count }, (_, k) => def.blades?.[k] || def.blades?.[0] || defaultBlade(def, k));
+  return w;
+}
+
 export function makeNPC(def, x, y, extra = {}) {
   const L = def.level ?? 6;
   const look = npcLook(def);
@@ -123,7 +152,7 @@ export function makeNPC(def, x, y, extra = {}) {
   const a = new Actor({
     x, y, name: def.name, title: def.title, look, race: def.race || look.race, faction: def.faction || 'civilian', attrs,
     style: def.style || 'brawler', fruit: def.fruit || null, fruitMastery: def.fruitMastery ?? (def.fruit ? 60 : 0),
-    weapon: def.weapon ? { kind: def.weapon, power: def.weaponPower || 1.2, count: STYLES[def.style]?.swords || 1 } : null,
+    weapon: def.weapon ? npcWeapon(def) : null,
     hakiSkill: def.haki || {}, boss: def.boss, hpMul: (def.hpMul || 1) * (def.boss ? 2.2 : 1), lethal: def.lethal ?? true, poise: def.poise,
     dmgMul: def.dmgMul, defMul: def.defMul,
     ...extra,

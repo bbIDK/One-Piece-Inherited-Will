@@ -16,7 +16,7 @@ import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat, U } from './props/mats.js';
 import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock, smallProfile } from '../world/hull.js';
-import { bigHull, bigInterior, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging } from './bigship.js';
+import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging } from './bigship.js';
 
 // a coated ship's bubble (see the coating, below): a soap film, its colours
 // running with the angle you see it at, bright at its rim — from either side
@@ -354,7 +354,11 @@ export function interiorGeometry(def) {
   if (!d.big) return null;
   const key = `${def.length}|${def.beam}|${def.color}|${def.cannons}|${def.sail}|${def.masts}`;
   let g = insideCache.get(key);
-  if (!g) { const m = bigInterior(def, d); g = { main: m.k.build(false), overhead: m.overhead.build(false) }; insideCache.set(key, g); }
+  if (!g) {
+    const m = bigInterior(def, d), t = bigTreasure(def, d);
+    g = { main: m.k.build(false), overhead: m.overhead.build(false), chest: t ? t.k.build(false) : null, chestAt: t?.at || null };
+    insideCache.set(key, g);
+  }
   return g;
 }
 
@@ -666,6 +670,13 @@ export class ShipView {
       this.overhead.receiveShadow = false;
       this.overhead.castShadow = true;
       this.inside.add(this.overhead);
+      // (the treasure chest in her hold: her own, so it can go once it's emptied)
+      if (ig.chest) {
+        this.chest = new THREE.Mesh(ig.chest, SOLID());
+        this.chest.receiveShadow = true;
+        this.chestAt = ig.chestAt;
+        this.inside.add(this.chest);
+      }
       root.add(this.inside);
     }
     // masts (a rowboat has none)
@@ -957,6 +968,18 @@ export class ShipView {
       // (its shadows — the decks overhead darkening the rooms — only while you're in one)
       const pl = ctx?.game?.player;
       this.inside.castShadow = this.overhead.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);
+      // plundered: the emptied chest sinks away into the hold's shadows, shrinking as it goes
+      if (this.chest) {
+        const gone = s.chestGone !== undefined ? Math.min(1, ((ctx?.game?.time ?? 0) - s.chestGone) / 0.7) : 0;
+        if (gone !== this.chestK) {
+          this.chestK = gone;
+          const k = 1 - gone * gone, [u, y, v] = this.chestAt;
+          this.chest.visible = k > 0.02;
+          // (scaled about its own foot, not the ship's middle)
+          this.chest.scale.setScalar(Math.max(0.001, k));
+          this.chest.position.set(u * (1 - k), y * (1 - k) - gone * 0.3, v * (1 - k));
+        }
+      }
     }
     // yards brace round to the wind; sails fill
     const relA = (windAngle || 0) - s.heading;

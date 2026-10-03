@@ -440,7 +440,7 @@ const npcs = [
     look: { hair: 'bald', skin: '#26a69a', top: '#ff7043', bottom: '#5d4037' }, style: 'brawler', moves: ['chew_watergun'], ranged: true, prefRange: 6,
     hostile: true, bounty: 7000000, infamy: true, when: (c) => !c.defeated.chew },
   { id: 'hatchan', name: 'Hatchan', title: 'Arlong Pirates officer (Six Sword Style)', island: 'conomi_islands', at: { town: 'arlong_park', plaza: true, ox: 0, oy: 3 }, faction: 'pirate', level: 12, named: true, race: 'fishman',
-    look: { hair: 'curly', hairColor: '#e53935', skin: '#ef9a9a', top: '#ffeb3b', bottom: '#5d4037', swords: 2 }, style: 'nitoryu', weapon: 'sword', moves: ['hatchan_six'],
+    look: { hair: 'curly', hairColor: '#e53935', skin: '#ef9a9a', top: '#ffeb3b', bottom: '#5d4037', swords: 2 }, style: 'nitoryu', weapon: 'sword', blades: ['fine_katana'], moves: ['hatchan_six'],
     hostile: true, bounty: 7000000, infamy: true, when: (c) => !c.defeated.hatchan },
   {
     id: 'arlong', name: 'Arlong the Saw', title: 'Captain of the Arlong Pirates', island: 'conomi_islands', at: { town: 'arlong_park', building: 'Arlong Park Tower' }, faction: 'pirate', level: 17, boss: true, hpMul: 1.2, race: 'fishman',
@@ -479,7 +479,7 @@ const npcs = [
     lethal: false, skill: 0.55, bounty: 0, breakthrough: 4, alert: 'Pirate. You won\'t leave Loguetown.',
     when: (c) => c.bounty > 0 && !c.bosses.includes('smoker') && !c.flags.escapedLoguetown },
   { id: 'tashigi', name: 'Tashigi', title: 'Marine Sergeant Major', island: 'polestar_islands', at: { town: 'loguetown', plaza: true, ox: 7 }, faction: 'marine', level: 14, named: true,
-    look: { hair: 'short', hairColor: '#212121', top: '#e1bee7', bottom: '#1565c0', swords: 1, hat: 'goggles' }, style: 'ittoryu', weapon: 'sword', moves: ['itto_iai'], lethal: false, skill: 0.5,
+    look: { hair: 'short', hairColor: '#212121', top: '#e1bee7', bottom: '#1565c0', swords: 1, hat: 'goggles' }, style: 'ittoryu', weapon: 'sword', blades: ['shigure'], moves: ['itto_iai'], lethal: false, skill: 0.5,
     when: (c) => c.bounty > 0 && !c.flags.escapedLoguetown },
 ];
 
