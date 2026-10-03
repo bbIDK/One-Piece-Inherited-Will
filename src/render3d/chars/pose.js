@@ -38,31 +38,28 @@ export function actorPose(a, env, look) {
     pose.dodgeSide = (-d.vx * Math.sin(a.facing) + d.vy * Math.cos(a.facing)) / dl;
   }
   let P = pose.anim ? samplePose(pose.anim, pose.anim.t, pose) : restPose(pose, look);
-  // (in first person a dash forwards or back is a low lunge, not a tumble:
-  // rolled head over heels, your body turned right through the eyes you see
-  // from — and the view, riding your head, dips and lunges with it)
-  if (pose.dodge !== undefined && P.r && a.isPlayer && a.game?.view3d?.rig?.mode === 'first') firstPersonDash(P, pose);
+  // (in first person a dash is felt, not watched: the view rides your head,
+  // so it dips and lunges with it — not thrown about with the whole dash)
+  if (pose.dodge !== undefined && a.isPlayer && a.game?.view3d?.rig?.mode === 'first') firstPersonDash(P, pose);
   if (pose.station && !pose.anim) stationPose(P, pose.station);
   if (!pose.anim && (a.held || a.eating) && !a.inWater) heldPose(P, a, env ? env.time : 0);
-  if (pose.blend && pose.blend.P) P = blendPose(pose.blend.P, P, pose.blend.k);
+  // (eased, not linear: a blend between two moves starts and ends gently, as the moves themselves do)
+  if (pose.blend && pose.blend.P) { const k = pose.blend.k; P = blendPose(pose.blend.P, P, k * k * (3 - 2 * k)); }
   pose.P = P;
   a._lastP = P; a._lastPose = pose; a._lastLook = look;
   return { pose, P };
 }
 
 /**
- * A dash in first person: low and leaning into it (forwards), or rocked back
- * on the heels (a backstep) — the tucked roll's crouch and stride without the
- * roll itself.
+ * A dash in first person: the dash's crouch and lean, toned down (your eyes
+ * ride your head: thrown forward with the whole lunge, the view would pitch
+ * at the ground), and no hop off the ground.
  */
 function firstPersonDash(P, pose) {
-  const e = Math.sin(pose.dodge * Math.PI), fwd = (pose.dodgeDir || 1) > 0;
   P.r = 0;
-  P.b = [0, 0.18 * e];
-  P.l = (fwd ? 0.32 : -0.16) * e;
-  P.fF = fwd ? [0.3, 0] : [0.12, 0];
-  P.fB = fwd ? [-0.28, -0.04] : [-0.34, -0.02];
-  P.hF = [0.24, 0.12]; P.hB = [-0.18, 0.14];
+  P.l = (P.l || 0) * 0.6;
+  P.z = (P.z || 0) * 0.3;
+  P.b = [P.b[0] * 0.5, P.b[1]];
 }
 
 // ------------------------------------------------------------------ food in hand
@@ -177,7 +174,7 @@ export function rigOptions(a, pose, P, o = {}) {
   const A = pose.anim;
   o.tilt = A && A.sweep && A.limb !== 'fF' && A.limb !== 'fB' ? A.sweep * 0.5 : 0;
   o.walkRel = null;
-  if (pose.moving && (!A || !A.legs) && pose.dodge === undefined && pose.state !== 'knocked') {
+  if (pose.moving && (!A || !A.legs) && pose.dodge === undefined && pose.state !== 'knocked' && !pose.flight) {
     const sp = Math.hypot(a.vx || 0, a.vy || 0);
     if (sp > 0.3) o.walkRel = Math.atan2(a.vy, a.vx) - a.facing;
   }
@@ -194,18 +191,22 @@ export function rigOptions(a, pose, P, o = {}) {
   if (pose.swimming) o.walkRel = null; // the legs kick, they don't walk
   o.roll = 0;
   o.lift = ((P.z || 0) + (pose.z || 0)) * 1.3;
-  o.squash = pose.squash || 1;
+  o.squash = (pose.squash || 1) * (P.sq || 1);
   if (pose.toon) o.squash *= 1 + Math.sin((pose.time || 0) * 9) * 0.05;
   o.moving = !!pose.moving;
   o.sprint = !!pose.sprint;
-  o.flow = pose.moving ? (pose.sprint ? 0.55 : 0.25) : 0;
+  o.flow = pose.flight ? Math.min(0.9, (pose.flight.speed || 0) / 14) : pose.moving ? (pose.sprint ? 0.55 : 0.25) : 0;
   o.time = pose.time || 0;
   o.armed = !!pose.armed;
   o.armament = !!pose.armament;
   o.blade = pose.blade || null; o.bladeB = pose.bladeB || null; o.bladeLen = pose.bladeLen || 1;
-  // a side-step leans into the slide
+  // a side-step leans into the slide (as much as the dash goes sideways)
   o.sideRoll = 0;
-  if (pose.dodge !== undefined && pose.dodgeSide !== undefined && Math.abs(pose.dodgeDir) <= 0.35) o.sideRoll = Math.sign(pose.dodgeSide) * 0.38 * Math.sin(pose.dodge * Math.PI);
+  if (pose.dodge !== undefined && pose.dodgeSide !== undefined) {
+    const n = Math.hypot(pose.dodgeDir || 0, pose.dodgeSide) || 1, s = pose.dodgeSide / n;
+    const lean = pose.dodgeKind === 'heavy' ? 0.22 : pose.dodgeKind === 'wing' || pose.dodgeKind === 'glide' ? 0.45 : 0.34;
+    o.sideRoll = Math.sign(s) * s * s * lean * Math.sin(Math.min(1, pose.dodge / 0.85) * Math.PI);
+  }
   // everyday poses: arms folded across the chest, a seat under you, something in your hand
   if (pose.activity === 'lean') o.spread = -0.17;
   o.seatH = pose.activity === 'sit' || pose.activity === 'fish' ? pose.seatH || 0 : null;
