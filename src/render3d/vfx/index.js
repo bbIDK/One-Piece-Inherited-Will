@@ -140,6 +140,7 @@ export class VFX {
     // (first person: nothing within about a metre of the eye — your own hands, a shot just leaving them)
     SHARED.uNearA.value = this.fp ? 0.75 : 0.25;
     SHARED.uNearB.value = this.fp ? 1.3 : 0.8;
+    SHARED.uFlashMax.value = this.fp ? 0.45 : 0.9;
     // how far hit flashes are pulled toward the camera (third person: past your own back)
     this.pull = this.fp ? 0.6 : 2.6;
 

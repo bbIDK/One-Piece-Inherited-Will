@@ -114,6 +114,7 @@ export const SHARED = {
   uTime: { value: 0 },
   uNearA: { value: 0.35 }, // m from the camera: invisible this close…
   uNearB: { value: 1.1 }, //  …fully there from here (first person: your own hands and body)
+  uFlashMax: { value: 0.9 }, // a flash's half-size at most this × its distance (no flash fills the view)
   uSunV: { value: new THREE.Vector3(0.3, 0.8, 0.5) }, // the sun in view space (puffs, solids)
   uSunW: { value: new THREE.Vector3(0.3, 0.8, 0.5) }, // …and in the world
   uSunCol: { value: new THREE.Color(1, 0.95, 0.85) },

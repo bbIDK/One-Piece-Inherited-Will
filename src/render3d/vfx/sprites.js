@@ -18,6 +18,7 @@ export const SK = {
 const VS = /* glsl */`
   ${VS_COMMON}
   attribute vec4 iPos, iCol, iCol2, iPrm, iVel;
+  uniform float uFlashMax;
   varying vec2 vUv;
   varying vec4 vCol, vCol2, vPrm, vX;
   varying float vTame;
@@ -45,6 +46,9 @@ const VS = /* glsl */`
         mv.xyz *= d1 / d0;
         size *= d1 / d0;
       }
+      // (a flash right in front of the camera — a counter landing at arm's
+      // length in first person — is kept to a part of the view)
+      if (kind == ${SK.GLOW} || kind == ${SK.STAR} || kind == ${SK.BURST} || kind == ${SK.FLASH}) size = min(size, length(mv.xyz) * uFlashMax);
       float c = cos(iPrm.y), s = sin(iPrm.y);
       off = mat2(c, s, -s, c) * q * size;
       // soft round things are drawn a little toward the camera, so the
