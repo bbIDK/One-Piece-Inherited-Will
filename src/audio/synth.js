@@ -123,7 +123,7 @@ export class Voice {
     f.type = 'bandpass'; f.Q.value = q;
     f.frequency.setValueAtTime(minF(f0 * this.pj), t);
     f.frequency.exponentialRampToValueAtTime(minF(f1 * this.pj), t + dur);
-    const g = c.createGain();
+    const g = c.createGain(); g.gain.value = 0;
     const p = Math.max(0.01, dur * peak);
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(gain, t + p);
@@ -164,6 +164,7 @@ export class Voice {
     if (rate1) src.playbackRate.linearRampToValueAtTime(rate1 / 90, t + dur);
     // (the resonances pass only a sliver of each click: made up here so `gain` is about the peak heard)
     const g = c.createGain(), mk = 18;
+    g.gain.value = 0;
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(gain * mk, t + dur * attack);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -184,7 +185,7 @@ export class Voice {
   zap(dt, dur, { f0 = 70, f1 = 600, gain = 0.12, step = 0.012, type = 'square', hp = 300, dest } = {}) {
     const c = this.c, t = this.at(dt);
     const o = c.createOscillator(); o.type = type;
-    const g = c.createGain();
+    const g = c.createGain(); g.gain.value = 0;
     const h = c.createBiquadFilter(); h.type = 'highpass'; h.frequency.value = hp;
     g.gain.setValueAtTime(0.0001, t);
     for (let k = 0; k * step < dur; k++) {
@@ -228,7 +229,7 @@ export class Voice {
       m.frequency.value = warble; mg.gain.value = f0 * 0.06;
       m.connect(mg); mg.connect(o.frequency); m.start(t); m.stop(t + dur + 0.02);
     }
-    const g = c.createGain();
+    const g = c.createGain(); g.gain.value = 0;
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(gain, t + dur * 0.3);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -258,6 +259,9 @@ export class Voice {
 /** An envelope on gain `p`: up in `attack` (exponential or linear), held, then down to nothing by `dur`. */
 export function env(p, t, attack, hold, dur, gain, curve = 'exp') {
   const a = Math.max(0.0008, Math.min(attack, dur * 0.9));
+  // (silent until it starts: a gain's default is 1, and a source starting between
+  // two samples can slip one frame out before the envelope's first event — a click)
+  p.value = 0;
   p.setValueAtTime(0.0001, t);
   if (curve === 'lin') p.linearRampToValueAtTime(gain, t + a);
   else p.exponentialRampToValueAtTime(Math.max(0.00011, gain), t + a);

@@ -97,7 +97,7 @@ export class Music {
   /** One note on an instrument into `bus` (a deck's stem). */
   inst(kind, t, dur, midi, vol, bus, o = {}) {
     const c = this.ctx, f = 440 * Math.pow(2, (midi - 69) / 12);
-    const g = c.createGain();
+    const g = c.createGain(); g.gain.value = 0; // (silent till its note: see synth.js env)
     g.connect(bus);
     const osc = (type, freq, gain = 1, detune = 0) => {
       const n = c.createOscillator(); n.type = type; n.frequency.value = freq; n.detune.value = detune;
@@ -166,7 +166,7 @@ export class Music {
       // the mallet (or the plectrum) itself
       const src = c.createBufferSource(); src.buffer = this.E.white;
       const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = S.click; bp.Q.value = 1.5;
-      const cg = c.createGain(); cg.gain.setValueAtTime(vol * 0.35, t); cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.012);
+      const cg = c.createGain(); cg.gain.value = 0; cg.gain.setValueAtTime(vol * 0.35, t); cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.012);
       src.connect(bp); bp.connect(cg); cg.connect(g); src.start(t, Math.random()); src.stop(t + 0.02);
     }
     g.gain.setValueAtTime(0.0001, t);
@@ -219,7 +219,7 @@ export class Music {
       // breath: at the start of each note (all the way through, for a shakuhachi)
       const src = c.createBufferSource(); src.buffer = this.E.white; src.loop = true;
       const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f * 2; bp.Q.value = 2;
-      const bg = c.createGain();
+      const bg = c.createGain(); bg.gain.value = 0;
       const len = B.breathHold ? dur : 0.12;
       bg.gain.setValueAtTime(vol * B.breath, t); bg.gain.exponentialRampToValueAtTime(vol * B.breath * (B.breathHold ? 0.5 : 0.001), t + len);
       if (B.breathHold) bg.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.2);
@@ -232,7 +232,7 @@ export class Music {
   drum(t, kind, bus, vol = 1, midi = 40) {
     const c = this.ctx;
     const tone = (f0, f1, dur, gain, type = 'sine') => {
-      const o = c.createOscillator(), g = c.createGain(); o.type = type;
+      const o = c.createOscillator(), g = c.createGain(); o.type = type; g.gain.value = 0;
       o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.8);
       g.gain.setValueAtTime(gain * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
       o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 0.02);
@@ -240,7 +240,7 @@ export class Music {
     const hiss = (type, freq, dur, gain, q = 1) => {
       const src = c.createBufferSource(); src.buffer = this.E.white;
       const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
-      const g = c.createGain();
+      const g = c.createGain(); g.gain.value = 0;
       g.gain.setValueAtTime(gain * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
       src.connect(f); f.connect(g); g.connect(bus); src.start(t, Math.random()); src.stop(t + dur + 0.02);
     };
