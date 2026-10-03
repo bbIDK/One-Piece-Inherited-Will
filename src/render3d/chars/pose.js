@@ -182,7 +182,12 @@ export function rigOptions(a, pose, P, o = {}) {
     if (sp > 0.3) o.walkRel = Math.atan2(a.vy, a.vx) - a.facing;
   }
   o.spread = 0; o.legSpread = 0; o.leanAdd = 0; o.tiltAdd = 0; o.lying = 0; o.bounce = 0; o.headRoll = 0; o.grip2 = 0; o.grip2K = 1;
-  if (pose.state === 'hurt') o.tiltAdd = -0.25;
+  // (staggered by a blow with no telling where it came from, the head's thrown back; a
+  // blow from somewhere has its own flinch: render/anims.js)
+  if (pose.state === 'hurt' && pose.hitAge === undefined && !pose.flinch) o.tiltAdd = -0.25;
+  // getting up after a knockdown starts from the ground: still tipped back as
+  // it sits up (render/anims.js getUpPose), righting itself as a knee comes under it
+  if (pose.getUp !== undefined && pose.state !== 'knocked') { const k = Math.max(0, 1 - pose.getUp / 0.3); o.lying = k * k * 0.9; }
   if (pose.swimming && (pose.swim === 'tread' || !pose.swim)) o.leanAdd = 0.2;
   if (pose.swimming && P.spread) o.spread = P.spread;
   if (pose.swimming && P.legSpread) o.legSpread = P.legSpread; // (the frog kick's knees and feet apart)

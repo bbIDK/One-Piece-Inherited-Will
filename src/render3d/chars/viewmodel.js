@@ -315,9 +315,12 @@ class Viewmodel {
     // own shift is taken out (kept, a lunge carried them out ahead of your
     // eyes twice over, an arm's length down your line of sight).
     if (PP.b && (PP.b[0] || PP.b[1])) PP = { ...PP, b: [0, 0] };
+    // (and the trunk's sideways bend — a flinch, a reel — would roll your arms
+    // round your line of sight: only a little of it reaches them)
+    if (PP.ls) PP = { ...PP, ls: PP.ls * 0.3 };
     // the body lean mostly stays out of first person
     o.leanAdd = -(PP.l || 0) * 0.55;
-    o.lift = 0; o.roll = 0; o.squash = 1;
+    o.lift = 0; o.roll = 0; o.squash = 1; o.lying = 0;
     // Gum-Gum: the arm stretches out to the fist in flight
     o.reachR = holdAt || (p.fruit === 'gomu' ? this.stretch(p, ctx) : null);
     m.pose(PP, o);

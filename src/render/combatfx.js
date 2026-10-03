@@ -1441,7 +1441,11 @@ function defaultCharge(def, actor, elem, st) {
 /**
  * Renderer extras for an actor this frame: element glow on the striking
  * limb, energy blades, charge-ups, flurries, Diable Jambe legs, Haki legs,
- * Gear 4 bounce and Gear 5 toon wobble.
+ * Gear 4 bounce and Gear 5 toon wobble — and the clocks of what the body
+ * reacts to (render/anims.js): a blow taken on the guard (blockHitAge),
+ * Armament Haki just coated on (armOn), and where the last blow came from
+ * (flinch: { age, rel, w }, the hit's own record, for when the pose has no
+ * hitAge of its own).
  */
 export function actorVisuals(actor, act, clip) {
   const out = {};
@@ -1452,6 +1456,16 @@ export function actorVisuals(actor, act, clip) {
   if (actor.armament && (actor.style === 'black_leg' || actor.style === 'okama_kenpo')) out.armLegs = true;
   if (bufs.some((b) => b.id === 'gear4')) out.bounce = true;
   if (bufs.some((b) => b.id === 'gear5')) out.toon = true;
+  const now = actor.game?.env?.time;
+  if (now !== undefined) {
+    if (actor.blocking && actor._blockFlash !== undefined && now - actor._blockFlash >= 0 && now - actor._blockFlash < 0.3) out.blockHitAge = now - actor._blockFlash;
+    // (switched on, not there from the start: someone who always wears it doesn't flex at you)
+    if (actor.armament && actor._armWas === false) actor._armOnT = now;
+    actor._armWas = !!actor.armament;
+    if (actor._armOnT !== undefined && now - actor._armOnT < 0.6) out.armOn = now - actor._armOnT;
+    const hf = actor.hitFx;
+    if (hf && now - hf.t0 >= 0 && now - hf.t0 < 0.8) out.flinch = { age: now - hf.t0, rel: Math.atan2(Math.sin(hf.ang - (actor.facing || 0)), Math.cos(hf.ang - (actor.facing || 0))), w: hf.w };
+  }
   if (!act || !clip) return out;
   const def = act.def;
   const w = def.windup ?? 0.1;

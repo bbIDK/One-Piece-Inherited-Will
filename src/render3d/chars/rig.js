@@ -8,6 +8,17 @@
 // is added in 3D: hands drift to the centre line as they reach forward,
 // elbows flare out, strikes twist the chest, and blade arcs tilt into
 // diagonals (the clip's sweep) so combos cross in X patterns.
+//
+// The pose may also turn what the side plane can't show (all optional, 0 if
+// absent): tw / hp the chest's and the pelvis's turn (radians, + brings the
+// right shoulder or hip forward) on top of what the hands' and feet's reach
+// gives them — so a cross can lead with the hips and drive the shoulder
+// through; ls a sideways bend of the trunk (+ toward the right); hy / hr the
+// head's turn and roll on the neck (+ toward the left, + onto the right
+// shoulder); zF / zB and zfF / zfB how far a hand or a foot is carried out to
+// its own side (2D units, + outward: a hook swung wide, arms flung open);
+// smF / smB / smfF / smfB a limb's smear — the blow overreaching itself by
+// that share of its length for a frame or two, the snap of a strike.
 import * as THREE from 'three';
 import { B } from './bones.js';
 
@@ -116,11 +127,16 @@ export class Rig {
     const hip = this.hip;
     const hF = toXY(P.hF, [0.05, 0.4]), hB = toXY(P.hB, [-0.03, 0.4]);
     const fF = P.fF || [0.05, 0], fB = P.fB || [-0.05, 0];
-    const twist = clamp((hF[0] - hB[0]) * 0.85, -0.5, 0.5) * (o.twistK ?? 1);
-    const ptw = clamp((fF[0] - fB[0]) * 0.45, -0.3, 0.3) * (o.twistK ?? 1);
+    const tk = o.twistK ?? 1;
+    // (the turn the reach gives, and the pose's own on top: the hips drive, the shoulders follow)
+    const twist = clamp(clamp((hF[0] - hB[0]) * 0.85, -0.5, 0.5) + (P.tw || 0), -1.35, 1.35) * tk;
+    const ptw = clamp(clamp((fF[0] - fB[0]) * 0.45, -0.3, 0.3) + (P.hp || 0), -1.1, 1.1) * tk;
+    const bend = P.ls || 0;
     this.qLean.setFromAxisAngle(Z, -l);
+    if (bend) this.qLean.multiply(_qa.setFromAxisAngle(X, bend));
     this.qChest.setFromAxisAngle(Y, twist).multiply(this.qLean);
     this.qPelvis.setFromAxisAngle(Y, ptw).multiply(_qa.setFromAxisAngle(Z, -l * 0.25));
+    if (bend) this.qPelvis.multiply(_qa.setFromAxisAngle(X, bend * 0.3));
     this.pos[B.hips].copy(hip); this.quat[B.hips].copy(this.qPelvis);
     this.pos[B.chest].copy(hip); this.quat[B.chest].copy(this.qChest);
 
@@ -130,9 +146,11 @@ export class Rig {
     // (turned first, then nodded about its own axis: a head turned to the side
     // and bowed looks down over that shoulder)
     this.qHead.copy(this.qChest);
-    if (o.lookYaw) this.qHead.multiply(_qb.setFromAxisAngle(Y, o.lookYaw));
+    // (and the eyes stay on whoever's in front: the head turns back against most of the chest's turn)
+    const yaw = (o.lookYaw || 0) + (P.hy || 0) - twist * 0.75, roll = (o.headRoll || 0) + (P.hr || 0);
+    if (yaw) this.qHead.multiply(_qb.setFromAxisAngle(Y, yaw));
     this.qHead.multiply(_qa.setFromAxisAngle(Z, -tilt));
-    if (o.headRoll) this.qHead.multiply(_qb.setFromAxisAngle(X, o.headRoll));
+    if (roll) this.qHead.multiply(_qb.setFromAxisAngle(X, roll));
     this.pos[B.head].copy(this.neck); this.quat[B.head].copy(this.qHead);
     this.headC.set(d.hx || 0, d.hc, 0).applyQuaternion(this.qHead).add(this.neck);
 
@@ -154,8 +172,10 @@ export class Rig {
         const hx = h[0], hy = h[1];
         const fwdK = clamp(hx / 0.43, 0, 1);
         const restK = clamp(1 - hx / 0.2, 0, 1) * clamp(hy / 0.3, 0, 1);
-        // (at rest the arms hang a hand's breadth clear of the hips, not pinned to them)
-        const lat = side * (-d.shW * 0.74 * fwdK + 0.075 * restK + (o.spread || 0));
+        // (at rest the arms hang a hand's breadth clear of the hips, not pinned to them;
+        // a hand carried out to its side — a hook's arc, arms flung wide — goes on from there)
+        const out = (k === 0 ? P.zF : P.zB) || 0;
+        const lat = side * (-d.shW * 0.74 * fwdK * clamp(1 - out * 3, 0, 1) + 0.075 * restK + (o.spread || 0) + out * d.kA);
         T.set(hx * d.kA, -hy * d.kA, lat);
         if (tiltA) T.applyAxisAngle(X, tiltA * side);
         T.applyQuaternion(this.qLean).add(S);
@@ -173,6 +193,15 @@ export class Rig {
         // and off by o.grip2K
         if (k === 1 && o.grip2 && o.grip2K > 0) T.lerp(_g2.copy(this.E[0]).addScaledVector(this.blade[0], o.grip2), o.grip2K);
       }
+      // a blow at full stretch overreaches itself for a frame or two (its smear)
+      let stretch = !!P.stretch || !!reach;
+      const sm = (k === 0 ? P.smF : P.smB) || 0;
+      if (sm > 0 && !stretch) {
+        _t.subVectors(T, S);
+        const L = d.A1 + d.A2, dist = _t.length();
+        const out = clamp((dist / L - 0.8) / 0.2, 0, 1);
+        if (out > 0 && dist > 1e-4) { T.copy(S).addScaledVector(_t, L * (1 + sm * out) / dist); stretch = true; }
+      }
       // elbow pole: the 2D bend side in the swing plane, flared outward
       const e = k === 0 ? (P.eF ?? 1) : (P.eB ?? 1);
       _t.subVectors(T, S);
@@ -184,7 +213,7 @@ export class Rig {
       // would flip over as the body bobs, and the whole arm and the palm with it)
       if (reach) this._pole.set(-0.75, -0.65, side * 0.45);
       if (o.att && o.attK > 0 && !reach && !(k === 1 && (broom || (o.grip2 && o.grip2K > 0.5)))) this._pole.lerp(_attP, o.attK);
-      ik(S, T, d.A1, d.A2, this._pole, e === 0 ? 0 : e, !!P.stretch || !!reach, J, E);
+      ik(S, T, d.A1, d.A2, this._pole, e === 0 ? 0 : e, stretch, J, E);
       const U = k === 0 ? B.uarmR : B.uarmL, F = k === 0 ? B.farmR : B.farmL, Hd = k === 0 ? B.handR : B.handL;
       this.pos[U].copy(S); aimNegY(this.quat[U], _t.subVectors(J, S), this._pole);
       this.len[U] = clamp(S.distanceTo(J) / d.A1, 0.5, 8);
@@ -211,6 +240,8 @@ export class Rig {
         this.blade[k].set(Math.cos(w), -Math.sin(w), 0);
         this.plane[k].set(0, 0, 1);
         if (tiltA) { this.blade[k].applyAxisAngle(X, tiltA * side); this.plane[k].applyAxisAngle(X, tiltA * side); }
+        // (rolled about the reach: a blade held up across the face, two of them crossed)
+        if (P.wt) { this.blade[k].applyAxisAngle(X, -P.wt * side); this.plane[k].applyAxisAngle(X, -P.wt * side); }
         this.blade[k].applyQuaternion(this.qLean); this.plane[k].applyQuaternion(this.qLean);
         this.bladeOn[k] = true;
       } else {
@@ -239,7 +270,7 @@ export class Rig {
       const f = k === 0 ? fF : fB;
       const Hj = _c.set(0, -0.07, side * d.hipW).applyQuaternion(this.qPelvis).add(hip);
       const T = this._T;
-      let fx = f[0] * d.kL, fz = side * (d.hipW + 0.012 + (o.legSpread || 0));
+      let fx = f[0] * d.kL, fz = side * (d.hipW + 0.012 + (o.legSpread || 0) + ((k === 0 ? P.zfF : P.zfB) || 0) * d.kL);
       if (walk !== undefined && walk !== null) {
         // (stepping sideways the stride is a little shorter, and each foot
         // keeps to its own side: the trailing foot closes up to the leading
@@ -249,15 +280,24 @@ export class Rig {
       }
       T.set(hip.x + fx, d.hA + Math.max(0, -f[1] * d.kL), fz);
       _t.subVectors(T, Hj);
+      // (a kick's smear: the leg out at full stretch overreaches itself, as an arm's blow does)
+      const sm = (k === 0 ? P.smfF : P.smfB) || 0;
+      let reachOut = false;
+      if (sm > 0) {
+        const L = d.T1 + d.T2, dist = _t.length();
+        const out = clamp((dist / L - 0.8) / 0.2, 0, 1);
+        if (out > 0 && dist > 1e-4) { T.copy(Hj).addScaledVector(_t, L * (1 + sm * out) / dist); _t.subVectors(T, Hj); reachOut = true; }
+      }
       const lxy = Math.hypot(_t.x, _t.y) || 1;
       this._pole.set(-_t.y / lxy, _t.x / lxy, side * 0.12);
       const Kn = this.K[k], Ft = this.F[k];
       const Hs = this.pos[k === 0 ? B.thighR : B.thighL].copy(Hj);
-      ik(Hs, T, d.T1, d.T2, this._pole, 1, false, Kn, Ft);
+      ik(Hs, T, d.T1, d.T2, this._pole, 1, reachOut, Kn, Ft);
       const Th = k === 0 ? B.thighR : B.thighL, Sh = k === 0 ? B.shinR : B.shinL, Fo = k === 0 ? B.footR : B.footL;
       aimNegY(this.quat[Th], _t.subVectors(Kn, Hs), this._pole);
       this.pos[Sh].copy(Kn); aimNegY(this.quat[Sh], _t.subVectors(Ft, Kn), this._pole);
-      this.len[Th] = 1; this.len[Sh] = 1;
+      this.len[Th] = reachOut ? clamp(Hs.distanceTo(Kn) / d.T1, 1, 1.5) : 1;
+      this.len[Sh] = reachOut ? clamp(Kn.distanceTo(Ft) / d.T2, 1, 1.5) : 1;
       // foot: flat on the ground, following the shin when raised (pointed kicks)
       _u.subVectors(Ft, Kn).normalize();
       const raise = clamp((Ft.y - d.hA) / 0.28, 0, 1);
