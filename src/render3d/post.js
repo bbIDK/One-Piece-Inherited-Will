@@ -157,6 +157,14 @@ export class Post {
   /** How far out outlines are drawn (m): short under water, where the fog swallows the view. */
   setInkFar(v) { if (this.scenePass) this.scenePass.material.uniforms.uInkFar.value = v; }
 
+  /** The weather's grading: { sat, contrast } as shares of the house look (1, 1: a fine day). */
+  setGrade(g) {
+    if (!this.scenePass || !g) return;
+    const u = this.scenePass.material.uniforms;
+    u.uSat.value = 1.12 * g.sat;
+    u.uContrast.value = 1.06 * g.contrast;
+  }
+
   /** The impact frame (0..1) and its tint. */
   setImpact(k, color) {
     if (!this.scenePass) return;

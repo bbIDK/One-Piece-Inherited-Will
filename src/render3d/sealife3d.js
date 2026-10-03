@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { registerFrameHook } from './registry.js';
 import { toon, addOutline, toonGradient } from './materials.js';
+import { FOG } from './fog.js';
 
 const TAU = Math.PI * 2;
 const MAX_FISH = 260;
@@ -80,6 +81,7 @@ const uTime = { value: 0 };
 function fishMaterial() {
   const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient(), side: THREE.DoubleSide });
   m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, FOG);
     sh.uniforms.uTime = uTime;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nuniform float uTime;\nattribute float aEye;\nvarying float vEye;')

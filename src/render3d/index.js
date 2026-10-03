@@ -236,6 +236,7 @@ export class Renderer3D {
     this.quality = q;
     this.renderer.shadowMap.enabled = q !== 'low';
     this.sky.sun.castShadow = q !== 'low';
+    this.sky.setDetail(q);
     this.terrain.setDetail?.(q);
     this.water.setDetail?.(q);
     this.vfx?.setQuality(q);
@@ -434,7 +435,7 @@ export class Renderer3D {
     this.sky.inBubble = this.dome.update(w, ox, oy, env, cam);
     this.sky.update(env, w, sailing);
     this.sky.mesh.position.copy(cam.position);
-    this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
+    this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top, this.sky.overcast);
     // (no sea inside the hull you're aboard: from her hold you'd see it across the room)
     const hs = p.deck?.ship || (sailing ? p.ship : null);
     // (nor while she's diving: going under, the sea closes over her)
@@ -468,7 +469,7 @@ export class Renderer3D {
     // effects layer scale: pixels per metre at arm's length in front of the camera
     const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
     this.proj.cam.zoom = f / 7;
-    if (this.post) this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor);
+    if (this.post) { this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor); this.post.setGrade(this.sky.grade); }
     this.fadeCameraProps(dt);
     prof('r.misc', t0); t0 = performance.now();
     this.draw(cam);
@@ -590,7 +591,8 @@ export class Renderer3D {
     this.sky.maxFar = this.terrain.extent;
     this.sky.update(env, w, true);
     this.sky.mesh.position.copy(cam.position);
-    this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top);
+    this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top, this.sky.overcast);
+    this.post?.setGrade(this.sky.grade);
     this.terrain.update(ox, oy);
     this.sky.shadowAt(0, gh, 0, Math.cos(yaw), Math.sin(yaw), ox, oy);
     this.updateProps(game, ox, oy, env, true);
@@ -965,8 +967,10 @@ export class Renderer3D {
     }
     const faded = fadeWarmUp();
     zoo.add(faded);
-    // (the effects layer's batches too, hidden while empty)
+    // (the effects layer's batches too, hidden while empty, and the weather's rain, snow, sand, mist and lightning)
     this.vfx.warmBegin();
+    this.precip?.warm(true);
+    this.mist?.warm(true);
     // (the ships' materials aren't disposed: that would drop the compiled shaders again)
     try {
       if (this.parallelCompile) {
@@ -978,6 +982,8 @@ export class Renderer3D {
       }
     } catch (e) { console.warn('shader warm-up failed', e); }
     this.vfx.warmEnd();
+    this.precip?.warm(false);
+    this.mist?.warm(false);
     faded.userData.spare();
   }
 

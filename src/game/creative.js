@@ -29,7 +29,7 @@ const HELP = [
   'tp <island> — go to an island (part of its name will do)',
   'tp <x> <y> — go to a spot on the chart',
   'time <0-24> — set the hour',
-  'weather clear | rain | storm — change the weather',
+  'weather clear | rain | storm | snow | fog | heat | dust | sandstorm | calm | … — change the weather',
   'give <item> [how many] — e.g. give meat 5',
   'fruit <name> — a Devil Fruit, e.g. fruit gomu',
   'race <name> — become another race, e.g. race mink',
@@ -330,7 +330,11 @@ export function installCreative(game) {
       return `It's ${game.env.clockString()}.`;
     },
     setWeather(kind) {
-      const k = WEATHER[kind], env = game.env;
+      const env = game.env;
+      // (the weather's own kinds: game/weather.js; and the old names)
+      const named = kind === 'sun' ? 'clear' : kind;
+      if (env.setWeather?.(named, { now: true, dur: 240 })) return `The weather turns: ${env.forecast.toLowerCase()}.`;
+      const k = WEATHER[kind];
       if (k === undefined) return '';
       env.stormTarget = k; env.storm = k; env.weatherTimer = 240;
       return `The weather turns: ${kind}.`;

@@ -7,7 +7,11 @@
 //    far sea melts into the sky;
 //  * light scattering: the haze glows warm toward the sun;
 //  * a guarantee: the fog is complete at the render distance (scene.fog.far),
-//    so terrain, props and ships never visibly pop in or out.
+//    so terrain, props and ships never visibly pop in or out;
+//  * the weather's mists (mist3d.js sets them): a second, much lower layer —
+//    windborne sand, blowing snow, the murk of heavy rain — tinted its own
+//    colour, thickest at the ground, broken into banks that drift with the
+//    wind (two taps of the sky's noise where the ray ends).
 //
 // Every built-in material with `fog: true` gets it automatically, and so does
 // any ShaderMaterial that includes the fog chunks (water, ...). The extra
@@ -22,6 +26,13 @@ export const FOG = {
   fogDensity2: { value: 0.0012 }, // extinction per metre at the base height
   fogHeightK: { value: 0.03 }, // how fast it thins with height (per metre)
   fogBase: { value: 0 }, // height of the densest layer (sea level)
+  // the weather's mist: x its thickness per metre at the ground, y how fast it
+  // thins with height (per metre), z how patchy it is, w how much of it there is
+  fogMist: { value: new THREE.Vector4(0, 0.2, 0, 0) },
+  fogMistCol: { value: new THREE.Color(0.8, 0.8, 0.8) },
+  fogMistBase: { value: 0 }, // the height it lies on (the ground where you are)
+  fogMistO: { value: new THREE.Vector4() }, // where the view sits in the world (wrapped), and the drift
+  fogNoise: { value: null }, // (the sky's noise: skynoise.js)
 };
 
 THREE.ShaderChunk.fog_pars_vertex = /* glsl */`
@@ -50,6 +61,11 @@ THREE.ShaderChunk.fog_pars_fragment = /* glsl */`
   uniform float fogDensity2;
   uniform float fogHeightK;
   uniform float fogBase;
+  uniform vec4 fogMist;
+  uniform vec3 fogMistCol;
+  uniform float fogMistBase;
+  uniform vec4 fogMistO;
+  uniform sampler2D fogNoise;
 #endif
 `;
 THREE.ShaderChunk.fog_fragment = /* glsl */`
@@ -72,6 +88,18 @@ THREE.ShaderChunk.fog_fragment = /* glsl */`
   float fogSun = pow(max(dot(fogDir, fogSunDir), 0.0), 6.0);
   vec3 fogCol = mix(fogColor, fogSunColor, fogSun * 0.5);
   gl_FragColor.rgb = mix(gl_FragColor.rgb, fogCol, clamp(fogFactor, 0.0, 1.0));
+  // the weather's mist, low on the ground, in drifting banks
+  if (fogMist.w > 0.0) {
+    float mKdy = fogMist.y * vFogRay.y;
+    float mHf = abs(mKdy) > 1e-3 ? (1.0 - exp(-mKdy)) / mKdy : 1.0;
+    float mOpt = fogMist.x * exp(-fogMist.y * max(cameraPosition.y - fogMistBase, -20.0)) * mHf * fogDist;
+    if (fogMist.z > 0.0) {
+      vec2 mP = (cameraPosition.xz + vFogRay.xz + fogMistO.xy) / 96.0 + fogMistO.zw;
+      float mN = texture2D(fogNoise, mP).r * 0.6 + texture2D(fogNoise, mP * 3.0 + 0.37).g * 0.4;
+      mOpt *= mix(1.0, smoothstep(0.28, 0.72, mN) * 1.9, fogMist.z);
+    }
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, fogMistCol, clamp((1.0 - exp(-mOpt)) * fogMist.w, 0.0, 1.0));
+  }
 #endif
 `;
 

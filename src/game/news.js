@@ -70,7 +70,8 @@ export function installWorld(game) {
         else game.log('Your bow cuts through the wave. Well steered!', '#a5d6a7');
       }, 3500);
     } else {
-      env.stormTarget = 0; env.storm *= 0.3;
+      env.setWeather?.('clear', { dur: 60 + Math.random() * 60 });
+      env.stormTarget = 0; env.storm *= 0.3; env.cloud *= 0.5;
       game.log('The storm vanishes as suddenly as it came. Blue sky.', '#90caf9');
     }
   };

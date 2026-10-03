@@ -4,10 +4,13 @@
 // and it stops where something is in the way — a roof (nothing falls indoors
 // or under the eaves; from inside you watch it come down past the door), or
 // the ground, where each drop bursts into a splash, or a ring on the water.
-// Snow drifts down slowly, swaying, and settles where it lands. In a storm,
-// lightning forks down out of the clouds on the horizon.
+// Snow drifts down slowly, swaying, and settles where it lands (ash from a
+// volcano too, grey). On a desert wind, sand streaks along the ground. In a
+// storm, lightning forks down out of the clouds to the sea. (The weather's
+// mists: mist3d.js.)
 import * as THREE from 'three';
 import { registerFrameHook } from './registry.js';
+import './mist3d.js';
 import { heightsOf } from '../world/interiors.js';
 import { bfoot } from '../world/bframe.js';
 
@@ -272,68 +275,169 @@ class Splashes {
 }
 
 // ---------------------------------------------------------------- lightning
+// A fork from the clouds down to the sea where the weather's bolt struck
+// (env.strike: which way, how far), built once per bolt into one buffer kept
+// for it: a jagged main channel (each segment split in two with its middle
+// pushed aside, again and again, for the zigzag) and a few branches dying out
+// in mid-air, each drawn twice — a thin white-hot core (HDR: the bloom on
+// 'high' catches it) and a wide violet-blue glow. The leader runs down first
+// and the stroke flashes after it (as Sea of Thieves animates its strikes),
+// the branches go before the main channel, and it flickers with the
+// stroke's pulses (env.lightning).
+const BOLT_V = 3600; // vertices (6 a segment, two layers)
+
+const BOLT_VS = /* glsl */`
+  attribute vec3 aInfo; // glow (1) or core (0), how far down the main channel (0..1), a branch (1)
+  attribute float aSide;
+  varying vec3 vInfo;
+  varying float vSide;
+  void main() {
+    vInfo = aInfo;
+    vSide = aSide;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+const BOLT_FS = /* glsl */`
+  uniform vec3 uCore, uGlow;
+  uniform float uLead, uFlash, uBranch;
+  varying vec3 vInfo;
+  varying float vSide;
+  void main() {
+    if (vInfo.y > uLead) discard;
+    float across = 1.0 - abs(vSide);
+    float a = vInfo.x > 0.5 ? across * across * 0.55 : smoothstep(0.0, 0.5, across);
+    a *= uFlash * (vInfo.z > 0.5 ? uBranch : 1.0);
+    if (a < 0.003) discard;
+    gl_FragColor = vec4((vInfo.x > 0.5 ? uGlow : uCore) * a, a);
+  }
+`;
+
 class Lightning {
   constructor(scene) {
-    this.mat = new THREE.MeshBasicMaterial({ color: 0xdfe8ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
-    this.mesh = null;
-    this.scene = scene;
-    this.last = 0;
-  }
-
-  /** A jagged fork from the clouds to the sea, far off, as a ribbon of quads facing the camera. */
-  strike(cam, ox, oy, yaw) {
-    this.clear();
-    const a = yaw + (Math.random() - 0.5) * 1.8, dist = 160 + Math.random() * 220;
-    const bx = cam.position.x + Math.cos(a) * dist, bz = cam.position.z + Math.sin(a) * dist;
-    const pos = [];
-    const toCam = new THREE.Vector3();
-    const seg = (x0, y0, z0, x1, y1, z1, wd) => {
-      toCam.set(cam.position.x - (x0 + x1) / 2, cam.position.y - (y0 + y1) / 2, cam.position.z - (z0 + z1) / 2).normalize();
-      const d = new THREE.Vector3(x1 - x0, y1 - y0, z1 - z0).normalize();
-      const s = new THREE.Vector3().crossVectors(d, toCam).normalize().multiplyScalar(wd);
-      pos.push(x0 - s.x, y0 - s.y, z0 - s.z, x0 + s.x, y0 + s.y, z0 + s.z, x1 + s.x, y1 + s.y, z1 + s.z);
-      pos.push(x0 - s.x, y0 - s.y, z0 - s.z, x1 + s.x, y1 + s.y, z1 + s.z, x1 - s.x, y1 - s.y, z1 - s.z);
-    };
-    const bolt = (x, y, z, len, wd, depth) => {
-      const steps = Math.max(3, Math.round(len / 9));
-      const dx = (Math.random() - 0.5) * 0.5, dz = (Math.random() - 0.5) * 0.5;
-      for (let i = 0; i < steps && y > 0; i++) {
-        const l = len / steps;
-        const nx = x + (dx + (Math.random() - 0.5) * 0.9) * l, ny = y - l * (0.8 + Math.random() * 0.4), nz = z + (dz + (Math.random() - 0.5) * 0.9) * l;
-        seg(x, y, z, nx, Math.max(0, ny), nz, wd);
-        if (depth < 2 && Math.random() < 0.28) bolt(nx, ny, nz, len * 0.35, wd * 0.55, depth + 1);
-        x = nx; y = ny; z = nz;
-      }
-    };
-    bolt(bx, 130 + Math.random() * 40, bz, 150, 0.9, 0);
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    this.pos = new Float32Array(BOLT_V * 3);
+    this.info = new Float32Array(BOLT_V * 3);
+    this.side = new Float32Array(BOLT_V);
+    g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('aInfo', new THREE.BufferAttribute(this.info, 3).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('aSide', new THREE.BufferAttribute(this.side, 1).setUsage(THREE.DynamicDrawUsage));
+    g.setDrawRange(0, 0);
+    this.uniforms = {
+      uCore: { value: new THREE.Color(1.9, 1.95, 2.3) }, uGlow: { value: new THREE.Color(0.62, 0.62, 1.45) },
+      uLead: { value: 0 }, uFlash: { value: 0 }, uBranch: { value: 1 },
+    };
+    // (premultiplied: added on top of what's behind, never darkening it)
+    this.mat = new THREE.ShaderMaterial({
+      uniforms: this.uniforms, vertexShader: BOLT_VS, fragmentShader: BOLT_FS, transparent: true, depthWrite: false, depthTest: true,
+      blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, side: THREE.DoubleSide,
+    });
     this.mesh = new THREE.Mesh(g, this.mat);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 4;
-    this.scene.add(this.mesh);
+    this.mesh.visible = false;
+    scene.add(this.mesh);
+    this.t = -1e9; // (the bolt drawn: its env.strike time)
+    this.n = 0;
+    this.at = new THREE.Vector3();
+    this.toCam = new THREE.Vector3();
+    this.d = new THREE.Vector3();
+    this.s = new THREE.Vector3();
   }
 
-  update(env, ctx) {
-    const l = env.lightning || 0;
-    if (l > 0.9 && this.last <= 0.9 && ctx.world?.zone === 0) this.strike(ctx.camera, 0, 0, ctx.game?.view3d?.rig?.yaw ?? 0);
-    this.last = l;
-    if (this.mesh) {
-      // it flickers, and it's gone in a moment
-      this.mat.opacity = l > 0.35 ? (0.55 + 0.45 * Math.random()) * Math.min(1, (l - 0.35) * 2.2) : 0;
-      if (l <= 0.35) this.clear();
+  /** Builds the fork for this bolt: from the cloud base above (x, z) to the sea, seen from the camera. */
+  build(cam, S) {
+    let seed = S.seed >>> 0;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const ax = cam.position.x + Math.cos(S.angle) * S.dist, az = cam.position.z + Math.sin(S.angle) * S.dist;
+    const H = Math.min(430, Math.max(170, S.dist * 0.42));
+    const wCore = Math.max(0.9, S.dist * 0.0021), wGlow = wCore * 7;
+    this.n = 0;
+    const seg = (x0, y0, z0, x1, y1, z1, k0, k1, wd, branch) => {
+      for (const glow of [1, 0]) {
+        if (this.n + 6 > BOLT_V) return;
+        const w = glow ? wd * wGlow : wd * wCore;
+        this.toCam.set(cam.position.x - (x0 + x1) / 2, cam.position.y - (y0 + y1) / 2, cam.position.z - (z0 + z1) / 2).normalize();
+        this.d.set(x1 - x0, y1 - y0, z1 - z0).normalize();
+        this.s.crossVectors(this.d, this.toCam).normalize().multiplyScalar(w);
+        const s = this.s;
+        const v = [[x0 - s.x, y0 - s.y, z0 - s.z, -1, k0], [x0 + s.x, y0 + s.y, z0 + s.z, 1, k0], [x1 + s.x, y1 + s.y, z1 + s.z, 1, k1],
+          [x0 - s.x, y0 - s.y, z0 - s.z, -1, k0], [x1 + s.x, y1 + s.y, z1 + s.z, 1, k1], [x1 - s.x, y1 - s.y, z1 - s.z, -1, k1]];
+        for (const q of v) {
+          const i = this.n++;
+          this.pos[i * 3] = q[0]; this.pos[i * 3 + 1] = q[1]; this.pos[i * 3 + 2] = q[2];
+          this.side[i] = q[3];
+          this.info[i * 3] = glow; this.info[i * 3 + 1] = q[4]; this.info[i * 3 + 2] = branch ? 1 : 0;
+        }
+      }
+    };
+    // the main channel: midpoint displacement, angular as the anime draws it
+    const pts = [[ax, H, az], [ax + (rnd() - 0.5) * H * 0.35, 0, az + (rnd() - 0.5) * H * 0.35]];
+    for (let pass = 0; pass < 5; pass++) {
+      const out = [pts[0]];
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i];
+        const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+        out.push([(a[0] + b[0]) / 2 + (rnd() - 0.5) * L * 0.42, (a[1] + b[1]) / 2 + (rnd() - 0.5) * L * 0.12, (a[2] + b[2]) / 2 + (rnd() - 0.5) * L * 0.42], b);
+      }
+      pts.length = 0; pts.push(...out);
+    }
+    const last = pts.length - 1;
+    for (let i = 1; i <= last; i++) {
+      const a = pts[i - 1], b = pts[i];
+      seg(a[0], a[1], a[2], b[0], Math.max(0, b[1]), b[2], (i - 1) / last, i / last, 1 - 0.3 * (i / last), false);
+    }
+    // branches, splitting off down the upper two thirds and dying away in the air
+    const nb = 3 + Math.floor(rnd() * 4);
+    for (let j = 0; j < nb; j++) {
+      const i0 = 1 + Math.floor(rnd() * last * 0.66), o = pts[i0];
+      const len = H * (0.15 + rnd() * 0.25), dir = rnd() * Math.PI * 2;
+      let x = o[0], y = o[1], z = o[2];
+      const steps = 6 + Math.floor(rnd() * 5);
+      for (let k = 0; k < steps && y > 8; k++) {
+        const l = len / steps;
+        const nx = x + (Math.cos(dir) * 0.55 + (rnd() - 0.5) * 0.9) * l, ny = y - l * (0.55 + rnd() * 0.5), nz = z + (Math.sin(dir) * 0.55 + (rnd() - 0.5) * 0.9) * l;
+        seg(x, y, z, nx, ny, nz, i0 / last + (k / steps) * 0.25, i0 / last + ((k + 1) / steps) * 0.25, 0.55 * (1 - k / steps * 0.7), true);
+        x = nx; y = ny; z = nz;
+      }
+    }
+    const g = this.mesh.geometry;
+    g.setDrawRange(0, this.n);
+    for (const k of ['position', 'aInfo', 'aSide']) {
+      const at = g.attributes[k];
+      at.clearUpdateRanges();
+      at.addUpdateRange(0, this.n * at.itemSize);
+      at.needsUpdate = true;
     }
   }
 
-  clear() {
-    if (!this.mesh) return;
-    this.mesh.geometry.dispose();
-    this.mesh.removeFromParent();
-    this.mesh = null;
+  update(env, ctx) {
+    const S = env.strike, now = env.time;
+    // a new bolt down to the sea: build its fork (out here, on the surface)
+    if (S && S.ground && S.t !== this.t && ctx.world?.zone === 0 && !ctx.game?.view3d?.isUnder) {
+      this.t = S.t;
+      this.build(ctx.camera, S);
+    }
+    const age = now - this.t;
+    const on = this.n > 0 && age >= 0 && age < 0.75;
+    this.mesh.visible = on;
+    if (!on) return;
+    const u = this.uniforms;
+    // the leader runs down in a few hundredths of a second; then the stroke flashes, and flickers
+    u.uLead.value = Math.min(1.001, age / 0.07);
+    const l = env.lightning || 0;
+    u.uFlash.value = age < 0.07 ? 0.5 : Math.min(1.2, l / Math.max(0.3, S.k) * 1.1) * (age > 0.55 ? (0.75 - age) / 0.2 : 1);
+    u.uBranch.value = Math.max(0, 1 - age / 0.3);
   }
+
+  /** Shown for the shaders' warm-up (Renderer3D.warmUp). */
+  warm(on) { this.mesh.visible = on; }
 }
 
 // ---------------------------------------------------------------- weather
+// sand blown along the ground on a desert wind: streaks, like the rain's, but
+// flying low and nearly level
+const DUST = { n: 3200, box: 30, tall: 6, below: 2.2, fall: 0.6, near: 1.2 };
+
 class Precipitation {
   constructor(scene) {
     this.shelter = new Shelter();
@@ -341,7 +445,8 @@ class Precipitation {
     const sq = [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0];
     this.rain = fallMesh(RAIN, RAIN_VS, RAIN_FS, quad, this.shelter, { uLen: { value: 0.55 }, uWidth: { value: 0.011 } });
     this.snow = fallMesh(SNOW, SNOW_VS, SNOW_FS, sq, this.shelter, { uSize: { value: 0.05 } });
-    scene.add(this.rain, this.snow);
+    this.dust = fallMesh(DUST, RAIN_VS, RAIN_FS, quad, this.shelter, { uLen: { value: 0.75 }, uWidth: { value: 0.009 } });
+    scene.add(this.rain, this.snow, this.dust);
     this.splash = new Splashes(scene);
     this.bolt = new Lightning(scene);
   }
@@ -355,11 +460,16 @@ class Precipitation {
     const lv = game.player?.deck?.lvl;
     const under = !!v.isUnder || lv === 'cabin' || lv === 'captain' || lv === 'forecastle' || lv === 'hold';
     const rain = !zone && !under ? env.rain || 0 : 0;
-    const snow = zone !== 1 && zone !== 2 && !under ? env.snow || 0 : 0;
+    // (falling ash is drawn with the snow's flakes, in grey)
+    const ash = !zone && !under ? env.ash || 0 : 0;
+    const snow = zone !== 1 && zone !== 2 && !under ? Math.max(env.snow || 0, ash) : 0;
+    const dust = !zone && !under ? env.mistDust || 0 : 0;
+    const low = v.quality === 'low';
     this.rain.visible = rain > 0.03;
     this.snow.visible = snow > 0.03;
+    this.dust.visible = dust > 0.08;
     if (!this.rain.visible) this.splash.clear();
-    if (!this.rain.visible && !this.snow.visible) return;
+    if (!this.rain.visible && !this.snow.visible && !this.dust.visible) return;
     const cam = ctx.camera;
     const wx = v.ox + cam.position.x, wy = v.oy + cam.position.z;
     this.shelter.update(ctx, w.wx(wx), wy);
@@ -381,13 +491,24 @@ class Precipitation {
       d.set(d.x % spec.box, d.y % spec.box);
       u.uColor.value.setRGB(col[0] * bright, col[1] * bright, col[2] * bright);
       u.uAlpha.value = alpha;
-      mesh.geometry.instanceCount = Math.floor(spec.n * Math.min(1, k));
+      mesh.geometry.instanceCount = Math.floor(spec.n * Math.min(1, k) * (low ? 0.5 : 1));
     };
     if (this.rain.visible) {
       set(this.rain, RAIN, 0.25 + rain * 0.75, 3.2 + (env.storm || 0) * 3, [0.78, 0.84, 0.95], 0.24 + rain * 0.22);
       this.splash.update(ctx, this.shelter, rain, bright, wx, wy, dt, env.time);
     }
-    if (this.snow.visible) set(this.snow, SNOW, 0.2 + snow * 0.8, 1.1 + (env.storm || 0) * 2.2, [1, 1, 1], 0.9);
+    if (this.snow.visible) {
+      const grey = ash > (env.snow || 0) ? 1 : 0;
+      set(this.snow, SNOW, 0.2 + snow * 0.8, (1.1 + (env.storm || 0) * 2.2) * (grey ? 0.6 : 1), grey ? [0.32, 0.3, 0.3] : [1, 1, 1], grey ? 0.75 : 0.9);
+    }
+    if (this.dust.visible) set(this.dust, DUST, dust, 11, [0.86, 0.68, 0.45], 0.16 + dust * 0.26);
+  }
+
+  /** Every weather's shaders shown for the warm-up compile (Renderer3D.warmUp), then put back. */
+  warm(on) {
+    if (on) this.was = [this.rain.visible, this.snow.visible, this.dust.visible];
+    [this.rain, this.snow, this.dust].forEach((m, i) => { m.visible = on || this.was[i]; });
+    this.bolt.warm(on);
   }
 }
 
