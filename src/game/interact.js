@@ -2,7 +2,7 @@
 import { WALKABLE } from '../world/tiles.js';
 import { angleDiff } from '../core/math.js';
 import { placeOnDeck, helmSpot, boardingSpot, freeDeckSpot } from './decks.js';
-import { shipDims, deckToWorld, footprint } from '../world/hull.js';
+import { shipDims, deckToWorld, footprint, seatsOf } from '../world/hull.js';
 import { bfront } from '../world/bframe.js';
 import { canSee } from './ai.js';
 import { allShips } from './ship.js';
@@ -24,6 +24,8 @@ export function findInteraction(game, p) {
     if (Math.abs(s.speed) < 1.6) return { label: 'Leave the oars (stand up)', key: 'E', run: () => leaveHelm(game, p, s) };
     return null;
   }
+  // sat on a chair, a bench or a barrel aboard (decks.js sitAboard): E gets you up
+  if (p.seat && game.standUp) return { label: 'Stand up', key: 'E', run: () => game.standUp(p) };
   // on foot / swimming (boarding is by hand: jump onto a deck from a pier or
   // another deck — over her rail, never up her side — or into a rowboat from
   // the water; a big ship's ladder is climbed at its foot: see ladders.js)
@@ -95,6 +97,20 @@ export function findInteraction(game, p) {
       if (dd > 1.1) continue;
       const at = deckToWorld(own, (it.u + d.L / 2) / d.L, it.v);
       cands.push({ d: dd + 0.3, x: at.x, y: at.y, label: `Sleep in the ${it.kind} (wake here if you fall)`, run: () => game.services.restAboard(own, it) });
+    }
+  }
+  // aboard any ship, out of a fight: sit down on a chair, a bench or a barrel
+  // (in the same room as you, within a step of it)
+  const on = p.deck?.ship;
+  if (on && !on.sunk && !p.deck.plank && !p.inCombat && game.sitAboard) {
+    const d = shipDims(on.def);
+    const u = p.deck.t * d.L - d.L / 2, v = p.deck.v;
+    for (const st of seatsOf(d)) {
+      if (Math.abs((p.deck.h ?? 0) - st.floor) > 0.6) continue;
+      const dd = Math.hypot(st.u - u, st.v - v);
+      if (dd > 1.25) continue;
+      const at = deckToWorld(on, (st.u + d.L / 2) / d.L, st.v);
+      cands.push({ d: dd + 0.4, x: at.x, y: at.y, label: `Sit on the ${st.kind}`, run: () => game.sitAboard(p, on, st) });
     }
   }
   for (const it of game.groundItems || []) {

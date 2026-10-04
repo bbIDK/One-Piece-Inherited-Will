@@ -509,8 +509,9 @@ export function snapshot(game) {
   const rw = p.climb?.ride;
   if (rw) { const ex = p.climb.up && p.climb.phase !== 'wait' ? rw.bExit : rw.aExit; c.pos.x = ex.x; c.pos.y = ex.y; }
   // (on one of your ships' decks, or down in her: where on her, to stand there again — see session.js)
-  // (on a gangway, the foot of its steps on her deck)
-  const dk = p.deck, at = dk?.plank ? dk.plank.footA() : dk;
+  // (on a gangway, the foot of its steps on her deck; sat on a chair or a
+  // barrel, where you stood to sit down)
+  const dk = p.deck, at = dk?.plank ? dk.plank.footA() : p.seat?.from && p.seat.ship === dk?.ship ? p.seat.from : dk;
   if (p.mode !== 'sail' && dk?.ship?.uid && !dk.ship.sunk) c.pos.deck = { uid: dk.ship.uid, t: at.t, v: at.v, h: at.h };
   // where your ships lie (those waiting on the surface while you're in a zone too)
   const afloat = liveShips(game);

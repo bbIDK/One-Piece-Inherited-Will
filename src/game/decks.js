@@ -24,6 +24,50 @@ export function installDecks(game) {
     const r = game.view3d?.rig;
     if (r && s) { r.yaw = ((s.heading % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2); r.pitch = s.def.oarsOnly ? -0.35 : -0.04; }
   });
+  // Sitting down aboard, on a chair, a bench or a barrel (hull.js seatsOf):
+  // you stay sat on it as she sails, turns and rolls under you, until you
+  // get up (E again), walk off, jump, or have to fight.
+  game.sitAboard = (a, s, st) => {
+    const d = shipDims(s.def), from = a.deck?.ship === s ? { t: a.deck.t, v: a.deck.v, h: a.deck.h } : null;
+    standAboard(game, a, s, { t: (st.u + d.L / 2) / d.L, v: st.v, h: st.floor });
+    a.seat = { ship: s, st, from };
+    a.act3d = { pose: 'sit', h: st.h };
+    a.facing = s.heading + st.face;
+    a.intent.mx = a.intent.my = 0;
+  };
+  game.standUp = (a, step = true) => {
+    const sat = a.seat;
+    if (!sat) return;
+    a.seat = null; a.act3d = null;
+    // (up, and a step clear of it: back from a table, else out in front or to
+    // a side — wherever there's floor and nothing in the way)
+    const s = sat.ship, st = sat.st, d = shipDims(s.def);
+    if (!step || s.sunk || a.deck?.ship !== s) return;
+    // (and failing that, back where you stood to sit down)
+    let to = sat.from;
+    for (const [da, r] of [[Math.PI, 0.62], [0, 0.62], [Math.PI / 2, 0.62], [-Math.PI / 2, 0.62], [Math.PI, 0.9], [0, 0.9]]) {
+      const u = st.u + Math.cos(st.face + da) * r, v = st.v + Math.sin(st.face + da) * r, t = (u + d.L / 2) / d.L;
+      const pt = deckToWorld(s, t, v), dk = game.deckAt(game.world.wx(pt.x), pt.y, 0.2, st.floor, s);
+      if (!dk || dk.solid || Math.abs((dk.h ?? st.floor) - st.floor) > 0.3) continue;
+      to = { t, v, h: st.floor };
+      break;
+    }
+    if (to) standAboard(game, a, s, to);
+    a.facing = s.heading + st.face;
+  };
+  game.on('tick', () => {
+    const a = game.player, sat = a?.seat;
+    if (!sat) return;
+    const s = sat.ship;
+    if (s.sunk || s.alive === false || !a.alive || a.state !== 'idle' || a.inWater || a.mode === 'sail' || a.action || a.hitstun > 0 || a.inCombat || a.deck?.ship !== s) { game.standUp(a, false); return; }
+    // (a jump or a step gets you up and off it)
+    if ((a.z || 0) > 0.05 || (a.vz || 0) > 0 || Math.hypot(a.intent.mx || 0, a.intent.my || 0) > 0.1) { game.standUp(a); return; }
+    // (sat where the seat is now, as she's moved and turned)
+    const d = shipDims(s.def), st = sat.st, p = deckToWorld(s, (st.u + d.L / 2) / d.L, st.v);
+    a.x = game.world.wx(p.x); a.y = p.y; a.vx = a.vy = 0;
+    a.facing = s.heading + st.face;
+    if (!a.act3d) a.act3d = { pose: 'sit', h: st.h };
+  });
   /**
    * The deck under a point: { ship, t, v, h, edge } or null (margin: how far
    * in from the rail). `hRef`: the height of the feet asking (above that ship's

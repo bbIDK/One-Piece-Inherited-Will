@@ -43425,6 +43425,26 @@ ${GLSL}
     const hu = (across ? it.dp : it.w) / 2, hv = (across ? it.w : it.dp) / 2;
     return { u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv };
   }
+  var SEAT_H = { chair: 0.47, bench: FURNITURE.bench.h, barrel: 0.8 };
+  function seatsOf(d) {
+    if (d.seats) return d.seats;
+    const out = [];
+    for (const it of d.furniture || []) {
+      const h2 = SEAT_H[it.kind];
+      if (!h2 || it.ghost || it.y) continue;
+      const face = Math.PI / 2 - (it.rot || 0);
+      if (it.kind !== "bench") {
+        out.push({ u: it.u, v: it.v, floor: it.floor, h: h2, face, kind: it.kind });
+        continue;
+      }
+      const n = Math.max(1, Math.floor(it.w / 0.6)), across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
+      for (let i = 0; i < n; i++) {
+        const o = ((i + 0.5) / n - 0.5) * it.w;
+        out.push({ u: it.u + (across ? 0 : o), v: it.v + (across ? o : 0), floor: it.floor, h: h2, face, kind: "bench" });
+      }
+    }
+    return d.seats = out;
+  }
   var liningYs = (r4) => r4.kind === "hold" ? [-0.02, 0.55, 1.15, 1.75, r4.ceil + 0.1 - r4.floor] : [-0.02, 0.9, r4.ceil + 0.1 - r4.floor];
   function liningAt(d, r4, t, y) {
     const ys = liningYs(r4);
@@ -79591,6 +79611,51 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         r4.pitch = s.def.oarsOnly ? -0.35 : -0.04;
       }
     });
+    game.sitAboard = (a, s, st) => {
+      const d = shipDims(s.def), from = a.deck?.ship === s ? { t: a.deck.t, v: a.deck.v, h: a.deck.h } : null;
+      standAboard(game, a, s, { t: (st.u + d.L / 2) / d.L, v: st.v, h: st.floor });
+      a.seat = { ship: s, st, from };
+      a.act3d = { pose: "sit", h: st.h };
+      a.facing = s.heading + st.face;
+      a.intent.mx = a.intent.my = 0;
+    };
+    game.standUp = (a, step2 = true) => {
+      const sat = a.seat;
+      if (!sat) return;
+      a.seat = null;
+      a.act3d = null;
+      const s = sat.ship, st = sat.st, d = shipDims(s.def);
+      if (!step2 || s.sunk || a.deck?.ship !== s) return;
+      let to = sat.from;
+      for (const [da, r4] of [[Math.PI, 0.62], [0, 0.62], [Math.PI / 2, 0.62], [-Math.PI / 2, 0.62], [Math.PI, 0.9], [0, 0.9]]) {
+        const u = st.u + Math.cos(st.face + da) * r4, v = st.v + Math.sin(st.face + da) * r4, t = (u + d.L / 2) / d.L;
+        const pt = deckToWorld(s, t, v), dk3 = game.deckAt(game.world.wx(pt.x), pt.y, 0.2, st.floor, s);
+        if (!dk3 || dk3.solid || Math.abs((dk3.h ?? st.floor) - st.floor) > 0.3) continue;
+        to = { t, v, h: st.floor };
+        break;
+      }
+      if (to) standAboard(game, a, s, to);
+      a.facing = s.heading + st.face;
+    };
+    game.on("tick", () => {
+      const a = game.player, sat = a?.seat;
+      if (!sat) return;
+      const s = sat.ship;
+      if (s.sunk || s.alive === false || !a.alive || a.state !== "idle" || a.inWater || a.mode === "sail" || a.action || a.hitstun > 0 || a.inCombat || a.deck?.ship !== s) {
+        game.standUp(a, false);
+        return;
+      }
+      if ((a.z || 0) > 0.05 || (a.vz || 0) > 0 || Math.hypot(a.intent.mx || 0, a.intent.my || 0) > 0.1) {
+        game.standUp(a);
+        return;
+      }
+      const d = shipDims(s.def), st = sat.st, p = deckToWorld(s, (st.u + d.L / 2) / d.L, st.v);
+      a.x = game.world.wx(p.x);
+      a.y = p.y;
+      a.vx = a.vy = 0;
+      a.facing = s.heading + st.face;
+      if (!a.act3d) a.act3d = { pose: "sit", h: st.h };
+    });
     game.deckAt = (x, y, margin = 0.2, hRef = null, only = null) => {
       const w = game.world;
       if (game.planks?.length) {
@@ -109889,6 +109954,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (Math.abs(s.speed) < 1.6) return { label: "Leave the oars (stand up)", key: "E", run: () => leaveHelm(game, p, s) };
       return null;
     }
+    if (p.seat && game.standUp) return { label: "Stand up", key: "E", run: () => game.standUp(p) };
     const cands = [];
     if (p.inWater && p.fruit && !p.gills && !p.climb) {
       for (const s of allShips(game)) {
@@ -109949,6 +110015,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         if (dd > 1.1) continue;
         const at4 = deckToWorld(own, (it.u + d.L / 2) / d.L, it.v);
         cands.push({ d: dd + 0.3, x: at4.x, y: at4.y, label: `Sleep in the ${it.kind} (wake here if you fall)`, run: () => game.services.restAboard(own, it) });
+      }
+    }
+    const on = p.deck?.ship;
+    if (on && !on.sunk && !p.deck.plank && !p.inCombat && game.sitAboard) {
+      const d = shipDims(on.def);
+      const u = p.deck.t * d.L - d.L / 2, v = p.deck.v;
+      for (const st of seatsOf(d)) {
+        if (Math.abs((p.deck.h ?? 0) - st.floor) > 0.6) continue;
+        const dd = Math.hypot(st.u - u, st.v - v);
+        if (dd > 1.25) continue;
+        const at4 = deckToWorld(on, (st.u + d.L / 2) / d.L, st.v);
+        cands.push({ d: dd + 0.4, x: at4.x, y: at4.y, label: `Sit on the ${st.kind}`, run: () => game.sitAboard(p, on, st) });
       }
     }
     for (const it of game.groundItems || []) {
@@ -110585,7 +110663,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       c.pos.x = ex.x;
       c.pos.y = ex.y;
     }
-    const dk3 = p.deck, at4 = dk3?.plank ? dk3.plank.footA() : dk3;
+    const dk3 = p.deck, at4 = dk3?.plank ? dk3.plank.footA() : p.seat?.from && p.seat.ship === dk3?.ship ? p.seat.from : dk3;
     if (p.mode !== "sail" && dk3?.ship?.uid && !dk3.ship.sunk) c.pos.deck = { uid: dk3.ship.uid, t: at4.t, v: at4.v, h: at4.h };
     const afloat = liveShips(game);
     c.ships = afloat.map((s) => ({
@@ -126948,7 +127026,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
 
   // src/game/townlife.js
-  var SEAT_H = { barrel: 0.8, crate: 0.74, haystack: 0.72, well: 0.76, fountain: 0.63, bench: 0.52, step: 0.22, dock: 0.05 };
+  var SEAT_H2 = { barrel: 0.8, crate: 0.74, haystack: 0.72, well: 0.76, fountain: 0.63, bench: 0.52, step: 0.22, dock: 0.05 };
   var SEAT_FWD = { barrel: 0.1, crate: 0.17, haystack: 0.42 };
   var KID_STYLES = /* @__PURE__ */ new Set(["village", "town", "port", "snow", "desert", "wano", "chinese", "candy", "fishman", "mink", "tribal", "sky", "giant"]);
   var CHATTER = [
@@ -127009,7 +127087,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         if (role !== "house") S6.shopfront.push({ ...p, ...bw(b, x, 0.75) });
       }
       if (role === "house" && !isEnterable(b)) {
-        const p = { ...bw(b, d.x + d.dw / 2 + 0.34, 0.3), face, h: SEAT_H.step, stand: bw(b, d.x + d.dw / 2 + 0.34, 0.95), b };
+        const p = { ...bw(b, d.x + d.dw / 2 + 0.34, 0.3), face, h: SEAT_H2.step, stand: bw(b, d.x + d.dw / 2 + 0.34, 0.95), b };
         if (clear3(p.stand.x, p.stand.y) && clear3(p.x, p.y, 0.2)) S6.seat.push(p);
       }
       const out = { ...bw(b, d.x, 0.95), b };
@@ -127025,7 +127103,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const r4 = (o.col?.r ?? 0.4) + 0.4;
         const stand = { x: o.x + Math.cos(face) * r4, y: o.y + Math.sin(face) * r4 };
         const sc = o.s || 1, fwd2 = SEAT_FWD[o.kind] * sc;
-        if (clear3(stand.x, stand.y)) S6.seat.push({ x: o.x + Math.cos(face) * fwd2, y: o.y + Math.sin(face) * fwd2, face, h: SEAT_H[o.kind] * sc, stand, o });
+        if (clear3(stand.x, stand.y)) S6.seat.push({ x: o.x + Math.cos(face) * fwd2, y: o.y + Math.sin(face) * fwd2, face, h: SEAT_H2[o.kind] * sc, stand, o });
       } else if (o.kind === "well" || o.kind === "fountain" || o.kind === "bench") {
         const sc = o.s || 1, rim3 = (o.kind === "well" ? 0.74 : o.kind === "fountain" ? 1.34 : 0) * sc;
         const n = o.kind === "bench" ? 2 : 4;
@@ -127033,7 +127111,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           const a = o.kind === "bench" ? Math.PI / 2 : i * Math.PI / 2 + 0.5;
           const px2 = o.kind === "bench" ? o.x + (i ? 0.35 : -0.35) : o.x + Math.cos(a) * rim3, py2 = o.kind === "bench" ? o.y : o.y + Math.sin(a) * rim3;
           const stand = { x: px2 + Math.cos(a) * 0.6, y: py2 + Math.sin(a) * 0.6 };
-          if (clear3(stand.x, stand.y)) S6.seat.push({ x: px2, y: py2, face: a, h: SEAT_H[o.kind] * sc, stand, o });
+          if (clear3(stand.x, stand.y)) S6.seat.push({ x: px2, y: py2, face: a, h: SEAT_H2[o.kind] * sc, stand, o });
         }
       } else if (o.kind === "stall") {
         const pl = town.plaza;
@@ -127051,7 +127129,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (!dk3.end || w.distance(dk3.end.x, dk3.end.y, town.x, town.y) > 70) continue;
       const face = Math.atan2(dk3.dirY || 0, dk3.dirX || 1);
       const x = dk3.end.x + 0.5 - Math.cos(face) * 0.4, y = dk3.end.y + 0.5 - Math.sin(face) * 0.4;
-      S6.dock.push({ x, y, face, h: SEAT_H.dock, stand: { x: x - Math.cos(face) * 0.7, y: y - Math.sin(face) * 0.7 } });
+      S6.dock.push({ x, y, face, h: SEAT_H2.dock, stand: { x: x - Math.cos(face) * 0.7, y: y - Math.sin(face) * 0.7 } });
     }
     town._life = S6;
     return S6;

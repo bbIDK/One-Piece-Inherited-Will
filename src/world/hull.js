@@ -485,6 +485,32 @@ export function footprint(it) {
   return { u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv };
 }
 
+// (how high you sit on each: a chair's seat, a bench's, the top of a barrel)
+const SEAT_H = { chair: 0.47, bench: FURNITURE.bench.h, barrel: 0.8 };
+
+/**
+ * Where you can sit aboard her: on every chair and barrel, and along every
+ * bench (a place for each 0.6 m of it) — { u, v, floor, h (the seat over its
+ * floor), face (the way a sitter looks, from her heading: the piece's front),
+ * kind }.
+ */
+export function seatsOf(d) {
+  if (d.seats) return d.seats;
+  const out = [];
+  for (const it of d.furniture || []) {
+    const h = SEAT_H[it.kind];
+    if (!h || it.ghost || it.y) continue;
+    const face = Math.PI / 2 - (it.rot || 0);
+    if (it.kind !== 'bench') { out.push({ u: it.u, v: it.v, floor: it.floor, h, face, kind: it.kind }); continue; }
+    const n = Math.max(1, Math.floor(it.w / 0.6)), across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
+    for (let i = 0; i < n; i++) {
+      const o = ((i + 0.5) / n - 0.5) * it.w;
+      out.push({ u: it.u + (across ? 0 : o), v: it.v + (across ? o : 0), floor: it.floor, h, face, kind: 'bench' });
+    }
+  }
+  return (d.seats = out);
+}
+
 /** The heights (over its floor) a room's lining is built at, by the 3D view. */
 export const liningYs = (r) => (r.kind === 'hold' ? [-0.02, 0.55, 1.15, 1.75, r.ceil + 0.1 - r.floor] : [-0.02, 0.9, r.ceil + 0.1 - r.floor]);
 
