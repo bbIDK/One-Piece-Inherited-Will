@@ -396,18 +396,27 @@ test('a quake throws them off their feet; Send Flying sends them clean off the f
 });
 
 // ------------------------------------------------------------------ peoples
-test('a Longleg\'s kicks hit 30% harder; a Skypiean\'s Dial 25%; a Longarm\'s bare jab snaps back quicker', () => {
+test('a Skypiean\'s Dial hits 25% harder, and nothing else of theirs does', () => {
   const { g } = duel();
-  const kick = getAbility('bleg_1'), jab = getAbility('brawl_1'), dial = getAbility('dial_impact');
-  const human = body(g, {}), longleg = body(g, { race: 'longleg' }), sky = body(g, { race: 'skypiean' }), longarm = body(g, { race: 'longarm' });
-  for (const a of [human, longleg, sky, longarm]) { a.attrs = { ...human.attrs }; a.recalc(); }
+  const jab = getAbility('brawl_1'), dial = getAbility('dial_impact');
+  const human = body(g, {}), sky = body(g, { race: 'skypiean' });
+  for (const a of [human, sky]) { a.attrs = { ...human.attrs }; a.recalc(); }
   const { powerFor } = { powerFor: (a, d) => { startAbility(a, d, g); const m = a.action.mult; a.action = null; return m; } };
-  assert.ok(Math.abs(powerFor(longleg, kick) / powerFor(human, kick) - 1.3) < 1e-6, 'kicks');
-  assert.ok(Math.abs(powerFor(longleg, jab) / powerFor(human, jab) - 1) < 1e-6, 'not punches');
   assert.ok(Math.abs(powerFor(sky, dial) / powerFor(human, dial) - 1.25) < 1e-6, 'dials');
-  startAbility(human, { ...jab, m1Chain: true }, g); const t0 = human.action.total; human.action = null;
-  startAbility(longarm, { ...jab, m1Chain: true }, g); const t1 = longarm.action.total; longarm.action = null;
-  assert.ok(Math.abs(t1 / t0 - 0.8) < 1e-6, 'the second elbow');
+  assert.ok(Math.abs(powerFor(sky, jab) / powerFor(human, jab) - 1) < 1e-6, 'not punches');
+});
+
+test('the Longarm and Longleg Tribes are gone: an old save of one comes back human', async () => {
+  const { RACES, liveRace } = await import('../src/data/races.js');
+  assert.equal(RACES.longarm, undefined);
+  assert.equal(RACES.longleg, undefined);
+  const c = liveRace({ race: 'longleg', look: { race: 'longleg', legs: 1.9, hair: 'afro' } });
+  assert.equal(c.race, 'human');
+  assert.deepEqual(c.look, { race: 'human', hair: 'afro' });
+  const d = liveRace({ race: 'longarm', look: { race: 'longarm', arms: 1.8 } });
+  assert.equal(d.race, 'human');
+  assert.equal(d.look.arms, undefined);
+  assert.equal(liveRace({ race: 'mink', look: { race: 'mink' } }).race, 'mink', 'the others as they were');
 });
 
 test('a Buccaneer shrugs off a light blow, and knockback hardly moves him', () => {

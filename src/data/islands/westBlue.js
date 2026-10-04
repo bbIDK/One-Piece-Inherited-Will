@@ -51,7 +51,7 @@ export const WEST_BLUE = [
       { kind: 'tent', dx: 0.26, dy: 0.34, v: 1 }, { kind: 'campfire', dx: 0.3, dy: 0.38 }, { kind: 'tent', dx: 0.36, dy: 0.3, v: 0 },
     ],
     spots: [{ id: 'camp_edge', dx: 0.14, dy: 0.26 }],
-    population: [['human', 86], ['three_eye', 6], ['longarm', 4], ['longleg', 4]],
+    population: [['human', 94], ['three_eye', 6]],
     danger: 2, music: 'night',
     tagline: 'Erased from every map. The ashes still remember.',
     rumors: [
@@ -484,8 +484,8 @@ export const WEST_BLUE = [
 
   // ------------------------------------------------- Asshina Gainone Kingdom
   {
-    // The Longleg Tribe's homeland (canon name; canon never says which sea it is
-    // in — the game places it in the West Blue). Famous here for its colosseum.
+    // A canon kingdom (canon never says which sea it is in — the game places
+    // it in the West Blue). Famous here for its kickers and their colosseum.
     id: 'asshina', name: 'Asshina Gainone Kingdom', sea: 'west_blue', x: 520, y: 1880, w: 150, h: 100,
     climate: 'tropical', rough: 0.24,
     blobs: [[0, 0, 0.85, 0.8], [-0.4, -0.35, 0.4, 0.4]],
@@ -506,12 +506,12 @@ export const WEST_BLUE = [
     ],
     landmarks: [{ kind: 'dummy', dx: 0.36, dy: -0.26 }, { kind: 'dummy', dx: 0.44, dy: -0.26 }, { kind: 'flagpole', dx: 0.4, dy: -0.4 }],
     spots: [{ id: 'arena_sands', dx: 0.42, dy: -0.12 }],
-    population: [['longleg', 78], ['human', 16], ['longarm', 6]],
+    population: [['human', 100]],
     danger: 1,
-    tagline: 'The kingdom of the Longleg Tribe. Everything here is built one storey too tall.',
+    tagline: 'A kingdom of kickers, and the Colosseum of the Long Stride at its heart.',
     rumors: [
-      'A Longleg kick can snap a mast. Their gladiators fight barefoot so they can feel the sand.',
-      'Longarms and Longlegs have been rivals since before anyone can remember. It gets loud at the Colosseum when a Longarm signs up.',
+      'An Asshina kick can snap a mast. Their gladiators fight barefoot so they can feel the sand.',
+      'The kickers of Asshina and the boxers of Notice have been rivals since before anyone can remember. It gets loud at the Colosseum when a boxer signs up.',
       'The Colosseum champion, "Secretarybird" Serena, kicks snakes to death for breakfast. Or so she says.',
     ],
   },

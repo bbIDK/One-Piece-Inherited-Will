@@ -392,7 +392,7 @@ export function poseExtras(actor, out, now) {
   const m = actorMass(actor);
   if (m !== 1) out.mass = m;
   const race = actor.race || actor.look?.race;
-  out.dodgeKind = race === 'skypiean' ? 'glide' : race === 'lunarian' ? 'wing' : race === 'mink' ? 'pounce' : race === 'longleg' ? 'stride' : m >= 1.25 ? 'heavy' : 'dash';
+  out.dodgeKind = race === 'skypiean' ? 'glide' : race === 'lunarian' ? 'wing' : race === 'mink' ? 'pounce' : m >= 1.25 ? 'heavy' : 'dash';
   if ((actor.buffs || []).some((b) => b.id === 'gear2')) out.gear = 2;
   if (now !== undefined && (actor.flying || actor._fly)) {
     const F = flightState(actor, now);

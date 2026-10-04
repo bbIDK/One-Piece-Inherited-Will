@@ -12,7 +12,7 @@ code each rule lives. Read it before adding or changing a clip.
   strike. How much of the wind-up goes on loading is the blow's weight class
   (`WEIGHT.loadAt`, below); a heavier body (`massOf`: a Buccaneer, a brawny
   frame, Gear Fourth's bulk) loads later, holds longer and settles deeper; a
-  light one (a Mink, the Longleg tribe) is snappier. A follow-up in a chain
+  light one (a Mink) is snappier. A follow-up in a chain
   has no anticipation of its own — the last blow's recovery was it.
 - **The hips lead, the head follows.** Within a pose the hips start a blow
   24 ms ahead of the rest and the head trails 32 ms behind (`samplePose`

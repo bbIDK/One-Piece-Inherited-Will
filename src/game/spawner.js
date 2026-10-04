@@ -119,8 +119,8 @@ export class Spawner {
 
 export function townRaces(isl) {
   const sea = isl.def.sea;
-  if (sea === 'new_world' || sea === 'paradise') return [['human', 70], ['fishman', 6], ['mink', 6], ['longarm', 4], ['longleg', 4], ['skypiean', 2]];
-  return [['human', 94], ['fishman', 2], ['longarm', 2], ['longleg', 2]];
+  if (sea === 'new_world' || sea === 'paradise') return [['human', 78], ['fishman', 6], ['mink', 6], ['skypiean', 2]];
+  return [['human', 98], ['fishman', 2]];
 }
 
 export function civilianOutfit(style, rng) {

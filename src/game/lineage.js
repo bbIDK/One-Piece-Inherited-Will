@@ -48,7 +48,7 @@ export const PERKS = {
   haki: { name: 'Latent Spirit', desc: 'Hidden powers, once awakened, grow 25% faster per level.', costs: [80, 160], icon: 'character' },
   will_of_d: { name: 'Will of D.', desc: 'Triples the chance to be born with the hidden "D." (5% → 15%).', costs: [90], icon: 'journal' },
   kings_blood: { name: 'Kingly Bloodline', desc: 'Four times the chance to be born with the qualities of a king (4% → 16%; with the Will of D., certain).', costs: [150], icon: 'crew' },
-  rare_races: { name: 'Distant Relatives', desc: 'Rare, epic and legendary races are twice as likely.', costs: [100], icon: 'character' },
+  rare_races: { name: 'Distant Relatives', desc: 'Epic and legendary races (Buccaneer, Three-Eye, Lunarian) are twice as likely.', costs: [100], icon: 'character' },
 };
 
 /** Has this character awakened any Haki? (Until then the game never mentions it.) */
@@ -77,7 +77,7 @@ export function nameWithD(name) {
 export function rollBirth(legacy, seed) {
   const rng = new RNG(seed);
   const boosts = {};
-  if (perkLevel(legacy, 'rare_races')) for (const r of ['longarm', 'longleg', 'buccaneer', 'three_eye', 'lunarian']) boosts[r] = 2;
+  if (perkLevel(legacy, 'rare_races')) for (const r of ['buccaneer', 'three_eye', 'lunarian']) boosts[r] = 2;
   const race = rollRace(rng, boosts);
   const traits = [];
   // one ordinary trait

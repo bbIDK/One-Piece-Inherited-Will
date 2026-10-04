@@ -218,7 +218,7 @@ const npcsA = [
 
   // ================================================================ Kenzan Island
   {
-    id: 'p1_tenaga', name: 'Old Tenaga', title: 'Longarm fisherman', island: 'kenzan_island', at: { town: 'tehna_gehna', building: "Old Tenaga's House" }, race: 'longarm',
+    id: 'p1_tenaga', name: 'Old Tenaga', title: 'Old fisherman', island: 'kenzan_island', at: { town: 'tehna_gehna', building: "Old Tenaga's House" },
     look: { hair: 'long', hairColor: '#eceff1', top: '#b71c1c', bottom: '#263238' }, level: 12,
     marker: giver('p1_kenzan_whirlpool'),
     dialogue: (ctx) => ({
@@ -226,8 +226,8 @@ const npcsA = [
       nodes: {
         a: {
           text: () => fin(ctx, 'p1_kenzan_whirlpool')
-            ? `"The boats come home full again! Two elbows or one, you have a long reach, friend. Come eat with us whenever you like."`
-            : `"Welcome to the Tehna Gehna Kingdom! We Longarms have two elbows — we can pull a fish out of the sea without getting our feet wet. Well... we could."`,
+            ? `"The boats come home full again! You have a long reach, friend. Come eat with us whenever you like."`
+            : `"Welcome to the Tehna Gehna Kingdom! We fish with poles three men long — we can pull a fish out of the sea without getting our feet wet. Well... we could."`,
           choices: [
             { text: 'What happened?', if: () => !ctx.quest('p1_kenzan_whirlpool'), next: 'what' },
             { text: 'The Whirlpool Lord is dead.', if: () => act(ctx, 'p1_kenzan_whirlpool', 'report'), do: (c) => c.complete('p1_kenzan_whirlpool'), next: 'thx' },
@@ -235,7 +235,7 @@ const npcsA = [
           ],
         },
         what: {
-          text: `"A Sea King nests in the whirlpools north of the island. It swallows our boats whole — even a Longarm can't reach that deep. If someone with a real ship could kill it..."`,
+          text: `"A Sea King nests in the whirlpools north of the island. It swallows our boats whole — even our longest poles can't reach that deep. If someone with a real ship could kill it..."`,
           choices: [{ text: 'I\'ll hunt it.', do: (c) => c.startQuest('p1_kenzan_whirlpool'), end: true }, { text: 'Sounds dangerous.', end: true }],
         },
         thx: { text: `"You really killed it?! Take this — and a fisherman's secret: the whirlpools calm down at dusk. Sail at sunset and the sea will be kind."` },
@@ -1462,7 +1462,7 @@ const quests = [
     rewards: { berries: 14000, points: 1, liberate: 'Ruluka Island' },
     onComplete: (ctx, g) => banner(g, 'THE RAINBOW MIST', 'Ruluka Island', 'Far out to sea, an arch of seven colours rises from the water, shimmers... and fades.', 5) },
   { id: 'p1_kenzan_whirlpool', name: 'The Whirlpool Lord', island: 'kenzan_island', kind: 'side',
-    summary: 'A Sea King nests in the whirlpools north of Kenzan Island and swallows the Longarms\' fishing boats.',
+    summary: 'A Sea King nests in the whirlpools north of Kenzan Island and swallows Tehna Gehna\'s fishing boats.',
     stages: [
       { id: 'hunt', desc: 'Sail into the whirlpools north of Kenzan Island and slay the Whirlpool Lord.', goal: { type: 'defeat', npc: 'p1_whirlpool_lord' },
         where: (g) => { const s = g.surface.islands.find((i) => i.id === 'kenzan_island')?.spots?.whirlpool; return s && g.world === g.surface ? { x: s.x, y: s.y, place: 'The Kenzan whirlpools' } : null; } },

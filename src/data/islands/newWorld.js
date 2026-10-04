@@ -359,7 +359,7 @@ export const NEW_WORLD = [
   {
     id: 'whole_cake_island', name: 'Whole Cake Island', sea: 'new_world', x: 846, y: 1062, w: 250, h: 204,
     climate: 'candy', rough: 0.2,
-    population: [['human', 40], ['fishman', 12], ['mink', 12], ['longarm', 9], ['longleg', 9], ['buccaneer', 6], ['skypiean', 6], ['three_eye', 3]],
+    population: [['human', 58], ['fishman', 12], ['mink', 12], ['buccaneer', 6], ['skypiean', 6], ['three_eye', 3]],
     blobs: [[0, 0, 0.88, 0.84], [-0.45, 0.45, 0.45, 0.4], [0.5, -0.4, 0.4, 0.4]],
     areas: [
       { name: 'Seducing Woods', tile: T.FOREST, dx: -0.48, dy: 0.45, rx: 0.3, ry: 0.3 },
@@ -405,7 +405,7 @@ export const NEW_WORLD = [
   {
     id: 'cacao_island', name: 'Cacao Island', sea: 'new_world', x: 660, y: 1188, w: 60, h: 48,
     climate: 'candy', ground: T.DIRT, beach: T.CAKE, rough: 0.25,
-    population: [['human', 55], ['fishman', 12], ['mink', 12], ['longleg', 8], ['longarm', 8], ['three_eye', 5]],
+    population: [['human', 71], ['fishman', 12], ['mink', 12], ['three_eye', 5]],
     towns: [{
       id: 'chocolat_town', name: 'Chocolat Town', dx: 0.08, dy: 0.0, w: 34, h: 24, style: 'candy', dockDir: 'n', plaza: 'fountain',
       buildings: [

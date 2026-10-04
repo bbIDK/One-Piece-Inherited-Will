@@ -12,7 +12,7 @@
 //   node tools/shot.mjs anim-fp --moves=brawler:m1,black_leg:m1.0,ittoryu:heavy,mera_hiken [--every=2] [--n=10]
 //   node tools/shot.mjs anim-pose --js=<file>   (a function body given g, OP, LAB: pose the row yourself)
 //   node tools/shot.mjs anim-live --moves=gomu_pistol,gomu_bazooka [--views=side,back,3q] [--every=2] [--n=12] [--fw=400]
-//   node tools/shot.mjs anim-dodge [--races=human,skypiean,lunarian,mink,buccaneer,longleg] [--dirs=f,fr,r,br,b] [--views=side,back]
+//   node tools/shot.mjs anim-dodge [--races=human,skypiean,lunarian,mink,buccaneer] [--dirs=f,fr,r,br,b] [--views=side,back]
 //   node tools/shot.mjs anim-fly [--styles=wings,phoenix,dragon,ride,float,geppo,none] [--views=side,back,3q] [--states=air|ground|all]
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';

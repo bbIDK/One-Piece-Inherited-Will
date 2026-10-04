@@ -303,7 +303,7 @@ const OTTO = offerOf('nb_otto', {
   marine: 'Otto the champion wants to enlist and serve under you — hear him out (by the ring).',
   hunter: 'Otto the champion wants to come along as your partner — hear him out (by the ring).',
 });
-const CUP = T.quest('nb_notice_cup', 'Win the Notice Cup at the Longarm Boxing Club (Ulrich).', 'nb_ulrich');
+const CUP = T.quest('nb_notice_cup', 'Win the Notice Cup at the Notice Boxing Club (Ulrich).', 'nb_ulrich');
 chapter('nb_notice', { part: 1, island: 'notice', role: 'crew' }, {
   all: { name: 'The Notice Cup' },
   pirate: {
@@ -312,7 +312,7 @@ chapter('nb_notice', { part: 1, island: 'notice', role: 'crew' }, {
     contact: hc('notice', 'pirate', 'outside the Notice bar'),
     meet: ['The Cup\'s on. Otto, the champion, has never been beaten — and he\'s been dreaming of the sea since he was a boy.', 'Beat him, and he might just ask to sail with you. That\'s how the good crews start.'],
     tasks: [CUP, OTTO.pirate],
-    wait: 'The Longarm Boxing Club. Ulrich runs the Cup.',
+    wait: 'The Notice Boxing Club. Ulrich runs the Cup.',
     done: [(ctx) => (aboard(ctx, 'nb_otto') ? 'You beat Otto AND took him to sea. Notice will be talking about that for years.' : 'You beat Otto, and left him on the dock. Your call — but he\'ll be asking every captain who comes through now.'), (ctx) => onward(ctx.char, 'Last stop before the mountain:')],
   },
   marine: {
@@ -321,7 +321,7 @@ chapter('nb_notice', { part: 1, island: 'notice', role: 'crew' }, {
     contact: hc('notice', 'marine', 'at the Notice Marine post'),
     meet: ['The Cup is the best fighting in the North Blue. Enter it. Show the town what a Marine can do.', 'Win, and the recruiters in Deul will know your name.'],
     tasks: [CUP, OTTO.marine],
-    wait: 'Ulrich at the Longarm Boxing Club takes the entries.',
+    wait: 'Ulrich at the Notice Boxing Club takes the entries.',
     done: ['Champion of Notice — and a Marine. I\'ll write to Deul tonight.', (ctx) => onward(ctx.char, 'Report to')],
   },
   hunter: {

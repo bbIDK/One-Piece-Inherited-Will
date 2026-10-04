@@ -189,7 +189,7 @@ GitHub Pages site: no account, and no server of our own.
   Up there you walk its slopes and ridge, step across to the next roof, and
   a chimney or a taller house is a wall. Walk off the edge and you drop to
   the street. A plain human reaches a one-storey house with a running,
-  charged jump; Minks, Longlegs and other high jumpers get onto taller ones.
+  charged jump; Minks, Skypieans and other high jumpers get onto taller ones.
   Jumping under an eave, your head stops at it. A gateway's posts are solid
   (a torii's two, a gate's stone pillars, an arch's legs) and you walk
   between them. A Wano house's veranda is a step up, not something you walk
@@ -275,8 +275,8 @@ GitHub Pages site: no account, and no server of our own.
 
 **Lineage (roguelike).**
 
-- **Race** is rolled with rarities: Human, Fish-Man, Mink, Skypiean, Longarm,
-  Longleg, Buccaneer, Three-Eye or Lunarian. Race decides which Blue and
+- **Race** is rolled with rarities: Human, Fish-Man, Mink, Skypiean,
+  Buccaneer, Three-Eye or Lunarian. Race decides which Blue and
   which town you are born in. Nobody is born in a town held by a crew who
   fight on sight (Fish-Men are born in Cocoyasi, not inside Arlong Park).
   A save that started there wakes in Cocoyasi instead. Buggy's crew in
@@ -635,7 +635,7 @@ player.
 - God Valley's remnants.
 - Kano Country's Hasshoken trials.
 - Capone Bege's Fire Tank Family in Las Camp.
-- Ilisia, and the Asshina colosseum of the Longleg tribe.
+- Ilisia, and the Asshina colosseum of the kickboxers.
 
 **South Blue**
 - Baterilla and Portgas D. Rouge.
@@ -699,7 +699,7 @@ node tools/heads3d-sheet.mjs [--only=…|--hairs=…|--fhairs=…|--races=…] [
 node tools/shot.mjs c3tops [--fem=0|1] [--tops=a,b]   # every top style on a man and a woman, front and three-quarter
 node tools/shot.mjs fpbody                      # first person: looking down standing, walking, sprinting, in a heavy blow's lunge
 node tools/shot.mjs fphelm                      # first person at a caravel's helm (ahead, down at the wheel, back) and a rowboat's oars
-node tools/shot.mjs c3motion [--looks=longskirt,dress,skirt,coat,longarm] [--sit]   # clothes and hair moving: standing, walking, running, stopping (and sat down)
+node tools/shot.mjs c3motion [--looks=longskirt,dress,skirt,coat] [--sit]   # clothes and hair moving: standing, walking, running, stopping (and sat down)
 node tools/shot.mjs c3draw [--wpns=fine_katana,flintlock,bo_staff] [--modes=third,first]   # weapons worn, drawn from the hotbar and sheathed, part way through
 node tools/shot.mjs fpweapons [--wpns=rusty_katana,flintlock] [--skip=run,atk] [--pitches=-0.08,-0.75]   # first person per weapon: ready, running, sprinting, a combo and a heavy, frame by frame
 node tools/shot.mjs c3carry [--wpns=sword,sword2,gun,staff,axe]   # third person: a weapon carried at a run and a sprint

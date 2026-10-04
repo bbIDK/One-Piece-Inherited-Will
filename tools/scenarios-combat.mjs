@@ -298,7 +298,7 @@ export const scenarios = {
   'combat-races': {
     async run(page, snap, args) {
       await boot(page);
-      const races = (args.only ? String(args.only).split(',') : ['human', 'fishman', 'mink', 'skypiean', 'longarm', 'longleg', 'buccaneer', 'three_eye', 'lunarian']);
+      const races = (args.only ? String(args.only).split(',') : ['human', 'fishman', 'mink', 'skypiean', 'buccaneer', 'three_eye', 'lunarian']);
       const frames = [];
       for (const race of races) {
         await page.evaluate((race) => {

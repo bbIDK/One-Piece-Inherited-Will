@@ -434,7 +434,7 @@ const npcs = [
     look: { hair: 'short', hairColor: '#424242', skin: '#e0ac7e', top: '#5d4037', bottom: '#3e2723', hat: 'tricorne', hatColor: '#3e2723', hand: '#90a4ae' }, level: 9,
     faction: 'bandit', style: 'sniper', weapon: 'gun', ranged: true, prefRange: 5, moves: ['wb_slaver_net', 'snipe_explode'], skill: 0.3, breakthrough: 2, reward: 6000,
     alert: '"A musician from a long line of musicians" — they pay double at Sabaody for a pedigree!',
-    barks: ['Don\'t bruise the merchandise!', 'A Longleg goes for seven hundred thousand. What are YOU worth?'],
+    barks: ['Don\'t bruise the merchandise!', 'A fighter goes for seven hundred thousand. What are YOU worth?'],
     when: (c, g) => g.quests.stageId('wb_toroa_slavers') === 'slavers',
   },
 
@@ -829,7 +829,7 @@ const npcs = [
 
   // =============================================================== ASSHINA
   {
-    id: 'wb_colosseum_master', name: 'Master Marabou', title: 'Master of the Colosseum of the Long Stride', island: 'asshina', at: { town: 'asshina_town', building: 'Colosseum of the Long Stride' }, race: 'longleg',
+    id: 'wb_colosseum_master', name: 'Master Marabou', title: 'Master of the Colosseum of the Long Stride', island: 'asshina', at: { town: 'asshina_town', building: 'Colosseum of the Long Stride' },
     look: { hair: 'bald', skin: '#e0ac7e', top: '#ffb300', bottom: '#5d4037', coat: '#6d4c41' }, level: 12,
     marker: (c, g) => mk(g, 'wb_asshina_colosseum', true, 'report'),
     dialogue: (ctx) => ({
@@ -839,21 +839,21 @@ const npcs = [
           text: () => {
             if (done(ctx, 'wb_asshina_colosseum')) return '"Champion! The sand still remembers your footprints. Come back whenever you want the crowd to scream your name."';
             if (active(ctx, 'wb_asshina_colosseum', 'report')) return '"SECRETARYBIRD SERENA IS DOWN! A new champion of the Long Stride! Come here, come here — the crowd wants to see your legs!"';
-            return '"Welcome to the Asshina Gainone Kingdom, where the Longleg Tribe has kicked for a thousand years! In my Colosseum, anyone may fight: human, Longleg — even a Longarm, if he is brave enough to be booed. Four bouts to the championship!"';
+            return '"Welcome to the Asshina Gainone Kingdom, where we have kicked for a thousand years! In my Colosseum, anyone may fight: kicker, brawler — even a boxer from Notice, if he is brave enough to be booed. Four bouts to the championship!"';
           },
           choices: [
             { text: 'Sign me up.', if: () => !ctx.quest('wb_asshina_colosseum'), do: (c) => c.startQuest('wb_asshina_colosseum'), end: true },
             { text: 'Claim the championship.', if: () => active(ctx, 'wb_asshina_colosseum', 'report'), do: (c) => c.complete('wb_asshina_colosseum'), next: 'a' },
-            { text: 'Why do Longlegs and Longarms fight?', next: 'feud' },
+            { text: 'Why do the kickers and the boxers fight?', next: 'feud' },
             { text: 'Goodbye.', end: true },
           ],
         },
-        feud: { text: '"More than a thousand years of feud, and nobody remembers how it started! ...Ha! Truly, it keeps the ticket sales up. And the human shops at Sabaody price us both the same: seven hundred thousand berries a head. Think about that."', next: 'a' },
+        feud: { text: '"Asshina kicks, Notice punches — more than a thousand years of feud, and nobody remembers how it started! ...Ha! Truly, it keeps the ticket sales up."', next: 'a' },
       },
     }),
   },
   {
-    id: 'wb_stride_master', name: 'Stride Master Rhea', title: 'Stride Dojo', island: 'asshina', at: { town: 'asshina_town', building: 'Stride Dojo' }, race: 'longleg', trainer: 'wb_asshina_kicks',
+    id: 'wb_stride_master', name: 'Stride Master Rhea', title: 'Stride Dojo', island: 'asshina', at: { town: 'asshina_town', building: 'Stride Dojo' }, trainer: 'wb_asshina_kicks',
     look: { hair: 'ponytail', hairColor: '#212121', skin: '#a0643a', top: '#fafafa', bottom: '#212121', belt: '#212121' }, level: 18,
     dialogue: () => ({
       start: 'a',
@@ -861,14 +861,14 @@ const npcs = [
     }),
   },
   {
-    id: 'wb_glad_stork', name: '"Stork Kick" Stavros', title: 'Gladiator', island: 'asshina', at: { spot: 'arena_sands' }, race: 'longleg', named: true, lethal: false,
+    id: 'wb_glad_stork', name: '"Stork Kick" Stavros', title: 'Gladiator', island: 'asshina', at: { spot: 'arena_sands' }, named: true, lethal: false,
     look: { hair: 'short', hairColor: '#fafafa', skin: '#f1c9a0', top: '#fafafa', bottom: '#212121' }, level: 7, faction: 'rival', style: 'brawler', moves: ['wb_whip_kick'], skill: 0.25,
     alert: 'First bout! The stork strikes!',
     when: (c, g) => !g.quests.isDone('wb_asshina_colosseum'),
     dialogue: (ctx) => ({ start: 'a', nodes: { a: { text: () => ctx.char.defeated.wb_glad_stork ? '"Ow. Ow ow ow. Good kick. Next bout is Kira — she doesn\'t lose."' : '"I\'m the first bout! Everybody starts with me. Most people also end with me."', choices: [{ text: 'Fight!', if: () => active(ctx, 'wb_asshina_colosseum', 'stork'), do: (c) => aggro(c.game, findActor(c.game, 'wb_glad_stork')), end: true }, { text: 'Later.', end: true }] } } }),
   },
   {
-    id: 'wb_glad_crane', name: '"Crane Stance" Kira', title: 'Gladiator', island: 'asshina', at: { spot: 'arena_sands' }, race: 'longleg', named: true, lethal: false,
+    id: 'wb_glad_crane', name: '"Crane Stance" Kira', title: 'Gladiator', island: 'asshina', at: { spot: 'arena_sands' }, named: true, lethal: false,
     look: { hair: 'long', hairColor: '#e53935', skin: '#e0ac7e', top: '#fafafa', bottom: '#e53935' }, level: 9, faction: 'rival', style: 'brawler', moves: ['wb_whip_kick', 'brawl_knee'], skill: 0.35,
     alert: 'Stand on one leg, strike with the other!',
     recruit: {
@@ -876,19 +876,19 @@ const npcs = [
       pitch: '"You beat Serena. SERENA. I\'ve been kicking sand in this arena for six years waiting for someone worth following out of it. The Grand Line has fighters I\'ve never even heard of — take me with you!"',
     },
     dialogue: (ctx) => ({ start: 'a', nodes: { a: {
-      text: () => ctx.game.quests.isDone('wb_asshina_colosseum') ? '"The champion! Every Longleg kid in town is practising your stance now."' : ctx.char.defeated.wb_glad_crane ? '"Tch. You got under my guard. Heron Blade Hector is next — watch his heels, they\'re sharpened."' : '"Crane Stance: one leg rooted, one leg free. You look like you use both of yours for walking. Cute."',
+      text: () => ctx.game.quests.isDone('wb_asshina_colosseum') ? '"The champion! Every kid in town is practising your stance now."' : ctx.char.defeated.wb_glad_crane ? '"Tch. You got under my guard. Heron Blade Hector is next — watch his heels, they\'re sharpened."' : '"Crane Stance: one leg rooted, one leg free. You look like you use both of yours for walking. Cute."',
       choices: [{ text: 'Fight!', if: () => active(ctx, 'wb_asshina_colosseum', 'crane'), do: (c) => aggro(c.game, findActor(c.game, 'wb_glad_crane')), end: true }, { text: 'Later.', end: true }],
     } } }),
   },
   {
-    id: 'wb_glad_heron', name: '"Heron Blade" Hector', title: 'Gladiator', island: 'asshina', at: { spot: 'arena_sands' }, race: 'longleg', named: true, lethal: false,
+    id: 'wb_glad_heron', name: '"Heron Blade" Hector', title: 'Gladiator', island: 'asshina', at: { spot: 'arena_sands' }, named: true, lethal: false,
     look: { hair: 'spiky', hairColor: '#90a4ae', skin: '#c68642', top: '#37474f', bottom: '#90a4ae' }, level: 11, faction: 'rival', style: 'brawler', moves: ['wb_whip_kick', 'wb_stilt_stomp', 'brawl_tackle'], skill: 0.4,
     alert: 'My heels are sharper than your sword!',
     when: (c, g) => !g.quests.isDone('wb_asshina_colosseum'),
     dialogue: (ctx) => ({ start: 'a', nodes: { a: { text: () => ctx.char.defeated.wb_glad_heron ? '"...The champion will not be as polite as me."' : '"Blades strapped to the heels. The Colosseum allows it. Do you?"', choices: [{ text: 'Fight!', if: () => active(ctx, 'wb_asshina_colosseum', 'heron'), do: (c) => aggro(c.game, findActor(c.game, 'wb_glad_heron')), end: true }, { text: 'Later.', end: true }] } } }),
   },
   {
-    id: 'wb_serena', name: '"Secretarybird" Serena', title: 'Champion of the Colosseum', island: 'asshina', at: { spot: 'arena_sands' }, race: 'longleg', boss: true, hpMul: 1.0, lethal: false,
+    id: 'wb_serena', name: '"Secretarybird" Serena', title: 'Champion of the Colosseum', island: 'asshina', at: { spot: 'arena_sands' }, boss: true, hpMul: 1.0, lethal: false,
     look: { hair: 'spiky', hairColor: '#212121', skin: '#f1c9a0', top: '#eceff1', bottom: '#212121', hat: 'headband', hatColor: '#ffb300' }, level: 13, faction: 'rival',
     style: 'brawler', moves: ['wb_secretary_kick', 'wb_whip_kick', 'wb_stilt_stomp'], skill: 0.5, breakthrough: 3, reward: 6000,
     alert: 'The secretarybird kicks snakes to death. You look like a snake.',
@@ -1125,7 +1125,7 @@ const quests = [
   },
   {
     id: 'wb_asshina_colosseum', name: 'The Colosseum of the Long Stride', island: 'asshina', kind: 'side',
-    summary: 'Four bouts on the sands of Asshina to become champion of the Longleg Tribe\'s colosseum.',
+    summary: 'Four bouts on the sands of Asshina to become champion of its colosseum.',
     stages: [
       { id: 'stork', desc: 'First bout: defeat "Stork Kick" Stavros on the arena sands (north-east of Asshina).', goal: { type: 'defeat', npc: 'wb_glad_stork' } },
       { id: 'crane', desc: 'Second bout: defeat "Crane Stance" Kira.', goal: { type: 'defeat', npc: 'wb_glad_crane' } },
@@ -1169,7 +1169,7 @@ const trainers = {
   },
   wb_asshina_kicks: {
     name: 'Stride Master Rhea', where: 'Stride Dojo, Asshina Gainone Kingdom (West Blue)', styles: {}, teaches: ['wb_whip_kick', 'brawl_knee', 'brawl_tackle'], train: { agi: 26, str: 22, end: 20 },
-    spar: { level: 11, style: 'brawler', name: 'Longleg Kickboxer', race: 'longleg' },
+    spar: { level: 11, style: 'brawler', name: 'Asshina Kickboxer' },
     lines: ['A leg is a whip. The hip is the handle.', 'Again — and point your toes this time!'],
   },
 };
@@ -1229,13 +1229,13 @@ const abilities = [
     steps: [{ dash: { dist: 8, time: 0.3, iframes: 0.15, hit: { damage: 22, knockback: 8, stun: 0.6, heavy: true, guardBreak: true } } }] },
   { id: 'wb_boo_elbow', name: 'Hasshoken Elbow', anim: 'punch', windup: 0.3, recover: 0.35, cd: 4,
     steps: [{ hit: { shape: 'arc', range: 1.7, arc: 1.2, offset: 0.2, damage: 16, knockback: 5, stun: 0.5, unblockable: true }, vfx: 'ring', color: '#80cbc4' }] },
-  // Longleg kicks
+  // Asshina kicks
   { id: 'wb_stilt_stomp', name: 'Stilt Stomp', anim: 'kick', windup: 0.45, recover: 0.4, cd: 6,
     steps: [{ hit: { shape: 'circle', range: 2.3, damage: 13, knockback: 5, stun: 0.45, heavy: true }, vfx: 'ring', color: '#d7ccc8' }] },
   { id: 'wb_secretary_kick', name: 'Secretarybird Stamp', anim: 'kick', windup: 0.35, recover: 0.4, cd: 6, say: 'Stomp stomp stomp!',
     steps: [{ hit: { shape: 'arc', range: 2.3, arc: 1.3, offset: 0.3, damage: 5, knockback: 1.5, stun: 0.2, duration: 0.6, interval: 0.1 }, vfx: 'fist', color: '#ffe0b2' }] },
   { id: 'wb_whip_kick', name: 'Whip Kick', icon: '🦵', style: 'brawler', anim: 'kick', windup: 0.18, recover: 0.3, cd: 5,
-    desc: 'The Longleg Tribe\'s signature: a long, lashing kick that hits everything in a wide arc.',
+    desc: 'The Asshina kickers\' signature: a long, lashing kick that hits everything in a wide arc.',
     steps: [{ hit: { shape: 'arc', range: 2.4, arc: 2.2, offset: 0.2, damage: 16, knockback: 4, stun: 0.35 }, vfx: 'slash', color: '#ffe0b2' }], learn: { mastery: 8, price: 4000 } },
   { id: 'wb_bujaogen', name: 'Bujaogen', icon: '🦶', style: 'hasshoken', anim: 'kick', windup: 0.3, recover: 0.35, cd: 8, say: 'Bujaogen!',
     desc: 'Martial Leg Heel: a kick that drives the Hasshoken\'s vibration straight through any guard. Sai\'s favourite.',
@@ -1339,7 +1339,6 @@ function install(game) {
   game.on('characterStart', ({ char, isNew }) => {
     if (!isNew || !char) return;
     if (char.race === 'three_eye') game.log('You were born among the scholars hiding in the ruins of Ohara. Professor Alfalfa says your third eye may one day hear the Voice of All Things. (Train Observation Haki to 20 to read Poneglyphs.)', '#ce93d8');
-    if (char.race === 'longleg') game.log('Welcome home to the Asshina Gainone Kingdom. The Colosseum of the Long Stride is always looking for fresh legs.', '#ffe0b2');
   });
 
   // --- spot-based events, sea boss, proximity duels ------------------------

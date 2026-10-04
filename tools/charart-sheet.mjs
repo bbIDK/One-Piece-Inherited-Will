@@ -134,8 +134,6 @@ R('mink panda', 'mink', 6, { kind: 'Panda', ears: 'round', fur: '#f5f6fa', skin:
 R('mink lion', 'mink', 7, { kind: 'Lion', ears: 'round', fur: '#f6b93b', skin: '#f6b93b', hairColor: '#e67e22', muzzle: true, furFace: true, hair: 'afro' });
 R('mink sulong', 'mink', 8, { kind: 'Rabbit', ears: 'long', fur: '#f5f6fa', skin: '#f5f6fa', hairColor: '#f5f6fa', furWhite: true, furFace: true, hair: 'long' });
 R('skypiean', 'skypiean', 4, { hair: 'curly', hairColor: '#f5f6fa' });
-R('longarm', 'longarm', 5, { hair: 'mohawk', hairColor: '#c0392b' });
-R('longleg', 'longleg', 6, { hair: 'ponytail', hairColor: '#8e44ad' });
 R('buccaneer', 'buccaneer', 7, { hair: 'buzz', hairColor: '#1e1e1e' });
 R('three-eye', 'three_eye', 8, { hair: 'long', hairColor: '#e84393' });
 R('lunarian', 'lunarian', 9, { hair: 'spiky' });
@@ -180,7 +178,7 @@ if (only.includes('matrix')) {
 }
 if (only.includes('world')) {
   const sec = section('world', 'Townsfolk at the in-game zoom (46 px/tile) — random makeLook');
-  const races = ['human', 'human', 'human', 'fishman', 'mink', 'skypiean', 'longarm', 'longleg', 'buccaneer', 'three_eye', 'lunarian'];
+  const races = ['human', 'human', 'human', 'fishman', 'mink', 'skypiean', 'human', 'human', 'buccaneer', 'three_eye', 'lunarian'];
   const hats = [null, null, null, 'bandana', 'straw', 'cowboy', 'marine', 'beanie', 'captain', 'headband', 'goggles', 'tricorne'];
   for (let r = 0; r < 4; r++) {
     const cells = [];
@@ -234,7 +232,7 @@ let scene = null;
 if (only.includes('scene')) {
   const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 720; document.body.appendChild(cv);
   const g = cv.getContext('2d');
-  const races = ['human', 'human', 'fishman', 'mink', 'skypiean', 'longarm', 'longleg', 'buccaneer', 'three_eye', 'lunarian'];
+  const races = ['human', 'human', 'fishman', 'mink', 'skypiean', 'human', 'human', 'buccaneer', 'three_eye', 'lunarian'];
   const hats = [null, 'straw', 'bandana', null, 'cowboy', 'marine', 'beanie', 'captain', 'headband', null, 'goggles', 'tricorne'];
   const cast = [];
   for (let i = 0; i < 30; i++) {
@@ -315,7 +313,7 @@ if (only.includes('bench')) {
   const c = document.createElement('canvas'); c.width = 1280; c.height = 720;
   const g = c.getContext('2d');
   const looks = [];
-  const races = ['human', 'human', 'human', 'fishman', 'mink', 'skypiean', 'longarm', 'longleg', 'buccaneer', 'three_eye', 'lunarian'];
+  const races = ['human', 'human', 'human', 'fishman', 'mink', 'skypiean', 'human', 'human', 'buccaneer', 'three_eye', 'lunarian'];
   const hats = [null, null, 'bandana', 'straw', 'cowboy', 'marine', 'beanie', 'captain', 'headband', 'goggles', 'tricorne', 'horns'];
   for (let i = 0; i < 64; i++) { const L = makeLook(races[i % races.length], 500 + i * 31); if (i % 2) L.hat = hats[i % hats.length]; looks.push(L); }
   const dirs = ['down', 'right', 'left', 'up'];

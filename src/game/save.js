@@ -2,6 +2,8 @@
 // lineage (legacy) that outlives it. There is no manual save to reload: the
 // game saves itself (and whenever you choose Save), and death is written
 // immediately — just like Rogue Lineage.
+import { liveRace } from '../data/races.js';
+
 const PREFIX = 'op-inherited-will';
 const LEGACY_CHAR = `${PREFIX}:char:v1`; // pre-slot saves
 const LEGACY_LEGACY = `${PREFIX}:legacy:v1`;
@@ -49,9 +51,13 @@ export function setSlot(n) { slot = Math.max(1, Math.min(SLOT_COUNT, n | 0)); wr
 export function getSlot() { return slot; }
 export function lastSlot() { const n = read(KEY_LAST); return n >= 1 && n <= SLOT_COUNT ? n : 1; }
 
-export const loadLegacy = (s = slot) => ({ ...defaultLegacy(), ...(read(key(s, 'legacy')) || {}) });
+export function loadLegacy(s = slot) {
+  const L = { ...defaultLegacy(), ...(read(key(s, 'legacy')) || {}) };
+  for (const e of L.hall || []) liveRace(e);
+  return L;
+}
 export const saveLegacy = (l, s = slot) => write(key(s, 'legacy'), l);
-export const loadChar = (s = slot) => read(key(s, 'char'));
+export const loadChar = (s = slot) => liveRace(read(key(s, 'char')));
 export const saveChar = (c, s = slot) => write(key(s, 'char'), c);
 export const clearChar = (s = slot) => remove(key(s, 'char'));
 export function clearSlot(s) { remove(key(s, 'char')); remove(key(s, 'legacy')); remove(key(s, 'net')); }
@@ -63,7 +69,7 @@ export const saveNet = (v, s = slot) => write(key(s, 'net'), v);
 
 /** What the title screen shows for a slot. */
 export function slotInfo(s) {
-  const char = read(key(s, 'char'));
+  const char = liveRace(read(key(s, 'char')));
   const legacy = read(key(s, 'legacy'));
   return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
 }

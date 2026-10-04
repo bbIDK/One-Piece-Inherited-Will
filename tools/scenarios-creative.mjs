@@ -172,7 +172,7 @@ export const scenarios = {
           await page.evaluate(() => { const g = window.OP.game, p = g.player; g.view3d.rig.yaw = p.facing + Math.PI - 0.45; });
           await snapNow(page, snap, '3p-' + race);
         };
-        for (const race of ['mink', 'fishman', 'buccaneer', 'lunarian', 'longarm', 'skypiean']) await face(race);
+        for (const race of ['mink', 'fishman', 'buccaneer', 'lunarian', 'skypiean']) await face(race);
         // a charged jump: how high it goes, by race
         log('charged jump (m)', await page.evaluate(() => {
           const g = window.OP.game, p = g.player, OP = window.OP;
@@ -187,7 +187,7 @@ export const scenarios = {
             return +top.toFixed(2);
           };
           OP.hold = true;
-          const out = { longleg: jump('longleg'), mink: jump('mink'), human: jump('human') };
+          const out = { skypiean: jump('skypiean'), mink: jump('mink'), human: jump('human') };
           OP.hold = false;
           return out;
         }));

@@ -91,7 +91,7 @@ export const scenarios = {
           { name: 'Cook', race: 'human', look: { hair: 'short', hairColor: '#f2d16b', top: '#212121', bottom: '#212121', skin: '#f1c9a0', eyeShape: 'sharp', mouth: 'flat' } },
           { name: 'Archaeologist', race: 'human', look: { hair: 'long', hairColor: '#111111', top: '#6a1b9a', bottom: '#d84315', skin: '#e0ac7e', eyeShape: 'soft', mouth: 'smile' } },
           { name: 'Shipwright', race: 'buccaneer', look: { hair: 'spiky', hairColor: '#29b6f6', top: '#e53935', openShirt: true, bottom: '#1565c0', skin: '#e0ac7e', bulk: 1.45, eyeShape: 'sharp', grin: true } },
-          { name: 'Musician', race: 'longleg', look: { hair: 'afro', hairColor: '#111111', top: '#212121', bottom: '#212121', skin: '#fafafa', eyeShape: 'round', mouth: 'flat' } },
+          { name: 'Musician', race: 'human', look: { hair: 'afro', hairColor: '#111111', top: '#212121', bottom: '#212121', skin: '#fafafa', eyeShape: 'round', mouth: 'flat' } },
         ];
         const n = crew.length;
         crew.forEach((c, i) => {

@@ -79,15 +79,10 @@ test('a new race is taken on whole, there and then: body, attributes, lives and 
   assert.equal(c.look.wings, 'lunar');
   assert.equal(c.look.scale, 1);
 
-  changeRace(game, 'longarm');
-  assert.equal(p.reach, RACES.longarm.reach);
-  assert.equal(c.look.wings, undefined);
-  assert.equal(c.look.arms, 1.8);
-
-  changeRace(game, 'longleg');
-  assert.equal(p.baseMods.stride, RACES.longleg.stride);
-  assert.equal(c.look.arms, undefined);
-  assert.ok(c.look.legs > 1.5);
+  changeRace(game, 'skypiean');
+  assert.equal(c.look.wings, 'sky', 'a Skypiean\'s little wings for a Lunarian\'s');
+  assert.equal(p.flameLit, false);
+  assert.equal(c.look.backFlame, undefined);
 
   // and back where we started: the races' builds come off as they went on
   changeRace(game, 'human');
@@ -112,7 +107,7 @@ test('a race\'s looks change, and nothing else of yours does', () => {
   assert.equal(back.fur, undefined);
   assert.notEqual(back.skin, mink.fur, 'and a human\'s skin is skin again');
   // a skin chosen in the creator stays, for races that leave it to you
-  assert.equal(raceLook(look, 'longleg', 5).skin, look.skin);
+  assert.equal(raceLook(look, 'skypiean', 5).skin, look.skin);
   assert.equal(raceLook(look, 'three_eye', 5).thirdEye, true);
 });
 

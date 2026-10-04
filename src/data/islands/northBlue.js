@@ -382,7 +382,7 @@ export const NORTH_BLUE = [
         { role: 'shop', name: 'Notice Boutique' },
         { role: 'bank', name: 'Bank of Notice' },
         { role: 'bar', name: "The Hyena's Den" },
-        { role: 'dojo', name: 'Longarm Boxing Club', npc: 'nb_ulrich' },
+        { role: 'dojo', name: 'Notice Boxing Club', npc: 'nb_ulrich' },
         { role: 'cafe', name: 'Café Sora', npc: 'nb_emil' },
       ],
     }],
@@ -397,7 +397,7 @@ export const NORTH_BLUE = [
     rumors: [
       '"Notice is the richest town in the North Blue. And the most boring, if you ask the young ones."',
       '"The Bellamy boys said this town was boring and sailed off to be pirates. Their mothers still won\'t talk about it."',
-      '"The Longarm Quarter runs the boxing club. Two elbows on each arm — you do NOT want to trade punches with them."',
+      '"The boxing club runs the Notice Cup. Old Ulrich\'s boys can jab you from across the street — you do NOT want to trade punches with them."',
       '"Kids here read \'Sora, Warrior of the Sea\' every week. They swear Germa 66 is real."',
     ],
   },

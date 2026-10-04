@@ -20,8 +20,6 @@ import { createPreview, renderPortrait } from './preview3d.js';
 const HEIGHT_NOTE = {
   human: 'Humans stand at an ordinary height.',
   buccaneer: 'Buccaneers stand head and shoulders above everyone.',
-  longarm: 'Longarms are ordinary in height, with an extra joint in each arm.',
-  longleg: 'Longlegs tower on their long legs.',
   fishman: 'Fish-Men are tall and broad.',
   mink: 'Minks are about as tall as humans.',
   skypiean: 'Skypieans are human-sized, with small wings.',
@@ -279,7 +277,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       clear(tabsEl);
       for (const [id, name] of TABS) tabsEl.appendChild(h('button' + (state.tab === id ? '.on' : ''), { on: { click: () => { state.tab = id; renderTabs(); renderOpts(); } } }, name));
     };
-    const skinnable = ['human', 'longarm', 'longleg', 'three_eye', 'buccaneer', 'skypiean', 'lunarian'].includes(race);
+    const skinnable = ['human', 'three_eye', 'buccaneer', 'skypiean', 'lunarian'].includes(race);
     const renderOpts = () => {
       clear(optsEl);
       const tab = state.tab;

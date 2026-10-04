@@ -995,12 +995,6 @@ export function drawCharacter(g, look, pose) {
       drawLimb(g, [arm.j, arm.e], [rs[1], rs[2]], foreC, dk(foreC, -0.18), sd);
       drawLimb(g, [arm.s, arm.j], [rs[0], rs[1]], upperCol, dk(upperCol, -0.18), sd);
     }
-    if (armLen > 1.2) {
-      // the Longarm Tribe's two elbows
-      const j2 = mix2(arm.j, arm.e, 0.5);
-      circ(g, arm.j[0], arm.j[1], rs[1] * 1.12, upperCol, OUTLINE, 0.03);
-      circ(g, j2[0], j2[1], rs[2] * 1.12, foreC, OUTLINE, 0.03);
-    }
     if (!look.sleeve && !look.noSleeves) {
       const m = mix2(arm.s, arm.j, 0.42);
       const tc = dk(top, dim);

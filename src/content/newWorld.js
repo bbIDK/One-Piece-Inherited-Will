@@ -984,7 +984,7 @@ const npcs = [
   },
   {
     id: 'nw_ideo', duel: true, recover: 8, recoverLine: '"What a punch! You\'ve got it, champ!"', name: 'Ideo', title: '"Destruction Cannon", boxer', island: 'dressrosa', at: { spot: 'colosseum_arena', ox: -2 },
-    race: 'longarm', level: 58, named: true, style: 'brawler', skill: 0.45,
+    level: 58, named: true, style: 'brawler', skill: 0.45,
     look: { hair: 'short', hairColor: '#212121', skin: '#e0ac7e', top: '#fafafa', bottom: '#b71c1c' },
     moves: ['nw_ideo_cannon', 'brawl_knee'],
     recruit: { role: 'fighter', fighter: true, requires: (c, g) => g.quests.isDone('nw_corrida'), pitch: '"You took the whole Colosseum! XXX-rank boxer Ideo, at your service. My fists are yours — point them at something worth destroying!"' },

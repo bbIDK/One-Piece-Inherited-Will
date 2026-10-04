@@ -184,7 +184,7 @@ export const SOUTH_BLUE = [
       { kind: 'torii', dx: 0.3, dy: -0.26, name: 'Gate of the Thousand Steps' },
       { kind: 'bell', dx: 0.5, dy: 0.2 },
     ],
-    population: [['human', 84], ['mink', 12], ['longarm', 2], ['longleg', 2]],
+    population: [['human', 88], ['mink', 12]],
     danger: 1,
     tagline: 'Every fist in the South Blue comes here to be humbled.',
     rumors: [

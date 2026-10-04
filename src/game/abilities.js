@@ -37,12 +37,6 @@ export const getAbility = (id) => REG.get(id);
 export const allAbilities = () => [...REG.values()];
 export { ownRoom };
 
-/** Is this a kick (for the Longleg Tribe's whip legs)? */
-export function isKick(def) {
-  if (!def) return false;
-  return /kick|sweep|knee|axe_kick|mouton|stomp|jete|ballet|pirouette|arabesque|handstand|rankyaku/.test(def.anim || '') || def.style === 'black_leg' || def.style === 'okama_kenpo';
-}
-
 export function abilityTotal(def) {
   const last = Math.max(0, ...(def.steps || []).map((s) => (s.at ?? def.windup ?? 0) + (s.dash ? s.dash.time : 0) + (s.hit ? s.hit.duration ?? 0.1 : 0)));
   return Math.max((def.windup ?? 0) + (def.active ?? 0.1), last) + (def.recover ?? 0.2);
@@ -66,8 +60,7 @@ export function powerFor(actor, def) {
     // weapon mastery: the more you fight with a kind of weapon, the harder it hits
     if (actor.weaponMastery) m *= 1 + (actor.weaponMastery[weaponKindOf(actor, def)] || 0) * 0.006;
   }
-  // (a Longleg's legs are whips; a Skypiean knows a Dial as nobody from the Blue Sea does)
-  if (actor.race === 'longleg' && isKick(def)) m *= 1.3;
+  // (a Skypiean knows a Dial as nobody from the Blue Sea does)
   if (actor.race === 'skypiean' && def.id?.startsWith('dial_')) m *= 1.25;
   m *= actor.buffMul('damage');
   if (actor.armament && !src.startsWith('fruit_ranged')) m *= 1.25 + (actor.hakiLevel('armament') || 0) * 0.004;
@@ -135,8 +128,6 @@ export function startAbility(actor, def, game, target) {
       if (actor.isPlayer) game.hint?.('roomweak', `${def.name} is only half as strong outside your ROOM. Cast ROOM first, then fight inside it.`);
     }
   }
-  // (a Longarm's second elbow snaps a bare-handed jab back quicker)
-  if (actor.race === 'longarm' && def.m1Chain && !def.weapon) actor.action.total *= 0.8;
   // a foe's blow: wound up long enough to read, and the moment it lands shown by a glint
   if (!actor.isPlayer && actor.faction !== 'player') {
     readable(actor, actor.action, game);

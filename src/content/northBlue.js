@@ -543,7 +543,7 @@ const npcs = [
 
   // ================================================================ Notice
   {
-    id: 'nb_ulrich', name: 'Ulrich', title: 'Master of the Longarm Boxing Club', island: 'notice', race: 'longarm', at: { town: 'notice_town', building: 'Longarm Boxing Club' }, trainer: 'nb_longarm',
+    id: 'nb_ulrich', name: 'Ulrich', title: 'Master of the Notice Boxing Club', island: 'notice', at: { town: 'notice_town', building: 'Notice Boxing Club' }, trainer: 'nb_longarm',
     look: { hair: 'buzz', hairColor: '#9e9e9e', top: '#b71c1c', bottom: '#212121', skin: '#e0ac7e' }, level: 18,
     marker: (c, g) => (!g.quests.state('nb_notice_cup') ? '!' : stageOf(g, 'nb_notice_cup') === 'report' ? '?' : null),
     dialogue: (ctx) => ({
@@ -552,7 +552,7 @@ const npcs = [
         a: {
           text: () => (done(ctx, 'nb_notice_cup')
             ? `"The champion of the Notice Cup! Otto still can't stop talking about you. The club's door is always open to you."`
-            : `"Two elbows on each arm — the Friend Elbow and the Lover Elbow. That's the Longarm Tribe! Notice is a rich, boring town, but my club isn't boring. Want to learn to hit from where they can't hit back?"`),
+            : `"Notice is a rich, boring town, but my club isn't boring. Long arms, a long guard, a jab like a whip — want to learn to hit from where they can't hit back?"`),
           choices: [
             { text: 'Train at the club', do: (c) => c.open('trainer', { trainer: 'nb_longarm' }) },
             { text: 'Is there a tournament?', if: () => !ctx.quest('nb_notice_cup'), next: 'cup' },
@@ -569,12 +569,12 @@ const npcs = [
     }),
   },
   {
-    id: 'nb_otto', name: 'Otto', title: 'Longarm boxer, champion of Notice', island: 'notice', race: 'longarm', at: { spot: 'notice_ring' }, faction: 'civilian', level: 9, named: true, lethal: false, duel: true,
+    id: 'nb_otto', name: 'Otto', title: 'Boxer, champion of Notice', island: 'notice', at: { spot: 'notice_ring' }, faction: 'civilian', level: 9, named: true, lethal: false, duel: true,
     look: { hair: 'spiky', hairColor: '#ff7043', top: '#1565c0', bottom: '#212121', skin: '#f1c9a0' }, style: 'brawler', moves: ['brawl_tackle', 'brawl_knee'], skill: 0.4,
-    alert: 'Friend Elbow! Lover Elbow! Here I come!',
+    alert: 'Jab! Jab! Here I come!',
     recruit: {
       role: 'fighter', requires: (c, g) => g.quests.isDone('nb_notice_cup'),
-      intro: `"Otto, champion of the Notice Cup — well, I was. Longarm boxing: two elbows on each arm, and I use all four. Notice is banks and gardens and tea at four. I've been dreaming of the sea since I could make a fist."`,
+      intro: `"Otto, champion of the Notice Cup — well, I was. Notice boxing: all reach and no mercy. Notice is banks and gardens and tea at four. I've been dreaming of the sea since I could make a fist."`,
       pitch: {
         pirate: `"You beat me fair and square. ...Take me to sea! The Bellamy boys left this boring town to be pirates and everyone laughed. Nobody's laughing now. My turn!"`,
         marine: `"You beat me fair and square — and you wear the Navy's cap. Take me with you! I'll enlist, I'll salute, I'll polish whatever needs polishing. Anything to get out of Notice and hit something that deserves it."`,
@@ -583,15 +583,15 @@ const npcs = [
       },
       again: `"You're asking? YES. I've been shadow-boxing on the pier every day, waiting for this."`,
       declined: `"...Yeah. Alright. I'll keep training. Next time you're in Notice, I'll be stronger — and I'll ask again."`,
-      aboard: [`"Four elbows, one ship. Anything comes aboard, I've got it."`, `"Is that a Sea King? ...No? Pity."`],
+      aboard: [`"Two fists, one ship. Anything comes aboard, I've got it."`, `"Is that a Sea King? ...No? Pity."`],
     },
     dialogue: (ctx) => ({
       start: 'a',
       nodes: {
         a: {
           text: () => {
-            if (done(ctx, 'nb_notice_cup')) return `"Champ! My arms still hurt. Both elbows on both of them."`;
-            if (at(ctx, 'nb_notice_cup', 'bout')) return `"So you're my opponent! Keep your guard up — my Lover Elbow comes in from angles you won't believe!"`;
+            if (done(ctx, 'nb_notice_cup')) return `"Champ! My arms still hurt. Both of them, all the way up."`;
+            if (at(ctx, 'nb_notice_cup', 'bout')) return `"So you're my opponent! Keep your guard up — my left hook comes in from angles you won't believe!"`;
             return `"Notice is the richest, most BORING town in the North Blue. Banks, gardens, tea at four. I want OUT. ...You're a sailor, right? What's it like out there?"`;
           },
           choices: [
@@ -1227,10 +1227,10 @@ const quests = [
   },
   {
     id: 'nb_notice_cup', name: 'The Notice Cup', island: 'notice', kind: 'side',
-    summary: 'The Longarm Boxing Club\'s tournament. Beat Notice\'s champion in the ring.',
+    summary: 'The Notice Boxing Club\'s tournament. Beat Notice\'s champion in the ring.',
     stages: [
       { id: 'bout', desc: 'Beat Otto in the boxing ring east of Notice\'s square. (Talk to him to start the bout.)', goal: { type: 'defeat', npc: 'nb_otto', island: 'notice', spot: 'notice_ring' } },
-      { id: 'report', desc: 'Tell Ulrich at the Longarm Boxing Club.' },
+      { id: 'report', desc: 'Tell Ulrich at the Notice Boxing Club.' },
     ],
     rewards: { berries: 4000, points: 1, mastery: { brawler: 3 } },
   },
@@ -1256,9 +1256,9 @@ const trainers = {
     lines: ['Give and take! You want lessons, you split the firewood first.', 'A hunter breathes out before the shot. Everybody forgets that.'],
   },
   nb_longarm: {
-    name: 'Ulrich', where: 'Longarm Boxing Club, Notice', styles: {}, teaches: ['brawl_tackle', 'brawl_knee', 'brawl_headbutt'], train: { str: 24, end: 22, agi: 20 },
-    spar: { level: 10, style: 'brawler', name: 'Longarm Sparring Partner' },
-    lines: ['Friend Elbow! Lover Elbow! Again!', 'Reach is a weapon. Make them come to you.'],
+    name: 'Ulrich', where: 'Notice Boxing Club, Notice', styles: {}, teaches: ['brawl_tackle', 'brawl_knee', 'brawl_headbutt'], train: { str: 24, end: 22, agi: 20 },
+    spar: { level: 10, style: 'brawler', name: 'Club Sparring Partner' },
+    lines: ['Jab! Jab! Again!', 'Reach is a weapon. Make them come to you.'],
   },
   nb_lvneel_fencing: {
     name: 'Master Ostrander', where: 'Royal Fencing Hall, Lvneel', styles: { ittoryu: 2000 }, teaches: ['itto_iai', 'itto_pound'], train: { str: 22, agi: 24 },

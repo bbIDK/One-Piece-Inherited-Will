@@ -549,7 +549,7 @@ export class Actor extends Entity {
   /**
    * Jump: charge 0 is a hop, 1 a full crouch-and-spring (see the player
    * controller: hold Space to charge). Races change the take-off (see
-   * data/races.js: Longlegs, Minks and Skypieans spring higher and charge
+   * data/races.js: Minks and Skypieans spring higher and charge
    * higher, Buccaneers are heavy but explosive). From the surface of the sea
    * you leap clean out of the water, leaving a ring on it.
    */

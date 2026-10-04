@@ -64,28 +64,6 @@ export const RACES = {
     swim: 0.9, hpMul: 0.95,
     jump: 8.6, charge: 1.55, leap: 1,
   },
-  longarm: {
-    name: 'Longarm Tribe', rarity: 'rare', weight: 5,
-    desc: 'Two elbows on each arm — the "Friend Elbow" and the "Lover Elbow". Your reach is feared across the North Blue.',
-    origin: 'Born in a Longarm enclave at Notice (North Blue).',
-    stats: { str: 3, agi: 0, end: 1, vit: 0, wil: 0 },
-    lives: 3,
-    traits: ['Long reach: +45% melee range', 'Double-jointed: bare-handed basic strikes snap back 20% quicker'],
-    spawnSeas: ['north_blue'], spawnTowns: ['notice_town'],
-    swim: 1, hpMul: 1, reach: 1.45,
-    jump: 7.6, charge: 1.6, leap: 1,
-  },
-  longleg: {
-    name: 'Longleg Tribe', rarity: 'rare', weight: 5,
-    desc: 'From the Asshina Gainone Kingdom. Legs like steel whips — the Colosseum fighters fear their kicks.',
-    origin: 'Born in the Asshina Gainone Kingdom (West Blue).',
-    stats: { str: 1, agi: 3, end: 0, vit: 0, wil: 0 },
-    lives: 3,
-    traits: ['Long stride: +18% move speed', 'Whip legs: kicks deal +30% damage'],
-    spawnSeas: ['west_blue'], spawnTowns: ['asshina_town'],
-    swim: 1, hpMul: 1, stride: 1.18,
-    jump: 9.2, charge: 1.65, leap: 1,
-  },
   buccaneer: {
     name: 'Buccaneer', rarity: 'epic', weight: 2.2,
     desc: 'A giant-framed race hunted almost to extinction. Bartholomew Kuma was born to your people in the South Blue.',
@@ -123,6 +101,25 @@ export const RACES = {
 };
 
 export const RACE_IDS = Object.keys(RACES);
+
+/**
+ * Peoples the game no longer has (the Longarm and Longleg Tribes), and what
+ * a character or record of one becomes: plain human — the tribe's long arms
+ * or legs going with it.
+ */
+const RETIRED = { longarm: { arms: 1.8 }, longleg: { legs: 1.9 } };
+/** Bring a saved character (or any record with `race` and `look`) up to date: a retired race becomes human. Returns it. */
+export function liveRace(rec) {
+  if (!rec || !RETIRED[rec.race]) return rec;
+  const was = RETIRED[rec.race];
+  rec.race = 'human';
+  const L = rec.look;
+  if (L) {
+    if (L.race) L.race = 'human';
+    for (const k of Object.keys(was)) if (L[k] === was[k]) delete L[k];
+  }
+  return rec;
+}
 
 export function rollRace(rng, boosts = {}) {
   const list = RACE_IDS.map((id) => [id, RACES[id].weight * (boosts[id] || 1)]);
@@ -313,10 +310,6 @@ export function makeLook(raceId, seed, overrides = {}) {
     look.skin = k.fur; look.hairColor = k.fur; look.hand = k.fur;
   } else if (raceId === 'skypiean') {
     look.wings = 'sky'; look.hairColor = rng.pick(['#f5f6fa', '#fdcb6e', '#dfe6e9', '#74b9ff', '#f7d794']); look.top = rng.pick(['#f5f6fa', '#dff9fb', '#f6e58d']);
-  } else if (raceId === 'longarm') {
-    look.arms = 1.8; look.top = rng.pick(['#c0392b', '#2c3e50', '#27ae60']);
-  } else if (raceId === 'longleg') {
-    look.legs = 1.9;
   } else if (raceId === 'buccaneer') {
     look.bulk = 1.25; look.skin = rng.pick(['#c68642', '#a0643a', '#7a4a2a']);
   } else if (raceId === 'three_eye') {

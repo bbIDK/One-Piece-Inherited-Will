@@ -46916,42 +46916,6 @@ ${GLSL}
       charge: 1.55,
       leap: 1
     },
-    longarm: {
-      name: "Longarm Tribe",
-      rarity: "rare",
-      weight: 5,
-      desc: 'Two elbows on each arm \u2014 the "Friend Elbow" and the "Lover Elbow". Your reach is feared across the North Blue.',
-      origin: "Born in a Longarm enclave at Notice (North Blue).",
-      stats: { str: 3, agi: 0, end: 1, vit: 0, wil: 0 },
-      lives: 3,
-      traits: ["Long reach: +45% melee range", "Double-jointed: bare-handed basic strikes snap back 20% quicker"],
-      spawnSeas: ["north_blue"],
-      spawnTowns: ["notice_town"],
-      swim: 1,
-      hpMul: 1,
-      reach: 1.45,
-      jump: 7.6,
-      charge: 1.6,
-      leap: 1
-    },
-    longleg: {
-      name: "Longleg Tribe",
-      rarity: "rare",
-      weight: 5,
-      desc: "From the Asshina Gainone Kingdom. Legs like steel whips \u2014 the Colosseum fighters fear their kicks.",
-      origin: "Born in the Asshina Gainone Kingdom (West Blue).",
-      stats: { str: 1, agi: 3, end: 0, vit: 0, wil: 0 },
-      lives: 3,
-      traits: ["Long stride: +18% move speed", "Whip legs: kicks deal +30% damage"],
-      spawnSeas: ["west_blue"],
-      spawnTowns: ["asshina_town"],
-      swim: 1,
-      hpMul: 1,
-      stride: 1.18,
-      jump: 9.2,
-      charge: 1.65,
-      leap: 1
-    },
     buccaneer: {
       name: "Buccaneer",
       rarity: "epic",
@@ -47007,6 +46971,18 @@ ${GLSL}
     }
   };
   var RACE_IDS = Object.keys(RACES);
+  var RETIRED = { longarm: { arms: 1.8 }, longleg: { legs: 1.9 } };
+  function liveRace(rec) {
+    if (!rec || !RETIRED[rec.race]) return rec;
+    const was = RETIRED[rec.race];
+    rec.race = "human";
+    const L3 = rec.look;
+    if (L3) {
+      if (L3.race) L3.race = "human";
+      for (const k of Object.keys(was)) if (L3[k] === was[k]) delete L3[k];
+    }
+    return rec;
+  }
   function rollRace(rng4, boosts = {}) {
     const list = RACE_IDS.map((id) => [id, RACES[id].weight * (boosts[id] || 1)]);
     return rng4.weighted(list);
@@ -47194,11 +47170,6 @@ ${GLSL}
       look.wings = "sky";
       look.hairColor = rng4.pick(["#f5f6fa", "#fdcb6e", "#dfe6e9", "#74b9ff", "#f7d794"]);
       look.top = rng4.pick(["#f5f6fa", "#dff9fb", "#f6e58d"]);
-    } else if (raceId === "longarm") {
-      look.arms = 1.8;
-      look.top = rng4.pick(["#c0392b", "#2c3e50", "#27ae60"]);
-    } else if (raceId === "longleg") {
-      look.legs = 1.9;
     } else if (raceId === "buccaneer") {
       look.bulk = 1.25;
       look.skin = rng4.pick(["#c68642", "#a0643a", "#7a4a2a"]);
@@ -49317,10 +49288,6 @@ ${GLSL}
     }
   }
   var getAbility = (id) => REG.get(id);
-  function isKick(def) {
-    if (!def) return false;
-    return /kick|sweep|knee|axe_kick|mouton|stomp|jete|ballet|pirouette|arabesque|handstand|rankyaku/.test(def.anim || "") || def.style === "black_leg" || def.style === "okama_kenpo";
-  }
   function abilityTotal(def) {
     const last = Math.max(0, ...(def.steps || []).map((s) => (s.at ?? def.windup ?? 0) + (s.dash ? s.dash.time : 0) + (s.hit ? s.hit.duration ?? 0.1 : 0)));
     return Math.max((def.windup ?? 0) + (def.active ?? 0.1), last) + (def.recover ?? 0.2);
@@ -49341,7 +49308,6 @@ ${GLSL}
       if (def.weapon && actor.weaponMul) m *= actor.weaponMul(def.weapon);
       if (actor.weaponMastery) m *= 1 + (actor.weaponMastery[weaponKindOf(actor, def)] || 0) * 6e-3;
     }
-    if (actor.race === "longleg" && isKick(def)) m *= 1.3;
     if (actor.race === "skypiean" && def.id?.startsWith("dial_")) m *= 1.25;
     m *= actor.buffMul("damage");
     if (actor.armament && !src.startsWith("fruit_ranged")) m *= 1.25 + (actor.hakiLevel("armament") || 0) * 4e-3;
@@ -49397,7 +49363,6 @@ ${GLSL}
         if (actor.isPlayer) game.hint?.("roomweak", `${def.name} is only half as strong outside your ROOM. Cast ROOM first, then fight inside it.`);
       }
     }
-    if (actor.race === "longarm" && def.m1Chain && !def.weapon) actor.action.total *= 0.8;
     if (!actor.isPlayer && actor.faction !== "player") {
       readable(actor, actor.action, game);
       const p = game.player;
@@ -58646,7 +58611,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const FR = { brawny: 1.18, heavy: 1.14, stocky: 1.08, athletic: 1.03, average: 1, lean: 0.95, slim: 0.93, lanky: 0.94, curvy: 0.98, petite: 0.9 };
     let m = (look.scale || 1) * (1 + ((look.bulk || 1) - 1) * 0.8) * (FR[look.frame] || 1);
     if (look.race === "mink") m *= 0.92;
-    if (look.race === "longleg") m *= 0.95;
     return clamp3(m, 0.85, 1.6);
   }
 
@@ -59496,10 +59460,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       P6.fF = mixP(P6.fF, [0.2, 0], 0.4);
       P6.fB = mixP(P6.fB, [-0.2, 0], 0.4);
       P6.tw = (P6.tw || 0) - 0.14 * fly * wF;
-    } else if (kind === "stride") {
-      const f = toXY(P6.fF), b = toXY(P6.fB);
-      P6.fF = [f[0] * 1.25, f[1]];
-      P6.fB = [b[0] * 1.25, b[1]];
     }
     P6.wF = null;
     P6.wB = null;
@@ -60136,7 +60096,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const m = actorMass(actor);
     if (m !== 1) out.mass = m;
     const race = actor.race || actor.look?.race;
-    out.dodgeKind = race === "skypiean" ? "glide" : race === "lunarian" ? "wing" : race === "mink" ? "pounce" : race === "longleg" ? "stride" : m >= 1.25 ? "heavy" : "dash";
+    out.dodgeKind = race === "skypiean" ? "glide" : race === "lunarian" ? "wing" : race === "mink" ? "pounce" : m >= 1.25 ? "heavy" : "dash";
     if ((actor.buffs || []).some((b) => b.id === "gear2")) out.gear = 2;
     if (now3 !== void 0 && (actor.flying || actor._fly)) {
       const F5 = flightState(actor, now3);
@@ -63483,11 +63443,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       else {
         drawLimb(g, [arm.j, arm.e], [rs[1], rs[2]], foreC, dk2(foreC, -0.18), sd);
         drawLimb(g, [arm.s, arm.j], [rs[0], rs[1]], upperCol, dk2(upperCol, -0.18), sd);
-      }
-      if (armLen > 1.2) {
-        const j2 = mix22(arm.j, arm.e, 0.5);
-        circ(g, arm.j[0], arm.j[1], rs[1] * 1.12, upperCol, OUTLINE3, 0.03);
-        circ(g, j2[0], j2[1], rs[2] * 1.12, foreC, OUTLINE3, 0.03);
       }
       if (!look.sleeve && !look.noSleeves) {
         const m = mix22(arm.s, arm.j, 0.42);
@@ -79985,7 +79940,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     /**
      * Jump: charge 0 is a hop, 1 a full crouch-and-spring (see the player
      * controller: hold Space to charge). Races change the take-off (see
-     * data/races.js: Longlegs, Minks and Skypieans spring higher and charge
+     * data/races.js: Minks and Skypieans spring higher and charge
      * higher, Buccaneers are heavy but explosive). From the surface of the sea
      * you leap clean out of the water, leaving a ring on it.
      */
@@ -82316,7 +82271,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       shoes = sandals ? "sandals" : seed % 3 === 1 ? "boots" : "shoes";
     }
     const r4 = look.race;
-    const muscle = look.muscle ?? (fem ? 0.25 : r4 === "buccaneer" || r4 === "giant" ? 0.95 : r4 === "fishman" ? 0.8 : r4 === "longarm" || r4 === "longleg" ? 0.3 : 0.3 + seed % 5 * 0.12);
+    const muscle = look.muscle ?? (fem ? 0.25 : r4 === "buccaneer" || r4 === "giant" ? 0.95 : r4 === "fishman" ? 0.8 : 0.3 + seed % 5 * 0.12);
     const tucked = look.tucked ?? (waist !== "none" || top === "jacket" || top === "kimono" || top === "crop" || top === "bikini" || top === "bare");
     const F5 = frameOf(look);
     const bustK = { curvy: 1.28, heavy: 1.3, petite: 0.85, athletic: 0.95, slim: 0.95 }[frameId(look)] || 1;
@@ -85494,11 +85449,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           if (o.att && o.attK > 0) {
             attitude2(d, k, side, o.att, hip, _att, _attP);
             T5.lerp(_att, o.attK);
-          }
-          if (d.Am > 1.25 && restK > 0.02) {
-            const lk2 = Math.min(1, (d.Am - 1.25) / 0.4) * Math.min(1, restK * 1.6) * 0.85;
-            _att.set(0.3 * d.Am * 0.6, -(d.A1 + d.A2) * 0.6, side * (d.shW * 0.95 + 0.05)).applyQuaternion(this.qLean).add(S6);
-            T5.lerp(_att, lk2);
           }
           if (k === 1 && o.grip2 && o.grip2K > 0) T5.lerp(_g2.copy(this.E[0]).addScaledVector(this.blade[0], o.grip2), o.grip2K);
         }
@@ -98144,7 +98094,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           { role: "shop", name: "Notice Boutique" },
           { role: "bank", name: "Bank of Notice" },
           { role: "bar", name: "The Hyena's Den" },
-          { role: "dojo", name: "Longarm Boxing Club", npc: "nb_ulrich" },
+          { role: "dojo", name: "Notice Boxing Club", npc: "nb_ulrich" },
           { role: "cafe", name: "Caf\xE9 Sora", npc: "nb_emil" }
         ]
       }],
@@ -98159,7 +98109,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       rumors: [
         '"Notice is the richest town in the North Blue. And the most boring, if you ask the young ones."',
         `"The Bellamy boys said this town was boring and sailed off to be pirates. Their mothers still won't talk about it."`,
-        '"The Longarm Quarter runs the boxing club. Two elbows on each arm \u2014 you do NOT want to trade punches with them."',
+        `"The boxing club runs the Notice Cup. Old Ulrich's boys can jab you from across the street \u2014 you do NOT want to trade punches with them."`,
         `"Kids here read 'Sora, Warrior of the Sea' every week. They swear Germa 66 is real."`
       ]
     },
@@ -98435,7 +98385,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         { kind: "tent", dx: 0.36, dy: 0.3, v: 0 }
       ],
       spots: [{ id: "camp_edge", dx: 0.14, dy: 0.26 }],
-      population: [["human", 86], ["three_eye", 6], ["longarm", 4], ["longleg", 4]],
+      population: [["human", 94], ["three_eye", 6]],
       danger: 2,
       music: "night",
       tagline: "Erased from every map. The ashes still remember.",
@@ -99082,8 +99032,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     },
     // ------------------------------------------------- Asshina Gainone Kingdom
     {
-      // The Longleg Tribe's homeland (canon name; canon never says which sea it is
-      // in — the game places it in the West Blue). Famous here for its colosseum.
+      // A canon kingdom (canon never says which sea it is in — the game places
+      // it in the West Blue). Famous here for its kickers and their colosseum.
       id: "asshina",
       name: "Asshina Gainone Kingdom",
       sea: "west_blue",
@@ -99119,12 +99069,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       ],
       landmarks: [{ kind: "dummy", dx: 0.36, dy: -0.26 }, { kind: "dummy", dx: 0.44, dy: -0.26 }, { kind: "flagpole", dx: 0.4, dy: -0.4 }],
       spots: [{ id: "arena_sands", dx: 0.42, dy: -0.12 }],
-      population: [["longleg", 78], ["human", 16], ["longarm", 6]],
+      population: [["human", 100]],
       danger: 1,
-      tagline: "The kingdom of the Longleg Tribe. Everything here is built one storey too tall.",
+      tagline: "A kingdom of kickers, and the Colosseum of the Long Stride at its heart.",
       rumors: [
-        "A Longleg kick can snap a mast. Their gladiators fight barefoot so they can feel the sand.",
-        "Longarms and Longlegs have been rivals since before anyone can remember. It gets loud at the Colosseum when a Longarm signs up.",
+        "An Asshina kick can snap a mast. Their gladiators fight barefoot so they can feel the sand.",
+        "The kickers of Asshina and the boxers of Notice have been rivals since before anyone can remember. It gets loud at the Colosseum when a boxer signs up.",
         'The Colosseum champion, "Secretarybird" Serena, kicks snakes to death for breakfast. Or so she says.'
       ]
     }
@@ -99376,7 +99326,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         { kind: "torii", dx: 0.3, dy: -0.26, name: "Gate of the Thousand Steps" },
         { kind: "bell", dx: 0.5, dy: 0.2 }
       ],
-      population: [["human", 84], ["mink", 12], ["longarm", 2], ["longleg", 2]],
+      population: [["human", 88], ["mink", 12]],
       danger: 1,
       tagline: "Every fist in the South Blue comes here to be humbled.",
       rumors: [
@@ -100123,7 +100073,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         { dx: 0.72, dy: 0.3, r: 0.08, h: 1.2 }
       ],
       trees: ["pine", "bamboo", "bush"],
-      population: [["longarm", 85], ["human", 15]],
+      population: [["human", 100]],
       towns: [{
         id: "tehna_gehna",
         name: "Tehna Gehna Kingdom",
@@ -100146,7 +100096,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       logNext: ["drum_island"],
       logTime: 1,
       danger: 3,
-      tagline: "Sword-shaped peaks, whirlpools all around \u2014 home of the Longarm Tribe.",
+      tagline: "Sword-shaped peaks, whirlpools all around \u2014 the fishing kingdom of Tehna Gehna.",
       music: "town"
     },
     // ------------------------------------------------- 4. Foolshout Island
@@ -102182,7 +102132,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       h: 204,
       climate: "candy",
       rough: 0.2,
-      population: [["human", 40], ["fishman", 12], ["mink", 12], ["longarm", 9], ["longleg", 9], ["buccaneer", 6], ["skypiean", 6], ["three_eye", 3]],
+      population: [["human", 58], ["fishman", 12], ["mink", 12], ["buccaneer", 6], ["skypiean", 6], ["three_eye", 3]],
       blobs: [[0, 0, 0.88, 0.84], [-0.45, 0.45, 0.45, 0.4], [0.5, -0.4, 0.4, 0.4]],
       areas: [
         { name: "Seducing Woods", tile: T.FOREST, dx: -0.48, dy: 0.45, rx: 0.3, ry: 0.3 },
@@ -102256,7 +102206,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       ground: T.DIRT,
       beach: T.CAKE,
       rough: 0.25,
-      population: [["human", 55], ["fishman", 12], ["mink", 12], ["longleg", 8], ["longarm", 8], ["three_eye", 5]],
+      population: [["human", 71], ["fishman", 12], ["mink", 12], ["three_eye", 5]],
       towns: [{
         id: "chocolat_town",
         name: "Chocolat Town",
@@ -107002,9 +106952,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     slot = Math.max(1, Math.min(SLOT_COUNT, n | 0));
     write(KEY_LAST, slot);
   }
-  var loadLegacy = (s = slot) => ({ ...defaultLegacy(), ...read(key(s, "legacy")) || {} });
+  function loadLegacy(s = slot) {
+    const L3 = { ...defaultLegacy(), ...read(key(s, "legacy")) || {} };
+    for (const e of L3.hall || []) liveRace(e);
+    return L3;
+  }
   var saveLegacy = (l, s = slot) => write(key(s, "legacy"), l);
-  var loadChar = (s = slot) => read(key(s, "char"));
+  var loadChar = (s = slot) => liveRace(read(key(s, "char")));
   var saveChar = (c, s = slot) => write(key(s, "char"), c);
   var clearChar = (s = slot) => remove(key(s, "char"));
   function clearSlot(s) {
@@ -107015,7 +106969,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var loadNet = (s = slot) => read(key(s, "net")) || {};
   var saveNet = (v, s = slot) => write(key(s, "net"), v);
   function slotInfo(s) {
-    const char = read(key(s, "char"));
+    const char = liveRace(read(key(s, "char")));
     const legacy = read(key(s, "legacy"));
     return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
   }
@@ -108407,7 +108361,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     haki: { name: "Latent Spirit", desc: "Hidden powers, once awakened, grow 25% faster per level.", costs: [80, 160], icon: "character" },
     will_of_d: { name: "Will of D.", desc: 'Triples the chance to be born with the hidden "D." (5% \u2192 15%).', costs: [90], icon: "journal" },
     kings_blood: { name: "Kingly Bloodline", desc: "Four times the chance to be born with the qualities of a king (4% \u2192 16%; with the Will of D., certain).", costs: [150], icon: "crew" },
-    rare_races: { name: "Distant Relatives", desc: "Rare, epic and legendary races are twice as likely.", costs: [100], icon: "character" }
+    rare_races: { name: "Distant Relatives", desc: "Epic and legendary races (Buccaneer, Three-Eye, Lunarian) are twice as likely.", costs: [100], icon: "character" }
   };
   var hakiKnown2 = (c) => !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
   var needsHaki = (d) => !!(d && (d.hakiType || d.requiresHaki || d.cost?.haki || d.learn?.haki));
@@ -108431,7 +108385,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   function rollBirth(legacy, seed) {
     const rng4 = new RNG(seed);
     const boosts = {};
-    if (perkLevel(legacy, "rare_races")) for (const r4 of ["longarm", "longleg", "buccaneer", "three_eye", "lunarian"]) boosts[r4] = 2;
+    if (perkLevel(legacy, "rare_races")) for (const r4 of ["buccaneer", "three_eye", "lunarian"]) boosts[r4] = 2;
     const race = rollRace(rng4, boosts);
     const traits = [];
     const pool = Object.entries(TRAITS).filter(([, t]) => t.weight > 0).map(([id, t]) => [id, t.weight]);
@@ -109894,8 +109848,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   };
   function townRaces(isl) {
     const sea = isl.def.sea;
-    if (sea === "new_world" || sea === "paradise") return [["human", 70], ["fishman", 6], ["mink", 6], ["longarm", 4], ["longleg", 4], ["skypiean", 2]];
-    return [["human", 94], ["fishman", 2], ["longarm", 2], ["longleg", 2]];
+    if (sea === "new_world" || sea === "paradise") return [["human", 78], ["fishman", 6], ["mink", 6], ["skypiean", 2]];
+    return [["human", 98], ["fishman", 2]];
   }
   function civilianOutfit(style, rng4) {
     if (style === "wano") return { role: "wano", top: rng4.pick(["#6d4c41", "#37474f", "#8d6e63", "#c62828", "#283593", "#4a148c", "#1b5e20"]), bottom: rng4.pick(["#3e2723", "#263238", "#37474f"]) };
@@ -111932,8 +111886,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var HEIGHT_NOTE = {
     human: "Humans stand at an ordinary height.",
     buccaneer: "Buccaneers stand head and shoulders above everyone.",
-    longarm: "Longarms are ordinary in height, with an extra joint in each arm.",
-    longleg: "Longlegs tower on their long legs.",
     fishman: "Fish-Men are tall and broad.",
     mink: "Minks are about as tall as humans.",
     skypiean: "Skypieans are human-sized, with small wings.",
@@ -112290,7 +112242,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           renderOpts();
         } } }, name));
       };
-      const skinnable = ["human", "longarm", "longleg", "three_eye", "buccaneer", "skypiean", "lunarian"].includes(race);
+      const skinnable = ["human", "three_eye", "buccaneer", "skypiean", "lunarian"].includes(race);
       const renderOpts = () => {
         clear(optsEl);
         const tab = state.tab;
@@ -128326,10 +128278,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     {
       id: "nb_ulrich",
       name: "Ulrich",
-      title: "Master of the Longarm Boxing Club",
+      title: "Master of the Notice Boxing Club",
       island: "notice",
-      race: "longarm",
-      at: { town: "notice_town", building: "Longarm Boxing Club" },
+      at: { town: "notice_town", building: "Notice Boxing Club" },
       trainer: "nb_longarm",
       look: { hair: "buzz", hairColor: "#9e9e9e", top: "#b71c1c", bottom: "#212121", skin: "#e0ac7e" },
       level: 18,
@@ -128338,7 +128289,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         start: "a",
         nodes: {
           a: {
-            text: () => done2(ctx, "nb_notice_cup") ? `"The champion of the Notice Cup! Otto still can't stop talking about you. The club's door is always open to you."` : `"Two elbows on each arm \u2014 the Friend Elbow and the Lover Elbow. That's the Longarm Tribe! Notice is a rich, boring town, but my club isn't boring. Want to learn to hit from where they can't hit back?"`,
+            text: () => done2(ctx, "nb_notice_cup") ? `"The champion of the Notice Cup! Otto still can't stop talking about you. The club's door is always open to you."` : `"Notice is a rich, boring town, but my club isn't boring. Long arms, a long guard, a jab like a whip \u2014 want to learn to hit from where they can't hit back?"`,
             choices: [
               { text: "Train at the club", do: (c) => c.open("trainer", { trainer: "nb_longarm" }) },
               { text: "Is there a tournament?", if: () => !ctx.quest("nb_notice_cup"), next: "cup" },
@@ -128357,9 +128308,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     {
       id: "nb_otto",
       name: "Otto",
-      title: "Longarm boxer, champion of Notice",
+      title: "Boxer, champion of Notice",
       island: "notice",
-      race: "longarm",
       at: { spot: "notice_ring" },
       faction: "civilian",
       level: 9,
@@ -128370,11 +128320,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       style: "brawler",
       moves: ["brawl_tackle", "brawl_knee"],
       skill: 0.4,
-      alert: "Friend Elbow! Lover Elbow! Here I come!",
+      alert: "Jab! Jab! Here I come!",
       recruit: {
         role: "fighter",
         requires: (c, g) => g.quests.isDone("nb_notice_cup"),
-        intro: `"Otto, champion of the Notice Cup \u2014 well, I was. Longarm boxing: two elbows on each arm, and I use all four. Notice is banks and gardens and tea at four. I've been dreaming of the sea since I could make a fist."`,
+        intro: `"Otto, champion of the Notice Cup \u2014 well, I was. Notice boxing: all reach and no mercy. Notice is banks and gardens and tea at four. I've been dreaming of the sea since I could make a fist."`,
         pitch: {
           pirate: `"You beat me fair and square. ...Take me to sea! The Bellamy boys left this boring town to be pirates and everyone laughed. Nobody's laughing now. My turn!"`,
           marine: `"You beat me fair and square \u2014 and you wear the Navy's cap. Take me with you! I'll enlist, I'll salute, I'll polish whatever needs polishing. Anything to get out of Notice and hit something that deserves it."`,
@@ -128383,15 +128333,15 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         },
         again: `"You're asking? YES. I've been shadow-boxing on the pier every day, waiting for this."`,
         declined: `"...Yeah. Alright. I'll keep training. Next time you're in Notice, I'll be stronger \u2014 and I'll ask again."`,
-        aboard: [`"Four elbows, one ship. Anything comes aboard, I've got it."`, `"Is that a Sea King? ...No? Pity."`]
+        aboard: [`"Two fists, one ship. Anything comes aboard, I've got it."`, `"Is that a Sea King? ...No? Pity."`]
       },
       dialogue: (ctx) => ({
         start: "a",
         nodes: {
           a: {
             text: () => {
-              if (done2(ctx, "nb_notice_cup")) return `"Champ! My arms still hurt. Both elbows on both of them."`;
-              if (at2(ctx, "nb_notice_cup", "bout")) return `"So you're my opponent! Keep your guard up \u2014 my Lover Elbow comes in from angles you won't believe!"`;
+              if (done2(ctx, "nb_notice_cup")) return `"Champ! My arms still hurt. Both of them, all the way up."`;
+              if (at2(ctx, "nb_notice_cup", "bout")) return `"So you're my opponent! Keep your guard up \u2014 my left hook comes in from angles you won't believe!"`;
               return `"Notice is the richest, most BORING town in the North Blue. Banks, gardens, tea at four. I want OUT. ...You're a sailor, right? What's it like out there?"`;
             },
             choices: [
@@ -129357,10 +129307,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "The Notice Cup",
       island: "notice",
       kind: "side",
-      summary: "The Longarm Boxing Club's tournament. Beat Notice's champion in the ring.",
+      summary: "The Notice Boxing Club's tournament. Beat Notice's champion in the ring.",
       stages: [
         { id: "bout", desc: "Beat Otto in the boxing ring east of Notice's square. (Talk to him to start the bout.)", goal: { type: "defeat", npc: "nb_otto", island: "notice", spot: "notice_ring" } },
-        { id: "report", desc: "Tell Ulrich at the Longarm Boxing Club." }
+        { id: "report", desc: "Tell Ulrich at the Notice Boxing Club." }
       ],
       rewards: { berries: 4e3, points: 1, mastery: { brawler: 3 } }
     }
@@ -129388,12 +129338,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     },
     nb_longarm: {
       name: "Ulrich",
-      where: "Longarm Boxing Club, Notice",
+      where: "Notice Boxing Club, Notice",
       styles: {},
       teaches: ["brawl_tackle", "brawl_knee", "brawl_headbutt"],
       train: { str: 24, end: 22, agi: 20 },
-      spar: { level: 10, style: "brawler", name: "Longarm Sparring Partner" },
-      lines: ["Friend Elbow! Lover Elbow! Again!", "Reach is a weapon. Make them come to you."]
+      spar: { level: 10, style: "brawler", name: "Club Sparring Partner" },
+      lines: ["Jab! Jab! Again!", "Reach is a weapon. Make them come to you."]
     },
     nb_lvneel_fencing: {
       name: "Master Ostrander",
@@ -130304,7 +130254,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       breakthrough: 2,
       reward: 6e3,
       alert: '"A musician from a long line of musicians" \u2014 they pay double at Sabaody for a pedigree!',
-      barks: ["Don't bruise the merchandise!", "A Longleg goes for seven hundred thousand. What are YOU worth?"],
+      barks: ["Don't bruise the merchandise!", "A fighter goes for seven hundred thousand. What are YOU worth?"],
       when: (c, g) => g.quests.stageId("wb_toroa_slavers") === "slavers"
     },
     // ================================================================= SOJA
@@ -130883,7 +130833,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       title: "Master of the Colosseum of the Long Stride",
       island: "asshina",
       at: { town: "asshina_town", building: "Colosseum of the Long Stride" },
-      race: "longleg",
       look: { hair: "bald", skin: "#e0ac7e", top: "#ffb300", bottom: "#5d4037", coat: "#6d4c41" },
       level: 12,
       marker: (c, g) => mk2(g, "wb_asshina_colosseum", true, "report"),
@@ -130894,16 +130843,16 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
             text: () => {
               if (done3(ctx, "wb_asshina_colosseum")) return '"Champion! The sand still remembers your footprints. Come back whenever you want the crowd to scream your name."';
               if (active2(ctx, "wb_asshina_colosseum", "report")) return '"SECRETARYBIRD SERENA IS DOWN! A new champion of the Long Stride! Come here, come here \u2014 the crowd wants to see your legs!"';
-              return '"Welcome to the Asshina Gainone Kingdom, where the Longleg Tribe has kicked for a thousand years! In my Colosseum, anyone may fight: human, Longleg \u2014 even a Longarm, if he is brave enough to be booed. Four bouts to the championship!"';
+              return '"Welcome to the Asshina Gainone Kingdom, where we have kicked for a thousand years! In my Colosseum, anyone may fight: kicker, brawler \u2014 even a boxer from Notice, if he is brave enough to be booed. Four bouts to the championship!"';
             },
             choices: [
               { text: "Sign me up.", if: () => !ctx.quest("wb_asshina_colosseum"), do: (c) => c.startQuest("wb_asshina_colosseum"), end: true },
               { text: "Claim the championship.", if: () => active2(ctx, "wb_asshina_colosseum", "report"), do: (c) => c.complete("wb_asshina_colosseum"), next: "a" },
-              { text: "Why do Longlegs and Longarms fight?", next: "feud" },
+              { text: "Why do the kickers and the boxers fight?", next: "feud" },
               { text: "Goodbye.", end: true }
             ]
           },
-          feud: { text: '"More than a thousand years of feud, and nobody remembers how it started! ...Ha! Truly, it keeps the ticket sales up. And the human shops at Sabaody price us both the same: seven hundred thousand berries a head. Think about that."', next: "a" }
+          feud: { text: '"Asshina kicks, Notice punches \u2014 more than a thousand years of feud, and nobody remembers how it started! ...Ha! Truly, it keeps the ticket sales up."', next: "a" }
         }
       })
     },
@@ -130913,7 +130862,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       title: "Stride Dojo",
       island: "asshina",
       at: { town: "asshina_town", building: "Stride Dojo" },
-      race: "longleg",
       trainer: "wb_asshina_kicks",
       look: { hair: "ponytail", hairColor: "#212121", skin: "#a0643a", top: "#fafafa", bottom: "#212121", belt: "#212121" },
       level: 18,
@@ -130928,7 +130876,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       title: "Gladiator",
       island: "asshina",
       at: { spot: "arena_sands" },
-      race: "longleg",
       named: true,
       lethal: false,
       look: { hair: "short", hairColor: "#fafafa", skin: "#f1c9a0", top: "#fafafa", bottom: "#212121" },
@@ -130947,7 +130894,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       title: "Gladiator",
       island: "asshina",
       at: { spot: "arena_sands" },
-      race: "longleg",
       named: true,
       lethal: false,
       look: { hair: "long", hairColor: "#e53935", skin: "#e0ac7e", top: "#fafafa", bottom: "#e53935" },
@@ -130964,7 +130910,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         pitch: `"You beat Serena. SERENA. I've been kicking sand in this arena for six years waiting for someone worth following out of it. The Grand Line has fighters I've never even heard of \u2014 take me with you!"`
       },
       dialogue: (ctx) => ({ start: "a", nodes: { a: {
-        text: () => ctx.game.quests.isDone("wb_asshina_colosseum") ? '"The champion! Every Longleg kid in town is practising your stance now."' : ctx.char.defeated.wb_glad_crane ? `"Tch. You got under my guard. Heron Blade Hector is next \u2014 watch his heels, they're sharpened."` : '"Crane Stance: one leg rooted, one leg free. You look like you use both of yours for walking. Cute."',
+        text: () => ctx.game.quests.isDone("wb_asshina_colosseum") ? '"The champion! Every kid in town is practising your stance now."' : ctx.char.defeated.wb_glad_crane ? `"Tch. You got under my guard. Heron Blade Hector is next \u2014 watch his heels, they're sharpened."` : '"Crane Stance: one leg rooted, one leg free. You look like you use both of yours for walking. Cute."',
         choices: [{ text: "Fight!", if: () => active2(ctx, "wb_asshina_colosseum", "crane"), do: (c) => aggro(c.game, findActor(c.game, "wb_glad_crane")), end: true }, { text: "Later.", end: true }]
       } } })
     },
@@ -130974,7 +130920,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       title: "Gladiator",
       island: "asshina",
       at: { spot: "arena_sands" },
-      race: "longleg",
       named: true,
       lethal: false,
       look: { hair: "spiky", hairColor: "#90a4ae", skin: "#c68642", top: "#37474f", bottom: "#90a4ae" },
@@ -130993,7 +130938,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       title: "Champion of the Colosseum",
       island: "asshina",
       at: { spot: "arena_sands" },
-      race: "longleg",
       boss: true,
       hpMul: 1,
       lethal: false,
@@ -131368,7 +131312,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "The Colosseum of the Long Stride",
       island: "asshina",
       kind: "side",
-      summary: "Four bouts on the sands of Asshina to become champion of the Longleg Tribe's colosseum.",
+      summary: "Four bouts on the sands of Asshina to become champion of its colosseum.",
       stages: [
         { id: "stork", desc: 'First bout: defeat "Stork Kick" Stavros on the arena sands (north-east of Asshina).', goal: { type: "defeat", npc: "wb_glad_stork" } },
         { id: "crane", desc: 'Second bout: defeat "Crane Stance" Kira.', goal: { type: "defeat", npc: "wb_glad_crane" } },
@@ -131426,7 +131370,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       styles: {},
       teaches: ["wb_whip_kick", "brawl_knee", "brawl_tackle"],
       train: { agi: 26, str: 22, end: 20 },
-      spar: { level: 11, style: "brawler", name: "Longleg Kickboxer", race: "longleg" },
+      spar: { level: 11, style: "brawler", name: "Asshina Kickboxer" },
       lines: ["A leg is a whip. The hip is the handle.", "Again \u2014 and point your toes this time!"]
     }
   };
@@ -131604,7 +131548,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       cd: 4,
       steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.2, damage: 16, knockback: 5, stun: 0.5, unblockable: true }, vfx: "ring", color: "#80cbc4" }]
     },
-    // Longleg kicks
+    // Asshina kicks
     {
       id: "wb_stilt_stomp",
       name: "Stilt Stomp",
@@ -131633,7 +131577,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       windup: 0.18,
       recover: 0.3,
       cd: 5,
-      desc: "The Longleg Tribe's signature: a long, lashing kick that hits everything in a wide arc.",
+      desc: "The Asshina kickers' signature: a long, lashing kick that hits everything in a wide arc.",
       steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.2, offset: 0.2, damage: 16, knockback: 4, stun: 0.35 }, vfx: "slash", color: "#ffe0b2" }],
       learn: { mastery: 8, price: 4e3 }
     },
@@ -131729,7 +131673,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     game.on("characterStart", ({ char, isNew }) => {
       if (!isNew || !char) return;
       if (char.race === "three_eye") game.log("You were born among the scholars hiding in the ruins of Ohara. Professor Alfalfa says your third eye may one day hear the Voice of All Things. (Train Observation Haki to 20 to read Poneglyphs.)", "#ce93d8");
-      if (char.race === "longleg") game.log("Welcome home to the Asshina Gainone Kingdom. The Colosseum of the Long Stride is always looking for fresh legs.", "#ffe0b2");
     });
     let t = 0;
     game.on("tick", (dt) => {
@@ -134907,10 +134850,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     {
       id: "p1_tenaga",
       name: "Old Tenaga",
-      title: "Longarm fisherman",
+      title: "Old fisherman",
       island: "kenzan_island",
       at: { town: "tehna_gehna", building: "Old Tenaga's House" },
-      race: "longarm",
       look: { hair: "long", hairColor: "#eceff1", top: "#b71c1c", bottom: "#263238" },
       level: 12,
       marker: giver("p1_kenzan_whirlpool"),
@@ -134918,7 +134860,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         start: "a",
         nodes: {
           a: {
-            text: () => fin2(ctx, "p1_kenzan_whirlpool") ? `"The boats come home full again! Two elbows or one, you have a long reach, friend. Come eat with us whenever you like."` : `"Welcome to the Tehna Gehna Kingdom! We Longarms have two elbows \u2014 we can pull a fish out of the sea without getting our feet wet. Well... we could."`,
+            text: () => fin2(ctx, "p1_kenzan_whirlpool") ? `"The boats come home full again! You have a long reach, friend. Come eat with us whenever you like."` : `"Welcome to the Tehna Gehna Kingdom! We fish with poles three men long \u2014 we can pull a fish out of the sea without getting our feet wet. Well... we could."`,
             choices: [
               { text: "What happened?", if: () => !ctx.quest("p1_kenzan_whirlpool"), next: "what" },
               { text: "The Whirlpool Lord is dead.", if: () => act(ctx, "p1_kenzan_whirlpool", "report"), do: (c) => c.complete("p1_kenzan_whirlpool"), next: "thx" },
@@ -134926,7 +134868,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
             ]
           },
           what: {
-            text: `"A Sea King nests in the whirlpools north of the island. It swallows our boats whole \u2014 even a Longarm can't reach that deep. If someone with a real ship could kill it..."`,
+            text: `"A Sea King nests in the whirlpools north of the island. It swallows our boats whole \u2014 even our longest poles can't reach that deep. If someone with a real ship could kill it..."`,
             choices: [{ text: "I'll hunt it.", do: (c) => c.startQuest("p1_kenzan_whirlpool"), end: true }, { text: "Sounds dangerous.", end: true }]
           },
           thx: { text: `"You really killed it?! Take this \u2014 and a fisherman's secret: the whirlpools calm down at dusk. Sail at sunset and the sea will be kind."` }
@@ -136995,7 +136937,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "The Whirlpool Lord",
       island: "kenzan_island",
       kind: "side",
-      summary: "A Sea King nests in the whirlpools north of Kenzan Island and swallows the Longarms' fishing boats.",
+      summary: "A Sea King nests in the whirlpools north of Kenzan Island and swallows Tehna Gehna's fishing boats.",
       stages: [
         {
           id: "hunt",
@@ -144295,7 +144237,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       title: '"Destruction Cannon", boxer',
       island: "dressrosa",
       at: { spot: "colosseum_arena", ox: -2 },
-      race: "longarm",
       level: 58,
       named: true,
       style: "brawler",
@@ -150318,7 +150259,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       where: "at the Asshina pier",
       at: PIER("asshina_town"),
       style: "brawler",
-      race: "longleg",
       look: { hair: "spiky", hairColor: "#4e342e", top: "#8d6e63", bottom: "#5d4037" },
       alert: "Long legs, long reach, short fuse!"
     },
@@ -150327,7 +150267,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       title: "Old Brawler",
       at: { town: "asshina_town", door: "inn" },
       where: "outside the inn",
-      race: "longleg",
       look: { hair: "short", hairColor: "#9e9e9e", top: "#1565c0", bottom: "#263238" },
       pitch: ["On Asshina every child learns to kick before they learn to walk. And every one dreams of the sea beyond the colosseum walls.", "I did too, once. You still can."]
     },
@@ -150336,7 +150275,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       post: "Asshina Marine Post",
       at: { town: "asshina_town", building: "marine_base" },
       where: "at the Marine post",
-      race: "longleg",
       look: LOOK.officer({ hair: "short", hairColor: "#212121" }),
       pitch: ["The colosseum makes champions. Some go on to the Navy. Most go on to prison.", "Pick the right one."]
     },
@@ -150344,7 +150282,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "Quick-Step Lira",
       at: { town: "asshina_town", door: "hall" },
       where: "outside the colosseum hall",
-      race: "longleg",
       look: { hair: "ponytail", hairColor: "#ffb300", top: "#212121", bottom: "#b71c1c", fem: true },
       pitch: ["I scout fighters for the colosseum \u2014 and for bounty work. The second pays better.", "Let's see how you move."]
     }
@@ -150952,7 +150889,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     marine: "Otto the champion wants to enlist and serve under you \u2014 hear him out (by the ring).",
     hunter: "Otto the champion wants to come along as your partner \u2014 hear him out (by the ring)."
   });
-  var CUP = T3.quest("nb_notice_cup", "Win the Notice Cup at the Longarm Boxing Club (Ulrich).", "nb_ulrich");
+  var CUP = T3.quest("nb_notice_cup", "Win the Notice Cup at the Notice Boxing Club (Ulrich).", "nb_ulrich");
   chapter("nb_notice", { part: 1, island: "notice", role: "crew" }, {
     all: { name: "The Notice Cup" },
     pirate: {
@@ -150961,7 +150898,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       contact: hc("notice", "pirate", "outside the Notice bar"),
       meet: ["The Cup's on. Otto, the champion, has never been beaten \u2014 and he's been dreaming of the sea since he was a boy.", "Beat him, and he might just ask to sail with you. That's how the good crews start."],
       tasks: [CUP, OTTO.pirate],
-      wait: "The Longarm Boxing Club. Ulrich runs the Cup.",
+      wait: "The Notice Boxing Club. Ulrich runs the Cup.",
       done: [(ctx) => aboard2(ctx, "nb_otto") ? "You beat Otto AND took him to sea. Notice will be talking about that for years." : "You beat Otto, and left him on the dock. Your call \u2014 but he'll be asking every captain who comes through now.", (ctx) => onward(ctx.char, "Last stop before the mountain:")]
     },
     marine: {
@@ -150970,7 +150907,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       contact: hc("notice", "marine", "at the Notice Marine post"),
       meet: ["The Cup is the best fighting in the North Blue. Enter it. Show the town what a Marine can do.", "Win, and the recruiters in Deul will know your name."],
       tasks: [CUP, OTTO.marine],
-      wait: "Ulrich at the Longarm Boxing Club takes the entries.",
+      wait: "Ulrich at the Notice Boxing Club takes the entries.",
       done: ["Champion of Notice \u2014 and a Marine. I'll write to Deul tonight.", (ctx) => onward(ctx.char, "Report to")]
     },
     hunter: {

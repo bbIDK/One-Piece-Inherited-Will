@@ -96,13 +96,12 @@ export function weightOf(def) {
  * How heavy a body moves (1 for an ordinary build): the bigger and bulkier
  * it is, the longer it takes to load a blow, the longer it holds it and the
  * deeper it settles — a Buccaneer's swing is the same move as anyone's, with
- * more body behind it. Light frames (a Mink, the Longleg tribe) are snappier.
+ * more body behind it. Light frames (a Mink) are snappier.
  */
 export function massOf(look) {
   if (!look) return 1;
   const FR = { brawny: 1.18, heavy: 1.14, stocky: 1.08, athletic: 1.03, average: 1, lean: 0.95, slim: 0.93, lanky: 0.94, curvy: 0.98, petite: 0.9 };
   let m = (look.scale || 1) * (1 + ((look.bulk || 1) - 1) * 0.8) * (FR[look.frame] || 1);
   if (look.race === 'mink') m *= 0.92;
-  if (look.race === 'longleg') m *= 0.95;
   return clamp(m, 0.85, 1.6);
 }

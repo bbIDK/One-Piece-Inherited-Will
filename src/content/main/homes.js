@@ -442,15 +442,15 @@ home('esperia', 'west_blue', {
 
 home('asshina', 'west_blue', {
   town: 'asshina_town', townName: 'Asshina',
-  villain: { name: '"Stilt" Ranulf', title: 'Colosseum Cheat', bounty: 1000000, crime: 'drugging the fighters he bets against', where: 'at the Asshina pier', at: PIER('asshina_town'), style: 'brawler', race: 'longleg',
+  villain: { name: '"Stilt" Ranulf', title: 'Colosseum Cheat', bounty: 1000000, crime: 'drugging the fighters he bets against', where: 'at the Asshina pier', at: PIER('asshina_town'), style: 'brawler',
     look: { hair: 'spiky', hairColor: '#4e342e', top: '#8d6e63', bottom: '#5d4037' }, alert: 'Long legs, long reach, short fuse!' },
-  pirate: { name: 'Stork-Leg Abe', title: 'Old Brawler', at: { town: 'asshina_town', door: 'inn' }, where: 'outside the inn', race: 'longleg',
+  pirate: { name: 'Stork-Leg Abe', title: 'Old Brawler', at: { town: 'asshina_town', door: 'inn' }, where: 'outside the inn',
     look: { hair: 'short', hairColor: '#9e9e9e', top: '#1565c0', bottom: '#263238' },
     pitch: ['On Asshina every child learns to kick before they learn to walk. And every one dreams of the sea beyond the colosseum walls.', 'I did too, once. You still can.'] },
-  marine: { name: 'Lieutenant Heron', post: 'Asshina Marine Post', at: { town: 'asshina_town', building: 'marine_base' }, where: 'at the Marine post', race: 'longleg',
+  marine: { name: 'Lieutenant Heron', post: 'Asshina Marine Post', at: { town: 'asshina_town', building: 'marine_base' }, where: 'at the Marine post',
     look: LOOK.officer({ hair: 'short', hairColor: '#212121' }),
     pitch: ['The colosseum makes champions. Some go on to the Navy. Most go on to prison.', 'Pick the right one.'] },
-  hunter: { name: 'Quick-Step Lira', at: { town: 'asshina_town', door: 'hall' }, where: 'outside the colosseum hall', race: 'longleg',
+  hunter: { name: 'Quick-Step Lira', at: { town: 'asshina_town', door: 'hall' }, where: 'outside the colosseum hall',
     look: { hair: 'ponytail', hairColor: '#ffb300', top: '#212121', bottom: '#b71c1c', fem: true },
     pitch: ['I scout fighters for the colosseum — and for bounty work. The second pays better.', 'Let\'s see how you move.'] },
 });

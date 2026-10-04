@@ -55,7 +55,7 @@ export function outfitOf(look) {
     shoes = sandals ? 'sandals' : seed % 3 === 1 ? 'boots' : 'shoes';
   }
   const r = look.race;
-  const muscle = look.muscle ?? (fem ? 0.25 : r === 'buccaneer' || r === 'giant' ? 0.95 : r === 'fishman' ? 0.8 : r === 'longarm' || r === 'longleg' ? 0.3 : 0.3 + (seed % 5) * 0.12);
+  const muscle = look.muscle ?? (fem ? 0.25 : r === 'buccaneer' || r === 'giant' ? 0.95 : r === 'fishman' ? 0.8 : 0.3 + (seed % 5) * 0.12);
   // a shirt hangs loose unless something is worn at the waist over it
   const tucked = look.tucked ?? (waist !== 'none' || top === 'jacket' || top === 'kimono' || top === 'crop' || top === 'bikini' || top === 'bare');
   const F = frameOf(look);

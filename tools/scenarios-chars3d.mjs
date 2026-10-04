@@ -88,7 +88,7 @@ async function boot(page, race = 'human') {
 const settle = async (page, n = 4) => { for (let i = 0; i < n; i++) { await step(page, 0.05); await frames(page, 2); } };
 
 // ------------------------------------------------------------------ line-ups
-const RACES = ['human', 'fishman', 'mink', 'skypiean', 'longarm', 'longleg', 'buccaneer', 'three_eye', 'lunarian'];
+const RACES = ['human', 'fishman', 'mink', 'skypiean', 'buccaneer', 'three_eye', 'lunarian'];
 async function raceLineup(page, snap) {
   await page.evaluate((races) => {
     const C = window.__C3; C.clear();
@@ -301,7 +301,7 @@ async function crowd(page, snap) {
   const n = await page.evaluate(() => {
     const C = window.__C3; C.clear();
     C.goSunny();
-    const races = ['human', 'human', 'fishman', 'mink', 'human', 'skypiean', 'longarm', 'human', 'buccaneer', 'human'];
+    const races = ['human', 'human', 'fishman', 'mink', 'human', 'skypiean', 'human', 'human', 'buccaneer', 'human'];
     let k = 0;
     for (let i = 0; i < 30; i++) {
       const row = Math.floor(i / 6), col = i % 6;
@@ -686,7 +686,7 @@ export const scenarios = {
     },
   },
   // hair and clothes in motion: someone walks, runs and stops across the view (from the side)
-  //   --looks=dress,coat,longarm,skirt
+  //   --looks=dress,coat,skirt
   c3motion: {
     async run(page, snap, args) {
       await boot(page);
@@ -694,7 +694,6 @@ export const scenarios = {
       const LOOKS = {
         dress: { fem: true, frame: 'curvy', hair: 'long', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'dress', top: '#d1545a', shoeStyle: 'sandals' },
         coat: { fem: false, frame: 'athletic', hair: 'ponytail', hairColor: '#1b1b1b', skin: '#e8b98f', topStyle: 'shirt', top: '#f5f5f5', coat: '#2c3e70', bottomStyle: 'trousers', bottom: '#2d3436', shoeStyle: 'boots' },
-        longarm: { race: 'longarm', arms: 1.8, fem: true, hair: 'wavy', hairColor: '#6c5ce7', skin: '#f1c9a0', topStyle: 'dress', top: '#16a085', shoeStyle: 'sandals' },
         skirt: { fem: true, frame: 'slim', hair: 'twintails', hairColor: '#e84393', skin: '#fbe3cf', topStyle: 'tank', top: '#fdcb6e', bottomStyle: 'skirt', bottom: '#6c5ce7', shoeStyle: 'shoes' },
         longskirt: { fem: true, frame: 'slim', idle: 'cross', hair: 'long', hairColor: '#171320', skin: '#dcae8a', topStyle: 'crop', top: '#3b3570', bottomStyle: 'longskirt', bottom: '#d1545a', shoeStyle: 'sandals' },
         // a cloak over the shoulders (the body slot's red_cloak), and a traveller in hood and cloak
@@ -709,7 +708,7 @@ export const scenarios = {
         await page.evaluate(() => { const a = window.__C3.npcs[0], p = window.OP.game.player; window.__C3.view(Math.atan2(a.y - p.y, a.x - p.x), -0.06); });
         await frames(page, 1);
       };
-      for (const name of String(args.looks || 'dress,coat,longarm').split(',')) {
+      for (const name of String(args.looks || 'dress,coat,skirt').split(',')) {
         await page.evaluate((look) => {
           // (the game runs only as the scenario steps it: a slow screenshot doesn't let the runner run off)
           window.OP.hold = true;

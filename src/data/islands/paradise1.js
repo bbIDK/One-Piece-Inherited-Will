@@ -98,7 +98,7 @@ export const PARADISE_1 = [
       { dx: -0.2, dy: -0.55, r: 0.08, h: 1.2 }, { dx: 0.5, dy: -0.45, r: 0.09, h: 1.25 }, { dx: 0.72, dy: 0.3, r: 0.08, h: 1.2 },
     ],
     trees: ['pine', 'bamboo', 'bush'],
-    population: [['longarm', 85], ['human', 15]],
+    population: [['human', 100]],
     towns: [{
       id: 'tehna_gehna', name: 'Tehna Gehna Kingdom', dx: -0.05, dy: 0.2, w: 40, h: 28, style: 'chinese', dockDir: 's', plaza: 'statue',
       buildings: [
@@ -111,7 +111,7 @@ export const PARADISE_1 = [
     }],
     spots: [{ id: 'whirlpool', dx: 0, dy: -62 }],
     logNext: ['drum_island'], logTime: 1,
-    danger: 3, tagline: 'Sword-shaped peaks, whirlpools all around — home of the Longarm Tribe.', music: 'town',
+    danger: 3, tagline: 'Sword-shaped peaks, whirlpools all around — the fishing kingdom of Tehna Gehna.', music: 'town',
   },
 
   // ------------------------------------------------- 4. Foolshout Island

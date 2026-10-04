@@ -362,7 +362,6 @@ export function chargePose(P, k, t) {
 //   wing    a Lunarian: one great beat of the black wings, a short flight
 //   pounce  a Mink: a springing bound, low, the claws near the ground
 //   heavy   a big body (a Buccaneer): a lumbering shove of a step, grounded
-//   stride  the Longleg tribe: one enormous split stride
 // The three beats: push (the first sixth), travel, brake (the last third).
 // `r` pitches the whole body (legs and all) — the dash is thrown forward off
 // its feet, the hop rocks back — while `l` bends the trunk over the hips.
@@ -472,9 +471,6 @@ export function dodgePose(P, pose) {
     P.b = [P.b[0] * 0.8, P.b[1] + 0.03];
     P.fF = mixP(P.fF, [0.2, 0], 0.4); P.fB = mixP(P.fB, [-0.2, 0], 0.4);
     P.tw = (P.tw || 0) - 0.14 * fly * wF;
-  } else if (kind === 'stride') {
-    const f = toXY(P.fF), b = toXY(P.fB);
-    P.fF = [f[0] * 1.25, f[1]]; P.fB = [b[0] * 1.25, b[1]];
   }
   P.wF = null; P.wB = null;
   P.hand = P.hand === 'claw' ? 'claw' : 'fist'; P.handB = P.handB === 'claw' ? 'claw' : 'fist';

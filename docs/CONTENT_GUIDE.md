@@ -293,7 +293,7 @@ Registry ids are global, so prefix anything that might collide.
   island: 'twin_cape',
   at: { town: 'x', building: 'Name or role' } | { spot: 'lighthouse', ox: 2 } | { town: 'x', plaza: true, ox: -3 } | { dx: 0.2, dy: -0.1 },
   look: { hair, hairColor, skin, top, bottom, hat, hatColor, coat, coatText, scarEye, goggles, nose, bulk, scale, swords, fin, ears, fur, tail, muzzle, furFace, grin, sharpTeeth, eyeColor, belt, hand },
-  race: 'human'|'fishman'|'mink'|'skypiean'|'longarm'|'longleg'|'buccaneer'|'three_eye'|'lunarian',
+  race: 'human'|'fishman'|'mink'|'skypiean'|'buccaneer'|'three_eye'|'lunarian',
   level: 12,                 // attribute level (see §4 difficulty)
   faction: 'civilian'|'pirate'|'marine'|'bandit'|'baroque'|'cp'|'beast'|'rival'|'zombie'|'revolutionary',
   style: 'brawler'|'ittoryu'|'nitoryu'|'santoryu'|'black_leg'|'fishman_karate'|'rokushiki'|'sniper'|'okama_kenpo'|'electro'|'hasshoken'|'weather_science'|'elbaf'|'ryusoken',

@@ -410,7 +410,7 @@ export const scenarios = {
       void races;
       const out = await page.evaluate(() => {
         const res = [];
-        for (const race of ['human', 'fishman', 'mink', 'skypiean', 'longarm', 'longleg', 'buccaneer', 'three_eye', 'lunarian']) {
+        for (const race of ['human', 'fishman', 'mink', 'skypiean', 'buccaneer', 'three_eye', 'lunarian']) {
           for (const seed of [1, 2, 3]) {
             localStorage.clear();
             window.OP.quickStart(race, { seed: seed * 7919 });

@@ -275,14 +275,6 @@ export class Rig {
         if (tiltA) T.applyAxisAngle(X, tiltA * side);
         T.applyQuaternion(this.qLean).add(S);
         if (o.att && o.attK > 0) { attitude(d, k, side, o.att, hip, _att, _attP); T.lerp(_att, o.attK); }
-        // the Longarm tribe's arms hang bent at the second elbow, the forearm
-        // carried forward — not trailing down past the knees through their
-        // clothes and swinging through their legs
-        if (d.Am > 1.25 && restK > 0.02) {
-          const lk = Math.min(1, (d.Am - 1.25) / 0.4) * Math.min(1, restK * 1.6) * 0.85;
-          _att.set(0.3 * d.Am * 0.6, -(d.A1 + d.A2) * 0.6, side * (d.shW * 0.95 + 0.05)).applyQuaternion(this.qLean).add(S);
-          T.lerp(_att, lk);
-        }
         // the other hand on the first one's weapon — a staff's or an axe's
         // shaft (o.grip2: how far along it from the first hand), eased on
         // and off by o.grip2K

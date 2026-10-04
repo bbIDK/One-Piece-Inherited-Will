@@ -11,8 +11,7 @@
 //    seconds after they're dry. Their wings fly (flight.js).
 //  * Buccaneers: a frame nothing light can shake (no stagger from light
 //    blows) and that knockback hardly moves.
-//  * Longlegs kick harder, Longarms' jabs snap back quicker, Skypieans get
-//    more out of a Dial (abilities.js powerFor / startAbility); a Fish-Man
+//  * Skypieans get more out of a Dial (abilities.js powerFor); a Fish-Man
 //    leaving the water at speed leaps like a dolphin (actor.js tryJump).
 
 const SULONG = {
