@@ -714,16 +714,17 @@ function toggleFullscreen() {
 export function openSettings(game) {
   const s = game.settings;
   const body = h('div');
-  const slider = (label, key) => {
-    // (a function label is re-read as the slider moves)
-    const nm = h('span.nm', typeof label === 'function' ? label() : label);
-    return h('div.stat-row', nm, h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: s[key] ?? 0.5, style: { flex: 1 }, on: { input: (e) => { s[key] = Number(e.target.value); if (typeof label === 'function') nm.textContent = label(); game.applySettings(); } } }));
+  // a row: its name, the slider, what it's set to (every row the same three columns)
+  const row = (label, min, max, step, get, set, shown) => {
+    const sv = h('span.sv', shown());
+    const fill = (el) => el.style.setProperty('--p', `${((get() - min) / (max - min || 1)) * 100}%`);
+    const el = h('input', { type: 'range', min, max, step, value: get(), on: { input: (e) => { set(Number(e.target.value)); sv.textContent = shown(); fill(e.target); game.applySettings(); } } });
+    fill(el);
+    return h('div.set-slider', h('span.nm', label), el, sv);
   };
-  // a slider in whole steps from min to max (its label is re-read as it moves)
-  const steps = (label, min, max, get, set) => {
-    const nm = h('span.nm', label());
-    return h('div.stat-row', nm, h('input', { type: 'range', min, max, step: 1, value: get(), style: { flex: 1 }, on: { input: (e) => { set(Number(e.target.value)); nm.textContent = label(); game.applySettings(); } } }));
-  };
+  const slider = (label, key, shown = () => `${Math.round((s[key] ?? 0.5) * 100)}%`) => row(label, 0, 1, 0.05, () => s[key] ?? 0.5, (v) => { s[key] = v; }, shown);
+  // (in whole steps from min to max)
+  const steps = (label, min, max, get, set, shown) => row(label, min, max, 1, get, set, shown);
   const check = (label, key) => h('label.check-row', h('input', { type: 'checkbox', checked: !!s[key], on: { change: (e) => { s[key] = e.target.checked; game.applySettings(); } } }), label);
   const choice = (label, key, opts) => h('div.set-row', h('span.nm', label), h('div.tabs', { style: { margin: 0 } }, opts.map(([v, name]) => h('button' + (s[key] === v ? '.on' : ''), { on: { click: () => { s[key] = v; if (key === 'quality') s.qualityPicked = true; game.applySettings(); render(); } } }, name))));
   const render = () => {
@@ -733,10 +734,10 @@ export function openSettings(game) {
       choice('Camera', 'view', [['first', 'First person'], ['third', 'Third person']]),
       slider(game.input.touch?.on ? 'Look sensitivity' : 'Mouse sensitivity', 'sensitivity'),
       check('Invert mouse look', 'invertY'),
-      slider(() => `Field of view ${Math.round(60 + (s.fov ?? 0.5) * 35)}°`, 'fov'),
+      slider('Field of view', 'fov', () => `${Math.round(60 + (s.fov ?? 0.5) * 35)}°`),
       check('View bobbing while walking', 'bob'),
       choice('Graphics', 'quality', [['high', 'High (shadows)'], ['low', 'Fast']]),
-      steps(() => { const n = renderChunks(s); return `Render distance ${n} chunks (${n * 32} m)`; }, RENDER_DIST.min, RENDER_DIST.max, () => renderChunks(s), (n) => { s.renderDist = n; }),
+      steps('Render distance', RENDER_DIST.min, RENDER_DIST.max, () => renderChunks(s), (n) => { s.renderDist = n; }, () => `${renderChunks(s) * 32} m`),
       h('p.muted', 'How far out the world is drawn before the haze closes in. Further looks grander but costs frame rate. At sea you see half as far again.'),
       check('Lower the resolution a little when the game is slow', 'autoRes'),
       h('h3', 'Sound & feel'),

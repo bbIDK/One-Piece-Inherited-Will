@@ -596,7 +596,17 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .look-hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); background: rgba(10,20,30,.78); border: 1px solid var(--border); border-radius: 12px; padding: 8px 16px; font-weight: 800; font-size: 15px; text-align: center; pointer-events: none; }
 .look-hint small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }
 .set-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
-.set-row .nm { width: 130px; font-weight: 800; }
+.set-row .nm { width: 180px; font-weight: 800; }
+/* Settings: a name, the slider, what it's set to — the same three columns on every row */
+.set-slider { display: flex; align-items: center; gap: 12px; margin: 7px 0; }
+.set-slider .nm { width: 172px; flex: none; font-weight: 800; }
+.set-slider .sv { width: 58px; flex: none; text-align: right; font-weight: 800; color: #6d4c33; font-variant-numeric: tabular-nums; }
+.set-slider input[type=range] { flex: 1; min-width: 0; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px; margin: 0; cursor: pointer; outline: none;
+  background: linear-gradient(90deg, #b03a2e var(--p, 50%), rgba(109,76,51,.22) var(--p, 50%)); }
+.set-slider input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fbf1dc; border: 3px solid #6d4c33; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.set-slider input[type=range]::-moz-range-thumb { width: 13px; height: 13px; border-radius: 50%; background: #fbf1dc; border: 3px solid #6d4c33; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.set-slider input[type=range]:focus-visible::-webkit-slider-thumb { border-color: #b03a2e; }
+.panel input[type=checkbox], .panel input[type=range] { accent-color: #b03a2e; }
 
 /* ---------- touch (phones and tablets) ---------- */
 #ui .t-only { display: none; }
