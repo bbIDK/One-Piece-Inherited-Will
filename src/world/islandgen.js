@@ -10,6 +10,7 @@ import { generateTown } from './towngen.js';
 import { bw } from './bframe.js';
 import { COLLIDE } from './objects.js';
 import { drumTile, drumR } from './drums.js';
+import { makeTerrace, terraceTile } from './terraces.js';
 
 export const CLIMATES = {
   temperate: { ground: T.GRASS, beach: T.SAND, clim: CLIMATE.TEMPERATE, trees: ['oak', 'oak', 'pine', 'bush'], density: 0.05 },
@@ -115,7 +116,7 @@ export function generateIsland(world, def, noise, rng) {
       const x = x0 + i, y = y0 + j;
       const cd = CD[k];
       const n = lumps(x, y);
-      const e = clamp(20 + cd * (def.elevRate ?? 5) + n * 25, 8, 170);
+      const e = clamp(20 + cd * (def.elevRate ?? 5) + n * (def.elevNoise ?? 25), 8, 170);
       const bw = beachW + noise.noise2(x * 0.15, y * 0.15) * 1.2;
       const t = cd <= bw ? beach : ground;
       world.setTile(x, y, t, Math.round(e), clim);
@@ -211,6 +212,20 @@ export function generateIsland(world, def, noise, rng) {
     }
   }
 
+  // a terraced city (see terraces.js — Water 7): its levels paved, their walls
+  // cut stone, and canals at its foot to carry the fountain's water to the sea
+  if (def.terraces) {
+    const c = P(def.terraces);
+    const tr = makeTerrace(def.terraces, c.x, c.y, def.id);
+    (world.terraces ||= []).push(tr);
+    rec.terrace = tr;
+    stampTerrace(world, tr, clim);
+    for (const f of tr.falls) if (f.k === 0) carveFallCanal(world, tr, f);
+  }
+  // shipyards (Water 7's Galley-La docks): numbered sheds over slipways into
+  // the sea, square to the shore — nothing else is built where they stand
+  for (const f of def.shipyards || []) placeShipyard(world, rec, f);
+
   // towns ---------------------------------------------------------------------
   for (const town of def.towns || []) {
     const c = P(town);
@@ -270,11 +285,12 @@ export function generateIsland(world, def, noise, rng) {
     if (!walkable(world, rec.landBox, a.x, a.y + 2, b.x, b.y + 2)) connectRoad(world, a.x, a.y, b.x, b.y, t.roadTile || T.DIRT);
   }
 
-  // (a drum's face stays a cliff, whatever was laid across it since)
+  // (a drum's face stays a cliff, whatever was laid across it since — and a terrace's walls stone)
   for (const d of rec.drums || []) stampDrum(world, d, clim, true);
+  if (rec.terrace) stampTerrace(world, rec.terrace, clim, true);
 
   // landmarks & props -------------------------------------------------------
-  rec.clearings = [];
+  rec.clearings = (rec.yards || []).map((o) => ({ x: o.x, y: o.y, r: 15 }));
 
   // ropeways (see game/ropeway.js): a cabin on a cable from a station on the
   // snow up to the top of a drum — its top station's platform run out over
@@ -795,6 +811,89 @@ function stampDrum(world, d, clim, faceOnly = false) {
       // (the face keeps the land's own height at its foot: see render3d/height.js)
       if (k === 1) world.setTile(x, y, T.SNOWROCK, undefined, clim);
       else if (!faceOnly) world.setTile(x, y, T.SNOW, 250, clim);
+    }
+  }
+}
+
+/**
+ * Lay a terrace's tiles: its walls cut stone (nobody walks up them), its
+ * levels, stairways and gutters paved. `wallsOnly`: just the walls again
+ * (after towns and roads). The land's own elevation stays under it all (the
+ * terrace's heights are its own: render3d/height.js).
+ */
+function stampTerrace(world, tr, clim, wallsOnly = false) {
+  const b = tr.box;
+  for (let y = Math.floor(tr.y + b.y0) - 1; y <= Math.ceil(tr.y + b.y1) + 1; y++) {
+    for (let x = Math.floor(tr.x + b.x0) - 1; x <= Math.ceil(tr.x + b.x1) + 1; x++) {
+      const k = terraceTile(tr, x, y);
+      if (!k) continue;
+      const wx = world.wx(x);
+      if (k === 'wall') world.setTile(wx, y, T.MASONRY, undefined, clim);
+      else if (!wallsOnly) world.setTile(wx, y, k === 'top' ? T.STONE : T.COBBLE, undefined, clim);
+    }
+  }
+}
+
+/** A shipyard shed's size (metres): wide, deep (its front standing `over` out over the water). */
+export const YARD = { w: 20, d: 22, over: 4 };
+/**
+ * A shipyard (a Galley-La dock): walked out from the island's middle along
+ * `f.at` metres of its shore on side `f.side` to the sea; the shed stands
+ * square to that shore with its front out over the water.
+ */
+function placeShipyard(world, rec, f) {
+  const V = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] }[f.side];
+  if (!V) return;
+  const [vx, vy] = V;
+  const sx = rec.x + (vy ? f.at : 0), sy = rec.y + (vy ? 0 : f.at);
+  let coast = -1;
+  for (let s = 0; s < 500; s++) {
+    if (world.isLiquid(world.wx(Math.floor(sx + vx * s)), Math.floor(sy + vy * s))) { coast = s; break; }
+  }
+  if (coast < 0) return;
+  const mid = coast + YARD.over - YARD.d / 2;
+  const o = {
+    kind: 'galleydock', x: world.wx(sx + vx * mid), y: sy + vy * mid, yaw: Math.atan2(vx, vy), n: f.n,
+    name: `Galley-La Dock ${f.n}`, block: true, far: 900,
+  };
+  placeObject(world, o);
+  rec.landmarks.push(o);
+  (rec.yards ||= []).push(o);
+  // (the ground it stands on: no house, no tree, no street's lamp)
+  const hw = (vy ? YARD.w : YARD.d) / 2 + 2, hd = (vy ? YARD.d : YARD.w) / 2 + 2;
+  (world.noBuild ||= []).push({ x0: o.x - hw, x1: o.x + hw, y0: o.y - hd, y1: o.y + hd });
+}
+
+/**
+ * The canal a terrace's lowest waterfall pours into: a pool at the foot of
+ * the wall, and a channel on from it, away from the terrace, down to the sea.
+ */
+function carveFallCanal(world, tr, f) {
+  const ux = f.sx * Math.SQRT1_2, uy = f.sy * Math.SQRT1_2;
+  const cx = tr.x + f.x, cy = tr.y + f.y;
+  const wet = (x, y, r) => {
+    for (let j = Math.floor(y - r); j <= Math.ceil(y + r); j++) {
+      for (let i = Math.floor(x - r); i <= Math.ceil(x + r); i++) {
+        if ((i + 0.5 - x) ** 2 + (j + 0.5 - y) ** 2 > r * r) continue;
+        if (terraceTile(tr, i, j)) continue; // (never into the terrace itself)
+        world.setTile(world.wx(i), j, T.CANAL, 0);
+      }
+    }
+  };
+  wet(cx + ux * 3.2, cy + uy * 3.2, 3.1);
+  let end = 160;
+  for (let s = 3; s < 160; s += 0.7) {
+    const x = cx + ux * s, y = cy + uy * s;
+    if (s > 8 && world.isLiquid(Math.floor(x), Math.floor(y)) && world.type(Math.floor(x), Math.floor(y)) !== T.CANAL) { end = s; break; }
+    wet(x, y, 1.7);
+  }
+  // and a footbridge over it, half way down (the low city's way round the terrace)
+  const b = Math.min(end * 0.5, 16), bx = cx + ux * b, by = cy + uy * b;
+  for (let j = Math.floor(by - 4); j <= Math.ceil(by + 4); j++) {
+    for (let i = Math.floor(bx - 4); i <= Math.ceil(bx + 4); i++) {
+      const px = i + 0.5 - bx, py = j + 0.5 - by;
+      if (Math.abs(px * ux + py * uy) > 1.3) continue; // (across the canal, 2.6 m wide)
+      if (world.type(world.wx(i), j) === T.CANAL) world.setTile(world.wx(i), j, T.BRIDGE);
     }
   }
 }

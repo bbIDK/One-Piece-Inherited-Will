@@ -54,6 +54,19 @@ export function colliderOf(o) {
   // a gateway's posts and legs stand solid where they're drawn (render3d/props/
   // landmarks.js); between them you walk through
   if (o.kind === 'torii') return { circles: [[-1.55, 0, 0.3], [1.55, 0, 0.3]] };
+  // (Water 7's Great Fountain: its basin, all round — render3d/props/water7.js)
+  if (o.kind === 'greatfountain') return { circles: [[0, 0, 10.1]] };
+  // a Galley-La dock's shed: its side walls, its back wall either side of the
+  // great doorway, the ship on the stocks down the middle and the crane — its
+  // front open to the sea (the shed's own frame: x across, z out to sea)
+  if (o.kind === 'galleydock') {
+    const c = [];
+    for (let z = -10.6; z <= 8.4; z += 0.85) c.push([-10, z, 0.45], [10, z, 0.45]);
+    for (let x = -9.6; x <= 9.6; x += 0.85) if (Math.abs(x) > 3.6) c.push([x, -11, 0.45]);
+    for (let z = -5.6; z <= 7.6; z += 1.65) c.push([0, z, 3.4]);
+    c.push([8.8, 10.1, 0.5]);
+    return { circles: c };
+  }
   // (the Baratie: her two masts stand on her deck — render3d/props/baratie.js; the rest of her is round it)
   if (o.kind === 'baratie') return { circles: [[-18.5, 0, 0.55], [18.5, 0, 0.55]] };
   if (o.kind === 'gate') {

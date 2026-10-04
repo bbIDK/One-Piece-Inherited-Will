@@ -296,7 +296,8 @@ function drawLabels(game, r, cam, layer) {
             pin('.poi', P[0], 20, z >= 2.6 ? b.name || P[1] : null, b.door.x, b.door.y, true);
           }
         }
-        if (t.name && t.plaza) add('.town', t.name, t.plaza.x, t.plaza.y, { fontSize: Math.min(22, 13 + z * 3) + 'px' }, true);
+        // (a district of several parts — a terraced city's levels — is named once)
+        if (t.name && t.plaza && !t.def?.noLabel) add('.town', t.name, t.plaza.x, t.plaza.y, { fontSize: Math.min(22, 13 + z * 3) + 'px' }, true);
       }
       for (const d of isl.docks || []) if (d.end) pin('.poi.dock', 'anchor', 18, null, d.end.x, d.end.y);
       // (the places a chart would name — not the notices, posters and curios you can look at)

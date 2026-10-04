@@ -79,7 +79,8 @@ export class Spawner {
     const game = this.game;
     const spots = town.npcSpots.slice();
     rng.shuffle(spots);
-    const count = Math.min(spots.length, Math.round(4 + town.w * town.h / 90));
+    // (a town's own share: the many little districts of a terraced city have fewer each)
+    const count = Math.min(spots.length, Math.round((4 + town.w * town.h / 90) * (town.def?.folk ?? 1)));
     const races = isl.def.population || townRaces(isl);
     for (let i = 0; i < count; i++) {
       const s = spots[i];

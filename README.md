@@ -653,7 +653,10 @@ player.
 - The Davy Back Fight.
 
 **Paradise, second half and the Calm Belt**
-- Water 7, CP9 and the Enies Lobby raid.
+- Water 7 (as in the anime: the City of Water climbing in four walled terraces
+  to the Great Fountain on top, its water pouring over every corner from level
+  to level and out to sea in canals, with Galley-La's seven numbered docks round
+  the shore), CP9 and the Enies Lobby raid.
 - Thriller Bark and Moria's shadow theft.
 - Sabaody: Rayleigh's Haki, the auction and ship coating.
 - The Summit War at Marineford.

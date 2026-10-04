@@ -54,6 +54,7 @@ export const T = {
   CARPET: 52,
   TATAMI: 53,
   STEEL: 54,
+  MASONRY: 55, // a terraced city's retaining walls (world/terraces.js): cut stone, sheer
 };
 
 export const TILE_NAMES = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
@@ -73,9 +74,9 @@ for (let i = 16; i < N; i++) WALKABLE[i] = 1;
 for (const t of [T.SEA, T.RIVER, T.CANAL, T.CLOUD_SEA, T.POND, T.RAPIDS]) { SAILABLE[t] = 1; SWIMMABLE[t] = 1; }
 SWIMMABLE[T.REEF] = 1;
 SWIMMABLE[T.ACID] = 1;
-for (const t of [T.MOUNTAIN, T.CLIFF, T.RED_ROCK, T.WALL, T.SNOWROCK]) WALKABLE[t] = 0;
+for (const t of [T.MOUNTAIN, T.CLIFF, T.RED_ROCK, T.WALL, T.SNOWROCK, T.MASONRY]) WALKABLE[t] = 0;
 for (const t of [T.PLANK, T.RAIL, T.BRIDGE]) { OVERLAY[t] = 1; WALKABLE[t] = 1; }
-for (const t of [T.STONE, T.COBBLE, T.PLANK, T.FARM, T.MARBLE, T.WALL, T.RAIL, T.BRIDGE, T.CARPET, T.TATAMI, T.STEEL, T.GOLD]) MANMADE[t] = 1;
+for (const t of [T.STONE, T.COBBLE, T.PLANK, T.FARM, T.MARBLE, T.WALL, T.RAIL, T.BRIDGE, T.CARPET, T.TATAMI, T.STEEL, T.GOLD, T.MASONRY]) MANMADE[t] = 1;
 WALKABLE[T.PACK_ICE] = 1;
 
 SPEED[T.SAND] = 0.92;
@@ -145,6 +146,7 @@ export const PALETTE = {
   [T.CARPET]: ['#8e2436', '#c0392b'],
   [T.TATAMI]: ['#c8b77a', '#ddd09b'],
   [T.STEEL]: ['#7f8c8d', '#95a5a6'],
+  [T.MASONRY]: ['#b3a185', '#cdbd9f'],
 };
 
 // Climate ids stored per tile; the shader tints vegetation with them.

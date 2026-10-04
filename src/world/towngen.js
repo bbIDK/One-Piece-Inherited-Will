@@ -11,6 +11,15 @@ import { T, IS_LIQUID, WALKABLE, OVERLAY } from './tiles.js';
 import { placeObject } from './islandgen.js';
 import { bw } from './bframe.js';
 import { RNG } from '../core/rng.js';
+import { terraceNoBuild } from './terraces.js';
+
+/** Ground kept clear: a terraced city's stairways and gutters (terraces.js), a shipyard's (islandgen.js). */
+function noBuildAt(world, x, y) {
+  if (world.terraces && terraceNoBuild(world, x, y)) return true;
+  const nb = world.noBuild;
+  if (nb) for (const b of nb) if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1) return true;
+  return false;
+}
 
 export const TOWN_STYLES = {
   village: { ground: null, road: T.DIRT, plaza: T.DIRT, walls: ['#caa77a', '#b8915f', '#d8c29d', '#c49a6c'], roofs: ['#9c4a2a', '#7d5a3a', '#b5452f', '#6d7a4a'], roof: 'gable', rowStep: 8, lamps: false, fences: true },
@@ -142,7 +151,8 @@ function layTown(world, town, rng, noise, dry) {
   const gi = (x, y) => { const i = Math.floor(x) - GX, j = Math.floor(y) - GY; return i < 0 || j < 0 || i >= GW || j >= GH ? -1 : j * GW + i; };
   const occAt = (x, y) => { const k = gi(x, y); return k < 0 ? NOPE : occ[k]; };
   const setOcc = (x, y, v) => { const k = gi(x, y); if (k >= 0) occ[k] = v; };
-  for (let y = GY; y < GY + GH; y++) for (let x = GX; x < GX + GW; x++) if (!okLand(x, y) || world.isBlocked(x, y)) setOcc(x, y, NOPE);
+  // (nor where the ground is kept clear: a terraced city's stairways and gutters, a shipyard's)
+  for (let y = GY; y < GY + GH; y++) for (let x = GX; x < GX + GW; x++) if (!okLand(x, y) || world.isBlocked(x, y) || noBuildAt(world, x, y)) setOcc(x, y, NOPE);
 
   // ---- streets: rectangles of tiles { x0, x1, y0, y1 } (inclusive), 'h' or 'v', and how important
   const streets = [];

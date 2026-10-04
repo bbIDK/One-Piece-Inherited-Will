@@ -22,8 +22,6 @@ import { T } from '../../world/tiles.js';
 function hut(isl, dx, dy, spec) {
   return { kind: 'building', dx, dy, fw: 6, fd: 4, hgt: 3, style: 'town', roofType: 'gable', showName: true, ...spec };
 }
-/** Sea-train track: painted over open water only (tile offsets from the island centre). */
-const rail = (x0, x1, y0, y1) => ({ op: 'rect', x0, x1, y0, y1, tile: T.RAIL, onlyWater: true });
 /** Walkable planks over water only. */
 const planks = (x0, x1, y0, y1) => ({ op: 'rect', x0, x1, y0, y1, tile: T.BRIDGE, onlyWater: true });
 /** A rope-and-plank bridge between two land blobs (points as fractions of the island). */
@@ -39,6 +37,7 @@ function span(isl, a, b, rx, ry) {
 
 // ------------------------------------------------------------ geometry
 const W7 = { x: 3300, y: 1000, w: 220, h: 160 };
+const W7_UPPER = { style: 'noble', plaza: false, ground: T.STONE, road: T.STONE, plazaTile: T.STONE };
 const EL = { x: 3505, y: 1010, w: 110, h: 100 };
 const TB = { x: 3675, y: 1010, w: 160, h: 130 };
 const SB = { x: 3880, y: 1060, w: 180, h: 140 };
@@ -64,39 +63,52 @@ export const PARADISE_2 = [
   // ============================================================ WATER 7
   {
     id: 'water_7', name: 'Water 7', sea: 'paradise', ...W7,
-    // (the city's own streets are paved by its towns; round them, lawns and gardens)
-    climate: 'temperate', rough: 0.05, ground: T.LAWN, beach: T.STONE, archipelago: true, treeDensity: 0.012, trees: ['oak', 'bush'],
-    blobs: [[0, 0, 0.72, 0.8], [-0.8, 0.26, 0.16, 0.12], [0.86, 0.42, 0.12, 0.15]], // Shipbuilding Island, Rocky Cape, Scrap Island
+    // The City of Water, as the anime draws it: a great stepped mound of a
+    // city (world/terraces.js), four levels of paved terraces and houses
+    // climbing to the Great Fountain on top, its water pouring from level to
+    // level over every corner in falls and running out to sea in canals; at
+    // its foot, round the shore, the low city — Main Street and the seven
+    // Galley-La docks on the north shore, Back Street on the south — and out
+    // across the bay, Rocky Cape and Franky's Scrap Island.
+    climate: 'temperate', rough: 0.05, ground: T.LAWN, beach: T.STONE, archipelago: true, treeDensity: 0.004, trees: ['oak', 'bush'],
+    elevRate: 0.12, elevNoise: 3, // (the low city lies flat, barely over the water: it's sinking)
+    blobs: [[0, 0, 0.72, 0.8], [-0.8, 0.26, 0.16, 0.12], [0.86, 0.42, 0.12, 0.15]], // the city, Rocky Cape, Scrap Island
+    terraces: {
+      dx: 0, dy: 0.02, base: 2, basin: 9.5, pitch: 3,
+      levels: [
+        { ax: 122, ay: 96, rc: 16, h: 8 }, // Downtown
+        { ax: 92, ay: 70, rc: 12, h: 14 }, // the Middle Terrace
+        { ax: 62, ay: 46, rc: 9, h: 20 }, // the Upper Terrace
+        { ax: 32, ay: 26, rc: 7, h: 26 }, // Fountain Plaza
+      ],
+    },
+    // the seven docks of the Galley-La Company, numbered along the north shore and round the east
+    // (metres along the shore from the middle; each a shipyard shed over a slipway into the sea)
+    shipyards: [
+      { side: 'n', at: 0, n: 1 }, { side: 'n', at: -42, n: 2 }, { side: 'n', at: 42, n: 3 }, { side: 'n', at: -84, n: 4 }, { side: 'n', at: 84, n: 5 },
+      { side: 'e', at: -34, n: 6 }, { side: 'e', at: 40, n: 7 },
+    ],
     areas: [
       { name: 'Rocky Cape', tile: T.ROCK, dx: -0.82, dy: 0.26, rx: 0.1, ry: 0.1 },
       { name: 'Scrap Island', tile: T.GRAVEL, dx: 0.86, dy: 0.42, rx: 0.1, ry: 0.13, overBeach: true },
-      { name: 'Uptown gardens', tile: T.LAWN, dx: -0.5, dy: -0.35, rx: 0.12, ry: 0.12 },
     ],
     paint: [
-      // the canals of the City of Water (bulls pull boats along them)
-      { op: 'grid', x0: -46, x1: 46, y0: -36, y1: 36, step: 23, width: 2, tile: T.CANAL, onlyLand: true },
-      planks(-50, 50, -25, -23), planks(-50, 50, -2, 0), planks(-50, 50, 21, 23),
-      planks(-35, -33, -40, 40), planks(-12, -10, -40, 40), planks(11, 13, -40, 40), planks(34, 36, -40, 40),
       // the large stone bridge to Scrap Island
       planks(60, 92, 30, 34),
-      // the Puffing Tom's tracks (they dip under the waves here and there, so ships can cross)
-      rail(60, 106, 4, 6), rail(114, 172, 4, 6), // → Enies Lobby (from Shift Station)
-      rail(-66, -64, -128, -100), rail(-66, -64, -92, -62), rail(-66, -64, -54, -30), // → St. Poplar
-      rail(46, 48, -128, -96), rail(46, 48, -88, -40), // → Pucci
-      rail(-38, -36, 44, 86), rail(-38, -36, 94, 150), // → San Faldo
     ],
     towns: [
       {
-        id: 'w7_main_street', name: 'Shipbuilding Island — Main Street', dx: 0, dy: -0.56, w: 72, h: 24, style: 'city', plaza: 'fountain',
+        // (along the north shore, behind the docks)
+        id: 'w7_main_street', name: 'Main Street', dx: 0, dy: -0.611, w: 66, h: 7, style: 'city', plaza: false, mainDir: 'h', folk: 0.6,
         buildings: [
           { role: 'hall', name: 'Galley-La Company Headquarters', npc: 'p2_iceburg', w: 9, d: 5, hgt: 4, wall: '#f5e6c4', roof: '#8e4430' },
           { role: 'shipwright', name: 'Galley-La Dock 1', npc: 'p2_paulie', w: 8, d: 4 },
           { role: 'bank', name: 'Berry Cashing' },
         ],
       },
+      // Downtown: the first terrace, all round
       {
-        // (the whole canal district: every block between the canals built up)
-        id: 'w7_downtown', name: 'Water 7 Downtown', dx: 0, dy: 0.04, w: 170, h: 190, style: 'city', plaza: 'fountain', houses: 240,
+        id: 'w7_downtown', name: 'Downtown', dx: 0, dy: -0.441, w: 79, h: 10, style: 'city', plaza: 'fountain', plazaR: 3, mainDir: 'h', folk: 0.45,
         buildings: [
           { role: 'hall', name: 'Blue Station', npc: 'p2_bushon', w: 7, d: 4, wall: '#e3f2fd', roof: '#1565c0' },
           { role: 'bar', name: "Blueno's Bar", npc: 'p2_blueno' },
@@ -105,8 +117,22 @@ export const PARADISE_2 = [
           { role: 'shop', name: 'Rental Bull Shop', shop: 'p2_bull_rental' },
         ],
       },
+      { id: 'w7_downtown_s', name: 'Downtown', dx: 0, dy: 0.481, w: 79, h: 10, style: 'city', plaza: false, mainDir: 'h', folk: 0.3, noLabel: true },
+      { id: 'w7_downtown_e', name: 'Downtown', dx: 0.442, dy: 0.02, w: 9, h: 44, style: 'city', plaza: false, mainDir: 'v', folk: 0.3, noLabel: true },
+      { id: 'w7_downtown_w', name: 'Downtown', dx: -0.442, dy: 0.02, w: 9, h: 44, style: 'city', plaza: false, mainDir: 'v', folk: 0.3, noLabel: true },
+      // the Middle Terrace
+      { id: 'w7_middle_n', name: 'Middle Terrace', dx: 0, dy: -0.302, w: 52, h: 9, style: 'city', plaza: false, mainDir: 'h', folk: 0.3 },
+      { id: 'w7_middle_s', name: 'Middle Terrace', dx: 0, dy: 0.342, w: 52, h: 9, style: 'city', plaza: false, mainDir: 'h', folk: 0.25, noLabel: true },
+      { id: 'w7_middle_e', name: 'Middle Terrace', dx: 0.321, dy: 0.02, w: 9, h: 31, style: 'city', plaza: false, mainDir: 'v', folk: 0.25, noLabel: true },
+      { id: 'w7_middle_w', name: 'Middle Terrace', dx: -0.321, dy: 0.02, w: 9, h: 31, style: 'city', plaza: false, mainDir: 'v', folk: 0.25, noLabel: true },
+      // the Upper Terrace (the grand houses, on the terrace's own paving: a
+      // noble town's white marble glares in the sun, all of it from out at sea)
+      { id: 'w7_upper_n', name: 'Upper Terrace', dx: 0, dy: -0.18, w: 26, h: 7, ...W7_UPPER, mainDir: 'h', folk: 0.25 },
+      { id: 'w7_upper_s', name: 'Upper Terrace', dx: 0, dy: 0.22, w: 26, h: 7, ...W7_UPPER, mainDir: 'h', folk: 0.2, noLabel: true },
+      { id: 'w7_upper_e', name: 'Upper Terrace', dx: 0.2, dy: 0.02, w: 9, h: 15, ...W7_UPPER, mainDir: 'v', folk: 0.2, noLabel: true },
+      { id: 'w7_upper_w', name: 'Upper Terrace', dx: -0.2, dy: 0.02, w: 9, h: 15, ...W7_UPPER, mainDir: 'v', folk: 0.2, noLabel: true },
       {
-        id: 'w7_back_street', name: 'Back Street', dx: 0.05, dy: 0.56, w: 66, h: 22, style: 'port', plaza: false,
+        id: 'w7_back_street', name: 'Back Street', dx: 0.02, dy: 0.68, w: 50, h: 8, style: 'port', plaza: false, mainDir: 'h', folk: 0.5,
         buildings: [
           { role: 'hall', name: 'Franky House', npc: 'p2_zambai', w: 7, d: 4, wall: '#ffb74d', roof: '#1565c0' },
           { role: 'doctor', name: 'Back Street Clinic' },
@@ -115,12 +141,15 @@ export const PARADISE_2 = [
       },
     ],
     docks: [
-      { dx: 0.02, dy: -0.66, dir: 'n', len: 7, name: 'Galley-La Dock 1' },
+      { dx: -0.093, dy: -0.66, dir: 'n', len: 7, name: 'Water 7 Harbour' },
       { dx: -0.84, dy: 0.26, dir: 'w', len: 6, name: 'Rocky Cape' },
-      { dx: 0.1, dy: 0.7, dir: 's', len: 6, name: 'Back Street Pier' },
+      { dx: 0.1, dy: 0.72, dir: 's', len: 6, name: 'Back Street Pier' },
     ],
     landmarks: [
-      hut(W7, 0.6, -0.1, { role: 'hall', name: 'Shift Station', npc: 'p2_kokoro', fw: 6, fd: 3, style: 'port', wall: '#f5e6c4', roof: '#2e7d32' }),
+      // the Great Fountain, on top of it all (seen from far out at sea)
+      { kind: 'greatfountain', dx: 0, dy: 0.02, name: 'The Great Fountain', far: 1400, loreLabel: 'Read the plaque',
+        lore: '"THE GREAT FOUNTAIN." Water drawn up out of the sea, rising through the heart of the city and falling back down all four of its terraces to the canals. Without it there is no City of Water.' },
+      hut(W7, 0.6, 0.03, { role: 'hall', name: 'Shift Station', npc: 'p2_kokoro', fw: 6, fd: 3, style: 'port', wall: '#f5e6c4', roof: '#2e7d32' }),
       hut(W7, 0.86, 0.36, { role: 'shipwright', name: "Franky's Workshop (Scrap Island)", npc: 'p2_franky', fw: 7, fd: 4, style: 'port', wall: '#8d6e63', roof: '#455a64' }),
       { kind: 'shipwreck', dx: 0.8, dy: 0.5, name: 'A scrapped galleon' },
       { kind: 'shipwreck', dx: 0.93, dy: 0.47 },
@@ -134,10 +163,11 @@ export const PARADISE_2 = [
       { id: 'galley_la', dx: 0, dy: -0.6 },
       { id: 'scrap_island', dx: 0.86, dy: 0.46 },
       { id: 'aqua_laguna', dx: 0, dy: 1.25 },
-      { id: 'franky_house', dx: 0.12, dy: 0.5 },
+      { id: 'franky_house', dx: 0.12, dy: 0.66 },
+      { id: 'great_fountain', dx: 0.0, dy: 0.1 },
     ],
     logNext: ['enies_lobby', 'thriller_bark'], logTime: 2, danger: 4, music: 'town',
-    tagline: 'The City of Water — home of Galley-La, the finest shipwrights in the world.',
+    tagline: 'The City of Water — a city in terraces round the Great Fountain, home of Galley-La, the finest shipwrights in the world.',
   },
   {
     id: 'st_poplar', name: 'St. Poplar', sea: 'paradise', x: 3232, y: 862, w: 64, h: 46, climate: 'spring', rough: 0.2,

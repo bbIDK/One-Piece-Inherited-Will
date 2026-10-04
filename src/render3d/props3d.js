@@ -12,5 +12,6 @@ import './props/vegetation.js';
 import './props/street.js';
 import './props/landmarks.js';
 import './props/baratie.js';
+import './props/water7.js';
 
 export { instancerStats } from './props/instancer.js';

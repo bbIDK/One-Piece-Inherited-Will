@@ -14,6 +14,7 @@ import { RM, canalAt, coneAt, nearRM } from '../world/reverseMountain.js';
 import { PLINTH, STEPS_MAX } from '../world/interiors.js';
 import { bw, bl, bfoot } from '../world/bframe.js';
 import { drumAt, drumTop, nearDrum, drumTile } from '../world/drums.js';
+import { terraceAt, terraceGround } from '../world/terraces.js';
 
 export const SEA_Y = 0;
 export const DECK_Y = 0.55; // top of bridges (and sea-train tracks)
@@ -161,8 +162,22 @@ function quayRamp(world, cx, cy, h, pads) {
   return h;
 }
 
+const TG = { h: 0, base: false, t: 1 };
 /** Height at a tile corner before anything is built on it. */
 function naturalHeight(world, cx, cy) {
+  // (on a terraced city — Water 7 — its levels, stairways and gutters: see terraces.js;
+  // the first flight's foot is the land's own)
+  const tr = world.terraces?.length && world.zone === 0 ? terraceAt(world, cx, cy) : null;
+  if (tr && terraceGround(tr, world.dx(tr.x, cx), cy - tr.y, TG)) {
+    if (!TG.base) return TG.h;
+    const land = landAt(world, cx, cy);
+    return land + (TG.h - land) * TG.t;
+  }
+  return landAt(world, cx, cy);
+}
+
+/** Height at a tile corner from the land itself (its tiles, the coast, Reverse Mountain, the Drum Rockies). */
+function landAt(world, cx, cy) {
   // (on top of one of the Drum Rockies: its own height — its face a sheer wall a tile thick, see drums.js)
   const nd = world.drums?.length && world.zone === 0 ? nearDrum(world, cx, cy, 2) : null;
   if (nd) {
