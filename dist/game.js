@@ -73328,6 +73328,145 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   var WHITE7 = new Color(1, 1, 1);
 
+  // src/render3d/chars/flameaura.js
+  var IDENT2 = new Matrix4();
+  var NOISE2 = `
+float faH( vec3 p ) { p = fract( p * 0.3183099 + 0.1 ); p *= 17.0; return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) ); }
+float faN( vec3 x ) {
+  vec3 i = floor( x ), f = fract( x ); f = f * f * ( 3.0 - 2.0 * f );
+  return mix( mix( mix( faH( i ), faH( i + vec3( 1, 0, 0 ) ), f.x ), mix( faH( i + vec3( 0, 1, 0 ) ), faH( i + vec3( 1, 1, 0 ) ), f.x ), f.y ),
+              mix( mix( faH( i + vec3( 0, 0, 1 ) ), faH( i + vec3( 1, 0, 1 ) ), f.x ), mix( faH( i + vec3( 0, 1, 1 ) ), faH( i + vec3( 1, 1, 1 ) ), f.x ), f.y ), f.z );
+}
+`;
+  function flameMaterial(inner) {
+    const u = {
+      uTime: { value: 0 },
+      uThick: { value: 0.06 },
+      uLift: { value: 0.3 },
+      uCol: { value: new Color() },
+      uRim: { value: new Color() },
+      uK: { value: 1 },
+      uHip: { value: 0.9 },
+      uBack: { value: 0.7 }
+    };
+    const m = new MeshBasicMaterial({ color: 16777215, side: BackSide, transparent: true, depthWrite: false, fog: false });
+    m.userData.u = u;
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, u);
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", `#include <common>
+uniform float uTime, uThick, uLift, uK, uHip, uBack;
+varying vec3 vFaP;
+varying float vFaLift;
+${NOISE2}`).replace("#include <skinning_vertex>", `#include <skinning_vertex>
+{
+#ifdef USE_SKINNING
+  vec3 onrm = normalize( objectNormal );
+#else
+  vec3 onrm = normalize( normal );
+#endif
+  vFaP = transformed;
+  // a thin band round the body; off whatever faces up (the head, the
+  // shoulders, the tops of the arms) the flames rise \u2014 most off the head and
+  // shoulders \u2014 breathing as the noise under them rises
+  float up = smoothstep( -0.1, 0.8, onrm.y );
+  float hi = smoothstep( uHip * 0.7, uHip * 1.8, transformed.y );
+  float sw = faN( transformed * 2.2 + vec3( 0.0, -uTime * 1.8, uTime * 0.3 ) );
+  float lift = up * ( 0.3 + 0.7 * hi ) * ( 0.45 + 0.55 * sw );
+  vFaLift = lift;
+  transformed += onrm * uThick * uK * ( ${inner ? "0.32 + 0.08 * sw" : "0.85 + 0.35 * sw"} );
+  transformed.y += uLift * uK * lift * ${inner ? "0.12" : "1.0"};
+}`).replace("#include <project_vertex>", `vec4 mvPosition = vec4( transformed, 1.0 );
+#ifdef USE_INSTANCING
+  mvPosition = instanceMatrix * mvPosition;
+#endif
+  mvPosition = modelViewMatrix * mvPosition;
+  {
+    float zz = max( -mvPosition.z, 0.1 );
+    mvPosition.xyz *= ( zz + uBack ) / zz;
+  }
+  gl_Position = projectionMatrix * mvPosition;`);
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
+uniform float uTime, uK;
+uniform vec3 uCol, uRim;
+varying vec3 vFaP;
+varying float vFaLift;
+${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", `
+  // flame tongues: noise stretched upward and rising, cut against a
+  // threshold that climbs with height into the flame \u2014 so the higher up it
+  // is the less survives, and each tongue tapers to a point (a flame's apex)
+  // that flickers and breaks off as the noise rises through it
+  vec3 q = vec3( vFaP.x * 3.4, vFaP.y * 1.5 - uTime * ${inner ? "2.6" : "3.4"}, vFaP.z * 3.4 );
+  float n = faN( q ) * 0.75 + faN( q * 2.2 + 7.1 ) * 0.25;
+  float cut = ${inner ? "0.08 + 0.7" : "0.22 + 0.62"} * vFaLift;
+  if ( n < cut || uK < 0.01 ) discard;
+  ${inner ? "vec4 diffuseColor = vec4( mix( uCol, vec3( 1.0 ), 0.75 ) * 1.1, uK );" : "float edge = step( cut + 0.07, n );\n  vec4 diffuseColor = vec4( mix( uRim, uCol, edge ), uK );"}`);
+    };
+    m.customProgramCacheKey = () => "op-flame-aura-3-" + (inner ? "in" : "out");
+    return m;
+  }
+  var FlameAura = class {
+    /** On a character model (chars/model.js): two hulls sharing its body and skeleton. */
+    constructor(model2) {
+      this.model = model2;
+      this.outerMat = flameMaterial(false);
+      this.innerMat = flameMaterial(true);
+      this.outer = new SkinnedMesh(model2.body.geo, this.outerMat);
+      this.inner = new SkinnedMesh(model2.body.geo, this.innerMat);
+      for (const h2 of [this.outer, this.inner]) {
+        h2.bind(model2.skeleton, IDENT2);
+        h2.boundingSphere = model2.mesh.boundingSphere;
+        h2.castShadow = false;
+        h2.receiveShadow = false;
+      }
+      this.outer.renderOrder = 1;
+      this.inner.renderOrder = 2;
+      model2.group.add(this.outer, this.inner);
+      this.color = null;
+      this.k = 0;
+    }
+    /** css colour (its alpha how strong), the time, the body's hip height and build (for the size of it). */
+    set(color, t, hip, bulk = 1) {
+      if (color !== this.color) {
+        this.color = color;
+        const c = parse(color);
+        const U3 = this.outerMat.userData.u, I2 = this.innerMat.userData.u;
+        U3.uCol.value.copy(c.c);
+        U3.uRim.value.copy(c.c).multiplyScalar(c.dark ? 1.8 : 0.55);
+        if (c.dark) U3.uRim.value.lerp(new Color(0.85, 0.05, 0.12), 0.5);
+        I2.uCol.value.copy(c.dark ? new Color(0.75, 0.1, 0.2) : c.c);
+        this.k = Math.min(1, 0.55 + c.a * 0.45);
+      }
+      for (const m of [this.outerMat, this.innerMat]) {
+        const u = m.userData.u;
+        u.uTime.value = t;
+        u.uK.value = this.k;
+        u.uHip.value = hip;
+        u.uThick.value = 0.06 * Math.max(0.8, bulk);
+        u.uLift.value = 0.3 * Math.max(0.8, bulk);
+        u.uBack.value = 0.75 * Math.max(0.8, bulk);
+      }
+    }
+    set visible(v) {
+      this.outer.visible = this.inner.visible = v;
+    }
+    dispose() {
+      this.model.group.remove(this.outer, this.inner);
+      this.outerMat.dispose();
+      this.innerMat.dispose();
+    }
+  };
+  function parse(css2) {
+    let a = 1, c;
+    const m = /rgba?\(([^)]+)\)/.exec(css2 || "");
+    if (m) {
+      const p = m[1].split(",").map((x) => parseFloat(x));
+      c = new Color().setRGB(p[0] / 255, p[1] / 255, p[2] / 255, SRGBColorSpace);
+      if (p.length > 3) a = p[3];
+    } else c = new Color(css2 || "#ffffff");
+    const lum4 = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+    return { c, a, dark: lum4 < 0.03 };
+  }
+
   // src/game/stats.js
   var ATTRS = {
     str: { name: "Strength", short: "STR", desc: "Physical damage and carrying power." },
@@ -83843,7 +83982,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _mm = new three_module_exports.Matrix4();
 
   // src/render3d/chars/model.js
-  var IDENT2 = new Matrix4();
+  var IDENT3 = new Matrix4();
   var ZERO = new Vector3(0, 0, 0);
   var ONE2 = new Vector3(1, 1, 1);
   var _q3 = new Quaternion();
@@ -83993,12 +84132,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.skeleton = new Skeleton(this.bones, this.body.inv.map((m) => m.clone()));
       this.mat = bodyMaterial({ fog: opts.fog ?? true, self: opts.viewmodel ? SELF_SHADE_VM : SELF_SHADE * ((look?.scale || 1) >= 1.5 ? 2 : 1) });
       this.mesh = new SkinnedMesh(this.body.geo, this.mat);
-      this.mesh.bind(this.skeleton, IDENT2);
+      this.mesh.bind(this.skeleton, IDENT3);
       this.mesh.boundingSphere = new Sphere(new Vector3(0, 1, 0), 2.4);
       this.mesh.castShadow = !opts.viewmodel;
       this.mesh.receiveShadow = true;
       this.outline = new SkinnedMesh(this.body.geo, opts.outline || sharedOutline());
-      this.outline.bind(this.skeleton, IDENT2);
+      this.outline.bind(this.skeleton, IDENT3);
       this.outline.boundingSphere = this.mesh.boundingSphere;
       this.group.add(this.mesh, this.outline);
       const d = this.d;
@@ -84469,7 +84608,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       }
       if (!sm2) {
         this.senseMesh = new SkinnedMesh(this.body.geo, senseMaterial());
-        this.senseMesh.bind(this.skeleton, IDENT2);
+        this.senseMesh.bind(this.skeleton, IDENT3);
         this.senseMesh.boundingSphere = this.mesh.boundingSphere;
         this.senseMesh.renderOrder = 8;
         this.group.add(this.senseMesh);
@@ -85392,7 +85531,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   };
 
   // src/render3d/chars/flame.js
-  var NOISE2 = (
+  var NOISE3 = (
     /* glsl */
     `
   float fhash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
@@ -85412,7 +85551,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   uniform vec3 uLean;
   varying float vH;
   varying vec3 vP, vN, vV;
-  ${NOISE2}
+  ${NOISE3}
   void main() {
     vec3 p = position;
     float h = clamp(p.y, 0.0, 1.0), t = uTime + uSeed;
@@ -85441,7 +85580,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   uniform vec3 uRim, uMid, uHot, uCore;
   varying float vH;
   varying vec3 vP, vN, vV;
-  ${NOISE2}
+  ${NOISE3}
   void main() {
     float t = uTime + uSeed;
     float face = abs(dot(normalize(vN), normalize(vV)));
@@ -85465,7 +85604,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   uniform vec3 uCore;
   varying float vH;
   varying vec3 vP, vN, vV;
-  ${NOISE2}
+  ${NOISE3}
   void main() {
     float t = uTime + uSeed;
     float face = abs(dot(normalize(vN), normalize(vV)));
@@ -87163,14 +87302,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.alpha = alpha2;
       const near = dist < 45;
       if (pose.aura && near && !(a.isPlayer && ctx.mode === "first")) {
+        if (!this.flame) this.flame = new FlameAura(m);
+        this.flame.visible = true;
+        this.flame.set(pose.aura, t, m.d.hip0, m.d.Bk);
         if (!this.aura) {
           this.aura = new Aura();
           this.root.add(this.aura.mesh);
+          this.aura.shell.visible = this.aura.outer.visible = false;
         }
         this.aura.mesh.visible = true;
         this.aura.set(pose.aura, t, 2.25 * (1 + (m.d.hip0 - 0.93) * 0.5), 1.45 * m.d.Bk, camYaw3);
         this.aura.mesh.position.set(-Math.sin(camYaw3) * 0.3, -0.05 + o.lift, -Math.cos(camYaw3) * 0.3);
-      } else if (this.aura) this.aura.mesh.visible = false;
+      } else {
+        if (this.aura) this.aura.mesh.visible = false;
+        if (this.flame) this.flame.visible = false;
+      }
       const lit2 = !!this.look.backFlame && a.flameLit !== false && !a.inWater && !(a.isPlayer && ctx.mode === "first");
       if ((lit2 || this.backFlame?.grow > 0.02) && near) {
         const chest = m.bones[B4.chest];
@@ -87327,6 +87473,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.wake?.dispose();
       this.label?.dispose();
       this.aura?.dispose();
+      this.flame?.dispose();
       this.collar?.dispose();
       this.backFlame?.dispose();
       this.wings?.dispose();
@@ -149697,7 +149844,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
 
   // src/content/mainStory.js
   var qidOf = (chId, path2) => `mq:${chId}:${path2}`;
-  var parse = (qid) => {
+  var parse2 = (qid) => {
     const [, ch, path2] = String(qid).split(":");
     return { ch: CHAPTERS.get(ch), path: path2 };
   };
@@ -150094,7 +150241,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       m.path = to;
       m.sworn = to === "marine" && c.faction === "marine";
       const plan = PLANS[m.part](c, to, null, game);
-      const doneCh = new Set(m.done.map((q2) => parse(q2).ch?.id));
+      const doneCh = new Set(m.done.map((q2) => parse2(q2).ch?.id));
       if (cur && cur.ch.v[to] && (cur.ch.kind !== "start" || PROLOGUES.get(cur.ch.island) === cur.ch.id)) {
         m.chain = [...m.chain.slice(0, m.at), cur.ch.id, ...plan.filter((id) => id !== cur.ch.id && !doneCh.has(id) && CHAPTERS.get(id)?.kind !== "start")];
       } else {

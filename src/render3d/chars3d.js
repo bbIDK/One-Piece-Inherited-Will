@@ -7,6 +7,7 @@
 // decals with expressions and blinks, hair and hats are 3D geometry, and
 // labels, quest markers, auras, glows, ice and stars float around them.
 // Sea Kings get their own serpent model.
+import { FlameAura } from './chars/flameaura.js';
 import * as THREE from 'three';
 import { angleDiff } from '../core/math.js';
 import { registerActorView, registerViewmodel, registerFrameHook } from './registry.js';
@@ -455,12 +456,19 @@ class ActorView {
     this.alpha = alpha;
     const near = dist < 45;
     // aura (not round your own eyes in first person: the view's edges take its tint instead)
+    // (the blaze hugging the figure — flameaura.js — and the flecks drifting up off it)
     if (pose.aura && near && !(a.isPlayer && ctx.mode === 'first')) {
-      if (!this.aura) { this.aura = new Aura(); this.root.add(this.aura.mesh); }
+      if (!this.flame) this.flame = new FlameAura(m);
+      this.flame.visible = true;
+      this.flame.set(pose.aura, t, m.d.hip0, m.d.Bk);
+      if (!this.aura) { this.aura = new Aura(); this.root.add(this.aura.mesh); this.aura.shell.visible = this.aura.outer.visible = false; }
       this.aura.mesh.visible = true;
       this.aura.set(pose.aura, t, 2.25 * (1 + (m.d.hip0 - 0.93) * 0.5), 1.45 * m.d.Bk, camYaw3);
       this.aura.mesh.position.set(-Math.sin(camYaw3) * 0.3, -0.05 + o.lift, -Math.cos(camYaw3) * 0.3);
-    } else if (this.aura) this.aura.mesh.visible = false;
+    } else {
+      if (this.aura) this.aura.mesh.visible = false;
+      if (this.flame) this.flame.visible = false;
+    }
     // the Lunarian flame on the back, between the wings (out in the sea, and
     // not over your own shoulders in first person: you'd be looking out of it)
     const lit = !!this.look.backFlame && a.flameLit !== false && !a.inWater && !(a.isPlayer && ctx.mode === 'first');
@@ -603,6 +611,7 @@ class ActorView {
     this.wake?.dispose();
     this.label?.dispose();
     this.aura?.dispose();
+    this.flame?.dispose();
     this.collar?.dispose();
     this.backFlame?.dispose();
     this.wings?.dispose();
