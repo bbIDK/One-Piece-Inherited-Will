@@ -433,11 +433,13 @@ export class AIController {
     return dist < 3;
   }
 
-  moveToward(a, x, y, game, direct = false) {
+  moveToward(a, x, y, game, direct = false, who = null) {
     let tx = x, ty = y;
     if (!direct) {
       // in or out of a building by its door, and round anything in the way
-      const via = game.deckRoute?.(a, x, y) || game.buildings?.route(a, x, y);
+      // (after someone: by the deck they're on — a plank's far end, not the
+      // water a step behind them that the point might be over)
+      const via = game.deckRoute?.(a, x, y, who) || game.buildings?.route(a, x, y);
       if (via) { tx = via.x; ty = via.y; }
       const wp = this.steer(a, tx, ty, game);
       tx = wp.x; ty = wp.y;
@@ -631,7 +633,7 @@ export class AIController {
     const d = game.world.distance(a.x, a.y, p.x, p.y);
     if (d > 22) { catchUp(game, a, p); return; }
     if (d > 2.2) {
-      this.moveToward(a, p.x - Math.cos(p.facing) * 1.2, p.y - Math.sin(p.facing) * 1.2 + 0.3, game);
+      this.moveToward(a, p.x - Math.cos(p.facing) * 1.2, p.y - Math.sin(p.facing) * 1.2 + 0.3, game, false, p);
       a.intent.sprint = d > 5;
     }
     void clamp; void angleDiff; void TAU;

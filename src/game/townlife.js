@@ -12,7 +12,12 @@ import { makeLook } from '../data/races.js';
 import { civilianOutfit, randomName, townRaces } from './spawner.js';
 import { RNG } from '../core/rng.js';
 
-const SEAT_H = { barrel: 0.95, crate: 0.62, haystack: 0.78, well: 0.76, fountain: 0.56, bench: 0.46, step: 0.22, dock: 0.05 };
+// What people sit on: the height of its top (the props' own: render3d/props), and
+// how far forward of its middle they sit — at the front of a barrel's lid or a
+// crate's, the knees over its edge and the legs hanging down in front of it, not
+// in the middle with their legs through its sides; on a haystack, on its flank
+const SEAT_H = { barrel: 0.8, crate: 0.74, haystack: 0.72, well: 0.76, fountain: 0.63, bench: 0.52, step: 0.22, dock: 0.05 };
+const SEAT_FWD = { barrel: 0.1, crate: 0.17, haystack: 0.42 };
 const KID_STYLES = new Set(['village', 'town', 'port', 'snow', 'desert', 'wano', 'chinese', 'candy', 'fishman', 'mink', 'tribal', 'sky', 'giant']);
 const CHATTER = [
   'Did you hear? Pirates were spotted off the coast!', 'The price of fish these days...', 'Ha ha ha! No way!', 'Is that so?!', 'My husband says the Marines are useless.',
@@ -90,15 +95,16 @@ function spotsOf(game, town, isl) {
       const face = Math.PI / 2;
       const r = (o.col?.r ?? 0.4) + 0.4;
       const stand = { x: o.x + Math.cos(face) * r, y: o.y + Math.sin(face) * r };
-      if (clear(stand.x, stand.y)) S.seat.push({ x: o.x, y: o.y, face, h: SEAT_H[o.kind], stand, o });
+      const sc = o.s || 1, fwd = SEAT_FWD[o.kind] * sc;
+      if (clear(stand.x, stand.y)) S.seat.push({ x: o.x + Math.cos(face) * fwd, y: o.y + Math.sin(face) * fwd, face, h: SEAT_H[o.kind] * sc, stand, o });
     } else if (o.kind === 'well' || o.kind === 'fountain' || o.kind === 'bench') {
-      const rim = o.kind === 'well' ? 0.86 : o.kind === 'fountain' ? 1.32 : 0;
+      const sc = o.s || 1, rim = (o.kind === 'well' ? 0.74 : o.kind === 'fountain' ? 1.34 : 0) * sc;
       const n = o.kind === 'bench' ? 2 : 4;
       for (let i = 0; i < n; i++) {
         const a = o.kind === 'bench' ? Math.PI / 2 : i * Math.PI / 2 + 0.5;
         const px = o.kind === 'bench' ? o.x + (i ? 0.35 : -0.35) : o.x + Math.cos(a) * rim, py = o.kind === 'bench' ? o.y : o.y + Math.sin(a) * rim;
         const stand = { x: px + Math.cos(a) * 0.6, y: py + Math.sin(a) * 0.6 };
-        if (clear(stand.x, stand.y)) S.seat.push({ x: px, y: py, face: a, h: SEAT_H[o.kind], stand, o });
+        if (clear(stand.x, stand.y)) S.seat.push({ x: px, y: py, face: a, h: SEAT_H[o.kind] * sc, stand, o });
       }
     } else if (o.kind === 'stall') {
       // the stall faces the plaza; its keeper stands behind it

@@ -1043,6 +1043,19 @@ export const SFX = {
     },
   },
   /**
+   * A Devil Fruit somewhere close by: a faint, glassy twinkle now and then
+   * from where it hangs (with its glint: render3d/glints.js) — a few high
+   * notes a fifth apart, shimmering, quiet enough to be missed.
+   */
+  df_glint: {
+    prio: 2, cd: 2.5, max: 1, kind: 'world', send: 0.3,
+    play(v) {
+      const f = rnd(1900, 2300);
+      M.shimmer(v, 0, 0.35, 0.9);
+      [1, 1.5, 2].forEach((m, i) => v.tone(0.05 + i * 0.09, 0.6, { freq: f * m, type: 'sine', gain: 0.016, attack: 0.01 }));
+    },
+  },
+  /**
    * A fruit picked off a tree: the leaves rustling as the hand goes in among
    * them, the stalk snapping (a sharp crack, a few splinters), the branch
    * springing back with a swish and a last shiver of leaves, the fruit in the

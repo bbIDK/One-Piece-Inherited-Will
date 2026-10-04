@@ -129,6 +129,22 @@ export function installFruits(game) {
     hangFruits(game);
   });
   game.hangFruits = () => hangFruits(game);
+  // (close to one in its tree: a faint twinkle of sound from where it hangs, now and then — with its glint, render3d/glints.js)
+  let nearT = 0;
+  game.on('tick', (dt) => {
+    if ((nearT -= dt) > 0) return;
+    nearT = 0.5;
+    const c = game.state?.char, p = game.player, w = game.world;
+    if (!c || !p || w !== game.surface || p.inCombat) return;
+    for (const f of c.world?.fruitSpawns || []) {
+      if (f.taken || f.tx == null) continue;
+      const d = w.distance(p.x, p.y, f.tx, f.ty);
+      if (d > 14) continue;
+      if (Math.random() < 0.5 * (1 - d / 16)) game.audio?.sfx('df_glint', { x: f.tx, y: f.ty }, { vol: 0.8 });
+      nearT = 2.2 + Math.random() * 2;
+      break;
+    }
+  });
   // a Devil Fruit picked from its tree (forage.js): yours, and the tree's just a tree again
   game.devilPicked = (o, df) => {
     const f = df.spawn;

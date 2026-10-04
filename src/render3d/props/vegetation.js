@@ -678,6 +678,7 @@ function buildTree(o, ctx, sub) {
       ? { key: `df:${sub}:${v % 2}:${fr}:${i}:${df.color}`, geo: devilFruitGeo(sub, v, fr, i, q, df.color, model.crown), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }
       : { key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }));
     o._devil = df ? dfi : -1;
+    o._devilColor = df ? df.color : null;
     parts.push(...fps);
     dyn = (oo, env, c, u) => { for (let i = 0; i < fps.length; i++) setPartVisible(u, fps[i], !fruitPicked(c.world?.id, oo, i, env.day)); };
     // where each fruit is, for aiming at it (see game/forage.js)

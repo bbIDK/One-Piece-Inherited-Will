@@ -28,6 +28,7 @@ import { PROP_BUILDERS, VIEWS, FRAME_HOOKS, registerPropBuilder } from './regist
 import { fadeProp, fadeWarmUp } from './props/instancer.js';
 import { instancerStats } from './props3d.js';
 import { VFX } from './vfx/index.js';
+import { Glints } from './glints.js';
 import './chars3d.js';
 
 registerPropBuilder('building', (o, ctx) => buildBuilding(o, ctx));
@@ -219,6 +220,7 @@ export class Renderer3D {
     };
     // the combat effects, drawn in 3D (render/fx3d.js leaves out what's drawn there)
     this.vfx = new VFX(this);
+    this.glints = new Glints(this);
     this.setQuality(this.quality);
     this.terrain.setReach(this.viewChunks, this.seaChunks());
     this.parallelCompile = !!this.renderer.extensions.has('KHR_parallel_shader_compile');
@@ -374,6 +376,7 @@ export class Renderer3D {
     for (const m of this.projViews.values()) this.ents.remove(m);
     this.projViews.clear();
     this.vfx?.clear();
+    this.glints?.clear();
     this.propOrigin = null;
   }
 
@@ -462,6 +465,7 @@ export class Renderer3D {
     this.updateViewmodel(game, env);
     prof('r.viewmodel', t0); t0 = performance.now();
     try { this.vfx.update(game, dt); } catch (e) { if (!this.vfxWarned) { this.vfxWarned = true; console.warn('3D effects failed', e); } this.vfx.hide(); }
+    this.glints.update(game, this.rig.camera);
     t0 = performance.now();
 
     const amb = env.ambient || [1, 1, 1];

@@ -67348,6 +67348,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const df = devilOn(ctx?.world?.id, o), dfi = df ? df.slot % pts.length : -1;
       const fps = pts.map((q2, i) => i === dfi ? { key: `df:${sub}:${v % 2}:${fr}:${i}:${df.color}`, geo: devilFruitGeo(sub, v, fr, i, q2, df.color, model2.crown), sway: model2.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true } : { key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q2), sway: model2.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true });
       o._devil = df ? dfi : -1;
+      o._devilColor = df ? df.color : null;
       parts.push(...fps);
       dyn = (oo, env2, c, u) => {
         for (let i = 0; i < fps.length; i++) setPartVisible(u, fps[i], !fruitPicked(c.world?.id, oo, i, env2.day));
@@ -73193,6 +73194,139 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       S6.grid(v0, n, n);
     }
   };
+
+  // src/render3d/glints.js
+  var FAR = 90;
+  var NEAR2 = 3;
+  var TEX = null;
+  function starTexture() {
+    if (TEX) return TEX;
+    const n = 128, c = document.createElement("canvas");
+    c.width = c.height = n;
+    const g = c.getContext("2d"), m = n / 2;
+    const glow3 = g.createRadialGradient(m, m, 0, m, m, m);
+    glow3.addColorStop(0, "rgba(255,255,255,1)");
+    glow3.addColorStop(0.12, "rgba(255,255,255,0.85)");
+    glow3.addColorStop(0.35, "rgba(255,255,255,0.18)");
+    glow3.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = glow3;
+    g.fillRect(0, 0, n, n);
+    const ray = (ang, len, w) => {
+      g.save();
+      g.translate(m, m);
+      g.rotate(ang);
+      const r4 = g.createLinearGradient(0, -len, 0, len);
+      r4.addColorStop(0, "rgba(255,255,255,0)");
+      r4.addColorStop(0.5, "rgba(255,255,255,1)");
+      r4.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = r4;
+      g.beginPath();
+      g.moveTo(0, -len);
+      g.lineTo(w, 0);
+      g.lineTo(0, len);
+      g.lineTo(-w, 0);
+      g.closePath();
+      g.fill();
+      g.restore();
+    };
+    ray(0, m * 0.98, n * 0.035);
+    ray(Math.PI / 2, m * 0.98, n * 0.035);
+    ray(Math.PI / 4, m * 0.5, n * 0.025);
+    ray(-Math.PI / 4, m * 0.5, n * 0.025);
+    TEX = new CanvasTexture(c);
+    TEX.colorSpace = SRGBColorSpace;
+    return TEX;
+  }
+  var Glints = class {
+    constructor(view) {
+      this.view = view;
+      this.group = new Group();
+      this.group.name = "devil-fruit-glints";
+      view.scene.add(this.group);
+      this.pool = [];
+      this.list = [];
+      this.scanT = 0;
+    }
+    /** The trees with a Devil Fruit still on them, among those built round you (looked for twice a second). */
+    scan(game) {
+      const v = this.view, w = game.world, p = game.player, out = [];
+      for (const o of v.built.keys()) {
+        if (!(o._devil >= 0) || !o._fruitPts) continue;
+        if (w.distance(o.x, o.y, p.x, p.y) > FAR + 10) continue;
+        out.push(o);
+      }
+      this.list = out;
+    }
+    update(game, cam) {
+      const v = this.view, w = game.world, p = game.player, env2 = game.env;
+      if (!w || !p || !cam) {
+        this.group.visible = false;
+        return;
+      }
+      if ((this.scanT -= 1 / 60) <= 0) {
+        this.scanT = 0.5;
+        this.scan(game);
+      }
+      const t = env2.time || 0, day = env2.day, dark = 1 - Math.min(1, Math.max(0, env2.daylight ?? 1));
+      let k = 0;
+      for (const o of this.list) {
+        const i = o._devil;
+        if (!(i >= 0) || fruitPicked(w.id, o, i, day)) continue;
+        const [px2, py2, pz2] = o._fruitPts[i];
+        const s = o.s || 1, cy = Math.cos(o._yaw || 0), sy = Math.sin(o._yaw || 0);
+        const fx = o.x + (px2 * cy + pz2 * sy) * s, fy = o.y + (-px2 * sy + pz2 * cy) * s, fh = (o._gy || 0) + py2 * s;
+        const sx = w.dx(v.ox, fx), sz = fy - v.oy;
+        const dx = sx - cam.position.x, dh = fh - cam.position.y, dz = sz - cam.position.z, d = Math.hypot(dx, dh, dz);
+        if (d > FAR || d < 0.6) continue;
+        let sp = this.pool[k];
+        if (!sp) {
+          sp = new Sprite(new SpriteMaterial({ map: starTexture(), color: 16777215, blending: AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
+          sp.renderOrder = 5;
+          this.group.add(sp);
+          this.pool[k] = sp;
+        }
+        k++;
+        const ph = (t + (o.x * 0.37 + o.y * 0.61) % 2.3) % 2.3 / 2.3;
+        const tw = Math.exp(-Math.pow((ph - 0.12) / 0.045, 2));
+        const fade2 = Math.min(1, (FAR - d) / 20) * Math.min(1, (d - 0.6) / (NEAR2 - 0.6));
+        const size = Math.max(0.5, d * 0.034) * (0.7 + 0.9 * tw);
+        const back = Math.min(0.35, d * 0.05) / d;
+        sp.position.set(sx - dx * back, fh - dh * back, sz - dz * back);
+        sp.scale.set(size, size, 1);
+        const m = sp.material;
+        m.rotation = tw * 0.6 + o.x * 0.1;
+        m.opacity = Math.min(1, fade2 * (0.6 + 0.4 * tw) * (0.9 + 0.3 * dark));
+        m.color.set(o._devilColor || "#fff6c8").lerp(WHITE7, 0.55);
+        if (!sp.userData.t || t - sp.userData.t > 0.25 || sp.userData.o !== o) {
+          sp.userData.t = t;
+          sp.userData.o = o;
+          m.depthTest = !this.clearLine(game, cam, fx, fy, fh, d, o);
+        }
+        sp.visible = true;
+      }
+      for (let j = k; j < this.pool.length; j++) this.pool[j].visible = false;
+      this.group.visible = k > 0;
+    }
+    /** Nothing solid between the camera and (fx, fy, fh): no building, no wall, no rise of the ground. */
+    clearLine(game, cam, fx, fy, fh, d, o) {
+      const v = this.view, w = game.world;
+      const cx = v.ox + cam.position.x, cy = v.oy + cam.position.z, ch = cam.position.y;
+      const n = Math.max(4, Math.min(24, Math.ceil(d / 2.5)));
+      for (let i = 1; i < n; i++) {
+        const k = i / n;
+        const x = cx + w.dx(cx, fx) * k, y = cy + (fy - cy) * k, h2 = ch + (fh - ch) * k;
+        if (w.distance(x, y, o.x, o.y) < 3.5 * (o.s || 1)) break;
+        if (w.interiorAt?.(x, y) || w.isBlocked(x, y)) return false;
+        if (v.ground && v.ground(x, y) > h2 - 0.1) return false;
+      }
+      return true;
+    }
+    clear() {
+      this.list = [];
+      for (const sp of this.pool) sp.visible = false;
+    }
+  };
+  var WHITE7 = new Color(1, 1, 1);
 
   // src/game/stats.js
   var ATTRS = {
@@ -80217,9 +80351,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       stroke(g, lcurve(P6, (t) => [th + t * 4, 0.15 + t * 0.85], 6), 2, 172, 0.5);
     }
   }
-  var TEX = null;
+  var TEX2 = null;
   function detailTexture2() {
-    if (TEX) return TEX;
+    if (TEX2) return TEX2;
     const c = document.createElement("canvas");
     c.width = W3;
     c.height = H3;
@@ -80236,12 +80370,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     limbCloth(g, "trouser", 0.95);
     limbCloth(g, "trouserShin", 0.12);
     skirtLines(g);
-    TEX = new CanvasTexture(c);
-    TEX.colorSpace = SRGBColorSpace;
-    TEX.anisotropy = 4;
-    TEX.generateMipmaps = true;
-    TEX.minFilter = LinearMipmapLinearFilter;
-    return TEX;
+    TEX2 = new CanvasTexture(c);
+    TEX2.colorSpace = SRGBColorSpace;
+    TEX2.anisotropy = 4;
+    TEX2.generateMipmaps = true;
+    TEX2.minFilter = LinearMipmapLinearFilter;
+    return TEX2;
   }
 
   // src/render3d/chars/body.js
@@ -87432,6 +87566,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         }
       };
       this.vfx = new VFX(this);
+      this.glints = new Glints(this);
       this.setQuality(this.quality);
       this.terrain.setReach(this.viewChunks, this.seaChunks());
       this.parallelCompile = !!this.renderer.extensions.has("KHR_parallel_shader_compile");
@@ -87619,6 +87754,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       for (const m of this.projViews.values()) this.ents.remove(m);
       this.projViews.clear();
       this.vfx?.clear();
+      this.glints?.clear();
       this.propOrigin = null;
     }
     ground(x, y) {
@@ -87712,6 +87848,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         }
         this.vfx.hide();
       }
+      this.glints.update(game, this.rig.camera);
       t0 = performance.now();
       const amb = env2.ambient || [1, 1, 1];
       tintSprites(Math.min(1, amb[0] * 1.05), Math.min(1, amb[1] * 1.05), Math.min(1, amb[2] * 1.05));
@@ -88776,7 +88913,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
 
   // src/render3d/groundcover.js
   var CELL5 = 16;
-  var NEAR2 = 22;
+  var NEAR3 = 22;
   var KINDS = ["grass", "flower", "fern", "pebble", "shell", "rock"];
   var REACH = { grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
   var MAXN = { grass: 5200, flower: 1400, fern: 1100, pebble: 1600, shell: 500, rock: 400 };
@@ -89082,7 +89219,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           mat: coverMaterial(k),
           capNear: MAXN[k],
           capFar: MAXF[k],
-          near: NEAR2,
+          near: NEAR3,
           wedges: WEDGES[k],
           pad: PAD2[k],
           setup: (m) => {
@@ -89128,7 +89265,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > FILL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR2 / CELL5)) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR3 / CELL5)) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -89349,7 +89486,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var SWAY3 = { fan: 0.5, anemone: 0.7, kelp: 1, seagrass: 0.9 };
   var GLOW3 = { branch: 0.07, brain: 0.04, table: 0.05, fan: 0.08, tube: 0.06, anemone: 0.16, clam: 0.14, star: 0.06 };
   var STRIDE = 9;
-  var NEAR3 = 16;
+  var NEAR4 = 16;
   var PAD3 = { branch: 1, brain: 1, table: 1.5, fan: 1.2, tube: 1, anemone: 0.5, kelp: 1, seagrass: 0.5, boulder: 2, star: 0.3, clam: 0.8 };
   var WEDGES2 = { branch: 4, brain: 4, table: 1, fan: 4, tube: 1, anemone: 1, kelp: 4, seagrass: 8, boulder: 4, star: 1, clam: 1 };
   var CELL_BUDGET_MS = 2.5;
@@ -89718,7 +89855,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           mat: seabedMaterial(k),
           capNear: Math.ceil(MAX4[k] * 0.3),
           capFar: MAX4[k],
-          near: NEAR3,
+          near: NEAR4,
           wedges: WEDGES2[k],
           pad: PAD3[k],
           setup: (m) => {
@@ -89770,7 +89907,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > CELL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR3 / CELL6) + 1) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR4 / CELL6) + 1) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell2(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -104087,7 +104224,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const dur = C3.dur[0] + (C3.dur[1] - C3.dur[0]) * rand();
     return { kind, k, dur };
   }
-  var WHITE7 = [1, 1, 1];
+  var WHITE8 = [1, 1, 1];
   function weatherTargets(kind, k = 1, climate = "temperate", out = {}) {
     const K = KINDS4[kind] || KINDS4.clear, C3 = CLIMATES2[climate] || CLIMATES2.temperate;
     out.cloud = Math.min(1, K.cloud * (K.cloud > 0.6 ? 0.85 + 0.15 * k : 0.7 + 0.3 * k));
@@ -104105,7 +104242,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     out.ash = (K.ash || 0) * k;
     out.calm = K.calm || 0;
     out.odd = (K.odd || 0) * Math.max(0.7, k);
-    out.tint = K.tint || WHITE7;
+    out.tint = K.tint || WHITE8;
     out.aurora = K.aurora || 0;
     out.thunder = (K.thunder || 0) * k;
     out.wind = C3.wind * (K.wind ?? 1);
@@ -105347,10 +105484,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (s.conqueror) return dist < s.conqueror.range * 0.8;
       return dist < 3;
     }
-    moveToward(a, x, y, game, direct = false) {
+    moveToward(a, x, y, game, direct = false, who = null) {
       let tx = x, ty = y;
       if (!direct) {
-        const via = game.deckRoute?.(a, x, y) || game.buildings?.route(a, x, y);
+        const via = game.deckRoute?.(a, x, y, who) || game.buildings?.route(a, x, y);
         if (via) {
           tx = via.x;
           ty = via.y;
@@ -105580,7 +105717,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         return;
       }
       if (d > 2.2) {
-        this.moveToward(a, p.x - Math.cos(p.facing) * 1.2, p.y - Math.sin(p.facing) * 1.2 + 0.3, game);
+        this.moveToward(a, p.x - Math.cos(p.facing) * 1.2, p.y - Math.sin(p.facing) * 1.2 + 0.3, game, false, p);
         a.intent.sprint = d > 5;
       }
     }
@@ -108061,7 +108198,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var RING_X = 0.3;
   var RING_Y = 0.36;
   var RING_SIDE = 300;
-  var NEAR4 = 160;
+  var NEAR5 = 160;
   var HEAD3 = 3.8;
   var Waypoints = class _Waypoints {
     constructor(parent) {
@@ -108111,7 +108248,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const d = w.distance(p.x, p.y, m.x, m.y);
         const mk3 = this.mark(id, kind);
         const fade2 = Math.max(0, Math.min(1, (d - 10) / 12));
-        const gy = d < NEAR4 ? v3.ground(m.x, m.y) + HEAD3 : cam.position.y;
+        const gy = d < NEAR5 ? v3.ground(m.x, m.y) + HEAD3 : cam.position.y;
         V4.set(w.dx(v3.ox, m.x), gy, m.y - v3.oy).applyMatrix4(cam.matrixWorldInverse);
         let sx, sy, edge;
         if (V4.z < -0.1) {
@@ -122697,7 +122834,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
 
   // src/game/townlife.js
-  var SEAT_H = { barrel: 0.95, crate: 0.62, haystack: 0.78, well: 0.76, fountain: 0.56, bench: 0.46, step: 0.22, dock: 0.05 };
+  var SEAT_H = { barrel: 0.8, crate: 0.74, haystack: 0.72, well: 0.76, fountain: 0.63, bench: 0.52, step: 0.22, dock: 0.05 };
+  var SEAT_FWD = { barrel: 0.1, crate: 0.17, haystack: 0.42 };
   var KID_STYLES = /* @__PURE__ */ new Set(["village", "town", "port", "snow", "desert", "wano", "chinese", "candy", "fishman", "mink", "tribal", "sky", "giant"]);
   var CHATTER = [
     "Did you hear? Pirates were spotted off the coast!",
@@ -122772,15 +122910,16 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const face = Math.PI / 2;
         const r4 = (o.col?.r ?? 0.4) + 0.4;
         const stand = { x: o.x + Math.cos(face) * r4, y: o.y + Math.sin(face) * r4 };
-        if (clear3(stand.x, stand.y)) S6.seat.push({ x: o.x, y: o.y, face, h: SEAT_H[o.kind], stand, o });
+        const sc = o.s || 1, fwd2 = SEAT_FWD[o.kind] * sc;
+        if (clear3(stand.x, stand.y)) S6.seat.push({ x: o.x + Math.cos(face) * fwd2, y: o.y + Math.sin(face) * fwd2, face, h: SEAT_H[o.kind] * sc, stand, o });
       } else if (o.kind === "well" || o.kind === "fountain" || o.kind === "bench") {
-        const rim2 = o.kind === "well" ? 0.86 : o.kind === "fountain" ? 1.32 : 0;
+        const sc = o.s || 1, rim2 = (o.kind === "well" ? 0.74 : o.kind === "fountain" ? 1.34 : 0) * sc;
         const n = o.kind === "bench" ? 2 : 4;
         for (let i = 0; i < n; i++) {
           const a = o.kind === "bench" ? Math.PI / 2 : i * Math.PI / 2 + 0.5;
           const px2 = o.kind === "bench" ? o.x + (i ? 0.35 : -0.35) : o.x + Math.cos(a) * rim2, py2 = o.kind === "bench" ? o.y : o.y + Math.sin(a) * rim2;
           const stand = { x: px2 + Math.cos(a) * 0.6, y: py2 + Math.sin(a) * 0.6 };
-          if (clear3(stand.x, stand.y)) S6.seat.push({ x: px2, y: py2, face: a, h: SEAT_H[o.kind], stand, o });
+          if (clear3(stand.x, stand.y)) S6.seat.push({ x: px2, y: py2, face: a, h: SEAT_H[o.kind] * sc, stand, o });
         }
       } else if (o.kind === "stall") {
         const pl = town.plaza;
@@ -123354,6 +123493,21 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       hangFruits(game);
     });
     game.hangFruits = () => hangFruits(game);
+    let nearT = 0;
+    game.on("tick", (dt) => {
+      if ((nearT -= dt) > 0) return;
+      nearT = 0.5;
+      const c = game.state?.char, p = game.player, w = game.world;
+      if (!c || !p || w !== game.surface || p.inCombat) return;
+      for (const f of c.world?.fruitSpawns || []) {
+        if (f.taken || f.tx == null) continue;
+        const d = w.distance(p.x, p.y, f.tx, f.ty);
+        if (d > 14) continue;
+        if (Math.random() < 0.5 * (1 - d / 16)) game.audio?.sfx("df_glint", { x: f.tx, y: f.ty }, { vol: 0.8 });
+        nearT = 2.2 + Math.random() * 2;
+        break;
+      }
+    });
     game.devilPicked = (o, df) => {
       const f = df.spawn;
       if (!f || f.taken) return false;
@@ -152616,6 +152770,23 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         v.noise(0, 0.4, { color: "pink", type: "lowpass", freq: 500, sweep: 90, gain: 0.25 });
         v.noise(0.12, 0.05, { freq: 2200, q: 0.8, gain: 0.12, attack: 2e-3 });
         v.noise(0.12, 0.2, { type: "highpass", freq: 3e3, gain: 0.03 });
+      }
+    },
+    /**
+     * A Devil Fruit somewhere close by: a faint, glassy twinkle now and then
+     * from where it hangs (with its glint: render3d/glints.js) — a few high
+     * notes a fifth apart, shimmering, quiet enough to be missed.
+     */
+    df_glint: {
+      prio: 2,
+      cd: 2.5,
+      max: 1,
+      kind: "world",
+      send: 0.3,
+      play(v) {
+        const f = rnd3(1900, 2300);
+        shimmer(v, 0, 0.35, 0.9);
+        [1, 1.5, 2].forEach((m, i) => v.tone(0.05 + i * 0.09, 0.6, { freq: f * m, type: "sine", gain: 0.016, attack: 0.01 }));
       }
     },
     /**
