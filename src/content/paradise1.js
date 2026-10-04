@@ -328,7 +328,7 @@ const npcsA = [
   {
     id: 'p1_mr5', name: 'Mr. 5', title: '"Gem of the Border", Officer Agent of Baroque Works', island: 'cactus_island', at: { spot: 'wp_outskirts' },
     look: { hair: 'pompadour', hairColor: '#ffcc80', skin: '#e0ac7e', top: '#fafafa', bottom: '#1a237e', coat: '#283593', goggles: true }, level: 21,
-    boss: true, hpMul: 0.95, faction: 'baroque', fruit: 'bomu', fruitMastery: 55, moves: ['bomu_kick', 'bomu_nose', 'bomu_breeze'],
+    boss: true, hpMul: 0.95, faction: 'baroque', fruit: 'bomu', fruitMastery: 55, moves: ['bomu_kick', 'bomu_nose', 'bomu_breeze', 'bomu_fist'],
     bounty: 10000000, infamy: true, breakthrough: 3, skill: 0.4, hostile: true,
     alert: `"Orders from the boss: the traitor dies — and so does anyone who gets in the way."`, barks: ['Nose Fancy Cannon.', 'Boom.'],
     when: (c, g) => stg(g, 'p1_whisky_peak') === 'traitor',
@@ -557,7 +557,7 @@ const npcsB = [
   {
     id: 'p1_mr3', name: 'Mr. 3', title: 'Officer Agent of Baroque Works — the Wax Man', island: 'little_garden', at: { spot: 'candle_service' },
     look: { hair: 'curly', hairColor: '#212121', skin: '#f1c9a0', top: '#fafafa', bottom: '#212121', coat: '#ef6c00', goggles: true }, level: 24,
-    boss: true, hostile: true, faction: 'baroque', fruit: 'doru', fruitMastery: 62, moves: ['doru_arrow', 'doru_lock', 'doru_armor', 'p1_candle_service'],
+    boss: true, hostile: true, faction: 'baroque', fruit: 'doru', fruitMastery: 62, moves: ['doru_arrow', 'doru_lock', 'doru_armor', 'p1_candle_service', 'doru_ken', 'doru_wall'],
     bounty: 24000000, infamy: true, breakthrough: 3, skill: 0.45,
     alert: `"Candle Service Set! You'll make a lovely wax statue — right next to the giant!"`, barks: ['Hahahaha!', 'Candle Wall!'],
     phases: [{ at: 0.5, run: (a, g) => { g.fx?.text?.(a.x, a.y - 2.4, 'CANDLE CHAMPION!', '#fff8e1', 0.6); a.addBuff({ id: 'p1_champion', name: 'Candle Champion', dur: 25, mods: { defMul: 0.6, damage: 1.2 }, aura: 'rgba(255,248,225,0.8)' }); } }],
@@ -865,7 +865,7 @@ const npcsB = [
   {
     id: 'p1_mr1', name: 'Mr. 1', title: '"The Killer" Daz Bonez, Officer Agent of Baroque Works', island: 'alabasta', at: { town: 'alubarna', plaza: true, ox: -9 },
     look: { hair: 'bald', skin: '#e0ac7e', top: '#e0ac7e', bottom: '#212121', goggles: true, bulk: 1.25 }, bulk: 1.25, level: 33,
-    boss: true, hostile: true, hpMul: 0.9, faction: 'baroque', fruit: 'supa', fruitMastery: 60, moves: ['supa_sparkling', 'supa_spider', 'p1_atomic_spurt'],
+    boss: true, hostile: true, hpMul: 0.9, faction: 'baroque', fruit: 'supa', fruitMastery: 60, moves: ['supa_sparkling', 'supa_spider', 'p1_atomic_spurt', 'supa_claw', 'supa_atomic'],
     bounty: 75000000, infamy: true, breakthrough: 3, skill: 0.55,
     alert: `"My whole body is a blade. Nothing you swing can cut me."`, barks: ['Sparkling Daisy.', 'Atomic Spurt.'],
     when: (c, g) => stg(g, 'p1_alabasta') === 'officers',
@@ -1167,7 +1167,7 @@ const npcsC = [
   {
     id: 'p1_enel', name: 'Enel', title: '"God" of Skypiea', island: 'upper_yard', at: { spot: 'god_shrine' },
     look: { hair: 'curly', hairColor: '#fff59d', skin: '#f1d9c0', top: '#f1d9c0', bottom: '#ff8f00', hat: 'beanie', hatColor: '#fafafa', belt: '#1565c0' }, level: 40,
-    boss: true, hostile: true, hpMul: 1.2, faction: 'rival', fruit: 'goro', fruitMastery: 88, moves: ['goro_vari', 'goro_sango', 'goro_elthor', 'goro_amaru', 'goro_raigo'],
+    boss: true, hostile: true, hpMul: 1.2, faction: 'rival', fruit: 'goro', fruitMastery: 88, moves: ['goro_vari', 'goro_sango', 'goro_elthor', 'goro_amaru', 'goro_raigo', 'goro_kari', 'goro_raiju', 'goro_jamboule'],
     breakthrough: 6, skill: 0.75, aggroRange: 16,
     alert: `"Yahahaha! I am God. You are a creature that crawled up from the Blue Sea. Kneel — or be judged."`, barks: ['Yahahaha!', 'Fear is what makes a god.', 'El Thor!'],
     phases: [{ at: 0.4, run: (a, g) => { g.fx?.text?.(a.x, a.y - 2.6, '200,000,000 VOLT AMARU!', '#fff176', 0.6); a.addBuff({ id: 'p1_enel_amaru', name: 'Amaru', dur: 30, mods: { damage: 1.4, speedMul: 1.2, scale: 1.25 }, aura: 'rgba(255,241,118,0.9)' }); } }],

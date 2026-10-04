@@ -1121,6 +1121,10 @@ export const FRUIT_TECH = {
     gomu_gatling: (v, k) => { M.stretch(v, 0, Math.max(0.12, k.rel), 0.8); for (let i = 0; i < 11; i++) swing(v, k.rel + i * 0.08 + Math.random() * 0.02, 'fists', 0.8); },
     gomu_rocket: (v, k) => { M.stretch(v, 0, Math.max(0.15, k.rel), 1.1); M.snap(v, k.rel, 1.2); v.whoosh(k.rel, 0.4, { f0: 300, f1: 2400, gain: 0.12 }); },
     gomu_bazooka: (v, k) => { STRETCH(v, k, 1.3); v.thump(k.rel, { f0: 140, f1: 60, dur: 0.1, gain: 0.2 }); },
+    // (a head flung back and swung into theirs: GONG — a bell's partials, ringing on)
+    gomu_bell: (v, k) => { STRETCH(v, k, 1.2); v.thump(k.rel, { f0: 160, f1: 70, dur: 0.1, gain: 0.2 }); v.ring(k.rel + 0.01, 520, 1.4, 0.05, [1, 2.4, 3.0, 4.5]); },
+    // (a fist punched into the ground, rumbling along under it, bursting up)
+    gomu_mogura_pistol: (v, k) => { STRETCH(v, k, 1.2); M.rumble(v, k.rel, 0.6, 0.45, { lp: 160 }); M.boom(v, k.rel + 0.42, 1); },
     gomu_gear2: (v) => { for (let i = 0; i < 4; i++) v.thump(i * 0.11, { f0: 70, f1: 46, dur: 0.09, gain: 0.25 }); M.hiss(v, 0.3, 1.6, 1.2, 3500); v.whoosh(0.4, 0.8, { f0: 2500, f1: 1200, gain: 0.06, color: 'pink' }); },
     gomu_gear3: (v, k) => { v.noise(0, Math.max(0.3, k.rel), { type: 'lowpass', freq: 600, gain: 0.2, attack: 0.3, curve: 'lin' }); v.tone(0, Math.max(0.3, k.rel), { freq: 90, to: 60, type: 'triangle', gain: 0.12, attack: 0.2 }); M.snap(v, k.rel, 1.6); M.boom(v, k.rel + 0.02, 0.6); },
     gomu_gear4: (v) => { M.stretch(v, 0, 0.6, 1.2); v.tone(0.5, 0.4, { freq: 80, to: 130, type: 'triangle', gain: 0.25, vib: { rate: 8, depth: 12 } }); hakiClank(v, 0.75, 1.2); for (let i = 0; i < 3; i++) v.thump(0.8 + i * 0.2, { f0: 90, f1: 120, dur: 0.12, gain: 0.18 }); },
@@ -1156,7 +1160,8 @@ export const FRUIT_TECH = {
     ope_gamma: (v, k) => { v.tone(0, Math.max(0.2, k.rel) + 0.3, { freq: 120, type: 'sawtooth', gain: 0.05, attack: 0.1 }); v.zap(k.rel, 0.3, { f0: 300, f1: 1200, gain: 0.06 }); },
     default: (v, k) => swing(v, k.rel, 'sword', 1),
   },
-  bara: { default: (v, k) => { M.pop(v, 0, 1, 300); v.noise(0.01, 0.03, { freq: 1500, q: 3, gain: 0.08 }); swing(v, k.rel, 'fists', 1); }, bara_festival: (v) => { for (let i = 0; i < 8; i++) M.pop(v, i * 0.05, 0.6, rnd(220, 420)); } },
+  bara: { default: (v, k) => { M.pop(v, 0, 1, 300); v.noise(0.01, 0.03, { freq: 1500, q: 3, gain: 0.08 }); swing(v, k.rel, 'fists', 1); }, bara_festival: (v) => { for (let i = 0; i < 8; i++) M.pop(v, i * 0.05, 0.6, rnd(220, 420)); },
+    bara_muggy: (v, k) => { M.hiss(v, 0, Math.max(0.3, k.rel) + 0.3, 0.8, 5500); v.crackle(0, Math.max(0.3, k.rel), 6, { freq: 4000, gain: 0.03 }); M.pop(v, k.rel, 0.9, 200); } },
   bomu: { default: (v, k) => { M.hiss(v, 0, Math.max(0.2, k.rel), 1, 5500); v.crackle(0, Math.max(0.2, k.rel), 6, { freq: 4000, gain: 0.03 }); swing(v, k.rel, 'legs', 0.9); } },
   hana: {
     default: (v, k) => {
@@ -1169,16 +1174,19 @@ export const FRUIT_TECH = {
   },
   ito: {
     ito_birdcage: (v) => { for (let i = 0; i < 6; i++) v.ring(i * 0.1, rnd(900, 1700), 0.6, 0.025, [1, 2.01, 3.02], { spread: 0.004 }); v.tone(0, 1.2, { freq: 2000, type: 'sawtooth', gain: 0.008, attack: 0.4 }); },
+    // (strings fired down out of the sky like a hail of bullets: each one a thin twang and a zip)
+    ito_fulbright: (v, k) => { for (let i = 0; i < 9; i++) { const t = k.rel + i * 0.07 + Math.random() * 0.03; v.whoosh(t, 0.08, { f0: 6000, f1: 2500, q: 2, gain: 0.06, peak: 0.3 }); v.ring(t + 0.05, rnd(1200, 1900), 0.25, 0.02, [1, 2.01, 3.02], { spread: 0.004 }); } },
     default: (v, k) => { v.ring(0, rnd(900, 1300), 0.4, 0.035, [1, 2.01, 3.02, 4.03], { spread: 0.004 }); v.whoosh(k.rel, 0.1, { f0: 3000, f1: 7000, q: 2, gain: 0.1, peak: 0.2 }); },
   },
   mochi: { default: (v, k) => { v.tone(0, Math.max(0.15, k.rel), { freq: 150, to: 230, gain: 0.08, vib: { rate: 8, depth: 20 } }); v.noise(0, Math.max(0.15, k.rel), { type: 'lowpass', freq: 400, gain: 0.12, attack: 0.05 }); v.thump(k.rel, { f0: 180, f1: 70, dur: 0.1, gain: 0.2 }); v.bubble(k.rel, { f: 220, rise: 1.8, dur: 0.08, gain: 0.08 }); } },
-  horo: { default: (v) => { M.wail(v, 0, 1, 0.8); v.whoosh(0.2, 0.5, { f0: 600, f1: 1500, gain: 0.05, flutter: 6 }); } },
+  horo: { default: (v) => { M.wail(v, 0, 1, 0.8); v.whoosh(0.2, 0.5, { f0: 600, f1: 1500, gain: 0.05, flutter: 6 }); }, horo_ghostrap: (v, k) => { M.wail(v, 0, 0.8, 0.6); M.boom(v, Math.max(0.3, k.rel), 0.8); } },
   kage: {
     kage_brickbat: (v, k) => { for (let i = 0; i < 10; i++) v.whoosh(k.rel + Math.random() * 0.25, 0.06, { f0: 900, f1: 1500, q: 1.5, gain: 0.14, flutter: 40 }); },
     kage_steal: (v, k) => { for (const t of [0, 0.08]) { v.noise(k.rel + t, 0.01, { type: 'highpass', freq: 5000, gain: 0.2, attack: 0.0006 }); v.ring(k.rel + t, 3000, 0.08, 0.02, [1, 1.7]); } },
+    kage_asgard: (v, k) => { M.suction(v, 0, Math.max(0.6, k.rel) + 0.3, 1.4); M.rumble(v, 0.2, 0.8, Math.max(0.6, k.rel) + 0.4, { lp: 140 }); M.roar(v, Math.max(0.6, k.rel), 1, 0.9, 70); },
     default: (v) => { M.suction(v, 0, 0.5, 0.6); v.formant(0, 0.5, { f1: 300, f2: 600, q: 6, gain: 0.05 }); },
   },
-  doku: { doku_hydra: (v, k) => { M.hiss(v, 0, Math.max(0.3, k.rel) + 0.3, 1.3, 5500); v.bubbles(0, 0.4, 6, { f: 600, gain: 0.04 }); }, default: (v, k) => { M.hiss(v, 0, Math.max(0.2, k.rel), 0.8, 6000); v.bubbles(0, 0.3, 4, { f: 700, gain: 0.04 }); swing(v, k.rel, 'fists', 0.8); } },
+  doku: { doku_gumo: (v, k) => { M.hiss(v, 0, Math.max(0.3, k.rel) + 1, 1.1, 3500); v.bubbles(0, 0.6, 8, { f: 500, gain: 0.04 }); }, doku_chloro: (v, k) => { M.hiss(v, 0, Math.max(0.3, k.rel) + 0.6, 0.9, 4000); M.pop(v, k.rel, 0.7, 260); }, doku_hydra: (v, k) => { M.hiss(v, 0, Math.max(0.3, k.rel) + 0.3, 1.3, 5500); v.bubbles(0, 0.4, 6, { f: 600, gain: 0.04 }); }, default: (v, k) => { M.hiss(v, 0, Math.max(0.2, k.rel), 0.8, 6000); v.bubbles(0, 0.3, 4, { f: 700, gain: 0.04 }); swing(v, k.rel, 'fists', 0.8); } },
   noro: { default: (v, k) => { v.tone(k.rel, 0.8, { freq: 1200, to: 300, gain: 0.06, vib: { rate: 7, depth: 30 } }); v.tone(k.rel, 0.8, { freq: 1800, to: 450, gain: 0.025 }); } },
   bari: { default: (v, k) => { v.fm(k.rel, 0.6, { freq: 1600, ratio: 1.5, index: 1.4, gain: 0.05 }); v.ring(k.rel, 2400, 0.5, 0.03, [1, 1.34, 1.87]); v.tone(k.rel, 0.6, { freq: 220, gain: 0.04, attack: 0.05 }); } },
   suke: { default: (v) => M.shimmer(v, 0, 1, 0.6, false) },
@@ -1200,9 +1208,12 @@ export const FRUIT_TECH = {
   uo_seiryu: {
     seiryu_bolo: (v, k) => { M.roar(v, 0, 1, Math.max(0.4, k.rel), 80); M.flame(v, k.rel, 1.6, { dur: 0.9 }); },
     seiryu_raimei: (v, k) => { swing(v, 0, 'heavy', 1.3); M.strike(v, k.rel, 1.2, 1.8); },
+    seiryu_tatsumaki: (v, k) => { M.roar(v, 0, 0.8, 0.7, 80); v.whoosh(k.rel, 1.6, { f0: 250, f1: 900, q: 0.5, gain: 0.2, peak: 0.4, flutter: 4, color: 'pink' }); },
+    seiryu_ragnaraku: (v, k) => { swing(v, 0, 'heavy', 1.3); M.strike(v, k.rel, 1.3, 2); M.boom(v, k.rel + 0.03, 1.2); },
     default: (v, k) => { M.roar(v, 0, 1, 0.9, 70); v.whoosh(k.rel, 0.4, { f0: 300, f1: 2000, gain: 0.1 }); },
   },
   mera: {
+    mera_kyokaen: (v, k) => { M.flame(v, k.rel, 1.5, { dur: 1.2 }); v.whoosh(k.rel, 0.6, { f0: 200, f1: 800, q: 0.5, gain: 0.18, color: 'pink' }); },
     mera_entei: (v, k) => { v.whoosh(0, Math.max(0.6, k.rel), { f0: 200, f1: 900, q: 0.5, gain: 0.25, peak: 0.95, flutter: 10, color: 'pink' }); M.flame(v, k.rel, 1.8, { dur: 1 }); },
     default: (v, k) => { v.whoosh(0, Math.max(0.15, k.rel), { f0: 300, f1: 1500, q: 0.6, gain: 0.1, peak: 0.9, color: 'pink' }); M.flame(v, k.rel, 1.1); },
   },
@@ -1214,6 +1225,7 @@ export const FRUIT_TECH = {
     // (El Thor and Raigo: the charge gathering, then a strike from the sky — the crack and the thunder rolling on)
     goro_elthor: (v, k) => { v.zap(0, Math.max(0.5, k.rel), { f0: 40, f1: 200, gain: 0.04 }); M.rumble(v, 0, 0.6, Math.max(0.5, k.rel), { lp: 180 }); M.strike(v, k.rel, 1.3, 2.4); },
     goro_raigo: (v, k) => { M.rumble(v, 0, 1.4, Math.max(1, k.rel) + 1, { lp: 140 }); v.zap(0.3, 1, { f0: 40, f1: 160, gain: 0.03 }); M.strike(v, Math.max(1, k.rel), 1.4, 3); },
+    goro_kari: (v, k) => { v.zap(0, Math.max(0.3, k.rel), { f0: 40, f1: 180, gain: 0.04 }); M.strike(v, k.rel, 1.2, 1.8); },
     default: (v, k) => {
       // static gathering (the hair on your neck), then VARI
       v.zap(0, Math.max(0.15, k.rel), { f0: 40, f1: 220, gain: 0.03, step: 0.02 });
@@ -1225,6 +1237,7 @@ export const FRUIT_TECH = {
   moku: { default: (v, k) => { for (let i = 0; i < 3; i++) v.noise(i * 0.08, 0.3, { type: 'lowpass', freq: 600, sweep: 250, gain: 0.25, attack: 0.04 }); v.whoosh(k.rel, 0.3, { f0: 300, f1: 1000, gain: 0.3, color: 'pink' }); } },
   pika: {
     pika_yata: (v) => { M.shimmer(v, 0, 1, 0.25); v.whoosh(0.02, 0.12, { f0: 3000, f1: 8000, q: 1.5, gain: 0.1, peak: 0.2 }); },
+    pika_flash: (v, k) => { v.tone(0, Math.max(0.2, k.rel), { freq: 900, to: 5000, gain: 0.05, attack: Math.max(0.15, k.rel) * 0.9, curve: 'lin' }); M.shimmer(v, k.rel, 1, 0.5); v.noise(k.rel, 0.02, { type: 'highpass', freq: 5000, gain: 0.2, attack: 0.0005 }); },
     default: (v, k) => {
       // a high whine charging, then PYUN
       v.tone(0, Math.max(0.15, k.rel), { freq: 800, to: 4000, gain: 0.04, attack: Math.max(0.1, k.rel) * 0.9, curve: 'lin' });
@@ -1233,9 +1246,10 @@ export const FRUIT_TECH = {
       v.fm(k.rel, 0.2, { freq: 2500, ratio: 1.5, index: 2, gain: 0.03 });
     },
   },
-  magu: { default: (v, k) => { v.bubbles(0, Math.max(0.2, k.rel), 6, { f: 130, rise: 1.4, gain: 0.08, dur: 0.1 }); v.noise(0, Math.max(0.2, k.rel), { color: 'brown', type: 'lowpass', freq: 400, gain: 0.2, attack: 0.1 }); v.whoosh(k.rel, 0.4, { f0: 200, f1: 900, q: 0.6, gain: 0.18, color: 'pink' }); M.hiss(v, k.rel, 0.4, 0.8, 5000); } },
+  magu: { magu_bakuretsu: (v, k) => { M.rumble(v, 0, 0.8, Math.max(0.3, k.rel), { lp: 140 }); M.boom(v, k.rel, 1.3); M.flame(v, k.rel + 0.05, 1.4, { dur: 0.9 }); }, default: (v, k) => { v.bubbles(0, Math.max(0.2, k.rel), 6, { f: 130, rise: 1.4, gain: 0.08, dur: 0.1 }); v.noise(0, Math.max(0.2, k.rel), { color: 'brown', type: 'lowpass', freq: 400, gain: 0.2, attack: 0.1 }); v.whoosh(k.rel, 0.4, { f0: 200, f1: 900, q: 0.6, gain: 0.18, color: 'pink' }); M.hiss(v, k.rel, 0.4, 0.8, 5000); } },
   yami: {
     yami_kurouzu: (v) => M.suction(v, 0, 0.9, 1.3),
+    yami_abyss: (v, k) => { M.suction(v, 0, Math.max(0.5, k.rel) + 1.2, 1.6); M.rumble(v, 0, 1, Math.max(0.5, k.rel) + 1, { lp: 120 }); },
     default: (v, k) => { M.suction(v, 0, Math.max(0.3, k.rel) + 0.2, 0.9); v.crackle(0, 0.5, 8, { freq: 700, gain: 0.04, q: 1.5 }); },
   },
 };
@@ -1304,7 +1318,7 @@ function animKind(anim, weapon) {
 export function techStart(v, def, { rel = 0, weapon = 'fists', gun = null, heavy = false, voice } = {}) {
   const k = { rel: Math.max(0, rel), def, voice };
   const fr = def.fruit && FRUIT_TECH[def.fruit];
-  if (fr) { (fr[def.id] || fr.default || STRETCH)(v, k); return; }
+  if (fr) { (fr[def.id] || (def.base && fr[def.base]) || fr.default || STRETCH)(v, k); return; }
   if (STYLE_TECH[def.id]) { STYLE_TECH[def.id](v, k); return; }
   // (Conqueror's: the pressure gathering through the wind-up; the DOOON comes with the burst itself — abilities.js)
   if ((def.steps || []).some((s) => s.conqueror)) { SFX.conqueror_rise.play(v, k); return; }

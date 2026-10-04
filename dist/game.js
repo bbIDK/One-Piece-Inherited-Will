@@ -50241,6 +50241,18 @@ ${GLSL}
         steps: [{ proj: { speed: 34, range: 18, radius: 1, damage: 70, sprite: "thunder", size: 2.4, element: "lightning", pierce: true, status: { shock: 1.5 }, knockback: 10, stun: 0.8, hitShips: true } }]
       },
       {
+        id: "gomu_mogura_pistol",
+        name: "Mole Pistol",
+        icon: "\u{1F44A}",
+        anim: "slam",
+        windup: 0.35,
+        recover: 0.4,
+        cd: 7,
+        say: "Gomu Gomu no... Mogura Pistol!",
+        desc: "Punch straight down into the ground: the fist tunnels under them like a mole and bursts up beneath their chin.",
+        steps: [{ fx: { ring: 1.4, color: "#ffffff", shake: 0.25 } }, { at: 0.75, hit: { shape: "circle", range: 2.8, offset: 3.2, damage: 62, knockback: 6, stun: 0.9, heavy: true, guardBreak: true, launch: 9, impactFrame: true, shake: 0.5 }, vfx: "ring" }]
+      },
+      {
         id: "gomu_bajrang_gun",
         name: "Bajrang Gun",
         icon: "\u2600",
@@ -50325,13 +50337,52 @@ ${GLSL}
         steps: [{ hit: { shape: "line", range: 12, width: 3.2, damage: 55, knockback: 9, stun: 0.9, slashing: true, element: "string" }, vfx: "beam", color: "#f8bbd0" }, { zone: { range: 3, duration: 3, interval: 0.5, damage: 8, color: "#f8bbd0", atTarget: true, kind: "field", slow: 0.4 } }]
       }
     ] } },
-    mochi: { m1: { dmg: 1.1, reach: 1.25 } },
+    mochi: { m1: { dmg: 1.1, reach: 1.25 }, awakening: { name: "Awakened Mochi", extra: [
+      {
+        id: "mochi_shirotsuki",
+        name: "Shiro Tsuki",
+        icon: "\u{1F361}",
+        anim: "slam",
+        windup: 0.45,
+        recover: 0.4,
+        cd: 13,
+        say: "Mochi... Shiro Tsuki!",
+        desc: "Awakened: the very ground round you turns to mochi \u2014 it heaves, swallows their feet and holds them fast.",
+        steps: [{ hit: { shape: "circle", range: 5, damage: 46, knockback: 4, stun: 0.6, element: "physical", heavy: true, shake: 0.5 }, vfx: "ring" }, { zone: { range: 5.5, duration: 4, interval: 0.5, damage: 6, color: "#f5f5f5", kind: "mochi", slow: 0.75, status: { root: 0.6 } } }]
+      }
+    ] } },
     // (fists that fly off on their own, arms that sprout out of anything: a longer reach)
     bara: { m1: { reach: 1.4 } },
-    hana: { m1: { reach: 1.3 } },
+    hana: { m1: { reach: 1.3 }, awakening: { name: "Awakened Flowers", extra: [
+      {
+        id: "hana_demonio",
+        name: "Demonio Fleur",
+        icon: "\u{1F338}",
+        anim: "flex",
+        windup: 0.5,
+        recover: 0.3,
+        cd: 30,
+        say: "Demonio Fleur!",
+        desc: "Awakened: arms and wings of petals bloom from your back \u2014 a towering demon's shape, every blow a giant's.",
+        steps: [{ fx: { burst: 24, color: "#f48fb1", kind: "petal", ring: 3, impact: 0.06 } }, { at: 0.5, buff: { id: "demonio", name: "Demonio Fleur", dur: 14, mods: { damage: 1.35, defMul: 0.8, scale: 1.6 }, aura: "rgba(136,14,79,0.8)" } }]
+      }
+    ] } },
     // (a Zoan's beast in every blow)
     neko_leopard: { m1: { dmg: 1.2 } },
-    doku: { m1: { element: "poison", status: { poison: 2 } } },
+    doku: { m1: { element: "poison", status: { poison: 2 } }, awakening: { name: "Awakened Venom", extra: [
+      {
+        id: "doku_venom_demon",
+        name: "Venom Demon: Hell's Judgement",
+        icon: "\u2620",
+        anim: "thrust",
+        windup: 0.5,
+        recover: 0.45,
+        cd: 16,
+        say: "Venom Demon... Hell's Judgement!",
+        desc: "Awakened: a demon of poison wraps you and you charge \u2014 the ground it crosses stays a pool of venom.",
+        steps: [{ dash: { dist: 10, time: 0.45, iframes: 0.4, hit: { damage: 60, knockback: 10, stun: 0.7, heavy: true, element: "poison", status: { poison: 4 } } } }, { at: 0.95, zone: { range: 3.5, duration: 5, interval: 0.5, damage: 8, element: "poison", status: { poison: 2 }, color: "#7b1fa2", kind: "gas" } }]
+      }
+    ] } },
     bomu: { m1: { element: "explosion", dmg: 1.1 } },
     // the Logia: their own stuff in every blow
     mera: { m1: { element: "fire", status: { burn: 1.5 } }, awakening: { name: "Awakened Flames", skills: [
@@ -50360,24 +50411,17 @@ ${GLSL}
         steps: [{ proj: { speed: 26, range: 15, radius: 0.6, damage: 40, count: 2, spread: 0.18, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 6, trail: { color: ["#ff7043", "#ffca28"] } } }]
       },
       awaken("mera_enkai"),
-      awaken("mera_entei")
+      awaken("mera_entei"),
+      awaken("mera_kagero"),
+      awaken("mera_kyokaen")
     ] } },
     hie: { m1: { element: "ice", status: { chill: 1.5 } }, awakening: { name: "Awakened Ice", skills: [
       awaken("hie_saber"),
       awaken("hie_pheasant"),
-      {
-        id: "hie_partisan",
-        name: "Ice Block: Partisan",
-        icon: "\u2744",
-        anim: "cast",
-        windup: 0.35,
-        recover: 0.35,
-        cd: 8,
-        desc: "A volley of ice spears.",
-        steps: [{ proj: { speed: 24, range: 14, radius: 0.35, damage: 26, count: 6, spread: 0.6, sprite: "iceshard", size: 1.6, color: "#e1f5fe", element: "ice", status: { freeze: 0.8 }, pierce: true } }]
-      },
+      awaken("hie_partisan"),
       awaken("hie_ageand"),
-      awaken("hie_time")
+      awaken("hie_time"),
+      awaken("hie_icetime")
     ] } },
     goro: {
       m1: { element: "lightning", status: { shock: 0.4 } },
@@ -50387,7 +50431,34 @@ ${GLSL}
     moku: { m1: { element: "smoke" } },
     pika: { m1: { element: "light", dmg: 1.1 } },
     magu: { m1: { element: "magma", status: { burn: 2 } } },
-    yami: { m1: { element: "dark" } },
+    kage: { awakening: { name: "Awakened Shadows", extra: [
+      {
+        id: "kage_asgard",
+        name: "Shadows' Asgard",
+        icon: "\u{1F464}",
+        anim: "flex",
+        windup: 0.7,
+        recover: 0.3,
+        cd: 40,
+        say: "Shadows' Asgard!",
+        desc: "Awakened: draw a legion of shadows into your own body \u2014 you swell into a towering giant, every blow a landslide.",
+        steps: [{ fx: { burst: 26, color: "#2a1838", kind: "smoke", ring: 4, impact: 0.08, shake: 0.4 } }, { at: 0.7, buff: { id: "asgard", name: "Shadows' Asgard", dur: 16, mods: { damage: 1.45, defMul: 0.7, speedMul: 0.9, scale: 2.2 }, aura: "rgba(42,24,56,0.85)" } }]
+      }
+    ] } },
+    yami: { m1: { element: "dark" }, awakening: { name: "Awakened Darkness", extra: [
+      {
+        id: "yami_abyss",
+        name: "Kurozu: Abyss",
+        icon: "\u{1F311}",
+        anim: "raise",
+        windup: 0.6,
+        recover: 0.4,
+        cd: 22,
+        say: "Abyss!",
+        desc: "Awakened: the dark spreads out from you over the whole field and drags everyone in it down and in.",
+        steps: [{ zone: { range: 8, duration: 5, interval: 0.4, damage: 9, element: "dark", color: "#120a1a", kind: "dark", pull: 2.5, slow: 0.5, absorb: true } }]
+      }
+    ] } },
     hito: { m1: { dmg: 1.1 }, forms: [{ id: "monster", name: "Monster Point", short: "Monster", mastery: 50, activate: "hito_monster", desc: "A Rumble Ball overdose: a towering monster, enormous power, barely controlled.", m1: { dmg: 1.5, reach: 1.4 } }] },
     uo_seiryu: { m1: { dmg: 1.2 }, forms: [{ id: "dragon", name: "Azure Dragon Form", short: "Dragon", mastery: 40, activate: "seiryu_form", desc: "Take the Azure Dragon's whole shape: bigger and stronger, every breath a furnace.", m1: { dmg: 1.4, reach: 1.4 } }] }
   };
@@ -50470,6 +50541,39 @@ ${GLSL}
           say: "Gomu Gomu no... Balloon!",
           desc: "Blow yourself up like a balloon: bullets and cannonballs bounce off you and fly back the way they came.",
           steps: [{ buff: { id: "balloon", name: "Balloon", dur: 1.8, mods: { speedMul: 0.35 }, reflect: 1.8, reflectWord: "BOING!", look: { bulk: 1.9 } } }]
+        }),
+        T2(25, {
+          id: "gomu_stamp",
+          name: "Gum-Gum Stamp",
+          anim: "kick_high",
+          windup: 0.18,
+          recover: 0.3,
+          cd: 4,
+          say: "Gomu Gomu no... Stamp!",
+          desc: "A rubber leg shot out straight at them, sole first: it lands like a door slammed in their face.",
+          steps: [{ hit: { shape: "line", range: 5.5, width: 0.9, damage: 20, knockback: 9, stun: 0.45, heavy: true }, vfx: "stab" }]
+        }),
+        T2(35, {
+          id: "gomu_spear",
+          name: "Gum-Gum Spear",
+          anim: "kick_high",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 7,
+          say: "Gomu Gomu no... Yari!",
+          desc: "Both feet pressed together and stretched out like a spearhead: it drives straight through whoever is in front of you.",
+          steps: [{ hit: { shape: "line", range: 6.5, width: 1, damage: 30, knockback: 10, stun: 0.6, heavy: true, guardBreak: true }, vfx: "stab" }]
+        }),
+        T2(40, {
+          id: "gomu_bell",
+          name: "Gum-Gum Bell",
+          anim: "grab",
+          windup: 0.25,
+          recover: 0.35,
+          cd: 9,
+          say: "Gomu Gomu no... Kane!",
+          desc: "Grab hold of them, stretch your head right back \u2014 and let it fly into theirs like the clapper of a bell.",
+          steps: [{ pull: { range: 5, strength: 12, stun: 0.5 } }, { at: 0.45, hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 32, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true, shake: 0.4 } }]
         })
       ],
       // (the Gears: Second and Fourth are switched on by these — see data/fruitForms.js — and so is Third by
@@ -50555,6 +50659,26 @@ ${GLSL}
             { hit: { shape: "circle", range: 8, damage: 90, knockback: 16, stun: 1.2, element: "quake", heavy: true, unblockable: true, launch: 7, impactFrame: true, shake: 1.2, hitShips: true, shipDamage: 500 }, vfx: "ring" },
             { zone: { range: 8, duration: 3, interval: 0.5, damage: 5, element: "quake", color: "#e0f7fa", kind: "quake", slow: 0.5 } }
           ]
+        }),
+        T2(30, {
+          id: "gura_bubble",
+          name: "Quake Bubble",
+          anim: "quake",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 8,
+          desc: "A bubble of tremors gathered round the fist and flung: where it bursts, the very air shatters like glass.",
+          steps: [{ proj: { speed: 16, range: 12, radius: 0.7, damage: 14, sprite: "shockwave", color: "#e0f7fa", size: 1.6, element: "quake", pierce: true, explode: { range: 3.2, damage: 46, element: "quake", knockback: 12 } } }]
+        }),
+        T2(60, {
+          id: "gura_tilt",
+          name: "Sky Tilt",
+          anim: "grab",
+          windup: 0.55,
+          recover: 0.45,
+          cd: 18,
+          desc: "Grab the air itself and wrench it sideways: the whole field tilts like the deck of a ship, and everyone in a great sweep in front of you is thrown off their feet.",
+          steps: [{ hit: { shape: "arc", range: 9, arc: 1.8, offset: 0.3, damage: 50, knockback: 15, stun: 1, element: "quake", heavy: true, guardBreak: true, launch: 5, impactFrame: true, shake: 1, hitShips: true, shipDamage: 200 }, vfx: "ring" }]
         })
       ]
     },
@@ -50712,7 +50836,39 @@ ${GLSL}
       techniques: [
         T2(0, { id: "bara_cannon", name: "Chop-Chop Cannon", icon: "\u{1F921}", anim: "cross", windup: 0.15, recover: 0.25, cd: 3, say: "Bara Bara Ho!", steps: [{ proj: { speed: 20, range: 9, radius: 0.35, damage: 14, sprite: "barafist", color: "#ffccbc", knockback: 3, stun: 0.3 } }] }),
         T2(20, { id: "bara_festival", name: "Chop-Chop Festival", icon: "\u{1F3AA}", anim: "cast", windup: 0.3, recover: 0.4, cd: 10, desc: "Scatter into a hundred pieces that pummel everything nearby.", steps: [{ hit: { shape: "circle", range: 3.2, damage: 6, knockback: 1.5, stun: 0.15, duration: 1.2, interval: 0.15 }, vfx: "ring" }] }),
-        T2(40, { id: "bara_escape", name: "Emergency Escape", icon: "\u{1F388}", anim: "fly", windup: 0.05, recover: 0.1, cd: 8, desc: "Your pieces fly off every which way and come back together somewhere safer.", steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, air: true } }] })
+        T2(40, { id: "bara_escape", name: "Emergency Escape", icon: "\u{1F388}", anim: "fly", windup: 0.05, recover: 0.1, cd: 8, desc: "Your pieces fly off every which way and come back together somewhere safer.", steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, air: true } }] }),
+        T2(10, {
+          id: "bara_knives",
+          name: "Chop-Chop Knives",
+          anim: "cross",
+          windup: 0.15,
+          recover: 0.25,
+          cd: 4,
+          say: "Bara Bara Ho!",
+          desc: "A hand flung off with knives fanned between its fingers: three blades come at them at once.",
+          steps: [{ proj: { speed: 22, range: 10, radius: 0.25, damage: 10, count: 3, spread: 0.35, sprite: "iceshard", color: "#cfd8dc", slashing: true } }]
+        }),
+        T2(30, {
+          id: "bara_senbei",
+          name: "Chop-Chop Senbei",
+          anim: "sweep",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 7,
+          desc: "Chop-Chop Pancake: your feet stay on the ground and your lower half spins off through them like a saw blade.",
+          steps: [{ dash: { dist: 7, time: 0.35, iframes: 0.2, hit: { damage: 22, knockback: 6, stun: 0.5, range: 1.3 } } }]
+        }),
+        T2(55, {
+          id: "bara_muggy",
+          name: "Muggy Ball",
+          anim: "shoot",
+          windup: 0.45,
+          recover: 0.4,
+          cd: 16,
+          say: "Muggy Ball!",
+          desc: "Buggy's own cannonball, lit and hurled by hand: it bursts with the force of a whole broadside.",
+          steps: [{ proj: { speed: 13, range: 12, radius: 0.5, damage: 10, sprite: "bomb", size: 1.4, explode: { range: 4, damage: 70, knockback: 12 } } }]
+        })
       ]
     },
     bomu: {
@@ -50727,7 +50883,27 @@ ${GLSL}
       techniques: [
         T2(0, { id: "bomu_kick", name: "Kick Bomb", icon: "\u{1F4A3}", anim: "kick", windup: 0.2, recover: 0.3, cd: 3, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.3, damage: 18, knockback: 7, stun: 0.4, element: "explosion", blast: true }, vfx: "ring", color: "#ffab40" }] }),
         T2(15, { id: "bomu_nose", name: "Nose Fancy Cannon", icon: "\u{1F443}", anim: "flick", windup: 0.25, recover: 0.3, cd: 5, desc: "Flick an explosive... bogey. Disgusting and effective.", steps: [{ proj: { speed: 18, range: 12, radius: 0.2, damage: 6, sprite: "orb", color: "#aed581", explode: { range: 2, damage: 24 } } }] }),
-        T2(40, { id: "bomu_breeze", name: "Breeze Breath Bomb", icon: "\u{1F32C}", anim: "breath", windup: 0.35, recover: 0.3, cd: 9, steps: [{ hit: { shape: "arc", range: 4, arc: 1.2, offset: 0.2, damage: 32, knockback: 8, stun: 0.6, element: "explosion", heavy: true, blast: true }, vfx: "ring", color: "#ffab40" }] })
+        T2(40, { id: "bomu_breeze", name: "Breeze Breath Bomb", icon: "\u{1F32C}", anim: "breath", windup: 0.35, recover: 0.3, cd: 9, steps: [{ hit: { shape: "arc", range: 4, arc: 1.2, offset: 0.2, damage: 32, knockback: 8, stun: 0.6, element: "explosion", heavy: true, blast: true }, vfx: "ring", color: "#ffab40" }] }),
+        T2(20, {
+          id: "bomu_fist",
+          name: "Bomb Punch",
+          anim: "punch",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 4,
+          desc: "Your fist goes off as it lands.",
+          steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.3, damage: 22, knockback: 8, stun: 0.5, element: "explosion", blast: true }, vfx: "ring", color: "#ffab40" }]
+        }),
+        T2(55, {
+          id: "bomu_stomp",
+          name: "Bomb Stomp",
+          anim: "slam",
+          windup: 0.4,
+          recover: 0.4,
+          cd: 12,
+          desc: "Stamp down and let your whole body go off: everything round you is blown off its feet.",
+          steps: [{ hit: { shape: "circle", range: 3.6, damage: 44, knockback: 12, stun: 0.7, element: "explosion", heavy: true, blast: true, launch: 3, shake: 0.5 }, vfx: "ring", color: "#ffab40" }]
+        })
       ]
     },
     hana: {
@@ -50741,7 +50917,47 @@ ${GLSL}
       techniques: [
         T2(0, { id: "hana_clutch", name: "Seis Fleur: Clutch", icon: "\u{1F338}", anim: "hana", windup: 0.25, recover: 0.3, cd: 5, say: "Seis Fleur... Clutch!", desc: "Sprout arms on the target and bend them backwards.", steps: [{ zone: { range: 1.2, duration: 0.3, interval: 0.3, damage: 24, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.2 } } }] }),
         T2(20, { id: "hana_mil", name: "Mil Fleur", icon: "\u{1F33A}", anim: "hana", windup: 0.4, recover: 0.4, cd: 10, desc: "A thousand arms bloom around you and strike.", steps: [{ hit: { shape: "circle", range: 3.6, damage: 7, knockback: 1, stun: 0.3, duration: 1, interval: 0.14 }, vfx: "ring", color: "#f48fb1" }] }),
-        T2(50, { id: "hana_gigante", name: "Mil Fleur: Gigantesco Mano", icon: "\u270B", anim: "hana", windup: 0.5, recover: 0.4, cd: 14, desc: "A thousand arms bloom into two giant hands that slam down.", steps: [{ zone: { range: 2.6, duration: 0.3, interval: 0.3, damage: 60, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.5 } } }] })
+        T2(50, { id: "hana_gigante", name: "Mil Fleur: Gigantesco Mano", icon: "\u270B", anim: "hana", windup: 0.5, recover: 0.4, cd: 14, desc: "A thousand arms bloom into two giant hands that slam down.", steps: [{ zone: { range: 2.6, duration: 0.3, interval: 0.3, damage: 60, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.5 } } }] }),
+        T2(30, {
+          id: "hana_spank",
+          name: "Cien Fleur: Spank",
+          anim: "hana",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 8,
+          desc: "A hundred hands bloom all round the target and slap them silly.",
+          steps: [{ zone: { range: 1.8, duration: 1, interval: 0.12, damage: 6, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 0.3 } } }]
+        }),
+        T2(40, {
+          id: "hana_strangle",
+          name: "Treinta Fleur: Strangle",
+          anim: "hana",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 12,
+          desc: "Arms bloom on the target's neck and legs and hold them fast, squeezing.",
+          steps: [{ zone: { range: 1.4, duration: 2.4, interval: 0.4, damage: 9, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 0.6 } } }]
+        }),
+        T2(45, {
+          id: "hana_ojos",
+          name: "Ojos Fleur",
+          anim: "pray",
+          windup: 0.3,
+          recover: 0.2,
+          cd: 24,
+          desc: "Eyes bloom on every wall and tree round you: nothing moves without you seeing it \u2014 blows are easier to slip, and every opening is yours.",
+          steps: [{ buff: { id: "ojos", name: "Ojos Fleur", dur: 12, mods: { evade: 0.3, crit: 0.25 }, aura: "rgba(244,143,177,0.5)" } }]
+        }),
+        T2(60, {
+          id: "hana_cuerpo",
+          name: "Cuerpo Fleur",
+          anim: "hana",
+          windup: 0.4,
+          recover: 0.3,
+          cd: 35,
+          desc: "Bloom a whole body of yourself out of the ground in a swirl of petals: a double that draws them off and fights beside you.",
+          steps: [{ summon: { archetype: "brute", count: 1, name: "Cuerpo Fleur", duration: 12, look: "copy", color: ["#f48fb1", "#fce4ec"], moves: ["brawl_tackle"], hpMul: 0.6 } }]
+        })
       ]
     },
     ito: {
@@ -50762,7 +50978,27 @@ ${GLSL}
           desc: "Sky Path: hook your strings onto the clouds and walk the sky. Fly \u2014 or press Space again in the air.",
           flight: { style: "float", ride: "strings", gauge: 16, speed: 10, climb: 6, ceiling: 40, sea: 3.5, color: "#f8bbd0" }
         }),
-        T2(70, { id: "ito_birdcage", name: "Birdcage", icon: "\u{1F578}", anim: "summon", windup: 0.8, recover: 0.4, cd: 45, desc: "A cage of strings round the whole area: nobody inside gets out, it closes in \u2014 and its strings cut whatever touches them.", steps: [{ zone: { range: 9, duration: 9, interval: 0.4, damage: 14, color: "#f8bbd0", kind: "cage", cage: true, shrink: 0.55, edge: 1.2 } }] })
+        T2(70, { id: "ito_birdcage", name: "Birdcage", icon: "\u{1F578}", anim: "summon", windup: 0.8, recover: 0.4, cd: 45, desc: "A cage of strings round the whole area: nobody inside gets out, it closes in \u2014 and its strings cut whatever touches them.", steps: [{ zone: { range: 9, duration: 9, interval: 0.4, damage: 14, color: "#f8bbd0", kind: "cage", cage: true, shrink: 0.55, edge: 1.2 } }] }),
+        T2(20, {
+          id: "ito_tamaito",
+          name: "Tamaito",
+          anim: "point",
+          windup: 0.15,
+          recover: 0.25,
+          cd: 4,
+          desc: "Bullet String: strings fired from your fingertips like gunshots \u2014 they punch clean through.",
+          steps: [{ proj: { speed: 34, range: 13, radius: 0.22, damage: 9, count: 3, spread: 0.12, sprite: "string", color: "#f8bbd0", pierce: true, slashing: true, element: "string" } }]
+        }),
+        T2(50, {
+          id: "ito_fulbright",
+          name: "Fulbright",
+          anim: "raise",
+          windup: 0.5,
+          recover: 0.4,
+          cd: 14,
+          desc: "Strings hooked onto the clouds come down on the target like a rain of blades.",
+          steps: [{ zone: { range: 2.6, duration: 1.4, interval: 0.2, damage: 11, color: "#f8bbd0", atTarget: true, kind: "strings", element: "string", status: { bleed: 1 } } }]
+        })
       ]
     },
     mochi: {
@@ -50778,7 +51014,27 @@ ${GLSL}
         T2(0, { id: "mochi_tsuki", name: "Mochi Tsuki", icon: "\u{1F361}", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, desc: "Your arm stretches into a great fist of mochi.", steps: [{ proj: { speed: 18, range: 8, radius: 0.6, damage: 22, sprite: "mochi", color: "#fff8e1", knockback: 6, stun: 0.5, size: 1.5, stretch: true } }] }),
         T2(20, { id: "mochi_zangiri", name: "Zan Giri Mochi", icon: "\u{1F531}", anim: "thrust", windup: 0.3, recover: 0.3, cd: 7, desc: "A trident of hardened mochi, thrust straight through.", steps: [{ hit: { shape: "line", range: 4.5, width: 1.2, damage: 36, knockback: 5, stun: 0.6, slashing: true }, vfx: "beam", color: "#fff8e1" }] }),
         T2(35, { id: "mochi_bind", name: "Sticky Mochi", anim: "grab", windup: 0.35, recover: 0.35, cd: 11, desc: "The ground under the target turns to sticky mochi: whoever is in it is stuck fast.", steps: [{ zone: { range: 2.2, duration: 3.5, interval: 0.5, damage: 6, color: "#fff8e1", atTarget: true, kind: "field", slow: 0.3, status: { root: 0.6 } } }] }),
-        T2(50, { id: "mochi_chikara", name: "Chikara Mochi", icon: "\u{1F4AA}", anim: "slam", windup: 0.45, recover: 0.4, cd: 12, desc: "Giant mochi fists rain down.", steps: [{ zone: { range: 3, duration: 1.2, interval: 0.2, damage: 18, color: "#fff8e1", atTarget: true, kind: "fists" } }] })
+        T2(50, { id: "mochi_chikara", name: "Chikara Mochi", icon: "\u{1F4AA}", anim: "slam", windup: 0.45, recover: 0.4, cd: 12, desc: "Giant mochi fists rain down.", steps: [{ zone: { range: 3, duration: 1.2, interval: 0.2, damage: 18, color: "#fff8e1", atTarget: true, kind: "fists" } }] }),
+        T2(40, {
+          id: "mochi_buto",
+          name: "Buto Giri",
+          anim: "thrust",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 8,
+          desc: "Martial Cut: whirl the trident Mogura round and drive it through them as you charge.",
+          steps: [{ dash: { dist: 7, time: 0.28, iframes: 0.2, hit: { damage: 34, knockback: 8, stun: 0.6, slashing: true, heavy: true } } }]
+        }),
+        T2(60, {
+          id: "mochi_kaku",
+          name: "Kaku Mochi",
+          anim: "slam",
+          windup: 0.5,
+          recover: 0.4,
+          cd: 14,
+          desc: "Squared Mochi: a great block of mochi pressed down on them \u2014 it lands like a wall, and they stick to it.",
+          steps: [{ zone: { range: 2.4, duration: 0.6, interval: 0.3, damage: 34, color: "#fff8e1", atTarget: true, kind: "fists", status: { root: 1.2 } } }]
+        })
       ]
     },
     horo: {
@@ -50792,7 +51048,27 @@ ${GLSL}
       techniques: [
         T2(0, { id: "horo_negative", name: "Negative Hollow", icon: "\u{1F47B}", anim: "point", windup: 0.3, recover: 0.3, cd: 8, desc: `"I'm so sorry I was born..." A ghost drifts through anything in its way and into the target, who collapses in despair.`, steps: [{ proj: { speed: 10, range: 12, radius: 0.5, damage: 4, sprite: "ghost", color: "#e1bee7", homing: 3, status: { despair: 3 }, stun: 2.2, unblockable: true, passWalls: true } }] }),
         T2(20, { id: "horo_mini", name: "Mini Hollow", icon: "\u{1F4AB}", anim: "cast", windup: 0.3, recover: 0.3, cd: 7, desc: 'Little ghosts float to the target \u2014 and "Ghost Rap": they burst.', steps: [{ proj: { speed: 11, range: 10, radius: 0.3, damage: 6, count: 4, spread: 0.9, sprite: "ghost", size: 0.7, color: "#e1bee7", homing: 4, passWalls: true, explode: { range: 1.2, damage: 12, colors: ["#e1bee7", "#fff"] } } }] }),
-        T2(45, { id: "horo_toku", name: "Tokuhollow", anim: "cast", windup: 0.7, recover: 0.4, cd: 16, desc: "A great ghost that floats after the target and bursts like a bomb.", steps: [{ proj: { speed: 6.5, range: 11, radius: 1, damage: 10, sprite: "ghost", size: 2.2, color: "#e1bee7", homing: 2.5, passWalls: true, explode: { range: 3.2, damage: 44, colors: ["#e1bee7", "#ffffff"] } } }] })
+        T2(45, { id: "horo_toku", name: "Tokuhollow", anim: "cast", windup: 0.7, recover: 0.4, cd: 16, desc: "A great ghost that floats after the target and bursts like a bomb.", steps: [{ proj: { speed: 6.5, range: 11, radius: 1, damage: 10, sprite: "ghost", size: 2.2, color: "#e1bee7", homing: 2.5, passWalls: true, explode: { range: 3.2, damage: 44, colors: ["#e1bee7", "#ffffff"] } } }] }),
+        T2(30, {
+          id: "horo_ghostrap",
+          name: "Ghost Rap",
+          anim: "cast",
+          windup: 0.35,
+          recover: 0.3,
+          cd: 10,
+          desc: "Mini Hollows bob up all round you \u2014 then, with a snap of your fingers, every one of them bursts.",
+          steps: [{ hit: { shape: "circle", range: 3.4, damage: 30, knockback: 9, stun: 0.5, element: "explosion", blast: true }, vfx: "ring", color: "#e1bee7" }]
+        }),
+        T2(55, {
+          id: "horo_spirit",
+          name: "Spirit Body",
+          anim: "pray",
+          windup: 0.3,
+          recover: 0.2,
+          cd: 30,
+          desc: "Slip out of your body as a ghost: blows pass through you and nobody can quite tell where you are.",
+          steps: [{ buff: { id: "spirit", name: "Spirit Body", dur: 6, mods: { evade: 0.7, stealth: 0.6 }, alpha: 0.45, aura: "rgba(225,190,231,0.5)" } }]
+        })
       ]
     },
     kage: {
@@ -50817,7 +51093,27 @@ ${GLSL}
           desc: "Your shadow peels away and fights beside you as a body of its own.",
           steps: [{ summon: { archetype: "brute", count: 1, name: "Doppelman", duration: 18, look: "shadow", at: "shadow", moves: ["brawl_tackle"], hpMul: 0.8 } }, { buff: { id: "doppel", name: "Doppelman", dur: 18, mods: { damage: 1.15 } } }]
         }),
-        T2(60, { id: "kage_tsuno", name: "Tsuno-Tokage", anim: "cast", windup: 0.6, recover: 0.4, cd: 12, desc: "Horned Lizard: your shadow runs along the ground to the target and bursts up as a spike under them.", steps: [{ zone: { range: 1.8, duration: 0.6, interval: 0.3, damage: 40, color: "#37474f", atTarget: true, kind: "field" } }] })
+        T2(60, { id: "kage_tsuno", name: "Tsuno-Tokage", anim: "cast", windup: 0.6, recover: 0.4, cd: 12, desc: "Horned Lizard: your shadow runs along the ground to the target and bursts up as a spike under them.", steps: [{ zone: { range: 1.8, duration: 0.6, interval: 0.3, damage: 40, color: "#37474f", atTarget: true, kind: "field" } }] }),
+        T2(30, {
+          id: "kage_blackbox",
+          name: "Black Box",
+          anim: "grab",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 13,
+          desc: "Your shadow rears up round the target and folds shut: a box of shadow they can't get out of for a moment.",
+          steps: [{ zone: { range: 1.6, duration: 1.8, interval: 0.6, damage: 10, color: "#263238", atTarget: true, kind: "dark", status: { root: 0.9 } } }]
+        }),
+        T2(50, {
+          id: "kage_kakumei",
+          name: "Kage Kakumei",
+          anim: "thrust",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 9,
+          desc: "Shadow Revolution: your arm runs out along its own shadow, far longer than any arm should, and strikes.",
+          steps: [{ hit: { shape: "line", range: 8, width: 1, damage: 32, knockback: 8, stun: 0.5, heavy: true }, vfx: "beam", color: "#37474f" }]
+        })
       ]
     },
     doku: {
@@ -50832,7 +51128,37 @@ ${GLSL}
       techniques: [
         T2(0, { id: "doku_fist", name: "Poison Fist", icon: "\u2620", anim: "punch", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 12, knockback: 3, stun: 0.3, element: "poison", status: { poison: 5 } } }] }),
         T2(20, { id: "doku_hydra", name: "Hydra", icon: "\u{1F40D}", anim: "cast", windup: 0.4, recover: 0.4, cd: 9, say: "Hydra!", steps: [{ proj: { speed: 13, range: 12, radius: 0.7, damage: 26, count: 3, spread: 0.4, sprite: "hydra", element: "poison", status: { poison: 6 }, homing: 1.5, trail: { color: "#8e24aa", kind: "smoke" } } }] }),
-        T2(50, { id: "doku_venom", name: "Venom Demon", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.5, cd: 40, desc: "Venom Demon: Hell's Judgement \u2014 a giant of poison, and everything around it rots.", steps: [{ zone: { range: 4.5, duration: 8, interval: 0.5, damage: 12, element: "poison", status: { poison: 4 }, color: "#8e24aa", kind: "field" } }] })
+        T2(50, { id: "doku_venom", name: "Venom Demon", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.5, cd: 40, desc: "Venom Demon: Hell's Judgement \u2014 a giant of poison, and everything around it rots.", steps: [{ zone: { range: 4.5, duration: 8, interval: 0.5, damage: 12, element: "poison", status: { poison: 4 }, color: "#8e24aa", kind: "field" } }] }),
+        T2(10, {
+          id: "doku_fugu",
+          name: "Doku Fugu",
+          anim: "breath",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 6,
+          desc: "Poison Puffer: a glob of venom spat at them \u2014 it bursts and spatters everything round where it lands.",
+          steps: [{ proj: { speed: 15, range: 11, radius: 0.45, damage: 10, sprite: "poison", element: "poison", status: { poison: 4 }, explode: { range: 2.2, damage: 18, element: "poison", status: { poison: 4 } } } }]
+        }),
+        T2(30, {
+          id: "doku_gumo",
+          name: "Doku Gumo",
+          anim: "cast",
+          windup: 0.4,
+          recover: 0.3,
+          cd: 16,
+          desc: "Poison Cloud: a cloud of venom boils out all round you \u2014 whoever breathes it in, rots.",
+          steps: [{ zone: { range: 3.6, duration: 5, interval: 0.5, damage: 8, element: "poison", status: { poison: 2 }, color: "#8e24aa", kind: "gas", slow: 0.6 } }]
+        }),
+        T2(40, {
+          id: "doku_chloro",
+          name: "Chloro Ball",
+          anim: "cast",
+          windup: 0.45,
+          recover: 0.35,
+          cd: 14,
+          desc: "A balloon of poison gas floated onto them: it bursts into a choking cloud.",
+          steps: [{ zone: { range: 2.8, duration: 4, interval: 0.5, damage: 9, element: "poison", status: { poison: 3 }, color: "#ab47bc", atTarget: true, kind: "gas", slow: 0.5 } }]
+        })
       ]
     },
     noro: {
@@ -50845,7 +51171,27 @@ ${GLSL}
       desc: "Fire Noro Noro photons that slow anything they hit to a crawl. (Foxy the Silver Fox.)",
       techniques: [
         T2(0, { id: "noro_beam", name: "Noro Noro Beam", icon: "\u{1F40C}", anim: "point", windup: 0.25, recover: 0.3, cd: 8, steps: [{ hit: { shape: "line", range: 9, width: 1.2, damage: 4, stun: 0.1, status: { slowmo: 4 } }, vfx: "beam", color: "#80deea" }] }),
-        T2(30, { id: "noro_mirror", name: "Noro Noro Beam Sword", icon: "\u{1FA9E}", anim: "slash", windup: 0.2, recover: 0.3, cd: 10, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.2, offset: 0.2, damage: 10, stun: 0.2, status: { slowmo: 3 } }, vfx: "slash", color: "#80deea" }] })
+        T2(30, { id: "noro_mirror", name: "Noro Noro Beam Sword", icon: "\u{1FA9E}", anim: "slash", windup: 0.2, recover: 0.3, cd: 10, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.2, offset: 0.2, damage: 10, stun: 0.2, status: { slowmo: 3 } }, vfx: "slash", color: "#80deea" }] }),
+        T2(15, {
+          id: "noro_reflect",
+          name: "Noro Noro Beam: Reflection",
+          anim: "point",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 12,
+          desc: "The Noro Noro photons bounced off a mirror into a wide fan: everyone in front of you slows to a crawl.",
+          steps: [{ hit: { shape: "arc", range: 6.5, arc: 1.4, offset: 0.2, damage: 5, stun: 0.1, status: { slowmo: 3.5 } }, vfx: "ring", color: "#80deea" }]
+        }),
+        T2(40, {
+          id: "noro_barrage",
+          name: "Slow-Mo Barrage",
+          anim: "punch",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 9,
+          desc: "Foxy's favourite trick: while they're slowed to a crawl, lay into them as fast as you can.",
+          steps: [{ hit: { shape: "arc", range: 2.2, arc: 1, offset: 0.3, damage: 6, knockback: 0.6, stun: 0.12, duration: 1, interval: 0.1, status: { slowmo: 1 } } }]
+        })
       ]
     },
     bari: {
@@ -50878,6 +51224,26 @@ ${GLSL}
           cd: 20,
           desc: "A sphere of barrier all round you: nothing gets in at all \u2014 but you can do nothing from inside it either.",
           steps: [{ buff: { id: "barrier_ball", name: "Barrier Ball", dur: 3, barrier: "all", hold: true, mods: { speedMul: 0.05 } } }]
+        }),
+        T2(10, {
+          id: "bari_pistol",
+          name: "Barrier Pistol",
+          anim: "punch",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 4,
+          desc: "Bari Bari no Pistol: a fist sheathed in barrier \u2014 there's no stopping what it lands on.",
+          steps: [{ hit: { shape: "arc", range: 1.9, arc: 1, offset: 0.3, damage: 24, knockback: 9, stun: 0.5, heavy: true, guardBreak: true } }]
+        }),
+        T2(50, {
+          id: "bari_bulldog",
+          name: "Barrier Bulldog",
+          anim: "palm",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 12,
+          desc: "A barrier in the shape of a bulldog's head, sent charging at them: it bowls over everything in its way.",
+          steps: [{ proj: { speed: 17, range: 12, radius: 1.1, damage: 34, sprite: "shockwave", color: "#b3e5fc", size: 2.2, pierce: true, knockback: 14, stun: 0.6, heavy: true, hitShips: true } }]
         })
       ]
     },
@@ -50890,7 +51256,27 @@ ${GLSL}
       weight: 3,
       desc: "Turn yourself (and what you touch) invisible. (Absalom, then Shiliew.)",
       techniques: [
-        T2(0, { id: "suke_vanish", name: "Clear Body", icon: "\u{1F441}", anim: "cast", windup: 0.2, recover: 0.1, cd: 16, desc: "Become invisible: enemies lose track of you and your first hit is a critical.", steps: [{ buff: { id: "invisible", name: "Invisible", dur: 8, mods: { stealth: 1, crit: 0.6 }, alpha: 0.12 } }] })
+        T2(0, { id: "suke_vanish", name: "Clear Body", icon: "\u{1F441}", anim: "cast", windup: 0.2, recover: 0.1, cd: 16, desc: "Become invisible: enemies lose track of you and your first hit is a critical.", steps: [{ buff: { id: "invisible", name: "Invisible", dur: 8, mods: { stealth: 1, crit: 0.6 }, alpha: 0.12 } }] }),
+        T2(10, {
+          id: "suke_strike",
+          name: "Clear Strike",
+          anim: "punch",
+          windup: 0.12,
+          recover: 0.25,
+          cd: 4,
+          desc: "A blow from an arm they can't see: there's no telling it's coming, so there's no blocking it.",
+          steps: [{ hit: { shape: "arc", range: 1.7, arc: 1, offset: 0.3, damage: 20, knockback: 5, stun: 0.5, unblockable: true } }]
+        }),
+        T2(30, {
+          id: "suke_phantom",
+          name: "Phantom Rush",
+          anim: "thrust",
+          windup: 0.1,
+          recover: 0.3,
+          cd: 9,
+          desc: "Turn clear, cross the ground between you unseen \u2014 and strike from right in front of them.",
+          steps: [{ teleport: { dist: 10, toTarget: true, gap: 1, color: "#eceff1" } }, { at: 0.18, hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 30, knockback: 8, stun: 0.6, unblockable: true, heavy: true } }]
+        })
       ]
     },
     sube: {
@@ -50904,7 +51290,27 @@ ${GLSL}
       passive: { slippery: 0.3 },
       techniques: [
         T2(0, { id: "sube_slide", name: "Slip Slide", icon: "\u26F8", anim: "thrust", windup: 0.05, recover: 0.1, cd: 3, steps: [{ dash: { dist: 6, time: 0.25, iframes: 0.25, hit: { damage: 8, knockback: 3 } } }] }),
-        T2(25, { id: "sube_mace", name: "Mace Swing", icon: "\u{1F528}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 5, steps: [{ hit: { shape: "arc", range: 2.2, arc: 2, offset: 0.2, damage: 22, knockback: 7, stun: 0.5, heavy: true } }] })
+        T2(25, { id: "sube_mace", name: "Mace Swing", icon: "\u{1F528}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 5, steps: [{ hit: { shape: "arc", range: 2.2, arc: 2, offset: 0.2, damage: 22, knockback: 7, stun: 0.5, heavy: true } }] }),
+        T2(10, {
+          id: "sube_skin",
+          name: "Slip-Slip Skin",
+          anim: "flex",
+          windup: 0.15,
+          recover: 0.1,
+          cd: 14,
+          desc: "Your skin as slick as glass: blows, shots and blades skid right off you.",
+          steps: [{ buff: { id: "slick", name: "Slip-Slip Skin", dur: 5, mods: { evade: 0.55 }, aura: "rgba(252,228,236,0.6)" } }]
+        }),
+        T2(40, {
+          id: "sube_spin",
+          name: "Slip Spin",
+          anim: "sweep",
+          windup: 0.25,
+          recover: 0.35,
+          cd: 8,
+          desc: "Spin on your slick heels with the mace held out: everything round you gets clubbed aside.",
+          steps: [{ hit: { shape: "circle", range: 2.6, damage: 26, knockback: 9, stun: 0.5, heavy: true }, vfx: "ring", color: "#fce4ec" }]
+        })
       ]
     },
     doru: {
@@ -50919,7 +51325,47 @@ ${GLSL}
       techniques: [
         T2(0, { id: "doru_arrow", name: "Candle Arrows", icon: "\u{1F56F}", anim: "shoot", windup: 0.2, recover: 0.3, cd: 4, steps: [{ proj: { speed: 18, range: 11, radius: 0.25, damage: 9, count: 3, spread: 0.25, sprite: "iceshard", color: "#fff8e1" } }] }),
         T2(20, { id: "doru_lock", name: "Candle Lock", icon: "\u{1F512}", anim: "cast", windup: 0.3, recover: 0.3, cd: 11, desc: "Wax hardens round the target's feet and locks them in place.", steps: [{ zone: { range: 1.5, duration: 0.4, interval: 0.4, damage: 10, color: "#fff8e1", atTarget: true, status: { root: 2.5 } } }] }),
-        T2(40, { id: "doru_armor", name: "Candle Champion", icon: "\u{1F5FF}", anim: "cast", windup: 0.4, recover: 0.2, cd: 30, steps: [{ buff: { id: "waxarmor", name: "Wax Armour", dur: 12, mods: { defMul: 0.55, damage: 1.2 }, aura: "rgba(255,248,225,0.8)" } }] })
+        T2(40, { id: "doru_armor", name: "Candle Champion", icon: "\u{1F5FF}", anim: "cast", windup: 0.4, recover: 0.2, cd: 30, steps: [{ buff: { id: "waxarmor", name: "Wax Armour", dur: 12, mods: { defMul: 0.55, damage: 1.2 }, aura: "rgba(255,248,225,0.8)" } }] }),
+        T2(25, {
+          id: "doru_ken",
+          name: "Doru Doru Arts: Ken",
+          anim: "slash",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 4,
+          desc: "Wax Sword: a blade of wax as hard as steel, swept through them.",
+          steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.8, offset: 0.2, damage: 22, knockback: 4, stun: 0.4, slashing: true }, vfx: "slash", color: "#fff8e1" }]
+        }),
+        T2(35, {
+          id: "doru_mori",
+          name: "Doru Doru Arts: Mori",
+          anim: "shoot",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 8,
+          desc: "Harpoon: a great spear of hardened wax, flung through everything in a line.",
+          steps: [{ proj: { speed: 20, range: 13, radius: 0.5, damage: 30, sprite: "iceshard", size: 2.2, color: "#fff8e1", pierce: true, knockback: 8, stun: 0.5 } }]
+        }),
+        T2(50, {
+          id: "doru_wall",
+          name: "Candle Wall",
+          anim: "block",
+          windup: 0.05,
+          recover: 0.1,
+          cd: 14,
+          desc: "A wall of wax springs up in front of you, harder than steel: nothing gets through it from the front.",
+          steps: [{ buff: { id: "waxwall", name: "Candle Wall", dur: 3, barrier: "front", mods: { speedMul: 0.5 }, aura: "rgba(255,248,225,0.7)" } }]
+        }),
+        T2(65, {
+          id: "doru_service",
+          name: "Candle Service Set",
+          anim: "cast",
+          windup: 0.6,
+          recover: 0.4,
+          cd: 22,
+          desc: "A great wax cake rises round them and sets: everyone caught in it is stuck fast.",
+          steps: [{ zone: { range: 3, duration: 3.5, interval: 0.5, damage: 8, color: "#fff8e1", atTarget: true, kind: "field", slow: 0.2, status: { root: 0.7 } } }]
+        })
       ]
     },
     supa: {
@@ -50933,7 +51379,37 @@ ${GLSL}
       passive: { immuneSlash: true },
       techniques: [
         T2(0, { id: "supa_sparkling", name: "Sparkling Daisy", icon: "\u2734", anim: "slash3", windup: 0.25, recover: 0.3, cd: 5, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.6, offset: 0.2, damage: 26, knockback: 4, stun: 0.5, slashing: true }, vfx: "slash", color: "#eceff1" }] }),
-        T2(25, { id: "supa_spider", name: "Spider", icon: "\u{1F577}", anim: "block", windup: 0.05, recover: 0.1, cd: 12, desc: "Harden your whole body into steel.", steps: [{ buff: { id: "steel", name: "Steel Body", dur: 4, mods: { defMul: 0.3 }, aura: "rgba(176,190,197,0.9)" } }] })
+        T2(25, { id: "supa_spider", name: "Spider", icon: "\u{1F577}", anim: "block", windup: 0.05, recover: 0.1, cd: 12, desc: "Harden your whole body into steel.", steps: [{ buff: { id: "steel", name: "Steel Body", dur: 4, mods: { defMul: 0.3 }, aura: "rgba(176,190,197,0.9)" } }] }),
+        T2(15, {
+          id: "supa_claw",
+          name: "Spar Claw",
+          anim: "claw",
+          windup: 0.15,
+          recover: 0.25,
+          cd: 3.5,
+          desc: "Blades spring from each fingertip and rake down through them.",
+          steps: [{ hit: { shape: "arc", range: 2, arc: 1.4, offset: 0.2, damage: 20, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 2 } }, vfx: "slash", color: "#eceff1" }]
+        }),
+        T2(35, {
+          id: "supa_atomic",
+          name: "Atomic Spar",
+          anim: "slash3",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 8,
+          desc: "Your arms become whirling blades: everything round you is cut to ribbons.",
+          steps: [{ hit: { shape: "circle", range: 2.8, damage: 9, knockback: 1.5, stun: 0.2, slashing: true, duration: 0.8, interval: 0.1 }, vfx: "slash", color: "#eceff1" }]
+        }),
+        T2(55, {
+          id: "supa_spiral",
+          name: "Spiral Hollow",
+          anim: "thrust",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 10,
+          desc: "Blades spinning from both arms like a drill, driven through them at a run.",
+          steps: [{ dash: { dist: 8, time: 0.3, iframes: 0.25, hit: { damage: 40, knockback: 7, stun: 0.6, slashing: true, heavy: true, status: { bleed: 3 } } } }]
+        })
       ]
     },
     nikyu: {
@@ -50969,7 +51445,31 @@ ${GLSL}
           steps: [{ hit: { shape: "arc", range: 1.8, arc: 1, offset: 0.2, damage: 18, knockback: 4, stun: 1.2, fling: 24 } }]
         }),
         T2(70, { id: "nikyu_ursus", name: "Ursus Shock", icon: "\u{1F4A3}", anim: "cast", windup: 1, recover: 0.5, cd: 30, desc: "Compress the air into a paw-shaped bomb.", steps: [{ proj: { speed: 7, range: 9, radius: 1.2, damage: 20, sprite: "paw", size: 2.5, pierce: true, explode: { range: 4.5, damage: 110, colors: ["#ffffff", "#e0f7fa", "#b2ebf2"] } } }] }),
-        T2(85, { id: "nikyu_pain", name: "Pain Extraction", anim: "pray", windup: 0.5, recover: 0.3, cd: 75, desc: "Push the pain and fatigue out of your own body as a paw-shaped bubble: much of your hurt, and every ailment, gone.", steps: [{ heal: 120, color: "#ffffff" }, { self: { cleanse: true } }] })
+        T2(85, { id: "nikyu_pain", name: "Pain Extraction", anim: "pray", windup: 0.5, recover: 0.3, cd: 75, desc: "Push the pain and fatigue out of your own body as a paw-shaped bubble: much of your hurt, and every ailment, gone.", steps: [{ heal: 120, color: "#ffffff" }, { self: { cleanse: true } }] }),
+        T2(30, {
+          id: "nikyu_tsuppari",
+          name: "Tsuppari Pad Ho",
+          anim: "palm",
+          windup: 0.3,
+          recover: 0.4,
+          cd: 10,
+          desc: "Paw after paw thrust out at blinding speed: a storm of paw-shaped shockwaves.",
+          steps: [
+            { proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: "paw", pierce: true, knockback: 5, stun: 0.3 } },
+            { at: 0.45, proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: "paw", pierce: true, knockback: 5, stun: 0.3 } },
+            { at: 0.6, proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: "paw", pierce: true, knockback: 5, stun: 0.3 } }
+          ]
+        }),
+        T2(55, {
+          id: "nikyu_hop",
+          name: "Paw Hop",
+          anim: "palm",
+          windup: 0.05,
+          recover: 0.1,
+          cd: 6,
+          desc: "Repel yourself: gone from where you stood and somewhere else in an instant.",
+          steps: [{ teleport: { dist: 12, color: "#ffffff" } }]
+        })
       ]
     },
     mane: {
@@ -50983,7 +51483,17 @@ ${GLSL}
       passive: { disguise: true },
       techniques: [
         T2(0, { id: "mane_disguise", name: "Mimicry", icon: "\u{1F3AD}", anim: "pray", windup: 0.4, recover: 0.2, cd: 60, desc: "Disguise yourself: Marines and bounty hunters ignore you until you attack.", steps: [{ buff: { id: "disguise", name: "Disguised", dur: 90, mods: { stealth: 0.5 }, disguise: true } }] }),
-        T2(20, { id: "mane_memoir", name: "Memoir Strike", icon: "\u{1F4AD}", anim: "kick", windup: 0.2, recover: 0.3, cd: 8, desc: "Take a friend's face \u2014 the enemy hesitates to strike.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] })
+        T2(20, { id: "mane_memoir", name: "Memoir Strike", icon: "\u{1F4AD}", anim: "kick", windup: 0.2, recover: 0.3, cd: 8, desc: "Take a friend's face \u2014 the enemy hesitates to strike.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] }),
+        T2(30, {
+          id: "mane_montage",
+          name: "Mane Mane Montage",
+          anim: "pray",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 14,
+          desc: "Your face a jumble of every face you've ever touched: whoever looks at you is too bewildered to move for a moment.",
+          steps: [{ hit: { shape: "arc", range: 3.2, arc: 1.6, offset: 0.2, damage: 6, stun: 1.6, status: { despair: 1.2 } }, vfx: "ring", color: "#f06292" }]
+        })
       ]
     },
     zushi: {
@@ -51013,7 +51523,27 @@ ${GLSL}
           desc: "Lift a slab of rubble with gravity and ride it through the air. Fly \u2014 or press Space again in the air.",
           flight: { style: "ride", ride: "rock", gauge: 18, speed: 8, climb: 5, ceiling: 35, sea: 3, color: "#9575cd" }
         }),
-        T2(70, { id: "zushi_meteor", name: "Meteor", icon: "\u2604", anim: "raise", windup: 1.2, recover: 0.5, cd: 45, desc: "Call down a meteor from the heavens.", steps: [{ zone: { range: 4, duration: 1.3, interval: 1.2, damage: 140, color: "#ff7043", atTarget: true, kind: "meteor", element: "explosion" } }] })
+        T2(70, { id: "zushi_meteor", name: "Meteor", icon: "\u2604", anim: "raise", windup: 1.2, recover: 0.5, cd: 45, desc: "Call down a meteor from the heavens.", steps: [{ zone: { range: 4, duration: 1.3, interval: 1.2, damage: 140, color: "#ff7043", atTarget: true, kind: "meteor", element: "explosion" } }] }),
+        T2(15, {
+          id: "zushi_pull",
+          name: "Gravity Pull",
+          anim: "grab",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 9,
+          desc: "Gravity turned sideways: the target is dragged across the ground to you \u2014 and anyone up in the air comes down hard.",
+          steps: [{ pull: { range: 9, strength: 16, stun: 0.6 } }, { at: 0.35, hit: { shape: "circle", range: 2.2, damage: 18, knockback: 1, stun: 0.4, status: { grounded: 1.5 } } }]
+        }),
+        T2(55, {
+          id: "zushi_lift",
+          name: "Rubble Rise",
+          anim: "raise",
+          windup: 0.5,
+          recover: 0.4,
+          cd: 16,
+          desc: "Lift the ground under them in great slabs \u2014 then let it drop.",
+          steps: [{ zone: { range: 3, duration: 1, interval: 0.5, damage: 32, color: "#9575cd", atTarget: true, kind: "gravity", grounds: true, status: { grounded: 0.8 } } }]
+        })
       ]
     },
     // ------------------------------------------------------------------ ZOAN
@@ -51028,7 +51558,47 @@ ${GLSL}
       techniques: [
         T2(0, { id: "hito_heavy", name: "Heavy Point", icon: "\u{1F4AA}", anim: "flex", windup: 0.4, recover: 0.1, cd: 25, steps: [{ buff: { id: "heavy_point", name: "Heavy Point", dur: 15, mods: { damage: 1.4, defMul: 0.8, scale: 1.3 }, look: { hat: "antlers", bulk: 1.3 } } }] }),
         T2(10, { id: "hito_guard", name: "Guard Point", anim: "block", windup: 0.1, recover: 0.1, cd: 14, desc: "Puff up into a great ball of fur: blows bounce off the fluff (but you can hardly move).", steps: [{ buff: { id: "guard_point", name: "Guard Point", dur: 3.5, mods: { defMul: 0.25, speedMul: 0.4 }, look: { bulk: 1.9 } } }] }),
-        T2(20, { id: "hito_horn", name: "Horn Point: Kokutei Roseo", icon: "\u{1F98C}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] })
+        T2(20, { id: "hito_horn", name: "Horn Point: Kokutei Roseo", icon: "\u{1F98C}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
+        T2(30, {
+          id: "hito_arm",
+          name: "Arm Point: Kokutei Cross",
+          anim: "punch",
+          windup: 0.25,
+          recover: 0.3,
+          cd: 6,
+          desc: "Arms like a gorilla's: both hooves driven into them crossed \u2014 and the mark of the cross left behind.",
+          steps: [{ buff: { id: "arm_point", name: "Arm Point", dur: 1.2, look: { bulk: 1.25 } } }, { at: 0.25, hit: { shape: "arc", range: 1.9, arc: 1.2, offset: 0.3, damage: 34, knockback: 10, stun: 0.6, heavy: true, guardBreak: true, impactFrame: true } }]
+        }),
+        T2(40, {
+          id: "hito_walk",
+          name: "Walk Point",
+          anim: "flex",
+          windup: 0.25,
+          recover: 0.1,
+          cd: 20,
+          desc: "Down on four hooves like a true reindeer: you run a great deal faster.",
+          steps: [{ buff: { id: "walk_point", name: "Walk Point", dur: 12, mods: { speedMul: 1.45 }, look: { hat: "antlers" } } }]
+        }),
+        T2(50, {
+          id: "hito_jump",
+          name: "Jumping Point",
+          anim: "thrust",
+          windup: 0.25,
+          recover: 0.35,
+          cd: 9,
+          desc: "Legs built to leap: bound high over them and come down hooves first.",
+          steps: [{ dash: { dist: 7, time: 0.4, iframes: 0.3, air: true, hit: { damage: 26, knockback: 8, stun: 0.6, launch: 3 } } }]
+        }),
+        T2(60, {
+          id: "hito_brain",
+          name: "Brain Point: Scope",
+          anim: "pray",
+          windup: 0.3,
+          recover: 0.2,
+          cd: 30,
+          desc: "Look through the lens of your hooves and find their weak spot: for a while every blow lands where it hurts most.",
+          steps: [{ buff: { id: "scope", name: "Scope", dur: 10, mods: { crit: 0.5, damage: 1.15 } } }]
+        })
       ],
       // (Monster Point is a form, opened by fighting: data/fruitForms.js)
       more: [
@@ -51046,7 +51616,27 @@ ${GLSL}
       techniques: [
         T2(0, { id: "neko_hybrid", name: "Hybrid Form", icon: "\u{1F406}", anim: "flex", windup: 0.4, recover: 0.1, cd: 30, steps: [{ buff: { id: "leopard", name: "Leopard Form", dur: 20, mods: { damage: 1.45, speedMul: 1.2, defMul: 0.85 }, aura: "rgba(255,183,77,0.6)", look: { spots: true, ears: "round", tail: "thin", fur: "#ffb74d", hand: "#ffb74d" } } }] }),
         T2(20, { id: "neko_claw", name: "Leopard Claw", icon: "\u{1F43E}", anim: "claw", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 1.9, arc: 1.8, offset: 0.2, damage: 22, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#ffb74d" }] }),
-        T2(50, { id: "neko_pounce", name: "Hunting Pounce", icon: "\u{1F405}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 8, time: 0.25, iframes: 0.2, hit: { damage: 40, knockback: 5, stun: 0.8, heavy: true } } }] })
+        T2(50, { id: "neko_pounce", name: "Hunting Pounce", icon: "\u{1F405}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 8, time: 0.25, iframes: 0.2, hit: { damage: 40, knockback: 5, stun: 0.8, heavy: true } } }] }),
+        T2(30, {
+          id: "neko_shigan",
+          name: "Shigan: Ouren",
+          anim: "point",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 6,
+          desc: "Finger Pistol, Yellow Lotus: a leopard's fingers driven through them again and again, faster than they can follow.",
+          steps: [{ hit: { shape: "arc", range: 1.9, arc: 0.9, offset: 0.3, damage: 7, knockback: 0.5, stun: 0.15, duration: 0.8, interval: 0.08, status: { bleed: 0.5 } }, vfx: "stab" }]
+        }),
+        T2(65, {
+          id: "neko_rokuogan",
+          name: "Rokuogan",
+          anim: "palm",
+          windup: 0.45,
+          recover: 0.4,
+          cd: 14,
+          desc: "Six King Gun: both fists set against them and all your strength let go at once \u2014 a shockwave straight through them.",
+          steps: [{ hit: { shape: "line", range: 4, width: 1.6, damage: 64, knockback: 14, stun: 0.9, heavy: true, unblockable: true, impactFrame: true, shake: 0.6 }, vfx: "beam", color: "#ffffff" }]
+        })
       ]
     },
     tori_phoenix: {
@@ -51078,7 +51668,27 @@ ${GLSL}
           desc: "Your arms become wings of blue flame: you hit harder, move faster, and the flames heal you as you fight.",
           steps: [{ buff: { id: "phoenix_form", name: "Phoenix Form", dur: 20, phoenix: true, regen: 6, mods: { damage: 1.25, speedMul: 1.15 }, aura: "rgba(77,208,225,0.6)" } }]
         }),
-        T2(70, { id: "phoenix_rebirth", name: "Rebirth Flames", icon: "\u267E", anim: "cast", windup: 0.6, recover: 0.2, cd: 120, desc: "Burn away all harm: a full heal, every ailment cleansed, and a burst of blue fire.", steps: [{ heal: 400, color: "#4dd0e1", phoenix: 3 }, { hit: { shape: "circle", range: 3, damage: 30, knockback: 6, element: "fire" }, vfx: "ring", color: "#4dd0e1" }, { self: { cleanse: true } }] })
+        T2(70, { id: "phoenix_rebirth", name: "Rebirth Flames", icon: "\u267E", anim: "cast", windup: 0.6, recover: 0.2, cd: 120, desc: "Burn away all harm: a full heal, every ailment cleansed, and a burst of blue fire.", steps: [{ heal: 400, color: "#4dd0e1", phoenix: 3 }, { hit: { shape: "circle", range: 3, damage: 30, knockback: 6, element: "fire" }, vfx: "ring", color: "#4dd0e1" }, { self: { cleanse: true } }] }),
+        T2(40, {
+          id: "phoenix_pyreapple",
+          name: "Phoenix Pyreapple",
+          anim: "sweep",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 9,
+          desc: "Wings of blue flame swept round in a great arc: they burn whoever they touch \u2014 and the flames that touch you, heal.",
+          steps: [{ hit: { shape: "arc", range: 3.6, arc: 2.6, offset: 0.2, damage: 34, knockback: 8, stun: 0.5, element: "fire", status: { burn: 2 } }, vfx: "slash", color: "#4dd0e1" }, { heal: 20, color: "#4dd0e1" }]
+        }),
+        T2(55, {
+          id: "phoenix_talon",
+          name: "Phoenix Talons",
+          anim: "claw",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 6,
+          desc: "A great bird's talons, wreathed in blue fire, raked down through them.",
+          steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.3, offset: 0.2, damage: 30, knockback: 4, stun: 0.5, slashing: true, element: "fire", status: { bleed: 2 } }, vfx: "slash", color: "#4dd0e1" }]
+        })
       ]
     },
     uo_seiryu: {
@@ -51098,7 +51708,37 @@ ${GLSL}
           desc: "Take the Azure Dragon's shape and fly on the clouds it makes. Fly, or land again (or press Space again in the air).",
           flight: { style: "dragon", ride: "cloud", gauge: 40, speed: 11, climb: 6, ceiling: 60, drain: 0.6, sea: 3, refill: 6, color: "#90caf9" }
         }),
-        T2(50, { id: "seiryu_raimei", name: "Raimei Hakke", icon: "\u26A1", anim: "heavy", windup: 0.6, recover: 0.5, cd: 14, desc: "Thunder Bagua: a club blow that shakes the heavens.", steps: [{ hit: { shape: "arc", range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: "lightning", impactFrame: true, shake: 0.9 } }] })
+        T2(50, { id: "seiryu_raimei", name: "Raimei Hakke", icon: "\u26A1", anim: "heavy", windup: 0.6, recover: 0.5, cd: 14, desc: "Thunder Bagua: a club blow that shakes the heavens.", steps: [{ hit: { shape: "arc", range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: "lightning", impactFrame: true, shake: 0.9 } }] }),
+        T2(40, {
+          id: "seiryu_kamaitachi",
+          name: "Kamaitachi Rusukaina",
+          anim: "breath",
+          windup: 0.5,
+          recover: 0.4,
+          cd: 10,
+          desc: "The dragon's whiskers whip up a gale of blades: a storm of them sweeps the ground in front of you.",
+          steps: [{ proj: { speed: 20, range: 13, radius: 0.5, damage: 16, count: 7, spread: 1.3, sprite: "airslash", slashing: true, pierce: true } }]
+        }),
+        T2(55, {
+          id: "seiryu_tatsumaki",
+          name: "Tatsumaki",
+          anim: "summon",
+          windup: 0.6,
+          recover: 0.4,
+          cd: 16,
+          desc: "Dragon Twister: whirlwinds rise round the target, dragging everything in and cutting it to pieces.",
+          steps: [{ zone: { range: 3.2, duration: 2.5, interval: 0.25, damage: 10, color: "#e3f2fd", atTarget: true, kind: "storm", pull: 3 } }]
+        }),
+        T2(70, {
+          id: "seiryu_ragnaraku",
+          name: "Ragnaraku",
+          anim: "slam",
+          windup: 0.7,
+          recover: 0.5,
+          cd: 18,
+          desc: "The club brought down with all the dragon's might: the ground caves in and the shock throws everyone round you into the air.",
+          steps: [{ hit: { shape: "circle", range: 4.5, damage: 90, knockback: 16, stun: 1.1, heavy: true, guardBreak: true, launch: 6, impactFrame: true, shake: 1, hitShips: true }, vfx: "ring", color: "#90caf9" }]
+        })
       ],
       // (the whole Azure Dragon is a form, opened by fighting: data/fruitForms.js)
       more: [
@@ -51130,7 +51770,27 @@ ${GLSL}
         }),
         T2(25, { id: "mera_higan", name: "Higan", anim: "point", windup: 0.2, recover: 0.3, cd: 5, say: "Higan!", desc: "Fire Gun: bullets of flame from your fingertips.", steps: [{ proj: { speed: 26, range: 11, radius: 0.18, damage: 6, count: 5, spread: 0.18, sprite: "fireball", size: 0.5, element: "fire", status: { burn: 1.5 }, knockback: 1 } }] }),
         T2(35, { id: "mera_enkai", name: "Enkai: Hibashira", icon: "\u{1F30B}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, desc: "Flame Commandment, Fire Pillar: a pillar of flame erupts around you.", steps: [{ hit: { shape: "circle", range: 3, damage: 36, knockback: 8, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true }, vfx: "ring" }] }),
-        T2(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "raise", windup: 1.1, recover: 0.5, cd: 40, desc: "Great Flame Commandment: a second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 2.2, damage: 40, size: 4, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] })
+        T2(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "raise", windup: 1.1, recover: 0.5, cd: 40, desc: "Great Flame Commandment: a second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 2.2, damage: 40, size: 4, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] }),
+        T2(30, {
+          id: "mera_kagero",
+          name: "Kagero",
+          anim: "palm",
+          windup: 0.25,
+          recover: 0.3,
+          cd: 6,
+          desc: "Heat Haze: a torrent of flame poured from your palm across everything in front of you.",
+          steps: [{ hit: { shape: "line", range: 8, width: 1.6, damage: 30, knockback: 5, stun: 0.4, element: "fire", status: { burn: 3 } }, vfx: "beam", color: "#ff7043" }]
+        }),
+        T2(45, {
+          id: "mera_kyokaen",
+          name: "Kyokaen",
+          anim: "spread",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 14,
+          desc: "Fire Fence: a wall of flame bursts up where they stand \u2014 nobody gets through it without burning.",
+          steps: [{ zone: { range: 2.4, duration: 4, interval: 0.4, damage: 10, element: "fire", status: { burn: 2 }, color: "#ff7043", atTarget: true, kind: "fire", slow: 0.6 } }]
+        })
       ]
     },
     hie: {
@@ -51158,7 +51818,28 @@ ${GLSL}
           steps: [{ hit: { shape: "circle", range: 5, damage: 30, knockback: 1, stun: 0.3, element: "ice", status: { freeze: 2.5 }, heavy: true }, vfx: "ring", color: "#e1f5fe" }, { zone: { range: 6.5, duration: 12, interval: 1, damage: 0, color: "#e1f5fe", kind: "ice", slow: 0.5, freezeWater: true } }]
         }),
         T2(50, { id: "hie_iceball", name: "Ice Ball", anim: "cast", windup: 0.35, recover: 0.3, cd: 10, desc: "Encase the target in a ball of ice.", steps: [{ proj: { speed: 14, range: 10, radius: 0.6, damage: 24, sprite: "iceshard", size: 2, color: "#e1f5fe", element: "ice", status: { freeze: 2.2 } } }] }),
-        T2(65, { id: "hie_time", name: "Ice Time Capsule", icon: "\u{1F9CA}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, desc: "A wave of ice that freezes everything along its path solid.", steps: [{ hit: { shape: "line", range: 10, width: 2.5, damage: 60, knockback: 2, element: "ice", status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: "beam", color: "#e1f5fe" }] })
+        T2(65, { id: "hie_time", name: "Ice Time Capsule", icon: "\u{1F9CA}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, desc: "A wave of ice that freezes everything along its path solid.", steps: [{ hit: { shape: "line", range: 10, width: 2.5, damage: 60, knockback: 2, element: "ice", status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: "beam", color: "#e1f5fe" }] }),
+        T2(45, {
+          id: "hie_partisan",
+          name: "Ice Block: Partisan",
+          icon: "\u2744",
+          anim: "cast",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 8,
+          desc: "A volley of ice spears.",
+          steps: [{ proj: { speed: 24, range: 14, radius: 0.35, damage: 18, count: 5, spread: 0.55, sprite: "iceshard", size: 1.4, color: "#e1f5fe", element: "ice", status: { freeze: 0.6 }, pierce: true } }]
+        }),
+        T2(55, {
+          id: "hie_icetime",
+          name: "Ice Time",
+          anim: "palm",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 12,
+          desc: "A touch of your hand and the cold runs right through them: frozen solid where they stand.",
+          steps: [{ hit: { shape: "arc", range: 1.7, arc: 1, offset: 0.2, damage: 24, knockback: 0, stun: 0.3, element: "ice", status: { freeze: 3.2 }, unblockable: true } }]
+        })
       ]
     },
     goro: {
@@ -51175,7 +51856,37 @@ ${GLSL}
         T2(15, { id: "goro_sango", name: "Sango", icon: "\u{1F409}", anim: "cast", windup: 0.4, recover: 0.3, cd: 8, desc: "A great bolt in the shape of a dragon.", steps: [{ proj: { speed: 20, range: 14, radius: 0.9, damage: 34, sprite: "thunder", size: 2, element: "lightning", pierce: true, status: { shock: 1.2 } } }] }),
         T2(35, { id: "goro_elthor", name: "El Thor", icon: "\u{1F329}", anim: "raise", windup: 0.7, recover: 0.4, cd: 14, desc: "A pillar of divine lightning straight down from the sky.", say: "El Thor!", steps: [{ zone: { range: 2.8, duration: 0.8, interval: 0.4, damage: 45, element: "lightning", status: { shock: 1.5 }, color: "#fff176", atTarget: true, kind: "thunder" } }] }),
         T2(45, { id: "goro_mamaragan", name: "Mamaragan", anim: "raise", windup: 0.6, recover: 0.4, cd: 16, say: "Mamaragan!", desc: "Lightning falls from the sky all around you, again and again.", steps: [{ zone: { range: 6, duration: 1.6, interval: 0.25, damage: 12, element: "lightning", status: { shock: 0.8 }, color: "#fff176", kind: "thunder" } }] }),
-        T2(85, { id: "goro_raigo", name: "Raigo", icon: "\u{1F311}", anim: "summon", windup: 1.4, recover: 0.6, cd: 90, desc: "A thundercloud large enough to erase an island.", steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: "lightning", status: { shock: 0.5 }, color: "#fff176", kind: "thunder" } }] })
+        T2(85, { id: "goro_raigo", name: "Raigo", icon: "\u{1F311}", anim: "summon", windup: 1.4, recover: 0.6, cd: 90, desc: "A thundercloud large enough to erase an island.", steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: "lightning", status: { shock: 0.5 }, color: "#fff176", kind: "thunder" } }] }),
+        T2(10, {
+          id: "goro_kari",
+          name: "Kari",
+          anim: "raise",
+          windup: 0.25,
+          recover: 0.3,
+          cd: 7,
+          desc: "Rumble: lightning crackles out of your whole body at once \u2014 everything round you is struck.",
+          steps: [{ hit: { shape: "circle", range: 3.4, damage: 26, knockback: 6, stun: 0.6, element: "lightning", status: { shock: 1 } }, vfx: "ring", color: "#fff176" }]
+        }),
+        T2(25, {
+          id: "goro_raiju",
+          name: "Raiju",
+          anim: "cast",
+          windup: 0.35,
+          recover: 0.3,
+          cd: 9,
+          desc: "Thunder Beast: a beast of lightning loosed at them \u2014 it runs them down wherever they go.",
+          steps: [{ proj: { speed: 18, range: 15, radius: 0.7, damage: 30, sprite: "thunder", size: 1.6, element: "lightning", homing: 4, status: { shock: 1 } } }]
+        }),
+        T2(30, {
+          id: "goro_jamboule",
+          name: "Jamboule",
+          anim: "point",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 8,
+          desc: "A ball of lightning dropped on them from your fingertip: it bursts like a thunderclap.",
+          steps: [{ proj: { speed: 15, range: 12, radius: 0.5, damage: 10, sprite: "lightorb", color: "#fff176", element: "lightning", explode: { range: 2.6, damage: 36, element: "lightning", status: { shock: 1.2 } } } }]
+        })
       ],
       // (Amaru is a form, opened by fighting: data/fruitForms.js)
       more: [
@@ -51202,7 +51913,27 @@ ${GLSL}
         }),
         T2(35, { id: "suna_spada", name: "Desert Spada", icon: "\u{1F5E1}", anim: "grab", windup: 0.3, recover: 0.35, cd: 8, desc: "Blades of sand rip through the ground.", steps: [{ hit: { shape: "line", range: 11, width: 1.2, damage: 40, knockback: 4, stun: 0.5, element: "sand", slashing: true }, vfx: "beam", color: "#e1c16e" }] }),
         T2(45, { id: "suna_grip", name: "Dehydrating Grip", anim: "grab", windup: 0.3, recover: 0.35, cd: 10, desc: "Seize the target with your right hand and drain the water from their body: they wither as you hold them.", steps: [{ hit: { shape: "arc", range: 1.6, arc: 1, offset: 0.2, damage: 22, knockback: 1, stun: 0.6, element: "sand", unblockable: true, status: { dry: 5 } } }] }),
-        T2(60, { id: "suna_dry", name: "Ground Death", icon: "\u{1F3DC}", anim: "kneel", windup: 0.7, recover: 0.4, cd: 30, desc: "Drain all moisture from the land around you: whoever is on it dries out.", steps: [{ zone: { range: 6, duration: 5, interval: 0.4, damage: 12, element: "sand", color: "#d7b56d", kind: "field", status: { dry: 2 } } }] })
+        T2(60, { id: "suna_dry", name: "Ground Death", icon: "\u{1F3DC}", anim: "kneel", windup: 0.7, recover: 0.4, cd: 30, desc: "Drain all moisture from the land around you: whoever is on it dries out.", steps: [{ zone: { range: 6, duration: 5, interval: 0.4, damage: 12, element: "sand", color: "#d7b56d", kind: "field", status: { dry: 2 } } }] }),
+        T2(40, {
+          id: "suna_girasole",
+          name: "Desert Girasole",
+          anim: "kneel",
+          windup: 0.6,
+          recover: 0.4,
+          cd: 22,
+          desc: "Drain the ground round them dry: it collapses into a great whirlpool of quicksand that sucks everything down to its heart.",
+          steps: [{ zone: { range: 4.5, duration: 4, interval: 0.4, damage: 9, element: "sand", color: "#d7b56d", atTarget: true, kind: "storm", pull: 3.5, slow: 0.35, status: { dry: 1 } } }]
+        }),
+        T2(55, {
+          id: "suna_pesado",
+          name: "Sables: Pesado",
+          anim: "cast",
+          windup: 0.45,
+          recover: 0.35,
+          cd: 12,
+          desc: "A sandstorm squeezed into a ball in your hand and hurled: it bursts into a full storm where it lands.",
+          steps: [{ proj: { speed: 15, range: 12, radius: 0.6, damage: 14, sprite: "sandblade", size: 1.4, element: "sand", explode: { range: 3.2, damage: 44, element: "sand", knockback: 10 } } }]
+        })
       ]
     },
     moku: {
@@ -51224,7 +51955,17 @@ ${GLSL}
           flight: { style: "ride", ride: "smoke", gauge: 14, speed: 10, climb: 5, ceiling: 30, sea: 4, color: "#eceff1" }
         }),
         T2(35, { id: "moku_out", name: "White Out", icon: "\u{1F32B}", anim: "cast", windup: 0.4, recover: 0.3, cd: 12, desc: "Fill the area with smoke that seizes whoever is in it: they can barely move.", steps: [{ zone: { range: 4, duration: 5, interval: 0.5, damage: 6, element: "smoke", color: "#eceff1", kind: "storm", slow: 0.45, status: { root: 0.4 } } }] }),
-        T2(60, { id: "moku_launcher", name: "White Launcher", icon: "\u{1F680}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 6, desc: "Turn into smoke and launch yourself at the target.", steps: [{ dash: { dist: 10, time: 0.3, iframes: 0.3, air: true, trail: "#eceff1", hit: { damage: 36, knockback: 8, stun: 0.6, element: "smoke" } } }] })
+        T2(60, { id: "moku_launcher", name: "White Launcher", icon: "\u{1F680}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 6, desc: "Turn into smoke and launch yourself at the target.", steps: [{ dash: { dist: 10, time: 0.3, iframes: 0.3, air: true, trail: "#eceff1", hit: { damage: 36, knockback: 8, stun: 0.6, element: "smoke" } } }] }),
+        T2(30, {
+          id: "moku_vine",
+          name: "White Vine",
+          anim: "grab",
+          windup: 0.25,
+          recover: 0.3,
+          cd: 8,
+          desc: "A long vine of smoke lashed out along the ground: it wraps whoever it touches and holds them.",
+          steps: [{ hit: { shape: "line", range: 8, width: 1, damage: 16, knockback: 1, stun: 0.4, element: "smoke", status: { root: 1.5 } }, vfx: "beam", color: "#eceff1" }]
+        })
       ]
     },
     pika: {
@@ -51256,7 +51997,17 @@ ${GLSL}
           desc: "Become light and drift through the air, fast \u2014 but not for long. Fly \u2014 or press Space again in the air.",
           flight: { style: "float", ride: "light", gauge: 10, speed: 15, climb: 8, ceiling: 35, sea: 4, color: "#fff59d" }
         }),
-        T2(60, { id: "pika_amaterasu", name: "Light Laser", icon: "\u2600", anim: "cast", windup: 0.8, recover: 0.4, cd: 25, desc: "A beam of light from your fingertip that blasts through everything in a line.", steps: [{ hit: { shape: "line", range: 16, width: 1.6, damage: 90, knockback: 8, stun: 0.8, element: "light", heavy: true, impactFrame: true, hitShips: true, shipDamage: 300 }, vfx: "beam", color: "#fff59d" }] })
+        T2(60, { id: "pika_amaterasu", name: "Light Laser", icon: "\u2600", anim: "cast", windup: 0.8, recover: 0.4, cd: 25, desc: "A beam of light from your fingertip that blasts through everything in a line.", steps: [{ hit: { shape: "line", range: 16, width: 1.6, damage: 90, knockback: 8, stun: 0.8, element: "light", heavy: true, impactFrame: true, hitShips: true, shipDamage: 300 }, vfx: "beam", color: "#fff59d" }] }),
+        T2(20, {
+          id: "pika_flash",
+          name: "Flash",
+          anim: "raise",
+          windup: 0.15,
+          recover: 0.25,
+          cd: 12,
+          desc: "Burst into blinding light: everyone round you is left staggering, seeing nothing.",
+          steps: [{ hit: { shape: "circle", range: 4, damage: 8, knockback: 2, stun: 1.2, element: "light" }, vfx: "ring", color: "#fff9c4" }, { fx: { flash: 0.35 } }]
+        })
       ]
     },
     magu: {
@@ -51272,7 +52023,20 @@ ${GLSL}
         T2(0, { id: "magu_daifunka", name: "Dai Funka", icon: "\u{1F30B}", anim: "punch", windup: 0.3, recover: 0.35, cd: 4, say: "Dai Funka!", desc: "Great Eruption: a fist of magma.", steps: [{ proj: { speed: 15, range: 11, radius: 0.9, damage: 34, sprite: "magmafist", size: 1.5, element: "magma", pierce: true, status: { burn: 4 }, knockback: 6, trail: { color: ["#bf360c", "#ff6f00"], kind: "fire" } } }] }),
         T2(20, { id: "magu_meigo", name: "Meigo", icon: "\u{1F44A}", anim: "thrust", windup: 0.3, recover: 0.35, cd: 8, desc: "Hell Hound: a magma fist that pierces through.", steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 55, knockback: 6, stun: 0.8, element: "magma", status: { burn: 4 }, heavy: true, guardBreak: true } } }] }),
         T2(35, { id: "magu_inugami", name: "Inugami Guren", anim: "thrust", windup: 0.5, recover: 0.4, cd: 14, desc: "Dog Bite Crimson Lotus: a giant hound's head of magma lunges along the ground and bites down.", steps: [{ hit: { shape: "line", range: 9, width: 2.2, damage: 60, knockback: 8, stun: 0.7, element: "magma", status: { burn: 4 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff5722" }] }),
-        T2(50, { id: "magu_ryusei", name: "Ryusei Kazan", icon: "\u2604", anim: "summon", windup: 1, recover: 0.5, cd: 35, desc: "Meteor Volcano: a rain of magma fists.", steps: [{ zone: { range: 6, duration: 2.5, interval: 0.2, damage: 24, element: "magma", color: "#ff5722", kind: "meteor", status: { burn: 3 } } }] })
+        T2(50, { id: "magu_ryusei", name: "Ryusei Kazan", icon: "\u2604", anim: "summon", windup: 1, recover: 0.5, cd: 35, desc: "Meteor Volcano: a rain of magma fists.", steps: [{ zone: { range: 6, duration: 2.5, interval: 0.2, damage: 24, element: "magma", color: "#ff5722", kind: "meteor", status: { burn: 3 } } }] }),
+        T2(40, {
+          id: "magu_bakuretsu",
+          name: "Bakuretsu Kazan",
+          anim: "slam",
+          windup: 0.6,
+          recover: 0.45,
+          cd: 20,
+          desc: "Erupting Volcano: drive a fist of magma into the ground and it wells up all round you \u2014 a floor of molten rock.",
+          steps: [
+            { hit: { shape: "circle", range: 3.5, damage: 40, knockback: 10, stun: 0.6, element: "magma", status: { burn: 3 }, heavy: true, launch: 3 }, vfx: "ring", color: "#ff5722" },
+            { zone: { range: 4.5, duration: 4, interval: 0.4, damage: 10, element: "magma", status: { burn: 2 }, color: "#ff5722", kind: "fire", slow: 0.6 } }
+          ]
+        })
       ]
     },
     yami: {
@@ -55367,6 +56131,80 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     yami_blackhole: ["vortex", { ring: true }],
     yami_nullify: ["claw", { c: "#c9a0ff", hand: "#2a1f33" }],
     yami_liberation: ["explosion", { c: "#6a3ab8", c2: "#1a1024" }],
+    // (the newer fruit techniques)
+    gomu_stamp: ["kick", { burst: "#ffd23f" }],
+    gomu_spear: ["kick", { r: 0.2, burst: "#ffd23f" }],
+    gomu_bell: ["impact", { c: "#f4c08a" }],
+    gomu_mogura_pistol: ["fist", { fx: "cracks", burst: "#ffffff" }],
+    gura_bubble: ["cracks"],
+    gura_tilt: ["wave", { c: "#9fd9ef", fx: "cracks" }],
+    bara_knives: ["knives"],
+    bara_senbei: ["glove", { multi: true }],
+    bara_muggy: ["bomb"],
+    bomu_fist: ["fist", { fx: "cracks", burst: "#ff9100" }],
+    bomu_stomp: ["explosion", { smoke: true }],
+    hana_spank: ["flower", { arms: true }],
+    hana_strangle: ["flower", { cross: true }],
+    hana_ojos: ["eye", { iris: "#f48fb1" }],
+    hana_cuerpo: ["flower"],
+    hana_demonio: ["oni", { c: "#ad1457" }],
+    ito_tamaito: ["strings", { hand: true }],
+    ito_fulbright: ["strings", { five: true }],
+    mochi_buto: ["mochi", { trident: true }],
+    mochi_kaku: ["fist", { c: "#f7f0e0", fx: "mochi" }],
+    mochi_shirotsuki: ["mochi"],
+    horo_ghostrap: ["ghost", { many: true }],
+    horo_spirit: ["ghost"],
+    kage_blackbox: ["vortex", { ring: true }],
+    kage_kakumei: ["shadowFigure"],
+    kage_asgard: ["oni", { c: "#2a1838" }],
+    doku_fugu: ["skull", { aura: "#b35ad6" }],
+    doku_gumo: ["smoke", { c: "#b35ad6" }],
+    doku_chloro: ["skull", { aura: "#b35ad6" }],
+    doku_venom_demon: ["oni", { c: "#8e3ab8" }],
+    noro_reflect: ["mirror", { c: "#9ff0ff" }],
+    noro_barrage: ["multi", { burst: "#9ff0ff" }],
+    bari_pistol: ["hex", { burst: "#ffd23f" }],
+    bari_bulldog: ["hex"],
+    suke_strike: ["fist", { c: "#d8dee2" }],
+    suke_phantom: ["dash", { c: "#eef2f4", c2: "#d8dee2" }],
+    sube_skin: ["sparkles"],
+    sube_spin: ["tornado", { c: "#f8bbd0" }],
+    doru_ken: ["candle", { arrows: true }],
+    doru_mori: ["drill", { c: "#fbf3dc" }],
+    doru_wall: ["shield", { c: "#fbf3dc" }],
+    doru_service: ["candle"],
+    supa_claw: ["claw", { c: "#c9d1d8" }],
+    supa_atomic: ["bladeFlower"],
+    supa_spiral: ["drill", { c: "#c9d1d8" }],
+    nikyu_tsuppari: ["paw", { push: true }],
+    nikyu_hop: ["paw", { arrow: true }],
+    mane_montage: ["masks", { c: "#f4a3bf" }],
+    zushi_pull: ["gravity"],
+    zushi_lift: ["meteor", { c: "#6d4c41" }],
+    hito_arm: ["antler", { muscle: true }],
+    hito_walk: ["antler"],
+    hito_jump: ["antler", { hat: true }],
+    hito_brain: ["eye", { iris: "#8a5a30" }],
+    neko_shigan: ["claw", { c: "#ffe8c0" }],
+    neko_rokuogan: ["palms", { burst: "#ffffff" }],
+    phoenix_pyreapple: ["kick", { fx: "fire", flame: BLUEFIRE, c: "#e8d9a8", shoe: "#6b4a2a" }],
+    phoenix_talon: ["claw", { c: "#4dd0e1" }],
+    seiryu_kamaitachi: ["airblade", { n: 2 }],
+    seiryu_tatsumaki: ["tornado", { c: "#e3f2fd" }],
+    seiryu_ragnaraku: ["bolt", { two: true }],
+    mera_kagero: ["flame"],
+    mera_kyokaen: ["flame", { pillar: true }],
+    hie_icetime: ["iceCube"],
+    goro_kari: ["cloud", { bolt: true, c: "#b8c0d8" }],
+    goro_raiju: ["bolt", { two: true }],
+    goro_jamboule: ["lightOrbs"],
+    suna_girasole: ["tornado", { c: "#e8c77a" }],
+    suna_pesado: ["airblade", { c: "#e8c77a" }],
+    moku_vine: ["smoke", { snake: true }],
+    pika_flash: ["sun", { c: "#fff6b0", ray: "#ffe066" }],
+    magu_bakuretsu: ["magma"],
+    yami_abyss: ["vortex", { ring: true }],
     // Styles
     brawl_heavy: ["fist", { burst: "#ffd23f", s: 0.95 }],
     brawl_tackle: ["dash", { c: "#ffe8c0", c2: "#f2c596" }],
@@ -72371,7 +73209,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var SCORCH_COL = col("rgba(30,18,12,1)");
   var BOLT_EMBER = col("#ffd54f");
   var ROOM_LINE = col("#e1f5fe");
-  var ZONE_COL = { dark: ["#7e57c2", "#12001c"], ice: ["#e1f5fe", "#ffffff"], storm: ["#e1c16e", "#fff3c4"], gravity: ["#b39ddb", "#ede7f6"] };
+  var ZONE_COL = { dark: ["#7e57c2", "#12001c"], ice: ["#e1f5fe", "#ffffff"], storm: ["#e1c16e", "#fff3c4"], gravity: ["#b39ddb", "#ede7f6"], mochi: ["#e8dcc4", "#fff8e1"] };
+  var FIELD_FIRE = col("#ff7a1a");
+  var FIELD_FIRE_CORE = col("#ffe08a");
+  var GAS_LIGHT = col("#e1bee7");
+  var MOCHI_SHADE = col("#d7ccc8");
   SHAPES.zone = {
     draw(v, s, k, a) {
       const R4 = s.r * easeOut(Math.min(1, (s.age || 0) / 0.3));
@@ -72381,7 +73223,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         room(v, s, R4, a);
         return;
       }
-      const zc = ZONE_COL[kind];
+      const zc = kind === "storm" && s.color ? null : ZONE_COL[kind];
       const c = col(zc ? zc[0] : s.color || "#ffffff"), c2 = col(zc ? zc[1] : s.color || "#ffffff");
       const patch3 = v.patch(s, s.x, s.y, s.r);
       const zk = ZK[kind] ?? 0;
@@ -72419,6 +73261,36 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           r4.data = pts;
         }
         arms2(v, s, r4.data, R4 > 2, a, 1);
+      } else if (kind === "gas") {
+        for (let i = 0; i < 9; i++) {
+          const ph = (v.time * 0.35 + hash7(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.35 + hash7(s.seed + i));
+          const th = hash7(s.seed + i * 7 + cyc) * TAU11, rr = Math.sqrt(hash7(s.seed + i * 11 + cyc)) * R4 * 0.8;
+          v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G4 + 0.15 + ph * 0.7, Z2 + Math.sin(th) * rr, (0.35 + 0.4 * ph) * Math.min(1.6, 0.6 + R4 / 4), c, a * Math.sin(ph * PI) * 0.5, GAS_LIGHT, 0, ph * 2, s.seed + i, 0.15 + ph * 0.6);
+        }
+      } else if (kind === "fire") {
+        for (let i = 0; i < 12; i++) {
+          const ph = (v.time * 1.2 + hash7(s.seed + i)) % 1, cyc = Math.floor(v.time * 1.2 + hash7(s.seed + i));
+          const th = hash7(s.seed + i * 7 + cyc) * TAU11, rr = Math.sqrt(hash7(s.seed + i * 11 + cyc)) * R4 * 0.85;
+          const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, h2 = 0.3 + 0.35 * hash7(s.seed + i * 13);
+          v.sprites.put(SK2.FIRE, x, G4 + h2 * (0.6 + ph * 0.8), z, h2 * (1 - ph * 0.5), i % 3 ? FIELD_FIRE : DEEP_FIRE, a * Math.sin(ph * PI), FIELD_FIRE_CORE, 0.5, 0, s.seed + i * 7, 0.15 + ph * 0.5);
+          if (i % 3 === 0) v.sprites.put(SK2.EMBER, x, G4 + 0.4 + ph * 2.4, z, 0.035, FIELD_FIRE_CORE, a * (1 - ph), WHITE4, 1, 0, s.seed + i, ph);
+        }
+      } else if (kind === "strings") {
+        for (let i = 0; i < 14; i++) {
+          const ph = (v.time * 0.9 + hash7(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.9 + hash7(s.seed + i));
+          const th = hash7(s.seed + i * 7 + cyc) * TAU11, rr = Math.sqrt(hash7(s.seed + i * 11 + cyc)) * R4 * 0.9;
+          const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, lean = (hash7(s.seed + i * 5 + cyc) - 0.5) * 3;
+          const head = G4 + 16 * Math.max(0, 1 - ph * 2.2), tail2 = Math.min(G4 + 22, head + 9);
+          const f = a * (ph < 0.75 ? 0.9 : (1 - ph) * 3.6);
+          v.ribbons.start(RK.THIN, RM2.FACE, c, f, WHITE4, 0.5).point(x + lean * (tail2 - G4) / 16, tail2, z, 0.01).point(x + lean * (head - G4) / 16, head, z, 0.014).finish();
+        }
+      } else if (kind === "mochi") {
+        for (let i = 0; i < 6; i++) {
+          const ph = (v.time * 0.45 + hash7(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.45 + hash7(s.seed + i));
+          const th = hash7(s.seed + i * 7 + cyc) * TAU11, rr = Math.sqrt(hash7(s.seed + i * 11 + cyc)) * R4 * 0.75;
+          const r4 = (0.5 + 0.4 * hash7(s.seed + i * 3)) * Math.sin(ph * PI);
+          v.shells.put(VK.GOO, X2 + Math.cos(th) * rr, G4 - r4 * 0.25, Z2 + Math.sin(th) * rr, r4, 0, 1, 0, 0.85, c, a, MOCHI_SHADE, 0, k, s.seed + i);
+        }
       } else if (kind === "field") {
         for (let i = 0; i < 5; i++) {
           const ph = (v.time * 0.8 + hash7(s.seed + i)) % 1;
@@ -75609,6 +76481,377 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       return true;
     }
   });
+  sig("gomu_bell", {
+    pull(fx, actor, s, a) {
+      const [px2, py2] = fwd(actor, a.angle, 1.4);
+      fx.burst(px2, py2, 6, { angle: a.angle + Math.PI, spread: 0.5, speed: 6, kind: "line", color: "#ffffff", z: 1, vz: 0, g: 0, life: 0.18, size: 0.05 });
+    },
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      const [px2, py2] = fwd(actor, hb.angle, 0.9);
+      vibration(fx, px2, py2, 1.5, 1.6, "#fff59d", 4);
+      fx.add("flare", { x: px2, y: py2, z: 1.5, size: 1.1, color: "#ffffff", life: 0.22 });
+      fx.callout(px2, py2 - 2.2, "GONG!", "#fff59d", 0.5, { life: 0.8 });
+    }
+  });
+  sig("gomu_mogura_pistol", {
+    hit(fx, actor, s, a, hb) {
+      const [px2, py2] = fwd(actor, hb.angle, s.hit.offset || 3);
+      fx.crack(actor.x + Math.cos(hb.angle) * 0.6, actor.y + Math.sin(hb.angle) * 0.4, 0.8, 1.2);
+      fx.crack(px2, py2, 1.6, 2);
+      dust(fx, px2, py2, 14, { speed: 4, vz: 4, size: 0.24 });
+      shards(fx, px2, py2, 0.2, 10, ["#8d6e63", "#a1887f", "#6d4c41"]);
+      fx.add("flare", { x: px2, y: py2, z: 1.2, size: 1.4, color: "#ffffff", life: 0.2 });
+      fx.ring(px2, py2, 0.3, 2.6, "#ffffff", 0.4, 0.14, { z: 0.06, flat: 0.6, add: true });
+    }
+  });
+  sig("gura_bubble", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.8);
+    fx.add("aircrack", { x: px2, y: py2, z: 0.8, size: 1, life: 0.4 });
+    vibration(fx, px2, py2, 0.8, 1, "#e0f7fa", 3);
+  } });
+  sig("gura_tilt", {
+    hit(fx, actor, s, a, hb) {
+      const R4 = (s.hit.range || 8) * 0.7;
+      for (let i = 0; i < 7; i++) {
+        const th = hb.angle + rnd(-0.9, 0.9), rr = R4 * rnd(0.3, 1);
+        fx.add("aircrack", { x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr * 0.6, z: rnd(1.5, 4), size: rnd(1, 1.8), life: 0.7, delay: i * 0.04 });
+      }
+      fx.crack(actor.x + Math.cos(hb.angle) * R4 * 0.5, actor.y + Math.sin(hb.angle) * R4 * 0.3, R4 * 0.6, 2.5);
+      fx.shake(0.5, hb.angle);
+      fx.flashScreen(0.08, "rgba(224,247,250,1)");
+    }
+  });
+  sig("bara_knives", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.6);
+    sparkle2(fx, px2, py2, 0.9, 4, ["#ffffff", "#eceff1"]);
+    fx.burst(px2, py2, 6, { angle: a.angle, spread: 0.8, speed: 6, kind: "line", color: "#eceff1", z: 0.9, g: 0, life: 0.15, size: 0.05 });
+  } });
+  sig("bara_senbei", { dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    actor._ghostTint = "#ffcdd2";
+    fx.add("vortex", { x: actor.x, y: actor.y, follow: actor, r: 1.1, h: 0.4, kind: "wind", life: s.dash.time + 0.1, spin: 14, arms: 3 });
+  } });
+  sig("bara_muggy", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.6);
+    fx.burst(px2, py2, 6, { kind: "spark", color: ["#ffab40", "#fff3c4"], speed: 3, z: 1, g: 2, life: 0.3, size: 0.08 });
+    smoke(fx, px2, py2, 1, 4, ["#9e9e9e", "#bdbdbd"], { size: 0.18 });
+  } });
+  sig("bomu_fist bomu_stomp", {
+    hit(fx, actor, s, a, hb) {
+      const stomp = a.def.id === "bomu_stomp" || a.def.base === "bomu_stomp";
+      const [px2, py2] = stomp ? [actor.x, actor.y] : fwd(actor, hb.angle, 1.1);
+      fx.add("blast", { x: px2, y: py2, z: stomp ? 0 : 0.6, r: stomp ? 2.4 : 1.4, color: "#ff9100", core: "#fff3c4", life: 0.6 });
+      smoke(fx, px2, py2, stomp ? 0.3 : 0.8, stomp ? 14 : 8, ["#5d4037", "#757575", "#9e9e9e"], { speed: 2.4, size: 0.4 });
+      embers(fx, px2, py2, 0.8, 8);
+      if (stomp) fx.crack(px2, py2, 1.6, 2.2);
+    }
+  });
+  sig("hana_spank hana_strangle", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "arms", color: zone.color, zone, life: 1e6 });
+      fx.burst(zone.x, zone.y, 14, { kind: "petal", color: ["#f48fb1", "#f8bbd0", "#ffffff"], speed: 2.5, z: 0.4, vz: 2, g: 2, life: 0.9, size: 0.1 });
+      return true;
+    }
+  });
+  sig("hana_ojos", { buff(fx, actor) {
+    for (let i = 0; i < 6; i++) {
+      const th = rnd(0, TAU12), rr = rnd(2, 5);
+      fx.burst(actor.x + Math.cos(th) * rr, actor.y + Math.sin(th) * rr * 0.6, 5, { kind: "petal", color: ["#f48fb1", "#ffffff"], speed: 1.5, z: rnd(0.5, 2), vz: 1, g: 1, life: 0.8, size: 0.09 });
+    }
+    fx.ring(actor.x, actor.y, 0.3, 4, "#f8bbd0", 0.5, 0.06, { z: 0.05, flat: 0.6, add: true });
+  } });
+  sig("hana_demonio", {
+    buff(fx, actor, s, a, ex) {
+      DEFAULTS.buff(fx, actor, s, a, ex);
+      fx.burst(actor.x, actor.y, 30, { kind: "petal", color: ["#880e4f", "#f48fb1", "#ffffff"], speed: 4, z: 1.2, vz: 3, g: 1.5, life: 1.2, size: 0.13 });
+      fx.add("pillar", { x: actor.x, y: actor.y, r: 1, h: 6, color: "#ad1457", life: 0.5, kind: "light" });
+    }
+  });
+  sig("ito_tamaito", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.6);
+    fx.add("flare", { x: px2, y: py2, z: 1, size: 0.4, color: "#f8bbd0", life: 0.12 });
+  } });
+  sig("ito_fulbright", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "strings", color: "#f8bbd0", zone, life: 1e6 });
+      for (let i = 0; i < 6; i++) {
+        const th = i / 6 * TAU12;
+        fx.add("strings", { x: actor.x, y: actor.y, x1: zone.x + Math.cos(th) * zone.r * 0.6, y1: zone.y + Math.sin(th) * zone.r * 0.4, color: "#f8bbd0", n: 1, life: 0.5 });
+      }
+      return true;
+    }
+  });
+  sig("mochi_buto", { dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    actor._ghostTint = "#fff8e1";
+    fx.add("vortex", { x: actor.x, y: actor.y, follow: actor, r: 0.8, h: 0.9, kind: "wind", life: s.dash.time + 0.1, spin: 16, arms: 4 });
+  } });
+  sig("mochi_kaku", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "mochi", color: "#fff8e1", zone, life: 1e6 });
+      const n = Math.max(3, Math.ceil(zone.t / zone.interval));
+      for (let i = 0; i < n; i++) {
+        const r4 = Math.sqrt(Math.random()) * zone.r * 0.8, th = rnd(0, TAU12);
+        fx.add("meteor", { x: zone.x + Math.cos(th) * r4, y: zone.y + Math.sin(th) * r4 * 0.62, size: 0.5, fall: 0.3, h: 9, drift: 1.2, kind: "mochi", glow: "#fff8e1", life: 1, delay: i * zone.interval * 0.8 });
+      }
+      return true;
+    }
+  });
+  sig("mochi_shirotsuki", {
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      dust(fx, actor.x, actor.y, 16, { color: ["#fff8e1", "#ffffff", "#efebe9"], speed: 4, size: 0.3 });
+    },
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "mochi", color: "#fff8e1", zone, life: 1e6 });
+      return true;
+    }
+  });
+  sig("horo_ghostrap", {
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      const [px2, py2] = fwd(actor, hb.angle, s.hit.offset || 0);
+      for (let i = 0; i < 5; i++) {
+        const th = i / 5 * TAU12;
+        fx.burst(px2 + Math.cos(th) * 1.2, py2 + Math.sin(th) * 0.8, 4, { kind: "smoke", color: ["#f3e5f5", "#ffffff"], speed: 1.5, z: 1, vz: 1, g: -0.5, life: 0.6, size: 0.3 });
+      }
+      fx.callout(px2, py2 - 2.2, "RAP!", "#f3e5f5", 0.45, { life: 0.7 });
+    }
+  });
+  sig("horo_spirit", { buff(fx, actor, s, a, ex) {
+    DEFAULTS.buff(fx, actor, s, a, ex);
+    smoke(fx, actor.x, actor.y, 1.2, 14, ["#f3e5f5", "#ffffff", "#e1bee7"], { speed: 1.2, vz: 1.5, size: 0.35 });
+    afterimage(fx, actor, { tint: "#f3e5f5", life: 1.2, alpha: 0.55 });
+  } });
+  sig("kage_blackbox", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "dark", color: "#120a1a", zone, life: 1e6 });
+      fx.add("vortex", { x: zone.x, y: zone.y, r: zone.r * 0.7, kind: "dark", life: zone.t, spin: -4, arms: 4 });
+      smoke(fx, zone.x, zone.y, 0.5, 12, ["#120a1a", "#2a1838"], { speed: 2 });
+      return true;
+    }
+  });
+  sig("kage_kakumei", { beam: "dark" });
+  sig("kage_asgard", {
+    buff(fx, actor, s, a, ex) {
+      DEFAULTS.buff(fx, actor, s, a, ex);
+      for (let i = 0; i < 12; i++) {
+        const th = i / 12 * TAU12, rr = rnd(3, 6);
+        fx.burst(actor.x + Math.cos(th) * rr, actor.y + Math.sin(th) * rr * 0.6, 3, { kind: "smoke", color: ["#120a1a", "#2a1838"], speed: rr * 1.2, angle: th + Math.PI, spread: 0.2, z: 1, g: 0, life: 0.5, size: 0.35 });
+      }
+      fx.add("pillar", { x: actor.x, y: actor.y, r: 1.4, h: 7, color: "#2a1838", life: 0.6, kind: "dark" });
+      fx.shake(0.4);
+    }
+  });
+  sig("doku_fugu", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.6);
+    smoke(fx, px2, py2, 1.2, 8, ["#6a1b9a", "#8e24aa", "#ce93d8"], { speed: 2, size: 0.25 });
+  } });
+  sig("doku_gumo doku_chloro", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "gas", color: zone.color || "#7b1fa2", zone, life: 1e6 });
+      smoke(fx, zone.x, zone.y, 0.4, 10, ["#4a148c", "#7b1fa2", "#ce93d8"], { speed: zone.r * 0.9, size: 0.32 });
+      return true;
+    }
+  });
+  sig("doku_venom_demon", {
+    dash(fx, actor, s, a) {
+      DEFAULTS.dash(fx, actor, s, a);
+      actor._ghostTint = "#7b1fa2";
+      smoke(fx, actor.x, actor.y, 1, 16, ["#4a148c", "#7b1fa2", "#ce93d8"], { speed: 2.5, size: 0.5 });
+    },
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "gas", color: "#7b1fa2", zone, life: 1e6 });
+      return true;
+    }
+  });
+  sig("noro_reflect", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    fx.add("barrier", { x: actor.x, y: actor.y, follow: actor, color: "#80deea", angle: hb.angle, life: 0.5 });
+    sparkle2(fx, actor.x, actor.y, 1, 6, ["#80deea", "#ffffff"]);
+  } });
+  sig("noro_barrage", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px2, py2] = fwd(actor, hb.angle, 1.2);
+    for (let i = 0; i < 6; i++) fx.add("flare", { x: px2 + rnd(-0.6, 0.6), y: py2 + rnd(-0.4, 0.4), z: rnd(0.6, 1.6), size: 0.45, color: "#80deea", life: 0.18, delay: 0.3 + i * 0.05 });
+  } });
+  sig("bari_pistol", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px2, py2] = fwd(actor, hb.angle, 1);
+    fx.add("barrier", { x: px2, y: py2, color: "#b3e5fc", angle: hb.angle, life: 0.35 });
+  } });
+  sig("bari_bulldog", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 1);
+    fx.add("barrier", { x: px2, y: py2, color: "#b3e5fc", angle: a.angle, life: 0.4 });
+    sparkle2(fx, px2, py2, 1, 5, ["#b3e5fc", "#ffffff"]);
+  } });
+  sig("suke_strike suke_phantom", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px2, py2] = fwd(actor, hb.angle, 1);
+    fx.ring(px2, py2, 0.1, 1.2, "#eceff1", 0.3, 0.05, { z: 0.9, add: true });
+    sparkle2(fx, px2, py2, 1, 4, ["#ffffff", "#eceff1"]);
+  } });
+  sig("sube_skin", { buff(fx, actor) {
+    sparkle2(fx, actor.x, actor.y, 1, 10, ["#fce4ec", "#ffffff", "#f8bbd0"]);
+    fx.ring(actor.x, actor.y, 0.2, 1.3, "#fce4ec", 0.4, 0.06, { add: true });
+  } });
+  sig("sube_spin", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    fx.add("vortex", { x: actor.x, y: actor.y, follow: actor, r: 1.4, h: 0.3, kind: "wind", life: 0.4, spin: 18, arms: 3 });
+    sparkle2(fx, actor.x, actor.y, 0.6, 6, ["#fce4ec", "#ffffff"]);
+  } });
+  sig("doru_ken doru_mori", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.6);
+    sparkle2(fx, px2, py2, 0.9, 4, ["#fffde7", "#ffffff"]);
+  } });
+  sig("doru_wall", { buff(fx, actor, s, a, ex) {
+    const b = ex.buff;
+    fx.add("barrier", { x: actor.x, y: actor.y, follow: actor, color: "#fff9c4", life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(b) });
+    sparkle2(fx, actor.x, actor.y, 1, 5, ["#fffde7", "#ffffff"]);
+  } });
+  sig("doru_service", { zone(fx, actor, spec, a, zone) {
+    fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "field", color: "#fff9c4", zone, life: 1e6 });
+    fx.burst(zone.x, zone.y, 14, { kind: "drop", color: ["#fffde7", "#fff59d"], speed: 3, z: 3, vz: 1, g: 9, life: 0.6, size: 0.09 });
+    return true;
+  } });
+  sig("supa_claw supa_atomic", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    sparks(fx, actor.x + Math.cos(hb.angle) * 1, actor.y + Math.sin(hb.angle) * 0.7, 0.9, hb.angle, 8, ["#eceff1", "#ffffff", "#b0bec5"]);
+  } });
+  sig("supa_spiral", { dash(fx, actor, s, a) {
+    DEFAULTS.dash(fx, actor, s, a);
+    actor._ghostTint = "#eceff1";
+    fx.add("vortex", { x: actor.x, y: actor.y, follow: actor, r: 0.9, h: 0.9, kind: "wind", life: s.dash.time + 0.1, spin: 22, arms: 4 });
+  } });
+  sig("nikyu_tsuppari", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.8);
+    fx.ring(px2, py2, 0.1, 1, "#ffffff", 0.25, 0.08, { z: 0.9, add: true });
+  } });
+  sig("mane_montage", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    fx.burst(actor.x, actor.y, 14, { kind: "smoke", color: ["#f8bbd0", "#ffffff"], speed: 2.5, z: 1, g: 0, life: 0.4, size: 0.3 });
+  } });
+  sig("zushi_pull", { pull(fx, actor, s, a) {
+    fx.add("zone", { x: actor.x, y: actor.y, r: s.pull.range, kind: "gravity", color: "#b39ddb", life: 0.8 });
+    vibration(fx, actor.x, actor.y, 0.2, s.pull.range * 0.6, "#b39ddb", 3);
+  } });
+  sig("zushi_lift", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "gravity", color: "#b39ddb", zone, life: 1e6 });
+      for (let i = 0; i < 10; i++) {
+        const th = rnd(0, TAU12), rr = zone.r * Math.sqrt(Math.random());
+        fx.burst(zone.x + Math.cos(th) * rr, zone.y + Math.sin(th) * rr * 0.62, 1, { kind: "shard", color: ["#6d4c41", "#8d6e63"], speed: 0.2, z: 0.1, vz: rnd(3, 6), g: -0.5, life: 1.4, size: rnd(0.12, 0.25), drag: 0.6 });
+      }
+      fx.crack(zone.x, zone.y, zone.r * 0.6, 2);
+      return true;
+    }
+  });
+  sig("hito_arm hito_walk hito_jump hito_brain", { buff(fx, actor, s, a, ex) {
+    DEFAULTS.buff(fx, actor, s, a, ex);
+    smoke(fx, actor.x, actor.y, 0.9, 10, ["#ffe0b2", "#ffffff"], { speed: 2, size: 0.3 });
+  } });
+  sig("neko_rokuogan", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px2, py2] = fwd(actor, hb.angle, 1);
+    for (let i = 0; i < 3; i++) fx.ring(px2, py2, 0.1, 1.5 + i * 0.8, "#ffffff", 0.4, 0.1, { z: 0.9, flat: 0.85, delay: i * 0.05, wobble: 0.15, lobes: 9, add: true });
+    fx.add("aircrack", { x: px2, y: py2, z: 0.9, size: 1.1, life: 0.45 });
+    fx.shake(0.4, hb.angle);
+  } });
+  sig("phoenix_pyreapple phoenix_talon", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px2, py2] = fwd(actor, hb.angle, 1);
+    flames(fx, px2, py2, 0.8, 14, ["#4fc3f7", "#81d4fa", "#fff176"], { speed: 2.5, size: 0.22 });
+  } });
+  sig("seiryu_kamaitachi", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.8);
+    fx.add("crescent", { x: px2, y: py2, angle: a.angle, radius: 1.2, arc: 1.8, width: 0.2, color: "#e3f2fd", core: "#ffffff", life: 0.25, z: 1 });
+  } });
+  sig("seiryu_tatsumaki", { zone(fx, actor, spec, a, zone) {
+    fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "storm", color: "#e3f2fd", zone, life: 1e6 });
+    smoke(fx, zone.x, zone.y, 0.5, 12, ["#e3f2fd", "#ffffff"], { speed: 3, size: 0.45 });
+    return true;
+  } });
+  sig("seiryu_ragnaraku", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    fx.add("pillar", { x: actor.x, y: actor.y, r: 1.2, h: 8, color: "#80deea", life: 0.4, kind: "light" });
+    miniBolts(fx, actor.x, actor.y, 0.5, 6, 2.5, "#e1f5fe");
+    fx.crack(actor.x, actor.y, 2.2, 2.5);
+  } });
+  sig("mera_kagero", { beam: "fire" });
+  sig("mera_kyokaen", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "fire", color: "#ff7043", zone, life: 1e6 });
+      flames(fx, zone.x, zone.y, 0.3, 18, ["#ff7043", "#ffca28", "#ff5722"], { speed: zone.r, size: 0.3 });
+      return true;
+    }
+  });
+  sig("hie_partisan", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.7);
+    shards(fx, px2, py2, 0.9, 8, null, a.angle);
+  } });
+  sig("hie_icetime", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px2, py2] = fwd(actor, hb.angle, 1);
+    ringSpikes(fx, px2, py2, 0.9, 7, "ice");
+    shards(fx, px2, py2, 0.8, 10);
+  } });
+  sig("goro_kari", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    for (let i = 0; i < 4; i++) {
+      const th = rnd(0, TAU12), rr = rnd(0.5, s.hit.range || 3);
+      fx.bolt(actor.x + Math.cos(th) * rr, actor.y + Math.sin(th) * rr * 0.6, actor.x + Math.cos(th) * rr, actor.y + Math.sin(th) * rr * 0.6, "#fff176", 0.3, 0.08, { z0: 7, z1: 0, branches: 2 });
+    }
+    fx.flashScreen(0.08, "rgba(255,253,231,1)");
+  } });
+  sig("goro_raiju goro_jamboule", { charge: { kind: "bolt", color: "#fff176" }, proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.7);
+    miniBolts(fx, px2, py2, 0.9, 5, 1, "#fff176");
+    glow2(fx, px2, py2, 0.9, 1, "#fff59d", 0.2);
+  } });
+  sig("suna_girasole", {
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "storm", zone, life: 1e6 });
+      dust(fx, zone.x, zone.y, 16, { color: ["#d7b56d", "#e1c16e", "#bfa16a"], speed: zone.r, size: 0.3 });
+      fx.crack(zone.x, zone.y, zone.r * 0.5, 2);
+      return true;
+    }
+  });
+  sig("suna_pesado", { proj(fx, actor, s, a) {
+    const [px2, py2] = fwd(actor, a.angle, 0.7);
+    dust(fx, px2, py2, 8, { color: ["#d7b56d", "#e1c16e"], angle: a.angle, spread: 1, speed: 3, z: 0.8 });
+  } });
+  sig("moku_vine", { beam: "wind", hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const L3 = s.hit.range || 7;
+    for (let i = 0; i < 6; i++) {
+      const t = (i + 0.5) / 6;
+      smoke(fx, actor.x + Math.cos(hb.angle) * L3 * t, actor.y + Math.sin(hb.angle) * L3 * t * 0.8, 0.8, 3, ["#ffffff", "#eceff1"], { size: 0.3 });
+    }
+  } });
+  sig("pika_flash", { hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    glow2(fx, actor.x, actor.y, 1.4, 3.5, "#fff59d", 0.35);
+    fx.add("pillar", { x: actor.x, y: actor.y, r: 0.8, h: 4, color: "#fff59d", life: 0.25, kind: "light" });
+  } });
+  sig("magu_bakuretsu", {
+    hit(fx, actor, s, a, hb) {
+      DEFAULTS.hit(fx, actor, s, a, hb);
+      flames(fx, actor.x, actor.y, 0.3, 20, ["#ff6f00", "#bf360c", "#ffab40"], { speed: 4, vz: 4, size: 0.3 });
+      fx.crack(actor.x, actor.y, 2.4, 3);
+      embers(fx, actor.x, actor.y, 1, 12);
+    },
+    zone(fx, actor, spec, a, zone) {
+      fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "fire", color: "#ff6f00", zone, life: 1e6 });
+      return true;
+    }
+  });
+  sig("yami_abyss", { charge: { kind: "dark" }, zone(fx, actor, spec, a, zone) {
+    fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "dark", color: zone.color, zone, life: 1e6 });
+    fx.add("vortex", { x: zone.x, y: zone.y, r: 2, kind: "dark", life: zone.t, spin: -5, arms: 6 });
+    smoke(fx, zone.x, zone.y, 0.4, 16, ["#12001c", "#311b92"], { speed: 4 });
+    return true;
+  } });
   sig("yami_kurouzu", { charge: { kind: "dark" } });
   sig("yami_blackhole", { charge: { kind: "dark" }, zone(fx, actor, spec, a, zone) {
     fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "dark", color: "#311b92", zone, life: 1e6 });
@@ -75729,6 +76972,12 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         break;
       case "storm":
         smoke(fx, zone.x, zone.y, 0.5, 10, [zone.color || "#eceff1", "#ffffff"], { speed: 3, size: 0.4 });
+        break;
+      case "gas":
+        smoke(fx, zone.x, zone.y, 0.4, 12, ["#4a148c", zone.color || "#7b1fa2", "#ce93d8"], { speed: zone.r * 0.8, size: 0.45 });
+        break;
+      case "fire":
+        flames(fx, zone.x, zone.y, 0.3, 16, ["#ff7043", "#ffca28", "#ff5722"], { speed: zone.r, size: 0.3 });
         break;
       case "cage":
         for (let i = 0; i < 10; i++) {
@@ -111852,11 +113101,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           const ang = spec.at === "shadow" ? (owner.facing || 0) + Math.PI + (i - (n - 1) / 2) * 0.6 : Math.random() * Math.PI * 2;
           const r4 = spec.at === "shadow" ? 1.1 : 2;
           const p = game.spawner.findFree(owner.x + Math.cos(ang) * r4, owner.y + Math.sin(ang) * r4, 3) || { x: owner.x, y: owner.y + 1 };
-          const a = makeEnemy(spec.archetype || "pirate", spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: spec.look === "shadow" ? void 0 : spec.look, moves: spec.moves, hpMul: spec.hpMul });
+          const a = makeEnemy(spec.archetype || "pirate", spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: typeof spec.look === "string" ? void 0 : spec.look, moves: spec.moves, hpMul: spec.hpMul });
           a.game = game;
           a.bornT = game.env.time;
           if (spec.at === "shadow") a.facing = owner.facing || 0;
           if (spec.look === "shadow") a.look = shadowLook(owner.look || {});
+          else if (spec.look === "copy") {
+            a.look = { ...owner.look || {} };
+            a.name = spec.name || owner.name;
+          }
+          a.summonColor = spec.look === "copy" ? spec.color || ["#f48fb1", "#ffffff"] : null;
           a.faction = owner.faction;
           a.summonedBy = owner;
           a.summonT = spec.duration || 30;
@@ -111869,7 +113123,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
             a.controller.state = "chase";
           }
           game.addActor(a);
-          if (spec.look !== "shadow") game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || "#eeeeee", speed: 3, g: 0, life: 0.4, kind: "smoke", size: 0.3 });
+          if (spec.look === "copy") game.fx.burst(a.x, a.y - 0.6, 26, { kind: "petal", color: spec.color || ["#f48fb1", "#ffffff"], speed: 3, z: 0.2, vz: 2.5, g: 1.5, life: 1, size: 0.11 });
+          else if (spec.look !== "shadow") game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || "#eeeeee", speed: 3, g: 0, life: 0.4, kind: "smoke", size: 0.3 });
         }
       };
       game.on("tick", (dt) => {
@@ -111879,6 +113134,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           if (a.summonT <= 0 || !a.summonedBy.alive || a.summonedBy.state === "knocked") {
             a.alive = false;
             if (a.look?.shadow) game.fx.burst(a.x, a.y, 8, { color: ["#120a1a", "#2a1838"], speed: 1, z: 0.1, vz: 1.2, g: 0, life: 0.5, kind: "smoke", size: 0.22 });
+            else if (a.summonColor) game.fx.burst(a.x, a.y - 0.6, 18, { kind: "petal", color: Array.isArray(a.summonColor) ? a.summonColor : [a.summonColor, "#ffffff"], speed: 2.5, z: 0.6, vz: 1.5, g: 1, life: 0.9, size: 0.1 });
             else game.fx.burst(a.x, a.y - 0.6, 8, { color: "#eeeeee", speed: 2, g: 0, life: 0.3, kind: "smoke" });
           }
         }
@@ -125911,7 +127167,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       look: { hair: "short", hairColor: "#eceff1", top: "#37474f", bottom: "#263238", coat: "#fafafa", coatText: "JUSTICE", skin: "#e0ac7e" },
       fruit: "moku",
       fruitMastery: 60,
-      moves: ["moku_blow", "moku_snake", "smoker_jitte", "moku_launcher"],
+      moves: ["moku_blow", "moku_snake", "smoker_jitte", "moku_launcher", "moku_vine"],
       lethal: false,
       skill: 0.55,
       bounty: 0,
@@ -131489,7 +132745,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       lethal: false,
       fruit: "nikyu",
       fruitMastery: 80,
-      moves: ["nikyu_paw", "nikyu_repel", "kuma_paw_npc"],
+      moves: ["nikyu_paw", "nikyu_repel", "kuma_paw_npc", "nikyu_tsuppari"],
       skill: 0.6,
       when: (c, g) => !["fleet", "report"].includes(stageOf2(g, "sb_solo_revolution")) && !g.quests.isDone("sb_solo_revolution"),
       marker: (c, g) => {
@@ -133810,7 +135066,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       faction: "baroque",
       fruit: "bomu",
       fruitMastery: 55,
-      moves: ["bomu_kick", "bomu_nose", "bomu_breeze"],
+      moves: ["bomu_kick", "bomu_nose", "bomu_breeze", "bomu_fist"],
       bounty: 1e7,
       infamy: true,
       breakthrough: 3,
@@ -134167,7 +135423,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       faction: "baroque",
       fruit: "doru",
       fruitMastery: 62,
-      moves: ["doru_arrow", "doru_lock", "doru_armor", "p1_candle_service"],
+      moves: ["doru_arrow", "doru_lock", "doru_armor", "p1_candle_service", "doru_ken", "doru_wall"],
       bounty: 24e6,
       infamy: true,
       breakthrough: 3,
@@ -134664,7 +135920,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       faction: "baroque",
       fruit: "supa",
       fruitMastery: 60,
-      moves: ["supa_sparkling", "supa_spider", "p1_atomic_spurt"],
+      moves: ["supa_sparkling", "supa_spider", "p1_atomic_spurt", "supa_claw", "supa_atomic"],
       bounty: 75e6,
       infamy: true,
       breakthrough: 3,
@@ -135229,7 +136485,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       faction: "rival",
       fruit: "goro",
       fruitMastery: 88,
-      moves: ["goro_vari", "goro_sango", "goro_elthor", "goro_amaru", "goro_raigo"],
+      moves: ["goro_vari", "goro_sango", "goro_elthor", "goro_amaru", "goro_raigo", "goro_kari", "goro_raiju", "goro_jamboule"],
       breakthrough: 6,
       skill: 0.75,
       aggroRange: 16,
@@ -138281,7 +139537,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       fruit: "suke",
       fruitMastery: 60,
       style: "brawler",
-      moves: ["suke_vanish", "p2_lion_bite", "brawl_tackle"],
+      moves: ["suke_vanish", "p2_lion_bite", "brawl_tackle", "suke_strike", "suke_phantom"],
       skill: 0.45,
       breakthrough: 3,
       alert: "You can't hit what you can't see! Gaohahaha!",
@@ -138306,7 +139562,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       look: { hair: "long", hairColor: "#f48fb1", top: "#212121", bottom: "#e91e63", hat: "crown", hatColor: "#ffd54f", scale: 0.92 },
       fruit: "horo",
       fruitMastery: 70,
-      moves: ["horo_negative", "horo_mini", "p2_tokuhollow"],
+      moves: ["horo_negative", "horo_mini", "p2_tokuhollow", "horo_ghostrap"],
       skill: 0.5,
       ranged: true,
       prefRange: 7,
@@ -138397,7 +139653,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       look: { hair: "spiky", hairColor: "#212121", hat: "horns", hatColor: "#212121", skin: "#b0bec5", top: "#212121", bottom: "#4a148c", coat: "#6a1b9a", grin: true, sharpTeeth: true },
       fruit: "kage",
       fruitMastery: 80,
-      moves: ["kage_brickbat", "kage_steal", "kage_doppelman", "p2_kage_zombies", "p2_kage_kakumei", "p2_tsuno_tokage"],
+      moves: ["kage_brickbat", "kage_steal", "kage_doppelman", "p2_kage_zombies", "p2_kage_kakumei", "p2_tsuno_tokage", "kage_blackbox"],
       skill: 0.55,
       bounty: 32e7,
       infamy: true,
@@ -138830,7 +140086,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       look: { hair: "short", hairColor: "#6d4c41", goggles: true, top: "#fdd835", bottom: "#fbc02d", coat: "#fafafa", coatText: "JUSTICE", skin: "#f1c9a0" },
       fruit: "pika",
       fruitMastery: 95,
-      moves: ["pika_yasakani", "pika_yata", "pika_murakumo", "pika_amaterasu"],
+      moves: ["pika_yasakani", "pika_yata", "pika_murakumo", "pika_amaterasu", "pika_flash"],
       haki: { armament: 70, observation: 70 },
       skill: 0.8,
       lethal: false,
@@ -139032,7 +140288,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       look: { hair: "short", hairColor: "#212121", hat: "marine", top: "#b71c1c", bottom: "#7f0000", coat: "#fafafa", coatText: "JUSTICE", bulk: 1.3, skin: "#e0ac7e" },
       fruit: "magu",
       fruitMastery: 95,
-      moves: ["magu_daifunka", "magu_meigo", "magu_ryusei"],
+      moves: ["magu_daifunka", "magu_meigo", "magu_ryusei", "magu_bakuretsu"],
       haki: { armament: 85, observation: 70 },
       lethal: true,
       bounty: 3e8,
@@ -139056,7 +140312,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       look: { hair: "afro", hairColor: "#212121", top: "#fafafa", bottom: "#1b4f72", coat: "#fafafa", coatText: "JUSTICE", skin: "#8d6e63" },
       fruit: "hie",
       fruitMastery: 95,
-      moves: ["hie_saber", "hie_pheasant", "hie_ageand", "hie_time"],
+      moves: ["hie_saber", "hie_pheasant", "hie_ageand", "hie_time", "hie_partisan", "hie_icetime"],
       haki: { armament: 80, observation: 70 },
       bounty: 25e7,
       dialogue: (ctx) => ({ start: "a", nodes: {
@@ -139218,7 +140474,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       look: { hair: "short", hairColor: "#212121", hat: "marine", top: "#b71c1c", bottom: "#7f0000", coat: "#fafafa", coatText: "JUSTICE", bulk: 1.3, skin: "#e0ac7e" },
       fruit: "magu",
       fruitMastery: 95,
-      moves: ["magu_daifunka", "magu_meigo", "magu_ryusei"],
+      moves: ["magu_daifunka", "magu_meigo", "magu_ryusei", "magu_bakuretsu"],
       haki: { armament: 85, observation: 70 },
       skill: 0.85,
       lethal: true,
@@ -139885,7 +141141,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       look: { hair: "spiky", hairColor: "#212121", hat: "horns", hatColor: "#4a148c", top: "#4a148c", bottom: "#311b92", coat: "#212121", skin: "#e0ac7e" },
       fruit: "doku",
       fruitMastery: 95,
-      moves: ["doku_fist", "doku_hydra", "doku_venom"],
+      moves: ["doku_fist", "doku_hydra", "doku_venom", "doku_gumo", "doku_chloro"],
       haki: { armament: 40 },
       skill: 0.6,
       lethal: false,
@@ -153960,6 +155216,18 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         STRETCH(v, k, 1.3);
         v.thump(k.rel, { f0: 140, f1: 60, dur: 0.1, gain: 0.2 });
       },
+      // (a head flung back and swung into theirs: GONG — a bell's partials, ringing on)
+      gomu_bell: (v, k) => {
+        STRETCH(v, k, 1.2);
+        v.thump(k.rel, { f0: 160, f1: 70, dur: 0.1, gain: 0.2 });
+        v.ring(k.rel + 0.01, 520, 1.4, 0.05, [1, 2.4, 3, 4.5]);
+      },
+      // (a fist punched into the ground, rumbling along under it, bursting up)
+      gomu_mogura_pistol: (v, k) => {
+        STRETCH(v, k, 1.2);
+        rumble(v, k.rel, 0.6, 0.45, { lp: 160 });
+        boom(v, k.rel + 0.42, 1);
+      },
       gomu_gear2: (v) => {
         for (let i = 0; i < 4; i++) v.thump(i * 0.11, { f0: 70, f1: 46, dur: 0.09, gain: 0.25 });
         hiss(v, 0.3, 1.6, 1.2, 3500);
@@ -154023,13 +155291,21 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       },
       default: (v, k) => swing(v, k.rel, "sword", 1)
     },
-    bara: { default: (v, k) => {
-      pop(v, 0, 1, 300);
-      v.noise(0.01, 0.03, { freq: 1500, q: 3, gain: 0.08 });
-      swing(v, k.rel, "fists", 1);
-    }, bara_festival: (v) => {
-      for (let i = 0; i < 8; i++) pop(v, i * 0.05, 0.6, rnd3(220, 420));
-    } },
+    bara: {
+      default: (v, k) => {
+        pop(v, 0, 1, 300);
+        v.noise(0.01, 0.03, { freq: 1500, q: 3, gain: 0.08 });
+        swing(v, k.rel, "fists", 1);
+      },
+      bara_festival: (v) => {
+        for (let i = 0; i < 8; i++) pop(v, i * 0.05, 0.6, rnd3(220, 420));
+      },
+      bara_muggy: (v, k) => {
+        hiss(v, 0, Math.max(0.3, k.rel) + 0.3, 0.8, 5500);
+        v.crackle(0, Math.max(0.3, k.rel), 6, { freq: 4e3, gain: 0.03 });
+        pop(v, k.rel, 0.9, 200);
+      }
+    },
     bomu: { default: (v, k) => {
       hiss(v, 0, Math.max(0.2, k.rel), 1, 5500);
       v.crackle(0, Math.max(0.2, k.rel), 6, { freq: 4e3, gain: 0.03 });
@@ -154048,6 +155324,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         for (let i = 0; i < 6; i++) v.ring(i * 0.1, rnd3(900, 1700), 0.6, 0.025, [1, 2.01, 3.02], { spread: 4e-3 });
         v.tone(0, 1.2, { freq: 2e3, type: "sawtooth", gain: 8e-3, attack: 0.4 });
       },
+      // (strings fired down out of the sky like a hail of bullets: each one a thin twang and a zip)
+      ito_fulbright: (v, k) => {
+        for (let i = 0; i < 9; i++) {
+          const t = k.rel + i * 0.07 + Math.random() * 0.03;
+          v.whoosh(t, 0.08, { f0: 6e3, f1: 2500, q: 2, gain: 0.06, peak: 0.3 });
+          v.ring(t + 0.05, rnd3(1200, 1900), 0.25, 0.02, [1, 2.01, 3.02], { spread: 4e-3 });
+        }
+      },
       default: (v, k) => {
         v.ring(0, rnd3(900, 1300), 0.4, 0.035, [1, 2.01, 3.02, 4.03], { spread: 4e-3 });
         v.whoosh(k.rel, 0.1, { f0: 3e3, f1: 7e3, q: 2, gain: 0.1, peak: 0.2 });
@@ -154062,6 +155346,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     horo: { default: (v) => {
       wail(v, 0, 1, 0.8);
       v.whoosh(0.2, 0.5, { f0: 600, f1: 1500, gain: 0.05, flutter: 6 });
+    }, horo_ghostrap: (v, k) => {
+      wail(v, 0, 0.8, 0.6);
+      boom(v, Math.max(0.3, k.rel), 0.8);
     } },
     kage: {
       kage_brickbat: (v, k) => {
@@ -154073,12 +155360,23 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           v.ring(k.rel + t, 3e3, 0.08, 0.02, [1, 1.7]);
         }
       },
+      kage_asgard: (v, k) => {
+        suction(v, 0, Math.max(0.6, k.rel) + 0.3, 1.4);
+        rumble(v, 0.2, 0.8, Math.max(0.6, k.rel) + 0.4, { lp: 140 });
+        roar(v, Math.max(0.6, k.rel), 1, 0.9, 70);
+      },
       default: (v) => {
         suction(v, 0, 0.5, 0.6);
         v.formant(0, 0.5, { f1: 300, f2: 600, q: 6, gain: 0.05 });
       }
     },
-    doku: { doku_hydra: (v, k) => {
+    doku: { doku_gumo: (v, k) => {
+      hiss(v, 0, Math.max(0.3, k.rel) + 1, 1.1, 3500);
+      v.bubbles(0, 0.6, 8, { f: 500, gain: 0.04 });
+    }, doku_chloro: (v, k) => {
+      hiss(v, 0, Math.max(0.3, k.rel) + 0.6, 0.9, 4e3);
+      pop(v, k.rel, 0.7, 260);
+    }, doku_hydra: (v, k) => {
       hiss(v, 0, Math.max(0.3, k.rel) + 0.3, 1.3, 5500);
       v.bubbles(0, 0.4, 6, { f: 600, gain: 0.04 });
     }, default: (v, k) => {
@@ -154159,12 +155457,25 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         swing(v, 0, "heavy", 1.3);
         strike2(v, k.rel, 1.2, 1.8);
       },
+      seiryu_tatsumaki: (v, k) => {
+        roar(v, 0, 0.8, 0.7, 80);
+        v.whoosh(k.rel, 1.6, { f0: 250, f1: 900, q: 0.5, gain: 0.2, peak: 0.4, flutter: 4, color: "pink" });
+      },
+      seiryu_ragnaraku: (v, k) => {
+        swing(v, 0, "heavy", 1.3);
+        strike2(v, k.rel, 1.3, 2);
+        boom(v, k.rel + 0.03, 1.2);
+      },
       default: (v, k) => {
         roar(v, 0, 1, 0.9, 70);
         v.whoosh(k.rel, 0.4, { f0: 300, f1: 2e3, gain: 0.1 });
       }
     },
     mera: {
+      mera_kyokaen: (v, k) => {
+        flame2(v, k.rel, 1.5, { dur: 1.2 });
+        v.whoosh(k.rel, 0.6, { f0: 200, f1: 800, q: 0.5, gain: 0.18, color: "pink" });
+      },
       mera_entei: (v, k) => {
         v.whoosh(0, Math.max(0.6, k.rel), { f0: 200, f1: 900, q: 0.5, gain: 0.25, peak: 0.95, flutter: 10, color: "pink" });
         flame2(v, k.rel, 1.8, { dur: 1 });
@@ -154197,6 +155508,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         v.zap(0.3, 1, { f0: 40, f1: 160, gain: 0.03 });
         strike2(v, Math.max(1, k.rel), 1.4, 3);
       },
+      goro_kari: (v, k) => {
+        v.zap(0, Math.max(0.3, k.rel), { f0: 40, f1: 180, gain: 0.04 });
+        strike2(v, k.rel, 1.2, 1.8);
+      },
       default: (v, k) => {
         v.zap(0, Math.max(0.15, k.rel), { f0: 40, f1: 220, gain: 0.03, step: 0.02 });
         v.crackle(0, Math.max(0.15, k.rel), 6, { freq: 5e3, gain: 0.025 });
@@ -154216,6 +155531,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         shimmer(v, 0, 1, 0.25);
         v.whoosh(0.02, 0.12, { f0: 3e3, f1: 8e3, q: 1.5, gain: 0.1, peak: 0.2 });
       },
+      pika_flash: (v, k) => {
+        v.tone(0, Math.max(0.2, k.rel), { freq: 900, to: 5e3, gain: 0.05, attack: Math.max(0.15, k.rel) * 0.9, curve: "lin" });
+        shimmer(v, k.rel, 1, 0.5);
+        v.noise(k.rel, 0.02, { type: "highpass", freq: 5e3, gain: 0.2, attack: 5e-4 });
+      },
       default: (v, k) => {
         v.tone(0, Math.max(0.15, k.rel), { freq: 800, to: 4e3, gain: 0.04, attack: Math.max(0.1, k.rel) * 0.9, curve: "lin" });
         v.noise(k.rel, 8e-3, { type: "highpass", freq: 6e3, gain: 0.2, attack: 5e-4 });
@@ -154223,7 +155543,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         v.fm(k.rel, 0.2, { freq: 2500, ratio: 1.5, index: 2, gain: 0.03 });
       }
     },
-    magu: { default: (v, k) => {
+    magu: { magu_bakuretsu: (v, k) => {
+      rumble(v, 0, 0.8, Math.max(0.3, k.rel), { lp: 140 });
+      boom(v, k.rel, 1.3);
+      flame2(v, k.rel + 0.05, 1.4, { dur: 0.9 });
+    }, default: (v, k) => {
       v.bubbles(0, Math.max(0.2, k.rel), 6, { f: 130, rise: 1.4, gain: 0.08, dur: 0.1 });
       v.noise(0, Math.max(0.2, k.rel), { color: "brown", type: "lowpass", freq: 400, gain: 0.2, attack: 0.1 });
       v.whoosh(k.rel, 0.4, { f0: 200, f1: 900, q: 0.6, gain: 0.18, color: "pink" });
@@ -154231,6 +155555,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     } },
     yami: {
       yami_kurouzu: (v) => suction(v, 0, 0.9, 1.3),
+      yami_abyss: (v, k) => {
+        suction(v, 0, Math.max(0.5, k.rel) + 1.2, 1.6);
+        rumble(v, 0, 1, Math.max(0.5, k.rel) + 1, { lp: 120 });
+      },
       default: (v, k) => {
         suction(v, 0, Math.max(0.3, k.rel) + 0.2, 0.9);
         v.crackle(0, 0.5, 8, { freq: 700, gain: 0.04, q: 1.5 });
@@ -154335,7 +155663,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const k = { rel: Math.max(0, rel3), def, voice };
     const fr = def.fruit && FRUIT_TECH[def.fruit];
     if (fr) {
-      (fr[def.id] || fr.default || STRETCH)(v, k);
+      (fr[def.id] || def.base && fr[def.base] || fr.default || STRETCH)(v, k);
       return;
     }
     if (STYLE_TECH[def.id]) {

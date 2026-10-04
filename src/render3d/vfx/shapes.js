@@ -1045,7 +1045,8 @@ const SKID = [-0.14, 0.14];
 const DARKNESS = col('#311b92');
 const SCORCH_COL = col('rgba(30,18,12,1)'), BOLT_EMBER = col('#ffd54f');
 const ROOM_LINE = col('#e1f5fe');
-const ZONE_COL = { dark: ['#7e57c2', '#12001c'], ice: ['#e1f5fe', '#ffffff'], storm: ['#e1c16e', '#fff3c4'], gravity: ['#b39ddb', '#ede7f6'] };
+const ZONE_COL = { dark: ['#7e57c2', '#12001c'], ice: ['#e1f5fe', '#ffffff'], storm: ['#e1c16e', '#fff3c4'], gravity: ['#b39ddb', '#ede7f6'], mochi: ['#e8dcc4', '#fff8e1'] };
+const FIELD_FIRE = col('#ff7a1a'), FIELD_FIRE_CORE = col('#ffe08a'), GAS_LIGHT = col('#e1bee7'), MOCHI_SHADE = col('#d7ccc8');
 /**
  * Area techniques: the floor of the area (a black hole's arms, gravity
  * rippling in, frost, a field of drifting blotches) and what stands over it
@@ -1058,7 +1059,8 @@ SHAPES.zone = {
     if (R < 0.05) return;
     const kind = s.kind || 'field';
     if (kind === 'room') { room(v, s, R, a); return; }
-    const zc = ZONE_COL[kind];
+    // (a storm of something other than sand — a whirlwind — keeps its own colour)
+    const zc = kind === 'storm' && s.color ? null : ZONE_COL[kind];
     const c = col(zc ? zc[0] : s.color || '#ffffff'), c2 = col(zc ? zc[1] : s.color || '#ffffff');
     const patch = v.patch(s, s.x, s.y, s.r);
     const zk = ZK[kind] ?? 0;
@@ -1101,6 +1103,40 @@ SHAPES.zone = {
         r.data = pts;
       }
       arms(v, s, r.data, R > 2, a, 1);
+    } else if (kind === 'gas') {
+      // poison gas rolling low over the ground in slow, heavy billows
+      for (let i = 0; i < 9; i++) {
+        const ph = (v.time * 0.35 + hash(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.35 + hash(s.seed + i));
+        const th = hash(s.seed + i * 7 + cyc) * TAU, rr = Math.sqrt(hash(s.seed + i * 11 + cyc)) * R * 0.8;
+        v.sprites.put(SK.SMOKE, X + Math.cos(th) * rr, G + 0.15 + ph * 0.7, Z + Math.sin(th) * rr, (0.35 + 0.4 * ph) * Math.min(1.6, 0.6 + R / 4), c, a * Math.sin(ph * PI) * 0.5, GAS_LIGHT, 0, ph * 2, s.seed + i, 0.15 + ph * 0.6);
+      }
+    } else if (kind === 'fire') {
+      // a field ablaze: tongues of flame licking up all over it, embers rising off them
+      for (let i = 0; i < 12; i++) {
+        const ph = (v.time * 1.2 + hash(s.seed + i)) % 1, cyc = Math.floor(v.time * 1.2 + hash(s.seed + i));
+        const th = hash(s.seed + i * 7 + cyc) * TAU, rr = Math.sqrt(hash(s.seed + i * 11 + cyc)) * R * 0.85;
+        const x = X + Math.cos(th) * rr, z = Z + Math.sin(th) * rr, h = 0.3 + 0.35 * hash(s.seed + i * 13);
+        v.sprites.put(SK.FIRE, x, G + h * (0.6 + ph * 0.8), z, h * (1 - ph * 0.5), i % 3 ? FIELD_FIRE : DEEP_FIRE, a * Math.sin(ph * PI), FIELD_FIRE_CORE, 0.5, 0, s.seed + i * 7, 0.15 + ph * 0.5);
+        if (i % 3 === 0) v.sprites.put(SK.EMBER, x, G + 0.4 + ph * 2.4, z, 0.035, FIELD_FIRE_CORE, a * (1 - ph), WHITE, 1, 0, s.seed + i, ph);
+      }
+    } else if (kind === 'strings') {
+      // strings raining down out of the sky like bullets, each a fine line driven into the ground
+      for (let i = 0; i < 14; i++) {
+        const ph = (v.time * 0.9 + hash(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.9 + hash(s.seed + i));
+        const th = hash(s.seed + i * 7 + cyc) * TAU, rr = Math.sqrt(hash(s.seed + i * 11 + cyc)) * R * 0.9;
+        const x = X + Math.cos(th) * rr, z = Z + Math.sin(th) * rr, lean = (hash(s.seed + i * 5 + cyc) - 0.5) * 3;
+        const head = G + 16 * Math.max(0, 1 - ph * 2.2), tail = Math.min(G + 22, head + 9);
+        const f = a * (ph < 0.75 ? 0.9 : (1 - ph) * 3.6);
+        v.ribbons.start(RK.THIN, RM.FACE, c, f, WHITE, 0.5).point(x + lean * (tail - G) / 16, tail, z, 0.01).point(x + lean * (head - G) / 16, head, z, 0.014).finish();
+      }
+    } else if (kind === 'mochi') {
+      // the ground turned to mochi: soft white mounds heaving up and sinking back all over it
+      for (let i = 0; i < 6; i++) {
+        const ph = (v.time * 0.45 + hash(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.45 + hash(s.seed + i));
+        const th = hash(s.seed + i * 7 + cyc) * TAU, rr = Math.sqrt(hash(s.seed + i * 11 + cyc)) * R * 0.75;
+        const r = (0.5 + 0.4 * hash(s.seed + i * 3)) * Math.sin(ph * PI);
+        v.shells.put(VK.GOO, X + Math.cos(th) * rr, G - r * 0.25, Z + Math.sin(th) * rr, r, 0, 1, 0, 0.85, c, a, MOCHI_SHADE, 0, k, s.seed + i);
+      }
     } else if (kind === 'field') {
       for (let i = 0; i < 5; i++) {
         const ph = (v.time * 0.8 + hash(s.seed + i)) % 1;

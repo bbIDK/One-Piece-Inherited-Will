@@ -407,12 +407,15 @@ export class Interactions {
         const ang = spec.at === 'shadow' ? (owner.facing || 0) + Math.PI + (i - (n - 1) / 2) * 0.6 : Math.random() * Math.PI * 2;
         const r = spec.at === 'shadow' ? 1.1 : 2;
         const p = game.spawner.findFree(owner.x + Math.cos(ang) * r, owner.y + Math.sin(ang) * r, 3) || { x: owner.x, y: owner.y + 1 };
-        const a = makeEnemy(spec.archetype || 'pirate', spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: spec.look === 'shadow' ? undefined : spec.look, moves: spec.moves, hpMul: spec.hpMul });
+        const a = makeEnemy(spec.archetype || 'pirate', spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: typeof spec.look === 'string' ? undefined : spec.look, moves: spec.moves, hpMul: spec.hpMul });
         a.game = game;
         a.bornT = game.env.time;
         if (spec.at === 'shadow') a.facing = owner.facing || 0;
         // (exactly its owner's shape — not an archetype's build on top)
         if (spec.look === 'shadow') a.look = shadowLook(owner.look || {});
+        // (a double of its owner, to the last hair — Cuerpo Fleur's body of petals)
+        else if (spec.look === 'copy') { a.look = { ...(owner.look || {}) }; a.name = spec.name || owner.name; }
+        a.summonColor = spec.look === 'copy' ? spec.color || ['#f48fb1', '#ffffff'] : null;
         a.faction = owner.faction;
         a.summonedBy = owner;
         a.summonT = spec.duration || 30;
@@ -421,7 +424,8 @@ export class Interactions {
         else if (owner.controller?.target) { a.controller.target = owner.controller.target; a.controller.state = 'chase'; }
         game.addActor(a);
         // (a shadow's rise has its own: combatfx.js kage_doppelman)
-        if (spec.look !== 'shadow') game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || '#eeeeee', speed: 3, g: 0, life: 0.4, kind: 'smoke', size: 0.3 });
+        if (spec.look === 'copy') game.fx.burst(a.x, a.y - 0.6, 26, { kind: 'petal', color: spec.color || ['#f48fb1', '#ffffff'], speed: 3, z: 0.2, vz: 2.5, g: 1.5, life: 1, size: 0.11 });
+        else if (spec.look !== 'shadow') game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || '#eeeeee', speed: 3, g: 0, life: 0.4, kind: 'smoke', size: 0.3 });
       }
     };
     game.on('tick', (dt) => {
@@ -432,6 +436,7 @@ export class Interactions {
           a.alive = false;
           // (a shadow sinks back into the ground — render3d/chars/forms.js — and leaves its dark behind)
           if (a.look?.shadow) game.fx.burst(a.x, a.y, 8, { color: ['#120a1a', '#2a1838'], speed: 1, z: 0.1, vz: 1.2, g: 0, life: 0.5, kind: 'smoke', size: 0.22 });
+          else if (a.summonColor) game.fx.burst(a.x, a.y - 0.6, 18, { kind: 'petal', color: Array.isArray(a.summonColor) ? a.summonColor : [a.summonColor, '#ffffff'], speed: 2.5, z: 0.6, vz: 1.5, g: 1, life: 0.9, size: 0.1 });
           else game.fx.burst(a.x, a.y - 0.6, 8, { color: '#eeeeee', speed: 2, g: 0, life: 0.3, kind: 'smoke' });
         }
       }

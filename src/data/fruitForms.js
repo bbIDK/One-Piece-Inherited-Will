@@ -189,6 +189,8 @@ const GEAR5 = {
       steps: [{ dash: { dist: 16, time: 0.32, iframes: 0.3, air: true, hit: { damage: 46, knockback: 14, stun: 0.6, launch: 5 } } }] },
     { id: 'gomu_kaminari', name: 'Gomu Gomu no Kaminari', icon: '⚡', anim: 'raise', windup: 0.6, recover: 0.4, cd: 12, say: 'Gomu Gomu no... Kaminari!', desc: 'Grab a bolt of lightning out of the sky like a rope and hurl it.',
       steps: [{ proj: { speed: 34, range: 18, radius: 1.0, damage: 70, sprite: 'thunder', size: 2.4, element: 'lightning', pierce: true, status: { shock: 1.5 }, knockback: 10, stun: 0.8, hitShips: true } }] },
+    { id: 'gomu_mogura_pistol', name: 'Mole Pistol', icon: '👊', anim: 'slam', windup: 0.35, recover: 0.4, cd: 7, say: 'Gomu Gomu no... Mogura Pistol!', desc: 'Punch straight down into the ground: the fist tunnels under them like a mole and bursts up beneath their chin.',
+      steps: [{ fx: { ring: 1.4, color: '#ffffff', shake: 0.25 } }, { at: 0.75, hit: { shape: 'circle', range: 2.8, offset: 3.2, damage: 62, knockback: 6, stun: 0.9, heavy: true, guardBreak: true, launch: 9, impactFrame: true, shake: 0.5 }, vfx: 'ring' }] },
     { id: 'gomu_bajrang_gun', name: 'Bajrang Gun', icon: '☀', anim: 'punch', clip: 'gigant', windup: 1.4, recover: 0.6, cd: 40, say: 'Gomu Gomu no... BAJRANG GUN!', desc: 'A fist the size of an island.',
       steps: [{ fx: { ring: 5, color: '#ffffff', impact: 0.08 } }, { at: 1.4, proj: { speed: 15, range: 17, radius: 3, damage: 180, sprite: 'gomufist', size: 9, stretch: true, pierce: true, knockback: 30, stun: 1.6, heavy: true, guardBreak: true, hitShips: true, shipDamage: 800 } }, { at: 1.45, fx: { shake: 1, impact: 0.15 } }] },
   ],
@@ -234,13 +236,22 @@ export const KITS = {
     { id: 'ito_nami_shiraito', name: 'Nami Shiraito', icon: '🧵', anim: 'spread', windup: 0.5, recover: 0.4, cd: 12, desc: 'Awakened: the very ground turns to strings and rolls at them in waves.',
       steps: [{ hit: { shape: 'line', range: 12, width: 3.2, damage: 55, knockback: 9, stun: 0.9, slashing: true, element: 'string' }, vfx: 'beam', color: '#f8bbd0' }, { zone: { range: 3, duration: 3, interval: 0.5, damage: 8, color: '#f8bbd0', atTarget: true, kind: 'field', slow: 0.4 } }] },
   ] } },
-  mochi: { m1: { dmg: 1.1, reach: 1.25 } },
+  mochi: { m1: { dmg: 1.1, reach: 1.25 }, awakening: { name: 'Awakened Mochi', extra: [
+    { id: 'mochi_shirotsuki', name: 'Shiro Tsuki', icon: '🍡', anim: 'slam', windup: 0.45, recover: 0.4, cd: 13, say: 'Mochi... Shiro Tsuki!', desc: 'Awakened: the very ground round you turns to mochi — it heaves, swallows their feet and holds them fast.',
+      steps: [{ hit: { shape: 'circle', range: 5, damage: 46, knockback: 4, stun: 0.6, element: 'physical', heavy: true, shake: 0.5 }, vfx: 'ring' }, { zone: { range: 5.5, duration: 4, interval: 0.5, damage: 6, color: '#f5f5f5', kind: 'mochi', slow: 0.75, status: { root: 0.6 } } }] },
+  ] } },
   // (fists that fly off on their own, arms that sprout out of anything: a longer reach)
   bara: { m1: { reach: 1.4 } },
-  hana: { m1: { reach: 1.3 } },
+  hana: { m1: { reach: 1.3 }, awakening: { name: 'Awakened Flowers', extra: [
+    { id: 'hana_demonio', name: 'Demonio Fleur', icon: '🌸', anim: 'flex', windup: 0.5, recover: 0.3, cd: 30, say: 'Demonio Fleur!', desc: 'Awakened: arms and wings of petals bloom from your back — a towering demon\'s shape, every blow a giant\'s.',
+      steps: [{ fx: { burst: 24, color: '#f48fb1', kind: 'petal', ring: 3, impact: 0.06 } }, { at: 0.5, buff: { id: 'demonio', name: 'Demonio Fleur', dur: 14, mods: { damage: 1.35, defMul: 0.8, scale: 1.6 }, aura: 'rgba(136,14,79,0.8)' } }] },
+  ] } },
   // (a Zoan's beast in every blow)
   neko_leopard: { m1: { dmg: 1.2 } },
-  doku: { m1: { element: 'poison', status: { poison: 2 } } },
+  doku: { m1: { element: 'poison', status: { poison: 2 } }, awakening: { name: 'Awakened Venom', extra: [
+    { id: 'doku_venom_demon', name: 'Venom Demon: Hell\'s Judgement', icon: '☠', anim: 'thrust', windup: 0.5, recover: 0.45, cd: 16, say: 'Venom Demon... Hell\'s Judgement!', desc: 'Awakened: a demon of poison wraps you and you charge — the ground it crosses stays a pool of venom.',
+      steps: [{ dash: { dist: 10, time: 0.45, iframes: 0.4, hit: { damage: 60, knockback: 10, stun: 0.7, heavy: true, element: 'poison', status: { poison: 4 } } } }, { at: 0.95, zone: { range: 3.5, duration: 5, interval: 0.5, damage: 8, element: 'poison', status: { poison: 2 }, color: '#7b1fa2', kind: 'gas' } }] },
+  ] } },
   bomu: { m1: { element: 'explosion', dmg: 1.1 } },
   // the Logia: their own stuff in every blow
   mera: { m1: { element: 'fire', status: { burn: 1.5 } }, awakening: { name: 'Awakened Flames', skills: [
@@ -249,13 +260,12 @@ export const KITS = {
       steps: [{ proj: { speed: 22, range: 14, radius: 1.1, damage: 48, sprite: 'fireball', size: 2.2, element: 'fire', pierce: true, status: { burn: 3 }, knockback: 8, trail: { color: ['#ff7043', '#ffca28'] } } }] },
     { id: 'mera_shiranui', name: 'Shinka: Shiranui', anim: 'thrust', windup: 0.35, recover: 0.35, cd: 9, say: 'Shinka... Shiranui!', desc: 'Divine Fire: two spears of flame thrown side by side.',
       steps: [{ proj: { speed: 26, range: 15, radius: 0.6, damage: 40, count: 2, spread: 0.18, sprite: 'firefist', element: 'fire', pierce: true, status: { burn: 3 }, knockback: 6, trail: { color: ['#ff7043', '#ffca28'] } } }] },
-    awaken('mera_enkai'), awaken('mera_entei'),
+    awaken('mera_enkai'), awaken('mera_entei'), awaken('mera_kagero'), awaken('mera_kyokaen'),
   ] } },
   hie: { m1: { element: 'ice', status: { chill: 1.5 } }, awakening: { name: 'Awakened Ice', skills: [
     awaken('hie_saber'), awaken('hie_pheasant'),
-    { id: 'hie_partisan', name: 'Ice Block: Partisan', icon: '❄', anim: 'cast', windup: 0.35, recover: 0.35, cd: 8, desc: 'A volley of ice spears.',
-      steps: [{ proj: { speed: 24, range: 14, radius: 0.35, damage: 26, count: 6, spread: 0.6, sprite: 'iceshard', size: 1.6, color: '#e1f5fe', element: 'ice', status: { freeze: 0.8 }, pierce: true } }] },
-    awaken('hie_ageand'), awaken('hie_time'),
+    awaken('hie_partisan'),
+    awaken('hie_ageand'), awaken('hie_time'), awaken('hie_icetime'),
   ] } },
   goro: {
     m1: { element: 'lightning', status: { shock: 0.4 } },
@@ -265,7 +275,14 @@ export const KITS = {
   moku: { m1: { element: 'smoke' } },
   pika: { m1: { element: 'light', dmg: 1.1 } },
   magu: { m1: { element: 'magma', status: { burn: 2 } } },
-  yami: { m1: { element: 'dark' } },
+  kage: { awakening: { name: 'Awakened Shadows', extra: [
+    { id: 'kage_asgard', name: 'Shadows\' Asgard', icon: '👤', anim: 'flex', windup: 0.7, recover: 0.3, cd: 40, say: 'Shadows\' Asgard!', desc: 'Awakened: draw a legion of shadows into your own body — you swell into a towering giant, every blow a landslide.',
+      steps: [{ fx: { burst: 26, color: '#2a1838', kind: 'smoke', ring: 4, impact: 0.08, shake: 0.4 } }, { at: 0.7, buff: { id: 'asgard', name: 'Shadows\' Asgard', dur: 16, mods: { damage: 1.45, defMul: 0.7, speedMul: 0.9, scale: 2.2 }, aura: 'rgba(42,24,56,0.85)' } }] },
+  ] } },
+  yami: { m1: { element: 'dark' }, awakening: { name: 'Awakened Darkness', extra: [
+    { id: 'yami_abyss', name: 'Kurozu: Abyss', icon: '🌑', anim: 'raise', windup: 0.6, recover: 0.4, cd: 22, say: 'Abyss!', desc: 'Awakened: the dark spreads out from you over the whole field and drags everyone in it down and in.',
+      steps: [{ zone: { range: 8, duration: 5, interval: 0.4, damage: 9, element: 'dark', color: '#120a1a', kind: 'dark', pull: 2.5, slow: 0.5, absorb: true } }] },
+  ] } },
   hito: { m1: { dmg: 1.1 }, forms: [{ id: 'monster', name: 'Monster Point', short: 'Monster', mastery: 50, activate: 'hito_monster', desc: 'A Rumble Ball overdose: a towering monster, enormous power, barely controlled.', m1: { dmg: 1.5, reach: 1.4 } }] },
   uo_seiryu: { m1: { dmg: 1.2 }, forms: [{ id: 'dragon', name: 'Azure Dragon Form', short: 'Dragon', mastery: 40, activate: 'seiryu_form', desc: 'Take the Azure Dragon\'s whole shape: bigger and stronger, every breath a furnace.', m1: { dmg: 1.4, reach: 1.4 } }] },
 };

@@ -641,7 +641,7 @@ const npcs = [
   {
     id: 'sb_kuma', name: 'Bartholomew Kuma', title: 'Pastor of the south church', island: 'sorbet_kingdom', at: { town: 'sorbet_church', building: "Kuma's Church" }, race: 'buccaneer',
     look: { hair: 'curly', hairColor: '#3e2723', hat: 'beanie', hatColor: '#f5f5f5', top: '#263238', bottom: '#1a237e', skin: '#a0643a' }, bulk: 1.5, scale: 1.9, level: 60, lethal: false,
-    fruit: 'nikyu', fruitMastery: 80, moves: ['nikyu_paw', 'nikyu_repel', 'kuma_paw_npc'], skill: 0.6,
+    fruit: 'nikyu', fruitMastery: 80, moves: ['nikyu_paw', 'nikyu_repel', 'kuma_paw_npc', 'nikyu_tsuppari'], skill: 0.6,
     when: (c, g) => !['fleet', 'report'].includes(stageOf(g, 'sb_solo_revolution')) && !g.quests.isDone('sb_solo_revolution'),
     marker: (c, g) => {
       if (stageOf(g, 'sb_solo_revolution') === 'warn') return '?';

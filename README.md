@@ -329,7 +329,11 @@ GitHub Pages site: no account, and no server of our own.
   rest circle and wait, and whoever you hit goes next. Nobody runs off when
   nearly beaten, and pirates at home in a village leave you alone until you
   break in or strike one of them.
-- About 32 **Devil Fruits** (Paramecia, Zoan, Logia), with canon rules:
+- About 32 **Devil Fruits** (Paramecia, Zoan, Logia), each with three to eight
+  of its anime techniques from the moment you eat it (Gum-Gum Stamp and Bell,
+  Fulbright, Ghost Rap, Doku Gumo, Kyokaen, Kari, Bakuretsu Kazan...), its
+  forms, and an awakened set with moves of its own (Mole Pistol, Demonio
+  Fleur, Shadows' Asgard, Shiro Tsuki, Venom Demon, Abyss...), with canon rules:
   - Logia intangibility unless you use Haki, seastone or their weakness;
   - rubber versus lightning;
   - fruit users can't swim: they thrash for a few seconds (longer with

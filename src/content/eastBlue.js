@@ -475,7 +475,7 @@ const npcs = [
       { text: 'Buy a weapon', do: (c) => c.open('shop', { shop: ['slingshot', 'flintlock', 'marine_rifle'], building: { name: 'Gunsmith', role: 'weapons' } }) },
       { text: 'Leave', end: true }] } } }) },
   { id: 'smoker', name: 'Captain Smoker', title: '"The White Hunter"', island: 'polestar_islands', at: { town: 'loguetown', plaza: true, ox: 5 }, faction: 'marine', level: 30, boss: true, hpMul: 1.5,
-    look: { hair: 'short', hairColor: '#eceff1', top: '#37474f', bottom: '#263238', coat: '#fafafa', coatText: 'JUSTICE', skin: '#e0ac7e' }, fruit: 'moku', fruitMastery: 60, moves: ['moku_blow', 'moku_snake', 'smoker_jitte', 'moku_launcher'],
+    look: { hair: 'short', hairColor: '#eceff1', top: '#37474f', bottom: '#263238', coat: '#fafafa', coatText: 'JUSTICE', skin: '#e0ac7e' }, fruit: 'moku', fruitMastery: 60, moves: ['moku_blow', 'moku_snake', 'smoker_jitte', 'moku_launcher', 'moku_vine'],
     lethal: false, skill: 0.55, bounty: 0, breakthrough: 4, alert: 'Pirate. You won\'t leave Loguetown.',
     when: (c) => c.bounty > 0 && !c.bosses.includes('smoker') && !c.flags.escapedLoguetown },
   { id: 'tashigi', name: 'Tashigi', title: 'Marine Sergeant Major', island: 'polestar_islands', at: { town: 'loguetown', plaza: true, ox: 7 }, faction: 'marine', level: 14, named: true,

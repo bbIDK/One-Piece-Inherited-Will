@@ -36,6 +36,12 @@ export const FRUITS = {
       T(30, { id: 'gomu_bazooka', name: 'Gum-Gum Bazooka', icon: '💥', anim: 'heavy', windup: 0.35, recover: 0.35, cd: 8, say: 'Gomu Gomu no... BAZOOKA!', steps: [{ hit: { shape: 'arc', range: 2.4, arc: 1.2, offset: 0.4, damage: 36, knockback: 14, stun: 0.8, heavy: true, guardBreak: true, impactFrame: true, hitShips: true } }] }),
       T(15, { id: 'gomu_balloon', name: 'Gum-Gum Balloon', anim: 'flex', windup: 0.1, recover: 0.25, cd: 9, say: 'Gomu Gomu no... Balloon!', desc: 'Blow yourself up like a balloon: bullets and cannonballs bounce off you and fly back the way they came.',
         steps: [{ buff: { id: 'balloon', name: 'Balloon', dur: 1.8, mods: { speedMul: 0.35 }, reflect: 1.8, reflectWord: 'BOING!', look: { bulk: 1.9 } } }] }),
+      T(25, { id: 'gomu_stamp', name: 'Gum-Gum Stamp', anim: 'kick_high', windup: 0.18, recover: 0.3, cd: 4, say: 'Gomu Gomu no... Stamp!', desc: 'A rubber leg shot out straight at them, sole first: it lands like a door slammed in their face.',
+        steps: [{ hit: { shape: 'line', range: 5.5, width: 0.9, damage: 20, knockback: 9, stun: 0.45, heavy: true }, vfx: 'stab' }] }),
+      T(35, { id: 'gomu_spear', name: 'Gum-Gum Spear', anim: 'kick_high', windup: 0.3, recover: 0.35, cd: 7, say: 'Gomu Gomu no... Yari!', desc: 'Both feet pressed together and stretched out like a spearhead: it drives straight through whoever is in front of you.',
+        steps: [{ hit: { shape: 'line', range: 6.5, width: 1.0, damage: 30, knockback: 10, stun: 0.6, heavy: true, guardBreak: true }, vfx: 'stab' }] }),
+      T(40, { id: 'gomu_bell', name: 'Gum-Gum Bell', anim: 'grab', windup: 0.25, recover: 0.35, cd: 9, say: 'Gomu Gomu no... Kane!', desc: 'Grab hold of them, stretch your head right back — and let it fly into theirs like the clapper of a bell.',
+        steps: [{ pull: { range: 5, strength: 12, stun: 0.5 } }, { at: 0.45, hit: { shape: 'arc', range: 1.8, arc: 1.4, offset: 0.2, damage: 32, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true, shake: 0.4 } }] }),
     ],
     // (the Gears: Second and Fourth are switched on by these — see data/fruitForms.js — and so is Third by
     // its own; the old Gear Third and Gear Fifth stay for whoever uses them as single moves)
@@ -60,6 +66,10 @@ export const FRUITS = {
       T(75, { id: 'gura_tsunami', name: 'Kaishin', icon: '🌋', anim: 'slam', windup: 0.9, recover: 0.5, cd: 40, desc: 'Seaquake: strike the very air and the sea rises — everything nearby is crushed, ships are swamped, and the ground goes on shaking.',
         steps: [{ hit: { shape: 'circle', range: 8, damage: 90, knockback: 16, stun: 1.2, element: 'quake', heavy: true, unblockable: true, launch: 7, impactFrame: true, shake: 1.2, hitShips: true, shipDamage: 500 }, vfx: 'ring' },
           { zone: { range: 8, duration: 3, interval: 0.5, damage: 5, element: 'quake', color: '#e0f7fa', kind: 'quake', slow: 0.5 } }] }),
+      T(30, { id: 'gura_bubble', name: 'Quake Bubble', anim: 'quake', windup: 0.35, recover: 0.35, cd: 8, desc: 'A bubble of tremors gathered round the fist and flung: where it bursts, the very air shatters like glass.',
+        steps: [{ proj: { speed: 16, range: 12, radius: 0.7, damage: 14, sprite: 'shockwave', color: '#e0f7fa', size: 1.6, element: 'quake', pierce: true, explode: { range: 3.2, damage: 46, element: 'quake', knockback: 12 } } }] }),
+      T(60, { id: 'gura_tilt', name: 'Sky Tilt', anim: 'grab', windup: 0.55, recover: 0.45, cd: 18, desc: 'Grab the air itself and wrench it sideways: the whole field tilts like the deck of a ship, and everyone in a great sweep in front of you is thrown off their feet.',
+        steps: [{ hit: { shape: 'arc', range: 9, arc: 1.8, offset: 0.3, damage: 50, knockback: 15, stun: 1.0, element: 'quake', heavy: true, guardBreak: true, launch: 5, impactFrame: true, shake: 1.0, hitShips: true, shipDamage: 200 }, vfx: 'ring' }] }),
     ],
   },
   ope: {
@@ -111,6 +121,12 @@ export const FRUITS = {
       T(0, { id: 'bara_cannon', name: 'Chop-Chop Cannon', icon: '🤡', anim: 'cross', windup: 0.15, recover: 0.25, cd: 3, say: 'Bara Bara Ho!', steps: [{ proj: { speed: 20, range: 9, radius: 0.35, damage: 14, sprite: 'barafist', color: '#ffccbc', knockback: 3, stun: 0.3 } }] }),
       T(20, { id: 'bara_festival', name: 'Chop-Chop Festival', icon: '🎪', anim: 'cast', windup: 0.3, recover: 0.4, cd: 10, desc: 'Scatter into a hundred pieces that pummel everything nearby.', steps: [{ hit: { shape: 'circle', range: 3.2, damage: 6, knockback: 1.5, stun: 0.15, duration: 1.2, interval: 0.15 }, vfx: 'ring' }] }),
       T(40, { id: 'bara_escape', name: 'Emergency Escape', icon: '🎈', anim: 'fly', windup: 0.05, recover: 0.1, cd: 8, desc: 'Your pieces fly off every which way and come back together somewhere safer.', steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, air: true } }] }),
+      T(10, { id: 'bara_knives', name: 'Chop-Chop Knives', anim: 'cross', windup: 0.15, recover: 0.25, cd: 4, say: 'Bara Bara Ho!', desc: 'A hand flung off with knives fanned between its fingers: three blades come at them at once.',
+        steps: [{ proj: { speed: 22, range: 10, radius: 0.25, damage: 10, count: 3, spread: 0.35, sprite: 'iceshard', color: '#cfd8dc', slashing: true } }] }),
+      T(30, { id: 'bara_senbei', name: 'Chop-Chop Senbei', anim: 'sweep', windup: 0.2, recover: 0.3, cd: 7, desc: 'Chop-Chop Pancake: your feet stay on the ground and your lower half spins off through them like a saw blade.',
+        steps: [{ dash: { dist: 7, time: 0.35, iframes: 0.2, hit: { damage: 22, knockback: 6, stun: 0.5, range: 1.3 } } }] }),
+      T(55, { id: 'bara_muggy', name: 'Muggy Ball', anim: 'shoot', windup: 0.45, recover: 0.4, cd: 16, say: 'Muggy Ball!', desc: 'Buggy\'s own cannonball, lit and hurled by hand: it bursts with the force of a whole broadside.',
+        steps: [{ proj: { speed: 13, range: 12, radius: 0.5, damage: 10, sprite: 'bomb', size: 1.4, explode: { range: 4, damage: 70, knockback: 12 } } }] }),
     ],
   },
   bomu: {
@@ -121,6 +137,10 @@ export const FRUITS = {
       T(0, { id: 'bomu_kick', name: 'Kick Bomb', icon: '💣', anim: 'kick', windup: 0.2, recover: 0.3, cd: 3, steps: [{ hit: { shape: 'arc', range: 1.8, arc: 1.4, offset: 0.3, damage: 18, knockback: 7, stun: 0.4, element: 'explosion', blast: true }, vfx: 'ring', color: '#ffab40' }] }),
       T(15, { id: 'bomu_nose', name: 'Nose Fancy Cannon', icon: '👃', anim: 'flick', windup: 0.25, recover: 0.3, cd: 5, desc: 'Flick an explosive... bogey. Disgusting and effective.', steps: [{ proj: { speed: 18, range: 12, radius: 0.2, damage: 6, sprite: 'orb', color: '#aed581', explode: { range: 2, damage: 24 } } }] }),
       T(40, { id: 'bomu_breeze', name: 'Breeze Breath Bomb', icon: '🌬', anim: 'breath', windup: 0.35, recover: 0.3, cd: 9, steps: [{ hit: { shape: 'arc', range: 4, arc: 1.2, offset: 0.2, damage: 32, knockback: 8, stun: 0.6, element: 'explosion', heavy: true, blast: true }, vfx: 'ring', color: '#ffab40' }] }),
+      T(20, { id: 'bomu_fist', name: 'Bomb Punch', anim: 'punch', windup: 0.2, recover: 0.3, cd: 4, desc: 'Your fist goes off as it lands.',
+        steps: [{ hit: { shape: 'arc', range: 1.7, arc: 1.2, offset: 0.3, damage: 22, knockback: 8, stun: 0.5, element: 'explosion', blast: true }, vfx: 'ring', color: '#ffab40' }] }),
+      T(55, { id: 'bomu_stomp', name: 'Bomb Stomp', anim: 'slam', windup: 0.4, recover: 0.4, cd: 12, desc: 'Stamp down and let your whole body go off: everything round you is blown off its feet.',
+        steps: [{ hit: { shape: 'circle', range: 3.6, damage: 44, knockback: 12, stun: 0.7, element: 'explosion', heavy: true, blast: true, launch: 3, shake: 0.5 }, vfx: 'ring', color: '#ffab40' }] }),
     ],
   },
   hana: {
@@ -130,6 +150,14 @@ export const FRUITS = {
       T(0, { id: 'hana_clutch', name: 'Seis Fleur: Clutch', icon: '🌸', anim: 'hana', windup: 0.25, recover: 0.3, cd: 5, say: 'Seis Fleur... Clutch!', desc: 'Sprout arms on the target and bend them backwards.', steps: [{ zone: { range: 1.2, duration: 0.3, interval: 0.3, damage: 24, color: '#f48fb1', atTarget: true, kind: 'arms', status: { root: 1.2 } } }] }),
       T(20, { id: 'hana_mil', name: 'Mil Fleur', icon: '🌺', anim: 'hana', windup: 0.4, recover: 0.4, cd: 10, desc: 'A thousand arms bloom around you and strike.', steps: [{ hit: { shape: 'circle', range: 3.6, damage: 7, knockback: 1, stun: 0.3, duration: 1.0, interval: 0.14 }, vfx: 'ring', color: '#f48fb1' }] }),
       T(50, { id: 'hana_gigante', name: 'Mil Fleur: Gigantesco Mano', icon: '✋', anim: 'hana', windup: 0.5, recover: 0.4, cd: 14, desc: 'A thousand arms bloom into two giant hands that slam down.', steps: [{ zone: { range: 2.6, duration: 0.3, interval: 0.3, damage: 60, color: '#f48fb1', atTarget: true, kind: 'arms', status: { root: 1.5 } } }] }),
+      T(30, { id: 'hana_spank', name: 'Cien Fleur: Spank', anim: 'hana', windup: 0.3, recover: 0.35, cd: 8, desc: 'A hundred hands bloom all round the target and slap them silly.',
+        steps: [{ zone: { range: 1.8, duration: 1.0, interval: 0.12, damage: 6, color: '#f48fb1', atTarget: true, kind: 'arms', status: { root: 0.3 } } }] }),
+      T(40, { id: 'hana_strangle', name: 'Treinta Fleur: Strangle', anim: 'hana', windup: 0.35, recover: 0.35, cd: 12, desc: 'Arms bloom on the target\'s neck and legs and hold them fast, squeezing.',
+        steps: [{ zone: { range: 1.4, duration: 2.4, interval: 0.4, damage: 9, color: '#f48fb1', atTarget: true, kind: 'arms', status: { root: 0.6 } } }] }),
+      T(45, { id: 'hana_ojos', name: 'Ojos Fleur', anim: 'pray', windup: 0.3, recover: 0.2, cd: 24, desc: 'Eyes bloom on every wall and tree round you: nothing moves without you seeing it — blows are easier to slip, and every opening is yours.',
+        steps: [{ buff: { id: 'ojos', name: 'Ojos Fleur', dur: 12, mods: { evade: 0.3, crit: 0.25 }, aura: 'rgba(244,143,177,0.5)' } }] }),
+      T(60, { id: 'hana_cuerpo', name: 'Cuerpo Fleur', anim: 'hana', windup: 0.4, recover: 0.3, cd: 35, desc: 'Bloom a whole body of yourself out of the ground in a swirl of petals: a double that draws them off and fights beside you.',
+        steps: [{ summon: { archetype: 'brute', count: 1, name: 'Cuerpo Fleur', duration: 12, look: 'copy', color: ['#f48fb1', '#fce4ec'], moves: ['brawl_tackle'], hpMul: 0.6 } }] }),
     ],
   },
   ito: {
@@ -142,6 +170,10 @@ export const FRUITS = {
       T(40, { id: 'ito_skypath', name: 'Sora no Michi', desc: 'Sky Path: hook your strings onto the clouds and walk the sky. Fly — or press Space again in the air.',
         flight: { style: 'float', ride: 'strings', gauge: 16, speed: 10, climb: 6, ceiling: 40, sea: 3.5, color: '#f8bbd0' } }),
       T(70, { id: 'ito_birdcage', name: 'Birdcage', icon: '🕸', anim: 'summon', windup: 0.8, recover: 0.4, cd: 45, desc: 'A cage of strings round the whole area: nobody inside gets out, it closes in — and its strings cut whatever touches them.', steps: [{ zone: { range: 9, duration: 9, interval: 0.4, damage: 14, color: '#f8bbd0', kind: 'cage', cage: true, shrink: 0.55, edge: 1.2 } }] }),
+      T(20, { id: 'ito_tamaito', name: 'Tamaito', anim: 'point', windup: 0.15, recover: 0.25, cd: 4, desc: 'Bullet String: strings fired from your fingertips like gunshots — they punch clean through.',
+        steps: [{ proj: { speed: 34, range: 13, radius: 0.22, damage: 9, count: 3, spread: 0.12, sprite: 'string', color: '#f8bbd0', pierce: true, slashing: true, element: 'string' } }] }),
+      T(50, { id: 'ito_fulbright', name: 'Fulbright', anim: 'raise', windup: 0.5, recover: 0.4, cd: 14, desc: 'Strings hooked onto the clouds come down on the target like a rain of blades.',
+        steps: [{ zone: { range: 2.6, duration: 1.4, interval: 0.2, damage: 11, color: '#f8bbd0', atTarget: true, kind: 'strings', element: 'string', status: { bleed: 1 } } }] }),
     ],
   },
   mochi: {
@@ -153,6 +185,10 @@ export const FRUITS = {
       T(20, { id: 'mochi_zangiri', name: 'Zan Giri Mochi', icon: '🔱', anim: 'thrust', windup: 0.3, recover: 0.3, cd: 7, desc: 'A trident of hardened mochi, thrust straight through.', steps: [{ hit: { shape: 'line', range: 4.5, width: 1.2, damage: 36, knockback: 5, stun: 0.6, slashing: true }, vfx: 'beam', color: '#fff8e1' }] }),
       T(35, { id: 'mochi_bind', name: 'Sticky Mochi', anim: 'grab', windup: 0.35, recover: 0.35, cd: 11, desc: 'The ground under the target turns to sticky mochi: whoever is in it is stuck fast.', steps: [{ zone: { range: 2.2, duration: 3.5, interval: 0.5, damage: 6, color: '#fff8e1', atTarget: true, kind: 'field', slow: 0.3, status: { root: 0.6 } } }] }),
       T(50, { id: 'mochi_chikara', name: 'Chikara Mochi', icon: '💪', anim: 'slam', windup: 0.45, recover: 0.4, cd: 12, desc: 'Giant mochi fists rain down.', steps: [{ zone: { range: 3, duration: 1.2, interval: 0.2, damage: 18, color: '#fff8e1', atTarget: true, kind: 'fists' } }] }),
+      T(40, { id: 'mochi_buto', name: 'Buto Giri', anim: 'thrust', windup: 0.3, recover: 0.35, cd: 8, desc: 'Martial Cut: whirl the trident Mogura round and drive it through them as you charge.',
+        steps: [{ dash: { dist: 7, time: 0.28, iframes: 0.2, hit: { damage: 34, knockback: 8, stun: 0.6, slashing: true, heavy: true } } }] }),
+      T(60, { id: 'mochi_kaku', name: 'Kaku Mochi', anim: 'slam', windup: 0.5, recover: 0.4, cd: 14, desc: 'Squared Mochi: a great block of mochi pressed down on them — it lands like a wall, and they stick to it.',
+        steps: [{ zone: { range: 2.4, duration: 0.6, interval: 0.3, damage: 34, color: '#fff8e1', atTarget: true, kind: 'fists', status: { root: 1.2 } } }] }),
     ],
   },
   horo: {
@@ -162,6 +198,10 @@ export const FRUITS = {
       T(0, { id: 'horo_negative', name: 'Negative Hollow', icon: '👻', anim: 'point', windup: 0.3, recover: 0.3, cd: 8, desc: '"I\'m so sorry I was born..." A ghost drifts through anything in its way and into the target, who collapses in despair.', steps: [{ proj: { speed: 10, range: 12, radius: 0.5, damage: 4, sprite: 'ghost', color: '#e1bee7', homing: 3, status: { despair: 3 }, stun: 2.2, unblockable: true, passWalls: true } }] }),
       T(20, { id: 'horo_mini', name: 'Mini Hollow', icon: '💫', anim: 'cast', windup: 0.3, recover: 0.3, cd: 7, desc: 'Little ghosts float to the target — and "Ghost Rap": they burst.', steps: [{ proj: { speed: 11, range: 10, radius: 0.3, damage: 6, count: 4, spread: 0.9, sprite: 'ghost', size: 0.7, color: '#e1bee7', homing: 4, passWalls: true, explode: { range: 1.2, damage: 12, colors: ['#e1bee7', '#fff'] } } }] }),
       T(45, { id: 'horo_toku', name: 'Tokuhollow', anim: 'cast', windup: 0.7, recover: 0.4, cd: 16, desc: 'A great ghost that floats after the target and bursts like a bomb.', steps: [{ proj: { speed: 6.5, range: 11, radius: 1.0, damage: 10, sprite: 'ghost', size: 2.2, color: '#e1bee7', homing: 2.5, passWalls: true, explode: { range: 3.2, damage: 44, colors: ['#e1bee7', '#ffffff'] } } }] }),
+      T(30, { id: 'horo_ghostrap', name: 'Ghost Rap', anim: 'cast', windup: 0.35, recover: 0.3, cd: 10, desc: 'Mini Hollows bob up all round you — then, with a snap of your fingers, every one of them bursts.',
+        steps: [{ hit: { shape: 'circle', range: 3.4, damage: 30, knockback: 9, stun: 0.5, element: 'explosion', blast: true }, vfx: 'ring', color: '#e1bee7' }] }),
+      T(55, { id: 'horo_spirit', name: 'Spirit Body', anim: 'pray', windup: 0.3, recover: 0.2, cd: 30, desc: 'Slip out of your body as a ghost: blows pass through you and nobody can quite tell where you are.',
+        steps: [{ buff: { id: 'spirit', name: 'Spirit Body', dur: 6, mods: { evade: 0.7, stealth: 0.6 }, alpha: 0.45, aura: 'rgba(225,190,231,0.5)' } }] }),
     ],
   },
   kage: {
@@ -173,6 +213,10 @@ export const FRUITS = {
       T(40, { id: 'kage_doppelman', name: 'Doppelman', icon: '👤', anim: 'cast', windup: 0.3, recover: 0.2, cd: 30, desc: 'Your shadow peels away and fights beside you as a body of its own.',
         steps: [{ summon: { archetype: 'brute', count: 1, name: 'Doppelman', duration: 18, look: 'shadow', at: 'shadow', moves: ['brawl_tackle'], hpMul: 0.8 } }, { buff: { id: 'doppel', name: 'Doppelman', dur: 18, mods: { damage: 1.15 } } }] }),
       T(60, { id: 'kage_tsuno', name: 'Tsuno-Tokage', anim: 'cast', windup: 0.6, recover: 0.4, cd: 12, desc: 'Horned Lizard: your shadow runs along the ground to the target and bursts up as a spike under them.', steps: [{ zone: { range: 1.8, duration: 0.6, interval: 0.3, damage: 40, color: '#37474f', atTarget: true, kind: 'field' } }] }),
+      T(30, { id: 'kage_blackbox', name: 'Black Box', anim: 'grab', windup: 0.35, recover: 0.35, cd: 13, desc: 'Your shadow rears up round the target and folds shut: a box of shadow they can\'t get out of for a moment.',
+        steps: [{ zone: { range: 1.6, duration: 1.8, interval: 0.6, damage: 10, color: '#263238', atTarget: true, kind: 'dark', status: { root: 0.9 } } }] }),
+      T(50, { id: 'kage_kakumei', name: 'Kage Kakumei', anim: 'thrust', windup: 0.3, recover: 0.35, cd: 9, desc: 'Shadow Revolution: your arm runs out along its own shadow, far longer than any arm should, and strikes.',
+        steps: [{ hit: { shape: 'line', range: 8, width: 1.0, damage: 32, knockback: 8, stun: 0.5, heavy: true }, vfx: 'beam', color: '#37474f' }] }),
     ],
   },
   doku: {
@@ -183,6 +227,12 @@ export const FRUITS = {
       T(0, { id: 'doku_fist', name: 'Poison Fist', icon: '☠', anim: 'punch', windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: 'arc', range: 1.6, arc: 1.2, offset: 0.2, damage: 12, knockback: 3, stun: 0.3, element: 'poison', status: { poison: 5 } } }] }),
       T(20, { id: 'doku_hydra', name: 'Hydra', icon: '🐍', anim: 'cast', windup: 0.4, recover: 0.4, cd: 9, say: 'Hydra!', steps: [{ proj: { speed: 13, range: 12, radius: 0.7, damage: 26, count: 3, spread: 0.4, sprite: 'hydra', element: 'poison', status: { poison: 6 }, homing: 1.5, trail: { color: '#8e24aa', kind: 'smoke' } } }] }),
       T(50, { id: 'doku_venom', name: 'Venom Demon', icon: '👹', anim: 'cast', windup: 0.8, recover: 0.5, cd: 40, desc: 'Venom Demon: Hell\'s Judgement — a giant of poison, and everything around it rots.', steps: [{ zone: { range: 4.5, duration: 8, interval: 0.5, damage: 12, element: 'poison', status: { poison: 4 }, color: '#8e24aa', kind: 'field' } }] }),
+      T(10, { id: 'doku_fugu', name: 'Doku Fugu', anim: 'breath', windup: 0.3, recover: 0.3, cd: 6, desc: 'Poison Puffer: a glob of venom spat at them — it bursts and spatters everything round where it lands.',
+        steps: [{ proj: { speed: 15, range: 11, radius: 0.45, damage: 10, sprite: 'poison', element: 'poison', status: { poison: 4 }, explode: { range: 2.2, damage: 18, element: 'poison', status: { poison: 4 } } } }] }),
+      T(30, { id: 'doku_gumo', name: 'Doku Gumo', anim: 'cast', windup: 0.4, recover: 0.3, cd: 16, desc: 'Poison Cloud: a cloud of venom boils out all round you — whoever breathes it in, rots.',
+        steps: [{ zone: { range: 3.6, duration: 5, interval: 0.5, damage: 8, element: 'poison', status: { poison: 2 }, color: '#8e24aa', kind: 'gas', slow: 0.6 } }] }),
+      T(40, { id: 'doku_chloro', name: 'Chloro Ball', anim: 'cast', windup: 0.45, recover: 0.35, cd: 14, desc: 'A balloon of poison gas floated onto them: it bursts into a choking cloud.',
+        steps: [{ zone: { range: 2.8, duration: 4, interval: 0.5, damage: 9, element: 'poison', status: { poison: 3 }, color: '#ab47bc', atTarget: true, kind: 'gas', slow: 0.5 } }] }),
     ],
   },
   noro: {
@@ -191,6 +241,10 @@ export const FRUITS = {
     techniques: [
       T(0, { id: 'noro_beam', name: 'Noro Noro Beam', icon: '🐌', anim: 'point', windup: 0.25, recover: 0.3, cd: 8, steps: [{ hit: { shape: 'line', range: 9, width: 1.2, damage: 4, stun: 0.1, status: { slowmo: 4 } }, vfx: 'beam', color: '#80deea' }] }),
       T(30, { id: 'noro_mirror', name: 'Noro Noro Beam Sword', icon: '🪞', anim: 'slash', windup: 0.2, recover: 0.3, cd: 10, steps: [{ hit: { shape: 'arc', range: 2.4, arc: 2.2, offset: 0.2, damage: 10, stun: 0.2, status: { slowmo: 3 } }, vfx: 'slash', color: '#80deea' }] }),
+      T(15, { id: 'noro_reflect', name: 'Noro Noro Beam: Reflection', anim: 'point', windup: 0.3, recover: 0.3, cd: 12, desc: 'The Noro Noro photons bounced off a mirror into a wide fan: everyone in front of you slows to a crawl.',
+        steps: [{ hit: { shape: 'arc', range: 6.5, arc: 1.4, offset: 0.2, damage: 5, stun: 0.1, status: { slowmo: 3.5 } }, vfx: 'ring', color: '#80deea' }] }),
+      T(40, { id: 'noro_barrage', name: 'Slow-Mo Barrage', anim: 'punch', windup: 0.2, recover: 0.3, cd: 9, desc: 'Foxy\'s favourite trick: while they\'re slowed to a crawl, lay into them as fast as you can.',
+        steps: [{ hit: { shape: 'arc', range: 2.2, arc: 1.0, offset: 0.3, damage: 6, knockback: 0.6, stun: 0.12, duration: 1.0, interval: 0.1, status: { slowmo: 1 } } }] }),
     ],
   },
   bari: {
@@ -202,6 +256,10 @@ export const FRUITS = {
       T(20, { id: 'bari_crash', name: 'Barrier Crash', icon: '🧱', anim: 'thrust', windup: 0.2, recover: 0.3, cd: 7, desc: 'Charge behind a barrier and ram everything in your way.', steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, hit: { damage: 30, knockback: 9, stun: 0.6, heavy: true, guardBreak: true } } }] }),
       T(40, { id: 'bari_ball', name: 'Barrier Ball', anim: 'block', windup: 0.05, recover: 0.1, cd: 20, desc: 'A sphere of barrier all round you: nothing gets in at all — but you can do nothing from inside it either.',
         steps: [{ buff: { id: 'barrier_ball', name: 'Barrier Ball', dur: 3, barrier: 'all', hold: true, mods: { speedMul: 0.05 } } }] }),
+      T(10, { id: 'bari_pistol', name: 'Barrier Pistol', anim: 'punch', windup: 0.2, recover: 0.3, cd: 4, desc: 'Bari Bari no Pistol: a fist sheathed in barrier — there\'s no stopping what it lands on.',
+        steps: [{ hit: { shape: 'arc', range: 1.9, arc: 1.0, offset: 0.3, damage: 24, knockback: 9, stun: 0.5, heavy: true, guardBreak: true } }] }),
+      T(50, { id: 'bari_bulldog', name: 'Barrier Bulldog', anim: 'palm', windup: 0.35, recover: 0.35, cd: 12, desc: 'A barrier in the shape of a bulldog\'s head, sent charging at them: it bowls over everything in its way.',
+        steps: [{ proj: { speed: 17, range: 12, radius: 1.1, damage: 34, sprite: 'shockwave', color: '#b3e5fc', size: 2.2, pierce: true, knockback: 14, stun: 0.6, heavy: true, hitShips: true } }] }),
     ],
   },
   suke: {
@@ -209,6 +267,10 @@ export const FRUITS = {
     desc: 'Turn yourself (and what you touch) invisible. (Absalom, then Shiliew.)',
     techniques: [
       T(0, { id: 'suke_vanish', name: 'Clear Body', icon: '👁', anim: 'cast', windup: 0.2, recover: 0.1, cd: 16, desc: 'Become invisible: enemies lose track of you and your first hit is a critical.', steps: [{ buff: { id: 'invisible', name: 'Invisible', dur: 8, mods: { stealth: 1, crit: 0.6 }, alpha: 0.12 } }] }),
+      T(10, { id: 'suke_strike', name: 'Clear Strike', anim: 'punch', windup: 0.12, recover: 0.25, cd: 4, desc: 'A blow from an arm they can\'t see: there\'s no telling it\'s coming, so there\'s no blocking it.',
+        steps: [{ hit: { shape: 'arc', range: 1.7, arc: 1.0, offset: 0.3, damage: 20, knockback: 5, stun: 0.5, unblockable: true } }] }),
+      T(30, { id: 'suke_phantom', name: 'Phantom Rush', anim: 'thrust', windup: 0.1, recover: 0.3, cd: 9, desc: 'Turn clear, cross the ground between you unseen — and strike from right in front of them.',
+        steps: [{ teleport: { dist: 10, toTarget: true, gap: 1.0, color: '#eceff1' } }, { at: 0.18, hit: { shape: 'arc', range: 1.8, arc: 1.2, offset: 0.2, damage: 30, knockback: 8, stun: 0.6, unblockable: true, heavy: true } }] }),
     ],
   },
   sube: {
@@ -218,6 +280,10 @@ export const FRUITS = {
     techniques: [
       T(0, { id: 'sube_slide', name: 'Slip Slide', icon: '⛸', anim: 'thrust', windup: 0.05, recover: 0.1, cd: 3, steps: [{ dash: { dist: 6, time: 0.25, iframes: 0.25, hit: { damage: 8, knockback: 3 } } }] }),
       T(25, { id: 'sube_mace', name: 'Mace Swing', icon: '🔨', anim: 'heavy', windup: 0.35, recover: 0.35, cd: 5, steps: [{ hit: { shape: 'arc', range: 2.2, arc: 2, offset: 0.2, damage: 22, knockback: 7, stun: 0.5, heavy: true } }] }),
+      T(10, { id: 'sube_skin', name: 'Slip-Slip Skin', anim: 'flex', windup: 0.15, recover: 0.1, cd: 14, desc: 'Your skin as slick as glass: blows, shots and blades skid right off you.',
+        steps: [{ buff: { id: 'slick', name: 'Slip-Slip Skin', dur: 5, mods: { evade: 0.55 }, aura: 'rgba(252,228,236,0.6)' } }] }),
+      T(40, { id: 'sube_spin', name: 'Slip Spin', anim: 'sweep', windup: 0.25, recover: 0.35, cd: 8, desc: 'Spin on your slick heels with the mace held out: everything round you gets clubbed aside.',
+        steps: [{ hit: { shape: 'circle', range: 2.6, damage: 26, knockback: 9, stun: 0.5, heavy: true }, vfx: 'ring', color: '#fce4ec' }] }),
     ],
   },
   doru: {
@@ -228,6 +294,14 @@ export const FRUITS = {
       T(0, { id: 'doru_arrow', name: 'Candle Arrows', icon: '🕯', anim: 'shoot', windup: 0.2, recover: 0.3, cd: 4, steps: [{ proj: { speed: 18, range: 11, radius: 0.25, damage: 9, count: 3, spread: 0.25, sprite: 'iceshard', color: '#fff8e1' } }] }),
       T(20, { id: 'doru_lock', name: 'Candle Lock', icon: '🔒', anim: 'cast', windup: 0.3, recover: 0.3, cd: 11, desc: 'Wax hardens round the target\'s feet and locks them in place.', steps: [{ zone: { range: 1.5, duration: 0.4, interval: 0.4, damage: 10, color: '#fff8e1', atTarget: true, status: { root: 2.5 } } }] }),
       T(40, { id: 'doru_armor', name: 'Candle Champion', icon: '🗿', anim: 'cast', windup: 0.4, recover: 0.2, cd: 30, steps: [{ buff: { id: 'waxarmor', name: 'Wax Armour', dur: 12, mods: { defMul: 0.55, damage: 1.2 }, aura: 'rgba(255,248,225,0.8)' } }] }),
+      T(25, { id: 'doru_ken', name: 'Doru Doru Arts: Ken', anim: 'slash', windup: 0.2, recover: 0.3, cd: 4, desc: 'Wax Sword: a blade of wax as hard as steel, swept through them.',
+        steps: [{ hit: { shape: 'arc', range: 2.2, arc: 1.8, offset: 0.2, damage: 22, knockback: 4, stun: 0.4, slashing: true }, vfx: 'slash', color: '#fff8e1' }] }),
+      T(35, { id: 'doru_mori', name: 'Doru Doru Arts: Mori', anim: 'shoot', windup: 0.35, recover: 0.35, cd: 8, desc: 'Harpoon: a great spear of hardened wax, flung through everything in a line.',
+        steps: [{ proj: { speed: 20, range: 13, radius: 0.5, damage: 30, sprite: 'iceshard', size: 2.2, color: '#fff8e1', pierce: true, knockback: 8, stun: 0.5 } }] }),
+      T(50, { id: 'doru_wall', name: 'Candle Wall', anim: 'block', windup: 0.05, recover: 0.1, cd: 14, desc: 'A wall of wax springs up in front of you, harder than steel: nothing gets through it from the front.',
+        steps: [{ buff: { id: 'waxwall', name: 'Candle Wall', dur: 3, barrier: 'front', mods: { speedMul: 0.5 }, aura: 'rgba(255,248,225,0.7)' } }] }),
+      T(65, { id: 'doru_service', name: 'Candle Service Set', anim: 'cast', windup: 0.6, recover: 0.4, cd: 22, desc: 'A great wax cake rises round them and sets: everyone caught in it is stuck fast.',
+        steps: [{ zone: { range: 3, duration: 3.5, interval: 0.5, damage: 8, color: '#fff8e1', atTarget: true, kind: 'field', slow: 0.2, status: { root: 0.7 } } }] }),
     ],
   },
   supa: {
@@ -237,6 +311,12 @@ export const FRUITS = {
     techniques: [
       T(0, { id: 'supa_sparkling', name: 'Sparkling Daisy', icon: '✴', anim: 'slash3', windup: 0.25, recover: 0.3, cd: 5, steps: [{ hit: { shape: 'arc', range: 2.4, arc: 2.6, offset: 0.2, damage: 26, knockback: 4, stun: 0.5, slashing: true }, vfx: 'slash', color: '#eceff1' }] }),
       T(25, { id: 'supa_spider', name: 'Spider', icon: '🕷', anim: 'block', windup: 0.05, recover: 0.1, cd: 12, desc: 'Harden your whole body into steel.', steps: [{ buff: { id: 'steel', name: 'Steel Body', dur: 4, mods: { defMul: 0.3 }, aura: 'rgba(176,190,197,0.9)' } }] }),
+      T(15, { id: 'supa_claw', name: 'Spar Claw', anim: 'claw', windup: 0.15, recover: 0.25, cd: 3.5, desc: 'Blades spring from each fingertip and rake down through them.',
+        steps: [{ hit: { shape: 'arc', range: 2, arc: 1.4, offset: 0.2, damage: 20, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 2 } }, vfx: 'slash', color: '#eceff1' }] }),
+      T(35, { id: 'supa_atomic', name: 'Atomic Spar', anim: 'slash3', windup: 0.3, recover: 0.35, cd: 8, desc: 'Your arms become whirling blades: everything round you is cut to ribbons.',
+        steps: [{ hit: { shape: 'circle', range: 2.8, damage: 9, knockback: 1.5, stun: 0.2, slashing: true, duration: 0.8, interval: 0.1 }, vfx: 'slash', color: '#eceff1' }] }),
+      T(55, { id: 'supa_spiral', name: 'Spiral Hollow', anim: 'thrust', windup: 0.3, recover: 0.35, cd: 10, desc: 'Blades spinning from both arms like a drill, driven through them at a run.',
+        steps: [{ dash: { dist: 8, time: 0.3, iframes: 0.25, hit: { damage: 40, knockback: 7, stun: 0.6, slashing: true, heavy: true, status: { bleed: 3 } } } }] }),
     ],
   },
   nikyu: {
@@ -250,6 +330,12 @@ export const FRUITS = {
         steps: [{ hit: { shape: 'arc', range: 1.8, arc: 1.0, offset: 0.2, damage: 18, knockback: 4, stun: 1.2, fling: 24 } }] }),
       T(70, { id: 'nikyu_ursus', name: 'Ursus Shock', icon: '💣', anim: 'cast', windup: 1.0, recover: 0.5, cd: 30, desc: 'Compress the air into a paw-shaped bomb.', steps: [{ proj: { speed: 7, range: 9, radius: 1.2, damage: 20, sprite: 'paw', size: 2.5, pierce: true, explode: { range: 4.5, damage: 110, colors: ['#ffffff', '#e0f7fa', '#b2ebf2'] } } }] }),
       T(85, { id: 'nikyu_pain', name: 'Pain Extraction', anim: 'pray', windup: 0.5, recover: 0.3, cd: 75, desc: 'Push the pain and fatigue out of your own body as a paw-shaped bubble: much of your hurt, and every ailment, gone.', steps: [{ heal: 120, color: '#ffffff' }, { self: { cleanse: true } }] }),
+      T(30, { id: 'nikyu_tsuppari', name: 'Tsuppari Pad Ho', anim: 'palm', windup: 0.3, recover: 0.4, cd: 10, desc: 'Paw after paw thrust out at blinding speed: a storm of paw-shaped shockwaves.',
+        steps: [{ proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: 'paw', pierce: true, knockback: 5, stun: 0.3 } },
+          { at: 0.45, proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: 'paw', pierce: true, knockback: 5, stun: 0.3 } },
+          { at: 0.6, proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: 'paw', pierce: true, knockback: 5, stun: 0.3 } }] }),
+      T(55, { id: 'nikyu_hop', name: 'Paw Hop', anim: 'palm', windup: 0.05, recover: 0.1, cd: 6, desc: 'Repel yourself: gone from where you stood and somewhere else in an instant.',
+        steps: [{ teleport: { dist: 12, color: '#ffffff' } }] }),
     ],
   },
   mane: {
@@ -259,6 +345,8 @@ export const FRUITS = {
     techniques: [
       T(0, { id: 'mane_disguise', name: 'Mimicry', icon: '🎭', anim: 'pray', windup: 0.4, recover: 0.2, cd: 60, desc: 'Disguise yourself: Marines and bounty hunters ignore you until you attack.', steps: [{ buff: { id: 'disguise', name: 'Disguised', dur: 90, mods: { stealth: 0.5 }, disguise: true } }] }),
       T(20, { id: 'mane_memoir', name: 'Memoir Strike', icon: '💭', anim: 'kick', windup: 0.2, recover: 0.3, cd: 8, desc: 'Take a friend\'s face — the enemy hesitates to strike.', steps: [{ hit: { shape: 'arc', range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] }),
+      T(30, { id: 'mane_montage', name: 'Mane Mane Montage', anim: 'pray', windup: 0.3, recover: 0.3, cd: 14, desc: 'Your face a jumble of every face you\'ve ever touched: whoever looks at you is too bewildered to move for a moment.',
+        steps: [{ hit: { shape: 'arc', range: 3.2, arc: 1.6, offset: 0.2, damage: 6, stun: 1.6, status: { despair: 1.2 } }, vfx: 'ring', color: '#f06292' }] }),
     ],
   },
   zushi: {
@@ -271,6 +359,10 @@ export const FRUITS = {
       T(45, { id: 'zushi_ride', name: 'Floating Rubble', desc: 'Lift a slab of rubble with gravity and ride it through the air. Fly — or press Space again in the air.',
         flight: { style: 'ride', ride: 'rock', gauge: 18, speed: 8, climb: 5, ceiling: 35, sea: 3, color: '#9575cd' } }),
       T(70, { id: 'zushi_meteor', name: 'Meteor', icon: '☄', anim: 'raise', windup: 1.2, recover: 0.5, cd: 45, desc: 'Call down a meteor from the heavens.', steps: [{ zone: { range: 4, duration: 1.3, interval: 1.2, damage: 140, color: '#ff7043', atTarget: true, kind: 'meteor', element: 'explosion' } }] }),
+      T(15, { id: 'zushi_pull', name: 'Gravity Pull', anim: 'grab', windup: 0.3, recover: 0.3, cd: 9, desc: 'Gravity turned sideways: the target is dragged across the ground to you — and anyone up in the air comes down hard.',
+        steps: [{ pull: { range: 9, strength: 16, stun: 0.6 } }, { at: 0.35, hit: { shape: 'circle', range: 2.2, damage: 18, knockback: 1, stun: 0.4, status: { grounded: 1.5 } } }] }),
+      T(55, { id: 'zushi_lift', name: 'Rubble Rise', anim: 'raise', windup: 0.5, recover: 0.4, cd: 16, desc: 'Lift the ground under them in great slabs — then let it drop.',
+        steps: [{ zone: { range: 3, duration: 1.0, interval: 0.5, damage: 32, color: '#9575cd', atTarget: true, kind: 'gravity', grounds: true, status: { grounded: 0.8 } } }] }),
     ],
   },
 
@@ -282,6 +374,14 @@ export const FRUITS = {
       T(0, { id: 'hito_heavy', name: 'Heavy Point', icon: '💪', anim: 'flex', windup: 0.4, recover: 0.1, cd: 25, steps: [{ buff: { id: 'heavy_point', name: 'Heavy Point', dur: 15, mods: { damage: 1.4, defMul: 0.8, scale: 1.3 }, look: { hat: 'antlers', bulk: 1.3 } } }] }),
       T(10, { id: 'hito_guard', name: 'Guard Point', anim: 'block', windup: 0.1, recover: 0.1, cd: 14, desc: 'Puff up into a great ball of fur: blows bounce off the fluff (but you can hardly move).', steps: [{ buff: { id: 'guard_point', name: 'Guard Point', dur: 3.5, mods: { defMul: 0.25, speedMul: 0.4 }, look: { bulk: 1.9 } } }] }),
       T(20, { id: 'hito_horn', name: 'Horn Point: Kokutei Roseo', icon: '🦌', anim: 'thrust', windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
+      T(30, { id: 'hito_arm', name: 'Arm Point: Kokutei Cross', anim: 'punch', windup: 0.25, recover: 0.3, cd: 6, desc: 'Arms like a gorilla\'s: both hooves driven into them crossed — and the mark of the cross left behind.',
+        steps: [{ buff: { id: 'arm_point', name: 'Arm Point', dur: 1.2, look: { bulk: 1.25 } } }, { at: 0.25, hit: { shape: 'arc', range: 1.9, arc: 1.2, offset: 0.3, damage: 34, knockback: 10, stun: 0.6, heavy: true, guardBreak: true, impactFrame: true } }] }),
+      T(40, { id: 'hito_walk', name: 'Walk Point', anim: 'flex', windup: 0.25, recover: 0.1, cd: 20, desc: 'Down on four hooves like a true reindeer: you run a great deal faster.',
+        steps: [{ buff: { id: 'walk_point', name: 'Walk Point', dur: 12, mods: { speedMul: 1.45 }, look: { hat: 'antlers' } } }] }),
+      T(50, { id: 'hito_jump', name: 'Jumping Point', anim: 'thrust', windup: 0.25, recover: 0.35, cd: 9, desc: 'Legs built to leap: bound high over them and come down hooves first.',
+        steps: [{ dash: { dist: 7, time: 0.4, iframes: 0.3, air: true, hit: { damage: 26, knockback: 8, stun: 0.6, launch: 3 } } }] }),
+      T(60, { id: 'hito_brain', name: 'Brain Point: Scope', anim: 'pray', windup: 0.3, recover: 0.2, cd: 30, desc: 'Look through the lens of your hooves and find their weak spot: for a while every blow lands where it hurts most.',
+        steps: [{ buff: { id: 'scope', name: 'Scope', dur: 10, mods: { crit: 0.5, damage: 1.15 } } }] }),
     ],
     // (Monster Point is a form, opened by fighting: data/fruitForms.js)
     more: [
@@ -295,6 +395,10 @@ export const FRUITS = {
       T(0, { id: 'neko_hybrid', name: 'Hybrid Form', icon: '🐆', anim: 'flex', windup: 0.4, recover: 0.1, cd: 30, steps: [{ buff: { id: 'leopard', name: 'Leopard Form', dur: 20, mods: { damage: 1.45, speedMul: 1.2, defMul: 0.85 }, aura: 'rgba(255,183,77,0.6)', look: { spots: true, ears: 'round', tail: 'thin', fur: '#ffb74d', hand: '#ffb74d' } } }] }),
       T(20, { id: 'neko_claw', name: 'Leopard Claw', icon: '🐾', anim: 'claw', windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: 'arc', range: 1.9, arc: 1.8, offset: 0.2, damage: 22, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: 'slash', color: '#ffb74d' }] }),
       T(50, { id: 'neko_pounce', name: 'Hunting Pounce', icon: '🐅', anim: 'thrust', windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 8, time: 0.25, iframes: 0.2, hit: { damage: 40, knockback: 5, stun: 0.8, heavy: true } } }] }),
+      T(30, { id: 'neko_shigan', name: 'Shigan: Ouren', anim: 'point', windup: 0.2, recover: 0.3, cd: 6, desc: 'Finger Pistol, Yellow Lotus: a leopard\'s fingers driven through them again and again, faster than they can follow.',
+        steps: [{ hit: { shape: 'arc', range: 1.9, arc: 0.9, offset: 0.3, damage: 7, knockback: 0.5, stun: 0.15, duration: 0.8, interval: 0.08, status: { bleed: 0.5 } }, vfx: 'stab' }] }),
+      T(65, { id: 'neko_rokuogan', name: 'Rokuogan', anim: 'palm', windup: 0.45, recover: 0.4, cd: 14, desc: 'Six King Gun: both fists set against them and all your strength let go at once — a shockwave straight through them.',
+        steps: [{ hit: { shape: 'line', range: 4, width: 1.6, damage: 64, knockback: 14, stun: 0.9, heavy: true, unblockable: true, impactFrame: true, shake: 0.6 }, vfx: 'beam', color: '#ffffff' }] }),
     ],
   },
   tori_phoenix: {
@@ -309,6 +413,10 @@ export const FRUITS = {
       T(45, { id: 'phoenix_form', name: 'Phoenix Hybrid Form', anim: 'flex', windup: 0.35, recover: 0.1, cd: 45, desc: 'Your arms become wings of blue flame: you hit harder, move faster, and the flames heal you as you fight.',
         steps: [{ buff: { id: 'phoenix_form', name: 'Phoenix Form', dur: 20, phoenix: true, regen: 6, mods: { damage: 1.25, speedMul: 1.15 }, aura: 'rgba(77,208,225,0.6)' } }] }),
       T(70, { id: 'phoenix_rebirth', name: 'Rebirth Flames', icon: '♾', anim: 'cast', windup: 0.6, recover: 0.2, cd: 120, desc: 'Burn away all harm: a full heal, every ailment cleansed, and a burst of blue fire.', steps: [{ heal: 400, color: '#4dd0e1', phoenix: 3 }, { hit: { shape: 'circle', range: 3, damage: 30, knockback: 6, element: 'fire' }, vfx: 'ring', color: '#4dd0e1' }, { self: { cleanse: true } }] }),
+      T(40, { id: 'phoenix_pyreapple', name: 'Phoenix Pyreapple', anim: 'sweep', windup: 0.3, recover: 0.35, cd: 9, desc: 'Wings of blue flame swept round in a great arc: they burn whoever they touch — and the flames that touch you, heal.',
+        steps: [{ hit: { shape: 'arc', range: 3.6, arc: 2.6, offset: 0.2, damage: 34, knockback: 8, stun: 0.5, element: 'fire', status: { burn: 2 } }, vfx: 'slash', color: '#4dd0e1' }, { heal: 20, color: '#4dd0e1' }] }),
+      T(55, { id: 'phoenix_talon', name: 'Phoenix Talons', anim: 'claw', windup: 0.2, recover: 0.3, cd: 6, desc: 'A great bird\'s talons, wreathed in blue fire, raked down through them.',
+        steps: [{ hit: { shape: 'arc', range: 2.2, arc: 1.3, offset: 0.2, damage: 30, knockback: 4, stun: 0.5, slashing: true, element: 'fire', status: { bleed: 2 } }, vfx: 'slash', color: '#4dd0e1' }] }),
     ],
   },
   uo_seiryu: {
@@ -320,6 +428,12 @@ export const FRUITS = {
       T(35, { id: 'seiryu_fly', name: 'Azure Dragon Flight', desc: 'Take the Azure Dragon\'s shape and fly on the clouds it makes. Fly, or land again (or press Space again in the air).',
         flight: { style: 'dragon', ride: 'cloud', gauge: 40, speed: 11, climb: 6, ceiling: 60, drain: 0.6, sea: 3, refill: 6, color: '#90caf9' } }),
       T(50, { id: 'seiryu_raimei', name: 'Raimei Hakke', icon: '⚡', anim: 'heavy', windup: 0.6, recover: 0.5, cd: 14, desc: 'Thunder Bagua: a club blow that shakes the heavens.', steps: [{ hit: { shape: 'arc', range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: 'lightning', impactFrame: true, shake: 0.9 } }] }),
+      T(40, { id: 'seiryu_kamaitachi', name: 'Kamaitachi Rusukaina', anim: 'breath', windup: 0.5, recover: 0.4, cd: 10, desc: 'The dragon\'s whiskers whip up a gale of blades: a storm of them sweeps the ground in front of you.',
+        steps: [{ proj: { speed: 20, range: 13, radius: 0.5, damage: 16, count: 7, spread: 1.3, sprite: 'airslash', slashing: true, pierce: true } }] }),
+      T(55, { id: 'seiryu_tatsumaki', name: 'Tatsumaki', anim: 'summon', windup: 0.6, recover: 0.4, cd: 16, desc: 'Dragon Twister: whirlwinds rise round the target, dragging everything in and cutting it to pieces.',
+        steps: [{ zone: { range: 3.2, duration: 2.5, interval: 0.25, damage: 10, color: '#e3f2fd', atTarget: true, kind: 'storm', pull: 3 } }] }),
+      T(70, { id: 'seiryu_ragnaraku', name: 'Ragnaraku', anim: 'slam', windup: 0.7, recover: 0.5, cd: 18, desc: 'The club brought down with all the dragon\'s might: the ground caves in and the shock throws everyone round you into the air.',
+        steps: [{ hit: { shape: 'circle', range: 4.5, damage: 90, knockback: 16, stun: 1.1, heavy: true, guardBreak: true, launch: 6, impactFrame: true, shake: 1.0, hitShips: true }, vfx: 'ring', color: '#90caf9' }] }),
     ],
     // (the whole Azure Dragon is a form, opened by fighting: data/fruitForms.js)
     more: [
@@ -339,6 +453,10 @@ export const FRUITS = {
       T(25, { id: 'mera_higan', name: 'Higan', anim: 'point', windup: 0.2, recover: 0.3, cd: 5, say: 'Higan!', desc: 'Fire Gun: bullets of flame from your fingertips.', steps: [{ proj: { speed: 26, range: 11, radius: 0.18, damage: 6, count: 5, spread: 0.18, sprite: 'fireball', size: 0.5, element: 'fire', status: { burn: 1.5 }, knockback: 1 } }] }),
       T(35, { id: 'mera_enkai', name: 'Enkai: Hibashira', icon: '🌋', anim: 'cast', windup: 0.4, recover: 0.4, cd: 10, desc: 'Flame Commandment, Fire Pillar: a pillar of flame erupts around you.', steps: [{ hit: { shape: 'circle', range: 3, damage: 36, knockback: 8, stun: 0.5, element: 'fire', status: { burn: 3 }, heavy: true }, vfx: 'ring' }] }),
       T(70, { id: 'mera_entei', name: 'Dai Enkai: Entei', icon: '☀', anim: 'raise', windup: 1.1, recover: 0.5, cd: 40, desc: 'Great Flame Commandment: a second sun, hurled.', say: 'Dai Enkai... ENTEI!', steps: [{ proj: { speed: 9, range: 13, radius: 2.2, damage: 40, size: 4, sprite: 'fireball', element: 'fire', pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: 'fire' } } }] }),
+      T(30, { id: 'mera_kagero', name: 'Kagero', anim: 'palm', windup: 0.25, recover: 0.3, cd: 6, desc: 'Heat Haze: a torrent of flame poured from your palm across everything in front of you.',
+        steps: [{ hit: { shape: 'line', range: 8, width: 1.6, damage: 30, knockback: 5, stun: 0.4, element: 'fire', status: { burn: 3 } }, vfx: 'beam', color: '#ff7043' }] }),
+      T(45, { id: 'mera_kyokaen', name: 'Kyokaen', anim: 'spread', windup: 0.35, recover: 0.35, cd: 14, desc: 'Fire Fence: a wall of flame bursts up where they stand — nobody gets through it without burning.',
+        steps: [{ zone: { range: 2.4, duration: 4, interval: 0.4, damage: 10, element: 'fire', status: { burn: 2 }, color: '#ff7043', atTarget: true, kind: 'fire', slow: 0.6 } }] }),
     ],
   },
   hie: {
@@ -352,6 +470,10 @@ export const FRUITS = {
         steps: [{ hit: { shape: 'circle', range: 5, damage: 30, knockback: 1, stun: 0.3, element: 'ice', status: { freeze: 2.5 }, heavy: true }, vfx: 'ring', color: '#e1f5fe' }, { zone: { range: 6.5, duration: 12, interval: 1, damage: 0, color: '#e1f5fe', kind: 'ice', slow: 0.5, freezeWater: true } }] }),
       T(50, { id: 'hie_iceball', name: 'Ice Ball', anim: 'cast', windup: 0.35, recover: 0.3, cd: 10, desc: 'Encase the target in a ball of ice.', steps: [{ proj: { speed: 14, range: 10, radius: 0.6, damage: 24, sprite: 'iceshard', size: 2, color: '#e1f5fe', element: 'ice', status: { freeze: 2.2 } } }] }),
       T(65, { id: 'hie_time', name: 'Ice Time Capsule', icon: '🧊', anim: 'cast', windup: 0.7, recover: 0.4, cd: 25, desc: 'A wave of ice that freezes everything along its path solid.', steps: [{ hit: { shape: 'line', range: 10, width: 2.5, damage: 60, knockback: 2, element: 'ice', status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: 'beam', color: '#e1f5fe' }] }),
+      T(45, { id: 'hie_partisan', name: 'Ice Block: Partisan', icon: '❄', anim: 'cast', windup: 0.35, recover: 0.35, cd: 8, desc: 'A volley of ice spears.',
+        steps: [{ proj: { speed: 24, range: 14, radius: 0.35, damage: 18, count: 5, spread: 0.55, sprite: 'iceshard', size: 1.4, color: '#e1f5fe', element: 'ice', status: { freeze: 0.6 }, pierce: true } }] }),
+      T(55, { id: 'hie_icetime', name: 'Ice Time', anim: 'palm', windup: 0.2, recover: 0.3, cd: 12, desc: 'A touch of your hand and the cold runs right through them: frozen solid where they stand.',
+        steps: [{ hit: { shape: 'arc', range: 1.7, arc: 1.0, offset: 0.2, damage: 24, knockback: 0, stun: 0.3, element: 'ice', status: { freeze: 3.2 }, unblockable: true } }] }),
     ],
   },
   goro: {
@@ -364,6 +486,12 @@ export const FRUITS = {
       T(35, { id: 'goro_elthor', name: 'El Thor', icon: '🌩', anim: 'raise', windup: 0.7, recover: 0.4, cd: 14, desc: 'A pillar of divine lightning straight down from the sky.', say: 'El Thor!', steps: [{ zone: { range: 2.8, duration: 0.8, interval: 0.4, damage: 45, element: 'lightning', status: { shock: 1.5 }, color: '#fff176', atTarget: true, kind: 'thunder' } }] }),
       T(45, { id: 'goro_mamaragan', name: 'Mamaragan', anim: 'raise', windup: 0.6, recover: 0.4, cd: 16, say: 'Mamaragan!', desc: 'Lightning falls from the sky all around you, again and again.', steps: [{ zone: { range: 6, duration: 1.6, interval: 0.25, damage: 12, element: 'lightning', status: { shock: 0.8 }, color: '#fff176', kind: 'thunder' } }] }),
       T(85, { id: 'goro_raigo', name: 'Raigo', icon: '🌑', anim: 'summon', windup: 1.4, recover: 0.6, cd: 90, desc: 'A thundercloud large enough to erase an island.', steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: 'lightning', status: { shock: 0.5 }, color: '#fff176', kind: 'thunder' } }] }),
+      T(10, { id: 'goro_kari', name: 'Kari', anim: 'raise', windup: 0.25, recover: 0.3, cd: 7, desc: 'Rumble: lightning crackles out of your whole body at once — everything round you is struck.',
+        steps: [{ hit: { shape: 'circle', range: 3.4, damage: 26, knockback: 6, stun: 0.6, element: 'lightning', status: { shock: 1 } }, vfx: 'ring', color: '#fff176' }] }),
+      T(25, { id: 'goro_raiju', name: 'Raiju', anim: 'cast', windup: 0.35, recover: 0.3, cd: 9, desc: 'Thunder Beast: a beast of lightning loosed at them — it runs them down wherever they go.',
+        steps: [{ proj: { speed: 18, range: 15, radius: 0.7, damage: 30, sprite: 'thunder', size: 1.6, element: 'lightning', homing: 4, status: { shock: 1 } } }] }),
+      T(30, { id: 'goro_jamboule', name: 'Jamboule', anim: 'point', windup: 0.3, recover: 0.3, cd: 8, desc: 'A ball of lightning dropped on them from your fingertip: it bursts like a thunderclap.',
+        steps: [{ proj: { speed: 15, range: 12, radius: 0.5, damage: 10, sprite: 'lightorb', color: '#fff176', element: 'lightning', explode: { range: 2.6, damage: 36, element: 'lightning', status: { shock: 1.2 } } } }] }),
     ],
     // (Amaru is a form, opened by fighting: data/fruitForms.js)
     more: [
@@ -382,6 +510,10 @@ export const FRUITS = {
       T(35, { id: 'suna_spada', name: 'Desert Spada', icon: '🗡', anim: 'grab', windup: 0.3, recover: 0.35, cd: 8, desc: 'Blades of sand rip through the ground.', steps: [{ hit: { shape: 'line', range: 11, width: 1.2, damage: 40, knockback: 4, stun: 0.5, element: 'sand', slashing: true }, vfx: 'beam', color: '#e1c16e' }] }),
       T(45, { id: 'suna_grip', name: 'Dehydrating Grip', anim: 'grab', windup: 0.3, recover: 0.35, cd: 10, desc: 'Seize the target with your right hand and drain the water from their body: they wither as you hold them.', steps: [{ hit: { shape: 'arc', range: 1.6, arc: 1.0, offset: 0.2, damage: 22, knockback: 1, stun: 0.6, element: 'sand', unblockable: true, status: { dry: 5 } } }] }),
       T(60, { id: 'suna_dry', name: 'Ground Death', icon: '🏜', anim: 'kneel', windup: 0.7, recover: 0.4, cd: 30, desc: 'Drain all moisture from the land around you: whoever is on it dries out.', steps: [{ zone: { range: 6, duration: 5, interval: 0.4, damage: 12, element: 'sand', color: '#d7b56d', kind: 'field', status: { dry: 2 } } }] }),
+      T(40, { id: 'suna_girasole', name: 'Desert Girasole', anim: 'kneel', windup: 0.6, recover: 0.4, cd: 22, desc: 'Drain the ground round them dry: it collapses into a great whirlpool of quicksand that sucks everything down to its heart.',
+        steps: [{ zone: { range: 4.5, duration: 4, interval: 0.4, damage: 9, element: 'sand', color: '#d7b56d', atTarget: true, kind: 'storm', pull: 3.5, slow: 0.35, status: { dry: 1 } } }] }),
+      T(55, { id: 'suna_pesado', name: 'Sables: Pesado', anim: 'cast', windup: 0.45, recover: 0.35, cd: 12, desc: 'A sandstorm squeezed into a ball in your hand and hurled: it bursts into a full storm where it lands.',
+        steps: [{ proj: { speed: 15, range: 12, radius: 0.6, damage: 14, sprite: 'sandblade', size: 1.4, element: 'sand', explode: { range: 3.2, damage: 44, element: 'sand', knockback: 10 } } }] }),
     ],
   },
   moku: {
@@ -395,6 +527,8 @@ export const FRUITS = {
         flight: { style: 'ride', ride: 'smoke', gauge: 14, speed: 10, climb: 5, ceiling: 30, sea: 4, color: '#eceff1' } }),
       T(35, { id: 'moku_out', name: 'White Out', icon: '🌫', anim: 'cast', windup: 0.4, recover: 0.3, cd: 12, desc: 'Fill the area with smoke that seizes whoever is in it: they can barely move.', steps: [{ zone: { range: 4, duration: 5, interval: 0.5, damage: 6, element: 'smoke', color: '#eceff1', kind: 'storm', slow: 0.45, status: { root: 0.4 } } }] }),
       T(60, { id: 'moku_launcher', name: 'White Launcher', icon: '🚀', anim: 'thrust', windup: 0.2, recover: 0.3, cd: 6, desc: 'Turn into smoke and launch yourself at the target.', steps: [{ dash: { dist: 10, time: 0.3, iframes: 0.3, air: true, trail: '#eceff1', hit: { damage: 36, knockback: 8, stun: 0.6, element: 'smoke' } } }] }),
+      T(30, { id: 'moku_vine', name: 'White Vine', anim: 'grab', windup: 0.25, recover: 0.3, cd: 8, desc: 'A long vine of smoke lashed out along the ground: it wraps whoever it touches and holds them.',
+        steps: [{ hit: { shape: 'line', range: 8, width: 1.0, damage: 16, knockback: 1, stun: 0.4, element: 'smoke', status: { root: 1.5 } }, vfx: 'beam', color: '#eceff1' }] }),
     ],
   },
   pika: {
@@ -410,6 +544,8 @@ export const FRUITS = {
       T(45, { id: 'pika_fly', name: 'Light Flight', desc: 'Become light and drift through the air, fast — but not for long. Fly — or press Space again in the air.',
         flight: { style: 'float', ride: 'light', gauge: 10, speed: 15, climb: 8, ceiling: 35, sea: 4, color: '#fff59d' } }),
       T(60, { id: 'pika_amaterasu', name: 'Light Laser', icon: '☀', anim: 'cast', windup: 0.8, recover: 0.4, cd: 25, desc: 'A beam of light from your fingertip that blasts through everything in a line.', steps: [{ hit: { shape: 'line', range: 16, width: 1.6, damage: 90, knockback: 8, stun: 0.8, element: 'light', heavy: true, impactFrame: true, hitShips: true, shipDamage: 300 }, vfx: 'beam', color: '#fff59d' }] }),
+      T(20, { id: 'pika_flash', name: 'Flash', anim: 'raise', windup: 0.15, recover: 0.25, cd: 12, desc: 'Burst into blinding light: everyone round you is left staggering, seeing nothing.',
+        steps: [{ hit: { shape: 'circle', range: 4, damage: 8, knockback: 2, stun: 1.2, element: 'light' }, vfx: 'ring', color: '#fff9c4' }, { fx: { flash: 0.35 } }] }),
     ],
   },
   magu: {
@@ -421,6 +557,9 @@ export const FRUITS = {
       T(20, { id: 'magu_meigo', name: 'Meigo', icon: '👊', anim: 'thrust', windup: 0.3, recover: 0.35, cd: 8, desc: 'Hell Hound: a magma fist that pierces through.', steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 55, knockback: 6, stun: 0.8, element: 'magma', status: { burn: 4 }, heavy: true, guardBreak: true } } }] }),
       T(35, { id: 'magu_inugami', name: 'Inugami Guren', anim: 'thrust', windup: 0.5, recover: 0.4, cd: 14, desc: 'Dog Bite Crimson Lotus: a giant hound\'s head of magma lunges along the ground and bites down.', steps: [{ hit: { shape: 'line', range: 9, width: 2.2, damage: 60, knockback: 8, stun: 0.7, element: 'magma', status: { burn: 4 }, heavy: true, hitShips: true }, vfx: 'beam', color: '#ff5722' }] }),
       T(50, { id: 'magu_ryusei', name: 'Ryusei Kazan', icon: '☄', anim: 'summon', windup: 1.0, recover: 0.5, cd: 35, desc: 'Meteor Volcano: a rain of magma fists.', steps: [{ zone: { range: 6, duration: 2.5, interval: 0.2, damage: 24, element: 'magma', color: '#ff5722', kind: 'meteor', status: { burn: 3 } } }] }),
+      T(40, { id: 'magu_bakuretsu', name: 'Bakuretsu Kazan', anim: 'slam', windup: 0.6, recover: 0.45, cd: 20, desc: 'Erupting Volcano: drive a fist of magma into the ground and it wells up all round you — a floor of molten rock.',
+        steps: [{ hit: { shape: 'circle', range: 3.5, damage: 40, knockback: 10, stun: 0.6, element: 'magma', status: { burn: 3 }, heavy: true, launch: 3 }, vfx: 'ring', color: '#ff5722' },
+          { zone: { range: 4.5, duration: 4, interval: 0.4, damage: 10, element: 'magma', status: { burn: 2 }, color: '#ff5722', kind: 'fire', slow: 0.6 } }] }),
     ],
   },
   yami: {

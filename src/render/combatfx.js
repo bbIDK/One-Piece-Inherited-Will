@@ -1462,6 +1462,216 @@ sig('magu_ryusei zushi_meteor mochi_chikara hana_gigante hana_clutch', {
     return true;
   },
 });
+// ---- the newer techniques (data/fruits.js), each with its own look
+// Gum-Gum: a head flung back and swung like a bell's clapper; a fist tunnelling under them
+sig('gomu_bell', {
+  pull(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 1.4); fx.burst(px, py, 6, { angle: a.angle + Math.PI, spread: 0.5, speed: 6, kind: 'line', color: '#ffffff', z: 1, vz: 0, g: 0, life: 0.18, size: 0.05 }); },
+  hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px, py] = fwd(actor, hb.angle, 0.9);
+    vibration(fx, px, py, 1.5, 1.6, '#fff59d', 4);
+    fx.add('flare', { x: px, y: py, z: 1.5, size: 1.1, color: '#ffffff', life: 0.22 });
+    fx.callout(px, py - 2.2, 'GONG!', '#fff59d', 0.5, { life: 0.8 });
+  },
+});
+sig('gomu_mogura_pistol', {
+  hit(fx, actor, s, a, hb) {
+    const [px, py] = fwd(actor, hb.angle, s.hit.offset || 3);
+    fx.crack(actor.x + Math.cos(hb.angle) * 0.6, actor.y + Math.sin(hb.angle) * 0.4, 0.8, 1.2);
+    fx.crack(px, py, 1.6, 2);
+    dust(fx, px, py, 14, { speed: 4, vz: 4, size: 0.24 });
+    shards(fx, px, py, 0.2, 10, ['#8d6e63', '#a1887f', '#6d4c41']);
+    fx.add('flare', { x: px, y: py, z: 1.2, size: 1.4, color: '#ffffff', life: 0.2 });
+    fx.ring(px, py, 0.3, 2.6, '#ffffff', 0.4, 0.14, { z: 0.06, flat: 0.6, add: true });
+  },
+});
+// Gura: a bubble of quake punched loose; the sky itself tilted
+sig('gura_bubble', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.add('aircrack', { x: px, y: py, z: 0.8, size: 1, life: 0.4 }); vibration(fx, px, py, 0.8, 1, '#e0f7fa', 3); } });
+sig('gura_tilt', {
+  hit(fx, actor, s, a, hb) {
+    const R = (s.hit.range || 8) * 0.7;
+    for (let i = 0; i < 7; i++) { const th = hb.angle + rnd(-0.9, 0.9), rr = R * rnd(0.3, 1); fx.add('aircrack', { x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr * 0.6, z: rnd(1.5, 4), size: rnd(1, 1.8), life: 0.7, delay: i * 0.04 }); }
+    fx.crack(actor.x + Math.cos(hb.angle) * R * 0.5, actor.y + Math.sin(hb.angle) * R * 0.3, R * 0.6, 2.5);
+    fx.shake(0.5, hb.angle); fx.flashScreen(0.08, 'rgba(224,247,250,1)');
+  },
+});
+// Chop-Chop: hands flung off like knives; a spinning top of a body; the Muggy Ball
+sig('bara_knives', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); sparkle(fx, px, py, 0.9, 4, ['#ffffff', '#eceff1']); fx.burst(px, py, 6, { angle: a.angle, spread: 0.8, speed: 6, kind: 'line', color: '#eceff1', z: 0.9, g: 0, life: 0.15, size: 0.05 }); } });
+sig('bara_senbei', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#ffcdd2'; fx.add('vortex', { x: actor.x, y: actor.y, follow: actor, r: 1.1, h: 0.4, kind: 'wind', life: s.dash.time + 0.1, spin: 14, arms: 3 }); } });
+sig('bara_muggy', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); fx.burst(px, py, 6, { kind: 'spark', color: ['#ffab40', '#fff3c4'], speed: 3, z: 1, g: 2, life: 0.3, size: 0.08 }); smoke(fx, px, py, 1, 4, ['#9e9e9e', '#bdbdbd'], { size: 0.18 }); } });
+// Bomb-Bomb: every blow goes off
+sig('bomu_fist bomu_stomp', {
+  hit(fx, actor, s, a, hb) {
+    const stomp = a.def.id === 'bomu_stomp' || (a.def.base === 'bomu_stomp');
+    const [px, py] = stomp ? [actor.x, actor.y] : fwd(actor, hb.angle, 1.1);
+    fx.add('blast', { x: px, y: py, z: stomp ? 0 : 0.6, r: stomp ? 2.4 : 1.4, color: '#ff9100', core: '#fff3c4', life: 0.6 });
+    smoke(fx, px, py, stomp ? 0.3 : 0.8, stomp ? 14 : 8, ['#5d4037', '#757575', '#9e9e9e'], { speed: 2.4, size: 0.4 });
+    embers(fx, px, py, 0.8, 8);
+    if (stomp) fx.crack(px, py, 1.6, 2.2);
+  },
+});
+// Flower-Flower: arms bloom out of the ground (and a body of petals)
+sig('hana_spank hana_strangle', {
+  zone(fx, actor, spec, a, zone) {
+    fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'arms', color: zone.color, zone, life: 1e6 });
+    fx.burst(zone.x, zone.y, 14, { kind: 'petal', color: ['#f48fb1', '#f8bbd0', '#ffffff'], speed: 2.5, z: 0.4, vz: 2, g: 2, life: 0.9, size: 0.1 });
+    return true;
+  },
+});
+sig('hana_ojos', { buff(fx, actor) { for (let i = 0; i < 6; i++) { const th = rnd(0, TAU), rr = rnd(2, 5); fx.burst(actor.x + Math.cos(th) * rr, actor.y + Math.sin(th) * rr * 0.6, 5, { kind: 'petal', color: ['#f48fb1', '#ffffff'], speed: 1.5, z: rnd(0.5, 2), vz: 1, g: 1, life: 0.8, size: 0.09 }); } fx.ring(actor.x, actor.y, 0.3, 4, '#f8bbd0', 0.5, 0.06, { z: 0.05, flat: 0.6, add: true }); } });
+sig('hana_demonio', {
+  buff(fx, actor, s, a, ex) {
+    DEFAULTS.buff(fx, actor, s, a, ex);
+    fx.burst(actor.x, actor.y, 30, { kind: 'petal', color: ['#880e4f', '#f48fb1', '#ffffff'], speed: 4, z: 1.2, vz: 3, g: 1.5, life: 1.2, size: 0.13 });
+    fx.add('pillar', { x: actor.x, y: actor.y, r: 1, h: 6, color: '#ad1457', life: 0.5, kind: 'light' });
+  },
+});
+// String-String: a thread flicked like a bullet; strings rained down out of the sky
+sig('ito_tamaito', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); fx.add('flare', { x: px, y: py, z: 1, size: 0.4, color: '#f8bbd0', life: 0.12 }); } });
+sig('ito_fulbright', {
+  zone(fx, actor, spec, a, zone) {
+    fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'strings', color: '#f8bbd0', zone, life: 1e6 });
+    for (let i = 0; i < 6; i++) { const th = (i / 6) * TAU; fx.add('strings', { x: actor.x, y: actor.y, x1: zone.x + Math.cos(th) * zone.r * 0.6, y1: zone.y + Math.sin(th) * zone.r * 0.4, color: '#f8bbd0', n: 1, life: 0.5 }); }
+    return true;
+  },
+});
+// Mochi: a drilling lance of mochi; a rain of mochi fists; the ground itself turned to mochi
+sig('mochi_buto', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#fff8e1'; fx.add('vortex', { x: actor.x, y: actor.y, follow: actor, r: 0.8, h: 0.9, kind: 'wind', life: s.dash.time + 0.1, spin: 16, arms: 4 }); } });
+sig('mochi_kaku', {
+  zone(fx, actor, spec, a, zone) {
+    fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'mochi', color: '#fff8e1', zone, life: 1e6 });
+    const n = Math.max(3, Math.ceil(zone.t / zone.interval));
+    for (let i = 0; i < n; i++) {
+      const r = Math.sqrt(Math.random()) * zone.r * 0.8, th = rnd(0, TAU);
+      fx.add('meteor', { x: zone.x + Math.cos(th) * r, y: zone.y + Math.sin(th) * r * 0.62, size: 0.5, fall: 0.3, h: 9, drift: 1.2, kind: 'mochi', glow: '#fff8e1', life: 1, delay: i * zone.interval * 0.8 });
+    }
+    return true;
+  },
+});
+sig('mochi_shirotsuki', {
+  hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); dust(fx, actor.x, actor.y, 16, { color: ['#fff8e1', '#ffffff', '#efebe9'], speed: 4, size: 0.3 }); },
+  zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'mochi', color: '#fff8e1', zone, life: 1e6 }); return true; },
+});
+// Hollow-Hollow: ghosts that go off like bombs; your spirit stepping out of your body
+sig('horo_ghostrap', {
+  hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    const [px, py] = fwd(actor, hb.angle, s.hit.offset || 0);
+    for (let i = 0; i < 5; i++) { const th = (i / 5) * TAU; fx.burst(px + Math.cos(th) * 1.2, py + Math.sin(th) * 0.8, 4, { kind: 'smoke', color: ['#f3e5f5', '#ffffff'], speed: 1.5, z: 1, vz: 1, g: -0.5, life: 0.6, size: 0.3 }); }
+    fx.callout(px, py - 2.2, 'RAP!', '#f3e5f5', 0.45, { life: 0.7 });
+  },
+});
+sig('horo_spirit', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); smoke(fx, actor.x, actor.y, 1.2, 14, ['#f3e5f5', '#ffffff', '#e1bee7'], { speed: 1.2, vz: 1.5, size: 0.35 }); afterimage(fx, actor, { tint: '#f3e5f5', life: 1.2, alpha: 0.55 }); } });
+// Shadow-Shadow: a box of shadow round them; a revolution of shadows; Asgard
+sig('kage_blackbox', {
+  zone(fx, actor, spec, a, zone) {
+    fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'dark', color: '#120a1a', zone, life: 1e6 });
+    fx.add('vortex', { x: zone.x, y: zone.y, r: zone.r * 0.7, kind: 'dark', life: zone.t, spin: -4, arms: 4 });
+    smoke(fx, zone.x, zone.y, 0.5, 12, ['#120a1a', '#2a1838'], { speed: 2 });
+    return true;
+  },
+});
+sig('kage_kakumei', { beam: 'dark' });
+sig('kage_asgard', {
+  buff(fx, actor, s, a, ex) {
+    DEFAULTS.buff(fx, actor, s, a, ex);
+    for (let i = 0; i < 12; i++) { const th = (i / 12) * TAU, rr = rnd(3, 6); fx.burst(actor.x + Math.cos(th) * rr, actor.y + Math.sin(th) * rr * 0.6, 3, { kind: 'smoke', color: ['#120a1a', '#2a1838'], speed: rr * 1.2, angle: th + Math.PI, spread: 0.2, z: 1, g: 0, life: 0.5, size: 0.35 }); }
+    fx.add('pillar', { x: actor.x, y: actor.y, r: 1.4, h: 7, color: '#2a1838', life: 0.6, kind: 'dark' });
+    fx.shake(0.4);
+  },
+});
+// Venom: a poison balloon, a cloud of poison gas, a venom demon
+sig('doku_fugu', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); smoke(fx, px, py, 1.2, 8, ['#6a1b9a', '#8e24aa', '#ce93d8'], { speed: 2, size: 0.25 }); } });
+sig('doku_gumo doku_chloro', {
+  zone(fx, actor, spec, a, zone) {
+    fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'gas', color: zone.color || '#7b1fa2', zone, life: 1e6 });
+    smoke(fx, zone.x, zone.y, 0.4, 10, ['#4a148c', '#7b1fa2', '#ce93d8'], { speed: zone.r * 0.9, size: 0.32 });
+    return true;
+  },
+});
+sig('doku_venom_demon', {
+  dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#7b1fa2'; smoke(fx, actor.x, actor.y, 1, 16, ['#4a148c', '#7b1fa2', '#ce93d8'], { speed: 2.5, size: 0.5 }); },
+  zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'gas', color: '#7b1fa2', zone, life: 1e6 }); return true; },
+});
+// Slow-Slow: the beam turned back; a barrage of punches that all land at once
+sig('noro_reflect', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); fx.add('barrier', { x: actor.x, y: actor.y, follow: actor, color: '#80deea', angle: hb.angle, life: 0.5 }); sparkle(fx, actor.x, actor.y, 1, 6, ['#80deea', '#ffffff']); } });
+sig('noro_barrage', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1.2); for (let i = 0; i < 6; i++) fx.add('flare', { x: px + rnd(-0.6, 0.6), y: py + rnd(-0.4, 0.4), z: rnd(0.6, 1.6), size: 0.45, color: '#80deea', life: 0.18, delay: 0.3 + i * 0.05 }); } });
+// Barrier: a barrier punched out flat; a bulldog of barrier charging
+sig('bari_pistol', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); fx.add('barrier', { x: px, y: py, color: '#b3e5fc', angle: hb.angle, life: 0.35 }); } });
+sig('bari_bulldog', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 1); fx.add('barrier', { x: px, y: py, color: '#b3e5fc', angle: a.angle, life: 0.4 }); sparkle(fx, px, py, 1, 5, ['#b3e5fc', '#ffffff']); } });
+// Clear-Clear: blows out of nowhere
+sig('suke_strike suke_phantom', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); fx.ring(px, py, 0.1, 1.2, '#eceff1', 0.3, 0.05, { z: 0.9, add: true }); sparkle(fx, px, py, 1, 4, ['#ffffff', '#eceff1']); } });
+// Slip-Slip: a skin nothing holds on; a spin that sends them sliding
+sig('sube_skin', { buff(fx, actor) { sparkle(fx, actor.x, actor.y, 1, 10, ['#fce4ec', '#ffffff', '#f8bbd0']); fx.ring(actor.x, actor.y, 0.2, 1.3, '#fce4ec', 0.4, 0.06, { add: true }); } });
+sig('sube_spin', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); fx.add('vortex', { x: actor.x, y: actor.y, follow: actor, r: 1.4, h: 0.3, kind: 'wind', life: 0.4, spin: 18, arms: 3 }); sparkle(fx, actor.x, actor.y, 0.6, 6, ['#fce4ec', '#ffffff']); } });
+// Wax-Wax: wax hardened into blades, harpoons and walls
+sig('doru_ken doru_mori', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); sparkle(fx, px, py, 0.9, 4, ['#fffde7', '#ffffff']); } });
+sig('doru_wall', { buff(fx, actor, s, a, ex) { const b = ex.buff; fx.add('barrier', { x: actor.x, y: actor.y, follow: actor, color: '#fff9c4', life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(b) }); sparkle(fx, actor.x, actor.y, 1, 5, ['#fffde7', '#ffffff']); } });
+sig('doru_service', { zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'field', color: '#fff9c4', zone, life: 1e6 }); fx.burst(zone.x, zone.y, 14, { kind: 'drop', color: ['#fffde7', '#fff59d'], speed: 3, z: 3, vz: 1, g: 9, life: 0.6, size: 0.09 }); return true; } });
+// Spike-Spike: blades out of every limb
+sig('supa_claw supa_atomic', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); sparks(fx, actor.x + Math.cos(hb.angle) * 1, actor.y + Math.sin(hb.angle) * 0.7, 0.9, hb.angle, 8, ['#eceff1', '#ffffff', '#b0bec5']); } });
+sig('supa_spiral', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#eceff1'; fx.add('vortex', { x: actor.x, y: actor.y, follow: actor, r: 0.9, h: 0.9, kind: 'wind', life: s.dash.time + 0.1, spin: 22, arms: 4 }); } });
+// Paw-Paw: paws of air slapped out; a hop that's gone in a blink
+sig('nikyu_tsuppari', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.ring(px, py, 0.1, 1, '#ffffff', 0.25, 0.08, { z: 0.9, add: true }); } });
+// Clone-Clone: faces swapped in a blur
+sig('mane_montage', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); fx.burst(actor.x, actor.y, 14, { kind: 'smoke', color: ['#f8bbd0', '#ffffff'], speed: 2.5, z: 1, g: 0, life: 0.4, size: 0.3 }); } });
+// Press-Press: dragged in by gravity; rubble lifted into the sky
+sig('zushi_pull', { pull(fx, actor, s, a) { fx.add('zone', { x: actor.x, y: actor.y, r: s.pull.range, kind: 'gravity', color: '#b39ddb', life: 0.8 }); vibration(fx, actor.x, actor.y, 0.2, s.pull.range * 0.6, '#b39ddb', 3); } });
+sig('zushi_lift', {
+  zone(fx, actor, spec, a, zone) {
+    fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'gravity', color: '#b39ddb', zone, life: 1e6 });
+    for (let i = 0; i < 10; i++) { const th = rnd(0, TAU), rr = zone.r * Math.sqrt(Math.random()); fx.burst(zone.x + Math.cos(th) * rr, zone.y + Math.sin(th) * rr * 0.62, 1, { kind: 'shard', color: ['#6d4c41', '#8d6e63'], speed: 0.2, z: 0.1, vz: rnd(3, 6), g: -0.5, life: 1.4, size: rnd(0.12, 0.25), drag: 0.6 }); }
+    fx.crack(zone.x, zone.y, zone.r * 0.6, 2);
+    return true;
+  },
+});
+// Human-Human: the Rumble points
+sig('hito_arm hito_walk hito_jump hito_brain', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); smoke(fx, actor.x, actor.y, 0.9, 10, ['#ffe0b2', '#ffffff'], { speed: 2, size: 0.3 }); } });
+// Leopard: a finger gun; the Six Kings' Gun
+sig('neko_rokuogan', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); for (let i = 0; i < 3; i++) fx.ring(px, py, 0.1, 1.5 + i * 0.8, '#ffffff', 0.4, 0.1, { z: 0.9, flat: 0.85, delay: i * 0.05, wobble: 0.15, lobes: 9, add: true }); fx.add('aircrack', { x: px, y: py, z: 0.9, size: 1.1, life: 0.45 }); fx.shake(0.4, hb.angle); } });
+// Phoenix: blue flame
+sig('phoenix_pyreapple phoenix_talon', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); flames(fx, px, py, 0.8, 14, ['#4fc3f7', '#81d4fa', '#fff176'], { speed: 2.5, size: 0.22 }); } });
+// Azure Dragon: blades of wind; a whirlwind; a heavenly strike
+sig('seiryu_kamaitachi', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.add('crescent', { x: px, y: py, angle: a.angle, radius: 1.2, arc: 1.8, width: 0.2, color: '#e3f2fd', core: '#ffffff', life: 0.25, z: 1 }); } });
+sig('seiryu_tatsumaki', { zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'storm', color: '#e3f2fd', zone, life: 1e6 }); smoke(fx, zone.x, zone.y, 0.5, 12, ['#e3f2fd', '#ffffff'], { speed: 3, size: 0.45 }); return true; } });
+sig('seiryu_ragnaraku', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); fx.add('pillar', { x: actor.x, y: actor.y, r: 1.2, h: 8, color: '#80deea', life: 0.4, kind: 'light' }); miniBolts(fx, actor.x, actor.y, 0.5, 6, 2.5, '#e1f5fe'); fx.crack(actor.x, actor.y, 2.2, 2.5); } });
+// Flame-Flame: a heat haze; the Flame Fence
+sig('mera_kagero', { beam: 'fire' });
+sig('mera_kyokaen', {
+  zone(fx, actor, spec, a, zone) {
+    fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'fire', color: '#ff7043', zone, life: 1e6 });
+    flames(fx, zone.x, zone.y, 0.3, 18, ['#ff7043', '#ffca28', '#ff5722'], { speed: zone.r, size: 0.3 });
+    return true;
+  },
+});
+// Ice-Ice: a touch that freezes
+sig('hie_partisan', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.7); shards(fx, px, py, 0.9, 8, null, a.angle); } });
+sig('hie_icetime', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); ringSpikes(fx, px, py, 0.9, 7, 'ice'); shards(fx, px, py, 0.8, 10); } });
+// Rumble: a lightning bolt grabbed and swung; a thunder beast; a thunder ball
+sig('goro_kari', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); for (let i = 0; i < 4; i++) { const th = rnd(0, TAU), rr = rnd(0.5, s.hit.range || 3); fx.bolt(actor.x + Math.cos(th) * rr, actor.y + Math.sin(th) * rr * 0.6, actor.x + Math.cos(th) * rr, actor.y + Math.sin(th) * rr * 0.6, '#fff176', 0.3, 0.08, { z0: 7, z1: 0, branches: 2 }); } fx.flashScreen(0.08, 'rgba(255,253,231,1)'); } });
+sig('goro_raiju goro_jamboule', { charge: { kind: 'bolt', color: '#fff176' }, proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.7); miniBolts(fx, px, py, 0.9, 5, 1, '#fff176'); glow(fx, px, py, 0.9, 1, '#fff59d', 0.2); } });
+// Sand-Sand: a sunflower of sand sucking them down; a heavy blade of sand
+sig('suna_girasole', {
+  zone(fx, actor, spec, a, zone) {
+    fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'storm', zone, life: 1e6 });
+    dust(fx, zone.x, zone.y, 16, { color: ['#d7b56d', '#e1c16e', '#bfa16a'], speed: zone.r, size: 0.3 });
+    fx.crack(zone.x, zone.y, zone.r * 0.5, 2);
+    return true;
+  },
+});
+sig('suna_pesado', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.7); dust(fx, px, py, 8, { color: ['#d7b56d', '#e1c16e'], angle: a.angle, spread: 1, speed: 3, z: 0.8 }); } });
+// Smoke: a vine of smoke that lashes round them
+sig('moku_vine', { beam: 'wind', hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const L = s.hit.range || 7; for (let i = 0; i < 6; i++) { const t = (i + 0.5) / 6; smoke(fx, actor.x + Math.cos(hb.angle) * L * t, actor.y + Math.sin(hb.angle) * L * t * 0.8, 0.8, 3, ['#ffffff', '#eceff1'], { size: 0.3 }); } } });
+// Glint-Glint: a flash that blinds
+sig('pika_flash', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); glow(fx, actor.x, actor.y, 1.4, 3.5, '#fff59d', 0.35); fx.add('pillar', { x: actor.x, y: actor.y, r: 0.8, h: 4, color: '#fff59d', life: 0.25, kind: 'light' }); } });
+// Magma: an eruption that leaves the ground burning
+sig('magu_bakuretsu', {
+  hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); flames(fx, actor.x, actor.y, 0.3, 20, ['#ff6f00', '#bf360c', '#ffab40'], { speed: 4, vz: 4, size: 0.3 }); fx.crack(actor.x, actor.y, 2.4, 3); embers(fx, actor.x, actor.y, 1, 12); },
+  zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'fire', color: '#ff6f00', zone, life: 1e6 }); return true; },
+});
+// Dark-Dark: the abyss
+sig('yami_abyss', { charge: { kind: 'dark' }, zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'dark', color: zone.color, zone, life: 1e6 }); fx.add('vortex', { x: zone.x, y: zone.y, r: 2, kind: 'dark', life: zone.t, spin: -5, arms: 6 }); smoke(fx, zone.x, zone.y, 0.4, 16, ['#12001c', '#311b92'], { speed: 4 }); return true; } });
+
 sig('yami_kurouzu', { charge: { kind: 'dark' } });
 sig('yami_blackhole', { charge: { kind: 'dark' }, zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'dark', color: '#311b92', zone, life: 1e6 }); smoke(fx, actor.x, actor.y, 0.3, 12, ['#12001c', '#311b92'], { speed: 3 }); return true; } });
 sig('yami_liberation', {
@@ -1544,6 +1754,12 @@ export function zoneFx(fx, zone, spec, actor, a) {
       break;
     case 'storm':
       smoke(fx, zone.x, zone.y, 0.5, 10, [zone.color || '#eceff1', '#ffffff'], { speed: 3, size: 0.4 });
+      break;
+    case 'gas':
+      smoke(fx, zone.x, zone.y, 0.4, 12, ['#4a148c', zone.color || '#7b1fa2', '#ce93d8'], { speed: zone.r * 0.8, size: 0.45 });
+      break;
+    case 'fire':
+      flames(fx, zone.x, zone.y, 0.3, 16, ['#ff7043', '#ffca28', '#ff5722'], { speed: zone.r, size: 0.3 });
       break;
     case 'cage':
       for (let i = 0; i < 10; i++) { const th = (i / 10) * TAU; fx.add('strings', { x: actor.x, y: actor.y, x1: zone.x + Math.cos(th) * zone.r, y1: zone.y + Math.sin(th) * zone.r * 0.62, color: '#f8bbd0', n: 1, life: 0.6 }); }

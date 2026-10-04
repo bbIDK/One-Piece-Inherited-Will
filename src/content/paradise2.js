@@ -703,7 +703,7 @@ npcs.push(
   {
     id: 'p2_absalom', name: 'Absalom', title: '"Graveyard" Absalom of the Mysterious Four', island: 'thriller_bark', at: { spot: 'graveyard' }, faction: 'pirate', level: 46, boss: true, hpMul: 1.2,
     look: { hair: 'long', hairColor: '#ffe082', muzzle: true, top: '#fafafa', bottom: '#5d4037', hat: 'cowboy', hatColor: '#fafafa', bulk: 1.4 }, bulk: 1.4,
-    fruit: 'suke', fruitMastery: 60, style: 'brawler', moves: ['suke_vanish', 'p2_lion_bite', 'brawl_tackle'], skill: 0.45, breakthrough: 3,
+    fruit: 'suke', fruitMastery: 60, style: 'brawler', moves: ['suke_vanish', 'p2_lion_bite', 'brawl_tackle', 'suke_strike', 'suke_phantom'], skill: 0.45, breakthrough: 3,
     alert: 'You can\'t hit what you can\'t see! Gaohahaha!', when: (c, g) => !D(g, TB_Q),
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: '(A voice from nowhere.) "Over here. No — here. Gaohahaha! Elephant skin, bear muscles, a lion\'s jaw — and the Clear-Clear Fruit. The General Zombies of this graveyard obey me. Want to see my bride? She\'ll be yours to meet at the wedding... after I find her."',
@@ -713,7 +713,7 @@ npcs.push(
   {
     id: 'p2_perona', name: 'Perona', title: 'The "Ghost Princess" of the Mysterious Four', island: 'thriller_bark', at: { spot: 'wonder_garden' }, faction: 'pirate', level: 45, boss: true, hpMul: 1.1,
     look: { hair: 'long', hairColor: '#f48fb1', top: '#212121', bottom: '#e91e63', hat: 'crown', hatColor: '#ffd54f', scale: 0.92 },
-    fruit: 'horo', fruitMastery: 70, moves: ['horo_negative', 'horo_mini', 'p2_tokuhollow'], skill: 0.5, ranged: true, prefRange: 7, breakthrough: 3,
+    fruit: 'horo', fruitMastery: 70, moves: ['horo_negative', 'horo_mini', 'p2_tokuhollow', 'horo_ghostrap'], skill: 0.5, ranged: true, prefRange: 7, breakthrough: 3,
     alert: 'Horohorohoro! Negative Hollow!', barks: ['Horohorohoro!', 'So cute... NOT!'], when: (c, g) => !D(g, TB_Q),
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: '"Horohorohoro! Welcome to my Wonder Garden. Kumashi, don\'t talk, you ruin the mood. (A ghost drifts through you — and for a second you want to crawl into a hole.) That\'s a Negative Hollow. Nobody who\'s felt one wants to fight anymore."',
@@ -747,7 +747,7 @@ npcs.push(
   {
     id: 'p2_moria', name: 'Gecko Moria', title: 'Warlord of the Sea, master of Thriller Bark', island: 'thriller_bark', faction: 'pirate', level: 58, boss: true, hpMul: 1.6, scale: 1.9, bulk: 1.5,
     look: { hair: 'spiky', hairColor: '#212121', hat: 'horns', hatColor: '#212121', skin: '#b0bec5', top: '#212121', bottom: '#4a148c', coat: '#6a1b9a', grin: true, sharpTeeth: true },
-    fruit: 'kage', fruitMastery: 80, moves: ['kage_brickbat', 'kage_steal', 'kage_doppelman', 'p2_kage_zombies', 'p2_kage_kakumei', 'p2_tsuno_tokage'], skill: 0.55,
+    fruit: 'kage', fruitMastery: 80, moves: ['kage_brickbat', 'kage_steal', 'kage_doppelman', 'p2_kage_zombies', 'p2_kage_kakumei', 'p2_tsuno_tokage', 'kage_blackbox'], skill: 0.55,
     bounty: 320000000, infamy: true, breakthrough: 5, lethal: true,
     alert: 'Kishishishi! Your shadow will make a fine soldier!', barks: ['Kishishishi!', 'Shadows Asgard!', 'Brick Bat!'],
     phases: [{ at: 0.5, run: (a, g) => {
@@ -970,7 +970,7 @@ npcs.push(
   {
     id: 'p2_kizaru', name: 'Admiral Kizaru', title: 'Borsalino — Pika Pika no Mi', island: 'sabaody', at: { spot: 'kizaru_arrival', ox: 6 }, faction: 'marine', level: 110, boss: true, hpMul: 3, ai: 'idle',
     look: { hair: 'short', hairColor: '#6d4c41', goggles: true, top: '#fdd835', bottom: '#fbc02d', coat: '#fafafa', coatText: 'JUSTICE', skin: '#f1c9a0' },
-    fruit: 'pika', fruitMastery: 95, moves: ['pika_yasakani', 'pika_yata', 'pika_murakumo', 'pika_amaterasu'], haki: { armament: 70, observation: 70 }, skill: 0.8, lethal: false, breakthrough: 8, bounty: 250000000,
+    fruit: 'pika', fruitMastery: 95, moves: ['pika_yasakani', 'pika_yata', 'pika_murakumo', 'pika_amaterasu', 'pika_flash'], haki: { armament: 70, observation: 70 }, skill: 0.8, lethal: false, breakthrough: 8, bounty: 250000000,
     when: (c, g) => ['kizaru', 'kuma'].includes(S(g, 'p2_sabaody_auction')) && !c.flags.p2_fledKizaru,
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: '"Ooh~ how scary~. You\'re the one who punched a World Noble? (He yawns.) I\'m supposed to capture you. But let\'s see if you can survive the Pacifista first~. Have you ever been kicked at the speed of light?"',
@@ -1082,7 +1082,7 @@ npcs.push(
   {
     id: 'p2_akainu', name: 'Admiral Akainu', title: 'Sakazuki — Magu Magu no Mi', island: 'marineford', at: { spot: 'admirals_hall' }, ...ADMIRAL, level: 115,
     look: { hair: 'short', hairColor: '#212121', hat: 'marine', top: '#b71c1c', bottom: '#7f0000', coat: '#fafafa', coatText: 'JUSTICE', bulk: 1.3, skin: '#e0ac7e' },
-    fruit: 'magu', fruitMastery: 95, moves: ['magu_daifunka', 'magu_meigo', 'magu_ryusei'], haki: { armament: 85, observation: 70 }, lethal: true, bounty: 300000000,
+    fruit: 'magu', fruitMastery: 95, moves: ['magu_daifunka', 'magu_meigo', 'magu_ryusei', 'magu_bakuretsu'], haki: { armament: 85, observation: 70 }, lethal: true, bounty: 300000000,
     when: (c, g) => !warOn(g, 'akainu'),
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: () => (wanted(ctx.char)
@@ -1094,7 +1094,7 @@ npcs.push(
   {
     id: 'p2_aokiji', name: 'Admiral Aokiji', title: 'Kuzan — Hie Hie no Mi', island: 'marineford', at: { spot: 'admirals_hall', ox: 3 }, ...ADMIRAL, level: 112, scale: 1.25,
     look: { hair: 'afro', hairColor: '#212121', top: '#fafafa', bottom: '#1b4f72', coat: '#fafafa', coatText: 'JUSTICE', skin: '#8d6e63' },
-    fruit: 'hie', fruitMastery: 95, moves: ['hie_saber', 'hie_pheasant', 'hie_ageand', 'hie_time'], haki: { armament: 80, observation: 70 }, bounty: 250000000,
+    fruit: 'hie', fruitMastery: 95, moves: ['hie_saber', 'hie_pheasant', 'hie_ageand', 'hie_time', 'hie_partisan', 'hie_icetime'], haki: { armament: 80, observation: 70 }, bounty: 250000000,
     dialogue: (ctx) => ({ start: 'a', nodes: {
       a: { text: '"Ara ara... (He lifts a sleeping mask off his eyes.) Lazy Justice. That\'s my way. If you\'re not here to cause trouble, I\'m going back to sleep. If you are... well. I\'d rather you didn\'t."',
         choices: [{ ...challenge('p2_aokiji') }, { text: 'Let him sleep.', end: true }] },
@@ -1169,7 +1169,7 @@ npcs.push(
   {
     id: 'p2_akainu_war', name: 'Admiral Akainu', title: 'Magma rains on Oris Plaza', island: 'marineford', at: { spot: 'oris_plaza', ox: 4 }, faction: 'marine', level: 115, boss: true, hpMul: 3, hostile: true,
     look: { hair: 'short', hairColor: '#212121', hat: 'marine', top: '#b71c1c', bottom: '#7f0000', coat: '#fafafa', coatText: 'JUSTICE', bulk: 1.3, skin: '#e0ac7e' },
-    fruit: 'magu', fruitMastery: 95, moves: ['magu_daifunka', 'magu_meigo', 'magu_ryusei'], haki: { armament: 85, observation: 70 }, skill: 0.85, lethal: true, breakthrough: 8, bounty: 300000000,
+    fruit: 'magu', fruitMastery: 95, moves: ['magu_daifunka', 'magu_meigo', 'magu_ryusei', 'magu_bakuretsu'], haki: { armament: 85, observation: 70 }, skill: 0.85, lethal: true, breakthrough: 8, bounty: 300000000,
     alert: 'Pirates who flee are still pirates. Dai Funka!', when: (c, g) => warOn(g, 'akainu') && !marine(c),
   },
 
@@ -1490,7 +1490,7 @@ npcs.push(
   {
     id: 'p2_magellan', name: 'Chief Warden Magellan', title: 'Doku Doku no Mi — the strongest man in Impel Down', island: 'id_level4', at: { spot: 'warden_office' }, faction: 'marine', level: 98, boss: true, hpMul: 2.6, hostile: true, scale: 1.4, bulk: 1.7,
     look: { hair: 'spiky', hairColor: '#212121', hat: 'horns', hatColor: '#4a148c', top: '#4a148c', bottom: '#311b92', coat: '#212121', skin: '#e0ac7e' },
-    fruit: 'doku', fruitMastery: 95, moves: ['doku_fist', 'doku_hydra', 'doku_venom'], haki: { armament: 40 }, skill: 0.6, lethal: false, breakthrough: 8, bounty: 150000000,
+    fruit: 'doku', fruitMastery: 95, moves: ['doku_fist', 'doku_hydra', 'doku_venom', 'doku_gumo', 'doku_chloro'], haki: { armament: 40 }, skill: 0.6, lethal: false, breakthrough: 8, bounty: 150000000,
     alert: 'Hydra. Nobody escapes Impel Down on my watch.', barks: ['Hydra!', 'Venom Demon: Hell\'s Judgement!', '(He heads off to the toilet for the ninth time today.)'],
     when: (c, g) => ['level4', 'newkama', 'escape'].includes(S(g, 'p2_impel_down')),
   },
