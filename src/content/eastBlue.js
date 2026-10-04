@@ -587,7 +587,9 @@ const quests = [
     onComplete: (ctx, g) => {
       const isl = g.surface.islands.find((i) => i.id === 'gecko_islands');
       const dock = isl?.docks.find((d) => d.name === "Kaya's Mansion") || isl?.docks[0];
-      if (dock) { g.giveShip('caravel', dock.moor.x, dock.moor.y, 'Going Merry'); g.ui.toast('A NEW SHIP!', 'Kaya gives you a caravel — the Going Merry!', '#ffe082'); }
+      // (there's only the one Going Merry: never a second, whoever saved Kaya before)
+      const have = (ctx.char.fleet || []).some((f) => /going merry/i.test(f.name || '')) || (g.ships || []).some((s) => /going merry/i.test(s.name || '') && !s.sunk);
+      if (dock && !have) { g.giveShip('caravel', dock.moor.x, dock.moor.y, 'Going Merry'); g.ui.toast('A NEW SHIP!', 'Kaya gives you a caravel — the Going Merry!', '#ffe082'); }
     } },
   { id: 'baratie_krieg', name: 'The Sea Restaurant', island: 'baratie', kind: 'story', summary: 'A starving Krieg pirate named Gin is adrift near the Baratie.',
     stages: [

@@ -45916,10 +45916,44 @@ ${GLSL}
     m.name = "standInCrew";
     return m;
   }
+  var isMerry = (s) => /going merry/i.test(s?.name || "");
+  function clothify(mesh, U4, tri2) {
+    const g = mesh.geometry, uv = g.attributes.uv, n = uv.count, w = new Float32Array(n * 2);
+    for (let i = 0; i < n; i++) {
+      const u = uv.getX(i), v = uv.getY(i);
+      w[i * 2] = tri2 ? 27 * u * v * Math.max(0, 1 - u - v) : 4 * u * (1 - u) * (1 - v * v);
+      w[i * 2 + 1] = u;
+    }
+    g.setAttribute("aCloth", new BufferAttribute(w, 2));
+    const P6 = g.attributes.position, ix = g.index ? [0, 1, 2].map((k) => g.index.getX(k)) : [0, 1, 2];
+    const p0 = new Vector3().fromBufferAttribute(P6, ix[0]), e1 = new Vector3().fromBufferAttribute(P6, ix[1]).sub(p0), e2 = new Vector3().fromBufferAttribute(P6, ix[2]).sub(p0);
+    const du1 = uv.getX(ix[1]) - uv.getX(ix[0]), du2 = uv.getX(ix[2]) - uv.getX(ix[0]);
+    const a11 = e1.dot(e1), a12 = e1.dot(e2), a22 = e2.dot(e2), det = a11 * a22 - a12 * a12 || 1;
+    const gu = e1.clone().multiplyScalar((du1 * a22 - du2 * a12) / det).add(e2.clone().multiplyScalar((du2 * a11 - du1 * a12) / det));
+    const mat = mesh.material, base2 = Material.prototype.onBeforeCompile;
+    mat.onBeforeCompile = function(sh, r4) {
+      base2?.call(this, sh, r4);
+      Object.assign(sh.uniforms, { uClothT: U4.t, uClothAmp: U4.amp, uClothGust: U4.gust, uClothAxis: { value: tri2 ? new Vector3(0, 0, 1) : new Vector3(1, 0, 0) }, uClothDu: { value: gu } });
+      sh.vertexShader = "attribute vec2 aCloth;\nuniform float uClothT;\nuniform float uClothAmp;\nuniform float uClothGust;\nuniform vec3 uClothAxis;\nuniform vec3 uClothDu;\nvarying float vClothFold;\n" + sh.vertexShader.replace("#include <beginnormal_vertex>", `#include <beginnormal_vertex>
+      float clA = uClothT * 4.6 - aCloth.y * 7.0 + position.y * 0.35, clB = uClothT * 7.3 - aCloth.y * 12.0 - position.y * 0.6;
+      float clWave = sin(clA) * 0.6 + sin(clB) * 0.4, clH = uClothAmp * aCloth.x;
+      {
+        float across = cos(clA) * -4.2 + cos(clB) * -4.8;
+        vClothFold = clH * across * length(uClothDu);
+        vec3 slope = clH * (across * uClothDu + vec3(0.0, cos(clA) * 0.21 - cos(clB) * 0.24, 0.0));
+        slope -= uClothAxis * dot(slope, uClothAxis);
+        objectNormal = normalize(objectNormal - dot(objectNormal, uClothAxis) * slope * 1.6);
+      }`).replace("#include <begin_vertex>", `#include <begin_vertex>
+      transformed += uClothAxis * (dot(transformed, uClothAxis) * (uClothGust - 1.0) + clWave * clH);`);
+      sh.fragmentShader = "varying float vClothFold;\n" + sh.fragmentShader.replace("#include <color_fragment>", `#include <color_fragment>
+      diffuseColor.rgb *= 1.0 - 0.13 * smoothstep(0.04, 0.16, vClothFold) + 0.05 * smoothstep(0.06, 0.18, -vClothFold);`);
+    };
+    mat.customProgramCacheKey = () => "sailcloth";
+  }
   var ShipView = class {
     constructor(s) {
       this.ship = s;
-      const def = s.def;
+      const def = s.def.figurehead === "ram" && !isMerry(s) ? { ...s.def, figurehead: "scroll" } : s.def;
       const d = shipDims(def);
       this.d = d;
       const root4 = new Group();
@@ -45957,6 +45991,7 @@ ${GLSL}
       this.sails = [];
       this.braces = [];
       this.ownMats = [];
+      this.cloth = { t: { value: 0 }, amp: { value: 0 }, gust: { value: 1 } };
       const own = (m) => {
         this.ownMats.push(m);
         return m;
@@ -45977,7 +46012,7 @@ ${GLSL}
           if (sp.type === "square") {
             const sw2 = sp.w, sh = sp.y1 - sp.y0, yr = sp.yardR || 0.05;
             yk.add(cyl(yr * 0.7, yr, sw2 * 1.08, 6), { at: [0.1 + (d.big ? m.r * 1.2 + yr : 0), sp.y1 + 0.04, -sw2 * 0.54], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
-            const geo2 = new PlaneGeometry(sw2, sh, 6, 4);
+            const geo2 = new PlaneGeometry(sw2, sh, 10, 7);
             geo2.rotateY(Math.PI / 2);
             const tex3 = sp.emblem && kind !== "none" ? sailTexture(kind, s.jr, sailCol) : null;
             const mat = own(new MeshToonMaterial({ color: tex3 ? 16777215 : sailCol, map: tex3, side: DoubleSide }));
@@ -45986,6 +46021,7 @@ ${GLSL}
             mesh.castShadow = true;
             mesh.userData.base = geo2.attributes.position.array.slice();
             grp.add(mesh);
+            clothify(mesh, this.cloth, false);
             this.sails.push({ mesh, sw: sw2, sh, kind: "square" });
           } else if (sp.type === "gaff") {
             const a = [0.12, sp.y0, 0], b = [0.12, sp.y1, 0], c = [-sp.len, sp.y0 + 0.05, 0];
@@ -45996,6 +46032,7 @@ ${GLSL}
             mesh.castShadow = true;
             mesh.userData.base = geo2.attributes.position.array.slice();
             grp.add(mesh);
+            clothify(mesh, this.cloth, true);
             this.sails.push({ mesh, kind: "fore", len: sp.len, y0: sp.y0, y1: sp.y1 });
           } else if (sp.type === "jib") {
             const a = sp.head ? [sp.head[0], sp.head[1], 0] : [m.x + 0.05, sp.y1, 0], b = [sp.tipX, sp.tipY, 0];
@@ -46006,6 +46043,7 @@ ${GLSL}
             mesh.castShadow = true;
             mesh.userData.base = geo2.attributes.position.array.slice();
             root4.add(mesh);
+            clothify(mesh, this.cloth, true);
             this.sails.push({ mesh, kind: "jib" });
           }
         }
@@ -46268,6 +46306,12 @@ ${GLSL}
       const set = s.sailSet ?? 0.5;
       const billow = (0.15 + set * 0.45) * (0.6 + 0.4 * Math.max(0, rel3));
       const side = Math.sin(relA) >= 0 ? 1 : -1;
+      {
+        const wind = Math.min(2, Math.max(0, env2.windStrength ?? 1)), now3 = env2.time || 0, U4 = this.cloth;
+        U4.t.value = now3 * (0.75 + wind * 0.35) % 3600;
+        U4.amp.value = s.sunk ? 0 : (0.04 + 0.09 * wind) * (0.35 + set) * (1 + Math.max(0, -rel3) * 2.2) * Math.max(0.6, this.d.B / 6);
+        U4.gust.value = 1 + 0.08 * wind * Math.sin(now3 * 1.3 + this.d.L) * Math.sin(now3 * 0.47);
+      }
       for (const sl of this.sails) {
         sl.mesh.visible = set > 0.05 || sl.kind === "fore";
         const a = sl.mesh.geometry.attributes.position;
@@ -46282,6 +46326,7 @@ ${GLSL}
             const kv = 1 - (y / (sl.sh / 2)) ** 2 * 0.5;
             a.array[i * 3] = base2[i * 3] + billow * k * kv;
           }
+          sl.mesh.geometry.computeVertexNormals();
         } else {
           const amt = (0.1 + set * 0.35) * side * (sl.kind === "jib" ? 0.6 : 1);
           if (sl.kind === "fore") sl.mesh.scale.y = 1;
@@ -46292,6 +46337,7 @@ ${GLSL}
             const uu = uv[i * 2], vv = uv[i * 2 + 1], w = Math.max(0, 1 - uu - vv);
             a.array[i * 3 + 2] = base2[i * 3 + 2] + amt * 27 * uu * vv * w * 0.8;
           }
+          sl.mesh.geometry.computeVertexNormals();
         }
         a.needsUpdate = true;
       }
@@ -129089,7 +129135,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       onComplete: (ctx, g) => {
         const isl = g.surface.islands.find((i) => i.id === "gecko_islands");
         const dock = isl?.docks.find((d) => d.name === "Kaya's Mansion") || isl?.docks[0];
-        if (dock) {
+        const have = (ctx.char.fleet || []).some((f) => /going merry/i.test(f.name || "")) || (g.ships || []).some((s) => /going merry/i.test(s.name || "") && !s.sunk);
+        if (dock && !have) {
           g.giveShip("caravel", dock.moor.x, dock.moor.y, "Going Merry");
           g.ui.toast("A NEW SHIP!", "Kaya gives you a caravel \u2014 the Going Merry!", "#ffe082");
         }

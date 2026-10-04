@@ -662,10 +662,65 @@ function standInCrew(s, d) {
   return m;
 }
 
+/** Is this the Going Merry (the caravel Kaya gives you: there's only her)? */
+export const isMerry = (s) => /going merry/i.test(s?.name || '');
+
+/**
+ * Sails that move like cloth: each vertex weighted by how free it is (0 where
+ * it's bound — to the yard, the mast, its corners), and in the vertex shader
+ * ripples run across it with the wind and gusts breathe its belly in and out
+ * (`U`: the ship's clock, how hard the wind works the cloth, the gust; set
+ * in ShipView.update; `axis` the way the sail bellies).
+ */
+function clothify(mesh, U, tri) {
+  const g = mesh.geometry, uv = g.attributes.uv, n = uv.count, w = new Float32Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    const u = uv.getX(i), v = uv.getY(i);
+    // (a square sail is lashed along its yard and sheeted at its foot's
+    // corners — its foot works most; a gaff sail and a jib are bound along
+    // their edges)
+    w[i * 2] = tri ? 27 * u * v * Math.max(0, 1 - u - v) : 4 * u * (1 - u) * (1 - v * v);
+    w[i * 2 + 1] = u;
+  }
+  g.setAttribute('aCloth', new THREE.BufferAttribute(w, 2));
+  // (how fast u runs across the cloth, in metres: the ripples' slope, to
+  // shade them, from the first triangle — u is linear over the sail)
+  const P = g.attributes.position, ix = g.index ? [0, 1, 2].map((k) => g.index.getX(k)) : [0, 1, 2];
+  const p0 = new THREE.Vector3().fromBufferAttribute(P, ix[0]), e1 = new THREE.Vector3().fromBufferAttribute(P, ix[1]).sub(p0), e2 = new THREE.Vector3().fromBufferAttribute(P, ix[2]).sub(p0);
+  const du1 = uv.getX(ix[1]) - uv.getX(ix[0]), du2 = uv.getX(ix[2]) - uv.getX(ix[0]);
+  const a11 = e1.dot(e1), a12 = e1.dot(e2), a22 = e2.dot(e2), det = a11 * a22 - a12 * a12 || 1;
+  const gu = e1.clone().multiplyScalar((du1 * a22 - du2 * a12) / det).add(e2.clone().multiplyScalar((du2 * a11 - du1 * a12) / det));
+  const mat = mesh.material, base = THREE.Material.prototype.onBeforeCompile;
+  mat.onBeforeCompile = function (sh, r) {
+    base?.call(this, sh, r);
+    Object.assign(sh.uniforms, { uClothT: U.t, uClothAmp: U.amp, uClothGust: U.gust, uClothAxis: { value: tri ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0) }, uClothDu: { value: gu } });
+    // two travelling ripples down the cloth; the normal tipped by their slope,
+    // and the folds they make shaded in bands (the toon light alone, in two
+    // tones, would hardly show them) running across the sail as it works
+    sh.vertexShader = 'attribute vec2 aCloth;\nuniform float uClothT;\nuniform float uClothAmp;\nuniform float uClothGust;\nuniform vec3 uClothAxis;\nuniform vec3 uClothDu;\nvarying float vClothFold;\n' + sh.vertexShader
+      .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+      float clA = uClothT * 4.6 - aCloth.y * 7.0 + position.y * 0.35, clB = uClothT * 7.3 - aCloth.y * 12.0 - position.y * 0.6;
+      float clWave = sin(clA) * 0.6 + sin(clB) * 0.4, clH = uClothAmp * aCloth.x;
+      {
+        float across = cos(clA) * -4.2 + cos(clB) * -4.8;
+        vClothFold = clH * across * length(uClothDu);
+        vec3 slope = clH * (across * uClothDu + vec3(0.0, cos(clA) * 0.21 - cos(clB) * 0.24, 0.0));
+        slope -= uClothAxis * dot(slope, uClothAxis);
+        objectNormal = normalize(objectNormal - dot(objectNormal, uClothAxis) * slope * 1.6);
+      }`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+      transformed += uClothAxis * (dot(transformed, uClothAxis) * (uClothGust - 1.0) + clWave * clH);`);
+    sh.fragmentShader = 'varying float vClothFold;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      diffuseColor.rgb *= 1.0 - 0.13 * smoothstep(0.04, 0.16, vClothFold) + 0.05 * smoothstep(0.06, 0.18, -vClothFold);`);
+  };
+  mat.customProgramCacheKey = () => 'sailcloth';
+}
+
 export class ShipView {
   constructor(s) {
     this.ship = s;
-    const def = s.def;
+    // (a caravel carries the Going Merry's ram's head only if she's the Merry: any other has a carved scroll at her stem)
+    const def = s.def.figurehead === 'ram' && !isMerry(s) ? { ...s.def, figurehead: 'scroll' } : s.def;
     const d = shipDims(def);
     this.d = d;
     const root = new THREE.Group();
@@ -710,6 +765,7 @@ export class ShipView {
     this.sails = [];
     this.braces = [];
     this.ownMats = [];
+    this.cloth = { t: { value: 0 }, amp: { value: 0 }, gust: { value: 1 } };
     const own = (m) => { this.ownMats.push(m); return m; };
     this.ghostables = [];
     const boxes = [];
@@ -730,7 +786,7 @@ export class ShipView {
         if (sp.type === 'square') {
           const sw = sp.w, sh = sp.y1 - sp.y0, yr = sp.yardR || 0.05;
           yk.add(cyl(yr * 0.7, yr, sw * 1.08, 6), { at: [0.1 + (d.big ? m.r * 1.2 + yr : 0), sp.y1 + 0.04, -sw * 0.54], rot: [Math.PI / 2, 0, 0], color: '#5d4037' });
-          const geo = new THREE.PlaneGeometry(sw, sh, 6, 4);
+          const geo = new THREE.PlaneGeometry(sw, sh, 10, 7);
           geo.rotateY(Math.PI / 2);
           const tex = sp.emblem && kind !== 'none' ? sailTexture(kind, s.jr, sailCol) : null;
           const mat = own(new THREE.MeshToonMaterial({ color: tex ? 0xffffff : sailCol, map: tex, side: THREE.DoubleSide }));
@@ -739,6 +795,7 @@ export class ShipView {
           mesh.castShadow = true;
           mesh.userData.base = geo.attributes.position.array.slice();
           grp.add(mesh);
+          clothify(mesh, this.cloth, false);
           this.sails.push({ mesh, sw, sh, kind: 'square' });
         } else if (sp.type === 'gaff') {
           const a = [0.12, sp.y0, 0], b = [0.12, sp.y1, 0], c = [-sp.len, sp.y0 + 0.05, 0];
@@ -749,6 +806,7 @@ export class ShipView {
           mesh.castShadow = true;
           mesh.userData.base = geo.attributes.position.array.slice();
           grp.add(mesh);
+          clothify(mesh, this.cloth, true);
           this.sails.push({ mesh, kind: 'fore', len: sp.len, y0: sp.y0, y1: sp.y1 });
         } else if (sp.type === 'jib') {
           // the jib is fixed to the hull (not braced)
@@ -760,6 +818,7 @@ export class ShipView {
           mesh.castShadow = true;
           mesh.userData.base = geo.attributes.position.array.slice();
           root.add(mesh);
+          clothify(mesh, this.cloth, true);
           this.sails.push({ mesh, kind: 'jib' });
         }
       }
@@ -1051,6 +1110,15 @@ export class ShipView {
     const set = s.sailSet ?? 0.5;
     const billow = (0.15 + set * 0.45) * (0.6 + 0.4 * Math.max(0, rel));
     const side = Math.sin(relA) >= 0 ? 1 : -1;
+    // the cloth working in the wind: harder the stronger it blows and the more
+    // she's set, flogging when she heads up into it; a gust now and then
+    // filling her out, the ripples running quicker in a breeze
+    {
+      const wind = Math.min(2, Math.max(0, env.windStrength ?? 1)), now = env.time || 0, U = this.cloth;
+      U.t.value = (now * (0.75 + wind * 0.35)) % 3600;
+      U.amp.value = s.sunk ? 0 : (0.04 + 0.09 * wind) * (0.35 + set) * (1 + Math.max(0, -rel) * 2.2) * Math.max(0.6, this.d.B / 6);
+      U.gust.value = 1 + 0.08 * wind * Math.sin(now * 1.3 + this.d.L) * Math.sin(now * 0.47);
+    }
     // (a sail's shape only changes with the wind and how far it's set: reshaped
     // and sent to the GPU again only then)
     for (const sl of this.sails) {
@@ -1067,6 +1135,7 @@ export class ShipView {
           const kv = 1 - (y / (sl.sh / 2)) ** 2 * 0.5;
           a.array[i * 3] = base[i * 3] + billow * k * kv;
         }
+        sl.mesh.geometry.computeVertexNormals();
       } else {
         // fore-and-aft sails belly out to leeward
         const amt = (0.1 + set * 0.35) * side * (sl.kind === 'jib' ? 0.6 : 1);
@@ -1078,6 +1147,7 @@ export class ShipView {
           const uu = uv[i * 2], vv = uv[i * 2 + 1], w = Math.max(0, 1 - uu - vv);
           a.array[i * 3 + 2] = base[i * 3 + 2] + amt * 27 * uu * vv * w * 0.8;
         }
+        sl.mesh.geometry.computeVertexNormals();
       }
       a.needsUpdate = true;
     }
