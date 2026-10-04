@@ -23,9 +23,10 @@ import { BackFlame, PhoenixWings, driftInto } from './chars/flame.js';
 import { createViewmodel } from './chars/viewmodel.js';
 import { holdItem, heldSize } from './chars/helditem.js';
 import { rubberFist, fistState } from './chars/rubber.js';
-import { currentLook, weaponOf, weaponKey, actorPose, rigOptions, LYING, stationSpot, stationReach } from './chars/pose.js';
+import { currentLook, weaponOf, weaponKey, actorPose, rigOptions, LYING, stationSpot, stationReach, HelmHands } from './chars/pose.js';
+import { BOAT_FEEL } from '../game/boatFeel.js';
 import { blendPose } from '../render/anims.js';
-import { shipBob, shipLift } from '../world/hull.js';
+import { shipBob, shipPoint, shipRock } from '../world/hull.js';
 import { WakeTrail } from './wake3d.js';
 import { coatBody, senseOf } from './chars/haki.js';
 import { gearOf, formRig, formBody, shadowRise } from './chars/forms.js';
@@ -34,6 +35,7 @@ import { sigOf } from '../game/haki.js';
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _eyeP = new THREE.Vector3(), _eyeQ = new THREE.Quaternion();
+const _sp3 = [0, 0, 0], _eu = new THREE.Euler(), _qh = new THREE.Quaternion(), _up3 = new THREE.Vector3(0, 1, 0);
 const _fq = new THREE.Quaternion(), _fq2 = new THREE.Quaternion();
 // knocked off your feet, on the way down (see ActorView.update): arched back
 // with the arms thrown up over the head, the legs going out from under you
@@ -109,6 +111,7 @@ class ActorView {
     const helm = a.isPlayer && a.mode === 'sail' && a.ship && !a.ship.sunk ? a.station() : null;
     this.root.visible = !(a.isPlayer && a.mode === 'sail' && !helm);
     if (helm) this.placeAtStation(a, helm, env, ctx);
+    else if (this.tilted) { this.root.quaternion.identity(); this.tilted = false; }
     // in the water the body settles to a new height over a moment — treading
     // water or swimming along, afloat or wading on the bottom — not in a jump
     const wet = !helm && (a.inWater || a.wading > 0);
@@ -141,8 +144,10 @@ class ActorView {
       if (cam.position.distanceTo(_v.set(r.x, r.y + 1.55 * (this.look.scale || 1), r.z)) < 0.45) this.root.visible = false;
     }
     this.frame++;
-    // far characters animate at a lower rate (their position still updates every frame)
-    const every = dist < 22 ? 1 : dist < 45 ? 2 : 3;
+    // far characters animate at a lower rate (their position still updates every frame) —
+    // never you, though: at the helm the camera stands well off, and your hands
+    // keep to the spokes of a turning wheel only if they move with it every frame
+    const every = a.isPlayer || dist < 22 ? 1 : dist < 45 ? 2 : 3;
     const full = redraw !== false && (this.frame % every === 0 || this.lastT < 0);
     const scaleBuff = a.buffs.find((b) => b.mods?.scale);
     const s = (this.look.scale || 1) * (scaleBuff ? scaleBuff.mods.scale : 1);
@@ -184,8 +189,16 @@ class ActorView {
       if (pose.station) {
         const st = pose.station, R = this._grips || (this._grips = [new THREE.Vector3(), new THREE.Vector3()]);
         const hipY = m.d.hip0 + ((o.sitY ?? m.d.hA) + 0.07 - m.d.hip0) * o.sitK;
-        stationReach(st, stationSpot(st), m.d, s, (this.visF ?? a.facing) - st.ship.heading, P.l || 0, hipY, R);
+        // (at the helm you face square to her wheel, turning exactly as she turns)
+        if (helm) this.visF = st.ship.heading;
+        if (st.kind === 'row' || !st.ship.def || st.ship.def.oarsOnly) stationReach(st, stationSpot(st), m.d, s, (this.visF ?? a.facing) - st.ship.heading, P.l || 0, hipY, R);
+        else {
+          // on the wheel's spokes as it turns, hand over hand (pose.js HelmHands)
+          const w = ctx.world, sh = st.ship;
+          (this.helmHands || (this.helmHands = new HelmHands())).update(st, env.time, dtv, this.root.position, w ? w.dx(a.x, sh.x) : sh.x - a.x, sh.y - a.y, this.visF ?? a.facing, helm ? this.root.quaternion : null, s, m.d, hipY, P.l || 0, R);
+        }
         o.reachR = R[0]; o.reachL = R[1];
+        o.rubber = false; // (hands that hold on: never a rubber arm reaching after them)
       } else if (a.fruit === 'gomu') this.stretchTarget(a, ctx, s, o, dtv);
       const knocked = pose.state === 'knocked' || pose.state === 'dead';
       let PP = P;
@@ -228,8 +241,8 @@ class ActorView {
       m.pose(PP, o);
       // turning: eased, so people swing round rather than snap (quickly for
       // you and anyone mid-technique, more gently for folk walking about)
-      const want = a.facing || 0;
-      if (this.visF === undefined || dtv >= 1 || knocked) this.visF = want;
+      const want = helm ? helm.ship.heading : a.facing || 0;
+      if (this.visF === undefined || dtv >= 1 || knocked || helm) this.visF = want;
       else this.visF += angleDiff(this.visF, want) * (1 - Math.exp(-dtv * (a.isPlayer ? 24 : a.action ? 20 : 10)));
       this.yaw.rotation.y = -(this.visF + (P.sp || 0) * TAU);
       // long hair and coat tails swing (close enough to see)
@@ -390,10 +403,22 @@ class ActorView {
 
   /** At the helm or the oars of your ship: stand (or sit) where the work is, riding up and down with her. */
   placeAtStation(a, st, env, ctx) {
-    const s = st.ship, spot = stationSpot(st), w = ctx.world, h = s.heading;
+    const s = st.ship, spot = stationSpot(st), w = ctx.world;
     // (the ship's middle relative to you: nothing, at her helm)
     const dx = w ? w.dx(a.x, s.x) : s.x - a.x, dy = s.y - a.y;
-    this.root.position.set(dx + Math.cos(h) * spot.u, shipLift(s, env.time, spot.u, 0, spot.floor), dy + Math.sin(h) * spot.u);
+    // on her deck where the work is, as she rolls and pitches — not where
+    // she'd have it lying flat: up on a big ship's quarterdeck that's half a
+    // metre off in a few degrees of roll, and the wheel's spokes with it
+    const p = shipPoint(s, env.time, spot.u, 0, spot.floor, _sp3);
+    this.root.position.set(dx + p[0], p[1], dy + p[2]);
+    // leaning a little with the deck under the feet (braced on it, not stood stiff upright on a slope)
+    const k = BOAT_FEEL.standTilt;
+    if (k > 0) {
+      const [roll, pitch] = shipRock(s, env.time);
+      _eu.set(roll * k, -s.heading, pitch * k, 'YXZ');
+      this.root.quaternion.setFromEuler(_eu).multiply(_qh.setFromAxisAngle(_up3, s.heading));
+      this.tilted = true;
+    } else this.root.quaternion.identity();
   }
 
   /** Head yaw toward the camera for nearby idle NPCs. */

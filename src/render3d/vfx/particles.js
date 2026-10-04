@@ -22,7 +22,8 @@ export function drawParticles(v, parts) {
     const al = Math.min(1, life * 1.6) * (p.alpha ?? 1) * c[3];
     if (al < 0.01) continue;
     const h = p.under !== undefined ? p.z - p.under : p.z;
-    const X = w.dx(v.ox, p.x), Z = p.y - v.oy, Y = v.ground(p.x, p.y) + h;
+    // (on the ground or a deck under it — or, a burst placed in the world as it is, at its own height: fx.burst o.world)
+    const X = w.dx(v.ox, p.x), Z = p.y - v.oy, Y = (p.base !== undefined ? p.base : v.ground(p.x, p.y)) + h;
     const sz = p.size || 0.1;
     // (black can't add light: dark sparks and glows — Haki's — are inked on instead)
     const lit = luma(c) >= 0.04 ? 1 : 0;

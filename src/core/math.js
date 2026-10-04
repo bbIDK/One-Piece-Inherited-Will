@@ -24,6 +24,28 @@ export function rotateToward(a, target, maxStep) {
   return a + Math.sign(d) * maxStep;
 }
 
+/**
+ * A spring easing x (moving at v) toward `target`: `w` its rate (per second),
+ * `zeta` its damping (1 settles without overshooting; under 1 overshoots a
+ * little, then settles). It starts and stops gently — no sudden change of
+ * pace — and is worked out exactly, so a long frame never makes it jump.
+ * Returns [x, v] after dt (into `out`, if given).
+ */
+export function springStep(x, v, target, w, dt, zeta = 1, out = [0, 0]) {
+  const e0 = x - target;
+  if (zeta >= 1) {
+    const c = v + w * e0, k = Math.exp(-w * dt);
+    out[0] = target + (e0 + c * dt) * k;
+    out[1] = (v - w * c * dt) * k;
+    return out;
+  }
+  const wd = w * Math.sqrt(1 - zeta * zeta), k = Math.exp(-zeta * w * dt);
+  const B = (v + zeta * w * e0) / wd, cs = Math.cos(wd * dt), sn = Math.sin(wd * dt);
+  out[0] = target + k * (e0 * cs + B * sn);
+  out[1] = k * ((wd * B - zeta * w * e0) * cs - (zeta * w * B + wd * e0) * sn);
+  return out;
+}
+
 export const len = (x, y) => Math.sqrt(x * x + y * y);
 
 export function normalize(x, y) {

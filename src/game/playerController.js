@@ -399,11 +399,14 @@ export class PlayerController {
       s.rowL = fwd || (turn > 0.2 ? 0.8 : 0);
       s.rowR = fwd || (turn < -0.2 ? 0.8 : 0);
       if (s.rowL || s.rowR) s.anchored = false;
-      s.heading += turn * s.def.turn * (game.crewMods?.turnMul || 1) * (fwd ? 0.45 : 0.6) * (0.55 + 0.45 * s.drive) * dt;
+      // (the stroke on one side swings her round: eased in and out like a helm — Ship.steer)
+      s.steer(turn, s.def.turn * (game.crewMods?.turnMul || 1) * (fwd ? 0.45 : 0.6) * (0.55 + 0.45 * s.drive), dt);
       s.sail = 0; s.rowing = 0;
     } else {
+      // (the helm goes over and back easing in and out, and she answers it a
+      // moment later — no snapping round: Ship.steer, tuned in boatFeel.js)
       const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
-      s.heading += turn * steer * dt;
+      s.steer(turn, steer, dt);
       if (ahead) { s.sail = Math.min(1, s.sail + dt * 0.9); s.anchored = false; }
       if (back) s.sail = Math.max(0, s.sail - dt * 1.2);
       s.rowing = inp.isDown('Space') ? 1 : 0;

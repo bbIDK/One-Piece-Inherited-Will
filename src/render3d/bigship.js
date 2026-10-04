@@ -550,10 +550,20 @@ function companionway(k, d, P, s) {
  */
 export function helmWheel(k, P, x, y, R = 0.56, hub = 0.92) {
   // the pedestal: a stout post and the barrel the tiller ropes wind round
+  // (the wheel itself turns as she's steered: its own mesh, wheelParts — see ships3d.js ShipView)
   k.add(box(0.26, hub + 0.1, 0.34), { at: [x + 0.2, y, 0], color: P.wood, outline: 0.012 });
   k.add(cyl(0.15, 0.15, 0.62, 10), { at: [x + 0.2, y + hub - 0.08, -0.31], rot: [Math.PI / 2, 0, 0], color: shade(P.wood, 0.15), outline: 0.01 });
   k.add(cyl(0.045, 0.045, 0.3, 6), { at: [x + 0.05, y + hub, 0], rot: [0, 0, Math.PI / 2], color: P.dark });
-  k.save(); k.translate(x, y + hub, 0); k.rotateY(Math.PI / 2);
+}
+
+/**
+ * A big ship's wheel — the rim, its eight spokes with their turned handles,
+ * the brass boss — about its hub (the origin), its axle along x (fore and
+ * aft): turned about x, as she's steered. Spoke i stands i/8 of the way round
+ * from the top, toward starboard (+z).
+ */
+export function wheelParts(k, P, R = 0.56) {
+  k.save(); k.rotateY(Math.PI / 2);
   k.add(torus(R, 0.045, 6, 28), { color: '#7b5230', outline: 0.012 });
   for (let i = 0; i < 8; i++) {
     k.save(); k.rotateZ(i / 8 * TAU);

@@ -13,6 +13,8 @@
 // boat are things you walk round.
 
 import { swellAt, swellOn } from '../render3d/swell.js';
+import { springStep } from '../core/math.js';
+import { BOAT_FEEL } from '../game/boatFeel.js';
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 
@@ -858,6 +860,26 @@ export function wallDepth(d, u, v, fl, margin) {
 }
 
 /** Where the helmsman stands (a rowboat's rower sits): x along the hull (stern < 0) and the floor height above the waterline. */
+/**
+ * A ship's wheel, as it's built (render3d/ships3d.js wheelGeometry) and
+ * held: { u (along her from the middle), floor (the deck under the helmsman),
+ * hub (its height over her waterline), R (the rim), grip (how far out from
+ * the hub the hands hold its spokes, just outside the rim) } — null on an
+ * open boat (no wheel: oars, or a tiller).
+ */
+export function wheelSpec(d) {
+  if (d.open) return null;
+  if (d._wheel) return d._wheel;
+  let w;
+  if (d.big) w = { u: d.wheelU, floor: d.yq, hub: d.yq + 0.92, R: 0.56, grip: 0.66 };
+  else {
+    const floor = floorAt(d, (d.wheelU + 0.1 + d.L / 2) / d.L);
+    w = { u: d.wheelU, floor, hub: floor + 0.92, R: 0.4, grip: 0.47 };
+  }
+  Object.defineProperty(d, '_wheel', { value: w, enumerable: false });
+  return w;
+}
+
 export function helmPoint(def) {
   const d = shipDims(def);
   if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
@@ -931,25 +953,77 @@ export function solidAt(d, u, v, margin = 0, lvl = null) {
 /**
  * How the swell under her moves her just now: { h (m up), r (roll), p (pitch) }
  * — the sea's own surface (render3d/swell.js: the same waves the water's
- * drawn with) sampled at her bow, her stern, each side and her middle, so she
- * rises and falls and leans with it. A long hull bridges the short seas (they
- * average out under her) and only the long swell lifts her ends; a small boat
- * rides every one. (Once for a moment and a place, then reused.)
+ * drawn with) sampled all over her waterplane, five stations along her and
+ * three across each (weighted by how broad she is there), and the plane that
+ * fits them best: so a long hull bridges the short seas (they average out
+ * under her) and only the long swell lifts her ends, while a small boat rides
+ * every one. And she has weight: she follows that plane through a spring
+ * (BOAT_FEEL's ride*), so she rises, falls and leans with the sea smoothly,
+ * never jolted — led by how fast the sea's moving under her, so she keeps
+ * up with the swell and doesn't lag down into it. (Worked out once for each
+ * moment and place; asked again for the same moment after she's moved on,
+ * the step is redone from where it began.)
  */
-function waveRide(ship, time) {
-  const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0 });
-  if (c.t === time && c.x === ship.x && c.y === ship.y && c.hd === ship.heading) return c;
-  c.t = time; c.x = ship.x; c.y = ship.y; c.hd = ship.heading;
-  c.h = c.r = c.p = 0;
-  // (not up a canal of Reverse Mountain, or going down)
-  if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return c;
+const RIDE_U = [-0.4, -0.2, 0, 0.2, 0.4], RIDE_V = [-0.8, 0, 0.8];
+const softClamp = (x, m) => m * Math.tanh(x / m);
+const _rs = [0, 0];
+function rideTarget(ship, time, out) {
+  out[0] = out[1] = out[2] = 0;
+  if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return out;
   const L = ship.def.length || 6, B = ship.def.beam || L * 0.3;
   const ch = Math.cos(ship.heading), sh = Math.sin(ship.heading);
-  const at = (u, v) => swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
-  const bow = at(L * 0.38, 0), stern = at(-L * 0.38, 0), port = at(0, -B * 0.42), stb = at(0, B * 0.42), mid = at(0, 0);
-  c.h = (bow + stern + port + stb + mid * 2) / 6;
-  c.p = Math.max(-0.22, Math.min(0.22, Math.atan2(bow - stern, L * 0.76)));
-  c.r = Math.max(-0.26, Math.min(0.26, Math.atan2(port - stb, B * 0.84)));
+  let W = 0, Z = 0, Wu = 0, Zu = 0, Wv = 0, Zv = 0;
+  const z = _rz;
+  for (let i = 0; i < RIDE_U.length; i++) {
+    const u = RIDE_U[i] * L, hb = hbAt(RIDE_U[i] + 0.5, B);
+    for (let j = 0; j < RIDE_V.length; j++) {
+      const v = RIDE_V[j] * hb, k = i * 3 + j;
+      z[k] = swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
+      W += hb; Z += hb * z[k];
+    }
+  }
+  const h = Z / W;
+  for (let i = 0; i < RIDE_U.length; i++) {
+    const u = RIDE_U[i] * L, hb = hbAt(RIDE_U[i] + 0.5, B);
+    for (let j = 0; j < RIDE_V.length; j++) {
+      const v = RIDE_V[j] * hb, dz = z[i * 3 + j] - h;
+      Wu += hb * u * u; Zu += hb * u * dz;
+      Wv += hb * v * v; Zv += hb * v * dz;
+    }
+  }
+  out[0] = h;
+  out[1] = Math.atan(Zu / Wu); // (bow up as the sea rises toward her bow)
+  out[2] = Math.atan(-Zv / Wv); // (her port side up as the sea rises to port)
+  return out;
+}
+const _rz = new Float64Array(15), _rt = [0, 0, 0];
+function waveRide(ship, time) {
+  const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0, s: new Float64Array(12), s0: new Float64Array(12), t0: NaN, ok: false });
+  if (c.t === time && c.x === ship.x && c.y === ship.y && c.hd === ship.heading) return c;
+  // a new moment: the state she's in now is where this step starts from
+  if (c.t !== time) { c.s0.set(c.s); c.t0 = c.t; }
+  c.t = time; c.x = ship.x; c.y = ship.y; c.hd = ship.heading;
+  const T = rideTarget(ship, time, _rt), S = c.s, S0 = c.s0, dt = time - c.t0;
+  if (!c.ok || !(dt > 0) || dt > 0.5) {
+    // (the first moment, or a long gap — loading, a pause: she's simply where the sea has her)
+    for (let k = 0; k < 3; k++) { S[k * 2] = T[k]; S[k * 2 + 1] = 0; S[6 + k] = T[k]; S[9 + k] = 0; }
+    c.ok = true;
+  } else {
+    const F = BOAT_FEEL, L = ship.def?.length || 6;
+    const w = Math.max(1.6, F.rideRate + F.rideRatePerM * L), z = Math.min(1, Math.max(0.3, F.rideDamp)), lead = 2 * z / w * F.rideLead;
+    // (led by how fast the sea's rising or falling under her — the swell's own
+    // pace, not every quick little sea she sweeps through turning hard: the
+    // bigger she is, the more of those she rides through without answering)
+    const kv = 1 - Math.exp(-dt / (0.1 + 0.006 * L));
+    for (let k = 0; k < 3; k++) {
+      const vS = S0[9 + k] + ((T[k] - S0[6 + k]) / dt - S0[9 + k]) * kv;
+      springStep(S0[k * 2], S0[k * 2 + 1], T[k] + vS * lead, w, dt, z, _rs);
+      S[k * 2] = _rs[0]; S[k * 2 + 1] = _rs[1]; S[6 + k] = T[k]; S[9 + k] = vS;
+    }
+  }
+  c.h = S[0];
+  c.p = softClamp(S[2], BOAT_FEEL.pitchMax);
+  c.r = softClamp(S[4], BOAT_FEEL.rollMax);
   return c;
 }
 
@@ -977,6 +1051,30 @@ export function shipRock(ship, time) {
 export function shipLift(ship, time, u, v, h) {
   const [a, b] = shipRock(ship, time);
   return shipBob(ship, time) + (u * Math.sin(b) + h * Math.cos(b)) * Math.cos(a) - v * Math.sin(a);
+}
+
+/**
+ * Where a point aboard is just now, all of it: `u` along her from the middle
+ * (+ toward the bow), `v` across (+ to starboard), `h` over her waterline —
+ * turned with her heading, her roll and her pitch, exactly as she's drawn
+ * (ships3d.js: rotation (roll, -heading, pitch) in 'YXZ' order). Into `out`:
+ * [x, y, z] — x and z from her middle (world tiles: x east, z = world y),
+ * y metres above the sea (the same as shipLift). A point well up on her
+ * decks swings a good way to and fro as she rolls and pitches (the helm of
+ * a big ship, five metres up, half a metre in a five-degree roll): whatever
+ * has to stay on her — the helmsman at the wheel, the hands on its spokes —
+ * goes there, not where she'd be lying flat.
+ */
+export function shipPoint(ship, time, u, v, h, out = [0, 0, 0]) {
+  const [a, b] = shipRock(ship, time);
+  const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+  const x1 = u * cb - h * sb, y1 = u * sb + h * cb;
+  const x2 = x1, y2 = y1 * ca - v * sa, z2 = y1 * sa + v * ca;
+  const ch = Math.cos(ship.heading), shd = Math.sin(ship.heading);
+  out[0] = x2 * ch - z2 * shd;
+  out[1] = shipBob(ship, time) + y2;
+  out[2] = x2 * shd + z2 * ch;
+  return out;
 }
 
 /**

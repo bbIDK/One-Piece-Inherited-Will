@@ -150,15 +150,26 @@ export class FX {
     return p;
   }
 
+  /**
+   * `n` particles thrown out from (x, y). `o.world`: a burst placed in the
+   * 3D world as it is — not lifted onto someone standing just "above" it
+   * (the top-down view's way of drawing height), thrown as far one way as
+   * another, at `o.base` m above the sea (not on whatever ground or deck is
+   * under it as it flies: spray off a ship's bow goes over her side, not onto
+   * her deck), carried along at `o.carry` [vx, vy] (the ship it came off),
+   * and gone (`o.sink`) when it falls back below where it started.
+   */
   burst(x, y, n, o = {}) {
-    const lift = this.lift3d(x, y);
+    const world = !!o.world;
+    const lift = world ? 0 : this.lift3d(x, y);
     if (lift) { y += lift; o = { ...o, z: (o.z ?? 0.6) + lift }; }
     this._inBurst = true;
+    const cx = o.carry ? o.carry[0] : 0, cy = o.carry ? o.carry[1] : 0;
     for (let i = 0; i < n; i++) {
       const a = (o.angle ?? Math.random() * TAU) + (o.spread !== undefined ? (Math.random() - 0.5) * o.spread : 0);
       const sp = (o.speed ?? 4) * (0.4 + Math.random() * 0.8);
       this.particle({
-        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7,
+        x, y, vx: Math.cos(a) * sp + cx, vy: Math.sin(a) * sp * (world ? 1 : 0.7) + cy, base: o.base, sink: o.sink,
         z: (o.z ?? 0.6) + (o.zJitter ? (Math.random() - 0.5) * o.zJitter : 0), vz: o.vz !== undefined ? o.vz * (0.5 + Math.random()) : Math.random() * 3,
         g: o.g ?? 9, life: (o.life ?? 0.5) * (0.6 + Math.random() * 0.8), size: (o.size ?? 0.1) * (0.6 + Math.random() * 0.8),
         color: Array.isArray(o.color) ? o.color[Math.floor(Math.random() * o.color.length)] : o.color || '#fff',
@@ -328,6 +339,8 @@ export class FX {
       // (a diver's bubbles rise from where they are, `under` the surface, and
       // burst when they reach it — not float on up into the air)
       if (p.under !== undefined && p.z >= p.under) { this.parts.splice(i, 1); continue; }
+      // (spray falling back into the sea is gone into it)
+      if (p.sink && p.z < 0) { this.parts.splice(i, 1); continue; }
       if (p.z < 0) { p.z = 0; p.vz *= -0.3; p.vx *= 0.6; p.vy *= 0.6; }
       p.size = Math.max(0.005, p.size + p.grow * sdt);
       if (p.vr) p.rot = (p.rot || 0) + p.vr * sdt;

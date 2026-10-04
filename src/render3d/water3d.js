@@ -44,6 +44,7 @@ const SHIPS_N = 8;
 const HULLS = /* glsl */`
   uniform vec4 uShips[${SHIPS_N}];
   uniform vec4 uShipD[${SHIPS_N}];
+  uniform float uShipK[${SHIPS_N}];   // how sharply each is turning (1/m: + to starboard)
   float hullHalf(float t) {
     float tc = clamp(t, 0.0, 1.0);
     return tc > 0.58 ? sqrt(max(0.0, 1.0 - pow((tc - 0.58) / 0.42, 2.2))) : tc < 0.14 ? 0.74 + 0.26 * sin(tc / 0.14 * 1.5707963) : 1.0;
@@ -213,9 +214,18 @@ const FRAG = /* glsl */`
       // along her side
       float wdt = 0.3 + spd * 0.35 + spd * 0.95 * smoothstep(0.55, 1.0, f.z);
       float band = (1.0 - smoothstep(wdt * 0.3, wdt, f.w)) * step(-0.3, f.w);
-      // the bow wave: out from the stem, back along her
-      float back = (0.98 - f.z) * D.x;
-      float edge = abs(abs(f.y) - (D.y * 0.12 + back * 0.36));
+      // the bow wave: out from the stem, back along her — along the way she's
+      // come, round the curve of her turn (not swung round rigidly with her
+      // hull, cutting across her wake), its arms square to that track
+      float back = (0.98 - f.z) * D.x, lat = abs(f.y);
+      float kk = clamp(uShipK[i], -2.0 / D.x, 2.0 / D.x);
+      if (abs(kk) > 0.002) {
+        vec2 C = vec2(0.0, 1.0 / kk), st = vec2(D.x * 0.48, 0.0) - C, pc = f.xy - C;
+        float Rs = length(st);
+        back = -atan(st.x * pc.y - st.y * pc.x, dot(st, pc)) * sign(kk) * Rs;
+        lat = abs(length(pc) - Rs);
+      }
+      float edge = abs(lat - (D.y * 0.12 + back * 0.36));
       float bw = (1.0 - smoothstep(0.25 + back * 0.03, 0.7 + back * 0.06, edge)) * smoothstep(0.0, 1.5, back) * (1.0 - smoothstep(D.x * 0.4, D.x * 1.2, back)) * step(0.0, f.w) * spd;
       foam = max(foam, max(band * (0.55 + 0.45 * spd), bw * 0.85));
     }
@@ -495,6 +505,7 @@ export class Water {
         uSeaA: { value: new THREE.Color(SEA_HUES[0]) }, uSeaB: { value: new THREE.Color(SEA_HUES[1]) },
         uSeaC: { value: new THREE.Color(SEA_HUES[2]) }, uSeaD: { value: new THREE.Color(SEA_HUES[3]) },
         uShipD: { value: Array.from({ length: SHIPS_N }, () => new THREE.Vector4()) },
+        uShipK: { value: new Array(SHIPS_N).fill(0) },
       },
     ]);
     // the water writes depth, so the ink outlines see its surface (not the sea floor under it)
@@ -523,12 +534,14 @@ export class Water {
    * (as many as there's room for).
    */
   setShips(list) {
-    const S = this.uniforms.uShips.value, D = this.uniforms.uShipD.value;
+    const S = this.uniforms.uShips.value, D = this.uniforms.uShipD.value, K = this.uniforms.uShipK.value;
     for (let i = 0; i < SHIPS_N; i++) {
       const s = list[i];
-      if (!s) { D[i].w = 0; continue; }
+      if (!s) { D[i].w = 0; K[i] = 0; continue; }
       S[i].set(s.x, s.z, Math.cos(s.h), Math.sin(s.h));
       D[i].set(s.L, s.B, s.sp, 1);
+      // (the curve she's on: her rate of turn over her speed)
+      K[i] = s.sp > 0.5 ? (s.yaw || 0) / s.sp : 0;
     }
   }
 

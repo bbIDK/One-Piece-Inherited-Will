@@ -1180,7 +1180,7 @@ export class Renderer3D {
     for (const s of seenS) {
       if (s.sunk || s.dive || s.lvl || !s.def) continue;
       const dx = w.dx(ox, s.x), dz = s.y - oy, d = Math.hypot(dx, dz);
-      if (d < 260) meet.push({ x: dx, z: dz, h: s.heading, L: s.def.length, B: s.def.beam || s.def.length * 0.3, sp: Math.abs(s.speed || 0), d });
+      if (d < 260) meet.push({ x: dx, z: dz, h: s.heading, L: s.def.length, B: s.def.beam || s.def.length * 0.3, sp: Math.abs(s.speed || 0), yaw: this.shipViews.get(s)?.yawSm || 0, d });
     }
     meet.sort((a, b) => a.d - b.d);
     this.water.setShips(meet);

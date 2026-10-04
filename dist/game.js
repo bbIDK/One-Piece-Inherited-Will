@@ -35910,6 +35910,20 @@ void main() {
     else if (d <= -Math.PI) d += TAU;
     return d;
   }
+  function springStep(x, v, target2, w, dt, zeta = 1, out = [0, 0]) {
+    const e0 = x - target2;
+    if (zeta >= 1) {
+      const c = v + w * e0, k2 = Math.exp(-w * dt);
+      out[0] = target2 + (e0 + c * dt) * k2;
+      out[1] = (v - w * c * dt) * k2;
+      return out;
+    }
+    const wd = w * Math.sqrt(1 - zeta * zeta), k = Math.exp(-zeta * w * dt);
+    const B5 = (v + zeta * w * e0) / wd, cs = Math.cos(wd * dt), sn = Math.sin(wd * dt);
+    out[0] = target2 + k * (e0 * cs + B5 * sn);
+    out[1] = k * ((wd * B5 - zeta * w * e0) * cs - (zeta * w * B5 + wd * e0) * sn);
+    return out;
+  }
   function formatBerries(n) {
     return "\u0E3F" + Math.round(n).toLocaleString("en-US");
   }
@@ -40668,6 +40682,7 @@ void main() {
     `
   uniform vec4 uShips[${SHIPS_N}];
   uniform vec4 uShipD[${SHIPS_N}];
+  uniform float uShipK[${SHIPS_N}];   // how sharply each is turning (1/m: + to starboard)
   float hullHalf(float t) {
     float tc = clamp(t, 0.0, 1.0);
     return tc > 0.58 ? sqrt(max(0.0, 1.0 - pow((tc - 0.58) / 0.42, 2.2))) : tc < 0.14 ? 0.74 + 0.26 * sin(tc / 0.14 * 1.5707963) : 1.0;
@@ -40841,9 +40856,18 @@ void main() {
       // along her side
       float wdt = 0.3 + spd * 0.35 + spd * 0.95 * smoothstep(0.55, 1.0, f.z);
       float band = (1.0 - smoothstep(wdt * 0.3, wdt, f.w)) * step(-0.3, f.w);
-      // the bow wave: out from the stem, back along her
-      float back = (0.98 - f.z) * D.x;
-      float edge = abs(abs(f.y) - (D.y * 0.12 + back * 0.36));
+      // the bow wave: out from the stem, back along her \u2014 along the way she's
+      // come, round the curve of her turn (not swung round rigidly with her
+      // hull, cutting across her wake), its arms square to that track
+      float back = (0.98 - f.z) * D.x, lat = abs(f.y);
+      float kk = clamp(uShipK[i], -2.0 / D.x, 2.0 / D.x);
+      if (abs(kk) > 0.002) {
+        vec2 C = vec2(0.0, 1.0 / kk), st = vec2(D.x * 0.48, 0.0) - C, pc = f.xy - C;
+        float Rs = length(st);
+        back = -atan(st.x * pc.y - st.y * pc.x, dot(st, pc)) * sign(kk) * Rs;
+        lat = abs(length(pc) - Rs);
+      }
+      float edge = abs(lat - (D.y * 0.12 + back * 0.36));
       float bw = (1.0 - smoothstep(0.25 + back * 0.03, 0.7 + back * 0.06, edge)) * smoothstep(0.0, 1.5, back) * (1.0 - smoothstep(D.x * 0.4, D.x * 1.2, back)) * step(0.0, f.w) * spd;
       foam = max(foam, max(band * (0.55 + 0.45 * spd), bw * 0.85));
     }
@@ -41121,7 +41145,8 @@ void main() {
           uSeaB: { value: new Color(SEA_HUES[1]) },
           uSeaC: { value: new Color(SEA_HUES[2]) },
           uSeaD: { value: new Color(SEA_HUES[3]) },
-          uShipD: { value: Array.from({ length: SHIPS_N }, () => new Vector4()) }
+          uShipD: { value: Array.from({ length: SHIPS_N }, () => new Vector4()) },
+          uShipK: { value: new Array(SHIPS_N).fill(0) }
         }
       ]);
       this.material = new ShaderMaterial({
@@ -41155,15 +41180,17 @@ void main() {
      * (as many as there's room for).
      */
     setShips(list) {
-      const S6 = this.uniforms.uShips.value, D4 = this.uniforms.uShipD.value;
+      const S6 = this.uniforms.uShips.value, D4 = this.uniforms.uShipD.value, K = this.uniforms.uShipK.value;
       for (let i = 0; i < SHIPS_N; i++) {
         const s = list[i];
         if (!s) {
           D4[i].w = 0;
+          K[i] = 0;
           continue;
         }
         S6[i].set(s.x, s.z, Math.cos(s.h), Math.sin(s.h));
         D4[i].set(s.L, s.B, s.sp, 1);
+        K[i] = s.sp > 0.5 ? (s.yaw || 0) / s.sp : 0;
       }
     }
     /** 'high' shows caustics and sparkles; 'low' skips them. */
@@ -42703,6 +42730,47 @@ ${GLSL}
     g.restore();
   }
 
+  // src/game/boatFeel.js
+  var BOAT_FEEL = {
+    // ---- steering (the helm you hold with A / D)
+    helmIn: 0.32,
+    // s for the helm to go hard over when you steer (eased in and out, no snap)
+    helmOut: 0.2,
+    // s for it to come back amidships when you let go
+    turnLag: 0.1,
+    // s the hull takes to answer her helm: how long her turn takes to build up, and to die away
+    turnLagPerM: 32e-4,
+    // … and that much more per metre of her length (a big ship swings more slowly)
+    turnRate: 1,
+    // × each class's top turning rate (1 = as the ship tables have it)
+    // ---- the wheel (it turns as you steer and comes back to centre when you let go)
+    wheelMax: 2.2,
+    // radians the wheel is turned hard over (about a third of a turn)
+    wheelSpeed: 14,
+    // how briskly the wheel follows the helm (a spring's rate, per second: higher is snappier)
+    standTilt: 0.5,
+    // how much the helmsman leans with the deck as she rolls and pitches (0 stands bolt upright, 1 tilts with it)
+    // (how far round each hand works a spoke before taking the next one: render3d/chars/pose.js HELM_GRIP)
+    // ---- riding the sea (how she heaves, pitches and rolls on the swell)
+    rideRate: 6.5,
+    // how closely she follows the sea's surface (per second: higher is stiffer, lower floatier)
+    rideRatePerM: -0.055,
+    // … less per metre of her length (a long hull is heavier, slower to answer)
+    rideDamp: 0.9,
+    // 1 = settles without overshooting; a little under 1 gives a buoyant bob
+    rideLead: 1,
+    // how well she keeps up with the swell (1 keeps her waterline on the sea; less lets her lag behind it, floatier)
+    pitchMax: 0.22,
+    // radians she pitches at most (bow up or down)
+    rollMax: 0.26,
+    // radians she rolls at most
+    // ---- speed changes (sails set or taken in, oars, wind round as she turns)
+    speedSmooth: 0.45,
+    // s over which a change in her driving force builds up (under sail)
+    speedSmoothOars: 0.12
+    // … under oars (each stroke still surges her on)
+  };
+
   // src/world/hull.js
   var clamp01 = (x) => Math.max(0, Math.min(1, x));
   var smooth3 = (a, b, x) => {
@@ -43481,6 +43549,18 @@ ${GLSL}
     }
     return depth;
   }
+  function wheelSpec(d) {
+    if (d.open) return null;
+    if (d._wheel) return d._wheel;
+    let w;
+    if (d.big) w = { u: d.wheelU, floor: d.yq, hub: d.yq + 0.92, R: 0.56, grip: 0.66 };
+    else {
+      const floor2 = floorAt(d, (d.wheelU + 0.1 + d.L / 2) / d.L);
+      w = { u: d.wheelU, floor: floor2, hub: floor2 + 0.92, R: 0.4, grip: 0.47 };
+    }
+    Object.defineProperty(d, "_wheel", { value: w, enumerable: false });
+    return w;
+  }
   function helmPoint(def) {
     const d = shipDims(def);
     if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
@@ -43541,22 +43621,80 @@ ${GLSL}
     }
     return depth;
   }
+  var RIDE_U = [-0.4, -0.2, 0, 0.2, 0.4];
+  var RIDE_V = [-0.8, 0, 0.8];
+  var softClamp = (x, m) => m * Math.tanh(x / m);
+  var _rs = [0, 0];
+  function rideTarget(ship, time, out) {
+    out[0] = out[1] = out[2] = 0;
+    if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return out;
+    const L3 = ship.def.length || 6, B5 = ship.def.beam || L3 * 0.3;
+    const ch = Math.cos(ship.heading), sh = Math.sin(ship.heading);
+    let W4 = 0, Z2 = 0, Wu = 0, Zu = 0, Wv = 0, Zv = 0;
+    const z = _rz;
+    for (let i = 0; i < RIDE_U.length; i++) {
+      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
+      for (let j = 0; j < RIDE_V.length; j++) {
+        const v = RIDE_V[j] * hb, k = i * 3 + j;
+        z[k] = swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
+        W4 += hb;
+        Z2 += hb * z[k];
+      }
+    }
+    const h2 = Z2 / W4;
+    for (let i = 0; i < RIDE_U.length; i++) {
+      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
+      for (let j = 0; j < RIDE_V.length; j++) {
+        const v = RIDE_V[j] * hb, dz = z[i * 3 + j] - h2;
+        Wu += hb * u * u;
+        Zu += hb * u * dz;
+        Wv += hb * v * v;
+        Zv += hb * v * dz;
+      }
+    }
+    out[0] = h2;
+    out[1] = Math.atan(Zu / Wu);
+    out[2] = Math.atan(-Zv / Wv);
+    return out;
+  }
+  var _rz = new Float64Array(15);
+  var _rt = [0, 0, 0];
   function waveRide(ship, time) {
-    const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0 });
+    const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0, s: new Float64Array(12), s0: new Float64Array(12), t0: NaN, ok: false });
     if (c.t === time && c.x === ship.x && c.y === ship.y && c.hd === ship.heading) return c;
+    if (c.t !== time) {
+      c.s0.set(c.s);
+      c.t0 = c.t;
+    }
     c.t = time;
     c.x = ship.x;
     c.y = ship.y;
     c.hd = ship.heading;
-    c.h = c.r = c.p = 0;
-    if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return c;
-    const L3 = ship.def.length || 6, B5 = ship.def.beam || L3 * 0.3;
-    const ch = Math.cos(ship.heading), sh = Math.sin(ship.heading);
-    const at4 = (u, v) => swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
-    const bow = at4(L3 * 0.38, 0), stern2 = at4(-L3 * 0.38, 0), port = at4(0, -B5 * 0.42), stb = at4(0, B5 * 0.42), mid = at4(0, 0);
-    c.h = (bow + stern2 + port + stb + mid * 2) / 6;
-    c.p = Math.max(-0.22, Math.min(0.22, Math.atan2(bow - stern2, L3 * 0.76)));
-    c.r = Math.max(-0.26, Math.min(0.26, Math.atan2(port - stb, B5 * 0.84)));
+    const T5 = rideTarget(ship, time, _rt), S6 = c.s, S0 = c.s0, dt = time - c.t0;
+    if (!c.ok || !(dt > 0) || dt > 0.5) {
+      for (let k = 0; k < 3; k++) {
+        S6[k * 2] = T5[k];
+        S6[k * 2 + 1] = 0;
+        S6[6 + k] = T5[k];
+        S6[9 + k] = 0;
+      }
+      c.ok = true;
+    } else {
+      const F5 = BOAT_FEEL, L3 = ship.def?.length || 6;
+      const w = Math.max(1.6, F5.rideRate + F5.rideRatePerM * L3), z = Math.min(1, Math.max(0.3, F5.rideDamp)), lead = 2 * z / w * F5.rideLead;
+      const kv = 1 - Math.exp(-dt / (0.1 + 6e-3 * L3));
+      for (let k = 0; k < 3; k++) {
+        const vS = S0[9 + k] + ((T5[k] - S0[6 + k]) / dt - S0[9 + k]) * kv;
+        springStep(S0[k * 2], S0[k * 2 + 1], T5[k] + vS * lead, w, dt, z, _rs);
+        S6[k * 2] = _rs[0];
+        S6[k * 2 + 1] = _rs[1];
+        S6[6 + k] = T5[k];
+        S6[9 + k] = vS;
+      }
+    }
+    c.h = S6[0];
+    c.p = softClamp(S6[2], BOAT_FEEL.pitchMax);
+    c.r = softClamp(S6[4], BOAT_FEEL.rollMax);
     return c;
   }
   function shipBob(ship, time) {
@@ -43570,6 +43708,17 @@ ${GLSL}
   function shipLift(ship, time, u, v, h2) {
     const [a, b] = shipRock(ship, time);
     return shipBob(ship, time) + (u * Math.sin(b) + h2 * Math.cos(b)) * Math.cos(a) - v * Math.sin(a);
+  }
+  function shipPoint(ship, time, u, v, h2, out = [0, 0, 0]) {
+    const [a, b] = shipRock(ship, time);
+    const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    const x1 = u * cb - h2 * sb, y1 = u * sb + h2 * cb;
+    const x2 = x1, y2 = y1 * ca - v * sa, z2 = y1 * sa + v * ca;
+    const ch = Math.cos(ship.heading), shd = Math.sin(ship.heading);
+    out[0] = x2 * ch - z2 * shd;
+    out[1] = shipBob(ship, time) + y2;
+    out[2] = x2 * shd + z2 * ch;
+    return out;
   }
   function deckLift(dk3, time) {
     return dk3.plank ? dk3.plank.liftAt(dk3.k) : shipLift(dk3.ship, time, dk3.u ?? (dk3.t - 0.5) * dk3.ship.def.length, dk3.v || 0, dk3.h);
@@ -44113,8 +44262,9 @@ ${GLSL}
     k.add(box(0.26, hub + 0.1, 0.34), { at: [x + 0.2, y, 0], color: P6.wood, outline: 0.012 });
     k.add(cyl(0.15, 0.15, 0.62, 10), { at: [x + 0.2, y + hub - 0.08, -0.31], rot: [Math.PI / 2, 0, 0], color: shade2(P6.wood, 0.15), outline: 0.01 });
     k.add(cyl(0.045, 0.045, 0.3, 6), { at: [x + 0.05, y + hub, 0], rot: [0, 0, Math.PI / 2], color: P6.dark });
+  }
+  function wheelParts(k, P6, R4 = 0.56) {
     k.save();
-    k.translate(x, y + hub, 0);
     k.rotateY(Math.PI / 2);
     k.add(torus(R4, 0.045, 6, 28), { color: "#7b5230", outline: 0.012 });
     for (let i = 0; i < 8; i++) {
@@ -44827,20 +44977,24 @@ ${GLSL}
   var ALPHA = [0, 1, 0.45, 0.45, 1, 0];
   var WK = ACROSS.length;
   var WakeTrail = class {
-    constructor({ n = 36, life: life2 = 4.2, every = 0.11, y = 0.04, grain = 0.3, drift = 0.17 } = {}) {
+    constructor({ n = 36, life: life2 = 4.2, every = 0.11, y = 0.04, grain = 0.3, drift = 0.17, turn = 0.05, fadeIn = 0.8 } = {}) {
       this.n = n;
       this.life = life2;
       this.every = every;
       this.y = y;
       this.grain = grain;
       this.drift = drift;
+      this.turn = turn;
+      this.fadeIn = fadeIn;
       this.pts = [];
-      const m = n * WK;
+      this.rows = n + 1;
+      const m = this.rows * WK;
       this.pos = new Float32Array(m * 3);
       this.col = new Float32Array(m * 4);
       this.uv = new Float32Array(m * 2);
+      this.k = new Float32Array(this.rows * 4);
       const idx = [];
-      for (let i = 0; i < n - 1; i++) {
+      for (let i = 0; i < this.rows - 1; i++) {
         for (let k = 0; k < WK - 1; k++) {
           const a = i * WK + k, b = a + 1, c = a + WK, d = b + WK;
           idx.push(a, c, b, b, c, d);
@@ -44856,33 +45010,86 @@ ${GLSL}
       this.mesh.frustumCulled = false;
       this.mesh.renderOrder = 2;
       this.lastT = -1;
+      this.head = { x: 0, y: 0, h: 0, t: 0, sp: 0, s: 0 };
     }
     update(src, time, ox, oy, w, shape) {
-      if (src && time - this.lastT > this.every) {
-        this.lastT = time;
-        this.pts.unshift({ x: src.x, y: src.y, h: src.h, t: time, sp: src.sp });
-        if (this.pts.length > this.n) this.pts.length = this.n;
+      const P6 = this.pts;
+      if (src) {
+        const q2 = P6[0];
+        const dh = q2 ? Math.abs(Math.atan2(Math.sin(src.h - q2.h), Math.cos(src.h - q2.h))) : 0;
+        if (!q2 || time - this.lastT > this.every || dh > this.turn && time - this.lastT > 1 / 40) {
+          const d = q2 ? Math.hypot(w.dx(q2.x, src.x), src.y - q2.y) : 0;
+          if (q2 && d > 60) P6.length = 0;
+          this.lastT = time;
+          P6.unshift({ x: src.x, y: src.y, h: src.h, t: time, sp: src.sp, s: P6[0] ? P6[0].s + d : 0 });
+          if (P6.length > this.n) P6.length = this.n;
+        }
       }
-      while (this.pts.length && time - this.pts[this.pts.length - 1].t > this.life) this.pts.pop();
-      const n = this.pts.length;
+      while (P6.length && time - P6[P6.length - 1].t > this.life) P6.pop();
       const g = this.mesh.geometry;
+      let rows = P6;
+      if (src && P6.length) {
+        const H4 = this.head, q2 = P6[0];
+        H4.x = src.x;
+        H4.y = src.y;
+        H4.h = src.h;
+        H4.t = time;
+        H4.sp = src.sp;
+        H4.s = q2.s + Math.hypot(w.dx(q2.x, src.x), src.y - q2.y);
+        rows = this._rows || (this._rows = []);
+        rows.length = 0;
+        rows.push(H4);
+        for (const p of P6) rows.push(p);
+      }
+      const n = rows.length;
       if (n < 2) {
         g.setDrawRange(0, 0);
         return;
       }
+      const K = this.k;
       for (let i = 0; i < n; i++) {
-        const q2 = this.pts[i];
+        const a = rows[Math.max(0, i - 1)], b = rows[Math.min(n - 1, i + 1)];
+        let tx = w.dx(b.x, a.x), ty = a.y - b.y, l = Math.hypot(tx, ty);
+        if (l < 1e-4) {
+          tx = Math.cos(rows[i].h);
+          ty = Math.sin(rows[i].h);
+          l = 1;
+        }
+        K[i * 4] = -ty / l;
+        K[i * 4 + 1] = tx / l;
+        K[i * 4 + 2] = 0;
+      }
+      for (let i = 1; i < n - 1; i++) {
+        const a = rows[i - 1], b = rows[i], c = rows[i + 1];
+        const x1 = w.dx(c.x, b.x), y1 = b.y - c.y, x2 = w.dx(b.x, a.x), y2 = a.y - b.y;
+        const l1 = Math.hypot(x1, y1), l2 = Math.hypot(x2, y2);
+        if (l1 < 1e-3 || l2 < 1e-3) continue;
+        const bend = Math.atan2(x1 * y2 - y1 * x2, x1 * x2 + y1 * y2);
+        K[i * 4 + 2] = bend / ((l1 + l2) / 2);
+      }
+      let prev = K[2];
+      for (let i = 1; i < n - 1; i++) {
+        const cur = K[i * 4 + 2];
+        K[i * 4 + 2] = (prev + cur * 2 + K[(i + 1) * 4 + 2]) / 4;
+        prev = cur;
+      }
+      const sHead = rows[0].s, vBase = Math.floor(rows[n - 1].s * this.drift);
+      for (let i = 0; i < n; i++) {
+        const q2 = rows[i];
         const [half2, bright] = shape(q2, (time - q2.t) / this.life);
-        const fade2 = bright * (i === 0 ? 0 : 1);
-        const px2 = -Math.sin(q2.h), py2 = Math.cos(q2.h);
+        const run = sHead - q2.s, fade2 = bright * (run <= 0 ? 0 : run >= this.fadeIn ? 1 : run / this.fadeIn * (run / this.fadeIn) * (3 - 2 * run / this.fadeIn));
+        const px2 = K[i * 4], py2 = K[i * 4 + 1], kap = K[i * 4 + 2];
+        const inner = Math.abs(kap) > 1e-4 ? 0.85 / Math.abs(kap) : 1e9;
         const cx = w.dx(ox, q2.x), cz = q2.y - oy;
         for (let j = 0; j < WK; j++) {
           const o = i * WK + j;
+          let off = ACROSS[j] * half2;
+          if (off * kap > 0 && Math.abs(off) > inner) off = Math.sign(off) * inner;
           this.uv[o * 2] = ACROSS[j] * half2 * this.grain;
-          this.uv[o * 2 + 1] = (q2.x * Math.cos(q2.h) + q2.y * Math.sin(q2.h)) * this.drift;
-          this.pos[o * 3] = cx + px2 * half2 * ACROSS[j];
-          this.pos[o * 3 + 1] = this.y + swellAt(q2.x + px2 * half2 * ACROSS[j], q2.y + py2 * half2 * ACROSS[j]);
-          this.pos[o * 3 + 2] = cz + py2 * half2 * ACROSS[j];
+          this.uv[o * 2 + 1] = q2.s * this.drift - vBase;
+          this.pos[o * 3] = cx + px2 * off;
+          this.pos[o * 3 + 1] = this.y + swellAt(q2.x + px2 * off, q2.y + py2 * off);
+          this.pos[o * 3 + 2] = cz + py2 * off;
           this.col[o * 4] = 0.95;
           this.col[o * 4 + 1] = 0.98;
           this.col[o * 4 + 2] = 1;
@@ -45104,16 +45311,6 @@ ${GLSL}
     if (!d.open) {
       const wx = d.wheelU + 0.1, fy = floorAt(d, (wx + d.L / 2) / d.L);
       k.add(box(0.14, 0.82, 0.14), { at: [wx, fy, 0], color: P6.wood, outline: 0.015 });
-      k.save();
-      k.translate(wx - 0.1, fy + 0.92, 0);
-      k.rotateY(Math.PI / 2);
-      k.add(torus(0.4, 0.03, 5, 18), { color: "#7b5230" });
-      for (let i = 0; i < 8; i++) {
-        const a = i / 8 * Math.PI * 2;
-        k.add(box(0.035, 0.56, 0.035), { at: [0, 0, 0], rot: [0, 0, a], color: "#7b5230" });
-      }
-      k.add(cyl(0.07, 0.07, 0.08, 8), { at: [0, 0, -0.04], rot: [Math.PI / 2, 0, 0], color: "#d4ac0d" });
-      k.restore();
     } else if (d.row) {
       const r4 = d.row, seatY = d.deckY + r4.seatH;
       const thwart = (t, w) => {
@@ -45408,6 +45605,25 @@ ${GLSL}
     g.computeVertexNormals();
     return g;
   }
+  function wheelGeometry(def, d) {
+    const P6 = d.big ? bigPalette(def) : null, key2 = d.big ? `wheel|big|${P6.trim.getHexString()}` : "wheel|small";
+    let g = rigCache.get(key2);
+    if (g) return g;
+    const k = new Mesher();
+    if (d.big) wheelParts(k, P6, wheelSpec(d).R);
+    else {
+      const R4 = wheelSpec(d).R;
+      k.save();
+      k.rotateY(Math.PI / 2);
+      k.add(torus(R4, 0.03, 5, 18), { color: "#7b5230", outline: 8e-3 });
+      for (let i = 0; i < 8; i++) k.add(box(0.035, R4 + 0.16, 0.035), { rot: [0, 0, i / 8 * Math.PI * 2], color: "#7b5230" });
+      k.add(cyl(0.07, 0.07, 0.08, 8), { at: [0, 0, -0.04], rot: [Math.PI / 2, 0, 0], color: "#d4ac0d" });
+      k.restore();
+    }
+    g = k.build(true);
+    rigCache.set(key2, g);
+    return g;
+  }
   function oarGeometry(d) {
     const r4 = d.row, key2 = `oar|${r4.inboard}|${r4.outboard}`;
     let g = rigCache.get(key2);
@@ -45629,6 +45845,13 @@ ${GLSL}
           this.oars.push({ mesh: m, side });
         }
       }
+      const ws = wheelSpec(d);
+      if (ws) {
+        this.wheel = new Mesh(wheelGeometry(def, d), SOLID());
+        this.wheel.castShadow = true;
+        this.wheel.position.set(ws.u, ws.hub, 0);
+        root2.add(this.wheel);
+      }
       if (kind !== "none" && plan.length) {
         const fs = d.big ? d.L / 11 : 1;
         const fg = new PlaneGeometry(1.1 * fs, 0.75 * fs, 5, 1);
@@ -45744,7 +45967,7 @@ ${GLSL}
     update(env2, rx, rz, windAngle, ctx) {
       const s = this.ship;
       const r4 = this.root;
-      if (!this.wake) this.wake = new WakeTrail();
+      if (!this.wake) this.wake = new WakeTrail({ n: 96, turn: 0.09, fadeIn: 1.2 });
       if (r4.parent && this.wake.mesh.parent !== r4.parent) r4.parent.add(this.wake.mesh);
       const v3 = ctx?.game?.view3d;
       if (v3 && ctx.world) {
@@ -45762,15 +45985,26 @@ ${GLSL}
           if (this.sprayT <= 0) {
             this.sprayT = 0.6 + Math.random() * 0.8;
             const c = Math.cos(s.heading), sn = Math.sin(s.heading);
+            const t2 = 0.9, u = (t2 - 0.5) * L3, out = hbAt(t2, B5) + 0.35 + B5 * 0.02;
+            const vx = c * (s.speed || 0) * 0.8, vy = sn * (s.speed || 0) * 0.8;
             for (const side2 of [-1, 1]) {
-              const bx = s.x + c * L3 * 0.44 - sn * side2 * B5 * 0.22, by = s.y + sn * L3 * 0.44 + c * side2 * B5 * 0.22;
-              fx.burst(bx, by, Math.round(3 + k * 6 + rough * 6), { angle: s.heading + side2 * (Math.PI / 2 - 0.45), spread: 0.9, speed: 1.6 + k * 2.6 + rough * 2, z: 0.5, zJitter: 0.4, vz: 2.2 + k * 2.6 + rough * 2.4, g: 9.8, life: 0.65 + k * 0.3, size: 0.1 + k * 0.07, color: ["#ffffff", "#f1f8ff", "#d6efff"], kind: "drop", drag: 0.7 });
+              const bx = s.x + c * u - sn * side2 * out, by = s.y + sn * u + c * side2 * out;
+              fx.burst(bx, by, Math.round(3 + k * 6 + rough * 6), { world: true, base: swellAt(bx, by) + 0.12, carry: [vx, vy], sink: true, angle: s.heading + side2 * (Math.PI / 2 - 0.3), spread: 0.7, speed: 2.2 + k * 2.6 + rough * 2, z: 0.12, zJitter: 0.16, vz: 2.2 + k * 2.6 + rough * 2.4, g: 9.8, life: 0.65 + k * 0.3, size: 0.1 + k * 0.07, color: ["#ffffff", "#f1f8ff", "#d6efff"], kind: "drop", drag: 0.7 });
             }
           }
         }
       }
       const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === "sail" && ctx.mode !== "third";
       if (own !== this.ghost) this.setGhost(own);
+      const dth = env2.time - (this.hT ?? env2.time);
+      if (dth > 0 && dth < 0.5) {
+        const r5 = Math.atan2(Math.sin(s.heading - this.hPrev), Math.cos(s.heading - this.hPrev)) / dth;
+        this.yawSm += (r5 - this.yawSm) * (1 - Math.exp(-dth / 0.12));
+      } else if (!(dth > 0)) this.yawSm = this.yawSm || 0;
+      else this.yawSm = 0;
+      this.hPrev = s.heading;
+      this.hT = env2.time;
+      if (this.wheel) this.wheel.rotation.x = s.wheel || 0;
       if (this.oars) {
         const st = s.oars;
         for (const o of this.oars) {
@@ -62941,6 +63175,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   var STROKE_T = 1.15;
   var OAR_READY = { a: 0.15, b: 0.22, f: 1 };
   var OAR_REST = { a: -1.15, b: 0.12, f: 1 };
+  var _sp = [0, 0];
   var SEA_PACE = 2;
   var NONE = [];
   function theirShips(game) {
@@ -62983,6 +63218,13 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.rowR = 0;
       this.rowPh = 0;
       this.drive = 0;
+      this.helm = 0;
+      this.helmV = 0;
+      this.yawRate = 0;
+      this.wheel = 0;
+      this.wheelV = 0;
+      this.steered = false;
+      this.push = 0;
       this.oars = this.def.oarsOnly ? [{ ...OAR_REST }, { ...OAR_REST }] : null;
       this.speedCap = null;
       this.burstCd = 0;
@@ -63045,6 +63287,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.cannonCd = Math.max(0, this.cannonCd - dt);
       this.burstCd = Math.max(0, this.burstCd - dt);
       if (this.ai) this.ai(this, dt, game);
+      if (!this.steered && (this.helm || this.yawRate || this.wheel)) {
+        if (this.anchored) {
+          this.helm = this.helmV = this.yawRate = 0;
+        }
+        this.steer(0, 0, dt);
+        if (Math.abs(this.helm) + Math.abs(this.yawRate) + Math.abs(this.wheel) < 1e-4) {
+          this.helm = this.helmV = this.yawRate = this.wheel = this.wheelV = 0;
+        }
+      }
+      this.steered = false;
       const env2 = game.env;
       const calm = game.isCalmAt(this.x, this.y);
       const windA = env2.windAngle, windS = calm ? 0 : env2.windStrength;
@@ -63081,7 +63333,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       const cur = game.currentAt(this.x, this.y, this);
       if (cur.canal) target2 *= 0.35;
-      this.speed += (target2 - this.speed) * Math.min(1, dt * (oared ? 1.6 : target2 > this.speed ? 0.7 : 1.2));
+      this.push += (target2 - this.push) * (1 - Math.exp(-dt / Math.max(0.01, oared ? BOAT_FEEL.speedSmoothOars : BOAT_FEEL.speedSmooth)));
+      this.speed += (this.push - this.speed) * Math.min(1, dt * (oared ? 1.6 : this.push > this.speed ? 0.7 : 1.2));
       this.lvl = cur.level + (this.dive || 0);
       const along = cur.canal ? Math.cos(angleDiff(this.heading, Math.atan2(cur.y, cur.x))) : 0;
       const pitchT = Math.atan(cur.slope) * along;
@@ -63156,6 +63409,32 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         ride(a);
       }
       if (also) ride(also);
+    }
+    /**
+     * Steer her: `turn` is the helm you're asking for (-1 hard a-port … 1 hard
+     * a-starboard, from the keys or a stick), `rate` how fast she turns hard
+     * over (rad/s). The helm goes over and comes back easing in and out (no
+     * snap), she answers it a moment later as her turn builds (and dies away
+     * when it's back amidships), and the wheel spins with it — see BOAT_FEEL.
+     */
+    steer(turn, rate, dt) {
+      const F5 = BOAT_FEEL, h2 = this.helm;
+      const back = Math.abs(turn) < Math.abs(h2) - 1e-3 && Math.sign(turn) !== -Math.sign(h2);
+      const w = 4.74 / Math.max(0.02, back ? F5.helmOut : F5.helmIn);
+      const o = springStep(h2, this.helmV, clamp2(turn, -1, 1), w, dt, 1, _sp);
+      this.helm = o[0];
+      this.helmV = o[1];
+      if (Math.abs(this.helm) > 1) {
+        this.helm = Math.sign(this.helm);
+        this.helmV = 0;
+      }
+      const lag = Math.max(0.01, F5.turnLag + F5.turnLagPerM * (this.def.length || 3));
+      this.yawRate += (this.helm * rate * F5.turnRate - this.yawRate) * (1 - Math.exp(-dt / lag));
+      this.heading += this.yawRate * dt;
+      const ww = springStep(this.wheel, this.wheelV, this.helm * F5.wheelMax, F5.wheelSpeed, dt, 1, _sp);
+      this.wheel = ww[0];
+      this.wheelV = ww[1];
+      this.steered = true;
     }
     /**
      * A rowboat's oars, stroke by stroke: the blades dip in at the catch, sweep
@@ -72274,7 +72553,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const al = Math.min(1, life2 * 1.6) * (p.alpha ?? 1) * c[3];
       if (al < 0.01) continue;
       const h2 = p.under !== void 0 ? p.z - p.under : p.z;
-      const X2 = w.dx(v.ox, p.x), Z2 = p.y - v.oy, Y2 = v.ground(p.x, p.y) + h2;
+      const X2 = w.dx(v.ox, p.x), Z2 = p.y - v.oy, Y2 = (p.base !== void 0 ? p.base : v.ground(p.x, p.y)) + h2;
       const sz = p.size || 0.1;
       const lit2 = luma(c) >= 0.04 ? 1 : 0;
       const add7 = p.add ? lit2 : 0;
@@ -86608,38 +86887,118 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   function stationSpot(st) {
     const d = shipDims(st.ship.def);
     if (d.row) return { u: d.row.seatU, floor: d.deckY, row: true };
-    const w = wheelOf(d);
-    const u = w.u - 0.42, floor2 = floorAt(d, (u + d.L / 2) / d.L);
+    const w = wheelSpec(d);
+    const u = w.u - 0.36, floor2 = floorAt(d, (u + d.L / 2) / d.L);
     if (Math.abs(floor2 - w.floor) > 0.1) return { u: d.helmX, floor: d.helmFloor, row: false };
     return { u, floor: floor2, row: false };
-  }
-  function wheelOf(d) {
-    if (d.big) return { u: d.wheelU, floor: d.yq, hub: d.yq + 0.92, r: 0.5 };
-    const u = d.wheelU, floor2 = floorAt(d, (u + 0.1 + d.L / 2) / d.L);
-    return { u, floor: floor2, hub: floor2 + 0.92, r: 0.4 };
   }
   var _g = new Vector3();
   function stationReach(st, spot, d, s, rel3, lean, hipY, out) {
     const sh = shipDims(st.ship.def);
     for (let k = 0; k < 2; k++) {
       const side = k === 0 ? 1 : -1, T5 = out[k];
-      if (spot.row) {
-        const o = st.ship.oars[k === 0 ? 1 : 0];
-        const q2 = oarPoints(sh, side, o.a, o.b);
-        const back = sh.row.inboard - 0.07;
-        T5.set(q2.lock[0] - q2.dir[0] * back - spot.u, q2.lock[1] - q2.dir[1] * back - spot.floor, q2.lock[2] - q2.dir[2] * back);
-      } else {
-        const w = wheelOf(sh);
-        T5.set(w.u - 0.02 - spot.u, w.hub - spot.floor + w.r * 0.55, side * w.r * 0.7);
-      }
+      const o = st.ship.oars[k === 0 ? 1 : 0];
+      const q2 = oarPoints(sh, side, o.a, o.b);
+      const back = sh.row.inboard - 0.07;
+      T5.set(q2.lock[0] - q2.dir[0] * back - spot.u, q2.lock[1] - q2.dir[1] * back - spot.floor, q2.lock[2] - q2.dir[2] * back);
       const c = Math.cos(rel3), sn = Math.sin(rel3), x = T5.x, z = T5.z;
       T5.set((x * c + z * sn) / s, T5.y / s, (-x * sn + z * c) / s);
-      _g.set(d.shY * Math.sin(lean), hipY + d.shY * Math.cos(lean), side * d.shW);
-      const L3 = (d.A1 + d.A2) * 0.97;
-      const dist = T5.distanceTo(_g);
-      if (dist > L3) T5.sub(_g).multiplyScalar(L3 / dist).add(_g);
+      inReach(T5, d, side, lean, hipY);
     }
     return out;
+  }
+  function inReach(T5, d, side, lean, hipY) {
+    _g.set(d.shY * Math.sin(lean), hipY + d.shY * Math.cos(lean), side * d.shW);
+    const L3 = (d.A1 + d.A2) * 0.97;
+    const dist = T5.distanceTo(_g);
+    if (dist > L3) T5.sub(_g).multiplyScalar(L3 / dist).add(_g);
+  }
+  var SPOKE = Math.PI / 4;
+  var HELM_GRIP = {
+    near: 0.5,
+    far: 1.58,
+    // the arc each hand works its spoke through, radians from the top (never up over it, by the face)
+    rest: 0.95,
+    // where it likes to take hold
+    shift: 0.15
+    // s to let go and take the next spoke
+  };
+  var wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  var _pa = [0, 0, 0];
+  var _pb = [0, 0, 0];
+  var _q5 = new Quaternion();
+  var HelmHands = class {
+    constructor() {
+      this.h = [null, null];
+      this.ship = null;
+    }
+    /** The spoke nearest where this hand likes to hold, of those in its reach (or any, if `any`). */
+    pick(W4, side, not = -1, any = false) {
+      let best = -1, bd = 1e9;
+      for (let k = 0; k < 8; k++) {
+        if (k === not) continue;
+        const a = wrapA(k * SPOKE + W4) * side;
+        if (!any && (a < HELM_GRIP.near || a > HELM_GRIP.far)) continue;
+        const dd = Math.abs(a - HELM_GRIP.rest);
+        if (dd < bd) {
+          bd = dd;
+          best = k;
+        }
+      }
+      return best;
+    }
+    /**
+     * This frame's targets for the hands at `st`'s wheel (out: [right, left]
+     * Vector3s, in the model's frame): `rel` — the root, from the actor's own
+     * spot (render axes, metres); `ox, oz` — the ship's middle from there;
+     * `facing` the model's turn, `tilt` its lean with the deck (a quaternion,
+     * or null), `s` its scale; `d` its rig's dimensions, `hipY` and `lean`
+     * for the reach.
+     */
+    update(st, time, dt, rel3, ox, oz, facing, tilt, s, d, hipY, lean, out) {
+      const ship = st.ship, sh = shipDims(ship.def), w = wheelSpec(sh), W4 = ship.wheel || 0;
+      if (this.ship !== ship) {
+        this.ship = ship;
+        this.h = [null, null];
+      }
+      for (let k = 0; k < 2; k++) {
+        const side = k === 0 ? 1 : -1;
+        let H4 = this.h[k];
+        if (!H4) H4 = this.h[k] = { k: this.pick(W4, side, -1, true), from: -1, t: 1 };
+        if (H4.t < 1) H4.t = Math.min(1, H4.t + dt / HELM_GRIP.shift);
+        const a = wrapA(H4.k * SPOKE + W4) * side;
+        const other = this.h[1 - k];
+        const out2 = a < HELM_GRIP.near || a > HELM_GRIP.far, way = a < HELM_GRIP.near - 0.3 || a > HELM_GRIP.far + 0.3;
+        if (H4.t >= 1 && out2 && (!other || other.t >= 1 || way)) {
+          const n = this.pick(W4, side, H4.k);
+          if (n >= 0) {
+            H4.from = H4.k;
+            H4.k = n;
+            H4.t = 0;
+          }
+        }
+        const T5 = out[k];
+        gripAt(ship, time, w, H4.k * SPOKE + W4, _pa);
+        if (H4.t < 1 && H4.from >= 0) {
+          gripAt(ship, time, w, H4.from * SPOKE + W4, _pb);
+          const e = H4.t * H4.t * (3 - 2 * H4.t), lift = Math.sin(H4.t * Math.PI);
+          for (let i = 0; i < 3; i++) _pa[i] = _pb[i] + (_pa[i] - _pb[i]) * e;
+          const c2 = Math.cos(ship.heading), sn2 = Math.sin(ship.heading);
+          _pa[0] -= c2 * 0.09 * lift;
+          _pa[2] -= sn2 * 0.09 * lift;
+          _pa[1] += 0.03 * lift;
+        }
+        T5.set(ox + _pa[0] - rel3.x, _pa[1] - rel3.y, oz + _pa[2] - rel3.z);
+        if (tilt) T5.applyQuaternion(_q5.copy(tilt).invert());
+        const c = Math.cos(facing), sn = Math.sin(facing), x = T5.x, z = T5.z;
+        T5.set((x * c + z * sn) / s, T5.y / s, (-x * sn + z * c) / s);
+        inReach(T5, d, side, lean, hipY);
+      }
+      return out;
+    }
+  };
+  function gripAt(ship, time, w, a, out) {
+    return shipPoint(ship, time, w.u - 0.05, Math.sin(a) * w.grip, w.hub + Math.cos(a) * w.grip, out);
   }
   var LYING2 = { b: [0, 0], l: 0, r: 0, z: 0, sp: 0, ht: -0.2, hF: [0.03, 0.3], hB: [0.03, 0.3], eF: 0.35, eB: 0.35, fF: [0.07, 0], fB: [-0.03, 0], wF: null, wB: null, m: 0.15, hand: "palm", handB: "palm", face: null };
   function rigOptions(a, pose, P6, o = {}) {
@@ -86756,7 +87115,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _v8 = new Vector3();
   var _v23 = new Vector3();
   var _ax = new Vector3();
-  var _q5 = new Quaternion();
+  var _q6 = new Quaternion();
   var _up2 = new Vector3(0, 1, 0);
   var _one2 = new Vector3(1, 1, 1);
   var _mA = new Matrix4();
@@ -87101,8 +87460,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const cam = this.ctx.camera, h2 = s.heading, w = this.ctx.world;
       const dx = w ? w.dx(p.x, s.x) : s.x - p.x, dy = s.y - p.y;
       _v8.set(dx + Math.cos(h2) * spot.u, shipLift(s, env2.time, spot.u, 0, spot.floor), dy + Math.sin(h2) * spot.u);
-      _q5.setFromAxisAngle(_up2, -h2);
-      _mA.compose(_v8, _q5, _one2);
+      _q6.setFromAxisAngle(_up2, -h2);
+      _mA.compose(_v8, _q6, _one2);
       _mB.copy(cam.matrixWorld).invert().multiply(_mA);
       _mB.decompose(this.body.position, this.body.quaternion, this.body.scale);
       this.body.updateMatrix();
@@ -87301,7 +87660,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _m42 = new Matrix4();
   var _p5 = new Vector3();
   var _s3 = new Vector3();
-  var _q6 = new Quaternion();
+  var _q7 = new Quaternion();
   var Collar = class {
     constructor() {
       if (!PUFF_GEO) PUFF_GEO = new IcosahedronGeometry(1, 2);
@@ -87339,7 +87698,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const put2 = (x, y, z, r4, a) => {
         _p5.set(x, y, z);
         _s3.setScalar(Math.max(1e-3, r4));
-        this.mesh.setMatrixAt(n, _m42.compose(_p5, _q6, _s3));
+        this.mesh.setMatrixAt(n, _m42.compose(_p5, _q7, _s3));
         al[n++] = a;
       };
       const rx = (steam ? 0.19 : 0.15) * Bk, rz = (steam ? 0.25 : 0.2) * Bk;
@@ -87383,6 +87742,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _v24 = new Vector3();
   var _eyeP = new Vector3();
   var _eyeQ = new Quaternion();
+  var _sp3 = [0, 0, 0];
+  var _eu = new Euler();
+  var _qh = new Quaternion();
+  var _up3 = new Vector3(0, 1, 0);
   var _fq = new Quaternion();
   var _fq2 = new Quaternion();
   var FALLING = { ...LYING2, l: -0.32, ht: -0.4, hF: [0, -0.33], hB: [-0.08, -0.29], eF: 0.5, eB: 0.5, fF: [0.17, -0.07], fB: [0.03, -0.02], face: "hurt" };
@@ -87441,6 +87804,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const helm = a.isPlayer && a.mode === "sail" && a.ship && !a.ship.sunk ? a.station() : null;
       this.root.visible = !(a.isPlayer && a.mode === "sail" && !helm);
       if (helm) this.placeAtStation(a, helm, env2, ctx);
+      else if (this.tilted) {
+        this.root.quaternion.identity();
+        this.tilted = false;
+      }
       const wet = !helm && (a.inWater || a.wading > 0);
       const dty = Math.min(0.1, Math.max(0, env2.time - (this.yT ?? env2.time)));
       this.yT = env2.time;
@@ -87467,7 +87834,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         if (cam.position.distanceTo(_v9.set(r4.x, r4.y + 1.55 * (this.look.scale || 1), r4.z)) < 0.45) this.root.visible = false;
       }
       this.frame++;
-      const every = dist < 22 ? 1 : dist < 45 ? 2 : 3;
+      const every = a.isPlayer || dist < 22 ? 1 : dist < 45 ? 2 : 3;
       const full = redraw2 !== false && (this.frame % every === 0 || this.lastT < 0);
       const scaleBuff = a.buffs.find((b) => b.mods?.scale);
       const s = (this.look.scale || 1) * (scaleBuff ? scaleBuff.mods.scale : 1);
@@ -87501,9 +87868,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         if (pose.station) {
           const st = pose.station, R4 = this._grips || (this._grips = [new Vector3(), new Vector3()]);
           const hipY = m.d.hip0 + ((o.sitY ?? m.d.hA) + 0.07 - m.d.hip0) * o.sitK;
-          stationReach(st, stationSpot(st), m.d, s, (this.visF ?? a.facing) - st.ship.heading, P6.l || 0, hipY, R4);
+          if (helm) this.visF = st.ship.heading;
+          if (st.kind === "row" || !st.ship.def || st.ship.def.oarsOnly) stationReach(st, stationSpot(st), m.d, s, (this.visF ?? a.facing) - st.ship.heading, P6.l || 0, hipY, R4);
+          else {
+            const w = ctx.world, sh = st.ship;
+            (this.helmHands || (this.helmHands = new HelmHands())).update(st, env2.time, dtv, this.root.position, w ? w.dx(a.x, sh.x) : sh.x - a.x, sh.y - a.y, this.visF ?? a.facing, helm ? this.root.quaternion : null, s, m.d, hipY, P6.l || 0, R4);
+          }
           o.reachR = R4[0];
           o.reachL = R4[1];
+          o.rubber = false;
         } else if (a.fruit === "gomu") this.stretchTarget(a, ctx, s, o, dtv);
         const knocked = pose.state === "knocked" || pose.state === "dead";
         let PP = P6;
@@ -87537,8 +87910,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         formRig(a, pose, o, gear);
         this.gear = gear;
         m.pose(PP, o);
-        const want = a.facing || 0;
-        if (this.visF === void 0 || dtv >= 1 || knocked) this.visF = want;
+        const want = helm ? helm.ship.heading : a.facing || 0;
+        if (this.visF === void 0 || dtv >= 1 || knocked || helm) this.visF = want;
         else this.visF += angleDiff(this.visF, want) * (1 - Math.exp(-dtv * (a.isPlayer ? 24 : a.action ? 20 : 10)));
         this.yaw.rotation.y = -(this.visF + (P6.sp || 0) * TAU20);
         if (dist < 32) m.swing(this.lastT < 0 ? 1 : dtv, this.root);
@@ -87682,9 +88055,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     /** At the helm or the oars of your ship: stand (or sit) where the work is, riding up and down with her. */
     placeAtStation(a, st, env2, ctx) {
-      const s = st.ship, spot = stationSpot(st), w = ctx.world, h2 = s.heading;
+      const s = st.ship, spot = stationSpot(st), w = ctx.world;
       const dx = w ? w.dx(a.x, s.x) : s.x - a.x, dy = s.y - a.y;
-      this.root.position.set(dx + Math.cos(h2) * spot.u, shipLift(s, env2.time, spot.u, 0, spot.floor), dy + Math.sin(h2) * spot.u);
+      const p = shipPoint(s, env2.time, spot.u, 0, spot.floor, _sp3);
+      this.root.position.set(dx + p[0], p[1], dy + p[2]);
+      const k = BOAT_FEEL.standTilt;
+      if (k > 0) {
+        const [roll2, pitch] = shipRock(s, env2.time);
+        _eu.set(roll2 * k, -s.heading, pitch * k, "YXZ");
+        this.root.quaternion.setFromEuler(_eu).multiply(_qh.setFromAxisAngle(_up3, s.heading));
+        this.tilted = true;
+      } else this.root.quaternion.identity();
     }
     /** Head yaw toward the camera for nearby idle NPCs. */
     lookAt(a, dist, pose, cam, s) {
@@ -89181,7 +89562,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       for (const s of seenS) {
         if (s.sunk || s.dive || s.lvl || !s.def) continue;
         const dx = w.dx(ox, s.x), dz = s.y - oy, d = Math.hypot(dx, dz);
-        if (d < 260) meet.push({ x: dx, z: dz, h: s.heading, L: s.def.length, B: s.def.beam || s.def.length * 0.3, sp: Math.abs(s.speed || 0), d });
+        if (d < 260) meet.push({ x: dx, z: dz, h: s.heading, L: s.def.length, B: s.def.beam || s.def.length * 0.3, sp: Math.abs(s.speed || 0), yaw: this.shipViews.get(s)?.yawSm || 0, d });
       }
       meet.sort((a, b) => a.d - b.d);
       this.water.setShips(meet);
@@ -103964,21 +104345,34 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.parts.push(p);
       return p;
     }
+    /**
+     * `n` particles thrown out from (x, y). `o.world`: a burst placed in the
+     * 3D world as it is — not lifted onto someone standing just "above" it
+     * (the top-down view's way of drawing height), thrown as far one way as
+     * another, at `o.base` m above the sea (not on whatever ground or deck is
+     * under it as it flies: spray off a ship's bow goes over her side, not onto
+     * her deck), carried along at `o.carry` [vx, vy] (the ship it came off),
+     * and gone (`o.sink`) when it falls back below where it started.
+     */
     burst(x, y, n, o = {}) {
-      const lift = this.lift3d(x, y);
+      const world = !!o.world;
+      const lift = world ? 0 : this.lift3d(x, y);
       if (lift) {
         y += lift;
         o = { ...o, z: (o.z ?? 0.6) + lift };
       }
       this._inBurst = true;
+      const cx = o.carry ? o.carry[0] : 0, cy = o.carry ? o.carry[1] : 0;
       for (let i = 0; i < n; i++) {
         const a = (o.angle ?? Math.random() * TAU) + (o.spread !== void 0 ? (Math.random() - 0.5) * o.spread : 0);
         const sp = (o.speed ?? 4) * (0.4 + Math.random() * 0.8);
         this.particle({
           x,
           y,
-          vx: Math.cos(a) * sp,
-          vy: Math.sin(a) * sp * 0.7,
+          vx: Math.cos(a) * sp + cx,
+          vy: Math.sin(a) * sp * (world ? 1 : 0.7) + cy,
+          base: o.base,
+          sink: o.sink,
           z: (o.z ?? 0.6) + (o.zJitter ? (Math.random() - 0.5) * o.zJitter : 0),
           vz: o.vz !== void 0 ? o.vz * (0.5 + Math.random()) : Math.random() * 3,
           g: o.g ?? 9,
@@ -104268,6 +104662,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         p.vz -= p.g * sdt;
         p.z += p.vz * sdt;
         if (p.under !== void 0 && p.z >= p.under) {
+          this.parts.splice(i, 1);
+          continue;
+        }
+        if (p.sink && p.z < 0) {
           this.parts.splice(i, 1);
           continue;
         }
@@ -108065,12 +108463,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         s.rowL = fwd2 || (turn > 0.2 ? 0.8 : 0);
         s.rowR = fwd2 || (turn < -0.2 ? 0.8 : 0);
         if (s.rowL || s.rowR) s.anchored = false;
-        s.heading += turn * s.def.turn * (game.crewMods?.turnMul || 1) * (fwd2 ? 0.45 : 0.6) * (0.55 + 0.45 * s.drive) * dt;
+        s.steer(turn, s.def.turn * (game.crewMods?.turnMul || 1) * (fwd2 ? 0.45 : 0.6) * (0.55 + 0.45 * s.drive), dt);
         s.sail = 0;
         s.rowing = 0;
       } else {
         const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp2(Math.abs(s.speed) / 3, 0, 1));
-        s.heading += turn * steer * dt;
+        s.steer(turn, steer, dt);
         if (ahead) {
           s.sail = Math.min(1, s.sail + dt * 0.9);
           s.anchored = false;

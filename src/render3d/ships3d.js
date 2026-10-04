@@ -15,8 +15,9 @@ import { canvasTexture } from './materials.js';
 import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat, U } from './props/mats.js';
-import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock, shipBob, smallProfile } from '../world/hull.js';
-import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging } from './bigship.js';
+import { swellAt } from './swell.js';
+import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock, shipBob, smallProfile, wheelSpec } from '../world/hull.js';
+import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging, bigPalette, wheelParts } from './bigship.js';
 
 // a coated ship's bubble (see the coating, below): a soap film, its colours
 // running with the angle you see it at, bright at its rim — from either side
@@ -236,16 +237,9 @@ export function hullGeometry(def) {
 
   // ---- the helm (a wheel on a post; the rowboat just has oars)
   if (!d.open) {
+    // (the post: the wheel on it turns as she's steered — wheelGeometry, ShipView)
     const wx = d.wheelU + 0.1, fy = floorAt(d, (wx + d.L / 2) / d.L);
     k.add(box(0.14, 0.82, 0.14), { at: [wx, fy, 0], color: P.wood, outline: 0.015 });
-    k.save(); k.translate(wx - 0.1, fy + 0.92, 0); k.rotateY(Math.PI / 2);
-    k.add(torus(0.4, 0.03, 5, 18), { color: '#7b5230' });
-    for (let i = 0; i < 8; i++) {
-      const a = i / 8 * Math.PI * 2;
-      k.add(box(0.035, 0.56, 0.035), { at: [0, 0, 0], rot: [0, 0, a], color: '#7b5230' });
-    }
-    k.add(cyl(0.07, 0.07, 0.08, 8), { at: [0, 0, -0.04], rot: [Math.PI / 2, 0, 0], color: '#d4ac0d' });
-    k.restore();
   } else if (d.row) {
     // a rowboat: the rower's thwart amidships, a bench in the stern and a
     // thwart in the bow, knees under the seats, and a rowlock on each gunwale
@@ -557,6 +551,31 @@ function triGeometry(a, b, c, n = 5) {
 }
 
 /**
+ * A ship's wheel (shared per ship shape), about its hub, its axle fore and
+ * aft (x): it turns about x as she's steered (ShipView). Spoke i stands i/8
+ * of the way round from the top, toward starboard — where the helmsman's
+ * hands hold it (hull.js wheelSpec, chars3d.js).
+ */
+function wheelGeometry(def, d) {
+  const P = d.big ? bigPalette(def) : null, key = d.big ? `wheel|big|${P.trim.getHexString()}` : 'wheel|small';
+  let g = rigCache.get(key);
+  if (g) return g;
+  const k = new Mesher();
+  if (d.big) wheelParts(k, P, wheelSpec(d).R);
+  else {
+    const R = wheelSpec(d).R;
+    k.save(); k.rotateY(Math.PI / 2);
+    k.add(torus(R, 0.03, 5, 18), { color: '#7b5230', outline: 0.008 });
+    for (let i = 0; i < 8; i++) k.add(box(0.035, R + 0.16, 0.035), { rot: [0, 0, i / 8 * Math.PI * 2], color: '#7b5230' });
+    k.add(cyl(0.07, 0.07, 0.08, 8), { at: [0, 0, -0.04], rot: [Math.PI / 2, 0, 0], color: '#d4ac0d' });
+    k.restore();
+  }
+  g = k.build(true);
+  rigCache.set(key, g);
+  return g;
+}
+
+/**
  * An oar (shared per rowboat type): built along +z from the grip, through
  * the rowlock at the origin, out to the blade — square to the stroke (its
  * flat faces fore and aft) until it's turned about the loom to feather.
@@ -798,6 +817,14 @@ export class ShipView {
         this.oars.push({ mesh: m, side });
       }
     }
+    // the wheel, on its post: it turns as she's steered (and back as the helm comes amidships)
+    const ws = wheelSpec(d);
+    if (ws) {
+      this.wheel = new THREE.Mesh(wheelGeometry(def, d), SOLID());
+      this.wheel.castShadow = true;
+      this.wheel.position.set(ws.u, ws.hub, 0);
+      root.add(this.wheel);
+    }
     // the masthead flag
     if (kind !== 'none' && plan.length) {
       const fs = d.big ? d.L / 11 : 1;
@@ -919,7 +946,7 @@ export class ShipView {
     const s = this.ship;
     const r = this.root;
     // the foam trail on the water (a sibling of the ship, not riding it)
-    if (!this.wake) this.wake = new WakeTrail();
+    if (!this.wake) this.wake = new WakeTrail({ n: 96, turn: 0.09, fadeIn: 1.2 });
     if (r.parent && this.wake.mesh.parent !== r.parent) r.parent.add(this.wake.mesh);
     const v3 = ctx?.game?.view3d;
     if (v3 && ctx.world) {
@@ -941,9 +968,15 @@ export class ShipView {
         if (this.sprayT <= 0) {
           this.sprayT = 0.6 + Math.random() * 0.8;
           const c = Math.cos(s.heading), sn = Math.sin(s.heading);
+          // where her bow cuts the sea: just outside her planking at the
+          // waterline (never over her deck), thrown up and out to either
+          // side, carried on with her at first and falling astern of her as
+          // it flies — clear of her side all the way, gone back into the sea
+          const t = 0.9, u = (t - 0.5) * L, out = hbAt(t, B) + 0.35 + B * 0.02;
+          const vx = c * (s.speed || 0) * 0.8, vy = sn * (s.speed || 0) * 0.8;
           for (const side of [-1, 1]) {
-            const bx = s.x + c * L * 0.44 - sn * side * B * 0.22, by = s.y + sn * L * 0.44 + c * side * B * 0.22;
-            fx.burst(bx, by, Math.round(3 + k * 6 + rough * 6), { angle: s.heading + side * (Math.PI / 2 - 0.45), spread: 0.9, speed: 1.6 + k * 2.6 + rough * 2, z: 0.5, zJitter: 0.4, vz: 2.2 + k * 2.6 + rough * 2.4, g: 9.8, life: 0.65 + k * 0.3, size: 0.1 + k * 0.07, color: ['#ffffff', '#f1f8ff', '#d6efff'], kind: 'drop', drag: 0.7 });
+            const bx = s.x + c * u - sn * side * out, by = s.y + sn * u + c * side * out;
+            fx.burst(bx, by, Math.round(3 + k * 6 + rough * 6), { world: true, base: swellAt(bx, by) + 0.12, carry: [vx, vy], sink: true, angle: s.heading + side * (Math.PI / 2 - 0.3), spread: 0.7, speed: 2.2 + k * 2.6 + rough * 2, z: 0.12, zJitter: 0.16, vz: 2.2 + k * 2.6 + rough * 2.4, g: 9.8, life: 0.65 + k * 0.3, size: 0.1 + k * 0.07, color: ['#ffffff', '#f1f8ff', '#d6efff'], kind: 'drop', drag: 0.7 });
           }
         }
       }
@@ -952,6 +985,16 @@ export class ShipView {
     // so you can steer (in third person you see her whole, from outside)
     const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === 'sail' && ctx.mode !== 'third';
     if (own !== this.ghost) this.setGhost(own);
+    // how fast she's swinging round (her wake and bow wave curve with it: water3d.js hullFoam)
+    const dth = env.time - (this.hT ?? env.time);
+    if (dth > 0 && dth < 0.5) {
+      const r = Math.atan2(Math.sin(s.heading - this.hPrev), Math.cos(s.heading - this.hPrev)) / dth;
+      this.yawSm += (r - this.yawSm) * (1 - Math.exp(-dth / 0.12));
+    } else if (!(dth > 0)) this.yawSm = this.yawSm || 0;
+    else this.yawSm = 0;
+    this.hPrev = s.heading; this.hT = env.time;
+    // the wheel, turned as far as her helm is over (game/ship.js steer)
+    if (this.wheel) this.wheel.rotation.x = s.wheel || 0;
     // the oars, as the rower has them (see game/ship.js updateOars)
     if (this.oars) {
       const st = s.oars;

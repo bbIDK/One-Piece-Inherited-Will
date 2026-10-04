@@ -5,7 +5,8 @@ import { SHIPS_UNBREAKABLE, shipStats, shotCapFor } from '../data/ships.js';
 import { drawShip } from '../render/ship.js';
 import { drawCharacter } from '../render/character.js';
 import { SAILABLE } from '../world/tiles.js';
-import { angleDiff, clamp, TAU } from '../core/math.js';
+import { angleDiff, clamp, TAU, springStep } from '../core/math.js';
+import { BOAT_FEEL } from './boatFeel.js';
 import { drawProjectile } from '../render/projectiles.js';
 import { hbAt, hullGap, BIG_SHIP, oarStroke, oarDrive, shipDims, deckToWorld, xAt } from '../world/hull.js';
 
@@ -17,6 +18,7 @@ const SMALL_HULL = [[0.47, 0], [-0.46, 0], [0.2, 0.42], [0.2, -0.42], [-0.25, 0.
 const STROKE_T = 1.15;
 const OAR_READY = { a: 0.15, b: 0.22, f: 1 };
 const OAR_REST = { a: -1.15, b: 0.12, f: 1 };
+const _sp = [0, 0];
 
 /**
  * Sailing speed multiplier: the seas are wide (islands kilometres apart, see
@@ -71,6 +73,11 @@ export class Ship extends Entity {
     // a rowboat's oars: which way each is pulling (1 ahead, -1 backing, 0 held),
     // where the stroke is, and how each lies now (see updateOars)
     this.rowL = 0; this.rowR = 0; this.rowPh = 0; this.drive = 0;
+    // the helm (-1 hard a-port … 1 hard a-starboard) and how fast it's going
+    // over, how fast she's turning (rad/s), and the wheel as it lies (radians:
+    // + turned to starboard, the top of it gone over to the right): see steer()
+    this.helm = 0; this.helmV = 0; this.yawRate = 0; this.wheel = 0; this.wheelV = 0; this.steered = false;
+    this.push = 0; // (what's driving her on, eased: see update)
     this.oars = this.def.oarsOnly ? [{ ...OAR_REST }, { ...OAR_REST }] : null;
     this.speedCap = null; // (a pursuer holding back to your pace: see traffic.js)
     this.burstCd = 0;
@@ -134,6 +141,15 @@ export class Ship extends Entity {
     this.cannonCd = Math.max(0, this.cannonCd - dt);
     this.burstCd = Math.max(0, this.burstCd - dt);
     if (this.ai) this.ai(this, dt, game);
+    // nobody at her helm this moment (you've let go of it, or left it): it
+    // comes back amidships, and her turn dies away as it does
+    if (!this.steered && (this.helm || this.yawRate || this.wheel)) {
+      // (at anchor, or moored: she doesn't swing on round — only the wheel spins back)
+      if (this.anchored) { this.helm = this.helmV = this.yawRate = 0; }
+      this.steer(0, 0, dt);
+      if (Math.abs(this.helm) + Math.abs(this.yawRate) + Math.abs(this.wheel) < 1e-4) { this.helm = this.helmV = this.yawRate = this.wheel = this.wheelV = 0; }
+    }
+    this.steered = false;
 
     const env = game.env;
     const calm = game.isCalmAt(this.x, this.y);
@@ -173,7 +189,10 @@ export class Ship extends Entity {
     // riding Reverse Mountain the current does the sailing: the sails can only help a little
     if (cur.canal) target *= 0.35;
     // (a light boat under oars answers each stroke; a ship under sail gathers way slowly)
-    this.speed += (target - this.speed) * Math.min(1, dt * (oared ? 1.6 : target > this.speed ? 0.7 : 1.2));
+    // — and what drives her builds up and dies away over a moment (the sails
+    // filling, the oars biting), so she never lurches into a new pace
+    this.push += (target - this.push) * (1 - Math.exp(-dt / Math.max(0.01, oared ? BOAT_FEEL.speedSmoothOars : BOAT_FEEL.speedSmooth)));
+    this.speed += (this.push - this.speed) * Math.min(1, dt * (oared ? 1.6 : this.push > this.speed ? 0.7 : 1.2));
     // the water's height under the keel (up the mountain's canals) and the slope she's riding
     // (and, diving to Fish-Man Island, how far over or under it she is: zones.js)
     this.lvl = cur.level + (this.dive || 0);
@@ -245,6 +264,29 @@ export class Ship extends Entity {
       ride(a);
     }
     if (also) ride(also);
+  }
+
+  /**
+   * Steer her: `turn` is the helm you're asking for (-1 hard a-port … 1 hard
+   * a-starboard, from the keys or a stick), `rate` how fast she turns hard
+   * over (rad/s). The helm goes over and comes back easing in and out (no
+   * snap), she answers it a moment later as her turn builds (and dies away
+   * when it's back amidships), and the wheel spins with it — see BOAT_FEEL.
+   */
+  steer(turn, rate, dt) {
+    const F = BOAT_FEEL, h = this.helm;
+    // (going over — or over the other way — at the helmIn pace; back amidships at helmOut's)
+    const back = Math.abs(turn) < Math.abs(h) - 1e-3 && Math.sign(turn) !== -Math.sign(h);
+    const w = 4.74 / Math.max(0.02, back ? F.helmOut : F.helmIn);
+    const o = springStep(h, this.helmV, clamp(turn, -1, 1), w, dt, 1, _sp);
+    this.helm = o[0]; this.helmV = o[1];
+    if (Math.abs(this.helm) > 1) { this.helm = Math.sign(this.helm); this.helmV = 0; }
+    const lag = Math.max(0.01, F.turnLag + F.turnLagPerM * (this.def.length || 3));
+    this.yawRate += (this.helm * rate * F.turnRate - this.yawRate) * (1 - Math.exp(-dt / lag));
+    this.heading += this.yawRate * dt;
+    const ww = springStep(this.wheel, this.wheelV, this.helm * F.wheelMax, F.wheelSpeed, dt, 1, _sp);
+    this.wheel = ww[0]; this.wheelV = ww[1];
+    this.steered = true;
   }
 
   /**

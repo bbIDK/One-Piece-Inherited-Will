@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { infusedAura } from '../../game/haki.js';
 import { samplePose, restPose, blendPose } from '../../render/anims.js';
-import { shipDims, oarPoints, rowLean, floorAt } from '../../world/hull.js';
+import { shipDims, oarPoints, rowLean, floorAt, wheelSpec, shipPoint } from '../../world/hull.js';
 import { ITEMS } from '../../data/items.js';
 import { swordLook } from './swords.js';
 
@@ -139,53 +139,128 @@ function stationPose(P, st) {
 export function stationSpot(st) {
   const d = shipDims(st.ship.def);
   if (d.row) return { u: d.row.seatU, floor: d.deckY, row: true };
-  const w = wheelOf(d);
-  const u = w.u - 0.42, floor = floorAt(d, (u + d.L / 2) / d.L);
+  const w = wheelSpec(d);
+  const u = w.u - 0.36, floor = floorAt(d, (u + d.L / 2) / d.L);
   // (a wheel down on the main deck under the quarterdeck's rail: stand at the helm above it)
   if (Math.abs(floor - w.floor) > 0.1) return { u: d.helmX, floor: d.helmFloor, row: false };
   return { u, floor, row: false };
 }
 
-/** The wheel: where it stands along the hull, its floor, and its hub's height and radius. */
-function wheelOf(d) {
-  if (d.big) return { u: d.wheelU, floor: d.yq, hub: d.yq + 0.92, r: 0.5 };
-  const u = d.wheelU, floor = floorAt(d, (u + 0.1 + d.L / 2) / d.L);
-  return { u, floor, hub: floor + 0.92, r: 0.4 };
-}
-
 const _g = new THREE.Vector3();
 /**
- * The hands' targets for a station, in a character model's own frame
+ * The hands' targets at a rowboat's oars, in a character model's own frame
  * (metres / scale, from the feet; +x ahead, +z to the right): on the oar
- * grips as the oars lie now (the right hand on the starboard oar), or on the
- * wheel's rim. `rel`: how far the model is turned from the ship's heading.
- * Kept within arm's reach of the shoulders (no rubber arms). Writes into
- * `out` ([Vector3, Vector3]: right, left) and returns it.
+ * grips as the oars lie now (the right hand on the starboard oar). `rel`:
+ * how far the model is turned from the ship's heading. Kept within arm's
+ * reach of the shoulders (no rubber arms). Writes into `out` ([Vector3,
+ * Vector3]: right, left) and returns it. (At the wheel: HelmHands.)
  */
 export function stationReach(st, spot, d, s, rel, lean, hipY, out) {
   const sh = shipDims(st.ship.def);
   for (let k = 0; k < 2; k++) {
     const side = k === 0 ? 1 : -1, T = out[k];
-    if (spot.row) {
-      const o = st.ship.oars[k === 0 ? 1 : 0];
-      const q = oarPoints(sh, side, o.a, o.b);
-      // (the hand round the grip, a little in from its end)
-      const back = sh.row.inboard - 0.07;
-      T.set(q.lock[0] - q.dir[0] * back - spot.u, q.lock[1] - q.dir[1] * back - spot.floor, q.lock[2] - q.dir[2] * back);
-    } else {
-      const w = wheelOf(sh);
-      T.set(w.u - 0.02 - spot.u, w.hub - spot.floor + w.r * 0.55, side * w.r * 0.7);
-    }
+    const o = st.ship.oars[k === 0 ? 1 : 0];
+    const q = oarPoints(sh, side, o.a, o.b);
+    // (the hand round the grip, a little in from its end)
+    const back = sh.row.inboard - 0.07;
+    T.set(q.lock[0] - q.dir[0] * back - spot.u, q.lock[1] - q.dir[1] * back - spot.floor, q.lock[2] - q.dir[2] * back);
     // into the model's frame (turned `rel` from the ship, and scaled)
     const c = Math.cos(rel), sn = Math.sin(rel), x = T.x, z = T.z;
     T.set((x * c + z * sn) / s, T.y / s, (-x * sn + z * c) / s);
-    // within reach of the shoulder (over the hips at `hipY`, leaning `lean`)
-    _g.set(d.shY * Math.sin(lean), hipY + d.shY * Math.cos(lean), side * d.shW);
-    const L = (d.A1 + d.A2) * 0.97;
-    const dist = T.distanceTo(_g);
-    if (dist > L) T.sub(_g).multiplyScalar(L / dist).add(_g);
+    inReach(T, d, side, lean, hipY);
   }
   return out;
+}
+
+/** Keep a hand target within arm's reach of its shoulder (over the hips at `hipY`, leaning `lean`). */
+function inReach(T, d, side, lean, hipY) {
+  _g.set(d.shY * Math.sin(lean), hipY + d.shY * Math.cos(lean), side * d.shW);
+  const L = (d.A1 + d.A2) * 0.97;
+  const dist = T.distanceTo(_g);
+  if (dist > L) T.sub(_g).multiplyScalar(L / dist).add(_g);
+}
+
+// ---- the hands on the wheel
+// Each hand holds a spoke just outside the rim, in its own reach of the
+// wheel (the right hand on the starboard side of the top, the left the port
+// side). As the wheel turns, the spoke goes round with it, and the hand with
+// the spoke — until it's carried out of the hand's reach, when the hand lets
+// go and takes the next spoke coming round (hand over hand, as a helmsman
+// spins a wheel), one hand at a time.
+const SPOKE = Math.PI / 4;
+export const HELM_GRIP = {
+  near: 0.5, far: 1.58, // the arc each hand works its spoke through, radians from the top (never up over it, by the face)
+  rest: 0.95, // where it likes to take hold
+  shift: 0.15, // s to let go and take the next spoke
+};
+const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+const _pa = [0, 0, 0], _pb = [0, 0, 0], _q = new THREE.Quaternion();
+export class HelmHands {
+  constructor() { this.h = [null, null]; this.ship = null; }
+
+  /** The spoke nearest where this hand likes to hold, of those in its reach (or any, if `any`). */
+  pick(W, side, not = -1, any = false) {
+    let best = -1, bd = 1e9;
+    for (let k = 0; k < 8; k++) {
+      if (k === not) continue;
+      const a = wrapA(k * SPOKE + W) * side;
+      if (!any && (a < HELM_GRIP.near || a > HELM_GRIP.far)) continue;
+      const dd = Math.abs(a - HELM_GRIP.rest);
+      if (dd < bd) { bd = dd; best = k; }
+    }
+    return best;
+  }
+
+  /**
+   * This frame's targets for the hands at `st`'s wheel (out: [right, left]
+   * Vector3s, in the model's frame): `rel` — the root, from the actor's own
+   * spot (render axes, metres); `ox, oz` — the ship's middle from there;
+   * `facing` the model's turn, `tilt` its lean with the deck (a quaternion,
+   * or null), `s` its scale; `d` its rig's dimensions, `hipY` and `lean`
+   * for the reach.
+   */
+  update(st, time, dt, rel, ox, oz, facing, tilt, s, d, hipY, lean, out) {
+    const ship = st.ship, sh = shipDims(ship.def), w = wheelSpec(sh), W = ship.wheel || 0;
+    if (this.ship !== ship) { this.ship = ship; this.h = [null, null]; }
+    for (let k = 0; k < 2; k++) {
+      const side = k === 0 ? 1 : -1;
+      let H = this.h[k];
+      if (!H) H = this.h[k] = { k: this.pick(W, side, -1, true), from: -1, t: 1 };
+      if (H.t < 1) H.t = Math.min(1, H.t + dt / HELM_GRIP.shift);
+      const a = wrapA(H.k * SPOKE + W) * side;
+      const other = this.h[1 - k];
+      // (out of its reach: on to the next spoke — once the other hand has hold, unless it's well past)
+      const out2 = a < HELM_GRIP.near || a > HELM_GRIP.far, way = a < HELM_GRIP.near - 0.3 || a > HELM_GRIP.far + 0.3;
+      if (H.t >= 1 && out2 && (!other || other.t >= 1 || way)) {
+        const n = this.pick(W, side, H.k);
+        if (n >= 0) { H.from = H.k; H.k = n; H.t = 0; }
+      }
+      // where it holds (or, taking a new spoke, on its way from the old one: drawn back a little off the wheel)
+      const T = out[k];
+      gripAt(ship, time, w, H.k * SPOKE + W, _pa);
+      if (H.t < 1 && H.from >= 0) {
+        gripAt(ship, time, w, H.from * SPOKE + W, _pb);
+        const e = H.t * H.t * (3 - 2 * H.t), lift = Math.sin(H.t * Math.PI);
+        for (let i = 0; i < 3; i++) _pa[i] = _pb[i] + (_pa[i] - _pb[i]) * e;
+        // (off the spokes, toward the helmsman: back along her)
+        const c = Math.cos(ship.heading), sn = Math.sin(ship.heading);
+        _pa[0] -= c * 0.09 * lift; _pa[2] -= sn * 0.09 * lift; _pa[1] += 0.03 * lift;
+      }
+      T.set(ox + _pa[0] - rel.x, _pa[1] - rel.y, oz + _pa[2] - rel.z);
+      // into the model's frame: its lean with the deck undone, then its turn, and its scale
+      if (tilt) T.applyQuaternion(_q.copy(tilt).invert());
+      const c = Math.cos(facing), sn = Math.sin(facing), x = T.x, z = T.z;
+      T.set((x * c + z * sn) / s, T.y / s, (-x * sn + z * c) / s);
+      inReach(T, d, side, lean, hipY);
+    }
+    return out;
+  }
+}
+
+/** Where a hand holds the spoke that's at angle `a` round the wheel (from the top, toward starboard): render axes from her middle. */
+function gripAt(ship, time, w, a, out) {
+  // (round the spoke just outside the rim, the hand a little behind the wheel's face)
+  return shipPoint(ship, time, w.u - 0.05, Math.sin(a) * w.grip, w.hub + Math.cos(a) * w.grip, out);
 }
 
 export const LYING = { b: [0, 0], l: 0, r: 0, z: 0, sp: 0, ht: -0.2, hF: [0.03, 0.3], hB: [0.03, 0.3], eF: 0.35, eB: 0.35, fF: [0.07, 0], fB: [-0.03, 0], wF: null, wB: null, m: 0.15, hand: 'palm', handB: 'palm', face: null };
