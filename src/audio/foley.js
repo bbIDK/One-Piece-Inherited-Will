@@ -312,9 +312,14 @@ export class Foley {
     if (zone === 'surface' && !inside && !calm && (storm > 0.3 || wind > 1.15)) S.gust = storm * 5 + Math.max(0, wind - 1) * 8;
     // the rain: how hard, and on what — the sea, a deck, leaves, a town's roofs, the ground, or the roof over you
     let rain = null;
+    // (birds and insects go quiet in the rain, the gulls with them; a downpour silences them)
+    if ((env.rain || 0) > 0.1 && zone === 'surface') {
+      const hush = 1 - Math.min(1, (env.rain - 0.1) / 0.45);
+      for (const k of ['bird', 'tropical', 'cicada', 'cricket', 'gull', 'frog', 'owl']) if (S[k]) S[k] *= hush;
+    }
     if ((env.rain || 0) > 0.02 && zone === 'surface') {
       const where = inside ? 'inside' : ship ? 'deck' : atSea || p.inWater ? 'sea' : w.town ? 'town' : leafy ? 'leaves' : 'ground';
-      rain = { r: env.rain, storm, where, level: 0.6 };
+      rain = { r: env.rain, storm, where, level: 0.7 };
     }
     if (p.under) { L.deep = 0.7; S.bubbles = 10; L.ocean = 0; L.wind = 0; L.howl = 0; rain = null; }
     amb.update(L, S, dt, 1.2, rain);

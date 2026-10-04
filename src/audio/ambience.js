@@ -165,11 +165,11 @@ class Bed {
 // roof heard from under it peaks at 500 Hz–1 kHz with little over 4 kHz)
 const RAIN = {
   sea: { wash: [750, 16000, 0.3], pat: [600, 14000, 0.3], body: [1300, 3], drop: 'plip', rate: 8 },
-  deck: { wash: [800, 12000, 0.2], pat: [260, 5000, 0.4], body: [850, 6], drop: 'tok', rate: 8 },
-  leaves: { wash: [320, 7000, 0.28], pat: [480, 7000, 0.4], body: [2000, 3], drop: 'tak', rate: 9 },
-  ground: { wash: [260, 5000, 0.28], pat: [380, 5000, 0.36], body: [1000, 3], drop: 'pat', rate: 6 },
-  town: { wash: [300, 4800, 0.28], pat: [420, 4800, 0.38], body: [1200, 4], drop: 'tik', rate: 7 },
-  inside: { wash: [220, 2600, 0.36], pat: [260, 3000, 0.5], body: [650, 6], drop: 'dup', rate: 5 },
+  deck: { wash: [150, 9000, 0.22], pat: [260, 5000, 0.4], body: [850, 6], drop: 'tok', rate: 8 },
+  leaves: { wash: [170, 5000, 0.32], pat: [480, 6000, 0.4], body: [1600, 3], drop: 'tak', rate: 9 },
+  ground: { wash: [190, 2600, 0.36], pat: [340, 3600, 0.34], body: [1000, 5], drop: 'pat', rate: 6 },
+  town: { wash: [200, 3000, 0.36], pat: [400, 4000, 0.36], body: [1100, 5], drop: 'tik', rate: 7 },
+  inside: { wash: [90, 2400, 0.36], pat: [260, 3000, 0.5], body: [650, 6], drop: 'dup', rate: 5 },
 };
 
 /** Near drops, on what they fall on (each drawn into voice `v` at `t`, `s` its strength). */
@@ -264,12 +264,17 @@ class Rain {
     }
     if (Math.abs(r - this.r) < 0.01 && Math.abs(storm - (this.storm || 0)) < 0.02) return;
     this.r = r; this.storm = storm;
-    // light: sparse drops and a faint wash; a downpour: the dense patter and a heavy wash
-    const heavy = smooth(0.3, 0.85, r);
-    this.wash.g.go(S.wash[2] * (0.1 + 0.9 * Math.pow(r, 1.5)), t, sec);
-    this.pat.g.go(S.pat[2], t, sec);
-    this.sparse.go((0.55 + 0.45 * r) * (1 - 0.65 * heavy), t, sec);
-    this.dense.go(heavy * (0.55 + 0.45 * r), t, sec);
+    // how hard it sounds: the weather's rain (0.35-0.55) is a steady rain, a
+    // squall's a downpour, a storm's a roar. Out of doors light rain is some
+    // 45 dB(A) and a downpour 65 or more, so the rain swings 20 dB from the
+    // one to the other (the wash most: the dense, steady roar of a downpour is
+    // the wash; light rain is drops you could count over a faint one)
+    const k = Math.max(0, Math.min(1, (r - 0.06) / 0.6)), heavy = smooth(0.25, 0.9, k);
+    const lev = Math.pow(10, -20 * (1 - k) / 20) * (1 + 0.2 * storm);
+    this.wash.g.go(S.wash[2] * lev * (0.3 + 0.7 * heavy), t, sec);
+    this.pat.g.go(S.pat[2] * Math.pow(10, -10 * (1 - k) / 20), t, sec);
+    this.sparse.go(0.9 * (1 - 0.7 * heavy), t, sec);
+    this.dense.go(heavy * (0.6 + 0.4 * k), t, sec);
   }
 
   /** The overall level (0 fades it out). */

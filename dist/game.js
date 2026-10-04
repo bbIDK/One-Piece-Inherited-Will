@@ -112798,6 +112798,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       a.showName = true;
       a.controller = new AIController({ kind: "follower", skill: 0.45, moves: a.def?.moves || [], ranged: a.def?.ranged, barks: a.def?.barks });
       a.stationary = false;
+      a.homeB = null;
+      a.wanderBox = null;
+      a.faceHome = void 0;
+      a.spar = null;
+      a._preBout = null;
+      a.activity = null;
+      a.act3d = null;
+      a.townsfolk = false;
+      if (a.state === "knocked") {
+        a.state = "idle";
+        a.hp = Math.max(a.hp, Math.round(a.d.maxHp * 0.3));
+      }
       for (const list of g.spawner.populated.values()) {
         const k = list.indexOf(a);
         if (k >= 0) list.splice(k, 1);
@@ -154542,11 +154554,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   };
   var RAIN2 = {
     sea: { wash: [750, 16e3, 0.3], pat: [600, 14e3, 0.3], body: [1300, 3], drop: "plip", rate: 8 },
-    deck: { wash: [800, 12e3, 0.2], pat: [260, 5e3, 0.4], body: [850, 6], drop: "tok", rate: 8 },
-    leaves: { wash: [320, 7e3, 0.28], pat: [480, 7e3, 0.4], body: [2e3, 3], drop: "tak", rate: 9 },
-    ground: { wash: [260, 5e3, 0.28], pat: [380, 5e3, 0.36], body: [1e3, 3], drop: "pat", rate: 6 },
-    town: { wash: [300, 4800, 0.28], pat: [420, 4800, 0.38], body: [1200, 4], drop: "tik", rate: 7 },
-    inside: { wash: [220, 2600, 0.36], pat: [260, 3e3, 0.5], body: [650, 6], drop: "dup", rate: 5 }
+    deck: { wash: [150, 9e3, 0.22], pat: [260, 5e3, 0.4], body: [850, 6], drop: "tok", rate: 8 },
+    leaves: { wash: [170, 5e3, 0.32], pat: [480, 6e3, 0.4], body: [1600, 3], drop: "tak", rate: 9 },
+    ground: { wash: [190, 2600, 0.36], pat: [340, 3600, 0.34], body: [1e3, 5], drop: "pat", rate: 6 },
+    town: { wash: [200, 3e3, 0.36], pat: [400, 4e3, 0.36], body: [1100, 5], drop: "tik", rate: 7 },
+    inside: { wash: [90, 2400, 0.36], pat: [260, 3e3, 0.5], body: [650, 6], drop: "dup", rate: 5 }
   };
   var DROPS = {
     /** On water: the plip of a drop and the little whistle of the bubble it leaves. */
@@ -154665,24 +154677,25 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     set(r4, storm, where, t, sec = 1.5) {
       const S6 = RAIN2[where] || RAIN2.ground;
       if (where !== this.where) {
-        const w = S6.wash, p = S6.pat, k = 1.2;
-        this.wash.hp.go(w[0], t, k);
-        this.wash.lp.go(w[1], t, k);
-        this.pat.hp.go(p[0], t, k);
-        this.pat.lp.go(p[1], t, k);
-        this.pat.pk.go(S6.body[0], t, k);
-        this.pat.pkg.go(S6.body[1], t, k);
+        const w = S6.wash, p = S6.pat, k2 = 1.2;
+        this.wash.hp.go(w[0], t, k2);
+        this.wash.lp.go(w[1], t, k2);
+        this.pat.hp.go(p[0], t, k2);
+        this.pat.lp.go(p[1], t, k2);
+        this.pat.pk.go(S6.body[0], t, k2);
+        this.pat.pkg.go(S6.body[1], t, k2);
         this.where = where;
         this.r = -1;
       }
       if (Math.abs(r4 - this.r) < 0.01 && Math.abs(storm - (this.storm || 0)) < 0.02) return;
       this.r = r4;
       this.storm = storm;
-      const heavy = smooth13(0.3, 0.85, r4);
-      this.wash.g.go(S6.wash[2] * (0.1 + 0.9 * Math.pow(r4, 1.5)), t, sec);
-      this.pat.g.go(S6.pat[2], t, sec);
-      this.sparse.go((0.55 + 0.45 * r4) * (1 - 0.65 * heavy), t, sec);
-      this.dense.go(heavy * (0.55 + 0.45 * r4), t, sec);
+      const k = Math.max(0, Math.min(1, (r4 - 0.06) / 0.6)), heavy = smooth13(0.25, 0.9, k);
+      const lev = Math.pow(10, -20 * (1 - k) / 20) * (1 + 0.2 * storm);
+      this.wash.g.go(S6.wash[2] * lev * (0.3 + 0.7 * heavy), t, sec);
+      this.pat.g.go(S6.pat[2] * Math.pow(10, -10 * (1 - k) / 20), t, sec);
+      this.sparse.go(0.9 * (1 - 0.7 * heavy), t, sec);
+      this.dense.go(heavy * (0.6 + 0.4 * k), t, sec);
     }
     /** The overall level (0 fades it out). */
     fade(level, t, sec) {
@@ -155328,9 +155341,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       }
       if (zone === "surface" && !inside2 && !calm && (storm > 0.3 || wind > 1.15)) S6.gust = storm * 5 + Math.max(0, wind - 1) * 8;
       let rain = null;
+      if ((env2.rain || 0) > 0.1 && zone === "surface") {
+        const hush = 1 - Math.min(1, (env2.rain - 0.1) / 0.45);
+        for (const k of ["bird", "tropical", "cicada", "cricket", "gull", "frog", "owl"]) if (S6[k]) S6[k] *= hush;
+      }
       if ((env2.rain || 0) > 0.02 && zone === "surface") {
         const where = inside2 ? "inside" : ship ? "deck" : atSea || p.inWater ? "sea" : w.town ? "town" : leafy ? "leaves" : "ground";
-        rain = { r: env2.rain, storm, where, level: 0.6 };
+        rain = { r: env2.rain, storm, where, level: 0.7 };
       }
       if (p.under) {
         L3.deep = 0.7;

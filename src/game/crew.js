@@ -271,6 +271,12 @@ export class Crew {
     a.showName = true;
     a.controller = new AIController({ kind: 'follower', skill: 0.45, moves: a.def?.moves || [], ranged: a.def?.ranged, barks: a.def?.barks });
     a.stationary = false;
+    // (nothing of their life on the island comes with them: no house to keep
+    // to or room to pace, no post to face, no bout, no seat or chore)
+    a.homeB = null; a.wanderBox = null; a.faceHome = undefined;
+    a.spar = null; a._preBout = null;
+    a.activity = null; a.act3d = null; a.townsfolk = false;
+    if (a.state === 'knocked') { a.state = 'idle'; a.hp = Math.max(a.hp, Math.round(a.d.maxHp * 0.3)); }
     // drop it from the island population so leaving the island keeps it
     for (const list of g.spawner.populated.values()) { const k = list.indexOf(a); if (k >= 0) list.splice(k, 1); }
     this.followers.set(m.id, a);
