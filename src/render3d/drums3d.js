@@ -61,7 +61,8 @@ function capGeometry(d) {
 registerFrameHook((env, ctx) => {
   const game = ctx.game, v = game?.view3d, w = ctx.world;
   if (!group) { group = new THREE.Group(); group.name = 'drum-caps'; ctx.scene.add(group); }
-  const list = (w && w === game?.world && w.zone === 0 && w.drums) || [];
+  // (a plate's edge is leaves, not snow: plates3d.js)
+  const list = ((w && w === game?.world && w.zone === 0 && w.drums) || []).filter((d) => !d.plate);
   for (const [d, m] of views) {
     if (list.includes(d)) continue;
     m.removeFromParent(); m.geometry.dispose();

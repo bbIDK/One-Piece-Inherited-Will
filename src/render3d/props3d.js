@@ -13,5 +13,6 @@ import './props/street.js';
 import './props/landmarks.js';
 import './props/baratie.js';
 import './props/water7.js';
+import './props/elbaf.js';
 
 export { instancerStats } from './props/instancer.js';

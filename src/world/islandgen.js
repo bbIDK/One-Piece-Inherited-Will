@@ -9,7 +9,7 @@ import { clamp, lerp } from '../core/math.js';
 import { generateTown } from './towngen.js';
 import { bw } from './bframe.js';
 import { COLLIDE } from './objects.js';
-import { drumTile, drumR } from './drums.js';
+import { drumTile, drumR, plateTop, WET } from './drums.js';
 import { makeTerrace, terraceTile } from './terraces.js';
 
 export const CLIMATES = {
@@ -163,13 +163,16 @@ export function generateIsland(world, def, noise, rng) {
   }
 
   // the Drum Rockies (see drums.js): sheer cylinders of rock, flat-topped and
-  // capped with snow — the plateau on top walkable, its face a cliff
+  // capped with snow — the plateau on top walkable, its face a cliff. (Or a
+  // plate: a great tree's canopy, grassland on top — Elbaph's Sun World.)
   for (const f of def.drums || []) {
     const c = P(f);
     const d = { name: f.name, x: c.x, y: c.y, R: rel(f.r ?? 0.1, Math.max(hw, hh)), H: f.h ?? 40, seed: ((f.name || '').length * 1.7 + c.x * 0.013) % 6.283, island: def.id };
+    if (f.plate) makePlate(world, d, f, P, hh);
     (world.drums ||= []).push(d);
     (rec.drums ||= []).push(d);
     stampDrum(world, d, clim);
+    if (d.plate) for (const fl of d.water.falls) if (!fl.sea) carveRunoff(world, d.x + fl.x + fl.nx * 4.2, d.y + fl.y + fl.ny * 4.2, fl.nx, fl.ny, (i, j) => drumTile(world, d, i, j));
     rec.landmarks.push({ type: 'mountain', name: f.name, x: c.x, y: c.y, r: d.R, drum: true });
   }
 
@@ -220,7 +223,7 @@ export function generateIsland(world, def, noise, rng) {
     (world.terraces ||= []).push(tr);
     rec.terrace = tr;
     stampTerrace(world, tr, clim);
-    for (const f of tr.falls) if (f.k === 0) carveFallCanal(world, tr, f);
+    for (const f of tr.falls) if (f.k === 0) carveRunoff(world, tr.x + f.x + f.sx * Math.SQRT1_2 * 3.2, tr.y + f.y + f.sy * Math.SQRT1_2 * 3.2, f.sx * Math.SQRT1_2, f.sy * Math.SQRT1_2, (i, j) => terraceTile(tr, i, j));
   }
   // shipyards (Water 7's Galley-La docks): numbered sheds over slipways into
   // the sea, square to the shore — nothing else is built where they stand
@@ -292,6 +295,15 @@ export function generateIsland(world, def, noise, rng) {
   // landmarks & props -------------------------------------------------------
   rec.clearings = (rec.yards || []).map((o) => ({ x: o.x, y: o.y, r: 15 }));
 
+  // a plate's roots, reaching down out of the dark under it, and the spires
+  // standing round its foot (Elbaph's Underworld)
+  for (const d of rec.drums || []) {
+    const f = d.plate && (def.drums || []).find((q) => q.name === d.name);
+    if (!f) continue;
+    if (f.roots) plateRoots(world, rec, d, f.roots);
+    if (f.spires) plateSpires(world, rec, d, f.spires, rng);
+  }
+
   // ropeways (see game/ropeway.js): a cabin on a cable from a station on the
   // snow up to the top of a drum — its top station's platform run out over
   // the edge of the cliff, the cabin's bay at its end
@@ -307,6 +319,14 @@ export function generateIsland(world, def, noise, rng) {
     placeObject(world, { kind: 'ropeway', rope: f.id, end: 'b', x: rw.bExit.x, y: rw.bExit.y, face: th, reach: 7.7, edge: 4.5, block: false, name: f.name, interact: `Ride the ropeway down to ${f.foot || 'the foot of the mountain'}`, use: 'ropeway', interactRange: 3.4 });
     rec.spots[`${f.id}_foot`] = { ...rw.aExit };
     rec.spots[`${f.id}_top`] = { ...rw.bExit };
+    // (a road up from the nearest landing to its foot, and on from its top to the nearest town up there)
+    if (f.road) {
+      const near = (list, p) => list.slice().sort((u, v) => Math.hypot(world.dx(u.x, p.x), u.y - p.y) - Math.hypot(world.dx(v.x, p.x), v.y - p.y))[0];
+      const dk = near(rec.docks.map((k) => k.land), rw.aExit);
+      if (dk) connectRoad(world, dk.x, dk.y, rw.aExit.x, rw.aExit.y, T.DIRT);
+      const up = near(rec.towns.filter((t) => drumTile(world, d, Math.floor(t.x), Math.floor(t.y)) === 2).map((t) => t.plaza), rw.bExit);
+      if (up) connectRoad(world, rw.bExit.x, rw.bExit.y, up.x, up.y, T.DIRT);
+    }
     // (no tree grows in either station)
     rec.clearings.push({ x: rw.aExit.x, y: rw.aExit.y, r: 8 }, { x: rw.bExit.x, y: rw.bExit.y, r: 7 });
   }
@@ -802,14 +822,20 @@ export function connectRoad(world, ax, ay, bx, by, tile) {
  * its face snow-rock. `faceOnly`: just its face again (after towns and roads).
  */
 function stampDrum(world, d, clim, faceOnly = false) {
-  const m = Math.ceil(d.R * 1.06) + 1;
+  const m = Math.ceil(Math.max(d.R, d.Ry || 0) * 1.06) + 1;
   for (let y = Math.floor(d.y - m); y <= Math.ceil(d.y + m); y++) {
     for (let i = Math.floor(-m); i <= m; i++) {
       const x = world.wx(Math.floor(d.x) + i);
       const k = drumTile(world, d, x, y);
-      if (!k || world.isLiquid(x, y) || world.isOverlay(x, y)) continue;
+      if (!k || world.isOverlay(x, y)) continue;
+      // (a plate stands out over the sea, its face rising out of the water)
+      const wet = world.isLiquid(x, y);
+      if (wet && !d.overSea) continue;
       // (the face keeps the land's own height at its foot: see render3d/height.js)
-      if (k === 1) world.setTile(x, y, T.SNOWROCK, undefined, clim);
+      if (d.plate) {
+        if (k === 1) world.setTile(x, y, T.CANOPY, wet ? 0 : undefined, CLIMATE.TEMPERATE);
+        else if (!faceOnly) world.setTile(x, y, T.GRASS, 150, CLIMATE.TEMPERATE);
+      } else if (k === 1) world.setTile(x, y, T.SNOWROCK, undefined, clim);
       else if (!faceOnly) world.setTile(x, y, T.SNOW, 250, clim);
     }
   }
@@ -865,36 +891,121 @@ function placeShipyard(world, rec, f) {
 }
 
 /**
- * The canal a terrace's lowest waterfall pours into: a pool at the foot of
- * the wall, and a channel on from it, away from the terrace, down to the sea.
+ * Where a waterfall lands on dry land (a terrace's lowest falls, a plate's
+ * over the land): a pool at (px, py), at the foot of the wall it pours down,
+ * and a canal on from it along (ux, uy), away from the wall, down to the sea
+ * — `keep(i, j)` the tiles it never cuts into (the wall's own) — with a
+ * footbridge over it, part of the way along.
  */
-function carveFallCanal(world, tr, f) {
-  const ux = f.sx * Math.SQRT1_2, uy = f.sy * Math.SQRT1_2;
-  const cx = tr.x + f.x, cy = tr.y + f.y;
+function carveRunoff(world, px, py, ux, uy, keep) {
   const wet = (x, y, r) => {
     for (let j = Math.floor(y - r); j <= Math.ceil(y + r); j++) {
       for (let i = Math.floor(x - r); i <= Math.ceil(x + r); i++) {
         if ((i + 0.5 - x) ** 2 + (j + 0.5 - y) ** 2 > r * r) continue;
-        if (terraceTile(tr, i, j)) continue; // (never into the terrace itself)
+        if (keep(world.wx(i), j)) continue;
         world.setTile(world.wx(i), j, T.CANAL, 0);
       }
     }
   };
-  wet(cx + ux * 3.2, cy + uy * 3.2, 3.1);
+  // (as far as the water it runs out to: found first, before any of the canal's own is laid)
   let end = 160;
-  for (let s = 3; s < 160; s += 0.7) {
-    const x = cx + ux * s, y = cy + uy * s;
-    if (s > 8 && world.isLiquid(Math.floor(x), Math.floor(y)) && world.type(Math.floor(x), Math.floor(y)) !== T.CANAL) { end = s; break; }
-    wet(x, y, 1.7);
+  for (let s = 4; s < 160; s += 0.5) {
+    if (world.isLiquid(world.wx(Math.floor(px + ux * s)), Math.floor(py + uy * s))) { end = s; break; }
   }
-  // and a footbridge over it, half way down (the low city's way round the terrace)
-  const b = Math.min(end * 0.5, 16), bx = cx + ux * b, by = cy + uy * b;
+  wet(px, py, 3.1);
+  for (let s = 0; s <= end + 1; s += 0.7) wet(px + ux * s, py + uy * s, 1.7);
+  // (the way round the wall's foot crosses it)
+  const b = Math.min(end * 0.5, 13), bx = px + ux * b, by = py + uy * b;
   for (let j = Math.floor(by - 4); j <= Math.ceil(by + 4); j++) {
     for (let i = Math.floor(bx - 4); i <= Math.ceil(bx + 4); i++) {
-      const px = i + 0.5 - bx, py = j + 0.5 - by;
-      if (Math.abs(px * ux + py * uy) > 1.3) continue; // (across the canal, 2.6 m wide)
+      const qx = i + 0.5 - bx, qy = j + 0.5 - by;
+      if (Math.abs(qx * ux + qy * uy) > 1.3) continue; // (across the canal, 2.6 m wide)
       if (world.type(world.wx(i), j) === T.CANAL) world.setTile(world.wx(i), j, T.BRIDGE);
     }
+  }
+}
+
+/**
+ * A plate's oval and its waters (see drums.js): its streams wandering from
+ * their springs (`a`: the way they run, degrees from east, clockwise) out to
+ * the edge, where they pour over in falls — into the sea, or onto the land
+ * at its foot — its ponds, and the ground kept clear round the trunk.
+ */
+function makePlate(world, d, f, P, hh) {
+  d.plate = true;
+  d.Ry = rel(f.ry ?? f.r ?? 0.1, hh);
+  d.overSea = !!f.overSea;
+  const W = (d.water = { streams: [], ponds: [], clear: [], falls: [] });
+  const local = (q) => { const c = P(q); return { x: world.dx(d.x, c.x), y: c.y - d.y }; };
+  for (const p of f.ponds || []) W.ponds.push({ ...local(p), rx: p.rx, ry: p.ry, depth: 0.8, name: p.name });
+  for (const q of f.clear || []) W.clear.push({ ...local(q), r: q.r });
+  const edge = (x, y) => Math.hypot(x, y) - drumR(d, Math.atan2(y, x));
+  (f.streams || []).forEach((st, n) => {
+    const o = local(st), a = (st.a * Math.PI) / 180, ux = Math.cos(a), uy = Math.sin(a), seed = d.seed + n * 2.7;
+    const hw = st.w ?? 1.8, pts = [[o.x, o.y]];
+    let lip = null;
+    for (let t = 1; t < 700; t += 1) {
+      const wob = Math.sin(t * 0.045 + seed) * 5 * Math.min(1, t / 30);
+      const x = o.x + ux * t - uy * wob, y = o.y + uy * t + ux * wob;
+      if (edge(x, y) >= -0.2) { lip = { x, y }; break; }
+      if (t % 6 === 0) pts.push([x, y]);
+    }
+    if (!lip) return;
+    pts.push([lip.x, lip.y]);
+    // (on, through the edge: its bed runs out through the face)
+    const g = Math.hypot(lip.x / d.R ** 2, lip.y / d.Ry ** 2), nx = lip.x / d.R ** 2 / g, ny = lip.y / d.Ry ** 2 / g;
+    pts.push([lip.x + nx * 1.5, lip.y + ny * 1.5]);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    const s = { pts, hw, depth: 0.62, box: [x0 - hw, y0 - hw, x1 + hw, y1 + hw], name: st.name };
+    W.streams.push(s);
+    // the fall: from the lip straight down the face — into the sea, or onto the land
+    const fx = d.x + lip.x + nx * 4.2, fy = d.y + lip.y + ny * 4.2;
+    W.falls.push({ x: lip.x, y: lip.y, nx, ny, w: hw * 2, top: plateTop(d, lip.x - nx * 0.6, lip.y - ny * 0.6) + s.depth - WET, sea: world.isLiquid(world.wx(Math.floor(fx)), Math.floor(fy)), stream: s });
+  });
+}
+
+/**
+ * The giant roots a plate's tree reaches down to the land with, out of the
+ * dark under its canopy (Elbaph: Treasure Tree Adam's, in the Underworld):
+ * at `angles` (degrees from east, clockwise) round the plate, each its root
+ * object (render3d/props/elbaf.js) standing out from the face.
+ */
+function plateRoots(world, rec, d, angles) {
+  for (const deg of angles) {
+    const a = (deg * Math.PI) / 180, r = drumR(d, a);
+    const g = Math.hypot(Math.cos(a) * r / d.R ** 2, Math.sin(a) * r / d.Ry ** 2), nx = Math.cos(a) * r / d.R ** 2 / g, ny = Math.sin(a) * r / d.Ry ** 2 / g;
+    const x = d.x + Math.cos(a) * r + nx * 12, y = d.y + Math.sin(a) * r + ny * 12;
+    if (world.isLiquid(world.wx(Math.floor(x)), Math.floor(y))) continue;
+    const o = { kind: 'adamroot', x: world.wx(x), y, yaw: Math.atan2(nx, ny), H: d.H, block: true, far: 1200, seed: deg };
+    placeObject(world, o);
+    rec.landmarks.push(o);
+    rec.clearings.push({ x: o.x, y: o.y, r: 16 });
+  }
+}
+
+/**
+ * Spires of rock standing round the foot of a plate, on its land and out in
+ * the sea, mist hanging about them (render3d/props/elbaf.js `spire`): `n` of
+ * them, `from`–`to` metres out from its edge, clear of towns, docks and roads.
+ */
+function plateSpires(world, rec, d, sp, rng) {
+  const n = sp.n ?? 14, from = sp.from ?? 14, to = sp.to ?? 70;
+  let placed = 0;
+  for (let tries = 0; tries < n * 12 && placed < n; tries++) {
+    const a = rng.range(0, Math.PI * 2), r = drumR(d, a) + rng.range(from, to);
+    const x = world.wx(d.x + Math.cos(a) * r), y = d.y + Math.sin(a) * r;
+    const tx = Math.floor(x), ty = Math.floor(y);
+    if (ty < 2 || ty >= world.height - 2) continue;
+    const t = world.type(tx, ty);
+    if (MANMADE[t] || world.isOverlay(tx, ty) || world.isBlocked(tx, ty) || world.hitsProp(x, y, 9)) continue;
+    if (t === T.CANAL || t === T.RIVER) continue;
+    if ((rec.towns || []).some((tw) => Math.abs(world.dx(tw.x, x)) < tw.w / 2 + 12 && Math.abs(y - tw.y) < tw.h / 2 + 12)) continue;
+    if ((rec.docks || []).some((dk) => Math.hypot(world.dx(dk.land?.x ?? dk.x, x), y - (dk.land?.y ?? dk.y)) < 30)) continue;
+    const o = { kind: 'spire', x, y, h: rng.range(sp.hLo ?? 16, sp.hHi ?? 42), r: rng.range(3.2, 6.5), seed: rng.range(0, 100), block: true, far: 1600 };
+    placeObject(world, o);
+    rec.landmarks.push(o);
+    placed++;
   }
 }
 
@@ -911,13 +1022,16 @@ function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, d
       const x = x0 + i, y = y0 + j;
       const t = world.type(x, y);
       if (IS_LIQUID[t] || !WALKABLE[t]) continue;
-      let p = density;
-      let kindList = kinds;
+      // (an island of two climates — Elbaph's sunny canopy over its snowbound Underworld — has trees for each, as thick as each has them)
+      let p = def.densityByClimate?.[world.climate(x, y)] ?? density;
+      const own = def.treesByClimate?.[world.climate(x, y)];
+      let kindList = own || kinds;
       if (forestTypes.has(t)) {
         p = t === T.JUNGLE ? 0.3 : 0.26;
         if (def.forestTrees) kindList = def.forestTrees;
         else if (t === T.JUNGLE) kindList = ['jungle', 'jungle', 'palm', 'fern'];
         else if (world.climate(x, y) === CLIMATE.WINTER) kindList = ['snowpine'];
+        else if (own) kindList = own;
         else if (!kinds.includes('pine') && !kinds.includes('oak')) kindList = kinds;
         else kindList = ['oak', 'pine', 'oak', 'bush'];
       } else if (MANMADE[t] || t === T.DIRT || t === T.GRAVEL) {

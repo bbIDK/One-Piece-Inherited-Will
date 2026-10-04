@@ -671,7 +671,11 @@ player.
 
 **New World, second half**
 - Wano, Onigashima and Kaido (Road Poneglyph).
-- Egghead and Elbaph.
+- Egghead, and Elbaph (as the story draws it: Treasure Tree Adam standing up
+  through the island, its lower canopy the Sun World — the giants' villages on
+  a great leafy plate sixty metres up, reached by gondola, its streams pouring
+  off the edge in waterfalls into the sea — its upper canopies the Heaven
+  World, and at its roots the snowbound, misty Underworld with its spires).
 - Blackbeard's Hachinosu.
 - Lodestar, then **Laugh Tale** and the One Piece.
 

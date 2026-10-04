@@ -45,6 +45,17 @@ const TRUNK = {
   oak: 0.26, autumn: 0.26, cottoncandy: 0.26, cloudtree: 0.26, palm: 0.23, pine: 0.21, snowpine: 0.21, jungle: 0.45, cactus: 0.32,
   dead: 0.22, deadsnow: 0.22, spooky: 0.22, lollipop: 0.09, candycane: 0.16, bamboo: 0.3, coral: 0.13, kelp: 0.3, sakura: 0.28, blossom: 0.28,
 };
+/**
+ * Treasure Tree Adam's trunk on the Sun World (render3d/props/elbaf.js):
+ * its radius at the ground, and its buttress roots spreading over the plate
+ * round it — [angle (rad), how far out from the trunk they reach (m), how
+ * thick they start (m)].
+ */
+export const ADAM = {
+  trunk: 31,
+  roots: [[0.25, 20, 6.2], [0.95, 15, 5], [1.6, 22, 6.5], [2.3, 14, 4.6], [2.95, 19, 5.8], [3.65, 16, 5.2], [4.35, 21, 6.4], [5.05, 13, 4.4], [5.7, 18, 5.6]],
+};
+
 /** A prop's collider (see COLLIDE; scaled by its size). */
 export function colliderOf(o) {
   if (o.kind === 'tree') return TRUNK[o.sub || 'oak'] ?? COLLIDE.tree;
@@ -54,6 +65,21 @@ export function colliderOf(o) {
   // a gateway's posts and legs stand solid where they're drawn (render3d/props/
   // landmarks.js); between them you walk through
   if (o.kind === 'torii') return { circles: [[-1.55, 0, 0.3], [1.55, 0, 0.3]] };
+  // (Elbaph: Treasure Tree Adam's trunk and the buttress roots round it, the
+  // spires of rock round the Sun World's foot, the great roots reaching down
+  // into the Underworld — their feet, where they meet the ground: elbaf.js)
+  if (o.kind === 'adamtree') {
+    const c = [[0, 0, ADAM.trunk + 1]];
+    for (const [a, len, r0] of ADAM.roots) {
+      for (let t = 0.25; t <= 1.001; t += 0.25) {
+        const d = ADAM.trunk + len * t, r = r0 * (1 - t * 0.7) * 0.8;
+        c.push([Math.cos(a) * d, Math.sin(a) * d, Math.max(0.8, r)]);
+      }
+    }
+    return { circles: c };
+  }
+  if (o.kind === 'spire') return { circles: [[0, 0, (o.r || 4) * 0.95]] };
+  if (o.kind === 'adamroot') return { circles: [[0, 3, 2.7], [0, 7, 2.3], [0, 11, 1.9], [0, 15, 1.4], [0, 18.5, 1.0]] };
   // (Water 7's Great Fountain: its basin, all round — render3d/props/water7.js)
   if (o.kind === 'greatfountain') return { circles: [[0, 0, 10.1]] };
   // a Galley-La dock's shed: its side walls, its back wall either side of the

@@ -303,24 +303,56 @@ export const NEW_WORLD_2 = [
 
   // ------------------------------------------------------------------ Elbaph
   {
+    // Elbaph as the story draws it: Treasure Tree Adam standing up through the
+    // middle of the island, so vast that its lower canopy is a land of its own
+    // — the Sun World, where the giants live (world/drums.js plates): sunny
+    // grassland and villages on a great leafy plate sixty metres up, streams
+    // running out over its edge in waterfalls, into the sea and down into the
+    // Underworld at its foot — snowbound, dim and misty, spires of rock
+    // standing about it and the tree's roots reaching down into it. Above the
+    // plate, the trunk climbs on to the canopies of the Heaven World.
     id: 'elbaf', name: 'Elbaph', sea: 'new_world', x: 1600, y: 930, w: 230, h: 190,
-    climate: 'temperate', rough: 0.22, trees: ['pine', 'oak', 'pine'], treeDensity: 0.07,
+    climate: 'winter', rough: 0.22, trees: ['snowpine', 'snowpine', 'deadsnow'], treeDensity: 0.06,
+    // (the Sun World up on the canopy is open grassland and groves)
+    treesByClimate: { [CLIMATE.TEMPERATE]: ['oak', 'oak', 'pine', 'oak', 'bush'] }, densityByClimate: { [CLIMATE.TEMPERATE]: 0.018 },
     population: [['human', 100]], // scaled up to giants by the newWorld2 pack
     blobs: [[0, 0, 0.85, 0.85], [-0.55, -0.35, 0.42, 0.45], [0.5, -0.4, 0.45, 0.42], [0, 0.55, 0.7, 0.4]],
+    drums: [{
+      name: 'The Sun World', dx: 0, dy: -0.2, r: 0.68, ry: 0.685, h: 62, plate: true, overSea: true,
+      // (Adam's trunk, its roots spread on the plate round it)
+      clear: [{ dx: 0, dy: -0.2, r: 46 }],
+      ponds: [{ dx: -0.174, dy: 0.187, rx: 15, ry: 10, name: "Warrior's Spring" }],
+      // springs at the trunk's roots and the pond's outflows, each running out to a fall
+      streams: [
+        { dx: 0.054, dy: -0.4, a: -82, name: 'the Rootspring' },
+        { dx: -0.15, dy: -0.37, a: -112 },
+        { dx: 0.22, dy: -0.47, a: -78 },
+        { dx: 0.23, dy: 0.05, a: 24 },
+        { dx: -0.18, dy: 0.235, a: 95, name: "Warrior's Fall" },
+        { dx: -0.225, dy: 0.17, a: 178 },
+      ],
+      // the great roots reaching down into the Underworld (degrees from east, clockwise)
+      roots: [22, 60, 86, 104, 128, 156, 206, 334],
+      spires: { n: 16, from: 14, to: 76 },
+    }],
+    // (the ways up: a road from each landing to a gondola's foot, and on from its top across the Sun World)
+    ropeways: [
+      { id: 'elbaf_west_lift', name: 'Western Gondola', drum: 'The Sun World', from: [-0.85, -0.19], top: 'the Sun World', foot: 'the Underworld', road: true },
+      { id: 'elbaf_south_lift', name: 'Underworld Gondola', drum: 'The Sun World', from: [0.12, 0.7], top: 'the Sun World', foot: 'the Underworld', road: true },
+      { id: 'elbaf_east_lift', name: 'Eastern Gondola', drum: 'The Sun World', from: [0.82, -0.28], top: 'the Sun World', foot: 'the Underworld', road: true },
+    ],
     mountains: [
-      { name: 'Treasure Tree Adam', dx: 0.05, dy: 0.05, r: 0.13, h: 1.25 },
       { name: "Road's Mountain", dx: 0.52, dy: 0.55, r: 0.08, h: 0.9, snow: true },
-      { name: 'Underworld peaks', dx: -0.05, dy: 0.5, r: 0.07, h: 0.85, snow: true },
+      { name: 'Underworld peaks', dx: 0.3, dy: 0.6, r: 0.06, h: 0.85, snow: true },
     ],
     areas: [
-      { name: 'Underworld', tile: T.SNOW, climate: CLIMATE.WINTER, dx: 0, dy: 0.58, rx: 0.9, ry: 0.36 },
-      { name: 'Forest Sector 2', tile: T.FOREST, dx: 0.18, dy: -0.28, rx: 0.12, ry: 0.12 },
-      { name: "Warrior's Spring", tile: T.SAND, dx: -0.2, dy: -0.12, rx: 0.1, ry: 0.08 },
+      { name: 'Forest Sector 2', tile: T.FOREST, dx: 0.25, dy: 0.12, rx: 0.1, ry: 0.1 },
+      { name: 'the Underworld woods', tile: T.FOREST, dx: 0.3, dy: 0.78, rx: 0.14, ry: 0.08 },
     ],
-    lakes: [{ dx: -0.2, dy: -0.12, rx: 0.06, ry: 0.05, tile: T.POND }],
     towns: [
       {
-        id: 'western_village', name: 'Western Village', dx: -0.5, dy: -0.38, w: 74, h: 58, style: 'giant', dockDir: 'w', plaza: 'statue',
+        // (up on the Sun World, west of the trunk)
+        id: 'western_village', name: 'Western Village', dx: -0.39, dy: -0.21, w: 40, h: 30, style: 'giant', dockDir: 'w', plaza: 'statue',
         buildings: [
           { role: 'dojo', name: 'Hall of Warriors', trainer: 'elbaf_warrior', npc: 'hajrudin_elbaf' },
           { role: 'hall', name: "Elder Jarul's Longhouse", npc: 'jarul' },
@@ -331,7 +363,8 @@ export const NEW_WORLD_2 = [
         ],
       },
       {
-        id: 'owl_library', name: 'Owl Library & Walrus School', dx: 0.42, dy: -0.45, w: 64, h: 46, style: 'giant', dockDir: 'n', plaza: 'fountain',
+        // (up on the Sun World, east of it)
+        id: 'owl_library', name: 'Owl Library & Walrus School', dx: 0.39, dy: -0.29, w: 34, h: 24, style: 'giant', dockDir: 'e', plaza: 'fountain',
         buildings: [
           { role: 'library', name: 'Owl Library', npc: 'saul_elbaf' },
           { role: 'hall', name: 'Walrus School' },
@@ -339,36 +372,39 @@ export const NEW_WORLD_2 = [
         ],
       },
       {
-        id: 'ida_bar', name: 'Underworld Coast', dx: -0.38, dy: 0.72, w: 42, h: 30, style: 'giant', dockDir: 's', plaza: false, houses: 1,
+        // (down in the Underworld, on the south coast)
+        id: 'ida_bar', name: 'Underworld Coast', dx: -0.4, dy: 0.76, w: 36, h: 20, style: 'giant', dockDir: 's', plaza: false, houses: 1, noRoad: true,
         buildings: [{ role: 'bar', name: "Ida's Bar", npc: 'mato_elbaf', shop: 'elbaf_tavern' }],
       },
     ],
     landmarks: [
-      { kind: 'building', role: 'palace', name: 'Aurust Castle (sealed)', fw: 16, fd: 9, hgt: 7, style: 'giant', roofType: 'gable', wall: '#8d6e63', roof: '#3e2723', dx: -0.72, dy: 0.1, spot: 'aurust_castle' },
-      { kind: 'pillar', dx: 0.0, dy: 0.3, name: 'Seastone chains at the roots of Adam', spot: 'loki_chains' },
-      { kind: 'bones', dx: -0.08, dy: 0.36 },
-      { kind: 'bones', dx: 0.1, dy: 0.4 },
-      { kind: 'elevator', dx: 0.2, dy: 0.25, name: 'Boat Elevator to the Sun World' },
+      { kind: 'adamtree', dx: 0, dy: -0.18, name: 'Treasure Tree Adam', far: 4000,
+        lore: 'Treasure Tree Adam, the greatest tree in the world: its lower canopy is the Sun World, where the giants live, its upper canopies the Heaven World, and its roots go down into the Underworld. Its wood is the toughest there is; the Oro Jackson and the Thousand Sunny were built from it.' },
+      { kind: 'building', role: 'palace', name: 'Aurust Castle (sealed)', fw: 16, fd: 9, hgt: 7, style: 'giant', roofType: 'gable', wall: '#8d6e63', roof: '#3e2723', dx: -0.78, dy: 0.02, spot: 'aurust_castle' },
+      { kind: 'pillar', dx: -0.02, dy: 0.543, name: 'Seastone chains at the roots of Adam', spot: 'loki_chains' },
+      { kind: 'bones', dx: -0.1, dy: 0.6 },
+      { kind: 'bones', dx: 0.08, dy: 0.62 },
       { kind: 'pillar', dx: 0.3, dy: 0.05, name: 'The Great Longsword',
         lore: 'A longsword so huge it pierces the Sun World and reaches all the way down to the Underworld. Nobody in Elbaph remembers who forged it, or whose hand could ever have swung it.' },
-      { kind: 'statue', dx: 0.05, dy: -0.18, name: "Mural on Adam's bark (carved during the Void Century)",
+      { kind: 'statue', dx: 0, dy: 0.037, name: "Mural on Adam's bark (carved during the Void Century)",
         lore: 'A mural carved into the living bark of the Adam Tree during the Void Century. It matches the Harley, Elbaph\'s oldest text: the world has already been destroyed twice, and the Sun God Nika was there both times. Its third panel, Saul says, is the present day.' },
-      { kind: 'ruins', dx: 0.75, dy: -0.05, name: 'Ancient Facility (3,000 years old)',
+      { kind: 'ruins', dx: 0.76, dy: 0.14, name: 'Ancient Facility (3,000 years old)',
         lore: 'Doorways built for giants, grown over by the Adam Tree. Vegapunk\'s satellite Lilith guesses the facility is at least three thousand years old — and there is no record of it anywhere in the history of Elbaph.' },
       { kind: 'building', role: 'house', name: "Road's Castle", fw: 10, fd: 7, hgt: 6, style: 'giant', roofType: 'gable', wall: '#90a4ae', roof: '#455a64', dx: 0.52, dy: 0.72 },
     ],
     spots: [
       { id: 'walrus_school', dx: 0.42, dy: -0.2 },
-      { id: 'underworld_hunt', dx: -0.3, dy: 0.42 },
+      { id: 'underworld_hunt', dx: -0.55, dy: 0.55 },
     ],
+    // (the landings are all down in the Underworld: the villages are up the gondolas)
     docks: [
-      { near: 'western_village', dir: 'w', name: 'Western Village' },
-      { near: 'owl_library', dir: 'n', name: 'Owl Library Landing' },
+      { dx: -0.9, dy: -0.19, dir: 'w', name: 'Western Village Landing' },
+      { dx: 0.88, dy: -0.28, dir: 'e', name: 'Owl Library Landing' },
       { near: 'ida_bar', dir: 's', name: 'Underworld Coast' },
     ],
     logNext: ['karai_bari', 'hachinosu', 'lodestar'], logTime: 2,
     danger: 8, music: 'town',
-    tagline: 'The Warland, home of the giants — the strongest country in the world.',
+    tagline: 'The Warland, home of the giants — the Sun World on the canopy of Treasure Tree Adam, the Underworld at its roots.',
   },
 
   // ------------------------------------------------------------- Hachinosu

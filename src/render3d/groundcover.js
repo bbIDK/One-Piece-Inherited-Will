@@ -31,7 +31,7 @@ const FILL_BUDGET_MS = 2.5; // building new cells, per frame
 
 // tiles that never get cover (paved, built, walls, floors)
 const PAVED = new Uint8Array(64);
-for (const t of [T.STONE, T.COBBLE, T.PLANK, T.MARBLE, T.WALL, T.RAIL, T.BRIDGE, T.CARPET, T.TATAMI, T.STEEL, T.GOLD, T.CAKE, T.ISLAND_CLOUD, T.ICE, T.PACK_ICE, T.RED_ROCK, T.MASONRY]) PAVED[t] = 1;
+for (const t of [T.STONE, T.COBBLE, T.PLANK, T.MARBLE, T.WALL, T.RAIL, T.BRIDGE, T.CARPET, T.TATAMI, T.STEEL, T.GOLD, T.CAKE, T.ISLAND_CLOUD, T.ICE, T.PACK_ICE, T.RED_ROCK, T.MASONRY, T.CANOPY]) PAVED[t] = 1;
 
 function hash(x, y, k) {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(k | 0, 1103515245);

@@ -12,10 +12,12 @@ import { placeObject } from './islandgen.js';
 import { bw } from './bframe.js';
 import { RNG } from '../core/rng.js';
 import { terraceNoBuild } from './terraces.js';
+import { plateNoBuild } from './drums.js';
 
-/** Ground kept clear: a terraced city's stairways and gutters (terraces.js), a shipyard's (islandgen.js). */
+/** Ground kept clear: a terraced city's stairways and gutters (terraces.js), a plate's streams (drums.js), a shipyard's (islandgen.js). */
 function noBuildAt(world, x, y) {
   if (world.terraces && terraceNoBuild(world, x, y)) return true;
+  if (world.drums && plateNoBuild(world, x + 0.5, y + 0.5)) return true;
   const nb = world.noBuild;
   if (nb) for (const b of nb) if (x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1) return true;
   return false;
