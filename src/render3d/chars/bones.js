@@ -17,6 +17,11 @@
 //                 toward the right; each swings out about its own
 //                 horizontal axis to clear the legs (model.js skirtPanels);
 //   skirtK0..5    and a long skirt's lower panels, bending from them at the knee
+//   coat0..coat5  a coat's tail: panels round the back, hung from the waist
+//                 from its front-right edge (0) round to its front-left;
+//                 each swings out about its own horizontal axis, as cloth
+//                 (model.js coatPanels)
+//   coatK0..5     and its lower panels, bending from them part way down
 //   raR1..raR12, raL1..raL12 a rubber arm: the bare forearm in twelve rings
 //                 down to the wrist (the Gum-Gum stretch, chars/rig.js
 //                 solveRubber); at rest each sits where the forearm has it
@@ -25,6 +30,8 @@ import * as THREE from 'three';
 
 /** Bones in a rubber limb's chain (from the elbow, or the knee, to the wrist or ankle). */
 export const RUB_N = 12;
+/** Panels round a coat's tail. */
+export const COAT_N = 6;
 const chain = (p) => ['R', 'L'].flatMap((H) => Array.from({ length: RUB_N }, (_, i) => `${p}${H}${i + 1}`));
 export const BONES = [
   'hips', 'chest', 'head',
@@ -36,6 +43,7 @@ export const BONES = [
   'skirt0', 'skirt1', 'skirt2', 'skirt3', 'skirt4', 'skirt5',
   'skirtK0', 'skirtK1', 'skirtK2', 'skirtK3', 'skirtK4', 'skirtK5',
   ...chain('ra'), ...chain('rl'),
+  ...Array.from({ length: COAT_N }, (_, i) => 'coat' + i), ...Array.from({ length: COAT_N }, (_, i) => 'coatK' + i),
 ];
 export const SKIRT_N = 6;
 export const B = Object.fromEntries(BONES.map((n, i) => [n, i]));
@@ -47,6 +55,7 @@ export const PARENT = {
   coatTail: 'chest', wingR: 'chest', wingL: 'chest', backWpn: 'chest', tail: 'hips', sheath: 'hips', hilts: 'hips', hairTail: 'head',
 };
 for (let i = 0; i < SKIRT_N; i++) { PARENT['skirt' + i] = 'hips'; PARENT['skirtK' + i] = 'skirt' + i; }
+for (let i = 0; i < COAT_N; i++) { PARENT['coat' + i] = 'hips'; PARENT['coatK' + i] = 'coat' + i; }
 for (const H of ['R', 'L']) {
   for (let i = 1; i <= 4; i++) { PARENT['k' + i + H] = 'hand' + H; PARENT['j' + i + H] = 'k' + i + H; }
   PARENT['tb' + H] = 'hand' + H; PARENT['tc' + H] = 'tb' + H;
@@ -132,7 +141,27 @@ export function restOffsets(d) {
     R['skirt' + i] = [c * Dp, 0, s * Wp];
     R['skirtK' + i] = [c * (L.Dh - Dp) * f, -L.hK, s * (L.Wh - Wp) * f];
   }
+  // a coat's tail panels hang from round the waist (just outside the hips),
+  // and bend again part way down, as far out as its flare has them there
+  const C = coatShape(d);
+  for (let i = 0; i < COAT_N; i++) {
+    const a = C.a[i], c = Math.cos(a), s = Math.sin(a), k = C.flare * C.hK / C.L;
+    R['coat' + i] = [c * C.Dp, 0, s * C.Wp];
+    R['coatK' + i] = [c * C.Dp * k, -C.hK, s * C.Wp * k];
+  }
   return R;
+}
+/**
+ * A coat's tail: its length below the waist (L), where its panels bend
+ * again (hK, below the waist), how much wider it is at the hem than at the
+ * waist (flare), the half depth and width of the ring it hangs from, the
+ * angles of its panels round it (from the front, toward the right: its
+ * front edges at ±open), and how far round each panel's reach goes.
+ */
+export function coatShape(d) {
+  const [Dp, Wp] = skirtWaist(d), L = 0.62 * d.Lg, open = 0.85;
+  const a = Array.from({ length: COAT_N }, (_, i) => open + (Math.PI * 2 - 2 * open) * (i / (COAT_N - 1)));
+  return { L, hK: L * 0.52, flare: 0.42, Dp: Dp * 1.12, Wp: Wp * 1.1, open, a, reach: (Math.PI * 2 - 2 * open) / (COAT_N - 1) };
 }
 /** Where a skirt's panels hang from: the waist's half depth and half width. */
 export function skirtWaist(d) { const Wp = d.hipOut * 0.92; return [Wp * 0.78, Wp]; }
@@ -184,5 +213,6 @@ export function bindPose(d) {
   child('tail', 'hips', R.tail); child('wingR', 'chest', R.wingR); child('wingL', 'chest', R.wingL);
   child('hairTail', 'head', R.hairTail);
   for (let i = 0; i < SKIRT_N; i++) { child('skirt' + i, 'hips', R['skirt' + i]); child('skirtK' + i, 'skirt' + i, R['skirtK' + i]); }
+  for (let i = 0; i < COAT_N; i++) { child('coat' + i, 'hips', R['coat' + i]); child('coatK' + i, 'coat' + i, R['coatK' + i]); }
   return m;
 }

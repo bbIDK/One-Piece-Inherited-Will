@@ -697,6 +697,10 @@ export const scenarios = {
         longarm: { race: 'longarm', arms: 1.8, fem: true, hair: 'wavy', hairColor: '#6c5ce7', skin: '#f1c9a0', topStyle: 'dress', top: '#16a085', shoeStyle: 'sandals' },
         skirt: { fem: true, frame: 'slim', hair: 'twintails', hairColor: '#e84393', skin: '#fbe3cf', topStyle: 'tank', top: '#fdcb6e', bottomStyle: 'skirt', bottom: '#6c5ce7', shoeStyle: 'shoes' },
         longskirt: { fem: true, frame: 'slim', idle: 'cross', hair: 'long', hairColor: '#171320', skin: '#dcae8a', topStyle: 'crop', top: '#3b3570', bottomStyle: 'longskirt', bottom: '#d1545a', shoeStyle: 'sandals' },
+        // a cloak over the shoulders (the body slot's red_cloak), and a traveller in hood and cloak
+        cloak: { fem: false, frame: 'athletic', hair: 'short', hairColor: '#3b2a1a', skin: '#e8b98f', topStyle: 'shirt', top: '#f5f5f5', coat: '#b71c1c', bottomStyle: 'trousers', bottom: '#2d3436', shoeStyle: 'boots' },
+        hood: { fem: false, frame: 'lean', hair: 'short', hairColor: '#1b1b1b', skin: '#d9a77c', topStyle: 'tee', top: '#5d6d7e', hat: 'hood', hatColor: '#6a5643', coat: '#6a5643', bottomStyle: 'trousers', bottom: '#3e2f25', shoeStyle: 'boots' },
+        cowl: { fem: true, frame: 'slim', hair: 'long', hairColor: '#e8742a', skin: '#f6cfae', topStyle: 'tank', top: '#26262b', hat: 'hood', hatColor: '#26262b', bottomStyle: 'trousers', bottom: '#26262b', shoeStyle: 'boots' },
       };
       const walk = async (mx, my, sprint, n) => {
         await page.evaluate(([mx, my, sprint]) => { const a = window.__C3.npcs[0]; a.intent.mx = mx; a.intent.my = my; a.intent.sprint = sprint; }, [mx, my, sprint]);
@@ -715,6 +719,16 @@ export const scenarios = {
         }, LOOKS[name]);
         await settle(page, 4);
         await snap(`${name}-stand`);
+        // (--around: the stand from the front, the back and three-quarters, to see what a coat or hood does round the body)
+        if (args.around) {
+          // (the mover turned: facing you, away from you, three-quarters)
+          for (const [lab, turn] of [['front', 0], ['back', Math.PI], ['q', Math.PI / 4]]) {
+            await page.evaluate((k) => { const a = window.__C3.npcs[0], p = window.OP.game.player; a.facing = Math.atan2(p.y - a.y, p.x - a.x) + k; }, turn);
+            await settle(page, 3);
+            await snap(`${name}-${lab}`);
+          }
+          await page.evaluate(() => { window.__C3.npcs[0].facing = Math.PI / 2; });
+        }
         await walk(0, 0.45, false, 8);
         await snap(`${name}-walk`);
         await walk(0, 1, true, 5);

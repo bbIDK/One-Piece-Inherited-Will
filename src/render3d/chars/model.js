@@ -3,7 +3,7 @@
 // texture per expression) and held weapons. `pose(P, o)` applies a sampled
 // 2D-rig pose through the 3D rig; the caller turns the model to its facing.
 import * as THREE from 'three';
-import { BONES, B, PARENT, restOffsets, SKIRT_N, skirtWaist, RUB, RUBL } from './bones.js';
+import { BONES, B, PARENT, restOffsets, SKIRT_N, skirtWaist, COAT_N, RUB, RUBL } from './bones.js';
 import { getBody, releaseBody, faceGeo, headLevel } from './build.js';
 import { Rig } from './rig.js';
 import { bodyMaterial, sharedOutline, glowMaterial, senseMaterial, SELF_SHADE, SELF_SHADE_VM } from './mats.js';
@@ -54,16 +54,25 @@ const _srad = new Float32Array(SKIRT_T.length * 2), _sleg = new Uint8Array(SKIRT
  * `psi` round the waist: panels further round it than their neighbours
  * care less, and not at all beyond).
  */
-function panelNeed(u, h, r, len, psi, a) {
+function panelNeed(u, h, r, len, psi, a, reach = SKIRT_REACH) {
   let da = Math.abs(psi - a) % TAU;
   if (da > Math.PI) da = TAU - da;
-  if (da > SKIRT_REACH + SKIRT_FADE || h < -0.05 || h > len + 0.05) return -1;
-  const fade = da <= SKIRT_REACH ? 1 : 1 - (da - SKIRT_REACH) / SKIRT_FADE;
+  if (da > reach + SKIRT_FADE || h < -0.05 || h > len + 0.05) return -1;
+  const fade = da <= reach ? 1 : 1 - (da - reach) / SKIRT_FADE;
   const R = Math.hypot(u, h);
   // (u·cos φ − h·sin φ ≤ −r: the point at least r inside the panel's line)
   const phi = R <= r ? 1.75 : Math.acos(Math.max(-1, -r / R)) - Math.atan2(h, u);
   return phi * fade;
 }
+
+// a coat's tail (coatPanels): gravity's pull on a panel, the wind of moving on
+// it (per m/s), how quickly its swing dies (upper, lower), how hard each
+// panel pulls its neighbours along (so the tail holds together), and how far
+// out it may swing (radians) — the feel of the cloth
+export const COAT_FEEL = { g: 9.8, wind: 1.05, damp: 3.2, damp2: 2.6, link: 5, max: 1.15, max2: 1.4, smooth: 0.09 };
+const _cv = new THREE.Vector3(), _cv2 = new THREE.Vector3(), _cv3 = new THREE.Vector3(), _cq = new THREE.Quaternion(), _cq2 = new THREE.Quaternion(), _cm = new THREE.Matrix4(), _cax = new THREE.Vector3();
+const _cpts = Array.from({ length: SKIRT_T.length * 2 }, () => new THREE.Vector3());
+const _crad = new Float32Array(SKIRT_T.length * 2), _cleg = new Uint8Array(SKIRT_T.length * 2);
 
 // ------------------------------------------------------------------ hair and cloth that swing
 // Long hair and a coat's tail are each a weight on a spring at the end of
@@ -178,6 +187,7 @@ export class CharacterModel {
     const R = restOffsets(d);
     for (const n of ['hairTail', 'tail', 'wingR', 'wingL']) this.bones[B[n]].position.set(...R[n]);
     for (let i = 0; i < SKIRT_N; i++) { this.bones[B['skirt' + i]].position.set(...R['skirt' + i]); this.bones[B['skirtK' + i]].position.set(...R['skirtK' + i]); }
+    for (let i = 0; i < COAT_N; i++) { this.bones[B['coat' + i]].position.set(...R['coat' + i]); this.bones[B['coatK' + i]].position.set(...R['coatK' + i]); }
     this.restFingers();
     // face decal on the head
     this.face = new THREE.Mesh(faceGeo(look, headLevel(this.lod)), undefined);
@@ -314,9 +324,10 @@ export class CharacterModel {
   /** Swing the long hair and the coat's tail (after the model and its root are posed for the frame). */
   swing(dt, root) {
     const D = this.dangles || (this.dangles = this.makeDangles());
-    if (!D.length) return;
+    if (!D.length && !this.body.coat) return;
     root.updateMatrixWorld(true);
     for (const s of D) s.step(dt);
+    if (this.body.coat) this.coatSwing(dt);
   }
 
   /** Show or hide a bone's geometry (scale 0 hides; children follow). */
@@ -379,6 +390,7 @@ export class CharacterModel {
       } else bones[k === 0 ? B.handR : B.handL].scale.setScalar(1);
     }
     if (this.body.skirt) this.skirtPanels(o.dt);
+    if (this.body.coat) this.coatPanels(o.dt);
     if (this.visibleParts) for (const [i, on] of this.visibleParts) this.showBone(i, on);
     if (this.fing) for (let k = 0; k < 2; k++) this.poseFingers(k, this.shape[k], t);
 
@@ -591,6 +603,160 @@ export class CharacterModel {
       const pB = Math.min(1.3, phiB), j = SKIRT_N + i;
       th[j] = pB >= th[j] ? pB : Math.max(pB, th[j] - fall);
       bones[B['skirtK' + i]].quaternion.setFromAxisAngle(_sax, Math.max(phi0, th[j]) - phi0 - th[i]);
+    }
+  }
+
+  /**
+   * A coat's tail, as cloth: six panels round the back hung from the waist
+   * (coat0..5), each bending again part way down (coatK0..5). Each panel is
+   * a pendulum — the body's own moves swing it (set off and it lags, stop or
+   * turn and it swings on), the wind of moving streams it back, it settles
+   * as it hangs, and neighbours pull on each other so the tail holds
+   * together (coatSwing, close by) — and whatever it's doing, it swings out
+   * as far as it must to clear the thighs and shins (as a skirt's panels do).
+   * Here, every frame: where the legs are, and (further off, with nothing
+   * swinging it) the cloth falling back to hang, pushed out by the legs.
+   * th: each upper panel's swing out from its rest (radians), then each
+   * lower panel's (its own, not its upper's).
+   */
+  coatPanels(dt) {
+    const C = this.body.coat, N = COAT_N, d = this.d, rig = this.rig;
+    const S = this.coatS || (this.coatS = { th: new Float32Array(N * 2), om: new Float32Array(N * 2), need: new Float32Array(N), live: 0, n: 0, p: new THREE.Vector3(), v: new THREE.Vector3(), q: new THREE.Quaternion(), on: false });
+    // the legs' points, in the hips' frame (+X forward, +Z right), and how thick they are there
+    const F = d.F || {}, Bk = d.Bk;
+    const rT = 0.088 * (F.th || 1) * Bk + 0.03, rS = 0.056 * (F.ca || 1) * Bk + 0.026;
+    _cq.copy(rig.quat[B.hips]).invert();
+    const H = rig.pos[B.hips];
+    let n = 0;
+    for (const [hi, ki, fi] of LEG3) {
+      const A = rig.pos[hi], K = rig.pos[ki], Ft = rig.pos[fi];
+      for (let s = 0; s < SKIRT_T.length; s++) {
+        const t = SKIRT_T[s], P = _cpts[n];
+        (s < 3 ? P.lerpVectors(A, K, t) : P.lerpVectors(K, Ft, t)).sub(H).applyQuaternion(_cq);
+        _crad[n] = s < 3 ? rT - 0.018 * t : rS - 0.012 * t;
+        _cleg[n] = s < 3 ? (t === 1 ? 2 : 0) : 1;
+        n++;
+      }
+    }
+    S.n = n;
+    // the upper panels: as far out as they must go to clear the thighs and knees
+    for (let i = 0; i < N; i++) {
+      const a = C.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C.Dp, sa * C.Wp);
+      const phi0 = Math.atan2(rp * C.flare, C.L);
+      let need = phi0;
+      for (let k = 0; k < n; k++) {
+        if (_cleg[k] === 1) continue;
+        const P = _cpts[k];
+        const v = panelNeed(P.x * ca + P.z * sa - rp, -P.y, _crad[k], C.hK + 0.08, Math.atan2(P.z, P.x), a, C.reach);
+        if (v > need) need = v;
+      }
+      S.need[i] = Math.min(1.6, need) - phi0;
+    }
+    // (nothing swinging it — too far off to see it swing: it falls back to
+    // hanging, as gently as cloth falls, held out by the legs)
+    S.live -= dt || 0.016;
+    if (S.live > 0) return;
+    const fall = Math.min(0.2, dt || 0.016) * 2.2;
+    for (let i = 0; i < N; i++) {
+      const up = Math.max(S.need[i], S.th[i] > 0 ? Math.max(0, S.th[i] - fall) : Math.min(0, S.th[i] + fall));
+      S.th[i] = up; S.om[i] = 0;
+      const lo = this.coatLowNeed(i, up), j = N + i, cur = S.th[j];
+      S.th[j] = Math.max(lo, cur > 0 ? Math.max(0, cur - fall) : Math.min(0, cur + fall)); S.om[j] = 0;
+    }
+    this.coatApply();
+  }
+
+  /** How far out (from its rest) lower panel i must swing to clear the shins, its upper panel `up` out from its rest. */
+  coatLowNeed(i, up) {
+    const C = this.body.coat, S = this.coatS;
+    const a = C.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C.Dp, sa * C.Wp);
+    const phi0 = Math.atan2(rp * C.flare, C.L), Lb = C.hK / Math.cos(phi0), ang = phi0 + up;
+    // (the bend: out from the axis, down from the waist)
+    const ku = rp + Math.sin(ang) * Lb, kh = Math.cos(ang) * Lb;
+    let need = phi0;
+    for (let k = 0; k < S.n; k++) {
+      if (_cleg[k] === 0) continue;
+      const P = _cpts[k], hB = -P.y - kh;
+      if (hB < 0.04) continue;
+      const v = panelNeed(P.x * ca + P.z * sa - ku, hB, _crad[k], C.L - C.hK + 0.05, Math.atan2(P.z, P.x), a, C.reach);
+      if (v > need) need = v;
+    }
+    return Math.min(1.6, need) - phi0;
+  }
+
+  /**
+   * The coat's tail swung as cloth (close by: after the model's posed and
+   * placed in the world for the frame): the hips' own motion — how fast
+   * they go and how that changes, how fast they turn — in their own frame
+   * drives each panel's pendulum; the legs keep it out (coatPanels).
+   */
+  coatSwing(dt) {
+    const S = this.coatS, C = this.body.coat, N = COAT_N, K = COAT_FEEL;
+    if (!S) return;
+    const hips = this.bones[B.hips];
+    const p = _cv.setFromMatrixPosition(hips.matrixWorld);
+    _cq.setFromRotationMatrix(_cm.extractRotation(hips.matrixWorld));
+    S.live = 0.25;
+    if (!S.on || !(dt > 0) || dt > 0.3 || p.distanceToSquared(S.p) > 4) {
+      // (first frame, a long gap or a jump: hanging still)
+      S.p.copy(p); S.v.set(0, 0, 0); S.q.copy(_cq); S.on = true;
+      this.coatApply();
+      return;
+    }
+    // (the body's way through the world, smoothed: a stride's sway and the
+    // bob of a run aren't the cloth's to answer, only the body going
+    // somewhere, starting, stopping and turning)
+    const v = _cv2.subVectors(p, S.p).divideScalar(dt);
+    v.y = 0;
+    v.lerpVectors(S.v, v, 1 - Math.exp(-dt / K.smooth));
+    const acc = _cv3.subVectors(v, S.v).divideScalar(dt);
+    if (acc.lengthSq() > 900) acc.setLength(30);
+    // (how fast the hips turn about the upright)
+    _cq2.copy(S.q).invert().premultiply(_cq);
+    const yawRate = 2 * Math.atan2(_cq2.y, _cq2.w) / dt;
+    S.p.copy(p); S.v.copy(v); S.q.copy(_cq);
+    // into the hips' frame
+    _cq2.copy(_cq).invert();
+    v.applyQuaternion(_cq2); acc.applyQuaternion(_cq2);
+    const g = K.g, w2 = Math.min(25, yawRate * yawRate);
+    const lU = C.hK * 0.6, lL = (C.L - C.hK) * 0.6, th = S.th, om = S.om;
+    const steps = Math.min(4, Math.ceil(dt / (1 / 60))), h = dt / steps;
+    for (let st = 0; st < steps; st++) {
+      for (let i = 0; i < N; i++) {
+        const a = C.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C.Dp, sa * C.Wp);
+        // the air on its face (a run streams the back of it out behind), the
+        // lag of its own weight as the body speeds up, slows or turns
+        const wind = -(v.x * ca + v.z * sa) * K.wind;
+        const push = -(acc.x * ca + acc.z * sa) + w2 * rp;
+        const t0 = th[i];
+        const link = K.link * ((i > 0 ? th[i - 1] : t0) + (i < N - 1 ? th[i + 1] : t0) - 2 * t0);
+        const al = (-g * Math.sin(t0) + (wind + push) * Math.cos(t0)) / lU - K.damp * om[i] + link;
+        om[i] += al * h;
+        th[i] += om[i] * h;
+        if (th[i] < S.need[i]) { th[i] = S.need[i]; if (om[i] < 0) om[i] = 0; }
+        if (th[i] > K.max) { th[i] = K.max; if (om[i] > 0) om[i] = 0; }
+        // the lower panel, hung from where the upper one bends: pushed the same way, and by the upper's swing
+        const j = N + i, t1 = th[j];
+        const linkL = K.link * ((i > 0 ? th[j - 1] : t1) + (i < N - 1 ? th[j + 1] : t1) - 2 * t1);
+        const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - al * C.hK) * Math.cos(t1)) / lL - K.damp2 * om[j] + linkL;
+        om[j] += alL * h;
+        th[j] += om[j] * h;
+        const lo = this.coatLowNeed(i, th[i]);
+        if (th[j] < lo) { th[j] = lo; if (om[j] < 0) om[j] = 0; }
+        if (th[j] > K.max2) { th[j] = K.max2; if (om[j] > 0) om[j] = 0; }
+      }
+    }
+    this.coatApply();
+  }
+
+  /** Set the coat panels' bones from their swings. */
+  coatApply() {
+    const S = this.coatS, C = this.body.coat, bones = this.bones;
+    for (let i = 0; i < COAT_N; i++) {
+      const a = C.a[i];
+      _cax.set(-Math.sin(a), 0, Math.cos(a));
+      bones[B['coat' + i]].quaternion.setFromAxisAngle(_cax, S.th[i]);
+      bones[B['coatK' + i]].quaternion.setFromAxisAngle(_cax, S.th[COAT_N + i] - S.th[i]);
     }
   }
 

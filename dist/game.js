@@ -79995,6 +79995,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
 
   // src/render3d/chars/bones.js
   var RUB_N = 12;
+  var COAT_N = 6;
   var chain = (p) => ["R", "L"].flatMap((H4) => Array.from({ length: RUB_N }, (_, i) => `${p}${H4}${i + 1}`));
   var BONES = [
     "hips",
@@ -80040,7 +80041,9 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     "skirtK4",
     "skirtK5",
     ...chain("ra"),
-    ...chain("rl")
+    ...chain("rl"),
+    ...Array.from({ length: COAT_N }, (_, i) => "coat" + i),
+    ...Array.from({ length: COAT_N }, (_, i) => "coatK" + i)
   ];
   var SKIRT_N = 6;
   var B4 = Object.fromEntries(BONES.map((n, i) => [n, i]));
@@ -80065,6 +80068,10 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
   for (let i = 0; i < SKIRT_N; i++) {
     PARENT["skirt" + i] = "hips";
     PARENT["skirtK" + i] = "skirt" + i;
+  }
+  for (let i = 0; i < COAT_N; i++) {
+    PARENT["coat" + i] = "hips";
+    PARENT["coatK" + i] = "coat" + i;
   }
   for (const H4 of ["R", "L"]) {
     for (let i = 1; i <= 4; i++) {
@@ -80158,7 +80165,18 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       R4["skirt" + i] = [c * Dp, 0, s * Wp];
       R4["skirtK" + i] = [c * (L3.Dh - Dp) * f, -L3.hK, s * (L3.Wh - Wp) * f];
     }
+    const C3 = coatShape(d);
+    for (let i = 0; i < COAT_N; i++) {
+      const a = C3.a[i], c = Math.cos(a), s = Math.sin(a), k = C3.flare * C3.hK / C3.L;
+      R4["coat" + i] = [c * C3.Dp, 0, s * C3.Wp];
+      R4["coatK" + i] = [c * C3.Dp * k, -C3.hK, s * C3.Wp * k];
+    }
     return R4;
+  }
+  function coatShape(d) {
+    const [Dp, Wp] = skirtWaist(d), L3 = 0.62 * d.Lg, open = 0.85;
+    const a = Array.from({ length: COAT_N }, (_, i) => open + (Math.PI * 2 - 2 * open) * (i / (COAT_N - 1)));
+    return { L: L3, hK: L3 * 0.52, flare: 0.42, Dp: Dp * 1.12, Wp: Wp * 1.1, open, a, reach: (Math.PI * 2 - 2 * open) / (COAT_N - 1) };
   }
   function skirtWaist(d) {
     const Wp = d.hipOut * 0.92;
@@ -80205,6 +80223,10 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     for (let i = 0; i < SKIRT_N; i++) {
       child("skirt" + i, "hips", R4["skirt" + i]);
       child("skirtK" + i, "skirt" + i, R4["skirtK" + i]);
+    }
+    for (let i = 0; i < COAT_N; i++) {
+      child("coat" + i, "hips", R4["coat" + i]);
+      child("coatK" + i, "coat" + i, R4["coatK" + i]);
     }
     return m;
   }
@@ -81421,9 +81443,11 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       }
       feet(add7, o, pal, d, q2, Ft, part5);
     }
-    if (look.coat && TOP2 !== "coat" || TOP2 === "coat" && !look.top2 && look.coat) coat(add7, sh, look.coat, TR, U3, cloth, d, q2);
-    else if (TOP2 === "coat") coatTail(add7, sh, look.coat || pal.top, U3, cloth, d, 0.03);
-    return { ...o, skirtInfo, rubTA };
+    let coatInfo = null;
+    if (look.coat && TOP2 !== "coat" || TOP2 === "coat" && !look.top2 && look.coat) coatInfo = coat(add7, sh, look.coat, TR, U3, cloth, d, q2);
+    else if (TOP2 === "coat") coatInfo = coatTail(add7, sh, look.coat || pal.top, U3, cloth, d, 0.03);
+    if (look.hat === "hood") mantle(add7, sh, look.hatColor || "#6a5643", U3, cloth, d);
+    return { ...o, skirtInfo, rubTA, coatInfo };
   }
   function neckGeo(nk, y0, y1, o, cloth) {
     const U3 = cloth ? 14 : 7, V5 = cloth ? 6 : 2, C3 = cloth ? 3 : 1, VV = V5 + C3;
@@ -81515,20 +81539,50 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const p = col2(s, a);
       return [p[0] * 0.95, p[1], p[2] * 0.95];
     }, cr, 1.25, TAU14 - 1.25, Math.max(4, U3 / 2), true), M(), lining2, B4.chest);
-    coatTail(add7, sh, c, U3, cloth, d, off(-0.1));
+    return coatTail(add7, sh, c, U3, cloth, d, off(-0.1));
   }
   function coatTail(add7, sh, c, U3, cloth, d, off0) {
     const lining2 = shade(c, -0.3);
-    const L3 = 0.62 * d.Lg;
-    const tr = cloth ? [0.02, -0.12, -0.28, -0.45, -L3] : [0.02, -0.3, -L3];
+    const C3 = coatShape(d), L3 = C3.L, hK = C3.hK;
+    const tr = cloth ? [0.02, -0.1, -hK * 0.55, -hK + 0.05, -hK - 0.05, -(hK + (L3 - hK) * 0.5), -L3] : [0.02, -hK, -L3];
     const tp = (inset) => (y, a) => {
       const p = torsoPt(sh, -0.1, a, off0 - inset, 0);
-      const k = 1 + clamp4(-y / L3, 0, 1) * 0.42;
+      const k = 1 + clamp4(-y / L3, 0, 1) * C3.flare;
       return [p[0] * k - 8e-3, y, p[2] * k];
     };
-    const openT = 0.62;
-    add7(band(tp(0), tr, openT, TAU14 - openT, U3), M(), c, B4.coatTail);
-    if (cloth) add7(band(tp(6e-3), half(tr), openT, TAU14 - openT, U3 / 2, true), M(), lining2, B4.coatTail);
+    const openT = C3.open, span2 = TAU14 - 2 * openT;
+    const skin = { skin: (x, y, z) => {
+      if (y > -0.02) return [B4.chest, 0, 0];
+      let a = Math.atan2(z / C3.Wp, x / C3.Dp);
+      if (a < 0) a += TAU14;
+      const f = clamp4((a - openT) / span2, 0, 1) * (COAT_N - 1);
+      const i = Math.min(COAT_N - 2, Math.floor(f)), j = i + 1, w = f - i;
+      const t = sstep(hK - 0.06, hK + 0.06, -y);
+      return [B4["coat" + i], B4["coat" + j], B4["coatK" + i], B4["coatK" + j], w * (1 - t), (1 - w) * t, w * t];
+    } };
+    add7(band(tp(0), tr, openT, TAU14 - openT, U3), M(), c, B4.hips, 0, skin);
+    if (cloth) add7(band(tp(6e-3), half(tr), openT, TAU14 - openT, U3 / 2, true), M(), lining2, B4.hips, 0, skin);
+    return C3;
+  }
+  function mantle(add7, sh, c, U3, cloth, d) {
+    const lining2 = shade(c, -0.35);
+    const Wn = Math.abs(torsoPt(sh, 0.9, Math.PI / 2, 0, 0)[2]);
+    const armR = 0.06 * (d.F && d.F.arm || 1) * d.Bk;
+    const over = Math.max(0.03, d.shW + armR + 0.015 - Wn);
+    const rows = cloth ? [1.03, 0.98, 0.92, 0.86, 0.8] : [1.03, 0.9, 0.8];
+    const pt = (inset) => (s, a) => {
+      const side = Math.pow(Math.abs(Math.sin(a)), 1.6);
+      const off = 0.024 + (1.03 - s) * 0.22 + side * over * sstep(1.02, 0.92, s) - inset;
+      const p = torsoPt(sh, Math.min(s, 0.99), a, off, 0);
+      const k = s > 1 ? 0.8 : 1;
+      return [p[0] * k, s * sh.cl, p[2] * k];
+    };
+    const skin = { skin: (x, y, z) => {
+      const w = sstep(0.5, 0.95, Math.abs(z) / (Wn + over)) * sstep(d.shY + 0.07, d.shY - 0.05, y) * 0.7;
+      return w > 0.01 ? [B4.chest, z > 0 ? B4.uarmR : B4.uarmL, w] : [B4.chest, 0, 0];
+    } };
+    add7(band(pt(0), rows, -Math.PI, Math.PI, U3), M(), c, B4.chest, 0, skin);
+    if (cloth) add7(band(pt(8e-3), rows.slice(-2), -Math.PI, Math.PI, U3, true), M(), lining2, B4.chest, 0, skin);
   }
 
   // src/render3d/chars/mats.js
@@ -83267,7 +83321,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       h2.add(capGeo(1.21, 60, 134, 160, null, U3, V5), M(0.07, 0.03, 0, 0, 0, 0, [1.06, 1, -1.03]), shade(c, -0.7), h2.bone);
       const k = surf(12, 180, 1.28);
       h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(k[0] - 0.12, k[1] + 0.02, 0, 0, 0, 0.5, [0.34, 0.2, 0.3]), shade(c, -0.06), h2.bone);
-      h2.add(lathe2([[1, -0.8], [1.42, -1.3], [1.62, -1.58]], 14), M(), shade(c, -0.06), h2.bone);
+      h2.add(lathe2([[1, -0.8], [1.12, -1.12]], 14), M(), shade(c, -0.06), h2.bone);
     },
     cap(h2, col2) {
       const c = col2 || "#5d6d7e";
@@ -83495,7 +83549,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const geo2 = b.build();
     const inv = bind.map((m) => m.clone().invert());
     const used = new Set(b.bone);
-    return { geo: geo2, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null, skirt: outfit.skirtInfo || null, rubTA: outfit.rubTA };
+    return { geo: geo2, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === "bubble", lod, fingers: fingers.R ? fingers : null, skirt: outfit.skirtInfo || null, coat: outfit.coatInfo || null, rubTA: outfit.rubTA };
   }
   var LIMB_OF = new Uint8Array(BONES.length);
   for (const [k, H4] of [[1, "R"], [2, "L"]]) {
@@ -84241,15 +84295,26 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _spts = Array.from({ length: SKIRT_T.length * 2 }, () => new Vector3());
   var _srad = new Float32Array(SKIRT_T.length * 2);
   var _sleg = new Uint8Array(SKIRT_T.length * 2);
-  function panelNeed(u, h2, r4, len, psi, a) {
+  function panelNeed(u, h2, r4, len, psi, a, reach2 = SKIRT_REACH) {
     let da = Math.abs(psi - a) % TAU17;
     if (da > Math.PI) da = TAU17 - da;
-    if (da > SKIRT_REACH + SKIRT_FADE || h2 < -0.05 || h2 > len + 0.05) return -1;
-    const fade2 = da <= SKIRT_REACH ? 1 : 1 - (da - SKIRT_REACH) / SKIRT_FADE;
+    if (da > reach2 + SKIRT_FADE || h2 < -0.05 || h2 > len + 0.05) return -1;
+    const fade2 = da <= reach2 ? 1 : 1 - (da - reach2) / SKIRT_FADE;
     const R4 = Math.hypot(u, h2);
     const phi = R4 <= r4 ? 1.75 : Math.acos(Math.max(-1, -r4 / R4)) - Math.atan2(h2, u);
     return phi * fade2;
   }
+  var COAT_FEEL = { g: 9.8, wind: 1.05, damp: 3.2, damp2: 2.6, link: 5, max: 1.15, max2: 1.4, smooth: 0.09 };
+  var _cv = new Vector3();
+  var _cv2 = new Vector3();
+  var _cv3 = new Vector3();
+  var _cq = new Quaternion();
+  var _cq2 = new Quaternion();
+  var _cm = new Matrix4();
+  var _cax = new Vector3();
+  var _cpts = Array.from({ length: SKIRT_T.length * 2 }, () => new Vector3());
+  var _crad = new Float32Array(SKIRT_T.length * 2);
+  var _cleg = new Uint8Array(SKIRT_T.length * 2);
   var _d1 = new Vector3();
   var _d2 = new Vector3();
   var _d3 = new Vector3();
@@ -84363,6 +84428,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       for (let i = 0; i < SKIRT_N; i++) {
         this.bones[B4["skirt" + i]].position.set(...R4["skirt" + i]);
         this.bones[B4["skirtK" + i]].position.set(...R4["skirtK" + i]);
+      }
+      for (let i = 0; i < COAT_N; i++) {
+        this.bones[B4["coat" + i]].position.set(...R4["coat" + i]);
+        this.bones[B4["coatK" + i]].position.set(...R4["coatK" + i]);
       }
       this.restFingers();
       this.face = new Mesh(faceGeo(look, headLevel(this.lod)), void 0);
@@ -84490,9 +84559,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     /** Swing the long hair and the coat's tail (after the model and its root are posed for the frame). */
     swing(dt, root2) {
       const D4 = this.dangles || (this.dangles = this.makeDangles());
-      if (!D4.length) return;
+      if (!D4.length && !this.body.coat) return;
       root2.updateMatrixWorld(true);
       for (const s of D4) s.step(dt);
+      if (this.body.coat) this.coatSwing(dt);
     }
     /** Show or hide a bone's geometry (scale 0 hides; children follow). */
     showBone(i, on) {
@@ -84549,6 +84619,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         } else bones2[k === 0 ? B4.handR : B4.handL].scale.setScalar(1);
       }
       if (this.body.skirt) this.skirtPanels(o.dt);
+      if (this.body.coat) this.coatPanels(o.dt);
       if (this.visibleParts) for (const [i, on] of this.visibleParts) this.showBone(i, on);
       if (this.fing) for (let k = 0; k < 2; k++) this.poseFingers(k, this.shape[k], t);
       const lean = (P6.l || 0) + (o.leanAdd || 0);
@@ -84749,6 +84820,162 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const pB = Math.min(1.3, phiB), j = SKIRT_N + i;
         th[j] = pB >= th[j] ? pB : Math.max(pB, th[j] - fall2);
         bones2[B4["skirtK" + i]].quaternion.setFromAxisAngle(_sax, Math.max(phi0, th[j]) - phi0 - th[i]);
+      }
+    }
+    /**
+     * A coat's tail, as cloth: six panels round the back hung from the waist
+     * (coat0..5), each bending again part way down (coatK0..5). Each panel is
+     * a pendulum — the body's own moves swing it (set off and it lags, stop or
+     * turn and it swings on), the wind of moving streams it back, it settles
+     * as it hangs, and neighbours pull on each other so the tail holds
+     * together (coatSwing, close by) — and whatever it's doing, it swings out
+     * as far as it must to clear the thighs and shins (as a skirt's panels do).
+     * Here, every frame: where the legs are, and (further off, with nothing
+     * swinging it) the cloth falling back to hang, pushed out by the legs.
+     * th: each upper panel's swing out from its rest (radians), then each
+     * lower panel's (its own, not its upper's).
+     */
+    coatPanels(dt) {
+      const C3 = this.body.coat, N9 = COAT_N, d = this.d, rig = this.rig;
+      const S6 = this.coatS || (this.coatS = { th: new Float32Array(N9 * 2), om: new Float32Array(N9 * 2), need: new Float32Array(N9), live: 0, n: 0, p: new Vector3(), v: new Vector3(), q: new Quaternion(), on: false });
+      const F5 = d.F || {}, Bk = d.Bk;
+      const rT = 0.088 * (F5.th || 1) * Bk + 0.03, rS = 0.056 * (F5.ca || 1) * Bk + 0.026;
+      _cq.copy(rig.quat[B4.hips]).invert();
+      const H4 = rig.pos[B4.hips];
+      let n = 0;
+      for (const [hi, ki, fi] of LEG3) {
+        const A2 = rig.pos[hi], K = rig.pos[ki], Ft = rig.pos[fi];
+        for (let s = 0; s < SKIRT_T.length; s++) {
+          const t = SKIRT_T[s], P6 = _cpts[n];
+          (s < 3 ? P6.lerpVectors(A2, K, t) : P6.lerpVectors(K, Ft, t)).sub(H4).applyQuaternion(_cq);
+          _crad[n] = s < 3 ? rT - 0.018 * t : rS - 0.012 * t;
+          _cleg[n] = s < 3 ? t === 1 ? 2 : 0 : 1;
+          n++;
+        }
+      }
+      S6.n = n;
+      for (let i = 0; i < N9; i++) {
+        const a = C3.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C3.Dp, sa * C3.Wp);
+        const phi0 = Math.atan2(rp * C3.flare, C3.L);
+        let need = phi0;
+        for (let k = 0; k < n; k++) {
+          if (_cleg[k] === 1) continue;
+          const P6 = _cpts[k];
+          const v = panelNeed(P6.x * ca + P6.z * sa - rp, -P6.y, _crad[k], C3.hK + 0.08, Math.atan2(P6.z, P6.x), a, C3.reach);
+          if (v > need) need = v;
+        }
+        S6.need[i] = Math.min(1.6, need) - phi0;
+      }
+      S6.live -= dt || 0.016;
+      if (S6.live > 0) return;
+      const fall2 = Math.min(0.2, dt || 0.016) * 2.2;
+      for (let i = 0; i < N9; i++) {
+        const up = Math.max(S6.need[i], S6.th[i] > 0 ? Math.max(0, S6.th[i] - fall2) : Math.min(0, S6.th[i] + fall2));
+        S6.th[i] = up;
+        S6.om[i] = 0;
+        const lo = this.coatLowNeed(i, up), j = N9 + i, cur = S6.th[j];
+        S6.th[j] = Math.max(lo, cur > 0 ? Math.max(0, cur - fall2) : Math.min(0, cur + fall2));
+        S6.om[j] = 0;
+      }
+      this.coatApply();
+    }
+    /** How far out (from its rest) lower panel i must swing to clear the shins, its upper panel `up` out from its rest. */
+    coatLowNeed(i, up) {
+      const C3 = this.body.coat, S6 = this.coatS;
+      const a = C3.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C3.Dp, sa * C3.Wp);
+      const phi0 = Math.atan2(rp * C3.flare, C3.L), Lb = C3.hK / Math.cos(phi0), ang = phi0 + up;
+      const ku = rp + Math.sin(ang) * Lb, kh = Math.cos(ang) * Lb;
+      let need = phi0;
+      for (let k = 0; k < S6.n; k++) {
+        if (_cleg[k] === 0) continue;
+        const P6 = _cpts[k], hB = -P6.y - kh;
+        if (hB < 0.04) continue;
+        const v = panelNeed(P6.x * ca + P6.z * sa - ku, hB, _crad[k], C3.L - C3.hK + 0.05, Math.atan2(P6.z, P6.x), a, C3.reach);
+        if (v > need) need = v;
+      }
+      return Math.min(1.6, need) - phi0;
+    }
+    /**
+     * The coat's tail swung as cloth (close by: after the model's posed and
+     * placed in the world for the frame): the hips' own motion — how fast
+     * they go and how that changes, how fast they turn — in their own frame
+     * drives each panel's pendulum; the legs keep it out (coatPanels).
+     */
+    coatSwing(dt) {
+      const S6 = this.coatS, C3 = this.body.coat, N9 = COAT_N, K = COAT_FEEL;
+      if (!S6) return;
+      const hips = this.bones[B4.hips];
+      const p = _cv.setFromMatrixPosition(hips.matrixWorld);
+      _cq.setFromRotationMatrix(_cm.extractRotation(hips.matrixWorld));
+      S6.live = 0.25;
+      if (!S6.on || !(dt > 0) || dt > 0.3 || p.distanceToSquared(S6.p) > 4) {
+        S6.p.copy(p);
+        S6.v.set(0, 0, 0);
+        S6.q.copy(_cq);
+        S6.on = true;
+        this.coatApply();
+        return;
+      }
+      const v = _cv2.subVectors(p, S6.p).divideScalar(dt);
+      v.y = 0;
+      v.lerpVectors(S6.v, v, 1 - Math.exp(-dt / K.smooth));
+      const acc = _cv3.subVectors(v, S6.v).divideScalar(dt);
+      if (acc.lengthSq() > 900) acc.setLength(30);
+      _cq2.copy(S6.q).invert().premultiply(_cq);
+      const yawRate = 2 * Math.atan2(_cq2.y, _cq2.w) / dt;
+      S6.p.copy(p);
+      S6.v.copy(v);
+      S6.q.copy(_cq);
+      _cq2.copy(_cq).invert();
+      v.applyQuaternion(_cq2);
+      acc.applyQuaternion(_cq2);
+      const g = K.g, w2 = Math.min(25, yawRate * yawRate);
+      const lU = C3.hK * 0.6, lL = (C3.L - C3.hK) * 0.6, th = S6.th, om = S6.om;
+      const steps = Math.min(4, Math.ceil(dt / (1 / 60))), h2 = dt / steps;
+      for (let st = 0; st < steps; st++) {
+        for (let i = 0; i < N9; i++) {
+          const a = C3.a[i], ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * C3.Dp, sa * C3.Wp);
+          const wind = -(v.x * ca + v.z * sa) * K.wind;
+          const push = -(acc.x * ca + acc.z * sa) + w2 * rp;
+          const t0 = th[i];
+          const link = K.link * ((i > 0 ? th[i - 1] : t0) + (i < N9 - 1 ? th[i + 1] : t0) - 2 * t0);
+          const al = (-g * Math.sin(t0) + (wind + push) * Math.cos(t0)) / lU - K.damp * om[i] + link;
+          om[i] += al * h2;
+          th[i] += om[i] * h2;
+          if (th[i] < S6.need[i]) {
+            th[i] = S6.need[i];
+            if (om[i] < 0) om[i] = 0;
+          }
+          if (th[i] > K.max) {
+            th[i] = K.max;
+            if (om[i] > 0) om[i] = 0;
+          }
+          const j = N9 + i, t1 = th[j];
+          const linkL = K.link * ((i > 0 ? th[j - 1] : t1) + (i < N9 - 1 ? th[j + 1] : t1) - 2 * t1);
+          const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - al * C3.hK) * Math.cos(t1)) / lL - K.damp2 * om[j] + linkL;
+          om[j] += alL * h2;
+          th[j] += om[j] * h2;
+          const lo = this.coatLowNeed(i, th[i]);
+          if (th[j] < lo) {
+            th[j] = lo;
+            if (om[j] < 0) om[j] = 0;
+          }
+          if (th[j] > K.max2) {
+            th[j] = K.max2;
+            if (om[j] > 0) om[j] = 0;
+          }
+        }
+      }
+      this.coatApply();
+    }
+    /** Set the coat panels' bones from their swings. */
+    coatApply() {
+      const S6 = this.coatS, C3 = this.body.coat, bones2 = this.bones;
+      for (let i = 0; i < COAT_N; i++) {
+        const a = C3.a[i];
+        _cax.set(-Math.sin(a), 0, Math.cos(a));
+        bones2[B4["coat" + i]].quaternion.setFromAxisAngle(_cax, S6.th[i]);
+        bones2[B4["coatK" + i]].quaternion.setFromAxisAngle(_cax, S6.th[COAT_N + i] - S6.th[i]);
       }
     }
     /**
@@ -90094,10 +90321,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       shell2.translate(0, 0.2, 0);
       parts.push(shell2);
     }
-    const mantle = new SphereGeometry(0.34, 10, 3);
-    mantle.scale(1, 0.3, 0.2);
-    mantle.translate(0, 0.28, 0);
-    parts.push(mantle);
+    const mantle2 = new SphereGeometry(0.34, 10, 3);
+    mantle2.scale(1, 0.3, 0.2);
+    mantle2.translate(0, 0.28, 0);
+    parts.push(mantle2);
     return colored2(merge3(parts), (c, x, y, z) => {
       if (Math.abs(z) < 0.075 && y > 0.18) c.setRGB(0.25, 0.55, 1.6);
       else c.setScalar(0.8 + y * 0.4);

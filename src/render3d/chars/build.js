@@ -793,10 +793,11 @@ const HATS = {
     h.add(capGeo(1.25, 60, 134, 160, null, U, V), M(0.07, 0.03, 0, 0, 0, 0, [1.08, 1.02, 1.05]), c, h.bone);
     // its shadowed inside, seen through the face opening
     h.add(capGeo(1.21, 60, 134, 160, null, U, V), M(0.07, 0.03, 0, 0, 0, 0, [1.06, 1.0, -1.03]), shade(c, -0.7), h.bone);
-    // the peak's soft fold and the cape over the shoulders
+    // the peak's soft fold, and a skirt of it round the neck (its mantle over
+    // the shoulders is on the body, not the head: body.js mantle)
     const k = surf(12, 180, 1.28);
     h.addC(Prim.sphere(h.q.sph[0], h.q.sph[1]), M(k[0] - 0.12, k[1] + 0.02, 0, 0, 0, 0.5, [0.34, 0.2, 0.3]), shade(c, -0.06), h.bone);
-    h.add(lathe([[1.0, -0.8], [1.42, -1.3], [1.62, -1.58]], 14), M(), shade(c, -0.06), h.bone);
+    h.add(lathe([[1.0, -0.8], [1.12, -1.12]], 14), M(), shade(c, -0.06), h.bone);
   },
   cap(h, col) {
     const c = col || '#5d6d7e';
@@ -984,7 +985,7 @@ function buildBody0(look, wpn, lod, articulated) {
   const geo = b.build();
   const inv = bind.map((m) => m.clone().invert());
   const used = new Set(b.bone);
-  return { geo, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null, skirt: outfit.skirtInfo || null, rubTA: outfit.rubTA };
+  return { geo, dims: d, bind, inv, used, style, meta, hatKind: kind, bubble: kind === 'bubble', lod, fingers: fingers.R ? fingers : null, skirt: outfit.skirtInfo || null, coat: outfit.coatInfo || null, rubTA: outfit.rubTA };
 }
 
 // which limb each bone belongs to: 1 the right arm, 2 the left, 3 the right leg, 4 the left (0: none)

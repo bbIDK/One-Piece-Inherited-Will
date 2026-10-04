@@ -20,7 +20,7 @@
 // pelvis on the hips bone, limbs hang along -Y from their joints.
 import { Prim, M, mul, grid, lathe, between, lin, THREE } from './geom.js';
 import { atlasUV, torsoUV, BLANK_UV } from './detail.js';
-import { B, frameOf, frameId, SKIRT_N, skirtShape, RUB, RUBL } from './bones.js';
+import { B, frameOf, frameId, SKIRT_N, skirtShape, COAT_N, coatShape, RUB, RUBL } from './bones.js';
 import { shade, mixHex } from '../../core/math.js';
 
 const TAU = Math.PI * 2;
@@ -782,9 +782,12 @@ export function buildFigure(add0, look, d, pal, q) {
   }
 
   // ---- a coat over the shoulders (coat colour), the tail swings from the waist
-  if (look.coat && TOP !== 'coat' || TOP === 'coat' && !look.top2 && look.coat) coat(add, sh, look.coat, TR, U, cloth, d, q);
-  else if (TOP === 'coat') coatTail(add, sh, look.coat || pal.top, U, cloth, d, 0.03);
-  return { ...o, skirtInfo, rubTA };
+  let coatInfo = null;
+  if (look.coat && TOP !== 'coat' || TOP === 'coat' && !look.top2 && look.coat) coatInfo = coat(add, sh, look.coat, TR, U, cloth, d, q);
+  else if (TOP === 'coat') coatInfo = coatTail(add, sh, look.coat || pal.top, U, cloth, d, 0.03);
+  // ---- a hood's mantle over the shoulders (its cowl is on the head: build.js HATS.hood)
+  if (look.hat === 'hood') mantle(add, sh, look.hatColor || '#6a5643', U, cloth, d);
+  return { ...o, skirtInfo, rubTA, coatInfo };
 }
 
 /**
@@ -895,20 +898,66 @@ function coat(add, sh, c, TR, U, cloth, d, q) {
   };
   add(band(col, cr, 1.25, TAU - 1.25, Math.max(4, U / 2)), M(), c, B.chest);
   if (cloth) add(band((s, a) => { const p = col(s, a); return [p[0] * 0.95, p[1], p[2] * 0.95]; }, cr, 1.25, TAU - 1.25, Math.max(4, U / 2), true), M(), lining, B.chest);
-  coatTail(add, sh, c, U, cloth, d, off(-0.1));
+  return coatTail(add, sh, c, U, cloth, d, off(-0.1));
 }
 
-/** A coat's tail from the waist down past the knees (coatTail bone, origin at the hip pivot). */
+/**
+ * A coat's tail from the waist down past the knees: its top sewn to the
+ * coat above it (on the chest), the rest hung from six panels round it
+ * (coat0..5, from the hips), each bending again part way down (coatK0..5),
+ * which model.js coatPanels swings as cloth, clear of the legs. Returns how
+ * it hangs, for that.
+ */
 function coatTail(add, sh, c, U, cloth, d, off0) {
   const lining = shade(c, -0.3);
-  const L = 0.62 * d.Lg;
-  const tr = cloth ? [0.02, -0.12, -0.28, -0.45, -L] : [0.02, -0.3, -L];
+  const C = coatShape(d), L = C.L, hK = C.hK;
+  // (rows through the bend, so the cloth folds there; far off, just the bend)
+  const tr = cloth ? [0.02, -0.1, -hK * 0.55, -hK + 0.05, -hK - 0.05, -(hK + (L - hK) * 0.5), -L] : [0.02, -hK, -L];
   const tp = (inset) => (y, a) => {
     const p = torsoPt(sh, -0.1, a, off0 - inset, 0);
-    const k = 1 + clamp(-y / L, 0, 1) * 0.42;
+    const k = 1 + clamp(-y / L, 0, 1) * C.flare;
     return [p[0] * k - 0.008, y, p[2] * k];
   };
-  const openT = 0.62;
-  add(band(tp(0), tr, openT, TAU - openT, U), M(), c, B.coatTail);
-  if (cloth) add(band(tp(0.006), half(tr), openT, TAU - openT, U / 2, true), M(), lining, B.coatTail);
+  const openT = C.open, span = TAU - 2 * openT;
+  const skin = { skin: (x, y, z) => {
+    if (y > -0.02) return [B.chest, 0, 0];
+    let a = Math.atan2(z / C.Wp, x / C.Dp);
+    if (a < 0) a += TAU;
+    const f = clamp((a - openT) / span, 0, 1) * (COAT_N - 1);
+    const i = Math.min(COAT_N - 2, Math.floor(f)), j = i + 1, w = f - i;
+    const t = sstep(hK - 0.06, hK + 0.06, -y);
+    return [B['coat' + i], B['coat' + j], B['coatK' + i], B['coatK' + j], w * (1 - t), (1 - w) * t, w * t];
+  } };
+  add(band(tp(0), tr, openT, TAU - openT, U), M(), c, B.hips, 0, skin);
+  if (cloth) add(band(tp(0.006), half(tr), openT, TAU - openT, U / 2, true), M(), lining, B.hips, 0, skin);
+  return C;
+}
+
+/**
+ * A hood's mantle: the cloth over the shoulders it hangs from, on the body
+ * (it doesn't turn when the head does, nor cut into the shoulders when you
+ * look round), standing out far enough over each shoulder to clear it, and
+ * the cloth over a shoulder following that arm a little (an arm raised lifts
+ * it, rather than coming up through it).
+ */
+function mantle(add, sh, c, U, cloth, d) {
+  const lining = shade(c, -0.35);
+  const Wn = Math.abs(torsoPt(sh, 0.9, Math.PI / 2, 0, 0)[2]);
+  const armR = 0.06 * ((d.F && d.F.arm) || 1) * d.Bk;
+  const over = Math.max(0.03, d.shW + armR + 0.015 - Wn);
+  const rows = cloth ? [1.03, 0.98, 0.92, 0.86, 0.8] : [1.03, 0.9, 0.8];
+  const pt = (inset) => (s, a) => {
+    const side = Math.pow(Math.abs(Math.sin(a)), 1.6);
+    const off = 0.024 + (1.03 - s) * 0.22 + side * over * sstep(1.02, 0.92, s) - inset;
+    const p = torsoPt(sh, Math.min(s, 0.99), a, off, 0);
+    // (the top drawn in round the neck, under the cowl)
+    const k = s > 1 ? 0.8 : 1;
+    return [p[0] * k, s * sh.cl, p[2] * k];
+  };
+  const skin = { skin: (x, y, z) => {
+    const w = sstep(0.5, 0.95, Math.abs(z) / (Wn + over)) * sstep(d.shY + 0.07, d.shY - 0.05, y) * 0.7;
+    return w > 0.01 ? [B.chest, z > 0 ? B.uarmR : B.uarmL, w] : [B.chest, 0, 0];
+  } };
+  add(band(pt(0), rows, -Math.PI, Math.PI, U), M(), c, B.chest, 0, skin);
+  if (cloth) add(band(pt(0.008), rows.slice(-2), -Math.PI, Math.PI, U, true), M(), lining, B.chest, 0, skin);
 }
