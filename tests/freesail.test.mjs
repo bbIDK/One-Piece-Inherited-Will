@@ -75,8 +75,9 @@ test('a new character is looking for a calling: the three are marked', () => {
   const c = g.state.char;
   assert.equal(c.freeSail, null);
   assert.ok(c.mainIntro, 'the calling is on the tracker');
-  assert.equal(marker(g, PIRATE), 'M!');
-  assert.equal(marker(g, MARINE), 'M!');
+  // (each with the sign of the road they'd set you on)
+  assert.equal(marker(g, PIRATE), 'Rpirate');
+  assert.equal(marker(g, MARINE), 'Rmarine');
 });
 
 test('turning every road down with a contact: no markers, no calling, nothing begun', () => {
@@ -120,7 +121,7 @@ test('or look for a calling again (the Quests menu): the three are marked again'
   assert.ok(g.story.seekCalling());
   assert.equal(c.freeSail, null);
   assert.ok(c.mainIntro);
-  assert.equal(marker(g, PIRATE), 'M!');
+  assert.equal(marker(g, PIRATE), 'Rpirate');
   // (and the fourth way is there again)
   assert.ok(g.story.sailFree('quests'));
   assert.equal(c.freeSail.from, 'quests');
