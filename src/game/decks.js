@@ -337,13 +337,16 @@ export function deckRoute(game, a, tx, ty, who = null) {
   const dk = a.deck;
   if (!dk) return null;
   if (game.planks?.length) { const pr = plankRoute(game, a, tx, ty, who); if (pr !== undefined) return pr; }
-  if (dk.lvl === undefined || dk.plank) return null;
+  if (dk.plank) return null;
   const s = dk.ship, d = shipDims(s.def), w = game.world;
   const to = who?.deck?.ship === s ? who.deck : deckPoint(s, w.dx(s.x, tx), ty - s.y, 0);
   if (!to) return null;
+  if (dk.lvl === undefined) return roundSolids(game, a, tx, ty);
   const lvl = (p) => (typeof p.lvl === 'string' ? p.lvl : null);
   const here = lvl(dk), there = lvl(to);
-  if (!there || here === there) return null;
+  // (on the same deck — or making for someone on a flight of stairs off it:
+  // round whatever's in the way to them)
+  if (!there || here === there) return here ? roundSolids(game, a, tx, ty) : null;
   // on a flight already: carry on to whichever end is nearer the goal
   const end = (st, top) => {
     const tt = top ? (st.ha > st.hb ? st.ta - 0.5 / d.L : st.tb + 0.5 / d.L) : (st.ha > st.hb ? st.tb + 0.5 / d.L : st.ta - 0.5 / d.L);
@@ -374,6 +377,123 @@ export function deckRoute(game, a, tx, ty, who = null) {
   // at the near end: step onto the flight and head for its far end
   if (w.distance(a.x, a.y, best.p.x, best.p.y) < 0.6) return end(best.st, lower(best.st) === here);
   return best.p;
+}
+
+/**
+ * On her deck, to (tx, ty) on the same deck: round whatever stands on it in
+ * the way — the shot pile by the mainmast, a gun, the capstan, a mast, the
+ * ship's boat. The shortest way round, from corner to corner of what's there
+ * (kept inside her bulwarks, on this deck), worked out when the straight way's
+ * blocked and kept while they're on it. A point to make for, or null when the
+ * way's clear (walk straight there).
+ */
+function roundSolids(game, a, tx, ty) {
+  const dk = a.deck, s = dk.ship, d = shipDims(s.def), w = game.world;
+  const c = Math.cos(s.heading), sn = Math.sin(s.heading);
+  const frame = (x, y) => { const dx = w.dx(s.x, x), dy = y - s.y; return [dx * c + dy * sn, -dx * sn + dy * c]; };
+  const world = (q) => ({ x: w.wx(s.x + q[0] * c - q[1] * sn), y: s.y + q[0] * sn + q[1] * c });
+  const A = frame(a.x, a.y), B = frame(tx, ty);
+  // (no one comes nearer anything on deck than seven tenths of their girth —
+  // actor.js — and the corners to go by are a stride out from that)
+  const M = (a.r || 0.35) * 0.7, R = M + 0.3, K = R - M + 0.02;
+  const lv = typeof dk.lvl === 'string' ? dk.lvl : null;
+  // (what stands on this deck, a few metres either side of the way)
+  const u0 = Math.min(A[0], B[0]) - 4, u1 = Math.max(A[0], B[0]) + 4, v0 = Math.min(A[1], B[1]) - 4, v1 = Math.max(A[1], B[1]) + 4;
+  const near = [];
+  for (const o of d.solids) {
+    if (o.lvl && lv !== null && o.lvl !== lv) continue;
+    if (o.r === undefined ? o.u1 < u0 || o.u0 > u1 || o.v1 < v0 || o.v0 > v1 : o.u + o.r < u0 || o.u - o.r > u1 || o.v + o.r < v0 || o.v - o.r > v1) continue;
+    near.push(o.r === undefined ? { o, box: { u0: o.u0 - R, u1: o.u1 + R, v0: o.v0 - R, v1: o.v1 + R } } : { o, r: o.r + R });
+  }
+  if (!near.length) { a._deckPath = null; return null; }
+  const inside = (q, u, v, k = 0) => (q.box ? u > q.box.u0 + k && u < q.box.u1 - k && v > q.box.v0 + k && v < q.box.v1 - k : Math.hypot(u - q.o.u, v - q.o.v) < q.r - k);
+  // (where they're going is in the lee of something — behind you, say, and
+  // you've your back to the shot pile: the near side of it instead)
+  for (const q of near) {
+    if (!inside(q, B[0], B[1])) continue;
+    if (q.box) {
+      const X = q.box, out = [[X.u0 - 0.05 - B[0], 0], [X.u1 + 0.05 - B[0], 0], [0, X.v0 - 0.05 - B[1]], [0, X.v1 + 0.05 - B[1]]];
+      out.sort((m, n) => Math.hypot(...m) - Math.hypot(...n));
+      B[0] += out[0][0]; B[1] += out[0][1];
+    } else {
+      const ang = Math.atan2(B[1] - q.o.v, B[0] - q.o.u);
+      B[0] = q.o.u + Math.cos(ang) * (q.r + 0.05); B[1] = q.o.v + Math.sin(ang) * (q.r + 0.05);
+    }
+  }
+  // (does the way from p to q run into anything — as near as anyone can come to it?)
+  const meets = (x, p, q) => {
+    const du = q[0] - p[0], dv = q[1] - p[1];
+    if (x.box) {
+      let t0 = 0, t1 = 1;
+      for (const [o, dd, lo, hi] of [[p[0], du, x.box.u0 + K, x.box.u1 - K], [p[1], dv, x.box.v0 + K, x.box.v1 - K]]) {
+        if (Math.abs(dd) < 1e-9) { if (o <= lo || o >= hi) return false; continue; }
+        let ta = (lo - o) / dd, tb = (hi - o) / dd;
+        if (ta > tb) [ta, tb] = [tb, ta];
+        t0 = Math.max(t0, ta); t1 = Math.min(t1, tb);
+        if (t0 >= t1) return false;
+      }
+      return true;
+    }
+    const fu = p[0] - x.o.u, fv = p[1] - x.o.v, aa = du * du + dv * dv, bb = 2 * (fu * du + fv * dv), cc = fu * fu + fv * fv - (x.r - K) ** 2;
+    if (cc < 0) return true;
+    const disc = bb * bb - 4 * aa * cc;
+    if (aa < 1e-9 || disc <= 0) return false;
+    const t = (-bb - Math.sqrt(disc)) / (2 * aa);
+    return t >= 0 && t <= 1;
+  };
+  const blocked = (p, q) => near.some((x) => meets(x, p, q));
+  if (!blocked(A, B)) { a._deckPath = null; return null; }
+  const now = game.time || 0, C = a._deckPath;
+  if (C && C.s === s && C.lv === lv && (now - C.t < 0.3 || (Math.hypot(C.b[0] - B[0], C.b[1] - B[1]) < 0.8 && now - C.t < 2.5))) {
+    // (on the way already: past the corners reached, and on to the furthest one in sight)
+    while (C.pts.length && Math.hypot(C.pts[0][0] - A[0], C.pts[0][1] - A[1]) < 0.35) C.pts.shift();
+    for (let i = C.pts.length - 1; i > 0; i--) if (!blocked(A, C.pts[i])) { C.pts.splice(0, i); break; }
+    if (C.pts.length) return world(C.pts[0]);
+  }
+  // the corners round everything here (an octagon round a mast or the
+  // capstan), on this deck and inside her bulwarks, clear of everything else
+  const nodes = [];
+  const add = (u, v) => {
+    const t = (u + d.L / 2) / d.L;
+    if (t < 0.03 || t > 0.97 || Math.abs(v) > hbAt(t, d.B) * d.walk - M) return;
+    if (lv !== null && levelAt(d, t, v) !== lv) return;
+    if (near.some((q) => inside(q, u, v, 0.01))) return;
+    nodes.push([u, v]);
+  };
+  for (const q of near) {
+    if (q.box) for (const [u, v] of [[q.box.u0 - 0.02, q.box.v0 - 0.02], [q.box.u0 - 0.02, q.box.v1 + 0.02], [q.box.u1 + 0.02, q.box.v0 - 0.02], [q.box.u1 + 0.02, q.box.v1 + 0.02]]) add(u, v);
+    else for (let k = 0; k < 8; k++) { const ang = k * Math.PI / 4, rr = (q.r + 0.03) / Math.cos(Math.PI / 8); add(q.o.u + Math.cos(ang) * rr, q.o.v + Math.sin(ang) * rr); }
+  }
+  // (a crowded deck — a gun deck's batteries — just those nearest the way)
+  if (nodes.length > 64) {
+    const du = B[0] - A[0], dv = B[1] - A[1], L2 = du * du + dv * dv || 1;
+    const off = (q) => { const t = Math.max(0, Math.min(1, ((q[0] - A[0]) * du + (q[1] - A[1]) * dv) / L2)); return Math.hypot(q[0] - A[0] - du * t, q[1] - A[1] - dv * t); };
+    nodes.sort((m, n) => off(m) - off(n)).length = 64;
+  }
+  // A*, from here to there by those corners (whether one's in sight of
+  // another worked out only as it's needed)
+  const N = nodes.length, goal = N;
+  nodes.push(B);
+  const g = new Float64Array(N + 1).fill(Infinity), from = new Int32Array(N + 1).fill(-1), done = new Uint8Array(N + 1);
+  const h = (i) => Math.hypot(nodes[i][0] - B[0], nodes[i][1] - B[1]);
+  for (let j = 0; j <= N; j++) if (!blocked(A, nodes[j])) { g[j] = Math.hypot(nodes[j][0] - A[0], nodes[j][1] - A[1]); from[j] = -2; }
+  for (;;) {
+    let i = -1, bf = Infinity;
+    for (let j = 0; j <= N; j++) if (!done[j] && g[j] + h(j) < bf) { bf = g[j] + h(j); i = j; }
+    if (i < 0 || i === goal) break;
+    done[i] = 1;
+    for (let j = 0; j <= N; j++) {
+      if (done[j] || j === i) continue;
+      const nd = g[i] + Math.hypot(nodes[j][0] - nodes[i][0], nodes[j][1] - nodes[i][1]);
+      if (nd < g[j] && !blocked(nodes[i], nodes[j])) { g[j] = nd; from[j] = i; }
+    }
+  }
+  if (!Number.isFinite(g[goal])) { a._deckPath = null; return null; }
+  const pts = [];
+  for (let i = from[goal]; i >= 0; i = from[i]) pts.unshift(nodes[i]);
+  if (!pts.length) { a._deckPath = null; return null; }
+  a._deckPath = { s, lv, b: B.slice(), t: now, pts };
+  return world(pts[0]);
 }
 
 /**
