@@ -5,7 +5,9 @@
 // there (from 22 m in, gone by 10 m: by then you can see it). They wear the same icons as the compass and the chart (render/icons.js wp_main,
 // wp_side): gold for the main story, sky blue for a side quest. Look at one
 // and it says which quest it is. The island the needle of your Log Pose
-// points to has one too (its icon, coral), until you're on it.
+// points to has one too (its icon, coral), until you're on it; and before
+// you've a road, so do the people who could set you on one (their road's
+// sign: the Jolly Roger, the Marines' gull, a bounty poster).
 import * as THREE from 'three';
 import { h } from './dom.js';
 import { uiImg } from './icon.js';
@@ -18,6 +20,9 @@ const RING_X = 0.3, RING_Y = 0.36; // the ring's radii, shares of the screen's w
 const RING_SIDE = 300; // px: however wide the screen, the ring keeps this far in from its sides (the tracker, the menu)
 const NEAR = 160; // m: closer than this, a marker stands over the spot; farther, on the horizon
 const HEAD = 3.8; // m above the ground: over the head (and the name, and the "!") of whoever it's about
+// (the roads the people who can start your story would set you on: their sign — render/icons.js — and name)
+const ROAD_ICON = { pirate: 'jolly_roger', marine: 'marine', hunter: 'bounty' };
+const ROAD_NAME = { pirate: 'Pirate', marine: 'Marine', hunter: 'Bounty Hunter' };
 
 
 export class Waypoints {
@@ -39,13 +44,29 @@ export class Waypoints {
     return out;
   }
 
-  /** The marker for a quest (kind 'main' or 'side') or the Log Pose ('lp'). */
-  mark(id, kind) {
+  /**
+   * The people who could start your story, still to be found — on your home
+   * island, before you've taken a road (see content/mainStory.js storyMarker):
+   * each with the sign of their road.
+   */
+  static roads(game) {
+    const out = [];
+    for (const a of game.actors || []) {
+      const qm = a.questMarker;
+      if (!qm || qm[0] !== 'R' || !a.alive || a.hidden) continue;
+      const road = qm.slice(1);
+      out.push({ id: 'road:' + (a.npcId || a.name), kind: 'road', icon: ROAD_ICON[road] || 'wp_main', m: { x: a.x, y: a.y, label: `${a.name} · ${ROAD_NAME[road] || 'your road'}` } });
+    }
+    return out;
+  }
+
+  /** The marker for a quest (kind 'main' or 'side'), the Log Pose ('lp') or a road ('road', with its sign). */
+  mark(id, kind, iconName = null) {
     let m = this.marks.get(id);
     if (!m || m.kind !== kind) {
       m?.e.remove();
       const arrow = h('i.wpm-arrow'), dist = h('small.wpm-d'), name = h('b.wpm-name');
-      const icon = kind === 'main' ? uiImg('wp_main', 34) : kind === 'lp' ? uiImg('log_pose', 26) : uiImg('wp_side', 28);
+      const icon = kind === 'road' ? uiImg(iconName || 'wp_main', 32) : kind === 'main' ? uiImg('wp_main', 34) : kind === 'lp' ? uiImg('log_pose', 26) : uiImg('wp_side', 28);
       const e = h('div.wpm.' + kind, arrow, icon, dist, name);
       this.el.appendChild(e);
       m = { e, arrow, dist, name, kind, seen: 0, txt: '', label: '', cls: '' };
@@ -64,13 +85,14 @@ export class Waypoints {
     const W = v3.r2d.cw, H = v3.r2d.ch, cx = W / 2, cy = H / 2;
     const rx = Math.max(80, Math.min(W * RING_X, cx - RING_SIDE)), ry = H * RING_Y;
     const list = Waypoints.quests(game).map(({ id, main }) => ({ id, kind: main ? 'main' : 'side', m: game.quests.marker(id) }));
+    list.push(...Waypoints.roads(game));
     // the Log Pose's island (not once you're on it)
     const lp = w === game.surface && game.logPoseInfo?.() ? game.logPoseTarget?.() : null;
     if (lp && lp !== game.currentIsland && w.distance(p.x, p.y, lp.x, lp.y) > (lp.radius || 0)) list.push({ id: 'lp', kind: 'lp', m: { x: lp.x, y: lp.y, label: game.logPoseInfo()?.label === '???' ? 'Uncharted island' : lp.name } });
-    for (const { id, kind, m } of list) {
-      if (!m || !Number.isFinite(m.x) || (m.zone ? m.zone !== w.id : w !== game.surface)) continue;
+    for (const { id, kind, m, icon } of list) {
+      if (!m || !Number.isFinite(m.x) || (m.zone ? m.zone !== w.id : kind !== 'road' && w !== game.surface)) continue;
       const d = w.distance(p.x, p.y, m.x, m.y);
-      const mk = this.mark(id, kind);
+      const mk = this.mark(id, kind, icon);
       // (nearly there — where their name and "!" say who it is: out of the way)
       const fade = Math.max(0, Math.min(1, (d - 10) / 12));
       // into the camera's space: over the spot close by, on the horizon far off

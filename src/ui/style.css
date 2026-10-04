@@ -718,6 +718,9 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .wpm.side small { color: #b9e4f8; }
 .wpm.lp > img { margin-top: -13px; }
 .wpm.lp small { color: #ffb4a8; }
+.wpm.road { z-index: 2; }
+.wpm.road > img { margin-top: -16px; }
+.wpm.road small { color: #ffd66b; }
 .wpm-name { font: 400 16px 'Pirata One', serif; color: #fff; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000; letter-spacing: .3px; opacity: 0; transform: translateY(-3px); transition: opacity .2s, transform .2s; }
 .wpm.look .wpm-name { opacity: 1; transform: none; }
 .wpm-arrow { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; display: none; }
@@ -725,6 +728,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .wpm.main .wpm-arrow::after { border-left-color: #ffc940; }
 .wpm.side .wpm-arrow::after { border-left-color: #a6dcf5; }
 .wpm.lp .wpm-arrow::after { border-left-color: #ff8a80; }
+.wpm.road .wpm-arrow::after { border-left-color: #ffc940; }
 .wpm.edge .wpm-arrow { display: block; }
 .wpm.edge > img { transform: scale(.85); }
 #ui.v3 .bossbar { top: 64px; }

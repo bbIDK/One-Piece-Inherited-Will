@@ -3,6 +3,7 @@
 // story's gold, side quests' sky blue: the icons of the chart and of the
 // markers over the world) and your ship.
 import { h } from './dom.js';
+import { Waypoints } from './waypoints.js';
 import { angleDiff } from '../core/math.js';
 import { uiImg } from './icon.js';
 
@@ -85,6 +86,8 @@ export class Compass {
     }
     qs.sort((a, b) => b.main - a.main || a.d - b.d);
     for (const q of qs.slice(0, 4)) mark('q:' + q.id, q.main ? 'main' : 'side', q.main ? 'wp_main' : 'wp_side', q.m.x, q.m.y, q.m.label);
+    // before you've a road: the people who could set you on one, with its sign
+    for (const r of Waypoints.roads(game)) mark(r.id, 'main', r.icon, r.m.x, r.m.y, r.m.label);
     // your ship, while you're ashore
     if (p.mode !== 'sail') {
       const s = game.ships.find((x) => x.owner === 'player' && !x.sunk);

@@ -12,6 +12,9 @@
 import { ChartDetail } from './chartDetail.js';
 import { seenIsland, POI } from './mapUI.js';
 import { uiIcon } from '../render/icons.js';
+
+// (the sign over someone who could start your story: see ui/waypoints.js)
+const ROAD_ICON = { pirate: 'jolly_roger', marine: 'marine', hunter: 'bounty' };
 import { GL_TOP, GL_BOTTOM, CB_TOP, CB_BOTTOM } from '../world/constants.js';
 
 const ZOOMS = [0.5, 1, 2, 4, 8, 16, 32]; // m to a pixel of the minimap
@@ -176,7 +179,16 @@ export class Minimap {
       // (with Observation Haki you sense everyone about)
       const hostileNow = a.controller?.target === p || (p.observation && a.faction !== 'civilian');
       if (!hostileNow && !a.questMarker) continue;
-      const dx = w.dx(p.x, a.x) * z, dy = (a.y - p.y) * z;
+      let dx = w.dx(p.x, a.x) * z, dy = (a.y - p.y) * z;
+      // someone who could start your story: their road's sign, held at the
+      // rim pointing the way when they're further off than the map shows
+      if (a.questMarker?.[0] === 'R') {
+        const dd = Math.hypot(dx, dy), rim = r - 7;
+        if (dd > rim) { dx *= rim / dd; dy *= rim / dd; }
+        const ic = uiIcon(ROAD_ICON[a.questMarker.slice(1)] || 'wp_main', 48);
+        g.drawImage(ic, dx - 8, dy - 8, 16, 16);
+        continue;
+      }
       if (Math.hypot(dx, dy) > r) continue;
       g.fillStyle = a.questMarker ? (a.questMarker[0] === 'M' || a.questMarker[0] === 'R' ? '#ff9100' : '#ffd54f') : '#e53935';
       g.strokeStyle = 'rgba(40,26,14,.9)'; g.lineWidth = 1;
