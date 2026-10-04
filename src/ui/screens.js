@@ -1,6 +1,7 @@
 // Title (three lineage slots), character creation (birth roll → identity),
 // death and Inherited Will screens.
 import { h, clear, add } from './dom.js';
+import { MALE_FIRST, FEMALE_FIRST, SURNAMES } from '../data/names.js';
 import { RACES, RARITY, makeLook, raceLabel, MINK_KINDS, FISHMAN_KINDS } from '../data/races.js';
 import { outfitOf } from '../render3d/chars/body.js';
 import { EYES_M, EYES_F, EYE_NAMES, eyeShapeOf } from '../render3d/chars/face.js';
@@ -12,7 +13,6 @@ import { ITEMS } from '../data/items.js';
 import { FRUITS } from '../data/fruits.js';
 import { keysOf, keyLabel } from '../game/keys.js';
 import { formatBerries } from '../core/math.js';
-import { RNG } from '../core/rng.js';
 import { itemImg, uiImg } from './icon.js';
 import { createPreview, renderPortrait } from './preview3d.js';
 
@@ -205,16 +205,29 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
     stopAnim();
     clear(root);
     if (!state.look) { state.look = makeLook(birth.race, birth.seed); state.look.build = 0.5; }
-    if (!state.name) state.name = randomCharName();
     const L = state.look;
+    // a first name and a family name, a word each (a man's first name for a
+    // man, a woman's for a woman: rolled again when you change which, unless
+    // you typed it yourself)
+    if (state.first === undefined) {
+      const [f, ...rest] = (state.name || '').trim().split(/\s+/).filter(Boolean);
+      state.first = f || randomFirst(L.fem); state.last = rest.join('') || (f ? '' : randomLast());
+      state.firstRolled = !f;
+    }
     const race = birth.race;
     const finalName = h('div.final-name');
     const updateName = () => {
+      state.name = [state.first, state.last].filter(Boolean).join(' ');
       clear(finalName);
-      const n = (state.name || '').trim() || 'Nameless';
+      const n = state.name || 'Nameless';
       finalName.append(h('span.muted', 'You will be known as '), h('b', hasD() ? nameWithD(n) : n));
     };
-    const nameInput = h('input.name', { value: state.name, maxLength: 24, spellcheck: false, on: { input: (e) => { state.name = e.target.value; updateName(); } } });
+    // (one word: no spaces in it)
+    const word = (e) => { const v = e.target.value.replace(/\s+/g, ''); if (v !== e.target.value) e.target.value = v; return v; };
+    const firstInput = h('input.name', { value: state.first, maxLength: 14, spellcheck: false, placeholder: 'First name', on: { input: (e) => { state.first = word(e); state.firstRolled = false; updateName(); } } });
+    const lastInput = h('input.name', { value: state.last, maxLength: 16, spellcheck: false, placeholder: 'Family name', on: { input: (e) => { state.last = word(e); updateName(); } } });
+    const rollFirst = () => { state.first = randomFirst(L.fem, state.first); state.firstRolled = true; firstInput.value = state.first; updateName(); };
+    const rollLast = () => { state.last = randomLast(state.last); lastInput.value = state.last; updateName(); };
     updateName();
     const row = (label, ...kids) => h('div.opt-row', h('div.opt-label', label), ...kids);
     const swatch = (key, colors) => h('div.swatches', ...colors.map((c) => h('button' + (L[key] === c ? '.on' : ''), { title: c, style: { background: c }, on: { click: () => { L[key] = c; changed(); } } })));
@@ -234,12 +247,14 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       genderEl.appendChild(row('You are', chips(L.fem ? 'f' : 'm', ['m', 'f'], ['Male', 'Female'], (v) => setGender(v === 'f'))));
     };
     const setGender = (fem) => {
+      const other = !!L.fem !== fem;
       L.fem = fem;
       // clothes and eyes that only suit the other build are swapped for ones that suit this one
       if (!fem && ['dress', 'crop', 'bikini'].includes(L.topStyle)) L.topStyle = 'tee';
       if (!fem && ['skirt', 'longskirt'].includes(L.bottomStyle)) L.bottomStyle = 'trousers';
       if (L.eyeShape !== 'fish') L.eyeShape = eyeShapeOf({ ...L, eyeShape: L.eyeShape });
       if (fem && L.bust === undefined) L.bust = 1;
+      if (other && state.firstRolled) rollFirst();
       renderGender();
     };
     renderGender();
@@ -255,7 +270,8 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
     };
     renderStory();
     const right = h('div',
-      row('Name', h('div', { style: { display: 'flex', gap: '6px' } }, nameInput, h('button.btn', { on: { click: () => { state.name = randomCharName(); nameInput.value = state.name; updateName(); } } }, 'Random'))),
+      row('First name', h('div', { style: { display: 'flex', gap: '6px' } }, firstInput, h('button.btn', { on: { click: rollFirst } }, 'Random'))),
+      row('Family name', h('div', { style: { display: 'flex', gap: '6px' } }, lastInput, h('button.btn', { on: { click: rollLast } }, 'Random'))),
       finalName, genderEl, storyEl, tabsEl, optsEl,
       h('p.muted', { style: { marginTop: '12px' } }, 'No destiny is chosen for you. Pirate, Marine, adventurer, bounty hunter or none of these — the sea is free, and what you become is up to you. You can found your own pirate crew and raise your Jolly Roger later, from the Crew menu.'),
     );
@@ -521,9 +537,9 @@ export function wantedPoster(char) {
 }
 
 // ------------------------------------------------------------ names
-const FIRST = ['Kaito', 'Rin', 'Jiro', 'Marlo', 'Sen', 'Tobias', 'Yuki', 'Bram', 'Ines', 'Kaji', 'Rook', 'Kazuma', 'Mira', 'Otto', 'Sabrina', 'Goro', 'Hana', 'Leon', 'Pip', 'Ramon', 'Tess', 'Umi', 'Vito', 'Zola', 'Enzo', 'Akira', 'Nell', 'Cruz', 'Ivo', 'Juno'];
-const LAST = ['Stormwell', 'Kurogane', 'Blackwater', 'Hayate', 'Marrow', 'Goldtooth', 'Saltbane', 'Tempest', 'Ironside', 'Raiden', 'Nagare', 'Crowe', 'Seabright', 'Kaminari', 'Wolfe', 'Tidebreaker', 'Hoshi', 'Gunnar', 'Vasquez', 'Umibozu'];
-export function randomCharName() {
-  const r = new RNG(Math.floor(Math.random() * 1e9));
-  return `${r.pick(FIRST)} ${r.pick(LAST)}`;
-}
+// (a fresh one each press: never the one you have)
+const pickNew = (list, not) => { let n; do n = list[Math.floor(Math.random() * list.length)]; while (n === not && list.length > 1); return n; };
+/** A first name (a woman's for `fem`, else a man's), one word — not `not`. */
+export const randomFirst = (fem, not) => pickNew(fem ? FEMALE_FIRST : MALE_FIRST, not);
+/** A family name, one word — not `not`. */
+export const randomLast = (not) => pickNew(SURNAMES, not);
