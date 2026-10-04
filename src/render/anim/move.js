@@ -172,6 +172,42 @@ export function activityPose(P, act, t) {
       P.ht = 0.14 * s2;
       P.fF = [0.1, 0]; P.fB = [-0.12, 0];
       break;
+    // a wanted poster's (ui/screens.js wantedPoster): the face it's struck
+    // with is part of the pose
+    case 'poster-fist':
+      // a fist up by the face, grinning
+      P.hF = [0.13, -0.14]; P.hand = 'fist'; P.eF = 1;
+      P.hB = [0.04, 0.38];
+      P.ht = -0.04;
+      break;
+    case 'poster-fold':
+      // arms folded high across the chest, chin up, a cold look
+      P.hF = [0.13, 0.1]; P.hB = [0.12, 0.12]; P.eF = 1; P.eB = 1;
+      P.ht = -0.06; P.face = 'glare';
+      break;
+    case 'poster-power':
+      // an open hand held up beside the head, the power in it
+      P.hF = [0.15, -0.17]; P.hand = 'palm'; P.eF = 1;
+      P.hB = [0.06, 0.36]; P.handB = 'fist';
+      P.l = 0.08; P.face = 'fierce';
+      break;
+    case 'poster-point':
+      // pointing straight out of the poster at whoever's reading it
+      P.hF = [0.38, 0.06]; P.hand = 'fist'; P.eF = 0.1;
+      P.hB = [0.1, 0.3]; P.handB = 'fist';
+      P.l = 0.1; P.face = 'fierce';
+      break;
+    case 'poster-blade':
+      // the blade drawn and laid back over the shoulder
+      P.hF = [0.07, -0.02]; P.wF = -2.35; P.hand = 'fist'; P.eF = 1;
+      P.hB = [0.05, 0.36];
+      P.ht = -0.03; P.face = 'glare';
+      break;
+    case 'poster-roar':
+      // both fists up, roaring
+      P.hF = [0.2, -0.08]; P.hB = [0.2, -0.06]; P.hand = 'fist'; P.handB = 'fist'; P.eF = 1; P.eB = 1;
+      P.ht = -0.14; P.l = 0.06; P.face = 'shout';
+      break;
   }
 }
 

@@ -8,7 +8,7 @@ import { EYES_M, EYES_F, EYE_NAMES, eyeShapeOf } from '../render3d/chars/face.js
 import { headParams, FACE_SHAPES, CHINS, NOSES } from '../render3d/chars/build.js';
 import { FRAME, FRAMES_M, FRAMES_F, FRAME_NAMES, frameId } from '../render3d/chars/bones.js';
 import { LEGENDS } from '../data/dreams.js';
-import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, nameWithD } from '../game/lineage.js';
+import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, nameWithD, weaponFromChar } from '../game/lineage.js';
 import { ITEMS } from '../data/items.js';
 import { FRUITS } from '../data/fruits.js';
 import { keysOf, keyLabel } from '../game/keys.js';
@@ -522,12 +522,32 @@ export function helpContent(char, settings) {
 }
 
 // ---------------------------------------------------------- wanted poster
+/**
+ * How you're caught on your poster — it changes as your story does: a
+ * nobody's plain face; a grin and a fist once there's a price on you; a
+ * blade out, a cold look with the arms folded, or a finger pointed out of
+ * the poster as it climbs (more of a killer's glare the more fights you've
+ * won); a Devil Fruit's power in an open hand; roaring, at an Emperor's price.
+ * { look, act, weapon }
+ */
+export function posterPose(char) {
+  const b = char.bounty || 0, kills = char.stats?.kills || 0, look = { ...char.look };
+  const tier = b >= 500e6 ? 4 : b >= 100e6 ? 3 : b >= 30e6 ? 2 : b >= 1e6 ? 1 : 0;
+  const w = weaponFromChar(char), blade = w && w.kind === 'sword';
+  if (tier === 0) return { look: { ...look, mouth: 'smile' }, act: null, weapon: null };
+  if (tier === 4) return { look, act: 'poster-roar', weapon: null };
+  if (char.fruit && tier >= 2) return { look, act: 'poster-power', weapon: null };
+  if (blade && kills >= 10) return { look, act: 'poster-blade', weapon: w };
+  if (tier === 1) return { look: { ...look, grin: true }, act: 'poster-fist', weapon: null };
+  return { look, act: kills >= 25 ? 'poster-fold' : 'poster-point', weapon: null };
+}
 export function wantedPoster(char) {
   const cv = h('canvas', { width: 240, height: 200 });
   const g = cv.getContext('2d');
   g.fillStyle = '#e8d5a8'; g.fillRect(0, 0, 240, 200);
   g.fillStyle = '#d4bd8a'; for (let i = 0; i < 40; i++) g.fillRect((i * 53) % 240, (i * 37) % 200, 3, 3);
-  const img = char.look ? renderPortrait(char.look, { w: 240, h: 200, view: 'bust' }) : null;
+  const pp = char.look ? posterPose(char) : null;
+  const img = pp ? renderPortrait(pp.look, { w: 240, h: 200, view: 'bust', act: pp.act, weapon: pp.weapon }) : null;
   if (img) g.drawImage(img, 0, 0, 240, 200);
   g.globalCompositeOperation = 'multiply';
   g.fillStyle = '#d9c28f'; g.fillRect(0, 0, 240, 200);
