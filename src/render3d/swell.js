@@ -2,10 +2,12 @@
 // vertices move with them, the pixels shade with them) and here, for the
 // things that float on them: a ship rises, falls and leans with them
 // (world/hull.js), a swimmer rides them, a wake and the rings on the water
-// lie on them. Four trains of waves — a long swell and three shorter seas —
-// each gathered into groups that come and go across the sea, their crests
-// gently bent, so from high up they don't line up into a repeating grid; the
-// three longer ones peaked (sharp crests, wide troughs: e^sin, less its mean).
+// lie on them. Five trains of waves — a long swell, a cross swell strong in
+// some stretches of sea and gone in others, and three shorter seas — each
+// gathered into groups that come and go across the sea, their crests bent
+// (a little everywhere, and in long slow curves), so from high up they don't
+// line up into stripes or a grid; all but the shortest peaked (sharp crests,
+// wide troughs: e^sin, less its mean).
 // The shorter a train, the nearer the eye it stops: further off the water is
 // drawn too coarsely to carry it (and there it's only shaded: water3d.js).
 //
@@ -33,22 +35,24 @@ export const SWELL_GLSL = /* glsl */`
   }
   // d: how far from the eye (m) — the shorter trains stop nearer it
   float swells(vec2 p, float t, float d, out vec2 slope) {
-    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.96, 0.28), D2 = vec2(-0.37, 0.93), D3 = vec2(0.75, -0.66);
-    const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854;   // 46 m, 22 m, 13 m, 8 m
-    const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774;       // deep-water speeds
-    // bent crests
-    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0;
+    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.96, 0.28), D2 = vec2(-0.37, 0.93), D3 = vec2(0.75, -0.66), D4 = vec2(0.64, -0.77);
+    const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854, K4 = 0.1848;   // 46 m, 22 m, 13 m, 8 m; a cross swell of 34 m
+    const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774, W4 = 1.346;       // deep-water speeds
+    // bent crests (a little everywhere, and long slow curves)
+    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0 + (vec2(sNoise(p * 0.0055 + 3.1), sNoise(p * 0.0055 + 9.4)) - 0.5) * 44.0;
     // wave groups
     float g0 = (0.55 + 0.6 * sFbm(p * 0.006 + vec2(0.0, t * 0.012) + 91.0)) * (1.0 - smoothstep(160.0, 320.0, d));
     float g1 = (0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0))) * 0.6 * (1.0 - smoothstep(90.0, 190.0, d));
     float g2 = (0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025))) * 0.4 * (1.0 - smoothstep(45.0, 100.0, d));
     float g3 = (0.3 + 0.9 * sFbm(p * 0.026 + 57.0)) * 0.22 * (1.0 - smoothstep(25.0, 55.0, d));
-    float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1;
+    // (the cross swell strong in some stretches of sea, gone in others)
+    float g4 = (0.9 * sFbm(p * 0.0045 - 51.0 + vec2(t * 0.01, 0.0)) - 0.15) * 0.8 * (1.0 - smoothstep(160.0, 320.0, d));
+    float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1, a4 = K4 * dot(D4, q) - W4 * t + 2.3;
     // (peaked: e^(sin a - 1), less its mean 0.466, scaled back to a peak of 1)
-    float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873;
-    float h = (e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + sin(a3) * g3;
-    slope = (D0 * K0 * e0 * cos(a0) * g0 + D1 * K1 * e1 * cos(a1) * g1 + D2 * K2 * e2 * cos(a2) * g2 + D3 * K3 * cos(a3) * g3) / 2.22;
-    return h / 2.22;
+    float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873, e4 = exp(sin(a4) - 1.0) * 1.873;
+    float h = (e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + sin(a3) * g3 + (e4 - 0.873) * g4;
+    slope = (D0 * K0 * e0 * cos(a0) * g0 + D1 * K1 * e1 * cos(a1) * g1 + D2 * K2 * e2 * cos(a2) * g2 + D3 * K3 * cos(a3) * g3 + D4 * K4 * e4 * cos(a4) * g4) / 2.6;
+    return h / 2.6;
   }
 `;
 
@@ -76,22 +80,24 @@ function sFbm(x, y) {
 const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 /** The swell's height at world (x, y) at time t, `d` m from the eye: about -0.6..1 (times the amplitude: see swellAt). */
 export function swells(x, y, t, d = 0) {
-  const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14;
-  const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14;
+  const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14 + (sNoise(x * 0.0055 + 3.1, y * 0.0055 + 3.1) - 0.5) * 44;
+  const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14 + (sNoise(x * 0.0055 + 9.4, y * 0.0055 + 9.4) - 0.5) * 44;
   const g0 = (0.55 + 0.6 * sFbm(x * 0.006 + 91, y * 0.006 + t * 0.012 + 91)) * (1 - sst(160, 320, d));
   const g1 = (0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011)) * 0.6 * (1 - sst(90, 190, d));
   const g2 = (0.3 + 0.9 * sFbm(x * 0.017 + 31, y * 0.017 + 31 - t * 0.025)) * 0.4 * (1 - sst(45, 100, d));
   const g3 = (0.3 + 0.9 * sFbm(x * 0.026 + 57, y * 0.026 + 57)) * 0.22 * (1 - sst(25, 55, d));
+  const g4 = (0.9 * sFbm(x * 0.0045 - 51 + t * 0.01, y * 0.0045 - 51) - 0.15) * 0.8 * (1 - sst(160, 320, d));
   const a0 = 0.1366 * (0.86 * qx + 0.51 * qy) - 1.157 * t + 0.6;
   const a1 = 0.2856 * (0.96 * qx + 0.28 * qy) - 1.673 * t;
   const a2 = 0.4833 * (-0.37 * qx + 0.93 * qy) - 2.177 * t + 1.7;
   const a3 = 0.7854 * (0.75 * qx - 0.66 * qy) - 2.774 * t + 4.1;
-  const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873;
-  return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3) / 2.22;
+  const a4 = 0.1848 * (0.64 * qx - 0.77 * qy) - 1.346 * t + 2.3;
+  const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873, e4 = Math.exp(Math.sin(a4) - 1) * 1.873;
+  return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3 + (e4 - 0.873) * g4) / 2.6;
 }
 
 /** How big the swells are: calm on a fine day, heavy in a storm, all but none in the Calm Belt, still water indoors and under the sea. */
-export const swellAmp = (storm, zone, calm = 0) => (zone >= 2 ? 0 : (0.5 + storm * 1.1) * (1 - calm * 0.85));
+export const swellAmp = (storm, zone, calm = 0) => (zone >= 2 ? 0 : (0.85 + storm * 1.4) * (1 - calm * 0.85));
 
 // how much of the swell a liquid has (the sea all of it, a lake half, lava and the like a little)
 const LIQUID = new Float32Array(256).fill(0.15);

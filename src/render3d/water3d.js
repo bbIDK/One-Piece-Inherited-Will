@@ -31,6 +31,11 @@ const CALM = /* glsl */`
   }
 `;
 
+// the open sea's blues (as they show on screen): the main one, and the ones
+// wide stretches of it turn to, blending — a turquoise, a deeper cobalt, a
+// soft grey-green (water3d's seaHue)
+const SEA_HUES = ['#629aca', '#5bb0cc', '#4f86c6', '#6aa3b6'];
+
 // the ships near the eye, for how they meet the sea (the foam round each
 // hull, the bow wave, the water heaped up at her stem): x, z (render space),
 // cos and sin of her heading; her length, beam, speed (kn) and 1 = on. Her
@@ -145,8 +150,19 @@ const FRAG = /* glsl */`
   #include <fog_pars_fragment>
 
   uniform float uAmp;
+  uniform vec3 uSeaA, uSeaB, uSeaC, uSeaD; // the open sea's blues (see SEA_HUES)
   ${SWELL}
   ${HULLS}
+  // the open sea's colour here: wide stretches of it in different blues — the
+  // main one, a turquoise, a cobalt, a soft grey-green — each running into
+  // the next over a few hundred metres, so no two stretches of sea are alike
+  vec3 seaHue(vec2 p) {
+    float a = sFbm(p * 0.0011 + 13.0), b = sFbm(p * 0.0004 - 7.0), c = sFbm(p * 0.0031 + 29.0);
+    vec3 col = mix(uSeaA, uSeaB, smoothstep(0.42, 0.72, a));
+    col = mix(col, uSeaC, smoothstep(0.48, 0.78, b) * 0.85);
+    col = mix(col, uSeaD, smoothstep(0.55, 0.8, 1.0 - a) * smoothstep(0.4, 0.66, b) * 0.6);
+    return col * (0.92 + 0.16 * c);
+  }
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
   float noise(vec2 p) {
@@ -294,8 +310,12 @@ const FRAG = /* glsl */`
     vec2 fc = vec2(0.0);
     if (water) {
       float rough = (0.62 + uStorm * 0.7 + uRain * 0.2) * (1.0 - uGlass * 0.85) * (1.0 - smoothstep(80.0, 320.0, dist));
-      fc = facets(p * 0.85, t * 0.5) * 0.5;
-      if (uDetail > 0.5) fc += facets(p * 2.1 + 7.3, t * 0.75) * 0.24;
+      // (stretches choppier and smoother, choppier on the crests; the cells
+      // warped, so they never fall into an even grid)
+      rough *= (0.45 + 0.95 * sFbm(p * 0.006 + 71.0)) * (0.8 + 0.4 * clamp(sw.z, 0.0, 1.0));
+      vec2 pf = p + (vec2(sNoise(p * 0.045), sNoise(p * 0.045 + 3.3)) - 0.5) * 7.0;
+      fc = facets(pf * 0.85, t * 0.5) * 0.36;
+      if (uDetail > 0.5) fc += facets(pf * 2.1 + 7.3, t * 0.75) * 0.16;
       fc *= rough;
     }
     // (the swells' slopes drawn steeper than they are, so their shapes read under the chop)
@@ -306,7 +326,8 @@ const FRAG = /* glsl */`
     float light = mix(0.26, 1.0, uDay);
 
     // water colour by depth: lagoon, turquoise, blue, deep ocean
-    vec3 deep = vec3(0.006, 0.05, 0.27), mid = vec3(0.01, 0.13, 0.46), shallow = vec3(0.03, 0.5, 0.58), lagoon = vec3(0.18, 0.74, 0.64);
+    vec3 open = seaHue(p);
+    vec3 deep = open, mid = mix(open, vec3(0.12, 0.42, 0.62), 0.3), shallow = vec3(0.08, 0.52, 0.6), lagoon = vec3(0.22, 0.76, 0.68);
     if (uZone > 1.5 && uZone < 2.5) { deep = vec3(0.01, 0.06, 0.18); mid = vec3(0.02, 0.14, 0.32); shallow = vec3(0.04, 0.32, 0.5); lagoon = shallow; }
     // under a grey sky the sea turns a dark grey-green; in a storm, slate
     else if (uOvercast > 0.0) {
@@ -324,7 +345,7 @@ const FRAG = /* glsl */`
     // the swells' crests lighter, their troughs darker
     if (water) {
       float big = sFbm(p * 0.0045 + vec2(uTime * 0.004, -uTime * 0.003)) * 0.65 + sFbm(p * 0.017 + 41.0 - uTime * 0.006) * 0.35;
-      col *= mix(0.62, 1.18, smoothstep(0.3, 0.72, big)) * (1.0 + 0.5 * clamp(sw.z, -1.0, 1.0));
+      col *= mix(0.82, 1.1, smoothstep(0.3, 0.72, big)) * (1.0 + 0.32 * clamp(sw.z, -1.0, 1.0));
     }
     // light through the tops of the swells (patchy, like real water)
     col += shallow * clamp(sw.z, 0.0, 1.0) * 0.2 * (0.5 + sFbm(p * 0.045)) * crestFade;
@@ -380,12 +401,12 @@ const FRAG = /* glsl */`
       float edge = smoothstep(-1.0, -0.15, sd + (noise(p * 1.4 + t * 0.4) - 0.5) * 0.6);
       // whitecaps: rare and ragged in a calm, everywhere in a storm
       float capN = sFbm(p * 0.21 + vec2(t * 0.12, -t * 0.07)) * 0.7 + sFbm(p * 0.047 - t * 0.02) * 0.3;
-      float caps = smoothstep(0.6, 0.85, sw.z) * smoothstep(0.7 - uStorm * 0.35, 0.8 - uStorm * 0.35, capN) * (0.06 + uStorm * 0.94);
+      float caps = smoothstep(0.68 - uStorm * 0.12, 0.88 - uStorm * 0.12, sw.z) * smoothstep(0.68 - uStorm * 0.32, 0.78 - uStorm * 0.32, capN) * (0.24 + uStorm * 0.76);
       // further off, a storm's whitecaps are scattered where the noise says
       float capsFar = smoothstep(0.72, 0.84, sFbm(p * 0.09 + vec2(t * 0.05, 0.0)) * 0.6 + sFbm(p * 0.023 - t * 0.01) * 0.4) * uStorm * 0.8;
       caps = mix(capsFar, caps, crestFade);
       // (broken up into streaks and flecks, not smooth white ovals)
-      if (uStorm > 0.05) caps *= smoothstep(0.38, 0.6, noise(p * vec2(0.9, 2.3) + vec2(t * 0.4, 0.0)) * 0.65 + noise(p * 3.1 - t * 0.6) * 0.35);
+      caps *= smoothstep(0.4 + 0.06 * (1.0 - uStorm), 0.62, noise(p * vec2(0.9, 2.3) + vec2(t * 0.4, 0.0)) * 0.65 + noise(p * 3.1 - t * 0.6) * 0.35);
       foam = clamp(max(edge, line * band * 0.9) + caps, 0.0, 1.0);
       // where the ships meet it: laced white, in paler churned water
       if (dist < 220.0) {
@@ -471,6 +492,8 @@ export class Water {
         uBubble: { value: new THREE.Vector4() },
         uCalm: { value: Array.from({ length: CALM_N }, () => new THREE.Vector4()) },
         uShips: { value: Array.from({ length: SHIPS_N }, () => new THREE.Vector4()) },
+        uSeaA: { value: new THREE.Color(SEA_HUES[0]) }, uSeaB: { value: new THREE.Color(SEA_HUES[1]) },
+        uSeaC: { value: new THREE.Color(SEA_HUES[2]) }, uSeaD: { value: new THREE.Color(SEA_HUES[3]) },
         uShipD: { value: Array.from({ length: SHIPS_N }, () => new THREE.Vector4()) },
       },
     ]);

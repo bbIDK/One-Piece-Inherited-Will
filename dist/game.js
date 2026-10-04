@@ -40538,22 +40538,24 @@ void main() {
   }
   // d: how far from the eye (m) \u2014 the shorter trains stop nearer it
   float swells(vec2 p, float t, float d, out vec2 slope) {
-    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.96, 0.28), D2 = vec2(-0.37, 0.93), D3 = vec2(0.75, -0.66);
-    const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854;   // 46 m, 22 m, 13 m, 8 m
-    const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774;       // deep-water speeds
-    // bent crests
-    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0;
+    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.96, 0.28), D2 = vec2(-0.37, 0.93), D3 = vec2(0.75, -0.66), D4 = vec2(0.64, -0.77);
+    const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854, K4 = 0.1848;   // 46 m, 22 m, 13 m, 8 m; a cross swell of 34 m
+    const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774, W4 = 1.346;       // deep-water speeds
+    // bent crests (a little everywhere, and long slow curves)
+    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0 + (vec2(sNoise(p * 0.0055 + 3.1), sNoise(p * 0.0055 + 9.4)) - 0.5) * 44.0;
     // wave groups
     float g0 = (0.55 + 0.6 * sFbm(p * 0.006 + vec2(0.0, t * 0.012) + 91.0)) * (1.0 - smoothstep(160.0, 320.0, d));
     float g1 = (0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0))) * 0.6 * (1.0 - smoothstep(90.0, 190.0, d));
     float g2 = (0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025))) * 0.4 * (1.0 - smoothstep(45.0, 100.0, d));
     float g3 = (0.3 + 0.9 * sFbm(p * 0.026 + 57.0)) * 0.22 * (1.0 - smoothstep(25.0, 55.0, d));
-    float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1;
+    // (the cross swell strong in some stretches of sea, gone in others)
+    float g4 = (0.9 * sFbm(p * 0.0045 - 51.0 + vec2(t * 0.01, 0.0)) - 0.15) * 0.8 * (1.0 - smoothstep(160.0, 320.0, d));
+    float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1, a4 = K4 * dot(D4, q) - W4 * t + 2.3;
     // (peaked: e^(sin a - 1), less its mean 0.466, scaled back to a peak of 1)
-    float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873;
-    float h = (e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + sin(a3) * g3;
-    slope = (D0 * K0 * e0 * cos(a0) * g0 + D1 * K1 * e1 * cos(a1) * g1 + D2 * K2 * e2 * cos(a2) * g2 + D3 * K3 * cos(a3) * g3) / 2.22;
-    return h / 2.22;
+    float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873, e4 = exp(sin(a4) - 1.0) * 1.873;
+    float h = (e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + sin(a3) * g3 + (e4 - 0.873) * g4;
+    slope = (D0 * K0 * e0 * cos(a0) * g0 + D1 * K1 * e1 * cos(a1) * g1 + D2 * K2 * e2 * cos(a2) * g2 + D3 * K3 * cos(a3) * g3 + D4 * K4 * e4 * cos(a4) * g4) / 2.6;
+    return h / 2.6;
   }
 `
   );
@@ -40583,20 +40585,22 @@ void main() {
     return t * t * (3 - 2 * t);
   };
   function swells(x, y, t, d = 0) {
-    const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14;
-    const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14;
+    const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14 + (sNoise(x * 55e-4 + 3.1, y * 55e-4 + 3.1) - 0.5) * 44;
+    const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14 + (sNoise(x * 55e-4 + 9.4, y * 55e-4 + 9.4) - 0.5) * 44;
     const g0 = (0.55 + 0.6 * sFbm(x * 6e-3 + 91, y * 6e-3 + t * 0.012 + 91)) * (1 - sst(160, 320, d));
     const g1 = (0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011)) * 0.6 * (1 - sst(90, 190, d));
     const g2 = (0.3 + 0.9 * sFbm(x * 0.017 + 31, y * 0.017 + 31 - t * 0.025)) * 0.4 * (1 - sst(45, 100, d));
     const g3 = (0.3 + 0.9 * sFbm(x * 0.026 + 57, y * 0.026 + 57)) * 0.22 * (1 - sst(25, 55, d));
+    const g4 = (0.9 * sFbm(x * 45e-4 - 51 + t * 0.01, y * 45e-4 - 51) - 0.15) * 0.8 * (1 - sst(160, 320, d));
     const a0 = 0.1366 * (0.86 * qx + 0.51 * qy) - 1.157 * t + 0.6;
     const a1 = 0.2856 * (0.96 * qx + 0.28 * qy) - 1.673 * t;
     const a2 = 0.4833 * (-0.37 * qx + 0.93 * qy) - 2.177 * t + 1.7;
     const a3 = 0.7854 * (0.75 * qx - 0.66 * qy) - 2.774 * t + 4.1;
-    const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873;
-    return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3) / 2.22;
+    const a4 = 0.1848 * (0.64 * qx - 0.77 * qy) - 1.346 * t + 2.3;
+    const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873, e4 = Math.exp(Math.sin(a4) - 1) * 1.873;
+    return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3 + (e4 - 0.873) * g4) / 2.6;
   }
-  var swellAmp = (storm, zone, calm = 0) => zone >= 2 ? 0 : (0.5 + storm * 1.1) * (1 - calm * 0.85);
+  var swellAmp = (storm, zone, calm = 0) => zone >= 2 ? 0 : (0.85 + storm * 1.4) * (1 - calm * 0.85);
   var LIQUID = new Float32Array(256).fill(0.15);
   for (const k of [0, 1, 2, 5, 7]) LIQUID[k] = 1;
   LIQUID[3] = 0.5;
@@ -40657,6 +40661,7 @@ void main() {
   }
 `
   );
+  var SEA_HUES = ["#629aca", "#5bb0cc", "#4f86c6", "#6aa3b6"];
   var SHIPS_N = 8;
   var HULLS = (
     /* glsl */
@@ -40773,8 +40778,19 @@ void main() {
   #include <fog_pars_fragment>
 
   uniform float uAmp;
+  uniform vec3 uSeaA, uSeaB, uSeaC, uSeaD; // the open sea's blues (see SEA_HUES)
   ${SWELL}
   ${HULLS}
+  // the open sea's colour here: wide stretches of it in different blues \u2014 the
+  // main one, a turquoise, a cobalt, a soft grey-green \u2014 each running into
+  // the next over a few hundred metres, so no two stretches of sea are alike
+  vec3 seaHue(vec2 p) {
+    float a = sFbm(p * 0.0011 + 13.0), b = sFbm(p * 0.0004 - 7.0), c = sFbm(p * 0.0031 + 29.0);
+    vec3 col = mix(uSeaA, uSeaB, smoothstep(0.42, 0.72, a));
+    col = mix(col, uSeaC, smoothstep(0.48, 0.78, b) * 0.85);
+    col = mix(col, uSeaD, smoothstep(0.55, 0.8, 1.0 - a) * smoothstep(0.4, 0.66, b) * 0.6);
+    return col * (0.92 + 0.16 * c);
+  }
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
   float noise(vec2 p) {
@@ -40922,8 +40938,12 @@ void main() {
     vec2 fc = vec2(0.0);
     if (water) {
       float rough = (0.62 + uStorm * 0.7 + uRain * 0.2) * (1.0 - uGlass * 0.85) * (1.0 - smoothstep(80.0, 320.0, dist));
-      fc = facets(p * 0.85, t * 0.5) * 0.5;
-      if (uDetail > 0.5) fc += facets(p * 2.1 + 7.3, t * 0.75) * 0.24;
+      // (stretches choppier and smoother, choppier on the crests; the cells
+      // warped, so they never fall into an even grid)
+      rough *= (0.45 + 0.95 * sFbm(p * 0.006 + 71.0)) * (0.8 + 0.4 * clamp(sw.z, 0.0, 1.0));
+      vec2 pf = p + (vec2(sNoise(p * 0.045), sNoise(p * 0.045 + 3.3)) - 0.5) * 7.0;
+      fc = facets(pf * 0.85, t * 0.5) * 0.36;
+      if (uDetail > 0.5) fc += facets(pf * 2.1 + 7.3, t * 0.75) * 0.16;
       fc *= rough;
     }
     // (the swells' slopes drawn steeper than they are, so their shapes read under the chop)
@@ -40934,7 +40954,8 @@ void main() {
     float light = mix(0.26, 1.0, uDay);
 
     // water colour by depth: lagoon, turquoise, blue, deep ocean
-    vec3 deep = vec3(0.006, 0.05, 0.27), mid = vec3(0.01, 0.13, 0.46), shallow = vec3(0.03, 0.5, 0.58), lagoon = vec3(0.18, 0.74, 0.64);
+    vec3 open = seaHue(p);
+    vec3 deep = open, mid = mix(open, vec3(0.12, 0.42, 0.62), 0.3), shallow = vec3(0.08, 0.52, 0.6), lagoon = vec3(0.22, 0.76, 0.68);
     if (uZone > 1.5 && uZone < 2.5) { deep = vec3(0.01, 0.06, 0.18); mid = vec3(0.02, 0.14, 0.32); shallow = vec3(0.04, 0.32, 0.5); lagoon = shallow; }
     // under a grey sky the sea turns a dark grey-green; in a storm, slate
     else if (uOvercast > 0.0) {
@@ -40952,7 +40973,7 @@ void main() {
     // the swells' crests lighter, their troughs darker
     if (water) {
       float big = sFbm(p * 0.0045 + vec2(uTime * 0.004, -uTime * 0.003)) * 0.65 + sFbm(p * 0.017 + 41.0 - uTime * 0.006) * 0.35;
-      col *= mix(0.62, 1.18, smoothstep(0.3, 0.72, big)) * (1.0 + 0.5 * clamp(sw.z, -1.0, 1.0));
+      col *= mix(0.82, 1.1, smoothstep(0.3, 0.72, big)) * (1.0 + 0.32 * clamp(sw.z, -1.0, 1.0));
     }
     // light through the tops of the swells (patchy, like real water)
     col += shallow * clamp(sw.z, 0.0, 1.0) * 0.2 * (0.5 + sFbm(p * 0.045)) * crestFade;
@@ -41008,12 +41029,12 @@ void main() {
       float edge = smoothstep(-1.0, -0.15, sd + (noise(p * 1.4 + t * 0.4) - 0.5) * 0.6);
       // whitecaps: rare and ragged in a calm, everywhere in a storm
       float capN = sFbm(p * 0.21 + vec2(t * 0.12, -t * 0.07)) * 0.7 + sFbm(p * 0.047 - t * 0.02) * 0.3;
-      float caps = smoothstep(0.6, 0.85, sw.z) * smoothstep(0.7 - uStorm * 0.35, 0.8 - uStorm * 0.35, capN) * (0.06 + uStorm * 0.94);
+      float caps = smoothstep(0.68 - uStorm * 0.12, 0.88 - uStorm * 0.12, sw.z) * smoothstep(0.68 - uStorm * 0.32, 0.78 - uStorm * 0.32, capN) * (0.24 + uStorm * 0.76);
       // further off, a storm's whitecaps are scattered where the noise says
       float capsFar = smoothstep(0.72, 0.84, sFbm(p * 0.09 + vec2(t * 0.05, 0.0)) * 0.6 + sFbm(p * 0.023 - t * 0.01) * 0.4) * uStorm * 0.8;
       caps = mix(capsFar, caps, crestFade);
       // (broken up into streaks and flecks, not smooth white ovals)
-      if (uStorm > 0.05) caps *= smoothstep(0.38, 0.6, noise(p * vec2(0.9, 2.3) + vec2(t * 0.4, 0.0)) * 0.65 + noise(p * 3.1 - t * 0.6) * 0.35);
+      caps *= smoothstep(0.4 + 0.06 * (1.0 - uStorm), 0.62, noise(p * vec2(0.9, 2.3) + vec2(t * 0.4, 0.0)) * 0.65 + noise(p * 3.1 - t * 0.6) * 0.35);
       foam = clamp(max(edge, line * band * 0.9) + caps, 0.0, 1.0);
       // where the ships meet it: laced white, in paler churned water
       if (dist < 220.0) {
@@ -41096,6 +41117,10 @@ void main() {
           uBubble: { value: new Vector4() },
           uCalm: { value: Array.from({ length: CALM_N }, () => new Vector4()) },
           uShips: { value: Array.from({ length: SHIPS_N }, () => new Vector4()) },
+          uSeaA: { value: new Color(SEA_HUES[0]) },
+          uSeaB: { value: new Color(SEA_HUES[1]) },
+          uSeaC: { value: new Color(SEA_HUES[2]) },
+          uSeaD: { value: new Color(SEA_HUES[3]) },
           uShipD: { value: Array.from({ length: SHIPS_N }, () => new Vector4()) }
         }
       ]);
