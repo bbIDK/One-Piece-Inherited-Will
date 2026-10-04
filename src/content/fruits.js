@@ -66,6 +66,8 @@ function hangFruits(game) {
   const used = new Set();
   for (const f of c.world.fruitSpawns || []) {
     if (f.taken) continue;
+    // (its tree gone — one taken off a cliff face when the world was made: worldgen.js — another near it)
+    if (f.tx != null && !w.objects?.near(f.tx, f.ty, 0.6, (o) => o.kind === 'tree').length) f.tx = undefined;
     if (f.tx === undefined) {
       const o = fruitTreeNear(game, f.x, f.y, 70, used);
       if (o) { f.tx = o.x; f.ty = o.y; f.slot = Math.floor(((o.x * 7.31 + o.y * 3.17) % 1 + 1) % 1 * 97) % Math.max(1, fruitCount(o)); } else f.tx = null;

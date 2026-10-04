@@ -79,8 +79,17 @@ varying float vFaUp;`)
 #endif
   mvPosition = modelViewMatrix * mvPosition;
   {
-    float zz = max( -mvPosition.z, 0.1 );
-    mvPosition.xyz *= ( zz + uBack ) / zz;
+    // (but never down below the feet: looked at from above, as the camera
+    // over your shoulder looks, a push the full way would send the aura round
+    // the calves and boots under the ground, and the ground would hide it)
+    vec3 o = ( modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 ) ).xyz;
+    vec3 U = normalize( ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz );
+    vec3 dir = normalize( mvPosition.xyz );
+    float h = dot( U, mvPosition.xyz - o );
+    float dn = -dot( U, dir );
+    float s = uBack;
+    if ( dn > 0.001 ) s = min( s, max( 0.0, h - 0.04 ) / dn );
+    mvPosition.xyz += dir * s;
   }
   gl_Position = projectionMatrix * mvPosition;`);
     sh.fragmentShader = sh.fragmentShader
@@ -92,7 +101,7 @@ varying float vFaUp;
 ${NOISE}`)
       .replace('vec4 diffuseColor = vec4( diffuse, opacity );', frag);
   };
-  m.customProgramCacheKey = () => 'op-aura-layer-' + L.out;
+  m.customProgramCacheKey = () => 'op-aura-layer-2-' + L.out;
   return m;
 }
 

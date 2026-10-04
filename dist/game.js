@@ -73390,8 +73390,17 @@ varying float vFaUp;`).replace("#include <skinning_vertex>", `#include <skinning
 #endif
   mvPosition = modelViewMatrix * mvPosition;
   {
-    float zz = max( -mvPosition.z, 0.1 );
-    mvPosition.xyz *= ( zz + uBack ) / zz;
+    // (but never down below the feet: looked at from above, as the camera
+    // over your shoulder looks, a push the full way would send the aura round
+    // the calves and boots under the ground, and the ground would hide it)
+    vec3 o = ( modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 ) ).xyz;
+    vec3 U = normalize( ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz );
+    vec3 dir = normalize( mvPosition.xyz );
+    float h = dot( U, mvPosition.xyz - o );
+    float dn = -dot( U, dir );
+    float s = uBack;
+    if ( dn > 0.001 ) s = min( s, max( 0.0, h - 0.04 ) / dn );
+    mvPosition.xyz += dir * s;
   }
   gl_Position = projectionMatrix * mvPosition;`);
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
@@ -73401,7 +73410,7 @@ varying vec3 vFaP;
 varying float vFaUp;
 ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     };
-    m.customProgramCacheKey = () => "op-aura-layer-" + L3.out;
+    m.customProgramCacheKey = () => "op-aura-layer-2-" + L3.out;
     return m;
   }
   var FlameAura = class {
@@ -94323,10 +94332,49 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     await computeDistanceField(world, yieldFrame);
     compactDistance(world);
     openGentleRock(world);
+    clearCliffTrees(world);
     onProgress(0.92, "Drawing the chart");
     world.map = buildMapImage(world);
     onProgress(1, "Ready");
     return world;
+  }
+  function clearCliffTrees(world) {
+    if (!world.objects?.chunks) return 0;
+    const W1 = world.width + 1, heights = /* @__PURE__ */ new Map();
+    const key2 = (x, y) => y * W1 + world.wx(x);
+    const corner = (x, y) => {
+      const k = key2(x, y);
+      let h2 = heights.get(k);
+      if (h2 === void 0) heights.set(k, h2 = cornerHeight(world, x, y));
+      return h2;
+    };
+    const BOOSTS = { [T.MOUNTAIN]: 7, [T.CLIFF]: 4, [T.SNOWROCK]: 9, [T.RED_ROCK]: 7, [T.ROCK]: 1.2 };
+    const rough = (x, y) => Math.min(world.elev(x, y), 190) * 0.075 + (BOOSTS[world.type(x, y)] || 0);
+    const drop = [];
+    for (const list of world.objects.chunks.values()) {
+      for (const o of list) {
+        if (o.kind !== "tree") continue;
+        const x = Math.floor(o.x), y = Math.floor(o.y - 0.5);
+        let rlo = Infinity, rhi = -Infinity;
+        for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+          const r4 = rough(x + i, y + j);
+          if (r4 < rlo) rlo = r4;
+          if (r4 > rhi) rhi = r4;
+        }
+        if (rhi - rlo < 1.1) continue;
+        const a = corner(x, y), b = corner(x + 1, y), c = corner(x, y + 1), d = corner(x + 1, y + 1);
+        if (Math.max(a, b, c, d) - Math.min(a, b, c, d) < 1.3) continue;
+        let lo = Infinity, hi = -Infinity;
+        for (let j = -1; j <= 2; j++) for (let i = -1; i <= 2; i++) {
+          const h2 = corner(x + i, y + j);
+          if (h2 < lo) lo = h2;
+          if (h2 > hi) hi = h2;
+        }
+        if (hi - lo > 4) drop.push(o);
+      }
+    }
+    for (const o of drop) world.objects.remove(o);
+    return drop.length;
   }
   function openGentleRock(world) {
     const hard = /* @__PURE__ */ new Set([T.MOUNTAIN, T.CLIFF, T.SNOWROCK, T.RED_ROCK]);
@@ -123573,6 +123621,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const used = /* @__PURE__ */ new Set();
     for (const f of c.world.fruitSpawns || []) {
       if (f.taken) continue;
+      if (f.tx != null && !w.objects?.near(f.tx, f.ty, 0.6, (o) => o.kind === "tree").length) f.tx = void 0;
       if (f.tx === void 0) {
         const o = fruitTreeNear(game, f.x, f.y, 70, used);
         if (o) {

@@ -73,11 +73,49 @@ export async function generateWorld({ seed = 'blue-planet', islands = [], onProg
   await computeDistanceField(world, yieldFrame);
   compactDistance(world);
   openGentleRock(world);
+  clearCliffTrees(world);
 
   onProgress(0.92, 'Drawing the chart');
   world.map = buildMapImage(world);
   onProgress(1, 'Ready');
   return world;
+}
+
+/**
+ * Trees standing on a cliff face — a river's canyon wall, the side of a
+ * crag — are taken away: drawn on ground that steep they stuck out of the
+ * rock at the river's edge, half buried on one side and hanging in the air
+ * on the other. (A tree on a hillside stays, however steep: it's the
+ * near-sheer ground only, a rise of more than 4 m across the 3 m round its
+ * foot — some 3% of the trees, at the rivers and crags.)
+ */
+function clearCliffTrees(world) {
+  if (!world.objects?.chunks) return 0;
+  const W1 = world.width + 1, heights = new Map();
+  const key = (x, y) => y * W1 + world.wx(x);
+  const corner = (x, y) => { const k = key(x, y); let h = heights.get(k); if (h === undefined) heights.set(k, (h = cornerHeight(world, x, y))); return h; };
+  const BOOSTS = { [T.MOUNTAIN]: 7, [T.CLIFF]: 4, [T.SNOWROCK]: 9, [T.RED_ROCK]: 7, [T.ROCK]: 1.2 };
+  const rough = (x, y) => Math.min(world.elev(x, y), 190) * 0.075 + (BOOSTS[world.type(x, y)] || 0);
+  const drop = [];
+  for (const list of world.objects.chunks.values()) {
+    for (const o of list) {
+      if (o.kind !== 'tree') continue;
+      const x = Math.floor(o.x), y = Math.floor(o.y - 0.5);
+      // (most stand on gentle ground: the tiles round them say so at a glance —
+      // the lie of the land is about their elevation, and a crag's boost, as
+      // render3d/height.js draws it — and only the steep few are measured)
+      let rlo = Infinity, rhi = -Infinity;
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const r = rough(x + i, y + j); if (r < rlo) rlo = r; if (r > rhi) rhi = r; }
+      if (rhi - rlo < 1.1) continue;
+      const a = corner(x, y), b = corner(x + 1, y), c = corner(x, y + 1), d = corner(x + 1, y + 1);
+      if (Math.max(a, b, c, d) - Math.min(a, b, c, d) < 1.3) continue;
+      let lo = Infinity, hi = -Infinity;
+      for (let j = -1; j <= 2; j++) for (let i = -1; i <= 2; i++) { const h = corner(x + i, y + j); if (h < lo) lo = h; if (h > hi) hi = h; }
+      if (hi - lo > 4) drop.push(o);
+    }
+  }
+  for (const o of drop) world.objects.remove(o);
+  return drop.length;
 }
 
 /**
