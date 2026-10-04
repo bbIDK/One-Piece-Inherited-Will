@@ -277,7 +277,8 @@ class ActorView {
   ownBody(fp, a, ctx, env) {
     const m = this.model, u = m.fx, pose = a._lastPose || {};
     // (at the helm or the oars the view has no arms of its own: yours are on the wheel, or the grips)
-    const busy = !!pose.anim || !!pose.combat || !!pose.armed || !!this.draw || pose.block !== undefined || (!!pose.station && a.mode !== 'sail') || !!a.held || !!pose.launch || a.inWater;
+    // (and whenever the first-person arms are up in view: see viewmodel.js)
+    const busy = !!pose.anim || !!pose.combat || !!pose.armed || !!this.draw || pose.block !== undefined || (!!pose.station && a.mode !== 'sail') || !!a.held || !!pose.launch || a.inWater || !!a._fpArms;
     // (like the first-person view in the big open-world games: from the eyes you
     // see your chest, arms, legs and feet — never your own head, hair or hat,
     // however long the hair or deep the hood. The body is whole below the

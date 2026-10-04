@@ -171,6 +171,7 @@ class Viewmodel {
     m.setShaded(!ctx?.world?.roomOf?.(p));
     const hidden = p.state === 'knocked' || p.state === 'dead' || p.hidden;
     this.root.visible = !hidden;
+    p._fpArms = false;
     if (hidden) return;
     const { pose, P } = actorPose(p, env, look);
     const o = rigOptions(p, pose, P, this.o);
@@ -203,6 +204,11 @@ class Viewmodel {
     const reach = p.reachT > 0 ? Math.sin((1 - p.reachT / 0.45) * Math.PI) : 0;
     this.pump = (this.pump ?? 0) + ((pose.sprint && !busy ? 1 : 0) - (this.pump ?? 0)) * Math.min(1, dtv * 6);
     const swimming = p.inWater && !busy;
+    // (while these arms are up in view, your body's own are put out of sight
+    // — chars3d.js ownBody — or there'd be two pairs: in a dodge, a blow
+    // taken, getting up, reaching for something, lowering the guard after a
+    // fight, sprinting)
+    p._fpArms = busy || swimming || this.ready > 0.03 || this.pump > 0.03 || reach > 0;
     if (swimming) {
       // breaststroke: reach out together, sweep wide and back, tuck in under the chin
       const df = !!p.fruit && !p.gills;
