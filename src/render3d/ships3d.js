@@ -15,7 +15,7 @@ import { canvasTexture } from './materials.js';
 import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
 import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat, U } from './props/mats.js';
-import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock, smallProfile } from '../world/hull.js';
+import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock, shipBob, smallProfile } from '../world/hull.js';
 import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging } from './bigship.js';
 
 // a coated ship's bubble (see the coating, below): a soap film, its colours
@@ -956,7 +956,8 @@ export class ShipView {
     }
     const t = env.time + (s.seed || 0);
     const sinking = s.sunk ? Math.min(1, s.sinkT / 4) : 0;
-    r.position.set(rx, (s.lvl || 0) + 0.05 + Math.sin(t * 1.3) * 0.07 - sinking * 3, rz);
+    // (riding the swell: shipBob, the same for the game — those aboard stand on her as she's drawn)
+    r.position.set(rx, shipBob(s, env.time) - sinking * 3, rz);
     // (riding up or down Reverse Mountain, the bow points up or down the slope;
     // those aboard ride the same roll and pitch: hull.js shipLift)
     const [roll, pitch] = shipRock(s, env.time);

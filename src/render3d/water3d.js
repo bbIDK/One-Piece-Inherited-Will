@@ -31,6 +31,31 @@ const CALM = /* glsl */`
   }
 `;
 
+// the ships near the eye, for how they meet the sea (the foam round each
+// hull, the bow wave, the water heaped up at her stem): x, z (render space),
+// cos and sin of her heading; her length, beam, speed (kn) and 1 = on. Her
+// waterline's outline is the one the sea's kept out of her by (world/hull.js hbAt).
+const SHIPS_N = 8;
+const HULLS = /* glsl */`
+  uniform vec4 uShips[${SHIPS_N}];
+  uniform vec4 uShipD[${SHIPS_N}];
+  float hullHalf(float t) {
+    float tc = clamp(t, 0.0, 1.0);
+    return tc > 0.58 ? sqrt(max(0.0, 1.0 - pow((tc - 0.58) / 0.42, 2.2))) : tc < 0.14 ? 0.74 + 0.26 * sin(tc / 0.14 * 1.5707963) : 1.0;
+  }
+  // ship i, seen from render-space point r: (u: m forward of her middle, v: m out to starboard, t: 0 stern → 1 bow, how far outside her waterline, m)
+  vec4 hullFrame(int i, vec2 r) {
+    vec4 S = uShips[i], D = uShipD[i];
+    vec2 q = r - S.xy;
+    float u = q.x * S.z + q.y * S.w, v = -q.x * S.w + q.y * S.z;
+    float t = u / D.x + 0.5;
+    float off = abs(v) - hullHalf(t) * D.y * 0.5;
+    if (t > 1.0) off = max(off, (t - 1.0) * D.x);
+    if (t < 0.0) off = max(off, -t * D.x);
+    return vec4(u, v, t, off);
+  }
+`;
+
 const VERT = /* glsl */`
   uniform vec2 uOrigin;
   uniform sampler2D uMap;
@@ -45,6 +70,25 @@ const VERT = /* glsl */`
 
   ${SWELL}
   ${CALM}
+  ${HULLS}
+
+  // where a hull pushes the sea aside: heaped up at her stem (the faster she
+  // goes, the higher), drawn down a little along her sides
+  float hullPush(vec2 r) {
+    float h = 0.0;
+    for (int i = 0; i < ${SHIPS_N}; i++) {
+      vec4 D = uShipD[i];
+      if (D.w < 0.5) continue;
+      vec4 f = hullFrame(i, r);
+      if (f.z < -0.5 || f.z > 1.5 || f.w > D.y * 2.0 + 3.0) continue;
+      float spd = clamp(D.z / 8.0, 0.0, 1.2);
+      float o = max(f.w, 0.0);
+      float stem = exp(-pow((f.z - 0.98) * D.x / (1.2 + D.y * 0.25), 2.0) - pow(o / (0.9 + D.y * 0.12), 2.0));
+      float side = exp(-pow(o / 1.6, 2.0)) * smoothstep(0.1, 0.3, f.z) * (1.0 - smoothstep(0.6, 0.85, f.z));
+      h += (stem * (0.12 + 0.35 * spd) - side * 0.12 * spd) * step(0.0, f.w + 0.4);
+    }
+    return h;
+  }
 
   void main() {
     vec4 wp = modelMatrix * vec4(position, 1.0);
@@ -58,11 +102,13 @@ const VERT = /* glsl */`
     if (max(abs(P.x - uWin.x), abs(P.y - uWin.y)) > 1000.0) { sd = -32.0; kind = 0.0; }
     float liquid = kind < 2.5 || kind == 5.0 || kind == 7.0 ? 1.0 : kind == 3.0 ? 0.5 : 0.15;
     float shore = mix(0.35, 1.0, smoothstep(0.5, -7.0, sd));
-    float fade = 1.0 - smoothstep(70.0, 190.0, length(wp.xz - cameraPosition.xz));
-    float A = uAmp * shore * fade * liquid * calmAt(P);
+    float A = uAmp * shore * liquid * calmAt(P);
     vec2 slope;
-    float h = swells(P, uTime, slope);
+    // (reckoned from the eye — the disc's middle — as swellAt reckons it, so what floats sits on it)
+    float h = swells(P, uTime, length(wp.xz), slope);
     wp.y += h * A;
+    // (only near the eye: the disc's too coarse further off)
+    if (length(wp.xz) < 160.0) wp.y += hullPush(wp.xz) * step(0.5, liquid);
     vSwell = vec3(slope * A, h * step(0.001, A));
     vWorld = vec3(P.x, wp.y, P.y);
     vView = cameraPosition - wp.xyz;
@@ -100,6 +146,7 @@ const FRAG = /* glsl */`
 
   uniform float uAmp;
   ${SWELL}
+  ${HULLS}
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
   float noise(vec2 p) {
@@ -112,6 +159,54 @@ const FRAG = /* glsl */`
     h += (noise(p * 1.7 - vec2(t * 0.6, -t * 0.4)) - 0.5) * 0.5;
     h += (noise(p * 4.1 + vec2(t * 0.9, t * 0.7)) - 0.5) * 0.18;
     return h;
+  }
+  // the chop as an anime painting has it: the sea broken into small planes,
+  // each tilted its own way and turning slowly, so each catches the light (or
+  // the sky, or the sun) on its own — p's cell (the nearest of some drifting
+  // points), its tilt eased into its neighbour's right at the edge. A slope
+  // (dh/dx, dh/dz), up to about 1.
+  vec2 facets(vec2 p, float t) {
+    vec2 i = floor(p), f = fract(p);
+    float d1 = 8.0, d2 = 8.0;
+    vec2 c1 = i, c2 = i;
+    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+      vec2 g = vec2(float(x), float(y));
+      vec2 o = hash2(i + g);
+      o = 0.5 + 0.38 * sin(t * 0.6 + 6.2831 * o);
+      float d = length(g + o - f);
+      if (d < d1) { d2 = d1; c2 = c1; d1 = d; c1 = i + g; } else if (d < d2) { d2 = d; c2 = i + g; }
+    }
+    vec2 h1 = hash2(c1 + 13.7), h2 = hash2(c2 + 13.7);
+    float a1 = h1.x * 6.2831 + t * (h1.y - 0.5) * 1.6, a2 = h2.x * 6.2831 + t * (h2.y - 0.5) * 1.6;
+    vec2 n1 = vec2(cos(a1), sin(a1)) * (0.3 + 0.7 * h1.y), n2 = vec2(cos(a2), sin(a2)) * (0.3 + 0.7 * h2.y);
+    return mix(n2, n1, 0.5 + 0.5 * smoothstep(0.0, 0.16, d2 - d1));
+  }
+  // the foam where a hull meets the sea (r: render space; p: world): a band
+  // of churned white along her waterline — wider at her bow, and the faster
+  // she goes — laced, not solid; and her bow wave, a line of it running out
+  // and back from her stem at the angle a ship's waves keep (19.5°)
+  // (x: the foam; y: the paler, churned water round it)
+  vec2 hullFoam(vec2 r, vec2 p, float t) {
+    float foam = 0.0;
+    for (int i = 0; i < ${SHIPS_N}; i++) {
+      vec4 D = uShipD[i];
+      if (D.w < 0.5) continue;
+      vec4 f = hullFrame(i, r);
+      if (f.z < -0.6 || f.z > 1.4 || f.w > D.y * 4.0 + 8.0) continue;
+      float spd = clamp(D.z / 8.0, 0.0, 1.2);
+      // along her side
+      float wdt = 0.3 + spd * 0.35 + spd * 0.95 * smoothstep(0.55, 1.0, f.z);
+      float band = (1.0 - smoothstep(wdt * 0.3, wdt, f.w)) * step(-0.3, f.w);
+      // the bow wave: out from the stem, back along her
+      float back = (0.98 - f.z) * D.x;
+      float edge = abs(abs(f.y) - (D.y * 0.12 + back * 0.36));
+      float bw = (1.0 - smoothstep(0.25 + back * 0.03, 0.7 + back * 0.06, edge)) * smoothstep(0.0, 1.5, back) * (1.0 - smoothstep(D.x * 0.4, D.x * 1.2, back)) * step(0.0, f.w) * spd;
+      foam = max(foam, max(band * (0.55 + 0.45 * spd), bw * 0.85));
+    }
+    if (foam <= 0.0) return vec2(0.0);
+    // (laced: veins of white over thinner patches, churning)
+    float lace = noise(p * vec2(1.7, 2.3) + vec2(t * 1.1, -t * 0.7)) * 0.6 + noise(p * 4.3 - t * 1.6) * 0.4;
+    return vec2(clamp(foam * smoothstep(0.42, 0.66, lace + foam * 0.22), 0.0, 1.0), foam);
   }
   // caustic network: the edges between moving Voronoi cells
   float caustic(vec2 p, float t) {
@@ -171,16 +266,18 @@ const FRAG = /* glsl */`
     float depth = clamp(-sd, 0.0, 30.0);
     bool water = kind < 2.5 || kind == 5.0 || kind == 7.0;
 
-    // the surface normal: swells plus small ripples (the swell worked out
-    // again for this pixel, the same as the vertices had it)
+    // the surface normal: the swells (worked out again for this pixel —
+    // and, only shaded, carried twice as far out as the water's drawn with
+    // them), the chop's facets over them, a faint ripple
     float t = uRipT;
     vec2 p = vWorld.xz;
     vec3 sw = vSwell;
+    float dist = length(vView);
     if (uDetail > 0.5) {
       float liquidF = kind < 2.5 || kind == 5.0 || kind == 7.0 ? 1.0 : kind == 3.0 ? 0.5 : 0.15;
-      float A = uAmp * mix(0.35, 1.0, smoothstep(0.5, -7.0, sd)) * (1.0 - smoothstep(70.0, 190.0, length(vView.xz))) * liquidF;
+      float A = uAmp * mix(0.35, 1.0, smoothstep(0.5, -7.0, sd)) * liquidF;
       vec2 sl;
-      float sh = swells(p, uTime, sl);
+      float sh = swells(p, uTime, length(vView.xz) * 0.45, sl);
       sw = vec3(sl * A, sh * step(0.001, A));
     }
     // how much of the crests to show: the three swells add up to a regular
@@ -192,15 +289,24 @@ const FRAG = /* glsl */`
     float e = 0.3;
     float r0 = ripples(p, t);
     // (rougher in a storm and in the rain; glassy in a calm)
-    vec2 rip = vec2(ripples(p + vec2(e, 0.0), t) - r0, ripples(p + vec2(0.0, e), t) - r0) / e * (0.09 + uStorm * 0.22 + uRain * 0.05) * (1.0 - uGlass * 0.8);
-    vec3 n = normalize(vec3(-sw.x - rip.x, 1.0, -sw.y - rip.y));
+    vec2 rip = vec2(ripples(p + vec2(e, 0.0), t) - r0, ripples(p + vec2(0.0, e), t) - r0) / e * (0.04 + uStorm * 0.12 + uRain * 0.05) * (1.0 - uGlass * 0.8);
+    // the facets: a big chop and a small one over it (one on the lower setting), fading out far off
+    vec2 fc = vec2(0.0);
+    if (water) {
+      float rough = (0.62 + uStorm * 0.7 + uRain * 0.2) * (1.0 - uGlass * 0.85) * (1.0 - smoothstep(80.0, 320.0, dist));
+      fc = facets(p * 0.85, t * 0.5) * 0.5;
+      if (uDetail > 0.5) fc += facets(p * 2.1 + 7.3, t * 0.75) * 0.24;
+      fc *= rough;
+    }
+    // (the swells' slopes drawn steeper than they are, so their shapes read under the chop)
+    vec3 n = normalize(vec3(-sw.x * 3.4 - rip.x - fc.x, 1.0, -sw.y * 3.4 - rip.y - fc.y));
     vec3 v = normalize(vView);
     float ndv = max(dot(n, v), 0.0);
     float fres = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);
     float light = mix(0.26, 1.0, uDay);
 
     // water colour by depth: lagoon, turquoise, blue, deep ocean
-    vec3 deep = vec3(0.006, 0.07, 0.24), mid = vec3(0.01, 0.2, 0.44), shallow = vec3(0.03, 0.52, 0.56), lagoon = vec3(0.18, 0.74, 0.64);
+    vec3 deep = vec3(0.006, 0.05, 0.27), mid = vec3(0.01, 0.13, 0.46), shallow = vec3(0.03, 0.5, 0.58), lagoon = vec3(0.18, 0.74, 0.64);
     if (uZone > 1.5 && uZone < 2.5) { deep = vec3(0.01, 0.06, 0.18); mid = vec3(0.02, 0.14, 0.32); shallow = vec3(0.04, 0.32, 0.5); lagoon = shallow; }
     // under a grey sky the sea turns a dark grey-green; in a storm, slate
     else if (uOvercast > 0.0) {
@@ -213,6 +319,13 @@ const FRAG = /* glsl */`
     vec3 col = mix(deep, mid, exp(-depth * 0.07));
     col = mix(col, shallow, exp(-depth * 0.32));
     col = mix(col, lagoon, exp(-depth * 1.1) * 0.7);
+    // the sea's wide patches, drifting: stretches a shade darker and lighter
+    // (so no stretch of it is the same as the next, from up high too), and
+    // the swells' crests lighter, their troughs darker
+    if (water) {
+      float big = sFbm(p * 0.0045 + vec2(uTime * 0.004, -uTime * 0.003)) * 0.65 + sFbm(p * 0.017 + 41.0 - uTime * 0.006) * 0.35;
+      col *= mix(0.62, 1.18, smoothstep(0.3, 0.72, big)) * (1.0 + 0.5 * clamp(sw.z, -1.0, 1.0));
+    }
     // light through the tops of the swells (patchy, like real water)
     col += shallow * clamp(sw.z, 0.0, 1.0) * 0.2 * (0.5 + sFbm(p * 0.045)) * crestFade;
     // see-through in the shallows; the open sea is opaque (its floor is only
@@ -232,22 +345,29 @@ const FRAG = /* glsl */`
       float c = caustic(p * 0.42 + vec2(t * 0.03, t * 0.02), t) + caustic(p * 0.71 - vec2(t * 0.02, -t * 0.03) + 3.1, t * 1.3) * 0.6;
       col += vec3(0.55, 0.95, 0.85) * c * exp(-depth * 0.45) * 0.28 * uDay * (1.0 - uStorm) * (1.0 - uOvercast * 0.8);
     }
-    // the sky, mirrored at a glance
+    // the sky, mirrored at a glance — on the sea, a facet at a time: one
+    // turned to the sky shows it, one turned to you the deep blue (crisply,
+    // like paint, not a soft blur)
     vec3 rd = reflect(-v, n);
     vec3 skyR = mix(uSky, uSkyTop, pow(clamp(rd.y, 0.0, 1.0), 0.6));
-    col = mix(col, skyR * (0.45 + 0.55 * uDay), fres * 0.85);
+    float sheen = water ? mix(fres, smoothstep(0.07, 0.16, fres) * 0.42 + fres * 0.4, 1.0 - smoothstep(120.0, 400.0, dist)) : fres;
+    // (a facet's sheen is the sky's blue more than its pale haze: a lighter, brighter blue, as paint has it)
+    vec3 skyF = water ? mix(skyR, uSkyTop * 1.15, 0.45 * (1.0 - smoothstep(150.0, 450.0, dist))) : skyR;
+    col = mix(col, skyF * (0.45 + 0.55 * uDay), sheen * 0.85);
     // the sun: a hard highlight, and sparkles along its path
     vec3 hlf = normalize(uSunDir + v);
     float nh = max(dot(n, hlf), 0.0);
     float sunUp = smoothstep(-0.05, 0.1, uSunDir.y) * (1.0 - max(uStorm * 0.85, uOvercast * 0.92));
     col += uSunCol * (pow(nh, 320.0) * 3.2 + pow(nh, 42.0) * 0.12) * sunUp;
+    // glints: a facet turned just so throws the sun back, a small hard flash
+    // (a few small ones on each facet — not the whole facet lit up)
+    if (water) col += uSunCol * smoothstep(0.988, 0.996, nh) * step(0.62, hash(floor(p * 4.0))) * 1.6 * sunUp * smoothstep(2.0, 12.0, dist) * (1.0 - smoothstep(40.0, 280.0, dist) * 0.7);
     if (uDetail > 0.5) {
       vec2 cell = floor(p * 2.6);
       float g = hash(cell);
       float tw = pow(max(0.0, sin(t * 3.1 + g * 40.0)), 12.0);
       vec2 fc = fract(p * 2.6) - 0.5;
       float dotS = 1.0 - smoothstep(0.04, 0.16, length(fc));
-      float dist = length(vView);
       col += uSunCol * step(0.9, g) * tw * dotS * pow(nh, 14.0) * 2.5 * sunUp * (1.0 - smoothstep(18.0, 70.0, dist));
     }
     // surf: lines rolling in toward the beach, foam at the waterline, whitecaps
@@ -267,6 +387,12 @@ const FRAG = /* glsl */`
       // (broken up into streaks and flecks, not smooth white ovals)
       if (uStorm > 0.05) caps *= smoothstep(0.38, 0.6, noise(p * vec2(0.9, 2.3) + vec2(t * 0.4, 0.0)) * 0.65 + noise(p * 3.1 - t * 0.6) * 0.35);
       foam = clamp(max(edge, line * band * 0.9) + caps, 0.0, 1.0);
+      // where the ships meet it: laced white, in paler churned water
+      if (dist < 220.0) {
+        vec2 hf = hullFoam(cameraPosition.xz - vView.xz, p, t);
+        col = mix(col, vec3(0.3, 0.68, 0.92) * light, hf.y * 0.45);
+        foam = max(foam, hf.x);
+      }
     } else if (kind == 7.0) {
       foam = smoothstep(-0.6, -0.1, sd) * 0.6;
     }
@@ -287,11 +413,11 @@ const WMASK = WIN - 1;
 const STEP = 256; // the window moves on in steps this big
 const SLICE = 32; // columns (or rows) filled in per frame while it does
 
-/** A disc of rings: ~0.6 m apart at the centre, growing outward to the horizon. */
-function discGeometry(radius = 1600, segs = 96) {
+/** A disc of rings: ~0.6 m apart at the centre, growing outward to the horizon (dense enough out to 300 m to carry the swells). */
+function discGeometry(radius = 1600, segs = 160) {
   const rings = [0];
   let r = 0.6, dr = 0.6;
-  while (r < radius) { rings.push(r); dr *= 1.075; r += dr; }
+  while (r < radius) { rings.push(r); dr *= 1.045; r += dr; }
   rings.push(radius);
   const pos = [], idx = [];
   pos.push(0, 0, 0);
@@ -344,6 +470,8 @@ export class Water {
         uHullD: { value: new THREE.Vector3() },
         uBubble: { value: new THREE.Vector4() },
         uCalm: { value: Array.from({ length: CALM_N }, () => new THREE.Vector4()) },
+        uShips: { value: Array.from({ length: SHIPS_N }, () => new THREE.Vector4()) },
+        uShipD: { value: Array.from({ length: SHIPS_N }, () => new THREE.Vector4()) },
       },
     ]);
     // the water writes depth, so the ink outlines see its surface (not the sea floor under it)
@@ -364,6 +492,21 @@ export class Water {
     if (!h) { u.uHullD.value.z = 0; return; }
     u.uHull.value.set(h.x, h.z, Math.cos(h.h), Math.sin(h.h));
     u.uHullD.value.set(h.L, h.B, 1);
+  }
+
+  /**
+   * The ships near the eye, for the foam and the push of their hulls in the
+   * sea: [{ x, z (render space), h (heading), L, B, sp (kn) }], nearest first
+   * (as many as there's room for).
+   */
+  setShips(list) {
+    const S = this.uniforms.uShips.value, D = this.uniforms.uShipD.value;
+    for (let i = 0; i < SHIPS_N; i++) {
+      const s = list[i];
+      if (!s) { D[i].w = 0; continue; }
+      S[i].set(s.x, s.z, Math.cos(s.h), Math.sin(s.h));
+      D[i].set(s.L, s.B, s.sp, 1);
+    }
   }
 
   /** 'high' shows caustics and sparkles; 'low' skips them. */

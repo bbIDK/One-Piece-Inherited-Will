@@ -12,6 +12,7 @@
 // companionway) down to the hold — and the masts, the capstan and the ship's
 // boat are things you walk round.
 
+import { swellAt, swellOn } from '../render3d/swell.js';
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const smooth = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 
@@ -927,8 +928,33 @@ export function solidAt(d, u, v, margin = 0, lvl = null) {
   return depth;
 }
 
-/** The ship's gentle rise and fall on the swell (as the 3D view draws it). */
-export function shipBob(ship, time) { return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.07; }
+/**
+ * How the swell under her moves her just now: { h (m up), r (roll), p (pitch) }
+ * — the sea's own surface (render3d/swell.js: the same waves the water's
+ * drawn with) sampled at her bow, her stern, each side and her middle, so she
+ * rises and falls and leans with it. A long hull bridges the short seas (they
+ * average out under her) and only the long swell lifts her ends; a small boat
+ * rides every one. (Once for a moment and a place, then reused.)
+ */
+function waveRide(ship, time) {
+  const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0 });
+  if (c.t === time && c.x === ship.x && c.y === ship.y && c.hd === ship.heading) return c;
+  c.t = time; c.x = ship.x; c.y = ship.y; c.hd = ship.heading;
+  c.h = c.r = c.p = 0;
+  // (not up a canal of Reverse Mountain, or going down)
+  if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return c;
+  const L = ship.def.length || 6, B = ship.def.beam || L * 0.3;
+  const ch = Math.cos(ship.heading), sh = Math.sin(ship.heading);
+  const at = (u, v) => swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
+  const bow = at(L * 0.38, 0), stern = at(-L * 0.38, 0), port = at(0, -B * 0.42), stb = at(0, B * 0.42), mid = at(0, 0);
+  c.h = (bow + stern + port + stb + mid * 2) / 6;
+  c.p = Math.max(-0.22, Math.min(0.22, Math.atan2(bow - stern, L * 0.76)));
+  c.r = Math.max(-0.26, Math.min(0.26, Math.atan2(port - stb, B * 0.84)));
+  return c;
+}
+
+/** The ship's rise and fall: on the swell (as the 3D view draws it), and a little of her own. */
+export function shipBob(ship, time) { return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.03 + waveRide(ship, time).h; }
 /** How much higher than the middle a point `along` metres toward the bow rides (the ship pitched up a slope). */
 export const pitchRise = (ship, along) => (ship.pitch ? along * Math.tan(ship.pitch) : 0);
 /**
@@ -938,7 +964,8 @@ export const pitchRise = (ship, along) => (ship.pitch ? along * Math.tan(ship.pi
  */
 export function shipRock(ship, time) {
   const t = time + (ship.seed || 0), sinking = ship.sunk ? Math.min(1, (ship.sinkT || 0) / 4) : 0;
-  return [Math.sin(t * 0.9) * 0.035 + sinking * 0.5, Math.sin(t * 1.1) * 0.02 + (ship.pitch || 0)];
+  const w = waveRide(ship, time);
+  return [Math.sin(t * 0.9) * 0.02 + w.r + sinking * 0.5, Math.sin(t * 1.1) * 0.012 + w.p + (ship.pitch || 0)];
 }
 /**
  * Where a point aboard rides just now, in metres above the sea: `u` along her
