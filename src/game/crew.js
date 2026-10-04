@@ -222,7 +222,7 @@ export class Crew {
     const role = CREW_ROLES[m.role];
     const W = crewWords(c);
     g.ui.toast(W.joined, `${m.name} joins your ${W.group} as ${role?.name || m.role}.`, '#ffd54f');
-    g.log(`${m.name} sails with you now. ${role?.desc || ''} ${m.fighter && m.follow ? 'They\'ll follow you ashore.' : 'They\'ll keep to the ship.'} (Crew: U)`, '#ffe082');
+    g.log(`${m.name} sails with you now. ${role?.desc || ''} ${m.fighter && m.follow ? 'They\'ll follow you ashore.' : 'They\'ll keep to the ship.'} (Crew: Tab)`, '#ffe082');
     g.audio?.sfx('breakthrough');
     // the NPC on the island becomes your companion (or goes down to the ship)
     if (actor && actor.alive) {

@@ -135,8 +135,8 @@ export function drawSkillsHud(ui, game, p) {
     const box = h('div.sp-box', { style: { '--sp-c': ms.color } });
     box.appendChild(h('div.sp-head', h('b', ms.title), h('span', ms.sub)));
     for (const s of shown) box.appendChild(row('skills', s, s.i, K.skills[s.i]));
-    if (ms.skills.length > SKILL_SLOTS) box.appendChild(h('div.sp-more', `${ms.skills.length - SKILL_SLOTS} more than there are skill keys: see Skills (K)`));
-    if (more > 0) box.appendChild(h('div.sp-more', `+${more} more to learn — Skills (K)`));
+    if (ms.skills.length > SKILL_SLOTS) box.appendChild(h('div.sp-more', `${ms.skills.length - SKILL_SLOTS} more than there are skill keys: see Skills (Tab)`));
+    if (more > 0) box.appendChild(h('div.sp-more', `+${more} more to learn — Skills (Tab)`));
     if (!shown.length) box.appendChild(h('div.sp-more', ms.kind === 'weapon' ? 'No techniques for it yet: a trainer teaches them.' : 'No techniques yet: trainers teach them, a Devil Fruit gives them.'));
     box.appendChild(h('div.sp-mouse', h('span', h('kbd', 'LMB'), ' ', m1Name), h('span' + (heavyCd > 0 ? '.cd' : ''), h('kbd', 'RMB'), ' ', heavyName, heavyCd > 0 ? h('i', ' ' + fmt(heavyCd)) : null)));
     if (ms.forms.length) {
@@ -150,7 +150,7 @@ export function drawSkillsHud(ui, game, p) {
     }
     if (full) for (const n of ms.next) box.appendChild(h('div.sp-next', { title: `${n.name} — ${n.why}` }, h('b', 'Next: '), `${n.name} — ${n.why}`));
     const foot = [];
-    if (ms.kind === 'weapon') foot.push(h('span', h('kbd', 'X'), ' sheathes'));
+    if (ms.kind === 'weapon') foot.push(h('span', h('kbd', 'H'), ' sheathes'));
     else if (ms.kind === 'fruit') {
       const k = hotKey(p, ENTRY.fruit);
       if (fb && Number.isFinite(fb.t)) foot.push(h('span', `${Math.ceil(fb.t)}s left`));

@@ -1,4 +1,4 @@
-// The Quests menu (L): the main story — the chapter you're on, what's left
+// The Quests section of the menu (Tab): the main story — the chapter you're on, what's left
 // of it and the story so far — side quests you can track or give up, and
 // everything you've finished. The main story is never forced: before taking
 // a road you can sail your own way instead, and a road under way can be set

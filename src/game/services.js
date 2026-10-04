@@ -168,7 +168,7 @@ export class Services {
     c.masteries[style] = 0;
     g.player.masteries = c.masteries;
     g.ui.toast('NEW STYLE', STYLES[style].name, '#90caf9');
-    g.log(`You can switch to ${STYLES[style].name} in the Skills menu (K).`, '#90caf9');
+    g.log(`You can switch to ${STYLES[style].name} in the Skills menu (Tab).`, '#90caf9');
     persist(g);
     return true;
   }

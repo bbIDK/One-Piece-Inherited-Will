@@ -1003,7 +1003,7 @@ const quests = [
       const knew = ctx.char.masteries.hasshoken !== undefined;
       if (!knew) ctx.char.masteries.hasshoken = 0;
       g.progression.addStyleMastery('hasshoken', 5);
-      if (!knew) g.log('Don Chinjao teaches you the basics of the Hasshoken. Switch to it in Skills (K).', '#90caf9');
+      if (!knew) g.log('Don Chinjao teaches you the basics of the Hasshoken. Switch to it in Skills (Tab).', '#90caf9');
     },
   },
   {

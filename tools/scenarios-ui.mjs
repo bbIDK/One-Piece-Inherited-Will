@@ -37,8 +37,8 @@ export const scenarios = {
       await frames(page, 3);
       await snap('hud');
 
-      // ---- inventory via the sidebar
-      await page.click('.side-btn[title^="Inventory"]');
+      // ---- the menu (its button; Tab): at Inventory the first time
+      await page.click('.side-btn.pill');
       await frames(page, 3);
       await snap('inventory');
       await page.locator('.inv-tile[title^="Pirate Cutlass"]').dragTo(page.locator('.eq-slot').first(), { timeout: 90000 });
@@ -68,7 +68,7 @@ export const scenarios = {
       console.log('fruit', JSON.stringify({ fruit: (await state(page)).fruit, canEatSecond }));
       await snap('second-fruit');
 
-      // ---- switch menus with the sidebar
+      // ---- switch sections down its side
       for (const [btn, name] of [['Character', 'character'], ['Skills', 'skills'], ['Journal', 'journal'], ['Crew', 'crew']]) {
         await page.click(`.side-btn[title^="${btn}"]`);
         await frames(page, 3);
@@ -92,8 +92,10 @@ export const scenarios = {
       await page.keyboard.press('Escape');
       await frames(page, 2);
 
-      // ---- pause menu: no World Map button, Save works
-      await page.click('.side-btn[title^="Menu"]');
+      // ---- pause menu (Game, the menu's last section): no World Map button, Save works
+      await page.click('.side-btn.pill');
+      await frames(page, 2);
+      await page.click('.side-btn.s-menu');
       await frames(page, 2);
       await snap('pause');
       const hasMap = await page.getByRole('button', { name: /World Map/ }).count();
@@ -171,7 +173,9 @@ export const scenarios = {
       await frames(page, 5);
       await step(page, 1);
       const name = await page.evaluate(() => window.OP.game.state.char.name);
-      await page.click('.side-btn[title^="Character"]');
+      await page.click('.side-btn.pill');
+      await frames(page, 2);
+      await page.click('.side-btn.s-character');
       await frames(page, 3);
       await snap('d-character');
       console.log('d', JSON.stringify({ name }));

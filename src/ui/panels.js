@@ -617,7 +617,7 @@ export function openJournal(game) {
   const body = h('div.journal');
   const entry = ui.openPanel(body, { wide: true, id: 'journal' });
   if (!entry) return;
-  // (quests have a menu of their own now: Quests, L) — and your road, with the
+  // (quests have a section of the menu of their own now: Quests) — and your road, with the
   // choice that goes with it: sail your own way, or take a road (up again)
   const road = h('div.journal-road');
   const drawRoad = () => {
@@ -627,7 +627,7 @@ export function openJournal(game) {
   };
   drawRoad();
   add(body, h('h2', 'Journal'),
-    h('div.journal-quests', uiImg('quest', 18), h('span', ' Your main story and side quests are in the Quests menu.'), h('button.btn.small', { on: { click: () => ui.sideAction?.('quests') } }, 'Open Quests (L)')),
+    h('div.journal-quests', uiImg('quest', 18), h('span', ' Your main story and side quests are in the Quests menu.'), h('button.btn.small', { on: { click: () => ui.sideAction?.('quests') } }, 'Open Quests (Tab)')),
     road,
     h('h3', 'Legends'),
     h('p.muted', 'Nobody chooses your destiny. But the sea remembers those who do the impossible — every legend you write adds to your Inherited Will.'));
@@ -679,7 +679,7 @@ export function openMenu(game, { onQuit, onRetire, onSave, extra = [] }) {
       btn('map', game.creative?.on ? 'Creative mode: on — turn off' : 'Creative mode (fly, commands)', async () => {
         const C = game.creative;
         if (!C) return;
-        if (!C.on && !(await ui.ask({ title: 'Creative mode?', text: "Fly anywhere (double-tap Space; Space rises, C sinks, Shift goes fast), take no harm, see the whole chart and click it to travel, type commands with / (help lists them) — and open the creative panel (F1, or here) for Devil Fruits, items, races, Haki, foes, ships and the world. Turn it off here any time.", ok: 'Turn it on' }))) return;
+        if (!C.on && !(await ui.ask({ title: 'Creative mode?', text: "Fly anywhere (double-tap Space; Space rises, Ctrl sinks, Shift goes fast), take no harm, see the whole chart and click it to travel, type commands with / (help lists them) — and open the creative panel (F1, or here) for Devil Fruits, items, races, Haki, foes, ships and the world. Turn it off here any time.", ok: 'Turn it on' }))) return;
         ui.closePanel();
         C.set(!C.on);
       }, game.creative?.on ? '.gold' : ''),
@@ -743,7 +743,7 @@ export function openSettings(game) {
       slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),
       check('Show tutorial hints', 'showHints'),
       controlsSection(game, render),
-      h('p.muted', 'Press V in game to switch between first and third person. Settings are saved in this browser.'));
+      h('p.muted', 'Press P in game (or scroll all the way in or out) to switch between first and third person. Settings are saved in this browser.'));
   };
   game.ui.onKeysChange = render;
   render();

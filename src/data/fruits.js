@@ -66,7 +66,7 @@ export const FRUITS = {
     name: 'Ope Ope no Mi', en: 'Op-Op Fruit', type: 'Paramecia', rarity: 'legendary', color: '#81d4fa', weight: 0.4,
     desc: 'Open a ROOM — a sphere of space that stays where you cast it — and inside it you are a surgeon: you can swap, lift, cut and remove whatever is in it, and your blows pass through any body. Its ultimate technique grants eternal youth, at the cost of the user\'s life.',
     // (ROOM, Shambles, Amputate, Mes and Takt on the first five skill keys; the rest of the surgeon's
-    // base on keys of your choosing — the skills panel, or Skills (K))
+    // base on keys of your choosing — the skills panel, or Skills (Tab))
     techniques: [
       T(0, { id: 'ope_room', name: 'ROOM', icon: '🔵', anim: 'raise', windup: 0.35, recover: 0.25, cd: 18, say: 'ROOM.',
         desc: 'Open a ROOM: a pale blue sphere that stays where you cast it (it grows with your mastery). Your other techniques work inside it — draw the fight in.',

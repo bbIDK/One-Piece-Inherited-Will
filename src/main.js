@@ -100,7 +100,7 @@ const TIPS = [
   'The number keys take things out — food, a weapon, your Devil Fruit; the skills of what is out are on Z, B, N, Y and O.',
   'Click a key on the skills panel (bottom right) to change it — or in Settings, under Controls.',
   'Fight worthy foes with your Devil Fruit: its mastery opens its forms, and at its height it can awaken.',
-  'Tap Ctrl in third person for shift lock; V switches between first and third person.',
+  'Tap Ctrl in third person for shift lock; P (or scrolling all the way in) switches between first and third person.',
   'Out of air under water? Swim for the surface — your lungs will not wait.',
   'Enemies hunt you by sight. Break the line of sight and they will lose you.',
   'Every life that ends passes its Will on to the next generation.',
@@ -212,7 +212,7 @@ async function start() {
       else if (!view3d.rig.locked && !view3d.rig.lockFailed) view3d.rig.requestLock();
     }
     if (quiet) return;
-    ui.toast(settings.view === 'first' ? 'FIRST PERSON' : 'THIRD PERSON', input.touch?.on ? 'Tap View to switch' : settings.view === 'third' ? (settings.shiftLock ? 'Shift lock is on (tap Ctrl to free the mouse) · V switches views' : 'Hold the right mouse button to turn the camera · tap Ctrl for shift lock · V switches views') : 'Press V to switch views', '#ffe082', 'view');
+    ui.toast(settings.view === 'first' ? 'FIRST PERSON' : 'THIRD PERSON', input.touch?.on ? 'Tap View to switch' : settings.view === 'third' ? (settings.shiftLock ? 'Shift lock is on (tap Ctrl to free the mouse) · P switches views' : 'Hold the right mouse button to turn the camera · tap Ctrl for shift lock · P switches views') : 'Press P to switch views', '#ffe082', 'view');
   };
   // start looking down the longest clear line of sight (not at a wall)
   const openYaw = (p) => {
@@ -328,27 +328,20 @@ async function start() {
   };
   const touch = installTouch(game, root);
   ui.keyHandlers.push(
-    { key: 'V', when: playing, fn: () => game.cycleView() },
+    { key: 'P', when: playing, fn: () => game.cycleView() },
     // draw your weapon, or put it back in its sheath (sheathed, you fight with your fists)
-    { key: 'X', when: playing, fn: () => { const p = game.player; if (p?.weapon && p.mode !== 'sail') setDrawn(game, !p.drawn); } },
-    { key: 'I', when: playing, fn: () => ui.sideAction('inventory') },
-    { key: 'Tab', when: playing, fn: () => ui.sideAction('inventory') },
-    { key: 'C', when: () => playing() && !game.player?.inWater, fn: () => ui.sideAction('character') }, // (in the sea, C dives)
-    { key: 'K', when: playing, fn: () => ui.sideAction('skills') },
-    { key: 'J', when: playing, fn: () => ui.sideAction('journal') },
-    { key: 'H', when: playing, fn: () => ui.sideAction('help') },
-    { key: 'U', when: playing, fn: () => ui.sideAction('crew') },
-    { key: 'L', when: playing, fn: () => ui.sideAction('quests') },
+    { key: 'H', when: playing, fn: () => { const p = game.player; if (p?.weapon && p.mode !== 'sail') setDrawn(game, !p.drawn); } },
+    // every menu behind one key: Tab opens the one you had open last (its sections down its side), Tab again shuts it
+    { key: 'Tab', when: playing, fn: () => ui.toggleMenu() },
     { key: 'F1', when: () => playing() && !!game.creative?.on, fn: () => ui.sideAction('creative') },
     // the minimap: − zooms it out, + (or =) in
     { key: 'Minus', when: playing, fn: () => ui.minimapZoom(game, 1) },
     { key: 'NumpadSubtract', when: playing, fn: () => ui.minimapZoom(game, 1) },
     { key: 'Equal', when: playing, fn: () => ui.minimapZoom(game, -1) },
     { key: 'NumpadAdd', when: playing, fn: () => ui.minimapZoom(game, -1) },
-    // in a multiplayer voyage: Enter to chat, P for who's aboard and where
+    // in a multiplayer voyage: Enter to chat (who's aboard and where: its section in the menu)
     { key: 'Enter', when: () => playing() && !ui.stack.length && !!game.net?.open, fn: () => voyageHud.openChat() },
     { key: 'NumpadEnter', when: () => playing() && !ui.stack.length && !!game.net?.open, fn: () => voyageHud.openChat() },
-    { key: 'P', when: () => playing() && !!game.net, fn: () => ui.sideAction('voyage') },
   );
   game.on('saved', () => ui.savedNote());
   // (at the helm or the oars your hands are on the wheel: the weapon goes back in its sheath)

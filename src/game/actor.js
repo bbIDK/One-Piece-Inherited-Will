@@ -202,7 +202,7 @@ export class Actor extends Entity {
   styleMastery(s) { return this.masteries[s || this.style] || 0; }
   /** Holding that kind of weapon — and, for swords, as many as `style` (by default your own) needs? */
   hasWeapon(kind, style = this.style) {
-    // (your own weapon counts once it's drawn: sheathed, you fight with your fists — X draws it)
+    // (your own weapon counts once it's drawn: sheathed, you fight with your fists — H draws it)
     if (!this.weapon || (this.isPlayer && !this.drawn)) return false;
     if (kind === 'sword') return this.weapon.kind === 'sword' && (this.weapon.count || 1) >= (STYLES[style]?.swords || 1);
     return this.weapon.kind === kind;

@@ -97,7 +97,7 @@ export function equip(game, id, { slot } = {}) {
     else eq.weapons = [id];
     // (on the hotbar, if there's room: its key draws it, and again puts it away)
     if (eq.weapons.includes(id)) addToHotbar(c, 'item:' + id);
-    if (eq.weapons.length) game.hint?.('draw', 'X — or the weapon\'s key on the hotbar — draws your weapon, and puts it back in its sheath. Sheathed, you fight with your fists; drawn, its moves and their keys show at the bottom right.');
+    if (eq.weapons.length) game.hint?.('draw', 'H — or the weapon\'s key on the hotbar — draws your weapon, and puts it back in its sheath. Sheathed, you fight with your fists; drawn, its moves and their keys show at the bottom right.');
     if (id === 'sandai_kitetsu' && !c.flags.kitetsuTested) {
       c.flags.kitetsuTested = true;
       game.log('You toss the cursed Kitetsu into the air and hold out your arm… it spins down and misses you by a hair. The blade accepts you.', '#ef9a9a');

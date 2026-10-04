@@ -57,9 +57,9 @@ export class PlayerController {
       my = Math.sin(yaw) * fwd + Math.cos(yaw) * right;
     }
     p.intent.mx = mx; p.intent.my = my;
-    // swimming: Space rises, C dives — and swimming forward follows the view up or down
+    // swimming: Space rises, Ctrl dives — and swimming forward follows the view up or down
     p.intent.mz = 0;
-    // creative mode: double-tap Space to take off or land; flying, Space rises and C sinks
+    // creative mode: double-tap Space to take off or land; flying, Space rises and Ctrl sinks
     // (those who fly in earnest — wings, flames, smoke... — take off the same
     // way: Space again in the air; see airPress)
     const cr = game.creative;
@@ -69,15 +69,15 @@ export class PlayerController {
       if (now - (this.spaceT ?? -9) < 0.3) { cr.fly(); this.spaceT = -9; this.jumpHold = null; p.charging = 0; }
       else this.spaceT = now;
     } else if (inp.wasPressed('Space')) spaceUsed = this.airPress(p, game);
-    if (p.flying) p.intent.mz = inp.isDown('Space') ? 1 : inp.isDown('C') ? -1 : 0;
+    if (p.flying) p.intent.mz = inp.isDown('Space') ? 1 : inp.isDown('Control') ? -1 : 0;
     if (p.inWater) {
       if (inp.isDown('Space')) p.intent.mz = 1;
-      else if (inp.isDown('C')) p.intent.mz = -1;
+      else if (inp.isDown('Control')) p.intent.mz = -1;
       else if (v3 && fwdIn > 0.3) {
         const pitch = v3.rig.pitch;
         if (pitch < -0.28 || (pitch > 0.2 && p.depth > 0.05)) p.intent.mz = Math.max(-1, Math.min(1, pitch * 1.5)) * fwdIn;
       }
-      if (!p.gills && p.under && !this.o2Hint) { this.o2Hint = true; game.hint?.('diving', 'Under water you hold your breath — watch the bubbles under your health and come up for air (Space). Look down and swim, or hold C, to dive.'); }
+      if (!p.gills && p.under && !this.o2Hint) { this.o2Hint = true; game.hint?.('diving', 'Under water you hold your breath — watch the bubbles under your health and come up for air (Space). Look down and swim, or hold Ctrl, to dive.'); }
     }
     // Shift: holding it sprints (a quick tap dodges in first person); Q dashes
     if (inp.wasPressed('Shift')) this.shiftT = 0;
@@ -117,7 +117,8 @@ export class PlayerController {
     if (held) this.eat(p, game, dt, held, rightClick, freeMouse ? null : inp.mouseDown(2));
     if (tapDodge && !(v3 && v3.rig.mode === 'third')) buf.dodge = 0.16;
     // in third person Ctrl toggles shift lock (Shift is for running)
-    if (inp.wasPressed('Control') && v3 && v3.rig.mode === 'third' && !inp.touch?.on) {
+    // (Ctrl is down — diving, flying lower — in the water and in the air: shift lock is on foot)
+    if (inp.wasPressed('Control') && !p.flying && !p.inWater && v3 && v3.rig.mode === 'third' && !inp.touch?.on) {
       v3.rig.setShiftLock(!v3.rig.shiftLock);
       game.applySettings?.(true);
       game.ui.toast(v3.rig.shiftLock ? 'SHIFT LOCK ON' : 'SHIFT LOCK OFF', v3.rig.shiftLock ? 'Your character faces where you look. Tap Ctrl to free the mouse.' : 'Hold the right mouse button to turn the camera. Tap Ctrl to lock it.', '#ffe082', 'shiftlock');

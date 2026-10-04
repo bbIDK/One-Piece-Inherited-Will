@@ -24,12 +24,12 @@ export function installVoyageHud(game, ui) {
 
   const build = () => {
     if (side) return;
-    // (on the sidebar after Menu, as the menus are: lit while its list is open — ui.js)
+    // (a section of the menu, after Quests: lit while its list is open — ui.js)
     count = h('span.vy-n');
-    side = h('button.side-btn.vy-side', { title: 'The voyage (P)', on: { click: (e) => { e.currentTarget.blur(); ui.sideAction('voyage'); } } },
-      uiImg('jolly_roger', 22), h('span.lbl', 'Voyage'), count, h('span.key', 'P'));
-    const menu = ui.el.sideBtns?.menu;
-    if (menu) menu.after(side); else (ui.el.side || ui.hud).appendChild(side);
+    side = h('button.side-btn.rail.vy-side', { title: 'The voyage', on: { click: (e) => { e.currentTarget.blur(); ui.sideAction('voyage'); } } },
+      uiImg('jolly_roger', 22), h('span.lbl', 'Voyage'), count);
+    const q = ui.el.sideBtns?.quests;
+    if (q) q.after(side); else (ui.el.side || ui.hud).appendChild(side);
     if (ui.el.sideBtns) ui.el.sideBtns.voyage = side;
     lines = h('div.chat-lines');
     input = h('input.chat-in', { type: 'text', maxLength: CHAT_MAX, spellcheck: false, autocomplete: 'off', placeholder: 'Say something to the crew — Enter sends, Esc cancels' });
@@ -68,7 +68,7 @@ export function installVoyageHud(game, ui) {
     if (!side || !v) return;
     const n = v.crew().length;
     count.textContent = String(n);
-    side.title = `The voyage ${showCode(v.code)} · ${n} aboard (P)`;
+    side.title = `The voyage ${showCode(v.code)} · ${n} aboard`;
   };
 
   function openChat() {

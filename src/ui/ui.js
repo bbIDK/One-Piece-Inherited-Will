@@ -16,18 +16,27 @@ import { drawSkillsHud, entryView, panelRow } from './skillsHud.js';
 import { captureKey } from './rebind.js';
 import { keysOf, keyLabel } from '../game/keys.js';
 
-// the menu buttons on the right of the screen (below the minimap)
-const SIDEBAR = [
-  { id: 'inventory', label: 'Inventory', key: 'Tab' },
-  { id: 'character', label: 'Character', key: 'C' },
-  { id: 'skills', label: 'Skills', key: 'K' },
-  { id: 'journal', label: 'Journal', key: 'J' },
-  { id: 'crew', label: 'Crew', key: 'U' },
-  { id: 'quests', label: 'Quests', key: 'L' },
-  { id: 'menu', label: 'Menu', key: 'Esc' },
-  // on phones: no keyboard, so the map and the camera get buttons too
-  { id: 'map', label: 'Map', key: 'M', touch: true },
-  { id: 'view', label: 'View', key: 'V', touch: true },
+// the menu (Tab, or the one button for it on the left of the screen): open,
+// its sections run down the left side — the one you're in lit, a click on
+// another goes there; shut, there's just that button
+const SECTIONS = [
+  { id: 'inventory', label: 'Inventory' },
+  { id: 'character', label: 'Character' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'journal', label: 'Journal' },
+  { id: 'crew', label: 'Crew' },
+  { id: 'quests', label: 'Quests' },
+  { id: 'map', label: 'Map', key: 'M' },
+  { id: 'menu', label: 'Game', key: 'Esc', icon: 'settings' },
+];
+// (a panel opened from a section: that section stays lit)
+const SECTION_OF = { settings: 'menu', help: 'menu' };
+// (what Tab opens again: the section you were last in)
+const RETURN_TO = new Set(['inventory', 'character', 'skills', 'journal', 'crew', 'quests', 'voyage']);
+// on phones there's no keyboard: the map and the camera get buttons of their own
+const TOUCH_BTNS = [
+  { id: 'map', label: 'Map' },
+  { id: 'view', label: 'View' },
 ];
 // (Conqueror's has no switch: its key is the first Haki key, its release — keys.js)
 const HAKI_TOGGLES = [
@@ -183,7 +192,7 @@ export class UI {
     E.hitMark.innerHTML = '<svg viewBox="-20 -20 40 40" width="40" height="40"><path d="M-13 -13 L-6.5 -6.5 M13 -13 L6.5 -6.5 M-13 13 L-6.5 6.5 M13 13 L6.5 6.5" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
     E.crosshair.appendChild(E.hitMark);
     this.hud.appendChild(E.crosshair);
-    E.lookHint = h('div.look-hint.hidden', 'Click to look around', h('small', 'Esc frees the mouse · V switches view'));
+    E.lookHint = h('div.look-hint.hidden', 'Click to look around', h('small', 'Esc frees the mouse · P switches view'));
     this.hud.appendChild(E.lookHint);
     R.appendChild(this.hud);
     this.bannerEl = h('div.banner', h('h2'), h('h1'), h('p'));
@@ -194,12 +203,14 @@ export class UI {
     R.appendChild(this.fadeEl);
     this.panelLayer = h('div');
     R.appendChild(this.panelLayer);
-    // the sidebar sits above open panels so you can jump between menus
+    // the menu: its button, and its sections (over the open panel, to go between them)
     E.side = h('div.sidebar.hidden');
     E.sideBtns = {};
-    for (const b of SIDEBAR) {
-      const el = h('button.side-btn' + (b.touch ? '.t-only' : ''), { title: `${b.label} (${b.key})`, on: { click: (ev) => { ev.currentTarget.blur(); this.sideAction(b.id); } } },
-        uiImg(b.id, 22), h('span.lbl', b.label), h('span.key', b.key));
+    const go = (fn) => (ev) => { ev.currentTarget.blur(); fn(); };
+    E.side.appendChild(h('button.side-btn.pill', { title: 'Menu (Tab)', on: { click: go(() => this.toggleMenu()) } }, uiImg('menu', 22), h('span.lbl', 'Menu'), h('span.key', 'Tab')));
+    for (const b of TOUCH_BTNS) E.side.appendChild(h('button.side-btn.t-only', { title: b.label, on: { click: go(() => this.sideAction(b.id)) } }, uiImg(b.id, 22), h('span.lbl', b.label)));
+    for (const b of SECTIONS) {
+      const el = h('button.side-btn.rail.s-' + b.id, { title: b.key ? `${b.label} (${b.key})` : b.label, on: { click: go(() => this.sideAction(b.id)) } }, uiImg(b.icon || b.id, 22), h('span.lbl', b.label));
       E.sideBtns[b.id] = el;
       E.side.appendChild(el);
     }
@@ -216,7 +227,24 @@ export class UI {
     this.el.side.classList.toggle('hidden', !v);
   }
 
-  /** Sidebar / shortcut: open a menu, or close it if it is already open. */
+  /** The section of the menu a panel belongs to (lit while it's open), or null. */
+  sectionOf(id) { return SECTION_OF[id] || (id && this.el.sideBtns[id] ? id : null); }
+  /** The section of the menu that's open, or null (a panel opened over it — the Jolly Roger over Character — its own). */
+  menuSection() {
+    for (let i = this.stack.length - 1; i >= 0; i--) { const s = this.sectionOf(this.stack[i].id); if (s) return s; }
+    return null;
+  }
+
+  /** Tab, or the Menu button: the menu, at the section you were last in (Inventory the first time) — or, open, shut. */
+  toggleMenu() {
+    if (this.menuSection()) { this.closeAll(); return; }
+    let id = this.lastSection || 'inventory';
+    const b = this.el.sideBtns[id];
+    if (!b || b.classList.contains('hidden')) id = 'inventory'; // (a voyage that's over)
+    this.sideAction(id);
+  }
+
+  /** A section of the menu (or the map, the view): open it, or close it if it is already open. */
   sideAction(id) {
     const g = this.game;
     if (!g?.player || this.screenEl) return;
@@ -430,7 +458,8 @@ export class UI {
     if (id) { const ex = this.stack.find((s) => s.id === id); if (ex) { this.closePanel(ex); return null; } }
     const close = h('button.close', { title: 'Close (Esc)', on: { click: () => this.closePanel(entry) } }, '×');
     const panel = h('div.panel' + (wide ? '.wide' : ''), close, content);
-    const bg = h('div.panel-bg' + (this.hudVisible ? '.side-pad' : ''), panel);
+    // (a section of the menu: clear of its sections down the left)
+    const bg = h('div.panel-bg' + (this.hudVisible && (this.sectionOf(id) || this.menuSection()) ? '.side-pad' : ''), panel);
     // (a click beside it closes it — and goes no further: it isn't a swing at whoever's in front of you)
     bg.addEventListener('mousedown', (e) => { if (e.target === bg) { e.stopPropagation(); this.closePanel(entry); } });
     const entry = { el: bg, onClose, id, panel, pause: !!pause };
@@ -457,7 +486,12 @@ export class UI {
 
   markSidebar() {
     const top = this.stack[this.stack.length - 1];
-    for (const [id, el] of Object.entries(this.el.sideBtns)) el.classList.toggle('on', !!top && top.id === id);
+    // (the menu's sections are up while one of them is open, it lit; the Menu button otherwise)
+    const sec = this.menuSection();
+    for (const [id, el] of Object.entries(this.el.sideBtns)) el.classList.toggle('on', id === sec);
+    this.root.classList.toggle('menu-open', !!sec);
+    this.root.classList.toggle('panel-open', !!top);
+    if (RETURN_TO.has(sec)) this.lastSection = sec;
     // the hotbar takes drops while the Inventory or Skills is open
     const edit = !!top && (top.id === 'inventory' || top.id === 'skills');
     this.root.classList.toggle('hb-edit', edit);
@@ -530,8 +564,8 @@ export class UI {
     if (this.cache.lookHint !== hintKey) {
       this.cache.lookHint = hintKey;
       clear(E.lookHint);
-      if (hintKey === 'free') E.lookHint.append('Hold right mouse to turn the camera', h('small', 'Tap Ctrl for shift lock · V switches view'));
-      else E.lookHint.append('Click to look around', h('small', 'Esc frees the mouse · V switches view'));
+      if (hintKey === 'free') E.lookHint.append('Hold right mouse to turn the camera', h('small', 'Tap Ctrl for shift lock · P switches view'));
+      else E.lookHint.append('Click to look around', h('small', 'Esc frees the mouse · P switches view'));
     }
     this.root.classList.toggle('v3', !!v3);
     this.compass.update(game, v3 ? v3.rig.yaw : 0, !!v3 && !this.mapOpen);
@@ -638,7 +672,7 @@ export class UI {
         s.nm.textContent = def ? def.name : '';
         s.el.classList.toggle('empty', !def);
         const use = def?.type === 'weapon' ? 'draw it — its moves on the skill keys (again to sheathe it)' : def?.type === 'dial' ? 'fire it where you aim' : 'use';
-        s.el.title = def ? `${def.name}\n${def.desc || ''}\n\nClick or press ${HOTBAR_KEYS[i]} to ${use} · drag to rearrange` : 'Empty — open Inventory (Tab) or Skills (K) and drag food, weapons, Dials or your Devil Fruit here';
+        s.el.title = def ? `${def.name}\n${def.desc || ''}\n\nClick or press ${HOTBAR_KEYS[i]} to ${use} · drag to rearrange` : 'Empty — open the Inventory or Skills (Tab) and drag food, weapons, Dials or your Devil Fruit here';
       }
       if (isItem) {
         const n = (ch.inventory || []).filter((x) => x.id === id.slice(5)).reduce((a, x) => a + (x.qty || 1), 0);
@@ -854,8 +888,8 @@ export class UI {
       // (after a while away from home, just a reminder) — and the fourth way: no road at all
       const brief = (c.stats?.playTime || 0) > 600 && !game.currentIsland;
       E.track.appendChild(h('div.qt-main', h('div.qt-head', uiImg('quest', 14), 'MAIN STORY'), h('div.qt-title', 'Find your calling'),
-        h('div.qt-obj', brief ? 'Look for the orange ! — or see Quests (L).' : c.mainIntro),
-        h('div.qt-alt', 'Or sail your own way, with no main story (Quests, L).')));
+        h('div.qt-obj', brief ? 'Look for the orange ! — or see Quests (Tab).' : c.mainIntro),
+        h('div.qt-alt', 'Or sail your own way, with no main story (Quests, in the menu: Tab).')));
     }
     // (a free sailor has no story on the tracker: only the side quests they've taken on)
     for (const x of side) E.track.appendChild(h('div.qt-side', ...card(x, false)));

@@ -63,14 +63,14 @@ export const scenarios = {
       // dodge button
       await tapSel('.t-btn.dodge');
       await step(page, 0.05);
-      // top strip: inventory, then map
-      await tapSel('.side-btn[title^="Inventory"]');
+      // top strip: the menu (at Inventory), then the map from its sections
+      await tapSel('.side-btn.pill');
       await frames(page, 3);
       await snap('inventory');
       const inv = await page.evaluate(() => window.OP.ui.stack.map((e) => e.id));
       console.log('panels', JSON.stringify(inv));
       if (!inv.includes('inventory')) throw new Error('inventory did not open from the strip');
-      await tapSel('.side-btn[title^="Map"]');
+      await tapSel('.side-btn.s-map');
       await frames(page, 4);
       await snap('map');
       if (!(await page.evaluate(() => window.OP.ui.mapOpen))) throw new Error('map did not open');
@@ -118,8 +118,10 @@ export const scenarios = {
       console.log('helm', JSON.stringify(h0), '->', JSON.stringify(h1));
       if (h1.sail <= h0.sail) throw new Error('pushing the stick up did not raise the sails');
       if (Math.abs(h1.heading - h0.heading) < 0.02) throw new Error('pushing the stick right did not steer');
-      // pause menu from the strip
-      await tapSel('.side-btn[title^="Menu"]');
+      // pause menu from the strip: the menu, then Game
+      await tapSel('.side-btn.pill');
+      await frames(page, 2);
+      await tapSel('.side-btn.s-menu');
       await frames(page, 3);
       await snap('menu');
     },

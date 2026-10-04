@@ -215,12 +215,12 @@ export function skillHome(id, settings) {
       if (i >= 0) return `${K.skills[i] ? `on ${keyLabel(K.skills[i])}` : `skill ${i + 1}, with no key yet`} with ${nm} out`;
     }
     if ([f.heavy, ...(f.forms || []).map((F) => F.heavy), f.awakening?.heavy].includes(id)) return 'the heavy blow (right mouse button) with it out';
-    return 'in Skills (K)';
+    return 'in Skills (Tab)';
   }
   const st = STYLES[d.style];
-  if (!st) return 'in Skills (K)';
+  if (!st) return 'in Skills (Tab)';
   const i = (st.techniques || []).filter((t) => !AIR.has(t.id)).findIndex((t) => t.id === id);
-  if (i < 0) return 'in Skills (K)';
+  if (i < 0) return 'in Skills (Tab)';
   const key = K.skills[i];
   const when = st.weapon ? `with your ${st.weapon === 'sword' ? 'sword' : st.weapon} drawn` : 'with your fists up';
   return `${key ? `on ${keyLabel(key)}` : `skill ${i + 1}, with no key yet (Settings, Controls)`} ${when}`;

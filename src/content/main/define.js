@@ -74,7 +74,7 @@ export const T = {
    * itself, not the "pirate" the world calls anyone with a bounty: a price on
    * your head isn't a crew.)
    */
-  flag: (desc = 'Raise your own Jolly Roger: found your crew in the Crew menu (U).') => ({ id: 'flag', desc, goal: { type: 'check', fn: (c) => !!c.crewName }, pin: false }),
+  flag: (desc = 'Raise your own Jolly Roger: found your crew in the Crew menu (Tab).') => ({ id: 'flag', desc, goal: { type: 'check', fn: (c) => !!c.crewName }, pin: false }),
   /**
    * Someone who'd sail with you makes you an offer (game/crew.js): the step
    * is done once it's answered — yes or no, it's yours to choose — so

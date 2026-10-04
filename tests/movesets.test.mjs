@@ -338,10 +338,10 @@ test('the Haki techniques have their own group and keys: a king\'s Conqueror\'s 
   assert.ok(inf.locked && inf.slot === -1 && /Conqueror's 50/.test(inf.why), `still to learn: ${inf.why}`);
   // (and a technique learned says where it sits)
   assert.match(skillHome('haki_emission', g.settings), /Haki keys while Armament/);
-  assert.match(skillHome('gomu_pistol', g.settings), /on B with the Gomu Gomu no Mi out/);
+  assert.match(skillHome('gomu_pistol', g.settings), /on Z with the Gomu Gomu no Mi out/);
 });
 
-test('the form key (Z) goes through the forms unlocked in turn, and back to the base set', () => {
+test('the form key (B) goes through the forms unlocked in turn, and back to the base set', () => {
   const { g, p } = setup();
   eat(g, 'gomu');
   // (nothing to switch to yet: said, nothing happens)
@@ -367,10 +367,16 @@ test('skill keys: defaults nothing else uses; a key the game keeps is refused, o
   assert.deepEqual(K.skills.slice(0, 4), DEFAULT_KEYS.skills);
   assert.equal(K.skills.length, 8);
   assert.deepEqual(K.skills.slice(4), ['', '', '', ''], 'slots past the defaults start without a key');
-  assert.deepEqual(K.form, ['Z'], 'Z switches the fruit\'s form');
+  assert.deepEqual(K.form, ['B'], 'B switches the fruit\'s form');
+  // (an old save's keys as they were by default — B N Y O, the form on Z — move to the new ones, the rest kept)
+  const old = { keys: { skills: ['B', 'N', 'Y', 'O', 'K', 'X', '', ''], form: ['Z'] } };
+  assert.deepEqual(keysOf(old).skills, ['Z', 'X', 'C', 'V', 'K', '', '', '']);
+  assert.deepEqual(keysOf(old).form, ['B']);
+  const mine = { keys: { skills: ['B', 'N', 'Y', 'P'], form: ['Z'] } };
+  assert.deepEqual(keysOf(mine).skills.slice(0, 4), ['B', 'N', 'Y', 'P'], 'keys of your own choosing stay as they are');
   for (const k of [...DEFAULT_KEYS.skills, ...DEFAULT_KEYS.haki, ...DEFAULT_KEYS.form]) assert.equal(gameUse(k), '', `${k} is free`);
   // every key the game uses is on the list (a sample of what the controller, the menus and the map read)
-  for (const k of ['W', 'A', 'S', 'D', 'Space', 'Shift', 'Control', 'Q', 'F', 'E', 'R', 'T', 'X', 'C', 'V', 'Tab', 'I', 'K', 'J', 'H', 'U', 'L', 'M', 'P', 'Escape', 'Enter', 'Mouse1', 'Mouse2', '1', '0']) assert.ok(gameUse(k), `${k} is the game's`);
+  for (const k of ['W', 'A', 'S', 'D', 'Space', 'Shift', 'Control', 'Q', 'F', 'E', 'R', 'T', 'Tab', 'H', 'M', 'P', 'Escape', 'Enter', 'Mouse1', 'Mouse2', '1', '0']) assert.ok(gameUse(k), `${k} is the game's`);
   assert.equal(new Set(GAME_KEYS.map(([k]) => k)).size, GAME_KEYS.length, 'each listed once');
   let r = rebind(s, 'skills', 0, 'E');
   assert.equal(r.ok, false);
@@ -380,17 +386,17 @@ test('skill keys: defaults nothing else uses; a key the game keeps is refused, o
   assert.equal(rebind(s, 'skills', 0, 'Meta').ok, false, 'the browser\'s');
   assert.equal(s.keys, undefined, 'nothing saved for a refusal');
   // onto another skill's key: the two swap
-  r = rebind(s, 'skills', 0, 'N');
+  r = rebind(s, 'skills', 0, 'X');
   assert.ok(r.ok);
-  assert.deepEqual(r.swapped, { group: 'skills', slot: 1, key: 'B' });
-  assert.equal(keysOf(s).skills[0], 'N');
-  assert.equal(keysOf(s).skills[1], 'B');
-  // (the form key's too: Z onto a skill leaves the form key with that skill's old one)
-  r = rebind(s, 'skills', 2, 'Z');
+  assert.deepEqual(r.swapped, { group: 'skills', slot: 1, key: 'Z' });
+  assert.equal(keysOf(s).skills[0], 'X');
+  assert.equal(keysOf(s).skills[1], 'Z');
+  // (the form key's too: B onto a skill leaves the form key with that skill's old one)
+  r = rebind(s, 'skills', 2, 'B');
   assert.ok(r.ok);
-  assert.deepEqual(r.swapped, { group: 'form', slot: 0, key: 'Y' });
-  assert.equal(keysOf(s).form[0], 'Y');
-  assert.ok(rebind(s, 'form', 0, 'Z').ok, 'and back');
+  assert.deepEqual(r.swapped, { group: 'form', slot: 0, key: 'C' });
+  assert.equal(keysOf(s).form[0], 'C');
+  assert.ok(rebind(s, 'form', 0, 'B').ok, 'and back');
   // across the groups too, and onto a slot with no key yet
   r = rebind(s, 'skills', 6, 'G');
   assert.ok(r.ok);

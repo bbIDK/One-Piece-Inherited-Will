@@ -147,7 +147,7 @@ export function openJollyRoger(game) {
   }
   if (!c.crewName) {
     add(body, h('h2', 'Jolly Roger'), flagCanvas({ skull: 'classic', bones: 'cross', accessory: 'none', color: '#333' }, 220, 150),
-      h('p', 'You have no crew — and no flag — yet. Found a pirate crew from the Crew menu (U) to design your Jolly Roger. It will fly from the sails of your ships.'),
+      h('p', 'You have no crew — and no flag — yet. Found a pirate crew from the Crew menu (Tab) to design your Jolly Roger. It will fly from the sails of your ships.'),
       h('button.btn.gold', { on: { click: () => { game.ui.closePanel(entry); openCrew(game); } } }, uiImg('crew', 18), 'Open the Crew menu'));
     return;
   }

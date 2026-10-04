@@ -230,7 +230,8 @@ export const scenarios = {
       console.log('A\'s voyage list', JSON.stringify(listA));
       await snap('voyage-list');
       await pageA.keyboard.press('Escape');
-      // (B opens it with the Voyage button on the sidebar, which is lit while it's open)
+      // (B opens it from the menu: its Voyage section, lit while it's open)
+      await pageB.click('.side-btn.pill');
       await pageB.click('.sidebar .vy-side');
       await pageB.waitForSelector('.vy-list .vy-row button:has-text("Go to them")', { timeout: 30000 });
       console.log('B\'s Voyage button', JSON.stringify(await pageB.evaluate(() => { const b = document.querySelector('.sidebar .vy-side'); return { text: b.textContent, lit: b.classList.contains('on'), title: b.title }; })));

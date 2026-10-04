@@ -1,5 +1,5 @@
 // Changing a skill key (game/keys.js): click its key — on the skills panel
-// at the bottom right, in Skills (K), or in Settings under Controls — then
+// at the bottom right, in Skills (Tab), or in Settings under Controls — then
 // press the key (or mouse button) you want. Esc leaves it as it was; Delete
 // or Backspace leaves the slot with no key. A key the game keeps for itself
 // is refused (and what it's for, said); one another skill has is swapped

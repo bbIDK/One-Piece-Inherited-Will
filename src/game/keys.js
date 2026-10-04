@@ -8,11 +8,12 @@
 //
 // The defaults are keys nothing else uses (GAME_KEYS lists everything the game
 // itself keeps — playerController, ui.js, main.js, the map, creative mode):
-// Z under the left hand switches the fruit's form (the Gears, the awakened
-// set); B, N, Y and O hold the skills;
-// G (the Haki row: R, T, G), the middle mouse button and the two side buttons
-// for Haki techniques — G stays Conqueror's for a king, whose release always
-// comes first (a mouse without side buttons: move those to keys). Any of
+// the skills sit on Z, X, C and V, the row under your left hand beside WASD
+// (as the One Piece games people play put them), B switches the fruit's form
+// (the Gears, the awakened set), G (the Haki row: R, T, G), the middle mouse
+// button and the two side buttons hold the Haki techniques — G stays
+// Conqueror's for a king, whose release always comes first (a mouse without
+// side buttons: move those to keys). Every menu is behind Tab, in one place. Any of
 // them can be moved to another key: one the game keeps is refused, and one
 // another skill has is swapped with it (see rebind).
 
@@ -20,12 +21,12 @@
 export const GAME_KEYS = [
   ['W', 'move forward'], ['A', 'move left'], ['S', 'move back'], ['D', 'move right'],
   ['ArrowUp', 'turn the camera'], ['ArrowDown', 'turn the camera'], ['ArrowLeft', 'turn the camera'], ['ArrowRight', 'turn the camera'],
-  ['Space', 'jump, climb, swim up, fly'], ['Shift', 'sprint (tap: dodge)'], ['Control', 'shift lock (third person)'],
+  ['Space', 'jump, climb, swim up, fly up'], ['Shift', 'sprint (tap: dodge)'], ['Control', 'shift lock (third person); dive or fly down'],
   ['Q', 'dodge'], ['F', 'block and parry'], ['E', 'talk, use, take the helm'],
   ['R', 'Armament Haki'], ['T', 'Observation Haki'],
-  ['X', 'draw or sheathe your weapon'], ['C', 'character sheet (in the water: dive; flying: down)'], ['V', 'first or third person'],
-  ['Tab', 'inventory'], ['I', 'inventory'], ['K', 'skills'], ['J', 'journal'], ['H', 'help'], ['U', 'crew'], ['L', 'quests'], ['M', 'world map'],
-  ['P', 'who\'s aboard the voyage (multiplayer)'], ['Enter', 'chat (multiplayer)'], ['NumpadEnter', 'chat (multiplayer)'],
+  ['H', 'draw or sheathe your weapon'], ['P', 'first or third person'],
+  ['Tab', 'the menu (inventory, character, skills, journal, crew, quests, map)'], ['M', 'world map'],
+  ['Enter', 'chat (multiplayer)'], ['NumpadEnter', 'chat (multiplayer)'],
   ['Escape', 'pause menu'], ['F1', 'creative panel'],
   ['Minus', 'minimap out'], ['Equal', 'minimap in'], ['NumpadSubtract', 'minimap out'], ['NumpadAdd', 'minimap in'],
   ['Slash', 'command console'], ['Backquote', 'command console'], ['NumpadDivide', 'command console'],
@@ -38,10 +39,12 @@ export const gameUse = (key) => GAME.get(key) || '';
 
 /**
  * The default keys: the moveset's skill slots, the Haki techniques', and the
- * one that switches the fruit's form (Z: base → each Gear or form unlocked →
+ * one that switches the fruit's form (B: base → each Gear or form unlocked →
  * the awakened set → base again; entries.js cycleForm).
  */
-export const DEFAULT_KEYS = { skills: ['B', 'N', 'Y', 'O'], haki: ['G', 'Mouse3', 'Mouse4', 'Mouse5'], form: ['Z'] };
+export const DEFAULT_KEYS = { skills: ['Z', 'X', 'C', 'V'], haki: ['G', 'Mouse3', 'Mouse4', 'Mouse5'], form: ['B'] };
+// (the defaults before the skills moved beside WASD: a player still on them moves to the new ones)
+const OLD_DEFAULTS = { skills: ['B', 'N', 'Y', 'O'], form: ['Z'] };
 /** How many skill slots a moveset can have keys for (past the defaults they start unbound). */
 export const SKILL_SLOTS = 8;
 export const HAKI_SLOTS = 4;
@@ -52,6 +55,11 @@ const NEVER = new Set(['Meta', 'OSLeft', 'OSRight', 'ContextMenu', 'F5', 'F11', 
 /** The skill keys from the settings (filled out to their slot counts; '' = unbound). */
 export function keysOf(settings) {
   const k = settings?.keys || {};
+  if (k.skills && OLD_DEFAULTS.skills.every((x, i) => k.skills[i] === x) && (!k.form || k.form[0] === OLD_DEFAULTS.form[0])) {
+    // (an old save's keys as they were by default — B N Y O, the form on Z — move to the new ones; any set past them stay, unless now taken)
+    const now = [...DEFAULT_KEYS.skills, ...DEFAULT_KEYS.form];
+    k.skills = DEFAULT_KEYS.skills.concat(k.skills.slice(4).map((x) => (now.includes(x) ? '' : x))); k.form = DEFAULT_KEYS.form.slice();
+  }
   const fill = (list, def, n) => Array.from({ length: n }, (_, i) => (Array.isArray(list) && list[i] !== undefined ? list[i] || '' : def[i] || ''));
   return { skills: fill(k.skills, DEFAULT_KEYS.skills, SKILL_SLOTS), haki: fill(k.haki, DEFAULT_KEYS.haki, HAKI_SLOTS), form: fill(k.form, DEFAULT_KEYS.form, 1) };
 }

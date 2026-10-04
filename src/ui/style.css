@@ -328,14 +328,26 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 .btn img.icon, .tabs button img.icon { margin-right: 6px; vertical-align: -4px; }
 .icon.ghost { opacity: .32; }
 
-/* ---------- sidebar ---------- */
+/* ---------- the menu: one button on the HUD (Tab); open, its sections down the left (ui.js) ---------- */
 .sidebar { position: absolute; left: 14px; top: 180px; width: 190px; display: flex; flex-direction: column; gap: 5px; z-index: 5; pointer-events: auto; }
+.side-btn.rail { display: none; }
+#ui.menu-open .side-btn.rail { display: flex; }
+#ui.menu-open .side-btn.pill, #ui.menu-open .side-btn.t-only { display: none; }
+#ui.panel-open:not(.menu-open) .sidebar { display: none; }
+.side-btn.pill { width: auto; align-self: flex-start; }
+.side-btn.pill .lbl { flex: none; margin-right: 4px; }
+/* (Map and Game after the sections: a little apart from them) */
+.side-btn.s-map { margin-top: 8px; }
 .side-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 5px 10px 5px 7px; border-radius: 10px; border: 2px solid rgba(200,160,96,.55); background: linear-gradient(rgba(38,28,20,.88), rgba(20,14,10,.88)); color: var(--parch); font: 800 14px Nunito, sans-serif; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); text-align: left; transition: transform .08s, border-color .15s, background .15s; }
 .side-btn .lbl { flex: 1; letter-spacing: .3px; }
 .side-btn .key { font-size: 11px; opacity: .65; background: rgba(255,255,255,.1); border-radius: 5px; padding: 1px 6px; }
 .side-btn:hover { border-color: var(--gold); transform: translateX(2px); }
 .side-btn.on { background: linear-gradient(#b03a2e, #7b1f16); border-color: #f1c40f; }
 .panel-bg.side-pad { padding-left: 222px; box-sizing: border-box; }
+/* (the menu open: its sections and the panel both from the top, so going from one to another nothing jumps) */
+#ui.menu-open .sidebar { top: 18px; }
+.panel-bg.side-pad { align-items: start; padding-top: 18px; padding-bottom: 18px; }
+.panel-bg.side-pad .panel { max-height: calc(100vh - 36px); }
 .panel-bg.side-pad .panel { max-width: 100%; box-sizing: border-box; }
 .panel-bg.side-pad .panel.wide { width: min(1080px, 100%); }
 .saved-note { font-size: 11px; color: #a5d6a7; opacity: 0; text-shadow: 0 1px 2px #000; height: 14px; }
@@ -349,6 +361,7 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 #ui.hb-edit .hotbar .slot.empty { border-style: dashed; border-color: rgba(241,196,15,.55); opacity: .85; }
 #ui.hb-edit .hotbar .slot.over { border-color: var(--gold); transform: translateY(-3px); }
 #ui.hb-edit .panel-bg { padding-bottom: 92px; box-sizing: border-box; }
+#ui.hb-edit .panel-bg.side-pad .panel { max-height: calc(100vh - 110px); }
 .hb-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(43,29,18,.08); border: 1px dashed rgba(109,76,51,.45); font-size: 13px; }
 .hb-note.picking { background: rgba(241,196,15,.18); border-color: #c79a12; font-weight: 800; }
 .hb-row { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -445,7 +458,7 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 .tech .meta { opacity: .65; }
 h4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c; }
 .tech.fixed { cursor: default; }
-/* Skills (K): what you take out (cards for the hotbar), the skills of what's out on their keys */
+/* Skills (a section of the menu): what you take out (cards for the hotbar), the skills of what's out on their keys */
 .ms-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px; }
 .ms-card { display: flex; gap: 9px; align-items: center; background: rgba(255,255,255,.55); border: 2px solid rgba(109,76,51,.3); border-radius: 10px; padding: 5px 9px; cursor: grab; }
 .ms-card:hover { border-color: #6d4c33; }
@@ -478,9 +491,13 @@ details.game-keys .keycap { min-width: 26px; font-size: 11px; padding: 0 5px; bo
 .legend-done { background: rgba(255,236,179,.7); }
 .list.compact { gap: 3px; }
 .list.compact .row-item { padding: 4px 10px; }
-.pause { text-align: center; min-width: 300px; }
-.menu-list { display: flex; flex-direction: column; gap: 8px; align-items: center; }
-.menu-btn { min-width: 260px; display: flex; align-items: center; justify-content: center; font-size: 16px; padding: 9px 16px; }
+/* the pause menu: a narrow card, one column of buttons all the same width, their icons in a line */
+.panel:has(> .pause) { width: min(420px, 94vw); }
+.pause { text-align: center; }
+.pause h2 { margin-bottom: 12px; }
+.menu-list { display: flex; flex-direction: column; gap: 7px; align-items: stretch; width: min(320px, 100%); margin: 0 auto; }
+.menu-btn { display: flex; align-items: center; justify-content: flex-start; gap: 10px; font-size: 16px; padding: 9px 16px; text-align: left; }
+.menu-btn img.icon { flex: none; }
 .save-note { margin-top: 10px; }
 .check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: pointer; }
 .shop-top { display: flex; justify-content: space-between; align-items: center; }
@@ -622,6 +639,8 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 #ui.touch .side-btn .lbl, #ui.touch .side-btn .key { display: none; }
 #ui.touch .side-btn:hover { transform: none; }
 #ui.touch .panel-bg.side-pad { padding-left: 0; padding-top: 52px; }
+#ui.touch .panel-bg.side-pad .panel { max-height: calc(100vh - 62px); }
+#ui.touch .side-btn.s-map { margin-top: 0; margin-left: 6px; }
 #ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }
 #ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }
 #ui.touch .slot .ico img { width: 30px; height: 30px; }
@@ -826,13 +845,20 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .qt-where { text-align: right; font-size: 11px; color: #b8d6f0; margin-top: 2px; letter-spacing: .3px; }
 .qt-alt { text-align: right; font-size: 11px; color: #9fd8cf; margin-top: 3px; font-style: italic; }
 @media (max-width: 860px) { .qtrack { width: 200px; font-size: 11px; } .qt-title { font-size: 12.5px; } }
+/* on a phone: just what you're doing, top left under your health — clear of the buttons on the right */
+#ui.touch .qtrack { left: max(10px, env(safe-area-inset-left)); right: auto; top: 108px; transform: none; width: 190px; }
+#ui.touch .qtrack > div { background: linear-gradient(270deg, rgba(20,16,12,0), rgba(20,16,12,.62) 22%); padding: 5px 28px 6px 9px; border-right: 0; border-left: 3px solid rgba(144,202,249,.75); }
+#ui.touch .qtrack > .qt-main { border-left-color: #f2c14e; }
+#ui.touch .qt-head { justify-content: flex-start; }
+#ui.touch .qt-title, #ui.touch .qt-sub { text-align: left; }
+#ui.touch .qt-obj, #ui.touch .qt-where, #ui.touch .qt-alt, #ui.touch .qtrack > div:nth-child(n+3) { display: none; }
 
 .journal-quests { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 4px 0 12px; border-radius: 8px; background: rgba(255, 145, 0, .1); border: 1px solid rgba(255, 145, 0, .35); }
 .journal-quests span { flex: 1; }
 .journal-road { display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin: -4px 0 12px; border-radius: 8px; background: rgba(0, 137, 123, .08); border: 1px solid rgba(0, 137, 123, .3); font-size: 13px; }
 .journal-road span { flex: 1; }
 
-/* ---- Quests menu (L) */
+/* ---- Quests (a section of the menu) */
 .quests .q-pathline { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }
 .quests .q-path { display: inline-block; padding: 3px 10px 4px; border-radius: 999px; color: #fff; font: 800 12px Nunito, sans-serif; letter-spacing: 1.2px; text-transform: uppercase; box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }
 .quests .q-pathline .muted { font-style: italic; }

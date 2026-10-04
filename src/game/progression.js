@@ -220,7 +220,7 @@ export class Progression {
       c.formsShown.push(F.id);
       const at = addToHotbar(c, ENTRY.form(F.id));
       g.ui.toast(F.name.toUpperCase(), `A new form of the ${f.name}`, f.color);
-      g.log(`Your mastery of the ${f.name} opens up ${F.name}. ${F.desc} ${at >= 0 ? `Press ${hotbarKey(at)} to switch it on (and again to switch it off).` : 'Put it on your hotbar from Skills (K) to switch it on.'}`, '#ffab91');
+      g.log(`Your mastery of the ${f.name} opens up ${F.name}. ${F.desc} ${at >= 0 ? `Press ${hotbarKey(at)} to switch it on (and again to switch it off).` : 'Put it on your hotbar from Skills (Tab) to switch it on.'}`, '#ffab91');
       g.audio?.sfx('breakthrough');
     }
   }
@@ -258,7 +258,7 @@ export class Progression {
     g.fx.burst?.(p.x, p.y - 0.8, 40, { color: [f.color, '#ffffff'], speed: 7, g: 0, life: 0.9, kind: 'star' });
     g.fx.shake?.(0.6);
     p.tryTechnique(aw.activate, g);
-    g.log(`The ${f.name} has awakened! ${aw.desc} ${at >= 0 ? `Press ${hotbarKey(at)} to switch the awakened set on and off.` : 'Put it on your hotbar from Skills (K) to switch it on and off.'}`, f.color);
+    g.log(`The ${f.name} has awakened! ${aw.desc} ${at >= 0 ? `Press ${hotbarKey(at)} to switch the awakened set on and off.` : 'Put it on your hotbar from Skills (Tab) to switch it on and off.'}`, f.color);
     g.emit('fruitAwakened', c.fruit, how);
     persist(g);
     return true;

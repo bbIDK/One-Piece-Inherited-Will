@@ -1,5 +1,5 @@
 // Creative mode (turned on in the pause menu): fly anywhere (double-tap Space;
-// Space rises, C sinks, Shift goes fast, and nothing is solid), come to no
+// Space rises, Ctrl sinks, Shift goes fast, and nothing is solid), come to no
 // harm, see the whole chart and travel by clicking it — and a command line
 // (press /) for the rest: moving time and weather, handing out things,
 // calling up foes to fight. The creative panel (F1, ui/creativePanel.js) does
@@ -316,7 +316,7 @@ export function installCreative(game) {
       p.flying = true;
       p.alt = null;
       p.vz = 0;
-      game.log('Flying. Space rises, C sinks, Shift to go fast. Double-tap Space to land.', '#80deea');
+      game.log('Flying. Space rises, Ctrl sinks, Shift to go fast. Double-tap Space to land.', '#80deea');
     },
     land() {
       const p = game.player;

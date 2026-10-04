@@ -274,7 +274,7 @@ export function buildPlayer(game, char) {
   const a = new Actor({ name: char.name, look: equippedLook(char), race: char.race, attrs: effectiveAttrs(char) });
   a.char = char;
   a.game = game;
-  // (you set out with your weapon in its sheath: X draws it)
+  // (you set out with your weapon in its sheath: H draws it)
   a.style = unarmedStyle(char);
   a.masteries = char.masteries;
   a.techniques = char.techniques;

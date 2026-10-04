@@ -597,7 +597,7 @@ const quests = [
     ],
     rewards: { berries: 10000, items: [['baratie_course', 2]], points: 1 },
     onComplete: (ctx, g) => {
-      if (ctx.char.masteries.black_leg === undefined) { ctx.char.masteries.black_leg = 0; g.log('Zeff teaches you the basics of Black Leg Style. Switch to it in Skills (K).', '#90caf9'); }
+      if (ctx.char.masteries.black_leg === undefined) { ctx.char.masteries.black_leg = 0; g.log('Zeff teaches you the basics of Black Leg Style. Switch to it in Skills (Tab).', '#90caf9'); }
       if ((ctx.char.weaponMastery?.sword || 0) >= 10 || /ittoryu|nitoryu|santoryu/.test(ctx.char.style)) { ctx.setFlag('mihawkBaratie'); spawnNow(g, 'mihawk_cameo'); }
     } },
   { id: 'arlong_park', name: 'Arlong Park', island: 'conomi_islands', kind: 'story', summary: 'For eight years Arlong\'s Fish-Man pirates have ruled the Conomi Islands.',

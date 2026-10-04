@@ -243,7 +243,7 @@ export function installMainStory(game) {
     game.ui.banner(PATHS[path].name.toUpperCase(), `Part ${part} · ${PART_NAMES[part]}`, PATHS[path].tagline, 5);
     game.log(`You take up the road of the ${PATHS[path].name}.`, PATHS[path].color);
     // (no road asks for a sword: a word on fighting your own way, once)
-    setTimeout(() => { if (game.state?.char === c) game.hint?.('fightstyle', 'Fight however suits you: fists, legs, a blade or a gun all win fights. Weapon shops sell blades and pistols, and trainers and dojos teach styles — your Skills (K) show what you know.'); }, 7000);
+    setTimeout(() => { if (game.state?.char === c) game.hint?.('fightstyle', 'Fight however suits you: fists, legs, a blade or a gun all win fights. Weapon shops sell blades and pistols, and trainers and dojos teach styles — your Skills (Tab) show what you know.'); }, 7000);
     openChapter();
     persist(game);
     return true;
@@ -280,7 +280,7 @@ export function installMainStory(game) {
     if (!c || c.main || c.mainShelf || !c.freeSail) return false;
     c.freeSail = null;
     c.mainIntro = introFor(game, c, { island: game.currentIsland });
-    game.ui.toast('FIND YOUR CALLING', 'Look for the orange ! — or see Quests (L).', '#ffd54f');
+    game.ui.toast('FIND YOUR CALLING', 'Look for the orange ! — or see Quests (Tab).', '#ffd54f');
     game.log(`You'll look for a calling after all. ${c.mainIntro}`, '#ffe082');
     changed('calling');
     return true;
@@ -298,7 +298,7 @@ export function installMainStory(game) {
     c.mainIntro = null;
     c.freeSail = { day: game.env.day, from: 'aside' };
     S.pending = 0;
-    game.ui.banner('THE STORY WAITS', `The road of the ${PATHS[m.path].name}`, 'You set your story aside and sail your own way for now. Take it up again from the Quests menu (L) whenever you like.', 5);
+    game.ui.banner('THE STORY WAITS', `The road of the ${PATHS[m.path].name}`, 'You set your story aside and sail your own way for now. Take it up again from Quests, in the menu (Tab), whenever you like.', 5);
     game.log(`You set the road of the ${PATHS[m.path].name} aside. (Quests, L, takes it up again.)`, '#80cbc4');
     changed('aside');
     return true;
