@@ -280,7 +280,7 @@ export function installMainStory(game) {
     if (!c || c.main || c.mainShelf || !c.freeSail) return false;
     c.freeSail = null;
     c.mainIntro = introFor(game, c, { island: game.currentIsland });
-    game.ui.toast('FIND YOUR CALLING', 'Look for the orange ! — or see Quests (Tab).', '#ffd54f');
+    game.ui.toast('FIND YOUR CALLING', 'Look for the Jolly Roger, the Marine gull and the bounty sign over their heads — or see Quests (Tab).', '#ffd54f');
     game.log(`You'll look for a calling after all. ${c.mainIntro}`, '#ffe082');
     changed('calling');
     return true;
@@ -528,8 +528,10 @@ export function installMainStory(game) {
         // no road yet: the home islands' three can start you on one (not
         // marked for a free sailor: they're there if you go and talk to them)
         if (c.freeSail || c.mainShelf) return null;
-        if (roles.some(({ ch }) => ch.kind === 'start')) return 'M!';
-        if (roles.some(({ ch }) => ch.opensStory)) return 'M!';
+        // (each with the sign of the road they'd set you on: the Jolly Roger,
+        // the Marines' gull, the bounty hunter's reward)
+        const r = roles.find(({ ch }) => ch.kind === 'start') || roles.find(({ ch }) => ch.opensStory);
+        if (r) return 'R' + r.path;
       } else {
         for (const { ch, path } of roles) {
           if (path !== m.path) continue;
@@ -616,7 +618,7 @@ function introFor(game, c, spawn) {
   if (chId) {
     const ch = CHAPTERS.get(chId);
     const who = PATHS3.map((p) => `${shortName(contactOf(ch, p).name)} (${PATHS[p].name.toLowerCase()})`);
-    return `Three people on ${islName(home)} could set you on your road: ${who[0]}, ${who[1]} and ${who[2]}. Look for the orange !`;
+    return `Three people on ${islName(home)} could set you on your road: ${who[0]}, ${who[1]} and ${who[2]}. Look for the sign over their heads: the Jolly Roger, the Marine gull, the bounty.`;
   }
   // (castaways and old saves: the nearest home island in this sea)
   const p = game.player;
@@ -628,7 +630,7 @@ function introFor(game, c, spawn) {
     if (d < bd) { bd = d; best = isl; }
   }
   if (c.flags?.enteredGrandLine) return 'Visit Crocus at the Twin Cape lighthouse to take up the main story.';
-  return best ? `Sail to ${best.name}: people there could set you on your road — as a pirate, a Marine or a bounty hunter.` : 'Find your road: talk to the people with an orange ! over their heads.';
+  return best ? `Sail to ${best.name}: people there could set you on your road — as a pirate, a Marine or a bounty hunter.` : 'Find your road: talk to the people with a road\'s sign over their heads (the Jolly Roger, the Marine gull, the bounty).';
 }
 
 // ------------------------------------------------------------ dialogue

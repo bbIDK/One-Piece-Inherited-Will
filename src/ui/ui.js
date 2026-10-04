@@ -889,7 +889,7 @@ export class UI {
       // (after a while away from home, just a reminder) — and the fourth way: no road at all
       const brief = (c.stats?.playTime || 0) > 600 && !game.currentIsland;
       E.track.appendChild(h('div.qt-main', h('div.qt-head', uiImg('quest', 14), 'MAIN STORY'), h('div.qt-title', 'Find your calling'),
-        h('div.qt-obj', brief ? 'Look for the orange ! — or see Quests (Tab).' : c.mainIntro),
+        h('div.qt-obj', brief ? 'Look for the Jolly Roger, the Marine gull and the bounty sign over their heads — or see Quests (Tab).' : c.mainIntro),
         h('div.qt-alt', 'Or sail your own way, with no main story (Quests, in the menu: Tab).')));
     }
     // (a free sailor has no story on the tracker: only the side quests they've taken on)

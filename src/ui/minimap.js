@@ -178,7 +178,7 @@ export class Minimap {
       if (!hostileNow && !a.questMarker) continue;
       const dx = w.dx(p.x, a.x) * z, dy = (a.y - p.y) * z;
       if (Math.hypot(dx, dy) > r) continue;
-      g.fillStyle = a.questMarker ? (a.questMarker[0] === 'M' ? '#ff9100' : '#ffd54f') : '#e53935';
+      g.fillStyle = a.questMarker ? (a.questMarker[0] === 'M' || a.questMarker[0] === 'R' ? '#ff9100' : '#ffd54f') : '#e53935';
       g.strokeStyle = 'rgba(40,26,14,.9)'; g.lineWidth = 1;
       g.beginPath(); g.arc(dx, dy, a.questMarker ? 3.2 : 2.4, 0, Math.PI * 2); g.fill(); g.stroke();
     }

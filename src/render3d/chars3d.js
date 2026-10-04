@@ -627,7 +627,9 @@ class ActorView {
       this.marker.sprite.visible = true;
       const bob = Math.sin(env.time * 4) * 0.08;
       this.marker.sprite.position.set(0, (top + (name ? 0.62 * k * s : 0) + 0.3 * k * s + bob) / s, 0);
-      this.marker.sprite.scale.set(0.42 * k * 1.2, 0.63 * k * 1.2, 1);
+      // (a road's sign is a round badge, a little bigger)
+      if (a.questMarker[0] === 'R') this.marker.sprite.scale.set(0.78 * k * 1.2, 0.78 * k * 1.2, 1);
+      else this.marker.sprite.scale.set(0.42 * k * 1.2, 0.63 * k * 1.2, 1);
     } else if (this.marker) this.marker.sprite.visible = false;
   }
 

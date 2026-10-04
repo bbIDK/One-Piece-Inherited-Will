@@ -64,9 +64,58 @@ export class Label {
 }
 
 const MARKERS = {};
-/** The shared '!' / '?' quest marker sprite material ('M!' / 'M?': the main story's, in orange). */
+/**
+ * The sign over someone who'd set you on a road at the start of the story
+ * ('Rpirate', 'Rmarine', 'Rhunter'): a round badge in the main story's warm
+ * halo — the Jolly Roger, the Marines' gull, a bounty hunter's reward.
+ */
+function roadMat(ch) {
+  const road = ch.slice(1), c = canvas(96, 96), g = c.getContext('2d');
+  const gr = g.createRadialGradient(48, 48, 10, 48, 48, 48);
+  gr.addColorStop(0, 'rgba(255,183,77,0.55)'); gr.addColorStop(1, 'rgba(255,183,77,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 96, 96);
+  const BG = { pirate: '#1d1d1d', marine: '#f4f7fb', hunter: '#f2deb0' }[road] || '#1d1d1d';
+  g.beginPath(); g.arc(48, 48, 30, 0, Math.PI * 2);
+  g.fillStyle = BG; g.fill();
+  g.lineWidth = 6; g.strokeStyle = '#000'; g.stroke();
+  g.lineWidth = 3; g.strokeStyle = '#ff9100'; g.beginPath(); g.arc(48, 48, 26.5, 0, Math.PI * 2); g.stroke();
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  if (road === 'pirate') {
+    // skull and crossbones
+    g.strokeStyle = '#f5f1e6'; g.lineWidth = 5;
+    for (const [a, b, c2, d] of [[30, 38, 66, 66], [66, 38, 30, 66]]) { g.beginPath(); g.moveTo(a, b); g.lineTo(c2, d); g.stroke(); }
+    g.fillStyle = '#f5f1e6';
+    for (const [x, y] of [[29, 37], [33, 33], [67, 37], [63, 33], [29, 67], [33, 71], [67, 67], [63, 71]]) { g.beginPath(); g.arc(x, y, 3.2, 0, Math.PI * 2); g.fill(); }
+    g.beginPath(); g.arc(48, 45, 13, 0, Math.PI * 2); g.fill();
+    g.fillRect(41, 52, 14, 9);
+    g.fillStyle = '#1d1d1d';
+    g.beginPath(); g.arc(43, 45, 3.6, 0, Math.PI * 2); g.arc(53, 45, 3.6, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.moveTo(48, 49); g.lineTo(46, 53); g.lineTo(50, 53); g.closePath(); g.fill();
+    g.fillRect(44.5, 56, 1.6, 5); g.fillRect(47.2, 56, 1.6, 5); g.fillRect(49.9, 56, 1.6, 5);
+  } else if (road === 'marine') {
+    // the Marines' gull, blue on white
+    g.strokeStyle = '#1b4f9c'; g.lineWidth = 6;
+    g.beginPath(); g.moveTo(25, 46); g.quadraticCurveTo(35, 33, 47, 48); g.quadraticCurveTo(59, 33, 71, 46); g.stroke();
+    g.fillStyle = '#1b4f9c';
+    g.beginPath(); g.arc(48, 51, 5.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ff9100'; g.beginPath(); g.moveTo(52, 50); g.lineTo(60, 53); g.lineTo(52, 55); g.closePath(); g.fill();
+    g.font = 'bold 11px Bangers, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#1b4f9c'; g.fillText('MARINE', 48, 66);
+  } else {
+    // a reward: the Berry sign in a hunter's sights
+    g.strokeStyle = '#b71c1c'; g.lineWidth = 3.5;
+    g.beginPath(); g.arc(48, 48, 17, 0, Math.PI * 2); g.stroke();
+    for (const [a, b, c2, d] of [[48, 24, 48, 33], [48, 63, 48, 72], [24, 48, 33, 48], [63, 48, 72, 48]]) { g.beginPath(); g.moveTo(a, b); g.lineTo(c2, d); g.stroke(); }
+    g.font = 'bold 30px Bangers, Impact, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 5; g.strokeStyle = '#3e2723'; g.strokeText('\u0E3F', 48, 50);
+    g.fillStyle = '#ffc107'; g.fillText('\u0E3F', 48, 50);
+  }
+  return new THREE.SpriteMaterial({ map: tex(c), transparent: true, depthWrite: false, fog: false });
+}
+/** The shared '!' / '?' quest marker sprite material ('M!' / 'M?': the main story's, in orange; 'R…': a road's sign). */
 function markerMat(ch) {
   if (MARKERS[ch]) return MARKERS[ch];
+  if (ch[0] === 'R') return (MARKERS[ch] = roadMat(ch));
   const main = ch[0] === 'M', glyph = main ? ch.slice(1) : ch;
   const c = canvas(64, 96), g = c.getContext('2d');
   g.font = 'bold 84px Bangers, Impact, sans-serif';

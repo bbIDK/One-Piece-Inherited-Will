@@ -151,7 +151,7 @@ export function startNewCharacter(game, birth, choices) {
   // (a free sailor isn't sent looking for the people who start the story)
   const story = char.freeSail
     ? 'You\'re sailing your own way, with no main story — if you change your mind, the Quests section of the menu (Tab) can set you looking for a calling.'
-    : 'People with an orange ! over their heads can start your story — as a pirate, a Marine or a bounty hunter — or you can sail your own way (Quests, in the menu).';
+    : 'Three people here can start your story — look for the sign over their heads: the Jolly Roger (a pirate), the Marine gull (the Marines) or the bounty sign (a bounty hunter). Or sail your own way (Quests, in the menu).';
   const menus = game.input?.touch?.on
     ? 'The menu button at the top has your Inventory, Character, Skills, Journal, Crew and Quests — and Game, to pause and save.'
     : 'Tab opens the menu (or its button on the left): Inventory, Character, Skills, Journal, Crew and Quests down its side, Tab again to close it. Esc pauses and saves.';

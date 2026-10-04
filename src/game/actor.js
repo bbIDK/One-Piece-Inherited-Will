@@ -2024,9 +2024,10 @@ export class Actor extends Entity {
     if (this.questMarker) {
       const bob = Math.sin(env.time * 4) * 0.08;
       g.font = 'bold 0.5px Bangers, sans-serif'; g.textAlign = 'center';
-      const qm = this.questMarker.replace(/^M/, '');
+      // (a road's sign, 'R…', is a main-story '!' here)
+      const main = this.questMarker[0] === 'M' || this.questMarker[0] === 'R', qm = this.questMarker[0] === 'R' ? '!' : this.questMarker.replace(/^M/, '');
       g.lineWidth = 0.08; g.strokeStyle = '#000'; g.strokeText(qm, 0, -2.5 * s + bob);
-      g.fillStyle = this.questMarker[0] === 'M' ? '#ff9100' : qm === '!' ? '#ffd54f' : '#90caf9'; g.fillText(qm, 0, -2.5 * s + bob);
+      g.fillStyle = main ? '#ff9100' : qm === '!' ? '#ffd54f' : '#90caf9'; g.fillText(qm, 0, -2.5 * s + bob);
     }
   }
 }
