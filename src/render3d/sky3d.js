@@ -23,6 +23,8 @@ import { FOG } from './fog.js';
 import { SunShadow } from './sunshadow.js';
 import { DEEP, MID } from './bubble3d.js';
 import { skyNoise } from './skynoise.js';
+// the lowest the light that casts the shadows goes (sine of its elevation)
+const MIN_LIGHT_Y = 0.24;
 
 const VERT = /* glsl */`
   varying vec3 vDir;
@@ -578,10 +580,18 @@ export class Sky {
     const low = 1 - sm(0.02, 0.4, this.sunDir.y); // 1 at the horizon, 0 well up
     const warm = Math.max(dusk, low * 0.9) * (1 - ov * 0.8);
     this.lightDir.copy(sunUp ? this.sunDir : moon);
+    // (never lower than about 14 degrees: a sun right down on the horizon
+    // throws shadows dozens of metres long, streaked across a whole island at
+    // dusk; long and soft is the evening's look, not a field of black stripes)
+    if (this.lightDir.y < MIN_LIGHT_Y) {
+      const h = Math.hypot(this.lightDir.x, this.lightDir.z) || 1, k = Math.sqrt(1 - MIN_LIGHT_Y * MIN_LIGHT_Y) / h;
+      this.lightDir.set(this.lightDir.x * k, MIN_LIGHT_Y, this.lightDir.z * k);
+    }
     const weatherK = (1 - ov * 0.72) * (1 - storm * 0.2) * (1 - dust * 0.35);
     this.sun.intensity = (sunUp ? 2.4 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y) * (0.6 + 0.4 * moonLit))
       * weatherK * (zone === 3 ? 0.25 : zone === 2 ? 0.35 + 0.5 * ib : 1);
-    this.sun.shadow.intensity = 1 - sm(0.3, 0.9, ov) * 0.85;
+    // (and the low sun's shadows grow fainter as it goes down)
+    this.sun.shadow.intensity = (1 - sm(0.3, 0.9, ov) * 0.85) * (sunUp ? 1 - 0.5 * low : 0.75);
     if (sunUp) this.sun.color.setRGB(1, 0.95 - warm * 0.24, 0.88 - warm * 0.42);
     else this.sun.color.setRGB(0.6, 0.7, 1);
     if (dust) this.sun.color.lerp(_haze.setRGB(1, 0.75, 0.5), dust * 0.4);

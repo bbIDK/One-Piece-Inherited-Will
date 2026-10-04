@@ -41575,6 +41575,7 @@ ${GLSL}
   }
 
   // src/render3d/sky3d.js
+  var MIN_LIGHT_Y = 0.24;
   var VERT2 = (
     /* glsl */
     `
@@ -42126,9 +42127,13 @@ ${GLSL}
       const low = 1 - sm(0.02, 0.4, this.sunDir.y);
       const warm = Math.max(dusk, low * 0.9) * (1 - ov * 0.8);
       this.lightDir.copy(sunUp ? this.sunDir : moon);
+      if (this.lightDir.y < MIN_LIGHT_Y) {
+        const h2 = Math.hypot(this.lightDir.x, this.lightDir.z) || 1, k = Math.sqrt(1 - MIN_LIGHT_Y * MIN_LIGHT_Y) / h2;
+        this.lightDir.set(this.lightDir.x * k, MIN_LIGHT_Y, this.lightDir.z * k);
+      }
       const weatherK = (1 - ov * 0.72) * (1 - storm * 0.2) * (1 - dust2 * 0.35);
       this.sun.intensity = (sunUp ? 2.4 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y) * (0.6 + 0.4 * moonLit)) * weatherK * (zone === 3 ? 0.25 : zone === 2 ? 0.35 + 0.5 * ib : 1);
-      this.sun.shadow.intensity = 1 - sm(0.3, 0.9, ov) * 0.85;
+      this.sun.shadow.intensity = (1 - sm(0.3, 0.9, ov) * 0.85) * (sunUp ? 1 - 0.5 * low : 0.75);
       if (sunUp) this.sun.color.setRGB(1, 0.95 - warm * 0.24, 0.88 - warm * 0.42);
       else this.sun.color.setRGB(0.6, 0.7, 1);
       if (dust2) this.sun.color.lerp(_haze.setRGB(1, 0.75, 0.5), dust2 * 0.4);
@@ -73338,26 +73343,36 @@ float faN( vec3 x ) {
               mix( mix( faH( i + vec3( 0, 0, 1 ) ), faH( i + vec3( 1, 0, 1 ) ), f.x ), mix( faH( i + vec3( 0, 1, 1 ) ), faH( i + vec3( 1, 1, 1 ) ), f.x ), f.y ), f.z );
 }
 `;
-  function flameMaterial(inner) {
+  var LAYERS = [
+    { out: 0.3, cut: 0, shade: 0 },
+    { out: 0.48, cut: 0.2, shade: 1 },
+    { out: 0.66, cut: 0.4, shade: 2 },
+    { out: 0.84, cut: 0.56, shade: 2 },
+    { out: 1, cut: 0.7, shade: 3 }
+  ];
+  function layerMaterial(L3) {
     const u = {
       uTime: { value: 0 },
-      uThick: { value: 0.06 },
-      uLift: { value: 0.3 },
+      uThick: { value: 0.08 },
       uCol: { value: new Color() },
-      uRim: { value: new Color() },
       uK: { value: 1 },
-      uHip: { value: 0.9 },
       uBack: { value: 0.7 }
     };
     const m = new MeshBasicMaterial({ color: 16777215, side: BackSide, transparent: true, depthWrite: false, fog: false });
     m.userData.u = u;
+    const frag = L3.cut > 0 ? `
+  vec3 q = vec3( vFaP.x * 7.0, vFaP.y * 2.6 - uTime * 2.2, vFaP.z * 7.0 );
+  float n = faN( q ) * 0.7 + faN( q * 2.03 + vec3( 3.1, -uTime * 1.3, 7.7 ) ) * 0.3;
+  if ( n < ${L3.cut.toFixed(3)} - 0.06 * vFaUp || uK < 0.01 ) discard;
+  vec4 diffuseColor = vec4( uCol, uK );` : `
+  if ( uK < 0.01 ) discard;
+  vec4 diffuseColor = vec4( uCol, uK );`;
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, u);
       sh.vertexShader = sh.vertexShader.replace("#include <common>", `#include <common>
-uniform float uTime, uThick, uLift, uK, uHip, uBack;
+uniform float uThick, uK, uBack;
 varying vec3 vFaP;
-varying float vFaLift;
-${NOISE2}`).replace("#include <skinning_vertex>", `#include <skinning_vertex>
+varying float vFaUp;`).replace("#include <skinning_vertex>", `#include <skinning_vertex>
 {
 #ifdef USE_SKINNING
   vec3 onrm = normalize( objectNormal );
@@ -73365,16 +73380,10 @@ ${NOISE2}`).replace("#include <skinning_vertex>", `#include <skinning_vertex>
   vec3 onrm = normalize( normal );
 #endif
   vFaP = transformed;
-  // a thin band round the body; off whatever faces up (the head, the
-  // shoulders, the tops of the arms) the flames rise \u2014 most off the head and
-  // shoulders \u2014 breathing as the noise under them rises
-  float up = smoothstep( -0.1, 0.8, onrm.y );
-  float hi = smoothstep( uHip * 0.7, uHip * 1.8, transformed.y );
-  float sw = faN( transformed * 2.2 + vec3( 0.0, -uTime * 1.8, uTime * 0.3 ) );
-  float lift = up * ( 0.3 + 0.7 * hi ) * ( 0.45 + 0.55 * sw );
-  vFaLift = lift;
-  transformed += onrm * uThick * uK * ( ${inner ? "0.32 + 0.08 * sw" : "0.85 + 0.35 * sw"} );
-  transformed.y += uLift * uK * lift * ${inner ? "0.12" : "1.0"};
+  float up = smoothstep( -0.1, 0.9, onrm.y );
+  vFaUp = up;
+  // (a steady width, never moving \u2014 a little thinner over the head and shoulders, so it doesn't sit on them like a hood)
+  transformed += onrm * uThick * uK * ${L3.out.toFixed(3)} * ( 1.0 - 0.35 * up );
 }`).replace("#include <project_vertex>", `vec4 mvPosition = vec4( transformed, 1.0 );
 #ifdef USE_INSTANCING
   mvPosition = instanceMatrix * mvPosition;
@@ -73387,72 +73396,63 @@ ${NOISE2}`).replace("#include <skinning_vertex>", `#include <skinning_vertex>
   gl_Position = projectionMatrix * mvPosition;`);
       sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>
 uniform float uTime, uK;
-uniform vec3 uCol, uRim;
+uniform vec3 uCol;
 varying vec3 vFaP;
-varying float vFaLift;
-${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", `
-  // flame tongues: noise stretched upward and rising, cut against a
-  // threshold that climbs with height into the flame \u2014 so the higher up it
-  // is the less survives, and each tongue tapers to a point (a flame's apex)
-  // that flickers and breaks off as the noise rises through it
-  vec3 q = vec3( vFaP.x * 3.4, vFaP.y * 1.5 - uTime * ${inner ? "2.6" : "3.4"}, vFaP.z * 3.4 );
-  float n = faN( q ) * 0.75 + faN( q * 2.2 + 7.1 ) * 0.25;
-  float cut = ${inner ? "0.08 + 0.7" : "0.22 + 0.62"} * vFaLift;
-  if ( n < cut || uK < 0.01 ) discard;
-  ${inner ? "vec4 diffuseColor = vec4( mix( uCol, vec3( 1.0 ), 0.75 ) * 1.1, uK );" : "float edge = step( cut + 0.07, n );\n  vec4 diffuseColor = vec4( mix( uRim, uCol, edge ), uK );"}`);
+varying float vFaUp;
+${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     };
-    m.customProgramCacheKey = () => "op-flame-aura-3-" + (inner ? "in" : "out");
+    m.customProgramCacheKey = () => "op-aura-layer-" + L3.out;
     return m;
   }
   var FlameAura = class {
-    /** On a character model (chars/model.js): two hulls sharing its body and skeleton. */
+    /** On a character model (chars/model.js): the layers, sharing its body and skeleton. */
     constructor(model2) {
       this.model = model2;
-      this.outerMat = flameMaterial(false);
-      this.innerMat = flameMaterial(true);
-      this.outer = new SkinnedMesh(model2.body.geo, this.outerMat);
-      this.inner = new SkinnedMesh(model2.body.geo, this.innerMat);
-      for (const h2 of [this.outer, this.inner]) {
+      this.mats = LAYERS.map(layerMaterial);
+      this.meshes = this.mats.map((mat, i) => {
+        const h2 = new SkinnedMesh(model2.body.geo, mat);
         h2.bind(model2.skeleton, IDENT2);
         h2.boundingSphere = model2.mesh.boundingSphere;
         h2.castShadow = false;
         h2.receiveShadow = false;
-      }
-      this.outer.renderOrder = 1;
-      this.inner.renderOrder = 2;
-      model2.group.add(this.outer, this.inner);
+        h2.renderOrder = 1 + (LAYERS.length - 1 - i) * 0.01;
+        return h2;
+      });
+      this.meshes.slice().reverse().forEach((h2, k) => {
+        h2.renderOrder = 1 + k * 0.01;
+      });
+      model2.group.add(...this.meshes);
       this.color = null;
       this.k = 0;
     }
-    /** css colour (its alpha how strong), the time, the body's hip height and build (for the size of it). */
+    /** css colour (its alpha how strong), the time, the body's hip height and build (for the width of it). */
     set(color, t, hip, bulk = 1) {
       if (color !== this.color) {
         this.color = color;
         const c = parse(color);
-        const U3 = this.outerMat.userData.u, I2 = this.innerMat.userData.u;
-        U3.uCol.value.copy(c.c);
-        U3.uRim.value.copy(c.c).multiplyScalar(c.dark ? 1.8 : 0.55);
-        if (c.dark) U3.uRim.value.lerp(new Color(0.85, 0.05, 0.12), 0.5);
-        I2.uCol.value.copy(c.dark ? new Color(0.75, 0.1, 0.2) : c.c);
-        this.k = Math.min(1, 0.55 + c.a * 0.45);
+        const base2 = c.c, white = new Color(1, 1, 1);
+        const inner = c.dark ? new Color(0.9, 0.12, 0.22) : base2.clone().lerp(white, 0.78);
+        const light = c.dark ? new Color(0.45, 0.04, 0.1) : base2.clone().lerp(white, 0.4);
+        const deep = c.dark ? new Color(0.01, 0, 0.015) : base2.clone().multiplyScalar(0.72);
+        const shades = [inner, light, base2, deep];
+        LAYERS.forEach((L3, i) => this.mats[i].userData.u.uCol.value.copy(shades[L3.shade]));
+        this.k = Math.min(1, 0.6 + c.a * 0.4);
       }
-      for (const m of [this.outerMat, this.innerMat]) {
+      const w = 0.075 * Math.max(0.8, bulk);
+      for (const m of this.mats) {
         const u = m.userData.u;
         u.uTime.value = t;
         u.uK.value = this.k;
-        u.uHip.value = hip;
-        u.uThick.value = 0.06 * Math.max(0.8, bulk);
-        u.uLift.value = 0.3 * Math.max(0.8, bulk);
+        u.uThick.value = w;
         u.uBack.value = 0.75 * Math.max(0.8, bulk);
       }
     }
     set visible(v) {
-      this.outer.visible = this.inner.visible = v;
+      for (const h2 of this.meshes) h2.visible = v;
     }
     dispose() {
-      this.model.group.remove(this.outer, this.inner);
-      this.outerMat.dispose();
-      this.innerMat.dispose();
+      this.model.group.remove(...this.meshes);
+      for (const m of this.mats) m.dispose();
     }
   };
   function parse(css2) {
@@ -154399,7 +154399,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
 
   // src/audio/director.js
   var HOLD = { title: 0, under: 0.6, surface: 1.5, rm: 0.3, zone: 0.5, town: 2, isl: 3, sea: 4, holy: 3 };
-  var LAYERS = [["perc", 0], ["bass", 0.15], ["pad", 0.2], ["arp", 0.3], ["perc2", 0.4], ["lead", 0.5], ["brass", 0.72]];
+  var LAYERS2 = [["perc", 0], ["bass", 0.15], ["pad", 0.2], ["arp", 0.3], ["perc2", 0.4], ["lead", 0.5], ["brass", 0.72]];
   var smooth12 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
@@ -154628,7 +154628,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     /** The intensity's layers: each stem eases in around its threshold (the boss layer only for a boss). */
     layers(k, boss) {
       const out = {};
-      for (const [s, th] of LAYERS) out[s] = th <= 0 ? 1 : smooth12(th - 0.1, th + 0.06, k);
+      for (const [s, th] of LAYERS2) out[s] = th <= 0 ? 1 : smooth12(th - 0.1, th + 0.06, k);
       out.boss = boss ? smooth12(0.55, 0.75, k) : 0;
       return out;
     }
