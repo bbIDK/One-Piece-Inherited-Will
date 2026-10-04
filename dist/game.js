@@ -79885,13 +79885,14 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const pr = plankRoute(game, a, tx, ty, who);
       if (pr !== void 0) return pr;
     }
-    if (dk3.lvl === void 0 || dk3.plank) return null;
+    if (dk3.plank) return null;
     const s = dk3.ship, d = shipDims(s.def), w = game.world;
     const to = who?.deck?.ship === s ? who.deck : deckPoint(s, w.dx(s.x, tx), ty - s.y, 0);
     if (!to) return null;
+    if (dk3.lvl === void 0) return roundSolids(game, a, tx, ty);
     const lvl = (p) => typeof p.lvl === "string" ? p.lvl : null;
     const here = lvl(dk3), there = lvl(to);
-    if (!there || here === there) return null;
+    if (!there || here === there) return here ? roundSolids(game, a, tx, ty) : null;
     const end = (st, top) => {
       const tt = top ? st.ha > st.hb ? st.ta - 0.5 / d.L : st.tb + 0.5 / d.L : st.ha > st.hb ? st.tb + 0.5 / d.L : st.ta - 0.5 / d.L;
       return deckToWorld(s, tt, (st.va + st.vb) / 2);
@@ -79923,6 +79924,141 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     if (!best) return null;
     if (w.distance(a.x, a.y, best.p.x, best.p.y) < 0.6) return end(best.st, lower(best.st) === here);
     return best.p;
+  }
+  function roundSolids(game, a, tx, ty) {
+    const dk3 = a.deck, s = dk3.ship, d = shipDims(s.def), w = game.world;
+    const c = Math.cos(s.heading), sn = Math.sin(s.heading);
+    const frame3 = (x, y) => {
+      const dx = w.dx(s.x, x), dy = y - s.y;
+      return [dx * c + dy * sn, -dx * sn + dy * c];
+    };
+    const world = (q2) => ({ x: w.wx(s.x + q2[0] * c - q2[1] * sn), y: s.y + q2[0] * sn + q2[1] * c });
+    const A2 = frame3(a.x, a.y), B5 = frame3(tx, ty);
+    const M3 = (a.r || 0.35) * 0.7, R5 = M3 + 0.3, K = R5 - M3 + 0.02;
+    const lv = typeof dk3.lvl === "string" ? dk3.lvl : null;
+    const u0 = Math.min(A2[0], B5[0]) - 4, u1 = Math.max(A2[0], B5[0]) + 4, v0 = Math.min(A2[1], B5[1]) - 4, v1 = Math.max(A2[1], B5[1]) + 4;
+    const near = [];
+    for (const o of d.solids) {
+      if (o.lvl && lv !== null && o.lvl !== lv) continue;
+      if (o.r === void 0 ? o.u1 < u0 || o.u0 > u1 || o.v1 < v0 || o.v0 > v1 : o.u + o.r < u0 || o.u - o.r > u1 || o.v + o.r < v0 || o.v - o.r > v1) continue;
+      near.push(o.r === void 0 ? { o, box: { u0: o.u0 - R5, u1: o.u1 + R5, v0: o.v0 - R5, v1: o.v1 + R5 } } : { o, r: o.r + R5 });
+    }
+    if (!near.length) {
+      a._deckPath = null;
+      return null;
+    }
+    const inside2 = (q2, u, v, k = 0) => q2.box ? u > q2.box.u0 + k && u < q2.box.u1 - k && v > q2.box.v0 + k && v < q2.box.v1 - k : Math.hypot(u - q2.o.u, v - q2.o.v) < q2.r - k;
+    for (const q2 of near) {
+      if (!inside2(q2, B5[0], B5[1])) continue;
+      if (q2.box) {
+        const X2 = q2.box, out = [[X2.u0 - 0.05 - B5[0], 0], [X2.u1 + 0.05 - B5[0], 0], [0, X2.v0 - 0.05 - B5[1]], [0, X2.v1 + 0.05 - B5[1]]];
+        out.sort((m, n) => Math.hypot(...m) - Math.hypot(...n));
+        B5[0] += out[0][0];
+        B5[1] += out[0][1];
+      } else {
+        const ang = Math.atan2(B5[1] - q2.o.v, B5[0] - q2.o.u);
+        B5[0] = q2.o.u + Math.cos(ang) * (q2.r + 0.05);
+        B5[1] = q2.o.v + Math.sin(ang) * (q2.r + 0.05);
+      }
+    }
+    const meets = (x, p, q2) => {
+      const du = q2[0] - p[0], dv = q2[1] - p[1];
+      if (x.box) {
+        let t0 = 0, t1 = 1;
+        for (const [o, dd, lo, hi] of [[p[0], du, x.box.u0 + K, x.box.u1 - K], [p[1], dv, x.box.v0 + K, x.box.v1 - K]]) {
+          if (Math.abs(dd) < 1e-9) {
+            if (o <= lo || o >= hi) return false;
+            continue;
+          }
+          let ta = (lo - o) / dd, tb = (hi - o) / dd;
+          if (ta > tb) [ta, tb] = [tb, ta];
+          t0 = Math.max(t0, ta);
+          t1 = Math.min(t1, tb);
+          if (t0 >= t1) return false;
+        }
+        return true;
+      }
+      const fu = p[0] - x.o.u, fv = p[1] - x.o.v, aa = du * du + dv * dv, bb = 2 * (fu * du + fv * dv), cc = fu * fu + fv * fv - (x.r - K) ** 2;
+      if (cc < 0) return true;
+      const disc2 = bb * bb - 4 * aa * cc;
+      if (aa < 1e-9 || disc2 <= 0) return false;
+      const t = (-bb - Math.sqrt(disc2)) / (2 * aa);
+      return t >= 0 && t <= 1;
+    };
+    const blocked = (p, q2) => near.some((x) => meets(x, p, q2));
+    if (!blocked(A2, B5)) {
+      a._deckPath = null;
+      return null;
+    }
+    const now3 = game.time || 0, C3 = a._deckPath;
+    if (C3 && C3.s === s && C3.lv === lv && (now3 - C3.t < 0.3 || Math.hypot(C3.b[0] - B5[0], C3.b[1] - B5[1]) < 0.8 && now3 - C3.t < 2.5)) {
+      while (C3.pts.length && Math.hypot(C3.pts[0][0] - A2[0], C3.pts[0][1] - A2[1]) < 0.35) C3.pts.shift();
+      for (let i = C3.pts.length - 1; i > 0; i--) if (!blocked(A2, C3.pts[i])) {
+        C3.pts.splice(0, i);
+        break;
+      }
+      if (C3.pts.length) return world(C3.pts[0]);
+    }
+    const nodes = [];
+    const add7 = (u, v) => {
+      const t = (u + d.L / 2) / d.L;
+      if (t < 0.03 || t > 0.97 || Math.abs(v) > hbAt(t, d.B) * d.walk - M3) return;
+      if (lv !== null && levelAt(d, t, v) !== lv) return;
+      if (near.some((q2) => inside2(q2, u, v, 0.01))) return;
+      nodes.push([u, v]);
+    };
+    for (const q2 of near) {
+      if (q2.box) for (const [u, v] of [[q2.box.u0 - 0.02, q2.box.v0 - 0.02], [q2.box.u0 - 0.02, q2.box.v1 + 0.02], [q2.box.u1 + 0.02, q2.box.v0 - 0.02], [q2.box.u1 + 0.02, q2.box.v1 + 0.02]]) add7(u, v);
+      else for (let k = 0; k < 8; k++) {
+        const ang = k * Math.PI / 4, rr = (q2.r + 0.03) / Math.cos(Math.PI / 8);
+        add7(q2.o.u + Math.cos(ang) * rr, q2.o.v + Math.sin(ang) * rr);
+      }
+    }
+    if (nodes.length > 64) {
+      const du = B5[0] - A2[0], dv = B5[1] - A2[1], L22 = du * du + dv * dv || 1;
+      const off = (q2) => {
+        const t = Math.max(0, Math.min(1, ((q2[0] - A2[0]) * du + (q2[1] - A2[1]) * dv) / L22));
+        return Math.hypot(q2[0] - A2[0] - du * t, q2[1] - A2[1] - dv * t);
+      };
+      nodes.sort((m, n) => off(m) - off(n)).length = 64;
+    }
+    const N9 = nodes.length, goal = N9;
+    nodes.push(B5);
+    const g = new Float64Array(N9 + 1).fill(Infinity), from = new Int32Array(N9 + 1).fill(-1), done6 = new Uint8Array(N9 + 1);
+    const h2 = (i) => Math.hypot(nodes[i][0] - B5[0], nodes[i][1] - B5[1]);
+    for (let j = 0; j <= N9; j++) if (!blocked(A2, nodes[j])) {
+      g[j] = Math.hypot(nodes[j][0] - A2[0], nodes[j][1] - A2[1]);
+      from[j] = -2;
+    }
+    for (; ; ) {
+      let i = -1, bf = Infinity;
+      for (let j = 0; j <= N9; j++) if (!done6[j] && g[j] + h2(j) < bf) {
+        bf = g[j] + h2(j);
+        i = j;
+      }
+      if (i < 0 || i === goal) break;
+      done6[i] = 1;
+      for (let j = 0; j <= N9; j++) {
+        if (done6[j] || j === i) continue;
+        const nd = g[i] + Math.hypot(nodes[j][0] - nodes[i][0], nodes[j][1] - nodes[i][1]);
+        if (nd < g[j] && !blocked(nodes[i], nodes[j])) {
+          g[j] = nd;
+          from[j] = i;
+        }
+      }
+    }
+    if (!Number.isFinite(g[goal])) {
+      a._deckPath = null;
+      return null;
+    }
+    const pts = [];
+    for (let i = from[goal]; i >= 0; i = from[i]) pts.unshift(nodes[i]);
+    if (!pts.length) {
+      a._deckPath = null;
+      return null;
+    }
+    a._deckPath = { s, lv, b: B5.slice(), t: now3, pts };
+    return world(pts[0]);
   }
   function plankRoute(game, a, tx, ty, who) {
     const dk3 = a.deck, to = who?.deck || game.deckAt(tx, ty, 0);
@@ -113770,6 +113906,371 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     return Math.max(1, Math.round(p / 5) * 5);
   }
 
+  // src/data/names.js
+  var MALE_FIRST = [
+    "Kaito",
+    "Jiro",
+    "Marlo",
+    "Sen",
+    "Tobias",
+    "Bram",
+    "Kaji",
+    "Rook",
+    "Kazuma",
+    "Otto",
+    "Goro",
+    "Leon",
+    "Pip",
+    "Ramon",
+    "Vito",
+    "Enzo",
+    "Akira",
+    "Cruz",
+    "Ivo",
+    "Daichi",
+    "Haruto",
+    "Ren",
+    "Sora",
+    "Takeshi",
+    "Kenji",
+    "Ryo",
+    "Shin",
+    "Toma",
+    "Yusuke",
+    "Hiro",
+    "Masa",
+    "Isamu",
+    "Benji",
+    "Corbin",
+    "Dario",
+    "Elio",
+    "Felix",
+    "Gideon",
+    "Hugo",
+    "Jasper",
+    "Kasimir",
+    "Lorenzo",
+    "Matteo",
+    "Nico",
+    "Orrin",
+    "Pablo",
+    "Quill",
+    "Rafael",
+    "Silas",
+    "Tadeo",
+    "Ulric",
+    "Viggo",
+    "Wendel",
+    "Xander",
+    "Yorick",
+    "Zeke",
+    "Bartolo",
+    "Cosimo",
+    "Dante",
+    "Emilio",
+    "Fausto",
+    "Gaspar",
+    "Horatio",
+    "Joaquin",
+    "Lazlo",
+    "Mateus",
+    "Nando",
+    "Osvaldo",
+    "Rocco",
+    "Santiago",
+    "Teodor",
+    "Valentin",
+    "Wolf",
+    "Bastian",
+    "Caspian",
+    "Desmond",
+    "Ezra",
+    "Finn",
+    "Garrick",
+    "Hal",
+    "Lucan",
+    "Marcel",
+    "Tycho",
+    "Anton",
+    "Barnaby",
+    "Cyrus",
+    "Rafe",
+    "Haku",
+    "Genzo",
+    "Tatsu",
+    "Raiji",
+    "Kenta",
+    "Shiro",
+    "Arlo",
+    "Brock",
+    "Duncan",
+    "Ewan",
+    "Fritz",
+    "Gunther",
+    "Harlan",
+    "Jory",
+    "Kael",
+    "Milo",
+    "Nestor",
+    "Oswin",
+    "Percival",
+    "Reuben",
+    "Stellan",
+    "Torvald",
+    "Ugo",
+    "Vance",
+    "Zoran",
+    "Amadeo",
+    "Bodhi",
+    "Cassius",
+    "Idris"
+  ];
+  var FEMALE_FIRST = [
+    "Rin",
+    "Yuki",
+    "Ines",
+    "Mira",
+    "Sabrina",
+    "Hana",
+    "Tess",
+    "Umi",
+    "Zola",
+    "Nell",
+    "Juno",
+    "Akane",
+    "Ayame",
+    "Chiyo",
+    "Emi",
+    "Fumiko",
+    "Haru",
+    "Izumi",
+    "Kaede",
+    "Kiko",
+    "Mei",
+    "Sakura",
+    "Shiori",
+    "Tomoe",
+    "Yua",
+    "Aiko",
+    "Ada",
+    "Bianca",
+    "Carmen",
+    "Delia",
+    "Elena",
+    "Freya",
+    "Greta",
+    "Ilsa",
+    "Jade",
+    "Kira",
+    "Lena",
+    "Marisol",
+    "Nadia",
+    "Odette",
+    "Paloma",
+    "Rosa",
+    "Selene",
+    "Talia",
+    "Ursula",
+    "Vera",
+    "Wren",
+    "Xiomara",
+    "Yara",
+    "Zara",
+    "Alba",
+    "Brisa",
+    "Celeste",
+    "Dalia",
+    "Esme",
+    "Flora",
+    "Gemma",
+    "Helga",
+    "Isla",
+    "Jolie",
+    "Lucia",
+    "Marina",
+    "Noor",
+    "Ondine",
+    "Perla",
+    "Ruby",
+    "Sirena",
+    "Thalia",
+    "Valeria",
+    "Willa",
+    "Coral",
+    "Delphine",
+    "Pearl",
+    "Opal",
+    "Maren",
+    "Nerissa",
+    "Liesel",
+    "Amaya",
+    "Beatriz",
+    "Calla",
+    "Dagny",
+    "Eira",
+    "Fiora",
+    "Gisela",
+    "Hilde",
+    "Ingrid",
+    "Junko",
+    "Kasumi",
+    "Lila",
+    "Mariko",
+    "Natsu",
+    "Orla",
+    "Priya",
+    "Reina",
+    "Saya",
+    "Tamsin",
+    "Una",
+    "Viola",
+    "Ximena",
+    "Yoko",
+    "Zinnia",
+    "Astrid",
+    "Brigid",
+    "Cosima",
+    "Dulce",
+    "Estrella",
+    "Farah",
+    "Imogen",
+    "Leilani",
+    "Mireille",
+    "Nova",
+    "Rhea",
+    "Sunniva",
+    "Tove",
+    "Ysolde",
+    "Azalea"
+  ];
+  var SURNAMES = [
+    "Stormwell",
+    "Kurogane",
+    "Blackwater",
+    "Hayate",
+    "Marrow",
+    "Goldtooth",
+    "Saltbane",
+    "Tempest",
+    "Ironside",
+    "Raiden",
+    "Nagare",
+    "Crowe",
+    "Seabright",
+    "Kaminari",
+    "Wolfe",
+    "Tidebreaker",
+    "Hoshi",
+    "Gunnar",
+    "Vasquez",
+    "Umibozu",
+    "Ashgrove",
+    "Barrow",
+    "Coldwater",
+    "Drake",
+    "Fairwind",
+    "Galeheart",
+    "Harrow",
+    "Inkwater",
+    "Jetsam",
+    "Keelhaul",
+    "Longshore",
+    "Mistral",
+    "Northwind",
+    "Oakhart",
+    "Pikeman",
+    "Redsail",
+    "Sharkbite",
+    "Thornback",
+    "Undertow",
+    "Vane",
+    "Wavecrest",
+    "Yardley",
+    "Zephyr",
+    "Arashi",
+    "Fujikaze",
+    "Hakuro",
+    "Isari",
+    "Kagerou",
+    "Kujira",
+    "Mizuchi",
+    "Namikaze",
+    "Oboro",
+    "Sazanami",
+    "Shiranui",
+    "Tatsumaki",
+    "Yamikaze",
+    "Barbosa",
+    "Castillo",
+    "Delgado",
+    "Fuentes",
+    "Guerrero",
+    "Herrera",
+    "Montoya",
+    "Navarro",
+    "Ortega",
+    "Reyes",
+    "Salazar",
+    "Torres",
+    "Valdez",
+    "Blackmoor",
+    "Brightwater",
+    "Copperhead",
+    "Driftwood",
+    "Flint",
+    "Grimsby",
+    "Hollowell",
+    "Ironfist",
+    "Kettle",
+    "Larkin",
+    "Marlin",
+    "Nettle",
+    "Pennywhistle",
+    "Rattlebones",
+    "Saltmarsh",
+    "Stonebridge",
+    "Swiftwater",
+    "Thatch",
+    "Whitecap",
+    "Windward",
+    "Wrecker",
+    "Anchorage",
+    "Bilgewater",
+    "Corsair",
+    "Deepwell",
+    "Embervale",
+    "Foghorn",
+    "Gullwing",
+    "Hookhand",
+    "Kraken",
+    "Lanternfish",
+    "Moonwake",
+    "Nightingale",
+    "Oceanus",
+    "Quartermain",
+    "Riptide",
+    "Seaward",
+    "Tallmast",
+    "Wavebreaker",
+    "Akatsuki",
+    "Benihana",
+    "Fuuma",
+    "Hagane",
+    "Kurosawa",
+    "Mikazuki",
+    "Shinonome",
+    "Tsurugi",
+    "Yasha",
+    "Abernathy",
+    "Blackthorn",
+    "Carrow",
+    "Dunmore",
+    "Fenwick",
+    "Gallows",
+    "Lockhart",
+    "Ravenscar"
+  ];
+
   // src/ui/screens.js
   var HEIGHT_NOTE = {
     human: "Humans stand at an ordinary height.",
@@ -114014,19 +114515,46 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         state.look = makeLook(birth.race, birth.seed);
         state.look.build = 0.5;
       }
-      if (!state.name) state.name = randomCharName();
       const L3 = state.look;
+      if (state.first === void 0) {
+        const [f, ...rest] = (state.name || "").trim().split(/\s+/).filter(Boolean);
+        state.first = f || randomFirst(L3.fem);
+        state.last = rest.join("") || (f ? "" : randomLast());
+        state.firstRolled = !f;
+      }
       const race = birth.race;
       const finalName = h("div.final-name");
       const updateName = () => {
+        state.name = [state.first, state.last].filter(Boolean).join(" ");
         clear(finalName);
-        const n = (state.name || "").trim() || "Nameless";
+        const n = state.name || "Nameless";
         finalName.append(h("span.muted", "You will be known as "), h("b", hasD() ? nameWithD(n) : n));
       };
-      const nameInput = h("input.name", { value: state.name, maxLength: 24, spellcheck: false, on: { input: (e) => {
-        state.name = e.target.value;
+      const word = (e) => {
+        const v = e.target.value.replace(/\s+/g, "");
+        if (v !== e.target.value) e.target.value = v;
+        return v;
+      };
+      const firstInput = h("input.name", { value: state.first, maxLength: 14, spellcheck: false, placeholder: "First name", on: { input: (e) => {
+        state.first = word(e);
+        state.firstRolled = false;
         updateName();
       } } });
+      const lastInput = h("input.name", { value: state.last, maxLength: 16, spellcheck: false, placeholder: "Family name", on: { input: (e) => {
+        state.last = word(e);
+        updateName();
+      } } });
+      const rollFirst = () => {
+        state.first = randomFirst(L3.fem, state.first);
+        state.firstRolled = true;
+        firstInput.value = state.first;
+        updateName();
+      };
+      const rollLast = () => {
+        state.last = randomLast(state.last);
+        lastInput.value = state.last;
+        updateName();
+      };
       updateName();
       const row = (label, ...kids) => h("div.opt-row", h("div.opt-label", label), ...kids);
       const swatch = (key2, colors) => h("div.swatches", ...colors.map((c) => h("button" + (L3[key2] === c ? ".on" : ""), { title: c, style: { background: c }, on: { click: () => {
@@ -114055,11 +114583,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         genderEl.appendChild(row("You are", chips2(L3.fem ? "f" : "m", ["m", "f"], ["Male", "Female"], (v) => setGender(v === "f"))));
       };
       const setGender = (fem) => {
+        const other = !!L3.fem !== fem;
         L3.fem = fem;
         if (!fem && ["dress", "crop", "bikini"].includes(L3.topStyle)) L3.topStyle = "tee";
         if (!fem && ["skirt", "longskirt"].includes(L3.bottomStyle)) L3.bottomStyle = "trousers";
         if (L3.eyeShape !== "fish") L3.eyeShape = eyeShapeOf2({ ...L3, eyeShape: L3.eyeShape });
         if (fem && L3.bust === void 0) L3.bust = 1;
+        if (other && state.firstRolled) rollFirst();
         renderGender();
       };
       renderGender();
@@ -114078,11 +114608,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       renderStory();
       const right = h(
         "div",
-        row("Name", h("div", { style: { display: "flex", gap: "6px" } }, nameInput, h("button.btn", { on: { click: () => {
-          state.name = randomCharName();
-          nameInput.value = state.name;
-          updateName();
-        } } }, "Random"))),
+        row("First name", h("div", { style: { display: "flex", gap: "6px" } }, firstInput, h("button.btn", { on: { click: rollFirst } }, "Random"))),
+        row("Family name", h("div", { style: { display: "flex", gap: "6px" } }, lastInput, h("button.btn", { on: { click: rollLast } }, "Random"))),
         finalName,
         genderEl,
         storyEl,
@@ -114466,12 +114993,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const bounty = char.bounty ? formatBerries(char.bounty).replace("\u0E3F", "\u0E3F ") + "-" : "\u0E3F 0-";
     return h("div.poster", h("div.w", "WANTED"), cv, h("div.doa", "DEAD OR ALIVE"), h("div.nm", char.name), h("div.amt", bounty), h("div.mar", "MARINE"));
   }
-  var FIRST2 = ["Kaito", "Rin", "Jiro", "Marlo", "Sen", "Tobias", "Yuki", "Bram", "Ines", "Kaji", "Rook", "Kazuma", "Mira", "Otto", "Sabrina", "Goro", "Hana", "Leon", "Pip", "Ramon", "Tess", "Umi", "Vito", "Zola", "Enzo", "Akira", "Nell", "Cruz", "Ivo", "Juno"];
-  var LAST = ["Stormwell", "Kurogane", "Blackwater", "Hayate", "Marrow", "Goldtooth", "Saltbane", "Tempest", "Ironside", "Raiden", "Nagare", "Crowe", "Seabright", "Kaminari", "Wolfe", "Tidebreaker", "Hoshi", "Gunnar", "Vasquez", "Umibozu"];
-  function randomCharName() {
-    const r4 = new RNG(Math.floor(Math.random() * 1e9));
-    return `${r4.pick(FIRST2)} ${r4.pick(LAST)}`;
-  }
+  var pickNew = (list, not) => {
+    let n;
+    do
+      n = list[Math.floor(Math.random() * list.length)];
+    while (n === not && list.length > 1);
+    return n;
+  };
+  var randomFirst = (fem, not) => pickNew(fem ? FEMALE_FIRST : MALE_FIRST, not);
+  var randomLast = (not) => pickNew(SURNAMES, not);
 
   // src/game/rumors.js
   var SEA_TIPS = {
