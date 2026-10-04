@@ -168,8 +168,9 @@ export class AIController {
       if (b === a || b.state !== 'idle' || b.onShip) continue;
       const isFoe = hostile(a, b) || (b.isPlayer && a.provoked) || (a.faction === 'player' && b.provoked);
       if (!isFoe) continue;
-      // (some keep to themselves until the player starts it: pirates at home in a village, say)
-      if (b.isPlayer && a.calm && !a.provoked) continue;
+      // (some keep to themselves until the player starts it: pirates at home
+      // in a village, say — your crew walking by included)
+      if ((b.isPlayer || b.faction === 'player') && a.calm && !a.provoked) continue;
       let d = game.world.dist2(a.x, a.y, b.x, b.y);
       const stealth = b.buffs?.find((x) => x.mods?.stealth);
       if (stealth) d *= 1 + stealth.mods.stealth * 6;
@@ -594,7 +595,14 @@ export class AIController {
         this.think = 0.5;
         let best = null, bd = 64;
         for (const b of game.actorsNear(p.x, p.y, 8)) {
-          if (b.state !== 'idle' || !(hostile(a, b) || b.provoked) || b.faction === 'player') continue;
+          if (b.state !== 'idle' || b.faction === 'player') continue;
+          // (they join a fight, they don't pick one: whoever's after you or
+          // one of the crew, anyone you've gone for, or a foe out looking
+          // for trouble — never pirates at ease in their den, say, who'd only
+          // fight someone who broke in or laid a hand on them)
+          const t = b.controller?.target;
+          const fighting = b.provoked || t === p || t?.faction === 'player';
+          if (!fighting && !(hostile(a, b) && b.aggroPlayer !== false && !b.calm)) continue;
           const d = game.world.dist2(a.x, a.y, b.x, b.y);
           if (d < bd) { bd = d; best = b; }
         }
