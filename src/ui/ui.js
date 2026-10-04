@@ -16,9 +16,11 @@ import { drawSkillsHud, entryView, panelRow } from './skillsHud.js';
 import { captureKey } from './rebind.js';
 import { keysOf, keyLabel } from '../game/keys.js';
 
-// the menu (Tab, or the one button for it on the left of the screen): open,
-// its sections run down the left side — the one you're in lit, a click on
-// another goes there; shut, there's just that button
+// the menu (Tab, or the one button for it on the left of the screen): one
+// window in the middle of the screen, its sections down its left side — the
+// one you're in lit, a click on another goes there; shut, there's just that
+// button. (Map and Game go on from it: the chart, the pause screen — each
+// a screen of its own.)
 const SECTIONS = [
   { id: 'inventory', label: 'Inventory' },
   { id: 'character', label: 'Character' },
@@ -26,11 +28,10 @@ const SECTIONS = [
   { id: 'journal', label: 'Journal' },
   { id: 'crew', label: 'Crew' },
   { id: 'quests', label: 'Quests' },
-  { id: 'map', label: 'Map', key: 'M' },
-  { id: 'menu', label: 'Game', key: 'Esc', icon: 'settings' },
+  { id: 'map', label: 'Map', key: 'M', away: true },
+  { id: 'menu', label: 'Game', key: 'Esc', icon: 'settings', away: true },
 ];
-// (a panel opened from a section: that section stays lit)
-const SECTION_OF = { settings: 'menu', help: 'menu' };
+const AWAY = new Set(SECTIONS.filter((b) => b.away).map((b) => b.id));
 // (what Tab opens again: the section you were last in)
 const RETURN_TO = new Set(['inventory', 'character', 'skills', 'journal', 'crew', 'quests', 'voyage']);
 // on phones there's no keyboard: the map and the camera get buttons of their own
@@ -227,8 +228,8 @@ export class UI {
     this.el.side.classList.toggle('hidden', !v);
   }
 
-  /** The section of the menu a panel belongs to (lit while it's open), or null. */
-  sectionOf(id) { return SECTION_OF[id] || (id && this.el.sideBtns[id] ? id : null); }
+  /** The section of the menu a panel is (lit while it's open), or null. */
+  sectionOf(id) { return id && this.el.sideBtns[id] && !AWAY.has(id) ? id : null; }
   /** The section of the menu that's open, or null (a panel opened over it — the Jolly Roger over Character — its own). */
   menuSection() {
     for (let i = this.stack.length - 1; i >= 0; i--) { const s = this.sectionOf(this.stack[i].id); if (s) return s; }
@@ -458,8 +459,8 @@ export class UI {
     if (id) { const ex = this.stack.find((s) => s.id === id); if (ex) { this.closePanel(ex); return null; } }
     const close = h('button.close', { title: 'Close (Esc)', on: { click: () => this.closePanel(entry) } }, '×');
     const panel = h('div.panel' + (wide ? '.wide' : ''), close, content);
-    // (a section of the menu: clear of its sections down the left)
-    const bg = h('div.panel-bg' + (this.hudVisible && (this.sectionOf(id) || this.menuSection()) ? '.side-pad' : ''), panel);
+    // (a section of the menu: in the menu's window, its sections beside it)
+    const bg = h('div.panel-bg' + (this.hudVisible && this.sectionOf(id) ? '.in-menu' : ''), panel);
     // (a click beside it closes it — and goes no further: it isn't a swing at whoever's in front of you)
     bg.addEventListener('mousedown', (e) => { if (e.target === bg) { e.stopPropagation(); this.closePanel(entry); } });
     const entry = { el: bg, onClose, id, panel, pause: !!pause };
