@@ -930,6 +930,23 @@ export class ShipView {
         const k = Math.min(1, q.sp / 6);
         return [B * 0.42 + age * (1.6 + L * 0.25) * (0.5 + k), Math.pow(1 - age, 1.6) * (0.35 + 0.65 * k)];
       });
+      // spray thrown up and out at her bow as she drives through the sea — the
+      // faster she goes and the rougher it is, the more and the higher (near
+      // the eye only: it's small)
+      const fx = ctx.game.fx, dt = Math.min(0.25, Math.max(0, env.time - (this.sprayAt ?? env.time)));
+      this.sprayAt = env.time;
+      if (fx && !s.sunk && !s.lvl && sp > 3 && Math.hypot(ctx.world.dx(v3.ox, s.x), s.y - v3.oy) < 110) {
+        const k = Math.min(1.4, (sp - 3) / 7), rough = env.storm || 0;
+        this.sprayT = (this.sprayT ?? Math.random()) - dt * (0.8 + k * 2.2 + rough * 2.5);
+        if (this.sprayT <= 0) {
+          this.sprayT = 0.6 + Math.random() * 0.8;
+          const c = Math.cos(s.heading), sn = Math.sin(s.heading);
+          for (const side of [-1, 1]) {
+            const bx = s.x + c * L * 0.44 - sn * side * B * 0.22, by = s.y + sn * L * 0.44 + c * side * B * 0.22;
+            fx.burst(bx, by, Math.round(3 + k * 6 + rough * 6), { angle: s.heading + side * (Math.PI / 2 - 0.45), spread: 0.9, speed: 1.6 + k * 2.6 + rough * 2, z: 0.5, zJitter: 0.4, vz: 2.2 + k * 2.6 + rough * 2.4, g: 9.8, life: 0.65 + k * 0.3, size: 0.1 + k * 0.07, color: ['#ffffff', '#f1f8ff', '#d6efff'], kind: 'drop', drag: 0.7 });
+          }
+        }
+      }
     }
     // from the helm of your own ship in first person the rig is see-through,
     // so you can steer (in third person you see her whole, from outside)

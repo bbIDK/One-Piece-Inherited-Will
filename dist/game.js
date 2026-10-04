@@ -45729,6 +45729,20 @@ ${GLSL}
           const k = Math.min(1, q2.sp / 6);
           return [B5 * 0.42 + age * (1.6 + L3 * 0.25) * (0.5 + k), Math.pow(1 - age, 1.6) * (0.35 + 0.65 * k)];
         });
+        const fx = ctx.game.fx, dt = Math.min(0.25, Math.max(0, env2.time - (this.sprayAt ?? env2.time)));
+        this.sprayAt = env2.time;
+        if (fx && !s.sunk && !s.lvl && sp > 3 && Math.hypot(ctx.world.dx(v3.ox, s.x), s.y - v3.oy) < 110) {
+          const k = Math.min(1.4, (sp - 3) / 7), rough = env2.storm || 0;
+          this.sprayT = (this.sprayT ?? Math.random()) - dt * (0.8 + k * 2.2 + rough * 2.5);
+          if (this.sprayT <= 0) {
+            this.sprayT = 0.6 + Math.random() * 0.8;
+            const c = Math.cos(s.heading), sn = Math.sin(s.heading);
+            for (const side2 of [-1, 1]) {
+              const bx = s.x + c * L3 * 0.44 - sn * side2 * B5 * 0.22, by = s.y + sn * L3 * 0.44 + c * side2 * B5 * 0.22;
+              fx.burst(bx, by, Math.round(3 + k * 6 + rough * 6), { angle: s.heading + side2 * (Math.PI / 2 - 0.45), spread: 0.9, speed: 1.6 + k * 2.6 + rough * 2, z: 0.5, zJitter: 0.4, vz: 2.2 + k * 2.6 + rough * 2.4, g: 9.8, life: 0.65 + k * 0.3, size: 0.1 + k * 0.07, color: ["#ffffff", "#f1f8ff", "#d6efff"], kind: "drop", drag: 0.7 });
+            }
+          }
+        }
       }
       const own = ctx?.game?.player?.ship === s && ctx.game.player.mode === "sail" && ctx.mode !== "third";
       if (own !== this.ghost) this.setGhost(own);
@@ -90337,10 +90351,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     /* glsl */
     `
   uniform float uTime;
+  uniform float uRipT;    // the sea's chop clock (water3d.js)
+  uniform vec2 uOrigin;   // world tiles at the render origin: the sea's own coordinates
   uniform float uDay;
   uniform vec3 uSunDir;
   uniform vec3 uSunCol;
   uniform vec3 uSky;
+  uniform vec3 uSkyTop;
   uniform float uPool;
   varying vec2 vUv;
   varying float vSlope;
@@ -90351,10 +90368,30 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   #include <fog_pars_fragment>
 
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
   float noise(vec2 p) {
     vec2 i = floor(p), f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
     return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
+  }
+  ${SWELL_GLSL}
+  // the sea's chop, cell for cell as water3d.js has it (so where this water
+  // fades in over the sea, the two are the same planes)
+  vec2 facets(vec2 p, float t) {
+    vec2 i = floor(p), f = fract(p);
+    float d1 = 8.0, d2 = 8.0;
+    vec2 c1 = i, c2 = i;
+    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+      vec2 g = vec2(float(x), float(y));
+      vec2 o = hash2(i + g);
+      o = 0.5 + 0.38 * sin(t * 0.6 + 6.2831 * o);
+      float d = length(g + o - f);
+      if (d < d1) { d2 = d1; c2 = c1; d1 = d; c1 = i + g; } else if (d < d2) { d2 = d; c2 = i + g; }
+    }
+    vec2 h1 = hash2(c1 + 13.7), h2 = hash2(c2 + 13.7);
+    float a1 = h1.x * 6.2831 + t * (h1.y - 0.5) * 1.6, a2 = h2.x * 6.2831 + t * (h2.y - 0.5) * 1.6;
+    vec2 n1 = vec2(cos(a1), sin(a1)) * (0.3 + 0.7 * h1.y), n2 = vec2(cos(a2), sin(a2)) * (0.3 + 0.7 * h2.y);
+    return mix(n2, n1, 0.5 + 0.5 * smoothstep(0.0, 0.16, d2 - d1));
   }
 
   void main() {
@@ -90381,18 +90418,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     float s1 = noise(vec2(across * 9.0, along * 0.22 - run * 0.22));
     float s2 = noise(vec2(across * 23.0 + 5.0, along * 0.6 - run * 0.55));
     float streak = s1 * 0.65 + s2 * 0.35;
-    // the surface: a normal tilted by the streaks
-    float e = 0.02;
-    float sx = noise(vec2((across + e) * 9.0, along * 0.22 - run * 0.22)) - s1;
-    vec3 n = normalize(vec3(-sx * 3.0, 1.0, -(s2 - 0.5) * 0.4));
-    vec3 v = normalize(vView);
-    float light = mix(0.3, 1.0, uDay);
     // the water's colour: the sea's own blue while the current runs level
     // (into the gates and through the gorges), turning to turquoise rapids
     // as it climbs the mountain (and races down the far side)
     float up = smoothstep(2.0, 30.0, vWorld.y);
-    vec3 deep = mix(vec3(0.008, 0.09, 0.27), vec3(0.02, 0.26, 0.44), up), bright = mix(vec3(0.02, 0.24, 0.47), vec3(0.12, 0.62, 0.72), up);
-    vec3 col = mix(deep, bright, streak * mix(0.45, 0.7, up) + 0.15);
+    // the surface: the sea's chop (its own planes, in its own coordinates),
+    // tilted by the streaks \u2014 the planes fewer as the rush takes over
+    vec2 pw = vWorld.xz + uOrigin;
+    vec2 fc = (facets(pw * 0.85, uRipT * 0.5) * 0.5 + facets(pw * 2.1 + 7.3, uRipT * 0.75) * 0.24) * 0.62 * mix(1.0, 0.4, up);
+    float e = 0.02;
+    float sx = noise(vec2((across + e) * 9.0, along * 0.22 - run * 0.22)) - s1;
+    vec3 n = normalize(vec3(-sx * 3.0 * mix(0.4, 1.0, fade) - fc.x, 1.0, -(s2 - 0.5) * 0.4 - fc.y));
+    vec3 v = normalize(vView);
+    float light = mix(0.3, 1.0, uDay);
+    vec3 deep = mix(vec3(0.006, 0.05, 0.27), vec3(0.02, 0.26, 0.44), up), bright = mix(vec3(0.01, 0.13, 0.46), vec3(0.12, 0.62, 0.72), up);
+    vec3 col = mix(deep, bright, streak * mix(0.45, 0.7, up) * mix(0.5, 1.0, fade) + 0.15);
+    // (and the sea's wide drifting patches, where it runs level)
+    float big = sFbm(pw * 0.0045 + vec2(uTime * 0.004, -uTime * 0.003)) * 0.65 + sFbm(pw * 0.017 + 41.0 - uTime * 0.006) * 0.35;
+    col *= mix(1.0, mix(0.62, 1.18, smoothstep(0.3, 0.72, big)), 1.0 - up);
     // foam: against the walls, in the steep runs, and in the churning pool
     float wall = 1.0 - smoothstep(0.0, 0.16, min(across, 1.0 - across));
     float steep = smoothstep(0.08, 0.3, abs(vSlope));
@@ -90402,11 +90445,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     foam *= fade * fade * mix(0.45, 1.0, up);
     col = mix(col, vec3(0.93, 0.98, 1.0), foam * 0.85);
     col *= light * (0.8 + 0.2 * max(dot(n, uSunDir), 0.0));
-    // sky at a glance, and the sun glinting off the rush
+    // sky at a glance \u2014 a facet at a time, as on the sea \u2014 and the sun glinting off the rush
     float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
-    col = mix(col, uSky * (0.45 + 0.55 * uDay), fres * 0.6);
+    float sheen = mix(fres, smoothstep(0.07, 0.16, fres) * 0.42 + fres * 0.4, 1.0 - up * 0.6);
+    vec3 skyF = mix(uSky, uSkyTop * 1.15, 0.45);
+    col = mix(col, skyF * (0.45 + 0.55 * uDay), sheen * mix(0.85, 0.6, up));
     vec3 h = normalize(uSunDir + v);
-    col += uSunCol * pow(max(dot(n, h), 0.0), 120.0) * 1.4 * smoothstep(-0.05, 0.1, uSunDir.y);
+    float nh = max(dot(n, h), 0.0), sunUp = smoothstep(-0.05, 0.1, uSunDir.y);
+    col += uSunCol * pow(nh, 120.0) * 1.4 * sunUp;
+    col += uSunCol * smoothstep(0.988, 0.996, nh) * step(0.62, hash(floor(pw * 4.0))) * 1.6 * sunUp;
     // (at sea its edges melt into the water either side, as the middle does ahead)
     float edge = mix(smoothstep(0.0, 0.32, min(across, 1.0 - across)), 1.0, fade * fade);
     gl_FragColor = vec4(col, smoothstep(0.1, 1.0, fade) * edge);
@@ -90425,11 +90472,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         UniformsLib.fog,
         {
           uTime: { value: 0 },
+          uRipT: { value: 0 },
+          uOrigin: { value: new Vector2() },
           uDay: { value: 1 },
           uPool: { value: 0 },
           uSunDir: { value: new Vector3(0.3, 0.8, 0.2) },
           uSunCol: { value: new Color(1, 0.95, 0.85) },
-          uSky: { value: new Color(0.6, 0.8, 1) }
+          uSky: { value: new Color(0.6, 0.8, 1) },
+          uSkyTop: { value: new Color(0.2, 0.45, 0.85) }
         }
       ]);
       const mat = (pool) => {
@@ -90529,7 +90579,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         u.uSunDir.value.copy(wu.uSunDir.value);
         u.uSunCol.value.copy(wu.uSunCol.value);
         u.uSky.value.copy(wu.uSky.value);
+        u.uSkyTop.value.copy(wu.uSkyTop.value);
+        u.uRipT.value = wu.uRipT.value;
       }
+      u.uOrigin.value.set(ox, oy);
     }
   };
   var water = null;
