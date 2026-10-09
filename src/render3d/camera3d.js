@@ -8,7 +8,8 @@
 import * as THREE from 'three';
 import { interiorRect, heightsOf } from '../world/interiors.js';
 import { helmPoint } from './ships3d.js';
-import { shipBob, shipLift, shipDims, rowLean, deckLift } from '../world/hull.js';
+import { shipBob, shipLift, shipDims, rowLean, deckLift, deckSwing } from '../world/hull.js';
+const _dsw = [0, 0];
 import { waterLevel } from './height.js';
 import { swellAt } from './swell.js';
 
@@ -309,6 +310,8 @@ export class CameraRig {
     let gh = p.flying && p.alt != null ? p.alt
       : p.deck ? deckLift(p.deck, time) + (p.z || 0)
         : (p.belowDeck ? p.groundAt(game, p.x, p.y) : p.roofed && p.lastG != null ? p.lastG : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
+    // (aboard, you're drawn swung across with her roll and pitch: the eye goes too — hull.js deckSwing)
+    if (p.deck && !sailing) { deckSwing(p.deck, time, _dsw); gx = _dsw[0]; gz = _dsw[1]; }
     let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
     if (!sailing) this.seaPitch = 0;
     if (sailing) {

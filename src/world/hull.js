@@ -1104,6 +1104,24 @@ export function shipPoint(ship, time, u, v, h, out = [0, 0, 0]) {
 }
 
 /**
+ * How far a deck point (from deckAt) is swung sideways, just now, from where
+ * it'd be on her lying flat: her roll and pitch carry everything on her
+ * across as well as up and down (a chair five metres up her side moves half
+ * a metre in a few degrees of roll). Into `out`: [x, z] (world tiles, x east,
+ * z = world y). Those aboard are drawn there, and the camera rides with them.
+ */
+export function deckSwing(dk, time, out = [0, 0]) {
+  out[0] = 0; out[1] = 0;
+  const s = dk?.ship;
+  if (!s?.def || dk.plank) return out;
+  const u = dk.u ?? (dk.t - 0.5) * s.def.length, v = dk.v || 0, c = Math.cos(s.heading), sn = Math.sin(s.heading);
+  const q = shipPoint(s, time, u, v, dk.h || 0, _swq);
+  out[0] = q[0] - (u * c - v * sn); out[1] = q[2] - (u * sn + v * c);
+  return out;
+}
+const _swq = [0, 0, 0];
+
+/**
  * How high (m above the sea) a deck point (from deckAt) is just now, as it
  * rides: on a ship's deck, with her (shipLift); on a gangway laid between two
  * ships, on its planks (see game/gangway.js).

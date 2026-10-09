@@ -18,7 +18,8 @@ import { BubbleDome } from './bubble3d.js';
 import { CameraRig } from './camera3d.js';
 import { SpriteForest, ActorSprite, propSprite, projectileMesh, tintSprites } from './billboards.js';
 import { ShipView } from './ships3d.js';
-import { deckLift } from '../world/hull.js';
+import { deckLift, deckSwing } from '../world/hull.js';
+const _swing = [0, 0];
 import { Ship } from '../game/ship.js';
 import { buildBuilding, setNightWindows } from './buildings3d.js';
 import { FarBuildings } from './farbuildings.js';
@@ -1128,8 +1129,13 @@ export class Renderer3D {
         this.actorViews.set(a, v);
         this.attach(v.root, this.ents);
       }
-      let gh;
-      if (a.deck) gh = deckLift(a.deck, env.time);
+      let gh, sx = 0, sz = 0;
+      if (a.deck) {
+        gh = deckLift(a.deck, env.time);
+        // (and swung with her as she rolls and pitches, as the planks, the chair
+        // or the bench under you are drawn — not just raised and lowered)
+        deckSwing(a.deck, env.time, _swing); sx = _swing[0]; sz = _swing[1];
+      }
       else if (a.flying) gh = Math.max(0, this.ground(a.x, a.y));
       else if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
       else if (a.inWater) {
@@ -1146,7 +1152,7 @@ export class Renderer3D {
       else if (a.wading) gh = this.ground(a.x, a.y) - a.wading; // (feet on the bottom of the shallows)
       else if (a.roofed && a.lastG != null) gh = a.lastG; // (up on a roof: see actor.js groundAt)
       else gh = this.ground(a.x, a.y);
-      v.root.position.set(dx, gh + (a.z || 0), dy);
+      v.root.position.set(dx + sx, gh + (a.z || 0), dy + sz);
       // (off the screen and not right beside you: posed every sixth frame only —
       // the bones, the cloth, the face — it's out of sight, so nothing's lost)
       const sc = a.look?.scale || 1;
