@@ -335,6 +335,62 @@ const skull = () => model('skull', (k) => {
   k.add(box(0.9, 0.05, 0.05), { at: [0, 0.24, 0.62], color: D });
 });
 
+// a wooden flower box under a front window: soil, leaves and blooms
+const planter = () => model('planter', (k) => {
+  k.add(box(1.0, 0.36, 0.34), { color: WOOD, tint: 1, outline: 0.015 });
+  for (const x of [-0.46, 0.46]) k.add(box(0.06, 0.4, 0.38), { at: [x, 0, 0], color: DARK_WOOD });
+  k.add(box(0.92, 0.04, 0.28), { at: [0, 0.34, 0], color: '#4e342e' });
+  const R = rng(17);
+  for (let i = 0; i < 9; i++) {
+    const x = -0.4 + i * 0.1 + (R() - 0.5) * 0.04, z = (R() - 0.5) * 0.16;
+    k.add(new THREE.IcosahedronGeometry(0.1 + R() * 0.04, 0), { at: [x, 0.42 + R() * 0.06, z], flat: true, color: R() < 0.5 ? '#43a047' : '#2e7d32' });
+    if (i % 2 === 0) k.add(new THREE.IcosahedronGeometry(0.055, 0), { at: [x, 0.54 + R() * 0.06, z + 0.04], color: ['#e84a7f', '#ffd54f', '#ffffff', '#ff7043', '#ba68c8'][Math.floor(R() * 5)] });
+  }
+});
+
+// a heap of grain sacks, tied at the neck
+const sacks = () => model('sacks', (k) => {
+  const S = '#c8b48a', T = '#8d6e4a';
+  const one = (x, y, z, ry, lie) => {
+    k.save(); k.translate(x, y, z); k.rotateY(ry); if (lie) k.rotateZ(Math.PI / 2 - 0.15);
+    k.add(lathe([[0.2, 0], [0.26, 0.08], [0.27, 0.3], [0.22, 0.48], [0.1, 0.56], [0.06, 0.62], [0.09, 0.68]], 9), { color: S, tint: 1, outline: 0.015 });
+    k.add(torus(0.07, 0.02, 4, 8), { at: [0, 0.58, 0], rot: [Math.PI / 2, 0, 0], color: T });
+    k.restore();
+  };
+  one(-0.22, 0, 0.05, 0.3, false); one(0.25, 0, -0.05, -0.5, false); one(0.0, 0.3, 0.32, 1.2, true);
+});
+
+// a rack of weapons outside an armoury: spears and swords in a frame
+const weaponRack = () => model('weaponrack', (k) => {
+  for (const x of [-0.6, 0.6]) k.add(box(0.08, 1.3, 0.08), { at: [x, 0, 0], color: DARK_WOOD, outline: 0.012 });
+  for (const y of [0.2, 1.05]) k.add(box(1.28, 0.07, 0.12), { at: [0, y, 0], color: WOOD, outline: 0.012 });
+  const steel = '#b0bec5';
+  for (let i = 0; i < 5; i++) {
+    const x = -0.44 + i * 0.22, spear = i % 2 === 0;
+    k.save(); k.translate(x, 0.12, 0.03); k.rotateZ((i - 2) * 0.03);
+    if (spear) {
+      k.add(cyl(0.02, 0.02, 1.55, 5), { color: '#6d4c41' });
+      k.add(cone(0.045, 0.2, 4), { at: [0, 1.55, 0], color: steel, outline: 0.01 });
+    } else {
+      k.add(box(0.05, 0.9, 0.012), { at: [0, 0.32, 0], color: steel, outline: 0.008 });
+      k.add(box(0.16, 0.03, 0.04), { at: [0, 1.22, 0], color: '#5d4037' });
+      k.add(cyl(0.022, 0.022, 0.22, 6), { at: [0, 1.24, 0], color: '#3e2723' });
+    }
+    k.restore();
+  }
+});
+
+// a sandwich-board sign at a tavern's or a shop's door
+const signboard = () => model('signboard', (k) => {
+  for (const s of [-1, 1]) {
+    k.save(); k.translate(0, 0, s * 0.02); k.rotateX(s * 0.2);
+    k.add(box(0.6, 0.82, 0.04), { at: [0, 0.05, s * 0.06], color: WOOD, outline: 0.012 });
+    k.add(box(0.5, 0.58, 0.012), { at: [0, 0.17, s * 0.085], color: '#2f3640' });
+    for (const y of [0.55, 0.43, 0.31]) k.add(box(0.36 - (y < 0.4 ? 0.1 : 0), 0.03, 0.006), { at: [0, y, s * 0.093], color: '#f5f0e1' });
+    k.restore();
+  }
+});
+
 const tint = (o, pal) => pal[(o.v || 0) % pal.length];
 
 // ------------------------------------------------------------------ builders
@@ -360,6 +416,10 @@ reg('dummy', (o, ctx) => simple(o, ctx, 'dummy', dummy(), { yaw: jitterYaw(o, 0.
 reg('well', (o, ctx) => simple(o, ctx, 'well', well(), { yaw: 0 }));
 reg('lamp', (o, ctx) => simple(o, ctx, 'lamp', lamp(), { yaw: 0 }));
 reg('lantern', (o, ctx) => simple(o, ctx, 'lantern', lantern(), { yaw: hash(o.x, o.y) < 0.5 ? 0 : Math.PI }));
+reg('planter', (o, ctx) => simple(o, ctx, 'planter', planter(), { yaw: o.yaw ?? 0 }));
+reg('sacks', (o, ctx) => simple(o, ctx, 'sacks', sacks(), { randomYaw: true }));
+reg('weaponrack', (o, ctx) => simple(o, ctx, 'weaponrack', weaponRack(), { yaw: o.yaw ?? 0 }));
+reg('signboard', (o, ctx) => simple(o, ctx, 'signboard', signboard(), { yaw: (o.yaw ?? 0) + jitterYaw(o, 0.4) }));
 reg('skull', (o, ctx) => simple(o, ctx, 'skull', skull(), { yaw: jitterYaw(o, 0.6) }));
 
 // market stalls turn to face the town plaza (as placed: see towngen; its collider turns with it)

@@ -490,6 +490,25 @@ function layTown(world, town, rng, noise, dry) {
       placeObject(world, { kind: rng.pick(propKinds), x: p.x, y: p.y, block: true, v: rng.int(0, 3) });
     }
   }
+  // by the door, what the place is: a weapon rack at an armoury, a
+  // sandwich board at a tavern, an inn or an eatery, grain sacks at a shop or
+  // a market, a flower box under a house's front window (never on the doorstep)
+  for (const b of buildings) {
+    const f0 = bw(b, 0, 0), f1 = bw(b, 0, 1);
+    const yaw = Math.atan2(world.dx(f0.x, f1.x), f1.y - f0.y);
+    const side = (b.doorX || 0) > 0 ? -1 : 1;
+    const put = (kind, x, z, r, door) => {
+      const p = bw(b, x, z);
+      if (nearDoor(p.x, p.y, door) || !clearAt(p.x, p.y, r)) return false;
+      placeObject(world, { kind, x: p.x, y: p.y, block: true, yaw });
+      return true;
+    };
+    const role = b.role || '';
+    if (role === 'weapons' || role === 'dojo') put('weaponrack', side * Math.min(b.fw / 2 - 0.9, (b.doorX || 0) * side + 1.9), 0.45, 0.7, 1.4);
+    else if (role === 'bar' || role === 'tavern' || role === 'inn' || role === 'restaurant' || role === 'cafe') put('signboard', (b.doorX || 0) + side * 1.4, 1.1, 0.5, 1.1);
+    else if (role === 'shop' || role === 'market') put('sacks', side * (b.fw / 2 - 0.7), 0.6, 0.65, 1.4);
+    else if (role === 'house' && b.fw >= 4 && rng.chance(0.45)) put('planter', (b.doorX || 0) + side * 1.5, 0.35, 0.5, 1.2);
+  }
   if (!terraced) {
     // village gardens: a vegetable plot or a fruit tree behind the house, a fence along the front
     for (const b of buildings) {
