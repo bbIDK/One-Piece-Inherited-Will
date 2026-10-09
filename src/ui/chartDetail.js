@@ -352,7 +352,7 @@ function buildingsOf(world, c) {
 }
 
 /** The buildings, sharp at any zoom: roofs in their colours, a ridge line along the long side, inked outlines (all of a kind in one path). */
-function drawBuildings(g, c, v, a) {
+export function drawBuildings(g, c, v, a) {
   if (!c.buildings?.length || a <= 0) return;
   const { dpr, zoom } = v;
   const shadow = new Path2D(), outline = new Path2D(), fills = new Map(), ridges = new Map();

@@ -46,10 +46,10 @@ export function installMap(game) {
   rose.innerHTML = ROSE_SVG;
   // (the globe or the flat chart: M opens the globe; the button flips between them)
   let globeOn = true;
-  const flip = h('button.btn.small.wm-flip', { on: { pointerdown: (e) => e.stopPropagation(), click: () => setGlobe(!globeOn) } }, 'Flat chart');
+  const flip = h('button.btn.small.wm-flip', { on: { pointerdown: (e) => e.stopPropagation(), click: () => setGlobe(!globeOn, true) } }, 'Flat chart');
   const wrap = h('div', { style: { position: 'absolute', inset: '0', pointerEvents: 'auto', cursor: 'grab', touchAction: 'none' } }, layer, scaleBar, rose, title, help, close, flip);
   const globe = new GlobeView(wrap);
-  window.__globeDone = () => !!globe.paint?.done; // (for the test harness)
+  window.__globe = globe; // (for the test harness)
   const globeHere = () => globeOn && game.world === game.surface;
   const setGlobe = (on, keepView = false) => {
     globeOn = on;
@@ -57,10 +57,18 @@ export function installMap(game) {
     globe.show(g);
     flip.textContent = on ? 'Flat chart' : 'Globe';
     flip.classList.toggle('hidden', game.world !== game.surface);
-    for (const el of [layer, scaleBar, rose]) el.style.visibility = g ? 'hidden' : '';
+    rose.style.visibility = g ? 'hidden' : '';
     title.textContent = g ? 'The Blue Planet' : 'Chart of the Blue Planet';
-    help.textContent = g ? 'Drag to turn the globe · wheel to come closer · M or Esc to close' : 'Drag to pan · wheel to zoom · M or Esc to close';
-    if (g && !keepView) { globe.prepare(game.surface); globe.face(game.player.x, game.player.y); }
+    help.textContent = g ? 'Drag to turn the globe · wheel or double-click to come closer · M or Esc to close' : 'Drag to pan · wheel to zoom · M or Esc to close';
+    layer.dataset.key = '';
+    if (g) {
+      globe.buildBase(game, game.renderer);
+      // (opening on the seas round you; flipped from the chart, on what the chart was showing)
+      if (keepView) { globe.face(cam.x, cam.y); globe.zoomTo(cam.zoom); } else { globe.face(game.player.x, game.player.y); globe.zoomTo(0.02); }
+    } else if (keepView) {
+      const c = globe.centre();
+      cam.x = c.x; cam.y = c.y; cam.zoom = Math.max(MIN_ZOOM(), Math.min(MAX_ZOOM, globe.zoomPx()));
+    }
   };
   const detail = game.chartDetail = new ChartDetail();
   wrap.classList.add('hidden');
@@ -99,9 +107,10 @@ export function installMap(game) {
     if (pinch && ptrs.size >= 2) {
       const [a, b] = [...ptrs.values()];
       const d = Math.max(20, Math.hypot(a.x - b.x, a.y - b.y));
-      zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch.d);
+      if (globeHere()) globe.zoom(d / pinch.d); else zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch.d);
       pinch.d = d;
     } else if (drag && globeHere()) {
+      globe.dragging = true;
       globe.drag(e.clientX - drag.lx, e.clientY - drag.ly);
       drag.lx = e.clientX; drag.ly = e.clientY;
     } else if (drag) {
@@ -123,25 +132,17 @@ export function installMap(game) {
     press = null;
     ptrs.delete(e.pointerId);
     if (ptrs.size < 2) pinch = null;
-    if (!ptrs.size) { drag = null; wrap.style.cursor = 'grab'; } else if (ptrs.size === 1 && !drag) { const [a] = [...ptrs.values()]; startDrag(a.x, a.y); }
+    if (!ptrs.size) { drag = null; wrap.style.cursor = 'grab'; globe.dragging = false; } else if (ptrs.size === 1 && !drag) { const [a] = [...ptrs.values()]; startDrag(a.x, a.y); }
   };
   wrap.addEventListener('pointerup', up);
   wrap.addEventListener('pointercancel', up);
   wrap.addEventListener('wheel', (e) => {
     e.preventDefault();
-    if (globeHere()) {
-      // (in past the globe's closest: down onto the detailed chart, where you were looking)
-      if (!globe.zoom(e.deltaY > 0 ? 0.88 : 1.14)) {
-        const c = globe.centre();
-        cam.x = c.x; cam.y = c.y; cam.zoom = 0.45;
-        setGlobe(false);
-      }
-      return;
-    }
-    // (and out past the chart's widest: back out to the globe)
-    if (e.deltaY > 0 && game.world === game.surface && cam.zoom <= MIN_ZOOM() * 1.001) { setGlobe(true, true); globe.prepare(game.surface); globe.face(cam.x, cam.y); globe.dist = 4.2; return; }
+    if (globeHere()) { globe.zoom(e.deltaY > 0 ? 0.8 : 1.25); return; }
     zoomAt(e.clientX, e.clientY, e.deltaY > 0 ? 0.85 : 1.18);
   }, { passive: false });
+
+  wrap.addEventListener('dblclick', (e) => { if (globeHere()) { e.preventDefault(); globe.zoom(2.5); } });
 
   game.openMap = () => {
     if (ui.mapOpen) return;
@@ -168,7 +169,7 @@ export function installMap(game) {
     }
     help.textContent = game.input.touch?.on ? 'Drag to pan · pinch to zoom · tap the cross to close' : 'Drag to pan · wheel to zoom · M or Esc to close';
     wrap.classList.remove('hidden');
-    globe.dist = 4.2; setGlobe(true);
+    setGlobe(true);
     layer.classList.remove('hidden');
     ui.root.classList.add('map-open');
     // the chart gets the whole screen
@@ -192,9 +193,21 @@ export function installMap(game) {
   game.renderMap = () => {
     const r = game.renderer;
     if (globeHere()) {
-      globe.render(game);
+      const now = performance.now(), dt = Math.min(0.1, (now - (globe.lastT || now)) / 1000);
+      globe.lastT = now;
+      globe.update(dt);
+      const c = game.state.char, w = game.surface, discovered = new Set(c.discovered || []);
+      globe.layIslands(game, detail, (isl) => game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland || seenIsland(w, isl));
+      globe.render();
       r.ctx.setTransform(1, 0, 0, 1, 0, 0);
       r.ctx.clearRect(0, 0, r.canvas.width, r.canvas.height);
+      // (the chart's own labels and markers, stood on the globe; laid out again as it turns)
+      const z = globe.zoomPx();
+      drawLabels(game, r, cam, layer, {
+        z, toS: (x, y) => globe.project(x, y) || [-1e5, -1e5], north: (x, y) => globe.northAt(x, y),
+        key: `g|${globe.yaw.toFixed(4)}|${globe.tilt.toFixed(4)}|${globe.dist.toFixed(5)}|${Math.floor(now / 600)}`,
+      });
+      drawScale(scaleBar, z);
       return;
     }
     const saved = { ...r.cam };
@@ -226,17 +239,22 @@ export function installMap(game) {
   };
 }
 
-function drawLabels(game, r, cam, layer) {
+/**
+ * The chart's labels and markers. `proj` (the globe): its own projection of
+ * chart points onto the screen, its zoom (css px to the metre where you look)
+ * and which way north is — the same labels, stood on the sphere.
+ */
+function drawLabels(game, r, cam, layer, proj = null) {
   const w = game.world;
   const zone = w !== game.surface;
   const c = game.state.char;
-  const z = cam.zoom;
+  const z = proj ? proj.z : cam.zoom;
   // (the chart doesn't move while it's open unless you move it: the labels are laid out again only then)
-  const key = `${w.id}|${cam.x.toFixed(2)}|${cam.y.toFixed(2)}|${z.toFixed(4)}|${r.cw}x${r.ch}|${Math.floor(performance.now() / 600)}`;
+  const key = proj ? proj.key : `${w.id}|${cam.x.toFixed(2)}|${cam.y.toFixed(2)}|${z.toFixed(4)}|${r.cw}x${r.ch}|${Math.floor(performance.now() / 600)}`;
   if (layer.dataset.key === key) return;
   layer.dataset.key = key;
   clear(layer);
-  const toS = (x, y) => {
+  const toS = proj ? proj.toS : (x, y) => {
     let dx = x - cam.x;
     if (!zone) dx -= W * Math.round(dx / W);
     return [dx * z + r.cw / 2, (y - cam.y) * z + r.ch / 2];
@@ -354,7 +372,7 @@ function drawLabels(game, r, cam, layer) {
   const [mx, my] = toS(p.x, p.y);
   const yaw = game.view3d?.rig?.yaw ?? p.facing ?? 0;
   const me = h('div.wm-me', { style: { left: mx + 'px', top: my + 'px' } }, h('i'));
-  me.firstChild.style.transform = `rotate(${(yaw + Math.PI / 2).toFixed(3)}rad)`;
+  me.firstChild.style.transform = `rotate(${(yaw + Math.PI / 2 + (proj?.north?.(p.x, p.y) || 0)).toFixed(3)}rad)`;
   layer.appendChild(me);
 }
 

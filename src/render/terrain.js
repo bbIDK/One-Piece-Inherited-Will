@@ -121,6 +121,7 @@ export class TerrainRenderer {
     gl.uniform1f(u.uDay, view.daylight);
     gl.uniform1f(u.uMapMode, view.mapMode ? 1 : 0);
     gl.uniform1f(u.uSurfaceMap, view.revealAll ? 1 : 0);
+    if (u.uGlobe) gl.uniform1f(u.uGlobe, view.globeTint ? 1 : 0);
     gl.uniform1f(u.uStorm, view.storm || 0);
     gl.uniform2f(u.uWind, view.windX || 0.7, view.windY || 0.3);
     gl.uniform1i(u.uZone, view.zone || 0);

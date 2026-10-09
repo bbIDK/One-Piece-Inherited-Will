@@ -28,6 +28,7 @@ uniform float uStorm;
 uniform vec2 uWind;
 uniform int uZone;
 uniform float uSurfaceMap;
+uniform float uGlobe; // the chart as the globe (M) takes it: its seas coloured by region
 uniform vec4 uLights[24];
 uniform vec3 uLightCol[24];
 uniform int uNumLights;
@@ -329,6 +330,21 @@ vec4 mapColor(vec2 wp) {
   }
   // unexplored parts fade to blank parchment
   col = mix(parch * vec3(0.98, 0.96, 0.92), col, smoothstep(0.05, 0.6, fog) * 0.85 + 0.15 * uSurfaceMap);
+  // (on the globe: the seas told apart by colour as on the world map, fog or not — the Blues blue,
+  // the Calm Belts a still grey-green, hatched, Paradise gold, the New World amber; the Red Line red)
+  if (uGlobe > 0.5) {
+    float ady = abs(wp.y - EQY);
+    vec3 tint = ady < GLH ? (mod(wp.x, WW) > RMX ? vec3(0.97, 0.86, 0.6) : vec3(0.95, 0.74, 0.56))
+      : ady < GLH + CBW ? vec3(0.7, 0.76, 0.72)
+      : (wp.y < POL || wp.y > HH - POL) ? vec3(0.86, 0.9, 0.94) : vec3(0.66, 0.8, 0.94);
+    if (reg == 5) tint = sd > 0.0 ? vec3(0.86, 0.48, 0.4) : vec3(0.66, 0.8, 0.94);
+    float sea = reg == 5 ? 1.0 : 1.0 - smoothstep(-0.5, 0.5, sd) * smoothstep(0.05, 0.6, fog);
+    col *= mix(vec3(1.0), tint, sea);
+    if (reg == 3 && sd < 0.0) {
+      float hp = max(4.0, px * 9.0);
+      col *= 1.0 - 0.1 * step(0.6, fract((wp.x + wp.y) / hp));
+    }
+  }
   // latitude/longitude grid
   float gx = abs(fract(wp.x / 256.0 + 0.5) - 0.5) * 256.0;
   float gy = abs(fract(wp.y / 256.0 + 0.5) - 0.5) * 256.0;

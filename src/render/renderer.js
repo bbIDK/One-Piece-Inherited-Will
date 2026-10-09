@@ -61,7 +61,7 @@ export class Renderer {
       camX: c.x - c.shakeX / c.zoom, camY: c.y - c.shakeY / c.zoom,
       zoom: c.zoom * this.dpr * this.terrainScale,
       time: env.time, ambient: env.ambient, daylight: env.daylight,
-      mapMode: env.mapMode, revealAll: env.revealAll, storm: env.storm, windX: env.windX, windY: env.windY,
+      mapMode: env.mapMode, globeTint: env.globeTint, revealAll: env.revealAll, storm: env.storm, windX: env.windX, windY: env.windY,
       zone: world.zone,
     });
   }
