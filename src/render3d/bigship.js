@@ -26,7 +26,9 @@ function rake(k, d) {
 }
 
 /** Figureheads that ARE the bow (the Going Merry's ram, the Sunny's lion): no bowsprit through them, no rigging to them. */
-export const NO_SPRIT = new Set(['ram', 'lion', 'lion_gold']);
+// (a ship with a figurehead carries no bowsprit: the head is the bow, and a
+// spar run out over it only spears it; no jib or bobstay with it either)
+export const noSprit = (fh) => !!fh && fh !== 'none';
 
 const TAU = Math.PI * 2;
 
@@ -834,7 +836,7 @@ export function bigMastPlan(d) {
 
 /** The tip of the bowsprit: steeved up from the stem head. */
 export function bigBowTip(d, def) {
-  if (def && NO_SPRIT.has(def.figurehead)) {
+  if (def && noSprit(def.figurehead)) {
     // (no bowsprit: the forestays come down to the foredeck, behind the head)
     const x0 = d.L / 2 - 2.2, y0 = (d.bowY ?? d.yf) + 0.2;
     return { x0, y0, a: 0, len: 0, none: true, tip: [x0, y0 + 0.9] };
@@ -869,7 +871,7 @@ export function bigSailPlan(def, d, mast) {
   }
   sails.push({ type: 'square', x: mast.x, w: wC * 0.82, y0: mast.h1 + 0.5, y1: mast.h2 - 0.35, emblem: mast.fore && def.sail === 'marine', yardR: yr * 0.85 });
   sails.push({ type: 'square', x: mast.x, w: wC * 0.62, y0: mast.h2 + 0.35, y1: mast.h - 0.7, yardR: yr * 0.7 });
-  if (mast.fore && !NO_SPRIT.has(def.figurehead)) {
+  if (mast.fore && !noSprit(def.figurehead)) {
     const b = bigBowTip(d, def);
     sails.push({ type: 'jib', x: mast.x, y1: mast.h2 - 0.4, head: [mast.x + 0.4, mast.h2 - 0.4], tipX: b.tip[0], tipY: b.tip[1] - 0.2, clew: [xAt(d, 0.9), (d.bowY ?? d.yf) + (d.fore ? 2.6 : 1.9)] });
   }

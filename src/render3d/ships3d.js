@@ -17,7 +17,7 @@ import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat, U } from './props/mats.js';
 import { swellAt } from './swell.js';
 import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock, shipBob, smallProfile, wheelSpec } from '../world/hull.js';
-import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging, bigPalette, wheelParts, NO_SPRIT } from './bigship.js';
+import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging, bigPalette, wheelParts, noSprit } from './bigship.js';
 
 // a coated ship's bubble (see the coating, below): a soap film, its colours
 // running with the angle you see it at, bright at its rim — from either side
@@ -312,7 +312,7 @@ export function hullGeometry(def) {
   if (!d.open) {
     k.add(box(0.34, d.deckY + d.D * 0.8, 0.08), { at: [-d.L / 2 - 0.1, -d.D * 0.8, 0], color: shade(P.hull, -0.35), outline: 0.015 });
     const ft = topAt(d, 0.98);
-    if (def.figurehead !== 'ram' && def.figurehead !== 'lion') {
+    if (!noSprit(def.figurehead)) {
       k.save(); k.translate(d.L / 2 - 0.35, ft - 0.1, 0); k.rotateZ(-Math.PI / 2 + 0.33);
       k.add(cyl(0.05, 0.09, d.L * 0.3, 6), { color: P.wood, outline: 0.015 });
       k.restore();
@@ -424,7 +424,7 @@ function mastPlan(def, d) {
 /** The tip of the bowsprit (or the stem head for ships without one). */
 function bowTip(def, d) {
   const ft = topAt(d, 0.98);
-  if (def.figurehead === 'ram' || def.figurehead === 'lion' || d.open) return [d.L / 2 - 0.05, topAt(d, 1) + 0.15];
+  if (noSprit(def.figurehead) || d.open) return [d.L / 2 - 0.05, topAt(d, 1) + 0.15];
   return [d.L / 2 - 0.35 + 0.946 * 0.3 * d.L, ft - 0.1 + 0.324 * 0.3 * d.L];
 }
 
@@ -446,7 +446,8 @@ function sailPlan(def, d, mast) {
     const y1 = top * 0.86;
     sails.push({ type: 'square', x: mast.x, w: d.open ? d.B * 1.5 : w1, y1, y0: Math.max(mast.base + (d.open ? 1.0 : 1.4), y1 - top * 0.58), emblem: mast.main });
   }
-  if (mast.m === 0 && d.masts > 1 && !d.open) { const [tx, ty] = bowTip(def, d); sails.push({ type: 'jib', x: mast.x, y1: top * 0.72, tipX: tx, tipY: ty }); }
+  // (no bowsprit with a figurehead: so no jib either — the foremast carries its square sails alone)
+  if (mast.m === 0 && d.masts > 1 && !d.open && !noSprit(def.figurehead)) { const [tx, ty] = bowTip(def, d); sails.push({ type: 'jib', x: mast.x, y1: top * 0.72, tipX: tx, tipY: ty }); }
   return sails;
 }
 
@@ -482,7 +483,7 @@ function mastGeometry(def, d, plan) {
 
 /** The big ships' masts, tops and bowsprit (cached per ship type). */
 function bigRigGeometry(def, d, plan) {
-  const key = `big|${def.length}|${def.beam}|${def.masts}|${NO_SPRIT.has(def.figurehead) ? 'ns' : ''}`;
+  const key = `big|${def.length}|${def.beam}|${def.masts}|${noSprit(def.figurehead) ? 'ns' : ''}`;
   let g = rigCache.get(key);
   if (!g) { g = bigMastGeometry(def, d, plan); rigCache.set(key, g); }
   return g;
