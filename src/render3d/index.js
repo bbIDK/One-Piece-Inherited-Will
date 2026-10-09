@@ -7,6 +7,7 @@
 import { prof } from '../core/prof.js';
 import * as THREE from 'three';
 import { FOG } from './fog.js'; // the atmospheric fog shader chunks (before any material compiles)
+import './curvature.js'; // (the planet's curve, bent into every vertex shader: before anything compiles)
 import './lighting.js'; // cheaper point lights (also shader chunks; the sun's shadows are in sunshadow.js)
 import { Post } from './post.js';
 import { TerrainManager , CTIME } from './terrain3d.js';

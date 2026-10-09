@@ -7,6 +7,7 @@
 // glance. It also colours the other "liquids": the Skypiea cloud sea, lava,
 // acid.
 import * as THREE from 'three';
+import { curveStmt } from './curvature.js';
 import { SWELL_GLSL, swellAmp, setSwell, calmPoints } from './swell.js';
 import { regionAt, REGION } from '../world/constants.js';
 
@@ -138,6 +139,8 @@ const VERT = /* glsl */`
     vSwell = vec3(slope * A, h * step(0.001, A));
     vWorld = vec3(P.x, wp.y, P.y);
     vView = cameraPosition - wp.xyz;
+    // (the planet's curve: the sea falls away to the horizon — curvature.js)
+    ${curveStmt('wp')}
     vec4 mvPosition = viewMatrix * wp;
     gl_Position = projectionMatrix * mvPosition;
     #include <fog_vertex>
