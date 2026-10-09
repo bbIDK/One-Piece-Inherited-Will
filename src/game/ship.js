@@ -230,9 +230,9 @@ export class Ship extends Entity {
     if (ok(nx, ny)) {
       this.x = nx; this.y = ny;
     } else if (ok(nx, this.y)) {
-      this.x = nx; this.speed *= 0.7;
+      this.x = nx; this.scrape(game); this.speed *= 0.7;
     } else if (ok(this.x, ny)) {
-      this.y = ny; this.speed *= 0.7;
+      this.y = ny; this.scrape(game); this.speed *= 0.7;
     } else {
       const impact = Math.hypot(vx, vy);
       if (impact > 5 && this.owner === 'player' && !(this.crashT > 0)) {
@@ -533,6 +533,14 @@ export class Ship extends Entity {
       }
     }
     return false;
+  }
+
+  /** A glancing knock along rock or another hull: a grinding scrape (yours, and only now and then). */
+  scrape(game) {
+    const now = performance.now() / 1000;
+    if (this.owner !== 'player' || Math.abs(this.speed) < 1.5 || (this.scrapeT || 0) > now) return;
+    this.scrapeT = now + 1.2;
+    game.audio?.sfx('scrape', this, { s: Math.min(1.4, Math.abs(this.speed) / 6) });
   }
 
   damage(n, attacker, info = {}) {

@@ -5,57 +5,109 @@ import { shade } from '../core/math.js';
 const TAU = Math.PI * 2;
 
 export function drawJollyRoger(g, jr = {}, size = 1, bg = '#111') {
-  // jr: { skull, bones, accessory, color, bgColor }
+  // jr: { skull, mark, bones, accessory, color (the skull's), bg (the flag's), acc (the accessory's) }
   g.save();
   g.scale(size, size);
   const fg = jr.color || '#f5f6fa';
-  // crossbones
-  g.strokeStyle = fg; g.lineCap = 'round'; g.lineWidth = 0.12;
+  const accC = jr.acc || jr.accColor || '#c0392b';
+  const disc = (x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
+  // ---- behind the skull
+  g.strokeStyle = fg; g.fillStyle = fg; g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = 0.12;
   const bones = jr.bones || 'cross';
-  if (bones === 'cross') {
-    g.beginPath(); g.moveTo(-0.42, -0.3); g.lineTo(0.42, 0.35); g.moveTo(0.42, -0.3); g.lineTo(-0.42, 0.35); g.stroke();
-    for (const [x, y] of [[-0.42, -0.3], [0.42, 0.35], [0.42, -0.3], [-0.42, 0.35]]) {
-      g.beginPath(); g.arc(x + (x < 0 ? -0.03 : 0.03), y - 0.04, 0.06, 0, TAU); g.arc(x + (x < 0 ? 0.03 : -0.03), y + 0.04, 0.06, 0, TAU); g.fillStyle = fg; g.fill();
+  const bone = (x0, y0, x1, y1) => {
+    g.lineWidth = 0.12; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    const dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy), nx = -dy / l * 0.055, ny = dx / l * 0.055;
+    for (const [x, y, s] of [[x0, y0, -1], [x1, y1, 1]]) { disc(x + nx + dx / l * 0.02 * s, y + ny + dy / l * 0.02 * s, 0.065); disc(x - nx + dx / l * 0.02 * s, y - ny + dy / l * 0.02 * s, 0.065); }
+  };
+  if (bones === 'cross') { bone(-0.42, -0.3, 0.42, 0.35); bone(0.42, -0.3, -0.42, 0.35); }
+  else if (bones === 'bone') bone(-0.46, 0.36, 0.46, 0.36);
+  else if (bones === 'swords') {
+    for (const s of [-1, 1]) {
+      g.lineWidth = 0.07; g.beginPath(); g.moveTo(-0.45 * s, 0.4); g.lineTo(0.38 * s, -0.4); g.stroke();
+      g.beginPath(); g.moveTo(0.38 * s, -0.4); g.lineTo(0.44 * s, -0.5); g.lineTo(0.33 * s, -0.43); g.fill();
+      g.lineWidth = 0.11; g.beginPath(); g.moveTo(-0.45 * s, 0.2); g.lineTo(-0.27 * s, 0.4); g.stroke();
+      disc(-0.5 * s, 0.46, 0.05);
     }
-  } else if (bones === 'swords') {
-    g.lineWidth = 0.07;
-    g.beginPath(); g.moveTo(-0.45, 0.4); g.lineTo(0.35, -0.35); g.moveTo(0.45, 0.4); g.lineTo(-0.35, -0.35); g.stroke();
-    g.lineWidth = 0.12; g.beginPath(); g.moveTo(-0.45, 0.2); g.lineTo(-0.25, 0.4); g.moveTo(0.45, 0.2); g.lineTo(0.25, 0.4); g.stroke();
+  } else if (bones === 'flintlocks') {
+    for (const s of [-1, 1]) {
+      g.save(); g.rotate(s * 0.75);
+      g.lineWidth = 0.085; g.beginPath(); g.moveTo(-0.08 * s, 0.42); g.lineTo(-0.08 * s, -0.42); g.stroke();
+      g.beginPath(); g.moveTo(-0.11 * s, 0.3); g.quadraticCurveTo(-0.25 * s, 0.42, -0.2 * s, 0.56); g.lineTo(-0.06 * s, 0.5); g.closePath(); g.fill();
+      g.restore();
+    }
   } else if (bones === 'anchor') {
     g.lineWidth = 0.08;
     g.beginPath(); g.moveTo(0, -0.35); g.lineTo(0, 0.45); g.arc(0, 0.15, 0.35, Math.PI * 0.15, Math.PI * 0.85); g.stroke();
+    g.beginPath(); g.moveTo(-0.2, -0.3); g.lineTo(0.2, -0.3); g.stroke();
+  } else if (bones === 'crescent') {
+    g.beginPath(); g.arc(0, 0.02, 0.5, Math.PI * 0.1, Math.PI * 0.9); g.arc(0, -0.08, 0.5, Math.PI * 0.82, Math.PI * 0.18, true); g.fill();
   }
-  // skull
+  // ---- the skull
   const skull = jr.skull || 'classic';
+  const shape = { classic: [0.3, 0.27, 0.34, 0.16], grin: [0.3, 0.27, 0.34, 0.16], eyepatch: [0.3, 0.27, 0.34, 0.16], round: [0.34, 0.27, 0.42, 0.14], long: [0.25, 0.31, 0.28, 0.2], fanged: [0.31, 0.27, 0.36, 0.15] }[skull] || [0.3, 0.27, 0.34, 0.16];
+  const [rx, ry, jw, jh] = shape;
   g.fillStyle = fg;
-  g.beginPath(); g.ellipse(0, -0.05, 0.3, 0.27, 0, 0, TAU); g.fill();
-  g.fillRect(-0.17, 0.1, 0.34, 0.16);
+  g.beginPath(); g.ellipse(0, -0.05, rx, ry, 0, 0, TAU); g.fill();
+  g.beginPath(); g.moveTo(-jw / 2, 0.1); g.lineTo(jw / 2, 0.1); g.lineTo(jw / 2 * 0.9, 0.1 + jh); g.quadraticCurveTo(0, 0.1 + jh * 1.18, -jw / 2 * 0.9, 0.1 + jh); g.closePath(); g.fill();
+  if (skull === 'fanged') { for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 0.06, 0.24); g.lineTo(s * 0.13, 0.24); g.lineTo(s * 0.095, 0.36); g.fill(); } }
   g.fillStyle = bg;
-  const eye = skull === 'grin' ? 0.07 : 0.085;
-  g.beginPath(); g.ellipse(-0.11, -0.05, eye, eye * 1.15, 0, 0, TAU); g.ellipse(0.11, -0.05, eye, eye * 1.15, 0, 0, TAU); g.fill();
+  const eye = skull === 'grin' ? 0.07 : skull === 'round' ? 0.095 : 0.085, ex = skull === 'long' ? 0.095 : skull === 'round' ? 0.13 : 0.11;
+  g.beginPath(); g.ellipse(-ex, -0.05, eye, eye * 1.15, 0, 0, TAU);
+  if (skull !== 'eyepatch') g.ellipse(ex, -0.05, eye, eye * 1.15, 0, 0, TAU);
+  g.fill();
   g.beginPath(); g.moveTo(0, 0.04); g.lineTo(-0.035, 0.1); g.lineTo(0.035, 0.1); g.fill();
-  if (skull === 'grin') { g.fillRect(-0.12, 0.17, 0.24, 0.03); for (let k = -2; k <= 2; k++) g.fillRect(k * 0.05 - 0.005, 0.14, 0.01, 0.1); }
-  else { for (let k = -1; k <= 1; k++) g.fillRect(k * 0.07 - 0.01, 0.16, 0.02, 0.1); }
-  if (skull === 'eyepatch') { g.strokeStyle = bg; g.lineWidth = 0.03; g.beginPath(); g.moveTo(-0.3, -0.25); g.lineTo(0.3, 0.05); g.stroke(); }
-  // accessory on top
+  const my = 0.1 + jh * 0.45;
+  if (skull === 'grin') { g.fillRect(-0.12, my, 0.24, 0.03); for (let k = -2; k <= 2; k++) g.fillRect(k * 0.05 - 0.005, my - 0.03, 0.01, 0.1); }
+  else { const n = skull === 'round' ? 2 : 1; for (let k = -n; k <= n; k++) g.fillRect(k * 0.07 - 0.01, my - 0.02, 0.02, jh * 0.6); }
+  if (skull === 'eyepatch') {
+    g.strokeStyle = bg; g.lineWidth = 0.035; g.beginPath(); g.moveTo(-rx, -0.24); g.lineTo(rx, 0.0); g.stroke();
+    g.beginPath(); g.ellipse(ex, -0.05, eye * 1.25, eye * 1.2, 0.35, 0, TAU); g.fill();
+  }
+  // ---- a mark on the face
+  const mark = jr.mark || 'none';
+  if (mark === 'scars') { // (three claw scars over the left eye)
+    g.strokeStyle = bg; g.lineWidth = 0.028;
+    for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(-ex - 0.1 + k * 0.045, -0.24); g.lineTo(-ex + 0.04 + k * 0.045, 0.1); g.stroke(); }
+  } else if (mark === 'stitches') {
+    g.strokeStyle = bg; g.lineWidth = 0.022;
+    g.beginPath(); g.moveTo(-rx * 0.85, -0.2); g.quadraticCurveTo(0, -0.27, rx * 0.85, -0.2); g.stroke();
+    for (let k = -3; k <= 3; k++) { const x = k * rx * 0.24; g.beginPath(); g.moveTo(x, -0.27); g.lineTo(x, -0.18); g.stroke(); }
+  } else if (mark === 'mustache') { // (a great crescent moustache, ends swept up past the skull)
+    g.fillStyle = fg; g.strokeStyle = bg; g.lineWidth = 0.02;
+    g.beginPath(); g.moveTo(0, 0.1); g.quadraticCurveTo(-0.3, 0.2, -0.56, -0.12); g.quadraticCurveTo(-0.32, 0.08, 0, 0.06);
+    g.quadraticCurveTo(0.32, 0.08, 0.56, -0.12); g.quadraticCurveTo(0.3, 0.2, 0, 0.1); g.closePath(); g.fill(); g.stroke();
+  } else if (mark === 'beard') {
+    g.fillStyle = fg; g.beginPath(); g.moveTo(-jw / 2, 0.18); g.lineTo(jw / 2, 0.18); g.lineTo(0, 0.5); g.closePath(); g.fill();
+    g.strokeStyle = bg; g.lineWidth = 0.015; for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(k * 0.07, 0.3); g.lineTo(k * 0.03, 0.44); g.stroke(); }
+  }
+  // ---- on its head
   const acc = jr.accessory || 'none';
+  const top = -0.05 - ry;
   if (acc === 'strawhat') {
-    g.fillStyle = '#f2d16b'; g.beginPath(); g.ellipse(0, -0.24, 0.42, 0.1, 0, 0, TAU); g.fill();
-    g.beginPath(); g.ellipse(0, -0.3, 0.23, 0.15, 0, Math.PI, 0); g.fill();
-    g.fillStyle = '#c0392b'; g.fillRect(-0.23, -0.32, 0.46, 0.06);
+    g.fillStyle = '#f2d16b'; g.beginPath(); g.ellipse(0, top + 0.08, 0.44, 0.1, 0, 0, TAU); g.fill();
+    g.beginPath(); g.ellipse(0, top + 0.02, 0.24, 0.16, 0, Math.PI, 0); g.fill();
+    g.fillStyle = jr.acc || '#c0392b'; g.fillRect(-0.24, top - 0.01, 0.48, 0.06);
   } else if (acc === 'bandana') {
-    g.fillStyle = jr.accColor || '#c0392b'; g.beginPath(); g.arc(0, -0.12, 0.31, Math.PI, 0); g.fill();
-    g.beginPath(); g.moveTo(0.28, -0.14); g.lineTo(0.48, -0.02); g.lineTo(0.42, 0.06); g.closePath(); g.fill();
+    g.fillStyle = accC; g.beginPath(); g.arc(0, top + 0.2, rx + 0.01, Math.PI, 0); g.fill();
+    g.beginPath(); g.moveTo(rx - 0.02, top + 0.18); g.lineTo(rx + 0.18, top + 0.3); g.lineTo(rx + 0.12, top + 0.38); g.closePath(); g.fill();
   } else if (acc === 'horns') {
-    g.fillStyle = fg; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 0.15, -0.28); g.quadraticCurveTo(s * 0.45, -0.45, s * 0.38, -0.65); g.lineTo(s * 0.08, -0.3); g.fill(); }
+    g.fillStyle = fg; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * 0.15, top + 0.04); g.quadraticCurveTo(s * 0.45, top - 0.13, s * 0.38, top - 0.33); g.lineTo(s * 0.08, top + 0.02); g.fill(); }
   } else if (acc === 'crown') {
-    g.fillStyle = '#f1c40f'; g.beginPath(); g.moveTo(-0.22, -0.26); g.lineTo(-0.26, -0.48); g.lineTo(-0.11, -0.36); g.lineTo(0, -0.52); g.lineTo(0.11, -0.36); g.lineTo(0.26, -0.48); g.lineTo(0.22, -0.26); g.fill();
+    g.fillStyle = jr.acc || '#f1c40f'; g.beginPath(); g.moveTo(-0.22, top + 0.06); g.lineTo(-0.26, top - 0.16); g.lineTo(-0.11, top - 0.04); g.lineTo(0, top - 0.2); g.lineTo(0.11, top - 0.04); g.lineTo(0.26, top - 0.16); g.lineTo(0.22, top + 0.06); g.fill();
   } else if (acc === 'tricorne') {
-    g.fillStyle = '#2d3436'; g.beginPath(); g.moveTo(-0.45, -0.22); g.quadraticCurveTo(0, -0.62, 0.45, -0.22); g.quadraticCurveTo(0, -0.3, -0.45, -0.22); g.fill();
+    g.fillStyle = jr.acc || '#2d3436'; g.beginPath(); g.moveTo(-0.45, top + 0.1); g.quadraticCurveTo(0, top - 0.3, 0.45, top + 0.1); g.quadraticCurveTo(0, top + 0.02, -0.45, top + 0.1); g.fill();
+    g.strokeStyle = '#f1c40f'; g.lineWidth = 0.02; g.beginPath(); g.moveTo(-0.4, top + 0.08); g.quadraticCurveTo(0, top - 0.24, 0.4, top + 0.08); g.stroke();
+  } else if (acc === 'tophat') {
+    g.fillStyle = jr.acc || '#2d3436'; g.beginPath(); g.ellipse(0, top + 0.08, 0.36, 0.06, 0, 0, TAU); g.fill();
+    g.fillRect(-0.2, top - 0.3, 0.4, 0.38);
+    g.fillStyle = '#c0392b'; g.fillRect(-0.2, top - 0.02, 0.4, 0.06);
+  } else if (acc === 'viking') {
+    g.fillStyle = jr.acc || '#95a5a6'; g.beginPath(); g.arc(0, top + 0.16, rx + 0.02, Math.PI, 0); g.fill();
+    g.fillStyle = '#efe2c4'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(s * (rx - 0.02), top + 0.08); g.quadraticCurveTo(s * (rx + 0.2), top + 0.02, s * (rx + 0.16), top - 0.22); g.lineTo(s * (rx - 0.08), top + 0.02); g.fill(); }
   } else if (acc === 'flames') {
-    g.fillStyle = '#e17055'; for (let k = -2; k <= 2; k++) { g.beginPath(); g.moveTo(k * 0.11 - 0.06, -0.28); g.quadraticCurveTo(k * 0.11, -0.55 - Math.abs(k) * -0.05, k * 0.11 + 0.06, -0.28); g.fill(); }
+    g.fillStyle = jr.acc || '#e17055'; for (let k = -2; k <= 2; k++) { g.beginPath(); g.moveTo(k * 0.11 - 0.06, top + 0.04); g.quadraticCurveTo(k * 0.11, top - 0.22 + Math.abs(k) * 0.05, k * 0.11 + 0.06, top + 0.04); g.fill(); }
   } else if (acc === 'halo') {
-    g.strokeStyle = '#f1c40f'; g.lineWidth = 0.04; g.beginPath(); g.ellipse(0, -0.42, 0.25, 0.07, 0, 0, TAU); g.stroke();
+    g.strokeStyle = jr.acc || '#f1c40f'; g.lineWidth = 0.04; g.beginPath(); g.ellipse(0, top - 0.1, 0.25, 0.07, 0, 0, TAU); g.stroke();
   }
   g.restore();
 }

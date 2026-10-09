@@ -88,6 +88,9 @@ export function installMap(game) {
     cam.x = wx - (sx - r.cw / 2) / cam.zoom;
     cam.y = Math.max(0, Math.min(H, wy - (sy - r.ch / 2) / cam.zoom));
   };
+  // (the parchment rustles as it's dragged about — every so far, not every move)
+  let rustled = 0;
+  const rustle = (dx, dy) => { rustled += Math.hypot(dx, dy); if (rustled > 140) { rustled = 0; game.audio?.sfx('map_rustle'); } };
   const startDrag = (x, y) => { drag = { x, y, lx: x, ly: y, cx: cam.x, cy: cam.y }; wrap.style.cursor = 'grabbing'; };
   let press = null;
   wrap.addEventListener('pointerdown', (e) => {
@@ -110,10 +113,12 @@ export function installMap(game) {
       if (globeHere()) globe.zoom(d / pinch.d); else zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch.d);
       pinch.d = d;
     } else if (drag && globeHere()) {
+      rustle(e.clientX - drag.lx, e.clientY - drag.ly);
       globe.dragging = true;
       globe.drag(e.clientX - drag.lx, e.clientY - drag.ly);
       drag.lx = e.clientX; drag.ly = e.clientY;
     } else if (drag) {
+      rustle(e.clientX - drag.lx, e.clientY - drag.ly); drag.lx = e.clientX; drag.ly = e.clientY;
       cam.x = drag.cx - (e.clientX - drag.x) / cam.zoom;
       cam.y = Math.max(0, Math.min(H, drag.cy - (e.clientY - drag.y) / cam.zoom));
     }
@@ -138,6 +143,7 @@ export function installMap(game) {
   wrap.addEventListener('pointercancel', up);
   wrap.addEventListener('wheel', (e) => {
     e.preventDefault();
+    game.audio?.sfx('map_zoom', null, { in: e.deltaY < 0 });
     if (globeHere()) { globe.zoom(e.deltaY > 0 ? 0.8 : 1.25); return; }
     zoomAt(e.clientX, e.clientY, e.deltaY > 0 ? 0.85 : 1.18);
   }, { passive: false });

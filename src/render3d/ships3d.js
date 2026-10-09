@@ -505,8 +505,9 @@ function sailTexture(kind, jr, sailColor) {
     g.fillStyle = '#1b4f72'; g.font = 'bold 40px Nunito, "Trebuchet MS", sans-serif'; g.textAlign = 'center';
     g.fillText('MARINE', 128, 70);
   } else if (jr) {
+    // (painted on the canvas as the flag is, in the flag's own colour: the skull dark on the sail, its eyes the sail showing through)
     g.setTransform(150, 0, 0, 150, 128, 132);
-    drawJollyRoger(g, jr, 1, bg);
+    drawJollyRoger(g, { ...jr, color: jr.bg || '#141414' }, 1, bg);
   }
   g.setTransform(1, 0, 0, 1, 0, 0);
   tex.needsUpdate = true;
@@ -515,10 +516,11 @@ function sailTexture(kind, jr, sailColor) {
 
 function flagTexture(kind, jr) {
   const { ctx: g, tex } = canvasTexture(128, 96);
-  g.fillStyle = kind === 'marine' ? '#f5f6fa' : '#141414';
+  const bg = kind === 'marine' ? '#f5f6fa' : jr?.bg || '#141414';
+  g.fillStyle = bg;
   g.fillRect(0, 0, 128, 96);
   g.setTransform(70, 0, 0, 70, 64, 50);
-  if (kind === 'marine') drawMarineEmblem(g, 1); else if (jr) drawJollyRoger(g, jr, 1, '#141414');
+  if (kind === 'marine') drawMarineEmblem(g, 1); else if (jr) drawJollyRoger(g, jr, 1, bg);
   tex.needsUpdate = true;
   return tex;
 }

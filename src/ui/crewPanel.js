@@ -7,30 +7,50 @@ import { persist } from '../game/lineage.js';
 import { uiImg } from './icon.js';
 
 const JR_OPTS = {
-  skull: [['classic', 'Classic'], ['grin', 'Grinning'], ['eyepatch', 'Scarred']],
-  bones: [['cross', 'Crossbones'], ['swords', 'Crossed swords'], ['anchor', 'Anchor']],
-  accessory: [['none', 'None'], ['strawhat', 'Straw hat'], ['bandana', 'Bandana'], ['tricorne', 'Tricorne'], ['horns', 'Horns'], ['crown', 'Crown'], ['flames', 'Flames'], ['halo', 'Halo']],
-  color: [['#f5f6fa', 'White'], ['#efe2c4', 'Bone'], ['#e53935', 'Red'], ['#f1c40f', 'Gold'], ['#64b5f6', 'Sky']],
+  skull: [['classic', 'Classic'], ['round', 'Round'], ['long', 'Long'], ['grin', 'Grinning'], ['fanged', 'Fanged'], ['eyepatch', 'Eyepatch']],
+  mark: [['none', 'None'], ['scars', 'Claw scars'], ['stitches', 'Stitches'], ['mustache', 'Moustache'], ['beard', 'Beard']],
+  bones: [['cross', 'Crossbones'], ['bone', 'One bone'], ['swords', 'Crossed swords'], ['flintlocks', 'Flintlocks'], ['anchor', 'Anchor'], ['crescent', 'Crescent'], ['none', 'Nothing']],
+  accessory: [['none', 'None'], ['strawhat', 'Straw hat'], ['bandana', 'Bandana'], ['tricorne', 'Tricorne'], ['tophat', 'Top hat'], ['viking', 'Horned helm'], ['horns', 'Horns'], ['crown', 'Crown'], ['flames', 'Flames'], ['halo', 'Halo']],
+  color: [['#f5f6fa', 'White'], ['#efe2c4', 'Bone'], ['#e53935', 'Red'], ['#f1c40f', 'Gold'], ['#64b5f6', 'Sky'], ['#81c784', 'Jade'], ['#ce93d8', 'Lilac'], ['#141414', 'Black']],
+  bg: [['#141414', 'Black'], ['#7b1418', 'Crimson'], ['#14284f', 'Navy'], ['#3c1856', 'Purple'], ['#16402a', 'Forest'], ['#4a2c17', 'Umber'], ['#f2ead8', 'White']],
+  acc: [['', 'As drawn'], ['#c0392b', 'Red'], ['#2e86de', 'Blue'], ['#27ae60', 'Green'], ['#8e44ad', 'Purple'], ['#f1c40f', 'Gold'], ['#2d3436', 'Black'], ['#ecf0f1', 'White']],
 };
+/** Flags to start from (each one a look a famous crew might fly). */
+const JR_PRESETS = [
+  ['Straw hat', { skull: 'classic', mark: 'none', bones: 'cross', accessory: 'strawhat', color: '#f5f6fa', bg: '#141414', acc: '' }],
+  ['Scarred', { skull: 'classic', mark: 'scars', bones: 'swords', accessory: 'none', color: '#f5f6fa', bg: '#141414', acc: '' }],
+  ['Moustache', { skull: 'round', mark: 'mustache', bones: 'cross', accessory: 'none', color: '#f5f6fa', bg: '#141414', acc: '' }],
+  ['Buccaneer', { skull: 'eyepatch', mark: 'none', bones: 'flintlocks', accessory: 'tricorne', color: '#efe2c4', bg: '#7b1418', acc: '' }],
+  ['Beast', { skull: 'fanged', mark: 'stitches', bones: 'bone', accessory: 'horns', color: '#efe2c4', bg: '#3c1856', acc: '' }],
+  ['Royal', { skull: 'long', mark: 'beard', bones: 'anchor', accessory: 'crown', color: '#f1c40f', bg: '#14284f', acc: '' }],
+];
+const JR_DEFAULT = { skull: 'classic', mark: 'none', bones: 'cross', accessory: 'none', color: '#f5f6fa', bg: '#141414', acc: '' };
+const pick = (a) => a[Math.floor(Math.random() * a.length)][0];
 
 /** A canvas showing a flag (Jolly Roger, or the Marine emblem). */
 export function flagCanvas(jr, w = 180, hgt = 130, marine = false) {
   const cv = h('canvas.flag', { width: w * 2, height: hgt * 2, style: { width: w + 'px', height: hgt + 'px' } });
   const g = cv.getContext('2d');
-  g.fillStyle = marine ? '#f5f6fa' : '#111';
+  const bg = marine ? '#f5f6fa' : jr?.bg || '#111';
+  g.fillStyle = bg;
   g.fillRect(0, 0, w * 2, hgt * 2);
   g.setTransform(hgt * 1.7, 0, 0, hgt * 1.7, w, hgt * 1.08);
-  if (marine) drawMarineEmblem(g, 1); else drawJollyRoger(g, jr || {}, 1, '#111');
+  if (marine) drawMarineEmblem(g, 1); else drawJollyRoger(g, jr || {}, 1, bg);
   return cv;
 }
 
 function designer(state, onChange) {
-  const row = (label, key) => h('div.opt-row', h('div.opt-label', label),
-    h('div.swatches', JR_OPTS[key].map(([v, name]) => key === 'color'
-      ? h('button' + (state.jr[key] === v ? '.on' : ''), { title: name, style: { background: v }, on: { click: () => { state.jr[key] = v; onChange(); } } })
-      : h('button.chip' + (state.jr[key] === v ? '.on' : ''), { on: { click: () => { state.jr[key] = v; onChange(); } } }, name))));
+  const set = (key, v) => { state.jr[key] = v; onChange(); };
+  const row = (label, key, swatch = false) => h('div.opt-row', h('div.opt-label', label),
+    h('div.swatches', JR_OPTS[key].map(([v, name]) => swatch && v
+      ? h('button' + (state.jr[key] === v ? '.on' : ''), { title: name, style: { background: v }, on: { click: () => set(key, v) } })
+      : h('button.chip' + ((state.jr[key] || '') === v ? '.on' : ''), { on: { click: () => set(key, v) } }, name))));
+  const presets = h('div.opt-row', h('div.opt-label', 'Start from'), h('div.swatches',
+    ...JR_PRESETS.map(([name, jr]) => h('button.chip', { on: { click: () => { Object.assign(state.jr, jr); onChange(); } } }, name)),
+    h('button.chip', { on: { click: () => { for (const k of Object.keys(JR_OPTS)) state.jr[k] = pick(JR_OPTS[k]); if (state.jr.color === state.jr.bg) state.jr.color = '#f5f6fa'; onChange(); } } }, 'Random')));
   return h('div.jr-designer', flagCanvas(state.jr, 220, 150),
-    h('div', row('Skull', 'skull'), row('Behind it', 'bones'), row('On its head', 'accessory'), row('Colour', 'color')));
+    h('div.jr-opts', presets, row('Skull', 'skull'), row('On its face', 'mark'), row('Behind it', 'bones'), row('On its head', 'accessory'),
+      row('Skull colour', 'color', true), row('Flag colour', 'bg', true), row('Hat colour', 'acc', true)));
 }
 
 /** Apply the flag to every ship you own. */
@@ -44,7 +64,7 @@ export function openCrew(game) {
   const entry = game.ui.openPanel(body, { wide: true, id: 'crew' });
   if (!entry) return;
   const c = game.state.char;
-  const found = { name: '', jr: { skull: 'classic', bones: 'cross', accessory: 'none', color: '#f5f6fa' } };
+  const found = { name: '', jr: { ...JR_DEFAULT } };
   const render = () => {
     clear(body);
     if (c.faction === 'marine') {
@@ -151,7 +171,7 @@ export function openJollyRoger(game) {
       h('button.btn.gold', { on: { click: () => { game.ui.closePanel(entry); openCrew(game); } } }, uiImg('crew', 18), 'Open the Crew menu'));
     return;
   }
-  const state = { jr: { skull: 'classic', bones: 'cross', accessory: 'none', color: '#f5f6fa', ...c.jr } };
+  const state = { jr: { ...JR_DEFAULT, ...c.jr } };
   const render = () => {
     clear(body);
     add(body, h('h2', `Flag of the ${c.crewName}`), designer(state, render),

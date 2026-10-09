@@ -964,6 +964,128 @@ export const SFX = {
       v.ring(0.01, 1900, 0.18, 0.045, [1, 1.6]);
     },
   },
+  // ---- SFX pass 3: the small moments that were silent
+  /** A lid lifted: the hasp's click, the hinge's long creak, the lid laid back. */
+  chest_open: {
+    prio: 5, cd: 0.2, max: 1, send: 0.1,
+    play(v) {
+      v.ring(0, 1900, 0.07, 0.035, [1, 2.4]);
+      v.noise(0, 0.014, { freq: 2800, q: 3, gain: 0.16, attack: 0.0006 });
+      v.creak(0.05, 0.55, { rate: 42, rate1: 75, freqs: [260, 470, 700], q: 6, gain: 0.09 });
+      v.thump(0.55, { f0: 150, f1: 100, dur: 0.08, gain: 0.12 });
+      v.noise(0.55, 0.06, { type: 'lowpass', freq: 500, gain: 0.08 });
+    },
+  },
+  /** Sitting down: wood taking the weight, cloth settling. */
+  sit: {
+    prio: 3, cd: 0.3, max: 1, send: 0.05,
+    play(v) {
+      v.creak(0.02, 0.28, { rate: rnd(55, 80), rate1: rnd(30, 50), freqs: [180, 300, 460], q: 6, gain: 0.08 });
+      v.thump(0.04, { f0: 130, f1: 80, dur: 0.08, gain: 0.1 });
+      v.noise(0.02, 0.2, { freq: 1800, q: 0.7, gain: 0.03, attack: 0.03 });
+    },
+  },
+  /** Getting up: the seat's creak let go, a step. */
+  stand: {
+    prio: 3, cd: 0.3, max: 1, send: 0.05,
+    play(v) {
+      v.creak(0, 0.18, { rate: rnd(70, 95), rate1: rnd(90, 120), freqs: [200, 330, 500], q: 6, gain: 0.06 });
+      v.noise(0.02, 0.15, { freq: 1600, q: 0.7, gain: 0.025, attack: 0.02 });
+      v.thump(0.16, { f0: 140, f1: 90, dur: 0.06, gain: 0.08 });
+    },
+  },
+  /** Lying down to sleep: a soft falling lullaby, three notes. */
+  sleep: {
+    prio: 6, cd: 1, max: 1, send: 0.4, bus: 'ui',
+    play: (v) => [659, 523, 392].forEach((f, i) => { v.tone(i * 0.28, 0.9, { freq: f, type: 'sine', gain: 0.07, attack: 0.04 }); v.tone(i * 0.28, 0.9, { freq: f * 2, type: 'sine', gain: 0.012, attack: 0.04 }); }),
+  },
+  /** Waking: a morning gull's call over a bright rising chime. */
+  wake: {
+    prio: 6, cd: 1, max: 1, send: 0.35, bus: 'ui',
+    play(v) {
+      [392, 523, 659, 784].forEach((f, i) => v.tone(i * 0.12, 0.6, { freq: f, type: 'triangle', gain: 0.06, attack: 0.01 }));
+      v.chirp(0.5, { f0: 2400, f1: 1500, dur: 0.22, gain: 0.03, warble: 18 });
+      v.chirp(0.78, { f0: 2300, f1: 1400, dur: 0.18, gain: 0.025, warble: 18 });
+    },
+  },
+  /** Someone turns to talk to you: a short breath of paper and a low "hm". */
+  talk: {
+    prio: 4, cd: 0.25, max: 1, bus: 'ui',
+    play(v) {
+      v.noise(0, 0.08, { type: 'highpass', freq: 3200, gain: 0.04, attack: 0.008 });
+      v.vox(0.02, 0.16, { f0: rnd(130, 170), to0: rnd(110, 140), f1: 520, f2: 1100, q: 6, gain: 0.05 });
+    },
+  },
+  /** The next line of a conversation: a little blip. */
+  talk_next: { prio: 2, cd: 0.05, max: 1, bus: 'ui', play: (v) => { v.tone(0, 0.04, { freq: rnd(620, 700), to: 560, type: 'triangle', gain: 0.03 }); } },
+  /** A chart handled: the rustle of the parchment as it's dragged. */
+  map_rustle: {
+    prio: 2, cd: 0.18, max: 1, bus: 'ui',
+    play(v) {
+      v.noise(0, rnd(0.12, 0.2), { freq: rnd(2600, 3800), q: 0.6, gain: 0.025, attack: 0.02 });
+      v.crackle(0.01, 0.12, 4, { freq: 3500, gain: 0.015, q: 2 });
+    },
+  },
+  /** Zooming the chart or globe in or out: a soft tick, higher going in. */
+  map_zoom: { prio: 2, cd: 0.06, max: 1, bus: 'ui', play: (v, k) => { v.tone(0, 0.03, { freq: k.in ? 1500 : 1000, to: k.in ? 1800 : 850, gain: 0.02 }); } },
+  /** Crouching / standing from a crouch: cloth and leather shifting. */
+  crouch: {
+    prio: 2, cd: 0.2, max: 1,
+    play(v, k) {
+      v.noise(0, 0.16, { freq: k.up ? 1900 : 1400, q: 0.8, gain: 0.04, attack: 0.02 });
+      v.creak(0.03, 0.08, { rate: 120, rate1: 90, freqs: [600, 900], q: 7, gain: 0.015 });
+    },
+  },
+  /** Gathering for a big jump: a rising strain. */
+  charge: {
+    prio: 3, cd: 0.6, max: 1,
+    play(v) {
+      v.whoosh(0, 0.6, { f0: 300, f1: 1400, gain: 0.04, peak: 0.95 });
+      v.tone(0, 0.6, { freq: 110, to: 220, type: 'triangle', gain: 0.03, attack: 0.3 });
+    },
+  },
+  /** Cannons loaded again: the ramrod's thud, the carriage run out. */
+  cannon_load: {
+    prio: 4, cd: 0.8, max: 1, send: 0.12,
+    play(v) {
+      v.thump(0, { f0: 120, f1: 80, dur: 0.08, gain: 0.12 });
+      v.noise(0.12, 0.35, { type: 'lowpass', freq: 260, gain: 0.12, attack: 0.04 });
+      v.ring(0.46, 700, 0.12, 0.03, [1, 2.2, 3.1]);
+      v.thump(0.46, { f0: 100, f1: 60, dur: 0.1, gain: 0.12 });
+    },
+  },
+  /** A hull grinding along rock or another ship. */
+  scrape: {
+    prio: 5, cd: 0.5, max: 1, send: 0.12,
+    play(v, k) {
+      const s = k.s || 1;
+      v.noise(0, 0.5, { type: 'lowpass', freq: 380, gain: 0.18 * s, attack: 0.05 });
+      v.creak(0, 0.5, { rate: rnd(20, 35), rate1: rnd(15, 30), freqs: [140, 230, 380], q: 4, gain: 0.08 * s, attack: 0.1 });
+      v.crackle(0.05, 0.4, 8, { freq: 1200, gain: 0.04 * s, q: 3 });
+    },
+  },
+  /** Somewhere new: a rising four-note stinger, airy and open. */
+  arrive: {
+    prio: 7, cd: 2, max: 1, send: 0.45, bus: 'ui', duck: 0.3,
+    play(v) {
+      [294, 392, 494, 587].forEach((f, i) => { v.tone(i * 0.13, 0.9 - i * 0.12, { freq: f, type: 'triangle', gain: 0.09, attack: 0.01 }); v.tone(i * 0.13, 0.7, { freq: f * 1.5, type: 'sine', gain: 0.02 }); });
+      v.whoosh(0, 0.8, { f0: 400, f1: 2400, gain: 0.03, peak: 0.7 });
+    },
+  },
+  /** Carried away in a moment: a rising rush that cuts off. */
+  warp: {
+    prio: 5, cd: 0.4, max: 1, bus: 'ui',
+    play(v) { v.whoosh(0, 0.35, { f0: 500, f1: 3200, gain: 0.07, peak: 0.85 }); v.tone(0.05, 0.3, { freq: 600, to: 1200, type: 'sine', gain: 0.03 }); },
+  },
+  /** Iron bars swung shut: a clang and its long ring. */
+  cell_door: {
+    prio: 6, cd: 0.5, max: 1, send: 0.35,
+    play(v) {
+      v.noise(0, 0.02, { freq: 2200, q: 2, gain: 0.25, attack: 0.0005 });
+      v.ring(0, 420, 1.1, 0.12, [1, 1.47, 2.09, 2.95, 3.9]);
+      v.thump(0, { f0: 110, f1: 60, dur: 0.12, gain: 0.2 });
+    },
+  },
   page: {
     prio: 5, cd: 0.1, max: 1, bus: 'ui',
     play(v) {

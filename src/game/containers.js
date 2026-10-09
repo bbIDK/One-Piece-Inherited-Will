@@ -105,7 +105,7 @@ export function installContainers(game) {
     const e = contents(key, kind, o);
     let first = true;
     const pocket = { get berries() { return e.berries; }, get items() { return e.items; } };
-    game.audio?.sfx('door');
+    game.audio?.sfx('chest_open');
     return openLoot(game, { name: title || 'Chest', pocket }, {
       title, sub: sub || (isEmpty(e) ? '' : 'You lift the lid and look inside…'),
       empty: kind === 'home' ? 'Nothing left worth taking. (People restock their homes in time.)' : 'Empty. You took it all.',

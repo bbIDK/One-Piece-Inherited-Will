@@ -337,7 +337,11 @@ vec4 mapColor(vec2 wp) {
     vec3 tint = ady < GLH ? (mod(wp.x, WW) > RMX ? vec3(0.97, 0.86, 0.6) : vec3(0.95, 0.74, 0.56))
       : ady < GLH + CBW ? vec3(0.7, 0.76, 0.72)
       : (wp.y < POL || wp.y > HH - POL) ? vec3(0.86, 0.9, 0.94) : vec3(0.66, 0.8, 0.94);
-    if (reg == 5) tint = sd > 0.0 ? vec3(0.86, 0.48, 0.4) : vec3(0.66, 0.8, 0.94);
+    // (the Red Line red all the way round, across the poles' ice too, so its two halves meet there)
+    float rx = mod(wp.x, WW);
+    bool rl = abs(rx - RMX) < RLH || rx < RLH || rx > WW - RLH;
+    if (reg == 4 && rl) { reg = 5; col = mix(col, vec3(0.66, 0.3, 0.22), 0.75); } // (its rock, not the pole's ice)
+    if (reg == 5) tint = sd > 0.0 || wp.y < POL || wp.y > HH - POL ? vec3(0.86, 0.48, 0.4) : vec3(0.66, 0.8, 0.94);
     float sea = reg == 5 ? 1.0 : 1.0 - smoothstep(-0.5, 0.5, sd) * smoothstep(0.05, 0.6, fog);
     col *= mix(vec3(1.0), tint, sea);
     if (reg == 3 && sd < 0.0) {

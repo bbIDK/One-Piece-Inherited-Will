@@ -469,6 +469,7 @@ function rescue(game, S, dt, p) {
     who.scripted = { moving: false };
     if (who.inWater) R.phase = 'swim';
     game.log(`${who.name} dives in after you!`, '#81d4fa');
+    game.audio?.sfx('jump', who);
   }
   // (they're coming: the sea holds off till they get there)
   if (p.oxygen != null && p.oxygen < 0.6) p.oxygen = 0.6;
@@ -497,6 +498,9 @@ function rescue(game, S, dt, p) {
     who.facing = Math.atan2(dy, dx);
     who.scripted.moving = true; who.moving = true;
     if (d > 1.0) { const k = Math.min(1, sp / d); who.x = w.wx(who.x + dx * k); who.y += dy * k; }
+    // (their strokes, heard coming)
+    R.stroke = (R.stroke || 0) - dt;
+    if (R.stroke <= 0) { R.stroke = 0.75; game.audio?.sfx('swim_pull', who); }
     if (d <= 1.0 || R.t > 12) { R.phase = 'grab'; R.t = 0; who.scripted.moving = false; who.moving = false; }
     return;
   }
@@ -523,6 +527,7 @@ function rescue(game, S, dt, p) {
       who.scripted = null;
       R.phase = 'out'; R.t = 0;
       game.log(`${who.name} hauls you out of the sea, coughing and spluttering.`, '#a5d6a7');
+      game.audio?.sfx('splash_out'); game.audio?.sfx('gasp');
     }
     return;
   }

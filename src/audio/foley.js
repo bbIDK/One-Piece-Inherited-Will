@@ -68,6 +68,12 @@ export class Foley {
       if (first || (b > (this.bounty || 0) * 1.1 && b - (this.bounty || 0) > 1e6)) A.sfx('bounty');
       this.bounty = b;
     });
+    // (SFX pass 3: the moments that were silent)
+    on('rested', () => { A.sfx('sleep'); setTimeout(() => { try { A.sfx('wake'); } catch { /* */ } }, 1100); });
+    on('discovered', () => A.sfx('arrive'));
+    on('enterZone', () => A.sfx('arrive'));
+    on('leaveZone', () => A.sfx('warp'));
+    on('legend', () => A.sfx('fanfare'));
     game.on('characterStart', () => { this.bounty = game.state?.char?.bounty || 0; this.techs = null; });
   }
 
@@ -94,8 +100,40 @@ export class Foley {
     this.ship(dt, p, g);
     this.swim(dt, p, g);
     this.feet(dt, p, g);
+    this.watch(p, g);
     // the drawn weapon, for the next 'equip' (see audio.js)
     A.lastDrawn = !!p.drawn;
+  }
+
+  /**
+   * Small changes of state that each want a sound of their own: sitting
+   * down and getting up, crouching, gathering for a big jump, someone
+   * turning to talk to you and the talk going on, your guns loaded again, a
+   * jump far across the sea.
+   */
+  watch(p, g) {
+    const A = this.audio, w = this.w || (this.w = {});
+    const seat = !!p.seat;
+    if (w.seat !== undefined && seat !== w.seat) A.sfx(seat ? 'sit' : 'stand');
+    w.seat = seat;
+    const crouch = !!p.crouch;
+    if (w.crouch !== undefined && crouch !== w.crouch) A.sfx('crouch', null, { up: !crouch });
+    w.crouch = crouch;
+    const charging = (p.charging || 0) > 0.05;
+    if (charging && !w.charging) A.sfx('charge');
+    w.charging = charging;
+    const d = g.dialogue?.active || null;
+    if (d && !w.dlg) A.sfx('talk');
+    else if (d && w.dlg === d && d.node !== w.node) A.sfx('talk_next');
+    else if (!d && w.dlg) A.sfx('ui_close');
+    w.dlg = d; w.node = d?.node;
+    const s = p.onShip && p.ship?.owner === 'player' ? p.ship : null;
+    const cd = s ? s.cannonCd || 0 : 0;
+    if (s && w.cd > 0.6 && cd === 0) A.sfx('cannon_load', s);
+    w.cd = cd;
+    // (a jump of more than a few hundred metres in one frame: a teleport, a portal, waking somewhere else)
+    if (w.x !== undefined && g.world === w.world && Math.hypot((g.world?.dx ? g.world.dx(w.x, p.x) : p.x - w.x), p.y - w.y) > 300) A.sfx('warp');
+    w.x = p.x; w.y = p.y; w.world = g.world;
   }
 
   /** Oars, sails, anchor, helm, creaks: the player's own boat. */

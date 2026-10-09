@@ -196,10 +196,11 @@ export class Progression {
     const after = Math.min(100, before + amt);
     p.fruitMastery = after;
     c.fruitMastery = after;
-    if (Math.floor(after / 10) > Math.floor(before / 10)) g.log(`${f.name} mastery ${Math.floor(after)}: its power grows.`, '#ffab91');
+    if (Math.floor(after / 10) > Math.floor(before / 10)) { g.log(`${f.name} mastery ${Math.floor(after)}: its power grows.`, '#ffab91'); g.audio?.sfx('unlock'); }
     this.openForms();
     if (before < AWAKEN_MASTERY && after >= AWAKEN_MASTERY && !c.fruitAwakened) {
       g.ui.toast('MASTERED', `The ${f.name} stirs: a hard fight may awaken it`, f.color);
+      g.audio?.sfx('breakthrough');
       g.log(`You have mastered the ${f.name}. Something deep in it stirs: the next time a boss, or a foe near your strength, brings you down (or to a quarter of your health) on land, it will awaken — and you'll get back up with its awakened set on.`, '#ffab91');
       g.hint?.('awaken', `The ${f.name} is ready to awaken. Fight a boss or a strong foe: when they bring you down, or to a quarter of your health, it awakens. Afterwards ${formKey(g)} switches the awakened set on and off.`);
     }
@@ -251,6 +252,7 @@ export class Progression {
     p.fruitOut = true;
     const aw = f.awakening;
     g.ui.toast('AWAKENING', `${aw.name} — the ${f.name} awakens!`, f.color);
+    g.audio?.sfx('conqueror_rise', p);
     g.fx.impactFrame?.(0.25);
     g.fx.flash = 0.45;
     g.fx.ring?.(p.x, p.y, 0.3, 6, f.color, 0.9, 0.3);
@@ -303,6 +305,7 @@ export class Progression {
     p.haki = p.d.maxHaki;
     const names = { armament: 'ARMAMENT HAKI', observation: 'OBSERVATION HAKI', conqueror: "CONQUEROR'S HAKI" };
     g.ui.toast(names[type], how || 'Your will takes shape.', type === 'conqueror' ? '#ff5252' : '#ce93d8');
+    g.audio?.sfx(type === 'conqueror' ? 'conqueror_rise' : 'haki_out', p);
     g.fx.impactFrame?.(0.12);
     const key = type === 'armament' ? 'R' : type === 'observation' ? 'T' : keyLabel(keysOf(g.settings).haki[0]);
     g.log(`${names[type]} awakened. Press ${key} to use it${type === 'conqueror' ? '' : ` — while it's on, its techniques are on the Haki keys (${keysOf(g.settings).haki.filter(Boolean).map(keyLabel).join(', ')})`}.${first ? ' Haki draws on a new spirit bar under your health; it refills when you rest it.' : ''}`, '#ce93d8');

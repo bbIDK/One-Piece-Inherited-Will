@@ -35,6 +35,19 @@ const latOf = (y) => (0.5 - Math.max(0, Math.min(1, y / H))) * Math.PI;
 const shrink = (y) => Math.max(0.06, Math.cos(latOf(y)));
 const wrapDx = (a, b) => { let d = b - a; d -= W * Math.round(d / W); return d; };
 
+/**
+ * How far either side of its middle an anchor reaches at row y. The Red
+ * Line's run its full width with the sea alongside, except toward the
+ * poles, where the circles of latitude grow small: there they narrow to the
+ * Red Line itself (and never more than a quarter of the way round), so the
+ * two halves of the ring meet across the pole instead of being laid one
+ * over the other.
+ */
+function halfAt(A, y) {
+  const h = (A.x1 - A.x0) / 2;
+  return A.band ? Math.min(h, Math.max(RL_HALF, shrink(y) * W / 4 - 2)) : h;
+}
+
 /** The features drawn true to shape, each about its own middle: the islands, and the Red Line's two great arcs. */
 function anchorsOf(world) {
   const out = [];
@@ -53,9 +66,10 @@ export function globeU(x, y, anchors) {
   if (anchors) {
     for (const A of anchors) {
       const dx = wrapDx(A.xc, x);
-      if (y < A.y0 - 200 || y > A.y1 + 200 || Math.abs(dx) > (A.x1 - A.x0) / 2 + 200) continue;
+      const ha = halfAt(A, y);
+      if (y < A.y0 - 200 || y > A.y1 + 200 || Math.abs(dx) > ha + 200) continue;
       // (inside its box: placed as it's drawn; coming away from it, eased back onto the plain chart)
-      const out = Math.max(0, Math.abs(dx) - (A.x1 - A.x0) / 2, A.y0 - y, y - A.y1);
+      const out = Math.max(0, Math.abs(dx) - ha, A.y0 - y, y - A.y1);
       const k = Math.max(0, 1 - out / 200);
       const uA = (A.xc + dx / shrink(y)) / W;
       u = u + (uA - u) * k;
@@ -157,7 +171,7 @@ export class GlobeView {
     let x = u * W;
     for (const A of this.anchors || []) {
       if (A.band || y < A.y0 || y > A.y1) continue;
-      const du = wrapDx(A.xc, x), half = (A.x1 - A.x0) / 2 / shrink(y);
+      const du = wrapDx(A.xc, x), half = halfAt(A, y) / shrink(y);
       if (Math.abs(du) <= half) { x = A.xc + du * shrink(y); break; }
     }
     return { x: ((x % W) + W) % W, y };
@@ -201,9 +215,10 @@ export class GlobeView {
     const pxW = W / TEX_W, pxH = H / TEX_H;
     for (const a of this.anchors) {
       const j0 = Math.max(0, Math.floor(a.y0 / pxH)), j1 = Math.min(TEX_H - 1, Math.ceil(a.y1 / pxH));
-      const sw = (a.x1 - a.x0) / pxW, sx0 = (((a.x0 / pxW) % TEX_W) + TEX_W) % TEX_W;
       for (let j = j0; j <= j1; j++) {
-        const s = shrink((j + 0.5) * pxH), dw = sw / s, dx = a.xc / pxW - dw / 2;
+        const yj = (j + 0.5) * pxH, half = halfAt(a, yj);
+        const sw = 2 * half / pxW, sx0 = ((((a.xc - half) / pxW) % TEX_W) + TEX_W) % TEX_W;
+        const s = shrink(yj), dw = sw / s, dx = a.xc / pxW - dw / 2;
         for (const off of [-TEX_W, 0, TEX_W]) {
           if (dx + off > TEX_W || dx + off + dw < 0) continue;
           if (sx0 + sw <= TEX_W) gf.drawImage(A, sx0, j, sw, 1, dx + off, j, dw, 1);

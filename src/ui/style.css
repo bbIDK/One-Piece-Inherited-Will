@@ -565,6 +565,10 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .crew-head { display: flex; gap: 16px; align-items: center; margin-bottom: 6px; }
 .flag { border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.4); border: 2px solid #3b2a1a; }
 .jr-designer { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }
+.jr-designer > .flag { border-radius: 4px; box-shadow: 0 3px 10px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.08); position: sticky; top: 0; }
+.jr-opts { flex: 1; min-width: 260px; }
+.jr-opts .opt-row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 8px; }
+@media (max-width: 720px) { .jr-opts .opt-row { grid-template-columns: 1fr; gap: 3px; } }
 .card.found h3 { margin-top: 2px; }
 .jolly { text-align: left; }
 .jolly > .flag { display: block; margin: 8px auto; }

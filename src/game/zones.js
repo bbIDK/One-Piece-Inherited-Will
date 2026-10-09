@@ -299,6 +299,7 @@ export function installZones(game) {
     c.equipped.weapons = [];
     c.berries = 0;
     game.enterZoneById('impel_down');
+    game.audio?.sfx('cell_door');
     game.ui.banner('IMPEL DOWN', 'Level 1 — Crimson Hell', `${by ? by.name + ' handed you over to the Great Prison. ' : ''}Your weapons and berries are confiscated. Find a way out through the Main Gate.`, 7);
     persist(game);
   };
@@ -307,6 +308,7 @@ export function installZones(game) {
     if (!c?.flags.imprisoned || game.world.id !== 'impel_down') return;
     if (game.env.day - (c.flags.imprisonedDay ?? game.env.day) >= 2 && !c.flags.impelRiot) {
       c.flags.impelRiot = true;
+      game.audio?.sfx('explosion');
       game.ui.banner('RIOT!', 'Impel Down', 'The prisoners of Level 1 have overpowered the guards. The Main Gate stands open — go, now!', 6);
     }
   });
