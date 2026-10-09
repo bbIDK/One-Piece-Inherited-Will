@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { registerFrameHook } from './registry.js';
 import './mist3d.js';
+import './windlines3d.js';
 import { heightsOf } from '../world/interiors.js';
 import { bfoot } from '../world/bframe.js';
 
