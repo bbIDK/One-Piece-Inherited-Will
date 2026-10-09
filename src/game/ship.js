@@ -135,7 +135,10 @@ export class Ship extends Entity {
       return;
     }
     const w = game.world;
-    const x0 = this.x, y0 = this.y, h0 = this.heading;
+    // (from the heading everyone aboard was last carried to: a turn of the
+    // helm made since — yours, steered before her update — swings them round
+    // with her too, not just a turn she makes in here)
+    const x0 = this.x, y0 = this.y, h0 = this.hCarried ?? this.heading;
     this.sortY = this.y;
     // (a hull of yours is always sound: an old save's damage, or new plating, is made good)
     if (this.hull < this.maxHull && this.unbreakable) this.hull = this.maxHull;
@@ -244,6 +247,7 @@ export class Ship extends Entity {
     if (this.captain) { this.captain.x = this.x; this.captain.y = this.y; }
     // and everyone standing on the deck, turning with the ship
     this.carry(w, x0, y0, h0);
+    this.hCarried = this.heading;
   }
 
   /**
