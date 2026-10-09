@@ -78,6 +78,15 @@ const GLSL = /* glsl */`
 		return wa.y * r0 + wb.y * r1 + wc.y * r2;
 	}
 
+	// A face the sun only skims (a ship's side under a high sun, a wall end-on
+	// to it) reads the map at a grazing angle: one texel smears down it, and
+	// the shadow of someone at the rail above runs down the hull as a long
+	// streak. Such a face is half in its own shade already (the cel ramp):
+	// cast shadows fade out on it.
+	float sunShadowGraze( float s, float ndl ) {
+		return mix( 1.0, s, smoothstep( 0.06, 0.28, ndl ) );
+	}
+
 	float getSunShadow( sampler2D map, vec2 size, float intensity, float bias, vec4 coord ) {
 		vec3 c = coord.xyz / coord.w;
 		vec2 d = abs( c.xy - 0.5 );
@@ -102,7 +111,7 @@ patch('shadowmap_pars_fragment', 'the directional shadow lookup', (chunk) => {
 // the sun is the only directional light: its shadow is read the way above
 patch('lights_fragment_begin', 'the directional shadow', (chunk) => chunk.replace(
   'getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )',
-  'getSunShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, vDirectionalShadowCoord[ i ] )',
+  'sunShadowGraze( getSunShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, vDirectionalShadowCoord[ i ] ), dot( geometryNormal, directLight.direction ) )',
 ));
 
 // (three.js doesn't export the class of a directional light's shadow: take it from one)

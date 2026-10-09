@@ -17,16 +17,16 @@ import { WedgeSet } from './wedges.js';
 
 const CELL = 16; // tiles per cached cell
 const NEAR = 22; // m from the cover's centre: full models inside, simple ones beyond
-const KINDS = ['grass', 'flower', 'fern', 'pebble', 'shell', 'rock'];
+const KINDS = ['grass', 'flower', 'fern', 'pebble', 'shell', 'rock', 'crop'];
 // how far out each kind grows (share of the cover radius)
-const REACH = { grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
+const REACH = { crop: 1, grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
 // instances: near, and beyond (in all the wedges together)
-const MAXN = { grass: 5200, flower: 1400, fern: 1100, pebble: 1600, shell: 500, rock: 400 };
-const MAXF = { grass: 16000, flower: 2600, fern: 2000, pebble: 1400, shell: 400, rock: 1200 };
-const PAD = { grass: 0.7, flower: 0.6, fern: 1.2, pebble: 0.3, shell: 0.2, rock: 2 }; // model size (for bounds)
-const WEDGES = { grass: 8, flower: 4, fern: 4, pebble: 1, shell: 1, rock: 4 }; // (see wedges.js)
-const SWAY = { grass: 1, flower: 0.7, fern: 0.45 };
-const THIN = { grass: 1, flower: 1, fern: 1 }; // thinned out with distance
+const MAXN = { crop: 4200, grass: 5200, flower: 1400, fern: 1100, pebble: 1600, shell: 500, rock: 400 };
+const MAXF = { crop: 9000, grass: 16000, flower: 2600, fern: 2000, pebble: 1400, shell: 400, rock: 1200 };
+const PAD = { crop: 1.1, grass: 0.7, flower: 0.6, fern: 1.2, pebble: 0.3, shell: 0.2, rock: 2 }; // model size (for bounds)
+const WEDGES = { crop: 8, grass: 8, flower: 4, fern: 4, pebble: 1, shell: 1, rock: 4 }; // (see wedges.js)
+const SWAY = { crop: 0.75, grass: 1, flower: 0.7, fern: 0.45 };
+const THIN = { crop: 1, grass: 1, flower: 1, fern: 1 }; // thinned out with distance
 const FILL_BUDGET_MS = 2.5; // building new cells, per frame
 
 // tiles that never get cover (paved, built, walls, floors)
@@ -85,6 +85,43 @@ function grassGeo(far = false) {
   const hs = shade;
   let k = 0;
   return colored(g, (c, x, y) => { const f = y / hs[k++]; c.setRGB(0.78 + f * 0.62, 0.8 + f * 0.6, 0.72 + f * 0.4); });
+}
+
+/**
+ * A clump of crop (wheat, barley — tinted green for a young field): five
+ * stalks about knee to waist high, each with a fat ear of grain at the top,
+ * the leaves fanning low. Far away: three tall flat blades with the ear.
+ */
+function cropGeo(far = false) {
+  const pos = [];
+  const n = far ? 3 : 5;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + i * 1.3;
+    const r = 0.03 + (i % 2) * 0.05;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const bx = ca * r, bz = sa * r;
+    const h = 0.72 + ((i * 29) % 5) * 0.06;
+    const tx = bx + ca * 0.08, tz = bz + sa * 0.08;
+    const w = far ? 0.035 : 0.018, px = -sa * w, pz = ca * w;
+    // the stalk
+    pos.push(bx - px, 0, bz - pz, bx + px, 0, bz + pz, tx + px, h * 0.82, tz + pz);
+    pos.push(bx - px, 0, bz - pz, tx + px, h * 0.82, tz + pz, tx - px, h * 0.82, tz - pz);
+    // the ear: a fat spindle, two crossed diamonds
+    const ew = far ? 0.05 : 0.04, ey = h * 0.82;
+    for (const [qx, qz] of [[-sa, ca], [ca, sa]]) {
+      pos.push(tx, ey, tz, tx + qx * ew, ey + 0.09, tz + qz * ew, tx, h + 0.04, tz);
+      pos.push(tx, ey, tz, tx, h + 0.04, tz, tx - qx * ew, ey + 0.09, tz - qz * ew);
+    }
+    if (far) continue;
+    // a leaf, low and arching out
+    const lx = ca * 0.22, lz = sa * 0.22;
+    pos.push(bx, 0.12, bz, bx + px * 3, 0.16, bz + pz * 3, bx + lx, 0.3, bz + lz);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  // green at the foot, ripening to the ear
+  return colored(g, (c, x, y) => { const f = Math.min(1, y / 0.75); c.setRGB(0.6 + f * 0.5, 0.72 + f * 0.42, 0.5 + f * 0.36); });
 }
 
 /** A flower: a stem, five petals and a heart; far away just a stem and a flat head. */
@@ -188,12 +225,12 @@ function merge(list) {
 // ---------------------------------------------------------------- materials
 const uTime = { value: 0 };
 function coverMaterial(kind) {
-  const soft = kind === 'grass' || kind === 'fern' || kind === 'flower';
+  const soft = kind === 'grass' || kind === 'fern' || kind === 'flower' || kind === 'crop';
   const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient(), side: soft ? THREE.DoubleSide : THREE.FrontSide });
   const sway = SWAY[kind] || 0;
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, FOG, { uTime });
-    if (kind === 'grass') {
+    if (kind === 'grass' || kind === 'crop') {
       // blades take the light of the ground they stand on, whichever side you see
       sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
       normal = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);`);
@@ -272,7 +309,26 @@ function buildCell(world, terrain, cx, cy) {
       if (OVERLAY[t] || PAVED[t] || world.isBlocked(x, y)) continue;
       const clim = world.climate ? world.climate(x, y) : 0;
       const winter = clim === CLIMATE.WINTER || t === T.SNOW;
-      if (t === T.GRASS || t === T.LAWN || t === T.FARM || t === T.FLOWERS || t === T.FOREST || t === T.JUNGLE || t === T.SAKURA || t === T.MANGROVE) {
+      if (t === T.FARM) {
+        if (winter) continue;
+        // a field: crops in the furrows' rows (the ground's own stripes —
+        // terrainShader: a row every 2/3 m), each field its own crop: golden
+        // wheat, or green where something younger is coming up
+        const fk = hash(Math.floor(x / 22), Math.floor(y / 22), 41);
+        const ripe = fk < 0.62;
+        for (let k = Math.ceil(y * 1.5 - 0.25); k <= Math.floor((y + 1) * 1.5 - 0.25); k++) {
+          const ry = (k + 0.25) / 1.5;
+          if (ry < y || ry >= y + 1) continue;
+          for (let q = 0; q < 3; q++) {
+            const a = hash(x, k, 50 + q);
+            if (a < 0.08) continue; // (a gap here and there)
+            const c = ripe ? col.setRGB(0.84 + a * 0.06, 0.74 + a * 0.05, 0.46, SRGB) : col.setRGB(0.42 + a * 0.06, 0.64, 0.26, SRGB);
+            put('crop', x + (q + 0.2 + a * 0.6) / 3, ry + (a - 0.5) * 0.08, a * 360, ripe ? 0.95 + a * 0.3 : 0.6 + a * 0.25, c);
+          }
+        }
+        continue;
+      }
+      if (t === T.GRASS || t === T.LAWN || t === T.FLOWERS || t === T.FOREST || t === T.JUNGLE || t === T.SAKURA || t === T.MANGROVE) {
         if (winter) continue;
         const n = t === T.FOREST || t === T.JUNGLE ? 2 : t === T.LAWN ? 1 : 3;
         for (let q = 0; q < n; q++) {
@@ -342,8 +398,8 @@ class GroundCover {
     this.group = new THREE.Group();
     this.group.name = 'groundcover';
     scene.add(this.group);
-    const near = { grass: grassGeo(), flower: flowerGeo(), fern: fernGeo(), pebble: pebbleGeo(), shell: shellGeo(), rock: rockGeo() };
-    const far = { grass: grassGeo(true), flower: flowerGeo(true), fern: fernGeo(true), pebble: pebbleGeo(true), shell: near.shell, rock: rockGeo(true) };
+    const near = { grass: grassGeo(), flower: flowerGeo(), fern: fernGeo(), pebble: pebbleGeo(), shell: shellGeo(), rock: rockGeo(), crop: cropGeo() };
+    const far = { grass: grassGeo(true), flower: flowerGeo(true), fern: fernGeo(true), pebble: pebbleGeo(true), shell: near.shell, rock: rockGeo(true), crop: cropGeo(true) };
     this.sets = {};
     for (const k of KINDS) {
       this.sets[k] = new WedgeSet(this.group, k, {
