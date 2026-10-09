@@ -1036,11 +1036,20 @@ export class ShipView {
       // the eye only: it's small)
       const fx = ctx.game.fx, dt = Math.min(0.25, Math.max(0, env.time - (this.sprayAt ?? env.time)));
       this.sprayAt = env.time;
-      if (fx && !s.sunk && !s.lvl && sp > 3 && Math.hypot(ctx.world.dx(v3.ox, s.x), s.y - v3.oy) < 110) {
-        const k = Math.min(1.4, (sp - 3) / 7), rough = env.storm || 0;
+      if (fx && !s.sunk && !s.lvl && sp > 1.5 && Math.hypot(ctx.world.dx(v3.ox, s.x), s.y - v3.oy) < 110) {
+        const k = Math.min(1.4, (sp - 1.5) / 7), rough = env.storm || 0;
+        // (water thrown up off her sides as she shoulders through it, all along her forward half)
+        this.sideT = (this.sideT ?? Math.random()) - dt * (1.5 + k * 4);
+        if (this.sideT <= 0) {
+          this.sideT = 0.08 + Math.random() * 0.12;
+          const c = Math.cos(s.heading), sn = Math.sin(s.heading), t = 0.55 + Math.random() * 0.35;
+          const u = (t - 0.5) * L, out = hbAt(t, B) + 0.25, side = Math.random() < 0.5 ? -1 : 1;
+          const bx = s.x + c * u - sn * side * out, by = s.y + sn * u + c * side * out;
+          fx.burst(bx, by, Math.round(2 + k * 4), { world: true, base: swellAt(bx, by) + 0.05, carry: [c * (s.speed || 0) * 0.6, sn * (s.speed || 0) * 0.6], sink: true, angle: s.heading + side * (Math.PI / 2 + 0.25), spread: 0.5, speed: 1.2 + k * 1.8, z: 0.05, zJitter: 0.1, vz: 1.4 + k * 1.8, g: 9.8, life: 0.5 + k * 0.25, size: 0.08 + k * 0.05, color: ['#ffffff', '#eaf6ff', '#cfeaf8'], kind: 'drop', drag: 0.8 });
+        }
         this.sprayT = (this.sprayT ?? Math.random()) - dt * (0.8 + k * 2.2 + rough * 2.5);
         if (this.sprayT <= 0) {
-          this.sprayT = 0.6 + Math.random() * 0.8;
+          this.sprayT = 0.18 + Math.random() * 0.3;
           const c = Math.cos(s.heading), sn = Math.sin(s.heading);
           // where her bow cuts the sea: just outside her planking at the
           // waterline (never over her deck), thrown up and out to either

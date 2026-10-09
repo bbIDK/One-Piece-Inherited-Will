@@ -36,7 +36,7 @@ const CALM = /* glsl */`
 // wide stretches of it turn to, blending — a turquoise, a deeper cobalt, a
 // soft grey-green (water3d's seaHue)
 // (deep, saturated blues — a cobalt, a teal, a navy and a slate — not a pale sky blue)
-const SEA_HUES = ['#2d679f', '#2a7c9f', '#234f8f', '#36708a'];
+const SEA_HUES = ['#3f7cb3', '#3a90b0', '#3566a6', '#4a86a0'];
 // each sea its own cast over them (eased in as you sail from one into another):
 // the Blues a little brighter, the Calm Belt glassy and green, Paradise a
 // rich blue, the New World dark and violet
@@ -104,7 +104,10 @@ const VERT = /* glsl */`
       float o = max(f.w, 0.0);
       float stem = exp(-pow((f.z - 0.98) * D.x / (1.2 + D.y * 0.25), 2.0) - pow(o / (0.9 + D.y * 0.12), 2.0));
       float side = exp(-pow(o / 1.6, 2.0)) * smoothstep(0.1, 0.3, f.z) * (1.0 - smoothstep(0.6, 0.85, f.z));
-      h += (stem * (0.12 + 0.35 * spd) - side * 0.12 * spd) * step(0.0, f.w + 0.4);
+      // (and the bow wave's crest rolling out from her shoulders and away aft: the sea itself, heaped)
+      float back = (0.95 - f.z) * D.x, crestAt = D.y * 0.1 + back * 0.32;
+      float crest = exp(-pow((o - crestAt) / (0.6 + back * 0.05), 2.0)) * smoothstep(0.0, 2.0, back) * (1.0 - smoothstep(D.x * 0.3, D.x * 0.9, back));
+      h += (stem * (0.18 + 0.55 * spd) - side * 0.16 * spd + crest * 0.28 * spd) * step(0.0, f.w + 0.4);
     }
     return h;
   }
@@ -259,7 +262,8 @@ const FRAG = /* glsl */`
       }
       float edge = abs(lat - (D.y * 0.12 + back * 0.36));
       float bw = (1.0 - smoothstep(0.25 + back * 0.03, 0.7 + back * 0.06, edge)) * smoothstep(0.0, 1.5, back) * (1.0 - smoothstep(D.x * 0.4, D.x * 1.2, back)) * step(0.0, f.w) * spd;
-      foam = max(foam, max(band * (0.55 + 0.45 * spd), bw * 0.85));
+      // (the bow wave's arms are the sea's own shape now — see hullPush and the spray: ships3d.js — not painted foam)
+      foam = max(foam, max(band * (0.55 + 0.45 * spd), bw * 0.25));
     }
     if (foam <= 0.0) return vec2(0.0);
     // (laced: veins of white over thinner patches, churning)
@@ -294,7 +298,7 @@ const FRAG = /* glsl */`
         churn = max(churn, mid);
         // (the arms: a ridge of the sea at either edge)
         float wr = 0.45 + hw * 0.16, e = (d - hw) / wr, ridge = exp(-e * e) * br;
-        foam = max(foam, max(mid * 0.55, ridge * 0.9));
+        foam = max(foam, max(mid * 0.4, ridge * 0.22));
         sl += (dv / max(d, 0.001)) * (-2.0 * e / wr) * ridge * 0.22;
       }
     }
@@ -461,6 +465,8 @@ const FRAG = /* glsl */`
     // (a facet's sheen is the sky's blue more than its pale haze: a lighter, brighter blue, as paint has it)
     vec3 skyF = water ? mix(skyR, uSkyTop * 1.15, 0.45 * (1.0 - smoothstep(150.0, 450.0, dist))) : skyR;
     col = mix(col, skyF * (0.45 + 0.55 * uDay), sheen * 0.85);
+    // (on the faster setting the sea has fewer facets catching the sky: lift it, so it's not a darker sea)
+    if (water && uDetail < 0.5) col = mix(col, skyF * (0.45 + 0.55 * uDay), 0.2);
     // the sun: a hard highlight, and sparkles along its path
     vec3 hlf = normalize(uSunDir + v);
     float nh = max(dot(n, hlf), 0.0);
