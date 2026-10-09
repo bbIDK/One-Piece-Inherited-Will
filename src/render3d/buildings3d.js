@@ -1255,16 +1255,20 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex 
     }
   }
   if (S.portico && fw >= 6 && role !== 'house' && Math.abs(door.x) + (dd.dw + 1.8) / 2 + 0.5 < fw / 2) {
-    // columns and a pediment around the door (grand buildings only)
+    // columns and a pediment framing the door (grand buildings only): set
+    // into the front wall, half their round standing proud of it, so the
+    // street in front stays clear — nothing you'd walk through, nothing in
+    // the way of a cart or a crowd
     const px = door.x, pw = dd.dw + 1.8;
     for (const sx of [-1, 1]) {
-      k.add(cyl(0.17, 0.2, dd.top + 0.9, 10), { at: [px + sx * pw / 2, 0.3, 1.1], color: '#fdfefe', outline: 0.02 });
-      B(k, px + sx * pw / 2 - 0.26, -dn, 0.85, px + sx * pw / 2 + 0.26, 0.32, 1.35, '#ecf0f1');
+      k.add(cyl(0.17, 0.2, dd.top + 0.9, 10), { at: [px + sx * pw / 2, 0.3, 0.2], color: '#fdfefe', outline: 0.02 });
+      B(k, px + sx * pw / 2 - 0.26, -dn, 0.0, px + sx * pw / 2 + 0.26, 0.32, 0.44, '#ecf0f1');
+      B(k, px + sx * pw / 2 - 0.24, dd.top + 1.12, 0.0, px + sx * pw / 2 + 0.24, dd.top + 1.22, 0.42, '#ecf0f1');
     }
-    B(k, px - pw / 2 - 0.35, dd.top + 1.2, -0.05, px + pw / 2 + 0.35, dd.top + 1.45, 1.4, '#fdfefe', { outline: 0.02 });
-    k.save(); k.translate(px, dd.top + 1.45, 0.65); k.rotateY(0);
-    k.add(slab([[-pw / 2 - 0.35, 0], [pw / 2 + 0.35, 0], [0, 0.9]], 1.4), { color: S.trim === '#d4ac0d' ? '#fdfefe' : '#fdfefe', outline: 0.02 });
-    k.add(slab([[-pw / 2 + 0.1, 0.06], [pw / 2 - 0.1, 0.06], [0, 0.72]], 0.05), { at: [0, 0, 0.71], color: '#d4ac0d' });
+    B(k, px - pw / 2 - 0.35, dd.top + 1.2, -0.05, px + pw / 2 + 0.35, dd.top + 1.45, 0.5, '#fdfefe', { outline: 0.02 });
+    k.save(); k.translate(px, dd.top + 1.45, 0.2);
+    k.add(slab([[-pw / 2 - 0.35, 0], [pw / 2 + 0.35, 0], [0, 0.9]], 0.5), { color: '#fdfefe', outline: 0.02 });
+    k.add(slab([[-pw / 2 + 0.1, 0.06], [pw / 2 - 0.1, 0.06], [0, 0.72]], 0.05), { at: [0, 0, 0.26], color: '#d4ac0d' });
     k.restore();
   }
   if ((b.role === 'marine_base' || (b.style === 'marine' && fw >= 6)) && b.style !== 'ruins') {
