@@ -37,6 +37,7 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _eyeP = new THREE.Vector3(), _eyeQ = new THREE.Quaternion();
 const _sp3 = [0, 0, 0], _eu = new THREE.Euler(), _qh = new THREE.Quaternion(), _up3 = new THREE.Vector3(0, 1, 0);
 const _fq = new THREE.Quaternion(), _fq2 = new THREE.Quaternion();
+const _fs1 = new THREE.Vector3(), _fs2 = new THREE.Vector3();
 // knocked off your feet, on the way down (see ActorView.update): arched back
 // with the arms thrown up over the head, the legs going out from under you
 const FALLING = { ...LYING, l: -0.32, ht: -0.4, hF: [0.0, -0.33], hB: [-0.08, -0.29], eF: 0.5, eB: 0.5, fF: [0.17, -0.07], fB: [0.03, -0.02], face: 'hurt' };
@@ -509,6 +510,11 @@ class ActorView {
       chest.updateWorldMatrix(true, false);
       chest.getWorldQuaternion(_fq).invert();
       this.backFlame.group.quaternion.copy(_fq).multiply(this.yaw.getWorldQuaternion(_fq2));
+      // (a chest swollen by a move — Gigant Balloon, Gear Third, a Monster
+      // Point — carries the flame on its back, not blown up with it: the
+      // bone's own scale undone, the body's size kept)
+      chest.getWorldScale(_fs1); this.yaw.getWorldScale(_fs2);
+      this.backFlame.group.scale.set(_fs2.x / (_fs1.x || 1), _fs2.y / (_fs1.y || 1), _fs2.z / (_fs1.z || 1));
       const fdt = Math.min(0.1, Math.max(0, t - (this.flameT ?? t)));
       this.flameT = t;
       // (the air going past: the way they're moving, from where they were a frame ago)
@@ -518,7 +524,10 @@ class ActorView {
       const sp = Math.hypot(mvx, mvy), lim = sp > 9 ? 9 / sp : 1;
       driftInto(this.yaw, -mvx * lim * 0.05, -mvy * lim * 0.05, _v2);
       _v2.x -= 0.08; // (and a little back off the shoulders even standing still)
-      this.backFlame.update(t, fdt, 1.1 * m.d.Bk, _v2, lit);
+      // (its size from the body as it is, not as a move has blown it up: a
+      // look a buff puts on — Balloon's bulk, a Gear — leaves the flame be)
+      if (!a.buffs?.some((b) => b.look)) this.flameBk = m.d.Bk;
+      this.backFlame.update(t, fdt, 1.1 * (this.flameBk ?? m.d.Bk), _v2, lit);
     } else if (this.backFlame) this.backFlame.group.visible = false;
     // the Phoenix's wings of blue flame: flying as the Phoenix, or while its form is on
     const phoenix = (a.flying && a.flightStyle === 'phoenix') || !!a.phoenixForm;
