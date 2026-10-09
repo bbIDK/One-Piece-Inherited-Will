@@ -284,6 +284,21 @@ export class Services {
     c.trained[tid] = { ...(c.trained[tid] || {}), sparDay: g.env.day };
     const sp = t.spar;
     const L = sp.level;
+    // (when it's the trainer themself you spar — Sai, not "a sparring partner"
+    // — it's them who squares up to you, not a copy of them beside them)
+    const self = g.actorsNear(p.x, p.y, 25).find((a) => a.alive && !a.isPlayer && a.def?.trainer === tid && a.name === sp.name && a.state === 'idle');
+    if (self) {
+      const C = self.controller;
+      self._preSpar = { kind: C?.kind, skill: C?.skill, moves: C?.moves, leash: C?.leash, home: C?.home ? { ...C.home } : { x: self.x, y: self.y }, lethal: self.lethal, stationary: self.stationary, facing: self.facing, hp: self.hp };
+      if (C) { C.kind = 'hostile'; C.target = p; C.state = 'idle'; C.leash = 0; C.skill = Math.max(C.skill || 0, Math.min(0.85, 0.3 + L / 100)); }
+      self.hp = self.d.maxHp; self.lethal = false; self.stationary = false;
+      self.provoked = true; self.spar = tid;
+      g.sparring = { opp: self, tid, start: g.time, self: true };
+      g.bossTarget = self;
+      g.ui.banner('SPAR!', t.name, 'A duel with no killing. Knock them down to win.', 3);
+      g.audio?.sfx('fanfare');
+      return;
+    }
     const spot = findShore(g.world, p.x + 3, p.y, 5) || { x: p.x + 2, y: p.y };
     const opp = new Actor({
       x: spot.x, y: spot.y, name: sp.name, title: `Sparring partner (${t.name})`,
@@ -320,7 +335,16 @@ export class Services {
     const opp = s.opp;
     const power = opp.power(), mine = p.power();
     const ratio = power / Math.max(1, mine);
-    setTimeout(() => { opp.alive = false; }, 1500);
+    if (s.self) {
+      // (the trainer gets back up, dusts off and goes back to what they were doing)
+      setTimeout(() => {
+        const P = opp._preSpar, C = opp.controller;
+        if (!P || !opp.alive) return;
+        opp._preSpar = null; opp.spar = null; opp.provoked = false; opp.aggroPlayer = false;
+        opp.state = 'idle'; opp.hp = opp.d.maxHp; opp.lethal = P.lethal; opp.stationary = P.stationary;
+        if (C) { C.kind = P.kind; C.skill = P.skill; C.moves = P.moves; C.leash = P.leash; C.home = P.home; C.target = null; C.state = 'return'; }
+      }, won ? 3500 : 800);
+    } else setTimeout(() => { opp.alive = false; }, 1500);
     const style = g.progression.styleInUse();
     if (won) {
       const m = Math.max(2, Math.min(12, 6 * ratio));

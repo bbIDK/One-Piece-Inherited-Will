@@ -1383,7 +1383,8 @@ function install(game) {
     // friendly duelists shake it off and stand up again
     for (const id of DUELISTS) {
       const a = game.actors.find((x) => x.alive && x.npcId === id && x.state === 'knocked');
-      if (!a || (a.knockT || 0) < 6) continue;
+      // (they stay down while you're standing over them: up again once you've gone, or after a good while)
+      if (!a || (a.knockT || 0) < 6 || ((a.knockT || 0) < 60 && W.distance(p.x, p.y, a.x, a.y) < 30)) continue;
       a.state = 'idle';
       a.hp = Math.round(a.d.maxHp * 0.6);
       a.provoked = false; a.aggroPlayer = false; a.stationary = true;

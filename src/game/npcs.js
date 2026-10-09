@@ -529,7 +529,7 @@ export class Interactions {
       if (!c) return;
       for (const a of game.actors) {
         // duelists and sparring partners get back up after a while
-        if (a.recoverAfter && a.state === 'knocked' && a.knockT > a.recoverAfter && a.alive) {
+        if (a.recoverAfter && a.state === 'knocked' && a.knockT > a.recoverAfter && a.alive && (a.knockT > Math.max(60, a.recoverAfter) || !game.player || game.world.distance(game.player.x, game.player.y, a.x, a.y) > 30)) {
           a.state = 'idle'; a.hp = Math.round(a.d.maxHp * 0.5); a.provoked = false; a.aggroPlayer = !!a.def?.hostile;
           if (a.controller) { a.controller.target = null; a.controller.state = 'return'; }
           if (game.bossTarget === a) game.bossTarget = null;
