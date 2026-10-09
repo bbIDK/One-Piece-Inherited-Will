@@ -24,6 +24,11 @@ import { plankJoins, PLANK_W } from './gangway.js';
 import { bw } from '../world/bframe.js';
 import { heightsOf } from '../world/interiors.js';
 import { attackSpec, infuse } from './moveset.js';
+import { G, legacyV, fallStep, bodyDragK, gripStep, gripOf, DRY_GRIP } from './physics.js';
+// (the surfaces that give less than a dry grip: physics.js)
+const GRIP_OF = [];
+for (const [t, n] of [[T.ICE, 'ice'], [T.PACK_ICE, 'pack_ice'], [T.SNOW, 'snow'], [T.SNOWROCK, 'snowrock'], [T.MUD, 'mud'], [T.SAND, 'sand'], [T.DESERT, 'desert'], [T.MARBLE, 'marble'], [T.ISLAND_CLOUD, 'cloud'], [T.CANDY, 'candy'], [T.CAKE, 'cake'], [T.ASH, 'ash']]) GRIP_OF[t] = n;
+const _gv = [0, 0];
 
 // what a step sounds like on each kind of ground
 const STEP_SOUND = [];
@@ -534,7 +539,8 @@ export class Actor extends Entity {
   /** Take-off speeds for this body: { v (a plain jump), charge (× for a full charge), leap (out of the water) }. */
   jumpStats() {
     const R = RACES[this.race] || RACES.human;
-    return { v: (R.jump || 7.6) * (this.jumpMul || 1), charge: R.charge || 1.45, leap: R.leap || 1 };
+    // (the race's spring, set as the height it carries you — physics.js legacyV: same height, real gravity)
+    return { v: legacyV((R.jump || 7.6) * (this.jumpMul || 1)), charge: R.charge || 1.45, leap: R.leap || 1 };
   }
 
   /** Can you jump right now: on your feet, or at the surface of the water (not a Devil Fruit user). */
@@ -606,6 +612,14 @@ export class Actor extends Entity {
     return game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
   }
 
+  /** The grip under your feet just now (physics.js gripOf): the ground's, a little less wet in the rain. */
+  gripHere(game) {
+    const name = GRIP_OF[game.world.type(this.x, this.y)];
+    let mu = name ? gripOf(name) : DRY_GRIP;
+    if (mu > 1 && (game.env?.rain || 0) > 0.3) mu = 1.05;
+    return mu;
+  }
+
   /** Deep enough to swim in (about chest-deep; a little less to stand up again, so shorelines don't flicker). */
   swimDepth(was) { return 1.75 * (this.look?.scale || 1) * (was ? 0.5 : 0.62); }
 
@@ -641,18 +655,24 @@ export class Actor extends Entity {
     const wd = this.waterUnder(game);
     const deep = wd > this.swimDepth(false);
     const z0 = this.z;
-    let grav = 22;
+    // Earth's gravity, and the air pushing back on a body falling through it
+    // (½ρv²C_dA: little in a jump, a lot in a long fall — a body tops out at
+    // about 40 m/s); in the sea, Archimedes: the water takes almost all of a
+    // body's weight (it's nearly as dense), and its drag is far stronger
+    let grav = G, k = bodyDragK(s);
     if (deep && z0 < 0 && this.vz < 0) {
-      // (in up to the chest: drag, and the water takes your weight)
       const sub = clamp(-z0 / (1.3 * s), 0, 1);
       grav *= 1 - sub * 0.8;
       this.vz -= this.vz * Math.min(1, dt * 9 * sub);
     }
-    this.vz -= grav * dt;
+    this.vz = fallStep(this.vz, dt, k, grav);
     this.z += this.vz * dt;
     if (this.vz > 0) { this.underRoof(game); return; } // (still rising: out of the water too)
+    // (how hard a landing is, in the units the effects were tuned in: the
+    // same height of fall reads the same, whatever the gravity)
+    const IMP = 1 / legacyV(1);
     if (wd > 0 && z0 > 0 && this.z <= 0) {
-      const impact = -this.vz;
+      const impact = -this.vz * IMP;
       game.fx.ripple?.(this.x, this.y, Math.min(2.4, 0.8 + impact * 0.1));
       game.fx.burst(this.x, this.y, Math.min(22, 6 + impact * 1.2), { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 1.6 + impact * 0.22, z: 0.05, vz: 2 + impact * 0.35, g: 11, life: 0.6, size: 0.11 });
       game.audio?.sfx(impact > 9 ? 'splash_big' : 'splash', this);
@@ -661,7 +681,7 @@ export class Actor extends Entity {
     // (afloat, the body lies where a swimmer's does: stretched out if you came in moving)
     const floor = wd <= 0 ? 0 : deep ? -Math.min(wd - 0.1, (this.moving ? 1.06 : 1.45) * s) : -wd;
     if (this.z <= floor) {
-      const impact = -this.vz;
+      const impact = -this.vz * IMP;
       // (and floats on from just there: see updateWater)
       this.landSink = deep ? -floor / s : null;
       this.z = 0;
@@ -670,7 +690,7 @@ export class Actor extends Entity {
       this.leapT = 0;
       this.lastLanded = game.time || 0;
       // what's left of the fall takes you on under for a moment
-      if (deep) this.plungeV = Math.min(impact, Math.max(0, wd - 1.5) * 4);
+      if (deep) this.plungeV = Math.min(impact / IMP, Math.max(0, wd - 1.5) * 4);
       else if (impact > 3) {
         game.fx.burst(this.x, this.y, Math.min(14, 4 + impact), { color: wd > 0 ? ['#e1f5fe', '#b3e5fc'] : ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 1.5 + impact * 0.25, z: 0.05 + this.liftUnder(game), vz: 0.6, g: 1.2, life: 0.45, kind: wd > 0 ? undefined : 'dust', size: 0.18, grow: 0.4 });
         if (impact > 9 && !wd) game.audio?.sfx('land_heavy', this);
@@ -1600,9 +1620,20 @@ export class Actor extends Entity {
       const tx = i.mx * sp, ty = i.my * sp;
       // (the water holds you: a swimmer gathers way and loses it over a moment —
       // running in, you glide on and slow down rather than stopping dead)
-      const k = Math.min(1, dt * (this.inWater ? 4 : 16));
-      this.vx += (tx - this.vx) * k;
-      this.vy += (ty - this.vy) * k;
+      if (this.inWater) {
+        const k = Math.min(1, dt * 4);
+        this.vx += (tx - this.vx) * k;
+        this.vy += (ty - this.vy) * k;
+      } else {
+        // on your feet, you speed up, stop and turn only as fast as the grip
+        // under them lets you push (F = μmg: a = μg) — on ice you skid on;
+        // in the air there's nothing to push on but a twist of the body, so
+        // a jump carries the way you had (momentum) with only a little steer
+        const air = (this.z || 0) > 0.05 || !!this.vz;
+        const mu = air ? 0.35 : this.deck ? DRY_GRIP : this.gripHere(game);
+        gripStep(this.vx, this.vy, tx, ty, mu, dt, _gv);
+        this.vx = _gv[0]; this.vy = _gv[1];
+      }
       vx = this.vx; vy = this.vy;
     } else {
       this.vx *= 0.8; this.vy *= 0.8;

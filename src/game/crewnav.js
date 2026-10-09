@@ -10,7 +10,9 @@ import { allShips } from './ship.js';
 
 // (a running jump: how fast they're going as they leave the deck — a little
 // under a sprint, to be sure of it — and how it falls: see actor.js)
-const RUN = 5, GRAV = 22;
+import { G as GRAV } from './physics.js';
+
+const RUN = 5;
 // (a big ship's decks open to the sky, with a rail to jump from)
 const OPEN_DECKS = ['main', 'quarter', 'fore', 'poop'];
 
@@ -98,7 +100,10 @@ function railGap(game, a, T, S, gx, gy) {
  * they're across the water to it?
  */
 function leapable(a, rg) {
-  const J = a.jumpStats ? a.jumpStats() : { v: 7.6, charge: 1.45 }, v0 = J.v * J.charge, t = (rg.gap + 0.5) / RUN;
+  // (a short gap to a high rail is jumped high and slow, to cross it at the top
+  // of the leap — at v₀/g — rather than flat out at a run, still on the way up)
+  const J = a.jumpStats ? a.jumpStats() : { v: 7.6, charge: 1.45 }, v0 = J.v * J.charge;
+  const t = Math.max((rg.gap + 0.5) / RUN, v0 / GRAV);
   return v0 * t - GRAV / 2 * t * t >= rg.rise - 0.05;
 }
 

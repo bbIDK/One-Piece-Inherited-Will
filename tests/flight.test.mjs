@@ -8,6 +8,7 @@
 // it, so a flier swoops onto what it swings at; a shot reaches a flier, and
 // a heavy blow knocks one out of the sky. Geppo is a few kicks off the air.
 import { test } from 'node:test';
+import { legacyV } from '../src/game/physics.js';
 import assert from 'node:assert/strict';
 
 globalThis.window = globalThis;
@@ -299,7 +300,7 @@ test('Geppo: a few kicks off the air in one jump, and they come back on landing'
   assert.ok(airStep(p, g));
   assert.equal(p.flightStyle, 'geppo');
   assert.ok(!p.flying, 'not true flight');
-  assert.ok(p.vz > 5 && p.airStepT >= 0);
+  assert.ok(p.vz > legacyV(5) && p.airStepT >= 0);
   step(g, 0.2);
   assert.ok(airStep(p, g), 'a second');
   step(g, 0.2);

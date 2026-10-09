@@ -1,6 +1,7 @@
 // Ships: wind-driven sailing, currents, hull collision against coasts,
 // broadside cannons, damage, sinking (not yours, while SHIPS_UNBREAKABLE).
 import { Entity } from './entity.js';
+import { hullStep } from './physics.js';
 import { SHIPS_UNBREAKABLE, shipStats, shotCapFor } from '../data/ships.js';
 import { drawShip } from '../render/ship.js';
 import { drawCharacter } from '../render/character.js';
@@ -174,7 +175,8 @@ export class Ship extends Entity {
     } else {
       this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
       const rel = Math.cos(angleDiff(this.heading, windA));
-      const windFactor = (0.35 + 0.65 * clamp((rel + 0.4) / 1.4, 0, 1)) * windS;
+      // (beating into the wind she still makes good way — tacking, as a real ship would — just not her best)
+      const windFactor = (0.62 + 0.38 * clamp((rel + 0.4) / 1.4, 0, 1)) * windS;
       // (the seas were widened with the world, so sails carry a little further)
       target = this.def.speed * SEA_PACE * this.sailSet * windFactor * (this.owner === 'player' ? game.crewMods?.speedMul || 1 : 1);
       // rowing / paddles work without wind
@@ -197,7 +199,16 @@ export class Ship extends Entity {
     // — and what drives her builds up and dies away over a moment (the sails
     // filling, the oars biting), so she never lurches into a new pace
     this.push += (target - this.push) * (1 - Math.exp(-dt / Math.max(0.01, oared ? BOAT_FEEL.speedSmoothOars : BOAT_FEEL.speedSmooth)));
-    this.speed += (this.push - this.speed) * Math.min(1, dt * (oared ? 1.6 : this.push > this.speed ? 0.7 : 1.2));
+    // a light boat under oars answers each stroke; a ship under sail is driven
+    // by her sails against the water's drag on her hull (physics.js hullStep:
+    // m dv/dt = drive - ½ρv²C·S), so she gathers way slowly, carries it, and
+    // coasts on when the sails come in — a heavier hull for longer
+    if (oared) this.speed += (this.push - this.speed) * Math.min(1, dt * 1.6);
+    // (her anchor down, or hove to with her sails backed against the wind: those
+    // brake her hard — the chain's drag, the wind on the sails' fronts — and she
+    // comes to rest in a few lengths rather than coasting on)
+    else if (this.anchored || this.speedCap === 0) this.speed += (this.push - this.speed) * Math.min(1, dt * 1.2);
+    else this.speed = hullStep(this.speed, this.push, this.def.speed * SEA_PACE, 2 + (this.def.length || 20) * 0.06, dt);
     // the water's height under the keel (up the mountain's canals) and the slope she's riding
     // (and, diving to Fish-Man Island, how far over or under it she is: zones.js)
     this.lvl = cur.level + (this.dive || 0);

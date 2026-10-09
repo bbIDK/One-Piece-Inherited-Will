@@ -31,6 +31,7 @@
 //    lesser counter on the foe who overreached.
 //  * No stun-locks: after a few blows in a row you break free for a moment.
 import { angleDiff, clamp, TAU } from '../core/math.js';
+import { legacyV } from './physics.js';
 import { hullGap, BIG_SHIP } from '../world/hull.js';
 import { hostile } from './entity.js';
 import { tierOf, PARRY } from './difficulty.js';
@@ -425,7 +426,7 @@ export class Combat {
       if (h.status) for (const [k, v] of Object.entries(h.status)) tgt.addStatus(k, v, att);
       // (a quake throws them off their feet; a heavy blow knocks a flier out of the sky)
       if (h.launch && !tgt.flying && !tgt.inWater && !tgt.climb && !tgt.onShip && !((tgt.z || 0) > 0.3) && tgt.state === 'idle') {
-        tgt.vz = Math.max(tgt.vz || 0, h.launch * (tgt.boss ? 0.5 : 1));
+        tgt.vz = Math.max(tgt.vz || 0, legacyV(h.launch * (tgt.boss ? 0.5 : 1)));
         tgt.z = Math.max(tgt.z || 0, 0.02); tgt.airT = 0; tgt.jumpK = 0;
       }
       if (tgt.flying && tgt.flight && (h.heavy || h.guardBreak || (h.stun || 0) >= 0.6 || h.fling)) downFlyer(tgt, game);
@@ -433,7 +434,7 @@ export class Combat {
       if (h.fling && tgt.state === 'idle' && !tgt.onShip && !tgt.climb) {
         const sp = h.fling * (tgt.boss ? 0.35 : 1);
         tgt.dash = { vx: Math.cos(kbAng) * sp, vy: Math.sin(kbAng) * sp, t: 1.1, ignoreWater: true, flung: true };
-        tgt.vz = Math.max(tgt.vz || 0, 8); tgt.z = Math.max(tgt.z || 0, 0.02); tgt.airT = 0;
+        tgt.vz = Math.max(tgt.vz || 0, legacyV(8)); tgt.z = Math.max(tgt.z || 0, 0.02); tgt.airT = 0;
       }
       if (h.onHit) h.onHit(tgt, att, game, h);
       raceHit(att, tgt, h, game);
