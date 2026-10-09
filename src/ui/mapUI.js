@@ -280,7 +280,13 @@ function drawLabels(game, r, cam, layer) {
   const lp = game.logPoseTarget?.();
   if (lp && !zone) pin('.lp', 'log_pose', 26, game.logPoseInfo?.()?.label === '???' ? 'Log Pose' : `Log Pose: ${lp.name}`, lp.x, lp.y);
   // your ships
-  for (const s of game.ships) if (s.owner === 'player' && !s.sunk) pin('.ship', 'ship', 24, z >= 1 ? s.name || 'Your ship' : null, s.x, s.y);
+  // (the one you're using: the one you're aboard, else the one you last sailed or brought round)
+  {
+    const pl = game.player, mine = game.ships.filter((s) => s.owner === 'player' && !s.sunk && s.alive !== false);
+    const uid = game.state?.char?.activeShip;
+    const s = mine.find((x) => pl && (pl.deck?.ship === x || (pl.mode === 'sail' && pl.ship === x))) || mine.find((x) => uid && x.uid === uid) || mine.find((x) => pl?.ship === x) || mine[0];
+    if (s) pin('.ship', 'ship', 24, z >= 1 ? s.name || 'Your ship' : null, s.x, s.y);
+  }
   // close up, the islands you know are charted in detail: their towns, harbours and the places in them
   if (close) {
     for (const isl of w.islands) {

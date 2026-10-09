@@ -102,5 +102,6 @@ test('bringing a ship round takes her from wherever she was: one of her afloat, 
   c.fleet.push(up);
   const r2 = launchShip(game, up, B);
   assert.equal(r2.ship.name, 'Marine Cutter');
-  assert.equal(liveShips(game).length, 2);
+  // (one boat of yours afloat at a time: the other goes into the yards)
+  assert.equal(liveShips(game).length, 1);
 });

@@ -102,8 +102,10 @@ export function launchShip(game, rec, dock) {
   if (old && aboard(p, old)) return { why: 'aboard', ship: old };
   if (old && dockOf(w, old) === dock) return { why: 'here', ship: old };
   const laidUp = [];
+  // (one boat of yours afloat at a time: bringing one round — or a new one —
+  // lays up whichever else is out, wherever she lies, unless you're aboard her)
   for (const o of liveShips(game)) {
-    if (o === old || aboard(p, o) || dockOf(w, o) !== dock) continue;
+    if (o === old || aboard(p, o)) continue;
     layUp(game, o);
     laidUp.push(o.name);
   }
