@@ -539,9 +539,10 @@ function fruitPart(fruit, q, sway) {
  */
 function hangOut(p, crown) {
   if (!crown?.blobs || crown.palm) return p;
-  const a = Math.atan2(p[2] - crown.c[2], p[0] - crown.c[0]), e = -0.62;
-  const q = crownPoint(crown.blobs, crown.c, [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 0.97, crown.squash || 1);
-  return [q[0], q[1] - 0.26, q[2], q[1] + 0.08];
+  // (well under the crown's rim on a long stalk, clear of every leaf: seen from below and from the side)
+  const a = Math.atan2(p[2] - crown.c[2], p[0] - crown.c[0]), e = -0.8;
+  const q = crownPoint(crown.blobs, crown.c, [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 1.04, crown.squash || 1);
+  return [q[0], q[1] - 0.42, q[2], q[1] + 0.12];
 }
 
 /**

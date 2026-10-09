@@ -131,6 +131,33 @@ export function installFruits(game) {
     hangFruits(game);
   });
   game.hangFruits = () => hangFruits(game);
+  // (on its island: a strange call you can follow — faint and slow out at the
+  // island's edge, louder and quicker the closer you come, from its way)
+  let callT = 0;
+  game.on('tick', (dt) => {
+    if ((callT -= dt) > 0) return;
+    callT = 0.5;
+    const c = game.state?.char, p = game.player, w = game.world;
+    if (!c || !p || w !== game.surface || p.inCombat) return;
+    let best = null, bd = 230;
+    for (const f of c.world?.fruitSpawns || []) {
+      if (f.taken) continue;
+      const fx = f.tx ?? f.x, fy = f.ty ?? f.y;
+      const d = w.distance(p.x, p.y, fx, fy);
+      if (d < bd) { bd = d; best = { f, fx, fy }; }
+    }
+    if (!best || bd < 14) return;
+    const k = 1 - bd / 230;
+    c.flags.fruitCalled = c.flags.fruitCalled || {};
+    if (!c.flags.fruitCalled[best.f.fruit]) {
+      c.flags.fruitCalled[best.f.fruit] = 1;
+      game.hint?.('fruit_call_' + best.f.fruit, 'Something on this island is calling to you... follow the sound: it grows louder the closer you get. Look for a swirled fruit that glints.');
+    }
+    // (heard from its way: a little off you toward it, at a loudness of its own)
+    const dx = w.dx(p.x, best.fx), dy = best.fy - p.y, l = Math.hypot(dx, dy) || 1;
+    game.audio?.sfx('df_call', { x: p.x + dx / l * 6, y: p.y + dy / l * 6 }, { vol: 0.25 + 0.75 * k * k, near: k });
+    callT = 7 - 5 * k;
+  });
   // (close to one in its tree: a faint twinkle of sound from where it hangs, now and then — with its glint, render3d/glints.js)
   let nearT = 0;
   game.on('tick', (dt) => {

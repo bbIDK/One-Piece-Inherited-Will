@@ -1247,6 +1247,16 @@ export const SFX = {
    * from where it hangs (with its glint: render3d/glints.js) — a few high
    * notes a fifth apart, shimmering, quiet enough to be missed.
    */
+  /** A Devil Fruit calling from somewhere on the island: a low, wavering hum that swells and fades, a breath of chimes over it. */
+  df_call: {
+    prio: 2, cd: 1.5, max: 1, kind: 'world', send: 0.45,
+    play(v, k) {
+      const n = k.near || 0, f = rnd(196, 220);
+      [1, 1.498, 2.01].forEach((m, i) => v.tone(0.05 * i, 1.6, { freq: f * m, to: f * m * 1.012, type: 'sine', gain: 0.02 - i * 0.004, attack: 0.5 }));
+      v.tone(0, 1.6, { freq: f * 0.5, type: 'triangle', gain: 0.012, attack: 0.6 });
+      if (n > 0.4) [3, 4, 5].forEach((m, i) => v.tone(0.4 + i * 0.16, 0.7, { freq: f * m * 2, type: 'sine', gain: 0.006 + 0.01 * n, attack: 0.02 }));
+    },
+  },
   df_glint: {
     prio: 2, cd: 2.5, max: 1, kind: 'world', send: 0.3,
     play(v) {
