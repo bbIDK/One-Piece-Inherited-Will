@@ -216,7 +216,10 @@ export class Rig {
     const d = this.d;
     const l = (P.l || 0) + (o.leanAdd || 0);
     const bx = P.b ? P.b[0] : 0, by = P.b ? P.b[1] : 0;
-    this.hip.set(bx * d.kL * 0.8, d.hip0 - by * d.kHip, 0);
+    // (on a moving deck the hips ride a little off their mark — see balance.js — and drop
+    // to keep the downhill foot on the planks)
+    const G = o.deckG, gdrop = G ? Math.abs(G[1]) * (d.hipW + 0.03 + (o.legSpread || 0)) + Math.abs(G[0]) * 0.08 : 0;
+    this.hip.set(bx * d.kL * 0.8 + (o.balF || 0), d.hip0 - by * d.kHip + (o.balY || 0) - gdrop, o.balS || 0);
     // on a seat (o.sitY: model units over the feet; o.sitK: 0..1 eased in)
     if (o.sitK > 0) this.hip.y += ((o.sitY ?? d.hA) + 0.07 - this.hip.y) * o.sitK;
     const hip = this.hip;
@@ -226,7 +229,7 @@ export class Rig {
     // (the turn the reach gives, and the pose's own on top: the hips drive, the shoulders follow)
     const twist = clamp(clamp((hF[0] - hB[0]) * 0.85, -0.5, 0.5) + (P.tw || 0), -1.35, 1.35) * tk;
     const ptw = clamp(clamp((fF[0] - fB[0]) * 0.45, -0.3, 0.3) + (P.hp || 0), -1.1, 1.1) * tk;
-    const bend = P.ls || 0;
+    const bend = (P.ls || 0) + (o.balLs || 0);
     this.qLean.setFromAxisAngle(Z, -l);
     if (bend) this.qLean.multiply(_qa.setFromAxisAngle(X, bend));
     this.qChest.setFromAxisAngle(Y, twist).multiply(this.qLean);
@@ -383,7 +386,9 @@ export class Rig {
         fz += fx * Math.sin(walk) * 0.8; fx *= Math.cos(walk);
         fz = side * Math.max(d.hipW * 0.35, side * fz);
       }
-      T.set(hip.x + fx, d.hA + Math.max(0, -f[1] * d.kL), fz);
+      T.set(hip.x - (o.balF || 0) + fx, d.hA + Math.max(0, -f[1] * d.kL), fz);
+      // (each foot on the deck where it is, the deck sloped under them as she rolls and pitches)
+      if (G) T.y += G[0] * T.x + G[1] * T.z;
       _t.subVectors(T, Hj);
       // (a kick's smear: the leg out at full stretch overreaches itself, as an arm's blow does)
       const sm = (k === 0 ? P.smfF : P.smfB) || 0;

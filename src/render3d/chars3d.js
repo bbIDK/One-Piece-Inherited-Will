@@ -28,6 +28,7 @@ import { BOAT_FEEL } from '../game/boatFeel.js';
 import { blendPose } from '../render/anims.js';
 import { shipBob, shipPoint, shipRock } from '../world/hull.js';
 import { WakeTrail } from './wake3d.js';
+import { deckBalance, balanceState, clearBalance } from './chars/balance.js';
 import { coatBody, senseOf } from './chars/haki.js';
 import { gearOf, formRig, formBody, shadowRise } from './chars/forms.js';
 import { sigOf } from '../game/haki.js';
@@ -184,6 +185,13 @@ class ActorView {
       o.sitK = this.sitK > 0.01 ? this.sitK : 0;
       o.dt = dtv; // (a skirt's panels settle back at their own pace, however often this one is drawn)
       o.sitY = (this.sitH || 0) / s;
+      // standing on a ship's deck as she moves: the knees and hips ride her (balance.js)
+      const dk = a.deck, sh = dk && !dk.plank ? dk.ship : null;
+      if (sh && !helm && !sh.sunk && o.sitK < 0.3 && !a.inWater && !a.climb && !(a.z > 0.15) && pose.state !== 'knocked' && dist < 40) {
+        const w = ctx.world, bal = this.bal || (this.bal = balanceState());
+        deckBalance(bal, sh, env.time, dtv, this.visF ?? a.facing, w ? w.dx(sh.x, a.x) : a.x - sh.x, a.y - sh.y, this.root.position.y - shipBob(sh, env.time), s, o, a.isPlayer && ctx.mode === 'first' ? 0.3 : 1);
+        if (!pose.combat && !o.armed && !pose.anim && !pose.station) o.spread = (o.spread || 0) + (o.balArms || 0);
+      } else { if (this.bal) this.bal = null; clearBalance(o); }
       // the hands on the oar grips (or the wheel's rim) — or a rubber punch in
       // flight: the arm stretches out to the fist, and snaps back after it
       o.reachR = null; o.reachL = null; o.reachRK = 1; o.reachLK = 1; o.infR = 0;
