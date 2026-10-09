@@ -254,7 +254,9 @@ function setupBase(world, noise) {
           if (r < 1) e = clamp(e + (1 - r) * 140, 0, 255);
           summit = Math.hypot((x - M.x) * 1.6, y - M.y) < chart(70) + noise.noise2(x * 0.05, y * 0.05) * 12;
         }
-        out[0] = polarRow(y) || summit ? T.SNOWROCK : T.RED_ROCK;
+        // (near the poles the Red Line is still red rock — the wall you know —
+        // snowbound only along its heights)
+        out[0] = summit || (polarRow(y) && e > 175 + noise.noise2(x * 0.07, y * 0.07) * 30) ? T.SNOWROCK : T.RED_ROCK;
         out[1] = Math.round(e);
         out[2] = wintry(y) ? CLIMATE.WINTER : CLIMATE.TEMPERATE;
         return out;

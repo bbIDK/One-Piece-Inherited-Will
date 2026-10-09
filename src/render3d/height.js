@@ -75,6 +75,17 @@ function landHeight(world, x, y, t, e) {
     // the Red Line: a wall of red rock that dwarfs everything
     return 38 + Math.max(0, e - 90) * 0.55 + (t === T.SNOWROCK ? 9 : 0);
   }
+  // the polar ice: not a flat sheet at the sea's edge but an ice shelf, a
+  // cliff some 30 m high a few steps in from the water, then the ice cap
+  // (the floes drifting off it stay low)
+  if (t === T.PACK_ICE && world.zone === 0 && world.base?.ptop) {
+    const B = world.base, xi = world.wx(Math.floor(x));
+    const d = y < B.ptop[xi] ? B.ptop[xi] - y : y > B.pbot[xi] ? y - B.pbot[xi] : -1;
+    if (d >= 0) {
+      const k = Math.min(1, d / 5);
+      return 2 + 30 * k * k * (3 - 2 * k) + Math.max(0, d - 5) * 0.08;
+    }
+  }
   // (Mary Geoise is built on top of it, level with its plateau, not down in a pit cut into it)
   if (inMaryGeoise(world, x, y)) return RL_TOP;
   return 0.45 + Math.min(e, 190) * ELEV_K + BOOST[t];
