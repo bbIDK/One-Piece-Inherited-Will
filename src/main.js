@@ -105,13 +105,17 @@ const TIPS = [
   "A Devil Fruit user can't swim. Fall in and thrash back to shore before your strength gives out.",
   'Rest at an inn and that is where you wake if you fall.',
   'Homes are locked: knock, or kick the door in — a crime, unless it is a pirates\' den.',
-  'The number keys take things out — food, a weapon, your Devil Fruit; the skills of what is out are on Z, B, N, Y and O.',
+  'The number keys take things out — food, a weapon, your Devil Fruit; the skills of what is out sit on Z, X and C.',
   'Click a key on the skills panel (bottom right) to change it — or in Settings, under Controls.',
-  'Fight worthy foes with your Devil Fruit: its mastery opens its forms, and at its height it can awaken.',
-  'Tap Ctrl in third person for shift lock; P (or scrolling all the way in) switches between first and third person.',
+  'Fight worthy foes with your Devil Fruit: its mastery opens its moves and forms, and at its height it can awaken.',
+  'A teacher sells a style; its techniques open as you fight with it.',
   'Out of air under water? Swim for the surface — your lungs will not wait.',
   'Enemies hunt you by sight. Break the line of sight and they will lose you.',
   'Every life that ends passes its Will on to the next generation.',
+  'Bandages and medical kits are wrapped on over a few seconds: get clear of the fight first.',
+  'Hungry or thirsty, you heal slowly. Eat, drink — or crouch at a stream to drink your fill.',
+  'An island with a Devil Fruit on it calls to you: follow the sound, then the shine.',
+  'On a big ship, climb the mainmast ladder to the crow\'s nest to look out over the sea.',
 ];
 const bootEl = (q) => boot?.querySelector(q);
 let tipI = Math.floor(Math.random() * TIPS.length), tipT = -1e9;
