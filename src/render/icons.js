@@ -2124,7 +2124,7 @@ const ITEM_MAP = {
   elephant_tuna: ['fish', { color: '#35557a', trunk: true }], fighting_fish_horn: ['horn', { color: '#f1e6cc' }],
   sea_king_steak: ['steak'], baratie_course: ['plate'], sake: ['sake'], cola: ['barrel', { label: 'cola', hoop: '#c23b2e' }],
   p2_cola_barrel: ['barrel', { label: 'cola', hoop: '#c23b2e' }],
-  bandage: ['bandage'], antidote: ['vial'], rumble_ball: ['pill'], tension_hormone: ['syringe'],
+  bandage: ['bandage'], medkit: ['pouch'], antidote: ['vial'], rumble_ball: ['pill'], tension_hormone: ['syringe'],
   nb_germa_antidote: ['syringe', { liquid: '#4fb3c9' }], p1_gold_ball: ['pill', { color: '#f0bf45', engrave: true }],
   sb_moqueca_stew: ['bowl', { soup: '#e2572f', top: 'veg', bowl: '#a4552c' }], p2_attack_cuisine: ['bowl', { soup: '#c9763a', top: 'bone', bowl: '#5a3b2a' }],
   oshiruko: ['bowl', { soup: '#6b2a2a', top: 'mochi', bowl: '#2d2b2f' }], sb_curry_udon: ['bowl', { soup: '#d99a2b', top: 'noodles', bowl: '#8e2f2a' }],

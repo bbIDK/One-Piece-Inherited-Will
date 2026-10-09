@@ -975,6 +975,23 @@ export const SFX = {
       v.formant(0.4, 0.1, { f1: 300, f2: 700, q: 3, gain: 0.15, attack: 0.01 });
     },
   },
+  /** A turn of bandage round the arm: cloth drawn tight, a soft rasp. */
+  wrap: {
+    prio: 4, cd: 0.3, max: 1, variants: 3,
+    play(v, k) {
+      v.noise(0, 0.22, { freq: [2400, 2800, 2100][k.rr] * r(), sweep: 1600, q: 1.1, gain: 0.07, attack: 0.04, curve: 'lin' });
+      v.noise(0.16, 0.06, { freq: 900, q: 2, gain: 0.05, attack: 0.005 });
+    },
+  },
+  /** The bandage tied off: a tug and a pat. */
+  wrap_done: {
+    prio: 5, cd: 0.3, max: 1,
+    play(v) {
+      v.noise(0, 0.12, { freq: 1800, sweep: 3200, q: 1.4, gain: 0.08, attack: 0.01 });
+      v.tone(0.13, 0.06, { freq: 180, to: 120, gain: 0.12, attack: 0.004 });
+      v.tone(0.24, 0.05, { freq: 170, to: 115, gain: 0.09, attack: 0.004 });
+    },
+  },
   /** GULP: a swallow of water, a little glug behind it. */
   sip: {
     prio: 5, cd: 0.25, max: 1, variants: 3,

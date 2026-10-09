@@ -91,6 +91,18 @@ function firstPersonDash(P, pose) {
  */
 function heldPose(P, a, t) {
   P.hand = 'hold';
+  if (a.eating?.wrap) {
+    // binding a wound: the left forearm held out across the chest, the right
+    // hand winding the bandage round and round it, the head bowed to watch
+    const e = a.eating, k = Math.min(1, e.t / 0.3), w = e.t * 10;
+    P.hB = [0.3 * k + 0.05 * (1 - k), 0.16 * k + 0.4 * (1 - k)];
+    P.eB = 1;
+    P.hF = [0.3 * k + 0.06 * Math.cos(w) * k, 0.16 * k + 0.07 * Math.sin(w) * k + 0.4 * (1 - k)];
+    P.eF = 1;
+    P.hand = 'hold'; P.handB = 'fist';
+    P.ht = (P.ht || 0) + 0.16 * k;
+    return;
+  }
   if (a.eating) {
     // (raised to the mouth, the palm turns to face it)
     if (a.eating.t > 0.09) P.hand = 'eat';

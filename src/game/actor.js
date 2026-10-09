@@ -1006,6 +1006,7 @@ export class Actor extends Entity {
     }
     let regen = (this.fruitDef?.passive?.regen || 0) + d.hpRegen * (this.inCombat ? 0.2 : 1);
     // (a form that heals as it fights: the Phoenix's)
+    regen *= this.regenMul ?? 1;
     for (const b of this.buffs) if (b.regen) regen += b.regen;
     // everyone else only heals once they've been left alone for a good while
     const rested = this.isPlayer || !this.game || (this.game.time || 0) - (this.lastHitT || -999) > 45;

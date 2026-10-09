@@ -277,7 +277,12 @@ class Viewmodel {
     const holding = !!p.held && !swimming && !A && p.state !== 'hurt';
     this.holdK = (this.holdK ?? 0) + ((holding ? 1 : 0) - (this.holdK ?? 0)) * Math.min(1, dtv * 10);
     let holdAt = null;
-    if (holding) {
+    if (holding && p.eating?.wrap && p.eating.id === p.held) {
+      // binding a wound, seen from your eyes: the left forearm across the
+      // bottom of the view, the right hand winding round it
+      const e = p.eating, k = Math.min(1, e.t / 0.3), w = e.t * 10;
+      PP = { ...PP, hB: [0.3, 0.1 * k + 0.4 * (1 - k)], eB: 1, hF: [0.3 + 0.06 * Math.cos(w) * k, 0.1 + 0.07 * Math.sin(w) * k + 0.4 * (1 - k)], eF: 1, hand: 'hold', handB: 'fist' };
+    } else if (holding) {
       const e = p.eating && p.eating.id === p.held ? p.eating : null;
       const k = e ? Math.min(1, e.t / 0.18) : 0;
       const bite = e ? Math.max(0, Math.sin((e.t / 0.36) * Math.PI * 2)) : 0;

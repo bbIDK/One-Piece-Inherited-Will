@@ -138,7 +138,9 @@ export function useItem(game, id) {
   if (!d || !count(c, id)) return false;
   if (d.type === 'food' || d.type === 'medicine') {
     if (p.state !== 'idle') return false;
-    let heal = d.heal || 0;
+    // (food and drink fill you up — game/survival.js — and a full belly
+    // and a full flask heal you faster; only medicine heals you outright)
+    let heal = d.type === 'food' ? 0 : d.heal || 0;
     if (d.type === 'food') {
       if (c.traits.includes('iron_stomach')) heal *= 1.3;
       if (c.flags?.allBlue) heal *= 1.25; // a cook who has seen the All Blue
@@ -154,7 +156,7 @@ export function useItem(game, id) {
     if (d.buff) p.addBuff({ ...d.buff });
     if (heal >= 1) game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, '#69f0ae', 0.45);
     game.survival?.consume(id);
-    game.audio?.sfx(d.water > (d.food ?? 0.2) ? 'sip' : 'eat');
+    game.audio?.sfx(d.type === 'medicine' ? (d.apply === 'wrap' ? 'wrap_done' : 'eat') : d.water > (d.food ?? 0.2) ? 'sip' : 'eat');
     removeItem(game, id, 1);
     return true;
   }

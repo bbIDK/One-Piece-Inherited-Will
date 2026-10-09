@@ -2,9 +2,9 @@
 import { ITEMS } from './items.js';
 
 export const STOCK = {
-  general: ['water_flask', 'hot_tea', 'meat', 'rice_ball', 'fish_stew', 'coconut', 'apple', 'bandage', 'antidote', 'sake', 'bandana', 'headband', 'traveller_hood', 'lucky_charm', 'shell_bracelet', 'den_den_mushi'],
+  general: ['water_flask', 'hot_tea', 'meat', 'rice_ball', 'fish_stew', 'coconut', 'apple', 'bandage', 'medkit', 'antidote', 'sake', 'bandana', 'headband', 'traveller_hood', 'lucky_charm', 'shell_bracelet', 'den_den_mushi'],
   // (in the four Blues, where everyone's journey starts, the general store keeps a rack of old swords)
-  general_blue: ['water_flask', 'hot_tea', 'meat', 'rice_ball', 'fish_stew', 'coconut', 'apple', 'bandage', 'antidote', 'sake', 'wooden_sword', 'rusty_katana', 'bandana', 'headband', 'traveller_hood', 'lucky_charm', 'shell_bracelet', 'den_den_mushi'],
+  general_blue: ['water_flask', 'hot_tea', 'meat', 'rice_ball', 'fish_stew', 'coconut', 'apple', 'bandage', 'medkit', 'antidote', 'sake', 'wooden_sword', 'rusty_katana', 'bandana', 'headband', 'traveller_hood', 'lucky_charm', 'shell_bracelet', 'den_den_mushi'],
   tavern: ['water_flask', 'milk', 'hot_tea', 'meat', 'rice_ball', 'fish_stew', 'sake', 'tangerine', 'mango'],
   weapons_blue: ['wooden_sword', 'rusty_katana', 'cutlass', 'slingshot', 'flintlock', 'bo_staff', 'woodsman_axe', 'padded_vest', 'leather_jerkin', 'leather_bracers', 'iron_ring'],
   weapons_grand: ['cutlass', 'fine_katana', 'marine_saber', 'flintlock', 'marine_rifle', 'bo_staff', 'woodsman_axe', 'shigure', 'leather_jerkin', 'chain_shirt', 'hand_wraps', 'iron_ring'],

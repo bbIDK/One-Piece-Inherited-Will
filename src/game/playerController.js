@@ -292,11 +292,12 @@ export class PlayerController {
     const ok = down && p.state === 'idle' && !p.action && !p.blocking && !(p.inWater && !p.gills);
     if (!ok) { p.eating = null; if (!down) this.eatAuto = false; return; }
     const d = ITEMS[id];
-    if (!p.eating || p.eating.id !== id) p.eating = { id, t: 0, dur: EAT_TIME[d.type] || 1.25, bites: 0 };
+    if (!p.eating || p.eating.id !== id) p.eating = { id, t: 0, dur: d.useTime || EAT_TIME[d.type] || 1.25, bites: 0, wrap: d.apply === 'wrap' };
     const e = p.eating;
     e.t += dt;
     const b = Math.floor(e.t / BITE);
-    if (b > e.bites && e.t < e.dur - 0.1) { e.bites = b; game.audio?.sfx(d.type === 'medicine' ? 'page' : 'bite', p); }
+    if (e.wrap) { const w = Math.floor(e.t / 0.62); if (w > e.bites && e.t < e.dur - 0.2) { e.bites = w; game.audio?.sfx('wrap', p); } }
+    else if (b > e.bites && e.t < e.dur - 0.1) { e.bites = b; game.audio?.sfx(d.type === 'medicine' ? 'page' : 'bite', p); }
     if (e.t < e.dur) return;
     p.eating = null;
     this.eatAuto = false;

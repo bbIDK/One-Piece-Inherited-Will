@@ -1,5 +1,6 @@
 // Modal panels: inventory & equipment, character, skills, journal, pause
 // menu, settings, shops, trainers, inns, doctors, shipyards.
+import { nourishment } from '../game/survival.js';
 import { h, clear, add } from './dom.js';
 import { ITEMS, sellPrice } from '../data/items.js';
 import { STYLES } from '../data/styles.js';
@@ -155,7 +156,12 @@ export function statLine(d) {
   if (d.type === 'weapon') parts.push(`${title(d.kind || 'weapon')} · power ×${d.power}${d.grade ? ' · ' + d.grade : ''}`);
   if (d.armor) parts.push(`Defence +${Math.round(d.armor * 100)}%`);
   if (d.bonus) parts.push(Object.entries(d.bonus).map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${ATTRS[k]?.short || k.toUpperCase()}`).join('  '));
-  if (d.heal) parts.push(d.heal > 9999 ? 'Full health' : `+${d.heal} health`);
+  if (d.type === 'food') {
+    // (food fills you up — and a full belly heals you faster — but it's no medicine)
+    const n = nourishment(d);
+    if (n.food >= 0.01) parts.push(`Hunger +${Math.round(n.food * 100)}%`);
+    if (n.water >= 0.01) parts.push(`Thirst +${Math.round(n.water * 100)}%`);
+  } else if (d.heal) parts.push(d.heal > 9999 ? 'Full health' : `+${d.heal} health${d.apply === 'wrap' ? ` (${d.useTime || 3.5}s to apply)` : ''}`);
   if (d.buff) parts.push(`${d.buff.name} for ${d.buff.dur}s`);
   return parts.join(' · ');
 }

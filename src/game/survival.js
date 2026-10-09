@@ -87,7 +87,7 @@ export function installSurvival(game) {
   game.on('tick', (dt) => {
     const p = game.player, n = needs(), w = game.world, env = game.env;
     if (!p || !n || !w || !env || p.dead || p.state === 'dead') return;
-    if (!S.enabled() || dt <= 0) { p.needsHurt = false; S.felt = env.tempC; return; }
+    if (!S.enabled() || dt <= 0) { p.needsHurt = false; p.regenMul = 1; S.felt = env.tempC; return; }
     dt = Math.min(dt, 0.25);
     const c = game.state.char;
     const eq = Object.values(c.equipped || {}).flat().filter(Boolean).join(' ');
@@ -128,6 +128,8 @@ export function installSurvival(game) {
     if (n.body < 35) hurt += (35 - n.body) * 0.6;
     if (n.body > 39) hurt += (n.body - 39) * 0.8;
     p.needsHurt = hurt > 0;
+    // (well fed and watered you heal quickly; running on empty, barely)
+    p.regenMul = 0.3 + 1.7 * Math.min(1, (n.food + n.water) / 2);
     if (hurt > 0 && p.hp > 1) p.hp = Math.max(1, p.hp - hurt * dt * (p.d.maxHp / 150));
 
     warn('food', n.food < 0.2, n.food <= 0 ? 'You are starving: eat something, or you will keep weakening.' : 'You\'re getting hungry.', '#ffcc80');

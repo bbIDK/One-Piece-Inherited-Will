@@ -23,7 +23,8 @@ export const ITEMS = {
   hot_tea: { name: 'Hot Tea', icon: '', type: 'food', heal: 10, water: 0.35, food: 0.02, warm: 1.2, price: 25, desc: 'Steaming hot: it warms you through in the cold.' },
   sake: { name: 'Sake', icon: '🍶', type: 'food', heal: 10, water: 0.15, price: 120, buff: { id: 'tipsy', name: 'Tipsy', dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: 'Dutch courage.' },
   cola: { name: 'Cola Barrel', icon: '🥤', type: 'material', price: 500, desc: 'Fuel for Coup de Burst and for certain cyborgs.' },
-  bandage: { name: 'Bandages', icon: '🩹', type: 'medicine', heal: 55, price: 70, desc: 'Stops the bleeding.', cure: ['bleed'] },
+  bandage: { name: 'Bandages', icon: '🩹', type: 'medicine', heal: 55, price: 70, apply: 'wrap', useTime: 3.5, desc: 'Wrap them round the wound: it takes a few seconds, and a blow stops you. Stops the bleeding.', cure: ['bleed'] },
+  medkit: { name: 'Ship\'s Medical Kit', icon: '', type: 'medicine', heal: 140, price: 260, apply: 'wrap', useTime: 6, desc: 'Gauze, splints and salve: patches up serious wounds, given time and nobody hitting you. Stops the bleeding.', cure: ['bleed'] },
   antidote: { name: 'Antidote', icon: '🧪', type: 'medicine', heal: 20, price: 150, cure: ['poison'], desc: 'Neutralises most poisons.' },
   rumble_ball: { name: 'Rumble Ball', icon: '🟡', type: 'medicine', price: 8000, buff: { id: 'rumble', name: 'Rumble', dur: 180, mods: { damage: 1.2, speedMul: 1.1 } }, desc: 'Chopper\'s invention. Strengthens you for three minutes.' },
   // foraged from trees (E next to a palm or fruit tree)
