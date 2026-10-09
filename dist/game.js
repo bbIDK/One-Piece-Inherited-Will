@@ -3801,6 +3801,7414 @@
     }
   });
 
+  // src/world/tiles.js
+  var T = {
+    SEA: 0,
+    RIVER: 1,
+    CANAL: 2,
+    CLOUD_SEA: 3,
+    LAVA: 4,
+    REEF: 5,
+    ABYSS: 6,
+    POND: 7,
+    ACID: 8,
+    RAPIDS: 9,
+    // Reverse Mountain's canals: the sea running up (and down) a mountain
+    SAND: 16,
+    GRASS: 17,
+    DIRT: 18,
+    FOREST: 19,
+    JUNGLE: 20,
+    SNOW: 21,
+    ICE: 22,
+    DESERT: 23,
+    ROCK: 24,
+    MOUNTAIN: 25,
+    CLIFF: 26,
+    RED_ROCK: 27,
+    STONE: 28,
+    COBBLE: 29,
+    PLANK: 30,
+    FARM: 31,
+    FLOWERS: 32,
+    SAKURA: 33,
+    CANDY: 34,
+    ISLAND_CLOUD: 35,
+    CORAL: 36,
+    MANGROVE: 37,
+    ASH: 38,
+    MUD: 39,
+    MARBLE: 40,
+    WALL: 41,
+    GOLD: 42,
+    BONE: 43,
+    RAIL: 44,
+    BRIDGE: 45,
+    GRAVEL: 46,
+    LAWN: 47,
+    CAKE: 48,
+    SEAFLOOR: 49,
+    SNOWROCK: 50,
+    PACK_ICE: 51,
+    CARPET: 52,
+    TATAMI: 53,
+    STEEL: 54,
+    MASONRY: 55,
+    // a terraced city's retaining walls (world/terraces.js): cut stone, sheer
+    CANOPY: 56
+    // the edge of a great tree's canopy (Elbaph's Sun World: world/drums.js plates): leaves over a sheer drop
+  };
+  var TILE_NAMES = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
+  var N = 256;
+  var IS_LIQUID = new Uint8Array(N);
+  var WALKABLE = new Uint8Array(N);
+  var SAILABLE = new Uint8Array(N);
+  var SWIMMABLE = new Uint8Array(N);
+  var OVERLAY = new Uint8Array(N);
+  var MANMADE = new Uint8Array(N);
+  var SPEED = new Float32Array(N).fill(1);
+  var DAMAGE = new Float32Array(N);
+  for (let i = 0; i < 16; i++) IS_LIQUID[i] = 1;
+  for (let i = 16; i < N; i++) WALKABLE[i] = 1;
+  for (const t of [T.SEA, T.RIVER, T.CANAL, T.CLOUD_SEA, T.POND, T.RAPIDS]) {
+    SAILABLE[t] = 1;
+    SWIMMABLE[t] = 1;
+  }
+  SWIMMABLE[T.REEF] = 1;
+  SWIMMABLE[T.ACID] = 1;
+  for (const t of [T.MOUNTAIN, T.CLIFF, T.RED_ROCK, T.WALL, T.SNOWROCK, T.MASONRY, T.CANOPY]) WALKABLE[t] = 0;
+  for (const t of [T.PLANK, T.RAIL, T.BRIDGE]) {
+    OVERLAY[t] = 1;
+    WALKABLE[t] = 1;
+  }
+  for (const t of [T.STONE, T.COBBLE, T.PLANK, T.FARM, T.MARBLE, T.WALL, T.RAIL, T.BRIDGE, T.CARPET, T.TATAMI, T.STEEL, T.GOLD, T.MASONRY]) MANMADE[t] = 1;
+  WALKABLE[T.PACK_ICE] = 1;
+  SPEED[T.SAND] = 0.92;
+  SPEED[T.DESERT] = 0.8;
+  SPEED[T.SNOW] = 0.8;
+  SPEED[T.MUD] = 0.6;
+  SPEED[T.JUNGLE] = 0.85;
+  SPEED[T.STONE] = 1.08;
+  SPEED[T.COBBLE] = 1.06;
+  SPEED[T.MARBLE] = 1.08;
+  SPEED[T.ICE] = 1.15;
+  SPEED[T.ISLAND_CLOUD] = 1.1;
+  SPEED[T.REEF] = 0.55;
+  DAMAGE[T.LAVA] = 40;
+  DAMAGE[T.ACID] = 12;
+  var PALETTE = {
+    [T.SEA]: ["#1d6fb8", "#39a7d8"],
+    [T.RIVER]: ["#2b8fc4", "#58bde0"],
+    [T.CANAL]: ["#2a86b0", "#4fb0cf"],
+    [T.RAPIDS]: ["#3a9ccf", "#bfe9f5"],
+    [T.CLOUD_SEA]: ["#cfdcec", "#eef3fa"],
+    [T.LAVA]: ["#e8420e", "#ffb02e"],
+    [T.REEF]: ["#34b3b8", "#e7d9a8"],
+    [T.ABYSS]: ["#061a33", "#0b2d52"],
+    [T.POND]: ["#2f8fb0", "#6fc6d6"],
+    [T.ACID]: ["#6ab04c", "#badc58"],
+    [T.SAND]: ["#e8d49a", "#f5e6b8"],
+    [T.GRASS]: ["#5aa843", "#7cc653"],
+    [T.DIRT]: ["#a9824f", "#c19a64"],
+    [T.FOREST]: ["#3d8a35", "#57a53f"],
+    [T.JUNGLE]: ["#2f8a3a", "#4fb34a"],
+    [T.SNOW]: ["#eef4fa", "#ffffff"],
+    [T.ICE]: ["#bfe3f2", "#e6f7ff"],
+    [T.DESERT]: ["#e3bf78", "#f0d396"],
+    [T.ROCK]: ["#8f8a80", "#a8a296"],
+    [T.MOUNTAIN]: ["#7d7468", "#9b9184"],
+    [T.CLIFF]: ["#6b6258", "#857a6d"],
+    [T.RED_ROCK]: ["#9e3b2a", "#c0563a"],
+    [T.STONE]: ["#b8b0a2", "#cfc8ba"],
+    [T.COBBLE]: ["#9c958a", "#b5ada0"],
+    [T.PLANK]: ["#9a6a3c", "#b8844f"],
+    [T.FARM]: ["#8f7a3e", "#b59a4c"],
+    [T.FLOWERS]: ["#6bb54a", "#f06292"],
+    [T.SAKURA]: ["#7fb069", "#f8b4cf"],
+    [T.CANDY]: ["#f7a8c8", "#fff0f6"],
+    [T.ISLAND_CLOUD]: ["#e3e9f2", "#f3f6fb"],
+    [T.CORAL]: ["#e8a0a0", "#f7d0b8"],
+    [T.MANGROVE]: ["#6f8f45", "#93b35a"],
+    [T.ASH]: ["#4d4a48", "#6a6461"],
+    [T.MUD]: ["#5f5236", "#75683f"],
+    [T.MARBLE]: ["#e8e4dc", "#fdfbf6"],
+    [T.WALL]: ["#6e6457", "#8a7f70"],
+    [T.GOLD]: ["#e1b12c", "#fbc531"],
+    [T.BONE]: ["#8a8574", "#a8a28f"],
+    [T.RAIL]: ["#6d5a47", "#9a9a9a"],
+    [T.BRIDGE]: ["#8c5f36", "#a9764a"],
+    [T.GRAVEL]: ["#9d968c", "#b7b0a5"],
+    [T.LAWN]: ["#66b84d", "#7fcf5f"],
+    [T.CAKE]: ["#f3d9a4", "#ffffff"],
+    [T.SEAFLOOR]: ["#3f6f7a", "#5a8f8f"],
+    [T.SNOWROCK]: ["#9aa3ad", "#e8eef5"],
+    [T.PACK_ICE]: ["#dff3fb", "#ffffff"],
+    [T.CARPET]: ["#8e2436", "#c0392b"],
+    [T.TATAMI]: ["#c8b77a", "#ddd09b"],
+    [T.STEEL]: ["#7f8c8d", "#95a5a6"],
+    [T.MASONRY]: ["#b3a185", "#cdbd9f"],
+    [T.CANOPY]: ["#2f6a34", "#3d7d3a"]
+  };
+  var CLIMATE = {
+    TEMPERATE: 0,
+    TROPICAL: 1,
+    AUTUMN: 2,
+    WINTER: 3,
+    ARID: 4,
+    VOLCANIC: 5,
+    SKY: 6,
+    UNDERSEA: 7,
+    SAKURA: 8,
+    CANDY: 9,
+    GLOOM: 10,
+    SPRING: 11
+  };
+
+  // src/core/math.js
+  var TAU = Math.PI * 2;
+  var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  var lerp = (a, b, t) => a + (b - a) * t;
+  var smoothstep = (a, b, x) => {
+    const t = clamp((x - a) / (b - a), 0, 1);
+    return t * t * (3 - 2 * t);
+  };
+  function angleDiff(a, b) {
+    let d = (b - a) % TAU;
+    if (d > Math.PI) d -= TAU;
+    else if (d <= -Math.PI) d += TAU;
+    return d;
+  }
+  function springStep(x, v, target2, w, dt, zeta = 1, out = [0, 0]) {
+    const e0 = x - target2;
+    if (zeta >= 1) {
+      const c = v + w * e0, k2 = Math.exp(-w * dt);
+      out[0] = target2 + (e0 + c * dt) * k2;
+      out[1] = (v - w * c * dt) * k2;
+      return out;
+    }
+    const wd = w * Math.sqrt(1 - zeta * zeta), k = Math.exp(-zeta * w * dt);
+    const B5 = (v + zeta * w * e0) / wd, cs = Math.cos(wd * dt), sn = Math.sin(wd * dt);
+    out[0] = target2 + k * (e0 * cs + B5 * sn);
+    out[1] = k * ((wd * B5 - zeta * w * e0) * cs - (zeta * w * B5 + wd * e0) * sn);
+    return out;
+  }
+  function formatBerries(n) {
+    return "\u0E3F" + Math.round(n).toLocaleString("en-US");
+  }
+  function roundBounty(b) {
+    if (!(b > 0)) return 0;
+    const mag = Math.pow(10, Math.max(4, Math.floor(Math.log10(b)) - 2));
+    return Math.round(b / mag) * mag;
+  }
+  function hexToRgb(hex3) {
+    const h2 = hex3.replace("#", "");
+    const n = parseInt(h2.length === 3 ? h2.split("").map((c) => c + c).join("") : h2, 16);
+    return [n >> 16 & 255, n >> 8 & 255, n & 255];
+  }
+  function rgbToHex(r4, g, b) {
+    return "#" + [r4, g, b].map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("");
+  }
+  function shade(hex3, amt) {
+    const [r4, g, b] = hexToRgb(hex3);
+    if (amt >= 0) return rgbToHex(r4 + (255 - r4) * amt, g + (255 - g) * amt, b + (255 - b) * amt);
+    return rgbToHex(r4 * (1 + amt), g * (1 + amt), b * (1 + amt));
+  }
+  function mixHex(a, b, t) {
+    const A2 = hexToRgb(a), B5 = hexToRgb(b);
+    return rgbToHex(lerp(A2[0], B5[0], t), lerp(A2[1], B5[1], t), lerp(A2[2], B5[2], t));
+  }
+
+  // src/world/constants.js
+  var POS_SCALE = 6;
+  var SIZE_SCALE = 2.25;
+  var chart = (v) => Math.round(v * POS_SCALE);
+  var csize = (v) => Math.round(v * SIZE_SCALE);
+  var W = chart(4096);
+  var H = chart(2048);
+  var EQ = chart(1024);
+  var GL_HALF = chart(200);
+  var CB = chart(100);
+  var RL_HALF = chart(46);
+  var RM_X = chart(2048);
+  var MG_X = 0;
+  var POLAR = chart(26);
+  var GL_TOP = EQ - GL_HALF;
+  var GL_BOTTOM = EQ + GL_HALF;
+  var CB_TOP = GL_TOP - CB;
+  var CB_BOTTOM = GL_BOTTOM + CB;
+  var REGION = {
+    EAST_BLUE: 1,
+    NORTH_BLUE: 2,
+    WEST_BLUE: 3,
+    SOUTH_BLUE: 4,
+    PARADISE: 5,
+    NEW_WORLD: 6,
+    CALM_NORTH: 7,
+    CALM_SOUTH: 8,
+    RED_LINE: 9,
+    POLAR: 10
+  };
+  var REGION_INFO = {
+    [REGION.EAST_BLUE]: { id: "east_blue", name: "East Blue", danger: 1, color: "#4fb3e8", sea: true },
+    [REGION.NORTH_BLUE]: { id: "north_blue", name: "North Blue", danger: 2, color: "#5a8fd6", sea: true },
+    [REGION.WEST_BLUE]: { id: "west_blue", name: "West Blue", danger: 2, color: "#4a9fc9", sea: true },
+    [REGION.SOUTH_BLUE]: { id: "south_blue", name: "South Blue", danger: 2, color: "#3fc1c9", sea: true },
+    [REGION.PARADISE]: { id: "paradise", name: "Grand Line \u2014 Paradise", danger: 4, color: "#2aa198", sea: true },
+    [REGION.NEW_WORLD]: { id: "new_world", name: "Grand Line \u2014 New World", danger: 7, color: "#6c5ce7", sea: true },
+    [REGION.CALM_NORTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
+    [REGION.CALM_SOUTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
+    [REGION.RED_LINE]: { id: "red_line", name: "Red Line", danger: 5, color: "#b33939", sea: false },
+    [REGION.POLAR]: { id: "polar", name: "Polar Sea", danger: 3, color: "#dfe6e9", sea: true }
+  };
+  var SEA_IDS = {
+    east_blue: REGION.EAST_BLUE,
+    north_blue: REGION.NORTH_BLUE,
+    west_blue: REGION.WEST_BLUE,
+    south_blue: REGION.SOUTH_BLUE,
+    paradise: REGION.PARADISE,
+    new_world: REGION.NEW_WORLD,
+    calm_belt: REGION.CALM_NORTH,
+    red_line: REGION.RED_LINE
+  };
+  var wrapX = (x) => (x % W + W) % W;
+  var RMX = 900;
+  var RMY = 2150;
+  function regionAt(x, y) {
+    x = wrapX(x);
+    if (y < POLAR || y >= H - POLAR) return REGION.POLAR;
+    if (Math.abs(x - RM_X) < RL_HALF || x < RL_HALF || x >= W - RL_HALF) return REGION.RED_LINE;
+    const ey = (y - EQ) / RMY;
+    if (Math.abs(ey) < 1 && Math.abs(x - RM_X) < RMX * Math.sqrt(1 - ey * ey)) return REGION.RED_LINE;
+    const east = x > RM_X;
+    if (y >= GL_TOP && y < GL_BOTTOM) return east ? REGION.PARADISE : REGION.NEW_WORLD;
+    if (y >= CB_TOP && y < GL_TOP) return REGION.CALM_NORTH;
+    if (y >= GL_BOTTOM && y < CB_BOTTOM) return REGION.CALM_SOUTH;
+    if (y < EQ) return east ? REGION.EAST_BLUE : REGION.NORTH_BLUE;
+    return east ? REGION.SOUTH_BLUE : REGION.WEST_BLUE;
+  }
+  var isCalmBelt = (r4) => r4 === REGION.CALM_NORTH || r4 === REGION.CALM_SOUTH;
+  var isGrandLine = (r4) => r4 === REGION.PARADISE || r4 === REGION.NEW_WORLD;
+  var isBlue = (r4) => r4 >= REGION.EAST_BLUE && r4 <= REGION.SOUTH_BLUE;
+
+  // src/world/reverseMountain.js
+  var RM = {
+    x: RM_X,
+    y: EQ,
+    rx: 900,
+    // the massif's reach across the Red Line (the coast bulges out this far)…
+    ry: 2150,
+    // …and along it
+    top: 160,
+    // water level of the summit pool, metres above the sea
+    poolR: 56,
+    // (room for the greatest ships to turn out into the torrent)
+    halfW: 17,
+    // half the width of a canal (a great galleon rides it with room either side)
+    climb: 740,
+    // the last stretch of each canal, where it climbs the mountain
+    drop: 620,
+    // the torrent down to Paradise
+    cone: { rx: 760, ry: 1250, h: 110 },
+    // the mountain standing on the Red Line
+    upSpeed: 20,
+    // m/s of the currents up the mountain…
+    downSpeed: 28
+    // …and of the torrent down
+  };
+  var UP_PTS = [[1150, 2020], [620, 1900], [300, 1560], [150, 950], [70, 420], [24, 70], [8, 22]];
+  var EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
+  var CANALS = [
+    { id: "east_blue", sx: 1, sy: -1 },
+    { id: "north_blue", sx: -1, sy: -1 },
+    { id: "west_blue", sx: -1, sy: 1 },
+    { id: "south_blue", sx: 1, sy: 1 },
+    { id: "exit", exit: true }
+  ];
+  var STEP = 4;
+  var CELL = 32;
+  function catmull(pts, step2) {
+    const out = [];
+    const P6 = [pts[0], ...pts, pts[pts.length - 1]];
+    for (let i = 1; i < P6.length - 2; i++) {
+      const [p0, p1, p2, p3] = [P6[i - 1], P6[i], P6[i + 1], P6[i + 2]];
+      const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+      const n = Math.max(1, Math.ceil(len / step2));
+      for (let k = 0; k < n; k++) {
+        const t = k / n, t2 = t * t, t3 = t2 * t;
+        const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+        out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+      }
+    }
+    out.push(pts[pts.length - 1]);
+    return out;
+  }
+  var smooth = (t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  function build() {
+    for (const c of CANALS) {
+      const pts = c.exit ? EXIT_PTS : UP_PTS.map(([x, y]) => [x * c.sx, y * c.sy]);
+      const raw = catmull(pts, STEP);
+      const n = raw.length;
+      c.x = new Float32Array(n);
+      c.y = new Float32Array(n);
+      c.s = new Float32Array(n);
+      c.lv = new Float32Array(n);
+      c.fx = new Float32Array(n);
+      c.fy = new Float32Array(n);
+      let s = 0;
+      for (let i = 0; i < n; i++) {
+        if (i) s += Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]);
+        c.x[i] = RM.x + raw[i][0];
+        c.y[i] = RM.y + raw[i][1];
+        c.s[i] = s;
+      }
+      c.len = s;
+      for (let i = 0; i < n; i++) {
+        const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
+        const dx = c.x[b] - c.x[a], dy = c.y[b] - c.y[a], d = Math.hypot(dx, dy) || 1;
+        c.fx[i] = dx / d;
+        c.fy[i] = dy / d;
+        const si = c.s[i];
+        c.lv[i] = c.exit ? RM.top * (1 - smooth((si - 30) / RM.drop)) : RM.top * smooth((si - (s - RM.climb)) / RM.climb);
+      }
+    }
+    const grid2 = /* @__PURE__ */ new Map();
+    CANALS.forEach((c, ci) => {
+      for (let i = 0; i < c.x.length; i++) {
+        const k = Math.floor(c.x[i] / CELL) * 65536 + Math.floor(c.y[i] / CELL);
+        let l = grid2.get(k);
+        if (!l) grid2.set(k, l = []);
+        l.push(ci, i);
+      }
+    });
+    RM.grid = grid2;
+  }
+  build();
+  function canalLevel(c, s) {
+    if (c.exit) return RM.top * (1 - smooth((s - 30) / RM.drop));
+    return RM.top * smooth((s - (c.len - RM.climb)) / RM.climb);
+  }
+  var HIT = { canal: null, i: 0, d: 0, s: 0, level: 0, fx: 0, fy: 0, side: 0, pool: false };
+  var POOL_CURL = 0.2;
+  function canalAt(x, y, reach3 = 40, out = HIT) {
+    const dxs = x - RM.x, dys = y - RM.y;
+    if (Math.abs(dxs) > 1400 || Math.abs(dys) > 2200) return null;
+    const pd = Math.hypot(dxs, dys);
+    if (pd < RM.poolR) {
+      out.canal = CANALS[4];
+      out.i = 0;
+      out.d = 0;
+      out.s = 0;
+      out.level = RM.top;
+      out.pool = true;
+      const c2 = pd > 1e-3 ? dxs / pd : 1;
+      const a = smooth((pd - 3) / 7) * (1 - smooth((c2 - 0.7) / 0.27));
+      out.fx = (pd > 1e-3 ? -dxs / pd * a : 0) + (1 - a);
+      out.fy = (pd > 1e-3 ? -dys / pd * a : 0) - (1 - a) * dys * POOL_CURL;
+      const f = Math.hypot(out.fx, out.fy) || 1;
+      out.fx /= f;
+      out.fy /= f;
+      out.side = 0;
+      return out;
+    }
+    let best = -1, bc = 0, bd = reach3 * reach3;
+    const r4 = Math.ceil(reach3 / CELL);
+    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    for (let j = -r4; j <= r4; j++) {
+      for (let i = -r4; i <= r4; i++) {
+        const l = RM.grid.get((cx + i) * 65536 + (cy + j));
+        if (!l) continue;
+        for (let k = 0; k < l.length; k += 2) {
+          const c2 = CANALS[l[k]], si = l[k + 1];
+          const ex = x - c2.x[si], ey = y - c2.y[si];
+          const d2 = ex * ex + ey * ey;
+          if (d2 < bd) {
+            bd = d2;
+            best = si;
+            bc = l[k];
+          }
+        }
+      }
+    }
+    if (best < 0) return null;
+    const c = CANALS[bc];
+    let s = c.s[best], px2 = c.x[best], py2 = c.y[best];
+    const ax = x - px2, ay = y - py2;
+    const along2 = ax * c.fx[best] + ay * c.fy[best];
+    s = Math.max(0, Math.min(c.len, s + along2));
+    const side = ax * -c.fy[best] + ay * c.fx[best];
+    out.canal = c;
+    out.i = best;
+    out.s = s;
+    out.d = Math.abs(side);
+    out.side = side;
+    out.level = canalLevel(c, s);
+    out.fx = c.fx[best];
+    out.fy = c.fy[best];
+    out.pool = false;
+    return out;
+  }
+  function coneAt(x, y) {
+    const C3 = RM.cone;
+    const r4 = Math.hypot((x - RM.x) / C3.rx, (y - RM.y) / C3.ry);
+    if (r4 >= 1) return 0;
+    const k = 1 - r4;
+    return C3.h * k * k * (3 - 2 * k);
+  }
+  var nearRM = (x, y) => Math.abs(x - RM.x) < RM.rx + 500 && Math.abs(y - RM.y) < RM.ry + 400;
+
+  // src/render3d/swell.js
+  var SWELL_GLSL = (
+    /* glsl */
+    `
+  float sHash(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+  float sNoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(sHash(i), sHash(i + vec2(1, 0)), u.x), mix(sHash(i + vec2(0, 1)), sHash(i + vec2(1, 1)), u.x), u.y);
+  }
+  // two octaves, rotated against each other (no grid-aligned blobs)
+  float sFbm(vec2 p) {
+    float a = sNoise(p);
+    p = mat2(0.8, -0.6, 0.6, 0.8) * p * 2.03 + 17.3;
+    return a * 0.64 + sNoise(p) * 0.36;
+  }
+  // d: how far from the eye (m) \u2014 the shorter trains stop nearer it
+  float swells(vec2 p, float t, float d, out vec2 slope) {
+    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.17, 0.985), D2 = vec2(-0.81, 0.59), D3 = vec2(0.75, -0.66), D4 = vec2(0.42, -0.91);
+    const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854, K4 = 0.1848;   // 46 m, 22 m, 13 m, 8 m; a cross swell of 34 m
+    const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774, W4 = 1.346;       // deep-water speeds
+    // bent crests (a little everywhere, and long slow curves)
+    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0 + (vec2(sNoise(p * 0.0055 + 3.1), sNoise(p * 0.0055 + 9.4)) - 0.5) * 44.0;
+    // wave groups
+    float g0 = (0.36 + 0.45 * sFbm(p * 0.006 + vec2(0.0, t * 0.012) + 91.0)) * (1.0 - smoothstep(160.0, 320.0, d));
+    float g1 = (0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0))) * 0.75 * (1.0 - smoothstep(150.0, 300.0, d));
+    float g2 = (0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025))) * 0.4 * (1.0 - smoothstep(45.0, 100.0, d));
+    float g3 = (0.3 + 0.9 * sFbm(p * 0.026 + 57.0)) * 0.22 * (1.0 - smoothstep(25.0, 55.0, d));
+    // (the cross swell strong in some stretches of sea, gone in others)
+    float g4 = (0.7 * sFbm(p * 0.0045 - 51.0 + vec2(t * 0.01, 0.0)) + 0.15) * 0.8 * (1.0 - smoothstep(160.0, 320.0, d));
+    float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1, a4 = K4 * dot(D4, q) - W4 * t + 2.3;
+    // (peaked: e^(sin a - 1), less its mean 0.466, scaled back to a peak of 1)
+    float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873, e4 = exp(sin(a4) - 1.0) * 1.873;
+    float h = (e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + sin(a3) * g3 + (e4 - 0.873) * g4;
+    slope = (D0 * K0 * e0 * cos(a0) * g0 + D1 * K1 * e1 * cos(a1) * g1 + D2 * K2 * e2 * cos(a2) * g2 + D3 * K3 * cos(a3) * g3 + D4 * K4 * e4 * cos(a4) * g4) / 2.6;
+    return h / 2.6;
+  }
+`
+  );
+  var fract = (v) => v - Math.floor(v);
+  function sHash(x, y) {
+    let a = fract(x * 0.1031), b = fract(y * 0.1031), c = a;
+    const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33);
+    a += d;
+    b += d;
+    c += d;
+    return fract((a + b) * c);
+  }
+  function sNoise(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+    const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+    const a = sHash(ix, iy), b = sHash(ix + 1, iy), c = sHash(ix, iy + 1), d = sHash(ix + 1, iy + 1);
+    const top = a + (b - a) * ux, bot = c + (d - c) * ux;
+    return top + (bot - top) * uy;
+  }
+  function sFbm(x, y) {
+    const a = sNoise(x, y);
+    const px2 = (0.8 * x + 0.6 * y) * 2.03 + 17.3, py2 = (-0.6 * x + 0.8 * y) * 2.03 + 17.3;
+    return a * 0.64 + sNoise(px2, py2) * 0.36;
+  }
+  var sst = (a, b, x) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  function swells(x, y, t, d = 0) {
+    const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14 + (sNoise(x * 55e-4 + 3.1, y * 55e-4 + 3.1) - 0.5) * 44;
+    const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14 + (sNoise(x * 55e-4 + 9.4, y * 55e-4 + 9.4) - 0.5) * 44;
+    const g0 = (0.36 + 0.45 * sFbm(x * 6e-3 + 91, y * 6e-3 + t * 0.012 + 91)) * (1 - sst(160, 320, d));
+    const g1 = (0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011)) * 0.75 * (1 - sst(150, 300, d));
+    const g2 = (0.3 + 0.9 * sFbm(x * 0.017 + 31, y * 0.017 + 31 - t * 0.025)) * 0.4 * (1 - sst(45, 100, d));
+    const g3 = (0.3 + 0.9 * sFbm(x * 0.026 + 57, y * 0.026 + 57)) * 0.22 * (1 - sst(25, 55, d));
+    const g4 = (0.7 * sFbm(x * 45e-4 - 51 + t * 0.01, y * 45e-4 - 51) + 0.15) * 0.8 * (1 - sst(160, 320, d));
+    const a0 = 0.1366 * (0.86 * qx + 0.51 * qy) - 1.157 * t + 0.6;
+    const a1 = 0.2856 * (0.17 * qx + 0.985 * qy) - 1.673 * t;
+    const a2 = 0.4833 * (-0.81 * qx + 0.59 * qy) - 2.177 * t + 1.7;
+    const a3 = 0.7854 * (0.75 * qx - 0.66 * qy) - 2.774 * t + 4.1;
+    const a4 = 0.1848 * (0.42 * qx - 0.91 * qy) - 1.346 * t + 2.3;
+    const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873, e4 = Math.exp(Math.sin(a4) - 1) * 1.873;
+    return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3 + (e4 - 0.873) * g4) / 2.6;
+  }
+  var swellAmp = (storm, zone, calm = 0) => zone >= 2 ? 0 : (0.85 + storm * 1.4) * (1 - calm * 0.85);
+  var LIQUID = new Float32Array(256).fill(0.15);
+  for (const k of [0, 1, 2, 5, 7]) LIQUID[k] = 1;
+  LIQUID[3] = 0.5;
+  LIQUID[9] = 0;
+  function calmPoints(world) {
+    if (!world?.reverseMountain) return [];
+    if (world.calmPts) return world.calmPts;
+    const out = [];
+    for (const c of CANALS) {
+      if (c.i0 === void 0) continue;
+      const land2 = c.exit ? c.i1 - 3 : c.i0 + 3;
+      const j = Math.max(0, Math.min(c.x.length - 1, land2 + (c.exit ? 12 : -12)));
+      out.push([c.x[j], c.y[j], 170]);
+    }
+    return world.calmPts = out;
+  }
+  function calmAt(w, x, y) {
+    let k = 1;
+    for (const [cx, cy, r4] of calmPoints(w)) k = Math.min(k, sst(r4 * 0.45, r4, Math.hypot(w.dx ? w.dx(cx, x) : x - cx, y - cy)));
+    return k;
+  }
+  var S = { t: 0, amp: 0, world: null, ox: 0, oy: 0 };
+  function setSwell(t, amp, world, ox, oy) {
+    S.t = t;
+    S.amp = amp;
+    S.world = world;
+    S.ox = ox;
+    S.oy = oy;
+  }
+  function swellAt(x, y, t = S.t) {
+    const w = S.world;
+    if (!w || !S.amp) return 0;
+    const dx = w.dx ? w.dx(S.ox, x) : x - S.ox, dy = y - S.oy;
+    const d = Math.hypot(dx, dy);
+    if (d > 320) return 0;
+    const k = w.type(Math.floor(x), Math.floor(y));
+    const liquid = LIQUID[k < 16 ? k : 255];
+    if (!liquid) return 0;
+    const shore = 0.35 + 0.65 * sst(0.5, -7, w.sd ? w.sd(x, y) : -32);
+    return swells(x, y, t, d) * S.amp * shore * liquid * (w.reverseMountain ? calmAt(w, x, y) : 1);
+  }
+  var swellOn = () => !!(S.world && S.amp > 0.01);
+
+  // src/game/boatFeel.js
+  var BOAT_FEEL = {
+    // ---- steering (the helm you hold with A / D)
+    helmIn: 0.32,
+    // s for the helm to go hard over when you steer (eased in and out, no snap)
+    helmOut: 0.2,
+    // s for it to come back amidships when you let go
+    turnLag: 0.1,
+    // s the hull takes to answer her helm: how long her turn takes to build up, and to die away
+    turnLagPerM: 32e-4,
+    // … and that much more per metre of her length (a big ship swings more slowly)
+    turnRate: 1,
+    // × each class's top turning rate (1 = as the ship tables have it)
+    // ---- the wheel (it turns as you steer and comes back to centre when you let go)
+    wheelMax: 2.2,
+    // radians the wheel is turned hard over (about a third of a turn)
+    wheelSpeed: 14,
+    // how briskly the wheel follows the helm (a spring's rate, per second: higher is snappier)
+    standTilt: 0.5,
+    // how much the helmsman leans with the deck as she rolls and pitches (0 stands bolt upright, 1 tilts with it)
+    // (how far round each hand works a spoke before taking the next one: render3d/chars/pose.js HELM_GRIP)
+    // ---- riding the sea (how she heaves, pitches and rolls on the swell)
+    rideRate: 6.5,
+    // how closely she follows the sea's surface (per second: higher is stiffer, lower floatier)
+    rideRatePerM: -0.055,
+    // … less per metre of her length (a long hull is heavier, slower to answer)
+    rideDamp: 0.9,
+    // 1 = settles without overshooting; a little under 1 gives a buoyant bob
+    rideLead: 1,
+    // how well she keeps up with the swell (1 keeps her waterline on the sea; less lets her lag behind it, floatier)
+    pitchMax: 0.22,
+    // radians she pitches at most (bow up or down)
+    rollMax: 0.26,
+    // radians she rolls at most
+    // ---- speed changes (sails set or taken in, oars, wind round as she turns)
+    speedSmooth: 0.45,
+    // s over which a change in her driving force builds up (under sail)
+    speedSmoothOars: 0.12
+    // … under oars (each stroke still surges her on)
+  };
+
+  // src/world/hull.js
+  var clamp01 = (x) => Math.max(0, Math.min(1, x));
+  var smooth2 = (a, b, x) => {
+    const t = clamp01((x - a) / (b - a));
+    return t * t * (3 - 2 * t);
+  };
+  var BIG_SHIP = 8;
+  var dimsCache = /* @__PURE__ */ new Map();
+  function shipDims(def) {
+    if (def._dims) return def._dims;
+    const key2 = `${def.length}|${def.beam}|${def.masts}|${def.cannons}|${!!def.oarsOnly}`;
+    let d = dimsCache.get(key2);
+    if (!d) {
+      d = def.length >= BIG_SHIP ? bigDims(def) : smallDims(def);
+      dimsCache.set(key2, d);
+    }
+    Object.defineProperty(def, "_dims", { value: d, enumerable: false, configurable: true });
+    return d;
+  }
+  function smallDims(def) {
+    const L3 = def.length, B5 = def.beam;
+    const open = L3 < 3.5;
+    const D4 = B5 * 0.42;
+    const deckY2 = open ? 0.14 : 0.25 + B5 * 0.2;
+    const bulH = open ? 0.36 : 0.3 + B5 * 0.07;
+    const castle = L3 >= 5.5, fore = L3 >= 6.8;
+    const hq = castle ? 0.85 + (L3 - 5.5) * 0.1 : 0;
+    const hf = fore ? 0.5 : 0;
+    const tq = castle ? 0.27 : 0, tf2 = fore ? 0.83 : 1;
+    const masts = def.masts ?? 1;
+    const mastH = masts ? 1.2 + L3 * 0.75 : 0;
+    let helmX = -L3 * 0.42;
+    const d = {
+      L: L3,
+      B: B5,
+      D: D4,
+      open,
+      deckY: deckY2,
+      bulH,
+      castle,
+      fore,
+      hq,
+      hf,
+      tq,
+      tf: tf2,
+      masts,
+      mastH,
+      helmX,
+      yq: deckY2 + hq,
+      yf: deckY2 + hf,
+      helmFloor: castle ? deckY2 + hq : deckY2,
+      big: false,
+      poop: false,
+      hp: 0,
+      tp: 0,
+      sheer: 0.16 * B5,
+      walk: 0.94,
+      stairs: [],
+      solids: []
+    };
+    d.mastU = masts ? Array.from({ length: masts }, (_, m) => masts === 1 ? 0.05 * L3 : L3 * (0.28 - m * (0.56 / Math.max(1, masts - 1)))) : [];
+    d.mastR = 0.05 + L3 * 0.011;
+    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.16 }));
+    if (!open) {
+      const aft = masts > 1 ? d.mastU[masts - 1] : Infinity;
+      d.wheelU = Math.min(helmX + 1, aft - d.mastR - 0.35);
+      d.helmX = helmX = Math.max(-L3 / 2 + 0.3, Math.min(helmX, d.wheelU - 1));
+      d.solids.push({ u: d.wheelU + 0.1, v: 0, r: 0.2 });
+    }
+    if (def.oarsOnly) {
+      const seatT = 0.44, lockT = seatT + 0.4 / L3;
+      d.row = {
+        seatT,
+        seatU: xAt(d, seatT),
+        seatH: 0.3,
+        // (the top of the thwart, over the floor)
+        lockT,
+        lockU: xAt(d, lockT),
+        lockV: hbAt(lockT, B5) * 0.965,
+        lockH: topAt(d, lockT) + 0.04,
+        inboard: 0.56,
+        outboard: 1.5
+      };
+      d.helmX = helmX = d.row.seatU;
+    }
+    return d;
+  }
+  var OAR = { catchA: 0.6, finishA: -0.3, dipB: 0.52, liftB: 0.2 };
+  var ease = (k) => k * k * (3 - 2 * k);
+  function oarStroke(ph, pull = 1) {
+    const { catchA: ca, finishA: fa, dipB, liftB } = OAR;
+    let a, b, f;
+    if (ph < 0.08) {
+      const k = ease(ph / 0.08);
+      a = ca;
+      b = liftB + (dipB - liftB) * k;
+      f = 0;
+    } else if (ph < 0.52) {
+      a = ca + (fa - ca) * ease((ph - 0.08) / 0.44);
+      b = dipB;
+      f = 0;
+    } else if (ph < 0.6) {
+      const k = ease((ph - 0.52) / 0.08);
+      a = fa;
+      b = dipB + (liftB - dipB) * k;
+      f = k;
+    } else {
+      const k = (ph - 0.6) / 0.4;
+      a = fa + (ca - fa) * ease(k);
+      b = liftB + Math.sin(k * Math.PI) * 0.05;
+      f = k < 0.8 ? 1 : 1 - ease((k - 0.8) / 0.2);
+    }
+    if (pull < 0) a = ca + fa - a;
+    return { a, b, f };
+  }
+  function rowLean(ship) {
+    const o = ship.oars;
+    if (!o) return 0;
+    const k = clamp01((OAR.catchA - (o[0].a + o[1].a) / 2) / (OAR.catchA - OAR.finishA));
+    return -0.08 + 0.44 * k;
+  }
+  var oarDrive = (ph) => ph < 0.08 || ph > 0.52 ? 0 : Math.sin((ph - 0.08) / 0.44 * Math.PI);
+  function oarPoints(d, side, a, b) {
+    const r4 = d.row, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    const ox = sa * cb, oy = -sb, oz = side * ca * cb;
+    const px2 = r4.lockU, py2 = r4.lockH, pz2 = side * r4.lockV;
+    return {
+      lock: [px2, py2, pz2],
+      dir: [ox, oy, oz],
+      grip: [px2 - ox * r4.inboard, py2 - oy * r4.inboard, pz2 - oz * r4.inboard],
+      tip: [px2 + ox * r4.outboard, py2 + oy * r4.outboard, pz2 + oz * r4.outboard]
+    };
+  }
+  function bigDims(def) {
+    const L3 = def.length, B5 = def.beam;
+    const D4 = B5 * 0.45;
+    const narrow = B5 < 7;
+    const large = L3 >= 44, mid = !narrow && !large;
+    const deckY2 = 0.6 + Math.min(B5, 11) * 0.2;
+    const bulH = 1.1;
+    const fore = L3 >= 24;
+    const hq = narrow ? 2.4 : Math.min(3, 1.95 + B5 * 0.075), hf = hq - 0.1;
+    const poop = large, hp = poop ? hq - 0.2 : 0;
+    const tq = narrow ? Math.max(0.24, 2.9 / L3) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 1 - Math.max(0.13, 5.4 / L3) : 1, tp = poop ? 0.13 : 0;
+    const yq = deckY2 + hq, yf = deckY2 + hf, yp = yq + hp;
+    const masts = Math.max(1, Math.min(4, def.masts || 3));
+    const tHelm = poop ? tp + 0.02 : narrow ? 0.08 : 0.1;
+    const d = {
+      L: L3,
+      B: B5,
+      D: D4,
+      open: false,
+      big: true,
+      narrow,
+      deckY: deckY2,
+      bulH,
+      castle: true,
+      fore,
+      poop,
+      hq,
+      hf,
+      hp,
+      tq,
+      tf: tf2,
+      tp,
+      masts,
+      mastH: narrow ? L3 * 0.95 + 3 : L3 + 4,
+      helmX: -L3 / 2 + tHelm * L3,
+      yq,
+      yf,
+      yp,
+      helmFloor: yq,
+      sheer: 0.4,
+      walk: 0.86
+    };
+    d.bowY = fore ? yf : deckY2 + 0.9;
+    d.mastU = { 1: [0.06], 2: [0.22, -0.06], 3: large ? [0.27, 0.03, -0.24] : [0.26, 0.02, -0.28], 4: [0.3, 0.1, -0.12, -0.27] }[masts].map((k) => k * L3);
+    d.mastR = Math.min(0.6, 0.05 + L3 * 0.011);
+    d.wheelU = d.helmX + 0.9;
+    const bu = d.wheelU + 1.45;
+    d.binnacleU = !narrow && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
+    const W4 = narrow ? 1.05 : Math.min(1.6, 0.75 + B5 * 0.055), sides2 = narrow ? [1] : [-1, 1];
+    const run = (rise2) => rise2 * (narrow ? 1.1 : mid ? 1.15 : 1.3);
+    const edge = (t) => hbAt(t, B5) * d.walk - 0.22;
+    d.stairs = [];
+    const flight = (ta, tb, ha, hb, la, lb) => {
+      const vo2 = Math.min(edge(ta), edge(tb)), vi = vo2 - W4;
+      for (const s of sides2) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo2, vb: s > 0 ? vo2 : -vi });
+    };
+    flight(tq, tq + run(hq) / L3, yq, deckY2, "quarter", "main");
+    if (fore) flight(tf2 - run(hf) / L3, tf2, deckY2, yf, "main", "fore");
+    if (poop) flight(tp, tp + run(hp) / L3, yp, yq, "poop", "quarter");
+    const qs = d.stairs.find((s) => s.la === "quarter" && s.lb === "main"), fs = d.stairs.find((s) => s.lb === "fore");
+    const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
+    d.mainT0 = mainT0;
+    d.mainT1 = mainT1;
+    const holdY = deckY2 - Math.max(2.25, Math.min(2.7, 1.9 + B5 * 0.045));
+    d.holdY = holdY;
+    const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
+    let h0 = 0.06, h1 = 0.94;
+    while (h0 < 0.4 && holdHalf(h0) < 0.8) h0 += 5e-3;
+    while (h1 > 0.6 && holdHalf(h1) < 0.8) h1 -= 5e-3;
+    const clearU = (u0, u1, pad2) => d.mastU.every((m) => m < u0 - d.mastR - pad2 || m > u1 + d.mastR + pad2);
+    const clearComp = (u0, u1) => d.mastU.every((m) => m < u0 - d.mastR - 1.2 || m > u1 + d.mastR + 1.5);
+    const rise = deckY2 - holdY;
+    let comp = null;
+    for (const cRun of [...large ? [rise * 1.15, rise, rise * 0.85] : [], rise * 0.55]) {
+      for (let k = 0; k < 160 && !comp; k++) {
+        const tc = (mainT0 + mainT1) / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 3e-3;
+        const t0 = tc - cRun / L3 / 2, t1 = tc + cRun / L3 / 2;
+        if (t0 < mainT0 + 0.5 / L3 || t1 > mainT1 - 1.8 / L3 || t0 < h0 + 1.8 / L3 || t1 > h1 - 0.3 / L3) continue;
+        if (clearComp(xAt(d, t0), xAt(d, t1))) comp = { t0, t1, ladder: cRun < rise * 0.7 };
+      }
+      if (comp) break;
+    }
+    if (!comp) comp = { t0: (mainT0 + mainT1) / 2 - rise * 0.275 / L3, t1: (mainT0 + mainT1) / 2 + rise * 0.275 / L3, ladder: true };
+    const cw = comp.ladder ? 0.9 : 1.3;
+    d.comp = { ...comp, w: cw, u0: xAt(d, comp.t0), u1: xAt(d, comp.t1) };
+    d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY2, la: "hold", lb: "main", s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
+    d.hatchT = (comp.t0 + comp.t1) / 2;
+    const freeT = (want2, len, pad2) => {
+      for (let k = 0; k < 80; k++) {
+        const tc = want2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 6e-3;
+        const u0 = xAt(d, tc) - len / 2, u1 = u0 + len;
+        if (tc - len / L3 / 2 < mainT0 + 0.3 / L3 || tc + len / L3 / 2 > mainT1 - 0.3 / L3) continue;
+        if (!clearU(u0, u1, pad2)) continue;
+        if (u1 > d.comp.u0 - pad2 && u0 < d.comp.u1 + Math.max(pad2, 1.6)) continue;
+        return tc;
+      }
+      return null;
+    };
+    d.capstanT = L3 >= 14 ? freeT(masts >= 4 ? 0.54 : 0.385, 0.9, 0.7) : null;
+    const bl2 = Math.min(6, L3 * 0.14), bt = L3 >= 24 ? freeT(masts >= 4 ? 0.69 : 0.645, bl2, 0.6) : null;
+    if (bt !== null && d.capstanT !== null && Math.abs(xAt(d, bt) - xAt(d, d.capstanT)) < bl2 / 2 + 1.2) d.boat = null;
+    else d.boat = bt !== null ? { u0: (bt - 0.5) * L3 - bl2 / 2, u1: (bt - 0.5) * L3 + bl2 / 2, w: Math.min(2.2, B5 * 0.22) } : null;
+    const gs = Math.max(0.6, Math.min(1, B5 / 6.5));
+    d.gunScale = gs;
+    const rows = [{ y: deckY2 + 0.42, t0: mainT0 + 1.5 / L3, t1: mainT1 - 1.5 / L3, lid: 0.42, open: 1.4, deck: true }];
+    if ((def.cannons || 0) >= 12) rows.push({ y: holdY + 0.42 * Math.max(0.85, gs), t0: Math.max(0.12, h0 + 0.8 / L3), t1: Math.min(0.86, h1 - 0.8 / L3), lid: 0.6, open: 1.05 });
+    const perSide = Math.ceil((def.cannons || 0) / 2);
+    const capU = d.capstanT !== null ? (d.capstanT - 0.5) * L3 : null;
+    const centre = (u) => {
+      let w = 0;
+      for (const m of d.mastU) if (Math.abs(u - m) < d.mastR + 0.6) w = Math.max(w, d.mastR + 0.1);
+      if (capU !== null && Math.abs(u - capU) < 1.17) w = Math.max(w, 0.62);
+      if (d.boat && u > d.boat.u0 - 0.55 && u < d.boat.u1 + 0.55) w = Math.max(w, d.boat.w / 2);
+      if (u > d.comp.u0 - 0.6 && u < d.comp.u1 + 0.6) w = Math.max(w, cw / 2 + 0.05);
+      return w;
+    };
+    const walkway = large ? 0.9 : mid ? 0.7 : 0.45;
+    const offAt = (t) => hbAt(t, B5) * 0.93 - 0.95 * gs;
+    const fitsGun = (t) => {
+      const u = (t - 0.5) * L3, reach3 = 0.5 * gs;
+      return [u - reach3, u, u + reach3].every((uu) => offAt(t) - gunIn(gs) - centre(uu) >= walkway);
+    };
+    const top = rows[0], want = rows.length > 1 ? Math.ceil(perSide / 2) : perSide;
+    const cand = [];
+    for (let t = top.t0; t <= top.t1 + 1e-9; t += 0.1 / L3) if (fitsGun(t)) cand.push(t);
+    const pick6 = [], gap = (1.4 * gs + 0.35) / L3;
+    for (let i = 0; i < want && cand.length; i++) {
+      const aim = want === 1 ? (top.t0 + top.t1) / 2 : top.t0 + (top.t1 - top.t0) * i / (want - 1);
+      let best = null;
+      for (const t of cand) if (pick6.every((q2) => Math.abs(q2 - t) >= gap) && (best === null || Math.abs(t - aim) < Math.abs(best - aim))) best = t;
+      if (best !== null) pick6.push(best);
+    }
+    pick6.sort((a, b) => a - b);
+    d.guns = [];
+    for (const t of pick6) for (const s of [-1, 1]) d.guns.push({ t, u: (t - 0.5) * L3, v: s * offAt(t), s });
+    top.ts = pick6;
+    top.n = pick6.length;
+    for (const r4 of rows) if (!r4.deck) r4.n = Math.max(2, Math.min(16, Math.ceil(perSide / 2), Math.floor((r4.t1 - r4.t0) * L3 / 1.9)));
+    d.gunRows = rows;
+    d.lowGuns = [];
+    const low = rows.find((r4) => !r4.deck);
+    if (low) {
+      for (let i = 0; i < low.n; i++) {
+        const t = low.t0 + (low.t1 - low.t0) * (i + 0.5) / low.n;
+        const off = skinAt(d, t, low.y) - 0.3 - 0.85 * gs;
+        if (t > comp.t0 - 1.6 / L3 && t < comp.t1 + 0.5 / L3 && off - gunIn(gs) - 0.8 < cw / 2 + 0.5) continue;
+        for (const s of [-1, 1]) d.lowGuns.push({ t, u: (t - 0.5) * L3, v: s * off, s });
+      }
+    }
+    const tS = 0.02 + 0.3 / L3;
+    const mastIn = d.mastU.some((m) => m < xAt(d, tq) && m > xAt(d, tq) - 2.6);
+    const doorVs = narrow ? [Math.max(-edge(tq) + 0.75, Math.min(0, qs.va - 0.75))] : mastIn ? [-1, 1].map((s) => s * Math.max(0.95, d.mastR + 1.15)) : [0];
+    d.rooms = [
+      { kind: "cabin", t0: tS, t1: tq, floor: deckY2, ceil: yq - 0.12, top: yq, doors: doorVs.map((v) => ({ t: tq, v, w: 1.05, face: 1 })) }
+    ];
+    if (poop) d.rooms.push({ kind: "captain", t0: tS, t1: tp, floor: yq, ceil: yp - 0.12, top: yp, doors: [{ t: tp, v: 0, w: 1.05, face: 1 }] });
+    if (fore) {
+      let fe = 0.95;
+      while (fe > tf2 + 0.03 && innerAt(d, fe, deckY2 + 1) < 0.85) fe -= 5e-3;
+      const fdv = narrow ? [Math.max(-edge(tf2) + 0.75, Math.min(0, fs.va - 0.75))] : [-0.95, 0.95];
+      d.rooms.push({ kind: "forecastle", t0: tf2, t1: fe, floor: deckY2, ceil: yf - 0.12, top: yf, doors: fdv.map((v) => ({ t: tf2, v, w: 1, face: -1 })) });
+    }
+    d.rooms.push({ kind: "hold", t0: h0, t1: h1, floor: holdY, ceil: deckY2 - 0.12, doors: [] });
+    const upTo = { cabin: ["quarter", "main"], captain: ["poop", "quarter"], forecastle: ["main", "fore"] };
+    for (const r4 of d.rooms) if (r4.doors.length) roomFront(d, r4, d.stairs.filter((s) => s.la === upTo[r4.kind][0] && s.lb === upTo[r4.kind][1]));
+    for (const r4 of d.rooms) if (r4.kind === "cabin" || r4.kind === "captain") r4.windows = sternWindows(d, r4);
+    d.walls = [];
+    for (const r4 of d.rooms) {
+      if (!r4.doors.length) continue;
+      const u = xAt(d, r4.front.t), w = innerAt(d, r4.front.t, r4.floor + 1) + 0.1;
+      let v = -w;
+      for (const dr of [...r4.doors].sort((a, b) => a.v - b.v)) {
+        d.walls.push({ u0: u, v0: v, u1: u, v1: dr.v - dr.w / 2, y0: r4.floor, y1: r4.ceil + 0.12 });
+        v = dr.v + dr.w / 2;
+      }
+      d.walls.push({ u0: u, v0: v, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12 });
+    }
+    for (const r4 of d.rooms) {
+      const hold = r4.kind === "hold";
+      for (const [t, off] of hold ? [[r4.t0, 0], [r4.t1, 0]] : r4.kind === "forecastle" ? [[r4.t1, 0]] : [[r4.t0, 0.05]]) {
+        const u = xAt(d, t) + off, w = (hold ? skinAt(d, t, r4.floor + 0.3) : innerAt(d, t, r4.floor + 1)) + 0.1;
+        d.walls.push({ u0: u, v0: -w, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12, end: true });
+      }
+    }
+    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.08 }));
+    for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: "main" });
+    for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: "hold" });
+    if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: "main" });
+    d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: "quarter" });
+    if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: "quarter" });
+    if (fore) d.solids.push({ u: (tf2 + 0.03 - 0.5) * L3, v: 0, r: 0.55, lvl: "fore" });
+    if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: "main" });
+    d.shotPile = null;
+    const mainFirst = [...d.mastU].sort((a, b) => Math.abs(a) - Math.abs(b));
+    const S6 = FURNITURE.shot;
+    for (const m of mainFirst) {
+      for (const [u, v] of [[m + d.mastR + 0.95, 0], [m - d.mastR - 0.95, 0], [m, d.mastR + 0.85], [m, -d.mastR - 0.85]]) {
+        const box2 = { u0: u - S6.w / 2, u1: u + S6.w / 2, v0: v - S6.dp / 2, v1: v + S6.dp / 2 };
+        if (deckClear(d, box2, 0.55)) {
+          d.shotPile = { u, v, ...box2 };
+          break;
+        }
+      }
+      if (d.shotPile) break;
+    }
+    if (d.shotPile) {
+      const p = d.shotPile;
+      d.solids.push({ u0: p.u0, u1: p.u1, v0: p.v0, v1: p.v1, lvl: "main" });
+    }
+    furnish(d);
+    d.ladders = [];
+    for (const s of [1, -1]) {
+      const t = ladderT(d, def, s, mainT0, mainT1);
+      if (t !== null) d.ladders.push({ t, u: xAt(d, t), s, w: LADDER_W });
+    }
+    return d;
+  }
+  var LADDER_W = 0.62;
+  function ladderT(d, def, s, t0, t1) {
+    const L3 = d.L, mid = (t0 + t1) / 2;
+    for (let k = 0; k < 600; k++) {
+      const t = mid + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.05 / L3;
+      if (t < t0 + 1 / L3 || t > t1 - 1 / L3) continue;
+      const u = xAt(d, t);
+      if ([...d.guns, ...d.lowGuns || []].some((g) => g.s === s && Math.abs(g.u - u) < LADDER_W / 2 + 0.31 + 0.3)) continue;
+      if (d.mastU.some((m) => Math.abs(u - (m - 0.5)) < (2.4 + d.mastR * 2) / 2 + LADDER_W / 2 + 0.25)) continue;
+      if (def.paddle && Math.abs(t - 0.34) < (0.72 * d.B / 3.2 + LADDER_W / 2 + 0.5) / L3) continue;
+      const v = s * (hbAt(t, d.B) * d.walk - 0.5);
+      if (levelAt(d, t, v) !== "main" || solidAt(d, u, v, 0.4, "main") > 0) continue;
+      return t;
+    }
+    return null;
+  }
+  var gunIn = (gs) => 0.92 * gs + 0.05;
+  function gunBox(g, gs) {
+    const a = 0.25 * gs + 0.15, i = gunIn(gs), o = 0.6 * gs;
+    return { u0: g.u - a, u1: g.u + a, v0: g.s > 0 ? g.v - i : g.v - o, v1: g.s > 0 ? g.v + o : g.v + i };
+  }
+  var hits = (a, b, pad2 = 0) => a.u0 < b.u1 + pad2 && a.u1 > b.u0 - pad2 && a.v0 < b.v1 + pad2 && a.v1 > b.v0 - pad2;
+  var nearRing = (a, u, v, r4) => Math.hypot(u - Math.max(a.u0, Math.min(a.u1, u)), v - Math.max(a.v0, Math.min(a.v1, v))) < r4;
+  function deckClear(d, b, pad2) {
+    const t0 = (b.u0 + d.L / 2) / d.L, t1 = (b.u1 + d.L / 2) / d.L;
+    if (t0 < d.tq || t1 > d.tf) return false;
+    for (const t of [t0, t1]) if (Math.max(-b.v0, b.v1) > hbAt(t, d.B) * d.walk - pad2) return false;
+    const cp = d.comp;
+    if (hits(b, { u0: cp.u0, u1: cp.u1 + 1.6, v0: -cp.w / 2 - 0.4, v1: cp.w / 2 + 0.4 }, pad2)) return false;
+    for (const s of d.stairs) if (!s.down && (s.la === "main" || s.lb === "main") && hits(b, { u0: xAt(d, s.ta), u1: xAt(d, s.tb), v0: s.va, v1: s.vb }, pad2)) return false;
+    for (const o of d.solids) {
+      if (o.lvl && o.lvl !== "main") continue;
+      if (o.r !== void 0 ? nearRing(b, o.u, o.v, o.r + pad2) : hits(b, o, pad2)) return false;
+    }
+    return true;
+  }
+  function roomFront(d, r4, stairs2) {
+    const face = r4.kind === "forecastle" ? -1 : 1, t = face > 0 ? r4.t1 : r4.t0, u = xAt(d, t);
+    const w = innerAt(d, t, (r4.floor + r4.top) / 2) + 0.05, dh = Math.min(2.05, r4.top - r4.floor - 0.12);
+    const ds = [...r4.doors].sort((a, b) => a.v - b.v);
+    ds.forEach((dr, i) => {
+      const lo = i ? (ds[i - 1].v + ds[i - 1].w / 2 + dr.v - dr.w / 2) / 2 : -w, hi = i < ds.length - 1 ? (dr.v + dr.w / 2 + ds[i + 1].v - ds[i + 1].w / 2) / 2 : w;
+      const right = hi - (dr.v + dr.w / 2), left = dr.v - dr.w / 2 - lo, sd = right >= left ? 1 : -1;
+      const lw = Math.min(dr.w - 0.1, Math.max(right, left) - 0.12), e = dr.v + sd * (dr.w / 2 + 0.04);
+      dr.dh = dh;
+      dr.leaf = lw > 0.3 ? { u: u - face * 0.12, v0: Math.min(e, e + sd * lw), v1: Math.max(e, e + sd * lw), s: sd } : null;
+    });
+    const clearOfStairs = (zz, half2) => !stairs2.some((st) => zz + half2 > st.va - 0.1 && zz - half2 < st.vb + 0.1);
+    const windows = [];
+    if (r4.top - r4.floor > 1.8) {
+      for (let zz = -w + 0.75; zz <= w - 0.75; zz += 1.15) {
+        if (ds.some((dr) => Math.abs(zz - dr.v) < dr.w / 2 + 0.5 || dr.leaf && zz + 0.38 > dr.leaf.v0 && zz - 0.38 < dr.leaf.v1) || !clearOfStairs(zz, 0.4)) continue;
+        windows.push(zz);
+      }
+    }
+    r4.front = { t, u, face, w, dh, windows };
+  }
+  function sternWindows(d, r4) {
+    const w = innerAt(d, r4.t0, r4.floor + 1);
+    if (r4.ceil + 0.1 - r4.floor <= 1.9) return [];
+    const n = Math.max(2, Math.floor(w * 2 / 1.15)), ww = Math.min(0.8, w * 2 / n - 0.3);
+    return Array.from({ length: n }, (_, i) => ({ v: -w + (i + 0.5) * (w * 2) / n, w: ww }));
+  }
+  var FURNITURE = {
+    table: { w: 1.6, dp: 0.9, h: 0.76 },
+    chair: { w: 0.46, dp: 0.46, h: 0.95 },
+    bench: { w: 1.5, dp: 0.36, h: 0.46 },
+    desk: { w: 1.4, dp: 0.75, h: 0.78 },
+    bunk: { w: 2.05, dp: 0.95, h: 0.7 },
+    chest: { w: 0.9, dp: 0.55, h: 0.62 },
+    treasure: { w: 0.9, dp: 0.8, h: 0.98 },
+    shelf: { w: 1.3, dp: 0.38, h: 1.8 },
+    stove: { w: 0.9, dp: 0.7, h: 0.8 },
+    hammock: { w: 2.1, dp: 0.8, h: 0.62 },
+    barrel: { w: 0.66, dp: 0.66, h: 0.78 },
+    barrels: { w: 1.34, dp: 0.66, h: 0.78 },
+    crate: { w: 0.8, dp: 0.8, h: 1.2 },
+    sacks: { w: 1.2, dp: 0.7, h: 0.48 },
+    shot: { w: 0.6, dp: 0.45, h: 0.48 },
+    lantern: { w: 0.28, dp: 0.36, h: 0.46 }
+  };
+  function footprint(it) {
+    const across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
+    const hu = (across ? it.dp : it.w) / 2, hv = (across ? it.w : it.dp) / 2;
+    return { u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv };
+  }
+  var SEAT_H = { chair: 0.47, bench: FURNITURE.bench.h, barrel: 0.8 };
+  function seatsOf(d) {
+    if (d.seats) return d.seats;
+    const out = [];
+    for (const it of d.furniture || []) {
+      const h2 = SEAT_H[it.kind];
+      if (!h2 || it.ghost || it.y) continue;
+      const face = Math.PI / 2 - (it.rot || 0);
+      if (it.kind !== "bench") {
+        out.push({ u: it.u, v: it.v, floor: it.floor, h: h2, face, kind: it.kind });
+        continue;
+      }
+      const n = Math.max(1, Math.floor(it.w / 0.6)), across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
+      for (let i = 0; i < n; i++) {
+        const o = ((i + 0.5) / n - 0.5) * it.w;
+        out.push({ u: it.u + (across ? 0 : o), v: it.v + (across ? o : 0), floor: it.floor, h: h2, face, kind: "bench" });
+      }
+    }
+    return d.seats = out;
+  }
+  var liningYs = (r4) => r4.kind === "hold" ? [-0.02, 0.55, 1.15, 1.75, r4.ceil + 0.1 - r4.floor] : [-0.02, 0.9, r4.ceil + 0.1 - r4.floor];
+  function liningAt(d, r4, t, y) {
+    const ys = liningYs(r4);
+    const at4 = (yy) => r4.kind === "hold" ? Math.max(0.3, skinAt(d, t, r4.floor + yy) - 0.22) : innerAt(d, t, r4.floor + yy) + 0.01;
+    const yc = Math.max(ys[0], Math.min(ys[ys.length - 1], y));
+    for (let i = 0; i < ys.length - 1; i++) {
+      if (yc <= ys[i + 1]) return at4(ys[i]) + (at4(ys[i + 1]) - at4(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
+    }
+    return at4(ys[ys.length - 1]);
+  }
+  function roomEnds(d, r4) {
+    const a = xAt(d, r4.t0), b = xAt(d, r4.t1);
+    if (r4.kind === "forecastle") return [a + 0.07, b];
+    if (r4.kind === "hold") return [a, b];
+    return [a + 0.1, b - 0.07];
+  }
+  function roomPlacer(d, r4) {
+    const [ua, ub] = roomEnds(d, r4), H5 = r4.ceil - r4.floor;
+    const tOf = (u) => (Math.max(ua, Math.min(ub, u)) + d.L / 2) / d.L;
+    const ys = liningYs(r4);
+    const P6 = { d, r: r4, ua, ub, H: H5, items: [], keep: [], low: [], rings: [] };
+    const reached = /* @__PURE__ */ new Map();
+    P6.reach = (u, y0, y1) => {
+      const key2 = `${Math.round(u * 100)}|${y0}|${y1}`;
+      let m = reached.get(key2);
+      if (m === void 0) {
+        m = Infinity;
+        for (const y of [y0, y1, ...ys.filter((yy) => yy > y0 && yy < y1)]) m = Math.min(m, liningAt(d, r4, tOf(Math.round(u * 100) / 100), y));
+        reached.set(key2, m);
+      }
+      return m - 0.03;
+    };
+    const top = (o) => o.pipe ? H5 - 0.1 : (o.y || 0) + o.h;
+    P6.fits = (it) => {
+      const fp = footprint(it), y0 = it.y || 0, y1 = top(it);
+      if (fp.u0 < ua - 1e-6 || fp.u1 > ub + 1e-6 || y1 > H5 - (it.y ? 0 : 0.06)) return false;
+      for (const u of [fp.u0, (fp.u0 + fp.u1) / 2, fp.u1]) {
+        const w = P6.reach(u, y0, y1);
+        if (fp.v0 < -w - 1e-6 || fp.v1 > w + 1e-6) return false;
+      }
+      if (P6.keep.some((k) => hits(fp, k) && y0 < (k.top ?? Infinity))) return false;
+      if (y1 > 0.72 && P6.low.some((k) => hits(fp, k))) return false;
+      if (P6.rings.some((c) => nearRing(fp, c.u, c.v, c.r))) return false;
+      for (const o of P6.items) if (hits(fp, footprint(o), 0.02) && y0 < top(o) && (o.y || 0) < y1) return false;
+      return true;
+    };
+    P6.put = (it) => {
+      const x = { rot: 0, ...it, room: r4.kind, floor: r4.floor };
+      if (!P6.fits(x)) return null;
+      P6.items.push(x);
+      return x;
+    };
+    const spec = (kind, extra = {}) => ({ kind, ...FURNITURE[kind], ...extra });
+    const sidePlace = (kind, s, u, extra) => {
+      const S6 = spec(kind, extra), y0 = S6.y || 0, y1 = S6.pipe ? H5 - 0.1 : y0 + S6.h;
+      const w = Math.min(P6.reach(u - S6.w / 2, y0, y1), P6.reach(u, y0, y1), P6.reach(u + S6.w / 2, y0, y1));
+      const it = { rot: s > 0 ? Math.PI : 0, ...S6, u, v: s * (w - 0.01 - S6.dp / 2), room: r4.kind, floor: r4.floor };
+      return { it, off: P6.reach(u, y0, y1) - w };
+    };
+    P6.onSide = (kind, s, u, extra = {}) => P6.put(sidePlace(kind, s, u, extra).it);
+    P6.alongSide = (kind, s, from, to, extra = {}) => {
+      const dir = to >= from ? 1 : -1;
+      let best = null;
+      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
+        const c = sidePlace(kind, s, u, extra);
+        if (!P6.fits(c.it)) continue;
+        if (c.off < 0.12) {
+          best = c;
+          break;
+        }
+        if (!best || c.off < best.off - 0.02) best = c;
+      }
+      if (!best) return null;
+      P6.items.push(best.it);
+      return best.it;
+    };
+    P6.row = (kinds, s, from, to, gap, extra = {}) => {
+      const out = [], dir = to >= from ? 1 : -1;
+      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
+        const kind = kinds[out.length % kinds.length], S6 = spec(kind, extra);
+        const it = P6.onSide(kind, s, u + dir * S6.w / 2, extra);
+        if (it) {
+          out.push(it);
+          u += dir * (S6.w + (typeof gap === "function" ? gap(out.length) : gap) - 0.05);
+        }
+      }
+      return out;
+    };
+    P6.onEnd = (kind, e, v, extra = {}) => {
+      const S6 = spec(kind, extra);
+      return P6.put({ ...S6, u: e < 0 ? ua + 0.01 + S6.dp / 2 : ub - 0.01 - S6.dp / 2, v, rot: e < 0 ? Math.PI / 2 : -Math.PI / 2 });
+    };
+    P6.around = (u0, v0, fn) => {
+      for (let k = 0; k < 160; k++) {
+        const u = u0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.1;
+        if (u < ua || u > ub) continue;
+        for (const dv of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9]) {
+          const g = fn(u, v0 + dv);
+          if (g) return g;
+        }
+      }
+      return null;
+    };
+    P6.group = (build5, clear3 = 0.55) => {
+      const mark = P6.items.length;
+      const g = build5();
+      const mine = P6.items.slice(mark);
+      if (g && mine.length) {
+        const b = mine.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
+        if (!P6.items.slice(0, mark).some((o) => !o.ghost && hits(b, footprint(o), clear3) && (o.y || 0) < 1.7)) {
+          P6.keep.push({ u0: b.u0 - clear3, u1: b.u1 + clear3, v0: b.v0 - clear3, v1: b.v1 + clear3, top: 1.7 });
+          return mine;
+        }
+      }
+      P6.items.length = mark;
+      return null;
+    };
+    P6.table = (u, v, len, wid, seats = "chairs") => P6.group(() => {
+      if (!P6.put({ kind: "table", w: len, dp: wid, h: FURNITURE.table.h, u, v, mess: seats === "benches" })) return null;
+      let n = 0;
+      if (seats === "benches") {
+        for (const s of [-1, 1]) if (P6.put({ ...spec("bench"), w: len, u, v: v + s * (wid / 2 + 0.05 + FURNITURE.bench.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
+      } else {
+        const C3 = FURNITURE.chair, k = Math.max(1, Math.min(4, Math.floor((len + 0.1) / 0.75)));
+        for (const s of [-1, 1]) for (let i = 0; i < k; i++) if (P6.put({ ...spec("chair"), u: u - len / 2 + len * (i + 0.5) / k, v: v + s * (wid / 2 + 0.05 + C3.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
+        for (const e of [-1, 1]) if (P6.put({ ...spec("chair"), u: u + e * (len / 2 + 0.05 + C3.dp / 2), v, rot: e > 0 ? -Math.PI / 2 : Math.PI / 2 })) n++;
+      }
+      return n >= 2;
+    });
+    P6.rug = (group6) => {
+      if (!group6) return null;
+      const b = group6.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
+      for (let pad2 = 0.35; pad2 > -0.2; pad2 -= 0.05) {
+        const rug = { kind: "rug", u: (b.u0 + b.u1) / 2, v: (b.v0 + b.v1) / 2, w: b.u1 - b.u0 + 2 * pad2, dp: b.v1 - b.v0 + 2 * pad2, h: 0.02, rot: 0, ghost: true, room: r4.kind, floor: r4.floor };
+        const fp = footprint(rug);
+        if (fp.u0 < ua || fp.u1 > ub || [fp.u0, fp.u1].some((u) => P6.reach(u, 0, 0.02) < Math.max(-fp.v0, fp.v1))) continue;
+        if (P6.items.some((o) => !group6.includes(o) && !o.y && !o.wall && hits(fp, footprint(o)))) continue;
+        P6.items.push(rug);
+        return rug;
+      }
+      return null;
+    };
+    P6.lanterns = () => {
+      const S6 = FURNITURE.lantern, y = Math.min(H5 - 0.12, 2.25) - S6.h, len = ub - ua, n = Math.max(1, Math.round(len / 3.2));
+      const free = (lt2) => {
+        const fp = footprint(lt2);
+        return fp.u0 >= ua && fp.u1 <= ub && !P6.items.some((o) => hits(fp, footprint(o), 0.08) && (o.y || 0) < lt2.y + S6.h && top(o) > lt2.y);
+      };
+      for (let i = 0; i < n; i++) {
+        const u = ua + len * (i + 0.5) / n;
+        let put2 = null;
+        for (const s of i % 2 ? [1, -1] : [-1, 1]) {
+          const w = Math.min(P6.reach(u - S6.w / 2, y, y + S6.h), P6.reach(u, y, y + S6.h), P6.reach(u + S6.w / 2, y, y + S6.h)) + 0.02;
+          const lt2 = { kind: "lantern", ...S6, u, v: s * (w - S6.dp / 2), y, rot: s > 0 ? Math.PI : 0, ghost: true, wall: s, room: r4.kind, floor: r4.floor };
+          if (free(lt2)) {
+            put2 = lt2;
+            break;
+          }
+        }
+        for (const dv of [0, 0.6, -0.6, 1.2, -1.2]) {
+          if (put2) break;
+          const lt2 = { kind: "lantern", ...S6, dp: S6.w, u, v: dv, y: H5 - 0.5, h: 0.5, rot: 0, ghost: true, wall: 0, room: r4.kind, floor: r4.floor };
+          if (free(lt2)) put2 = lt2;
+        }
+        if (put2) P6.items.push(put2);
+      }
+    };
+    for (const dr of r4.doors) {
+      const f = r4.front.face, u = r4.front.u;
+      const inside2 = (a, b) => f > 0 ? { u0: u - b, u1: u - a } : { u0: u + a, u1: u + b };
+      P6.keep.push({ ...inside2(-1, 1.35), v0: dr.v - dr.w / 2 - 0.2, v1: dr.v + dr.w / 2 + 0.2, top: dr.dh + 0.15 });
+      if (dr.leaf) P6.keep.push({ ...inside2(-1, 0.25), v0: dr.leaf.v0 - 0.05, v1: dr.leaf.v1 + 0.05, top: dr.dh + 0.05 });
+    }
+    if (r4.front) for (const zz of r4.front.windows) P6.low.push({ ...r4.front.face > 0 ? { u0: ub - 0.35, u1: ub + 1 } : { u0: ua - 1, u1: ua + 0.35 }, v0: zz - 0.4, v1: zz + 0.4 });
+    for (const wd of r4.windows || []) P6.low.push({ u0: ua - 1, u1: ua + 0.35, v0: wd.v - wd.w / 2 - 0.1, v1: wd.v + wd.w / 2 + 0.1 });
+    for (const m of d.mastU) if (m > ua - 1.5 && m < ub + 1.5) P6.rings.push({ u: m, v: 0, r: d.mastR + 0.08 + 0.45 });
+    if (r4.kind === "hold") {
+      const cp = d.comp;
+      P6.keep.push({ u0: cp.u0 - 1.4, u1: cp.u1 + 0.3, v0: -cp.w / 2 - 0.45, v1: cp.w / 2 + 0.45 });
+      for (const g of d.lowGuns) {
+        const b = gunBox(g, d.gunScale);
+        P6.keep.push({ u0: b.u0 - 0.2, u1: b.u1 + 0.2, v0: g.s > 0 ? b.v0 - 0.9 : b.v0, v1: g.s > 0 ? b.v1 : b.v1 + 0.9, top: 1.3 });
+      }
+    }
+    return P6;
+  }
+  var clampN = (x, a, b) => Math.max(a, Math.min(b, x));
+  var CARGO = ["barrels", "crate", "sacks", "barrel", "crate", "shot", "barrels", "sacks", "barrel"];
+  var ROOMS = {
+    // the great cabin: a bunk along the starboard side with the sea chest at
+    // its foot, books and another chest to port (and on the bigger ships a
+    // second bunk, a water cask and a chest under the stern windows), the
+    // table down the middle with its chairs round it, a rug under it
+    cabin(P6) {
+      const { ua, ub } = P6, len = ub - ua;
+      const bunk = P6.alongSide("bunk", 1, ua + 1.05, ub - 1.05, { head: -1 });
+      if (bunk) P6.alongSide("chest", 1, bunk.u + bunk.w / 2 + 0.5, ub - 0.5, { loot: "cabin" });
+      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "cabin" });
+      if (len > 5.5) P6.alongSide("bunk", -1, ua + 1.05, ub - 1.05, { head: -1 });
+      if (len > 5.5) P6.onEnd("chest", -1, 0);
+      const half2 = P6.reach((ua + ub) / 2, 0, 1);
+      const tl = clampN(len * 0.3, 1.1, 2.6), tw = clampN(half2 * 0.24, 0.75, 1.05);
+      let table = null;
+      for (const [l, w] of [[tl, tw], [Math.max(1, tl * 0.75), Math.max(0.7, tw - 0.1)]]) if (!table) table = P6.around((ua + ub) / 2 - 0.2, 0, (u, v) => P6.table(u, v, l, w));
+      if (len > 5.5) P6.alongSide("barrel", 1, ub - 0.4, ua + 0.4);
+      P6.rug(table);
+      P6.lanterns();
+    },
+    // the captain's cabin under the poop: the desk facing the door, his chair
+    // behind it (his back to the stern windows); a bunk with a chest at its
+    // foot, bookcases and another chest; a rug
+    captain(P6) {
+      const { ua, ub } = P6, C3 = FURNITURE.chair, D4 = FURNITURE.desk;
+      const bunk = P6.alongSide("bunk", 1, ub - 1.05, ua + 1.05, { head: -1 });
+      if (bunk) P6.alongSide("chest", 1, bunk.u - bunk.w / 2 - 0.5, ua + 0.5, { loot: "captain" });
+      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "captain" });
+      let desk = null;
+      for (let du = 0; du < 2.5 && !desk; du += 0.1) {
+        for (const v of [0, 0.3, -0.3, 0.6, -0.6]) {
+          if (desk) break;
+          const cu = ua + 0.42 + du + C3.dp / 2;
+          desk = P6.group(() => P6.put({ ...FURNITURE.chair, kind: "chair", u: cu, v, rot: Math.PI / 2 }) && P6.put({ ...D4, kind: "desk", u: cu + C3.dp / 2 + 0.05 + D4.dp / 2, v, rot: Math.PI / 2 }));
+        }
+      }
+      P6.rug(desk);
+      P6.lanterns();
+    },
+    // the forecastle: the galley stove, the mess table and its benches, the
+    // crew's hammocks slung up under the deck beams and their sea chests below
+    forecastle(P6) {
+      const { ua, ub, H: H5 } = P6, len = ub - ua;
+      P6.alongSide("stove", -1, ua + 0.5, ub - 0.5, { pipe: true });
+      P6.row(["chest"], 1, ua + 0.1, ub - 0.1, 1.4, { loot: "crew" });
+      P6.row(["chest"], -1, ua + 1.2, ub - 0.1, 1.4, { loot: "crew" });
+      if (P6.reach(ua + len * 0.45, 0, 1) > 1.7) {
+        const tl = clampN(len * 0.4, 1.1, 2.4);
+        for (const l of [tl, 1.1]) if (P6.around(ua + len * 0.45, 0, (u, v) => P6.table(u, v, l, 0.7, "benches"))) break;
+      }
+      for (const s of [1, -1]) P6.row(["hammock"], s, ua + 0.05, ub - 0.05, 0.12, { y: H5 - 0.64, ghost: true });
+      P6.lanterns();
+    },
+    // the hold: the treasure chest by the foot of the ladder (its lid thrown
+    // back, facing you as you come down), the cargo stowed along both sides —
+    // a second row in a wide hold — with the way down the middle clear (on a
+    // gun deck, what fits between the guns)
+    hold(P6) {
+      const { d, ua, ub } = P6, cp = d.comp, T5 = FURNITURE.treasure;
+      let chest = null;
+      for (let du = 0; du < 3 && !chest; du += 0.1) {
+        for (const s of [-1, 1]) {
+          if (!chest) chest = P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u: cp.u0 - 0.7 - du, v: s * (cp.w / 2 + 0.47 + T5.dp / 2), rot: s < 0 ? 0 : Math.PI });
+        }
+      }
+      if (!chest) P6.around(cp.u0 - 2.2, 0, (u, v) => P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u, v, rot: Math.PI / 2 }));
+      let n = 0;
+      for (const s of [-1, 1]) n += P6.row(CARGO.slice(n % 3), s, ua + 0.3, ub - 0.3, (k) => k % 3 ? 0.15 : 1.1).length;
+      for (const o of P6.items.slice()) {
+        if (o.treasure || o.kind === "shot") continue;
+        const s = Math.sign(o.v), f = footprint(o), kind = ["barrel", "sacks", "barrel", "crate"][Math.floor(Math.abs(o.u) * 3.7) % 4], S6 = FURNITURE[kind];
+        const v = s > 0 ? f.v0 - 0.08 - S6.dp / 2 : f.v1 + 0.08 + S6.dp / 2;
+        if (Math.abs(v) - S6.dp / 2 >= 1.3) P6.put({ ...S6, kind, u: o.u, v, rot: s > 0 ? Math.PI : 0 });
+      }
+      P6.lanterns();
+    }
+  };
+  function furnish(d) {
+    d.furniture = [];
+    for (const r4 of d.rooms) {
+      const P6 = roomPlacer(d, r4);
+      ROOMS[r4.kind](P6);
+      d.furniture.push(...P6.items);
+    }
+    for (const it of d.furniture) if (!it.ghost) d.solids.push({ ...footprint(it), lvl: it.room });
+  }
+  var keelAt = (d, t) => -d.D * (1 - 0.5 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
+  function hullProfile(d, t) {
+    const top = topAt(d, t), dk3 = d.deckY, D4 = d.D;
+    return [
+      [0.875, top],
+      [0.89, top - 0.14],
+      [0.93, dk3 + 0.95],
+      [0.975, dk3 - 0.25],
+      [1, dk3 * 0.42],
+      [0.985, 0],
+      [0.9, -D4 * 0.3],
+      [0.68, -D4 * 0.64],
+      [0.36, -D4 * 0.9],
+      [0, keelAt(d, t)]
+    ];
+  }
+  function smallProfile(d, t) {
+    const top = topAt(d, t), dk3 = d.deckY;
+    return [
+      [0.965, top],
+      [0.975, top - 0.1],
+      [0.995, dk3 + (d.open ? 0.02 : 0)],
+      [1, dk3 - 0.12],
+      [1, dk3 * 0.55],
+      [0.975, dk3 * 0.12],
+      [0.9, -d.D * 0.25],
+      [0.68, -d.D * 0.62],
+      [0.36, -d.D * 0.9],
+      [0, -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4))]
+    ];
+  }
+  function profileWidth(pr, hb, y) {
+    if (y >= pr[0][1]) return pr[0][0] * hb;
+    for (let i = 0; i < pr.length - 1; i++) {
+      const [w0, y0] = pr[i], [w1, y1] = pr[i + 1];
+      if (y <= y0 && y >= y1) return (w0 + (w1 - w0) * (y0 - y) / Math.max(1e-6, y0 - y1)) * hb;
+    }
+    return 0;
+  }
+  function skinAt(d, t, y) {
+    return profileWidth(hullProfile(d, t), hbAt(t, d.B), y);
+  }
+  function sideAt(d, t, y) {
+    return d.big ? skinAt(d, t, y) : profileWidth(smallProfile(d, t), hbAt(t, d.B), y);
+  }
+  var innerAt = (d, t, y) => Math.max(0.05, skinAt(d, t, y) - 0.2);
+  function roomHalf(d, r4, t) {
+    return r4.kind === "hold" ? skinAt(d, t, r4.floor + 0.3) - 0.3 : innerAt(d, t, r4.floor + 1) - 0.08;
+  }
+  function roomAt(d, t, h2) {
+    if (!d.rooms) return null;
+    for (const r4 of d.rooms) if (t >= r4.t0 && t <= r4.t1 && h2 > r4.floor - 0.7 && h2 < r4.ceil - 0.9) return r4;
+    return null;
+  }
+  function wallDepth(d, u, v, fl2, margin) {
+    let depth = 0;
+    for (const w of d.walls || []) {
+      if (fl2 < w.y0 - 0.3 || fl2 > w.y1 - 1) continue;
+      const ex = w.u1 - w.u0, ey = w.v1 - w.v0, l2 = ex * ex + ey * ey;
+      const k = l2 ? Math.max(0, Math.min(1, ((u - w.u0) * ex + (v - w.v0) * ey) / l2)) : 0;
+      const dd = Math.hypot(u - (w.u0 + ex * k), v - (w.v0 + ey * k));
+      depth = Math.max(depth, margin + 0.08 - dd);
+    }
+    return depth;
+  }
+  function wheelSpec(d) {
+    if (d.open) return null;
+    if (d._wheel) return d._wheel;
+    let w;
+    if (d.big) w = { u: d.wheelU, floor: d.yq, hub: d.yq + 0.92, R: 0.56, grip: 0.66 };
+    else {
+      const floor2 = floorAt(d, (d.wheelU + 0.1 + d.L / 2) / d.L);
+      w = { u: d.wheelU, floor: floor2, hub: floor2 + 0.92, R: 0.4, grip: 0.47 };
+    }
+    Object.defineProperty(d, "_wheel", { value: w, enumerable: false });
+    return w;
+  }
+  function helmPoint(def) {
+    const d = shipDims(def);
+    if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
+    return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
+  }
+  function hbAt(t, B5) {
+    if (t > 0.58) {
+      const k = (t - 0.58) / 0.42;
+      return B5 / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(k, 2.2)));
+    }
+    if (t < 0.14) return B5 / 2 * (0.74 + 0.26 * Math.sin(t / 0.14 * Math.PI / 2));
+    return B5 / 2;
+  }
+  function topAt(d, t) {
+    let y = d.deckY + d.bulH + d.sheer * Math.pow(Math.abs(t - 0.45) / 0.55, 2);
+    if (d.castle) y += d.hq * (1 - smooth2(d.tq - 0.015, d.tq + 0.035, t));
+    if (d.poop) y += d.hp * (1 - smooth2(d.tp - 0.012, d.tp + 0.03, t));
+    if (d.fore) y += d.hf * smooth2(d.tf - 0.035, d.tf + 0.015, t);
+    return y;
+  }
+  var xAt = (d, t) => -d.L / 2 + t * d.L;
+  function stairAt(d, t, v) {
+    for (const s of d.stairs) if (t >= s.ta && t <= s.tb && v >= s.va && v <= s.vb) return s;
+    return null;
+  }
+  function floorAt(d, t, v = null, h2 = null) {
+    if (v !== null && d.stairs.length) {
+      const s = stairAt(d, t, v);
+      if (s) return s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta);
+    }
+    if (h2 !== null) {
+      const r4 = roomAt(d, t, h2);
+      if (r4) return r4.floor;
+    }
+    if (d.poop && t < d.tp) return d.yp;
+    if (d.castle && t < d.tq) return d.yq;
+    if (d.fore && t > d.tf) return d.yf;
+    return d.deckY;
+  }
+  function levelAt(d, t, v, h2 = null) {
+    const s = v !== null && d.stairs.length ? stairAt(d, t, v) : null;
+    if (s) return s;
+    if (h2 !== null) {
+      const r4 = roomAt(d, t, h2);
+      if (r4) return r4.kind;
+    }
+    if (d.poop && t < d.tp) return "poop";
+    if (d.castle && t < d.tq) return "quarter";
+    if (d.fore && t > d.tf) return "fore";
+    return "main";
+  }
+  function solidAt(d, u, v, margin = 0, lvl = null) {
+    let depth = 0;
+    for (const o of d.solids) {
+      if (o.lvl && lvl !== null && o.lvl !== lvl) continue;
+      if (o.r !== void 0) depth = Math.max(depth, o.r + margin - Math.hypot(u - o.u, v - o.v));
+      else depth = Math.max(depth, Math.min(u - (o.u0 - margin), o.u1 + margin - u, v - (o.v0 - margin), o.v1 + margin - v));
+    }
+    return depth;
+  }
+  var RIDE_U = [-0.4, -0.2, 0, 0.2, 0.4];
+  var RIDE_V = [-0.8, 0, 0.8];
+  var softClamp = (x, m) => m * Math.tanh(x / m);
+  var _rs = [0, 0];
+  function rideTarget(ship, time, out) {
+    out[0] = out[1] = out[2] = 0;
+    if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return out;
+    const L3 = ship.def.length || 6, B5 = ship.def.beam || L3 * 0.3;
+    const ch = Math.cos(ship.heading), sh = Math.sin(ship.heading);
+    let W4 = 0, Z2 = 0, Wu = 0, Zu = 0, Wv = 0, Zv = 0;
+    const z = _rz;
+    for (let i = 0; i < RIDE_U.length; i++) {
+      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
+      for (let j = 0; j < RIDE_V.length; j++) {
+        const v = RIDE_V[j] * hb, k = i * 3 + j;
+        z[k] = swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
+        W4 += hb;
+        Z2 += hb * z[k];
+      }
+    }
+    const h2 = Z2 / W4;
+    for (let i = 0; i < RIDE_U.length; i++) {
+      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
+      for (let j = 0; j < RIDE_V.length; j++) {
+        const v = RIDE_V[j] * hb, dz = z[i * 3 + j] - h2;
+        Wu += hb * u * u;
+        Zu += hb * u * dz;
+        Wv += hb * v * v;
+        Zv += hb * v * dz;
+      }
+    }
+    out[0] = h2;
+    out[1] = Math.atan(Zu / Wu);
+    out[2] = Math.atan(-Zv / Wv);
+    return out;
+  }
+  var _rz = new Float64Array(15);
+  var _rt = [0, 0, 0];
+  function waveRide(ship, time) {
+    const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0, s: new Float64Array(12), s0: new Float64Array(12), t0: NaN, ok: false });
+    if (c.t === time && c.x === ship.x && c.y === ship.y && c.hd === ship.heading) return c;
+    if (c.t !== time) {
+      c.s0.set(c.s);
+      c.t0 = c.t;
+    }
+    c.t = time;
+    c.x = ship.x;
+    c.y = ship.y;
+    c.hd = ship.heading;
+    const T5 = rideTarget(ship, time, _rt), S6 = c.s, S0 = c.s0, dt = time - c.t0;
+    if (!c.ok || !(dt > 0) || dt > 0.5) {
+      for (let k = 0; k < 3; k++) {
+        S6[k * 2] = T5[k];
+        S6[k * 2 + 1] = 0;
+        S6[6 + k] = T5[k];
+        S6[9 + k] = 0;
+      }
+      c.ok = true;
+    } else {
+      const F5 = BOAT_FEEL, L3 = ship.def?.length || 6;
+      const w = Math.max(1.6, F5.rideRate + F5.rideRatePerM * L3), z = Math.min(1, Math.max(0.3, F5.rideDamp)), lead = 2 * z / w * F5.rideLead;
+      const kv = 1 - Math.exp(-dt / (0.1 + 6e-3 * L3));
+      for (let k = 0; k < 3; k++) {
+        const vS = S0[9 + k] + ((T5[k] - S0[6 + k]) / dt - S0[9 + k]) * kv;
+        springStep(S0[k * 2], S0[k * 2 + 1], T5[k] + vS * lead, w, dt, z, _rs);
+        S6[k * 2] = _rs[0];
+        S6[k * 2 + 1] = _rs[1];
+        S6[6 + k] = T5[k];
+        S6[9 + k] = vS;
+      }
+    }
+    c.h = S6[0];
+    c.p = softClamp(S6[2], BOAT_FEEL.pitchMax);
+    c.r = softClamp(S6[4], BOAT_FEEL.rollMax);
+    return c;
+  }
+  function shipBob(ship, time) {
+    return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.03 + waveRide(ship, time).h;
+  }
+  function shipRock(ship, time) {
+    const t = time + (ship.seed || 0), sinking = ship.sunk ? Math.min(1, (ship.sinkT || 0) / 4) : 0;
+    const w = waveRide(ship, time);
+    return [Math.sin(t * 0.9) * 0.02 + w.r + sinking * 0.5, Math.sin(t * 1.1) * 0.012 + w.p + (ship.pitch || 0)];
+  }
+  function shipLift(ship, time, u, v, h2) {
+    const [a, b] = shipRock(ship, time);
+    return shipBob(ship, time) + (u * Math.sin(b) + h2 * Math.cos(b)) * Math.cos(a) - v * Math.sin(a);
+  }
+  function shipPoint(ship, time, u, v, h2, out = [0, 0, 0]) {
+    const [a, b] = shipRock(ship, time);
+    const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    const x1 = u * cb - h2 * sb, y1 = u * sb + h2 * cb;
+    const x2 = x1, y2 = y1 * ca - v * sa, z2 = y1 * sa + v * ca;
+    const ch = Math.cos(ship.heading), shd = Math.sin(ship.heading);
+    out[0] = x2 * ch - z2 * shd;
+    out[1] = shipBob(ship, time) + y2;
+    out[2] = x2 * shd + z2 * ch;
+    return out;
+  }
+  function deckSwing(dk3, time, out = [0, 0]) {
+    out[0] = 0;
+    out[1] = 0;
+    const s = dk3?.ship;
+    if (!s?.def || dk3.plank) return out;
+    const u = dk3.u ?? (dk3.t - 0.5) * s.def.length, v = dk3.v || 0, c = Math.cos(s.heading), sn = Math.sin(s.heading);
+    const q2 = shipPoint(s, time, u, v, dk3.h || 0, _swq);
+    out[0] = q2[0] - (u * c - v * sn);
+    out[1] = q2[2] - (u * sn + v * c);
+    return out;
+  }
+  var _swq = [0, 0, 0];
+  function deckLift(dk3, time) {
+    return dk3.plank ? dk3.plank.liftAt(dk3.k) : shipLift(dk3.ship, time, dk3.u ?? (dk3.t - 0.5) * dk3.ship.def.length, dk3.v || 0, dk3.h);
+  }
+  function deckPoint(ship, dx, dy, margin = 0.2, hRef = null) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = (u + d.L / 2) / d.L;
+    if (t < 0.02 || t > 0.97) return null;
+    const room2 = hRef !== null && d.big ? roomAt(d, t, hRef) : null;
+    if (room2) {
+      const lv = levelAt(d, t, v, hRef);
+      const out2 = { t, u, v, h: floorAt(d, t, v, hRef), edge: roomHalf(d, room2, t) - Math.abs(v), lvl: lv, room: room2 };
+      const depth = Math.max(margin - out2.edge, solidAt(d, u, v, Math.max(0, margin), room2.kind), wallDepth(d, u, v, room2.floor, margin));
+      if (depth > 0) out2.solid = depth;
+      return out2;
+    }
+    const hb = hbAt(t, d.B) * d.walk - margin;
+    if (hb <= 0 || Math.abs(v) > hb) return null;
+    const out = { t, u, v, h: floorAt(d, t, v, d.big ? hRef : null), edge: hb - Math.abs(v) };
+    if (d.big) out.lvl = levelAt(d, t, v, hRef);
+    if (d.solids.length) {
+      const lv = typeof out.lvl === "string" ? out.lvl : null;
+      let depth = solidAt(d, u, v, Math.max(0, margin), d.big ? lv ?? "stairs" : null);
+      if (d.walls) depth = Math.max(depth, wallDepth(d, u, v, out.h, margin));
+      if (depth > 0) out.solid = depth;
+    }
+    return out;
+  }
+  function hullPoint(ship, dx, dy, pad2 = 0) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = (u + d.L / 2) / d.L, tc = clamp01(t);
+    if (Math.abs(t - tc) * d.L > pad2) return null;
+    if (Math.abs(v) > hbAt(tc, d.B) + pad2) return null;
+    return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
+  }
+  function deckToWorld(ship, t, v) {
+    const d = shipDims(ship.def);
+    const u = -d.L / 2 + t * d.L;
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    return { x: ship.x + u * c - v * s, y: ship.y + u * s + v * c, h: floorAt(d, t, v) };
+  }
+  function hullSolid(ship, dx, dy, h2) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = Math.abs(-dx * s + dy * c);
+    const t = (u + d.L / 2) / d.L;
+    if (t < 0 || t > 1 || h2 < -d.D) return false;
+    if (d.mastU && v < d.mastR + 0.2 && h2 < d.mastH && d.mastU.some((m) => Math.abs(u - m) < d.mastR + 0.2)) return true;
+    const hb = hbAt(t, d.B);
+    if (v > hb) return false;
+    if (d.rooms) {
+      for (const r4 of d.rooms) if (t > r4.t0 + 4e-3 && t < r4.t1 - 4e-3 && h2 > r4.floor - 0.05 && h2 < r4.ceil - 0.02 && v < roomHalf(d, r4, t) + 0.05) return false;
+      const cp = d.comp;
+      if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h2 > d.holdY - 0.05 && h2 < d.deckY + 0.05) return false;
+    }
+    const rail = d.big ? 1 : 0.8, at4 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
+    if (d.castle && at4(d.tq) && h2 < d.yq + rail || d.poop && at4(d.tp) && h2 < d.yp + rail || d.fore && at4(d.tf) && h2 < d.yf + rail) return true;
+    if (h2 > topAt(d, t)) return false;
+    if (v > hb * d.walk - 0.05 || h2 < d.deckY - 0.1) return true;
+    if (d.poop && t < d.tp) return h2 < d.yp - 0.1;
+    if (d.castle && t < d.tq) return h2 < d.yq - 0.1;
+    if (d.fore && t > d.tf) return h2 < d.yf - 0.1;
+    return false;
+  }
+  function hullGap(ship, dx, dy) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = clamp01((u + d.L / 2) / d.L);
+    const along2 = Math.max(0, Math.abs(u) - d.L / 2);
+    return Math.hypot(along2, Math.max(0, Math.abs(v) - hbAt(t, d.B)));
+  }
+
+  // src/game/entity.js
+  var nextId = 1;
+  var Entity = class {
+    constructor(o = {}) {
+      this.id = nextId++;
+      this.x = o.x ?? 0;
+      this.y = o.y ?? 0;
+      this.vx = 0;
+      this.vy = 0;
+      this.r = o.r ?? 0.3;
+      this.alive = true;
+      this.kind = o.kind || "entity";
+      this.faction = o.faction || "neutral";
+      this.world = o.world || null;
+    }
+    update() {
+    }
+    remove() {
+      this.alive = false;
+    }
+  };
+  var HOSTILITY = {
+    player: /* @__PURE__ */ new Set(["pirate", "bandit", "beast", "seaking", "baroque", "cp", "marine_hostile", "zombie", "rival"]),
+    marine: /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "revolutionary"]),
+    pirate: /* @__PURE__ */ new Set(["player", "marine", "civilian_target", "rival"]),
+    bandit: /* @__PURE__ */ new Set(["player", "civilian_target"]),
+    beast: /* @__PURE__ */ new Set(["player", "civilian", "marine", "pirate", "bandit"]),
+    seaking: /* @__PURE__ */ new Set(["player", "marine", "pirate"]),
+    baroque: /* @__PURE__ */ new Set(["player", "marine"]),
+    cp: /* @__PURE__ */ new Set(["player"]),
+    zombie: /* @__PURE__ */ new Set(["player", "marine"]),
+    rival: /* @__PURE__ */ new Set(["player", "pirate"]),
+    civilian: /* @__PURE__ */ new Set(),
+    neutral: /* @__PURE__ */ new Set()
+  };
+  function hostile(a, b) {
+    if (!a || !b || a === b) return false;
+    if (a.faction === "player" && b.aggroPlayer) return true;
+    if (b.faction === "player" && a.aggroPlayer) return true;
+    const fa = HOSTILITY[a.faction], fb = HOSTILITY[b.faction];
+    return fa && fa.has(b.faction) || fb && fb.has(a.faction) || false;
+  }
+
+  // src/game/difficulty.js
+  var TIERS = {
+    blue: {
+      id: "blue",
+      // the parry: how long after the guard comes up a blow can still be parried
+      // (s), the start of that which is a perfect parry, and how plain the glint
+      // that shows the moment is (1: unmissable; Observation Haki makes it so anywhere)
+      parry: 0.3,
+      perfect: 0.09,
+      cue: 1,
+      cueLead: 0.36,
+      // foes' wind-ups (s): the first blow of a string at least windupMin, a
+      // longer one stretched (× windupMul + windupAdd); a follow-up in a combo at least chainWindup
+      windupMin: 0.46,
+      windupMul: 1.15,
+      windupAdd: 0.05,
+      chainWindup: 0.26,
+      // pacing: the pause between a foe's attacks (×), how many more blows they
+      // may string onto one (at most), the gap they leave after a big move (s),
+      // how much less often they guard, and their parries (chance a guard is one)
+      think: 1.8,
+      combo: 1,
+      rest: 0.9,
+      block: 0.5,
+      npcParry: 0,
+      // what their blows do to you (×), a boss's guard-breaking blows at least this
+      // far apart (s), how close a gunner will still shoot you from (nearer, they
+      // back off first) and how fast they back off (× their pace)
+      dmg: 0.62,
+      breakGap: 6,
+      closeShot: 2.4,
+      backpedal: 0.55,
+      // a flurry: after this many blows in a row (or this long held stunned — the
+      // longest any one blow can stun you, too) you break free;
+      // a smashed guard staggers you this long (s); this many foes may go for you at once
+      stunHits: 3,
+      stunCap: 1,
+      gbStun: 0.6,
+      turns: 1
+    },
+    paradise: {
+      id: "paradise",
+      parry: 0.25,
+      perfect: 0.07,
+      cue: 0.6,
+      cueLead: 0.3,
+      windupMin: 0.26,
+      windupMul: 1.08,
+      windupAdd: 0.03,
+      chainWindup: 0.14,
+      think: 1.2,
+      combo: 2,
+      rest: 0.5,
+      block: 0.8,
+      npcParry: 0.15,
+      dmg: 0.9,
+      breakGap: 3.5,
+      closeShot: 1.6,
+      backpedal: 0.75,
+      stunHits: 4,
+      stunCap: 1.4,
+      gbStun: 0.85,
+      turns: 2
+    },
+    newWorld: {
+      id: "newWorld",
+      parry: 0.21,
+      perfect: 0.06,
+      cue: 0.35,
+      cueLead: 0.26,
+      windupMin: 0.16,
+      windupMul: 1,
+      windupAdd: 0,
+      chainWindup: 0.07,
+      think: 1,
+      combo: 2,
+      rest: 0.25,
+      block: 1,
+      npcParry: 0.3,
+      dmg: 1,
+      breakGap: 1.5,
+      closeShot: 0,
+      backpedal: 0.9,
+      stunHits: 5,
+      stunCap: 1.8,
+      gbStun: 1.1,
+      turns: 3
+    }
+  };
+  var PARRY = {
+    lockout: 0.35,
+    // s: a guard raised again sooner than this after F was let go has no parry in it (mashing doesn't work)
+    buffer: 0.3,
+    // s: a press made while the guard can't come up yet (a basic swing's follow-through) still counts if it comes up this soon
+    observation: 0.04,
+    // s more to parry in with Observation Haki on
+    reel: 1,
+    // s a parried foe reels, posture broken (a boss for 0.7 of it; a perfect parry adds perfectReel)
+    perfectReel: 0.3,
+    bossReel: 0.7,
+    playerReel: 0.6,
+    // s you reel when a foe parries you
+    counterMul: 1.5,
+    perfectCounterMul: 1.8,
+    // the counter strike's damage
+    counterStun: 0.5,
+    // s it staggers them (through a boss's poise)
+    heal: 0.05,
+    haki: 8,
+    parryHaki: 3,
+    // a perfect parry gives back this much health (of the max) and Haki; a parry, Haki
+    // a perfect dodge: a heavy, guard-smashing blow slipped within this long of
+    // starting the dodge (s) earns a counter of this long and this much
+    dodgeWindow: 0.1,
+    dodgeCounter: 0.8,
+    dodgeCounterMul: 1.3
+  };
+  function tierAt(game, x, y) {
+    if (!game?.world || game.surface && game.world !== game.surface) return TIERS.paradise;
+    const r4 = regionAt(x, y);
+    return isBlue(r4) ? TIERS.blue : r4 === REGION.NEW_WORLD ? TIERS.newWorld : TIERS.paradise;
+  }
+  var tierOf = (game, a) => tierAt(game, a.x, a.y);
+  function stretchWindup(T5, w, chained) {
+    if (!(w > 0)) return w;
+    if (chained) return Math.max(T5.chainWindup, w);
+    return Math.max(T5.windupMin, w * T5.windupMul + T5.windupAdd);
+  }
+
+  // src/core/rng.js
+  function hashString(str) {
+    let h2 = 2166136261 >>> 0;
+    for (let i = 0; i < str.length; i++) {
+      h2 ^= str.charCodeAt(i);
+      h2 = Math.imul(h2, 16777619);
+    }
+    return h2 >>> 0;
+  }
+  function hash2i(x, y, seed = 0) {
+    let h2 = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(seed | 0, 2246822519) | 0;
+    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
+    h2 ^= h2 >>> 16;
+    return h2 >>> 0;
+  }
+  var hash2 = (x, y, seed = 0) => hash2i(x, y, seed) / 4294967296;
+  function hash01(a, b = 0, c = 0) {
+    let h2 = Math.imul(a * 1e3 | 0, 374761393) ^ Math.imul(b * 1e3 | 0, 668265263) ^ Math.imul(c * 1e3 | 0, 1274126177);
+    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
+    return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
+  }
+  var RNG = class _RNG {
+    constructor(seed = 1) {
+      this.s = (typeof seed === "string" ? hashString(seed) : seed >>> 0) || 2654435769;
+    }
+    next() {
+      let t = this.s = this.s + 1831565813 >>> 0;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+    range(a, b) {
+      return a + (b - a) * this.next();
+    }
+    int(a, b) {
+      return a + Math.floor(this.next() * (b - a + 1));
+    }
+    chance(p) {
+      return this.next() < p;
+    }
+    pick(arr) {
+      return arr[Math.floor(this.next() * arr.length)];
+    }
+    sign() {
+      return this.next() < 0.5 ? -1 : 1;
+    }
+    gauss() {
+      const u = 1 - this.next(), v = this.next();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+    shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(this.next() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+    /** Pick from [{weight, ...}] or [[item, weight]] lists. */
+    weighted(list, weightKey = "weight") {
+      let total = 0;
+      for (const e of list) total += Array.isArray(e) ? e[1] : e[weightKey];
+      let r4 = this.next() * total;
+      for (const e of list) {
+        r4 -= Array.isArray(e) ? e[1] : e[weightKey];
+        if (r4 <= 0) return Array.isArray(e) ? e[0] : e;
+      }
+      const last = list[list.length - 1];
+      return Array.isArray(last) ? last[0] : last;
+    }
+    fork(salt) {
+      return new _RNG(hashString(String(salt)) ^ Math.floor(this.next() * 4294967296));
+    }
+  };
+
+  // src/data/races.js
+  var RARITY = {
+    common: { label: "Common", color: "#b2bec3" },
+    uncommon: { label: "Uncommon", color: "#55efc4" },
+    rare: { label: "Rare", color: "#74b9ff" },
+    epic: { label: "Epic", color: "#a29bfe" },
+    legendary: { label: "Legendary", color: "#fdcb6e" }
+  };
+  var RACES = {
+    human: {
+      name: "Human",
+      rarity: "common",
+      weight: 52,
+      desc: "The most numerous people of the Blue Planet. Adaptable, stubborn, and capable of anything \u2014 the Pirate King himself was human.",
+      origin: "Born on any island of the four Blues.",
+      stats: { str: 0, agi: 0, end: 0, vit: 0, wil: 1 },
+      lives: 3,
+      traits: ["Adaptable: trainers teach you 15% cheaper", "Stubborn Will: +1 Willpower"],
+      spawnSeas: ["east_blue", "north_blue", "west_blue", "south_blue"],
+      swim: 1,
+      hpMul: 1,
+      jump: 7.6,
+      charge: 1.6,
+      leap: 1
+    },
+    fishman: {
+      name: "Fish-Man",
+      rarity: "uncommon",
+      weight: 13,
+      desc: "Born with ten times the strength of a human and the sea in their blood. Many followed Arlong to the East Blue.",
+      origin: "Born in the Conomi Islands (East Blue), in the shadow of Arlong Park.",
+      stats: { str: 4, agi: 0, end: 2, vit: 1, wil: 0 },
+      lives: 3,
+      traits: ["Gills: breathe underwater \u2014 never drown (unless a Devil Fruit user)", "Swims 3\xD7 faster", "Fish-Man Karate affinity: learns it 30% faster", "Dolphin leap: springs far out of the water \u2014 and, swimming hard, on forward like a dolphin"],
+      spawnSeas: ["east_blue"],
+      spawnTowns: ["cocoyasi"],
+      swim: 3,
+      hpMul: 1.1,
+      gills: true,
+      jump: 7.4,
+      charge: 1.65,
+      leap: 1.35
+    },
+    mink: {
+      name: "Mink",
+      rarity: "uncommon",
+      weight: 12,
+      desc: "The Warrior Beast Tribe. Every Mink is born a fighter and can channel Electro through their fur.",
+      origin: "Born among wandering Mink traders who settled in the wilds of the South Blue.",
+      stats: { str: 1, agi: 4, end: 1, vit: 0, wil: 0 },
+      lives: 3,
+      traits: ["Electro: bare-handed basic attacks crackle, and now and then shock (innate)", "Keen senses: a dodge leaves you untouchable a little longer", "Sulong: in a fight under the full moon, at night, you become a battle beast (hidden)", "Springy: jumps high, and a charged leap goes higher still"],
+      spawnSeas: ["south_blue"],
+      spawnTowns: ["torino_village", "karate_dojo_town"],
+      swim: 1,
+      hpMul: 1,
+      electro: true,
+      jump: 8.6,
+      charge: 1.7,
+      leap: 1
+    },
+    skypiean: {
+      name: "Skypiean",
+      rarity: "uncommon",
+      weight: 10,
+      desc: "A winged people of the White Sea. You fell from the clouds as a child and washed ashore at Lvneel, homeland of Noland the Liar.",
+      origin: "Fell from a sky island; raised in Lvneel (North Blue).",
+      stats: { str: 0, agi: 2, end: 0, vit: 0, wil: 3 },
+      lives: 3,
+      traits: ["Mantra: once their sixth sense awakens, it grows twice as fast", "Light-footed: dodge travels 30% further", "Dial-savvy: dials hit 25% harder", "Little wings: not for flying \u2014 no Skypiean can"],
+      spawnSeas: ["north_blue"],
+      spawnTowns: ["lvneel_town"],
+      swim: 0.9,
+      hpMul: 0.95,
+      jump: 8.6,
+      charge: 1.55,
+      leap: 1
+    },
+    buccaneer: {
+      name: "Buccaneer",
+      rarity: "epic",
+      weight: 2.2,
+      desc: "A giant-framed race hunted almost to extinction. Bartholomew Kuma was born to your people in the South Blue.",
+      origin: "Born in the Sorbet Kingdom (South Blue).",
+      stats: { str: 5, agi: -2, end: 5, vit: 4, wil: 0 },
+      lives: 3,
+      traits: ["Huge frame: +35% HP", "Unshakable: light blows can't stagger you, and knockback barely moves you", "Slow: -8% move speed"],
+      spawnSeas: ["south_blue"],
+      spawnTowns: ["sorbet_town"],
+      swim: 0.9,
+      hpMul: 1.35,
+      scale: 1.3,
+      jump: 6.6,
+      charge: 1.85,
+      leap: 1
+    },
+    three_eye: {
+      name: "Three-Eye Tribe",
+      rarity: "legendary",
+      weight: 0.8,
+      desc: "A vanishingly rare people whose third eye may one day hear the Voice of All Things.",
+      origin: "Born among the scholars sheltering in the ruins of Ohara (West Blue).",
+      stats: { str: 0, agi: 1, end: 0, vit: 0, wil: 6 },
+      lives: 3,
+      traits: ["Third Eye: Observation Haki from birth", "Voice of All Things: once the Third Eye has grown (Observation 20), reads Poneglyphs without an archaeologist"],
+      spawnSeas: ["west_blue"],
+      spawnTowns: ["ohara_camp"],
+      swim: 1,
+      hpMul: 1,
+      jump: 7.4,
+      charge: 1.65,
+      leap: 1
+    },
+    lunarian: {
+      name: "Lunarian",
+      rarity: "legendary",
+      weight: 0.5,
+      desc: 'A people of the "Land of Gods" atop the Red Line, believed extinct. Black wings, white hair, and a flame that never goes out.',
+      origin: "Washed up alone on an uncharted islet in one of the Blues.",
+      stats: { str: 2, agi: 1, end: 5, vit: 5, wil: 2 },
+      lives: 4,
+      traits: ["Ignition: bare blows can set foes alight, and while the flame on your back burns, harm done to you is halved \u2014 the sea puts it out, and it lights again once you're dry", "Tremendous vitality: +1 life", "Wings: fly (Space again in the air) \u2014 and a dodge is a wing-beat that carries you further, even over water"],
+      spawnSeas: ["east_blue", "north_blue", "west_blue", "south_blue"],
+      spawnIslet: true,
+      swim: 1,
+      hpMul: 1.15,
+      jump: 8.2,
+      charge: 1.6,
+      leap: 1,
+      flight: { style: "wings", gauge: 22, speed: 10, climb: 6, ceiling: 40, sea: 3.5, refill: 6, color: "#ff7043" }
+    }
+  };
+  var RACE_IDS = Object.keys(RACES);
+  var RETIRED = { longarm: { arms: 1.8 }, longleg: { legs: 1.9 } };
+  function liveRace(rec) {
+    if (!rec || !RETIRED[rec.race]) return rec;
+    const was = RETIRED[rec.race];
+    rec.race = "human";
+    const L3 = rec.look;
+    if (L3) {
+      if (L3.race) L3.race = "human";
+      for (const k of Object.keys(was)) if (L3[k] === was[k]) delete L3[k];
+    }
+    return rec;
+  }
+  function rollRace(rng4, boosts = {}) {
+    const list = RACE_IDS.map((id) => [id, RACES[id].weight * (boosts[id] || 1)]);
+    return rng4.weighted(list);
+  }
+  var HUMAN_SKIN = ["#f9dcc4", "#f1c9a0", "#e0ac7e", "#c68642", "#a0643a", "#7a4a2a", "#5c3a21"];
+  var HAIR = ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#2ecc71", "#2980b9", "#e84393", "#dfe6e9", "#8e44ad", "#16a085"];
+  var TOPS = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#b2bec3", "#a0522d"];
+  var BOTTOMS = ["#2d3436", "#1e3799", "#3b3b98", "#6d4c41", "#636e72", "#0a3d62", "#b8860b", "#2f3542"];
+  var HAIRSTYLES = ["short", "short", "spiky", "messy", "crop", "crop", "sidefringe", "slick", "long", "ponytail", "buzz", "curly", "afro", "topknot", "mohawk", "bald", "pompadour"];
+  var FISHMAN_KINDS = [
+    { id: "shark", name: "Saw Shark", skin: "#7fa7c9" },
+    { id: "great_white", name: "Great White Shark", skin: "#9fb4c7" },
+    { id: "whale_shark", name: "Whale Shark", skin: "#4a69bd" },
+    { id: "octopus", name: "Octopus", skin: "#e17b77" },
+    { id: "sea_bream", name: "Sea Bream", skin: "#f3a683" },
+    { id: "manta", name: "Manta Ray", skin: "#546de5" },
+    { id: "sunfish", name: "Sunfish", skin: "#c7ecee" },
+    { id: "goldfish", name: "Goldfish", skin: "#f5b041" }
+  ];
+  var MINK_KINDS = [
+    { id: "cat", name: "Cat", ears: "pointy", fur: "#f0932b", tail: "thin" },
+    { id: "dog", name: "Dog", ears: "pointy", fur: "#dfe6e9", tail: "fluffy", muzzle: true },
+    { id: "rabbit", name: "Rabbit", ears: "long", fur: "#f5f6fa", tail: "fluffy" },
+    { id: "bear", name: "Bear", ears: "round", fur: "#6d4c41", tail: null, muzzle: true },
+    { id: "fox", name: "Fox", ears: "pointy", fur: "#e67e22", tail: "fluffy", muzzle: true },
+    { id: "lion", name: "Lion", ears: "round", fur: "#f6b93b", tail: "thin", muzzle: true },
+    { id: "panda", name: "Panda", ears: "round", fur: "#f5f6fa", tail: null },
+    { id: "jaguar", name: "Jaguar", ears: "round", fur: "#e1b12c", tail: "thin" },
+    { id: "wolf", name: "Wolf", ears: "pointy", fur: "#7f8fa6", tail: "fluffy", muzzle: true }
+  ];
+  var W2 = (s) => s.split(" ").map((t) => {
+    const [k, w] = t.split(":");
+    return [k, +w || 1];
+  });
+  var DRESS = {
+    civilian: {
+      m: { top: W2("tee:4 shirt:3 open:1 tank:1 striped:1 vest:0.5"), bottom: W2("trousers:4 capri:2 shorts:2 baggy:1 slim:1"), waist: W2("belt:3 none:3 sash:1"), shoes: W2("shoes:3 sandals:3 boots:2") },
+      f: { top: W2("tee:3 tank:2 shirt:2 dress:3 crop:1"), bottom: W2("skirt:3 longskirt:2 trousers:2 capri:1 shorts:1 slim:1"), waist: W2("none:3 belt:2 sash:1"), shoes: W2("shoes:3 sandals:3 boots:1") }
+    },
+    pirate: {
+      m: { top: W2("striped:3 open:3 vest:2 tee:2 bare:1 tank:1"), bottom: W2("baggy:4 capri:2 shorts:2 trousers:2"), waist: W2("sash:5 belt:3"), shoes: W2("boots:5 sandals:2") },
+      f: { top: W2("crop:3 tank:2 open:1 striped:1 bikini:1"), bottom: W2("trousers:2 shorts:2 capri:2 skirt:1 baggy:1"), waist: W2("sash:4 belt:3"), shoes: W2("boots:5 sandals:2") }
+    },
+    bandit: {
+      m: { top: W2("vest:3 open:2 tank:2 bare:1"), bottom: W2("baggy:4 trousers:2 capri:1"), waist: W2("sash:4 belt:2"), shoes: W2("boots:3 sandals:2") },
+      f: { top: W2("crop:2 tank:2 vest:1"), bottom: W2("trousers:2 baggy:2 shorts:1"), waist: W2("sash:3 belt:2"), shoes: W2("boots:3 sandals:1") }
+    },
+    marine: {
+      m: { top: W2("shirt:1"), bottom: W2("trousers:1"), waist: W2("belt:1"), shoes: W2("boots:1") },
+      f: { top: W2("shirt:1"), bottom: W2("trousers:3 skirt:1"), waist: W2("belt:1"), shoes: W2("boots:1") }
+    },
+    officer: {
+      m: { top: W2("jacket:2 shirt:1"), bottom: W2("trousers:2 slim:1"), waist: W2("belt:1"), shoes: W2("boots:1 shoes:1") },
+      f: { top: W2("jacket:2 shirt:1"), bottom: W2("slim:2 skirt:1"), waist: W2("belt:1"), shoes: W2("boots:1 shoes:1") }
+    },
+    agent: {
+      m: { top: W2("jacket:1"), bottom: W2("slim:1"), waist: W2("belt:1"), shoes: W2("shoes:1") },
+      f: { top: W2("jacket:2 shirt:1"), bottom: W2("slim:2 skirt:1"), waist: W2("belt:1"), shoes: W2("shoes:2 boots:1") }
+    },
+    swordsman: {
+      m: { top: W2("kimono:3 open:2 tee:1"), bottom: W2("hakama:3 baggy:1 trousers:1"), waist: W2("obi:2 sash:2"), shoes: W2("geta:2 sandals:2 boots:1") },
+      f: { top: W2("kimono:3 tank:1"), bottom: W2("hakama:2 slim:1"), waist: W2("obi:2 sash:1"), shoes: W2("geta:1 sandals:2 boots:1") }
+    },
+    wano: {
+      m: { top: W2("kimono:6 open:1"), bottom: W2("hakama:4 baggy:1 capri:1"), waist: W2("obi:4 sash:1"), shoes: W2("geta:3 sandals:3") },
+      f: { top: W2("kimono:6 dress:1"), bottom: W2("longskirt:3 hakama:2"), waist: W2("obi:4 none:1"), shoes: W2("geta:3 sandals:2") }
+    },
+    desert: {
+      m: { top: W2("shirt:3 open:2 vest:1 kimono:1"), bottom: W2("baggy:4 trousers:2"), waist: W2("sash:4 belt:1"), shoes: W2("sandals:4 boots:1") },
+      f: { top: W2("dress:2 crop:2 shirt:1"), bottom: W2("longskirt:2 baggy:2 skirt:1"), waist: W2("sash:3 none:1"), shoes: W2("sandals:4") }
+    },
+    snow: {
+      m: { top: W2("coat:3 shirt:2 jacket:1"), bottom: W2("trousers:3 baggy:1"), waist: W2("belt:2 none:1"), shoes: W2("boots:1") },
+      f: { top: W2("coat:3 shirt:1 dress:1"), bottom: W2("trousers:2 longskirt:1 slim:1"), waist: W2("belt:1 none:1"), shoes: W2("boots:1") }
+    },
+    sky: {
+      m: { top: W2("tank:2 tee:2 open:2 vest:1"), bottom: W2("baggy:3 shorts:2 capri:1"), waist: W2("sash:3 none:1"), shoes: W2("sandals:4 bare:1") },
+      f: { top: W2("dress:2 tank:2 crop:2"), bottom: W2("skirt:2 longskirt:2 baggy:1"), waist: W2("sash:2 none:2"), shoes: W2("sandals:4") }
+    },
+    fishman: {
+      m: { top: W2("open:3 tank:2 bare:2 vest:1 shirt:1"), bottom: W2("shorts:3 baggy:2 trousers:1"), waist: W2("sash:2 belt:2 none:1"), shoes: W2("sandals:3 bare:2 boots:1") },
+      f: { top: W2("crop:2 tank:2 bikini:2 dress:1"), bottom: W2("skirt:2 shorts:2 longskirt:1"), waist: W2("none:2 sash:1"), shoes: W2("sandals:3 bare:1") }
+    }
+  };
+  var SASH = ["#f4c430", "#c62828", "#1e88e5", "#2e7d32", "#6a1b9a", "#ef6c00", "#fafafa", "#212121"];
+  var LIGHT = ["#f5f5f5", "#fff8e1", "#e3f2fd", "#fce4ec", "#e8f5e9"];
+  var STERN = { pirate: 0.55, bandit: 0.6, marine: 0.45, officer: 0.6, agent: 0.7, swordsman: 0.6 };
+  var FEM_ROLES = { civilian: 0.5, pirate: 0.3, bandit: 0.2, marine: 0.25, officer: 0.2, agent: 0.3, swordsman: 0.25, wano: 0.5, desert: 0.5, snow: 0.5, sky: 0.5, fishman: 0.3 };
+  var FRAME_ROLL = {
+    m: {
+      civilian: W2("average:5 lean:2 slim:2 heavy:2 stocky:2 lanky:1 athletic:1"),
+      pirate: W2("average:3 lean:2 athletic:2 brawny:2 heavy:2 stocky:2 lanky:1"),
+      bandit: W2("average:2 lean:2 brawny:2 heavy:2 stocky:2 lanky:1"),
+      marine: W2("average:3 athletic:4 lean:2 brawny:1 stocky:1"),
+      officer: W2("average:3 athletic:3 brawny:1 heavy:1 slim:1"),
+      agent: W2("athletic:3 slim:2 lean:2 average:2"),
+      swordsman: W2("lean:3 athletic:3 average:2 slim:1 lanky:1"),
+      wano: W2("average:3 lean:2 athletic:2 stocky:1 heavy:1 brawny:1"),
+      desert: W2("average:3 lean:3 slim:2 heavy:1 lanky:1"),
+      snow: W2("average:3 heavy:2 stocky:2 brawny:1 lean:1"),
+      sky: W2("average:3 slim:2 lean:2 lanky:1"),
+      fishman: W2("athletic:3 brawny:3 average:2 heavy:1 stocky:1")
+    },
+    f: {
+      civilian: W2("average:4 slim:2 curvy:2 petite:2 heavy:1"),
+      fighter: W2("average:3 athletic:3 slim:2 curvy:2 petite:1"),
+      other: W2("average:4 slim:2 curvy:2 petite:1 heavy:1 athletic:1")
+    }
+  };
+  var FIGHTERS = /* @__PURE__ */ new Set(["pirate", "bandit", "marine", "officer", "agent", "swordsman"]);
+  var FRAME_MUS = { average: 0.55, lean: 0.75, athletic: 1, slim: 0.45, brawny: 1.2, heavy: 0.3, lanky: 0.28, stocky: 0.8 };
+  function dress(look, rng4, role = "civilian", over = {}) {
+    if (role === "beast") {
+      Object.assign(look, { fem: false, topStyle: "bare", bottomStyle: "slim", waist: "none", shoeStyle: "bare", muscle: 0.8 });
+      return look;
+    }
+    const set = DRESS[role] || DRESS.civilian;
+    const fem = over.fem ?? rng4.chance(FEM_ROLES[role] ?? 0.45);
+    const T5 = set[fem ? "f" : "m"];
+    look.fem = fem;
+    const legacyTop = over.openShirt !== void 0 || over.noSleeves || over.sleeve || over.vest;
+    if (!over.topStyle && !legacyTop) look.topStyle = rng4.weighted(T5.top);
+    if (!over.bottomStyle) look.bottomStyle = rng4.weighted(T5.bottom);
+    if (!over.waist) look.waist = rng4.weighted(T5.waist);
+    if (!over.shoeStyle && over.sandals === void 0) look.shoeStyle = rng4.weighted(T5.shoes);
+    if (!over.top2) look.top2 = look.topStyle === "striped" ? rng4.pick(LIGHT) : look.topStyle === "jacket" ? rng4.pick(["#f5f5f5", "#f5f5f5", "#90caf9", "#fce4ec"]) : void 0;
+    if (!over.waistCol && (look.waist === "sash" || look.waist === "obi")) look.waistCol = rng4.pick(SASH);
+    if (look.topStyle === "jacket" && !over.tie && rng4.chance(0.5)) look.tie = rng4.pick(["#212121", "#c62828", "#1e3a8a"]);
+    if (look.topStyle === "coat" && !over.coat) look.coat = rng4.pick(["#5d4037", "#37474f", "#6d4c41", "#1b5e20", "#4a148c", "#263238"]);
+    if (over.frame === void 0 && !((over.bulk ?? look.bulk ?? 1) > 1.1)) {
+      let set2 = fem ? FRAME_ROLL.f[role === "civilian" ? "civilian" : FIGHTERS.has(role) ? "fighter" : "other"] : FRAME_ROLL.m[role] || FRAME_ROLL.m.civilian;
+      if (look.legs > 1.2) set2 = set2.filter(([k]) => k !== "lanky" && k !== "stocky" && k !== "petite");
+      look.frame = rng4.weighted(set2);
+    }
+    if (fem) {
+      if (!over.hair && rng4.chance(0.75)) look.hair = rng4.pick(["long", "long", "wavy", "ponytail", "bun", "bob", "twintails", "braid", "short", "curly", "sidefringe"]);
+      if (!over.eyeShape) look.eyeShape = rng4.pick(["soft", "round", "round", "sharp"]);
+      look.bust = +(0.8 + rng4.next() * 0.45).toFixed(2);
+    } else if (over.muscle === void 0) {
+      const m = (FRAME_MUS[look.frame] ?? 0.55) + (rng4.next() - 0.5) * 0.4;
+      look.muscle = +Math.min(1.2, Math.max(0.15, m)).toFixed(2);
+    }
+    if (over.frown === void 0 && rng4.chance(STERN[role] ?? 0.15)) look.frown = true;
+    return look;
+  }
+  function makeLook(raceId, seed, overrides = {}) {
+    const rng4 = new RNG(seed);
+    const race = RACES[raceId] || RACES.human;
+    const look = {
+      race: raceId,
+      seed: rng4.int(0, 1e3),
+      skin: rng4.pick(HUMAN_SKIN),
+      hairColor: rng4.pick(HAIR),
+      hair: rng4.pick(HAIRSTYLES),
+      top: rng4.pick(TOPS),
+      bottom: rng4.pick(BOTTOMS),
+      shoes: rng4.pick(["#3b2a1a", "#2d3436", "#8d6e4a", "#c8a878"]),
+      // (most eyes are dark, as in the manga; a few are coloured)
+      eyeColor: rng4.pick(["#222", "#222", "#3b2a1a", "#3b2a1a", "#4a3426", "#2b2f3a", "#1e3799", "#27ae60"]),
+      scale: race.scale || 1,
+      hat: null,
+      openShirt: rng4.chance(0.25)
+    };
+    if (raceId === "fishman") {
+      const k = rng4.pick(FISHMAN_KINDS);
+      look.skin = k.skin;
+      look.fin = true;
+      look.gills = true;
+      look.kind = k.name;
+      look.grin = rng4.chance(0.5);
+      look.sharpTeeth = true;
+      look.hairColor = rng4.pick(["#1e1e1e", "#2c3e50", "#16a085", "#8e44ad"]);
+    } else if (raceId === "mink") {
+      const k = rng4.pick(MINK_KINDS);
+      look.ears = k.ears;
+      look.fur = k.fur;
+      look.tail = k.tail;
+      look.muzzle = k.muzzle;
+      look.kind = k.name;
+      look.furFace = rng4.chance(0.6);
+      look.skin = k.fur;
+      look.hairColor = k.fur;
+      look.hand = k.fur;
+    } else if (raceId === "skypiean") {
+      look.wings = "sky";
+      look.hairColor = rng4.pick(["#f5f6fa", "#fdcb6e", "#dfe6e9", "#74b9ff", "#f7d794"]);
+      look.top = rng4.pick(["#f5f6fa", "#dff9fb", "#f6e58d"]);
+    } else if (raceId === "buccaneer") {
+      look.bulk = 1.25;
+      look.skin = rng4.pick(["#c68642", "#a0643a", "#7a4a2a"]);
+    } else if (raceId === "three_eye") {
+      look.thirdEye = true;
+      look.eyeColor = "#8e44ad";
+    } else if (raceId === "lunarian") {
+      look.wings = "lunar";
+      look.backFlame = true;
+      look.skin = rng4.pick(["#7a4a2a", "#5c3a21", "#8d5524"]);
+      look.hairColor = "#f5f6fa";
+      look.hair = rng4.pick(["long", "spiky", "short"]);
+    }
+    const { role, ...over } = overrides;
+    dress(look, rng4, role || (raceId === "fishman" ? "fishman" : raceId === "skypiean" ? "sky" : "civilian"), over);
+    if (look.race === "buccaneer" || look.race === "giant") look.fem = over.fem ?? look.fem;
+    return Object.assign(look, over);
+  }
+  function raceLabel(look) {
+    const r4 = RACES[look.race] || RACES.human;
+    return look.kind ? `${r4.name} (${look.kind})` : r4.name;
+  }
+
+  // src/game/flight.js
+  var DEF = { speed: 10, climb: 6, dive: 9, ceiling: 35, drain: 1, sea: 3.5, refill: 6 };
+  var SEA_CEILING = 14;
+  var LOW = 3.5;
+  var helpless = (a) => !!(a.status && (a.status.freeze || a.status.despair || a.status.heartless || a.status.pieces || a.status.lifted || a.status.puppet));
+  var timeOf = (game) => game.env?.time ?? game.time ?? 0;
+  var FLY_MASTERY = 40;
+  function flightOf(a) {
+    let best = null;
+    const f = a?.fruitDef;
+    if (f) {
+      const k = 0.6 + 0.4 * Math.min(1, (a.fruitMastery || 0) / FLY_MASTERY);
+      for (const t of f.techniques) {
+        if (!t.flight) continue;
+        const s = { ...DEF, ...t.flight, fruit: true, tech: t.id };
+        s.gauge = Math.round(s.gauge * k * 10) / 10;
+        if (!best || s.gauge > best.gauge) best = s;
+      }
+    }
+    const R5 = RACES[a?.race]?.flight;
+    if (R5 && (!best || R5.gauge > best.gauge)) best = { ...DEF, ...R5, fruit: false };
+    return best;
+  }
+  function groundBase(game, x, y) {
+    return game.view3d ? Math.max(0, game.view3d.ground(x, y)) : 0;
+  }
+  function feetOf(a, game) {
+    if (a.flying && a.alt != null) return a.alt;
+    return a.feetH ? a.feetH(game) : a.z || 0;
+  }
+  function overOpenSea(game, x, y) {
+    const w = game.world;
+    if (!w.isLiquid?.(x, y) || w.isOverlay?.(x, y)) return false;
+    if (game.deckAt && game.ships?.length && game.deckAt(x, y, 0)) return false;
+    return true;
+  }
+  function flyableAt(a, game, x, y, alt = a.alt ?? feetOf(a, game)) {
+    const w = game.world;
+    if (y < 1 || y > w.height - 1) return false;
+    if (w.interiorAt?.(x, y)) return false;
+    const g = groundBase(game, x, y);
+    if (g > alt + 0.6) return false;
+    const roof = game.view3d?.roofAt?.(x, y);
+    if (roof && roof.h > alt + 0.5) return false;
+    if (alt - g < LOW && (w.solid?.(x, y) || w.hitsProp?.(x, y, (a.r || 0.28) * 0.9))) return false;
+    if (game.inShip && game.ships?.length) {
+      for (const s of game.ships) if (game.inShip(s, x, y, alt + 0.9, true)) return false;
+    }
+    return true;
+  }
+  function floorUnder(a, game, x, y) {
+    let f = groundBase(game, x, y);
+    const roof = game.view3d?.roofAt?.(x, y, a.alt + 0.3);
+    if (roof && roof.h > f) f = roof.h;
+    if (game.deckAt && game.ships?.length) {
+      const dk3 = game.deckAt(x, y, 0.1);
+      if (dk3) {
+        const h2 = deckLift(dk3, timeOf(game));
+        if (h2 > f && h2 <= a.alt + 0.3) f = h2;
+      }
+    }
+    return f;
+  }
+  function cantTakeOff(a, game) {
+    const S6 = flightOf(a);
+    if (!S6) return "nowings";
+    if (a.flying) return "flying";
+    if (a.state !== "idle" || a.onShip || a.climb || helpless(a) || a.hitstun > 0.25 || a.status?.grounded) return "busy";
+    if (a.inWater) return "water";
+    const zone = game.world.zone;
+    if (zone === 2 || zone === 3) return "nosky";
+    if (game.world.interiorAt?.(a.x, a.y) && !a.roofed) return "indoors";
+    if (S6.fruit && a.seastoned) return "seastone";
+    if ((a.flightGauge ?? 1) < 0.25) return "tired";
+    return "";
+  }
+  var WHY = {
+    water: "You can't take off from the water.",
+    nosky: "There's no sky to fly in down here.",
+    indoors: "No room to fly in here.",
+    seastone: "Seastone holds your power down.",
+    tired: "Too tired to fly \u2014 catch your breath on solid ground.",
+    busy: ""
+  };
+  function takeOff(a, game) {
+    const why = cantTakeOff(a, game);
+    if (why) {
+      if (a.isPlayer && WHY[why]) game.log(WHY[why], "#ff8a80");
+      return false;
+    }
+    const S6 = flightOf(a);
+    const alt = feetOf(a, game);
+    if (a.deck) {
+      a.deck.ship.aboard?.delete(a);
+      a.deck = null;
+    }
+    a.flying = true;
+    a.flightStyle = S6.style;
+    a.flightRide = S6.ride || null;
+    a.flight = { spec: S6, t: 0, lift: (a.z || 0) > 0.6 ? 0.15 : 0.4, tired: false, landing: false };
+    a.alt = alt;
+    a.vz = 0;
+    a.charging = 0;
+    a.wading = 0;
+    if (!a.dash?.dodge) a.dash = null;
+    if (a.flightGauge === void 0) a.flightGauge = 1;
+    a.flightTired = false;
+    a.takeoffT = timeOf(game);
+    takeoffFx(a, game, S6);
+    game.audio?.sfx("jump_big", a);
+    if (a.isPlayer) {
+      game.emit?.("playerTakeOff", S6.style);
+      game.hint?.("flight", "FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air \u2014 far faster out over the open sea \u2014 and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.");
+    }
+    return true;
+  }
+  function land(a, game, quiet = false) {
+    if (!a.flying || !a.flight) return;
+    endFlight(a, game, -0.01);
+    a.landT = timeOf(game);
+    if (!quiet && (a.z || 0) < 0.6) {
+      game.fx.burst(a.x, a.y, 8, { color: ["#d7ccc8", "#efebe9"], speed: 2.2, g: 1.2, z: 0.1, vz: 0.5, life: 0.45, kind: "dust", size: 0.18, grow: 0.4 });
+      game.audio?.sfx("land", a);
+    }
+  }
+  function fall(a, game) {
+    if (!a.flying || !a.flight) return;
+    endFlight(a, game, Math.min(-1, a.flightClimb || -1));
+  }
+  function endFlight(a, game, vz) {
+    const g = a.groundAt ? a.groundAt(game, a.x, a.y) : 0;
+    a.flying = false;
+    a.flight = null;
+    a.flightStyle = null;
+    a.flightRide = null;
+    a.flightTired = false;
+    a.flightClimb = 0;
+    a.flightBank = 0;
+    a.z = Math.max(0, (a.alt ?? g) - g);
+    a.vz = a.z > 0.02 ? vz : 0;
+    a.alt = null;
+    a.airT = 0;
+    a.lastG = g;
+    a.lastGX = a.x;
+    a.lastGY = a.y;
+  }
+  function downFlyer(a, game) {
+    if (!a.flying || !a.flight) return;
+    fall(a, game);
+    game.fx.text(a.x, a.y - 1.6, "DOWNED!", "#ff8a80", 0.34);
+  }
+  function toggleFlight(a, game) {
+    if (a.flying && a.flight) {
+      a.flight.landing = true;
+      return true;
+    }
+    return takeOff(a, game);
+  }
+  function flyStep(a, dt, game) {
+    const F5 = a.flight, S6 = F5.spec, i = a.intent, w = game.world;
+    F5.t += dt;
+    a.inWater = false;
+    a.under = false;
+    a.depth = 0;
+    a.wading = 0;
+    if (a.alt == null) a.alt = feetOf(a, game);
+    if (a.flightOut || helpless(a) || a.status.grounded || S6.fruit && a.seastoned || w.zone === 2 || w.zone === 3) {
+      a.flightOut = false;
+      fall(a, game);
+      return;
+    }
+    const sea = overOpenSea(game, a.x, a.y);
+    const moving = Math.hypot(i.mx, i.my) > 0.1;
+    let rate = S6.drain;
+    if (i.sprint && moving) rate *= 1.7;
+    if (F5.lift > 0 || i.mz > 0 && !F5.tired) rate *= 1.3;
+    else if (i.mz < 0 || F5.landing || F5.tired) rate *= 0.5;
+    if (sea) rate *= S6.sea;
+    a.flightGauge = Math.max(0, (a.flightGauge ?? 1) - rate * dt / S6.gauge);
+    if (a.flightGauge <= 0 && !F5.tired) {
+      F5.tired = true;
+      a.flightTired = true;
+      if (a.isPlayer) game.log(sea ? "Your strength gives out over the open sea \u2014 you're coming down!" : "Your strength gives out \u2014 you're coming down.", "#ff8a80");
+    }
+    let sp = S6.speed * (i.sprint && !F5.tired ? 1.6 : 1) * (F5.tired ? 0.7 : 1);
+    if (a.action) sp *= a.action.def.moveMul ?? (a.action.def.m1Chain ? 0.6 : 0.4);
+    if (a.hitstun > 0) sp = 0;
+    if (a.status.slowmo) sp *= 0.2;
+    if (a.status.chill) sp *= 0.6;
+    if (a.zoneSlow) sp *= a.zoneSlow;
+    const k = Math.min(1, dt * 3.5);
+    const hv0 = Math.atan2(a.vy, a.vx), s0 = Math.hypot(a.vx, a.vy);
+    a.vx += (i.mx * sp - a.vx) * k;
+    a.vy += (i.my * sp - a.vy) * k;
+    let vx = a.vx, vy = a.vy;
+    if (a.dash) {
+      vx = a.dash.vx;
+      vy = a.dash.vy;
+      a.dash.t -= dt;
+      if (a.dash.t <= 0) {
+        a.dash = null;
+        a.vx *= 0.3;
+        a.vy *= 0.3;
+      }
+    }
+    vx += a.kb.x;
+    vy += a.kb.y;
+    const decay = Math.exp(-dt * 8);
+    a.kb.x *= decay;
+    a.kb.y *= decay;
+    if (Math.abs(a.kb.x) < 0.05) a.kb.x = 0;
+    if (Math.abs(a.kb.y) < 0.05) a.kb.y = 0;
+    let vz;
+    if (F5.lift > 0) {
+      F5.lift -= dt;
+      vz = S6.climb * 1.2;
+    } else if (F5.landing) vz = -S6.dive;
+    else if (F5.tired) vz = -3.5;
+    else vz = (i.mz || 0) * ((i.mz || 0) > 0 ? S6.climb : S6.dive);
+    const sw2 = swoopAlt(a, game);
+    if (sw2 !== null) vz = clamp((sw2 - a.alt) * 6, -16, Math.max(vz, 3));
+    a.alt += vz * dt;
+    const n = Math.max(1, Math.ceil(Math.hypot(vx, vy) * dt / 0.25));
+    for (let s = 0; s < n; s++) {
+      const nx = w.wx(a.x + vx * dt / n), ny = a.y + vy * dt / n;
+      if (flyableAt(a, game, nx, a.y)) a.x = nx;
+      else {
+        a.vx *= 0.2;
+        a.kb.x *= -0.3;
+        if (a.dash) a.dash.vx = 0;
+      }
+      if (flyableAt(a, game, a.x, ny)) a.y = ny;
+      else {
+        a.vy *= 0.2;
+        a.kb.y *= -0.3;
+        if (a.dash) a.dash.vy = 0;
+      }
+    }
+    const g = groundBase(game, a.x, a.y);
+    const ceil = g + (sea ? SEA_CEILING : S6.ceiling);
+    if (a.alt > ceil) a.alt = Math.max(ceil, a.alt - 6 * dt);
+    const floor2 = floorUnder(a, game, a.x, a.y);
+    if (a.alt < floor2) a.alt = floor2;
+    a.z = a.alt - g;
+    const sp2 = Math.hypot(vx, vy);
+    a.flightSpeed = sp2;
+    a.flightClimb = vz;
+    const turn = s0 > 1 && sp2 > 1 ? angleDiff(hv0, Math.atan2(a.vy, a.vx)) / Math.max(dt, 1e-3) : 0;
+    a.flightBank = clamp((a.flightBank || 0) + (clamp(turn * 0.35, -1, 1) - (a.flightBank || 0)) * Math.min(1, dt * 5), -1, 1);
+    a.moving = sp2 > 0.4;
+    a.speed = sp2;
+    if (a.moving && !a.action && !a.isPlayer) a.facing += angleDiff(a.facing, Math.atan2(vy, vx)) * Math.min(1, dt * 8);
+    trailFx(a, game, S6, dt);
+    if (a.alt <= floor2 + 0.05 && vz <= 0 && F5.t > 0.3 && (F5.landing || F5.tired || (i.mz || 0) < 0)) land(a, game);
+  }
+  function swoopAlt(a, game) {
+    const act2 = a.action;
+    if (!act2) return null;
+    const def = act2.def;
+    const melee = (def.steps || []).some((s) => s.hit && s.hit.shape !== "line" && !s.proj || s.dash?.hit);
+    if (!melee || act2.t > (def.windup ?? 0.1) + 0.45) return null;
+    const t = act2.target && act2.target.alive !== void 0 && act2.target.state === "idle" ? act2.target : foeBelow(a, game);
+    if (!t) return a.dash?.dive ? groundBase(game, a.x, a.y) + 0.4 : null;
+    return feetOf(t, game) + 0.3;
+  }
+  function foeBelow(a, game) {
+    let best = null, bd = Infinity;
+    for (const e of game.actorsNear(a.x, a.y, 4.5)) {
+      if (e === a || e.state !== "idle" || !game.combat.canHit(a, e, { vx: 0 })) continue;
+      const dx = game.world.dx(a.x, e.x), dy = e.y - a.y;
+      if (Math.abs(angleDiff(a.facing, Math.atan2(dy, dx))) > 1.3) continue;
+      const d = Math.hypot(dx, dy);
+      if (d < bd) {
+        bd = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+  function reachesUp(att, tgt, h2, game) {
+    if (!(att?.flying || tgt.flying)) return true;
+    if (h2.vx !== void 0 || h2.isProj || h2.shape === "line") return true;
+    const groundRef = h2.zone || h2.radial && !h2.follow;
+    const from = groundRef ? groundBase(game, h2.x ?? tgt.x, (h2.y ?? tgt.y) + 0.4) : feetOf(att, game);
+    const gap = Math.abs(from - feetOf(tgt, game));
+    const reach3 = h2.reachZ ?? (h2.radial || h2.shape === "circle" ? Math.max(2.4, (h2.range || 1) * 0.7) : 2.4);
+    return gap <= reach3 * Math.max(att?.look?.scale || 1, tgt.look?.scale || 1);
+  }
+  function refill(a, dt, game) {
+    if (a.flying || !(a.flightGauge < 1)) return;
+    if (a.inWater || (a.z || 0) > 0.05 || a.vz || a.state !== "idle") return;
+    const S6 = flightOf(a);
+    if (!S6) return;
+    a.flightGauge = Math.min(1, a.flightGauge + dt / S6.refill);
+  }
+  function geppoSteps(a) {
+    const t = a.techniques || [];
+    let n = 0;
+    if (t.includes("roku_geppo")) n = Math.max(n, 2 + Math.floor((a.masteries?.rokushiki || 0) / 35));
+    if (t.includes("bleg_skywalk")) n = Math.max(n, 2 + Math.floor((a.masteries?.black_leg || 0) / 35));
+    return n;
+  }
+  function airStep(a, game) {
+    const n = geppoSteps(a);
+    if (!n || a.flying || (a.airSteps || 0) >= n) return false;
+    if (a.state !== "idle" || helpless(a) || a.hitstun > 0 || a.inWater || a.climb || a.onShip) return false;
+    if (!((a.z || 0) > 0.35 || a.vz > 0.5)) return false;
+    const J = a.jumpStats();
+    a.vz = J.v * 0.9;
+    const l = Math.hypot(a.intent.mx, a.intent.my);
+    const dx = l > 0.2 ? a.intent.mx / l : Math.cos(a.facing), dy = l > 0.2 ? a.intent.my / l : Math.sin(a.facing);
+    a.dash = { vx: dx * 9, vy: dy * 9, t: 0.22, ignoreWater: true };
+    a.airSteps = (a.airSteps || 0) + 1;
+    a.flightStyle = "geppo";
+    a.airStepT = timeOf(game);
+    for (let k = 0; k < 2; k++) game.fx.add("ring", { x: a.x, y: a.y, r0: 0.1, r1: 0.7 + k * 0.3, color: "#ffffff", width: 0.07, life: 0.3, z: Math.max(0.05, a.z || 0), flat: 0.8, add: true, delay: k * 0.05 });
+    game.audio?.sfx("jump", a);
+    return true;
+  }
+  function takeoffFx(a, game, S6) {
+    const fx = game.fx, z = Math.max(0.05, a.z || 0);
+    fx.burst(a.x, a.y, 10, { color: ["#d7ccc8", "#efebe9"], speed: 3, g: 1.2, z, vz: 0.6, life: 0.5, kind: "dust", size: 0.2, grow: 0.4 });
+    fx.ring(a.x, a.y, 0.2, 1.6, S6.color || "#ffffff", 0.35, 0.1, { z, flat: 0.55, add: true });
+    const c = S6.color || "#ffffff";
+    if (S6.style === "phoenix") fx.burst(a.x, a.y, 18, { color: ["#4dd0e1", "#80deea", "#fff59d"], speed: 3, g: -1, z: z + 1, vz: 1.5, life: 0.7, kind: "fire", size: 0.2 });
+    else if (S6.style === "dragon") fx.burst(a.x, a.y, 14, { color: ["#eceff1", "#cfd8dc", "#ffffff"], speed: 3, g: 0, z: z + 0.3, life: 0.9, kind: "smoke", size: 0.5, grow: 0.6 });
+    else if (S6.style === "wings") fx.burst(a.x, a.y, 10, { color: ["#212121", "#37474f"], speed: 3, g: 2, z: z + 1.2, vz: 1, life: 0.8, kind: "leaf", size: 0.12 });
+    else fx.burst(a.x, a.y, 12, { color: [c, "#ffffff"], speed: 2.5, g: 0, z: z + 0.2, life: 0.6, kind: S6.ride === "light" ? "glow" : S6.ride === "sand" ? "sand" : "smoke", size: 0.3, grow: 0.3 });
+  }
+  function trailFx(a, game, S6, dt) {
+    const p = game.player;
+    if (!p || a !== p && game.world.dist2(a.x, a.y, p.x, p.y) > 40 * 40) return;
+    a._flyFxT = (a._flyFxT || 0) - dt;
+    if (a._flyFxT > 0) return;
+    a._flyFxT = 0.05;
+    const fx = game.fx, z = a.z || 0, r4 = () => Math.random() - 0.5;
+    const back = { vx: -(a.vx || 0) * 0.25, vy: -(a.vy || 0) * 0.25 };
+    switch (S6.style) {
+      case "phoenix":
+        for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 1.4, y: a.y + r4() * 0.6, z: z + 1.1 + r4() * 0.5, ...back, vz: 0.5, g: -0.6, life: 0.5, size: 0.16, grow: -0.12, color: ["#4dd0e1", "#80deea", "#26c6da", "#fff59d"][k + (Math.random() < 0.5 ? 0 : 2)], kind: "fire" });
+        break;
+      case "dragon":
+        fx.particle({ x: a.x + r4() * 1.6, y: a.y + r4() * 0.8, z: z + 0.1, ...back, vz: -0.2, g: 0, life: 1.1, size: 0.45, grow: 0.5, color: Math.random() < 0.5 ? "#eceff1" : "#cfd8dc", kind: "smoke" });
+        if (Math.random() < 0.08) fx.burst(a.x, a.y, 3, { color: "#90caf9", speed: 3, g: 0, z: z + 1, life: 0.15, kind: "line", size: 0.05 });
+        break;
+      case "wings":
+        if (Math.random() < 0.25) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.4, z: z + 1.3, ...back, vz: -0.3, g: 0.6, life: 1.2, size: 0.1, color: "#212121", kind: "leaf", rot: Math.random() * TAU, vr: r4() * 6 });
+        break;
+      case "ride":
+        fx.particle({ x: a.x + r4() * 0.6, y: a.y + r4() * 0.4, z: Math.max(0, z - 0.15), ...back, vz: -0.4, g: 0, life: 0.8, size: S6.ride === "rock" ? 0.12 : 0.35, grow: S6.ride === "rock" ? 0 : 0.4, color: S6.color || "#eceff1", kind: S6.ride === "sand" ? "sand" : S6.ride === "rock" ? "dust" : "smoke" });
+        break;
+      case "float":
+        if (S6.ride === "strings") for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.5, y: a.y + r4() * 0.25, z: z + 1.4, vx: 0, vy: 0, vz: 12, g: 0, life: 0.4, size: 0.05, color: "#f8bbd0", kind: "line" });
+        else for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.5, z: z + 0.4 + Math.random(), ...back, vz: 0.2, g: 0, life: 0.45, size: 0.2, color: k ? "#ffffff" : S6.color || "#fff59d", kind: "glow" });
+        break;
+      default:
+        break;
+    }
+  }
+  function aiFlight(a, ctl, t, dist, game, sorties = false) {
+    if (!a.flying) a.intent.mz = 0;
+    const S6 = flightOf(a);
+    if (!S6) return;
+    const now3 = game.time || 0;
+    if (!a.flying) {
+      if (ctl.flyNext === void 0) ctl.flyNext = now3 + 6 + Math.random() * 8;
+      const above = !!t.flying && feetOf(t, game) - feetOf(a, game) > 2.2;
+      const sortie = a.boss && sorties && now3 >= ctl.flyNext && dist < 14;
+      if ((above || sortie) && !cantTakeOff(a, game)) {
+        takeOff(a, game);
+        ctl.flyChase = above;
+        ctl.flyUntil = now3 + (above ? 30 : 5 + Math.random() * 3);
+        ctl.flyNext = now3 + 16 + Math.random() * 10;
+      }
+      return;
+    }
+    if (!a.flight) return;
+    if (a.flightGauge < 0.2 || now3 > (ctl.flyUntil ?? 0) && !t.flying || ctl.flyChase && !t.flying) a.flight.landing = true;
+    const want = t.flying ? feetOf(t, game) : feetOf(t, game) + (a.flight.landing ? 0 : 4.5);
+    a.intent.mz = clamp((want - a.alt) / 2, -1, 1);
+  }
+
+  // src/game/room.js
+  function inRoom(game, z, x, y, pad2 = 0) {
+    return !!z && z.t > 0 && game.world.distance(z.x, z.y, x, y) <= z.r + pad2;
+  }
+  function ownRoom(actor, game = actor?.game) {
+    const zs = game?.areaZones;
+    if (!zs || !zs.length || !actor) return null;
+    for (const z of zs) {
+      if (z.kind !== "room" || z.owner !== actor || !(z.t > 0)) continue;
+      if (game.world.distance(z.x, z.y, actor.x, actor.y) <= z.r) return z;
+    }
+    return null;
+  }
+  function roomFollows(z) {
+    const o = z?.owner;
+    return !!o && z.kind === "room" && o.alive !== false && (o.buffs || []).some((b) => b.form === "awake");
+  }
+  function movable(e, actor) {
+    return e !== actor && e.alive !== false && e.state !== "dead" && !e.hidden && !e.onShip && !e.climb && !e.invulnerable && !e.seaCreature && (e.deck?.ship || null) === (actor.deck?.ship || null);
+  }
+  function shambles(actor, p, game, a, s) {
+    const z = a.room || ownRoom(actor, game);
+    if (!z) return;
+    const w = game.world;
+    let who = a.target && a.target.alive !== void 0 && movable(a.target, actor) && inRoom(game, z, a.target.x, a.target.y) ? a.target : null;
+    if (!who && a.tx !== void 0) {
+      let bd = 2.2 * 2.2;
+      for (const e of game.actorsNear(a.tx, a.ty, 2.2)) {
+        if (!movable(e, actor) || !inRoom(game, z, e.x, e.y)) continue;
+        const d = w.dist2(a.tx, a.ty, e.x, e.y);
+        if (d < bd) {
+          bd = d;
+          who = e;
+        }
+      }
+    }
+    const x0 = actor.x, y0 = actor.y;
+    if (who) {
+      actor.x = who.x;
+      actor.y = who.y;
+      who.x = x0;
+      who.y = y0;
+      if (game.combat.canHit(actor, who, {})) {
+        who.stagger(who.boss ? 0.2 : 0.4);
+        who.facing = Math.atan2(actor.y - who.y, w.dx(who.x, actor.x));
+      }
+      actor.facing = Math.atan2(who.y - actor.y, w.dx(actor.x, who.x));
+      if (who.lastG !== void 0) who.lastG = null;
+    } else {
+      let tx = a.tx ?? actor.x + Math.cos(a.angle) * 5, ty = a.ty ?? actor.y + Math.sin(a.angle) * 5;
+      const dx = w.dx(z.x, tx), dy = ty - z.y, d = Math.hypot(dx, dy), lim = Math.max(0.5, z.r - 0.6);
+      if (d > lim) {
+        tx = w.wx(z.x + dx / d * lim);
+        ty = z.y + dy / d * lim;
+      }
+      const free = (x, y) => actor.flying ? flyableAt(actor, game, x, y) : actor.canOccupy(w, x, y);
+      const bx = w.dx(tx, actor.x), by = actor.y - ty;
+      for (let k = 0; k <= 16; k++) {
+        const x = w.wx(tx + bx * (k / 16)), y = ty + by * (k / 16);
+        if (free(x, y)) {
+          actor.x = x;
+          actor.y = y;
+          break;
+        }
+      }
+    }
+    actor.lastG = null;
+    actor.iframes = Math.max(actor.iframes, 0.2);
+    game.fx.tech(actor, s, a, "power", { x0, y0, swapped: who, room: z });
+    game.audio?.sfx("whoosh", actor);
+  }
+  function takt(actor, p, game, a, s) {
+    const z = a.room || ownRoom(actor, game);
+    if (!z) return;
+    const lifted = [];
+    for (const e of game.actorsNear(z.x, z.y, z.r + 1)) {
+      if (e === actor || !inRoom(game, z, e.x, e.y) || !game.combat.canHit(actor, e, { room: z })) continue;
+      if (e.state !== "idle" || e.inWater || e.flying || e.onShip || e.climb || e.lift) continue;
+      startLift(e, actor, game, { h: p.h ?? 2.6, hold: p.hold ?? 1.1, damage: (p.damage || 20) * a.mult, def: a.def });
+      lifted.push(e);
+    }
+    game.fx.tech(actor, s, a, "power", { room: z, lifted });
+    if (actor.isPlayer && !lifted.length) game.fx.text(actor.x, actor.y - 1.8, "Nobody in the Room", "#81d4fa", 0.3);
+  }
+  function startLift(e, owner, game, o) {
+    let hold = o.hold * (e.boss ? 0.6 : 1);
+    if (e.isPlayer) hold = Math.min(hold, 0.9);
+    e.lift = { t: 0, hold, h: o.h * (e.boss ? 0.7 : 1), damage: o.damage, owner, def: o.def, slam: false };
+    e.addStatus("lifted", hold + 0.8, owner);
+    e.action = null;
+    e.blocking = false;
+    e.dash = null;
+    e.charging = 0;
+    e.kb.x = 0;
+    e.kb.y = 0;
+  }
+  function updateLift(e, dt, game) {
+    const L3 = e.lift;
+    if (!L3) return;
+    if (e.state !== "idle" || e.alive === false || e.inWater || e.flying) {
+      e.lift = null;
+      delete e.status.lifted;
+      return;
+    }
+    L3.t += dt;
+    if (L3.cube) L3.cube.z = (e.z || 0) + 0.9;
+    if (!L3.slam) {
+      const k = Math.min(1, L3.t / 0.35);
+      e.z = L3.h * (1 - (1 - k) * (1 - k));
+      e.vz = 0;
+      e.vx = 0;
+      e.vy = 0;
+      e.kb.x = 0;
+      e.kb.y = 0;
+      e.airT = 0.1;
+      if (L3.t >= L3.hold) {
+        L3.slam = true;
+        e.vz = -20;
+      }
+      return;
+    }
+    if ((e.z || 0) > 0.02 || e.vz) return;
+    e.lift = null;
+    delete e.status.lifted;
+    if (!L3.owner || L3.owner.alive === false || L3.owner.state !== "idle") return;
+    game.combat.applyHit(L3.owner, e, {
+      owner: L3.owner,
+      x: e.x,
+      y: e.y - 0.4,
+      shape: "circle",
+      range: 0.5,
+      damage: L3.damage,
+      knockback: 1.5,
+      stun: 0.7,
+      heavy: true,
+      unblockable: true,
+      radial: true,
+      def: L3.def,
+      ignoreLogia: true,
+      element: "physical",
+      critChance: 0,
+      impactFrame: false
+    });
+    game.fx.ring(e.x, e.y, 0.2, 1.6, "#e1f5fe", 0.4, 0.14, { z: 0.05, flat: 0.6, add: true });
+    game.fx.crack(e.x, e.y, 1.1, 1.6);
+    game.fx.burst(e.x, e.y, 10, { color: ["#d7ccc8", "#efebe9"], speed: 3, g: 1.2, z: 0.1, vz: 0.8, life: 0.5, kind: "dust", size: 0.2, grow: 0.4 });
+    if (e.isPlayer || L3.owner.isPlayer) game.fx.shake(0.3);
+  }
+
+  // src/game/powers.js
+  function release(actor, p, game, a, s) {
+    const store = Math.min(p.cap ?? 220, actor.absorbed || 0);
+    actor.absorbed = 0;
+    if (store <= 0) return;
+    game.combat.hitbox({
+      owner: actor,
+      x: actor.x,
+      y: actor.y - 0.4,
+      shape: "circle",
+      range: p.range || 5,
+      damage: store * (p.mul ?? 1.2) * (a.mult || 1),
+      knockback: 10,
+      stun: 0.6,
+      element: "dark",
+      heavy: true,
+      radial: true,
+      duration: 0.1,
+      def: a.def,
+      blast: true
+    });
+    game.fx.tech(actor, s, a, "power", { store });
+    if (actor.isPlayer) game.fx.text(actor.x, actor.y - 2, "LIBERATION!", "#b388ff", 0.45);
+  }
+  var POWERS = { shambles, takt, release };
+  function iceAt(game, x, y) {
+    const zs = game?.areaZones;
+    if (!zs || !zs.length) return false;
+    for (const z of zs) if (z.freezeWater && z.t > 0 && game.world.distance(z.x, z.y, x, y) <= z.r) return true;
+    return false;
+  }
+  function zoneRules(game, z, dt) {
+    const o = z.owner;
+    if (z.whileOwner && (!o || o.alive === false || o.state !== "idle" || o.inWater)) {
+      z.t = 0;
+      return;
+    }
+    if (z.kind === "room" && roomFollows(z)) {
+      z.x = o.x;
+      z.y = o.y;
+    }
+    if (z.shrink) {
+      z.r0 = z.r0 ?? z.r;
+      z.r = z.r0 * (1 - z.shrink * (1 - Math.max(0, z.t) / Math.max(0.01, z.t0)));
+      if (z.shape) z.shape.r = z.r;
+    }
+    if (z.cage) {
+      const w = game.world;
+      z.held = z.held || /* @__PURE__ */ new Set();
+      for (const a of game.actorsNear(z.x, z.y, z.r)) if (a !== o && a.state !== "dead" && game.combat.canHit(o, a, {})) z.held.add(a);
+      for (const a of z.held) {
+        if (!a.alive || a.state === "dead") {
+          z.held.delete(a);
+          continue;
+        }
+        const dx = w.dx(z.x, a.x), dy = a.y - z.y, d = Math.hypot(dx, dy);
+        const lim = Math.max(0.3, z.r - (a.r || 0.3) - 0.05);
+        if (d > lim) {
+          const k = lim / (d || 1);
+          a.x = w.wx(z.x + dx * k);
+          a.y = z.y + dy * k;
+          a.kb.x *= -0.2;
+          a.kb.y *= -0.2;
+          if (a.dash) a.dash = null;
+          if (a.flying) a.flightOut = true;
+        }
+      }
+    }
+    if (z.grounds) {
+      for (const a of game.actorsNear(z.x, z.y, z.r)) if (a.flying && a.flight && game.combat.canHit(o, a, {})) a.flightOut = true;
+    }
+  }
+  function reflectShot(game, p, actors) {
+    if ((p.reflected || 0) >= 3 || !p.owner) return false;
+    const w = game.world;
+    for (const a of actors) {
+      if (a === p.owner || !a.alive || a.state !== "idle") continue;
+      const R5 = reflectRadius(a);
+      if (!R5 || w.dist2(p.x, p.y, a.x, a.y - 0.5) > R5 * R5) continue;
+      if (!game.combat.canHit(p.owner, a, p)) continue;
+      const back = p.owner, sp = Math.hypot(p.vx, p.vy) * 1.1;
+      const ang = back.alive !== false ? Math.atan2(back.y - 0.5 - p.y, w.dx(p.x, back.x)) : Math.atan2(-p.vy, -p.vx);
+      p.vx = Math.cos(ang) * sp;
+      p.vy = Math.sin(ang) * sp;
+      p.owner = a;
+      p.target = back;
+      p.hit = /* @__PURE__ */ new Set();
+      p.traveled = 0;
+      p.t = 0;
+      p.range = Math.max(p.range, w.distance(p.x, p.y, back.x, back.y) + 3);
+      p.reflected = (p.reflected || 0) + 1;
+      p.cued = true;
+      game.fx.ring(p.x, p.y, 0.1, 1.2, "#ffffff", 0.25, 0.08, { z: 0.9, add: true });
+      game.fx.text(a.x, a.y - 1.6, a.buffs.find((b) => b.reflect)?.reflectWord || "REPEL!", "#ffffff", 0.32);
+      game.audio?.sfx("parry", a);
+      return true;
+    }
+    return false;
+  }
+  function reflectRadius(a) {
+    let R5 = 0;
+    for (const b of a.buffs || []) if (b.reflect) R5 = Math.max(R5, b.reflect);
+    return R5;
+  }
+  function absorbShot(game, p) {
+    const zs = game.areaZones;
+    if (!zs || !zs.length) return false;
+    for (const z of zs) {
+      if (!z.absorb || !(z.t > 0) || z.owner === p.owner || !z.owner) continue;
+      if (game.world.distance(z.x, z.y, p.x, p.y) > z.r) continue;
+      z.owner.absorbed = Math.min(400, (z.owner.absorbed || 0) + (p.damage || 0) * 0.6);
+      p.onEnd = null;
+      game.fx.burst(p.x, p.y + 0.5, 6, { color: ["#12001c", "#311b92", "#7e57c2"], speed: 2, g: 0, z: 0.9, life: 0.35, kind: "smoke", size: 0.2 });
+      return true;
+    }
+    return false;
+  }
+  function barrierStops(game, tgt, att, h2) {
+    const b = (tgt.buffs || []).find((x) => x.barrier);
+    if (!b || h2.trueDamage) return false;
+    if (b.barrier === "all") return true;
+    const w = game.world;
+    let from;
+    if (h2.vx !== void 0) from = Math.atan2(-h2.vy, -h2.vx);
+    else if (h2.radial && !h2.follow) from = Math.atan2(h2.y + 0.4 - tgt.y, w.dx(tgt.x, h2.x));
+    else if (att) from = Math.atan2(att.y - tgt.y, w.dx(tgt.x, att.x));
+    else return false;
+    return Math.abs(angleDiff(tgt.facing, from)) < 1.75;
+  }
+  function statusFx(game, a, k, dur, src) {
+    const fx = game?.fx;
+    if (!fx) return;
+    const l = a._lastLook || a.look || {};
+    if (k === "pieces") {
+      fx.add("pieces", { x: a.x, y: a.y, follow: a, r: 0.75 * (l.scale || 1), skin: l.skin, top: l.top, bottom: l.bottom, life: dur });
+      fx.burst(a.x, a.y, 8, { color: ["#e1f5fe", "#81d4fa"], speed: 3, g: 0, z: 0.9, life: 0.3, kind: "line", size: 0.06 });
+    } else if (k === "heartless" && src) {
+      fx.add("cube", { x: src.x, y: src.y, follow: src, ox: Math.cos(src.facing || 0) * 0.45, oy: Math.sin(src.facing || 0) * 0.3, z: 1.15, size: 0.22, color: "#81d4fa", heart: true, life: dur, spin: 0.8 });
+      fx.text(a.x, a.y - 1.8, "MES", "#81d4fa", 0.34);
+    } else if (k === "puppet" && src) {
+      fx.add("strings", { x: src.x, y: src.y, x1: a.x, y1: a.y, color: "#f8bbd0", n: 5, life: Math.min(dur, 2.5) });
+    } else if (k === "shadowless") {
+      fx.burst(a.x, a.y, 10, { color: ["#263238", "#000000"], speed: 1.5, g: 0, z: 0.2, life: 0.6, kind: "smoke", size: 0.25 });
+    }
+  }
+
+  // src/game/racial.js
+  var SULONG = {
+    id: "sulong",
+    name: "Sulong",
+    dur: 25,
+    mods: { damage: 1.8, speedMul: 1.35, defMul: 0.8, atkSpeed: 1.2 },
+    aura: "rgba(255,255,255,0.95)",
+    look: { furWhite: true },
+    after: { id: "sulong_spent", name: "Spent", dur: 12, mods: { speedMul: 0.85, atkSpeed: 0.85 } }
+  };
+  var RELIGHT = 6;
+  function raceHit(att, tgt, h2, game) {
+    if (!att || !h2 || tgt.state !== "idle") return;
+    const bare = !h2.element || h2.element === "physical";
+    const blow = h2.vx === void 0 && !h2.blast;
+    if (att.race === "mink" && bare && blow && h2.def?.m1Chain && !att.inWater && Math.random() < 0.3) {
+      tgt.addStatus("shock", 0.5, att);
+      game.fx.burst(tgt.x, tgt.y, 5, { color: ["#fff176", "#ffffff"], speed: 3, g: 0, z: 0.9, life: 0.18, kind: "line", size: 0.05 });
+    }
+    if (att.race === "lunarian" && att.flameLit !== false && bare && blow && !att.inWater && Math.random() < 0.25) {
+      tgt.addStatus("burn", 2, att);
+      game.fx.burst(tgt.x, tgt.y, 6, { color: ["#ff7043", "#ffca28"], speed: 1.5, g: -1, z: 0.9, vz: 1.5, life: 0.4, kind: "fire", size: 0.16 });
+    }
+  }
+  function raceTick(a, dt, game) {
+    if (a.race === "lunarian") {
+      if (a.inWater || a.status?.wet) {
+        if (a.flameLit !== false) {
+          a.flameLit = false;
+          game.fx.burst(a.x, a.y, 8, { color: ["#eceff1", "#cfd8dc"], speed: 1.2, g: -1, z: 1.4, vz: 1, life: 0.6, kind: "smoke", size: 0.25 });
+          if (a.isPlayer) game.log("Your flame goes out \u2014 nothing shields you now.", "#90a4ae");
+        }
+        a.relightT = RELIGHT;
+      } else if (a.flameLit === false) {
+        a.relightT = (a.relightT ?? RELIGHT) - dt;
+        if (a.relightT <= 0) {
+          a.flameLit = true;
+          game.fx.burst(a.x, a.y, 10, { color: ["#ff7043", "#ffca28", "#ffffff"], speed: 2, g: -1.5, z: 1.4, vz: 2, life: 0.6, kind: "fire", size: 0.2 });
+          if (a.isPlayer) game.log("Your flame lights again.", "#ffab91");
+        }
+      }
+    }
+    if (a.race === "mink") sulongCheck(a, game);
+  }
+  function sulongCheck(a, game) {
+    const env2 = game.env;
+    if (!env2?.fullMoon || !env2.isNight || a.state !== "idle" || a.hasBuff("sulong") || a.hasBuff("sulong_spent")) return;
+    if (a.sulongNight === env2.day) return;
+    const w = game.world;
+    if (w.zone === 2 || w.zone === 3 || w.interiorAt?.(a.x, a.y) || a.inWater) return;
+    const fighting = a.isPlayer ? !!a.inCombat : !!a.controller?.target;
+    if (!fighting) return;
+    a.sulongNight = env2.day;
+    a.addBuff({ ...SULONG, source: "race:mink" });
+    game.fx.ring(a.x, a.y, 0.3, 3, "#ffffff", 0.6, 0.2, { add: true });
+    game.fx.callout(a.x, a.y - 2.2, "SULONG!", "#ffffff", 0.5, { life: 1.2 });
+    game.fx.flashScreen?.(0.15, "rgba(255,255,255,1)");
+    if (a.isPlayer) game.log("You look up at the full moon... your blood boils. SULONG!", "#ffffff");
+  }
+  var unshakable = (a) => !!a.poise || a.race === "buccaneer";
+  var kbFrame = (a) => a.race === "buccaneer" ? 0.7 : 1;
+
+  // src/game/haki.js
+  var CONQUEROR_COLOURS = [
+    { id: "crimson", name: "Crimson", hex: "#ff1a3c", w: 28 },
+    { id: "violet", name: "Violet", hex: "#a64dff", w: 15 },
+    { id: "gold", name: "Gold", hex: "#ffc21a", w: 10 },
+    { id: "azure", name: "Azure", hex: "#2e8bff", w: 10 },
+    { id: "amber", name: "Amber", hex: "#ff7417", w: 9 },
+    { id: "rose", name: "Rose", hex: "#ff4fa8", w: 8 },
+    { id: "emerald", name: "Emerald", hex: "#17e07c", w: 8 },
+    { id: "white", name: "White", hex: "#eef4ff", w: 6 },
+    { id: "cyan", name: "Cyan", hex: "#21e3f0", w: 6 }
+  ];
+  var OBSERVATION_TINTS = [
+    { id: "lilac", name: "Lilac", hex: "#d9b8ff" },
+    { id: "ice", name: "Ice", hex: "#b8ecff" },
+    { id: "mint", name: "Mint", hex: "#bfffe0" },
+    { id: "pearl", name: "Pearl", hex: "#f2f0ff" },
+    { id: "blush", name: "Blush", hex: "#ffc9e2" },
+    { id: "honey", name: "Honey", hex: "#fff0b8" }
+  ];
+  var ARMAMENT_SHEENS = [
+    { id: "violet", name: "Violet sheen", hex: "#9d8cff" },
+    { id: "steel", name: "Steel sheen", hex: "#8fb8ff" },
+    { id: "bronze", name: "Bronze sheen", hex: "#ffc78a" },
+    { id: "jade", name: "Jade sheen", hex: "#9dffd6" },
+    { id: "silver", name: "Silver sheen", hex: "#e8ecf5" },
+    { id: "wine", name: "Wine sheen", hex: "#ff8aa8" }
+  ];
+  var pickW = (rng4, list) => {
+    let t = 0;
+    for (const c of list) t += c.w || 1;
+    let r4 = rng4.next() * t;
+    for (const c of list) if ((r4 -= c.w || 1) < 0) return c;
+    return list[list.length - 1];
+  };
+  function hakiSignature(seed) {
+    const rng4 = new RNG(`${seed}:haki`);
+    const conqueror = pickW(rng4, CONQUEROR_COLOURS).hex;
+    const observation = OBSERVATION_TINTS[Math.floor(rng4.next() * OBSERVATION_TINTS.length)].hex;
+    const armament = ARMAMENT_SHEENS[Math.floor(rng4.next() * ARMAMENT_SHEENS.length)].hex;
+    const voice = Math.round(rng4.next() * 1e3) / 1e3;
+    return { conqueror, observation, armament, voice };
+  }
+  function charSignature(c) {
+    if (!c) return hakiSignature("nobody");
+    return c.hakiSig || hakiSignature(c.runSeed ?? hashString(String(c.id || c.name || "nobody")));
+  }
+  function npcHakiSig(def) {
+    const base2 = hakiSignature(def?.id || def?.name || "npc");
+    return def?.hakiSig ? { ...base2, ...def.hakiSig } : base2;
+  }
+  var FALLBACK = /* @__PURE__ */ new WeakMap();
+  function sigOf(a) {
+    if (!a) return hakiSignature("nobody");
+    if (a.hakiSig) return a.hakiSig;
+    let s = FALLBACK.get(a);
+    if (!s) {
+      s = hakiSignature(a.npcId || a.name || "someone");
+      FALLBACK.set(a, s);
+    }
+    return s;
+  }
+  function colourName(hex3) {
+    const h2 = String(hex3 || "").toLowerCase();
+    for (const L3 of [CONQUEROR_COLOURS, OBSERVATION_TINTS, ARMAMENT_SHEENS]) for (const c of L3) if (c.hex === h2) return c.name;
+    return h2;
+  }
+  function infusedAura(a) {
+    const h2 = sigOf(a).conqueror, n = parseInt(h2.slice(1), 16);
+    return `rgba(${Math.round((n >> 16 & 255) * 0.32)},${Math.round((n >> 8 & 255) * 0.32)},${Math.round((n & 255) * 0.32)},0.85)`;
+  }
+  function armamentReach(lvl) {
+    const L3 = Math.max(0, lvl || 0);
+    if (L3 <= 0) return 0;
+    if (L3 < 15) return 0.2;
+    if (L3 < 40) return 0.2 + (L3 - 15) / 25 * 0.36;
+    return Math.min(1.02, 0.56 + (L3 - 40) / 30 * 0.46);
+  }
+  var COAT = { spread: 0.3, fall: 0.16 };
+  function hardening(lvl) {
+    return Math.min(0.4, 0.12 + (lvl || 0) * 3e-3);
+  }
+  var RYOU = { level: 60, internal: 0.15, guard: 0.55 };
+  function hasRyou(a) {
+    return !!(a && a.armament && (a.hakiLevel?.("armament") || 0) >= RYOU.level);
+  }
+  function senseRange(lvl) {
+    return 14 + Math.min(100, lvl || 0) * 0.16;
+  }
+  var FUTURE_SIGHT = 65;
+  var KING = { base: 0.04, withD: 0.4, bloodline: 4 };
+  function kingChance(hasD, bloodline) {
+    return Math.min(1, (hasD ? KING.withD : KING.base) * (bloodline ? KING.bloodline : 1));
+  }
+  function clashes(a, b, dist, range) {
+    if (!a || !b || a === b) return false;
+    if (!((a.hakiLevel?.("conqueror") || 0) > 0 && (b.hakiLevel?.("conqueror") || 0) > 0)) return false;
+    if (b.state && b.state !== "idle") return false;
+    if (!(a.isPlayer || a.boss) || !(b.isPlayer || b.boss)) return false;
+    return dist <= range;
+  }
+  var HAKI_HOW = {
+    armament: "Hardened in hard fights (Strength 22+, or weapon mastery 35+) \u2014 or taught by a Haki master.",
+    observation: "Sharpened by dodging danger (Agility 22+, or many dodges) \u2014 or taught.",
+    conqueror: "Cannot be taught. One in millions is born with the qualities of a king; if it's in you, it wakes the day your will is truly tested."
+  };
+
+  // src/game/combat.js
+  var ELEMENT_COLORS = {
+    physical: "#ffffff",
+    fire: "#ff7b39",
+    ice: "#9be7ff",
+    lightning: "#fff176",
+    sand: "#e1c16e",
+    smoke: "#cfd8dc",
+    light: "#fff9c4",
+    magma: "#ff5722",
+    dark: "#7e57c2",
+    quake: "#e0f7fa",
+    poison: "#aed581",
+    water: "#4fc3f7",
+    haki: "#9c27b0",
+    slash: "#ecf0f1",
+    explosion: "#ffab40",
+    gas: "#b2dfdb",
+    string: "#f8bbd0",
+    wax: "#fff8e1",
+    snow: "#ffffff",
+    swamp: "#6d4c41"
+  };
+  var FLURRY_GAP = 0.8;
+  var BREAK_IFRAMES = 0.6;
+  function parryWindow(game, att, tgt) {
+    const T5 = tierOf(game, tgt);
+    const ratio = att?.power && tgt.power ? att.power() / Math.max(1, tgt.power()) : 1;
+    const k = clamp(1.1 - 0.1 * ratio, 0.85, 1.1);
+    return { window: T5.parry * k + (tgt.observation ? PARRY.observation : 0), perfect: T5.perfect };
+  }
+  function blowWeight(att, tgt, h2, final, crit, counter2) {
+    const def = h2.def || (att && att.action ? att.action.def : null);
+    const m12 = !!(def && def.m1Chain && !h2.sprite);
+    let w = m12 ? 0.22 : h2.sprite ? 0.35 : 0.45;
+    if (m12 && (h2.knockback ?? 0) >= 3.2) w = 0.52;
+    if (h2.heavy) w = Math.max(w, 0.72);
+    if (h2.guardBreak) w += 0.06;
+    if (h2.impactFrame) w = Math.max(w, 1);
+    const maxHp = tgt.d ? tgt.d.maxHp : 100;
+    w += Math.min(0.3, final / maxHp * 1.2);
+    if (crit) w += 0.22;
+    if (h2.interval) w *= 0.55;
+    w = Math.min(1.25, w);
+    return counter2 ? Math.min(1.5, w + 0.3) : w;
+  }
+  var Combat = class {
+    constructor(game) {
+      this.game = game;
+      this.hitboxes = [];
+      this.projectiles = [];
+    }
+    /** Register a hitbox that lives for `duration` seconds and hits each target once. */
+    hitbox(h2) {
+      h2.t = 0;
+      h2.duration = h2.duration ?? 0.1;
+      h2.hit = h2.hit || /* @__PURE__ */ new Set();
+      h2.interval = h2.interval || 0;
+      h2.lastHit = /* @__PURE__ */ new Map();
+      this.hitboxes.push(h2);
+      return h2;
+    }
+    projectile(p) {
+      p.t = 0;
+      p.hit = /* @__PURE__ */ new Set();
+      p.alive = true;
+      p.traveled = 0;
+      this.projectiles.push(p);
+      return p;
+    }
+    /** Stop whatever of `a`'s blows are still swinging (a parried move: the rest of it never lands). */
+    cancelBlows(a) {
+      for (const h2 of this.hitboxes) if (h2.owner === a && !h2.blast) h2.cancelled = true;
+    }
+    update(dt) {
+      const game = this.game;
+      const actors = game.actorsNear(game.player ? game.player.x : 0, game.player ? game.player.y : 0, 60);
+      for (let i = this.hitboxes.length - 1; i >= 0; i--) {
+        const h2 = this.hitboxes[i];
+        if (h2.cancelled) {
+          this.hitboxes.splice(i, 1);
+          continue;
+        }
+        h2.t += dt;
+        if (h2.follow && h2.owner && h2.owner.alive) {
+          h2.x = h2.owner.x + (h2.offX || 0);
+          h2.y = h2.owner.y + (h2.offY || 0);
+          if (h2.followAngle) h2.angle = h2.owner.facing;
+        }
+        for (const a of actors) {
+          if (h2.cancelled) break;
+          if (!this.canHit(h2.owner, a, h2)) continue;
+          if (!this.overlaps(h2, a)) continue;
+          if (h2.interval) {
+            const last = h2.lastHit.get(a.id);
+            if (last !== void 0 && h2.t - last < h2.interval) continue;
+            h2.lastHit.set(a.id, h2.t);
+          } else {
+            if (h2.hit.has(a.id)) continue;
+            h2.hit.add(a.id);
+          }
+          this.applyHit(h2.owner, a, h2);
+        }
+        if (h2.hitShips && !h2.cancelled) this.hitShips(h2);
+        if (h2.t >= h2.duration) this.hitboxes.splice(i, 1);
+      }
+      for (let i = this.projectiles.length - 1; i >= 0; i--) {
+        const p = this.projectiles[i];
+        p.t += dt;
+        if (p.homing && p.target && p.target.alive) {
+          const want = Math.atan2(p.target.y - p.y, game.world.dx(p.x, p.target.x));
+          const cur = Math.atan2(p.vy, p.vx);
+          const na = cur + clamp(angleDiff(cur, want), -p.homing * dt, p.homing * dt);
+          const sp = Math.hypot(p.vx, p.vy);
+          p.vx = Math.cos(na) * sp;
+          p.vy = Math.sin(na) * sp;
+        }
+        const sx = p.vx * dt, sy = p.vy * dt;
+        p.x = game.world.wx(p.x + sx);
+        p.y += sy;
+        p.traveled += Math.hypot(sx, sy);
+        if (p.trail) p.trail(p, game);
+        if (p.isProj && !p.cued) this.shotGlint(p);
+        let dead = p.traveled >= p.range || p.t > (p.life ?? 6);
+        if (!p.passWalls && !dead) {
+          const t = game.world.type(p.x, p.y);
+          if (game.world.solid(p.x, p.y) || game.world.hitsProp(p.x, p.y, 0.04, true) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
+        }
+        if (!dead && game.areaZones?.length && absorbShot(game, p)) dead = true;
+        if (!dead) reflectShot(game, p, actors);
+        if (!dead) {
+          for (const a of actors) {
+            if (p.hit.has(a.id) || !this.canHit(p.owner, a, p)) continue;
+            if (game.world.dist2(p.x, p.y, a.x, a.y - 0.5) > (p.radius + a.r + 0.2) ** 2) continue;
+            p.hit.add(a.id);
+            p.angle = Math.atan2(p.vy, p.vx);
+            this.applyHit(p.owner, a, p);
+            if (!p.pierce || p.stopped) {
+              dead = true;
+              break;
+            }
+          }
+          if (p.hitShips && !dead) {
+            for (const s of game.ships) {
+              if (s === p.ownerShip || s.sunk) continue;
+              const on = s.def.length >= BIG_SHIP ? hullGap(s, game.world.dx(s.x, p.x), p.y - s.y) < 0.5 + (p.radius || 0.3) : game.world.dist2(p.x, p.y, s.x, s.y) < (s.def.length * 0.45) ** 2;
+              if (on) {
+                s.damage(p.shipDamage ?? p.damage, p.owner, p);
+                dead = true;
+                break;
+              }
+            }
+          }
+        }
+        if (dead) {
+          p.alive = false;
+          if (p.onEnd) p.onEnd(p, game);
+          this.projectiles.splice(i, 1);
+        }
+      }
+    }
+    /**
+     * A foe's shot about to reach you while you hold a sword: a glint on it,
+     * a tier's cueLead before it gets to you — the moment to turn it aside.
+     */
+    shotGlint(p) {
+      const game = this.game, pl = game.player, o = p.owner;
+      if (!pl || !o || o.isPlayer || o.faction === "player" || p.explodes || p.unblockable || pl.state !== "idle") return;
+      if (!pl.hasWeapon?.("sword") || !this.canHit(o, pl, p)) return;
+      const dx = game.world.dx(p.x, pl.x), dy = pl.y - 0.5 - p.y, d = Math.hypot(dx, dy);
+      const sp = Math.hypot(p.vx, p.vy) || 1;
+      if ((dx * p.vx + dy * p.vy) / (d * sp || 1) < 0.85) return;
+      const T5 = tierOf(game, pl);
+      if (d / sp > T5.cueLead) return;
+      p.cued = true;
+      const k = pl.observation ? 1 : T5.cue;
+      if (k > 0) game.fx.parryCue?.({ x: p.x, y: p.y, z: 0.9, follow: p }, false, k * 0.8);
+    }
+    canHit(owner, target2, h2) {
+      if (!target2.alive || target2 === owner) return false;
+      if (target2.state === "dead") return false;
+      if (target2.state === "knocked" && !h2.hitsDowned) return false;
+      if (h2.friendly) return false;
+      if (owner && owner.faction === "player" && target2.faction === "player") return false;
+      if (!owner) return true;
+      if (target2.invulnerable) return false;
+      if (owner.deck && target2.deck && owner.deck.ship === target2.deck.ship && h2.vx === void 0 && !h2.radial) {
+        if (Math.abs(owner.deck.h + (owner.z || 0) - target2.deck.h - (target2.z || 0)) > 1.6) return false;
+      }
+      if (h2.room && this.game.world.distance(h2.room.x, h2.room.y, target2.x, target2.y) > h2.room.r + (target2.r || 0.3)) return false;
+      if ((owner.flying || target2.flying) && !reachesUp(owner, target2, h2, this.game)) return false;
+      return hostile(owner, target2) || owner.isPlayer && target2.provoked || target2.isPlayer && owner.provoked || h2.hitsAll;
+    }
+    overlaps(h2, a) {
+      const w = this.game.world;
+      const dx = w.dx(h2.x, a.x), dy = a.y - 0.4 - h2.y;
+      const d = Math.hypot(dx, dy);
+      const rr = a.r + 0.15;
+      if (h2.shape === "circle") return d <= h2.range + rr;
+      if (h2.shape === "arc") {
+        if (d > h2.range + rr) return false;
+        if (d < rr + 0.4) return true;
+        return Math.abs(angleDiff(h2.angle, Math.atan2(dy, dx))) <= h2.arc / 2 + rr / Math.max(d, 0.1);
+      }
+      if (h2.shape === "line") {
+        const ca = Math.cos(h2.angle), sa = Math.sin(h2.angle);
+        const along2 = dx * ca + dy * sa;
+        const perp2 = Math.abs(-dx * sa + dy * ca);
+        return along2 >= -rr && along2 <= h2.range + rr && perp2 <= h2.width / 2 + rr;
+      }
+      if (h2.shape === "ring") return Math.abs(d - h2.range) <= (h2.width || 1) / 2 + rr;
+      return false;
+    }
+    hitShips(h2) {
+      for (const s of this.game.ships) {
+        if (s.sunk || s === h2.ownerShip) continue;
+        if (h2.hitShipSet && h2.hitShipSet.has(s.id)) continue;
+        const d = this.game.world.distance(h2.x, h2.y, s.x, s.y);
+        if (s.def.length >= BIG_SHIP ? hullGap(s, this.game.world.dx(s.x, h2.x), h2.y - s.y) < h2.range : d < h2.range + s.def.length * 0.4) {
+          h2.hitShipSet = h2.hitShipSet || /* @__PURE__ */ new Set();
+          h2.hitShipSet.add(s.id);
+          s.damage(h2.shipDamage ?? h2.damage * 0.5, h2.owner, h2);
+        }
+      }
+    }
+    /** Resolve one hit. `h` carries damage, element, knockback, stun, status. */
+    applyHit(att, tgt, h2) {
+      const game = this.game;
+      const fx = game.fx;
+      const now3 = game.env ? game.env.time : game.time;
+      const el = h2.element || "physical";
+      const isPlayerInvolved = att && att.isPlayer || tgt.isPlayer;
+      const ang = h2.angle ?? (att ? Math.atan2(tgt.y - att.y, game.world.dx(att.x, tgt.x)) : 0);
+      const kbAng = h2.shape === "circle" || h2.radial ? Math.atan2(tgt.y - h2.y, game.world.dx(h2.x, tgt.x)) : ang;
+      if (tgt.iframes > 0) {
+        const quiet = (game.time || 0) < (tgt.quietUntil ?? -1);
+        const d = tgt.dash;
+        const perfect = !quiet && !!att && !!d?.dodge && d.t0 - d.t <= PARRY.dodgeWindow && (h2.guardBreak || h2.unblockable || h2.heavy) && h2.vx === void 0 && !h2.blast && att.state === "idle" && game.world.distance(att.x, att.y, tgt.x, tgt.y) < 4 && (tgt.isPlayer || tierOf(game, tgt).npcParry > 0);
+        if (perfect) {
+          tgt.counterOn = att;
+          tgt.counterLeft = PARRY.dodgeCounter;
+          tgt.counterMul = PARRY.dodgeCounterMul;
+          fx.perfectDodge?.(tgt, att);
+          if (tgt.isPlayer) game.hint("perfectdodge", "PERFECT DODGE! Slipping a heavy blow at the last instant leaves them overreaching \u2014 your next strike is a COUNTER.");
+        } else if (!quiet && (tgt.isPlayer || att?.isPlayer)) fx.text(tgt.x, tgt.y - 1.2, "DODGE", "#b2ebf2", 0.32);
+        if (!quiet && tgt.isPlayer) game.emit("playerEvaded", att, h2);
+        return false;
+      }
+      if (tgt.observation && tgt.hakiLevel("observation") > 0 && !h2.unblockable) {
+        const lvl = tgt.hakiLevel("observation");
+        const chance = 0.12 + lvl * 35e-4 - (att?.observation ? 0.15 : 0);
+        if (Math.random() < chance && tgt.haki >= 4) {
+          tgt.haki -= 4;
+          tgt.iframes = 0.2;
+          const side = ang + (Math.random() < 0.5 ? 1 : -1) * Math.PI / 2;
+          if (tgt.state === "idle" && !tgt.onShip && !tgt.climb) tgt.knock(Math.cos(side) * 4.5, Math.sin(side) * 4.5);
+          fx.foresight?.(tgt, att);
+          game.audio?.sfx("foresight", tgt);
+          if (tgt.isPlayer) game.emit("playerEvaded", att, h2);
+          return false;
+        }
+      }
+      if (barrierStops(game, tgt, att, h2)) {
+        h2.stopped = true;
+        fx.ring(tgt.x + Math.cos(tgt.facing) * 0.6, tgt.y + Math.sin(tgt.facing) * 0.45, 0.1, 1, "#b3e5fc", 0.25, 0.08, { z: 0.9, flat: 0.4, add: true });
+        if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, "BARRIER", "#b3e5fc", 0.32);
+        game.audio?.sfx("block", tgt);
+        return false;
+      }
+      const ryou = !!att && hasRyou(att) && h2.vx === void 0 && !h2.isProj && (!h2.element || h2.element === "physical");
+      const armed = att && (att.armament || h2.haki || h2.seastone);
+      const lg2 = tgt.fruitDef && tgt.fruitDef.logia ? tgt.fruitDef : tgt.fakeLogia || null;
+      if (lg2 && !tgt.seastoned && (lg2 === tgt.fakeLogia ? tgt.state !== "knocked" && !tgt.inWater && !tgt.status.freeze : tgt.intangibleOK())) {
+        const weakness = lg2.weakTo || [];
+        const counters = weakness.includes(el) || el === "water" && tgt.status.wet || att && att.status.wet && weakness.includes("water") || !!att?.fruitDef?.rubber && weakness.includes("rubber");
+        if (!armed && !counters && !h2.trueDamage && !h2.ignoreLogia) {
+          fx.burst(tgt.x, tgt.y - 0.7, 8, { color: lg2.color || "#fff", speed: 3, g: 0, life: 0.35, kind: "smoke", size: 0.2 });
+          if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, "INTANGIBLE", lg2.color || "#fff", 0.3);
+          if (att && att.isPlayer) game.hint("logia", att.hakiUnlocked?.() ? "Logia users are intangible. Use Armament Haki, Seastone, or their elemental weakness to hit them." : "Your blows pass straight through them! Logia users are intangible \u2014 Seastone or their elemental weakness can still reach them.");
+          return false;
+        }
+      }
+      const lk2 = tgt.fruitDef?.passive;
+      if (lk2?.logiaLike && !tgt.seastoned && !armed && !h2.trueDamage && !h2.ignoreLogia && tgt.state === "idle" && !tgt.inWater && !tgt.status.freeze && !(lk2.weakTo || []).includes(el) && Math.random() < (lk2.intangible || 0)) {
+        fx.burst(tgt.x, tgt.y - 0.7, 6, { color: tgt.fruitDef.color || "#fff8e1", speed: 2.5, g: 0, life: 0.3, kind: "smoke", size: 0.2 });
+        if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, "MOCHI!", tgt.fruitDef.color || "#fff8e1", 0.3);
+        return false;
+      }
+      let dmg = h2.damage;
+      if (tgt.fruitDef && tgt.fruitDef.rubber && !armed) {
+        if (el === "lightning") {
+          dmg = 0;
+          if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.2, "RUBBER!", "#fff176", 0.34);
+        } else if (!h2.slashing && el === "physical") dmg *= 0.35;
+      }
+      if (tgt.fruitDef && tgt.fruitDef.resist && tgt.fruitDef.resist.includes(el)) dmg *= 0.25;
+      if (tgt.fruitDef && tgt.fruitDef.weakTo && tgt.fruitDef.weakTo.includes(el)) dmg *= 1.5;
+      if (tgt.race === "lunarian" && tgt.flameLit) dmg *= 0.55;
+      if (tgt.armament) dmg *= 1 - hardening(tgt.hakiLevel("armament"));
+      if (ryou) dmg *= 1 + RYOU.internal;
+      dmg *= 1 - (tgt.d ? tgt.d.def : 0);
+      if (tgt.defMul) dmg *= tgt.defMul;
+      const T5 = tierOf(game, tgt);
+      if (att && !att.isPlayer && att.faction !== "player" && (tgt.isPlayer || tgt.faction === "player")) dmg *= T5.dmg;
+      const counter2 = !!att && att.counterOn === tgt && att.counterLeft > 0;
+      if (counter2) dmg *= att.counterMul || PARRY.counterMul;
+      let blocked = false;
+      if (tgt.blocking && !h2.unblockable && !counter2) {
+        const facingDiff = Math.abs(angleDiff(tgt.facing, ang + Math.PI));
+        if (facingDiff < 1.9) {
+          const pw = parryWindow(game, att, tgt);
+          const inWindow = tgt.blockTime <= pw.window;
+          const blast = h2.blast || h2.radial && !h2.follow;
+          const shot = h2.isProj || h2.vx !== void 0;
+          const parryable = !!att && !blast && !h2.guardBreak && (!shot || !h2.explodes && !h2.onEnd && !!tgt.hasWeapon?.("sword"));
+          if (parryable && inWindow && tgt.guardFresh) {
+            this.parry(att, tgt, h2, ang, tgt.blockTime <= pw.perfect);
+            return false;
+          }
+          if (tgt.isPlayer && parryable && inWindow && !tgt.guardFresh) game.hint("mash", "Not a parry \u2014 that guard wasn't fresh. A parry takes one clean press of F as the blow lands: not mashed, not held through your own swing.");
+          blocked = true;
+          if (tgt.isPlayer) game.emit("playerBlocked", att, h2);
+          if (h2.guardBreak) {
+            dmg *= 0.6;
+            tgt.blocking = false;
+            tgt.guardCd = tgt.guardCooldown();
+            tgt.guardBrokenT = now3;
+            tgt.stagger(tgt.isPlayer ? T5.gbStun : 1.1);
+            fx.guardBreak(tgt, att, ang);
+            game.audio?.sfx("guardbreak", tgt);
+            if (tgt.isPlayer) {
+              game.emit("playerGuardBroken", att, h2);
+              game.hint("guardbreak", "GUARD BREAK! A red-glint blow smashes a guard aside \u2014 and it can't come up again until the F slot fills. Dodge (Q) those instead.");
+            }
+          } else {
+            dmg *= ryou ? Math.max(tgt.guardChip(), RYOU.guard) : tgt.guardChip();
+            game.audio?.sfx("block", tgt);
+          }
+        }
+      }
+      dmg = Math.max(0, dmg);
+      const crit = !blocked && h2.critChance && Math.random() < h2.critChance;
+      if (crit) dmg *= 1.6;
+      const final = Math.round(dmg);
+      tgt.takeDamage(final, att, h2, game);
+      const w = blowWeight(att, tgt, h2, final, crit, counter2);
+      if (att?.armament && (!h2.element || h2.element === "physical" || h2.haki)) att.armHitT = now3;
+      if (!blocked) {
+        const kb = (h2.knockback ?? 2) * (tgt.kbResist ?? 1);
+        if (kb > 0) tgt.knock(Math.cos(kbAng) * kb, Math.sin(kbAng) * kb, h2.forceWater);
+        let stun = counter2 ? Math.max(h2.stun || 0, PARRY.counterStun) : h2.stun;
+        if (tgt.isPlayer && stun > T5.stunCap) stun = T5.stunCap;
+        if (stun && (counter2 || !(unshakable(tgt) && !h2.guardBreak && stun < 0.6))) tgt.stagger(stun * (tgt.stunResist ?? 1));
+        if (h2.status) for (const [k, v] of Object.entries(h2.status)) tgt.addStatus(k, v, att);
+        if (h2.launch && !tgt.flying && !tgt.inWater && !tgt.climb && !tgt.onShip && !((tgt.z || 0) > 0.3) && tgt.state === "idle") {
+          tgt.vz = Math.max(tgt.vz || 0, h2.launch * (tgt.boss ? 0.5 : 1));
+          tgt.z = Math.max(tgt.z || 0, 0.02);
+          tgt.airT = 0;
+          tgt.jumpK = 0;
+        }
+        if (tgt.flying && tgt.flight && (h2.heavy || h2.guardBreak || (h2.stun || 0) >= 0.6 || h2.fling)) downFlyer(tgt, game);
+        if (h2.fling && tgt.state === "idle" && !tgt.onShip && !tgt.climb) {
+          const sp = h2.fling * (tgt.boss ? 0.35 : 1);
+          tgt.dash = { vx: Math.cos(kbAng) * sp, vy: Math.sin(kbAng) * sp, t: 1.1, ignoreWater: true, flung: true };
+          tgt.vz = Math.max(tgt.vz || 0, 8);
+          tgt.z = Math.max(tgt.z || 0, 0.02);
+          tgt.airT = 0;
+        }
+        if (h2.onHit) h2.onHit(tgt, att, game, h2);
+        raceHit(att, tgt, h2, game);
+        if (final > 0 || h2.trueDamage) {
+          tgt.hitT = now3;
+          tgt.hitDir = kbAng;
+          tgt.hitW = w;
+        }
+        if (tgt.isPlayer && tgt.state === "idle") this.flurry(tgt, att, kbAng, T5);
+      }
+      if (counter2) {
+        att.counterOn = null;
+        att.counterLeft = 0;
+        att.counterT = now3;
+        fx.counter?.(att, tgt, kbAng, w);
+        if (att.isPlayer) game.emit("playerCounter", tgt, final);
+      }
+      fx.hit(att, tgt, h2, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved, w, counter: counter2, ryou });
+      if (att?.isPlayer) game.emit("playerLanded", tgt, { final, crit, blocked, counter: counter2 });
+      const thud = h2.slashing ? h2.heavy ? "slash_heavy" : "slash_hit" : h2.heavy ? "punch_heavy" : "punch";
+      game.audio?.sfx(blocked ? "block" : h2.sfxHit || (el === "physical" ? thud : el), tgt);
+      return true;
+    }
+    /**
+     * `tgt` parries `att`'s blow: `att` reels, posture broken (the rest of the
+     * move stops), and `tgt`'s next blow on them while they reel is a counter.
+     * A sword against a shot turns it aside instead (nobody reels: the shooter
+     * is over there). A perfect parry reels them longer, makes the counter
+     * harder and gives back health and Haki.
+     */
+    parry(att, tgt, h2, ang, perfect) {
+      const game = this.game, fx = game.fx;
+      const now3 = game.env ? game.env.time : game.time;
+      tgt.parryT = now3;
+      tgt.parryPerfect = perfect;
+      tgt.parryEarned = true;
+      tgt.iframes = Math.max(tgt.iframes, 0.12);
+      tgt.quietUntil = (game.time || 0) + 0.12;
+      if (h2.isProj || h2.vx !== void 0) {
+        fx.deflect?.(tgt, h2, ang, perfect);
+        game.audio?.sfx("parry", tgt);
+        if (tgt.isPlayer) game.onPlayerParry(att);
+        return;
+      }
+      const reel = (att.isPlayer ? PARRY.playerReel : PARRY.reel * (att.boss ? PARRY.bossReel : 1)) + (perfect ? PARRY.perfectReel : 0);
+      this.cancelBlows(att);
+      att.dash = null;
+      att.parriedT = now3;
+      att.stagger(reel);
+      const back = ang + Math.PI;
+      att.knock(Math.cos(back) * 2.5, Math.sin(back) * 2.5);
+      tgt.counterOn = att;
+      tgt.counterLeft = reel;
+      tgt.counterMul = perfect ? PARRY.perfectCounterMul : PARRY.counterMul;
+      if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + (perfect ? PARRY.haki : PARRY.parryHaki));
+      if (perfect && tgt.d) tgt.heal(Math.max(1, Math.round(tgt.d.maxHp * PARRY.heal)), game);
+      fx.parry(tgt, att, ang, perfect);
+      game.audio?.sfx("parry", tgt);
+      if (tgt.isPlayer) {
+        game.onPlayerParry(att);
+        game.hint("parried", "PARRIED! They reel \u2014 strike now: your next blow is a COUNTER, harder and through any guard. Parry at the very last instant for a PERFECT parry.");
+      }
+      if (att.isPlayer) {
+        game.emit("playerParried", tgt);
+        game.hint("foeparry", "Your blow was PARRIED \u2014 you reel, wide open. Out past the Blues, foes read your swings too: don't hammer at a guard that has just come up.");
+      }
+    }
+    /**
+     * No stun-locks: blows landing on you one after another (each within
+     * FLURRY_GAP of the last) are a flurry. After a tier's stunHits of them,
+     * or stunCap seconds of it with you still reeling, you break free: the
+     * stagger shaken off, a moment untouchable, shoved a step clear.
+     */
+    flurry(tgt, att, ang, T5) {
+      const game = this.game, now3 = game.time || 0;
+      const f = tgt.flurryRun || (tgt.flurryRun = { n: 0, t0: now3, last: -Infinity });
+      if (now3 - f.last > FLURRY_GAP) {
+        f.n = 0;
+        f.t0 = now3;
+      }
+      f.n++;
+      f.last = now3;
+      if (!(tgt.hitstun > 0) || f.n < T5.stunHits && now3 - f.t0 < T5.stunCap) return;
+      f.n = 0;
+      f.t0 = now3;
+      f.last = -Infinity;
+      tgt.hitstun = 0;
+      tgt.iframes = Math.max(tgt.iframes, BREAK_IFRAMES);
+      tgt.quietUntil = now3 + BREAK_IFRAMES;
+      tgt.knock(Math.cos(ang) * 3, Math.sin(ang) * 3);
+      game.fx.breakFree?.(tgt);
+      if (tgt.isPlayer) {
+        game.emit("playerBrokeFree", att);
+        game.hint("breakfree", "You shook free of the flurry! Nobody can keep you pinned for long \u2014 use the moment to dodge clear or hit back.");
+      }
+    }
+  };
+
+  // src/render/projectiles.js
+  var TAU2 = Math.PI * 2;
+  var OUT = "rgba(30,20,20,0.85)";
+  function tail(g, a, len, w, col0, col1) {
+    g.save();
+    g.rotate(a);
+    const gr = g.createLinearGradient(0, 0, -len, 0);
+    gr.addColorStop(0, col0);
+    gr.addColorStop(1, col1 || "rgba(255,255,255,0)");
+    g.fillStyle = gr;
+    g.beginPath();
+    g.moveTo(0, -w / 2);
+    g.lineTo(-len, 0);
+    g.lineTo(0, w / 2);
+    g.closePath();
+    g.fill();
+    g.restore();
+  }
+  function glowDisc(g, r4, col2, a = 0.35) {
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    g.globalAlpha *= a;
+    g.fillStyle = col2;
+    g.beginPath();
+    g.arc(0, 0, r4, 0, TAU2);
+    g.fill();
+    g.restore();
+  }
+  function rgbaOf(col2, a) {
+    if (col2 && col2[0] === "#") {
+      let h2 = col2.slice(1);
+      if (h2.length === 3) h2 = h2[0] + h2[0] + h2[1] + h2[1] + h2[2] + h2[2];
+      const n = parseInt(h2, 16);
+      return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+    }
+    return col2;
+  }
+  function fistShape(g, R5, col2, dark) {
+    g.fillStyle = col2;
+    g.strokeStyle = OUT;
+    g.lineWidth = 0.05 * Math.max(1, R5 / 0.3);
+    g.beginPath();
+    g.roundRect(-R5 * 0.9, -R5 * 0.85, R5 * 1.8, R5 * 1.7, R5 * 0.5);
+    g.fill();
+    g.stroke();
+    g.strokeStyle = dark;
+    g.lineWidth = 0.03 * Math.max(1, R5 / 0.3);
+    g.beginPath();
+    for (let k = -1; k <= 1; k++) {
+      g.moveTo(R5 * 0.45, k * R5 * 0.5 - R5 * 0.12);
+      g.lineTo(R5 * 0.85, k * R5 * 0.5 - R5 * 0.12);
+    }
+    g.stroke();
+    g.fillStyle = col2;
+    g.strokeStyle = OUT;
+    g.lineWidth = 0.035 * Math.max(1, R5 / 0.3);
+    g.beginPath();
+    g.ellipse(R5 * 0.1, R5 * 0.62, R5 * 0.5, R5 * 0.25, 0.2, 0, TAU2);
+    g.fill();
+    g.stroke();
+  }
+  function drawProjectile(g) {
+    const p = this;
+    const a = Math.atan2(p.vy, p.vx);
+    const s = p.size || 1;
+    const t = p.t || 0;
+    const sp = Math.hypot(p.vx, p.vy);
+    const lift = -0.5;
+    g.translate(0, lift);
+    switch (p.sprite) {
+      case "gomufist": {
+        const o = p.stretch;
+        const skin = o?.look?.skin || "#f1c9a0";
+        const sleeve = o?.look?.sleeve || skin;
+        const dark = o?.armament ? "#1c1a24" : null;
+        if (o && o.alive) {
+          const w = o.game ? o.game.world : null;
+          const dx = w ? w.dx(p.x, o.x) : o.x - p.x;
+          const dy = o.y - 0.9 - p.y + 0.5;
+          const L3 = Math.hypot(dx, dy) || 1;
+          const wd = Math.min(0.26 * s, 0.16 + 0.04 * s);
+          g.lineCap = "round";
+          g.strokeStyle = OUT;
+          g.lineWidth = wd + 0.07;
+          g.beginPath();
+          g.moveTo(0, 0);
+          g.quadraticCurveTo(dx * 0.5, dy * 0.5 + Math.sin(t * 30) * 0.08, dx, dy);
+          g.stroke();
+          g.strokeStyle = dark || sleeve;
+          g.lineWidth = wd;
+          g.stroke();
+          g.strokeStyle = "rgba(0,0,0,0.18)";
+          g.lineWidth = 0.02;
+          g.beginPath();
+          for (let k = 1; k < Math.min(12, L3 * 2.5); k++) {
+            const u = k / Math.min(12, L3 * 2.5);
+            const x = dx * u, y = dy * u, nx = -dy / L3 * wd * 0.45, ny = dx / L3 * wd * 0.45;
+            g.moveTo(x + nx, y + ny);
+            g.lineTo(x - nx, y - ny);
+          }
+          g.stroke();
+        }
+        g.save();
+        g.rotate(a);
+        if (sp > 10) {
+          g.strokeStyle = "rgba(255,255,255,0.8)";
+          g.lineWidth = 0.03;
+          g.beginPath();
+          for (let k = -1; k <= 1; k++) {
+            g.moveTo(0.35 * s, k * 0.14 * s);
+            g.lineTo(0.35 * s - 0.4, k * 0.16 * s);
+          }
+          g.stroke();
+        }
+        fistShape(g, 0.3 * s, dark || skin, dark ? "#7c4dff" : "rgba(80,40,30,0.45)");
+        if (s >= 3) {
+          g.strokeStyle = "rgba(255,255,255,0.5)";
+          g.lineWidth = 0.06;
+          g.beginPath();
+          g.arc(-0.1 * s, -0.25 * s, 0.25 * s, 3.4, 4.6);
+          g.stroke();
+        }
+        g.restore();
+        break;
+      }
+      case "fireball": {
+        if (s >= 3) {
+          const R5 = 0.55 * s;
+          glowDisc(g, R5 * 1.9, "#ff6d00", 0.35);
+          g.save();
+          g.globalCompositeOperation = "lighter";
+          for (let k = 0; k < 16; k++) {
+            const ang = k / 16 * TAU2 + t * 1.2;
+            const fl2 = 1.18 + 0.2 * Math.sin(t * 11 + k * 1.7);
+            g.fillStyle = k % 2 ? "rgba(255,171,0,0.7)" : "rgba(255,61,0,0.65)";
+            g.beginPath();
+            g.moveTo(Math.cos(ang - 0.18) * R5 * 0.92, Math.sin(ang - 0.18) * R5 * 0.92);
+            g.lineTo(Math.cos(ang) * R5 * fl2, Math.sin(ang) * R5 * fl2);
+            g.lineTo(Math.cos(ang + 0.18) * R5 * 0.92, Math.sin(ang + 0.18) * R5 * 0.92);
+            g.fill();
+          }
+          g.restore();
+          const gr = g.createRadialGradient(-R5 * 0.25, -R5 * 0.25, R5 * 0.1, 0, 0, R5);
+          gr.addColorStop(0, "#fff8e1");
+          gr.addColorStop(0.35, "#ffd54f");
+          gr.addColorStop(0.75, "#ff9100");
+          gr.addColorStop(1, "#e65100");
+          g.fillStyle = gr;
+          g.beginPath();
+          g.arc(0, 0, R5, 0, TAU2);
+          g.fill();
+          break;
+        }
+        tail(g, a, 0.9 * s + sp * 0.03, 0.5 * s, "rgba(255,152,0,0.75)", "rgba(255,87,34,0)");
+        for (let k = 0; k < 3; k++) {
+          g.fillStyle = ["rgba(255,87,34,0.6)", "rgba(255,152,0,0.85)", "rgba(255,241,118,0.95)"][k];
+          g.beginPath();
+          g.ellipse(-Math.cos(a) * 0.1 * (2 - k), -Math.sin(a) * 0.1 * (2 - k), (0.36 - k * 0.09) * s * (1 + 0.08 * Math.sin(t * 30 + k)), (0.3 - k * 0.07) * s, a, 0, TAU2);
+          g.fill();
+        }
+        break;
+      }
+      case "firefist": {
+        g.save();
+        g.rotate(a);
+        g.globalCompositeOperation = "lighter";
+        for (let k = 0; k < 4; k++) {
+          const L3 = (1.3 - k * 0.22) * s, W4 = (0.62 - k * 0.12) * s;
+          g.fillStyle = ["rgba(255,61,0,0.45)", "rgba(255,109,0,0.6)", "rgba(255,171,0,0.75)", "rgba(255,241,118,0.9)"][k];
+          g.beginPath();
+          g.moveTo(W4 * 0.7, 0);
+          g.quadraticCurveTo(W4 * 0.6, -W4, -L3 * 0.4, -W4 * (0.7 + 0.1 * Math.sin(t * 25 + k)));
+          g.quadraticCurveTo(-L3 * 0.7, -W4 * 0.3, -L3, Math.sin(t * 20 + k) * W4 * 0.2);
+          g.quadraticCurveTo(-L3 * 0.7, W4 * 0.3, -L3 * 0.4, W4 * (0.7 + 0.1 * Math.cos(t * 25 + k)));
+          g.quadraticCurveTo(W4 * 0.6, W4, W4 * 0.7, 0);
+          g.fill();
+        }
+        g.globalCompositeOperation = "source-over";
+        g.globalAlpha *= 0.75;
+        fistShape(g, 0.24 * s, "#ff7043", "rgba(120,20,0,0.6)");
+        g.restore();
+        break;
+      }
+      case "magmafist": {
+        g.save();
+        g.rotate(a);
+        tail(g, 0, 0.9 * s, 0.7 * s, "rgba(62,39,35,0.8)", "rgba(62,39,35,0)");
+        glowDisc(g, 0.6 * s, "#ff6f00", 0.35);
+        fistShape(g, 0.34 * s, "#4e342e", "rgba(0,0,0,0.4)");
+        g.strokeStyle = "#ffab40";
+        g.lineWidth = 0.035 * s;
+        g.lineCap = "round";
+        g.beginPath();
+        for (let k = 0; k < 5; k++) {
+          const x0 = Math.sin(k * 3.1) * 0.25 * s, y0 = Math.cos(k * 2.3) * 0.25 * s;
+          g.moveTo(x0, y0);
+          g.lineTo(x0 + Math.cos(k * 1.9) * 0.18 * s, y0 + Math.sin(k * 1.9) * 0.18 * s);
+        }
+        g.stroke();
+        g.fillStyle = "#ff9100";
+        for (let k = 0; k < 3; k++) {
+          const ph = (t * 3 + k / 3) % 1;
+          g.globalAlpha = 1 - ph;
+          g.beginPath();
+          g.arc(-0.2 * s - ph * 0.6, (k - 1) * 0.2 * s + ph * 0.3, 0.06 * s, 0, TAU2);
+          g.fill();
+        }
+        g.restore();
+        break;
+      }
+      case "iceshard": {
+        g.rotate(a);
+        tail(g, 0, 0.5 * s + sp * 0.02, 0.2 * s, rgbaOf(p.color || "#b3e5fc", 0.5));
+        g.fillStyle = p.color || "#b3e5fc";
+        g.strokeStyle = p.color && p.color !== "#b3e5fc" ? OUT : "#e1f5fe";
+        g.lineWidth = 0.035;
+        g.beginPath();
+        g.moveTo(0.5 * s, 0);
+        g.lineTo(-0.25 * s, -0.15 * s);
+        g.lineTo(-0.45 * s, 0);
+        g.lineTo(-0.25 * s, 0.15 * s);
+        g.closePath();
+        g.fill();
+        g.stroke();
+        g.fillStyle = "rgba(255,255,255,0.75)";
+        g.beginPath();
+        g.moveTo(0.45 * s, -0.01);
+        g.lineTo(-0.2 * s, -0.11 * s);
+        g.lineTo(-0.1 * s, 0);
+        g.closePath();
+        g.fill();
+        break;
+      }
+      case "bird": {
+        g.rotate(a);
+        const col2 = p.color || "#b3e5fc";
+        const flap = Math.sin(t * 20);
+        glowDisc(g, 0.7 * s, col2, 0.3);
+        tail(g, 0, 1.1 * s, 0.5 * s, rgbaOf(col2, 0.55));
+        g.fillStyle = col2;
+        g.strokeStyle = "rgba(255,255,255,0.8)";
+        g.lineWidth = 0.03;
+        for (const sy of [-1, 1]) {
+          g.beginPath();
+          g.moveTo(0.1 * s, 0);
+          g.quadraticCurveTo(-0.15 * s, sy * (0.55 + 0.2 * flap * sy) * s, -0.55 * s, sy * (0.6 + 0.25 * flap * sy) * s);
+          g.quadraticCurveTo(-0.3 * s, sy * 0.25 * s, -0.25 * s, 0);
+          g.closePath();
+          g.fill();
+          g.stroke();
+        }
+        g.beginPath();
+        g.ellipse(0, 0, 0.35 * s, 0.14 * s, 0, 0, TAU2);
+        g.fill();
+        g.beginPath();
+        g.moveTo(0.35 * s, -0.06 * s);
+        g.lineTo(0.6 * s, 0);
+        g.lineTo(0.35 * s, 0.06 * s);
+        g.fill();
+        g.fillStyle = "#ffffff";
+        g.beginPath();
+        g.arc(0.22 * s, -0.04 * s, 0.03 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "airslash": {
+        g.rotate(a);
+        const col2 = p.color || "#e3f2fd";
+        g.lineCap = "round";
+        g.strokeStyle = rgbaOf(col2, 0.4);
+        g.lineWidth = 0.03;
+        g.beginPath();
+        for (let k = -1; k <= 1; k++) {
+          g.moveTo(-0.3 * s, k * 0.3 * s);
+          g.lineTo(-1.1 * s, k * 0.35 * s);
+        }
+        g.stroke();
+        const R5 = 0.7 * s;
+        const gr = g.createLinearGradient(0, -R5, 0, R5);
+        gr.addColorStop(0, rgbaOf(col2, 0));
+        gr.addColorStop(0.5, rgbaOf(col2, 0.95));
+        gr.addColorStop(1, rgbaOf(col2, 0));
+        g.fillStyle = gr;
+        g.beginPath();
+        g.arc(-0.45 * s, 0, R5, -1.15, 1.15);
+        g.arc(-0.62 * s, 0, R5 * 0.9, 1.05, -1.05, true);
+        g.closePath();
+        g.fill();
+        g.strokeStyle = "rgba(255,255,255,0.95)";
+        g.lineWidth = 0.045 * s;
+        g.beginPath();
+        g.arc(-0.45 * s, 0, R5, -0.9, 0.9);
+        g.stroke();
+        break;
+      }
+      case "bullet": {
+        g.rotate(a);
+        const L3 = Math.min(1.6, 0.3 + sp * 0.04);
+        const gr = g.createLinearGradient(0, 0, -L3, 0);
+        gr.addColorStop(0, "rgba(255,248,225,0.95)");
+        gr.addColorStop(0.3, "rgba(255,213,79,0.6)");
+        gr.addColorStop(1, "rgba(255,213,79,0)");
+        g.fillStyle = gr;
+        g.fillRect(-L3, -0.03, L3, 0.06);
+        g.fillStyle = "#ffffff";
+        g.fillRect(-0.12, -0.012, 0.12, 0.024);
+        g.fillStyle = "#546e7a";
+        g.beginPath();
+        g.arc(0, 0, 0.065, 0, TAU2);
+        g.fill();
+        g.fillStyle = "rgba(255,255,255,0.7)";
+        g.beginPath();
+        g.arc(-0.015, -0.02, 0.02, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "cannonball": {
+        tail(g, a, 0.8 * s, 0.35 * s, "rgba(120,120,120,0.45)", "rgba(120,120,120,0)");
+        g.fillStyle = "#212121";
+        g.strokeStyle = OUT;
+        g.lineWidth = 0.04;
+        g.beginPath();
+        g.arc(0, 0, 0.22 * s, 0, TAU2);
+        g.fill();
+        g.stroke();
+        g.fillStyle = "#757575";
+        g.beginPath();
+        g.arc(-0.07 * s, -0.07 * s, 0.07 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "bomb": {
+        g.fillStyle = "#263238";
+        g.strokeStyle = OUT;
+        g.lineWidth = 0.04;
+        g.beginPath();
+        g.arc(0, 0, 0.25 * s, 0, TAU2);
+        g.fill();
+        g.stroke();
+        g.fillStyle = "#546e7a";
+        g.beginPath();
+        g.arc(-0.08 * s, -0.08 * s, 0.07 * s, 0, TAU2);
+        g.fill();
+        g.strokeStyle = "#8d6e63";
+        g.lineWidth = 0.04;
+        g.beginPath();
+        g.moveTo(0.1 * s, -0.2 * s);
+        g.quadraticCurveTo(0.2 * s, -0.32 * s, 0.14 * s, -0.4 * s);
+        g.stroke();
+        g.save();
+        g.globalCompositeOperation = "lighter";
+        g.fillStyle = Math.sin(t * 30) > 0 ? "#ffeb3b" : "#ff7043";
+        g.beginPath();
+        g.arc(0.14 * s, -0.42 * s, 0.07 + 0.03 * Math.sin(t * 40), 0, TAU2);
+        g.fill();
+        g.restore();
+        break;
+      }
+      case "sandblade": {
+        g.rotate(a);
+        g.fillStyle = "rgba(225,193,110,0.85)";
+        g.strokeStyle = "rgba(141,110,99,0.7)";
+        g.lineWidth = 0.03;
+        g.beginPath();
+        g.moveTo(0.5 * s, 0);
+        g.quadraticCurveTo(0, -0.8 * s, -0.5 * s, -0.62 * s);
+        g.quadraticCurveTo(-0.1, 0, -0.5 * s, 0.62 * s);
+        g.quadraticCurveTo(0, 0.8 * s, 0.5 * s, 0);
+        g.fill();
+        g.stroke();
+        g.fillStyle = "#d7b56d";
+        for (let k = 0; k < 8; k++) {
+          const ph = (t * 4 + k / 8) % 1;
+          g.globalAlpha = 1 - ph;
+          g.fillRect(-0.4 * s - ph * 0.9, Math.sin(k * 7.3) * 0.6 * s, 0.05, 0.05);
+        }
+        g.globalAlpha = 1;
+        break;
+      }
+      case "smokefist": {
+        for (let k = 0; k < 5; k++) {
+          const r4 = (0.5 - k * 0.07) * s;
+          g.fillStyle = k ? `rgba(236,239,241,${0.85 - k * 0.14})` : "rgba(255,255,255,0.95)";
+          g.beginPath();
+          g.arc(-Math.cos(a) * k * 0.22 * s + Math.sin(t * 9 + k) * 0.03, -Math.sin(a) * k * 0.22 * s, r4, 0, TAU2);
+          g.fill();
+        }
+        g.save();
+        g.rotate(a);
+        g.globalAlpha *= 0.35;
+        fistShape(g, 0.22 * s, "#cfd8dc", "rgba(0,0,0,0.2)");
+        g.restore();
+        break;
+      }
+      case "smokesnake": {
+        g.rotate(a);
+        for (let k = 7; k >= 0; k--) {
+          const x = -k * 0.16 * s, y = Math.sin(t * 12 - k * 0.9) * 0.14 * s;
+          g.fillStyle = `rgba(236,239,241,${0.95 - k * 0.09})`;
+          g.beginPath();
+          g.arc(x, y, (0.26 - k * 0.018) * s, 0, TAU2);
+          g.fill();
+        }
+        g.fillStyle = "#ffffff";
+        g.beginPath();
+        g.ellipse(0.12 * s, 0, 0.26 * s, 0.2 * s, 0, 0, TAU2);
+        g.fill();
+        g.fillStyle = "#546e7a";
+        g.beginPath();
+        g.arc(0.2 * s, -0.08 * s, 0.035 * s, 0, TAU2);
+        g.arc(0.2 * s, 0.08 * s, 0.035 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "lightorb": {
+        g.save();
+        g.rotate(a);
+        const L3 = 1.4 * s + sp * 0.04;
+        const gr = g.createLinearGradient(0, 0, -L3, 0);
+        gr.addColorStop(0, "rgba(255,253,231,0.95)");
+        gr.addColorStop(1, "rgba(255,245,157,0)");
+        g.fillStyle = gr;
+        g.fillRect(-L3, -0.08 * s, L3, 0.16 * s);
+        g.restore();
+        glowDisc(g, 0.45 * s, "#fff59d", 0.5);
+        g.fillStyle = "#ffffff";
+        g.beginPath();
+        g.arc(0, 0, 0.16 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "darkorb": {
+        g.fillStyle = "rgba(49,27,146,0.55)";
+        g.beginPath();
+        g.arc(0, 0, 0.55 * s, 0, TAU2);
+        g.fill();
+        g.strokeStyle = "#b388ff";
+        g.lineWidth = 0.035;
+        for (let k = 0; k < 3; k++) {
+          g.beginPath();
+          g.arc(0, 0, (0.4 + k * 0.06) * s, t * 6 + k * 2, t * 6 + k * 2 + 2);
+          g.stroke();
+        }
+        g.fillStyle = "#000";
+        g.beginPath();
+        g.arc(0, 0, 0.32 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "thunder": {
+        if (s >= 2) {
+          g.save();
+          g.rotate(a);
+          g.globalCompositeOperation = "lighter";
+          const segs = 9;
+          for (const [col2, lw] of [["rgba(255,241,118,0.45)", 0.4 * s], ["#fff59d", 0.16 * s], ["#ffffff", 0.06 * s]]) {
+            g.strokeStyle = col2;
+            g.lineWidth = lw;
+            g.lineJoin = "round";
+            g.lineCap = "round";
+            g.beginPath();
+            for (let k = 0; k <= segs; k++) {
+              const x = -k * 0.28 * s, y = Math.sin(t * 14 - k * 0.8) * 0.3 * s + ((k * 7 + Math.floor(t * 20)) % 5 - 2) * 0.03 * s;
+              if (k) g.lineTo(x, y);
+              else g.moveTo(x, y);
+            }
+            g.stroke();
+          }
+          g.fillStyle = "#fffde7";
+          g.beginPath();
+          g.ellipse(0.1 * s, 0, 0.32 * s, 0.22 * s, 0, 0, TAU2);
+          g.fill();
+          g.strokeStyle = "#fff176";
+          g.lineWidth = 0.05 * s;
+          g.beginPath();
+          g.moveTo(0, -0.15 * s);
+          g.lineTo(-0.25 * s, -0.4 * s);
+          g.moveTo(0, 0.15 * s);
+          g.lineTo(-0.25 * s, 0.4 * s);
+          g.stroke();
+          g.fillStyle = "#ffab00";
+          g.beginPath();
+          g.arc(0.22 * s, -0.07 * s, 0.04 * s, 0, TAU2);
+          g.fill();
+          g.restore();
+          break;
+        }
+        glowDisc(g, 0.55 * s, "#fff176", 0.35);
+        g.save();
+        g.globalCompositeOperation = "lighter";
+        g.strokeStyle = "#fff176";
+        g.lineWidth = 0.06;
+        g.beginPath();
+        for (let k = 0; k < 6; k++) {
+          const aa = k / 6 * TAU2 + Math.floor(t * 20) * 0.7;
+          g.moveTo(0, 0);
+          g.lineTo(Math.cos(aa) * 0.3 * s, Math.sin(aa) * 0.3 * s);
+          g.lineTo(Math.cos(aa + 0.4) * 0.5 * s, Math.sin(aa + 0.4) * 0.5 * s);
+        }
+        g.stroke();
+        g.restore();
+        g.fillStyle = "#fffde7";
+        g.beginPath();
+        g.arc(0, 0, 0.2 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "waterdrop": {
+        tail(g, a, 0.5 * s + sp * 0.02, 0.2 * s, "rgba(129,212,250,0.7)");
+        g.save();
+        g.rotate(a);
+        g.fillStyle = p.color || "#4fc3f7";
+        g.beginPath();
+        g.moveTo(0.18 * s, 0);
+        g.quadraticCurveTo(0, -0.14 * s, -0.16 * s, 0);
+        g.quadraticCurveTo(0, 0.14 * s, 0.18 * s, 0);
+        g.fill();
+        g.fillStyle = "#e1f5fe";
+        g.beginPath();
+        g.arc(0.02, -0.04, 0.045 * s, 0, TAU2);
+        g.fill();
+        g.restore();
+        break;
+      }
+      case "shockwave": {
+        g.rotate(a);
+        const col2 = p.color || "#e0f7fa";
+        g.lineCap = "round";
+        for (let k = 0; k < 4; k++) {
+          const ph = (t * 3 + k * 0.25) % 1;
+          g.globalAlpha = (1 - k * 0.2) * (0.6 + 0.4 * Math.sin(ph * Math.PI));
+          g.strokeStyle = k ? col2 : "#ffffff";
+          g.lineWidth = (0.12 - k * 0.02) * Math.max(1, s * 0.8);
+          g.beginPath();
+          g.arc(-k * 0.22 * s, 0, (0.45 + k * 0.12) * s, -1.15, 1.15);
+          g.stroke();
+        }
+        g.globalAlpha = 1;
+        break;
+      }
+      case "star": {
+        tail(g, a, 0.5 * s, 0.18 * s, rgbaOf(p.color || "#ffeb3b", 0.55));
+        g.fillStyle = p.color || "#ffeb3b";
+        g.strokeStyle = OUT;
+        g.lineWidth = 0.03;
+        g.rotate(t * 12);
+        g.beginPath();
+        for (let k = 0; k < 10; k++) {
+          const rr = k % 2 ? 0.1 * s : 0.25 * s;
+          g.lineTo(Math.cos(k * TAU2 / 10) * rr, Math.sin(k * TAU2 / 10) * rr);
+        }
+        g.closePath();
+        g.fill();
+        g.stroke();
+        break;
+      }
+      case "hydra": {
+        g.save();
+        g.rotate(a);
+        g.strokeStyle = "rgba(106,27,154,0.85)";
+        g.lineWidth = 0.34 * s;
+        g.lineCap = "round";
+        g.beginPath();
+        g.moveTo(-1.2 * s, Math.sin(t * 8) * 0.2 * s);
+        g.quadraticCurveTo(-0.6 * s, Math.cos(t * 8) * 0.25 * s, 0, 0);
+        g.stroke();
+        g.strokeStyle = "rgba(171,71,188,0.8)";
+        g.lineWidth = 0.14 * s;
+        g.stroke();
+        g.fillStyle = "#7b1fa2";
+        g.strokeStyle = OUT;
+        g.lineWidth = 0.035;
+        g.beginPath();
+        g.moveTo(0.55 * s, -0.08 * s);
+        g.quadraticCurveTo(0.2 * s, -0.4 * s, -0.2 * s, -0.25 * s);
+        g.quadraticCurveTo(-0.25 * s, 0, -0.2 * s, 0.25 * s);
+        g.quadraticCurveTo(0.2 * s, 0.4 * s, 0.55 * s, 0.08 * s);
+        g.closePath();
+        g.fill();
+        g.stroke();
+        g.fillStyle = "#aed581";
+        g.beginPath();
+        g.arc(0.15 * s, -0.16 * s, 0.05 * s, 0, TAU2);
+        g.arc(0.15 * s, 0.16 * s, 0.05 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "rgba(174,213,129,0.8)";
+        for (let k = 0; k < 3; k++) {
+          const ph = (t * 2 + k / 3) % 1;
+          g.beginPath();
+          g.arc(0.3 * s - ph * 0.5, 0.2 * s + ph * 0.4, 0.04 * s, 0, TAU2);
+          g.fill();
+        }
+        g.restore();
+        break;
+      }
+      case "poison": {
+        g.fillStyle = "rgba(123,31,162,0.8)";
+        g.beginPath();
+        g.arc(0, 0, 0.4 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "rgba(174,213,129,0.8)";
+        g.beginPath();
+        g.arc(0.08, -0.08, 0.15 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "string": {
+        g.rotate(a);
+        g.strokeStyle = p.color || "#f8bbd0";
+        g.lineWidth = 0.025;
+        for (let k = -2; k <= 2; k++) {
+          g.beginPath();
+          g.moveTo(-1.4, k * 0.07);
+          g.quadraticCurveTo(-0.6, k * 0.05 + Math.sin(t * 20 + k) * 0.03, 0.3, k * 0.015);
+          g.stroke();
+        }
+        g.fillStyle = "#ffffff";
+        g.beginPath();
+        g.moveTo(0.42, 0);
+        g.lineTo(0.28, -0.04);
+        g.lineTo(0.28, 0.04);
+        g.fill();
+        break;
+      }
+      case "paw": {
+        const wob = 1 + 0.05 * Math.sin(t * 14);
+        g.fillStyle = "rgba(255,255,255,0.22)";
+        g.strokeStyle = "rgba(255,255,255,0.9)";
+        g.lineWidth = 0.045;
+        g.beginPath();
+        g.ellipse(0, 0.08 * s, 0.36 * s * wob, 0.32 * s / wob, 0, 0, TAU2);
+        g.fill();
+        g.stroke();
+        for (let k = 0; k < 3; k++) {
+          g.beginPath();
+          g.ellipse((k - 1) * 0.22 * s, -0.3 * s - (k === 1 ? 0.05 * s : 0), 0.1 * s, 0.12 * s, 0, 0, TAU2);
+          g.fill();
+          g.stroke();
+        }
+        g.fillStyle = "rgba(255,255,255,0.7)";
+        g.beginPath();
+        g.arc(-0.14 * s, -0.02 * s, 0.06 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "petal": {
+        g.fillStyle = "#f48fb1";
+        for (let k = 0; k < 5; k++) {
+          g.save();
+          g.rotate(k * TAU2 / 5 + t * 5);
+          g.beginPath();
+          g.ellipse(0.15, 0, 0.14, 0.07, 0, 0, TAU2);
+          g.fill();
+          g.restore();
+        }
+        g.fillStyle = "#fff59d";
+        g.beginPath();
+        g.arc(0, 0, 0.05, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "ghost": {
+        const bob = Math.sin(t * 8) * 0.05;
+        g.translate(0, bob);
+        const col2 = p.color || "#e1bee7";
+        glowDisc(g, 0.5 * s, col2, 0.25);
+        g.fillStyle = rgbaOf(col2, 0.85);
+        g.strokeStyle = "rgba(123,31,162,0.6)";
+        g.lineWidth = 0.03;
+        g.beginPath();
+        g.arc(0, -0.05 * s, 0.3 * s, Math.PI, 0);
+        const dir = Math.cos(a) >= 0 ? -1 : 1;
+        g.quadraticCurveTo(0.3 * s, 0.25 * s, dir * 0.15 * s + 0.1 * s, 0.3 * s);
+        g.quadraticCurveTo(dir * 0.5 * s, 0.45 * s + Math.sin(t * 10) * 0.05, dir * 0.55 * s, 0.25 * s);
+        g.quadraticCurveTo(-0.1 * s, 0.35 * s, -0.3 * s, -0.05 * s);
+        g.closePath();
+        g.fill();
+        g.stroke();
+        g.fillStyle = "#4a148c";
+        g.beginPath();
+        g.ellipse(-0.1 * s, -0.08 * s, 0.045 * s, 0.07 * s, 0, 0, TAU2);
+        g.ellipse(0.1 * s, -0.08 * s, 0.045 * s, 0.07 * s, 0, 0, TAU2);
+        g.fill();
+        g.strokeStyle = "#4a148c";
+        g.lineWidth = 0.025;
+        g.beginPath();
+        g.arc(0, 0.05 * s, 0.06 * s, 0.2, Math.PI - 0.2);
+        g.stroke();
+        break;
+      }
+      case "bat": {
+        g.rotate(a);
+        const flap = Math.sin(t * 28);
+        g.fillStyle = "#1c1b22";
+        g.strokeStyle = "#000";
+        g.lineWidth = 0.02;
+        for (const sy of [-1, 1]) {
+          g.beginPath();
+          g.moveTo(0.05 * s, 0);
+          g.quadraticCurveTo(-0.05 * s, sy * (0.35 + 0.2 * flap) * s, -0.3 * s, sy * (0.45 + 0.25 * flap) * s);
+          g.lineTo(-0.2 * s, sy * 0.2 * s);
+          g.lineTo(-0.3 * s, sy * 0.12 * s);
+          g.lineTo(-0.12 * s, 0);
+          g.closePath();
+          g.fill();
+          g.stroke();
+        }
+        g.beginPath();
+        g.ellipse(0.02 * s, 0, 0.16 * s, 0.1 * s, 0, 0, TAU2);
+        g.fill();
+        g.fillStyle = "#ff1744";
+        g.beginPath();
+        g.arc(0.1 * s, -0.035 * s, 0.022 * s, 0, TAU2);
+        g.arc(0.1 * s, 0.035 * s, 0.022 * s, 0, TAU2);
+        g.fill();
+        break;
+      }
+      case "mochi": {
+        g.save();
+        g.rotate(a);
+        tail(g, 0, 0.8 * s, 0.6 * s, "rgba(255,248,225,0.6)");
+        g.fillStyle = "#fff8e1";
+        g.strokeStyle = "#bcaaa4";
+        g.lineWidth = 0.04;
+        g.beginPath();
+        g.ellipse(0, 0, 0.42 * s, 0.34 * s, 0, 0, TAU2);
+        g.fill();
+        g.stroke();
+        g.strokeStyle = "#d7ccc8";
+        g.lineWidth = 0.03;
+        g.beginPath();
+        for (let k = -1; k <= 1; k++) {
+          g.moveTo(0.18 * s, k * 0.13 * s);
+          g.lineTo(0.36 * s, k * 0.12 * s);
+        }
+        g.stroke();
+        g.fillStyle = "rgba(255,255,255,0.8)";
+        g.beginPath();
+        g.ellipse(-0.1 * s, -0.14 * s, 0.14 * s, 0.07 * s, -0.3, 0, TAU2);
+        g.fill();
+        g.restore();
+        break;
+      }
+      case "barafist": {
+        g.save();
+        g.rotate(a);
+        tail(g, 0, 0.6 * s, 0.3 * s, "rgba(255,255,255,0.5)");
+        g.fillStyle = "#90caf9";
+        g.fillRect(-0.42 * s, -0.12 * s, 0.22 * s, 0.24 * s);
+        fistShape(g, 0.26 * s, p.color && p.color !== "#ffccbc" ? p.color : "#f1c9a0", "rgba(80,40,30,0.45)");
+        g.strokeStyle = "#ffffff";
+        g.lineWidth = 0.025;
+        g.beginPath();
+        g.moveTo(-0.2 * s, -0.14 * s);
+        g.lineTo(-0.2 * s, 0.14 * s);
+        g.stroke();
+        g.restore();
+        break;
+      }
+      default: {
+        const col2 = p.color || "#ffffff";
+        tail(g, a, 0.5 * s + sp * 0.02, 0.4 * s, rgbaOf(col2, 0.45));
+        glowDisc(g, 0.42 * s, col2, 0.3);
+        g.fillStyle = col2;
+        g.beginPath();
+        g.arc(0, 0, 0.25 * s, 0, TAU2);
+        g.fill();
+        g.fillStyle = "rgba(255,255,255,0.8)";
+        g.beginPath();
+        g.arc(-0.06 * s, -0.06 * s, 0.08 * s, 0, TAU2);
+        g.fill();
+      }
+    }
+  }
+
+  // src/game/abilities.js
+  var REG = /* @__PURE__ */ new Map();
+  function registerAbilities(list, source) {
+    for (const a of list) {
+      a.source = a.source || source;
+      REG.set(a.id, a);
+    }
+  }
+  var getAbility = (id) => REG.get(id);
+  function abilityTotal(def) {
+    const last = Math.max(0, ...(def.steps || []).map((s) => (s.at ?? def.windup ?? 0) + (s.dash ? s.dash.time : 0) + (s.hit ? s.hit.duration ?? 0.1 : 0)));
+    return Math.max((def.windup ?? 0) + (def.active ?? 0.1), last) + (def.recover ?? 0.2);
+  }
+  function powerFor(actor, def) {
+    const src = def.source || "";
+    if (actor.dmgOverride) return actor.dmgOverride * actor.buffMul("damage");
+    const str = actor.d ? actor.d.dmg : 1;
+    let m = 1;
+    if (src.startsWith("fruit")) {
+      const fm = actor.fruitMastery || 0;
+      m = (0.7 + str * 0.35) * (1 + fm * 0.022);
+    } else if (src.startsWith("haki")) {
+      m = (0.6 + str * 0.3) * (1 + (actor.hakiLevel(def.hakiType || "armament") || 0) * 0.02) * (1 + (actor.attrs?.wil || 0) * 0.01);
+    } else {
+      const sm2 = actor.styleMastery ? actor.styleMastery(def.style || actor.style) : 0;
+      m = str * (1 + sm2 * 0.012);
+      if (def.weapon && actor.weaponMul) m *= actor.weaponMul(def.weapon);
+      if (actor.weaponMastery) m *= 1 + (actor.weaponMastery[weaponKindOf(actor, def)] || 0) * 6e-3;
+    }
+    if (actor.race === "skypiean" && def.id?.startsWith("dial_")) m *= 1.25;
+    m *= actor.buffMul("damage");
+    if (actor.armament && !src.startsWith("fruit_ranged")) m *= 1.25 + (actor.hakiLevel("armament") || 0) * 4e-3;
+    if (actor.conquerorInfused) m *= 1.4;
+    return m;
+  }
+  function weaponKindOf(actor, def) {
+    if (def.weaponKind) return def.weaponKind;
+    if (def.weapon) return def.weapon;
+    const src = def.source || "";
+    if (src.startsWith("style")) {
+      const st = def.style || actor.style;
+      if (/ittoryu|nitoryu|santoryu/.test(st)) return actor.hasWeapon?.("sword") ? "sword" : "fists";
+      if (st === "sniper") return actor.hasWeapon?.("gun") ? "gun" : "fists";
+      if (st === "weather_science") return actor.hasWeapon?.("staff") ? "staff" : "fists";
+      if (st === "elbaf") return actor.hasWeapon?.("axe") ? "axe" : "fists";
+      if (st === "black_leg" || st === "okama_kenpo") return "legs";
+    }
+    return "fists";
+  }
+  function canUse(actor, def) {
+    if (!def) return false;
+    if ((actor.cooldowns[def.id] || 0) > 0) return false;
+    const c = def.cost || {};
+    if (c.haki && actor.haki < c.haki) return false;
+    if (def.source?.startsWith("fruit") && (actor.inWater || actor.seastoned)) return false;
+    if (def.source?.startsWith("haki") && actor.buffs?.some((b) => b.noHaki)) return false;
+    if (def.weapon && !actor.hasWeapon(def.weapon, def.style)) return false;
+    if (def.requiresBuff && !actor.hasBuff(def.requiresBuff)) return false;
+    if (def.room === "need" && !ownRoom(actor)) return false;
+    return true;
+  }
+  var isDamaging = (s) => !!(s.hit || s.proj || s.zone && s.zone.damage > 0 || s.dash?.hit || s.power?.blow);
+  var breaksGuard = (s) => !!(s.hit?.guardBreak || s.hit?.unblockable || s.dash?.hit?.guardBreak || s.dash?.hit?.unblockable || s.proj?.unblockable || s.power?.unblockable);
+  function firstBlow(def) {
+    return (def.steps || []).findIndex(isDamaging);
+  }
+  function startAbility(actor, def, game, target2) {
+    const c = def.cost || {};
+    if (c.haki) actor.haki -= c.haki;
+    const cdMul = actor.cdMul ?? 1;
+    if (def.cd) actor.cooldowns[def.id] = def.cd * cdMul;
+    const angle = actor.facing;
+    const tx = target2 ? target2.x : actor.x + Math.cos(angle) * 5;
+    const ty = target2 ? target2.y : actor.y + Math.sin(angle) * 5;
+    actor.action = { def, t: 0, step: 0, angle, tx, ty, target: target2, total: abilityTotal(def) / (def.noSpeedup ? 1 : actor.atkSpeed()), mult: powerFor(actor, def) };
+    if (actor.counterLeft > 0) actor.action.counter = true;
+    if (def.room) {
+      const z = ownRoom(actor, game);
+      if (z) actor.action.room = z;
+      else if (def.room === "weak") {
+        actor.action.mult *= 0.5;
+        if (actor.isPlayer) game.hint?.("roomweak", `${def.name} is only half as strong outside your ROOM. Cast ROOM first, then fight inside it.`);
+      }
+    }
+    if (!actor.isPlayer && actor.faction !== "player") {
+      readable(actor, actor.action, game);
+      const p = game.player;
+      if (p?.observation && p !== actor && (target2 === p || actor.controller?.target === p) && firstBlow(def) >= 0) game.fx.sensed?.(actor, p);
+    }
+    if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, "#ffffff", 0.34, { life: 1.2 });
+    if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
+    if (def.onStart) def.onStart(actor, game);
+    game.audio?.sfx(def.sfxStart || "whoosh", actor);
+  }
+  function readable(actor, a, game) {
+    const def = a.def, i = firstBlow(def);
+    if (i < 0) return;
+    const s = def.steps[i];
+    const T5 = tierOf(game, actor);
+    const speed2 = def.noSpeedup ? 1 : actor.atkSpeed();
+    const at4 = s.at ?? def.windup ?? 0;
+    const w = at4 / speed2;
+    const want = stretchWindup(T5, w, !!def.chained);
+    a.hitAt = at4;
+    a.slow = w > 1e-3 && want > w ? want / w : 1;
+    a.breaks = breaksGuard(s) || !!s.zone;
+    a.shot = !!s.proj;
+    const who = a.target || actor.controller?.target;
+    let travel2 = 0;
+    if (s.dash && who) travel2 = Math.max(0, game.world.distance(actor.x, actor.y, who.x, who.y) - 1) / Math.max(1, s.dash.dist / s.dash.time);
+    const real = Math.max(0, want + travel2 - T5.cueLead);
+    a.cueT = want > 0 && real <= want ? real / want * at4 : at4 + Math.max(0, real - want) * speed2;
+  }
+  function glint(actor, a, game) {
+    const p = game.player;
+    if (!p || p === actor || p.state !== "idle") return;
+    const who = a.target || actor.controller?.target;
+    if (who !== p || game.world.distance(actor.x, actor.y, p.x, p.y) > (a.shot ? 14 : 10)) return;
+    if (a.shot && !a.breaks && p.hasWeapon?.("sword")) return;
+    const T5 = tierOf(game, p);
+    const k = p.observation ? 1 : T5.cue;
+    if (!(k > 0)) return;
+    game.fx.parryCue?.(actor, a.breaks, k);
+    if (futureSight(p)) game.fx.vision?.(actor, p);
+    const key2 = a.breaks ? "redglint" : a.shot ? "shotglint" : "parry";
+    if (!game.hintsShown?.has(key2) && game.settings?.showHints !== false) game.fx.slowmo(1.2, 0.2);
+    if (a.breaks) game.hint("redglint", "A RED glint: that blow smashes any guard (and some go straight through one). Don't block it \u2014 dodge (Q) just before it lands.");
+    else if (a.shot) game.hint("shotglint", "A glint on a gunman: a shot is coming. Hold F to block it, or sidestep and dodge (Q) \u2014 a sword can even turn it aside with a parry.");
+    else game.hint("parry", "A YELLOW glint: the blow is about to land \u2014 tap F right then to PARRY it. A parried foe reels, open to a COUNTER. (Hold F to simply block.)");
+  }
+  function futureSight(p) {
+    return !!p && (!!p.hasBuff?.("future_sight") || !!p.observation && (p.hakiLevel?.("observation") || 0) >= FUTURE_SIGHT);
+  }
+  function telegraph(actor, def, game) {
+    const a = actor.action;
+    const wind = (a?.hitAt ?? def.windup ?? 0.2) * (a?.slow || 1) / (def.noSpeedup ? 1 : actor.atkSpeed());
+    if (wind < 0.12) return;
+    const first = (def.steps || []).find((s) => s.hit || s.proj || s.dash || s.zone && s.zone.damage > 0 || s.power?.blow);
+    if (!first) return;
+    const parryable = (first.hit || first.dash?.hit) && !breaksGuard(first) && !first.zone;
+    const col2 = parryable ? "rgba(255,193,7,1)" : actor.boss ? "rgba(255,40,80,1)" : "rgba(255,60,60,1)";
+    const life2 = wind * (actor.game?.player?.observation ? 1.35 : 1);
+    if (first.power) {
+      const z = a?.room || ownRoom(actor, game);
+      if (z) game.fx.telegraph(z.x, z.y, "circle", { r: z.r, life: life2, color: col2 });
+      return;
+    }
+    if (first.hit) {
+      const h2 = first.hit;
+      const ox = actor.x + Math.cos(actor.facing) * (h2.offset || 0), oy = actor.y + Math.sin(actor.facing) * (h2.offset || 0);
+      if (h2.shape === "circle" || h2.shape === "ring") game.fx.telegraph(ox, oy, "circle", { r: h2.range, life: life2, color: col2, follow: h2.offset ? null : actor });
+      else if (h2.shape === "line") game.fx.telegraph(actor.x, actor.y, "line", { angle: actor.facing, length: h2.range, width: h2.width || 1, life: life2, color: col2 });
+      else game.fx.telegraph(ox, oy, "arc", { r: h2.range, angle: actor.facing, arc: h2.arc || 1.4, life: life2, color: col2 });
+    } else if (first.proj || first.dash) {
+      const len = first.proj ? Math.min(14, first.proj.range || 10) : first.dash.dist;
+      game.fx.telegraph(actor.x, actor.y, "line", { angle: actor.facing, length: len, width: first.proj ? (first.proj.radius || 0.4) * 2 + 0.3 : 1.2, life: life2, color: col2 });
+    } else if (first.zone) {
+      game.fx.telegraph(actor.action.tx, actor.action.ty, "circle", { r: first.zone.range, life: life2, color: col2 });
+    }
+  }
+  function updateAbility(actor, dt, game) {
+    const a = actor.action;
+    const def = a.def;
+    a.t += dt * (def.noSpeedup ? 1 : actor.atkSpeed()) / (a.slow > 1 && a.t < a.hitAt ? a.slow : 1);
+    if (a.cueT !== void 0 && !a.cued && a.t >= a.cueT) {
+      a.cued = true;
+      glint(actor, a, game);
+    }
+    const steps = def.steps || [];
+    if (def.track && a.t < (def.windup ?? 0)) a.angle = actor.facing;
+    while (a.step < steps.length && a.t >= (steps[a.step].at ?? def.windup ?? 0)) {
+      runStep(actor, steps[a.step], game, a);
+      a.step++;
+    }
+    if (a.t >= a.total * (def.noSpeedup ? 1 : actor.atkSpeed())) {
+      if (def.onEnd) def.onEnd(actor, game);
+      actor.action = null;
+    }
+  }
+  function runStep(actor, s, game, a) {
+    const ang = s.angleOffset ? a.angle + s.angleOffset : a.angle;
+    const mult = a.mult;
+    const col2 = ELEMENT_COLORS[s.hit?.element || s.proj?.element || "physical"];
+    if (s.hit) {
+      const h2 = s.hit;
+      const off = h2.offset ?? 0;
+      const reach3 = actor.reach ?? 1;
+      const hb = {
+        owner: actor,
+        x: game.world.wx(actor.x + Math.cos(ang) * off * reach3),
+        y: actor.y - 0.4 + Math.sin(ang) * off * reach3,
+        // (Conqueror's Infusion: the black lightning round a blow lands it a little beyond the fist)
+        shape: h2.shape || "arc",
+        range: (h2.range || 1.4) * (h2.shape === "circle" ? 1 : reach3) + (actor.conquerorInfused && h2.shape !== "circle" && h2.shape !== "ring" ? INFUSED_REACH : 0),
+        arc: h2.arc ?? 1.8,
+        width: h2.width,
+        angle: ang,
+        damage: (h2.damage || 5) * mult,
+        knockback: h2.knockback,
+        stun: h2.stun ?? 0.25,
+        element: h2.element || "physical",
+        status: h2.status,
+        duration: h2.duration ?? 0.1,
+        interval: h2.interval,
+        heavy: h2.heavy,
+        slashing: h2.slashing,
+        guardBreak: h2.guardBreak,
+        unblockable: h2.unblockable,
+        haki: h2.haki || actor.armament && def_isPhysical(h2),
+        critChance: h2.crit ?? (actor.critChance || 0.05),
+        follow: h2.follow,
+        offX: Math.cos(ang) * off * reach3,
+        offY: -0.4 + Math.sin(ang) * off * reach3,
+        followAngle: h2.followAngle,
+        impactFrame: h2.impactFrame,
+        trueDamage: h2.trueDamage,
+        hitShips: h2.hitShips,
+        shipDamage: h2.shipDamage,
+        radial: h2.radial,
+        onHit: h2.onHit,
+        forceWater: h2.forceWater,
+        hitsAll: h2.hitsAll,
+        def: a.def,
+        // (cuts that don't kill — Amputate; an explosion, never parried; a
+        // quake that throws you off your feet; a paw that sends you flying off
+        // the field; a blow that reaches only what's in the ROOM it was struck
+        // in, and passes through no Logia's body)
+        nonLethal: h2.nonLethal,
+        blast: h2.blast,
+        launch: h2.launch,
+        fling: h2.fling,
+        room: a.room || null,
+        ignoreLogia: h2.ignoreLogia || !!a.room,
+        reachZ: h2.reachZ
+      };
+      game.combat.hitbox(hb);
+      game.fx.tech(actor, s, a, "hit", hb);
+      if (h2.shake) game.fx.shake(h2.shake, ang);
+    }
+    if (s.proj) {
+      const p = s.proj;
+      const n = p.count || 1;
+      for (let i = 0; i < n; i++) {
+        const spread2 = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) : p.jitter ? (Math.random() - 0.5) * p.jitter : 0;
+        const pa = ang + spread2;
+        const sp = p.speed || 14;
+        const sx = actor.x + Math.cos(pa) * 0.6, sy = actor.y - 0.5 + Math.sin(pa) * 0.6;
+        game.combat.projectile({
+          owner: actor,
+          x: game.world.wx(sx),
+          y: sy,
+          vx: Math.cos(pa) * sp,
+          vy: Math.sin(pa) * sp,
+          range: p.range || 10,
+          radius: p.radius || 0.3,
+          damage: (p.damage || 5) * mult,
+          element: p.element || "physical",
+          knockback: p.knockback ?? 2,
+          stun: p.stun ?? 0.2,
+          status: p.status,
+          pierce: p.pierce,
+          homing: p.homing,
+          target: a.target,
+          sprite: p.sprite || "orb",
+          color: p.color || col2,
+          size: p.size || 1,
+          haki: actor.armament && p.element === void 0,
+          stretch: p.stretch ? actor : null,
+          passWalls: p.passWalls,
+          hitShips: p.hitShips ?? true,
+          shipDamage: p.shipDamage,
+          slashing: p.slashing,
+          heavy: p.heavy,
+          critChance: 0.05,
+          unblockable: p.unblockable,
+          def: a.def,
+          // (a shot, not a blow: a sword can turn it aside with a parry — unless it goes off on impact)
+          isProj: true,
+          explodes: !!p.explode,
+          onEnd: p.explode ? (pr, g) => explode(pr, g, p.explode, mult) : null,
+          trail: p.trail ? (pr, g) => trail(pr, g, p.trail) : null,
+          draw: drawProjectile
+        });
+      }
+      game.fx.tech(actor, s, a, "proj");
+    }
+    if (s.dash) {
+      const d = s.dash;
+      const dist = d.dist * (actor.dashMul || 1);
+      actor.dash = { vx: Math.cos(ang) * dist / d.time, vy: Math.sin(ang) * dist / d.time, t: d.time, ignoreWater: d.air, dive: d.dive };
+      if (d.iframes) actor.iframes = Math.max(actor.iframes, d.iframes);
+      if (d.hit) {
+        game.combat.hitbox({
+          owner: actor,
+          x: actor.x,
+          y: actor.y - 0.4,
+          shape: "circle",
+          range: d.hit.range || 1.1,
+          damage: (d.hit.damage || 5) * mult,
+          knockback: d.hit.knockback ?? 4,
+          stun: d.hit.stun ?? 0.3,
+          element: d.hit.element || "physical",
+          follow: true,
+          offX: 0,
+          offY: -0.4,
+          duration: d.time + 0.05,
+          slashing: d.hit.slashing,
+          heavy: d.hit.heavy,
+          status: d.hit.status,
+          radial: true,
+          guardBreak: d.hit.guardBreak,
+          unblockable: d.hit.unblockable,
+          def: a.def,
+          launch: d.hit.launch,
+          ignoreLogia: !!a.room,
+          reachZ: d.dive ? 3.5 : void 0
+        });
+      }
+      game.fx.tech(actor, s, a, "dash");
+    }
+    if (s.teleport) {
+      const t = s.teleport;
+      let dist = t.dist, tang = ang;
+      const who = t.toTarget ? a.target || actor.controller?.target : null;
+      if (who && who.alive !== false && who.x !== void 0) {
+        const dx = game.world.dx(actor.x, who.x), dy = who.y - actor.y, d = Math.hypot(dx, dy);
+        if (d <= dist + 1) {
+          tang = Math.atan2(dy, dx);
+          dist = Math.max(0, d - (t.gap ?? 1.1));
+          a.angle = tang;
+          actor.facing = tang;
+        }
+      }
+      const free = (x, y) => actor.flying ? flyableAt(actor, game, x, y) : actor.canOccupy(game.world, x, y);
+      let nx = actor.x, ny = actor.y;
+      for (let k = 0; k < 20; k++) {
+        const tx = actor.x + Math.cos(tang) * dist * (1 - k / 20), ty = actor.y + Math.sin(tang) * dist * (1 - k / 20);
+        if (free(tx, ty)) {
+          nx = tx;
+          ny = ty;
+          break;
+        }
+      }
+      const x0 = actor.x, y0 = actor.y;
+      actor.x = game.world.wx(nx);
+      actor.y = ny;
+      game.fx.tech(actor, s, a, "teleport", { x0, y0 });
+      actor.iframes = Math.max(actor.iframes, 0.15);
+    }
+    if (s.buff) {
+      const b = actor.addBuff({ ...s.buff, source: a.def.id });
+      game.fx.tech(actor, s, a, "buff", { buff: b });
+    }
+    if (s.heal) {
+      const amt = s.heal * (a.def.source?.startsWith("fruit") ? 1 + (actor.fruitMastery || 0) * 0.02 : 1);
+      actor.heal(amt, game);
+      game.fx.tech(actor, s, a, "heal");
+    }
+    if (s.phoenix) actor.phoenixUntil = Math.max(actor.phoenixUntil || 0, (game.env?.time ?? game.time ?? 0) + s.phoenix);
+    if (s.zone) {
+      const z = s.zone;
+      const zx = z.atTarget ? a.tx : actor.x + Math.cos(ang) * (z.offset || 0);
+      const zy = z.atTarget ? a.ty : actor.y + Math.sin(ang) * (z.offset || 0);
+      const r4 = z.range + (z.grow ? z.grow * (actor.fruitMastery || 0) : 0);
+      const zone = {
+        owner: actor,
+        x: game.world.wx(zx),
+        y: zy,
+        r: r4,
+        t: z.duration,
+        interval: z.interval || 0.5,
+        damage: (z.damage || 0) * mult,
+        element: z.element || "physical",
+        status: z.status,
+        slow: z.slow,
+        color: z.color || col2,
+        kind: z.kind || "field",
+        pull: z.pull,
+        // a field's own rules (powers.js): ice that makes the sea a road, a cage
+        // of strings that closes in and lets no one out, darkness that swallows
+        // shots, gravity that drags fliers down, one that goes when its maker falls
+        freezeWater: z.freezeWater,
+        cage: z.cage,
+        shrink: z.shrink,
+        edge: z.edge,
+        absorb: z.absorb,
+        grounds: z.grounds,
+        whileOwner: z.whileOwner,
+        def: a.def
+      };
+      if (z.single) {
+        for (const o of game.areaZones) if (o.owner === actor && o.kind === zone.kind) o.t = 0;
+      }
+      game.addZone(zone);
+      game.fx.zone(zone, z, actor, a);
+    }
+    if (s.power) {
+      const fn = POWERS[s.power.kind];
+      if (fn) fn(actor, s.power, game, a, s);
+    }
+    if (s.pull) {
+      for (const e of game.actorsNear(actor.x, actor.y, s.pull.range)) {
+        if (!game.combat.canHit(actor, e, {})) continue;
+        const dx = game.world.dx(e.x, actor.x), dy = actor.y - e.y;
+        const d = Math.hypot(dx, dy) || 1;
+        e.knock(dx / d * s.pull.strength, dy / d * s.pull.strength);
+        if (s.pull.stun) e.stagger(s.pull.stun);
+        if (s.pull.nullify) e.addStatus("seastone", s.pull.nullify);
+      }
+      game.fx.tech(actor, s, a, "pull");
+    }
+    if (s.conqueror) conquerorBurst(actor, game, s.conqueror, mult);
+    if (s.summon && game.summon) game.summon(actor, s.summon);
+    if (s.self) {
+      if (s.self.iframes) actor.iframes = Math.max(actor.iframes, s.self.iframes);
+      if (s.self.cleanse) actor.status = {};
+      if (s.self.hurt && actor.d) {
+        const n = Math.round(actor.d.maxHp * s.self.hurt);
+        actor.hp = Math.max(1, actor.hp - n);
+        game.fx.text(actor.x, actor.y - 1.2, String(n), "#ff6b6b", 0.4);
+        if (actor.isPlayer) game.ui?.onPlayerHurt(n);
+      }
+    }
+    if (s.fx) game.fx.tech(actor, s.fx.color ? s : { ...s, fx: { ...s.fx, color: col2 } }, a, "fx");
+    if (s.sfx) game.audio?.sfx(s.sfx, actor);
+  }
+  function def_isPhysical(h2) {
+    return !h2.element || h2.element === "physical";
+  }
+  function explode(p, game, e, mult) {
+    game.combat.hitbox({ owner: p.owner, x: p.x, y: p.y, shape: "circle", range: e.range || 1.8, damage: (e.damage || 10) * mult, knockback: e.knockback ?? 6, stun: e.stun ?? 0.4, element: e.element || "explosion", duration: 0.1, radial: true, heavy: true, hitShips: true, status: e.status, blast: true });
+    game.fx.explosion(p.x, p.y, e, p.owner);
+    game.audio?.sfx("explosion", p);
+  }
+  function trail(p, game, t) {
+    game.fx.projTrail(p, t);
+  }
+  var INFUSED_REACH = 0.9;
+  function conquerorBurst(actor, game, c, mult) {
+    const lvl = actor.hakiLevel("conqueror") || 20;
+    const my = actor.power();
+    let rival2 = null, rd = Infinity;
+    for (const e of game.actorsNear(actor.x, actor.y, c.range * 1.5)) {
+      if (e === actor || !game.combat.canHit(actor, e, {})) continue;
+      const d = game.world.distance(actor.x, actor.y, e.x, e.y);
+      if (d < rd && clashes(actor, e, d, c.range * 1.5)) {
+        rival2 = e;
+        rd = d;
+      }
+    }
+    if (rival2) {
+      clash(actor, rival2, game, c);
+      return { fainted: 0, clash: rival2 };
+    }
+    game.fx.conqueror(actor, c);
+    game.audio?.sfx("conqueror", actor);
+    let fainted = 0;
+    for (const e of game.actorsNear(actor.x, actor.y, c.range)) {
+      if (e === actor || !game.combat.canHit(actor, e, {})) continue;
+      if (e.isPlayer) {
+        underPressure(e, actor, game, c, mult);
+        continue;
+      }
+      if (overwhelms(e, my, lvl)) {
+        e.faint(game);
+        fainted++;
+        continue;
+      }
+      e.stagger(0.6 + lvl * 0.01);
+      e.takeDamage(Math.round((c.damage || 0) * mult), actor, { element: "haki" }, game);
+    }
+    if (fainted && actor.isPlayer) game.log(`${fainted} ${fainted === 1 ? "foe" : "foes"} fainted before your will.`, "#ef5350");
+    return { fainted, clash: null };
+  }
+  function overwhelms(e, my, lvl) {
+    const resist = e.hakiLevel && e.hakiLevel("conqueror") > 0 ? 0.5 : 0;
+    return !e.boss && e.power() / Math.max(1, my) < 0.35 + lvl * 4e-3 - resist;
+  }
+  function underPressure(p, k, game, c, mult) {
+    const ch = p.char;
+    if (ch?.traits?.includes("conqueror") && !p.hakiLevel("conqueror") && game.lives?.awaken) {
+      game.lives.awaken("pressure", k);
+      return;
+    }
+    if (p.hakiLevel("conqueror") > 0) {
+      game.fx.text(p.x, p.y - 1.6, "UNSHAKEN", sigOf(p).conqueror, 0.36);
+      return;
+    }
+    p.stagger(Math.max(0.25, 0.75 - (p.attrs?.wil || 0) * 6e-3));
+    p.takeDamage(Math.round((c.damage || 0) * mult * 0.5), k, { element: "haki" }, game);
+    game.fx.text(p.x, p.y - 1.6, "PRESSURE!", "#ef9a9a", 0.36);
+    game.log(`${k.name}'s will presses down on you like a weight: Conqueror's Haki. Your knees buckle, but you stay standing.`, "#ef9a9a");
+    game.hintHaki?.();
+  }
+  function clash(a, b, game, c) {
+    const w = game.world;
+    const dx = w.dx(a.x, b.x), dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+    game.fx.clash?.(a, b);
+    game.audio?.sfx("conqueror_clash", a.isPlayer ? a : b);
+    for (const [x, s] of [[a, -1], [b, 1]]) {
+      x.knock(dx / d * 8 * s, dy / d * 8 * s);
+      if (x.state === "idle") x.stagger(x.isPlayer ? 0.35 : 0.55);
+    }
+    const strong = Math.max(a.power(), b.power()), lvl = Math.max(a.hakiLevel("conqueror"), b.hakiLevel("conqueror"));
+    const mx = w.wx(a.x + dx / 2), my = a.y + dy / 2;
+    let fainted = 0;
+    for (const e of game.actorsNear(mx, my, (c?.range || 9) + d / 2)) {
+      if (e === a || e === b || e.isPlayer || e.state !== "idle" || e.faction === "player") continue;
+      if (overwhelms(e, strong, lvl)) {
+        e.faint(game);
+        fainted++;
+      }
+    }
+    const p = a.isPlayer ? a : b.isPlayer ? b : null;
+    if (p) {
+      const o = p === a ? b : a;
+      game.log(`Your Conqueror's Haki clashes with ${o.name}'s! The sky splits between your two wills.${fainted ? ` ${fainted} ${fainted === 1 ? "onlooker" : "onlookers"} fainted.` : ""}`, sigOf(p).conqueror);
+      game.emit?.("conquerorClash", o);
+    }
+    return fainted;
+  }
+
+  // src/data/fruitForms.js
+  var AW = { dmg: 1.6, size: 1.35, reach: 1.25, kb: 1.25, cd: 0.75, wind: 0.85, dur: 1.25 };
+  var AWAKEN_MASTERY = 100;
+  var r1 = (v) => Math.round(v * 10) / 10;
+  var rgba = (hex3, a) => /^#[0-9a-f]{6}$/i.test(hex3 || "") ? `rgba(${parseInt(hex3.slice(1, 3), 16)},${parseInt(hex3.slice(3, 5), 16)},${parseInt(hex3.slice(5, 7), 16)},${a})` : hex3;
+  var scaleMods = (m, k) => {
+    if (!m) return m;
+    const o = { ...m };
+    for (const key2 of ["damage", "speedMul", "atkSpeed"]) if (o[key2] > 1) o[key2] = r1(1 + (o[key2] - 1) * 1.4);
+    if (o.defMul < 1) o.defMul = Math.max(0.2, r1(1 - (1 - o.defMul) * 1.3));
+    if (o.evade) o.evade = Math.min(0.9, r1(o.evade * 1.3));
+    return o;
+  };
+  function scaleStep(s, k) {
+    const o = { ...s };
+    if (s.at !== void 0) o.at = r1(s.at * k.wind * 100) / 100;
+    if (s.hit) {
+      const h2 = { ...s.hit };
+      h2.damage = Math.round((h2.damage || 5) * k.dmg);
+      h2.range = r1((h2.range || 1.4) * k.size);
+      if (h2.width) h2.width = r1(h2.width * k.size);
+      if (h2.knockback !== void 0) h2.knockback = r1(h2.knockback * k.kb);
+      if (h2.shake) h2.shake = r1(h2.shake * 1.3);
+      if (h2.shipDamage) h2.shipDamage = Math.round(h2.shipDamage * k.dmg);
+      o.hit = h2;
+    }
+    if (s.proj) {
+      const p = { ...s.proj };
+      p.damage = Math.round((p.damage || 5) * k.dmg);
+      p.radius = r1((p.radius ?? 0.3) * k.size * 100) / 100;
+      p.size = r1((p.size ?? 1) * k.size);
+      p.range = r1((p.range ?? 10) * k.reach);
+      p.speed = r1((p.speed ?? 14) * 1.1);
+      if (p.knockback !== void 0) p.knockback = r1(p.knockback * k.kb);
+      if (p.count > 1) p.count += Math.max(1, Math.round(p.count * 0.4));
+      if (p.explode) p.explode = { ...p.explode, range: r1((p.explode.range || 1.8) * k.size), damage: Math.round((p.explode.damage || 10) * k.dmg) };
+      if (p.shipDamage) p.shipDamage = Math.round(p.shipDamage * k.dmg);
+      o.proj = p;
+    }
+    if (s.dash) {
+      const d = { ...s.dash, dist: r1(s.dash.dist * k.reach) };
+      if (d.hit) d.hit = { ...d.hit, damage: Math.round((d.hit.damage || 5) * k.dmg), range: r1((d.hit.range || 1.1) * k.size), knockback: r1((d.hit.knockback ?? 4) * k.kb) };
+      o.dash = d;
+    }
+    if (s.zone) o.zone = { ...s.zone, range: r1(s.zone.range * k.size), damage: Math.round((s.zone.damage || 0) * k.dmg), duration: r1(s.zone.duration * k.dur) };
+    if (s.buff) o.buff = { ...s.buff, dur: s.buff.dur ? r1(s.buff.dur * k.dur) : s.buff.dur, mods: scaleMods(s.buff.mods, k), reflect: s.buff.reflect ? r1(s.buff.reflect * k.size) : s.buff.reflect, regen: s.buff.regen ? r1(s.buff.regen * 1.4) : s.buff.regen };
+    if (s.heal) o.heal = Math.round(s.heal * 1.5);
+    if (s.teleport) o.teleport = { ...s.teleport, dist: r1(s.teleport.dist * k.reach) };
+    if (s.pull) o.pull = { ...s.pull, range: r1(s.pull.range * k.size), strength: r1(s.pull.strength * 1.2) };
+    if (s.power) o.power = { ...s.power, ...s.power.damage ? { damage: Math.round(s.power.damage * k.dmg) } : {}, ...s.power.range ? { range: r1(s.power.range * k.size) } : {}, ...s.power.h ? { h: r1(s.power.h * 1.2) } : {}, ...s.power.cap ? { cap: Math.round(s.power.cap * k.dmg) } : {} };
+    if (s.fx) o.fx = { ...s.fx, ...s.fx.ring ? { ring: r1(s.fx.ring * k.size) } : {}, ...s.fx.burst ? { burst: Math.round(s.fx.burst * 1.5) } : {} };
+    if (s.summon) o.summon = { ...s.summon, duration: r1((s.summon.duration || 15) * k.dur), hpMul: r1((s.summon.hpMul ?? 1) * 1.5) };
+    if (s.self?.hurt) o.self = { ...s.self, hurt: r1(s.self.hurt * 0.7 * 100) / 100 };
+    return o;
+  }
+  function awakenDef(d, o = {}) {
+    const k = { ...AW, ...o.k || {} };
+    const steps = (d.steps || []).map((s) => scaleStep(s, k));
+    const out = {
+      ...d,
+      ...o,
+      k: void 0,
+      id: o.id || d.id + "_aw",
+      name: o.name || `Awakened ${d.name}`,
+      base: d.base || d.id,
+      awakened: true,
+      steps,
+      windup: d.windup !== void 0 ? r1(d.windup * k.wind * 100) / 100 : d.windup,
+      recover: d.recover !== void 0 ? r1(d.recover * k.wind * 100) / 100 : d.recover,
+      cd: d.cd ? r1(d.cd * k.cd) : d.cd,
+      desc: o.desc || `${d.desc ? d.desc + " " : ""}Awakened: bigger, stronger, faster.`
+    };
+    delete out.k;
+    delete out.mastery;
+    if (d.flight) out.flight = { ...d.flight, gauge: r1(d.flight.gauge * 1.5), speed: r1(d.flight.speed * 1.2), climb: r1((d.flight.climb || 6) * 1.2) };
+    return out;
+  }
+  var awaken = (id, o = {}) => ({ awaken: id, ...o });
+  var GEAR2 = {
+    id: "gear2",
+    name: "Gear Second",
+    short: "Gear 2",
+    mastery: 25,
+    activate: "gomu_gear2",
+    desc: "Pump your blood at high speed: faster and stronger, every move a Jet. You're spent for a moment when it wears off.",
+    heavy: {
+      id: "gomu_jet_whip",
+      name: "Jet Whip",
+      anim: "sweep",
+      windup: 0.14,
+      recover: 0.28,
+      cd: 1.3,
+      desc: "A leg whipped round faster than the eye can follow.",
+      steps: [{ hit: { shape: "arc", range: 3.4, arc: 2, offset: 0.2, damage: 16, knockback: 7, stun: 0.4, heavy: true, guardBreak: true } }]
+    },
+    skills: [
+      {
+        id: "gomu_jet_pistol",
+        name: "Jet Pistol",
+        icon: "\u{1F44A}",
+        anim: "punch",
+        windup: 0.06,
+        recover: 0.18,
+        cd: 1.6,
+        say: "Jet Pistol!",
+        desc: "A Pistol too fast to see coming.",
+        steps: [{ proj: { speed: 42, range: 10, radius: 0.4, damage: 20, sprite: "gomufist", stretch: true, knockback: 6, stun: 0.35 } }]
+      },
+      {
+        id: "gomu_jet_gatling",
+        name: "Jet Gatling",
+        icon: "\u{1F52B}",
+        anim: "punch",
+        windup: 0.12,
+        recover: 0.25,
+        cd: 5,
+        say: "Jet Gatling!",
+        desc: "A Gatling at Jet speed: a wall of fists.",
+        steps: [{ hit: { shape: "arc", range: 3.6, arc: 1, offset: 0.3, damage: 5, knockback: 1, stun: 0.12, duration: 1, interval: 0.05 } }]
+      },
+      {
+        id: "gomu_jet_rocket",
+        name: "Jet Rocket",
+        icon: "\u{1F680}",
+        anim: "thrust",
+        windup: 0.1,
+        recover: 0.15,
+        cd: 3,
+        desc: "Slingshot yourself at a blur.",
+        steps: [{ dash: { dist: 12, time: 0.25, iframes: 0.25, air: true, hit: { damage: 20, knockback: 7, stun: 0.4 } } }]
+      },
+      {
+        id: "gomu_jet_bazooka",
+        name: "Jet Bazooka",
+        icon: "\u{1F4A5}",
+        anim: "heavy",
+        windup: 0.22,
+        recover: 0.3,
+        cd: 6,
+        say: "Jet Bazooka!",
+        desc: "Both palms, at Jet speed.",
+        steps: [{ hit: { shape: "arc", range: 2.8, arc: 1.2, offset: 0.4, damage: 44, knockback: 16, stun: 0.8, heavy: true, guardBreak: true, impactFrame: true, hitShips: true } }]
+      },
+      {
+        id: "gomu_jet_spear",
+        name: "Jet Spear",
+        anim: "kick_high",
+        windup: 0.15,
+        recover: 0.3,
+        cd: 4,
+        say: "Jet Spear!",
+        desc: "Both feet driven out like a spearhead, at Jet speed.",
+        steps: [{ hit: { shape: "line", range: 4.5, width: 1, damage: 30, knockback: 8, stun: 0.5, heavy: true } }]
+      }
+    ]
+  };
+  var GEAR3 = {
+    id: "gear3",
+    name: "Gear Third",
+    short: "Gear 3",
+    mastery: 45,
+    desc: "Blow air into your bones: giant limbs \u2014 Gigant Pistol, Elephant Gatling, Gigant Axe. A little slower, a lot heavier.",
+    activate: {
+      id: "gomu_gear3_on",
+      name: "Gear Third",
+      icon: "\u{1F9B4}",
+      anim: "flex",
+      windup: 0.35,
+      recover: 0.2,
+      cd: 20,
+      say: "Gear... Third!",
+      desc: "Bite your thumb and blow: your bones swell like balloons.",
+      steps: [{ fx: { burst: 16, color: "#ffe0b2", kind: "smoke" } }, { at: 0.35, buff: { id: "gear3", form: "gear3", name: "Gear Third", dur: 25, mods: { damage: 1.1, speedMul: 0.92 }, fpTint: "rgba(255,224,178,0.45)" } }]
+    },
+    m1: { dmg: 1.3, reach: 1.35 },
+    heavy: {
+      id: "gomu_gigant_stamp",
+      name: "Gigant Stamp",
+      anim: "kick_high",
+      windup: 0.4,
+      recover: 0.4,
+      cd: 2.4,
+      desc: "A giant's sole driven straight out.",
+      steps: [{ hit: { shape: "line", range: 4.5, width: 1.8, damage: 36, knockback: 12, stun: 0.6, heavy: true, guardBreak: true, shake: 0.4 } }]
+    },
+    skills: [
+      {
+        id: "gomu_gigant_pistol",
+        name: "Gigant Pistol",
+        icon: "\u{1F9B4}",
+        anim: "punch",
+        clip: "gigant",
+        windup: 0.55,
+        recover: 0.45,
+        cd: 6,
+        say: "Gigant Pistol!",
+        desc: "A fist as big as a house, flung on its rubber.",
+        steps: [{ proj: { speed: 17, range: 11, radius: 1.6, damage: 60, sprite: "gomufist", size: 4, stretch: true, pierce: true, knockback: 14, stun: 1, heavy: true, hitShips: true, shipDamage: 200 } }]
+      },
+      {
+        id: "gomu_elephant_gatling",
+        name: "Elephant Gatling",
+        icon: "\u{1F418}",
+        anim: "punch",
+        windup: 0.4,
+        recover: 0.4,
+        cd: 9,
+        say: "Elephant Gatling!",
+        desc: "A barrage of giant fists.",
+        steps: [{ hit: { shape: "arc", range: 4.6, arc: 1.2, offset: 0.4, damage: 13, knockback: 3, stun: 0.3, duration: 1, interval: 0.1, heavy: true } }]
+      },
+      {
+        id: "gomu_gigant_axe",
+        name: "Gigant Axe",
+        anim: "axe_kick",
+        windup: 0.5,
+        recover: 0.45,
+        cd: 8,
+        say: "Gigant Axe!",
+        desc: "Leap and bring a giant heel down like an axe: the ground caves in.",
+        steps: [{ dash: { dist: 2.5, time: 0.2, iframes: 0.2 } }, { at: 0.62, hit: { shape: "circle", range: 3.4, damage: 70, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, launch: 4, impactFrame: true, shake: 0.6 }, vfx: "ring" }]
+      },
+      {
+        id: "gomu_gigant_bazooka",
+        name: "Gigant Bazooka",
+        icon: "\u{1F4A5}",
+        anim: "heavy",
+        windup: 0.6,
+        recover: 0.45,
+        cd: 11,
+        say: "Gigant Bazooka!",
+        desc: "Two giant palms.",
+        steps: [{ hit: { shape: "arc", range: 3.8, arc: 1.3, offset: 0.5, damage: 95, knockback: 20, stun: 1, heavy: true, guardBreak: true, impactFrame: true, shake: 0.7, hitShips: true, shipDamage: 250 } }]
+      },
+      {
+        id: "gomu_gigant_balloon",
+        name: "Gigant Balloon",
+        anim: "flex",
+        windup: 0.25,
+        recover: 0.3,
+        cd: 12,
+        say: "Gigant Balloon!",
+        desc: "Blow yourself up huge: shots bounce away, and whoever is pressed against you is thrown off.",
+        steps: [{ buff: { id: "balloon", name: "Gigant Balloon", dur: 2.6, mods: { speedMul: 0.3 }, reflect: 3.2, reflectWord: "BOING!", look: { bulk: 2.6 } } }, { at: 0.3, hit: { shape: "circle", range: 2.6, damage: 24, knockback: 12, stun: 0.5 }, vfx: "ring" }]
+      }
+    ]
+  };
+  var GEAR4 = {
+    id: "gear4",
+    name: "Gear Fourth",
+    short: "Gear 4",
+    mastery: 70,
+    needs: "armament",
+    activate: "gomu_gear4",
+    desc: "Boundman: Haki-hardened muscles blown up like a ball \u2014 Kong Gun, Rhino Schneider, Culverin, Leo Bazooka. It runs out, and leaves you exhausted.",
+    m1: { dmg: 1.4, reach: 1.3 },
+    heavy: {
+      id: "gomu_leo_bazooka",
+      name: "Leo Bazooka",
+      anim: "heavy",
+      windup: 0.35,
+      recover: 0.4,
+      cd: 2.2,
+      say: "Leo Bazooka!",
+      desc: "Both fists pulled back into the arms, then fired point-blank.",
+      steps: [{ hit: { shape: "arc", range: 2.8, arc: 1.2, offset: 0.4, damage: 30, knockback: 20, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true } }]
+    },
+    skills: [
+      {
+        id: "gomu_kong_gun",
+        name: "Kong Gun",
+        icon: "\u{1F98D}",
+        anim: "punch",
+        windup: 0.35,
+        recover: 0.35,
+        cd: 3,
+        say: "Kong Gun!",
+        desc: "A fist pulled back into the swollen arm, then fired like a cannon.",
+        steps: [{ proj: { speed: 30, range: 12, radius: 1, damage: 34, sprite: "gomufist", size: 3, stretch: true, knockback: 14, stun: 0.7, heavy: true, guardBreak: true, hitShips: true } }]
+      },
+      {
+        id: "gomu_kong_organ",
+        name: "Kong Organ",
+        anim: "punch",
+        windup: 0.45,
+        recover: 0.45,
+        cd: 8,
+        say: "Kong Organ!",
+        desc: "Kong Guns, one after another, like the pipes of an organ.",
+        steps: [{ hit: { shape: "arc", range: 5, arc: 1.1, offset: 0.4, damage: 18, knockback: 6, stun: 0.35, duration: 0.9, interval: 0.15, heavy: true } }]
+      },
+      {
+        id: "gomu_rhino_schneider",
+        name: "Rhino Schneider",
+        anim: "thrust",
+        windup: 0.3,
+        recover: 0.4,
+        cd: 5,
+        say: "Rhino Schneider!",
+        desc: "Bounce off the ground and ram both feet through the target.",
+        steps: [{ dash: { dist: 13, time: 0.3, iframes: 0.3, hit: { damage: 40, knockback: 18, stun: 0.8, heavy: true, guardBreak: true, launch: 4 } } }]
+      },
+      {
+        id: "gomu_culverin",
+        name: "Culverin",
+        anim: "punch",
+        windup: 0.3,
+        recover: 0.35,
+        cd: 6,
+        say: "Culverin!",
+        desc: "A punch that bends round after its target.",
+        steps: [{ proj: { speed: 22, range: 16, radius: 0.9, damage: 38, sprite: "gomufist", size: 2.2, stretch: true, homing: 5, knockback: 12, stun: 0.6, heavy: true } }]
+      },
+      {
+        id: "gomu_king_kong_gun",
+        name: "King Kong Gun",
+        icon: "\u{1F98D}",
+        anim: "punch",
+        clip: "gigant",
+        windup: 1.3,
+        recover: 0.6,
+        cd: 30,
+        say: "King Kong Gun!",
+        desc: "A whole arm swollen into a giant's fist and fired at everything in front of you.",
+        steps: [{ fx: { ring: 3, color: "#b71c1c", impact: 0.06 } }, { at: 1.3, proj: { speed: 18, range: 15, radius: 2.4, damage: 120, sprite: "gomufist", size: 7, stretch: true, pierce: true, knockback: 26, stun: 1.4, heavy: true, guardBreak: true, hitShips: true, shipDamage: 600 } }, { at: 1.35, fx: { shake: 0.8, impact: 0.12 } }]
+      }
+    ]
+  };
+  var GEAR5 = {
+    name: "Gear Fifth",
+    short: "Gear 5",
+    desc: "Awakening: the warrior of liberation. Your body as free as your imagination \u2014 Dawn Pistol, Dawn Gatling, Gomu Gomu no Kaminari, Bajrang Gun.",
+    activate: {
+      id: "gomu_awaken",
+      name: "Gear Fifth",
+      icon: "\u2600",
+      anim: "cast",
+      windup: 0.9,
+      recover: 0.2,
+      cd: 6,
+      say: "...Drums of Liberation.",
+      desc: "Your heartbeat drums: Gear Fifth.",
+      steps: [{ fx: { ring: 6, color: "#ffffff", flash: 0.5, impact: 0.15, text: "GEAR 5" } }, { at: 0.9, buff: { id: "gear5", form: "awake", name: "Gear Fifth", dur: Infinity, mods: { damage: 1.3, defMul: 0.8, speedMul: 1.3, atkSpeed: 1.25 }, fpTint: "rgba(255,255,255,0.8)", wisps: true, look: { hairColor: "#ffffff", top: "#ffffff", bottom: "#ffffff", eyeColor: "#ff4d7e", belt: "#7b3fa0", nika: true } } }]
+    },
+    m1: { dmg: 1.5, reach: 1.7 },
+    heavy: {
+      id: "gomu_dawn_whip",
+      name: "Dawn Whip",
+      anim: "sweep",
+      windup: 0.2,
+      recover: 0.35,
+      cd: 1.8,
+      desc: "A leg stretched across the whole field and swept.",
+      steps: [{ hit: { shape: "arc", range: 4.6, arc: 2.4, offset: 0.2, damage: 30, knockback: 18, stun: 0.6, heavy: true, guardBreak: true } }]
+    },
+    skills: [
+      {
+        id: "gomu_dawn_pistol",
+        name: "Dawn Pistol",
+        icon: "\u{1F44A}",
+        anim: "punch",
+        windup: 0.2,
+        recover: 0.3,
+        cd: 2.2,
+        say: "Dawn Pistol!",
+        desc: "A cartoon-giant fist.",
+        steps: [{ proj: { speed: 34, range: 14, radius: 1.3, damage: 60, sprite: "gomufist", size: 3.2, stretch: true, knockback: 16, stun: 0.7, heavy: true, guardBreak: true, hitShips: true } }]
+      },
+      {
+        id: "gomu_dawn_gatling",
+        name: "Dawn Gatling",
+        icon: "\u{1F52B}",
+        anim: "punch",
+        windup: 0.25,
+        recover: 0.35,
+        cd: 6,
+        say: "Dawn Gatling!",
+        desc: "Giant fists from everywhere at once.",
+        steps: [{ hit: { shape: "arc", range: 5.5, arc: 1.3, offset: 0.4, damage: 12, knockback: 3, stun: 0.2, duration: 1.2, interval: 0.07, heavy: true } }]
+      },
+      {
+        id: "gomu_dawn_rocket",
+        name: "Dawn Rocket",
+        icon: "\u{1F680}",
+        anim: "thrust",
+        windup: 0.15,
+        recover: 0.2,
+        cd: 3.5,
+        say: "Dawn Rocket!",
+        desc: "Fling yourself like a toy, headfirst through them.",
+        steps: [{ dash: { dist: 16, time: 0.32, iframes: 0.3, air: true, hit: { damage: 46, knockback: 14, stun: 0.6, launch: 5 } } }]
+      },
+      {
+        id: "gomu_kaminari",
+        name: "Gomu Gomu no Kaminari",
+        icon: "\u26A1",
+        anim: "raise",
+        windup: 0.6,
+        recover: 0.4,
+        cd: 12,
+        say: "Gomu Gomu no... Kaminari!",
+        desc: "Grab a bolt of lightning out of the sky like a rope and hurl it.",
+        steps: [{ proj: { speed: 34, range: 18, radius: 1, damage: 70, sprite: "thunder", size: 2.4, element: "lightning", pierce: true, status: { shock: 1.5 }, knockback: 10, stun: 0.8, hitShips: true } }]
+      },
+      {
+        id: "gomu_mogura_pistol",
+        name: "Mole Pistol",
+        icon: "\u{1F44A}",
+        anim: "slam",
+        windup: 0.35,
+        recover: 0.4,
+        cd: 7,
+        say: "Gomu Gomu no... Mogura Pistol!",
+        desc: "Punch straight down into the ground: the fist tunnels under them like a mole and bursts up beneath their chin.",
+        steps: [{ fx: { ring: 1.4, color: "#ffffff", shake: 0.25 } }, { at: 0.75, hit: { shape: "circle", range: 2.8, offset: 3.2, damage: 62, knockback: 6, stun: 0.9, heavy: true, guardBreak: true, launch: 9, impactFrame: true, shake: 0.5 }, vfx: "ring" }]
+      },
+      {
+        id: "gomu_bajrang_gun",
+        name: "Bajrang Gun",
+        icon: "\u2600",
+        anim: "punch",
+        clip: "gigant",
+        windup: 1.4,
+        recover: 0.6,
+        cd: 40,
+        say: "Gomu Gomu no... BAJRANG GUN!",
+        desc: "A fist the size of an island.",
+        steps: [{ fx: { ring: 5, color: "#ffffff", impact: 0.08 } }, { at: 1.4, proj: { speed: 15, range: 17, radius: 3, damage: 180, sprite: "gomufist", size: 9, stretch: true, pierce: true, knockback: 30, stun: 1.6, heavy: true, guardBreak: true, hitShips: true, shipDamage: 800 } }, { at: 1.45, fx: { shake: 1, impact: 0.15 } }]
+      }
+    ]
+  };
+  var KITS = {
+    gomu: {
+      m1: { reach: 1.5 },
+      heavy: {
+        id: "gomu_whip",
+        name: "Gum-Gum Whip",
+        anim: "sweep",
+        windup: 0.18,
+        recover: 0.32,
+        cd: 1.5,
+        desc: "A rubber leg stretched out and swept round.",
+        steps: [{ hit: { shape: "arc", range: 3.2, arc: 1.8, offset: 0.2, damage: 13, knockback: 6, stun: 0.4, heavy: true, guardBreak: true } }]
+      },
+      forms: [GEAR2, GEAR3, GEAR4],
+      awakening: GEAR5
+    },
+    gura: { m1: { element: "quake", dmg: 1.1 }, awakening: { name: "Awakened Quakes", extra: [
+      {
+        id: "gura_kabutowari",
+        name: "Kabutowari",
+        icon: "\u270A",
+        anim: "quake",
+        windup: 0.5,
+        recover: 0.45,
+        cd: 14,
+        desc: "Helmet Splitter: a quake bubble driven straight down \u2014 the ground for a long way round heaves and splits.",
+        steps: [{ hit: { shape: "circle", range: 7, damage: 110, knockback: 16, stun: 1.2, element: "quake", heavy: true, unblockable: true, launch: 7, impactFrame: true, shake: 1.2, hitShips: true, shipDamage: 400 }, vfx: "ring" }]
+      }
+    ] } },
+    // Ope Ope: the surgeon fights hand to hand with a shock in the palm. Awakened,
+    // the ROOM goes where the surgeon goes (room.js roomFollows): no need to stay in it.
+    ope: {
+      heavy: "ope_counter",
+      awakening: {
+        name: "K-ROOM",
+        desc: "Awakening: your ROOM goes where you go \u2014 always in it, always the surgeon. Radio Knife, Shock Wille, Puncture Wille.",
+        skills: [
+          awaken("ope_room", { name: "ROOM", desc: "Open a ROOM \u2014 awakened, it goes where you go, so you are always in it.", k: { dur: 1.3 } }),
+          awaken("ope_shambles", { name: "Shambles", desc: "Change places with anyone in your ROOM \u2014 awakened, it goes where you go." }),
+          awaken("ope_radio", { name: "Radio Knife" }),
+          "ope_shockwille",
+          {
+            id: "ope_puncture_wille",
+            name: "K-Room: Puncture Wille",
+            icon: "\u{1F499}",
+            anim: "thrust",
+            windup: 0.6,
+            recover: 0.5,
+            cd: 30,
+            say: "K-Room... Puncture Wille!",
+            desc: "A ROOM coated on your blade, driven through the target: a shockwave that pierces everything behind them.",
+            steps: [{ hit: { shape: "line", range: 9, width: 2.4, damage: 160, knockback: 20, stun: 1.4, unblockable: true, heavy: true, impactFrame: true, shake: 1, hitShips: true, shipDamage: 500 }, vfx: "beam", color: "#81d4fa" }]
+          }
+        ],
+        heavy: awaken("ope_injection", { name: "Injection Shot", k: { cd: 0.3 } })
+      }
+    },
+    ito: { m1: { element: "string", status: { bleed: 1.5 } }, awakening: { name: "Awakened Strings", extra: [
+      {
+        id: "ito_nami_shiraito",
+        name: "Nami Shiraito",
+        icon: "\u{1F9F5}",
+        anim: "spread",
+        windup: 0.5,
+        recover: 0.4,
+        cd: 12,
+        desc: "Awakened: the very ground turns to strings and rolls at them in waves.",
+        steps: [{ hit: { shape: "line", range: 12, width: 3.2, damage: 55, knockback: 9, stun: 0.9, slashing: true, element: "string" }, vfx: "beam", color: "#f8bbd0" }, { zone: { range: 3, duration: 3, interval: 0.5, damage: 8, color: "#f8bbd0", atTarget: true, kind: "field", slow: 0.4 } }]
+      }
+    ] } },
+    mochi: { m1: { dmg: 1.1, reach: 1.25 }, awakening: { name: "Awakened Mochi", extra: [
+      {
+        id: "mochi_shirotsuki",
+        name: "Shiro Tsuki",
+        icon: "\u{1F361}",
+        anim: "slam",
+        windup: 0.45,
+        recover: 0.4,
+        cd: 13,
+        say: "Mochi... Shiro Tsuki!",
+        desc: "Awakened: the very ground round you turns to mochi \u2014 it heaves, swallows their feet and holds them fast.",
+        steps: [{ hit: { shape: "circle", range: 5, damage: 46, knockback: 4, stun: 0.6, element: "physical", heavy: true, shake: 0.5 }, vfx: "ring" }, { zone: { range: 5.5, duration: 4, interval: 0.5, damage: 6, color: "#f5f5f5", kind: "mochi", slow: 0.75, status: { root: 0.6 } } }]
+      }
+    ] } },
+    // (fists that fly off on their own, arms that sprout out of anything: a longer reach)
+    bara: { m1: { reach: 1.4 } },
+    hana: { m1: { reach: 1.3 }, awakening: { name: "Awakened Flowers", extra: [
+      {
+        id: "hana_demonio",
+        name: "Demonio Fleur",
+        icon: "\u{1F338}",
+        anim: "flex",
+        windup: 0.5,
+        recover: 0.3,
+        cd: 30,
+        say: "Demonio Fleur!",
+        desc: "Awakened: arms and wings of petals bloom from your back \u2014 a towering demon's shape, every blow a giant's.",
+        steps: [{ fx: { burst: 24, color: "#f48fb1", kind: "petal", ring: 3, impact: 0.06 } }, { at: 0.5, buff: { id: "demonio", name: "Demonio Fleur", dur: 14, mods: { damage: 1.35, defMul: 0.8, scale: 1.6 }, aura: "rgba(136,14,79,0.8)" } }]
+      }
+    ] } },
+    // (a Zoan's beast in every blow)
+    neko_leopard: { m1: { dmg: 1.2 } },
+    doku: { m1: { element: "poison", status: { poison: 2 } }, awakening: { name: "Awakened Venom", extra: [
+      {
+        id: "doku_venom_demon",
+        name: "Venom Demon: Hell's Judgement",
+        icon: "\u2620",
+        anim: "thrust",
+        windup: 0.5,
+        recover: 0.45,
+        cd: 16,
+        say: "Venom Demon... Hell's Judgement!",
+        desc: "Awakened: a demon of poison wraps you and you charge \u2014 the ground it crosses stays a pool of venom.",
+        steps: [{ dash: { dist: 10, time: 0.45, iframes: 0.4, hit: { damage: 60, knockback: 10, stun: 0.7, heavy: true, element: "poison", status: { poison: 4 } } } }, { at: 0.95, zone: { range: 3.5, duration: 5, interval: 0.5, damage: 8, element: "poison", status: { poison: 2 }, color: "#7b1fa2", kind: "gas" } }]
+      }
+    ] } },
+    bomu: { m1: { element: "explosion", dmg: 1.1 } },
+    // the Logia: their own stuff in every blow
+    mera: { m1: { element: "fire", status: { burn: 1.5 } }, awakening: { name: "Awakened Flames", skills: [
+      awaken("mera_hiken"),
+      {
+        id: "mera_jujika",
+        name: "Jujika",
+        icon: "\u271D",
+        anim: "cast",
+        windup: 0.3,
+        recover: 0.35,
+        cd: 7,
+        say: "Jujika!",
+        desc: "Fire Cross: a cross of flame shot from crossed fingers.",
+        steps: [{ proj: { speed: 22, range: 14, radius: 1.1, damage: 48, sprite: "fireball", size: 2.2, element: "fire", pierce: true, status: { burn: 3 }, knockback: 8, trail: { color: ["#ff7043", "#ffca28"] } } }]
+      },
+      {
+        id: "mera_shiranui",
+        name: "Shinka: Shiranui",
+        anim: "thrust",
+        windup: 0.35,
+        recover: 0.35,
+        cd: 9,
+        say: "Shinka... Shiranui!",
+        desc: "Divine Fire: two spears of flame thrown side by side.",
+        steps: [{ proj: { speed: 26, range: 15, radius: 0.6, damage: 40, count: 2, spread: 0.18, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 6, trail: { color: ["#ff7043", "#ffca28"] } } }]
+      },
+      awaken("mera_enkai"),
+      awaken("mera_entei"),
+      awaken("mera_kagero"),
+      awaken("mera_kyokaen")
+    ] } },
+    hie: { m1: { element: "ice", status: { chill: 1.5 } }, awakening: { name: "Awakened Ice", skills: [
+      awaken("hie_saber"),
+      awaken("hie_pheasant"),
+      awaken("hie_partisan"),
+      awaken("hie_ageand"),
+      awaken("hie_time"),
+      awaken("hie_icetime")
+    ] } },
+    goro: {
+      m1: { element: "lightning", status: { shock: 0.4 } },
+      forms: [{ id: "amaru", name: "200 Million Volt Amaru", short: "Amaru", mastery: 55, activate: "goro_amaru", desc: "A body of thunder, its drums ringing: bigger, faster, every bolt harder." }]
+    },
+    suna: { m1: { element: "sand", status: { dry: 1 } } },
+    moku: { m1: { element: "smoke" } },
+    pika: { m1: { element: "light", dmg: 1.1 } },
+    magu: { m1: { element: "magma", status: { burn: 2 } } },
+    kage: { awakening: { name: "Awakened Shadows", extra: [
+      {
+        id: "kage_asgard",
+        name: "Shadows' Asgard",
+        icon: "\u{1F464}",
+        anim: "flex",
+        windup: 0.7,
+        recover: 0.3,
+        cd: 40,
+        say: "Shadows' Asgard!",
+        desc: "Awakened: draw a legion of shadows into your own body \u2014 you swell into a towering giant, every blow a landslide.",
+        steps: [{ fx: { burst: 26, color: "#2a1838", kind: "smoke", ring: 4, impact: 0.08, shake: 0.4 } }, { at: 0.7, buff: { id: "asgard", name: "Shadows' Asgard", dur: 16, mods: { damage: 1.45, defMul: 0.7, speedMul: 0.9, scale: 2.2 }, aura: "rgba(42,24,56,0.85)" } }]
+      }
+    ] } },
+    yami: { m1: { element: "dark" }, awakening: { name: "Awakened Darkness", extra: [
+      {
+        id: "yami_abyss",
+        name: "Kurozu: Abyss",
+        icon: "\u{1F311}",
+        anim: "raise",
+        windup: 0.6,
+        recover: 0.4,
+        cd: 22,
+        say: "Abyss!",
+        desc: "Awakened: the dark spreads out from you over the whole field and drags everyone in it down and in.",
+        steps: [{ zone: { range: 8, duration: 5, interval: 0.4, damage: 9, element: "dark", color: "#120a1a", kind: "dark", pull: 2.5, slow: 0.5, absorb: true } }]
+      }
+    ] } },
+    hito: { m1: { dmg: 1.1 }, forms: [{ id: "monster", name: "Monster Point", short: "Monster", mastery: 50, activate: "hito_monster", desc: "A Rumble Ball overdose: a towering monster, enormous power, barely controlled.", m1: { dmg: 1.5, reach: 1.4 } }] },
+    uo_seiryu: { m1: { dmg: 1.2 }, forms: [{ id: "dragon", name: "Azure Dragon Form", short: "Dragon", mastery: 40, activate: "seiryu_form", desc: "Take the Azure Dragon's whole shape: bigger and stronger, every breath a furnace.", m1: { dmg: 1.4, reach: 1.4 } }] }
+  };
+  function attachKits(FRUITS2) {
+    const reg6 = (fid, d, extra) => {
+      const def = { ...d, ...extra, source: "fruit:" + fid, fruit: fid };
+      registerAbilities([def], "fruit:" + fid);
+      return def.id;
+    };
+    for (const [fid, f] of Object.entries(FRUITS2)) {
+      const kit = KITS[fid] || {};
+      const base2 = Object.fromEntries([...f.techniques, ...f.more || []].map((t) => [t.id, t]));
+      const one = (s, extra) => {
+        if (!s) return null;
+        if (typeof s === "string") return s;
+        if (s.awaken) {
+          const b = base2[s.awaken] || getAbility(s.awaken);
+          if (!b) return null;
+          const o = { ...s };
+          delete o.awaken;
+          return reg6(fid, awakenDef(b, o), extra);
+        }
+        return reg6(fid, s, extra);
+      };
+      f.m1 = kit.m1 || null;
+      f.heavy = one(kit.heavy) || null;
+      f.forms = (kit.forms || []).map((F5) => {
+        const form = { ...F5, fruit: fid };
+        form.activate = one(F5.activate, { formOf: F5.id });
+        form.skills = F5.skills ? F5.skills.map((s) => one(s, { formSkill: F5.id })).filter(Boolean) : null;
+        form.heavy = one(F5.heavy, { formSkill: F5.id });
+        return form;
+      });
+      const A2 = kit.awakening || {};
+      const aw = { name: A2.name || `Awakened ${f.en.replace(/ Fruit.*$/, "")}`, short: A2.short || (A2.name && A2.name.length <= 12 ? A2.name : "Awakened"), desc: A2.desc || `Awakening: every move of the ${f.name} bigger, stronger, faster.`, fruit: fid, m1: A2.m1 || f.m1 || null };
+      aw.activate = one(A2.activate || {
+        id: fid + "_awaken",
+        name: aw.name,
+        icon: f.techniques[0]?.icon,
+        anim: "cast",
+        windup: 0.6,
+        recover: 0.2,
+        cd: 6,
+        desc: `Awaken the ${f.name}.`,
+        steps: [{ fx: { ring: 4, color: f.color, flash: 0.25, impact: 0.08, text: "AWAKENED" } }, { at: 0.6, buff: { id: fid + "_awake", form: "awake", name: aw.name, dur: Infinity, mods: { damage: 1.15, speedMul: 1.1 }, aura: rgba(f.color, 0.8), ...A2.look ? { look: A2.look } : {} } }]
+      }, { formOf: "awake", awakened: true, awColor: f.color });
+      const skills = A2.skills || [...f.techniques.filter((t) => !t.flight).map((t) => awaken(t.id)), ...A2.extra || []];
+      aw.skills = skills.map((s) => one(s, { awakenedSkill: true, awakened: true, awColor: f.color })).filter(Boolean);
+      aw.heavy = one(A2.heavy, { awakenedSkill: true, awakened: true, awColor: f.color }) || (f.heavy ? one(awaken(f.heavy), { awakenedSkill: true, awakened: true, awColor: f.color }) : null);
+      f.awakening = aw;
+    }
+  }
+
+  // src/data/fruits.js
+  var T2 = (mastery, a) => ({ ...a, mastery });
+  var FRUITS = {
+    // ------------------------------------------------------------- PARAMECIA
+    gomu: {
+      name: "Gomu Gomu no Mi",
+      en: "Gum-Gum Fruit",
+      type: "Paramecia",
+      rarity: "mythical",
+      color: "#e57373",
+      weight: 0.6,
+      desc: "Turns the body into rubber: blunt blows and lightning barely touch it, and its fists land even on a body made of lightning. Or so the World Government would have you believe...",
+      passive: { rubber: true },
+      stretch: true,
+      techniques: [
+        T2(0, { id: "gomu_pistol", name: "Gum-Gum Pistol", icon: "\u{1F44A}", anim: "punch", windup: 0.12, recover: 0.25, cd: 2.5, say: "Gomu Gomu no... Pistol!", steps: [{ proj: { speed: 26, range: 8, radius: 0.35, damage: 16, sprite: "gomufist", stretch: true, knockback: 5, stun: 0.3 } }] }),
+        T2(10, { id: "gomu_gatling", name: "Gum-Gum Gatling", icon: "\u{1F52B}", anim: "punch", windup: 0.2, recover: 0.3, cd: 6, say: "Gomu Gomu no... Gatling!", steps: [{ hit: { shape: "arc", range: 3.2, arc: 0.9, offset: 0.3, damage: 5, knockback: 0.8, stun: 0.15, duration: 0.9, interval: 0.08 }, vfx: "fist" }] }),
+        T2(20, { id: "gomu_rocket", name: "Gum-Gum Rocket", icon: "\u{1F680}", anim: "thrust", windup: 0.15, recover: 0.2, cd: 4, desc: "Launch yourself like a slingshot.", steps: [{ dash: { dist: 9, time: 0.3, iframes: 0.25, air: true, hit: { damage: 14, knockback: 6, stun: 0.4 } } }] }),
+        T2(30, { id: "gomu_bazooka", name: "Gum-Gum Bazooka", icon: "\u{1F4A5}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 8, say: "Gomu Gomu no... BAZOOKA!", steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.2, offset: 0.4, damage: 36, knockback: 14, stun: 0.8, heavy: true, guardBreak: true, impactFrame: true, hitShips: true } }] }),
+        T2(15, {
+          id: "gomu_balloon",
+          name: "Gum-Gum Balloon",
+          anim: "flex",
+          windup: 0.1,
+          recover: 0.25,
+          cd: 9,
+          say: "Gomu Gomu no... Balloon!",
+          desc: "Blow yourself up like a balloon: bullets and cannonballs bounce off you and fly back the way they came.",
+          steps: [{ buff: { id: "balloon", name: "Balloon", dur: 1.8, mods: { speedMul: 0.35 }, reflect: 1.8, reflectWord: "BOING!", look: { bulk: 1.9 } } }]
+        }),
+        T2(25, {
+          id: "gomu_stamp",
+          name: "Gum-Gum Stamp",
+          anim: "kick_high",
+          windup: 0.18,
+          recover: 0.3,
+          cd: 4,
+          say: "Gomu Gomu no... Stamp!",
+          desc: "A rubber leg shot out straight at them, sole first: it lands like a door slammed in their face.",
+          steps: [{ hit: { shape: "line", range: 5.5, width: 0.9, damage: 20, knockback: 9, stun: 0.45, heavy: true }, vfx: "stab" }]
+        }),
+        T2(35, {
+          id: "gomu_spear",
+          name: "Gum-Gum Spear",
+          anim: "kick_high",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 7,
+          say: "Gomu Gomu no... Yari!",
+          desc: "Both feet pressed together and stretched out like a spearhead: it drives straight through whoever is in front of you.",
+          steps: [{ hit: { shape: "line", range: 6.5, width: 1, damage: 30, knockback: 10, stun: 0.6, heavy: true, guardBreak: true }, vfx: "stab" }]
+        }),
+        T2(40, {
+          id: "gomu_bell",
+          name: "Gum-Gum Bell",
+          anim: "grab",
+          windup: 0.25,
+          recover: 0.35,
+          cd: 9,
+          say: "Gomu Gomu no... Kane!",
+          desc: "Grab hold of them, stretch your head right back \u2014 and let it fly into theirs like the clapper of a bell.",
+          steps: [{ pull: { range: 5, strength: 12, stun: 0.5 } }, { at: 0.45, hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 32, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true, shake: 0.4 } }]
+        })
+      ],
+      // (the Gears: Second and Fourth are switched on by these — see data/fruitForms.js — and so is Third by
+      // its own; the old Gear Third and Gear Fifth stay for whoever uses them as single moves)
+      more: [
+        T2(45, {
+          id: "gomu_gear2",
+          name: "Gear Second",
+          icon: "\u2668",
+          anim: "kneel",
+          windup: 0.4,
+          recover: 0.1,
+          cd: 30,
+          say: "Gear... Second!",
+          desc: "Pump blood at high speed: faster and stronger, every move a Jet \u2014 at a cost when it wears off.",
+          steps: [{ fx: { burst: 20, color: "#ffcdd2", kind: "smoke" } }, { at: 0.4, buff: { id: "gear2", form: "gear2", name: "Gear Second", dur: 25, mods: { speedMul: 1.35, damage: 1.25, atkSpeed: 1.3 }, fpTint: "rgba(255,138,128,0.7)", steam: true, look: { skin: "#f4a39c" }, after: { id: "gear2_spent", name: "Spent", dur: 6, mods: { speedMul: 0.85, atkSpeed: 0.85 } } } }]
+        }),
+        T2(60, { id: "gomu_gear3", name: "Gear Third: Gigant Pistol", icon: "\u{1F9B4}", anim: "pistol", windup: 0.7, recover: 0.5, cd: 18, say: "Gear Third... Gigant Pistol!", steps: [{ proj: { speed: 16, range: 10, radius: 1.6, damage: 80, sprite: "gomufist", size: 4, stretch: true, pierce: true, knockback: 14, stun: 1, heavy: true, hitShips: true, shipDamage: 200 } }] }),
+        T2(80, {
+          id: "gomu_gear4",
+          name: "Gear Fourth: Boundman",
+          icon: "\u{1F388}",
+          anim: "cast",
+          windup: 0.8,
+          recover: 0.2,
+          cd: 60,
+          cost: { haki: 40 },
+          requiresHaki: "armament",
+          say: "Gear... FOURTH!",
+          desc: "Inflate your Haki-hardened muscles and bounce: enormous power for a short time \u2014 then you're exhausted.",
+          steps: [{ fx: { ring: 3, color: "#b71c1c", impact: 0.1 } }, { at: 0.8, buff: {
+            id: "gear4",
+            form: "gear4",
+            name: "Boundman",
+            dur: 22,
+            mods: { damage: 2.2, defMul: 0.6, speedMul: 1.2 },
+            fpTint: "rgba(183,28,28,0.9)",
+            forceArmament: true,
+            steam: "collar",
+            look: { bulk: 1.85, muscle: 1.2, boundman: true, hair: "spiky" },
+            drain: { haki: 1.5 },
+            after: { id: "gear4_spent", name: "Exhausted", dur: 12, mods: { speedMul: 0.7, atkSpeed: 0.75, damage: 0.8 }, noHaki: true, noForms: true }
+          } }]
+        }),
+        T2(100, {
+          id: "gomu_gear5",
+          name: "Gear Fifth",
+          icon: "\u2600",
+          anim: "cast",
+          windup: 1,
+          recover: 0.2,
+          cd: 180,
+          cost: { haki: 60 },
+          requiresHaki: "conqueror",
+          say: "...Drums of Liberation.",
+          desc: "The fruit's true name is Hito Hito no Mi, Model: Nika. The warrior of liberation, bringer of joy.",
+          steps: [{ fx: { ring: 6, color: "#ffffff", flash: 0.6, impact: 0.2, text: "SUN GOD NIKA" } }, { at: 1, buff: { id: "gear5", name: "Gear Fifth", dur: 30, mods: { damage: 3, defMul: 0.45, speedMul: 1.4, atkSpeed: 1.4 }, fpTint: "rgba(255,255,255,0.8)", wisps: true, look: { hairColor: "#ffffff", top: "#ffffff", bottom: "#ffffff", eyeColor: "#ff4d7e", belt: "#7b3fa0", nika: true } } }]
+        })
+      ]
+    },
+    gura: {
+      name: "Gura Gura no Mi",
+      en: "Tremor-Tremor Fruit",
+      type: "Paramecia",
+      rarity: "legendary",
+      color: "#e0f7fa",
+      weight: 0.4,
+      desc: "The power to destroy the world: quakes in the air, the ground and the sea that crack the very sky and throw everything off its feet. Once eaten by Whitebeard.",
+      techniques: [
+        T2(0, { id: "gura_punch", name: "Quake Punch", icon: "\u270A", anim: "quake", windup: 0.25, recover: 0.3, cd: 4, desc: "A fist wrapped in a quake bubble: the air in front of it cracks like glass.", steps: [{ hit: { shape: "arc", range: 3, arc: 1.2, offset: 0.3, damage: 26, knockback: 10, stun: 0.6, element: "quake", heavy: true, guardBreak: true, launch: 3, shake: 0.4 }, vfx: "ring" }] }),
+        T2(20, { id: "gura_kaishin", name: "Shima Yurashi", icon: "\u{1F310}", anim: "quake", windup: 0.45, recover: 0.4, cd: 9, desc: "Island Shaker: grab the air and shake it \u2014 the ground heaves and everyone around you is thrown off their feet.", steps: [{ hit: { shape: "circle", range: 4.5, damage: 40, knockback: 12, stun: 0.9, element: "quake", heavy: true, guardBreak: true, launch: 6, impactFrame: true, shake: 0.8, hitShips: true }, vfx: "ring" }] }),
+        T2(45, { id: "gura_wave", name: "Gekishin", icon: "\u{1F30A}", anim: "quake", windup: 0.5, recover: 0.4, cd: 12, desc: "Violent Quake: a quake bubble punched into the air sends a shockwave ripping through the air and the ground (and the sea), throwing everything in its path.", steps: [{ hit: { shape: "line", range: 12, width: 3, damage: 55, knockback: 14, stun: 1, element: "quake", heavy: true, unblockable: true, launch: 5, shake: 0.7, hitShips: true, shipDamage: 250 }, vfx: "beam", color: "#e0f7fa" }] }),
+        T2(75, {
+          id: "gura_tsunami",
+          name: "Kaishin",
+          icon: "\u{1F30B}",
+          anim: "slam",
+          windup: 0.9,
+          recover: 0.5,
+          cd: 40,
+          desc: "Seaquake: strike the very air and the sea rises \u2014 everything nearby is crushed, ships are swamped, and the ground goes on shaking.",
+          steps: [
+            { hit: { shape: "circle", range: 8, damage: 90, knockback: 16, stun: 1.2, element: "quake", heavy: true, unblockable: true, launch: 7, impactFrame: true, shake: 1.2, hitShips: true, shipDamage: 500 }, vfx: "ring" },
+            { zone: { range: 8, duration: 3, interval: 0.5, damage: 5, element: "quake", color: "#e0f7fa", kind: "quake", slow: 0.5 } }
+          ]
+        }),
+        T2(30, {
+          id: "gura_bubble",
+          name: "Quake Bubble",
+          anim: "quake",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 8,
+          desc: "A bubble of tremors gathered round the fist and flung: where it bursts, the very air shatters like glass.",
+          steps: [{ proj: { speed: 16, range: 12, radius: 0.7, damage: 14, sprite: "shockwave", color: "#e0f7fa", size: 1.6, element: "quake", pierce: true, explode: { range: 3.2, damage: 46, element: "quake", knockback: 12 } } }]
+        }),
+        T2(60, {
+          id: "gura_tilt",
+          name: "Sky Tilt",
+          anim: "grab",
+          windup: 0.55,
+          recover: 0.45,
+          cd: 18,
+          desc: "Grab the air itself and wrench it sideways: the whole field tilts like the deck of a ship, and everyone in a great sweep in front of you is thrown off their feet.",
+          steps: [{ hit: { shape: "arc", range: 9, arc: 1.8, offset: 0.3, damage: 50, knockback: 15, stun: 1, element: "quake", heavy: true, guardBreak: true, launch: 5, impactFrame: true, shake: 1, hitShips: true, shipDamage: 200 }, vfx: "ring" }]
+        })
+      ]
+    },
+    ope: {
+      name: "Ope Ope no Mi",
+      en: "Op-Op Fruit",
+      type: "Paramecia",
+      rarity: "legendary",
+      color: "#81d4fa",
+      weight: 0.4,
+      desc: "Open a ROOM \u2014 a sphere of space that stays where you cast it \u2014 and inside it you are a surgeon: you can swap, lift, cut and remove whatever is in it, and your blows pass through any body. Its ultimate technique grants eternal youth, at the cost of the user's life.",
+      // (ROOM, Shambles, Amputate, Mes and Takt on the first five skill keys; the rest of the surgeon's
+      // base on keys of your choosing — the skills panel, or Skills (Tab))
+      techniques: [
+        T2(0, {
+          id: "ope_room",
+          name: "ROOM",
+          icon: "\u{1F535}",
+          anim: "raise",
+          windup: 0.35,
+          recover: 0.25,
+          cd: 18,
+          say: "ROOM.",
+          desc: "Open a ROOM: a pale blue sphere that stays where you cast it (it grows with your mastery). Your other techniques work inside it \u2014 draw the fight in.",
+          steps: [{ zone: { kind: "room", range: 6.5, grow: 0.035, duration: 16, damage: 0, color: "#81d4fa", single: true, whileOwner: true } }, { buff: { id: "room", name: "ROOM", dur: 16 } }]
+        }),
+        T2(10, {
+          id: "ope_shambles",
+          name: "Shambles",
+          icon: "\u{1F500}",
+          anim: "point",
+          windup: 0.12,
+          recover: 0.15,
+          cd: 2.5,
+          room: "need",
+          say: "Shambles.",
+          desc: "In your Room: change places with whoever you aim at \u2014 a foe mid-swing finds themselves somewhere else \u2014 or be wherever in it you aim.",
+          steps: [{ power: { kind: "shambles" } }]
+        }),
+        T2(20, {
+          id: "ope_amputate",
+          name: "Amputate",
+          icon: "\u{1F5E1}",
+          anim: "slash",
+          windup: 0.25,
+          recover: 0.3,
+          cd: 7,
+          room: "need",
+          say: "Amputate!",
+          desc: "In your Room: a vast slash through everything in front of you. It cuts without killing \u2014 the pieces live, helpless, for a while.",
+          steps: [{ hit: { shape: "arc", range: 4.2, arc: 2.4, offset: 0.2, damage: 22, knockback: 1, stun: 0.3, slashing: true, nonLethal: true, status: { pieces: 2.4 } }, vfx: "slash", color: "#81d4fa" }]
+        }),
+        T2(40, {
+          id: "ope_mes",
+          name: "Mes",
+          icon: "\u{1F499}",
+          anim: "thrust",
+          windup: 0.18,
+          recover: 0.3,
+          cd: 14,
+          room: "need",
+          say: "Mes.",
+          desc: "In your Room: push a hand into the target and take their heart out in a cube. Without it they can do nothing for a long while \u2014 and every blow lands harder.",
+          steps: [{ hit: { shape: "arc", range: 1.9, arc: 1, offset: 0.2, damage: 12, knockback: 0, stun: 0.3, unblockable: true, status: { heartless: 3.5 } } }]
+        }),
+        T2(30, {
+          id: "ope_takt",
+          name: "Takt",
+          anim: "raise",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 12,
+          room: "need",
+          say: "Takt.",
+          desc: "In your Room: raise a finger, and everyone in the Room is lifted into the air, held there helpless \u2014 and slammed back down.",
+          steps: [{ power: { kind: "takt", h: 2.6, hold: 1.1, damage: 26, blow: true, unblockable: true } }]
+        }),
+        T2(65, {
+          id: "ope_injection",
+          name: "Injection Shot",
+          anim: "thrust",
+          windup: 0.25,
+          recover: 0.35,
+          cd: 9,
+          room: "weak",
+          say: "Injection Shot!",
+          desc: "Charge in a blur and run the target through with your sword. Half as strong outside your Room.",
+          steps: [{ dash: { dist: 7, time: 0.18, iframes: 0.15, hit: { damage: 58, knockback: 7, stun: 0.6, slashing: true, guardBreak: true } } }]
+        }),
+        T2(75, {
+          id: "ope_gamma",
+          name: "Gamma Knife",
+          icon: "\u2622",
+          anim: "thrust",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 18,
+          room: "need",
+          say: "Gamma Knife.",
+          desc: "In your Room: a blade of gamma rays that destroys the organs from the inside and leaves the body unmarked. Nothing defends against it.",
+          steps: [{ hit: { shape: "line", range: 3.4, width: 0.9, damage: 72, knockback: 1, stun: 1, unblockable: true, trueDamage: true, status: { bleed: 4 } }, vfx: "beam", color: "#b388ff" }]
+        }),
+        T2(85, {
+          id: "ope_radio",
+          name: "Radio Knife",
+          anim: "slash",
+          windup: 0.4,
+          recover: 0.4,
+          cd: 20,
+          room: "need",
+          say: "Radio Knife!",
+          desc: "In your Room: an electrified slash that cuts the target to pieces \u2014 and the shock keeps the pieces from coming back together for a long while.",
+          steps: [{ hit: { shape: "arc", range: 4, arc: 2.2, offset: 0.2, damage: 64, knockback: 2, stun: 0.5, slashing: true, status: { pieces: 3, shock: 2 } }, vfx: "slash", color: "#fff176" }]
+        })
+      ],
+      // (Counter Shock is the surgeon's heavy blow; Shock Wille belongs to the awakened K-ROOM)
+      more: [
+        T2(55, {
+          id: "ope_counter",
+          name: "Counter Shock",
+          icon: "\u26A1",
+          anim: "palm",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 10,
+          room: "weak",
+          say: "Counter Shock!",
+          desc: "A hand on the target and a shock like a defibrillator's. Half as strong outside your Room.",
+          steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 42, knockback: 3, stun: 1, element: "lightning", status: { shock: 1.5 } }, vfx: "ring", color: "#fff176" }]
+        }),
+        T2(100, {
+          id: "ope_shockwille",
+          name: "K-Room: Shock Wille",
+          anim: "thrust",
+          windup: 0.5,
+          recover: 0.5,
+          cd: 45,
+          cost: { haki: 35 },
+          requiresHaki: "armament",
+          say: "K-Room... Shock Wille!",
+          desc: "A Room coated in Haki, opened inside the target's own body on your sword's point \u2014 and a shockwave set off within it. Needs no other Room.",
+          steps: [{ hit: { shape: "arc", range: 2, arc: 0.9, offset: 0.2, damage: 130, knockback: 12, stun: 1.2, unblockable: true, trueDamage: true, heavy: true, impactFrame: true, shake: 0.7 }, vfx: "ring", color: "#81d4fa" }]
+        })
+      ]
+    },
+    bara: {
+      name: "Bara Bara no Mi",
+      en: "Chop-Chop Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#ff8a65",
+      weight: 3,
+      desc: "Split your body into pieces. Blades cannot hurt you \u2014 but your feet must stay on the ground. (Buggy the Clown's fruit.)",
+      passive: { immuneSlash: true },
+      techniques: [
+        T2(0, { id: "bara_cannon", name: "Chop-Chop Cannon", icon: "\u{1F921}", anim: "cross", windup: 0.15, recover: 0.25, cd: 3, say: "Bara Bara Ho!", steps: [{ proj: { speed: 20, range: 9, radius: 0.35, damage: 14, sprite: "barafist", color: "#ffccbc", knockback: 3, stun: 0.3 } }] }),
+        T2(20, { id: "bara_festival", name: "Chop-Chop Festival", icon: "\u{1F3AA}", anim: "cast", windup: 0.3, recover: 0.4, cd: 10, desc: "Scatter into a hundred pieces that pummel everything nearby.", steps: [{ hit: { shape: "circle", range: 3.2, damage: 6, knockback: 1.5, stun: 0.15, duration: 1.2, interval: 0.15 }, vfx: "ring" }] }),
+        T2(40, { id: "bara_escape", name: "Emergency Escape", icon: "\u{1F388}", anim: "fly", windup: 0.05, recover: 0.1, cd: 8, desc: "Your pieces fly off every which way and come back together somewhere safer.", steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, air: true } }] }),
+        T2(10, {
+          id: "bara_knives",
+          name: "Chop-Chop Knives",
+          anim: "cross",
+          windup: 0.15,
+          recover: 0.25,
+          cd: 4,
+          say: "Bara Bara Ho!",
+          desc: "A hand flung off with knives fanned between its fingers: three blades come at them at once.",
+          steps: [{ proj: { speed: 22, range: 10, radius: 0.25, damage: 10, count: 3, spread: 0.35, sprite: "iceshard", color: "#cfd8dc", slashing: true } }]
+        }),
+        T2(30, {
+          id: "bara_senbei",
+          name: "Chop-Chop Senbei",
+          anim: "sweep",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 7,
+          desc: "Chop-Chop Pancake: your feet stay on the ground and your lower half spins off through them like a saw blade.",
+          steps: [{ dash: { dist: 7, time: 0.35, iframes: 0.2, hit: { damage: 22, knockback: 6, stun: 0.5, range: 1.3 } } }]
+        }),
+        T2(55, {
+          id: "bara_muggy",
+          name: "Muggy Ball",
+          anim: "shoot",
+          windup: 0.45,
+          recover: 0.4,
+          cd: 16,
+          say: "Muggy Ball!",
+          desc: "Buggy's own cannonball, lit and hurled by hand: it bursts with the force of a whole broadside.",
+          steps: [{ proj: { speed: 13, range: 12, radius: 0.5, damage: 10, sprite: "bomb", size: 1.4, explode: { range: 4, damage: 70, knockback: 12 } } }]
+        })
+      ]
+    },
+    bomu: {
+      name: "Bomu Bomu no Mi",
+      en: "Bomb-Bomb Fruit",
+      type: "Paramecia",
+      rarity: "common",
+      color: "#ffab40",
+      weight: 5,
+      desc: "Make any part of your body explode \u2014 and survive it. An explosion can be blocked, never parried. (Mr. 5 of Baroque Works.)",
+      passive: { resist: ["explosion"] },
+      techniques: [
+        T2(0, { id: "bomu_kick", name: "Kick Bomb", icon: "\u{1F4A3}", anim: "kick", windup: 0.2, recover: 0.3, cd: 3, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.3, damage: 18, knockback: 7, stun: 0.4, element: "explosion", blast: true }, vfx: "ring", color: "#ffab40" }] }),
+        T2(15, { id: "bomu_nose", name: "Nose Fancy Cannon", icon: "\u{1F443}", anim: "flick", windup: 0.25, recover: 0.3, cd: 5, desc: "Flick an explosive... bogey. Disgusting and effective.", steps: [{ proj: { speed: 18, range: 12, radius: 0.2, damage: 6, sprite: "orb", color: "#aed581", explode: { range: 2, damage: 24 } } }] }),
+        T2(40, { id: "bomu_breeze", name: "Breeze Breath Bomb", icon: "\u{1F32C}", anim: "breath", windup: 0.35, recover: 0.3, cd: 9, steps: [{ hit: { shape: "arc", range: 4, arc: 1.2, offset: 0.2, damage: 32, knockback: 8, stun: 0.6, element: "explosion", heavy: true, blast: true }, vfx: "ring", color: "#ffab40" }] }),
+        T2(20, {
+          id: "bomu_fist",
+          name: "Bomb Punch",
+          anim: "punch",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 4,
+          desc: "Your fist goes off as it lands.",
+          steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.3, damage: 22, knockback: 8, stun: 0.5, element: "explosion", blast: true }, vfx: "ring", color: "#ffab40" }]
+        }),
+        T2(55, {
+          id: "bomu_stomp",
+          name: "Bomb Stomp",
+          anim: "slam",
+          windup: 0.4,
+          recover: 0.4,
+          cd: 12,
+          desc: "Stamp down and let your whole body go off: everything round you is blown off its feet.",
+          steps: [{ hit: { shape: "circle", range: 3.6, damage: 44, knockback: 12, stun: 0.7, element: "explosion", heavy: true, blast: true, launch: 3, shake: 0.5 }, vfx: "ring", color: "#ffab40" }]
+        })
+      ]
+    },
+    hana: {
+      name: "Hana Hana no Mi",
+      en: "Flower-Flower Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#f48fb1",
+      weight: 2.5,
+      desc: "Sprout copies of your body parts on any surface \u2014 including your enemies. (Nico Robin.)",
+      techniques: [
+        T2(0, { id: "hana_clutch", name: "Seis Fleur: Clutch", icon: "\u{1F338}", anim: "hana", windup: 0.25, recover: 0.3, cd: 5, say: "Seis Fleur... Clutch!", desc: "Sprout arms on the target and bend them backwards.", steps: [{ zone: { range: 1.2, duration: 0.3, interval: 0.3, damage: 24, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.2 } } }] }),
+        T2(20, { id: "hana_mil", name: "Mil Fleur", icon: "\u{1F33A}", anim: "hana", windup: 0.4, recover: 0.4, cd: 10, desc: "A thousand arms bloom around you and strike.", steps: [{ hit: { shape: "circle", range: 3.6, damage: 7, knockback: 1, stun: 0.3, duration: 1, interval: 0.14 }, vfx: "ring", color: "#f48fb1" }] }),
+        T2(50, { id: "hana_gigante", name: "Mil Fleur: Gigantesco Mano", icon: "\u270B", anim: "hana", windup: 0.5, recover: 0.4, cd: 14, desc: "A thousand arms bloom into two giant hands that slam down.", steps: [{ zone: { range: 2.6, duration: 0.3, interval: 0.3, damage: 60, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.5 } } }] }),
+        T2(30, {
+          id: "hana_spank",
+          name: "Cien Fleur: Spank",
+          anim: "hana",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 8,
+          desc: "A hundred hands bloom all round the target and slap them silly.",
+          steps: [{ zone: { range: 1.8, duration: 1, interval: 0.12, damage: 6, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 0.3 } } }]
+        }),
+        T2(40, {
+          id: "hana_strangle",
+          name: "Treinta Fleur: Strangle",
+          anim: "hana",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 12,
+          desc: "Arms bloom on the target's neck and legs and hold them fast, squeezing.",
+          steps: [{ zone: { range: 1.4, duration: 2.4, interval: 0.4, damage: 9, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 0.6 } } }]
+        }),
+        T2(45, {
+          id: "hana_ojos",
+          name: "Ojos Fleur",
+          anim: "pray",
+          windup: 0.3,
+          recover: 0.2,
+          cd: 24,
+          desc: "Eyes bloom on every wall and tree round you: nothing moves without you seeing it \u2014 blows are easier to slip, and every opening is yours.",
+          steps: [{ buff: { id: "ojos", name: "Ojos Fleur", dur: 12, mods: { evade: 0.3, crit: 0.25 }, aura: "rgba(244,143,177,0.5)" } }]
+        }),
+        T2(60, {
+          id: "hana_cuerpo",
+          name: "Cuerpo Fleur",
+          anim: "hana",
+          windup: 0.4,
+          recover: 0.3,
+          cd: 35,
+          desc: "Bloom a whole body of yourself out of the ground in a swirl of petals: a double that draws them off and fights beside you.",
+          steps: [{ summon: { archetype: "brute", count: 1, name: "Cuerpo Fleur", duration: 12, look: "copy", color: ["#f48fb1", "#fce4ec"], moves: ["brawl_tackle"], hpMul: 0.6 } }]
+        })
+      ]
+    },
+    ito: {
+      name: "Ito Ito no Mi",
+      en: "String-String Fruit",
+      type: "Paramecia",
+      rarity: "legendary",
+      color: "#f8bbd0",
+      weight: 0.5,
+      desc: "Create strings sharp enough to cut steel and strong enough to puppet people \u2014 or to hook onto the clouds and walk the sky. (Donquixote Doflamingo.)",
+      techniques: [
+        T2(0, { id: "ito_overheat", name: "Overheat", icon: "\u{1F9F5}", anim: "point", windup: 0.3, recover: 0.3, cd: 5, desc: "A whip of strings, red-hot, lashed in a straight line.", steps: [{ hit: { shape: "line", range: 9, width: 0.6, damage: 24, knockback: 4, stun: 0.4, slashing: true, element: "fire" }, vfx: "beam", color: "#ff8a80" }] }),
+        T2(15, { id: "ito_parasite", name: "Parasite", icon: "\u{1F3AD}", anim: "point", windup: 0.25, recover: 0.3, cd: 12, desc: "Strings into the target's nerves: a puppet on your strings, they can neither move nor fight for a while.", steps: [{ proj: { speed: 22, range: 10, radius: 0.4, damage: 8, sprite: "string", status: { puppet: 2.5 }, stun: 0.5 } }] }),
+        T2(35, { id: "ito_fivecolor", name: "Goshikito", icon: "\u{1F590}", anim: "claw", windup: 0.25, recover: 0.3, cd: 7, desc: "Five Color String: a string from each fingertip, raked down through whatever is in front of you.", steps: [{ hit: { shape: "arc", range: 3.4, arc: 1.4, offset: 0.2, damage: 34, knockback: 3, stun: 0.5, slashing: true }, vfx: "slash", color: "#f8bbd0" }] }),
+        T2(40, {
+          id: "ito_skypath",
+          name: "Sora no Michi",
+          desc: "Sky Path: hook your strings onto the clouds and walk the sky. Fly \u2014 or press Space again in the air.",
+          flight: { style: "float", ride: "strings", gauge: 16, speed: 10, climb: 6, ceiling: 40, sea: 3.5, color: "#f8bbd0" }
+        }),
+        T2(70, { id: "ito_birdcage", name: "Birdcage", icon: "\u{1F578}", anim: "summon", windup: 0.8, recover: 0.4, cd: 45, desc: "A cage of strings round the whole area: nobody inside gets out, it closes in \u2014 and its strings cut whatever touches them.", steps: [{ zone: { range: 9, duration: 9, interval: 0.4, damage: 14, color: "#f8bbd0", kind: "cage", cage: true, shrink: 0.55, edge: 1.2 } }] }),
+        T2(20, {
+          id: "ito_tamaito",
+          name: "Tamaito",
+          anim: "point",
+          windup: 0.15,
+          recover: 0.25,
+          cd: 4,
+          desc: "Bullet String: strings fired from your fingertips like gunshots \u2014 they punch clean through.",
+          steps: [{ proj: { speed: 34, range: 13, radius: 0.22, damage: 9, count: 3, spread: 0.12, sprite: "string", color: "#f8bbd0", pierce: true, slashing: true, element: "string" } }]
+        }),
+        T2(50, {
+          id: "ito_fulbright",
+          name: "Fulbright",
+          anim: "raise",
+          windup: 0.5,
+          recover: 0.4,
+          cd: 14,
+          desc: "Strings hooked onto the clouds come down on the target like a rain of blades.",
+          steps: [{ zone: { range: 2.6, duration: 1.4, interval: 0.2, damage: 11, color: "#f8bbd0", atTarget: true, kind: "strings", element: "string", status: { bleed: 1 } } }]
+        })
+      ]
+    },
+    mochi: {
+      name: "Mochi Mochi no Mi",
+      en: "Mochi-Mochi Fruit",
+      type: "Special Paramecia",
+      rarity: "legendary",
+      color: "#fff8e1",
+      weight: 0.5,
+      desc: "A special Paramecia that behaves like a Logia: your body is mochi \u2014 it stretches, it binds, and blows sometimes pass through a hole you make in it. (Charlotte Katakuri.)",
+      passive: { logiaLike: true, intangible: 0.35, weakTo: ["fire"] },
+      techniques: [
+        T2(0, { id: "mochi_tsuki", name: "Mochi Tsuki", icon: "\u{1F361}", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, desc: "Your arm stretches into a great fist of mochi.", steps: [{ proj: { speed: 18, range: 8, radius: 0.6, damage: 22, sprite: "mochi", color: "#fff8e1", knockback: 6, stun: 0.5, size: 1.5, stretch: true } }] }),
+        T2(20, { id: "mochi_zangiri", name: "Zan Giri Mochi", icon: "\u{1F531}", anim: "thrust", windup: 0.3, recover: 0.3, cd: 7, desc: "A trident of hardened mochi, thrust straight through.", steps: [{ hit: { shape: "line", range: 4.5, width: 1.2, damage: 36, knockback: 5, stun: 0.6, slashing: true }, vfx: "beam", color: "#fff8e1" }] }),
+        T2(35, { id: "mochi_bind", name: "Sticky Mochi", anim: "grab", windup: 0.35, recover: 0.35, cd: 11, desc: "The ground under the target turns to sticky mochi: whoever is in it is stuck fast.", steps: [{ zone: { range: 2.2, duration: 3.5, interval: 0.5, damage: 6, color: "#fff8e1", atTarget: true, kind: "field", slow: 0.3, status: { root: 0.6 } } }] }),
+        T2(50, { id: "mochi_chikara", name: "Chikara Mochi", icon: "\u{1F4AA}", anim: "slam", windup: 0.45, recover: 0.4, cd: 12, desc: "Giant mochi fists rain down.", steps: [{ zone: { range: 3, duration: 1.2, interval: 0.2, damage: 18, color: "#fff8e1", atTarget: true, kind: "fists" } }] }),
+        T2(40, {
+          id: "mochi_buto",
+          name: "Buto Giri",
+          anim: "thrust",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 8,
+          desc: "Martial Cut: whirl the trident Mogura round and drive it through them as you charge.",
+          steps: [{ dash: { dist: 7, time: 0.28, iframes: 0.2, hit: { damage: 34, knockback: 8, stun: 0.6, slashing: true, heavy: true } } }]
+        }),
+        T2(60, {
+          id: "mochi_kaku",
+          name: "Kaku Mochi",
+          anim: "slam",
+          windup: 0.5,
+          recover: 0.4,
+          cd: 14,
+          desc: "Squared Mochi: a great block of mochi pressed down on them \u2014 it lands like a wall, and they stick to it.",
+          steps: [{ zone: { range: 2.4, duration: 0.6, interval: 0.3, damage: 34, color: "#fff8e1", atTarget: true, kind: "fists", status: { root: 1.2 } } }]
+        })
+      ]
+    },
+    horo: {
+      name: "Horo Horo no Mi",
+      en: "Hollow-Hollow Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#ce93d8",
+      weight: 3,
+      desc: "Create ghosts. Negative Hollows drift through walls and drain the will to live from anyone they pass through. (Perona.)",
+      techniques: [
+        T2(0, { id: "horo_negative", name: "Negative Hollow", icon: "\u{1F47B}", anim: "point", windup: 0.3, recover: 0.3, cd: 8, desc: `"I'm so sorry I was born..." A ghost drifts through anything in its way and into the target, who collapses in despair.`, steps: [{ proj: { speed: 10, range: 12, radius: 0.5, damage: 4, sprite: "ghost", color: "#e1bee7", homing: 3, status: { despair: 3 }, stun: 2.2, unblockable: true, passWalls: true } }] }),
+        T2(20, { id: "horo_mini", name: "Mini Hollow", icon: "\u{1F4AB}", anim: "cast", windup: 0.3, recover: 0.3, cd: 7, desc: 'Little ghosts float to the target \u2014 and "Ghost Rap": they burst.', steps: [{ proj: { speed: 11, range: 10, radius: 0.3, damage: 6, count: 4, spread: 0.9, sprite: "ghost", size: 0.7, color: "#e1bee7", homing: 4, passWalls: true, explode: { range: 1.2, damage: 12, colors: ["#e1bee7", "#fff"] } } }] }),
+        T2(45, { id: "horo_toku", name: "Tokuhollow", anim: "cast", windup: 0.7, recover: 0.4, cd: 16, desc: "A great ghost that floats after the target and bursts like a bomb.", steps: [{ proj: { speed: 6.5, range: 11, radius: 1, damage: 10, sprite: "ghost", size: 2.2, color: "#e1bee7", homing: 2.5, passWalls: true, explode: { range: 3.2, damage: 44, colors: ["#e1bee7", "#ffffff"] } } }] }),
+        T2(30, {
+          id: "horo_ghostrap",
+          name: "Ghost Rap",
+          anim: "cast",
+          windup: 0.35,
+          recover: 0.3,
+          cd: 10,
+          desc: "Mini Hollows bob up all round you \u2014 then, with a snap of your fingers, every one of them bursts.",
+          steps: [{ hit: { shape: "circle", range: 3.4, damage: 30, knockback: 9, stun: 0.5, element: "explosion", blast: true }, vfx: "ring", color: "#e1bee7" }]
+        }),
+        T2(55, {
+          id: "horo_spirit",
+          name: "Spirit Body",
+          anim: "pray",
+          windup: 0.3,
+          recover: 0.2,
+          cd: 30,
+          desc: "Slip out of your body as a ghost: blows pass through you and nobody can quite tell where you are.",
+          steps: [{ buff: { id: "spirit", name: "Spirit Body", dur: 6, mods: { evade: 0.7, stealth: 0.6 }, alpha: 0.45, aura: "rgba(225,190,231,0.5)" } }]
+        })
+      ]
+    },
+    kage: {
+      name: "Kage Kage no Mi",
+      en: "Shadow-Shadow Fruit",
+      type: "Paramecia",
+      rarity: "rare",
+      color: "#455a64",
+      weight: 1.2,
+      desc: "Manipulate shadows, steal them, and fight with a living shadow double. One whose shadow is stolen burns in the sunlight. (Gecko Moria.)",
+      techniques: [
+        T2(0, { id: "kage_brickbat", name: "Brick Bat", icon: "\u{1F987}", anim: "cast", windup: 0.25, recover: 0.3, cd: 4, desc: "Your shadow breaks into a swarm of bats.", steps: [{ proj: { speed: 14, range: 11, radius: 0.3, damage: 7, count: 5, spread: 0.6, sprite: "bat", color: "#263238", homing: 2 } }] }),
+        T2(20, { id: "kage_steal", name: "Shadow Steal", icon: "\u{1F311}", anim: "grab", windup: 0.35, recover: 0.3, cd: 16, desc: "Cut away the target's shadow: without it they take more harm \u2014 and out in the sunlight they burn.", steps: [{ hit: { shape: "arc", range: 2.6, arc: 1, offset: 0.2, damage: 18, stun: 0.8, status: { shadowless: 12 }, unblockable: true } }] }),
+        T2(40, {
+          id: "kage_doppelman",
+          name: "Doppelman",
+          icon: "\u{1F464}",
+          anim: "cast",
+          windup: 0.3,
+          recover: 0.2,
+          cd: 30,
+          desc: "Your shadow peels away and fights beside you as a body of its own.",
+          steps: [{ summon: { archetype: "brute", count: 1, name: "Doppelman", duration: 18, look: "shadow", at: "shadow", moves: ["brawl_tackle"], hpMul: 0.8 } }, { buff: { id: "doppel", name: "Doppelman", dur: 18, mods: { damage: 1.15 } } }]
+        }),
+        T2(60, { id: "kage_tsuno", name: "Tsuno-Tokage", anim: "cast", windup: 0.6, recover: 0.4, cd: 12, desc: "Horned Lizard: your shadow runs along the ground to the target and bursts up as a spike under them.", steps: [{ zone: { range: 1.8, duration: 0.6, interval: 0.3, damage: 40, color: "#37474f", atTarget: true, kind: "field" } }] }),
+        T2(30, {
+          id: "kage_blackbox",
+          name: "Black Box",
+          anim: "grab",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 13,
+          desc: "Your shadow rears up round the target and folds shut: a box of shadow they can't get out of for a moment.",
+          steps: [{ zone: { range: 1.6, duration: 1.8, interval: 0.6, damage: 10, color: "#263238", atTarget: true, kind: "dark", status: { root: 0.9 } } }]
+        }),
+        T2(50, {
+          id: "kage_kakumei",
+          name: "Kage Kakumei",
+          anim: "thrust",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 9,
+          desc: "Shadow Revolution: your arm runs out along its own shadow, far longer than any arm should, and strikes.",
+          steps: [{ hit: { shape: "line", range: 8, width: 1, damage: 32, knockback: 8, stun: 0.5, heavy: true }, vfx: "beam", color: "#37474f" }]
+        })
+      ]
+    },
+    doku: {
+      name: "Doku Doku no Mi",
+      en: "Venom-Venom Fruit",
+      type: "Paramecia",
+      rarity: "rare",
+      color: "#8e24aa",
+      weight: 1.2,
+      desc: "Produce and control lethal poison. (Magellan, chief warden of Impel Down.)",
+      passive: { resist: ["poison"] },
+      techniques: [
+        T2(0, { id: "doku_fist", name: "Poison Fist", icon: "\u2620", anim: "punch", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 12, knockback: 3, stun: 0.3, element: "poison", status: { poison: 5 } } }] }),
+        T2(20, { id: "doku_hydra", name: "Hydra", icon: "\u{1F40D}", anim: "cast", windup: 0.4, recover: 0.4, cd: 9, say: "Hydra!", steps: [{ proj: { speed: 13, range: 12, radius: 0.7, damage: 26, count: 3, spread: 0.4, sprite: "hydra", element: "poison", status: { poison: 6 }, homing: 1.5, trail: { color: "#8e24aa", kind: "smoke" } } }] }),
+        T2(50, { id: "doku_venom", name: "Venom Demon", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.5, cd: 40, desc: "Venom Demon: Hell's Judgement \u2014 a giant of poison, and everything around it rots.", steps: [{ zone: { range: 4.5, duration: 8, interval: 0.5, damage: 12, element: "poison", status: { poison: 4 }, color: "#8e24aa", kind: "field" } }] }),
+        T2(10, {
+          id: "doku_fugu",
+          name: "Doku Fugu",
+          anim: "breath",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 6,
+          desc: "Poison Puffer: a glob of venom spat at them \u2014 it bursts and spatters everything round where it lands.",
+          steps: [{ proj: { speed: 15, range: 11, radius: 0.45, damage: 10, sprite: "poison", element: "poison", status: { poison: 4 }, explode: { range: 2.2, damage: 18, element: "poison", status: { poison: 4 } } } }]
+        }),
+        T2(30, {
+          id: "doku_gumo",
+          name: "Doku Gumo",
+          anim: "cast",
+          windup: 0.4,
+          recover: 0.3,
+          cd: 16,
+          desc: "Poison Cloud: a cloud of venom boils out all round you \u2014 whoever breathes it in, rots.",
+          steps: [{ zone: { range: 3.6, duration: 5, interval: 0.5, damage: 8, element: "poison", status: { poison: 2 }, color: "#8e24aa", kind: "gas", slow: 0.6 } }]
+        }),
+        T2(40, {
+          id: "doku_chloro",
+          name: "Chloro Ball",
+          anim: "cast",
+          windup: 0.45,
+          recover: 0.35,
+          cd: 14,
+          desc: "A balloon of poison gas floated onto them: it bursts into a choking cloud.",
+          steps: [{ zone: { range: 2.8, duration: 4, interval: 0.5, damage: 9, element: "poison", status: { poison: 3 }, color: "#ab47bc", atTarget: true, kind: "gas", slow: 0.5 } }]
+        })
+      ]
+    },
+    noro: {
+      name: "Noro Noro no Mi",
+      en: "Slow-Slow Fruit",
+      type: "Paramecia",
+      rarity: "common",
+      color: "#80deea",
+      weight: 5,
+      desc: "Fire Noro Noro photons that slow anything they hit to a crawl. (Foxy the Silver Fox.)",
+      techniques: [
+        T2(0, { id: "noro_beam", name: "Noro Noro Beam", icon: "\u{1F40C}", anim: "point", windup: 0.25, recover: 0.3, cd: 8, steps: [{ hit: { shape: "line", range: 9, width: 1.2, damage: 4, stun: 0.1, status: { slowmo: 4 } }, vfx: "beam", color: "#80deea" }] }),
+        T2(30, { id: "noro_mirror", name: "Noro Noro Beam Sword", icon: "\u{1FA9E}", anim: "slash", windup: 0.2, recover: 0.3, cd: 10, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.2, offset: 0.2, damage: 10, stun: 0.2, status: { slowmo: 3 } }, vfx: "slash", color: "#80deea" }] }),
+        T2(15, {
+          id: "noro_reflect",
+          name: "Noro Noro Beam: Reflection",
+          anim: "point",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 12,
+          desc: "The Noro Noro photons bounced off a mirror into a wide fan: everyone in front of you slows to a crawl.",
+          steps: [{ hit: { shape: "arc", range: 6.5, arc: 1.4, offset: 0.2, damage: 5, stun: 0.1, status: { slowmo: 3.5 } }, vfx: "ring", color: "#80deea" }]
+        }),
+        T2(40, {
+          id: "noro_barrage",
+          name: "Slow-Mo Barrage",
+          anim: "punch",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 9,
+          desc: "Foxy's favourite trick: while they're slowed to a crawl, lay into them as fast as you can.",
+          steps: [{ hit: { shape: "arc", range: 2.2, arc: 1, offset: 0.3, damage: 6, knockback: 0.6, stun: 0.12, duration: 1, interval: 0.1, status: { slowmo: 1 } } }]
+        })
+      ]
+    },
+    bari: {
+      name: "Bari Bari no Mi",
+      en: "Barrier-Barrier Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#b3e5fc",
+      weight: 2.5,
+      desc: "Create barriers nothing can break: whatever comes at them stops dead. (Bartolomeo.)",
+      techniques: [
+        T2(0, {
+          id: "bari_barrier",
+          name: "Barrier",
+          icon: "\u{1F6E1}",
+          anim: "block",
+          windup: 0.05,
+          recover: 0.1,
+          cd: 10,
+          desc: "An unbreakable wall in front of you: nothing gets through it from the front \u2014 blows, shots, blasts. From behind, you're open.",
+          steps: [{ buff: { id: "barrier", name: "Barrier", dur: 3, barrier: "front", mods: { speedMul: 0.6 }, aura: "rgba(179,229,252,0.6)" } }]
+        }),
+        T2(20, { id: "bari_crash", name: "Barrier Crash", icon: "\u{1F9F1}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 7, desc: "Charge behind a barrier and ram everything in your way.", steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, hit: { damage: 30, knockback: 9, stun: 0.6, heavy: true, guardBreak: true } } }] }),
+        T2(40, {
+          id: "bari_ball",
+          name: "Barrier Ball",
+          anim: "block",
+          windup: 0.05,
+          recover: 0.1,
+          cd: 20,
+          desc: "A sphere of barrier all round you: nothing gets in at all \u2014 but you can do nothing from inside it either.",
+          steps: [{ buff: { id: "barrier_ball", name: "Barrier Ball", dur: 3, barrier: "all", hold: true, mods: { speedMul: 0.05 } } }]
+        }),
+        T2(10, {
+          id: "bari_pistol",
+          name: "Barrier Pistol",
+          anim: "punch",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 4,
+          desc: "Bari Bari no Pistol: a fist sheathed in barrier \u2014 there's no stopping what it lands on.",
+          steps: [{ hit: { shape: "arc", range: 1.9, arc: 1, offset: 0.3, damage: 24, knockback: 9, stun: 0.5, heavy: true, guardBreak: true } }]
+        }),
+        T2(50, {
+          id: "bari_bulldog",
+          name: "Barrier Bulldog",
+          anim: "palm",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 12,
+          desc: "A barrier in the shape of a bulldog's head, sent charging at them: it bowls over everything in its way.",
+          steps: [{ proj: { speed: 17, range: 12, radius: 1.1, damage: 34, sprite: "shockwave", color: "#b3e5fc", size: 2.2, pierce: true, knockback: 14, stun: 0.6, heavy: true, hitShips: true } }]
+        })
+      ]
+    },
+    suke: {
+      name: "Suke Suke no Mi",
+      en: "Clear-Clear Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#eceff1",
+      weight: 3,
+      desc: "Turn yourself (and what you touch) invisible. (Absalom, then Shiliew.)",
+      techniques: [
+        T2(0, { id: "suke_vanish", name: "Clear Body", icon: "\u{1F441}", anim: "cast", windup: 0.2, recover: 0.1, cd: 16, desc: "Become invisible: enemies lose track of you and your first hit is a critical.", steps: [{ buff: { id: "invisible", name: "Invisible", dur: 8, mods: { stealth: 1, crit: 0.6 }, alpha: 0.12 } }] }),
+        T2(10, {
+          id: "suke_strike",
+          name: "Clear Strike",
+          anim: "punch",
+          windup: 0.12,
+          recover: 0.25,
+          cd: 4,
+          desc: "A blow from an arm they can't see: there's no telling it's coming, so there's no blocking it.",
+          steps: [{ hit: { shape: "arc", range: 1.7, arc: 1, offset: 0.3, damage: 20, knockback: 5, stun: 0.5, unblockable: true } }]
+        }),
+        T2(30, {
+          id: "suke_phantom",
+          name: "Phantom Rush",
+          anim: "thrust",
+          windup: 0.1,
+          recover: 0.3,
+          cd: 9,
+          desc: "Turn clear, cross the ground between you unseen \u2014 and strike from right in front of them.",
+          steps: [{ teleport: { dist: 10, toTarget: true, gap: 1, color: "#eceff1" } }, { at: 0.18, hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 30, knockback: 8, stun: 0.6, unblockable: true, heavy: true } }]
+        })
+      ]
+    },
+    sube: {
+      name: "Sube Sube no Mi",
+      en: "Slip-Slip Fruit",
+      type: "Paramecia",
+      rarity: "common",
+      color: "#fce4ec",
+      weight: 5,
+      desc: "Your skin becomes perfectly slippery. Attacks slide right off. (Alvida.)",
+      passive: { slippery: 0.3 },
+      techniques: [
+        T2(0, { id: "sube_slide", name: "Slip Slide", icon: "\u26F8", anim: "thrust", windup: 0.05, recover: 0.1, cd: 3, steps: [{ dash: { dist: 6, time: 0.25, iframes: 0.25, hit: { damage: 8, knockback: 3 } } }] }),
+        T2(25, { id: "sube_mace", name: "Mace Swing", icon: "\u{1F528}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 5, steps: [{ hit: { shape: "arc", range: 2.2, arc: 2, offset: 0.2, damage: 22, knockback: 7, stun: 0.5, heavy: true } }] }),
+        T2(10, {
+          id: "sube_skin",
+          name: "Slip-Slip Skin",
+          anim: "flex",
+          windup: 0.15,
+          recover: 0.1,
+          cd: 14,
+          desc: "Your skin as slick as glass: blows, shots and blades skid right off you.",
+          steps: [{ buff: { id: "slick", name: "Slip-Slip Skin", dur: 5, mods: { evade: 0.55 }, aura: "rgba(252,228,236,0.6)" } }]
+        }),
+        T2(40, {
+          id: "sube_spin",
+          name: "Slip Spin",
+          anim: "sweep",
+          windup: 0.25,
+          recover: 0.35,
+          cd: 8,
+          desc: "Spin on your slick heels with the mace held out: everything round you gets clubbed aside.",
+          steps: [{ hit: { shape: "circle", range: 2.6, damage: 26, knockback: 9, stun: 0.5, heavy: true }, vfx: "ring", color: "#fce4ec" }]
+        })
+      ]
+    },
+    doru: {
+      name: "Doru Doru no Mi",
+      en: "Wax-Wax Fruit",
+      type: "Paramecia",
+      rarity: "common",
+      color: "#fff8e1",
+      weight: 5,
+      desc: "Produce wax as hard as steel. Weak to fire. (Mr. 3 of Baroque Works.)",
+      passive: { weakTo: ["fire"] },
+      techniques: [
+        T2(0, { id: "doru_arrow", name: "Candle Arrows", icon: "\u{1F56F}", anim: "shoot", windup: 0.2, recover: 0.3, cd: 4, steps: [{ proj: { speed: 18, range: 11, radius: 0.25, damage: 9, count: 3, spread: 0.25, sprite: "iceshard", color: "#fff8e1" } }] }),
+        T2(20, { id: "doru_lock", name: "Candle Lock", icon: "\u{1F512}", anim: "cast", windup: 0.3, recover: 0.3, cd: 11, desc: "Wax hardens round the target's feet and locks them in place.", steps: [{ zone: { range: 1.5, duration: 0.4, interval: 0.4, damage: 10, color: "#fff8e1", atTarget: true, status: { root: 2.5 } } }] }),
+        T2(40, { id: "doru_armor", name: "Candle Champion", icon: "\u{1F5FF}", anim: "cast", windup: 0.4, recover: 0.2, cd: 30, steps: [{ buff: { id: "waxarmor", name: "Wax Armour", dur: 12, mods: { defMul: 0.55, damage: 1.2 }, aura: "rgba(255,248,225,0.8)" } }] }),
+        T2(25, {
+          id: "doru_ken",
+          name: "Doru Doru Arts: Ken",
+          anim: "slash",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 4,
+          desc: "Wax Sword: a blade of wax as hard as steel, swept through them.",
+          steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.8, offset: 0.2, damage: 22, knockback: 4, stun: 0.4, slashing: true }, vfx: "slash", color: "#fff8e1" }]
+        }),
+        T2(35, {
+          id: "doru_mori",
+          name: "Doru Doru Arts: Mori",
+          anim: "shoot",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 8,
+          desc: "Harpoon: a great spear of hardened wax, flung through everything in a line.",
+          steps: [{ proj: { speed: 20, range: 13, radius: 0.5, damage: 30, sprite: "iceshard", size: 2.2, color: "#fff8e1", pierce: true, knockback: 8, stun: 0.5 } }]
+        }),
+        T2(50, {
+          id: "doru_wall",
+          name: "Candle Wall",
+          anim: "block",
+          windup: 0.05,
+          recover: 0.1,
+          cd: 14,
+          desc: "A wall of wax springs up in front of you, harder than steel: nothing gets through it from the front.",
+          steps: [{ buff: { id: "waxwall", name: "Candle Wall", dur: 3, barrier: "front", mods: { speedMul: 0.5 }, aura: "rgba(255,248,225,0.7)" } }]
+        }),
+        T2(65, {
+          id: "doru_service",
+          name: "Candle Service Set",
+          anim: "cast",
+          windup: 0.6,
+          recover: 0.4,
+          cd: 22,
+          desc: "A great wax cake rises round them and sets: everyone caught in it is stuck fast.",
+          steps: [{ zone: { range: 3, duration: 3.5, interval: 0.5, damage: 8, color: "#fff8e1", atTarget: true, kind: "field", slow: 0.2, status: { root: 0.7 } } }]
+        })
+      ]
+    },
+    supa: {
+      name: "Supa Supa no Mi",
+      en: "Dice-Dice Fruit",
+      type: "Paramecia",
+      rarity: "uncommon",
+      color: "#b0bec5",
+      weight: 3,
+      desc: "Turn any part of your body into a steel blade. Blades can't hurt you. (Daz Bonez, Mr. 1.)",
+      passive: { immuneSlash: true },
+      techniques: [
+        T2(0, { id: "supa_sparkling", name: "Sparkling Daisy", icon: "\u2734", anim: "slash3", windup: 0.25, recover: 0.3, cd: 5, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.6, offset: 0.2, damage: 26, knockback: 4, stun: 0.5, slashing: true }, vfx: "slash", color: "#eceff1" }] }),
+        T2(25, { id: "supa_spider", name: "Spider", icon: "\u{1F577}", anim: "block", windup: 0.05, recover: 0.1, cd: 12, desc: "Harden your whole body into steel.", steps: [{ buff: { id: "steel", name: "Steel Body", dur: 4, mods: { defMul: 0.3 }, aura: "rgba(176,190,197,0.9)" } }] }),
+        T2(15, {
+          id: "supa_claw",
+          name: "Spar Claw",
+          anim: "claw",
+          windup: 0.15,
+          recover: 0.25,
+          cd: 3.5,
+          desc: "Blades spring from each fingertip and rake down through them.",
+          steps: [{ hit: { shape: "arc", range: 2, arc: 1.4, offset: 0.2, damage: 20, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 2 } }, vfx: "slash", color: "#eceff1" }]
+        }),
+        T2(35, {
+          id: "supa_atomic",
+          name: "Atomic Spar",
+          anim: "slash3",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 8,
+          desc: "Your arms become whirling blades: everything round you is cut to ribbons.",
+          steps: [{ hit: { shape: "circle", range: 2.8, damage: 9, knockback: 1.5, stun: 0.2, slashing: true, duration: 0.8, interval: 0.1 }, vfx: "slash", color: "#eceff1" }]
+        }),
+        T2(55, {
+          id: "supa_spiral",
+          name: "Spiral Hollow",
+          anim: "thrust",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 10,
+          desc: "Blades spinning from both arms like a drill, driven through them at a run.",
+          steps: [{ dash: { dist: 8, time: 0.3, iframes: 0.25, hit: { damage: 40, knockback: 7, stun: 0.6, slashing: true, heavy: true, status: { bleed: 3 } } } }]
+        })
+      ]
+    },
+    nikyu: {
+      name: "Nikyu Nikyu no Mi",
+      en: "Paw-Paw Fruit",
+      type: "Paramecia",
+      rarity: "legendary",
+      color: "#fff",
+      weight: 0.4,
+      desc: "Paw pads that repel anything \u2014 blows, shots, the very air, even pain, even people clean across the world. (Bartholomew Kuma.)",
+      techniques: [
+        T2(0, { id: "nikyu_paw", name: "Pad Ho", icon: "\u{1F43E}", anim: "palm", windup: 0.25, recover: 0.3, cd: 4, desc: "A paw-shaped shockwave of repelled air.", steps: [{ proj: { speed: 24, range: 12, radius: 0.5, damage: 20, sprite: "paw", pierce: true, knockback: 8, stun: 0.4 } }] }),
+        T2(20, {
+          id: "nikyu_repel",
+          name: "Repel",
+          icon: "\u270B",
+          anim: "spread",
+          windup: 0.02,
+          recover: 0.1,
+          cd: 8,
+          desc: "Repel everything around you \u2014 blows, people, and the shots fired at you, which fly back the way they came.",
+          steps: [{ hit: { shape: "circle", range: 2.2, damage: 10, knockback: 12, stun: 0.4 }, vfx: "ring", color: "#ffffff" }, { self: { iframes: 0.4 } }, { buff: { id: "repel", dur: 0.9, reflect: 2.4, reflectWord: "REPEL!" } }]
+        }),
+        T2(45, {
+          id: "nikyu_travel",
+          name: "Send Flying",
+          icon: "\u2708",
+          anim: "palm",
+          windup: 0.3,
+          recover: 0.4,
+          cd: 16,
+          desc: `"If you were to take a trip, where would you go?" A paw on the target, and they're repelled clean off the field.`,
+          steps: [{ hit: { shape: "arc", range: 1.8, arc: 1, offset: 0.2, damage: 18, knockback: 4, stun: 1.2, fling: 24 } }]
+        }),
+        T2(70, { id: "nikyu_ursus", name: "Ursus Shock", icon: "\u{1F4A3}", anim: "cast", windup: 1, recover: 0.5, cd: 30, desc: "Compress the air into a paw-shaped bomb.", steps: [{ proj: { speed: 7, range: 9, radius: 1.2, damage: 20, sprite: "paw", size: 2.5, pierce: true, explode: { range: 4.5, damage: 110, colors: ["#ffffff", "#e0f7fa", "#b2ebf2"] } } }] }),
+        T2(85, { id: "nikyu_pain", name: "Pain Extraction", anim: "pray", windup: 0.5, recover: 0.3, cd: 75, desc: "Push the pain and fatigue out of your own body as a paw-shaped bubble: much of your hurt, and every ailment, gone.", steps: [{ heal: 120, color: "#ffffff" }, { self: { cleanse: true } }] }),
+        T2(30, {
+          id: "nikyu_tsuppari",
+          name: "Tsuppari Pad Ho",
+          anim: "palm",
+          windup: 0.3,
+          recover: 0.4,
+          cd: 10,
+          desc: "Paw after paw thrust out at blinding speed: a storm of paw-shaped shockwaves.",
+          steps: [
+            { proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: "paw", pierce: true, knockback: 5, stun: 0.3 } },
+            { at: 0.45, proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: "paw", pierce: true, knockback: 5, stun: 0.3 } },
+            { at: 0.6, proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: "paw", pierce: true, knockback: 5, stun: 0.3 } }
+          ]
+        }),
+        T2(55, {
+          id: "nikyu_hop",
+          name: "Paw Hop",
+          anim: "palm",
+          windup: 0.05,
+          recover: 0.1,
+          cd: 6,
+          desc: "Repel yourself: gone from where you stood and somewhere else in an instant.",
+          steps: [{ teleport: { dist: 12, color: "#ffffff" } }]
+        })
+      ]
+    },
+    mane: {
+      name: "Mane Mane no Mi",
+      en: "Clone-Clone Fruit",
+      type: "Paramecia",
+      rarity: "common",
+      color: "#f06292",
+      weight: 4,
+      desc: "Touch a face with your right hand and copy it perfectly. Marines won't recognise you. (Bon Clay.)",
+      passive: { disguise: true },
+      techniques: [
+        T2(0, { id: "mane_disguise", name: "Mimicry", icon: "\u{1F3AD}", anim: "pray", windup: 0.4, recover: 0.2, cd: 60, desc: "Disguise yourself: Marines and bounty hunters ignore you until you attack.", steps: [{ buff: { id: "disguise", name: "Disguised", dur: 90, mods: { stealth: 0.5 }, disguise: true } }] }),
+        T2(20, { id: "mane_memoir", name: "Memoir Strike", icon: "\u{1F4AD}", anim: "kick", windup: 0.2, recover: 0.3, cd: 8, desc: "Take a friend's face \u2014 the enemy hesitates to strike.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] }),
+        T2(30, {
+          id: "mane_montage",
+          name: "Mane Mane Montage",
+          anim: "pray",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 14,
+          desc: "Your face a jumble of every face you've ever touched: whoever looks at you is too bewildered to move for a moment.",
+          steps: [{ hit: { shape: "arc", range: 3.2, arc: 1.6, offset: 0.2, damage: 6, stun: 1.6, status: { despair: 1.2 } }, vfx: "ring", color: "#f06292" }]
+        })
+      ]
+    },
+    zushi: {
+      name: "Zushi Zushi no Mi",
+      en: "Press-Press Fruit",
+      type: "Paramecia",
+      rarity: "legendary",
+      color: "#9575cd",
+      weight: 0.4,
+      desc: "Control gravity: crush, pull meteors down from space, drag fliers out of the sky \u2014 or lift a slab of rubble and ride it. (Admiral Fujitora.)",
+      techniques: [
+        T2(0, {
+          id: "zushi_press",
+          name: "Gravity Press",
+          icon: "\u2B07",
+          anim: "cast",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 6,
+          desc: "Gravity crushes down on the target's spot: they can barely move, can't jump \u2014 and anyone flying over it falls out of the sky.",
+          steps: [{ zone: { range: 2.8, duration: 2, interval: 0.25, damage: 6, color: "#9575cd", atTarget: true, slow: 0.25, kind: "gravity", grounds: true, status: { grounded: 0.4 } } }]
+        }),
+        T2(25, { id: "zushi_blade", name: "Gravity Blade: Raging Tiger", icon: "\u{1F42F}", anim: "slash", windup: 0.4, recover: 0.4, cd: 10, steps: [{ hit: { shape: "line", range: 10, width: 2.2, damage: 48, knockback: 6, stun: 0.8, heavy: true }, vfx: "beam", color: "#9575cd" }] }),
+        T2(45, {
+          id: "zushi_ride",
+          name: "Floating Rubble",
+          desc: "Lift a slab of rubble with gravity and ride it through the air. Fly \u2014 or press Space again in the air.",
+          flight: { style: "ride", ride: "rock", gauge: 18, speed: 8, climb: 5, ceiling: 35, sea: 3, color: "#9575cd" }
+        }),
+        T2(70, { id: "zushi_meteor", name: "Meteor", icon: "\u2604", anim: "raise", windup: 1.2, recover: 0.5, cd: 45, desc: "Call down a meteor from the heavens.", steps: [{ zone: { range: 4, duration: 1.3, interval: 1.2, damage: 140, color: "#ff7043", atTarget: true, kind: "meteor", element: "explosion" } }] }),
+        T2(15, {
+          id: "zushi_pull",
+          name: "Gravity Pull",
+          anim: "grab",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 9,
+          desc: "Gravity turned sideways: the target is dragged across the ground to you \u2014 and anyone up in the air comes down hard.",
+          steps: [{ pull: { range: 9, strength: 16, stun: 0.6 } }, { at: 0.35, hit: { shape: "circle", range: 2.2, damage: 18, knockback: 1, stun: 0.4, status: { grounded: 1.5 } } }]
+        }),
+        T2(55, {
+          id: "zushi_lift",
+          name: "Rubble Rise",
+          anim: "raise",
+          windup: 0.5,
+          recover: 0.4,
+          cd: 16,
+          desc: "Lift the ground under them in great slabs \u2014 then let it drop.",
+          steps: [{ zone: { range: 3, duration: 1, interval: 0.5, damage: 32, color: "#9575cd", atTarget: true, kind: "gravity", grounds: true, status: { grounded: 0.8 } } }]
+        })
+      ]
+    },
+    // ------------------------------------------------------------------ ZOAN
+    hito: {
+      name: "Hito Hito no Mi",
+      en: "Human-Human Fruit",
+      type: "Zoan",
+      rarity: "uncommon",
+      color: "#f8bbd0",
+      weight: 2.5,
+      desc: "Grants the intelligence and form of a human. Tony Tony Chopper ate it as a reindeer, and learned to take a different shape for each need.",
+      techniques: [
+        T2(0, { id: "hito_heavy", name: "Heavy Point", icon: "\u{1F4AA}", anim: "flex", windup: 0.4, recover: 0.1, cd: 25, steps: [{ buff: { id: "heavy_point", name: "Heavy Point", dur: 15, mods: { damage: 1.4, defMul: 0.8, scale: 1.3 }, look: { hat: "antlers", bulk: 1.3 } } }] }),
+        T2(10, { id: "hito_guard", name: "Guard Point", anim: "block", windup: 0.1, recover: 0.1, cd: 14, desc: "Puff up into a great ball of fur: blows bounce off the fluff (but you can hardly move).", steps: [{ buff: { id: "guard_point", name: "Guard Point", dur: 3.5, mods: { defMul: 0.25, speedMul: 0.4 }, look: { bulk: 1.9 } } }] }),
+        T2(20, { id: "hito_horn", name: "Horn Point: Kokutei Roseo", icon: "\u{1F98C}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
+        T2(30, {
+          id: "hito_arm",
+          name: "Arm Point: Kokutei Cross",
+          anim: "punch",
+          windup: 0.25,
+          recover: 0.3,
+          cd: 6,
+          desc: "Arms like a gorilla's: both hooves driven into them crossed \u2014 and the mark of the cross left behind.",
+          steps: [{ buff: { id: "arm_point", name: "Arm Point", dur: 1.2, look: { bulk: 1.25 } } }, { at: 0.25, hit: { shape: "arc", range: 1.9, arc: 1.2, offset: 0.3, damage: 34, knockback: 10, stun: 0.6, heavy: true, guardBreak: true, impactFrame: true } }]
+        }),
+        T2(40, {
+          id: "hito_walk",
+          name: "Walk Point",
+          anim: "flex",
+          windup: 0.25,
+          recover: 0.1,
+          cd: 20,
+          desc: "Down on four hooves like a true reindeer: you run a great deal faster.",
+          steps: [{ buff: { id: "walk_point", name: "Walk Point", dur: 12, mods: { speedMul: 1.45 }, look: { hat: "antlers" } } }]
+        }),
+        T2(50, {
+          id: "hito_jump",
+          name: "Jumping Point",
+          anim: "thrust",
+          windup: 0.25,
+          recover: 0.35,
+          cd: 9,
+          desc: "Legs built to leap: bound high over them and come down hooves first.",
+          steps: [{ dash: { dist: 7, time: 0.4, iframes: 0.3, air: true, hit: { damage: 26, knockback: 8, stun: 0.6, launch: 3 } } }]
+        }),
+        T2(60, {
+          id: "hito_brain",
+          name: "Brain Point: Scope",
+          anim: "pray",
+          windup: 0.3,
+          recover: 0.2,
+          cd: 30,
+          desc: "Look through the lens of your hooves and find their weak spot: for a while every blow lands where it hurts most.",
+          steps: [{ buff: { id: "scope", name: "Scope", dur: 10, mods: { crit: 0.5, damage: 1.15 } } }]
+        })
+      ],
+      // (Monster Point is a form, opened by fighting: data/fruitForms.js)
+      more: [
+        T2(50, { id: "hito_monster", name: "Monster Point", icon: "\u{1F479}", anim: "flex", windup: 0.8, recover: 0.1, cd: 90, desc: "A Rumble Ball overdose: enormous power, barely controllable.", steps: [{ buff: { id: "monster", form: "monster", name: "Monster Point", dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, aura: "rgba(121,85,72,0.8)", look: { hat: "antlers", bulk: 1.45, sleeve: "#8d6e63" } } }] })
+      ]
+    },
+    neko_leopard: {
+      name: "Neko Neko no Mi, Model: Leopard",
+      en: "Cat-Cat Fruit, Leopard",
+      type: "Zoan",
+      rarity: "rare",
+      color: "#ffb74d",
+      weight: 1.2,
+      desc: "Become a leopard or a half-leopard warrior. Rob Lucci's ferocious fruit.",
+      techniques: [
+        T2(0, { id: "neko_hybrid", name: "Hybrid Form", icon: "\u{1F406}", anim: "flex", windup: 0.4, recover: 0.1, cd: 30, steps: [{ buff: { id: "leopard", name: "Leopard Form", dur: 20, mods: { damage: 1.45, speedMul: 1.2, defMul: 0.85 }, aura: "rgba(255,183,77,0.6)", look: { spots: true, ears: "round", tail: "thin", fur: "#ffb74d", hand: "#ffb74d" } } }] }),
+        T2(20, { id: "neko_claw", name: "Leopard Claw", icon: "\u{1F43E}", anim: "claw", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 1.9, arc: 1.8, offset: 0.2, damage: 22, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#ffb74d" }] }),
+        T2(50, { id: "neko_pounce", name: "Hunting Pounce", icon: "\u{1F405}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 8, time: 0.25, iframes: 0.2, hit: { damage: 40, knockback: 5, stun: 0.8, heavy: true } } }] }),
+        T2(30, {
+          id: "neko_shigan",
+          name: "Shigan: Ouren",
+          anim: "point",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 6,
+          desc: "Finger Pistol, Yellow Lotus: a leopard's fingers driven through them again and again, faster than they can follow.",
+          steps: [{ hit: { shape: "arc", range: 1.9, arc: 0.9, offset: 0.3, damage: 7, knockback: 0.5, stun: 0.15, duration: 0.8, interval: 0.08, status: { bleed: 0.5 } }, vfx: "stab" }]
+        }),
+        T2(65, {
+          id: "neko_rokuogan",
+          name: "Rokuogan",
+          anim: "palm",
+          windup: 0.45,
+          recover: 0.4,
+          cd: 14,
+          desc: "Six King Gun: both fists set against them and all your strength let go at once \u2014 a shockwave straight through them.",
+          steps: [{ hit: { shape: "line", range: 4, width: 1.6, damage: 64, knockback: 14, stun: 0.9, heavy: true, unblockable: true, impactFrame: true, shake: 0.6 }, vfx: "beam", color: "#ffffff" }]
+        })
+      ]
+    },
+    tori_phoenix: {
+      name: "Tori Tori no Mi, Model: Phoenix",
+      en: "Bird-Bird Fruit, Phoenix",
+      type: "Mythical Zoan",
+      rarity: "mythical",
+      color: "#4dd0e1",
+      weight: 0.4,
+      desc: "Become the Phoenix: wings of blue flame that fly further than any, and flames of resurrection \u2014 wounds heal as fast as they are dealt. (Marco the Phoenix.)",
+      passive: { regen: 3 },
+      techniques: [
+        T2(0, { id: "phoenix_flame", name: "Flames of Restoration", icon: "\u{1F499}", anim: "cast", windup: 0.3, recover: 0.2, cd: 12, desc: "Blue flames of regeneration close your wounds.", steps: [{ heal: 45, color: "#4dd0e1", phoenix: 2.5 }] }),
+        T2(15, {
+          id: "phoenix_fly",
+          name: "Phoenix Flight",
+          icon: "\u{1F54A}",
+          desc: "Spread your wings of blue flame and take to the sky \u2014 no one stays up longer than the Phoenix. Fly, or land again (or press Space again in the air).",
+          flight: { style: "phoenix", gauge: 30, speed: 12, climb: 7, ceiling: 45, drain: 0.5, sea: 3.5, refill: 4, color: "#4dd0e1" }
+        }),
+        T2(30, { id: "phoenix_brand", name: "Phoenix Brand", icon: "\u{1F525}", anim: "kick", windup: 0.3, recover: 0.3, cd: 7, desc: "A kick wreathed in blue flame \u2014 from the sky, a dive straight down onto the target.", steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.2, air: true, dive: true, hit: { damage: 40, knockback: 8, stun: 0.6, heavy: true } }, phoenix: 0.8 }] }),
+        T2(45, {
+          id: "phoenix_form",
+          name: "Phoenix Hybrid Form",
+          anim: "flex",
+          windup: 0.35,
+          recover: 0.1,
+          cd: 45,
+          desc: "Your arms become wings of blue flame: you hit harder, move faster, and the flames heal you as you fight.",
+          steps: [{ buff: { id: "phoenix_form", name: "Phoenix Form", dur: 20, phoenix: true, regen: 6, mods: { damage: 1.25, speedMul: 1.15 }, aura: "rgba(77,208,225,0.6)" } }]
+        }),
+        T2(70, { id: "phoenix_rebirth", name: "Rebirth Flames", icon: "\u267E", anim: "cast", windup: 0.6, recover: 0.2, cd: 120, desc: "Burn away all harm: a full heal, every ailment cleansed, and a burst of blue fire.", steps: [{ heal: 400, color: "#4dd0e1", phoenix: 3 }, { hit: { shape: "circle", range: 3, damage: 30, knockback: 6, element: "fire" }, vfx: "ring", color: "#4dd0e1" }, { self: { cleanse: true } }] }),
+        T2(40, {
+          id: "phoenix_pyreapple",
+          name: "Phoenix Pyreapple",
+          anim: "sweep",
+          windup: 0.3,
+          recover: 0.35,
+          cd: 9,
+          desc: "Wings of blue flame swept round in a great arc: they burn whoever they touch \u2014 and the flames that touch you, heal.",
+          steps: [{ hit: { shape: "arc", range: 3.6, arc: 2.6, offset: 0.2, damage: 34, knockback: 8, stun: 0.5, element: "fire", status: { burn: 2 } }, vfx: "slash", color: "#4dd0e1" }, { heal: 20, color: "#4dd0e1" }]
+        }),
+        T2(55, {
+          id: "phoenix_talon",
+          name: "Phoenix Talons",
+          anim: "claw",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 6,
+          desc: "A great bird's talons, wreathed in blue fire, raked down through them.",
+          steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.3, offset: 0.2, damage: 30, knockback: 4, stun: 0.5, slashing: true, element: "fire", status: { bleed: 2 } }, vfx: "slash", color: "#4dd0e1" }]
+        })
+      ]
+    },
+    uo_seiryu: {
+      name: "Uo Uo no Mi, Model: Seiryu",
+      en: "Fish-Fish Fruit, Azure Dragon",
+      type: "Mythical Zoan",
+      rarity: "mythical",
+      color: "#42a5f5",
+      weight: 0.3,
+      desc: "Become the Azure Dragon of legend, who flies on the clouds it makes. Kaido, strongest creature in the world, ate this fruit.",
+      techniques: [
+        T2(0, { id: "seiryu_bolo", name: "Bolo Breath", icon: "\u{1F409}", anim: "breath", windup: 0.5, recover: 0.4, cd: 7, say: "Bolo Breath!", steps: [{ hit: { shape: "line", range: 11, width: 1.8, damage: 44, knockback: 6, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff7043" }] }),
+        T2(25, { id: "seiryu_kaifu", name: "Kaifu", icon: "\u{1F32C}", anim: "breath", windup: 0.35, recover: 0.3, cd: 6, desc: "Wind blades from the dragon's whiskers.", steps: [{ proj: { speed: 18, range: 12, radius: 0.5, damage: 18, count: 3, spread: 0.5, sprite: "airslash", slashing: true, pierce: true } }] }),
+        T2(35, {
+          id: "seiryu_fly",
+          name: "Azure Dragon Flight",
+          desc: "Take the Azure Dragon's shape and fly on the clouds it makes. Fly, or land again (or press Space again in the air).",
+          flight: { style: "dragon", ride: "cloud", gauge: 40, speed: 11, climb: 6, ceiling: 60, drain: 0.6, sea: 3, refill: 6, color: "#90caf9" }
+        }),
+        T2(50, { id: "seiryu_raimei", name: "Raimei Hakke", icon: "\u26A1", anim: "heavy", windup: 0.6, recover: 0.5, cd: 14, desc: "Thunder Bagua: a club blow that shakes the heavens.", steps: [{ hit: { shape: "arc", range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: "lightning", impactFrame: true, shake: 0.9 } }] }),
+        T2(40, {
+          id: "seiryu_kamaitachi",
+          name: "Kamaitachi Rusukaina",
+          anim: "breath",
+          windup: 0.5,
+          recover: 0.4,
+          cd: 10,
+          desc: "The dragon's whiskers whip up a gale of blades: a storm of them sweeps the ground in front of you.",
+          steps: [{ proj: { speed: 20, range: 13, radius: 0.5, damage: 16, count: 7, spread: 1.3, sprite: "airslash", slashing: true, pierce: true } }]
+        }),
+        T2(55, {
+          id: "seiryu_tatsumaki",
+          name: "Tatsumaki",
+          anim: "summon",
+          windup: 0.6,
+          recover: 0.4,
+          cd: 16,
+          desc: "Dragon Twister: whirlwinds rise round the target, dragging everything in and cutting it to pieces.",
+          steps: [{ zone: { range: 3.2, duration: 2.5, interval: 0.25, damage: 10, color: "#e3f2fd", atTarget: true, kind: "storm", pull: 3 } }]
+        }),
+        T2(70, {
+          id: "seiryu_ragnaraku",
+          name: "Ragnaraku",
+          anim: "slam",
+          windup: 0.7,
+          recover: 0.5,
+          cd: 18,
+          desc: "The club brought down with all the dragon's might: the ground caves in and the shock throws everyone round you into the air.",
+          steps: [{ hit: { shape: "circle", range: 4.5, damage: 90, knockback: 16, stun: 1.1, heavy: true, guardBreak: true, launch: 6, impactFrame: true, shake: 1, hitShips: true }, vfx: "ring", color: "#90caf9" }]
+        })
+      ],
+      // (the whole Azure Dragon is a form, opened by fighting: data/fruitForms.js)
+      more: [
+        T2(80, { id: "seiryu_form", name: "Dragon Form", icon: "\u{1F432}", anim: "cast", windup: 1, recover: 0.1, cd: 120, steps: [{ buff: { id: "dragon", form: "dragon", name: "Azure Dragon", dur: 25, mods: { damage: 2, defMul: 0.4, scale: 1.6 }, aura: "rgba(66,165,245,0.8)", look: { dragonForm: true } } }] })
+      ]
+    },
+    // ----------------------------------------------------------------- LOGIA
+    mera: {
+      name: "Mera Mera no Mi",
+      en: "Flame-Flame Fruit",
+      type: "Logia",
+      rarity: "rare",
+      color: "#ff7043",
+      weight: 1,
+      desc: "Become fire itself: blows pass through you, and whatever you touch burns. Magma burns hotter still. Portgas D. Ace's fruit \u2014 later the Colosseum prize of Dressrosa.",
+      passive: { logia: true, element: "fire", resist: ["fire"], weakTo: ["magma", "water"] },
+      techniques: [
+        T2(0, { id: "mera_hiken", name: "Hiken", icon: "\u{1F525}", anim: "punch", windup: 0.3, recover: 0.3, cd: 4, say: "Hiken!", desc: "Fire Fist: a fist of flame that burns through everything in its path.", steps: [{ proj: { speed: 16, range: 12, radius: 0.8, damage: 26, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 5, trail: { color: ["#ff7043", "#ffca28"] } } }] }),
+        T2(15, {
+          id: "mera_hidaruma",
+          name: "Hotarubi: Hidaruma",
+          icon: "\u{1F386}",
+          anim: "cast",
+          windup: 0.25,
+          recover: 0.3,
+          cd: 7,
+          desc: 'Fireflies: green lights drift slowly onto the target \u2014 then all at once, "Hidaruma", every one bursts into flame.',
+          steps: [{ proj: { speed: 6, range: 9, radius: 0.35, damage: 3, count: 5, spread: 1.4, sprite: "fireball", color: "#aeea00", size: 0.6, element: "fire", homing: 2.5, explode: { range: 1.3, damage: 9, element: "fire", status: { burn: 2 }, colors: ["#ff7043", "#ffca28", "#aeea00"] } } }]
+        }),
+        T2(25, { id: "mera_higan", name: "Higan", anim: "point", windup: 0.2, recover: 0.3, cd: 5, say: "Higan!", desc: "Fire Gun: bullets of flame from your fingertips.", steps: [{ proj: { speed: 26, range: 11, radius: 0.18, damage: 6, count: 5, spread: 0.18, sprite: "fireball", size: 0.5, element: "fire", status: { burn: 1.5 }, knockback: 1 } }] }),
+        T2(35, { id: "mera_enkai", name: "Enkai: Hibashira", icon: "\u{1F30B}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, desc: "Flame Commandment, Fire Pillar: a pillar of flame erupts around you.", steps: [{ hit: { shape: "circle", range: 3, damage: 36, knockback: 8, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true }, vfx: "ring" }] }),
+        T2(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "raise", windup: 1.1, recover: 0.5, cd: 40, desc: "Great Flame Commandment: a second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 2.2, damage: 40, size: 4, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] }),
+        T2(30, {
+          id: "mera_kagero",
+          name: "Kagero",
+          anim: "palm",
+          windup: 0.25,
+          recover: 0.3,
+          cd: 6,
+          desc: "Heat Haze: a torrent of flame poured from your palm across everything in front of you.",
+          steps: [{ hit: { shape: "line", range: 8, width: 1.6, damage: 30, knockback: 5, stun: 0.4, element: "fire", status: { burn: 3 } }, vfx: "beam", color: "#ff7043" }]
+        }),
+        T2(45, {
+          id: "mera_kyokaen",
+          name: "Kyokaen",
+          anim: "spread",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 14,
+          desc: "Fire Fence: a wall of flame bursts up where they stand \u2014 nobody gets through it without burning.",
+          steps: [{ zone: { range: 2.4, duration: 4, interval: 0.4, damage: 10, element: "fire", status: { burn: 2 }, color: "#ff7043", atTarget: true, kind: "fire", slow: 0.6 } }]
+        })
+      ]
+    },
+    hie: {
+      name: "Hie Hie no Mi",
+      en: "Ice-Ice Fruit",
+      type: "Logia",
+      rarity: "rare",
+      color: "#81d4fa",
+      weight: 1,
+      desc: "Become ice. Freeze anything solid \u2014 even the sea, into a road you can walk. Only magma is hotter than its cold. (Admiral Aokiji.)",
+      passive: { logia: true, element: "ice", resist: ["ice"], weakTo: ["magma"] },
+      techniques: [
+        T2(0, { id: "hie_saber", name: "Ice Saber", icon: "\u{1F5E1}", anim: "slash", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 2, arc: 1.8, offset: 0.2, damage: 18, knockback: 3, stun: 0.3, slashing: true, element: "ice", status: { chill: 3 } }, vfx: "slash", color: "#b3e5fc" }] }),
+        T2(15, { id: "hie_pheasant", name: "Pheasant Beak", icon: "\u{1F426}", anim: "cast", windup: 0.35, recover: 0.3, cd: 6, say: "Pheasant Beak!", steps: [{ proj: { speed: 15, range: 12, radius: 0.8, damage: 28, sprite: "bird", color: "#b3e5fc", element: "ice", status: { freeze: 1.4 }, pierce: true } }] }),
+        T2(35, {
+          id: "hie_ageand",
+          name: "Ice Age",
+          icon: "\u2744",
+          anim: "kneel",
+          windup: 0.6,
+          recover: 0.4,
+          cd: 14,
+          desc: "Freeze everything around you solid \u2014 the ground, and the sea itself, which becomes a road of ice while it lasts.",
+          say: "Ice Age!",
+          steps: [{ hit: { shape: "circle", range: 5, damage: 30, knockback: 1, stun: 0.3, element: "ice", status: { freeze: 2.5 }, heavy: true }, vfx: "ring", color: "#e1f5fe" }, { zone: { range: 6.5, duration: 12, interval: 1, damage: 0, color: "#e1f5fe", kind: "ice", slow: 0.5, freezeWater: true } }]
+        }),
+        T2(50, { id: "hie_iceball", name: "Ice Ball", anim: "cast", windup: 0.35, recover: 0.3, cd: 10, desc: "Encase the target in a ball of ice.", steps: [{ proj: { speed: 14, range: 10, radius: 0.6, damage: 24, sprite: "iceshard", size: 2, color: "#e1f5fe", element: "ice", status: { freeze: 2.2 } } }] }),
+        T2(65, { id: "hie_time", name: "Ice Time Capsule", icon: "\u{1F9CA}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, desc: "A wave of ice that freezes everything along its path solid.", steps: [{ hit: { shape: "line", range: 10, width: 2.5, damage: 60, knockback: 2, element: "ice", status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: "beam", color: "#e1f5fe" }] }),
+        T2(45, {
+          id: "hie_partisan",
+          name: "Ice Block: Partisan",
+          icon: "\u2744",
+          anim: "cast",
+          windup: 0.35,
+          recover: 0.35,
+          cd: 8,
+          desc: "A volley of ice spears.",
+          steps: [{ proj: { speed: 24, range: 14, radius: 0.35, damage: 18, count: 5, spread: 0.55, sprite: "iceshard", size: 1.4, color: "#e1f5fe", element: "ice", status: { freeze: 0.6 }, pierce: true } }]
+        }),
+        T2(55, {
+          id: "hie_icetime",
+          name: "Ice Time",
+          anim: "palm",
+          windup: 0.2,
+          recover: 0.3,
+          cd: 12,
+          desc: "A touch of your hand and the cold runs right through them: frozen solid where they stand.",
+          steps: [{ hit: { shape: "arc", range: 1.7, arc: 1, offset: 0.2, damage: 24, knockback: 0, stun: 0.3, element: "ice", status: { freeze: 3.2 }, unblockable: true } }]
+        })
+      ]
+    },
+    goro: {
+      name: "Goro Goro no Mi",
+      en: "Rumble-Rumble Fruit",
+      type: "Logia",
+      rarity: "legendary",
+      color: "#fff176",
+      weight: 0.6,
+      desc: "Become lightning, and call it down from the sky. The self-proclaimed God Enel's fruit. Useless against rubber.",
+      passive: { logia: true, element: "lightning", resist: ["lightning"], weakTo: ["rubber"] },
+      techniques: [
+        T2(0, { id: "goro_vari", name: "Vari", icon: "\u26A1", anim: "point", windup: 0.2, recover: 0.25, cd: 3, desc: "A hundred million volts from your fingertip.", steps: [{ hit: { shape: "line", range: 8, width: 0.8, damage: 22, knockback: 2, stun: 0.5, element: "lightning", status: { shock: 1 } }, vfx: "beam", color: "#fff176" }] }),
+        T2(15, { id: "goro_sango", name: "Sango", icon: "\u{1F409}", anim: "cast", windup: 0.4, recover: 0.3, cd: 8, desc: "A great bolt in the shape of a dragon.", steps: [{ proj: { speed: 20, range: 14, radius: 0.9, damage: 34, sprite: "thunder", size: 2, element: "lightning", pierce: true, status: { shock: 1.2 } } }] }),
+        T2(35, { id: "goro_elthor", name: "El Thor", icon: "\u{1F329}", anim: "raise", windup: 0.7, recover: 0.4, cd: 14, desc: "A pillar of divine lightning straight down from the sky.", say: "El Thor!", steps: [{ zone: { range: 2.8, duration: 0.8, interval: 0.4, damage: 45, element: "lightning", status: { shock: 1.5 }, color: "#fff176", atTarget: true, kind: "thunder" } }] }),
+        T2(45, { id: "goro_mamaragan", name: "Mamaragan", anim: "raise", windup: 0.6, recover: 0.4, cd: 16, say: "Mamaragan!", desc: "Lightning falls from the sky all around you, again and again.", steps: [{ zone: { range: 6, duration: 1.6, interval: 0.25, damage: 12, element: "lightning", status: { shock: 0.8 }, color: "#fff176", kind: "thunder" } }] }),
+        T2(85, { id: "goro_raigo", name: "Raigo", icon: "\u{1F311}", anim: "summon", windup: 1.4, recover: 0.6, cd: 90, desc: "A thundercloud large enough to erase an island.", steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: "lightning", status: { shock: 0.5 }, color: "#fff176", kind: "thunder" } }] }),
+        T2(10, {
+          id: "goro_kari",
+          name: "Kari",
+          anim: "raise",
+          windup: 0.25,
+          recover: 0.3,
+          cd: 7,
+          desc: "Rumble: lightning crackles out of your whole body at once \u2014 everything round you is struck.",
+          steps: [{ hit: { shape: "circle", range: 3.4, damage: 26, knockback: 6, stun: 0.6, element: "lightning", status: { shock: 1 } }, vfx: "ring", color: "#fff176" }]
+        }),
+        T2(25, {
+          id: "goro_raiju",
+          name: "Raiju",
+          anim: "cast",
+          windup: 0.35,
+          recover: 0.3,
+          cd: 9,
+          desc: "Thunder Beast: a beast of lightning loosed at them \u2014 it runs them down wherever they go.",
+          steps: [{ proj: { speed: 18, range: 15, radius: 0.7, damage: 30, sprite: "thunder", size: 1.6, element: "lightning", homing: 4, status: { shock: 1 } } }]
+        }),
+        T2(30, {
+          id: "goro_jamboule",
+          name: "Jamboule",
+          anim: "point",
+          windup: 0.3,
+          recover: 0.3,
+          cd: 8,
+          desc: "A ball of lightning dropped on them from your fingertip: it bursts like a thunderclap.",
+          steps: [{ proj: { speed: 15, range: 12, radius: 0.5, damage: 10, sprite: "lightorb", color: "#fff176", element: "lightning", explode: { range: 2.6, damage: 36, element: "lightning", status: { shock: 1.2 } } } }]
+        })
+      ],
+      // (Amaru is a form, opened by fighting: data/fruitForms.js)
+      more: [
+        T2(55, { id: "goro_amaru", name: "200 Million Volt Amaru", icon: "\u{1F47A}", anim: "cast", windup: 0.8, recover: 0.2, cd: 60, steps: [{ buff: { id: "amaru", form: "amaru", name: "Amaru", dur: 18, mods: { damage: 1.9, speedMul: 1.25, scale: 1.3 }, element: "lightning", aura: "rgba(255,241,118,0.9)", look: { drums: true } } }] })
+      ]
+    },
+    suna: {
+      name: "Suna Suna no Mi",
+      en: "Sand-Sand Fruit",
+      type: "Logia",
+      rarity: "rare",
+      color: "#e1c16e",
+      weight: 1,
+      desc: "Become sand: blows pass through you, you ride the wind as a sandstorm, and your hand drains the moisture from anything it touches. Water is its weakness. (Sir Crocodile.)",
+      passive: { logia: true, element: "sand", weakTo: ["water"] },
+      techniques: [
+        T2(0, { id: "suna_barjan", name: "Barjan", icon: "\u{1F319}", anim: "slash", windup: 0.2, recover: 0.3, cd: 3, desc: "A crescent blade of sand.", steps: [{ proj: { speed: 17, range: 10, radius: 0.5, damage: 18, sprite: "sandblade", element: "sand", slashing: true, pierce: true } }] }),
+        T2(15, { id: "suna_sables", name: "Sables", icon: "\u{1F32A}", anim: "cast", windup: 0.4, recover: 0.3, cd: 9, desc: "A sandstorm that drags whoever is in it to its heart.", steps: [{ zone: { range: 3, duration: 3.5, interval: 0.3, damage: 7, element: "sand", color: "#e1c16e", kind: "storm", atTarget: true, pull: 2 } }] }),
+        T2(25, {
+          id: "suna_ride",
+          name: "Sand Glide",
+          desc: "Turn into a sandstorm and ride the wind. Fly \u2014 or press Space again in the air.",
+          flight: { style: "ride", ride: "sand", gauge: 12, speed: 10, climb: 5, ceiling: 25, sea: 4, color: "#e1c16e" }
+        }),
+        T2(35, { id: "suna_spada", name: "Desert Spada", icon: "\u{1F5E1}", anim: "grab", windup: 0.3, recover: 0.35, cd: 8, desc: "Blades of sand rip through the ground.", steps: [{ hit: { shape: "line", range: 11, width: 1.2, damage: 40, knockback: 4, stun: 0.5, element: "sand", slashing: true }, vfx: "beam", color: "#e1c16e" }] }),
+        T2(45, { id: "suna_grip", name: "Dehydrating Grip", anim: "grab", windup: 0.3, recover: 0.35, cd: 10, desc: "Seize the target with your right hand and drain the water from their body: they wither as you hold them.", steps: [{ hit: { shape: "arc", range: 1.6, arc: 1, offset: 0.2, damage: 22, knockback: 1, stun: 0.6, element: "sand", unblockable: true, status: { dry: 5 } } }] }),
+        T2(60, { id: "suna_dry", name: "Ground Death", icon: "\u{1F3DC}", anim: "kneel", windup: 0.7, recover: 0.4, cd: 30, desc: "Drain all moisture from the land around you: whoever is on it dries out.", steps: [{ zone: { range: 6, duration: 5, interval: 0.4, damage: 12, element: "sand", color: "#d7b56d", kind: "field", status: { dry: 2 } } }] }),
+        T2(40, {
+          id: "suna_girasole",
+          name: "Desert Girasole",
+          anim: "kneel",
+          windup: 0.6,
+          recover: 0.4,
+          cd: 22,
+          desc: "Drain the ground round them dry: it collapses into a great whirlpool of quicksand that sucks everything down to its heart.",
+          steps: [{ zone: { range: 4.5, duration: 4, interval: 0.4, damage: 9, element: "sand", color: "#d7b56d", atTarget: true, kind: "storm", pull: 3.5, slow: 0.35, status: { dry: 1 } } }]
+        }),
+        T2(55, {
+          id: "suna_pesado",
+          name: "Sables: Pesado",
+          anim: "cast",
+          windup: 0.45,
+          recover: 0.35,
+          cd: 12,
+          desc: "A sandstorm squeezed into a ball in your hand and hurled: it bursts into a full storm where it lands.",
+          steps: [{ proj: { speed: 15, range: 12, radius: 0.6, damage: 14, sprite: "sandblade", size: 1.4, element: "sand", explode: { range: 3.2, damage: 44, element: "sand", knockback: 10 } } }]
+        })
+      ]
+    },
+    moku: {
+      name: "Moku Moku no Mi",
+      en: "Plume-Plume Fruit",
+      type: "Logia",
+      rarity: "rare",
+      color: "#cfd8dc",
+      weight: 1,
+      desc: 'Become smoke: blows pass through you, you fly on a column of smoke, and your smoke seizes and holds whatever it wraps. Smoker "the White Hunter" pairs it with a Seastone jitte.',
+      passive: { logia: true, element: "smoke" },
+      techniques: [
+        T2(0, { id: "moku_blow", name: "White Blow", icon: "\u2601", anim: "punch", windup: 0.2, recover: 0.3, cd: 3, steps: [{ proj: { speed: 16, range: 10, radius: 0.6, damage: 18, sprite: "smokefist", element: "smoke", knockback: 5, stun: 0.4 } }] }),
+        T2(15, { id: "moku_snake", name: "White Snake", icon: "\u{1F40D}", anim: "grab", windup: 0.25, recover: 0.3, cd: 7, desc: "Smoke tendrils wrap round the target and hold them.", steps: [{ proj: { speed: 14, range: 11, radius: 0.5, damage: 12, sprite: "smokesnake", element: "smoke", status: { root: 2 }, homing: 2 } }] }),
+        T2(25, {
+          id: "moku_ride",
+          name: "Smoke Ride",
+          desc: "Ride a column of your own smoke through the air. Fly \u2014 or press Space again in the air.",
+          flight: { style: "ride", ride: "smoke", gauge: 14, speed: 10, climb: 5, ceiling: 30, sea: 4, color: "#eceff1" }
+        }),
+        T2(35, { id: "moku_out", name: "White Out", icon: "\u{1F32B}", anim: "cast", windup: 0.4, recover: 0.3, cd: 12, desc: "Fill the area with smoke that seizes whoever is in it: they can barely move.", steps: [{ zone: { range: 4, duration: 5, interval: 0.5, damage: 6, element: "smoke", color: "#eceff1", kind: "storm", slow: 0.45, status: { root: 0.4 } } }] }),
+        T2(60, { id: "moku_launcher", name: "White Launcher", icon: "\u{1F680}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 6, desc: "Turn into smoke and launch yourself at the target.", steps: [{ dash: { dist: 10, time: 0.3, iframes: 0.3, air: true, trail: "#eceff1", hit: { damage: 36, knockback: 8, stun: 0.6, element: "smoke" } } }] }),
+        T2(30, {
+          id: "moku_vine",
+          name: "White Vine",
+          anim: "grab",
+          windup: 0.25,
+          recover: 0.3,
+          cd: 8,
+          desc: "A long vine of smoke lashed out along the ground: it wraps whoever it touches and holds them.",
+          steps: [{ hit: { shape: "line", range: 8, width: 1, damage: 16, knockback: 1, stun: 0.4, element: "smoke", status: { root: 1.5 } }, vfx: "beam", color: "#eceff1" }]
+        })
+      ]
+    },
+    pika: {
+      name: "Pika Pika no Mi",
+      en: "Glint-Glint Fruit",
+      type: "Logia",
+      rarity: "legendary",
+      color: "#fff9c4",
+      weight: 0.6,
+      desc: "Become light. Move at the speed of light \u2014 and kick with its weight. (Admiral Kizaru.)",
+      passive: { logia: true, element: "light" },
+      techniques: [
+        T2(0, { id: "pika_yasakani", name: "Yasakani no Magatama", icon: "\u2728", anim: "cast", windup: 0.35, recover: 0.4, cd: 6, desc: "A rain of light bullets.", steps: [{ proj: { speed: 30, range: 12, radius: 0.25, damage: 8, count: 9, spread: 1, sprite: "lightorb", element: "light" } }] }),
+        T2(15, { id: "pika_yata", name: "Yata no Kagami", icon: "\u{1FA9E}", anim: "cast", windup: 0.05, recover: 0.05, cd: 2, desc: "Travel at the speed of light.", steps: [{ teleport: { dist: 12, color: "#fff9c4" } }] }),
+        T2(25, {
+          id: "pika_kick",
+          name: "Light-Speed Kick",
+          anim: "kick",
+          windup: 0.2,
+          recover: 0.35,
+          cd: 8,
+          desc: '"Ever been kicked at the speed of light?" Be in front of the target in a flash \u2014 and kick.',
+          steps: [{ at: 0.2, teleport: { dist: 14, toTarget: true, gap: 1, color: "#fff9c4" } }, { at: 0.27, hit: { shape: "arc", range: 1.9, arc: 1.2, offset: 0.2, damage: 46, knockback: 14, stun: 0.7, element: "light", heavy: true, guardBreak: true, impactFrame: true } }]
+        }),
+        T2(35, { id: "pika_murakumo", name: "Ama no Murakumo", icon: "\u2694", anim: "slash", windup: 0.2, recover: 0.3, cd: 5, desc: "A sword of light.", steps: [{ hit: { shape: "arc", range: 2.6, arc: 2.2, offset: 0.2, damage: 40, knockback: 4, stun: 0.5, slashing: true, element: "light" }, vfx: "slash", color: "#fff9c4" }] }),
+        T2(45, {
+          id: "pika_fly",
+          name: "Light Flight",
+          desc: "Become light and drift through the air, fast \u2014 but not for long. Fly \u2014 or press Space again in the air.",
+          flight: { style: "float", ride: "light", gauge: 10, speed: 15, climb: 8, ceiling: 35, sea: 4, color: "#fff59d" }
+        }),
+        T2(60, { id: "pika_amaterasu", name: "Light Laser", icon: "\u2600", anim: "cast", windup: 0.8, recover: 0.4, cd: 25, desc: "A beam of light from your fingertip that blasts through everything in a line.", steps: [{ hit: { shape: "line", range: 16, width: 1.6, damage: 90, knockback: 8, stun: 0.8, element: "light", heavy: true, impactFrame: true, hitShips: true, shipDamage: 300 }, vfx: "beam", color: "#fff59d" }] }),
+        T2(20, {
+          id: "pika_flash",
+          name: "Flash",
+          anim: "raise",
+          windup: 0.15,
+          recover: 0.25,
+          cd: 12,
+          desc: "Burst into blinding light: everyone round you is left staggering, seeing nothing.",
+          steps: [{ hit: { shape: "circle", range: 4, damage: 8, knockback: 2, stun: 1.2, element: "light" }, vfx: "ring", color: "#fff9c4" }, { fx: { flash: 0.35 } }]
+        })
+      ]
+    },
+    magu: {
+      name: "Magu Magu no Mi",
+      en: "Magma-Magma Fruit",
+      type: "Logia",
+      rarity: "legendary",
+      color: "#ff5722",
+      weight: 0.6,
+      desc: "Become magma \u2014 hotter than fire itself: it burns whatever it touches, beats fire and melts ice. (Admiral, then Fleet Admiral, Akainu.)",
+      passive: { logia: true, element: "magma", resist: ["fire", "magma"] },
+      techniques: [
+        T2(0, { id: "magu_daifunka", name: "Dai Funka", icon: "\u{1F30B}", anim: "punch", windup: 0.3, recover: 0.35, cd: 4, say: "Dai Funka!", desc: "Great Eruption: a fist of magma.", steps: [{ proj: { speed: 15, range: 11, radius: 0.9, damage: 34, sprite: "magmafist", size: 1.5, element: "magma", pierce: true, status: { burn: 4 }, knockback: 6, trail: { color: ["#bf360c", "#ff6f00"], kind: "fire" } } }] }),
+        T2(20, { id: "magu_meigo", name: "Meigo", icon: "\u{1F44A}", anim: "thrust", windup: 0.3, recover: 0.35, cd: 8, desc: "Hell Hound: a magma fist that pierces through.", steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 55, knockback: 6, stun: 0.8, element: "magma", status: { burn: 4 }, heavy: true, guardBreak: true } } }] }),
+        T2(35, { id: "magu_inugami", name: "Inugami Guren", anim: "thrust", windup: 0.5, recover: 0.4, cd: 14, desc: "Dog Bite Crimson Lotus: a giant hound's head of magma lunges along the ground and bites down.", steps: [{ hit: { shape: "line", range: 9, width: 2.2, damage: 60, knockback: 8, stun: 0.7, element: "magma", status: { burn: 4 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff5722" }] }),
+        T2(50, { id: "magu_ryusei", name: "Ryusei Kazan", icon: "\u2604", anim: "summon", windup: 1, recover: 0.5, cd: 35, desc: "Meteor Volcano: a rain of magma fists.", steps: [{ zone: { range: 6, duration: 2.5, interval: 0.2, damage: 24, element: "magma", color: "#ff5722", kind: "meteor", status: { burn: 3 } } }] }),
+        T2(40, {
+          id: "magu_bakuretsu",
+          name: "Bakuretsu Kazan",
+          anim: "slam",
+          windup: 0.6,
+          recover: 0.45,
+          cd: 20,
+          desc: "Erupting Volcano: drive a fist of magma into the ground and it wells up all round you \u2014 a floor of molten rock.",
+          steps: [
+            { hit: { shape: "circle", range: 3.5, damage: 40, knockback: 10, stun: 0.6, element: "magma", status: { burn: 3 }, heavy: true, launch: 3 }, vfx: "ring", color: "#ff5722" },
+            { zone: { range: 4.5, duration: 4, interval: 0.4, damage: 10, element: "magma", status: { burn: 2 }, color: "#ff5722", kind: "fire", slow: 0.6 } }
+          ]
+        })
+      ]
+    },
+    yami: {
+      name: "Yami Yami no Mi",
+      en: "Dark-Dark Fruit",
+      type: "Logia",
+      rarity: "legendary",
+      color: "#311b92",
+      weight: 0.5,
+      desc: "Darkness that swallows everything \u2014 shots, people, even other Devil Fruit powers \u2014 and can let it all out again. Unlike other Logia it can't let blows through: it draws pain in. (Marshall D. Teach.)",
+      passive: { element: "dark", noIntangible: true, damageTaken: 1.15 },
+      techniques: [
+        T2(0, { id: "yami_kurouzu", name: "Kurouzu", icon: "\u{1F573}", anim: "grab", windup: 0.3, recover: 0.3, cd: 6, desc: "Black Vortex: the darkness drags the target to you \u2014 and while it holds them, their Devil Fruit is useless.", steps: [{ pull: { range: 8, strength: 14, stun: 0.6, nullify: 2.5 } }] }),
+        T2(15, {
+          id: "yami_blackhole",
+          name: "Black Hole",
+          icon: "\u26AB",
+          anim: "cast",
+          windup: 0.5,
+          recover: 0.4,
+          cd: 14,
+          desc: "Darkness spreads over the ground and swallows everything: shots fired into it, and the Devil Fruit powers of whoever stands in it.",
+          steps: [{ zone: { range: 4, duration: 4, interval: 0.4, damage: 10, element: "dark", color: "#311b92", kind: "dark", pull: 4, slow: 0.4, absorb: true, status: { seastone: 1.2 } } }]
+        }),
+        T2(35, { id: "yami_nullify", name: "Nullifying Touch", icon: "\u270B", anim: "grab", windup: 0.2, recover: 0.3, cd: 18, desc: "Grab hold of the target: while the darkness has them, their Devil Fruit power is gone.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 15, stun: 0.8, status: { seastone: 8 }, unblockable: true } }] }),
+        T2(60, {
+          id: "yami_liberation",
+          name: "Liberation",
+          icon: "\u{1F4A5}",
+          anim: "cast",
+          windup: 0.7,
+          recover: 0.4,
+          cd: 25,
+          desc: "Release everything the darkness swallowed \u2014 and the shots it took in come back out with it.",
+          steps: [{ hit: { shape: "circle", range: 5, damage: 70, knockback: 12, stun: 0.8, element: "dark", heavy: true, impactFrame: true }, vfx: "ring", color: "#7e57c2" }, { power: { kind: "release", range: 5.5, mul: 1.2, cap: 220 } }]
+        })
+      ]
+    }
+  };
+  var FRUIT_IDS = Object.keys(FRUITS);
+  for (const [fid, f] of Object.entries(FRUITS)) {
+    registerAbilities([...f.techniques, ...f.more || []].map((t) => ({ ...t, source: "fruit:" + fid, fruit: fid })), "fruit:" + fid);
+    f.logia = !!(f.passive && f.passive.logia);
+    f.rubber = !!(f.passive && f.passive.rubber);
+    f.resist = f.passive?.resist || [];
+    f.weakTo = f.passive?.weakTo || [];
+  }
+  var FRUIT_RARITY = {
+    common: { label: "Common", color: "#b2bec3" },
+    uncommon: { label: "Uncommon", color: "#55efc4" },
+    rare: { label: "Rare", color: "#74b9ff" },
+    legendary: { label: "Legendary", color: "#fdcb6e" },
+    mythical: { label: "Mythical", color: "#ff7675" }
+  };
+  attachKits(FRUITS);
+  function unlockedFruitTechniques(fruitId, mastery) {
+    const f = FRUITS[fruitId];
+    if (!f) return [];
+    return f.techniques.map((t) => t.id);
+  }
+
+  // src/data/items.js
+  var ITEMS = {
+    // ---------------------------------------------------------------- food
+    meat: { name: "Meat on the Bone", icon: "\u{1F356}", type: "food", heal: 70, price: 90, desc: "The universal fuel of every rubber-brained captain." },
+    rice_ball: { name: "Rice Ball", icon: "\u{1F359}", type: "food", heal: 40, price: 45, desc: "Simple, salty, filling." },
+    fish_stew: { name: "Sea Fish Stew", icon: "\u{1F372}", type: "food", heal: 110, water: 0.2, warm: 0.8, price: 180, desc: "A sailor's favourite." },
+    tangerine: { name: "Bell-m\xE8re's Tangerine", icon: "\u{1F34A}", type: "food", heal: 35, water: 0.2, price: 60, desc: "From the groves of Cocoyasi Village." },
+    fresh_fish: { name: "Fresh Fish", icon: "\u{1F41F}", type: "food", heal: 45, price: 40, desc: "Caught with your bare hands. Better cooked, but it will do." },
+    tuna: { name: "Bluefin Tuna", icon: "\u{1F41F}", type: "food", heal: 160, price: 420, desc: "A fat, fast fish from the open sea. A cook would weep with joy." },
+    elephant_tuna: { name: "Elephant Honmaguro", icon: "\u{1F41F}", type: "food", heal: 320, price: 1400, desc: "A giant tuna with an elephant's trunk and ears \u2014 the finest eating in the sea. Sanji would kill for one." },
+    sea_king_steak: { name: "Sea King Steak", icon: "\u{1F969}", type: "food", heal: 400, price: 2500, desc: "Enough meat to feed a crew for a week." },
+    baratie_course: { name: "Baratie Full Course", icon: "\u{1F37D}", type: "food", heal: 300, price: 1200, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: `Cooked by "Red Leg" Zeff's kitchen. Leaves you Well Fed.` },
+    water_flask: { name: "Water Flask", icon: "", type: "food", heal: 0, water: 0.55, food: 0, price: 12, cool: 0.6, desc: "Fresh water in a stoppered flask. Drink it in the heat." },
+    milk: { name: "Milk", icon: "", type: "food", heal: 15, water: 0.4, food: 0.08, price: 30, desc: "A bottle of fresh milk. Good for the bones." },
+    hot_tea: { name: "Hot Tea", icon: "", type: "food", heal: 10, water: 0.35, food: 0.02, warm: 1.2, price: 25, desc: "Steaming hot: it warms you through in the cold." },
+    sake: { name: "Sake", icon: "\u{1F376}", type: "food", heal: 10, water: 0.15, price: 120, buff: { id: "tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: "Dutch courage." },
+    cola: { name: "Cola Barrel", icon: "\u{1F964}", type: "material", price: 500, desc: "Fuel for Coup de Burst and for certain cyborgs." },
+    bandage: { name: "Bandages", icon: "\u{1FA79}", type: "medicine", heal: 55, price: 70, desc: "Stops the bleeding.", cure: ["bleed"] },
+    antidote: { name: "Antidote", icon: "\u{1F9EA}", type: "medicine", heal: 20, price: 150, cure: ["poison"], desc: "Neutralises most poisons." },
+    rumble_ball: { name: "Rumble Ball", icon: "\u{1F7E1}", type: "medicine", price: 8e3, buff: { id: "rumble", name: "Rumble", dur: 180, mods: { damage: 1.2, speedMul: 1.1 } }, desc: "Chopper's invention. Strengthens you for three minutes." },
+    // foraged from trees (E next to a palm or fruit tree)
+    coconut: { name: "Coconut", icon: "", type: "food", heal: 30, water: 0.4, price: 25, desc: "Crack it open: sweet water and white flesh. Picked from palms." },
+    banana: { name: "Banana", icon: "", type: "food", heal: 25, water: 0.05, price: 20, desc: "Quick energy from a jungle tree." },
+    mango: { name: "Mango", icon: "", type: "food", heal: 40, water: 0.2, price: 35, desc: "Ripe, juicy and sticky." },
+    apple: { name: "Apple", icon: "", type: "food", heal: 25, water: 0.12, price: 15, desc: "Crisp and red." },
+    cherry: { name: "Cherries", icon: "", type: "food", heal: 12, water: 0.08, price: 10, desc: "A handful of cherries." },
+    tension_hormone: { name: "Tension Hormones", icon: "\u{1F489}", type: "medicine", heal: 99999, price: 0, costsLife: true, desc: "Emporio Ivankov's miracle: fully restores you right now \u2014 at the cost of ten years of lifespan (one life)." },
+    // ------------------------------------------------------------- swords
+    wooden_sword: { name: "Wooden Practice Sword", icon: "\u{1FAB5}", type: "weapon", kind: "sword", power: 0.75, price: 300, grade: "Training", desc: "Every swordsman starts with one." },
+    rusty_katana: { name: "Rusty Katana", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1, price: 1500, grade: "Unranked", desc: "Nicked and rusted, but it cuts." },
+    cutlass: { name: "Pirate Cutlass", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.1, price: 3500, grade: "Unranked" },
+    marine_saber: { name: "Marine Saber", icon: "\u2694", type: "weapon", kind: "sword", power: 1.15, price: 6e3, grade: "Unranked" },
+    fine_katana: { name: "Fine Katana", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.25, price: 18e3, grade: "Unranked", desc: "Well-balanced steel from a Loguetown forge." },
+    yubashiri: { name: "Yubashiri", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.35, price: 1e5, grade: "Wazamono", desc: "A light, sharp blade sold in Ipponmatsu's shop." },
+    sandai_kitetsu: { name: "Sandai Kitetsu", icon: "\u{1FA78}", type: "weapon", kind: "sword", power: 1.45, price: 0, grade: "Wazamono (cursed)", cursed: true, desc: "A cursed blade said to bring doom to its wielders. Throw it into the air and see if fate spares your arm." },
+    shigure: { name: "Shigure", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.4, price: 25e4, grade: "Wazamono" },
+    wado_ichimonji: { name: "Wado Ichimonji", icon: "\u{1F90D}", type: "weapon", kind: "sword", power: 1.6, price: 0, grade: "O Wazamono", unique: true, desc: "The white-hilted sword of Kuina, entrusted by Koshiro of Shimotsuki Village." },
+    shusui: { name: "Shusui", icon: "\u{1F5A4}", type: "weapon", kind: "sword", power: 1.75, price: 0, grade: "O Wazamono", unique: true, desc: "The black blade of the legendary samurai Ryuma, won at Thriller Bark." },
+    enma: { name: "Enma", icon: "\u{1F525}", type: "weapon", kind: "sword", power: 1.95, price: 0, grade: "O Wazamono", unique: true, hakiHungry: true, desc: "The blade that cut Kaido. It draws out its wielder's Haki whether they like it or not." },
+    yoru: { name: "Yoru", icon: "\u271D", type: "weapon", kind: "sword", power: 2.3, price: 0, grade: "Saijo O Wazamono", unique: true, desc: "The black blade of Dracule Mihawk, one of the twelve Supreme Grade swords." },
+    // --------------------------------------------------------------- guns
+    slingshot: { name: "Slingshot", icon: "\u{1F3AF}", type: "weapon", kind: "gun", power: 0.9, price: 800, desc: "Lead stars at the ready." },
+    flintlock: { name: "Flintlock Pistol", icon: "\u{1F52B}", type: "weapon", kind: "gun", power: 1.05, price: 4e3 },
+    marine_rifle: { name: "Marine Rifle", icon: "\u{1F52B}", type: "weapon", kind: "gun", power: 1.2, price: 16e3 },
+    kabuto: { name: "Kabuto", icon: "\u{1FAB2}", type: "weapon", kind: "gun", power: 1.35, price: 0, unique: true, desc: "A giant slingshot with a Dial built in." },
+    kuro_kabuto: { name: "Kuro Kabuto", icon: "\u{1FAB2}", type: "weapon", kind: "gun", power: 1.6, price: 0, unique: true },
+    // ------------------------------------------------------------- staffs
+    bo_staff: { name: "Bo Staff", icon: "\u{1F9AF}", type: "weapon", kind: "staff", power: 1, price: 2e3 },
+    clima_tact: { name: "Clima-Tact", icon: "\u{1F326}", type: "weapon", kind: "staff", power: 1.2, price: 6e4, desc: "A weather-controlling staff." },
+    sorcery_clima_tact: { name: "Sorcery Clima-Tact", icon: "\u26C8", type: "weapon", kind: "staff", power: 1.6, price: 0, unique: true, desc: "Improved with Weatherian science." },
+    // --------------------------------------------------------------- axes
+    woodsman_axe: { name: "Woodsman's Axe", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.1, price: 2500 },
+    giant_axe: { name: "Axe of a Giant Warrior", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.6, price: 0, unique: true, desc: "A gift from the giants of Little Garden. Absurdly heavy." },
+    morgan_axe: { name: "Axe-Hand", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.3, price: 0, desc: "Taken from Captain Morgan." },
+    // --------------------------------------------------------- hats / coats
+    straw_hat: { name: "Straw Hat", icon: "\u{1F452}", type: "hat", look: { hat: "straw" }, bonus: { wil: 2 }, price: 500, desc: "A hat passed down through generations of dreamers. It is said to carry a promise." },
+    bandana: { name: "Bandana", icon: "\u{1F397}", type: "hat", look: { hat: "bandana" }, price: 120 },
+    tricorne: { name: "Tricorne", icon: "\u{1F3A9}", type: "hat", look: { hat: "tricorne" }, bonus: { wil: 1 }, price: 900 },
+    captain_hat: { name: "Captain's Hat", icon: "\u{1F3A9}", type: "hat", look: { hat: "captain" }, bonus: { wil: 2 }, price: 4e3 },
+    cowboy_hat: { name: "Cowboy Hat", icon: "\u{1F920}", type: "hat", look: { hat: "cowboy" }, bonus: { agi: 1 }, price: 700 },
+    marine_cap: { name: "Marine Cap", icon: "\u{1F9E2}", type: "hat", look: { hat: "marine" }, price: 0 },
+    pink_hat: { name: "Pink Top Hat", icon: "\u{1F380}", type: "hat", look: { hat: "pinkhat" }, bonus: { vit: 1 }, price: 800 },
+    goggles: { name: "North Blue Goggles", icon: "\u{1F97D}", type: "hat", look: { hat: "goggles" }, bonus: { agi: 1 }, price: 1200, desc: "A new model from the North Blue. (Usopp bought these in Loguetown.)" },
+    headband: { name: "Black Bandana", icon: "\u{1F5A4}", type: "hat", look: { hat: "headband", hatColor: "#212121" }, bonus: { str: 1 }, price: 300, desc: "Tie it on when you mean business." },
+    traveller_hood: { name: "Traveller's Hood", icon: "", type: "hat", hood: true, look: { hat: "hood", hatColor: "#6a5643" }, price: 1800, desc: "A deep hood that keeps your face in shadow. Marines won't know a wanted face unless they get right up close \u2014 or you start a fight in it." },
+    black_hood: { name: "Black Cowl", icon: "", type: "hat", hood: true, look: { hat: "hood", hatColor: "#26262b" }, bonus: { agi: 1 }, price: 9e3, desc: "The cowl of a Revolutionary Army field agent. Nobody sees your face." },
+    horned_helm: { name: "Horned Helm", icon: "\u26D1", type: "hat", look: { hat: "horns" }, bonus: { end: 2 }, price: 0, desc: "A helm of Elbaf make." },
+    // body armour (the body slot: coats, cloaks and armour)
+    padded_vest: { name: "Padded Vest", icon: "", type: "coat", armor: 0.04, look: { coat: "#795548" }, bonus: { end: 1 }, price: 1800, desc: "Quilted canvas that takes the sting out of a cutlass." },
+    leather_jerkin: { name: "Leather Jerkin", icon: "", type: "coat", armor: 0.06, look: { coat: "#6d4c33" }, bonus: { agi: 1 }, price: 5500, desc: "Boiled leather \u2014 light enough to dodge in." },
+    chain_shirt: { name: "Chain Shirt", icon: "", type: "coat", armor: 0.1, look: { coat: "#90a4ae" }, bonus: { end: 1 }, price: 22e3, desc: "Rings of steel under your shirt. Heavy, but blades slide off." },
+    samurai_armor: { name: "Samurai Armour", icon: "", type: "coat", armor: 0.14, look: { coat: "#8e1b16" }, bonus: { end: 2, vit: 1 }, price: 9e4, desc: "Lacquered plates in the style of the Land of Wano." },
+    marine_coat: { name: "Marine Coat of Justice", icon: "\u{1F9E5}", type: "coat", look: { coat: "#fafafa", coatText: "JUSTICE" }, bonus: { end: 1 }, price: 0, desc: 'Worn by Marine officers. "JUSTICE" is stitched on the back.' },
+    captain_coat: { name: "Captain's Coat", icon: "\u{1F9E5}", type: "coat", look: { coat: "#1a237e" }, bonus: { wil: 1 }, price: 12e3 },
+    red_cloak: { name: "Red Cloak", icon: "\u{1F9E3}", type: "coat", look: { coat: "#b71c1c" }, bonus: { vit: 1 }, price: 6e3 },
+    // ---------------------------------------------------------- accessories (two slots)
+    iron_ring: { name: "Iron Ring", icon: "", type: "accessory", bonus: { str: 1 }, price: 1500, desc: "A heavy ring that makes every punch land harder." },
+    shell_bracelet: { name: "Shell Bracelet", icon: "", type: "accessory", bonus: { agi: 1 }, price: 900, desc: "Strung by island children. Light on the wrist." },
+    lucky_charm: { name: "Lucky Charm", icon: "", type: "accessory", bonus: { wil: 1 }, price: 800, desc: "A little wooden charm. Sailors swear by them." },
+    leather_bracers: { name: "Leather Bracers", icon: "", type: "accessory", bonus: { end: 1 }, price: 1200, desc: "For blocking blades with your forearms (not recommended)." },
+    haramaki: { name: "Haramaki", icon: "", type: "accessory", bonus: { vit: 1, end: 1 }, price: 2400, desc: "A green belly-warmer. Keeps your insides where they belong." },
+    gold_earrings: { name: "Three Gold Earrings", icon: "", type: "accessory", bonus: { agi: 1, wil: 1 }, price: 6e3, desc: "Three small gold drops that clink when you move." },
+    hand_wraps: { name: "Fighter's Hand Wraps", icon: "", type: "accessory", bonus: { str: 2 }, price: 5e3, desc: "Tight cloth wraps worn by bare-knuckle brawlers." },
+    pearl_necklace: { name: "Pearl Necklace", icon: "", type: "accessory", bonus: { vit: 2 }, price: 14e3, desc: "Pearls from the seabed near Fish-Man Island." },
+    red_sash: { name: "Red Sash", icon: "", type: "accessory", bonus: { str: 1, wil: 1 }, price: 8e3, desc: "Tied at the waist the way the old Roger Pirates wore theirs." },
+    sea_prism_charm: { name: "Sea-Glass Charm", icon: "", type: "accessory", bonus: { end: 2 }, price: 12e3, desc: "Polished sea glass in a brass cage." },
+    marine_medal: { name: "Medal of Honour", icon: "", type: "accessory", bonus: { wil: 2, end: 1 }, price: 0, unique: true, desc: "Awarded by Marine Headquarters for distinguished service." },
+    king_signet: { name: "Signet of a Fallen King", icon: "", type: "accessory", bonus: { wil: 3 }, price: 0, unique: true, desc: "A royal ring from a kingdom erased from the maps." },
+    // ---------------------------------------------------------------- dials
+    impact_dial: { name: "Impact Dial", icon: "\u{1F41A}", type: "dial", price: 3e4, ability: "dial_impact", desc: "Absorbs a blow and releases it. Hurts the user too." },
+    flame_dial: { name: "Flame Dial", icon: "\u{1F525}", type: "dial", price: 12e3, ability: "dial_flame", desc: "Stores fire and breathes it out." },
+    breath_dial: { name: "Breath Dial", icon: "\u{1F4A8}", type: "dial", price: 6e3, ability: "dial_breath", desc: "Stores wind \u2014 boats and gusts." },
+    flash_dial: { name: "Flash Dial", icon: "\u{1F4A1}", type: "dial", price: 8e3, ability: "dial_flash", desc: "Blinds everyone nearby." },
+    reject_dial: { name: "Reject Dial", icon: "\u{1F4A5}", type: "dial", price: 0, ability: "dial_reject", unique: true, desc: "Ten times the power of an Impact Dial. Can kill the user." },
+    // -------------------------------------------------------- navigation
+    log_pose: { name: "Log Pose", icon: "\u{1F9ED}", type: "key", logPose: 1, price: 5e3, desc: "The only compass that works in the Grand Line. It locks onto the next island after the log is set." },
+    new_world_log_pose: { name: "Three-Needle Log Pose", icon: "\u{1F9ED}", type: "key", logPose: 3, price: 6e4, desc: "A Log Pose for the New World: three needles for three islands." },
+    vivre_card: { name: "Vivre Card", icon: "\u{1F4C3}", type: "key", price: 0, desc: "A piece of paper made from someone's fingernail. It points to them and burns as their life fades." },
+    south_bird: { name: "South Bird", icon: "\u{1F426}", type: "key", price: 0, desc: "A bird that always faces south. Needed to find the Knock Up Stream." },
+    adam_wood: { name: "Adam Wood", icon: "\u{1FAB5}", type: "material", price: 2e6, desc: "Timber from the Treasure Tree Adam. Water 7 shipwrights can build a legend with it." },
+    seastone: { name: "Seastone Chunk", icon: "\u{1FAA8}", type: "material", price: 4e4, desc: "Stone that emits the same energy as the sea. Devil Fruit users go weak when they touch it." },
+    seastone_cuffs: { name: "Seastone Handcuffs", icon: "\u26D3", type: "key", price: 9e4, desc: "Capture a Devil Fruit user alive." },
+    poneglyph_rubbing: { name: "Road Poneglyph Rubbing", icon: "\u{1F7E5}", type: "key", price: 0, stack: true, desc: "A rubbing of a red Road Poneglyph. Four of them together point to Laugh Tale." },
+    treasure_map: { name: "Treasure Map", icon: "\u{1F5FA}", type: "key", price: 0, desc: "X marks the spot." },
+    den_den_mushi: { name: "Den Den Mushi", icon: "\u{1F40C}", type: "key", price: 3e3, desc: "A transponder snail. Lets you hear the news of the world." },
+    // ------------------------------------------------------------ treasure
+    gold_coins: { name: "Gold Doubloons", icon: "\u{1FA99}", type: "treasure", price: 1200, desc: "Sell them." },
+    jewels: { name: "Jewels", icon: "\u{1F48E}", type: "treasure", price: 6e3 },
+    shark_fin: { name: "Shark Fin", icon: "\u{1F988}", type: "material", price: 1500, desc: "Prized by cooks across the Grand Line." },
+    fighting_fish_horn: { name: "Fighting Fish Horn", icon: "\u{1F9B4}", type: "material", price: 2200, desc: "As long as a sword and nearly as sharp. Smiths and shipwrights pay well for them." },
+    shandora_gold: { name: "Shandora Gold", icon: "\u{1F514}", type: "treasure", price: 8e4, desc: "Gold from the lost city of Shandora." },
+    golden_statue: { name: "Golden Statue", icon: "\u{1F5FF}", type: "treasure", price: 25e3 },
+    pearl: { name: "Mermaid Pearl", icon: "\u26AA", type: "treasure", price: 15e3 }
+  };
+  for (const [id, f] of Object.entries(FRUITS)) {
+    ITEMS["fruit_" + id] = {
+      name: f.name,
+      icon: "\u{1F348}",
+      type: "fruit",
+      fruit: id,
+      price: 0,
+      unique: true,
+      desc: `${f.type}. ${f.desc}
+
+Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a second one will kill you.`
+    };
+  }
+  var FRUIT_VALUE = { common: 15e4, uncommon: 3e5, rare: 7e5, epic: 15e5, legendary: 3e6, mythical: 5e6 };
+  function sellPrice(id) {
+    const d = ITEMS[id];
+    if (!d) return 0;
+    if (d.type === "treasure") return d.price;
+    if (d.type === "fruit") return FRUIT_VALUE[FRUITS[d.fruit]?.rarity] || 2e5;
+    if (d.unique || d.type === "key") return 0;
+    return Math.floor((d.price || 0) * 0.4);
+  }
+
+  // src/game/survival.js
+  var FOOD_SECONDS = 2900;
+  var WATER_SECONDS = 1900;
+  var BODY = 37;
+  var FRESH = /* @__PURE__ */ new Set([T.RIVER, T.POND, T.CANAL]);
+  function nourishment(d) {
+    if (!d || d.type !== "food" && d.type !== "drink") return { food: 0, water: 0 };
+    const food = d.food ?? (d.type === "drink" ? 0 : Math.min(0.6, 0.06 + (d.heal || 0) / 260));
+    return { food, water: d.water ?? 0 };
+  }
+  function feltTemp(air, { indoors: indoors2 = false, wet = false, coat: coat2 = false, coldProof = false, heatProof = false, fur = false } = {}) {
+    let t = air;
+    if (indoors2) t += (20 - t) * 0.75;
+    if (wet) t = Math.min(t, 18) - 4;
+    if (t < 12) {
+      if (coat2) t += 7;
+      if (fur) t += 12;
+    }
+    if (t > 28 && fur) t += 3;
+    if (coldProof) t = Math.max(t, 16);
+    if (heatProof) t = Math.min(t, 28);
+    return t;
+  }
+  function bodyTarget(felt) {
+    if (felt < 12) return BODY - (12 - felt) * 0.18;
+    if (felt > 30) return BODY + (felt - 30) * 0.2;
+    return BODY;
+  }
+  function thirstRate(felt, body, busy = 0) {
+    return (1 + Math.max(0, felt - 24) / 9 + Math.max(0, body - 37.5) * 0.6) * (1 + busy * 0.3);
+  }
+  function installSurvival(game) {
+    const S6 = { sipT: 0, warned: {} };
+    game.survival = S6;
+    const needs2 = () => {
+      const c = game.state?.char;
+      if (!c) return null;
+      return c.needs || (c.needs = { food: 1, water: 1, body: BODY });
+    };
+    S6.needs = needs2;
+    S6.enabled = () => game.settings?.survival !== false && !game.creative?.on && !game.zoneRules?.noNeeds;
+    S6.consume = (id) => {
+      const n = needs2(), d = ITEMS[id];
+      if (!n || !d) return;
+      const { food, water: water3 } = nourishment(d);
+      n.food = Math.min(1, n.food + food);
+      n.water = Math.min(1, n.water + water3);
+      if (d.warm) n.body = Math.min(BODY, n.body + d.warm);
+      if (d.cool) n.body = Math.max(BODY, n.body - d.cool);
+    };
+    game.on("rested", () => {
+      const n = needs2();
+      if (n) {
+        n.food = Math.max(n.food, 0.9);
+        n.water = Math.max(n.water, 0.9);
+        n.body = BODY;
+      }
+    });
+    const warn = (key2, on, text2, color) => {
+      if (on && !S6.warned[key2]) {
+        S6.warned[key2] = 1;
+        game.log(text2, color);
+      } else if (!on) S6.warned[key2] = 0;
+    };
+    game.on("tick", (dt) => {
+      const p = game.player, n = needs2(), w = game.world, env2 = game.env;
+      if (!p || !n || !w || !env2 || p.dead || p.state === "dead") return;
+      if (!S6.enabled() || dt <= 0) {
+        p.needsHurt = false;
+        S6.felt = env2.tempC;
+        return;
+      }
+      dt = Math.min(dt, 0.25);
+      const c = game.state.char;
+      const eq = Object.values(c.equipped || {}).flat().filter(Boolean).join(" ");
+      const fruit = p.fruit || c.fruit || "";
+      const rec = w.floorRec?.(p.x, p.y);
+      const air = env2.tempC ?? 20;
+      const felt = feltTemp(air, {
+        indoors: !!(rec?.interior || p.belowDeck || game.zone?.indoors),
+        wet: !!p.inWater,
+        coat: /coat|cloak|hood|jerkin|haramaki/.test(eq),
+        coldProof: fruit === "mera" || fruit === "magu" || fruit === "hie" || c.race === "lunarian",
+        heatProof: fruit === "mera" || fruit === "magu" || c.race === "lunarian",
+        fur: c.race === "mink"
+      });
+      S6.felt = felt;
+      const target2 = bodyTarget(felt);
+      n.body += (target2 - n.body) * Math.min(1, dt / 150);
+      const busy = (p.sprinting || p.inCombat || p.action ? 1 : 0) + (p.inWater && !p.gills ? 0.5 : 0);
+      const fishy = c.race === "fishman" && p.inWater ? 0.2 : 1;
+      n.water = Math.max(0, n.water - dt / WATER_SECONDS * thirstRate(felt, n.body, busy) * fishy);
+      n.food = Math.max(0, n.food - dt / FOOD_SECONDS * (1 + Math.max(0, BODY - n.body) * 0.4) * (1 + busy * 0.25));
+      S6.sipT -= dt;
+      const fresh = FRESH.has(w.type(p.x, p.y)) || [0, 1.6, 3.2, 4.8].some((a) => FRESH.has(w.type(p.x + Math.cos(a) * 1.2, p.y + Math.sin(a) * 1.2)));
+      S6.canDrink = fresh && n.water < 0.98;
+      if (S6.canDrink && p.crouch && p.state === "idle" && !p.action) {
+        n.water = Math.min(1, n.water + dt * 0.12);
+        if (S6.sipT <= 0) {
+          S6.sipT = 0.7;
+          game.audio?.sfx("sip", p);
+        }
+        game.hint?.("drink_stream", "Crouched at fresh water (Alt), you drink your fill.");
+      } else if (fresh && n.water < 0.6) game.hint?.("drink_here", "Fresh water: crouch here (Alt) to drink.");
+      let hurt = 0;
+      if (n.food <= 0) hurt += 0.35;
+      if (n.water <= 0) hurt += 0.7;
+      if (n.body < 35) hurt += (35 - n.body) * 0.6;
+      if (n.body > 39) hurt += (n.body - 39) * 0.8;
+      p.needsHurt = hurt > 0;
+      if (hurt > 0 && p.hp > 1) p.hp = Math.max(1, p.hp - hurt * dt * (p.d.maxHp / 150));
+      warn("food", n.food < 0.2, n.food <= 0 ? "You are starving: eat something, or you will keep weakening." : "You're getting hungry.", "#ffcc80");
+      warn("water", n.water < 0.2, "You're thirsty. Drink: a flask, a coconut, or crouch at a stream.", "#81d4fa");
+      warn("cold", n.body < 35.6, "You're freezing. Get indoors, or put on a coat or a cloak.", "#b3e5fc");
+      warn("hot", n.body > 38.6, "You're overheating. Get into the shade, indoors, or drink.", "#ffab91");
+    });
+    return S6;
+  }
+
   // node_modules/three/build/three.module.js
   var three_module_exports = {};
   __export(three_module_exports, {
@@ -4480,7 +11888,7 @@
     const uuid = _lut[d0 & 255] + _lut[d0 >> 8 & 255] + _lut[d0 >> 16 & 255] + _lut[d0 >> 24 & 255] + "-" + _lut[d1 & 255] + _lut[d1 >> 8 & 255] + "-" + _lut[d1 >> 16 & 15 | 64] + _lut[d1 >> 24 & 255] + "-" + _lut[d2 & 63 | 128] + _lut[d2 >> 8 & 255] + "-" + _lut[d2 >> 16 & 255] + _lut[d2 >> 24 & 255] + _lut[d3 & 255] + _lut[d3 >> 8 & 255] + _lut[d3 >> 16 & 255] + _lut[d3 >> 24 & 255];
     return uuid.toLowerCase();
   }
-  function clamp(value, min2, max) {
+  function clamp2(value, min2, max) {
     return Math.max(min2, Math.min(max, value));
   }
   function euclideanModulo(n, m) {
@@ -4496,16 +11904,16 @@
       return 0;
     }
   }
-  function lerp(x, y, t) {
+  function lerp2(x, y, t) {
     return (1 - t) * x + t * y;
   }
   function damp(x, y, lambda, dt) {
-    return lerp(x, y, 1 - Math.exp(-lambda * dt));
+    return lerp2(x, y, 1 - Math.exp(-lambda * dt));
   }
   function pingpong(x, length = 1) {
     return length - Math.abs(euclideanModulo(x, length * 2) - length);
   }
-  function smoothstep(x, min2, max) {
+  function smoothstep2(x, min2, max) {
     if (x <= min2) return 0;
     if (x >= max) return 1;
     x = (x - min2) / (max - min2);
@@ -4626,14 +12034,14 @@
     DEG2RAD,
     RAD2DEG,
     generateUUID,
-    clamp,
+    clamp: clamp2,
     euclideanModulo,
     mapLinear,
     inverseLerp,
-    lerp,
+    lerp: lerp2,
     damp,
     pingpong,
-    smoothstep,
+    smoothstep: smoothstep2,
     smootherstep,
     randInt,
     randFloat,
@@ -4850,7 +12258,7 @@
       const denominator = Math.sqrt(this.lengthSq() * v.lengthSq());
       if (denominator === 0) return Math.PI / 2;
       const theta = this.dot(v) / denominator;
-      return Math.acos(clamp(theta, -1, 1));
+      return Math.acos(clamp2(theta, -1, 1));
     }
     distanceTo(v) {
       return Math.sqrt(this.distanceToSquared(v));
@@ -6431,7 +13839,7 @@
       return this.normalize();
     }
     angleTo(q2) {
-      return 2 * Math.acos(Math.abs(clamp(this.dot(q2), -1, 1)));
+      return 2 * Math.acos(Math.abs(clamp2(this.dot(q2), -1, 1)));
     }
     rotateTowards(q2, step2) {
       const angle = this.angleTo(q2);
@@ -6900,7 +14308,7 @@
       const denominator = Math.sqrt(this.lengthSq() * v.lengthSq());
       if (denominator === 0) return Math.PI / 2;
       const theta = this.dot(v) / denominator;
-      return Math.acos(clamp(theta, -1, 1));
+      return Math.acos(clamp2(theta, -1, 1));
     }
     distanceTo(v) {
       return Math.sqrt(this.distanceToSquared(v));
@@ -8506,7 +15914,7 @@
       const m31 = te[2], m32 = te[6], m33 = te[10];
       switch (order) {
         case "XYZ":
-          this._y = Math.asin(clamp(m13, -1, 1));
+          this._y = Math.asin(clamp2(m13, -1, 1));
           if (Math.abs(m13) < 0.9999999) {
             this._x = Math.atan2(-m23, m33);
             this._z = Math.atan2(-m12, m11);
@@ -8516,7 +15924,7 @@
           }
           break;
         case "YXZ":
-          this._x = Math.asin(-clamp(m23, -1, 1));
+          this._x = Math.asin(-clamp2(m23, -1, 1));
           if (Math.abs(m23) < 0.9999999) {
             this._y = Math.atan2(m13, m33);
             this._z = Math.atan2(m21, m22);
@@ -8526,7 +15934,7 @@
           }
           break;
         case "ZXY":
-          this._x = Math.asin(clamp(m32, -1, 1));
+          this._x = Math.asin(clamp2(m32, -1, 1));
           if (Math.abs(m32) < 0.9999999) {
             this._y = Math.atan2(-m31, m33);
             this._z = Math.atan2(-m12, m22);
@@ -8536,7 +15944,7 @@
           }
           break;
         case "ZYX":
-          this._y = Math.asin(-clamp(m31, -1, 1));
+          this._y = Math.asin(-clamp2(m31, -1, 1));
           if (Math.abs(m31) < 0.9999999) {
             this._x = Math.atan2(m32, m33);
             this._z = Math.atan2(m21, m11);
@@ -8546,7 +15954,7 @@
           }
           break;
         case "YZX":
-          this._z = Math.asin(clamp(m21, -1, 1));
+          this._z = Math.asin(clamp2(m21, -1, 1));
           if (Math.abs(m21) < 0.9999999) {
             this._x = Math.atan2(-m23, m22);
             this._y = Math.atan2(-m31, m11);
@@ -8556,7 +15964,7 @@
           }
           break;
         case "XZY":
-          this._z = Math.asin(-clamp(m12, -1, 1));
+          this._z = Math.asin(-clamp2(m12, -1, 1));
           if (Math.abs(m12) < 0.9999999) {
             this._x = Math.atan2(m32, m22);
             this._y = Math.atan2(m13, m11);
@@ -9600,8 +17008,8 @@
     }
     setHSL(h2, s, l, colorSpace = ColorManagement.workingColorSpace) {
       h2 = euclideanModulo(h2, 1);
-      s = clamp(s, 0, 1);
-      l = clamp(l, 0, 1);
+      s = clamp2(s, 0, 1);
+      l = clamp2(l, 0, 1);
       if (s === 0) {
         this.r = this.g = this.b = l;
       } else {
@@ -9723,7 +17131,7 @@
     }
     getHex(colorSpace = SRGBColorSpace) {
       ColorManagement.fromWorkingColorSpace(_color.copy(this), colorSpace);
-      return Math.round(clamp(_color.r * 255, 0, 255)) * 65536 + Math.round(clamp(_color.g * 255, 0, 255)) * 256 + Math.round(clamp(_color.b * 255, 0, 255));
+      return Math.round(clamp2(_color.r * 255, 0, 255)) * 65536 + Math.round(clamp2(_color.g * 255, 0, 255)) * 256 + Math.round(clamp2(_color.b * 255, 0, 255));
     }
     getHexString(colorSpace = SRGBColorSpace) {
       return ("000000" + this.getHex(colorSpace).toString(16)).slice(-6);
@@ -9829,9 +17237,9 @@
     lerpHSL(color, alpha2) {
       this.getHSL(_hslA);
       color.getHSL(_hslB);
-      const h2 = lerp(_hslA.h, _hslB.h, alpha2);
-      const s = lerp(_hslA.s, _hslB.s, alpha2);
-      const l = lerp(_hslA.l, _hslB.l, alpha2);
+      const h2 = lerp2(_hslA.h, _hslB.h, alpha2);
+      const s = lerp2(_hslA.s, _hslB.s, alpha2);
+      const l = lerp2(_hslA.l, _hslB.l, alpha2);
       this.setHSL(h2, s, l);
       return this;
     }
@@ -10341,7 +17749,7 @@
   }
   function toHalfFloat(val) {
     if (Math.abs(val) > 65504) console.warn("THREE.DataUtils.toHalfFloat(): Value out of range.");
-    val = clamp(val, -65504, 65504);
+    val = clamp2(val, -65504, 65504);
     _tables.floatView[0] = val;
     const f = _tables.uint32View[0];
     const e = f >> 23 & 511;
@@ -25005,13 +32413,13 @@ void main() {
         vec.crossVectors(tangents[i - 1], tangents[i]);
         if (vec.length() > Number.EPSILON) {
           vec.normalize();
-          const theta = Math.acos(clamp(tangents[i - 1].dot(tangents[i]), -1, 1));
+          const theta = Math.acos(clamp2(tangents[i - 1].dot(tangents[i]), -1, 1));
           normals[i].applyMatrix4(mat.makeRotationAxis(vec, theta));
         }
         binormals[i].crossVectors(tangents[i], normals[i]);
       }
       if (closed === true) {
-        let theta = Math.acos(clamp(normals[0].dot(normals[segments]), -1, 1));
+        let theta = Math.acos(clamp2(normals[0].dot(normals[segments]), -1, 1));
         theta /= segments;
         if (tangents[0].dot(vec.crossVectors(normals[0], normals[segments])) > 0) {
           theta = -theta;
@@ -25883,7 +33291,7 @@ void main() {
         phiLength
       };
       segments = Math.floor(segments);
-      phiLength = clamp(phiLength, 0, Math.PI * 2);
+      phiLength = clamp2(phiLength, 0, Math.PI * 2);
       const indices = [];
       const vertices = [];
       const uvs = [];
@@ -28384,7 +35792,7 @@ void main() {
       this.ior = 1.5;
       Object.defineProperty(this, "reflectivity", {
         get: function() {
-          return clamp(2.5 * (this.ior - 1) / (this.ior + 1), 0, 1);
+          return clamp2(2.5 * (this.ior - 1) / (this.ior + 1), 0, 1);
         },
         set: function(reflectivity) {
           this.ior = (1 + 0.4 * reflectivity) / (1 - 0.4 * reflectivity);
@@ -33962,7 +41370,7 @@ void main() {
         this.phi = 0;
       } else {
         this.theta = Math.atan2(x, z);
-        this.phi = Math.acos(clamp(y / this.radius, -1, 1));
+        this.phi = Math.acos(clamp2(y / this.radius, -1, 1));
       }
       return this;
     }
@@ -34181,7 +41589,7 @@ void main() {
       const startEnd_startP = _startEnd.dot(_startP);
       let t = startEnd_startP / startEnd2;
       if (clampToLine) {
-        t = clamp(t, 0, 1);
+        t = clamp2(t, 0, 1);
       }
       return t;
     }
@@ -35231,78 +42639,6 @@ void main() {
     return vao;
   }
 
-  // src/world/constants.js
-  var POS_SCALE = 6;
-  var SIZE_SCALE = 2.25;
-  var chart = (v) => Math.round(v * POS_SCALE);
-  var csize = (v) => Math.round(v * SIZE_SCALE);
-  var W = chart(4096);
-  var H = chart(2048);
-  var EQ = chart(1024);
-  var GL_HALF = chart(200);
-  var CB = chart(100);
-  var RL_HALF = chart(46);
-  var RM_X = chart(2048);
-  var MG_X = 0;
-  var POLAR = chart(26);
-  var GL_TOP = EQ - GL_HALF;
-  var GL_BOTTOM = EQ + GL_HALF;
-  var CB_TOP = GL_TOP - CB;
-  var CB_BOTTOM = GL_BOTTOM + CB;
-  var REGION = {
-    EAST_BLUE: 1,
-    NORTH_BLUE: 2,
-    WEST_BLUE: 3,
-    SOUTH_BLUE: 4,
-    PARADISE: 5,
-    NEW_WORLD: 6,
-    CALM_NORTH: 7,
-    CALM_SOUTH: 8,
-    RED_LINE: 9,
-    POLAR: 10
-  };
-  var REGION_INFO = {
-    [REGION.EAST_BLUE]: { id: "east_blue", name: "East Blue", danger: 1, color: "#4fb3e8", sea: true },
-    [REGION.NORTH_BLUE]: { id: "north_blue", name: "North Blue", danger: 2, color: "#5a8fd6", sea: true },
-    [REGION.WEST_BLUE]: { id: "west_blue", name: "West Blue", danger: 2, color: "#4a9fc9", sea: true },
-    [REGION.SOUTH_BLUE]: { id: "south_blue", name: "South Blue", danger: 2, color: "#3fc1c9", sea: true },
-    [REGION.PARADISE]: { id: "paradise", name: "Grand Line \u2014 Paradise", danger: 4, color: "#2aa198", sea: true },
-    [REGION.NEW_WORLD]: { id: "new_world", name: "Grand Line \u2014 New World", danger: 7, color: "#6c5ce7", sea: true },
-    [REGION.CALM_NORTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
-    [REGION.CALM_SOUTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
-    [REGION.RED_LINE]: { id: "red_line", name: "Red Line", danger: 5, color: "#b33939", sea: false },
-    [REGION.POLAR]: { id: "polar", name: "Polar Sea", danger: 3, color: "#dfe6e9", sea: true }
-  };
-  var SEA_IDS = {
-    east_blue: REGION.EAST_BLUE,
-    north_blue: REGION.NORTH_BLUE,
-    west_blue: REGION.WEST_BLUE,
-    south_blue: REGION.SOUTH_BLUE,
-    paradise: REGION.PARADISE,
-    new_world: REGION.NEW_WORLD,
-    calm_belt: REGION.CALM_NORTH,
-    red_line: REGION.RED_LINE
-  };
-  var wrapX = (x) => (x % W + W) % W;
-  var RMX = 900;
-  var RMY = 2150;
-  function regionAt(x, y) {
-    x = wrapX(x);
-    if (y < POLAR || y >= H - POLAR) return REGION.POLAR;
-    if (Math.abs(x - RM_X) < RL_HALF || x < RL_HALF || x >= W - RL_HALF) return REGION.RED_LINE;
-    const ey = (y - EQ) / RMY;
-    if (Math.abs(ey) < 1 && Math.abs(x - RM_X) < RMX * Math.sqrt(1 - ey * ey)) return REGION.RED_LINE;
-    const east = x > RM_X;
-    if (y >= GL_TOP && y < GL_BOTTOM) return east ? REGION.PARADISE : REGION.NEW_WORLD;
-    if (y >= CB_TOP && y < GL_TOP) return REGION.CALM_NORTH;
-    if (y >= GL_BOTTOM && y < CB_BOTTOM) return REGION.CALM_SOUTH;
-    if (y < EQ) return east ? REGION.EAST_BLUE : REGION.NORTH_BLUE;
-    return east ? REGION.SOUTH_BLUE : REGION.WEST_BLUE;
-  }
-  var isCalmBelt = (r4) => r4 === REGION.CALM_NORTH || r4 === REGION.CALM_SOUTH;
-  var isGrandLine = (r4) => r4 === REGION.PARADISE || r4 === REGION.NEW_WORLD;
-  var isBlue = (r4) => r4 >= REGION.EAST_BLUE && r4 <= REGION.SOUTH_BLUE;
-
   // src/render/terrainShader.js
   var TERRAIN_FS = `#version 300 es
 precision highp float;
@@ -35759,223 +43095,6 @@ void main() {
   outColor = vec4(col, 1.0);
 }
 `;
-
-  // src/world/tiles.js
-  var T = {
-    SEA: 0,
-    RIVER: 1,
-    CANAL: 2,
-    CLOUD_SEA: 3,
-    LAVA: 4,
-    REEF: 5,
-    ABYSS: 6,
-    POND: 7,
-    ACID: 8,
-    RAPIDS: 9,
-    // Reverse Mountain's canals: the sea running up (and down) a mountain
-    SAND: 16,
-    GRASS: 17,
-    DIRT: 18,
-    FOREST: 19,
-    JUNGLE: 20,
-    SNOW: 21,
-    ICE: 22,
-    DESERT: 23,
-    ROCK: 24,
-    MOUNTAIN: 25,
-    CLIFF: 26,
-    RED_ROCK: 27,
-    STONE: 28,
-    COBBLE: 29,
-    PLANK: 30,
-    FARM: 31,
-    FLOWERS: 32,
-    SAKURA: 33,
-    CANDY: 34,
-    ISLAND_CLOUD: 35,
-    CORAL: 36,
-    MANGROVE: 37,
-    ASH: 38,
-    MUD: 39,
-    MARBLE: 40,
-    WALL: 41,
-    GOLD: 42,
-    BONE: 43,
-    RAIL: 44,
-    BRIDGE: 45,
-    GRAVEL: 46,
-    LAWN: 47,
-    CAKE: 48,
-    SEAFLOOR: 49,
-    SNOWROCK: 50,
-    PACK_ICE: 51,
-    CARPET: 52,
-    TATAMI: 53,
-    STEEL: 54,
-    MASONRY: 55,
-    // a terraced city's retaining walls (world/terraces.js): cut stone, sheer
-    CANOPY: 56
-    // the edge of a great tree's canopy (Elbaph's Sun World: world/drums.js plates): leaves over a sheer drop
-  };
-  var TILE_NAMES = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
-  var N = 256;
-  var IS_LIQUID = new Uint8Array(N);
-  var WALKABLE = new Uint8Array(N);
-  var SAILABLE = new Uint8Array(N);
-  var SWIMMABLE = new Uint8Array(N);
-  var OVERLAY = new Uint8Array(N);
-  var MANMADE = new Uint8Array(N);
-  var SPEED = new Float32Array(N).fill(1);
-  var DAMAGE = new Float32Array(N);
-  for (let i = 0; i < 16; i++) IS_LIQUID[i] = 1;
-  for (let i = 16; i < N; i++) WALKABLE[i] = 1;
-  for (const t of [T.SEA, T.RIVER, T.CANAL, T.CLOUD_SEA, T.POND, T.RAPIDS]) {
-    SAILABLE[t] = 1;
-    SWIMMABLE[t] = 1;
-  }
-  SWIMMABLE[T.REEF] = 1;
-  SWIMMABLE[T.ACID] = 1;
-  for (const t of [T.MOUNTAIN, T.CLIFF, T.RED_ROCK, T.WALL, T.SNOWROCK, T.MASONRY, T.CANOPY]) WALKABLE[t] = 0;
-  for (const t of [T.PLANK, T.RAIL, T.BRIDGE]) {
-    OVERLAY[t] = 1;
-    WALKABLE[t] = 1;
-  }
-  for (const t of [T.STONE, T.COBBLE, T.PLANK, T.FARM, T.MARBLE, T.WALL, T.RAIL, T.BRIDGE, T.CARPET, T.TATAMI, T.STEEL, T.GOLD, T.MASONRY]) MANMADE[t] = 1;
-  WALKABLE[T.PACK_ICE] = 1;
-  SPEED[T.SAND] = 0.92;
-  SPEED[T.DESERT] = 0.8;
-  SPEED[T.SNOW] = 0.8;
-  SPEED[T.MUD] = 0.6;
-  SPEED[T.JUNGLE] = 0.85;
-  SPEED[T.STONE] = 1.08;
-  SPEED[T.COBBLE] = 1.06;
-  SPEED[T.MARBLE] = 1.08;
-  SPEED[T.ICE] = 1.15;
-  SPEED[T.ISLAND_CLOUD] = 1.1;
-  SPEED[T.REEF] = 0.55;
-  DAMAGE[T.LAVA] = 40;
-  DAMAGE[T.ACID] = 12;
-  var PALETTE = {
-    [T.SEA]: ["#1d6fb8", "#39a7d8"],
-    [T.RIVER]: ["#2b8fc4", "#58bde0"],
-    [T.CANAL]: ["#2a86b0", "#4fb0cf"],
-    [T.RAPIDS]: ["#3a9ccf", "#bfe9f5"],
-    [T.CLOUD_SEA]: ["#cfdcec", "#eef3fa"],
-    [T.LAVA]: ["#e8420e", "#ffb02e"],
-    [T.REEF]: ["#34b3b8", "#e7d9a8"],
-    [T.ABYSS]: ["#061a33", "#0b2d52"],
-    [T.POND]: ["#2f8fb0", "#6fc6d6"],
-    [T.ACID]: ["#6ab04c", "#badc58"],
-    [T.SAND]: ["#e8d49a", "#f5e6b8"],
-    [T.GRASS]: ["#5aa843", "#7cc653"],
-    [T.DIRT]: ["#a9824f", "#c19a64"],
-    [T.FOREST]: ["#3d8a35", "#57a53f"],
-    [T.JUNGLE]: ["#2f8a3a", "#4fb34a"],
-    [T.SNOW]: ["#eef4fa", "#ffffff"],
-    [T.ICE]: ["#bfe3f2", "#e6f7ff"],
-    [T.DESERT]: ["#e3bf78", "#f0d396"],
-    [T.ROCK]: ["#8f8a80", "#a8a296"],
-    [T.MOUNTAIN]: ["#7d7468", "#9b9184"],
-    [T.CLIFF]: ["#6b6258", "#857a6d"],
-    [T.RED_ROCK]: ["#9e3b2a", "#c0563a"],
-    [T.STONE]: ["#b8b0a2", "#cfc8ba"],
-    [T.COBBLE]: ["#9c958a", "#b5ada0"],
-    [T.PLANK]: ["#9a6a3c", "#b8844f"],
-    [T.FARM]: ["#8f7a3e", "#b59a4c"],
-    [T.FLOWERS]: ["#6bb54a", "#f06292"],
-    [T.SAKURA]: ["#7fb069", "#f8b4cf"],
-    [T.CANDY]: ["#f7a8c8", "#fff0f6"],
-    [T.ISLAND_CLOUD]: ["#e3e9f2", "#f3f6fb"],
-    [T.CORAL]: ["#e8a0a0", "#f7d0b8"],
-    [T.MANGROVE]: ["#6f8f45", "#93b35a"],
-    [T.ASH]: ["#4d4a48", "#6a6461"],
-    [T.MUD]: ["#5f5236", "#75683f"],
-    [T.MARBLE]: ["#e8e4dc", "#fdfbf6"],
-    [T.WALL]: ["#6e6457", "#8a7f70"],
-    [T.GOLD]: ["#e1b12c", "#fbc531"],
-    [T.BONE]: ["#8a8574", "#a8a28f"],
-    [T.RAIL]: ["#6d5a47", "#9a9a9a"],
-    [T.BRIDGE]: ["#8c5f36", "#a9764a"],
-    [T.GRAVEL]: ["#9d968c", "#b7b0a5"],
-    [T.LAWN]: ["#66b84d", "#7fcf5f"],
-    [T.CAKE]: ["#f3d9a4", "#ffffff"],
-    [T.SEAFLOOR]: ["#3f6f7a", "#5a8f8f"],
-    [T.SNOWROCK]: ["#9aa3ad", "#e8eef5"],
-    [T.PACK_ICE]: ["#dff3fb", "#ffffff"],
-    [T.CARPET]: ["#8e2436", "#c0392b"],
-    [T.TATAMI]: ["#c8b77a", "#ddd09b"],
-    [T.STEEL]: ["#7f8c8d", "#95a5a6"],
-    [T.MASONRY]: ["#b3a185", "#cdbd9f"],
-    [T.CANOPY]: ["#2f6a34", "#3d7d3a"]
-  };
-  var CLIMATE = {
-    TEMPERATE: 0,
-    TROPICAL: 1,
-    AUTUMN: 2,
-    WINTER: 3,
-    ARID: 4,
-    VOLCANIC: 5,
-    SKY: 6,
-    UNDERSEA: 7,
-    SAKURA: 8,
-    CANDY: 9,
-    GLOOM: 10,
-    SPRING: 11
-  };
-
-  // src/core/math.js
-  var TAU = Math.PI * 2;
-  var clamp2 = (v, a, b) => v < a ? a : v > b ? b : v;
-  var lerp2 = (a, b, t) => a + (b - a) * t;
-  var smoothstep2 = (a, b, x) => {
-    const t = clamp2((x - a) / (b - a), 0, 1);
-    return t * t * (3 - 2 * t);
-  };
-  function angleDiff(a, b) {
-    let d = (b - a) % TAU;
-    if (d > Math.PI) d -= TAU;
-    else if (d <= -Math.PI) d += TAU;
-    return d;
-  }
-  function springStep(x, v, target2, w, dt, zeta = 1, out = [0, 0]) {
-    const e0 = x - target2;
-    if (zeta >= 1) {
-      const c = v + w * e0, k2 = Math.exp(-w * dt);
-      out[0] = target2 + (e0 + c * dt) * k2;
-      out[1] = (v - w * c * dt) * k2;
-      return out;
-    }
-    const wd = w * Math.sqrt(1 - zeta * zeta), k = Math.exp(-zeta * w * dt);
-    const B5 = (v + zeta * w * e0) / wd, cs = Math.cos(wd * dt), sn = Math.sin(wd * dt);
-    out[0] = target2 + k * (e0 * cs + B5 * sn);
-    out[1] = k * ((wd * B5 - zeta * w * e0) * cs - (zeta * w * B5 + wd * e0) * sn);
-    return out;
-  }
-  function formatBerries(n) {
-    return "\u0E3F" + Math.round(n).toLocaleString("en-US");
-  }
-  function roundBounty(b) {
-    if (!(b > 0)) return 0;
-    const mag = Math.pow(10, Math.max(4, Math.floor(Math.log10(b)) - 2));
-    return Math.round(b / mag) * mag;
-  }
-  function hexToRgb(hex3) {
-    const h2 = hex3.replace("#", "");
-    const n = parseInt(h2.length === 3 ? h2.split("").map((c) => c + c).join("") : h2, 16);
-    return [n >> 16 & 255, n >> 8 & 255, n & 255];
-  }
-  function rgbToHex(r4, g, b) {
-    return "#" + [r4, g, b].map((v) => clamp2(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("");
-  }
-  function shade(hex3, amt) {
-    const [r4, g, b] = hexToRgb(hex3);
-    if (amt >= 0) return rgbToHex(r4 + (255 - r4) * amt, g + (255 - g) * amt, b + (255 - b) * amt);
-    return rgbToHex(r4 * (1 + amt), g * (1 + amt), b * (1 + amt));
-  }
-  function mixHex(a, b, t) {
-    const A2 = hexToRgb(a), B5 = hexToRgb(b);
-    return rgbToHex(lerp2(A2[0], B5[0], t), lerp2(A2[1], B5[1], t), lerp2(A2[2], B5[2], t));
-  }
 
   // src/render/terrain.js
   var TerrainRenderer = class {
@@ -37634,172 +44753,6 @@ void main() {
     }
   };
 
-  // src/world/reverseMountain.js
-  var RM = {
-    x: RM_X,
-    y: EQ,
-    rx: 900,
-    // the massif's reach across the Red Line (the coast bulges out this far)…
-    ry: 2150,
-    // …and along it
-    top: 160,
-    // water level of the summit pool, metres above the sea
-    poolR: 56,
-    // (room for the greatest ships to turn out into the torrent)
-    halfW: 17,
-    // half the width of a canal (a great galleon rides it with room either side)
-    climb: 740,
-    // the last stretch of each canal, where it climbs the mountain
-    drop: 620,
-    // the torrent down to Paradise
-    cone: { rx: 760, ry: 1250, h: 110 },
-    // the mountain standing on the Red Line
-    upSpeed: 20,
-    // m/s of the currents up the mountain…
-    downSpeed: 28
-    // …and of the torrent down
-  };
-  var UP_PTS = [[1150, 2020], [620, 1900], [300, 1560], [150, 950], [70, 420], [24, 70], [8, 22]];
-  var EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
-  var CANALS = [
-    { id: "east_blue", sx: 1, sy: -1 },
-    { id: "north_blue", sx: -1, sy: -1 },
-    { id: "west_blue", sx: -1, sy: 1 },
-    { id: "south_blue", sx: 1, sy: 1 },
-    { id: "exit", exit: true }
-  ];
-  var STEP = 4;
-  var CELL = 32;
-  function catmull(pts, step2) {
-    const out = [];
-    const P6 = [pts[0], ...pts, pts[pts.length - 1]];
-    for (let i = 1; i < P6.length - 2; i++) {
-      const [p0, p1, p2, p3] = [P6[i - 1], P6[i], P6[i + 1], P6[i + 2]];
-      const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
-      const n = Math.max(1, Math.ceil(len / step2));
-      for (let k = 0; k < n; k++) {
-        const t = k / n, t2 = t * t, t3 = t2 * t;
-        const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-        out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
-      }
-    }
-    out.push(pts[pts.length - 1]);
-    return out;
-  }
-  var smooth = (t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
-  function build() {
-    for (const c of CANALS) {
-      const pts = c.exit ? EXIT_PTS : UP_PTS.map(([x, y]) => [x * c.sx, y * c.sy]);
-      const raw = catmull(pts, STEP);
-      const n = raw.length;
-      c.x = new Float32Array(n);
-      c.y = new Float32Array(n);
-      c.s = new Float32Array(n);
-      c.lv = new Float32Array(n);
-      c.fx = new Float32Array(n);
-      c.fy = new Float32Array(n);
-      let s = 0;
-      for (let i = 0; i < n; i++) {
-        if (i) s += Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]);
-        c.x[i] = RM.x + raw[i][0];
-        c.y[i] = RM.y + raw[i][1];
-        c.s[i] = s;
-      }
-      c.len = s;
-      for (let i = 0; i < n; i++) {
-        const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
-        const dx = c.x[b] - c.x[a], dy = c.y[b] - c.y[a], d = Math.hypot(dx, dy) || 1;
-        c.fx[i] = dx / d;
-        c.fy[i] = dy / d;
-        const si = c.s[i];
-        c.lv[i] = c.exit ? RM.top * (1 - smooth((si - 30) / RM.drop)) : RM.top * smooth((si - (s - RM.climb)) / RM.climb);
-      }
-    }
-    const grid2 = /* @__PURE__ */ new Map();
-    CANALS.forEach((c, ci) => {
-      for (let i = 0; i < c.x.length; i++) {
-        const k = Math.floor(c.x[i] / CELL) * 65536 + Math.floor(c.y[i] / CELL);
-        let l = grid2.get(k);
-        if (!l) grid2.set(k, l = []);
-        l.push(ci, i);
-      }
-    });
-    RM.grid = grid2;
-  }
-  build();
-  function canalLevel(c, s) {
-    if (c.exit) return RM.top * (1 - smooth((s - 30) / RM.drop));
-    return RM.top * smooth((s - (c.len - RM.climb)) / RM.climb);
-  }
-  var HIT = { canal: null, i: 0, d: 0, s: 0, level: 0, fx: 0, fy: 0, side: 0, pool: false };
-  var POOL_CURL = 0.2;
-  function canalAt(x, y, reach3 = 40, out = HIT) {
-    const dxs = x - RM.x, dys = y - RM.y;
-    if (Math.abs(dxs) > 1400 || Math.abs(dys) > 2200) return null;
-    const pd = Math.hypot(dxs, dys);
-    if (pd < RM.poolR) {
-      out.canal = CANALS[4];
-      out.i = 0;
-      out.d = 0;
-      out.s = 0;
-      out.level = RM.top;
-      out.pool = true;
-      const c2 = pd > 1e-3 ? dxs / pd : 1;
-      const a = smooth((pd - 3) / 7) * (1 - smooth((c2 - 0.7) / 0.27));
-      out.fx = (pd > 1e-3 ? -dxs / pd * a : 0) + (1 - a);
-      out.fy = (pd > 1e-3 ? -dys / pd * a : 0) - (1 - a) * dys * POOL_CURL;
-      const f = Math.hypot(out.fx, out.fy) || 1;
-      out.fx /= f;
-      out.fy /= f;
-      out.side = 0;
-      return out;
-    }
-    let best = -1, bc = 0, bd = reach3 * reach3;
-    const r4 = Math.ceil(reach3 / CELL);
-    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
-    for (let j = -r4; j <= r4; j++) {
-      for (let i = -r4; i <= r4; i++) {
-        const l = RM.grid.get((cx + i) * 65536 + (cy + j));
-        if (!l) continue;
-        for (let k = 0; k < l.length; k += 2) {
-          const c2 = CANALS[l[k]], si = l[k + 1];
-          const ex = x - c2.x[si], ey = y - c2.y[si];
-          const d2 = ex * ex + ey * ey;
-          if (d2 < bd) {
-            bd = d2;
-            best = si;
-            bc = l[k];
-          }
-        }
-      }
-    }
-    if (best < 0) return null;
-    const c = CANALS[bc];
-    let s = c.s[best], px2 = c.x[best], py2 = c.y[best];
-    const ax = x - px2, ay = y - py2;
-    const along2 = ax * c.fx[best] + ay * c.fy[best];
-    s = Math.max(0, Math.min(c.len, s + along2));
-    const side = ax * -c.fy[best] + ay * c.fx[best];
-    out.canal = c;
-    out.i = best;
-    out.s = s;
-    out.d = Math.abs(side);
-    out.side = side;
-    out.level = canalLevel(c, s);
-    out.fx = c.fx[best];
-    out.fy = c.fy[best];
-    out.pool = false;
-    return out;
-  }
-  function coneAt(x, y) {
-    const C3 = RM.cone;
-    const r4 = Math.hypot((x - RM.x) / C3.rx, (y - RM.y) / C3.ry);
-    if (r4 >= 1) return 0;
-    const k = 1 - r4;
-    return C3.h * k * k * (3 - 2 * k);
-  }
-  var nearRM = (x, y) => Math.abs(x - RM.x) < RM.rx + 500 && Math.abs(y - RM.y) < RM.ry + 400;
-
   // src/world/bframe.js
   var FRONT = [[0, 1], [1, 0], [0, -1], [-1, 0]];
   var rotOf = (b) => ((b.rot | 0) % 4 + 4) % 4;
@@ -38195,7 +45148,7 @@ void main() {
       else P6.low.push({ x0: L3.x1 - 0.7, x1: L3.x1 + 1, z0: w.u - hw, z1: w.u + hw });
     }
     const S6 = (k) => sized(F[k], g);
-    (ROOMS[L3.room] || ROOMS.house)(P6, L3, b, R5, S6, g);
+    (ROOMS2[L3.room] || ROOMS2.house)(P6, L3, b, R5, S6, g);
     P6.deco({ k: "lamp", w: 0.3, d: 0.3, h: 0.5 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2);
     b._layout = L3;
     return L3;
@@ -38343,7 +45296,7 @@ void main() {
       stash(P6, L3, S6, low ? "tansu" : "dresser", [["front", "start"], ["right", "end"]], "Search the drawers");
     }
   };
-  var ROOMS = {
+  var ROOMS2 = {
     house(P6, L3, b, R5, S6, g) {
       const low = lowStyle(b);
       const kinds = ["family", "family", "fisher", "crafter", "scholar", "farmer", "sailor"];
@@ -38427,7 +45380,7 @@ void main() {
       L3.rest = bar2 ? { x: bar2.x, z: bar2.rect.z1 + 0.7 } : { x: 0, z: L3.z1 - 1 };
     },
     inn(P6, L3, b, R5, S6, g) {
-      ROOMS.tavern(P6, L3, b, R5, S6, g);
+      ROOMS2.tavern(P6, L3, b, R5, S6, g);
       P6.wall(S6("stairs"), "left", "start") || P6.wall(S6("stairs"), "right", "start");
     },
     restaurant(P6, L3, b, R5, S6, g) {
@@ -38617,7 +45570,7 @@ void main() {
 
   // src/world/terraces.js
   var R2 = Math.SQRT1_2;
-  var clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp012 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function makeTerrace(spec, x, y, island) {
     const T5 = {
       x: Math.round(x),
@@ -38687,11 +45640,11 @@ void main() {
     if (b <= 0 || b > r4.w) return -1;
     const along2 = dy * r4.up;
     if (along2 < r4.a0 || along2 > r4.a1) return -1;
-    return clamp01((along2 - r4.a0) / Math.max(1, r4.a1 - r4.land - r4.a0));
+    return clamp012((along2 - r4.a0) / Math.max(1, r4.a1 - r4.land - r4.a0));
   }
   function segDist(px2, py2, ax, ay, bx, by) {
     const vx = bx - ax, vy = by - ay, l2 = vx * vx + vy * vy;
-    const t = l2 > 0 ? clamp01(((px2 - ax) * vx + (py2 - ay) * vy) / l2) : 0;
+    const t = l2 > 0 ? clamp012(((px2 - ax) * vx + (py2 - ay) * vy) / l2) : 0;
     return Math.hypot(px2 - ax - vx * t, py2 - ay - vy * t);
   }
   function terraceGround(T5, dx, dy, out) {
@@ -38810,7 +45763,7 @@ void main() {
     if (inMaryGeoise(world, x, y)) return RL_TOP;
     return 0.45 + Math.min(e, 190) * ELEV_K + BOOST[t];
   }
-  var smooth2 = (a, b, x) => {
+  var smooth3 = (a, b, x) => {
     const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
@@ -38833,7 +45786,7 @@ void main() {
     else if (d < 14) h2 = -1.75 - (d - 5) * 0.95;
     else h2 = -10.3 - (d - 14) * 1.3;
     if (d > 24) {
-      const k = smooth2(24, 32, d);
+      const k = smooth3(24, 32, d);
       const abyss = -(35 + vnoise(cx * 4e-3, cy * 4e-3) * 25);
       h2 = h2 * (1 - k) + abyss * k;
     }
@@ -38863,7 +45816,7 @@ void main() {
       const d = Math.hypot(Math.max(0, -p.depth - along2), Math.max(0, across - p.halfW));
       const R5 = Math.min(p.r, 3 + Math.abs(h2 - DOCK_Y) * 0.8);
       if (d >= R5) continue;
-      const w = d <= 0 ? 1 : (1 - smooth2(0, R5, d)) * smooth2(-0.3, 0.7, h2);
+      const w = d <= 0 ? 1 : (1 - smooth3(0, R5, d)) * smooth3(-0.3, 0.7, h2);
       h2 += (DOCK_Y - 0.06 - h2) * w;
     }
     return h2;
@@ -38913,7 +45866,7 @@ void main() {
     const base2 = rm ? rm.level : 0;
     if (rm) land2 = Math.min(land2 + rm.cone, rm.bank);
     if (sd <= 0) return base2 + 0.2 + sd * 0.4;
-    return base2 + 0.25 + (land2 - base2 - 0.25) * smooth2(0, 3.2, sd);
+    return base2 + 0.25 + (land2 - base2 - 0.25) * smooth3(0, 3.2, sd);
   }
   var RMS = { cone: 0, level: 0, bank: 0 };
   function rmShape(cx, cy, wet) {
@@ -39203,7 +46156,7 @@ void main() {
               const dx = Math.max(0, tx - cx, cx - (tx + 1)), dy = Math.max(0, ty - cy, cy - (ty + 1));
               const d = Math.hypot(dx, dy);
               if (d >= R5) continue;
-              const k = 1 - smooth2(0, R5, d), q2 = j * N9 + i;
+              const k = 1 - smooth3(0, R5, d), q2 = j * N9 + i;
               if (k > K[q2]) {
                 K[q2] = k;
                 any = true;
@@ -39385,80 +46338,6 @@ void main() {
     tex3.anisotropy = 2;
     return { canvas: c, ctx: c.getContext("2d"), tex: tex3 };
   }
-
-  // src/core/rng.js
-  function hashString(str) {
-    let h2 = 2166136261 >>> 0;
-    for (let i = 0; i < str.length; i++) {
-      h2 ^= str.charCodeAt(i);
-      h2 = Math.imul(h2, 16777619);
-    }
-    return h2 >>> 0;
-  }
-  function hash2i(x, y, seed = 0) {
-    let h2 = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(seed | 0, 2246822519) | 0;
-    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
-    h2 ^= h2 >>> 16;
-    return h2 >>> 0;
-  }
-  var hash2 = (x, y, seed = 0) => hash2i(x, y, seed) / 4294967296;
-  function hash01(a, b = 0, c = 0) {
-    let h2 = Math.imul(a * 1e3 | 0, 374761393) ^ Math.imul(b * 1e3 | 0, 668265263) ^ Math.imul(c * 1e3 | 0, 1274126177);
-    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
-    return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
-  }
-  var RNG = class _RNG {
-    constructor(seed = 1) {
-      this.s = (typeof seed === "string" ? hashString(seed) : seed >>> 0) || 2654435769;
-    }
-    next() {
-      let t = this.s = this.s + 1831565813 >>> 0;
-      t = Math.imul(t ^ t >>> 15, t | 1);
-      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    }
-    range(a, b) {
-      return a + (b - a) * this.next();
-    }
-    int(a, b) {
-      return a + Math.floor(this.next() * (b - a + 1));
-    }
-    chance(p) {
-      return this.next() < p;
-    }
-    pick(arr) {
-      return arr[Math.floor(this.next() * arr.length)];
-    }
-    sign() {
-      return this.next() < 0.5 ? -1 : 1;
-    }
-    gauss() {
-      const u = 1 - this.next(), v = this.next();
-      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-    }
-    shuffle(arr) {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(this.next() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
-    /** Pick from [{weight, ...}] or [[item, weight]] lists. */
-    weighted(list, weightKey = "weight") {
-      let total = 0;
-      for (const e of list) total += Array.isArray(e) ? e[1] : e[weightKey];
-      let r4 = this.next() * total;
-      for (const e of list) {
-        r4 -= Array.isArray(e) ? e[1] : e[weightKey];
-        if (r4 <= 0) return Array.isArray(e) ? e[0] : e;
-      }
-      const last = list[list.length - 1];
-      return Array.isArray(last) ? last[0] : last;
-    }
-    fork(salt) {
-      return new _RNG(hashString(String(salt)) ^ Math.floor(this.next() * 4294967296));
-    }
-  };
 
   // src/render3d/props/kit.js
   var _v = new Vector3();
@@ -40794,134 +47673,6 @@ void main() {
     m.receiveShadow = true;
     return m;
   }
-
-  // src/render3d/swell.js
-  var SWELL_GLSL = (
-    /* glsl */
-    `
-  float sHash(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-  }
-  float sNoise(vec2 p) {
-    vec2 i = floor(p), f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(sHash(i), sHash(i + vec2(1, 0)), u.x), mix(sHash(i + vec2(0, 1)), sHash(i + vec2(1, 1)), u.x), u.y);
-  }
-  // two octaves, rotated against each other (no grid-aligned blobs)
-  float sFbm(vec2 p) {
-    float a = sNoise(p);
-    p = mat2(0.8, -0.6, 0.6, 0.8) * p * 2.03 + 17.3;
-    return a * 0.64 + sNoise(p) * 0.36;
-  }
-  // d: how far from the eye (m) \u2014 the shorter trains stop nearer it
-  float swells(vec2 p, float t, float d, out vec2 slope) {
-    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.17, 0.985), D2 = vec2(-0.81, 0.59), D3 = vec2(0.75, -0.66), D4 = vec2(0.42, -0.91);
-    const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854, K4 = 0.1848;   // 46 m, 22 m, 13 m, 8 m; a cross swell of 34 m
-    const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774, W4 = 1.346;       // deep-water speeds
-    // bent crests (a little everywhere, and long slow curves)
-    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0 + (vec2(sNoise(p * 0.0055 + 3.1), sNoise(p * 0.0055 + 9.4)) - 0.5) * 44.0;
-    // wave groups
-    float g0 = (0.36 + 0.45 * sFbm(p * 0.006 + vec2(0.0, t * 0.012) + 91.0)) * (1.0 - smoothstep(160.0, 320.0, d));
-    float g1 = (0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0))) * 0.75 * (1.0 - smoothstep(150.0, 300.0, d));
-    float g2 = (0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025))) * 0.4 * (1.0 - smoothstep(45.0, 100.0, d));
-    float g3 = (0.3 + 0.9 * sFbm(p * 0.026 + 57.0)) * 0.22 * (1.0 - smoothstep(25.0, 55.0, d));
-    // (the cross swell strong in some stretches of sea, gone in others)
-    float g4 = (0.7 * sFbm(p * 0.0045 - 51.0 + vec2(t * 0.01, 0.0)) + 0.15) * 0.8 * (1.0 - smoothstep(160.0, 320.0, d));
-    float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1, a4 = K4 * dot(D4, q) - W4 * t + 2.3;
-    // (peaked: e^(sin a - 1), less its mean 0.466, scaled back to a peak of 1)
-    float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873, e4 = exp(sin(a4) - 1.0) * 1.873;
-    float h = (e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + sin(a3) * g3 + (e4 - 0.873) * g4;
-    slope = (D0 * K0 * e0 * cos(a0) * g0 + D1 * K1 * e1 * cos(a1) * g1 + D2 * K2 * e2 * cos(a2) * g2 + D3 * K3 * cos(a3) * g3 + D4 * K4 * e4 * cos(a4) * g4) / 2.6;
-    return h / 2.6;
-  }
-`
-  );
-  var fract = (v) => v - Math.floor(v);
-  function sHash(x, y) {
-    let a = fract(x * 0.1031), b = fract(y * 0.1031), c = a;
-    const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33);
-    a += d;
-    b += d;
-    c += d;
-    return fract((a + b) * c);
-  }
-  function sNoise(x, y) {
-    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
-    const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
-    const a = sHash(ix, iy), b = sHash(ix + 1, iy), c = sHash(ix, iy + 1), d = sHash(ix + 1, iy + 1);
-    const top = a + (b - a) * ux, bot = c + (d - c) * ux;
-    return top + (bot - top) * uy;
-  }
-  function sFbm(x, y) {
-    const a = sNoise(x, y);
-    const px2 = (0.8 * x + 0.6 * y) * 2.03 + 17.3, py2 = (-0.6 * x + 0.8 * y) * 2.03 + 17.3;
-    return a * 0.64 + sNoise(px2, py2) * 0.36;
-  }
-  var sst = (a, b, x) => {
-    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-    return t * t * (3 - 2 * t);
-  };
-  function swells(x, y, t, d = 0) {
-    const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14 + (sNoise(x * 55e-4 + 3.1, y * 55e-4 + 3.1) - 0.5) * 44;
-    const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14 + (sNoise(x * 55e-4 + 9.4, y * 55e-4 + 9.4) - 0.5) * 44;
-    const g0 = (0.36 + 0.45 * sFbm(x * 6e-3 + 91, y * 6e-3 + t * 0.012 + 91)) * (1 - sst(160, 320, d));
-    const g1 = (0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011)) * 0.75 * (1 - sst(150, 300, d));
-    const g2 = (0.3 + 0.9 * sFbm(x * 0.017 + 31, y * 0.017 + 31 - t * 0.025)) * 0.4 * (1 - sst(45, 100, d));
-    const g3 = (0.3 + 0.9 * sFbm(x * 0.026 + 57, y * 0.026 + 57)) * 0.22 * (1 - sst(25, 55, d));
-    const g4 = (0.7 * sFbm(x * 45e-4 - 51 + t * 0.01, y * 45e-4 - 51) + 0.15) * 0.8 * (1 - sst(160, 320, d));
-    const a0 = 0.1366 * (0.86 * qx + 0.51 * qy) - 1.157 * t + 0.6;
-    const a1 = 0.2856 * (0.17 * qx + 0.985 * qy) - 1.673 * t;
-    const a2 = 0.4833 * (-0.81 * qx + 0.59 * qy) - 2.177 * t + 1.7;
-    const a3 = 0.7854 * (0.75 * qx - 0.66 * qy) - 2.774 * t + 4.1;
-    const a4 = 0.1848 * (0.42 * qx - 0.91 * qy) - 1.346 * t + 2.3;
-    const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873, e4 = Math.exp(Math.sin(a4) - 1) * 1.873;
-    return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3 + (e4 - 0.873) * g4) / 2.6;
-  }
-  var swellAmp = (storm, zone, calm = 0) => zone >= 2 ? 0 : (0.85 + storm * 1.4) * (1 - calm * 0.85);
-  var LIQUID = new Float32Array(256).fill(0.15);
-  for (const k of [0, 1, 2, 5, 7]) LIQUID[k] = 1;
-  LIQUID[3] = 0.5;
-  LIQUID[9] = 0;
-  function calmPoints(world) {
-    if (!world?.reverseMountain) return [];
-    if (world.calmPts) return world.calmPts;
-    const out = [];
-    for (const c of CANALS) {
-      if (c.i0 === void 0) continue;
-      const land2 = c.exit ? c.i1 - 3 : c.i0 + 3;
-      const j = Math.max(0, Math.min(c.x.length - 1, land2 + (c.exit ? 12 : -12)));
-      out.push([c.x[j], c.y[j], 170]);
-    }
-    return world.calmPts = out;
-  }
-  function calmAt(w, x, y) {
-    let k = 1;
-    for (const [cx, cy, r4] of calmPoints(w)) k = Math.min(k, sst(r4 * 0.45, r4, Math.hypot(w.dx ? w.dx(cx, x) : x - cx, y - cy)));
-    return k;
-  }
-  var S = { t: 0, amp: 0, world: null, ox: 0, oy: 0 };
-  function setSwell(t, amp, world, ox, oy) {
-    S.t = t;
-    S.amp = amp;
-    S.world = world;
-    S.ox = ox;
-    S.oy = oy;
-  }
-  function swellAt(x, y, t = S.t) {
-    const w = S.world;
-    if (!w || !S.amp) return 0;
-    const dx = w.dx ? w.dx(S.ox, x) : x - S.ox, dy = y - S.oy;
-    const d = Math.hypot(dx, dy);
-    if (d > 320) return 0;
-    const k = w.type(Math.floor(x), Math.floor(y));
-    const liquid = LIQUID[k < 16 ? k : 255];
-    if (!liquid) return 0;
-    const shore = 0.35 + 0.65 * sst(0.5, -7, w.sd ? w.sd(x, y) : -32);
-    return swells(x, y, t, d) * S.amp * shore * liquid * (w.reverseMountain ? calmAt(w, x, y) : 1);
-  }
-  var swellOn = () => !!(S.world && S.amp > 0.01);
 
   // src/render3d/water3d.js
   var SWELL = SWELL_GLSL;
@@ -42787,7 +49538,7 @@ ${GLSL}
   };
 
   // src/render/ship.js
-  var TAU2 = Math.PI * 2;
+  var TAU3 = Math.PI * 2;
   function drawJollyRoger(g, jr = {}, size = 1, bg = "#111") {
     g.save();
     g.scale(size, size);
@@ -42795,7 +49546,7 @@ ${GLSL}
     const accC = jr.acc || jr.accColor || "#c0392b";
     const disc2 = (x, y, r4) => {
       g.beginPath();
-      g.arc(x, y, r4, 0, TAU2);
+      g.arc(x, y, r4, 0, TAU3);
       g.fill();
     };
     g.strokeStyle = fg;
@@ -42878,7 +49629,7 @@ ${GLSL}
     const [rx, ry, jw, jh] = shape;
     g.fillStyle = fg;
     g.beginPath();
-    g.ellipse(0, -0.05, rx, ry, 0, 0, TAU2);
+    g.ellipse(0, -0.05, rx, ry, 0, 0, TAU3);
     g.fill();
     g.beginPath();
     g.moveTo(-jw / 2, 0.1);
@@ -42899,8 +49650,8 @@ ${GLSL}
     g.fillStyle = bg;
     const eye = skull4 === "grin" ? 0.07 : skull4 === "round" ? 0.095 : 0.085, ex = skull4 === "long" ? 0.095 : skull4 === "round" ? 0.13 : 0.11;
     g.beginPath();
-    g.ellipse(-ex, -0.05, eye, eye * 1.15, 0, 0, TAU2);
-    if (skull4 !== "eyepatch") g.ellipse(ex, -0.05, eye, eye * 1.15, 0, 0, TAU2);
+    g.ellipse(-ex, -0.05, eye, eye * 1.15, 0, 0, TAU3);
+    if (skull4 !== "eyepatch") g.ellipse(ex, -0.05, eye, eye * 1.15, 0, 0, TAU3);
     g.fill();
     g.beginPath();
     g.moveTo(0, 0.04);
@@ -42923,7 +49674,7 @@ ${GLSL}
       g.lineTo(rx, 0);
       g.stroke();
       g.beginPath();
-      g.ellipse(ex, -0.05, eye * 1.25, eye * 1.2, 0.35, 0, TAU2);
+      g.ellipse(ex, -0.05, eye * 1.25, eye * 1.2, 0.35, 0, TAU3);
       g.fill();
     }
     const mark = jr.mark || "none";
@@ -42985,7 +49736,7 @@ ${GLSL}
     if (acc === "strawhat") {
       g.fillStyle = "#f2d16b";
       g.beginPath();
-      g.ellipse(0, top + 0.08, 0.44, 0.1, 0, 0, TAU2);
+      g.ellipse(0, top + 0.08, 0.44, 0.1, 0, 0, TAU3);
       g.fill();
       g.beginPath();
       g.ellipse(0, top + 0.02, 0.24, 0.16, 0, Math.PI, 0);
@@ -43039,7 +49790,7 @@ ${GLSL}
     } else if (acc === "tophat") {
       g.fillStyle = jr.acc || "#2d3436";
       g.beginPath();
-      g.ellipse(0, top + 0.08, 0.36, 0.06, 0, 0, TAU2);
+      g.ellipse(0, top + 0.08, 0.36, 0.06, 0, 0, TAU3);
       g.fill();
       g.fillRect(-0.2, top - 0.3, 0.4, 0.38);
       g.fillStyle = "#c0392b";
@@ -43069,7 +49820,7 @@ ${GLSL}
       g.strokeStyle = jr.acc || "#f1c40f";
       g.lineWidth = 0.04;
       g.beginPath();
-      g.ellipse(0, top - 0.1, 0.25, 0.07, 0, 0, TAU2);
+      g.ellipse(0, top - 0.1, 0.25, 0.07, 0, 0, TAU3);
       g.stroke();
     }
     g.restore();
@@ -43088,7 +49839,7 @@ ${GLSL}
     g.quadraticCurveTo(0.22, -0.3, 0.42, -0.05);
     g.stroke();
     g.beginPath();
-    g.ellipse(0, 0.02, 0.08, 0.12, 0, 0, TAU2);
+    g.ellipse(0, 0.02, 0.08, 0.12, 0, 0, TAU3);
     g.fill();
     g.lineWidth = 0.06;
     g.beginPath();
@@ -43106,7 +49857,7 @@ ${GLSL}
     g.scale(1, 1 + bobRoll);
     g.fillStyle = "rgba(0,20,40,0.28)";
     g.beginPath();
-    g.ellipse(0.1, 0.12, L3 * 0.55, B5 * 0.62, 0, 0, TAU2);
+    g.ellipse(0.1, 0.12, L3 * 0.55, B5 * 0.62, 0, 0, TAU3);
     g.fill();
     const hullCol = def.color || "#8d5b33";
     const hullPath = () => {
@@ -43153,25 +49904,25 @@ ${GLSL}
     if (def.figurehead === "ram") {
       g.fillStyle = "#f5f6fa";
       g.beginPath();
-      g.arc(L3 * 0.52, 0, 0.26, 0, TAU2);
+      g.arc(L3 * 0.52, 0, 0.26, 0, TAU3);
       g.fill();
       g.strokeStyle = "#d4a373";
       g.lineWidth = 0.08;
       g.beginPath();
-      g.arc(L3 * 0.5, -0.12, 0.12, 0, TAU2);
-      g.arc(L3 * 0.5, 0.12, 0.12, 0, TAU2);
+      g.arc(L3 * 0.5, -0.12, 0.12, 0, TAU3);
+      g.arc(L3 * 0.5, 0.12, 0.12, 0, TAU3);
       g.stroke();
     } else if (def.figurehead === "lion") {
       g.fillStyle = "#f39c12";
       for (let k = 0; k < 10; k++) {
-        const a = k / 10 * TAU2;
+        const a = k / 10 * TAU3;
         g.beginPath();
-        g.arc(L3 * 0.52 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.14, 0, TAU2);
+        g.arc(L3 * 0.52 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.14, 0, TAU3);
         g.fill();
       }
       g.fillStyle = "#fdcb6e";
       g.beginPath();
-      g.arc(L3 * 0.52, 0, 0.26, 0, TAU2);
+      g.arc(L3 * 0.52, 0, 0.26, 0, TAU3);
       g.fill();
     } else if (def.figurehead === "seagull") {
       g.fillStyle = "#f5f6fa";
@@ -43234,7 +49985,7 @@ ${GLSL}
       g.restore();
       g.fillStyle = "#4e342e";
       g.beginPath();
-      g.arc(mx, 0, 0.12, 0, TAU2);
+      g.arc(mx, 0, 0.12, 0, TAU3);
       g.fill();
     }
     const marineFlag = def.sail === "marine" || st.marine;
@@ -43265,7 +50016,7 @@ ${GLSL}
         const ph = (t * 0.7 + k / 3) % 1;
         g.fillStyle = `rgba(60,60,60,${0.5 * (1 - ph)})`;
         g.beginPath();
-        g.arc(-L3 * 0.2 + k * 0.3, -ph * 1.5, 0.2 + ph * 0.4, 0, TAU2);
+        g.arc(-L3 * 0.2 + k * 0.3, -ph * 1.5, 0.2 + ph * 0.4, 0, TAU3);
         g.fill();
       }
     }
@@ -43274,1113 +50025,15 @@ ${GLSL}
       g.fillStyle = "rgba(200,240,255,0.18)";
       g.lineWidth = 0.06;
       g.beginPath();
-      g.ellipse(0, 0, L3 * 0.7, B5 * 1.2, 0, 0, TAU2);
+      g.ellipse(0, 0, L3 * 0.7, B5 * 1.2, 0, 0, TAU3);
       g.fill();
       g.stroke();
     }
     g.restore();
   }
 
-  // src/game/boatFeel.js
-  var BOAT_FEEL = {
-    // ---- steering (the helm you hold with A / D)
-    helmIn: 0.32,
-    // s for the helm to go hard over when you steer (eased in and out, no snap)
-    helmOut: 0.2,
-    // s for it to come back amidships when you let go
-    turnLag: 0.1,
-    // s the hull takes to answer her helm: how long her turn takes to build up, and to die away
-    turnLagPerM: 32e-4,
-    // … and that much more per metre of her length (a big ship swings more slowly)
-    turnRate: 1,
-    // × each class's top turning rate (1 = as the ship tables have it)
-    // ---- the wheel (it turns as you steer and comes back to centre when you let go)
-    wheelMax: 2.2,
-    // radians the wheel is turned hard over (about a third of a turn)
-    wheelSpeed: 14,
-    // how briskly the wheel follows the helm (a spring's rate, per second: higher is snappier)
-    standTilt: 0.5,
-    // how much the helmsman leans with the deck as she rolls and pitches (0 stands bolt upright, 1 tilts with it)
-    // (how far round each hand works a spoke before taking the next one: render3d/chars/pose.js HELM_GRIP)
-    // ---- riding the sea (how she heaves, pitches and rolls on the swell)
-    rideRate: 6.5,
-    // how closely she follows the sea's surface (per second: higher is stiffer, lower floatier)
-    rideRatePerM: -0.055,
-    // … less per metre of her length (a long hull is heavier, slower to answer)
-    rideDamp: 0.9,
-    // 1 = settles without overshooting; a little under 1 gives a buoyant bob
-    rideLead: 1,
-    // how well she keeps up with the swell (1 keeps her waterline on the sea; less lets her lag behind it, floatier)
-    pitchMax: 0.22,
-    // radians she pitches at most (bow up or down)
-    rollMax: 0.26,
-    // radians she rolls at most
-    // ---- speed changes (sails set or taken in, oars, wind round as she turns)
-    speedSmooth: 0.45,
-    // s over which a change in her driving force builds up (under sail)
-    speedSmoothOars: 0.12
-    // … under oars (each stroke still surges her on)
-  };
-
-  // src/world/hull.js
-  var clamp012 = (x) => Math.max(0, Math.min(1, x));
-  var smooth3 = (a, b, x) => {
-    const t = clamp012((x - a) / (b - a));
-    return t * t * (3 - 2 * t);
-  };
-  var BIG_SHIP = 8;
-  var dimsCache = /* @__PURE__ */ new Map();
-  function shipDims(def) {
-    if (def._dims) return def._dims;
-    const key2 = `${def.length}|${def.beam}|${def.masts}|${def.cannons}|${!!def.oarsOnly}`;
-    let d = dimsCache.get(key2);
-    if (!d) {
-      d = def.length >= BIG_SHIP ? bigDims(def) : smallDims(def);
-      dimsCache.set(key2, d);
-    }
-    Object.defineProperty(def, "_dims", { value: d, enumerable: false, configurable: true });
-    return d;
-  }
-  function smallDims(def) {
-    const L3 = def.length, B5 = def.beam;
-    const open = L3 < 3.5;
-    const D4 = B5 * 0.42;
-    const deckY2 = open ? 0.14 : 0.25 + B5 * 0.2;
-    const bulH = open ? 0.36 : 0.3 + B5 * 0.07;
-    const castle = L3 >= 5.5, fore = L3 >= 6.8;
-    const hq = castle ? 0.85 + (L3 - 5.5) * 0.1 : 0;
-    const hf = fore ? 0.5 : 0;
-    const tq = castle ? 0.27 : 0, tf2 = fore ? 0.83 : 1;
-    const masts = def.masts ?? 1;
-    const mastH = masts ? 1.2 + L3 * 0.75 : 0;
-    let helmX = -L3 * 0.42;
-    const d = {
-      L: L3,
-      B: B5,
-      D: D4,
-      open,
-      deckY: deckY2,
-      bulH,
-      castle,
-      fore,
-      hq,
-      hf,
-      tq,
-      tf: tf2,
-      masts,
-      mastH,
-      helmX,
-      yq: deckY2 + hq,
-      yf: deckY2 + hf,
-      helmFloor: castle ? deckY2 + hq : deckY2,
-      big: false,
-      poop: false,
-      hp: 0,
-      tp: 0,
-      sheer: 0.16 * B5,
-      walk: 0.94,
-      stairs: [],
-      solids: []
-    };
-    d.mastU = masts ? Array.from({ length: masts }, (_, m) => masts === 1 ? 0.05 * L3 : L3 * (0.28 - m * (0.56 / Math.max(1, masts - 1)))) : [];
-    d.mastR = 0.05 + L3 * 0.011;
-    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.16 }));
-    if (!open) {
-      const aft = masts > 1 ? d.mastU[masts - 1] : Infinity;
-      d.wheelU = Math.min(helmX + 1, aft - d.mastR - 0.35);
-      d.helmX = helmX = Math.max(-L3 / 2 + 0.3, Math.min(helmX, d.wheelU - 1));
-      d.solids.push({ u: d.wheelU + 0.1, v: 0, r: 0.2 });
-    }
-    if (def.oarsOnly) {
-      const seatT = 0.44, lockT = seatT + 0.4 / L3;
-      d.row = {
-        seatT,
-        seatU: xAt(d, seatT),
-        seatH: 0.3,
-        // (the top of the thwart, over the floor)
-        lockT,
-        lockU: xAt(d, lockT),
-        lockV: hbAt(lockT, B5) * 0.965,
-        lockH: topAt(d, lockT) + 0.04,
-        inboard: 0.56,
-        outboard: 1.5
-      };
-      d.helmX = helmX = d.row.seatU;
-    }
-    return d;
-  }
-  var OAR = { catchA: 0.6, finishA: -0.3, dipB: 0.52, liftB: 0.2 };
-  var ease = (k) => k * k * (3 - 2 * k);
-  function oarStroke(ph, pull = 1) {
-    const { catchA: ca, finishA: fa, dipB, liftB } = OAR;
-    let a, b, f;
-    if (ph < 0.08) {
-      const k = ease(ph / 0.08);
-      a = ca;
-      b = liftB + (dipB - liftB) * k;
-      f = 0;
-    } else if (ph < 0.52) {
-      a = ca + (fa - ca) * ease((ph - 0.08) / 0.44);
-      b = dipB;
-      f = 0;
-    } else if (ph < 0.6) {
-      const k = ease((ph - 0.52) / 0.08);
-      a = fa;
-      b = dipB + (liftB - dipB) * k;
-      f = k;
-    } else {
-      const k = (ph - 0.6) / 0.4;
-      a = fa + (ca - fa) * ease(k);
-      b = liftB + Math.sin(k * Math.PI) * 0.05;
-      f = k < 0.8 ? 1 : 1 - ease((k - 0.8) / 0.2);
-    }
-    if (pull < 0) a = ca + fa - a;
-    return { a, b, f };
-  }
-  function rowLean(ship) {
-    const o = ship.oars;
-    if (!o) return 0;
-    const k = clamp012((OAR.catchA - (o[0].a + o[1].a) / 2) / (OAR.catchA - OAR.finishA));
-    return -0.08 + 0.44 * k;
-  }
-  var oarDrive = (ph) => ph < 0.08 || ph > 0.52 ? 0 : Math.sin((ph - 0.08) / 0.44 * Math.PI);
-  function oarPoints(d, side, a, b) {
-    const r4 = d.row, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
-    const ox = sa * cb, oy = -sb, oz = side * ca * cb;
-    const px2 = r4.lockU, py2 = r4.lockH, pz2 = side * r4.lockV;
-    return {
-      lock: [px2, py2, pz2],
-      dir: [ox, oy, oz],
-      grip: [px2 - ox * r4.inboard, py2 - oy * r4.inboard, pz2 - oz * r4.inboard],
-      tip: [px2 + ox * r4.outboard, py2 + oy * r4.outboard, pz2 + oz * r4.outboard]
-    };
-  }
-  function bigDims(def) {
-    const L3 = def.length, B5 = def.beam;
-    const D4 = B5 * 0.45;
-    const narrow = B5 < 7;
-    const large = L3 >= 44, mid = !narrow && !large;
-    const deckY2 = 0.6 + Math.min(B5, 11) * 0.2;
-    const bulH = 1.1;
-    const fore = L3 >= 24;
-    const hq = narrow ? 2.4 : Math.min(3, 1.95 + B5 * 0.075), hf = hq - 0.1;
-    const poop = large, hp = poop ? hq - 0.2 : 0;
-    const tq = narrow ? Math.max(0.24, 2.9 / L3) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 1 - Math.max(0.13, 5.4 / L3) : 1, tp = poop ? 0.13 : 0;
-    const yq = deckY2 + hq, yf = deckY2 + hf, yp = yq + hp;
-    const masts = Math.max(1, Math.min(4, def.masts || 3));
-    const tHelm = poop ? tp + 0.02 : narrow ? 0.08 : 0.1;
-    const d = {
-      L: L3,
-      B: B5,
-      D: D4,
-      open: false,
-      big: true,
-      narrow,
-      deckY: deckY2,
-      bulH,
-      castle: true,
-      fore,
-      poop,
-      hq,
-      hf,
-      hp,
-      tq,
-      tf: tf2,
-      tp,
-      masts,
-      mastH: narrow ? L3 * 0.95 + 3 : L3 + 4,
-      helmX: -L3 / 2 + tHelm * L3,
-      yq,
-      yf,
-      yp,
-      helmFloor: yq,
-      sheer: 0.4,
-      walk: 0.86
-    };
-    d.bowY = fore ? yf : deckY2 + 0.9;
-    d.mastU = { 1: [0.06], 2: [0.22, -0.06], 3: large ? [0.27, 0.03, -0.24] : [0.26, 0.02, -0.28], 4: [0.3, 0.1, -0.12, -0.27] }[masts].map((k) => k * L3);
-    d.mastR = Math.min(0.6, 0.05 + L3 * 0.011);
-    d.wheelU = d.helmX + 0.9;
-    const bu = d.wheelU + 1.45;
-    d.binnacleU = !narrow && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
-    const W4 = narrow ? 1.05 : Math.min(1.6, 0.75 + B5 * 0.055), sides2 = narrow ? [1] : [-1, 1];
-    const run = (rise2) => rise2 * (narrow ? 1.1 : mid ? 1.15 : 1.3);
-    const edge = (t) => hbAt(t, B5) * d.walk - 0.22;
-    d.stairs = [];
-    const flight = (ta, tb, ha, hb, la, lb) => {
-      const vo2 = Math.min(edge(ta), edge(tb)), vi = vo2 - W4;
-      for (const s of sides2) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo2, vb: s > 0 ? vo2 : -vi });
-    };
-    flight(tq, tq + run(hq) / L3, yq, deckY2, "quarter", "main");
-    if (fore) flight(tf2 - run(hf) / L3, tf2, deckY2, yf, "main", "fore");
-    if (poop) flight(tp, tp + run(hp) / L3, yp, yq, "poop", "quarter");
-    const qs = d.stairs.find((s) => s.la === "quarter" && s.lb === "main"), fs = d.stairs.find((s) => s.lb === "fore");
-    const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
-    d.mainT0 = mainT0;
-    d.mainT1 = mainT1;
-    const holdY = deckY2 - Math.max(2.25, Math.min(2.7, 1.9 + B5 * 0.045));
-    d.holdY = holdY;
-    const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
-    let h0 = 0.06, h1 = 0.94;
-    while (h0 < 0.4 && holdHalf(h0) < 0.8) h0 += 5e-3;
-    while (h1 > 0.6 && holdHalf(h1) < 0.8) h1 -= 5e-3;
-    const clearU = (u0, u1, pad2) => d.mastU.every((m) => m < u0 - d.mastR - pad2 || m > u1 + d.mastR + pad2);
-    const clearComp = (u0, u1) => d.mastU.every((m) => m < u0 - d.mastR - 1.2 || m > u1 + d.mastR + 1.5);
-    const rise = deckY2 - holdY;
-    let comp = null;
-    for (const cRun of [...large ? [rise * 1.15, rise, rise * 0.85] : [], rise * 0.55]) {
-      for (let k = 0; k < 160 && !comp; k++) {
-        const tc = (mainT0 + mainT1) / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 3e-3;
-        const t0 = tc - cRun / L3 / 2, t1 = tc + cRun / L3 / 2;
-        if (t0 < mainT0 + 0.5 / L3 || t1 > mainT1 - 1.8 / L3 || t0 < h0 + 1.8 / L3 || t1 > h1 - 0.3 / L3) continue;
-        if (clearComp(xAt(d, t0), xAt(d, t1))) comp = { t0, t1, ladder: cRun < rise * 0.7 };
-      }
-      if (comp) break;
-    }
-    if (!comp) comp = { t0: (mainT0 + mainT1) / 2 - rise * 0.275 / L3, t1: (mainT0 + mainT1) / 2 + rise * 0.275 / L3, ladder: true };
-    const cw = comp.ladder ? 0.9 : 1.3;
-    d.comp = { ...comp, w: cw, u0: xAt(d, comp.t0), u1: xAt(d, comp.t1) };
-    d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY2, la: "hold", lb: "main", s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
-    d.hatchT = (comp.t0 + comp.t1) / 2;
-    const freeT = (want2, len, pad2) => {
-      for (let k = 0; k < 80; k++) {
-        const tc = want2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 6e-3;
-        const u0 = xAt(d, tc) - len / 2, u1 = u0 + len;
-        if (tc - len / L3 / 2 < mainT0 + 0.3 / L3 || tc + len / L3 / 2 > mainT1 - 0.3 / L3) continue;
-        if (!clearU(u0, u1, pad2)) continue;
-        if (u1 > d.comp.u0 - pad2 && u0 < d.comp.u1 + Math.max(pad2, 1.6)) continue;
-        return tc;
-      }
-      return null;
-    };
-    d.capstanT = L3 >= 14 ? freeT(masts >= 4 ? 0.54 : 0.385, 0.9, 0.7) : null;
-    const bl2 = Math.min(6, L3 * 0.14), bt = L3 >= 24 ? freeT(masts >= 4 ? 0.69 : 0.645, bl2, 0.6) : null;
-    if (bt !== null && d.capstanT !== null && Math.abs(xAt(d, bt) - xAt(d, d.capstanT)) < bl2 / 2 + 1.2) d.boat = null;
-    else d.boat = bt !== null ? { u0: (bt - 0.5) * L3 - bl2 / 2, u1: (bt - 0.5) * L3 + bl2 / 2, w: Math.min(2.2, B5 * 0.22) } : null;
-    const gs = Math.max(0.6, Math.min(1, B5 / 6.5));
-    d.gunScale = gs;
-    const rows = [{ y: deckY2 + 0.42, t0: mainT0 + 1.5 / L3, t1: mainT1 - 1.5 / L3, lid: 0.42, open: 1.4, deck: true }];
-    if ((def.cannons || 0) >= 12) rows.push({ y: holdY + 0.42 * Math.max(0.85, gs), t0: Math.max(0.12, h0 + 0.8 / L3), t1: Math.min(0.86, h1 - 0.8 / L3), lid: 0.6, open: 1.05 });
-    const perSide = Math.ceil((def.cannons || 0) / 2);
-    const capU = d.capstanT !== null ? (d.capstanT - 0.5) * L3 : null;
-    const centre = (u) => {
-      let w = 0;
-      for (const m of d.mastU) if (Math.abs(u - m) < d.mastR + 0.6) w = Math.max(w, d.mastR + 0.1);
-      if (capU !== null && Math.abs(u - capU) < 1.17) w = Math.max(w, 0.62);
-      if (d.boat && u > d.boat.u0 - 0.55 && u < d.boat.u1 + 0.55) w = Math.max(w, d.boat.w / 2);
-      if (u > d.comp.u0 - 0.6 && u < d.comp.u1 + 0.6) w = Math.max(w, cw / 2 + 0.05);
-      return w;
-    };
-    const walkway = large ? 0.9 : mid ? 0.7 : 0.45;
-    const offAt = (t) => hbAt(t, B5) * 0.93 - 0.95 * gs;
-    const fitsGun = (t) => {
-      const u = (t - 0.5) * L3, reach3 = 0.5 * gs;
-      return [u - reach3, u, u + reach3].every((uu) => offAt(t) - gunIn(gs) - centre(uu) >= walkway);
-    };
-    const top = rows[0], want = rows.length > 1 ? Math.ceil(perSide / 2) : perSide;
-    const cand = [];
-    for (let t = top.t0; t <= top.t1 + 1e-9; t += 0.1 / L3) if (fitsGun(t)) cand.push(t);
-    const pick6 = [], gap = (1.4 * gs + 0.35) / L3;
-    for (let i = 0; i < want && cand.length; i++) {
-      const aim = want === 1 ? (top.t0 + top.t1) / 2 : top.t0 + (top.t1 - top.t0) * i / (want - 1);
-      let best = null;
-      for (const t of cand) if (pick6.every((q2) => Math.abs(q2 - t) >= gap) && (best === null || Math.abs(t - aim) < Math.abs(best - aim))) best = t;
-      if (best !== null) pick6.push(best);
-    }
-    pick6.sort((a, b) => a - b);
-    d.guns = [];
-    for (const t of pick6) for (const s of [-1, 1]) d.guns.push({ t, u: (t - 0.5) * L3, v: s * offAt(t), s });
-    top.ts = pick6;
-    top.n = pick6.length;
-    for (const r4 of rows) if (!r4.deck) r4.n = Math.max(2, Math.min(16, Math.ceil(perSide / 2), Math.floor((r4.t1 - r4.t0) * L3 / 1.9)));
-    d.gunRows = rows;
-    d.lowGuns = [];
-    const low = rows.find((r4) => !r4.deck);
-    if (low) {
-      for (let i = 0; i < low.n; i++) {
-        const t = low.t0 + (low.t1 - low.t0) * (i + 0.5) / low.n;
-        const off = skinAt(d, t, low.y) - 0.3 - 0.85 * gs;
-        if (t > comp.t0 - 1.6 / L3 && t < comp.t1 + 0.5 / L3 && off - gunIn(gs) - 0.8 < cw / 2 + 0.5) continue;
-        for (const s of [-1, 1]) d.lowGuns.push({ t, u: (t - 0.5) * L3, v: s * off, s });
-      }
-    }
-    const tS = 0.02 + 0.3 / L3;
-    const mastIn = d.mastU.some((m) => m < xAt(d, tq) && m > xAt(d, tq) - 2.6);
-    const doorVs = narrow ? [Math.max(-edge(tq) + 0.75, Math.min(0, qs.va - 0.75))] : mastIn ? [-1, 1].map((s) => s * Math.max(0.95, d.mastR + 1.15)) : [0];
-    d.rooms = [
-      { kind: "cabin", t0: tS, t1: tq, floor: deckY2, ceil: yq - 0.12, top: yq, doors: doorVs.map((v) => ({ t: tq, v, w: 1.05, face: 1 })) }
-    ];
-    if (poop) d.rooms.push({ kind: "captain", t0: tS, t1: tp, floor: yq, ceil: yp - 0.12, top: yp, doors: [{ t: tp, v: 0, w: 1.05, face: 1 }] });
-    if (fore) {
-      let fe = 0.95;
-      while (fe > tf2 + 0.03 && innerAt(d, fe, deckY2 + 1) < 0.85) fe -= 5e-3;
-      const fdv = narrow ? [Math.max(-edge(tf2) + 0.75, Math.min(0, fs.va - 0.75))] : [-0.95, 0.95];
-      d.rooms.push({ kind: "forecastle", t0: tf2, t1: fe, floor: deckY2, ceil: yf - 0.12, top: yf, doors: fdv.map((v) => ({ t: tf2, v, w: 1, face: -1 })) });
-    }
-    d.rooms.push({ kind: "hold", t0: h0, t1: h1, floor: holdY, ceil: deckY2 - 0.12, doors: [] });
-    const upTo = { cabin: ["quarter", "main"], captain: ["poop", "quarter"], forecastle: ["main", "fore"] };
-    for (const r4 of d.rooms) if (r4.doors.length) roomFront(d, r4, d.stairs.filter((s) => s.la === upTo[r4.kind][0] && s.lb === upTo[r4.kind][1]));
-    for (const r4 of d.rooms) if (r4.kind === "cabin" || r4.kind === "captain") r4.windows = sternWindows(d, r4);
-    d.walls = [];
-    for (const r4 of d.rooms) {
-      if (!r4.doors.length) continue;
-      const u = xAt(d, r4.front.t), w = innerAt(d, r4.front.t, r4.floor + 1) + 0.1;
-      let v = -w;
-      for (const dr of [...r4.doors].sort((a, b) => a.v - b.v)) {
-        d.walls.push({ u0: u, v0: v, u1: u, v1: dr.v - dr.w / 2, y0: r4.floor, y1: r4.ceil + 0.12 });
-        v = dr.v + dr.w / 2;
-      }
-      d.walls.push({ u0: u, v0: v, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12 });
-    }
-    for (const r4 of d.rooms) {
-      const hold = r4.kind === "hold";
-      for (const [t, off] of hold ? [[r4.t0, 0], [r4.t1, 0]] : r4.kind === "forecastle" ? [[r4.t1, 0]] : [[r4.t0, 0.05]]) {
-        const u = xAt(d, t) + off, w = (hold ? skinAt(d, t, r4.floor + 0.3) : innerAt(d, t, r4.floor + 1)) + 0.1;
-        d.walls.push({ u0: u, v0: -w, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12, end: true });
-      }
-    }
-    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.08 }));
-    for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: "main" });
-    for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: "hold" });
-    if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: "main" });
-    d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: "quarter" });
-    if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: "quarter" });
-    if (fore) d.solids.push({ u: (tf2 + 0.03 - 0.5) * L3, v: 0, r: 0.55, lvl: "fore" });
-    if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: "main" });
-    d.shotPile = null;
-    const mainFirst = [...d.mastU].sort((a, b) => Math.abs(a) - Math.abs(b));
-    const S6 = FURNITURE.shot;
-    for (const m of mainFirst) {
-      for (const [u, v] of [[m + d.mastR + 0.95, 0], [m - d.mastR - 0.95, 0], [m, d.mastR + 0.85], [m, -d.mastR - 0.85]]) {
-        const box2 = { u0: u - S6.w / 2, u1: u + S6.w / 2, v0: v - S6.dp / 2, v1: v + S6.dp / 2 };
-        if (deckClear(d, box2, 0.55)) {
-          d.shotPile = { u, v, ...box2 };
-          break;
-        }
-      }
-      if (d.shotPile) break;
-    }
-    if (d.shotPile) {
-      const p = d.shotPile;
-      d.solids.push({ u0: p.u0, u1: p.u1, v0: p.v0, v1: p.v1, lvl: "main" });
-    }
-    furnish(d);
-    d.ladders = [];
-    for (const s of [1, -1]) {
-      const t = ladderT(d, def, s, mainT0, mainT1);
-      if (t !== null) d.ladders.push({ t, u: xAt(d, t), s, w: LADDER_W });
-    }
-    return d;
-  }
-  var LADDER_W = 0.62;
-  function ladderT(d, def, s, t0, t1) {
-    const L3 = d.L, mid = (t0 + t1) / 2;
-    for (let k = 0; k < 600; k++) {
-      const t = mid + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.05 / L3;
-      if (t < t0 + 1 / L3 || t > t1 - 1 / L3) continue;
-      const u = xAt(d, t);
-      if ([...d.guns, ...d.lowGuns || []].some((g) => g.s === s && Math.abs(g.u - u) < LADDER_W / 2 + 0.31 + 0.3)) continue;
-      if (d.mastU.some((m) => Math.abs(u - (m - 0.5)) < (2.4 + d.mastR * 2) / 2 + LADDER_W / 2 + 0.25)) continue;
-      if (def.paddle && Math.abs(t - 0.34) < (0.72 * d.B / 3.2 + LADDER_W / 2 + 0.5) / L3) continue;
-      const v = s * (hbAt(t, d.B) * d.walk - 0.5);
-      if (levelAt(d, t, v) !== "main" || solidAt(d, u, v, 0.4, "main") > 0) continue;
-      return t;
-    }
-    return null;
-  }
-  var gunIn = (gs) => 0.92 * gs + 0.05;
-  function gunBox(g, gs) {
-    const a = 0.25 * gs + 0.15, i = gunIn(gs), o = 0.6 * gs;
-    return { u0: g.u - a, u1: g.u + a, v0: g.s > 0 ? g.v - i : g.v - o, v1: g.s > 0 ? g.v + o : g.v + i };
-  }
-  var hits = (a, b, pad2 = 0) => a.u0 < b.u1 + pad2 && a.u1 > b.u0 - pad2 && a.v0 < b.v1 + pad2 && a.v1 > b.v0 - pad2;
-  var nearRing = (a, u, v, r4) => Math.hypot(u - Math.max(a.u0, Math.min(a.u1, u)), v - Math.max(a.v0, Math.min(a.v1, v))) < r4;
-  function deckClear(d, b, pad2) {
-    const t0 = (b.u0 + d.L / 2) / d.L, t1 = (b.u1 + d.L / 2) / d.L;
-    if (t0 < d.tq || t1 > d.tf) return false;
-    for (const t of [t0, t1]) if (Math.max(-b.v0, b.v1) > hbAt(t, d.B) * d.walk - pad2) return false;
-    const cp = d.comp;
-    if (hits(b, { u0: cp.u0, u1: cp.u1 + 1.6, v0: -cp.w / 2 - 0.4, v1: cp.w / 2 + 0.4 }, pad2)) return false;
-    for (const s of d.stairs) if (!s.down && (s.la === "main" || s.lb === "main") && hits(b, { u0: xAt(d, s.ta), u1: xAt(d, s.tb), v0: s.va, v1: s.vb }, pad2)) return false;
-    for (const o of d.solids) {
-      if (o.lvl && o.lvl !== "main") continue;
-      if (o.r !== void 0 ? nearRing(b, o.u, o.v, o.r + pad2) : hits(b, o, pad2)) return false;
-    }
-    return true;
-  }
-  function roomFront(d, r4, stairs2) {
-    const face = r4.kind === "forecastle" ? -1 : 1, t = face > 0 ? r4.t1 : r4.t0, u = xAt(d, t);
-    const w = innerAt(d, t, (r4.floor + r4.top) / 2) + 0.05, dh = Math.min(2.05, r4.top - r4.floor - 0.12);
-    const ds = [...r4.doors].sort((a, b) => a.v - b.v);
-    ds.forEach((dr, i) => {
-      const lo = i ? (ds[i - 1].v + ds[i - 1].w / 2 + dr.v - dr.w / 2) / 2 : -w, hi = i < ds.length - 1 ? (dr.v + dr.w / 2 + ds[i + 1].v - ds[i + 1].w / 2) / 2 : w;
-      const right = hi - (dr.v + dr.w / 2), left = dr.v - dr.w / 2 - lo, sd = right >= left ? 1 : -1;
-      const lw = Math.min(dr.w - 0.1, Math.max(right, left) - 0.12), e = dr.v + sd * (dr.w / 2 + 0.04);
-      dr.dh = dh;
-      dr.leaf = lw > 0.3 ? { u: u - face * 0.12, v0: Math.min(e, e + sd * lw), v1: Math.max(e, e + sd * lw), s: sd } : null;
-    });
-    const clearOfStairs = (zz, half2) => !stairs2.some((st) => zz + half2 > st.va - 0.1 && zz - half2 < st.vb + 0.1);
-    const windows = [];
-    if (r4.top - r4.floor > 1.8) {
-      for (let zz = -w + 0.75; zz <= w - 0.75; zz += 1.15) {
-        if (ds.some((dr) => Math.abs(zz - dr.v) < dr.w / 2 + 0.5 || dr.leaf && zz + 0.38 > dr.leaf.v0 && zz - 0.38 < dr.leaf.v1) || !clearOfStairs(zz, 0.4)) continue;
-        windows.push(zz);
-      }
-    }
-    r4.front = { t, u, face, w, dh, windows };
-  }
-  function sternWindows(d, r4) {
-    const w = innerAt(d, r4.t0, r4.floor + 1);
-    if (r4.ceil + 0.1 - r4.floor <= 1.9) return [];
-    const n = Math.max(2, Math.floor(w * 2 / 1.15)), ww = Math.min(0.8, w * 2 / n - 0.3);
-    return Array.from({ length: n }, (_, i) => ({ v: -w + (i + 0.5) * (w * 2) / n, w: ww }));
-  }
-  var FURNITURE = {
-    table: { w: 1.6, dp: 0.9, h: 0.76 },
-    chair: { w: 0.46, dp: 0.46, h: 0.95 },
-    bench: { w: 1.5, dp: 0.36, h: 0.46 },
-    desk: { w: 1.4, dp: 0.75, h: 0.78 },
-    bunk: { w: 2.05, dp: 0.95, h: 0.7 },
-    chest: { w: 0.9, dp: 0.55, h: 0.62 },
-    treasure: { w: 0.9, dp: 0.8, h: 0.98 },
-    shelf: { w: 1.3, dp: 0.38, h: 1.8 },
-    stove: { w: 0.9, dp: 0.7, h: 0.8 },
-    hammock: { w: 2.1, dp: 0.8, h: 0.62 },
-    barrel: { w: 0.66, dp: 0.66, h: 0.78 },
-    barrels: { w: 1.34, dp: 0.66, h: 0.78 },
-    crate: { w: 0.8, dp: 0.8, h: 1.2 },
-    sacks: { w: 1.2, dp: 0.7, h: 0.48 },
-    shot: { w: 0.6, dp: 0.45, h: 0.48 },
-    lantern: { w: 0.28, dp: 0.36, h: 0.46 }
-  };
-  function footprint(it) {
-    const across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
-    const hu = (across ? it.dp : it.w) / 2, hv = (across ? it.w : it.dp) / 2;
-    return { u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv };
-  }
-  var SEAT_H = { chair: 0.47, bench: FURNITURE.bench.h, barrel: 0.8 };
-  function seatsOf(d) {
-    if (d.seats) return d.seats;
-    const out = [];
-    for (const it of d.furniture || []) {
-      const h2 = SEAT_H[it.kind];
-      if (!h2 || it.ghost || it.y) continue;
-      const face = Math.PI / 2 - (it.rot || 0);
-      if (it.kind !== "bench") {
-        out.push({ u: it.u, v: it.v, floor: it.floor, h: h2, face, kind: it.kind });
-        continue;
-      }
-      const n = Math.max(1, Math.floor(it.w / 0.6)), across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
-      for (let i = 0; i < n; i++) {
-        const o = ((i + 0.5) / n - 0.5) * it.w;
-        out.push({ u: it.u + (across ? 0 : o), v: it.v + (across ? o : 0), floor: it.floor, h: h2, face, kind: "bench" });
-      }
-    }
-    return d.seats = out;
-  }
-  var liningYs = (r4) => r4.kind === "hold" ? [-0.02, 0.55, 1.15, 1.75, r4.ceil + 0.1 - r4.floor] : [-0.02, 0.9, r4.ceil + 0.1 - r4.floor];
-  function liningAt(d, r4, t, y) {
-    const ys = liningYs(r4);
-    const at4 = (yy) => r4.kind === "hold" ? Math.max(0.3, skinAt(d, t, r4.floor + yy) - 0.22) : innerAt(d, t, r4.floor + yy) + 0.01;
-    const yc = Math.max(ys[0], Math.min(ys[ys.length - 1], y));
-    for (let i = 0; i < ys.length - 1; i++) {
-      if (yc <= ys[i + 1]) return at4(ys[i]) + (at4(ys[i + 1]) - at4(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
-    }
-    return at4(ys[ys.length - 1]);
-  }
-  function roomEnds(d, r4) {
-    const a = xAt(d, r4.t0), b = xAt(d, r4.t1);
-    if (r4.kind === "forecastle") return [a + 0.07, b];
-    if (r4.kind === "hold") return [a, b];
-    return [a + 0.1, b - 0.07];
-  }
-  function roomPlacer(d, r4) {
-    const [ua, ub] = roomEnds(d, r4), H5 = r4.ceil - r4.floor;
-    const tOf = (u) => (Math.max(ua, Math.min(ub, u)) + d.L / 2) / d.L;
-    const ys = liningYs(r4);
-    const P6 = { d, r: r4, ua, ub, H: H5, items: [], keep: [], low: [], rings: [] };
-    const reached = /* @__PURE__ */ new Map();
-    P6.reach = (u, y0, y1) => {
-      const key2 = `${Math.round(u * 100)}|${y0}|${y1}`;
-      let m = reached.get(key2);
-      if (m === void 0) {
-        m = Infinity;
-        for (const y of [y0, y1, ...ys.filter((yy) => yy > y0 && yy < y1)]) m = Math.min(m, liningAt(d, r4, tOf(Math.round(u * 100) / 100), y));
-        reached.set(key2, m);
-      }
-      return m - 0.03;
-    };
-    const top = (o) => o.pipe ? H5 - 0.1 : (o.y || 0) + o.h;
-    P6.fits = (it) => {
-      const fp = footprint(it), y0 = it.y || 0, y1 = top(it);
-      if (fp.u0 < ua - 1e-6 || fp.u1 > ub + 1e-6 || y1 > H5 - (it.y ? 0 : 0.06)) return false;
-      for (const u of [fp.u0, (fp.u0 + fp.u1) / 2, fp.u1]) {
-        const w = P6.reach(u, y0, y1);
-        if (fp.v0 < -w - 1e-6 || fp.v1 > w + 1e-6) return false;
-      }
-      if (P6.keep.some((k) => hits(fp, k) && y0 < (k.top ?? Infinity))) return false;
-      if (y1 > 0.72 && P6.low.some((k) => hits(fp, k))) return false;
-      if (P6.rings.some((c) => nearRing(fp, c.u, c.v, c.r))) return false;
-      for (const o of P6.items) if (hits(fp, footprint(o), 0.02) && y0 < top(o) && (o.y || 0) < y1) return false;
-      return true;
-    };
-    P6.put = (it) => {
-      const x = { rot: 0, ...it, room: r4.kind, floor: r4.floor };
-      if (!P6.fits(x)) return null;
-      P6.items.push(x);
-      return x;
-    };
-    const spec = (kind, extra = {}) => ({ kind, ...FURNITURE[kind], ...extra });
-    const sidePlace = (kind, s, u, extra) => {
-      const S6 = spec(kind, extra), y0 = S6.y || 0, y1 = S6.pipe ? H5 - 0.1 : y0 + S6.h;
-      const w = Math.min(P6.reach(u - S6.w / 2, y0, y1), P6.reach(u, y0, y1), P6.reach(u + S6.w / 2, y0, y1));
-      const it = { rot: s > 0 ? Math.PI : 0, ...S6, u, v: s * (w - 0.01 - S6.dp / 2), room: r4.kind, floor: r4.floor };
-      return { it, off: P6.reach(u, y0, y1) - w };
-    };
-    P6.onSide = (kind, s, u, extra = {}) => P6.put(sidePlace(kind, s, u, extra).it);
-    P6.alongSide = (kind, s, from, to, extra = {}) => {
-      const dir = to >= from ? 1 : -1;
-      let best = null;
-      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
-        const c = sidePlace(kind, s, u, extra);
-        if (!P6.fits(c.it)) continue;
-        if (c.off < 0.12) {
-          best = c;
-          break;
-        }
-        if (!best || c.off < best.off - 0.02) best = c;
-      }
-      if (!best) return null;
-      P6.items.push(best.it);
-      return best.it;
-    };
-    P6.row = (kinds, s, from, to, gap, extra = {}) => {
-      const out = [], dir = to >= from ? 1 : -1;
-      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
-        const kind = kinds[out.length % kinds.length], S6 = spec(kind, extra);
-        const it = P6.onSide(kind, s, u + dir * S6.w / 2, extra);
-        if (it) {
-          out.push(it);
-          u += dir * (S6.w + (typeof gap === "function" ? gap(out.length) : gap) - 0.05);
-        }
-      }
-      return out;
-    };
-    P6.onEnd = (kind, e, v, extra = {}) => {
-      const S6 = spec(kind, extra);
-      return P6.put({ ...S6, u: e < 0 ? ua + 0.01 + S6.dp / 2 : ub - 0.01 - S6.dp / 2, v, rot: e < 0 ? Math.PI / 2 : -Math.PI / 2 });
-    };
-    P6.around = (u0, v0, fn) => {
-      for (let k = 0; k < 160; k++) {
-        const u = u0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.1;
-        if (u < ua || u > ub) continue;
-        for (const dv of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9]) {
-          const g = fn(u, v0 + dv);
-          if (g) return g;
-        }
-      }
-      return null;
-    };
-    P6.group = (build5, clear3 = 0.55) => {
-      const mark = P6.items.length;
-      const g = build5();
-      const mine = P6.items.slice(mark);
-      if (g && mine.length) {
-        const b = mine.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
-        if (!P6.items.slice(0, mark).some((o) => !o.ghost && hits(b, footprint(o), clear3) && (o.y || 0) < 1.7)) {
-          P6.keep.push({ u0: b.u0 - clear3, u1: b.u1 + clear3, v0: b.v0 - clear3, v1: b.v1 + clear3, top: 1.7 });
-          return mine;
-        }
-      }
-      P6.items.length = mark;
-      return null;
-    };
-    P6.table = (u, v, len, wid, seats = "chairs") => P6.group(() => {
-      if (!P6.put({ kind: "table", w: len, dp: wid, h: FURNITURE.table.h, u, v, mess: seats === "benches" })) return null;
-      let n = 0;
-      if (seats === "benches") {
-        for (const s of [-1, 1]) if (P6.put({ ...spec("bench"), w: len, u, v: v + s * (wid / 2 + 0.05 + FURNITURE.bench.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
-      } else {
-        const C3 = FURNITURE.chair, k = Math.max(1, Math.min(4, Math.floor((len + 0.1) / 0.75)));
-        for (const s of [-1, 1]) for (let i = 0; i < k; i++) if (P6.put({ ...spec("chair"), u: u - len / 2 + len * (i + 0.5) / k, v: v + s * (wid / 2 + 0.05 + C3.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
-        for (const e of [-1, 1]) if (P6.put({ ...spec("chair"), u: u + e * (len / 2 + 0.05 + C3.dp / 2), v, rot: e > 0 ? -Math.PI / 2 : Math.PI / 2 })) n++;
-      }
-      return n >= 2;
-    });
-    P6.rug = (group6) => {
-      if (!group6) return null;
-      const b = group6.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
-      for (let pad2 = 0.35; pad2 > -0.2; pad2 -= 0.05) {
-        const rug = { kind: "rug", u: (b.u0 + b.u1) / 2, v: (b.v0 + b.v1) / 2, w: b.u1 - b.u0 + 2 * pad2, dp: b.v1 - b.v0 + 2 * pad2, h: 0.02, rot: 0, ghost: true, room: r4.kind, floor: r4.floor };
-        const fp = footprint(rug);
-        if (fp.u0 < ua || fp.u1 > ub || [fp.u0, fp.u1].some((u) => P6.reach(u, 0, 0.02) < Math.max(-fp.v0, fp.v1))) continue;
-        if (P6.items.some((o) => !group6.includes(o) && !o.y && !o.wall && hits(fp, footprint(o)))) continue;
-        P6.items.push(rug);
-        return rug;
-      }
-      return null;
-    };
-    P6.lanterns = () => {
-      const S6 = FURNITURE.lantern, y = Math.min(H5 - 0.12, 2.25) - S6.h, len = ub - ua, n = Math.max(1, Math.round(len / 3.2));
-      const free = (lt2) => {
-        const fp = footprint(lt2);
-        return fp.u0 >= ua && fp.u1 <= ub && !P6.items.some((o) => hits(fp, footprint(o), 0.08) && (o.y || 0) < lt2.y + S6.h && top(o) > lt2.y);
-      };
-      for (let i = 0; i < n; i++) {
-        const u = ua + len * (i + 0.5) / n;
-        let put2 = null;
-        for (const s of i % 2 ? [1, -1] : [-1, 1]) {
-          const w = Math.min(P6.reach(u - S6.w / 2, y, y + S6.h), P6.reach(u, y, y + S6.h), P6.reach(u + S6.w / 2, y, y + S6.h)) + 0.02;
-          const lt2 = { kind: "lantern", ...S6, u, v: s * (w - S6.dp / 2), y, rot: s > 0 ? Math.PI : 0, ghost: true, wall: s, room: r4.kind, floor: r4.floor };
-          if (free(lt2)) {
-            put2 = lt2;
-            break;
-          }
-        }
-        for (const dv of [0, 0.6, -0.6, 1.2, -1.2]) {
-          if (put2) break;
-          const lt2 = { kind: "lantern", ...S6, dp: S6.w, u, v: dv, y: H5 - 0.5, h: 0.5, rot: 0, ghost: true, wall: 0, room: r4.kind, floor: r4.floor };
-          if (free(lt2)) put2 = lt2;
-        }
-        if (put2) P6.items.push(put2);
-      }
-    };
-    for (const dr of r4.doors) {
-      const f = r4.front.face, u = r4.front.u;
-      const inside2 = (a, b) => f > 0 ? { u0: u - b, u1: u - a } : { u0: u + a, u1: u + b };
-      P6.keep.push({ ...inside2(-1, 1.35), v0: dr.v - dr.w / 2 - 0.2, v1: dr.v + dr.w / 2 + 0.2, top: dr.dh + 0.15 });
-      if (dr.leaf) P6.keep.push({ ...inside2(-1, 0.25), v0: dr.leaf.v0 - 0.05, v1: dr.leaf.v1 + 0.05, top: dr.dh + 0.05 });
-    }
-    if (r4.front) for (const zz of r4.front.windows) P6.low.push({ ...r4.front.face > 0 ? { u0: ub - 0.35, u1: ub + 1 } : { u0: ua - 1, u1: ua + 0.35 }, v0: zz - 0.4, v1: zz + 0.4 });
-    for (const wd of r4.windows || []) P6.low.push({ u0: ua - 1, u1: ua + 0.35, v0: wd.v - wd.w / 2 - 0.1, v1: wd.v + wd.w / 2 + 0.1 });
-    for (const m of d.mastU) if (m > ua - 1.5 && m < ub + 1.5) P6.rings.push({ u: m, v: 0, r: d.mastR + 0.08 + 0.45 });
-    if (r4.kind === "hold") {
-      const cp = d.comp;
-      P6.keep.push({ u0: cp.u0 - 1.4, u1: cp.u1 + 0.3, v0: -cp.w / 2 - 0.45, v1: cp.w / 2 + 0.45 });
-      for (const g of d.lowGuns) {
-        const b = gunBox(g, d.gunScale);
-        P6.keep.push({ u0: b.u0 - 0.2, u1: b.u1 + 0.2, v0: g.s > 0 ? b.v0 - 0.9 : b.v0, v1: g.s > 0 ? b.v1 : b.v1 + 0.9, top: 1.3 });
-      }
-    }
-    return P6;
-  }
-  var clampN = (x, a, b) => Math.max(a, Math.min(b, x));
-  var CARGO = ["barrels", "crate", "sacks", "barrel", "crate", "shot", "barrels", "sacks", "barrel"];
-  var ROOMS2 = {
-    // the great cabin: a bunk along the starboard side with the sea chest at
-    // its foot, books and another chest to port (and on the bigger ships a
-    // second bunk, a water cask and a chest under the stern windows), the
-    // table down the middle with its chairs round it, a rug under it
-    cabin(P6) {
-      const { ua, ub } = P6, len = ub - ua;
-      const bunk = P6.alongSide("bunk", 1, ua + 1.05, ub - 1.05, { head: -1 });
-      if (bunk) P6.alongSide("chest", 1, bunk.u + bunk.w / 2 + 0.5, ub - 0.5, { loot: "cabin" });
-      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
-      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "cabin" });
-      if (len > 5.5) P6.alongSide("bunk", -1, ua + 1.05, ub - 1.05, { head: -1 });
-      if (len > 5.5) P6.onEnd("chest", -1, 0);
-      const half2 = P6.reach((ua + ub) / 2, 0, 1);
-      const tl = clampN(len * 0.3, 1.1, 2.6), tw = clampN(half2 * 0.24, 0.75, 1.05);
-      let table = null;
-      for (const [l, w] of [[tl, tw], [Math.max(1, tl * 0.75), Math.max(0.7, tw - 0.1)]]) if (!table) table = P6.around((ua + ub) / 2 - 0.2, 0, (u, v) => P6.table(u, v, l, w));
-      if (len > 5.5) P6.alongSide("barrel", 1, ub - 0.4, ua + 0.4);
-      P6.rug(table);
-      P6.lanterns();
-    },
-    // the captain's cabin under the poop: the desk facing the door, his chair
-    // behind it (his back to the stern windows); a bunk with a chest at its
-    // foot, bookcases and another chest; a rug
-    captain(P6) {
-      const { ua, ub } = P6, C3 = FURNITURE.chair, D4 = FURNITURE.desk;
-      const bunk = P6.alongSide("bunk", 1, ub - 1.05, ua + 1.05, { head: -1 });
-      if (bunk) P6.alongSide("chest", 1, bunk.u - bunk.w / 2 - 0.5, ua + 0.5, { loot: "captain" });
-      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
-      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
-      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "captain" });
-      let desk = null;
-      for (let du = 0; du < 2.5 && !desk; du += 0.1) {
-        for (const v of [0, 0.3, -0.3, 0.6, -0.6]) {
-          if (desk) break;
-          const cu = ua + 0.42 + du + C3.dp / 2;
-          desk = P6.group(() => P6.put({ ...FURNITURE.chair, kind: "chair", u: cu, v, rot: Math.PI / 2 }) && P6.put({ ...D4, kind: "desk", u: cu + C3.dp / 2 + 0.05 + D4.dp / 2, v, rot: Math.PI / 2 }));
-        }
-      }
-      P6.rug(desk);
-      P6.lanterns();
-    },
-    // the forecastle: the galley stove, the mess table and its benches, the
-    // crew's hammocks slung up under the deck beams and their sea chests below
-    forecastle(P6) {
-      const { ua, ub, H: H5 } = P6, len = ub - ua;
-      P6.alongSide("stove", -1, ua + 0.5, ub - 0.5, { pipe: true });
-      P6.row(["chest"], 1, ua + 0.1, ub - 0.1, 1.4, { loot: "crew" });
-      P6.row(["chest"], -1, ua + 1.2, ub - 0.1, 1.4, { loot: "crew" });
-      if (P6.reach(ua + len * 0.45, 0, 1) > 1.7) {
-        const tl = clampN(len * 0.4, 1.1, 2.4);
-        for (const l of [tl, 1.1]) if (P6.around(ua + len * 0.45, 0, (u, v) => P6.table(u, v, l, 0.7, "benches"))) break;
-      }
-      for (const s of [1, -1]) P6.row(["hammock"], s, ua + 0.05, ub - 0.05, 0.12, { y: H5 - 0.64, ghost: true });
-      P6.lanterns();
-    },
-    // the hold: the treasure chest by the foot of the ladder (its lid thrown
-    // back, facing you as you come down), the cargo stowed along both sides —
-    // a second row in a wide hold — with the way down the middle clear (on a
-    // gun deck, what fits between the guns)
-    hold(P6) {
-      const { d, ua, ub } = P6, cp = d.comp, T5 = FURNITURE.treasure;
-      let chest = null;
-      for (let du = 0; du < 3 && !chest; du += 0.1) {
-        for (const s of [-1, 1]) {
-          if (!chest) chest = P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u: cp.u0 - 0.7 - du, v: s * (cp.w / 2 + 0.47 + T5.dp / 2), rot: s < 0 ? 0 : Math.PI });
-        }
-      }
-      if (!chest) P6.around(cp.u0 - 2.2, 0, (u, v) => P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u, v, rot: Math.PI / 2 }));
-      let n = 0;
-      for (const s of [-1, 1]) n += P6.row(CARGO.slice(n % 3), s, ua + 0.3, ub - 0.3, (k) => k % 3 ? 0.15 : 1.1).length;
-      for (const o of P6.items.slice()) {
-        if (o.treasure || o.kind === "shot") continue;
-        const s = Math.sign(o.v), f = footprint(o), kind = ["barrel", "sacks", "barrel", "crate"][Math.floor(Math.abs(o.u) * 3.7) % 4], S6 = FURNITURE[kind];
-        const v = s > 0 ? f.v0 - 0.08 - S6.dp / 2 : f.v1 + 0.08 + S6.dp / 2;
-        if (Math.abs(v) - S6.dp / 2 >= 1.3) P6.put({ ...S6, kind, u: o.u, v, rot: s > 0 ? Math.PI : 0 });
-      }
-      P6.lanterns();
-    }
-  };
-  function furnish(d) {
-    d.furniture = [];
-    for (const r4 of d.rooms) {
-      const P6 = roomPlacer(d, r4);
-      ROOMS2[r4.kind](P6);
-      d.furniture.push(...P6.items);
-    }
-    for (const it of d.furniture) if (!it.ghost) d.solids.push({ ...footprint(it), lvl: it.room });
-  }
-  var keelAt = (d, t) => -d.D * (1 - 0.5 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
-  function hullProfile(d, t) {
-    const top = topAt(d, t), dk3 = d.deckY, D4 = d.D;
-    return [
-      [0.875, top],
-      [0.89, top - 0.14],
-      [0.93, dk3 + 0.95],
-      [0.975, dk3 - 0.25],
-      [1, dk3 * 0.42],
-      [0.985, 0],
-      [0.9, -D4 * 0.3],
-      [0.68, -D4 * 0.64],
-      [0.36, -D4 * 0.9],
-      [0, keelAt(d, t)]
-    ];
-  }
-  function smallProfile(d, t) {
-    const top = topAt(d, t), dk3 = d.deckY;
-    return [
-      [0.965, top],
-      [0.975, top - 0.1],
-      [0.995, dk3 + (d.open ? 0.02 : 0)],
-      [1, dk3 - 0.12],
-      [1, dk3 * 0.55],
-      [0.975, dk3 * 0.12],
-      [0.9, -d.D * 0.25],
-      [0.68, -d.D * 0.62],
-      [0.36, -d.D * 0.9],
-      [0, -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4))]
-    ];
-  }
-  function profileWidth(pr, hb, y) {
-    if (y >= pr[0][1]) return pr[0][0] * hb;
-    for (let i = 0; i < pr.length - 1; i++) {
-      const [w0, y0] = pr[i], [w1, y1] = pr[i + 1];
-      if (y <= y0 && y >= y1) return (w0 + (w1 - w0) * (y0 - y) / Math.max(1e-6, y0 - y1)) * hb;
-    }
-    return 0;
-  }
-  function skinAt(d, t, y) {
-    return profileWidth(hullProfile(d, t), hbAt(t, d.B), y);
-  }
-  function sideAt(d, t, y) {
-    return d.big ? skinAt(d, t, y) : profileWidth(smallProfile(d, t), hbAt(t, d.B), y);
-  }
-  var innerAt = (d, t, y) => Math.max(0.05, skinAt(d, t, y) - 0.2);
-  function roomHalf(d, r4, t) {
-    return r4.kind === "hold" ? skinAt(d, t, r4.floor + 0.3) - 0.3 : innerAt(d, t, r4.floor + 1) - 0.08;
-  }
-  function roomAt(d, t, h2) {
-    if (!d.rooms) return null;
-    for (const r4 of d.rooms) if (t >= r4.t0 && t <= r4.t1 && h2 > r4.floor - 0.7 && h2 < r4.ceil - 0.9) return r4;
-    return null;
-  }
-  function wallDepth(d, u, v, fl2, margin) {
-    let depth = 0;
-    for (const w of d.walls || []) {
-      if (fl2 < w.y0 - 0.3 || fl2 > w.y1 - 1) continue;
-      const ex = w.u1 - w.u0, ey = w.v1 - w.v0, l2 = ex * ex + ey * ey;
-      const k = l2 ? Math.max(0, Math.min(1, ((u - w.u0) * ex + (v - w.v0) * ey) / l2)) : 0;
-      const dd = Math.hypot(u - (w.u0 + ex * k), v - (w.v0 + ey * k));
-      depth = Math.max(depth, margin + 0.08 - dd);
-    }
-    return depth;
-  }
-  function wheelSpec(d) {
-    if (d.open) return null;
-    if (d._wheel) return d._wheel;
-    let w;
-    if (d.big) w = { u: d.wheelU, floor: d.yq, hub: d.yq + 0.92, R: 0.56, grip: 0.66 };
-    else {
-      const floor2 = floorAt(d, (d.wheelU + 0.1 + d.L / 2) / d.L);
-      w = { u: d.wheelU, floor: floor2, hub: floor2 + 0.92, R: 0.4, grip: 0.47 };
-    }
-    Object.defineProperty(d, "_wheel", { value: w, enumerable: false });
-    return w;
-  }
-  function helmPoint(def) {
-    const d = shipDims(def);
-    if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
-    return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
-  }
-  function hbAt(t, B5) {
-    if (t > 0.58) {
-      const k = (t - 0.58) / 0.42;
-      return B5 / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(k, 2.2)));
-    }
-    if (t < 0.14) return B5 / 2 * (0.74 + 0.26 * Math.sin(t / 0.14 * Math.PI / 2));
-    return B5 / 2;
-  }
-  function topAt(d, t) {
-    let y = d.deckY + d.bulH + d.sheer * Math.pow(Math.abs(t - 0.45) / 0.55, 2);
-    if (d.castle) y += d.hq * (1 - smooth3(d.tq - 0.015, d.tq + 0.035, t));
-    if (d.poop) y += d.hp * (1 - smooth3(d.tp - 0.012, d.tp + 0.03, t));
-    if (d.fore) y += d.hf * smooth3(d.tf - 0.035, d.tf + 0.015, t);
-    return y;
-  }
-  var xAt = (d, t) => -d.L / 2 + t * d.L;
-  function stairAt(d, t, v) {
-    for (const s of d.stairs) if (t >= s.ta && t <= s.tb && v >= s.va && v <= s.vb) return s;
-    return null;
-  }
-  function floorAt(d, t, v = null, h2 = null) {
-    if (v !== null && d.stairs.length) {
-      const s = stairAt(d, t, v);
-      if (s) return s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta);
-    }
-    if (h2 !== null) {
-      const r4 = roomAt(d, t, h2);
-      if (r4) return r4.floor;
-    }
-    if (d.poop && t < d.tp) return d.yp;
-    if (d.castle && t < d.tq) return d.yq;
-    if (d.fore && t > d.tf) return d.yf;
-    return d.deckY;
-  }
-  function levelAt(d, t, v, h2 = null) {
-    const s = v !== null && d.stairs.length ? stairAt(d, t, v) : null;
-    if (s) return s;
-    if (h2 !== null) {
-      const r4 = roomAt(d, t, h2);
-      if (r4) return r4.kind;
-    }
-    if (d.poop && t < d.tp) return "poop";
-    if (d.castle && t < d.tq) return "quarter";
-    if (d.fore && t > d.tf) return "fore";
-    return "main";
-  }
-  function solidAt(d, u, v, margin = 0, lvl = null) {
-    let depth = 0;
-    for (const o of d.solids) {
-      if (o.lvl && lvl !== null && o.lvl !== lvl) continue;
-      if (o.r !== void 0) depth = Math.max(depth, o.r + margin - Math.hypot(u - o.u, v - o.v));
-      else depth = Math.max(depth, Math.min(u - (o.u0 - margin), o.u1 + margin - u, v - (o.v0 - margin), o.v1 + margin - v));
-    }
-    return depth;
-  }
-  var RIDE_U = [-0.4, -0.2, 0, 0.2, 0.4];
-  var RIDE_V = [-0.8, 0, 0.8];
-  var softClamp = (x, m) => m * Math.tanh(x / m);
-  var _rs = [0, 0];
-  function rideTarget(ship, time, out) {
-    out[0] = out[1] = out[2] = 0;
-    if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return out;
-    const L3 = ship.def.length || 6, B5 = ship.def.beam || L3 * 0.3;
-    const ch = Math.cos(ship.heading), sh = Math.sin(ship.heading);
-    let W4 = 0, Z2 = 0, Wu = 0, Zu = 0, Wv = 0, Zv = 0;
-    const z = _rz;
-    for (let i = 0; i < RIDE_U.length; i++) {
-      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
-      for (let j = 0; j < RIDE_V.length; j++) {
-        const v = RIDE_V[j] * hb, k = i * 3 + j;
-        z[k] = swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
-        W4 += hb;
-        Z2 += hb * z[k];
-      }
-    }
-    const h2 = Z2 / W4;
-    for (let i = 0; i < RIDE_U.length; i++) {
-      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
-      for (let j = 0; j < RIDE_V.length; j++) {
-        const v = RIDE_V[j] * hb, dz = z[i * 3 + j] - h2;
-        Wu += hb * u * u;
-        Zu += hb * u * dz;
-        Wv += hb * v * v;
-        Zv += hb * v * dz;
-      }
-    }
-    out[0] = h2;
-    out[1] = Math.atan(Zu / Wu);
-    out[2] = Math.atan(-Zv / Wv);
-    return out;
-  }
-  var _rz = new Float64Array(15);
-  var _rt = [0, 0, 0];
-  function waveRide(ship, time) {
-    const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0, s: new Float64Array(12), s0: new Float64Array(12), t0: NaN, ok: false });
-    if (c.t === time && c.x === ship.x && c.y === ship.y && c.hd === ship.heading) return c;
-    if (c.t !== time) {
-      c.s0.set(c.s);
-      c.t0 = c.t;
-    }
-    c.t = time;
-    c.x = ship.x;
-    c.y = ship.y;
-    c.hd = ship.heading;
-    const T5 = rideTarget(ship, time, _rt), S6 = c.s, S0 = c.s0, dt = time - c.t0;
-    if (!c.ok || !(dt > 0) || dt > 0.5) {
-      for (let k = 0; k < 3; k++) {
-        S6[k * 2] = T5[k];
-        S6[k * 2 + 1] = 0;
-        S6[6 + k] = T5[k];
-        S6[9 + k] = 0;
-      }
-      c.ok = true;
-    } else {
-      const F5 = BOAT_FEEL, L3 = ship.def?.length || 6;
-      const w = Math.max(1.6, F5.rideRate + F5.rideRatePerM * L3), z = Math.min(1, Math.max(0.3, F5.rideDamp)), lead = 2 * z / w * F5.rideLead;
-      const kv = 1 - Math.exp(-dt / (0.1 + 6e-3 * L3));
-      for (let k = 0; k < 3; k++) {
-        const vS = S0[9 + k] + ((T5[k] - S0[6 + k]) / dt - S0[9 + k]) * kv;
-        springStep(S0[k * 2], S0[k * 2 + 1], T5[k] + vS * lead, w, dt, z, _rs);
-        S6[k * 2] = _rs[0];
-        S6[k * 2 + 1] = _rs[1];
-        S6[6 + k] = T5[k];
-        S6[9 + k] = vS;
-      }
-    }
-    c.h = S6[0];
-    c.p = softClamp(S6[2], BOAT_FEEL.pitchMax);
-    c.r = softClamp(S6[4], BOAT_FEEL.rollMax);
-    return c;
-  }
-  function shipBob(ship, time) {
-    return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.03 + waveRide(ship, time).h;
-  }
-  function shipRock(ship, time) {
-    const t = time + (ship.seed || 0), sinking = ship.sunk ? Math.min(1, (ship.sinkT || 0) / 4) : 0;
-    const w = waveRide(ship, time);
-    return [Math.sin(t * 0.9) * 0.02 + w.r + sinking * 0.5, Math.sin(t * 1.1) * 0.012 + w.p + (ship.pitch || 0)];
-  }
-  function shipLift(ship, time, u, v, h2) {
-    const [a, b] = shipRock(ship, time);
-    return shipBob(ship, time) + (u * Math.sin(b) + h2 * Math.cos(b)) * Math.cos(a) - v * Math.sin(a);
-  }
-  function shipPoint(ship, time, u, v, h2, out = [0, 0, 0]) {
-    const [a, b] = shipRock(ship, time);
-    const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
-    const x1 = u * cb - h2 * sb, y1 = u * sb + h2 * cb;
-    const x2 = x1, y2 = y1 * ca - v * sa, z2 = y1 * sa + v * ca;
-    const ch = Math.cos(ship.heading), shd = Math.sin(ship.heading);
-    out[0] = x2 * ch - z2 * shd;
-    out[1] = shipBob(ship, time) + y2;
-    out[2] = x2 * shd + z2 * ch;
-    return out;
-  }
-  function deckSwing(dk3, time, out = [0, 0]) {
-    out[0] = 0;
-    out[1] = 0;
-    const s = dk3?.ship;
-    if (!s?.def || dk3.plank) return out;
-    const u = dk3.u ?? (dk3.t - 0.5) * s.def.length, v = dk3.v || 0, c = Math.cos(s.heading), sn = Math.sin(s.heading);
-    const q2 = shipPoint(s, time, u, v, dk3.h || 0, _swq);
-    out[0] = q2[0] - (u * c - v * sn);
-    out[1] = q2[2] - (u * sn + v * c);
-    return out;
-  }
-  var _swq = [0, 0, 0];
-  function deckLift(dk3, time) {
-    return dk3.plank ? dk3.plank.liftAt(dk3.k) : shipLift(dk3.ship, time, dk3.u ?? (dk3.t - 0.5) * dk3.ship.def.length, dk3.v || 0, dk3.h);
-  }
-  function deckPoint(ship, dx, dy, margin = 0.2, hRef = null) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = -dx * s + dy * c;
-    const t = (u + d.L / 2) / d.L;
-    if (t < 0.02 || t > 0.97) return null;
-    const room2 = hRef !== null && d.big ? roomAt(d, t, hRef) : null;
-    if (room2) {
-      const lv = levelAt(d, t, v, hRef);
-      const out2 = { t, u, v, h: floorAt(d, t, v, hRef), edge: roomHalf(d, room2, t) - Math.abs(v), lvl: lv, room: room2 };
-      const depth = Math.max(margin - out2.edge, solidAt(d, u, v, Math.max(0, margin), room2.kind), wallDepth(d, u, v, room2.floor, margin));
-      if (depth > 0) out2.solid = depth;
-      return out2;
-    }
-    const hb = hbAt(t, d.B) * d.walk - margin;
-    if (hb <= 0 || Math.abs(v) > hb) return null;
-    const out = { t, u, v, h: floorAt(d, t, v, d.big ? hRef : null), edge: hb - Math.abs(v) };
-    if (d.big) out.lvl = levelAt(d, t, v, hRef);
-    if (d.solids.length) {
-      const lv = typeof out.lvl === "string" ? out.lvl : null;
-      let depth = solidAt(d, u, v, Math.max(0, margin), d.big ? lv ?? "stairs" : null);
-      if (d.walls) depth = Math.max(depth, wallDepth(d, u, v, out.h, margin));
-      if (depth > 0) out.solid = depth;
-    }
-    return out;
-  }
-  function hullPoint(ship, dx, dy, pad2 = 0) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = -dx * s + dy * c;
-    const t = (u + d.L / 2) / d.L, tc = clamp012(t);
-    if (Math.abs(t - tc) * d.L > pad2) return null;
-    if (Math.abs(v) > hbAt(tc, d.B) + pad2) return null;
-    return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
-  }
-  function deckToWorld(ship, t, v) {
-    const d = shipDims(ship.def);
-    const u = -d.L / 2 + t * d.L;
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    return { x: ship.x + u * c - v * s, y: ship.y + u * s + v * c, h: floorAt(d, t, v) };
-  }
-  function hullSolid(ship, dx, dy, h2) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = Math.abs(-dx * s + dy * c);
-    const t = (u + d.L / 2) / d.L;
-    if (t < 0 || t > 1 || h2 < -d.D) return false;
-    if (d.mastU && v < d.mastR + 0.2 && h2 < d.mastH && d.mastU.some((m) => Math.abs(u - m) < d.mastR + 0.2)) return true;
-    const hb = hbAt(t, d.B);
-    if (v > hb) return false;
-    if (d.rooms) {
-      for (const r4 of d.rooms) if (t > r4.t0 + 4e-3 && t < r4.t1 - 4e-3 && h2 > r4.floor - 0.05 && h2 < r4.ceil - 0.02 && v < roomHalf(d, r4, t) + 0.05) return false;
-      const cp = d.comp;
-      if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h2 > d.holdY - 0.05 && h2 < d.deckY + 0.05) return false;
-    }
-    const rail = d.big ? 1 : 0.8, at4 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
-    if (d.castle && at4(d.tq) && h2 < d.yq + rail || d.poop && at4(d.tp) && h2 < d.yp + rail || d.fore && at4(d.tf) && h2 < d.yf + rail) return true;
-    if (h2 > topAt(d, t)) return false;
-    if (v > hb * d.walk - 0.05 || h2 < d.deckY - 0.1) return true;
-    if (d.poop && t < d.tp) return h2 < d.yp - 0.1;
-    if (d.castle && t < d.tq) return h2 < d.yq - 0.1;
-    if (d.fore && t > d.tf) return h2 < d.yf - 0.1;
-    return false;
-  }
-  function hullGap(ship, dx, dy) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = -dx * s + dy * c;
-    const t = clamp012((u + d.L / 2) / d.L);
-    const along2 = Math.max(0, Math.abs(u) - d.L / 2);
-    return Math.hypot(along2, Math.max(0, Math.abs(v) - hbAt(t, d.B)));
-  }
-
   // src/render3d/bigship.js
-  var TAU3 = Math.PI * 2;
+  var TAU4 = Math.PI * 2;
   function bigPalette(def) {
     const H5 = C(def.color || "#6b4526");
     const marine2 = def.sail === "marine";
@@ -44852,7 +50505,7 @@ ${GLSL}
     k.add(torus(R5, 0.045, 6, 28), { color: "#7b5230", outline: 0.012 });
     for (let i = 0; i < 8; i++) {
       k.save();
-      k.rotateZ(i / 8 * TAU3);
+      k.rotateZ(i / 8 * TAU4);
       k.add(cyl(0.026, 0.034, R5 + 0.14, 6), { color: "#7b5230" });
       k.add(lathe([[0.028, 0], [0.042, 0.04], [0.03, 0.1], [0.046, 0.15], [0.036, 0.19], [1e-3, 0.2]], 7), { at: [0, R5 + 0.1, 0], color: "#8d6038", outline: 6e-3 });
       k.restore();
@@ -44869,7 +50522,7 @@ ${GLSL}
     }
     if (d.boat) {
       const b = d.boat, len = b.u1 - b.u0, xc = (b.u0 + b.u1) / 2;
-      const hullG = new SphereGeometry(1, 14, 6, 0, TAU3, Math.PI / 2, Math.PI / 2);
+      const hullG = new SphereGeometry(1, 14, 6, 0, TAU4, Math.PI / 2, Math.PI / 2);
       k.add(hullG, { at: [xc, dk3 + 0.95, 0], scale: [len / 2, 0.62, b.w / 2], color: "#f2efe6", double: true, outline: 0.02 });
       k.add(torus(1, 0.035, 4, 24), { at: [xc, dk3 + 0.95, 0], rot: [Math.PI / 2, 0, 0], scale: [len / 2, b.w / 2, 1], color: P6.cap });
       for (const f of [-0.28, 0.28]) k.add(box(0.28, 0.46, b.w * 0.9), { at: [xc + f * len, dk3, 0], color: P6.wood, outline: 0.012 });
@@ -44880,7 +50533,7 @@ ${GLSL}
     if (d.binnacleU !== null) {
       const fy = d.yq;
       k.add(box(0.45, 0.95, 0.45), { at: [d.binnacleU, fy, 0], color: P6.wood, outline: 0.012 });
-      k.add(new SphereGeometry(0.2, 10, 6, 0, TAU3, 0, Math.PI / 2), { at: [d.binnacleU, fy + 0.95, 0], color: "#cfe8ef", glow: "#fff1c1" });
+      k.add(new SphereGeometry(0.2, 10, 6, 0, TAU4, 0, Math.PI / 2), { at: [d.binnacleU, fy + 0.95, 0], color: "#cfe8ef", glow: "#fff1c1" });
     }
     for (const u of d.mastU) {
       const t = (u + d.L / 2) / d.L, fl2 = floorAt(d, t), r4 = d.mastR;
@@ -44946,7 +50599,7 @@ ${GLSL}
         for (let i = 0; i < 16; i++) {
           k.save();
           k.translate(hc2[0] - 0.08 * g, hc2[1], 0);
-          k.rotateX(i / 16 * TAU3);
+          k.rotateX(i / 16 * TAU4);
           k.add(cone(0.17 * g, 0.42 * g, 6), { at: [0, 0.38 * g, 0], color: i % 2 ? "#f39c12" : "#e67e22", outline: 0.015 });
           k.restore();
         }
@@ -44962,7 +50615,7 @@ ${GLSL}
       const cy = (top + bot) / 2, ry = (top - bot) / 2;
       const rz = hbAt(0.86, B5) * 1.04;
       const white = C("#f4f1ea");
-      const head = new SphereGeometry(1, 28, 18, 0, TAU3, 0, Math.PI), hp = head.attributes.position;
+      const head = new SphereGeometry(1, 28, 18, 0, TAU4, 0, Math.PI), hp = head.attributes.position;
       for (let i = 0; i < hp.count; i++) {
         let x = cx + hp.getX(i) * B5 * 0.66, y = cy + hp.getY(i) * ry;
         const z = hp.getZ(i) * rz;
@@ -45028,7 +50681,7 @@ ${GLSL}
       const hc2 = [stem[0] + 0.7 * s, stem[1] + 1.2 * s, 0];
       k.add(cyl(0.3 * s, 0.42 * s, 1.4 * s, 8), { at: [stem[0] - 0.3, stem[1] - 0.5, 0], rot: [0, 0, -0.5], color: "#c9a227", outline: 0.03 });
       for (let i = 0; i < 16; i++) {
-        const a = i / 16 * TAU3;
+        const a = i / 16 * TAU4;
         k.save();
         k.translate(hc2[0] - 0.18 * s, hc2[1], 0);
         k.rotateX(a);
@@ -46778,7 +52431,7 @@ ${GLSL}
   // src/render3d/camera3d.js
   var _dsw = [0, 0];
   var TP_MIN = 1.1;
-  var TAU4 = Math.PI * 2;
+  var TAU5 = Math.PI * 2;
   var CAM_SOLID = {
     tree: [5.3],
     rock: [0.85, 0.75],
@@ -46969,7 +52622,7 @@ ${GLSL}
     }
     /** Turn by angles (radians): used by mouse look and by touch drags. */
     lookBy(dyaw, dpitch) {
-      this.yaw = ((this.yaw + dyaw) % TAU4 + TAU4) % TAU4;
+      this.yaw = ((this.yaw + dyaw) % TAU5 + TAU5) % TAU5;
       this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + dpitch));
     }
     resize(w, h2) {
@@ -47082,7 +52735,7 @@ ${GLSL}
           if (Math.abs(ex) > 0.55) t += Math.sign(ex) * (Math.abs(ex) - 0.55) / 0.45 * 1.6;
           if (Math.abs(ey) > 0.6) l -= Math.sign(ey) * (Math.abs(ey) - 0.6) / 0.4 * 1;
         }
-        this.yaw = ((this.yaw + t * 2.4 * dt) % TAU4 + TAU4) % TAU4;
+        this.yaw = ((this.yaw + t * 2.4 * dt) % TAU5 + TAU5) % TAU5;
         this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + l * 1.4 * dt));
       }
       const cam = this.camera;
@@ -47361,5537 +53014,6 @@ ${GLSL}
       return res;
     }
   };
-
-  // src/game/entity.js
-  var nextId = 1;
-  var Entity = class {
-    constructor(o = {}) {
-      this.id = nextId++;
-      this.x = o.x ?? 0;
-      this.y = o.y ?? 0;
-      this.vx = 0;
-      this.vy = 0;
-      this.r = o.r ?? 0.3;
-      this.alive = true;
-      this.kind = o.kind || "entity";
-      this.faction = o.faction || "neutral";
-      this.world = o.world || null;
-    }
-    update() {
-    }
-    remove() {
-      this.alive = false;
-    }
-  };
-  var HOSTILITY = {
-    player: /* @__PURE__ */ new Set(["pirate", "bandit", "beast", "seaking", "baroque", "cp", "marine_hostile", "zombie", "rival"]),
-    marine: /* @__PURE__ */ new Set(["pirate", "bandit", "baroque", "zombie", "revolutionary"]),
-    pirate: /* @__PURE__ */ new Set(["player", "marine", "civilian_target", "rival"]),
-    bandit: /* @__PURE__ */ new Set(["player", "civilian_target"]),
-    beast: /* @__PURE__ */ new Set(["player", "civilian", "marine", "pirate", "bandit"]),
-    seaking: /* @__PURE__ */ new Set(["player", "marine", "pirate"]),
-    baroque: /* @__PURE__ */ new Set(["player", "marine"]),
-    cp: /* @__PURE__ */ new Set(["player"]),
-    zombie: /* @__PURE__ */ new Set(["player", "marine"]),
-    rival: /* @__PURE__ */ new Set(["player", "pirate"]),
-    civilian: /* @__PURE__ */ new Set(),
-    neutral: /* @__PURE__ */ new Set()
-  };
-  function hostile(a, b) {
-    if (!a || !b || a === b) return false;
-    if (a.faction === "player" && b.aggroPlayer) return true;
-    if (b.faction === "player" && a.aggroPlayer) return true;
-    const fa = HOSTILITY[a.faction], fb = HOSTILITY[b.faction];
-    return fa && fa.has(b.faction) || fb && fb.has(a.faction) || false;
-  }
-
-  // src/game/difficulty.js
-  var TIERS = {
-    blue: {
-      id: "blue",
-      // the parry: how long after the guard comes up a blow can still be parried
-      // (s), the start of that which is a perfect parry, and how plain the glint
-      // that shows the moment is (1: unmissable; Observation Haki makes it so anywhere)
-      parry: 0.3,
-      perfect: 0.09,
-      cue: 1,
-      cueLead: 0.36,
-      // foes' wind-ups (s): the first blow of a string at least windupMin, a
-      // longer one stretched (× windupMul + windupAdd); a follow-up in a combo at least chainWindup
-      windupMin: 0.46,
-      windupMul: 1.15,
-      windupAdd: 0.05,
-      chainWindup: 0.26,
-      // pacing: the pause between a foe's attacks (×), how many more blows they
-      // may string onto one (at most), the gap they leave after a big move (s),
-      // how much less often they guard, and their parries (chance a guard is one)
-      think: 1.8,
-      combo: 1,
-      rest: 0.9,
-      block: 0.5,
-      npcParry: 0,
-      // what their blows do to you (×), a boss's guard-breaking blows at least this
-      // far apart (s), how close a gunner will still shoot you from (nearer, they
-      // back off first) and how fast they back off (× their pace)
-      dmg: 0.62,
-      breakGap: 6,
-      closeShot: 2.4,
-      backpedal: 0.55,
-      // a flurry: after this many blows in a row (or this long held stunned — the
-      // longest any one blow can stun you, too) you break free;
-      // a smashed guard staggers you this long (s); this many foes may go for you at once
-      stunHits: 3,
-      stunCap: 1,
-      gbStun: 0.6,
-      turns: 1
-    },
-    paradise: {
-      id: "paradise",
-      parry: 0.25,
-      perfect: 0.07,
-      cue: 0.6,
-      cueLead: 0.3,
-      windupMin: 0.26,
-      windupMul: 1.08,
-      windupAdd: 0.03,
-      chainWindup: 0.14,
-      think: 1.2,
-      combo: 2,
-      rest: 0.5,
-      block: 0.8,
-      npcParry: 0.15,
-      dmg: 0.9,
-      breakGap: 3.5,
-      closeShot: 1.6,
-      backpedal: 0.75,
-      stunHits: 4,
-      stunCap: 1.4,
-      gbStun: 0.85,
-      turns: 2
-    },
-    newWorld: {
-      id: "newWorld",
-      parry: 0.21,
-      perfect: 0.06,
-      cue: 0.35,
-      cueLead: 0.26,
-      windupMin: 0.16,
-      windupMul: 1,
-      windupAdd: 0,
-      chainWindup: 0.07,
-      think: 1,
-      combo: 2,
-      rest: 0.25,
-      block: 1,
-      npcParry: 0.3,
-      dmg: 1,
-      breakGap: 1.5,
-      closeShot: 0,
-      backpedal: 0.9,
-      stunHits: 5,
-      stunCap: 1.8,
-      gbStun: 1.1,
-      turns: 3
-    }
-  };
-  var PARRY = {
-    lockout: 0.35,
-    // s: a guard raised again sooner than this after F was let go has no parry in it (mashing doesn't work)
-    buffer: 0.3,
-    // s: a press made while the guard can't come up yet (a basic swing's follow-through) still counts if it comes up this soon
-    observation: 0.04,
-    // s more to parry in with Observation Haki on
-    reel: 1,
-    // s a parried foe reels, posture broken (a boss for 0.7 of it; a perfect parry adds perfectReel)
-    perfectReel: 0.3,
-    bossReel: 0.7,
-    playerReel: 0.6,
-    // s you reel when a foe parries you
-    counterMul: 1.5,
-    perfectCounterMul: 1.8,
-    // the counter strike's damage
-    counterStun: 0.5,
-    // s it staggers them (through a boss's poise)
-    heal: 0.05,
-    haki: 8,
-    parryHaki: 3,
-    // a perfect parry gives back this much health (of the max) and Haki; a parry, Haki
-    // a perfect dodge: a heavy, guard-smashing blow slipped within this long of
-    // starting the dodge (s) earns a counter of this long and this much
-    dodgeWindow: 0.1,
-    dodgeCounter: 0.8,
-    dodgeCounterMul: 1.3
-  };
-  function tierAt(game, x, y) {
-    if (!game?.world || game.surface && game.world !== game.surface) return TIERS.paradise;
-    const r4 = regionAt(x, y);
-    return isBlue(r4) ? TIERS.blue : r4 === REGION.NEW_WORLD ? TIERS.newWorld : TIERS.paradise;
-  }
-  var tierOf = (game, a) => tierAt(game, a.x, a.y);
-  function stretchWindup(T5, w, chained) {
-    if (!(w > 0)) return w;
-    if (chained) return Math.max(T5.chainWindup, w);
-    return Math.max(T5.windupMin, w * T5.windupMul + T5.windupAdd);
-  }
-
-  // src/data/races.js
-  var RARITY = {
-    common: { label: "Common", color: "#b2bec3" },
-    uncommon: { label: "Uncommon", color: "#55efc4" },
-    rare: { label: "Rare", color: "#74b9ff" },
-    epic: { label: "Epic", color: "#a29bfe" },
-    legendary: { label: "Legendary", color: "#fdcb6e" }
-  };
-  var RACES = {
-    human: {
-      name: "Human",
-      rarity: "common",
-      weight: 52,
-      desc: "The most numerous people of the Blue Planet. Adaptable, stubborn, and capable of anything \u2014 the Pirate King himself was human.",
-      origin: "Born on any island of the four Blues.",
-      stats: { str: 0, agi: 0, end: 0, vit: 0, wil: 1 },
-      lives: 3,
-      traits: ["Adaptable: trainers teach you 15% cheaper", "Stubborn Will: +1 Willpower"],
-      spawnSeas: ["east_blue", "north_blue", "west_blue", "south_blue"],
-      swim: 1,
-      hpMul: 1,
-      jump: 7.6,
-      charge: 1.6,
-      leap: 1
-    },
-    fishman: {
-      name: "Fish-Man",
-      rarity: "uncommon",
-      weight: 13,
-      desc: "Born with ten times the strength of a human and the sea in their blood. Many followed Arlong to the East Blue.",
-      origin: "Born in the Conomi Islands (East Blue), in the shadow of Arlong Park.",
-      stats: { str: 4, agi: 0, end: 2, vit: 1, wil: 0 },
-      lives: 3,
-      traits: ["Gills: breathe underwater \u2014 never drown (unless a Devil Fruit user)", "Swims 3\xD7 faster", "Fish-Man Karate affinity: learns it 30% faster", "Dolphin leap: springs far out of the water \u2014 and, swimming hard, on forward like a dolphin"],
-      spawnSeas: ["east_blue"],
-      spawnTowns: ["cocoyasi"],
-      swim: 3,
-      hpMul: 1.1,
-      gills: true,
-      jump: 7.4,
-      charge: 1.65,
-      leap: 1.35
-    },
-    mink: {
-      name: "Mink",
-      rarity: "uncommon",
-      weight: 12,
-      desc: "The Warrior Beast Tribe. Every Mink is born a fighter and can channel Electro through their fur.",
-      origin: "Born among wandering Mink traders who settled in the wilds of the South Blue.",
-      stats: { str: 1, agi: 4, end: 1, vit: 0, wil: 0 },
-      lives: 3,
-      traits: ["Electro: bare-handed basic attacks crackle, and now and then shock (innate)", "Keen senses: a dodge leaves you untouchable a little longer", "Sulong: in a fight under the full moon, at night, you become a battle beast (hidden)", "Springy: jumps high, and a charged leap goes higher still"],
-      spawnSeas: ["south_blue"],
-      spawnTowns: ["torino_village", "karate_dojo_town"],
-      swim: 1,
-      hpMul: 1,
-      electro: true,
-      jump: 8.6,
-      charge: 1.7,
-      leap: 1
-    },
-    skypiean: {
-      name: "Skypiean",
-      rarity: "uncommon",
-      weight: 10,
-      desc: "A winged people of the White Sea. You fell from the clouds as a child and washed ashore at Lvneel, homeland of Noland the Liar.",
-      origin: "Fell from a sky island; raised in Lvneel (North Blue).",
-      stats: { str: 0, agi: 2, end: 0, vit: 0, wil: 3 },
-      lives: 3,
-      traits: ["Mantra: once their sixth sense awakens, it grows twice as fast", "Light-footed: dodge travels 30% further", "Dial-savvy: dials hit 25% harder", "Little wings: not for flying \u2014 no Skypiean can"],
-      spawnSeas: ["north_blue"],
-      spawnTowns: ["lvneel_town"],
-      swim: 0.9,
-      hpMul: 0.95,
-      jump: 8.6,
-      charge: 1.55,
-      leap: 1
-    },
-    buccaneer: {
-      name: "Buccaneer",
-      rarity: "epic",
-      weight: 2.2,
-      desc: "A giant-framed race hunted almost to extinction. Bartholomew Kuma was born to your people in the South Blue.",
-      origin: "Born in the Sorbet Kingdom (South Blue).",
-      stats: { str: 5, agi: -2, end: 5, vit: 4, wil: 0 },
-      lives: 3,
-      traits: ["Huge frame: +35% HP", "Unshakable: light blows can't stagger you, and knockback barely moves you", "Slow: -8% move speed"],
-      spawnSeas: ["south_blue"],
-      spawnTowns: ["sorbet_town"],
-      swim: 0.9,
-      hpMul: 1.35,
-      scale: 1.3,
-      jump: 6.6,
-      charge: 1.85,
-      leap: 1
-    },
-    three_eye: {
-      name: "Three-Eye Tribe",
-      rarity: "legendary",
-      weight: 0.8,
-      desc: "A vanishingly rare people whose third eye may one day hear the Voice of All Things.",
-      origin: "Born among the scholars sheltering in the ruins of Ohara (West Blue).",
-      stats: { str: 0, agi: 1, end: 0, vit: 0, wil: 6 },
-      lives: 3,
-      traits: ["Third Eye: Observation Haki from birth", "Voice of All Things: once the Third Eye has grown (Observation 20), reads Poneglyphs without an archaeologist"],
-      spawnSeas: ["west_blue"],
-      spawnTowns: ["ohara_camp"],
-      swim: 1,
-      hpMul: 1,
-      jump: 7.4,
-      charge: 1.65,
-      leap: 1
-    },
-    lunarian: {
-      name: "Lunarian",
-      rarity: "legendary",
-      weight: 0.5,
-      desc: 'A people of the "Land of Gods" atop the Red Line, believed extinct. Black wings, white hair, and a flame that never goes out.',
-      origin: "Washed up alone on an uncharted islet in one of the Blues.",
-      stats: { str: 2, agi: 1, end: 5, vit: 5, wil: 2 },
-      lives: 4,
-      traits: ["Ignition: bare blows can set foes alight, and while the flame on your back burns, harm done to you is halved \u2014 the sea puts it out, and it lights again once you're dry", "Tremendous vitality: +1 life", "Wings: fly (Space again in the air) \u2014 and a dodge is a wing-beat that carries you further, even over water"],
-      spawnSeas: ["east_blue", "north_blue", "west_blue", "south_blue"],
-      spawnIslet: true,
-      swim: 1,
-      hpMul: 1.15,
-      jump: 8.2,
-      charge: 1.6,
-      leap: 1,
-      flight: { style: "wings", gauge: 22, speed: 10, climb: 6, ceiling: 40, sea: 3.5, refill: 6, color: "#ff7043" }
-    }
-  };
-  var RACE_IDS = Object.keys(RACES);
-  var RETIRED = { longarm: { arms: 1.8 }, longleg: { legs: 1.9 } };
-  function liveRace(rec) {
-    if (!rec || !RETIRED[rec.race]) return rec;
-    const was = RETIRED[rec.race];
-    rec.race = "human";
-    const L3 = rec.look;
-    if (L3) {
-      if (L3.race) L3.race = "human";
-      for (const k of Object.keys(was)) if (L3[k] === was[k]) delete L3[k];
-    }
-    return rec;
-  }
-  function rollRace(rng4, boosts = {}) {
-    const list = RACE_IDS.map((id) => [id, RACES[id].weight * (boosts[id] || 1)]);
-    return rng4.weighted(list);
-  }
-  var HUMAN_SKIN = ["#f9dcc4", "#f1c9a0", "#e0ac7e", "#c68642", "#a0643a", "#7a4a2a", "#5c3a21"];
-  var HAIR = ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#2ecc71", "#2980b9", "#e84393", "#dfe6e9", "#8e44ad", "#16a085"];
-  var TOPS = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#b2bec3", "#a0522d"];
-  var BOTTOMS = ["#2d3436", "#1e3799", "#3b3b98", "#6d4c41", "#636e72", "#0a3d62", "#b8860b", "#2f3542"];
-  var HAIRSTYLES = ["short", "short", "spiky", "messy", "crop", "crop", "sidefringe", "slick", "long", "ponytail", "buzz", "curly", "afro", "topknot", "mohawk", "bald", "pompadour"];
-  var FISHMAN_KINDS = [
-    { id: "shark", name: "Saw Shark", skin: "#7fa7c9" },
-    { id: "great_white", name: "Great White Shark", skin: "#9fb4c7" },
-    { id: "whale_shark", name: "Whale Shark", skin: "#4a69bd" },
-    { id: "octopus", name: "Octopus", skin: "#e17b77" },
-    { id: "sea_bream", name: "Sea Bream", skin: "#f3a683" },
-    { id: "manta", name: "Manta Ray", skin: "#546de5" },
-    { id: "sunfish", name: "Sunfish", skin: "#c7ecee" },
-    { id: "goldfish", name: "Goldfish", skin: "#f5b041" }
-  ];
-  var MINK_KINDS = [
-    { id: "cat", name: "Cat", ears: "pointy", fur: "#f0932b", tail: "thin" },
-    { id: "dog", name: "Dog", ears: "pointy", fur: "#dfe6e9", tail: "fluffy", muzzle: true },
-    { id: "rabbit", name: "Rabbit", ears: "long", fur: "#f5f6fa", tail: "fluffy" },
-    { id: "bear", name: "Bear", ears: "round", fur: "#6d4c41", tail: null, muzzle: true },
-    { id: "fox", name: "Fox", ears: "pointy", fur: "#e67e22", tail: "fluffy", muzzle: true },
-    { id: "lion", name: "Lion", ears: "round", fur: "#f6b93b", tail: "thin", muzzle: true },
-    { id: "panda", name: "Panda", ears: "round", fur: "#f5f6fa", tail: null },
-    { id: "jaguar", name: "Jaguar", ears: "round", fur: "#e1b12c", tail: "thin" },
-    { id: "wolf", name: "Wolf", ears: "pointy", fur: "#7f8fa6", tail: "fluffy", muzzle: true }
-  ];
-  var W2 = (s) => s.split(" ").map((t) => {
-    const [k, w] = t.split(":");
-    return [k, +w || 1];
-  });
-  var DRESS = {
-    civilian: {
-      m: { top: W2("tee:4 shirt:3 open:1 tank:1 striped:1 vest:0.5"), bottom: W2("trousers:4 capri:2 shorts:2 baggy:1 slim:1"), waist: W2("belt:3 none:3 sash:1"), shoes: W2("shoes:3 sandals:3 boots:2") },
-      f: { top: W2("tee:3 tank:2 shirt:2 dress:3 crop:1"), bottom: W2("skirt:3 longskirt:2 trousers:2 capri:1 shorts:1 slim:1"), waist: W2("none:3 belt:2 sash:1"), shoes: W2("shoes:3 sandals:3 boots:1") }
-    },
-    pirate: {
-      m: { top: W2("striped:3 open:3 vest:2 tee:2 bare:1 tank:1"), bottom: W2("baggy:4 capri:2 shorts:2 trousers:2"), waist: W2("sash:5 belt:3"), shoes: W2("boots:5 sandals:2") },
-      f: { top: W2("crop:3 tank:2 open:1 striped:1 bikini:1"), bottom: W2("trousers:2 shorts:2 capri:2 skirt:1 baggy:1"), waist: W2("sash:4 belt:3"), shoes: W2("boots:5 sandals:2") }
-    },
-    bandit: {
-      m: { top: W2("vest:3 open:2 tank:2 bare:1"), bottom: W2("baggy:4 trousers:2 capri:1"), waist: W2("sash:4 belt:2"), shoes: W2("boots:3 sandals:2") },
-      f: { top: W2("crop:2 tank:2 vest:1"), bottom: W2("trousers:2 baggy:2 shorts:1"), waist: W2("sash:3 belt:2"), shoes: W2("boots:3 sandals:1") }
-    },
-    marine: {
-      m: { top: W2("shirt:1"), bottom: W2("trousers:1"), waist: W2("belt:1"), shoes: W2("boots:1") },
-      f: { top: W2("shirt:1"), bottom: W2("trousers:3 skirt:1"), waist: W2("belt:1"), shoes: W2("boots:1") }
-    },
-    officer: {
-      m: { top: W2("jacket:2 shirt:1"), bottom: W2("trousers:2 slim:1"), waist: W2("belt:1"), shoes: W2("boots:1 shoes:1") },
-      f: { top: W2("jacket:2 shirt:1"), bottom: W2("slim:2 skirt:1"), waist: W2("belt:1"), shoes: W2("boots:1 shoes:1") }
-    },
-    agent: {
-      m: { top: W2("jacket:1"), bottom: W2("slim:1"), waist: W2("belt:1"), shoes: W2("shoes:1") },
-      f: { top: W2("jacket:2 shirt:1"), bottom: W2("slim:2 skirt:1"), waist: W2("belt:1"), shoes: W2("shoes:2 boots:1") }
-    },
-    swordsman: {
-      m: { top: W2("kimono:3 open:2 tee:1"), bottom: W2("hakama:3 baggy:1 trousers:1"), waist: W2("obi:2 sash:2"), shoes: W2("geta:2 sandals:2 boots:1") },
-      f: { top: W2("kimono:3 tank:1"), bottom: W2("hakama:2 slim:1"), waist: W2("obi:2 sash:1"), shoes: W2("geta:1 sandals:2 boots:1") }
-    },
-    wano: {
-      m: { top: W2("kimono:6 open:1"), bottom: W2("hakama:4 baggy:1 capri:1"), waist: W2("obi:4 sash:1"), shoes: W2("geta:3 sandals:3") },
-      f: { top: W2("kimono:6 dress:1"), bottom: W2("longskirt:3 hakama:2"), waist: W2("obi:4 none:1"), shoes: W2("geta:3 sandals:2") }
-    },
-    desert: {
-      m: { top: W2("shirt:3 open:2 vest:1 kimono:1"), bottom: W2("baggy:4 trousers:2"), waist: W2("sash:4 belt:1"), shoes: W2("sandals:4 boots:1") },
-      f: { top: W2("dress:2 crop:2 shirt:1"), bottom: W2("longskirt:2 baggy:2 skirt:1"), waist: W2("sash:3 none:1"), shoes: W2("sandals:4") }
-    },
-    snow: {
-      m: { top: W2("coat:3 shirt:2 jacket:1"), bottom: W2("trousers:3 baggy:1"), waist: W2("belt:2 none:1"), shoes: W2("boots:1") },
-      f: { top: W2("coat:3 shirt:1 dress:1"), bottom: W2("trousers:2 longskirt:1 slim:1"), waist: W2("belt:1 none:1"), shoes: W2("boots:1") }
-    },
-    sky: {
-      m: { top: W2("tank:2 tee:2 open:2 vest:1"), bottom: W2("baggy:3 shorts:2 capri:1"), waist: W2("sash:3 none:1"), shoes: W2("sandals:4 bare:1") },
-      f: { top: W2("dress:2 tank:2 crop:2"), bottom: W2("skirt:2 longskirt:2 baggy:1"), waist: W2("sash:2 none:2"), shoes: W2("sandals:4") }
-    },
-    fishman: {
-      m: { top: W2("open:3 tank:2 bare:2 vest:1 shirt:1"), bottom: W2("shorts:3 baggy:2 trousers:1"), waist: W2("sash:2 belt:2 none:1"), shoes: W2("sandals:3 bare:2 boots:1") },
-      f: { top: W2("crop:2 tank:2 bikini:2 dress:1"), bottom: W2("skirt:2 shorts:2 longskirt:1"), waist: W2("none:2 sash:1"), shoes: W2("sandals:3 bare:1") }
-    }
-  };
-  var SASH = ["#f4c430", "#c62828", "#1e88e5", "#2e7d32", "#6a1b9a", "#ef6c00", "#fafafa", "#212121"];
-  var LIGHT = ["#f5f5f5", "#fff8e1", "#e3f2fd", "#fce4ec", "#e8f5e9"];
-  var STERN = { pirate: 0.55, bandit: 0.6, marine: 0.45, officer: 0.6, agent: 0.7, swordsman: 0.6 };
-  var FEM_ROLES = { civilian: 0.5, pirate: 0.3, bandit: 0.2, marine: 0.25, officer: 0.2, agent: 0.3, swordsman: 0.25, wano: 0.5, desert: 0.5, snow: 0.5, sky: 0.5, fishman: 0.3 };
-  var FRAME_ROLL = {
-    m: {
-      civilian: W2("average:5 lean:2 slim:2 heavy:2 stocky:2 lanky:1 athletic:1"),
-      pirate: W2("average:3 lean:2 athletic:2 brawny:2 heavy:2 stocky:2 lanky:1"),
-      bandit: W2("average:2 lean:2 brawny:2 heavy:2 stocky:2 lanky:1"),
-      marine: W2("average:3 athletic:4 lean:2 brawny:1 stocky:1"),
-      officer: W2("average:3 athletic:3 brawny:1 heavy:1 slim:1"),
-      agent: W2("athletic:3 slim:2 lean:2 average:2"),
-      swordsman: W2("lean:3 athletic:3 average:2 slim:1 lanky:1"),
-      wano: W2("average:3 lean:2 athletic:2 stocky:1 heavy:1 brawny:1"),
-      desert: W2("average:3 lean:3 slim:2 heavy:1 lanky:1"),
-      snow: W2("average:3 heavy:2 stocky:2 brawny:1 lean:1"),
-      sky: W2("average:3 slim:2 lean:2 lanky:1"),
-      fishman: W2("athletic:3 brawny:3 average:2 heavy:1 stocky:1")
-    },
-    f: {
-      civilian: W2("average:4 slim:2 curvy:2 petite:2 heavy:1"),
-      fighter: W2("average:3 athletic:3 slim:2 curvy:2 petite:1"),
-      other: W2("average:4 slim:2 curvy:2 petite:1 heavy:1 athletic:1")
-    }
-  };
-  var FIGHTERS = /* @__PURE__ */ new Set(["pirate", "bandit", "marine", "officer", "agent", "swordsman"]);
-  var FRAME_MUS = { average: 0.55, lean: 0.75, athletic: 1, slim: 0.45, brawny: 1.2, heavy: 0.3, lanky: 0.28, stocky: 0.8 };
-  function dress(look, rng4, role = "civilian", over = {}) {
-    if (role === "beast") {
-      Object.assign(look, { fem: false, topStyle: "bare", bottomStyle: "slim", waist: "none", shoeStyle: "bare", muscle: 0.8 });
-      return look;
-    }
-    const set = DRESS[role] || DRESS.civilian;
-    const fem = over.fem ?? rng4.chance(FEM_ROLES[role] ?? 0.45);
-    const T5 = set[fem ? "f" : "m"];
-    look.fem = fem;
-    const legacyTop = over.openShirt !== void 0 || over.noSleeves || over.sleeve || over.vest;
-    if (!over.topStyle && !legacyTop) look.topStyle = rng4.weighted(T5.top);
-    if (!over.bottomStyle) look.bottomStyle = rng4.weighted(T5.bottom);
-    if (!over.waist) look.waist = rng4.weighted(T5.waist);
-    if (!over.shoeStyle && over.sandals === void 0) look.shoeStyle = rng4.weighted(T5.shoes);
-    if (!over.top2) look.top2 = look.topStyle === "striped" ? rng4.pick(LIGHT) : look.topStyle === "jacket" ? rng4.pick(["#f5f5f5", "#f5f5f5", "#90caf9", "#fce4ec"]) : void 0;
-    if (!over.waistCol && (look.waist === "sash" || look.waist === "obi")) look.waistCol = rng4.pick(SASH);
-    if (look.topStyle === "jacket" && !over.tie && rng4.chance(0.5)) look.tie = rng4.pick(["#212121", "#c62828", "#1e3a8a"]);
-    if (look.topStyle === "coat" && !over.coat) look.coat = rng4.pick(["#5d4037", "#37474f", "#6d4c41", "#1b5e20", "#4a148c", "#263238"]);
-    if (over.frame === void 0 && !((over.bulk ?? look.bulk ?? 1) > 1.1)) {
-      let set2 = fem ? FRAME_ROLL.f[role === "civilian" ? "civilian" : FIGHTERS.has(role) ? "fighter" : "other"] : FRAME_ROLL.m[role] || FRAME_ROLL.m.civilian;
-      if (look.legs > 1.2) set2 = set2.filter(([k]) => k !== "lanky" && k !== "stocky" && k !== "petite");
-      look.frame = rng4.weighted(set2);
-    }
-    if (fem) {
-      if (!over.hair && rng4.chance(0.75)) look.hair = rng4.pick(["long", "long", "wavy", "ponytail", "bun", "bob", "twintails", "braid", "short", "curly", "sidefringe"]);
-      if (!over.eyeShape) look.eyeShape = rng4.pick(["soft", "round", "round", "sharp"]);
-      look.bust = +(0.8 + rng4.next() * 0.45).toFixed(2);
-    } else if (over.muscle === void 0) {
-      const m = (FRAME_MUS[look.frame] ?? 0.55) + (rng4.next() - 0.5) * 0.4;
-      look.muscle = +Math.min(1.2, Math.max(0.15, m)).toFixed(2);
-    }
-    if (over.frown === void 0 && rng4.chance(STERN[role] ?? 0.15)) look.frown = true;
-    return look;
-  }
-  function makeLook(raceId, seed, overrides = {}) {
-    const rng4 = new RNG(seed);
-    const race = RACES[raceId] || RACES.human;
-    const look = {
-      race: raceId,
-      seed: rng4.int(0, 1e3),
-      skin: rng4.pick(HUMAN_SKIN),
-      hairColor: rng4.pick(HAIR),
-      hair: rng4.pick(HAIRSTYLES),
-      top: rng4.pick(TOPS),
-      bottom: rng4.pick(BOTTOMS),
-      shoes: rng4.pick(["#3b2a1a", "#2d3436", "#8d6e4a", "#c8a878"]),
-      // (most eyes are dark, as in the manga; a few are coloured)
-      eyeColor: rng4.pick(["#222", "#222", "#3b2a1a", "#3b2a1a", "#4a3426", "#2b2f3a", "#1e3799", "#27ae60"]),
-      scale: race.scale || 1,
-      hat: null,
-      openShirt: rng4.chance(0.25)
-    };
-    if (raceId === "fishman") {
-      const k = rng4.pick(FISHMAN_KINDS);
-      look.skin = k.skin;
-      look.fin = true;
-      look.gills = true;
-      look.kind = k.name;
-      look.grin = rng4.chance(0.5);
-      look.sharpTeeth = true;
-      look.hairColor = rng4.pick(["#1e1e1e", "#2c3e50", "#16a085", "#8e44ad"]);
-    } else if (raceId === "mink") {
-      const k = rng4.pick(MINK_KINDS);
-      look.ears = k.ears;
-      look.fur = k.fur;
-      look.tail = k.tail;
-      look.muzzle = k.muzzle;
-      look.kind = k.name;
-      look.furFace = rng4.chance(0.6);
-      look.skin = k.fur;
-      look.hairColor = k.fur;
-      look.hand = k.fur;
-    } else if (raceId === "skypiean") {
-      look.wings = "sky";
-      look.hairColor = rng4.pick(["#f5f6fa", "#fdcb6e", "#dfe6e9", "#74b9ff", "#f7d794"]);
-      look.top = rng4.pick(["#f5f6fa", "#dff9fb", "#f6e58d"]);
-    } else if (raceId === "buccaneer") {
-      look.bulk = 1.25;
-      look.skin = rng4.pick(["#c68642", "#a0643a", "#7a4a2a"]);
-    } else if (raceId === "three_eye") {
-      look.thirdEye = true;
-      look.eyeColor = "#8e44ad";
-    } else if (raceId === "lunarian") {
-      look.wings = "lunar";
-      look.backFlame = true;
-      look.skin = rng4.pick(["#7a4a2a", "#5c3a21", "#8d5524"]);
-      look.hairColor = "#f5f6fa";
-      look.hair = rng4.pick(["long", "spiky", "short"]);
-    }
-    const { role, ...over } = overrides;
-    dress(look, rng4, role || (raceId === "fishman" ? "fishman" : raceId === "skypiean" ? "sky" : "civilian"), over);
-    if (look.race === "buccaneer" || look.race === "giant") look.fem = over.fem ?? look.fem;
-    return Object.assign(look, over);
-  }
-  function raceLabel(look) {
-    const r4 = RACES[look.race] || RACES.human;
-    return look.kind ? `${r4.name} (${look.kind})` : r4.name;
-  }
-
-  // src/game/flight.js
-  var DEF = { speed: 10, climb: 6, dive: 9, ceiling: 35, drain: 1, sea: 3.5, refill: 6 };
-  var SEA_CEILING = 14;
-  var LOW = 3.5;
-  var helpless = (a) => !!(a.status && (a.status.freeze || a.status.despair || a.status.heartless || a.status.pieces || a.status.lifted || a.status.puppet));
-  var timeOf = (game) => game.env?.time ?? game.time ?? 0;
-  var FLY_MASTERY = 40;
-  function flightOf(a) {
-    let best = null;
-    const f = a?.fruitDef;
-    if (f) {
-      const k = 0.6 + 0.4 * Math.min(1, (a.fruitMastery || 0) / FLY_MASTERY);
-      for (const t of f.techniques) {
-        if (!t.flight) continue;
-        const s = { ...DEF, ...t.flight, fruit: true, tech: t.id };
-        s.gauge = Math.round(s.gauge * k * 10) / 10;
-        if (!best || s.gauge > best.gauge) best = s;
-      }
-    }
-    const R5 = RACES[a?.race]?.flight;
-    if (R5 && (!best || R5.gauge > best.gauge)) best = { ...DEF, ...R5, fruit: false };
-    return best;
-  }
-  function groundBase(game, x, y) {
-    return game.view3d ? Math.max(0, game.view3d.ground(x, y)) : 0;
-  }
-  function feetOf(a, game) {
-    if (a.flying && a.alt != null) return a.alt;
-    return a.feetH ? a.feetH(game) : a.z || 0;
-  }
-  function overOpenSea(game, x, y) {
-    const w = game.world;
-    if (!w.isLiquid?.(x, y) || w.isOverlay?.(x, y)) return false;
-    if (game.deckAt && game.ships?.length && game.deckAt(x, y, 0)) return false;
-    return true;
-  }
-  function flyableAt(a, game, x, y, alt = a.alt ?? feetOf(a, game)) {
-    const w = game.world;
-    if (y < 1 || y > w.height - 1) return false;
-    if (w.interiorAt?.(x, y)) return false;
-    const g = groundBase(game, x, y);
-    if (g > alt + 0.6) return false;
-    const roof = game.view3d?.roofAt?.(x, y);
-    if (roof && roof.h > alt + 0.5) return false;
-    if (alt - g < LOW && (w.solid?.(x, y) || w.hitsProp?.(x, y, (a.r || 0.28) * 0.9))) return false;
-    if (game.inShip && game.ships?.length) {
-      for (const s of game.ships) if (game.inShip(s, x, y, alt + 0.9, true)) return false;
-    }
-    return true;
-  }
-  function floorUnder(a, game, x, y) {
-    let f = groundBase(game, x, y);
-    const roof = game.view3d?.roofAt?.(x, y, a.alt + 0.3);
-    if (roof && roof.h > f) f = roof.h;
-    if (game.deckAt && game.ships?.length) {
-      const dk3 = game.deckAt(x, y, 0.1);
-      if (dk3) {
-        const h2 = deckLift(dk3, timeOf(game));
-        if (h2 > f && h2 <= a.alt + 0.3) f = h2;
-      }
-    }
-    return f;
-  }
-  function cantTakeOff(a, game) {
-    const S6 = flightOf(a);
-    if (!S6) return "nowings";
-    if (a.flying) return "flying";
-    if (a.state !== "idle" || a.onShip || a.climb || helpless(a) || a.hitstun > 0.25 || a.status?.grounded) return "busy";
-    if (a.inWater) return "water";
-    const zone = game.world.zone;
-    if (zone === 2 || zone === 3) return "nosky";
-    if (game.world.interiorAt?.(a.x, a.y) && !a.roofed) return "indoors";
-    if (S6.fruit && a.seastoned) return "seastone";
-    if ((a.flightGauge ?? 1) < 0.25) return "tired";
-    return "";
-  }
-  var WHY = {
-    water: "You can't take off from the water.",
-    nosky: "There's no sky to fly in down here.",
-    indoors: "No room to fly in here.",
-    seastone: "Seastone holds your power down.",
-    tired: "Too tired to fly \u2014 catch your breath on solid ground.",
-    busy: ""
-  };
-  function takeOff(a, game) {
-    const why = cantTakeOff(a, game);
-    if (why) {
-      if (a.isPlayer && WHY[why]) game.log(WHY[why], "#ff8a80");
-      return false;
-    }
-    const S6 = flightOf(a);
-    const alt = feetOf(a, game);
-    if (a.deck) {
-      a.deck.ship.aboard?.delete(a);
-      a.deck = null;
-    }
-    a.flying = true;
-    a.flightStyle = S6.style;
-    a.flightRide = S6.ride || null;
-    a.flight = { spec: S6, t: 0, lift: (a.z || 0) > 0.6 ? 0.15 : 0.4, tired: false, landing: false };
-    a.alt = alt;
-    a.vz = 0;
-    a.charging = 0;
-    a.wading = 0;
-    if (!a.dash?.dodge) a.dash = null;
-    if (a.flightGauge === void 0) a.flightGauge = 1;
-    a.flightTired = false;
-    a.takeoffT = timeOf(game);
-    takeoffFx(a, game, S6);
-    game.audio?.sfx("jump_big", a);
-    if (a.isPlayer) {
-      game.emit?.("playerTakeOff", S6.style);
-      game.hint?.("flight", "FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air \u2014 far faster out over the open sea \u2014 and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.");
-    }
-    return true;
-  }
-  function land(a, game, quiet = false) {
-    if (!a.flying || !a.flight) return;
-    endFlight(a, game, -0.01);
-    a.landT = timeOf(game);
-    if (!quiet && (a.z || 0) < 0.6) {
-      game.fx.burst(a.x, a.y, 8, { color: ["#d7ccc8", "#efebe9"], speed: 2.2, g: 1.2, z: 0.1, vz: 0.5, life: 0.45, kind: "dust", size: 0.18, grow: 0.4 });
-      game.audio?.sfx("land", a);
-    }
-  }
-  function fall(a, game) {
-    if (!a.flying || !a.flight) return;
-    endFlight(a, game, Math.min(-1, a.flightClimb || -1));
-  }
-  function endFlight(a, game, vz) {
-    const g = a.groundAt ? a.groundAt(game, a.x, a.y) : 0;
-    a.flying = false;
-    a.flight = null;
-    a.flightStyle = null;
-    a.flightRide = null;
-    a.flightTired = false;
-    a.flightClimb = 0;
-    a.flightBank = 0;
-    a.z = Math.max(0, (a.alt ?? g) - g);
-    a.vz = a.z > 0.02 ? vz : 0;
-    a.alt = null;
-    a.airT = 0;
-    a.lastG = g;
-    a.lastGX = a.x;
-    a.lastGY = a.y;
-  }
-  function downFlyer(a, game) {
-    if (!a.flying || !a.flight) return;
-    fall(a, game);
-    game.fx.text(a.x, a.y - 1.6, "DOWNED!", "#ff8a80", 0.34);
-  }
-  function toggleFlight(a, game) {
-    if (a.flying && a.flight) {
-      a.flight.landing = true;
-      return true;
-    }
-    return takeOff(a, game);
-  }
-  function flyStep(a, dt, game) {
-    const F5 = a.flight, S6 = F5.spec, i = a.intent, w = game.world;
-    F5.t += dt;
-    a.inWater = false;
-    a.under = false;
-    a.depth = 0;
-    a.wading = 0;
-    if (a.alt == null) a.alt = feetOf(a, game);
-    if (a.flightOut || helpless(a) || a.status.grounded || S6.fruit && a.seastoned || w.zone === 2 || w.zone === 3) {
-      a.flightOut = false;
-      fall(a, game);
-      return;
-    }
-    const sea = overOpenSea(game, a.x, a.y);
-    const moving = Math.hypot(i.mx, i.my) > 0.1;
-    let rate = S6.drain;
-    if (i.sprint && moving) rate *= 1.7;
-    if (F5.lift > 0 || i.mz > 0 && !F5.tired) rate *= 1.3;
-    else if (i.mz < 0 || F5.landing || F5.tired) rate *= 0.5;
-    if (sea) rate *= S6.sea;
-    a.flightGauge = Math.max(0, (a.flightGauge ?? 1) - rate * dt / S6.gauge);
-    if (a.flightGauge <= 0 && !F5.tired) {
-      F5.tired = true;
-      a.flightTired = true;
-      if (a.isPlayer) game.log(sea ? "Your strength gives out over the open sea \u2014 you're coming down!" : "Your strength gives out \u2014 you're coming down.", "#ff8a80");
-    }
-    let sp = S6.speed * (i.sprint && !F5.tired ? 1.6 : 1) * (F5.tired ? 0.7 : 1);
-    if (a.action) sp *= a.action.def.moveMul ?? (a.action.def.m1Chain ? 0.6 : 0.4);
-    if (a.hitstun > 0) sp = 0;
-    if (a.status.slowmo) sp *= 0.2;
-    if (a.status.chill) sp *= 0.6;
-    if (a.zoneSlow) sp *= a.zoneSlow;
-    const k = Math.min(1, dt * 3.5);
-    const hv0 = Math.atan2(a.vy, a.vx), s0 = Math.hypot(a.vx, a.vy);
-    a.vx += (i.mx * sp - a.vx) * k;
-    a.vy += (i.my * sp - a.vy) * k;
-    let vx = a.vx, vy = a.vy;
-    if (a.dash) {
-      vx = a.dash.vx;
-      vy = a.dash.vy;
-      a.dash.t -= dt;
-      if (a.dash.t <= 0) {
-        a.dash = null;
-        a.vx *= 0.3;
-        a.vy *= 0.3;
-      }
-    }
-    vx += a.kb.x;
-    vy += a.kb.y;
-    const decay = Math.exp(-dt * 8);
-    a.kb.x *= decay;
-    a.kb.y *= decay;
-    if (Math.abs(a.kb.x) < 0.05) a.kb.x = 0;
-    if (Math.abs(a.kb.y) < 0.05) a.kb.y = 0;
-    let vz;
-    if (F5.lift > 0) {
-      F5.lift -= dt;
-      vz = S6.climb * 1.2;
-    } else if (F5.landing) vz = -S6.dive;
-    else if (F5.tired) vz = -3.5;
-    else vz = (i.mz || 0) * ((i.mz || 0) > 0 ? S6.climb : S6.dive);
-    const sw2 = swoopAlt(a, game);
-    if (sw2 !== null) vz = clamp2((sw2 - a.alt) * 6, -16, Math.max(vz, 3));
-    a.alt += vz * dt;
-    const n = Math.max(1, Math.ceil(Math.hypot(vx, vy) * dt / 0.25));
-    for (let s = 0; s < n; s++) {
-      const nx = w.wx(a.x + vx * dt / n), ny = a.y + vy * dt / n;
-      if (flyableAt(a, game, nx, a.y)) a.x = nx;
-      else {
-        a.vx *= 0.2;
-        a.kb.x *= -0.3;
-        if (a.dash) a.dash.vx = 0;
-      }
-      if (flyableAt(a, game, a.x, ny)) a.y = ny;
-      else {
-        a.vy *= 0.2;
-        a.kb.y *= -0.3;
-        if (a.dash) a.dash.vy = 0;
-      }
-    }
-    const g = groundBase(game, a.x, a.y);
-    const ceil = g + (sea ? SEA_CEILING : S6.ceiling);
-    if (a.alt > ceil) a.alt = Math.max(ceil, a.alt - 6 * dt);
-    const floor2 = floorUnder(a, game, a.x, a.y);
-    if (a.alt < floor2) a.alt = floor2;
-    a.z = a.alt - g;
-    const sp2 = Math.hypot(vx, vy);
-    a.flightSpeed = sp2;
-    a.flightClimb = vz;
-    const turn = s0 > 1 && sp2 > 1 ? angleDiff(hv0, Math.atan2(a.vy, a.vx)) / Math.max(dt, 1e-3) : 0;
-    a.flightBank = clamp2((a.flightBank || 0) + (clamp2(turn * 0.35, -1, 1) - (a.flightBank || 0)) * Math.min(1, dt * 5), -1, 1);
-    a.moving = sp2 > 0.4;
-    a.speed = sp2;
-    if (a.moving && !a.action && !a.isPlayer) a.facing += angleDiff(a.facing, Math.atan2(vy, vx)) * Math.min(1, dt * 8);
-    trailFx(a, game, S6, dt);
-    if (a.alt <= floor2 + 0.05 && vz <= 0 && F5.t > 0.3 && (F5.landing || F5.tired || (i.mz || 0) < 0)) land(a, game);
-  }
-  function swoopAlt(a, game) {
-    const act2 = a.action;
-    if (!act2) return null;
-    const def = act2.def;
-    const melee = (def.steps || []).some((s) => s.hit && s.hit.shape !== "line" && !s.proj || s.dash?.hit);
-    if (!melee || act2.t > (def.windup ?? 0.1) + 0.45) return null;
-    const t = act2.target && act2.target.alive !== void 0 && act2.target.state === "idle" ? act2.target : foeBelow(a, game);
-    if (!t) return a.dash?.dive ? groundBase(game, a.x, a.y) + 0.4 : null;
-    return feetOf(t, game) + 0.3;
-  }
-  function foeBelow(a, game) {
-    let best = null, bd = Infinity;
-    for (const e of game.actorsNear(a.x, a.y, 4.5)) {
-      if (e === a || e.state !== "idle" || !game.combat.canHit(a, e, { vx: 0 })) continue;
-      const dx = game.world.dx(a.x, e.x), dy = e.y - a.y;
-      if (Math.abs(angleDiff(a.facing, Math.atan2(dy, dx))) > 1.3) continue;
-      const d = Math.hypot(dx, dy);
-      if (d < bd) {
-        bd = d;
-        best = e;
-      }
-    }
-    return best;
-  }
-  function reachesUp(att, tgt, h2, game) {
-    if (!(att?.flying || tgt.flying)) return true;
-    if (h2.vx !== void 0 || h2.isProj || h2.shape === "line") return true;
-    const groundRef = h2.zone || h2.radial && !h2.follow;
-    const from = groundRef ? groundBase(game, h2.x ?? tgt.x, (h2.y ?? tgt.y) + 0.4) : feetOf(att, game);
-    const gap = Math.abs(from - feetOf(tgt, game));
-    const reach3 = h2.reachZ ?? (h2.radial || h2.shape === "circle" ? Math.max(2.4, (h2.range || 1) * 0.7) : 2.4);
-    return gap <= reach3 * Math.max(att?.look?.scale || 1, tgt.look?.scale || 1);
-  }
-  function refill(a, dt, game) {
-    if (a.flying || !(a.flightGauge < 1)) return;
-    if (a.inWater || (a.z || 0) > 0.05 || a.vz || a.state !== "idle") return;
-    const S6 = flightOf(a);
-    if (!S6) return;
-    a.flightGauge = Math.min(1, a.flightGauge + dt / S6.refill);
-  }
-  function geppoSteps(a) {
-    const t = a.techniques || [];
-    let n = 0;
-    if (t.includes("roku_geppo")) n = Math.max(n, 2 + Math.floor((a.masteries?.rokushiki || 0) / 35));
-    if (t.includes("bleg_skywalk")) n = Math.max(n, 2 + Math.floor((a.masteries?.black_leg || 0) / 35));
-    return n;
-  }
-  function airStep(a, game) {
-    const n = geppoSteps(a);
-    if (!n || a.flying || (a.airSteps || 0) >= n) return false;
-    if (a.state !== "idle" || helpless(a) || a.hitstun > 0 || a.inWater || a.climb || a.onShip) return false;
-    if (!((a.z || 0) > 0.35 || a.vz > 0.5)) return false;
-    const J = a.jumpStats();
-    a.vz = J.v * 0.9;
-    const l = Math.hypot(a.intent.mx, a.intent.my);
-    const dx = l > 0.2 ? a.intent.mx / l : Math.cos(a.facing), dy = l > 0.2 ? a.intent.my / l : Math.sin(a.facing);
-    a.dash = { vx: dx * 9, vy: dy * 9, t: 0.22, ignoreWater: true };
-    a.airSteps = (a.airSteps || 0) + 1;
-    a.flightStyle = "geppo";
-    a.airStepT = timeOf(game);
-    for (let k = 0; k < 2; k++) game.fx.add("ring", { x: a.x, y: a.y, r0: 0.1, r1: 0.7 + k * 0.3, color: "#ffffff", width: 0.07, life: 0.3, z: Math.max(0.05, a.z || 0), flat: 0.8, add: true, delay: k * 0.05 });
-    game.audio?.sfx("jump", a);
-    return true;
-  }
-  function takeoffFx(a, game, S6) {
-    const fx = game.fx, z = Math.max(0.05, a.z || 0);
-    fx.burst(a.x, a.y, 10, { color: ["#d7ccc8", "#efebe9"], speed: 3, g: 1.2, z, vz: 0.6, life: 0.5, kind: "dust", size: 0.2, grow: 0.4 });
-    fx.ring(a.x, a.y, 0.2, 1.6, S6.color || "#ffffff", 0.35, 0.1, { z, flat: 0.55, add: true });
-    const c = S6.color || "#ffffff";
-    if (S6.style === "phoenix") fx.burst(a.x, a.y, 18, { color: ["#4dd0e1", "#80deea", "#fff59d"], speed: 3, g: -1, z: z + 1, vz: 1.5, life: 0.7, kind: "fire", size: 0.2 });
-    else if (S6.style === "dragon") fx.burst(a.x, a.y, 14, { color: ["#eceff1", "#cfd8dc", "#ffffff"], speed: 3, g: 0, z: z + 0.3, life: 0.9, kind: "smoke", size: 0.5, grow: 0.6 });
-    else if (S6.style === "wings") fx.burst(a.x, a.y, 10, { color: ["#212121", "#37474f"], speed: 3, g: 2, z: z + 1.2, vz: 1, life: 0.8, kind: "leaf", size: 0.12 });
-    else fx.burst(a.x, a.y, 12, { color: [c, "#ffffff"], speed: 2.5, g: 0, z: z + 0.2, life: 0.6, kind: S6.ride === "light" ? "glow" : S6.ride === "sand" ? "sand" : "smoke", size: 0.3, grow: 0.3 });
-  }
-  function trailFx(a, game, S6, dt) {
-    const p = game.player;
-    if (!p || a !== p && game.world.dist2(a.x, a.y, p.x, p.y) > 40 * 40) return;
-    a._flyFxT = (a._flyFxT || 0) - dt;
-    if (a._flyFxT > 0) return;
-    a._flyFxT = 0.05;
-    const fx = game.fx, z = a.z || 0, r4 = () => Math.random() - 0.5;
-    const back = { vx: -(a.vx || 0) * 0.25, vy: -(a.vy || 0) * 0.25 };
-    switch (S6.style) {
-      case "phoenix":
-        for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 1.4, y: a.y + r4() * 0.6, z: z + 1.1 + r4() * 0.5, ...back, vz: 0.5, g: -0.6, life: 0.5, size: 0.16, grow: -0.12, color: ["#4dd0e1", "#80deea", "#26c6da", "#fff59d"][k + (Math.random() < 0.5 ? 0 : 2)], kind: "fire" });
-        break;
-      case "dragon":
-        fx.particle({ x: a.x + r4() * 1.6, y: a.y + r4() * 0.8, z: z + 0.1, ...back, vz: -0.2, g: 0, life: 1.1, size: 0.45, grow: 0.5, color: Math.random() < 0.5 ? "#eceff1" : "#cfd8dc", kind: "smoke" });
-        if (Math.random() < 0.08) fx.burst(a.x, a.y, 3, { color: "#90caf9", speed: 3, g: 0, z: z + 1, life: 0.15, kind: "line", size: 0.05 });
-        break;
-      case "wings":
-        if (Math.random() < 0.25) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.4, z: z + 1.3, ...back, vz: -0.3, g: 0.6, life: 1.2, size: 0.1, color: "#212121", kind: "leaf", rot: Math.random() * TAU, vr: r4() * 6 });
-        break;
-      case "ride":
-        fx.particle({ x: a.x + r4() * 0.6, y: a.y + r4() * 0.4, z: Math.max(0, z - 0.15), ...back, vz: -0.4, g: 0, life: 0.8, size: S6.ride === "rock" ? 0.12 : 0.35, grow: S6.ride === "rock" ? 0 : 0.4, color: S6.color || "#eceff1", kind: S6.ride === "sand" ? "sand" : S6.ride === "rock" ? "dust" : "smoke" });
-        break;
-      case "float":
-        if (S6.ride === "strings") for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.5, y: a.y + r4() * 0.25, z: z + 1.4, vx: 0, vy: 0, vz: 12, g: 0, life: 0.4, size: 0.05, color: "#f8bbd0", kind: "line" });
-        else for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.5, z: z + 0.4 + Math.random(), ...back, vz: 0.2, g: 0, life: 0.45, size: 0.2, color: k ? "#ffffff" : S6.color || "#fff59d", kind: "glow" });
-        break;
-      default:
-        break;
-    }
-  }
-  function aiFlight(a, ctl, t, dist, game, sorties = false) {
-    if (!a.flying) a.intent.mz = 0;
-    const S6 = flightOf(a);
-    if (!S6) return;
-    const now3 = game.time || 0;
-    if (!a.flying) {
-      if (ctl.flyNext === void 0) ctl.flyNext = now3 + 6 + Math.random() * 8;
-      const above = !!t.flying && feetOf(t, game) - feetOf(a, game) > 2.2;
-      const sortie = a.boss && sorties && now3 >= ctl.flyNext && dist < 14;
-      if ((above || sortie) && !cantTakeOff(a, game)) {
-        takeOff(a, game);
-        ctl.flyChase = above;
-        ctl.flyUntil = now3 + (above ? 30 : 5 + Math.random() * 3);
-        ctl.flyNext = now3 + 16 + Math.random() * 10;
-      }
-      return;
-    }
-    if (!a.flight) return;
-    if (a.flightGauge < 0.2 || now3 > (ctl.flyUntil ?? 0) && !t.flying || ctl.flyChase && !t.flying) a.flight.landing = true;
-    const want = t.flying ? feetOf(t, game) : feetOf(t, game) + (a.flight.landing ? 0 : 4.5);
-    a.intent.mz = clamp2((want - a.alt) / 2, -1, 1);
-  }
-
-  // src/game/room.js
-  function inRoom(game, z, x, y, pad2 = 0) {
-    return !!z && z.t > 0 && game.world.distance(z.x, z.y, x, y) <= z.r + pad2;
-  }
-  function ownRoom(actor, game = actor?.game) {
-    const zs = game?.areaZones;
-    if (!zs || !zs.length || !actor) return null;
-    for (const z of zs) {
-      if (z.kind !== "room" || z.owner !== actor || !(z.t > 0)) continue;
-      if (game.world.distance(z.x, z.y, actor.x, actor.y) <= z.r) return z;
-    }
-    return null;
-  }
-  function roomFollows(z) {
-    const o = z?.owner;
-    return !!o && z.kind === "room" && o.alive !== false && (o.buffs || []).some((b) => b.form === "awake");
-  }
-  function movable(e, actor) {
-    return e !== actor && e.alive !== false && e.state !== "dead" && !e.hidden && !e.onShip && !e.climb && !e.invulnerable && !e.seaCreature && (e.deck?.ship || null) === (actor.deck?.ship || null);
-  }
-  function shambles(actor, p, game, a, s) {
-    const z = a.room || ownRoom(actor, game);
-    if (!z) return;
-    const w = game.world;
-    let who = a.target && a.target.alive !== void 0 && movable(a.target, actor) && inRoom(game, z, a.target.x, a.target.y) ? a.target : null;
-    if (!who && a.tx !== void 0) {
-      let bd = 2.2 * 2.2;
-      for (const e of game.actorsNear(a.tx, a.ty, 2.2)) {
-        if (!movable(e, actor) || !inRoom(game, z, e.x, e.y)) continue;
-        const d = w.dist2(a.tx, a.ty, e.x, e.y);
-        if (d < bd) {
-          bd = d;
-          who = e;
-        }
-      }
-    }
-    const x0 = actor.x, y0 = actor.y;
-    if (who) {
-      actor.x = who.x;
-      actor.y = who.y;
-      who.x = x0;
-      who.y = y0;
-      if (game.combat.canHit(actor, who, {})) {
-        who.stagger(who.boss ? 0.2 : 0.4);
-        who.facing = Math.atan2(actor.y - who.y, w.dx(who.x, actor.x));
-      }
-      actor.facing = Math.atan2(who.y - actor.y, w.dx(actor.x, who.x));
-      if (who.lastG !== void 0) who.lastG = null;
-    } else {
-      let tx = a.tx ?? actor.x + Math.cos(a.angle) * 5, ty = a.ty ?? actor.y + Math.sin(a.angle) * 5;
-      const dx = w.dx(z.x, tx), dy = ty - z.y, d = Math.hypot(dx, dy), lim = Math.max(0.5, z.r - 0.6);
-      if (d > lim) {
-        tx = w.wx(z.x + dx / d * lim);
-        ty = z.y + dy / d * lim;
-      }
-      const free = (x, y) => actor.flying ? flyableAt(actor, game, x, y) : actor.canOccupy(w, x, y);
-      const bx = w.dx(tx, actor.x), by = actor.y - ty;
-      for (let k = 0; k <= 16; k++) {
-        const x = w.wx(tx + bx * (k / 16)), y = ty + by * (k / 16);
-        if (free(x, y)) {
-          actor.x = x;
-          actor.y = y;
-          break;
-        }
-      }
-    }
-    actor.lastG = null;
-    actor.iframes = Math.max(actor.iframes, 0.2);
-    game.fx.tech(actor, s, a, "power", { x0, y0, swapped: who, room: z });
-    game.audio?.sfx("whoosh", actor);
-  }
-  function takt(actor, p, game, a, s) {
-    const z = a.room || ownRoom(actor, game);
-    if (!z) return;
-    const lifted = [];
-    for (const e of game.actorsNear(z.x, z.y, z.r + 1)) {
-      if (e === actor || !inRoom(game, z, e.x, e.y) || !game.combat.canHit(actor, e, { room: z })) continue;
-      if (e.state !== "idle" || e.inWater || e.flying || e.onShip || e.climb || e.lift) continue;
-      startLift(e, actor, game, { h: p.h ?? 2.6, hold: p.hold ?? 1.1, damage: (p.damage || 20) * a.mult, def: a.def });
-      lifted.push(e);
-    }
-    game.fx.tech(actor, s, a, "power", { room: z, lifted });
-    if (actor.isPlayer && !lifted.length) game.fx.text(actor.x, actor.y - 1.8, "Nobody in the Room", "#81d4fa", 0.3);
-  }
-  function startLift(e, owner, game, o) {
-    let hold = o.hold * (e.boss ? 0.6 : 1);
-    if (e.isPlayer) hold = Math.min(hold, 0.9);
-    e.lift = { t: 0, hold, h: o.h * (e.boss ? 0.7 : 1), damage: o.damage, owner, def: o.def, slam: false };
-    e.addStatus("lifted", hold + 0.8, owner);
-    e.action = null;
-    e.blocking = false;
-    e.dash = null;
-    e.charging = 0;
-    e.kb.x = 0;
-    e.kb.y = 0;
-  }
-  function updateLift(e, dt, game) {
-    const L3 = e.lift;
-    if (!L3) return;
-    if (e.state !== "idle" || e.alive === false || e.inWater || e.flying) {
-      e.lift = null;
-      delete e.status.lifted;
-      return;
-    }
-    L3.t += dt;
-    if (L3.cube) L3.cube.z = (e.z || 0) + 0.9;
-    if (!L3.slam) {
-      const k = Math.min(1, L3.t / 0.35);
-      e.z = L3.h * (1 - (1 - k) * (1 - k));
-      e.vz = 0;
-      e.vx = 0;
-      e.vy = 0;
-      e.kb.x = 0;
-      e.kb.y = 0;
-      e.airT = 0.1;
-      if (L3.t >= L3.hold) {
-        L3.slam = true;
-        e.vz = -20;
-      }
-      return;
-    }
-    if ((e.z || 0) > 0.02 || e.vz) return;
-    e.lift = null;
-    delete e.status.lifted;
-    if (!L3.owner || L3.owner.alive === false || L3.owner.state !== "idle") return;
-    game.combat.applyHit(L3.owner, e, {
-      owner: L3.owner,
-      x: e.x,
-      y: e.y - 0.4,
-      shape: "circle",
-      range: 0.5,
-      damage: L3.damage,
-      knockback: 1.5,
-      stun: 0.7,
-      heavy: true,
-      unblockable: true,
-      radial: true,
-      def: L3.def,
-      ignoreLogia: true,
-      element: "physical",
-      critChance: 0,
-      impactFrame: false
-    });
-    game.fx.ring(e.x, e.y, 0.2, 1.6, "#e1f5fe", 0.4, 0.14, { z: 0.05, flat: 0.6, add: true });
-    game.fx.crack(e.x, e.y, 1.1, 1.6);
-    game.fx.burst(e.x, e.y, 10, { color: ["#d7ccc8", "#efebe9"], speed: 3, g: 1.2, z: 0.1, vz: 0.8, life: 0.5, kind: "dust", size: 0.2, grow: 0.4 });
-    if (e.isPlayer || L3.owner.isPlayer) game.fx.shake(0.3);
-  }
-
-  // src/game/powers.js
-  function release(actor, p, game, a, s) {
-    const store = Math.min(p.cap ?? 220, actor.absorbed || 0);
-    actor.absorbed = 0;
-    if (store <= 0) return;
-    game.combat.hitbox({
-      owner: actor,
-      x: actor.x,
-      y: actor.y - 0.4,
-      shape: "circle",
-      range: p.range || 5,
-      damage: store * (p.mul ?? 1.2) * (a.mult || 1),
-      knockback: 10,
-      stun: 0.6,
-      element: "dark",
-      heavy: true,
-      radial: true,
-      duration: 0.1,
-      def: a.def,
-      blast: true
-    });
-    game.fx.tech(actor, s, a, "power", { store });
-    if (actor.isPlayer) game.fx.text(actor.x, actor.y - 2, "LIBERATION!", "#b388ff", 0.45);
-  }
-  var POWERS = { shambles, takt, release };
-  function iceAt(game, x, y) {
-    const zs = game?.areaZones;
-    if (!zs || !zs.length) return false;
-    for (const z of zs) if (z.freezeWater && z.t > 0 && game.world.distance(z.x, z.y, x, y) <= z.r) return true;
-    return false;
-  }
-  function zoneRules(game, z, dt) {
-    const o = z.owner;
-    if (z.whileOwner && (!o || o.alive === false || o.state !== "idle" || o.inWater)) {
-      z.t = 0;
-      return;
-    }
-    if (z.kind === "room" && roomFollows(z)) {
-      z.x = o.x;
-      z.y = o.y;
-    }
-    if (z.shrink) {
-      z.r0 = z.r0 ?? z.r;
-      z.r = z.r0 * (1 - z.shrink * (1 - Math.max(0, z.t) / Math.max(0.01, z.t0)));
-      if (z.shape) z.shape.r = z.r;
-    }
-    if (z.cage) {
-      const w = game.world;
-      z.held = z.held || /* @__PURE__ */ new Set();
-      for (const a of game.actorsNear(z.x, z.y, z.r)) if (a !== o && a.state !== "dead" && game.combat.canHit(o, a, {})) z.held.add(a);
-      for (const a of z.held) {
-        if (!a.alive || a.state === "dead") {
-          z.held.delete(a);
-          continue;
-        }
-        const dx = w.dx(z.x, a.x), dy = a.y - z.y, d = Math.hypot(dx, dy);
-        const lim = Math.max(0.3, z.r - (a.r || 0.3) - 0.05);
-        if (d > lim) {
-          const k = lim / (d || 1);
-          a.x = w.wx(z.x + dx * k);
-          a.y = z.y + dy * k;
-          a.kb.x *= -0.2;
-          a.kb.y *= -0.2;
-          if (a.dash) a.dash = null;
-          if (a.flying) a.flightOut = true;
-        }
-      }
-    }
-    if (z.grounds) {
-      for (const a of game.actorsNear(z.x, z.y, z.r)) if (a.flying && a.flight && game.combat.canHit(o, a, {})) a.flightOut = true;
-    }
-  }
-  function reflectShot(game, p, actors) {
-    if ((p.reflected || 0) >= 3 || !p.owner) return false;
-    const w = game.world;
-    for (const a of actors) {
-      if (a === p.owner || !a.alive || a.state !== "idle") continue;
-      const R5 = reflectRadius(a);
-      if (!R5 || w.dist2(p.x, p.y, a.x, a.y - 0.5) > R5 * R5) continue;
-      if (!game.combat.canHit(p.owner, a, p)) continue;
-      const back = p.owner, sp = Math.hypot(p.vx, p.vy) * 1.1;
-      const ang = back.alive !== false ? Math.atan2(back.y - 0.5 - p.y, w.dx(p.x, back.x)) : Math.atan2(-p.vy, -p.vx);
-      p.vx = Math.cos(ang) * sp;
-      p.vy = Math.sin(ang) * sp;
-      p.owner = a;
-      p.target = back;
-      p.hit = /* @__PURE__ */ new Set();
-      p.traveled = 0;
-      p.t = 0;
-      p.range = Math.max(p.range, w.distance(p.x, p.y, back.x, back.y) + 3);
-      p.reflected = (p.reflected || 0) + 1;
-      p.cued = true;
-      game.fx.ring(p.x, p.y, 0.1, 1.2, "#ffffff", 0.25, 0.08, { z: 0.9, add: true });
-      game.fx.text(a.x, a.y - 1.6, a.buffs.find((b) => b.reflect)?.reflectWord || "REPEL!", "#ffffff", 0.32);
-      game.audio?.sfx("parry", a);
-      return true;
-    }
-    return false;
-  }
-  function reflectRadius(a) {
-    let R5 = 0;
-    for (const b of a.buffs || []) if (b.reflect) R5 = Math.max(R5, b.reflect);
-    return R5;
-  }
-  function absorbShot(game, p) {
-    const zs = game.areaZones;
-    if (!zs || !zs.length) return false;
-    for (const z of zs) {
-      if (!z.absorb || !(z.t > 0) || z.owner === p.owner || !z.owner) continue;
-      if (game.world.distance(z.x, z.y, p.x, p.y) > z.r) continue;
-      z.owner.absorbed = Math.min(400, (z.owner.absorbed || 0) + (p.damage || 0) * 0.6);
-      p.onEnd = null;
-      game.fx.burst(p.x, p.y + 0.5, 6, { color: ["#12001c", "#311b92", "#7e57c2"], speed: 2, g: 0, z: 0.9, life: 0.35, kind: "smoke", size: 0.2 });
-      return true;
-    }
-    return false;
-  }
-  function barrierStops(game, tgt, att, h2) {
-    const b = (tgt.buffs || []).find((x) => x.barrier);
-    if (!b || h2.trueDamage) return false;
-    if (b.barrier === "all") return true;
-    const w = game.world;
-    let from;
-    if (h2.vx !== void 0) from = Math.atan2(-h2.vy, -h2.vx);
-    else if (h2.radial && !h2.follow) from = Math.atan2(h2.y + 0.4 - tgt.y, w.dx(tgt.x, h2.x));
-    else if (att) from = Math.atan2(att.y - tgt.y, w.dx(tgt.x, att.x));
-    else return false;
-    return Math.abs(angleDiff(tgt.facing, from)) < 1.75;
-  }
-  function statusFx(game, a, k, dur, src) {
-    const fx = game?.fx;
-    if (!fx) return;
-    const l = a._lastLook || a.look || {};
-    if (k === "pieces") {
-      fx.add("pieces", { x: a.x, y: a.y, follow: a, r: 0.75 * (l.scale || 1), skin: l.skin, top: l.top, bottom: l.bottom, life: dur });
-      fx.burst(a.x, a.y, 8, { color: ["#e1f5fe", "#81d4fa"], speed: 3, g: 0, z: 0.9, life: 0.3, kind: "line", size: 0.06 });
-    } else if (k === "heartless" && src) {
-      fx.add("cube", { x: src.x, y: src.y, follow: src, ox: Math.cos(src.facing || 0) * 0.45, oy: Math.sin(src.facing || 0) * 0.3, z: 1.15, size: 0.22, color: "#81d4fa", heart: true, life: dur, spin: 0.8 });
-      fx.text(a.x, a.y - 1.8, "MES", "#81d4fa", 0.34);
-    } else if (k === "puppet" && src) {
-      fx.add("strings", { x: src.x, y: src.y, x1: a.x, y1: a.y, color: "#f8bbd0", n: 5, life: Math.min(dur, 2.5) });
-    } else if (k === "shadowless") {
-      fx.burst(a.x, a.y, 10, { color: ["#263238", "#000000"], speed: 1.5, g: 0, z: 0.2, life: 0.6, kind: "smoke", size: 0.25 });
-    }
-  }
-
-  // src/game/racial.js
-  var SULONG = {
-    id: "sulong",
-    name: "Sulong",
-    dur: 25,
-    mods: { damage: 1.8, speedMul: 1.35, defMul: 0.8, atkSpeed: 1.2 },
-    aura: "rgba(255,255,255,0.95)",
-    look: { furWhite: true },
-    after: { id: "sulong_spent", name: "Spent", dur: 12, mods: { speedMul: 0.85, atkSpeed: 0.85 } }
-  };
-  var RELIGHT = 6;
-  function raceHit(att, tgt, h2, game) {
-    if (!att || !h2 || tgt.state !== "idle") return;
-    const bare = !h2.element || h2.element === "physical";
-    const blow = h2.vx === void 0 && !h2.blast;
-    if (att.race === "mink" && bare && blow && h2.def?.m1Chain && !att.inWater && Math.random() < 0.3) {
-      tgt.addStatus("shock", 0.5, att);
-      game.fx.burst(tgt.x, tgt.y, 5, { color: ["#fff176", "#ffffff"], speed: 3, g: 0, z: 0.9, life: 0.18, kind: "line", size: 0.05 });
-    }
-    if (att.race === "lunarian" && att.flameLit !== false && bare && blow && !att.inWater && Math.random() < 0.25) {
-      tgt.addStatus("burn", 2, att);
-      game.fx.burst(tgt.x, tgt.y, 6, { color: ["#ff7043", "#ffca28"], speed: 1.5, g: -1, z: 0.9, vz: 1.5, life: 0.4, kind: "fire", size: 0.16 });
-    }
-  }
-  function raceTick(a, dt, game) {
-    if (a.race === "lunarian") {
-      if (a.inWater || a.status?.wet) {
-        if (a.flameLit !== false) {
-          a.flameLit = false;
-          game.fx.burst(a.x, a.y, 8, { color: ["#eceff1", "#cfd8dc"], speed: 1.2, g: -1, z: 1.4, vz: 1, life: 0.6, kind: "smoke", size: 0.25 });
-          if (a.isPlayer) game.log("Your flame goes out \u2014 nothing shields you now.", "#90a4ae");
-        }
-        a.relightT = RELIGHT;
-      } else if (a.flameLit === false) {
-        a.relightT = (a.relightT ?? RELIGHT) - dt;
-        if (a.relightT <= 0) {
-          a.flameLit = true;
-          game.fx.burst(a.x, a.y, 10, { color: ["#ff7043", "#ffca28", "#ffffff"], speed: 2, g: -1.5, z: 1.4, vz: 2, life: 0.6, kind: "fire", size: 0.2 });
-          if (a.isPlayer) game.log("Your flame lights again.", "#ffab91");
-        }
-      }
-    }
-    if (a.race === "mink") sulongCheck(a, game);
-  }
-  function sulongCheck(a, game) {
-    const env2 = game.env;
-    if (!env2?.fullMoon || !env2.isNight || a.state !== "idle" || a.hasBuff("sulong") || a.hasBuff("sulong_spent")) return;
-    if (a.sulongNight === env2.day) return;
-    const w = game.world;
-    if (w.zone === 2 || w.zone === 3 || w.interiorAt?.(a.x, a.y) || a.inWater) return;
-    const fighting = a.isPlayer ? !!a.inCombat : !!a.controller?.target;
-    if (!fighting) return;
-    a.sulongNight = env2.day;
-    a.addBuff({ ...SULONG, source: "race:mink" });
-    game.fx.ring(a.x, a.y, 0.3, 3, "#ffffff", 0.6, 0.2, { add: true });
-    game.fx.callout(a.x, a.y - 2.2, "SULONG!", "#ffffff", 0.5, { life: 1.2 });
-    game.fx.flashScreen?.(0.15, "rgba(255,255,255,1)");
-    if (a.isPlayer) game.log("You look up at the full moon... your blood boils. SULONG!", "#ffffff");
-  }
-  var unshakable = (a) => !!a.poise || a.race === "buccaneer";
-  var kbFrame = (a) => a.race === "buccaneer" ? 0.7 : 1;
-
-  // src/game/haki.js
-  var CONQUEROR_COLOURS = [
-    { id: "crimson", name: "Crimson", hex: "#ff1a3c", w: 28 },
-    { id: "violet", name: "Violet", hex: "#a64dff", w: 15 },
-    { id: "gold", name: "Gold", hex: "#ffc21a", w: 10 },
-    { id: "azure", name: "Azure", hex: "#2e8bff", w: 10 },
-    { id: "amber", name: "Amber", hex: "#ff7417", w: 9 },
-    { id: "rose", name: "Rose", hex: "#ff4fa8", w: 8 },
-    { id: "emerald", name: "Emerald", hex: "#17e07c", w: 8 },
-    { id: "white", name: "White", hex: "#eef4ff", w: 6 },
-    { id: "cyan", name: "Cyan", hex: "#21e3f0", w: 6 }
-  ];
-  var OBSERVATION_TINTS = [
-    { id: "lilac", name: "Lilac", hex: "#d9b8ff" },
-    { id: "ice", name: "Ice", hex: "#b8ecff" },
-    { id: "mint", name: "Mint", hex: "#bfffe0" },
-    { id: "pearl", name: "Pearl", hex: "#f2f0ff" },
-    { id: "blush", name: "Blush", hex: "#ffc9e2" },
-    { id: "honey", name: "Honey", hex: "#fff0b8" }
-  ];
-  var ARMAMENT_SHEENS = [
-    { id: "violet", name: "Violet sheen", hex: "#9d8cff" },
-    { id: "steel", name: "Steel sheen", hex: "#8fb8ff" },
-    { id: "bronze", name: "Bronze sheen", hex: "#ffc78a" },
-    { id: "jade", name: "Jade sheen", hex: "#9dffd6" },
-    { id: "silver", name: "Silver sheen", hex: "#e8ecf5" },
-    { id: "wine", name: "Wine sheen", hex: "#ff8aa8" }
-  ];
-  var pickW = (rng4, list) => {
-    let t = 0;
-    for (const c of list) t += c.w || 1;
-    let r4 = rng4.next() * t;
-    for (const c of list) if ((r4 -= c.w || 1) < 0) return c;
-    return list[list.length - 1];
-  };
-  function hakiSignature(seed) {
-    const rng4 = new RNG(`${seed}:haki`);
-    const conqueror = pickW(rng4, CONQUEROR_COLOURS).hex;
-    const observation = OBSERVATION_TINTS[Math.floor(rng4.next() * OBSERVATION_TINTS.length)].hex;
-    const armament = ARMAMENT_SHEENS[Math.floor(rng4.next() * ARMAMENT_SHEENS.length)].hex;
-    const voice = Math.round(rng4.next() * 1e3) / 1e3;
-    return { conqueror, observation, armament, voice };
-  }
-  function charSignature(c) {
-    if (!c) return hakiSignature("nobody");
-    return c.hakiSig || hakiSignature(c.runSeed ?? hashString(String(c.id || c.name || "nobody")));
-  }
-  function npcHakiSig(def) {
-    const base2 = hakiSignature(def?.id || def?.name || "npc");
-    return def?.hakiSig ? { ...base2, ...def.hakiSig } : base2;
-  }
-  var FALLBACK = /* @__PURE__ */ new WeakMap();
-  function sigOf(a) {
-    if (!a) return hakiSignature("nobody");
-    if (a.hakiSig) return a.hakiSig;
-    let s = FALLBACK.get(a);
-    if (!s) {
-      s = hakiSignature(a.npcId || a.name || "someone");
-      FALLBACK.set(a, s);
-    }
-    return s;
-  }
-  function colourName(hex3) {
-    const h2 = String(hex3 || "").toLowerCase();
-    for (const L3 of [CONQUEROR_COLOURS, OBSERVATION_TINTS, ARMAMENT_SHEENS]) for (const c of L3) if (c.hex === h2) return c.name;
-    return h2;
-  }
-  function infusedAura(a) {
-    const h2 = sigOf(a).conqueror, n = parseInt(h2.slice(1), 16);
-    return `rgba(${Math.round((n >> 16 & 255) * 0.32)},${Math.round((n >> 8 & 255) * 0.32)},${Math.round((n & 255) * 0.32)},0.85)`;
-  }
-  function armamentReach(lvl) {
-    const L3 = Math.max(0, lvl || 0);
-    if (L3 <= 0) return 0;
-    if (L3 < 15) return 0.2;
-    if (L3 < 40) return 0.2 + (L3 - 15) / 25 * 0.36;
-    return Math.min(1.02, 0.56 + (L3 - 40) / 30 * 0.46);
-  }
-  var COAT = { spread: 0.3, fall: 0.16 };
-  function hardening(lvl) {
-    return Math.min(0.4, 0.12 + (lvl || 0) * 3e-3);
-  }
-  var RYOU = { level: 60, internal: 0.15, guard: 0.55 };
-  function hasRyou(a) {
-    return !!(a && a.armament && (a.hakiLevel?.("armament") || 0) >= RYOU.level);
-  }
-  function senseRange(lvl) {
-    return 14 + Math.min(100, lvl || 0) * 0.16;
-  }
-  var FUTURE_SIGHT = 65;
-  var KING = { base: 0.04, withD: 0.4, bloodline: 4 };
-  function kingChance(hasD, bloodline) {
-    return Math.min(1, (hasD ? KING.withD : KING.base) * (bloodline ? KING.bloodline : 1));
-  }
-  function clashes(a, b, dist, range) {
-    if (!a || !b || a === b) return false;
-    if (!((a.hakiLevel?.("conqueror") || 0) > 0 && (b.hakiLevel?.("conqueror") || 0) > 0)) return false;
-    if (b.state && b.state !== "idle") return false;
-    if (!(a.isPlayer || a.boss) || !(b.isPlayer || b.boss)) return false;
-    return dist <= range;
-  }
-  var HAKI_HOW = {
-    armament: "Hardened in hard fights (Strength 22+, or weapon mastery 35+) \u2014 or taught by a Haki master.",
-    observation: "Sharpened by dodging danger (Agility 22+, or many dodges) \u2014 or taught.",
-    conqueror: "Cannot be taught. One in millions is born with the qualities of a king; if it's in you, it wakes the day your will is truly tested."
-  };
-
-  // src/game/combat.js
-  var ELEMENT_COLORS = {
-    physical: "#ffffff",
-    fire: "#ff7b39",
-    ice: "#9be7ff",
-    lightning: "#fff176",
-    sand: "#e1c16e",
-    smoke: "#cfd8dc",
-    light: "#fff9c4",
-    magma: "#ff5722",
-    dark: "#7e57c2",
-    quake: "#e0f7fa",
-    poison: "#aed581",
-    water: "#4fc3f7",
-    haki: "#9c27b0",
-    slash: "#ecf0f1",
-    explosion: "#ffab40",
-    gas: "#b2dfdb",
-    string: "#f8bbd0",
-    wax: "#fff8e1",
-    snow: "#ffffff",
-    swamp: "#6d4c41"
-  };
-  var FLURRY_GAP = 0.8;
-  var BREAK_IFRAMES = 0.6;
-  function parryWindow(game, att, tgt) {
-    const T5 = tierOf(game, tgt);
-    const ratio = att?.power && tgt.power ? att.power() / Math.max(1, tgt.power()) : 1;
-    const k = clamp2(1.1 - 0.1 * ratio, 0.85, 1.1);
-    return { window: T5.parry * k + (tgt.observation ? PARRY.observation : 0), perfect: T5.perfect };
-  }
-  function blowWeight(att, tgt, h2, final, crit, counter2) {
-    const def = h2.def || (att && att.action ? att.action.def : null);
-    const m12 = !!(def && def.m1Chain && !h2.sprite);
-    let w = m12 ? 0.22 : h2.sprite ? 0.35 : 0.45;
-    if (m12 && (h2.knockback ?? 0) >= 3.2) w = 0.52;
-    if (h2.heavy) w = Math.max(w, 0.72);
-    if (h2.guardBreak) w += 0.06;
-    if (h2.impactFrame) w = Math.max(w, 1);
-    const maxHp = tgt.d ? tgt.d.maxHp : 100;
-    w += Math.min(0.3, final / maxHp * 1.2);
-    if (crit) w += 0.22;
-    if (h2.interval) w *= 0.55;
-    w = Math.min(1.25, w);
-    return counter2 ? Math.min(1.5, w + 0.3) : w;
-  }
-  var Combat = class {
-    constructor(game) {
-      this.game = game;
-      this.hitboxes = [];
-      this.projectiles = [];
-    }
-    /** Register a hitbox that lives for `duration` seconds and hits each target once. */
-    hitbox(h2) {
-      h2.t = 0;
-      h2.duration = h2.duration ?? 0.1;
-      h2.hit = h2.hit || /* @__PURE__ */ new Set();
-      h2.interval = h2.interval || 0;
-      h2.lastHit = /* @__PURE__ */ new Map();
-      this.hitboxes.push(h2);
-      return h2;
-    }
-    projectile(p) {
-      p.t = 0;
-      p.hit = /* @__PURE__ */ new Set();
-      p.alive = true;
-      p.traveled = 0;
-      this.projectiles.push(p);
-      return p;
-    }
-    /** Stop whatever of `a`'s blows are still swinging (a parried move: the rest of it never lands). */
-    cancelBlows(a) {
-      for (const h2 of this.hitboxes) if (h2.owner === a && !h2.blast) h2.cancelled = true;
-    }
-    update(dt) {
-      const game = this.game;
-      const actors = game.actorsNear(game.player ? game.player.x : 0, game.player ? game.player.y : 0, 60);
-      for (let i = this.hitboxes.length - 1; i >= 0; i--) {
-        const h2 = this.hitboxes[i];
-        if (h2.cancelled) {
-          this.hitboxes.splice(i, 1);
-          continue;
-        }
-        h2.t += dt;
-        if (h2.follow && h2.owner && h2.owner.alive) {
-          h2.x = h2.owner.x + (h2.offX || 0);
-          h2.y = h2.owner.y + (h2.offY || 0);
-          if (h2.followAngle) h2.angle = h2.owner.facing;
-        }
-        for (const a of actors) {
-          if (h2.cancelled) break;
-          if (!this.canHit(h2.owner, a, h2)) continue;
-          if (!this.overlaps(h2, a)) continue;
-          if (h2.interval) {
-            const last = h2.lastHit.get(a.id);
-            if (last !== void 0 && h2.t - last < h2.interval) continue;
-            h2.lastHit.set(a.id, h2.t);
-          } else {
-            if (h2.hit.has(a.id)) continue;
-            h2.hit.add(a.id);
-          }
-          this.applyHit(h2.owner, a, h2);
-        }
-        if (h2.hitShips && !h2.cancelled) this.hitShips(h2);
-        if (h2.t >= h2.duration) this.hitboxes.splice(i, 1);
-      }
-      for (let i = this.projectiles.length - 1; i >= 0; i--) {
-        const p = this.projectiles[i];
-        p.t += dt;
-        if (p.homing && p.target && p.target.alive) {
-          const want = Math.atan2(p.target.y - p.y, game.world.dx(p.x, p.target.x));
-          const cur = Math.atan2(p.vy, p.vx);
-          const na = cur + clamp2(angleDiff(cur, want), -p.homing * dt, p.homing * dt);
-          const sp = Math.hypot(p.vx, p.vy);
-          p.vx = Math.cos(na) * sp;
-          p.vy = Math.sin(na) * sp;
-        }
-        const sx = p.vx * dt, sy = p.vy * dt;
-        p.x = game.world.wx(p.x + sx);
-        p.y += sy;
-        p.traveled += Math.hypot(sx, sy);
-        if (p.trail) p.trail(p, game);
-        if (p.isProj && !p.cued) this.shotGlint(p);
-        let dead = p.traveled >= p.range || p.t > (p.life ?? 6);
-        if (!p.passWalls && !dead) {
-          const t = game.world.type(p.x, p.y);
-          if (game.world.solid(p.x, p.y) || game.world.hitsProp(p.x, p.y, 0.04, true) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
-        }
-        if (!dead && game.areaZones?.length && absorbShot(game, p)) dead = true;
-        if (!dead) reflectShot(game, p, actors);
-        if (!dead) {
-          for (const a of actors) {
-            if (p.hit.has(a.id) || !this.canHit(p.owner, a, p)) continue;
-            if (game.world.dist2(p.x, p.y, a.x, a.y - 0.5) > (p.radius + a.r + 0.2) ** 2) continue;
-            p.hit.add(a.id);
-            p.angle = Math.atan2(p.vy, p.vx);
-            this.applyHit(p.owner, a, p);
-            if (!p.pierce || p.stopped) {
-              dead = true;
-              break;
-            }
-          }
-          if (p.hitShips && !dead) {
-            for (const s of game.ships) {
-              if (s === p.ownerShip || s.sunk) continue;
-              const on = s.def.length >= BIG_SHIP ? hullGap(s, game.world.dx(s.x, p.x), p.y - s.y) < 0.5 + (p.radius || 0.3) : game.world.dist2(p.x, p.y, s.x, s.y) < (s.def.length * 0.45) ** 2;
-              if (on) {
-                s.damage(p.shipDamage ?? p.damage, p.owner, p);
-                dead = true;
-                break;
-              }
-            }
-          }
-        }
-        if (dead) {
-          p.alive = false;
-          if (p.onEnd) p.onEnd(p, game);
-          this.projectiles.splice(i, 1);
-        }
-      }
-    }
-    /**
-     * A foe's shot about to reach you while you hold a sword: a glint on it,
-     * a tier's cueLead before it gets to you — the moment to turn it aside.
-     */
-    shotGlint(p) {
-      const game = this.game, pl = game.player, o = p.owner;
-      if (!pl || !o || o.isPlayer || o.faction === "player" || p.explodes || p.unblockable || pl.state !== "idle") return;
-      if (!pl.hasWeapon?.("sword") || !this.canHit(o, pl, p)) return;
-      const dx = game.world.dx(p.x, pl.x), dy = pl.y - 0.5 - p.y, d = Math.hypot(dx, dy);
-      const sp = Math.hypot(p.vx, p.vy) || 1;
-      if ((dx * p.vx + dy * p.vy) / (d * sp || 1) < 0.85) return;
-      const T5 = tierOf(game, pl);
-      if (d / sp > T5.cueLead) return;
-      p.cued = true;
-      const k = pl.observation ? 1 : T5.cue;
-      if (k > 0) game.fx.parryCue?.({ x: p.x, y: p.y, z: 0.9, follow: p }, false, k * 0.8);
-    }
-    canHit(owner, target2, h2) {
-      if (!target2.alive || target2 === owner) return false;
-      if (target2.state === "dead") return false;
-      if (target2.state === "knocked" && !h2.hitsDowned) return false;
-      if (h2.friendly) return false;
-      if (owner && owner.faction === "player" && target2.faction === "player") return false;
-      if (!owner) return true;
-      if (target2.invulnerable) return false;
-      if (owner.deck && target2.deck && owner.deck.ship === target2.deck.ship && h2.vx === void 0 && !h2.radial) {
-        if (Math.abs(owner.deck.h + (owner.z || 0) - target2.deck.h - (target2.z || 0)) > 1.6) return false;
-      }
-      if (h2.room && this.game.world.distance(h2.room.x, h2.room.y, target2.x, target2.y) > h2.room.r + (target2.r || 0.3)) return false;
-      if ((owner.flying || target2.flying) && !reachesUp(owner, target2, h2, this.game)) return false;
-      return hostile(owner, target2) || owner.isPlayer && target2.provoked || target2.isPlayer && owner.provoked || h2.hitsAll;
-    }
-    overlaps(h2, a) {
-      const w = this.game.world;
-      const dx = w.dx(h2.x, a.x), dy = a.y - 0.4 - h2.y;
-      const d = Math.hypot(dx, dy);
-      const rr = a.r + 0.15;
-      if (h2.shape === "circle") return d <= h2.range + rr;
-      if (h2.shape === "arc") {
-        if (d > h2.range + rr) return false;
-        if (d < rr + 0.4) return true;
-        return Math.abs(angleDiff(h2.angle, Math.atan2(dy, dx))) <= h2.arc / 2 + rr / Math.max(d, 0.1);
-      }
-      if (h2.shape === "line") {
-        const ca = Math.cos(h2.angle), sa = Math.sin(h2.angle);
-        const along2 = dx * ca + dy * sa;
-        const perp2 = Math.abs(-dx * sa + dy * ca);
-        return along2 >= -rr && along2 <= h2.range + rr && perp2 <= h2.width / 2 + rr;
-      }
-      if (h2.shape === "ring") return Math.abs(d - h2.range) <= (h2.width || 1) / 2 + rr;
-      return false;
-    }
-    hitShips(h2) {
-      for (const s of this.game.ships) {
-        if (s.sunk || s === h2.ownerShip) continue;
-        if (h2.hitShipSet && h2.hitShipSet.has(s.id)) continue;
-        const d = this.game.world.distance(h2.x, h2.y, s.x, s.y);
-        if (s.def.length >= BIG_SHIP ? hullGap(s, this.game.world.dx(s.x, h2.x), h2.y - s.y) < h2.range : d < h2.range + s.def.length * 0.4) {
-          h2.hitShipSet = h2.hitShipSet || /* @__PURE__ */ new Set();
-          h2.hitShipSet.add(s.id);
-          s.damage(h2.shipDamage ?? h2.damage * 0.5, h2.owner, h2);
-        }
-      }
-    }
-    /** Resolve one hit. `h` carries damage, element, knockback, stun, status. */
-    applyHit(att, tgt, h2) {
-      const game = this.game;
-      const fx = game.fx;
-      const now3 = game.env ? game.env.time : game.time;
-      const el = h2.element || "physical";
-      const isPlayerInvolved = att && att.isPlayer || tgt.isPlayer;
-      const ang = h2.angle ?? (att ? Math.atan2(tgt.y - att.y, game.world.dx(att.x, tgt.x)) : 0);
-      const kbAng = h2.shape === "circle" || h2.radial ? Math.atan2(tgt.y - h2.y, game.world.dx(h2.x, tgt.x)) : ang;
-      if (tgt.iframes > 0) {
-        const quiet = (game.time || 0) < (tgt.quietUntil ?? -1);
-        const d = tgt.dash;
-        const perfect = !quiet && !!att && !!d?.dodge && d.t0 - d.t <= PARRY.dodgeWindow && (h2.guardBreak || h2.unblockable || h2.heavy) && h2.vx === void 0 && !h2.blast && att.state === "idle" && game.world.distance(att.x, att.y, tgt.x, tgt.y) < 4 && (tgt.isPlayer || tierOf(game, tgt).npcParry > 0);
-        if (perfect) {
-          tgt.counterOn = att;
-          tgt.counterLeft = PARRY.dodgeCounter;
-          tgt.counterMul = PARRY.dodgeCounterMul;
-          fx.perfectDodge?.(tgt, att);
-          if (tgt.isPlayer) game.hint("perfectdodge", "PERFECT DODGE! Slipping a heavy blow at the last instant leaves them overreaching \u2014 your next strike is a COUNTER.");
-        } else if (!quiet && (tgt.isPlayer || att?.isPlayer)) fx.text(tgt.x, tgt.y - 1.2, "DODGE", "#b2ebf2", 0.32);
-        if (!quiet && tgt.isPlayer) game.emit("playerEvaded", att, h2);
-        return false;
-      }
-      if (tgt.observation && tgt.hakiLevel("observation") > 0 && !h2.unblockable) {
-        const lvl = tgt.hakiLevel("observation");
-        const chance = 0.12 + lvl * 35e-4 - (att?.observation ? 0.15 : 0);
-        if (Math.random() < chance && tgt.haki >= 4) {
-          tgt.haki -= 4;
-          tgt.iframes = 0.2;
-          const side = ang + (Math.random() < 0.5 ? 1 : -1) * Math.PI / 2;
-          if (tgt.state === "idle" && !tgt.onShip && !tgt.climb) tgt.knock(Math.cos(side) * 4.5, Math.sin(side) * 4.5);
-          fx.foresight?.(tgt, att);
-          game.audio?.sfx("foresight", tgt);
-          if (tgt.isPlayer) game.emit("playerEvaded", att, h2);
-          return false;
-        }
-      }
-      if (barrierStops(game, tgt, att, h2)) {
-        h2.stopped = true;
-        fx.ring(tgt.x + Math.cos(tgt.facing) * 0.6, tgt.y + Math.sin(tgt.facing) * 0.45, 0.1, 1, "#b3e5fc", 0.25, 0.08, { z: 0.9, flat: 0.4, add: true });
-        if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, "BARRIER", "#b3e5fc", 0.32);
-        game.audio?.sfx("block", tgt);
-        return false;
-      }
-      const ryou = !!att && hasRyou(att) && h2.vx === void 0 && !h2.isProj && (!h2.element || h2.element === "physical");
-      const armed = att && (att.armament || h2.haki || h2.seastone);
-      const lg2 = tgt.fruitDef && tgt.fruitDef.logia ? tgt.fruitDef : tgt.fakeLogia || null;
-      if (lg2 && !tgt.seastoned && (lg2 === tgt.fakeLogia ? tgt.state !== "knocked" && !tgt.inWater && !tgt.status.freeze : tgt.intangibleOK())) {
-        const weakness = lg2.weakTo || [];
-        const counters = weakness.includes(el) || el === "water" && tgt.status.wet || att && att.status.wet && weakness.includes("water") || !!att?.fruitDef?.rubber && weakness.includes("rubber");
-        if (!armed && !counters && !h2.trueDamage && !h2.ignoreLogia) {
-          fx.burst(tgt.x, tgt.y - 0.7, 8, { color: lg2.color || "#fff", speed: 3, g: 0, life: 0.35, kind: "smoke", size: 0.2 });
-          if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, "INTANGIBLE", lg2.color || "#fff", 0.3);
-          if (att && att.isPlayer) game.hint("logia", att.hakiUnlocked?.() ? "Logia users are intangible. Use Armament Haki, Seastone, or their elemental weakness to hit them." : "Your blows pass straight through them! Logia users are intangible \u2014 Seastone or their elemental weakness can still reach them.");
-          return false;
-        }
-      }
-      const lk2 = tgt.fruitDef?.passive;
-      if (lk2?.logiaLike && !tgt.seastoned && !armed && !h2.trueDamage && !h2.ignoreLogia && tgt.state === "idle" && !tgt.inWater && !tgt.status.freeze && !(lk2.weakTo || []).includes(el) && Math.random() < (lk2.intangible || 0)) {
-        fx.burst(tgt.x, tgt.y - 0.7, 6, { color: tgt.fruitDef.color || "#fff8e1", speed: 2.5, g: 0, life: 0.3, kind: "smoke", size: 0.2 });
-        if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.3, "MOCHI!", tgt.fruitDef.color || "#fff8e1", 0.3);
-        return false;
-      }
-      let dmg = h2.damage;
-      if (tgt.fruitDef && tgt.fruitDef.rubber && !armed) {
-        if (el === "lightning") {
-          dmg = 0;
-          if (isPlayerInvolved) fx.text(tgt.x, tgt.y - 1.2, "RUBBER!", "#fff176", 0.34);
-        } else if (!h2.slashing && el === "physical") dmg *= 0.35;
-      }
-      if (tgt.fruitDef && tgt.fruitDef.resist && tgt.fruitDef.resist.includes(el)) dmg *= 0.25;
-      if (tgt.fruitDef && tgt.fruitDef.weakTo && tgt.fruitDef.weakTo.includes(el)) dmg *= 1.5;
-      if (tgt.race === "lunarian" && tgt.flameLit) dmg *= 0.55;
-      if (tgt.armament) dmg *= 1 - hardening(tgt.hakiLevel("armament"));
-      if (ryou) dmg *= 1 + RYOU.internal;
-      dmg *= 1 - (tgt.d ? tgt.d.def : 0);
-      if (tgt.defMul) dmg *= tgt.defMul;
-      const T5 = tierOf(game, tgt);
-      if (att && !att.isPlayer && att.faction !== "player" && (tgt.isPlayer || tgt.faction === "player")) dmg *= T5.dmg;
-      const counter2 = !!att && att.counterOn === tgt && att.counterLeft > 0;
-      if (counter2) dmg *= att.counterMul || PARRY.counterMul;
-      let blocked = false;
-      if (tgt.blocking && !h2.unblockable && !counter2) {
-        const facingDiff = Math.abs(angleDiff(tgt.facing, ang + Math.PI));
-        if (facingDiff < 1.9) {
-          const pw = parryWindow(game, att, tgt);
-          const inWindow = tgt.blockTime <= pw.window;
-          const blast = h2.blast || h2.radial && !h2.follow;
-          const shot = h2.isProj || h2.vx !== void 0;
-          const parryable = !!att && !blast && !h2.guardBreak && (!shot || !h2.explodes && !h2.onEnd && !!tgt.hasWeapon?.("sword"));
-          if (parryable && inWindow && tgt.guardFresh) {
-            this.parry(att, tgt, h2, ang, tgt.blockTime <= pw.perfect);
-            return false;
-          }
-          if (tgt.isPlayer && parryable && inWindow && !tgt.guardFresh) game.hint("mash", "Not a parry \u2014 that guard wasn't fresh. A parry takes one clean press of F as the blow lands: not mashed, not held through your own swing.");
-          blocked = true;
-          if (tgt.isPlayer) game.emit("playerBlocked", att, h2);
-          if (h2.guardBreak) {
-            dmg *= 0.6;
-            tgt.blocking = false;
-            tgt.guardCd = tgt.guardCooldown();
-            tgt.guardBrokenT = now3;
-            tgt.stagger(tgt.isPlayer ? T5.gbStun : 1.1);
-            fx.guardBreak(tgt, att, ang);
-            game.audio?.sfx("guardbreak", tgt);
-            if (tgt.isPlayer) {
-              game.emit("playerGuardBroken", att, h2);
-              game.hint("guardbreak", "GUARD BREAK! A red-glint blow smashes a guard aside \u2014 and it can't come up again until the F slot fills. Dodge (Q) those instead.");
-            }
-          } else {
-            dmg *= ryou ? Math.max(tgt.guardChip(), RYOU.guard) : tgt.guardChip();
-            game.audio?.sfx("block", tgt);
-          }
-        }
-      }
-      dmg = Math.max(0, dmg);
-      const crit = !blocked && h2.critChance && Math.random() < h2.critChance;
-      if (crit) dmg *= 1.6;
-      const final = Math.round(dmg);
-      tgt.takeDamage(final, att, h2, game);
-      const w = blowWeight(att, tgt, h2, final, crit, counter2);
-      if (att?.armament && (!h2.element || h2.element === "physical" || h2.haki)) att.armHitT = now3;
-      if (!blocked) {
-        const kb = (h2.knockback ?? 2) * (tgt.kbResist ?? 1);
-        if (kb > 0) tgt.knock(Math.cos(kbAng) * kb, Math.sin(kbAng) * kb, h2.forceWater);
-        let stun = counter2 ? Math.max(h2.stun || 0, PARRY.counterStun) : h2.stun;
-        if (tgt.isPlayer && stun > T5.stunCap) stun = T5.stunCap;
-        if (stun && (counter2 || !(unshakable(tgt) && !h2.guardBreak && stun < 0.6))) tgt.stagger(stun * (tgt.stunResist ?? 1));
-        if (h2.status) for (const [k, v] of Object.entries(h2.status)) tgt.addStatus(k, v, att);
-        if (h2.launch && !tgt.flying && !tgt.inWater && !tgt.climb && !tgt.onShip && !((tgt.z || 0) > 0.3) && tgt.state === "idle") {
-          tgt.vz = Math.max(tgt.vz || 0, h2.launch * (tgt.boss ? 0.5 : 1));
-          tgt.z = Math.max(tgt.z || 0, 0.02);
-          tgt.airT = 0;
-          tgt.jumpK = 0;
-        }
-        if (tgt.flying && tgt.flight && (h2.heavy || h2.guardBreak || (h2.stun || 0) >= 0.6 || h2.fling)) downFlyer(tgt, game);
-        if (h2.fling && tgt.state === "idle" && !tgt.onShip && !tgt.climb) {
-          const sp = h2.fling * (tgt.boss ? 0.35 : 1);
-          tgt.dash = { vx: Math.cos(kbAng) * sp, vy: Math.sin(kbAng) * sp, t: 1.1, ignoreWater: true, flung: true };
-          tgt.vz = Math.max(tgt.vz || 0, 8);
-          tgt.z = Math.max(tgt.z || 0, 0.02);
-          tgt.airT = 0;
-        }
-        if (h2.onHit) h2.onHit(tgt, att, game, h2);
-        raceHit(att, tgt, h2, game);
-        if (final > 0 || h2.trueDamage) {
-          tgt.hitT = now3;
-          tgt.hitDir = kbAng;
-          tgt.hitW = w;
-        }
-        if (tgt.isPlayer && tgt.state === "idle") this.flurry(tgt, att, kbAng, T5);
-      }
-      if (counter2) {
-        att.counterOn = null;
-        att.counterLeft = 0;
-        att.counterT = now3;
-        fx.counter?.(att, tgt, kbAng, w);
-        if (att.isPlayer) game.emit("playerCounter", tgt, final);
-      }
-      fx.hit(att, tgt, h2, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved, w, counter: counter2, ryou });
-      if (att?.isPlayer) game.emit("playerLanded", tgt, { final, crit, blocked, counter: counter2 });
-      const thud = h2.slashing ? h2.heavy ? "slash_heavy" : "slash_hit" : h2.heavy ? "punch_heavy" : "punch";
-      game.audio?.sfx(blocked ? "block" : h2.sfxHit || (el === "physical" ? thud : el), tgt);
-      return true;
-    }
-    /**
-     * `tgt` parries `att`'s blow: `att` reels, posture broken (the rest of the
-     * move stops), and `tgt`'s next blow on them while they reel is a counter.
-     * A sword against a shot turns it aside instead (nobody reels: the shooter
-     * is over there). A perfect parry reels them longer, makes the counter
-     * harder and gives back health and Haki.
-     */
-    parry(att, tgt, h2, ang, perfect) {
-      const game = this.game, fx = game.fx;
-      const now3 = game.env ? game.env.time : game.time;
-      tgt.parryT = now3;
-      tgt.parryPerfect = perfect;
-      tgt.parryEarned = true;
-      tgt.iframes = Math.max(tgt.iframes, 0.12);
-      tgt.quietUntil = (game.time || 0) + 0.12;
-      if (h2.isProj || h2.vx !== void 0) {
-        fx.deflect?.(tgt, h2, ang, perfect);
-        game.audio?.sfx("parry", tgt);
-        if (tgt.isPlayer) game.onPlayerParry(att);
-        return;
-      }
-      const reel = (att.isPlayer ? PARRY.playerReel : PARRY.reel * (att.boss ? PARRY.bossReel : 1)) + (perfect ? PARRY.perfectReel : 0);
-      this.cancelBlows(att);
-      att.dash = null;
-      att.parriedT = now3;
-      att.stagger(reel);
-      const back = ang + Math.PI;
-      att.knock(Math.cos(back) * 2.5, Math.sin(back) * 2.5);
-      tgt.counterOn = att;
-      tgt.counterLeft = reel;
-      tgt.counterMul = perfect ? PARRY.perfectCounterMul : PARRY.counterMul;
-      if (tgt.hakiUnlocked()) tgt.haki = Math.min(tgt.d.maxHaki, tgt.haki + (perfect ? PARRY.haki : PARRY.parryHaki));
-      if (perfect && tgt.d) tgt.heal(Math.max(1, Math.round(tgt.d.maxHp * PARRY.heal)), game);
-      fx.parry(tgt, att, ang, perfect);
-      game.audio?.sfx("parry", tgt);
-      if (tgt.isPlayer) {
-        game.onPlayerParry(att);
-        game.hint("parried", "PARRIED! They reel \u2014 strike now: your next blow is a COUNTER, harder and through any guard. Parry at the very last instant for a PERFECT parry.");
-      }
-      if (att.isPlayer) {
-        game.emit("playerParried", tgt);
-        game.hint("foeparry", "Your blow was PARRIED \u2014 you reel, wide open. Out past the Blues, foes read your swings too: don't hammer at a guard that has just come up.");
-      }
-    }
-    /**
-     * No stun-locks: blows landing on you one after another (each within
-     * FLURRY_GAP of the last) are a flurry. After a tier's stunHits of them,
-     * or stunCap seconds of it with you still reeling, you break free: the
-     * stagger shaken off, a moment untouchable, shoved a step clear.
-     */
-    flurry(tgt, att, ang, T5) {
-      const game = this.game, now3 = game.time || 0;
-      const f = tgt.flurryRun || (tgt.flurryRun = { n: 0, t0: now3, last: -Infinity });
-      if (now3 - f.last > FLURRY_GAP) {
-        f.n = 0;
-        f.t0 = now3;
-      }
-      f.n++;
-      f.last = now3;
-      if (!(tgt.hitstun > 0) || f.n < T5.stunHits && now3 - f.t0 < T5.stunCap) return;
-      f.n = 0;
-      f.t0 = now3;
-      f.last = -Infinity;
-      tgt.hitstun = 0;
-      tgt.iframes = Math.max(tgt.iframes, BREAK_IFRAMES);
-      tgt.quietUntil = now3 + BREAK_IFRAMES;
-      tgt.knock(Math.cos(ang) * 3, Math.sin(ang) * 3);
-      game.fx.breakFree?.(tgt);
-      if (tgt.isPlayer) {
-        game.emit("playerBrokeFree", att);
-        game.hint("breakfree", "You shook free of the flurry! Nobody can keep you pinned for long \u2014 use the moment to dodge clear or hit back.");
-      }
-    }
-  };
-
-  // src/render/projectiles.js
-  var TAU5 = Math.PI * 2;
-  var OUT = "rgba(30,20,20,0.85)";
-  function tail(g, a, len, w, col0, col1) {
-    g.save();
-    g.rotate(a);
-    const gr = g.createLinearGradient(0, 0, -len, 0);
-    gr.addColorStop(0, col0);
-    gr.addColorStop(1, col1 || "rgba(255,255,255,0)");
-    g.fillStyle = gr;
-    g.beginPath();
-    g.moveTo(0, -w / 2);
-    g.lineTo(-len, 0);
-    g.lineTo(0, w / 2);
-    g.closePath();
-    g.fill();
-    g.restore();
-  }
-  function glowDisc(g, r4, col2, a = 0.35) {
-    g.save();
-    g.globalCompositeOperation = "lighter";
-    g.globalAlpha *= a;
-    g.fillStyle = col2;
-    g.beginPath();
-    g.arc(0, 0, r4, 0, TAU5);
-    g.fill();
-    g.restore();
-  }
-  function rgbaOf(col2, a) {
-    if (col2 && col2[0] === "#") {
-      let h2 = col2.slice(1);
-      if (h2.length === 3) h2 = h2[0] + h2[0] + h2[1] + h2[1] + h2[2] + h2[2];
-      const n = parseInt(h2, 16);
-      return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
-    }
-    return col2;
-  }
-  function fistShape(g, R5, col2, dark) {
-    g.fillStyle = col2;
-    g.strokeStyle = OUT;
-    g.lineWidth = 0.05 * Math.max(1, R5 / 0.3);
-    g.beginPath();
-    g.roundRect(-R5 * 0.9, -R5 * 0.85, R5 * 1.8, R5 * 1.7, R5 * 0.5);
-    g.fill();
-    g.stroke();
-    g.strokeStyle = dark;
-    g.lineWidth = 0.03 * Math.max(1, R5 / 0.3);
-    g.beginPath();
-    for (let k = -1; k <= 1; k++) {
-      g.moveTo(R5 * 0.45, k * R5 * 0.5 - R5 * 0.12);
-      g.lineTo(R5 * 0.85, k * R5 * 0.5 - R5 * 0.12);
-    }
-    g.stroke();
-    g.fillStyle = col2;
-    g.strokeStyle = OUT;
-    g.lineWidth = 0.035 * Math.max(1, R5 / 0.3);
-    g.beginPath();
-    g.ellipse(R5 * 0.1, R5 * 0.62, R5 * 0.5, R5 * 0.25, 0.2, 0, TAU5);
-    g.fill();
-    g.stroke();
-  }
-  function drawProjectile(g) {
-    const p = this;
-    const a = Math.atan2(p.vy, p.vx);
-    const s = p.size || 1;
-    const t = p.t || 0;
-    const sp = Math.hypot(p.vx, p.vy);
-    const lift = -0.5;
-    g.translate(0, lift);
-    switch (p.sprite) {
-      case "gomufist": {
-        const o = p.stretch;
-        const skin = o?.look?.skin || "#f1c9a0";
-        const sleeve = o?.look?.sleeve || skin;
-        const dark = o?.armament ? "#1c1a24" : null;
-        if (o && o.alive) {
-          const w = o.game ? o.game.world : null;
-          const dx = w ? w.dx(p.x, o.x) : o.x - p.x;
-          const dy = o.y - 0.9 - p.y + 0.5;
-          const L3 = Math.hypot(dx, dy) || 1;
-          const wd = Math.min(0.26 * s, 0.16 + 0.04 * s);
-          g.lineCap = "round";
-          g.strokeStyle = OUT;
-          g.lineWidth = wd + 0.07;
-          g.beginPath();
-          g.moveTo(0, 0);
-          g.quadraticCurveTo(dx * 0.5, dy * 0.5 + Math.sin(t * 30) * 0.08, dx, dy);
-          g.stroke();
-          g.strokeStyle = dark || sleeve;
-          g.lineWidth = wd;
-          g.stroke();
-          g.strokeStyle = "rgba(0,0,0,0.18)";
-          g.lineWidth = 0.02;
-          g.beginPath();
-          for (let k = 1; k < Math.min(12, L3 * 2.5); k++) {
-            const u = k / Math.min(12, L3 * 2.5);
-            const x = dx * u, y = dy * u, nx = -dy / L3 * wd * 0.45, ny = dx / L3 * wd * 0.45;
-            g.moveTo(x + nx, y + ny);
-            g.lineTo(x - nx, y - ny);
-          }
-          g.stroke();
-        }
-        g.save();
-        g.rotate(a);
-        if (sp > 10) {
-          g.strokeStyle = "rgba(255,255,255,0.8)";
-          g.lineWidth = 0.03;
-          g.beginPath();
-          for (let k = -1; k <= 1; k++) {
-            g.moveTo(0.35 * s, k * 0.14 * s);
-            g.lineTo(0.35 * s - 0.4, k * 0.16 * s);
-          }
-          g.stroke();
-        }
-        fistShape(g, 0.3 * s, dark || skin, dark ? "#7c4dff" : "rgba(80,40,30,0.45)");
-        if (s >= 3) {
-          g.strokeStyle = "rgba(255,255,255,0.5)";
-          g.lineWidth = 0.06;
-          g.beginPath();
-          g.arc(-0.1 * s, -0.25 * s, 0.25 * s, 3.4, 4.6);
-          g.stroke();
-        }
-        g.restore();
-        break;
-      }
-      case "fireball": {
-        if (s >= 3) {
-          const R5 = 0.55 * s;
-          glowDisc(g, R5 * 1.9, "#ff6d00", 0.35);
-          g.save();
-          g.globalCompositeOperation = "lighter";
-          for (let k = 0; k < 16; k++) {
-            const ang = k / 16 * TAU5 + t * 1.2;
-            const fl2 = 1.18 + 0.2 * Math.sin(t * 11 + k * 1.7);
-            g.fillStyle = k % 2 ? "rgba(255,171,0,0.7)" : "rgba(255,61,0,0.65)";
-            g.beginPath();
-            g.moveTo(Math.cos(ang - 0.18) * R5 * 0.92, Math.sin(ang - 0.18) * R5 * 0.92);
-            g.lineTo(Math.cos(ang) * R5 * fl2, Math.sin(ang) * R5 * fl2);
-            g.lineTo(Math.cos(ang + 0.18) * R5 * 0.92, Math.sin(ang + 0.18) * R5 * 0.92);
-            g.fill();
-          }
-          g.restore();
-          const gr = g.createRadialGradient(-R5 * 0.25, -R5 * 0.25, R5 * 0.1, 0, 0, R5);
-          gr.addColorStop(0, "#fff8e1");
-          gr.addColorStop(0.35, "#ffd54f");
-          gr.addColorStop(0.75, "#ff9100");
-          gr.addColorStop(1, "#e65100");
-          g.fillStyle = gr;
-          g.beginPath();
-          g.arc(0, 0, R5, 0, TAU5);
-          g.fill();
-          break;
-        }
-        tail(g, a, 0.9 * s + sp * 0.03, 0.5 * s, "rgba(255,152,0,0.75)", "rgba(255,87,34,0)");
-        for (let k = 0; k < 3; k++) {
-          g.fillStyle = ["rgba(255,87,34,0.6)", "rgba(255,152,0,0.85)", "rgba(255,241,118,0.95)"][k];
-          g.beginPath();
-          g.ellipse(-Math.cos(a) * 0.1 * (2 - k), -Math.sin(a) * 0.1 * (2 - k), (0.36 - k * 0.09) * s * (1 + 0.08 * Math.sin(t * 30 + k)), (0.3 - k * 0.07) * s, a, 0, TAU5);
-          g.fill();
-        }
-        break;
-      }
-      case "firefist": {
-        g.save();
-        g.rotate(a);
-        g.globalCompositeOperation = "lighter";
-        for (let k = 0; k < 4; k++) {
-          const L3 = (1.3 - k * 0.22) * s, W4 = (0.62 - k * 0.12) * s;
-          g.fillStyle = ["rgba(255,61,0,0.45)", "rgba(255,109,0,0.6)", "rgba(255,171,0,0.75)", "rgba(255,241,118,0.9)"][k];
-          g.beginPath();
-          g.moveTo(W4 * 0.7, 0);
-          g.quadraticCurveTo(W4 * 0.6, -W4, -L3 * 0.4, -W4 * (0.7 + 0.1 * Math.sin(t * 25 + k)));
-          g.quadraticCurveTo(-L3 * 0.7, -W4 * 0.3, -L3, Math.sin(t * 20 + k) * W4 * 0.2);
-          g.quadraticCurveTo(-L3 * 0.7, W4 * 0.3, -L3 * 0.4, W4 * (0.7 + 0.1 * Math.cos(t * 25 + k)));
-          g.quadraticCurveTo(W4 * 0.6, W4, W4 * 0.7, 0);
-          g.fill();
-        }
-        g.globalCompositeOperation = "source-over";
-        g.globalAlpha *= 0.75;
-        fistShape(g, 0.24 * s, "#ff7043", "rgba(120,20,0,0.6)");
-        g.restore();
-        break;
-      }
-      case "magmafist": {
-        g.save();
-        g.rotate(a);
-        tail(g, 0, 0.9 * s, 0.7 * s, "rgba(62,39,35,0.8)", "rgba(62,39,35,0)");
-        glowDisc(g, 0.6 * s, "#ff6f00", 0.35);
-        fistShape(g, 0.34 * s, "#4e342e", "rgba(0,0,0,0.4)");
-        g.strokeStyle = "#ffab40";
-        g.lineWidth = 0.035 * s;
-        g.lineCap = "round";
-        g.beginPath();
-        for (let k = 0; k < 5; k++) {
-          const x0 = Math.sin(k * 3.1) * 0.25 * s, y0 = Math.cos(k * 2.3) * 0.25 * s;
-          g.moveTo(x0, y0);
-          g.lineTo(x0 + Math.cos(k * 1.9) * 0.18 * s, y0 + Math.sin(k * 1.9) * 0.18 * s);
-        }
-        g.stroke();
-        g.fillStyle = "#ff9100";
-        for (let k = 0; k < 3; k++) {
-          const ph = (t * 3 + k / 3) % 1;
-          g.globalAlpha = 1 - ph;
-          g.beginPath();
-          g.arc(-0.2 * s - ph * 0.6, (k - 1) * 0.2 * s + ph * 0.3, 0.06 * s, 0, TAU5);
-          g.fill();
-        }
-        g.restore();
-        break;
-      }
-      case "iceshard": {
-        g.rotate(a);
-        tail(g, 0, 0.5 * s + sp * 0.02, 0.2 * s, rgbaOf(p.color || "#b3e5fc", 0.5));
-        g.fillStyle = p.color || "#b3e5fc";
-        g.strokeStyle = p.color && p.color !== "#b3e5fc" ? OUT : "#e1f5fe";
-        g.lineWidth = 0.035;
-        g.beginPath();
-        g.moveTo(0.5 * s, 0);
-        g.lineTo(-0.25 * s, -0.15 * s);
-        g.lineTo(-0.45 * s, 0);
-        g.lineTo(-0.25 * s, 0.15 * s);
-        g.closePath();
-        g.fill();
-        g.stroke();
-        g.fillStyle = "rgba(255,255,255,0.75)";
-        g.beginPath();
-        g.moveTo(0.45 * s, -0.01);
-        g.lineTo(-0.2 * s, -0.11 * s);
-        g.lineTo(-0.1 * s, 0);
-        g.closePath();
-        g.fill();
-        break;
-      }
-      case "bird": {
-        g.rotate(a);
-        const col2 = p.color || "#b3e5fc";
-        const flap = Math.sin(t * 20);
-        glowDisc(g, 0.7 * s, col2, 0.3);
-        tail(g, 0, 1.1 * s, 0.5 * s, rgbaOf(col2, 0.55));
-        g.fillStyle = col2;
-        g.strokeStyle = "rgba(255,255,255,0.8)";
-        g.lineWidth = 0.03;
-        for (const sy of [-1, 1]) {
-          g.beginPath();
-          g.moveTo(0.1 * s, 0);
-          g.quadraticCurveTo(-0.15 * s, sy * (0.55 + 0.2 * flap * sy) * s, -0.55 * s, sy * (0.6 + 0.25 * flap * sy) * s);
-          g.quadraticCurveTo(-0.3 * s, sy * 0.25 * s, -0.25 * s, 0);
-          g.closePath();
-          g.fill();
-          g.stroke();
-        }
-        g.beginPath();
-        g.ellipse(0, 0, 0.35 * s, 0.14 * s, 0, 0, TAU5);
-        g.fill();
-        g.beginPath();
-        g.moveTo(0.35 * s, -0.06 * s);
-        g.lineTo(0.6 * s, 0);
-        g.lineTo(0.35 * s, 0.06 * s);
-        g.fill();
-        g.fillStyle = "#ffffff";
-        g.beginPath();
-        g.arc(0.22 * s, -0.04 * s, 0.03 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "airslash": {
-        g.rotate(a);
-        const col2 = p.color || "#e3f2fd";
-        g.lineCap = "round";
-        g.strokeStyle = rgbaOf(col2, 0.4);
-        g.lineWidth = 0.03;
-        g.beginPath();
-        for (let k = -1; k <= 1; k++) {
-          g.moveTo(-0.3 * s, k * 0.3 * s);
-          g.lineTo(-1.1 * s, k * 0.35 * s);
-        }
-        g.stroke();
-        const R5 = 0.7 * s;
-        const gr = g.createLinearGradient(0, -R5, 0, R5);
-        gr.addColorStop(0, rgbaOf(col2, 0));
-        gr.addColorStop(0.5, rgbaOf(col2, 0.95));
-        gr.addColorStop(1, rgbaOf(col2, 0));
-        g.fillStyle = gr;
-        g.beginPath();
-        g.arc(-0.45 * s, 0, R5, -1.15, 1.15);
-        g.arc(-0.62 * s, 0, R5 * 0.9, 1.05, -1.05, true);
-        g.closePath();
-        g.fill();
-        g.strokeStyle = "rgba(255,255,255,0.95)";
-        g.lineWidth = 0.045 * s;
-        g.beginPath();
-        g.arc(-0.45 * s, 0, R5, -0.9, 0.9);
-        g.stroke();
-        break;
-      }
-      case "bullet": {
-        g.rotate(a);
-        const L3 = Math.min(1.6, 0.3 + sp * 0.04);
-        const gr = g.createLinearGradient(0, 0, -L3, 0);
-        gr.addColorStop(0, "rgba(255,248,225,0.95)");
-        gr.addColorStop(0.3, "rgba(255,213,79,0.6)");
-        gr.addColorStop(1, "rgba(255,213,79,0)");
-        g.fillStyle = gr;
-        g.fillRect(-L3, -0.03, L3, 0.06);
-        g.fillStyle = "#ffffff";
-        g.fillRect(-0.12, -0.012, 0.12, 0.024);
-        g.fillStyle = "#546e7a";
-        g.beginPath();
-        g.arc(0, 0, 0.065, 0, TAU5);
-        g.fill();
-        g.fillStyle = "rgba(255,255,255,0.7)";
-        g.beginPath();
-        g.arc(-0.015, -0.02, 0.02, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "cannonball": {
-        tail(g, a, 0.8 * s, 0.35 * s, "rgba(120,120,120,0.45)", "rgba(120,120,120,0)");
-        g.fillStyle = "#212121";
-        g.strokeStyle = OUT;
-        g.lineWidth = 0.04;
-        g.beginPath();
-        g.arc(0, 0, 0.22 * s, 0, TAU5);
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#757575";
-        g.beginPath();
-        g.arc(-0.07 * s, -0.07 * s, 0.07 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "bomb": {
-        g.fillStyle = "#263238";
-        g.strokeStyle = OUT;
-        g.lineWidth = 0.04;
-        g.beginPath();
-        g.arc(0, 0, 0.25 * s, 0, TAU5);
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#546e7a";
-        g.beginPath();
-        g.arc(-0.08 * s, -0.08 * s, 0.07 * s, 0, TAU5);
-        g.fill();
-        g.strokeStyle = "#8d6e63";
-        g.lineWidth = 0.04;
-        g.beginPath();
-        g.moveTo(0.1 * s, -0.2 * s);
-        g.quadraticCurveTo(0.2 * s, -0.32 * s, 0.14 * s, -0.4 * s);
-        g.stroke();
-        g.save();
-        g.globalCompositeOperation = "lighter";
-        g.fillStyle = Math.sin(t * 30) > 0 ? "#ffeb3b" : "#ff7043";
-        g.beginPath();
-        g.arc(0.14 * s, -0.42 * s, 0.07 + 0.03 * Math.sin(t * 40), 0, TAU5);
-        g.fill();
-        g.restore();
-        break;
-      }
-      case "sandblade": {
-        g.rotate(a);
-        g.fillStyle = "rgba(225,193,110,0.85)";
-        g.strokeStyle = "rgba(141,110,99,0.7)";
-        g.lineWidth = 0.03;
-        g.beginPath();
-        g.moveTo(0.5 * s, 0);
-        g.quadraticCurveTo(0, -0.8 * s, -0.5 * s, -0.62 * s);
-        g.quadraticCurveTo(-0.1, 0, -0.5 * s, 0.62 * s);
-        g.quadraticCurveTo(0, 0.8 * s, 0.5 * s, 0);
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#d7b56d";
-        for (let k = 0; k < 8; k++) {
-          const ph = (t * 4 + k / 8) % 1;
-          g.globalAlpha = 1 - ph;
-          g.fillRect(-0.4 * s - ph * 0.9, Math.sin(k * 7.3) * 0.6 * s, 0.05, 0.05);
-        }
-        g.globalAlpha = 1;
-        break;
-      }
-      case "smokefist": {
-        for (let k = 0; k < 5; k++) {
-          const r4 = (0.5 - k * 0.07) * s;
-          g.fillStyle = k ? `rgba(236,239,241,${0.85 - k * 0.14})` : "rgba(255,255,255,0.95)";
-          g.beginPath();
-          g.arc(-Math.cos(a) * k * 0.22 * s + Math.sin(t * 9 + k) * 0.03, -Math.sin(a) * k * 0.22 * s, r4, 0, TAU5);
-          g.fill();
-        }
-        g.save();
-        g.rotate(a);
-        g.globalAlpha *= 0.35;
-        fistShape(g, 0.22 * s, "#cfd8dc", "rgba(0,0,0,0.2)");
-        g.restore();
-        break;
-      }
-      case "smokesnake": {
-        g.rotate(a);
-        for (let k = 7; k >= 0; k--) {
-          const x = -k * 0.16 * s, y = Math.sin(t * 12 - k * 0.9) * 0.14 * s;
-          g.fillStyle = `rgba(236,239,241,${0.95 - k * 0.09})`;
-          g.beginPath();
-          g.arc(x, y, (0.26 - k * 0.018) * s, 0, TAU5);
-          g.fill();
-        }
-        g.fillStyle = "#ffffff";
-        g.beginPath();
-        g.ellipse(0.12 * s, 0, 0.26 * s, 0.2 * s, 0, 0, TAU5);
-        g.fill();
-        g.fillStyle = "#546e7a";
-        g.beginPath();
-        g.arc(0.2 * s, -0.08 * s, 0.035 * s, 0, TAU5);
-        g.arc(0.2 * s, 0.08 * s, 0.035 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "lightorb": {
-        g.save();
-        g.rotate(a);
-        const L3 = 1.4 * s + sp * 0.04;
-        const gr = g.createLinearGradient(0, 0, -L3, 0);
-        gr.addColorStop(0, "rgba(255,253,231,0.95)");
-        gr.addColorStop(1, "rgba(255,245,157,0)");
-        g.fillStyle = gr;
-        g.fillRect(-L3, -0.08 * s, L3, 0.16 * s);
-        g.restore();
-        glowDisc(g, 0.45 * s, "#fff59d", 0.5);
-        g.fillStyle = "#ffffff";
-        g.beginPath();
-        g.arc(0, 0, 0.16 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "darkorb": {
-        g.fillStyle = "rgba(49,27,146,0.55)";
-        g.beginPath();
-        g.arc(0, 0, 0.55 * s, 0, TAU5);
-        g.fill();
-        g.strokeStyle = "#b388ff";
-        g.lineWidth = 0.035;
-        for (let k = 0; k < 3; k++) {
-          g.beginPath();
-          g.arc(0, 0, (0.4 + k * 0.06) * s, t * 6 + k * 2, t * 6 + k * 2 + 2);
-          g.stroke();
-        }
-        g.fillStyle = "#000";
-        g.beginPath();
-        g.arc(0, 0, 0.32 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "thunder": {
-        if (s >= 2) {
-          g.save();
-          g.rotate(a);
-          g.globalCompositeOperation = "lighter";
-          const segs = 9;
-          for (const [col2, lw] of [["rgba(255,241,118,0.45)", 0.4 * s], ["#fff59d", 0.16 * s], ["#ffffff", 0.06 * s]]) {
-            g.strokeStyle = col2;
-            g.lineWidth = lw;
-            g.lineJoin = "round";
-            g.lineCap = "round";
-            g.beginPath();
-            for (let k = 0; k <= segs; k++) {
-              const x = -k * 0.28 * s, y = Math.sin(t * 14 - k * 0.8) * 0.3 * s + ((k * 7 + Math.floor(t * 20)) % 5 - 2) * 0.03 * s;
-              if (k) g.lineTo(x, y);
-              else g.moveTo(x, y);
-            }
-            g.stroke();
-          }
-          g.fillStyle = "#fffde7";
-          g.beginPath();
-          g.ellipse(0.1 * s, 0, 0.32 * s, 0.22 * s, 0, 0, TAU5);
-          g.fill();
-          g.strokeStyle = "#fff176";
-          g.lineWidth = 0.05 * s;
-          g.beginPath();
-          g.moveTo(0, -0.15 * s);
-          g.lineTo(-0.25 * s, -0.4 * s);
-          g.moveTo(0, 0.15 * s);
-          g.lineTo(-0.25 * s, 0.4 * s);
-          g.stroke();
-          g.fillStyle = "#ffab00";
-          g.beginPath();
-          g.arc(0.22 * s, -0.07 * s, 0.04 * s, 0, TAU5);
-          g.fill();
-          g.restore();
-          break;
-        }
-        glowDisc(g, 0.55 * s, "#fff176", 0.35);
-        g.save();
-        g.globalCompositeOperation = "lighter";
-        g.strokeStyle = "#fff176";
-        g.lineWidth = 0.06;
-        g.beginPath();
-        for (let k = 0; k < 6; k++) {
-          const aa = k / 6 * TAU5 + Math.floor(t * 20) * 0.7;
-          g.moveTo(0, 0);
-          g.lineTo(Math.cos(aa) * 0.3 * s, Math.sin(aa) * 0.3 * s);
-          g.lineTo(Math.cos(aa + 0.4) * 0.5 * s, Math.sin(aa + 0.4) * 0.5 * s);
-        }
-        g.stroke();
-        g.restore();
-        g.fillStyle = "#fffde7";
-        g.beginPath();
-        g.arc(0, 0, 0.2 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "waterdrop": {
-        tail(g, a, 0.5 * s + sp * 0.02, 0.2 * s, "rgba(129,212,250,0.7)");
-        g.save();
-        g.rotate(a);
-        g.fillStyle = p.color || "#4fc3f7";
-        g.beginPath();
-        g.moveTo(0.18 * s, 0);
-        g.quadraticCurveTo(0, -0.14 * s, -0.16 * s, 0);
-        g.quadraticCurveTo(0, 0.14 * s, 0.18 * s, 0);
-        g.fill();
-        g.fillStyle = "#e1f5fe";
-        g.beginPath();
-        g.arc(0.02, -0.04, 0.045 * s, 0, TAU5);
-        g.fill();
-        g.restore();
-        break;
-      }
-      case "shockwave": {
-        g.rotate(a);
-        const col2 = p.color || "#e0f7fa";
-        g.lineCap = "round";
-        for (let k = 0; k < 4; k++) {
-          const ph = (t * 3 + k * 0.25) % 1;
-          g.globalAlpha = (1 - k * 0.2) * (0.6 + 0.4 * Math.sin(ph * Math.PI));
-          g.strokeStyle = k ? col2 : "#ffffff";
-          g.lineWidth = (0.12 - k * 0.02) * Math.max(1, s * 0.8);
-          g.beginPath();
-          g.arc(-k * 0.22 * s, 0, (0.45 + k * 0.12) * s, -1.15, 1.15);
-          g.stroke();
-        }
-        g.globalAlpha = 1;
-        break;
-      }
-      case "star": {
-        tail(g, a, 0.5 * s, 0.18 * s, rgbaOf(p.color || "#ffeb3b", 0.55));
-        g.fillStyle = p.color || "#ffeb3b";
-        g.strokeStyle = OUT;
-        g.lineWidth = 0.03;
-        g.rotate(t * 12);
-        g.beginPath();
-        for (let k = 0; k < 10; k++) {
-          const rr = k % 2 ? 0.1 * s : 0.25 * s;
-          g.lineTo(Math.cos(k * TAU5 / 10) * rr, Math.sin(k * TAU5 / 10) * rr);
-        }
-        g.closePath();
-        g.fill();
-        g.stroke();
-        break;
-      }
-      case "hydra": {
-        g.save();
-        g.rotate(a);
-        g.strokeStyle = "rgba(106,27,154,0.85)";
-        g.lineWidth = 0.34 * s;
-        g.lineCap = "round";
-        g.beginPath();
-        g.moveTo(-1.2 * s, Math.sin(t * 8) * 0.2 * s);
-        g.quadraticCurveTo(-0.6 * s, Math.cos(t * 8) * 0.25 * s, 0, 0);
-        g.stroke();
-        g.strokeStyle = "rgba(171,71,188,0.8)";
-        g.lineWidth = 0.14 * s;
-        g.stroke();
-        g.fillStyle = "#7b1fa2";
-        g.strokeStyle = OUT;
-        g.lineWidth = 0.035;
-        g.beginPath();
-        g.moveTo(0.55 * s, -0.08 * s);
-        g.quadraticCurveTo(0.2 * s, -0.4 * s, -0.2 * s, -0.25 * s);
-        g.quadraticCurveTo(-0.25 * s, 0, -0.2 * s, 0.25 * s);
-        g.quadraticCurveTo(0.2 * s, 0.4 * s, 0.55 * s, 0.08 * s);
-        g.closePath();
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#aed581";
-        g.beginPath();
-        g.arc(0.15 * s, -0.16 * s, 0.05 * s, 0, TAU5);
-        g.arc(0.15 * s, 0.16 * s, 0.05 * s, 0, TAU5);
-        g.fill();
-        g.fillStyle = "rgba(174,213,129,0.8)";
-        for (let k = 0; k < 3; k++) {
-          const ph = (t * 2 + k / 3) % 1;
-          g.beginPath();
-          g.arc(0.3 * s - ph * 0.5, 0.2 * s + ph * 0.4, 0.04 * s, 0, TAU5);
-          g.fill();
-        }
-        g.restore();
-        break;
-      }
-      case "poison": {
-        g.fillStyle = "rgba(123,31,162,0.8)";
-        g.beginPath();
-        g.arc(0, 0, 0.4 * s, 0, TAU5);
-        g.fill();
-        g.fillStyle = "rgba(174,213,129,0.8)";
-        g.beginPath();
-        g.arc(0.08, -0.08, 0.15 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "string": {
-        g.rotate(a);
-        g.strokeStyle = p.color || "#f8bbd0";
-        g.lineWidth = 0.025;
-        for (let k = -2; k <= 2; k++) {
-          g.beginPath();
-          g.moveTo(-1.4, k * 0.07);
-          g.quadraticCurveTo(-0.6, k * 0.05 + Math.sin(t * 20 + k) * 0.03, 0.3, k * 0.015);
-          g.stroke();
-        }
-        g.fillStyle = "#ffffff";
-        g.beginPath();
-        g.moveTo(0.42, 0);
-        g.lineTo(0.28, -0.04);
-        g.lineTo(0.28, 0.04);
-        g.fill();
-        break;
-      }
-      case "paw": {
-        const wob = 1 + 0.05 * Math.sin(t * 14);
-        g.fillStyle = "rgba(255,255,255,0.22)";
-        g.strokeStyle = "rgba(255,255,255,0.9)";
-        g.lineWidth = 0.045;
-        g.beginPath();
-        g.ellipse(0, 0.08 * s, 0.36 * s * wob, 0.32 * s / wob, 0, 0, TAU5);
-        g.fill();
-        g.stroke();
-        for (let k = 0; k < 3; k++) {
-          g.beginPath();
-          g.ellipse((k - 1) * 0.22 * s, -0.3 * s - (k === 1 ? 0.05 * s : 0), 0.1 * s, 0.12 * s, 0, 0, TAU5);
-          g.fill();
-          g.stroke();
-        }
-        g.fillStyle = "rgba(255,255,255,0.7)";
-        g.beginPath();
-        g.arc(-0.14 * s, -0.02 * s, 0.06 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "petal": {
-        g.fillStyle = "#f48fb1";
-        for (let k = 0; k < 5; k++) {
-          g.save();
-          g.rotate(k * TAU5 / 5 + t * 5);
-          g.beginPath();
-          g.ellipse(0.15, 0, 0.14, 0.07, 0, 0, TAU5);
-          g.fill();
-          g.restore();
-        }
-        g.fillStyle = "#fff59d";
-        g.beginPath();
-        g.arc(0, 0, 0.05, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "ghost": {
-        const bob = Math.sin(t * 8) * 0.05;
-        g.translate(0, bob);
-        const col2 = p.color || "#e1bee7";
-        glowDisc(g, 0.5 * s, col2, 0.25);
-        g.fillStyle = rgbaOf(col2, 0.85);
-        g.strokeStyle = "rgba(123,31,162,0.6)";
-        g.lineWidth = 0.03;
-        g.beginPath();
-        g.arc(0, -0.05 * s, 0.3 * s, Math.PI, 0);
-        const dir = Math.cos(a) >= 0 ? -1 : 1;
-        g.quadraticCurveTo(0.3 * s, 0.25 * s, dir * 0.15 * s + 0.1 * s, 0.3 * s);
-        g.quadraticCurveTo(dir * 0.5 * s, 0.45 * s + Math.sin(t * 10) * 0.05, dir * 0.55 * s, 0.25 * s);
-        g.quadraticCurveTo(-0.1 * s, 0.35 * s, -0.3 * s, -0.05 * s);
-        g.closePath();
-        g.fill();
-        g.stroke();
-        g.fillStyle = "#4a148c";
-        g.beginPath();
-        g.ellipse(-0.1 * s, -0.08 * s, 0.045 * s, 0.07 * s, 0, 0, TAU5);
-        g.ellipse(0.1 * s, -0.08 * s, 0.045 * s, 0.07 * s, 0, 0, TAU5);
-        g.fill();
-        g.strokeStyle = "#4a148c";
-        g.lineWidth = 0.025;
-        g.beginPath();
-        g.arc(0, 0.05 * s, 0.06 * s, 0.2, Math.PI - 0.2);
-        g.stroke();
-        break;
-      }
-      case "bat": {
-        g.rotate(a);
-        const flap = Math.sin(t * 28);
-        g.fillStyle = "#1c1b22";
-        g.strokeStyle = "#000";
-        g.lineWidth = 0.02;
-        for (const sy of [-1, 1]) {
-          g.beginPath();
-          g.moveTo(0.05 * s, 0);
-          g.quadraticCurveTo(-0.05 * s, sy * (0.35 + 0.2 * flap) * s, -0.3 * s, sy * (0.45 + 0.25 * flap) * s);
-          g.lineTo(-0.2 * s, sy * 0.2 * s);
-          g.lineTo(-0.3 * s, sy * 0.12 * s);
-          g.lineTo(-0.12 * s, 0);
-          g.closePath();
-          g.fill();
-          g.stroke();
-        }
-        g.beginPath();
-        g.ellipse(0.02 * s, 0, 0.16 * s, 0.1 * s, 0, 0, TAU5);
-        g.fill();
-        g.fillStyle = "#ff1744";
-        g.beginPath();
-        g.arc(0.1 * s, -0.035 * s, 0.022 * s, 0, TAU5);
-        g.arc(0.1 * s, 0.035 * s, 0.022 * s, 0, TAU5);
-        g.fill();
-        break;
-      }
-      case "mochi": {
-        g.save();
-        g.rotate(a);
-        tail(g, 0, 0.8 * s, 0.6 * s, "rgba(255,248,225,0.6)");
-        g.fillStyle = "#fff8e1";
-        g.strokeStyle = "#bcaaa4";
-        g.lineWidth = 0.04;
-        g.beginPath();
-        g.ellipse(0, 0, 0.42 * s, 0.34 * s, 0, 0, TAU5);
-        g.fill();
-        g.stroke();
-        g.strokeStyle = "#d7ccc8";
-        g.lineWidth = 0.03;
-        g.beginPath();
-        for (let k = -1; k <= 1; k++) {
-          g.moveTo(0.18 * s, k * 0.13 * s);
-          g.lineTo(0.36 * s, k * 0.12 * s);
-        }
-        g.stroke();
-        g.fillStyle = "rgba(255,255,255,0.8)";
-        g.beginPath();
-        g.ellipse(-0.1 * s, -0.14 * s, 0.14 * s, 0.07 * s, -0.3, 0, TAU5);
-        g.fill();
-        g.restore();
-        break;
-      }
-      case "barafist": {
-        g.save();
-        g.rotate(a);
-        tail(g, 0, 0.6 * s, 0.3 * s, "rgba(255,255,255,0.5)");
-        g.fillStyle = "#90caf9";
-        g.fillRect(-0.42 * s, -0.12 * s, 0.22 * s, 0.24 * s);
-        fistShape(g, 0.26 * s, p.color && p.color !== "#ffccbc" ? p.color : "#f1c9a0", "rgba(80,40,30,0.45)");
-        g.strokeStyle = "#ffffff";
-        g.lineWidth = 0.025;
-        g.beginPath();
-        g.moveTo(-0.2 * s, -0.14 * s);
-        g.lineTo(-0.2 * s, 0.14 * s);
-        g.stroke();
-        g.restore();
-        break;
-      }
-      default: {
-        const col2 = p.color || "#ffffff";
-        tail(g, a, 0.5 * s + sp * 0.02, 0.4 * s, rgbaOf(col2, 0.45));
-        glowDisc(g, 0.42 * s, col2, 0.3);
-        g.fillStyle = col2;
-        g.beginPath();
-        g.arc(0, 0, 0.25 * s, 0, TAU5);
-        g.fill();
-        g.fillStyle = "rgba(255,255,255,0.8)";
-        g.beginPath();
-        g.arc(-0.06 * s, -0.06 * s, 0.08 * s, 0, TAU5);
-        g.fill();
-      }
-    }
-  }
-
-  // src/game/abilities.js
-  var REG = /* @__PURE__ */ new Map();
-  function registerAbilities(list, source) {
-    for (const a of list) {
-      a.source = a.source || source;
-      REG.set(a.id, a);
-    }
-  }
-  var getAbility = (id) => REG.get(id);
-  function abilityTotal(def) {
-    const last = Math.max(0, ...(def.steps || []).map((s) => (s.at ?? def.windup ?? 0) + (s.dash ? s.dash.time : 0) + (s.hit ? s.hit.duration ?? 0.1 : 0)));
-    return Math.max((def.windup ?? 0) + (def.active ?? 0.1), last) + (def.recover ?? 0.2);
-  }
-  function powerFor(actor, def) {
-    const src = def.source || "";
-    if (actor.dmgOverride) return actor.dmgOverride * actor.buffMul("damage");
-    const str = actor.d ? actor.d.dmg : 1;
-    let m = 1;
-    if (src.startsWith("fruit")) {
-      const fm = actor.fruitMastery || 0;
-      m = (0.7 + str * 0.35) * (1 + fm * 0.022);
-    } else if (src.startsWith("haki")) {
-      m = (0.6 + str * 0.3) * (1 + (actor.hakiLevel(def.hakiType || "armament") || 0) * 0.02) * (1 + (actor.attrs?.wil || 0) * 0.01);
-    } else {
-      const sm2 = actor.styleMastery ? actor.styleMastery(def.style || actor.style) : 0;
-      m = str * (1 + sm2 * 0.012);
-      if (def.weapon && actor.weaponMul) m *= actor.weaponMul(def.weapon);
-      if (actor.weaponMastery) m *= 1 + (actor.weaponMastery[weaponKindOf(actor, def)] || 0) * 6e-3;
-    }
-    if (actor.race === "skypiean" && def.id?.startsWith("dial_")) m *= 1.25;
-    m *= actor.buffMul("damage");
-    if (actor.armament && !src.startsWith("fruit_ranged")) m *= 1.25 + (actor.hakiLevel("armament") || 0) * 4e-3;
-    if (actor.conquerorInfused) m *= 1.4;
-    return m;
-  }
-  function weaponKindOf(actor, def) {
-    if (def.weaponKind) return def.weaponKind;
-    if (def.weapon) return def.weapon;
-    const src = def.source || "";
-    if (src.startsWith("style")) {
-      const st = def.style || actor.style;
-      if (/ittoryu|nitoryu|santoryu/.test(st)) return actor.hasWeapon?.("sword") ? "sword" : "fists";
-      if (st === "sniper") return actor.hasWeapon?.("gun") ? "gun" : "fists";
-      if (st === "weather_science") return actor.hasWeapon?.("staff") ? "staff" : "fists";
-      if (st === "elbaf") return actor.hasWeapon?.("axe") ? "axe" : "fists";
-      if (st === "black_leg" || st === "okama_kenpo") return "legs";
-    }
-    return "fists";
-  }
-  function canUse(actor, def) {
-    if (!def) return false;
-    if ((actor.cooldowns[def.id] || 0) > 0) return false;
-    const c = def.cost || {};
-    if (c.haki && actor.haki < c.haki) return false;
-    if (def.source?.startsWith("fruit") && (actor.inWater || actor.seastoned)) return false;
-    if (def.source?.startsWith("haki") && actor.buffs?.some((b) => b.noHaki)) return false;
-    if (def.weapon && !actor.hasWeapon(def.weapon, def.style)) return false;
-    if (def.requiresBuff && !actor.hasBuff(def.requiresBuff)) return false;
-    if (def.room === "need" && !ownRoom(actor)) return false;
-    return true;
-  }
-  var isDamaging = (s) => !!(s.hit || s.proj || s.zone && s.zone.damage > 0 || s.dash?.hit || s.power?.blow);
-  var breaksGuard = (s) => !!(s.hit?.guardBreak || s.hit?.unblockable || s.dash?.hit?.guardBreak || s.dash?.hit?.unblockable || s.proj?.unblockable || s.power?.unblockable);
-  function firstBlow(def) {
-    return (def.steps || []).findIndex(isDamaging);
-  }
-  function startAbility(actor, def, game, target2) {
-    const c = def.cost || {};
-    if (c.haki) actor.haki -= c.haki;
-    const cdMul = actor.cdMul ?? 1;
-    if (def.cd) actor.cooldowns[def.id] = def.cd * cdMul;
-    const angle = actor.facing;
-    const tx = target2 ? target2.x : actor.x + Math.cos(angle) * 5;
-    const ty = target2 ? target2.y : actor.y + Math.sin(angle) * 5;
-    actor.action = { def, t: 0, step: 0, angle, tx, ty, target: target2, total: abilityTotal(def) / (def.noSpeedup ? 1 : actor.atkSpeed()), mult: powerFor(actor, def) };
-    if (actor.counterLeft > 0) actor.action.counter = true;
-    if (def.room) {
-      const z = ownRoom(actor, game);
-      if (z) actor.action.room = z;
-      else if (def.room === "weak") {
-        actor.action.mult *= 0.5;
-        if (actor.isPlayer) game.hint?.("roomweak", `${def.name} is only half as strong outside your ROOM. Cast ROOM first, then fight inside it.`);
-      }
-    }
-    if (!actor.isPlayer && actor.faction !== "player") {
-      readable(actor, actor.action, game);
-      const p = game.player;
-      if (p?.observation && p !== actor && (target2 === p || actor.controller?.target === p) && firstBlow(def) >= 0) game.fx.sensed?.(actor, p);
-    }
-    if (def.say && Math.random() < 0.9) game.fx.text(actor.x, actor.y - 2.1, def.say, "#ffffff", 0.34, { life: 1.2 });
-    if (!actor.isPlayer && def.telegraph !== false) telegraph(actor, def, game);
-    if (def.onStart) def.onStart(actor, game);
-    game.audio?.sfx(def.sfxStart || "whoosh", actor);
-  }
-  function readable(actor, a, game) {
-    const def = a.def, i = firstBlow(def);
-    if (i < 0) return;
-    const s = def.steps[i];
-    const T5 = tierOf(game, actor);
-    const speed2 = def.noSpeedup ? 1 : actor.atkSpeed();
-    const at4 = s.at ?? def.windup ?? 0;
-    const w = at4 / speed2;
-    const want = stretchWindup(T5, w, !!def.chained);
-    a.hitAt = at4;
-    a.slow = w > 1e-3 && want > w ? want / w : 1;
-    a.breaks = breaksGuard(s) || !!s.zone;
-    a.shot = !!s.proj;
-    const who = a.target || actor.controller?.target;
-    let travel2 = 0;
-    if (s.dash && who) travel2 = Math.max(0, game.world.distance(actor.x, actor.y, who.x, who.y) - 1) / Math.max(1, s.dash.dist / s.dash.time);
-    const real = Math.max(0, want + travel2 - T5.cueLead);
-    a.cueT = want > 0 && real <= want ? real / want * at4 : at4 + Math.max(0, real - want) * speed2;
-  }
-  function glint(actor, a, game) {
-    const p = game.player;
-    if (!p || p === actor || p.state !== "idle") return;
-    const who = a.target || actor.controller?.target;
-    if (who !== p || game.world.distance(actor.x, actor.y, p.x, p.y) > (a.shot ? 14 : 10)) return;
-    if (a.shot && !a.breaks && p.hasWeapon?.("sword")) return;
-    const T5 = tierOf(game, p);
-    const k = p.observation ? 1 : T5.cue;
-    if (!(k > 0)) return;
-    game.fx.parryCue?.(actor, a.breaks, k);
-    if (futureSight(p)) game.fx.vision?.(actor, p);
-    const key2 = a.breaks ? "redglint" : a.shot ? "shotglint" : "parry";
-    if (!game.hintsShown?.has(key2) && game.settings?.showHints !== false) game.fx.slowmo(1.2, 0.2);
-    if (a.breaks) game.hint("redglint", "A RED glint: that blow smashes any guard (and some go straight through one). Don't block it \u2014 dodge (Q) just before it lands.");
-    else if (a.shot) game.hint("shotglint", "A glint on a gunman: a shot is coming. Hold F to block it, or sidestep and dodge (Q) \u2014 a sword can even turn it aside with a parry.");
-    else game.hint("parry", "A YELLOW glint: the blow is about to land \u2014 tap F right then to PARRY it. A parried foe reels, open to a COUNTER. (Hold F to simply block.)");
-  }
-  function futureSight(p) {
-    return !!p && (!!p.hasBuff?.("future_sight") || !!p.observation && (p.hakiLevel?.("observation") || 0) >= FUTURE_SIGHT);
-  }
-  function telegraph(actor, def, game) {
-    const a = actor.action;
-    const wind = (a?.hitAt ?? def.windup ?? 0.2) * (a?.slow || 1) / (def.noSpeedup ? 1 : actor.atkSpeed());
-    if (wind < 0.12) return;
-    const first = (def.steps || []).find((s) => s.hit || s.proj || s.dash || s.zone && s.zone.damage > 0 || s.power?.blow);
-    if (!first) return;
-    const parryable = (first.hit || first.dash?.hit) && !breaksGuard(first) && !first.zone;
-    const col2 = parryable ? "rgba(255,193,7,1)" : actor.boss ? "rgba(255,40,80,1)" : "rgba(255,60,60,1)";
-    const life2 = wind * (actor.game?.player?.observation ? 1.35 : 1);
-    if (first.power) {
-      const z = a?.room || ownRoom(actor, game);
-      if (z) game.fx.telegraph(z.x, z.y, "circle", { r: z.r, life: life2, color: col2 });
-      return;
-    }
-    if (first.hit) {
-      const h2 = first.hit;
-      const ox = actor.x + Math.cos(actor.facing) * (h2.offset || 0), oy = actor.y + Math.sin(actor.facing) * (h2.offset || 0);
-      if (h2.shape === "circle" || h2.shape === "ring") game.fx.telegraph(ox, oy, "circle", { r: h2.range, life: life2, color: col2, follow: h2.offset ? null : actor });
-      else if (h2.shape === "line") game.fx.telegraph(actor.x, actor.y, "line", { angle: actor.facing, length: h2.range, width: h2.width || 1, life: life2, color: col2 });
-      else game.fx.telegraph(ox, oy, "arc", { r: h2.range, angle: actor.facing, arc: h2.arc || 1.4, life: life2, color: col2 });
-    } else if (first.proj || first.dash) {
-      const len = first.proj ? Math.min(14, first.proj.range || 10) : first.dash.dist;
-      game.fx.telegraph(actor.x, actor.y, "line", { angle: actor.facing, length: len, width: first.proj ? (first.proj.radius || 0.4) * 2 + 0.3 : 1.2, life: life2, color: col2 });
-    } else if (first.zone) {
-      game.fx.telegraph(actor.action.tx, actor.action.ty, "circle", { r: first.zone.range, life: life2, color: col2 });
-    }
-  }
-  function updateAbility(actor, dt, game) {
-    const a = actor.action;
-    const def = a.def;
-    a.t += dt * (def.noSpeedup ? 1 : actor.atkSpeed()) / (a.slow > 1 && a.t < a.hitAt ? a.slow : 1);
-    if (a.cueT !== void 0 && !a.cued && a.t >= a.cueT) {
-      a.cued = true;
-      glint(actor, a, game);
-    }
-    const steps = def.steps || [];
-    if (def.track && a.t < (def.windup ?? 0)) a.angle = actor.facing;
-    while (a.step < steps.length && a.t >= (steps[a.step].at ?? def.windup ?? 0)) {
-      runStep(actor, steps[a.step], game, a);
-      a.step++;
-    }
-    if (a.t >= a.total * (def.noSpeedup ? 1 : actor.atkSpeed())) {
-      if (def.onEnd) def.onEnd(actor, game);
-      actor.action = null;
-    }
-  }
-  function runStep(actor, s, game, a) {
-    const ang = s.angleOffset ? a.angle + s.angleOffset : a.angle;
-    const mult = a.mult;
-    const col2 = ELEMENT_COLORS[s.hit?.element || s.proj?.element || "physical"];
-    if (s.hit) {
-      const h2 = s.hit;
-      const off = h2.offset ?? 0;
-      const reach3 = actor.reach ?? 1;
-      const hb = {
-        owner: actor,
-        x: game.world.wx(actor.x + Math.cos(ang) * off * reach3),
-        y: actor.y - 0.4 + Math.sin(ang) * off * reach3,
-        // (Conqueror's Infusion: the black lightning round a blow lands it a little beyond the fist)
-        shape: h2.shape || "arc",
-        range: (h2.range || 1.4) * (h2.shape === "circle" ? 1 : reach3) + (actor.conquerorInfused && h2.shape !== "circle" && h2.shape !== "ring" ? INFUSED_REACH : 0),
-        arc: h2.arc ?? 1.8,
-        width: h2.width,
-        angle: ang,
-        damage: (h2.damage || 5) * mult,
-        knockback: h2.knockback,
-        stun: h2.stun ?? 0.25,
-        element: h2.element || "physical",
-        status: h2.status,
-        duration: h2.duration ?? 0.1,
-        interval: h2.interval,
-        heavy: h2.heavy,
-        slashing: h2.slashing,
-        guardBreak: h2.guardBreak,
-        unblockable: h2.unblockable,
-        haki: h2.haki || actor.armament && def_isPhysical(h2),
-        critChance: h2.crit ?? (actor.critChance || 0.05),
-        follow: h2.follow,
-        offX: Math.cos(ang) * off * reach3,
-        offY: -0.4 + Math.sin(ang) * off * reach3,
-        followAngle: h2.followAngle,
-        impactFrame: h2.impactFrame,
-        trueDamage: h2.trueDamage,
-        hitShips: h2.hitShips,
-        shipDamage: h2.shipDamage,
-        radial: h2.radial,
-        onHit: h2.onHit,
-        forceWater: h2.forceWater,
-        hitsAll: h2.hitsAll,
-        def: a.def,
-        // (cuts that don't kill — Amputate; an explosion, never parried; a
-        // quake that throws you off your feet; a paw that sends you flying off
-        // the field; a blow that reaches only what's in the ROOM it was struck
-        // in, and passes through no Logia's body)
-        nonLethal: h2.nonLethal,
-        blast: h2.blast,
-        launch: h2.launch,
-        fling: h2.fling,
-        room: a.room || null,
-        ignoreLogia: h2.ignoreLogia || !!a.room,
-        reachZ: h2.reachZ
-      };
-      game.combat.hitbox(hb);
-      game.fx.tech(actor, s, a, "hit", hb);
-      if (h2.shake) game.fx.shake(h2.shake, ang);
-    }
-    if (s.proj) {
-      const p = s.proj;
-      const n = p.count || 1;
-      for (let i = 0; i < n; i++) {
-        const spread2 = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) : p.jitter ? (Math.random() - 0.5) * p.jitter : 0;
-        const pa = ang + spread2;
-        const sp = p.speed || 14;
-        const sx = actor.x + Math.cos(pa) * 0.6, sy = actor.y - 0.5 + Math.sin(pa) * 0.6;
-        game.combat.projectile({
-          owner: actor,
-          x: game.world.wx(sx),
-          y: sy,
-          vx: Math.cos(pa) * sp,
-          vy: Math.sin(pa) * sp,
-          range: p.range || 10,
-          radius: p.radius || 0.3,
-          damage: (p.damage || 5) * mult,
-          element: p.element || "physical",
-          knockback: p.knockback ?? 2,
-          stun: p.stun ?? 0.2,
-          status: p.status,
-          pierce: p.pierce,
-          homing: p.homing,
-          target: a.target,
-          sprite: p.sprite || "orb",
-          color: p.color || col2,
-          size: p.size || 1,
-          haki: actor.armament && p.element === void 0,
-          stretch: p.stretch ? actor : null,
-          passWalls: p.passWalls,
-          hitShips: p.hitShips ?? true,
-          shipDamage: p.shipDamage,
-          slashing: p.slashing,
-          heavy: p.heavy,
-          critChance: 0.05,
-          unblockable: p.unblockable,
-          def: a.def,
-          // (a shot, not a blow: a sword can turn it aside with a parry — unless it goes off on impact)
-          isProj: true,
-          explodes: !!p.explode,
-          onEnd: p.explode ? (pr, g) => explode(pr, g, p.explode, mult) : null,
-          trail: p.trail ? (pr, g) => trail(pr, g, p.trail) : null,
-          draw: drawProjectile
-        });
-      }
-      game.fx.tech(actor, s, a, "proj");
-    }
-    if (s.dash) {
-      const d = s.dash;
-      const dist = d.dist * (actor.dashMul || 1);
-      actor.dash = { vx: Math.cos(ang) * dist / d.time, vy: Math.sin(ang) * dist / d.time, t: d.time, ignoreWater: d.air, dive: d.dive };
-      if (d.iframes) actor.iframes = Math.max(actor.iframes, d.iframes);
-      if (d.hit) {
-        game.combat.hitbox({
-          owner: actor,
-          x: actor.x,
-          y: actor.y - 0.4,
-          shape: "circle",
-          range: d.hit.range || 1.1,
-          damage: (d.hit.damage || 5) * mult,
-          knockback: d.hit.knockback ?? 4,
-          stun: d.hit.stun ?? 0.3,
-          element: d.hit.element || "physical",
-          follow: true,
-          offX: 0,
-          offY: -0.4,
-          duration: d.time + 0.05,
-          slashing: d.hit.slashing,
-          heavy: d.hit.heavy,
-          status: d.hit.status,
-          radial: true,
-          guardBreak: d.hit.guardBreak,
-          unblockable: d.hit.unblockable,
-          def: a.def,
-          launch: d.hit.launch,
-          ignoreLogia: !!a.room,
-          reachZ: d.dive ? 3.5 : void 0
-        });
-      }
-      game.fx.tech(actor, s, a, "dash");
-    }
-    if (s.teleport) {
-      const t = s.teleport;
-      let dist = t.dist, tang = ang;
-      const who = t.toTarget ? a.target || actor.controller?.target : null;
-      if (who && who.alive !== false && who.x !== void 0) {
-        const dx = game.world.dx(actor.x, who.x), dy = who.y - actor.y, d = Math.hypot(dx, dy);
-        if (d <= dist + 1) {
-          tang = Math.atan2(dy, dx);
-          dist = Math.max(0, d - (t.gap ?? 1.1));
-          a.angle = tang;
-          actor.facing = tang;
-        }
-      }
-      const free = (x, y) => actor.flying ? flyableAt(actor, game, x, y) : actor.canOccupy(game.world, x, y);
-      let nx = actor.x, ny = actor.y;
-      for (let k = 0; k < 20; k++) {
-        const tx = actor.x + Math.cos(tang) * dist * (1 - k / 20), ty = actor.y + Math.sin(tang) * dist * (1 - k / 20);
-        if (free(tx, ty)) {
-          nx = tx;
-          ny = ty;
-          break;
-        }
-      }
-      const x0 = actor.x, y0 = actor.y;
-      actor.x = game.world.wx(nx);
-      actor.y = ny;
-      game.fx.tech(actor, s, a, "teleport", { x0, y0 });
-      actor.iframes = Math.max(actor.iframes, 0.15);
-    }
-    if (s.buff) {
-      const b = actor.addBuff({ ...s.buff, source: a.def.id });
-      game.fx.tech(actor, s, a, "buff", { buff: b });
-    }
-    if (s.heal) {
-      const amt = s.heal * (a.def.source?.startsWith("fruit") ? 1 + (actor.fruitMastery || 0) * 0.02 : 1);
-      actor.heal(amt, game);
-      game.fx.tech(actor, s, a, "heal");
-    }
-    if (s.phoenix) actor.phoenixUntil = Math.max(actor.phoenixUntil || 0, (game.env?.time ?? game.time ?? 0) + s.phoenix);
-    if (s.zone) {
-      const z = s.zone;
-      const zx = z.atTarget ? a.tx : actor.x + Math.cos(ang) * (z.offset || 0);
-      const zy = z.atTarget ? a.ty : actor.y + Math.sin(ang) * (z.offset || 0);
-      const r4 = z.range + (z.grow ? z.grow * (actor.fruitMastery || 0) : 0);
-      const zone = {
-        owner: actor,
-        x: game.world.wx(zx),
-        y: zy,
-        r: r4,
-        t: z.duration,
-        interval: z.interval || 0.5,
-        damage: (z.damage || 0) * mult,
-        element: z.element || "physical",
-        status: z.status,
-        slow: z.slow,
-        color: z.color || col2,
-        kind: z.kind || "field",
-        pull: z.pull,
-        // a field's own rules (powers.js): ice that makes the sea a road, a cage
-        // of strings that closes in and lets no one out, darkness that swallows
-        // shots, gravity that drags fliers down, one that goes when its maker falls
-        freezeWater: z.freezeWater,
-        cage: z.cage,
-        shrink: z.shrink,
-        edge: z.edge,
-        absorb: z.absorb,
-        grounds: z.grounds,
-        whileOwner: z.whileOwner,
-        def: a.def
-      };
-      if (z.single) {
-        for (const o of game.areaZones) if (o.owner === actor && o.kind === zone.kind) o.t = 0;
-      }
-      game.addZone(zone);
-      game.fx.zone(zone, z, actor, a);
-    }
-    if (s.power) {
-      const fn = POWERS[s.power.kind];
-      if (fn) fn(actor, s.power, game, a, s);
-    }
-    if (s.pull) {
-      for (const e of game.actorsNear(actor.x, actor.y, s.pull.range)) {
-        if (!game.combat.canHit(actor, e, {})) continue;
-        const dx = game.world.dx(e.x, actor.x), dy = actor.y - e.y;
-        const d = Math.hypot(dx, dy) || 1;
-        e.knock(dx / d * s.pull.strength, dy / d * s.pull.strength);
-        if (s.pull.stun) e.stagger(s.pull.stun);
-        if (s.pull.nullify) e.addStatus("seastone", s.pull.nullify);
-      }
-      game.fx.tech(actor, s, a, "pull");
-    }
-    if (s.conqueror) conquerorBurst(actor, game, s.conqueror, mult);
-    if (s.summon && game.summon) game.summon(actor, s.summon);
-    if (s.self) {
-      if (s.self.iframes) actor.iframes = Math.max(actor.iframes, s.self.iframes);
-      if (s.self.cleanse) actor.status = {};
-      if (s.self.hurt && actor.d) {
-        const n = Math.round(actor.d.maxHp * s.self.hurt);
-        actor.hp = Math.max(1, actor.hp - n);
-        game.fx.text(actor.x, actor.y - 1.2, String(n), "#ff6b6b", 0.4);
-        if (actor.isPlayer) game.ui?.onPlayerHurt(n);
-      }
-    }
-    if (s.fx) game.fx.tech(actor, s.fx.color ? s : { ...s, fx: { ...s.fx, color: col2 } }, a, "fx");
-    if (s.sfx) game.audio?.sfx(s.sfx, actor);
-  }
-  function def_isPhysical(h2) {
-    return !h2.element || h2.element === "physical";
-  }
-  function explode(p, game, e, mult) {
-    game.combat.hitbox({ owner: p.owner, x: p.x, y: p.y, shape: "circle", range: e.range || 1.8, damage: (e.damage || 10) * mult, knockback: e.knockback ?? 6, stun: e.stun ?? 0.4, element: e.element || "explosion", duration: 0.1, radial: true, heavy: true, hitShips: true, status: e.status, blast: true });
-    game.fx.explosion(p.x, p.y, e, p.owner);
-    game.audio?.sfx("explosion", p);
-  }
-  function trail(p, game, t) {
-    game.fx.projTrail(p, t);
-  }
-  var INFUSED_REACH = 0.9;
-  function conquerorBurst(actor, game, c, mult) {
-    const lvl = actor.hakiLevel("conqueror") || 20;
-    const my = actor.power();
-    let rival2 = null, rd = Infinity;
-    for (const e of game.actorsNear(actor.x, actor.y, c.range * 1.5)) {
-      if (e === actor || !game.combat.canHit(actor, e, {})) continue;
-      const d = game.world.distance(actor.x, actor.y, e.x, e.y);
-      if (d < rd && clashes(actor, e, d, c.range * 1.5)) {
-        rival2 = e;
-        rd = d;
-      }
-    }
-    if (rival2) {
-      clash(actor, rival2, game, c);
-      return { fainted: 0, clash: rival2 };
-    }
-    game.fx.conqueror(actor, c);
-    game.audio?.sfx("conqueror", actor);
-    let fainted = 0;
-    for (const e of game.actorsNear(actor.x, actor.y, c.range)) {
-      if (e === actor || !game.combat.canHit(actor, e, {})) continue;
-      if (e.isPlayer) {
-        underPressure(e, actor, game, c, mult);
-        continue;
-      }
-      if (overwhelms(e, my, lvl)) {
-        e.faint(game);
-        fainted++;
-        continue;
-      }
-      e.stagger(0.6 + lvl * 0.01);
-      e.takeDamage(Math.round((c.damage || 0) * mult), actor, { element: "haki" }, game);
-    }
-    if (fainted && actor.isPlayer) game.log(`${fainted} ${fainted === 1 ? "foe" : "foes"} fainted before your will.`, "#ef5350");
-    return { fainted, clash: null };
-  }
-  function overwhelms(e, my, lvl) {
-    const resist = e.hakiLevel && e.hakiLevel("conqueror") > 0 ? 0.5 : 0;
-    return !e.boss && e.power() / Math.max(1, my) < 0.35 + lvl * 4e-3 - resist;
-  }
-  function underPressure(p, k, game, c, mult) {
-    const ch = p.char;
-    if (ch?.traits?.includes("conqueror") && !p.hakiLevel("conqueror") && game.lives?.awaken) {
-      game.lives.awaken("pressure", k);
-      return;
-    }
-    if (p.hakiLevel("conqueror") > 0) {
-      game.fx.text(p.x, p.y - 1.6, "UNSHAKEN", sigOf(p).conqueror, 0.36);
-      return;
-    }
-    p.stagger(Math.max(0.25, 0.75 - (p.attrs?.wil || 0) * 6e-3));
-    p.takeDamage(Math.round((c.damage || 0) * mult * 0.5), k, { element: "haki" }, game);
-    game.fx.text(p.x, p.y - 1.6, "PRESSURE!", "#ef9a9a", 0.36);
-    game.log(`${k.name}'s will presses down on you like a weight: Conqueror's Haki. Your knees buckle, but you stay standing.`, "#ef9a9a");
-    game.hintHaki?.();
-  }
-  function clash(a, b, game, c) {
-    const w = game.world;
-    const dx = w.dx(a.x, b.x), dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
-    game.fx.clash?.(a, b);
-    game.audio?.sfx("conqueror_clash", a.isPlayer ? a : b);
-    for (const [x, s] of [[a, -1], [b, 1]]) {
-      x.knock(dx / d * 8 * s, dy / d * 8 * s);
-      if (x.state === "idle") x.stagger(x.isPlayer ? 0.35 : 0.55);
-    }
-    const strong = Math.max(a.power(), b.power()), lvl = Math.max(a.hakiLevel("conqueror"), b.hakiLevel("conqueror"));
-    const mx = w.wx(a.x + dx / 2), my = a.y + dy / 2;
-    let fainted = 0;
-    for (const e of game.actorsNear(mx, my, (c?.range || 9) + d / 2)) {
-      if (e === a || e === b || e.isPlayer || e.state !== "idle" || e.faction === "player") continue;
-      if (overwhelms(e, strong, lvl)) {
-        e.faint(game);
-        fainted++;
-      }
-    }
-    const p = a.isPlayer ? a : b.isPlayer ? b : null;
-    if (p) {
-      const o = p === a ? b : a;
-      game.log(`Your Conqueror's Haki clashes with ${o.name}'s! The sky splits between your two wills.${fainted ? ` ${fainted} ${fainted === 1 ? "onlooker" : "onlookers"} fainted.` : ""}`, sigOf(p).conqueror);
-      game.emit?.("conquerorClash", o);
-    }
-    return fainted;
-  }
-
-  // src/data/fruitForms.js
-  var AW = { dmg: 1.6, size: 1.35, reach: 1.25, kb: 1.25, cd: 0.75, wind: 0.85, dur: 1.25 };
-  var AWAKEN_MASTERY = 100;
-  var r1 = (v) => Math.round(v * 10) / 10;
-  var rgba = (hex3, a) => /^#[0-9a-f]{6}$/i.test(hex3 || "") ? `rgba(${parseInt(hex3.slice(1, 3), 16)},${parseInt(hex3.slice(3, 5), 16)},${parseInt(hex3.slice(5, 7), 16)},${a})` : hex3;
-  var scaleMods = (m, k) => {
-    if (!m) return m;
-    const o = { ...m };
-    for (const key2 of ["damage", "speedMul", "atkSpeed"]) if (o[key2] > 1) o[key2] = r1(1 + (o[key2] - 1) * 1.4);
-    if (o.defMul < 1) o.defMul = Math.max(0.2, r1(1 - (1 - o.defMul) * 1.3));
-    if (o.evade) o.evade = Math.min(0.9, r1(o.evade * 1.3));
-    return o;
-  };
-  function scaleStep(s, k) {
-    const o = { ...s };
-    if (s.at !== void 0) o.at = r1(s.at * k.wind * 100) / 100;
-    if (s.hit) {
-      const h2 = { ...s.hit };
-      h2.damage = Math.round((h2.damage || 5) * k.dmg);
-      h2.range = r1((h2.range || 1.4) * k.size);
-      if (h2.width) h2.width = r1(h2.width * k.size);
-      if (h2.knockback !== void 0) h2.knockback = r1(h2.knockback * k.kb);
-      if (h2.shake) h2.shake = r1(h2.shake * 1.3);
-      if (h2.shipDamage) h2.shipDamage = Math.round(h2.shipDamage * k.dmg);
-      o.hit = h2;
-    }
-    if (s.proj) {
-      const p = { ...s.proj };
-      p.damage = Math.round((p.damage || 5) * k.dmg);
-      p.radius = r1((p.radius ?? 0.3) * k.size * 100) / 100;
-      p.size = r1((p.size ?? 1) * k.size);
-      p.range = r1((p.range ?? 10) * k.reach);
-      p.speed = r1((p.speed ?? 14) * 1.1);
-      if (p.knockback !== void 0) p.knockback = r1(p.knockback * k.kb);
-      if (p.count > 1) p.count += Math.max(1, Math.round(p.count * 0.4));
-      if (p.explode) p.explode = { ...p.explode, range: r1((p.explode.range || 1.8) * k.size), damage: Math.round((p.explode.damage || 10) * k.dmg) };
-      if (p.shipDamage) p.shipDamage = Math.round(p.shipDamage * k.dmg);
-      o.proj = p;
-    }
-    if (s.dash) {
-      const d = { ...s.dash, dist: r1(s.dash.dist * k.reach) };
-      if (d.hit) d.hit = { ...d.hit, damage: Math.round((d.hit.damage || 5) * k.dmg), range: r1((d.hit.range || 1.1) * k.size), knockback: r1((d.hit.knockback ?? 4) * k.kb) };
-      o.dash = d;
-    }
-    if (s.zone) o.zone = { ...s.zone, range: r1(s.zone.range * k.size), damage: Math.round((s.zone.damage || 0) * k.dmg), duration: r1(s.zone.duration * k.dur) };
-    if (s.buff) o.buff = { ...s.buff, dur: s.buff.dur ? r1(s.buff.dur * k.dur) : s.buff.dur, mods: scaleMods(s.buff.mods, k), reflect: s.buff.reflect ? r1(s.buff.reflect * k.size) : s.buff.reflect, regen: s.buff.regen ? r1(s.buff.regen * 1.4) : s.buff.regen };
-    if (s.heal) o.heal = Math.round(s.heal * 1.5);
-    if (s.teleport) o.teleport = { ...s.teleport, dist: r1(s.teleport.dist * k.reach) };
-    if (s.pull) o.pull = { ...s.pull, range: r1(s.pull.range * k.size), strength: r1(s.pull.strength * 1.2) };
-    if (s.power) o.power = { ...s.power, ...s.power.damage ? { damage: Math.round(s.power.damage * k.dmg) } : {}, ...s.power.range ? { range: r1(s.power.range * k.size) } : {}, ...s.power.h ? { h: r1(s.power.h * 1.2) } : {}, ...s.power.cap ? { cap: Math.round(s.power.cap * k.dmg) } : {} };
-    if (s.fx) o.fx = { ...s.fx, ...s.fx.ring ? { ring: r1(s.fx.ring * k.size) } : {}, ...s.fx.burst ? { burst: Math.round(s.fx.burst * 1.5) } : {} };
-    if (s.summon) o.summon = { ...s.summon, duration: r1((s.summon.duration || 15) * k.dur), hpMul: r1((s.summon.hpMul ?? 1) * 1.5) };
-    if (s.self?.hurt) o.self = { ...s.self, hurt: r1(s.self.hurt * 0.7 * 100) / 100 };
-    return o;
-  }
-  function awakenDef(d, o = {}) {
-    const k = { ...AW, ...o.k || {} };
-    const steps = (d.steps || []).map((s) => scaleStep(s, k));
-    const out = {
-      ...d,
-      ...o,
-      k: void 0,
-      id: o.id || d.id + "_aw",
-      name: o.name || `Awakened ${d.name}`,
-      base: d.base || d.id,
-      awakened: true,
-      steps,
-      windup: d.windup !== void 0 ? r1(d.windup * k.wind * 100) / 100 : d.windup,
-      recover: d.recover !== void 0 ? r1(d.recover * k.wind * 100) / 100 : d.recover,
-      cd: d.cd ? r1(d.cd * k.cd) : d.cd,
-      desc: o.desc || `${d.desc ? d.desc + " " : ""}Awakened: bigger, stronger, faster.`
-    };
-    delete out.k;
-    delete out.mastery;
-    if (d.flight) out.flight = { ...d.flight, gauge: r1(d.flight.gauge * 1.5), speed: r1(d.flight.speed * 1.2), climb: r1((d.flight.climb || 6) * 1.2) };
-    return out;
-  }
-  var awaken = (id, o = {}) => ({ awaken: id, ...o });
-  var GEAR2 = {
-    id: "gear2",
-    name: "Gear Second",
-    short: "Gear 2",
-    mastery: 25,
-    activate: "gomu_gear2",
-    desc: "Pump your blood at high speed: faster and stronger, every move a Jet. You're spent for a moment when it wears off.",
-    heavy: {
-      id: "gomu_jet_whip",
-      name: "Jet Whip",
-      anim: "sweep",
-      windup: 0.14,
-      recover: 0.28,
-      cd: 1.3,
-      desc: "A leg whipped round faster than the eye can follow.",
-      steps: [{ hit: { shape: "arc", range: 3.4, arc: 2, offset: 0.2, damage: 16, knockback: 7, stun: 0.4, heavy: true, guardBreak: true } }]
-    },
-    skills: [
-      {
-        id: "gomu_jet_pistol",
-        name: "Jet Pistol",
-        icon: "\u{1F44A}",
-        anim: "punch",
-        windup: 0.06,
-        recover: 0.18,
-        cd: 1.6,
-        say: "Jet Pistol!",
-        desc: "A Pistol too fast to see coming.",
-        steps: [{ proj: { speed: 42, range: 10, radius: 0.4, damage: 20, sprite: "gomufist", stretch: true, knockback: 6, stun: 0.35 } }]
-      },
-      {
-        id: "gomu_jet_gatling",
-        name: "Jet Gatling",
-        icon: "\u{1F52B}",
-        anim: "punch",
-        windup: 0.12,
-        recover: 0.25,
-        cd: 5,
-        say: "Jet Gatling!",
-        desc: "A Gatling at Jet speed: a wall of fists.",
-        steps: [{ hit: { shape: "arc", range: 3.6, arc: 1, offset: 0.3, damage: 5, knockback: 1, stun: 0.12, duration: 1, interval: 0.05 } }]
-      },
-      {
-        id: "gomu_jet_rocket",
-        name: "Jet Rocket",
-        icon: "\u{1F680}",
-        anim: "thrust",
-        windup: 0.1,
-        recover: 0.15,
-        cd: 3,
-        desc: "Slingshot yourself at a blur.",
-        steps: [{ dash: { dist: 12, time: 0.25, iframes: 0.25, air: true, hit: { damage: 20, knockback: 7, stun: 0.4 } } }]
-      },
-      {
-        id: "gomu_jet_bazooka",
-        name: "Jet Bazooka",
-        icon: "\u{1F4A5}",
-        anim: "heavy",
-        windup: 0.22,
-        recover: 0.3,
-        cd: 6,
-        say: "Jet Bazooka!",
-        desc: "Both palms, at Jet speed.",
-        steps: [{ hit: { shape: "arc", range: 2.8, arc: 1.2, offset: 0.4, damage: 44, knockback: 16, stun: 0.8, heavy: true, guardBreak: true, impactFrame: true, hitShips: true } }]
-      },
-      {
-        id: "gomu_jet_spear",
-        name: "Jet Spear",
-        anim: "kick_high",
-        windup: 0.15,
-        recover: 0.3,
-        cd: 4,
-        say: "Jet Spear!",
-        desc: "Both feet driven out like a spearhead, at Jet speed.",
-        steps: [{ hit: { shape: "line", range: 4.5, width: 1, damage: 30, knockback: 8, stun: 0.5, heavy: true } }]
-      }
-    ]
-  };
-  var GEAR3 = {
-    id: "gear3",
-    name: "Gear Third",
-    short: "Gear 3",
-    mastery: 45,
-    desc: "Blow air into your bones: giant limbs \u2014 Gigant Pistol, Elephant Gatling, Gigant Axe. A little slower, a lot heavier.",
-    activate: {
-      id: "gomu_gear3_on",
-      name: "Gear Third",
-      icon: "\u{1F9B4}",
-      anim: "flex",
-      windup: 0.35,
-      recover: 0.2,
-      cd: 20,
-      say: "Gear... Third!",
-      desc: "Bite your thumb and blow: your bones swell like balloons.",
-      steps: [{ fx: { burst: 16, color: "#ffe0b2", kind: "smoke" } }, { at: 0.35, buff: { id: "gear3", form: "gear3", name: "Gear Third", dur: 25, mods: { damage: 1.1, speedMul: 0.92 }, fpTint: "rgba(255,224,178,0.45)" } }]
-    },
-    m1: { dmg: 1.3, reach: 1.35 },
-    heavy: {
-      id: "gomu_gigant_stamp",
-      name: "Gigant Stamp",
-      anim: "kick_high",
-      windup: 0.4,
-      recover: 0.4,
-      cd: 2.4,
-      desc: "A giant's sole driven straight out.",
-      steps: [{ hit: { shape: "line", range: 4.5, width: 1.8, damage: 36, knockback: 12, stun: 0.6, heavy: true, guardBreak: true, shake: 0.4 } }]
-    },
-    skills: [
-      {
-        id: "gomu_gigant_pistol",
-        name: "Gigant Pistol",
-        icon: "\u{1F9B4}",
-        anim: "punch",
-        clip: "gigant",
-        windup: 0.55,
-        recover: 0.45,
-        cd: 6,
-        say: "Gigant Pistol!",
-        desc: "A fist as big as a house, flung on its rubber.",
-        steps: [{ proj: { speed: 17, range: 11, radius: 1.6, damage: 60, sprite: "gomufist", size: 4, stretch: true, pierce: true, knockback: 14, stun: 1, heavy: true, hitShips: true, shipDamage: 200 } }]
-      },
-      {
-        id: "gomu_elephant_gatling",
-        name: "Elephant Gatling",
-        icon: "\u{1F418}",
-        anim: "punch",
-        windup: 0.4,
-        recover: 0.4,
-        cd: 9,
-        say: "Elephant Gatling!",
-        desc: "A barrage of giant fists.",
-        steps: [{ hit: { shape: "arc", range: 4.6, arc: 1.2, offset: 0.4, damage: 13, knockback: 3, stun: 0.3, duration: 1, interval: 0.1, heavy: true } }]
-      },
-      {
-        id: "gomu_gigant_axe",
-        name: "Gigant Axe",
-        anim: "axe_kick",
-        windup: 0.5,
-        recover: 0.45,
-        cd: 8,
-        say: "Gigant Axe!",
-        desc: "Leap and bring a giant heel down like an axe: the ground caves in.",
-        steps: [{ dash: { dist: 2.5, time: 0.2, iframes: 0.2 } }, { at: 0.62, hit: { shape: "circle", range: 3.4, damage: 70, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, launch: 4, impactFrame: true, shake: 0.6 }, vfx: "ring" }]
-      },
-      {
-        id: "gomu_gigant_bazooka",
-        name: "Gigant Bazooka",
-        icon: "\u{1F4A5}",
-        anim: "heavy",
-        windup: 0.6,
-        recover: 0.45,
-        cd: 11,
-        say: "Gigant Bazooka!",
-        desc: "Two giant palms.",
-        steps: [{ hit: { shape: "arc", range: 3.8, arc: 1.3, offset: 0.5, damage: 95, knockback: 20, stun: 1, heavy: true, guardBreak: true, impactFrame: true, shake: 0.7, hitShips: true, shipDamage: 250 } }]
-      },
-      {
-        id: "gomu_gigant_balloon",
-        name: "Gigant Balloon",
-        anim: "flex",
-        windup: 0.25,
-        recover: 0.3,
-        cd: 12,
-        say: "Gigant Balloon!",
-        desc: "Blow yourself up huge: shots bounce away, and whoever is pressed against you is thrown off.",
-        steps: [{ buff: { id: "balloon", name: "Gigant Balloon", dur: 2.6, mods: { speedMul: 0.3 }, reflect: 3.2, reflectWord: "BOING!", look: { bulk: 2.6 } } }, { at: 0.3, hit: { shape: "circle", range: 2.6, damage: 24, knockback: 12, stun: 0.5 }, vfx: "ring" }]
-      }
-    ]
-  };
-  var GEAR4 = {
-    id: "gear4",
-    name: "Gear Fourth",
-    short: "Gear 4",
-    mastery: 70,
-    needs: "armament",
-    activate: "gomu_gear4",
-    desc: "Boundman: Haki-hardened muscles blown up like a ball \u2014 Kong Gun, Rhino Schneider, Culverin, Leo Bazooka. It runs out, and leaves you exhausted.",
-    m1: { dmg: 1.4, reach: 1.3 },
-    heavy: {
-      id: "gomu_leo_bazooka",
-      name: "Leo Bazooka",
-      anim: "heavy",
-      windup: 0.35,
-      recover: 0.4,
-      cd: 2.2,
-      say: "Leo Bazooka!",
-      desc: "Both fists pulled back into the arms, then fired point-blank.",
-      steps: [{ hit: { shape: "arc", range: 2.8, arc: 1.2, offset: 0.4, damage: 30, knockback: 20, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true } }]
-    },
-    skills: [
-      {
-        id: "gomu_kong_gun",
-        name: "Kong Gun",
-        icon: "\u{1F98D}",
-        anim: "punch",
-        windup: 0.35,
-        recover: 0.35,
-        cd: 3,
-        say: "Kong Gun!",
-        desc: "A fist pulled back into the swollen arm, then fired like a cannon.",
-        steps: [{ proj: { speed: 30, range: 12, radius: 1, damage: 34, sprite: "gomufist", size: 3, stretch: true, knockback: 14, stun: 0.7, heavy: true, guardBreak: true, hitShips: true } }]
-      },
-      {
-        id: "gomu_kong_organ",
-        name: "Kong Organ",
-        anim: "punch",
-        windup: 0.45,
-        recover: 0.45,
-        cd: 8,
-        say: "Kong Organ!",
-        desc: "Kong Guns, one after another, like the pipes of an organ.",
-        steps: [{ hit: { shape: "arc", range: 5, arc: 1.1, offset: 0.4, damage: 18, knockback: 6, stun: 0.35, duration: 0.9, interval: 0.15, heavy: true } }]
-      },
-      {
-        id: "gomu_rhino_schneider",
-        name: "Rhino Schneider",
-        anim: "thrust",
-        windup: 0.3,
-        recover: 0.4,
-        cd: 5,
-        say: "Rhino Schneider!",
-        desc: "Bounce off the ground and ram both feet through the target.",
-        steps: [{ dash: { dist: 13, time: 0.3, iframes: 0.3, hit: { damage: 40, knockback: 18, stun: 0.8, heavy: true, guardBreak: true, launch: 4 } } }]
-      },
-      {
-        id: "gomu_culverin",
-        name: "Culverin",
-        anim: "punch",
-        windup: 0.3,
-        recover: 0.35,
-        cd: 6,
-        say: "Culverin!",
-        desc: "A punch that bends round after its target.",
-        steps: [{ proj: { speed: 22, range: 16, radius: 0.9, damage: 38, sprite: "gomufist", size: 2.2, stretch: true, homing: 5, knockback: 12, stun: 0.6, heavy: true } }]
-      },
-      {
-        id: "gomu_king_kong_gun",
-        name: "King Kong Gun",
-        icon: "\u{1F98D}",
-        anim: "punch",
-        clip: "gigant",
-        windup: 1.3,
-        recover: 0.6,
-        cd: 30,
-        say: "King Kong Gun!",
-        desc: "A whole arm swollen into a giant's fist and fired at everything in front of you.",
-        steps: [{ fx: { ring: 3, color: "#b71c1c", impact: 0.06 } }, { at: 1.3, proj: { speed: 18, range: 15, radius: 2.4, damage: 120, sprite: "gomufist", size: 7, stretch: true, pierce: true, knockback: 26, stun: 1.4, heavy: true, guardBreak: true, hitShips: true, shipDamage: 600 } }, { at: 1.35, fx: { shake: 0.8, impact: 0.12 } }]
-      }
-    ]
-  };
-  var GEAR5 = {
-    name: "Gear Fifth",
-    short: "Gear 5",
-    desc: "Awakening: the warrior of liberation. Your body as free as your imagination \u2014 Dawn Pistol, Dawn Gatling, Gomu Gomu no Kaminari, Bajrang Gun.",
-    activate: {
-      id: "gomu_awaken",
-      name: "Gear Fifth",
-      icon: "\u2600",
-      anim: "cast",
-      windup: 0.9,
-      recover: 0.2,
-      cd: 6,
-      say: "...Drums of Liberation.",
-      desc: "Your heartbeat drums: Gear Fifth.",
-      steps: [{ fx: { ring: 6, color: "#ffffff", flash: 0.5, impact: 0.15, text: "GEAR 5" } }, { at: 0.9, buff: { id: "gear5", form: "awake", name: "Gear Fifth", dur: Infinity, mods: { damage: 1.3, defMul: 0.8, speedMul: 1.3, atkSpeed: 1.25 }, fpTint: "rgba(255,255,255,0.8)", wisps: true, look: { hairColor: "#ffffff", top: "#ffffff", bottom: "#ffffff", eyeColor: "#ff4d7e", belt: "#7b3fa0", nika: true } } }]
-    },
-    m1: { dmg: 1.5, reach: 1.7 },
-    heavy: {
-      id: "gomu_dawn_whip",
-      name: "Dawn Whip",
-      anim: "sweep",
-      windup: 0.2,
-      recover: 0.35,
-      cd: 1.8,
-      desc: "A leg stretched across the whole field and swept.",
-      steps: [{ hit: { shape: "arc", range: 4.6, arc: 2.4, offset: 0.2, damage: 30, knockback: 18, stun: 0.6, heavy: true, guardBreak: true } }]
-    },
-    skills: [
-      {
-        id: "gomu_dawn_pistol",
-        name: "Dawn Pistol",
-        icon: "\u{1F44A}",
-        anim: "punch",
-        windup: 0.2,
-        recover: 0.3,
-        cd: 2.2,
-        say: "Dawn Pistol!",
-        desc: "A cartoon-giant fist.",
-        steps: [{ proj: { speed: 34, range: 14, radius: 1.3, damage: 60, sprite: "gomufist", size: 3.2, stretch: true, knockback: 16, stun: 0.7, heavy: true, guardBreak: true, hitShips: true } }]
-      },
-      {
-        id: "gomu_dawn_gatling",
-        name: "Dawn Gatling",
-        icon: "\u{1F52B}",
-        anim: "punch",
-        windup: 0.25,
-        recover: 0.35,
-        cd: 6,
-        say: "Dawn Gatling!",
-        desc: "Giant fists from everywhere at once.",
-        steps: [{ hit: { shape: "arc", range: 5.5, arc: 1.3, offset: 0.4, damage: 12, knockback: 3, stun: 0.2, duration: 1.2, interval: 0.07, heavy: true } }]
-      },
-      {
-        id: "gomu_dawn_rocket",
-        name: "Dawn Rocket",
-        icon: "\u{1F680}",
-        anim: "thrust",
-        windup: 0.15,
-        recover: 0.2,
-        cd: 3.5,
-        say: "Dawn Rocket!",
-        desc: "Fling yourself like a toy, headfirst through them.",
-        steps: [{ dash: { dist: 16, time: 0.32, iframes: 0.3, air: true, hit: { damage: 46, knockback: 14, stun: 0.6, launch: 5 } } }]
-      },
-      {
-        id: "gomu_kaminari",
-        name: "Gomu Gomu no Kaminari",
-        icon: "\u26A1",
-        anim: "raise",
-        windup: 0.6,
-        recover: 0.4,
-        cd: 12,
-        say: "Gomu Gomu no... Kaminari!",
-        desc: "Grab a bolt of lightning out of the sky like a rope and hurl it.",
-        steps: [{ proj: { speed: 34, range: 18, radius: 1, damage: 70, sprite: "thunder", size: 2.4, element: "lightning", pierce: true, status: { shock: 1.5 }, knockback: 10, stun: 0.8, hitShips: true } }]
-      },
-      {
-        id: "gomu_mogura_pistol",
-        name: "Mole Pistol",
-        icon: "\u{1F44A}",
-        anim: "slam",
-        windup: 0.35,
-        recover: 0.4,
-        cd: 7,
-        say: "Gomu Gomu no... Mogura Pistol!",
-        desc: "Punch straight down into the ground: the fist tunnels under them like a mole and bursts up beneath their chin.",
-        steps: [{ fx: { ring: 1.4, color: "#ffffff", shake: 0.25 } }, { at: 0.75, hit: { shape: "circle", range: 2.8, offset: 3.2, damage: 62, knockback: 6, stun: 0.9, heavy: true, guardBreak: true, launch: 9, impactFrame: true, shake: 0.5 }, vfx: "ring" }]
-      },
-      {
-        id: "gomu_bajrang_gun",
-        name: "Bajrang Gun",
-        icon: "\u2600",
-        anim: "punch",
-        clip: "gigant",
-        windup: 1.4,
-        recover: 0.6,
-        cd: 40,
-        say: "Gomu Gomu no... BAJRANG GUN!",
-        desc: "A fist the size of an island.",
-        steps: [{ fx: { ring: 5, color: "#ffffff", impact: 0.08 } }, { at: 1.4, proj: { speed: 15, range: 17, radius: 3, damage: 180, sprite: "gomufist", size: 9, stretch: true, pierce: true, knockback: 30, stun: 1.6, heavy: true, guardBreak: true, hitShips: true, shipDamage: 800 } }, { at: 1.45, fx: { shake: 1, impact: 0.15 } }]
-      }
-    ]
-  };
-  var KITS = {
-    gomu: {
-      m1: { reach: 1.5 },
-      heavy: {
-        id: "gomu_whip",
-        name: "Gum-Gum Whip",
-        anim: "sweep",
-        windup: 0.18,
-        recover: 0.32,
-        cd: 1.5,
-        desc: "A rubber leg stretched out and swept round.",
-        steps: [{ hit: { shape: "arc", range: 3.2, arc: 1.8, offset: 0.2, damage: 13, knockback: 6, stun: 0.4, heavy: true, guardBreak: true } }]
-      },
-      forms: [GEAR2, GEAR3, GEAR4],
-      awakening: GEAR5
-    },
-    gura: { m1: { element: "quake", dmg: 1.1 }, awakening: { name: "Awakened Quakes", extra: [
-      {
-        id: "gura_kabutowari",
-        name: "Kabutowari",
-        icon: "\u270A",
-        anim: "quake",
-        windup: 0.5,
-        recover: 0.45,
-        cd: 14,
-        desc: "Helmet Splitter: a quake bubble driven straight down \u2014 the ground for a long way round heaves and splits.",
-        steps: [{ hit: { shape: "circle", range: 7, damage: 110, knockback: 16, stun: 1.2, element: "quake", heavy: true, unblockable: true, launch: 7, impactFrame: true, shake: 1.2, hitShips: true, shipDamage: 400 }, vfx: "ring" }]
-      }
-    ] } },
-    // Ope Ope: the surgeon fights hand to hand with a shock in the palm. Awakened,
-    // the ROOM goes where the surgeon goes (room.js roomFollows): no need to stay in it.
-    ope: {
-      heavy: "ope_counter",
-      awakening: {
-        name: "K-ROOM",
-        desc: "Awakening: your ROOM goes where you go \u2014 always in it, always the surgeon. Radio Knife, Shock Wille, Puncture Wille.",
-        skills: [
-          awaken("ope_room", { name: "ROOM", desc: "Open a ROOM \u2014 awakened, it goes where you go, so you are always in it.", k: { dur: 1.3 } }),
-          awaken("ope_shambles", { name: "Shambles", desc: "Change places with anyone in your ROOM \u2014 awakened, it goes where you go." }),
-          awaken("ope_radio", { name: "Radio Knife" }),
-          "ope_shockwille",
-          {
-            id: "ope_puncture_wille",
-            name: "K-Room: Puncture Wille",
-            icon: "\u{1F499}",
-            anim: "thrust",
-            windup: 0.6,
-            recover: 0.5,
-            cd: 30,
-            say: "K-Room... Puncture Wille!",
-            desc: "A ROOM coated on your blade, driven through the target: a shockwave that pierces everything behind them.",
-            steps: [{ hit: { shape: "line", range: 9, width: 2.4, damage: 160, knockback: 20, stun: 1.4, unblockable: true, heavy: true, impactFrame: true, shake: 1, hitShips: true, shipDamage: 500 }, vfx: "beam", color: "#81d4fa" }]
-          }
-        ],
-        heavy: awaken("ope_injection", { name: "Injection Shot", k: { cd: 0.3 } })
-      }
-    },
-    ito: { m1: { element: "string", status: { bleed: 1.5 } }, awakening: { name: "Awakened Strings", extra: [
-      {
-        id: "ito_nami_shiraito",
-        name: "Nami Shiraito",
-        icon: "\u{1F9F5}",
-        anim: "spread",
-        windup: 0.5,
-        recover: 0.4,
-        cd: 12,
-        desc: "Awakened: the very ground turns to strings and rolls at them in waves.",
-        steps: [{ hit: { shape: "line", range: 12, width: 3.2, damage: 55, knockback: 9, stun: 0.9, slashing: true, element: "string" }, vfx: "beam", color: "#f8bbd0" }, { zone: { range: 3, duration: 3, interval: 0.5, damage: 8, color: "#f8bbd0", atTarget: true, kind: "field", slow: 0.4 } }]
-      }
-    ] } },
-    mochi: { m1: { dmg: 1.1, reach: 1.25 }, awakening: { name: "Awakened Mochi", extra: [
-      {
-        id: "mochi_shirotsuki",
-        name: "Shiro Tsuki",
-        icon: "\u{1F361}",
-        anim: "slam",
-        windup: 0.45,
-        recover: 0.4,
-        cd: 13,
-        say: "Mochi... Shiro Tsuki!",
-        desc: "Awakened: the very ground round you turns to mochi \u2014 it heaves, swallows their feet and holds them fast.",
-        steps: [{ hit: { shape: "circle", range: 5, damage: 46, knockback: 4, stun: 0.6, element: "physical", heavy: true, shake: 0.5 }, vfx: "ring" }, { zone: { range: 5.5, duration: 4, interval: 0.5, damage: 6, color: "#f5f5f5", kind: "mochi", slow: 0.75, status: { root: 0.6 } } }]
-      }
-    ] } },
-    // (fists that fly off on their own, arms that sprout out of anything: a longer reach)
-    bara: { m1: { reach: 1.4 } },
-    hana: { m1: { reach: 1.3 }, awakening: { name: "Awakened Flowers", extra: [
-      {
-        id: "hana_demonio",
-        name: "Demonio Fleur",
-        icon: "\u{1F338}",
-        anim: "flex",
-        windup: 0.5,
-        recover: 0.3,
-        cd: 30,
-        say: "Demonio Fleur!",
-        desc: "Awakened: arms and wings of petals bloom from your back \u2014 a towering demon's shape, every blow a giant's.",
-        steps: [{ fx: { burst: 24, color: "#f48fb1", kind: "petal", ring: 3, impact: 0.06 } }, { at: 0.5, buff: { id: "demonio", name: "Demonio Fleur", dur: 14, mods: { damage: 1.35, defMul: 0.8, scale: 1.6 }, aura: "rgba(136,14,79,0.8)" } }]
-      }
-    ] } },
-    // (a Zoan's beast in every blow)
-    neko_leopard: { m1: { dmg: 1.2 } },
-    doku: { m1: { element: "poison", status: { poison: 2 } }, awakening: { name: "Awakened Venom", extra: [
-      {
-        id: "doku_venom_demon",
-        name: "Venom Demon: Hell's Judgement",
-        icon: "\u2620",
-        anim: "thrust",
-        windup: 0.5,
-        recover: 0.45,
-        cd: 16,
-        say: "Venom Demon... Hell's Judgement!",
-        desc: "Awakened: a demon of poison wraps you and you charge \u2014 the ground it crosses stays a pool of venom.",
-        steps: [{ dash: { dist: 10, time: 0.45, iframes: 0.4, hit: { damage: 60, knockback: 10, stun: 0.7, heavy: true, element: "poison", status: { poison: 4 } } } }, { at: 0.95, zone: { range: 3.5, duration: 5, interval: 0.5, damage: 8, element: "poison", status: { poison: 2 }, color: "#7b1fa2", kind: "gas" } }]
-      }
-    ] } },
-    bomu: { m1: { element: "explosion", dmg: 1.1 } },
-    // the Logia: their own stuff in every blow
-    mera: { m1: { element: "fire", status: { burn: 1.5 } }, awakening: { name: "Awakened Flames", skills: [
-      awaken("mera_hiken"),
-      {
-        id: "mera_jujika",
-        name: "Jujika",
-        icon: "\u271D",
-        anim: "cast",
-        windup: 0.3,
-        recover: 0.35,
-        cd: 7,
-        say: "Jujika!",
-        desc: "Fire Cross: a cross of flame shot from crossed fingers.",
-        steps: [{ proj: { speed: 22, range: 14, radius: 1.1, damage: 48, sprite: "fireball", size: 2.2, element: "fire", pierce: true, status: { burn: 3 }, knockback: 8, trail: { color: ["#ff7043", "#ffca28"] } } }]
-      },
-      {
-        id: "mera_shiranui",
-        name: "Shinka: Shiranui",
-        anim: "thrust",
-        windup: 0.35,
-        recover: 0.35,
-        cd: 9,
-        say: "Shinka... Shiranui!",
-        desc: "Divine Fire: two spears of flame thrown side by side.",
-        steps: [{ proj: { speed: 26, range: 15, radius: 0.6, damage: 40, count: 2, spread: 0.18, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 6, trail: { color: ["#ff7043", "#ffca28"] } } }]
-      },
-      awaken("mera_enkai"),
-      awaken("mera_entei"),
-      awaken("mera_kagero"),
-      awaken("mera_kyokaen")
-    ] } },
-    hie: { m1: { element: "ice", status: { chill: 1.5 } }, awakening: { name: "Awakened Ice", skills: [
-      awaken("hie_saber"),
-      awaken("hie_pheasant"),
-      awaken("hie_partisan"),
-      awaken("hie_ageand"),
-      awaken("hie_time"),
-      awaken("hie_icetime")
-    ] } },
-    goro: {
-      m1: { element: "lightning", status: { shock: 0.4 } },
-      forms: [{ id: "amaru", name: "200 Million Volt Amaru", short: "Amaru", mastery: 55, activate: "goro_amaru", desc: "A body of thunder, its drums ringing: bigger, faster, every bolt harder." }]
-    },
-    suna: { m1: { element: "sand", status: { dry: 1 } } },
-    moku: { m1: { element: "smoke" } },
-    pika: { m1: { element: "light", dmg: 1.1 } },
-    magu: { m1: { element: "magma", status: { burn: 2 } } },
-    kage: { awakening: { name: "Awakened Shadows", extra: [
-      {
-        id: "kage_asgard",
-        name: "Shadows' Asgard",
-        icon: "\u{1F464}",
-        anim: "flex",
-        windup: 0.7,
-        recover: 0.3,
-        cd: 40,
-        say: "Shadows' Asgard!",
-        desc: "Awakened: draw a legion of shadows into your own body \u2014 you swell into a towering giant, every blow a landslide.",
-        steps: [{ fx: { burst: 26, color: "#2a1838", kind: "smoke", ring: 4, impact: 0.08, shake: 0.4 } }, { at: 0.7, buff: { id: "asgard", name: "Shadows' Asgard", dur: 16, mods: { damage: 1.45, defMul: 0.7, speedMul: 0.9, scale: 2.2 }, aura: "rgba(42,24,56,0.85)" } }]
-      }
-    ] } },
-    yami: { m1: { element: "dark" }, awakening: { name: "Awakened Darkness", extra: [
-      {
-        id: "yami_abyss",
-        name: "Kurozu: Abyss",
-        icon: "\u{1F311}",
-        anim: "raise",
-        windup: 0.6,
-        recover: 0.4,
-        cd: 22,
-        say: "Abyss!",
-        desc: "Awakened: the dark spreads out from you over the whole field and drags everyone in it down and in.",
-        steps: [{ zone: { range: 8, duration: 5, interval: 0.4, damage: 9, element: "dark", color: "#120a1a", kind: "dark", pull: 2.5, slow: 0.5, absorb: true } }]
-      }
-    ] } },
-    hito: { m1: { dmg: 1.1 }, forms: [{ id: "monster", name: "Monster Point", short: "Monster", mastery: 50, activate: "hito_monster", desc: "A Rumble Ball overdose: a towering monster, enormous power, barely controlled.", m1: { dmg: 1.5, reach: 1.4 } }] },
-    uo_seiryu: { m1: { dmg: 1.2 }, forms: [{ id: "dragon", name: "Azure Dragon Form", short: "Dragon", mastery: 40, activate: "seiryu_form", desc: "Take the Azure Dragon's whole shape: bigger and stronger, every breath a furnace.", m1: { dmg: 1.4, reach: 1.4 } }] }
-  };
-  function attachKits(FRUITS2) {
-    const reg6 = (fid, d, extra) => {
-      const def = { ...d, ...extra, source: "fruit:" + fid, fruit: fid };
-      registerAbilities([def], "fruit:" + fid);
-      return def.id;
-    };
-    for (const [fid, f] of Object.entries(FRUITS2)) {
-      const kit = KITS[fid] || {};
-      const base2 = Object.fromEntries([...f.techniques, ...f.more || []].map((t) => [t.id, t]));
-      const one = (s, extra) => {
-        if (!s) return null;
-        if (typeof s === "string") return s;
-        if (s.awaken) {
-          const b = base2[s.awaken] || getAbility(s.awaken);
-          if (!b) return null;
-          const o = { ...s };
-          delete o.awaken;
-          return reg6(fid, awakenDef(b, o), extra);
-        }
-        return reg6(fid, s, extra);
-      };
-      f.m1 = kit.m1 || null;
-      f.heavy = one(kit.heavy) || null;
-      f.forms = (kit.forms || []).map((F5) => {
-        const form = { ...F5, fruit: fid };
-        form.activate = one(F5.activate, { formOf: F5.id });
-        form.skills = F5.skills ? F5.skills.map((s) => one(s, { formSkill: F5.id })).filter(Boolean) : null;
-        form.heavy = one(F5.heavy, { formSkill: F5.id });
-        return form;
-      });
-      const A2 = kit.awakening || {};
-      const aw = { name: A2.name || `Awakened ${f.en.replace(/ Fruit.*$/, "")}`, short: A2.short || (A2.name && A2.name.length <= 12 ? A2.name : "Awakened"), desc: A2.desc || `Awakening: every move of the ${f.name} bigger, stronger, faster.`, fruit: fid, m1: A2.m1 || f.m1 || null };
-      aw.activate = one(A2.activate || {
-        id: fid + "_awaken",
-        name: aw.name,
-        icon: f.techniques[0]?.icon,
-        anim: "cast",
-        windup: 0.6,
-        recover: 0.2,
-        cd: 6,
-        desc: `Awaken the ${f.name}.`,
-        steps: [{ fx: { ring: 4, color: f.color, flash: 0.25, impact: 0.08, text: "AWAKENED" } }, { at: 0.6, buff: { id: fid + "_awake", form: "awake", name: aw.name, dur: Infinity, mods: { damage: 1.15, speedMul: 1.1 }, aura: rgba(f.color, 0.8), ...A2.look ? { look: A2.look } : {} } }]
-      }, { formOf: "awake", awakened: true, awColor: f.color });
-      const skills = A2.skills || [...f.techniques.filter((t) => !t.flight).map((t) => awaken(t.id)), ...A2.extra || []];
-      aw.skills = skills.map((s) => one(s, { awakenedSkill: true, awakened: true, awColor: f.color })).filter(Boolean);
-      aw.heavy = one(A2.heavy, { awakenedSkill: true, awakened: true, awColor: f.color }) || (f.heavy ? one(awaken(f.heavy), { awakenedSkill: true, awakened: true, awColor: f.color }) : null);
-      f.awakening = aw;
-    }
-  }
-
-  // src/data/fruits.js
-  var T2 = (mastery, a) => ({ ...a, mastery });
-  var FRUITS = {
-    // ------------------------------------------------------------- PARAMECIA
-    gomu: {
-      name: "Gomu Gomu no Mi",
-      en: "Gum-Gum Fruit",
-      type: "Paramecia",
-      rarity: "mythical",
-      color: "#e57373",
-      weight: 0.6,
-      desc: "Turns the body into rubber: blunt blows and lightning barely touch it, and its fists land even on a body made of lightning. Or so the World Government would have you believe...",
-      passive: { rubber: true },
-      stretch: true,
-      techniques: [
-        T2(0, { id: "gomu_pistol", name: "Gum-Gum Pistol", icon: "\u{1F44A}", anim: "punch", windup: 0.12, recover: 0.25, cd: 2.5, say: "Gomu Gomu no... Pistol!", steps: [{ proj: { speed: 26, range: 8, radius: 0.35, damage: 16, sprite: "gomufist", stretch: true, knockback: 5, stun: 0.3 } }] }),
-        T2(10, { id: "gomu_gatling", name: "Gum-Gum Gatling", icon: "\u{1F52B}", anim: "punch", windup: 0.2, recover: 0.3, cd: 6, say: "Gomu Gomu no... Gatling!", steps: [{ hit: { shape: "arc", range: 3.2, arc: 0.9, offset: 0.3, damage: 5, knockback: 0.8, stun: 0.15, duration: 0.9, interval: 0.08 }, vfx: "fist" }] }),
-        T2(20, { id: "gomu_rocket", name: "Gum-Gum Rocket", icon: "\u{1F680}", anim: "thrust", windup: 0.15, recover: 0.2, cd: 4, desc: "Launch yourself like a slingshot.", steps: [{ dash: { dist: 9, time: 0.3, iframes: 0.25, air: true, hit: { damage: 14, knockback: 6, stun: 0.4 } } }] }),
-        T2(30, { id: "gomu_bazooka", name: "Gum-Gum Bazooka", icon: "\u{1F4A5}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 8, say: "Gomu Gomu no... BAZOOKA!", steps: [{ hit: { shape: "arc", range: 2.4, arc: 1.2, offset: 0.4, damage: 36, knockback: 14, stun: 0.8, heavy: true, guardBreak: true, impactFrame: true, hitShips: true } }] }),
-        T2(15, {
-          id: "gomu_balloon",
-          name: "Gum-Gum Balloon",
-          anim: "flex",
-          windup: 0.1,
-          recover: 0.25,
-          cd: 9,
-          say: "Gomu Gomu no... Balloon!",
-          desc: "Blow yourself up like a balloon: bullets and cannonballs bounce off you and fly back the way they came.",
-          steps: [{ buff: { id: "balloon", name: "Balloon", dur: 1.8, mods: { speedMul: 0.35 }, reflect: 1.8, reflectWord: "BOING!", look: { bulk: 1.9 } } }]
-        }),
-        T2(25, {
-          id: "gomu_stamp",
-          name: "Gum-Gum Stamp",
-          anim: "kick_high",
-          windup: 0.18,
-          recover: 0.3,
-          cd: 4,
-          say: "Gomu Gomu no... Stamp!",
-          desc: "A rubber leg shot out straight at them, sole first: it lands like a door slammed in their face.",
-          steps: [{ hit: { shape: "line", range: 5.5, width: 0.9, damage: 20, knockback: 9, stun: 0.45, heavy: true }, vfx: "stab" }]
-        }),
-        T2(35, {
-          id: "gomu_spear",
-          name: "Gum-Gum Spear",
-          anim: "kick_high",
-          windup: 0.3,
-          recover: 0.35,
-          cd: 7,
-          say: "Gomu Gomu no... Yari!",
-          desc: "Both feet pressed together and stretched out like a spearhead: it drives straight through whoever is in front of you.",
-          steps: [{ hit: { shape: "line", range: 6.5, width: 1, damage: 30, knockback: 10, stun: 0.6, heavy: true, guardBreak: true }, vfx: "stab" }]
-        }),
-        T2(40, {
-          id: "gomu_bell",
-          name: "Gum-Gum Bell",
-          anim: "grab",
-          windup: 0.25,
-          recover: 0.35,
-          cd: 9,
-          say: "Gomu Gomu no... Kane!",
-          desc: "Grab hold of them, stretch your head right back \u2014 and let it fly into theirs like the clapper of a bell.",
-          steps: [{ pull: { range: 5, strength: 12, stun: 0.5 } }, { at: 0.45, hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 32, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true, shake: 0.4 } }]
-        })
-      ],
-      // (the Gears: Second and Fourth are switched on by these — see data/fruitForms.js — and so is Third by
-      // its own; the old Gear Third and Gear Fifth stay for whoever uses them as single moves)
-      more: [
-        T2(45, {
-          id: "gomu_gear2",
-          name: "Gear Second",
-          icon: "\u2668",
-          anim: "kneel",
-          windup: 0.4,
-          recover: 0.1,
-          cd: 30,
-          say: "Gear... Second!",
-          desc: "Pump blood at high speed: faster and stronger, every move a Jet \u2014 at a cost when it wears off.",
-          steps: [{ fx: { burst: 20, color: "#ffcdd2", kind: "smoke" } }, { at: 0.4, buff: { id: "gear2", form: "gear2", name: "Gear Second", dur: 25, mods: { speedMul: 1.35, damage: 1.25, atkSpeed: 1.3 }, fpTint: "rgba(255,138,128,0.7)", steam: true, look: { skin: "#f4a39c" }, after: { id: "gear2_spent", name: "Spent", dur: 6, mods: { speedMul: 0.85, atkSpeed: 0.85 } } } }]
-        }),
-        T2(60, { id: "gomu_gear3", name: "Gear Third: Gigant Pistol", icon: "\u{1F9B4}", anim: "pistol", windup: 0.7, recover: 0.5, cd: 18, say: "Gear Third... Gigant Pistol!", steps: [{ proj: { speed: 16, range: 10, radius: 1.6, damage: 80, sprite: "gomufist", size: 4, stretch: true, pierce: true, knockback: 14, stun: 1, heavy: true, hitShips: true, shipDamage: 200 } }] }),
-        T2(80, {
-          id: "gomu_gear4",
-          name: "Gear Fourth: Boundman",
-          icon: "\u{1F388}",
-          anim: "cast",
-          windup: 0.8,
-          recover: 0.2,
-          cd: 60,
-          cost: { haki: 40 },
-          requiresHaki: "armament",
-          say: "Gear... FOURTH!",
-          desc: "Inflate your Haki-hardened muscles and bounce: enormous power for a short time \u2014 then you're exhausted.",
-          steps: [{ fx: { ring: 3, color: "#b71c1c", impact: 0.1 } }, { at: 0.8, buff: {
-            id: "gear4",
-            form: "gear4",
-            name: "Boundman",
-            dur: 22,
-            mods: { damage: 2.2, defMul: 0.6, speedMul: 1.2 },
-            fpTint: "rgba(183,28,28,0.9)",
-            forceArmament: true,
-            steam: "collar",
-            look: { bulk: 1.85, muscle: 1.2, boundman: true, hair: "spiky" },
-            drain: { haki: 1.5 },
-            after: { id: "gear4_spent", name: "Exhausted", dur: 12, mods: { speedMul: 0.7, atkSpeed: 0.75, damage: 0.8 }, noHaki: true, noForms: true }
-          } }]
-        }),
-        T2(100, {
-          id: "gomu_gear5",
-          name: "Gear Fifth",
-          icon: "\u2600",
-          anim: "cast",
-          windup: 1,
-          recover: 0.2,
-          cd: 180,
-          cost: { haki: 60 },
-          requiresHaki: "conqueror",
-          say: "...Drums of Liberation.",
-          desc: "The fruit's true name is Hito Hito no Mi, Model: Nika. The warrior of liberation, bringer of joy.",
-          steps: [{ fx: { ring: 6, color: "#ffffff", flash: 0.6, impact: 0.2, text: "SUN GOD NIKA" } }, { at: 1, buff: { id: "gear5", name: "Gear Fifth", dur: 30, mods: { damage: 3, defMul: 0.45, speedMul: 1.4, atkSpeed: 1.4 }, fpTint: "rgba(255,255,255,0.8)", wisps: true, look: { hairColor: "#ffffff", top: "#ffffff", bottom: "#ffffff", eyeColor: "#ff4d7e", belt: "#7b3fa0", nika: true } } }]
-        })
-      ]
-    },
-    gura: {
-      name: "Gura Gura no Mi",
-      en: "Tremor-Tremor Fruit",
-      type: "Paramecia",
-      rarity: "legendary",
-      color: "#e0f7fa",
-      weight: 0.4,
-      desc: "The power to destroy the world: quakes in the air, the ground and the sea that crack the very sky and throw everything off its feet. Once eaten by Whitebeard.",
-      techniques: [
-        T2(0, { id: "gura_punch", name: "Quake Punch", icon: "\u270A", anim: "quake", windup: 0.25, recover: 0.3, cd: 4, desc: "A fist wrapped in a quake bubble: the air in front of it cracks like glass.", steps: [{ hit: { shape: "arc", range: 3, arc: 1.2, offset: 0.3, damage: 26, knockback: 10, stun: 0.6, element: "quake", heavy: true, guardBreak: true, launch: 3, shake: 0.4 }, vfx: "ring" }] }),
-        T2(20, { id: "gura_kaishin", name: "Shima Yurashi", icon: "\u{1F310}", anim: "quake", windup: 0.45, recover: 0.4, cd: 9, desc: "Island Shaker: grab the air and shake it \u2014 the ground heaves and everyone around you is thrown off their feet.", steps: [{ hit: { shape: "circle", range: 4.5, damage: 40, knockback: 12, stun: 0.9, element: "quake", heavy: true, guardBreak: true, launch: 6, impactFrame: true, shake: 0.8, hitShips: true }, vfx: "ring" }] }),
-        T2(45, { id: "gura_wave", name: "Gekishin", icon: "\u{1F30A}", anim: "quake", windup: 0.5, recover: 0.4, cd: 12, desc: "Violent Quake: a quake bubble punched into the air sends a shockwave ripping through the air and the ground (and the sea), throwing everything in its path.", steps: [{ hit: { shape: "line", range: 12, width: 3, damage: 55, knockback: 14, stun: 1, element: "quake", heavy: true, unblockable: true, launch: 5, shake: 0.7, hitShips: true, shipDamage: 250 }, vfx: "beam", color: "#e0f7fa" }] }),
-        T2(75, {
-          id: "gura_tsunami",
-          name: "Kaishin",
-          icon: "\u{1F30B}",
-          anim: "slam",
-          windup: 0.9,
-          recover: 0.5,
-          cd: 40,
-          desc: "Seaquake: strike the very air and the sea rises \u2014 everything nearby is crushed, ships are swamped, and the ground goes on shaking.",
-          steps: [
-            { hit: { shape: "circle", range: 8, damage: 90, knockback: 16, stun: 1.2, element: "quake", heavy: true, unblockable: true, launch: 7, impactFrame: true, shake: 1.2, hitShips: true, shipDamage: 500 }, vfx: "ring" },
-            { zone: { range: 8, duration: 3, interval: 0.5, damage: 5, element: "quake", color: "#e0f7fa", kind: "quake", slow: 0.5 } }
-          ]
-        }),
-        T2(30, {
-          id: "gura_bubble",
-          name: "Quake Bubble",
-          anim: "quake",
-          windup: 0.35,
-          recover: 0.35,
-          cd: 8,
-          desc: "A bubble of tremors gathered round the fist and flung: where it bursts, the very air shatters like glass.",
-          steps: [{ proj: { speed: 16, range: 12, radius: 0.7, damage: 14, sprite: "shockwave", color: "#e0f7fa", size: 1.6, element: "quake", pierce: true, explode: { range: 3.2, damage: 46, element: "quake", knockback: 12 } } }]
-        }),
-        T2(60, {
-          id: "gura_tilt",
-          name: "Sky Tilt",
-          anim: "grab",
-          windup: 0.55,
-          recover: 0.45,
-          cd: 18,
-          desc: "Grab the air itself and wrench it sideways: the whole field tilts like the deck of a ship, and everyone in a great sweep in front of you is thrown off their feet.",
-          steps: [{ hit: { shape: "arc", range: 9, arc: 1.8, offset: 0.3, damage: 50, knockback: 15, stun: 1, element: "quake", heavy: true, guardBreak: true, launch: 5, impactFrame: true, shake: 1, hitShips: true, shipDamage: 200 }, vfx: "ring" }]
-        })
-      ]
-    },
-    ope: {
-      name: "Ope Ope no Mi",
-      en: "Op-Op Fruit",
-      type: "Paramecia",
-      rarity: "legendary",
-      color: "#81d4fa",
-      weight: 0.4,
-      desc: "Open a ROOM \u2014 a sphere of space that stays where you cast it \u2014 and inside it you are a surgeon: you can swap, lift, cut and remove whatever is in it, and your blows pass through any body. Its ultimate technique grants eternal youth, at the cost of the user's life.",
-      // (ROOM, Shambles, Amputate, Mes and Takt on the first five skill keys; the rest of the surgeon's
-      // base on keys of your choosing — the skills panel, or Skills (Tab))
-      techniques: [
-        T2(0, {
-          id: "ope_room",
-          name: "ROOM",
-          icon: "\u{1F535}",
-          anim: "raise",
-          windup: 0.35,
-          recover: 0.25,
-          cd: 18,
-          say: "ROOM.",
-          desc: "Open a ROOM: a pale blue sphere that stays where you cast it (it grows with your mastery). Your other techniques work inside it \u2014 draw the fight in.",
-          steps: [{ zone: { kind: "room", range: 6.5, grow: 0.035, duration: 16, damage: 0, color: "#81d4fa", single: true, whileOwner: true } }, { buff: { id: "room", name: "ROOM", dur: 16 } }]
-        }),
-        T2(10, {
-          id: "ope_shambles",
-          name: "Shambles",
-          icon: "\u{1F500}",
-          anim: "point",
-          windup: 0.12,
-          recover: 0.15,
-          cd: 2.5,
-          room: "need",
-          say: "Shambles.",
-          desc: "In your Room: change places with whoever you aim at \u2014 a foe mid-swing finds themselves somewhere else \u2014 or be wherever in it you aim.",
-          steps: [{ power: { kind: "shambles" } }]
-        }),
-        T2(20, {
-          id: "ope_amputate",
-          name: "Amputate",
-          icon: "\u{1F5E1}",
-          anim: "slash",
-          windup: 0.25,
-          recover: 0.3,
-          cd: 7,
-          room: "need",
-          say: "Amputate!",
-          desc: "In your Room: a vast slash through everything in front of you. It cuts without killing \u2014 the pieces live, helpless, for a while.",
-          steps: [{ hit: { shape: "arc", range: 4.2, arc: 2.4, offset: 0.2, damage: 22, knockback: 1, stun: 0.3, slashing: true, nonLethal: true, status: { pieces: 2.4 } }, vfx: "slash", color: "#81d4fa" }]
-        }),
-        T2(40, {
-          id: "ope_mes",
-          name: "Mes",
-          icon: "\u{1F499}",
-          anim: "thrust",
-          windup: 0.18,
-          recover: 0.3,
-          cd: 14,
-          room: "need",
-          say: "Mes.",
-          desc: "In your Room: push a hand into the target and take their heart out in a cube. Without it they can do nothing for a long while \u2014 and every blow lands harder.",
-          steps: [{ hit: { shape: "arc", range: 1.9, arc: 1, offset: 0.2, damage: 12, knockback: 0, stun: 0.3, unblockable: true, status: { heartless: 3.5 } } }]
-        }),
-        T2(30, {
-          id: "ope_takt",
-          name: "Takt",
-          anim: "raise",
-          windup: 0.35,
-          recover: 0.35,
-          cd: 12,
-          room: "need",
-          say: "Takt.",
-          desc: "In your Room: raise a finger, and everyone in the Room is lifted into the air, held there helpless \u2014 and slammed back down.",
-          steps: [{ power: { kind: "takt", h: 2.6, hold: 1.1, damage: 26, blow: true, unblockable: true } }]
-        }),
-        T2(65, {
-          id: "ope_injection",
-          name: "Injection Shot",
-          anim: "thrust",
-          windup: 0.25,
-          recover: 0.35,
-          cd: 9,
-          room: "weak",
-          say: "Injection Shot!",
-          desc: "Charge in a blur and run the target through with your sword. Half as strong outside your Room.",
-          steps: [{ dash: { dist: 7, time: 0.18, iframes: 0.15, hit: { damage: 58, knockback: 7, stun: 0.6, slashing: true, guardBreak: true } } }]
-        }),
-        T2(75, {
-          id: "ope_gamma",
-          name: "Gamma Knife",
-          icon: "\u2622",
-          anim: "thrust",
-          windup: 0.35,
-          recover: 0.35,
-          cd: 18,
-          room: "need",
-          say: "Gamma Knife.",
-          desc: "In your Room: a blade of gamma rays that destroys the organs from the inside and leaves the body unmarked. Nothing defends against it.",
-          steps: [{ hit: { shape: "line", range: 3.4, width: 0.9, damage: 72, knockback: 1, stun: 1, unblockable: true, trueDamage: true, status: { bleed: 4 } }, vfx: "beam", color: "#b388ff" }]
-        }),
-        T2(85, {
-          id: "ope_radio",
-          name: "Radio Knife",
-          anim: "slash",
-          windup: 0.4,
-          recover: 0.4,
-          cd: 20,
-          room: "need",
-          say: "Radio Knife!",
-          desc: "In your Room: an electrified slash that cuts the target to pieces \u2014 and the shock keeps the pieces from coming back together for a long while.",
-          steps: [{ hit: { shape: "arc", range: 4, arc: 2.2, offset: 0.2, damage: 64, knockback: 2, stun: 0.5, slashing: true, status: { pieces: 3, shock: 2 } }, vfx: "slash", color: "#fff176" }]
-        })
-      ],
-      // (Counter Shock is the surgeon's heavy blow; Shock Wille belongs to the awakened K-ROOM)
-      more: [
-        T2(55, {
-          id: "ope_counter",
-          name: "Counter Shock",
-          icon: "\u26A1",
-          anim: "palm",
-          windup: 0.2,
-          recover: 0.3,
-          cd: 10,
-          room: "weak",
-          say: "Counter Shock!",
-          desc: "A hand on the target and a shock like a defibrillator's. Half as strong outside your Room.",
-          steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 42, knockback: 3, stun: 1, element: "lightning", status: { shock: 1.5 } }, vfx: "ring", color: "#fff176" }]
-        }),
-        T2(100, {
-          id: "ope_shockwille",
-          name: "K-Room: Shock Wille",
-          anim: "thrust",
-          windup: 0.5,
-          recover: 0.5,
-          cd: 45,
-          cost: { haki: 35 },
-          requiresHaki: "armament",
-          say: "K-Room... Shock Wille!",
-          desc: "A Room coated in Haki, opened inside the target's own body on your sword's point \u2014 and a shockwave set off within it. Needs no other Room.",
-          steps: [{ hit: { shape: "arc", range: 2, arc: 0.9, offset: 0.2, damage: 130, knockback: 12, stun: 1.2, unblockable: true, trueDamage: true, heavy: true, impactFrame: true, shake: 0.7 }, vfx: "ring", color: "#81d4fa" }]
-        })
-      ]
-    },
-    bara: {
-      name: "Bara Bara no Mi",
-      en: "Chop-Chop Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#ff8a65",
-      weight: 3,
-      desc: "Split your body into pieces. Blades cannot hurt you \u2014 but your feet must stay on the ground. (Buggy the Clown's fruit.)",
-      passive: { immuneSlash: true },
-      techniques: [
-        T2(0, { id: "bara_cannon", name: "Chop-Chop Cannon", icon: "\u{1F921}", anim: "cross", windup: 0.15, recover: 0.25, cd: 3, say: "Bara Bara Ho!", steps: [{ proj: { speed: 20, range: 9, radius: 0.35, damage: 14, sprite: "barafist", color: "#ffccbc", knockback: 3, stun: 0.3 } }] }),
-        T2(20, { id: "bara_festival", name: "Chop-Chop Festival", icon: "\u{1F3AA}", anim: "cast", windup: 0.3, recover: 0.4, cd: 10, desc: "Scatter into a hundred pieces that pummel everything nearby.", steps: [{ hit: { shape: "circle", range: 3.2, damage: 6, knockback: 1.5, stun: 0.15, duration: 1.2, interval: 0.15 }, vfx: "ring" }] }),
-        T2(40, { id: "bara_escape", name: "Emergency Escape", icon: "\u{1F388}", anim: "fly", windup: 0.05, recover: 0.1, cd: 8, desc: "Your pieces fly off every which way and come back together somewhere safer.", steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, air: true } }] }),
-        T2(10, {
-          id: "bara_knives",
-          name: "Chop-Chop Knives",
-          anim: "cross",
-          windup: 0.15,
-          recover: 0.25,
-          cd: 4,
-          say: "Bara Bara Ho!",
-          desc: "A hand flung off with knives fanned between its fingers: three blades come at them at once.",
-          steps: [{ proj: { speed: 22, range: 10, radius: 0.25, damage: 10, count: 3, spread: 0.35, sprite: "iceshard", color: "#cfd8dc", slashing: true } }]
-        }),
-        T2(30, {
-          id: "bara_senbei",
-          name: "Chop-Chop Senbei",
-          anim: "sweep",
-          windup: 0.2,
-          recover: 0.3,
-          cd: 7,
-          desc: "Chop-Chop Pancake: your feet stay on the ground and your lower half spins off through them like a saw blade.",
-          steps: [{ dash: { dist: 7, time: 0.35, iframes: 0.2, hit: { damage: 22, knockback: 6, stun: 0.5, range: 1.3 } } }]
-        }),
-        T2(55, {
-          id: "bara_muggy",
-          name: "Muggy Ball",
-          anim: "shoot",
-          windup: 0.45,
-          recover: 0.4,
-          cd: 16,
-          say: "Muggy Ball!",
-          desc: "Buggy's own cannonball, lit and hurled by hand: it bursts with the force of a whole broadside.",
-          steps: [{ proj: { speed: 13, range: 12, radius: 0.5, damage: 10, sprite: "bomb", size: 1.4, explode: { range: 4, damage: 70, knockback: 12 } } }]
-        })
-      ]
-    },
-    bomu: {
-      name: "Bomu Bomu no Mi",
-      en: "Bomb-Bomb Fruit",
-      type: "Paramecia",
-      rarity: "common",
-      color: "#ffab40",
-      weight: 5,
-      desc: "Make any part of your body explode \u2014 and survive it. An explosion can be blocked, never parried. (Mr. 5 of Baroque Works.)",
-      passive: { resist: ["explosion"] },
-      techniques: [
-        T2(0, { id: "bomu_kick", name: "Kick Bomb", icon: "\u{1F4A3}", anim: "kick", windup: 0.2, recover: 0.3, cd: 3, steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.3, damage: 18, knockback: 7, stun: 0.4, element: "explosion", blast: true }, vfx: "ring", color: "#ffab40" }] }),
-        T2(15, { id: "bomu_nose", name: "Nose Fancy Cannon", icon: "\u{1F443}", anim: "flick", windup: 0.25, recover: 0.3, cd: 5, desc: "Flick an explosive... bogey. Disgusting and effective.", steps: [{ proj: { speed: 18, range: 12, radius: 0.2, damage: 6, sprite: "orb", color: "#aed581", explode: { range: 2, damage: 24 } } }] }),
-        T2(40, { id: "bomu_breeze", name: "Breeze Breath Bomb", icon: "\u{1F32C}", anim: "breath", windup: 0.35, recover: 0.3, cd: 9, steps: [{ hit: { shape: "arc", range: 4, arc: 1.2, offset: 0.2, damage: 32, knockback: 8, stun: 0.6, element: "explosion", heavy: true, blast: true }, vfx: "ring", color: "#ffab40" }] }),
-        T2(20, {
-          id: "bomu_fist",
-          name: "Bomb Punch",
-          anim: "punch",
-          windup: 0.2,
-          recover: 0.3,
-          cd: 4,
-          desc: "Your fist goes off as it lands.",
-          steps: [{ hit: { shape: "arc", range: 1.7, arc: 1.2, offset: 0.3, damage: 22, knockback: 8, stun: 0.5, element: "explosion", blast: true }, vfx: "ring", color: "#ffab40" }]
-        }),
-        T2(55, {
-          id: "bomu_stomp",
-          name: "Bomb Stomp",
-          anim: "slam",
-          windup: 0.4,
-          recover: 0.4,
-          cd: 12,
-          desc: "Stamp down and let your whole body go off: everything round you is blown off its feet.",
-          steps: [{ hit: { shape: "circle", range: 3.6, damage: 44, knockback: 12, stun: 0.7, element: "explosion", heavy: true, blast: true, launch: 3, shake: 0.5 }, vfx: "ring", color: "#ffab40" }]
-        })
-      ]
-    },
-    hana: {
-      name: "Hana Hana no Mi",
-      en: "Flower-Flower Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#f48fb1",
-      weight: 2.5,
-      desc: "Sprout copies of your body parts on any surface \u2014 including your enemies. (Nico Robin.)",
-      techniques: [
-        T2(0, { id: "hana_clutch", name: "Seis Fleur: Clutch", icon: "\u{1F338}", anim: "hana", windup: 0.25, recover: 0.3, cd: 5, say: "Seis Fleur... Clutch!", desc: "Sprout arms on the target and bend them backwards.", steps: [{ zone: { range: 1.2, duration: 0.3, interval: 0.3, damage: 24, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.2 } } }] }),
-        T2(20, { id: "hana_mil", name: "Mil Fleur", icon: "\u{1F33A}", anim: "hana", windup: 0.4, recover: 0.4, cd: 10, desc: "A thousand arms bloom around you and strike.", steps: [{ hit: { shape: "circle", range: 3.6, damage: 7, knockback: 1, stun: 0.3, duration: 1, interval: 0.14 }, vfx: "ring", color: "#f48fb1" }] }),
-        T2(50, { id: "hana_gigante", name: "Mil Fleur: Gigantesco Mano", icon: "\u270B", anim: "hana", windup: 0.5, recover: 0.4, cd: 14, desc: "A thousand arms bloom into two giant hands that slam down.", steps: [{ zone: { range: 2.6, duration: 0.3, interval: 0.3, damage: 60, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 1.5 } } }] }),
-        T2(30, {
-          id: "hana_spank",
-          name: "Cien Fleur: Spank",
-          anim: "hana",
-          windup: 0.3,
-          recover: 0.35,
-          cd: 8,
-          desc: "A hundred hands bloom all round the target and slap them silly.",
-          steps: [{ zone: { range: 1.8, duration: 1, interval: 0.12, damage: 6, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 0.3 } } }]
-        }),
-        T2(40, {
-          id: "hana_strangle",
-          name: "Treinta Fleur: Strangle",
-          anim: "hana",
-          windup: 0.35,
-          recover: 0.35,
-          cd: 12,
-          desc: "Arms bloom on the target's neck and legs and hold them fast, squeezing.",
-          steps: [{ zone: { range: 1.4, duration: 2.4, interval: 0.4, damage: 9, color: "#f48fb1", atTarget: true, kind: "arms", status: { root: 0.6 } } }]
-        }),
-        T2(45, {
-          id: "hana_ojos",
-          name: "Ojos Fleur",
-          anim: "pray",
-          windup: 0.3,
-          recover: 0.2,
-          cd: 24,
-          desc: "Eyes bloom on every wall and tree round you: nothing moves without you seeing it \u2014 blows are easier to slip, and every opening is yours.",
-          steps: [{ buff: { id: "ojos", name: "Ojos Fleur", dur: 12, mods: { evade: 0.3, crit: 0.25 }, aura: "rgba(244,143,177,0.5)" } }]
-        }),
-        T2(60, {
-          id: "hana_cuerpo",
-          name: "Cuerpo Fleur",
-          anim: "hana",
-          windup: 0.4,
-          recover: 0.3,
-          cd: 35,
-          desc: "Bloom a whole body of yourself out of the ground in a swirl of petals: a double that draws them off and fights beside you.",
-          steps: [{ summon: { archetype: "brute", count: 1, name: "Cuerpo Fleur", duration: 12, look: "copy", color: ["#f48fb1", "#fce4ec"], moves: ["brawl_tackle"], hpMul: 0.6 } }]
-        })
-      ]
-    },
-    ito: {
-      name: "Ito Ito no Mi",
-      en: "String-String Fruit",
-      type: "Paramecia",
-      rarity: "legendary",
-      color: "#f8bbd0",
-      weight: 0.5,
-      desc: "Create strings sharp enough to cut steel and strong enough to puppet people \u2014 or to hook onto the clouds and walk the sky. (Donquixote Doflamingo.)",
-      techniques: [
-        T2(0, { id: "ito_overheat", name: "Overheat", icon: "\u{1F9F5}", anim: "point", windup: 0.3, recover: 0.3, cd: 5, desc: "A whip of strings, red-hot, lashed in a straight line.", steps: [{ hit: { shape: "line", range: 9, width: 0.6, damage: 24, knockback: 4, stun: 0.4, slashing: true, element: "fire" }, vfx: "beam", color: "#ff8a80" }] }),
-        T2(15, { id: "ito_parasite", name: "Parasite", icon: "\u{1F3AD}", anim: "point", windup: 0.25, recover: 0.3, cd: 12, desc: "Strings into the target's nerves: a puppet on your strings, they can neither move nor fight for a while.", steps: [{ proj: { speed: 22, range: 10, radius: 0.4, damage: 8, sprite: "string", status: { puppet: 2.5 }, stun: 0.5 } }] }),
-        T2(35, { id: "ito_fivecolor", name: "Goshikito", icon: "\u{1F590}", anim: "claw", windup: 0.25, recover: 0.3, cd: 7, desc: "Five Color String: a string from each fingertip, raked down through whatever is in front of you.", steps: [{ hit: { shape: "arc", range: 3.4, arc: 1.4, offset: 0.2, damage: 34, knockback: 3, stun: 0.5, slashing: true }, vfx: "slash", color: "#f8bbd0" }] }),
-        T2(40, {
-          id: "ito_skypath",
-          name: "Sora no Michi",
-          desc: "Sky Path: hook your strings onto the clouds and walk the sky. Fly \u2014 or press Space again in the air.",
-          flight: { style: "float", ride: "strings", gauge: 16, speed: 10, climb: 6, ceiling: 40, sea: 3.5, color: "#f8bbd0" }
-        }),
-        T2(70, { id: "ito_birdcage", name: "Birdcage", icon: "\u{1F578}", anim: "summon", windup: 0.8, recover: 0.4, cd: 45, desc: "A cage of strings round the whole area: nobody inside gets out, it closes in \u2014 and its strings cut whatever touches them.", steps: [{ zone: { range: 9, duration: 9, interval: 0.4, damage: 14, color: "#f8bbd0", kind: "cage", cage: true, shrink: 0.55, edge: 1.2 } }] }),
-        T2(20, {
-          id: "ito_tamaito",
-          name: "Tamaito",
-          anim: "point",
-          windup: 0.15,
-          recover: 0.25,
-          cd: 4,
-          desc: "Bullet String: strings fired from your fingertips like gunshots \u2014 they punch clean through.",
-          steps: [{ proj: { speed: 34, range: 13, radius: 0.22, damage: 9, count: 3, spread: 0.12, sprite: "string", color: "#f8bbd0", pierce: true, slashing: true, element: "string" } }]
-        }),
-        T2(50, {
-          id: "ito_fulbright",
-          name: "Fulbright",
-          anim: "raise",
-          windup: 0.5,
-          recover: 0.4,
-          cd: 14,
-          desc: "Strings hooked onto the clouds come down on the target like a rain of blades.",
-          steps: [{ zone: { range: 2.6, duration: 1.4, interval: 0.2, damage: 11, color: "#f8bbd0", atTarget: true, kind: "strings", element: "string", status: { bleed: 1 } } }]
-        })
-      ]
-    },
-    mochi: {
-      name: "Mochi Mochi no Mi",
-      en: "Mochi-Mochi Fruit",
-      type: "Special Paramecia",
-      rarity: "legendary",
-      color: "#fff8e1",
-      weight: 0.5,
-      desc: "A special Paramecia that behaves like a Logia: your body is mochi \u2014 it stretches, it binds, and blows sometimes pass through a hole you make in it. (Charlotte Katakuri.)",
-      passive: { logiaLike: true, intangible: 0.35, weakTo: ["fire"] },
-      techniques: [
-        T2(0, { id: "mochi_tsuki", name: "Mochi Tsuki", icon: "\u{1F361}", anim: "punch", windup: 0.25, recover: 0.3, cd: 4, desc: "Your arm stretches into a great fist of mochi.", steps: [{ proj: { speed: 18, range: 8, radius: 0.6, damage: 22, sprite: "mochi", color: "#fff8e1", knockback: 6, stun: 0.5, size: 1.5, stretch: true } }] }),
-        T2(20, { id: "mochi_zangiri", name: "Zan Giri Mochi", icon: "\u{1F531}", anim: "thrust", windup: 0.3, recover: 0.3, cd: 7, desc: "A trident of hardened mochi, thrust straight through.", steps: [{ hit: { shape: "line", range: 4.5, width: 1.2, damage: 36, knockback: 5, stun: 0.6, slashing: true }, vfx: "beam", color: "#fff8e1" }] }),
-        T2(35, { id: "mochi_bind", name: "Sticky Mochi", anim: "grab", windup: 0.35, recover: 0.35, cd: 11, desc: "The ground under the target turns to sticky mochi: whoever is in it is stuck fast.", steps: [{ zone: { range: 2.2, duration: 3.5, interval: 0.5, damage: 6, color: "#fff8e1", atTarget: true, kind: "field", slow: 0.3, status: { root: 0.6 } } }] }),
-        T2(50, { id: "mochi_chikara", name: "Chikara Mochi", icon: "\u{1F4AA}", anim: "slam", windup: 0.45, recover: 0.4, cd: 12, desc: "Giant mochi fists rain down.", steps: [{ zone: { range: 3, duration: 1.2, interval: 0.2, damage: 18, color: "#fff8e1", atTarget: true, kind: "fists" } }] }),
-        T2(40, {
-          id: "mochi_buto",
-          name: "Buto Giri",
-          anim: "thrust",
-          windup: 0.3,
-          recover: 0.35,
-          cd: 8,
-          desc: "Martial Cut: whirl the trident Mogura round and drive it through them as you charge.",
-          steps: [{ dash: { dist: 7, time: 0.28, iframes: 0.2, hit: { damage: 34, knockback: 8, stun: 0.6, slashing: true, heavy: true } } }]
-        }),
-        T2(60, {
-          id: "mochi_kaku",
-          name: "Kaku Mochi",
-          anim: "slam",
-          windup: 0.5,
-          recover: 0.4,
-          cd: 14,
-          desc: "Squared Mochi: a great block of mochi pressed down on them \u2014 it lands like a wall, and they stick to it.",
-          steps: [{ zone: { range: 2.4, duration: 0.6, interval: 0.3, damage: 34, color: "#fff8e1", atTarget: true, kind: "fists", status: { root: 1.2 } } }]
-        })
-      ]
-    },
-    horo: {
-      name: "Horo Horo no Mi",
-      en: "Hollow-Hollow Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#ce93d8",
-      weight: 3,
-      desc: "Create ghosts. Negative Hollows drift through walls and drain the will to live from anyone they pass through. (Perona.)",
-      techniques: [
-        T2(0, { id: "horo_negative", name: "Negative Hollow", icon: "\u{1F47B}", anim: "point", windup: 0.3, recover: 0.3, cd: 8, desc: `"I'm so sorry I was born..." A ghost drifts through anything in its way and into the target, who collapses in despair.`, steps: [{ proj: { speed: 10, range: 12, radius: 0.5, damage: 4, sprite: "ghost", color: "#e1bee7", homing: 3, status: { despair: 3 }, stun: 2.2, unblockable: true, passWalls: true } }] }),
-        T2(20, { id: "horo_mini", name: "Mini Hollow", icon: "\u{1F4AB}", anim: "cast", windup: 0.3, recover: 0.3, cd: 7, desc: 'Little ghosts float to the target \u2014 and "Ghost Rap": they burst.', steps: [{ proj: { speed: 11, range: 10, radius: 0.3, damage: 6, count: 4, spread: 0.9, sprite: "ghost", size: 0.7, color: "#e1bee7", homing: 4, passWalls: true, explode: { range: 1.2, damage: 12, colors: ["#e1bee7", "#fff"] } } }] }),
-        T2(45, { id: "horo_toku", name: "Tokuhollow", anim: "cast", windup: 0.7, recover: 0.4, cd: 16, desc: "A great ghost that floats after the target and bursts like a bomb.", steps: [{ proj: { speed: 6.5, range: 11, radius: 1, damage: 10, sprite: "ghost", size: 2.2, color: "#e1bee7", homing: 2.5, passWalls: true, explode: { range: 3.2, damage: 44, colors: ["#e1bee7", "#ffffff"] } } }] }),
-        T2(30, {
-          id: "horo_ghostrap",
-          name: "Ghost Rap",
-          anim: "cast",
-          windup: 0.35,
-          recover: 0.3,
-          cd: 10,
-          desc: "Mini Hollows bob up all round you \u2014 then, with a snap of your fingers, every one of them bursts.",
-          steps: [{ hit: { shape: "circle", range: 3.4, damage: 30, knockback: 9, stun: 0.5, element: "explosion", blast: true }, vfx: "ring", color: "#e1bee7" }]
-        }),
-        T2(55, {
-          id: "horo_spirit",
-          name: "Spirit Body",
-          anim: "pray",
-          windup: 0.3,
-          recover: 0.2,
-          cd: 30,
-          desc: "Slip out of your body as a ghost: blows pass through you and nobody can quite tell where you are.",
-          steps: [{ buff: { id: "spirit", name: "Spirit Body", dur: 6, mods: { evade: 0.7, stealth: 0.6 }, alpha: 0.45, aura: "rgba(225,190,231,0.5)" } }]
-        })
-      ]
-    },
-    kage: {
-      name: "Kage Kage no Mi",
-      en: "Shadow-Shadow Fruit",
-      type: "Paramecia",
-      rarity: "rare",
-      color: "#455a64",
-      weight: 1.2,
-      desc: "Manipulate shadows, steal them, and fight with a living shadow double. One whose shadow is stolen burns in the sunlight. (Gecko Moria.)",
-      techniques: [
-        T2(0, { id: "kage_brickbat", name: "Brick Bat", icon: "\u{1F987}", anim: "cast", windup: 0.25, recover: 0.3, cd: 4, desc: "Your shadow breaks into a swarm of bats.", steps: [{ proj: { speed: 14, range: 11, radius: 0.3, damage: 7, count: 5, spread: 0.6, sprite: "bat", color: "#263238", homing: 2 } }] }),
-        T2(20, { id: "kage_steal", name: "Shadow Steal", icon: "\u{1F311}", anim: "grab", windup: 0.35, recover: 0.3, cd: 16, desc: "Cut away the target's shadow: without it they take more harm \u2014 and out in the sunlight they burn.", steps: [{ hit: { shape: "arc", range: 2.6, arc: 1, offset: 0.2, damage: 18, stun: 0.8, status: { shadowless: 12 }, unblockable: true } }] }),
-        T2(40, {
-          id: "kage_doppelman",
-          name: "Doppelman",
-          icon: "\u{1F464}",
-          anim: "cast",
-          windup: 0.3,
-          recover: 0.2,
-          cd: 30,
-          desc: "Your shadow peels away and fights beside you as a body of its own.",
-          steps: [{ summon: { archetype: "brute", count: 1, name: "Doppelman", duration: 18, look: "shadow", at: "shadow", moves: ["brawl_tackle"], hpMul: 0.8 } }, { buff: { id: "doppel", name: "Doppelman", dur: 18, mods: { damage: 1.15 } } }]
-        }),
-        T2(60, { id: "kage_tsuno", name: "Tsuno-Tokage", anim: "cast", windup: 0.6, recover: 0.4, cd: 12, desc: "Horned Lizard: your shadow runs along the ground to the target and bursts up as a spike under them.", steps: [{ zone: { range: 1.8, duration: 0.6, interval: 0.3, damage: 40, color: "#37474f", atTarget: true, kind: "field" } }] }),
-        T2(30, {
-          id: "kage_blackbox",
-          name: "Black Box",
-          anim: "grab",
-          windup: 0.35,
-          recover: 0.35,
-          cd: 13,
-          desc: "Your shadow rears up round the target and folds shut: a box of shadow they can't get out of for a moment.",
-          steps: [{ zone: { range: 1.6, duration: 1.8, interval: 0.6, damage: 10, color: "#263238", atTarget: true, kind: "dark", status: { root: 0.9 } } }]
-        }),
-        T2(50, {
-          id: "kage_kakumei",
-          name: "Kage Kakumei",
-          anim: "thrust",
-          windup: 0.3,
-          recover: 0.35,
-          cd: 9,
-          desc: "Shadow Revolution: your arm runs out along its own shadow, far longer than any arm should, and strikes.",
-          steps: [{ hit: { shape: "line", range: 8, width: 1, damage: 32, knockback: 8, stun: 0.5, heavy: true }, vfx: "beam", color: "#37474f" }]
-        })
-      ]
-    },
-    doku: {
-      name: "Doku Doku no Mi",
-      en: "Venom-Venom Fruit",
-      type: "Paramecia",
-      rarity: "rare",
-      color: "#8e24aa",
-      weight: 1.2,
-      desc: "Produce and control lethal poison. (Magellan, chief warden of Impel Down.)",
-      passive: { resist: ["poison"] },
-      techniques: [
-        T2(0, { id: "doku_fist", name: "Poison Fist", icon: "\u2620", anim: "punch", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 12, knockback: 3, stun: 0.3, element: "poison", status: { poison: 5 } } }] }),
-        T2(20, { id: "doku_hydra", name: "Hydra", icon: "\u{1F40D}", anim: "cast", windup: 0.4, recover: 0.4, cd: 9, say: "Hydra!", steps: [{ proj: { speed: 13, range: 12, radius: 0.7, damage: 26, count: 3, spread: 0.4, sprite: "hydra", element: "poison", status: { poison: 6 }, homing: 1.5, trail: { color: "#8e24aa", kind: "smoke" } } }] }),
-        T2(50, { id: "doku_venom", name: "Venom Demon", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.5, cd: 40, desc: "Venom Demon: Hell's Judgement \u2014 a giant of poison, and everything around it rots.", steps: [{ zone: { range: 4.5, duration: 8, interval: 0.5, damage: 12, element: "poison", status: { poison: 4 }, color: "#8e24aa", kind: "field" } }] }),
-        T2(10, {
-          id: "doku_fugu",
-          name: "Doku Fugu",
-          anim: "breath",
-          windup: 0.3,
-          recover: 0.3,
-          cd: 6,
-          desc: "Poison Puffer: a glob of venom spat at them \u2014 it bursts and spatters everything round where it lands.",
-          steps: [{ proj: { speed: 15, range: 11, radius: 0.45, damage: 10, sprite: "poison", element: "poison", status: { poison: 4 }, explode: { range: 2.2, damage: 18, element: "poison", status: { poison: 4 } } } }]
-        }),
-        T2(30, {
-          id: "doku_gumo",
-          name: "Doku Gumo",
-          anim: "cast",
-          windup: 0.4,
-          recover: 0.3,
-          cd: 16,
-          desc: "Poison Cloud: a cloud of venom boils out all round you \u2014 whoever breathes it in, rots.",
-          steps: [{ zone: { range: 3.6, duration: 5, interval: 0.5, damage: 8, element: "poison", status: { poison: 2 }, color: "#8e24aa", kind: "gas", slow: 0.6 } }]
-        }),
-        T2(40, {
-          id: "doku_chloro",
-          name: "Chloro Ball",
-          anim: "cast",
-          windup: 0.45,
-          recover: 0.35,
-          cd: 14,
-          desc: "A balloon of poison gas floated onto them: it bursts into a choking cloud.",
-          steps: [{ zone: { range: 2.8, duration: 4, interval: 0.5, damage: 9, element: "poison", status: { poison: 3 }, color: "#ab47bc", atTarget: true, kind: "gas", slow: 0.5 } }]
-        })
-      ]
-    },
-    noro: {
-      name: "Noro Noro no Mi",
-      en: "Slow-Slow Fruit",
-      type: "Paramecia",
-      rarity: "common",
-      color: "#80deea",
-      weight: 5,
-      desc: "Fire Noro Noro photons that slow anything they hit to a crawl. (Foxy the Silver Fox.)",
-      techniques: [
-        T2(0, { id: "noro_beam", name: "Noro Noro Beam", icon: "\u{1F40C}", anim: "point", windup: 0.25, recover: 0.3, cd: 8, steps: [{ hit: { shape: "line", range: 9, width: 1.2, damage: 4, stun: 0.1, status: { slowmo: 4 } }, vfx: "beam", color: "#80deea" }] }),
-        T2(30, { id: "noro_mirror", name: "Noro Noro Beam Sword", icon: "\u{1FA9E}", anim: "slash", windup: 0.2, recover: 0.3, cd: 10, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.2, offset: 0.2, damage: 10, stun: 0.2, status: { slowmo: 3 } }, vfx: "slash", color: "#80deea" }] }),
-        T2(15, {
-          id: "noro_reflect",
-          name: "Noro Noro Beam: Reflection",
-          anim: "point",
-          windup: 0.3,
-          recover: 0.3,
-          cd: 12,
-          desc: "The Noro Noro photons bounced off a mirror into a wide fan: everyone in front of you slows to a crawl.",
-          steps: [{ hit: { shape: "arc", range: 6.5, arc: 1.4, offset: 0.2, damage: 5, stun: 0.1, status: { slowmo: 3.5 } }, vfx: "ring", color: "#80deea" }]
-        }),
-        T2(40, {
-          id: "noro_barrage",
-          name: "Slow-Mo Barrage",
-          anim: "punch",
-          windup: 0.2,
-          recover: 0.3,
-          cd: 9,
-          desc: "Foxy's favourite trick: while they're slowed to a crawl, lay into them as fast as you can.",
-          steps: [{ hit: { shape: "arc", range: 2.2, arc: 1, offset: 0.3, damage: 6, knockback: 0.6, stun: 0.12, duration: 1, interval: 0.1, status: { slowmo: 1 } } }]
-        })
-      ]
-    },
-    bari: {
-      name: "Bari Bari no Mi",
-      en: "Barrier-Barrier Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#b3e5fc",
-      weight: 2.5,
-      desc: "Create barriers nothing can break: whatever comes at them stops dead. (Bartolomeo.)",
-      techniques: [
-        T2(0, {
-          id: "bari_barrier",
-          name: "Barrier",
-          icon: "\u{1F6E1}",
-          anim: "block",
-          windup: 0.05,
-          recover: 0.1,
-          cd: 10,
-          desc: "An unbreakable wall in front of you: nothing gets through it from the front \u2014 blows, shots, blasts. From behind, you're open.",
-          steps: [{ buff: { id: "barrier", name: "Barrier", dur: 3, barrier: "front", mods: { speedMul: 0.6 }, aura: "rgba(179,229,252,0.6)" } }]
-        }),
-        T2(20, { id: "bari_crash", name: "Barrier Crash", icon: "\u{1F9F1}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 7, desc: "Charge behind a barrier and ram everything in your way.", steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, hit: { damage: 30, knockback: 9, stun: 0.6, heavy: true, guardBreak: true } } }] }),
-        T2(40, {
-          id: "bari_ball",
-          name: "Barrier Ball",
-          anim: "block",
-          windup: 0.05,
-          recover: 0.1,
-          cd: 20,
-          desc: "A sphere of barrier all round you: nothing gets in at all \u2014 but you can do nothing from inside it either.",
-          steps: [{ buff: { id: "barrier_ball", name: "Barrier Ball", dur: 3, barrier: "all", hold: true, mods: { speedMul: 0.05 } } }]
-        }),
-        T2(10, {
-          id: "bari_pistol",
-          name: "Barrier Pistol",
-          anim: "punch",
-          windup: 0.2,
-          recover: 0.3,
-          cd: 4,
-          desc: "Bari Bari no Pistol: a fist sheathed in barrier \u2014 there's no stopping what it lands on.",
-          steps: [{ hit: { shape: "arc", range: 1.9, arc: 1, offset: 0.3, damage: 24, knockback: 9, stun: 0.5, heavy: true, guardBreak: true } }]
-        }),
-        T2(50, {
-          id: "bari_bulldog",
-          name: "Barrier Bulldog",
-          anim: "palm",
-          windup: 0.35,
-          recover: 0.35,
-          cd: 12,
-          desc: "A barrier in the shape of a bulldog's head, sent charging at them: it bowls over everything in its way.",
-          steps: [{ proj: { speed: 17, range: 12, radius: 1.1, damage: 34, sprite: "shockwave", color: "#b3e5fc", size: 2.2, pierce: true, knockback: 14, stun: 0.6, heavy: true, hitShips: true } }]
-        })
-      ]
-    },
-    suke: {
-      name: "Suke Suke no Mi",
-      en: "Clear-Clear Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#eceff1",
-      weight: 3,
-      desc: "Turn yourself (and what you touch) invisible. (Absalom, then Shiliew.)",
-      techniques: [
-        T2(0, { id: "suke_vanish", name: "Clear Body", icon: "\u{1F441}", anim: "cast", windup: 0.2, recover: 0.1, cd: 16, desc: "Become invisible: enemies lose track of you and your first hit is a critical.", steps: [{ buff: { id: "invisible", name: "Invisible", dur: 8, mods: { stealth: 1, crit: 0.6 }, alpha: 0.12 } }] }),
-        T2(10, {
-          id: "suke_strike",
-          name: "Clear Strike",
-          anim: "punch",
-          windup: 0.12,
-          recover: 0.25,
-          cd: 4,
-          desc: "A blow from an arm they can't see: there's no telling it's coming, so there's no blocking it.",
-          steps: [{ hit: { shape: "arc", range: 1.7, arc: 1, offset: 0.3, damage: 20, knockback: 5, stun: 0.5, unblockable: true } }]
-        }),
-        T2(30, {
-          id: "suke_phantom",
-          name: "Phantom Rush",
-          anim: "thrust",
-          windup: 0.1,
-          recover: 0.3,
-          cd: 9,
-          desc: "Turn clear, cross the ground between you unseen \u2014 and strike from right in front of them.",
-          steps: [{ teleport: { dist: 10, toTarget: true, gap: 1, color: "#eceff1" } }, { at: 0.18, hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 30, knockback: 8, stun: 0.6, unblockable: true, heavy: true } }]
-        })
-      ]
-    },
-    sube: {
-      name: "Sube Sube no Mi",
-      en: "Slip-Slip Fruit",
-      type: "Paramecia",
-      rarity: "common",
-      color: "#fce4ec",
-      weight: 5,
-      desc: "Your skin becomes perfectly slippery. Attacks slide right off. (Alvida.)",
-      passive: { slippery: 0.3 },
-      techniques: [
-        T2(0, { id: "sube_slide", name: "Slip Slide", icon: "\u26F8", anim: "thrust", windup: 0.05, recover: 0.1, cd: 3, steps: [{ dash: { dist: 6, time: 0.25, iframes: 0.25, hit: { damage: 8, knockback: 3 } } }] }),
-        T2(25, { id: "sube_mace", name: "Mace Swing", icon: "\u{1F528}", anim: "heavy", windup: 0.35, recover: 0.35, cd: 5, steps: [{ hit: { shape: "arc", range: 2.2, arc: 2, offset: 0.2, damage: 22, knockback: 7, stun: 0.5, heavy: true } }] }),
-        T2(10, {
-          id: "sube_skin",
-          name: "Slip-Slip Skin",
-          anim: "flex",
-          windup: 0.15,
-          recover: 0.1,
-          cd: 14,
-          desc: "Your skin as slick as glass: blows, shots and blades skid right off you.",
-          steps: [{ buff: { id: "slick", name: "Slip-Slip Skin", dur: 5, mods: { evade: 0.55 }, aura: "rgba(252,228,236,0.6)" } }]
-        }),
-        T2(40, {
-          id: "sube_spin",
-          name: "Slip Spin",
-          anim: "sweep",
-          windup: 0.25,
-          recover: 0.35,
-          cd: 8,
-          desc: "Spin on your slick heels with the mace held out: everything round you gets clubbed aside.",
-          steps: [{ hit: { shape: "circle", range: 2.6, damage: 26, knockback: 9, stun: 0.5, heavy: true }, vfx: "ring", color: "#fce4ec" }]
-        })
-      ]
-    },
-    doru: {
-      name: "Doru Doru no Mi",
-      en: "Wax-Wax Fruit",
-      type: "Paramecia",
-      rarity: "common",
-      color: "#fff8e1",
-      weight: 5,
-      desc: "Produce wax as hard as steel. Weak to fire. (Mr. 3 of Baroque Works.)",
-      passive: { weakTo: ["fire"] },
-      techniques: [
-        T2(0, { id: "doru_arrow", name: "Candle Arrows", icon: "\u{1F56F}", anim: "shoot", windup: 0.2, recover: 0.3, cd: 4, steps: [{ proj: { speed: 18, range: 11, radius: 0.25, damage: 9, count: 3, spread: 0.25, sprite: "iceshard", color: "#fff8e1" } }] }),
-        T2(20, { id: "doru_lock", name: "Candle Lock", icon: "\u{1F512}", anim: "cast", windup: 0.3, recover: 0.3, cd: 11, desc: "Wax hardens round the target's feet and locks them in place.", steps: [{ zone: { range: 1.5, duration: 0.4, interval: 0.4, damage: 10, color: "#fff8e1", atTarget: true, status: { root: 2.5 } } }] }),
-        T2(40, { id: "doru_armor", name: "Candle Champion", icon: "\u{1F5FF}", anim: "cast", windup: 0.4, recover: 0.2, cd: 30, steps: [{ buff: { id: "waxarmor", name: "Wax Armour", dur: 12, mods: { defMul: 0.55, damage: 1.2 }, aura: "rgba(255,248,225,0.8)" } }] }),
-        T2(25, {
-          id: "doru_ken",
-          name: "Doru Doru Arts: Ken",
-          anim: "slash",
-          windup: 0.2,
-          recover: 0.3,
-          cd: 4,
-          desc: "Wax Sword: a blade of wax as hard as steel, swept through them.",
-          steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.8, offset: 0.2, damage: 22, knockback: 4, stun: 0.4, slashing: true }, vfx: "slash", color: "#fff8e1" }]
-        }),
-        T2(35, {
-          id: "doru_mori",
-          name: "Doru Doru Arts: Mori",
-          anim: "shoot",
-          windup: 0.35,
-          recover: 0.35,
-          cd: 8,
-          desc: "Harpoon: a great spear of hardened wax, flung through everything in a line.",
-          steps: [{ proj: { speed: 20, range: 13, radius: 0.5, damage: 30, sprite: "iceshard", size: 2.2, color: "#fff8e1", pierce: true, knockback: 8, stun: 0.5 } }]
-        }),
-        T2(50, {
-          id: "doru_wall",
-          name: "Candle Wall",
-          anim: "block",
-          windup: 0.05,
-          recover: 0.1,
-          cd: 14,
-          desc: "A wall of wax springs up in front of you, harder than steel: nothing gets through it from the front.",
-          steps: [{ buff: { id: "waxwall", name: "Candle Wall", dur: 3, barrier: "front", mods: { speedMul: 0.5 }, aura: "rgba(255,248,225,0.7)" } }]
-        }),
-        T2(65, {
-          id: "doru_service",
-          name: "Candle Service Set",
-          anim: "cast",
-          windup: 0.6,
-          recover: 0.4,
-          cd: 22,
-          desc: "A great wax cake rises round them and sets: everyone caught in it is stuck fast.",
-          steps: [{ zone: { range: 3, duration: 3.5, interval: 0.5, damage: 8, color: "#fff8e1", atTarget: true, kind: "field", slow: 0.2, status: { root: 0.7 } } }]
-        })
-      ]
-    },
-    supa: {
-      name: "Supa Supa no Mi",
-      en: "Dice-Dice Fruit",
-      type: "Paramecia",
-      rarity: "uncommon",
-      color: "#b0bec5",
-      weight: 3,
-      desc: "Turn any part of your body into a steel blade. Blades can't hurt you. (Daz Bonez, Mr. 1.)",
-      passive: { immuneSlash: true },
-      techniques: [
-        T2(0, { id: "supa_sparkling", name: "Sparkling Daisy", icon: "\u2734", anim: "slash3", windup: 0.25, recover: 0.3, cd: 5, steps: [{ hit: { shape: "arc", range: 2.4, arc: 2.6, offset: 0.2, damage: 26, knockback: 4, stun: 0.5, slashing: true }, vfx: "slash", color: "#eceff1" }] }),
-        T2(25, { id: "supa_spider", name: "Spider", icon: "\u{1F577}", anim: "block", windup: 0.05, recover: 0.1, cd: 12, desc: "Harden your whole body into steel.", steps: [{ buff: { id: "steel", name: "Steel Body", dur: 4, mods: { defMul: 0.3 }, aura: "rgba(176,190,197,0.9)" } }] }),
-        T2(15, {
-          id: "supa_claw",
-          name: "Spar Claw",
-          anim: "claw",
-          windup: 0.15,
-          recover: 0.25,
-          cd: 3.5,
-          desc: "Blades spring from each fingertip and rake down through them.",
-          steps: [{ hit: { shape: "arc", range: 2, arc: 1.4, offset: 0.2, damage: 20, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 2 } }, vfx: "slash", color: "#eceff1" }]
-        }),
-        T2(35, {
-          id: "supa_atomic",
-          name: "Atomic Spar",
-          anim: "slash3",
-          windup: 0.3,
-          recover: 0.35,
-          cd: 8,
-          desc: "Your arms become whirling blades: everything round you is cut to ribbons.",
-          steps: [{ hit: { shape: "circle", range: 2.8, damage: 9, knockback: 1.5, stun: 0.2, slashing: true, duration: 0.8, interval: 0.1 }, vfx: "slash", color: "#eceff1" }]
-        }),
-        T2(55, {
-          id: "supa_spiral",
-          name: "Spiral Hollow",
-          anim: "thrust",
-          windup: 0.3,
-          recover: 0.35,
-          cd: 10,
-          desc: "Blades spinning from both arms like a drill, driven through them at a run.",
-          steps: [{ dash: { dist: 8, time: 0.3, iframes: 0.25, hit: { damage: 40, knockback: 7, stun: 0.6, slashing: true, heavy: true, status: { bleed: 3 } } } }]
-        })
-      ]
-    },
-    nikyu: {
-      name: "Nikyu Nikyu no Mi",
-      en: "Paw-Paw Fruit",
-      type: "Paramecia",
-      rarity: "legendary",
-      color: "#fff",
-      weight: 0.4,
-      desc: "Paw pads that repel anything \u2014 blows, shots, the very air, even pain, even people clean across the world. (Bartholomew Kuma.)",
-      techniques: [
-        T2(0, { id: "nikyu_paw", name: "Pad Ho", icon: "\u{1F43E}", anim: "palm", windup: 0.25, recover: 0.3, cd: 4, desc: "A paw-shaped shockwave of repelled air.", steps: [{ proj: { speed: 24, range: 12, radius: 0.5, damage: 20, sprite: "paw", pierce: true, knockback: 8, stun: 0.4 } }] }),
-        T2(20, {
-          id: "nikyu_repel",
-          name: "Repel",
-          icon: "\u270B",
-          anim: "spread",
-          windup: 0.02,
-          recover: 0.1,
-          cd: 8,
-          desc: "Repel everything around you \u2014 blows, people, and the shots fired at you, which fly back the way they came.",
-          steps: [{ hit: { shape: "circle", range: 2.2, damage: 10, knockback: 12, stun: 0.4 }, vfx: "ring", color: "#ffffff" }, { self: { iframes: 0.4 } }, { buff: { id: "repel", dur: 0.9, reflect: 2.4, reflectWord: "REPEL!" } }]
-        }),
-        T2(45, {
-          id: "nikyu_travel",
-          name: "Send Flying",
-          icon: "\u2708",
-          anim: "palm",
-          windup: 0.3,
-          recover: 0.4,
-          cd: 16,
-          desc: `"If you were to take a trip, where would you go?" A paw on the target, and they're repelled clean off the field.`,
-          steps: [{ hit: { shape: "arc", range: 1.8, arc: 1, offset: 0.2, damage: 18, knockback: 4, stun: 1.2, fling: 24 } }]
-        }),
-        T2(70, { id: "nikyu_ursus", name: "Ursus Shock", icon: "\u{1F4A3}", anim: "cast", windup: 1, recover: 0.5, cd: 30, desc: "Compress the air into a paw-shaped bomb.", steps: [{ proj: { speed: 7, range: 9, radius: 1.2, damage: 20, sprite: "paw", size: 2.5, pierce: true, explode: { range: 4.5, damage: 110, colors: ["#ffffff", "#e0f7fa", "#b2ebf2"] } } }] }),
-        T2(85, { id: "nikyu_pain", name: "Pain Extraction", anim: "pray", windup: 0.5, recover: 0.3, cd: 75, desc: "Push the pain and fatigue out of your own body as a paw-shaped bubble: much of your hurt, and every ailment, gone.", steps: [{ heal: 120, color: "#ffffff" }, { self: { cleanse: true } }] }),
-        T2(30, {
-          id: "nikyu_tsuppari",
-          name: "Tsuppari Pad Ho",
-          anim: "palm",
-          windup: 0.3,
-          recover: 0.4,
-          cd: 10,
-          desc: "Paw after paw thrust out at blinding speed: a storm of paw-shaped shockwaves.",
-          steps: [
-            { proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: "paw", pierce: true, knockback: 5, stun: 0.3 } },
-            { at: 0.45, proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: "paw", pierce: true, knockback: 5, stun: 0.3 } },
-            { at: 0.6, proj: { speed: 26, range: 12, radius: 0.45, damage: 12, count: 3, spread: 0.5, sprite: "paw", pierce: true, knockback: 5, stun: 0.3 } }
-          ]
-        }),
-        T2(55, {
-          id: "nikyu_hop",
-          name: "Paw Hop",
-          anim: "palm",
-          windup: 0.05,
-          recover: 0.1,
-          cd: 6,
-          desc: "Repel yourself: gone from where you stood and somewhere else in an instant.",
-          steps: [{ teleport: { dist: 12, color: "#ffffff" } }]
-        })
-      ]
-    },
-    mane: {
-      name: "Mane Mane no Mi",
-      en: "Clone-Clone Fruit",
-      type: "Paramecia",
-      rarity: "common",
-      color: "#f06292",
-      weight: 4,
-      desc: "Touch a face with your right hand and copy it perfectly. Marines won't recognise you. (Bon Clay.)",
-      passive: { disguise: true },
-      techniques: [
-        T2(0, { id: "mane_disguise", name: "Mimicry", icon: "\u{1F3AD}", anim: "pray", windup: 0.4, recover: 0.2, cd: 60, desc: "Disguise yourself: Marines and bounty hunters ignore you until you attack.", steps: [{ buff: { id: "disguise", name: "Disguised", dur: 90, mods: { stealth: 0.5 }, disguise: true } }] }),
-        T2(20, { id: "mane_memoir", name: "Memoir Strike", icon: "\u{1F4AD}", anim: "kick", windup: 0.2, recover: 0.3, cd: 8, desc: "Take a friend's face \u2014 the enemy hesitates to strike.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] }),
-        T2(30, {
-          id: "mane_montage",
-          name: "Mane Mane Montage",
-          anim: "pray",
-          windup: 0.3,
-          recover: 0.3,
-          cd: 14,
-          desc: "Your face a jumble of every face you've ever touched: whoever looks at you is too bewildered to move for a moment.",
-          steps: [{ hit: { shape: "arc", range: 3.2, arc: 1.6, offset: 0.2, damage: 6, stun: 1.6, status: { despair: 1.2 } }, vfx: "ring", color: "#f06292" }]
-        })
-      ]
-    },
-    zushi: {
-      name: "Zushi Zushi no Mi",
-      en: "Press-Press Fruit",
-      type: "Paramecia",
-      rarity: "legendary",
-      color: "#9575cd",
-      weight: 0.4,
-      desc: "Control gravity: crush, pull meteors down from space, drag fliers out of the sky \u2014 or lift a slab of rubble and ride it. (Admiral Fujitora.)",
-      techniques: [
-        T2(0, {
-          id: "zushi_press",
-          name: "Gravity Press",
-          icon: "\u2B07",
-          anim: "cast",
-          windup: 0.3,
-          recover: 0.3,
-          cd: 6,
-          desc: "Gravity crushes down on the target's spot: they can barely move, can't jump \u2014 and anyone flying over it falls out of the sky.",
-          steps: [{ zone: { range: 2.8, duration: 2, interval: 0.25, damage: 6, color: "#9575cd", atTarget: true, slow: 0.25, kind: "gravity", grounds: true, status: { grounded: 0.4 } } }]
-        }),
-        T2(25, { id: "zushi_blade", name: "Gravity Blade: Raging Tiger", icon: "\u{1F42F}", anim: "slash", windup: 0.4, recover: 0.4, cd: 10, steps: [{ hit: { shape: "line", range: 10, width: 2.2, damage: 48, knockback: 6, stun: 0.8, heavy: true }, vfx: "beam", color: "#9575cd" }] }),
-        T2(45, {
-          id: "zushi_ride",
-          name: "Floating Rubble",
-          desc: "Lift a slab of rubble with gravity and ride it through the air. Fly \u2014 or press Space again in the air.",
-          flight: { style: "ride", ride: "rock", gauge: 18, speed: 8, climb: 5, ceiling: 35, sea: 3, color: "#9575cd" }
-        }),
-        T2(70, { id: "zushi_meteor", name: "Meteor", icon: "\u2604", anim: "raise", windup: 1.2, recover: 0.5, cd: 45, desc: "Call down a meteor from the heavens.", steps: [{ zone: { range: 4, duration: 1.3, interval: 1.2, damage: 140, color: "#ff7043", atTarget: true, kind: "meteor", element: "explosion" } }] }),
-        T2(15, {
-          id: "zushi_pull",
-          name: "Gravity Pull",
-          anim: "grab",
-          windup: 0.3,
-          recover: 0.3,
-          cd: 9,
-          desc: "Gravity turned sideways: the target is dragged across the ground to you \u2014 and anyone up in the air comes down hard.",
-          steps: [{ pull: { range: 9, strength: 16, stun: 0.6 } }, { at: 0.35, hit: { shape: "circle", range: 2.2, damage: 18, knockback: 1, stun: 0.4, status: { grounded: 1.5 } } }]
-        }),
-        T2(55, {
-          id: "zushi_lift",
-          name: "Rubble Rise",
-          anim: "raise",
-          windup: 0.5,
-          recover: 0.4,
-          cd: 16,
-          desc: "Lift the ground under them in great slabs \u2014 then let it drop.",
-          steps: [{ zone: { range: 3, duration: 1, interval: 0.5, damage: 32, color: "#9575cd", atTarget: true, kind: "gravity", grounds: true, status: { grounded: 0.8 } } }]
-        })
-      ]
-    },
-    // ------------------------------------------------------------------ ZOAN
-    hito: {
-      name: "Hito Hito no Mi",
-      en: "Human-Human Fruit",
-      type: "Zoan",
-      rarity: "uncommon",
-      color: "#f8bbd0",
-      weight: 2.5,
-      desc: "Grants the intelligence and form of a human. Tony Tony Chopper ate it as a reindeer, and learned to take a different shape for each need.",
-      techniques: [
-        T2(0, { id: "hito_heavy", name: "Heavy Point", icon: "\u{1F4AA}", anim: "flex", windup: 0.4, recover: 0.1, cd: 25, steps: [{ buff: { id: "heavy_point", name: "Heavy Point", dur: 15, mods: { damage: 1.4, defMul: 0.8, scale: 1.3 }, look: { hat: "antlers", bulk: 1.3 } } }] }),
-        T2(10, { id: "hito_guard", name: "Guard Point", anim: "block", windup: 0.1, recover: 0.1, cd: 14, desc: "Puff up into a great ball of fur: blows bounce off the fluff (but you can hardly move).", steps: [{ buff: { id: "guard_point", name: "Guard Point", dur: 3.5, mods: { defMul: 0.25, speedMul: 0.4 }, look: { bulk: 1.9 } } }] }),
-        T2(20, { id: "hito_horn", name: "Horn Point: Kokutei Roseo", icon: "\u{1F98C}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
-        T2(30, {
-          id: "hito_arm",
-          name: "Arm Point: Kokutei Cross",
-          anim: "punch",
-          windup: 0.25,
-          recover: 0.3,
-          cd: 6,
-          desc: "Arms like a gorilla's: both hooves driven into them crossed \u2014 and the mark of the cross left behind.",
-          steps: [{ buff: { id: "arm_point", name: "Arm Point", dur: 1.2, look: { bulk: 1.25 } } }, { at: 0.25, hit: { shape: "arc", range: 1.9, arc: 1.2, offset: 0.3, damage: 34, knockback: 10, stun: 0.6, heavy: true, guardBreak: true, impactFrame: true } }]
-        }),
-        T2(40, {
-          id: "hito_walk",
-          name: "Walk Point",
-          anim: "flex",
-          windup: 0.25,
-          recover: 0.1,
-          cd: 20,
-          desc: "Down on four hooves like a true reindeer: you run a great deal faster.",
-          steps: [{ buff: { id: "walk_point", name: "Walk Point", dur: 12, mods: { speedMul: 1.45 }, look: { hat: "antlers" } } }]
-        }),
-        T2(50, {
-          id: "hito_jump",
-          name: "Jumping Point",
-          anim: "thrust",
-          windup: 0.25,
-          recover: 0.35,
-          cd: 9,
-          desc: "Legs built to leap: bound high over them and come down hooves first.",
-          steps: [{ dash: { dist: 7, time: 0.4, iframes: 0.3, air: true, hit: { damage: 26, knockback: 8, stun: 0.6, launch: 3 } } }]
-        }),
-        T2(60, {
-          id: "hito_brain",
-          name: "Brain Point: Scope",
-          anim: "pray",
-          windup: 0.3,
-          recover: 0.2,
-          cd: 30,
-          desc: "Look through the lens of your hooves and find their weak spot: for a while every blow lands where it hurts most.",
-          steps: [{ buff: { id: "scope", name: "Scope", dur: 10, mods: { crit: 0.5, damage: 1.15 } } }]
-        })
-      ],
-      // (Monster Point is a form, opened by fighting: data/fruitForms.js)
-      more: [
-        T2(50, { id: "hito_monster", name: "Monster Point", icon: "\u{1F479}", anim: "flex", windup: 0.8, recover: 0.1, cd: 90, desc: "A Rumble Ball overdose: enormous power, barely controllable.", steps: [{ buff: { id: "monster", form: "monster", name: "Monster Point", dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, aura: "rgba(121,85,72,0.8)", look: { hat: "antlers", bulk: 1.45, sleeve: "#8d6e63" } } }] })
-      ]
-    },
-    neko_leopard: {
-      name: "Neko Neko no Mi, Model: Leopard",
-      en: "Cat-Cat Fruit, Leopard",
-      type: "Zoan",
-      rarity: "rare",
-      color: "#ffb74d",
-      weight: 1.2,
-      desc: "Become a leopard or a half-leopard warrior. Rob Lucci's ferocious fruit.",
-      techniques: [
-        T2(0, { id: "neko_hybrid", name: "Hybrid Form", icon: "\u{1F406}", anim: "flex", windup: 0.4, recover: 0.1, cd: 30, steps: [{ buff: { id: "leopard", name: "Leopard Form", dur: 20, mods: { damage: 1.45, speedMul: 1.2, defMul: 0.85 }, aura: "rgba(255,183,77,0.6)", look: { spots: true, ears: "round", tail: "thin", fur: "#ffb74d", hand: "#ffb74d" } } }] }),
-        T2(20, { id: "neko_claw", name: "Leopard Claw", icon: "\u{1F43E}", anim: "claw", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 1.9, arc: 1.8, offset: 0.2, damage: 22, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: "slash", color: "#ffb74d" }] }),
-        T2(50, { id: "neko_pounce", name: "Hunting Pounce", icon: "\u{1F405}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 8, time: 0.25, iframes: 0.2, hit: { damage: 40, knockback: 5, stun: 0.8, heavy: true } } }] }),
-        T2(30, {
-          id: "neko_shigan",
-          name: "Shigan: Ouren",
-          anim: "point",
-          windup: 0.2,
-          recover: 0.3,
-          cd: 6,
-          desc: "Finger Pistol, Yellow Lotus: a leopard's fingers driven through them again and again, faster than they can follow.",
-          steps: [{ hit: { shape: "arc", range: 1.9, arc: 0.9, offset: 0.3, damage: 7, knockback: 0.5, stun: 0.15, duration: 0.8, interval: 0.08, status: { bleed: 0.5 } }, vfx: "stab" }]
-        }),
-        T2(65, {
-          id: "neko_rokuogan",
-          name: "Rokuogan",
-          anim: "palm",
-          windup: 0.45,
-          recover: 0.4,
-          cd: 14,
-          desc: "Six King Gun: both fists set against them and all your strength let go at once \u2014 a shockwave straight through them.",
-          steps: [{ hit: { shape: "line", range: 4, width: 1.6, damage: 64, knockback: 14, stun: 0.9, heavy: true, unblockable: true, impactFrame: true, shake: 0.6 }, vfx: "beam", color: "#ffffff" }]
-        })
-      ]
-    },
-    tori_phoenix: {
-      name: "Tori Tori no Mi, Model: Phoenix",
-      en: "Bird-Bird Fruit, Phoenix",
-      type: "Mythical Zoan",
-      rarity: "mythical",
-      color: "#4dd0e1",
-      weight: 0.4,
-      desc: "Become the Phoenix: wings of blue flame that fly further than any, and flames of resurrection \u2014 wounds heal as fast as they are dealt. (Marco the Phoenix.)",
-      passive: { regen: 3 },
-      techniques: [
-        T2(0, { id: "phoenix_flame", name: "Flames of Restoration", icon: "\u{1F499}", anim: "cast", windup: 0.3, recover: 0.2, cd: 12, desc: "Blue flames of regeneration close your wounds.", steps: [{ heal: 45, color: "#4dd0e1", phoenix: 2.5 }] }),
-        T2(15, {
-          id: "phoenix_fly",
-          name: "Phoenix Flight",
-          icon: "\u{1F54A}",
-          desc: "Spread your wings of blue flame and take to the sky \u2014 no one stays up longer than the Phoenix. Fly, or land again (or press Space again in the air).",
-          flight: { style: "phoenix", gauge: 30, speed: 12, climb: 7, ceiling: 45, drain: 0.5, sea: 3.5, refill: 4, color: "#4dd0e1" }
-        }),
-        T2(30, { id: "phoenix_brand", name: "Phoenix Brand", icon: "\u{1F525}", anim: "kick", windup: 0.3, recover: 0.3, cd: 7, desc: "A kick wreathed in blue flame \u2014 from the sky, a dive straight down onto the target.", steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.2, air: true, dive: true, hit: { damage: 40, knockback: 8, stun: 0.6, heavy: true } }, phoenix: 0.8 }] }),
-        T2(45, {
-          id: "phoenix_form",
-          name: "Phoenix Hybrid Form",
-          anim: "flex",
-          windup: 0.35,
-          recover: 0.1,
-          cd: 45,
-          desc: "Your arms become wings of blue flame: you hit harder, move faster, and the flames heal you as you fight.",
-          steps: [{ buff: { id: "phoenix_form", name: "Phoenix Form", dur: 20, phoenix: true, regen: 6, mods: { damage: 1.25, speedMul: 1.15 }, aura: "rgba(77,208,225,0.6)" } }]
-        }),
-        T2(70, { id: "phoenix_rebirth", name: "Rebirth Flames", icon: "\u267E", anim: "cast", windup: 0.6, recover: 0.2, cd: 120, desc: "Burn away all harm: a full heal, every ailment cleansed, and a burst of blue fire.", steps: [{ heal: 400, color: "#4dd0e1", phoenix: 3 }, { hit: { shape: "circle", range: 3, damage: 30, knockback: 6, element: "fire" }, vfx: "ring", color: "#4dd0e1" }, { self: { cleanse: true } }] }),
-        T2(40, {
-          id: "phoenix_pyreapple",
-          name: "Phoenix Pyreapple",
-          anim: "sweep",
-          windup: 0.3,
-          recover: 0.35,
-          cd: 9,
-          desc: "Wings of blue flame swept round in a great arc: they burn whoever they touch \u2014 and the flames that touch you, heal.",
-          steps: [{ hit: { shape: "arc", range: 3.6, arc: 2.6, offset: 0.2, damage: 34, knockback: 8, stun: 0.5, element: "fire", status: { burn: 2 } }, vfx: "slash", color: "#4dd0e1" }, { heal: 20, color: "#4dd0e1" }]
-        }),
-        T2(55, {
-          id: "phoenix_talon",
-          name: "Phoenix Talons",
-          anim: "claw",
-          windup: 0.2,
-          recover: 0.3,
-          cd: 6,
-          desc: "A great bird's talons, wreathed in blue fire, raked down through them.",
-          steps: [{ hit: { shape: "arc", range: 2.2, arc: 1.3, offset: 0.2, damage: 30, knockback: 4, stun: 0.5, slashing: true, element: "fire", status: { bleed: 2 } }, vfx: "slash", color: "#4dd0e1" }]
-        })
-      ]
-    },
-    uo_seiryu: {
-      name: "Uo Uo no Mi, Model: Seiryu",
-      en: "Fish-Fish Fruit, Azure Dragon",
-      type: "Mythical Zoan",
-      rarity: "mythical",
-      color: "#42a5f5",
-      weight: 0.3,
-      desc: "Become the Azure Dragon of legend, who flies on the clouds it makes. Kaido, strongest creature in the world, ate this fruit.",
-      techniques: [
-        T2(0, { id: "seiryu_bolo", name: "Bolo Breath", icon: "\u{1F409}", anim: "breath", windup: 0.5, recover: 0.4, cd: 7, say: "Bolo Breath!", steps: [{ hit: { shape: "line", range: 11, width: 1.8, damage: 44, knockback: 6, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff7043" }] }),
-        T2(25, { id: "seiryu_kaifu", name: "Kaifu", icon: "\u{1F32C}", anim: "breath", windup: 0.35, recover: 0.3, cd: 6, desc: "Wind blades from the dragon's whiskers.", steps: [{ proj: { speed: 18, range: 12, radius: 0.5, damage: 18, count: 3, spread: 0.5, sprite: "airslash", slashing: true, pierce: true } }] }),
-        T2(35, {
-          id: "seiryu_fly",
-          name: "Azure Dragon Flight",
-          desc: "Take the Azure Dragon's shape and fly on the clouds it makes. Fly, or land again (or press Space again in the air).",
-          flight: { style: "dragon", ride: "cloud", gauge: 40, speed: 11, climb: 6, ceiling: 60, drain: 0.6, sea: 3, refill: 6, color: "#90caf9" }
-        }),
-        T2(50, { id: "seiryu_raimei", name: "Raimei Hakke", icon: "\u26A1", anim: "heavy", windup: 0.6, recover: 0.5, cd: 14, desc: "Thunder Bagua: a club blow that shakes the heavens.", steps: [{ hit: { shape: "arc", range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: "lightning", impactFrame: true, shake: 0.9 } }] }),
-        T2(40, {
-          id: "seiryu_kamaitachi",
-          name: "Kamaitachi Rusukaina",
-          anim: "breath",
-          windup: 0.5,
-          recover: 0.4,
-          cd: 10,
-          desc: "The dragon's whiskers whip up a gale of blades: a storm of them sweeps the ground in front of you.",
-          steps: [{ proj: { speed: 20, range: 13, radius: 0.5, damage: 16, count: 7, spread: 1.3, sprite: "airslash", slashing: true, pierce: true } }]
-        }),
-        T2(55, {
-          id: "seiryu_tatsumaki",
-          name: "Tatsumaki",
-          anim: "summon",
-          windup: 0.6,
-          recover: 0.4,
-          cd: 16,
-          desc: "Dragon Twister: whirlwinds rise round the target, dragging everything in and cutting it to pieces.",
-          steps: [{ zone: { range: 3.2, duration: 2.5, interval: 0.25, damage: 10, color: "#e3f2fd", atTarget: true, kind: "storm", pull: 3 } }]
-        }),
-        T2(70, {
-          id: "seiryu_ragnaraku",
-          name: "Ragnaraku",
-          anim: "slam",
-          windup: 0.7,
-          recover: 0.5,
-          cd: 18,
-          desc: "The club brought down with all the dragon's might: the ground caves in and the shock throws everyone round you into the air.",
-          steps: [{ hit: { shape: "circle", range: 4.5, damage: 90, knockback: 16, stun: 1.1, heavy: true, guardBreak: true, launch: 6, impactFrame: true, shake: 1, hitShips: true }, vfx: "ring", color: "#90caf9" }]
-        })
-      ],
-      // (the whole Azure Dragon is a form, opened by fighting: data/fruitForms.js)
-      more: [
-        T2(80, { id: "seiryu_form", name: "Dragon Form", icon: "\u{1F432}", anim: "cast", windup: 1, recover: 0.1, cd: 120, steps: [{ buff: { id: "dragon", form: "dragon", name: "Azure Dragon", dur: 25, mods: { damage: 2, defMul: 0.4, scale: 1.6 }, aura: "rgba(66,165,245,0.8)", look: { dragonForm: true } } }] })
-      ]
-    },
-    // ----------------------------------------------------------------- LOGIA
-    mera: {
-      name: "Mera Mera no Mi",
-      en: "Flame-Flame Fruit",
-      type: "Logia",
-      rarity: "rare",
-      color: "#ff7043",
-      weight: 1,
-      desc: "Become fire itself: blows pass through you, and whatever you touch burns. Magma burns hotter still. Portgas D. Ace's fruit \u2014 later the Colosseum prize of Dressrosa.",
-      passive: { logia: true, element: "fire", resist: ["fire"], weakTo: ["magma", "water"] },
-      techniques: [
-        T2(0, { id: "mera_hiken", name: "Hiken", icon: "\u{1F525}", anim: "punch", windup: 0.3, recover: 0.3, cd: 4, say: "Hiken!", desc: "Fire Fist: a fist of flame that burns through everything in its path.", steps: [{ proj: { speed: 16, range: 12, radius: 0.8, damage: 26, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 5, trail: { color: ["#ff7043", "#ffca28"] } } }] }),
-        T2(15, {
-          id: "mera_hidaruma",
-          name: "Hotarubi: Hidaruma",
-          icon: "\u{1F386}",
-          anim: "cast",
-          windup: 0.25,
-          recover: 0.3,
-          cd: 7,
-          desc: 'Fireflies: green lights drift slowly onto the target \u2014 then all at once, "Hidaruma", every one bursts into flame.',
-          steps: [{ proj: { speed: 6, range: 9, radius: 0.35, damage: 3, count: 5, spread: 1.4, sprite: "fireball", color: "#aeea00", size: 0.6, element: "fire", homing: 2.5, explode: { range: 1.3, damage: 9, element: "fire", status: { burn: 2 }, colors: ["#ff7043", "#ffca28", "#aeea00"] } } }]
-        }),
-        T2(25, { id: "mera_higan", name: "Higan", anim: "point", windup: 0.2, recover: 0.3, cd: 5, say: "Higan!", desc: "Fire Gun: bullets of flame from your fingertips.", steps: [{ proj: { speed: 26, range: 11, radius: 0.18, damage: 6, count: 5, spread: 0.18, sprite: "fireball", size: 0.5, element: "fire", status: { burn: 1.5 }, knockback: 1 } }] }),
-        T2(35, { id: "mera_enkai", name: "Enkai: Hibashira", icon: "\u{1F30B}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, desc: "Flame Commandment, Fire Pillar: a pillar of flame erupts around you.", steps: [{ hit: { shape: "circle", range: 3, damage: 36, knockback: 8, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true }, vfx: "ring" }] }),
-        T2(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "raise", windup: 1.1, recover: 0.5, cd: 40, desc: "Great Flame Commandment: a second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 2.2, damage: 40, size: 4, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] }),
-        T2(30, {
-          id: "mera_kagero",
-          name: "Kagero",
-          anim: "palm",
-          windup: 0.25,
-          recover: 0.3,
-          cd: 6,
-          desc: "Heat Haze: a torrent of flame poured from your palm across everything in front of you.",
-          steps: [{ hit: { shape: "line", range: 8, width: 1.6, damage: 30, knockback: 5, stun: 0.4, element: "fire", status: { burn: 3 } }, vfx: "beam", color: "#ff7043" }]
-        }),
-        T2(45, {
-          id: "mera_kyokaen",
-          name: "Kyokaen",
-          anim: "spread",
-          windup: 0.35,
-          recover: 0.35,
-          cd: 14,
-          desc: "Fire Fence: a wall of flame bursts up where they stand \u2014 nobody gets through it without burning.",
-          steps: [{ zone: { range: 2.4, duration: 4, interval: 0.4, damage: 10, element: "fire", status: { burn: 2 }, color: "#ff7043", atTarget: true, kind: "fire", slow: 0.6 } }]
-        })
-      ]
-    },
-    hie: {
-      name: "Hie Hie no Mi",
-      en: "Ice-Ice Fruit",
-      type: "Logia",
-      rarity: "rare",
-      color: "#81d4fa",
-      weight: 1,
-      desc: "Become ice. Freeze anything solid \u2014 even the sea, into a road you can walk. Only magma is hotter than its cold. (Admiral Aokiji.)",
-      passive: { logia: true, element: "ice", resist: ["ice"], weakTo: ["magma"] },
-      techniques: [
-        T2(0, { id: "hie_saber", name: "Ice Saber", icon: "\u{1F5E1}", anim: "slash", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 2, arc: 1.8, offset: 0.2, damage: 18, knockback: 3, stun: 0.3, slashing: true, element: "ice", status: { chill: 3 } }, vfx: "slash", color: "#b3e5fc" }] }),
-        T2(15, { id: "hie_pheasant", name: "Pheasant Beak", icon: "\u{1F426}", anim: "cast", windup: 0.35, recover: 0.3, cd: 6, say: "Pheasant Beak!", steps: [{ proj: { speed: 15, range: 12, radius: 0.8, damage: 28, sprite: "bird", color: "#b3e5fc", element: "ice", status: { freeze: 1.4 }, pierce: true } }] }),
-        T2(35, {
-          id: "hie_ageand",
-          name: "Ice Age",
-          icon: "\u2744",
-          anim: "kneel",
-          windup: 0.6,
-          recover: 0.4,
-          cd: 14,
-          desc: "Freeze everything around you solid \u2014 the ground, and the sea itself, which becomes a road of ice while it lasts.",
-          say: "Ice Age!",
-          steps: [{ hit: { shape: "circle", range: 5, damage: 30, knockback: 1, stun: 0.3, element: "ice", status: { freeze: 2.5 }, heavy: true }, vfx: "ring", color: "#e1f5fe" }, { zone: { range: 6.5, duration: 12, interval: 1, damage: 0, color: "#e1f5fe", kind: "ice", slow: 0.5, freezeWater: true } }]
-        }),
-        T2(50, { id: "hie_iceball", name: "Ice Ball", anim: "cast", windup: 0.35, recover: 0.3, cd: 10, desc: "Encase the target in a ball of ice.", steps: [{ proj: { speed: 14, range: 10, radius: 0.6, damage: 24, sprite: "iceshard", size: 2, color: "#e1f5fe", element: "ice", status: { freeze: 2.2 } } }] }),
-        T2(65, { id: "hie_time", name: "Ice Time Capsule", icon: "\u{1F9CA}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, desc: "A wave of ice that freezes everything along its path solid.", steps: [{ hit: { shape: "line", range: 10, width: 2.5, damage: 60, knockback: 2, element: "ice", status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: "beam", color: "#e1f5fe" }] }),
-        T2(45, {
-          id: "hie_partisan",
-          name: "Ice Block: Partisan",
-          icon: "\u2744",
-          anim: "cast",
-          windup: 0.35,
-          recover: 0.35,
-          cd: 8,
-          desc: "A volley of ice spears.",
-          steps: [{ proj: { speed: 24, range: 14, radius: 0.35, damage: 18, count: 5, spread: 0.55, sprite: "iceshard", size: 1.4, color: "#e1f5fe", element: "ice", status: { freeze: 0.6 }, pierce: true } }]
-        }),
-        T2(55, {
-          id: "hie_icetime",
-          name: "Ice Time",
-          anim: "palm",
-          windup: 0.2,
-          recover: 0.3,
-          cd: 12,
-          desc: "A touch of your hand and the cold runs right through them: frozen solid where they stand.",
-          steps: [{ hit: { shape: "arc", range: 1.7, arc: 1, offset: 0.2, damage: 24, knockback: 0, stun: 0.3, element: "ice", status: { freeze: 3.2 }, unblockable: true } }]
-        })
-      ]
-    },
-    goro: {
-      name: "Goro Goro no Mi",
-      en: "Rumble-Rumble Fruit",
-      type: "Logia",
-      rarity: "legendary",
-      color: "#fff176",
-      weight: 0.6,
-      desc: "Become lightning, and call it down from the sky. The self-proclaimed God Enel's fruit. Useless against rubber.",
-      passive: { logia: true, element: "lightning", resist: ["lightning"], weakTo: ["rubber"] },
-      techniques: [
-        T2(0, { id: "goro_vari", name: "Vari", icon: "\u26A1", anim: "point", windup: 0.2, recover: 0.25, cd: 3, desc: "A hundred million volts from your fingertip.", steps: [{ hit: { shape: "line", range: 8, width: 0.8, damage: 22, knockback: 2, stun: 0.5, element: "lightning", status: { shock: 1 } }, vfx: "beam", color: "#fff176" }] }),
-        T2(15, { id: "goro_sango", name: "Sango", icon: "\u{1F409}", anim: "cast", windup: 0.4, recover: 0.3, cd: 8, desc: "A great bolt in the shape of a dragon.", steps: [{ proj: { speed: 20, range: 14, radius: 0.9, damage: 34, sprite: "thunder", size: 2, element: "lightning", pierce: true, status: { shock: 1.2 } } }] }),
-        T2(35, { id: "goro_elthor", name: "El Thor", icon: "\u{1F329}", anim: "raise", windup: 0.7, recover: 0.4, cd: 14, desc: "A pillar of divine lightning straight down from the sky.", say: "El Thor!", steps: [{ zone: { range: 2.8, duration: 0.8, interval: 0.4, damage: 45, element: "lightning", status: { shock: 1.5 }, color: "#fff176", atTarget: true, kind: "thunder" } }] }),
-        T2(45, { id: "goro_mamaragan", name: "Mamaragan", anim: "raise", windup: 0.6, recover: 0.4, cd: 16, say: "Mamaragan!", desc: "Lightning falls from the sky all around you, again and again.", steps: [{ zone: { range: 6, duration: 1.6, interval: 0.25, damage: 12, element: "lightning", status: { shock: 0.8 }, color: "#fff176", kind: "thunder" } }] }),
-        T2(85, { id: "goro_raigo", name: "Raigo", icon: "\u{1F311}", anim: "summon", windup: 1.4, recover: 0.6, cd: 90, desc: "A thundercloud large enough to erase an island.", steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: "lightning", status: { shock: 0.5 }, color: "#fff176", kind: "thunder" } }] }),
-        T2(10, {
-          id: "goro_kari",
-          name: "Kari",
-          anim: "raise",
-          windup: 0.25,
-          recover: 0.3,
-          cd: 7,
-          desc: "Rumble: lightning crackles out of your whole body at once \u2014 everything round you is struck.",
-          steps: [{ hit: { shape: "circle", range: 3.4, damage: 26, knockback: 6, stun: 0.6, element: "lightning", status: { shock: 1 } }, vfx: "ring", color: "#fff176" }]
-        }),
-        T2(25, {
-          id: "goro_raiju",
-          name: "Raiju",
-          anim: "cast",
-          windup: 0.35,
-          recover: 0.3,
-          cd: 9,
-          desc: "Thunder Beast: a beast of lightning loosed at them \u2014 it runs them down wherever they go.",
-          steps: [{ proj: { speed: 18, range: 15, radius: 0.7, damage: 30, sprite: "thunder", size: 1.6, element: "lightning", homing: 4, status: { shock: 1 } } }]
-        }),
-        T2(30, {
-          id: "goro_jamboule",
-          name: "Jamboule",
-          anim: "point",
-          windup: 0.3,
-          recover: 0.3,
-          cd: 8,
-          desc: "A ball of lightning dropped on them from your fingertip: it bursts like a thunderclap.",
-          steps: [{ proj: { speed: 15, range: 12, radius: 0.5, damage: 10, sprite: "lightorb", color: "#fff176", element: "lightning", explode: { range: 2.6, damage: 36, element: "lightning", status: { shock: 1.2 } } } }]
-        })
-      ],
-      // (Amaru is a form, opened by fighting: data/fruitForms.js)
-      more: [
-        T2(55, { id: "goro_amaru", name: "200 Million Volt Amaru", icon: "\u{1F47A}", anim: "cast", windup: 0.8, recover: 0.2, cd: 60, steps: [{ buff: { id: "amaru", form: "amaru", name: "Amaru", dur: 18, mods: { damage: 1.9, speedMul: 1.25, scale: 1.3 }, element: "lightning", aura: "rgba(255,241,118,0.9)", look: { drums: true } } }] })
-      ]
-    },
-    suna: {
-      name: "Suna Suna no Mi",
-      en: "Sand-Sand Fruit",
-      type: "Logia",
-      rarity: "rare",
-      color: "#e1c16e",
-      weight: 1,
-      desc: "Become sand: blows pass through you, you ride the wind as a sandstorm, and your hand drains the moisture from anything it touches. Water is its weakness. (Sir Crocodile.)",
-      passive: { logia: true, element: "sand", weakTo: ["water"] },
-      techniques: [
-        T2(0, { id: "suna_barjan", name: "Barjan", icon: "\u{1F319}", anim: "slash", windup: 0.2, recover: 0.3, cd: 3, desc: "A crescent blade of sand.", steps: [{ proj: { speed: 17, range: 10, radius: 0.5, damage: 18, sprite: "sandblade", element: "sand", slashing: true, pierce: true } }] }),
-        T2(15, { id: "suna_sables", name: "Sables", icon: "\u{1F32A}", anim: "cast", windup: 0.4, recover: 0.3, cd: 9, desc: "A sandstorm that drags whoever is in it to its heart.", steps: [{ zone: { range: 3, duration: 3.5, interval: 0.3, damage: 7, element: "sand", color: "#e1c16e", kind: "storm", atTarget: true, pull: 2 } }] }),
-        T2(25, {
-          id: "suna_ride",
-          name: "Sand Glide",
-          desc: "Turn into a sandstorm and ride the wind. Fly \u2014 or press Space again in the air.",
-          flight: { style: "ride", ride: "sand", gauge: 12, speed: 10, climb: 5, ceiling: 25, sea: 4, color: "#e1c16e" }
-        }),
-        T2(35, { id: "suna_spada", name: "Desert Spada", icon: "\u{1F5E1}", anim: "grab", windup: 0.3, recover: 0.35, cd: 8, desc: "Blades of sand rip through the ground.", steps: [{ hit: { shape: "line", range: 11, width: 1.2, damage: 40, knockback: 4, stun: 0.5, element: "sand", slashing: true }, vfx: "beam", color: "#e1c16e" }] }),
-        T2(45, { id: "suna_grip", name: "Dehydrating Grip", anim: "grab", windup: 0.3, recover: 0.35, cd: 10, desc: "Seize the target with your right hand and drain the water from their body: they wither as you hold them.", steps: [{ hit: { shape: "arc", range: 1.6, arc: 1, offset: 0.2, damage: 22, knockback: 1, stun: 0.6, element: "sand", unblockable: true, status: { dry: 5 } } }] }),
-        T2(60, { id: "suna_dry", name: "Ground Death", icon: "\u{1F3DC}", anim: "kneel", windup: 0.7, recover: 0.4, cd: 30, desc: "Drain all moisture from the land around you: whoever is on it dries out.", steps: [{ zone: { range: 6, duration: 5, interval: 0.4, damage: 12, element: "sand", color: "#d7b56d", kind: "field", status: { dry: 2 } } }] }),
-        T2(40, {
-          id: "suna_girasole",
-          name: "Desert Girasole",
-          anim: "kneel",
-          windup: 0.6,
-          recover: 0.4,
-          cd: 22,
-          desc: "Drain the ground round them dry: it collapses into a great whirlpool of quicksand that sucks everything down to its heart.",
-          steps: [{ zone: { range: 4.5, duration: 4, interval: 0.4, damage: 9, element: "sand", color: "#d7b56d", atTarget: true, kind: "storm", pull: 3.5, slow: 0.35, status: { dry: 1 } } }]
-        }),
-        T2(55, {
-          id: "suna_pesado",
-          name: "Sables: Pesado",
-          anim: "cast",
-          windup: 0.45,
-          recover: 0.35,
-          cd: 12,
-          desc: "A sandstorm squeezed into a ball in your hand and hurled: it bursts into a full storm where it lands.",
-          steps: [{ proj: { speed: 15, range: 12, radius: 0.6, damage: 14, sprite: "sandblade", size: 1.4, element: "sand", explode: { range: 3.2, damage: 44, element: "sand", knockback: 10 } } }]
-        })
-      ]
-    },
-    moku: {
-      name: "Moku Moku no Mi",
-      en: "Plume-Plume Fruit",
-      type: "Logia",
-      rarity: "rare",
-      color: "#cfd8dc",
-      weight: 1,
-      desc: 'Become smoke: blows pass through you, you fly on a column of smoke, and your smoke seizes and holds whatever it wraps. Smoker "the White Hunter" pairs it with a Seastone jitte.',
-      passive: { logia: true, element: "smoke" },
-      techniques: [
-        T2(0, { id: "moku_blow", name: "White Blow", icon: "\u2601", anim: "punch", windup: 0.2, recover: 0.3, cd: 3, steps: [{ proj: { speed: 16, range: 10, radius: 0.6, damage: 18, sprite: "smokefist", element: "smoke", knockback: 5, stun: 0.4 } }] }),
-        T2(15, { id: "moku_snake", name: "White Snake", icon: "\u{1F40D}", anim: "grab", windup: 0.25, recover: 0.3, cd: 7, desc: "Smoke tendrils wrap round the target and hold them.", steps: [{ proj: { speed: 14, range: 11, radius: 0.5, damage: 12, sprite: "smokesnake", element: "smoke", status: { root: 2 }, homing: 2 } }] }),
-        T2(25, {
-          id: "moku_ride",
-          name: "Smoke Ride",
-          desc: "Ride a column of your own smoke through the air. Fly \u2014 or press Space again in the air.",
-          flight: { style: "ride", ride: "smoke", gauge: 14, speed: 10, climb: 5, ceiling: 30, sea: 4, color: "#eceff1" }
-        }),
-        T2(35, { id: "moku_out", name: "White Out", icon: "\u{1F32B}", anim: "cast", windup: 0.4, recover: 0.3, cd: 12, desc: "Fill the area with smoke that seizes whoever is in it: they can barely move.", steps: [{ zone: { range: 4, duration: 5, interval: 0.5, damage: 6, element: "smoke", color: "#eceff1", kind: "storm", slow: 0.45, status: { root: 0.4 } } }] }),
-        T2(60, { id: "moku_launcher", name: "White Launcher", icon: "\u{1F680}", anim: "thrust", windup: 0.2, recover: 0.3, cd: 6, desc: "Turn into smoke and launch yourself at the target.", steps: [{ dash: { dist: 10, time: 0.3, iframes: 0.3, air: true, trail: "#eceff1", hit: { damage: 36, knockback: 8, stun: 0.6, element: "smoke" } } }] }),
-        T2(30, {
-          id: "moku_vine",
-          name: "White Vine",
-          anim: "grab",
-          windup: 0.25,
-          recover: 0.3,
-          cd: 8,
-          desc: "A long vine of smoke lashed out along the ground: it wraps whoever it touches and holds them.",
-          steps: [{ hit: { shape: "line", range: 8, width: 1, damage: 16, knockback: 1, stun: 0.4, element: "smoke", status: { root: 1.5 } }, vfx: "beam", color: "#eceff1" }]
-        })
-      ]
-    },
-    pika: {
-      name: "Pika Pika no Mi",
-      en: "Glint-Glint Fruit",
-      type: "Logia",
-      rarity: "legendary",
-      color: "#fff9c4",
-      weight: 0.6,
-      desc: "Become light. Move at the speed of light \u2014 and kick with its weight. (Admiral Kizaru.)",
-      passive: { logia: true, element: "light" },
-      techniques: [
-        T2(0, { id: "pika_yasakani", name: "Yasakani no Magatama", icon: "\u2728", anim: "cast", windup: 0.35, recover: 0.4, cd: 6, desc: "A rain of light bullets.", steps: [{ proj: { speed: 30, range: 12, radius: 0.25, damage: 8, count: 9, spread: 1, sprite: "lightorb", element: "light" } }] }),
-        T2(15, { id: "pika_yata", name: "Yata no Kagami", icon: "\u{1FA9E}", anim: "cast", windup: 0.05, recover: 0.05, cd: 2, desc: "Travel at the speed of light.", steps: [{ teleport: { dist: 12, color: "#fff9c4" } }] }),
-        T2(25, {
-          id: "pika_kick",
-          name: "Light-Speed Kick",
-          anim: "kick",
-          windup: 0.2,
-          recover: 0.35,
-          cd: 8,
-          desc: '"Ever been kicked at the speed of light?" Be in front of the target in a flash \u2014 and kick.',
-          steps: [{ at: 0.2, teleport: { dist: 14, toTarget: true, gap: 1, color: "#fff9c4" } }, { at: 0.27, hit: { shape: "arc", range: 1.9, arc: 1.2, offset: 0.2, damage: 46, knockback: 14, stun: 0.7, element: "light", heavy: true, guardBreak: true, impactFrame: true } }]
-        }),
-        T2(35, { id: "pika_murakumo", name: "Ama no Murakumo", icon: "\u2694", anim: "slash", windup: 0.2, recover: 0.3, cd: 5, desc: "A sword of light.", steps: [{ hit: { shape: "arc", range: 2.6, arc: 2.2, offset: 0.2, damage: 40, knockback: 4, stun: 0.5, slashing: true, element: "light" }, vfx: "slash", color: "#fff9c4" }] }),
-        T2(45, {
-          id: "pika_fly",
-          name: "Light Flight",
-          desc: "Become light and drift through the air, fast \u2014 but not for long. Fly \u2014 or press Space again in the air.",
-          flight: { style: "float", ride: "light", gauge: 10, speed: 15, climb: 8, ceiling: 35, sea: 4, color: "#fff59d" }
-        }),
-        T2(60, { id: "pika_amaterasu", name: "Light Laser", icon: "\u2600", anim: "cast", windup: 0.8, recover: 0.4, cd: 25, desc: "A beam of light from your fingertip that blasts through everything in a line.", steps: [{ hit: { shape: "line", range: 16, width: 1.6, damage: 90, knockback: 8, stun: 0.8, element: "light", heavy: true, impactFrame: true, hitShips: true, shipDamage: 300 }, vfx: "beam", color: "#fff59d" }] }),
-        T2(20, {
-          id: "pika_flash",
-          name: "Flash",
-          anim: "raise",
-          windup: 0.15,
-          recover: 0.25,
-          cd: 12,
-          desc: "Burst into blinding light: everyone round you is left staggering, seeing nothing.",
-          steps: [{ hit: { shape: "circle", range: 4, damage: 8, knockback: 2, stun: 1.2, element: "light" }, vfx: "ring", color: "#fff9c4" }, { fx: { flash: 0.35 } }]
-        })
-      ]
-    },
-    magu: {
-      name: "Magu Magu no Mi",
-      en: "Magma-Magma Fruit",
-      type: "Logia",
-      rarity: "legendary",
-      color: "#ff5722",
-      weight: 0.6,
-      desc: "Become magma \u2014 hotter than fire itself: it burns whatever it touches, beats fire and melts ice. (Admiral, then Fleet Admiral, Akainu.)",
-      passive: { logia: true, element: "magma", resist: ["fire", "magma"] },
-      techniques: [
-        T2(0, { id: "magu_daifunka", name: "Dai Funka", icon: "\u{1F30B}", anim: "punch", windup: 0.3, recover: 0.35, cd: 4, say: "Dai Funka!", desc: "Great Eruption: a fist of magma.", steps: [{ proj: { speed: 15, range: 11, radius: 0.9, damage: 34, sprite: "magmafist", size: 1.5, element: "magma", pierce: true, status: { burn: 4 }, knockback: 6, trail: { color: ["#bf360c", "#ff6f00"], kind: "fire" } } }] }),
-        T2(20, { id: "magu_meigo", name: "Meigo", icon: "\u{1F44A}", anim: "thrust", windup: 0.3, recover: 0.35, cd: 8, desc: "Hell Hound: a magma fist that pierces through.", steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 55, knockback: 6, stun: 0.8, element: "magma", status: { burn: 4 }, heavy: true, guardBreak: true } } }] }),
-        T2(35, { id: "magu_inugami", name: "Inugami Guren", anim: "thrust", windup: 0.5, recover: 0.4, cd: 14, desc: "Dog Bite Crimson Lotus: a giant hound's head of magma lunges along the ground and bites down.", steps: [{ hit: { shape: "line", range: 9, width: 2.2, damage: 60, knockback: 8, stun: 0.7, element: "magma", status: { burn: 4 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff5722" }] }),
-        T2(50, { id: "magu_ryusei", name: "Ryusei Kazan", icon: "\u2604", anim: "summon", windup: 1, recover: 0.5, cd: 35, desc: "Meteor Volcano: a rain of magma fists.", steps: [{ zone: { range: 6, duration: 2.5, interval: 0.2, damage: 24, element: "magma", color: "#ff5722", kind: "meteor", status: { burn: 3 } } }] }),
-        T2(40, {
-          id: "magu_bakuretsu",
-          name: "Bakuretsu Kazan",
-          anim: "slam",
-          windup: 0.6,
-          recover: 0.45,
-          cd: 20,
-          desc: "Erupting Volcano: drive a fist of magma into the ground and it wells up all round you \u2014 a floor of molten rock.",
-          steps: [
-            { hit: { shape: "circle", range: 3.5, damage: 40, knockback: 10, stun: 0.6, element: "magma", status: { burn: 3 }, heavy: true, launch: 3 }, vfx: "ring", color: "#ff5722" },
-            { zone: { range: 4.5, duration: 4, interval: 0.4, damage: 10, element: "magma", status: { burn: 2 }, color: "#ff5722", kind: "fire", slow: 0.6 } }
-          ]
-        })
-      ]
-    },
-    yami: {
-      name: "Yami Yami no Mi",
-      en: "Dark-Dark Fruit",
-      type: "Logia",
-      rarity: "legendary",
-      color: "#311b92",
-      weight: 0.5,
-      desc: "Darkness that swallows everything \u2014 shots, people, even other Devil Fruit powers \u2014 and can let it all out again. Unlike other Logia it can't let blows through: it draws pain in. (Marshall D. Teach.)",
-      passive: { element: "dark", noIntangible: true, damageTaken: 1.15 },
-      techniques: [
-        T2(0, { id: "yami_kurouzu", name: "Kurouzu", icon: "\u{1F573}", anim: "grab", windup: 0.3, recover: 0.3, cd: 6, desc: "Black Vortex: the darkness drags the target to you \u2014 and while it holds them, their Devil Fruit is useless.", steps: [{ pull: { range: 8, strength: 14, stun: 0.6, nullify: 2.5 } }] }),
-        T2(15, {
-          id: "yami_blackhole",
-          name: "Black Hole",
-          icon: "\u26AB",
-          anim: "cast",
-          windup: 0.5,
-          recover: 0.4,
-          cd: 14,
-          desc: "Darkness spreads over the ground and swallows everything: shots fired into it, and the Devil Fruit powers of whoever stands in it.",
-          steps: [{ zone: { range: 4, duration: 4, interval: 0.4, damage: 10, element: "dark", color: "#311b92", kind: "dark", pull: 4, slow: 0.4, absorb: true, status: { seastone: 1.2 } } }]
-        }),
-        T2(35, { id: "yami_nullify", name: "Nullifying Touch", icon: "\u270B", anim: "grab", windup: 0.2, recover: 0.3, cd: 18, desc: "Grab hold of the target: while the darkness has them, their Devil Fruit power is gone.", steps: [{ hit: { shape: "arc", range: 1.8, arc: 1.2, offset: 0.2, damage: 15, stun: 0.8, status: { seastone: 8 }, unblockable: true } }] }),
-        T2(60, {
-          id: "yami_liberation",
-          name: "Liberation",
-          icon: "\u{1F4A5}",
-          anim: "cast",
-          windup: 0.7,
-          recover: 0.4,
-          cd: 25,
-          desc: "Release everything the darkness swallowed \u2014 and the shots it took in come back out with it.",
-          steps: [{ hit: { shape: "circle", range: 5, damage: 70, knockback: 12, stun: 0.8, element: "dark", heavy: true, impactFrame: true }, vfx: "ring", color: "#7e57c2" }, { power: { kind: "release", range: 5.5, mul: 1.2, cap: 220 } }]
-        })
-      ]
-    }
-  };
-  var FRUIT_IDS = Object.keys(FRUITS);
-  for (const [fid, f] of Object.entries(FRUITS)) {
-    registerAbilities([...f.techniques, ...f.more || []].map((t) => ({ ...t, source: "fruit:" + fid, fruit: fid })), "fruit:" + fid);
-    f.logia = !!(f.passive && f.passive.logia);
-    f.rubber = !!(f.passive && f.passive.rubber);
-    f.resist = f.passive?.resist || [];
-    f.weakTo = f.passive?.weakTo || [];
-  }
-  var FRUIT_RARITY = {
-    common: { label: "Common", color: "#b2bec3" },
-    uncommon: { label: "Uncommon", color: "#55efc4" },
-    rare: { label: "Rare", color: "#74b9ff" },
-    legendary: { label: "Legendary", color: "#fdcb6e" },
-    mythical: { label: "Mythical", color: "#ff7675" }
-  };
-  attachKits(FRUITS);
-  function unlockedFruitTechniques(fruitId, mastery) {
-    const f = FRUITS[fruitId];
-    if (!f) return [];
-    return f.techniques.map((t) => t.id);
-  }
-
-  // src/data/items.js
-  var ITEMS = {
-    // ---------------------------------------------------------------- food
-    meat: { name: "Meat on the Bone", icon: "\u{1F356}", type: "food", heal: 70, price: 90, desc: "The universal fuel of every rubber-brained captain." },
-    rice_ball: { name: "Rice Ball", icon: "\u{1F359}", type: "food", heal: 40, price: 45, desc: "Simple, salty, filling." },
-    fish_stew: { name: "Sea Fish Stew", icon: "\u{1F372}", type: "food", heal: 110, price: 180, desc: "A sailor's favourite." },
-    tangerine: { name: "Bell-m\xE8re's Tangerine", icon: "\u{1F34A}", type: "food", heal: 35, price: 60, desc: "From the groves of Cocoyasi Village." },
-    fresh_fish: { name: "Fresh Fish", icon: "\u{1F41F}", type: "food", heal: 45, price: 40, desc: "Caught with your bare hands. Better cooked, but it will do." },
-    tuna: { name: "Bluefin Tuna", icon: "\u{1F41F}", type: "food", heal: 160, price: 420, desc: "A fat, fast fish from the open sea. A cook would weep with joy." },
-    elephant_tuna: { name: "Elephant Honmaguro", icon: "\u{1F41F}", type: "food", heal: 320, price: 1400, desc: "A giant tuna with an elephant's trunk and ears \u2014 the finest eating in the sea. Sanji would kill for one." },
-    sea_king_steak: { name: "Sea King Steak", icon: "\u{1F969}", type: "food", heal: 400, price: 2500, desc: "Enough meat to feed a crew for a week." },
-    baratie_course: { name: "Baratie Full Course", icon: "\u{1F37D}", type: "food", heal: 300, price: 1200, buff: { id: "well_fed", name: "Well Fed", dur: 180, mods: { damage: 1.1 } }, desc: `Cooked by "Red Leg" Zeff's kitchen. Leaves you Well Fed.` },
-    sake: { name: "Sake", icon: "\u{1F376}", type: "food", heal: 10, price: 120, buff: { id: "tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: "Dutch courage." },
-    cola: { name: "Cola Barrel", icon: "\u{1F964}", type: "material", price: 500, desc: "Fuel for Coup de Burst and for certain cyborgs." },
-    bandage: { name: "Bandages", icon: "\u{1FA79}", type: "medicine", heal: 55, price: 70, desc: "Stops the bleeding.", cure: ["bleed"] },
-    antidote: { name: "Antidote", icon: "\u{1F9EA}", type: "medicine", heal: 20, price: 150, cure: ["poison"], desc: "Neutralises most poisons." },
-    rumble_ball: { name: "Rumble Ball", icon: "\u{1F7E1}", type: "medicine", price: 8e3, buff: { id: "rumble", name: "Rumble", dur: 180, mods: { damage: 1.2, speedMul: 1.1 } }, desc: "Chopper's invention. Strengthens you for three minutes." },
-    // foraged from trees (E next to a palm or fruit tree)
-    coconut: { name: "Coconut", icon: "", type: "food", heal: 30, price: 25, desc: "Crack it open: sweet water and white flesh. Picked from palms." },
-    banana: { name: "Banana", icon: "", type: "food", heal: 25, price: 20, desc: "Quick energy from a jungle tree." },
-    mango: { name: "Mango", icon: "", type: "food", heal: 40, price: 35, desc: "Ripe, juicy and sticky." },
-    apple: { name: "Apple", icon: "", type: "food", heal: 25, price: 15, desc: "Crisp and red." },
-    cherry: { name: "Cherries", icon: "", type: "food", heal: 12, price: 10, desc: "A handful of cherries." },
-    tension_hormone: { name: "Tension Hormones", icon: "\u{1F489}", type: "medicine", heal: 99999, price: 0, costsLife: true, desc: "Emporio Ivankov's miracle: fully restores you right now \u2014 at the cost of ten years of lifespan (one life)." },
-    // ------------------------------------------------------------- swords
-    wooden_sword: { name: "Wooden Practice Sword", icon: "\u{1FAB5}", type: "weapon", kind: "sword", power: 0.75, price: 300, grade: "Training", desc: "Every swordsman starts with one." },
-    rusty_katana: { name: "Rusty Katana", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1, price: 1500, grade: "Unranked", desc: "Nicked and rusted, but it cuts." },
-    cutlass: { name: "Pirate Cutlass", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.1, price: 3500, grade: "Unranked" },
-    marine_saber: { name: "Marine Saber", icon: "\u2694", type: "weapon", kind: "sword", power: 1.15, price: 6e3, grade: "Unranked" },
-    fine_katana: { name: "Fine Katana", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.25, price: 18e3, grade: "Unranked", desc: "Well-balanced steel from a Loguetown forge." },
-    yubashiri: { name: "Yubashiri", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.35, price: 1e5, grade: "Wazamono", desc: "A light, sharp blade sold in Ipponmatsu's shop." },
-    sandai_kitetsu: { name: "Sandai Kitetsu", icon: "\u{1FA78}", type: "weapon", kind: "sword", power: 1.45, price: 0, grade: "Wazamono (cursed)", cursed: true, desc: "A cursed blade said to bring doom to its wielders. Throw it into the air and see if fate spares your arm." },
-    shigure: { name: "Shigure", icon: "\u{1F5E1}", type: "weapon", kind: "sword", power: 1.4, price: 25e4, grade: "Wazamono" },
-    wado_ichimonji: { name: "Wado Ichimonji", icon: "\u{1F90D}", type: "weapon", kind: "sword", power: 1.6, price: 0, grade: "O Wazamono", unique: true, desc: "The white-hilted sword of Kuina, entrusted by Koshiro of Shimotsuki Village." },
-    shusui: { name: "Shusui", icon: "\u{1F5A4}", type: "weapon", kind: "sword", power: 1.75, price: 0, grade: "O Wazamono", unique: true, desc: "The black blade of the legendary samurai Ryuma, won at Thriller Bark." },
-    enma: { name: "Enma", icon: "\u{1F525}", type: "weapon", kind: "sword", power: 1.95, price: 0, grade: "O Wazamono", unique: true, hakiHungry: true, desc: "The blade that cut Kaido. It draws out its wielder's Haki whether they like it or not." },
-    yoru: { name: "Yoru", icon: "\u271D", type: "weapon", kind: "sword", power: 2.3, price: 0, grade: "Saijo O Wazamono", unique: true, desc: "The black blade of Dracule Mihawk, one of the twelve Supreme Grade swords." },
-    // --------------------------------------------------------------- guns
-    slingshot: { name: "Slingshot", icon: "\u{1F3AF}", type: "weapon", kind: "gun", power: 0.9, price: 800, desc: "Lead stars at the ready." },
-    flintlock: { name: "Flintlock Pistol", icon: "\u{1F52B}", type: "weapon", kind: "gun", power: 1.05, price: 4e3 },
-    marine_rifle: { name: "Marine Rifle", icon: "\u{1F52B}", type: "weapon", kind: "gun", power: 1.2, price: 16e3 },
-    kabuto: { name: "Kabuto", icon: "\u{1FAB2}", type: "weapon", kind: "gun", power: 1.35, price: 0, unique: true, desc: "A giant slingshot with a Dial built in." },
-    kuro_kabuto: { name: "Kuro Kabuto", icon: "\u{1FAB2}", type: "weapon", kind: "gun", power: 1.6, price: 0, unique: true },
-    // ------------------------------------------------------------- staffs
-    bo_staff: { name: "Bo Staff", icon: "\u{1F9AF}", type: "weapon", kind: "staff", power: 1, price: 2e3 },
-    clima_tact: { name: "Clima-Tact", icon: "\u{1F326}", type: "weapon", kind: "staff", power: 1.2, price: 6e4, desc: "A weather-controlling staff." },
-    sorcery_clima_tact: { name: "Sorcery Clima-Tact", icon: "\u26C8", type: "weapon", kind: "staff", power: 1.6, price: 0, unique: true, desc: "Improved with Weatherian science." },
-    // --------------------------------------------------------------- axes
-    woodsman_axe: { name: "Woodsman's Axe", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.1, price: 2500 },
-    giant_axe: { name: "Axe of a Giant Warrior", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.6, price: 0, unique: true, desc: "A gift from the giants of Little Garden. Absurdly heavy." },
-    morgan_axe: { name: "Axe-Hand", icon: "\u{1FA93}", type: "weapon", kind: "axe", power: 1.3, price: 0, desc: "Taken from Captain Morgan." },
-    // --------------------------------------------------------- hats / coats
-    straw_hat: { name: "Straw Hat", icon: "\u{1F452}", type: "hat", look: { hat: "straw" }, bonus: { wil: 2 }, price: 500, desc: "A hat passed down through generations of dreamers. It is said to carry a promise." },
-    bandana: { name: "Bandana", icon: "\u{1F397}", type: "hat", look: { hat: "bandana" }, price: 120 },
-    tricorne: { name: "Tricorne", icon: "\u{1F3A9}", type: "hat", look: { hat: "tricorne" }, bonus: { wil: 1 }, price: 900 },
-    captain_hat: { name: "Captain's Hat", icon: "\u{1F3A9}", type: "hat", look: { hat: "captain" }, bonus: { wil: 2 }, price: 4e3 },
-    cowboy_hat: { name: "Cowboy Hat", icon: "\u{1F920}", type: "hat", look: { hat: "cowboy" }, bonus: { agi: 1 }, price: 700 },
-    marine_cap: { name: "Marine Cap", icon: "\u{1F9E2}", type: "hat", look: { hat: "marine" }, price: 0 },
-    pink_hat: { name: "Pink Top Hat", icon: "\u{1F380}", type: "hat", look: { hat: "pinkhat" }, bonus: { vit: 1 }, price: 800 },
-    goggles: { name: "North Blue Goggles", icon: "\u{1F97D}", type: "hat", look: { hat: "goggles" }, bonus: { agi: 1 }, price: 1200, desc: "A new model from the North Blue. (Usopp bought these in Loguetown.)" },
-    headband: { name: "Black Bandana", icon: "\u{1F5A4}", type: "hat", look: { hat: "headband", hatColor: "#212121" }, bonus: { str: 1 }, price: 300, desc: "Tie it on when you mean business." },
-    traveller_hood: { name: "Traveller's Hood", icon: "", type: "hat", hood: true, look: { hat: "hood", hatColor: "#6a5643" }, price: 1800, desc: "A deep hood that keeps your face in shadow. Marines won't know a wanted face unless they get right up close \u2014 or you start a fight in it." },
-    black_hood: { name: "Black Cowl", icon: "", type: "hat", hood: true, look: { hat: "hood", hatColor: "#26262b" }, bonus: { agi: 1 }, price: 9e3, desc: "The cowl of a Revolutionary Army field agent. Nobody sees your face." },
-    horned_helm: { name: "Horned Helm", icon: "\u26D1", type: "hat", look: { hat: "horns" }, bonus: { end: 2 }, price: 0, desc: "A helm of Elbaf make." },
-    // body armour (the body slot: coats, cloaks and armour)
-    padded_vest: { name: "Padded Vest", icon: "", type: "coat", armor: 0.04, look: { coat: "#795548" }, bonus: { end: 1 }, price: 1800, desc: "Quilted canvas that takes the sting out of a cutlass." },
-    leather_jerkin: { name: "Leather Jerkin", icon: "", type: "coat", armor: 0.06, look: { coat: "#6d4c33" }, bonus: { agi: 1 }, price: 5500, desc: "Boiled leather \u2014 light enough to dodge in." },
-    chain_shirt: { name: "Chain Shirt", icon: "", type: "coat", armor: 0.1, look: { coat: "#90a4ae" }, bonus: { end: 1 }, price: 22e3, desc: "Rings of steel under your shirt. Heavy, but blades slide off." },
-    samurai_armor: { name: "Samurai Armour", icon: "", type: "coat", armor: 0.14, look: { coat: "#8e1b16" }, bonus: { end: 2, vit: 1 }, price: 9e4, desc: "Lacquered plates in the style of the Land of Wano." },
-    marine_coat: { name: "Marine Coat of Justice", icon: "\u{1F9E5}", type: "coat", look: { coat: "#fafafa", coatText: "JUSTICE" }, bonus: { end: 1 }, price: 0, desc: 'Worn by Marine officers. "JUSTICE" is stitched on the back.' },
-    captain_coat: { name: "Captain's Coat", icon: "\u{1F9E5}", type: "coat", look: { coat: "#1a237e" }, bonus: { wil: 1 }, price: 12e3 },
-    red_cloak: { name: "Red Cloak", icon: "\u{1F9E3}", type: "coat", look: { coat: "#b71c1c" }, bonus: { vit: 1 }, price: 6e3 },
-    // ---------------------------------------------------------- accessories (two slots)
-    iron_ring: { name: "Iron Ring", icon: "", type: "accessory", bonus: { str: 1 }, price: 1500, desc: "A heavy ring that makes every punch land harder." },
-    shell_bracelet: { name: "Shell Bracelet", icon: "", type: "accessory", bonus: { agi: 1 }, price: 900, desc: "Strung by island children. Light on the wrist." },
-    lucky_charm: { name: "Lucky Charm", icon: "", type: "accessory", bonus: { wil: 1 }, price: 800, desc: "A little wooden charm. Sailors swear by them." },
-    leather_bracers: { name: "Leather Bracers", icon: "", type: "accessory", bonus: { end: 1 }, price: 1200, desc: "For blocking blades with your forearms (not recommended)." },
-    haramaki: { name: "Haramaki", icon: "", type: "accessory", bonus: { vit: 1, end: 1 }, price: 2400, desc: "A green belly-warmer. Keeps your insides where they belong." },
-    gold_earrings: { name: "Three Gold Earrings", icon: "", type: "accessory", bonus: { agi: 1, wil: 1 }, price: 6e3, desc: "Three small gold drops that clink when you move." },
-    hand_wraps: { name: "Fighter's Hand Wraps", icon: "", type: "accessory", bonus: { str: 2 }, price: 5e3, desc: "Tight cloth wraps worn by bare-knuckle brawlers." },
-    pearl_necklace: { name: "Pearl Necklace", icon: "", type: "accessory", bonus: { vit: 2 }, price: 14e3, desc: "Pearls from the seabed near Fish-Man Island." },
-    red_sash: { name: "Red Sash", icon: "", type: "accessory", bonus: { str: 1, wil: 1 }, price: 8e3, desc: "Tied at the waist the way the old Roger Pirates wore theirs." },
-    sea_prism_charm: { name: "Sea-Glass Charm", icon: "", type: "accessory", bonus: { end: 2 }, price: 12e3, desc: "Polished sea glass in a brass cage." },
-    marine_medal: { name: "Medal of Honour", icon: "", type: "accessory", bonus: { wil: 2, end: 1 }, price: 0, unique: true, desc: "Awarded by Marine Headquarters for distinguished service." },
-    king_signet: { name: "Signet of a Fallen King", icon: "", type: "accessory", bonus: { wil: 3 }, price: 0, unique: true, desc: "A royal ring from a kingdom erased from the maps." },
-    // ---------------------------------------------------------------- dials
-    impact_dial: { name: "Impact Dial", icon: "\u{1F41A}", type: "dial", price: 3e4, ability: "dial_impact", desc: "Absorbs a blow and releases it. Hurts the user too." },
-    flame_dial: { name: "Flame Dial", icon: "\u{1F525}", type: "dial", price: 12e3, ability: "dial_flame", desc: "Stores fire and breathes it out." },
-    breath_dial: { name: "Breath Dial", icon: "\u{1F4A8}", type: "dial", price: 6e3, ability: "dial_breath", desc: "Stores wind \u2014 boats and gusts." },
-    flash_dial: { name: "Flash Dial", icon: "\u{1F4A1}", type: "dial", price: 8e3, ability: "dial_flash", desc: "Blinds everyone nearby." },
-    reject_dial: { name: "Reject Dial", icon: "\u{1F4A5}", type: "dial", price: 0, ability: "dial_reject", unique: true, desc: "Ten times the power of an Impact Dial. Can kill the user." },
-    // -------------------------------------------------------- navigation
-    log_pose: { name: "Log Pose", icon: "\u{1F9ED}", type: "key", logPose: 1, price: 5e3, desc: "The only compass that works in the Grand Line. It locks onto the next island after the log is set." },
-    new_world_log_pose: { name: "Three-Needle Log Pose", icon: "\u{1F9ED}", type: "key", logPose: 3, price: 6e4, desc: "A Log Pose for the New World: three needles for three islands." },
-    vivre_card: { name: "Vivre Card", icon: "\u{1F4C3}", type: "key", price: 0, desc: "A piece of paper made from someone's fingernail. It points to them and burns as their life fades." },
-    south_bird: { name: "South Bird", icon: "\u{1F426}", type: "key", price: 0, desc: "A bird that always faces south. Needed to find the Knock Up Stream." },
-    adam_wood: { name: "Adam Wood", icon: "\u{1FAB5}", type: "material", price: 2e6, desc: "Timber from the Treasure Tree Adam. Water 7 shipwrights can build a legend with it." },
-    seastone: { name: "Seastone Chunk", icon: "\u{1FAA8}", type: "material", price: 4e4, desc: "Stone that emits the same energy as the sea. Devil Fruit users go weak when they touch it." },
-    seastone_cuffs: { name: "Seastone Handcuffs", icon: "\u26D3", type: "key", price: 9e4, desc: "Capture a Devil Fruit user alive." },
-    poneglyph_rubbing: { name: "Road Poneglyph Rubbing", icon: "\u{1F7E5}", type: "key", price: 0, stack: true, desc: "A rubbing of a red Road Poneglyph. Four of them together point to Laugh Tale." },
-    treasure_map: { name: "Treasure Map", icon: "\u{1F5FA}", type: "key", price: 0, desc: "X marks the spot." },
-    den_den_mushi: { name: "Den Den Mushi", icon: "\u{1F40C}", type: "key", price: 3e3, desc: "A transponder snail. Lets you hear the news of the world." },
-    // ------------------------------------------------------------ treasure
-    gold_coins: { name: "Gold Doubloons", icon: "\u{1FA99}", type: "treasure", price: 1200, desc: "Sell them." },
-    jewels: { name: "Jewels", icon: "\u{1F48E}", type: "treasure", price: 6e3 },
-    shark_fin: { name: "Shark Fin", icon: "\u{1F988}", type: "material", price: 1500, desc: "Prized by cooks across the Grand Line." },
-    fighting_fish_horn: { name: "Fighting Fish Horn", icon: "\u{1F9B4}", type: "material", price: 2200, desc: "As long as a sword and nearly as sharp. Smiths and shipwrights pay well for them." },
-    shandora_gold: { name: "Shandora Gold", icon: "\u{1F514}", type: "treasure", price: 8e4, desc: "Gold from the lost city of Shandora." },
-    golden_statue: { name: "Golden Statue", icon: "\u{1F5FF}", type: "treasure", price: 25e3 },
-    pearl: { name: "Mermaid Pearl", icon: "\u26AA", type: "treasure", price: 15e3 }
-  };
-  for (const [id, f] of Object.entries(FRUITS)) {
-    ITEMS["fruit_" + id] = {
-      name: f.name,
-      icon: "\u{1F348}",
-      type: "fruit",
-      fruit: id,
-      price: 0,
-      unique: true,
-      desc: `${f.type}. ${f.desc}
-
-Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a second one will kill you.`
-    };
-  }
-  var FRUIT_VALUE = { common: 15e4, uncommon: 3e5, rare: 7e5, epic: 15e5, legendary: 3e6, mythical: 5e6 };
-  function sellPrice(id) {
-    const d = ITEMS[id];
-    if (!d) return 0;
-    if (d.type === "treasure") return d.price;
-    if (d.type === "fruit") return FRUIT_VALUE[FRUITS[d.fruit]?.rarity] || 2e5;
-    if (d.unique || d.type === "key") return 0;
-    return Math.floor((d.price || 0) * 0.4);
-  }
 
   // src/render/icons.js
   var TAU6 = Math.PI * 2;
@@ -55403,6 +55525,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
   };
   var ITEM_MAP = {
     meat: ["meat"],
+    water_flask: ["bottle", { liquid: "#8fd0f2" }],
     rice_ball: ["riceBall"],
     fish_stew: ["bowl", { top: "fish" }],
     tangerine: ["orange"],
@@ -65004,7 +65127,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       } else {
         this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
         const rel3 = Math.cos(angleDiff(this.heading, windA));
-        const windFactor = (0.62 + 0.38 * clamp2((rel3 + 0.4) / 1.4, 0, 1)) * windS;
+        const windFactor = (0.62 + 0.38 * clamp((rel3 + 0.4) / 1.4, 0, 1)) * windS;
         target2 = this.def.speed * SEA_PACE * this.sailSet * windFactor * (this.owner === "player" ? game.crewMods?.speedMul || 1 : 1);
         const rowSpeed = this.def.paddle ? 0.6 : this.def.oars ? 0.42 : 0.12;
         if (this.rowing) target2 = Math.max(target2, this.def.speed * rowSpeed * this.rowing);
@@ -65032,7 +65155,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       let vx = Math.cos(this.heading) * this.speed + cur.x;
       let vy = Math.sin(this.heading) * this.speed + cur.y;
       if (cur.steer) {
-        const turn = clamp2(angleDiff(this.heading, Math.atan2(cur.y, cur.x)), -1, 1) * dt * cur.steer;
+        const turn = clamp(angleDiff(this.heading, Math.atan2(cur.y, cur.x)), -1, 1) * dt * cur.steer;
         for (const f of [1, 0.5, 0.25]) {
           if (this.fits(w, this.x, this.y, this.heading + turn * f)) {
             this.heading += turn * f;
@@ -65114,7 +65237,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const F5 = BOAT_FEEL, h2 = this.helm;
       const back = Math.abs(turn) < Math.abs(h2) - 1e-3 && Math.sign(turn) !== -Math.sign(h2);
       const w = 4.74 / Math.max(0.02, back ? F5.helmOut : F5.helmIn);
-      const o = springStep(h2, this.helmV, clamp2(turn, -1, 1), w, dt, 1, _sp);
+      const o = springStep(h2, this.helmV, clamp(turn, -1, 1), w, dt, 1, _sp);
       this.helm = o[0];
       this.helmV = o[1];
       if (Math.abs(this.helm) > 1) {
@@ -65399,7 +65522,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const toT = Math.atan2(ty - this.y, game.world.dx(this.x, tx));
       const side = angleDiff(this.heading, toT) > 0 ? 1 : -1;
       const baseA = this.heading + side * Math.PI / 2;
-      const aim = clamp2(angleDiff(baseA, toT), -0.6, 0.6);
+      const aim = clamp(angleDiff(baseA, toT), -0.6, 0.6);
       const d = shipDims(this.def);
       const want = Math.max(1, Math.min(10, Math.ceil(cannons / 2)));
       let guns = d.big ? [...d.guns, ...d.lowGuns || []].filter((g) => g.s === side) : [];
@@ -76631,7 +76754,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       maxHaki: Math.round(40 + a.wil * 4),
       speed: 4.3 * (1 + a.agi * 45e-4) * (mods.stride || 1) * (mods.speedMul || 1),
       dmg: 1 + a.str * 0.028,
-      def: clamp2(a.end * 35e-4 + (mods.armor || 0), 0, 0.55),
+      def: clamp(a.end * 35e-4 + (mods.armor || 0), 0, 0.55),
       hpRegen: 0.25 + a.vit * 0.02,
       hakiRegen: 1.5 + a.wil * 0.06,
       atkSpeed: 1 + a.agi * 3e-3
@@ -76649,7 +76772,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     if (!playerPower) return 1;
     const r4 = enemyPower / playerPower;
     if (r4 < 0.55) return 0;
-    return clamp2((r4 - 0.55) / 0.45, 0, 1.6);
+    return clamp((r4 - 0.55) / 0.45, 0, 1.6);
   }
 
   // src/render/combatfx.js
@@ -81477,7 +81600,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
   })) for (const n of ts) if (T[n] !== void 0) STEP_SOUND[T[n]] = k;
   var deckY = (dk3, time) => deckLift(dk3, time);
   var smooth012 = (a, b, x) => {
-    const t = clamp2((x - a) / (b - a), 0, 1);
+    const t = clamp((x - a) / (b - a), 0, 1);
     return t * t * (3 - 2 * t);
   };
   var ROOF_STEP = 0.55;
@@ -81988,7 +82111,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       if (this.inWater && this.fruit && !this.gills && !this.sinking && !this.under && this.state === "idle" && !(this.hitstun > 0) && this.climbOut(game)) return true;
       if (!this.canJump()) return false;
       const J = this.jumpStats();
-      const k = clamp2(charge, 0, 1);
+      const k = clamp(charge, 0, 1);
       if ((this.inWater || this.wading) && this.climbOut(game)) return true;
       let v = J.v * (1 + (J.charge - 1) * k);
       const fromWater = this.inWater;
@@ -82069,7 +82192,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const z0 = this.z;
       let grav = GAME_G;
       if (deep && z0 < 0 && this.vz < 0) {
-        const sub = clamp2(-z0 / (1.3 * s), 0, 1);
+        const sub = clamp(-z0 / (1.3 * s), 0, 1);
         grav *= 1 - sub * 0.8;
         this.vz -= this.vz * Math.min(1, dt * 9 * sub);
       }
@@ -82151,7 +82274,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       this.vy += (i.my * sp - this.vy) * k;
       this.x = w.wx(this.x + this.vx * dt);
       this.y += this.vy * dt;
-      if (!((this.y < 1 || this.y > w.height - 1) && this.overPole(w))) this.y = clamp2(this.y, 1, w.height - 1);
+      if (!((this.y < 1 || this.y > w.height - 1) && this.overPole(w))) this.y = clamp(this.y, 1, w.height - 1);
       const gh = game.view3d ? Math.max(0, game.view3d.ground(this.x, this.y)) : 0;
       if (this.alt == null) this.alt = gh + (this.z || 0);
       this.alt = Math.min(this.alt + (i.mz || 0) * 8 * fast * dt, gh + 400);
@@ -82423,7 +82546,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       let regen = (this.fruitDef?.passive?.regen || 0) + d.hpRegen * (this.inCombat ? 0.2 : 1);
       for (const b of this.buffs) if (b.regen) regen += b.regen;
       const rested = this.isPlayer || !this.game || (this.game.time || 0) - (this.lastHitT || -999) > 45;
-      if (this.hp < d.maxHp && this.state === "idle" && rested) this.hp = Math.min(d.maxHp, this.hp + regen * dt);
+      if (this.hp < d.maxHp && this.state === "idle" && rested && !this.needsHurt) this.hp = Math.min(d.maxHp, this.hp + regen * dt);
     }
     /**
      * Haki given out, the spirit bar empty: the coat of Armament flakes away,
@@ -82837,7 +82960,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         ty = to.y;
         th = to.h;
       }
-      c.T = 0.42 + 0.3 * clamp2(th - h0, 0, 3);
+      c.T = 0.42 + 0.3 * clamp(th - h0, 0, 3);
       if (to.ladder) c.T = 0.6 + 0.3 * Math.max(0, shipLift(to.ship, game.env?.time || 0, to.ladder.u, to.v, topAt(shipDims(to.ship.def), to.ladder.t)) - h0);
       this.climb = c;
       this.vx = 0;
@@ -83001,8 +83124,8 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const air = (this.z || 0) > 0.02 || !!this.vz;
       const coming = av < inner || av < face && (inward > 0.3 || inward > -0.3 && face - av > av - inner);
       if (coming && air && !this.inWater && hk.hh >= hk.floor - 0.1) {
-        const t = clamp2(hk.t, 0.05, 0.95), room2 = Math.max(0, hbAt(t, d.B) * d.walk - 0.22);
-        const p = deckToWorld(s, t, clamp2(hk.v, -room2, room2));
+        const t = clamp(hk.t, 0.05, 0.95), room2 = Math.max(0, hbAt(t, d.B) * d.walk - 0.22);
+        const p = deckToWorld(s, t, clamp(hk.v, -room2, room2));
         const dk3 = game.deckAt(p.x, p.y, 0);
         if (dk3 && dk3.ship === s && !dk3.solid) {
           this.x = w.wx(p.x);
@@ -83024,7 +83147,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         if (this.inWater) {
           if (this.fruit && !this.gills) sp *= this.sinking ? 0.03 : 0.3;
           else sp *= 0.55 * this.canSwimRace * (this.under && !this.gills ? 0.85 : 1);
-        } else if (this.wading) sp *= 1 - 0.42 * clamp2(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
+        } else if (this.wading) sp *= 1 - 0.42 * clamp(this.wading / (1.1 * (this.look?.scale || 1)), 0, 1);
         if (this.charging) sp *= 1 - 0.75 * this.charging;
         if (i.sprint && (i.mx || i.my) && !this.eating && (!this.inWater || this.gills) && this.sprintOk(dt)) sp *= this.inWater ? 1.35 : 1.55;
         if (this.eating) sp *= 0.45;
@@ -83287,7 +83410,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
           if (this.plungeV < 0 && (this.depth <= 0.02 || iz || this.gills)) this.plungeV = 0;
           vz = (iz || df ? vz : 0) + this.plungeV;
         }
-        this.depth = clamp2(this.depth + vz * dt, 0, bottom);
+        this.depth = clamp(this.depth + vz * dt, 0, bottom);
         if (this.depth >= bottom && this.plungeV > 0) this.plungeV = 0;
         const wasUnder = this.under;
         this.under = this.depth > 0.35;
@@ -83554,7 +83677,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
           g.fillStyle = "rgba(0,0,0,0.6)";
           g.fillRect(-w / 2, -2.05 * s, w, 0.12);
           g.fillStyle = this.faction === "player" ? "#66bb6a" : "#ef5350";
-          g.fillRect(-w / 2, -2.05 * s, w * clamp2(this.hp / this.d.maxHp, 0, 1), 0.12);
+          g.fillRect(-w / 2, -2.05 * s, w * clamp(this.hp / this.d.maxHp, 0, 1), 0.12);
         }
       }
       if (this.showName && this.state === "idle") {
@@ -98482,7 +98605,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       ry: rel(bry, hh)
     }));
     const rough = def.rough ?? 0.28;
-    const nf = def.noiseScale ?? clamp2(4 / Math.max(hw, hh), 0.02, 0.25);
+    const nf = def.noiseScale ?? clamp(4 / Math.max(hw, hh), 0.02, 0.25);
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const b of blobs) {
       x0 = Math.min(x0, b.x - b.rx);
@@ -98544,7 +98667,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const x = x0 + i, y = y0 + j;
         const cd = CD[k];
         const n = lumps(x, y);
-        const e = clamp2(20 + cd * (def.elevRate ?? 5) + n * (def.elevNoise ?? 25), 8, 170);
+        const e = clamp(20 + cd * (def.elevRate ?? 5) + n * (def.elevNoise ?? 25), 8, 170);
         const bw2 = beachW + noise.noise2(x * 0.15, y * 0.15) * 1.2;
         const t = cd <= bw2 ? beach : ground;
         world.setTile(x, y, t, Math.round(e), clim);
@@ -98584,10 +98707,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       stampRadial(world, c.x, c.y, r4 * 1.3, (x, y, dn) => {
         if (world.isLiquid(x, y)) return;
         const ridge = noise.ridged(x * 0.06 + seedOff, y * 0.06, 4);
-        const falloff = Math.pow(clamp2(1 - dn, 0, 1), 1.6);
+        const falloff = Math.pow(clamp(1 - dn, 0, 1), 1.6);
         const add7 = falloff * peak * (140 + ridge * 120);
         const cur = world.elev(x, y);
-        const e = clamp2(cur + add7, 0, 255);
+        const e = clamp(cur + add7, 0, 255);
         world.setElev(x, y, e);
         if (e > (f.cliff ?? 222)) world.setType(x, y, f.snow || clim === CLIMATE.WINTER ? T.SNOWROCK : f.peak ?? T.MOUNTAIN);
         else if (e > (f.slopeAt ?? 170) && f.slope && world.type(x, y) !== beach) world.setType(x, y, f.slope);
@@ -99628,11 +99751,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           if (dx < left || dx > right) continue;
           const edge = Math.min(dx - left, right - dx);
           const ridge = noise.ridged(x * 0.03, y * 0.03, 4);
-          let e = clamp2(90 + edge * 4 + ridge * 90, 0, 255);
+          let e = clamp(90 + edge * 4 + ridge * 90, 0, 255);
           let summit = false;
           if (m === 0) {
             const r4 = Math.hypot((x - M3.x) / M3.rx, (y - M3.y) / M3.ry);
-            if (r4 < 1) e = clamp2(e + (1 - r4) * 140, 0, 255);
+            if (r4 < 1) e = clamp(e + (1 - r4) * 140, 0, 255);
             summit = Math.hypot((x - M3.x) * 1.6, y - M3.y) < chart(70) + noise.noise2(x * 0.05, y * 0.05) * 12;
           }
           out[0] = polarRow(y) || summit ? T.SNOWROCK : T.RED_ROCK;
@@ -99642,13 +99765,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         }
         if (y < ptop[x]) {
           out[0] = T.PACK_ICE;
-          out[1] = clamp2(20 + Math.floor((ptop[x] - y) * 3), 0, 255);
+          out[1] = clamp(20 + Math.floor((ptop[x] - y) * 3), 0, 255);
           out[2] = CLIMATE.WINTER;
           return out;
         }
         if (y > pbot[x]) {
           out[0] = T.PACK_ICE;
-          out[1] = clamp2(20 + Math.floor((y - pbot[x]) * 3), 0, 255);
+          out[1] = clamp(20 + Math.floor((y - pbot[x]) * 3), 0, 255);
           out[2] = CLIMATE.WINTER;
           return out;
         }
@@ -99674,7 +99797,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         else best = Math.max(best, -(y - t));
         if (y > b) best = Math.max(best, Math.min(32, y - b));
         else best = Math.max(best, -(b - y));
-        return clamp2(Math.round(128 + clamp2(best, -32, 32) * 4), 0, 255);
+        return clamp(Math.round(128 + clamp(best, -32, 32) * 4), 0, 255);
       },
       /** Is there Red Line or ice anywhere in block (bx, by)? */
       hasLand(bx, by) {
@@ -110087,7 +110210,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const fp = game.focus?.(), fw = game.world;
       if (fp && fw && fw.zone === 0) {
         this.zone = zoneOffset(fp.x);
-        this.lat = (0.5 - clamp2(fp.y / H, 0, 1)) * Math.PI * 0.7;
+        this.lat = (0.5 - clamp(fp.y / H, 0, 1)) * Math.PI * 0.7;
       }
       this.utc += dt * 24 / DAY_SECONDS;
       while (this.utc >= 24) {
@@ -110102,7 +110225,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         game.onNewDay?.(this.day);
       }
       const c = this.clock;
-      const rise = smoothstep2(5, 7, c), set = 1 - smoothstep2(18, 20, c);
+      const rise = smoothstep(5, 7, c), set = 1 - smoothstep(18, 20, c);
       this.daylight = Math.min(rise, set);
       const p = game.focus();
       const w = game.world;
@@ -110126,7 +110249,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const stormy = Math.max(st, this.storm), own = W4.storm + 0.02, ownSnow = this.ownSnow || 0;
       const cloudT = Math.max(W4.cloud, stormy > own ? Math.min(1, stormy * 1.6) : 0, ownSnow ? 0.62 + ownSnow * 0.5 : 0);
       this.cloud = Math.max(ease2(this.cloud, cloudT, dt, cloudT > this.cloud ? TAU_CLOUD : TAU_CLEAR), this.storm > own ? Math.min(1, this.storm * 1.1) : 0);
-      const gate = W4.gate ? smoothstep2(0.55, 0.85, this.cloud) : 1;
+      const gate = W4.gate ? smoothstep(0.55, 0.85, this.cloud) : 1;
       const dry = CLIMATES2[this.climate]?.dry ? 0.15 : 1;
       const ext = st > W4.storm + 0.02 && st > 0.2 ? st : 0;
       const precip2 = Math.max(W4.rain + W4.snow, ext, ownSnow) * gate * dry;
@@ -110153,21 +110276,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.fog = ease2(this.fog, Math.max(fogRegion, W4.fog), dt, TAU_FOG);
       if (this.fog < 2e-3) this.fog = 0;
       this.tempC = temperature(this.climate, this.lat, this.clock, this);
-      this.windAngle += clamp2(angleDiff(this.windAngle, this.windTarget), -0.2, 0.2) * dt * (gl ? 0.5 : 0.15);
+      this.windAngle += clamp(angleDiff(this.windAngle, this.windTarget), -0.2, 0.2) * dt * (gl ? 0.5 : 0.15);
       const gust = gl ? 0.85 + Math.sin(this.time * 0.7) * 0.15 : 1;
       this.stormOut = this.storm;
       this.windK = ease2(this.windK, W4.wind, dt, 8);
-      this.windStrength = isCalmBelt(reg6) ? 0 : clamp2((0.8 + this.storm * 0.5) * gust * this.windK, 0.2, 1.4);
+      this.windStrength = isCalmBelt(reg6) ? 0 : clamp((0.8 + this.storm * 0.5) * gust * this.windK, 0.2, 1.4);
       this.windX = Math.cos(this.windAngle) * this.windStrength;
       this.windY = Math.sin(this.windAngle) * this.windStrength;
-      this.mistDust = this.dust * clamp2(0.35 + this.windStrength * 0.55, 0, 1.1);
-      this.mistSnow = this.snow * clamp2(0.3 + this.storm * 0.9 + this.snow * 0.25, 0, 1);
-      this.mistRain = smoothstep2(0.45, 0.95, this.rain) * (0.45 + this.storm * 0.55);
+      this.mistDust = this.dust * clamp(0.35 + this.windStrength * 0.55, 0, 1.1);
+      this.mistSnow = this.snow * clamp(0.3 + this.storm * 0.9 + this.snow * 0.25, 0, 1);
+      this.mistRain = smoothstep(0.45, 0.95, this.rain) * (0.45 + this.storm * 0.55);
       this.mist = Math.max(this.mistDust, this.mistSnow, this.mistRain);
       const coming = Math.max(0, this.front - this.storm);
-      const th = Math.max(this.thunder, smoothstep2(0.55, 0.9, this.storm), coming * 0.6);
+      const th = Math.max(this.thunder, smoothstep(0.55, 0.9, this.storm), coming * 0.6);
       if (th > 0.05 && (this.flashT -= dt) <= 0) {
-        this.flashT = lerp2(16, 4.5, th) * (0.4 + Math.random() * 1.2) * (reg6 === REGION.NEW_WORLD ? 0.7 : 1);
+        this.flashT = lerp(16, 4.5, th) * (0.4 + Math.random() * 1.2) * (reg6 === REGION.NEW_WORLD ? 0.7 : 1);
         const far = coming > 0.25 && this.storm < 0.55;
         this.bolt(game, far ? { angle: this.frontAngle + (Math.random() - 0.5) * 0.6, dist: 1500 + Math.random() * 1100, ground: Math.random() < 0.3 } : { ground: Math.random() < 0.25 + th * 0.2 });
       }
@@ -110183,14 +110306,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         if (age >= 0) f = Math.max(f, this.pulses[i + 1] * Math.exp(-age / 0.055));
       }
       this.lightning = this.lightOut = Math.max(this.flashExt, f);
-      const duskAmt = clamp2(Math.max(1 - Math.abs(c - 19) / 1.5, 1 - Math.abs(c - 6) / 1.5, 0) * 0.8, 0, 1) * (this.daylight > 0.05 ? 1 : 0.4);
+      const duskAmt = clamp(Math.max(1 - Math.abs(c - 19) / 1.5, 1 - Math.abs(c - 6) / 1.5, 0) * 0.8, 0, 1) * (this.daylight > 0.05 ? 1 : 0.4);
       const dark = Math.min(0.55, this.storm * 0.3 + this.cloud * 0.1 + this.fog * 0.15 + this.dust * 0.12 + this.ash * 0.18);
       const amb = this.ambient;
       for (let i = 0; i < 3; i++) {
         const moonK = 0.72 + 0.5 * (0.5 + 0.5 * Math.cos(this.moonPhase * Math.PI * 2));
-        let v = lerp2(lerp2(NIGHT[i] * moonK, DAY[i], this.daylight), DUSK[i], duskAmt) * (1 - dark);
-        if (this.odd > 0.01) v *= lerp2(1, 0.45 + 0.55 * this.tint[i], this.odd * 0.6);
-        if (this.dust > 0.01) v *= lerp2(1, DUSTY[i], this.dust * 0.45);
+        let v = lerp(lerp(NIGHT[i] * moonK, DAY[i], this.daylight), DUSK[i], duskAmt) * (1 - dark);
+        if (this.odd > 0.01) v *= lerp(1, 0.45 + 0.55 * this.tint[i], this.odd * 0.6);
+        if (this.dust > 0.01) v *= lerp(1, DUSTY[i], this.dust * 0.45);
         if (this.lightning > 0) v = Math.min(1.6, v + this.lightning * 1.2 * FLASH[i]);
         amb[i] = w && w.zone === 2 ? v * 0.8 : v;
       }
@@ -110265,13 +110388,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
      */
     bolt(game, { ground = false, angle, dist, near = false } = {}) {
       const S6 = this.strike;
-      const over = smoothstep2(0.6, 0.9, this.storm);
+      const over = smoothstep(0.6, 0.9, this.storm);
       S6.t = this.time;
       S6.ground = ground;
-      S6.angle = angle ?? this.frontAngle + (Math.random() - 0.5) * lerp2(2.2, TAU, over);
+      S6.angle = angle ?? this.frontAngle + (Math.random() - 0.5) * lerp(2.2, TAU, over);
       S6.dist = dist ?? (near ? 170 + Math.random() * 150 : ground ? 320 + Math.random() * 1300 : 260 + Math.random() * 2200);
       S6.seed = Math.random() * 1e9 | 0;
-      S6.k = clamp2(1.25 - S6.dist / 2200, 0.3, 1) * (ground ? 1 : 0.65);
+      S6.k = clamp(1.25 - S6.dist / 2200, 0.3, 1) * (ground ? 1 : 0.65);
       this.pulses.length = 0;
       const n = ground ? 2 + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 3);
       let t = this.time + (ground ? 0.07 : 0);
@@ -110279,7 +110402,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         this.pulses.push(t, S6.k * (i ? 0.45 + Math.random() * 0.5 : 1));
         t += 0.05 + Math.random() * 0.12;
       }
-      game?.audio?.sfx?.("thunder", null, { far: clamp2(S6.dist / 2400, 0, 1) });
+      game?.audio?.sfx?.("thunder", null, { far: clamp(S6.dist / 2400, 0, 1) });
     }
     /** A bolt now, down to the sea (tests and screenshots): see bolt. */
     strikeNow(opts = {}) {
@@ -110463,7 +110586,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const legacy = read(key(s, "legacy"));
     return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
   }
-  var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, view: "first", sensitivity: 0.5, invertY: false, quality: "high", autoRes: true, fov: 0.5, bob: true, renderDist: null, ...read(KEY_SETTINGS) || {} });
+  var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, survival: true, view: "first", sensitivity: 0.5, invertY: false, quality: "high", autoRes: true, fov: 0.5, bob: true, renderDist: null, ...read(KEY_SETTINGS) || {} });
   var saveSettings = (s) => write(KEY_SETTINGS, s);
   var RENDER_DIST = { min: 4, max: 24, high: 12, low: 8 };
   function renderChunks(s) {
@@ -111368,7 +111491,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           this.wanderTo = { x: this.home.x + (Math.random() - 0.5) * 2 * r4, y: this.home.y + (Math.random() - 0.5) * 2 * r4 };
           const bx = a.wanderBox;
           if (bx) {
-            this.wanderTo = { x: clamp2(this.wanderTo.x, bx.x0 + 0.35, bx.x1 - 0.35), y: clamp2(this.wanderTo.y, bx.y0 + 0.35, bx.y1 - 0.35) };
+            this.wanderTo = { x: clamp(this.wanderTo.x, bx.x0 + 0.35, bx.x1 - 0.35), y: clamp(this.wanderTo.y, bx.y0 + 0.35, bx.y1 - 0.35) };
             if (a.homeB && game.buildings?.freeAt && !game.buildings.freeAt(a.homeB, this.wanderTo.x, this.wanderTo.y)) {
               let ok = null;
               for (let k = 0; k < 8 && !ok; k++) {
@@ -112702,8 +112825,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       p.hp = Math.min(p.d.maxHp, p.hp + heal);
       for (const s of d.cure || []) delete p.status[s];
       if (d.buff) p.addBuff({ ...d.buff });
-      game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, "#69f0ae", 0.45);
-      game.audio?.sfx("eat");
+      if (heal >= 1) game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, "#69f0ae", 0.45);
+      game.survival?.consume(id);
+      game.audio?.sfx(d.water > (d.food ?? 0.2) ? "sip" : "eat");
       removeItem(game, id, 1);
       return true;
     }
@@ -112888,7 +113012,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           p.charging = 0;
         } else if (inp.isDown("Space")) {
           this.jumpHold.t += dt;
-          p.charging = clamp2((this.jumpHold.t - 0.16) / 0.75, 0, 1);
+          p.charging = clamp((this.jumpHold.t - 0.16) / 0.75, 0, 1);
         } else {
           if (p.tryJump(game, p.charging) && flightOf(p)) game.hint?.("takeoff", "You can fly! Press Space again in the air (a double tap) to take off.");
           this.jumpHold = null;
@@ -113186,7 +113310,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (inp.isDown("A") || inp.isDown("ArrowLeft")) turn -= 1;
       if (inp.isDown("D") || inp.isDown("ArrowRight")) turn += 1;
       const tc = inp.touch?.on ? inp.touch : null;
-      if (tc && !turn && Math.abs(tc.mx) > 0.2) turn = clamp2(tc.mx * 1.3, -1, 1);
+      if (tc && !turn && Math.abs(tc.mx) > 0.2) turn = clamp(tc.mx * 1.3, -1, 1);
       const ahead = inp.isDown("W") || inp.isDown("ArrowUp") || tc && tc.my < -0.45 || s.def.oarsOnly && inp.isDown("Space");
       const back = inp.isDown("S") || inp.isDown("ArrowDown") || tc && tc.my > 0.45;
       if (s.def.oarsOnly) {
@@ -113201,7 +113325,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         s.sail = 0;
         s.rowing = 0;
       } else {
-        const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp2(Math.abs(s.speed) / 3, 0, 1));
+        const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
         s.steer(turn, steer, dt);
         if (ahead) {
           s.sail = Math.min(1, s.sail + dt * 0.9);
@@ -113702,8 +113826,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const cam = this.renderer.cam;
       const p = this.player;
       const sailing = p.mode === "sail";
-      const target2 = (sailing ? this.camZoomSea * (p.ship ? clamp2(6 / p.ship.def.length, 0.75, 1.2) : 1) : this.camZoomFoot) * this.zoomBias;
-      if (this.input.mouse.wheel && !this.env.mapMode) this.zoomBias = clamp2(this.zoomBias * (this.input.mouse.wheel > 0 ? 0.9 : 1.1), 0.45, 1.6);
+      const target2 = (sailing ? this.camZoomSea * (p.ship ? clamp(6 / p.ship.def.length, 0.75, 1.2) : 1) : this.camZoomFoot) * this.zoomBias;
+      if (this.input.mouse.wheel && !this.env.mapMode) this.zoomBias = clamp(this.zoomBias * (this.input.mouse.wheel > 0 ? 0.9 : 1.1), 0.45, 1.6);
       cam.zoom += (target2 - cam.zoom) * Math.min(1, dt * 3);
       let lx = 0, ly = 0;
       if (sailing && p.ship) {
@@ -113883,6 +114007,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
 .bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }
 .bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }
 .bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }
+.needs { display: flex; gap: 6px; margin: -1px 0 4px; }
+.needs .need { flex: 1; display: flex; align-items: center; gap: 3px; min-width: 0; }
+.needs .need-ic { width: 14px; height: 14px; flex: none; filter: drop-shadow(0 1px 1px #000); }
+.needs .need-ic svg { width: 100%; height: 100%; display: block; }
+.needs .bar { flex: 1; height: 7px; margin: 0; border-radius: 4px; }
+.needs .bar > i, .needs .bar > b { border-radius: 4px; }
+.needs .bar > span { top: -3px; right: 3px; font-size: 8px; }
+.bar.food > i { background: linear-gradient(#ffcc80, #e08a2e); }
+.bar.water > i { background: linear-gradient(#b3e5fc, #1e88e5); }
+.bar.heat > i { background: linear-gradient(#c5e1a5, #7cb342); }
+.bar.heat.cold > i { background: linear-gradient(#e1f5fe, #4fc3f7); }
+.bar.heat.hot > i { background: linear-gradient(#ffccbc, #e53935); }
+.bar.low, .bar.cold, .bar.hot { animation: needpulse 1.1s ease-in-out infinite; }
+@keyframes needpulse { 50% { border-color: #ff5252; box-shadow: 0 0 8px rgba(255,82,82,.8); } }
 .bar.hk.locked { opacity: .35; }
 .bar.hk.flash { animation: hkspent .7s ease-out; }
 @keyframes hkspent { 0%, 40% { border-color: #ff5252; box-shadow: 0 0 10px #ff5252; } }
@@ -113975,7 +114113,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
 
 .hint { position: absolute; top: 70px; transition: top .25s, opacity .5s; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); display: flex; gap: 10px; align-items: center; }
 .hint img.icon { flex: none; }
-.hint.low { top: auto; bottom: 140px; max-width: 480px; font-size: 13px; padding: 8px 14px; }
+.hint.low, #ui.v3 .hint.low, #ui.touch .hint.low, #ui.touch.v3 .hint.low { top: auto; bottom: 140px; max-width: 480px; font-size: 13px; padding: 8px 14px; }
 
 .bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }
 .bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }
@@ -116939,18 +117077,18 @@ button:disabled { cursor: not-allowed; }
 
   // src/data/shops.js
   var STOCK = {
-    general: ["meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
+    general: ["water_flask", "hot_tea", "meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
     // (in the four Blues, where everyone's journey starts, the general store keeps a rack of old swords)
-    general_blue: ["meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "wooden_sword", "rusty_katana", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
-    tavern: ["meat", "rice_ball", "fish_stew", "sake", "tangerine", "mango"],
+    general_blue: ["water_flask", "hot_tea", "meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "wooden_sword", "rusty_katana", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
+    tavern: ["water_flask", "milk", "hot_tea", "meat", "rice_ball", "fish_stew", "sake", "tangerine", "mango"],
     weapons_blue: ["wooden_sword", "rusty_katana", "cutlass", "slingshot", "flintlock", "bo_staff", "woodsman_axe", "padded_vest", "leather_jerkin", "leather_bracers", "iron_ring"],
     weapons_grand: ["cutlass", "fine_katana", "marine_saber", "flintlock", "marine_rifle", "bo_staff", "woodsman_axe", "shigure", "leather_jerkin", "chain_shirt", "hand_wraps", "iron_ring"],
     weapons_new: ["fine_katana", "marine_saber", "marine_rifle", "shigure", "seastone_cuffs", "chain_shirt", "samurai_armor", "hand_wraps", "sea_prism_charm"],
     outfitter: ["bandana", "traveller_hood", "black_hood", "tricorne", "captain_hat", "cowboy_hat", "pink_hat", "goggles", "headband", "captain_coat", "red_cloak", "haramaki", "red_sash", "gold_earrings", "shell_bracelet", "lucky_charm"],
     navigator: ["log_pose", "den_den_mushi"],
     navigator_grand: ["log_pose", "new_world_log_pose", "den_den_mushi"],
-    skypiea: ["impact_dial", "flame_dial", "breath_dial", "flash_dial", "rice_ball", "fish_stew"],
-    fishman: ["fish_stew", "sea_king_steak", "pearl", "pearl_necklace", "bandage", "antidote"],
+    skypiea: ["water_flask", "impact_dial", "flame_dial", "breath_dial", "flash_dial", "rice_ball", "fish_stew"],
+    fishman: ["water_flask", "fish_stew", "sea_king_steak", "pearl", "pearl_necklace", "bandage", "antidote"],
     loguetown_swords: ["wooden_sword", "rusty_katana", "cutlass", "fine_katana", "yubashiri"],
     black_market: ["rumble_ball", "seastone", "seastone_cuffs", "cola", "jewels", "black_hood"]
   };
@@ -119978,7 +120116,7 @@ button:disabled { cursor: not-allowed; }
     const c = game.state?.char;
     if (!c || !delta) return 0;
     const before = c.reputation || 0;
-    c.reputation = clamp2(Math.round((before + delta) * 10) / 10, 0, 100);
+    c.reputation = clamp(Math.round((before + delta) * 10) / 10, 0, 100);
     const d = Math.round((c.reputation - before) * 10) / 10;
     if (!d) return 0;
     if (!quiet) game.log(`Reputation ${d > 0 ? "+" : ""}${d}${why ? " \u2014 " + why : ""}`, d > 0 ? "#a5d6a7" : "#ef9a9a");
@@ -120031,7 +120169,7 @@ button:disabled { cursor: not-allowed; }
   function stealChance(game, bonus = 0) {
     const p = game.player;
     const stealth = (p.buffs?.some((b) => b.mods?.stealth) ? 0.35 : 0) + (p.crouch ? 0.12 : 0);
-    return clamp2(0.3 + p.attrs.agi * 6e-3 + stealth + bonus, 0.08, 0.92);
+    return clamp(0.3 + p.attrs.agi * 6e-3 + stealth + bonus, 0.08, 0.92);
   }
   function stealFromShop(game, itemId, building, price = 0) {
     const c = game.state.char, p = game.player;
@@ -122135,7 +122273,7 @@ Click for details \xB7 right-click to take off` : `${label} \u2014 empty`,
           h(
             "div.rep",
             h("span.lbl", uiImg("reputation", 18), " Reputation"),
-            h("div.rep-bar", h("i", { style: { left: "0", width: clamp2(rep, 0, 100) + "%", background: tier.color } })),
+            h("div.rep-bar", h("i", { style: { left: "0", width: clamp(rep, 0, 100) + "%", background: tier.color } })),
             h("span.rep-name", { style: { color: tier.color } }, `${tier.name} (${Math.round(rep)})`)
           ),
           h(
@@ -122595,6 +122733,7 @@ Trains by: ${TRAINS_BY[k]}` },
         slider2("Music", "music"),
         slider2("Screen shake", "shake"),
         check("Show tutorial hints", "showHints"),
+        check("Survival needs: hunger, thirst and body temperature", "survival"),
         controlsSection(game, render2),
         h("p.muted", "Press P in game (or scroll all the way in or out) to switch between first and third person. Settings are saved in this browser.")
       );
@@ -123087,10 +123226,27 @@ Trains by: ${TRAINS_BY[k]}` },
       E.fly.el.classList.add("hidden");
       E.fly.el.title = "Flight \u2014 drains in the air (fast over the open sea), fills up on solid ground";
       E.fly.el.querySelector("i").style.background = "linear-gradient(#e1f5fe, #4fc3f7)";
+      const ns = (d) => {
+        const e = h("span.need-ic");
+        e.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true">${d}</svg>`;
+        return e;
+      };
+      E.food = bar("food");
+      E.water = bar("water");
+      E.heat = bar("heat");
+      E.food.el.title = "Food: eat to fill it. Empty, you weaken.";
+      E.water.el.title = "Water: drink (a flask, a coconut, a stream: crouch at it). The heat empties it faster.";
+      E.heat.el.title = "Body temperature: the air pulls it. Too cold or too hot, you weaken. Shelter, coats and drinks help.";
+      E.needs = h(
+        "div.needs",
+        h("div.need", ns('<path d="M10.5 2.2a3.6 3.6 0 0 1 1.3 5.7L8.6 11l.9.9a1.3 1.3 0 1 1-1.6 1.9 1.3 1.3 0 1 1-1.9-1.6l.9.9 3.1-3.2a3.6 3.6 0 0 1 .5-7.7z" fill="#e9a35b"/>'), E.food.el),
+        h("div.need", ns('<path d="M8 1.5C6 5 3.8 7.4 3.8 10a4.2 4.2 0 0 0 8.4 0C12.2 7.4 10 5 8 1.5z" fill="#4fc3f7"/>'), E.water.el),
+        h("div.need", ns('<path d="M6.6 2.5a1.4 1.4 0 0 1 2.8 0v6.2a3 3 0 1 1-2.8 0z" fill="none" stroke="#f5e6c4" stroke-width="1.2"/><circle cx="8" cy="11.3" r="1.7" fill="#ff7043"/>'), E.heat.el)
+      );
       E.lives = h("div.lives");
       E.bounty = h("div.hud-bounty");
       E.buffs = h("div.buffs");
-      this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.hp.el, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
+      this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.hp.el, E.needs, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
       E.hotbar = h("div.hotbar");
       E.acts = {};
       for (const [k, key2, name, tip] of [["dodge", "Q", "Dodge", "Dash out of the way, untouchable for an instant. It comes back after a moment."], ["guard", "F", "Block", "Hold to block. Tap it just as a blow lands to PARRY (a yellow glint shows the moment): they reel, and your next strike is a COUNTER. Mashing it won't parry. A red-glint blow smashes a guard aside \u2014 dodge those: the guard can't come up again until this fills."]]) {
@@ -123675,6 +123831,25 @@ ${tip}` }), cd: h("div.cd") };
       const title2 = ch.title || (ch.faction === "marine" ? `Marine ${ch.marineRank || "Recruit"}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === "pirate" ? "Pirate" : "Wanderer");
       this.set(E.sub, "sub", `${raceLabel(p.look)} \xB7 ${title2} \xB7 Doriki ${p.power().toLocaleString()}`);
       E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
+      const S6 = game.survival, nd = S6?.enabled?.() ? S6.needs() : null;
+      if (!!nd !== this.cache.needsOn) {
+        E.needs.classList.toggle("hidden", !nd);
+        this.cache.needsOn = !!nd;
+      }
+      if (nd) {
+        E.food.set(nd.food, "");
+        E.water.set(nd.water, "");
+        E.heat.set((nd.body - 33) / 8, `${nd.body.toFixed(1)}\xB0`);
+        const cold = nd.body < 35.6, hot = nd.body > 38.6;
+        const st = (nd.food < 0.2 ? "f" : "") + (nd.water < 0.2 ? "w" : "") + (cold ? "c" : hot ? "h" : "");
+        if (st !== this.cache.needSt) {
+          this.cache.needSt = st;
+          E.food.el.classList.toggle("low", nd.food < 0.2);
+          E.water.el.classList.toggle("low", nd.water < 0.2);
+          E.heat.el.classList.toggle("cold", cold);
+          E.heat.el.classList.toggle("hot", hot);
+        }
+      }
       const struggling = p.inWater && p.fruit && !p.gills && !p.sinking && p.struggle != null;
       const o2max = struggling ? p.struggleTime() : p.maxOxygen, o2 = struggling ? Math.max(0, p.struggle) : p.oxygen;
       const showO2 = !p.gills && o2 != null && Number.isFinite(o2max) && (struggling || o2 < o2max - 0.05);
@@ -123769,7 +123944,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           s2.el.classList.toggle("held", weapon && !!p.drawn && (ch.equipped?.weapons || []).includes(id.slice(5)) || p.held === id.slice(5));
           s2.el.classList.toggle("none-left", n <= 0);
           const e = p.eating && p.eating.id === id.slice(5) ? p.eating : null;
-          s2.cd.style.transform = `scaleY(${e ? clamp2(e.t / e.dur, 0, 1) : 0})`;
+          s2.cd.style.transform = `scaleY(${e ? clamp(e.t / e.dur, 0, 1) : 0})`;
           if (s2.cdt.textContent) s2.cdt.textContent = "";
           continue;
         }
@@ -123781,7 +123956,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const out = def?.room === "need" && !ownRoom(p);
         if (s2.el.classList.contains("none-left") !== out) s2.el.classList.toggle("none-left", out);
         const cd = def ? p.cooldowns[def.id] || 0 : 0;
-        const frac2 = def && def.cd ? clamp2(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
+        const frac2 = def && def.cd ? clamp(cd / (def.cd * (p.cdMul ?? 1)), 0, 1) : 0;
         s2.cd.style.transform = `scaleY(${frac2})`;
         const txt = cd > 0.05 ? cd >= 10 ? Math.ceil(cd) : cd.toFixed(1) : "";
         if (s2.cdt.textContent !== String(txt)) s2.cdt.textContent = txt;
@@ -123792,7 +123967,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         for (const a of Object.values(E.acts)) a.el.classList.toggle("hidden", sea);
       }
       const dodge = E.acts.dodge, guard2 = E.acts.guard;
-      const dcd = p.dodgeCd > 0 ? clamp2(p.dodgeCd / (p.dodgeCdMax || 1), 0, 1) : 0;
+      const dcd = p.dodgeCd > 0 ? clamp(p.dodgeCd / (p.dodgeCdMax || 1), 0, 1) : 0;
       if (dcd !== this.cache.dodgeCd) {
         if (!dcd && this.cache.dodgeCd) {
           dodge.el.classList.remove("ready");
@@ -123803,7 +123978,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         dodge.cd.style.transform = `scaleY(${dcd.toFixed(3)})`;
         dodge.el.classList.toggle("wait", dcd > 0);
       }
-      const gcd = p.guardCd > 0 ? clamp2(p.guardCd / p.guardCooldown(), 0, 1) : 0;
+      const gcd = p.guardCd > 0 ? clamp(p.guardCd / p.guardCooldown(), 0, 1) : 0;
       if (gcd !== this.cache.guardCd) {
         this.cache.guardCd = gcd;
         guard2.cd.style.transform = `scaleY(${gcd.toFixed(3)})`;
@@ -123887,8 +124062,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
           h3.append(h("small", boss.title || ""), boss.name);
         }
         const bb = E.boss.children[1];
-        bb.firstChild.style.width = 100 * clamp2(boss.hp / boss.d.maxHp, 0, 1) + "%";
-        bb.children[1].style.width = 100 * clamp2(boss.hp / boss.d.maxHp, 0, 1) + "%";
+        bb.firstChild.style.width = 100 * clamp(boss.hp / boss.d.maxHp, 0, 1) + "%";
+        bb.children[1].style.width = 100 * clamp(boss.hp / boss.d.maxHp, 0, 1) + "%";
       }
       this.spT = (this.spT || 0) - 1 / 60;
       if (this.spT <= 0) {
@@ -123938,7 +124113,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       s.el.classList.toggle("out", !v.on && !!v.out);
       if (s.el.classList.contains("none-left") !== !!v.dim) s.el.classList.toggle("none-left", !!v.dim);
       const cd = v.cd && !v.on ? p.cooldowns[v.cd.id] || 0 : 0;
-      const frac2 = v.left != null ? 0 : v.cd ? clamp2(cd / (v.cd.max * (p.cdMul ?? 1)), 0, 1) : 0;
+      const frac2 = v.left != null ? 0 : v.cd ? clamp(cd / (v.cd.max * (p.cdMul ?? 1)), 0, 1) : 0;
       s.cd.style.transform = `scaleY(${frac2})`;
       const txt = v.left != null ? Math.ceil(v.left) + "s" : cd > 0.05 ? cd >= 10 ? Math.ceil(cd) : cd.toFixed(1) : "";
       if (s.cdt.textContent !== String(txt)) s.cdt.textContent = txt;
@@ -124017,7 +124192,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     return {
       el,
       set(frac2, text2) {
-        frac2 = clamp2(frac2, 0, 1);
+        frac2 = clamp(frac2, 0, 1);
         if (Math.abs(frac2 - last) > 2e-3) {
           i.style.width = frac2 * 100 + "%";
           b.style.width = frac2 * 100 + "%";
@@ -127697,8 +127872,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       return seaHeading(game, s, w.wx(target2.x + (nx * lane * cs + hx * lead)), target2.y + ny * lane * cs + hy * lead, seaRoom(s));
     }
     const across = (rx * nx + ry * ny) * cs;
-    s.speedCap = Math.min(blues ? 8.5 : 99, pace + clamp2(-ahead * 0.3, -1.5, 2) + 0.3);
-    return th - cs * clamp2((across - lane) * 0.1, -0.6, 0.6);
+    s.speedCap = Math.min(blues ? 8.5 : 99, pace + clamp(-ahead * 0.3, -1.5, 2) + 0.3);
+    return th - cs * clamp((across - lane) * 0.1, -0.6, 0.6);
   }
   function playerShip(p) {
     const s = p.mode === "sail" ? p.ship : p.deck?.ship?.owner === "player" ? p.deck.ship : null;
@@ -127828,11 +128003,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       const room2 = (L3 + o.def.length) * 0.55 + 5;
       if (dd < room2 && !(target2 === o && hostile2(s, game))) {
         const away = Math.atan2(s.y - o.y, w.dx(o.x, s.x));
-        want = s.heading + clamp2(angleDiff(s.heading, away), -1.2, 1.2) * (1 - dd / room2);
+        want = s.heading + clamp(angleDiff(s.heading, away), -1.2, 1.2) * (1 - dd / room2);
       }
     }
     if (!s.heaveTo && Math.abs(angleDiff(s.heading, want)) > 1.2) s.speedCap = Math.min(s.speedCap ?? 99, 3.5);
-    s.heading += clamp2(angleDiff(s.heading, want), -1, 1) * s.def.turn * 0.55 * dt;
+    s.heading += clamp(angleDiff(s.heading, want), -1, 1) * s.def.turn * 0.55 * dt;
   }
   function crewFor(game, T5, s, p) {
     const tr = s.traffic;
@@ -128467,8 +128642,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (tgtShip) {
         const c = Math.cos(tgtShip.heading), sn = Math.sin(tgtShip.heading), L3 = tgtShip.def.length;
         const ox = game.world.dx(tgtShip.x, k.x), oy = k.y - tgtShip.y;
-        const u = clamp2(ox * c + oy * sn, -L3 * 0.35, L3 * 0.35), hb = hbAt(u / L3 + 0.5, tgtShip.def.beam) * 0.7;
-        const v = clamp2(-ox * sn + oy * c, -hb, hb);
+        const u = clamp(ox * c + oy * sn, -L3 * 0.35, L3 * 0.35), hb = hbAt(u / L3 + 0.5, tgtShip.def.beam) * 0.7;
+        const v = clamp(-ox * sn + oy * c, -hb, hb);
         tx = game.world.wx(tgtShip.x + u * c - v * sn);
         ty = tgtShip.y + u * sn + v * c;
       }
@@ -128676,7 +128851,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         }
       }
       const def = FISH[kind];
-      const z = clamp2(def.low ? depth - 1 : def.depth[0] + Math.random() * Math.min(depth - def.depth[0], 8), 0.5, Math.max(0.5, depth - 0.6));
+      const z = clamp(def.low ? depth - 1 : def.depth[0] + Math.random() * Math.min(depth - def.depth[0], 8), 0.5, Math.max(0.5, depth - 0.6));
       S6.schools.push(makeSchool(kind, x, y, z, Math.random() * TAU));
       return;
     }
@@ -128722,7 +128897,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (!def.critter && !def.wild) s.scare = Math.max(s.scare, 1.2);
     }
     s.scare = Math.max(0, s.scare - dt);
-    s.hd += clamp2(angleDiff(s.hd, s.want), -1.2, 1.2) * dt * (s.scare > 0 ? 4 : 1.1);
+    s.hd += clamp(angleDiff(s.hd, s.want), -1.2, 1.2) * dt * (s.scare > 0 ? 4 : 1.1);
     const sp = def.speed * (s.scare > 0 ? 2.6 : 1);
     const nx = w.wx(s.x + Math.cos(s.hd) * sp * dt), ny = s.y + Math.sin(s.hd) * sp * dt;
     if (w.isLiquid(nx, ny) && !w.isOverlay(nx, ny)) {
@@ -128734,9 +128909,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const zmin = Math.min(zmax, Math.max(0.5, def.depth[0] * 0.6));
     if (def.low) s.wantZ = zmax;
     if (def.leap) s.wantZ = Math.min(s.wantZ, 1.3);
-    s.wantZ = clamp2(s.wantZ, zmin, Math.min(def.depth[1], zmax));
-    s.z += clamp2(s.wantZ - s.z, -1, 1) * dt * 0.7;
-    s.z = clamp2(s.z, 0.35, zmax);
+    s.wantZ = clamp(s.wantZ, zmin, Math.min(def.depth[1], zmax));
+    s.z += clamp(s.wantZ - s.z, -1, 1) * dt * 0.7;
+    s.z = clamp(s.z, 0.35, zmax);
   }
   function tryCatch(game, S6, p) {
     const w = game.world;
@@ -129013,13 +129188,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       const ex = w.dx(k.x, tx), ey = ty - k.y, el = Math.hypot(ex, ey);
       if (el > 0.3) {
         const want = Math.atan2(ey, ex);
-        k.facing += clamp2(angleDiff(k.facing, want), -1, 1) * Math.min(1, dt * 5);
+        k.facing += clamp(angleDiff(k.facing, want), -1, 1) * Math.min(1, dt * 5);
         k.intent.mx = Math.cos(k.facing) * speed2;
         k.intent.my = Math.sin(k.facing) * speed2;
       }
       const floor2 = game.seaDepth(k.x, k.y);
-      k.depth += clamp2(Math.min(tz, floor2 - 0.6) - k.depth, -1, 1) * dt * 1.8;
-      k.depth = clamp2(k.depth, 0.5, Math.max(0.5, floor2 - 0.5));
+      k.depth += clamp(Math.min(tz, floor2 - 0.6) - k.depth, -1, 1) * dt * 1.8;
+      k.depth = clamp(k.depth, 0.5, Math.max(0.5, floor2 - 0.5));
     }
   };
   function rescue(game, S6, dt, p) {
@@ -129058,7 +129233,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         ex = p.x;
         ey = p.y;
       }
-      Object.assign(R5, { x0: who2.x, y0: who2.y, h0, ex: w2.wx(ex), ey, T: clamp2(d / 9, 0.8, 1.8), peak: 1.2 + Math.min(3, d * 0.06) });
+      Object.assign(R5, { x0: who2.x, y0: who2.y, h0, ex: w2.wx(ex), ey, T: clamp(d / 9, 0.8, 1.8), peak: 1.2 + Math.min(3, d * 0.06) });
       who2.scripted = { moving: false };
       if (who2.inWater) R5.phase = "swim";
       game.log(`${who2.name} dives in after you!`, "#81d4fa");
@@ -129301,7 +129476,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const c = game.state?.char, p = game.player;
     const f = FRUITS[c?.fruit];
     if (!f || !p) return 0;
-    v = clamp2(Math.round(v), 0, 100);
+    v = clamp(Math.round(v), 0, 100);
     c.fruitMastery = p.fruitMastery = v;
     c.formsShown = c.formsShown || [];
     let open = 0;
@@ -129361,11 +129536,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const c = game.state?.char, p = game.player, R5 = RACES[race];
     if (!c || !p || !R5 || c.race === race) return false;
     const was = RACES[c.race] || RACES.human;
-    for (const k of ATTR_KEYS) c.attrs[k] = clamp2(c.attrs[k] - (was.stats[k] || 0) + (R5.stats[k] || 0), 1, ATTR_CAP);
+    for (const k of ATTR_KEYS) c.attrs[k] = clamp(c.attrs[k] - (was.stats[k] || 0) + (R5.stats[k] || 0), 1, ATTR_CAP);
     const dl = (R5.lives || 3) - (was.lives || 3);
     if (dl) {
-      c.maxLives = clamp2(c.maxLives + dl, 1, 5);
-      c.lives = clamp2(c.lives + dl, 1, c.maxLives);
+      c.maxLives = clamp(c.maxLives + dl, 1, 5);
+      c.lives = clamp(c.lives + dl, 1, c.maxLives);
     }
     const spirit = p.hakiUnlocked();
     if (race === "fishman") innateStyle(c, "fishman_karate", 8, "fmk_uchimizu");
@@ -129401,7 +129576,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const c = game.state?.char, p = game.player;
     if (!c || !p || !["armament", "observation", "conqueror"].includes(type)) return false;
     const spirit = p.hakiUnlocked();
-    lvl = clamp2(Math.round(lvl), 0, 100);
+    lvl = clamp(Math.round(lvl), 0, 100);
     c.haki[type] = lvl;
     if (type === "conqueror" && lvl && !c.traits.includes("conqueror")) c.traits.push("conqueror");
     if (!lvl) {
@@ -129420,7 +129595,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   function setAttr(game, k, v) {
     const c = game.state?.char;
     if (!c || !game.player || !ATTR_KEYS.includes(k)) return false;
-    c.attrs[k] = clamp2(Math.round(v), 1, ATTR_CAP);
+    c.attrs[k] = clamp(Math.round(v), 1, ATTR_CAP);
     refreshPlayer(game);
     return true;
   }
@@ -129570,7 +129745,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const d = ITEMS[id];
         if (!d || !game.state?.char) return "";
         if (d.type === "fruit") return C3.giveFruit(d.fruit);
-        n = clamp2(Math.round(n) || 1, 1, 99);
+        n = clamp(Math.round(n) || 1, 1, 99);
         addItem(game, id, n);
         return `Gave you ${n} \xD7 ${d.name}.`;
       },
@@ -129609,7 +129784,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       setLevel(n) {
         const c = game.state?.char;
         if (!c || !game.player) return;
-        for (const k of ATTR_KEYS) c.attrs[k] = clamp2(Math.round(n), 1, ATTR_CAP);
+        for (const k of ATTR_KEYS) c.attrs[k] = clamp(Math.round(n), 1, ATTR_CAP);
         refreshPlayer(game);
       },
       setBounty(n) {
@@ -129623,7 +129798,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const c = game.state?.char;
         if (!c) return;
         const before = c.reputation || 0;
-        c.reputation = clamp2(Math.round(v), 0, 100);
+        c.reputation = clamp(Math.round(v), 0, 100);
         game.emit("reputationChanged", c.reputation, c.reputation - before);
       },
       // --- calling things up -------------------------------------------------------
@@ -129669,8 +129844,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const p = game.player;
         if (!p || !ARCHETYPES[arch]) return `No foe called "${arch}".`;
         if (C3.aboard()) return C3.aboard();
-        lvl = clamp2(Math.round(lvl) || 5, 1, 120);
-        n = clamp2(Math.round(n) || 1, 1, 8);
+        lvl = clamp(Math.round(lvl) || 5, 1, 120);
+        n = clamp(Math.round(n) || 1, 1, 8);
         let a = null;
         for (let i = 0; i < n; i++) {
           const at4 = C3.ahead(4 + i % 3 * 0.6, (i - (n - 1) / 2) * 0.45);
@@ -129723,7 +129898,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const side = sea.a + Math.PI / 2, off = L3 * 0.5 + 18;
         const dest = { x: w.wx(p.x + Math.cos(side) * off - Math.cos(sea.a) * 600), y: p.y + Math.sin(side) * off - Math.sin(sea.a) * 600 };
         const heading = Math.atan2(dest.y - sea.y, w.dx(sea.x, dest.x));
-        const s = game.traffic.spawn({ kind, type, x: sea.x, y: sea.y, heading, dest, level: clamp2(Math.round(lvl) || 10, 1, 120) });
+        const s = game.traffic.spawn({ kind, type, x: sea.x, y: sea.y, heading, dest, level: clamp(Math.round(lvl) || 10, 1, 120) });
         if (!s) return "She wouldn't fit in the water here \u2014 try somewhere more open.";
         if (hostile3) s.provoked = true;
         C3.spawned.add(s);
@@ -129736,7 +129911,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       spawnSea(kind, lvl = 30) {
         const p = game.player;
         if (!p) return "";
-        lvl = clamp2(Math.round(lvl) || 30, 1, 120);
+        lvl = clamp(Math.round(lvl) || 30, 1, 120);
         if (kind === "seaking") {
           const at5 = C3.waterNear(3, 14, 45);
           if (!at5) return "A Sea King needs open water \u2014 go down to the sea.";
@@ -129757,7 +129932,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const at4 = C3.waterNear(def.depth[0] + 0.6, 8, 30);
         if (!at4) return `No water deep enough for ${def.name} near you \u2014 go out to sea.`;
         const depth = game.seaDepth ? game.seaDepth(at4.x, at4.y) : 10;
-        const z = clamp2(def.depth[0] + Math.random() * Math.min(depth - def.depth[0], 8), 0.5, Math.max(0.5, depth - 0.6));
+        const z = clamp(def.depth[0] + Math.random() * Math.min(depth - def.depth[0], 8), 0.5, Math.max(0.5, depth - 0.6));
         C3.spawned.add(game.seaLife.spawn(kind, at4.x, at4.y, z, Math.random() * TAU));
         return `${def.name[0].toUpperCase() + def.name.slice(1)} \u2014 in the water ahead of you.`;
       },
@@ -154953,7 +155128,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       s.sail = 1;
       const toT = Math.atan2(foe.y - s.y, w.dx(s.x, foe.x)), abreast = (s.def.beam + foe.def.beam) / 2;
       const want2 = fd > abreast + 7 ? toT : toT + Math.PI / 2 * (angleDiff(s.heading, toT) > 0 ? -1 : 1);
-      s.heading += clamp2(angleDiff(s.heading, want2), -1, 1) * s.def.turn * dt;
+      s.heading += clamp(angleDiff(s.heading, want2), -1, 1) * s.def.turn * dt;
       const side = Math.abs(Math.abs(angleDiff(s.heading, toT)) - Math.PI / 2);
       const toLead = Math.atan2(lead.y - s.y, w.dx(s.x, lead.x));
       const clear3 = Math.abs(angleDiff(toT, toLead)) > 0.5 || w.distance(s.x, s.y, lead.x, lead.y) > fd + 3;
@@ -154975,7 +155150,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }
     const toP = Math.atan2(pt.y - s.y, w.dx(s.x, pt.x));
     const want = d > 3 ? toP : lead.heading;
-    s.heading += clamp2(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
+    s.heading += clamp(angleDiff(s.heading, want), -1, 1) * s.def.turn * dt;
     s.sail = d > 8 ? 1 : d > 3 ? Math.max(0.3, lead.sailSet) : lead.sailSet;
     s.rowing = d > 10 && game.isCalmAt(s.x, s.y) ? 1 : 0;
   }
@@ -160820,6 +160995,18 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         v.formant(0.4, 0.1, { f1: 300, f2: 700, q: 3, gain: 0.15, attack: 0.01 });
       }
     },
+    /** GULP: a swallow of water, a little glug behind it. */
+    sip: {
+      prio: 5,
+      cd: 0.25,
+      max: 1,
+      variants: 3,
+      play(v, k) {
+        v.tone(0, 0.09, { freq: [420, 470, 390][k.rr] * r(), to: 230, gain: 0.12, attack: 8e-3 });
+        v.noise(0.02, 0.07, { freq: 900, q: 2.5, gain: 0.06, attack: 0.01 });
+        v.tone(0.1, 0.07, { freq: 300 * r(), to: 520, gain: 0.07, attack: 0.01 });
+      }
+    },
     /** CHOMP: teeth through something crisp, a little crunch after. */
     bite: {
       prio: 5,
@@ -166102,6 +166289,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     installTownLife(game);
     installSeaLife(game);
     installForaging(game);
+    installSurvival(game);
     installContent(game);
     installNet(game);
     const voyageHud = installVoyageHud(game, ui);
