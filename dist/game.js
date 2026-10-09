@@ -44076,6 +44076,18 @@ ${GLSL}
     out[2] = x2 * shd + z2 * ch;
     return out;
   }
+  function deckSwing(dk3, time, out = [0, 0]) {
+    out[0] = 0;
+    out[1] = 0;
+    const s = dk3?.ship;
+    if (!s?.def || dk3.plank) return out;
+    const u = dk3.u ?? (dk3.t - 0.5) * s.def.length, v = dk3.v || 0, c = Math.cos(s.heading), sn = Math.sin(s.heading);
+    const q2 = shipPoint(s, time, u, v, dk3.h || 0, _swq);
+    out[0] = q2[0] - (u * c - v * sn);
+    out[1] = q2[2] - (u * sn + v * c);
+    return out;
+  }
+  var _swq = [0, 0, 0];
   function deckLift(dk3, time) {
     return dk3.plank ? dk3.plank.liftAt(dk3.k) : shipLift(dk3.ship, time, dk3.u ?? (dk3.t - 0.5) * dk3.ship.def.length, dk3.v || 0, dk3.h);
   }
@@ -46547,6 +46559,7 @@ ${GLSL}
   };
 
   // src/render3d/camera3d.js
+  var _dsw = [0, 0];
   var TP_MIN = 1.1;
   var TAU4 = Math.PI * 2;
   var CAM_SOLID = {
@@ -46835,6 +46848,11 @@ ${GLSL}
       let eyeH = 1.72 * scale;
       let gx = 0, gz = 0;
       let gh = p.flying && p.alt != null ? p.alt : p.deck ? deckLift(p.deck, time) + (p.z || 0) : (p.belowDeck ? p.groundAt(game, p.x, p.y) : p.roofed && p.lastG != null ? p.lastG : ground(p.x, p.y)) - (p.wading || 0) + (p.z || 0);
+      if (p.deck && !sailing) {
+        deckSwing(p.deck, time, _dsw);
+        gx = _dsw[0];
+        gz = _dsw[1];
+      }
       let rollSea = 0, hp = null, shipX = 0, shipZ = 0;
       if (!sailing) this.seaPitch = 0;
       if (sailing) {
@@ -47099,58 +47117,6 @@ ${GLSL}
       return res;
     }
   };
-
-  // src/game/physics.js
-  var G2 = 9.81;
-  var RHO_AIR = 1.225;
-  var LEGACY_G = 22;
-  var legacyV = (v) => v * Math.sqrt(G2 / LEGACY_G);
-  var bodyMass = (scale = 1) => 70 * scale * scale * scale;
-  var dragK = (cd, area2, mass, rho = RHO_AIR) => 0.5 * rho * cd * area2 / mass;
-  var bodyDragK = (scale = 1) => dragK(1, 0.7 * scale * scale, bodyMass(scale));
-  function fallStep(vz, dt, k, g = G2) {
-    const v = vz - g * dt;
-    return v / (1 + k * Math.abs(v) * dt);
-  }
-  var GRIP = /* @__PURE__ */ new Map([
-    ["ice", 0.12],
-    ["pack_ice", 0.18],
-    ["snow", 0.55],
-    ["snowrock", 0.75],
-    ["mud", 0.5],
-    ["sand", 0.75],
-    ["desert", 0.7],
-    ["marble", 0.8],
-    ["cloud", 0.6],
-    ["candy", 0.8],
-    ["cake", 0.7],
-    ["ash", 0.8]
-  ]);
-  var DRY_GRIP = 1.35;
-  function gripOf(name) {
-    return GRIP.get(name) ?? DRY_GRIP;
-  }
-  function gripStep(vx, vy, tx, ty, mu, dt, out) {
-    const dx = tx - vx, dy = ty - vy, d = Math.hypot(dx, dy);
-    const max = mu * G2 * dt;
-    if (d <= max || d < 1e-9) {
-      out[0] = tx;
-      out[1] = ty;
-      return out;
-    }
-    const k = max / d;
-    out[0] = vx + dx * k;
-    out[1] = vy + dy * k;
-    return out;
-  }
-  function hullStep(v, target2, top, tau, dt) {
-    top = Math.max(0.5, top);
-    const c = 1 / (Math.max(0.1, tau) * top);
-    const drive2 = c * target2 * Math.abs(target2);
-    const n = Math.max(1, Math.ceil(dt / 0.05)), h2 = dt / n;
-    for (let i = 0; i < n; i++) v += (drive2 - c * v * Math.abs(v)) * h2;
-    return v;
-  }
 
   // src/game/entity.js
   var nextId = 1;
@@ -48880,7 +48846,7 @@ ${GLSL}
         if (stun && (counter2 || !(unshakable(tgt) && !h2.guardBreak && stun < 0.6))) tgt.stagger(stun * (tgt.stunResist ?? 1));
         if (h2.status) for (const [k, v] of Object.entries(h2.status)) tgt.addStatus(k, v, att);
         if (h2.launch && !tgt.flying && !tgt.inWater && !tgt.climb && !tgt.onShip && !((tgt.z || 0) > 0.3) && tgt.state === "idle") {
-          tgt.vz = Math.max(tgt.vz || 0, legacyV(h2.launch * (tgt.boss ? 0.5 : 1)));
+          tgt.vz = Math.max(tgt.vz || 0, h2.launch * (tgt.boss ? 0.5 : 1));
           tgt.z = Math.max(tgt.z || 0, 0.02);
           tgt.airT = 0;
           tgt.jumpK = 0;
@@ -48889,7 +48855,7 @@ ${GLSL}
         if (h2.fling && tgt.state === "idle" && !tgt.onShip && !tgt.climb) {
           const sp = h2.fling * (tgt.boss ? 0.35 : 1);
           tgt.dash = { vx: Math.cos(kbAng) * sp, vy: Math.sin(kbAng) * sp, t: 1.1, ignoreWater: true, flung: true };
-          tgt.vz = Math.max(tgt.vz || 0, legacyV(8));
+          tgt.vz = Math.max(tgt.vz || 0, 8);
           tgt.z = Math.max(tgt.z || 0, 0.02);
           tgt.airT = 0;
         }
@@ -58736,6 +58702,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     const r4 = Math.max(0.12, Math.min(0.8, (p.radius || 0.3) * 0.8));
     const m = new Mesh(new SphereGeometry(r4, 10, 8), new MeshBasicMaterial({ color: col2, fog: true }));
     return m;
+  }
+
+  // src/game/physics.js
+  function hullStep(v, target2, top, tau, dt) {
+    top = Math.max(0.5, top);
+    const c = 1 / (Math.max(0.1, tau) * top);
+    const drive2 = c * target2 * Math.abs(target2);
+    const n = Math.max(1, Math.ceil(dt / 0.05)), h2 = dt / n;
+    for (let i = 0; i < n; i++) v += (drive2 - c * v * Math.abs(v)) * h2;
+    return v;
   }
 
   // src/data/ships.js
@@ -81150,12 +81126,9 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
   }
 
   // src/game/actor.js
-  var GRIP_OF = [];
-  for (const [t, n] of [[T.ICE, "ice"], [T.PACK_ICE, "pack_ice"], [T.SNOW, "snow"], [T.SNOWROCK, "snowrock"], [T.MUD, "mud"], [T.SAND, "sand"], [T.DESERT, "desert"], [T.MARBLE, "marble"], [T.ISLAND_CLOUD, "cloud"], [T.CANDY, "candy"], [T.CAKE, "cake"], [T.ASH, "ash"]]) GRIP_OF[t] = n;
-  var _gv = [0, 0];
+  var GAME_G = 22;
   var _sv = [0, 0];
   var _sv2 = [0, 0];
-  var _z2 = [0, 0];
   var _svK = 0;
   function shipVelAt(w, s, x, y) {
     const o = (_svK ^= 1) ? _sv : _sv2;
@@ -81671,7 +81644,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     /** Take-off speeds for this body: { v (a plain jump), charge (× for a full charge), leap (out of the water) }. */
     jumpStats() {
       const R5 = RACES[this.race] || RACES.human;
-      return { v: legacyV((R5.jump || 7.6) * (this.jumpMul || 1)), charge: R5.charge || 1.45, leap: R5.leap || 1 };
+      return { v: (R5.jump || 7.6) * (this.jumpMul || 1), charge: R5.charge || 1.45, leap: R5.leap || 1 };
     }
     /** Can you jump right now: on your feet, or at the surface of the water (not a Devil Fruit user). */
     canJump() {
@@ -81734,13 +81707,6 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       if (t === T.LAVA || iceAt(game, this.x, this.y)) return 0;
       return game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
     }
-    /** The grip under your feet just now (physics.js gripOf): the ground's, a little less wet in the rain. */
-    gripHere(game) {
-      const name = GRIP_OF[game.world.type(this.x, this.y)];
-      let mu = name ? gripOf(name) : DRY_GRIP;
-      if (mu > 1 && (game.env?.rain || 0) > 0.3) mu = 1.05;
-      return mu;
-    }
     /** Deep enough to swim in (about chest-deep; a little less to stand up again, so shorelines don't flicker). */
     swimDepth(was) {
       return 1.75 * (this.look?.scale || 1) * (was ? 0.5 : 0.62);
@@ -81778,19 +81744,19 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const wd = this.waterUnder(game);
       const deep = wd > this.swimDepth(false);
       const z0 = this.z;
-      let grav = G2, k = bodyDragK(s);
+      let grav = GAME_G;
       if (deep && z0 < 0 && this.vz < 0) {
         const sub = clamp2(-z0 / (1.3 * s), 0, 1);
         grav *= 1 - sub * 0.8;
         this.vz -= this.vz * Math.min(1, dt * 9 * sub);
       }
-      this.vz = fallStep(this.vz, dt, k, grav);
+      this.vz -= grav * dt;
       this.z += this.vz * dt;
       if (this.vz > 0) {
         this.underRoof(game);
         return;
       }
-      const IMP = 1 / legacyV(1);
+      const IMP = 1;
       if (wd > 0 && z0 > 0 && this.z <= 0) {
         const impact = -this.vz * IMP;
         game.fx.ripple?.(this.x, this.y, Math.min(2.4, 0.8 + impact * 0.1));
@@ -81916,6 +81882,11 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         return;
       }
       if (this.state === "dead") return;
+      if (this.scripted) {
+        this.moving = !!this.scripted.moving;
+        this.vx = this.vy = 0;
+        return;
+      }
       if (this.onShip || this.climb) {
         if (this.controller) this.controller.update(this, dt, game);
         this.iframes = Math.max(0, this.iframes - dt);
@@ -82741,17 +82712,9 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         if (this.status.chill) sp *= 0.6;
         if (this.zoneSlow) sp *= this.zoneSlow;
         const tx = i.mx * sp, ty = i.my * sp;
-        if (this.inWater) {
-          const k = Math.min(1, dt * 4);
-          this.vx += (tx - this.vx) * k;
-          this.vy += (ty - this.vy) * k;
-        } else {
-          const air = (this.z || 0) > 0.05 || !!this.vz;
-          const mu = air ? 0.35 : this.deck ? DRY_GRIP : this.gripHere(game);
-          gripStep(this.vx, this.vy, tx, ty, mu, dt, _gv);
-          this.vx = _gv[0];
-          this.vy = _gv[1];
-        }
+        const k = Math.min(1, dt * (this.inWater ? 4 : 16));
+        this.vx += (tx - this.vx) * k;
+        this.vy += (ty - this.vy) * k;
         vx = this.vx;
         vy = this.vy;
       } else {
@@ -82770,6 +82733,15 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       }
       vx += this.kb.x;
       vy += this.kb.y;
+      if (this.carryV) {
+        vx += this.carryV[0];
+        vy += this.carryV[1];
+        const air = ((this.z || 0) > 0.05 || !!this.vz) && !this.inWater && !this.deck;
+        const f = Math.exp(-dt * (air ? 0.15 : this.inWater ? 3 : 7));
+        this.carryV[0] *= f;
+        this.carryV[1] *= f;
+        if (Math.hypot(this.carryV[0], this.carryV[1]) < 0.05) this.carryV = null;
+      }
       const decay = Math.exp(-dt * 8);
       this.kb.x *= decay;
       this.kb.y *= decay;
@@ -82863,8 +82835,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         was.ship.aboard?.delete(this);
         if (!dk3 && !was.plank) {
           const sv = shipVelAt(game.world, was.ship, this.x, this.y);
-          this.vx = (this.vx || 0) + sv[0];
-          this.vy = (this.vy || 0) + sv[1];
+          this.carryV = [sv[0], sv[1]];
         }
         if (!dk3) {
           const g = this.groundAt(game, this.x, this.y);
@@ -82882,11 +82853,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         this.wading = 0;
         if (!this.vz && this.z > 0) this.vz = -0.01;
         (dk3.ship.aboard || (dk3.ship.aboard = /* @__PURE__ */ new Set())).add(this);
-        if (!dk3.plank && (!was || was.ship !== dk3.ship)) {
-          const sv = shipVelAt(game.world, dk3.ship, this.x, this.y), sw2 = was && !was.plank ? shipVelAt(game.world, was.ship, this.x, this.y) : _z2;
-          this.vx = (this.vx || 0) - sv[0] + sw2[0];
-          this.vy = (this.vy || 0) - sv[1] + sw2[1];
-        }
+        if (!dk3.plank && (!was || was.ship !== dk3.ship)) this.carryV = null;
       }
       this.deck = dk3;
     }
@@ -87505,7 +87472,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     /** Place at a grip point with the blade along `dir` and the flat facing `plane`. */
     place(grip, dir, plane2) {
       const x = _x2.copy(dir).normalize();
-      const z = _z3.copy(plane2).addScaledVector(x, -plane2.dot(x));
+      const z = _z2.copy(plane2).addScaledVector(x, -plane2.dot(x));
       if (z.lengthSq() < 1e-6) z.set(0, 0, 1).addScaledVector(x, -x.z);
       z.normalize();
       const y = _y2.crossVectors(z, x);
@@ -87516,7 +87483,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   };
   var _x2 = new three_module_exports.Vector3();
   var _y2 = new three_module_exports.Vector3();
-  var _z3 = new three_module_exports.Vector3();
+  var _z2 = new three_module_exports.Vector3();
   var _mm = new three_module_exports.Matrix4();
 
   // src/render3d/chars/model.js
@@ -91517,6 +91484,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }, "rowing arms");
 
   // src/render3d/index.js
+  var _swing = [0, 0];
   registerPropBuilder("building", (o, ctx) => buildBuilding(o, ctx));
   var _shockV = new Vector3();
   var RES_STEPS = [1, 0.88, 0.77, 0.67, 0.58];
@@ -92691,9 +92659,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           this.actorViews.set(a, v);
           this.attach(v.root, this.ents);
         }
-        let gh;
-        if (a.deck) gh = deckLift(a.deck, env2.time);
-        else if (a.flying) gh = Math.max(0, this.ground(a.x, a.y));
+        let gh, sx = 0, sz = 0;
+        if (a.deck) {
+          gh = deckLift(a.deck, env2.time);
+          deckSwing(a.deck, env2.time, _swing);
+          sx = _swing[0];
+          sz = _swing[1];
+        } else if (a.flying) gh = Math.max(0, this.ground(a.x, a.y));
         else if (a.seaCreature) gh = Math.max(-(a.depth || 0), this.terrain.terrainAt(a.x, a.y) + 0.35);
         else if (a.inWater) {
           gh = waterLevel(this.game.world, a.x, a.y) - (a.depth || 0) - (a.swimSink ? a.swimSink() : 1.3 * (a.look?.scale || 1));
@@ -92704,7 +92676,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         else if (a.wading) gh = this.ground(a.x, a.y) - a.wading;
         else if (a.roofed && a.lastG != null) gh = a.lastG;
         else gh = this.ground(a.x, a.y);
-        v.root.position.set(dx, gh + (a.z || 0), dy);
+        v.root.position.set(dx + sx, gh + (a.z || 0), dy + sz);
         const sc = a.look?.scale || 1;
         if (a !== p && d2 > 64 && !_frus.intersectsSphere(_sph.set(_sphC.set(dx, gh + (a.z || 0) + sc, dy), 2.4 * sc + 1)) && (this.frame + i) % 6 !== 0) {
           i++;
@@ -97467,7 +97439,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
 
   // src/core/noise.js
   var F2 = 0.5 * (Math.sqrt(3) - 1);
-  var G22 = (3 - Math.sqrt(3)) / 6;
+  var G2 = (3 - Math.sqrt(3)) / 6;
   var GRAD2 = new Float32Array([1, 1, -1, 1, 1, -1, -1, -1, 1, 0, -1, 0, 0, 1, 0, -1]);
   var Noise = class {
     constructor(seed = 1) {
@@ -97492,11 +97464,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const perm = this.perm, pm = this.permMod8;
       const s = (xin + yin) * F2;
       const i = Math.floor(xin + s), j = Math.floor(yin + s);
-      const t = (i + j) * G22;
+      const t = (i + j) * G2;
       const x0 = xin - (i - t), y0 = yin - (j - t);
       const i1 = x0 > y0 ? 1 : 0, j1 = x0 > y0 ? 0 : 1;
-      const x1 = x0 - i1 + G22, y1 = y0 - j1 + G22;
-      const x2 = x0 - 1 + 2 * G22, y2 = y0 - 1 + 2 * G22;
+      const x1 = x0 - i1 + G2, y1 = y0 - j1 + G2;
+      const x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
       const ii = i & 255, jj = j & 255;
       let n0 = 0, n1 = 0, n2 = 0;
       let t0 = 0.5 - x0 * x0 - y0 * y0;
@@ -110080,6 +110052,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
 
   // src/game/crewnav.js
   var RUN = 5;
+  var GRAV = 22;
   var OPEN_DECKS = ["main", "quarter", "fore", "poop"];
   var shipOf = (a) => a?.deck && !a.deck.plank ? a.deck.ship : null;
   function spotNear(game, s, x, y) {
@@ -110150,9 +110123,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     return { gap: on - off, rise: rail - deckLift(a.deck, time) };
   }
   function leapable(a, rg2) {
-    const J = a.jumpStats ? a.jumpStats() : { v: 7.6, charge: 1.45 }, v0 = J.v * J.charge;
-    const t = Math.max((rg2.gap + 0.5) / RUN, v0 / G2);
-    return v0 * t - G2 / 2 * t * t >= rg2.rise - 0.05;
+    const J = a.jumpStats ? a.jumpStats() : { v: 7.6, charge: 1.45 }, v0 = J.v * J.charge, t = (rg2.gap + 0.5) / RUN;
+    return v0 * t - GRAV / 2 * t * t >= rg2.rise - 0.05;
   }
   function atRail(game, a, gx, gy) {
     if (!a.deck || a.deck.edge > 0.5 || (a.z || 0) > 0.02) return false;
@@ -126842,40 +126814,138 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }
   };
   function rescue(game, S6, dt, p) {
-    const sinking = p.inWater && p.fruit && !p.gills && p.state === "idle" && p.under;
-    if (!sinking) {
-      S6.rescueT = 0;
-      S6.rescuer = null;
+    const low = p.oxygen != null && p.maxOxygen < Infinity && p.oxygen < p.maxOxygen * 0.25;
+    const going = p.inWater && p.under && p.state === "idle" && (p.fruit && !p.gills || low);
+    let R5 = S6.res;
+    if (R5 && R5.phase !== "grab" && R5.phase !== "out" && (!going || !R5.who.alive)) {
+      endRescue(game, S6, false);
       return;
     }
-    if (!S6.rescuer) {
-      const crew = game.crew?.followers ? [...game.crew.followers.values()] : [];
-      S6.rescuer = crew.find((a) => a.alive && a.state === "idle" && !(a.fruit && !a.gills) && game.world.distance(a.x, a.y, p.x, p.y) < 35) || null;
-      if (!S6.rescuer) return;
-      S6.rescueT = 0;
-      game.log(`${S6.rescuer.name} dives in after you!`, "#81d4fa");
+    if (!R5) {
+      if (!going) return;
+      const crew = [...game.crew?.followers?.values() || [], ...game.crew?.hands?.values() || []];
+      const w2 = game.world;
+      let who2 = null, bd = Infinity;
+      for (const a of crew) {
+        if (!a.alive || a.state !== "idle" || a.fruit && !a.gills || a.scripted) continue;
+        const d2 = w2.distance(a.x, a.y, p.x, p.y);
+        if (d2 < 90 && d2 < bd) {
+          bd = d2;
+          who2 = a;
+        }
+      }
+      if (!who2) return;
+      R5 = S6.res = { who: who2, phase: "dive", t: 0 };
+      const time = game.env?.time || 0;
+      const h0 = who2.deck ? deckLift(who2.deck, time) + (who2.z || 0) : who2.inWater ? 0 : Math.max(0, game.view3d?.ground?.(who2.x, who2.y) ?? 0) + (who2.z || 0);
+      if (who2.deck) {
+        who2.deck.ship.aboard?.delete(who2);
+        who2.deck = null;
+      }
+      const dx = w2.dx(p.x, who2.x), dy = who2.y - p.y, d = Math.hypot(dx, dy) || 1;
+      const off = Math.min(2.5, d * 0.5);
+      let ex = p.x + dx / d * off, ey = p.y + dy / d * off;
+      if (!w2.isLiquid?.(w2.wx(ex), ey)) {
+        ex = p.x;
+        ey = p.y;
+      }
+      Object.assign(R5, { x0: who2.x, y0: who2.y, h0, ex: w2.wx(ex), ey, T: clamp2(d / 9, 0.8, 1.8), peak: 1.2 + Math.min(3, d * 0.06) });
+      who2.scripted = { moving: false };
+      if (who2.inWater) R5.phase = "swim";
+      game.log(`${who2.name} dives in after you!`, "#81d4fa");
     }
-    S6.rescueT += dt;
-    if (S6.rescueT < (S6.rescuer.gills ? 1.5 : 3.2)) return;
-    const w = game.world, who = S6.rescuer;
-    S6.rescuer = null;
-    S6.rescueT = 0;
-    const ship = game.ships.find((s) => !s.sunk && s.owner === "player" && w.distance(s.x, s.y, p.x, p.y) < 45);
-    if (ship) board(game, p, ship);
-    else {
-      const spot = findShore(w, p.x, p.y, 24);
-      if (!spot) return;
-      p.leaveWater(game);
-      p.x = spot.x;
-      p.y = spot.y;
-      p.vx = p.vy = 0;
+    if (p.oxygen != null && p.oxygen < 0.6) p.oxygen = 0.6;
+    const w = game.world, who = R5.who;
+    R5.t += dt;
+    if (R5.phase === "dive") {
+      const k = Math.min(1, R5.t / R5.T);
+      who.x = w.wx(R5.x0 + w.dx(R5.x0, R5.ex) * k);
+      who.y = R5.y0 + (R5.ey - R5.y0) * k;
+      who.z = R5.h0 + (0 - R5.h0) * k + R5.peak * 4 * k * (1 - k);
+      who.vz = k < 0.45 ? 2 : -6;
+      who.jumpK = 1;
+      who.inWater = false;
+      who.under = false;
+      who.facing = Math.atan2(R5.ey - R5.y0, w.dx(R5.x0, R5.ex));
+      if (k >= 1) {
+        R5.phase = "swim";
+        R5.t = 0;
+        who.z = 0;
+        who.vz = 0;
+        game.fx.ripple?.(who.x, who.y, 2);
+        game.fx.burst(who.x, who.y, 20, { color: ["#e1f5fe", "#81d4fa", "#ffffff"], speed: 2.6, z: 0.05, vz: 6, g: 11, life: 0.7, size: 0.12 });
+        game.audio?.sfx("splash_big", who);
+      }
+      return;
     }
-    p.oxygen = p.maxOxygen;
-    if (who.alive) {
-      who.x = p.x + 0.8;
-      who.y = p.y;
+    if (R5.phase === "swim") {
+      who.inWater = true;
+      who.under = true;
+      who.wading = 0;
+      who.depth = Math.max(0.3, Math.min((p.depth || 0) + 0.2, (who.depth || 0) + dt * 2.5));
+      const dx = w.dx(who.x, p.x), dy = p.y - who.y, d = Math.hypot(dx, dy);
+      const sp = (who.gills ? 7 : 4.5) * dt;
+      who.facing = Math.atan2(dy, dx);
+      who.scripted.moving = true;
+      who.moving = true;
+      if (d > 1) {
+        const k = Math.min(1, sp / d);
+        who.x = w.wx(who.x + dx * k);
+        who.y += dy * k;
+      }
+      if (d <= 1 || R5.t > 12) {
+        R5.phase = "grab";
+        R5.t = 0;
+        who.scripted.moving = false;
+        who.moving = false;
+      }
+      return;
     }
-    game.log(`${who.name} hauls you out of the sea, coughing and spluttering.`, "#a5d6a7");
+    if (R5.phase === "grab") {
+      who.facing = Math.atan2(p.y - who.y, w.dx(who.x, p.x));
+      if (R5.t > 0.35 && !R5.faded) {
+        R5.faded = true;
+        game.ui?.fade?.(true);
+      }
+      if (R5.t > 1.3) {
+        const ship = game.ships.find((s) => !s.sunk && s.owner === "player" && w.distance(s.x, s.y, p.x, p.y) < 200);
+        if (ship) {
+          if (p.inWater) p.leaveWater?.(game);
+          p.mode = "foot";
+          p.onShip = false;
+          placeOnDeck(game, p, ship, 0.5, 0);
+          placeOnDeck(game, who, ship, 0.56, 0.6);
+        } else {
+          const spot = findShore(w, p.x, p.y, 24);
+          if (spot) {
+            p.leaveWater(game);
+            p.x = spot.x;
+            p.y = spot.y;
+            p.vx = p.vy = 0;
+            who.x = w.wx(spot.x + 0.8);
+            who.y = spot.y;
+            who.inWater = false;
+            who.under = false;
+            who.depth = 0;
+            who.z = 0;
+          }
+        }
+        p.oxygen = p.maxOxygen;
+        who.scripted = null;
+        R5.phase = "out";
+        R5.t = 0;
+        game.log(`${who.name} hauls you out of the sea, coughing and spluttering.`, "#a5d6a7");
+      }
+      return;
+    }
+    if (R5.phase === "out" && R5.t > 0.5) endRescue(game, S6, true);
+  }
+  function endRescue(game, S6, done6) {
+    const R5 = S6.res;
+    if (!R5) return;
+    if (R5.who) R5.who.scripted = null;
+    if (R5.faded) game.ui?.fade?.(false);
+    S6.res = null;
   }
 
   // src/content/helpers.js
