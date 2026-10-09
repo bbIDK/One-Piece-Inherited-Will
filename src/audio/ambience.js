@@ -164,7 +164,7 @@ class Bed {
 // in octaves, leaves and the ground peak at 1–2 kHz and fall away above 4, a
 // roof heard from under it peaks at 500 Hz–1 kHz with little over 4 kHz)
 const RAIN = {
-  sea: { wash: [750, 16000, 0.3], pat: [600, 14000, 0.3], body: [1300, 3], drop: 'plip', rate: 8 },
+  sea: { wash: [750, 16000, 0.34], pat: [600, 14000, 0.3], body: [1300, 3], drop: 'plip', rate: 5 },
   deck: { wash: [150, 9000, 0.22], pat: [260, 5000, 0.4], body: [850, 6], drop: 'tok', rate: 8 },
   leaves: { wash: [170, 5000, 0.32], pat: [480, 6000, 0.4], body: [1600, 3], drop: 'tak', rate: 9 },
   ground: { wash: [190, 2600, 0.36], pat: [340, 3600, 0.34], body: [1000, 5], drop: 'pat', rate: 6 },
@@ -175,7 +175,9 @@ const RAIN = {
 /** Near drops, on what they fall on (each drawn into voice `v` at `t`, `s` its strength). */
 const DROPS = {
   /** On water: the plip of a drop and the little whistle of the bubble it leaves. */
-  plip(v, t, s) { v.bubble(t, { f: rnd(1300, 3600), rise: rnd(1.4, 2.2), dur: rnd(0.012, 0.03), gain: 0.03 * s }); v.noise(t, 0.005, { type: 'highpass', freq: 5000, gain: 0.025 * s, attack: 0.0005 }); },
+  // (a splash of noise, the bubble's ring faint and high — up where rain on the
+  // sea really rings, 10 kHz and over — not a tuned plink from a dripping tap)
+  plip(v, t, s) { v.noise(t, 0.012, { freq: rnd(2500, 6000), q: 0.8, gain: 0.04 * s, attack: 0.0006 }); v.noise(t, 0.004, { type: 'highpass', freq: 6000, gain: 0.02 * s, attack: 0.0004 }); if (Math.random() < 0.25) v.bubble(t + 0.004, { f: rnd(9000, 14000), rise: 1.3, dur: 0.008, gain: 0.006 * s }); },
   /** On a leaf: a sharp little tap, the leaf trembling after it. */
   tak(v, t, s) { v.noise(t, 0.01, { freq: rnd(2200, 4200), q: 2, gain: 0.06 * s, attack: 0.0006 }); v.noise(t + 0.008, 0.035, { freq: rnd(3000, 5200), q: 1, gain: 0.012 * s }); },
   /** On the ground: a soft pat. */
@@ -204,9 +206,10 @@ function patterLoop(c, secs, rate) {
     const d = buf.getChannelData(ch);
     for (let i = 0, cnt = Math.round(rate * secs); i < cnt; i++) {
       const at = Math.floor(Math.random() * n), a = 0.12 + 0.88 * Math.pow(Math.random(), 3);
-      const f = 800 + Math.random() * Math.random() * 6500, tau = (0.0005 + Math.random() * 0.0022) * sr;
+      const f = 800 + Math.random() * Math.random() * 6500, tau = (0.0004 + Math.random() * 0.0012) * sr;
       const w = 2 * Math.PI * f / sr, len = Math.floor(tau * 5);
-      for (let j = 0; j < len; j++) d[(at + j) % n] += a * Math.exp(-j / tau) * (0.55 * Math.sin(w * j) + 0.45 * (Math.random() * 2 - 1));
+      // (mostly the tick of noise, only a trace of a ring: many drops, not a xylophone)
+      for (let j = 0; j < len; j++) d[(at + j) % n] += a * Math.exp(-j / tau) * (0.12 * Math.sin(w * j) + 0.88 * (Math.random() * 2 - 1));
     }
     for (let i = 0; i < n; i++) ss += d[i] * d[i];
   }
@@ -271,7 +274,7 @@ class Rain {
     // the wash; light rain is drops you could count over a faint one)
     const k = Math.max(0, Math.min(1, (r - 0.06) / 0.6)), heavy = smooth(0.25, 0.9, k);
     const lev = Math.pow(10, -20 * (1 - k) / 20) * (1 + 0.2 * storm);
-    this.wash.g.go(S.wash[2] * lev * (0.3 + 0.7 * heavy), t, sec);
+    this.wash.g.go(S.wash[2] * lev * (0.5 + 0.5 * heavy), t, sec);
     this.pat.g.go(S.pat[2] * Math.pow(10, -10 * (1 - k) / 20), t, sec);
     this.sparse.go(0.9 * (1 - 0.7 * heavy), t, sec);
     this.dense.go(heavy * (0.6 + 0.4 * k), t, sec);

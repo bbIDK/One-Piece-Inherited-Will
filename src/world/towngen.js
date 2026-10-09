@@ -559,6 +559,8 @@ function layTown(world, town, rng, noise, dry) {
 
   return {
     id: town.id, name: town.name, x: plaza.x, y: plaza.y + 2, w, h, x0, y0, x1, y1,
+    // (the square: its extent along the main street and across it — people waiting for you stand round its edges: game/npcs.js)
+    square: town.plaza !== false ? { horiz, along: pa, across: pc } : null,
     style: town.style, buildings, plaza, npcSpots, streetSpots, streets, roadTile, rows: [], mainX: plaza.x, def: town,
   };
 }

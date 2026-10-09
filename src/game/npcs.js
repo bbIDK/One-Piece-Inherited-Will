@@ -233,6 +233,7 @@ export function npcBuilder(ctx) {
     if (!pos) continue;
     const a = makeNPC(def, pos.x, pos.y);
     a.game = game;
+    if (pos.face !== undefined) a.facing = a.faceHome = pos.face;
     if (pos.inside) {
       a.homeB = pos.building;
       a.facing = a.faceHome = Math.PI / 2;
@@ -334,7 +335,10 @@ export function placeGuess(game, island, def) {
       const b = town.buildings.find((x) => x.name === pl.building || (def.id && x.npc === def.id) || x.role === pl.building);
       if (b) return inB(b);
     }
-    if (pl.plaza || (!pl.building && !pl.dx && !pl.door) || (pl.town && !pl.dx)) return { x: town.plaza.x + (pl.ox || 1.5), y: town.plaza.y + 2.5 + (pl.oy || 0) };
+    if (pl.plaza || (!pl.building && !pl.dx && !pl.door) || (pl.town && !pl.dx)) {
+      const sq = pl.ox === undefined && pl.oy === undefined ? squareSpot(town, def.id) : null;
+      return sq ? { x: sq.x, y: sq.y } : { x: town.plaza.x + (pl.ox || 1.5), y: town.plaza.y + 2.5 + (pl.oy || 0) };
+    }
   }
   for (const town of island.towns) { const b = town.buildings.find((x) => (def.id && x.npc === def.id)); if (b) return inB(b); }
   const lm = island.landmarks.find((l) => def.id && l.npc === def.id);
@@ -348,7 +352,42 @@ export function placeFor(game, island, def) {
   return placeNPC(game, island, def, Math, game.spawner);
 }
 
+/**
+ * Where someone waiting in a town's square stands: round its edges, not out
+ * in the street through the middle of it — each at their own spot along it
+ * (by who they are, so two never line up on the same one), facing in across
+ * the square. Null if the town has no square on record.
+ */
+export function squareSpot(town, id = '') {
+  const S = town.square, P = town.plaza;
+  if (!S || !P) return null;
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+  const u = ((h >>> 0) % 1000) / 1000, side = (h >>> 11) & 1 ? 1 : -1;
+  const along = (u * 2 - 1) * Math.max(0.5, S.along - 1.6), across = side * Math.max(0.8, S.across - 0.7);
+  const x = P.x + 0.5 + (S.horiz ? along : across), y = P.y + 0.5 + (S.horiz ? across : along);
+  // (facing in, across the square, turned a little toward its middle)
+  const face = Math.atan2(P.y + 0.5 - y, P.x + 0.5 - x);
+  return { x, y, face };
+}
+
+/** Which way someone outside a building's door faces: out from it, onto the street. */
+function outFrom(b, x0) {
+  const a = bw(b, x0, 0.5), c = bw(b, x0, 2.5);
+  return Math.atan2(c.y - a.y, c.x - a.x);
+}
+
 function placeNPC(game, island, def, rng, spawner) {
+  const q = placeNPC0(game, island, def, rng, spawner);
+  if (q && q.face === undefined && q.inside === undefined) {
+    // (no way to face given: toward the middle of the nearest town, not off at nothing)
+    const t = (island.towns || []).reduce((m, x) => (!m || Math.hypot(x.x - q.x, x.y - q.y) < Math.hypot(m.x - q.x, m.y - q.y) ? x : m), null);
+    if (t && Math.hypot(t.plaza.x - q.x, t.plaza.y - q.y) > 1.5) q.face = Math.atan2(t.plaza.y - q.y, t.plaza.x - q.x);
+  }
+  return q;
+}
+
+function placeNPC0(game, island, def, rng, spawner) {
   const pl = (typeof def.at === 'function' ? def.at(game.state?.char, game) : def.at) || {};
   if (pl.spot && island.spots[pl.spot]) {
     const s = island.spots[pl.spot];
@@ -361,19 +400,29 @@ function placeNPC(game, island, def, rng, spawner) {
     // by the town's pier
     if (pl.dock) {
       const d = island.docks.slice().sort((a, b) => Math.hypot(a.land.x - town.x, a.land.y - town.y) - Math.hypot(b.land.x - town.x, b.land.y - town.y))[0];
-      if (d) return spawner.findFree(d.land.x + (pl.ox || 0), d.land.y + (pl.oy || 0), 4, rng) || spawner.findFree(town.plaza.x, town.plaza.y + 2.5, 4, rng);
+      if (d) {
+        const q = spawner.findFree(d.land.x + (pl.ox || 0), d.land.y + (pl.oy || 0), 4, rng) || spawner.findFree(town.plaza.x, town.plaza.y + 2.5, 4, rng);
+        // (looking out along the pier)
+        const e = d.end || d.head;
+        if (q && e) q.face = Math.atan2(e.y - d.land.y, e.x - d.land.x);
+        return q;
+      }
     }
     // on the street outside a building (whoever keeps it stays inside)
     if (pl.door) {
       const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
-      if (b) { const q = bw(b, doorLocalX(b) + (pl.ox ?? 1.6), 1.6); return clear(spawner, q.x, q.y, rng); }
+      if (b) { const x0 = doorLocalX(b) + (pl.ox ?? 1.6), q = bw(b, x0, 1.6), r = clear(spawner, q.x, q.y, rng); if (r) r.face = outFrom(b, x0); return r; }
     }
     if (pl.building) {
       const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
       if (b) { const q = bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4); return inside(b, pl.guest) || clear(spawner, q.x, q.y, rng, { building: b }); }
     }
     // (the square — also for someone whose building didn't fit in this town)
-    if (pl.plaza || (!pl.building && !pl.dx && !pl.door) || (pl.town && !pl.dx)) return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5 + (pl.oy || 0), 3, rng);
+    if (pl.plaza || (!pl.building && !pl.dx && !pl.door) || (pl.town && !pl.dx)) {
+      const sq = pl.ox === undefined && pl.oy === undefined ? squareSpot(town, def.id) : null;
+      if (sq) { const q = spawner.findFree(sq.x, sq.y, 2.5, rng); if (q) { q.face = sq.face; return q; } }
+      return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5 + (pl.oy || 0), 3, rng);
+    }
   }
   // any building that names this NPC
   for (const town of island.towns) {

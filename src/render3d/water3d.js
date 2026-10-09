@@ -171,6 +171,24 @@ const FRAG = /* glsl */`
     vec2 u = f * f * (3.0 - 2.0 * f);
     return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
   }
+  // rain on the sea: where each drop lands a little ring spreads and fades —
+  // a slope (dh/dx, dh/dz) from a few drifting layers of them, a drop now and
+  // then in each cell at its own moment
+  vec2 rainRings(vec2 p, float t) {
+    vec2 g = vec2(0.0);
+    for (int k = 0; k < 3; k++) {
+      float fk = float(k);
+      vec2 q = p * 1.35 + vec2(fk * 0.37, fk * 0.71);
+      vec2 i = floor(q), f = fract(q);
+      vec2 hc = hash2(i + fk * 17.3);
+      float ph = fract(t * (0.9 + 0.3 * fk) + hash(i + fk * 5.1));
+      vec2 d = f - (0.2 + 0.6 * hc);
+      float r = length(d), rr = ph * 0.42;
+      float w = exp(-pow((r - rr) * 22.0, 2.0)) * (1.0 - ph) * (1.0 - ph);
+      g += d / max(r, 0.001) * w * cos((r - rr) * 55.0);
+    }
+    return g;
+  }
   float ripples(vec2 p, float t) {
     float h = (noise(p * 0.6 + vec2(t * 0.35, t * 0.2)) - 0.5) * 1.2;
     h += (noise(p * 1.7 - vec2(t * 0.6, -t * 0.4)) - 0.5) * 0.5;
@@ -316,6 +334,8 @@ const FRAG = /* glsl */`
     float r0 = ripples(p, t);
     // (rougher in a storm and in the rain; glassy in a calm)
     vec2 rip = vec2(ripples(p + vec2(e, 0.0), t) - r0, ripples(p + vec2(0.0, e), t) - r0) / e * (0.04 + uStorm * 0.12 + uRain * 0.05) * (1.0 - uGlass * 0.8);
+    // (the rain's rings, close by, as hard as it rains)
+    if (uRain > 0.05 && water && dist < 45.0) rip += rainRings(p, uTime) * uRain * 0.55 * (1.0 - smoothstep(15.0, 45.0, dist));
     // the facets: a big chop and a small one over it (one on the lower setting), fading out far off
     vec2 fc = vec2(0.0);
     if (water) {
