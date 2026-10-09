@@ -1,4 +1,5 @@
 // Starting, resuming and ending a character's journey.
+import { zoneOffset } from './env.js';
 import { buildPlayer, resolveSpawn, heldTowns, townAt, persist, decodeFog, createCharacter, refreshPlayer, upgradeChar, migrateWorld } from './lineage.js';
 import { allNpcDefs, allGroups } from './npcs.js';
 import { ALL_ISLANDS } from '../data/islands/index.js';
@@ -141,7 +142,8 @@ export function startNewCharacter(game, birth, choices) {
   p.x = spawn.x; p.y = spawn.y;
   p.mode = 'foot';
   game.setPlayer(p);
-  game.env.day = 1; game.env.clock = 8.5;
+  // (half past eight in the morning where you're born, whatever the hour elsewhere)
+  game.env.day = 1; game.env.zone = zoneOffset(p.x); game.env.clock = 8.5;
   for (const id of char.discovered) revealIsland(game, id);
   // a boat to start the journey
   const isl = spawn.island;
@@ -194,7 +196,8 @@ export function resumeCharacter(game, char) {
   p.mode = 'foot';
   game.setPlayer(p);
   game.env.day = char.world?.day || 1;
-  game.env.clock = char.world?.clock ?? 8.5;
+  // (the world clock; an old save kept only the hour, taken as the world's)
+  game.env.utc = char.world?.utc ?? char.world?.clock ?? 8.5;
   game.hintsShown = new Set(char.hintsShown || []);
   let active = null;
   for (const sd of char.ships || []) {

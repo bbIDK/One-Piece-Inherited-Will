@@ -485,7 +485,7 @@ export class Voyage {
   // ---------------------------------------------------------------- the host's clock and weather
   packEnv() {
     const g = this.game, e = g.env;
-    return { k: 'env', live: !!g.player, day: e.day, clock: r3(e.clock), st: r2(e.stormTarget), wt: r3(e.windTarget), wa: r3(e.windAngle), fc: e.forecast || 'Clear', wk: e.weather || null, wq: r2(e.weatherK ?? 1) };
+    return { k: 'env', live: !!g.player, day: e.day, clock: r3(e.utc ?? e.clock), st: r2(e.stormTarget), wt: r3(e.windTarget), wa: r3(e.windAngle), fc: e.forecast || 'Clear', wk: e.weather || null, wq: r2(e.weatherK ?? 1) };
   }
 
   sendEnv(now) {
@@ -501,14 +501,16 @@ export class Voyage {
     this.hostEnv = e;
     const g = this.game, env = g.env;
     if (!e.live || !g.player) return;
-    const diff = (e.day * 24 + e.clock) - (env.day * 24 + env.clock);
+    // (the world clock: each player sees it in their own time zone)
+    const K = 'utc' in env ? 'utc' : 'clock';
+    const diff = (e.day * 24 + e.clock) - (env.day * 24 + env[K]);
     if (Math.abs(diff) > 0.25) {
       const was = env.day;
-      env.day = e.day; env.clock = e.clock;
+      env.day = e.day; env[K] = e.clock;
       if (env.day > was) g.onNewDay?.(env.day);
     } else {
-      env.clock += diff * 0.5;
-      if (env.clock >= 24) { env.clock -= 24; env.day++; g.onNewDay?.(env.day); } else if (env.clock < 0) { env.clock += 24; env.day--; }
+      env[K] += diff * 0.5;
+      if (env[K] >= 24) { env[K] -= 24; env.day++; g.onNewDay?.(env.day); } else if (env[K] < 0) { env[K] += 24; env.day--; }
     }
     // (the host's kind of weather, then its storm: an island's or a story's may be stronger)
     if (e.wk && env.setWeather && e.wk !== env.weather) env.setWeather(e.wk, { k: e.wq ?? 1, sync: true });

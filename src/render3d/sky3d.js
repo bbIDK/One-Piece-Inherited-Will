@@ -449,12 +449,18 @@ export class Sky {
     // golden, while the evening sky glows, and down only as it darkens. (Day
     // and night are each half a turn, at their own pace.)
     const a = c >= 6 && c <= 19 ? (c - 6) / 13 * Math.PI : Math.PI * (1 + ((c - 19 + 24) % 24) / 11);
-    this.sunDir.set(Math.cos(a), Math.sin(a) * 0.95 + 0.05, 0.35).normalize();
+    // (and it climbs as high as where you are lets it: overhead at noon on the
+    // Grand Line, lower and lower toward the poles, standing to the south of
+    // you in the north and to the north of you in the south; z is south)
+    const lat = zone === 0 ? env.lat || 0 : 0.35, cl = Math.cos(lat), sl = Math.sin(lat);
+    this.sunDir.set(Math.cos(a), Math.sin(a) * cl * 0.95 + 0.05, Math.sin(a) * sl + 0.12 * Math.sign(sl || 1)).normalize();
     // (10,000 m down the daylight comes from straight overhead, all day long)
     if (zone === 2) this.sunDir.set(0.22, 0.95, 0.2).normalize();
     // (Fish-Man Island: 1 inside its bubble, 0 out in the deep: see bubble3d.js)
     const ib = zone === 2 ? this.inBubble ?? 1 : 1;
-    const moon = this.moonDir.set(-Math.cos(a), -Math.sin(a) * 0.9 + 0.1, -0.3).normalize();
+    // (the moon keeps its own hours: opposite the sun when full, rising later each night after)
+    const am = a + Math.PI + (env.moonPhase ?? 0) * Math.PI * 2 * 0.25;
+    const moon = this.moonDir.set(Math.cos(am), Math.sin(am) * cl * 0.9 + 0.1, Math.sin(am) * sl - 0.1 * Math.sign(sl || 1)).normalize();
     const day = env.daylight;
     const night = 1 - day;
     const dusk = Math.max(0, 1 - Math.abs(c - 18.8) / 1.6, 1 - Math.abs(c - 6.2) / 1.6);

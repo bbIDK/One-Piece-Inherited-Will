@@ -6,13 +6,30 @@
 // goes smoothly — the clouds first, then the rain; the rain stops, then the
 // sky clears — and sailing from one sea (or island) into the next changes it
 // over as you go.
-import { regionAt, REGION, isGrandLine, isCalmBelt, EQ, RM_X } from '../world/constants.js';
+import { regionAt, REGION, isGrandLine, isCalmBelt, EQ, RM_X, W, H } from '../world/constants.js';
 import { clamp, lerp, smoothstep, TAU, angleDiff } from '../core/math.js';
 import { RM, canalAt, canalLevel, nearRM } from '../world/reverseMountain.js';
 import { T } from '../world/tiles.js';
 import { KINDS, CLIMATES, LABELS, placeAt, rollWeather, weatherTargets, allowed } from './weather.js';
 
 export const DAY_SECONDS = 960; // one in-game day = 16 real minutes
+
+// Time zones: the Blue Planet turns, so it's noon on one side of it while
+// it's midnight on the other — an hour of local time for every 24th of the
+// way round (1,024 m). The world keeps one clock (`utc`, at the meridian
+// ZONE_X, in the middle of the East Blue, where a new life starts); what the
+// game reads as `clock` is the time where you are. The sun stands lower the
+// further you are from the equator (at noon it's overhead on the Grand Line,
+// low in the south toward the North Blue's polar seas): `lat` is how far
+// from the equator you are, for the sky (eased toward the poles so the
+// polar islands still see a day).
+export const ZONE_X = 3840;
+/** The hours local time is ahead of the world clock at chart x. */
+export function zoneOffset(x) {
+  let d = (x - ZONE_X) / W;
+  d -= Math.round(d);
+  return d * 24;
+}
 
 // how long each field takes to follow the weather (s, to get most of the way)
 const TAU_CLOUD = 14, TAU_CLEAR = 22, TAU_PRECIP = 5, TAU_STORM = 9, TAU_FOG = 5, TAU_SLOW = 12, TAU_FRONT = 7;
@@ -29,7 +46,9 @@ const DUSTY = [1.06, 0.9, 0.7]; // the light through blowing sand
 export class Env {
   constructor() {
     this.time = 0;
-    this.clock = 8.5; // hours
+    this.utc = 8.5; // the world clock (hours): see ZONE_X
+    this.zone = 0; // hours local time is ahead of it, where you are
+    this.lat = 0; // how far from the equator you are, for the sun (radians, + north)
     this.day = 1;
     this.windAngle = 0.4;
     this.windStrength = 1;
@@ -83,14 +102,34 @@ export class Env {
     this.stormOut = 0;
   }
 
+  /** The local time where you are (hours, 0..24). Set it and the world clock moves to match. */
+  get clock() { const c = this.utc + this.zone; return c - 24 * Math.floor(c / 24); }
+  set clock(v) {
+    // (run past midnight — waiting, sleeping — and the day rolls over in update)
+    while (v >= 24) { v -= 24; this.dayBump = (this.dayBump || 0) + 1; }
+    while (v < 0) v += 24;
+    this.utc = v - this.zone;
+    if (this.utc < 0) this.utc += 24;
+    if (this.utc >= 24) this.utc -= 24;
+  }
+
   get moonPhase() { return ((this.day % 8) / 8); }
   get fullMoon() { return this.day % 8 === 0; }
   get isNight() { return this.daylight < 0.35; }
 
   update(dt, game) {
     this.time += dt;
-    this.clock += dt * 24 / DAY_SECONDS;
-    if (this.clock >= 24) { this.clock -= 24; this.day++; game.onNewDay?.(this.day); }
+    // (where you are on the planet: your time zone, how high the sun climbs)
+    const fp = game.focus?.(), fw = game.world;
+    if (fp && fw && fw.zone === 0) {
+      this.zone = zoneOffset(fp.x);
+      this.lat = (0.5 - clamp(fp.y / H, 0, 1)) * Math.PI * 0.7;
+    }
+    // (the days are counted on the world clock, so every sea agrees on the date)
+    this.utc += dt * 24 / DAY_SECONDS;
+    while (this.utc >= 24) { this.utc -= 24; this.day++; game.onNewDay?.(this.day); }
+    while (this.utc < 0) this.utc += 24;
+    while (this.dayBump > 0) { this.dayBump--; this.day++; game.onNewDay?.(this.day); }
     // daylight curve: sunrise 5-7, sunset 18-20
     const c = this.clock;
     const rise = smoothstep(5, 7, c), set = 1 - smoothstep(18, 20, c);

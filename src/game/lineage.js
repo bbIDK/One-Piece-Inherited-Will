@@ -503,6 +503,7 @@ export function snapshot(game) {
   c.techniques = p.techniques;
   c.world.day = game.env.day;
   c.world.clock = game.env.clock;
+  c.world.utc = game.env.utc;
   c.pos = { x: p.x, y: p.y, zone: game.world.id, mode: p.mode };
   // (riding a ropeway's cabin: saved at the station it's making for, not hanging in the air)
   const rw = p.climb?.ride;

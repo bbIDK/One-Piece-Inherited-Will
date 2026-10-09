@@ -21,7 +21,7 @@
 // which the ball's curve takes back in: its true shape and size, on the open
 // sea between, where there's nothing to squeeze.
 import * as THREE from 'three';
-import { W, H, RM_X, MG_X, RL_HALF, GL_TOP, GL_BOTTOM, CB_TOP, CB_BOTTOM } from '../world/constants.js';
+import { W, H, RM_X, MG_X, RL_HALF, GL_TOP, GL_BOTTOM, CB_TOP, CB_BOTTOM, POLAR } from '../world/constants.js';
 import { drawBuildings } from './chartDetail.js';
 
 const TEX_W = 4096, TEX_H = 2048; // (the whole planet: about 6 m of it to a pixel)
@@ -36,47 +36,133 @@ const shrink = (y) => Math.max(0.06, Math.cos(latOf(y)));
 const wrapDx = (a, b) => { let d = b - a; d -= W * Math.round(d / W); return d; };
 
 /**
- * How far either side of its middle an anchor reaches at row y. The Red
- * Line's run its full width with the sea alongside, except toward the
- * poles, where the circles of latitude grow small: there they narrow to the
- * Red Line itself (and never more than a quarter of the way round), so the
- * two halves of the ring meet across the pole instead of being laid one
- * over the other.
+ * True to shape, row by row. The game's world is a chart that wraps east–
+ * west, every row W metres round; on a ball a circle of latitude is only
+ * cos(latitude) of that, so laid straight round it the chart squeezes
+ * everything east–west toward the poles. So each row is laid round the ball
+ * by its own map: every feature on it (an island, the Red Line) kept to its
+ * true width about its own middle, the open sea between it and its
+ * neighbours taking up the squeeze — and where a row is too crowded for all
+ * of them at full width (near the poles), each gets its share of the room
+ * between its neighbours, so nothing is ever laid over anything else: the
+ * Red Line's two halves meet across the pole, and no island ends up on it.
+ *
+ * Every feature stays centred where the chart has it, so a row's map only
+ * changes next to what's on it: a coast doesn't jump from one row to the
+ * next because an island comes or goes somewhere else on the row.
  */
-function halfAt(A, y) {
-  const h = (A.x1 - A.x0) / 2;
-  return A.band ? Math.min(h, Math.max(RL_HALF, shrink(y) * W / 4 - 2)) : h;
-}
+const ROWS = TEX_H;
+const RL_MARGIN = 30;
 
-/** The features drawn true to shape, each about its own middle: the islands, and the Red Line's two great arcs. */
-function anchorsOf(world) {
+/** The features on the chart: the islands (their land and a little sea round it), and the Red Line's two arcs. */
+function featuresOf(world) {
   const out = [];
   for (const isl of world.islands || []) {
     const B = isl.landBox;
     if (!B) continue;
-    out.push({ x0: B.x0 - 30, y0: B.y0 - 30, x1: B.x1 + 30, y1: B.y1 + 30, xc: (B.x0 + B.x1) / 2 });
+    out.push({ c: (B.x0 + B.x1) / 2, h: (B.x1 - B.x0) / 2 + 30, y0: B.y0 - 30, y1: B.y1 + 30 });
   }
-  for (const mx of [RM_X, MG_X]) out.push({ x0: mx - RL_HALF - 420, y0: 0, x1: mx + RL_HALF + 420, y1: H, xc: mx, band: true });
   return out;
 }
 
-/** Where on the globe's picture a chart point (x, y) is (u in 0..1): about the middle of the island it's on or by. */
-export function globeU(x, y, anchors) {
-  let u = x / W;
-  if (anchors) {
-    for (const A of anchors) {
-      const dx = wrapDx(A.xc, x);
-      const ha = halfAt(A, y);
-      if (y < A.y0 - 200 || y > A.y1 + 200 || Math.abs(dx) > ha + 200) continue;
-      // (inside its box: placed as it's drawn; coming away from it, eased back onto the plain chart)
-      const out = Math.max(0, Math.abs(dx) - ha, A.y0 - y, y - A.y1);
-      const k = Math.max(0, 1 - out / 200);
-      const uA = (A.xc + dx / shrink(y)) / W;
-      u = u + (uA - u) * k;
-      break;
+/**
+ * One row's map: chart x → x laid round the ball (both in metres), as
+ * matched breakpoints. The Red Line first: its two arcs widened to their
+ * true width by latitude alone (so its coasts run smooth from row to row),
+ * up to most of the row near the poles, where its two halves meet. Then the
+ * sea between them is laid evenly into what's left, each island's middle
+ * going where that puts it (so nothing can end up on the Red Line), and
+ * each island widened about its middle to its true width — as far as its
+ * neighbours leave it room.
+ */
+function rowMap(feats, y) {
+  const s = shrink(y), K = 1 / s;
+  const HALF = W / 2;
+  // (the Red Line's arcs, each grown to take in whatever stands on it: Mary Geoise, Reverse Mountain)
+  const rl = [{ c: MG_X, h: RL_HALF + RL_MARGIN }, { c: RM_X, h: RL_HALF + RL_MARGIN }];
+  const isl = [];
+  for (const f of feats) {
+    if (f.rl || y < f.y0 || y > f.y1) continue;
+    const c = ((f.c % W) + W) % W;
+    let onRL = false;
+    for (const R of rl) {
+      const d = Math.abs(wrapDx(R.c, c));
+      if (d - f.h < R.h) { R.h = Math.max(R.h, d + f.h); onRL = true; }
     }
+    if (!onRL) isl.push({ c, h: f.h });
   }
-  return ((u % 1) + 1) % 1;
+  // (most of the way round near the poles; over the pole's own ice, all of it: the ring crosses the pole)
+  for (const R of rl) R.k = y < POLAR || y > H - POLAR ? 0.25 * W / R.h : Math.max(1, Math.min(K, 0.2 * W / R.h));
+  // (the two stretches of sea between the arcs, raw → laid)
+  const xs = [], Xs = [];
+  const stretches = [
+    { a: rl[0].h, b: HALF - rl[1].h, A: rl[0].h * rl[0].k, B: HALF - rl[1].h * rl[1].k },
+    { a: HALF + rl[1].h, b: W - rl[0].h, A: HALF + rl[1].h * rl[1].k, B: W - rl[0].h * rl[0].k },
+  ];
+  xs.push(-rl[0].h); Xs.push(-rl[0].h * rl[0].k);
+  for (let si = 0; si < 2; si++) {
+    const S = stretches[si];
+    const q = (S.B - S.A) / Math.max(1, S.b - S.a);
+    xs.push(S.a); Xs.push(S.A);
+    // (its islands, west to east, overlaps merged; where each one's middle goes)
+    const on = isl.filter((f) => f.c > S.a && f.c < S.b).sort((p, r) => p.c - r.c);
+    const m = [];
+    for (const f of on) {
+      const L = m[m.length - 1];
+      if (L && f.c - f.h <= L.c + L.h) { const lo = L.c - L.h, hi = Math.max(L.c + L.h, f.c + f.h); L.c = (lo + hi) / 2; L.h = (hi - lo) / 2; } else m.push({ ...f });
+    }
+    for (const f of m) {
+      f.lo = Math.max(S.a, f.c - f.h); f.hi = Math.min(S.b, f.c + f.h);
+      f.M = S.A + (f.c - S.a) * q;
+    }
+    // (as wide as it truly is, but into no more than its share of the room to each neighbour)
+    for (let i = 0; i < m.length; i++) {
+      const f = m[i], hw = Math.max(1, f.h);
+      let k = K;
+      const left = i ? m[i - 1] : null, right = i < m.length - 1 ? m[i + 1] : null;
+      const gl = f.M - (left ? left.M : S.A), gr = (right ? right.M : S.B) - f.M;
+      k = Math.min(k, 0.94 * gl * (left ? hw / (hw + left.h) : 1) / hw, 0.94 * gr * (right ? hw / (hw + right.h) : 1) / hw);
+      f.k = Math.max(0.05, k);
+    }
+    for (const f of m) {
+      const L0 = Math.max(S.A, f.M - (f.c - f.lo) * f.k), L1 = Math.min(S.B, f.M + (f.hi - f.c) * f.k);
+      if (f.lo > xs[xs.length - 1] && L0 >= Xs[Xs.length - 1]) { xs.push(f.lo); Xs.push(L0); }
+      if (f.hi > xs[xs.length - 1] && L1 >= Xs[Xs.length - 1]) { xs.push(f.hi); Xs.push(L1); }
+    }
+    xs.push(S.b); Xs.push(S.B);
+  }
+  xs.push(W + rl[0].h); Xs.push(W + rl[0].h * rl[0].k);
+  return { xs: Float64Array.from(xs), Xs: Float64Array.from(Xs) };
+}
+
+/** Interpolate along matched, increasing breakpoints a → b (one turn from a[0]). */
+function along(a, b, v) {
+  const n = a.length;
+  v = a[0] + ((((v - a[0]) % W) + W) % W);
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (a[m] <= v) lo = m; else hi = m; }
+  const t = a[hi] > a[lo] ? (v - a[lo]) / (a[hi] - a[lo]) : 0;
+  const r = b[lo] + (b[hi] - b[lo]) * t;
+  return ((r % W) + W) % W;
+}
+
+/** The whole chart's row maps (one per row of the globe's picture). */
+export function anchorsOf(world) {
+  const feats = featuresOf(world), rows = new Array(ROWS);
+  for (let j = 0; j < ROWS; j++) rows[j] = rowMap(feats, (j + 0.5) * H / ROWS);
+  return {
+    rows,
+    row(y) { return rows[Math.max(0, Math.min(ROWS - 1, Math.floor(y / H * ROWS)))]; },
+    /** chart x → x round the ball, on row y */
+    fwd(x, y) { const r = this.row(y); return r ? along(r.xs, r.Xs, x) : ((x % W) + W) % W; },
+    /** and back */
+    inv(X, y) { const r = this.row(y); return r ? along(r.Xs, r.xs, X) : ((X % W) + W) % W; },
+  };
+}
+
+/** Where on the globe's picture a chart point (x, y) is (u in 0..1). */
+export function globeU(x, y, maps) {
+  return (maps ? maps.fwd(x, y) : ((x % W) + W) % W) / W;
 }
 
 /** Where on the sphere a picture point (u, v) lies — as three.js's SphereGeometry lays its uv. */
@@ -168,12 +254,7 @@ export class GlobeView {
   centre() {
     const u = (((Math.PI / 2 - this.yaw) / (Math.PI * 2)) % 1 + 1) % 1, v = 0.5 - this.tilt / Math.PI;
     const y = Math.max(0, Math.min(1, v)) * H;
-    let x = u * W;
-    for (const A of this.anchors || []) {
-      if (A.band || y < A.y0 || y > A.y1) continue;
-      const du = wrapDx(A.xc, x), half = halfAt(A, y) / shrink(y);
-      if (Math.abs(du) <= half) { x = A.xc + du * shrink(y); break; }
-    }
+    const x = this.anchors ? this.anchors.inv(u * W, y) : u * W;
     return { x: ((x % W) + W) % W, y };
   }
 
@@ -213,18 +294,24 @@ export class GlobeView {
     const gf = F.getContext('2d');
     gf.drawImage(A, 0, 0);
     const pxW = W / TEX_W, pxH = H / TEX_H;
-    for (const a of this.anchors) {
-      const j0 = Math.max(0, Math.floor(a.y0 / pxH)), j1 = Math.min(TEX_H - 1, Math.ceil(a.y1 / pxH));
-      for (let j = j0; j <= j1; j++) {
-        const yj = (j + 0.5) * pxH, half = halfAt(a, yj);
-        const sw = 2 * half / pxW, sx0 = ((((a.xc - half) / pxW) % TEX_W) + TEX_W) % TEX_W;
-        const s = shrink(yj), dw = sw / s, dx = a.xc / pxW - dw / 2;
-        for (const off of [-TEX_W, 0, TEX_W]) {
-          if (dx + off > TEX_W || dx + off + dw < 0) continue;
-          if (sx0 + sw <= TEX_W) gf.drawImage(A, sx0, j, sw, 1, dx + off, j, dw, 1);
-          else { const a1 = TEX_W - sx0; gf.drawImage(A, sx0, j, a1, 1, dx + off, j, a1 / s, 1); gf.drawImage(A, 0, j, sw - a1, 1, dx + off + a1 / s, j, (sw - a1) / s, 1); }
-        }
+    // (each row laid round as its map has it, a stretch at a time; the source
+    // and the place it goes may each run across the picture's seam)
+    const seg = (j, sx0, sx1, dx0, dx1) => {
+      if (sx1 - sx0 < 1e-6) return;
+      const sw = sx1 - sx0, dw = dx1 - dx0;
+      // (cut the source where it crosses the seam, the destination in proportion)
+      const s0 = ((sx0 % TEX_W) + TEX_W) % TEX_W;
+      const parts = s0 + sw <= TEX_W ? [[s0, sw, dx0, dw]] : [[s0, TEX_W - s0, dx0, dw * (TEX_W - s0) / sw], [0, sw - (TEX_W - s0), dx0 + dw * (TEX_W - s0) / sw, dw * (sw - (TEX_W - s0)) / sw]];
+      for (const [ps, pw, pd, pdw] of parts) {
+        const d0 = ((pd % TEX_W) + TEX_W) % TEX_W;
+        gf.drawImage(A, ps, j, pw, 1, d0, j, pdw, 1);
+        if (d0 + pdw > TEX_W) gf.drawImage(A, ps, j, pw, 1, d0 - TEX_W, j, pdw, 1);
       }
+    };
+    for (let j = 0; j < TEX_H; j++) {
+      const r = this.anchors.rows[j];
+      if (!r) continue;
+      for (let i = 0; i + 1 < r.xs.length; i++) seg(j, r.xs[i] / pxW, r.xs[i + 1] / pxW, r.Xs[i] / pxW, r.Xs[i + 1] / pxW);
     }
     const tex = new THREE.CanvasTexture(F);
     tex.colorSpace = THREE.SRGBColorSpace;
