@@ -68,6 +68,7 @@ import { installDecks, hatchSpot, helmSpot, placeOnDeck } from './game/decks.js'
 import { deckToWorld, shipDims } from './world/hull.js';
 import { installTraffic } from './game/traffic.js';
 import { installLadders } from './game/ladders.js';
+import { installMasthead } from './game/masthead.js';
 import { installRopeways } from './game/ropeway.js';
 import { installGangways } from './game/gangway.js';
 import { installFleet, launchShip } from './game/fleet.js';
@@ -268,6 +269,7 @@ async function start() {
   installDecks(game);
   installTraffic(game);
   installLadders(game);
+  installMasthead(game);
   installGangways(game);
   installRopeways(game);
   installFleet(game);

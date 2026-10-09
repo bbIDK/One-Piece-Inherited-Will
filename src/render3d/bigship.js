@@ -625,7 +625,7 @@ function fittings(k, d, P) {
     for (const zz of [-0.18, 0.18]) k.add(cyl(0.03, 0.03, len * 0.9, 5), { at: [xc - len * 0.45, dk + 0.8, zz * b.w], rot: [0, 0, -Math.PI / 2], color: '#b08850' });
   }
   // the helm: the wheel (just the one) and the binnacle, on the quarterdeck
-  helmWheel(k, P, d.wheelU, d.yq);
+  helmWheel(k, P, d.wheelU, d.helmFloor);
   if (d.binnacleU !== null) {
     const fy = d.yq;
     k.add(box(0.45, 0.95, 0.45), { at: [d.binnacleU, fy, 0], color: P.wood, outline: 0.012 });
@@ -857,7 +857,7 @@ export function bigSailPlan(def, d, mast) {
     // under it; or, where that would leave it stunted, carried high enough to
     // clear that deck as well
     const tm = (mast.x + d.L / 2) / d.L, dt = 0.05 / d.L;
-    let len = Math.min(d.L * 0.2, 8), y0 = mast.base + 2.3;
+    let len = Math.min(d.L * 0.2, 8), y0 = mast.base + 2.6;
     let tUp = null;
     for (let t = tm; t >= tm - len / d.L; t -= dt) if (floorAt(d, t) > mast.base + 0.05) { tUp = t; break; }
     if (tUp !== null) {
@@ -867,10 +867,12 @@ export function bigSailPlan(def, d, mast) {
     }
     sails.push({ type: 'gaff', x: mast.x, y0, y1: mast.h1 - 0.3, len });
   } else {
-    sails.push({ type: 'square', x: mast.x, w: wC, y0: mast.base + 2.7, y1: mast.h1 - 0.35, emblem: mast.main, yardR: yr });
+    // (the course's foot well over the heads of the crew: the deck stays open to see across)
+    sails.push({ type: 'square', x: mast.x, w: wC, y0: Math.min(mast.base + 3.9, mast.h1 - 3), y1: mast.h1 - 0.35, emblem: mast.main, yardR: yr });
   }
   sails.push({ type: 'square', x: mast.x, w: wC * 0.82, y0: mast.h1 + 0.5, y1: mast.h2 - 0.35, emblem: mast.fore && def.sail === 'marine', yardR: yr * 0.85 });
-  sails.push({ type: 'square', x: mast.x, w: wC * 0.62, y0: mast.h2 + 0.35, y1: mast.h - 0.7, yardR: yr * 0.7 });
+  // (on the mainmast the topgallant sets above the crow's nest, not through it)
+  sails.push({ type: 'square', x: mast.x, w: wC * 0.62, y0: mast.h2 + (mast.main ? 1.5 : 0.35), y1: mast.h - 0.7, yardR: yr * 0.7 });
   if (mast.fore && !noSprit(def.figurehead)) {
     const b = bigBowTip(d, def);
     sails.push({ type: 'jib', x: mast.x, y1: mast.h2 - 0.4, head: [mast.x + 0.4, mast.h2 - 0.4], tipX: b.tip[0], tipY: b.tip[1] - 0.2, clew: [xAt(d, 0.9), (d.bowY ?? d.yf) + (d.fore ? 2.6 : 1.9)] });
@@ -906,6 +908,10 @@ export function bigMastGeometry(def, d, plan) {
       k.add(cyl(R, R * 0.85, 1.0, 12, true), { at: [m.x + r * 1.1, y, 0], color: '#8d6e4a', double: true, outline: 0.02 });
       k.add(cyl(R * 0.85, R * 0.85, 0.06, 12), { at: [m.x + r * 1.1, y, 0], color: '#6d4c33' });
       k.add(torus(R, 0.05, 4, 14), { at: [m.x + r * 1.1, y + 1.0, 0], rot: [Math.PI / 2, 0, 0], color: '#5d4037' });
+      // and the ladder up to it, up the aft side of the mast from the deck (climbable: see game/masthead.js)
+      const lx = m.x - r - 0.14, H = y - m.base + 0.9;
+      for (const z of [-0.24, 0.24]) k.add(box(0.07, H, 0.07), { at: [lx, m.base, z], color: '#5d4037', outline: 0.01 });
+      for (let h = 0.35; h < H - 0.1; h += 0.34) k.add(box(0.05, 0.05, 0.5), { at: [lx, m.base + h, 0], color: '#8d6e4a' });
     }
     // rope hoops up the lower mast
     for (let y = m.base + 1.6; y < m.h1 - 1; y += 1.4) k.add(torus(r * 1.05, 0.04, 3, 10), { at: [m.x, y, 0], rot: [Math.PI / 2, 0, 0], color: '#c8b89a' });

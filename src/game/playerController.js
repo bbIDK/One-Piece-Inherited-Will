@@ -141,7 +141,7 @@ export class PlayerController {
       }
     } else if (buf.jump > 0 && p.tryJump(game, 0)) buf.jump = 0;
     // on a ship's ladder you climb it yourself: W up, S down, Space lets go (actor.js updateClimb)
-    if (p.climb?.to?.ladder) {
+    if (p.climb?.to?.ladder || p.climb?.mast) {
       p.climbInput = (inp.isDown('W') || inp.isDown('ArrowUp') ? 1 : 0) - (inp.isDown('S') || inp.isDown('ArrowDown') ? 1 : 0);
       if (inp.wasPressed('Space')) p.letGo = true;
     } else { p.climbInput = 0; p.letGo = false; }

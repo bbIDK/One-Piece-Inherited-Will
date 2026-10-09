@@ -1488,6 +1488,8 @@ export class Actor extends Entity {
   updateClimb(dt, game) {
     // (riding a ropeway's cabin: see ropeway.js)
     if (this.climb.ride) { rideStep(this, dt, game); return; }
+    // (up the mainmast to the crow's nest: see masthead.js)
+    if (this.climb.mast) return;
     const c = this.climb, w = game.world, to = c.to;
     if (to.ship && (to.ship.sunk || to.ship.alive === false)) { this.endClimb(game, true); return; }
     // (up a ladder yourself: W climbs, S goes back down — off the foot of it

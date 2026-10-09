@@ -149,10 +149,11 @@ function bigDims(def) {
   const tq = narrow ? Math.max(0.24, 2.9 / L) : mid ? 0.26 : 0.3, tf = fore ? (large ? 0.85 : 1 - Math.max(0.13, 5.4 / L)) : 1, tp = poop ? 0.13 : 0;
   const yq = deckY + hq, yf = deckY + hf, yp = yq + hp;
   const masts = Math.max(1, Math.min(4, def.masts || 3));
-  const tHelm = poop ? tp + 0.02 : narrow ? 0.08 : 0.1;
+  // (with a poop deck, the helm is up on it: the highest deck, where the captain sees over everything)
+  const tHelm = poop ? tp - 2.2 / L : narrow ? 0.08 : 0.1;
   const d = {
     L, B, D, open: false, big: true, narrow, deckY, bulH, castle: true, fore, poop, hq, hf, hp, tq, tf, tp, masts,
-    mastH: narrow ? L * 0.95 + 3 : L + 4, helmX: -L / 2 + tHelm * L, yq, yf, yp, helmFloor: yq, sheer: 0.4, walk: 0.86,
+    mastH: narrow ? L * 0.95 + 3 : L + 4, helmX: -L / 2 + tHelm * L, yq, yf, yp, helmFloor: poop ? yp : yq, sheer: Math.min(1.3, 0.4 + L * 0.016), walk: 0.86,
   };
   // the bow's height (the forecastle, or the rail at the stem)
   d.bowY = fore ? yf : deckY + 0.9;
@@ -162,7 +163,7 @@ function bigDims(def) {
   // the wheel just forward of the helmsman, and the binnacle ahead of it (where there's room)
   d.wheelU = d.helmX + 0.9;
   const bu = d.wheelU + 1.45;
-  d.binnacleU = !narrow && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
+  d.binnacleU = !narrow && !poop && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
   // stairs along the rails: up to the quarterdeck and the forecastle from the
   // main deck, and from the quarterdeck up to the poop
   const W = narrow ? 1.05 : Math.min(1.6, 0.75 + B * 0.055), sides = narrow ? [1] : [-1, 1];
@@ -331,7 +332,7 @@ function bigDims(def) {
   for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: 'main' });
   for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: 'hold' });
   if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: 'main' });
-  d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: 'quarter' });
+  d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: d.poop ? 'poop' : 'quarter' });
   if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: 'quarter' });
   if (fore) d.solids.push({ u: (tf + 0.03 - 0.5) * L, v: 0, r: 0.55, lvl: 'fore' }); // the belfry
   if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: 'main' });
@@ -897,7 +898,7 @@ export function wheelSpec(d) {
   if (d.open) return null;
   if (d._wheel) return d._wheel;
   let w;
-  if (d.big) w = { u: d.wheelU, floor: d.yq, hub: d.yq + 0.92, R: 0.56, grip: 0.66 };
+  if (d.big) w = { u: d.wheelU, floor: d.helmFloor, hub: d.helmFloor + 0.92, R: 0.56, grip: 0.66 };
   else {
     const floor = floorAt(d, (d.wheelU + 0.1 + d.L / 2) / d.L);
     w = { u: d.wheelU, floor, hub: floor + 0.92, R: 0.4, grip: 0.47 };
@@ -1203,6 +1204,26 @@ export function hullPoint(ship, dx, dy, pad = 0) {
   if (Math.abs(t - tc) * d.L > pad) return null;
   if (Math.abs(v) > hbAt(tc, d.B) + pad) return null;
   return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
+}
+
+/** Each mast's height share by count (fore … aft): see render3d/bigship.js bigMastPlan. */
+export const MAST_KS = (n) => (n >= 4 ? [0.92, 1.0, 0.86, 0.7] : n === 3 ? [0.92, 1.0, 0.8] : n === 2 ? [1.0, 0.84] : [1.0]);
+
+/**
+ * A big ship's crow's nest, up her mainmast: { m (which mast), u (its middle,
+ * along her), y (its floor, above her waterline), r (its radius), mu (the
+ * mast), base (the deck at the mast's foot), mr (the mast's radius) } — or null.
+ * A ladder runs up the aft side of the mast to it.
+ */
+export function mastNest(d) {
+  if (!d.big || !d.mastU?.length) return null;
+  if (d._nest !== undefined) return d._nest;
+  const n = d.mastU.length, m = n >= 3 ? 1 : 0, mu = d.mastU[m];
+  const k = MAST_KS(n)[m], base = floorAt(d, (mu + d.L / 2) / d.L);
+  const H = d.mastH * k, h2 = base + (H - base) * 0.76, mr = d.mastR * Math.sqrt(k);
+  const out = { m, u: mu + mr * 1.1, y: h2 + 0.13, r: 0.75, mu, base, mr };
+  Object.defineProperty(d, '_nest', { value: out, enumerable: false });
+  return out;
 }
 
 /** World point of a deck position (t along, v across) of a ship. */
