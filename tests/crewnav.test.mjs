@@ -47,7 +47,7 @@ function clearRun(s, x0, y0, x1, y1, r) {
 
 test('from amidships on every big ship, a clear way out to her rail toward a ship alongside, and over it: a leap where it\'s a jump, else a dive', () => {
   for (const ta of big) {
-    for (const [gap, leap] of [[1.2, true], [14, false]]) {
+    for (const [gap, leap] of [[1.2, true], [6, false]]) {
       const { a: T, b: S } = pair(ta, 'caravel', gap), g = game([T, S]);
       const you = on(g, S, 0.5, 0);
       // (a spot on her main deck near the middle, clear of the mainmast)

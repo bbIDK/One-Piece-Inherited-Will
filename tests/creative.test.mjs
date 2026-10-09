@@ -6,7 +6,6 @@
 // that level opens. (The panel itself, and the model rebuilt in 3D, are
 // looked at in the browser.)
 import { test } from 'node:test';
-import { legacyV } from '../src/game/physics.js';
 import assert from 'node:assert/strict';
 
 globalThis.window = globalThis;
@@ -48,7 +47,7 @@ test('a new race is taken on whole, there and then: body, attributes, lives and 
   assert.equal(c.race, 'mink');
   assert.equal(p.race, 'mink');
   // (a Mink springs higher, and its build is on the attributes in place of a human's)
-  assert.equal(p.jumpStats().v, legacyV(RACES.mink.jump));
+  assert.equal(p.jumpStats().v, RACES.mink.jump);
   assert.equal(p.jumpStats().charge, RACES.mink.charge);
   assert.equal(c.attrs.agi, attrs0.agi + RACES.mink.stats.agi);
   assert.equal(c.attrs.wil, attrs0.wil - RACES.human.stats.wil);

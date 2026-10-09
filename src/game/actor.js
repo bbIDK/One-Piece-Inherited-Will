@@ -24,12 +24,8 @@ import { plankJoins, PLANK_W } from './gangway.js';
 import { bw } from '../world/bframe.js';
 import { heightsOf } from '../world/interiors.js';
 import { attackSpec, infuse } from './moveset.js';
-import { G, legacyV, fallStep, bodyDragK, gripStep, gripOf, DRY_GRIP } from './physics.js';
-// (the surfaces that give less than a dry grip: physics.js)
-const GRIP_OF = [];
-for (const [t, n] of [[T.ICE, 'ice'], [T.PACK_ICE, 'pack_ice'], [T.SNOW, 'snow'], [T.SNOWROCK, 'snowrock'], [T.MUD, 'mud'], [T.SAND, 'sand'], [T.DESERT, 'desert'], [T.MARBLE, 'marble'], [T.ISLAND_CLOUD, 'cloud'], [T.CANDY, 'candy'], [T.CAKE, 'cake'], [T.ASH, 'ash']]) GRIP_OF[t] = n;
-const _gv = [0, 0];
-const _sv = [0, 0], _sv2 = [0, 0], _z2 = [0, 0];
+const GAME_G = 22; // (gravity for jumps and falls: heavier than Earth's, for a snappy hop)
+const _sv = [0, 0], _sv2 = [0, 0];
 /** How fast a point aboard ship `s` is moving over the world (m/s): her way along her heading, and her turn swinging it round her middle (v = ω × r). */
 let _svK = 0;
 function shipVelAt(w, s, x, y) {
@@ -549,8 +545,7 @@ export class Actor extends Entity {
   /** Take-off speeds for this body: { v (a plain jump), charge (× for a full charge), leap (out of the water) }. */
   jumpStats() {
     const R = RACES[this.race] || RACES.human;
-    // (the race's spring, set as the height it carries you — physics.js legacyV: same height, real gravity)
-    return { v: legacyV((R.jump || 7.6) * (this.jumpMul || 1)), charge: R.charge || 1.45, leap: R.leap || 1 };
+    return { v: (R.jump || 7.6) * (this.jumpMul || 1), charge: R.charge || 1.45, leap: R.leap || 1 };
   }
 
   /** Can you jump right now: on your feet, or at the surface of the water (not a Devil Fruit user). */
@@ -622,14 +617,6 @@ export class Actor extends Entity {
     return game.seaDepth ? game.seaDepth(this.x, this.y) : 3;
   }
 
-  /** The grip under your feet just now (physics.js gripOf): the ground's, a little less wet in the rain. */
-  gripHere(game) {
-    const name = GRIP_OF[game.world.type(this.x, this.y)];
-    let mu = name ? gripOf(name) : DRY_GRIP;
-    if (mu > 1 && (game.env?.rain || 0) > 0.3) mu = 1.05;
-    return mu;
-  }
-
   /** Deep enough to swim in (about chest-deep; a little less to stand up again, so shorelines don't flicker). */
   swimDepth(was) { return 1.75 * (this.look?.scale || 1) * (was ? 0.5 : 0.62); }
 
@@ -665,22 +652,17 @@ export class Actor extends Entity {
     const wd = this.waterUnder(game);
     const deep = wd > this.swimDepth(false);
     const z0 = this.z;
-    // Earth's gravity, and the air pushing back on a body falling through it
-    // (½ρv²C_dA: little in a jump, a lot in a long fall — a body tops out at
-    // about 40 m/s); in the sea, Archimedes: the water takes almost all of a
-    // body's weight (it's nearly as dense), and its drag is far stronger
-    let grav = G, k = bodyDragK(s);
+    let grav = GAME_G;
     if (deep && z0 < 0 && this.vz < 0) {
+      // (in up to the chest: drag, and the water takes your weight)
       const sub = clamp(-z0 / (1.3 * s), 0, 1);
       grav *= 1 - sub * 0.8;
       this.vz -= this.vz * Math.min(1, dt * 9 * sub);
     }
-    this.vz = fallStep(this.vz, dt, k, grav);
+    this.vz -= grav * dt;
     this.z += this.vz * dt;
     if (this.vz > 0) { this.underRoof(game); return; } // (still rising: out of the water too)
-    // (how hard a landing is, in the units the effects were tuned in: the
-    // same height of fall reads the same, whatever the gravity)
-    const IMP = 1 / legacyV(1);
+    const IMP = 1;
     if (wd > 0 && z0 > 0 && this.z <= 0) {
       const impact = -this.vz * IMP;
       game.fx.ripple?.(this.x, this.y, Math.min(2.4, 0.8 + impact * 0.1));
@@ -1630,20 +1612,9 @@ export class Actor extends Entity {
       const tx = i.mx * sp, ty = i.my * sp;
       // (the water holds you: a swimmer gathers way and loses it over a moment —
       // running in, you glide on and slow down rather than stopping dead)
-      if (this.inWater) {
-        const k = Math.min(1, dt * 4);
-        this.vx += (tx - this.vx) * k;
-        this.vy += (ty - this.vy) * k;
-      } else {
-        // on your feet, you speed up, stop and turn only as fast as the grip
-        // under them lets you push (F = μmg: a = μg) — on ice you skid on;
-        // in the air there's nothing to push on but a twist of the body, so
-        // a jump carries the way you had (momentum) with only a little steer
-        const air = (this.z || 0) > 0.05 || !!this.vz;
-        const mu = air ? 0.35 : this.deck ? DRY_GRIP : this.gripHere(game);
-        gripStep(this.vx, this.vy, tx, ty, mu, dt, _gv);
-        this.vx = _gv[0]; this.vy = _gv[1];
-      }
+      const k = Math.min(1, dt * (this.inWater ? 4 : 16));
+      this.vx += (tx - this.vx) * k;
+      this.vy += (ty - this.vy) * k;
       vx = this.vx; vy = this.vy;
     } else {
       this.vx *= 0.8; this.vy *= 0.8;
@@ -1654,6 +1625,15 @@ export class Actor extends Entity {
       if (this.dash.t <= 0) { this.dash = null; this.vx *= 0.3; this.vy *= 0.3; }
     }
     vx += this.kb.x; vy += this.kb.y;
+    // (the way a ship had under you, carried on after you've jumped off her
+    // deck: kept in the air, lost quickly on your feet or in the water)
+    if (this.carryV) {
+      vx += this.carryV[0]; vy += this.carryV[1];
+      const air = ((this.z || 0) > 0.05 || !!this.vz) && !this.inWater && !this.deck;
+      const f = Math.exp(-dt * (air ? 0.15 : this.inWater ? 3 : 7));
+      this.carryV[0] *= f; this.carryV[1] *= f;
+      if (Math.hypot(this.carryV[0], this.carryV[1]) < 0.05) this.carryV = null;
+    }
     const decay = Math.exp(-dt * 8);
     this.kb.x *= decay; this.kb.y *= decay;
     if (Math.abs(this.kb.x) < 0.05) this.kb.x = 0;
@@ -1737,7 +1717,7 @@ export class Actor extends Entity {
       // ship does, and lose it only to the air, the ground's grip or the sea:
       // the deck under you is no longer carrying you, so your own velocity
       // has to carry it now)
-      if (!dk && !was.plank) { const sv = shipVelAt(game.world, was.ship, this.x, this.y); this.vx = (this.vx || 0) + sv[0]; this.vy = (this.vy || 0) + sv[1]; }
+      if (!dk && !was.plank) { const sv = shipVelAt(game.world, was.ship, this.x, this.y); this.carryV = [sv[0], sv[1]]; }
       if (!dk) {
         // over the side: on from the deck's height (a jump keeps its lift)
         const g = this.groundAt(game, this.x, this.y);
@@ -1755,10 +1735,7 @@ export class Actor extends Entity {
       if (!this.vz && this.z > 0) this.vz = -0.01;
       (dk.ship.aboard || (dk.ship.aboard = new Set())).add(this);
       // (and landing on one, your way is measured against her deck from now on)
-      if (!dk.plank && (!was || was.ship !== dk.ship)) {
-        const sv = shipVelAt(game.world, dk.ship, this.x, this.y), sw = was && !was.plank ? shipVelAt(game.world, was.ship, this.x, this.y) : _z2;
-        this.vx = (this.vx || 0) - sv[0] + sw[0]; this.vy = (this.vy || 0) - sv[1] + sw[1];
-      }
+      if (!dk.plank && (!was || was.ship !== dk.ship)) this.carryV = null;
     }
     this.deck = dk;
   }
