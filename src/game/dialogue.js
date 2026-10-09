@@ -78,8 +78,10 @@ export class Dialogue {
     const text = typeof node.text === 'function' ? node.text(a.ctx) : node.text || '';
     a.full = text;
     a.typing = 0;
-    const choices = (node.choices || []).filter((c) => !c.if || c.if(a.ctx)).map((c) => ({ ...c, label: typeof c.text === 'function' ? c.text(a.ctx) : c.text }));
-    a.choices = choices;
+    const choices = (node.choices || []).filter((c) => !c.if || c.if(a.ctx)).map((c) => ({ ...c, label: typeof c.text === 'function' ? c.text(a.ctx) : c.text, isQuest: questChoice(c) }));
+    // (the lines that move a quest on come first, picked out: amid a cook's
+    // menu and his stories you never hunt for the one you came for)
+    a.choices = [...choices.filter((c) => c.isQuest), ...choices.filter((c) => !c.isQuest)];
     this.render();
   }
 
@@ -113,7 +115,7 @@ export class Dialogue {
     const a = this.active;
     clear(a.choicesEl);
     a.choices.forEach((c, i) => {
-      a.choicesEl.appendChild(h('button', { on: { click: () => this.choose(i) } }, h('span.n', `${i + 1}.`), c.label));
+      a.choicesEl.appendChild(h('button' + (c.isQuest ? '.quest' : ''), { on: { click: () => this.choose(i) } }, h('span.n', `${i + 1}.`), c.isQuest ? h('span.qmark', '!') : null, c.label));
     });
   }
 
@@ -161,3 +163,19 @@ export class Dialogue {
 
 /** Quick one-screen line (with an optional follow-up). */
 export function say(text, next) { return { start: 'a', nodes: { a: { text, next } } }; }
+
+/**
+ * Does this line move a quest on — start one, set its next stage, finish it,
+ * or go back over the story's errand? (Marked `quest: true`, or seen in what
+ * it does: the quest calls are property names, which survive the build.)
+ */
+const QUEST_DO = /\.(startQuest|complete|stage)\s*\(/;
+// (shown only at a stage, or before a quest starts — not merely after one's done: that's talk)
+const QUEST_IF = /\.(quest|stageId)\s*\(/;
+function questChoice(c) {
+  if (c.quest !== undefined) return !!c.quest;
+  if (typeof c.next === 'string' && c.next.startsWith('mq_')) return true;
+  if (typeof c.do === 'function' && QUEST_DO.test(String(c.do))) return true;
+  if (typeof c.if === 'function' && QUEST_IF.test(String(c.if))) return true;
+  return false;
+}

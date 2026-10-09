@@ -137,6 +137,9 @@ export class Audio {
     }
     const now = this.E.now(), dt = Math.min(0.5, Math.max(0, now - (this.clock ?? now)));
     this.clock = now;
+    // (and keep the mix itself alive: engine.js heal)
+    this.healT = (this.healT || 0) + dt;
+    if (this.healT >= 0.25) { try { if (this.E.heal(this.healT)) console.warn('audio: the mix stalled and was rebuilt'); } catch { /* never mind */ } this.healT = 0; }
     try {
       this.director.update(this.game);
       this.foley.menus();

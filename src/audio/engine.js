@@ -55,7 +55,7 @@ export class Engine {
     // a slow, smooth release); its automatic make-up gain is taken back off
     // first, so below its threshold the mix passes through untouched
     this.limiter = c.createDynamicsCompressor ? c.createDynamicsCompressor() : null;
-    const head = c.createGain(); head.gain.value = 1 / CLIP_HEAD;
+    const head = this.head = c.createGain(); head.gain.value = 1 / CLIP_HEAD;
     if (this.limiter) {
       for (const k of Object.keys(LIM)) this.limiter[k].value = LIM[k];
       head.gain.value = 1 / (CLIP_HEAD * makeup(LIM));
@@ -81,6 +81,12 @@ export class Engine {
     this.duckGain = c.createGain();
     this.music.connect(this.duckGain); this.duckGain.connect(this.muffle);
     this.ui = c.createGain(); this.ui.connect(this.master);
+    // the mix as it goes into the limiter and as it comes out (see heal)
+    this.tapIn = c.createAnalyser(); this.tapIn.fftSize = 1024;
+    this.tapOut = c.createAnalyser(); this.tapOut.fftSize = 1024;
+    this.master.connect(this.tapIn); this.clip.connect(this.tapOut);
+    this.tapBuf = new Float32Array(1024);
+    this.deadT = 0;
     this.voices = { sfx: [], npc: [], amb: [], ui: [] };
     this.rr = {}; // round-robin counters by sound
     this.ducks = new Map();
@@ -89,6 +95,62 @@ export class Engine {
   }
 
   now() { return this.ctx.currentTime; }
+
+  /** RMS of what an analyser hears just now (NaN if anything in it isn't a number). */
+  rms(a) {
+    const b = this.tapBuf;
+    a.getFloatTimeDomainData(b);
+    let sum = 0;
+    for (let i = 0; i < b.length; i++) sum += b[i] * b[i];
+    return Math.sqrt(sum / b.length);
+  }
+
+  /**
+   * Keep the mix alive (called a few times a second). One bad sample — a
+   * number blown up to infinity, or not a number at all — stalls the filters
+   * and the limiter it passes through: the limiter clamps everything down
+   * and takes seconds to let go, a filter's state goes to NaN and stays
+   * there. All of it fell silent, then came back on its own (or didn't). If
+   * the mix goes in but nothing comes out, or what comes out isn't a number,
+   * the filters and the limiter are made anew. Returns true when it healed.
+   */
+  heal(dt) {
+    const a = this.rms(this.tapIn), b = this.rms(this.tapOut);
+    const bad = !Number.isFinite(a) || !Number.isFinite(b);
+    const dead = a > 0.004 && b < a * 0.02;
+    this.deadT = bad ? 1 : dead ? this.deadT + dt : 0;
+    if (this.deadT < 0.6) return false;
+    this.deadT = 0;
+    this.rebuildTail();
+    return true;
+  }
+
+  /** New muffle and shelter filters and a new limiter, wired in as the old ones were. */
+  rebuildTail() {
+    const c = this.ctx;
+    const fresh = (old, type, q) => {
+      const f = c.createBiquadFilter();
+      f.type = type; f.frequency.value = Number.isFinite(old.frequency.value) ? old.frequency.value : 20000; f.Q.value = q;
+      try { old.disconnect(); } catch { /* gone */ }
+      return f;
+    };
+    const muffle = fresh(this.muffle, 'lowpass', 0.6), shelter = fresh(this.shelter, 'lowpass', 0.5);
+    for (const n of [this.sfx, this.npcDuck, this.duckGain]) { try { n.disconnect(this.muffle); } catch { /* not wired */ } n.connect(muffle); }
+    try { this.ambDuck.disconnect(this.shelter); } catch { /* not wired */ }
+    this.ambDuck.connect(shelter); shelter.connect(muffle); muffle.connect(this.master);
+    this.muffle = muffle; this.shelter = shelter;
+    if (this.limiter) {
+      const lim = c.createDynamicsCompressor();
+      for (const k of Object.keys(LIM)) lim[k].value = LIM[k];
+      try { this.head.disconnect(this.limiter); this.limiter.disconnect(); } catch { /* gone */ }
+      this.head.connect(lim); lim.connect(this.clip);
+      this.limiter = lim;
+    }
+    // (and the ducks let go)
+    const t = this.now();
+    for (const p of [this.duckGain.gain, this.ambDuck.gain, this.npcDuck.gain]) { p.cancelScheduledValues(t); p.setValueAtTime(1, t); }
+    this.ducks.clear();
+  }
 
   /** Volumes from the settings: effects (and the beds with them), and music (`sec` 0: at once). */
   setVolumes(sfx, music, sec = 0.05) {
@@ -160,8 +222,8 @@ export class Engine {
     const until = t + att + hold;
     if (t < d.until && to >= d.to && until <= d.until) return;
     d.to = to; d.until = Math.max(until, d.until); d.rel = rel;
-    if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t);
-    else { p.cancelScheduledValues(t); p.setValueAtTime(p.value, t); }
+    // (not cancelAndHoldAtTime: see ambience.js Glide)
+    p.cancelScheduledValues(t); p.setValueAtTime(Math.min(1, Math.max(0.05, Number.isFinite(p.value) ? p.value : 1)), t);
     p.setTargetAtTime(to, t, att / 3);
     p.setTargetAtTime(1, d.until, rel / 4);
   }

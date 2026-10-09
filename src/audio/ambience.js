@@ -37,7 +37,9 @@ class Glide {
   /** Head for `to` from time `t`, most of the way there in `sec`. */
   go(to, t, sec) {
     const now = this.at(t), p = this.p, tc = Math.max(0.004, sec / 3);
-    if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t); else { p.cancelScheduledValues(t); p.setValueAtTime(now, t); }
+    // (not cancelAndHoldAtTime: in Chrome, cut into a setTargetAtTime curve it
+    // can hold the wrong level — a bed or the whole mix gone quiet till the next change)
+    p.cancelScheduledValues(t); p.setValueAtTime(now, t);
     p.setTargetAtTime(to, t, tc);
     this.v0 = now; this.to = to; this.t0 = t; this.tc = tc;
   }

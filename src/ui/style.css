@@ -251,6 +251,9 @@ a.btn { display: inline-block; text-decoration: none; }
 .dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: var(--cur-ptr); }
 .dialogue .choices button:hover { background: rgba(192,57,43,.2); }
 .dialogue .choices button .n { color: var(--red); margin-right: 8px; }
+.dialogue .choices button.quest { background: linear-gradient(90deg, rgba(241,196,15,.42), rgba(241,196,15,.16)); border-color: #c79a0b; box-shadow: inset 3px 0 0 #c79a0b; }
+.dialogue .choices button.quest:hover { background: linear-gradient(90deg, rgba(241,196,15,.6), rgba(241,196,15,.28)); }
+.dialogue .choices button .qmark { display: inline-grid; place-items: center; width: 17px; height: 17px; margin-right: 7px; border-radius: 50%; background: #c79a0b; color: #fffbe6; font: 800 12px Nunito; vertical-align: 1px; }
 .dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }
 
 /* wanted poster */

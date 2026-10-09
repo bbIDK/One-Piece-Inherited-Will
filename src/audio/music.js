@@ -22,6 +22,9 @@ export const MODES = {
   in: [0, 1, 5, 7, 8], yo: [0, 2, 5, 7, 9], penta: [0, 2, 4, 7, 9],
 };
 // rhythms for a two-bar motif, in eighths (negative = a rest)
+// how far ahead the notes are queued (seconds)
+const AHEAD = 1.5;
+
 const RHYTHMS = {
   straight: [[2, 2, 4, 2, 2, 4], [3, 1, 2, 2, 4, -4], [2, 2, 2, 2, 6, -2], [1, 1, 2, 4, 2, 2, 4], [4, 2, 2, 8]],
   lilt: [[3, 3, 2, 1, 3], [2, 1, 2, 1, 6], [3, 2, 1, 3, -3], [2, 1, 3, 2, 1, 3], [1, 1, 1, 3, 6]],
@@ -340,15 +343,17 @@ export class Deck {
     return this.t0 + k * b;
   }
 
-  /** Schedule what's due in the next half second. False once the piece has run out. */
+  /** Schedule what's due in the next AHEAD seconds. False once the piece has run out. */
   schedule(now) {
     if (this.ended) return false;
     // (fallen behind — a tab in the background — skip ahead rather than bunch the notes up)
-    if (this.t < now - 0.25) {
+    if (this.t < now - 0.6) {
       const skip = Math.ceil((now - this.t) / this.barDur);
       this.t += skip * this.barDur; this.bar += skip;
     }
-    while (this.t < now + 0.5 && this.t < this.stopAt) {
+    // (well ahead: the notes are queued on the audio thread, so a hitch on the
+    // page — a town streaming in, a long frame — never leaves the music a gap)
+    while (this.t < now + AHEAD && this.t < this.stopAt) {
       if (this.bar >= this.S.bars) {
         if (!this.loop) { this.ended = true; return false; }
         // a new piece straight on, in the same key
