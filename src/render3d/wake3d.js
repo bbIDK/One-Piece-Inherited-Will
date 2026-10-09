@@ -59,6 +59,8 @@ function foamTexture() {
 // across the trail: faded outer edge, a bright churned arm, paler water between
 const ACROSS = [-1, -0.62, -0.22, 0.22, 0.62, 1], ALPHA = [0, 1, 0.45, 0.45, 1, 0];
 const WK = ACROSS.length;
+/** How many points of a ship's track the sea is given (water3d.js uTrail). */
+export const TRACK_N = 10;
 
 /**
  * A trail of foam: points dropped behind the source as it goes — every
@@ -178,13 +180,25 @@ export class WakeTrail {
         this.col[o * 4] = 0.95; this.col[o * 4 + 1] = 0.98; this.col[o * 4 + 2] = 1; this.col[o * 4 + 3] = ALPHA[j] * fade;
       }
     }
+    // (the track itself, for a sea that draws the wake into its own surface:
+    // a few points along it, the newest first — world x, y, half-width, brightness)
+    if (this.keepTrack) {
+      const T = this.track || (this.track = []), m = Math.min(TRACK_N, n);
+      T.length = 0;
+      for (let k = 0; k < m; k++) {
+        const i = m === 1 ? 0 : Math.round((k / (m - 1)) * (n - 1)), q = rows[i];
+        const [half, bright] = shape(q, (time - q.t) / this.life);
+        const run = sHead - q.s, fade = run <= 0 ? 0 : run >= this.fadeIn ? 1 : run / this.fadeIn;
+        T.push(q.x, q.y, half, bright * fade);
+      }
+    }
     g.attributes.position.needsUpdate = true;
     g.attributes.color.needsUpdate = true;
     g.attributes.uv.needsUpdate = true;
     g.setDrawRange(0, (n - 1) * (WK - 1) * 6);
   }
 
-  clear() { this.pts.length = 0; this.mesh.geometry.setDrawRange(0, 0); }
+  clear() { this.pts.length = 0; this.mesh.geometry.setDrawRange(0, 0); if (this.track) this.track.length = 0; }
 
   dispose() { this.mesh.geometry.dispose(); this.mesh.material.dispose(); this.mesh.removeFromParent(); }
 }

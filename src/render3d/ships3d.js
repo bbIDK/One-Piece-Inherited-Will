@@ -1005,7 +1005,9 @@ export class ShipView {
     const s = this.ship;
     const r = this.root;
     // the foam trail on the water (a sibling of the ship, not riding it)
-    if (!this.wake) this.wake = new WakeTrail({ n: 96, turn: 0.09, fadeIn: 1.2 });
+    // (its track handed to the sea, which draws the wake into its own surface:
+    // the ribbon itself isn't shown — see water3d.js wakes)
+    if (!this.wake) { this.wake = new WakeTrail({ n: 96, turn: 0.09, fadeIn: 1.2 }); this.wake.keepTrack = true; this.wake.mesh.visible = false; }
     if (r.parent && this.wake.mesh.parent !== r.parent) r.parent.add(this.wake.mesh);
     const v3 = ctx?.game?.view3d;
     if (v3 && ctx.world) {

@@ -50,10 +50,14 @@ const SEA_TINT = {
 // cos and sin of her heading; her length, beam, speed (kn) and 1 = on. Her
 // waterline's outline is the one the sea's kept out of her by (world/hull.js hbAt).
 const SHIPS_N = 8;
+// the wakes the sea draws into itself: the tracks of the nearest few ships
+// under way, TRACK_N points each (render x, z, half-width, brightness)
+const WAKES_N = 4, TRACK = 10;
 const HULLS = /* glsl */`
   uniform vec4 uShips[${SHIPS_N}];
   uniform vec4 uShipD[${SHIPS_N}];
   uniform float uShipK[${SHIPS_N}];   // how sharply each is turning (1/m: + to starboard)
+  uniform vec4 uTrail[${WAKES_N * 10}];
   float hullHalf(float t) {
     float tc = clamp(t, 0.0, 1.0);
     return tc > 0.58 ? sqrt(max(0.0, 1.0 - pow((tc - 0.58) / 0.42, 2.2))) : tc < 0.14 ? 0.74 + 0.26 * sin(tc / 0.14 * 1.5707963) : 1.0;
@@ -262,6 +266,42 @@ const FRAG = /* glsl */`
     float lace = noise(p * vec2(1.7, 2.3) + vec2(t * 1.1, -t * 0.7)) * 0.6 + noise(p * 4.3 - t * 1.6) * 0.4;
     return vec2(clamp(foam * smoothstep(0.42, 0.66, lace + foam * 0.22), 0.0, 1.0), foam);
   }
+  // A ship's wake as part of the sea: along the track she left (the points of
+  // uTrail, newest first), churned paler water and flecks of foam down the
+  // middle, and the two arms of her wake — ridges of the sea itself, lit and
+  // foaming along their crests — at its edges, spreading as it ages and
+  // fading out; it bends exactly as she turned. (x: foam, y: churn, zw: the
+  // slope the arms put into the surface)
+  vec4 wakes(vec2 r, vec2 p, float t) {
+    float foam = 0.0, churn = 0.0;
+    vec2 sl = vec2(0.0);
+    for (int s = 0; s < ${WAKES_N}; s++) {
+      vec4 a = uTrail[s * 10];
+      if (a.w <= 0.0 && uTrail[s * 10 + 1].w <= 0.0) continue;
+      // (nowhere near this one's track: past it)
+      if (length(r - a.xy) > 140.0) continue;
+      for (int k = 0; k < 9; k++) {
+        vec4 A = uTrail[s * 10 + k], B = uTrail[s * 10 + k + 1];
+        if (B.w <= 0.0 && A.w <= 0.0) continue;
+        vec2 ab = B.xy - A.xy;
+        float l2 = max(dot(ab, ab), 0.001);
+        float h = clamp(dot(r - A.xy, ab) / l2, 0.0, 1.0);
+        vec2 c = A.xy + ab * h, dv = r - c;
+        float d = length(dv), hw = mix(A.z, B.z, h), br = mix(A.w, B.w, h);
+        if (d > hw * 1.6 + 2.0 || br <= 0.0) continue;
+        // (down the middle: churned water, paler, flecked with foam)
+        float mid = (1.0 - smoothstep(hw * 0.35, hw * 0.85, d)) * br;
+        churn = max(churn, mid);
+        // (the arms: a ridge of the sea at either edge)
+        float wr = 0.45 + hw * 0.16, e = (d - hw) / wr, ridge = exp(-e * e) * br;
+        foam = max(foam, max(mid * 0.55, ridge * 0.9));
+        sl += (dv / max(d, 0.001)) * (-2.0 * e / wr) * ridge * 0.22;
+      }
+    }
+    if (foam <= 0.0 && churn <= 0.0) return vec4(0.0);
+    float lace = noise(p * vec2(1.3, 1.9) + vec2(t * 0.6, -t * 0.4)) * 0.6 + noise(p * 3.7 - t * 0.9) * 0.4;
+    return vec4(clamp(foam * smoothstep(0.38, 0.7, lace + foam * 0.25), 0.0, 1.0), churn, sl);
+  }
   // caustic network: the edges between moving Voronoi cells
   float caustic(vec2 p, float t) {
     vec2 i = floor(p), f = fract(p);
@@ -358,8 +398,10 @@ const FRAG = /* glsl */`
       if (uDetail > 0.5) fc += facets(pf * 2.1 + 7.3, t * 0.75) * 0.16;
       fc *= rough;
     }
+    // (the wakes of ships under way, close by: part of the sea's own surface)
+    vec4 wk = water && dist < 200.0 ? wakes(cameraPosition.xz - vView.xz, p, t) : vec4(0.0);
     // (the swells' slopes drawn steeper than they are, so their shapes read under the chop)
-    vec3 n = normalize(vec3(-sw.x * 3.4 - rip.x - fc.x, 1.0, -sw.y * 3.4 - rip.y - fc.y));
+    vec3 n = normalize(vec3(-sw.x * 3.4 - rip.x - fc.x - wk.z, 1.0, -sw.y * 3.4 - rip.y - fc.y - wk.w));
     vec3 v = normalize(vView);
     float ndv = max(dot(n, v), 0.0);
     float fres = 0.02 + 0.98 * pow(1.0 - ndv, 5.0);
@@ -455,8 +497,8 @@ const FRAG = /* glsl */`
       // where the ships meet it: laced white, in paler churned water
       if (dist < 220.0) {
         vec2 hf = hullFoam(cameraPosition.xz - vView.xz, p, t);
-        col = mix(col, vec3(0.3, 0.68, 0.92) * light, hf.y * 0.45);
-        foam = max(foam, hf.x);
+        col = mix(col, vec3(0.3, 0.68, 0.92) * light, max(hf.y * 0.45, wk.y * 0.32));
+        foam = max(foam, max(hf.x, wk.x));
       }
     } else if (kind == 7.0) {
       foam = smoothstep(-0.6, -0.1, sd) * 0.6;
@@ -536,6 +578,7 @@ export class Water {
         uBubble: { value: new THREE.Vector4() },
         uCalm: { value: Array.from({ length: CALM_N }, () => new THREE.Vector4()) },
         uShips: { value: Array.from({ length: SHIPS_N }, () => new THREE.Vector4()) },
+        uTrail: { value: Array.from({ length: WAKES_N * TRACK }, () => new THREE.Vector4()) },
         uSeaA: { value: new THREE.Color(SEA_HUES[0]) }, uSeaB: { value: new THREE.Color(SEA_HUES[1]) },
         uSeaC: { value: new THREE.Color(SEA_HUES[2]) }, uSeaD: { value: new THREE.Color(SEA_HUES[3]) },
         uSeaTint: { value: new THREE.Vector3(1, 1, 1) },
@@ -578,6 +621,21 @@ export class Water {
       // (the curve she's on: her rate of turn over her speed)
       K[i] = s.sp > 0.5 ? (s.yaw || 0) / s.sp : 0;
     }
+    // the tracks of the nearest few with a wake (render space)
+    const T = this.uniforms.uTrail.value;
+    let n = 0;
+    for (const s of list) {
+      if (n >= WAKES_N) break;
+      const tr = s.track;
+      if (!tr || tr.length < 8) continue;
+      for (let k = 0; k < TRACK; k++) {
+        const o = k * 4, v = T[n * TRACK + k];
+        if (o + 3 < tr.length) v.set(s.w ? s.w.dx(s.ox, tr[o]) : tr[o] - s.ox, tr[o + 1] - s.oy, tr[o + 2], tr[o + 3]);
+        else v.set(0, 0, 0, 0);
+      }
+      n++;
+    }
+    for (; n < WAKES_N; n++) for (let k = 0; k < TRACK; k++) T[n * TRACK + k].set(0, 0, 0, 0);
   }
 
   /** 'high' shows caustics and sparkles; 'low' skips them. */
