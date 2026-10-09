@@ -579,9 +579,16 @@ export class UI {
     if (fighting !== this.cache.combat) { this.cache.combat = fighting; E.combat.classList.toggle('off', !fighting); }
     const sneak = !!p.crouch && !fighting && !this.mapOpen;
     if (sneak !== this.cache.sneak) { this.cache.sneak = sneak; E.sneak.classList.toggle('off', !sneak); }
-    // (a hint stays clear of the boss's bar and of the tag under the compass)
-    const hintTop = !E.boss.classList.contains('hidden') ? 112 : fighting || sneak ? 92 : 70;
-    if (hintTop !== this.cache.hintTop) { this.cache.hintTop = hintTop; this.hintEl.style.top = hintTop + 'px'; }
+    // (a hint stays clear of the boss's bar and of the tag under the compass —
+    // and in a fight it goes down above the hotbar altogether: up top it would
+    // sit over whoever you're fighting, their bounty and health over their head)
+    const low = !!p.inCombat || !E.boss.classList.contains('hidden');
+    const hintTop = low ? -1 : sneak ? 92 : 70;
+    if (hintTop !== this.cache.hintTop) {
+      this.cache.hintTop = hintTop;
+      this.hintEl.classList.toggle('low', low);
+      this.hintEl.style.top = low ? '' : hintTop + 'px';
+    }
     // the minimap turns so that where you look is up
     const up = v3 ? v3.rig.yaw : null;
     if (up !== null) E.mm.style.transform = `rotate(${(-Math.PI / 2 - up).toFixed(4)}rad)`;

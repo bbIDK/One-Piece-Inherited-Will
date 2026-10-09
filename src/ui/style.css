@@ -117,6 +117,7 @@
 
 .hint { position: absolute; top: 70px; transition: top .25s, opacity .5s; left: 50%; transform: translateX(-50%); max-width: 560px; background: rgba(245,230,196,.95); color: var(--ink); padding: 10px 16px; border-radius: 10px; border: 2px solid #8d6e4a; font-size: 14px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.5); display: flex; gap: 10px; align-items: center; }
 .hint img.icon { flex: none; }
+.hint.low { top: auto; bottom: 140px; max-width: 480px; font-size: 13px; padding: 8px 14px; }
 
 .bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }
 .bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }
