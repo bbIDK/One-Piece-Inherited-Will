@@ -8,6 +8,7 @@
 // acid.
 import * as THREE from 'three';
 import { SWELL_GLSL, swellAmp, setSwell, calmPoints } from './swell.js';
+import { regionAt, REGION } from '../world/constants.js';
 
 // The wind swells (see swell.js: the same waves are worked out there for the
 // things that float on them)
@@ -34,7 +35,15 @@ const CALM = /* glsl */`
 // the open sea's blues (as they show on screen): the main one, and the ones
 // wide stretches of it turn to, blending — a turquoise, a deeper cobalt, a
 // soft grey-green (water3d's seaHue)
-const SEA_HUES = ['#629aca', '#5bb0cc', '#4f86c6', '#6aa3b6'];
+// (deep, saturated blues — a cobalt, a teal, a navy and a slate — not a pale sky blue)
+const SEA_HUES = ['#2d679f', '#2a7c9f', '#234f8f', '#36708a'];
+// each sea its own cast over them (eased in as you sail from one into another):
+// the Blues a little brighter, the Calm Belt glassy and green, Paradise a
+// rich blue, the New World dark and violet
+const SEA_TINT = {
+  [REGION.EAST_BLUE]: [1.04, 1.08, 1.0], [REGION.NORTH_BLUE]: [0.9, 0.98, 1.06], [REGION.WEST_BLUE]: [1.02, 1.0, 0.96], [REGION.SOUTH_BLUE]: [1.0, 1.1, 0.98],
+  [REGION.CALM_NORTH]: [0.92, 1.08, 0.96], [REGION.CALM_SOUTH]: [0.92, 1.08, 0.96], [REGION.PARADISE]: [0.96, 1.0, 1.06], [REGION.NEW_WORLD]: [0.84, 0.84, 1.0],
+};
 
 // the ships near the eye, for how they meet the sea (the foam round each
 // hull, the bow wave, the water heaped up at her stem): x, z (render space),
@@ -152,6 +161,7 @@ const FRAG = /* glsl */`
 
   uniform float uAmp;
   uniform vec3 uSeaA, uSeaB, uSeaC, uSeaD; // the open sea's blues (see SEA_HUES)
+  uniform vec3 uSeaTint; // the cast of the sea you're in (SEA_TINT)
   ${SWELL}
   ${HULLS}
   // the open sea's colour here: wide stretches of it in different blues — the
@@ -162,7 +172,7 @@ const FRAG = /* glsl */`
     vec3 col = mix(uSeaA, uSeaB, smoothstep(0.42, 0.72, a));
     col = mix(col, uSeaC, smoothstep(0.48, 0.78, b) * 0.85);
     col = mix(col, uSeaD, smoothstep(0.55, 0.8, 1.0 - a) * smoothstep(0.4, 0.66, b) * 0.6);
-    return col * (0.92 + 0.16 * c);
+    return col * (0.92 + 0.16 * c) * uSeaTint;
   }
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   vec2 hash2(vec2 p) { return fract(sin(vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)))) * 43758.5453); }
@@ -357,7 +367,11 @@ const FRAG = /* glsl */`
 
     // water colour by depth: lagoon, turquoise, blue, deep ocean
     vec3 open = seaHue(p);
-    vec3 deep = open, mid = mix(open, vec3(0.12, 0.42, 0.62), 0.3), shallow = vec3(0.08, 0.52, 0.6), lagoon = vec3(0.22, 0.76, 0.68);
+    // (round each island its own shallows: here a clear turquoise, there greener, there bluer)
+    float isle = sFbm(p * 0.0009 + 41.0);
+    vec3 shallow = mix(mix(vec3(0.04, 0.42, 0.52), vec3(0.06, 0.46, 0.42), smoothstep(0.55, 0.75, isle)), vec3(0.05, 0.36, 0.58), smoothstep(0.45, 0.25, isle));
+    vec3 lagoon = mix(mix(vec3(0.16, 0.66, 0.66), vec3(0.24, 0.68, 0.52), smoothstep(0.55, 0.75, isle)), vec3(0.14, 0.56, 0.72), smoothstep(0.45, 0.25, isle));
+    vec3 deep = open, mid = mix(open, vec3(0.08, 0.34, 0.52), 0.3);
     if (uZone > 1.5 && uZone < 2.5) { deep = vec3(0.01, 0.06, 0.18); mid = vec3(0.02, 0.14, 0.32); shallow = vec3(0.04, 0.32, 0.5); lagoon = shallow; }
     // under a grey sky the sea turns a dark grey-green; in a storm, slate
     else if (uOvercast > 0.0) {
@@ -524,6 +538,7 @@ export class Water {
         uShips: { value: Array.from({ length: SHIPS_N }, () => new THREE.Vector4()) },
         uSeaA: { value: new THREE.Color(SEA_HUES[0]) }, uSeaB: { value: new THREE.Color(SEA_HUES[1]) },
         uSeaC: { value: new THREE.Color(SEA_HUES[2]) }, uSeaD: { value: new THREE.Color(SEA_HUES[3]) },
+        uSeaTint: { value: new THREE.Vector3(1, 1, 1) },
         uShipD: { value: Array.from({ length: SHIPS_N }, () => new THREE.Vector4()) },
         uShipK: { value: new Array(SHIPS_N).fill(0) },
       },
@@ -698,6 +713,9 @@ export class Water {
     // (once three.js has made the texture, strips go up on their own)
     if (this.tex && !this.tex.__uploaded && this.renderer?.properties.get(this.tex).__webglTexture) this.tex.__uploaded = true;
     u.uOrigin.value.set(ox, oy);
+    // (the sea's cast, eased toward the one you're in)
+    const tt = SEA_TINT[regionAt(ox, oy)] || [1, 1, 1], tv = u.uSeaTint.value, ke = 0.01;
+    tv.set(tv.x + (tt[0] - tv.x) * ke, tv.y + (tt[1] - tv.y) * ke, tv.z + (tt[2] - tv.z) * ke);
     u.uTime.value = env.time;
     // the ripples, surf and sparkles run up to 1.8× as fast in a storm, so
     // their clock is wound on a frame at a time at the storm's pace (the

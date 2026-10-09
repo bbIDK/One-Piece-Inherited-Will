@@ -35,18 +35,18 @@ export const SWELL_GLSL = /* glsl */`
   }
   // d: how far from the eye (m) — the shorter trains stop nearer it
   float swells(vec2 p, float t, float d, out vec2 slope) {
-    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.96, 0.28), D2 = vec2(-0.37, 0.93), D3 = vec2(0.75, -0.66), D4 = vec2(0.64, -0.77);
+    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.17, 0.985), D2 = vec2(-0.81, 0.59), D3 = vec2(0.75, -0.66), D4 = vec2(0.42, -0.91);
     const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854, K4 = 0.1848;   // 46 m, 22 m, 13 m, 8 m; a cross swell of 34 m
     const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774, W4 = 1.346;       // deep-water speeds
     // bent crests (a little everywhere, and long slow curves)
     vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0 + (vec2(sNoise(p * 0.0055 + 3.1), sNoise(p * 0.0055 + 9.4)) - 0.5) * 44.0;
     // wave groups
-    float g0 = (0.55 + 0.6 * sFbm(p * 0.006 + vec2(0.0, t * 0.012) + 91.0)) * (1.0 - smoothstep(160.0, 320.0, d));
-    float g1 = (0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0))) * 0.6 * (1.0 - smoothstep(90.0, 190.0, d));
+    float g0 = (0.36 + 0.45 * sFbm(p * 0.006 + vec2(0.0, t * 0.012) + 91.0)) * (1.0 - smoothstep(160.0, 320.0, d));
+    float g1 = (0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0))) * 0.75 * (1.0 - smoothstep(150.0, 300.0, d));
     float g2 = (0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025))) * 0.4 * (1.0 - smoothstep(45.0, 100.0, d));
     float g3 = (0.3 + 0.9 * sFbm(p * 0.026 + 57.0)) * 0.22 * (1.0 - smoothstep(25.0, 55.0, d));
     // (the cross swell strong in some stretches of sea, gone in others)
-    float g4 = (0.9 * sFbm(p * 0.0045 - 51.0 + vec2(t * 0.01, 0.0)) - 0.15) * 0.8 * (1.0 - smoothstep(160.0, 320.0, d));
+    float g4 = (0.7 * sFbm(p * 0.0045 - 51.0 + vec2(t * 0.01, 0.0)) + 0.15) * 0.8 * (1.0 - smoothstep(160.0, 320.0, d));
     float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1, a4 = K4 * dot(D4, q) - W4 * t + 2.3;
     // (peaked: e^(sin a - 1), less its mean 0.466, scaled back to a peak of 1)
     float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873, e4 = exp(sin(a4) - 1.0) * 1.873;
@@ -82,16 +82,16 @@ const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a)))
 export function swells(x, y, t, d = 0) {
   const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14 + (sNoise(x * 0.0055 + 3.1, y * 0.0055 + 3.1) - 0.5) * 44;
   const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14 + (sNoise(x * 0.0055 + 9.4, y * 0.0055 + 9.4) - 0.5) * 44;
-  const g0 = (0.55 + 0.6 * sFbm(x * 0.006 + 91, y * 0.006 + t * 0.012 + 91)) * (1 - sst(160, 320, d));
-  const g1 = (0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011)) * 0.6 * (1 - sst(90, 190, d));
+  const g0 = (0.36 + 0.45 * sFbm(x * 0.006 + 91, y * 0.006 + t * 0.012 + 91)) * (1 - sst(160, 320, d));
+  const g1 = (0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011)) * 0.75 * (1 - sst(150, 300, d));
   const g2 = (0.3 + 0.9 * sFbm(x * 0.017 + 31, y * 0.017 + 31 - t * 0.025)) * 0.4 * (1 - sst(45, 100, d));
   const g3 = (0.3 + 0.9 * sFbm(x * 0.026 + 57, y * 0.026 + 57)) * 0.22 * (1 - sst(25, 55, d));
-  const g4 = (0.9 * sFbm(x * 0.0045 - 51 + t * 0.01, y * 0.0045 - 51) - 0.15) * 0.8 * (1 - sst(160, 320, d));
+  const g4 = (0.7 * sFbm(x * 0.0045 - 51 + t * 0.01, y * 0.0045 - 51) + 0.15) * 0.8 * (1 - sst(160, 320, d));
   const a0 = 0.1366 * (0.86 * qx + 0.51 * qy) - 1.157 * t + 0.6;
-  const a1 = 0.2856 * (0.96 * qx + 0.28 * qy) - 1.673 * t;
-  const a2 = 0.4833 * (-0.37 * qx + 0.93 * qy) - 2.177 * t + 1.7;
+  const a1 = 0.2856 * (0.17 * qx + 0.985 * qy) - 1.673 * t;
+  const a2 = 0.4833 * (-0.81 * qx + 0.59 * qy) - 2.177 * t + 1.7;
   const a3 = 0.7854 * (0.75 * qx - 0.66 * qy) - 2.774 * t + 4.1;
-  const a4 = 0.1848 * (0.64 * qx - 0.77 * qy) - 1.346 * t + 2.3;
+  const a4 = 0.1848 * (0.42 * qx - 0.91 * qy) - 1.346 * t + 2.3;
   const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873, e4 = Math.exp(Math.sin(a4) - 1) * 1.873;
   return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3 + (e4 - 0.873) * g4) / 2.6;
 }
