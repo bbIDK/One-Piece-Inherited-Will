@@ -716,11 +716,24 @@ function clothify(mesh, U, tri) {
   mat.customProgramCacheKey = () => 'sailcloth';
 }
 
+/**
+ * Her build as she's drawn: her class, painted as her owner chose (hull
+ * colour, figurehead — see ui/shipDesigner.js); and a caravel carries the
+ * Going Merry's ram's head only if she's the Merry (any other has a carved
+ * scroll at her stem).
+ */
+export function paintedDef(s) {
+  let def = s.def;
+  const P = s.paint;
+  if (P && def.sail !== 'marine' && !def.special) def = { ...def, ...(P.color ? { color: P.color } : {}), ...(P.figurehead ? { figurehead: P.figurehead } : {}) };
+  if (def.figurehead === 'ram' && !isMerry(s)) def = { ...def, figurehead: 'scroll' };
+  return def;
+}
+
 export class ShipView {
   constructor(s) {
     this.ship = s;
-    // (a caravel carries the Going Merry's ram's head only if she's the Merry: any other has a carved scroll at her stem)
-    const def = s.def.figurehead === 'ram' && !isMerry(s) ? { ...s.def, figurehead: 'scroll' } : s.def;
+    const def = paintedDef(s);
     const d = shipDims(def);
     this.d = d;
     const root = new THREE.Group();
@@ -761,7 +774,7 @@ export class ShipView {
     root.add(this.rig);
     // yards + sails per mast (they brace to the wind around the mast)
     const kind = this.flagKind();
-    const sailCol = kind === 'marine' || def.sail === 'marine' ? '#f5f6fa' : s.sailColor || '#efe6cf';
+    const sailCol = kind === 'marine' || def.sail === 'marine' ? '#f5f6fa' : s.paint?.sail || s.sailColor || '#efe6cf';
     this.sails = [];
     this.braces = [];
     this.ownMats = [];
@@ -929,7 +942,7 @@ export class ShipView {
     // nobody at her wheel (see update)
     if (s.traffic) root.add(this.standIns = standInCrew(s, d));
     this.root = root;
-    this.kindKey = kind + ':' + JSON.stringify(s.jr || null) + ':' + !!s.coated;
+    this.kindKey = kind + ':' + JSON.stringify(s.jr || null) + ':' + !!s.coated + ':' + JSON.stringify(s.paint || null);
   }
 
   lineSet(pts) {
@@ -977,7 +990,7 @@ export class ShipView {
   }
 
   /** True when the colours changed (e.g. the player founded a crew) and the view must be rebuilt. */
-  stale() { return this.kindKey !== this.flagKind() + ':' + JSON.stringify(this.ship.jr || null) + ':' + !!this.ship.coated; }
+  stale() { return this.kindKey !== this.flagKind() + ':' + JSON.stringify(this.ship.jr || null) + ':' + !!this.ship.coated + ':' + JSON.stringify(this.ship.paint || null); }
 
   setGhost(on) {
     this.ghost = on;

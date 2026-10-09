@@ -14,7 +14,7 @@ let uidCounter = 0;
 
 export const fleetOf = (c) => (c.fleet ||= []);
 
-const record = (s) => ({ uid: s.uid, type: s.type, name: s.name, upgrades: (s.upgrades || []).slice(), coated: !!s.coated, shot: s.shot });
+const record = (s) => ({ uid: s.uid, type: s.type, name: s.name, upgrades: (s.upgrades || []).slice(), coated: !!s.coated, shot: s.shot, paint: s.paint || null });
 
 /** Keep the record of a ship you own up to date (a new one joins the fleet). */
 export function recordShip(c, s) {
@@ -111,7 +111,7 @@ export function launchShip(game, rec, dock) {
   }
   if (old) layUp(game, old);
   const e = (rec.uid && fleetOf(c).find((x) => x.uid === rec.uid)) || rec;
-  const s = game.giveShip(e.type, dock.moor.x, dock.moor.y, e.name, { uid: e.uid, upgrades: (e.upgrades || []).slice(), coated: e.coated, shot: e.shot });
+  const s = game.giveShip(e.type, dock.moor.x, dock.moor.y, e.name, { uid: e.uid, upgrades: (e.upgrades || []).slice(), coated: e.coated, shot: e.shot, paint: e.paint });
   // (a big ship berthed on top of another hull at the pier: out into the roads with her)
   if (s.shipIn(game, s.x, s.y, s.heading)) s.unstick(w, true);
   s.anchored = true; s.speed = 0;

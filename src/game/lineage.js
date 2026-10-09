@@ -515,7 +515,7 @@ export function snapshot(game) {
   // where your ships lie (those waiting on the surface while you're in a zone too)
   const afloat = liveShips(game);
   c.ships = afloat.map((s) => ({
-    uid: s.uid, type: s.type, name: s.name, upgrades: s.upgrades, hull: s.hull, x: s.x, y: s.y, heading: s.heading, zone: s.zoneId || 'surface', coated: s.coated, shot: s.shot,
+    uid: s.uid, type: s.type, name: s.name, upgrades: s.upgrades, hull: s.hull, x: s.x, y: s.y, heading: s.heading, zone: s.zoneId || 'surface', coated: s.coated, shot: s.shot, paint: s.paint || null,
   }));
   for (const s of afloat) recordShip(c, s);
   c.activeShip = p.ship && !p.ship.sunk ? p.ship.uid : c.activeShip;

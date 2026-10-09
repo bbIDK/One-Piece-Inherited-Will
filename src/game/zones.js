@@ -128,7 +128,7 @@ export function installZones(game) {
     clearPopulation();
     // ships left behind in the zone keep their zone tag (saved with the character)
     const left = game.ships.filter((s) => s !== carried && s.owner === 'player');
-    game.state.char.zoneShips = left.map((s) => ({ uid: s.uid, type: s.type, name: s.name, upgrades: s.upgrades, hull: s.hull, shot: s.shot, x: s.x, y: s.y, zone: id }));
+    game.state.char.zoneShips = left.map((s) => ({ uid: s.uid, type: s.type, name: s.name, upgrades: s.upgrades, hull: s.hull, shot: s.shot, paint: s.paint || null, x: s.x, y: s.y, zone: id }));
     game.ships = (stash || []).concat(carried ? [carried] : []);
     stash = null;
     game.setWorld(game.surface);

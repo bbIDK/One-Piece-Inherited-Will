@@ -60,6 +60,8 @@ export class Ship extends Entity {
     this.name = o.name || this.def.name;
     this.jr = o.jr || null;
     this.sailColor = o.sailColor || null;
+    // (her owner's choice of paint: hull colour, sails, figurehead — see ui/shipDesigner.js)
+    this.paint = o.paint || null;
     this.anchored = true;
     this.cannonCd = 0;
     this.crew = o.crew || [];

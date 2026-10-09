@@ -29,7 +29,7 @@ export function installSession(game, { onReturnToTitle }) {
     // whichever else of yours is afloat goes into the yards, unless you're on
     // her; ships being put back where they were, from a save, keep theirs)
     if (!extra.uid && game.player) for (const o of liveShips(game)) if (!aboard(game.player, o)) layUp(game, o);
-    const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: 'player', faction: 'player', name: name || undefined, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated, shot: extra.shot });
+    const s = game.addShip({ type, x, y, heading: extra.heading ?? Math.PI / 2, owner: 'player', faction: 'player', name: name || undefined, jr: game.state?.char?.jr, upgrades: extra.upgrades || [], hull: extra.hull, coated: extra.coated, shot: extra.shot, paint: extra.paint || null });
     s.uid = extra.uid || `s${Date.now().toString(36)}${shipCounter++}`;
     // (every ship of yours is in your fleet: see fleet.js)
     recordShip(game.state?.char, s);

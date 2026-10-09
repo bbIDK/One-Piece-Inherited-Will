@@ -992,3 +992,16 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 #ui.touch .vy-side .vy-n { position: absolute; right: -5px; top: -5px; min-width: 15px; padding: 0 3px; background: #0e2a33; font-size: 10px; line-height: 14px; }
 .vy-last { margin-left: 6px; padding: 0 6px; border-radius: 4px; background: #2e7d32; color: #fff; font: 800 9.5px Nunito, sans-serif; letter-spacing: .4px; text-transform: none; vertical-align: 1px; }
 .panel.vy-panel { width: min(640px, 94vw); }
+/* fitting out a ship (shipDesigner.js) */
+.ship-designer h2 { margin: 0 0 10px; }
+.ship-designer .sd-wrap { display: flex; gap: 16px; flex-wrap: wrap; }
+.ship-designer .sd-stage { flex: 1 1 380px; min-width: 280px; height: 340px; border-radius: 12px; background: radial-gradient(ellipse at 50% 35%, #d9ecf7 0%, #9cc6e2 55%, #6f9fc4 100%); overflow: hidden; }
+.ship-designer .sd-stage canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.ship-designer .sd-opts { flex: 1 1 260px; display: flex; flex-direction: column; gap: 6px; }
+.ship-designer .sd-label { font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: .8; margin-top: 4px; }
+.ship-designer .sd-name { font: 700 15px Nunito, sans-serif; padding: 6px 9px; border-radius: 8px; border: 2px solid rgba(109,76,51,.4); background: rgba(255,255,255,.8); }
+.ship-designer .sd-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.ship-designer .sd-swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(0,0,0,.25); cursor: pointer; padding: 0; }
+.ship-designer .sd-swatch.on { box-shadow: 0 0 0 3px #f1c40f; border-color: #3b2412; }
+.ship-designer .sd-figs { display: flex; flex-wrap: wrap; gap: 6px; }
+.ship-designer .sd-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }

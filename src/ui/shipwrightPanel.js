@@ -10,6 +10,10 @@ import { fleetOf, liveShip, dockOf, aboard, launchShip } from '../game/fleet.js'
 import { pay } from '../game/inventory.js';
 import { persist } from '../game/lineage.js';
 import { formatBerries } from '../core/math.js';
+import { openShipDesigner, paintable } from './shipDesigner.js';
+
+// (what the yard asks to repaint one of your ships and give her a new name)
+const REPAINT = 5000;
 
 const THANKS = ['She\'s all yours!', 'Fair winds!', 'Treat her kindly, now.', 'Mind the paint!'];
 
@@ -75,13 +79,36 @@ export function openShipwright(game, { dock, island, npc = null, tab = 'spawn' }
 
   const buy = async (type, price) => {
     const d = SHIPS[type];
-    const name = await ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: 'Buy' });
-    if (name === null || !entry.el.isConnected) return;
+    // (fit her out first: her name, her paint, her sails, her figurehead — as a body is made in the creator)
+    let name, paint = null;
+    if (paintable(d)) {
+      const got = await openShipDesigner(game, type, { name: d.name, ok: `Buy her (${formatBerries(price)})` });
+      if (!got || !entry.el.isConnected) return;
+      name = got.name; paint = got.paint;
+    } else {
+      name = await ui.ask({ title: `Buy a ${d.name}`, text: `Name your new ship (${formatBerries(price)}).`, input: d.name, ok: 'Buy' });
+      if (name === null || !entry.el.isConnected) return;
+    }
     if (!pay(game, price)) { game.log('Not enough berries.', '#ff8a80'); render(); return; }
-    const r = launchShip(game, { type, name: name.slice(0, 24) || d.name }, dock);
+    const r = launchShip(game, { type, name: name.slice(0, 24) || d.name, paint }, dock);
     game.emit('shipBought', type);
     game.audio?.sfx('coin');
     finish(r, 'NEW SHIP', `Your new ${d.name}, the ${r.ship.name}, is launched and made fast alongside ${pierName(dock, island)}: step aboard, and press E at her ${d.oarsOnly ? 'oars' : 'wheel'} to take her out.`);
+  };
+
+  /** Repaint one of your ships (and rename her): wherever she lies, the yard's painters see to it. */
+  const repaint = async (e) => {
+    if (c.berries < REPAINT) { say(`A fresh coat's ${formatBerries(REPAINT)} — come back when you've got it.`); return; }
+    const got = await openShipDesigner(game, e.type, { name: e.name, paint: e.paint, title: `Repaint the ${e.name}`, ok: `Repaint her (${formatBerries(REPAINT)})` });
+    if (!got || !entry.el.isConnected) return;
+    if (!pay(game, REPAINT)) return;
+    e.paint = got.paint; e.name = got.name;
+    const s = liveShip(game, e.uid);
+    if (s) { s.paint = got.paint; s.name = got.name; }
+    game.audio?.sfx('coin');
+    ui.toast('A FRESH COAT', `The ${got.name} is repainted`, '#ffe082');
+    persist(game);
+    render();
   };
 
   const yourShips = () => {
@@ -91,6 +118,7 @@ export function openShipwright(game, { dock, island, npc = null, tab = 'spawn' }
       const d = shipStats(e.type, e.upgrades), st = status(e);
       list.appendChild(h('div.row-item' + (st.here ? '.here' : ''), uiImg('ship', 34, '.ico'),
         h('div.grow', h('b', e.name), h('span.tag', d.name), h('div.sub', st.text), h('div.sub', shipStatLine(d))),
+        paintable(SHIPS[e.type]) ? h('button.btn', { title: `New paint, sails and figurehead, and a new name if you like (${formatBerries(REPAINT)})`, on: { click: () => repaint(e) } }, 'Repaint') : null,
         h('button.btn.gold', { disabled: !st.can, on: { click: () => bring(e) } }, st.can ? 'Bring her here' : st.btn)));
     }
     if (!fleet.length) list.appendChild(h('p', 'You don\'t own a ship. ', h('button.btn.small', { on: { click: () => { mode = 'buy'; render(); } } }, 'Buy ships')));

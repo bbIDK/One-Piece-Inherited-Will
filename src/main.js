@@ -23,6 +23,7 @@ import { renderPortrait } from './ui/preview3d.js';
 import { generateWorld } from './world/worldgen.js';
 import { ALL_ISLANDS } from './data/islands/index.js';
 import { Input } from './core/input.js';
+import { openShipDesigner } from './ui/shipDesigner.js';
 import { Game } from './game/game.js';
 import { UI } from './ui/ui.js';
 import './data/styles.js';
@@ -131,7 +132,7 @@ function hideBoot(now = false) {
 }
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
 
-const debug = { ready: false };
+const debug = { ready: false, shipDesigner: openShipDesigner };
 window.OP = debug;
 
 async function start() {
