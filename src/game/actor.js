@@ -736,7 +736,8 @@ export class Actor extends Entity {
     const k = Math.min(1, dt * 7);
     this.vx += (i.mx * sp - this.vx) * k; this.vy += (i.my * sp - this.vy) * k;
     this.x = w.wx(this.x + this.vx * dt);
-    this.y = clamp(this.y + this.vy * dt, 1, w.height - 1);
+    this.y += this.vy * dt;
+    if (!((this.y < 1 || this.y > w.height - 1) && this.overPole(w))) this.y = clamp(this.y, 1, w.height - 1);
     const gh = game.view3d ? Math.max(0, game.view3d.ground(this.x, this.y)) : 0;
     if (this.alt == null) this.alt = gh + (this.z || 0);
     this.alt = Math.min(this.alt + (i.mz || 0) * 8 * fast * dt, gh + 400);
@@ -1654,6 +1655,27 @@ export class Actor extends Entity {
     if (this.went > 0.3) this.wentDir = Math.atan2(gy, gx);
   }
 
+  /**
+   * Over the top of the world: the chart is the planet's surface, so north of
+   * the north pole is the far side of it — you come down the other meridian
+   * (half way round), now heading south, and the view turns with you. (You,
+   * on the open surface: the planet's poles are pack ice — walked or flown
+   * over, not sailed.) True if it took you over.
+   */
+  overPole(w) {
+    const g = this.game;
+    if (!this.isPlayer || !w.wrap || !g || w !== g.surface) return false;
+    const top = this.y < 1;
+    this.y = top ? 2 - this.y : 2 * (w.height - 1) - this.y;
+    this.x = w.wx(this.x + w.width / 2);
+    this.facing += Math.PI; this.vx = -this.vx; this.vy = -this.vy;
+    if (this.kb) { this.kb.x = -this.kb.x; this.kb.y = -this.kb.y; }
+    const r = g.view3d?.rig;
+    if (r) r.yaw += Math.PI;
+    g.log?.(top ? 'Over the North Pole: south again, down the far side of the world.' : 'Over the South Pole: north again, up the far side of the world.', '#b3e5fc');
+    return true;
+  }
+
   moveBy(w, dx, dy) {
     const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 0.2));
     const sx = dx / n, sy = dy / n;
@@ -1666,6 +1688,7 @@ export class Actor extends Entity {
       if (sy) { if (can(this.x, this.y + sy)) this.y += sy; else { hit = true; this.kb.y *= -0.3; } }
     }
     this.x = w.wx(this.x);
+    if ((this.y < 1 || this.y > w.height - 1) && this.overPole(w)) return hit;
     if (this.y < 1) this.y = 1;
     if (this.y > w.height - 1) this.y = w.height - 1;
     return hit;
