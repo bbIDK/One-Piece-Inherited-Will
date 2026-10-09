@@ -58,6 +58,7 @@ const HULLS = /* glsl */`
   uniform vec4 uShipD[${SHIPS_N}];
   uniform float uShipK[${SHIPS_N}];   // how sharply each is turning (1/m: + to starboard)
   uniform vec4 uTrail[${WAKES_N * 10}];
+  uniform vec4 uWakeB[${WAKES_N}];   // each wake's bounds: middle x, z, radius, and 1 if there's one
   float hullHalf(float t) {
     float tc = clamp(t, 0.0, 1.0);
     return tc > 0.58 ? sqrt(max(0.0, 1.0 - pow((tc - 0.58) / 0.42, 2.2))) : tc < 0.14 ? 0.74 + 0.26 * sin(tc / 0.14 * 1.5707963) : 1.0;
@@ -98,6 +99,9 @@ const VERT = /* glsl */`
     for (int i = 0; i < ${SHIPS_N}; i++) {
       vec4 D = uShipD[i];
       if (D.w < 0.5) continue;
+      // (nowhere near her: on to the next, before working out where in her frame this is)
+      vec2 rq = r - uShips[i].xy;
+      if (dot(rq, rq) > pow(D.x * 0.95 + D.y * 4.0 + 10.0, 2.0)) continue;
       vec4 f = hullFrame(i, r);
       if (f.z < -0.5 || f.z > 1.5 || f.w > D.y * 2.0 + 3.0) continue;
       float spd = clamp(D.z / 8.0, 0.0, 1.2);
@@ -243,11 +247,14 @@ const FRAG = /* glsl */`
     for (int i = 0; i < ${SHIPS_N}; i++) {
       vec4 D = uShipD[i];
       if (D.w < 0.5) continue;
+      // (nowhere near her: on to the next, before working out where in her frame this is)
+      vec2 rq = r - uShips[i].xy;
+      if (dot(rq, rq) > pow(D.x * 0.95 + D.y * 4.0 + 10.0, 2.0)) continue;
       vec4 f = hullFrame(i, r);
       if (f.z < -0.6 || f.z > 1.4 || f.w > D.y * 4.0 + 8.0) continue;
       float spd = clamp(D.z / 8.0, 0.0, 1.2);
       // along her side
-      float wdt = 0.3 + spd * 0.35 + spd * 0.95 * smoothstep(0.55, 1.0, f.z);
+      float wdt = 0.22 + spd * 0.2 + spd * 0.35 * smoothstep(0.55, 1.0, f.z);
       float band = (1.0 - smoothstep(wdt * 0.3, wdt, f.w)) * step(-0.3, f.w);
       // the bow wave: out from the stem, back along her — along the way she's
       // come, round the curve of her turn (not swung round rigidly with her
@@ -263,7 +270,7 @@ const FRAG = /* glsl */`
       float edge = abs(lat - (D.y * 0.12 + back * 0.36));
       float bw = (1.0 - smoothstep(0.25 + back * 0.03, 0.7 + back * 0.06, edge)) * smoothstep(0.0, 1.5, back) * (1.0 - smoothstep(D.x * 0.4, D.x * 1.2, back)) * step(0.0, f.w) * spd;
       // (the bow wave's arms are the sea's own shape now — see hullPush and the spray: ships3d.js — not painted foam)
-      foam = max(foam, max(band * (0.55 + 0.45 * spd), bw * 0.25));
+      foam = max(foam, band * (0.45 + 0.35 * spd));
     }
     if (foam <= 0.0) return vec2(0.0);
     // (laced: veins of white over thinner patches, churning)
@@ -280,10 +287,9 @@ const FRAG = /* glsl */`
     float foam = 0.0, churn = 0.0;
     vec2 sl = vec2(0.0);
     for (int s = 0; s < ${WAKES_N}; s++) {
-      vec4 a = uTrail[s * 10];
-      if (a.w <= 0.0 && uTrail[s * 10 + 1].w <= 0.0) continue;
-      // (nowhere near this one's track: past it)
-      if (length(r - a.xy) > 140.0) continue;
+      // (none, or nowhere near this one's track: past it, without looking at its points)
+      vec4 wb = uWakeB[s];
+      if (wb.w < 0.5 || length(r - wb.xy) > wb.z) continue;
       for (int k = 0; k < 9; k++) {
         vec4 A = uTrail[s * 10 + k], B = uTrail[s * 10 + k + 1];
         if (B.w <= 0.0 && A.w <= 0.0) continue;
@@ -298,7 +304,7 @@ const FRAG = /* glsl */`
         churn = max(churn, mid);
         // (the arms: a ridge of the sea at either edge)
         float wr = 0.45 + hw * 0.16, e = (d - hw) / wr, ridge = exp(-e * e) * br;
-        foam = max(foam, max(mid * 0.4, ridge * 0.22));
+        foam = max(foam, mid * 0.35 * smoothstep(0.55, 0.85, br));
         sl += (dv / max(d, 0.001)) * (-2.0 * e / wr) * ridge * 0.22;
       }
     }
@@ -503,7 +509,6 @@ const FRAG = /* glsl */`
       // where the ships meet it: laced white, in paler churned water
       if (dist < 220.0) {
         vec2 hf = hullFoam(cameraPosition.xz - vView.xz, p, t);
-        col = mix(col, vec3(0.3, 0.68, 0.92) * light, max(hf.y * 0.45, wk.y * 0.32));
         foam = max(foam, max(hf.x, wk.x));
       }
     } else if (kind == 7.0) {
@@ -585,6 +590,7 @@ export class Water {
         uCalm: { value: Array.from({ length: CALM_N }, () => new THREE.Vector4()) },
         uShips: { value: Array.from({ length: SHIPS_N }, () => new THREE.Vector4()) },
         uTrail: { value: Array.from({ length: WAKES_N * TRACK }, () => new THREE.Vector4()) },
+        uWakeB: { value: Array.from({ length: WAKES_N }, () => new THREE.Vector4()) },
         uSeaA: { value: new THREE.Color(SEA_HUES[0]) }, uSeaB: { value: new THREE.Color(SEA_HUES[1]) },
         uSeaC: { value: new THREE.Color(SEA_HUES[2]) }, uSeaD: { value: new THREE.Color(SEA_HUES[3]) },
         uSeaTint: { value: new THREE.Vector3(1, 1, 1) },
@@ -628,20 +634,26 @@ export class Water {
       K[i] = s.sp > 0.5 ? (s.yaw || 0) / s.sp : 0;
     }
     // the tracks of the nearest few with a wake (render space)
-    const T = this.uniforms.uTrail.value;
+    const T = this.uniforms.uTrail.value, B = this.uniforms.uWakeB.value;
     let n = 0;
     for (const s of list) {
       if (n >= WAKES_N) break;
       const tr = s.track;
       if (!tr || tr.length < 8) continue;
+      let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity, wmax = 0;
       for (let k = 0; k < TRACK; k++) {
         const o = k * 4, v = T[n * TRACK + k];
-        if (o + 3 < tr.length) v.set(s.w ? s.w.dx(s.ox, tr[o]) : tr[o] - s.ox, tr[o + 1] - s.oy, tr[o + 2], tr[o + 3]);
-        else v.set(0, 0, 0, 0);
+        if (o + 3 < tr.length) {
+          v.set(s.w ? s.w.dx(s.ox, tr[o]) : tr[o] - s.ox, tr[o + 1] - s.oy, tr[o + 2], tr[o + 3]);
+          x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); z0 = Math.min(z0, v.y); z1 = Math.max(z1, v.y); wmax = Math.max(wmax, v.z);
+        } else v.set(0, 0, 0, 0);
       }
+      // (a circle round the whole track, its widest wake and a margin: the shader skips everything outside)
+      const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+      B[n].set(cx, cz, Math.hypot(x1 - cx, z1 - cz) + wmax * 1.6 + 3, 1);
       n++;
     }
-    for (; n < WAKES_N; n++) for (let k = 0; k < TRACK; k++) T[n * TRACK + k].set(0, 0, 0, 0);
+    for (; n < WAKES_N; n++) { B[n].set(0, 0, 0, 0); for (let k = 0; k < TRACK; k++) T[n * TRACK + k].set(0, 0, 0, 0); }
   }
 
   /** 'high' shows caustics and sparkles; 'low' skips them. */

@@ -134,6 +134,7 @@ function inProfile(pr, u, d, h, m) {
 const _ndc = new THREE.Vector2(), _caster = new THREE.Raycaster();
 const _clearSea = new THREE.Color(0.06, 0.34, 0.42);
 
+const _frus = new THREE.Frustum(), _frusM = new THREE.Matrix4(), _sph = new THREE.Sphere(), _sphC = new THREE.Vector3();
 export class Renderer3D {
   constructor(root, r2d, game) {
     this.root = root;
@@ -1085,6 +1086,11 @@ export class Renderer3D {
   updateEntities(game, ox, oy, env, camYaw3) {
     const w = this.world;
     const p = game.player;
+    // (what the camera sees this frame: someone off the screen isn't posed every frame)
+    const cam = this.rig.camera;
+    cam.updateMatrixWorld();
+    _frusM.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    _frus.setFromProjectionMatrix(_frusM);
     const seen = new Set();
     // characters (in a multiplayer voyage, the other players too: drawn like
     // anyone else, as their games say they are — see net/remote.js)
@@ -1141,6 +1147,10 @@ export class Renderer3D {
       else if (a.roofed && a.lastG != null) gh = a.lastG; // (up on a roof: see actor.js groundAt)
       else gh = this.ground(a.x, a.y);
       v.root.position.set(dx, gh + (a.z || 0), dy);
+      // (off the screen and not right beside you: posed every sixth frame only —
+      // the bones, the cloth, the face — it's out of sight, so nothing's lost)
+      const sc = a.look?.scale || 1;
+      if (a !== p && d2 > 64 && !_frus.intersectsSphere(_sph.set(_sphC.set(dx, gh + (a.z || 0) + sc, dy), 2.4 * sc + 1)) && (this.frame + i) % 6 !== 0) { i++; continue; }
       v.update(a, env, this.ctx, { camYaw3, redraw: i < 18 || (this.frame + i) % 3 === 0 });
       i++;
     }
