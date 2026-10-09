@@ -1044,6 +1044,8 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .cine-card.show { opacity: 1; transform: translate(0, -50%) skewX(-8deg); }
 .cine-card::before { content: ''; position: absolute; left: -24px; right: -60px; top: -14px; bottom: -14px; background: linear-gradient(90deg, rgba(120,10,10,.85), rgba(120,10,10,.55) 60%, transparent); z-index: -1; clip-path: polygon(0 8%, 100% 0, 92% 100%, 2% 92%); }
 .cine-title { color: #ffd54f; font: 400 clamp(16px, 2.2vw, 26px) 'Bangers', Impact, sans-serif; letter-spacing: 3px; }
+.cine-card.meet::before { background: linear-gradient(90deg, rgba(14,40,66,.88), rgba(14,40,66,.55) 60%, transparent); }
+.cine-card.meet .cine-name { font-size: clamp(34px, 5.5vw, 70px); }
 .cine-name { color: #fff; font: 400 clamp(42px, 7vw, 92px)/1 'Pirata One', Georgia, serif; letter-spacing: 1px; }
 .cine-bounty { color: #f5e6c4; font: 400 clamp(18px, 2.6vw, 32px) 'Bangers', Impact, sans-serif; letter-spacing: 2px; margin-top: 4px; }
 .cine-bounty small { font-size: .6em; margin-right: 8px; color: #ffab91; letter-spacing: 3px; }

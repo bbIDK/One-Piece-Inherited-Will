@@ -1,4 +1,5 @@
 // Entry point: boot the world, show the title, run the loop.
+import { installQuestGivers } from './game/questgivers.js';
 import { installSurvival } from './game/survival.js';
 import * as THREE from 'three';
 import { Renderer } from './render/renderer.js';
@@ -276,6 +277,7 @@ async function start() {
   installCinematics(game);
   installCursor();
   installBossIntros(game);
+  installQuestGivers(game);
   new Crew(game);
   installFactions(game);
   installLegends(game);

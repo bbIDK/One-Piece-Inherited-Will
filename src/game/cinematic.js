@@ -44,7 +44,7 @@ export function installCinematics(game) {
     if (v?.rig) v.rig.mode = 'third';
     C.el = h('div.cine', h('div.cine-bar.top'), h('div.cine-bar.bot'), h('div.cine-skip', 'Space to skip'));
     if (spec.card) {
-      C.card = h('div.cine-card',
+      C.card = h('div.cine-card' + (spec.card.kind === 'meet' ? '.meet' : ''),
         spec.card.title ? h('div.cine-title', spec.card.title) : null,
         h('div.cine-name', spec.card.name),
         spec.card.bounty ? h('div.cine-bounty', h('small', 'BOUNTY'), bountyText(spec.card.bounty)) : null);
@@ -54,7 +54,7 @@ export function installCinematics(game) {
     requestAnimationFrame(() => C.el.classList.add('on'));
     game.ui?.hud?.classList.add('cine-dim');
     game.cine = C;
-    game.audio?.hint?.('battle', 12);
+    if (spec.mood !== 'meet') game.audio?.hint?.('battle', 12);
   };
 
   game.on('tick', (dt) => {
@@ -68,7 +68,7 @@ export function installCinematics(game) {
     while (S && C.shotT > S.dur) { C.shotT -= S.dur; C.shot++; S = C.shots[C.shot]; }
     if (!S || !S.focus?.alive) { endCine(game, true); return; }
     // (the card slams on with its shot, a drum under it)
-    if (S.card && C.card && !C.card.classList.contains('show')) { C.card.classList.add('show'); game.audio?.sfx?.('boss_intro'); }
+    if (S.card && C.card && !C.card.classList.contains('show')) { C.card.classList.add('show'); game.audio?.sfx?.(C.mood === 'meet' ? 'arrive' : 'boss_intro'); }
     const f = S.focus, w = game.world;
     // (each shot, once: turned as little as it takes for a clear line to the focus — not from behind a wall or a fountain)
     if (S.turn === undefined) S.turn = clearTurn(game, f, (f.facing || 0) + S.from.yaw, Math.max(S.from.dist, S.to.dist));
@@ -80,7 +80,7 @@ export function installCinematics(game) {
     // (never under the ground the camera stands over)
     const ch = Math.max(base + hh, g(cx, cy) + 0.4);
     // (the focus turns to face whoever they're sizing up)
-    if (p && f !== p) f.facing = Math.atan2(p.y - f.y, w.dx ? w.dx(f.x, p.x) : p.x - f.x);
+    if (p && f !== p && !f._leaning) f.facing = Math.atan2(p.y - f.y, w.dx ? w.dx(f.x, p.x) : p.x - f.x);
     if (game.view3d?.rig) game.view3d.rig.shot = { from: [cx, cy, ch], at: [fx, fy, base + (S.look ?? 1.5)] };
   });
 }

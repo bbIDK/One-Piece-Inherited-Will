@@ -16,8 +16,8 @@
 import { T } from '../world/tiles.js';
 import { ITEMS } from '../data/items.js';
 
-/** Real seconds for a full belly to empty, and a full flask (at a mild 24°C). */
-export const FOOD_SECONDS = 2900, WATER_SECONDS = 1900;
+/** Real seconds for a full belly to empty (100 min, about six in-game days), and a full flask (about four days, at a mild 24°C). */
+export const FOOD_SECONDS = 6000, WATER_SECONDS = 4000;
 const BODY = 37;
 // (fresh water you can drink from: not the sea)
 const FRESH = new Set([T.RIVER, T.POND, T.CANAL]);

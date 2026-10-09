@@ -58,7 +58,7 @@ export function installTownLife(game) {
 
 // ------------------------------------------------------------ places
 
-function spotsOf(game, town, isl) {
+export function spotsOf(game, town, isl) {
   if (town._life) return town._life;
   const w = game.world;
   const S = { wall: [], shopfront: [], seat: [], stall: [], street: [], door: [], dock: [], tavern: [] };
@@ -253,7 +253,7 @@ function pick(game, a) {
   const r = a.rng;
   const clock = game.env.clock;
   const evening = clock >= 18 || clock < 6;
-  const free = (list) => list.filter((s) => !s.taken || !s.taken.alive || s.taken.activity?.spot !== s);
+  const free = (list) => list.filter((s) => !s.taken || !s.taken.alive || (s.taken.activity?.spot !== s && !(s.taken._leaning && s.taken.x === s.x && s.taken.y === s.y)));
   const options = [];
   const walls = free(S.wall), seats = free(S.seat), fronts = free(S.shopfront);
   if (walls.length) options.push(['lean', 3]);
