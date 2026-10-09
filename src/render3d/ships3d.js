@@ -1113,7 +1113,9 @@ export class ShipView {
       const pl = ctx?.game?.player;
       this.inside.castShadow = this.overhead.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);
       // plundered: the emptied chest sinks away into the hold's shadows, shrinking as it goes
-      if (this.chest) {
+      // (your own ships carry no treasure chest: it's an NPC ship's plunder — see game/traffic.js)
+      if (this.chest && (s.owner === 'player' || s.faction === 'player')) this.chest.visible = false;
+      else if (this.chest) {
         const gone = s.chestGone !== undefined ? Math.min(1, ((ctx?.game?.time ?? 0) - s.chestGone) / 0.7) : 0;
         if (gone !== this.chestK) {
           this.chestK = gone;
