@@ -655,6 +655,11 @@ export class Sky {
    * where the view's frame sits in the world. See SunShadow.follow.
    */
   shadowAt(x, y, z, fx, fz, ox, oy) {
-    this.sun.shadow.follow(this.sun, this.lightDir, x, y, z, fx, fz, ox, oy);
+    // (the shadows turn with the sun in small steps, not every frame: a map
+    // turning a hair each frame crawls along every edge as you watch; a step
+    // of a fifth of a degree is a few seconds of the day apart, and unseen)
+    const d = this._shadowDir || (this._shadowDir = this.lightDir.clone());
+    if (d.dot(this.lightDir) < 0.999994) d.copy(this.lightDir);
+    this.sun.shadow.follow(this.sun, d, x, y, z, fx, fz, ox, oy);
   }
 }

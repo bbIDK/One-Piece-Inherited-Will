@@ -203,6 +203,8 @@ async function start() {
       view3d.rig.shiftLock = !!settings.shiftLock;
       // (zoomed all the way in, first person; out again, third: camera3d.js)
       view3d.rig.onZoom = (mode) => { if (settings.view !== mode) game.cycleView(true); };
+      view3d.gfx = view3d.gfx || {};
+      view3d.setGraphics({ shadows: settings.shadows || 'high', foliage: settings.foliage || 'far', bloom: settings.bloom !== false, res: settings.resScale || 1 });
       if (view3d.quality !== settings.quality) view3d.setQuality(settings.quality || 'high');
       view3d.setRenderDistance(renderChunks(settings));
       applyView();

@@ -420,11 +420,12 @@ class GroundCover {
     if (!w || !v) return;
     if (w !== this.world) { this.world = w; this.cells.clear(); this.key = ''; this.want = null; }
     uTime.value = env.time;
-    const low = v.quality === 'low';
-    const R = low ? 36 : 64;
+    const fol = game.settings?.foliage;
+    const low = v.quality === 'low' || fol === 'near';
+    const R = fol === 'off' ? 0 : low ? 36 : 64;
     const ox = v.ox, oy = v.oy;
     const ccx = Math.floor(w.wx(ox) / CELL), ccy = Math.floor(oy / CELL);
-    const key = `${ccx},${ccy},${low ? 1 : 0}`;
+    const key = `${ccx},${ccy},${low ? 1 : 0},${R}`;
     this.t -= dt;
     if (key !== this.key) { this.key = key; this.want = { ccx, ccy, R, low, placed: false }; }
     const wt = this.want;

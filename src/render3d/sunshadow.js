@@ -139,6 +139,15 @@ export class SunShadow extends DirectionalLightShadow {
     this.normalBias = NORMAL_BIAS;
   }
 
+  /** Settings → Shadows: 'high' (2048 texels a cascade) or 'medium' (1024: a quarter of the drawing, softer edges). */
+  setDetail(q) {
+    const n = q === 'medium' ? SIZE / 2 : SIZE;
+    if (n === this.mapSize.x) return;
+    this.mapSize.set(n, n);
+    this.map?.dispose();
+    this.map = null;
+  }
+
   /** Each cascade is drawn through its own window; the shaders read both through the coarse one's matrix. */
   updateMatrices(light, vp = 0) {
     const r = vp ? NEAR * RATIO : NEAR, cam = this.camera;
@@ -162,7 +171,7 @@ export class SunShadow extends DirectionalLightShadow {
     const h = Math.hypot(dir.x, dir.z) || 1;
     const rx = dir.z / h, rz = -dir.x / h;
     const ux = dir.y * rz, uy = dir.z * rx - dir.x * rz, uz = -dir.y * rx;
-    const t = 2 * NEAR * RATIO / SIZE;
+    const t = 2 * NEAR * RATIO / this.mapSize.x;
     const X = (cx + ox) * rx + (cz + oy) * rz, Y = (cx + ox) * ux + cy * uy + (cz + oy) * uz;
     const dX = Math.round(X / t) * t - X, dY = Math.round(Y / t) * t - Y;
     cx += rx * dX + ux * dY; cy += uy * dY; cz += rz * dX + uz * dY;

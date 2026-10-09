@@ -185,6 +185,7 @@ export class Renderer3D {
     this.ox = 0; this.oy = 0;
     this.quality = 'high';
     this.resScale = 1; // automatic resolution (see adapt)
+    this.gfx = {}; // the finer graphics settings (see setGraphics)
     this.viewChunks = 12; // the render distance (set from the settings: see setRenderDistance)
     this.ctx = {
       THREE, scene: this.scene, game,
@@ -231,7 +232,7 @@ export class Renderer3D {
   }
 
   resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, this.quality === 'low' ? 1 : 1.75) * this.resScale;
+    const dpr = Math.min(window.devicePixelRatio || 1, this.quality === 'low' ? 1 : 1.75) * this.resScale * (this.gfx.res || 1);
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
     this.rig.resize(window.innerWidth, window.innerHeight);
@@ -240,8 +241,10 @@ export class Renderer3D {
 
   setQuality(q) {
     this.quality = q;
-    this.renderer.shadowMap.enabled = q !== 'low';
-    this.sky.sun.castShadow = q !== 'low';
+    const shadows = q !== 'low' && this.gfx.shadows !== 'off';
+    this.renderer.shadowMap.enabled = shadows;
+    this.sky.sun.castShadow = shadows;
+    this.sky.sun.shadow.setDetail?.(this.gfx.shadows);
     this.sky.setDetail(q);
     this.terrain.setDetail?.(q);
     this.water.setDetail?.(q);
@@ -253,7 +256,21 @@ export class Renderer3D {
     if (want && !this.post) {
       try { this.post = new Post(this.renderer, this.scene, this.rig.camera, { lite: want === 'lite' }); } catch (e) { console.warn('post-processing unavailable', e); this.post = null; }
     }
+    if (this.post?.bloom) this.post.bloom.enabled = this.gfx.bloom !== false;
     this.resize();
+  }
+
+  /**
+   * The finer graphics settings (Settings → Graphics), over the preset:
+   * shadows ('high' | 'medium' | 'off'), foliage ('far' | 'near' | 'off'),
+   * bloom (on/off) and the resolution scale (0.5..1, under the automatic one).
+   */
+  setGraphics(g) {
+    const k = `${g.shadows}|${g.foliage}|${g.bloom}|${g.res}`;
+    if (k === this._gfxKey) return;
+    this._gfxKey = k;
+    this.gfx = g;
+    this.setQuality(this.quality);
   }
 
   /**
