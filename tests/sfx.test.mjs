@@ -39,3 +39,18 @@ test('every sound effect builds', () => {
   assert.deepEqual(bad, []);
   assert.ok(ctx.nodes > 1000);
 });
+
+test('every ambience spot (voices across the street, laughter, the rest) builds', async () => {
+  const { SPOTS } = await import('../src/audio/ambience.js');
+  const ctx = fakeCtx();
+  const E = { ctx, now: () => 0, noiseBuf: () => ({}), curve: () => new Float32Array(16) };
+  const bad = [];
+  for (const [name, def] of Object.entries(SPOTS)) {
+    if (typeof def?.play !== 'function') continue;
+    for (let k = 0; k < 5; k++) {
+      const v = new Voice(E, ctx.createGain(), 0, { name });
+      try { def.play(v, { s: 1, sea: 0.5 }); } catch (e) { bad.push(`${name}: ${e.message}`); }
+    }
+  }
+  assert.deepEqual(bad, []);
+});

@@ -314,7 +314,7 @@ class Rain {
 // ---------------------------------------------------------------- spots
 // the spots: one-off sounds, each drawn into a voice `v` on the ambience bus;
 // `gap` the least time between two of a kind (seconds)
-const SPOTS = {
+export const SPOTS = {
   /** A gull's "kyow-kyow" (two or three calls, falling). */
   gull: {
     gap: 3, play(v) {
@@ -363,23 +363,34 @@ const SPOTS = {
   owl: { gap: 8, play(v) { for (const [t, d] of [[0, 0.35], [0.6, 0.18], [0.82, 0.3]]) v.tone(t, d, { freq: rnd(370, 400), to: 350, gain: 0.03, attack: 0.05, curve: 'lin' }); } },
   /** A frog's croak. */
   frog: { gap: 3, play(v) { for (let i = 0; i < 2; i++) v.tone(i * 0.18, 0.12, { freq: rnd(180, 240), to: 150, type: 'sawtooth', gain: 0.025, attack: 0.01, vib: { rate: 30, depth: 25 } }); } },
-  /** A voice across the street: a few voiced syllables, the pitch and the vowels moving as speech does. */
+  /**
+   * A voice across the street: a phrase or two of somebody talking (words
+   * you can't quite make out) — a man's or a woman's, at their own pitch,
+   * syllables run together into words, words into a phrase.
+   */
   voice: {
     gap: 2.5, play(v) {
-      const f0 = Math.random() < 0.5 ? rnd(95, 140) : rnd(170, 250);
-      let t = 0;
-      for (let i = 0, n = 2 + Math.floor(Math.random() * 5); i < n; i++) {
-        const d = rnd(0.09, 0.22), f1 = rnd(350, 780), f2 = rnd(900, 2100);
-        v.vox(t, d, { f0: f0 * rnd(0.9, 1.15), to0: f0 * rnd(0.8, 1.1), f1, f2, to1: f1 * rnd(0.8, 1.2), to2: f2 * rnd(0.8, 1.2), gain: 0.22, attack: 0.025 });
-        t += d + rnd(0.03, 0.14);
+      const fem = Math.random() < 0.5;
+      const f0 = fem ? rnd(185, 245) : rnd(100, 140);
+      const V = 'aaeeiioou', C = ['', '', 's', 't', 'k', 'm', 't', ''];
+      const syl = [];
+      for (let w = 0, words = 2 + Math.floor(Math.random() * 5); w < words; w++) {
+        for (let i = 0, n = 1 + Math.floor(Math.random() * 3); i < n; i++) {
+          syl.push({ d: rnd(0.08, 0.17), v: V[Math.floor(Math.random() * V.length)], c: C[Math.floor(Math.random() * C.length)], gap: i === n - 1 ? rnd(0.05, 0.16) : 0 });
+        }
       }
+      if (Math.random() < 0.2) syl[syl.length - 1].q = true;
+      v.speech(0, syl, { f0, fem, gain: 0.16, far: rnd(1800, 2800) });
     },
   },
-  /** Laughter across the square: ha-ha-ha, each a little lower. */
+  /** Laughter across the square: ha-ha-ha, breathy, each a little lower. */
   laugh: {
     gap: 8, play(v) {
-      const f0 = Math.random() < 0.5 ? rnd(120, 160) : rnd(220, 290);
-      for (let i = 0, n = 3 + Math.floor(Math.random() * 3); i < n; i++) v.vox(i * rnd(0.12, 0.16), 0.09, { f0: f0 * (1.1 - i * 0.04), to0: f0 * (1.02 - i * 0.04), f1: 760, f2: 1250, gain: 0.2 * (1 - i * 0.12), attack: 0.012 });
+      const fem = Math.random() < 0.5;
+      const f0 = fem ? rnd(230, 300) : rnd(125, 170);
+      const syl = [];
+      for (let i = 0, n = 3 + Math.floor(Math.random() * 3); i < n; i++) syl.push({ d: rnd(0.07, 0.1), v: 'a', c: 'h', gap: rnd(0.04, 0.07) });
+      v.speech(0, syl, { f0, fem, gain: 0.15, far: 2600 });
     },
   },
   /** A cup or a bottle set down, a coin on a counter. */

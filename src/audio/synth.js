@@ -282,6 +282,74 @@ export class Voice {
   }
 
   /**
+   * Someone talking across the way (you can't make out the words): one
+   * continuous voice for a whole phrase, as a throat makes it — its pitch
+   * gliding through the phrase (up at the start, falling at the end, a
+   * little wobble), the vowels shaped by three formants moving from syllable
+   * to syllable, a breath of air through it, the consonants as short hisses
+   * and taps between the vowels, and all of it softened by the distance.
+   * `syl`: [{ d (s), v ('a' | 'e' | 'i' | 'o' | 'u'), c (a consonant before
+   * it: 's', 't', 'k', 'm' or none), gap (a pause after it, s) }].
+   */
+  speech(dt, syl, { f0 = 140, fem = false, gain = 0.1, far = 2400, dest } = {}) {
+    const c = this.c, t0 = this.at(dt);
+    const V = { a: [730, 1090, 2440], e: [530, 1840, 2480], i: [300, 2200, 2950], o: [570, 840, 2410], u: [320, 870, 2240] };
+    const k = (fem ? 1.17 : 1) * this.pj;
+    const total = syl.reduce((s, x) => s + x.d + (x.gap || 0), 0);
+    const end = t0 + total;
+    // the throat: a buzz, its pitch moving as speech does
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2800;
+    const air = c.createBufferSource(); air.buffer = this.E.noiseBuf('pink'); air.loop = true;
+    const airG = c.createGain(); airG.gain.value = 0.18;
+    const src = c.createGain();
+    o.connect(lp); lp.connect(src); air.connect(airG); airG.connect(src);
+    // the mouth: three formants, moved syllable to syllable; the voice's loudness by syllable
+    const amp = c.createGain(); amp.gain.setValueAtTime(0.0001, t0);
+    const out = c.createGain(); out.gain.value = gain;
+    const dist = c.createBiquadFilter(); dist.type = 'lowpass'; dist.frequency.value = far;
+    const fs = [0, 1, 2].map((i) => {
+      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = [7, 10, 12][i];
+      const g = c.createGain(); g.gain.value = [1, 0.6, 0.25][i];
+      src.connect(f); f.connect(g); g.connect(amp);
+      return f;
+    });
+    amp.connect(dist); dist.connect(out); out.connect(dest || this.in);
+    // the consonants: a hiss or a tap, straight into the output
+    const hiss = c.createBufferSource(); hiss.buffer = this.E.noiseBuf('white'); hiss.loop = true;
+    const hf = c.createBiquadFilter(); hf.type = 'bandpass'; hf.Q.value = 2;
+    const hg = c.createGain(); hg.gain.setValueAtTime(0.0001, t0);
+    hiss.connect(hf); hf.connect(hg); hg.connect(dist);
+    let t = t0;
+    const n = syl.length;
+    syl.forEach((x, i) => {
+      const [F1, F2, F3] = V[x.v] || V.a;
+      const ph = n > 1 ? i / (n - 1) : 0;
+      // (phrase intonation: rises into the first stress, then drifts down; a question lifts at the end)
+      const pitch = f0 * (1 + 0.12 * Math.sin(Math.min(1, ph * 3) * Math.PI) - 0.14 * ph + (x.q ? 0.2 : 0)) * (1 + (Math.random() - 0.5) * 0.06);
+      o.frequency.linearRampToValueAtTime(minF(pitch * this.pj), t + x.d * 0.5);
+      fs[0].frequency.linearRampToValueAtTime(minF(F1 * k), t + Math.min(0.05, x.d * 0.4));
+      fs[1].frequency.linearRampToValueAtTime(minF(F2 * k), t + Math.min(0.06, x.d * 0.4));
+      fs[2].frequency.linearRampToValueAtTime(minF(F3 * k), t + Math.min(0.06, x.d * 0.4));
+      if (x.c) {
+        const cs = { s: [5200, 0.045, 0.5], t: [3500, 0.018, 0.6], k: [2200, 0.02, 0.5], m: [300, 0.04, 0.0], h: [1400, 0.05, 0.35] }[x.c] || [4000, 0.02, 0.4];
+        hf.frequency.setValueAtTime(cs[0], t);
+        if (cs[2] > 0) { hg.gain.setValueAtTime(0.0001, t); hg.gain.linearRampToValueAtTime(cs[2], t + 0.006); hg.gain.linearRampToValueAtTime(0.0001, t + cs[1]); }
+        t += cs[1];
+      }
+      const stress = 0.7 + Math.random() * 0.3;
+      amp.gain.setTargetAtTime(stress, t, 0.018);
+      amp.gain.setTargetAtTime(x.gap ? 0.0001 : stress * 0.55, t + x.d * 0.7, 0.025);
+      t += x.d;
+      if (x.gap) t += x.gap;
+    });
+    amp.gain.setTargetAtTime(0.0001, Math.min(t, end), 0.03);
+    o.frequency.setValueAtTime(minF(f0 * this.pj), t0);
+    for (const s of [o, air, hiss]) { s.start(t0, s === o ? 0 : Math.random() * 1.9); s.stop(t + 0.2); }
+    this.done(t + 0.25);
+  }
+
+  /**
    * A swirl (the anime's "shing" of hardening steel): noise through a comb
    * whose tooth spacing sweeps (a flanger — a short delay fed back on itself,
    * its time gliding `d0` → `d1` → `d2` ms), so the colour sweeps in arcs.
