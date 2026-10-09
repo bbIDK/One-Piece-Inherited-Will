@@ -490,7 +490,8 @@ export class Sky {
       top = [0.05, 0.02, 0.02]; hor = [0.18, 0.08, 0.06]; bottom = [0.05, 0.02, 0.02];
     } else if (zone === 1) { // above the clouds: a deep blue overhead, a white horizon over the cloud sea
       top = lerp3(top, [0.1, 0.32, 0.78].map((v) => v * (0.2 + day * 0.8)), 0.6);
-      hor = lerp3(hor, [0.95, 0.97, 1.0], 0.5 * day);
+      // (a soft blue-white haze, not a glare: the cloud sea below is white enough)
+      hor = lerp3(hor, [0.78, 0.85, 0.94], 0.4 * day);
       bottom = hor;
     }
     // (the New World's odd skies: a red sky at noon, violet storm light)
@@ -589,7 +590,7 @@ export class Sky {
     }
     const weatherK = (1 - ov * 0.72) * (1 - storm * 0.2) * (1 - dust * 0.35);
     this.sun.intensity = (sunUp ? 2.4 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y) * (0.6 + 0.4 * moonLit))
-      * weatherK * (zone === 3 ? 0.25 : zone === 2 ? 0.35 + 0.5 * ib : 1);
+      * weatherK * (zone === 3 ? 0.25 : zone === 2 ? 0.35 + 0.5 * ib : zone === 1 ? 0.7 : 1);
     // (and the low sun's shadows grow fainter as it goes down)
     this.sun.shadow.intensity = (1 - sm(0.3, 0.9, ov) * 0.85) * (sunUp ? 1 - 0.5 * low : 0.75);
     if (sunUp) this.sun.color.setRGB(1, 0.95 - warm * 0.24, 0.88 - warm * 0.42);
@@ -597,7 +598,8 @@ export class Sky {
     if (dust) this.sun.color.lerp(_haze.setRGB(1, 0.75, 0.5), dust * 0.4);
     this.hemi.color.setRGB(amb[0] * 0.8, amb[1] * 0.85, amb[2] * 0.95);
     this.hemi.groundColor.setRGB(amb[0] * 0.45, amb[1] * 0.4, amb[2] * 0.35);
-    this.hemi.intensity = 1.0 + ov * 0.35 * day + (zone === 3 ? -0.3 : 0);
+    // (up on the sky islands the cloud underfoot throws so much light back that it's toned down, or it all glares white)
+    this.hemi.intensity = 1.0 + ov * 0.35 * day + (zone === 3 ? -0.3 : zone === 1 ? -0.22 : 0);
     // the picture's grading: flatter and cooler under cloud, richer in the heat
     this.grade.sat = 1 - ov * 0.14 - storm * 0.08 + heat * 0.06 - dust * 0.05;
     this.grade.contrast = 1 - ov * 0.05 + storm * 0.04;
