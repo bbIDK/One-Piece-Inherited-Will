@@ -1924,7 +1924,8 @@ export class Actor extends Entity {
     const ai = this.controller;
     const npcFight = !this.isPlayer && ai && ai.target && ai.state === 'chase';
     const combat = now - (this._lastActT ?? -99) < 2.5 || this.blocking || this.hitstun > 0 || (this.isPlayer ? !!this.inCombat : !!npcFight);
-    const drawn = !!this.drawn && !!wpn && !!STANCE_ARMED[stance];
+    // (a blade laid over the shoulder while they wait: out of its sheath)
+    const drawn = (!!this.drawn || (this.act3d?.pose === 'shoulder' && !this.moving)) && !!wpn && !!STANCE_ARMED[stance];
     const hurt = this.state === 'idle' && this.hitstun > 0.2 && !act;
     const dodging = !!(this.dash && this.dash.dodge);
     let anim = null;
@@ -1952,7 +1953,7 @@ export class Actor extends Entity {
       this._blendFrom = this._lastP || null;
       this._blendT = 0;
       // settling into (or getting up from) a seat or a lean takes a moment
-      const slow = busy || swim || st || (this._mode && /(lean|sit|sweep|vend|fish|drunk|chat|tread|crawl|dive|float|struggle|row|helm)$/.test(this._mode));
+      const slow = busy || swim || st || (this._mode && /(lean|sit|sweep|vend|fish|drunk|chat|fold|hips|attention|shoulder|fistpalm|think|tread|crawl|dive|float|struggle|row|helm)$/.test(this._mode));
       this._blendDur = act ? Math.min(0.06, (act.def.windup ?? 0.1) * 0.45) : hurt ? 0.05 : slow ? 0.45 : 0.12;
       this._mode = mode;
     }

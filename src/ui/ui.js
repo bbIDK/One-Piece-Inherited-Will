@@ -335,7 +335,7 @@ export class UI {
     captureKey(this.game, group, i, name, () => { this.cache.skills = null; this.onKeysChange?.(); });
   }
 
-  blocksInput() { return this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen || !!this.consoleOpen || !!this.chatOpen || this.asking > 0; }
+  blocksInput() { return !!this.game?.cine || this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen || !!this.consoleOpen || !!this.chatOpen || this.asking > 0; }
 
   log(text, color = '#fff') {
     const d = h('div', { style: { color } }, text);

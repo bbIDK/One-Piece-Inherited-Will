@@ -1006,6 +1006,17 @@ export const SFX = {
     },
   },
   // ---- SFX pass 3: the small moments that were silent
+  /** A boss's name slamming onto the screen: a taiko hit, a cymbal crash and a brass stab. */
+  boss_intro: {
+    prio: 9, cd: 1, max: 1, send: 0.4, drive: 1.2, bus: 'ui', duck: 0.6,
+    play(v) {
+      v.thump(0, { f0: 120, f1: 40, dur: 0.6, gain: 0.8, click: 0.4 });
+      v.noise(0, 0.02, { type: 'highpass', freq: 1800, gain: 0.5, attack: 0.0005 });
+      v.noise(0.01, 1.4, { type: 'highpass', freq: 4000, gain: 0.12, attack: 0.002 });
+      [196, 233, 294].forEach((f) => { v.tone(0.02, 0.7, { freq: f, type: 'sawtooth', gain: 0.06, attack: 0.01 }); v.tone(0.02, 0.7, { freq: f * 1.005, type: 'sawtooth', gain: 0.04, attack: 0.01 }); });
+      v.thump(0.42, { f0: 90, f1: 35, dur: 0.5, gain: 0.5 });
+    },
+  },
   /** A lid lifted: the hasp's click, the hinge's long creak, the lid laid back. */
   chest_open: {
     prio: 5, cd: 0.2, max: 1, send: 0.1,

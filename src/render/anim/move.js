@@ -172,6 +172,56 @@ export function activityPose(P, act, t) {
       P.ht = 0.14 * s2;
       P.fF = [0.1, 0]; P.fB = [-0.12, 0];
       break;
+    // ---- stances: how someone with a part to play stands about waiting
+    // (quest-givers and bosses — see game/npcs.js stanceFor), each breathing,
+    // shifting their weight now and then
+    case 'fold': {
+      // arms folded high across the chest, feet planted apart, chin up
+      const w = Math.sin(t * 0.37) > 0.6 ? 1 : 0;
+      P.hF = [0.13, 0.1]; P.hB = [0.12, 0.12]; P.eF = 1; P.eB = 1;
+      P.fF = [0.1 + 0.02 * w, 0]; P.fB = [-0.1, 0];
+      P.l = -0.03; P.ht = -0.05 + s2 * 0.02;
+      break;
+    }
+    case 'hips': {
+      // fists on the hips, elbows out, standing wide: daring you
+      P.hF = [-0.02, 0.27]; P.hB = [-0.03, 0.28]; P.hand = 'fist'; P.handB = 'fist';
+      P.fF = [0.13, 0]; P.fB = [-0.13, 0];
+      P.l = -0.04; P.ht = -0.06 + s2 * 0.025;
+      break;
+    }
+    case 'attention': {
+      // a Marine at ease: hands clasped behind the back, straight-backed
+      P.hF = [-0.13, 0.31]; P.hB = [-0.14, 0.32];
+      P.fF = [0.06, 0]; P.fB = [-0.06, 0];
+      P.l = -0.02; P.ht = -0.04 + s2 * 0.015;
+      break;
+    }
+    case 'shoulder': {
+      // the blade drawn and laid back over the shoulder, weight on the back foot
+      P.hF = [0.07, -0.02]; P.wF = -2.35; P.hand = 'fist'; P.eF = 1;
+      P.hB = [0.06, 0.37];
+      P.fF = [0.14, 0]; P.fB = [-0.09, 0];
+      P.l = -0.05; P.ht = -0.03 + s2 * 0.02;
+      break;
+    }
+    case 'fistpalm': {
+      // impatient: punching a fist into the open palm, again and again
+      const k = Math.max(0, Math.sin(t * 2.2));
+      P.hB = [0.2, 0.2]; P.handB = 'palm';
+      P.hF = [0.22 - 0.06 * (1 - k), 0.18 - 0.08 * (1 - k)]; P.hand = 'fist';
+      P.fF = [0.11, 0]; P.fB = [-0.11, 0];
+      P.l = 0.04; P.ht = -0.02 + 0.03 * k;
+      break;
+    }
+    case 'think': {
+      // a hand to the chin, the other arm across under it
+      P.hF = [0.11, 0.0]; P.hand = 'fist'; P.eF = 1;
+      P.hB = [0.12, 0.16]; P.eB = 1;
+      P.fF = [0.07, 0]; P.fB = [-0.08, 0];
+      P.ht = 0.05 + s2 * 0.03;
+      break;
+    }
     // a wanted poster's (ui/screens.js wantedPoster): the face it's struck
     // with is part of the pose
     case 'poster-fist':

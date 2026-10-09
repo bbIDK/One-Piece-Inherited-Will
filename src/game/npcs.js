@@ -198,10 +198,36 @@ export function makeNPC(def, x, y, extra = {}) {
     ranged: def.ranged, leash: def.leash ?? (def.boss ? 18 : 16), phases: def.phases, barks: def.barks,
   });
   if (kind === 'guard' || kind === 'idle') { a.stationary = true; a.faceHome = Math.PI / 2; }
+  // (someone with a part to play stands like it while they wait: see stanceFor)
+  const st = def.stance === undefined ? stanceFor(def) : def.stance;
+  if (st) a.act3d = { pose: st, prop: null, h: 0, stance: true };
   if (def.hostile) a.aggroPlayer = true;
   // (a crew who keep to themselves till you start it, or their story does)
   if (def.calm) a.calm = true;
   return a;
+}
+
+/**
+ * How a quest-giver or a boss stands about while they wait — so they read as
+ * someone, not a passer-by: a Marine at ease with their hands behind their
+ * back, a swordsman with the blade over a shoulder, a brawler punching a
+ * palm or daring you with fists on hips, a captain with arms folded, a
+ * scholar thinking. (A definition's own `stance` wins; null: none.)
+ */
+export function stanceFor(def) {
+  if (def.townsfolk || def.crew || def.hostile && !def.boss) return null;
+  if (!def.boss && !def.dialogue) return null;
+  if (def.shop || def.role === 'shop' || def.role === 'vendor' || def.role === 'inn') return null;
+  const h = hashSeed(def.id || def.name || '');
+  if (def.faction === 'marine') return def.boss ? (def.weapon ? 'shoulder' : 'fold') : 'attention';
+  if (def.boss) {
+    if (def.weapon && /sword|katana|blade|saber|sabre|cutlass|axe|scythe|mace|club/i.test(String(def.weapon.id || def.weapon))) return 'shoulder';
+    return ['fold', 'hips', 'fistpalm'][h % 3];
+  }
+  if (/scholar|doctor|archaeolog|navigator|professor|sage|elder/i.test(`${def.title || ''} ${def.role || ''}`)) return 'think';
+  if (def.faction === 'pirate' || def.faction === 'bandit') return h % 2 ? 'fold' : 'hips';
+  if (/hunter/i.test(`${def.title || ''} ${def.role || ''} ${def.faction || ''}`)) return 'fold';
+  return null;
 }
 
 function hashSeed(s) { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; }

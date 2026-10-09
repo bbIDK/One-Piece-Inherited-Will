@@ -304,7 +304,10 @@ export function rigOptions(a, pose, P, o = {}) {
     o.sideRoll = Math.sign(s) * s * s * lean * Math.sin(Math.min(1, pose.dodge / 0.85) * Math.PI);
   }
   // everyday poses: arms folded across the chest, a seat under you, something in your hand
-  if (pose.activity === 'lean' || pose.activity === 'poster-fold') o.spread = -0.17;
+  if (pose.activity === 'lean' || pose.activity === 'poster-fold' || pose.activity === 'fold') o.spread = -0.17;
+  else if (pose.activity === 'think') o.spread = -0.12;
+  else if (pose.activity === 'hips') o.spread = 0.07;
+  else if (pose.activity === 'attention') o.spread = -0.1;
   o.seatH = pose.activity === 'sit' || pose.activity === 'fish' ? pose.seatH || 0 : null;
   // (at a rowboat's oars, on her thwart)
   if (pose.station && pose.station.kind === 'row' && !A) { o.seatH = shipDims(pose.station.ship.def).row.seatH; o.walkRel = null; }

@@ -193,6 +193,8 @@ export class AIController {
   update(a, dt, game) {
     const w = game.world;
     a.intent.mx = 0; a.intent.my = 0; a.intent.sprint = false;
+    // (a cutscene playing: everyone holds where they are — see cinematic.js)
+    if (game.cine) return;
     this.think -= dt;
     if (this.barks && (this.barkT -= dt) <= 0 && (this.state === 'chase' || this.state === 'attack')) {
       this.barkT = 5 + Math.random() * 8;

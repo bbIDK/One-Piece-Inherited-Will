@@ -1019,3 +1019,18 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .vy-conn ol { margin: 6px 0; padding-left: 20px; }
 .vy-conn .turn-in { width: 100%; box-sizing: border-box; padding: 6px 8px; border-radius: 8px; border: 2px solid #6d4c33; background: #fffaf0; color: var(--ink); font: 600 12.5px Nunito, sans-serif; margin: 4px 0; }
 .vy-conn .turn-in.small { width: auto; flex: 1; min-width: 0; }
+/* cutscenes (game/cinematic.js): letterbox bars, a boss's name card */
+.cine { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.cine-bar { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .45s ease; }
+.cine-bar.top { top: 0; } .cine-bar.bot { bottom: 0; }
+.cine.on .cine-bar { height: 11vh; }
+.cine-skip { position: absolute; right: 22px; bottom: calc(11vh - 30px); color: rgba(255,255,255,.55); font: 700 12px Nunito, sans-serif; letter-spacing: .5px; opacity: 0; transition: opacity .4s ease .6s; }
+.cine.on .cine-skip { opacity: 1; }
+.cine-card { position: absolute; left: 7vw; top: 50%; transform: translate(-40px, -50%) skewX(-8deg); opacity: 0; transition: transform .28s cubic-bezier(.2,1.4,.4,1), opacity .2s ease; text-shadow: 0 3px 0 #000, 0 0 18px rgba(0,0,0,.7); }
+.cine-card.show { opacity: 1; transform: translate(0, -50%) skewX(-8deg); }
+.cine-card::before { content: ''; position: absolute; left: -24px; right: -60px; top: -14px; bottom: -14px; background: linear-gradient(90deg, rgba(120,10,10,.85), rgba(120,10,10,.55) 60%, transparent); z-index: -1; clip-path: polygon(0 8%, 100% 0, 92% 100%, 2% 92%); }
+.cine-title { color: #ffd54f; font: 400 clamp(16px, 2.2vw, 26px) 'Bangers', Impact, sans-serif; letter-spacing: 3px; }
+.cine-name { color: #fff; font: 400 clamp(42px, 7vw, 92px)/1 'Pirata One', Georgia, serif; letter-spacing: 1px; }
+.cine-bounty { color: #f5e6c4; font: 400 clamp(18px, 2.6vw, 32px) 'Bangers', Impact, sans-serif; letter-spacing: 2px; margin-top: 4px; }
+.cine-bounty small { font-size: .6em; margin-right: 8px; color: #ffab91; letter-spacing: 3px; }
+.hud.cine-dim { opacity: 0; transition: opacity .3s ease; }
