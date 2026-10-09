@@ -118,9 +118,14 @@ export function seaClimate(region, y, H, CB_TOP, CB_BOTTOM) {
 /** Each climate's mean temperature (°C, by day, in fair weather). */
 const MEAN_T = {
   east_blue: 19, north_blue: 13, west_blue: 18, south_blue: 24, paradise: 24, new_world: 22, calm_belt: 30, polar: -14, red_line: 9,
-  cold_sea: 3, warm_sea: 28, winter: -7, summer: 31, desert: 38, spring: 17, autumn: 12, temperate: 19, volcanic: 33, gloom: 10, candy: 22,
+  cold_sea: 3, warm_sea: 28, winter: -7, summer: 31, desert: 24, spring: 17, autumn: 12, temperate: 19, volcanic: 33, gloom: 10, candy: 22,
   sky: 16, none: 14,
 };
+
+// How far a day's warmth swings either side of the mean (°C): little over
+// the open sea, which holds its heat; a great deal in the dry air of a desert
+// (scorching by day, cold by night) or the thin air up in the sky.
+const SWING = { desert: 16, sky: 9, winter: 6, polar: 6, volcanic: 6, summer: 6, calm_belt: 3, cold_sea: 3, warm_sea: 3 };
 
 /**
  * The air's temperature (°C): the climate's, a little cooler the further
@@ -130,8 +135,11 @@ const MEAN_T = {
 export function temperature(climate, lat, clock, e = {}) {
   let t = MEAN_T[climate] ?? 18;
   t -= Math.abs(lat || 0) * 6;
-  // (warmest mid-afternoon, coldest just before dawn)
-  t += 5 * Math.cos(((clock ?? 14) - 14.5) / 24 * Math.PI * 2);
+  // (warmest mid-afternoon, coldest just before dawn — and falling fast once
+  // the sun's down, rising fast once it's up)
+  const c = clock ?? 14, sm = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+  const sun = sm(5.5, 8, c) - sm(18, 21, c);
+  t += (SWING[climate] ?? 5) * (0.6 * Math.cos((c - 14.5) / 24 * Math.PI * 2) + 0.4 * (2 * sun - 1));
   t -= (e.cloud || 0) * 3 + (e.rain || 0) * 3 + (e.snow || 0) * 5 + (e.storm || 0) * 3;
   t += (e.heat || 0) * 5;
   return Math.round(t);

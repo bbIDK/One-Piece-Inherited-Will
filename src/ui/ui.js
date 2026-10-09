@@ -338,7 +338,17 @@ export class UI {
   blocksInput() { return !!this.game?.cine || this.stack.length > 0 || !!this.dialogueEl || !!this.screenEl || !!this.mapOpen || !!this.consoleOpen || !!this.chatOpen || this.asking > 0; }
 
   log(text, color = '#fff') {
+    // (the same line again isn't stacked: it's moved to the bottom, counted)
+    const same = [...this.el.log.children].find((c) => c._text === text);
+    if (same) {
+      same._n = (same._n || 1) + 1;
+      same.textContent = `${text} ×${same._n}`;
+      this.el.log.appendChild(same);
+      same.style.animation = 'none'; void same.offsetWidth; same.style.animation = '';
+      return;
+    }
     const d = h('div', { style: { color } }, text);
+    d._text = text;
     this.el.log.appendChild(d);
     while (this.el.log.children.length > 7) this.el.log.removeChild(this.el.log.firstChild);
   }

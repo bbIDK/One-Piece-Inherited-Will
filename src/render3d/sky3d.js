@@ -47,6 +47,7 @@ const FRAG = /* glsl */`
   uniform vec4 uDrift;      // how far the clouds have drifted: cumulus (xy), deck (zw)
   uniform vec2 uScudDrift;
   uniform vec3 uCLit, uCMid, uCShade, uDeckLo, uDeckHi, uFlashCol;
+  uniform float uHorizonY; // where the sea's edge is (y of the view direction): below level, the higher you are
   uniform float uMoonPhase; // 0 full … 0.5 new
   uniform float uMoonLight; // how much of the moon is lit
   uniform mat3 uStarRot;    // the stars' turn round the pole
@@ -96,7 +97,11 @@ const FRAG = /* glsl */`
     }
     // ---- the clear sky: below the horizon it only ever shows past the edge
     // of the sea, so it keeps the far sea's hazy colour there
-    vec3 col = y > 0.0 ? mix(uHorizon, uTop, pow(clamp(y, 0.0, 1.0), 0.55)) : mix(uHorizon, uBottom, smoothstep(0.0, 0.35, -y) * 0.6);
+    // (and nothing in the sky shows below it: the sun or moon gone down, seen
+    // from up high past the edge of the sea, is under the planet's rim)
+    float yh = y - uHorizonY;
+    float above = smoothstep(-0.004, 0.004, yh);
+    vec3 col = yh > 0.0 ? mix(uHorizon, uTop, pow(clamp(y, 0.0, 1.0), 0.55)) : mix(uHorizon, uBottom, smoothstep(0.0, 0.35, -yh) * 0.6);
     // hot air: a white glare low down; windborne dust: an ochre haze
     col = mix(col, uHorizon * 1.08 + 0.03, uHeat * 0.35 * exp(-max(y, 0.0) * 9.0));
     col = mix(col, uDustCol, uDust * 0.75 * exp(-max(y, 0.0) * 3.5));
@@ -104,14 +109,14 @@ const FRAG = /* glsl */`
     // the sun, and its glow (through cloud a broad pale glow, no disc)
     float sd = max(dot(d, uSunDir), 0.0);
     float disc = smoothstep(0.99955, 0.9997, sd) * 5.0 + pow(sd, 900.0) * 2.0;
-    col += uSunCol * (disc * clearSky * clearSky * (1.0 - uDust * 0.6) + pow(sd, 12.0) * 0.35 * (1.0 - uOvercast * 0.6) + pow(sd, 3.0) * (0.08 * uDusk + 0.1 * uHeat));
+    col += uSunCol * (disc * above * clearSky * clearSky * (1.0 - uDust * 0.6) + pow(sd, 12.0) * 0.35 * (0.3 + 0.7 * above) * (1.0 - uOvercast * 0.6) + pow(sd, 3.0) * (0.08 * uDusk + 0.1 * uHeat));
     col += uSunCol * pow(sd, 4.0) * 0.18 * uOvercast * (1.0 - uStorm * 0.7);
     // ---- night: the moon, the stars, the Milky Way (fading behind cloud)
     // (the stars wait for the dark; the moon shows from dusk)
     float nightVis = smoothstep(0.45, 0.9, uNight) * clearSky;
-    if (y > -0.05 && uNight * clearSky > 0.02) {
+    if (yh > -0.004 && uNight * clearSky > 0.02) {
       vec3 sd3 = uStarRot * d;
-      float low = smoothstep(-0.02, 0.18, y);
+      float low = smoothstep(-0.02, 0.18, y) * above;
       // the moon's glow drowns the faint stars near it
       float mGlow = pow(max(dot(d, uMoonDir), 0.0), 40.0) * uMoonLight;
       float starK = nightVis * low * (1.0 - mGlow * 0.85);
@@ -168,10 +173,10 @@ const FRAG = /* glsl */`
           float maria = textureLod(uNoise, q * 0.22 + 0.5, 0.0).g;
           vec3 mc = vec3(1.0, 0.97, 0.88) * (0.78 + 0.3 * smoothstep(0.35, 0.6, maria)) * lit * 1.6 + vec3(0.05, 0.06, 0.09);
           float edge = 1.0 - smoothstep(0.92, 1.0, r2);
-          col = mix(col, mc, edge * smoothstep(0.05, 0.4, uNight) * (1.0 - uOvercast));
+          col = mix(col, mc, edge * above * smoothstep(0.05, 0.4, uNight) * (1.0 - uOvercast));
         }
       }
-      col += vec3(0.5, 0.6, 0.85) * (pow(max(md, 0.0), 300.0) * 0.25 + mGlow * 0.06) * uNight * (1.0 - uOvercast * 0.5);
+      col += vec3(0.5, 0.6, 0.85) * (pow(max(md, 0.0), 300.0) * 0.25 * above + mGlow * 0.06) * uNight * (1.0 - uOvercast * 0.5);
       // the aurora: curtains of light low in the north
       #ifndef LOW
       if (uAurora > 0.01) {
@@ -402,7 +407,7 @@ export class Sky {
       uDrift: { value: new THREE.Vector4() }, uScudDrift: { value: new THREE.Vector2() },
       uCLit: { value: new THREE.Color() }, uCMid: { value: new THREE.Color() }, uCShade: { value: new THREE.Color() },
       uDeckLo: { value: new THREE.Color() }, uDeckHi: { value: new THREE.Color() }, uFlashCol: { value: new THREE.Color(0.85, 0.88, 1.0) },
-      uMoonPhase: { value: 0 }, uMoonLight: { value: 1 }, uStarRot: { value: new THREE.Matrix3() },
+      uHorizonY: { value: 0 }, uMoonPhase: { value: 0 }, uMoonLight: { value: 1 }, uStarRot: { value: new THREE.Matrix3() },
       uAurora: { value: 0 }, uHeat: { value: 0 }, uDust: { value: 0 },
       uDustCol: { value: new THREE.Color(...DUST) }, uNoise: { value: skyNoise() },
     };

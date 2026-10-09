@@ -7,7 +7,7 @@
 import { prof } from '../core/prof.js';
 import * as THREE from 'three';
 import { FOG } from './fog.js'; // the atmospheric fog shader chunks (before any material compiles)
-import './curvature.js'; // (the planet's curve, bent into every vertex shader: before anything compiles)
+import { PLANET_R } from './curvature.js'; // (the planet's curve, bent into every vertex shader: before anything compiles)
 import './lighting.js'; // cheaper point lights (also shader chunks; the sun's shadows are in sunshadow.js)
 import { Post } from './post.js';
 import { TerrainManager , CTIME } from './terrain3d.js';
@@ -442,6 +442,8 @@ export class Renderer3D {
     this.sky.inBubble = this.dome.update(w, ox, oy, env, cam);
     this.sky.update(env, w, sailing);
     this.sky.mesh.position.copy(cam.position);
+    // (the sea's edge dips as you climb: √(2h/R) below level on a planet this size)
+    this.sky.uniforms.uHorizonY.value = -Math.sqrt(2 * Math.max(0, cam.position.y) / PLANET_R);
     this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top, this.sky.overcast);
     // (no sea inside the hull you're aboard: from her hold you'd see it across the room)
     const hs = p.deck?.ship || (sailing ? p.ship : null);
