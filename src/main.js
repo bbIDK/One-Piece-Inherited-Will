@@ -1,4 +1,5 @@
 // Entry point: boot the world, show the title, run the loop.
+import { installSurvival } from './game/survival.js';
 import * as THREE from 'three';
 import { Renderer } from './render/renderer.js';
 import { PROF, prof, profFrame, profReset } from './core/prof.js';
@@ -284,6 +285,7 @@ async function start() {
   installTownLife(game);
   installSeaLife(game);
   installForaging(game);
+  installSurvival(game);
   installContent(game);
   // multiplayer: nothing at all until a voyage is hosted or joined (see net/session.js)
   installNet(game);

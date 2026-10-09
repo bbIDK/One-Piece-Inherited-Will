@@ -975,6 +975,15 @@ export const SFX = {
       v.formant(0.4, 0.1, { f1: 300, f2: 700, q: 3, gain: 0.15, attack: 0.01 });
     },
   },
+  /** GULP: a swallow of water, a little glug behind it. */
+  sip: {
+    prio: 5, cd: 0.25, max: 1, variants: 3,
+    play(v, k) {
+      v.tone(0, 0.09, { freq: [420, 470, 390][k.rr] * r(), to: 230, gain: 0.12, attack: 0.008 });
+      v.noise(0.02, 0.07, { freq: 900, q: 2.5, gain: 0.06, attack: 0.01 });
+      v.tone(0.1, 0.07, { freq: 300 * r(), to: 520, gain: 0.07, attack: 0.01 });
+    },
+  },
   /** CHOMP: teeth through something crisp, a little crunch after. */
   bite: {
     prio: 5, cd: 0.18, max: 1, variants: 3,

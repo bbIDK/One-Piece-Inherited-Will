@@ -2120,7 +2120,7 @@ D.crate = (I, o = {}) => {
 // ================================================================ resolver
 /** id → [drawer, opts] for notable items. */
 const ITEM_MAP = {
-  meat: ['meat'], rice_ball: ['riceBall'], fish_stew: ['bowl', { top: 'fish' }], tangerine: ['orange'],
+  meat: ['meat'], water_flask: ['bottle', { liquid: '#8fd0f2' }], rice_ball: ['riceBall'], fish_stew: ['bowl', { top: 'fish' }], tangerine: ['orange'],
   elephant_tuna: ['fish', { color: '#35557a', trunk: true }], fighting_fish_horn: ['horn', { color: '#f1e6cc' }],
   sea_king_steak: ['steak'], baratie_course: ['plate'], sake: ['sake'], cola: ['barrel', { label: 'cola', hoop: '#c23b2e' }],
   p2_cola_barrel: ['barrel', { label: 'cola', hoop: '#c23b2e' }],

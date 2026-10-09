@@ -25,6 +25,20 @@
 .bar > span { position: absolute; right: 7px; top: -1px; font-size: 10px; font-weight: 800; text-shadow: 0 1px 1px #000; }
 .bar.hp > i { background: linear-gradient(#ff6b6b, var(--hp)); }
 .bar.hk > i { background: linear-gradient(#b39ddb, var(--haki)); }
+.needs { display: flex; gap: 6px; margin: -1px 0 4px; }
+.needs .need { flex: 1; display: flex; align-items: center; gap: 3px; min-width: 0; }
+.needs .need-ic { width: 14px; height: 14px; flex: none; filter: drop-shadow(0 1px 1px #000); }
+.needs .need-ic svg { width: 100%; height: 100%; display: block; }
+.needs .bar { flex: 1; height: 7px; margin: 0; border-radius: 4px; }
+.needs .bar > i, .needs .bar > b { border-radius: 4px; }
+.needs .bar > span { top: -3px; right: 3px; font-size: 8px; }
+.bar.food > i { background: linear-gradient(#ffcc80, #e08a2e); }
+.bar.water > i { background: linear-gradient(#b3e5fc, #1e88e5); }
+.bar.heat > i { background: linear-gradient(#c5e1a5, #7cb342); }
+.bar.heat.cold > i { background: linear-gradient(#e1f5fe, #4fc3f7); }
+.bar.heat.hot > i { background: linear-gradient(#ffccbc, #e53935); }
+.bar.low, .bar.cold, .bar.hot { animation: needpulse 1.1s ease-in-out infinite; }
+@keyframes needpulse { 50% { border-color: #ff5252; box-shadow: 0 0 8px rgba(255,82,82,.8); } }
 .bar.hk.locked { opacity: .35; }
 .bar.hk.flash { animation: hkspent .7s ease-out; }
 @keyframes hkspent { 0%, 40% { border-color: #ff5252; box-shadow: 0 0 10px #ff5252; } }

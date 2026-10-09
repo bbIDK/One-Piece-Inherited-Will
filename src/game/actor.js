@@ -1009,7 +1009,7 @@ export class Actor extends Entity {
     for (const b of this.buffs) if (b.regen) regen += b.regen;
     // everyone else only heals once they've been left alone for a good while
     const rested = this.isPlayer || !this.game || (this.game.time || 0) - (this.lastHitT || -999) > 45;
-    if (this.hp < d.maxHp && this.state === 'idle' && rested) this.hp = Math.min(d.maxHp, this.hp + regen * dt);
+    if (this.hp < d.maxHp && this.state === 'idle' && rested && !this.needsHurt) this.hp = Math.min(d.maxHp, this.hp + regen * dt);
   }
 
   /**

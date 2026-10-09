@@ -755,6 +755,7 @@ export function openSettings(game) {
       h('h3', 'Sound & feel'),
       slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),
       check('Show tutorial hints', 'showHints'),
+      check('Survival needs: hunger, thirst and body temperature', 'survival'),
       controlsSection(game, render),
       h('p.muted', 'Press P in game (or scroll all the way in or out) to switch between first and third person. Settings are saved in this browser.'));
   };

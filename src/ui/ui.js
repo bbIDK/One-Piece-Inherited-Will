@@ -84,10 +84,20 @@ export class UI {
     E.fly.el.classList.add('hidden');
     E.fly.el.title = 'Flight — drains in the air (fast over the open sea), fills up on solid ground';
     E.fly.el.querySelector('i').style.background = 'linear-gradient(#e1f5fe, #4fc3f7)';
+    // needs (game/survival.js): food, water and the body's warmth
+    const ns = (d) => { const e = h('span.need-ic'); e.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true">${d}</svg>`; return e; };
+    E.food = bar('food'); E.water = bar('water'); E.heat = bar('heat');
+    E.food.el.title = 'Food: eat to fill it. Empty, you weaken.';
+    E.water.el.title = 'Water: drink (a flask, a coconut, a stream: crouch at it). The heat empties it faster.';
+    E.heat.el.title = 'Body temperature: the air pulls it. Too cold or too hot, you weaken. Shelter, coats and drinks help.';
+    E.needs = h('div.needs',
+      h('div.need', ns('<path d="M10.5 2.2a3.6 3.6 0 0 1 1.3 5.7L8.6 11l.9.9a1.3 1.3 0 1 1-1.6 1.9 1.3 1.3 0 1 1-1.9-1.6l.9.9 3.1-3.2a3.6 3.6 0 0 1 .5-7.7z" fill="#e9a35b"/>'), E.food.el),
+      h('div.need', ns('<path d="M8 1.5C6 5 3.8 7.4 3.8 10a4.2 4.2 0 0 0 8.4 0C12.2 7.4 10 5 8 1.5z" fill="#4fc3f7"/>'), E.water.el),
+      h('div.need', ns('<path d="M6.6 2.5a1.4 1.4 0 0 1 2.8 0v6.2a3 3 0 1 1-2.8 0z" fill="none" stroke="#f5e6c4" stroke-width="1.2"/><circle cx="8" cy="11.3" r="1.7" fill="#ff7043"/>'), E.heat.el));
     E.lives = h('div.lives');
     E.bounty = h('div.hud-bounty');
     E.buffs = h('div.buffs');
-    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
+    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.needs, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
     // hotbar: ten slots (1-9, 0), each something you take out: food, a
     // weapon, your Devil Fruit, one of its forms (hotbar.js). Click a slot to
     // use it; drag slots to rearrange them. With the Inventory or Skills open
@@ -624,6 +634,21 @@ export class UI {
     const title = ch.title || (ch.faction === 'marine' ? `Marine ${ch.marineRank || 'Recruit'}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === 'pirate' ? 'Pirate' : 'Wanderer');
     this.set(E.sub, 'sub', `${raceLabel(p.look)} · ${title} · Doriki ${p.power().toLocaleString()}`);
     E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
+    // needs: food, water, warmth (hidden in creative, or with the setting off)
+    const S = game.survival, nd = S?.enabled?.() ? S.needs() : null;
+    if (!!nd !== this.cache.needsOn) { E.needs.classList.toggle('hidden', !nd); this.cache.needsOn = !!nd; }
+    if (nd) {
+      E.food.set(nd.food, ''); E.water.set(nd.water, '');
+      // (the warmth gauge: half full at 37°C, empty at 33, full at 41)
+      E.heat.set((nd.body - 33) / 8, `${nd.body.toFixed(1)}°`);
+      const cold = nd.body < 35.6, hot = nd.body > 38.6;
+      const st = (nd.food < 0.2 ? 'f' : '') + (nd.water < 0.2 ? 'w' : '') + (cold ? 'c' : hot ? 'h' : '');
+      if (st !== this.cache.needSt) {
+        this.cache.needSt = st;
+        E.food.el.classList.toggle('low', nd.food < 0.2); E.water.el.classList.toggle('low', nd.water < 0.2);
+        E.heat.el.classList.toggle('cold', cold); E.heat.el.classList.toggle('hot', hot);
+      }
+    }
     // breath — or, for a Devil Fruit user thrashing in the sea, the seconds
     // before it drags them under
     const struggling = p.inWater && p.fruit && !p.gills && !p.sinking && p.struggle != null;

@@ -152,8 +152,9 @@ export function useItem(game, id) {
     p.hp = Math.min(p.d.maxHp, p.hp + heal);
     for (const s of d.cure || []) delete p.status[s];
     if (d.buff) p.addBuff({ ...d.buff });
-    game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, '#69f0ae', 0.45);
-    game.audio?.sfx('eat');
+    if (heal >= 1) game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, '#69f0ae', 0.45);
+    game.survival?.consume(id);
+    game.audio?.sfx(d.water > (d.food ?? 0.2) ? 'sip' : 'eat');
     removeItem(game, id, 1);
     return true;
   }
