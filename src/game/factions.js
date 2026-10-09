@@ -11,11 +11,11 @@ import { persist, refreshPlayer } from './lineage.js';
 import { threatFactor } from './stats.js';
 import { formatBerries } from '../core/math.js';
 import { sightRange } from './traffic.js';
-import { allNpcDefs } from './npcs.js';
+import { allNpcDefs, npcLook } from './npcs.js';
 import { openTrainer } from '../ui/panels.js';
-import { wantedPoster } from '../ui/screens.js';
+import { wantedPoster, posterPose } from '../ui/screens.js';
+import { renderPortrait } from '../ui/preview3d.js';
 import { h } from '../ui/dom.js';
-import { uiImg } from '../ui/icon.js';
 import { regionAt, REGION_INFO, isGrandLine } from '../world/constants.js';
 import { hakiKnown } from './lineage.js';
 import { ENLIST_REP, repTier } from './reputation.js';
@@ -399,15 +399,40 @@ function bountyOffice(game, building, island) {
       h('button.btn.gold', { on: { click: (e) => { earn(game, payout, 'bounties'); c.claims = []; e.target.disabled = true; e.target.textContent = 'Paid!'; persist(game); } } }, `Collect ${formatBerries(payout)}${c.faction === 'marine' ? ' (Marines only receive a commendation bonus)' : ''}`));
   }
   if (c.bounty > 0) body.append(h('h3', 'Your poster'), wantedPoster(c));
-  const wanted = allNpcDefs().filter((d) => d.bounty && d.infamy && !c.bosses.includes(d.id) && !c.defeated[d.id]).sort((a, b) => b.bounty - a.bounty).slice(0, 12);
-  body.append(h('h3', 'Most Wanted'));
-  const list = h('div.list');
+  // (one poster a face: the same pirate met in two places is still one bounty)
+  const seen = new Set(), key = (d) => d.name.replace(/^"[^"]*"\s*/, '').replace(/\s+the\s+\w+$/i, '').toLowerCase();
+  const wanted = allNpcDefs().filter((d) => d.bounty && d.infamy && !c.bosses.includes(d.id) && !c.defeated[d.id]).sort((a, b) => b.bounty - a.bounty)
+    .filter((d) => (seen.has(key(d)) ? false : (seen.add(key(d)), true))).slice(0, 12);
+  body.append(h('h3', 'Most Wanted'), h('p.muted', 'Click a poster to take a closer look.'));
+  // their real posters, pinned up on the board (drawn a few at a time, so the office opens at once)
+  const board = h('div.wanted-board');
+  const looks = [];
   for (const d of wanted) {
     const isl = game.surface.islands.find((i) => i.id === d.island);
     const known = c.discovered.includes(d.island);
-    list.appendChild(h('div.row-item', uiImg('bounty', 30), h('div.grow', h('b', d.name), h('div.sub', `${d.title || ''}${known && isl ? ' · last seen: ' + isl.name : ''}`)), h('span.price', formatBerries(d.bounty))));
+    const who = { name: d.name, bounty: d.bounty, look: npcLook(d), equipped: {}, stats: { kills: 30 } };
+    const cv = h('canvas', { width: 150, height: 124 });
+    looks.push([cv, who]);
+    board.appendChild(h('div.mini-poster', { title: `${d.name}${d.title ? ' — ' + d.title : ''}${known && isl ? '\nLast seen: ' + isl.name : ''}`, on: { click: () => {
+      const full = h('div', { style: { display: 'flex', justifyContent: 'center', padding: '8px 0' } }, wantedPoster(who));
+      game.ui.openPanel(h('div', full, h('p.muted', { style: { textAlign: 'center' } }, `${d.title || ''}${known && isl ? ' · last seen: ' + isl.name : ''}`)));
+    } } },
+      h('div.w', 'WANTED'), cv, h('div.nm', d.name), h('div.amt', formatBerries(d.bounty))));
   }
-  body.appendChild(list);
+  body.appendChild(board);
+  let i = 0;
+  const next = () => {
+    if (i >= looks.length || !board.isConnected && i > 0) return;
+    const [cv, who] = looks[i++];
+    const pp = posterPose(who);
+    const img = renderPortrait(pp.look, { w: 150, h: 124, view: 'bust', act: pp.act });
+    const g = cv.getContext('2d');
+    g.fillStyle = '#e8d5a8'; g.fillRect(0, 0, 150, 124);
+    if (img) g.drawImage(img, 0, 0, 150, 124);
+    g.globalCompositeOperation = 'multiply'; g.fillStyle = '#d9c28f'; g.fillRect(0, 0, 150, 124); g.globalCompositeOperation = 'source-over';
+    setTimeout(next, 30);
+  };
+  setTimeout(next, 30);
   if (c.faction === 'pirate') body.append(h('p.muted', 'The clerk eyes you nervously and keeps one hand near the Den Den Mushi.'));
   void count;
 }

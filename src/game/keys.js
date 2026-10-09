@@ -62,7 +62,16 @@ export function keysOf(settings) {
     k.skills = DEFAULT_KEYS.skills.concat(k.skills.slice(4).map((x) => (now.includes(x) ? '' : x))); k.form = DEFAULT_KEYS.form.slice();
   }
   const fill = (list, def, n) => Array.from({ length: n }, (_, i) => (Array.isArray(list) && list[i] !== undefined ? list[i] || '' : def[i] || ''));
-  return { skills: fill(k.skills, DEFAULT_KEYS.skills, SKILL_SLOTS), haki: fill(k.haki, DEFAULT_KEYS.haki, HAKI_SLOTS), form: fill(k.form, DEFAULT_KEYS.form, 1) };
+  const out = { skills: fill(k.skills, DEFAULT_KEYS.skills, SKILL_SLOTS), haki: fill(k.haki, DEFAULT_KEYS.haki, HAKI_SLOTS), form: fill(k.form, DEFAULT_KEYS.form, 1) };
+  // (a skill slot left with no key — lost in an old swap — gets its default back, if nothing else holds it)
+  const used = new Set([...out.skills, ...out.haki, ...out.form].filter(Boolean));
+  out.skills = out.skills.map((x, i) => {
+    const d = DEFAULT_KEYS.skills[i];
+    if (x || !d || used.has(d) || gameUse(d) || settings?.keysOff?.includes(i)) return x;
+    used.add(d);
+    return d;
+  });
+  return out;
 }
 
 /**
@@ -89,12 +98,14 @@ export function rebind(settings, group, i, key) {
     }
   }
   K[group][i] = key;
+  // (a skill key cleared on purpose stays clear: see keysOf)
+  if (group === 'skills') settings.keysOff = key ? (settings.keysOff || []).filter((j) => j !== i) : [...new Set([...(settings.keysOff || []), i])];
   settings.keys = { skills: K.skills.slice(), haki: K.haki.slice(), form: K.form.slice() };
   return { ok: true, swapped };
 }
 
 /** Back to the default keys. */
-export function resetKeys(settings) { delete settings.keys; }
+export function resetKeys(settings) { delete settings.keys; delete settings.keysOff; }
 
 /** Mouse buttons by name (DOM button numbers). Mouse1 and Mouse2 are the game's (attack, heavy). */
 export const MOUSE = { Mouse1: 0, Mouse3: 1, Mouse2: 2, Mouse4: 3, Mouse5: 4 };

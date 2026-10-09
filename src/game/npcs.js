@@ -65,7 +65,7 @@ const WOMEN = /\b(Makino|Dadan|Alvida|Rika|Kaya|Nojiko|Bell-?m[eè]re|Tashigi|Ku
 const ROLE_OF = { pirate: 'pirate', bandit: 'bandit', marine: 'marine', cp: 'agent', baroque: 'agent', rival: 'swordsman', beast: 'beast', fishman: 'fishman' };
 
 /** A named NPC's look (the same every time: seeded by their id). */
-function npcLook(def) {
+export function npcLook(def) {
   let role = def.role || (def.beast || def.faction === 'beast' ? 'beast' : ROLE_OF[def.faction]) || 'civilian';
   if (role === 'marine' && (def.look?.coat || def.boss || def.named)) role = 'officer';
   const lookOver = { ...(def.look || {}), role };

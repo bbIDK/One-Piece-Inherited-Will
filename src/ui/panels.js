@@ -670,7 +670,7 @@ export function openMenu(game, { onQuit, onRetire, onSave, extra = [] }) {
   const ui = game.ui;
   const c = game.state.char;
   const saved = h('p.muted.save-note', c.lastSaved ? `Last saved ${new Date(c.lastSaved).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not saved yet');
-  const btn = (icon, text, fn, cls = '') => h('button.btn.menu-btn' + cls, { on: { click: fn } }, uiImg(icon, 20), text);
+  const btn = (icon, text, fn, cls = '') => h('button.btn.menu-btn' + cls, { on: { click: fn } }, text);
   const body = h('div.pause',
     // (in a multiplayer voyage the world goes on: only your own game waits)
     h('h2', game.net ? 'Menu' : 'Paused'),

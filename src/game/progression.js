@@ -203,7 +203,7 @@ export class Progression {
       if (!st) continue;
       for (const t of st.techniques || []) {
         const L = t.learn || {};
-        if (c.techniques.includes(t.id) || L.special || L.innate) continue;
+        if (c.techniques.includes(t.id) || L.special) continue;
         if ((L.mastery || 0) <= m) { c.techniques.push(t.id); fresh.push(t.id); }
       }
     }
