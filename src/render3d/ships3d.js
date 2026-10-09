@@ -223,9 +223,10 @@ export function hullGeometry(def) {
     // stern lanterns
     for (const s of [-1, 1]) {
       const lx = -d.L / 2 + 0.2, lz = s * (hbAt(0.02, d.B) * 0.9 - 0.1), ly = topAt(d, 0.02);
-      k.add(cyl(0.03, 0.03, 0.5, 4), { at: [lx, ly, lz], color: P.dark });
-      k.add(cyl(0.11, 0.13, 0.26, 6), { at: [lx, ly + 0.5, lz], color: '#fff3c4', glow: '#ffcf70', flicker: 0.2 });
-      k.add(cone(0.15, 0.14, 6), { at: [lx, ly + 0.76, lz], color: P.dark });
+      // (sat on the rail on a short iron foot, not up on a pole)
+      k.add(cyl(0.08, 0.1, 0.08, 6), { at: [lx, ly - 0.02, lz], color: P.dark });
+      k.add(cyl(0.11, 0.1, 0.28, 6), { at: [lx, ly + 0.06, lz], color: '#fff3c4', glow: '#ffcf70', flicker: 0.2, outline: 0.008 });
+      k.add(cone(0.15, 0.14, 6), { at: [lx, ly + 0.34, lz], color: P.dark });
     }
   }
   if (d.fore) {
@@ -356,13 +357,20 @@ export function interiorGeometry(def) {
   return g;
 }
 
+/** A figurehead's neck, out of the stem itself (starting inside the bow): the head is never left floating. */
+function smallNeck(k, tip, hc, r, color) {
+  const c = new THREE.CatmullRomCurve3([new THREE.Vector3(tip[0] - 0.6, tip[1] - 0.4, 0), new THREE.Vector3(tip[0] - 0.03, tip[1] - 0.02, 0), new THREE.Vector3(hc[0], hc[1], 0)]);
+  k.add(tube(c, 12, r, 8), { color, outline: 0.02 });
+  k.add(new THREE.SphereGeometry(r * 1.25, 10, 8), { at: [tip[0] - 0.03, tip[1] - 0.02, 0], color, outline: 0.015 });
+}
+
 function figurehead(k, def, d, P) {
   const tip = [d.L / 2, topAt(d, 1), 0];
   const s = Math.max(0.7, d.B / 2.4);
   if (def.figurehead === 'ram') {
     // the Going Merry: a round white sheep's head with curled horns
-    k.add(cyl(0.12 * s, 0.16 * s, 0.6 * s, 7), { at: [tip[0] - 0.12, tip[1] - 0.25, 0], rot: [0, 0, -0.5], color: '#f5f6fa', outline: 0.02 });
     const hc = [tip[0] + 0.28 * s, tip[1] + 0.42 * s, 0];
+    smallNeck(k, tip, hc, 0.15 * s, '#f5f6fa');
     k.add(new THREE.SphereGeometry(0.36 * s, 12, 9), { at: hc, scale: [1.15, 1, 1], color: '#f7f5ef', outline: 0.03 });
     k.add(new THREE.SphereGeometry(0.22 * s, 10, 7), { at: [hc[0] + 0.3 * s, hc[1] - 0.1 * s, 0], scale: [1, 0.85, 1.05], color: '#efe8da', outline: 0.02 });
     for (const z of [-1, 1]) {
@@ -380,7 +388,7 @@ function figurehead(k, def, d, P) {
   } else if (def.figurehead === 'lion') {
     // the Thousand Sunny: a sunflower-maned lion
     const hc = [tip[0] + 0.3 * s, tip[1] + 0.55 * s, 0];
-    k.add(cyl(0.14 * s, 0.2 * s, 0.7 * s, 7), { at: [tip[0] - 0.15, tip[1] - 0.25, 0], rot: [0, 0, -0.45], color: '#e8c26b' });
+    smallNeck(k, tip, hc, 0.17 * s, '#e8c26b');
     for (let i = 0; i < 14; i++) {
       const a = i / 14 * Math.PI * 2;
       k.save(); k.translate(hc[0] - 0.08 * s, hc[1], 0); k.rotateX(a);
@@ -398,9 +406,6 @@ function figurehead(k, def, d, P) {
     k.add(cone(0.1 * s, 0.42 * s, 6), { at: [hc[0] + 0.22 * s, hc[1] - 0.04 * s, 0], rot: [0, 0, -Math.PI / 2], color: '#f5a623', outline: 0.015 });
     for (const z of [-1, 1]) k.add(new THREE.SphereGeometry(0.05 * s, 6, 4), { at: [hc[0] + 0.14 * s, hc[1] + 0.1 * s, z * 0.2 * s], color: '#1d1d1d' });
     k.add(new THREE.CylinderGeometry(0.2 * s, 0.26 * s, 0.1 * s, 10), { at: [hc[0] - 0.02, hc[1] + 0.3 * s, 0], color: '#1b4f72' });
-  } else if (!d.open) {
-    // a carved scroll at the stem head
-    k.add(torus(0.14, 0.05, 5, 10, Math.PI * 1.5), { at: [tip[0] + 0.02, tip[1] + 0.05, 0], rot: [0, 0, 0], color: P.trim, outline: 0.012 });
   }
 }
 
@@ -729,7 +734,8 @@ export function paintedDef(s) {
   let def = s.def;
   const P = s.paint;
   if (P && def.sail !== 'marine' && !def.special) def = { ...def, ...(P.color ? { color: P.color } : {}), ...(P.figurehead ? { figurehead: P.figurehead } : {}) };
-  if (def.figurehead === 'ram' && !isMerry(s)) def = { ...def, figurehead: 'scroll' };
+  if (def.figurehead === 'ram' && !isMerry(s)) def = { ...def, figurehead: 'none' };
+  if (def.figurehead === 'scroll') def = { ...def, figurehead: 'none' };
   return def;
 }
 

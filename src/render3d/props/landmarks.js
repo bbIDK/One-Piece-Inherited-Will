@@ -172,16 +172,46 @@ reg('windmill', (o) => {
 
 // ------------------------------------------------------------ fountain
 const fountainGeo = () => model('fountain', (k) => {
-  const stone = '#d5cdbf';
-  k.add(lathe([[1.18, 0.22], [1.2, 0.58], [1.3, 0.64], [1.44, 0.6], [1.46, 0.05], [1.5, -0.2]], 18), { color: stone, outline: 0.03 });
-  k.add(new THREE.CircleGeometry(1.2, 18), { at: [0, 0.22, 0], rot: [-Math.PI / 2, 0, 0], color: '#8fa7ad' });
-  k.add(new THREE.CircleGeometry(1.19, 18), { at: [0, 0.46, 0], rot: [-Math.PI / 2, 0, 0], color: '#4fb3d9' });
-  k.add(new THREE.RingGeometry(0.62, 0.74, 18), { at: [0, 0.475, 0], rot: [-Math.PI / 2, 0, 0], color: '#bfe9ff' }); // (1.5 cm over the water: at 2 mm the two flickered from across the square)
-  k.add(cyl(0.16, 0.24, 1.35, 10), { at: [0, 0.2, 0], color: '#bdb5a6', outline: 0.02 });
-  k.add(lathe([[0.1, 0], [0.42, 0.1], [0.56, 0.24], [0.6, 0.3], [0.52, 0.3], [0.12, 0.2]], 14), { at: [0, 1.45, 0], color: stone, outline: 0.02 });
-  k.add(new THREE.CircleGeometry(0.5, 14), { at: [0, 1.72, 0], rot: [-Math.PI / 2, 0, 0], color: '#4fb3d9' });
-  k.add(cyl(0.06, 0.09, 0.3, 8), { at: [0, 1.62, 0], color: '#bdb5a6' });
-  k.add(new THREE.SphereGeometry(0.1, 8, 6), { at: [0, 1.95, 0], color: '#bdb5a6' });
+  // a town fountain in carved sandstone: an eight-sided basin with sunk
+  // panels and a moulded rim you can sit on, on a low step; a column with a
+  // moulded foot rising to a scalloped bowl, a smaller bowl over it and a
+  // carved finial; four lion masks round the column spout into the basin
+  const stone = '#ddd2bd', dark = '#bcae96', deep = '#a8987e', water = '#3a9fd0', pale = '#a8e0f2';
+  // the step round it and the basin wall (octagonal: 8 sides)
+  k.add(cyl(1.62, 1.66, 0.12, 8), { at: [0, -0.06, 0], rot: [0, Math.PI / 8, 0], color: deep, outline: 0.025 });
+  k.add(cyl(1.46, 1.5, 0.52, 8), { at: [0, 0.06, 0], rot: [0, Math.PI / 8, 0], color: stone, outline: 0.03 });
+  // the rim: a broad cap overhanging the wall, its lip rounded off
+  k.add(cyl(1.58, 1.58, 0.1, 8), { at: [0, 0.58, 0], rot: [0, Math.PI / 8, 0], color: stone, outline: 0.025 });
+  k.add(cyl(1.54, 1.58, 0.05, 8), { at: [0, 0.53, 0], rot: [0, Math.PI / 8, 0], color: dark });
+  // a sunk panel on each face of the basin
+  for (let i = 0; i < 8; i++) {
+    const a = i / 8 * Math.PI * 2, r = 1.44;
+    k.add(box(0.82, 0.3, 0.04), { at: [Math.cos(a) * r, 0.14, Math.sin(a) * r], rot: [0, Math.PI / 2 - a, 0], color: dark });
+    k.add(box(0.6, 0.18, 0.05), { at: [Math.cos(a) * (r + 0.005), 0.2, Math.sin(a) * (r + 0.005)], rot: [0, Math.PI / 2 - a, 0], color: shade(stone, -0.04) });
+  }
+  // the pool
+  k.add(new THREE.CircleGeometry(1.4, 8), { at: [0, 0.5, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: water });
+  k.add(new THREE.RingGeometry(1.24, 1.4, 8), { at: [0, 0.505, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: shade(water, -0.15) });
+  // the column: a square plinth in the water, a moulded foot, a shaft
+  k.add(box(0.7, 0.4, 0.7), { at: [0, 0.3, 0], color: dark, outline: 0.02 });
+  k.add(lathe([[0.36, 0], [0.36, 0.06], [0.28, 0.12], [0.26, 0.2], [0.2, 0.26], [0.18, 1.0], [0.24, 1.08], [0.26, 1.14]], 12), { at: [0, 0.7, 0], color: stone, outline: 0.02 });
+  for (let i = 0; i < 4; i++) {
+    // lion masks spouting into the pool
+    const a = i / 4 * Math.PI * 2 + Math.PI / 4, r = 0.2;
+    const x = Math.cos(a) * r, z = Math.sin(a) * r;
+    k.add(new THREE.SphereGeometry(0.11, 8, 6), { at: [x, 1.0, z], scale: [1, 1, 0.6], color: '#d8b04a', outline: 0.012 });
+    k.add(new THREE.SphereGeometry(0.045, 6, 4), { at: [Math.cos(a) * 0.29, 0.96, Math.sin(a) * 0.29], color: deep });
+  }
+  // the scalloped bowl, its rim lobed
+  k.add(lathe([[0.18, 0], [0.5, 0.06], [0.78, 0.18], [0.92, 0.3], [0.94, 0.36], [0.86, 0.36], [0.2, 0.22]], 16), { at: [0, 1.82, 0], color: stone, outline: 0.022 });
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; k.add(new THREE.SphereGeometry(0.1, 7, 5), { at: [Math.cos(a) * 0.92, 2.15, Math.sin(a) * 0.92], scale: [1, 0.55, 1], color: stone }); }
+  k.add(new THREE.CircleGeometry(0.86, 16), { at: [0, 2.12, 0], rot: [-Math.PI / 2, 0, 0], color: water });
+  // the upper stem and the little bowl
+  k.add(lathe([[0.14, 0], [0.1, 0.1], [0.08, 0.5], [0.12, 0.56]], 10), { at: [0, 2.1, 0], color: stone, outline: 0.015 });
+  k.add(lathe([[0.1, 0], [0.3, 0.06], [0.42, 0.18], [0.36, 0.18], [0.1, 0.1]], 14), { at: [0, 2.64, 0], color: stone, outline: 0.015 });
+  k.add(new THREE.CircleGeometry(0.36, 14), { at: [0, 2.81, 0], rot: [-Math.PI / 2, 0, 0], color: water });
+  // the finial: a carved bud the water bubbles out of
+  k.add(lathe([[0.08, 0], [0.12, 0.08], [0.1, 0.2], [0.03, 0.32], [0.001, 0.36]], 10), { at: [0, 2.8, 0], color: '#d8b04a', outline: 0.012 });
 });
 
 // (a stone base under the basin, h deep: see the fountain below)
@@ -203,31 +233,37 @@ reg('fountain', (o, ctx) => {
     const depth = Math.min(8, ctx.ground(o.x, o.y) - lo);
     if (depth > 0.05) add(root, fountainBase(Math.ceil((depth + 0.2) * 4) / 4));
   }
-  // the sheet of water falling from the bowl
-  const sheet = new THREE.Mesh(new THREE.CylinderGeometry(0.57, 0.62, 1.28, 18, 1, true), glowMat(0xcfeeff, { opacity: 0.33 }));
-  sheet.position.y = 1.1;
-  root.add(sheet);
-  // droplets thrown from the top
-  const N = 12;
-  const drop = new THREE.IcosahedronGeometry(0.055, 0);
-  const dp = drop.attributes.position.array;
-  const per = dp.length;
-  const arr = new Float32Array(per * N);
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
-  const drops = new THREE.Mesh(g, glowMat(0xe6f7ff, { opacity: 0.85 }));
-  drops.frustumCulled = false;
-  root.add(drops);
+  // the water: thin streams curving over the bowl's lip and from the lion
+  // masks down into the pool (not a glassy tube round the column), little
+  // rings spreading where they land, and a bubbling at the top
+  const streamMat = glowMat(0xd8f3ff, { opacity: 0.55 });
+  const streams = new THREE.Group();
+  const arc = (x0, y0, z0, out, drop, r) => {
+    const dx = x0, dz = z0, l = Math.hypot(dx, dz) || 1, ux = dx / l, uz = dz / l;
+    const c = new THREE.QuadraticBezierCurve3(new THREE.Vector3(x0, y0, z0), new THREE.Vector3(x0 + ux * out, y0 + 0.08, z0 + uz * out), new THREE.Vector3(x0 + ux * out * 1.5, y0 - drop, z0 + uz * out * 1.5));
+    streams.add(new THREE.Mesh(new THREE.TubeGeometry(c, 10, r, 5, false), streamMat));
+  };
+  for (let i = 0; i < 12; i++) { const a = (i + 0.5) / 12 * Math.PI * 2; arc(Math.cos(a) * 0.95, 2.14, Math.sin(a) * 0.95, 0.22, 1.62, 0.025); }
+  for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2 + Math.PI / 4; arc(Math.cos(a) * 0.3, 0.96, Math.sin(a) * 0.3, 0.35, 0.44, 0.03); }
+  for (let i = 0; i < 8; i++) { const a = (i + 0.5) / 8 * Math.PI * 2; arc(Math.cos(a) * 0.43, 2.82, Math.sin(a) * 0.43, 0.12, 0.68, 0.018); }
+  root.add(streams);
+  // rings spreading where the water lands
+  const ringMat = glowMat(0xe6f7ff, { opacity: 0.4 });
+  const rings = [];
+  for (let i = 0; i < 3; i++) {
+    const r = new THREE.Mesh(new THREE.RingGeometry(0.9, 0.96, 24), ringMat);
+    r.rotation.x = -Math.PI / 2; r.position.y = 0.52; root.add(r); rings.push(r);
+  }
+  const bub = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), glowMat(0xe6f7ff, { opacity: 0.7 }));
+  bub.position.y = 3.17; root.add(bub);
   animate(root, (t) => {
-    for (let k = 0; k < N; k++) {
-      const a = (k / N) * Math.PI * 2 + t * 0.4;
-      const ph = (t * 0.9 + k / N) % 1;
-      const r = 0.1 + ph * 0.55, y = 2.0 + ph * 0.55 - ph * ph * 1.3;
-      const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
-      for (let v = 0; v < per; v += 3) { arr[k * per + v] = dp[v] + cx; arr[k * per + v + 1] = dp[v + 1] + y; arr[k * per + v + 2] = dp[v + 2] + cz; }
+    for (let i = 0; i < 3; i++) {
+      const ph = (t * 0.5 + i / 3) % 1, sc = 1 + ph * 0.42;
+      rings[i].scale.set(sc, sc, 1);
+      rings[i].material.opacity = 0.4 * (1 - ph);
     }
-    g.attributes.position.needsUpdate = true;
-    sheet.scale.set(1 + Math.sin(t * 5) * 0.01, 1, 1 + Math.cos(t * 5.3) * 0.01);
+    bub.scale.setScalar(1 + Math.sin(t * 9) * 0.25);
+    streams.scale.set(1 + Math.sin(t * 6) * 0.015, 1, 1 + Math.cos(t * 6.4) * 0.015);
   });
   return root;
 });

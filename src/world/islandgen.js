@@ -1046,6 +1046,8 @@ function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, d
       if (rng.next() > p) continue;
       if (world.elev(x, y) > 200) continue;
       if (world.isBlocked(x, y) || world.hitsProp(x + 0.5, y + 0.5, 1.1)) continue;
+      // (no tree or bush in a road or a path, nor crowding its edge: a way stays clear to walk)
+      if (kind0Clear(world, x, y)) continue;
       // (nothing grows through a ring or a stage, or crowds round one — or any other landmark)
       if (world.floors.size && nearFloor(world, x + 0.5, y + 0.8, 3)) continue;
       if (def._clearings?.some((c) => Math.hypot(x + 0.5 - c.x, y + 0.5 - c.y) < c.r)) continue;
@@ -1066,3 +1068,13 @@ function populateVegetation(world, rng, x0, y0, LW, LH, L, li, kinds, density, d
 }
 
 export { lerp };
+
+/** Is a road, a path or paving within two tiles of (x, y)? (Trees keep off them.) */
+function kind0Clear(world, x, y) {
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+    if (dx * dx + dy * dy > 5) continue;
+    const t = world.type(world.wx(x + dx), y + dy);
+    if (t === T.DIRT || t === T.GRAVEL || MANMADE[t]) return true;
+  }
+  return false;
+}

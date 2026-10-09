@@ -20,8 +20,8 @@ export const SAIL_CLOTHS = [
   ['Canvas', '#efe6cf'], ['Bleached', '#fbf8f1'], ['Tan', '#d8b98a'], ['Ochre', '#c98d3a'], ['Crimson', '#b33a2e'],
   ['Black', '#2b2a2c'], ['Sky', '#9cc3e0'], ['Violet', '#8e6bb0'],
 ];
-/** Figureheads a ship of the line can carry (a small one has her carved scroll). */
-export const FIGUREHEADS = [['scroll', 'Carved scroll'], ['mermaid', 'Gilded mermaid'], ['dragon', 'Dragon'], ['lion_gold', 'Golden lion'], ['whale', 'White whale']];
+/** Figureheads a ship of the line can carry (or none). */
+export const FIGUREHEADS = [['none', 'None'], ['mermaid', 'Gilded mermaid'], ['dragon', 'Dragon'], ['lion_gold', 'Golden lion'], ['whale', 'White whale']];
 
 /** Can she be painted at all? (The Navy's ships, and the legendary ones, keep their colours.) */
 export const paintable = (def) => !!def && def.sail !== 'marine' && !def.special;
@@ -38,7 +38,7 @@ export function openShipDesigner(game, type, { name = '', paint = null, title = 
     name: name || SHIPS[type].name,
     color: paint?.color || def.color || HULL_PAINTS[0][1],
     sail: paint?.sail || SAIL_CLOTHS[0][1],
-    figurehead: paint?.figurehead || (big && FIGUREHEADS.some(([k]) => k === def.figurehead) ? def.figurehead : 'scroll'),
+    figurehead: paint?.figurehead || (big && FIGUREHEADS.some(([k]) => k === def.figurehead) ? def.figurehead : 'none'),
   };
   return new Promise((resolve) => {
     let done = false;
@@ -59,7 +59,7 @@ export function openShipDesigner(game, type, { name = '', paint = null, title = 
             h('input.sd-name', { value: st.name, maxLength: 24, on: { input: (e) => { st.name = e.target.value; } } }),
             h('label.sd-label', 'Hull'), swatches(HULL_PAINTS, 'color'),
             def.oarsOnly ? null : [h('label.sd-label', 'Sails'), swatches(SAIL_CLOTHS, 'sail')],
-            big ? [h('label.sd-label', 'Figurehead'), h('div.sd-figs', FIGUREHEADS.map(([k, label]) => h('button.btn.small' + (st.figurehead === k ? '.gold' : ''), { on: { click: () => { st.figurehead = k; draw(); } } }, label)))] : h('p.muted', 'A ship her size has a carved scroll at her stem; the ships of the line carry figureheads.'),
+            big ? [h('label.sd-label', 'Figurehead'), h('div.sd-figs', FIGUREHEADS.map(([k, label]) => h('button.btn.small' + (st.figurehead === k ? '.gold' : ''), { on: { click: () => { st.figurehead = k; draw(); } } }, label)))] : h('p.muted', 'A ship her size carries no figurehead; the ships of the line do.'),
             h('p.muted', 'Drag her to turn her round.'))),
         h('div.sd-buttons',
           h('button.btn', { on: { click: () => finish(null) } }, 'Cancel'),

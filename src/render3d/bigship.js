@@ -378,15 +378,21 @@ function stern(k, d, P) {
   };
   rowAt(d.deckY + 0.75, d.deckY + 1.65);
   if (d.poop) rowAt(d.yq + 0.6, d.yq + 1.45);
-  // the taffrail and three great stern lanterns
+  // the taffrail and its lanterns
   const ty = topAt(d, 0.01);
   k.add(box(0.14, 0.18, half(ty) * 2 + 0.1), { at: [x0 - 0.02, ty - 0.2, 0], color: P.trim, outline: 0.015 });
-  // (on the taffrail itself, inboard of her quarters — never out past her side)
-  for (const z of [-0.5, 0, 0.5]) {
-    const lx = -d.L / 2 + 0.35, lz = z * Math.min(half(ty), skinAt(d, (lx + d.L / 2) / d.L, ty) - 0.3), ly = ty + (z ? 0 : 0.3);
-    k.add(cyl(0.04, 0.04, 0.6, 5), { at: [lx, ly, lz], color: P.dark });
-    k.add(cyl(0.16, 0.19, 0.45, 8), { at: [lx, ly + 0.6, lz], color: '#fff3c4', glow: '#ffcf70', flicker: 0.2, outline: 0.012 });
-    k.add(cone(0.22, 0.24, 8), { at: [lx, ly + 1.05, lz], color: P.trim, outline: 0.01 });
+  // two stern lanterns, one at each corner of the taffrail: sat on the rail
+  // itself on an iron foot (never on a pole in the air), inboard of her side
+  for (const sz of [-1, 1]) {
+    const lx = -d.L / 2 + 0.32, w = Math.min(half(ty), skinAt(d, (lx + d.L / 2) / d.L, ty)) - 0.22, lz = sz * w;
+    const y0 = ty - 0.02;
+    k.add(cyl(0.11, 0.14, 0.08, 8), { at: [lx, y0, lz], color: P.dark, outline: 0.008 }); // the foot, on the rail
+    k.add(cyl(0.05, 0.07, 0.12, 6), { at: [lx, y0 + 0.08, lz], color: P.trim });
+    k.add(cyl(0.15, 0.13, 0.4, 8), { at: [lx, y0 + 0.2, lz], color: '#fff3c4', glow: '#ffcf70', flicker: 0.2, outline: 0.012 });
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; k.add(box(0.025, 0.42, 0.025), { at: [lx + Math.cos(a) * 0.145, y0 + 0.19, lz + Math.sin(a) * 0.145], color: P.trim }); }
+    k.add(cyl(0.17, 0.17, 0.04, 8), { at: [lx, y0 + 0.19, lz], color: P.trim });
+    k.add(cone(0.2, 0.2, 8), { at: [lx, y0 + 0.6, lz], color: P.trim, outline: 0.01 });
+    k.add(new THREE.SphereGeometry(0.04, 6, 4), { at: [lx, y0 + 0.82, lz], color: P.trim });
   }
   // quarter galleries: glazed bays bulging from the stern corners — laid
   // along her side as it curves in there, and no deeper into it than her
@@ -434,9 +440,20 @@ function cabinFront(k, d, P, r) {
   const h = y1 - y0 - 0.01, dh = f.dh;
   // the wall, in pieces round its doorways (you walk in through them)
   const ds = [...r.doors].sort((a, b) => a.v - b.v);
+  // (and real openings for the windows: you see into the cabin from the deck, and out of it)
+  const WW = 0.62, WY0 = 0.95, WY1 = 1.75;
+  const holes = [...ds.map((dr) => ({ a: dr.v - dr.w / 2, b: dr.v + dr.w / 2, door: true })), ...f.windows.map((zz) => ({ a: zz - WW / 2, b: zz + WW / 2, win: true }))].sort((p, q) => p.a - q.a);
   let z = -w;
   const piece = (za, zb) => { if (zb - za > 0.02) k.add(box(0.14, h, zb - za), { at: [x - face * 0.07, y0, (za + zb) / 2], color: P.front, outline: 0.02 }); };
-  for (const dr of ds) { piece(z, dr.v - dr.w / 2); z = dr.v + dr.w / 2; }
+  for (const o of holes) {
+    piece(z, o.a);
+    if (o.win) {
+      // the wall under and over the window
+      k.add(box(0.14, WY0, WW), { at: [x - face * 0.07, y0, (o.a + o.b) / 2], color: P.front });
+      if (h > WY1 + 0.02) k.add(box(0.14, h - WY1, WW), { at: [x - face * 0.07, y0 + WY1, (o.a + o.b) / 2], color: P.front });
+    }
+    z = Math.max(z, o.b);
+  }
   piece(z, w);
   for (const dr of ds) {
     // the lintel over the doorway, its frame, and the door standing open
@@ -455,9 +472,13 @@ function cabinFront(k, d, P, r) {
   k.add(box(0.12, 0.14, w * 2), { at: [x + face * 0.02, y1 - 0.18, 0], color: P.trim });
   // windows either side of the doors
   for (const zz of f.windows) {
-    k.add(box(0.06, 0.8, 0.62), { at: [x + face * 0.02, y0 + 0.95, zz], color: P.glass, glow: '#ffc766' });
-    k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 1.75, zz], color: P.trim });
-    k.add(box(0.08, 0.07, 0.76), { at: [x + face * 0.03, y0 + 0.88, zz], color: P.trim });
+    // an open casement: its frame round the opening and a cross of glazing bars (no painted pane)
+    // (each piece of the frame lapping a few centimetres over the cut edge of the wall: never in its planes)
+    k.add(box(0.18, 0.11, 0.78), { at: [x - face * 0.07, y0 + 1.72, zz], color: P.trim, outline: 0.008 });
+    k.add(box(0.18, 0.11, 0.78), { at: [x - face * 0.07, y0 + 0.86, zz], color: P.trim, outline: 0.008 });
+    for (const e of [-1, 1]) k.add(box(0.18, 0.86, 0.08), { at: [x - face * 0.07, y0 + 0.92, zz + e * 0.34], color: P.trim });
+    k.add(box(0.04, 0.8, 0.035), { at: [x - face * 0.07, y0 + 0.95, zz], color: P.trim });
+    k.add(box(0.04, 0.035, 0.62), { at: [x - face * 0.07, y0 + 1.35, zz], color: P.trim });
   }
 }
 
@@ -509,21 +530,22 @@ function stairs(k, d, P) {
       k.add(box(Math.abs(x1 - x0) + 0.02, 0.07, w - 0.1), { at: [(x0 + x1) / 2, top - 0.07, zc], color: shade(P.deck, -0.05), outline: 0.01 });
       k.add(box(0.04, top - Math.min(s.ha, s.hb) - 0.02, w - 0.14), { at: [lowEnd === 'a' ? x0 : x1, Math.min(s.ha, s.hb), zc], color: shade(P.deck, -0.3) });
     }
-    // the stringer and the handrail on the open (inboard) side
-    const inb = s.s > 0 ? s.va : s.vb;
+    // a stringer and a handrail on both sides of the flight (the open, inboard one and the one along her side)
     const lo = s.ha < s.hb ? [xa, s.ha] : [xb, s.hb], hi = s.ha < s.hb ? [xb, s.hb] : [xa, s.ha];
-    stringer(k, lo, hi, inb, 0.3, 0.08, P.wood);
-    // (the rail on its posts, a hand's height over the steps all the way up — whichever way the flight
-    // climbs, fore or aft, it's over them: never down through the deck, nor into the cabin under the landing)
-    const len = Math.hypot(hi[0] - lo[0], hi[1] - lo[1]);
-    k.save(); k.translate((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2 + 0.88, inb);
-    if (hi[0] < lo[0]) k.rotateY(Math.PI);
-    k.rotateZ(Math.atan2(hi[1] - lo[1], Math.abs(hi[0] - lo[0])));
-    k.add(box(len, 0.07, 0.09), { at: [0, -0.035, 0], color: P.cap, outline: 0.01 });
-    k.restore();
-    for (let i = 0; i <= 3; i++) {
-      const f = i / 3;
-      k.add(cyl(0.035, 0.035, 0.9, 5), { at: [lo[0] + (hi[0] - lo[0]) * f, lo[1] + (hi[1] - lo[1]) * f, inb], color: P.wood });
+    for (const side of [s.va + 0.05, s.vb - 0.05]) {
+      stringer(k, lo, hi, side, 0.3, 0.08, P.wood);
+      // (the rail on its posts, a hand's height over the steps all the way up — whichever way the flight
+      // climbs, fore or aft, it's over them: never down through the deck, nor into the cabin under the landing)
+      const len = Math.hypot(hi[0] - lo[0], hi[1] - lo[1]);
+      k.save(); k.translate((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2 + 0.88, side);
+      if (hi[0] < lo[0]) k.rotateY(Math.PI);
+      k.rotateZ(Math.atan2(hi[1] - lo[1], Math.abs(hi[0] - lo[0])));
+      k.add(box(len, 0.07, 0.09), { at: [0, -0.035, 0], color: P.cap, outline: 0.01 });
+      k.restore();
+      for (let i = 0; i <= 3; i++) {
+        const f = i / 3;
+        k.add(cyl(0.035, 0.035, 0.9, 5), { at: [lo[0] + (hi[0] - lo[0]) * f, lo[1] + (hi[1] - lo[1]) * f, side], color: P.wood });
+      }
     }
   }
 }
@@ -671,6 +693,19 @@ function fittings(k, d, P) {
 }
 
 // ---------------------------------------------------------------- figureheads
+/**
+ * A figurehead's neck (or body): a carved timber that comes out of the stem
+ * itself — it starts inside the bow, passes through the stem head and runs on
+ * to the figure, so the figure is always joined to the ship (never floating
+ * off her bow), thick where it leaves the hull and slimmer at the figure.
+ */
+function stemNeck(k, from, via, to, r, color) {
+  const c = new THREE.CatmullRomCurve3([new THREE.Vector3(from[0], from[1], 0), new THREE.Vector3(via[0], via[1], 0), new THREE.Vector3(to[0], to[1], 0)]);
+  k.add(tube(c, 14, r, 8), { color, outline: 0.02 });
+  // (and a collar where it meets the stem, hiding the join)
+  k.add(new THREE.SphereGeometry(r * 1.25, 10, 8), { at: [via[0], via[1], 0], color, outline: 0.015 });
+}
+
 function bigFigurehead(k, def, d, P) {
   const L = d.L, B = d.B;
   const stem = [L / 2 - 0.1, d.fore ? d.deckY + d.hf * 0.35 : d.deckY + 0.35];
@@ -682,8 +717,8 @@ function bigFigurehead(k, def, d, P) {
     const tip = [L / 2, topAt(d, 1)];
     const g = B / 2.3;
     if (fh === 'ram') {
-      k.add(cyl(0.12 * g, 0.16 * g, 0.6 * g, 8), { at: [tip[0] - 0.12 * g, tip[1] - 0.25 * g, 0], rot: [0, 0, -0.5], color: '#f5f6fa', outline: 0.02 });
       const hc = [tip[0] + 0.28 * g, tip[1] + 0.42 * g, 0];
+      stemNeck(k, [tip[0] - 0.9, tip[1] - 0.45 * g], [tip[0] - 0.05, tip[1] - 0.05 * g], hc, 0.15 * g, '#f5f6fa');
       k.add(new THREE.SphereGeometry(0.36 * g, 14, 10), { at: hc, scale: [1.15, 1, 1], color: '#f7f5ef', outline: 0.03 });
       k.add(new THREE.SphereGeometry(0.22 * g, 12, 8), { at: [hc[0] + 0.3 * g, hc[1] - 0.1 * g, 0], scale: [1, 0.85, 1.05], color: '#efe8da', outline: 0.02 });
       for (const z of [-1, 1]) {
@@ -698,7 +733,7 @@ function bigFigurehead(k, def, d, P) {
       }
     } else {
       const hc = [tip[0] + 0.3 * g, tip[1] + 0.55 * g, 0];
-      k.add(cyl(0.14 * g, 0.2 * g, 0.7 * g, 8), { at: [tip[0] - 0.15 * g, tip[1] - 0.25 * g, 0], rot: [0, 0, -0.45], color: '#e8c26b', outline: 0.02 });
+      stemNeck(k, [tip[0] - 0.9, tip[1] - 0.45 * g], [tip[0] - 0.05, tip[1] - 0.05 * g], hc, 0.17 * g, '#e8c26b');
       for (let i = 0; i < 16; i++) {
         k.save(); k.translate(hc[0] - 0.08 * g, hc[1], 0); k.rotateX(i / 16 * TAU);
         k.add(cone(0.17 * g, 0.42 * g, 6), { at: [0, 0.38 * g, 0], color: i % 2 ? '#f39c12' : '#e67e22', outline: 0.015 });
@@ -757,7 +792,7 @@ function bigFigurehead(k, def, d, P) {
     // the Marine gull, big enough to see from the next island
     const g = s * 1.25;
     const hc = [stem[0] + 0.9 * g, stem[1] + 1.1 * g, 0];
-    k.add(cyl(0.3 * g, 0.45 * g, 1.3 * g, 8), { at: [stem[0] - 0.2, stem[1] - 0.4, 0], rot: [0, 0, -0.6], color: '#f5f6fa', outline: 0.03 });
+    stemNeck(k, [stem[0] - 1.0, stem[1] - 0.6], [stem[0] + 0.05, stem[1] + 0.1], hc, 0.36 * g, '#f5f6fa');
     k.add(new THREE.SphereGeometry(0.75 * g, 14, 10), { at: hc, color: '#f5f6fa', outline: 0.04 });
     k.add(cone(0.26 * g, 1.1 * g, 8), { at: [hc[0] + 0.55 * g, hc[1] - 0.12 * g, 0], rot: [0, 0, -Math.PI / 2], color: '#f5a623', outline: 0.02 });
     for (const z of [-1, 1]) k.add(new THREE.SphereGeometry(0.12 * g, 8, 6), { at: [hc[0] + 0.36 * g, hc[1] + 0.25 * g, z * 0.5 * g], color: '#1d1d1d' });
@@ -768,7 +803,7 @@ function bigFigurehead(k, def, d, P) {
     // a green dragon rearing from the stem, jaws open
     const green = '#2e7d32', gold = '#e8c26b';
     const neck = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(stem[0] - 0.4, stem[1] - 0.6 * s, 0), new THREE.Vector3(stem[0] + 0.5 * s, stem[1] + 0.2 * s, 0),
+      new THREE.Vector3(stem[0] - 1.0, stem[1] - 0.6 * s, 0), new THREE.Vector3(stem[0] + 0.1, stem[1] + 0.1 * s, 0), new THREE.Vector3(stem[0] + 0.5 * s, stem[1] + 0.4 * s, 0),
       new THREE.Vector3(stem[0] + 0.7 * s, stem[1] + 1.2 * s, 0), new THREE.Vector3(stem[0] + 1.2 * s, stem[1] + 1.8 * s, 0),
     ]);
     k.add(tube(neck, 12, 0.34 * s, 8), { color: green, outline: 0.03 });
@@ -786,7 +821,7 @@ function bigFigurehead(k, def, d, P) {
   }
   if (fh === 'lion_gold') {
     const hc = [stem[0] + 0.7 * s, stem[1] + 1.2 * s, 0];
-    k.add(cyl(0.3 * s, 0.42 * s, 1.4 * s, 8), { at: [stem[0] - 0.3, stem[1] - 0.5, 0], rot: [0, 0, -0.5], color: '#c9a227', outline: 0.03 });
+    stemNeck(k, [stem[0] - 1.0, stem[1] - 0.6], [stem[0] + 0.05, stem[1] + 0.1], hc, 0.34 * s, '#c9a227');
     for (let i = 0; i < 16; i++) {
       const a = i / 16 * TAU;
       k.save(); k.translate(hc[0] - 0.18 * s, hc[1], 0); k.rotateX(a);
@@ -802,7 +837,7 @@ function bigFigurehead(k, def, d, P) {
     // a gilded mermaid leaning out under the bowsprit, her tail curled along the stem
     const skin = '#f2d5b8', hair = '#e6b422', tail = '#2a9d8f';
     const body = [stem[0] + 0.5 * s, stem[1] + 0.9 * s, 0];
-    k.add(cyl(0.2 * s, 0.26 * s, 0.9 * s, 8), { at: [body[0], body[1] - 0.45 * s, 0], rot: [0, 0, -0.55], color: skin, outline: 0.02 });
+    stemNeck(k, [stem[0] - 0.9, stem[1] - 0.5], [stem[0] + 0.05, stem[1] + 0.1], [body[0] + 0.4 * s, body[1] + 0.35 * s], 0.22 * s, skin);
     k.add(new THREE.SphereGeometry(0.22 * s, 10, 8), { at: [body[0] + 0.45 * s, body[1] + 0.45 * s, 0], color: skin, outline: 0.02 });
     k.add(new THREE.SphereGeometry(0.26 * s, 10, 8), { at: [body[0] + 0.36 * s, body[1] + 0.52 * s, 0], scale: [1.1, 1, 1.05], color: hair, outline: 0.02 });
     k.add(cyl(0.06 * s, 0.06 * s, 0.7 * s, 5), { at: [body[0] + 0.2 * s, body[1] + 0.2 * s, 0.22 * s], rot: [0, 0, -1.1], color: skin });
@@ -814,8 +849,8 @@ function bigFigurehead(k, def, d, P) {
     k.add(cone(0.35 * s, 0.5 * s, 4), { at: [stem[0] - 0.9, stem[1] - 2.3 * s, 0], rot: [Math.PI, 0, 0], scale: [1, 1, 0.3], color: tail });
     return;
   }
-  // a carved scroll at the stem head
-  k.add(torus(0.3, 0.1, 5, 10, Math.PI * 1.5), { at: [stem[0] + 0.1, stem[1] + 0.3, 0], color: P.trim, outline: 0.015 });
+  // (no figurehead: a plain stem head)
+  void P;
 }
 
 // ---------------------------------------------------------------- rig

@@ -33,6 +33,18 @@ const FILL_BUDGET_MS = 2.5; // building new cells, per frame
 const PAVED = new Uint8Array(64);
 for (const t of [T.STONE, T.COBBLE, T.PLANK, T.MARBLE, T.WALL, T.RAIL, T.BRIDGE, T.CARPET, T.TATAMI, T.STEEL, T.GOLD, T.CAKE, T.ISLAND_CLOUD, T.ICE, T.PACK_ICE, T.RED_ROCK, T.MASONRY, T.CANOPY]) PAVED[t] = 1;
 
+/** Is (x, y) within a couple of metres of a road, a path, paving or a building? */
+function nearWay(world, x, y) {
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+    if (dx * dx + dy * dy > 5) continue;
+    const xx = world.wx(x + dx), yy = y + dy;
+    const t = world.type(xx, yy);
+    if (t === T.DIRT || t === T.GRAVEL || PAVED[t]) return true;
+    if ((dx * dx + dy * dy) <= 4 && world.isBlocked(xx, yy)) return true;
+  }
+  return false;
+}
+
 function hash(x, y, k) {
   let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(k | 0, 1103515245);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -311,6 +323,9 @@ function buildCell(world, terrain, cx, cy) {
       const winter = clim === CLIMATE.WINTER || t === T.SNOW;
       if (t === T.FARM) {
         if (winter) continue;
+        // (a field stops short of the paths through it and of the houses
+        // beside it: nothing standing in a road or in front of a door)
+        if (nearWay(world, x, y)) continue;
         // a field: crops in the furrows' rows (the ground's own stripes —
         // terrainShader: a row every 2/3 m), each field its own crop: golden
         // wheat, or green where something younger is coming up

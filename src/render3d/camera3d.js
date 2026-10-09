@@ -52,7 +52,7 @@ export class CameraRig {
     this.bobAmp = 0;
     this.roll = 0;
     this.eye = new THREE.Vector3();
-    this.tp = { dist: 4.2, height: 1.4 };
+    this.tp = { dist: 3.6, height: 0.42 }; // (low, just over the head: an over-the-shoulder view, Fortnite-style)
     this.shake = new THREE.Vector2();
     this.aimCache = null;
     this.mouse = { x: 0, y: 0 };
@@ -419,9 +419,10 @@ export class CameraRig {
       const cp = Math.cos(this.pitch), spch = Math.sin(this.pitch);
       const fx = Math.cos(this.yaw), fz = Math.sin(this.yaw);
       // (from further out, a little higher up too: you look down on her deck)
-      let cx = ox - fx * d * cp, cz = oz - fz * d * cp, cy = oy + this.tp.height * Math.max(1, d / 8) - spch * d * 0.6;
+      let cx = ox - fx * d * cp, cz = oz - fz * d * cp, cy = oy + (sailing ? 1.4 : this.tp.height * scale) * Math.max(1, d / 8) - spch * d * 0.6;
       // shift lock looks over the right shoulder
-      this.shoulder = (this.shoulder || 0) + ((this.shiftLock && !sailing ? 0.7 : 0) - (this.shoulder || 0)) * Math.min(1, dt * 8);
+      // (and even without it, a little off to the right: the body to one side of the crosshair, not under it)
+      this.shoulder = (this.shoulder || 0) + ((sailing ? 0 : this.shiftLock ? 0.7 : 0.45 * scale) - (this.shoulder || 0)) * Math.min(1, dt * 8);
       cx += -fz * this.shoulder; cz += fx * this.shoulder;
       const w = game.world;
       const room = !sailing && w?.roomOf?.(p);

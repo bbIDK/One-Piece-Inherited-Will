@@ -696,12 +696,26 @@ function buildTree(o, ctx, sub) {
     o._fruitPts = pts.map((q, i) => (i === dfi ? hangOut(q.p, model.crown) : q.p));
     o._fruitN = pts.length;
     o._yaw = yaw;
-    o._gy = ctx?.ground ? ctx.ground(o.x, o.y) : 0;
+    o._gy = treeBase(o, ctx);
     void fruitSpots; void isPicked;
   }
-  const mk = instanced(o, ctx, parts, { yaw, scale: o.s || 1, dyn });
+  const mk = instanced(o, ctx, parts, { yaw, scale: o.s || 1, dyn, y: treeBase(o, ctx) });
   if (dyn) o._fruitRefresh = (env) => { const u = mk.userData; if (u.live) u.dyn(o, env, ctx, u); };
   return mk;
+}
+
+/**
+ * Where a tree's trunk stands: down at the lowest ground round its foot, so
+ * on a slope its downhill side goes into the earth instead of hanging in the
+ * air over it (the uphill side is buried a little, as a real trunk is).
+ */
+function treeBase(o, ctx) {
+  if (!ctx?.ground) return 0;
+  const g = ctx.ground(o.x, o.y), at = ctx.terrain || ctx.ground, R = 0.45 * (o.s || 1);
+  let lo = g;
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; lo = Math.min(lo, at(o.x + Math.cos(a) * R, o.y + Math.sin(a) * R)); }
+  // (never sunk more than a metre and a half: a cliff edge isn't a slope)
+  return Math.max(lo, g - 1.5 * (o.s || 1)) - 0.05;
 }
 
 registerPropBuilder('tree', (o, ctx) => buildTree(o, ctx, o.sub || 'oak'));

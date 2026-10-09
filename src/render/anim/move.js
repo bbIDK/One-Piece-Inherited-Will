@@ -412,7 +412,8 @@ export function swimPose(P, kind, t, dir) {
 export function airPose(P, air) {
   const k = air.k || 0;
   if (air.up) {
-    P.fF = [0.16, -0.22 - 0.1 * k]; P.fB = [-0.02, -0.3 - 0.12 * k];
+    // (the knees come up in front of the body, never back up into it)
+    P.fF = [0.22, -0.16 - 0.06 * k]; P.fB = [0.02, -0.2 - 0.08 * k];
     P.hF = [0.16, -0.24 - 0.08 * k]; P.hB = [0.0, -0.2 - 0.06 * k];
     P.l = 0.06;
   } else {
@@ -453,10 +454,11 @@ export function climbPose(P, c) {
   const hy = -0.42 * grip + 0.55 * haul + 0.12 * stand, hx = 0.2 - 0.04 * haul;
   P.hF = [hx, hy]; P.hB = [hx - 0.02, hy + 0.02];
   if (stand > 0.6) { P.hand = 'palm'; P.handB = 'palm'; }
-  P.l = 0.12 + 0.3 * haul * (1 - stand) + 0.05 * (1 - stand);
+  P.l = 0.1 + 0.18 * haul * (1 - stand) + 0.04 * (1 - stand);
   P.b = [0.03, 0.04 + 0.12 * knee * (1 - stand)];
   // the legs hang and scrabble, then one knee comes up over the edge, the other foot follows
-  P.fF = [0.06 + 0.22 * knee * (1 - stand) + 0.07 * stand, -0.1 * (1 - grip) - 0.32 * knee * (1 - stand)];
+  // (the knee comes forward onto the edge, in front of the hips: not drawn up into the chest)
+  P.fF = [0.06 + 0.3 * knee * (1 - stand) + 0.07 * stand, -0.1 * (1 - grip) - 0.18 * knee * (1 - stand)];
   P.fB = [-0.04 + 0.08 * haul * (1 - stand) - 0.05 * stand, -0.04 * (1 - haul) - 0.12 * haul * (1 - stand)];
   P.ht = -0.15 * (1 - haul) + 0.08 * haul * (1 - stand);
   P.face = 'grit';

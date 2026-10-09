@@ -218,8 +218,30 @@ const FRAG = /* glsl */`
       return;
     }
 
-    // (no painted clouds here in fair weather: the real ones are in the world
-    // itself, high up, drifting on the wind — clouds3d.js)
+    // ---- distant banks of cloud low on the horizon: flat-bottomed,
+    // billowing on top, coming and going round the compass
+    if (y > -0.012 && y < 0.26) {
+      vec4 bn = N0(ap * 0.21 + 0.43);
+      float bank = clamp(smoothstep(0.42, 0.72, bn.r) + uCloud * 0.45 + uOvercast * 0.4 - 0.12, 0.0, 1.0);
+      if (bank > 0.01) {
+        float topH = bank * (0.02 + 0.09 * bn.g);
+        // a lumpy upper edge (in two scales) over a straight base
+        float lumps = (N0(ap * 1.3 + vec2(y * 3.0, 0.3)).r - 0.5) * 0.06 + (N0(ap * 4.1 + 1.3).g - 0.5) * 0.02;
+        float inside = topH + lumps * (0.4 + bank) - y;
+        if (inside > 0.0) {
+          float body = smoothstep(0.0, 0.004, inside) * smoothstep(-0.012, 0.003, y);
+          float up = clamp(y / max(topH, 0.004), 0.0, 1.0);
+          float toward = dot(ap, sunH);
+          float lit = clamp(0.25 + up * 0.5 + toward * 0.25 * sunUp + (inside < 0.01 ? 0.12 : 0.0), 0.0, 1.0);
+          vec3 cc = cel(lit, uCShade, uCMid, uCLit);
+          cc += uSunCol * (1.0 - smoothstep(0.0, 0.01, inside)) * pow(sd, 6.0) * 0.6 * clearSky;
+          cc += uFlashCol * flash * 0.3;
+          // the farthest melt into the haze at the horizon
+          cc = mix(cc, uHorizon, (1.0 - smoothstep(0.0, 0.06, y)) * 0.5);
+          col = mix(col, cc, body * (0.6 + 0.35 * bank));
+        }
+      }
+    }
 
     // ---- a storm's cumulonimbus: a dark tower on the horizon spreading into
     // an anvil, lit from inside by its lightning, rain hanging under it
@@ -253,6 +275,38 @@ const FRAG = /* glsl */`
           towerA = a;
           towerBase = smoothstep(1.2, 0.6, k) * uFront;
         }
+      }
+    }
+
+    // ---- the fair-weather cumulus overhead, drifting on the wind
+    float cover = uCloud;
+    if (y > 0.03 && cover > 0.01 && uOvercast < 0.97) {
+      // (a layer low enough that clouds toward the horizon keep some size, not slivers)
+      vec2 cp = d.xz / (y + 0.24) * 1.45 + uDrift.xy;
+      float th = 0.54 + (0.5 - cover) * 0.42;
+      // (all three taps every pixel: no texture reads in a branch that splits a cloud's edge)
+      float n0 = cumulus(cp);
+      // light: thinner toward the sun is the lit side; thinner toward the
+      // zenith is a top; seen from right below, mostly the flat base
+      float n1 = cumulus(cp + sunH * 0.16);
+      float lit = 0.42 + (n0 - n1) * 9.0 * sunUp + uSunDir.y * 0.08;
+      #ifndef LOW
+      vec2 tz = cp - uDrift.xy;
+      float n2 = cumulus(cp - normalize(tz + 1e-4) * 0.16);
+      lit += (n0 - n2) * 7.0 * (1.0 - smoothstep(0.35, 0.9, y));
+      #endif
+      if (n0 > th - 0.02) {
+        // (from right below, mostly the flat base; toward the sun, backlit: dark bodies, bright edges)
+        lit -= smoothstep(0.45, 1.0, y) * 0.22 + pow(sd, 3.0) * 0.4 * clearSky;
+        lit = clamp(lit, 0.0, 1.0);
+        float w = mix(0.006, 0.016, y);
+        float edge = smoothstep(th, th + w, n0);
+        vec3 cc = cel(lit, uCShade, uCMid, uCLit);
+        // a silver lining where it's thin and the sun is behind it
+        cc += uSunCol * (1.0 - smoothstep(th, th + 0.07, n0)) * pow(sd, 4.0) * 1.4 * clearSky;
+        cc += uFlashCol * flash * 0.35;
+        cc = mix(cc, uHorizon, (1.0 - smoothstep(0.03, 0.22, y)) * 0.25);
+        col = mix(col, cc, edge * smoothstep(0.03, 0.1, y));
       }
     }
 

@@ -31,6 +31,15 @@ import { HAKI_HOW } from './haki.js';
 /** How far a training dummy can take a style (the basics: past it, only real fights or a master). */
 export const DUMMY_CAP = 15;
 
+/**
+ * Mastery comes slower the more of it you have: at the start a fight's
+ * worth is 40% of what it was, and each level makes the next a little
+ * harder to earn (a third as quick by mastery 50, a fifth by 100) — the
+ * first techniques come in a few good fights, the last ones take a career.
+ */
+export const MASTERY_RATE = 0.4;
+export const curve = (level, amt) => amt * MASTERY_RATE / (1 + (level || 0) / 25);
+
 const KEYS = ['str', 'agi', 'end', 'vit', 'wil'];
 /** The key of hotbar slot `i` ('1'...'9', '0'). */
 // (the key that switches the fruit's forms: B unless moved)
@@ -83,7 +92,7 @@ export class Progression {
     let gain = frac * tf * 6;
     if (c.traits.includes('born_fighter')) gain *= 1.15;
     if (src.startsWith('fruit') && c.fruit) {
-      this.addFruitMastery(gain * 0.9);
+      this.addFruitMastery(curve(p.fruitMastery, gain * 0.9));
       this.train('wil', frac * tf * 18);
     } else if (src.startsWith('haki')) {
       this.addHaki(getAbility(def.id)?.hakiType || 'armament', gain * 0.5);
@@ -93,9 +102,9 @@ export class Progression {
       // whose style you never learned train only the weapon (and a technique
       // still trains its own style)
       const style = p.masteries[p.style] !== undefined ? p.style : def.style;
-      if (p.masteries[style] !== undefined) this.addStyleMastery(style, gain);
+      if (p.masteries[style] !== undefined) this.addStyleMastery(style, curve(p.masteries[style], gain));
       const kind = weaponKindOf(p, def);
-      this.addWeaponMastery(kind, gain * 1.2);
+      this.addWeaponMastery(kind, curve(c.weaponMastery?.[kind], gain * 1.2));
       this.train(kind === 'gun' ? 'agi' : 'str', frac * tf * 40);
       if (p.armament) this.addHaki('armament', gain * 0.5);
       this.maybeAwaken('armament', tf);
@@ -182,9 +191,9 @@ export class Progression {
       return;
     }
     const gain = h?.final ? 0.35 : 0.18;
-    this.addStyleMastery(style, Math.min(gain, DUMMY_CAP - m));
+    this.addStyleMastery(style, Math.min(curve(m, gain), DUMMY_CAP - m));
     const kind = p.weapon?.kind || 'fists';
-    if ((c.weaponMastery?.[kind] || 0) < DUMMY_CAP) this.addWeaponMastery?.(kind, gain * 0.8);
+    if ((c.weaponMastery?.[kind] || 0) < DUMMY_CAP) this.addWeaponMastery?.(kind, curve(c.weaponMastery?.[kind], gain * 0.8));
   }
 
   addStyleMastery(style, amt) {

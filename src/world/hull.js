@@ -329,13 +329,14 @@ function bigDims(def) {
   // what you walk round: the masts (on every deck they pass through), and on
   // each deck the capstan, the boat, the guns, the wheel, the belfry
   d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.08 }));
-  for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: 'main' });
-  for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: 'hold' });
-  if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: 'main' });
+  // (`h`: how tall each stands over its deck — a jump that high clears it; masts and the belfry, never)
+  for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: 'main', h: 0.95 * gs });
+  for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: 'hold', h: 0.95 * gs });
+  if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: 'main', h: 1.0 });
   d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: d.poop ? 'poop' : 'quarter' });
-  if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: 'quarter' });
+  if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: 'quarter', h: 1.2 });
   if (fore) d.solids.push({ u: (tf + 0.03 - 0.5) * L, v: 0, r: 0.55, lvl: 'fore' }); // the belfry
-  if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: 'main' });
+  if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: 'main', h: 1.1 });
   // a pile of round shot beside a mast, out of everybody's way
   d.shotPile = null;
   const mainFirst = [...d.mastU].sort((a, b) => Math.abs(a) - Math.abs(b));
@@ -347,7 +348,7 @@ function bigDims(def) {
     }
     if (d.shotPile) break;
   }
-  if (d.shotPile) { const p = d.shotPile; d.solids.push({ u0: p.u0, u1: p.u1, v0: p.v0, v1: p.v1, lvl: 'main' }); }
+  if (d.shotPile) { const p = d.shotPile; d.solids.push({ u0: p.u0, u1: p.u1, v0: p.v0, v1: p.v1, lvl: 'main', h: 0.6 }); }
   // (the furniture in the rooms: see furnish)
   furnish(d);
   // a ladder down each side amidships, from the water to her rail: the way up
@@ -814,7 +815,7 @@ function furnish(d) {
     ROOMS[r.kind](P);
     d.furniture.push(...P.items);
   }
-  for (const it of d.furniture) if (!it.ghost) d.solids.push({ ...footprint(it), lvl: it.room });
+  for (const it of d.furniture) if (!it.ghost) d.solids.push({ ...footprint(it), lvl: it.room, h: it.h });
 }
 
 // ---------------------------------------------------------------- a big hull's skin
@@ -988,10 +989,12 @@ export function levelAt(d, t, v, h = null) {
 }
 
 /** How far (u, v) is inside something standing on the deck (a mast, the capstan, the boat): 0 when clear. `lvl`: only what's on that deck. */
-export function solidAt(d, u, v, margin = 0, lvl = null) {
+export function solidAt(d, u, v, margin = 0, lvl = null, above = 0) {
   let depth = 0;
   for (const o of d.solids) {
     if (o.lvl && lvl !== null && o.lvl !== lvl) continue;
+    // (feet `above` the deck higher than it stands: jumped over it)
+    if (o.h !== undefined && above > o.h - 0.1) continue;
     if (o.r !== undefined) depth = Math.max(depth, o.r + margin - Math.hypot(u - o.u, v - o.v));
     else depth = Math.max(depth, Math.min(u - (o.u0 - margin), o.u1 + margin - u, v - (o.v0 - margin), o.v1 + margin - v));
   }
@@ -1173,7 +1176,7 @@ export function deckPoint(ship, dx, dy, margin = 0.2, hRef = null) {
     const lv = levelAt(d, t, v, hRef);
     const out = { t, u, v, h: floorAt(d, t, v, hRef), edge: roomHalf(d, room, t) - Math.abs(v), lvl: lv, room };
     // (the sides of the room, what's in it and the walls round it stand in the way — never "over the side")
-    const depth = Math.max(margin - out.edge, solidAt(d, u, v, Math.max(0, margin), room.kind), wallDepth(d, u, v, room.floor, margin));
+    const depth = Math.max(margin - out.edge, solidAt(d, u, v, Math.max(0, margin), room.kind, Math.max(0, hRef - out.h)), wallDepth(d, u, v, room.floor, margin));
     if (depth > 0) out.solid = depth;
     return out;
   }
@@ -1184,7 +1187,7 @@ export function deckPoint(ship, dx, dy, margin = 0.2, hRef = null) {
   if (d.big) out.lvl = levelAt(d, t, v, hRef);
   if (d.solids.length) {
     const lv = typeof out.lvl === 'string' ? out.lvl : null;
-    let depth = solidAt(d, u, v, Math.max(0, margin), d.big ? lv ?? 'stairs' : null);
+    let depth = solidAt(d, u, v, Math.max(0, margin), d.big ? lv ?? 'stairs' : null, hRef === null ? 0 : Math.max(0, hRef - out.h));
     if (d.walls) depth = Math.max(depth, wallDepth(d, u, v, out.h, margin));
     if (depth > 0) out.solid = depth;
   }

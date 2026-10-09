@@ -122,11 +122,23 @@ export class Ship extends Entity {
   }
 
   fits(w, x, y, h) {
+    // (`strict`, while she's being put somewhere fresh: her whole waterline
+    // well off the shore, not just over water tiles — a shallow tile at the
+    // beach is drawn as sand, and a hull laid over it sat in the ground)
+    const clear = this.strict && w.sd ? (this.def.length >= BIG_SHIP ? 1.2 : 0.4) : null;
     for (const [px, py] of this.hullPoints(x, y, h)) {
       const t = w.type(px, py);
       if (!SAILABLE[t] || w.isBlocked(px, py)) return false;
+      if (clear !== null && w.sd(px, py) > -clear) return false;
     }
     return true;
+  }
+
+  /** Run `fn` (a search for a berth) wanting her clear of the shore first, and only then as before. */
+  placeClear(fn) {
+    this.strict = true;
+    try { if (fn()) return true; } finally { this.strict = false; }
+    return fn();
   }
 
   update(dt, game) {
