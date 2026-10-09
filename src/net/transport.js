@@ -39,6 +39,56 @@ export function relayUrls(search = globalThis.location?.search || '') {
   return urls.length ? urls.slice(0, 8) : null;
 }
 
+/**
+ * TURN relays: the way round networks that won't let two browsers talk
+ * directly (most home routers do, but some — and many mobile carriers —
+ * don't, so a friend on another network can't join). With one configured on
+ * either side, the line goes through it instead. Where they come from, the
+ * first that's set:
+ *  - ?turn=turn:host:port&turnuser=…&turnpass=… in the page's address;
+ *  - the Multiplayer screen's Connection setting (saved in this browser):
+ *    either a credentials URL that hands back a list of ICE servers (as
+ *    Metered's free TURN gives you: https://<app>.metered.live/api/v1/turn/credentials?apiKey=…),
+ *    or a TURN address with its username and password;
+ *  - and always, as a last resort, Metered's Open Relay (a public, shared,
+ *    free relay — best effort: it may be busy or gone).
+ */
+export const TURN_KEY = 'iw.turn';
+const OPEN_RELAY = [
+  { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' },
+];
+
+/** The saved Connection setting: { url } (a credentials URL) or { urls, username, credential }, or null. */
+export function savedTurn(store = globalThis.localStorage) {
+  try { const v = JSON.parse(store?.getItem(TURN_KEY) || 'null'); return v && (v.url || v.urls) ? v : null; } catch { return null; }
+}
+export function saveTurn(v, store = globalThis.localStorage) {
+  try { if (v) store?.setItem(TURN_KEY, JSON.stringify(v)); else store?.removeItem(TURN_KEY); } catch { /* (private window) */ }
+}
+
+/** The TURN servers to use (fetching fresh credentials from a credentials URL if one's set). */
+export async function turnServers(search = globalThis.location?.search || '', store = globalThis.localStorage, fetchFn = globalThis.fetch) {
+  const out = [];
+  const q = new URLSearchParams(String(search).replace(/^\?/, ''));
+  const qt = q.get('turn');
+  if (qt && /^turns?:/i.test(qt)) out.push({ urls: qt.split(','), username: q.get('turnuser') || undefined, credential: q.get('turnpass') || undefined });
+  const s = savedTurn(store);
+  if (s?.url && fetchFn) {
+    try {
+      const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = ctl ? setTimeout(() => ctl.abort(), 6000) : null;
+      const r = await fetchFn(s.url, ctl ? { signal: ctl.signal } : undefined);
+      if (timer) clearTimeout(timer);
+      const list = await r.json();
+      const arr = Array.isArray(list) ? list : list?.iceServers;
+      if (Array.isArray(arr)) for (const x of arr) if (x?.urls) out.push(x);
+    } catch { /* (unreachable: fall back on the rest) */ }
+  } else if (s?.urls) out.push({ urls: [].concat(s.urls), username: s.username || undefined, credential: s.credential || undefined });
+  // (only TURN entries: trystero brings its own STUN)
+  const turns = out.filter((x) => [].concat(x.urls).some((u) => /^turns?:/i.test(u)));
+  return turns.concat(OPEN_RELAY);
+}
+
 export function openTransport(kind, code, handlers = {}, opts = {}) {
   return kind === 'local' ? Promise.resolve(localTransport(code, handlers, opts)) : trysteroTransport(code, handlers, opts);
 }
@@ -47,7 +97,10 @@ export function openTransport(kind, code, handlers = {}, opts = {}) {
 async function trysteroTransport(code, h, opts) {
   const T = await import('trystero');
   const urls = opts.relays || relayUrls();
-  const room = T.joinRoom({ appId: APP_ID, relayConfig: { warnOnRelayFailure: false, ...(urls ? { urls } : {}) }, ...(opts.config || {}) }, ROOM(code), {
+  // (TURN relays, for networks that won't let browsers talk directly: see turnServers)
+  let turnConfig = opts.turn;
+  if (!turnConfig) { try { turnConfig = await turnServers(); } catch { turnConfig = OPEN_RELAY; } }
+  const room = T.joinRoom({ appId: APP_ID, relayConfig: { warnOnRelayFailure: false, ...(urls ? { urls } : {}) }, turnConfig, ...(opts.config || {}) }, ROOM(code), {
     // (two games that met but couldn't open a line to each other: usually a
     // network that won't let browsers talk directly — see the README)
     onJoinError: (d) => h.onError?.(String(d?.error || 'could not connect')),

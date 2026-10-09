@@ -96,7 +96,7 @@ const boot = document.getElementById('boot');
 // stays up until the world behind the title has really been drawn (and again,
 // briefly, while the seas around your pirate load).
 const TIPS = [
-  'Hold Space to charge a jump — Minks and Long-Legs spring highest of all.',
+  'Hold Space to charge a jump — Minks and giants spring highest of all.',
   "A Devil Fruit user can't swim. Fall in and thrash back to shore before your strength gives out.",
   'Rest at an inn and that is where you wake if you fall.',
   'Homes are locked: knock, or kick the door in — a crime, unless it is a pirates\' den.',

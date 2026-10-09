@@ -1012,3 +1012,10 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .ship-designer .sd-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
 
 .wm-flip { position: absolute; top: 18px; right: 70px; z-index: 3; }
+/* the Multiplayer pane's Connection help (a relay for friends who can't get through) */
+.vy-conn { display: block; margin-top: 12px; }
+.vy-conn summary { cursor: pointer; font-size: 14px; }
+.vy-conn[open] summary { margin-bottom: 6px; }
+.vy-conn ol { margin: 6px 0; padding-left: 20px; }
+.vy-conn .turn-in { width: 100%; box-sizing: border-box; padding: 6px 8px; border-radius: 8px; border: 2px solid #6d4c33; background: #fffaf0; color: var(--ink); font: 600 12.5px Nunito, sans-serif; margin: 4px 0; }
+.vy-conn .turn-in.small { width: auto; flex: 1; min-width: 0; }

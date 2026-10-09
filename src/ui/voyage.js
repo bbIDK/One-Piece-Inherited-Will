@@ -3,6 +3,7 @@
 // with the room code to pass on, looking for a friend's voyage, choosing the
 // pirate you bring aboard it, and what went wrong when something did.
 // (The voyage itself: net/session.js; in the world: voyageHud.js.)
+import { savedTurn, saveTurn } from '../net/transport.js';
 import { h, clear } from './dom.js';
 import { uiImg } from './icon.js';
 import { portrait } from './screens.js';
@@ -111,9 +112,43 @@ export function multiplayerPane({ slots, recent = [], local = false, offsite = f
     h('p.vy-small', 'You bring a pirate of your own (or begin a new lineage), and they keep their own save. The host\'s world sets the day, the hour and the weather.'));
   return h('div.vy-pane',
     h('div.vy-cards', host, card),
+    local ? null : connectionCard(),
     h('p.vy-foot', local
       ? 'Local test mode (?net=local): voyages reach only other tabs of this browser.'
-      : `Up to ${MAX_PLAYERS} players. No account and no server: games find each other through public relays, then talk directly (WebRTC). A few networks (strict firewalls, some mobile ones) don't allow that.`));
+      : `Up to ${MAX_PLAYERS} players, from anywhere: no account and no server. Games find each other through public relays, then talk directly (WebRTC) — or, where a network won't allow that, through a relay (above).`));
+}
+
+/**
+ * Connection: for a friend on another network who can't get through. Most
+ * home connections let two browsers talk directly, but some routers and
+ * many mobile networks don't; then the line needs a TURN relay. One player
+ * setting one up is enough (host or guest). A free one: sign up at
+ * metered.ca (Open Relay, 20 GB a month free), and paste the credentials
+ * URL it gives you here — or a TURN address with its username and password.
+ */
+function connectionCard() {
+  const cur = savedTurn();
+  const url = h('input.turn-in', { placeholder: 'https://yourapp.metered.live/api/v1/turn/credentials?apiKey=…', spellcheck: false, autocomplete: 'off', value: cur?.url || (cur?.urls ? [].concat(cur.urls).join(',') : '') });
+  const user = h('input.turn-in.small', { placeholder: 'username (TURN address only)', spellcheck: false, autocomplete: 'off', value: cur?.username || '' });
+  const pass = h('input.turn-in.small', { placeholder: 'password', type: 'password', autocomplete: 'off', value: cur?.credential || '' });
+  const note = h('div.code-hint', cur ? 'Saved: voyages use your relay as well as the free public one.' : 'Not set: voyages use the free public relay only (best effort).');
+  for (const el of [url, user, pass]) el.addEventListener('keydown', (e) => e.stopPropagation());
+  const save = () => {
+    const v = url.value.trim();
+    if (!v) { saveTurn(null); note.textContent = 'Cleared: the free public relay only.'; return; }
+    if (/^https:\/\//i.test(v)) saveTurn({ url: v });
+    else if (/^turns?:/i.test(v)) saveTurn({ urls: v.split(',').map((x) => x.trim()), username: user.value.trim(), credential: pass.value });
+    else { note.textContent = 'That should start with https:// (a credentials URL) or turn: (a TURN address).'; return; }
+    note.textContent = 'Saved. Host or join again to use it.';
+  };
+  return h('details.vy-card.vy-conn',
+    h('summary', h('b', 'Friend on another network can\'t join?')),
+    h('p', 'You can play together from different houses and different Wi-Fi: both open the game\'s own site (' + PLAY_URL + '), one hosts, the other types the code. Most connections link up directly. If yours won\'t (some routers and most mobile data don\'t allow it), the game needs a relay to pass the voyage through. It tries a free public one on its own; for a reliable one of your own, either player can:'),
+    h('ol.vy-small',
+      h('li', 'Sign up free at metered.ca and open their TURN server (Open Relay: 20 GB a month free).'),
+      h('li', 'Copy the "credentials" URL it shows you (it ends in ?apiKey=…) and paste it below.'),
+      h('li', 'Save, then host or join again. Only one of you needs to do this.')),
+    url, h('div.code-row', user, pass, h('button.btn.gold.small', { on: { click: save } }, 'Save')), note);
 }
 
 /** A status line: a coloured dot (or a spinner) and words. */

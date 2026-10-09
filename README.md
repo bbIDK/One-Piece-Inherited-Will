@@ -150,8 +150,15 @@ GitHub Pages site: no account, and no server of our own.
   [Nostr](https://nostr.com) relays (using
   [trystero](https://github.com/dmotz/trystero)), then talk directly, browser
   to browser, over WebRTC (encrypted). A few networks — strict firewalls,
-  some mobile carriers — don't allow a direct connection; joining then fails
-  (a TURN relay would get round that: none is configured). Both players need
+  some routers, most mobile carriers — don't allow a direct connection; the
+  line then goes through a TURN relay. The game tries Metered's free public
+  Open Relay on its own (best effort). For a reliable one, either player
+  (one is enough) signs up free at metered.ca (Open Relay: 20 GB a month),
+  copies the TURN "credentials" URL it gives (ending `?apiKey=…`) and pastes
+  it into **Multiplayer → Friend on another network can't join?** (saved in
+  that browser); a TURN address with a username and password works there
+  too, and so does `?turn=turn:host:port&turnuser=…&turnpass=…` in the
+  address. Both players need
   the same version of the game (reload the page if one is older). The copy
   of the game shown on claude.ai can't open these connections (its page
   won't let it): its Multiplayer tab points you to the GitHub Pages site.
