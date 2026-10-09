@@ -17,7 +17,7 @@ import { findShore, standable } from './interact.js';
 import { upgradeFleet, recordShip, liveShips } from './fleet.js';
 import { hakiSignature, charSignature, kingChance } from './haki.js';
 import { getAbility } from './abilities.js';
-import { HOTBAR_SIZE, ENTRY, addToHotbar } from './hotbar.js';
+import { HOTBAR_SIZE, ENTRY, addToHotbar, stripForms } from './hotbar.js';
 
 // --------------------------------------------------------------- birth traits
 export const TRAITS = {
@@ -362,7 +362,8 @@ export function upgradeChar(c) {
  * them: nothing is lost.
  */
 export function migrateHotbar(c) {
-  if (!c || (c.hotbarV || 1) >= 2) return c;
+  if (!c) return c;
+  if ((c.hotbarV || 1) >= 2) return stripForms(c);
   const hb = (c.hotbar || []).slice(0, HOTBAR_SIZE);
   while (hb.length < HOTBAR_SIZE) hb.push(null);
   c.techniques = c.techniques || [];
@@ -382,11 +383,9 @@ export function migrateHotbar(c) {
     for (const id of unlockedFruitTechniques(c.fruit, c.fruitMastery || 0)) if (!c.techniques.includes(id)) c.techniques.push(id);
     if (fruitAt >= 0) hb[fruitAt] = ENTRY.fruit;
     else addToHotbar(c, ENTRY.fruit);
-    for (const F of f.forms || []) if ((c.fruitMastery || 0) >= F.mastery) addToHotbar(c, ENTRY.form(F.id));
-    if (c.fruitAwakened) addToHotbar(c, ENTRY.awake);
   }
   c.hotbarV = 2;
-  return c;
+  return stripForms(c);
 }
 
 export function equippedLook(char) {

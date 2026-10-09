@@ -16,7 +16,6 @@
 //    strong enough, Observation in those who have learned to read attacks —
 //    at a random moment of a hard fight, like in the stories.
 //  * Legends: great feats the world remembers.
-import { addToHotbar, ENTRY } from './hotbar.js';
 import { threatFactor, ATTR_CAP, ATTRS } from './stats.js';
 import { FRUITS, AWAKEN_MASTERY } from '../data/fruits.js';
 import { keysOf, keyLabel } from './keys.js';
@@ -31,7 +30,8 @@ import { HAKI_HOW } from './haki.js';
 
 const KEYS = ['str', 'agi', 'end', 'vit', 'wil'];
 /** The key of hotbar slot `i` ('1'...'9', '0'). */
-const hotbarKey = (i) => String((i + 1) % 10);
+// (the key that switches the fruit's forms: B unless moved)
+const formKey = (g) => keyLabel(keysOf(g.settings).form?.[0] || 'B');
 export const WEAPON_KINDS = { fists: 'Fists', legs: 'Legs', sword: 'Swords', gun: 'Guns', staff: 'Staffs', axe: 'Axes' };
 
 export class Progression {
@@ -200,7 +200,8 @@ export class Progression {
     this.openForms();
     if (before < AWAKEN_MASTERY && after >= AWAKEN_MASTERY && !c.fruitAwakened) {
       g.ui.toast('MASTERED', `The ${f.name} stirs: a hard fight may awaken it`, f.color);
-      g.log(`You have mastered the ${f.name}. Something deep in it stirs — the next hard fight against a worthy foe may awaken it.`, '#ffab91');
+      g.log(`You have mastered the ${f.name}. Something deep in it stirs: the next time a boss, or a foe near your strength, brings you down (or to a quarter of your health) on land, it will awaken — and you'll get back up with its awakened set on.`, '#ffab91');
+      g.hint?.('awaken', `The ${f.name} is ready to awaken. Fight a boss or a strong foe: when they bring you down, or to a quarter of your health, it awakens. Afterwards ${formKey(g)} switches the awakened set on and off.`);
     }
   }
 
@@ -218,9 +219,8 @@ export class Progression {
       if ((c.fruitMastery || 0) < F.mastery || c.formsShown.includes(F.id)) continue;
       if (needsHaki(getAbility(F.activate)) && !hakiKnown(c)) continue;
       c.formsShown.push(F.id);
-      const at = addToHotbar(c, ENTRY.form(F.id));
-      g.ui.toast(F.name.toUpperCase(), `A new form of the ${f.name}`, f.color);
-      g.log(`Your mastery of the ${f.name} opens up ${F.name}. ${F.desc} ${at >= 0 ? `Press ${hotbarKey(at)} to switch it on (and again to switch it off).` : 'Put it on your hotbar from Skills (Tab) to switch it on.'}`, '#ffab91');
+      g.ui.toast(F.name.toUpperCase(), `A new form of the ${f.name} · ${formKey(g)} switches to it`, f.color);
+      g.log(`Your mastery of the ${f.name} opens up ${F.name}. ${F.desc} With the fruit out, press ${formKey(g)} to switch into it (and on through its forms, back to the base set).`, '#ffab91');
       g.audio?.sfx('breakthrough');
     }
   }
@@ -249,7 +249,6 @@ export class Progression {
     p.endForm?.(false);
     if (p.drawn) setDrawn(g, false);
     p.fruitOut = true;
-    const at = addToHotbar(c, ENTRY.awake);
     const aw = f.awakening;
     g.ui.toast('AWAKENING', `${aw.name} — the ${f.name} awakens!`, f.color);
     g.fx.impactFrame?.(0.25);
@@ -258,7 +257,7 @@ export class Progression {
     g.fx.burst?.(p.x, p.y - 0.8, 40, { color: [f.color, '#ffffff'], speed: 7, g: 0, life: 0.9, kind: 'star' });
     g.fx.shake?.(0.6);
     p.tryTechnique(aw.activate, g);
-    g.log(`The ${f.name} has awakened! ${aw.desc} ${at >= 0 ? `Press ${hotbarKey(at)} to switch the awakened set on and off.` : 'Put it on your hotbar from Skills (Tab) to switch it on and off.'}`, f.color);
+    g.log(`The ${f.name} has awakened! ${aw.desc} From now on ${formKey(g)} switches the awakened set on and off (it comes last in the fruit's forms).`, f.color);
     g.emit('fruitAwakened', c.fruit, how);
     persist(g);
     return true;

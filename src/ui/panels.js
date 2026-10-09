@@ -498,14 +498,26 @@ function movesetCards(game, c, p, render) {
   const f = FRUITS[c.fruit];
   if (f) {
     out.push(card(ENTRY.fruit, itemImg('fruit_' + c.fruit, 34), f.name, `Its powers: ${f.techniques.length} techniques · mastery ${Math.floor(c.fruitMastery || 0)}`));
+    // its forms and its awakened set: not for the hotbar — the form key goes
+    // through them with the fruit out — shown with what opens each, and the
+    // awakening with how far along you are
+    const fk = keyLabel(keysOf(game.settings).form?.[0] || 'B');
+    const info = (img, name, sub, lock = '') => h('div.ms-card.info' + (lock ? '.locked' : ''), { title: lock || sub }, img, h('div.grow', h('b', name), h('div.sub', lock || sub)), lock ? null : h('span.tag', `key ${fk}`));
     for (const F of f.forms || []) {
       const lock = formLock(p, F.id);
       // (a form that needs Haki keeps hidden until a Haki wakes)
       if (lock && needsHaki(getAbility(F.activate)) && !hakiKnown(c)) continue;
-      out.push(card(ENTRY.form(F.id), skillImg(getAbility(F.activate), 34), F.name, F.desc, lock));
+      out.push(info(skillImg(getAbility(F.activate), 34), F.name, `${F.desc} With the fruit out, ${fk} switches into it.`, lock));
     }
-    const aw = f.awakening;
-    out.push(card(ENTRY.awake, skillImg(getAbility(aw.activate), 34), aw.name, aw.desc, formLock(p, 'awake')));
+    const aw = f.awakening, m = Math.floor(c.fruitMastery || 0);
+    const how = c.fruitAwakened
+      ? `${aw.desc} Awakened: ${fk} switches it on and off (last of the fruit's forms).`
+      : m < AWAKEN_MASTERY
+        ? `Mastery ${m} / ${AWAKEN_MASTERY}: fight with the fruit out to raise it. Then, in a hard fight (a boss, or a foe near your strength) that brings you down or to a quarter of your health, the fruit awakens: ${aw.desc}`
+        : `Mastered, ready to awaken: get brought down (or to a quarter of your health) by a boss or a foe near your strength (on land, not in the sea) and it awakens there and then: ${aw.desc}`;
+    const card2 = info(skillImg(getAbility(aw.activate), 34), `Awakening: ${aw.name}`, how);
+    if (!c.fruitAwakened) card2.querySelector('.grow').append(h('div.aw-bar', h('i', { style: { width: `${Math.min(100, (m / AWAKEN_MASTERY) * 100)}%` } })));
+    out.push(card2);
   }
   return out;
 }

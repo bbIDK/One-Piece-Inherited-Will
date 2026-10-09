@@ -467,6 +467,9 @@ h4.grp { margin: 10px 0 6px; font: 400 18px 'Pirata One', serif; color: #5a2d0c;
 .ms-card.locked { opacity: .55; cursor: default; background: rgba(255,255,255,.3); }
 .ms-card.locked img.icon { filter: grayscale(1); }
 .ms-card .grow { flex: 1; min-width: 0; }
+.ms-card.info { cursor: default; }
+.ms-card .aw-bar { height: 6px; margin-top: 4px; border-radius: 4px; background: rgba(0,0,0,.15); overflow: hidden; }
+.ms-card .aw-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #b03a2e, #f1c40f); }
 .ms-card .sub { font-size: 11.5px; opacity: .8; line-height: 1.25; }
 .ms-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 4px 10px; }
 .ms-row { display: flex; gap: 8px; align-items: center; padding: 3px 4px; border-radius: 8px; }

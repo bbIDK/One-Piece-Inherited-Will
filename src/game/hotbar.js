@@ -2,9 +2,8 @@
 //   `item:<id>`       food, medicine, a Dial, a Devil Fruit to eat, a weapon
 //                     (its key draws it, and again sheathes it)
 //   `ms:fruit`        your Devil Fruit's powers (its skills on the skill keys)
-//   `ms:form:<id>`    one of its forms (Gum-Gum's Gears...), once fighting
-//                     with the fruit has opened it up
-//   `ms:awake`        its awakened set, once it has awakened
+//   (its forms — Gum-Gum's Gears... — and its awakened set aren't hotbar
+//   entries: the form key alone switches them, B by default: entries.js cycleForm)
 //   `ms:fists`        bare hands (pressing what's out again puts it away too)
 // Techniques themselves no longer live here: they're on the skill keys (keys.js).
 export const HOTBAR_SIZE = 10;
@@ -15,6 +14,13 @@ export const ENTRY = { fists: 'ms:fists', fruit: 'ms:fruit', awake: 'ms:awake', 
 export const isMoveset = (id) => typeof id === 'string' && id.startsWith('ms:');
 /** The form id of a form entry, or null. */
 export const formOfEntry = (id) => (typeof id === 'string' && id.startsWith('ms:form:') ? id.slice(8) : null);
+/** A fruit's form or its awakened set (switched with the form key, never from the hotbar). */
+export const isFormEntry = (id) => !!formOfEntry(id) || id === ENTRY.awake;
+/** Take any form entries off a hotbar (older saves had them there). */
+export function stripForms(c) {
+  if (c?.hotbar) c.hotbar = c.hotbar.map((id) => (isFormEntry(id) ? null : id));
+  return c;
+}
 
 /** The first empty slot (or -1). */
 export function freeSlot(hb) {
@@ -25,6 +31,7 @@ export function freeSlot(hb) {
 /** Put an entry in the first free slot, if it isn't there already and there's room. Returns its slot (or -1). */
 export function addToHotbar(c, id) {
   c.hotbar = c.hotbar || [];
+  if (isFormEntry(id)) return -1;
   const at = c.hotbar.indexOf(id);
   if (at >= 0) return at;
   const i = freeSlot(c.hotbar);

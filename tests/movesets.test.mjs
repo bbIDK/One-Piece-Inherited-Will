@@ -28,7 +28,7 @@ await import('../src/content/index.js');
 const { Progression } = await import('../src/game/progression.js');
 const { PlayerController } = await import('../src/game/playerController.js');
 const { movesetOf, hakiGroupOf, movesetKind, attackSpec, awakenedOn, formBuff, skillHome } = await import('../src/game/moveset.js');
-const { takeOut, keepEntries, cycleForm } = await import('../src/game/entries.js');
+const { takeOut, keepEntries, cycleForm, formLock } = await import('../src/game/entries.js');
 const { ENTRY, HOTBAR_SIZE } = await import('../src/game/hotbar.js');
 const { keysOf, rebind, resetKeys, gameUse, GAME_KEYS, DEFAULT_KEYS, keyFromEvent, pressed } = await import('../src/game/keys.js');
 const { roomFollows, ownRoom } = await import('../src/game/room.js');
@@ -129,15 +129,15 @@ test('fighting opens the forms at their mastery (Gear Fourth only once Haki has 
   assert.equal(takeOut(g, p, ENTRY.form('gear2')), false, 'and it can\'t be switched on');
   assert.ok(g.logLines.some((l) => /opens at fruit mastery 25/.test(l.text)), 'it says when');
   prog.addFruitMastery(1);
-  assert.ok(at(ENTRY.form('gear2')) >= 0, 'Gear Second on the hotbar at 25');
+  assert.ok(!formLock(p, 'gear2'), 'Gear Second open at 25');
   assert.ok(g.toasts.some((t) => /GEAR SECOND/.test(t)));
   prog.addFruitMastery(50); // 75
-  assert.ok(at(ENTRY.form('gear3')) >= 0, 'Gear Third at 45');
+  assert.ok(!formLock(p, 'gear3'), 'Gear Third at 45');
   assert.equal(at(ENTRY.form('gear4')), -1, 'Gear Fourth keeps hidden while no Haki has woken');
   const locked = movesetOf(p).forms.find((F) => F.id === 'gear4');
   assert.ok(locked.open && /power yet to awaken/.test(locked.why), `the panel keeps the secret (${locked.why})`);
   prog.awakenHaki('armament', 10);
-  assert.ok(at(ENTRY.form('gear4')) >= 0, 'Gear Fourth comes out with Armament');
+  assert.ok(c.formsShown.includes('gear4'), 'Gear Fourth comes out with Armament');
   // the awakening: at full mastery, then a moment in battle
   const aw = movesetOf(p).forms.find((F) => F.awakening);
   assert.ok(!aw.open && /mastery 100/.test(aw.why));
@@ -159,7 +159,8 @@ test('the awakening comes in a hard fight: a worthy foe or a boss, not a weaklin
   assert.equal(c.fruitAwakened, true);
   assert.equal(p.state, 'idle', 'back on your feet');
   assert.ok(p.hp >= p.d.maxHp * 0.5);
-  assert.ok(c.hotbar.includes(ENTRY.awake), 'its awakened set on the hotbar');
+  assert.ok(c.fruitAwakened, 'its awakened set open');
+  assert.ok(!c.hotbar.some((id) => (id && id.startsWith('ms:form')) || id === ENTRY.awake), 'forms never on the hotbar (the form key switches them)');
   step(g, 1.2);
   assert.ok(awakenedOn(p), 'switched on there and then');
   assert.equal(movesetOf(p).skills[0].id, 'gomu_dawn_pistol', 'Gear Fifth\'s moves');
@@ -228,7 +229,7 @@ test('Gear Fourth changes the moveset, runs out, and leaves you exhausted: no Ge
   g.progression.addFruitMastery(100);
   g.progression.awakenHaki('armament', 30);
   p.haki = p.d.maxHaki;
-  assert.ok(c.hotbar.includes(ENTRY.form('gear4')));
+  assert.ok(!formLock(p, 'gear4'));
   assert.ok(takeOut(g, p, ENTRY.form('gear4')));
   step(g, 1);
   assert.equal(formBuff(p)?.form, 'gear4');
@@ -283,7 +284,7 @@ test('a form switches on and, pressed again, off — straight from one into anot
   // the awakened set: not before it has awakened; then on and off at will
   assert.equal(takeOut(g, p, ENTRY.awake), false);
   setFruitAwakened(g, true);
-  assert.ok(c.hotbar.includes(ENTRY.awake));
+  assert.ok(c.fruitAwakened);
   p.cooldowns = {};
   assert.ok(takeOut(g, p, ENTRY.awake));
   step(g, 1.2);
@@ -445,8 +446,7 @@ test('an old save: techniques come off the hotbar, a Dial\'s back as the Dial, t
   assert.equal(c.hotbar[1], ENTRY.fruit, 'the fruit where its first technique was');
   assert.equal(c.hotbar[3], 'item:impact_dial', 'a Dial\'s technique: the Dial');
   assert.ok(!c.hotbar.some((id) => id && !id.startsWith('item:') && !id.startsWith('ms:')), `no techniques left (${c.hotbar})`);
-  assert.ok(c.hotbar.includes(ENTRY.form('gear2')) && c.hotbar.includes(ENTRY.form('gear3')), 'the forms its mastery has opened');
-  assert.ok(!c.hotbar.includes(ENTRY.form('gear4')), 'not one still shut');
+  assert.ok(!c.hotbar.some((id) => id && id.startsWith('ms:form')), 'its forms are on the form key, not the hotbar');
   assert.equal(c.hotbar.length, HOTBAR_SIZE);
   for (const id of before) assert.ok(c.techniques.includes(id), `${id} still known`);
   // (once only: a second load changes nothing)
@@ -459,11 +459,11 @@ test('creative mode: mastery sets which forms are on the hotbar, the awakening c
   const { g, c, p } = setup();
   eat(g, 'gomu');
   assert.equal(setFruitMastery(g, 50), 2, 'two Gears open at 50');
-  assert.ok(c.hotbar.includes(ENTRY.form('gear3')));
+  assert.ok(!formLock(p, 'gear3'));
   assert.equal(setFruitMastery(g, 30), 1);
-  assert.ok(!c.hotbar.includes(ENTRY.form('gear3')), 'off the hotbar below its mastery');
+  assert.ok(formLock(p, 'gear3'), 'shut again below its mastery');
   setFruitAwakened(g, true);
-  assert.ok(c.hotbar.includes(ENTRY.awake));
+  assert.ok(c.fruitAwakened);
   removeFruit(g);
   assert.ok(!c.hotbar.some((id) => id && id.startsWith('ms:')), 'its entries gone');
   assert.equal(p.fruitOut, false);
