@@ -599,12 +599,22 @@ export const FRUIT_RARITY = {
 // every fruit's forms, awakening, heavy and M1 (data/fruitForms.js)
 attachKits(FRUITS);
 
-/** The techniques you have with a fruit: its whole base set, the moment it's eaten (`mastery` no longer matters). */
-export function unlockedFruitTechniques(fruitId, mastery) {
-  void mastery;
+/**
+ * The fruit mastery a technique opens at: its first two moves (and its way
+ * of flying, if it flies) the moment it's eaten; the rest as you fight with
+ * it, each at its own mark (at least 10).
+ */
+export function fruitTechMastery(f, t) {
+  if (!f || !t || t.flight) return 0;
+  const i = f.techniques.filter((x) => !x.flight).indexOf(t);
+  return i >= 0 && i < 2 ? 0 : Math.max(10, t.mastery || 0);
+}
+
+/** The techniques you have with a fruit at a mastery. */
+export function unlockedFruitTechniques(fruitId, mastery = 0) {
   const f = FRUITS[fruitId];
   if (!f) return [];
-  return f.techniques.map((t) => t.id);
+  return f.techniques.filter((t) => fruitTechMastery(f, t) <= mastery).map((t) => t.id);
 }
 
 /** The forms of a fruit its mastery has opened up (and those still to come). */

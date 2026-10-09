@@ -419,9 +419,23 @@ export function weaponFromChar(char) {
  * cutlass swings the cutlass). A weapon style with nothing in hand falls back
  * on bare fists.
  */
+/** The sword form each number of blades makes (no teacher needed: progression.js syncUnlocks). */
+export const SWORD_FORMS = { 1: 'ittoryu', 2: 'nitoryu', 3: 'santoryu' };
+
 export function fightingStyle(char) {
+  const w0 = weaponFromChar(char);
+  // (swords: the form your blades make — one, two, three — unless you've chosen another school for them)
+  if (w0?.kind === 'sword') {
+    const pick = char.styleFor?.sword;
+    const form = SWORD_FORMS[Math.min(3, Math.max(1, w0.count || 1))];
+    if (pick && !Object.values(SWORD_FORMS).includes(pick) && STYLES[pick]?.weapon === 'sword' && char.masteries?.[pick] !== undefined && w0.count >= (STYLES[pick].swords || 1)) return pick;
+    return form;
+  }
+  // (another weapon: the style you've chosen for it, if you know it)
+  const own = w0 && char.styleFor?.[w0.kind];
+  if (own && STYLES[own]?.weapon === w0.kind && char.masteries?.[own] !== undefined) return own;
   const style = STYLES[char.style] ? char.style : 'brawler';
-  const st = STYLES[style], w = weaponFromChar(char);
+  const st = STYLES[style], w = w0;
   if (!w) return st.weapon ? 'brawler' : style;
   const suits = (s) => STYLES[s]?.weapon === w.kind && w.count >= (STYLES[s].swords || 1);
   if (suits(style)) return style;
@@ -435,6 +449,8 @@ export function fightingStyle(char) {
  * best, else plain brawling.
  */
 export function unarmedStyle(char) {
+  const own = char.styleFor?.fists;
+  if (own && STYLES[own] && !STYLES[own].weapon && char.masteries?.[own] !== undefined) return own;
   if (STYLES[char.style] && !STYLES[char.style].weapon) return char.style;
   const known = Object.keys(char.masteries || {}).filter((s) => STYLES[s] && !STYLES[s].weapon).sort((a, b) => char.masteries[b] - char.masteries[a]);
   return known[0] || 'brawler';

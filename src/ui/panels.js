@@ -556,7 +556,8 @@ export function openSkills(game) {
     game.ui.onHotbarChange = render;
     game.ui.onKeysChange = render;
     const styles = Object.keys(c.masteries).filter((s) => STYLES[s]);
-    const styleBtns = styles.map((s) => h('button' + (c.style === s ? '.on' : ''), { on: { click: () => { c.style = s; refreshPlayer(game); render(); } }, title: STYLES[s].desc },
+    // (a style for each weapon: choosing one for swords keeps your fists' own)
+    const styleBtns = styles.map((s) => h('button' + (c.style === s ? '.on' : ''), { on: { click: () => { c.style = s; const k = STYLES[s].weapon || 'fists'; (c.styleFor || (c.styleFor = {}))[k] = s; refreshPlayer(game); render(); } }, title: STYLES[s].desc },
       `${STYLES[s].name} (${Math.floor(c.masteries[s])})`));
     const cur = STYLES[c.style];
     const needW = cur?.weapon && !p.hasWeapon(cur.weapon, c.style);
@@ -949,7 +950,8 @@ export function openTrainer(game, tid, npcName) {
     } else if (tab === 'techniques') {
       for (const id of t.teaches || []) {
         const d = getAbility(id);
-        if (!d || (needsHaki(d) && !hakiKnown(c))) continue;
+        // (only Haki techniques are taught one by one: a style's open as you fight with it)
+        if (!d || !d.hakiType || (needsHaki(d) && !hakiKnown(c))) continue;
         const chk = S.canLearnTech(id);
         const price = S.techPrice(id);
         list.appendChild(h('div.row-item', skillImg(d, 34, '.ico'),
@@ -957,7 +959,7 @@ export function openTrainer(game, tid, npcName) {
           h('span.price', formatBerries(price)),
           h('button.btn.gold', { disabled: !chk.ok || c.berries < price, on: { click: () => { S.learnTech(id); render(); } } }, chk.ok ? 'Learn' : chk.why)));
       }
-      if (!list.children.length) list.appendChild(h('p', 'No techniques to teach you yet.'));
+      if (!list.children.length) list.appendChild(h('p', 'Styles are what a teacher gives you: learn one, and its techniques open as your mastery in it grows from fighting.'));
     } else if (tab === 'training') {
       list.appendChild(h('p.muted', `A master pushes your body further than fighting alone. Training sessions left today: ${S.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
       for (const [k, cap] of Object.entries(t.train || {})) {

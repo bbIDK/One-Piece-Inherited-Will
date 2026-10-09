@@ -150,10 +150,8 @@ export class Services {
     if (t.marineOnly && c.faction !== 'marine') return { ok: false, why: 'Marines only' };
     for (const [s, m] of Object.entries(t.requires?.mastery || {})) if ((c.masteries[s] || 0) < m) return { ok: false, why: `Needs ${STYLES[s].name} mastery ${m}` };
     const st = STYLES[style];
-    if (st.weapon === 'sword' && st.swords > 1) {
-      const swords = (c.inventory || []).filter((i) => i.id && /sword|katana|cutlass|saber|kitetsu|yubashiri|shigure|wado|shusui|enma|yoru/.test(i.id)).length;
-      if (swords < st.swords) return { ok: true, warn: `You will need ${st.swords} swords to use it.` };
-    }
+    // (one, two or three swords: a form your blades make, not a school — no lesson needed)
+    if (st.weapon === 'sword' && ['ittoryu', 'nitoryu', 'santoryu'].includes(style)) return { ok: false, why: `Carry ${st.swords} sword${st.swords > 1 ? 's' : ''}` };
     return { ok: true };
   }
   stylePrice(tid, style) {
@@ -168,7 +166,8 @@ export class Services {
     c.masteries[style] = 0;
     g.player.masteries = c.masteries;
     g.ui.toast('NEW STYLE', STYLES[style].name, '#90caf9');
-    g.log(`You can switch to ${STYLES[style].name} in the Skills menu (Tab).`, '#90caf9');
+    g.log(`You can switch to ${STYLES[style].name} in the Skills menu (Tab). Its techniques open as you fight with it.`, '#90caf9');
+    g.progression?.syncUnlocks?.();
     persist(g);
     return true;
   }
@@ -190,7 +189,8 @@ export class Services {
       if ((c.haki[d.hakiType] || 0) < (learn.level || 0)) return { ok: false, why: `Needs ${d.hakiType} Haki level ${learn.level}` };
       return { ok: true };
     }
-    if (d.style && c.masteries[d.style] === undefined) return { ok: false, why: `Learn ${STYLES[d.style]?.name} first` };
+    // (a style's techniques aren't sold: they open as you fight with it)
+    if (d.style) return { ok: false, why: c.masteries[d.style] === undefined ? `Learn ${STYLES[d.style]?.name} first` : `Opens at mastery ${learn.mastery || 0}` };
     if ((c.masteries[d.style] || 0) < (learn.mastery || 0)) return { ok: false, why: `Needs ${STYLES[d.style]?.name} mastery ${learn.mastery}` };
     if (learn.special === 'full_moon' && !(this.game.env.fullMoon && this.game.env.isNight)) return { ok: false, why: 'Only under a full moon' };
     return { ok: true };

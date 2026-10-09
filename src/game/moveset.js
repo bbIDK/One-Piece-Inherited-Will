@@ -14,7 +14,7 @@
 // Pure: reads the actor (and its character record), changes nothing. Taking a
 // moveset out is entries.js; using a skill is the player controller's.
 import { STYLES } from '../data/styles.js';
-import { FRUITS, AWAKEN_MASTERY } from '../data/fruits.js';
+import { FRUITS, AWAKEN_MASTERY, fruitTechMastery } from '../data/fruits.js';
 import { HAKI, HAKI_ABILITIES } from '../data/haki.js';
 import { TRAINERS } from '../data/trainers.js';
 import { getAbility } from './abilities.js';
@@ -78,7 +78,12 @@ export function movesetOf(p) {
     out.color = f.color;
     const base = f.techniques.filter((t) => !t.flight).map((t) => t.id);
     const list = form?.skills || base;
-    out.skills = list.map((id) => getAbility(id)).filter(Boolean).map((d) => ({ id: d.id, def: d, locked: false, why: needs(p, d) }));
+    // (a form's own skills are all there with it; the fruit's own open as its mastery grows)
+    const thr = (id) => (form ? 0 : fruitTechMastery(f, f.techniques.find((t) => t.id === id)));
+    out.skills = list.map((id) => getAbility(id)).filter(Boolean).map((d) => {
+      const locked = !known.has(d.id) && m < thr(d.id);
+      return { id: d.id, def: d, locked, why: locked ? `fruit mastery ${thr(d.id)} · fight with it` : needs(p, d) };
+    });
     out.air = f.techniques.filter((t) => t.flight).map((t) => ({ id: t.id, def: getAbility(t.id) }));
     out.m1 = { source: 'fruit:' + p.fruit, fruit: p.fruit, ...(f.m1 || {}), ...(form?.m1 || {}) };
     out.heavy = form ? form.heavy || null : f.heavy || null;
@@ -112,16 +117,15 @@ export function movesetOf(p) {
     if (AIR.has(t.id)) { if (have) out.air.push({ id: t.id, def: d }); continue; }
     let why = '';
     if (!have) {
+      // (a style's techniques come with fighting in it: each opens at its mastery)
       const L = t.learn || {};
-      const who = teachers(t.id);
-      const at = L.mastery ? `mastery ${L.mastery}` : '';
-      const by = who.length ? `taught by ${who[0]}` : '';
-      why = L.innate ? 'born to it' : L.special === 'full_moon' ? `${at ? at + ' · ' : ''}under a full moon` : [at, by].filter(Boolean).join(' · ') || 'a trainer teaches it';
-      if (!learnedStyle) why = `learn ${st.name} first`;
+      const at = `mastery ${L.mastery || 0}`;
+      why = L.innate ? 'born to it' : L.special === 'full_moon' ? `${at} · under a full moon` : `${at} · fight with ${st.name}`;
+      if (!learnedStyle) why = st.swords ? `carry ${st.swords} sword${st.swords > 1 ? 's' : ''}` : `learn ${st.name} from a teacher`;
     } else why = needs(p, d);
     out.skills.push({ id: t.id, def: d, locked: !have, why });
   }
-  if (kind === 'weapon' && !learnedStyle && st.techniques?.length) out.next.push({ name: st.name, why: `a trainer teaches it: its techniques open with it` });
+  if (kind === 'weapon' && !learnedStyle && st.techniques?.length) out.next.push({ name: st.name, why: 'a teacher teaches the style: its techniques open as you fight with it' });
   return out;
 }
 

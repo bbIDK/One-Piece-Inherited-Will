@@ -22,7 +22,7 @@ function catchUpFruit(game, c) {
   c.hotbar = (c.hotbar || []).map((id) => (stale(id) ? null : id));
   const fresh = unlockedFruitTechniques(c.fruit, c.fruitMastery || 0).filter((id) => !c.techniques.includes(id));
   for (const id of fresh) c.techniques.push(id);
-  if (fresh.length) game.log?.(`The whole of your ${FRUITS[c.fruit].name}'s base set is yours: ${fresh.map((id) => getAbility(id)?.name).filter(Boolean).join(', ')} — on the skill keys while the fruit is out (its key on the hotbar).`, '#ffab91');
+  if (fresh.length) game.log?.(`New moves of your ${FRUITS[c.fruit].name}: ${fresh.map((id) => getAbility(id)?.name).filter(Boolean).join(', ')} — on the skill keys while the fruit is out (its key on the hotbar).`, '#ffab91');
 }
 
 /**

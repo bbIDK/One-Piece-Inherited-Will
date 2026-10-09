@@ -142,12 +142,13 @@ test('a Devil Fruit handed out is the only one: taken from where it grows, eaten
   assert.equal(useItem(game, 'fruit_gomu'), false);
   assert.equal(c.fruit, 'hana');
 
-  // (its whole base set is yours on eating it, whatever its mastery: mastery opens its forms — Hana has none)
+  // (its first two moves are yours on eating it; mastery opens the rest — and they stay yours)
   const hana = FRUITS.hana.techniques.map((t) => t.id);
-  assert.ok(hana.every((id) => c.techniques.includes(id)));
+  assert.ok(hana.slice(0, 2).every((id) => c.techniques.includes(id)));
   assert.equal(setFruitMastery(game, 100), 0);
+  for (const id of hana) if (!c.techniques.includes(id)) c.techniques.push(id); // (what fighting at 100 opens: progression.js syncUnlocks)
   setFruitMastery(game, 0);
-  assert.ok(hana.every((id) => c.techniques.includes(id)), 'still all of it at mastery 0');
+  assert.ok(hana.every((id) => c.techniques.includes(id)), 'what you opened stays yours at mastery 0');
   assert.equal(c.fruitMastery, 0);
   assert.equal(p.fruitMastery, 0);
   assert.ok(c.hotbar.includes('ms:fruit'), 'its entry on the hotbar');

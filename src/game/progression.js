@@ -17,11 +17,11 @@
 //    at a random moment of a hard fight, like in the stories.
 //  * Legends: great feats the world remembers.
 import { threatFactor, ATTR_CAP, ATTRS } from './stats.js';
-import { FRUITS, AWAKEN_MASTERY } from '../data/fruits.js';
+import { FRUITS, AWAKEN_MASTERY, unlockedFruitTechniques } from '../data/fruits.js';
 import { keysOf, keyLabel } from './keys.js';
 import { getAbility, weaponKindOf } from './abilities.js';
 import { STYLES } from '../data/styles.js';
-import { persist, refreshPlayer, hakiKnown, needsHaki, setDrawn } from './lineage.js';
+import { persist, refreshPlayer, hakiKnown, needsHaki, setDrawn, weaponFromChar, SWORD_FORMS } from './lineage.js';
 import { earn } from './inventory.js';
 import { formatBerries, roundBounty } from '../core/math.js';
 import { bountySea } from './reputation.js';
@@ -51,6 +51,9 @@ export class Progression {
     game.on('questDone', () => this.checkDream());
     let t = 0;
     game.on('tick', (dt) => { if ((t += dt) > 5) { t = 0; this.checkDream(); } });
+    // (techniques catch up with mastery — and the sword form with the swords you carry — a few times a second)
+    let su = 0, first = true;
+    game.on('tick', (dt) => { if ((su += dt) > 0.5) { su = 0; this.syncUnlocks(first); first = false; } });
   }
 
   get char() { return this.game.state?.char; }
@@ -171,6 +174,51 @@ export class Progression {
     const after = Math.min(100, before + amt);
     p.masteries[style] = after;
     if (Math.floor(after / 5) > Math.floor(before / 5)) this.game.log(`${STYLES[style]?.name || style} mastery ${Math.floor(after)}`, '#90caf9');
+    this.syncUnlocks();
+  }
+
+  /**
+   * What fighting has opened: every technique of a style you know whose
+   * mastery you've reached (a teacher sells the style, not its moves); every
+   * move of your fruit its mastery has reached; and the sword form your
+   * swords make (one, two, three: Ittoryu, Nitoryu, Santoryu — no teacher
+   * needed to hold more blades). `silent`: catching up (a save loaded), no
+   * fanfare.
+   */
+  syncUnlocks(silent = false) {
+    const g = this.game, c = this.char, p = g.player;
+    if (!c || !p || !c.masteries || !c.techniques) return;
+    const fresh = [];
+    // the sword form your blades make
+    const w = weaponFromChar(c);
+    if (w?.kind === 'sword') {
+      const form = SWORD_FORMS[Math.min(3, Math.max(1, w.count || 1))];
+      if (c.masteries[form] === undefined) {
+        c.masteries[form] = 0;
+        if (!silent) { g.ui?.toast?.('NEW STYLE', STYLES[form].name, '#90caf9'); g.log(`${w.count > 1 ? `${w.count} swords` : 'A sword'} in hand: you fight ${STYLES[form].name}. Its techniques open as you fight with it.`, '#90caf9'); }
+      }
+    }
+    for (const [sid, m] of Object.entries(c.masteries)) {
+      const st = STYLES[sid];
+      if (!st) continue;
+      for (const t of st.techniques || []) {
+        const L = t.learn || {};
+        if (c.techniques.includes(t.id) || L.special || L.innate) continue;
+        if ((L.mastery || 0) <= m) { c.techniques.push(t.id); fresh.push(t.id); }
+      }
+    }
+    if (c.fruit) for (const id of unlockedFruitTechniques(c.fruit, c.fruitMastery || 0)) if (!c.techniques.includes(id)) { c.techniques.push(id); fresh.push(id); }
+    if (!fresh.length) return;
+    p.techniques = c.techniques;
+    if (silent) return;
+    for (const id of fresh) {
+      const d = getAbility(id);
+      if (!d) continue;
+      g.ui?.toast?.('NEW TECHNIQUE', d.name, '#90caf9');
+      g.log(`${d.name}: your ${d.fruit ? FRUITS[d.fruit]?.name : STYLES[d.style]?.name || 'training'} has grown enough for it.`, '#90caf9');
+    }
+    g.audio?.sfx?.('unlock');
+    persist(g);
   }
 
   addWeaponMastery(kind, amt) {
@@ -198,6 +246,7 @@ export class Progression {
     c.fruitMastery = after;
     if (Math.floor(after / 10) > Math.floor(before / 10)) { g.log(`${f.name} mastery ${Math.floor(after)}: its power grows.`, '#ffab91'); g.audio?.sfx('unlock'); }
     this.openForms();
+    this.syncUnlocks();
     if (before < AWAKEN_MASTERY && after >= AWAKEN_MASTERY && !c.fruitAwakened) {
       g.ui.toast('MASTERED', `The ${f.name} stirs: a hard fight may awaken it`, f.color);
       g.audio?.sfx('breakthrough');

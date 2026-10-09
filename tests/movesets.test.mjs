@@ -21,7 +21,7 @@ const { getAbility, abilityTotal, canUse } = await import('../src/game/abilities
 const { createCharacter, buildPlayer, migrateHotbar, upgradeChar, setDrawn } = await import('../src/game/lineage.js');
 const { defaultLegacy } = await import('../src/game/save.js');
 const { addItem, useItem } = await import('../src/game/inventory.js');
-const { FRUITS, AWAKEN_MASTERY } = await import('../src/data/fruits.js');
+const { FRUITS, AWAKEN_MASTERY, fruitTechMastery, unlockedFruitTechniques } = await import('../src/data/fruits.js');
 const { STYLES } = await import('../src/data/styles.js');
 await import('../src/data/haki.js');
 await import('../src/content/index.js');
@@ -101,11 +101,18 @@ function eat(g, fid) {
 }
 
 // ------------------------------------------------------------------ unlocks
-test('eating a fruit gives all of its base set at once, an entry on the hotbar, and the fruit out', () => {
+test('eating a fruit gives its first two moves (and its flight) at once, the rest by mastery; an entry on the hotbar, and the fruit out', () => {
   const { g, c, p } = setup();
   assert.deepEqual(c.hotbar.filter(Boolean), [], 'a new hotbar holds no techniques');
   eat(g, 'gomu');
-  for (const t of FRUITS.gomu.techniques) assert.ok(c.techniques.includes(t.id), `${t.id} known at mastery 0`);
+  const gb = FRUITS.gomu.techniques.filter((t) => !t.flight);
+  for (const t of gb.slice(0, 2)) assert.ok(c.techniques.includes(t.id), `${t.id} known at mastery 0`);
+  for (const t of gb.slice(2)) assert.ok(!c.techniques.includes(t.id), `${t.id} waits for mastery ${fruitTechMastery(FRUITS.gomu, t)}`);
+  const msLocked = movesetOf(p).skills;
+  assert.ok(msLocked.slice(0, 2).every((s) => !s.locked) && msLocked.slice(2).every((s) => s.locked && /fruit mastery \d+/.test(s.why)), 'the rest shown locked, with the mastery they open at');
+  c.fruitMastery = p.fruitMastery = 100;
+  for (const id of unlockedFruitTechniques('gomu', 100)) if (!c.techniques.includes(id)) c.techniques.push(id);
+  for (const t of FRUITS.gomu.techniques) assert.ok(c.techniques.includes(t.id), `${t.id} known at mastery 100`);
   assert.ok(c.hotbar.includes(ENTRY.fruit), 'the fruit has an entry');
   assert.ok(!c.hotbar.some((id) => id && getAbility(id)), 'no technique on the hotbar');
   assert.equal(movesetKind(p), 'fruit', 'taken out at once');
