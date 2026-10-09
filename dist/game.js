@@ -14127,7 +14127,8 @@
     chest: { w: 0.9, dp: 0.55, h: 0.62 },
     treasure: { w: 0.9, dp: 0.8, h: 0.98 },
     shelf: { w: 1.3, dp: 0.38, h: 1.8 },
-    stove: { w: 0.9, dp: 0.7, h: 0.8 },
+    stove: { w: 1.2, dp: 0.9, h: 0.8 },
+    // (the range itself 0.9 × 0.7, on its stone hearth)
     hammock: { w: 2.1, dp: 0.8, h: 0.62 },
     barrel: { w: 0.66, dp: 0.66, h: 0.78 },
     barrels: { w: 1.34, dp: 0.66, h: 0.78 },
@@ -14395,9 +14396,13 @@
     // crew's hammocks slung up under the deck beams and their sea chests below
     forecastle(P6) {
       const { ua, ub, H: H5 } = P6, len = ub - ua;
-      P6.alongSide("stove", -1, ua + 0.5, ub - 0.5, { pipe: true });
+      const stove = P6.alongSide("stove", -1, ua + 0.5, ub - 0.5, { pipe: true });
+      if (stove) {
+        const f = footprint(stove);
+        P6.keep.push({ u0: f.u0 - 0.55, u1: f.u1 + 0.55, v0: f.v0 - 0.1, v1: f.v1 + 0.75, top: 1.2 });
+      }
       P6.row(["chest"], 1, ua + 0.1, ub - 0.1, 1.4, { loot: "crew" });
-      P6.row(["chest"], -1, ua + 1.2, ub - 0.1, 1.4, { loot: "crew" });
+      P6.row(["chest"], -1, ua + 1.2, ub - 0.1, 1.6, { loot: "crew" });
       if (P6.reach(ua + len * 0.45, 0, 1) > 1.7) {
         const tl = clampN(len * 0.4, 1.1, 2.4);
         for (const l of [tl, 1.1]) if (P6.around(ua + len * 0.45, 0, (u, v) => P6.table(u, v, l, 0.7, "benches"))) break;
@@ -62901,7 +62906,7 @@ void main() {
       const ex = dx > 0 ? i + 1 : dx < 0 ? i : cx, ez = dz > 0 ? j + 1 : dz < 0 ? j : cz;
       const side = alongEdgeX === alongX;
       k.add(box(alongEdgeX ? 1 : 0.16, 0.34, alongEdgeX ? 0.16 : 1), { at: [ex - dx * 0.08, top - 0.5, ez - dz * 0.08], color: TRIM });
-      k.add(box(alongEdgeX ? 1.02 : 0.1, 0.14, alongEdgeX ? 0.1 : 1.02), { at: [ex + dx * 0.02, top - 0.14, ez + dz * 0.02], color: "#7a5638" });
+      k.add(box(alongEdgeX ? 1 : 0.1, 0.125, alongEdgeX ? 0.1 : 1), { at: [ex + dx * 0.02, top - 0.14, ez + dz * 0.02], color: "#7a5638" });
       const parity = ((alongEdgeX ? wx : wy) & 1) === 0;
       if (parity) {
         const px2 = alongEdgeX ? i : ex - dx * 0.1, pz2 = alongEdgeX ? ez - dz * 0.1 : j;
@@ -62992,8 +62997,8 @@ void main() {
       if (!open(i + dx, j + dz)) continue;
       const alongEdgeX = dz !== 0;
       const tx = ex - dx * 0.06, tz = ez - dz * 0.06;
-      if (alongEdgeX) beam(k, i, topAt2(i, tz) - 0.11, tz, i + 1, topAt2(i + 1, tz) - 0.11, tz, 0.12, 0.3, TRIM);
-      else beam(k, tx, topAt2(tx, j) - 0.11, j, tx, topAt2(tx, j + 1) - 0.11, j + 1, 0.12, 0.3, TRIM);
+      if (alongEdgeX) beam(k, i, topAt2(i, tz) - 0.165, tz, i + 1, topAt2(i + 1, tz) - 0.165, tz, 0.12, 0.3, TRIM);
+      else beam(k, tx, topAt2(tx, j) - 0.165, j, tx, topAt2(tx, j + 1) - 0.165, j + 1, 0.12, 0.3, TRIM);
       if (high) {
         const rx = ex - dx * 0.1, rz = ez - dz * 0.1;
         for (const [hy, sz] of [[0.92, 0.07], [0.45, 0.05]]) {
@@ -65767,8 +65772,9 @@ ${GLSL}
     deckGrid(k, d, P6, d.tq, cp.t0, d.deckY);
     deckGrid(k, d, P6, cp.t0, cp.t1, d.deckY, cp.w / 2);
     deckGrid(k, d, P6, cp.t1, d.tf, d.deckY);
-    deckGrid(k, d, P6, d.poop ? d.tp - 4e-3 : 0.012, d.tq + 6e-3, d.yq);
-    if (d.poop) deckGrid(k, d, P6, 0.012, d.tp + 6e-3, d.yp);
+    const ta = 0.18 / d.L;
+    deckGrid(k, d, P6, d.poop ? d.tp - 4e-3 : ta, d.tq + 6e-3, d.yq);
+    if (d.poop) deckGrid(k, d, P6, ta, d.tp + 6e-3, d.yp);
     if (d.fore) deckGrid(k, d, P6, d.tf - 6e-3, 0.975, d.yf);
   }
   function cannon(k, P6, s, gs = 1, opts = {}) {
@@ -66379,9 +66385,16 @@ ${GLSL}
       k.add(cyl(0.08, 0.12 + d.L * 3e-3, b.len * 0.45, 7), { at: [0, b.len * 0.6, 0], color: wood, outline: 0.015 });
       k.restore();
     }
-    const ty = topAt(d, 0.01);
-    k.add(cyl(0.05, 0.08, 3.4, 6), { at: [-d.L / 2 + 0.5, ty, 0], rot: [0, 0, 0.18], color: dark, outline: 0.012 });
+    const ty = topAt(d, 0.01), fs = flagstaff(d);
+    k.add(cyl(0.05, 0.08, fs.len, 6), { at: [fs.x, fs.y, 0], rot: [0, 0, fs.rake], color: dark, outline: 0.012 });
+    k.add(cyl(0.1, 0.1, 0.08, 8), { at: [fs.x - Math.sin(fs.rake) * (ty - 0.25 - fs.y), ty - 0.25, 0], color: "#3a3a3a" });
+    k.add(box(0.5, 0.06, 0.08), { at: [fs.x - 0.25 - Math.sin(fs.rake) * (ty - 0.25 - fs.y), ty - 0.23, 0], color: "#3a3a3a" });
     return k.build(true);
+  }
+  function flagstaff(d) {
+    const x = -d.L / 2 + 0.75, y = floorAt(d, 0.75 / d.L + 4e-3, 0), ty = topAt(d, 0.01);
+    const len = ty - y + 3.2, rake2 = 0.18;
+    return { x, y, len, rake: rake2, top: [x - Math.sin(rake2) * len, y + Math.cos(rake2) * len] };
   }
   function bigRigging(d, plan, def) {
     const pts = [];
@@ -66539,6 +66552,9 @@ ${GLSL}
       for (const a of [-0.3, 0.3]) k.add(box(0.06, body, dp + 0.012), { at: [a * w, 0, 0], color: iron });
       k.add(box(0.13, 0.15, 0.02), { at: [0, body - 0.19, dp / 2 + 6e-3], color: "#d4ac0d" });
       for (const e of [-1, 1]) k.add(torus(0.055, 0.012, 4, 8, Math.PI), { at: [e * (w / 2 + 2e-3), body * 0.62, 0], rot: [0, Math.PI / 2, Math.PI], color: "#2b2b2b" });
+      for (const y of [body * 0.33, body * 0.66]) k.add(box(w + 4e-3, 0.012, dp + 4e-3), { at: [0, y, 0], color: shade2(wood, -0.25) });
+      k.add(box(w + 0.03, 0.05, dp + 0.03), { at: [0, 0, 0], color: shade2(wood, -0.15) });
+      for (const ex of [-1, 1]) for (const ez of [-1, 1]) k.add(box(0.07, 0.07, 0.07), { at: [ex * (w / 2 - 0.03), 0, ez * (dp / 2 - 0.03)], scale: [1.08, 1, 1.08], color: "#3a3a3a" });
       k.save();
       k.translate(0, body, -dp / 2);
       if (it.treasure) k.rotateX(-1.3);
@@ -66568,12 +66584,34 @@ ${GLSL}
       }
     },
     stove(k, it, d) {
-      const { w, dp, h: h2 } = it, iron = "#2f2f2f", r4 = d.rooms.find((x) => x.kind === it.room);
-      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.06, 0.1, 0.06), { at: [a * (w / 2 - 0.06), 0, b * (dp / 2 - 0.06)], color: iron });
-      k.add(box(w, h2 - 0.1, dp), { at: [0, 0.1, 0], color: iron, outline: 0.01 });
-      k.add(box(w * 0.42, 0.24, 0.02), { at: [-w * 0.14, 0.24, dp / 2 + 6e-3], color: "#ff7a1a", glow: "#ff5a00", flicker: 0.5 });
-      k.add(cyl(0.16, 0.14, 0.24, 10), { at: [w * 0.2, h2, dp * 0.08], color: "#6b6b6b", outline: 8e-3 });
-      k.add(cyl(0.08, 0.08, (r4 ? r4.ceil + 0.12 - r4.floor : 2.4) - h2, 8), { at: [-w * 0.25, h2, -dp / 2 + 0.14], color: iron });
+      const { w: W4, dp: DP, h: h2 } = it, w = W4 - 0.3, dp = DP - 0.2, iron = "#2b2b2e", ironL = "#3c3c42", brass = "#c9a227", r4 = d.rooms.find((x) => x.kind === it.room);
+      k.add(box(W4, 0.06, DP), { at: [0, 0, 0], color: "#8b8378", outline: 8e-3 });
+      for (let i = 0; i < 3; i++) k.add(box(0.012, 0.062, DP), { at: [-W4 / 2 + (i + 1) * W4 / 4, 0, 0], color: "#6e675e" });
+      k.add(box(W4 - 0.04, 1.3, 0.02), { at: [0, 0.06, -DP / 2 + 0.012], color: "#9aa3a8" });
+      for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(cyl(0.035, 0.05, 0.12, 6), { at: [a * (w / 2 - 0.07), 0.06, b * (dp / 2 - 0.07)], color: iron });
+      k.add(box(w, h2 - 0.22, dp), { at: [0, 0.18, 0], color: iron, outline: 0.01 });
+      k.add(box(w + 0.04, 0.05, dp + 0.04), { at: [0, h2 - 0.06, 0], color: ironL, outline: 8e-3 });
+      const fx = -w * 0.18, fw = w * 0.42;
+      k.add(box(fw, 0.26, 0.02), { at: [fx, 0.3, dp / 2 + 6e-3], color: "#ff7a1a", glow: "#ff5a00", flicker: 0.5 });
+      k.add(box(fw + 0.06, 0.04, 0.03), { at: [fx, 0.56, dp / 2 + 0.01], color: ironL });
+      k.add(box(fw + 0.06, 0.04, 0.03), { at: [fx, 0.27, dp / 2 + 0.01], color: ironL });
+      for (let i = 0; i < 5; i++) k.add(box(0.02, 0.26, 0.025), { at: [fx - fw / 2 + (i + 0.5) * fw / 5, 0.3, dp / 2 + 0.015], color: ironL });
+      k.add(box(0.1, 0.03, 0.04), { at: [fx + fw / 2 - 0.06, 0.43, dp / 2 + 0.035], color: brass });
+      k.add(box(fw, 0.08, 0.02), { at: [fx, 0.18, dp / 2 + 6e-3], color: ironL });
+      k.add(box(w * 0.34, 0.36, 0.02), { at: [w * 0.27, 0.24, dp / 2 + 6e-3], color: ironL, outline: 6e-3 });
+      k.add(box(0.12, 0.025, 0.03), { at: [w * 0.27, 0.5, dp / 2 + 0.025], color: brass });
+      k.add(cyl(0.015, 0.015, w - 0.1, 6), { at: [-(w - 0.1) / 2, h2 - 0.2, dp / 2 + 0.07], rot: [0, 0, -Math.PI / 2], color: brass });
+      for (const a of [-1, 1]) k.add(box(0.02, 0.02, 0.08), { at: [a * (w / 2 - 0.06), h2 - 0.21, dp / 2 + 0.03], color: brass });
+      for (const a of [-1, 1]) k.add(cyl(0.13, 0.13, 0.015, 12), { at: [a * w * 0.22, h2 - 0.01, dp * 0.08], color: ironL });
+      const kx = w * 0.22, kz = dp * 0.08;
+      k.add(cyl(0.1, 0.13, 0.16, 12), { at: [kx, h2, kz], color: "#7b7f86", outline: 8e-3 });
+      k.add(cyl(0.04, 0.1, 0.05, 12), { at: [kx, h2 + 0.16, kz], color: "#7b7f86" });
+      k.add(cyl(0.012, 0.022, 0.12, 6), { at: [kx + 0.1, h2 + 0.06, kz], rot: [0, 0, -0.9], color: "#7b7f86" });
+      k.add(torus(0.07, 0.01, 4, 10, Math.PI), { at: [kx, h2 + 0.2, kz], color: "#2b2b2e" });
+      const top = r4 ? r4.ceil + 0.12 - r4.floor : 2.4;
+      k.add(cyl(0.11, 0.11, 0.06, 10), { at: [-w * 0.25, h2, -dp / 2 + 0.16], color: ironL });
+      k.add(cyl(0.08, 0.08, top - h2, 10), { at: [-w * 0.25, h2, -dp / 2 + 0.16], color: iron });
+      k.add(cyl(0.13, 0.13, 0.05, 10), { at: [-w * 0.25, top - 0.17, -dp / 2 + 0.16], color: brass });
     },
     hammock(k, it) {
       const { w, dp, h: h2 } = it, L3 = w - 0.44, N8 = 10, sag = 0.22;
@@ -67106,7 +67144,7 @@ ${GLSL}
       dg.computeVertexNormals();
       k.add(dg, { split: true, color: (p, n, i) => dc[Math.floor(i / 3)] });
     };
-    deckRegion(d.castle ? d.tq : 0.02, d.fore ? d.tf : 0.97, () => d.deckY);
+    deckRegion(d.castle ? d.tq : 0, d.fore ? d.tf : 0.97, () => d.deckY);
     if (d.castle) deckRegion(0, d.tq + 0.012, () => d.yq);
     if (d.fore) deckRegion(d.tf - 0.012, 0.975, () => d.yf);
     if (d.castle) {
@@ -67744,7 +67782,8 @@ ${GLSL}
         if (d.big) {
           const eg = fg.clone();
           const ens = new Mesh(eg, fmat);
-          ens.position.set(-d.L / 2 + 0.5 - 3.4 * Math.sin(0.18) - 0.1, topAt(d, 0.01) + 3.4 * Math.cos(0.18) - 0.75 * fs * 0.5, 0);
+          const st = flagstaff(d);
+          ens.position.set(st.top[0] - 0.1, st.top[1] - 0.75 * fs * 0.5, 0);
           ens.userData.base = eg.attributes.position.array.slice();
           root4.add(ens);
           this.ensign = ens;
@@ -76613,7 +76652,18 @@ ${GLSL}
         const x0 = door.x - aw / 2 + i * aw / n;
         k.add(box(aw / n + 5e-3, i % 2 ? 0.07 : 0.05, 1), { at: [x0 + aw / n / 2, ay - (i % 2 ? 0.01 : 0), 0.45], rot: [0.42, 0, 0], color: i % 2 ? "#ffffff" : c });
       }
-      for (let i = 0; i < n; i++) k.add(new CircleGeometry(aw / n / 2, 8, Math.PI, Math.PI), { at: [door.x - aw / 2 + (i + 0.5) * aw / n, ay - 0.4, 0.92], rot: [-0.42, 0, 0], color: i % 2 ? "#ffffff" : c, double: true, backShade: 0.85 });
+      const fy = ay - 0.5 * Math.sin(0.42), fz = 0.45 + 0.5 * Math.cos(0.42), vh = 0.14;
+      for (let i = 0; i < n; i++) {
+        const xc = door.x - aw / 2 + (i + 0.5) * aw / n, col2 = i % 2 ? "#ffffff" : c;
+        k.add(box(aw / n + 5e-3, vh + 0.03, 0.025), { at: [xc, fy - vh, fz - 0.03], color: col2 });
+        k.add(new CircleGeometry(aw / n / 2, 8, Math.PI, Math.PI), { at: [xc, fy - vh, fz - 0.017 + i % 2 * 2e-3], color: col2, double: true, backShade: 0.85 });
+      }
+      const sy = fy - 0.6, sl = Math.hypot(fy - sy, fz), sa = Math.atan2(fz, fy - sy);
+      for (const sx of [-1, 1]) {
+        const x = door.x + sx * (aw / 2 - 0.06);
+        k.add(cyl(0.018, 0.018, sl, 5), { at: [x, sy, 0.02], rot: [sa, 0, 0], color: "#2d3436" });
+        k.add(box(0.08, 0.14, 0.03), { at: [x, sy - 0.07, 0.015], color: "#2d3436" });
+      }
     }
     if (S6.engawa) {
       B2(k, -fw / 2 - ex(-1, 0.1), -dn, 0, fw / 2 + ex(1, 0.1), 0.42, 0.9, "#8d6e4a", { outline: 0.02 });
@@ -77216,7 +77266,8 @@ ${GLSL}
     tent: [1.2, 1],
     campfire: 0.45,
     well: 0.95,
-    fountain: 1.3,
+    fountain: 1.55,
+    // (its basin's step)
     // nature
     tree: 0.3,
     rock: 0.5,
@@ -79412,16 +79463,18 @@ ${GLSL}
   var fountainGeo = () => model("fountain", (k) => {
     const stone = "#ddd2bd", dark = "#bcae96", deep = "#a8987e", water3 = "#3a9fd0", pale = "#a8e0f2";
     k.add(cyl(1.62, 1.66, 0.12, 8), { at: [0, -0.06, 0], rot: [0, Math.PI / 8, 0], color: deep, outline: 0.025 });
-    k.add(cyl(1.46, 1.5, 0.52, 8), { at: [0, 0.06, 0], rot: [0, Math.PI / 8, 0], color: stone, outline: 0.03 });
-    k.add(cyl(1.58, 1.58, 0.1, 8), { at: [0, 0.58, 0], rot: [0, Math.PI / 8, 0], color: stone, outline: 0.025 });
-    k.add(cyl(1.54, 1.58, 0.05, 8), { at: [0, 0.53, 0], rot: [0, Math.PI / 8, 0], color: dark });
+    k.add(cyl(1.46, 1.5, 0.52, 8, true), { at: [0, 0.06, 0], rot: [0, Math.PI / 8, 0], color: stone, outline: 0.03 });
+    k.add(cyl(1.3, 1.3, 0.52, 8, true), { at: [0, 0.06, 0], rot: [0, Math.PI / 8, 0], color: dark, double: true, backShade: 1 });
+    k.add(new RingGeometry(1.3, 1.58, 8, 1), { at: [0, 0.68, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: stone, double: true, backShade: 0.8 });
+    k.add(cyl(1.58, 1.58, 0.1, 8, true), { at: [0, 0.58, 0], rot: [0, Math.PI / 8, 0], color: stone, outline: 0.025 });
+    k.add(cyl(1.3, 1.3, 0.1, 8, true), { at: [0, 0.58, 0], rot: [0, Math.PI / 8, 0], color: dark, double: true, backShade: 1 });
     for (let i = 0; i < 8; i++) {
-      const a = i / 8 * Math.PI * 2, r4 = 1.44;
+      const a = i / 8 * Math.PI * 2, r4 = 1.385;
       k.add(box(0.82, 0.3, 0.04), { at: [Math.cos(a) * r4, 0.14, Math.sin(a) * r4], rot: [0, Math.PI / 2 - a, 0], color: dark });
       k.add(box(0.6, 0.18, 0.05), { at: [Math.cos(a) * (r4 + 5e-3), 0.2, Math.sin(a) * (r4 + 5e-3)], rot: [0, Math.PI / 2 - a, 0], color: shade2(stone, -0.04) });
     }
-    k.add(new CircleGeometry(1.4, 8), { at: [0, 0.5, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: water3 });
-    k.add(new RingGeometry(1.24, 1.4, 8), { at: [0, 0.505, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: shade2(water3, -0.15) });
+    k.add(new CircleGeometry(1.3, 8), { at: [0, 0.5, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: water3 });
+    k.add(new RingGeometry(1.14, 1.3, 8), { at: [0, 0.505, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: shade2(water3, -0.15) });
     k.add(box(0.7, 0.4, 0.7), { at: [0, 0.3, 0], color: dark, outline: 0.02 });
     k.add(lathe([[0.36, 0], [0.36, 0.06], [0.28, 0.12], [0.26, 0.2], [0.2, 0.26], [0.18, 1], [0.24, 1.08], [0.26, 1.14]], 12), { at: [0, 0.7, 0], color: stone, outline: 0.02 });
     for (let i = 0; i < 4; i++) {
@@ -95929,12 +95982,31 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     return m;
   }
   var uTime = { value: 0 };
+  var MAXH = 4;
+  var uHull = { value: Array.from({ length: MAXH }, () => new Vector4(1e6, 1e6, 1, 0)) };
+  var uHullSz = { value: Array.from({ length: MAXH }, () => new Vector2(0, 0)) };
+  var HULL_GLSL = `
+      {
+        vec4 wp0 = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        for (int i = 0; i < ${MAXH}; i++) {
+          vec2 d = wp0.xz - uHull[i].xy;
+          float u = d.x * uHull[i].z + d.y * uHull[i].w, v = -d.x * uHull[i].w + d.y * uHull[i].z;
+          vec2 hs = uHullSz[i];
+          if (hs.x > 0.0) {
+            float e = pow(abs(u) / hs.x, 4.0) + pow(abs(v) / hs.y, 2.0);
+            if (e < 1.15) transformed *= 0.0;
+          }
+        }
+      }`;
   function coverMaterial(kind) {
     const soft = kind === "grass" || kind === "fern" || kind === "flower" || kind === "crop";
     const m = new MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient(), side: soft ? DoubleSide : FrontSide });
     const sway = SWAY2[kind] || 0;
     m.onBeforeCompile = (sh) => {
-      Object.assign(sh.uniforms, FOG, { uTime });
+      Object.assign(sh.uniforms, FOG, { uTime, uHull, uHullSz });
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", `#include <common>
+uniform vec4 uHull[${MAXH}];
+uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL + "\n#include <project_vertex>");
       if (kind === "grass" || kind === "crop") {
         sh.fragmentShader = sh.fragmentShader.replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
       normal = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);`);
@@ -95949,7 +96021,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         transformed.z += cos(ph * 0.8) * k * 0.12;
       }`);
     };
-    m.customProgramCacheKey = () => "cover2-" + kind;
+    m.customProgramCacheKey = () => "cover3-" + kind;
     return m;
   }
   var SRGB = SRGBColorSpace;
@@ -96124,6 +96196,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         this.want = null;
       }
       uTime.value = env2.time;
+      {
+        let n = 0;
+        for (const sh of game.ships || []) {
+          if (n >= MAXH) break;
+          if (sh.sunk || !sh.def || w.distance(v.ox, v.oy, sh.x, sh.y) > 90) continue;
+          const sv = v.shipViews?.get(sh), at4 = sv?.root?.position;
+          if (!at4) continue;
+          uHull.value[n].set(at4.x, at4.z, Math.cos(sh.heading), Math.sin(sh.heading));
+          uHullSz.value[n].set(sh.def.length * 0.5, sh.def.beam * 0.5);
+          n++;
+        }
+        for (let i = n; i < MAXH; i++) uHullSz.value[i].set(0, 0);
+      }
       const fol = game.settings?.foliage;
       const low = v.quality === "low" || fol === "near";
       const R5 = fol === "off" ? 0 : low ? 36 : 64;
@@ -113548,7 +113633,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       for (const s of allShips(game)) {
         if (s.sunk || s.owner !== "player" && !s.netRemote) continue;
         const d = w.distance(p.x, p.y, s.x, s.y);
-        if (d < s.def.length * 0.55 + 6) cands.push({ d: d - 1, x: s.x, y: s.y, label: `Grab the line from the ${s.name}`, run: () => hauledAboard(game, p, s) });
+        if (d < s.def.length * 0.55 + 6) cands.push({ d: d - 1, x: s.x, y: s.y, r: s.def.length * 0.5, label: `Grab the line from the ${s.name}`, run: () => hauledAboard(game, p, s) });
       }
     }
     const v3a = game.view3d?.active && game.view3d.rayHitsActor ? game.view3d : null;
@@ -113627,14 +113712,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     if (!cands.length) return null;
     const v3 = game.view3d?.active ? game.view3d : null;
-    if (v3 && cands.length > 1) {
+    let list = cands;
+    if (v3) {
+      list = [];
       for (const c of cands) {
-        if (c.x === void 0 || c.aimed) continue;
-        c.d += Math.abs(angleDiff(v3.rig.yaw, Math.atan2(c.y - p.y, w.dx(p.x, c.x)))) * 0.9;
+        if (c.x === void 0 || c.aimed) {
+          list.push(c);
+          continue;
+        }
+        const dx = w.dx(p.x, c.x), dy = c.y - p.y, dist = Math.hypot(dx, dy);
+        const off = Math.abs(angleDiff(v3.rig.yaw, Math.atan2(dy, dx)));
+        if (dist > 0.45 && off > 0.32 + Math.atan2(c.r ?? 0.55, dist)) continue;
+        c.d += off * 0.9;
+        list.push(c);
       }
+      if (!list.length) return null;
     }
-    cands.sort((a, b) => a.d - b.d);
-    return cands[0];
+    list.sort((a, b) => a.d - b.d);
+    return list[0];
   }
   function standable2(w, x, y) {
     if (!WALKABLE[w.type(x, y)] || w.isBlocked(x, y) || w.hitsProp(x, y, 0.4)) return false;
