@@ -10,7 +10,7 @@ import { regionAt, REGION, isGrandLine, isCalmBelt, EQ, RM_X, W, H } from '../wo
 import { clamp, lerp, smoothstep, TAU, angleDiff } from '../core/math.js';
 import { RM, canalAt, canalLevel, nearRM } from '../world/reverseMountain.js';
 import { T } from '../world/tiles.js';
-import { KINDS, CLIMATES, LABELS, placeAt, rollWeather, weatherTargets, allowed } from './weather.js';
+import { KINDS, CLIMATES, LABELS, placeAt, rollWeather, weatherTargets, allowed, temperature } from './weather.js';
 
 export const DAY_SECONDS = 960; // one in-game day = 16 real minutes
 
@@ -192,6 +192,8 @@ export class Env {
     const fogRegion = game.inFogRegion ? game.inFogRegion(p.x, p.y) : 0;
     this.fog = ease(this.fog, Math.max(fogRegion, W.fog), dt, TAU_FOG);
     if (this.fog < 0.002) this.fog = 0;
+    // (the air's temperature where you are: the climate's, by latitude, hour and weather)
+    this.tempC = temperature(this.climate, this.lat, this.clock, this);
 
     // ---- wind
     this.windAngle += clamp(angleDiff(this.windAngle, this.windTarget), -0.2, 0.2) * dt * (gl ? 0.5 : 0.15);

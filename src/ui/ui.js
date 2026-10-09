@@ -782,7 +782,7 @@ export class UI {
     this.set(E.locSub, 'locSub', reg);
     const env = game.env;
     const wx = env.storm > 0.6 ? 'Storm' : env.storm > 0.25 ? 'Squall' : env.snow ? 'Snow' : env.fog > 0.3 ? 'Fog' : env.daylight < 0.35 ? (env.fullMoon ? 'Full moon' : 'Night') : 'Clear';
-    this.set(E.clock, 'clock', `Day ${env.day} · ${env.clockString()} · ${wx}`);
+    this.set(E.clock, 'clock', `Day ${env.day} · ${env.clockString()} · ${wx}${env.tempC != null ? ` · ${env.tempC}°C` : ''}`);
     // quest tracker
     this.qtT = (this.qtT || 0) - 1 / 60;
     if (this.qtT <= 0) { this.qtT = 0.35; this.drawTracker(game); }

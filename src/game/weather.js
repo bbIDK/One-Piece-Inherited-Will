@@ -17,7 +17,7 @@
 //  * Winter islands snow, summer islands are hot and clear, desert islands are
 //    dry and dusty, autumn ones grey and wet, gloomy ones fogbound.
 //  * Sky islands are above the clouds: always clear.
-import { regionAt, REGION, isGrandLine } from '../world/constants.js';
+import { regionAt, REGION, isGrandLine, H as WORLD_H, CB_TOP, CB_BOTTOM } from '../world/constants.js';
 
 /**
  * Each kind of weather and what it wants at full strength (k = 1):
@@ -80,6 +80,9 @@ export const CLIMATES = {
   calm_belt: { w: { calm: 1 }, dur: [400, 800], k: [1, 1], wind: 0 },
   polar: { w: { snow: 3, blizzard: 1.5, overcast: 1, flurries: 1, clear: 0.6, aurora: 0.8 }, dur: [90, 220], k: [0.7, 1], wind: 1.1, cold: true },
   red_line: { w: { clear: 3, fair: 3, cloudy: 1, fog: 0.5 }, dur: [120, 260], k: [0.6, 0.9], wind: 1 },
+  // ---- the Blues by latitude: the cold seas toward the poles, the warm ones by the Calm Belts
+  cold_sea: { w: { overcast: 2, cloudy: 2, fog: 1.8, flurries: 1.4, snow: 0.6, fair: 1, clear: 0.6, aurora: 0.5, storm: 0.3 }, dur: [100, 240], k: [0.6, 0.95], wind: 1.1, cold: true },
+  warm_sea: { w: { clear: 3, fair: 2.5, heat: 1.6, squall: 1.1, sunshower: 0.8, cloudy: 0.6, storm: 0.25 }, dur: [100, 220], k: [0.55, 0.9], wind: 0.9 },
   // ---- the islands' own
   winter: { w: { snow: 4, flurries: 2, blizzard: 1.3, overcast: 1.2, clear: 1, aurora: 0.3 }, dur: [90, 220], k: [0.6, 1], wind: 0.95, cold: true },
   summer: { w: { heat: 3, clear: 3, fair: 2, squall: 1.2, sunshower: 0.6, storm: 0.4 }, dur: [90, 220], k: [0.6, 0.95], wind: 0.9 },
@@ -93,6 +96,46 @@ export const CLIMATES = {
   sky: { w: { clear: 1 }, dur: [600, 900], k: [1, 1], wind: 0.8 },
   none: { w: { clear: 1 }, dur: [600, 900], k: [1, 1], wind: 0.5 },
 };
+
+/** How far from the poles the cold seas reach, and how far out from the Calm Belts the warm ones. */
+export const COLD_ROWS = 1300, WARM_ROWS = 800;
+
+/**
+ * The sea's climate at (x, y): its region's — except across the Blues, cold
+ * toward the poles (fog, flurries, the aurora) and warm by the Calm Belts
+ * (heat, squalls, sun-showers), the way a real ocean's weather goes by
+ * latitude.
+ */
+export function seaClimate(region, y, H, CB_TOP, CB_BOTTOM) {
+  const blue = region === REGION.EAST_BLUE || region === REGION.NORTH_BLUE || region === REGION.WEST_BLUE || region === REGION.SOUTH_BLUE;
+  if (blue && H) {
+    if (y < COLD_ROWS || y > H - COLD_ROWS) return 'cold_sea';
+    if ((y > CB_TOP - WARM_ROWS && y < CB_TOP) || (y > CB_BOTTOM && y < CB_BOTTOM + WARM_ROWS)) return 'warm_sea';
+  }
+  return SEA_CLIMATE[region] || 'east_blue';
+}
+
+/** Each climate's mean temperature (°C, by day, in fair weather). */
+const MEAN_T = {
+  east_blue: 19, north_blue: 13, west_blue: 18, south_blue: 24, paradise: 24, new_world: 22, calm_belt: 30, polar: -14, red_line: 9,
+  cold_sea: 3, warm_sea: 28, winter: -7, summer: 31, desert: 38, spring: 17, autumn: 12, temperate: 19, volcanic: 33, gloom: 10, candy: 22,
+  sky: 16, none: 14,
+};
+
+/**
+ * The air's temperature (°C): the climate's, a little cooler the further
+ * from the equator, cooler by night (most at dawn), with rain, cloud, snow
+ * and storms taking the edge off (and a heatwave adding to it).
+ */
+export function temperature(climate, lat, clock, e = {}) {
+  let t = MEAN_T[climate] ?? 18;
+  t -= Math.abs(lat || 0) * 6;
+  // (warmest mid-afternoon, coldest just before dawn)
+  t += 5 * Math.cos(((clock ?? 14) - 14.5) / 24 * Math.PI * 2);
+  t -= (e.cloud || 0) * 3 + (e.rain || 0) * 3 + (e.snow || 0) * 5 + (e.storm || 0) * 3;
+  t += (e.heat || 0) * 5;
+  return Math.round(t);
+}
 
 /** Each sea's climate. */
 export const SEA_CLIMATE = {
@@ -144,7 +187,7 @@ export function placeAt(world, x, y, prev = null) {
     const d2 = dx * dx + dy * dy;
     if (d2 < reach * reach && d2 < bd) { bd = d2; best = isl; }
   }
-  if (!best) return { key: 'sea:' + (SEA_CLIMATE[region] || 'east_blue'), climate: SEA_CLIMATE[region] || 'east_blue', island: null, region };
+  if (!best) { const sc = seaClimate(region, y, WORLD_H, CB_TOP, CB_BOTTOM); return { key: 'sea:' + sc, climate: sc, island: null, region }; }
   let climate = islandClimate(best, region);
   // (ashore, the ground's own climate has the last word where it's a strong one)
   const t = world.climate && world.isLiquid && !world.isLiquid(x, y) ? TILE_CLIMATE[world.climate(x, y)] : null;
