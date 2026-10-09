@@ -2,18 +2,18 @@
 import { ITEMS } from './items.js';
 
 export const STOCK = {
-  general: ['water_flask', 'hot_tea', 'meat', 'rice_ball', 'fish_stew', 'coconut', 'apple', 'bandage', 'medkit', 'antidote', 'sake', 'bandana', 'headband', 'traveller_hood', 'lucky_charm', 'shell_bracelet', 'den_den_mushi'],
+  general: ['water_flask', 'hot_tea', 'lemonade', 'soda', 'coffee', 'meat', 'rice_ball', 'fish_stew', 'coconut', 'apple', 'bandage', 'medkit', 'antidote', 'sake', 'bandana', 'headband', 'traveller_hood', 'lucky_charm', 'shell_bracelet', 'den_den_mushi'],
   // (in the four Blues, where everyone's journey starts, the general store keeps a rack of old swords)
-  general_blue: ['water_flask', 'hot_tea', 'meat', 'rice_ball', 'fish_stew', 'coconut', 'apple', 'bandage', 'medkit', 'antidote', 'sake', 'wooden_sword', 'rusty_katana', 'bandana', 'headband', 'traveller_hood', 'lucky_charm', 'shell_bracelet', 'den_den_mushi'],
-  tavern: ['water_flask', 'milk', 'hot_tea', 'meat', 'rice_ball', 'fish_stew', 'sake', 'tangerine', 'mango'],
+  general_blue: ['water_flask', 'hot_tea', 'orange_juice', 'lemonade', 'coffee', 'meat', 'rice_ball', 'fish_stew', 'coconut', 'apple', 'bandage', 'medkit', 'antidote', 'sake', 'wooden_sword', 'rusty_katana', 'bandana', 'headband', 'traveller_hood', 'lucky_charm', 'shell_bracelet', 'den_den_mushi'],
+  tavern: ['water_flask', 'milk', 'hot_tea', 'grog', 'rum', 'cider', 'cocoa', 'orange_juice', 'soda', 'meat', 'rice_ball', 'fish_stew', 'sake', 'tangerine', 'mango'],
   weapons_blue: ['wooden_sword', 'rusty_katana', 'cutlass', 'slingshot', 'flintlock', 'bo_staff', 'woodsman_axe', 'padded_vest', 'leather_jerkin', 'leather_bracers', 'iron_ring'],
   weapons_grand: ['cutlass', 'fine_katana', 'marine_saber', 'flintlock', 'marine_rifle', 'bo_staff', 'woodsman_axe', 'shigure', 'leather_jerkin', 'chain_shirt', 'hand_wraps', 'iron_ring'],
   weapons_new: ['fine_katana', 'marine_saber', 'marine_rifle', 'shigure', 'seastone_cuffs', 'chain_shirt', 'samurai_armor', 'hand_wraps', 'sea_prism_charm'],
   outfitter: ['bandana', 'traveller_hood', 'black_hood', 'tricorne', 'captain_hat', 'cowboy_hat', 'pink_hat', 'goggles', 'headband', 'captain_coat', 'red_cloak', 'haramaki', 'red_sash', 'gold_earrings', 'shell_bracelet', 'lucky_charm'],
   navigator: ['log_pose', 'den_den_mushi'],
   navigator_grand: ['log_pose', 'new_world_log_pose', 'den_den_mushi'],
-  skypiea: ['water_flask', 'impact_dial', 'flame_dial', 'breath_dial', 'flash_dial', 'rice_ball', 'fish_stew'],
-  fishman: ['water_flask', 'fish_stew', 'sea_king_steak', 'pearl', 'pearl_necklace', 'bandage', 'antidote'],
+  skypiea: ['water_flask', 'coconut_milk', 'impact_dial', 'flame_dial', 'breath_dial', 'flash_dial', 'rice_ball', 'fish_stew'],
+  fishman: ['water_flask', 'coconut_milk', 'lemonade', 'fish_stew', 'sea_king_steak', 'pearl', 'pearl_necklace', 'bandage', 'antidote'],
   loguetown_swords: ['wooden_sword', 'rusty_katana', 'cutlass', 'fine_katana', 'yubashiri'],
   black_market: ['rumble_ball', 'seastone', 'seastone_cuffs', 'cola', 'jewels', 'black_hood'],
 };
@@ -21,7 +21,17 @@ export const STOCK = {
 // multiplier on list prices depending on the sea (Grand Line prices are wild)
 export const SEA_PRICE = { east_blue: 1, north_blue: 1.1, west_blue: 1.1, south_blue: 1.1, paradise: 1.6, calm_belt: 2, red_line: 3, new_world: 2.4, sky: 1.8, undersea: 2 };
 
+// (a drink of the place, in its general stores, taverns and markets: the
+// desert's cactus juice, hot cocoa and cider in the snow, Wano's green tea,
+// coconut milk in the tropics)
+const LOCAL_DRINK = { desert: ['cactus_juice'], winter: ['cocoa', 'cider'], tropical: ['coconut_milk'], jungle: ['coconut_milk'], mangrove: ['coconut_milk'], sakura: ['green_tea'], wano: ['green_tea'] };
 export function stockFor(building, island) {
+  const list = stockFor0(building, island);
+  if (!Array.isArray(list) || building.shop || !['tavern', 'bar', 'restaurant', 'cafe', 'market', 'shop'].includes(building.role)) return list;
+  const extra = [...(LOCAL_DRINK[island?.def?.climate] || []), ...(building.style === 'wano' || island?.def?.style === 'wano' ? LOCAL_DRINK.wano : [])];
+  return extra.length ? [...list, ...extra.filter((x) => !list.includes(x))] : list;
+}
+function stockFor0(building, island) {
   const sea = island?.def?.sea || 'east_blue';
   const grand = sea === 'paradise' || sea === 'new_world' || sea === 'calm_belt';
   if (building.shop) return STOCK[building.shop] || building.shop;
