@@ -457,7 +457,9 @@ function layTown(world, town, rng, noise, dry) {
 
   // ---- street furniture
   const clearAt = (x, y, r) => okLand(x, y) && !world.isBlocked(x, y) && !world.hitsProp(x, y, r);
-  const nearDoor = (x, y, r) => buildings.some((b) => Math.hypot(world.dx(b.door.x, x), b.door.y - y) < r);
+  // (a shop's, an inn's, any public place's door has a wide clear apron in front: room to stand, read its sign and walk in)
+  const apron = (b) => ((b.role || 'house') === 'house' ? 0 : 1.6);
+  const nearDoor = (x, y, r, skip = null) => buildings.some((b) => b !== skip && Math.hypot(world.dx(b.door.x, x), b.door.y - y) < r + apron(b));
   if (S.lamps) {
     // along the edges of the streets, alternating sides, never in front of a door
     for (const st of streets) {
@@ -499,7 +501,7 @@ function layTown(world, town, rng, noise, dry) {
     const side = (b.doorX || 0) > 0 ? -1 : 1;
     const put = (kind, x, z, r, door) => {
       const p = bw(b, x, z);
-      if (nearDoor(p.x, p.y, door) || !clearAt(p.x, p.y, r)) return false;
+      if (nearDoor(p.x, p.y, door, b) || !clearAt(p.x, p.y, r)) return false;
       placeObject(world, { kind, x: p.x, y: p.y, block: true, yaw });
       return true;
     };

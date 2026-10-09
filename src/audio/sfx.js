@@ -1202,6 +1202,8 @@ export const SFX = {
   },
 
   // ---- menus and milestones (on the ui bus: never muffled, never far away)
+  // the race roll's wheel clicking past each name (a wooden ratchet, rising a little as it slows)
+  roll_tick: { prio: 3, cd: 0.02, max: 2, bus: 'ui', play: (v, k) => { const p = k?.pitch || 1; v.noise(0, 0.018, { freq: 3200 * p, q: 4, gain: 0.09, attack: 0.0004 }); v.tone(0, 0.03, { freq: 1100 * p, to: 820 * p, type: 'triangle', gain: 0.05 }); } },
   ui_hover: { prio: 2, cd: 0.04, max: 2, bus: 'ui', play: (v) => { v.noise(0, 0.012, { freq: 4200, q: 3, gain: 0.05, attack: 0.0006 }); v.tone(0, 0.02, { freq: 2400, gain: 0.016 }); } },
   ui_click: { prio: 4, cd: 0.03, max: 2, bus: 'ui', play: (v) => { v.tone(0, 0.035, { freq: 900, to: 700, gain: 0.05 }); v.noise(0, 0.015, { freq: 2500, q: 2, gain: 0.05, attack: 0.0006 }); } },
   ui_open: { prio: 4, cd: 0.08, max: 1, bus: 'ui', play: (v) => { v.whoosh(0, 0.12, { f0: 900, f1: 2400, gain: 0.05, peak: 0.6 }); v.tone(0.05, 0.07, { freq: 520, to: 480, type: 'triangle', gain: 0.04 }); } },

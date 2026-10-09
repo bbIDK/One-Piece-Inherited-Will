@@ -143,11 +143,11 @@ export const FUTURE_SIGHT = 65;
 
 // ------------------------------------------------------------------ Conqueror's
 /**
- * The odds of being born with the qualities of a king: rare, as canon has
- * it, more often among those who carry the Will of D., and the Kingly
- * Bloodline (a legacy perk) multiplies either.
+ * The odds of being born with the qualities of a king: every one of you is
+ * the main character, so all are — it still lies asleep until your will is
+ * truly tested (see lives.js awaken).
  */
-export const KING = { base: 0.04, withD: 0.4, bloodline: 4 };
+export const KING = { base: 1, withD: 1, bloodline: 1 };
 export function kingChance(hasD, bloodline) { return Math.min(1, (hasD ? KING.withD : KING.base) * (bloodline ? KING.bloodline : 1)); }
 
 /**
@@ -168,5 +168,5 @@ export function clashes(a, b, dist, range) {
 export const HAKI_HOW = {
   armament: 'Hardened in hard fights (Strength 22+, or weapon mastery 35+) — or taught by a Haki master.',
   observation: 'Sharpened by dodging danger (Agility 22+, or many dodges) — or taught.',
-  conqueror: 'Cannot be taught. One in millions is born with the qualities of a king; if it\'s in you, it wakes the day your will is truly tested.',
+  conqueror: 'Cannot be taught. You were born with the qualities of a king; it wakes the day your will is truly tested.',
 };

@@ -140,27 +140,11 @@ test('Observation is sharpened by dodging danger (Agility 22+ or 60 dodges; cert
   assert.match(H.HAKI_HOW.conqueror, /Cannot be taught/);
 });
 
-test('the qualities of a king: 4% at birth, 40% with the Will of D., four times either with the Kingly Bloodline', () => {
-  assert.equal(H.kingChance(false, false), 0.04);
-  assert.equal(H.kingChance(true, false), 0.4);
-  assert.ok(Math.abs(H.kingChance(false, true) - 0.16) < 1e-9);
+test('the qualities of a king: everyone is born with them (asleep till the will is tested)', () => {
+  assert.equal(H.kingChance(false, false), 1);
   assert.equal(H.kingChance(true, true), 1);
-  // births: about 0.95 × 4% + 0.05 × 40% ≈ 5.8% are kings
   const legacy = defaultLegacy();
-  let kings = 0, withD = 0, kingsD = 0;
-  const N = 6000;
-  for (let s = 1; s <= N; s++) {
-    const b = rollBirth(legacy, s * 7919);
-    const k = b.traits.includes('conqueror'), d = b.traits.includes('will_of_d');
-    if (k) kings++;
-    if (d) { withD++; if (k) kingsD++; }
-  }
-  assert.ok(kings / N > 0.045 && kings / N < 0.072, `${kings / N}`);
-  assert.ok(kingsD / withD > 0.25 && kingsD / withD < 0.55, `with D: ${kingsD}/${withD}`);
-  const blood = { ...legacy, perks: { kings_blood: 1 } };
-  let kb = 0;
-  for (let s = 1; s <= 3000; s++) if (rollBirth(blood, s * 104729).traits.includes('conqueror')) kb++;
-  assert.ok(kb / 3000 > 0.16 && kb / 3000 < 0.26, `bloodline: ${kb / 3000}`);
+  for (let s = 1; s <= 300; s++) assert.ok(rollBirth(legacy, s * 7919).traits.includes('conqueror'));
 });
 
 // ------------------------------------------------------------------ fights

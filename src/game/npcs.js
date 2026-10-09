@@ -691,14 +691,8 @@ export class Interactions {
   }
 
   dummy(o) {
-    const g = this.game, c = g.state.char;
-    if (c.flags.dummyDay === g.env.day) { g.log('Your arms are too tired for more practice today.', '#b0bec5'); return; }
-    c.flags.dummyDay = g.env.day;
-    const style = g.progression.styleInUse();
-    const m = c.masteries[style] || 0;
-    g.env.clock += 1;
-    if (m < 10) { g.progression.addStyleMastery(style, 2); g.log('You practise your forms on the dummy for an hour. (Dummies only teach the very basics — mastery up to 10.)', '#90caf9'); }
-    else g.log('The dummy has nothing left to teach you. Find a real opponent — or a master.', '#b0bec5');
+    // (no more resting an hour against it: you train by hitting it — see combat.js hitDummies)
+    this.game.log('Strike the dummy to practise: every blow that lands is a little mastery, up to the basics.', '#90caf9');
   }
 
   quickHeal() {

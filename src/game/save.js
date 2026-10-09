@@ -57,7 +57,9 @@ export function loadLegacy(s = slot) {
   return L;
 }
 export const saveLegacy = (l, s = slot) => write(key(s, 'legacy'), l);
-export const loadChar = (s = slot) => liveRace(read(key(s, 'char')));
+// (everyone carries the qualities of a king now: a character from before that holds them too)
+const kingly = (c) => { if (c?.traits && !c.traits.includes('conqueror')) c.traits.push('conqueror'); return c; };
+export const loadChar = (s = slot) => kingly(liveRace(read(key(s, 'char'))));
 export const saveChar = (c, s = slot) => write(key(s, 'char'), c);
 export const clearChar = (s = slot) => remove(key(s, 'char'));
 export function clearSlot(s) { remove(key(s, 'char')); remove(key(s, 'legacy')); remove(key(s, 'net')); }

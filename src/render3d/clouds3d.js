@@ -1,7 +1,7 @@
 // Clouds you can fly through: real heaps of cumulus, out in the world.
 //
 // The sky dome (sky3d.js) paints the far sky's clouds; these are the near
-// ones, a kilometre round you, as puffs in the world itself — a cluster of
+// ones, two kilometres round you and half a kilometre up, as puffs in the world itself — a cluster of
 // cel-shaded billows to a cloud, flat-bottomed, lit by the sun on top and
 // shaded lavender underneath in the same colours the sky gives its own. They
 // lie in cells fixed to the world (wrapping round the planet with it), so the
@@ -14,10 +14,10 @@
 import * as THREE from 'three';
 import { curveStmt } from './curvature.js';
 
-const CELL = 240; // m: one cloud a cell, at most
-const REACH = 5; // cells out from you each way (≈1.2 km)
-const PUFFS = 9; // billows a cloud, at most
-const NEAR = 28, FAR0 = 760, FAR1 = 1150; // m: where they fade (into you, into the sky)
+const CELL = 420; // m: one cloud a cell, at most
+const REACH = 5; // cells out from you each way (≈2 km: the planet's bend takes them down to the horizon there)
+const PUFFS = 7; // lenses a streak, at most
+const NEAR = 60, FAR0 = 1650, FAR1 = 2250; // m: where they fade (into you, into the sky)
 
 const hash = (a, b, k) => {
   let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(k | 0, 2246822519);
@@ -70,7 +70,7 @@ export class Clouds {
       uOpacity: { value: 1 }, uNear: { value: NEAR }, uFar0: { value: FAR0 }, uFar1: { value: FAR1 },
     };
     this.material = new THREE.ShaderMaterial({ uniforms: this.uniforms, vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: true });
-    const n = (REACH * 2 + 1) ** 2 * PUFFS;
+    const n = (REACH * 2 + 1) ** 2 * PUFFS * 4;
     this.mesh = new THREE.InstancedMesh(geo, this.material, n);
     this.mesh.frustumCulled = false;
     this.mesh.count = 0;
@@ -82,6 +82,7 @@ export class Clouds {
     this.key = '';
     this.lastT = null;
     this.on = true;
+    this.streakAng = 0;
   }
 
   /** Lay out the clouds round cell (cx, cy) of the drifting field: as many as `cover` (0..1) brings. */
@@ -99,21 +100,34 @@ export class Clouds {
       if (!over && hash(gx, gy, 1) > share) continue;
       const size = 0.6 + hash(gx, gy, 2) * 0.8 + storm * 0.5 + (over ? 0.6 + rain * 0.6 : 0);
       const ox = (gx + 0.2 + hash(gx, gy, 3) * 0.6) * CELL, oy = (gy + 0.2 + hash(gx, gy, 4) * 0.6) * CELL;
-      const base = 150 + hash(gx, gy, 5) * 70 - storm * 50 - (over ? 30 + rain * 25 : 0);
-      const n = 4 + Math.floor(hash(gx, gy, 6) * (PUFFS - 4 + 1));
-      const len = 40 * size, wid = 22 * size;
-      const ang = hash(gx, gy, 7) * Math.PI;
-      for (let b = 0; b < n && k < this.mesh.instanceMatrix.count; b++) {
-        const t = n > 1 ? b / (n - 1) - 0.5 : 0;
-        const mid = 1 - Math.abs(t) * 1.4; // (the middle billows tallest)
-        const r = (14 + hash(gx * 7 + b, gy, 8) * 10) * size * (0.7 + mid * 0.5);
-        const along = t * len * 2, across = (hash(gx, gy * 3 + b, 9) - 0.5) * wid;
-        p.set(ox + Math.cos(ang) * along - Math.sin(ang) * across, base + r * 0.45 + mid * 6 * size, oy + Math.sin(ang) * along + Math.cos(ang) * across);
-        // (flat-bottomed: squashed a little, sitting on the cloud's base)
-        s.set(r, r * 0.72, r * (0.85 + hash(b, gx, 10) * 0.3));
-        q.setFromEuler(e.set(0, hash(gx, b, 11) * Math.PI * 2, 0));
-        m.compose(p, q, s);
-        this.mesh.setMatrixAt(k++, m);
+      // (high up: half a kilometre and more, the height a fair-weather sky's clouds look from the deck)
+      const base = 480 + hash(gx, gy, 5) * 170 - storm * 140 - (over ? 90 + rain * 80 : 0);
+      // a cloud is a group of long, thin streaks lying side by side, all drawn
+      // out the same way (the way the upper wind has combed them), each a
+      // chain of flat lenses overlapping along it: the anime's banded clouds,
+      // not round heaps
+      const ang = this.streakAng + (hash(gx, gy, 7) - 0.5) * 0.35;
+      const ca = Math.cos(ang), sa = Math.sin(ang);
+      const strands = 2 + Math.floor(hash(gx, gy, 6) * 3);
+      for (let st = 0; st < strands; st++) {
+        const across = (st - (strands - 1) / 2) * 34 * size + (hash(gx, gy * 5 + st, 9) - 0.5) * 18 * size;
+        const shift = (hash(gx * 3 + st, gy, 12) - 0.5) * 90 * size;
+        const sLen = (110 + hash(gx + st, gy, 13) * 150) * size * (st === Math.floor(strands / 2) ? 1.3 : 0.85);
+        const lift = (hash(gx, gy + st, 14) - 0.5) * 22 * size;
+        const n = Math.min(PUFFS, 3 + Math.floor(sLen / (60 * size)));
+        for (let b = 0; b < n && k < this.mesh.instanceMatrix.count; b++) {
+          const t = n > 1 ? b / (n - 1) - 0.5 : 0;
+          const mid = 1 - Math.abs(t) * 1.6; // (thickest in the middle, tapering to the ends)
+          const r = (26 + hash(gx * 7 + b, gy + st, 8) * 16) * size * (0.55 + Math.max(0, mid) * 0.6);
+          const along = shift + t * sLen;
+          const jit = (hash(gx + b, gy * 3 + st, 15) - 0.5) * 8 * size;
+          p.set(ox + ca * along - sa * (across + jit), base + lift + r * 0.12, oy + sa * along + ca * (across + jit));
+          // a flat lens: long along the streak, narrow across it, thin
+          s.set(r * (1.9 + hash(b, gx, 10) * 0.8), r * 0.26, r * (0.55 + hash(gx, b, 16) * 0.2));
+          q.setFromEuler(e.set(0, -ang, 0));
+          m.compose(p, q, s);
+          this.mesh.setMatrixAt(k++, m);
+        }
       }
     }
     this.mesh.count = k;
@@ -133,8 +147,8 @@ export class Clouds {
     this.lastT = env.time;
     // (the wind carries them along: a few metres a second)
     const wX = env.windX ?? 0.7, wY = env.windY ?? 0.3;
-    this.drift.x += wX * 3.2 * dt;
-    this.drift.y += wY * 3.2 * dt;
+    this.drift.x += wX * 5.5 * dt;
+    this.drift.y += wY * 5.5 * dt;
     const W = w.width || 1;
     const dx = ((this.drift.x % W) + W) % W, dy = this.drift.y;
     // the field is laid out in its own (drifting) frame: whole cells of it round you
@@ -143,6 +157,9 @@ export class Clouds {
     const cover = Math.min(1, this.sky.uniforms.uCloud.value);
     const storm = this.sky.uniforms.uStorm.value;
     const rain = Math.max(env.rain || 0, env.snow || 0);
+    // (the streaks lie along the wind)
+    const wa = Math.round(Math.atan2(wY, wX) / 0.3) * 0.3;
+    if (wa !== this.streakAng) { this.streakAng = wa; this.key = ''; }
     const key = `${cx},${cy},${Math.round(cover * 20)},${Math.round(storm * 10)},${Math.round(rain * 5)},${low ? 1 : 0}`;
     if (key !== this.key) { this.key = key; this.build(cx, cy, cover, storm, low, rain); }
     // the field's frame, about the view (the world is drawn round a floating origin at you)

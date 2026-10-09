@@ -24,7 +24,7 @@ import { HOTBAR_SIZE, ENTRY, addToHotbar, stripForms } from './hotbar.js';
 export const TRAITS = {
   will_of_d: { name: 'Will of D.', rarity: 'legendary', weight: 0, desc: 'Your name carries a hidden "D." — the mark of those who laugh in the face of death. Fate bends around you, and the world\'s powers will come to fear the name.', attrs: { wil: 3 } },
   // hidden: never shown until it awakens
-  conqueror: { name: "King's Disposition", rarity: 'legendary', weight: 0, hidden: true, desc: 'One in several million is born with the qualities of a king. It awakened the first time your will was truly tested.', latent: 'A Haki master sensed it in you: the qualities of a king. It will wake the day your will is truly tested.' },
+  conqueror: { name: "King's Disposition", rarity: 'legendary', weight: 0, hidden: true, desc: 'You were born with the qualities of a king. It awakened the first time your will was truly tested.', latent: 'A Haki master sensed it in you: the qualities of a king. It will wake the day your will is truly tested.' },
   iron_stomach: { name: 'Iron Stomach', rarity: 'common', weight: 10, desc: 'Food heals 30% more.' },
   sea_legs: { name: 'Sea Legs', rarity: 'common', weight: 10, desc: 'Storms and crashes damage your ship 30% less.' },
   silver_tongue: { name: 'Silver Tongue', rarity: 'common', weight: 10, desc: 'Shops charge you 10% less.' },
@@ -48,7 +48,6 @@ export const PERKS = {
   chart: { name: "Grandfather's Chart", desc: 'Every island your ancestors discovered starts charted on your map.', costs: [30], icon: 'map' },
   haki: { name: 'Latent Spirit', desc: 'Hidden powers, once awakened, grow 25% faster per level.', costs: [80, 160], icon: 'character' },
   will_of_d: { name: 'Will of D.', desc: 'Triples the chance to be born with the hidden "D." (5% → 15%).', costs: [90], icon: 'journal' },
-  kings_blood: { name: 'Kingly Bloodline', desc: 'Four times the chance to be born with the qualities of a king (4% → 16%; with the Will of D., certain).', costs: [150], icon: 'crew' },
   rare_races: { name: 'Distant Relatives', desc: 'Epic and legendary races (Buccaneer, Three-Eye, Lunarian) are twice as likely.', costs: [100], icon: 'character' },
 };
 
@@ -87,7 +86,7 @@ export function rollBirth(legacy, seed) {
   if (rng.chance(0.25)) { const t2 = rng.weighted(pool); if (!traits.includes(t2)) traits.push(t2); }
   if (rng.chance(dChance(legacy))) traits.push('will_of_d');
   // (the qualities of a king: see haki.js KING — rare, likelier with the "D.", and the bloodline multiplies either)
-  if (rng.chance(kingChance(traits.includes('will_of_d'), perkLevel(legacy, 'kings_blood') > 0))) traits.push('conqueror');
+  if (rng.chance(kingChance(traits.includes('will_of_d'), false))) traits.push('conqueror');
   return { race, traits, seed };
 }
 

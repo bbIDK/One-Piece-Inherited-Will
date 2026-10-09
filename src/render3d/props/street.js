@@ -261,23 +261,36 @@ const dummy = () => model('dummy', (k) => {
 });
 
 const stall = () => model('stall', (k) => {
+  // the counter: a plank front over a frame, a cloth over its top
   k.add(box(1.8, 0.85, 0.7), { at: [0, 0, 0.1], color: WOOD, outline: 0.02 });
-  for (let x = -0.8; x < 0.9; x += 0.3) k.add(box(0.02, 0.8, 0.02), { at: [x, 0.02, 0.46], color: shade(WOOD, -0.25) });
-  k.add(box(1.9, 0.06, 0.8), { at: [0, 0.85, 0.1], color: shade(WOOD, 0.15) });
+  for (let x = -0.75; x < 0.8; x += 0.3) k.add(box(0.025, 0.78, 0.02), { at: [x, 0.04, 0.455], color: shade(WOOD, -0.25) });
+  k.add(box(1.9, 0.06, 0.8), { at: [0, 0.85, 0.1], color: shade(WOOD, 0.15), outline: 0.012 });
+  k.add(box(1.92, 0.24, 0.012), { at: [0, 0.66, 0.505], color: '#f3ead3', tint: 1 });
+  // four posts up to the awning's underside (never through it), a rail across the back
+  const under = (z) => 2.12 - (z - 0.08) * Math.tan(0.3) - 0.03;
   for (const x of [-0.85, 0.85]) {
-    k.add(cyl(0.04, 0.045, 2.0, 5), { at: [x, 0, 0.42], color: DARK_WOOD });
-    k.add(cyl(0.04, 0.045, 2.35, 5), { at: [x, 0, -0.3], color: DARK_WOOD });
+    k.add(cyl(0.04, 0.045, under(0.42), 6), { at: [x, 0, 0.42], color: DARK_WOOD, outline: 0.01 });
+    k.add(cyl(0.04, 0.045, under(-0.3), 6), { at: [x, 0, -0.3], color: DARK_WOOD, outline: 0.01 });
   }
-  // striped awning: coloured (tinted) and white stripes
+  k.add(box(1.74, 0.06, 0.05), { at: [0, 1.55, -0.3], color: DARK_WOOD });
+  // a shelf of jars behind
+  k.add(box(1.5, 0.05, 0.25), { at: [0, 1.05, -0.3], color: shade(WOOD, 0.1) });
+  for (let i = 0; i < 6; i++) k.add(cyl(0.06, 0.07, 0.17, 7), { at: [-0.62 + i * 0.25, 1.1, -0.3], color: ['#c0392b', '#d68910', '#27ae60', '#8e44ad', '#2980b9', '#f1c40f'][i] });
+  // baskets of fruit on the counter, a crate at the end
+  const cols = ['#e67e22', '#f1c40f', '#c0392b', '#27ae60', '#8e44ad'];
+  for (let b = 0; b < 3; b++) {
+    const bx = -0.62 + b * 0.5;
+    k.add(cyl(0.2, 0.16, 0.12, 9), { at: [bx, 0.91, 0.15], color: '#a5793f', outline: 0.008 });
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; k.add(new THREE.SphereGeometry(0.065, 7, 5), { at: [bx + Math.cos(a) * 0.1, 1.04 + (i % 2) * 0.03, 0.15 + Math.sin(a) * 0.1], color: cols[(b * 2 + (i % 2)) % 5] }); }
+    k.add(new THREE.SphereGeometry(0.065, 7, 5), { at: [bx, 1.09, 0.15], color: cols[(b * 2 + 1) % 5] });
+  }
+  k.add(box(0.36, 0.26, 0.32), { at: [0.62, 0.91, 0.05], color: '#b08850', outline: 0.01 });
+  // striped awning: coloured (tinted) and white stripes, scalloped at the front
   const n = 6, w = 2.0;
   for (let i = 0; i < n; i++) {
     k.add(box(w / n + 0.005, 0.04, 1.15), { at: [-w / 2 + (i + 0.5) * w / n, 2.12, 0.08], rot: [0.3, 0, 0], color: '#ffffff', tint: i % 2 ? 0 : 1 });
     k.add(new THREE.CircleGeometry(w / n / 2, 8, Math.PI, Math.PI), { at: [-w / 2 + (i + 0.5) * w / n, 1.96, 0.645], rot: [-0.3, 0, 0], color: '#ffffff', tint: i % 2 ? 0 : 1, double: true, backShade: 0.85 });
   }
-  // goods on the counter
-  const cols = ['#e67e22', '#f1c40f', '#c0392b', '#27ae60', '#8e44ad'];
-  for (let i = 0; i < 9; i++) k.add(new THREE.IcosahedronGeometry(0.1, 0), { at: [-0.7 + (i % 5) * 0.34 + (i > 4 ? 0.17 : 0), 0.99 + (i > 4 ? 0.1 : 0), 0.18 + (i > 4 ? -0.08 : 0)], color: cols[i % 5] });
-  k.add(box(0.4, 0.3, 0.35), { at: [0.55, 0.91, -0.05], color: '#b08850' });
 });
 
 const well = () => model('well', (k) => {
@@ -288,8 +301,11 @@ const well = () => model('well', (k) => {
   k.add(new THREE.CircleGeometry(0.58, 14), { at: [0, 0.3, 0], rot: [-Math.PI / 2, 0, 0], color: '#26465b' });
   for (const s of [-1, 1]) k.add(box(0.12, 1.75, 0.12), { at: [s * 0.7, 0.2, 0], color: '#6d4c33', outline: 0.012 });
   k.add(cyl(0.06, 0.06, 1.3, 6), { at: [0.65, 1.55, 0], rot: [0, 0, Math.PI / 2], color: '#5d4037' });
-  k.add(cyl(0.01, 0.01, 0.8, 3), { at: [0, 0.75, 0], color: '#c8b89a' });
-  k.add(lathe([[0.1, 0], [0.13, 0.22]], 8), { at: [0, 0.55, 0], color: '#8d6e4a' });
+  k.add(cyl(0.01, 0.01, 0.78, 3), { at: [0, 0.77, 0], color: '#c8b89a' });
+  // the bucket: a solid wooden pail (closed, with its iron bands and handle)
+  k.add(cyl(0.13, 0.1, 0.22, 10), { at: [0, 0.55, 0], color: '#8d6e4a', outline: 0.01 });
+  for (const y of [0.58, 0.72]) k.add(cyl(0.128 - (0.72 - y) * 0.14, 0.128 - (0.72 - y) * 0.14, 0.025, 10), { at: [0, y, 0], scale: [1.04, 1, 1.04], color: '#4a4a4a' });
+  k.add(torus(0.12, 0.008, 3, 10, Math.PI), { at: [0, 0.77, 0], color: '#4a4a4a' });
   for (const s of [-1, 1]) {
     k.save(); k.translate(0, 2.35, 0); k.rotateX(s * 0.72);
     k.add(box(1.8, 0.07, 0.72), { at: [0, 0, s * 0.36], color: '#9c4a2a', outline: 0.02 });
@@ -382,13 +398,16 @@ const weaponRack = () => model('weaponrack', (k) => {
 
 // a sandwich-board sign at a tavern's or a shop's door
 const signboard = () => model('signboard', (k) => {
+  // an A-frame: the two boards hinged together at the top, splayed apart at the feet
+  const top = 0.86, len = 0.88;
   for (const s of [-1, 1]) {
-    k.save(); k.translate(0, 0, s * 0.02); k.rotateX(s * 0.2);
-    k.add(box(0.6, 0.82, 0.04), { at: [0, 0.05, s * 0.06], color: WOOD, outline: 0.012 });
-    k.add(box(0.5, 0.58, 0.012), { at: [0, 0.17, s * 0.085], color: '#2f3640' });
-    for (const y of [0.55, 0.43, 0.31]) k.add(box(0.36 - (y < 0.4 ? 0.1 : 0), 0.03, 0.006), { at: [0, y, s * 0.093], color: '#f5f0e1' });
+    k.save(); k.translate(0, top, 0); k.rotateX(-s * 0.2);
+    k.add(box(0.6, len, 0.04), { at: [0, -len, s * 0.02], color: WOOD, outline: 0.012 });
+    k.add(box(0.5, 0.5, 0.012), { at: [0, -0.62, s * 0.045], color: '#2f3640' });
+    for (const y of [-0.24, -0.36, -0.48]) k.add(box(0.36 - (y < -0.4 ? 0.1 : 0), 0.03, 0.006), { at: [0, y, s * 0.053], color: '#f5f0e1' });
     k.restore();
   }
+  k.add(box(0.64, 0.05, 0.08), { at: [0, top - 0.02, 0], color: shade(WOOD, -0.2) });
 });
 
 const tint = (o, pal) => pal[(o.v || 0) % pal.length];

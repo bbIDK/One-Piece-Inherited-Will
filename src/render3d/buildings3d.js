@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import { uiIcon } from '../render/icons.js';
 import { vcMat, bindCtx, STATE } from './props/mats.js';
-import { Mesher, box, cyl, cone, lathe, slab, quad, C, shade, mix, hash } from './props/kit.js';
+import { Mesher, box, cyl, cone, lathe, slab, quad, torus, C, shade, mix, hash } from './props/kit.js';
 import { CLIMATE } from '../world/tiles.js';
 import { doorOf, doorLocalX, windowSlots, STEPS_MAX, styleScale } from '../world/interiors.js';
 import { bw, bangle } from '../world/bframe.js';
@@ -204,7 +204,8 @@ const MAX_RISE = 16;
  * its own mesh (see interiors3d.doorLeaf).
  */
 function doorAt(k, b, S, x, g, wallCol, big, y0 = null, sink = 0.3) {
-  const dw = (big ? 1.7 : 1.05) * g, dh = (big ? 2.5 : 2.15) * g;
+  // (the same size as the doorway the world has: see interiors.js doorOf)
+  const D0 = doorOf(b), dw = big || !D0.big ? D0.dw : 1.05 * g, dh = big || !D0.big ? D0.dh : 2.15 * g;
   const wood = doorWood(b, S);
   const frame = S.wall === 'post' ? '#3e2723' : S.wall === 'brick' ? shade(wallCol, 0.4) : shade(wallCol, -0.4);
   const open = y0 !== null;
@@ -263,17 +264,34 @@ function doorAt(k, b, S, x, g, wallCol, big, y0 = null, sink = 0.3) {
         if (big) B(k, -0.02, 0.1, 0.09, 0.02, dh, 0.12, shade(wood, -0.35)); // (proud of the panels and wider than a plank joint: not level with either)
         k.add(new THREE.SphereGeometry(0.05, 5, 4), { at: [dw / 2 - 0.16, 0.1 + dh * 0.47, 0.13], color: '#f1c40f' });
       }
-      // a lamp over shop doors
+      // a lantern on the wall beside shop doors: on the side away from the
+      // hanging shop sign (see finish), clear of the door frame, below the
+      // name board — an iron bracket and a glazed lantern hung from it
       const top = open ? yb + dh : dh;
       if (b.role && b.role !== 'house') {
-        B(k, -0.04, top + 0.25, 0.05, 0.04, top + 0.3, 0.45, '#2d3436');
-        k.add(cyl(0.1, 0.13, 0.28, 6), { at: [0, top + 0.02, 0.42], color: '#fff1c4', glow: '#ffcf70', flicker: 0.15 });
-        k.add(cone(0.16, 0.12, 6), { at: [0, top + 0.3, 0.42], color: '#2d3436' });
+        const fw = b.fw || 3, signRight = x + dw / 2 + 0.75 <= fw / 2 - 0.5;
+        const lx = (signRight ? -1 : 1) * (dw / 2 + 0.42);
+        if (Math.abs(x + lx) < fw / 2 - 0.3) wallLantern(k, lx, top - 0.15, 0);
       }
     }
   }
   k.restore();
   return { dw, dh, top: open ? yb + dh : dh };
+}
+
+/** A wall lantern: a scrolled iron bracket out from the wall at height y, the lantern hung under its end. */
+function wallLantern(k, x, y, z) {
+  const iron = '#2d3436';
+  B(k, x - 0.05, y - 0.16, z, x + 0.05, y + 0.12, z + 0.04, iron); // the wall plate
+  B(k, x - 0.02, y + 0.04, z + 0.02, x + 0.02, y + 0.08, z + 0.34, iron); // the arm
+  k.add(torus(0.07, 0.012, 3, 8, Math.PI), { at: [x, y - 0.03, z + 0.12], rot: [0, Math.PI / 2, Math.PI], color: iron }); // its scroll
+  const ly = y - 0.36, lz = z + 0.3;
+  k.add(cyl(0.01, 0.01, 0.07, 3), { at: [x, ly + 0.33, lz], color: iron });
+  k.add(cone(0.12, 0.1, 4), { at: [x, ly + 0.25, lz], rot: [0, Math.PI / 4, 0], color: iron, outline: 0.008 });
+  k.add(new THREE.SphereGeometry(0.025, 5, 4), { at: [x, ly + 0.36, lz], color: iron });
+  B(k, x - 0.075, ly + 0.03, lz - 0.075, x + 0.075, ly + 0.25, lz + 0.075, '#fff1c4', { glow: '#ffcf70', flicker: 0.15 });
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) B(k, x + sx * 0.075 - 0.012, ly + 0.02, lz + sz * 0.075 - 0.012, x + sx * 0.075 + 0.012, ly + 0.26, lz + sz * 0.075 + 0.012, iron);
+  B(k, x - 0.09, ly, lz - 0.09, x + 0.09, ly + 0.03, lz + 0.09, iron);
 }
 
 /**

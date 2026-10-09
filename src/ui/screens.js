@@ -166,6 +166,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
     const ids = Object.keys(RACES);
     const t0 = performance.now();
     const dur = spin ? 1800 : 0;
+    let lastI = -1;
     const reveal = () => {
       nameEl.textContent = race.name;
       nameEl.style.color = rar.color;
@@ -192,6 +193,8 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       const k = Math.max(0, (now - t0) / Math.max(1, dur));
       if (k < 1) {
         const i = Math.floor(Math.pow(k, 0.5) * 40) % ids.length;
+        // (a tick for each name the wheel passes)
+        if (i !== lastI) { lastI = i; ui.game?.audio?.sfx('roll_tick', null, { pitch: 1 + k * 0.25 }); }
         nameEl.textContent = RACES[ids[i]].name;
         nameEl.style.color = RARITY[RACES[ids[i]].rarity].color;
         raf = requestAnimationFrame(tick);

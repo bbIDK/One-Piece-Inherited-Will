@@ -138,6 +138,7 @@ export class Combat {
         this.applyHit(h.owner, a, h);
       }
       if (h.hitShips && !h.cancelled) this.hitShips(h);
+      if (h.owner?.isPlayer && !h.cancelled) this.hitDummies(h);
       if (h.t >= h.duration) this.hitboxes.splice(i, 1);
     }
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -224,6 +225,28 @@ export class Combat {
     // (up in the air: a blow reaches only what's about level with it)
     if ((owner.flying || target.flying) && !reachesUp(owner, target, h, this.game)) return false;
     return hostile(owner, target) || (owner.isPlayer && target.provoked) || (target.isPlayer && owner.provoked) || h.hitsAll;
+  }
+
+  /**
+   * Training dummies: a blow of yours that lands on one thumps it (straw
+   * flies), and every blow is practice — a little mastery in the style and
+   * weapon you hit it with, up to the basics (a dummy can't teach more: see
+   * DUMMY_CAP). No timer, no limit a day: train as long as you like.
+   */
+  hitDummies(h) {
+    const g = this.game, w = g.world;
+    const near = w.objects?.near?.(h.x, h.y, (h.range || 1) + 1.2, (o) => o.kind === 'dummy');
+    if (!near?.length) return;
+    for (const o of near) {
+      const key = o.key || `${Math.round(o.x * 10)}_${Math.round(o.y * 10)}`;
+      if ((h.dummies ||= new Set()).has(key)) continue;
+      if (!this.overlaps(h, { x: o.x, y: o.y + 0.4, r: 0.35 })) continue;
+      h.dummies.add(key);
+      g.progression?.dummyHit?.(h);
+      g.audio?.sfx('punch', { x: o.x, y: o.y }, { w: 0.4 });
+      g.fx.burst(o.x, o.y - 0.2, 7, { color: ['#d4ac0d', '#e8d5b5'], speed: 2.5, vz: 2.5, g: 9, life: 0.5 });
+      o.struck = g.time;
+    }
   }
 
   overlaps(h, a) {

@@ -67,6 +67,19 @@ export class Audio {
     } catch { return; }
     this.build();
     this.scheduler = setInterval(() => this.schedule(), 60);
+    // Keep the sound going: the browser can suspend (or "interrupt") the
+    // context on its own — another tab or app taking the audio device, the
+    // output changing, the page hidden and shown again — and nothing here
+    // would wake it but the next effect played, so the music and the beds
+    // fell silent till then. Wake it as soon as it stops, when the page comes
+    // back, and on any key or click.
+    const wake = () => { if (this.ctx && this.ctx.state !== 'running' && this.ctx.state !== 'closed' && !document.hidden) this.ctx.resume?.().catch?.(() => {}); };
+    this.ctx.onstatechange = () => { if (this.ctx.state !== 'running') setTimeout(wake, 250); };
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('focus', wake);
+    window.addEventListener('pointerdown', wake, true);
+    window.addEventListener('keydown', wake, true);
+    this.wake = wake;
   }
 
   /** Make the mixer and everything that plays through it (once the context exists). */
@@ -114,7 +127,14 @@ export class Audio {
   hint(kind, sec) { this.director?.hint(kind, sec); }
 
   schedule() {
-    if (!this.ready()) return;
+    if (!this.ready()) {
+      // (stopped: try to wake it, now and then)
+      const t = performance.now();
+      if (this.ctx && t - (this.wokeAt || 0) > 1000) { this.wokeAt = t; this.wake?.(); }
+      // (and when it runs again, the clock carries on from now: no catching up)
+      this.clock = null;
+      return;
+    }
     const now = this.E.now(), dt = Math.min(0.5, Math.max(0, now - (this.clock ?? now)));
     this.clock = now;
     try {

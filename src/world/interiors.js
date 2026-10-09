@@ -53,8 +53,10 @@ export function doorOf(b) {
   const fw = Math.max(2, b.fw || 3), g = styleScale(b);
   const role = b.role || 'house';
   const big = (role === 'marine_base' || role === 'palace' || role === 'hall' || role === 'church') && fw >= 5;
+  // (a shop's door is wider than a home's: an open, welcoming way in)
+  const wide = !big && role !== 'house' && fw >= 4;
   const x = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b)));
-  return { x, dw: (big ? 1.7 : 1.05) * g, dh: (big ? 2.5 : 2.15) * g, big, kind: doorKind(b) };
+  return { x, dw: (big ? 1.7 : wide ? 1.4 : 1.05) * g, dh: (big ? 2.5 : wide ? 2.3 : 2.15) * g, big, kind: doorKind(b) };
 }
 
 /** Where along the front the door is (local x): set by the town, else from its world spot. */
@@ -158,6 +160,7 @@ class Placer {
     this.rects = [];
     this.keep = []; // always clear (the door swing)
     this.low = []; // clear of tall furniture (windows)
+    this.fronts = []; // the floor in front of things you open or use (a cupboard's doors, a stove): nothing stands there
   }
   fits(r, tall) {
     const L = this.L;
@@ -165,14 +168,26 @@ class Placer {
     for (const q of this.keep) if (overlap(r, q)) return false;
     if (tall) for (const q of this.low) if (overlap(r, q)) return false;
     for (const q of this.rects) if (overlap(r, q, 0.04)) return false;
+    for (const q of this.fronts) if (overlap(r, q)) return false;
     return true;
+  }
+  /** The floor in front of an item that has to be got at (or null). */
+  frontOf(item, x, z, rot) {
+    if (item.ghost || !ACCESS.has(item.k)) return null;
+    const f = [Math.round(Math.sin(rot)), Math.round(Math.cos(rot))], dd = 0.55;
+    const cx = x + f[0] * (item.d / 2 + dd / 2), cz = z + f[1] * (item.d / 2 + dd / 2);
+    return rectOf(cx, cz, rot, item.w * 0.8, dd);
   }
   /** Try to put an item at (x, z) facing `rot`; returns the item or null. */
   at(item, x, z, rot = 0) {
     const r = rectOf(x, z, rot, item.w, item.d);
     if (!this.fits(r, (item.h || 0) > 1.05)) return null;
+    // (and room in front of it to use it: not into the wall or anything already there)
+    const fr = this.frontOf(item, x, z, rot);
+    if (fr) { for (const q of this.rects) if (overlap(fr, q)) return null; }
     const it = { ...item, x, z, rot, rect: r };
     if (!item.ghost) this.rects.push(r);
+    if (fr) this.fronts.push(fr);
     this.L.items.push(it);
     return it;
   }
@@ -239,7 +254,7 @@ const F = {
   plant: { k: 'plant', w: 0.45, d: 0.45, h: 1.1 },
   counter: { k: 'counter', w: 2.0, d: 0.48, h: 1.02 },
   desk: { k: 'desk', w: 1.3, d: 0.62, h: 0.78 },
-  medbed: { k: 'medbed', w: 1.95, d: 0.9, h: 0.68 },
+  medbed: { k: 'medbed', w: 0.9, d: 1.95, h: 0.68 }, // (its head to the wall, as in a ward)
   cabinet: { k: 'medcabinet', w: 1.0, d: 0.36, h: 1.8 },
   screen: { k: 'screen', w: 1.1, d: 0.12, h: 1.6 },
   rack: { k: 'rack', w: 1.3, d: 0.3, h: 1.6 },
@@ -259,6 +274,8 @@ const F = {
   hull: { k: 'hull', w: 2.4, d: 1.2, h: 1.1 },
   produce: { k: 'produce', w: 1.1, d: 0.6, h: 0.8 },
 };
+// what has to be got at from in front (doors to open, drawers to pull, a fire to tend): nothing stands there
+const ACCESS = new Set(['cupboard', 'dresser', 'tansu', 'shelf', 'lowshelf', 'bookcase', 'stove', 'fireplace', 'medcabinet', 'safe', 'filing', 'workbench', 'rack', 'shrine', 'altar']);
 const sized = (it, g) => (g === 1 ? it : { ...it, w: it.w * g, d: it.d * g, h: it.h * g });
 
 // what each building type is, as a room

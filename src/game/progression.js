@@ -28,6 +28,9 @@ import { bountySea } from './reputation.js';
 import { LEGENDS } from '../data/dreams.js';
 import { HAKI_HOW } from './haki.js';
 
+/** How far a training dummy can take a style (the basics: past it, only real fights or a master). */
+export const DUMMY_CAP = 15;
+
 const KEYS = ['str', 'agi', 'end', 'vit', 'wil'];
 /** The key of hotbar slot `i` ('1'...'9', '0'). */
 // (the key that switches the fruit's forms: B unless moved)
@@ -166,6 +169,22 @@ export class Progression {
   styleInUse() {
     const p = this.game.player;
     return p.masteries[p.style] !== undefined ? p.style : this.char?.style || 'brawler';
+  }
+
+  /** A blow landed on a training dummy: a little practice, up to the basics. */
+  dummyHit(h) {
+    const p = this.game.player, c = this.char, g = this.game;
+    if (!p || !c) return;
+    const style = this.styleInUse();
+    const m = p.masteries[style] || 0;
+    if (m >= DUMMY_CAP) {
+      if (!this.dummyTold || g.time - this.dummyTold > 30) { this.dummyTold = g.time; g.log(`The dummy has taught you all it can (mastery ${DUMMY_CAP}). Find a real opponent — or a master.`, '#b0bec5'); }
+      return;
+    }
+    const gain = h?.final ? 0.35 : 0.18;
+    this.addStyleMastery(style, Math.min(gain, DUMMY_CAP - m));
+    const kind = p.weapon?.kind || 'fists';
+    if ((c.weaponMastery?.[kind] || 0) < DUMMY_CAP) this.addWeaponMastery?.(kind, gain * 0.8);
   }
 
   addStyleMastery(style, amt) {
