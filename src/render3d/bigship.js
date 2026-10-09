@@ -269,8 +269,10 @@ function decks(k, d, P) {
   deckGrid(k, d, P, d.tq, cp.t0, d.deckY);
   deckGrid(k, d, P, cp.t0, cp.t1, d.deckY, cp.w / 2);
   deckGrid(k, d, P, cp.t1, d.tf, d.deckY);
-  deckGrid(k, d, P, d.poop ? d.tp - 0.004 : 0.012, d.tq + 0.006, d.yq);
-  if (d.poop) deckGrid(k, d, P, 0.012, d.tp + 0.006, d.yp);
+  // (aft, the planks run right in under the stern wall's inner face)
+  const ta = 0.18 / d.L;
+  deckGrid(k, d, P, d.poop ? d.tp - 0.004 : ta, d.tq + 0.006, d.yq);
+  if (d.poop) deckGrid(k, d, P, ta, d.tp + 0.006, d.yp);
   if (d.fore) deckGrid(k, d, P, d.tf - 0.006, 0.975, d.yf);
 }
 
@@ -960,9 +962,20 @@ export function bigMastGeometry(def, d, plan) {
     k.restore();
   }
   // a flagstaff at the taffrail for the ensign
-  const ty = topAt(d, 0.01);
-  k.add(cyl(0.05, 0.08, 3.4, 6), { at: [-d.L / 2 + 0.5, ty, 0], rot: [0, 0, 0.18], color: dark, outline: 0.012 });
+  // (stepped on the deck right by the taffrail, an iron band holding it to
+  // the rail, raking aft over the stern: not standing on air at rail height)
+  const ty = topAt(d, 0.01), fs = flagstaff(d);
+  k.add(cyl(0.05, 0.08, fs.len, 6), { at: [fs.x, fs.y, 0], rot: [0, 0, fs.rake], color: dark, outline: 0.012 });
+  k.add(cyl(0.1, 0.1, 0.08, 8), { at: [fs.x - Math.sin(fs.rake) * (ty - 0.25 - fs.y), ty - 0.25, 0], color: '#3a3a3a' });
+  k.add(box(0.5, 0.06, 0.08), { at: [fs.x - 0.25 - Math.sin(fs.rake) * (ty - 0.25 - fs.y), ty - 0.23, 0], color: '#3a3a3a' });
   return k.build(true);
+}
+
+/** The ensign's staff: { x, y (its foot, on the deck at the stern), len, rake, top: [x, y] }. */
+export function flagstaff(d) {
+  const x = -d.L / 2 + 0.75, y = floorAt(d, 0.75 / d.L + 0.004, 0), ty = topAt(d, 0.01);
+  const len = ty - y + 3.2, rake = 0.18;
+  return { x, y, len, rake, top: [x - Math.sin(rake) * len, y + Math.cos(rake) * len] };
 }
 
 /** Shrouds with ratlines, stays and backstays (line segment positions). */

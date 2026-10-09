@@ -1251,8 +1251,21 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex 
       // (the white stripes a centimetre thicker: lapped over each other in one plane, the stripes' edges flickered)
       k.add(box(aw / n + 0.005, i % 2 ? 0.07 : 0.05, 1.0), { at: [x0 + aw / n / 2, ay - (i % 2 ? 0.01 : 0), 0.45], rot: [0.42, 0, 0], color: i % 2 ? '#ffffff' : c });
     }
-    // scalloped valance
-    for (let i = 0; i < n; i++) k.add(new THREE.CircleGeometry(aw / n / 2, 8, Math.PI, Math.PI), { at: [door.x - aw / 2 + (i + 0.5) * aw / n, ay - 0.4, 0.92], rot: [-0.42, 0, 0], color: i % 2 ? '#ffffff' : c, double: true, backShade: 0.85 });
+    // the scalloped valance hangs straight down from the cloth's front edge
+    // (its bottom corner: 0.5 m out along the slope from the box's middle)
+    const fy = ay - 0.5 * Math.sin(0.42), fz = 0.45 + 0.5 * Math.cos(0.42), vh = 0.14;
+    for (let i = 0; i < n; i++) {
+      const xc = door.x - aw / 2 + (i + 0.5) * aw / n, col = i % 2 ? '#ffffff' : c;
+      k.add(box(aw / n + 0.005, vh + 0.03, 0.025), { at: [xc, fy - vh, fz - 0.03], color: col });
+      k.add(new THREE.CircleGeometry(aw / n / 2, 8, Math.PI, Math.PI), { at: [xc, fy - vh, fz - 0.017 + (i % 2) * 0.002], color: col, double: true, backShade: 0.85 });
+    }
+    // iron stays from the wall up to the front corners carry it
+    const sy = fy - 0.6, sl = Math.hypot(fy - sy, fz), sa = Math.atan2(fz, fy - sy);
+    for (const sx of [-1, 1]) {
+      const x = door.x + sx * (aw / 2 - 0.06);
+      k.add(cyl(0.018, 0.018, sl, 5), { at: [x, sy, 0.02], rot: [sa, 0, 0], color: '#2d3436' });
+      k.add(box(0.08, 0.14, 0.03), { at: [x, sy - 0.07, 0.015], color: '#2d3436' });
+    }
   }
   if (S.engawa) {
     // a raised wooden veranda along the front

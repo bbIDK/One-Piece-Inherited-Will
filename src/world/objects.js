@@ -14,7 +14,7 @@ export const CHUNK = 32;
 export const COLLIDE = {
   // street furniture
   lamp: 0.16, lantern: 0.2, sign: 0.15, flagpole: 0.15, mooring: 0.2, barrel: 0.34, crate: 0.42, haystack: 0.6, chest: 0.4, planter: 0.3, sacks: 0.45, weaponrack: 0.4, signboard: 0.3,
-  bench: [0.8, 0.3], stall: [0.95, 0.4], fence: [0.54, 0.1], tent: [1.2, 1.0], campfire: 0.45, well: 0.95, fountain: 1.3,
+  bench: [0.8, 0.3], stall: [0.95, 0.4], fence: [0.54, 0.1], tent: [1.2, 1.0], campfire: 0.45, well: 0.95, fountain: 1.55, // (its basin's step)
   // nature
   tree: 0.3, rock: 0.5, mushroom: 0.25, crystal: 0.4,
   // landmarks (sized like their models; gates and arches you walk through)

@@ -17,7 +17,7 @@ import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat, U } from './props/mats.js';
 import { swellAt } from './swell.js';
 import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock, shipBob, smallProfile, wheelSpec } from '../world/hull.js';
-import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging, bigPalette, wheelParts, noSprit } from './bigship.js';
+import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging, bigPalette, wheelParts, noSprit, flagstaff } from './bigship.js';
 
 // a coated ship's bubble (see the coating, below): a soap film, its colours
 // running with the angle you see it at, bright at its rim — from either side
@@ -198,7 +198,7 @@ export function hullGeometry(def) {
     dg.computeVertexNormals();
     k.add(dg, { split: true, color: (p, n, i) => dc[Math.floor(i / 3)] });
   };
-  deckRegion(d.castle ? d.tq : 0.02, d.fore ? d.tf : 0.97, () => d.deckY);
+  deckRegion(d.castle ? d.tq : 0.0, d.fore ? d.tf : 0.97, () => d.deckY);
   if (d.castle) deckRegion(0.0, d.tq + 0.012, () => d.yq);
   if (d.fore) deckRegion(d.tf - 0.012, 0.975, () => d.yf);
 
@@ -923,7 +923,8 @@ export class ShipView {
         // the ensign, flying from the flagstaff at the taffrail
         const eg = fg.clone();
         const ens = new THREE.Mesh(eg, fmat);
-        ens.position.set(-d.L / 2 + 0.5 - 3.4 * Math.sin(0.18) - 0.1, topAt(d, 0.01) + 3.4 * Math.cos(0.18) - 0.75 * fs * 0.5, 0);
+        const st = flagstaff(d);
+        ens.position.set(st.top[0] - 0.1, st.top[1] - 0.75 * fs * 0.5, 0);
         ens.userData.base = eg.attributes.position.array.slice();
         root.add(ens);
         this.ensign = ens;

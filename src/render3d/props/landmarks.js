@@ -179,19 +179,23 @@ const fountainGeo = () => model('fountain', (k) => {
   const stone = '#ddd2bd', dark = '#bcae96', deep = '#a8987e', water = '#3a9fd0', pale = '#a8e0f2';
   // the step round it and the basin wall (octagonal: 8 sides)
   k.add(cyl(1.62, 1.66, 0.12, 8), { at: [0, -0.06, 0], rot: [0, Math.PI / 8, 0], color: deep, outline: 0.025 });
-  k.add(cyl(1.46, 1.5, 0.52, 8), { at: [0, 0.06, 0], rot: [0, Math.PI / 8, 0], color: stone, outline: 0.03 });
-  // the rim: a broad cap overhanging the wall, its lip rounded off
-  k.add(cyl(1.58, 1.58, 0.1, 8), { at: [0, 0.58, 0], rot: [0, Math.PI / 8, 0], color: stone, outline: 0.025 });
-  k.add(cyl(1.54, 1.58, 0.05, 8), { at: [0, 0.53, 0], rot: [0, Math.PI / 8, 0], color: dark });
+  // (an open wall, its inside face too: a solid drum here, or a solid cap
+  // on top, covered the pool and left the water falling into stone)
+  k.add(cyl(1.46, 1.5, 0.52, 8, true), { at: [0, 0.06, 0], rot: [0, Math.PI / 8, 0], color: stone, outline: 0.03 });
+  k.add(cyl(1.3, 1.3, 0.52, 8, true), { at: [0, 0.06, 0], rot: [0, Math.PI / 8, 0], color: dark, double: true, backShade: 1 });
+  // the rim: a broad coping overhanging the wall all round, the pool open inside it
+  k.add(new THREE.RingGeometry(1.3, 1.58, 8, 1), { at: [0, 0.68, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: stone, double: true, backShade: 0.8 });
+  k.add(cyl(1.58, 1.58, 0.1, 8, true), { at: [0, 0.58, 0], rot: [0, Math.PI / 8, 0], color: stone, outline: 0.025 });
+  k.add(cyl(1.3, 1.3, 0.1, 8, true), { at: [0, 0.58, 0], rot: [0, Math.PI / 8, 0], color: dark, double: true, backShade: 1 });
   // a sunk panel on each face of the basin
   for (let i = 0; i < 8; i++) {
-    const a = i / 8 * Math.PI * 2, r = 1.44;
+    const a = i / 8 * Math.PI * 2, r = 1.385; // (on the face of the octagon: its apothem, not its corner radius)
     k.add(box(0.82, 0.3, 0.04), { at: [Math.cos(a) * r, 0.14, Math.sin(a) * r], rot: [0, Math.PI / 2 - a, 0], color: dark });
     k.add(box(0.6, 0.18, 0.05), { at: [Math.cos(a) * (r + 0.005), 0.2, Math.sin(a) * (r + 0.005)], rot: [0, Math.PI / 2 - a, 0], color: shade(stone, -0.04) });
   }
   // the pool
-  k.add(new THREE.CircleGeometry(1.4, 8), { at: [0, 0.5, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: water });
-  k.add(new THREE.RingGeometry(1.24, 1.4, 8), { at: [0, 0.505, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: shade(water, -0.15) });
+  k.add(new THREE.CircleGeometry(1.3, 8), { at: [0, 0.5, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: water });
+  k.add(new THREE.RingGeometry(1.14, 1.3, 8), { at: [0, 0.505, 0], rot: [-Math.PI / 2, 0, Math.PI / 8], color: shade(water, -0.15) });
   // the column: a square plinth in the water, a moulded foot, a shaft
   k.add(box(0.7, 0.4, 0.7), { at: [0, 0.3, 0], color: dark, outline: 0.02 });
   k.add(lathe([[0.36, 0], [0.36, 0.06], [0.28, 0.12], [0.26, 0.2], [0.2, 0.26], [0.18, 1.0], [0.24, 1.08], [0.26, 1.14]], 12), { at: [0, 0.7, 0], color: stone, outline: 0.02 });
