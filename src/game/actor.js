@@ -788,6 +788,8 @@ export class Actor extends Entity {
       return;
     }
     if (this.state === 'dead') return;
+    // (played out by a scene — a crewmate diving in to save you, say — which places them itself)
+    if (this.scripted) { this.moving = !!this.scripted.moving; this.vx = this.vy = 0; return; }
 
     if (this.onShip || this.climb) {
       // standing at the helm (or hauling yourself up onto a ledge): no walking

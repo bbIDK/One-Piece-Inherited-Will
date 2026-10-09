@@ -16,7 +16,9 @@ import { regionAt, isCalmBelt, isGrandLine, REGION } from '../world/constants.js
 import { warmth, clamAt } from '../world/seabed.js';
 import { T } from '../world/tiles.js';
 import { TAU, clamp, angleDiff } from '../core/math.js';
-import { findShore, board } from './interact.js';
+import { findShore } from './interact.js';
+import { placeOnDeck } from './decks.js';
+import { deckLift } from '../world/hull.js';
 
 // shape: how the 3D view draws them — 'fish' / 'reef' / 'flying' (instanced
 // shoals), or a model per animal ('elephant', 'serpent', 'seacat', 'yagara')
@@ -428,32 +430,111 @@ class SharkBrain {
 // ------------------------------------------------------------ man overboard
 
 /**
- * A Devil Fruit user sinking like a stone: a crewmate who can swim dives in
- * after them and hauls them back to the ship (or the nearest shore).
+ * Going under — a Devil Fruit user sinking like a stone, or anyone whose
+ * breath is running out down there: a crewmate who can swim comes for you,
+ * and you see it. Wherever they are — on deck with you along, or keeping the
+ * ship while you're off on your own — they run and leap over the side in a
+ * dive, hit the water with a splash, and swim down to you; they get hold of
+ * you, the screen goes black, and you come to on your ship's deck (or the
+ * nearest shore) with them beside you, coughing up seawater. While they're
+ * on their way the sea doesn't finish you: they're coming.
  */
 function rescue(game, S, dt, p) {
-  const sinking = p.inWater && p.fruit && !p.gills && p.state === 'idle' && p.under;
-  if (!sinking) { S.rescueT = 0; S.rescuer = null; return; }
-  if (!S.rescuer) {
-    const crew = game.crew?.followers ? [...game.crew.followers.values()] : [];
-    S.rescuer = crew.find((a) => a.alive && a.state === 'idle' && !(a.fruit && !a.gills) && game.world.distance(a.x, a.y, p.x, p.y) < 35) || null;
-    if (!S.rescuer) return;
-    S.rescueT = 0;
-    game.log(`${S.rescuer.name} dives in after you!`, '#81d4fa');
+  const low = p.oxygen != null && p.maxOxygen < Infinity && p.oxygen < p.maxOxygen * 0.25;
+  const going = p.inWater && p.under && p.state === 'idle' && ((p.fruit && !p.gills) || low);
+  let R = S.res;
+  if (R && R.phase !== 'grab' && R.phase !== 'out' && (!going || !R.who.alive)) { endRescue(game, S, false); return; }
+  if (!R) {
+    if (!going) return;
+    // (those along with you, and those keeping the ship)
+    const crew = [...(game.crew?.followers?.values() || []), ...(game.crew?.hands?.values() || [])];
+    const w = game.world;
+    let who = null, bd = Infinity;
+    for (const a of crew) {
+      if (!a.alive || a.state !== 'idle' || (a.fruit && !a.gills) || a.scripted) continue;
+      const d = w.distance(a.x, a.y, p.x, p.y);
+      if (d < 90 && d < bd) { bd = d; who = a; }
+    }
+    if (!who) return;
+    R = S.res = { who, phase: 'dive', t: 0 };
+    const time = game.env?.time || 0;
+    // where they leap from (the deck's height, or the ground's), and where they hit the water: a little short of you
+    const h0 = who.deck ? deckLift(who.deck, time) + (who.z || 0) : who.inWater ? 0 : Math.max(0, game.view3d?.ground?.(who.x, who.y) ?? 0) + (who.z || 0);
+    if (who.deck) { who.deck.ship.aboard?.delete(who); who.deck = null; }
+    const dx = w.dx(p.x, who.x), dy = who.y - p.y, d = Math.hypot(dx, dy) || 1;
+    const off = Math.min(2.5, d * 0.5);
+    let ex = p.x + dx / d * off, ey = p.y + dy / d * off;
+    if (!w.isLiquid?.(w.wx(ex), ey)) { ex = p.x; ey = p.y; }
+    Object.assign(R, { x0: who.x, y0: who.y, h0, ex: w.wx(ex), ey, T: clamp(d / 9, 0.8, 1.8), peak: 1.2 + Math.min(3, d * 0.06) });
+    who.scripted = { moving: false };
+    if (who.inWater) R.phase = 'swim';
+    game.log(`${who.name} dives in after you!`, '#81d4fa');
   }
-  S.rescueT += dt;
-  if (S.rescueT < (S.rescuer.gills ? 1.5 : 3.2)) return;
-  const w = game.world, who = S.rescuer;
-  S.rescuer = null; S.rescueT = 0;
-  const ship = game.ships.find((s) => !s.sunk && s.owner === 'player' && w.distance(s.x, s.y, p.x, p.y) < 45);
-  if (ship) board(game, p, ship);
-  else {
-    const spot = findShore(w, p.x, p.y, 24);
-    if (!spot) return;
-    p.leaveWater(game);
-    p.x = spot.x; p.y = spot.y; p.vx = p.vy = 0;
+  // (they're coming: the sea holds off till they get there)
+  if (p.oxygen != null && p.oxygen < 0.6) p.oxygen = 0.6;
+  const w = game.world, who = R.who;
+  R.t += dt;
+  if (R.phase === 'dive') {
+    const k = Math.min(1, R.t / R.T);
+    who.x = w.wx(R.x0 + w.dx(R.x0, R.ex) * k); who.y = R.y0 + (R.ey - R.y0) * k;
+    who.z = R.h0 + (0 - R.h0) * k + R.peak * 4 * k * (1 - k);
+    who.vz = k < 0.45 ? 2 : -6; who.jumpK = 1; who.inWater = false; who.under = false;
+    who.facing = Math.atan2(R.ey - R.y0, w.dx(R.x0, R.ex));
+    if (k >= 1) {
+      R.phase = 'swim'; R.t = 0;
+      who.z = 0; who.vz = 0;
+      game.fx.ripple?.(who.x, who.y, 2);
+      game.fx.burst(who.x, who.y, 20, { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 2.6, z: 0.05, vz: 6, g: 11, life: 0.7, size: 0.12 });
+      game.audio?.sfx('splash_big', who);
+    }
+    return;
   }
-  p.oxygen = p.maxOxygen;
-  if (who.alive) { who.x = p.x + 0.8; who.y = p.y; }
-  game.log(`${who.name} hauls you out of the sea, coughing and spluttering.`, '#a5d6a7');
+  if (R.phase === 'swim') {
+    who.inWater = true; who.under = true; who.wading = 0;
+    who.depth = Math.max(0.3, Math.min((p.depth || 0) + 0.2, (who.depth || 0) + dt * 2.5));
+    const dx = w.dx(who.x, p.x), dy = p.y - who.y, d = Math.hypot(dx, dy);
+    const sp = (who.gills ? 7 : 4.5) * dt;
+    who.facing = Math.atan2(dy, dx);
+    who.scripted.moving = true; who.moving = true;
+    if (d > 1.0) { const k = Math.min(1, sp / d); who.x = w.wx(who.x + dx * k); who.y += dy * k; }
+    if (d <= 1.0 || R.t > 12) { R.phase = 'grab'; R.t = 0; who.scripted.moving = false; who.moving = false; }
+    return;
+  }
+  if (R.phase === 'grab') {
+    who.facing = Math.atan2(p.y - who.y, w.dx(who.x, p.x));
+    if (R.t > 0.35 && !R.faded) { R.faded = true; game.ui?.fade?.(true); }
+    if (R.t > 1.3) {
+      // (out of it: aboard your ship, or ashore)
+      const ship = game.ships.find((s) => !s.sunk && s.owner === 'player' && w.distance(s.x, s.y, p.x, p.y) < 200);
+      if (ship) {
+        if (p.inWater) p.leaveWater?.(game);
+        p.mode = 'foot'; p.onShip = false;
+        placeOnDeck(game, p, ship, 0.5, 0);
+        placeOnDeck(game, who, ship, 0.56, 0.6);
+      } else {
+        const spot = findShore(w, p.x, p.y, 24);
+        if (spot) {
+          p.leaveWater(game);
+          p.x = spot.x; p.y = spot.y; p.vx = p.vy = 0;
+          who.x = w.wx(spot.x + 0.8); who.y = spot.y; who.inWater = false; who.under = false; who.depth = 0; who.z = 0;
+        }
+      }
+      p.oxygen = p.maxOxygen;
+      who.scripted = null;
+      R.phase = 'out'; R.t = 0;
+      game.log(`${who.name} hauls you out of the sea, coughing and spluttering.`, '#a5d6a7');
+    }
+    return;
+  }
+  if (R.phase === 'out' && R.t > 0.5) endRescue(game, S, true);
+}
+
+/** The rescue's over (or called off: you swam up yourself) — the screen comes back, the crewmate is theirs again. */
+function endRescue(game, S, done) {
+  const R = S.res;
+  if (!R) return;
+  if (R.who) R.who.scripted = null;
+  if (R.faded) game.ui?.fade?.(false);
+  S.res = null;
+  void done;
 }
