@@ -29,6 +29,16 @@ import { G, legacyV, fallStep, bodyDragK, gripStep, gripOf, DRY_GRIP } from './p
 const GRIP_OF = [];
 for (const [t, n] of [[T.ICE, 'ice'], [T.PACK_ICE, 'pack_ice'], [T.SNOW, 'snow'], [T.SNOWROCK, 'snowrock'], [T.MUD, 'mud'], [T.SAND, 'sand'], [T.DESERT, 'desert'], [T.MARBLE, 'marble'], [T.ISLAND_CLOUD, 'cloud'], [T.CANDY, 'candy'], [T.CAKE, 'cake'], [T.ASH, 'ash']]) GRIP_OF[t] = n;
 const _gv = [0, 0];
+const _sv = [0, 0], _sv2 = [0, 0], _z2 = [0, 0];
+/** How fast a point aboard ship `s` is moving over the world (m/s): her way along her heading, and her turn swinging it round her middle (v = ω × r). */
+let _svK = 0;
+function shipVelAt(w, s, x, y) {
+  const o = (_svK ^= 1) ? _sv : _sv2; // (two answers can be in use at once)
+  const h = s.heading || 0, sp = s.speed || 0, om = s.yawRate || 0;
+  const rx = w.dx(s.x, x), ry = y - s.y;
+  o[0] = Math.cos(h) * sp - om * ry; o[1] = Math.sin(h) * sp + om * rx;
+  return o;
+}
 
 // what a step sounds like on each kind of ground
 const STEP_SOUND = [];
@@ -1722,6 +1732,12 @@ export class Actor extends Entity {
     const time = game.env?.time || 0;
     if (was) {
       was.ship.aboard?.delete(this);
+      // (off her deck — over her rail in a jump, or a gangway's end — you keep
+      // the way she had on her under you, as anything thrown from a moving
+      // ship does, and lose it only to the air, the ground's grip or the sea:
+      // the deck under you is no longer carrying you, so your own velocity
+      // has to carry it now)
+      if (!dk && !was.plank) { const sv = shipVelAt(game.world, was.ship, this.x, this.y); this.vx = (this.vx || 0) + sv[0]; this.vy = (this.vy || 0) + sv[1]; }
       if (!dk) {
         // over the side: on from the deck's height (a jump keeps its lift)
         const g = this.groundAt(game, this.x, this.y);
@@ -1738,6 +1754,11 @@ export class Actor extends Entity {
       this.wading = 0;
       if (!this.vz && this.z > 0) this.vz = -0.01;
       (dk.ship.aboard || (dk.ship.aboard = new Set())).add(this);
+      // (and landing on one, your way is measured against her deck from now on)
+      if (!dk.plank && (!was || was.ship !== dk.ship)) {
+        const sv = shipVelAt(game.world, dk.ship, this.x, this.y), sw = was && !was.plank ? shipVelAt(game.world, was.ship, this.x, this.y) : _z2;
+        this.vx = (this.vx || 0) - sv[0] + sw[0]; this.vy = (this.vy || 0) - sv[1] + sw[1];
+      }
     }
     this.deck = dk;
   }
