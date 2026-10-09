@@ -30,7 +30,10 @@ export const RM = {
 // the canals, as control points relative to the summit (out along +x and
 // +y; each canal's sx, sy turn them toward its Blue: north is −y)
 // (the last point is inside the summit pool, so the canal runs right into it)
-const UP_PTS = [[1150, 2020], [620, 1900], [300, 1560], [150, 950], [70, 420], [24, 70], [8, 22]];
+// (each opens out of the Red Line's cliff into its Blue, beyond the Calm
+// Belt — 1,800 m from the summit's row — and runs inside the rock all the
+// way past it, the gorge along the Red Line, then up the mountain)
+const UP_PTS = [[780, 2260], [440, 2190], [236, 2085], [205, 1800], [182, 1400], [150, 950], [70, 420], [24, 70], [8, 22]];
 const EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
 export const CANALS = [
   { id: 'east_blue', sx: 1, sy: -1 },
