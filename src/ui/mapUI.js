@@ -4,6 +4,7 @@
 // named; you're an arrow the way you face, with a scale bar and a compass
 // rose to read it by.
 import { uiImg } from './icon.js';
+import { GlobeView } from './globe.js';
 import { h, clear } from './dom.js';
 import { W, H, EQ, RM_X, GL_TOP, GL_BOTTOM, chart } from '../world/constants.js';
 import { ChartDetail } from './chartDetail.js';
@@ -43,7 +44,24 @@ export function installMap(game) {
   const scaleBar = h('div.wm-scale', h('i'), h('span'));
   const rose = h('div.wm-rose');
   rose.innerHTML = ROSE_SVG;
-  const wrap = h('div', { style: { position: 'absolute', inset: '0', pointerEvents: 'auto', cursor: 'grab', touchAction: 'none' } }, layer, scaleBar, rose, title, help, close);
+  // (the globe or the flat chart: M opens the globe; the button flips between them)
+  let globeOn = true;
+  const flip = h('button.btn.small.wm-flip', { on: { pointerdown: (e) => e.stopPropagation(), click: () => setGlobe(!globeOn) } }, 'Flat chart');
+  const wrap = h('div', { style: { position: 'absolute', inset: '0', pointerEvents: 'auto', cursor: 'grab', touchAction: 'none' } }, layer, scaleBar, rose, title, help, close, flip);
+  const globe = new GlobeView(wrap);
+  window.__globeDone = () => !!globe.paint?.done; // (for the test harness)
+  const globeHere = () => globeOn && game.world === game.surface;
+  const setGlobe = (on, keepView = false) => {
+    globeOn = on;
+    const g = globeHere();
+    globe.show(g);
+    flip.textContent = on ? 'Flat chart' : 'Globe';
+    flip.classList.toggle('hidden', game.world !== game.surface);
+    for (const el of [layer, scaleBar, rose]) el.style.visibility = g ? 'hidden' : '';
+    title.textContent = g ? 'The Blue Planet' : 'Chart of the Blue Planet';
+    help.textContent = g ? 'Drag to turn the globe · wheel to come closer · M or Esc to close' : 'Drag to pan · wheel to zoom · M or Esc to close';
+    if (g && !keepView) { globe.prepare(game.surface); globe.face(game.player.x, game.player.y); }
+  };
   const detail = game.chartDetail = new ChartDetail();
   wrap.classList.add('hidden');
   ui.root.appendChild(wrap);
@@ -62,7 +80,7 @@ export function installMap(game) {
     cam.x = wx - (sx - r.cw / 2) / cam.zoom;
     cam.y = Math.max(0, Math.min(H, wy - (sy - r.ch / 2) / cam.zoom));
   };
-  const startDrag = (x, y) => { drag = { x, y, cx: cam.x, cy: cam.y }; wrap.style.cursor = 'grabbing'; };
+  const startDrag = (x, y) => { drag = { x, y, lx: x, ly: y, cx: cam.x, cy: cam.y }; wrap.style.cursor = 'grabbing'; };
   let press = null;
   wrap.addEventListener('pointerdown', (e) => {
     press = ptrs.size ? null : { x: e.clientX, y: e.clientY };
@@ -83,6 +101,9 @@ export function installMap(game) {
       const d = Math.max(20, Math.hypot(a.x - b.x, a.y - b.y));
       zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch.d);
       pinch.d = d;
+    } else if (drag && globeHere()) {
+      globe.drag(e.clientX - drag.lx, e.clientY - drag.ly);
+      drag.lx = e.clientX; drag.ly = e.clientY;
     } else if (drag) {
       cam.x = drag.cx - (e.clientX - drag.x) / cam.zoom;
       cam.y = Math.max(0, Math.min(H, drag.cy - (e.clientY - drag.y) / cam.zoom));
@@ -90,7 +111,7 @@ export function installMap(game) {
   });
   const up = (e) => {
     // creative mode: a click (not a drag) on the chart takes you there
-    if (press && e.type === 'pointerup' && game.creative?.on && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6 && game.world === game.surface) {
+    if (press && e.type === 'pointerup' && !globeHere() && game.creative?.on && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6 && game.world === game.surface) {
       const r = game.renderer;
       const wx = cam.x + (e.clientX - r.cw / 2) / cam.zoom, wy = cam.y + (e.clientY - r.ch / 2) / cam.zoom;
       press = null;
@@ -108,6 +129,17 @@ export function installMap(game) {
   wrap.addEventListener('pointercancel', up);
   wrap.addEventListener('wheel', (e) => {
     e.preventDefault();
+    if (globeHere()) {
+      // (in past the globe's closest: down onto the detailed chart, where you were looking)
+      if (!globe.zoom(e.deltaY > 0 ? 0.88 : 1.14)) {
+        const c = globe.centre();
+        cam.x = c.x; cam.y = c.y; cam.zoom = 0.45;
+        setGlobe(false);
+      }
+      return;
+    }
+    // (and out past the chart's widest: back out to the globe)
+    if (e.deltaY > 0 && game.world === game.surface && cam.zoom <= MIN_ZOOM() * 1.001) { setGlobe(true, true); globe.prepare(game.surface); globe.face(cam.x, cam.y); globe.dist = 4.2; return; }
     zoomAt(e.clientX, e.clientY, e.deltaY > 0 ? 0.85 : 1.18);
   }, { passive: false });
 
@@ -136,6 +168,7 @@ export function installMap(game) {
     }
     help.textContent = game.input.touch?.on ? 'Drag to pan · pinch to zoom · tap the cross to close' : 'Drag to pan · wheel to zoom · M or Esc to close';
     wrap.classList.remove('hidden');
+    globe.dist = 4.2; setGlobe(true);
     layer.classList.remove('hidden');
     ui.root.classList.add('map-open');
     // the chart gets the whole screen
@@ -158,6 +191,12 @@ export function installMap(game) {
   // map rendering hook: called from main loop when the map is open
   game.renderMap = () => {
     const r = game.renderer;
+    if (globeHere()) {
+      globe.render(game);
+      r.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      r.ctx.clearRect(0, 0, r.canvas.width, r.canvas.height);
+      return;
+    }
     const saved = { ...r.cam };
     Object.assign(r.cam, { x: cam.x, y: cam.y, zoom: cam.zoom, shakeX: 0, shakeY: 0 });
     const env = game.env;

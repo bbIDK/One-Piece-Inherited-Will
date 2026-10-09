@@ -1006,3 +1006,5 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .ship-designer .sd-swatch.on { box-shadow: 0 0 0 3px #f1c40f; border-color: #3b2412; }
 .ship-designer .sd-figs { display: flex; flex-wrap: wrap; gap: 6px; }
 .ship-designer .sd-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+
+.wm-flip { position: absolute; top: 18px; right: 70px; z-index: 3; }
