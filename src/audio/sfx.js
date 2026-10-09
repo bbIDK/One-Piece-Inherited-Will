@@ -115,6 +115,18 @@ function slingshot(v, t, s = 1) {
 }
 
 // --------------------------------------------------------------- the library
+/**
+ * The shudder that sells Haki: the air itself vibrating — a low wave throbbing
+ * fast (its level beating at `rate`, slowing to `to`), a second a little off
+ * it so the two beat against each other, and a brown rumble pulsing with
+ * them: the pressure dropping and the ground answering.
+ */
+function shudder(v, t, dur, { f = 60, rate = 24, to = 9, gain = 0.3, color = 0.5 } = {}) {
+  v.tone(t, dur, { freq: f, to: f * 0.85, type: 'sine', gain, attack: 0.02, am: { rate, to, depth: 1 } });
+  v.tone(t, dur * 0.9, { freq: f * 1.5, to: f * 1.3, type: 'triangle', gain: gain * 0.35, attack: 0.03, am: { rate: rate * 1.13, to: to * 1.2, depth: 0.9 } });
+  v.noise(t, dur, { color: 'brown', type: 'lowpass', freq: 240, gain: gain * color, attack: 0.02, am: { rate: rate * 0.97, depth: 0.85 } });
+}
+
 export const SFX = {
   // ---- the fight
   /** The default swing of a blow (a technique's own start sound replaces it: see techStart). */
@@ -306,8 +318,12 @@ export const SFX = {
       v.tone(0, T + 1.1, { freq: 46 * p, to: 39 * p, gain: 0.34, attack: T * 0.9, curve: 'lin' });
       v.tone(0, T + 0.6, { freq: 92 * p, to: 78 * p, type: 'triangle', gain: 0.1, attack: T * 0.85, curve: 'lin', vib: { rate: 11, depth: 3 } });
       v.noise(0, T + 0.8, { color: 'brown', type: 'bandpass', freq: 130 * p, q: 2.5, gain: 0.45, attack: T * 0.9, curve: 'lin' });
-      // the set: a crack, the struck-steel clank
+      // (the coat drawn tight over the skin as a blade's drawn: a steel scrape rising into the set)
+      v.noise(T - 0.14, 0.16, { freq: 2600 * p, sweep: 7000 * p, q: 6, gain: 0.12, attack: 0.12, curve: 'lin' });
+      // the set: a crack, the struck-steel clank, locking home — and the arm shuddering with it
       v.noise(T, 0.006, { type: 'highpass', freq: 2000, gain: 0.55, attack: 0.0005 });
+      v.noise(T + 0.035, 0.012, { freq: 3200 * p, q: 4, gain: 0.25, attack: 0.0006 });
+      shudder(v, T, 0.55, { f: 72 * p, rate: 30, to: 12, gain: 0.22 });
       v.noise(T, 0.05, { freq: 3800 * p, q: 1, gain: 0.25, attack: 0.001 });
       v.thump(T, { f0: 170 * p, f1: 70, dur: 0.2, gain: 0.35 });
       // the ring: inharmonic partials of a struck plate, each beating against its twin, the high ones dying first
@@ -346,8 +362,10 @@ export const SFX = {
    * low bed, near two seconds long).
    */
   haki_obs: {
-    prio: 7, cd: 0.2, max: 1, send: 0.55, variants: 3, side: 0.3, hold: 0.4,
+    prio: 7, cd: 0.2, max: 1, send: 0.55, variants: 3, side: 0.3, hold: 0.4, duck: 0.55,
     play(v, k) {
+      // (the world going quiet round you — the duck — and the sense pulsing out in waves)
+      shudder(v, 0, 1.4, { f: 96, rate: 7, to: 3, gain: 0.08, color: 0.2 });
       const V = vo(k), f = (2050 + 900 * V) * [1, 1.03, 0.97][k.rr];
       v.thump(0, { f0: 66 - 8 * V, f1: 44, dur: 0.13, gain: 0.32 });
       v.thump(0.2, { f0: 58 - 6 * V, f1: 40, dur: 0.11, gain: 0.2 });
@@ -370,6 +388,9 @@ export const SFX = {
       v.whoosh(0.02, 0.2, { f0: 1500, f1: 5000, q: 2, gain: 0.14, peak: 0.95 });
       v.ring(0.22, f, 0.6, 0.12, [1, 2.0, 2.9]);
       v.fm(0.22, 0.8, { freq: f * 1.5, ratio: 2.01, index: 0.6, gain: 0.035 });
+      // (a gong played backwards: swelling up out of nothing and cut off at the instant — the future, heard first)
+      for (const [m, g] of [[1, 0.06], [1.52, 0.035], [2.3, 0.025], [3.1, 0.015]]) v.tone(0, 0.23, { freq: 180 * m * (1 + 0.1 * V), gain: g, attack: 0.22, curve: 'lin' });
+      v.tone(0.0, 0.22, { freq: 900, to: 2600, type: 'square', gain: 0.012, attack: 0.2, curve: 'lin' });
     },
   },
   /** Conqueror's Haki gathering (the wind-up): the air going heavy and still, a growl rising under it. */
@@ -380,6 +401,9 @@ export const SFX = {
       v.noise(0, T, { color: 'brown', type: 'lowpass', freq: 120, sweep: 500, gain: 0.4, attack: T * 0.9, curve: 'lin' });
       v.tone(0, T + 0.05, { freq: 30 + 8 * V, to: 55 + 10 * V, gain: 0.32, attack: T * 0.85, curve: 'lin' });
       v.whoosh(0, T, { f0: 200, f1: 900, q: 0.9, gain: 0.16, peak: 0.9 });
+      // (the high-tension ring before it breaks: a thin whine climbing, the air starting to shake)
+      v.tone(0, T, { freq: 2400 + 600 * V, to: 4200 + 600 * V, gain: 0.025, attack: T * 0.9, curve: 'lin' });
+      shudder(v, T * 0.3, T * 0.75, { f: 48 + 8 * V, rate: 12, to: 26, gain: 0.14 });
     },
   },
   /**
@@ -407,6 +431,17 @@ export const SFX = {
       v.zap(0.03, 0.45, { f0: 50, f1: 700 + 400 * V, gain: 0.07 });
       v.crackle(0.02, 1, 16, { freq: 2600 + 1000 * V, gain: 0.05 });
       M.rumble(v, 0.1, 1.2, 2.6, { lp: 170 });
+      // the "veen": a sharp ringing hum at the instant, then the heavy vibrating wave of the pressure shifting
+      v.tone(0, 0.5, { freq: 3100 * p, to: 2600 * p, gain: 0.05, attack: 0.002 });
+      v.tone(0, 0.5, { freq: 3112 * p, to: 2610 * p, gain: 0.035, attack: 0.002 });
+      shudder(v, 0.03, 1.8, { f: 52 * p, rate: 32, to: 7, gain: 0.42, color: 0.7 });
+      // black lightning: metallic, high-voltage snaps through it
+      for (let i = 0; i < 6; i++) {
+        const t = 0.05 + i * (0.12 + 0.06 * Math.random());
+        v.noise(t, 0.008, { type: 'highpass', freq: 3500, gain: 0.3, attack: 0.0004 });
+        v.ring(t, 2400 + 1600 * Math.random(), 0.09, 0.035, [1, 1.73, 2.61]);
+        v.zap(t, 0.07, { f0: 800, f1: 3000, gain: 0.05, step: 0.004 });
+      }
     },
   },
   /**
@@ -429,6 +464,12 @@ export const SFX = {
       v.noise(0.05, L, { type: 'highpass', freq: 5000, gain: 0.045, attack: 0.1, hold: L * 0.5 });
       M.rumble(v, 0.15, 1.4, 2.2, { lp: 200 });
       v.thump(L * 0.8, { f0: 90, f1: 28, dur: 0.8, gain: 0.5 });
+      // (a bomb going off behind thick glass: a hollow, compressed boom — the pocket of space between the blades — and the glass ringing)
+      v.noise(0, 0.9, { color: 'brown', type: 'lowpass', freq: 160, sweep: 60, gain: 0.7, attack: 0.003 });
+      v.tone(0, 0.7, { freq: 140, to: 95, type: 'sine', gain: 0.18, attack: 0.002, am: { rate: 38, to: 14, depth: 0.8 } });
+      v.ring(0.01, 1700, 1.4, 0.05, [1, 1.41, 2.13, 2.97, 3.89, 5.02]);
+      v.crackle(0.02, 0.5, 18, { freq: 5200, gain: 0.05, q: 3 });
+      shudder(v, 0.05, L * 0.85, { f: 40, rate: 26, to: 10, gain: 0.35, color: 0.8 });
     },
   },
 

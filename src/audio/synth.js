@@ -76,8 +76,12 @@ export class Voice {
     return g;
   }
 
-  /** An oscillator: `freq` gliding to `to`, an optional wobble (`vib`: rate, depth in Hz). */
-  tone(dt, dur, { freq = 440, to, glide, type = 'sine', gain = 0.3, attack = 0.005, hold = 0, curve = 'exp', dest, vib, detune = 0 } = {}) {
+  /**
+   * An oscillator: `freq` gliding to `to`, an optional wobble (`vib`: rate,
+   * depth in Hz) and an optional throb (`am`: its level beating at `rate`,
+   * `depth` deep — the shudder of a pressure wave).
+   */
+  tone(dt, dur, { freq = 440, to, glide, type = 'sine', gain = 0.3, attack = 0.005, hold = 0, curve = 'exp', dest, vib, detune = 0, am } = {}) {
     const c = this.c, t = this.at(dt);
     const o = c.createOscillator();
     o.type = type;
@@ -92,7 +96,15 @@ export class Voice {
     }
     const g = c.createGain();
     env(g.gain, t, attack, hold, dur, gain, curve);
-    o.connect(g); g.connect(dest || this.in);
+    o.connect(g);
+    if (am) {
+      const m = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+      m.gain.value = 1 - am.depth / 2; lfo.type = am.type || 'sine'; lfo.frequency.setValueAtTime(am.rate, t);
+      if (am.to) lfo.frequency.exponentialRampToValueAtTime(am.to, t + dur);
+      lg.gain.value = am.depth / 2;
+      lfo.connect(lg); lg.connect(m.gain); g.connect(m); m.connect(dest || this.in);
+      lfo.start(t); lfo.stop(t + dur + 0.05);
+    } else g.connect(dest || this.in);
     o.start(t); o.stop(t + dur + 0.05);
     this.done(t + dur + 0.05);
     return o;
