@@ -14,6 +14,7 @@ import { TerrainManager , CTIME } from './terrain3d.js';
 import { waterLevel } from './height.js';
 import { swellAt } from './swell.js';
 import { Water } from './water3d.js';
+import { Clouds } from './clouds3d.js';
 import { Sky } from './sky3d.js';
 import { BubbleDome } from './bubble3d.js';
 import { CameraRig } from './camera3d.js';
@@ -157,6 +158,7 @@ export class Renderer3D {
     this.renderer.info.autoReset = false;
     this.scene = new THREE.Scene();
     this.sky = new Sky(this.scene);
+    this.clouds = new Clouds(this.scene, this.sky);
     this.dome = new BubbleDome(this.scene); // (Fish-Man Island's bubble)
     this.water = new Water(this.scene, this.renderer);
     this.terrain = new TerrainManager(this.scene);
@@ -459,6 +461,7 @@ export class Renderer3D {
     this.sky.inBubble = this.dome.update(w, ox, oy, env, cam);
     this.sky.update(env, w, sailing);
     this.sky.mesh.position.copy(cam.position);
+    this.clouds?.update(env, w, ox, oy, this.quality === 'low');
     // (the sea's edge dips as you climb: √(2h/R) below level on a planet this size)
     this.sky.uniforms.uHorizonY.value = -Math.sqrt(2 * Math.max(0, cam.position.y) / PLANET_R);
     this.water.update(ox, oy, env, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top, this.sky.overcast);

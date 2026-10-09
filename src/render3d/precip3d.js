@@ -14,6 +14,7 @@ import './mist3d.js';
 import './windlines3d.js';
 import { heightsOf } from '../world/interiors.js';
 import { bfoot } from '../world/bframe.js';
+import { RAIN_HITS } from '../audio/ambience.js';
 
 const RAIN = { n: 9000, box: 34, tall: 20, below: 6, fall: 11, near: 2.6 };
 const SNOW = { n: 7000, box: 30, tall: 16, below: 5, fall: 1.25, near: 0.9 };
@@ -244,6 +245,13 @@ class Splashes {
       const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 15;
       const x = w.wx(wx + Math.cos(a) * r), y = wy + Math.sin(a) * r;
       const h = shelter.open(w, x, y);
+      // (the drops you'll hear: those landing near you, each where it lands — on the roof over you too)
+      if (r < 9 && RAIN_HITS.length < 24) {
+        const rig = ctx.game.view3d?.rig;
+        // (the view's right hand is (-sin yaw, cos yaw) on the ground: sin(a - yaw), +1 hard right)
+        const rel = a - (rig ? rig.yaw : 0);
+        RAIN_HITS.push({ d: r, pan: Math.sin(rel), on: h === null ? 'roof' : w.isLiquid(x, y) && !w.isOverlay(x, y) ? 'water' : 'ground' });
+      }
       if (h === null) continue;
       const water = w.isLiquid(x, y) && !w.isOverlay(x, y);
       this.list.push({ x, y, h, t: time, water, life: water ? 0.55 : 0.22 });

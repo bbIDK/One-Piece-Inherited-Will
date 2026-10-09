@@ -173,6 +173,13 @@ const RAIN = {
 };
 
 /** Near drops, on what they fall on (each drawn into voice `v` at `t`, `s` its strength). */
+/**
+ * The drops landing round you in the world (precip3d.js pushes them as they
+ * hit: how far off, which side, on what), heard one by one where they fall —
+ * as many as there are voices for; the rest are the wash.
+ */
+export const RAIN_HITS = [];
+
 const DROPS = {
   /** On water: the plip of a drop and the little whistle of the bubble it leaves. */
   // (a splash of noise, the bubble's ring faint and high — up where rain on the
@@ -276,7 +283,7 @@ class Rain {
     const lev = Math.pow(10, -20 * (1 - k) / 20) * (1 + 0.2 * storm);
     this.wash.g.go(S.wash[2] * lev * (0.5 + 0.5 * heavy), t, sec);
     this.pat.g.go(S.pat[2] * Math.pow(10, -10 * (1 - k) / 20), t, sec);
-    this.sparse.go(0.9 * (1 - 0.7 * heavy), t, sec);
+    this.sparse.go(0.55 * (1 - 0.7 * heavy), t, sec);
     this.dense.go(heavy * (0.6 + 0.4 * k), t, sec);
   }
 
@@ -291,8 +298,26 @@ class Rain {
       this.move.go(st > 0.5 ? 0.6 + 0.4 * k + 0.15 * st : 0.9 + 0.1 * k, t, rnd(0.6, 1.8));
       this.next = t + rnd(1.5, 4.5);
     }
+    const S = RAIN[this.where] || RAIN.ground;
+    // the drops you see land, heard where they land (the nearest few; the engine keeps only so many voices)
+    if (RAIN_HITS.length) {
+      const hits = RAIN_HITS.splice(0).sort((a, b) => a.d - b.d).slice(0, 6);
+      const E = this.A.E;
+      for (const h of hits) {
+        const kind = h.on === 'roof' ? (this.where === 'inside' ? 'dup' : 'tik') : h.on === 'water' ? 'plip' : this.where === 'leaves' || this.where === 'deck' || this.where === 'town' ? S.drop : 'pat';
+        const near = 1 / (1 + h.d / 2.5);
+        const v = E.open('amb:rain', { bus: 'amb', vol: this.level * (0.35 + near), pan: Math.max(-0.9, Math.min(0.9, h.pan * (0.4 + 0.6 * Math.min(1, h.d / 2)))), lp: this.where === 'inside' ? 1200 : 9000 - 5000 * (1 - near), send: 0.04, prio: 1, max: 6 });
+        if (!v) break;
+        v.pj = rnd(0.92, 1.08);
+        DROPS[kind](v, Math.random() * dt, 0.6 + 0.6 * near);
+      }
+      this.seen = t;
+      return;
+    }
+    // (none seen just now — under cover, or the view's elsewhere: a few near drops all the same)
+    if (t - (this.seen || -9) < 1) return;
     // near drops: a few each moment (counted out fairly: some moments none, some several)
-    const S = RAIN[this.where] || RAIN.ground, want = S.rate * (0.35 + 0.65 * this.r) * dt;
+    const want = S.rate * (0.35 + 0.65 * this.r) * dt;
     // (a Poisson count: some moments none, some several)
     let n = 0, p = Math.random();
     const L = Math.exp(-want);
