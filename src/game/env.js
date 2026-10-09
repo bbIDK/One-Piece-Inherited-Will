@@ -37,7 +37,7 @@ const ease = (v, to, dt, tau) => v + (to - v) * (1 - Math.exp(-dt / tau));
 // (climates whose weather is much the same: crossing between them keeps it)
 const MILD = new Set(['east_blue', 'north_blue', 'west_blue', 'south_blue', 'red_line', 'temperate', 'spring', 'autumn', 'candy']);
 // the light's colour by night, by day and at dusk
-const NIGHT = [0.21, 0.25, 0.46]; // moonlit blue, dark enough for lamplight to matter
+const NIGHT = [0.13, 0.16, 0.33]; // moonlit blue: dark, so a lamp's light matters — but never black (and brighter under a full moon: see below)
 const DAY = [1, 1, 1];
 const DUSK = [1.0, 0.72, 0.55];
 const FLASH = [0.92, 0.96, 1.1]; // a lightning flash: a cold white
@@ -238,7 +238,9 @@ export class Env {
     const dark = Math.min(0.55, this.storm * 0.3 + this.cloud * 0.1 + this.fog * 0.15 + this.dust * 0.12 + this.ash * 0.18);
     const amb = this.ambient;
     for (let i = 0; i < 3; i++) {
-      let v = lerp(lerp(NIGHT[i], DAY[i], this.daylight), DUSK[i], duskAmt) * (1 - dark);
+      // (the moon: a full one lights the night well; a new one leaves it darker)
+      const moonK = 0.72 + 0.5 * (0.5 + 0.5 * Math.cos(this.moonPhase * Math.PI * 2));
+      let v = lerp(lerp(NIGHT[i] * moonK, DAY[i], this.daylight), DUSK[i], duskAmt) * (1 - dark);
       // (an odd sky's colour on everything; a sandstorm's ochre)
       if (this.odd > 0.01) v *= lerp(1, 0.45 + 0.55 * this.tint[i], this.odd * 0.6);
       if (this.dust > 0.01) v *= lerp(1, DUSTY[i], this.dust * 0.45);

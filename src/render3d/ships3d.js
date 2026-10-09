@@ -1030,8 +1030,9 @@ export class ShipView {
       const L = s.def.length, B = s.def.beam, sp = Math.abs(s.speed || 0);
       const src = !s.sunk && sp > 0.8 ? { x: s.x - Math.cos(s.heading) * L * 0.46, y: s.y - Math.sin(s.heading) * L * 0.46, h: s.heading, sp } : null;
       this.wake.update(src, env.time, v3.ox, v3.oy, ctx.world, (q, age) => {
-        const k = Math.min(1, q.sp / 6);
-        return [B * 0.42 + age * (1.6 + L * 0.25) * (0.5 + k), Math.pow(1 - age, 1.6) * (0.35 + 0.65 * k)];
+        const k = Math.min(1, q.sp / 6), S = Math.max(0.3, Math.min(1, L / 18));
+        // (a small boat's wake: narrow, spreading little and fading quickly — sized to her)
+        return [B * 0.42 + age * (1.6 + L * 0.25) * (0.5 + k) * S, Math.pow(1 - age, 1.6 + (1 - S) * 1.5) * (0.35 + 0.65 * k) * (0.55 + 0.45 * S)];
       });
       // spray thrown up and out at her bow as she drives through the sea — the
       // faster she goes and the rougher it is, the more and the higher (near
@@ -1040,14 +1041,16 @@ export class ShipView {
       this.sprayAt = env.time;
       if (fx && !s.sunk && !s.lvl && sp > 1.5 && Math.hypot(ctx.world.dx(v3.ox, s.x), s.y - v3.oy) < 110) {
         const k = Math.min(1.4, (sp - 1.5) / 7), rough = env.storm || 0;
+        // (as big as she is: a rowboat throws up a few fine drops, a galleon sheets of it)
+        const S = Math.max(0.28, Math.min(1, L / 18)), Sv = Math.sqrt(S), small = !!s.def.oarsOnly || L < 8;
         // (water thrown up off her sides as she shoulders through it, all along her forward half)
-        this.sideT = (this.sideT ?? Math.random()) - dt * (1.5 + k * 4);
+        this.sideT = (this.sideT ?? Math.random()) - dt * (1.5 + k * 4) * (small ? 0.35 : 1);
         if (this.sideT <= 0) {
           this.sideT = 0.08 + Math.random() * 0.12;
           const c = Math.cos(s.heading), sn = Math.sin(s.heading), t = 0.55 + Math.random() * 0.35;
           const u = (t - 0.5) * L, out = hbAt(t, B) + 0.25, side = Math.random() < 0.5 ? -1 : 1;
           const bx = s.x + c * u - sn * side * out, by = s.y + sn * u + c * side * out;
-          fx.burst(bx, by, Math.round(2 + k * 4), { world: true, base: swellAt(bx, by) + 0.05, carry: [c * (s.speed || 0) * 0.6, sn * (s.speed || 0) * 0.6], sink: true, angle: s.heading + side * (Math.PI / 2 + 0.25), spread: 0.5, speed: 1.2 + k * 1.8, z: 0.05, zJitter: 0.1, vz: 1.4 + k * 1.8, g: 9.8, life: 0.5 + k * 0.25, size: 0.08 + k * 0.05, color: ['#ffffff', '#eaf6ff', '#cfeaf8'], kind: 'drop', drag: 0.8 });
+          fx.burst(bx, by, Math.max(1, Math.round((2 + k * 4) * S)), { world: true, base: swellAt(bx, by) + 0.05, carry: [c * (s.speed || 0) * 0.6, sn * (s.speed || 0) * 0.6], sink: true, angle: s.heading + side * (Math.PI / 2 + 0.25), spread: 0.5, speed: (1.2 + k * 1.8) * Sv, z: 0.05, zJitter: 0.1 * S, vz: (1.4 + k * 1.8) * Sv, g: 9.8, life: (0.5 + k * 0.25) * Sv, size: (0.08 + k * 0.05) * S, color: ['#ffffff', '#eaf6ff', '#cfeaf8'], kind: 'drop', drag: 0.8 });
         }
         this.sprayT = (this.sprayT ?? Math.random()) - dt * (0.8 + k * 2.2 + rough * 2.5);
         if (this.sprayT <= 0) {
@@ -1061,7 +1064,7 @@ export class ShipView {
           const vx = c * (s.speed || 0) * 0.8, vy = sn * (s.speed || 0) * 0.8;
           for (const side of [-1, 1]) {
             const bx = s.x + c * u - sn * side * out, by = s.y + sn * u + c * side * out;
-            fx.burst(bx, by, Math.round(3 + k * 6 + rough * 6), { world: true, base: swellAt(bx, by) + 0.12, carry: [vx, vy], sink: true, angle: s.heading + side * (Math.PI / 2 - 0.3), spread: 0.7, speed: 2.2 + k * 2.6 + rough * 2, z: 0.12, zJitter: 0.16, vz: 2.2 + k * 2.6 + rough * 2.4, g: 9.8, life: 0.65 + k * 0.3, size: 0.1 + k * 0.07, color: ['#ffffff', '#f1f8ff', '#d6efff'], kind: 'drop', drag: 0.7 });
+            fx.burst(bx, by, Math.max(1, Math.round((3 + k * 6 + rough * 6) * S)), { world: true, base: swellAt(bx, by) + 0.12 * S, carry: [vx, vy], sink: true, angle: s.heading + side * (Math.PI / 2 - 0.3), spread: 0.7, speed: (2.2 + k * 2.6 + rough * 2) * Sv, z: 0.12 * S, zJitter: 0.16 * S, vz: (2.2 + k * 2.6 + rough * 2.4) * Sv, g: 9.8, life: (0.65 + k * 0.3) * Sv, size: (0.1 + k * 0.07) * S, color: ['#ffffff', '#f1f8ff', '#d6efff'], kind: 'drop', drag: 0.7 });
           }
         }
       }

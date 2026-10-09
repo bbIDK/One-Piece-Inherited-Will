@@ -288,7 +288,7 @@ const FRAG = /* glsl */`
   // slope the arms put into the surface)
   vec4 wakes(vec2 r, vec2 p, float t) {
     float foam = 0.0, churn = 0.0;
-    vec2 sl = vec2(0.0);
+    vec2 sl = vec2(0.0), fdir = vec2(0.0);
     for (int s = 0; s < ${WAKES_N}; s++) {
       // (none, or nowhere near this one's track: past it, without looking at its points)
       vec4 wb = uWakeB[s];
@@ -304,6 +304,8 @@ const FRAG = /* glsl */`
         if (d > hw * 1.6 + 2.0 || br <= 0.0) continue;
         // (down the middle: churned water, paler, flecked with foam)
         float mid = (1.0 - smoothstep(hw * 0.35, hw * 0.85, d)) * br;
+        // (which way the churned water runs here: back along her track, newest to oldest)
+        if (mid > churn) fdir = ab / sqrt(l2);
         churn = max(churn, mid);
         // (the arms: a ridge of the sea at either edge)
         float wr = 0.45 + hw * 0.16, e = (d - hw) / wr, ridge = exp(-e * e) * br;
@@ -312,7 +314,9 @@ const FRAG = /* glsl */`
       }
     }
     if (foam <= 0.0 && churn <= 0.0) return vec4(0.0);
-    float lace = noise(p * vec2(1.3, 1.9) + vec2(t * 0.6, -t * 0.4)) * 0.6 + noise(p * 3.7 - t * 0.9) * 0.4;
+    // (its lace streams away down the track as the water settles behind her, not across it)
+    vec2 q = p - fdir * t * 0.9;
+    float lace = noise(q * vec2(1.3, 1.9) + vec2(t * 0.2, -t * 0.15)) * 0.6 + noise(q * 3.7 - t * 0.3) * 0.4;
     return vec4(clamp(foam * smoothstep(0.38, 0.7, lace + foam * 0.25), 0.0, 1.0), churn, sl);
   }
   // caustic network: the edges between moving Voronoi cells

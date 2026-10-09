@@ -231,8 +231,25 @@ class Mist {
       // spray only over the water; the rest on the ground (or the sea, in the rain)
       const water = w.isLiquid?.(w.wx(c.x), c.y);
       if (c.sea && !water) { c.age = c.life + 1; continue; }
-      const gy = water ? 0 : Math.max(0, ctx.ground(w.wx(c.x), c.y));
-      const fade = Math.min(1, c.age / 1.6) * Math.min(1, (c.life - c.age) / 1.6);
+      // (the card turns to face you, so the ground under its whole width matters:
+      // on a slope or against a wall a flat card cuts into it along a hard line that
+      // slides about as you move — set it on the highest ground under it, and fade
+      // it away where the ground rises or falls too much across it, or a wall stands
+      // in it)
+      const gy0 = water ? 0 : Math.max(0, ctx.ground(w.wx(c.x), c.y));
+      let gy = gy0, cut = 0;
+      if (!water) {
+        const tx = wx - c.x, ty = wy - c.y, tl = Math.hypot(tx, ty) || 1, rx = ty / tl, ry = -tx / tl;
+        for (const f of [-0.75, -0.4, 0.4, 0.75]) {
+          const sx = w.wx(c.x + rx * c.w * f), sy = c.y + ry * c.w * f;
+          const g = Math.max(0, ctx.ground(sx, sy));
+          gy = Math.max(gy, g); cut = Math.max(cut, Math.abs(g - gy0));
+          if (w.isBlocked?.(sx, sy)) cut = 99;
+        }
+      }
+      const ground = 1 - Math.min(1, Math.max(0, (cut - c.h * 0.12) / (c.h * 0.3)));
+      if (ground <= 0.01) { c.age = c.life + 1; continue; }
+      const fade = Math.min(1, c.age / 1.6) * Math.min(1, (c.life - c.age) / 1.6) * ground;
       this.m4.makeScale(c.w, c.h, 1).setPosition(w.dx(v.ox, c.x), gy + M.lift, c.y - v.oy);
       this.mesh.setMatrixAt(k, this.m4);
       this.card[k * 4] = Math.max(0, fade);

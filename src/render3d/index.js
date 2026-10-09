@@ -477,6 +477,13 @@ export class Renderer3D {
     // effects layer scale: pixels per metre at arm's length in front of the camera
     const f = this.r2d.ch / (2 * Math.tan(cam.fov * Math.PI / 360));
     this.proj.cam.zoom = f / 7;
+    // (by night lamps, fires and the moon bloom more: a softer, wider glow from a lower threshold)
+    if (this.post?.bloom) {
+      const night = 1 - Math.min(1, (env.daylight ?? 1) * 1.4);
+      this.post.bloom.strength = 0.32 + 0.38 * night;
+      this.post.bloom.threshold = 0.92 - 0.3 * night;
+      this.post.bloom.radius = 0.55 + 0.2 * night;
+    }
     if (this.post) { this.post.setImpact(game.fx && game.fx.impact > 0 ? 1 : 0, game.fx?.impactColor); this.post.setGrade(this.sky.grade); this.screenFx(game.fx, cam); }
     this.fadeCameraProps(dt);
     prof('r.misc', t0); t0 = performance.now();
