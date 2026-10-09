@@ -8,7 +8,7 @@
 // while the tree is picked.
 import * as THREE from 'three';
 import { Mesher, cyl, cone, box, ribbon, tube, slab, torus, C, shade, hash, rng, radial, KIT } from './kit.js';
-import { instanced, setPartVisible } from './instancer.js';
+import { instanced, setPartVisible, local } from './instancer.js';
 import { registerPropBuilder } from '../registry.js';
 import { fruitOf, fruitSpots, isPicked, fruitPicked, devilOn } from '../../world/fruitTrees.js';
 import { T, CLIMATE } from '../../world/tiles.js';
@@ -513,12 +513,22 @@ function fruitPoints(sub, v, fruit, model) {
   return pts;
 }
 /** One fruit (each is its own part, so each can be picked). */
-function fruitGeo(sub, v, fruit, i, q) {
-  return cached(`fruit1:${sub}:${(v || 0) % 2}:${fruit}:${i}`, () => {
+/**
+ * One fruit hanging at q: its model is built at its height (so it sways
+ * with the crown round it, which bends more the higher it is) but over the
+ * trunk, and moved out to its place by the instance — so every apple at
+ * about that height on every tree in a cell is one batch, one draw call
+ * (one model per fruit slot cost a few hundred draw calls in an orchard town).
+ */
+const FRUIT_Y = 0.5;
+function fruitPart(fruit, q, sway) {
+  const s = q.s ?? 1, yb = Math.round(q.p[1] / FRUIT_Y) * FRUIT_Y;
+  const geo = cached(`fruit2:${fruit}:${yb}:${s}`, () => {
     const k = new Mesher();
-    addFruit(k, fruit, q.p, q.s);
+    addFruit(k, fruit, [0, yb, 0], s);
     return k.build();
   });
+  return { key: `f:${fruit}:${yb}:${s}`, geo, local: local(q.p[0], q.p[1] - yb, q.p[2]), sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true };
 }
 
 /**
@@ -676,7 +686,7 @@ function buildTree(o, ctx, sub) {
     // (the fruit isn't drawn far off: see instancer.js)
     const fps = pts.map((q, i) => (i === dfi
       ? { key: `df:${sub}:${v % 2}:${fr}:${i}:${df.color}`, geo: devilFruitGeo(sub, v, fr, i, q, df.color, model.crown), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }
-      : { key: `f:${sub}:${v % 2}:${fr}:${i}`, geo: fruitGeo(sub, v, fr, i, q), sway: model.sway, hidden: false, receiveShadow: false, castShadow: false, nearOnly: true }));
+      : fruitPart(fr, q, model.sway)));
     o._devil = df ? dfi : -1;
     o._devilColor = df ? df.color : null;
     parts.push(...fps);
