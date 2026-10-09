@@ -51,8 +51,8 @@ export function findInteraction(game, p) {
       const hit = v3a.rayHitsActor(ray, a);
       // (not through a wall or a shut door)
       if (!hit || !canSee(game, p, a)) continue;
-      cands.push({ d: hit.miss * 0.4 + d * 0.05, aimed: true, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit('talk', a) });
-    } else cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit('talk', a) });
+      cands.push({ d: hit.miss * 0.4 + d * 0.05, aimed: true, x: a.x, y: a.y, label: `Talk to ${a.unmet ? '???' : a.name}`, run: () => game.emit('talk', a) });
+    } else cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.unmet ? '???' : a.name}`, run: () => game.emit('talk', a) });
   }
   for (const a of game.actorsNear(p.x, p.y, 2.2)) {
     if (a === p || a.state !== 'knocked' || !a.canCarry) continue;

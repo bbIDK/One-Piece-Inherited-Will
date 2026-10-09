@@ -14,8 +14,10 @@
 //   noticing — within a few steps they turn to you: head and shoulders from
 //     a wall they're leaning on, all the way round if they're standing; once
 //     you've gone, back the way they were.
-//   meeting — the main story's contacts, and whoever has a main-story step
-//     for you, get a short intro cutscene the first time (once each).
+//   meeting — until you've met them their name is "???" over their head;
+//     the first time you talk to one the camera introduces them (a short
+//     cutscene) and the conversation follows. A few — the legends you run
+//     into (introOnSight, cameos) — are introduced as soon as you come near.
 import { spotsOf } from './townlife.js';
 
 const NOTICE = 8, FORGET = 12, MEET = 9;
@@ -94,12 +96,15 @@ export function installQuestGivers(game) {
       const cur = a.faceHome ?? a.facing;
       a.faceHome = cur + wrapA(want - cur) * Math.min(1, dt * 3);
     }
-    // meeting the main story's people: once each, an introduction
+    // who you haven't met yet: "???" over their head (chars3d labels, interact.js)
+    const met0 = c.flags.metIntro || (c.flags.metIntro = {});
+    for (const a of game.actorsNear(p.x, p.y, 40)) if (a._staged) a.unmet = !!a.npcId && !met0[a.npcId];
+    // the legends: introduced on sight
     if (game.cine || game.ui?.blocksInput?.() || p.inCombat || p.mode !== 'foot' || p.state !== 'idle' || !game.view3d?.rig || game.bossTarget) return;
     const met = c.flags.metIntro || (c.flags.metIntro = {});
     for (const a of game.actorsNear(p.x, p.y, MEET)) {
       if (!a._staged || !a.alive || a.state !== 'idle' || !a.npcId || met[a.npcId]) continue;
-      if (!(a.def?.story || (a.questMarker && game.storyMarker?.(a)))) continue;
+      if (!onSight(a)) continue;
       if (w.distance(a.x, a.y, p.x, p.y) > MEET) continue;
       met[a.npcId] = 1;
       game.playCinematic({
@@ -110,7 +115,30 @@ export function installQuestGivers(game) {
       break;
     }
   });
+  /**
+   * Talking to someone you haven't met: their introduction first, then the
+   * conversation. True when it's taken care of (talk again once it ends).
+   */
+  Q.introOnTalk = (a) => {
+    const c = game.state?.char, p = game.player;
+    if (!c || !a?.npcId || !a.unmet || game.cine || !game.view3d?.rig || p?.mode !== 'foot') return false;
+    const met = c.flags.metIntro || (c.flags.metIntro = {});
+    met[a.npcId] = 1; a.unmet = false;
+    game.playCinematic({
+      mood: 'meet',
+      shots: meetShots(a, p, game.world),
+      card: { name: a.name, title: a.def?.title || a.title || '', kind: 'meet' },
+      onEnd: () => { if (a.alive) game.emit('talk', a); },
+    });
+    return true;
+  };
   return Q;
+}
+
+/** The ones you're introduced to just by coming near: legends, cameos. */
+function onSight(a) {
+  const d = a.def || {};
+  return !!(d.introOnSight || /cameo|shanks|mihawk|whitebeard|garp|dragon_|roger/.test(a.npcId || ''));
 }
 
 /** A first meeting: across to them from over your shoulder, then in close as they look round at you. */

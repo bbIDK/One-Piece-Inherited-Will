@@ -552,6 +552,8 @@ export class Interactions {
     const g = this.game;
     const def = a.def;
     if (def && def.dialogue) {
+      // (someone you've never met: their introduction comes first)
+      if (g.questGivers?.introOnTalk(a)) return;
       const tree = typeof def.dialogue === 'string' ? def.dialogue : def.dialogue;
       g.dialogue.open(a, tree);
       g.emit('talked', def.id);
