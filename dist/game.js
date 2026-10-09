@@ -14519,6 +14519,17 @@
     return y;
   }
   var xAt = (d, t) => -d.L / 2 + t * d.L;
+  function rakeDx(d, x, y) {
+    if (!d.big) return 0;
+    const t = (x + d.L / 2) / d.L;
+    const hold = d.rooms?.find((r4) => r4.kind === "hold");
+    const tb = hold ? hold.t1 + 5e-3 : 0.9, ts = hold ? hold.t0 - 5e-3 : 0.08;
+    const eb = smooth2(tb, 1, t), es = smooth2(ts, 0, t);
+    if (eb <= 0 && es <= 0) return 0;
+    const top = topAt(d, Math.min(1, Math.max(0, t)));
+    const f = Math.max(0, Math.min(1, (top - y) / (top + d.D)));
+    return -d.L * 0.045 * eb * Math.pow(f, 1.6) + d.L * 0.03 * es * Math.pow(f, 1.4);
+  }
   function stairAt(d, t, v) {
     for (const s of d.stairs) if (t >= s.ta && t <= s.tb && v >= s.va && v <= s.vb) return s;
     return null;
@@ -14986,7 +14997,7 @@
     game.audio?.sfx("jump_big", a);
     if (a.isPlayer) {
       game.emit?.("playerTakeOff", S6.style);
-      game.hint?.("flight", "FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air \u2014 far faster out over the open sea \u2014 and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.");
+      game.hint?.("flight", S6.fruit ? "FLYING! Space climbs, Alt dives, Shift for speed. Come down onto the ground (or double-tap Space) to land." : "FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air \u2014 far faster out over the open sea \u2014 and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.");
     }
     return true;
   }
@@ -15052,6 +15063,7 @@
     if (F4.lift > 0 || i.mz > 0 && !F4.tired) rate *= 1.3;
     else if (i.mz < 0 || F4.landing || F4.tired) rate *= 0.5;
     if (sea) rate *= S6.sea;
+    if (S6.fruit) rate = 0;
     a.flightGauge = Math.max(0, (a.flightGauge ?? 1) - rate * dt / S6.gauge);
     if (a.flightGauge <= 0 && !F4.tired) {
       F4.tired = true;
@@ -20388,10 +20400,15 @@
     mythical: { label: "Mythical", color: "#ff7675" }
   };
   attachKits(FRUITS);
-  function unlockedFruitTechniques(fruitId, mastery) {
+  function fruitTechMastery(f, t) {
+    if (!f || !t || t.flight) return 0;
+    const i = f.techniques.filter((x) => !x.flight).indexOf(t);
+    return i >= 0 && i < 2 ? 0 : Math.max(10, t.mastery || 0);
+  }
+  function unlockedFruitTechniques(fruitId, mastery = 0) {
     const f = FRUITS[fruitId];
     if (!f) return [];
-    return f.techniques.map((t) => t.id);
+    return f.techniques.filter((t) => fruitTechMastery(f, t) <= mastery).map((t) => t.id);
   }
 
   // src/world/tiles.js
@@ -21004,6 +21021,14 @@
   function landHeight(world, x, y, t, e) {
     if ((t === T2.RED_ROCK || t === T2.SNOWROCK) && onRedLine(world, x, y)) {
       return 38 + Math.max(0, e - 90) * 0.55 + (t === T2.SNOWROCK ? 9 : 0);
+    }
+    if (t === T2.PACK_ICE && world.zone === 0 && world.base?.ptop) {
+      const B5 = world.base, xi = world.wx(Math.floor(x));
+      const d = y < B5.ptop[xi] ? B5.ptop[xi] - y : y > B5.pbot[xi] ? y - B5.pbot[xi] : -1;
+      if (d >= 0) {
+        const k = Math.min(1, d / 5);
+        return 2 + 30 * k * k * (3 - 2 * k) + Math.max(0, d - 5) * 0.08;
+      }
     }
     if (inMaryGeoise(world, x, y)) return RL_TOP;
     return 0.45 + Math.min(e, 190) * ELEV_K + BOOST[t];
@@ -24281,7 +24306,11 @@
       out.color = f.color;
       const base2 = f.techniques.filter((t) => !t.flight).map((t) => t.id);
       const list = form?.skills || base2;
-      out.skills = list.map((id) => getAbility(id)).filter(Boolean).map((d) => ({ id: d.id, def: d, locked: false, why: needs(p, d) }));
+      const thr = (id) => form ? 0 : fruitTechMastery(f, f.techniques.find((t) => t.id === id));
+      out.skills = list.map((id) => getAbility(id)).filter(Boolean).map((d) => {
+        const locked = !known.has(d.id) && m < thr(d.id);
+        return { id: d.id, def: d, locked, why: locked ? `fruit mastery ${thr(d.id)} \xB7 fight with it` : needs(p, d) };
+      });
       out.air = f.techniques.filter((t) => t.flight).map((t) => ({ id: t.id, def: getAbility(t.id) }));
       out.m1 = { source: "fruit:" + p.fruit, fruit: p.fruit, ...f.m1 || {}, ...form?.m1 || {} };
       out.heavy = form ? form.heavy || null : f.heavy || null;
@@ -24326,15 +24355,13 @@
       let why = "";
       if (!have) {
         const L3 = t.learn || {};
-        const who = teachers(t.id);
-        const at4 = L3.mastery ? `mastery ${L3.mastery}` : "";
-        const by = who.length ? `taught by ${who[0]}` : "";
-        why = L3.innate ? "born to it" : L3.special === "full_moon" ? `${at4 ? at4 + " \xB7 " : ""}under a full moon` : [at4, by].filter(Boolean).join(" \xB7 ") || "a trainer teaches it";
-        if (!learnedStyle) why = `learn ${st.name} first`;
+        const at4 = `mastery ${L3.mastery || 0}`;
+        why = L3.innate ? "born to it" : L3.special === "full_moon" ? `${at4} \xB7 under a full moon` : `${at4} \xB7 fight with ${st.name}`;
+        if (!learnedStyle) why = st.swords ? `carry ${st.swords} sword${st.swords > 1 ? "s" : ""}` : `learn ${st.name} from a teacher`;
       } else why = needs(p, d);
       out.skills.push({ id: t.id, def: d, locked: !have, why });
     }
-    if (kind === "weapon" && !learnedStyle && st.techniques?.length) out.next.push({ name: st.name, why: `a trainer teaches it: its techniques open with it` });
+    if (kind === "weapon" && !learnedStyle && st.techniques?.length) out.next.push({ name: st.name, why: "a teacher teaches the style: its techniques open as you fight with it" });
     return out;
   }
   function weaponLine(p, c) {
@@ -25381,7 +25408,8 @@
           }
         } else this.haki = Math.min(d.maxHaki, this.haki + d.hakiRegen * dt);
       }
-      let regen = (this.fruitDef?.passive?.regen || 0) + d.hpRegen * (this.inCombat ? 0.2 : 1);
+      const base2 = this.isPlayer ? Math.max(d.hpRegen * 2.5, d.maxHp * 0.012) : d.hpRegen;
+      let regen = (this.fruitDef?.passive?.regen || 0) + base2 * (this.inCombat ? 0.2 : 1);
       regen *= this.regenMul ?? 1;
       for (const b of this.buffs) if (b.regen) regen += b.regen;
       const rested = this.isPlayer || !this.game || (this.game.time || 0) - (this.lastHitT || -999) > 45;
@@ -28302,11 +28330,13 @@
         const cur = a.faceHome ?? a.facing;
         a.faceHome = cur + wrapA(want - cur) * Math.min(1, dt * 3);
       }
+      const met0 = c.flags.metIntro || (c.flags.metIntro = {});
+      for (const a of game.actorsNear(p.x, p.y, 40)) if (a._staged) a.unmet = !!a.npcId && !met0[a.npcId];
       if (game.cine || game.ui?.blocksInput?.() || p.inCombat || p.mode !== "foot" || p.state !== "idle" || !game.view3d?.rig || game.bossTarget) return;
       const met = c.flags.metIntro || (c.flags.metIntro = {});
       for (const a of game.actorsNear(p.x, p.y, MEET)) {
         if (!a._staged || !a.alive || a.state !== "idle" || !a.npcId || met[a.npcId]) continue;
-        if (!(a.def?.story || a.questMarker && game.storyMarker?.(a))) continue;
+        if (!onSight(a)) continue;
         if (w.distance(a.x, a.y, p.x, p.y) > MEET) continue;
         met[a.npcId] = 1;
         game.playCinematic({
@@ -28317,7 +28347,27 @@
         break;
       }
     });
+    Q2.introOnTalk = (a) => {
+      const c = game.state?.char, p = game.player;
+      if (!c || !a?.npcId || !a.unmet || game.cine || !game.view3d?.rig || p?.mode !== "foot") return false;
+      const met = c.flags.metIntro || (c.flags.metIntro = {});
+      met[a.npcId] = 1;
+      a.unmet = false;
+      game.playCinematic({
+        mood: "meet",
+        shots: meetShots(a, p, game.world),
+        card: { name: a.name, title: a.def?.title || a.title || "", kind: "meet" },
+        onEnd: () => {
+          if (a.alive) game.emit("talk", a);
+        }
+      });
+      return true;
+    };
     return Q2;
+  }
+  function onSight(a) {
+    const d = a.def || {};
+    return !!(d.introOnSight || /cameo|shanks|mihawk|whitebeard|garp|dragon_|roger/.test(a.npcId || ""));
   }
   function meetShots(a, p, w) {
     const toYou = Math.atan2(p.y - a.y, w ? w.dx(a.x, p.x) : p.x - a.x) - (a.facing || 0);
@@ -61987,6 +62037,10 @@ void main() {
       c.rgb = mix(vec3(l), c.rgb, uSat);
       c.rgb = max((c.rgb - 0.18) * uContrast + 0.18, 0.0);
       c.rgb *= mix(vec3(0.95, 0.98, 1.05), vec3(1.05, 1.01, 0.95), smoothstep(0.03, 0.5, l));
+      // a soft shoulder on the highlights: white sand, pale stone and sunlit
+      // walls under a tropical noon roll off gently instead of glaring out
+      vec3 hi = max(c.rgb - 0.6, 0.0);
+      c.rgb = min(c.rgb, 0.6) + 0.55 * (1.0 - exp(-hi / 0.55));
       // vignette
       vec2 q = vUv - 0.5;
       c.rgb *= 1.0 - uVignette * dot(q, q) * 1.6;
@@ -64390,6 +64444,15 @@ void main() {
 		return wa.y * r0 + wb.y * r1 + wc.y * r2;
 	}
 
+	// A face the sun only skims (a ship's side under a high sun, a wall end-on
+	// to it) reads the map at a grazing angle: one texel smears down it, and
+	// the shadow of someone at the rail above runs down the hull as a long
+	// streak. Such a face is half in its own shade already (the cel ramp):
+	// cast shadows fade out on it.
+	float sunShadowGraze( float s, float ndl ) {
+		return mix( 1.0, s, smoothstep( 0.06, 0.28, ndl ) );
+	}
+
 	float getSunShadow( sampler2D map, vec2 size, float intensity, float bias, vec4 coord ) {
 		vec3 c = coord.xyz / coord.w;
 		vec2 d = abs( c.xy - 0.5 );
@@ -64416,7 +64479,7 @@ ${GLSL}
   });
   patch3("lights_fragment_begin", "the directional shadow", (chunk) => chunk.replace(
     "getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] )",
-    "getSunShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, vDirectionalShadowCoord[ i ] )"
+    "sunShadowGraze( getSunShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, vDirectionalShadowCoord[ i ] ), dot( geometryNormal, directLight.direction ) )"
   ));
   var DirectionalLightShadow2 = new DirectionalLight().shadow.constructor;
   function toCoarse(m) {
@@ -64436,6 +64499,14 @@ ${GLSL}
       this.camera.far = DEPTH;
       this.bias = -BIAS / (DEPTH - 1);
       this.normalBias = NORMAL_BIAS;
+    }
+    /** Settings → Shadows: 'high' (2048 texels a cascade) or 'medium' (1024: a quarter of the drawing, softer edges). */
+    setDetail(q2) {
+      const n = q2 === "medium" ? SIZE / 2 : SIZE;
+      if (n === this.mapSize.x) return;
+      this.mapSize.set(n, n);
+      this.map?.dispose();
+      this.map = null;
     }
     /** Each cascade is drawn through its own window; the shaders read both through the coarse one's matrix. */
     updateMatrices(light, vp = 0) {
@@ -64458,7 +64529,7 @@ ${GLSL}
       const h2 = Math.hypot(dir.x, dir.z) || 1;
       const rx = dir.z / h2, rz = -dir.x / h2;
       const ux = dir.y * rz, uy = dir.z * rx - dir.x * rz, uz = -dir.y * rx;
-      const t = 2 * NEAR * RATIO / SIZE;
+      const t = 2 * NEAR * RATIO / this.mapSize.x;
       const X2 = (cx + ox) * rx + (cz + oy) * rz, Y2 = (cx + ox) * ux + cy * uy + (cz + oy) * uz;
       const dX = Math.round(X2 / t) * t - X2, dY = Math.round(Y2 / t) * t - Y2;
       cx += rx * dX + ux * dY;
@@ -65336,7 +65407,7 @@ ${GLSL}
         this.lightDir.set(this.lightDir.x * k, MIN_LIGHT_Y, this.lightDir.z * k);
       }
       const weatherK = (1 - ov * 0.72) * (1 - storm * 0.2) * (1 - dust2 * 0.35);
-      this.sun.intensity = (sunUp ? 2.4 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y) * (0.6 + 0.4 * moonLit)) * weatherK * (zone === 3 ? 0.25 : zone === 2 ? 0.35 + 0.5 * ib : zone === 1 ? 0.7 : 1);
+      this.sun.intensity = (sunUp ? 2.15 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y) * (0.6 + 0.4 * moonLit)) * weatherK * (zone === 3 ? 0.25 : zone === 2 ? 0.35 + 0.5 * ib : zone === 1 ? 0.7 : 1);
       this.sun.shadow.intensity = (1 - sm(0.3, 0.9, ov) * 0.85) * (sunUp ? 1 - 0.5 * low : 0.75);
       if (sunUp) this.sun.color.setRGB(1, 0.95 - warm * 0.24, 0.88 - warm * 0.42);
       else this.sun.color.setRGB(0.6, 0.7, 1);
@@ -65375,11 +65446,18 @@ ${GLSL}
      * where the view's frame sits in the world. See SunShadow.follow.
      */
     shadowAt(x, y, z, fx, fz, ox, oy) {
-      this.sun.shadow.follow(this.sun, this.lightDir, x, y, z, fx, fz, ox, oy);
+      const d = this._shadowDir || (this._shadowDir = this.lightDir.clone());
+      if (d.dot(this.lightDir) < 0.999994) d.copy(this.lightDir);
+      this.sun.shadow.follow(this.sun, d, x, y, z, fx, fz, ox, oy);
     }
   };
 
   // src/render3d/bigship.js
+  function rake(k, d) {
+    const p = k.pos;
+    for (let i = 0; i < p.length; i += 3) p[i] += rakeDx(d, p[i], p[i + 1]);
+  }
+  var NO_SPRIT = /* @__PURE__ */ new Set(["ram", "lion", "lion_gold"]);
   var TAU8 = Math.PI * 2;
   function bigPalette(def) {
     const H5 = C(def.color || "#6b4526");
@@ -65421,8 +65499,25 @@ ${GLSL}
     stairs(k, d, P6);
     fittings(k, d, P6);
     sideLadders(k, d, P6);
+    stemHead(k, d, P6);
     bigFigurehead(k, def, d, P6);
+    rake(k, d);
     return k;
+  }
+  function stemHead(k, d, P6) {
+    const t0 = 0.968, x0 = xAt(d, t0), x1 = d.L / 2 + 0.04;
+    const top = topAt(d, 0.99) + 0.06, fl2 = floorAt(d, t0) - 0.05;
+    const w = skinAt(d, t0, top - 0.05) + 0.02;
+    const g = new Shape();
+    g.moveTo(x0, -w);
+    g.lineTo(x1, -0.12);
+    g.lineTo(x1, 0.12);
+    g.lineTo(x0, w);
+    g.closePath();
+    const geo2 = new ExtrudeGeometry(g, { depth: top - fl2, bevelEnabled: false });
+    geo2.rotateX(Math.PI / 2);
+    geo2.translate(0, top, 0);
+    k.add(geo2, { color: P6.cap, outline: 0.015, flat: true });
   }
   function sideLadders(k, d, P6) {
     for (const l of d.ladders || []) {
@@ -65676,11 +65771,11 @@ ${GLSL}
     if (d.poop) rowAt(d.yq + 0.6, d.yq + 1.45);
     const ty = topAt(d, 0.01);
     k.add(box(0.14, 0.18, half2(ty) * 2 + 0.1), { at: [x0 - 0.02, ty - 0.2, 0], color: P6.trim, outline: 0.015 });
-    for (const z of [-0.62, 0, 0.62]) {
-      const lz = z * half2(ty), ly = ty + (z ? 0 : 0.3);
-      k.add(cyl(0.04, 0.04, 0.6, 5), { at: [-d.L / 2 + 0.25, ly, lz], color: P6.dark });
-      k.add(cyl(0.16, 0.19, 0.45, 8), { at: [-d.L / 2 + 0.25, ly + 0.6, lz], color: "#fff3c4", glow: "#ffcf70", flicker: 0.2, outline: 0.012 });
-      k.add(cone(0.22, 0.24, 8), { at: [-d.L / 2 + 0.25, ly + 1.05, lz], color: P6.trim, outline: 0.01 });
+    for (const z of [-0.5, 0, 0.5]) {
+      const lx = -d.L / 2 + 0.35, lz = z * Math.min(half2(ty), skinAt(d, (lx + d.L / 2) / d.L, ty) - 0.3), ly = ty + (z ? 0 : 0.3);
+      k.add(cyl(0.04, 0.04, 0.6, 5), { at: [lx, ly, lz], color: P6.dark });
+      k.add(cyl(0.16, 0.19, 0.45, 8), { at: [lx, ly + 0.6, lz], color: "#fff3c4", glow: "#ffcf70", flicker: 0.2, outline: 0.012 });
+      k.add(cone(0.22, 0.24, 8), { at: [lx, ly + 1.05, lz], color: P6.trim, outline: 0.01 });
     }
     for (const s of [-1, 1]) {
       const t = 0.055, y0 = d.deckY + 0.55, y1 = d.poop ? d.yq + 1.5 : d.deckY + 1.9, ym = (y0 + y1) / 2;
@@ -66079,7 +66174,11 @@ ${GLSL}
       };
     });
   }
-  function bigBowTip(d) {
+  function bigBowTip(d, def) {
+    if (def && NO_SPRIT.has(def.figurehead)) {
+      const x02 = d.L / 2 - 2.2, y02 = (d.bowY ?? d.yf) + 0.2;
+      return { x0: x02, y0: y02, a: 0, len: 0, none: true, tip: [x02, y02 + 0.9] };
+    }
     const a = 0.3, len = d.L * 0.28;
     const x0 = d.L / 2 - 0.6, y0 = (d.bowY ?? d.yf) + 0.4;
     return { x0, y0, a, len, tip: [x0 + Math.cos(a) * len, y0 + Math.sin(a) * len] };
@@ -66111,8 +66210,8 @@ ${GLSL}
     }
     sails.push({ type: "square", x: mast.x, w: wC * 0.82, y0: mast.h1 + 0.5, y1: mast.h2 - 0.35, emblem: mast.fore && def.sail === "marine", yardR: yr * 0.85 });
     sails.push({ type: "square", x: mast.x, w: wC * 0.62, y0: mast.h2 + 0.35, y1: mast.h - 0.7, yardR: yr * 0.7 });
-    if (mast.fore) {
-      const b = bigBowTip(d);
+    if (mast.fore && !NO_SPRIT.has(def.figurehead)) {
+      const b = bigBowTip(d, def);
       sails.push({ type: "jib", x: mast.x, y1: mast.h2 - 0.4, head: [mast.x + 0.4, mast.h2 - 0.4], tipX: b.tip[0], tipY: b.tip[1] - 0.2, clew: [xAt(d, 0.9), (d.bowY ?? d.yf) + (d.fore ? 2.6 : 1.9)] });
     }
     return sails;
@@ -66142,18 +66241,20 @@ ${GLSL}
       }
       for (let y = m.base + 1.6; y < m.h1 - 1; y += 1.4) k.add(torus(r4 * 1.05, 0.04, 3, 10), { at: [m.x, y, 0], rot: [Math.PI / 2, 0, 0], color: "#c8b89a" });
     }
-    const b = bigBowTip(d);
-    k.save();
-    k.translate(b.x0, b.y0, 0);
-    k.rotateZ(-Math.PI / 2 + b.a);
-    k.add(cyl(0.12 + d.L * 3e-3, 0.2 + d.L * 6e-3, b.len * 0.7, 8), { color: wood, outline: 0.02 });
-    k.add(cyl(0.08, 0.12 + d.L * 3e-3, b.len * 0.45, 7), { at: [0, b.len * 0.6, 0], color: wood, outline: 0.015 });
-    k.restore();
+    const b = bigBowTip(d, def);
+    if (!b.none) {
+      k.save();
+      k.translate(b.x0, b.y0, 0);
+      k.rotateZ(-Math.PI / 2 + b.a);
+      k.add(cyl(0.12 + d.L * 3e-3, 0.2 + d.L * 6e-3, b.len * 0.7, 8), { color: wood, outline: 0.02 });
+      k.add(cyl(0.08, 0.12 + d.L * 3e-3, b.len * 0.45, 7), { at: [0, b.len * 0.6, 0], color: wood, outline: 0.015 });
+      k.restore();
+    }
     const ty = topAt(d, 0.01);
     k.add(cyl(0.05, 0.08, 3.4, 6), { at: [-d.L / 2 + 0.5, ty, 0], rot: [0, 0, 0.18], color: dark, outline: 0.012 });
     return k.build(true);
   }
-  function bigRigging(d, plan) {
+  function bigRigging(d, plan, def) {
     const pts = [];
     const Ln = (a, b2) => pts.push(a[0], a[1], a[2], b2[0], b2[1], b2[2]);
     for (const m of plan) {
@@ -66174,7 +66275,7 @@ ${GLSL}
         Ln([m.x + m.r, m.h2 + 0.3, s * m.r], [m.x - 3.2, rail, s * out]);
       }
     }
-    const b = bigBowTip(d);
+    const b = bigBowTip(d, def);
     for (let i = 0; i < plan.length; i++) {
       const m = plan[i];
       if (i === 0) {
@@ -66188,7 +66289,7 @@ ${GLSL}
         Ln([m.x + m.r * 1.7, m.h - 0.6, 0], [f.x + f.r, f.h2 + 0.2, 0]);
       }
     }
-    Ln([b.tip[0] - b.len * 0.3, b.tip[1] - b.len * 0.3 * Math.tan(b.a), 0], [d.L / 2 - 0.3, 0.3, 0]);
+    if (!b.none) Ln([b.tip[0] - b.len * 0.3, b.tip[1] - b.len * 0.3 * Math.tan(b.a), 0], [d.L / 2 - 0.3, 0.3, 0]);
     return pts;
   }
   var IN = { wall: C("#8a6445"), wall2: C("#7d5a3d"), beam: C("#5b3d26"), floor: C("#a57b52"), dark: C("#3e2a1c"), cloth: C("#c9b99a") };
@@ -66474,6 +66575,8 @@ ${GLSL}
       k.restore();
     }
     for (const it of d.furniture) if (!it.treasure) furniture(k, d, P6, it);
+    rake(k, d);
+    rake(overhead, d);
     return { k, overhead };
   }
   function bigTreasure(def, d) {
@@ -67125,7 +67228,7 @@ ${GLSL}
     return g;
   }
   function bigRigGeometry(def, d, plan) {
-    const key2 = `big|${def.length}|${def.beam}|${def.masts}`;
+    const key2 = `big|${def.length}|${def.beam}|${def.masts}|${NO_SPRIT.has(def.figurehead) ? "ns" : ""}`;
     let g = rigCache.get(key2);
     if (!g) {
       g = bigMastGeometry(def, d, plan);
@@ -67437,7 +67540,7 @@ ${GLSL}
         this.ghostables.push(ym);
       }
       s.sailBoxes = boxes2;
-      this.lines = d.big ? this.lineSet(bigRigging(d, plan)) : this.rigging(def, d, plan);
+      this.lines = d.big ? this.lineSet(bigRigging(d, plan, def)) : this.rigging(def, d, plan);
       root4.add(this.lines);
       if (def.paddle) {
         const pk = new Mesher();
@@ -76383,15 +76486,15 @@ ${GLSL}
     if (S6.portico && fw >= 6 && role !== "house" && Math.abs(door.x) + (dd.dw + 1.8) / 2 + 0.5 < fw / 2) {
       const px2 = door.x, pw = dd.dw + 1.8;
       for (const sx of [-1, 1]) {
-        k.add(cyl(0.17, 0.2, dd.top + 0.9, 10), { at: [px2 + sx * pw / 2, 0.3, 1.1], color: "#fdfefe", outline: 0.02 });
-        B2(k, px2 + sx * pw / 2 - 0.26, -dn, 0.85, px2 + sx * pw / 2 + 0.26, 0.32, 1.35, "#ecf0f1");
+        k.add(cyl(0.17, 0.2, dd.top + 0.9, 10), { at: [px2 + sx * pw / 2, 0.3, 0.2], color: "#fdfefe", outline: 0.02 });
+        B2(k, px2 + sx * pw / 2 - 0.26, -dn, 0, px2 + sx * pw / 2 + 0.26, 0.32, 0.44, "#ecf0f1");
+        B2(k, px2 + sx * pw / 2 - 0.24, dd.top + 1.12, 0, px2 + sx * pw / 2 + 0.24, dd.top + 1.22, 0.42, "#ecf0f1");
       }
-      B2(k, px2 - pw / 2 - 0.35, dd.top + 1.2, -0.05, px2 + pw / 2 + 0.35, dd.top + 1.45, 1.4, "#fdfefe", { outline: 0.02 });
+      B2(k, px2 - pw / 2 - 0.35, dd.top + 1.2, -0.05, px2 + pw / 2 + 0.35, dd.top + 1.45, 0.5, "#fdfefe", { outline: 0.02 });
       k.save();
-      k.translate(px2, dd.top + 1.45, 0.65);
-      k.rotateY(0);
-      k.add(slab([[-pw / 2 - 0.35, 0], [pw / 2 + 0.35, 0], [0, 0.9]], 1.4), { color: S6.trim === "#d4ac0d" ? "#fdfefe" : "#fdfefe", outline: 0.02 });
-      k.add(slab([[-pw / 2 + 0.1, 0.06], [pw / 2 - 0.1, 0.06], [0, 0.72]], 0.05), { at: [0, 0, 0.71], color: "#d4ac0d" });
+      k.translate(px2, dd.top + 1.45, 0.2);
+      k.add(slab([[-pw / 2 - 0.35, 0], [pw / 2 + 0.35, 0], [0, 0.9]], 0.5), { color: "#fdfefe", outline: 0.02 });
+      k.add(slab([[-pw / 2 + 0.1, 0.06], [pw / 2 - 0.1, 0.06], [0, 0.72]], 0.05), { at: [0, 0, 0.26], color: "#d4ac0d" });
       k.restore();
     }
     if ((b.role === "marine_base" || b.style === "marine" && fw >= 6) && b.style !== "ruins") {
@@ -78320,9 +78423,9 @@ ${GLSL}
   }
   function hangOut(p, crown3) {
     if (!crown3?.blobs || crown3.palm) return p;
-    const a = Math.atan2(p[2] - crown3.c[2], p[0] - crown3.c[0]), e = -0.62;
-    const q2 = crownPoint(crown3.blobs, crown3.c, [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 0.97, crown3.squash || 1);
-    return [q2[0], q2[1] - 0.26, q2[2], q2[1] + 0.08];
+    const a = Math.atan2(p[2] - crown3.c[2], p[0] - crown3.c[0]), e = -0.8;
+    const q2 = crownPoint(crown3.blobs, crown3.c, [Math.cos(a) * Math.cos(e), Math.sin(e), Math.sin(a) * Math.cos(e)], 1.04, crown3.squash || 1);
+    return [q2[0], q2[1] - 0.42, q2[2], q2[1] + 0.12];
   }
   function devilFruitGeo(sub, v, fruit, i, q2, color, crown3) {
     return cached(`dfruit:${sub}:${(v || 0) % 2}:${fruit}:${i}:${color}`, () => {
@@ -93687,7 +93790,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     labels(a, env2, dist, s) {
       const idle = a.state === "idle";
-      const name = a.showName && idle && dist < 36 ? a.name : null;
+      const name = a.showName && idle && dist < 36 ? a.unmet ? "???" : a.name : null;
       const t = a.controller?.target;
       const fighting = !!t && (t.isPlayer || t.faction === "player") && a.controller.state !== "idle";
       const bigBar = a.boss && a.game?.bossTarget === a && !a.game.ui?.el?.boss?.classList.contains("hidden");
@@ -93914,6 +94017,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.oy = 0;
       this.quality = "high";
       this.resScale = 1;
+      this.gfx = {};
       this.viewChunks = 12;
       this.ctx = {
         THREE: three_module_exports,
@@ -93975,7 +94079,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       window.addEventListener("resize", () => this.resize());
     }
     resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, this.quality === "low" ? 1 : 1.75) * this.resScale;
+      const dpr = Math.min(window.devicePixelRatio || 1, this.quality === "low" ? 1 : 1.75) * this.resScale * (this.gfx.res || 1);
       this.renderer.setPixelRatio(dpr);
       this.renderer.setSize(window.innerWidth, window.innerHeight, false);
       this.rig.resize(window.innerWidth, window.innerHeight);
@@ -93983,8 +94087,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     setQuality(q2) {
       this.quality = q2;
-      this.renderer.shadowMap.enabled = q2 !== "low";
-      this.sky.sun.castShadow = q2 !== "low";
+      const shadows = q2 !== "low" && this.gfx.shadows !== "off";
+      this.renderer.shadowMap.enabled = shadows;
+      this.sky.sun.castShadow = shadows;
+      this.sky.sun.shadow.setDetail?.(this.gfx.shadows);
       this.sky.setDetail(q2);
       this.terrain.setDetail?.(q2);
       this.water.setDetail?.(q2);
@@ -94002,7 +94108,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           this.post = null;
         }
       }
+      if (this.post?.bloom) this.post.bloom.enabled = this.gfx.bloom !== false;
       this.resize();
+    }
+    /**
+     * The finer graphics settings (Settings → Graphics), over the preset:
+     * shadows ('high' | 'medium' | 'off'), foliage ('far' | 'near' | 'off'),
+     * bloom (on/off) and the resolution scale (0.5..1, under the automatic one).
+     */
+    setGraphics(g) {
+      const k = `${g.shadows}|${g.foliage}|${g.bloom}|${g.res}`;
+      if (k === this._gfxKey) return;
+      this._gfxKey = k;
+      this.gfx = g;
+      this.setQuality(this.quality);
     }
     /**
      * The render distance, in 32 m chunks (Settings → Render distance): the
@@ -95345,14 +95464,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   // src/render3d/groundcover.js
   var CELL5 = 16;
   var NEAR3 = 22;
-  var KINDS = ["grass", "flower", "fern", "pebble", "shell", "rock"];
-  var REACH = { grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
-  var MAXN = { grass: 5200, flower: 1400, fern: 1100, pebble: 1600, shell: 500, rock: 400 };
-  var MAXF = { grass: 16e3, flower: 2600, fern: 2e3, pebble: 1400, shell: 400, rock: 1200 };
-  var PAD2 = { grass: 0.7, flower: 0.6, fern: 1.2, pebble: 0.3, shell: 0.2, rock: 2 };
-  var WEDGES = { grass: 8, flower: 4, fern: 4, pebble: 1, shell: 1, rock: 4 };
-  var SWAY2 = { grass: 1, flower: 0.7, fern: 0.45 };
-  var THIN = { grass: 1, flower: 1, fern: 1 };
+  var KINDS = ["grass", "flower", "fern", "pebble", "shell", "rock", "crop"];
+  var REACH = { crop: 1, grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
+  var MAXN = { crop: 4200, grass: 5200, flower: 1400, fern: 1100, pebble: 1600, shell: 500, rock: 400 };
+  var MAXF = { crop: 9e3, grass: 16e3, flower: 2600, fern: 2e3, pebble: 1400, shell: 400, rock: 1200 };
+  var PAD2 = { crop: 1.1, grass: 0.7, flower: 0.6, fern: 1.2, pebble: 0.3, shell: 0.2, rock: 2 };
+  var WEDGES = { crop: 8, grass: 8, flower: 4, fern: 4, pebble: 1, shell: 1, rock: 4 };
+  var SWAY2 = { crop: 0.75, grass: 1, flower: 0.7, fern: 0.45 };
+  var THIN = { crop: 1, grass: 1, flower: 1, fern: 1 };
   var FILL_BUDGET_MS = 2.5;
   var PAVED = new Uint8Array(64);
   for (const t of [T2.STONE, T2.COBBLE, T2.PLANK, T2.MARBLE, T2.WALL, T2.RAIL, T2.BRIDGE, T2.CARPET, T2.TATAMI, T2.STEEL, T2.GOLD, T2.CAKE, T2.ISLAND_CLOUD, T2.ICE, T2.PACK_ICE, T2.RED_ROCK, T2.MASONRY, T2.CANOPY]) PAVED[t] = 1;
@@ -95405,6 +95524,36 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     return colored(g, (c, x, y) => {
       const f = y / hs[k++];
       c.setRGB(0.78 + f * 0.62, 0.8 + f * 0.6, 0.72 + f * 0.4);
+    });
+  }
+  function cropGeo(far = false) {
+    const pos = [];
+    const n = far ? 3 : 5;
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2 + i * 1.3;
+      const r4 = 0.03 + i % 2 * 0.05;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const bx = ca * r4, bz = sa * r4;
+      const h2 = 0.72 + i * 29 % 5 * 0.06;
+      const tx = bx + ca * 0.08, tz = bz + sa * 0.08;
+      const w = far ? 0.035 : 0.018, px2 = -sa * w, pz2 = ca * w;
+      pos.push(bx - px2, 0, bz - pz2, bx + px2, 0, bz + pz2, tx + px2, h2 * 0.82, tz + pz2);
+      pos.push(bx - px2, 0, bz - pz2, tx + px2, h2 * 0.82, tz + pz2, tx - px2, h2 * 0.82, tz - pz2);
+      const ew = far ? 0.05 : 0.04, ey = h2 * 0.82;
+      for (const [qx, qz] of [[-sa, ca], [ca, sa]]) {
+        pos.push(tx, ey, tz, tx + qx * ew, ey + 0.09, tz + qz * ew, tx, h2 + 0.04, tz);
+        pos.push(tx, ey, tz, tx, h2 + 0.04, tz, tx - qx * ew, ey + 0.09, tz - qz * ew);
+      }
+      if (far) continue;
+      const lx = ca * 0.22, lz = sa * 0.22;
+      pos.push(bx, 0.12, bz, bx + px2 * 3, 0.16, bz + pz2 * 3, bx + lx, 0.3, bz + lz);
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    return colored(g, (c, x, y) => {
+      const f = Math.min(1, y / 0.75);
+      c.setRGB(0.6 + f * 0.5, 0.72 + f * 0.42, 0.5 + f * 0.36);
     });
   }
   function flowerGeo(far = false) {
@@ -95499,12 +95648,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
   var uTime = { value: 0 };
   function coverMaterial(kind) {
-    const soft = kind === "grass" || kind === "fern" || kind === "flower";
+    const soft = kind === "grass" || kind === "fern" || kind === "flower" || kind === "crop";
     const m = new MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient(), side: soft ? DoubleSide : FrontSide });
     const sway = SWAY2[kind] || 0;
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, FOG, { uTime });
-      if (kind === "grass") {
+      if (kind === "grass" || kind === "crop") {
         sh.fragmentShader = sh.fragmentShader.replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
       normal = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);`);
       }
@@ -95577,7 +95726,23 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         if (OVERLAY[t] || PAVED[t] || world.isBlocked(x, y)) continue;
         const clim = world.climate ? world.climate(x, y) : 0;
         const winter = clim === CLIMATE.WINTER || t === T2.SNOW;
-        if (t === T2.GRASS || t === T2.LAWN || t === T2.FARM || t === T2.FLOWERS || t === T2.FOREST || t === T2.JUNGLE || t === T2.SAKURA || t === T2.MANGROVE) {
+        if (t === T2.FARM) {
+          if (winter) continue;
+          const fk = hash9(Math.floor(x / 22), Math.floor(y / 22), 41);
+          const ripe = fk < 0.62;
+          for (let k = Math.ceil(y * 1.5 - 0.25); k <= Math.floor((y + 1) * 1.5 - 0.25); k++) {
+            const ry = (k + 0.25) / 1.5;
+            if (ry < y || ry >= y + 1) continue;
+            for (let q2 = 0; q2 < 3; q2++) {
+              const a = hash9(x, k, 50 + q2);
+              if (a < 0.08) continue;
+              const c = ripe ? col2.setRGB(0.84 + a * 0.06, 0.74 + a * 0.05, 0.46, SRGB) : col2.setRGB(0.42 + a * 0.06, 0.64, 0.26, SRGB);
+              put2("crop", x + (q2 + 0.2 + a * 0.6) / 3, ry + (a - 0.5) * 0.08, a * 360, ripe ? 0.95 + a * 0.3 : 0.6 + a * 0.25, c);
+            }
+          }
+          continue;
+        }
+        if (t === T2.GRASS || t === T2.LAWN || t === T2.FLOWERS || t === T2.FOREST || t === T2.JUNGLE || t === T2.SAKURA || t === T2.MANGROVE) {
           if (winter) continue;
           const n = t === T2.FOREST || t === T2.JUNGLE ? 2 : t === T2.LAWN ? 1 : 3;
           for (let q2 = 0; q2 < n; q2++) {
@@ -95640,8 +95805,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.group = new Group();
       this.group.name = "groundcover";
       scene.add(this.group);
-      const near = { grass: grassGeo(), flower: flowerGeo(), fern: fernGeo(), pebble: pebbleGeo(), shell: shellGeo(), rock: rockGeo2() };
-      const far = { grass: grassGeo(true), flower: flowerGeo(true), fern: fernGeo(true), pebble: pebbleGeo(true), shell: near.shell, rock: rockGeo2(true) };
+      const near = { grass: grassGeo(), flower: flowerGeo(), fern: fernGeo(), pebble: pebbleGeo(), shell: shellGeo(), rock: rockGeo2(), crop: cropGeo() };
+      const far = { grass: grassGeo(true), flower: flowerGeo(true), fern: fernGeo(true), pebble: pebbleGeo(true), shell: near.shell, rock: rockGeo2(true), crop: cropGeo(true) };
       this.sets = {};
       for (const k of KINDS) {
         this.sets[k] = new WedgeSet(this.group, k, {
@@ -95676,11 +95841,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         this.want = null;
       }
       uTime.value = env2.time;
-      const low = v.quality === "low";
-      const R5 = low ? 36 : 64;
+      const fol = game.settings?.foliage;
+      const low = v.quality === "low" || fol === "near";
+      const R5 = fol === "off" ? 0 : low ? 36 : 64;
       const ox = v.ox, oy = v.oy;
       const ccx = Math.floor(w.wx(ox) / CELL5), ccy = Math.floor(oy / CELL5);
-      const key2 = `${ccx},${ccy},${low ? 1 : 0}`;
+      const key2 = `${ccx},${ccy},${low ? 1 : 0},${R5}`;
       this.t -= dt;
       if (key2 !== this.key) {
         this.key = key2;
@@ -101563,7 +101729,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
             if (r4 < 1) e = clamp(e + (1 - r4) * 140, 0, 255);
             summit = Math.hypot((x - M3.x) * 1.6, y - M3.y) < chart(70) + noise.noise2(x * 0.05, y * 0.05) * 12;
           }
-          out[0] = polarRow(y) || summit ? T2.SNOWROCK : T2.RED_ROCK;
+          out[0] = summit || polarRow(y) && e > 175 + noise.noise2(x * 0.07, y * 0.07) * 30 ? T2.SNOWROCK : T2.RED_ROCK;
           out[1] = Math.round(e);
           out[2] = wintry(y) ? CLIMATE.WINTER : CLIMATE.TEMPERATE;
           return out;
@@ -112251,6 +112417,27 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     return out;
   }
 
+  // src/data/uniforms.js
+  var SEAMAN = { topStyle: "shirt", top: "#f5f6fa", bottom: "#f5f6fa", tie: "#1f5fa8", waist: "belt", belt: "#2d3436", shoeStyle: "boots", shoes: "#2d3436", hat: "marine" };
+  var PETTY = { ...SEAMAN, bottom: "#1b2f4e", tie: "#163d7a" };
+  var JUNIOR = { topStyle: "jacket", top: "#1b2f4e", top2: "#f5f6fa", tie: "#163d7a", bottom: "#1b2f4e", waist: "belt", belt: "#141a22", shoeStyle: "shoes", shoes: "#141414", hat: "marine" };
+  var SENIOR = { ...JUNIOR, top: "#22252b", bottom: "#22252b", tie: "#7f1d1d", hat: null };
+  var JUSTICE = { coat: "#fafafa", coatText: "JUSTICE" };
+  var TIERS4 = [
+    [["Seaman Recruit", "Seaman Apprentice", "Seaman First Class"], SEAMAN, "Sailor's whites"],
+    [["Petty Officer", "Chief Petty Officer", "Master Chief Petty Officer"], PETTY, "Petty officer's whites"],
+    [["Warrant Officer", "Ensign", "Lieutenant Junior Grade", "Lieutenant", "Lieutenant Commander"], JUNIOR, "Officer's navy jacket"],
+    [["Commander"], SENIOR, "Commander's suit"],
+    [["Captain", "Commodore", "Rear Admiral", "Vice Admiral", "Admiral", "Fleet Admiral"], { ...SENIOR, ...JUSTICE }, "Suit and the coat of Justice"]
+  ];
+  function marineUniform(rank) {
+    if (!rank) return null;
+    const t = TIERS4.find(([names]) => names.includes(rank)) || TIERS4[0];
+    const look = { ...t[1] };
+    if (look.hat === null) delete look.hat;
+    return { look, name: t[2] };
+  }
+
   // src/data/dreams.js
   var LEGENDS = {
     king: {
@@ -112391,7 +112578,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const legacy = read(key(s, "legacy"));
     return { slot: s, char, legacy: legacy ? { ...defaultLegacy(), ...legacy } : null, empty: !char && !legacy };
   }
-  var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, survival: true, view: "first", sensitivity: 0.5, invertY: false, quality: "high", autoRes: true, fov: 0.5, bob: true, renderDist: null, ...read(KEY_SETTINGS) || {} });
+  var loadSettings = () => ({ volume: 0.7, music: 0.5, shake: 1, showHints: true, survival: true, view: "first", sensitivity: 0.5, invertY: false, quality: "high", autoRes: true, fov: 0.5, bob: true, renderDist: null, shadows: "high", foliage: "far", bloom: true, resScale: 1, ...read(KEY_SETTINGS) || {} });
   var saveSettings = (s) => write(KEY_SETTINGS, s);
   var RENDER_DIST = { min: 4, max: 24, high: 12, low: 8 };
   function renderChunks(s) {
@@ -112430,8 +112617,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (ray) {
         const hit = v3a.rayHitsActor(ray, a);
         if (!hit || !canSee(game, p, a)) continue;
-        cands.push({ d: hit.miss * 0.4 + d * 0.05, aimed: true, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit("talk", a) });
-      } else cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.name}`, run: () => game.emit("talk", a) });
+        cands.push({ d: hit.miss * 0.4 + d * 0.05, aimed: true, x: a.x, y: a.y, label: `Talk to ${a.unmet ? "???" : a.name}`, run: () => game.emit("talk", a) });
+      } else cands.push({ d, x: a.x, y: a.y, label: `Talk to ${a.unmet ? "???" : a.name}`, run: () => game.emit("talk", a) });
     }
     for (const a of game.actorsNear(p.x, p.y, 2.2)) {
       if (a === p || a.state !== "knocked" || !a.canCarry) continue;
@@ -113027,6 +113214,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
   function equippedLook(char) {
     const look = { ...char.look };
+    const uni = char.faction === "marine" && char.uniform !== false ? marineUniform(char.marineRank) : null;
+    if (uni) Object.assign(look, uni.look);
     const hat = ITEMS[char.equipped?.hat];
     if (hat?.look) Object.assign(look, hat.look);
     const coat2 = ITEMS[char.equipped?.coat];
@@ -113045,9 +113234,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const power = same.reduce((s, w) => s + (w.power || 1), 0) / same.length;
     return { kind, power, count: same.length, ids: char.equipped.weapons.slice() };
   }
+  var SWORD_FORMS = { 1: "ittoryu", 2: "nitoryu", 3: "santoryu" };
   function fightingStyle(char) {
+    const w0 = weaponFromChar(char);
+    if (w0?.kind === "sword") {
+      const pick6 = char.styleFor?.sword;
+      const form = SWORD_FORMS[Math.min(3, Math.max(1, w0.count || 1))];
+      if (pick6 && !Object.values(SWORD_FORMS).includes(pick6) && STYLES2[pick6]?.weapon === "sword" && char.masteries?.[pick6] !== void 0 && w0.count >= (STYLES2[pick6].swords || 1)) return pick6;
+      return form;
+    }
+    const own = w0 && char.styleFor?.[w0.kind];
+    if (own && STYLES2[own]?.weapon === w0.kind && char.masteries?.[own] !== void 0) return own;
     const style = STYLES2[char.style] ? char.style : "brawler";
-    const st = STYLES2[style], w = weaponFromChar(char);
+    const st = STYLES2[style], w = w0;
     if (!w) return st.weapon ? "brawler" : style;
     const suits = (s) => STYLES2[s]?.weapon === w.kind && w.count >= (STYLES2[s].swords || 1);
     if (suits(style)) return style;
@@ -113055,6 +113254,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     return learned[0] || WEAPON_STYLE[w.kind] || (st.weapon ? "brawler" : style);
   }
   function unarmedStyle(char) {
+    const own = char.styleFor?.fists;
+    if (own && STYLES2[own] && !STYLES2[own].weapon && char.masteries?.[own] !== void 0) return own;
     if (STYLES2[char.style] && !STYLES2[char.style].weapon) return char.style;
     const known = Object.keys(char.masteries || {}).filter((s) => STYLES2[s] && !STYLES2[s].weapon).sort((a, b) => char.masteries[b] - char.masteries[a]);
     return known[0] || "brawler";
@@ -119430,6 +119631,7 @@ button:disabled { cursor: not-allowed; }
       const g = this.game;
       const def = a.def;
       if (def && def.dialogue) {
+        if (g.questGivers?.introOnTalk(a)) return;
         const tree = typeof def.dialogue === "string" ? def.dialogue : def.dialogue;
         g.dialogue.open(a, tree);
         g.emit("talked", def.id);
@@ -120883,6 +121085,14 @@ button:disabled { cursor: not-allowed; }
           this.checkDream();
         }
       });
+      let su = 0, first = true;
+      game.on("tick", (dt) => {
+        if ((su += dt) > 0.5) {
+          su = 0;
+          this.syncUnlocks(first);
+          first = false;
+        }
+      });
     }
     get char() {
       return this.game.state?.char;
@@ -120992,6 +121202,60 @@ button:disabled { cursor: not-allowed; }
       const after2 = Math.min(100, before + amt);
       p.masteries[style] = after2;
       if (Math.floor(after2 / 5) > Math.floor(before / 5)) this.game.log(`${STYLES2[style]?.name || style} mastery ${Math.floor(after2)}`, "#90caf9");
+      this.syncUnlocks();
+    }
+    /**
+     * What fighting has opened: every technique of a style you know whose
+     * mastery you've reached (a teacher sells the style, not its moves); every
+     * move of your fruit its mastery has reached; and the sword form your
+     * swords make (one, two, three: Ittoryu, Nitoryu, Santoryu — no teacher
+     * needed to hold more blades). `silent`: catching up (a save loaded), no
+     * fanfare.
+     */
+    syncUnlocks(silent = false) {
+      const g = this.game, c = this.char, p = g.player;
+      if (!c || !p || !c.masteries || !c.techniques) return;
+      const fresh = [];
+      const w = weaponFromChar(c);
+      if (w?.kind === "sword") {
+        const form = SWORD_FORMS[Math.min(3, Math.max(1, w.count || 1))];
+        if (c.masteries[form] === void 0) {
+          c.masteries[form] = 0;
+          if (!silent) {
+            g.ui?.toast?.("NEW STYLE", STYLES2[form].name, "#90caf9");
+            g.log(`${w.count > 1 ? `${w.count} swords` : "A sword"} in hand: you fight ${STYLES2[form].name}. Its techniques open as you fight with it.`, "#90caf9");
+          }
+        }
+      }
+      for (const [sid, m] of Object.entries(c.masteries)) {
+        const st = STYLES2[sid];
+        if (!st) continue;
+        for (const t of st.techniques || []) {
+          const L3 = t.learn || {};
+          if (c.techniques.includes(t.id) || L3.special || L3.innate) continue;
+          if ((L3.mastery || 0) <= m) {
+            c.techniques.push(t.id);
+            fresh.push(t.id);
+          }
+        }
+      }
+      if (c.fruit) {
+        for (const id of unlockedFruitTechniques(c.fruit, c.fruitMastery || 0)) if (!c.techniques.includes(id)) {
+          c.techniques.push(id);
+          fresh.push(id);
+        }
+      }
+      if (!fresh.length) return;
+      p.techniques = c.techniques;
+      if (silent) return;
+      for (const id of fresh) {
+        const d = getAbility(id);
+        if (!d) continue;
+        g.ui?.toast?.("NEW TECHNIQUE", d.name, "#90caf9");
+        g.log(`${d.name}: your ${d.fruit ? FRUITS[d.fruit]?.name : STYLES2[d.style]?.name || "training"} has grown enough for it.`, "#90caf9");
+      }
+      g.audio?.sfx?.("unlock");
+      persist(g);
     }
     addWeaponMastery(kind, amt) {
       const c = this.char;
@@ -121020,6 +121284,7 @@ button:disabled { cursor: not-allowed; }
         g.audio?.sfx("unlock");
       }
       this.openForms();
+      this.syncUnlocks();
       if (before < AWAKEN_MASTERY && after2 >= AWAKEN_MASTERY && !c.fruitAwakened) {
         g.ui.toast("MASTERED", `The ${f.name} stirs: a hard fight may awaken it`, f.color);
         g.audio?.sfx("breakthrough");
@@ -121743,6 +122008,13 @@ button:disabled { cursor: not-allowed; }
           "div",
           h("h2", `${c.marineRank} ${c.name}`),
           h("p", "You sail under the flag of the World Government. Marines cannot found a pirate crew \u2014 resign first if the sea calls you another way."),
+          h("p.muted", `Uniform: ${marineUniform(c.marineRank)?.name || "none"}. It changes as you rise through the ranks.`),
+          h("button.btn", { on: { click: () => {
+            c.uniform = c.uniform === false;
+            refreshPlayer(game);
+            persist(game);
+            render2();
+          } } }, c.uniform === false ? "Put the uniform on" : "Take the uniform off"),
           fleetInfo(game)
         )));
       } else if (!c.crewName) {
@@ -123035,6 +123307,8 @@ Trains by: ${TRAINS_BY[k]}` },
         "button" + (c.style === s ? ".on" : ""),
         { on: { click: () => {
           c.style = s;
+          const k = STYLES2[s].weapon || "fists";
+          (c.styleFor || (c.styleFor = {}))[k] = s;
           refreshPlayer(game);
           render2();
         } }, title: STYLES2[s].desc },
@@ -123317,6 +123591,14 @@ Trains by: ${TRAINS_BY[k]}` },
         }, () => `${renderChunks(s) * 32} m`),
         h("p.muted", "How far out the world is drawn before the haze closes in. Further looks grander but costs frame rate. At sea you see half as far again."),
         check("Lower the resolution a little when the game is slow", "autoRes"),
+        h("h3", "Graphics detail"),
+        s.quality === "low" ? h("p.muted", "Fast mode draws no shadows, bloom or outlines; pick High above for these.") : null,
+        choice("Shadows", "shadows", [["high", "High"], ["medium", "Medium"], ["off", "Off"]]),
+        choice("Grass & plants", "foliage", [["far", "Far"], ["near", "Near"], ["off", "Off"]]),
+        check("Bloom (glow round the sun, lamps and fire)", "bloom"),
+        row("Resolution", 0.5, 1, 0.05, () => s.resScale ?? 1, (v) => {
+          s.resScale = v;
+        }, () => `${Math.round((s.resScale ?? 1) * 100)}%`),
         h("h3", "Sound & feel"),
         slider2("Sound effects", "volume"),
         slider2("Music", "music"),
@@ -123599,7 +123881,7 @@ Trains by: ${TRAINS_BY[k]}` },
       } else if (tab === "techniques") {
         for (const id of t.teaches || []) {
           const d = getAbility(id);
-          if (!d || needsHaki(d) && !hakiKnown2(c)) continue;
+          if (!d || !d.hakiType || needsHaki(d) && !hakiKnown2(c)) continue;
           const chk = S6.canLearnTech(id);
           const price = S6.techPrice(id);
           list.appendChild(h(
@@ -123613,7 +123895,7 @@ Trains by: ${TRAINS_BY[k]}` },
             } } }, chk.ok ? "Learn" : chk.why)
           ));
         }
-        if (!list.children.length) list.appendChild(h("p", "No techniques to teach you yet."));
+        if (!list.children.length) list.appendChild(h("p", "Styles are what a teacher gives you: learn one, and its techniques open as your mastery in it grows from fighting."));
       } else if (tab === "training") {
         list.appendChild(h("p.muted", `A master pushes your body further than fighting alone. Training sessions left today: ${S6.trainsLeft()} (rest at an inn to recover). ${t.name} can train you up to the levels shown.`));
         for (const [k, cap3] of Object.entries(t.train || {})) {
@@ -124455,7 +124737,7 @@ ${tip}` }), cd: h("div.cd") };
           E.o2.classList.toggle("low", f < 2.5);
         }
       }
-      const flyOn = (!!p.flight || p.flightGauge < 1) && p.flightGauge !== void 0;
+      const flyOn = (!!p.flight || p.flightGauge < 1) && p.flightGauge !== void 0 && !p.flight?.spec?.fruit;
       if (flyOn !== this.cache.flyOn) {
         E.fly.el.classList.toggle("hidden", !flyOn);
         this.cache.flyOn = flyOn;
@@ -127747,10 +128029,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (t.marineOnly && c.faction !== "marine") return { ok: false, why: "Marines only" };
       for (const [s, m] of Object.entries(t.requires?.mastery || {})) if ((c.masteries[s] || 0) < m) return { ok: false, why: `Needs ${STYLES2[s].name} mastery ${m}` };
       const st = STYLES2[style];
-      if (st.weapon === "sword" && st.swords > 1) {
-        const swords = (c.inventory || []).filter((i) => i.id && /sword|katana|cutlass|saber|kitetsu|yubashiri|shigure|wado|shusui|enma|yoru/.test(i.id)).length;
-        if (swords < st.swords) return { ok: true, warn: `You will need ${st.swords} swords to use it.` };
-      }
+      if (st.weapon === "sword" && ["ittoryu", "nitoryu", "santoryu"].includes(style)) return { ok: false, why: `Carry ${st.swords} sword${st.swords > 1 ? "s" : ""}` };
       return { ok: true };
     }
     stylePrice(tid, style) {
@@ -127768,7 +128047,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       c.masteries[style] = 0;
       g.player.masteries = c.masteries;
       g.ui.toast("NEW STYLE", STYLES2[style].name, "#90caf9");
-      g.log(`You can switch to ${STYLES2[style].name} in the Skills menu (Tab).`, "#90caf9");
+      g.log(`You can switch to ${STYLES2[style].name} in the Skills menu (Tab). Its techniques open as you fight with it.`, "#90caf9");
+      g.progression?.syncUnlocks?.();
       persist(g);
       return true;
     }
@@ -127790,7 +128070,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         if ((c.haki[d.hakiType] || 0) < (learn.level || 0)) return { ok: false, why: `Needs ${d.hakiType} Haki level ${learn.level}` };
         return { ok: true };
       }
-      if (d.style && c.masteries[d.style] === void 0) return { ok: false, why: `Learn ${STYLES2[d.style]?.name} first` };
+      if (d.style) return { ok: false, why: c.masteries[d.style] === void 0 ? `Learn ${STYLES2[d.style]?.name} first` : `Opens at mastery ${learn.mastery || 0}` };
       if ((c.masteries[d.style] || 0) < (learn.mastery || 0)) return { ok: false, why: `Needs ${STYLES2[d.style]?.name} mastery ${learn.mastery}` };
       if (learn.special === "full_moon" && !(this.game.env.fullMoon && this.game.env.isNight)) return { ok: false, why: "Only under a full moon" };
       return { ok: true };
@@ -131940,7 +132220,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     c.hotbar = (c.hotbar || []).map((id) => stale(id) ? null : id);
     const fresh = unlockedFruitTechniques(c.fruit, c.fruitMastery || 0).filter((id) => !c.techniques.includes(id));
     for (const id of fresh) c.techniques.push(id);
-    if (fresh.length) game.log?.(`The whole of your ${FRUITS[c.fruit].name}'s base set is yours: ${fresh.map((id) => getAbility(id)?.name).filter(Boolean).join(", ")} \u2014 on the skill keys while the fruit is out (its key on the hotbar).`, "#ffab91");
+    if (fresh.length) game.log?.(`New moves of your ${FRUITS[c.fruit].name}: ${fresh.map((id) => getAbility(id)?.name).filter(Boolean).join(", ")} \u2014 on the skill keys while the fruit is out (its key on the hotbar).`, "#ffab91");
   }
   function takenFruits(game) {
     const c = game.state?.char;
@@ -132039,6 +132319,33 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       hangFruits(game);
     });
     game.hangFruits = () => hangFruits(game);
+    let callT = 0;
+    game.on("tick", (dt) => {
+      if ((callT -= dt) > 0) return;
+      callT = 0.5;
+      const c = game.state?.char, p = game.player, w = game.world;
+      if (!c || !p || w !== game.surface || p.inCombat) return;
+      let best = null, bd = 230;
+      for (const f of c.world?.fruitSpawns || []) {
+        if (f.taken) continue;
+        const fx = f.tx ?? f.x, fy = f.ty ?? f.y;
+        const d = w.distance(p.x, p.y, fx, fy);
+        if (d < bd) {
+          bd = d;
+          best = { f, fx, fy };
+        }
+      }
+      if (!best || bd < 14) return;
+      const k = 1 - bd / 230;
+      c.flags.fruitCalled = c.flags.fruitCalled || {};
+      if (!c.flags.fruitCalled[best.f.fruit]) {
+        c.flags.fruitCalled[best.f.fruit] = 1;
+        game.hint?.("fruit_call_" + best.f.fruit, "Something on this island is calling to you... follow the sound: it grows louder the closer you get. Look for a swirled fruit that glints.");
+      }
+      const dx = w.dx(p.x, best.fx), dy = best.fy - p.y, l = Math.hypot(dx, dy) || 1;
+      game.audio?.sfx("df_call", { x: p.x + dx / l * 6, y: p.y + dy / l * 6 }, { vol: 0.25 + 0.75 * k * k, near: k });
+      callT = 7 - 5 * k;
+    });
     let nearT = 0;
     game.on("tick", (dt) => {
       if ((nearT -= dt) > 0) return;
@@ -155226,6 +155533,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     game.on("leaveZone", clear3);
     game.on("marineRankChanged", (r4) => {
       if (!r4) clear3();
+      if (game.player?.char) refreshPlayer(game);
     });
     game.on("tick", (dt) => {
       if ((t -= dt) > 0) return;
@@ -161589,6 +161897,20 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
      * from where it hangs (with its glint: render3d/glints.js) — a few high
      * notes a fifth apart, shimmering, quiet enough to be missed.
      */
+    /** A Devil Fruit calling from somewhere on the island: a low, wavering hum that swells and fades, a breath of chimes over it. */
+    df_call: {
+      prio: 2,
+      cd: 1.5,
+      max: 1,
+      kind: "world",
+      send: 0.45,
+      play(v, k) {
+        const n = k.near || 0, f = rnd3(196, 220);
+        [1, 1.498, 2.01].forEach((m, i) => v.tone(0.05 * i, 1.6, { freq: f * m, to: f * m * 1.012, type: "sine", gain: 0.02 - i * 4e-3, attack: 0.5 }));
+        v.tone(0, 1.6, { freq: f * 0.5, type: "triangle", gain: 0.012, attack: 0.6 });
+        if (n > 0.4) [3, 4, 5].forEach((m, i) => v.tone(0.4 + i * 0.16, 0.7, { freq: f * m * 2, type: "sine", gain: 6e-3 + 0.01 * n, attack: 0.02 }));
+      }
+    },
     df_glint: {
       prio: 2,
       cd: 2.5,
@@ -166406,6 +166728,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         view3d.rig.onZoom = (mode) => {
           if (settings.view !== mode) game.cycleView(true);
         };
+        view3d.gfx = view3d.gfx || {};
+        view3d.setGraphics({ shadows: settings.shadows || "high", foliage: settings.foliage || "far", bloom: settings.bloom !== false, res: settings.resScale || 1 });
         if (view3d.quality !== settings.quality) view3d.setQuality(settings.quality || "high");
         view3d.setRenderDistance(renderChunks(settings));
         applyView();
