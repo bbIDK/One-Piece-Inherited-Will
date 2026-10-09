@@ -64,6 +64,13 @@ export class CameraRig {
       // free-mouse third person: hold the right button to turn the camera
       if (this.drag) {
         this.drag.moved += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
+        // (once it's a real drag, the cursor's held where it is — captured for the
+        // drag alone — so you can keep turning without running off the screen;
+        // let go and it's back, just where it was)
+        if (this.drag.moved > 6 && !this.drag.lock && !this.lockFailed && !this.locked) {
+          this.drag.lock = true; this.dragLocking = true;
+          try { const r = canvas.requestPointerLock?.(); r?.catch?.(() => { this.dragLocking = false; }); } catch { this.dragLocking = false; }
+        }
         this.turn(e.movementX || 0, e.movementY || 0);
         return;
       }
@@ -88,7 +95,10 @@ export class CameraRig {
       this.requestLock();
     });
     document.addEventListener('mouseup', (e) => {
-      if (e.button === 2 && this.drag) { this.lastDrag = { ...this.drag, end: performance.now() }; this.drag = null; }
+      if (e.button === 2 && this.drag) {
+        this.lastDrag = { ...this.drag, end: performance.now() }; this.drag = null;
+        if (this.dragLocking) { this.dragLocking = false; if (document.pointerLockElement === canvas) document.exitPointerLock?.(); }
+      }
     });
     // the mouse wheel pulls the third-person camera in and out — in past the
     // closest it goes and you're looking out of your own eyes; out again from
@@ -113,11 +123,17 @@ export class CameraRig {
       if (this.tp.dist <= TP_MIN + 1e-3) this.wheelAcc = 0;
     }, { passive: true });
     document.addEventListener('pointerlockchange', () => {
+      // (a lock held just for a right-button drag is no lock of the view's: see onMove)
+      if (this.dragLocking || (this.dragLockWas && !document.pointerLockElement)) {
+        this.dragLockWas = document.pointerLockElement === this.canvas;
+        if (!this.dragLockWas) this.dragLocking = false;
+        return;
+      }
       this.locked = document.pointerLockElement === this.canvas;
       if (this.locked) this.lockFails = 0;
       this.onLockChange?.(this.locked);
     });
-    document.addEventListener('pointerlockerror', () => this.lockRefused());
+    document.addEventListener('pointerlockerror', () => { if (this.dragLocking) { this.dragLocking = false; return; } this.lockRefused(); });
   }
 
   lockRefused() {

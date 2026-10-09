@@ -59,7 +59,7 @@ export function installMap(game) {
     flip.classList.toggle('hidden', game.world !== game.surface);
     rose.style.visibility = g ? 'hidden' : '';
     title.textContent = g ? 'The Blue Planet' : 'Chart of the Blue Planet';
-    help.textContent = g ? 'Drag to turn the globe · wheel or double-click to come closer · M or Esc to close' : 'Drag to pan · wheel to zoom · M or Esc to close';
+    help.textContent = g ? `${game.creative?.on ? 'Click anywhere to travel there · ' : ''}Drag to turn the globe · wheel or double-click to come closer · M or Esc to close` : `${game.creative?.on ? 'Click anywhere to travel there · ' : ''}Drag to pan · wheel to zoom · M or Esc to close`;
     layer.dataset.key = '';
     if (g) {
       globe.buildBase(game, game.renderer);
@@ -133,6 +133,18 @@ export function installMap(game) {
       game.closeMap();
       game.creative.teleport(((wx % W) + W) % W, Math.max(2, Math.min(H - 2, wy)));
       return;
+    }
+    // (and on the globe: the point of the ball under the click)
+    if (press && e.type === 'pointerup' && globeHere() && game.creative?.on && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6 && game.world === game.surface) {
+      const rect = globe.el.getBoundingClientRect();
+      const at = globe.pick(e.clientX - rect.left, e.clientY - rect.top);
+      if (at) {
+        press = null;
+        ptrs.clear(); drag = null; pinch = null; globe.dragging = false;
+        game.closeMap();
+        game.creative.teleport(((at.x % W) + W) % W, Math.max(2, Math.min(H - 2, at.y)));
+        return;
+      }
     }
     press = null;
     ptrs.delete(e.pointerId);

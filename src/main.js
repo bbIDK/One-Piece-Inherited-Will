@@ -77,6 +77,7 @@ import { installContainers } from './game/containers.js';
 import { installCreative } from './game/creative.js';
 import { installZones } from './game/zones.js';
 import { installCinematics, installBossIntros } from './game/cinematic.js';
+import { installCursor } from './ui/cursor.js';
 import { Crew } from './game/crew.js';
 import { openCrew } from './ui/crewPanel.js';
 import { openQuests } from './ui/questsPanel.js';
@@ -272,6 +273,7 @@ async function start() {
   installCreative(game);
   installZones(game);
   installCinematics(game);
+  installCursor();
   installBossIntros(game);
   new Crew(game);
   installFactions(game);

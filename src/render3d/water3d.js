@@ -483,14 +483,22 @@ const FRAG = /* glsl */`
     col += uSunCol * (pow(nh, 320.0) * 3.2 + pow(nh, 42.0) * 0.12) * sunUp;
     // glints: a facet turned just so throws the sun back, a small hard flash
     // (a few small ones on each facet — not the whole facet lit up)
-    if (water) col += uSunCol * smoothstep(0.988, 0.996, nh) * step(0.62, hash(floor(p * 4.0))) * 1.6 * sunUp * smoothstep(2.0, 12.0, dist) * (1.0 - smoothstep(40.0, 280.0, dist) * 0.7);
+    // (round flecks, not square cells; gone before they're smaller than a pixel —
+    // far off they'd alias into rows of dashes — and dimmed with the sun low, in the
+    // half-light, when its path lies flat along the water)
+    if (water) {
+      vec2 gc = p * 4.0, gf = fract(gc) - 0.5;
+      float px = length(fwidth(gc));
+      float fleck = (1.0 - smoothstep(0.18, 0.34, length(gf))) * (1.0 - smoothstep(0.25, 0.7, px));
+      col += uSunCol * smoothstep(0.988, 0.996, nh) * step(0.62, hash(floor(gc))) * fleck * 1.6 * sunUp * smoothstep(0.06, 0.25, uSunDir.y) * smoothstep(2.0, 12.0, dist) * (1.0 - smoothstep(30.0, 120.0, dist));
+    }
     if (uDetail > 0.5) {
       vec2 cell = floor(p * 2.6);
       float g = hash(cell);
       float tw = pow(max(0.0, sin(t * 3.1 + g * 40.0)), 12.0);
       vec2 fc = fract(p * 2.6) - 0.5;
       float dotS = 1.0 - smoothstep(0.04, 0.16, length(fc));
-      col += uSunCol * step(0.9, g) * tw * dotS * pow(nh, 14.0) * 2.5 * sunUp * (1.0 - smoothstep(18.0, 70.0, dist));
+      col += uSunCol * step(0.9, g) * tw * dotS * pow(nh, 14.0) * 2.5 * sunUp * smoothstep(0.06, 0.25, uSunDir.y) * (1.0 - smoothstep(0.25, 0.7, length(fwidth(p * 2.6)))) * (1.0 - smoothstep(18.0, 70.0, dist));
     }
     // surf: lines rolling in toward the beach, foam at the waterline, whitecaps
     float foam = 0.0;
@@ -507,7 +515,9 @@ const FRAG = /* glsl */`
       float capsFar = smoothstep(0.72, 0.84, sFbm(p * 0.09 + vec2(t * 0.05, 0.0)) * 0.6 + sFbm(p * 0.023 - t * 0.01) * 0.4) * uStorm * 0.8;
       caps = mix(capsFar, caps, crestFade);
       // (broken up into streaks and flecks, not smooth white ovals)
-      caps *= smoothstep(0.4 + 0.06 * (1.0 - uStorm), 0.62, noise(p * vec2(0.9, 2.3) + vec2(t * 0.4, 0.0)) * 0.65 + noise(p * 3.1 - t * 0.6) * 0.35);
+      // (…except where the flecks are finer than a pixel: there an even, fainter cap, not aliased dashes)
+      float capAA = 1.0 - smoothstep(0.3, 0.9, length(fwidth(p * 3.1)));
+      caps *= mix(0.45, smoothstep(0.4 + 0.06 * (1.0 - uStorm), 0.62, noise(p * vec2(0.9, 2.3) + vec2(t * 0.4, 0.0)) * 0.65 + noise(p * 3.1 - t * 0.6) * 0.35), capAA);
       foam = clamp(max(edge, line * band * 0.9) + caps, 0.0, 1.0);
       // where the ships meet it: laced white, in paler churned water
       if (dist < 220.0) {

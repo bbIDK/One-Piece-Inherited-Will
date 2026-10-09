@@ -403,7 +403,7 @@ export function lineageEndScreen(ui, { char, cause, will, legacy, onNext }) {
     clear(list);
     if (!heirloomOptions.length) list.appendChild(h('p.muted', 'You owned nothing worth passing down. Your successor starts with only your will.'));
     for (const o of heirloomOptions) {
-      list.appendChild(h('div.row-item' + (chosen === o.id ? '.picked' : ''), { style: { cursor: 'pointer' }, on: { click: () => { chosen = o.id; renderList(); } } },
+      list.appendChild(h('div.row-item' + (chosen === o.id ? '.picked' : ''), { style: { cursor: 'var(--cur-ptr)' }, on: { click: () => { chosen = o.id; renderList(); } } },
         itemImg(o.id, 30, '.ico'), h('div.grow', h('b', o.d.name), h('div.sub', o.d.desc || o.d.grade || o.d.type))));
     }
   };

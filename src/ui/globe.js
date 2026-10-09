@@ -396,6 +396,20 @@ export class GlobeView {
     return mesh;
   }
 
+  /** The chart point under css pixel (sx, sy) on the globe: { x, y }, or null off the ball. */
+  pick(sx, sy) {
+    const cw = this.el.clientWidth || 1280, ch = this.el.clientHeight || 720;
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(sx / cw * 2 - 1, -(sy / ch * 2 - 1)), this.camera);
+    const hit = ray.ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(), 1), new THREE.Vector3());
+    if (!hit) return null;
+    const p = hit.applyMatrix4(new THREE.Matrix4().copy(this.spin.matrixWorld).invert());
+    const theta = Math.acos(Math.max(-1, Math.min(1, p.y))), phi = Math.atan2(p.z, -p.x);
+    const u = ((phi / (Math.PI * 2)) % 1 + 1) % 1, y = theta / Math.PI * H;
+    const x = this.anchors ? this.anchors.inv(u * W, y) : u * W;
+    return { x, y };
+  }
+
   /** Chart point → css pixels as the globe stands just now; null round the far side of it. */
   project(x, y) {
     const v = uvToSphere(globeU(x, y, this.anchors), y / H, 1, this._v);
