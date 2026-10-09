@@ -5073,8 +5073,8 @@
   function derive(a, mods = {}) {
     const hpMul = mods.hpMul || 1;
     return {
-      maxHp: Math.round((90 + a.vit * 9 + a.end * 2) * hpMul),
-      maxHaki: Math.round(40 + a.wil * 4),
+      maxHp: Math.round((90 + a.vit * 9 + a.end * 2) * hpMul * (mods.heroHp || 1)),
+      maxHaki: Math.round((40 + a.wil * 4) * (mods.heroHaki || 1)),
       speed: 4.3 * (1 + a.agi * 45e-4) * (mods.stride || 1) * (mods.speedMul || 1),
       dmg: 1 + a.str * 0.028,
       def: clamp(a.end * 35e-4 + (mods.armor || 0), 0, 0.55),
@@ -6985,15 +6985,15 @@
         const R5 = f.reach || 0.34;
         const out = (x) => 1 - (1 - x) ** 2;
         const n = Math.floor(ph), sc = f.scatter || 0;
-        const hash17 = (i, j) => {
+        const hash18 = (i, j) => {
           const v = Math.sin(i * 127.1 + j * 311.7) * 43758.5;
           return v - Math.floor(v) - 0.5;
         };
         const nF = n - n % 2, nB = n - (n + 1) % 2;
-        P6.hF = [0.12 + R5 * out(tri2) * (1 + 0.15 * sc * hash17(nF, 3)), -0.04 + 0.06 * (1 - tri2) + 0.32 * sc * hash17(nF, 1) * tri2];
-        P6.hB = [0.12 + R5 * out(1 - tri2) * (1 + 0.15 * sc * hash17(nB, 4)), 0.02 + 0.05 * tri2 + 0.32 * sc * hash17(nB, 2) * (1 - tri2)];
-        P6.zF = (P6.zF || 0) + 0.4 * sc * hash17(nF, 5) * tri2;
-        P6.zB = (P6.zB || 0) + 0.4 * sc * hash17(nB, 6) * (1 - tri2);
+        P6.hF = [0.12 + R5 * out(tri2) * (1 + 0.15 * sc * hash18(nF, 3)), -0.04 + 0.06 * (1 - tri2) + 0.32 * sc * hash18(nF, 1) * tri2];
+        P6.hB = [0.12 + R5 * out(1 - tri2) * (1 + 0.15 * sc * hash18(nB, 4)), 0.02 + 0.05 * tri2 + 0.32 * sc * hash18(nB, 2) * (1 - tri2)];
+        P6.zF = (P6.zF || 0) + 0.4 * sc * hash18(nF, 5) * tri2;
+        P6.zB = (P6.zB || 0) + 0.4 * sc * hash18(nB, 6) * (1 - tri2);
         P6.tw = (P6.tw || 0) + 0.3 * (tri2 - 0.5);
         P6.hp = (P6.hp || 0) + 0.1 * (tri2 - 0.5);
         P6.smF = 0.08 * tri2;
@@ -13834,7 +13834,7 @@
     const tq = narrow ? Math.max(0.24, 2.9 / L3) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 1 - Math.max(0.13, 5.4 / L3) : 1, tp = poop ? 0.13 : 0;
     const yq = deckY2 + hq, yf = deckY2 + hf, yp = yq + hp;
     const masts = Math.max(1, Math.min(4, def.masts || 3));
-    const tHelm = poop ? tp + 0.02 : narrow ? 0.08 : 0.1;
+    const tHelm = poop ? tp - 2.2 / L3 : narrow ? 0.08 : 0.1;
     const d = {
       L: L3,
       B: B5,
@@ -13859,8 +13859,8 @@
       yq,
       yf,
       yp,
-      helmFloor: yq,
-      sheer: 0.4,
+      helmFloor: poop ? yp : yq,
+      sheer: Math.min(1.3, 0.4 + L3 * 0.016),
       walk: 0.86
     };
     d.bowY = fore ? yf : deckY2 + 0.9;
@@ -13868,7 +13868,7 @@
     d.mastR = Math.min(0.6, 0.05 + L3 * 0.011);
     d.wheelU = d.helmX + 0.9;
     const bu = d.wheelU + 1.45;
-    d.binnacleU = !narrow && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
+    d.binnacleU = !narrow && !poop && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
     const W4 = narrow ? 1.05 : Math.min(1.6, 0.75 + B5 * 0.055), sides2 = narrow ? [1] : [-1, 1];
     const run = (rise2) => rise2 * (narrow ? 1.1 : mid ? 1.15 : 1.3);
     const edge = (t) => hbAt(t, B5) * d.walk - 0.22;
@@ -14009,7 +14009,7 @@
     for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: "main" });
     for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: "hold" });
     if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: "main" });
-    d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: "quarter" });
+    d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: d.poop ? "poop" : "quarter" });
     if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: "quarter" });
     if (fore) d.solids.push({ u: (tf2 + 0.03 - 0.5) * L3, v: 0, r: 0.55, lvl: "fore" });
     if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: "main" });
@@ -14490,7 +14490,7 @@
     if (d.open) return null;
     if (d._wheel) return d._wheel;
     let w;
-    if (d.big) w = { u: d.wheelU, floor: d.yq, hub: d.yq + 0.92, R: 0.56, grip: 0.66 };
+    if (d.big) w = { u: d.wheelU, floor: d.helmFloor, hub: d.helmFloor + 0.92, R: 0.56, grip: 0.66 };
     else {
       const floor2 = floorAt(d, (d.wheelU + 0.1 + d.L / 2) / d.L);
       w = { u: d.wheelU, floor: floor2, hub: floor2 + 0.92, R: 0.4, grip: 0.47 };
@@ -14717,6 +14717,17 @@
     if (Math.abs(t - tc) * d.L > pad2) return null;
     if (Math.abs(v) > hbAt(tc, d.B) + pad2) return null;
     return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
+  }
+  var MAST_KS = (n) => n >= 4 ? [0.92, 1, 0.86, 0.7] : n === 3 ? [0.92, 1, 0.8] : n === 2 ? [1, 0.84] : [1];
+  function mastNest(d) {
+    if (!d.big || !d.mastU?.length) return null;
+    if (d._nest !== void 0) return d._nest;
+    const n = d.mastU.length, m = n >= 3 ? 1 : 0, mu = d.mastU[m];
+    const k = MAST_KS(n)[m], base2 = floorAt(d, (mu + d.L / 2) / d.L);
+    const H5 = d.mastH * k, h2 = base2 + (H5 - base2) * 0.76, mr = d.mastR * Math.sqrt(k);
+    const out = { m, u: mu + mr * 1.1, y: h2 + 0.13, r: 0.75, mu, base: base2, mr };
+    Object.defineProperty(d, "_nest", { value: out, enumerable: false });
+    return out;
   }
   function deckToWorld(ship, t, v) {
     const d = shipDims(ship.def);
@@ -22816,8 +22827,8 @@
       const off = B5 * 0.5 + hh + 1.4;
       const beside = (along2, h2) => [1, -1].some((sg) => lie(w.wx(ex + dx * along2 - dy * sg * off), ey + dy * along2 + dx * sg * off, h2));
       for (let along2 = -m0 - 2.5; along2 >= 0.5 - m12; along2 -= 0.5) if (beside(along2, hd)) return true;
-      for (let along2 = m12 - 2.5; along2 >= m0 + 0.5; along2 -= 0.5) if (beside(along2, hd + Math.PI)) return true;
       for (let along2 = -m0 - 2; along2 <= -m0 - 0.5; along2 += 0.5) if (beside(along2, hd)) return true;
+      for (let along2 = m12 - 2.5; along2 >= m0 + 0.5; along2 -= 0.5) if (beside(along2, hd + Math.PI)) return true;
       for (let along2 = m12 - 2; along2 <= m12 - 0.5; along2 += 0.5) if (beside(along2, hd + Math.PI)) return true;
       const mid = (m0 + m12) / 2, face = hh + 0.5;
       const out = 0.5 + 0.9 + B5 * 0.5;
@@ -23805,7 +23816,7 @@
       anim: "cast",
       windup: 0.2,
       recover: 0.1,
-      cd: 30,
+      cd: 12,
       cost: { haki: 30 },
       desc: "See a few seconds into the future: you evade almost everything for a short time.",
       learn: { haki: "observation", level: 65 },
@@ -23819,9 +23830,9 @@
       anim: "cast",
       windup: 0.45,
       recover: 0.3,
-      cd: 25,
-      cost: { haki: 40 },
-      desc: "Release your will. Weak foes faint; strong ones flinch.",
+      cd: 1,
+      cost: { haki: 35 },
+      desc: "Release your will. Weak foes faint; strong ones flinch. No cooldown: as often as your Haki lasts.",
       learn: { haki: "conqueror", level: 1 },
       steps: [{ conqueror: { range: 9, damage: 10 } }]
     },
@@ -23831,13 +23842,14 @@
       icon: "\u26A1",
       hakiType: "conqueror",
       anim: "cast",
-      windup: 0.5,
-      recover: 0.2,
-      cd: 60,
-      cost: { haki: 50 },
-      desc: "Coat your attacks in Conqueror's Haki. Black lightning crackles with every blow.",
-      learn: { haki: "conqueror", level: 50 },
-      steps: [{ fx: { impact: 0.1, ring: 3, color: "#000000" } }, { buff: { id: "infusion", name: "Conqueror's Infusion", dur: 15, mods: { damage: 1.6 }, conquerorInfused: true, aura: "rgba(0,0,0,0.85)", drain: { haki: 2 } } }]
+      windup: 0.25,
+      recover: 0.1,
+      cd: 0.5,
+      cost: { haki: 10 },
+      toggle: "infusion",
+      desc: "Coat your fists and blades in Conqueror's Haki: black lightning crackles with every blow, and your hits land far harder. Stays on, burning Haki, until you let it go (press again) or your Haki runs dry.",
+      learn: { haki: "conqueror", level: 10 },
+      steps: [{ fx: { impact: 0.1, ring: 3, color: "#000000" } }, { buff: { id: "infusion", name: "Conqueror's Infusion", dur: 1e6, mods: { damage: 1.6 }, conquerorInfused: true, aura: "rgba(0,0,0,0.85)", drain: { haki: 3 } } }]
     }
   ];
   registerAbilities(HAKI_ABILITIES.map((a) => ({ ...a, source: "haki:" + a.hakiType })), "haki");
@@ -23999,7 +24011,7 @@
       name: "Silvers Rayleigh",
       where: "Shakky's Rip-off Bar, Sabaody",
       styles: {},
-      teaches: ["haki_emission", "haki_futuresight", "haki_infusion"],
+      teaches: ["haki_futuresight", "haki_infusion"],
       train: { wil: 70, str: 60 },
       haki: { armament: 65, observation: 65, conqueror: 60 },
       spar: { level: 60, style: "ittoryu", weapon: "sword", name: "Silvers Rayleigh", haki: true },
@@ -24039,7 +24051,7 @@
       name: "Hyogoro the Flower",
       where: "Udon, Wano Country",
       styles: {},
-      teaches: ["haki_ryuo"],
+      teaches: [],
       train: { str: 70, wil: 70 },
       haki: { armament: 80 },
       spar: { level: 72, style: "brawler", name: "Udon Prisoner", haki: true },
@@ -24154,7 +24166,15 @@
       k.form = DEFAULT_KEYS.form.slice();
     }
     const fill2 = (list, def, n) => Array.from({ length: n }, (_, i) => Array.isArray(list) && list[i] !== void 0 ? list[i] || "" : def[i] || "");
-    return { skills: fill2(k.skills, DEFAULT_KEYS.skills, SKILL_SLOTS), haki: fill2(k.haki, DEFAULT_KEYS.haki, HAKI_SLOTS), form: fill2(k.form, DEFAULT_KEYS.form, 1) };
+    const out = { skills: fill2(k.skills, DEFAULT_KEYS.skills, SKILL_SLOTS), haki: fill2(k.haki, DEFAULT_KEYS.haki, HAKI_SLOTS), form: fill2(k.form, DEFAULT_KEYS.form, 1) };
+    const used = new Set([...out.skills, ...out.haki, ...out.form].filter(Boolean));
+    out.skills = out.skills.map((x, i) => {
+      const d = DEFAULT_KEYS.skills[i];
+      if (x || !d || used.has(d) || gameUse(d) || settings?.keysOff?.includes(i)) return x;
+      used.add(d);
+      return d;
+    });
+    return out;
   }
   function rebind(settings, group6, i, key2) {
     const K = keysOf(settings);
@@ -24176,11 +24196,13 @@
       }
     }
     K[group6][i] = key2;
+    if (group6 === "skills") settings.keysOff = key2 ? (settings.keysOff || []).filter((j) => j !== i) : [.../* @__PURE__ */ new Set([...settings.keysOff || [], i])];
     settings.keys = { skills: K.skills.slice(), haki: K.haki.slice(), form: K.form.slice() };
     return { ok: true, swapped };
   }
   function resetKeys(settings) {
     delete settings.keys;
+    delete settings.keysOff;
   }
   var MOUSE = { Mouse1: 0, Mouse3: 1, Mouse2: 2, Mouse4: 3, Mouse5: 4 };
   function keyFromEvent(e) {
@@ -24383,7 +24405,7 @@
       return `${hakiName(d.learn?.haki || d.hakiType)} ${d.learn?.level || 0}${who.length ? " \xB7 " + who[0] : ""}`;
     };
     for (const d of HAKI_ABILITIES) {
-      if (d.hakiType !== active5 || d.id === "haki_conqueror") continue;
+      if (d.hakiType !== active5 || d.hakiType === "armament" || d.id === "haki_conqueror" || d.id === "haki_infusion") continue;
       const have = known.has(d.id);
       rows.push({ id: d.id, def: getAbility(d.id) || d, locked: !have, why: have ? "" : lockedWhy(d) });
     }
@@ -24592,6 +24614,10 @@
       let speedMul = mods.speedMul;
       for (const b of this.buffs) if (b.mods?.speedMul) speedMul *= b.mods.speedMul;
       mods.speedMul = speedMul;
+      if (this.isPlayer) {
+        mods.heroHp = 1.5;
+        mods.heroHaki = 1.6;
+      }
       const old = this.d;
       this.d = derive(this.attrs, mods);
       if (old && this.hp !== void 0) {
@@ -24859,6 +24885,14 @@
         }
         this.cooldowns[def.id] = 0.6;
         return toggleFlight(this, game);
+      }
+      if (def.toggle) {
+        const on = this.buffs.find((b) => b.id === def.toggle);
+        if (on) {
+          on.t = 0;
+          if (this.isPlayer) game.audio?.sfx("ui_close", this);
+          return true;
+        }
       }
       if (!this.canAct()) return false;
       if (def.requiresHaki && !this.hakiLevel(def.requiresHaki)) {
@@ -25853,6 +25887,7 @@
         rideStep(this, dt, game);
         return;
       }
+      if (this.climb.mast) return;
       const c = this.climb, w = game.world, to = c.to;
       if (to.ship && (to.ship.sunk || to.ship.alive === false)) {
         this.endClimb(game, true);
@@ -28393,6 +28428,17 @@
     water_flask: { name: "Water Flask", icon: "", type: "food", heal: 0, water: 0.55, food: 0, price: 12, cool: 0.6, desc: "Fresh water in a stoppered flask. Drink it in the heat." },
     milk: { name: "Milk", icon: "", type: "food", heal: 15, water: 0.4, food: 0.08, price: 30, desc: "A bottle of fresh milk. Good for the bones." },
     hot_tea: { name: "Hot Tea", icon: "", type: "food", heal: 10, water: 0.35, food: 0.02, warm: 1.2, price: 25, desc: "Steaming hot: it warms you through in the cold." },
+    orange_juice: { name: "Tangerine Juice", icon: "", type: "food", heal: 0, water: 0.5, food: 0.04, cool: 0.4, price: 35, desc: "Squeezed from Cocoyasi tangerines. Sweet, cold and sharp." },
+    lemonade: { name: "Lemonade", icon: "", type: "food", heal: 0, water: 0.55, cool: 0.7, price: 30, desc: "Cloudy, sour and ice-cold: the thing for a hot afternoon." },
+    soda: { name: "Bottled Cola", icon: "", type: "food", heal: 0, water: 0.45, cool: 0.4, price: 40, buff: { id: "fizz", name: "Fizzing", dur: 40, mods: { speedMul: 1.04 } }, desc: "Fizzy, sugary and SUPER! A shipwright's favourite." },
+    coconut_milk: { name: "Coconut Milk", icon: "", type: "food", heal: 0, water: 0.45, food: 0.06, cool: 0.3, price: 28, desc: "Sweet and creamy, straight from the shell." },
+    cactus_juice: { name: "Cactus Juice", icon: "", type: "food", heal: 0, water: 0.7, cool: 0.9, price: 45, desc: "Pressed from desert cactus in Alabasta. Bitter, but it keeps you alive in the sands." },
+    coffee: { name: "Coffee", icon: "", type: "food", heal: 0, water: 0.25, warm: 0.6, price: 30, buff: { id: "alert", name: "Alert", dur: 90, mods: { atkSpeed: 1.04 } }, desc: "Black and strong: you're wide awake." },
+    cocoa: { name: "Hot Cocoa", icon: "", type: "food", heal: 0, water: 0.3, food: 0.06, warm: 1.6, price: 35, desc: "Thick, sweet and steaming: the best thing in the snow." },
+    green_tea: { name: "Green Tea", icon: "", type: "food", heal: 0, water: 0.35, warm: 0.8, price: 22, desc: "Wano-style: grassy, a little bitter, very calming." },
+    cider: { name: "Apple Cider", icon: "", type: "food", heal: 0, water: 0.35, warm: 0.5, price: 50, buff: { id: "tipsy", name: "Tipsy", dur: 40, mods: { damage: 1.04 } }, desc: "Mulled with spice in the cold islands." },
+    grog: { name: "Grog", icon: "", type: "food", heal: 0, water: 0.35, price: 25, buff: { id: "tipsy", name: "Tipsy", dur: 45, mods: { damage: 1.05, defMul: 1.05 } }, desc: "Watered rum, a sailor's ration." },
+    rum: { name: "Rum", icon: "", type: "food", heal: 0, water: 0.15, price: 140, buff: { id: "tipsy", name: "Tipsy", dur: 70, mods: { damage: 1.08, defMul: 1.1 } }, desc: "Dark rum. Binks' Sake was written for this." },
     sake: { name: "Sake", icon: "\u{1F376}", type: "food", heal: 10, water: 0.15, price: 120, buff: { id: "tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: "Dutch courage." },
     cola: { name: "Cola Barrel", icon: "\u{1F964}", type: "material", price: 500, desc: "Fuel for Coup de Burst and for certain cyborgs." },
     bandage: { name: "Bandages", icon: "\u{1FA79}", type: "medicine", heal: 55, price: 70, apply: "wrap", useTime: 3.5, desc: "Wrap them round the wound: it takes a few seconds, and a blow stops you. Stops the bleeding.", cure: ["bleed"] },
@@ -42303,8 +42349,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       state.ambient[0] = r4;
       state.ambient[1] = g;
       state.ambient[2] = b;
-      const hash17 = state.hash;
-      if (hash17.directionalLength !== directionalLength || hash17.pointLength !== pointLength || hash17.spotLength !== spotLength || hash17.rectAreaLength !== rectAreaLength || hash17.hemiLength !== hemiLength || hash17.numDirectionalShadows !== numDirectionalShadows || hash17.numPointShadows !== numPointShadows || hash17.numSpotShadows !== numSpotShadows || hash17.numSpotMaps !== numSpotMaps || hash17.numLightProbes !== numLightProbes) {
+      const hash18 = state.hash;
+      if (hash18.directionalLength !== directionalLength || hash18.pointLength !== pointLength || hash18.spotLength !== spotLength || hash18.rectAreaLength !== rectAreaLength || hash18.hemiLength !== hemiLength || hash18.numDirectionalShadows !== numDirectionalShadows || hash18.numPointShadows !== numPointShadows || hash18.numSpotShadows !== numSpotShadows || hash18.numSpotMaps !== numSpotMaps || hash18.numLightProbes !== numLightProbes) {
         state.directional.length = directionalLength;
         state.spot.length = spotLength;
         state.rectArea.length = rectAreaLength;
@@ -42322,16 +42368,16 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         state.spotLightMap.length = numSpotMaps;
         state.numSpotLightShadowsWithMaps = numSpotShadowsWithMaps;
         state.numLightProbes = numLightProbes;
-        hash17.directionalLength = directionalLength;
-        hash17.pointLength = pointLength;
-        hash17.spotLength = spotLength;
-        hash17.rectAreaLength = rectAreaLength;
-        hash17.hemiLength = hemiLength;
-        hash17.numDirectionalShadows = numDirectionalShadows;
-        hash17.numPointShadows = numPointShadows;
-        hash17.numSpotShadows = numSpotShadows;
-        hash17.numSpotMaps = numSpotMaps;
-        hash17.numLightProbes = numLightProbes;
+        hash18.directionalLength = directionalLength;
+        hash18.pointLength = pointLength;
+        hash18.spotLength = spotLength;
+        hash18.rectAreaLength = rectAreaLength;
+        hash18.hemiLength = hemiLength;
+        hash18.numDirectionalShadows = numDirectionalShadows;
+        hash18.numPointShadows = numPointShadows;
+        hash18.numSpotShadows = numSpotShadows;
+        hash18.numSpotMaps = numSpotMaps;
+        hash18.numLightProbes = numLightProbes;
         state.version = nextVersion++;
       }
     }
@@ -51420,7 +51466,7 @@ void main() {
             const vecHash1 = hashes2[jNext];
             const v0 = _triangle[vertKeys[j]];
             const v1 = _triangle[vertKeys[jNext]];
-            const hash17 = `${vecHash0}_${vecHash1}`;
+            const hash18 = `${vecHash0}_${vecHash1}`;
             const reverseHash = `${vecHash1}_${vecHash0}`;
             if (reverseHash in edgeData && edgeData[reverseHash]) {
               if (_normal.dot(edgeData[reverseHash].normal) <= thresholdDot) {
@@ -51428,8 +51474,8 @@ void main() {
                 vertices.push(v1.x, v1.y, v1.z);
               }
               edgeData[reverseHash] = null;
-            } else if (!(hash17 in edgeData)) {
-              edgeData[hash17] = {
+            } else if (!(hash18 in edgeData)) {
+              edgeData[hash18] = {
                 index0: indexArr[j],
                 index1: indexArr[jNext],
                 normal: _normal.clone()
@@ -62808,7 +62854,7 @@ void main() {
       if (parity) {
         const px2 = alongEdgeX ? i : ex - dx * 0.1, pz2 = alongEdgeX ? ez - dz * 0.1 : j;
         const f = floor2(px2 + dx * 0.3, pz2 + dz * 0.3);
-        const rail = side && !info.head;
+        const rail = side;
         const up = rail ? 0.95 : -0.04;
         k.add(cyl(0.15, 0.18, top + up - f, 8), { at: [px2, f, pz2], color: PILE, outline: 0.015 });
         if (rail) k.add(cyl(0.17, 0.17, 0.06, 8), { at: [px2, top + up, pz2], color: "#4a3223" });
@@ -62826,6 +62872,12 @@ void main() {
           }
           if (side && !info.head) {
             const r4 = Math.hypot(nx - px2, nz - pz2);
+            const ahead = alongEdgeX ? pier(i + 2, j) && water3(i + 2 + dx, j + dz) : pier(i, j + 2) && water3(i + dx, j + 2 + dz);
+            if (!ahead) {
+              const fn = floor2(nx + dx * 0.3, nz + dz * 0.3);
+              k.add(cyl(0.15, 0.18, top + 0.95 - fn, 8), { at: [nx, fn, nz], color: PILE, outline: 0.015 });
+              k.add(cyl(0.17, 0.17, 0.06, 8), { at: [nx, top + 0.95, nz], color: "#4a3223" });
+            }
             k.add(cyl(0.025, 0.025, r4, 4), { at: [px2, top + 0.82, pz2], rot: alongEdgeX ? [0, 0, -Math.PI / 2] : [Math.PI / 2, 0, 0], color: ROPE });
             k.add(cyl(0.02, 0.02, r4, 4), { at: [px2, top + 0.45, pz2], rot: alongEdgeX ? [0, 0, -Math.PI / 2] : [Math.PI / 2, 0, 0], color: ROPE });
           }
@@ -64394,9 +64446,153 @@ void main() {
     }
   };
 
+  // src/render3d/clouds3d.js
+  var CELL2 = 240;
+  var REACH = 5;
+  var PUFFS = 9;
+  var NEAR = 28;
+  var FAR0 = 760;
+  var FAR1 = 1150;
+  var hash5 = (a, b, k) => {
+    let h2 = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(k | 0, 2246822519);
+    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
+    return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
+  };
+  var VERT2 = (
+    /* glsl */
+    `
+  uniform float uNear, uFar0, uFar1;
+  varying vec3 vN;
+  varying float vFade;
+  varying float vLow;
+  void main() {
+    vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+    // (how far up the billow this point is: the undersides shade darker)
+    vLow = clamp(position.y * 0.5 + 0.5, 0.0, 1.0);
+    vN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal);
+    float d = length(wp.xz - cameraPosition.xz);
+    float r = length(wp.xyz - cameraPosition);
+    vFade = smoothstep(uNear * 0.35, uNear, r) * (1.0 - smoothstep(uFar0, uFar1, d));
+    ${curveStmt("wp")}
+    gl_Position = projectionMatrix * viewMatrix * wp;
+  }
+`
+  );
+  var FRAG2 = (
+    /* glsl */
+    `
+  uniform vec3 uLit, uMid, uShade, uSun;
+  uniform float uOpacity;
+  varying vec3 vN;
+  varying float vFade;
+  varying float vLow;
+  void main() {
+    float l = dot(normalize(vN), uSun) * 0.5 + 0.5;
+    l = mix(l, l * 0.55, 1.0 - smoothstep(0.0, 0.45, vLow));
+    // three flat tones, anime style: sunlit, mid, shade
+    vec3 c = l > 0.62 ? uLit : l > 0.38 ? uMid : uShade;
+    float a = vFade * uOpacity;
+    if (a < 0.01) discard;
+    gl_FragColor = vec4(c, a);
+  }
+`
+  );
+  var Clouds = class {
+    constructor(scene, sky) {
+      this.sky = sky;
+      const geo2 = new IcosahedronGeometry(1, 2);
+      const u = sky.uniforms;
+      this.uniforms = {
+        uLit: u.uCLit,
+        uMid: u.uCMid,
+        uShade: u.uCShade,
+        uSun: { value: new Vector3(0, 1, 0) },
+        uOpacity: { value: 1 },
+        uNear: { value: NEAR },
+        uFar0: { value: FAR0 },
+        uFar1: { value: FAR1 }
+      };
+      this.material = new ShaderMaterial({ uniforms: this.uniforms, vertexShader: VERT2, fragmentShader: FRAG2, transparent: true, depthWrite: true });
+      const n = (REACH * 2 + 1) ** 2 * PUFFS;
+      this.mesh = new InstancedMesh(geo2, this.material, n);
+      this.mesh.frustumCulled = false;
+      this.mesh.count = 0;
+      this.mesh.renderOrder = -1;
+      this.mesh.castShadow = false;
+      this.mesh.receiveShadow = false;
+      scene.add(this.mesh);
+      this.drift = { x: 0, y: 0 };
+      this.key = "";
+      this.lastT = null;
+      this.on = true;
+    }
+    /** Lay out the clouds round cell (cx, cy) of the drifting field: as many as `cover` (0..1) brings. */
+    build(cx, cy, cover3, storm, low, rain) {
+      const m = new Matrix4(), q2 = new Quaternion(), s = new Vector3(), p = new Vector3();
+      const e = new Euler();
+      let k = 0;
+      const R5 = low ? REACH - 1 : REACH;
+      const share = 0.12 + cover3 * 0.75;
+      for (let j = -R5; j <= R5; j++) for (let i = -R5; i <= R5; i++) {
+        const gx = cx + i, gy = cy + j;
+        const over = rain > 0.1 && Math.abs(i) <= 1 && Math.abs(j) <= 1;
+        if (!over && hash5(gx, gy, 1) > share) continue;
+        const size = 0.6 + hash5(gx, gy, 2) * 0.8 + storm * 0.5 + (over ? 0.6 + rain * 0.6 : 0);
+        const ox = (gx + 0.2 + hash5(gx, gy, 3) * 0.6) * CELL2, oy = (gy + 0.2 + hash5(gx, gy, 4) * 0.6) * CELL2;
+        const base2 = 150 + hash5(gx, gy, 5) * 70 - storm * 50 - (over ? 30 + rain * 25 : 0);
+        const n = 4 + Math.floor(hash5(gx, gy, 6) * (PUFFS - 4 + 1));
+        const len = 40 * size, wid = 22 * size;
+        const ang = hash5(gx, gy, 7) * Math.PI;
+        for (let b = 0; b < n && k < this.mesh.instanceMatrix.count; b++) {
+          const t = n > 1 ? b / (n - 1) - 0.5 : 0;
+          const mid = 1 - Math.abs(t) * 1.4;
+          const r4 = (14 + hash5(gx * 7 + b, gy, 8) * 10) * size * (0.7 + mid * 0.5);
+          const along2 = t * len * 2, across = (hash5(gx, gy * 3 + b, 9) - 0.5) * wid;
+          p.set(ox + Math.cos(ang) * along2 - Math.sin(ang) * across, base2 + r4 * 0.45 + mid * 6 * size, oy + Math.sin(ang) * along2 + Math.cos(ang) * across);
+          s.set(r4, r4 * 0.72, r4 * (0.85 + hash5(b, gx, 10) * 0.3));
+          q2.setFromEuler(e.set(0, hash5(gx, b, 11) * Math.PI * 2, 0));
+          m.compose(p, q2, s);
+          this.mesh.setMatrixAt(k++, m);
+        }
+      }
+      this.mesh.count = k;
+      this.mesh.instanceMatrix.needsUpdate = true;
+    }
+    /**
+     * Each frame: drift on the wind, follow the view, show as many as the
+     * weather has. (ox, oy): where the view is in the world; w: the world.
+     */
+    update(env2, w, ox, oy, low) {
+      const zone = w?.zone || 0;
+      const show = this.on && zone === 0 && !!w;
+      this.mesh.visible = show;
+      if (!show) return;
+      const dt = this.lastT === null ? 0 : Math.min(0.25, Math.max(0, env2.time - this.lastT));
+      this.lastT = env2.time;
+      const wX = env2.windX ?? 0.7, wY = env2.windY ?? 0.3;
+      this.drift.x += wX * 3.2 * dt;
+      this.drift.y += wY * 3.2 * dt;
+      const W4 = w.width || 1;
+      const dx = (this.drift.x % W4 + W4) % W4, dy = this.drift.y;
+      const fx = ox - dx, fy = oy - dy;
+      const cx = Math.floor(fx / CELL2), cy = Math.floor(fy / CELL2);
+      const cover3 = Math.min(1, this.sky.uniforms.uCloud.value);
+      const storm = this.sky.uniforms.uStorm.value;
+      const rain = Math.max(env2.rain || 0, env2.snow || 0);
+      const key2 = `${cx},${cy},${Math.round(cover3 * 20)},${Math.round(storm * 10)},${Math.round(rain * 5)},${low ? 1 : 0}`;
+      if (key2 !== this.key) {
+        this.key = key2;
+        this.build(cx, cy, cover3, storm, low, rain);
+      }
+      this.mesh.position.set(-fx, 0, -fy);
+      this.uniforms.uSun.value.copy(this.sky.lightDir || this.sky.sunDir);
+      this.uniforms.uOpacity.value = 1;
+    }
+  };
+
   // src/render3d/sunshadow.js
   var SIZE = 2048;
-  var NEAR = 16;
+  var NEAR2 = 16;
   var RATIO = 4;
   var AHEAD = 0.35;
   var DIST = 120;
@@ -64416,8 +64612,8 @@ void main() {
     /* glsl */
     `
 	const float SUN_RATIO = ${RATIO.toFixed(1)};
-	const float SUN_BLEND = ${(BLEND / (2 * NEAR)).toFixed(5)};
-	const float SUN_FADE = ${(FADE2 / (2 * NEAR * RATIO)).toFixed(5)};
+	const float SUN_BLEND = ${(BLEND / (2 * NEAR2)).toFixed(5)};
+	const float SUN_FADE = ${(FADE2 / (2 * NEAR2 * RATIO)).toFixed(5)};
 	#ifndef SUN_SELF
 	#define SUN_SELF 0.0
 	#endif
@@ -64510,7 +64706,7 @@ ${GLSL}
     }
     /** Each cascade is drawn through its own window; the shaders read both through the coarse one's matrix. */
     updateMatrices(light, vp = 0) {
-      const r4 = vp ? NEAR * RATIO : NEAR, cam = this.camera;
+      const r4 = vp ? NEAR2 * RATIO : NEAR2, cam = this.camera;
       cam.left = cam.bottom = -r4;
       cam.right = cam.top = r4;
       cam.updateProjectionMatrix();
@@ -64525,11 +64721,11 @@ ${GLSL}
      * same texels however you move. dir: toward the light.
      */
     follow(light, dir, x, y, z, fx, fz, ox, oy) {
-      let cx = x + fx * NEAR * AHEAD, cy = y, cz = z + fz * NEAR * AHEAD;
+      let cx = x + fx * NEAR2 * AHEAD, cy = y, cz = z + fz * NEAR2 * AHEAD;
       const h2 = Math.hypot(dir.x, dir.z) || 1;
       const rx = dir.z / h2, rz = -dir.x / h2;
       const ux = dir.y * rz, uy = dir.z * rx - dir.x * rz, uz = -dir.y * rx;
-      const t = 2 * NEAR * RATIO / this.mapSize.x;
+      const t = 2 * NEAR2 * RATIO / this.mapSize.x;
       const X2 = (cx + ox) * rx + (cz + oy) * rz, Y2 = (cx + ox) * ux + cy * uy + (cz + oy) * uz;
       const dX = Math.round(X2 / t) * t - X2, dY = Math.round(Y2 / t) * t - Y2;
       cx += rx * dX + ux * dY;
@@ -64843,7 +65039,7 @@ ${GLSL}
 
   // src/render3d/sky3d.js
   var MIN_LIGHT_Y = 0.24;
-  var VERT2 = (
+  var VERT3 = (
     /* glsl */
     `
   varying vec3 vDir;
@@ -64854,7 +65050,7 @@ ${GLSL}
   }
 `
   );
-  var FRAG2 = (
+  var FRAG3 = (
     /* glsl */
     `
   uniform vec3 uTop, uHorizon, uBottom, uSunDir, uSunCol, uMoonDir;
@@ -65252,7 +65448,7 @@ ${GLSL}
         uDustCol: { value: new Color(...DUST) },
         uNoise: { value: skyNoise() }
       };
-      this.material = new ShaderMaterial({ uniforms: this.uniforms, vertexShader: VERT2, fragmentShader: FRAG2, side: BackSide, depthWrite: false, depthTest: true });
+      this.material = new ShaderMaterial({ uniforms: this.uniforms, vertexShader: VERT3, fragmentShader: FRAG3, side: BackSide, depthWrite: false, depthTest: true });
       this.mesh = new Mesh(new SphereGeometry(1e3, 32, 16), this.material);
       this.mesh.frustumCulled = false;
       this.mesh.renderOrder = 1e3;
@@ -65457,7 +65653,7 @@ ${GLSL}
     const p = k.pos;
     for (let i = 0; i < p.length; i += 3) p[i] += rakeDx(d, p[i], p[i + 1]);
   }
-  var NO_SPRIT = /* @__PURE__ */ new Set(["ram", "lion", "lion_gold"]);
+  var noSprit = (fh) => !!fh && fh !== "none";
   var TAU8 = Math.PI * 2;
   function bigPalette(def) {
     const H5 = C(def.color || "#6b4526");
@@ -65971,7 +66167,7 @@ ${GLSL}
       for (const f of [-0.18, 0.12]) k.add(box(0.2, 0.05, b.w * 0.86), { at: [xc + f * len, dk3 + 0.72, 0], color: "#b08850" });
       for (const zz of [-0.18, 0.18]) k.add(cyl(0.03, 0.03, len * 0.9, 5), { at: [xc - len * 0.45, dk3 + 0.8, zz * b.w], rot: [0, 0, -Math.PI / 2], color: "#b08850" });
     }
-    helmWheel(k, P6, d.wheelU, d.yq);
+    helmWheel(k, P6, d.wheelU, d.helmFloor);
     if (d.binnacleU !== null) {
       const fy = d.yq;
       k.add(box(0.45, 0.95, 0.45), { at: [d.binnacleU, fy, 0], color: P6.wood, outline: 0.012 });
@@ -66175,7 +66371,7 @@ ${GLSL}
     });
   }
   function bigBowTip(d, def) {
-    if (def && NO_SPRIT.has(def.figurehead)) {
+    if (def && noSprit(def.figurehead)) {
       const x02 = d.L / 2 - 2.2, y02 = (d.bowY ?? d.yf) + 0.2;
       return { x0: x02, y0: y02, a: 0, len: 0, none: true, tip: [x02, y02 + 0.9] };
     }
@@ -66189,7 +66385,7 @@ ${GLSL}
     const yr = 0.06 + d.L * 25e-4;
     if (mast.aft) {
       const tm = (mast.x + d.L / 2) / d.L, dt = 0.05 / d.L;
-      let len = Math.min(d.L * 0.2, 8), y0 = mast.base + 2.3;
+      let len = Math.min(d.L * 0.2, 8), y0 = mast.base + 2.6;
       let tUp = null;
       for (let t = tm; t >= tm - len / d.L; t -= dt) if (floorAt(d, t) > mast.base + 0.05) {
         tUp = t;
@@ -66206,11 +66402,11 @@ ${GLSL}
       }
       sails.push({ type: "gaff", x: mast.x, y0, y1: mast.h1 - 0.3, len });
     } else {
-      sails.push({ type: "square", x: mast.x, w: wC, y0: mast.base + 2.7, y1: mast.h1 - 0.35, emblem: mast.main, yardR: yr });
+      sails.push({ type: "square", x: mast.x, w: wC, y0: Math.min(mast.base + 3.9, mast.h1 - 3), y1: mast.h1 - 0.35, emblem: mast.main, yardR: yr });
     }
     sails.push({ type: "square", x: mast.x, w: wC * 0.82, y0: mast.h1 + 0.5, y1: mast.h2 - 0.35, emblem: mast.fore && def.sail === "marine", yardR: yr * 0.85 });
-    sails.push({ type: "square", x: mast.x, w: wC * 0.62, y0: mast.h2 + 0.35, y1: mast.h - 0.7, yardR: yr * 0.7 });
-    if (mast.fore && !NO_SPRIT.has(def.figurehead)) {
+    sails.push({ type: "square", x: mast.x, w: wC * 0.62, y0: mast.h2 + (mast.main ? 1.5 : 0.35), y1: mast.h - 0.7, yardR: yr * 0.7 });
+    if (mast.fore && !noSprit(def.figurehead)) {
       const b = bigBowTip(d, def);
       sails.push({ type: "jib", x: mast.x, y1: mast.h2 - 0.4, head: [mast.x + 0.4, mast.h2 - 0.4], tipX: b.tip[0], tipY: b.tip[1] - 0.2, clew: [xAt(d, 0.9), (d.bowY ?? d.yf) + (d.fore ? 2.6 : 1.9)] });
     }
@@ -66238,6 +66434,9 @@ ${GLSL}
         k.add(cyl(R5, R5 * 0.85, 1, 12, true), { at: [m.x + r4 * 1.1, y, 0], color: "#8d6e4a", double: true, outline: 0.02 });
         k.add(cyl(R5 * 0.85, R5 * 0.85, 0.06, 12), { at: [m.x + r4 * 1.1, y, 0], color: "#6d4c33" });
         k.add(torus(R5, 0.05, 4, 14), { at: [m.x + r4 * 1.1, y + 1, 0], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
+        const lx = m.x - r4 - 0.14, H5 = y - m.base + 0.9;
+        for (const z of [-0.24, 0.24]) k.add(box(0.07, H5, 0.07), { at: [lx, m.base, z], color: "#5d4037", outline: 0.01 });
+        for (let h2 = 0.35; h2 < H5 - 0.1; h2 += 0.34) k.add(box(0.05, 0.05, 0.5), { at: [lx, m.base + h2, 0], color: "#8d6e4a" });
       }
       for (let y = m.base + 1.6; y < m.h1 - 1; y += 1.4) k.add(torus(r4 * 1.05, 0.04, 3, 10), { at: [m.x, y, 0], rot: [Math.PI / 2, 0, 0], color: "#c8b89a" });
     }
@@ -67070,7 +67269,7 @@ ${GLSL}
     if (!d.open) {
       k.add(box(0.34, d.deckY + d.D * 0.8, 0.08), { at: [-d.L / 2 - 0.1, -d.D * 0.8, 0], color: shade2(P6.hull, -0.35), outline: 0.015 });
       const ft = topAt(d, 0.98);
-      if (def.figurehead !== "ram" && def.figurehead !== "lion") {
+      if (!noSprit(def.figurehead)) {
         k.save();
         k.translate(d.L / 2 - 0.35, ft - 0.1, 0);
         k.rotateZ(-Math.PI / 2 + 0.33);
@@ -67172,7 +67371,7 @@ ${GLSL}
   }
   function bowTip(def, d) {
     const ft = topAt(d, 0.98);
-    if (def.figurehead === "ram" || def.figurehead === "lion" || d.open) return [d.L / 2 - 0.05, topAt(d, 1) + 0.15];
+    if (noSprit(def.figurehead) || d.open) return [d.L / 2 - 0.05, topAt(d, 1) + 0.15];
     return [d.L / 2 - 0.35 + 0.946 * 0.3 * d.L, ft - 0.1 + 0.324 * 0.3 * d.L];
   }
   function sailPlan(def, d, mast) {
@@ -67196,7 +67395,7 @@ ${GLSL}
       const y1 = top * 0.86;
       sails.push({ type: "square", x: mast.x, w: d.open ? d.B * 1.5 : w1, y1, y0: Math.max(mast.base + (d.open ? 1 : 1.4), y1 - top * 0.58), emblem: mast.main });
     }
-    if (mast.m === 0 && d.masts > 1 && !d.open) {
+    if (mast.m === 0 && d.masts > 1 && !d.open && !noSprit(def.figurehead)) {
       const [tx, ty] = bowTip(def, d);
       sails.push({ type: "jib", x: mast.x, y1: top * 0.72, tipX: tx, tipY: ty });
     }
@@ -67228,7 +67427,7 @@ ${GLSL}
     return g;
   }
   function bigRigGeometry(def, d, plan) {
-    const key2 = `big|${def.length}|${def.beam}|${def.masts}|${NO_SPRIT.has(def.figurehead) ? "ns" : ""}`;
+    const key2 = `big|${def.length}|${def.beam}|${def.masts}|${noSprit(def.figurehead) ? "ns" : ""}`;
     let g = rigCache.get(key2);
     if (!g) {
       g = bigMastGeometry(def, d, plan);
@@ -68507,7 +68706,7 @@ ${GLSL}
     const A2 = rgba3(c);
     return (0.299 * A2[0] + 0.587 * A2[1] + 0.114 * A2[2]) / 255;
   };
-  function hash5(s) {
+  function hash6(s) {
     let h2 = 2166136261;
     for (let i = 0; i < s.length; i++) {
       h2 ^= s.charCodeAt(i);
@@ -69316,7 +69515,7 @@ ${GLSL}
   ];
   function gemOf(name, id, fallback = true) {
     for (const [re, c] of GEM_RULES) if (re.test(name)) return c;
-    return fallback ? ["#d7263d", "#2f78d6", "#2fae66", "#8e4fd1", "#f0a52a"][hash5(id || name) % 5] : null;
+    return fallback ? ["#d7263d", "#2f78d6", "#2fae66", "#8e4fd1", "#f0a52a"][hash6(id || name) % 5] : null;
   }
   function metalOf(name) {
     if (/silver|steel|iron|platinum|kairoseki|seastone/.test(name)) return "#c9d1d8";
@@ -70301,7 +70500,7 @@ ${GLSL}
       const n = I2.small ? 3 : 4, step2 = 32 / n;
       let k = 0;
       for (let r4 = 0; r4 < n; r4++) for (let c = 0; c < n; c++) {
-        const x = 16 + c * step2, y = 17 + r4 * (30 / n), w = step2 - 2.6, h2 = 30 / n - 2.4, q2 = hash5("pg" + k++);
+        const x = 16 + c * step2, y = 17 + r4 * (30 / n), w = step2 - 2.6, h2 = 30 / n - 2.4, q2 = hash6("pg" + k++);
         fl(I2, rrect2(x, y, w, h2, 1), dk2(red, 0.55));
         if (!I2.small) {
           if (q2 & 1) fl(I2, rrect2(x + 1 + (q2 >> 3 & 3), y + 1, 1.3, h2 - 2, 0.4), lt(red, 0.25));
@@ -70371,7 +70570,7 @@ ${GLSL}
   };
   var BOOK_COLS = ["#8e2f2a", "#2f5f8f", "#3f7a3a", "#6b3f8a", "#8a5a2a", "#2a5a5a"];
   D.book = (I2, o = {}) => {
-    const col2 = o.color || BOOK_COLS[hash5(o.id || "b") % BOOK_COLS.length];
+    const col2 = o.color || BOOK_COLS[hash6(o.id || "b") % BOOK_COLS.length];
     part2(I2, "M18 11 H50 C51.5 11 53 12.5 53 14 V53 C53 54.5 51.5 56 50 56 H18 Z", "#f3ead3", { sd: 1.2, shT: 0.18, hd: 0 });
     if (!I2.small) for (let x = 49.2; x < 53; x += 1.5) ln(I2, `M${x} 12.5 V54.5`, "#d9ceb4", 0.6);
     if (o.ribbon !== false) tube2(I2, "M40 50 V61", "#c8372d", 3, { cap: "butt" });
@@ -70747,7 +70946,7 @@ ${GLSL}
       fl(I2, poly([[43, 39], [58, 40], [47, 57], [34, 50]]), dk2(col2, 0.15));
       ln(I2, "M22 30 L37 26 L43 39 L34 50 M37 26 L43 11 M43 39 L57 40", dk2(col2, 0.35), 1);
       if (o.speckle && !I2.small) for (let i = 0; i < 12; i++) {
-        const q2 = hash5("sp" + i);
+        const q2 = hash6("sp" + i);
         fl(I2, circle(14 + q2 % 38, 16 + (q2 >> 6) % 36, 0.9), lt(col2, 0.45), { a: 0.8 });
       }
     });
@@ -70920,7 +71119,7 @@ ${GLSL}
     clip(I2, path2, () => {
       let k = 0;
       for (let y = y0; y <= y1; y += step2 * 0.86) for (let x = x0 + (Math.round((y - y0) / (step2 * 0.86)) % 2 ? step2 / 2 : 0); x <= x1; x += step2) {
-        const q2 = hash5(seed + ":" + k++), jx = ((q2 & 15) / 15 - 0.5) * rr * 0.45, jy = ((q2 >> 4 & 15) / 15 - 0.5) * rr * 0.45, rot = (q2 >> 8 & 63) / 63 * TAU10, dir = q2 & 4096 ? 1 : -1;
+        const q2 = hash6(seed + ":" + k++), jx = ((q2 & 15) / 15 - 0.5) * rr * 0.45, jy = ((q2 >> 4 & 15) / 15 - 0.5) * rr * 0.45, rot = (q2 >> 8 & 63) / 63 * TAU10, dir = q2 & 4096 ? 1 : -1;
         const sp = spiral2(x + jx, y + jy, rr, I2.small ? 1.2 : 1.45, rot, dir);
         if (!I2.small) ln(I2, xf(sp, { x: -0.6, y: -0.6 }), hi, w * 0.5, { a: 0.75 });
         ln(I2, sp, sw2, w);
@@ -70931,7 +71130,7 @@ ${GLSL}
     const id = o.fruit || "", f = FRUITS[id] || {};
     let col2 = o.color || f.color || "#8e5bd1";
     if (lum2(col2) > 0.84) col2 = mix3(col2, "#9fb2c6", 0.24);
-    const shape = o.shape || FRUIT_SHAPE[id] || FRUIT_SHAPES[hash5(id || "x") % FRUIT_SHAPES.length];
+    const shape = o.shape || FRUIT_SHAPE[id] || FRUIT_SHAPES[hash6(id || "x") % FRUIT_SHAPES.length];
     const rr = I2.small ? 7.6 : 6.6;
     const stem = (x, y, leaf2 = 17) => {
       part2(I2, `M${x - 1} ${y + 1} C${x - leaf2 * 0.35} ${y - 5} ${x - leaf2 * 0.8} ${y - 5} ${x - leaf2} ${y - 1} C${x - leaf2 * 0.75} ${y + 3} ${x - leaf2 * 0.35} ${y + 3.5} ${x - 1} ${y + 1} Z`, C2.leaf, { sd: 1.2, hd: 0.9 });
@@ -74294,7 +74493,7 @@ ${GLSL}
   };
   var FRUIT_COLORS = { coconut: ["#7a4a20", "#5b3514"], apple: ["#e53935", "#8e1b16"], banana: ["#ffd54f", "#b8860b"], mango: ["#ffb300", "#e65100"], cherry: ["#c2185b", "#6d0f33"] };
   var REGROW_DAYS = 2;
-  function hash6(x, y) {
+  function hash7(x, y) {
     let h2 = Math.imul(Math.round(x * 100) | 0, 73856093) ^ Math.imul(Math.round(y * 100) | 0, 19349663);
     h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
     return (h2 ^ h2 >>> 16) >>> 0;
@@ -74304,7 +74503,7 @@ ${GLSL}
     let f = null;
     const b = o.kind === "tree" ? BEARS[o.sub] : null;
     if (b) {
-      const hv = hash6(o.x, o.y);
+      const hv = hash7(o.x, o.y);
       if (hv % 1e3 / 1e3 < b.chance) f = b.fruit[(hv >>> 10) % b.fruit.length];
     }
     o._fruit = f;
@@ -76704,7 +76903,7 @@ ${GLSL}
   }
 
   // src/render3d/farbuildings.js
-  var CELL2 = 32;
+  var CELL3 = 32;
   var FarBuildings = class {
     constructor(parent, ctx) {
       this.parent = parent;
@@ -76728,10 +76927,10 @@ ${GLSL}
       }
       if (!inRange) return;
       const w = this.ctx.world;
-      const cx = Math.floor(w.wx(b.x) / CELL2), cy = Math.floor(b.y / CELL2);
+      const cx = Math.floor(w.wx(b.x) / CELL3), cy = Math.floor(b.y / CELL3);
       const key2 = cy * 1e5 + cx;
       let c = this.cells.get(key2);
-      if (!c) this.cells.set(key2, c = { key: key2, x0: cx * CELL2, y0: cy * CELL2, members: /* @__PURE__ */ new Set(), mesh: null, ranges: null, orig: null, dirty: true });
+      if (!c) this.cells.set(key2, c = { key: key2, x0: cx * CELL3, y0: cy * CELL3, members: /* @__PURE__ */ new Set(), mesh: null, ranges: null, orig: null, dirty: true });
       c.members.add(b);
       c.dirty = true;
       this.cellOf.set(b, c);
@@ -76777,8 +76976,8 @@ ${GLSL}
       const w = this.ctx.world;
       for (const c of this.cells.values()) {
         if (!c.dirty) continue;
-        if (!c.mesh && this.ctx.landDrawn && !this.ctx.landDrawn(c.x0 + CELL2 / 2, c.y0 + CELL2 / 2)) continue;
-        const dx = w.dx(ox, c.x0 + CELL2 / 2), dy = c.y0 + CELL2 / 2 - oy;
+        if (!c.mesh && this.ctx.landDrawn && !this.ctx.landDrawn(c.x0 + CELL3 / 2, c.y0 + CELL3 / 2)) continue;
+        const dx = w.dx(ox, c.x0 + CELL3 / 2), dy = c.y0 + CELL3 / 2 - oy;
         (todo || (todo = [])).push([c, dx * dx + dy * dy]);
       }
       if (!todo) return;
@@ -76873,7 +77072,7 @@ ${GLSL}
   };
 
   // src/render3d/roofs.js
-  var CELL3 = 0.25;
+  var CELL4 = 0.25;
   var PAD = 0.9;
   var FLAT = 0.35;
   var HASH = 8;
@@ -76969,7 +77168,7 @@ ${GLSL}
   function startGrid(r4) {
     const b = r4.b, fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
     const X0 = -fw / 2 - PAD, Z0 = -fd - PAD;
-    const NX = Math.ceil((fw + 2 * PAD) / CELL3), NZ = Math.ceil((fd + 2 * PAD) / CELL3);
+    const NX = Math.ceil((fw + 2 * PAD) / CELL4), NZ = Math.ceil((fd + 2 * PAD) / CELL4);
     const grp = r4.group;
     grp.updateMatrixWorld(true);
     const inv = new Matrix4().copy(grp.matrixWorld).invert();
@@ -77006,12 +77205,12 @@ ${GLSL}
         if (!(len > 1e-9) || Math.abs(ny) / len < FLAT) continue;
         const det = (bz - cz) * (ax - cx) + (cx - bx) * (az - cz);
         if (Math.abs(det) < 1e-12) continue;
-        const i0 = Math.max(0, Math.floor((Math.min(ax, bx, cx) - X0) / CELL3)), i1 = Math.min(NX - 1, Math.floor((Math.max(ax, bx, cx) - X0) / CELL3));
-        const j0 = Math.max(0, Math.floor((Math.min(az, bz, cz) - Z0) / CELL3)), j1 = Math.min(NZ - 1, Math.floor((Math.max(az, bz, cz) - Z0) / CELL3));
+        const i0 = Math.max(0, Math.floor((Math.min(ax, bx, cx) - X0) / CELL4)), i1 = Math.min(NX - 1, Math.floor((Math.max(ax, bx, cx) - X0) / CELL4));
+        const j0 = Math.max(0, Math.floor((Math.min(az, bz, cz) - Z0) / CELL4)), j1 = Math.min(NZ - 1, Math.floor((Math.max(az, bz, cz) - Z0) / CELL4));
         for (let j = j0; j <= j1; j++) {
-          const pz2 = Z0 + (j + 0.5) * CELL3;
+          const pz2 = Z0 + (j + 0.5) * CELL4;
           for (let i = i0; i <= i1; i++) {
-            const px2 = X0 + (i + 0.5) * CELL3;
+            const px2 = X0 + (i + 0.5) * CELL4;
             const l1 = ((bz - cz) * (px2 - cx) + (cx - bx) * (pz2 - cz)) / det;
             const l2 = ((cz - az) * (px2 - cx) + (ax - cx) * (pz2 - cz)) / det;
             const l3 = 1 - l1 - l2;
@@ -77031,7 +77230,7 @@ ${GLSL}
     return true;
   }
   function sample(g, { lx, lz }) {
-    const fx = (lx - g.X0) / CELL3 - 0.5, fz = (lz - g.Z0) / CELL3 - 0.5;
+    const fx = (lx - g.X0) / CELL4 - 0.5, fz = (lz - g.Z0) / CELL4 - 0.5;
     const i = Math.floor(fx), j = Math.floor(fz);
     const ci = Math.round(fx), cj = Math.round(fz);
     if (ci < 0 || cj < 0 || ci >= g.NX || cj >= g.NZ) return null;
@@ -77059,6 +77258,10 @@ ${GLSL}
     crate: 0.42,
     haystack: 0.6,
     chest: 0.4,
+    planter: 0.3,
+    sacks: 0.45,
+    weaponrack: 0.4,
+    signboard: 0.3,
     bench: [0.8, 0.3],
     stall: [0.95, 0.4],
     fence: [0.54, 0.1],
@@ -77467,7 +77670,7 @@ ${GLSL}
   }
 
   // src/render3d/props/instancer.js
-  var CELL4 = 32;
+  var CELL5 = 32;
   var SUPER = 128;
   var cells2 = /* @__PURE__ */ new Map();
   var supers = /* @__PURE__ */ new Map();
@@ -77597,13 +77800,13 @@ ${GLSL}
     return Math.hypot(nx, ny);
   }
   function cellFor(o, ctx, parent) {
-    const cx = Math.floor(o.x / CELL4), cy = Math.floor(o.y / CELL4);
+    const cx = Math.floor(o.x / CELL5), cy = Math.floor(o.y / CELL5);
     const wid = ctx?.world?.id || "";
     const key2 = `${wid}:${cx},${cy}`;
     let c = cells2.get(key2);
     if (!c) {
-      c = { key: key2, wid, x0: cx * CELL4, y0: cy * CELL4, size: CELL4, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null, far: false, merged: false, sup: null };
-      const d = VIEW.world === ctx?.world ? viewDist(c.x0, c.y0, CELL4) : 0;
+      c = { key: key2, wid, x0: cx * CELL5, y0: cy * CELL5, size: CELL5, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null, far: false, merged: false, sup: null };
+      const d = VIEW.world === ctx?.world ? viewDist(c.x0, c.y0, CELL5) : 0;
       c.far = d > LOD2.far;
       if (d > LOD2.merge) join(c);
       cells2.set(key2, c);
@@ -77822,7 +78025,7 @@ ${GLSL}
       }
       const gp = mk3.parent ? mk3.parent.position : null;
       const cx = (gp ? gp.x : 0) + px2, cz = (gp ? gp.z : 0) + pz2;
-      const nx = Math.max(cx, Math.min(0, cx + CELL4)), nz = Math.max(cz, Math.min(0, cz + CELL4));
+      const nx = Math.max(cx, Math.min(0, cx + CELL5)), nz = Math.max(cz, Math.min(0, cz + CELL5));
       const d = Math.hypot(nx, nz);
       const merged = cell.merged ? d > LOD2.merge - 6 : d > LOD2.merge + 6;
       if (merged !== cell.merged && moves < 6) {
@@ -78946,6 +79149,63 @@ ${GLSL}
     for (let i = -3; i <= 3; i++) k.add(box(0.1, 0.16, 0.06), { at: [i * 0.12, 0.26, 0.64], color: "#dfe6e9" });
     k.add(box(0.9, 0.05, 0.05), { at: [0, 0.24, 0.62], color: D4 });
   });
+  var planter = () => model("planter", (k) => {
+    k.add(box(1, 0.36, 0.34), { color: WOOD2, tint: 1, outline: 0.015 });
+    for (const x of [-0.46, 0.46]) k.add(box(0.06, 0.4, 0.38), { at: [x, 0, 0], color: DARK_WOOD });
+    k.add(box(0.92, 0.04, 0.28), { at: [0, 0.34, 0], color: "#4e342e" });
+    const R5 = rng2(17);
+    for (let i = 0; i < 9; i++) {
+      const x = -0.4 + i * 0.1 + (R5() - 0.5) * 0.04, z = (R5() - 0.5) * 0.16;
+      k.add(new IcosahedronGeometry(0.1 + R5() * 0.04, 0), { at: [x, 0.42 + R5() * 0.06, z], flat: true, color: R5() < 0.5 ? "#43a047" : "#2e7d32" });
+      if (i % 2 === 0) k.add(new IcosahedronGeometry(0.055, 0), { at: [x, 0.54 + R5() * 0.06, z + 0.04], color: ["#e84a7f", "#ffd54f", "#ffffff", "#ff7043", "#ba68c8"][Math.floor(R5() * 5)] });
+    }
+  });
+  var sacks = () => model("sacks", (k) => {
+    const S6 = "#c8b48a", T5 = "#8d6e4a";
+    const one = (x, y, z, ry, lie) => {
+      k.save();
+      k.translate(x, y, z);
+      k.rotateY(ry);
+      if (lie) k.rotateZ(Math.PI / 2 - 0.15);
+      k.add(lathe([[0.2, 0], [0.26, 0.08], [0.27, 0.3], [0.22, 0.48], [0.1, 0.56], [0.06, 0.62], [0.09, 0.68]], 9), { color: S6, tint: 1, outline: 0.015 });
+      k.add(torus(0.07, 0.02, 4, 8), { at: [0, 0.58, 0], rot: [Math.PI / 2, 0, 0], color: T5 });
+      k.restore();
+    };
+    one(-0.22, 0, 0.05, 0.3, false);
+    one(0.25, 0, -0.05, -0.5, false);
+    one(0, 0.3, 0.32, 1.2, true);
+  });
+  var weaponRack = () => model("weaponrack", (k) => {
+    for (const x of [-0.6, 0.6]) k.add(box(0.08, 1.3, 0.08), { at: [x, 0, 0], color: DARK_WOOD, outline: 0.012 });
+    for (const y of [0.2, 1.05]) k.add(box(1.28, 0.07, 0.12), { at: [0, y, 0], color: WOOD2, outline: 0.012 });
+    const steel = "#b0bec5";
+    for (let i = 0; i < 5; i++) {
+      const x = -0.44 + i * 0.22, spear = i % 2 === 0;
+      k.save();
+      k.translate(x, 0.12, 0.03);
+      k.rotateZ((i - 2) * 0.03);
+      if (spear) {
+        k.add(cyl(0.02, 0.02, 1.55, 5), { color: "#6d4c41" });
+        k.add(cone(0.045, 0.2, 4), { at: [0, 1.55, 0], color: steel, outline: 0.01 });
+      } else {
+        k.add(box(0.05, 0.9, 0.012), { at: [0, 0.32, 0], color: steel, outline: 8e-3 });
+        k.add(box(0.16, 0.03, 0.04), { at: [0, 1.22, 0], color: "#5d4037" });
+        k.add(cyl(0.022, 0.022, 0.22, 6), { at: [0, 1.24, 0], color: "#3e2723" });
+      }
+      k.restore();
+    }
+  });
+  var signboard = () => model("signboard", (k) => {
+    for (const s of [-1, 1]) {
+      k.save();
+      k.translate(0, 0, s * 0.02);
+      k.rotateX(s * 0.2);
+      k.add(box(0.6, 0.82, 0.04), { at: [0, 0.05, s * 0.06], color: WOOD2, outline: 0.012 });
+      k.add(box(0.5, 0.58, 0.012), { at: [0, 0.17, s * 0.085], color: "#2f3640" });
+      for (const y of [0.55, 0.43, 0.31]) k.add(box(0.36 - (y < 0.4 ? 0.1 : 0), 0.03, 6e-3), { at: [0, y, s * 0.093], color: "#f5f0e1" });
+      k.restore();
+    }
+  });
   var tint2 = (o, pal) => pal[(o.v || 0) % pal.length];
   var reg = (kind, fn) => registerPropBuilder(kind, fn);
   reg("barrel", (o, ctx) => simple(o, ctx, "barrel", barrel(), { randomYaw: true, color: tint2(o, ["#ffffff", "#e8d9c8", "#f3e3cf", "#d9c6b0"]) }));
@@ -78974,6 +79234,10 @@ ${GLSL}
   reg("well", (o, ctx) => simple(o, ctx, "well", well(), { yaw: 0 }));
   reg("lamp", (o, ctx) => simple(o, ctx, "lamp", lamp(), { yaw: 0 }));
   reg("lantern", (o, ctx) => simple(o, ctx, "lantern", lantern(), { yaw: hash3(o.x, o.y) < 0.5 ? 0 : Math.PI }));
+  reg("planter", (o, ctx) => simple(o, ctx, "planter", planter(), { yaw: o.yaw ?? 0 }));
+  reg("sacks", (o, ctx) => simple(o, ctx, "sacks", sacks(), { randomYaw: true }));
+  reg("weaponrack", (o, ctx) => simple(o, ctx, "weaponrack", weaponRack(), { yaw: o.yaw ?? 0 }));
+  reg("signboard", (o, ctx) => simple(o, ctx, "signboard", signboard(), { yaw: (o.yaw ?? 0) + jitterYaw(o, 0.4) }));
   reg("skull", (o, ctx) => simple(o, ctx, "skull", skull3(), { yaw: jitterYaw(o, 0.6) }));
   reg("stall", (o, ctx) => {
     let yaw = o.yaw ?? 0;
@@ -80420,7 +80684,7 @@ ${GLSL}
   var RISER = new Color("#b29a72");
   var GUTTER = new Color("#bfae8a");
   var WALL_T2 = 1.2;
-  var VERT3 = (
+  var VERT4 = (
     /* glsl */
     `
   attribute float aKind;
@@ -80437,7 +80701,7 @@ ${GLSL}
   }
 `
   );
-  var FRAG3 = (
+  var FRAG4 = (
     /* glsl */
     `
   uniform float uTime;
@@ -80505,7 +80769,7 @@ ${GLSL}
     if (waterMat) return waterMat;
     const uniforms = UniformsUtils.merge([UniformsLib.fog, {}]);
     Object.assign(uniforms, U3);
-    waterMat = new ShaderMaterial({ uniforms, vertexShader: VERT3, fragmentShader: FRAG3, fog: true, transparent: true, depthWrite: false, side: DoubleSide });
+    waterMat = new ShaderMaterial({ uniforms, vertexShader: VERT4, fragmentShader: FRAG4, fog: true, transparent: true, depthWrite: false, side: DoubleSide });
     return waterMat;
   }
   function terraceWater() {
@@ -81090,7 +81354,7 @@ ${GLSL}
     bindCtx(ctx);
     return fn(o, ctx);
   });
-  var hash7 = (i, s) => {
+  var hash8 = (i, s) => {
     const v = Math.sin(i * 127.1 + s * 311.7) * 43758.5453;
     return v - Math.floor(v);
   };
@@ -81204,7 +81468,7 @@ ${GLSL}
       const nf = radial(0, ty - br * 1.5, 0, 0.18);
       const blob4 = (x, y, z, r4, i) => k.add(new DodecahedronGeometry(r4, 1), {
         at: [x, y, z],
-        rot: [hash7(i, ti) * 3, hash7(i, ti + 1) * 3, hash7(i, ti + 2) * 3],
+        rot: [hash8(i, ti) * 3, hash8(i, ti + 1) * 3, hash8(i, ti + 2) * 3],
         scale: [1, sq, 1],
         color: (p) => tmp2.copy(LEAF_LO).lerp(LEAF, Math.min(1, Math.max(0, (p.y - y0) / (y1 - y0)))).lerp(LEAF_HI, Math.max(0, Math.min(1, (p.y - ty) / (br * sq)))),
         normals: nf,
@@ -81212,8 +81476,8 @@ ${GLSL}
       });
       const outer = Math.max(6, Math.round(2 * Math.PI * R5 / (br * 1.25)));
       for (let i = 0; i < outer; i++) {
-        const a = i / outer * Math.PI * 2 + hash7(i, 40 + ti) * 0.2, rr = R5 * (0.86 + hash7(i, 41 + ti) * 0.14);
-        blob4(Math.cos(a) * rr, ty + (hash7(i, 42 + ti) - 0.5) * br * 0.5, Math.sin(a) * rr, br * (0.85 + hash7(i, 43 + ti) * 0.3), i);
+        const a = i / outer * Math.PI * 2 + hash8(i, 40 + ti) * 0.2, rr = R5 * (0.86 + hash8(i, 41 + ti) * 0.14);
+        blob4(Math.cos(a) * rr, ty + (hash8(i, 42 + ti) - 0.5) * br * 0.5, Math.sin(a) * rr, br * (0.85 + hash8(i, 43 + ti) * 0.3), i);
       }
       const inner = Math.max(3, Math.round(outer * 0.5));
       for (let i = 0; i < inner; i++) {
@@ -81223,8 +81487,8 @@ ${GLSL}
       blob4(0, ty + br * 0.55, 0, br * 1.2, 200);
     });
     for (let i = 0; i < 12; i++) {
-      const a = i / 12 * Math.PI * 2 + hash7(i, 70), ti = 1 + i % 2, [ty, R5] = TIERS3[ti];
-      const rr = R5 * (0.95 + hash7(i, 71) * 0.35), y = ty - 8 + hash7(i, 72) * 16, r4 = 11 + hash7(i, 73) * 9;
+      const a = i / 12 * Math.PI * 2 + hash8(i, 70), ti = 1 + i % 2, [ty, R5] = TIERS3[ti];
+      const rr = R5 * (0.95 + hash8(i, 71) * 0.35), y = ty - 8 + hash8(i, 72) * 16, r4 = 11 + hash8(i, 73) * 9;
       for (let j = 0; j < 3; j++) {
         const ox = (j - 1) * r4 * 0.9, x = Math.cos(a) * rr - Math.sin(a) * ox, z = Math.sin(a) * rr + Math.cos(a) * ox;
         k.add(new IcosahedronGeometry(r4 * (j === 1 ? 1 : 0.75), 1), { at: [x, y + (j === 1 ? 2 : 0), z], scale: [1, 0.55, 1], color: (p) => tmp2.copy(CLOUD_LO).lerp(CLOUD, Math.min(1, Math.max(0, (p.y - y + r4 * 0.4) / (r4 * 0.9)))), normals: radial(x, y - r4, z, 0.3) });
@@ -81245,24 +81509,24 @@ ${GLSL}
   reg5("spire", (o) => {
     const H5 = o.h || 24, R5 = o.r || 4.5, seed = o.seed || 1;
     const geo2 = model(`spire:${Math.round(H5)}:${Math.round(R5 * 2)}:${Math.round(seed)}`, (k) => {
-      const n = 6 + Math.floor(hash7(1, seed) * 3);
+      const n = 6 + Math.floor(hash8(1, seed) * 3);
       let y = -6, x = 0, z = 0, r4 = R5 * 1.25;
       const col2 = capColor(ROCK, SNOW, 0.62);
       for (let i = 0; i < n; i++) {
-        const t = (i + 1) / n, h2 = (H5 + 6) / n * (0.8 + hash7(i, seed + 2) * 0.4);
-        const r12 = Math.max(0.35, R5 * (1 - t) ** 0.85 * (0.85 + hash7(i, seed + 3) * 0.3));
-        const nx = x + (hash7(i, seed + 4) - 0.5) * R5 * 0.35, nz = z + (hash7(i, seed + 5) - 0.5) * R5 * 0.35;
-        k.add(new CylinderGeometry(r12, r4, h2, 6, 1), { at: [(x + nx) / 2, y + h2 / 2, (z + nz) / 2], rot: [(nz - z) / h2 * 0.6, hash7(i, seed + 6) * 3, -(nx - x) / h2 * 0.6], color: i % 2 ? col2 : capColor(ROCK_HI, SNOW, 0.62), flat: true, outline: 0.1 });
-        if (i < n - 2 && hash7(i, seed + 7) < 0.45) k.add(new CylinderGeometry(r12 * 1.25, r12 * 1.05, 0.9, 6, 1), { at: [nx, y + h2, nz], rot: [0, hash7(i, seed + 8) * 3, 0], color: capColor(ROCK, SNOW, 0.3), flat: true, outline: 0.06 });
+        const t = (i + 1) / n, h2 = (H5 + 6) / n * (0.8 + hash8(i, seed + 2) * 0.4);
+        const r12 = Math.max(0.35, R5 * (1 - t) ** 0.85 * (0.85 + hash8(i, seed + 3) * 0.3));
+        const nx = x + (hash8(i, seed + 4) - 0.5) * R5 * 0.35, nz = z + (hash8(i, seed + 5) - 0.5) * R5 * 0.35;
+        k.add(new CylinderGeometry(r12, r4, h2, 6, 1), { at: [(x + nx) / 2, y + h2 / 2, (z + nz) / 2], rot: [(nz - z) / h2 * 0.6, hash8(i, seed + 6) * 3, -(nx - x) / h2 * 0.6], color: i % 2 ? col2 : capColor(ROCK_HI, SNOW, 0.62), flat: true, outline: 0.1 });
+        if (i < n - 2 && hash8(i, seed + 7) < 0.45) k.add(new CylinderGeometry(r12 * 1.25, r12 * 1.05, 0.9, 6, 1), { at: [nx, y + h2, nz], rot: [0, hash8(i, seed + 8) * 3, 0], color: capColor(ROCK, SNOW, 0.3), flat: true, outline: 0.06 });
         y += h2;
         x = nx;
         z = nz;
         r4 = r12;
       }
-      k.add(new ConeGeometry(Math.max(0.3, r4), 2.5 + hash7(9, seed) * 2, 6), { at: [x, y + 1.2, z], color: SNOW, flat: true, outline: 0.06 });
+      k.add(new ConeGeometry(Math.max(0.3, r4), 2.5 + hash8(9, seed) * 2, 6), { at: [x, y + 1.2, z], color: SNOW, flat: true, outline: 0.06 });
       for (let i = 0; i < 4; i++) {
-        const a = hash7(i, seed + 11) * Math.PI * 2, d = R5 * (1.1 + hash7(i, seed + 12) * 0.5);
-        k.add(new DodecahedronGeometry(R5 * (0.25 + hash7(i, seed + 13) * 0.2), 0), { at: [Math.cos(a) * d, 0, Math.sin(a) * d], color: col2, flat: true, outline: 0.05 });
+        const a = hash8(i, seed + 11) * Math.PI * 2, d = R5 * (1.1 + hash8(i, seed + 12) * 0.5);
+        k.add(new DodecahedronGeometry(R5 * (0.25 + hash8(i, seed + 13) * 0.2), 0), { at: [Math.cos(a) * d, 0, Math.sin(a) * d], color: col2, flat: true, outline: 0.05 });
       }
     });
     const m = meshOf(geo2);
@@ -81273,12 +81537,12 @@ ${GLSL}
     const g = (z) => ctx.ground(o.x + Math.sin(o.yaw) * z, o.y + Math.cos(o.yaw) * z);
     const H5 = o.H || 60, s = o.seed || 0;
     const k = new Mesher();
-    const side = (hash7(1, s) - 0.5) * 3;
+    const side = (hash8(1, s) - 0.5) * 3;
     const pts = [[0, H5 - 16, -14.5], [side * 0.3, H5 - 24, -10], [side * 0.6, (H5 - 24 + g(-2)) * 0.5, -3.5], [side, g(3) + 6, 3], [side * 0.8, g(9) + 1.2, 9], [side * 0.5, g(14) - 0.4, 14], [side * 0.3, g(19) - 1.6, 19.5]];
     const tmp2 = new Color(), g10 = g(10);
     const color = (p, n) => n.y > 0.6 && p.y < H5 - 30 ? SNOW : tmp2.copy(BARK_DK).lerp(BARK, Math.min(1, Math.max(0, (p.y - g10) / 30)));
     k.add(sweep(pts, [5.2, 4.6, 4, 3.2, 2.5, 1.8, 1], 9), { color, outline: 0.15 });
-    const sx = side + (hash7(2, s) < 0.5 ? -1 : 1) * 4;
+    const sx = side + (hash8(2, s) < 0.5 ? -1 : 1) * 4;
     k.add(sweep([[side * 0.7, g(2) + 10, 0], [sx, g(7) + 3, 6], [sx * 1.3, g(11) + 0.2, 11], [sx * 1.5, g(14) - 1.2, 14]], [2.2, 1.7, 1.1, 0.6], 7), { color, outline: 0.1 });
     const m = new Mesh(k.build(false), vcMat());
     m.castShadow = true;
@@ -81294,7 +81558,7 @@ ${GLSL}
   var TAU12 = Math.PI * 2;
   var clamp017 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   var easeOut = (k) => 1 - (1 - k) * (1 - k) * (1 - k);
-  function hash8(n) {
+  function hash9(n) {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
   }
@@ -83099,13 +83363,13 @@ ${GLSL}
       v.planeRing(X2 + D2[0] * 0.08, Y2, Z2 + D2[2] * 0.08, A[0], A[1], A[2], B3[0], B3[1], B3[2], rr, s.size * 0.09 * (1 - k), c, fade2 * 0.9, c2, 0.6, 0.8, s.seed, k, 36);
       const n = s.lines ?? 5;
       for (let j = 0; j < n; j++) {
-        const th = hash8(s.seed + j * 17) * TAU12;
-        const lean = 0.25 + 0.5 * hash8(s.seed + j * 5);
+        const th = hash9(s.seed + j * 17) * TAU12;
+        const lean = 0.25 + 0.5 * hash9(s.seed + j * 5);
         Cc[0] = A[0] * Math.cos(th) + B3[0] * Math.sin(th) + D2[0] * lean;
         Cc[1] = A[1] * Math.cos(th) + B3[1] * Math.sin(th) + D2[1] * lean;
         Cc[2] = A[2] * Math.cos(th) + B3[2] * Math.sin(th) + D2[2] * lean;
         norm3(Cc);
-        const r0 = R5 * (0.75 + 0.6 * k), r12 = R5 * (1.6 + 1.1 * hash8(s.seed + j) + k * 1.1);
+        const r0 = R5 * (0.75 + 0.6 * k), r12 = R5 * (1.6 + 1.1 * hash9(s.seed + j) + k * 1.1);
         const hw = Math.max(0.012, s.size * 0.05) * (1 - k * 0.6);
         v.ribbons.start(RK.LINE, RM2.FACE, c, fade2, c2, 0.7).point(X2 + Cc[0] * r0, Y2 + Cc[1] * r0, Z2 + Cc[2] * r0, hw).point(X2 + Cc[0] * (r0 + r12) * 0.5, Y2 + Cc[1] * (r0 + r12) * 0.5, Z2 + Cc[2] * (r0 + r12) * 0.5, hw * 0.8).point(X2 + Cc[0] * r12, Y2 + Cc[1] * r12, Z2 + Cc[2] * r12, 2e-3).finish();
       }
@@ -83137,12 +83401,12 @@ ${GLSL}
       const r4 = v.cr, u = v.cu;
       const n = s.n || 9;
       for (let i = 0; i < n; i++) {
-        const th = i / n * TAU12 + (hash8(s.seed + i) - 0.5) * 0.5;
-        const L3 = R5 * (0.6 + 0.5 * hash8(s.seed + i * 3));
+        const th = i / n * TAU12 + (hash9(s.seed + i) - 0.5) * 0.5;
+        const L3 = R5 * (0.6 + 0.5 * hash9(s.seed + i * 3));
         v.ribbons.start(RK.LINE, RM2.FACE, c, fade2, WHITE4, 0.6);
         v.ribbons.point(X2, Y2, Z2, 0.035);
         for (let j = 1; j <= 3; j++) {
-          const rr = L3 * j / 3, o = (hash8(s.seed + i * 7 + j) - 0.5) * 0.5;
+          const rr = L3 * j / 3, o = (hash9(s.seed + i * 7 + j) - 0.5) * 0.5;
           const cs = Math.cos(th + o) * rr, sn = Math.sin(th + o) * rr;
           v.ribbons.point(X2 + r4[0] * cs + u[0] * sn, Y2 + r4[1] * cs + u[1] * sn, Z2 + r4[2] * cs + u[2] * sn, 0.032 * (1.1 - j * 0.25));
         }
@@ -83295,8 +83559,8 @@ ${GLSL}
       const c = col(s.color || "#ffffff");
       const t = Math.floor(v.time * 30);
       for (let i = 0; i < 7; i++) {
-        const h2 = 0.25 + hash8(s.seed + i) * 1.35, side = (hash8(s.seed + i * 9) - 0.5) * 0.9;
-        const x0 = 0.35 + hash8(s.seed + i * 3 + t) * 0.4, x1 = x0 + 0.6 + hash8(s.seed + i * 5) * 1;
+        const h2 = 0.25 + hash9(s.seed + i) * 1.35, side = (hash9(s.seed + i * 9) - 0.5) * 0.9;
+        const x0 = 0.35 + hash9(s.seed + i * 3 + t) * 0.4, x1 = x0 + 0.6 + hash9(s.seed + i * 5) * 1;
         const px2 = X2 - bz * side, pz2 = Z2 + bx * side;
         if (v.fp && v.player === s.follow) continue;
         v.ribbons.start(RK.SPEED, RM2.FACE, c, fade2, c, 0.2).point(px2 + bx * x0, G4 + h2, pz2 + bz * x0, 0.018).point(px2 + bx * x1, G4 + h2, pz2 + bz * x1, 0.01).finish();
@@ -83383,7 +83647,7 @@ ${GLSL}
           v.ribbons.finish();
         }
         for (let i = 0; i < 8; i++) {
-          const t = hash8(s.seed + i * 3 + Math.floor(v.time * 12)), up = (v.time * 2 + hash8(s.seed + i)) % 1 * 0.4;
+          const t = hash9(s.seed + i * 3 + Math.floor(v.time * 12)), up = (v.time * 2 + hash9(s.seed + i)) % 1 * 0.4;
           v.sprites.put(SK2.EMBER, bx + D2[0] * BL * t, by + D2[1] * BL * t + up, bz + D2[2] * BL * t, 0.035, ROPE_EMBER, fade2, WHITE4, 1, 0, s.seed + i, 0);
         }
       } else if (style === "fire") {
@@ -83426,12 +83690,12 @@ ${GLSL}
     if (black && c2 === WHITE4) c2 = HAKI_RED;
     let bi = 0;
     const bt = BT;
-    bt[0] = 0.3 + hash8(seed + 1) * 0.2;
-    bt[1] = 0.55 + hash8(seed + 2) * 0.25;
-    bt[2] = 0.75 + hash8(seed + 3) * 0.15;
+    bt[0] = 0.3 + hash9(seed + 1) * 0.2;
+    bt[1] = 0.55 + hash9(seed + 2) * 0.25;
+    bt[2] = 0.75 + hash9(seed + 3) * 0.15;
     for (let i = 0; i <= n; i++) {
       const t = i / n, env2 = Math.sin(t * PI);
-      const j1 = (hash8(seed + i * 7.3) - 0.5) * 2 * amp * env2, j2 = (hash8(seed + i * 3.7 + 11) - 0.5) * 2 * amp * env2;
+      const j1 = (hash9(seed + i * 7.3) - 0.5) * 2 * amp * env2, j2 = (hash9(seed + i * 3.7 + 11) - 0.5) * 2 * amp * env2;
       const k = i * 4;
       PTS[k] = x0 + dx * t + A[0] * j1 + B3[0] * j2;
       PTS[k + 1] = y0 + dy * t + A[1] * j1 + B3[1] * j2;
@@ -83454,12 +83718,12 @@ ${GLSL}
       }
       R5.finish();
       for (let b = 0; b < bi; b++) {
-        const ba = hash8(seed + b * 3) * TAU12, bl2 = (0.35 + hash8(seed + b * 5) * 0.6) * Math.min(2.5, L3 * 0.35);
+        const ba = hash9(seed + b * 3) * TAU12, bl2 = (0.35 + hash9(seed + b * 5) * 0.6) * Math.min(2.5, L3 * 0.35);
         const fx = FORK[b * 3], fy = FORK[b * 3 + 1], fz = FORK[b * 3 + 2];
         const ex = fx + (Cc[0] * 0.6 + A[0] * Math.cos(ba) + B3[0] * Math.sin(ba)) * bl2, ey = fy + (Cc[1] * 0.6 + A[1] * Math.cos(ba) + B3[1] * Math.sin(ba)) * bl2, ez = fz + (Cc[2] * 0.6 + A[2] * Math.cos(ba) + B3[2] * Math.sin(ba)) * bl2;
         R5.start(RK.GLOW, RM2.FACE, cc, al * 0.85, cc2, w);
         for (let i = 0; i <= 4; i++) {
-          const t = i / 4, j = (hash8(seed + b * 13 + i * 5.1) - 0.5) * bl2 * 0.35 * Math.sin(t * PI);
+          const t = i / 4, j = (hash9(seed + b * 13 + i * 5.1) - 0.5) * bl2 * 0.35 * Math.sin(t * PI);
           R5.point(fx + (ex - fx) * t + A[0] * j, fy + (ey - fy) * t + B3[1] * j, fz + (ez - fz) * t + A[2] * j, hw * 0.6 * (1 - t * 0.7) * wk);
         }
         R5.finish();
@@ -83475,10 +83739,10 @@ ${GLSL}
   function crown2(v, X2, Y2, Z2, R5, c, c2, alpha2, seed, t, n, k = 0.15) {
     const cr = v.cr, cu = v.cu;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU12 + Math.sin(t * 1.7 + i * 1.7) * 0.12 + hash8(seed + i) * 0.3;
+      const a = i / n * TAU12 + Math.sin(t * 1.7 + i * 1.7) * 0.12 + hash9(seed + i) * 0.3;
       const ca = Math.cos(a), sa = Math.sin(a);
-      const rr = R5 * (0.86 + 0.08 * hash8(seed + i * 3));
-      const sz = R5 * (0.32 + 0.16 * hash8(seed + i * 5)) * (0.85 + 0.15 * Math.sin(t * 9 + i * 2.3));
+      const rr = R5 * (0.86 + 0.08 * hash9(seed + i * 3));
+      const sz = R5 * (0.32 + 0.16 * hash9(seed + i * 5)) * (0.85 + 0.15 * Math.sin(t * 9 + i * 2.3));
       v.sprites.put(
         SK2.FIRE,
         X2 + (cr[0] * ca + cu[0] * sa) * rr,
@@ -83529,12 +83793,12 @@ ${GLSL}
       const t = Math.floor(v.time * 22);
       const AX2 = v.lx(s.x + w.dx(s.x, s.ax)), AZ2 = v.lz(s.ay), BX = v.lx(s.x + w.dx(s.x, s.bx)), BZ = v.lz(s.by);
       for (let i = 0; i < 3; i++) {
-        const j = (hash8(s.seed + t * 3 + i) - 0.5) * 0.6, jy = (hash8(s.seed + t * 5 + i) - 0.5) * 0.5;
+        const j = (hash9(s.seed + t * 3 + i) - 0.5) * 0.6, jy = (hash9(s.seed + t * 5 + i) - 0.5) * 0.5;
         bolt2(v, AX2, Y2 - 0.1, AZ2, X2 + j, Y2 + jy, Z2 - j, 0.14 - i * 0.03, 0.5, s.seed + t * 7 + i, K, fade2, 1, cA);
         bolt2(v, BX, Y2 - 0.1, BZ, X2 - j, Y2 - jy, Z2 + j, 0.14 - i * 0.03, 0.5, s.seed + t * 11 + i, K, fade2, 1, cB);
       }
       const H5 = 30 * easeOut(Math.min(1, k * 4));
-      const sway = (hash8(s.seed + t) - 0.5) * 2.4;
+      const sway = (hash9(s.seed + t) - 0.5) * 2.4;
       bolt2(v, X2, Y2, Z2, X2 + sway, Y2 + H5, Z2 - sway * 0.5, 0.85, 3, s.seed + t * 13, K, fade2, 3, t % 2 ? cA : cB);
       bolt2(v, X2, Y2 + 0.5, Z2, X2 - sway * 0.7, Y2 + H5 * 0.8, Z2 + sway, 0.45, 2.2, s.seed + t * 17, K, fade2 * 0.9, 2, t % 2 ? cB : cA);
       bolt2(v, X2, Y2 + 1, Z2, X2 + sway * 1.4, Y2 + H5 * 0.55, Z2 + sway * 0.8, 0.3, 1.6, s.seed + t * 19, K, fade2 * 0.85, 2, cA);
@@ -83583,8 +83847,8 @@ ${GLSL}
       } else if (kind === "lightning") {
         const t = Math.floor(v.time * 20);
         for (let i = 0; i < 5; i++) {
-          const th = hash8(s.seed + i * 3 + t) * TAU12, rr = R5 * (0.1 + 0.6 * hash8(s.seed + i + t));
-          const th2 = th + (hash8(s.seed + i * 7 + t) - 0.5) * 1.6, rr2 = R5 * 0.35 * hash8(s.seed + i * 11 + t);
+          const th = hash9(s.seed + i * 3 + t) * TAU12, rr = R5 * (0.1 + 0.6 * hash9(s.seed + i + t));
+          const th2 = th + (hash9(s.seed + i * 7 + t) - 0.5) * 1.6, rr2 = R5 * 0.35 * hash9(s.seed + i * 11 + t);
           bolt2(
             v,
             X2 + Math.cos(th) * rr,
@@ -83708,21 +83972,21 @@ ${GLSL}
   function cloud(v, X2, Y2, Z2, R5, c, a, seed, flash = STORM_FLASH) {
     const t = v.time;
     for (let i = 0; i < 18; i++) {
-      const th = hash8(seed + i * 3.7) * TAU12 + t * 0.05 * (i % 2 ? 1 : -1);
-      const rr = R5 * Math.sqrt(hash8(seed + i * 5.3)) * 0.92;
+      const th = hash9(seed + i * 3.7) * TAU12 + t * 0.05 * (i % 2 ? 1 : -1);
+      const rr = R5 * Math.sqrt(hash9(seed + i * 5.3)) * 0.92;
       const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr;
-      const y = Y2 + (hash8(seed + i * 7.1) - 0.5) * R5 * 0.16 + Math.sin(t * 0.9 + i * 1.3) * R5 * 0.03;
-      v.sprites.put(SK2.SMOKE, x, y, z, R5 * (0.3 + 0.2 * hash8(seed + i * 2.9)), i < 7 ? STORM_LOW : c, a, c, 0, t * 0.12 * (i % 3 - 1) + i, seed + i, 0.1);
+      const y = Y2 + (hash9(seed + i * 7.1) - 0.5) * R5 * 0.16 + Math.sin(t * 0.9 + i * 1.3) * R5 * 0.03;
+      v.sprites.put(SK2.SMOKE, x, y, z, R5 * (0.3 + 0.2 * hash9(seed + i * 2.9)), i < 7 ? STORM_LOW : c, a, c, 0, t * 0.12 * (i % 3 - 1) + i, seed + i, 0.1);
     }
     v.sprites.put(SK2.SMOKE, X2, Y2 + R5 * 0.08, Z2, R5 * 0.6, c, a, c, 0, t * 0.05, seed + 31, 0.08);
     if (!flash) return;
     const f = Math.floor(t * 9);
     for (let j = 0; j < 3; j++) {
-      if (hash8(seed + j * 13 + f) < 0.55) continue;
-      const th = hash8(seed + j * 17 + f) * TAU12, rr = R5 * 0.6 * hash8(seed + j * 19 + f);
+      if (hash9(seed + j * 13 + f) < 0.55) continue;
+      const th = hash9(seed + j * 17 + f) * TAU12, rr = R5 * 0.6 * hash9(seed + j * 19 + f);
       const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr;
       v.sprites.put(SK2.GLOW, x, Y2 - R5 * 0.05, z, R5 * 0.4, flash, a * 0.6, WHITE4, 1, 0, seed + j, 0);
-      if (!j) bolt2(v, x, Y2 - R5 * 0.1, z, x + (hash8(seed + f) - 0.5) * R5 * 0.8, Y2 - R5 * 0.5, z + (hash8(seed + f * 3) - 0.5) * R5 * 0.8, 0.05, R5 * 0.1, seed + f, flash, a * 0.9, 1);
+      if (!j) bolt2(v, x, Y2 - R5 * 0.1, z, x + (hash9(seed + f) - 0.5) * R5 * 0.8, Y2 - R5 * 0.5, z + (hash9(seed + f * 3) - 0.5) * R5 * 0.8, 0.05, R5 * 0.1, seed + f, flash, a * 0.9, 1);
     }
   }
   var STORM_LOW = col("#263238");
@@ -83760,9 +84024,9 @@ ${GLSL}
         const h2 = p.h * 1.6 * pop2, wd = (p.w || 0.15) * 1.35;
         const rl = Math.hypot(dx, dy) || 1;
         const lean = 0.18 + Math.abs(p.lean || 0) * 0.8;
-        const ldx = dx / rl * lean + (hash8(s.seed + i * 3) - 0.5) * 0.25, ldz = dy / rl * lean + (hash8(s.seed + i * 5) - 0.5) * 0.25;
+        const ldx = dx / rl * lean + (hash9(s.seed + i * 3) - 0.5) * 0.25, ldz = dy / rl * lean + (hash9(s.seed + i * 5) - 0.5) * 0.25;
         const G4 = r4.data[i] - 0.12;
-        putAlong(batch, v.lx(wx), G4, v.lz(wy), ldx, 1, ldz, h2, wd, hash8(s.seed + i) * TAU12, c, kind, dissolve, hash8(s.seed + i * 7) * 10, kind === OK2.ICE ? 0.08 : 0);
+        putAlong(batch, v.lx(wx), G4, v.lz(wy), ldx, 1, ldz, h2, wd, hash9(s.seed + i) * TAU12, c, kind, dissolve, hash9(s.seed + i * 7) * 10, kind === OK2.ICE ? 0.08 : 0);
       }
       if (s.kind === "ice" && !v.low) {
         const patch4 = v.patch(s, s.x, s.y, r4.n);
@@ -83788,7 +84052,7 @@ ${GLSL}
         v.sprites.put(SK2.FLASH, X2, G4 + R5 * 0.4, Z2, R5 * 1.4 * (1.25 - f * 0.25), glow3, f * f * a * 0.7, WHITE4, 0.8, 0, s.seed, k);
         return;
       }
-      const da = hash8(s.seed) * TAU12, drift = (s.drift || 1.5) * (1 - t);
+      const da = hash9(s.seed) * TAU12, drift = (s.drift || 1.5) * (1 - t);
       const hz = (s.h || 9) * (1 - t * t);
       const px2 = X2 + Math.cos(da) * drift, pz2 = Z2 + Math.sin(da) * drift, py2 = G4 + hz + R5 * 0.6;
       D2[0] = -Math.cos(da) * (s.drift || 1.5) / fall2;
@@ -83881,8 +84145,8 @@ ${GLSL}
           const line2 = [x0, y0, v.ground(x0, y0)];
           let px2 = x0, py2 = y0;
           for (let j = 1; j <= segs; j++) {
-            const a2 = ang + (hash8(sd + j * 13) - 0.5) * 1.1;
-            const st = len / segs * (0.7 + 0.6 * hash8(sd + j * 7));
+            const a2 = ang + (hash9(sd + j * 13) - 0.5) * 1.1;
+            const st = len / segs * (0.7 + 0.6 * hash9(sd + j * 7));
             px2 += Math.cos(a2) * st;
             py2 += Math.sin(a2) * st;
             line2.push(px2, py2, v.ground(px2, py2));
@@ -83890,13 +84154,13 @@ ${GLSL}
           return line2;
         };
         for (let i = 0; i < n; i++) {
-          const ang = i / n * TAU12 + s.seed + (hash8(s.seed + i) - 0.5) * 0.5;
-          const len = s.r * (0.65 + 0.55 * hash8(s.seed * 3 + i));
+          const ang = i / n * TAU12 + s.seed + (hash9(s.seed + i) - 0.5) * 0.5;
+          const len = s.r * (0.65 + 0.55 * hash9(s.seed * 3 + i));
           const line2 = jag(s.x, s.y, ang, len, 7, s.seed + i * 31);
           d.push(line2);
-          if (hash8(s.seed + i * 5) > 0.4) {
-            const j = 3 + Math.floor(hash8(s.seed + i * 17) * 3);
-            const b = ang + (hash8(s.seed + i * 9) > 0.5 ? 0.75 : -0.75);
+          if (hash9(s.seed + i * 5) > 0.4) {
+            const j = 3 + Math.floor(hash9(s.seed + i * 17) * 3);
+            const b = ang + (hash9(s.seed + i * 9) > 0.5 ? 0.75 : -0.75);
             d.push(jag(line2[j * 3], line2[j * 3 + 1], b, len * 0.38, 3, s.seed + i * 47));
           }
         }
@@ -83924,8 +84188,8 @@ ${GLSL}
           const j = 1 + i % 3;
           if (L3.length < (j + 1) * 3) continue;
           const px2 = L3[j * 3], py2 = L3[j * 3 + 1];
-          const sz = (0.13 + 0.17 * hash8(s.seed + i * 11)) * Math.max(0.7, Math.min(1.6, s.r * 0.6)) * Math.min(1, k * 14);
-          putAlong(v.solids.rocks, v.lx(px2), L3[j * 3 + 2] + sz * (0.2 - sink * 0.9), v.lz(py2), hash8(s.seed + i) - 0.5, 1, hash8(s.seed + i * 2) - 0.5, sz * 1.3, sz, hash8(s.seed + i * 3) * TAU12, earth, OK2.ROCK, sink * 0.8, i, 0);
+          const sz = (0.13 + 0.17 * hash9(s.seed + i * 11)) * Math.max(0.7, Math.min(1.6, s.r * 0.6)) * Math.min(1, k * 14);
+          putAlong(v.solids.rocks, v.lx(px2), L3[j * 3 + 2] + sz * (0.2 - sink * 0.9), v.lz(py2), hash9(s.seed + i) - 0.5, 1, hash9(s.seed + i * 2) - 0.5, sz * 1.3, sz, hash9(s.seed + i * 3) * TAU12, earth, OK2.ROCK, sink * 0.8, i, 0);
         }
       }
     }
@@ -83999,14 +84263,14 @@ ${GLSL}
         v.shells.put(VK.DOME, X2, G4, Z2, R5, 0, 1, 0, 1, col(s.color || "#f8bbd0"), a, WHITE4, 0.35, 1, s.seed, 0.96);
       } else if (kind === "dark") {
         for (let i = 0; i < 7; i++) {
-          const ph = (v.time * 0.55 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.55 + hash8(s.seed + i));
-          const th = hash8(s.seed + i * 7 + cyc) * TAU12, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.75;
+          const ph = (v.time * 0.55 + hash9(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.55 + hash9(s.seed + i));
+          const th = hash9(s.seed + i * 7 + cyc) * TAU12, rr = Math.sqrt(hash9(s.seed + i * 11 + cyc)) * R5 * 0.75;
           v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G4 + 0.1 + ph * 1.1, Z2 + Math.sin(th) * rr, 0.25 + 0.35 * ph, DARKNESS, a * Math.sin(ph * PI) * 0.9, DARKNESS, 0, ph * 2, s.seed + i, 0.15 + ph * 0.6);
         }
       } else if (kind === "gravity") {
         for (let i = 0; i < 10; i++) {
-          const th = hash8(s.seed + i) * TAU12, rr = Math.sqrt(hash8(s.seed + i * 3)) * R5 * 0.9;
-          const ph = (v.time * 1.6 + hash8(s.seed + i * 7)) % 1;
+          const th = hash9(s.seed + i) * TAU12, rr = Math.sqrt(hash9(s.seed + i * 3)) * R5 * 0.9;
+          const ph = (v.time * 1.6 + hash9(s.seed + i * 7)) % 1;
           const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, top = G4 + 3.2 * (1 - ph);
           v.ribbons.start(RK.SPEED, RM2.FACE, c2, a * 0.8, c2, 0.5).point(x, top + 0.7, z, 0.02).point(x, top, z, 0.014).finish();
         }
@@ -84015,7 +84279,7 @@ ${GLSL}
         if (!r4.data) {
           const pts = [], n = Math.max(3, Math.round(s.r * 3));
           for (let i = 0; i < n; i++) {
-            const th = i / n * TAU12 + hash8(s.seed + i), rr = s.r * (0.3 + 0.6 * hash8(s.seed + i * 3));
+            const th = i / n * TAU12 + hash9(s.seed + i), rr = s.r * (0.3 + 0.6 * hash9(s.seed + i * 3));
             pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr, L: 0.9, ang: th, delay: i * 0.03, seed: i });
           }
           r4.data = pts;
@@ -84023,39 +84287,39 @@ ${GLSL}
         arms2(v, s, r4.data, R5 > 2, a, 1);
       } else if (kind === "gas") {
         for (let i = 0; i < 9; i++) {
-          const ph = (v.time * 0.35 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.35 + hash8(s.seed + i));
-          const th = hash8(s.seed + i * 7 + cyc) * TAU12, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.8;
+          const ph = (v.time * 0.35 + hash9(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.35 + hash9(s.seed + i));
+          const th = hash9(s.seed + i * 7 + cyc) * TAU12, rr = Math.sqrt(hash9(s.seed + i * 11 + cyc)) * R5 * 0.8;
           v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G4 + 0.15 + ph * 0.7, Z2 + Math.sin(th) * rr, (0.35 + 0.4 * ph) * Math.min(1.6, 0.6 + R5 / 4), c, a * Math.sin(ph * PI) * 0.5, GAS_LIGHT, 0, ph * 2, s.seed + i, 0.15 + ph * 0.6);
         }
       } else if (kind === "fire") {
         for (let i = 0; i < 12; i++) {
-          const ph = (v.time * 1.2 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 1.2 + hash8(s.seed + i));
-          const th = hash8(s.seed + i * 7 + cyc) * TAU12, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.85;
-          const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, h2 = 0.3 + 0.35 * hash8(s.seed + i * 13);
+          const ph = (v.time * 1.2 + hash9(s.seed + i)) % 1, cyc = Math.floor(v.time * 1.2 + hash9(s.seed + i));
+          const th = hash9(s.seed + i * 7 + cyc) * TAU12, rr = Math.sqrt(hash9(s.seed + i * 11 + cyc)) * R5 * 0.85;
+          const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, h2 = 0.3 + 0.35 * hash9(s.seed + i * 13);
           v.sprites.put(SK2.FIRE, x, G4 + h2 * (0.6 + ph * 0.8), z, h2 * (1 - ph * 0.5), i % 3 ? FIELD_FIRE : DEEP_FIRE, a * Math.sin(ph * PI), FIELD_FIRE_CORE, 0.5, 0, s.seed + i * 7, 0.15 + ph * 0.5);
           if (i % 3 === 0) v.sprites.put(SK2.EMBER, x, G4 + 0.4 + ph * 2.4, z, 0.035, FIELD_FIRE_CORE, a * (1 - ph), WHITE4, 1, 0, s.seed + i, ph);
         }
       } else if (kind === "strings") {
         for (let i = 0; i < 14; i++) {
-          const ph = (v.time * 0.9 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.9 + hash8(s.seed + i));
-          const th = hash8(s.seed + i * 7 + cyc) * TAU12, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.9;
-          const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, lean = (hash8(s.seed + i * 5 + cyc) - 0.5) * 3;
+          const ph = (v.time * 0.9 + hash9(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.9 + hash9(s.seed + i));
+          const th = hash9(s.seed + i * 7 + cyc) * TAU12, rr = Math.sqrt(hash9(s.seed + i * 11 + cyc)) * R5 * 0.9;
+          const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, lean = (hash9(s.seed + i * 5 + cyc) - 0.5) * 3;
           const head = G4 + 16 * Math.max(0, 1 - ph * 2.2), tail2 = Math.min(G4 + 22, head + 9);
           const f = a * (ph < 0.75 ? 0.9 : (1 - ph) * 3.6);
           v.ribbons.start(RK.THIN, RM2.FACE, c, f, WHITE4, 0.5).point(x + lean * (tail2 - G4) / 16, tail2, z, 0.01).point(x + lean * (head - G4) / 16, head, z, 0.014).finish();
         }
       } else if (kind === "mochi") {
         for (let i = 0; i < 6; i++) {
-          const ph = (v.time * 0.45 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.45 + hash8(s.seed + i));
-          const th = hash8(s.seed + i * 7 + cyc) * TAU12, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.75;
-          const r4 = (0.5 + 0.4 * hash8(s.seed + i * 3)) * Math.sin(ph * PI);
+          const ph = (v.time * 0.45 + hash9(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.45 + hash9(s.seed + i));
+          const th = hash9(s.seed + i * 7 + cyc) * TAU12, rr = Math.sqrt(hash9(s.seed + i * 11 + cyc)) * R5 * 0.75;
+          const r4 = (0.5 + 0.4 * hash9(s.seed + i * 3)) * Math.sin(ph * PI);
           v.shells.put(VK.GOO, X2 + Math.cos(th) * rr, G4 - r4 * 0.25, Z2 + Math.sin(th) * rr, r4, 0, 1, 0, 0.85, c, a, MOCHI_SHADE, 0, k, s.seed + i);
         }
       } else if (kind === "field") {
         for (let i = 0; i < 5; i++) {
-          const ph = (v.time * 0.8 + hash8(s.seed + i)) % 1;
-          const cyc = Math.floor(v.time * 0.8 + hash8(s.seed + i));
-          const x = X2 + (hash8(s.seed + i * 7 + cyc) - 0.5) * R5 * 1.4, z = Z2 + (hash8(s.seed + i * 11 + cyc) - 0.5) * R5 * 1.4;
+          const ph = (v.time * 0.8 + hash9(s.seed + i)) % 1;
+          const cyc = Math.floor(v.time * 0.8 + hash9(s.seed + i));
+          const x = X2 + (hash9(s.seed + i * 7 + cyc) - 0.5) * R5 * 1.4, z = Z2 + (hash9(s.seed + i * 11 + cyc) - 0.5) * R5 * 1.4;
           v.sprites.put(SK2.BUBBLE, x, G4 + 0.05 + ph * 0.3, z, 0.06 + ph * 0.12, col(s.color || "#aed581"), a * (1 - ph) * 0.8, WHITE4, 0.3, 0, s.seed + i, ph);
         }
       }
@@ -84093,10 +84357,10 @@ ${GLSL}
         const seed = Math.floor(t * rate + i / N8) * 13 + i;
         const side = i % 2 ? 1 : -1;
         const shx = X2 + (ca * 0.04 - sa * side * 0.2) * sc, shy = G4 + 1.32 * sc, shz = Z2 + (sa * 0.04 + ca * side * 0.2) * sc;
-        const d = (0.9 + hash8(seed) * (s.range || 2.6) * (big2 > 1.5 ? 0.8 : 1)) * (0.35 + 0.65 * pop2);
-        const th = ang + (hash8(seed + 3) - 0.5) * (s.arc || 0.9) * (big2 > 1.5 ? 0.6 : 1);
+        const d = (0.9 + hash9(seed) * (s.range || 2.6) * (big2 > 1.5 ? 0.8 : 1)) * (0.35 + 0.65 * pop2);
+        const th = ang + (hash9(seed + 3) - 0.5) * (s.arc || 0.9) * (big2 > 1.5 ? 0.6 : 1);
         const ct = Math.cos(th), st = Math.sin(th);
-        const px2 = X2 + ct * d, pz2 = Z2 + st * d, py2 = G4 + (1.1 + (hash8(seed + 7) - 0.5) * 0.7) * sc;
+        const px2 = X2 + ct * d, pz2 = Z2 + st * d, py2 = G4 + (1.1 + (hash9(seed + 7) - 0.5) * 0.7) * sc;
         const R5 = 0.12 * big2 * sc;
         const w0 = 0.075 * sc * Math.min(big2, 1.7), w1 = 0.062 * sc * Math.min(big2, 2);
         for (let b = 0; b < 3; b++) {
@@ -84123,8 +84387,8 @@ ${GLSL}
       const skin = col(s.skin || "#f1c9a0"), top = col(s.top || "#e53935"), bottom = col(s.bottom || "#1565c0");
       for (let i = 0; i < 10; i++) {
         const th = t * (2.5 + i % 3) + i * 2.39;
-        const r4 = R5 * (0.35 + 0.65 * hash8(s.seed + i));
-        const px2 = X2 + Math.cos(th) * r4, pz2 = Z2 + Math.sin(th) * r4, py2 = G4 + 0.7 + Math.sin(t * 7 + i) * 0.3 + hash8(s.seed + i * 3) * 0.6;
+        const r4 = R5 * (0.35 + 0.65 * hash9(s.seed + i));
+        const px2 = X2 + Math.cos(th) * r4, pz2 = Z2 + Math.sin(th) * r4, py2 = G4 + 0.7 + Math.sin(t * 7 + i) * 0.3 + hash9(s.seed + i * 3) * 0.6;
         const kind = i % 3, sz = kind ? 0.22 : 0.16;
         putAlong(v.solids.blocks, px2, py2, pz2, Math.cos(th * 2), Math.sin(th * 1.3), Math.sin(th * 2), sz * (kind ? 1.6 : 1), sz, th, kind === 0 ? skin : kind === 1 ? top : bottom, OK2.SKIN, 1 - fade2, i, 0);
       }
@@ -84231,7 +84495,7 @@ ${GLSL}
           break;
         case "shard": {
           if (low && i & 1) break;
-          const r4 = p.rot || 0, q2 = hash8((p.max || 0) * 13.7) * TAU12;
+          const r4 = p.rot || 0, q2 = hash9((p.max || 0) * 13.7) * TAU12;
           const icy = c[2] > c[0] * 1.1 || c[0] > 0.8 && c[1] > 0.8 && c[2] > 0.8;
           putAlong(v.solids.shards, X2, Y2, Z2, Math.cos(r4) * Math.cos(q2), Math.sin(r4), Math.cos(r4) * Math.sin(q2), sz * 1.25, sz * 1, r4 * 0.7, c, icy ? OK2.ICE : OK2.WAX, k > 0.75 ? (k - 0.75) * 4 : 0, p.max * 7.1 % 10, 0.1);
           break;
@@ -84317,7 +84581,7 @@ ${GLSL}
       L3[o + 4] = p.vy / sp;
       L3[o + 5] = this.v.time;
       L3[o + 6] = p.size || 1;
-      L3[o + 7] = hash8(P3[0] * 3.1 + P3[1] * 7.7) * 100 | 0;
+      L3[o + 7] = hash9(P3[0] * 3.1 + P3[1] * 7.7) * 100 | 0;
     }
     /** Is this projectile drawn here (not as a plain mesh)? */
     owns(pr) {
@@ -84392,8 +84656,8 @@ ${GLSL}
     v.sprites.vel(j, 0.04 + 0.12 * fade2, 0.14 * fade2, 7, 0.8);
     const lx = -dz, lz = dx, bx = X2 - dx * 0.4, bz = Z2 - dz * 0.4;
     for (let n = 0; n < 8; n++) {
-      const th = n / 8 * TAU12 + hash8(seed + n) * 0.5, ca = Math.cos(th), sa = Math.sin(th);
-      const r12 = (1.9 - 1.1 * k) * s, r0 = r12 * (0.45 + 0.15 * hash8(seed + n * 3));
+      const th = n / 8 * TAU12 + hash9(seed + n) * 0.5, ca = Math.cos(th), sa = Math.sin(th);
+      const r12 = (1.9 - 1.1 * k) * s, r0 = r12 * (0.45 + 0.15 * hash9(seed + n * 3));
       v.ribbons.start(RK.SPEED, RM2.FACE, WHITE6, fade2 * 0.85, WHITE6, 0.4).point(bx + lx * ca * r12, Y2 + sa * r12, bz + lz * ca * r12, 0.03 * s).point(bx + lx * ca * r0, Y2 + sa * r0, bz + lz * ca * r0, 4e-3).finish();
     }
   }
@@ -84440,7 +84704,7 @@ ${GLSL}
     const sp = Math.hypot(pr.vx, pr.vy) || 1;
     const dx = pr.vx / sp, dz = pr.vy / sp;
     const c = col(pr.color || "#ffffff");
-    const seed = hash8(pr.range * 7.1 + pr.radius * 13.3 + (pr.damage || 0)) * 100 | 0;
+    const seed = hash9(pr.range * 7.1 + pr.radius * 13.3 + (pr.damage || 0)) * 100 | 0;
     switch (pr.sprite) {
       case "fireball":
       case "firefist": {
@@ -84490,8 +84754,8 @@ ${GLSL}
         const sc2 = col(pr.color || (sand ? "#e1c16e" : "#e3f2fd"));
         flyingCrescent(v, X2, Y2, Z2, dx, dz, 0.9 * s, 0.38 * s, sc2, sand, seed);
         if (sand) for (let i = 0; i < 6; i++) {
-          const ph = (t * 4 + i / 6) % 1, off = (hash8(seed + i) - 0.5) * 0.9 * s;
-          v.sprites.put(SK2.SPECK, X2 - dx * ph * 1.2 - dz * off, Y2 + (hash8(seed + i * 3) - 0.5) * 0.6 * s, Z2 - dz * ph * 1.2 + dx * off, 0.03, sc2, 1 - ph, sc2, 0);
+          const ph = (t * 4 + i / 6) % 1, off = (hash9(seed + i) - 0.5) * 0.9 * s;
+          v.sprites.put(SK2.SPECK, X2 - dx * ph * 1.2 - dz * off, Y2 + (hash9(seed + i * 3) - 0.5) * 0.6 * s, Z2 - dz * ph * 1.2 + dx * off, 0.03, sc2, 1 - ph, sc2, 0);
         }
         else trail2(v, r4, RK.SPEED, sc2, 0.45, WHITE6, 0.6, 0.2 * s, 0.4, 6);
         break;
@@ -84526,7 +84790,7 @@ ${GLSL}
         } else {
           const fl2 = Math.floor(t * 20);
           for (let i = 0; i < 4; i++) {
-            const a = hash8(seed + i * 3 + fl2) * TAU12, e = (hash8(seed + i * 5 + fl2) - 0.5) * 2;
+            const a = hash9(seed + i * 3 + fl2) * TAU12, e = (hash9(seed + i * 5 + fl2) - 0.5) * 2;
             bolt2(v, X2, Y2, Z2, X2 + Math.cos(a) * 0.5 * s, Y2 + e * 0.4 * s, Z2 + Math.sin(a) * 0.5 * s, 0.05, 0.12, seed + i + fl2, lc, 1, 0);
           }
           v.sprites.put(SK2.GLOW, X2, Y2, Z2, 0.35 * s, lc, 0.75, WHITE6, 1, 0, seed, 0);
@@ -84675,8 +84939,8 @@ ${GLSL}
     trail2(v, r4, RK.SMOKE, fr, 0.75, WHITE6, 0, 0.55 * R5, 0.4, 12);
     const f = Math.floor(t * 24);
     for (let i = 0; i < 6; i++) {
-      const ph = (t * 3 + i / 6) % 1, sd = i % 2 ? 1 : -1, off = (0.4 + hash8(seed + i + f) * 1.1) * R5 * sd;
-      v.sprites.put(SK2.SPECK, X2 - dx * ph * 2.5 * R5 + lx * off, Y2 + (hash8(seed + i * 3) - 0.3) * 0.6 * R5 - ph * 0.3, Z2 - dz * ph * 2.5 * R5 + lz * off, 0.035, fr, 1 - ph, WHITE6, 0.4, f + i, seed + i, 0);
+      const ph = (t * 3 + i / 6) % 1, sd = i % 2 ? 1 : -1, off = (0.4 + hash9(seed + i + f) * 1.1) * R5 * sd;
+      v.sprites.put(SK2.SPECK, X2 - dx * ph * 2.5 * R5 + lx * off, Y2 + (hash9(seed + i * 3) - 0.3) * 0.6 * R5 - ph * 0.3, Z2 - dz * ph * 2.5 * R5 + lz * off, 0.035, fr, 1 - ph, WHITE6, 0.4, f + i, seed + i, 0);
     }
   }
   function fireBird(v, r4, X2, Y2, Z2, R5, dx, dz, c, seed, t) {
@@ -84702,9 +84966,9 @@ ${GLSL}
     const lx = -dz, lz = dx, f = Math.floor(t * 30);
     v.ribbons.start(RK.SPEED, RM2.FACE, WHITE6, 0.32, WHITE6, 0.2).point(sx + ax * 0.15, sy + ay * 0.15, sz + az * 0.15, 0.05 * s).point(X2 - dx * 0.15, Y2, Z2 - dz * 0.15, 0.2 * s).finish();
     for (let i = 0; i < 6; i++) {
-      const th = hash8(seed + i * 7 + f) * TAU12, rr = (0.16 + 0.12 * hash8(seed + i)) * s;
+      const th = hash9(seed + i * 7 + f) * TAU12, rr = (0.16 + 0.12 * hash9(seed + i)) * s;
       const ox = lx * Math.cos(th) * rr, oy = Math.sin(th) * rr, oz = lz * Math.cos(th) * rr;
-      const q0 = 0.08 + 0.12 * hash8(seed + i * 3 + f), q1 = Math.min(0.95, q0 + 0.35 + 0.45 * hash8(seed + i * 5 + f));
+      const q0 = 0.08 + 0.12 * hash9(seed + i * 3 + f), q1 = Math.min(0.95, q0 + 0.35 + 0.45 * hash9(seed + i * 5 + f));
       const wob = Math.sin(t * 40 + i * 1.7) * 0.05 * s;
       v.ribbons.start(RK.SPEED, RM2.FACE, WHITE6, 0.75, WHITE6, 0.35).point(X2 - ax * q0 + ox, Y2 - ay * q0 + oy, Z2 - az * q0 + oz, 0.018 * s).point(X2 - ax * (q0 + q1) * 0.5 + ox + lx * wob, Y2 - ay * (q0 + q1) * 0.5 + oy + wob, Z2 - az * (q0 + q1) * 0.5 + oz + lz * wob, 0.014 * s).point(X2 - ax * q1 + ox, Y2 - ay * q1 + oy, Z2 - az * q1 + oz, 3e-3).finish();
     }
@@ -84712,9 +84976,9 @@ ${GLSL}
   function speedLines(v, X2, Y2, Z2, dx, dz, R5, seed, t) {
     const f = Math.floor(t * 30);
     for (let i = 0; i < 4; i++) {
-      const a = hash8(seed + i * 7 + f) * TAU12, rr = R5 * (1.1 + hash8(seed + i) * 0.6);
+      const a = hash9(seed + i * 7 + f) * TAU12, rr = R5 * (1.1 + hash9(seed + i) * 0.6);
       const ox = -dz * Math.cos(a) * rr, oy = Math.sin(a) * rr, oz = dx * Math.cos(a) * rr;
-      const L3 = 0.5 + hash8(seed + i * 3 + f) * 0.6;
+      const L3 = 0.5 + hash9(seed + i * 3 + f) * 0.6;
       v.ribbons.start(RK.SPEED, RM2.FACE, WHITE6, 0.8, WHITE6, 0.3).point(X2 + ox - dx * 0.2, Y2 + oy, Z2 + oz - dz * 0.2, 0.02).point(X2 + ox - dx * (0.2 + L3), Y2 + oy, Z2 + oz - dz * (0.2 + L3), 8e-3).finish();
     }
   }
@@ -85323,7 +85587,7 @@ ${GLSL}
 
   // src/render3d/glints.js
   var FAR = 90;
-  var NEAR2 = 3;
+  var NEAR3 = 3;
   var TEX = null;
   function starTexture() {
     if (TEX) return TEX;
@@ -85414,7 +85678,7 @@ ${GLSL}
         k++;
         const ph = (t + (o.x * 0.37 + o.y * 0.61) % 2.3) % 2.3 / 2.3;
         const tw = Math.exp(-Math.pow((ph - 0.12) / 0.045, 2));
-        const fade2 = Math.min(1, (FAR - d) / 20) * Math.min(1, (d - 0.6) / (NEAR2 - 0.6));
+        const fade2 = Math.min(1, (FAR - d) / 20) * Math.min(1, (d - 0.6) / (NEAR3 - 0.6));
         const size = Math.max(0.5, d * 0.034) * (0.7 + 0.9 * tw);
         const back = Math.min(0.35, d * 0.05) / d;
         sp.position.set(sx - dx * back, fh - dh * back, sz - dz * back);
@@ -91692,7 +91956,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   float ffbm(vec3 p) { return fnoise(p) * 0.55 + fnoise(p * 2.03 + 7.1) * 0.3 + fnoise(p * 4.1 + 3.7) * 0.15; }
 `
   );
-  var VERT4 = (
+  var VERT5 = (
     /* glsl */
     `
   uniform float uTime, uSeed, uGrow;
@@ -91831,11 +92095,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   function bodyMat(seed, cols = COLS2) {
     const u = { uTime: { value: 0 }, uSeed: { value: seed }, uGrow: { value: 1 }, uAlpha: { value: 1 }, uLean: { value: new Vector3() } };
     for (const [k, c] of Object.entries(cols)) u[k] = { value: new Color(c) };
-    return new ShaderMaterial({ uniforms: u, vertexShader: VERT4, fragmentShader: FRAG_BODY, transparent: true, depthWrite: false, side: DoubleSide });
+    return new ShaderMaterial({ uniforms: u, vertexShader: VERT5, fragmentShader: FRAG_BODY, transparent: true, depthWrite: false, side: DoubleSide });
   }
   function coreMat(seed) {
     const u = { uTime: { value: 0 }, uSeed: { value: seed }, uGrow: { value: 1 }, uAlpha: { value: 1 }, uLean: { value: new Vector3() }, uCore: { value: new Color("#ffe9a8") } };
-    return new ShaderMaterial({ uniforms: u, vertexShader: VERT4, fragmentShader: FRAG_CORE, transparent: true, depthWrite: false, blending: AdditiveBlending });
+    return new ShaderMaterial({ uniforms: u, vertexShader: VERT5, fragmentShader: FRAG_CORE, transparent: true, depthWrite: false, blending: AdditiveBlending });
   }
   var _q4 = new Quaternion();
   var _v7 = new Vector3();
@@ -93988,6 +94252,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.renderer.info.autoReset = false;
       this.scene = new Scene();
       this.sky = new Sky(this.scene);
+      this.clouds = new Clouds(this.scene, this.sky);
       this.dome = new BubbleDome(this.scene);
       this.water = new Water(this.scene, this.renderer);
       this.terrain = new TerrainManager(this.scene);
@@ -94335,6 +94600,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.sky.inBubble = this.dome.update(w, ox, oy, env2, cam);
       this.sky.update(env2, w, sailing);
       this.sky.mesh.position.copy(cam.position);
+      this.clouds?.update(env2, w, ox, oy, this.quality === "low");
       this.sky.uniforms.uHorizonY.value = -Math.sqrt(2 * Math.max(0, cam.position.y) / PLANET_R);
       this.water.update(ox, oy, env2, this.sky.sunDir, this.sky.sunCol, this.sky.horizon, this.sky.top, this.sky.overcast);
       const hs = p.deck?.ship || (sailing ? p.ship : null);
@@ -95462,10 +95728,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   };
 
   // src/render3d/groundcover.js
-  var CELL5 = 16;
-  var NEAR3 = 22;
+  var CELL6 = 16;
+  var NEAR4 = 22;
   var KINDS = ["grass", "flower", "fern", "pebble", "shell", "rock", "crop"];
-  var REACH = { crop: 1, grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
+  var REACH2 = { crop: 1, grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
   var MAXN = { crop: 4200, grass: 5200, flower: 1400, fern: 1100, pebble: 1600, shell: 500, rock: 400 };
   var MAXF = { crop: 9e3, grass: 16e3, flower: 2600, fern: 2e3, pebble: 1400, shell: 400, rock: 1200 };
   var PAD2 = { crop: 1.1, grass: 0.7, flower: 0.6, fern: 1.2, pebble: 0.3, shell: 0.2, rock: 2 };
@@ -95475,7 +95741,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var FILL_BUDGET_MS = 2.5;
   var PAVED = new Uint8Array(64);
   for (const t of [T2.STONE, T2.COBBLE, T2.PLANK, T2.MARBLE, T2.WALL, T2.RAIL, T2.BRIDGE, T2.CARPET, T2.TATAMI, T2.STEEL, T2.GOLD, T2.CAKE, T2.ISLAND_CLOUD, T2.ICE, T2.PACK_ICE, T2.RED_ROCK, T2.MASONRY, T2.CANOPY]) PAVED[t] = 1;
-  function hash9(x, y, k) {
+  function hash10(x, y, k) {
     let h2 = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(k | 0, 1103515245);
     h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
     h2 ^= h2 >>> 16;
@@ -95695,13 +95961,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   function vnoise2(x, y, k) {
     const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
     const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
-    const a = hash9(xi, yi, k), b = hash9(xi + 1, yi, k), c = hash9(xi, yi + 1, k), d = hash9(xi + 1, yi + 1, k);
+    const a = hash10(xi, yi, k), b = hash10(xi + 1, yi, k), c = hash10(xi, yi + 1, k), d = hash10(xi + 1, yi + 1, k);
     return (a + (b - a) * u) * (1 - v) + (c + (d - c) * u) * v;
   }
   function buildCell(world, terrain, cx, cy) {
     const out = {};
     for (const k of KINDS) out[k] = [];
-    const x0 = cx * CELL5, y0 = cy * CELL5;
+    const x0 = cx * CELL6, y0 = cy * CELL6;
     const col2 = new Color();
     const put2 = (k, x, y, rot, s, c) => {
       let h2 = terrain(x, y);
@@ -95709,13 +95975,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       else if (!(h2 > 0.05)) return;
       out[k].push(x, y, h2, rot, s, c.r, c.g, c.b);
     };
-    for (let j = 0; j < CELL5; j++) {
+    for (let j = 0; j < CELL6; j++) {
       const y = y0 + j;
       if (y < 1 || y >= world.height - 1) continue;
-      for (let i = 0; i < CELL5; i++) {
+      for (let i = 0; i < CELL6; i++) {
         const x = world.wx(x0 + i);
         const t = world.type(x, y);
-        const r12 = hash9(x, y, 1), r22 = hash9(x, y, 2), r32 = hash9(x, y, 3);
+        const r12 = hash10(x, y, 1), r22 = hash10(x, y, 2), r32 = hash10(x, y, 3);
         if (IS_LIQUID[t]) {
           if (t === T2.SEA && r12 < 0.022) {
             const sd = world.sd ? world.sd(x, y) : -1;
@@ -95728,13 +95994,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const winter = clim === CLIMATE.WINTER || t === T2.SNOW;
         if (t === T2.FARM) {
           if (winter) continue;
-          const fk = hash9(Math.floor(x / 22), Math.floor(y / 22), 41);
+          const fk = hash10(Math.floor(x / 22), Math.floor(y / 22), 41);
           const ripe = fk < 0.62;
           for (let k = Math.ceil(y * 1.5 - 0.25); k <= Math.floor((y + 1) * 1.5 - 0.25); k++) {
             const ry = (k + 0.25) / 1.5;
             if (ry < y || ry >= y + 1) continue;
             for (let q2 = 0; q2 < 3; q2++) {
-              const a = hash9(x, k, 50 + q2);
+              const a = hash10(x, k, 50 + q2);
               if (a < 0.08) continue;
               const c = ripe ? col2.setRGB(0.84 + a * 0.06, 0.74 + a * 0.05, 0.46, SRGB) : col2.setRGB(0.42 + a * 0.06, 0.64, 0.26, SRGB);
               put2("crop", x + (q2 + 0.2 + a * 0.6) / 3, ry + (a - 0.5) * 0.08, a * 360, ripe ? 0.95 + a * 0.3 : 0.6 + a * 0.25, c);
@@ -95746,14 +96012,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           if (winter) continue;
           const n = t === T2.FOREST || t === T2.JUNGLE ? 2 : t === T2.LAWN ? 1 : 3;
           for (let q2 = 0; q2 < n; q2++) {
-            const a = hash9(x, y, 10 + q2), b = hash9(x, y, 20 + q2);
+            const a = hash10(x, y, 10 + q2), b = hash10(x, y, 20 + q2);
             if (a < 0.12) continue;
-            put2("grass", x + a, y + b, a * 40, 0.7 + b * 0.7, grassTint(clim, col2, hash9(x, y, 30 + q2)));
+            put2("grass", x + a, y + b, a * 40, 0.7 + b * 0.7, grassTint(clim, col2, hash10(x, y, 30 + q2)));
           }
           const patch4 = vnoise2(x / 7, y / 7, 5);
           const fp = t === T2.FLOWERS ? 0.55 : t === T2.SAKURA ? 0.25 : t === T2.GRASS ? 0.015 + Math.max(0, patch4 - 0.62) * 1.1 : 0.02;
           if (r12 < fp) {
-            const pick6 = hash9(Math.floor(x / 7), Math.floor(y / 7), 6) * FLOWERS.length + (r22 < 0.3 ? 2 : 0);
+            const pick6 = hash10(Math.floor(x / 7), Math.floor(y / 7), 6) * FLOWERS.length + (r22 < 0.3 ? 2 : 0);
             const f = clim === CLIMATE.SAKURA ? FLOWERS[2 + Math.floor(r22 * 2)] : FLOWERS[Math.floor(pick6) % FLOWERS.length];
             put2("flower", x + r32, y + r22, r12 * 50, 0.8 + r32 * 0.6, col2.setRGB(f[0], f[1], f[2]));
           }
@@ -95815,7 +96081,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           mat: coverMaterial(k),
           capNear: MAXN[k],
           capFar: MAXF[k],
-          near: NEAR3,
+          near: NEAR4,
           wedges: WEDGES[k],
           pad: PAD2[k],
           setup: (m) => {
@@ -95845,7 +96111,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const low = v.quality === "low" || fol === "near";
       const R5 = fol === "off" ? 0 : low ? 36 : 64;
       const ox = v.ox, oy = v.oy;
-      const ccx = Math.floor(w.wx(ox) / CELL5), ccy = Math.floor(oy / CELL5);
+      const ccx = Math.floor(w.wx(ox) / CELL6), ccy = Math.floor(oy / CELL6);
       const key2 = `${ccx},${ccy},${low ? 1 : 0},${R5}`;
       this.t -= dt;
       if (key2 !== this.key) {
@@ -95855,14 +96121,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const wt = this.want;
       if (wt && this.t <= 0) {
         const t0 = performance.now();
-        const cr = Math.ceil(wt.R / CELL5) + 1;
+        const cr = Math.ceil(wt.R / CELL6) + 1;
         let nearReady = true, allReady = true;
         for (const [i, j] of ring2(cr)) {
           const k = this.cellKey(w, wt.ccx + i, wt.ccy + j);
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > FILL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR3 / CELL5)) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR4 / CELL6)) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -95881,16 +96147,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     /** The cache key of cell (cx, cy) (wrapped around the world on X), or -1 off the map. */
     cellKey(w, cx, cy) {
-      if (cy < 0 || cy * CELL5 >= w.height) return -1;
-      const n = Math.ceil(w.width / CELL5);
+      if (cy < 0 || cy * CELL6 >= w.height) return -1;
+      const n = Math.ceil(w.width / CELL6);
       if (w.wrap) cx = (cx % n + n) % n;
       else if (cx < 0 || cx >= n) return -1;
       return cy * 1e5 + cx;
     }
     /** Lay out the instances around the centre of cell (ccx, ccy). */
     place(w, ccx, ccy, R5, low) {
-      const cr = Math.ceil(R5 / CELL5) + 1;
-      const ox = (ccx + 0.5) * CELL5, oy = (ccy + 0.5) * CELL5;
+      const cr = Math.ceil(R5 / CELL6) + 1;
+      const ox = (ccx + 0.5) * CELL6, oy = (ccy + 0.5) * CELL6;
       this.origin = { x: ox, y: oy };
       for (const k of KINDS) this.sets[k].reset();
       const keep = /* @__PURE__ */ new Set();
@@ -95903,7 +96169,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         for (const kind of KINDS) {
           const list = cell[kind];
           if (!list.length) continue;
-          const Rk = R5 * REACH[kind], R22 = Rk * Rk;
+          const Rk = R5 * REACH2[kind], R22 = Rk * Rk;
           const thin = THIN[kind], thinK = low ? 2.4 : 1.7;
           const set = this.sets[kind];
           const grass = kind === "grass";
@@ -95914,7 +96180,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
             if (d2 > R22) continue;
             if (thin && d2 > R22 * 0.25) {
               const f = Math.sqrt(d2) / Rk;
-              if (hash9(Math.floor(x * 7), Math.floor(y * 7), 91) < (f - 0.5) * thinK) continue;
+              if (hash10(Math.floor(x * 7), Math.floor(y * 7), 91) < (f - 0.5) * thinK) continue;
             }
             const sc = list[q2 + 4];
             set.put(dx, list[q2 + 2] - 0.02, dz, list[q2 + 3], sc, sc * (grass ? 0.8 + sc % 0.3 : 1), list[q2 + 5], list[q2 + 6], list[q2 + 7]);
@@ -96031,7 +96297,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }, "ripples");
 
   // src/world/seabed.js
-  function hash10(x, y, k) {
+  function hash11(x, y, k) {
     let h2 = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(k | 0, 1103515245);
     h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
     h2 ^= h2 >>> 16;
@@ -96071,26 +96337,26 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     x = Math.floor(x);
     y = Math.floor(y);
     if (!(depth > 2.2 && depth < 22) || world.type(x, y) !== T2.SEA) return false;
-    if (hash10(x, y, 77) > 45e-4) return false;
+    if (hash11(x, y, 77) > 45e-4) return false;
     return warmth(world, x, y) > 0.55;
   }
 
   // src/render3d/seabed.js
   var TAU21 = Math.PI * 2;
-  var CELL6 = 16;
+  var CELL7 = 16;
   var KINDS2 = ["branch", "brain", "table", "fan", "tube", "anemone", "kelp", "seagrass", "boulder", "star", "clam"];
   var MAX4 = { branch: 1400, brain: 1e3, table: 420, fan: 800, tube: 600, anemone: 700, kelp: 1500, seagrass: 5e3, boulder: 1100, star: 500, clam: 60 };
   var SWAY3 = { fan: 0.5, anemone: 0.7, kelp: 1, seagrass: 0.9 };
   var GLOW3 = { branch: 0.07, brain: 0.04, table: 0.05, fan: 0.08, tube: 0.06, anemone: 0.16, clam: 0.14, star: 0.06 };
   var STRIDE = 9;
-  var NEAR4 = 16;
+  var NEAR5 = 16;
   var PAD3 = { branch: 1, brain: 1, table: 1.5, fan: 1.2, tube: 1, anemone: 0.5, kelp: 1, seagrass: 0.5, boulder: 2, star: 0.3, clam: 0.8 };
   var WEDGES2 = { branch: 4, brain: 4, table: 1, fan: 4, tube: 1, anemone: 1, kelp: 4, seagrass: 8, boulder: 4, star: 1, clam: 1 };
   var CELL_BUDGET_MS = 2.5;
   function vnoise3(x, y, k) {
     const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
     const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
-    const a = hash10(xi, yi, k), b = hash10(xi + 1, yi, k), c = hash10(xi, yi + 1, k), d = hash10(xi + 1, yi + 1, k);
+    const a = hash11(xi, yi, k), b = hash11(xi + 1, yi, k), c = hash11(xi, yi + 1, k), d = hash11(xi + 1, yi + 1, k);
     return (a + (b - a) * u) * (1 - v) + (c + (d - c) * u) * v;
   }
   function rng3(seed) {
@@ -96369,9 +96635,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   function buildCell2(world, terrain, cx, cy) {
     const out = {};
     for (const k of KINDS2) out[k] = [];
-    const x0 = cx * CELL6, y0 = cy * CELL6;
+    const x0 = cx * CELL7, y0 = cy * CELL7;
     const col2 = new Color();
-    const warm = warmth(world, x0 + CELL6 / 2, y0 + CELL6 / 2);
+    const warm = warmth(world, x0 + CELL7 / 2, y0 + CELL7 / 2);
     const reefy = warm > 0.55, cold = warm < 0.35;
     const put2 = (k, x, y, rot, s, sy, c, sink = 0.04) => {
       const h2 = terrain(x, y);
@@ -96381,22 +96647,22 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       col2.setRGB(c[0] * k, c[1] * k, c[2] * k, SRGB2);
       return [col2.r, col2.g, col2.b];
     };
-    for (let j = 0; j < CELL6; j++) {
+    for (let j = 0; j < CELL7; j++) {
       const y = y0 + j;
       if (y < 1 || y >= world.height - 1) continue;
-      for (let i = 0; i < CELL6; i++) {
+      for (let i = 0; i < CELL7; i++) {
         const x = world.wx(x0 + i);
         const t = world.type(x, y);
         if (t !== T2.SEA && t !== T2.REEF) continue;
         const depth = -terrain(x + 0.5, y + 0.5);
         if (!(depth > 0.45)) continue;
-        const r12 = hash10(x, y, 101), r22 = hash10(x, y, 102), r32 = hash10(x, y, 103), r4 = hash10(x, y, 104);
+        const r12 = hash11(x, y, 101), r22 = hash11(x, y, 102), r32 = hash11(x, y, 103), r4 = hash11(x, y, 104);
         const patch4 = vnoise3(x / 9, y / 9, 41), patch22 = vnoise3(x / 14, y / 14, 43);
         const reefTile = t === T2.REEF;
         if (depth < 7 && !cold && patch22 > 0.42) {
           const n = patch22 > 0.6 ? 3 : 1;
           for (let q2 = 0; q2 < n; q2++) {
-            const a = hash10(x, y, 110 + q2), b = hash10(x, y, 120 + q2);
+            const a = hash11(x, y, 110 + q2), b = hash11(x, y, 120 + q2);
             if (a < 0.25) continue;
             put2("seagrass", x + a, y + b, a * 40, 0.8 + b * 0.7, 1 + depth * 0.05, rgb([0.36 + b * 0.1, 0.56 + a * 0.08, 0.26]));
           }
@@ -96404,12 +96670,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const reefK = reefTile ? 1.2 : reefy && depth > 0.8 && depth < 20 ? smooth8(0.36, 0.62, patch4) * (1 - smooth8(14, 20, depth)) * 1.4 : 0;
         if (reefK > 0) {
           for (let q2 = 0; q2 < 3; q2++) {
-            const a = hash10(x, y, 130 + q2), b = hash10(x, y, 140 + q2), c = hash10(x, y, 150 + q2);
+            const a = hash11(x, y, 130 + q2), b = hash11(x, y, 140 + q2), c = hash11(x, y, 150 + q2);
             if (a > reefK * 0.5) continue;
-            const px2 = x + b, py2 = y + hash10(x, y, 180 + q2), rot = a * 70;
-            if (c < 0.36) put2("branch", px2, py2, rot, 0.75 + b * 0.8, 1, rgb(pick2(CORAL, hash10(x >> 2, y >> 2, 160 + q2))));
+            const px2 = x + b, py2 = y + hash11(x, y, 180 + q2), rot = a * 70;
+            if (c < 0.36) put2("branch", px2, py2, rot, 0.75 + b * 0.8, 1, rgb(pick2(CORAL, hash11(x >> 2, y >> 2, 160 + q2))));
             else if (c < 0.56) put2("brain", px2, py2, rot, 0.5 + b * 0.9, 1, rgb(pick2(BRAIN, b)), 0.06);
-            else if (c < 0.64) put2("table", px2, py2, rot, 0.6 + b * 0.8, 1, rgb(pick2(CORAL, hash10(x >> 3, y >> 3, 170))));
+            else if (c < 0.64) put2("table", px2, py2, rot, 0.6 + b * 0.8, 1, rgb(pick2(CORAL, hash11(x >> 3, y >> 3, 170))));
             else if (c < 0.78) put2("fan", px2, py2, rot, 0.6 + b * 0.7, 1, rgb(pick2(FANS, a * 3)));
             else if (c < 0.88) put2("tube", px2, py2, rot, 0.6 + b * 0.8, 1, rgb(pick2(TUBES, b * 2)));
             else put2("anemone", px2, py2, rot, 0.8 + b * 0.8, 1, rgb(pick2(ANEMONES, a * 2)));
@@ -96452,7 +96718,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           mat: seabedMaterial(k),
           capNear: Math.ceil(MAX4[k] * 0.3),
           capFar: MAX4[k],
-          near: NEAR4,
+          near: NEAR5,
           wedges: WEDGES2[k],
           pad: PAD3[k],
           setup: (m) => {
@@ -96487,7 +96753,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const show = camH < 40;
       this.group.visible = show;
       if (!show) return;
-      const ccx = Math.floor(w.wx(v.ox) / CELL6), ccy = Math.floor(v.oy / CELL6);
+      const ccx = Math.floor(w.wx(v.ox) / CELL7), ccy = Math.floor(v.oy / CELL7);
       const key2 = `${ccx},${ccy},${R5}`;
       this.t -= dt;
       if (key2 !== this.key) {
@@ -96497,14 +96763,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const wt = this.want;
       if (wt && this.t <= 0) {
         const t0 = performance.now();
-        const cr = Math.ceil(wt.R / CELL6) + 1;
+        const cr = Math.ceil(wt.R / CELL7) + 1;
         let nearReady = true, allReady = true;
         for (const [i, j] of ring3(cr)) {
           const k = this.cellKey(w, wt.ccx + i, wt.ccy + j);
           if (k < 0 || this.cells.has(k)) continue;
           if (performance.now() - t0 > CELL_BUDGET_MS) {
             allReady = false;
-            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR4 / CELL6) + 1) nearReady = false;
+            if (Math.max(Math.abs(i), Math.abs(j)) <= Math.ceil(NEAR5 / CELL7) + 1) nearReady = false;
             break;
           }
           this.cells.set(k, buildCell2(w, ctx.terrain, k % 1e5, wt.ccy + j));
@@ -96523,16 +96789,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     /** The cache key of cell (cx, cy) (wrapped around the world on X), or -1 off the map. */
     cellKey(w, cx, cy) {
-      if (cy < 0 || cy * CELL6 >= w.height) return -1;
-      const n = Math.ceil(w.width / CELL6);
+      if (cy < 0 || cy * CELL7 >= w.height) return -1;
+      const n = Math.ceil(w.width / CELL7);
       if (w.wrap) cx = (cx % n + n) % n;
       else if (cx < 0 || cx >= n) return -1;
       return cy * 1e5 + cx;
     }
     /** Lay out the floor around the centre of cell (ccx, ccy). */
     place(w, ccx, ccy, R5) {
-      const cr = Math.ceil(R5 / CELL6) + 1;
-      const ox = (ccx + 0.5) * CELL6, oy = (ccy + 0.5) * CELL6;
+      const cr = Math.ceil(R5 / CELL7) + 1;
+      const ox = (ccx + 0.5) * CELL7, oy = (ccy + 0.5) * CELL7;
       this.origin = { x: ox, y: oy };
       for (const k of KINDS2) this.sets[k].reset();
       const keep = /* @__PURE__ */ new Set();
@@ -96573,7 +96839,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }, "seabed");
 
   // src/render3d/rmCanals3d.js
-  var VERT5 = (
+  var VERT6 = (
     /* glsl */
     `
   attribute float aSlope;
@@ -96597,7 +96863,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
 `
   );
-  var FRAG4 = (
+  var FRAG5 = (
     /* glsl */
     `
   uniform float uTime;
@@ -96733,7 +96999,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         }
       ]);
       const mat = (pool2) => {
-        const m = new ShaderMaterial({ uniforms: { ...this.uniforms, uPool: { value: pool2 ? 1 : 0 } }, vertexShader: VERT5, fragmentShader: FRAG4, fog: true, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        const m = new ShaderMaterial({ uniforms: { ...this.uniforms, uPool: { value: pool2 ? 1 : 0 } }, vertexShader: VERT6, fragmentShader: FRAG5, fog: true, transparent: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
         for (const k of Object.keys(this.uniforms)) if (k !== "uPool") m.uniforms[k] = this.uniforms[k];
         return m;
       };
@@ -97889,8 +98155,633 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     lines.update(env2, ctx, dt || 1 / 60);
   }, "windlines");
 
+  // src/audio/ambience.js
+  var rnd2 = (a, b) => a + Math.random() * (b - a);
+  var smooth10 = (a, b, x) => {
+    const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  var Glide = class {
+    constructor(p, v) {
+      this.p = p;
+      this.v0 = v;
+      this.to = v;
+      this.t0 = 0;
+      this.tc = 0.01;
+      p.value = v;
+    }
+    at(t) {
+      return this.to + (this.v0 - this.to) * Math.exp(-Math.max(0, t - this.t0) / this.tc);
+    }
+    /** Head for `to` from time `t`, most of the way there in `sec`. */
+    go(to, t, sec) {
+      const now3 = this.at(t), p = this.p, tc = Math.max(4e-3, sec / 3);
+      if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t);
+      else {
+        p.cancelScheduledValues(t);
+        p.setValueAtTime(now3, t);
+      }
+      p.setTargetAtTime(to, t, tc);
+      this.v0 = now3;
+      this.to = to;
+      this.t0 = t;
+      this.tc = tc;
+    }
+    /** And then, from `t2`, head for `to2` (a wave: up, then away). */
+    then(to2, t2, sec) {
+      const tc = Math.max(4e-3, sec / 3);
+      this.p.setTargetAtTime(to2, t2, tc);
+      this.v0 = this.at(t2);
+      this.to = to2;
+      this.t0 = t2;
+      this.tc = tc;
+    }
+  };
+  var BEDS = {
+    // the sea: a low surge, a wash of foam over it
+    ocean: { layers: [["pink", "lowpass", 420, 0.6, 0.55], ["pink", "bandpass", 1300, 0.5, 0.06]], swell: { gap: [4.5, 9.5], rise: [1.1, 2.2], fall: [2.4, 4.4], lo: 0.45, f: [300, 760] } },
+    // wind: a broad band and a thinner whistle over it
+    wind: { layers: [["pink", "bandpass", 520, 0.7, 0.5], ["pink", "bandpass", 1500, 1.6, 0.07]], gust: { gap: [2, 7], lo: 0.2, f: [360, 900] } },
+    // a storm's howl: narrow whistles sliding with the gusts
+    howl: { layers: [["white", "bandpass", 900, 12, 0.35], ["white", "bandpass", 1450, 14, 0.2]], gust: { gap: [1.2, 4], lo: 0.08, f: [620, 1300] } },
+    // leaves stirring as the wind comes and goes
+    leaves: { layers: [["white", "bandpass", 4200, 0.6, 0.09], ["white", "bandpass", 2200, 0.8, 0.04]], gust: { gap: [2, 6], lo: 0.08 } },
+    // the water past a hull: the rushing wash, the spray at the bow, surging with each swell she meets
+    hull: { layers: [["pink", "lowpass", 1100, 0.6, 0.5], ["white", "bandpass", 3e3, 0.7, 0.05]], swell: { gap: [2.2, 5.5], rise: [0.5, 1.1], fall: [1, 2.2], lo: 0.5, f: [800, 1500] } },
+    // canvas in the wind: a low thrum, fluttering when she's luffing (see luff)
+    sails: { layers: [["pink", "lowpass", 300, 0.7, 0.6]], flap: true },
+    torrent: { layers: [["brown", "lowpass", 900, 0.5, 0.9], ["pink", "bandpass", 1400, 0.6, 0.35], ["white", "highpass", 3500, 0.5, 0.06]], gust: { gap: [0.4, 1.6], lo: 0.75 } },
+    deep: { layers: [["brown", "lowpass", 220, 0.7, 0.9]], swell: { gap: [6, 12], rise: [2, 4], fall: [3, 6], lo: 0.6 } },
+    fire: { layers: [["pink", "lowpass", 800, 0.7, 0.5], ["white", "highpass", 4e3, 0.5, 0.05]], gust: { gap: [0.15, 0.6], lo: 0.55 } },
+    sky: { layers: [["white", "bandpass", 3200, 0.4, 0.12], ["pink", "bandpass", 700, 0.6, 0.2]], gust: { gap: [3, 8], lo: 0.5 } }
+  };
+  var Bed = class {
+    constructor(A2, name) {
+      const E = A2.E, c = E.ctx, D4 = BEDS[name];
+      this.name = name;
+      this.D = D4;
+      this.out = c.createGain();
+      this.out.connect(E.amb);
+      this.vol = new Glide(this.out.gain, 0);
+      this.mv = c.createGain();
+      this.mv.connect(this.out);
+      this.move = new Glide(this.mv.gain, D4.swell ? D4.swell.lo : D4.gust ? D4.gust.lo : 1);
+      this.nodes = [];
+      this.layers = D4.layers.map(([color, type, f, q2, g]) => {
+        const src = c.createBufferSource();
+        src.buffer = E.noiseBuf(color);
+        src.loop = true;
+        src.playbackRate.value = rnd2(0.97, 1.03);
+        const flt = c.createBiquadFilter();
+        flt.type = type;
+        flt.frequency.value = f;
+        flt.Q.value = q2;
+        const gn = c.createGain();
+        gn.gain.value = g;
+        src.connect(flt);
+        flt.connect(gn);
+        gn.connect(this.mv);
+        src.start(0, Math.random() * 1.9);
+        this.nodes.push(src);
+        return { src, flt, gn };
+      });
+      this.f0 = new Glide(this.layers[0].flt.frequency, D4.layers[0][2]);
+      if (D4.flap) {
+        const o = c.createOscillator(), og = c.createGain();
+        o.frequency.value = rnd2(4, 6);
+        og.gain.value = 0.05;
+        o.connect(og);
+        og.connect(this.mv.gain);
+        o.start(0);
+        this.flapRate = new Glide(o.frequency, o.frequency.value);
+        this.flap = og;
+        this.flapDepth = new Glide(og.gain, 0.05);
+        this.nodes.push(o);
+      }
+      this.level = 0;
+      this.quietSince = 0;
+      this.next = 0;
+    }
+    set(level, t, sec) {
+      if (Math.abs(level - this.level) < 2e-3) return;
+      this.level = level;
+      this.vol.go(level, t, sec);
+    }
+    /** Keep it moving: the next wave or gust when its time comes (never on a beat). */
+    tick(t) {
+      if (t < this.next) return;
+      const D4 = this.D;
+      if (D4.swell) {
+        const S6 = D4.swell, rise = rnd2(...S6.rise), fall2 = rnd2(...S6.fall), pk = rnd2(0.75, 1);
+        this.move.go(pk, t, rise);
+        this.move.then(S6.lo * rnd2(0.8, 1.15), t + rise, fall2);
+        if (S6.f) {
+          this.f0.go(S6.f[1] * rnd2(0.85, 1.1), t, rise);
+          this.f0.then(S6.f[0] * rnd2(0.9, 1.1), t + rise, fall2);
+        }
+        this.next = t + rise + rnd2(...S6.gap) - rise * 0.5;
+      } else if (D4.gust) {
+        const G4 = D4.gust, k = Math.pow(Math.random(), 1.6), to = G4.lo + (1 - G4.lo) * k;
+        const gap = rnd2(...G4.gap);
+        this.move.go(to, t, Math.min(gap, rnd2(0.6, 2.2)));
+        if (G4.f) this.f0.go(G4.f[0] + (G4.f[1] - G4.f[0]) * k, t, Math.min(gap, rnd2(0.8, 2.4)));
+        this.next = t + gap;
+      } else this.next = t + 5;
+      if (this.flapRate) this.flapRate.go(rnd2(3.5, 7.5), t, 1.5);
+    }
+    stop() {
+      for (const n of this.nodes) {
+        try {
+          n.stop();
+        } catch {
+        }
+      }
+      try {
+        this.out.disconnect();
+      } catch {
+      }
+    }
+  };
+  var RAIN = {
+    sea: { wash: [750, 16e3, 0.34], pat: [600, 14e3, 0.3], body: [1300, 3], drop: "plip", rate: 5 },
+    deck: { wash: [150, 9e3, 0.22], pat: [260, 5e3, 0.4], body: [850, 6], drop: "tok", rate: 8 },
+    leaves: { wash: [170, 5e3, 0.32], pat: [480, 6e3, 0.4], body: [1600, 3], drop: "tak", rate: 9 },
+    ground: { wash: [190, 2600, 0.36], pat: [340, 3600, 0.34], body: [1e3, 5], drop: "pat", rate: 6 },
+    town: { wash: [200, 3e3, 0.36], pat: [400, 4e3, 0.36], body: [1100, 5], drop: "tik", rate: 7 },
+    inside: { wash: [90, 2400, 0.36], pat: [260, 3e3, 0.5], body: [650, 6], drop: "dup", rate: 5 }
+  };
+  var RAIN_HITS = [];
+  var DROPS = {
+    /** On water: the plip of a drop and the little whistle of the bubble it leaves. */
+    // (a splash of noise, the bubble's ring faint and high — up where rain on the
+    // sea really rings, 10 kHz and over — not a tuned plink from a dripping tap)
+    plip(v, t, s) {
+      v.noise(t, 0.012, { freq: rnd2(2500, 6e3), q: 0.8, gain: 0.04 * s, attack: 6e-4 });
+      v.noise(t, 4e-3, { type: "highpass", freq: 6e3, gain: 0.02 * s, attack: 4e-4 });
+      if (Math.random() < 0.25) v.bubble(t + 4e-3, { f: rnd2(9e3, 14e3), rise: 1.3, dur: 8e-3, gain: 6e-3 * s });
+    },
+    /** On a leaf: a sharp little tap, the leaf trembling after it. */
+    tak(v, t, s) {
+      v.noise(t, 0.01, { freq: rnd2(2200, 4200), q: 2, gain: 0.06 * s, attack: 6e-4 });
+      v.noise(t + 8e-3, 0.035, { freq: rnd2(3e3, 5200), q: 1, gain: 0.012 * s });
+    },
+    /** On the ground: a soft pat. */
+    pat(v, t, s) {
+      v.noise(t, 0.014, { freq: rnd2(900, 1800), q: 1.2, gain: 0.055 * s, attack: 1e-3 });
+    },
+    /** On a roof tile, a shutter, a barrel: a dry tick. */
+    tik(v, t, s) {
+      v.noise(t, 8e-3, { freq: rnd2(2500, 4500), q: 3, gain: 0.05 * s, attack: 5e-4 });
+      v.tone(t, 0.02, { freq: rnd2(1700, 2600), gain: 8e-3 * s });
+    },
+    /** On deck planks a hollow tok — and now and then on the canvas, a thrum. */
+    tok(v, t, s) {
+      if (Math.random() < 0.3) {
+        v.thump(t, { f0: rnd2(170, 240), f1: 130, dur: 0.05, gain: 0.035 * s });
+        v.noise(t, 0.03, { type: "lowpass", freq: 650, gain: 0.03 * s });
+        return;
+      }
+      v.tone(t, 0.035, { freq: rnd2(520, 900), to: 420, gain: 0.03 * s, attack: 8e-4 });
+      v.noise(t, 7e-3, { freq: 2600, q: 1.5, gain: 0.03 * s, attack: 5e-4 });
+    },
+    /** On the roof over your head: a muffled dup. */
+    dup(v, t, s) {
+      v.thump(t, { f0: rnd2(140, 230), f1: 100, dur: 0.06, gain: 0.05 * s });
+      v.noise(t, 0.02, { type: "lowpass", freq: 600, gain: 0.03 * s });
+    }
+  };
+  function patterLoop(c, secs, rate) {
+    const sr = c.sampleRate, n = Math.floor(sr * secs), buf = c.createBuffer(2, n, sr);
+    let ss = 0;
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0, cnt = Math.round(rate * secs); i < cnt; i++) {
+        const at4 = Math.floor(Math.random() * n), a = 0.12 + 0.88 * Math.pow(Math.random(), 3);
+        const f = 800 + Math.random() * Math.random() * 6500, tau = (4e-4 + Math.random() * 12e-4) * sr;
+        const w = 2 * Math.PI * f / sr, len = Math.floor(tau * 5);
+        for (let j = 0; j < len; j++) d[(at4 + j) % n] += a * Math.exp(-j / tau) * (0.12 * Math.sin(w * j) + 0.88 * (Math.random() * 2 - 1));
+      }
+      for (let i = 0; i < n; i++) ss += d[i] * d[i];
+    }
+    const k = 0.1 / Math.sqrt(ss / (2 * n) || 1);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < n; i++) d[i] *= k;
+    }
+    return buf;
+  }
+  var Rain = class {
+    constructor(A2) {
+      const E = A2.E, c = E.ctx;
+      this.A = A2;
+      E.patter = E.patter || { sparse: patterLoop(c, 6, 16), dense: patterLoop(c, 3, 240) };
+      this.out = c.createGain();
+      this.out.connect(E.amb);
+      this.vol = new Glide(this.out.gain, 0);
+      this.mv = c.createGain();
+      this.mv.connect(this.out);
+      this.move = new Glide(this.mv.gain, 1);
+      this.nodes = [];
+      const chain4 = (into) => {
+        const hp = c.createBiquadFilter();
+        hp.type = "highpass";
+        hp.Q.value = 0.6;
+        const lp = c.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.Q.value = 0.6;
+        const pk = c.createBiquadFilter();
+        pk.type = "peaking";
+        pk.Q.value = 1.1;
+        const g = c.createGain();
+        hp.connect(lp);
+        lp.connect(pk);
+        pk.connect(g);
+        g.connect(into);
+        return { in: hp, hp: new Glide(hp.frequency, 1e3), lp: new Glide(lp.frequency, 8e3), pk: new Glide(pk.frequency, 1e3), pkg: new Glide(pk.gain, 0), g: new Glide(g.gain, 0) };
+      };
+      this.wash = chain4(this.mv);
+      const ws = c.createBufferSource();
+      ws.buffer = E.pink;
+      ws.loop = true;
+      ws.connect(this.wash.in);
+      ws.start(0, Math.random() * 1.9);
+      this.pat = chain4(this.mv);
+      const loop = (buf, rate) => {
+        const s = c.createBufferSource();
+        s.buffer = buf;
+        s.loop = true;
+        s.playbackRate.value = rate;
+        const g = c.createGain();
+        s.connect(g);
+        g.connect(this.pat.in);
+        s.start(0, Math.random() * buf.duration);
+        this.nodes.push(s);
+        return new Glide(g.gain, 0);
+      };
+      this.sparse = loop(E.patter.sparse, rnd2(0.95, 1.05));
+      this.dense = loop(E.patter.dense, rnd2(0.95, 1.05));
+      this.nodes.push(ws);
+      this.where = null;
+      this.r = -1;
+      this.level = 0;
+      this.quietSince = 0;
+      this.next = 0;
+    }
+    /** How hard it rains (`r` 0..1: light from 0.2, a downpour from ~0.6, a storm with `storm`), and on what (`where`: a RAIN key). */
+    set(r4, storm, where, t, sec = 1.5) {
+      const S6 = RAIN[where] || RAIN.ground;
+      if (where !== this.where) {
+        const w = S6.wash, p = S6.pat, k2 = 1.2;
+        this.wash.hp.go(w[0], t, k2);
+        this.wash.lp.go(w[1], t, k2);
+        this.pat.hp.go(p[0], t, k2);
+        this.pat.lp.go(p[1], t, k2);
+        this.pat.pk.go(S6.body[0], t, k2);
+        this.pat.pkg.go(S6.body[1], t, k2);
+        this.where = where;
+        this.r = -1;
+      }
+      if (Math.abs(r4 - this.r) < 0.01 && Math.abs(storm - (this.storm || 0)) < 0.02) return;
+      this.r = r4;
+      this.storm = storm;
+      const k = Math.max(0, Math.min(1, (r4 - 0.06) / 0.6)), heavy = smooth10(0.25, 0.9, k);
+      const lev = Math.pow(10, -20 * (1 - k) / 20) * (1 + 0.2 * storm);
+      this.wash.g.go(S6.wash[2] * lev * (0.5 + 0.5 * heavy), t, sec);
+      this.pat.g.go(S6.pat[2] * Math.pow(10, -10 * (1 - k) / 20), t, sec);
+      this.sparse.go(0.55 * (1 - 0.7 * heavy), t, sec);
+      this.dense.go(heavy * (0.6 + 0.4 * k), t, sec);
+    }
+    /** The overall level (0 fades it out). */
+    fade(level, t, sec) {
+      if (Math.abs(level - this.level) > 2e-3) {
+        this.level = level;
+        this.vol.go(level, t, sec);
+      }
+    }
+    /** Gusts driving the rain in sheets (a storm), and the near drops landing round you. */
+    tick(t, dt) {
+      if (this.level < 0.01 || this.r <= 0) return;
+      if (t >= this.next) {
+        const st = this.storm || 0, k = Math.pow(Math.random(), 1.5);
+        this.move.go(st > 0.5 ? 0.6 + 0.4 * k + 0.15 * st : 0.9 + 0.1 * k, t, rnd2(0.6, 1.8));
+        this.next = t + rnd2(1.5, 4.5);
+      }
+      const S6 = RAIN[this.where] || RAIN.ground;
+      if (RAIN_HITS.length) {
+        const hits2 = RAIN_HITS.splice(0).sort((a, b) => a.d - b.d).slice(0, 6);
+        const E2 = this.A.E;
+        for (const h2 of hits2) {
+          const kind = h2.on === "roof" ? this.where === "inside" ? "dup" : "tik" : h2.on === "water" ? "plip" : this.where === "leaves" || this.where === "deck" || this.where === "town" ? S6.drop : "pat";
+          const near = 1 / (1 + h2.d / 2.5);
+          const v2 = E2.open("amb:rain", { bus: "amb", vol: this.level * (0.35 + near), pan: Math.max(-0.9, Math.min(0.9, h2.pan * (0.4 + 0.6 * Math.min(1, h2.d / 2)))), lp: this.where === "inside" ? 1200 : 9e3 - 5e3 * (1 - near), send: 0.04, prio: 1, max: 6 });
+          if (!v2) break;
+          v2.pj = rnd2(0.92, 1.08);
+          DROPS[kind](v2, Math.random() * dt, 0.6 + 0.6 * near);
+        }
+        this.seen = t;
+        return;
+      }
+      if (t - (this.seen || -9) < 1) return;
+      const want = S6.rate * (0.35 + 0.65 * this.r) * dt;
+      let n = 0, p = Math.random();
+      const L3 = Math.exp(-want);
+      while (p > L3 && n < 12) {
+        n++;
+        p *= Math.random();
+      }
+      if (!n) return;
+      const E = this.A.E;
+      const v = E.open("amb:rain", { bus: "amb", vol: this.level, pan: rnd2(-0.7, 0.7), lp: this.where === "inside" ? 1200 : 0, send: 0.04, prio: 1, max: 3 });
+      if (!v) return;
+      v.pj = rnd2(0.94, 1.06);
+      for (let i = 0; i < n; i++) DROPS[S6.drop](v, Math.random() * dt, 0.5 + 0.5 * Math.random());
+    }
+    stop() {
+      for (const n of this.nodes) {
+        try {
+          n.stop();
+        } catch {
+        }
+      }
+      try {
+        this.out.disconnect();
+      } catch {
+      }
+    }
+  };
+  var SPOTS = {
+    /** A gull's "kyow-kyow" (two or three calls, falling). */
+    gull: {
+      gap: 3,
+      play(v) {
+        const n = 1 + Math.floor(Math.random() * 3), f = rnd2(1300, 1700);
+        for (let i = 0; i < n; i++) {
+          const t = i * rnd2(0.22, 0.3);
+          v.tone(t, 0.2, { freq: f * 1.25, to: f * 0.8, glide: 0.16, type: "sawtooth", gain: 0.012, attack: 0.02 });
+          v.tone(t, 0.2, { freq: f * 0.62, to: f * 0.4, glide: 0.16, type: "triangle", gain: 0.02, attack: 0.02 });
+        }
+      }
+    },
+    /** A songbird: a short phrase of chirps and trills. */
+    bird: {
+      gap: 2.5,
+      play(v) {
+        const n = 2 + Math.floor(Math.random() * 5), base2 = rnd2(2600, 4200);
+        let t = 0;
+        for (let i = 0; i < n; i++) {
+          const up = Math.random() < 0.5, d = rnd2(0.04, 0.11);
+          v.chirp(t, { f0: base2 * (up ? 0.8 : 1.2), f1: base2 * (up ? 1.25 : 0.75), dur: d, gain: rnd2(0.015, 0.032), warble: Math.random() < 0.3 ? rnd2(30, 60) : 0 });
+          t += d + rnd2(0.02, 0.12);
+        }
+      }
+    },
+    /** A jungle bird's whooping call. */
+    tropical: { gap: 5, play(v) {
+      const f = rnd2(900, 1500);
+      for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) v.chirp(i * rnd2(0.22, 0.3), { f0: f, f1: f * 1.6, dur: 0.18, gain: 0.025, warble: 8 });
+    } },
+    /**
+     * Cicadas: a chorus swelling up out of nothing, holding, and dying away (as
+     * they do, in waves) — a band of noise round 4–6 kHz pulsing at their own
+     * rate, and a fainter band over it. Never a constant whine.
+     */
+    cicada: {
+      gap: 7,
+      play(v) {
+        const dur = rnd2(4, 9), f = rnd2(4200, 6e3), rate = rnd2(11, 19), up = dur * rnd2(0.3, 0.45);
+        v.noise(0, dur, { type: "bandpass", freq: f, q: 3, gain: 0.03, attack: up, hold: dur * 0.15, curve: "lin", am: { rate, depth: 0.75 } });
+        v.noise(0, dur, { type: "bandpass", freq: f * rnd2(1.55, 1.75), q: 4, gain: 8e-3, attack: up, hold: dur * 0.15, curve: "lin", am: { rate, depth: 0.75 } });
+      }
+    },
+    /** A cricket chirping a while from one spot: trills of three to five pulses, a tone near 4.5 kHz. */
+    cricket: {
+      gap: 3,
+      play(v) {
+        const f = rnd2(3900, 4900), n = 3 + Math.floor(Math.random() * 3), per = rnd2(0.024, 0.034), span2 = rnd2(2.5, 6);
+        for (let t = 0; t < span2; t += rnd2(0.45, 1.1)) for (let i = 0; i < n; i++) v.tone(t + i * per, 0.016, { freq: f, gain: 0.012 * (i ? 1 : 0.7), attack: 3e-3 });
+      }
+    },
+    /** An owl: hoo... hoo-hoo. */
+    owl: { gap: 8, play(v) {
+      for (const [t, d] of [[0, 0.35], [0.6, 0.18], [0.82, 0.3]]) v.tone(t, d, { freq: rnd2(370, 400), to: 350, gain: 0.03, attack: 0.05, curve: "lin" });
+    } },
+    /** A frog's croak. */
+    frog: { gap: 3, play(v) {
+      for (let i = 0; i < 2; i++) v.tone(i * 0.18, 0.12, { freq: rnd2(180, 240), to: 150, type: "sawtooth", gain: 0.025, attack: 0.01, vib: { rate: 30, depth: 25 } });
+    } },
+    /**
+     * A voice across the street: a phrase or two of somebody talking (words
+     * you can't quite make out) — a man's or a woman's, at their own pitch,
+     * syllables run together into words, words into a phrase.
+     */
+    voice: {
+      gap: 2.5,
+      play(v) {
+        const fem = Math.random() < 0.5;
+        const f0 = fem ? rnd2(185, 245) : rnd2(100, 140);
+        const V5 = "aaeeiioou", C3 = ["", "", "s", "t", "k", "m", "t", ""];
+        const syl = [];
+        for (let w = 0, words = 2 + Math.floor(Math.random() * 5); w < words; w++) {
+          for (let i = 0, n = 1 + Math.floor(Math.random() * 3); i < n; i++) {
+            syl.push({ d: rnd2(0.08, 0.17), v: V5[Math.floor(Math.random() * V5.length)], c: C3[Math.floor(Math.random() * C3.length)], gap: i === n - 1 ? rnd2(0.05, 0.16) : 0 });
+          }
+        }
+        if (Math.random() < 0.2) syl[syl.length - 1].q = true;
+        v.speech(0, syl, { f0, fem, gain: 0.16, far: rnd2(1800, 2800) });
+      }
+    },
+    /** Laughter across the square: ha-ha-ha, breathy, each a little lower. */
+    laugh: {
+      gap: 8,
+      play(v) {
+        const fem = Math.random() < 0.5;
+        const f0 = fem ? rnd2(230, 300) : rnd2(125, 170);
+        const syl = [];
+        for (let i = 0, n = 3 + Math.floor(Math.random() * 3); i < n; i++) syl.push({ d: rnd2(0.07, 0.1), v: "a", c: "h", gap: rnd2(0.04, 0.07) });
+        v.speech(0, syl, { f0, fem, gain: 0.15, far: 2600 });
+      }
+    },
+    /** A cup or a bottle set down, a coin on a counter. */
+    clink: { gap: 5, play(v) {
+      for (let i = 0, n = 1 + Math.floor(Math.random() * 2); i < n; i++) v.ring(i * rnd2(0.12, 0.3), rnd2(2200, 3400), 0.22, 0.012, [1, 2.32, 4.1]);
+    } },
+    /**
+     * A smith at the anvil: a few blows at a working pace (never on a beat) —
+     * the hammer's crack and the anvil's bright ring round 1.5 kHz, gone in a
+     * quarter of a second (as a recorded anvil is).
+     */
+    hammer: {
+      gap: 12,
+      play(v) {
+        let t = 0;
+        for (let i = 0, n = 2 + Math.floor(Math.random() * 4); i < n; i++) {
+          const f = rnd2(1350, 1650) * (i % 2 ? 1 : 1.02);
+          v.noise(t, 6e-3, { type: "highpass", freq: 3e3, gain: 0.05, attack: 4e-4 });
+          v.ring(t, f, 0.3, 0.018, [1, 2.76, 5.4, 8.9]);
+          v.thump(t, { f0: 220, f1: 150, dur: 0.04, gain: 0.02 });
+          t += rnd2(0.55, 1.05);
+        }
+      }
+    },
+    /** A dog barking. */
+    dog: { gap: 10, play(v) {
+      for (let i = 0; i < 1 + Math.floor(Math.random() * 3); i++) v.formant(i * rnd2(0.28, 0.4), 0.12, { f1: 650, f2: 1300, to1: 450, to2: 1e3, q: 4, gain: 0.4, attack: 8e-3 });
+    } },
+    /** A door across the way: the latch, a short creak, shut. */
+    door: {
+      gap: 8,
+      play(v) {
+        v.noise(0, 0.012, { freq: 2600, q: 3, gain: 0.04, attack: 6e-4 });
+        v.creak(0.03, rnd2(0.25, 0.5), { rate: rnd2(60, 90), rate1: rnd2(80, 120), freqs: [400, 650, 900], q: 7, gain: 0.03 });
+        if (Math.random() < 0.6) {
+          const t = rnd2(0.7, 1.6);
+          v.thump(t, { f0: 110, f1: 70, dur: 0.1, gain: 0.06 });
+          v.noise(t, 0.08, { type: "lowpass", freq: 400, gain: 0.05 });
+        }
+      }
+    },
+    /** A cart going by: wheels on the cobbles, a rumble and their clatter, and the creak of the axle. */
+    cart: {
+      gap: 25,
+      play(v) {
+        const dur = rnd2(2.5, 4);
+        v.noise(0, dur, { color: "brown", type: "lowpass", freq: 260, gain: 0.08, attack: dur * 0.45, curve: "lin" });
+        v.crackle(0.2, dur - 0.4, Math.round(dur * 9), { freq: 1100, gain: 0.025, q: 3 });
+        v.creak(dur * 0.3, dur * 0.4, { rate: 30, rate1: 24, freqs: [260, 430, 700], q: 6, gain: 0.015 });
+      }
+    },
+    /** A Sea King's moan, far down. */
+    moan: { gap: 20, play(v) {
+      v.formant(0, 2.5, { f1: 160, f2: 420, to1: 120, to2: 300, q: 5, gain: 0.12, attack: 0.8, color: "brown" });
+      v.tone(0, 2.5, { freq: 55, to: 42, type: "sawtooth", gain: 0.03, attack: 0.8, curve: "lin" });
+    } },
+    /** Whale song. */
+    whale: { gap: 15, play(v) {
+      v.tone(0, 2.2, { freq: rnd2(260, 320), to: rnd2(380, 480), glide: 1.2, gain: 0.025, attack: 0.5, curve: "lin", vib: { rate: 4, depth: 6 } });
+      v.tone(1.2, 1.4, { freq: 450, to: 230, gain: 0.02, attack: 0.3, curve: "lin" });
+    } },
+    /** A drip into a pool, in a cave or a cell (or off the eaves after rain). */
+    drip: { gap: 0.6, play(v) {
+      v.bubble(0, { f: rnd2(1300, 2200), rise: 1.6, dur: 0.05, gain: 0.035 });
+    } },
+    /** Chains, far off (Impel Down). */
+    chains: { gap: 6, play(v) {
+      for (let i = 0; i < 6; i++) v.ring(i * rnd2(0.05, 0.1), rnd2(900, 1500), 0.15, 0.025, [1, 2.7]);
+    } },
+    /** Bubbles rising past you. */
+    bubbles: { gap: 2, play(v) {
+      v.bubbles(0, 0.6, 6, { f: 500, spread: 0.9, gain: 0.03 });
+    } },
+    /** A burst of crackling embers. */
+    embers: { gap: 2, play(v) {
+      v.crackle(0, 0.5, 8, { freq: 2600, gain: 0.1 });
+    } },
+    /**
+     * A gust going by: the air rushing up and away over a few seconds (leaves
+     * thrashing with it on land, the rigging singing at sea).
+     */
+    gust: {
+      gap: 4,
+      play(v, k) {
+        const dur = rnd2(1.8, 3.5);
+        v.whoosh(0, dur, { f0: rnd2(250, 350), f1: rnd2(700, 1100), q: 0.7, gain: 0.07 * (k.s || 1), peak: rnd2(0.35, 0.55), color: "pink" });
+        if (k.sea) v.tone(dur * 0.2, dur * 0.6, { freq: rnd2(520, 880), to: rnd2(600, 1e3), gain: 4e-3 * (k.s || 1), attack: dur * 0.25, curve: "lin", vib: { rate: 5, depth: 12 } });
+        else v.noise(dur * 0.15, dur * 0.7, { freq: 4e3, q: 0.6, gain: 0.03 * (k.s || 1), attack: dur * 0.25, curve: "lin" });
+      }
+    },
+    /** A wave breaking on the shore: the surge, the crash, the hiss of it running back over the sand. */
+    surf: {
+      gap: 4,
+      play(v, k) {
+        const s = k.s || 1;
+        v.noise(0, 1.6, { color: "pink", type: "lowpass", freq: 500, sweep: 1800, gain: 0.22 * s, attack: 1.1, curve: "lin" });
+        v.noise(1.1, 1.8, { color: "pink", type: "lowpass", freq: 2e3, sweep: 600, gain: 0.26 * s, attack: 0.08 });
+        v.noise(1.5, 2.2, { type: "bandpass", freq: 2600, q: 0.5, gain: 0.03 * s, attack: 0.3, curve: "lin" });
+        v.crackle(1.8, 1.8, 10, { freq: 3600, gain: 0.012 * s, q: 3 });
+      }
+    }
+  };
+  var Ambience = class {
+    constructor(audio) {
+      this.audio = audio;
+      this.beds = {};
+      this.rainBed = null;
+      this.lastSpot = {};
+    }
+    /**
+     * Bring each bed to its level (`levels`: name → 0..1; missing ones fade
+     * out), the rain to `rain` ({ r, storm, where } or nothing), and roll the
+     * dice for each spot (`spots`: name → how many a minute).
+     */
+    update(levels, spots, dt, sec = 1.2, rain = null) {
+      const E = this.audio.E, t = E.now();
+      for (const name of Object.keys(BEDS)) {
+        const want = levels[name] || 0;
+        let b = this.beds[name];
+        if (!b && want > 5e-3) b = this.beds[name] = new Bed(this.audio, name);
+        if (!b) continue;
+        b.set(want, t, sec);
+        if (want > 5e-3) b.tick(t);
+        if (want <= 5e-3) {
+          if (!b.quietSince) b.quietSince = t;
+          else if (t - b.quietSince > 20) {
+            b.stop();
+            delete this.beds[name];
+          }
+        } else b.quietSince = 0;
+      }
+      this.rain(rain, t, dt);
+      for (const [name, perMin] of Object.entries(spots)) {
+        if (!(perMin > 0)) continue;
+        if (Math.random() < perMin / 60 * dt) this.spot(name);
+      }
+    }
+    /** The rain: made when it starts, set to how hard and on what, faded and taken apart when it's over. */
+    rain(R5, t, dt) {
+      let b = this.rainBed;
+      const want = R5 && R5.r > 0.02 ? 1 : 0;
+      if (!b && want) b = this.rainBed = new Rain(this.audio);
+      if (!b) return;
+      if (want) {
+        b.set(R5.r, R5.storm || 0, R5.where, t);
+        b.quietSince = 0;
+      }
+      b.fade(want ? R5.level ?? 1 : 0, t, want ? 2.5 : 3);
+      b.tick(t, dt);
+      if (!want) {
+        if (!b.quietSince) b.quietSince = t;
+        else if (t - b.quietSince > 20) {
+          b.stop();
+          this.rainBed = null;
+        }
+      }
+    }
+    /** How deep the sails' flutter is (0 drawing nicely … 1 luffing, flogging in the wind). */
+    luff(k) {
+      const b = this.beds.sails;
+      if (b?.flapDepth) b.flapDepth.go(0.05 + 0.45 * k, this.audio.E.now(), 0.6);
+    }
+    /** Play a spot now: off to one side or the other, near or far (never two of a kind too close together). */
+    spot(name, { vol = 1, pan = rnd2(-0.8, 0.8), far = rnd2(0, 1), s = 1, sea = false } = {}) {
+      const E = this.audio.E, S6 = SPOTS[name], t = E.now();
+      if (!S6 || t - (this.lastSpot[name] ?? -99) < S6.gap * rnd2(0.8, 1.3)) return;
+      const v = E.open("amb:" + name, { bus: "amb", vol: vol * (1 - 0.45 * far), pan, lp: far > 0.4 ? 9500 - far * 5500 : 0, send: 0.05 + far * 0.25, prio: 2, max: 2 });
+      if (!v) return;
+      this.lastSpot[name] = t;
+      v.pj = rnd2(0.95, 1.05);
+      S6.play(v, { s, sea });
+      v.end += v.tail || 0;
+    }
+    /** Stop every bed (the title's quiet, a page hidden). */
+    silence() {
+      const t = this.audio.E.now();
+      for (const b of Object.values(this.beds)) b.set(0, t, 0.5);
+      this.rainBed?.fade(0, t, 0.5);
+    }
+  };
+
   // src/render3d/precip3d.js
-  var RAIN = { n: 9e3, box: 34, tall: 20, below: 6, fall: 11, near: 2.6 };
+  var RAIN2 = { n: 9e3, box: 34, tall: 20, below: 6, fall: 11, near: 2.6 };
   var SNOW2 = { n: 7e3, box: 30, tall: 16, below: 5, fall: 1.25, near: 0.9 };
   var MAX_SPLASH = 320;
   var SH = 64;
@@ -98141,6 +99032,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const a = Math.random() * Math.PI * 2, r4 = Math.sqrt(Math.random()) * 15;
         const x = w.wx(wx + Math.cos(a) * r4), y = wy + Math.sin(a) * r4;
         const h2 = shelter.open(w, x, y);
+        if (r4 < 9 && RAIN_HITS.length < 24) {
+          const rig = ctx.game.view3d?.rig;
+          const rel3 = a - (rig ? rig.yaw : 0);
+          RAIN_HITS.push({ d: r4, pan: Math.sin(rel3), on: h2 === null ? "roof" : w.isLiquid(x, y) && !w.isOverlay(x, y) ? "water" : "ground" });
+        }
         if (h2 === null) continue;
         const water3 = w.isLiquid(x, y) && !w.isOverlay(x, y);
         this.list.push({ x, y, h: h2, t: time, water: water3, life: water3 ? 0.55 : 0.22 });
@@ -98353,7 +99249,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.shelter = new Shelter();
       const quad2 = [-1, 0, 0, 1, 0, 0, 1, 1, 0, -1, 1, 0];
       const sq = [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0];
-      this.rain = fallMesh(RAIN, RAIN_VS, RAIN_FS, quad2, this.shelter, { uLen: { value: 0.55 }, uWidth: { value: 0.011 } });
+      this.rain = fallMesh(RAIN2, RAIN_VS, RAIN_FS, quad2, this.shelter, { uLen: { value: 0.55 }, uWidth: { value: 0.011 } });
       this.snow = fallMesh(SNOW2, SNOW_VS, SNOW_FS, sq, this.shelter, { uSize: { value: 0.05 } });
       this.dust = fallMesh(DUST2, RAIN_VS, RAIN_FS, quad2, this.shelter, { uLen: { value: 0.75 }, uWidth: { value: 9e-3 } });
       scene.add(this.rain, this.snow, this.dust);
@@ -98398,7 +99294,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         mesh.geometry.instanceCount = Math.floor(spec.n * Math.min(1, k) * (low ? 0.5 : 1));
       };
       if (this.rain.visible) {
-        set(this.rain, RAIN, 0.25 + rain * 0.75, 3.2 + (env2.storm || 0) * 3, [0.78, 0.84, 0.95], 0.24 + rain * 0.22);
+        set(this.rain, RAIN2, 0.25 + rain * 0.75, 3.2 + (env2.storm || 0) * 3, [0.78, 0.84, 0.95], 0.24 + rain * 0.22);
         this.splash.update(ctx, this.shelter, rain, bright, wx, wy, dt, env2.time);
       }
       if (this.snow.visible) {
@@ -98660,7 +99556,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   // src/render3d/drums3d.js
   var views5 = /* @__PURE__ */ new Map();
   var group5 = null;
-  var hash11 = (i, s) => {
+  var hash12 = (i, s) => {
     const v = Math.sin(i * 127.1 + s * 311.7) * 43758.5453;
     return v - Math.floor(v);
   };
@@ -98673,7 +99569,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     for (let i = 0; i < n; i++) {
       const a = i / n * Math.PI * 2, r4 = drumR(d, a), c = Math.cos(a), s = Math.sin(a);
       const tongue = 0.5 + 0.5 * Math.sin(a * 7 + d.seed * 3) * Math.sin(a * 3.1 - d.seed);
-      const drip = hash11(i, d.seed) > 0.82 ? 1.6 + hash11(i + 7, d.seed) * 2.4 : 0;
+      const drip = hash12(i, d.seed) > 0.82 ? 1.6 + hash12(i + 7, d.seed) * 2.4 : 0;
       const depth = 1.5 + tongue * 2.6 + drip;
       rows(depth).forEach(([dr, dy], j) => {
         const k = (i * R5 + j) * 3;
@@ -98741,7 +99637,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }, "drum-caps");
 
   // src/render3d/plates3d.js
-  var hash12 = (i, s) => {
+  var hash13 = (i, s) => {
     const v = Math.sin(i * 127.1 + s * 311.7) * 43758.5453;
     return v - Math.floor(v);
   };
@@ -98784,10 +99680,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const cTmp = new Color();
     for (let i = 0; i <= N8; i++) {
       const p = pts[i % N8];
-      const rib = 0.9 * Math.abs(Math.sin(i * 1.7 + d.seed)) ** 2 + 0.6 * hash12(i, d.seed);
+      const rib = 0.9 * Math.abs(Math.sin(i * 1.7 + d.seed)) ** 2 + 0.6 * hash13(i, d.seed);
       const off = 1.1 + rib;
       const lo = Math.max(-2, foot(p.x + p.nx * 3, p.y + p.ny * 3) - 1.8);
-      const dark = 0.8 + 0.2 * hash12(i + 3, d.seed);
+      const dark = 0.8 + 0.2 * hash13(i + 3, d.seed);
       const rows2 = [[H5 + 0.3, LEAF_LO2], [H5 - 3, LEAF_DK], [H5 - 7.5, SHADE_HI]];
       for (let j = 0; j < ROWS2 - 3; j++) rows2.push([H5 - 7.5 + (lo - H5 + 7.5) * ((j + 1) / (ROWS2 - 3)), null]);
       rows2.forEach(([y, c], j) => {
@@ -98807,13 +99703,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     for (let i = 0; i < N8; i += 3) {
       const p = pts[i];
-      if (hash12(i, d.seed + 1) < 0.35) continue;
-      const len = 12 + hash12(i, d.seed + 2) * 26, r0 = 0.35 + hash12(i, d.seed + 3) * 0.6;
+      if (hash13(i, d.seed + 1) < 0.35) continue;
+      const len = 12 + hash13(i, d.seed + 2) * 26, r0 = 0.35 + hash13(i, d.seed + 3) * 0.6;
       const g2 = foot(p.x + p.nx * 3, p.y + p.ny * 3);
       const top = H5 - 8, bot = Math.max(g2 + 1.5, top - len);
       if (top - bot < 3) continue;
-      const off = 2.3 + hash12(i, d.seed + 4) * 1.2;
-      k.add(new CylinderGeometry(r0, r0 * 0.3, top - bot, 5, 1, true), { at: [p.x + p.nx * off, (top + bot) / 2, p.y + p.ny * off], color: hash12(i, 9) < 0.4 ? MOSS2 : hash12(i, 8) < 0.5 ? ROOT2 : ROOT_DK });
+      const off = 2.3 + hash13(i, d.seed + 4) * 1.2;
+      k.add(new CylinderGeometry(r0, r0 * 0.3, top - bot, 5, 1, true), { at: [p.x + p.nx * off, (top + bot) / 2, p.y + p.ny * off], color: hash13(i, 9) < 0.4 ? MOSS2 : hash13(i, 8) < 0.5 ? ROOT2 : ROOT_DK });
     }
     const rows = [
       { step: 4.6, out: 1, y: H5 + 0.2, r: [4.4, 5.8], sq: 0.6, c0: LEAF2, c1: LEAF_HI2, jy: 1.2 },
@@ -98826,14 +99722,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       for (let i = 0; i < n; i++) {
         const p = pts[Math.floor(i / n * pts.length)];
         if (inGap(gaps, p.x, p.y, ri ? 0 : 1)) continue;
-        const h2 = hash12(i, ri * 7 + d.seed);
-        const r4 = row.r[0] + (row.r[1] - row.r[0]) * h2, out = row.out + hash12(i, ri * 7 + 1) * 1.6;
-        const x = p.x + p.nx * out, z = p.y + p.ny * out, y = row.y + (hash12(i, ri * 7 + 2) - 0.5) * row.jy * 2;
+        const h2 = hash13(i, ri * 7 + d.seed);
+        const r4 = row.r[0] + (row.r[1] - row.r[0]) * h2, out = row.out + hash13(i, ri * 7 + 1) * 1.6;
+        const x = p.x + p.nx * out, z = p.y + p.ny * out, y = row.y + (hash13(i, ri * 7 + 2) - 0.5) * row.jy * 2;
         const nf = radial(p.x - p.nx * 8, y - r4 * 0.6, p.y - p.ny * 8, 0.2);
         const y0 = y - r4 * row.sq, y1 = y + r4 * row.sq;
         k.add(new DodecahedronGeometry(r4, 0), {
           at: [x, y, z],
-          rot: [h2 * 3, hash12(i, 5) * 3, hash12(i, 6) * 3],
+          rot: [h2 * 3, hash13(i, 5) * 3, hash13(i, 6) * 3],
           scale: [1, row.sq, 1],
           color: (q2) => cTmp.copy(row.c0).lerp(row.c1, Math.min(1, Math.max(0, (q2.y - y0) / (y1 - y0)))),
           normals: nf,
@@ -98844,9 +99740,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     for (let i = 0; i < pts.length; i += 2) {
       const p = pts[i];
       if (inGap(gaps, p.x, p.y, 1.5)) continue;
-      const r4 = 1.2 + hash12(i, 21) * 0.7, x = p.x - p.nx * 1.4, z = p.y - p.ny * 1.4;
+      const r4 = 1.2 + hash13(i, 21) * 0.7, x = p.x - p.nx * 1.4, z = p.y - p.ny * 1.4;
       const y = plateTop(d, x, z) + r4 * 0.35;
-      k.add(new DodecahedronGeometry(r4, 0), { at: [x, y, z], rot: [hash12(i, 22) * 3, hash12(i, 23) * 3, 0], scale: [1, 0.7, 1], color: hash12(i, 24) < 0.5 ? LEAF2 : LEAF_HI2, normals: radial(x, y - r4, z, 0.3), outline: 0.04 });
+      k.add(new DodecahedronGeometry(r4, 0), { at: [x, y, z], rot: [hash13(i, 22) * 3, hash13(i, 23) * 3, 0], scale: [1, 0.7, 1], color: hash13(i, 24) < 0.5 ? LEAF2 : LEAF_HI2, normals: radial(x, y - r4, z, 0.3), outline: 0.04 });
     }
     const shade4 = new Mesh(geometryOf2(M3), vcMat());
     const leaves = new Mesh(k.build(false), vcMat());
@@ -99015,18 +99911,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const cards = [];
     const pts = rim2(d);
     for (let i = 0; i < pts.length; i += 7) {
-      const p = pts[i], out = 8 + hash12(i, 31) * 26, x = p.x + p.nx * out, y = p.y + p.ny * out;
+      const p = pts[i], out = 8 + hash13(i, 31) * 26, x = p.x + p.nx * out, y = p.y + p.ny * out;
       const g = Math.max(0, foot(x, y));
-      cards.push([x, g + 5 + hash12(i, 32) * 12, y, 30 + hash12(i, 33) * 22, hash12(i, 34)]);
+      cards.push([x, g + 5 + hash13(i, 32) * 12, y, 30 + hash13(i, 33) * 22, hash13(i, 34)]);
     }
     for (const o of world.objects?.near?.(d.x, d.y, Math.max(d.R, d.Ry) + 140) || []) {
       if (o.kind !== "spire") continue;
       const x = world.dx(d.x, o.x), y = o.y - d.y, g = Math.max(0, foot(x, y));
-      for (let j = 0; j < 2; j++) cards.push([x + (hash12(j, o.seed) - 0.5) * 10, g + 4 + j * (o.h * 0.35), y + (hash12(j + 2, o.seed) - 0.5) * 10, 22 + j * 8, hash12(j, o.seed + 1)]);
+      for (let j = 0; j < 2; j++) cards.push([x + (hash13(j, o.seed) - 0.5) * 10, g + 4 + j * (o.h * 0.35), y + (hash13(j + 2, o.seed) - 0.5) * 10, 22 + j * 8, hash13(j, o.seed + 1)]);
     }
     for (const f of d.water?.falls || []) {
       const x = f.x + f.nx * 5, y = f.y + f.ny * 5, g = Math.max(0, foot(x, y));
-      cards.push([x, g + 3, y, 16, hash12(3, f.x)], [x + f.nx * 4, g + 8, y + f.ny * 4, 22, hash12(4, f.y)]);
+      cards.push([x, g + 3, y, 16, hash13(3, f.x)], [x + f.nx * 4, g + 8, y + f.ny * 4, 22, hash13(4, f.y)]);
     }
     const n = cards.length;
     const geo2 = new InstancedBufferGeometry();
@@ -100440,6 +101336,22 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         if (nearDoor(p.x, p.y, 1.3) || !clearAt(p.x, p.y, 0.7)) continue;
         placeObject(world, { kind: rng4.pick(propKinds), x: p.x, y: p.y, block: true, v: rng4.int(0, 3) });
       }
+    }
+    for (const b of buildings) {
+      const f0 = bw(b, 0, 0), f1 = bw(b, 0, 1);
+      const yaw = Math.atan2(world.dx(f0.x, f1.x), f1.y - f0.y);
+      const side = (b.doorX || 0) > 0 ? -1 : 1;
+      const put2 = (kind, x, z, r4, door) => {
+        const p = bw(b, x, z);
+        if (nearDoor(p.x, p.y, door) || !clearAt(p.x, p.y, r4)) return false;
+        placeObject(world, { kind, x: p.x, y: p.y, block: true, yaw });
+        return true;
+      };
+      const role = b.role || "";
+      if (role === "weapons" || role === "dojo") put2("weaponrack", side * Math.min(b.fw / 2 - 0.9, (b.doorX || 0) * side + 1.9), 0.45, 0.7, 1.4);
+      else if (role === "bar" || role === "tavern" || role === "inn" || role === "restaurant" || role === "cafe") put2("signboard", (b.doorX || 0) + side * 1.4, 1.1, 0.5, 1.1);
+      else if (role === "shop" || role === "market") put2("sacks", side * (b.fw / 2 - 0.7), 0.6, 0.65, 1.4);
+      else if (role === "house" && b.fw >= 4 && rng4.chance(0.45)) put2("planter", (b.doorX || 0) + side * 1.5, 0.35, 0.5, 1.2);
     }
     if (!terraced) {
       for (const b of buildings) {
@@ -108701,7 +109613,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var TAU23 = Math.PI * 2;
   var easeOut2 = (k) => 1 - (1 - k) ** 3;
   var clamp019 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
-  function hash13(n) {
+  function hash14(n) {
     const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
     return x - Math.floor(x);
   }
@@ -108713,7 +109625,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     g.beginPath();
     for (let i = 0; i < n * 2; i++) {
       const a = i / (n * 2) * TAU23;
-      const rr = i % 2 ? R5 * (0.26 + 0.08 * hash13(seed + i)) : R5 * (0.62 + 0.55 * hash13(seed + i * 3.1));
+      const rr = i % 2 ? R5 * (0.26 + 0.08 * hash14(seed + i)) : R5 * (0.62 + 0.55 * hash14(seed + i * 3.1));
       const x = Math.cos(a) * rr * sx, y = Math.sin(a) * rr;
       if (i) g.lineTo(x, y);
       else g.moveTo(x, y);
@@ -108726,7 +109638,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     g.moveTo(x0, y0);
     for (let i = 1; i < n; i++) {
       const t = i / n;
-      const j = (hash13(seed + i * 7.3) - 0.5) * 2 * amp * Math.sin(t * Math.PI);
+      const j = (hash14(seed + i * 7.3) - 0.5) * 2 * amp * Math.sin(t * Math.PI);
       g.lineTo(x0 + dx * t + nx * j, y0 + dy * t + ny * j);
     }
     g.lineTo(x1, y1);
@@ -108809,18 +109721,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const ang = i / n * TAU23 + s.seed + (hash13(s.seed + i) - 0.5) * 0.5;
+          const ang = i / n * TAU23 + s.seed + (hash14(s.seed + i) - 0.5) * 0.5;
           let px2 = 0, py2 = 0;
           g.moveTo(0, 0);
-          const len = s.r * (0.6 + 0.5 * hash13(s.seed * 3 + i));
+          const len = s.r * (0.6 + 0.5 * hash14(s.seed * 3 + i));
           for (let j = 1; j <= 4; j++) {
             const rr = len * j / 4;
-            const off = (hash13(s.seed + i * 13 + j) - 0.5) * 0.6;
+            const off = (hash14(s.seed + i * 13 + j) - 0.5) * 0.6;
             px2 = Math.cos(ang + off) * rr;
             py2 = Math.sin(ang + off) * rr * 0.7;
             g.lineTo(px2, py2);
-            if (j === 2 && hash13(s.seed + i * 5) > 0.45) {
-              const b = ang + (hash13(s.seed + i * 9) > 0.5 ? 0.7 : -0.7);
+            if (j === 2 && hash14(s.seed + i * 5) > 0.45) {
+              const b = ang + (hash14(s.seed + i * 9) > 0.5 ? 0.7 : -0.7);
               g.moveTo(px2, py2);
               g.lineTo(px2 + Math.cos(b) * len * 0.3, py2 + Math.sin(b) * len * 0.21);
               g.moveTo(px2, py2);
@@ -109010,8 +109922,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       g.beginPath();
       const n = s.lines ?? 5;
       for (let i = 0; i < n; i++) {
-        const th = (hash13(s.seed + i * 17) - 0.5) * 2.2;
-        const r0 = R5 * (0.9 + 0.5 * k), r12 = R5 * (1.5 + 0.9 * hash13(s.seed + i) + k * 0.8);
+        const th = (hash14(s.seed + i * 17) - 0.5) * 2.2;
+        const r0 = R5 * (0.9 + 0.5 * k), r12 = R5 * (1.5 + 0.9 * hash14(s.seed + i) + k * 0.8);
         g.moveTo(Math.cos(th) * r0, Math.sin(th) * r0 * 0.8);
         g.lineTo(Math.cos(th) * r12, Math.sin(th) * r12 * 0.8);
       }
@@ -109106,13 +110018,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const segs = Math.max(4, Math.round(L3 * 3));
       for (let i = 1; i <= segs; i++) {
         const x = i / segs * L3;
-        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 - c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash13(s.seed + i + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
+        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 - c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash14(s.seed + i + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
         g.lineTo(x, -wd / 2 - ripple2);
       }
       g.lineTo(L3 + wd * 0.3, 0);
       for (let i = segs; i >= 1; i--) {
         const x = i / segs * L3;
-        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 + c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash13(s.seed + i * 3 + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
+        const ripple2 = style === "fire" || style === "wind" || style === "water" ? Math.sin(x * 4 + c.t * 30 + s.seed) * wd * 0.18 : style === "sand" ? (hash14(s.seed + i * 3 + Math.floor(c.t * 20)) - 0.5) * wd * 0.3 : 0;
         g.lineTo(x, wd / 2 + ripple2);
       }
       g.lineTo(0, wd / 2);
@@ -109153,7 +110065,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         g.fillStyle = "#e1f5fe";
         const n = Math.max(3, Math.round(L3 * 1.5));
         for (let i = 0; i < n; i++) {
-          const x = (i + 0.5) / n * L3, sd = hash13(s.seed + i) > 0.5 ? 1 : -1, h2 = wd * (0.5 + hash13(s.seed + i * 3) * 0.6);
+          const x = (i + 0.5) / n * L3, sd = hash14(s.seed + i) > 0.5 ? 1 : -1, h2 = wd * (0.5 + hash14(s.seed + i * 3) * 0.6);
           g.beginPath();
           g.moveTo(x - 0.12, sd * wd * 0.35);
           g.lineTo(x, sd * (wd * 0.35 + h2));
@@ -109215,10 +110127,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         g.beginPath();
         const nb = s.branches || 2;
         for (let b = 0; b < nb; b++) {
-          const t0 = 0.25 + hash13(seed + b) * 0.5;
+          const t0 = 0.25 + hash14(seed + b) * 0.5;
           const bx = dx * t0, by = (dy - z1 + z0) * t0 - z0;
-          const ba = Math.atan2(dy - z1 + z0, dx) + (hash13(seed + b * 3) - 0.5) * 2;
-          const bl2 = 0.4 + hash13(seed + b * 5) * 0.8;
+          const ba = Math.atan2(dy - z1 + z0, dx) + (hash14(seed + b * 3) - 0.5) * 2;
+          const bl2 = 0.4 + hash14(seed + b * 5) * 0.8;
           jagged(g, bx, by, bx + Math.cos(ba) * bl2, by + Math.sin(ba) * bl2, seed + b * 11, 0.15, 4);
         }
         g.stroke();
@@ -109246,12 +110158,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU23 + (hash13(s.seed + i) - 0.5) * 0.5;
+          const th = i / n * TAU23 + (hash14(s.seed + i) - 0.5) * 0.5;
           let x = 0, y = 0;
           g.moveTo(0, 0);
-          const L3 = R5 * (0.6 + 0.5 * hash13(s.seed + i * 3));
+          const L3 = R5 * (0.6 + 0.5 * hash14(s.seed + i * 3));
           for (let j = 1; j <= 3; j++) {
-            const r4 = L3 * j / 3, o = (hash13(s.seed + i * 7 + j) - 0.5) * 0.5;
+            const r4 = L3 * j / 3, o = (hash14(s.seed + i * 7 + j) - 0.5) * 0.5;
             x = Math.cos(th + o) * r4;
             y = Math.sin(th + o) * r4;
             g.lineTo(x, y);
@@ -109289,12 +110201,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const segs = 10;
         for (let i = 1; i <= segs; i++) {
           const y = -H5 * (i / segs);
-          const wob = s.kind === "fire" ? Math.sin(i * 1.7 - c.t * 18 + layer) * w * 0.25 : s.kind === "lightning" ? (hash13(s.seed + i + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
+          const wob = s.kind === "fire" ? Math.sin(i * 1.7 - c.t * 18 + layer) * w * 0.25 : s.kind === "lightning" ? (hash14(s.seed + i + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
           g.lineTo(-w * (1 - 0.3 * i / segs) + wob, y);
         }
         for (let i = segs; i >= 1; i--) {
           const y = -H5 * (i / segs);
-          const wob = s.kind === "fire" ? Math.sin(i * 1.3 + c.t * 16 + layer) * w * 0.25 : s.kind === "lightning" ? (hash13(s.seed + i * 3 + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
+          const wob = s.kind === "fire" ? Math.sin(i * 1.3 + c.t * 16 + layer) * w * 0.25 : s.kind === "lightning" ? (hash14(s.seed + i * 3 + Math.floor(c.t * 30)) - 0.5) * w * 0.8 : 0;
           g.lineTo(w * (1 - 0.3 * i / segs) + wob, y);
         }
         g.lineTo(w, 0);
@@ -109475,7 +110387,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         for (let i = 0; i < n; i++) {
           const th = i / n * TAU23;
           const x = Math.cos(th) * R5 * 0.75 + Math.sin(c.t * 0.8 + i) * 0.1, y = Math.sin(th) * R5 * 0.28;
-          const rr = R5 * (0.38 + 0.12 * hash13(s.seed + i));
+          const rr = R5 * (0.38 + 0.12 * hash14(s.seed + i));
           g.globalAlpha = a * (pass ? 0.9 : 0.5);
           g.fillStyle = pass ? s.color || "#37474f" : "#263238";
           g.beginPath();
@@ -109488,7 +110400,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         g.globalAlpha = a * 0.5;
         g.fillStyle = s.glow || "#fff59d";
         g.beginPath();
-        g.arc((hash13(Math.floor(c.t * 8) + s.seed) - 0.5) * R5, 0, R5 * 0.35, 0, TAU23);
+        g.arc((hash14(Math.floor(c.t * 8) + s.seed) - 0.5) * R5, 0, R5 * 0.35, 0, TAU23);
         g.fill();
       }
     }
@@ -109641,7 +110553,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         g.beginPath();
         for (let i = 0; i < 9; i++) {
           const th = i / 9 * TAU23;
-          const rr = R5 * (0.8 + 0.3 * hash13(s.seed + i));
+          const rr = R5 * (0.8 + 0.3 * hash14(s.seed + i));
           g.lineTo(Math.cos(th) * rr, Math.sin(th) * rr);
         }
         g.closePath();
@@ -109758,8 +110670,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       g.lineCap = "round";
       g.beginPath();
       for (let i = 0; i < 7; i++) {
-        const y = (hash13(s.seed + i) - 0.5) * 1.4 - 0.7;
-        const x0 = -0.4 - hash13(s.seed + i * 3 + Math.floor(c.t * 30)) * 0.4, x1 = x0 - 0.6 - hash13(s.seed + i * 5) * 0.9;
+        const y = (hash14(s.seed + i) - 0.5) * 1.4 - 0.7;
+        const x0 = -0.4 - hash14(s.seed + i * 3 + Math.floor(c.t * 30)) * 0.4, x1 = x0 - 0.6 - hash14(s.seed + i * 5) * 0.9;
         g.moveTo(x0, y * 0.9);
         g.lineTo(x1, y * 0.9);
       }
@@ -109775,9 +110687,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       for (let i = 0; i < n; i++) {
         const ph = (c.t * 7 + i / n) % 1;
         const seed = Math.floor(c.t * 7 + i / n) * 13 + i;
-        const d = 0.8 + hash13(seed) * (s.range || 2.6);
-        const th = ang + (hash13(seed + 3) - 0.5) * (s.arc || 0.9);
-        const x = Math.cos(th) * d, y = Math.sin(th) * d * 0.8 - 0.75 - (hash13(seed + 7) - 0.5) * 0.5;
+        const d = 0.8 + hash14(seed) * (s.range || 2.6);
+        const th = ang + (hash14(seed + 3) - 0.5) * (s.arc || 0.9);
+        const x = Math.cos(th) * d, y = Math.sin(th) * d * 0.8 - 0.75 - (hash14(seed + 7) - 0.5) * 0.5;
         const pop2 = Math.sin(ph * Math.PI);
         g.globalAlpha = a * pop2 * 0.95;
         g.strokeStyle = "rgba(255,255,255,0.7)";
@@ -109811,7 +110723,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const R5 = s.r || 2.4;
       for (let i = 0; i < n; i++) {
         const th = c.t * (2.5 + i % 3) + i * 2.39;
-        const r4 = R5 * (0.35 + 0.65 * hash13(s.seed + i));
+        const r4 = R5 * (0.35 + 0.65 * hash14(s.seed + i));
         const x = Math.cos(th) * r4, y = Math.sin(th) * r4 * 0.62 - 0.6 - Math.sin(c.t * 7 + i) * 0.25;
         g.globalAlpha = a * Math.min(1, (1 - k) * 4);
         g.save();
@@ -109993,8 +110905,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
             s.pts = [];
             const n = Math.max(3, Math.round(R5 * 3));
             for (let i = 0; i < n; i++) {
-              const th = i / n * TAU23 + hash13(s.seed + i);
-              const rr = R5 * (0.3 + 0.6 * hash13(s.seed + i * 3));
+              const th = i / n * TAU23 + hash14(s.seed + i);
+              const rr = R5 * (0.3 + 0.6 * hash14(s.seed + i * 3));
               s.pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, L: 0.9, ang: th, delay: i * 0.03, seed: i });
             }
           }
@@ -110008,7 +110920,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           g.lineCap = "round";
           g.beginPath();
           for (let i = 0; i < 8; i++) {
-            const x = (hash13(s.seed + i) - 0.5) * R5 * 1.6, y0 = -3 + (c.t * 3 + hash13(s.seed + i * 3)) % 1 * 3;
+            const x = (hash14(s.seed + i) - 0.5) * R5 * 1.6, y0 = -3 + (c.t * 3 + hash14(s.seed + i * 3)) % 1 * 3;
             g.moveTo(x, y0 - 0.6);
             g.lineTo(x, y0);
           }
@@ -110017,8 +110929,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         }
         case "field": {
           for (let i = 0; i < 5; i++) {
-            const ph = (c.t * 0.8 + hash13(s.seed + i)) % 1;
-            const x = (hash13(s.seed + i * 7 + Math.floor(c.t * 0.8 + hash13(s.seed + i))) - 0.5) * R5 * 1.4, y = (hash13(s.seed + i * 11) - 0.5) * R5 * 0.8;
+            const ph = (c.t * 0.8 + hash14(s.seed + i)) % 1;
+            const x = (hash14(s.seed + i * 7 + Math.floor(c.t * 0.8 + hash14(s.seed + i))) - 0.5) * R5 * 1.4, y = (hash14(s.seed + i * 11) - 0.5) * R5 * 0.8;
             g.globalAlpha = a * (1 - ph) * 0.7;
             g.strokeStyle = s.color;
             g.lineWidth = 0.025;
@@ -113932,7 +114844,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           buf.jump = 0;
         }
       } else if (buf.jump > 0 && p.tryJump(game, 0)) buf.jump = 0;
-      if (p.climb?.to?.ladder) {
+      if (p.climb?.to?.ladder || p.climb?.mast) {
         p.climbInput = (inp.isDown("W") || inp.isDown("ArrowUp") ? 1 : 0) - (inp.isDown("S") || inp.isDown("ArrowDown") ? 1 : 0);
         if (inp.wasPressed("Space")) p.letGo = true;
       } else {
@@ -115026,6 +115938,14 @@ a.btn { display: inline-block; text-decoration: none; }
 .poster .doa { font-size: 20px; letter-spacing: 3px; }
 .poster .nm { font-size: 30px; line-height: 1; }
 .poster .amt { font-size: 30px; }
+.wanted-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; margin: 6px 0 10px; }
+.mini-poster { background: #f3e3bc; border: 1px solid #9c7b4f; box-shadow: 0 4px 12px rgba(0,0,0,.35); padding: 8px 8px 10px; text-align: center; color: #3b2a1a; font-family: 'Pirata One', serif; cursor: pointer; transition: transform .12s; }
+.mini-poster:nth-child(odd) { transform: rotate(-1.2deg); } .mini-poster:nth-child(even) { transform: rotate(1deg); }
+.mini-poster:hover { transform: rotate(0) scale(1.04); }
+.mini-poster .w { font-size: 30px; line-height: .9; letter-spacing: 1px; }
+.mini-poster canvas { width: 100%; height: auto; aspect-ratio: 150 / 124; border: 2px solid #5d4037; background: #e8d5a8; display: block; margin: 4px 0; }
+.mini-poster .nm { font-size: 16px; line-height: 1.05; min-height: 2.1em; display: flex; align-items: center; justify-content: center; }
+.mini-poster .amt { font-size: 17px; }
 .poster .mar { font-family: Nunito; font-weight: 800; font-size: 12px; letter-spacing: 2px; margin-top: 6px; }
 
 /* title & creation */
@@ -115280,7 +116200,7 @@ details.game-keys .keycap { min-width: 26px; font-size: 11px; padding: 0 5px; bo
 .pause { text-align: center; }
 .pause h2 { margin-bottom: 12px; }
 .menu-list { display: flex; flex-direction: column; gap: 7px; align-items: stretch; width: min(320px, 100%); margin: 0 auto; }
-.menu-btn { display: flex; align-items: center; justify-content: flex-start; gap: 10px; font-size: 16px; padding: 9px 16px; text-align: left; }
+.menu-btn { display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; padding: 9px 16px; text-align: center; }
 .menu-btn img.icon { flex: none; }
 .save-note { margin-top: 10px; }
 .check-row { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 8px 0; cursor: var(--cur-ptr); }
@@ -115844,7 +116764,7 @@ button:disabled { cursor: not-allowed; }
   var RING_X = 0.3;
   var RING_Y = 0.36;
   var RING_SIDE = 300;
-  var NEAR5 = 160;
+  var NEAR6 = 160;
   var HEAD3 = 3.8;
   var ROAD_ICON = { pirate: "jolly_roger", marine: "marine", hunter: "bounty" };
   var ROAD_NAME = { pirate: "Pirate", marine: "Marine", hunter: "Bounty Hunter" };
@@ -115912,7 +116832,7 @@ button:disabled { cursor: not-allowed; }
         const d = w.distance(p.x, p.y, m.x, m.y);
         const mk3 = this.mark(id, kind, icon);
         const fade2 = Math.max(0, Math.min(1, (d - 10) / 12));
-        const gy = d < NEAR5 ? v3.ground(m.x, m.y) + HEAD3 : cam.position.y;
+        const gy = d < NEAR6 ? v3.ground(m.x, m.y) + HEAD3 : cam.position.y;
         V4.set(w.dx(v3.ox, m.x), gy, m.y - v3.oy).applyMatrix4(cam.matrixWorldInverse);
         let sx, sy, edge;
         if (V4.z < -0.1) {
@@ -116106,11 +117026,11 @@ button:disabled { cursor: not-allowed; }
     dead: [[140, 120, 92], [96, 80, 60]]
   };
   var TREE_DEFAULT = [[96, 146, 78], [58, 98, 50]];
-  var smooth10 = (a, b, x) => {
+  var smooth11 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
-  var hash14 = (x, y) => {
+  var hash15 = (x, y) => {
     let h2 = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) | 0;
     h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
     return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
@@ -116118,7 +117038,7 @@ button:disabled { cursor: not-allowed; }
   function vnoise4(x, y) {
     const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
     const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
-    const a = hash14(ix, iy), b = hash14(ix + 1, iy), c = hash14(ix, iy + 1), d = hash14(ix + 1, iy + 1);
+    const a = hash15(ix, iy), b = hash15(ix + 1, iy), c = hash15(ix, iy + 1), d = hash15(ix + 1, iy + 1);
     return (a + (b - a) * ux) * (1 - uy) + (c + (d - c) * ux) * uy;
   }
   function chartSea(world, x, y) {
@@ -116167,7 +117087,7 @@ button:disabled { cursor: not-allowed; }
      */
     draw(g, v) {
       this.t++;
-      const a = v.alpha ?? smooth10(0.3, 0.7, v.zoom);
+      const a = v.alpha ?? smooth11(0.3, 0.7, v.zoom);
       if (a <= 0) return;
       const { world, dpr, zoom } = v;
       const t0 = performance.now();
@@ -116187,7 +117107,7 @@ button:disabled { cursor: not-allowed; }
         g.imageSmoothingEnabled = true;
         const [cx, cy] = v.toS(c.x0, c.y0);
         g.drawImage(c.canvas, cx * dpr, cy * dpr, c.cw / c.px * zoom * dpr, c.ch / c.px * zoom * dpr);
-        if (zoom > 0.45) drawBuildings(g, c, v, a * smooth10(0.45, 0.8, zoom));
+        if (zoom > 0.45) drawBuildings(g, c, v, a * smooth11(0.45, 0.8, zoom));
       }
       todo.sort((p, q2) => Math.hypot(p.mx - v.px, p.my - v.py) - Math.hypot(q2.mx - v.px, q2.my - v.py));
       const budget = v.budget ?? BUDGET;
@@ -116307,7 +117227,7 @@ button:disabled { cursor: not-allowed; }
       const tt = type[tk];
       let r4, g, b, a = 255;
       const edge = Math.min(pi, pj, c.cw - 1 - pi, c.ch - 1 - pj) / px2;
-      const out = smooth10(0, 6, edge) * (1 - smooth10(MARGIN - 9, MARGIN - 1, -sd));
+      const out = smooth11(0, 6, edge) * (1 - smooth11(MARGIN - 9, MARGIN - 1, -sd));
       if (OVERLAY[tt]) {
         const L3 = LAND2[tt];
         const plank = Math.floor(wx * 2) + Math.floor(wy * 2) & 1 ? 0.94 : 1.04;
@@ -116323,24 +117243,24 @@ button:disabled { cursor: not-allowed; }
           cg = liq[1];
           cb = liq[2];
         } else {
-          const w = 0.55 * (1 - smooth10(0, 16, d));
+          const w = 0.55 * (1 - smooth11(0, 16, d));
           cr += (WASH[0] - cr) * w;
           cg += (WASH[1] - cg) * w;
           cb += (WASH[2] - cb) * w;
           for (const L3 of DEPTHS) {
-            const ln2 = (1 - smooth10(lw * 0.5, lw * 1.5, Math.abs(d - L3))) * 0.32 * (1 - L3 / 20);
+            const ln2 = (1 - smooth11(lw * 0.5, lw * 1.5, Math.abs(d - L3))) * 0.32 * (1 - L3 / 20);
             cr += (60 - cr) * ln2;
             cg += (100 - cg) * ln2;
             cb += (118 - cb) * ln2;
           }
         }
-        const ink2 = 1 - smooth10(0, lw * 1.6, d);
+        const ink2 = 1 - smooth11(0, lw * 1.6, d);
         r4 = cr + (SEPIA[0] - cr) * ink2;
         g = cg + (SEPIA[1] - cg) * ink2;
         b = cb + (SEPIA[2] - cb) * ink2;
         a = 255 * Math.max(out, ink2);
       } else {
-        const sx = smooth10(0.3, 0.7, fx), sy = smooth10(0.3, 0.7, fy);
+        const sx = smooth11(0.3, 0.7, fx), sy = smooth11(0.3, 0.7, fy);
         B42.r = B42.g = B42.b = B42.w = 0;
         blend(type[k00], (1 - sx) * (1 - sy));
         blend(type[k10], sx * (1 - sy));
@@ -116371,12 +117291,12 @@ button:disabled { cursor: not-allowed; }
         const grad2 = Math.sqrt(ex * ex + ey * ey);
         if (grad2 > 0.6 && !MANMADE[tt]) {
           const cd = Math.abs(e - Math.round(e / 26) * 26) / grad2;
-          const cl = (1 - smooth10(lw * 0.4, lw * 1.2, cd)) * 0.22;
+          const cl = (1 - smooth11(lw * 0.4, lw * 1.2, cd)) * 0.22;
           r4 += (SEPIA[0] - r4) * cl;
           g += (SEPIA[1] - g) * cl;
           b += (SEPIA[2] - b) * cl;
         }
-        const ink2 = 1 - smooth10(lw * 0.3, lw * 1.9, sd);
+        const ink2 = 1 - smooth11(lw * 0.3, lw * 1.9, sd);
         r4 += (SEPIA[0] - r4) * ink2;
         g += (SEPIA[1] - g) * ink2;
         b += (SEPIA[2] - b) * ink2;
@@ -117383,11 +118303,11 @@ button:disabled { cursor: not-allowed; }
   var PARCH2 = [240, 224, 186];
   var BLANK = [PARCH2[0] * 0.98, PARCH2[1] * 0.96, PARCH2[2] * 0.92];
   var INK5 = [71, 51, 31];
-  var smooth11 = (a, b, x) => {
+  var smooth12 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
-  var hash15 = (x, y) => {
+  var hash16 = (x, y) => {
     let h2 = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) | 0;
     h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
     return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
@@ -117497,7 +118417,7 @@ button:disabled { cursor: not-allowed; }
         toS,
         px: p.x,
         py: p.y,
-        alpha: smooth11(0.07, 0.2, z),
+        alpha: smooth12(0.07, 0.2, z),
         budget: 3,
         known: (isl) => zone || game.creative?.on || discovered.has(isl.id) || isl === game.currentIsland || seenIsland(w, isl)
       });
@@ -117708,20 +118628,20 @@ button:disabled { cursor: not-allowed; }
       const mj = j0 + j, fy = Math.floor((mj + 0.5) * my / F4);
       for (let i = 0; i < cw; i++) {
         const mi = i0 + i, o = (mj * m.w + mi) * 4, q2 = (j * cw + i) * 4;
-        const n = 0.92 + 0.08 * hash15(mi >> 2, mj >> 2);
+        const n = 0.92 + 0.08 * hash16(mi >> 2, mj >> 2);
         let r4 = PARCH2[0] * n, gg = PARCH2[1] * n, b = PARCH2[2] * n;
         r4 += (m.data[o] - r4) * 0.62;
         gg += (m.data[o + 1] - gg) * 0.62;
         b += (m.data[o + 2] - b) * 0.62;
         if (m.dist) {
           const sd = (m.dist[mj * m.w + mi] - 128) * 0.25;
-          const ink2 = (1 - smooth11(0, mx * 0.9 + 0.25, Math.abs(sd))) * 0.85;
+          const ink2 = (1 - smooth12(0, mx * 0.9 + 0.25, Math.abs(sd))) * 0.85;
           r4 += (INK5[0] - r4) * ink2;
           gg += (INK5[1] - gg) * ink2;
           b += (INK5[2] - b) * ink2;
         }
         const fog = w.fog ? w.fog[fy * w.fogW + Math.floor((mi + 0.5) * mx / F4)] / 255 : 1;
-        const k = smooth11(0.05, 0.6, fog) * 0.85 + seen;
+        const k = smooth12(0.05, 0.6, fog) * 0.85 + seen;
         const kk = Math.min(1, k);
         d[q2] = BLANK[0] + (r4 - BLANK[0]) * kk;
         d[q2 + 1] = BLANK[1] + (gg - BLANK[1]) * kk;
@@ -117863,23 +118783,30 @@ button:disabled { cursor: not-allowed; }
 
   // src/data/shops.js
   var STOCK = {
-    general: ["water_flask", "hot_tea", "meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "medkit", "antidote", "sake", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
+    general: ["water_flask", "hot_tea", "lemonade", "soda", "coffee", "meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "medkit", "antidote", "sake", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
     // (in the four Blues, where everyone's journey starts, the general store keeps a rack of old swords)
-    general_blue: ["water_flask", "hot_tea", "meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "medkit", "antidote", "sake", "wooden_sword", "rusty_katana", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
-    tavern: ["water_flask", "milk", "hot_tea", "meat", "rice_ball", "fish_stew", "sake", "tangerine", "mango"],
+    general_blue: ["water_flask", "hot_tea", "orange_juice", "lemonade", "coffee", "meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "medkit", "antidote", "sake", "wooden_sword", "rusty_katana", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
+    tavern: ["water_flask", "milk", "hot_tea", "grog", "rum", "cider", "cocoa", "orange_juice", "soda", "meat", "rice_ball", "fish_stew", "sake", "tangerine", "mango"],
     weapons_blue: ["wooden_sword", "rusty_katana", "cutlass", "slingshot", "flintlock", "bo_staff", "woodsman_axe", "padded_vest", "leather_jerkin", "leather_bracers", "iron_ring"],
     weapons_grand: ["cutlass", "fine_katana", "marine_saber", "flintlock", "marine_rifle", "bo_staff", "woodsman_axe", "shigure", "leather_jerkin", "chain_shirt", "hand_wraps", "iron_ring"],
     weapons_new: ["fine_katana", "marine_saber", "marine_rifle", "shigure", "seastone_cuffs", "chain_shirt", "samurai_armor", "hand_wraps", "sea_prism_charm"],
     outfitter: ["bandana", "traveller_hood", "black_hood", "tricorne", "captain_hat", "cowboy_hat", "pink_hat", "goggles", "headband", "captain_coat", "red_cloak", "haramaki", "red_sash", "gold_earrings", "shell_bracelet", "lucky_charm"],
     navigator: ["log_pose", "den_den_mushi"],
     navigator_grand: ["log_pose", "new_world_log_pose", "den_den_mushi"],
-    skypiea: ["water_flask", "impact_dial", "flame_dial", "breath_dial", "flash_dial", "rice_ball", "fish_stew"],
-    fishman: ["water_flask", "fish_stew", "sea_king_steak", "pearl", "pearl_necklace", "bandage", "antidote"],
+    skypiea: ["water_flask", "coconut_milk", "impact_dial", "flame_dial", "breath_dial", "flash_dial", "rice_ball", "fish_stew"],
+    fishman: ["water_flask", "coconut_milk", "lemonade", "fish_stew", "sea_king_steak", "pearl", "pearl_necklace", "bandage", "antidote"],
     loguetown_swords: ["wooden_sword", "rusty_katana", "cutlass", "fine_katana", "yubashiri"],
     black_market: ["rumble_ball", "seastone", "seastone_cuffs", "cola", "jewels", "black_hood"]
   };
   var SEA_PRICE = { east_blue: 1, north_blue: 1.1, west_blue: 1.1, south_blue: 1.1, paradise: 1.6, calm_belt: 2, red_line: 3, new_world: 2.4, sky: 1.8, undersea: 2 };
+  var LOCAL_DRINK = { desert: ["cactus_juice"], winter: ["cocoa", "cider"], tropical: ["coconut_milk"], jungle: ["coconut_milk"], mangrove: ["coconut_milk"], sakura: ["green_tea"], wano: ["green_tea"] };
   function stockFor(building, island) {
+    const list = stockFor0(building, island);
+    if (!Array.isArray(list) || building.shop || !["tavern", "bar", "restaurant", "cafe", "market", "shop"].includes(building.role)) return list;
+    const extra = [...LOCAL_DRINK[island?.def?.climate] || [], ...building.style === "wano" || island?.def?.style === "wano" ? LOCAL_DRINK.wano : []];
+    return extra.length ? [...list, ...extra.filter((x) => !list.includes(x))] : list;
+  }
+  function stockFor0(building, island) {
     const sea = island?.def?.sea || "east_blue";
     const grand = sea === "paradise" || sea === "new_world" || sea === "calm_belt";
     if (building.shop) return STOCK[building.shop] || building.shop;
@@ -121232,7 +122159,7 @@ button:disabled { cursor: not-allowed; }
         if (!st) continue;
         for (const t of st.techniques || []) {
           const L3 = t.learn || {};
-          if (c.techniques.includes(t.id) || L3.special || L3.innate) continue;
+          if (c.techniques.includes(t.id) || L3.special) continue;
           if ((L3.mastery || 0) <= m) {
             c.techniques.push(t.id);
             fresh.push(t.id);
@@ -123452,7 +124379,7 @@ Trains by: ${TRAINS_BY[k]}` },
     const ui = game.ui;
     const c = game.state.char;
     const saved = h("p.muted.save-note", c.lastSaved ? `Last saved ${new Date(c.lastSaved).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Not saved yet");
-    const btn = (icon, text2, fn, cls = "") => h("button.btn.menu-btn" + cls, { on: { click: fn } }, uiImg(icon, 20), text2);
+    const btn = (icon, text2, fn, cls = "") => h("button.btn.menu-btn" + cls, { on: { click: fn } }, text2);
     const body = h(
       "div.pause",
       // (in a multiplayer voyage the world goes on: only your own game waits)
@@ -127149,7 +128076,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (!extra.uid && game.state?.char) game.state.char.activeShip = s.uid;
       const dock = extra.heading === void 0 ? dockNear(game.world, x, y) : null;
       if (s.def.big && extra.heading === void 0) {
-        if (!(dock && s.berth(game.world, dock)) && !s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
+        if (!(dock && s.berth(game.world, dock))) {
+          if (dock) s.heading = Math.atan2(dock.dirY ?? 1, dock.dirX ?? 0);
+          if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
+        }
       } else if (dock && s.moorAlongside(game.world, dock)) {
       } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
       return s;
@@ -154902,7 +155832,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "Scopper Gaban",
       where: "Gaban's Lodge, Western Village of Elbaph",
       styles: { elbaf: 25e3 },
-      teaches: ["elbaf_hakoku", "haki_emission", "haki_infusion"],
+      teaches: ["elbaf_hakoku", "haki_infusion"],
       train: { str: 85, vit: 85, wil: 80 },
       haki: { armament: 85, observation: 80, conqueror: 70 },
       spar: { level: 90, style: "elbaf", weapon: "axe", name: "Scopper Gaban", haki: true },
@@ -155875,15 +156805,47 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       );
     }
     if (c.bounty > 0) body.append(h("h3", "Your poster"), wantedPoster(c));
-    const wanted2 = allNpcDefs().filter((d) => d.bounty && d.infamy && !c.bosses.includes(d.id) && !c.defeated[d.id]).sort((a, b) => b.bounty - a.bounty).slice(0, 12);
-    body.append(h("h3", "Most Wanted"));
-    const list = h("div.list");
+    const seen = /* @__PURE__ */ new Set(), key2 = (d) => d.name.replace(/^"[^"]*"\s*/, "").replace(/\s+the\s+\w+$/i, "").toLowerCase();
+    const wanted2 = allNpcDefs().filter((d) => d.bounty && d.infamy && !c.bosses.includes(d.id) && !c.defeated[d.id]).sort((a, b) => b.bounty - a.bounty).filter((d) => seen.has(key2(d)) ? false : (seen.add(key2(d)), true)).slice(0, 12);
+    body.append(h("h3", "Most Wanted"), h("p.muted", "Click a poster to take a closer look."));
+    const board2 = h("div.wanted-board");
+    const looks = [];
     for (const d of wanted2) {
-      const isl = game.surface.islands.find((i) => i.id === d.island);
+      const isl = game.surface.islands.find((i2) => i2.id === d.island);
       const known = c.discovered.includes(d.island);
-      list.appendChild(h("div.row-item", uiImg("bounty", 30), h("div.grow", h("b", d.name), h("div.sub", `${d.title || ""}${known && isl ? " \xB7 last seen: " + isl.name : ""}`)), h("span.price", formatBerries(d.bounty))));
+      const who = { name: d.name, bounty: d.bounty, look: npcLook(d), equipped: {}, stats: { kills: 30 } };
+      const cv = h("canvas", { width: 150, height: 124 });
+      looks.push([cv, who]);
+      board2.appendChild(h(
+        "div.mini-poster",
+        { title: `${d.name}${d.title ? " \u2014 " + d.title : ""}${known && isl ? "\nLast seen: " + isl.name : ""}`, on: { click: () => {
+          const full = h("div", { style: { display: "flex", justifyContent: "center", padding: "8px 0" } }, wantedPoster(who));
+          game.ui.openPanel(h("div", full, h("p.muted", { style: { textAlign: "center" } }, `${d.title || ""}${known && isl ? " \xB7 last seen: " + isl.name : ""}`)));
+        } } },
+        h("div.w", "WANTED"),
+        cv,
+        h("div.nm", d.name),
+        h("div.amt", formatBerries(d.bounty))
+      ));
     }
-    body.appendChild(list);
+    body.appendChild(board2);
+    let i = 0;
+    const next = () => {
+      if (i >= looks.length || !board2.isConnected && i > 0) return;
+      const [cv, who] = looks[i++];
+      const pp3 = posterPose(who);
+      const img2 = renderPortrait(pp3.look, { w: 150, h: 124, view: "bust", act: pp3.act });
+      const g = cv.getContext("2d");
+      g.fillStyle = "#e8d5a8";
+      g.fillRect(0, 0, 150, 124);
+      if (img2) g.drawImage(img2, 0, 0, 150, 124);
+      g.globalCompositeOperation = "multiply";
+      g.fillStyle = "#d9c28f";
+      g.fillRect(0, 0, 150, 124);
+      g.globalCompositeOperation = "source-over";
+      setTimeout(next, 30);
+    };
+    setTimeout(next, 30);
     if (c.faction === "pirate") body.append(h("p.muted", "The clerk eyes you nervously and keeps one hand near the Den Den Mushi."));
   }
 
@@ -159676,6 +160638,103 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       this.done(t + dur + 0.05);
     }
     /**
+     * Someone talking across the way (you can't make out the words): one
+     * continuous voice for a whole phrase, as a throat makes it — its pitch
+     * gliding through the phrase (up at the start, falling at the end, a
+     * little wobble), the vowels shaped by three formants moving from syllable
+     * to syllable, a breath of air through it, the consonants as short hisses
+     * and taps between the vowels, and all of it softened by the distance.
+     * `syl`: [{ d (s), v ('a' | 'e' | 'i' | 'o' | 'u'), c (a consonant before
+     * it: 's', 't', 'k', 'm' or none), gap (a pause after it, s) }].
+     */
+    speech(dt, syl, { f0 = 140, fem = false, gain = 0.1, far = 2400, dest } = {}) {
+      const c = this.c, t0 = this.at(dt);
+      const V5 = { a: [730, 1090, 2440], e: [530, 1840, 2480], i: [300, 2200, 2950], o: [570, 840, 2410], u: [320, 870, 2240] };
+      const k = (fem ? 1.17 : 1) * this.pj;
+      const total = syl.reduce((s, x) => s + x.d + (x.gap || 0), 0);
+      const end = t0 + total;
+      const o = c.createOscillator();
+      o.type = "sawtooth";
+      const lp = c.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 2800;
+      const air = c.createBufferSource();
+      air.buffer = this.E.noiseBuf("pink");
+      air.loop = true;
+      const airG = c.createGain();
+      airG.gain.value = 0.18;
+      const src = c.createGain();
+      o.connect(lp);
+      lp.connect(src);
+      air.connect(airG);
+      airG.connect(src);
+      const amp = c.createGain();
+      amp.gain.setValueAtTime(1e-4, t0);
+      const out = c.createGain();
+      out.gain.value = gain;
+      const dist = c.createBiquadFilter();
+      dist.type = "lowpass";
+      dist.frequency.value = far;
+      const fs = [0, 1, 2].map((i) => {
+        const f = c.createBiquadFilter();
+        f.type = "bandpass";
+        f.Q.value = [7, 10, 12][i];
+        const g = c.createGain();
+        g.gain.value = [1, 0.6, 0.25][i];
+        src.connect(f);
+        f.connect(g);
+        g.connect(amp);
+        return f;
+      });
+      amp.connect(dist);
+      dist.connect(out);
+      out.connect(dest || this.in);
+      const hiss2 = c.createBufferSource();
+      hiss2.buffer = this.E.noiseBuf("white");
+      hiss2.loop = true;
+      const hf = c.createBiquadFilter();
+      hf.type = "bandpass";
+      hf.Q.value = 2;
+      const hg = c.createGain();
+      hg.gain.setValueAtTime(1e-4, t0);
+      hiss2.connect(hf);
+      hf.connect(hg);
+      hg.connect(dist);
+      let t = t0;
+      const n = syl.length;
+      syl.forEach((x, i) => {
+        const [F12, F23, F32] = V5[x.v] || V5.a;
+        const ph = n > 1 ? i / (n - 1) : 0;
+        const pitch = f0 * (1 + 0.12 * Math.sin(Math.min(1, ph * 3) * Math.PI) - 0.14 * ph + (x.q ? 0.2 : 0)) * (1 + (Math.random() - 0.5) * 0.06);
+        o.frequency.linearRampToValueAtTime(minF(pitch * this.pj), t + x.d * 0.5);
+        fs[0].frequency.linearRampToValueAtTime(minF(F12 * k), t + Math.min(0.05, x.d * 0.4));
+        fs[1].frequency.linearRampToValueAtTime(minF(F23 * k), t + Math.min(0.06, x.d * 0.4));
+        fs[2].frequency.linearRampToValueAtTime(minF(F32 * k), t + Math.min(0.06, x.d * 0.4));
+        if (x.c) {
+          const cs = { s: [5200, 0.045, 0.5], t: [3500, 0.018, 0.6], k: [2200, 0.02, 0.5], m: [300, 0.04, 0], h: [1400, 0.05, 0.35] }[x.c] || [4e3, 0.02, 0.4];
+          hf.frequency.setValueAtTime(cs[0], t);
+          if (cs[2] > 0) {
+            hg.gain.setValueAtTime(1e-4, t);
+            hg.gain.linearRampToValueAtTime(cs[2], t + 6e-3);
+            hg.gain.linearRampToValueAtTime(1e-4, t + cs[1]);
+          }
+          t += cs[1];
+        }
+        const stress = 0.7 + Math.random() * 0.3;
+        amp.gain.setTargetAtTime(stress, t, 0.018);
+        amp.gain.setTargetAtTime(x.gap ? 1e-4 : stress * 0.55, t + x.d * 0.7, 0.025);
+        t += x.d;
+        if (x.gap) t += x.gap;
+      });
+      amp.gain.setTargetAtTime(1e-4, Math.min(t, end), 0.03);
+      o.frequency.setValueAtTime(minF(f0 * this.pj), t0);
+      for (const s of [o, air, hiss2]) {
+        s.start(t0, s === o ? 0 : Math.random() * 1.9);
+        s.stop(t + 0.2);
+      }
+      this.done(t + 0.25);
+    }
+    /**
      * A swirl (the anime's "shing" of hardening steel): noise through a comb
      * whose tooth spacing sweeps (a flanger — a short delay fed back on itself,
      * its time gliding `d0` → `d1` → `d2` ms), so the colour sweeps in arcs.
@@ -160123,12 +161182,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
 
   // src/audio/motifs.js
-  var rnd2 = (a, b) => a + Math.random() * (b - a);
+  var rnd3 = (a, b) => a + Math.random() * (b - a);
   function flame2(v, t, s = 1, { dur = 0.5, low = 380, high = 1400 } = {}) {
     const q2 = Math.sqrt(s), L3 = dur * s;
     v.thump(t, { f0: 95, f1: 42, dur: 0.18 * q2 + 0.08, gain: 0.3 * q2 });
-    v.noise(t, L3 + 0.12, { color: "brown", type: "lowpass", freq: 280, sweep: 140, gain: 0.5 * q2, attack: 0.03, am: { rate: rnd2(8, 13), depth: 0.45 } });
-    v.noise(t + 0.01, L3, { color: "pink", type: "lowpass", freq: 1200, sweep: 450, gain: 0.42 * q2, attack: 0.03, am: { rate: rnd2(11, 16), depth: 0.5 } });
+    v.noise(t, L3 + 0.12, { color: "brown", type: "lowpass", freq: 280, sweep: 140, gain: 0.5 * q2, attack: 0.03, am: { rate: rnd3(8, 13), depth: 0.45 } });
+    v.noise(t + 0.01, L3, { color: "pink", type: "lowpass", freq: 1200, sweep: 450, gain: 0.42 * q2, attack: 0.03, am: { rate: rnd3(11, 16), depth: 0.5 } });
     v.whoosh(t, 0.1 * s + 0.12, { f0: low, f1: high, q: 0.7, gain: 0.24 * s, peak: 0.3, color: "pink" });
     v.crackle(t + 0.04, L3 * 0.9, Math.round(10 * s), { freq: 2600, gain: 0.06, q: 3 });
     v.noise(t + 0.03, L3 * 0.8, { type: "highpass", freq: 5e3, gain: 0.02, attack: 0.05 });
@@ -160148,11 +161207,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     v.thump(t, { f0: 190, f1: 95, dur: 0.07, gain: 0.25 * s });
     for (let i = 0; i < Math.round(22 * s); i++) {
       const k = Math.pow(Math.random(), 1.8);
-      v.noise(t + k * spreadDur * s, 6e-3 + Math.random() * 0.01, { freq: rnd2(2500, 8e3), q: 3, gain: 0.13 * (1 - k * 0.6) * s, attack: 6e-4 });
+      v.noise(t + k * spreadDur * s, 6e-3 + Math.random() * 0.01, { freq: rnd3(2500, 8e3), q: 3, gain: 0.13 * (1 - k * 0.6) * s, attack: 6e-4 });
     }
     v.noise(t + 0.01, spreadDur * s + 0.25, { type: "highpass", freq: 4200, gain: 0.06 * s, attack: 0.05, curve: "lin" });
-    v.ring(t + 3e-3, rnd2(2250, 2600), 0.45 * s, 0.05, [1, 1.34, 1.87, 2.51]);
-    v.fm(t + 4e-3, 0.4 * s, { freq: rnd2(3100, 3500), ratio: 1.73, index: 1.2, gain: 0.015 });
+    v.ring(t + 3e-3, rnd3(2250, 2600), 0.45 * s, 0.05, [1, 1.34, 1.87, 2.51]);
+    v.fm(t + 4e-3, 0.4 * s, { freq: rnd3(3100, 3500), ratio: 1.73, index: 1.2, gain: 0.015 });
   }
   function zapBurst(v, t, s = 1, dur = 0.3) {
     v.noise(t, 8e-3, { type: "highpass", freq: 1500, gain: 0.6 * s, attack: 5e-4 });
@@ -160173,12 +161232,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
   function rumble(v, t, s = 1, dur = 0.8, { lp = 260 } = {}) {
     v.noise(t, dur * s, { color: "brown", type: "lowpass", freq: lp, sweep: lp * 0.45, gain: 0.4 * s, attack: 0.02 });
-    for (let i = 0; i < 2 + Math.round(s * 2); i++) v.noise(t + rnd2(0.06, dur * 0.65) * s, rnd2(0.3, 0.7) * dur * s, { color: "brown", type: "lowpass", freq: lp * rnd2(0.7, 1.2), gain: rnd2(0.14, 0.3) * s, attack: rnd2(0.04, 0.16), curve: "lin" });
+    for (let i = 0; i < 2 + Math.round(s * 2); i++) v.noise(t + rnd3(0.06, dur * 0.65) * s, rnd3(0.3, 0.7) * dur * s, { color: "brown", type: "lowpass", freq: lp * rnd3(0.7, 1.2), gain: rnd3(0.14, 0.3) * s, attack: rnd3(0.04, 0.16), curve: "lin" });
   }
   function glassCrack(v, t, s = 1) {
     v.noise(t, 0.018, { type: "highpass", freq: 4e3, gain: 0.45 * s, attack: 6e-4 });
     v.crackle(t, 0.12 * s, Math.round(14 * s), { freq: 5200, spread: 0.9, q: 3, gain: 0.1 });
-    for (let i = 0; i < 2; i++) v.ring(t + rnd2(5e-3, 0.06), rnd2(2700, 3500), 0.3 * s, 0.022, [1, 1.62, 2.3]);
+    for (let i = 0; i < 2; i++) v.ring(t + rnd3(5e-3, 0.06), rnd3(2700, 3500), 0.3 * s, 0.022, [1, 1.62, 2.3]);
   }
   function boom(v, t, s = 1, { f0 = 90, f1 = 26, dur = 0.7 } = {}) {
     v.thump(t, { f0, f1, dur: dur * s, gain: 0.8 * Math.min(1.2, s) });
@@ -160199,7 +161258,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     v.noise(t, 0.05, { type: "lowpass", freq: 900, gain: 0.12 * s, attack: 2e-3 });
   }
   function shimmer(v, t, s = 1, dur = 0.5, up = true) {
-    const f = rnd2(2400, 2800);
+    const f = rnd3(2400, 2800);
     v.fm(t, dur, { freq: f, ratio: 1.5, index: 0.8, gain: 0.06 * s });
     v.tone(t, dur, { freq: up ? f * 0.6 : f * 1.4, to: up ? f * 1.4 : f * 0.6, gain: 0.055 * s, attack: dur * 0.3, curve: "lin" });
     v.crackle(t, dur, Math.round(6 * s), { freq: 7e3, gain: 0.045, q: 5 });
@@ -160209,7 +161268,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     v.noise(t, dur, { color: "brown", type: "lowpass", freq: 300, gain: 0.3 * s, attack: dur * 0.7, curve: "lin" });
   }
   function wail(v, t, s = 1, dur = 0.7) {
-    v.tone(t, dur, { freq: rnd2(620, 720), to: 380, gain: 0.05 * s, attack: 0.15, curve: "lin", vib: { rate: 5, depth: 40 } });
+    v.tone(t, dur, { freq: rnd3(620, 720), to: 380, gain: 0.05 * s, attack: 0.15, curve: "lin", vib: { rate: 5, depth: 40 } });
     v.formant(t, dur, { f1: 500, f2: 900, to1: 380, to2: 700, q: 6, gain: 0.3 * s, attack: 0.12 });
   }
   function roar(v, t, s = 1, dur = 0.9, low = 70) {
@@ -160225,13 +161284,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
   function chain3(v, t, dur, n, s = 1) {
     for (let i = 0; i < n; i++) {
-      const at4 = t + i / n * dur + rnd2(0, 0.012);
-      v.ring(at4, rnd2(1700, 2700), 0.06, 0.028 * s, [1, 2.7, 4.1], { spread: 0.05 });
+      const at4 = t + i / n * dur + rnd3(0, 0.012);
+      v.ring(at4, rnd3(1700, 2700), 0.06, 0.028 * s, [1, 2.7, 4.1], { spread: 0.05 });
       v.noise(at4, 0.01, { type: "highpass", freq: 4500, gain: 0.05 * s, attack: 6e-4 });
     }
   }
   function drips(v, t, span2, n, s = 1) {
-    for (let i = 0; i < n; i++) v.bubble(t + Math.random() * span2, { f: rnd2(1500, 2900), rise: rnd2(1.3, 1.9), dur: rnd2(0.018, 0.035), gain: rnd2(0.015, 0.035) * s });
+    for (let i = 0; i < n; i++) v.bubble(t + Math.random() * span2, { f: rnd3(1500, 2900), rise: rnd3(1.3, 1.9), dur: rnd3(0.018, 0.035), gain: rnd3(0.015, 0.035) * s });
   }
   function plunge(v, t, s = 1) {
     const q2 = Math.pow(s, 0.75);
@@ -160245,7 +161304,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     v.bubbles(t + 0.06, 0.3 + 0.3 * s, Math.round(6 + 12 * s), { f: 520, spread: 1, gain: 0.09 * q2, dur: 0.06 });
     const R5 = 0.3 + 1.1 * s;
     v.noise(t + 0.12, R5, { freq: 3e3, q: 0.5, sweep: 2200, gain: 0.35 * q2, attack: R5 * 0.2 });
-    for (let i = 0, n = Math.round(6 + 24 * s); i < n; i++) v.bubble(t + 0.15 + Math.pow(Math.random(), 1.4) * R5, { f: rnd2(1300, 3400), rise: rnd2(1.3, 2), dur: rnd2(0.012, 0.03), gain: rnd2(0.03, 0.07) * q2 });
+    for (let i = 0, n = Math.round(6 + 24 * s); i < n; i++) v.bubble(t + 0.15 + Math.pow(Math.random(), 1.4) * R5, { f: rnd3(1300, 3400), rise: rnd3(1.3, 2), dur: rnd3(0.012, 0.03), gain: rnd3(0.03, 0.07) * q2 });
   }
   function splash2(v, t, s = 1) {
     v.noise(t, 0.38 * s, { type: "lowpass", freq: 1800, sweep: 300, gain: 0.3 * s, attack: 3e-3 });
@@ -160256,12 +161315,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
 
   // src/audio/sfx.js
-  var rnd3 = (a, b) => a + Math.random() * (b - a);
+  var rnd4 = (a, b) => a + Math.random() * (b - a);
   var r = () => 0.92 + Math.random() * 0.16;
   var clamp9 = (x, a, b) => Math.max(a, Math.min(b, x));
   var vo = (k) => clamp9(k?.voice ?? 0.5, 0, 1);
   function hakiClank(v, t, s = 1, voice = 0.5) {
-    const base2 = (560 + 200 * voice) * rnd3(0.97, 1.03);
+    const base2 = (560 + 200 * voice) * rnd4(0.97, 1.03);
     v.noise(t, 6e-3, { type: "highpass", freq: 6e3, gain: 0.24 * s, attack: 5e-4 });
     v.ring(t + 2e-3, base2, 0.3 * s, 0.075 * s, [1, 1.47 + 0.06 * voice, 2.31, 2.97]);
     v.ring(t + 4e-3, base2 * 0.503, 0.22 * s, 0.045 * s, [1, 1.52, 2.4]);
@@ -160516,7 +161575,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         v.noise(0, 0.02, { type: "highpass", freq: 3e3, gain: 0.5, attack: 6e-4 });
         v.crackle(0, 0.25, 22, { freq: 3500, spread: 1, q: 3, gain: 0.13 });
         v.noise(2e-3, 0.1, { freq: 1300, q: 1, gain: 0.3 });
-        for (let i = 0; i < 4; i++) v.ring(rnd3(0.01, 0.12), rnd3(2400, 3200), 0.25, 0.035, [1, 1.7]);
+        for (let i = 0; i < 4; i++) v.ring(rnd4(0.01, 0.12), rnd4(2400, 3200), 0.25, 0.035, [1, 1.7]);
         v.thump(0, { f0: 160, f1: 40, dur: 0.25, gain: 0.45 });
         v.noise(0, 0.26, { type: "lowpass", freq: 600, gain: 0.3 });
         v.tone(0.02, 0.35, { freq: 300, to: 70, type: "sawtooth", gain: 0.1 });
@@ -160945,7 +162004,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       send: 0.15,
       play(v) {
         v.noise(0, 0.02, { type: "highpass", freq: 3500, gain: 0.25, attack: 6e-4 });
-        v.ring(0, rnd3(1500, 1800), 0.32, 0.05, [1, 2.01, 3.03, 4.05], { spread: 4e-3 });
+        v.ring(0, rnd4(1500, 1800), 0.32, 0.05, [1, 2.01, 3.03, 4.05], { spread: 4e-3 });
         v.whoosh(0, 0.09, { f0: 3e3, f1: 6e3, q: 2, gain: 0.07, peak: 0.3 });
       }
     },
@@ -161090,7 +162149,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         v.tone(0.06, 0.12, { freq: 260, to: 560, gain: 0.13, attack: 0.01 });
         v.noise(0.12, 0.7, { freq: 2200, q: 0.6, sweep: 1400, gain: 0.25, attack: 0.03 });
         v.bubbles(0.1, 0.25, 5, { f: 900, spread: 0.9, gain: 0.06 });
-        for (let i = 0; i < 18; i++) v.bubble(0.15 + Math.pow(Math.random(), 1.8) * 1.1, { f: rnd3(1300, 3200), rise: rnd3(1.3, 1.9), dur: rnd3(0.015, 0.03), gain: rnd3(0.03, 0.07) });
+        for (let i = 0; i < 18; i++) v.bubble(0.15 + Math.pow(Math.random(), 1.8) * 1.1, { f: rnd4(1300, 3200), rise: rnd4(1.3, 1.9), dur: rnd4(0.015, 0.03), gain: rnd4(0.03, 0.07) });
       }
     },
     /** Wading: water sloshing round the legs. */
@@ -161167,7 +162226,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     /** Treading water: a gentle slosh. */
     tread: { prio: 3, cd: 0.6, max: 1, play: (v) => {
       v.noise(0, 0.26, { type: "lowpass", freq: 900, sweep: 500, gain: 0.08, attack: 0.04 });
-      v.bubble(0.08, { f: rnd3(400, 600), gain: 0.03 });
+      v.bubble(0.08, { f: rnd4(400, 600), gain: 0.03 });
     } },
     /** Thrashing at the surface (a Devil Fruit user who can't swim). */
     thrash: {
@@ -161252,9 +162311,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const s = k.s || 1;
         v.noise(0, 0.09, { freq: [2600, 3200, 2200][k.rr] * r(), q: 0.7, sweep: 1400, gain: 0.32 * s, attack: 3e-3 });
         v.noise(0, 0.11, { type: "lowpass", freq: 900, sweep: 350, gain: 0.2 * s, attack: 4e-3 });
-        v.bubble(6e-3, { f: rnd3(260, 420), rise: 1.6, dur: 0.07, gain: 0.14 * s });
+        v.bubble(6e-3, { f: rnd4(260, 420), rise: 1.6, dur: 0.07, gain: 0.14 * s });
         v.bubbles(0.01, 0.1, 4, { f: 900, spread: 0.8, gain: 0.05 * s });
-        v.tone(0.012, 0.04, { freq: rnd3(560, 700), to: 480, gain: 0.07 * s, attack: 8e-4 });
+        v.tone(0.012, 0.04, { freq: rnd4(560, 700), to: 480, gain: 0.07 * s, attack: 8e-4 });
         v.noise(0.012, 8e-3, { freq: 2400, q: 2, gain: 0.08 * s, attack: 5e-4 });
       }
     },
@@ -161265,7 +162324,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       max: 3,
       play(v, k) {
         const s = k.s || 1, d = k.dur || 0.45;
-        v.noise(0, d, { freq: 3200 * r(), sweep: 1300, q: 0.8, gain: 0.2 * s, attack: d * 0.25, am: { rate: rnd3(9, 14), depth: 0.5 } });
+        v.noise(0, d, { freq: 3200 * r(), sweep: 1300, q: 0.8, gain: 0.2 * s, attack: d * 0.25, am: { rate: rnd4(9, 14), depth: 0.5 } });
         v.noise(0.02, d * 0.9, { type: "lowpass", freq: 700, sweep: 300, gain: 0.12 * s, attack: d * 0.3 });
         v.bubbles(0.05, d * 0.8, 7, { f: 1100, spread: 0.9, gain: 0.04 * s, dur: 0.04 });
         v.creak(0.02, 0.2, { rate: 140, rate1: 90, freqs: [600, 950, 1400], q: 8, gain: 0.09 * s });
@@ -161280,7 +162339,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const s = k.s || 1;
         v.noise(0, 0.08, { freq: 4200 * r(), sweep: 2400, q: 0.8, gain: 0.16 * s, attack: 4e-3 });
         drips(v, 0.06, 0.4, 5, s * 2);
-        v.tone(0.12, 0.035, { freq: rnd3(480, 620), to: 400, gain: 0.07 * s, attack: 8e-4 });
+        v.tone(0.12, 0.035, { freq: rnd4(480, 620), to: 400, gain: 0.07 * s, attack: 8e-4 });
         v.noise(0.12, 8e-3, { freq: 2e3, q: 2, gain: 0.06 * s, attack: 5e-4 });
       }
     },
@@ -161347,8 +162406,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       max: 2,
       send: 0.1,
       play(v, k) {
-        const d = rnd3(0.5, 1.2) * (k.s || 1);
-        v.creak(0, d, { rate: rnd3(28, 60), rate1: rnd3(22, 70), freqs: [120, 210, 340, 520], q: 5, gain: rnd3(0.06, 0.12) * (k.s || 1), attack: rnd3(0.3, 0.6) });
+        const d = rnd4(0.5, 1.2) * (k.s || 1);
+        v.creak(0, d, { rate: rnd4(28, 60), rate1: rnd4(22, 70), freqs: [120, 210, 340, 520], q: 5, gain: rnd4(0.06, 0.12) * (k.s || 1), attack: rnd4(0.3, 0.6) });
       }
     },
     /** Rigging working: a line creaking through a block, the slap of a slack sheet. */
@@ -161358,7 +162417,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       max: 2,
       send: 0.08,
       play(v) {
-        if (Math.random() < 0.5) v.creak(0, rnd3(0.25, 0.5), { rate: rnd3(120, 200), rate1: rnd3(90, 160), freqs: [500, 800, 1250], q: 8, gain: 0.04 });
+        if (Math.random() < 0.5) v.creak(0, rnd4(0.25, 0.5), { rate: rnd4(120, 200), rate1: rnd4(90, 160), freqs: [500, 800, 1250], q: 8, gain: 0.04 });
         else {
           v.noise(0, 0.06, { type: "lowpass", freq: 600, gain: 0.08, attack: 3e-3 });
           v.noise(0.08, 0.05, { type: "lowpass", freq: 500, gain: 0.04 });
@@ -161447,7 +162506,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       send: 0.15,
       bus: "ui",
       play(v) {
-        for (let i = 0; i < 3; i++) v.ring(i * 0.03 + Math.random() * 0.02, rnd3(3800, 5200), 0.07, 0.015, [1, 2.4]);
+        for (let i = 0; i < 3; i++) v.ring(i * 0.03 + Math.random() * 0.02, rnd4(3800, 5200), 0.07, 0.015, [1, 2.4]);
         v.ring(0, 1568, 0.18, 0.07, [1, 2.76]);
         v.ring(0.07, 2093, 0.3, 0.07, [1, 2.76]);
       }
@@ -161473,7 +162532,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       max: 1,
       play(v) {
         for (const t of [0, 0.13, 0.24]) {
-          v.noise(t, 0.07, { freq: rnd3(900, 1400), q: 1.2, gain: 0.16 });
+          v.noise(t, 0.07, { freq: rnd4(900, 1400), q: 1.2, gain: 0.16 });
           v.crackle(t, 0.05, 3, { freq: 2600, gain: 0.04 });
         }
         v.tone(0.4, 0.12, { freq: 300, to: 120, gain: 0.08 });
@@ -161535,7 +162594,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       play(v, k) {
         if (k.draw === "sword") {
           v.noise(0, 0.25, { freq: 3500, sweep: 6500, q: 3, gain: 0.08, attack: 0.05, curve: "lin" });
-          v.ring(0.22, rnd3(2100, 2400), 0.5, 0.03, [1, 2.04, 2.75]);
+          v.ring(0.22, rnd4(2100, 2400), 0.5, 0.03, [1, 2.04, 2.75]);
           return;
         }
         if (k.draw === "sheathe") {
@@ -161598,7 +162657,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       max: 1,
       send: 0.05,
       play(v) {
-        v.creak(0.02, 0.28, { rate: rnd3(55, 80), rate1: rnd3(30, 50), freqs: [180, 300, 460], q: 6, gain: 0.08 });
+        v.creak(0.02, 0.28, { rate: rnd4(55, 80), rate1: rnd4(30, 50), freqs: [180, 300, 460], q: 6, gain: 0.08 });
         v.thump(0.04, { f0: 130, f1: 80, dur: 0.08, gain: 0.1 });
         v.noise(0.02, 0.2, { freq: 1800, q: 0.7, gain: 0.03, attack: 0.03 });
       }
@@ -161610,7 +162669,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       max: 1,
       send: 0.05,
       play(v) {
-        v.creak(0, 0.18, { rate: rnd3(70, 95), rate1: rnd3(90, 120), freqs: [200, 330, 500], q: 6, gain: 0.06 });
+        v.creak(0, 0.18, { rate: rnd4(70, 95), rate1: rnd4(90, 120), freqs: [200, 330, 500], q: 6, gain: 0.06 });
         v.noise(0.02, 0.15, { freq: 1600, q: 0.7, gain: 0.025, attack: 0.02 });
         v.thump(0.16, { f0: 140, f1: 90, dur: 0.06, gain: 0.08 });
       }
@@ -161648,12 +162707,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       bus: "ui",
       play(v) {
         v.noise(0, 0.08, { type: "highpass", freq: 3200, gain: 0.04, attack: 8e-3 });
-        v.vox(0.02, 0.16, { f0: rnd3(130, 170), to0: rnd3(110, 140), f1: 520, f2: 1100, q: 6, gain: 0.05 });
+        v.vox(0.02, 0.16, { f0: rnd4(130, 170), to0: rnd4(110, 140), f1: 520, f2: 1100, q: 6, gain: 0.05 });
       }
     },
     /** The next line of a conversation: a little blip. */
     talk_next: { prio: 2, cd: 0.05, max: 1, bus: "ui", play: (v) => {
-      v.tone(0, 0.04, { freq: rnd3(620, 700), to: 560, type: "triangle", gain: 0.03 });
+      v.tone(0, 0.04, { freq: rnd4(620, 700), to: 560, type: "triangle", gain: 0.03 });
     } },
     /** A chart handled: the rustle of the parchment as it's dragged. */
     map_rustle: {
@@ -161662,7 +162721,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       max: 1,
       bus: "ui",
       play(v) {
-        v.noise(0, rnd3(0.12, 0.2), { freq: rnd3(2600, 3800), q: 0.6, gain: 0.025, attack: 0.02 });
+        v.noise(0, rnd4(0.12, 0.2), { freq: rnd4(2600, 3800), q: 0.6, gain: 0.025, attack: 0.02 });
         v.crackle(0.01, 0.12, 4, { freq: 3500, gain: 0.015, q: 2 });
       }
     },
@@ -161712,7 +162771,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       play(v, k) {
         const s = k.s || 1;
         v.noise(0, 0.5, { type: "lowpass", freq: 380, gain: 0.18 * s, attack: 0.05 });
-        v.creak(0, 0.5, { rate: rnd3(20, 35), rate1: rnd3(15, 30), freqs: [140, 230, 380], q: 4, gain: 0.08 * s, attack: 0.1 });
+        v.creak(0, 0.5, { rate: rnd4(20, 35), rate1: rnd4(15, 30), freqs: [140, 230, 380], q: 4, gain: 0.08 * s, attack: 0.1 });
         v.crackle(0.05, 0.4, 8, { freq: 1200, gain: 0.04 * s, q: 3 });
       }
     },
@@ -161905,7 +162964,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       kind: "world",
       send: 0.45,
       play(v, k) {
-        const n = k.near || 0, f = rnd3(196, 220);
+        const n = k.near || 0, f = rnd4(196, 220);
         [1, 1.498, 2.01].forEach((m, i) => v.tone(0.05 * i, 1.6, { freq: f * m, to: f * m * 1.012, type: "sine", gain: 0.02 - i * 4e-3, attack: 0.5 }));
         v.tone(0, 1.6, { freq: f * 0.5, type: "triangle", gain: 0.012, attack: 0.6 });
         if (n > 0.4) [3, 4, 5].forEach((m, i) => v.tone(0.4 + i * 0.16, 0.7, { freq: f * m * 2, type: "sine", gain: 6e-3 + 0.01 * n, attack: 0.02 }));
@@ -161918,7 +162977,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       kind: "world",
       send: 0.3,
       play(v) {
-        const f = rnd3(1900, 2300);
+        const f = rnd4(1900, 2300);
         shimmer(v, 0, 0.35, 0.9);
         [1, 1.5, 2].forEach((m, i) => v.tone(0.05 + i * 0.09, 0.6, { freq: f * m, type: "sine", gain: 0.016, attack: 0.01 }));
       }
@@ -161957,7 +163016,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         v.thump(0.12, { f0: 320, f1: 200, dur: 0.04, gain: 0.15 });
         v.noise(0.3, 0.09, { type: "lowpass", freq: 900, gain: 0.3, attack: 6e-3 });
         v.thump(0.3, { f0: 180, f1: 110, dur: 0.06, gain: 0.18 });
-        v.ring(0.31, rnd3(2400, 3e3), 0.08, 0.02, [1, 2.4]);
+        v.ring(0.31, rnd4(2400, 3e3), 0.08, 0.02, [1, 2.4]);
       }
     },
     /** A Log Pose needle settling: a small magnetic chime. */
@@ -162079,7 +163138,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         swing(v, k.rel, "fists", 1);
       },
       bara_festival: (v) => {
-        for (let i = 0; i < 8; i++) pop(v, i * 0.05, 0.6, rnd3(220, 420));
+        for (let i = 0; i < 8; i++) pop(v, i * 0.05, 0.6, rnd4(220, 420));
       },
       bara_muggy: (v, k) => {
         hiss(v, 0, Math.max(0.3, k.rel) + 0.3, 0.8, 5500);
@@ -162094,7 +163153,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     } },
     hana: {
       default: (v, k) => {
-        for (let i = 0; i < 6; i++) v.noise(Math.random() * Math.max(0.2, k.rel), 0.03, { freq: rnd3(1200, 1800), q: 2, gain: 0.06 });
+        for (let i = 0; i < 6; i++) v.noise(Math.random() * Math.max(0.2, k.rel), 0.03, { freq: rnd4(1200, 1800), q: 2, gain: 0.06 });
         chime(v, 0, 0.6, [1760, 2349, 2637], 0.6);
         v.noise(k.rel, 0.012, { type: "highpass", freq: 2500, gain: 0.18, attack: 6e-4 });
         v.crackle(k.rel, 0.06, 4, { freq: 900, gain: 0.08 });
@@ -162102,7 +163161,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     },
     ito: {
       ito_birdcage: (v) => {
-        for (let i = 0; i < 6; i++) v.ring(i * 0.1, rnd3(900, 1700), 0.6, 0.025, [1, 2.01, 3.02], { spread: 4e-3 });
+        for (let i = 0; i < 6; i++) v.ring(i * 0.1, rnd4(900, 1700), 0.6, 0.025, [1, 2.01, 3.02], { spread: 4e-3 });
         v.tone(0, 1.2, { freq: 2e3, type: "sawtooth", gain: 8e-3, attack: 0.4 });
       },
       // (strings fired down out of the sky like a hail of bullets: each one a thin twang and a zip)
@@ -162110,11 +163169,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         for (let i = 0; i < 9; i++) {
           const t = k.rel + i * 0.07 + Math.random() * 0.03;
           v.whoosh(t, 0.08, { f0: 6e3, f1: 2500, q: 2, gain: 0.06, peak: 0.3 });
-          v.ring(t + 0.05, rnd3(1200, 1900), 0.25, 0.02, [1, 2.01, 3.02], { spread: 4e-3 });
+          v.ring(t + 0.05, rnd4(1200, 1900), 0.25, 0.02, [1, 2.01, 3.02], { spread: 4e-3 });
         }
       },
       default: (v, k) => {
-        v.ring(0, rnd3(900, 1300), 0.4, 0.035, [1, 2.01, 3.02, 4.03], { spread: 4e-3 });
+        v.ring(0, rnd4(900, 1300), 0.4, 0.035, [1, 2.01, 3.02, 4.03], { spread: 4e-3 });
         v.whoosh(k.rel, 0.1, { f0: 3e3, f1: 7e3, q: 2, gain: 0.1, peak: 0.2 });
       }
     },
@@ -162417,13 +163476,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       v.bubble(0.01, { f: 200, rise: 1.8, dur: 0.08, gain: 0.07 });
       v.noise(0, 0.1, { type: "lowpass", freq: 500, gain: 0.08 });
     },
-    supa: (v) => v.ring(3e-3, rnd3(1900, 2300), 0.3, 0.03, [1, 2.04, 2.75]),
+    supa: (v) => v.ring(3e-3, rnd4(1900, 2300), 0.3, 0.03, [1, 2.04, 2.75]),
     nikyu: (v) => pop(v, 0, 0.7, 220),
     hana: (v) => {
       v.noise(0.02, 0.012, { type: "highpass", freq: 2500, gain: 0.12, attack: 6e-4 });
       v.crackle(0.02, 0.05, 3, { freq: 900, gain: 0.06 });
     },
-    ito: (v) => v.ring(0, rnd3(1500, 1800), 0.25, 0.025, [1, 2.01, 3.03], { spread: 4e-3 }),
+    ito: (v) => v.ring(0, rnd4(1500, 1800), 0.25, 0.025, [1, 2.01, 3.03], { spread: 4e-3 }),
     doru: (v) => v.thump(5e-3, { f0: 260, f1: 180, dur: 0.05, gain: 0.08 }),
     bari: (v) => v.fm(0, 0.35, { freq: 1600, ratio: 1.5, index: 1, gain: 0.03 }),
     ope: (v) => v.fm(0.01, 0.25, { freq: 900, ratio: 2, index: 0.6, gain: 0.02 }),
@@ -162469,7 +163528,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
 
   // src/audio/steps.js
-  var rnd4 = (a, b) => a + Math.random() * (b - a);
+  var rnd5 = (a, b) => a + Math.random() * (b - a);
   function footstep(v, surf2, loud, k = {}) {
     const L3 = 0.7 + 0.5 * loud, r4 = () => 0.9 + Math.random() * 0.2;
     v.pj *= k.foot < 0 ? 0.97 : 1.02;
@@ -162507,7 +163566,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         v.tone(0.01, 0.09, { freq: 140 * r4(), to: 320, gain: 0.05, attack: 0.01 });
         v.noise(0, 0.12, { freq: 500, q: 0.6, type: "lowpass", gain: 0.09, attack: 0.01 });
         v.noise(0.02, 0.08, { freq: 2400 * r4(), q: 1, gain: 0.025 * L3, attack: 0.01 });
-        v.bubble(roll2 + 0.04, { f: rnd4(260, 340), rise: 2, dur: 0.05, gain: 0.035 });
+        v.bubble(roll2 + 0.04, { f: rnd5(260, 340), rise: 2, dur: 0.05, gain: 0.035 });
         break;
       case "stone":
         v.noise(0, 0.014, { freq: 3200 * r4(), q: 0.9, type: "highpass", gain: 0.16 * L3, attack: 1e-3 });
@@ -162525,14 +163584,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         if (k.deck) {
           v.tone(0, 0.16, { freq: 118 * r4(), to: 92, gain: 0.05 * L3, attack: 3e-3 });
           v.noise(4e-3, 0.05, { freq: 1700 * r4(), q: 2, gain: 0.05 * L3, attack: 2e-3 });
-          if (Math.random() < 0.22) v.creak(0.03, rnd4(0.18, 0.35), { rate: rnd4(60, 110), rate1: rnd4(40, 90), freqs: [250, 395, 560, 900], gain: 0.04 });
+          if (Math.random() < 0.22) v.creak(0.03, rnd5(0.18, 0.35), { rate: rnd5(60, 110), rate1: rnd5(40, 90), freqs: [250, 395, 560, 900], gain: 0.04 });
         }
         break;
       case "snow":
         thud(0, 80, 0.04);
         v.noise(0, 0.13, { freq: 2300 * r4(), q: 0.6, gain: 0.07, attack: 0.015, sweep: 1300 });
         crunch(0.02, 0.11, 10, 5200, 0.04);
-        v.tone(roll2, 0.05, { freq: rnd4(1e3, 1300), to: 850, gain: 0.01 });
+        v.tone(roll2, 0.05, { freq: rnd5(1e3, 1300), to: 850, gain: 0.01 });
         break;
       case "ice":
         v.noise(0, 0.02, { freq: 4200 * r4(), q: 1, type: "highpass", gain: 0.08, attack: 1e-3 });
@@ -162554,7 +163613,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }
     if (loud > 0.85) v.noise(roll2 + 0.01, 0.06, { freq: 2600, sweep: 1500, q: 0.8, gain: 0.03, attack: 4e-3 });
     if (k.wet > 0) {
-      v.bubble(0.01, { f: rnd4(380, 480), rise: 1.8, dur: 0.04, gain: 0.03 * k.wet });
+      v.bubble(0.01, { f: rnd5(380, 480), rise: 1.8, dur: 0.04, gain: 0.03 * k.wet });
       v.noise(0, 0.06, { freq: 1200, q: 1, gain: 0.03 * k.wet });
     }
   }
@@ -163339,7 +164398,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   };
   var STYLE3 = { marine: "marine", wano: "wano", chinese: "kano", desert: "alabasta", snow: "drum", fishman: "fishman", future: "future", candy: "totland", tribal: "shandia", giant: "elbaf", ruins: "flevance" };
   var HINT = { night: "night", battle: "arlong", title: "laugh_tale", grandline: "grandline", town: "town", sea: null };
-  function hash16(s) {
+  function hash17(s) {
     let h2 = 2166136261;
     for (let i = 0; i < s.length; i++) {
       h2 ^= s.charCodeAt(i);
@@ -163375,7 +164434,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (cl.drums) out.drums = cl.drums;
       if (cl.bpm) out.bpm += cl.bpm;
     }
-    const h2 = hash16(def.id);
+    const h2 = hash17(def.id);
     out.key += [0, 2, -2, 5, -3, 3][Math.floor(h2 * 6)];
     out.bpm = Math.round(out.bpm + (h2 * 8 - 4));
     out.id = key2;
@@ -163459,7 +164518,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   // src/audio/director.js
   var HOLD = { title: 0, under: 0.6, surface: 1.5, rm: 0.3, zone: 0.5, town: 2, isl: 3, sea: 4, holy: 3 };
   var LAYERS2 = [["perc", 0], ["bass", 0.15], ["pad", 0.2], ["arp", 0.3], ["perc2", 0.4], ["lead", 0.5], ["brass", 0.72]];
-  var smooth12 = (a, b, x) => {
+  var smooth13 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
   };
@@ -163687,8 +164746,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     /** The intensity's layers: each stem eases in around its threshold (the boss layer only for a boss). */
     layers(k, boss) {
       const out = {};
-      for (const [s, th] of LAYERS2) out[s] = th <= 0 ? 1 : smooth12(th - 0.1, th + 0.06, k);
-      out.boss = boss ? smooth12(0.55, 0.75, k) : 0;
+      for (const [s, th] of LAYERS2) out[s] = th <= 0 ? 1 : smooth13(th - 0.1, th + 0.06, k);
+      out.boss = boss ? smooth13(0.55, 0.75, k) : 0;
       return out;
     }
     /** A fight begins: the battle theme on the next beat, a taiko hit and a cymbal swell into it. */
@@ -163779,603 +164838,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         } catch {
         }
       }, at4 - c.currentTime + dur + 5);
-    }
-  };
-
-  // src/audio/ambience.js
-  var rnd5 = (a, b) => a + Math.random() * (b - a);
-  var smooth13 = (a, b, x) => {
-    const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
-    return t * t * (3 - 2 * t);
-  };
-  var Glide = class {
-    constructor(p, v) {
-      this.p = p;
-      this.v0 = v;
-      this.to = v;
-      this.t0 = 0;
-      this.tc = 0.01;
-      p.value = v;
-    }
-    at(t) {
-      return this.to + (this.v0 - this.to) * Math.exp(-Math.max(0, t - this.t0) / this.tc);
-    }
-    /** Head for `to` from time `t`, most of the way there in `sec`. */
-    go(to, t, sec) {
-      const now3 = this.at(t), p = this.p, tc = Math.max(4e-3, sec / 3);
-      if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t);
-      else {
-        p.cancelScheduledValues(t);
-        p.setValueAtTime(now3, t);
-      }
-      p.setTargetAtTime(to, t, tc);
-      this.v0 = now3;
-      this.to = to;
-      this.t0 = t;
-      this.tc = tc;
-    }
-    /** And then, from `t2`, head for `to2` (a wave: up, then away). */
-    then(to2, t2, sec) {
-      const tc = Math.max(4e-3, sec / 3);
-      this.p.setTargetAtTime(to2, t2, tc);
-      this.v0 = this.at(t2);
-      this.to = to2;
-      this.t0 = t2;
-      this.tc = tc;
-    }
-  };
-  var BEDS = {
-    // the sea: a low surge, a wash of foam over it
-    ocean: { layers: [["pink", "lowpass", 420, 0.6, 0.55], ["pink", "bandpass", 1300, 0.5, 0.06]], swell: { gap: [4.5, 9.5], rise: [1.1, 2.2], fall: [2.4, 4.4], lo: 0.45, f: [300, 760] } },
-    // wind: a broad band and a thinner whistle over it
-    wind: { layers: [["pink", "bandpass", 520, 0.7, 0.5], ["pink", "bandpass", 1500, 1.6, 0.07]], gust: { gap: [2, 7], lo: 0.2, f: [360, 900] } },
-    // a storm's howl: narrow whistles sliding with the gusts
-    howl: { layers: [["white", "bandpass", 900, 12, 0.35], ["white", "bandpass", 1450, 14, 0.2]], gust: { gap: [1.2, 4], lo: 0.08, f: [620, 1300] } },
-    // leaves stirring as the wind comes and goes
-    leaves: { layers: [["white", "bandpass", 4200, 0.6, 0.09], ["white", "bandpass", 2200, 0.8, 0.04]], gust: { gap: [2, 6], lo: 0.08 } },
-    // the water past a hull: the rushing wash, the spray at the bow, surging with each swell she meets
-    hull: { layers: [["pink", "lowpass", 1100, 0.6, 0.5], ["white", "bandpass", 3e3, 0.7, 0.05]], swell: { gap: [2.2, 5.5], rise: [0.5, 1.1], fall: [1, 2.2], lo: 0.5, f: [800, 1500] } },
-    // canvas in the wind: a low thrum, fluttering when she's luffing (see luff)
-    sails: { layers: [["pink", "lowpass", 300, 0.7, 0.6]], flap: true },
-    torrent: { layers: [["brown", "lowpass", 900, 0.5, 0.9], ["pink", "bandpass", 1400, 0.6, 0.35], ["white", "highpass", 3500, 0.5, 0.06]], gust: { gap: [0.4, 1.6], lo: 0.75 } },
-    deep: { layers: [["brown", "lowpass", 220, 0.7, 0.9]], swell: { gap: [6, 12], rise: [2, 4], fall: [3, 6], lo: 0.6 } },
-    fire: { layers: [["pink", "lowpass", 800, 0.7, 0.5], ["white", "highpass", 4e3, 0.5, 0.05]], gust: { gap: [0.15, 0.6], lo: 0.55 } },
-    sky: { layers: [["white", "bandpass", 3200, 0.4, 0.12], ["pink", "bandpass", 700, 0.6, 0.2]], gust: { gap: [3, 8], lo: 0.5 } }
-  };
-  var Bed = class {
-    constructor(A2, name) {
-      const E = A2.E, c = E.ctx, D4 = BEDS[name];
-      this.name = name;
-      this.D = D4;
-      this.out = c.createGain();
-      this.out.connect(E.amb);
-      this.vol = new Glide(this.out.gain, 0);
-      this.mv = c.createGain();
-      this.mv.connect(this.out);
-      this.move = new Glide(this.mv.gain, D4.swell ? D4.swell.lo : D4.gust ? D4.gust.lo : 1);
-      this.nodes = [];
-      this.layers = D4.layers.map(([color, type, f, q2, g]) => {
-        const src = c.createBufferSource();
-        src.buffer = E.noiseBuf(color);
-        src.loop = true;
-        src.playbackRate.value = rnd5(0.97, 1.03);
-        const flt = c.createBiquadFilter();
-        flt.type = type;
-        flt.frequency.value = f;
-        flt.Q.value = q2;
-        const gn = c.createGain();
-        gn.gain.value = g;
-        src.connect(flt);
-        flt.connect(gn);
-        gn.connect(this.mv);
-        src.start(0, Math.random() * 1.9);
-        this.nodes.push(src);
-        return { src, flt, gn };
-      });
-      this.f0 = new Glide(this.layers[0].flt.frequency, D4.layers[0][2]);
-      if (D4.flap) {
-        const o = c.createOscillator(), og = c.createGain();
-        o.frequency.value = rnd5(4, 6);
-        og.gain.value = 0.05;
-        o.connect(og);
-        og.connect(this.mv.gain);
-        o.start(0);
-        this.flapRate = new Glide(o.frequency, o.frequency.value);
-        this.flap = og;
-        this.flapDepth = new Glide(og.gain, 0.05);
-        this.nodes.push(o);
-      }
-      this.level = 0;
-      this.quietSince = 0;
-      this.next = 0;
-    }
-    set(level, t, sec) {
-      if (Math.abs(level - this.level) < 2e-3) return;
-      this.level = level;
-      this.vol.go(level, t, sec);
-    }
-    /** Keep it moving: the next wave or gust when its time comes (never on a beat). */
-    tick(t) {
-      if (t < this.next) return;
-      const D4 = this.D;
-      if (D4.swell) {
-        const S6 = D4.swell, rise = rnd5(...S6.rise), fall2 = rnd5(...S6.fall), pk = rnd5(0.75, 1);
-        this.move.go(pk, t, rise);
-        this.move.then(S6.lo * rnd5(0.8, 1.15), t + rise, fall2);
-        if (S6.f) {
-          this.f0.go(S6.f[1] * rnd5(0.85, 1.1), t, rise);
-          this.f0.then(S6.f[0] * rnd5(0.9, 1.1), t + rise, fall2);
-        }
-        this.next = t + rise + rnd5(...S6.gap) - rise * 0.5;
-      } else if (D4.gust) {
-        const G4 = D4.gust, k = Math.pow(Math.random(), 1.6), to = G4.lo + (1 - G4.lo) * k;
-        const gap = rnd5(...G4.gap);
-        this.move.go(to, t, Math.min(gap, rnd5(0.6, 2.2)));
-        if (G4.f) this.f0.go(G4.f[0] + (G4.f[1] - G4.f[0]) * k, t, Math.min(gap, rnd5(0.8, 2.4)));
-        this.next = t + gap;
-      } else this.next = t + 5;
-      if (this.flapRate) this.flapRate.go(rnd5(3.5, 7.5), t, 1.5);
-    }
-    stop() {
-      for (const n of this.nodes) {
-        try {
-          n.stop();
-        } catch {
-        }
-      }
-      try {
-        this.out.disconnect();
-      } catch {
-      }
-    }
-  };
-  var RAIN2 = {
-    sea: { wash: [750, 16e3, 0.34], pat: [600, 14e3, 0.3], body: [1300, 3], drop: "plip", rate: 5 },
-    deck: { wash: [150, 9e3, 0.22], pat: [260, 5e3, 0.4], body: [850, 6], drop: "tok", rate: 8 },
-    leaves: { wash: [170, 5e3, 0.32], pat: [480, 6e3, 0.4], body: [1600, 3], drop: "tak", rate: 9 },
-    ground: { wash: [190, 2600, 0.36], pat: [340, 3600, 0.34], body: [1e3, 5], drop: "pat", rate: 6 },
-    town: { wash: [200, 3e3, 0.36], pat: [400, 4e3, 0.36], body: [1100, 5], drop: "tik", rate: 7 },
-    inside: { wash: [90, 2400, 0.36], pat: [260, 3e3, 0.5], body: [650, 6], drop: "dup", rate: 5 }
-  };
-  var DROPS = {
-    /** On water: the plip of a drop and the little whistle of the bubble it leaves. */
-    // (a splash of noise, the bubble's ring faint and high — up where rain on the
-    // sea really rings, 10 kHz and over — not a tuned plink from a dripping tap)
-    plip(v, t, s) {
-      v.noise(t, 0.012, { freq: rnd5(2500, 6e3), q: 0.8, gain: 0.04 * s, attack: 6e-4 });
-      v.noise(t, 4e-3, { type: "highpass", freq: 6e3, gain: 0.02 * s, attack: 4e-4 });
-      if (Math.random() < 0.25) v.bubble(t + 4e-3, { f: rnd5(9e3, 14e3), rise: 1.3, dur: 8e-3, gain: 6e-3 * s });
-    },
-    /** On a leaf: a sharp little tap, the leaf trembling after it. */
-    tak(v, t, s) {
-      v.noise(t, 0.01, { freq: rnd5(2200, 4200), q: 2, gain: 0.06 * s, attack: 6e-4 });
-      v.noise(t + 8e-3, 0.035, { freq: rnd5(3e3, 5200), q: 1, gain: 0.012 * s });
-    },
-    /** On the ground: a soft pat. */
-    pat(v, t, s) {
-      v.noise(t, 0.014, { freq: rnd5(900, 1800), q: 1.2, gain: 0.055 * s, attack: 1e-3 });
-    },
-    /** On a roof tile, a shutter, a barrel: a dry tick. */
-    tik(v, t, s) {
-      v.noise(t, 8e-3, { freq: rnd5(2500, 4500), q: 3, gain: 0.05 * s, attack: 5e-4 });
-      v.tone(t, 0.02, { freq: rnd5(1700, 2600), gain: 8e-3 * s });
-    },
-    /** On deck planks a hollow tok — and now and then on the canvas, a thrum. */
-    tok(v, t, s) {
-      if (Math.random() < 0.3) {
-        v.thump(t, { f0: rnd5(170, 240), f1: 130, dur: 0.05, gain: 0.035 * s });
-        v.noise(t, 0.03, { type: "lowpass", freq: 650, gain: 0.03 * s });
-        return;
-      }
-      v.tone(t, 0.035, { freq: rnd5(520, 900), to: 420, gain: 0.03 * s, attack: 8e-4 });
-      v.noise(t, 7e-3, { freq: 2600, q: 1.5, gain: 0.03 * s, attack: 5e-4 });
-    },
-    /** On the roof over your head: a muffled dup. */
-    dup(v, t, s) {
-      v.thump(t, { f0: rnd5(140, 230), f1: 100, dur: 0.06, gain: 0.05 * s });
-      v.noise(t, 0.02, { type: "lowpass", freq: 600, gain: 0.03 * s });
-    }
-  };
-  function patterLoop(c, secs, rate) {
-    const sr = c.sampleRate, n = Math.floor(sr * secs), buf = c.createBuffer(2, n, sr);
-    let ss = 0;
-    for (let ch = 0; ch < 2; ch++) {
-      const d = buf.getChannelData(ch);
-      for (let i = 0, cnt = Math.round(rate * secs); i < cnt; i++) {
-        const at4 = Math.floor(Math.random() * n), a = 0.12 + 0.88 * Math.pow(Math.random(), 3);
-        const f = 800 + Math.random() * Math.random() * 6500, tau = (4e-4 + Math.random() * 12e-4) * sr;
-        const w = 2 * Math.PI * f / sr, len = Math.floor(tau * 5);
-        for (let j = 0; j < len; j++) d[(at4 + j) % n] += a * Math.exp(-j / tau) * (0.12 * Math.sin(w * j) + 0.88 * (Math.random() * 2 - 1));
-      }
-      for (let i = 0; i < n; i++) ss += d[i] * d[i];
-    }
-    const k = 0.1 / Math.sqrt(ss / (2 * n) || 1);
-    for (let ch = 0; ch < 2; ch++) {
-      const d = buf.getChannelData(ch);
-      for (let i = 0; i < n; i++) d[i] *= k;
-    }
-    return buf;
-  }
-  var Rain = class {
-    constructor(A2) {
-      const E = A2.E, c = E.ctx;
-      this.A = A2;
-      E.patter = E.patter || { sparse: patterLoop(c, 6, 16), dense: patterLoop(c, 3, 240) };
-      this.out = c.createGain();
-      this.out.connect(E.amb);
-      this.vol = new Glide(this.out.gain, 0);
-      this.mv = c.createGain();
-      this.mv.connect(this.out);
-      this.move = new Glide(this.mv.gain, 1);
-      this.nodes = [];
-      const chain4 = (into) => {
-        const hp = c.createBiquadFilter();
-        hp.type = "highpass";
-        hp.Q.value = 0.6;
-        const lp = c.createBiquadFilter();
-        lp.type = "lowpass";
-        lp.Q.value = 0.6;
-        const pk = c.createBiquadFilter();
-        pk.type = "peaking";
-        pk.Q.value = 1.1;
-        const g = c.createGain();
-        hp.connect(lp);
-        lp.connect(pk);
-        pk.connect(g);
-        g.connect(into);
-        return { in: hp, hp: new Glide(hp.frequency, 1e3), lp: new Glide(lp.frequency, 8e3), pk: new Glide(pk.frequency, 1e3), pkg: new Glide(pk.gain, 0), g: new Glide(g.gain, 0) };
-      };
-      this.wash = chain4(this.mv);
-      const ws = c.createBufferSource();
-      ws.buffer = E.pink;
-      ws.loop = true;
-      ws.connect(this.wash.in);
-      ws.start(0, Math.random() * 1.9);
-      this.pat = chain4(this.mv);
-      const loop = (buf, rate) => {
-        const s = c.createBufferSource();
-        s.buffer = buf;
-        s.loop = true;
-        s.playbackRate.value = rate;
-        const g = c.createGain();
-        s.connect(g);
-        g.connect(this.pat.in);
-        s.start(0, Math.random() * buf.duration);
-        this.nodes.push(s);
-        return new Glide(g.gain, 0);
-      };
-      this.sparse = loop(E.patter.sparse, rnd5(0.95, 1.05));
-      this.dense = loop(E.patter.dense, rnd5(0.95, 1.05));
-      this.nodes.push(ws);
-      this.where = null;
-      this.r = -1;
-      this.level = 0;
-      this.quietSince = 0;
-      this.next = 0;
-    }
-    /** How hard it rains (`r` 0..1: light from 0.2, a downpour from ~0.6, a storm with `storm`), and on what (`where`: a RAIN key). */
-    set(r4, storm, where, t, sec = 1.5) {
-      const S6 = RAIN2[where] || RAIN2.ground;
-      if (where !== this.where) {
-        const w = S6.wash, p = S6.pat, k2 = 1.2;
-        this.wash.hp.go(w[0], t, k2);
-        this.wash.lp.go(w[1], t, k2);
-        this.pat.hp.go(p[0], t, k2);
-        this.pat.lp.go(p[1], t, k2);
-        this.pat.pk.go(S6.body[0], t, k2);
-        this.pat.pkg.go(S6.body[1], t, k2);
-        this.where = where;
-        this.r = -1;
-      }
-      if (Math.abs(r4 - this.r) < 0.01 && Math.abs(storm - (this.storm || 0)) < 0.02) return;
-      this.r = r4;
-      this.storm = storm;
-      const k = Math.max(0, Math.min(1, (r4 - 0.06) / 0.6)), heavy = smooth13(0.25, 0.9, k);
-      const lev = Math.pow(10, -20 * (1 - k) / 20) * (1 + 0.2 * storm);
-      this.wash.g.go(S6.wash[2] * lev * (0.5 + 0.5 * heavy), t, sec);
-      this.pat.g.go(S6.pat[2] * Math.pow(10, -10 * (1 - k) / 20), t, sec);
-      this.sparse.go(0.9 * (1 - 0.7 * heavy), t, sec);
-      this.dense.go(heavy * (0.6 + 0.4 * k), t, sec);
-    }
-    /** The overall level (0 fades it out). */
-    fade(level, t, sec) {
-      if (Math.abs(level - this.level) > 2e-3) {
-        this.level = level;
-        this.vol.go(level, t, sec);
-      }
-    }
-    /** Gusts driving the rain in sheets (a storm), and the near drops landing round you. */
-    tick(t, dt) {
-      if (this.level < 0.01 || this.r <= 0) return;
-      if (t >= this.next) {
-        const st = this.storm || 0, k = Math.pow(Math.random(), 1.5);
-        this.move.go(st > 0.5 ? 0.6 + 0.4 * k + 0.15 * st : 0.9 + 0.1 * k, t, rnd5(0.6, 1.8));
-        this.next = t + rnd5(1.5, 4.5);
-      }
-      const S6 = RAIN2[this.where] || RAIN2.ground, want = S6.rate * (0.35 + 0.65 * this.r) * dt;
-      let n = 0, p = Math.random();
-      const L3 = Math.exp(-want);
-      while (p > L3 && n < 12) {
-        n++;
-        p *= Math.random();
-      }
-      if (!n) return;
-      const E = this.A.E;
-      const v = E.open("amb:rain", { bus: "amb", vol: this.level, pan: rnd5(-0.7, 0.7), lp: this.where === "inside" ? 1200 : 0, send: 0.04, prio: 1, max: 3 });
-      if (!v) return;
-      v.pj = rnd5(0.94, 1.06);
-      for (let i = 0; i < n; i++) DROPS[S6.drop](v, Math.random() * dt, 0.5 + 0.5 * Math.random());
-    }
-    stop() {
-      for (const n of this.nodes) {
-        try {
-          n.stop();
-        } catch {
-        }
-      }
-      try {
-        this.out.disconnect();
-      } catch {
-      }
-    }
-  };
-  var SPOTS = {
-    /** A gull's "kyow-kyow" (two or three calls, falling). */
-    gull: {
-      gap: 3,
-      play(v) {
-        const n = 1 + Math.floor(Math.random() * 3), f = rnd5(1300, 1700);
-        for (let i = 0; i < n; i++) {
-          const t = i * rnd5(0.22, 0.3);
-          v.tone(t, 0.2, { freq: f * 1.25, to: f * 0.8, glide: 0.16, type: "sawtooth", gain: 0.012, attack: 0.02 });
-          v.tone(t, 0.2, { freq: f * 0.62, to: f * 0.4, glide: 0.16, type: "triangle", gain: 0.02, attack: 0.02 });
-        }
-      }
-    },
-    /** A songbird: a short phrase of chirps and trills. */
-    bird: {
-      gap: 2.5,
-      play(v) {
-        const n = 2 + Math.floor(Math.random() * 5), base2 = rnd5(2600, 4200);
-        let t = 0;
-        for (let i = 0; i < n; i++) {
-          const up = Math.random() < 0.5, d = rnd5(0.04, 0.11);
-          v.chirp(t, { f0: base2 * (up ? 0.8 : 1.2), f1: base2 * (up ? 1.25 : 0.75), dur: d, gain: rnd5(0.015, 0.032), warble: Math.random() < 0.3 ? rnd5(30, 60) : 0 });
-          t += d + rnd5(0.02, 0.12);
-        }
-      }
-    },
-    /** A jungle bird's whooping call. */
-    tropical: { gap: 5, play(v) {
-      const f = rnd5(900, 1500);
-      for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) v.chirp(i * rnd5(0.22, 0.3), { f0: f, f1: f * 1.6, dur: 0.18, gain: 0.025, warble: 8 });
-    } },
-    /**
-     * Cicadas: a chorus swelling up out of nothing, holding, and dying away (as
-     * they do, in waves) — a band of noise round 4–6 kHz pulsing at their own
-     * rate, and a fainter band over it. Never a constant whine.
-     */
-    cicada: {
-      gap: 7,
-      play(v) {
-        const dur = rnd5(4, 9), f = rnd5(4200, 6e3), rate = rnd5(11, 19), up = dur * rnd5(0.3, 0.45);
-        v.noise(0, dur, { type: "bandpass", freq: f, q: 3, gain: 0.03, attack: up, hold: dur * 0.15, curve: "lin", am: { rate, depth: 0.75 } });
-        v.noise(0, dur, { type: "bandpass", freq: f * rnd5(1.55, 1.75), q: 4, gain: 8e-3, attack: up, hold: dur * 0.15, curve: "lin", am: { rate, depth: 0.75 } });
-      }
-    },
-    /** A cricket chirping a while from one spot: trills of three to five pulses, a tone near 4.5 kHz. */
-    cricket: {
-      gap: 3,
-      play(v) {
-        const f = rnd5(3900, 4900), n = 3 + Math.floor(Math.random() * 3), per = rnd5(0.024, 0.034), span2 = rnd5(2.5, 6);
-        for (let t = 0; t < span2; t += rnd5(0.45, 1.1)) for (let i = 0; i < n; i++) v.tone(t + i * per, 0.016, { freq: f, gain: 0.012 * (i ? 1 : 0.7), attack: 3e-3 });
-      }
-    },
-    /** An owl: hoo... hoo-hoo. */
-    owl: { gap: 8, play(v) {
-      for (const [t, d] of [[0, 0.35], [0.6, 0.18], [0.82, 0.3]]) v.tone(t, d, { freq: rnd5(370, 400), to: 350, gain: 0.03, attack: 0.05, curve: "lin" });
-    } },
-    /** A frog's croak. */
-    frog: { gap: 3, play(v) {
-      for (let i = 0; i < 2; i++) v.tone(i * 0.18, 0.12, { freq: rnd5(180, 240), to: 150, type: "sawtooth", gain: 0.025, attack: 0.01, vib: { rate: 30, depth: 25 } });
-    } },
-    /** A voice across the street: a few voiced syllables, the pitch and the vowels moving as speech does. */
-    voice: {
-      gap: 2.5,
-      play(v) {
-        const f0 = Math.random() < 0.5 ? rnd5(95, 140) : rnd5(170, 250);
-        let t = 0;
-        for (let i = 0, n = 2 + Math.floor(Math.random() * 5); i < n; i++) {
-          const d = rnd5(0.09, 0.22), f1 = rnd5(350, 780), f2 = rnd5(900, 2100);
-          v.vox(t, d, { f0: f0 * rnd5(0.9, 1.15), to0: f0 * rnd5(0.8, 1.1), f1, f2, to1: f1 * rnd5(0.8, 1.2), to2: f2 * rnd5(0.8, 1.2), gain: 0.22, attack: 0.025 });
-          t += d + rnd5(0.03, 0.14);
-        }
-      }
-    },
-    /** Laughter across the square: ha-ha-ha, each a little lower. */
-    laugh: {
-      gap: 8,
-      play(v) {
-        const f0 = Math.random() < 0.5 ? rnd5(120, 160) : rnd5(220, 290);
-        for (let i = 0, n = 3 + Math.floor(Math.random() * 3); i < n; i++) v.vox(i * rnd5(0.12, 0.16), 0.09, { f0: f0 * (1.1 - i * 0.04), to0: f0 * (1.02 - i * 0.04), f1: 760, f2: 1250, gain: 0.2 * (1 - i * 0.12), attack: 0.012 });
-      }
-    },
-    /** A cup or a bottle set down, a coin on a counter. */
-    clink: { gap: 5, play(v) {
-      for (let i = 0, n = 1 + Math.floor(Math.random() * 2); i < n; i++) v.ring(i * rnd5(0.12, 0.3), rnd5(2200, 3400), 0.22, 0.012, [1, 2.32, 4.1]);
-    } },
-    /**
-     * A smith at the anvil: a few blows at a working pace (never on a beat) —
-     * the hammer's crack and the anvil's bright ring round 1.5 kHz, gone in a
-     * quarter of a second (as a recorded anvil is).
-     */
-    hammer: {
-      gap: 12,
-      play(v) {
-        let t = 0;
-        for (let i = 0, n = 2 + Math.floor(Math.random() * 4); i < n; i++) {
-          const f = rnd5(1350, 1650) * (i % 2 ? 1 : 1.02);
-          v.noise(t, 6e-3, { type: "highpass", freq: 3e3, gain: 0.05, attack: 4e-4 });
-          v.ring(t, f, 0.3, 0.018, [1, 2.76, 5.4, 8.9]);
-          v.thump(t, { f0: 220, f1: 150, dur: 0.04, gain: 0.02 });
-          t += rnd5(0.55, 1.05);
-        }
-      }
-    },
-    /** A dog barking. */
-    dog: { gap: 10, play(v) {
-      for (let i = 0; i < 1 + Math.floor(Math.random() * 3); i++) v.formant(i * rnd5(0.28, 0.4), 0.12, { f1: 650, f2: 1300, to1: 450, to2: 1e3, q: 4, gain: 0.4, attack: 8e-3 });
-    } },
-    /** A door across the way: the latch, a short creak, shut. */
-    door: {
-      gap: 8,
-      play(v) {
-        v.noise(0, 0.012, { freq: 2600, q: 3, gain: 0.04, attack: 6e-4 });
-        v.creak(0.03, rnd5(0.25, 0.5), { rate: rnd5(60, 90), rate1: rnd5(80, 120), freqs: [400, 650, 900], q: 7, gain: 0.03 });
-        if (Math.random() < 0.6) {
-          const t = rnd5(0.7, 1.6);
-          v.thump(t, { f0: 110, f1: 70, dur: 0.1, gain: 0.06 });
-          v.noise(t, 0.08, { type: "lowpass", freq: 400, gain: 0.05 });
-        }
-      }
-    },
-    /** A cart going by: wheels on the cobbles, a rumble and their clatter, and the creak of the axle. */
-    cart: {
-      gap: 25,
-      play(v) {
-        const dur = rnd5(2.5, 4);
-        v.noise(0, dur, { color: "brown", type: "lowpass", freq: 260, gain: 0.08, attack: dur * 0.45, curve: "lin" });
-        v.crackle(0.2, dur - 0.4, Math.round(dur * 9), { freq: 1100, gain: 0.025, q: 3 });
-        v.creak(dur * 0.3, dur * 0.4, { rate: 30, rate1: 24, freqs: [260, 430, 700], q: 6, gain: 0.015 });
-      }
-    },
-    /** A Sea King's moan, far down. */
-    moan: { gap: 20, play(v) {
-      v.formant(0, 2.5, { f1: 160, f2: 420, to1: 120, to2: 300, q: 5, gain: 0.12, attack: 0.8, color: "brown" });
-      v.tone(0, 2.5, { freq: 55, to: 42, type: "sawtooth", gain: 0.03, attack: 0.8, curve: "lin" });
-    } },
-    /** Whale song. */
-    whale: { gap: 15, play(v) {
-      v.tone(0, 2.2, { freq: rnd5(260, 320), to: rnd5(380, 480), glide: 1.2, gain: 0.025, attack: 0.5, curve: "lin", vib: { rate: 4, depth: 6 } });
-      v.tone(1.2, 1.4, { freq: 450, to: 230, gain: 0.02, attack: 0.3, curve: "lin" });
-    } },
-    /** A drip into a pool, in a cave or a cell (or off the eaves after rain). */
-    drip: { gap: 0.6, play(v) {
-      v.bubble(0, { f: rnd5(1300, 2200), rise: 1.6, dur: 0.05, gain: 0.035 });
-    } },
-    /** Chains, far off (Impel Down). */
-    chains: { gap: 6, play(v) {
-      for (let i = 0; i < 6; i++) v.ring(i * rnd5(0.05, 0.1), rnd5(900, 1500), 0.15, 0.025, [1, 2.7]);
-    } },
-    /** Bubbles rising past you. */
-    bubbles: { gap: 2, play(v) {
-      v.bubbles(0, 0.6, 6, { f: 500, spread: 0.9, gain: 0.03 });
-    } },
-    /** A burst of crackling embers. */
-    embers: { gap: 2, play(v) {
-      v.crackle(0, 0.5, 8, { freq: 2600, gain: 0.1 });
-    } },
-    /**
-     * A gust going by: the air rushing up and away over a few seconds (leaves
-     * thrashing with it on land, the rigging singing at sea).
-     */
-    gust: {
-      gap: 4,
-      play(v, k) {
-        const dur = rnd5(1.8, 3.5);
-        v.whoosh(0, dur, { f0: rnd5(250, 350), f1: rnd5(700, 1100), q: 0.7, gain: 0.07 * (k.s || 1), peak: rnd5(0.35, 0.55), color: "pink" });
-        if (k.sea) v.tone(dur * 0.2, dur * 0.6, { freq: rnd5(520, 880), to: rnd5(600, 1e3), gain: 4e-3 * (k.s || 1), attack: dur * 0.25, curve: "lin", vib: { rate: 5, depth: 12 } });
-        else v.noise(dur * 0.15, dur * 0.7, { freq: 4e3, q: 0.6, gain: 0.03 * (k.s || 1), attack: dur * 0.25, curve: "lin" });
-      }
-    },
-    /** A wave breaking on the shore: the surge, the crash, the hiss of it running back over the sand. */
-    surf: {
-      gap: 4,
-      play(v, k) {
-        const s = k.s || 1;
-        v.noise(0, 1.6, { color: "pink", type: "lowpass", freq: 500, sweep: 1800, gain: 0.22 * s, attack: 1.1, curve: "lin" });
-        v.noise(1.1, 1.8, { color: "pink", type: "lowpass", freq: 2e3, sweep: 600, gain: 0.26 * s, attack: 0.08 });
-        v.noise(1.5, 2.2, { type: "bandpass", freq: 2600, q: 0.5, gain: 0.03 * s, attack: 0.3, curve: "lin" });
-        v.crackle(1.8, 1.8, 10, { freq: 3600, gain: 0.012 * s, q: 3 });
-      }
-    }
-  };
-  var Ambience = class {
-    constructor(audio) {
-      this.audio = audio;
-      this.beds = {};
-      this.rainBed = null;
-      this.lastSpot = {};
-    }
-    /**
-     * Bring each bed to its level (`levels`: name → 0..1; missing ones fade
-     * out), the rain to `rain` ({ r, storm, where } or nothing), and roll the
-     * dice for each spot (`spots`: name → how many a minute).
-     */
-    update(levels, spots, dt, sec = 1.2, rain = null) {
-      const E = this.audio.E, t = E.now();
-      for (const name of Object.keys(BEDS)) {
-        const want = levels[name] || 0;
-        let b = this.beds[name];
-        if (!b && want > 5e-3) b = this.beds[name] = new Bed(this.audio, name);
-        if (!b) continue;
-        b.set(want, t, sec);
-        if (want > 5e-3) b.tick(t);
-        if (want <= 5e-3) {
-          if (!b.quietSince) b.quietSince = t;
-          else if (t - b.quietSince > 20) {
-            b.stop();
-            delete this.beds[name];
-          }
-        } else b.quietSince = 0;
-      }
-      this.rain(rain, t, dt);
-      for (const [name, perMin] of Object.entries(spots)) {
-        if (!(perMin > 0)) continue;
-        if (Math.random() < perMin / 60 * dt) this.spot(name);
-      }
-    }
-    /** The rain: made when it starts, set to how hard and on what, faded and taken apart when it's over. */
-    rain(R5, t, dt) {
-      let b = this.rainBed;
-      const want = R5 && R5.r > 0.02 ? 1 : 0;
-      if (!b && want) b = this.rainBed = new Rain(this.audio);
-      if (!b) return;
-      if (want) {
-        b.set(R5.r, R5.storm || 0, R5.where, t);
-        b.quietSince = 0;
-      }
-      b.fade(want ? R5.level ?? 1 : 0, t, want ? 2.5 : 3);
-      b.tick(t, dt);
-      if (!want) {
-        if (!b.quietSince) b.quietSince = t;
-        else if (t - b.quietSince > 20) {
-          b.stop();
-          this.rainBed = null;
-        }
-      }
-    }
-    /** How deep the sails' flutter is (0 drawing nicely … 1 luffing, flogging in the wind). */
-    luff(k) {
-      const b = this.beds.sails;
-      if (b?.flapDepth) b.flapDepth.go(0.05 + 0.45 * k, this.audio.E.now(), 0.6);
-    }
-    /** Play a spot now: off to one side or the other, near or far (never two of a kind too close together). */
-    spot(name, { vol = 1, pan = rnd5(-0.8, 0.8), far = rnd5(0, 1), s = 1, sea = false } = {}) {
-      const E = this.audio.E, S6 = SPOTS[name], t = E.now();
-      if (!S6 || t - (this.lastSpot[name] ?? -99) < S6.gap * rnd5(0.8, 1.3)) return;
-      const v = E.open("amb:" + name, { bus: "amb", vol: vol * (1 - 0.45 * far), pan, lp: far > 0.4 ? 9500 - far * 5500 : 0, send: 0.05 + far * 0.25, prio: 2, max: 2 });
-      if (!v) return;
-      this.lastSpot[name] = t;
-      v.pj = rnd5(0.95, 1.05);
-      S6.play(v, { s, sea });
-      v.end += v.tail || 0;
-    }
-    /** Stop every bed (the title's quiet, a page hidden). */
-    silence() {
-      const t = this.audio.E.now();
-      for (const b of Object.values(this.beds)) b.set(0, t, 0.5);
-      this.rainBed?.fade(0, t, 0.5);
     }
   };
 
@@ -165110,6 +165572,93 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       }, true);
     }
   };
+
+  // src/game/masthead.js
+  var CLIMB_SPEED = 1.7;
+  function mastLadder(ship) {
+    const d = shipDims(ship.def), nest = mastNest(d);
+    if (!nest) return null;
+    const u = nest.mu - nest.mr - 0.14, footU = u - 0.45;
+    return { nest, u, footU, t: (footU + d.L / 2) / d.L };
+  }
+  function ladderHere(game, p) {
+    const s = p.deck?.ship;
+    if (!s || p.climb || p.mode !== "foot" || p.state !== "idle" || p.hitstun > 0) return null;
+    const L3 = mastLadder(s);
+    if (!L3) return null;
+    const c = Math.cos(s.heading), sn = Math.sin(s.heading), dx = game.world.dx(s.x, p.x), dy = p.y - s.y;
+    const u = dx * c + dy * sn, v = -dx * sn + dy * c;
+    const dist = Math.hypot(u - L3.footU, v);
+    if (dist > 1.3 || Math.abs((p.deck.h ?? L3.nest.base) - L3.nest.base) > 0.5) return null;
+    return { ship: s, L: L3, d: dist };
+  }
+  function installMasthead(game) {
+    game.mastLadder = mastLadder;
+    game.placeOnDeck = (a, s, t, v) => placeOnDeck(game, a, s, t, v);
+    const prev = game.footInteraction;
+    game.footInteraction = (p) => {
+      const other = prev ? prev(p) : null;
+      const h2 = ladderHere(game, p);
+      if (!h2) return other;
+      const mine = { d: h2.d, x: p.x, y: p.y, label: "Climb to the crow's nest", run: () => startMastClimb(game, p, h2) };
+      return !other || mine.d <= other.d ? mine : other;
+    };
+    game.on("tick", (dt) => {
+      const p = game.player;
+      if (p?.climb?.mast) mastStep(game, p, dt);
+    });
+  }
+  function startMastClimb(game, p, h2) {
+    const { ship, L: L3 } = h2;
+    if (p.deck) {
+      ship.aboard?.delete(p);
+      p.deck = null;
+    }
+    p.climb = { mast: true, ship, L: L3, k: 0, H: L3.nest.y - L3.nest.base, top: false };
+    p.vx = p.vy = p.vz = 0;
+    p.dash = null;
+    p.blocking = false;
+    if (p.action?.def.m1Chain) p.action = null;
+    game.audio?.sfx("step", p);
+    if (p.isPlayer) game.hint?.("masthead", "Up the mast: hold W to climb, S to climb down, Space to let go. At the top you're in the crow's nest.");
+  }
+  function mastStep(game, p, dt) {
+    const c = p.climb, s = c.ship;
+    if (!s || s.sunk || s.alive === false) {
+      p.climb = null;
+      p.vz = -0.01;
+      return;
+    }
+    if (p.letGo) {
+      p.letGo = false;
+      p.climb = null;
+      p.vz = -0.01;
+      p.lastG = null;
+      return;
+    }
+    const inp = p.climbInput || 0;
+    c.k = Math.max(0, Math.min(1, c.k + inp * CLIMB_SPEED * dt / c.H));
+    if (c.k <= 0 && inp < 0) {
+      p.climb = null;
+      placeOnDeck(game, p, s, c.L.t, 0);
+      return;
+    }
+    const n = c.L.nest, time = game.env?.time || 0;
+    const into = Math.max(0, (c.k - 0.94) / 0.06);
+    const u = c.L.u - 0.32 + (n.u - 0.15 - (c.L.u - 0.32)) * into;
+    const hh = n.base + c.H * Math.min(1, c.k / 0.94) + Math.sin(Math.PI * into) * 0.25;
+    const cs = Math.cos(s.heading), sn = Math.sin(s.heading);
+    p.x = game.world.wx(s.x + u * cs);
+    p.y = s.y + u * sn;
+    p.z = shipLift(s, time, u, 0, hh) - p.groundAt(game, p.x, p.y);
+    if (c.k < 0.94) p.facing = s.heading;
+    p.airT = 0.1;
+    c.top = c.k >= 1;
+    if (c.top && !c.saidTop && p.isPlayer) {
+      c.saidTop = true;
+      game.hint?.("nest", "In the crow's nest: look out over the sea. S climbs back down.");
+    }
+  }
 
   // src/game/shipwrights.js
   var TOPS2 = ["#eceff1", "#f5f5f5", "#8d6e63", "#607d8b", "#ffe0b2", "#90a4ae"];
@@ -166792,6 +167341,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     installDecks(game);
     installTraffic(game);
     installLadders(game);
+    installMasthead(game);
     installGangways(game);
     installRopeways(game);
     installFleet(game);
