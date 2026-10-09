@@ -35326,6 +35326,7 @@ uniform float uStorm;
 uniform vec2 uWind;
 uniform int uZone;
 uniform float uSurfaceMap;
+uniform float uGlobe; // the chart as the globe (M) takes it: its seas coloured by region
 uniform vec4 uLights[24];
 uniform vec3 uLightCol[24];
 uniform int uNumLights;
@@ -35627,6 +35628,21 @@ vec4 mapColor(vec2 wp) {
   }
   // unexplored parts fade to blank parchment
   col = mix(parch * vec3(0.98, 0.96, 0.92), col, smoothstep(0.05, 0.6, fog) * 0.85 + 0.15 * uSurfaceMap);
+  // (on the globe: the seas told apart by colour as on the world map, fog or not \u2014 the Blues blue,
+  // the Calm Belts a still grey-green, hatched, Paradise gold, the New World amber; the Red Line red)
+  if (uGlobe > 0.5) {
+    float ady = abs(wp.y - EQY);
+    vec3 tint = ady < GLH ? (mod(wp.x, WW) > RMX ? vec3(0.97, 0.86, 0.6) : vec3(0.95, 0.74, 0.56))
+      : ady < GLH + CBW ? vec3(0.7, 0.76, 0.72)
+      : (wp.y < POL || wp.y > HH - POL) ? vec3(0.86, 0.9, 0.94) : vec3(0.66, 0.8, 0.94);
+    if (reg == 5) tint = sd > 0.0 ? vec3(0.86, 0.48, 0.4) : vec3(0.66, 0.8, 0.94);
+    float sea = reg == 5 ? 1.0 : 1.0 - smoothstep(-0.5, 0.5, sd) * smoothstep(0.05, 0.6, fog);
+    col *= mix(vec3(1.0), tint, sea);
+    if (reg == 3 && sd < 0.0) {
+      float hp = max(4.0, px * 9.0);
+      col *= 1.0 - 0.1 * step(0.6, fract((wp.x + wp.y) / hp));
+    }
+  }
   // latitude/longitude grid
   float gx = abs(fract(wp.x / 256.0 + 0.5) - 0.5) * 256.0;
   float gy = abs(fract(wp.y / 256.0 + 0.5) - 0.5) * 256.0;
@@ -35840,7 +35856,7 @@ void main() {
     [T.RIVER]: ["#2b8fc4", "#58bde0"],
     [T.CANAL]: ["#2a86b0", "#4fb0cf"],
     [T.RAPIDS]: ["#3a9ccf", "#bfe9f5"],
-    [T.CLOUD_SEA]: ["#dbe9f7", "#ffffff"],
+    [T.CLOUD_SEA]: ["#cfdcec", "#eef3fa"],
     [T.LAVA]: ["#e8420e", "#ffb02e"],
     [T.REEF]: ["#34b3b8", "#e7d9a8"],
     [T.ABYSS]: ["#061a33", "#0b2d52"],
@@ -35865,7 +35881,7 @@ void main() {
     [T.FLOWERS]: ["#6bb54a", "#f06292"],
     [T.SAKURA]: ["#7fb069", "#f8b4cf"],
     [T.CANDY]: ["#f7a8c8", "#fff0f6"],
-    [T.ISLAND_CLOUD]: ["#f4f8ff", "#ffffff"],
+    [T.ISLAND_CLOUD]: ["#e3e9f2", "#f3f6fb"],
     [T.CORAL]: ["#e8a0a0", "#f7d0b8"],
     [T.MANGROVE]: ["#6f8f45", "#93b35a"],
     [T.ASH]: ["#4d4a48", "#6a6461"],
@@ -36075,6 +36091,7 @@ void main() {
       gl.uniform1f(u.uDay, view.daylight);
       gl.uniform1f(u.uMapMode, view.mapMode ? 1 : 0);
       gl.uniform1f(u.uSurfaceMap, view.revealAll ? 1 : 0);
+      if (u.uGlobe) gl.uniform1f(u.uGlobe, view.globeTint ? 1 : 0);
       gl.uniform1f(u.uStorm, view.storm || 0);
       gl.uniform2f(u.uWind, view.windX || 0.7, view.windY || 0.3);
       gl.uniform1i(u.uZone, view.zone || 0);
@@ -36146,6 +36163,7 @@ void main() {
         ambient: env2.ambient,
         daylight: env2.daylight,
         mapMode: env2.mapMode,
+        globeTint: env2.globeTint,
         revealAll: env2.revealAll,
         storm: env2.storm,
         windX: env2.windX,
@@ -42618,7 +42636,7 @@ ${GLSL}
         bottom = [0.05, 0.02, 0.02];
       } else if (zone === 1) {
         top = lerp3(top, [0.1, 0.32, 0.78].map((v) => v * (0.2 + day * 0.8)), 0.6);
-        hor = lerp3(hor, [0.95, 0.97, 1], 0.5 * day);
+        hor = lerp3(hor, [0.78, 0.85, 0.94], 0.4 * day);
         bottom = hor;
       }
       const tint3 = env2.tint || [1, 1, 1];
@@ -42699,14 +42717,14 @@ ${GLSL}
         this.lightDir.set(this.lightDir.x * k, MIN_LIGHT_Y, this.lightDir.z * k);
       }
       const weatherK = (1 - ov * 0.72) * (1 - storm * 0.2) * (1 - dust2 * 0.35);
-      this.sun.intensity = (sunUp ? 2.4 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y) * (0.6 + 0.4 * moonLit)) * weatherK * (zone === 3 ? 0.25 : zone === 2 ? 0.35 + 0.5 * ib : 1);
+      this.sun.intensity = (sunUp ? 2.4 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y) * (0.6 + 0.4 * moonLit)) * weatherK * (zone === 3 ? 0.25 : zone === 2 ? 0.35 + 0.5 * ib : zone === 1 ? 0.7 : 1);
       this.sun.shadow.intensity = (1 - sm(0.3, 0.9, ov) * 0.85) * (sunUp ? 1 - 0.5 * low : 0.75);
       if (sunUp) this.sun.color.setRGB(1, 0.95 - warm * 0.24, 0.88 - warm * 0.42);
       else this.sun.color.setRGB(0.6, 0.7, 1);
       if (dust2) this.sun.color.lerp(_haze.setRGB(1, 0.75, 0.5), dust2 * 0.4);
       this.hemi.color.setRGB(amb[0] * 0.8, amb[1] * 0.85, amb[2] * 0.95);
       this.hemi.groundColor.setRGB(amb[0] * 0.45, amb[1] * 0.4, amb[2] * 0.35);
-      this.hemi.intensity = 1 + ov * 0.35 * day + (zone === 3 ? -0.3 : 0);
+      this.hemi.intensity = 1 + ov * 0.35 * day + (zone === 3 ? -0.3 : zone === 1 ? -0.22 : 0);
       this.grade.sat = 1 - ov * 0.14 - storm * 0.08 + heat * 0.06 - dust2 * 0.05;
       this.grade.contrast = 1 - ov * 0.05 + storm * 0.04;
       let far = this.maxFar || (sailing ? 900 : 620);
@@ -114110,11 +114128,19 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   // src/ui/globe.js
   var TEX_W = 4096;
   var TEX_H = 2048;
-  var GLOBE_MIN = 1.3;
-  var PAINT_MS = 12;
-  var hexRGB = (h2) => [parseInt(h2.slice(1, 3), 16), parseInt(h2.slice(3, 5), 16), parseInt(h2.slice(5, 7), 16)];
+  var R_M = W / (2 * Math.PI);
+  var FOV = 30;
+  var TANH = Math.tan(FOV / 2 * Math.PI / 180);
+  var NEAR_D = 1.035;
+  var FAR_D = 4.6;
+  var DETAIL_Z = 0.12;
   var latOf = (y) => (0.5 - Math.max(0, Math.min(1, y / H))) * Math.PI;
   var shrink = (y) => Math.max(0.06, Math.cos(latOf(y)));
+  var wrapDx = (a, b) => {
+    let d = b - a;
+    d -= W * Math.round(d / W);
+    return d;
+  };
   function anchorsOf(world) {
     const out = [];
     for (const isl of world.islands || []) {
@@ -114140,83 +114166,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     return (u % 1 + 1) % 1;
   }
-  var wrapDx = (a, b) => {
-    let d = b - a;
-    d -= W * Math.round(d / W);
-    return d;
-  };
   function uvToSphere(u, v, r4 = 1, out = new Vector3()) {
     const phi = u * Math.PI * 2, theta = Math.max(0, Math.min(1, v)) * Math.PI;
     return out.set(-r4 * Math.cos(phi) * Math.sin(theta), r4 * Math.cos(theta), r4 * Math.sin(phi) * Math.sin(theta));
   }
-  function painter2(world) {
-    const c = document.createElement("canvas");
-    c.width = TEX_W;
-    c.height = TEX_H;
-    const g = c.getContext("2d");
-    g.fillStyle = "#184a8c";
-    g.fillRect(0, 0, TEX_W, TEX_H);
-    const cap3 = Math.round(POLAR / H * TEX_H);
-    g.fillStyle = "#e8f1f6";
-    g.fillRect(0, 0, TEX_W, cap3);
-    g.fillRect(0, TEX_H - cap3, TEX_W, cap3);
-    const COL2 = [];
-    for (let t = 0; t < 256; t++) COL2[t] = hexRGB((PALETTE[t] || ["#8a8a8a"])[0]);
-    const deep = [24, 74, 140], shallow = [58, 150, 196];
-    const anchors = anchorsOf(world);
-    const P6 = { canvas: c, anchors, done: false };
-    let ai = 0, row = -1, A2 = null, img2 = null, rx0 = 0, rw = 0;
-    const pxW = W / TEX_W, pxH = H / TEX_H;
-    P6.step = () => {
-      const t0 = performance.now();
-      while (performance.now() - t0 < PAINT_MS) {
-        if (!A2) {
-          if (ai >= anchors.length) {
-            P6.done = true;
-            return;
-          }
-          A2 = anchors[ai++];
-          row = Math.max(0, Math.floor(A2.y0 / pxH));
-        }
-        const j = row, y = (j + 0.5) * pxH;
-        if (j >= TEX_H || y > A2.y1) {
-          A2 = null;
-          continue;
-        }
-        const half2 = (A2.x1 - A2.x0) / 2 / shrink(y);
-        const uc = A2.xc / pxW;
-        rx0 = Math.floor(uc - half2 / pxW);
-        rw = Math.ceil(half2 * 2 / pxW) + 2;
-        if (rw > TEX_W) {
-          rx0 = 0;
-          rw = TEX_W;
-        }
-        img2 = g.getImageData(0, j, TEX_W, 1);
-        const d = img2.data, s = shrink(y);
-        for (let i = 0; i < rw; i++) {
-          const u = rx0 + i, x = A2.xc + (u + 0.5 - uc) * pxW * s;
-          if (wrapDx(A2.xc, x) < A2.x0 - A2.xc || wrapDx(A2.xc, x) > A2.x1 - A2.xc) continue;
-          const wx = (x % W + W) % W, t = world.type(wx, y);
-          let r4, gg, b;
-          if (IS_LIQUID[t] === 1 && t !== T.LAVA) {
-            const sd = world.sd ? world.sd(wx, y) : -40;
-            if (sd < -24) continue;
-            const k = Math.max(0, Math.min(1, 1 + sd / 24));
-            r4 = deep[0] + (shallow[0] - deep[0]) * k;
-            gg = deep[1] + (shallow[1] - deep[1]) * k;
-            b = deep[2] + (shallow[2] - deep[2]) * k;
-          } else [r4, gg, b] = COL2[t];
-          const k4 = (u % TEX_W + TEX_W) % TEX_W * 4;
-          d[k4] = r4;
-          d[k4 + 1] = gg;
-          d[k4 + 2] = b;
-          d[k4 + 3] = 255;
-        }
-        g.putImageData(img2, 0, j);
-        row++;
-      }
-    };
-    return P6;
+  function inkEdges(g) {
+    const ty = (y) => y / H * TEX_H;
+    g.fillStyle = "rgba(40, 104, 82, 0.85)";
+    for (const y of [GL_TOP, GL_BOTTOM]) g.fillRect(0, ty(y) - 1.5, TEX_W, 3);
+    g.fillStyle = "rgba(70, 88, 96, 0.6)";
+    for (const y of [CB_TOP, CB_BOTTOM]) g.fillRect(0, ty(y) - 1, TEX_W, 2);
   }
   var GlobeView = class {
     constructor(parent) {
@@ -114225,68 +114184,77 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       parent.prepend(this.el);
       this.renderer = null;
       this.scene = new Scene();
-      this.camera = new PerspectiveCamera(30, 1, 0.01, 50);
-      this.dist = 4.2;
-      this.scene.add(new AmbientLight(16777215, 0.55));
-      this.sun = new DirectionalLight(16774368, 2.2);
+      this.camera = new PerspectiveCamera(FOV, 1, 5e-4, 50);
+      this.scene.add(new AmbientLight(16777215, 1.7));
+      this.sun = new DirectionalLight(16774368, 0.8);
       this.sun.position.set(-3, 2, 4);
       this.scene.add(this.sun);
       this.spin = new Group();
       this.scene.add(this.spin);
-      this.globe = new Mesh(new SphereGeometry(1, 96, 64), new MeshLambertMaterial({ color: 16777215 }));
-      this.spin.add(this.globe);
-      const halo = new Mesh(new SphereGeometry(1.035, 64, 48), new MeshBasicMaterial({ color: 9423103, transparent: true, opacity: 0.12, side: BackSide, depthWrite: false }));
-      this.scene.add(halo);
-      const pin = (col2) => {
-        const gp = new Group();
-        const head = new Mesh(new SphereGeometry(0.022, 16, 12), new MeshBasicMaterial({ color: col2 }));
-        head.position.y = 0.07;
-        const stem = new Mesh(new CylinderGeometry(4e-3, 4e-3, 0.07, 6), new MeshBasicMaterial({ color: 2236962 }));
-        stem.position.y = 0.035;
-        gp.add(head, stem);
-        this.spin.add(gp);
-        return gp;
-      };
-      this.youPin = pin(15022389);
-      this.shipPin = pin(15844367);
-      this.worldId = null;
+      this.base = new Mesh(new SphereGeometry(1, 192, 128), new MeshBasicMaterial({ color: 16777215 }));
+      this.spin.add(this.base);
+      this.scene.add(new Mesh(new SphereGeometry(1.03, 64, 48), new MeshBasicMaterial({ color: 9423103, transparent: true, opacity: 0.1, side: BackSide, depthWrite: false })));
+      this.spin.add(Object.assign(new Mesh(new SphereGeometry(1.0004, 96, 64), new ShaderMaterial({
+        // (no depth test: its coarser facets would dip under the ball's own at the rim)
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+        // (per pixel: worked out at the corners and spread across, the big triangles would show at the rim)
+        vertexShader: "varying vec3 vN; varying vec3 vP; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalMatrix * normal; vP = mv.xyz; gl_Position = projectionMatrix * mv; }",
+        fragmentShader: "varying vec3 vN; varying vec3 vP; void main() { float r = 1.0 - max(0.0, dot(normalize(vN), normalize(-vP))); gl_FragColor = vec4(0.04, 0.07, 0.14, pow(r, 2.6) * 0.55); }"
+      })), { renderOrder: 2 }));
+      this.isles = /* @__PURE__ */ new Map();
       this.yaw = 0;
       this.tilt = 0;
+      this.dist = 3.2;
+      this.want = 3.2;
+      this.vYaw = 0;
+      this.vTilt = 0;
+      this.dragging = false;
+      this.baseKey = null;
+      this.anchors = null;
+      this._v = new Vector3();
+      this._c = new Vector3();
     }
-    /** The picture of world `w` (started painting if it's new). */
-    prepare(w) {
-      if (this.worldId !== w.id) {
-        this.worldId = w.id;
-        this.paint = painter2(w);
-        const tex3 = new CanvasTexture(this.paint.canvas);
-        tex3.colorSpace = SRGBColorSpace;
-        tex3.anisotropy = 4;
-        this.globe.material.map?.dispose();
-        this.globe.material.map = tex3;
-        this.globe.material.needsUpdate = true;
-      }
+    show(on) {
+      this.el.style.display = on ? "block" : "none";
     }
-    /** Point (x, y) on the chart toward the viewer, north up. */
+    /** css pixels to the metre at the middle of the view (the chart's own measure of zoom: its labels go by it). */
+    zoomPx() {
+      const ch = this.el.clientHeight || 720;
+      return ch / (2 * TANH * Math.max(1e-4, this.dist - 1) * R_M);
+    }
+    /** Point (x, y) on the chart to the middle of the view, north up. */
     face(x, y) {
-      this.yaw = Math.PI / 2 - globeU(x, y, this.paint?.anchors) * Math.PI * 2;
+      this.yaw = Math.PI / 2 - globeU(x, y, this.anchors) * Math.PI * 2;
       this.tilt = (0.5 - Math.max(0, Math.min(1, y / H))) * Math.PI;
+      this.vYaw = this.vTilt = 0;
     }
+    /** Set how close: the chart's zoom (css px to the metre) at the middle of the view. */
+    zoomTo(z) {
+      const ch = this.el.clientHeight || 720;
+      this.want = this.dist = Math.max(NEAR_D, Math.min(FAR_D, 1 + ch / (2 * TANH * z * R_M)));
+    }
+    /** Dragged by (dx, dy) css pixels: the ground under the cursor goes with it. */
     drag(dx, dy) {
-      this.yaw += dx * 6e-3 * (this.dist / 4.2);
-      this.tilt = Math.max(-1.45, Math.min(1.45, this.tilt + dy * 6e-3 * (this.dist / 4.2)));
+      const ch = this.el.clientHeight || 720;
+      const k = 2 * TANH * (this.dist - 1) / ch;
+      const dy0 = dy * k, dx0 = dx * k / Math.max(0.15, Math.cos(this.tilt));
+      this.yaw += dx0;
+      this.tilt = Math.max(-1.52, Math.min(1.52, this.tilt + dy0));
+      this.vYaw = this.vYaw * 0.4 + dx0 * 0.6;
+      this.vTilt = this.vTilt * 0.4 + dy0 * 0.6;
     }
-    /** Come closer (f > 1) or back. False once it's as close as the globe goes (the chart takes over from there). */
+    /** The wheel: closer (f > 1) or further — smoothly, by the height above the ground. */
     zoom(f) {
-      if (f > 1 && this.dist <= GLOBE_MIN + 1e-6) return false;
-      this.dist = Math.max(GLOBE_MIN, Math.min(7, this.dist / f));
-      return true;
+      this.want = Math.max(NEAR_D, Math.min(FAR_D, 1 + (this.want - 1) / f));
     }
-    /** The chart point at the middle of the view (where the flat chart opens, zooming in past the globe). */
+    /** The chart point at the middle of the view. */
     centre() {
       const u = ((Math.PI / 2 - this.yaw) / (Math.PI * 2) % 1 + 1) % 1, v = 0.5 - this.tilt / Math.PI;
       const y = Math.max(0, Math.min(1, v)) * H;
       let x = u * W;
-      for (const A2 of this.paint?.anchors || []) {
+      for (const A2 of this.anchors || []) {
         if (A2.band || y < A2.y0 || y > A2.y1) continue;
         const du = wrapDx(A2.xc, x), half2 = (A2.x1 - A2.x0) / 2 / shrink(y);
         if (Math.abs(du) <= half2) {
@@ -114296,21 +114264,188 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       }
       return { x: (x % W + W) % W, y };
     }
-    show(on) {
-      this.el.style.display = on ? "block" : "none";
-    }
-    placePin(p, x, y) {
-      if (x == null) {
-        p.visible = false;
-        return;
+    /**
+     * The chart, captured from its own renderer, tinted by region and re-laid
+     * true to shape, round the ball — when the globe opens, and again if more
+     * of the world has been explored since.
+     */
+    buildBase(game, r4) {
+      const w = game.surface, c = game.state?.char;
+      if (!this.anchors) this.anchors = anchorsOf(w);
+      const key2 = `${w.id}|${(c?.discovered || []).length}|${Math.floor((game.time || 0) / 30)}|${game.creative?.on ? 1 : 0}`;
+      if (key2 === this.baseKey) return;
+      this.baseKey = key2;
+      const A2 = document.createElement("canvas");
+      A2.width = TEX_W;
+      A2.height = TEX_H;
+      const ga = A2.getContext("2d");
+      const env2 = game.env, saved = { ...r4.cam }, prevMode = env2.mapMode;
+      env2.mapMode = true;
+      env2.globeTint = true;
+      const scale = r4.dpr * (r4.terrainScale || 1), zEff = TEX_W / W;
+      const tw = r4.glCanvas.width / zEff, th = r4.glCanvas.height / zEff;
+      for (let Y0 = 0; Y0 < H; Y0 += th) {
+        for (let X0 = 0; X0 < W; X0 += tw) {
+          Object.assign(r4.cam, { x: X0 + tw / 2, y: Y0 + th / 2, zoom: zEff / scale, shakeX: 0, shakeY: 0 });
+          r4.renderTerrain(w, env2);
+          ga.drawImage(r4.glCanvas, Math.round(X0 * zEff), Math.round(Y0 * zEff));
+        }
       }
-      p.visible = true;
-      const v = uvToSphere(globeU(x, y, this.paint?.anchors), y / H, 1);
-      p.position.copy(v);
-      p.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), v.clone().normalize());
-      p.scale.setScalar(Math.max(0.05, Math.min(1, (this.dist - 1) / 3.2)));
+      env2.mapMode = prevMode;
+      env2.globeTint = false;
+      Object.assign(r4.cam, saved);
+      inkEdges(ga);
+      const F5 = document.createElement("canvas");
+      F5.width = TEX_W;
+      F5.height = TEX_H;
+      const gf = F5.getContext("2d");
+      gf.drawImage(A2, 0, 0);
+      const pxW = W / TEX_W, pxH = H / TEX_H;
+      for (const a of this.anchors) {
+        const j0 = Math.max(0, Math.floor(a.y0 / pxH)), j1 = Math.min(TEX_H - 1, Math.ceil(a.y1 / pxH));
+        const sw2 = (a.x1 - a.x0) / pxW, sx0 = (a.x0 / pxW % TEX_W + TEX_W) % TEX_W;
+        for (let j = j0; j <= j1; j++) {
+          const s = shrink((j + 0.5) * pxH), dw = sw2 / s, dx = a.xc / pxW - dw / 2;
+          for (const off of [-TEX_W, 0, TEX_W]) {
+            if (dx + off > TEX_W || dx + off + dw < 0) continue;
+            if (sx0 + sw2 <= TEX_W) gf.drawImage(A2, sx0, j, sw2, 1, dx + off, j, dw, 1);
+            else {
+              const a1 = TEX_W - sx0;
+              gf.drawImage(A2, sx0, j, a1, 1, dx + off, j, a1 / s, 1);
+              gf.drawImage(A2, 0, j, sw2 - a1, 1, dx + off + a1 / s, j, (sw2 - a1) / s, 1);
+            }
+          }
+        }
+      }
+      const tex3 = new CanvasTexture(F5);
+      tex3.colorSpace = SRGBColorSpace;
+      tex3.anisotropy = 8;
+      this.base.material.map?.dispose();
+      this.base.material.map = tex3;
+      this.base.material.needsUpdate = true;
+      for (const m of this.isles.values()) this.dropMesh(m);
+      this.isles.clear();
     }
-    render(game) {
+    dropMesh(m) {
+      this.spin.remove(m);
+      m.geometry.dispose();
+      m.material.map?.dispose();
+      m.material.dispose();
+    }
+    /**
+     * Close up, the islands round the middle of the view laid over the globe
+     * in the chart's full detail (their charts from chartDetail.js, roofs and
+     * all), each a mesh true to shape about its middle.
+     */
+    layIslands(game, detail, known) {
+      const z = this.zoomPx(), on = z > DETAIL_Z;
+      const fade2 = Math.max(0, Math.min(1, (z - DETAIL_Z) / DETAIL_Z));
+      for (const m of this.isles.values()) {
+        m.visible = on;
+        m.material.opacity = fade2;
+      }
+      if (!on) return;
+      const w = game.surface, cen = this.centre();
+      const reach3 = Math.max(this.el.clientWidth || 1280, this.el.clientHeight || 720) / z * 0.75 + 300;
+      const near = w.islands.filter((isl) => isl.landBox && known(isl) && Math.hypot(wrapDx(cen.x, isl.x), cen.y - isl.y) < reach3);
+      const scratch3 = this.scratch || (this.scratch = document.createElement("canvas").getContext("2d"));
+      const nearSet = new Set(near);
+      detail.draw(scratch3, { world: w, dpr: 1, zoom: 0.5, alpha: 1e-3, cw: 1e9, ch: 1e9, toS: (x, y) => [wrapDx(cen.x, x) + 5e8, y - cen.y + 5e8], px: cen.x, py: cen.y, known: (isl) => nearSet.has(isl), budget: 8 });
+      for (const isl of near) {
+        if (this.isles.has(isl.id)) continue;
+        const ch = detail.chart(w, isl);
+        if (!ch.done) continue;
+        const m = this.islandMesh(ch);
+        m.material.opacity = fade2;
+        this.isles.set(isl.id, m);
+      }
+    }
+    islandMesh(ch) {
+      const cv = document.createElement("canvas");
+      cv.width = ch.cw;
+      cv.height = ch.ch;
+      const g = cv.getContext("2d");
+      g.drawImage(ch.canvas, 0, 0);
+      drawBuildings(g, ch, { dpr: 1, zoom: ch.px, cw: ch.cw, ch: ch.ch, toS: (x, y) => [(x - ch.x0) * ch.px, (y - ch.y0) * ch.px] }, 1);
+      g.globalCompositeOperation = "destination-out";
+      const e = Math.max(4, Math.min(28, ch.cw * 0.08, ch.ch * 0.08));
+      const edge = (x0, y0, x1, y1, rx, ry, rw, rh) => {
+        const gr = g.createLinearGradient(x0, y0, x1, y1);
+        gr.addColorStop(0, "rgba(0,0,0,1)");
+        gr.addColorStop(1, "rgba(0,0,0,0)");
+        g.fillStyle = gr;
+        g.fillRect(rx, ry, rw, rh);
+      };
+      edge(0, 0, e, 0, 0, 0, e, ch.ch);
+      edge(ch.cw, 0, ch.cw - e, 0, ch.cw - e, 0, e, ch.ch);
+      edge(0, 0, 0, e, 0, 0, ch.cw, e);
+      edge(0, ch.ch, 0, ch.ch - e, 0, ch.ch - e, ch.cw, e);
+      g.globalCompositeOperation = "source-over";
+      const tex3 = new CanvasTexture(cv);
+      tex3.colorSpace = SRGBColorSpace;
+      tex3.anisotropy = 8;
+      const N9 = 48, pos = [], uv = [], idx = [], v = new Vector3();
+      for (let j = 0; j <= N9; j++) {
+        for (let i = 0; i <= N9; i++) {
+          const x = ch.x0 + ch.tw * i / N9, y = ch.y0 + ch.th * j / N9;
+          uvToSphere(globeU(x, y, this.anchors), y / H, 1.00015, v);
+          pos.push(v.x, v.y, v.z);
+          uv.push(i / N9, 1 - j / N9);
+          if (i < N9 && j < N9) {
+            const a = j * (N9 + 1) + i;
+            idx.push(a, a + N9 + 1, a + 1, a + 1, a + N9 + 1, a + N9 + 2);
+          }
+        }
+      }
+      const geo2 = new BufferGeometry();
+      geo2.setAttribute("position", new Float32BufferAttribute(pos, 3));
+      geo2.setAttribute("uv", new Float32BufferAttribute(uv, 2));
+      geo2.setIndex(idx);
+      geo2.computeVertexNormals();
+      const mesh = new Mesh(geo2, new MeshBasicMaterial({ map: tex3, transparent: true, depthWrite: false, side: DoubleSide }));
+      mesh.renderOrder = 1;
+      this.spin.add(mesh);
+      return mesh;
+    }
+    /** Chart point → css pixels as the globe stands just now; null round the far side of it. */
+    project(x, y) {
+      const v = uvToSphere(globeU(x, y, this.anchors), y / H, 1, this._v);
+      v.applyMatrix4(this.spin.matrixWorld);
+      this._c.copy(this.camera.position).sub(v);
+      if (v.dot(this._c) < 2e-3) return null;
+      v.project(this.camera);
+      if (v.z > 1) return null;
+      const cw = this.el.clientWidth || 1280, chh = this.el.clientHeight || 720;
+      return [(v.x + 1) / 2 * cw, (1 - v.y) / 2 * chh];
+    }
+    /** Which way north is on the screen at chart point (x, y) (radians, screen-up = 0), for arrows drawn there. */
+    northAt(x, y) {
+      const a = this.project(x, y), b = this.project(x, y - 30);
+      return a && b ? Math.atan2(b[0] - a[0], -(b[1] - a[1])) : 0;
+    }
+    /** Turn, settle and draw. */
+    update(dt = 1 / 60) {
+      if (!this.dragging && Math.abs(this.vYaw) + Math.abs(this.vTilt) > 1e-7) {
+        this.yaw += this.vYaw;
+        this.tilt = Math.max(-1.52, Math.min(1.52, this.tilt + this.vTilt));
+        const f = Math.exp(-dt * 3.5);
+        this.vYaw *= f;
+        this.vTilt *= f;
+      }
+      this.dist = 1 + (this.dist - 1) * Math.pow((this.want - 1) / (this.dist - 1), Math.min(1, dt * 9));
+      const cw = this.el.clientWidth || 1280, ch = this.el.clientHeight || 720;
+      this.camera.aspect = cw / ch;
+      this.camera.near = Math.max(2e-4, (this.dist - 1) * 0.3);
+      this.camera.updateProjectionMatrix();
+      this.camera.position.set(0, 0, this.dist);
+      this.camera.lookAt(0, 0, 0);
+      this.camera.updateMatrixWorld(true);
+      this.spin.rotation.set(0, 0, 0);
+      this.spin.rotateX(this.tilt);
+      this.spin.rotateY(this.yaw);
+      this.spin.updateMatrixWorld(true);
+    }
+    render() {
       if (!this.renderer) {
         try {
           this.renderer = new WebGLRenderer({ canvas: this.el, antialias: true, alpha: true });
@@ -114319,27 +114454,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           return;
         }
       }
-      this.prepare(game.surface || game.world);
-      if (this.paint && !this.paint.done) {
-        this.paint.step();
-        this.globe.material.map.needsUpdate = true;
-      }
       const cw = this.el.clientWidth || 1280, ch = this.el.clientHeight || 720, dpr = Math.min(2, window.devicePixelRatio || 1);
       if (this.el.width !== Math.round(cw * dpr) || this.el.height !== Math.round(ch * dpr)) {
         this.renderer.setPixelRatio(dpr);
         this.renderer.setSize(cw, ch, false);
       }
-      this.camera.aspect = cw / ch;
-      this.camera.updateProjectionMatrix();
-      this.camera.position.set(0, 0, this.dist);
-      this.camera.lookAt(0, 0, 0);
-      this.spin.rotation.set(0, 0, 0);
-      this.spin.rotateX(this.tilt);
-      this.spin.rotateY(this.yaw);
-      const p = game.player, onSurface = game.world === game.surface;
-      this.placePin(this.youPin, onSurface ? p.x : null, p.y);
-      const s = game.ships?.find((o) => !o.sunk && o.owner === "player" && o !== p.ship);
-      this.placePin(this.shipPin, s && onSurface ? s.x : null, s?.y);
       this.renderer.render(this.scene, this.camera);
     }
   };
@@ -114387,10 +114506,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const rose = h("div.wm-rose");
     rose.innerHTML = ROSE_SVG;
     let globeOn = true;
-    const flip = h("button.btn.small.wm-flip", { on: { pointerdown: (e) => e.stopPropagation(), click: () => setGlobe(!globeOn) } }, "Flat chart");
+    const flip = h("button.btn.small.wm-flip", { on: { pointerdown: (e) => e.stopPropagation(), click: () => setGlobe(!globeOn, true) } }, "Flat chart");
     const wrap2 = h("div", { style: { position: "absolute", inset: "0", pointerEvents: "auto", cursor: "grab", touchAction: "none" } }, layer, scaleBar, rose, title2, help, close, flip);
     const globe2 = new GlobeView(wrap2);
-    window.__globeDone = () => !!globe2.paint?.done;
+    window.__globe = globe2;
     const globeHere = () => globeOn && game.world === game.surface;
     const setGlobe = (on, keepView = false) => {
       globeOn = on;
@@ -114398,12 +114517,24 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       globe2.show(g);
       flip.textContent = on ? "Flat chart" : "Globe";
       flip.classList.toggle("hidden", game.world !== game.surface);
-      for (const el of [layer, scaleBar, rose]) el.style.visibility = g ? "hidden" : "";
+      rose.style.visibility = g ? "hidden" : "";
       title2.textContent = g ? "The Blue Planet" : "Chart of the Blue Planet";
-      help.textContent = g ? "Drag to turn the globe \xB7 wheel to come closer \xB7 M or Esc to close" : "Drag to pan \xB7 wheel to zoom \xB7 M or Esc to close";
-      if (g && !keepView) {
-        globe2.prepare(game.surface);
-        globe2.face(game.player.x, game.player.y);
+      help.textContent = g ? "Drag to turn the globe \xB7 wheel or double-click to come closer \xB7 M or Esc to close" : "Drag to pan \xB7 wheel to zoom \xB7 M or Esc to close";
+      layer.dataset.key = "";
+      if (g) {
+        globe2.buildBase(game, game.renderer);
+        if (keepView) {
+          globe2.face(cam.x, cam.y);
+          globe2.zoomTo(cam.zoom);
+        } else {
+          globe2.face(game.player.x, game.player.y);
+          globe2.zoomTo(0.02);
+        }
+      } else if (keepView) {
+        const c = globe2.centre();
+        cam.x = c.x;
+        cam.y = c.y;
+        cam.zoom = Math.max(MIN_ZOOM(), Math.min(MAX_ZOOM, globe2.zoomPx()));
       }
     };
     const detail = game.chartDetail = new ChartDetail();
@@ -114446,9 +114577,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (pinch && ptrs.size >= 2) {
         const [a, b] = [...ptrs.values()];
         const d = Math.max(20, Math.hypot(a.x - b.x, a.y - b.y));
-        zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch.d);
+        if (globeHere()) globe2.zoom(d / pinch.d);
+        else zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch.d);
         pinch.d = d;
       } else if (drag && globeHere()) {
+        globe2.dragging = true;
         globe2.drag(e.clientX - drag.lx, e.clientY - drag.ly);
         drag.lx = e.clientX;
         drag.ly = e.clientY;
@@ -114475,6 +114608,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (!ptrs.size) {
         drag = null;
         wrap2.style.cursor = "grab";
+        globe2.dragging = false;
       } else if (ptrs.size === 1 && !drag) {
         const [a] = [...ptrs.values()];
         startDrag(a.x, a.y);
@@ -114485,24 +114619,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     wrap2.addEventListener("wheel", (e) => {
       e.preventDefault();
       if (globeHere()) {
-        if (!globe2.zoom(e.deltaY > 0 ? 0.88 : 1.14)) {
-          const c = globe2.centre();
-          cam.x = c.x;
-          cam.y = c.y;
-          cam.zoom = 0.45;
-          setGlobe(false);
-        }
-        return;
-      }
-      if (e.deltaY > 0 && game.world === game.surface && cam.zoom <= MIN_ZOOM() * 1.001) {
-        setGlobe(true, true);
-        globe2.prepare(game.surface);
-        globe2.face(cam.x, cam.y);
-        globe2.dist = 4.2;
+        globe2.zoom(e.deltaY > 0 ? 0.8 : 1.25);
         return;
       }
       zoomAt(e.clientX, e.clientY, e.deltaY > 0 ? 0.85 : 1.18);
     }, { passive: false });
+    wrap2.addEventListener("dblclick", (e) => {
+      if (globeHere()) {
+        e.preventDefault();
+        globe2.zoom(2.5);
+      }
+    });
     game.openMap = () => {
       if (ui.mapOpen) return;
       help.textContent = game.creative?.on ? "Click anywhere to travel there \xB7 drag to pan \xB7 wheel to zoom \xB7 M or Esc to close" : "Drag to pan \xB7 wheel to zoom \xB7 M or Esc to close";
@@ -114527,7 +114654,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       }
       help.textContent = game.input.touch?.on ? "Drag to pan \xB7 pinch to zoom \xB7 tap the cross to close" : "Drag to pan \xB7 wheel to zoom \xB7 M or Esc to close";
       wrap2.classList.remove("hidden");
-      globe2.dist = 4.2;
       setGlobe(true);
       layer.classList.remove("hidden");
       ui.root.classList.add("map-open");
@@ -114548,9 +114674,22 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     game.renderMap = () => {
       const r4 = game.renderer;
       if (globeHere()) {
-        globe2.render(game);
+        const now3 = performance.now(), dt = Math.min(0.1, (now3 - (globe2.lastT || now3)) / 1e3);
+        globe2.lastT = now3;
+        globe2.update(dt);
+        const c2 = game.state.char, w2 = game.surface, discovered2 = new Set(c2.discovered || []);
+        globe2.layIslands(game, detail, (isl) => game.creative?.on || discovered2.has(isl.id) || isl === game.currentIsland || seenIsland(w2, isl));
+        globe2.render();
         r4.ctx.setTransform(1, 0, 0, 1, 0, 0);
         r4.ctx.clearRect(0, 0, r4.canvas.width, r4.canvas.height);
+        const z = globe2.zoomPx();
+        drawLabels(game, r4, cam, layer, {
+          z,
+          toS: (x, y) => globe2.project(x, y) || [-1e5, -1e5],
+          north: (x, y) => globe2.northAt(x, y),
+          key: `g|${globe2.yaw.toFixed(4)}|${globe2.tilt.toFixed(4)}|${globe2.dist.toFixed(5)}|${Math.floor(now3 / 600)}`
+        });
+        drawScale(scaleBar, z);
         return;
       }
       const saved = { ...r4.cam };
@@ -114587,16 +114726,16 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       Object.assign(r4.cam, saved);
     };
   }
-  function drawLabels(game, r4, cam, layer) {
+  function drawLabels(game, r4, cam, layer, proj = null) {
     const w = game.world;
     const zone = w !== game.surface;
     const c = game.state.char;
-    const z = cam.zoom;
-    const key2 = `${w.id}|${cam.x.toFixed(2)}|${cam.y.toFixed(2)}|${z.toFixed(4)}|${r4.cw}x${r4.ch}|${Math.floor(performance.now() / 600)}`;
+    const z = proj ? proj.z : cam.zoom;
+    const key2 = proj ? proj.key : `${w.id}|${cam.x.toFixed(2)}|${cam.y.toFixed(2)}|${z.toFixed(4)}|${r4.cw}x${r4.ch}|${Math.floor(performance.now() / 600)}`;
     if (layer.dataset.key === key2) return;
     layer.dataset.key = key2;
     clear(layer);
-    const toS = (x, y) => {
+    const toS = proj ? proj.toS : (x, y) => {
       let dx = x - cam.x;
       if (!zone) dx -= W * Math.round(dx / W);
       return [dx * z + r4.cw / 2, (y - cam.y) * z + r4.ch / 2];
@@ -114702,7 +114841,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const [mx, my] = toS(p.x, p.y);
     const yaw = game.view3d?.rig?.yaw ?? p.facing ?? 0;
     const me = h("div.wm-me", { style: { left: mx + "px", top: my + "px" } }, h("i"));
-    me.firstChild.style.transform = `rotate(${(yaw + Math.PI / 2).toFixed(3)}rad)`;
+    me.firstChild.style.transform = `rotate(${(yaw + Math.PI / 2 + (proj?.north?.(p.x, p.y) || 0)).toFixed(3)}rad)`;
     layer.appendChild(me);
   }
   function seenIsland(w, isl) {
