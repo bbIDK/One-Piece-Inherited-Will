@@ -1465,7 +1465,14 @@ export class Actor extends Entity {
     if (this.climb.ride) { rideStep(this, dt, game); return; }
     const c = this.climb, w = game.world, to = c.to;
     if (to.ship && (to.ship.sunk || to.ship.alive === false)) { this.endClimb(game, true); return; }
-    c.t += dt;
+    // (up a ladder yourself: W climbs, S goes back down — off the foot of it
+    // you let go — Space lets go anywhere; only the last of it, over her rail,
+    // goes on by itself)
+    if (to.ladder && this.isPlayer && c.t / c.T < 0.82) {
+      if (this.letGo) { this.letGo = false; this.endClimb(game, true); return; }
+      c.t += dt * (this.climbInput || 0);
+      if (c.t < 0) { this.endClimb(game, true); return; }
+    } else c.t += dt;
     const k = Math.min(1, c.t / c.T);
     if (to.ladder) { this.ladderClimb(game, c, k); return; }
     let x0 = c.x0, y0 = c.y0, x1, y1, h1;

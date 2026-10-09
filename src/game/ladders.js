@@ -51,6 +51,7 @@ export function ladderAt(game, a, reach = 1.5, only = null) {
 export function climbLadder(game, a, at) {
   a.startClimb(game, { ship: at.ship, t: at.foot.deck.t, v: at.foot.deck.v, ladder: at.l });
   game.audio?.sfx('step', a);
+  if (a.isPlayer) game.hint?.('ladder', 'On the ladder: hold W to climb, S to climb down, Space to let go.');
 }
 
 export function installLadders(game) {

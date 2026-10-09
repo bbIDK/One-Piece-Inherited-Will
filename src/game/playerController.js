@@ -140,6 +140,11 @@ export class PlayerController {
         this.jumpHold = null; p.charging = 0; buf.jump = 0;
       }
     } else if (buf.jump > 0 && p.tryJump(game, 0)) buf.jump = 0;
+    // on a ship's ladder you climb it yourself: W up, S down, Space lets go (actor.js updateClimb)
+    if (p.climb?.to?.ladder) {
+      p.climbInput = (inp.isDown('W') || inp.isDown('ArrowUp') ? 1 : 0) - (inp.isDown('S') || inp.isDown('ArrowDown') ? 1 : 0);
+      if (inp.wasPressed('Space')) p.letGo = true;
+    } else { p.climbInput = 0; p.letGo = false; }
     // Alt crouches: you sneak about (slower, quieter, harder to spot) while it's
     // held — a quick tap keeps you down until the next. Running, jumping, a
     // blow, the water or the air stand you up.
