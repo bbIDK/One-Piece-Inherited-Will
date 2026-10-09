@@ -13378,7 +13378,7 @@
     downSpeed: 28
     // …and of the torrent down
   };
-  var UP_PTS = [[1150, 2020], [620, 1900], [300, 1560], [150, 950], [70, 420], [24, 70], [8, 22]];
+  var UP_PTS = [[780, 2260], [440, 2190], [236, 2085], [205, 1800], [182, 1400], [150, 950], [70, 420], [24, 70], [8, 22]];
   var EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
   var CANALS = [
     { id: "east_blue", sx: 1, sy: -1 },
@@ -25382,6 +25382,7 @@
         } else this.haki = Math.min(d.maxHaki, this.haki + d.hakiRegen * dt);
       }
       let regen = (this.fruitDef?.passive?.regen || 0) + d.hpRegen * (this.inCombat ? 0.2 : 1);
+      regen *= this.regenMul ?? 1;
       for (const b of this.buffs) if (b.regen) regen += b.regen;
       const rested = this.isPlayer || !this.game || (this.game.time || 0) - (this.lastHitT || -999) > 45;
       if (this.hp < d.maxHp && this.state === "idle" && rested && !this.needsHurt) this.hp = Math.min(d.maxHp, this.hp + regen * dt);
@@ -28344,7 +28345,8 @@
     hot_tea: { name: "Hot Tea", icon: "", type: "food", heal: 10, water: 0.35, food: 0.02, warm: 1.2, price: 25, desc: "Steaming hot: it warms you through in the cold." },
     sake: { name: "Sake", icon: "\u{1F376}", type: "food", heal: 10, water: 0.15, price: 120, buff: { id: "tipsy", name: "Tipsy", dur: 60, mods: { damage: 1.08, defMul: 1.1 } }, desc: "Dutch courage." },
     cola: { name: "Cola Barrel", icon: "\u{1F964}", type: "material", price: 500, desc: "Fuel for Coup de Burst and for certain cyborgs." },
-    bandage: { name: "Bandages", icon: "\u{1FA79}", type: "medicine", heal: 55, price: 70, desc: "Stops the bleeding.", cure: ["bleed"] },
+    bandage: { name: "Bandages", icon: "\u{1FA79}", type: "medicine", heal: 55, price: 70, apply: "wrap", useTime: 3.5, desc: "Wrap them round the wound: it takes a few seconds, and a blow stops you. Stops the bleeding.", cure: ["bleed"] },
+    medkit: { name: "Ship's Medical Kit", icon: "", type: "medicine", heal: 140, price: 260, apply: "wrap", useTime: 6, desc: "Gauze, splints and salve: patches up serious wounds, given time and nobody hitting you. Stops the bleeding.", cure: ["bleed"] },
     antidote: { name: "Antidote", icon: "\u{1F9EA}", type: "medicine", heal: 20, price: 150, cure: ["poison"], desc: "Neutralises most poisons." },
     rumble_ball: { name: "Rumble Ball", icon: "\u{1F7E1}", type: "medicine", price: 8e3, buff: { id: "rumble", name: "Rumble", dur: 180, mods: { damage: 1.2, speedMul: 1.1 } }, desc: "Chopper's invention. Strengthens you for three minutes." },
     // foraged from trees (E next to a palm or fruit tree)
@@ -28533,6 +28535,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (!p || !n || !w || !env2 || p.dead || p.state === "dead") return;
       if (!S6.enabled() || dt <= 0) {
         p.needsHurt = false;
+        p.regenMul = 1;
         S6.felt = env2.tempC;
         return;
       }
@@ -28574,6 +28577,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (n.body < 35) hurt += (35 - n.body) * 0.6;
       if (n.body > 39) hurt += (n.body - 39) * 0.8;
       p.needsHurt = hurt > 0;
+      p.regenMul = 0.3 + 1.7 * Math.min(1, (n.food + n.water) / 2);
       if (hurt > 0 && p.hp > 1) p.hp = Math.max(1, p.hp - hurt * dt * (p.d.maxHp / 150));
       warn("food", n.food < 0.2, n.food <= 0 ? "You are starving: eat something, or you will keep weakening." : "You're getting hungry.", "#ffcc80");
       warn("water", n.water < 0.2, "You're thirsty. Drink: a flask, a coconut, or crouch at a stream.", "#81d4fa");
@@ -70880,6 +70884,7 @@ ${GLSL}
     cola: ["barrel", { label: "cola", hoop: "#c23b2e" }],
     p2_cola_barrel: ["barrel", { label: "cola", hoop: "#c23b2e" }],
     bandage: ["bandage"],
+    medkit: ["pouch"],
     antidote: ["vial"],
     rumble_ball: ["pill"],
     tension_hormone: ["syringe"],
@@ -92163,6 +92168,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
   function heldPose(P6, a, t) {
     P6.hand = "hold";
+    if (a.eating?.wrap) {
+      const e = a.eating, k = Math.min(1, e.t / 0.3), w = e.t * 10;
+      P6.hB = [0.3 * k + 0.05 * (1 - k), 0.16 * k + 0.4 * (1 - k)];
+      P6.eB = 1;
+      P6.hF = [0.3 * k + 0.06 * Math.cos(w) * k, 0.16 * k + 0.07 * Math.sin(w) * k + 0.4 * (1 - k)];
+      P6.eF = 1;
+      P6.hand = "hold";
+      P6.handB = "fist";
+      P6.ht = (P6.ht || 0) + 0.16 * k;
+      return;
+    }
     if (a.eating) {
       if (a.eating.t > 0.09) P6.hand = "eat";
       const e = a.eating, k = Math.min(1, e.t / 0.18);
@@ -92639,7 +92655,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const holding = !!p.held && !swimming && !A2 && p.state !== "hurt";
       this.holdK = (this.holdK ?? 0) + ((holding ? 1 : 0) - (this.holdK ?? 0)) * Math.min(1, dtv * 10);
       let holdAt = null;
-      if (holding) {
+      if (holding && p.eating?.wrap && p.eating.id === p.held) {
+        const e = p.eating, k = Math.min(1, e.t / 0.3), w = e.t * 10;
+        PP = { ...PP, hB: [0.3, 0.1 * k + 0.4 * (1 - k)], eB: 1, hF: [0.3 + 0.06 * Math.cos(w) * k, 0.1 + 0.07 * Math.sin(w) * k + 0.4 * (1 - k)], eF: 1, hand: "hold", handB: "fist" };
+      } else if (holding) {
         const e = p.eating && p.eating.id === p.held ? p.eating : null;
         const k = e ? Math.min(1, e.t / 0.18) : 0;
         const bite = e ? Math.max(0, Math.sin(e.t / 0.36 * Math.PI * 2)) : 0;
@@ -113500,7 +113519,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     if (!d || !count(c, id)) return false;
     if (d.type === "food" || d.type === "medicine") {
       if (p.state !== "idle") return false;
-      let heal = d.heal || 0;
+      let heal = d.type === "food" ? 0 : d.heal || 0;
       if (d.type === "food") {
         if (c.traits.includes("iron_stomach")) heal *= 1.3;
         if (c.flags?.allBlue) heal *= 1.25;
@@ -113519,7 +113538,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (d.buff) p.addBuff({ ...d.buff });
       if (heal >= 1) game.fx.text(p.x, p.y - 1.6, `+${Math.round(heal)}`, "#69f0ae", 0.45);
       game.survival?.consume(id);
-      game.audio?.sfx(d.water > (d.food ?? 0.2) ? "sip" : "eat");
+      game.audio?.sfx(d.type === "medicine" ? d.apply === "wrap" ? "wrap_done" : "eat" : d.water > (d.food ?? 0.2) ? "sip" : "eat");
       removeItem(game, id, 1);
       return true;
     }
@@ -113882,11 +113901,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         return;
       }
       const d = ITEMS[id];
-      if (!p.eating || p.eating.id !== id) p.eating = { id, t: 0, dur: EAT_TIME[d.type] || 1.25, bites: 0 };
+      if (!p.eating || p.eating.id !== id) p.eating = { id, t: 0, dur: d.useTime || EAT_TIME[d.type] || 1.25, bites: 0, wrap: d.apply === "wrap" };
       const e = p.eating;
       e.t += dt;
       const b = Math.floor(e.t / BITE);
-      if (b > e.bites && e.t < e.dur - 0.1) {
+      if (e.wrap) {
+        const w = Math.floor(e.t / 0.62);
+        if (w > e.bites && e.t < e.dur - 0.2) {
+          e.bites = w;
+          game.audio?.sfx("wrap", p);
+        }
+      } else if (b > e.bites && e.t < e.dur - 0.1) {
         e.bites = b;
         game.audio?.sfx(d.type === "medicine" ? "page" : "bite", p);
       }
@@ -117637,9 +117662,9 @@ button:disabled { cursor: not-allowed; }
 
   // src/data/shops.js
   var STOCK = {
-    general: ["water_flask", "hot_tea", "meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
+    general: ["water_flask", "hot_tea", "meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "medkit", "antidote", "sake", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
     // (in the four Blues, where everyone's journey starts, the general store keeps a rack of old swords)
-    general_blue: ["water_flask", "hot_tea", "meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "antidote", "sake", "wooden_sword", "rusty_katana", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
+    general_blue: ["water_flask", "hot_tea", "meat", "rice_ball", "fish_stew", "coconut", "apple", "bandage", "medkit", "antidote", "sake", "wooden_sword", "rusty_katana", "bandana", "headband", "traveller_hood", "lucky_charm", "shell_bracelet", "den_den_mushi"],
     tavern: ["water_flask", "milk", "hot_tea", "meat", "rice_ball", "fish_stew", "sake", "tangerine", "mango"],
     weapons_blue: ["wooden_sword", "rusty_katana", "cutlass", "slingshot", "flintlock", "bo_staff", "woodsman_axe", "padded_vest", "leather_jerkin", "leather_bracers", "iron_ring"],
     weapons_grand: ["cutlass", "fine_katana", "marine_saber", "flintlock", "marine_rifle", "bo_staff", "woodsman_axe", "shigure", "leather_jerkin", "chain_shirt", "hand_wraps", "iron_ring"],
@@ -122533,7 +122558,11 @@ ${s.why[0].toUpperCase() + s.why.slice(1)}` : ""}`;
     if (d.type === "weapon") parts.push(`${title(d.kind || "weapon")} \xB7 power \xD7${d.power}${d.grade ? " \xB7 " + d.grade : ""}`);
     if (d.armor) parts.push(`Defence +${Math.round(d.armor * 100)}%`);
     if (d.bonus) parts.push(Object.entries(d.bonus).map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${ATTRS[k]?.short || k.toUpperCase()}`).join("  "));
-    if (d.heal) parts.push(d.heal > 9999 ? "Full health" : `+${d.heal} health`);
+    if (d.type === "food") {
+      const n = nourishment(d);
+      if (n.food >= 0.01) parts.push(`Hunger +${Math.round(n.food * 100)}%`);
+      if (n.water >= 0.01) parts.push(`Thirst +${Math.round(n.water * 100)}%`);
+    } else if (d.heal) parts.push(d.heal > 9999 ? "Full health" : `+${d.heal} health${d.apply === "wrap" ? ` (${d.useTime || 3.5}s to apply)` : ""}`);
     if (d.buff) parts.push(`${d.buff.name} for ${d.buff.dur}s`);
     return parts.join(" \xB7 ");
   }
@@ -161141,6 +161170,28 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         }
         v.tone(0.4, 0.12, { freq: 300, to: 120, gain: 0.08 });
         v.formant(0.4, 0.1, { f1: 300, f2: 700, q: 3, gain: 0.15, attack: 0.01 });
+      }
+    },
+    /** A turn of bandage round the arm: cloth drawn tight, a soft rasp. */
+    wrap: {
+      prio: 4,
+      cd: 0.3,
+      max: 1,
+      variants: 3,
+      play(v, k) {
+        v.noise(0, 0.22, { freq: [2400, 2800, 2100][k.rr] * r(), sweep: 1600, q: 1.1, gain: 0.07, attack: 0.04, curve: "lin" });
+        v.noise(0.16, 0.06, { freq: 900, q: 2, gain: 0.05, attack: 5e-3 });
+      }
+    },
+    /** The bandage tied off: a tug and a pat. */
+    wrap_done: {
+      prio: 5,
+      cd: 0.3,
+      max: 1,
+      play(v) {
+        v.noise(0, 0.12, { freq: 1800, sweep: 3200, q: 1.4, gain: 0.08, attack: 0.01 });
+        v.tone(0.13, 0.06, { freq: 180, to: 120, gain: 0.12, attack: 4e-3 });
+        v.tone(0.24, 0.05, { freq: 170, to: 115, gain: 0.09, attack: 4e-3 });
       }
     },
     /** GULP: a swallow of water, a little glug behind it. */
