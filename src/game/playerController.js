@@ -423,8 +423,10 @@ export class PlayerController {
       // moment later — no snapping round: Ship.steer, tuned in boatFeel.js)
       const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
       s.steer(turn, steer, dt);
-      if (ahead) { s.sail = Math.min(1, s.sail + dt * 0.9); s.anchored = false; }
-      if (back) s.sail = Math.max(0, s.sail - dt * 1.2);
+      // sails are up or down, nothing between: W sets them, S takes them in
+      // (the canvas still runs up and down the yards, just quickly: Ship.update)
+      if (inp.wasPressed('W') || inp.wasPressed('ArrowUp') || (tc && tc.my < -0.45 && s.sail < 1)) s.setSails(true);
+      if (inp.wasPressed('S') || inp.wasPressed('ArrowDown') || (tc && tc.my > 0.45 && s.sail > 0)) s.setSails(false);
       s.rowing = inp.isDown('Space') ? 1 : 0;
       if (s.rowing) s.anchored = false;
     }

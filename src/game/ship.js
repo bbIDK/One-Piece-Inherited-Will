@@ -26,7 +26,7 @@ const _sp = [0, 0];
  * POS_SCALE), so a ship under full sail with the wind behind her makes a
  * crossing between neighbouring islands in a couple of minutes.
  */
-const SEA_PACE = 2;
+const SEA_PACE = 1.5;
 
 const NONE = [];
 /**
@@ -185,7 +185,8 @@ export class Ship extends Entity {
       // (each stroke surges her on and she slows between; backing water is slower)
       target = this.def.speed * pull * (pull < 0 ? 0.55 : 1) * (0.78 + 0.44 * this.drive);
     } else {
-      this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
+      // (the canvas runs up or down the yards in about half a second)
+      this.sailSet = this.sailSet < this.sail ? Math.min(this.sail, this.sailSet + dt * 2.2) : Math.max(this.sail, this.sailSet - dt * 2.6);
       const rel = Math.cos(angleDiff(this.heading, windA));
       // (beating into the wind she still makes good way — tacking, as a real ship would — just not her best)
       const windFactor = (0.62 + 0.38 * clamp((rel + 0.4) / 1.4, 0, 1)) * windS;
@@ -355,6 +356,12 @@ export class Ship extends Entity {
       for (const [px, py] of pts) if (hullGap(o, w.dx(o.x, px), py - o.y) <= 0) return o;
     }
     return null;
+  }
+
+  /** Set all sail (true) or take it all in (false): no half measures. */
+  setSails(on) {
+    this.sail = on ? 1 : 0;
+    if (on) this.anchored = false;
   }
 
   /** Lying still: moored, anchored, hove to or just stopped — no way on her, no sail set, nobody rowing. */
