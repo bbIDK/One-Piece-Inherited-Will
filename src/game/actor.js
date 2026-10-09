@@ -1004,7 +1004,9 @@ export class Actor extends Entity {
         if (this.haki <= 0) { this.haki = 0; this.observation = false; this.hakiSpent('observation'); }
       } else this.haki = Math.min(d.maxHaki, this.haki + d.hakiRegen * dt);
     }
-    let regen = (this.fruitDef?.passive?.regen || 0) + d.hpRegen * (this.inCombat ? 0.2 : 1);
+    // (you heal back in a minute or two out of a fight, a well-fed body faster still: see survival.js)
+    const base = this.isPlayer ? Math.max(d.hpRegen * 2.5, d.maxHp * 0.012) : d.hpRegen;
+    let regen = (this.fruitDef?.passive?.regen || 0) + base * (this.inCombat ? 0.2 : 1);
     // (a form that heals as it fights: the Phoenix's)
     regen *= this.regenMul ?? 1;
     for (const b of this.buffs) if (b.regen) regen += b.regen;

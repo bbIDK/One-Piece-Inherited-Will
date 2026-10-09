@@ -600,7 +600,7 @@ export class Sky {
       this.lightDir.set(this.lightDir.x * k, MIN_LIGHT_Y, this.lightDir.z * k);
     }
     const weatherK = (1 - ov * 0.72) * (1 - storm * 0.2) * (1 - dust * 0.35);
-    this.sun.intensity = (sunUp ? 2.4 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y) * (0.6 + 0.4 * moonLit))
+    this.sun.intensity = (sunUp ? 2.15 * Math.min(1, day + 0.15) * sm(0, 0.1, this.sunDir.y) : 0.5 * sm(0, 0.15, -this.sunDir.y) * sm(0, 0.1, moon.y) * (0.6 + 0.4 * moonLit))
       * weatherK * (zone === 3 ? 0.25 : zone === 2 ? 0.35 + 0.5 * ib : zone === 1 ? 0.7 : 1);
     // (and the low sun's shadows grow fainter as it goes down)
     this.sun.shadow.intensity = (1 - sm(0.3, 0.9, ov) * 0.85) * (sunUp ? 1 - 0.5 * low : 0.75);

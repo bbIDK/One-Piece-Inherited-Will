@@ -87,6 +87,10 @@ const InkGradeShader = {
       c.rgb = mix(vec3(l), c.rgb, uSat);
       c.rgb = max((c.rgb - 0.18) * uContrast + 0.18, 0.0);
       c.rgb *= mix(vec3(0.95, 0.98, 1.05), vec3(1.05, 1.01, 0.95), smoothstep(0.03, 0.5, l));
+      // a soft shoulder on the highlights: white sand, pale stone and sunlit
+      // walls under a tropical noon roll off gently instead of glaring out
+      vec3 hi = max(c.rgb - 0.6, 0.0);
+      c.rgb = min(c.rgb, 0.6) + 0.55 * (1.0 - exp(-hi / 0.55));
       // vignette
       vec2 q = vUv - 0.5;
       c.rgb *= 1.0 - uVignette * dot(q, q) * 1.6;
