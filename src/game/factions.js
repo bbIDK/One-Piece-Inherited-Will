@@ -7,7 +7,7 @@
 //    turn in the bounties of pirates they defeat (the bounty hunter's life).
 import { SHIPS } from '../data/ships.js';
 import { addItem, earn, equip, count } from './inventory.js';
-import { persist } from './lineage.js';
+import { persist, refreshPlayer } from './lineage.js';
 import { threatFactor } from './stats.js';
 import { formatBerries } from '../core/math.js';
 import { sightRange } from './traffic.js';
@@ -93,7 +93,7 @@ function installFleet(game) {
   game.on('characterStart', clear);
   game.on('enterZone', clear);
   game.on('leaveZone', clear);
-  game.on('marineRankChanged', (r) => { if (!r) clear(); });
+  game.on('marineRankChanged', (r) => { if (!r) clear(); if (game.player?.char) refreshPlayer(game); });
   game.on('tick', (dt) => {
     if ((t -= dt) > 0) return;
     t = 1;

@@ -3,6 +3,7 @@
 //  "Inherited Will, the Swell of the Ages, and the Dreams of the People. As
 //   long as people continue to pursue the meaning of Freedom, these things
 //   will never cease!" — Gol D. Roger
+import { marineUniform } from '../data/uniforms.js';
 import { RNG } from '../core/rng.js';
 import { RACES, rollRace, makeLook } from '../data/races.js';
 import { ITEMS } from '../data/items.js';
@@ -390,6 +391,9 @@ export function migrateHotbar(c) {
 
 export function equippedLook(char) {
   const look = { ...char.look };
+  // (a serving Marine wears the uniform of their rank: data/uniforms.js)
+  const uni = char.faction === 'marine' && char.uniform !== false ? marineUniform(char.marineRank) : null;
+  if (uni) Object.assign(look, uni.look);
   const hat = ITEMS[char.equipped?.hat];
   if (hat?.look) Object.assign(look, hat.look);
   const coat = ITEMS[char.equipped?.coat];

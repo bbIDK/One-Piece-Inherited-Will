@@ -3,7 +3,8 @@
 import { h, clear, add } from './dom.js';
 import { CREW_ROLES, crewWords } from '../game/crew.js';
 import { drawJollyRoger, drawMarineEmblem } from '../render/ship.js';
-import { persist } from '../game/lineage.js';
+import { persist, refreshPlayer } from '../game/lineage.js';
+import { marineUniform } from '../data/uniforms.js';
 import { uiImg } from './icon.js';
 
 const JR_OPTS = {
@@ -71,6 +72,8 @@ export function openCrew(game) {
       add(body, h('div.crew-head', flagCanvas(null, 120, 86, true), h('div',
         h('h2', `${c.marineRank} ${c.name}`),
         h('p', 'You sail under the flag of the World Government. Marines cannot found a pirate crew — resign first if the sea calls you another way.'),
+        h('p.muted', `Uniform: ${marineUniform(c.marineRank)?.name || 'none'}. It changes as you rise through the ranks.`),
+        h('button.btn', { on: { click: () => { c.uniform = c.uniform === false; refreshPlayer(game); persist(game); render(); } } }, c.uniform === false ? 'Put the uniform on' : 'Take the uniform off'),
         fleetInfo(game))));
     } else if (!c.crewName) {
       if (!found.name) found.name = `${c.name.split(' ')[0]} Pirates`;
