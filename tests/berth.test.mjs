@@ -54,14 +54,16 @@ for (const type of ['sloop', 'caravel', 'galleon']) {
     assert.ok(b.main >= 3 && b.other === 0, `the head beside her main deck only (${JSON.stringify(b)})`);
   });
 
-  test(`a ${type} at a short pier lies alongside its head (bow in if she must), her main deck beside it`, () => {
+  test(`a ${type} at a short pier lies alongside its head (bow out if it can be, so you sail straight off), her main deck beside it`, () => {
     const { w, dock, end } = harbour(0);
     const s = new Ship({ type, x: dock.moor.x, y: dock.moor.y, heading: 0 });
     assert.ok(s.berth(w, dock), 'berthed');
     assert.ok(s.fits(w, s.x, s.y, s.heading), 'afloat');
     assert.ok(Math.abs(Math.cos(s.heading)) < 0.01, `alongside the pier (heading ${s.heading.toFixed(2)})`);
+    const out = Math.sin(s.heading) > 0;
     const b = beside(w, s, end);
-    assert.ok(b.main >= 3 && b.other === 0, `the head beside her main deck only (${JSON.stringify(b)})`);
+    // (bow out, a metre or more of the head beside her waist; bow in, the whole of it)
+    assert.ok(b.main >= (out ? 1 : 3) && b.other <= (out ? 1 : 0), `the head beside her main deck only (${JSON.stringify(b)}, bow ${out ? 'out' : 'in'})`);
   });
 
   test(`a ${type} at a pier with a reef off the beach still has her waist to the head`, () => {

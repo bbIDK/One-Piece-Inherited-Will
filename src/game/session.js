@@ -38,7 +38,11 @@ export function installSession(game, { onReturnToTitle }) {
     const dock = extra.heading === undefined ? dockNear(game.world, x, y) : null;
     if (s.def.big && extra.heading === undefined) {
       // a big ship lies alongside the pier head, bow out to sea (or out in the roads if she won't fit)
-      if (!(dock && s.berth(game.world, dock)) && !s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
+      if (!(dock && s.berth(game.world, dock))) {
+        // (no berth: out in the roads, bow to the open sea, ready to sail)
+        if (dock) s.heading = Math.atan2(dock.dirY ?? 1, dock.dirX ?? 0);
+        if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);
+      }
     } else if (dock && s.moorAlongside(game.world, dock)) {
       // (a small one ties up right alongside it: step down off the pier onto her deck)
     } else if (!s.fits(game.world, s.x, s.y, s.heading)) s.unstick(game.world, true);

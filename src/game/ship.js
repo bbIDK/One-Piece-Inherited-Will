@@ -470,13 +470,14 @@ export class Ship extends Entity {
     const beside = (along, h) => [1, -1].some((sg) => lie(w.wx(ex + dx * along - dy * sg * off), ey + dy * along + dx * sg * off, h));
     // 1. bow out, the whole head beside her main deck (u = -along - 2.5 .. -along + 0.5)
     for (let along = -m0 - 2.5; along >= 0.5 - m1; along -= 0.5) if (beside(along, hd)) return true;
-    // 2. bow in, the whole head beside her main deck (u = along - 0.5 .. along +
+    // 2. bow out still, a metre or more of the head's end beside her main deck
+    // at least (jumped from there: off her, onto the head's breadth of planks)
+    // — better than bow in: you sail straight off, no turning her round in the shallows
+    for (let along = -m0 - 2; along <= -m0 - 0.5; along += 0.5) if (beside(along, hd)) return true;
+    // 3. bow in, the whole head beside her main deck (u = along - 0.5 .. along +
     // 2.5): she lies further out so, her stern in the deep water and her bow
     // tapering in toward the shallows
     for (let along = m1 - 2.5; along >= m0 + 0.5; along -= 0.5) if (beside(along, hd + Math.PI)) return true;
-    // 3. bow out, a metre or more of the head's end beside her main deck at
-    // least (jumped from there: off her, onto the head's breadth of planks)
-    for (let along = -m0 - 2; along <= -m0 - 0.5; along += 0.5) if (beside(along, hd)) return true;
     // (or bow in, the head's end beside the forward end of her main deck)
     for (let along = m1 - 2; along <= m1 - 0.5; along += 0.5) if (beside(along, hd + Math.PI)) return true;
     // 4. across the end of the head: her side 0.9 m off its face, the middle

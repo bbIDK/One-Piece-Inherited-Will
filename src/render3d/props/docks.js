@@ -96,8 +96,9 @@ function pierTile(k, i, j, x0, y0, info, { water, pier, floor }) {
     if (parity) {
       const px = alongEdgeX ? i : ex - dx * 0.1, pz = alongEdgeX ? ez - dz * 0.1 : j;
       const f = floor(px + dx * 0.3, pz + dz * 0.3);
-      // (up past the deck as the rail posts along the pier's sides; flush with it elsewhere)
-      const rail = side && !info.head;
+      // (up past the deck as the rail posts along the pier's sides — the head's too, so the rope
+      // rail running up to it ends on a post; flush with the deck across its ends)
+      const rail = side;
       const up = rail ? 0.95 : -0.04;
       k.add(cyl(0.15, 0.18, top + up - f, 8), { at: [px, f, pz], color: PILE, outline: 0.015 });
       if (rail) k.add(cyl(0.17, 0.17, 0.06, 8), { at: [px, top + up, pz], color: '#4a3223' });
@@ -117,6 +118,14 @@ function pierTile(k, i, j, x0, y0, info, { water, pier, floor }) {
         // and a rope rail between the rail posts along the pier's sides
         if (side && !info.head) {
           const r = Math.hypot(nx - px, nz - pz);
+          // (the rope ends on a post: where no rail post stands two tiles on — the pier turns, or
+          // ends at the shore — one of its own)
+          const ahead = alongEdgeX ? pier(i + 2, j) && water(i + 2 + dx, j + dz) : pier(i, j + 2) && water(i + dx, j + 2 + dz);
+          if (!ahead) {
+            const fn = floor(nx + dx * 0.3, nz + dz * 0.3);
+            k.add(cyl(0.15, 0.18, top + 0.95 - fn, 8), { at: [nx, fn, nz], color: PILE, outline: 0.015 });
+            k.add(cyl(0.17, 0.17, 0.06, 8), { at: [nx, top + 0.95, nz], color: '#4a3223' });
+          }
           k.add(cyl(0.025, 0.025, r, 4), { at: [px, top + 0.82, pz], rot: alongEdgeX ? [0, 0, -Math.PI / 2] : [Math.PI / 2, 0, 0], color: ROPE });
           k.add(cyl(0.02, 0.02, r, 4), { at: [px, top + 0.45, pz], rot: alongEdgeX ? [0, 0, -Math.PI / 2] : [Math.PI / 2, 0, 0], color: ROPE });
         }
