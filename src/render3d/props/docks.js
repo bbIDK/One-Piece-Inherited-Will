@@ -90,7 +90,9 @@ function pierTile(k, i, j, x0, y0, info, { water, pier, floor }) {
     const side = alongEdgeX === alongX;
     // the stringer under the edge and a trim board on it
     k.add(box(alongEdgeX ? 1.0 : 0.16, 0.34, alongEdgeX ? 0.16 : 1.0), { at: [ex - dx * 0.08, top - 0.5, ez - dz * 0.08], color: TRIM });
-    k.add(box(alongEdgeX ? 1.02 : 0.1, 0.14, alongEdgeX ? 0.1 : 1.02), { at: [ex + dx * 0.02, top - 0.14, ez + dz * 0.02], color: '#7a5638' });
+    // (its top a centimetre and a half under the planks, not level with them; a tile long exactly, not lapped
+    // over the next one's in the same plane — either way the two flickered)
+    k.add(box(alongEdgeX ? 1.0 : 0.1, 0.125, alongEdgeX ? 0.1 : 1.0), { at: [ex + dx * 0.02, top - 0.14, ez + dz * 0.02], color: '#7a5638' });
     // a piling at every other tile corner along the edge, standing on the sea bed and up past the deck
     const parity = ((alongEdgeX ? wx : wy) & 1) === 0;
     if (parity) {
@@ -202,8 +204,10 @@ function bridgeTile(k, i, j, x0, y0, t, { water, deck, floor, hf, dry }) {
     const alongEdgeX = dz !== 0;
     // (the trim board, along the edge as it slopes)
     const tx = ex - dx * 0.06, tz = ez - dz * 0.06;
-    if (alongEdgeX) beam(k, i, topAt(i, tz) - 0.11, tz, i + 1, topAt(i + 1, tz) - 0.11, tz, 0.12, 0.3, TRIM);
-    else beam(k, tx, topAt(tx, j) - 0.11, j, tx, topAt(tx, j + 1) - 0.11, j + 1, 0.12, 0.3, TRIM);
+    // (its top a centimetre and a half under the planks: centred 11 cm down it stood 4 cm proud of them,
+    // its top crossing the deck's edge and flickering against it)
+    if (alongEdgeX) beam(k, i, topAt(i, tz) - 0.165, tz, i + 1, topAt(i + 1, tz) - 0.165, tz, 0.12, 0.3, TRIM);
+    else beam(k, tx, topAt(tx, j) - 0.165, j, tx, topAt(tx, j + 1) - 0.165, j + 1, 0.12, 0.3, TRIM);
     if (high) {
       // the handrail along this tile's edge: a top rail and a middle one
       const rx = ex - dx * 0.1, rz = ez - dz * 0.1;

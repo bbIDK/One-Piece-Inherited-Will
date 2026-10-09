@@ -36,7 +36,7 @@ export function findInteraction(game, p) {
     for (const s of allShips(game)) {
       if (s.sunk || (s.owner !== 'player' && !s.netRemote)) continue;
       const d = w.distance(p.x, p.y, s.x, s.y);
-      if (d < s.def.length * 0.55 + 6) cands.push({ d: d - 1, x: s.x, y: s.y, label: `Grab the line from the ${s.name}`, run: () => hauledAboard(game, p, s) });
+      if (d < s.def.length * 0.55 + 6) cands.push({ d: d - 1, x: s.x, y: s.y, r: s.def.length * 0.5, label: `Grab the line from the ${s.name}`, run: () => hauledAboard(game, p, s) });
     }
   }
   // people: only the one under your crosshair (or cursor) — standing near
@@ -119,16 +119,26 @@ export function findInteraction(game, p) {
   }
   if (game.footInteraction) { const x = game.footInteraction(p); if (x) cands.push(x); }
   if (!cands.length) return null;
-  // in the 3D view, prefer what you are looking at
+  // in the 3D view, only what you are looking at: near enough AND roughly
+  // under your view (a cone round it, wider for something big or right at
+  // your feet) — a hammock behind you doesn't offer itself while you look
+  // at the door; and of those, the one nearest the middle of the view
   const v3 = game.view3d?.active ? game.view3d : null;
-  if (v3 && cands.length > 1) {
+  let list = cands;
+  if (v3) {
+    list = [];
     for (const c of cands) {
-      if (c.x === undefined || c.aimed) continue;
-      c.d += Math.abs(angleDiff(v3.rig.yaw, Math.atan2(c.y - p.y, w.dx(p.x, c.x)))) * 0.9;
+      if (c.x === undefined || c.aimed) { list.push(c); continue; }
+      const dx = w.dx(p.x, c.x), dy = c.y - p.y, dist = Math.hypot(dx, dy);
+      const off = Math.abs(angleDiff(v3.rig.yaw, Math.atan2(dy, dx)));
+      if (dist > 0.45 && off > 0.32 + Math.atan2(c.r ?? 0.55, dist)) continue;
+      c.d += off * 0.9;
+      list.push(c);
     }
+    if (!list.length) return null;
   }
-  cands.sort((a, b) => a.d - b.d);
-  return cands[0];
+  list.sort((a, b) => a.d - b.d);
+  return list[0];
 }
 
 /** Is there room to stand at (x, y): open ground, clear of walls and props, with a little room behind? */

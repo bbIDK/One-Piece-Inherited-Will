@@ -465,7 +465,7 @@ export const FURNITURE = {
   chest: { w: 0.9, dp: 0.55, h: 0.62 },
   treasure: { w: 0.9, dp: 0.8, h: 0.98 },
   shelf: { w: 1.3, dp: 0.38, h: 1.8 },
-  stove: { w: 0.9, dp: 0.7, h: 0.8 },
+  stove: { w: 1.2, dp: 0.9, h: 0.8 }, // (the range itself 0.9 × 0.7, on its stone hearth)
   hammock: { w: 2.1, dp: 0.8, h: 0.62 },
   barrel: { w: 0.66, dp: 0.66, h: 0.78 },
   barrels: { w: 1.34, dp: 0.66, h: 0.78 },
@@ -766,9 +766,11 @@ const ROOMS = {
   // crew's hammocks slung up under the deck beams and their sea chests below
   forecastle(P) {
     const { ua, ub, H } = P, len = ub - ua;
-    P.alongSide('stove', -1, ua + 0.5, ub - 0.5, { pipe: true });
+    const stove = P.alongSide('stove', -1, ua + 0.5, ub - 0.5, { pipe: true });
+    // (room to work at the stove: its front and half a metre either side kept clear — no chest pushed up against a fire)
+    if (stove) { const f = footprint(stove); P.keep.push({ u0: f.u0 - 0.55, u1: f.u1 + 0.55, v0: f.v0 - 0.1, v1: f.v1 + 0.75, top: 1.2 }); }
     P.row(['chest'], 1, ua + 0.1, ub - 0.1, 1.4, { loot: 'crew' });
-    P.row(['chest'], -1, ua + 1.2, ub - 0.1, 1.4, { loot: 'crew' });
+    P.row(['chest'], -1, ua + 1.2, ub - 0.1, 1.6, { loot: 'crew' });
     if (P.reach(ua + len * 0.45, 0, 1) > 1.7) {
       const tl = clampN(len * 0.4, 1.1, 2.4);
       for (const l of [tl, 1.1]) if (P.around(ua + len * 0.45, 0, (u, v) => P.table(u, v, l, 0.7, 'benches'))) break;

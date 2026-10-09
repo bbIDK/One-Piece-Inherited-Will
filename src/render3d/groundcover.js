@@ -236,12 +236,34 @@ function merge(list) {
 
 // ---------------------------------------------------------------- materials
 const uTime = { value: 0 };
+// (the ships near you, so nothing growing in the shallows pokes up through a
+// hull into her hold: xz her middle in the view's frame, zw her heading's
+// cos and sin; and her half length, half beam)
+const MAXH = 4;
+const uHull = { value: Array.from({ length: MAXH }, () => new THREE.Vector4(1e6, 1e6, 1, 0)) };
+const uHullSz = { value: Array.from({ length: MAXH }, () => new THREE.Vector2(0, 0)) };
+const HULL_GLSL = `
+      {
+        vec4 wp0 = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        for (int i = 0; i < ${MAXH}; i++) {
+          vec2 d = wp0.xz - uHull[i].xy;
+          float u = d.x * uHull[i].z + d.y * uHull[i].w, v = -d.x * uHull[i].w + d.y * uHull[i].z;
+          vec2 hs = uHullSz[i];
+          if (hs.x > 0.0) {
+            float e = pow(abs(u) / hs.x, 4.0) + pow(abs(v) / hs.y, 2.0);
+            if (e < 1.15) transformed *= 0.0;
+          }
+        }
+      }`;
 function coverMaterial(kind) {
   const soft = kind === 'grass' || kind === 'fern' || kind === 'flower' || kind === 'crop';
   const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient(), side: soft ? THREE.DoubleSide : THREE.FrontSide });
   const sway = SWAY[kind] || 0;
   m.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, FOG, { uTime });
+    Object.assign(sh.uniforms, FOG, { uTime, uHull, uHullSz });
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', `#include <common>\nuniform vec4 uHull[${MAXH}];\nuniform vec2 uHullSz[${MAXH}];`)
+      .replace('#include <project_vertex>', HULL_GLSL + '\n#include <project_vertex>');
     if (kind === 'grass' || kind === 'crop') {
       // blades take the light of the ground they stand on, whichever side you see
       sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
@@ -259,7 +281,7 @@ function coverMaterial(kind) {
         transformed.z += cos(ph * 0.8) * k * 0.12;
       }`);
   };
-  m.customProgramCacheKey = () => 'cover2-' + kind;
+  m.customProgramCacheKey = () => 'cover3-' + kind;
   return m;
 }
 
@@ -435,6 +457,20 @@ class GroundCover {
     if (!w || !v) return;
     if (w !== this.world) { this.world = w; this.cells.clear(); this.key = ''; this.want = null; }
     uTime.value = env.time;
+    // the ships nearest you (see uHull)
+    {
+      let n = 0;
+      for (const sh of game.ships || []) {
+        if (n >= MAXH) break;
+        if (sh.sunk || !sh.def || w.distance(v.ox, v.oy, sh.x, sh.y) > 90) continue;
+        const sv = v.shipViews?.get(sh), at = sv?.root?.position;
+        if (!at) continue;
+        uHull.value[n].set(at.x, at.z, Math.cos(sh.heading), Math.sin(sh.heading));
+        uHullSz.value[n].set(sh.def.length * 0.5, sh.def.beam * 0.5);
+        n++;
+      }
+      for (let i = n; i < MAXH; i++) uHullSz.value[i].set(0, 0);
+    }
     const fol = game.settings?.foliage;
     const low = v.quality === 'low' || fol === 'near';
     const R = fol === 'off' ? 0 : low ? 36 : 64;

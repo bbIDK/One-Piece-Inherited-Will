@@ -1152,6 +1152,10 @@ const PIECES = {
     for (const a of [-0.3, 0.3]) k.add(box(0.06, body, dp + 0.012), { at: [a * w, 0, 0], color: iron });
     k.add(box(0.13, 0.15, 0.02), { at: [0, body - 0.19, dp / 2 + 0.006], color: '#d4ac0d' });
     for (const e of [-1, 1]) k.add(torus(0.055, 0.012, 4, 8, Math.PI), { at: [e * (w / 2 + 0.002), body * 0.62, 0], rot: [0, Math.PI / 2, Math.PI], color: '#2b2b2b' });
+    // the boards of its sides, a plinth round its foot, iron corners
+    for (const y of [body * 0.33, body * 0.66]) k.add(box(w + 0.004, 0.012, dp + 0.004), { at: [0, y, 0], color: shade(wood, -0.25) });
+    k.add(box(w + 0.03, 0.05, dp + 0.03), { at: [0, 0, 0], color: shade(wood, -0.15) });
+    for (const ex of [-1, 1]) for (const ez of [-1, 1]) k.add(box(0.07, 0.07, 0.07), { at: [ex * (w / 2 - 0.03), 0.0, ez * (dp / 2 - 0.03)], scale: [1.08, 1, 1.08], color: '#3a3a3a' });
     k.save(); k.translate(0, body, -dp / 2);
     if (it.treasure) k.rotateX(-1.3);
     chestLid(k, w, dp, dome, wood, iron);
@@ -1182,14 +1186,44 @@ const PIECES = {
     }
   },
   stove(k, it, d) {
-    // the galley stove: an iron range on its feet, the firebox glowing, a pot
-    // on the hob, and its pipe up through the deck overhead
-    const { w, dp, h } = it, iron = '#2f2f2f', r = d.rooms.find((x) => x.kind === it.room);
-    for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(box(0.06, 0.1, 0.06), { at: [a * (w / 2 - 0.06), 0, b * (dp / 2 - 0.06)], color: iron });
-    k.add(box(w, h - 0.1, dp), { at: [0, 0.1, 0], color: iron, outline: 0.01 });
-    k.add(box(w * 0.42, 0.24, 0.02), { at: [-w * 0.14, 0.24, dp / 2 + 0.006], color: '#ff7a1a', glow: '#ff5a00', flicker: 0.5 });
-    k.add(cyl(0.16, 0.14, 0.24, 10), { at: [w * 0.2, h, dp * 0.08], color: '#6b6b6b', outline: 0.008 });
-    k.add(cyl(0.08, 0.08, (r ? r.ceil + 0.12 - r.floor : 2.4) - h, 8), { at: [-w * 0.25, h, -dp / 2 + 0.14], color: iron });
+    // the galley stove: a cast-iron range standing on a stone hearth (no fire
+    // on bare planks), a tin heat shield on the wall behind it; the firebox
+    // door with its grille glowing, the ash drawer under it, a brass rail
+    // along the front to hang a cloth on, two hotplates with a kettle on one,
+    // and its pipe up through the deck overhead with a collar where it passes
+    const { w: W, dp: DP, h } = it, w = W - 0.3, dp = DP - 0.2, iron = '#2b2b2e', ironL = '#3c3c42', brass = '#c9a227', r = d.rooms.find((x) => x.kind === it.room);
+    k.add(box(W, 0.06, DP), { at: [0, 0, 0], color: '#8b8378', outline: 0.008 });
+    for (let i = 0; i < 3; i++) k.add(box(0.012, 0.062, DP), { at: [-W / 2 + (i + 1) * W / 4, 0, 0], color: '#6e675e' });
+    k.add(box(W - 0.04, 1.3, 0.02), { at: [0, 0.06, -DP / 2 + 0.012], color: '#9aa3a8' });
+    for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) k.add(cyl(0.035, 0.05, 0.12, 6), { at: [a * (w / 2 - 0.07), 0.06, b * (dp / 2 - 0.07)], color: iron });
+    k.add(box(w, h - 0.22, dp), { at: [0, 0.18, 0], color: iron, outline: 0.01 });
+    k.add(box(w + 0.04, 0.05, dp + 0.04), { at: [0, h - 0.06, 0], color: ironL, outline: 0.008 });
+    // the firebox door and its grille, the fire behind
+    const fx = -w * 0.18, fw = w * 0.42;
+    k.add(box(fw, 0.26, 0.02), { at: [fx, 0.3, dp / 2 + 0.006], color: '#ff7a1a', glow: '#ff5a00', flicker: 0.5 });
+    k.add(box(fw + 0.06, 0.04, 0.03), { at: [fx, 0.56, dp / 2 + 0.01], color: ironL });
+    k.add(box(fw + 0.06, 0.04, 0.03), { at: [fx, 0.27, dp / 2 + 0.01], color: ironL });
+    for (let i = 0; i < 5; i++) k.add(box(0.02, 0.26, 0.025), { at: [fx - fw / 2 + (i + 0.5) * fw / 5, 0.3, dp / 2 + 0.015], color: ironL });
+    k.add(box(0.1, 0.03, 0.04), { at: [fx + fw / 2 - 0.06, 0.43, dp / 2 + 0.035], color: brass });
+    // the ash drawer, and the oven door beside the firebox
+    k.add(box(fw, 0.08, 0.02), { at: [fx, 0.18, dp / 2 + 0.006], color: ironL });
+    k.add(box(w * 0.34, 0.36, 0.02), { at: [w * 0.27, 0.24, dp / 2 + 0.006], color: ironL, outline: 0.006 });
+    k.add(box(0.12, 0.025, 0.03), { at: [w * 0.27, 0.5, dp / 2 + 0.025], color: brass });
+    // the brass rail along the front
+    k.add(cyl(0.015, 0.015, w - 0.1, 6), { at: [-(w - 0.1) / 2, h - 0.2, dp / 2 + 0.07], rot: [0, 0, -Math.PI / 2], color: brass });
+    for (const a of [-1, 1]) k.add(box(0.02, 0.02, 0.08), { at: [a * (w / 2 - 0.06), h - 0.21, dp / 2 + 0.03], color: brass });
+    // two hotplates, a kettle on one
+    for (const a of [-1, 1]) k.add(cyl(0.13, 0.13, 0.015, 12), { at: [a * w * 0.22, h - 0.01, dp * 0.08], color: ironL });
+    const kx = w * 0.22, kz = dp * 0.08;
+    k.add(cyl(0.1, 0.13, 0.16, 12), { at: [kx, h, kz], color: '#7b7f86', outline: 0.008 });
+    k.add(cyl(0.04, 0.1, 0.05, 12), { at: [kx, h + 0.16, kz], color: '#7b7f86' });
+    k.add(cyl(0.012, 0.022, 0.12, 6), { at: [kx + 0.1, h + 0.06, kz], rot: [0, 0, -0.9], color: '#7b7f86' });
+    k.add(torus(0.07, 0.01, 4, 10, Math.PI), { at: [kx, h + 0.2, kz], color: '#2b2b2e' });
+    // the pipe, with a collar at the stove and where it goes up through the deck
+    const top = (r ? r.ceil + 0.12 - r.floor : 2.4);
+    k.add(cyl(0.11, 0.11, 0.06, 10), { at: [-w * 0.25, h, -dp / 2 + 0.16], color: ironL });
+    k.add(cyl(0.08, 0.08, top - h, 10), { at: [-w * 0.25, h, -dp / 2 + 0.16], color: iron });
+    k.add(cyl(0.13, 0.13, 0.05, 10), { at: [-w * 0.25, top - 0.17, -dp / 2 + 0.16], color: brass });
   },
   hammock(k, it) {
     // the canvas slung between two spreader bars, sagging in the middle; the
