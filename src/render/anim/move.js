@@ -374,6 +374,74 @@ export function airPose(P, air) {
   P.eF = 1; P.eB = 1;
 }
 
+/**
+ * Climbing (pose.climb: k 0..1 through it). Up a ledge — a mantle: both
+ * hands up on the top, the body hauled up close against the edge (the
+ * hands, staying put on the top, come down the body to the chest), a knee
+ * brought up over the edge, then a push off the hands to stand. Up a
+ * ladder: hand over hand, each hand reaching for the rung over the other as
+ * the opposite foot steps up, the body close in to it, and over the rail at
+ * the top as up a ledge.
+ */
+export function climbPose(P, c) {
+  const k = c.k;
+  P.eF = 1; P.eB = 1; P.hand = 'fist'; P.handB = 'fist';
+  if (c.ladder && k < 0.82) {
+    // (one rung every 0.3 m climbed: the hands and feet in turn)
+    const ph = (c.rise || 0) / 0.3 * Math.PI, sF = Math.sin(ph), sB = -sF;
+    P.l = 0.08; P.b = [0.03, 0.06];
+    P.hF = [0.16, -0.3 - 0.16 * Math.max(0, sF)]; P.hB = [0.16, -0.3 - 0.16 * Math.max(0, sB)];
+    P.fF = [0.1, -0.08 - 0.2 * Math.max(0, sB)]; P.fB = [0.1, -0.08 - 0.2 * Math.max(0, sF)];
+    P.ht = -0.1;
+    return;
+  }
+  const m = c.ladder ? (k - 0.82) / 0.18 : k;
+  const ss = (a, b) => sm01((m - a) / (b - a));
+  const grip = ss(0, 0.18), haul = ss(0.12, 0.62), knee = bump(m, 0.4, 0.95), stand = ss(0.68, 1);
+  // the hands: up over the head on the top, then (staying there as the body
+  // rises past them) down to the chest, then pushing down at the hips
+  const hy = -0.42 * grip + 0.55 * haul + 0.12 * stand, hx = 0.2 - 0.04 * haul;
+  P.hF = [hx, hy]; P.hB = [hx - 0.02, hy + 0.02];
+  if (stand > 0.6) { P.hand = 'palm'; P.handB = 'palm'; }
+  P.l = 0.12 + 0.3 * haul * (1 - stand) + 0.05 * (1 - stand);
+  P.b = [0.03, 0.04 + 0.12 * knee * (1 - stand)];
+  // the legs hang and scrabble, then one knee comes up over the edge, the other foot follows
+  P.fF = [0.06 + 0.22 * knee * (1 - stand) + 0.07 * stand, -0.1 * (1 - grip) - 0.32 * knee * (1 - stand)];
+  P.fB = [-0.04 + 0.08 * haul * (1 - stand) - 0.05 * stand, -0.04 * (1 - haul) - 0.12 * haul * (1 - stand)];
+  P.ht = -0.15 * (1 - haul) + 0.08 * haul * (1 - stand);
+  P.face = 'grit';
+}
+
+/**
+ * Crouched to sneak (k 0..1 easing in): hips low, knees bent, the body bent
+ * forward with the head up to see ahead, and the free hands held low in
+ * front — the stride (already in P) kept, shorter and lower.
+ */
+export function crouchPose(P, k, pose) {
+  const b = toXY(P.b);
+  P.b = [b[0] + 0.03 * k, b[1] + 0.16 * k];
+  P.l = (P.l || 0) * (1 - 0.6 * k) + 0.26 * k;
+  P.ht = (P.ht || 0) * (1 - k) - 0.12 * k;
+  if (P.z) P.z *= 1 - k;
+  const fF = toXY(P.fF || [0.13, 0]), fB = toXY(P.fB || [-0.13, 0]);
+  if (pose.moving) {
+    P.fF = [fF[0] * (1 - 0.15 * k) + 0.04 * k, fF[1] * (1 - 0.4 * k)];
+    P.fB = [fB[0] * (1 - 0.15 * k) + 0.04 * k, fB[1] * (1 - 0.4 * k)];
+  } else {
+    P.fF = [fF[0] + (0.15 - fF[0]) * k, fF[1] * (1 - k)];
+    P.fB = [fB[0] + (-0.11 - fB[0]) * k, fB[1] * (1 - k)];
+  }
+  // (fists up in a fight, or a weapon in hand, keep their place)
+  const armed = P.wF !== null && P.wF !== undefined;
+  if (pose.combat || armed || pose.block !== undefined) return;
+  const sw = pose.moving ? Math.sin(pose.walk || 0) * 0.04 : 0;
+  const hF = toXY(P.hF || [0, 0.38]), hB = toXY(P.hB || [0, 0.38]);
+  P.hF = [mixN(hF[0], 0.15 - sw, k), mixN(hF[1], 0.27, k)];
+  P.hB = [mixN(hB[0], 0.08 + sw, k), mixN(hB[1], 0.3, k)];
+  P.eF = 1; P.eB = 1;
+  if (k > 0.5) { P.hand = 'palm'; P.handB = 'palm'; }
+}
+
 /** Crouched to spring (a charged jump): hips down, weight forward, arms swung back — a tremble at full charge. */
 export function chargePose(P, k, t) {
   const tr = k > 0.95 ? Math.sin(t * 70) * 0.006 : 0;

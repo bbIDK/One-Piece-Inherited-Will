@@ -679,7 +679,7 @@ export function openMenu(game, { onQuit, onRetire, onSave, extra = [] }) {
       btn('map', game.creative?.on ? 'Creative mode: on — turn off' : 'Creative mode (fly, commands)', async () => {
         const C = game.creative;
         if (!C) return;
-        if (!C.on && !(await ui.ask({ title: 'Creative mode?', text: "Fly anywhere (double-tap Space; Space rises, Ctrl sinks, Shift goes fast), take no harm, see the whole chart and click it to travel, type commands with / (help lists them) — and open the creative panel (F1, or here) for Devil Fruits, items, races, Haki, foes, ships and the world. Turn it off here any time.", ok: 'Turn it on' }))) return;
+        if (!C.on && !(await ui.ask({ title: 'Creative mode?', text: "Fly anywhere (double-tap Space; Space rises, Alt sinks, Shift goes fast), take no harm, see the whole chart and click it to travel, type commands with / (help lists them) — and open the creative panel (F1, or here) for Devil Fruits, items, races, Haki, foes, ships and the world. Turn it off here any time.", ok: 'Turn it on' }))) return;
         ui.closePanel();
         C.set(!C.on);
       }, game.creative?.on ? '.gold' : ''),

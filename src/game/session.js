@@ -81,7 +81,17 @@ export function installSession(game, { onReturnToTitle }) {
     if (t > 45) { t = 0; persist(game); }
   });
   const saveOnLeave = () => { if (game.player && game.player.state !== 'knocked') persist(game); };
-  window.addEventListener('beforeunload', saveOnLeave);
+  // (closing the tab mid-game — Ctrl+W, say — asks first: the browser's "Leave site?")
+  window.addEventListener('beforeunload', (e) => {
+    saveOnLeave();
+    if (game.player && game.state?.char && !game.net?.leaving) { e.preventDefault(); e.returnValue = ''; }
+  });
+  // Ctrl+S saves the game (not the page: core/input.js)
+  if (game.input) game.input.onSave = () => {
+    if (!game.player || !game.state?.char || game.player.state === 'knocked') return;
+    persist(game);
+    game.ui?.toast?.('GAME SAVED', 'Your progress is saved (it also saves itself as you play).', '#a5d6a7', 'saved');
+  };
   window.addEventListener('pagehide', saveOnLeave);
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveOnLeave(); });
   // milestones are saved right away (a little later, so the moment settles)

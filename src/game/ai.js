@@ -174,12 +174,16 @@ export class AIController {
       let d = game.world.dist2(a.x, a.y, b.x, b.y);
       const stealth = b.buffs?.find((x) => x.mods?.stealth);
       if (stealth) d *= 1 + stealth.mods.stealth * 6;
+      // (someone sneaking is seen at not much over half the distance)
+      const sneak = !!b.crouch;
+      if (sneak) d *= 2.8;
       if (b.isPlayer && b.disguised && a.faction === 'marine' && !a.provoked) continue;
       if (d >= bd) continue;
       // they see what's in front of them (a wide cone) and hear what's close behind
       const real = game.world.distance(a.x, a.y, b.x, b.y);
       const off = Math.abs(angleDiff(a.facing || 0, Math.atan2(b.y - a.y, game.world.dx(a.x, b.x))));
-      if (off > 1.95 && real > 4) continue;
+      // (sneaking: only what's well in front of them, and close behind hardly at all)
+      if (sneak ? off > 1.3 && real > 1.4 : off > 1.95 && real > 4) continue;
       if (!canSee(game, a, b)) continue;
       bd = d; best = b;
     }

@@ -891,6 +891,9 @@ export class Actor extends Entity {
     // your footsteps: a foot comes down every half stride (render/anims.js
     // legAt: touch-down at the start of each half cycle), and sounds of what
     // it lands on
+    // (crouched to sneak, easing down and back up: the pose and the camera follow it)
+    this.crouchK = (this.crouchK || 0) + ((this.crouch ? 1 : 0) - (this.crouchK || 0)) * Math.min(1, dt * 9);
+    if (this.crouchK < 0.002) this.crouchK = 0;
     const stepN = Math.floor(this.walk / Math.PI);
     if (this.isPlayer && stepN !== this.stepN && this.moving && !this.inWater && !this.wading && !this.climb && !this.flying && !this.vz && !(this.z > 0.05) && this.mode !== 'sail') {
       game.audio?.step?.(this.footSurface(game), this.intent.sprint ? 1 : Math.min(1, sp / 7));
@@ -1441,7 +1444,8 @@ export class Actor extends Entity {
       const cs = Math.cos(sh.heading), sn = Math.sin(sh.heading), dx = w.dx(sh.x, this.x), dy = this.y - sh.y;
       c.u0 = dx * cs + dy * sn; c.v0 = -dx * sn + dy * cs;
     } else { tx = to.x; ty = to.y; th = to.h; }
-    c.T = 0.32 + 0.2 * clamp(th - h0, 0, 3);
+    // (a haul up takes its time: hands on the top, up, a knee over, and onto your feet)
+    c.T = 0.42 + 0.3 * clamp(th - h0, 0, 3);
     // (a ladder up a ship's side: the height of her rail at a steady climb)
     if (to.ladder) c.T = 0.6 + 0.3 * Math.max(0, shipLift(to.ship, game.env?.time || 0, to.ladder.u, to.v, topAt(shipDims(to.ship.def), to.ladder.t)) - h0);
     this.climb = c;
@@ -1470,8 +1474,9 @@ export class Actor extends Entity {
       x1 = p.x; y1 = p.y; h1 = shipLift(sh, game.env?.time || 0, (to.t - 0.5) * sh.def.length, to.v || 0, p.h);
       x0 = sh.x + c.u0 * cs - c.v0 * sn; y0 = sh.y + c.u0 * sn + c.v0 * cs;
     } else { x1 = to.x; y1 = to.y; h1 = to.h; }
-    const up = smooth01(0, 0.65, k), over = smooth01(0.35, 1, k);
-    const h = c.h0 + (h1 - c.h0) * up + Math.sin(Math.PI * k) * 0.14;
+    // (up close against the edge first, then over it: no gliding through the corner)
+    const up = smooth01(0.08, 0.68, k), over = smooth01(0.42, 1, k);
+    const h = c.h0 + (h1 - c.h0) * up + Math.sin(Math.PI * k) * 0.08;
     this.x = w.wx(x0 + w.dx(x0, x1) * over); this.y = y0 + (y1 - y0) * over;
     // (onto a roof: what you're on, from where you are on the way up)
     if (to.roof) this.feetRef = h;
@@ -1578,6 +1583,7 @@ export class Actor extends Entity {
       if (this.charging) sp *= 1 - 0.75 * this.charging;
       if (i.sprint && (i.mx || i.my) && !this.eating && (!this.inWater || this.gills) && this.sprintOk(dt)) sp *= this.inWater ? 1.35 : 1.55;
       if (this.eating) sp *= 0.45; // (a slow walk with your mouth full)
+      if (this.crouch) sp *= 0.5; // (sneaking)
       if (this.blocking) sp *= 0.4;
       if (this.action) sp *= this.action.def.moveMul ?? (this.action.def.m1Chain ? 0.55 : 0.25);
       if (this.hitstun > 0 || this.status.root || this.helpless()) sp = 0;
@@ -1877,7 +1883,7 @@ export class Actor extends Entity {
           : this.moving ? 'crawl' : 'tread';
     // in the air from a jump (not a knock-back launch): up with the knees, then reaching for the ground
     // (hauling yourself up onto a ledge: knees up, arms reaching over the top)
-    const air = this.climb ? (this.climb.ride ? null : 'up') : !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
+    const air = this.climb ? null : !swim && !act && (this.z || 0) > 0.3 && this.airT > 0.05 && !(this.kb.x || this.kb.y) ? (this.vz > 0 ? 'up' : 'down') : null;
     // at a ship's station: rowing a rowboat, or at the wheel
     const st = !act ? this.station() : null;
     const mode = act || `${this.state}${drawn ? 'w' : ''}${this.blocking ? 'b' : ''}${dodging ? 'd' : ''}${hurt ? 'h' : ''}${this.moving ? 'm' : ''}${combat ? 'c' : ''}${this.intent.sprint ? 's' : ''}${swim || ''}${busy ? busy.pose : ''}${this.charging > 0 ? 'k' : ''}${air || ''}${st ? st.kind : ''}`;
@@ -1916,7 +1922,11 @@ export class Actor extends Entity {
     pose.hitW = this.hitW;
     pose.counterAge = now - this.counterT;
     if (this.charging > 0 && !act && !swim) pose.charge = this.charging;
+    if (this.crouchK > 0 && !act && !swim && !air && !busy) pose.crouch = this.crouchK;
     if (air) pose.air = { up: air === 'up', k: this.jumpK || 0 };
+    // hauling yourself up a ledge, or hand over hand up a ladder (render/anim/move.js climbPose)
+    const cl = this.climb;
+    if (cl && !cl.ride && !act) pose.climb = { k: Math.min(1, cl.t / (cl.T || 1)), ladder: !!cl.to?.ladder, rise: (this.z || 0) + (cl.t || 0) * 0.01 };
     if (this.blocking) { pose.block = this.blockTime; pose.armedBlock = pose.armed; }
     if (dodging && !act) {
       const d = this.dash;

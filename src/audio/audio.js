@@ -280,7 +280,9 @@ export class Audio {
     const p = this.game?.player;
     this.foot = -this.foot;
     const hard = surface === 'wood' || surface === 'stone' || surface === 'metal' || surface === 'ice';
-    const v = this.E.open('step', { kind: 'move', vol: pl.vol * (0.75 + 0.45 * loud) * STEP, pan: pl.pan + this.foot * 0.06, lp: pl.lp, send: hard ? 0.05 : 0.015, prio: 4, max: 3 });
+    // (sneaking, the feet are put down softly)
+    const hush = !at && p?.crouch ? 0.35 : 1;
+    const v = this.E.open('step', { kind: 'move', vol: pl.vol * (0.75 + 0.45 * loud) * STEP * hush, pan: pl.pan + this.foot * 0.06, lp: pl.lp, send: hard ? 0.05 : 0.015, prio: 4, max: 3 });
     if (!v) return;
     v.pj = 0.98 + Math.random() * 0.04;
     footstep(v, surface, loud, { foot: this.foot, deck: !!p?.deck, wet: this.foley?.wet() || 0 });

@@ -55,7 +55,7 @@ function lodFor(dist, cur) {
 /** Standing still with nothing to do (no clip, fight, errand, seat, weapon or food in hand). */
 function idleStill(a, pose, P, o) {
   return pose.state === 'idle' && !pose.anim && !pose.moving && !pose.combat && !pose.activity && !pose.station && pose.block === undefined
-    && !pose.swimming && !pose.air && !pose.charge && !pose.launch && !pose.getUp && P.wF == null && P.wB == null
+    && !pose.swimming && !pose.air && !pose.charge && !pose.crouch && !pose.launch && !pose.getUp && P.wF == null && P.wB == null
     && !a.held && !a.eating && o.seatH === null;
 }
 /**

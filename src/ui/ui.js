@@ -174,6 +174,10 @@ export class UI {
     E.combat = h('div.combat-tag.off');
     E.combat.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14"><g stroke="#fff3e0" stroke-width="1.8" stroke-linecap="round" fill="none"><path d="M3 3 L12.5 12.5"/><path d="M13 3 L3.5 12.5"/><path d="M10 14 L14 10"/><path d="M2 10 L6 14"/></g></svg><span>In combat</span>';
     this.hud.appendChild(E.combat);
+    // crouched to sneak (Alt)
+    E.sneak = h('div.sneak-tag.off');
+    E.sneak.innerHTML = '<svg viewBox="0 0 16 16" width="15" height="15"><g fill="none" stroke="#e8f1ff" stroke-width="1.6" stroke-linecap="round"><path d="M1.5 8 Q8 2.5 14.5 8 Q8 13.5 1.5 8 Z"/><path d="M2.5 13.5 L13.5 2.5"/></g><circle cx="8" cy="8" r="1.9" fill="#e8f1ff"/></svg><span>Sneaking</span>';
+    this.hud.appendChild(E.sneak);
     // the quest tracker: the main story and up to two side quests, right of centre
     E.track = h('div.qtrack.hidden');
     this.hud.appendChild(E.track);
@@ -573,6 +577,8 @@ export class UI {
     this.waypoints.update(game, v3, !!v3 && !this.blocksInput());
     const fighting = !!p.inCombat && p.state === 'idle' && !this.mapOpen && E.boss.classList.contains('hidden');
     if (fighting !== this.cache.combat) { this.cache.combat = fighting; E.combat.classList.toggle('off', !fighting); }
+    const sneak = !!p.crouch && !fighting && !this.mapOpen;
+    if (sneak !== this.cache.sneak) { this.cache.sneak = sneak; E.sneak.classList.toggle('off', !sneak); }
     // the minimap turns so that where you look is up
     const up = v3 ? v3.rig.yaw : null;
     if (up !== null) E.mm.style.transform = `rotate(${(-Math.PI / 2 - up).toFixed(4)}rad)`;

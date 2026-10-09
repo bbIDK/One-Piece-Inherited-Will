@@ -372,7 +372,8 @@ export class CameraRig {
     const fly = p.flying && p._fly ? p._fly : null;
     if (fly) roll = -(fly.bank || 0) * (this.mode === 'first' ? 0.28 : 0.12);
     // crouching to spring for a charged jump
-    this.crouch = (this.crouch || 0) + ((p.charging || 0) - (this.crouch || 0)) * Math.min(1, dt * 12);
+    // (or sneaking: actor.js eases crouchK)
+    this.crouch = (this.crouch || 0) + (Math.max(p.charging || 0, (p.crouchK || 0) * 0.7) - (this.crouch || 0)) * Math.min(1, dt * 12);
     eyeH -= this.crouch * 0.34 * scale;
     this.roll += (roll - this.roll) * Math.min(1, dt * 5);
     // screen shake from the effects system

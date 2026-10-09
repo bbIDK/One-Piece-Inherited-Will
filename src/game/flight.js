@@ -17,8 +17,8 @@
 // How it plays:
 //  * Take off with a second press of Space in the air (a jump, then Space
 //    again: a double tap), or with the power's own technique. In the air
-//    Space climbs and Ctrl dives (as in creative mode), Shift speeds you up.
-//    Land by coming down onto the ground (Ctrl), with a double tap of Space,
+//    Space climbs and Alt dives (as in creative mode), Shift speeds you up.
+//    Land by coming down onto the ground (Alt), with a double tap of Space,
 //    or with the technique again.
 //  * Endurance: a flier's gauge drains in the air — more climbing or flat
 //    out, less gliding down — and several times faster over the open sea,
@@ -171,7 +171,7 @@ export function takeOff(a, game) {
   game.audio?.sfx('jump_big', a);
   if (a.isPlayer) {
     game.emit?.('playerTakeOff', S.style);
-    game.hint?.('flight', 'FLYING! Space climbs, Ctrl dives, Shift for speed. Your flight gauge drains in the air — far faster out over the open sea — and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.');
+    game.hint?.('flight', 'FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air — far faster out over the open sea — and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.');
   }
   return true;
 }

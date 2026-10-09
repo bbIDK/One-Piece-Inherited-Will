@@ -17,9 +17,14 @@ export class Input {
       this.down.add(k);
       // (F1 opens the creative panel, not the browser's help)
       if (this.captureKeys && ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backquote', 'F1'].includes(k)) e.preventDefault();
+      // (Ctrl+S saves the game, not the page; Ctrl+P, Ctrl+F, Ctrl+D, Ctrl+H... the browser's own, mid-game, neither)
+      if (this.captureKeys && e.ctrlKey && !e.shiftKey && ['S', 'P', 'F', 'D', 'H', 'G', 'J', 'U', 'O', 'E', 'K', 'B'].includes(k)) { e.preventDefault(); if (k === 'S') this.onSave?.(); }
+      // (Alt is crouch: neither it nor Alt+D, Alt+F, Alt+E... while sneaking reach the browser's menus or address bar)
+      if (this.captureKeys && (k === 'Alt' || e.altKey) && k !== 'F4') e.preventDefault();
     };
     const ku = (e) => {
       const k = normKey(e);
+      if (this.captureKeys && k === 'Alt' && !this.isTyping(e)) e.preventDefault();
       this.down.delete(k);
       this.released.add(k);
     };

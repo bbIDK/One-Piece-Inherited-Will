@@ -116,7 +116,7 @@ function seaTier(game) { return SEA_TIER[seaOf(game)] || 1; }
 
 function stealChance(game, bonus = 0) {
   const p = game.player;
-  const stealth = p.buffs?.some((b) => b.mods?.stealth) ? 0.35 : 0;
+  const stealth = (p.buffs?.some((b) => b.mods?.stealth) ? 0.35 : 0) + (p.crouch ? 0.12 : 0);
   return clamp(0.3 + p.attrs.agi * 0.006 + stealth + bonus, 0.08, 0.92);
 }
 

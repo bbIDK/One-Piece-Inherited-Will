@@ -21,7 +21,8 @@
 export const GAME_KEYS = [
   ['W', 'move forward'], ['A', 'move left'], ['S', 'move back'], ['D', 'move right'],
   ['ArrowUp', 'turn the camera'], ['ArrowDown', 'turn the camera'], ['ArrowLeft', 'turn the camera'], ['ArrowRight', 'turn the camera'],
-  ['Space', 'jump, climb, swim up, fly up'], ['Shift', 'sprint (tap: dodge)'], ['Control', 'shift lock (third person); dive or fly down'],
+  ['Space', 'jump, climb, swim up, fly up'], ['Shift', 'sprint (tap: dodge)'], ['Control', 'shift lock (third person)'],
+  ['Alt', 'crouch and sneak (hold, or tap to stay down); dive or fly down'],
   ['Q', 'dodge'], ['F', 'block and parry'], ['E', 'talk, use, take the helm'],
   ['R', 'Armament Haki'], ['T', 'Observation Haki'],
   ['H', 'draw or sheathe your weapon'], ['P', 'first or third person'],

@@ -425,6 +425,7 @@ export class Voyage {
     if (p.wading) m.wd = r2(p.wading);
     if (p.hitstun > 0) m.hs = r2(p.hitstun);
     if (p.charging > 0) m.c = r2(p.charging);
+    if (p.crouch) m.cr = 1;
     // what they stand on: their ship's deck (where on her: drawn on her as she rides
     // there), or another deck, a gangway, a roof — the height of it; and on
     // another player's ship, whose she is, which, and where on her (REV 1:

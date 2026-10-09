@@ -42,7 +42,7 @@ import { TAU, toXY, WEIGHT, weightOf, heavier, massOf } from './anim/timing.js';
 import { STAND, GUARD, PALMS, SWORD, SWORD2, GUN, HEAVYW, STAFF, POCKETS, BALLET, STANCES, STANCE_ARMED, stanceFor, gunKind } from './anim/poses.js';
 import { lerpVal, finalize, seg } from './anim/keys.js';
 import { blockPose, parryPose, parriedPose, guardBrokenPose, hurtPose, flinch, counterPose, hardenPose, getUpPose, launchPose } from './anim/react.js';
-import { gaitParams, gaitCadence, walkLegs, gaitPose, activityPose, swimPose, airPose, chargePose, dodgePose } from './anim/move.js';
+import { gaitParams, gaitCadence, walkLegs, gaitPose, activityPose, swimPose, airPose, chargePose, crouchPose, climbPose, dodgePose } from './anim/move.js';
 import { flightPose, flightLegs, flightState } from './anim/flight.js';
 
 export { STAND, GUARD, STANCES, STANCE_ARMED, stanceFor, gunKind, gaitParams, gaitCadence };
@@ -665,8 +665,10 @@ export function restPose(pose) {
   else if (pose.moving) gaitPose(P, pose, base);
   if (pose.activity) activityPose(P, pose.activity, t);
   if (pose.bounce && !pose.flight) gear4Bounce(P, t, pose.moving);
+  if (pose.crouch) crouchPose(P, pose.crouch, pose);
   if (pose.charge) chargePose(P, pose.charge, t);
   if (pose.air && !pose.flight) airPose(P, pose.air);
+  if (pose.climb) climbPose(P, pose.climb);
   if (pose.swimming) swimPose(P, pose.swim || 'tread', t * (pose.swimRate || 1), pose.swimDir || 0);
   if (pose.block !== undefined) blockPose(P, pose);
   if (pose.armOn !== undefined && !pose.swimming) hardenPose(P, pose.armOn, t);
