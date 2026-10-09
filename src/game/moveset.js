@@ -156,7 +156,8 @@ export function hakiGroupOf(p) {
     return `${hakiName(d.learn?.haki || d.hakiType)} ${d.learn?.level || 0}${who.length ? ' · ' + who[0] : ''}`;
   };
   for (const d of HAKI_ABILITIES) {
-    if (d.hakiType !== active || d.id === 'haki_conqueror') continue;
+    // (Armament has no techniques of its own: you harden, and your blows land on anyone)
+    if (d.hakiType !== active || d.hakiType === 'armament' || d.id === 'haki_conqueror' || d.id === 'haki_infusion') continue;
     const have = known.has(d.id);
     rows.push({ id: d.id, def: getAbility(d.id) || d, locked: !have, why: have ? '' : lockedWhy(d) });
   }

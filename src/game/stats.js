@@ -22,8 +22,8 @@ export function baseAttrs() {
 export function derive(a, mods = {}) {
   const hpMul = mods.hpMul || 1;
   return {
-    maxHp: Math.round((90 + a.vit * 9 + a.end * 2) * hpMul),
-    maxHaki: Math.round(40 + a.wil * 4),
+    maxHp: Math.round((90 + a.vit * 9 + a.end * 2) * hpMul * (mods.heroHp || 1)),
+    maxHaki: Math.round((40 + a.wil * 4) * (mods.heroHaki || 1)),
     speed: 4.3 * (1 + a.agi * 0.0045) * (mods.stride || 1) * (mods.speedMul || 1),
     dmg: 1 + a.str * 0.028,
     def: clamp(a.end * 0.0035 + (mods.armor || 0), 0, 0.55),

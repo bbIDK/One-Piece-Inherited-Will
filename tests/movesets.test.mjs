@@ -336,16 +336,17 @@ test('the Haki techniques have their own group and keys: a king\'s Conqueror\'s 
   assert.equal(hakiGroupOf(p), null, 'shown while one is on');
   p.armament = true;
   let hg = hakiGroupOf(p);
-  assert.deepEqual(hg.rows.filter((r) => !r.locked).map((r) => [r.id, r.slot]), [['haki_emission', 0], ['haki_ryuo', 1]]);
+  // (Armament has no techniques of its own: hardened, your blows land; nothing to press)
+  assert.deepEqual(hg.rows.filter((r) => !r.locked).map((r) => [r.id, r.slot]), []);
   c.haki.conqueror = 5; c.techniques.push('haki_conqueror');
   hg = hakiGroupOf(p);
   assert.equal(hg.rows[0].id, 'haki_conqueror', 'a king\'s release first, on G');
   assert.equal(hg.rows[0].slot, 0);
   assert.equal(keysOf(g.settings).haki[0], 'G');
   const inf = hg.rows.find((r) => r.id === 'haki_infusion');
-  assert.ok(inf.locked && inf.slot === -1 && /Conqueror's 50/.test(inf.why), `still to learn: ${inf.why}`);
+  assert.ok(inf.locked && inf.slot === -1 && /Conqueror's 10/.test(inf.why), `still to learn: ${inf.why}`);
   // (and a technique learned says where it sits)
-  assert.match(skillHome('haki_emission', g.settings), /Haki keys while Armament/);
+  assert.match(skillHome('haki_futuresight', g.settings), /Haki keys while Observation/);
   assert.match(skillHome('gomu_pistol', g.settings), /on Z with the Gomu Gomu no Mi out/);
 });
 

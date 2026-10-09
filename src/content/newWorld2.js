@@ -1188,7 +1188,7 @@ const stock = {
 const trainers = {
   nw2_gaban: {
     name: 'Scopper Gaban', where: "Gaban's Lodge, Western Village of Elbaph", styles: { elbaf: 25000 },
-    teaches: ['elbaf_hakoku', 'haki_emission', 'haki_infusion'], train: { str: 85, vit: 85, wil: 80 }, haki: { armament: 85, observation: 80, conqueror: 70 },
+    teaches: ['elbaf_hakoku', 'haki_infusion'], train: { str: 85, vit: 85, wil: 80 }, haki: { armament: 85, observation: 80, conqueror: 70 },
     spar: { level: 90, style: 'elbaf', weapon: 'axe', name: 'Scopper Gaban', haki: true },
     lines: ['Roger used to say: the one who laughs last wins. Then he laughed first anyway.', 'Coat your blade with your will. Not your fear — your will.'],
   },

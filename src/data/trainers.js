@@ -79,7 +79,7 @@ export const TRAINERS = {
     lines: ['A ship is a living thing. Treat her right.'],
   },
   rayleigh: {
-    name: 'Silvers Rayleigh', where: "Shakky's Rip-off Bar, Sabaody", styles: {}, teaches: ['haki_emission', 'haki_futuresight', 'haki_infusion'], train: { wil: 70, str: 60 }, haki: { armament: 65, observation: 65, conqueror: 60 }, spar: { level: 60, style: 'ittoryu', weapon: 'sword', name: 'Silvers Rayleigh', haki: true },
+    name: 'Silvers Rayleigh', where: "Shakky's Rip-off Bar, Sabaody", styles: {}, teaches: ['haki_futuresight', 'haki_infusion'], train: { wil: 70, str: 60 }, haki: { armament: 65, observation: 65, conqueror: 60 }, spar: { level: 60, style: 'ittoryu', weapon: 'sword', name: 'Silvers Rayleigh', haki: true },
     lines: ['Haki is the power of doubt-free conviction.', 'Take it easy. Nobody learns this in a day.'],
   },
   kuja: {
@@ -96,7 +96,7 @@ export const TRAINERS = {
     lines: ['Fish-Man Karate controls the water inside all things.'],
   },
   hyogoro: {
-    name: 'Hyogoro the Flower', where: 'Udon, Wano Country', styles: {}, teaches: ['haki_ryuo'], train: { str: 70, wil: 70 }, haki: { armament: 80 }, spar: { level: 72, style: 'brawler', name: 'Udon Prisoner', haki: true },
+    name: 'Hyogoro the Flower', where: 'Udon, Wano Country', styles: {}, teaches: [], train: { str: 70, wil: 70 }, haki: { armament: 80 }, spar: { level: 72, style: 'brawler', name: 'Udon Prisoner', haki: true },
     lines: ['Ryuo is not "coating". Let your Haki flow — let it destroy from within.'],
   },
   kozuki_samurai: {

@@ -195,6 +195,8 @@ export class Actor extends Entity {
     let speedMul = mods.speedMul;
     for (const b of this.buffs) if (b.mods?.speedMul) speedMul *= b.mods.speedMul;
     mods.speedMul = speedMul;
+    // (you, the hero: half as much life again, and a deeper well of Haki)
+    if (this.isPlayer) { mods.heroHp = 1.5; mods.heroHaki = 1.6; }
     const old = this.d;
     this.d = derive(this.attrs, mods);
     if (old && this.hp !== undefined) {
@@ -463,6 +465,11 @@ export class Actor extends Entity {
       if (def.source?.startsWith('fruit') && (this.inWater || this.seastoned)) { if (this.isPlayer) game.log('Your Devil Fruit power is useless here!', '#ff8a80'); return false; }
       this.cooldowns[def.id] = 0.6;
       return toggleFlight(this, game);
+    }
+    // (a Haki held on, like Conqueror's Infusion: press again to let it go)
+    if (def.toggle) {
+      const on = this.buffs.find((b) => b.id === def.toggle);
+      if (on) { on.t = 0; if (this.isPlayer) game.audio?.sfx('ui_close', this); return true; }
     }
     if (!this.canAct()) return false;
     if (def.requiresHaki && !this.hakiLevel(def.requiresHaki)) { if (this.isPlayer) game.log(this.hakiUnlocked() ? `${def.name} requires ${def.requiresHaki} Haki.` : `${def.name} is beyond you for now — something in you has yet to awaken.`, '#ff8a80'); return false; }
