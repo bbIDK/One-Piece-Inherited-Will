@@ -170,9 +170,21 @@ test('the gauge drains in the air — several times faster over the open sea —
   assert.equal(p.flightGauge, 1);
 });
 
-test('run dry over the open sea and you come down into it — a Devil Fruit user sinks', () => {
+test('a Devil Fruit\'s flight never tires, even out over the open sea', () => {
   const g = arena({ seaFrom: X0 + 3 });
   const p = body(g, { player: true, fruit: 'tori_phoenix' });
+  fly(g, p);
+  p.intent.mz = 1; step(g, 0.8); p.intent.mz = 0;
+  p.x = X0 + 20;
+  p.flightGauge = 0.04;
+  step(g, 20);
+  assert.ok(!p.flightTired, 'never tired');
+  assert.ok(p.flying, 'still flying');
+});
+
+test('wings run dry over the open sea and you come down into it', () => {
+  const g = arena({ seaFrom: X0 + 3 });
+  const p = body(g, { player: true, race: 'lunarian' });
   fly(g, p);
   p.intent.mz = 1; step(g, 0.8); p.intent.mz = 0;
   p.x = X0 + 20;
@@ -185,8 +197,6 @@ test('run dry over the open sea and you come down into it — a Devil Fruit user
   step(g, 6);
   assert.equal(p.flying, false, 'down');
   assert.ok(p.inWater, 'in the sea');
-  step(g, p.struggleTime() + 1);
-  assert.ok(p.sinking, 'and the sea takes a Devil Fruit user down');
 });
 
 test('a ceiling over the land, a lower one over the sea; a cliff and a building are walls you fly over', () => {

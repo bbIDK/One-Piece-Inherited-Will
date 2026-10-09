@@ -26,7 +26,8 @@
 //    counts). Run dry and you come down whether you like it or not — out at
 //    sea, into it, where a Devil Fruit user sinks. Sailing stays the way
 //    across the sea: the Phoenix and the Dragon can hop a strait, nobody
-//    an ocean.
+//    an ocean. (That's for wings: a Devil Fruit's flight — the Phoenix,
+//    the Dragon and the rest — never tires.)
 //  * Nothing is solid to a flier but the ground (a cliff is a wall), the
 //    buildings below their roofs, walls, trees and the like low down, and
 //    ships. No sky indoors, under the sea or in Impel Down.
@@ -171,7 +172,7 @@ export function takeOff(a, game) {
   game.audio?.sfx('jump_big', a);
   if (a.isPlayer) {
     game.emit?.('playerTakeOff', S.style);
-    game.hint?.('flight', 'FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air — far faster out over the open sea — and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.');
+    game.hint?.('flight', S.fruit ? 'FLYING! Space climbs, Alt dives, Shift for speed. Come down onto the ground (or double-tap Space) to land.' : 'FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air — far faster out over the open sea — and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.');
   }
   return true;
 }
@@ -246,6 +247,8 @@ export function flyStep(a, dt, game) {
   if (F.lift > 0 || (i.mz > 0 && !F.tired)) rate *= 1.3;
   else if (i.mz < 0 || F.landing || F.tired) rate *= 0.5;
   if (sea) rate *= S.sea;
+  // (a Devil Fruit's flight never tires: the Phoenix, the Dragon fly as long as they like)
+  if (S.fruit) rate = 0;
   a.flightGauge = Math.max(0, (a.flightGauge ?? 1) - rate * dt / S.gauge);
   if (a.flightGauge <= 0 && !F.tired) {
     F.tired = true;

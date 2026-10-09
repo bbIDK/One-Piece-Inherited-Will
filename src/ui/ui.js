@@ -665,7 +665,7 @@ export class UI {
       }
     }
     // flight: the gauge while you're up there (or it's still filling again)
-    const flyOn = (!!p.flight || p.flightGauge < 1) && p.flightGauge !== undefined;
+    const flyOn = (!!p.flight || p.flightGauge < 1) && p.flightGauge !== undefined && !p.flight?.spec?.fruit;
     if (flyOn !== this.cache.flyOn) { E.fly.el.classList.toggle('hidden', !flyOn); this.cache.flyOn = flyOn; }
     if (flyOn) E.fly.set(p.flightGauge, p.flightTired ? 'tired' : '');
     // the spirit (Haki) bar doesn't exist until Haki awakens
