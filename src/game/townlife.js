@@ -17,7 +17,7 @@ import { RNG } from '../core/rng.js';
 // crate's, the knees over its edge and the legs hanging down in front of it, not
 // in the middle with their legs through its sides; on a haystack, on its flank
 const SEAT_H = { barrel: 0.8, crate: 0.74, haystack: 0.72, well: 0.76, fountain: 0.63, bench: 0.52, step: 0.22, dock: 0.05 };
-const SEAT_FWD = { barrel: 0.1, crate: 0.17, haystack: 0.42 };
+const SEAT_FWD = { barrel: 0.13, crate: 0.17, haystack: 0.42 };
 const KID_STYLES = new Set(['village', 'town', 'port', 'snow', 'desert', 'wano', 'chinese', 'candy', 'fishman', 'mink', 'tribal', 'sky', 'giant']);
 const CHATTER = [
   'Did you hear? Pirates were spotted off the coast!', 'The price of fish these days...', 'Ha ha ha! No way!', 'Is that so?!', 'My husband says the Marines are useless.',
@@ -313,7 +313,12 @@ function settle(a, act) {
   act.phase = 'do';
   const P = { lean: 'lean', sit: 'sit', chat: 'chat', sweep: 'sweep', vend: 'vend', fish: 'fish', drunk: 'drunk' }[act.kind];
   const prop = { sweep: 'broom', fish: 'rod', drunk: 'mug' }[act.kind] || null;
-  a.act3d = P ? { pose: P, prop, h: spot?.h ?? (act.kind === 'sit' ? 0.45 : 0) } : null;
+  let h = spot?.h ?? (act.kind === 'sit' ? 0.45 : 0);
+  // (on a barrel, a crate or a haystack: on its lid as it's drawn — stood on
+  // the ground under its middle — however the ground falls away under you)
+  const o = spot?.o, g = a.game;
+  if (P === 'sit' && o && SEAT_H[o.kind] && g?.view3d?.ground && a.groundAt) h = SEAT_H[o.kind] * (o.s || 1) + g.view3d.ground(o.x, o.y) - a.groundAt(g, a.x, a.y);
+  a.act3d = P ? { pose: P, prop, h } : null;
   a.faceHome = a.facing;
 }
 

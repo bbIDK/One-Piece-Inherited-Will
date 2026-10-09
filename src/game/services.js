@@ -37,10 +37,10 @@ export class Services {
     c.getUpCharges = 1 + (p.attrs.wil >= 40 ? 1 : 0) + (p.attrs.wil >= 80 ? 1 : 0);
     c.flags.dLuckUsed = false;
     c.trainedToday = 0;
-    // sleep until morning
+    // sleep until 8 in the morning (the next day's, unless it's still before 8)
     const env = g.env;
-    if (env.clock > 6) { env.day += 1; }
-    env.clock = 7;
+    if (env.clock >= 8) { env.day += 1; }
+    env.clock = 8;
     g.ui.fade(true);
     setTimeout(() => g.ui.fade(false), 700);
     g.log(`You rest at ${c.rest.name}. This is now where you will wake if you fall. (Second winds restored: ${c.getUpCharges})`, '#a5d6a7');
@@ -63,8 +63,8 @@ export class Services {
     c.flags.dLuckUsed = false;
     c.trainedToday = 0;
     const env = g.env;
-    if (env.clock > 6) env.day += 1;
-    env.clock = 7;
+    if (env.clock >= 8) env.day += 1;
+    env.clock = 8;
     g.ui.fade(true);
     setTimeout(() => g.ui.fade(false), 700);
     g.log(`You turn in for the night in a ${it.kind} aboard the ${ship.name}. She's where you'll wake if you fall, wherever she sails. (Second winds restored: ${c.getUpCharges})`, '#a5d6a7');

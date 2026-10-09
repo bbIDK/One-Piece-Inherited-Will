@@ -13,7 +13,9 @@ export const HANG = 4.2;
 /** A cabin's floor over the platform it stops at (m). */
 export const FLOOR = 0.3;
 /** Its speed on the cable (m/s), and the time to step in or out (s). */
-const SPEED = 7.5, STEP_T = 1.2;
+const SPEED = 7.5, STEP_T = 1.6;
+// (how far from the middle of the cabin you stand just outside its doorway: half its length, and a step)
+const DOOR = 1.25 + 0.45;
 
 const smooth = (k) => k * k * (3 - 2 * k);
 
@@ -69,6 +71,12 @@ export function startRide(game, a, rw, from) {
   return true;
 }
 
+/** Just outside the cabin's doorway at a station's bay: its end toward that station's way off (`exit`). */
+function doorOf(w, bay, exit) {
+  const dx = w.dx(bay.x, exit.x), dy = exit.y - bay.y, l = Math.hypot(dx, dy) || 1;
+  return { x: w.wx(bay.x + dx / l * DOOR), y: bay.y + dy / l * DOOR };
+}
+
 /** One step of a ride (from actor.updateClimb). */
 export function rideStep(a, dt, game) {
   const c = a.climb, rw = c.ride, w = game.world;
@@ -88,13 +96,24 @@ export function rideStep(a, dt, game) {
     return;
   }
   if (c.phase === 'in') {
-    // across the platform and into the cabin
-    const k = Math.min(1, c.t / STEP_T), e = smooth(k);
+    // across the platform to the cabin's doorway (at the end by the
+    // platform), and a step up over its sill in to stand in the middle
     rw.s = s0;
-    place(c.x0 + w.dx(c.x0, bay0.x) * e, c.y0 + (bay0.y - c.y0) * e, c.h0 + (floor0 - c.h0) * e);
-    a.facing = Math.atan2(bay0.y - c.y0, w.dx(c.x0, bay0.x)) || a.facing;
-    a.moving = k < 1;
-    if (k >= 1) {
+    const dr = doorOf(w, bay0, c.up ? rw.aExit : rw.bExit);
+    if (c.walkT === undefined) c.walkT = Math.max(0.5, Math.hypot(w.dx(c.x0, dr.x), dr.y - c.y0) / 2.6);
+    const T1 = c.walkT, T = T1 + 0.75;
+    if (c.t < T1) {
+      const e = smooth(c.t / T1);
+      place(c.x0 + w.dx(c.x0, dr.x) * e, c.y0 + (dr.y - c.y0) * e, c.h0 + (floor0 - c.h0) * e);
+      a.facing = Math.atan2(dr.y - c.y0, w.dx(c.x0, dr.x)) || a.facing;
+      a.moving = true;
+    } else {
+      const k = Math.min(1, (c.t - T1) / 0.75), e = smooth(k);
+      place(dr.x + w.dx(dr.x, bay0.x) * e, dr.y + (bay0.y - dr.y) * e, floor0 + Math.sin(Math.PI * Math.min(1, k * 1.6)) * 0.12);
+      a.facing = Math.atan2(bay0.y - dr.y, w.dx(dr.x, bay0.x)) || a.facing;
+      a.moving = k < 1;
+    }
+    if (c.t >= T) {
       c.phase = 'go'; c.t = 0; c.T = rw.len / SPEED + 1.2; rw.at = undefined;
       if (a.isPlayer) game.audio?.sfx('anchor_weigh', a);
     }
@@ -116,11 +135,17 @@ export function rideStep(a, dt, game) {
     }
     return;
   }
-  // out of the cabin onto the platform, and off it onto your own two feet
-  const k = Math.min(1, c.t / STEP_T), e = smooth(k);
+  // out of the cabin's doorway onto the platform, and off it onto your own two feet
+  const k = Math.min(1, c.t / STEP_T);
   rw.s = s1;
-  const g1 = floor1 - FLOOR;
-  place(bay1.x + w.dx(bay1.x, exit1.x) * e, bay1.y + (exit1.y - bay1.y) * e, floor1 + (g1 - floor1) * e);
+  const g1 = floor1 - FLOOR, dr = doorOf(w, bay1, exit1);
+  if (k < 0.4) {
+    const e = smooth(k / 0.4);
+    place(bay1.x + w.dx(bay1.x, dr.x) * e, bay1.y + (dr.y - bay1.y) * e, floor1 + Math.sin(Math.PI * Math.min(1, e * 1.6)) * 0.12);
+  } else {
+    const e = smooth((k - 0.4) / 0.6);
+    place(dr.x + w.dx(dr.x, exit1.x) * e, dr.y + (exit1.y - dr.y) * e, floor1 + (g1 - floor1) * e);
+  }
   a.facing = Math.atan2(exit1.y - bay1.y, w.dx(bay1.x, exit1.x)) || a.facing;
   a.moving = k < 1;
   if (k >= 1) endRide(a, game);

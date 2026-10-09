@@ -94,15 +94,26 @@ registerPropBuilder('ropeway', (o, ctx) => {
 function cabinGeo() {
   const k = new Mesher();
   const L = 2.5, W = 1.9;
+  // the floor you stand on, and the red lower half as walls round it (not a
+  // solid block you'd stand in): the long sides whole, each end with a
+  // doorway in its middle — you step in at the end by the platform you're on
+  const T = 0.08, D = 0.8;
   k.add(box(L, 0.18, W), { at: [0, -0.18, 0], color: IRON, outline: 0.03 });
-  k.add(box(L, 0.95, W), { at: [0, 0, 0], color: RED, outline: 0.03 });
-  // open above the waist all round (you look out over the snow as you ride,
-  // and you're seen standing in it): corner posts, a post mid-side, a rail
   for (const s of [-1, 1]) {
-    for (const t of [-1, 1]) k.add(box(0.12, 0.9, 0.12), { at: [s * (L / 2 - 0.06), 0.92, t * (W / 2 - 0.06)], color: TIMBER });
+    k.add(box(L, 0.95, T), { at: [0, 0, s * (W / 2 - T / 2)], color: RED, outline: 0.03 });
+    for (const t of [-1, 1]) k.add(box(T, 0.95, (W - D) / 2), { at: [s * (L / 2 - T / 2), 0, t * (D / 2 + (W - D) / 4)], color: RED, outline: 0.03 });
+  }
+  // open above the waist all round (you look out over the snow as you ride,
+  // and you're seen standing in it): corner posts, a post mid-side, a rail,
+  // and a post either side of each doorway
+  for (const s of [-1, 1]) {
+    for (const t of [-1, 1]) {
+      k.add(box(0.12, 0.9, 0.12), { at: [s * (L / 2 - 0.06), 0.92, t * (W / 2 - 0.06)], color: TIMBER });
+      k.add(box(0.09, 1.82, 0.09), { at: [s * (L / 2 - 0.045), 0, t * (D / 2 + 0.045)], color: TIMBER });
+      k.add(box(0.07, 0.07, (W - D) / 2 - 0.09), { at: [s * (L / 2 - 0.035), 0.95, t * (D / 2 + 0.09 + ((W - D) / 2 - 0.09) / 2)], color: DARK });
+    }
     k.add(box(0.07, 0.85, 0.07), { at: [0, 0.95, s * (W / 2 - 0.035)], color: TIMBER });
     k.add(box(L, 0.07, 0.07), { at: [0, 0.95, s * (W / 2 - 0.035)], color: DARK });
-    k.add(box(0.07, 0.07, W), { at: [s * (L / 2 - 0.035), 0.95, 0], color: DARK });
   }
   k.add(box(L, 0.2, W), { at: [0, 1.8, 0], color: TIMBER, outline: 0.03 });
   // the roof, and the snow on it

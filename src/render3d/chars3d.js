@@ -611,7 +611,13 @@ class ActorView {
   labels(a, env, dist, s) {
     const idle = a.state === 'idle';
     const name = a.showName && idle && dist < 36 ? a.name : null;
-    const bar = !a.isPlayer && (a.damageShown > 0 || a.boss) && idle && !a.hideBar && !a.boss && dist < 36 ? clamp(a.hp / a.d.maxHp, 0, 1) : null;
+    // (a health bar over anyone hurt a moment ago, or in a fight with you or
+    // your crew — not only for a few seconds after each blow; a boss has the
+    // big bar at the top of the screen instead, while it's up for them)
+    const t = a.controller?.target;
+    const fighting = !!t && (t.isPlayer || t.faction === 'player') && a.controller.state !== 'idle';
+    const bigBar = a.boss && a.game?.bossTarget === a && !a.game.ui?.el?.boss?.classList.contains('hidden');
+    const bar = !a.isPlayer && (a.damageShown > 0 || fighting) && idle && !a.hideBar && !bigBar && dist < 36 ? clamp(a.hp / a.d.maxHp, 0, 1) : null;
     const d = this.model.d;
     const top = (d.hip0 + d.chestLen + d.neck + d.hc + d.headR * Math.max(1.15, this.model.body.meta.top) + (this.model.body.hatKind ? 0.12 : 0)) * s + 0.12;
     const k = clamp(dist / 8, 0.32, 1.8) / s;
