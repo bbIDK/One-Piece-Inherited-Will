@@ -928,6 +928,27 @@ export function topAt(d, t) {
 
 export const xAt = (d, t) => -d.L / 2 + t * d.L;
 
+/**
+ * How far aft (−) or forward (+) a big hull's skin is drawn at (x, y) — her
+ * rake: the stem curving back under the bow (a few metres at the keel,
+ * hardly anything at the rail, so she cuts the water with a sloping cutwater,
+ * not a cliff), and the stern overhanging her rudder (the transom leaning
+ * out as it rises). Only the drawing bends: she floats, and you walk, on the
+ * plan as it is.
+ */
+export function rakeDx(d, x, y) {
+  if (!d.big) return 0;
+  const t = (x + d.L / 2) / d.L;
+  // (only past the ends of her hold: the bend never brings her side in through it)
+  const hold = d.rooms?.find((r) => r.kind === 'hold');
+  const tb = hold ? hold.t1 + 0.005 : 0.9, ts = hold ? hold.t0 - 0.005 : 0.08;
+  const eb = smooth(tb, 1, t), es = smooth(ts, 0, t);
+  if (eb <= 0 && es <= 0) return 0;
+  const top = topAt(d, Math.min(1, Math.max(0, t)));
+  const f = Math.max(0, Math.min(1, (top - y) / (top + d.D)));
+  return -d.L * 0.045 * eb * Math.pow(f, 1.6) + d.L * 0.03 * es * Math.pow(f, 1.4);
+}
+
 /** The flight of stairs at (t, v), if any. */
 export function stairAt(d, t, v) {
   for (const s of d.stairs) if (t >= s.ta && t <= s.tb && v >= s.va && v <= s.vb) return s;

@@ -17,7 +17,16 @@
 // waterline is y = 0.
 import * as THREE from 'three';
 import { Mesher, box, cyl, cone, torus, tube, lathe, C, shade } from './props/kit.js';
-import { hbAt, topAt, xAt, floorAt, skinAt, innerAt, hullProfile, liningAt, liningYs, FURNITURE } from '../world/hull.js';
+import { hbAt, topAt, xAt, floorAt, skinAt, innerAt, hullProfile, liningAt, liningYs, FURNITURE, rakeDx } from '../world/hull.js';
+
+/** Bend everything built so far to her rake (hull.js rakeDx): the shell and all that's fixed to it, together. */
+function rake(k, d) {
+  const p = k.pos;
+  for (let i = 0; i < p.length; i += 3) p[i] += rakeDx(d, p[i], p[i + 1]);
+}
+
+/** Figureheads that ARE the bow (the Going Merry's ram, the Sunny's lion): no bowsprit through them, no rigging to them. */
+export const NO_SPRIT = new Set(['ram', 'lion', 'lion_gold']);
 
 const TAU = Math.PI * 2;
 
@@ -70,8 +79,26 @@ export function bigHull(def, d) {
   stairs(k, d, P);
   fittings(k, d, P);
   sideLadders(k, d, P);
+  stemHead(k, d, P);
   bigFigurehead(k, def, d, P);
+  rake(k, d);
   return k;
+}
+
+/**
+ * The stem head: where her two bulwarks meet at the bow, a solid block of
+ * timber from the deck to over the rail (the knightheads the bowsprit is
+ * stepped between) — no notch, no gap at the point.
+ */
+function stemHead(k, d, P) {
+  const t0 = 0.968, x0 = xAt(d, t0), x1 = d.L / 2 + 0.04;
+  const top = topAt(d, 0.99) + 0.06, fl = floorAt(d, t0) - 0.05;
+  const w = skinAt(d, t0, top - 0.05) + 0.02;
+  const g = new THREE.Shape();
+  g.moveTo(x0, -w); g.lineTo(x1, -0.12); g.lineTo(x1, 0.12); g.lineTo(x0, w); g.closePath();
+  const geo = new THREE.ExtrudeGeometry(g, { depth: top - fl, bevelEnabled: false });
+  geo.rotateX(Math.PI / 2); geo.translate(0, top, 0);
+  k.add(geo, { color: P.cap, outline: 0.015, flat: true });
 }
 
 /**
@@ -352,11 +379,12 @@ function stern(k, d, P) {
   // the taffrail and three great stern lanterns
   const ty = topAt(d, 0.01);
   k.add(box(0.14, 0.18, half(ty) * 2 + 0.1), { at: [x0 - 0.02, ty - 0.2, 0], color: P.trim, outline: 0.015 });
-  for (const z of [-0.62, 0, 0.62]) {
-    const lz = z * half(ty), ly = ty + (z ? 0 : 0.3);
-    k.add(cyl(0.04, 0.04, 0.6, 5), { at: [-d.L / 2 + 0.25, ly, lz], color: P.dark });
-    k.add(cyl(0.16, 0.19, 0.45, 8), { at: [-d.L / 2 + 0.25, ly + 0.6, lz], color: '#fff3c4', glow: '#ffcf70', flicker: 0.2, outline: 0.012 });
-    k.add(cone(0.22, 0.24, 8), { at: [-d.L / 2 + 0.25, ly + 1.05, lz], color: P.trim, outline: 0.01 });
+  // (on the taffrail itself, inboard of her quarters — never out past her side)
+  for (const z of [-0.5, 0, 0.5]) {
+    const lx = -d.L / 2 + 0.35, lz = z * Math.min(half(ty), skinAt(d, (lx + d.L / 2) / d.L, ty) - 0.3), ly = ty + (z ? 0 : 0.3);
+    k.add(cyl(0.04, 0.04, 0.6, 5), { at: [lx, ly, lz], color: P.dark });
+    k.add(cyl(0.16, 0.19, 0.45, 8), { at: [lx, ly + 0.6, lz], color: '#fff3c4', glow: '#ffcf70', flicker: 0.2, outline: 0.012 });
+    k.add(cone(0.22, 0.24, 8), { at: [lx, ly + 1.05, lz], color: P.trim, outline: 0.01 });
   }
   // quarter galleries: glazed bays bulging from the stern corners — laid
   // along her side as it curves in there, and no deeper into it than her
@@ -805,7 +833,12 @@ export function bigMastPlan(d) {
 }
 
 /** The tip of the bowsprit: steeved up from the stem head. */
-export function bigBowTip(d) {
+export function bigBowTip(d, def) {
+  if (def && NO_SPRIT.has(def.figurehead)) {
+    // (no bowsprit: the forestays come down to the foredeck, behind the head)
+    const x0 = d.L / 2 - 2.2, y0 = (d.bowY ?? d.yf) + 0.2;
+    return { x0, y0, a: 0, len: 0, none: true, tip: [x0, y0 + 0.9] };
+  }
   const a = 0.3, len = d.L * 0.28;
   const x0 = d.L / 2 - 0.6, y0 = (d.bowY ?? d.yf) + 0.4;
   return { x0, y0, a, len, tip: [x0 + Math.cos(a) * len, y0 + Math.sin(a) * len] };
@@ -836,8 +869,8 @@ export function bigSailPlan(def, d, mast) {
   }
   sails.push({ type: 'square', x: mast.x, w: wC * 0.82, y0: mast.h1 + 0.5, y1: mast.h2 - 0.35, emblem: mast.fore && def.sail === 'marine', yardR: yr * 0.85 });
   sails.push({ type: 'square', x: mast.x, w: wC * 0.62, y0: mast.h2 + 0.35, y1: mast.h - 0.7, yardR: yr * 0.7 });
-  if (mast.fore) {
-    const b = bigBowTip(d);
+  if (mast.fore && !NO_SPRIT.has(def.figurehead)) {
+    const b = bigBowTip(d, def);
     sails.push({ type: 'jib', x: mast.x, y1: mast.h2 - 0.4, head: [mast.x + 0.4, mast.h2 - 0.4], tipX: b.tip[0], tipY: b.tip[1] - 0.2, clew: [xAt(d, 0.9), (d.bowY ?? d.yf) + (d.fore ? 2.6 : 1.9)] });
   }
   return sails;
@@ -876,11 +909,13 @@ export function bigMastGeometry(def, d, plan) {
     for (let y = m.base + 1.6; y < m.h1 - 1; y += 1.4) k.add(torus(r * 1.05, 0.04, 3, 10), { at: [m.x, y, 0], rot: [Math.PI / 2, 0, 0], color: '#c8b89a' });
   }
   // the bowsprit and jibboom
-  const b = bigBowTip(d);
-  k.save(); k.translate(b.x0, b.y0, 0); k.rotateZ(-Math.PI / 2 + b.a);
-  k.add(cyl(0.12 + d.L * 0.003, 0.2 + d.L * 0.006, b.len * 0.7, 8), { color: wood, outline: 0.02 });
-  k.add(cyl(0.08, 0.12 + d.L * 0.003, b.len * 0.45, 7), { at: [0, b.len * 0.6, 0], color: wood, outline: 0.015 });
-  k.restore();
+  const b = bigBowTip(d, def);
+  if (!b.none) {
+    k.save(); k.translate(b.x0, b.y0, 0); k.rotateZ(-Math.PI / 2 + b.a);
+    k.add(cyl(0.12 + d.L * 0.003, 0.2 + d.L * 0.006, b.len * 0.7, 8), { color: wood, outline: 0.02 });
+    k.add(cyl(0.08, 0.12 + d.L * 0.003, b.len * 0.45, 7), { at: [0, b.len * 0.6, 0], color: wood, outline: 0.015 });
+    k.restore();
+  }
   // a flagstaff at the taffrail for the ensign
   const ty = topAt(d, 0.01);
   k.add(cyl(0.05, 0.08, 3.4, 6), { at: [-d.L / 2 + 0.5, ty, 0], rot: [0, 0, 0.18], color: dark, outline: 0.012 });
@@ -888,7 +923,7 @@ export function bigMastGeometry(def, d, plan) {
 }
 
 /** Shrouds with ratlines, stays and backstays (line segment positions). */
-export function bigRigging(d, plan) {
+export function bigRigging(d, plan, def) {
   const pts = [];
   const Ln = (a, b) => pts.push(a[0], a[1], a[2], b[0], b[1], b[2]);
   for (const m of plan) {
@@ -913,7 +948,7 @@ export function bigRigging(d, plan) {
     }
   }
   // stays: each mast to the one before it, the foremast to the bowsprit
-  const b = bigBowTip(d);
+  const b = bigBowTip(d, def);
   for (let i = 0; i < plan.length; i++) {
     const m = plan[i];
     if (i === 0) {
@@ -928,7 +963,7 @@ export function bigRigging(d, plan) {
     }
   }
   // the bobstay under the bowsprit
-  Ln([b.tip[0] - b.len * 0.3, b.tip[1] - b.len * 0.3 * Math.tan(b.a), 0], [d.L / 2 - 0.3, 0.3, 0]);
+  if (!b.none) Ln([b.tip[0] - b.len * 0.3, b.tip[1] - b.len * 0.3 * Math.tan(b.a), 0], [d.L / 2 - 0.3, 0.3, 0]);
   return pts;
 }
 
@@ -1249,6 +1284,7 @@ export function bigInterior(def, d) {
   // the furniture (the rugs, the lanterns on the walls, and all) — but the
   // treasure chest in the hold, each ship's own (plundered, it's gone: ships3d.js)
   for (const it of d.furniture) if (!it.treasure) furniture(k, d, P, it);
+  rake(k, d); rake(overhead, d);
   return { k, overhead };
 }
 /** The treasure chest in a big ship's hold, on its own (or null), and where it stands: { k, at: [u, floor, v] }. */

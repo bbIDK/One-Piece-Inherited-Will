@@ -17,7 +17,7 @@ import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat, U } from './props/mats.js';
 import { swellAt } from './swell.js';
 import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock, shipBob, smallProfile, wheelSpec } from '../world/hull.js';
-import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging, bigPalette, wheelParts } from './bigship.js';
+import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging, bigPalette, wheelParts, NO_SPRIT } from './bigship.js';
 
 // a coated ship's bubble (see the coating, below): a soap film, its colours
 // running with the angle you see it at, bright at its rim — from either side
@@ -482,7 +482,7 @@ function mastGeometry(def, d, plan) {
 
 /** The big ships' masts, tops and bowsprit (cached per ship type). */
 function bigRigGeometry(def, d, plan) {
-  const key = `big|${def.length}|${def.beam}|${def.masts}`;
+  const key = `big|${def.length}|${def.beam}|${def.masts}|${NO_SPRIT.has(def.figurehead) ? 'ns' : ''}`;
   let g = rigCache.get(key);
   if (!g) { g = bigMastGeometry(def, d, plan); rigCache.set(key, g); }
   return g;
@@ -844,7 +844,7 @@ export class ShipView {
     void yardK;
     s.sailBoxes = boxes;
     // rigging lines
-    this.lines = d.big ? this.lineSet(bigRigging(d, plan)) : this.rigging(def, d, plan);
+    this.lines = d.big ? this.lineSet(bigRigging(d, plan, def)) : this.rigging(def, d, plan);
     root.add(this.lines);
     // paddle wheels
     if (def.paddle) {
