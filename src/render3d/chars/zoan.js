@@ -453,11 +453,12 @@ class Phoenix {
     this.group = group(parent);
     this.body = group(this.group, [0, 1.0, 0]);
     const blue = toon('#36c3ef', { emissive: '#0b4f9e' }), pale = toon('#bff3ff', { emissive: '#2a8fc0' }), gold = toon('#ffcd3c', { emissive: '#a05a00' });
-    part(this.body, SPH, blue, [0.48, 0.3, 0.3], [0, 0, 0], [0, 0, 0], 0.025);
-    part(this.body, SPH, pale, [0.34, 0.22, 0.22], [0.16, -0.06, 0], [0, 0, 0], 0);
+    // (a slender bird of fire, long in the neck — not a round little songbird)
+    part(this.body, SPH, blue, [0.5, 0.22, 0.22], [0, 0, 0], [0, 0, 0], 0.025);
+    part(this.body, SPH, pale, [0.34, 0.17, 0.17], [0.18, -0.04, 0], [0, 0, 0], 0);
     // neck and head
-    part(this.body, SPH, blue, [0.18, 0.3, 0.16], [0.42, 0.2, 0], [0, 0, -0.6], 0.02);
-    this.head = group(this.body, [0.62, 0.42, 0]);
+    part(this.body, SPH, blue, [0.13, 0.36, 0.12], [0.48, 0.26, 0], [0, 0, -0.55], 0.02);
+    this.head = group(this.body, [0.68, 0.55, 0]);
     part(this.head, SPH, blue, [0.2, 0.18, 0.17], [0, 0, 0], [0, 0, 0], 0.02);
     part(this.head, CONE, gold, [0.07, 0.26, 0.06], [0.14, -0.03, 0], [0, 0, -Math.PI / 2 - 0.25], 0.015);
     for (const z of [-1, 1]) {
@@ -483,7 +484,25 @@ class Phoenix {
     ];
     for (const F of this.flames) { F.f.group.position.set(...F.p); F.at.add(F.f.group); }
     this.wings = new PhoenixWings(seed);
+    // (the whole bird's wings far wider than a man's arms of flame: Marco's span dwarfs him)
+    this.wings.group.scale.setScalar(1.7);
+    this.wings.chordK = 1.7; // (and broad: great sheets of fire, not a fringe along the arm)
     this.body.add(this.wings.group);
+    // the long tail streamers of blue fire, trailing and rippling behind it, each with a gold flame at its end
+    const streak = toon('#36c3ef', { emissive: '#1b88d8' });
+    this.streamers = [-1, 0, 1].map((k) => {
+      const tb = new Tube(16, 5, streak, 0.012);
+      this.body.add(tb.mesh);
+      const tip = new BackFlame(seed + 11 + k, GOLD, '#ffc04d');
+      this.body.add(tip.group);
+      return { tb, k, tip, pts: Array.from({ length: 16 }, () => new THREE.Vector3()) };
+    });
+    // Whitebeard's mark on the chest, as Marco wears it (a dark cross and the crescent moustache under it)
+    const navy = toon('#1a2a6c');
+    const mark = group(this.body, [0.49, 0.02, 0], [0, Math.PI / 2, 0]);
+    part(mark, SPH, navy, [0.035, 0.12, 0.012], [0, 0, 0], [0, 0, 0], 0);
+    part(mark, SPH, navy, [0.1, 0.03, 0.012], [0, 0.04, 0], [0, 0, 0], 0);
+    for (const sd of [-1, 1]) part(mark, SPH, navy, [0.07, 0.02, 0.012], [sd * 0.06, -0.07, 0], [0, 0, sd * 0.35], 0);
     // the synthetic arms the wings are laid along: shoulders, elbows, wrists (the body's frame)
     this.rig = { S: [new THREE.Vector3(), new THREE.Vector3()], J: [new THREE.Vector3(), new THREE.Vector3()], E: [new THREE.Vector3(), new THREE.Vector3()], hip: new THREE.Vector3(-0.35, -0.02, 0), qChest: new THREE.Quaternion() };
     this.dims = { Bk: 1.3, chestLen: 0.2 };
@@ -515,16 +534,29 @@ class Phoenix {
       const z = s === 0 ? 1 : -1;
       const up = beat, sw = 0.15;
       R.S[s].set(0.08, 0.12, z * 0.2);
-      R.J[s].set(0.08 - sw * 0.5, 0.12 + Math.sin(up) * 0.6, z * (0.2 + Math.cos(up) * 0.6 * reach));
-      R.E[s].set(0.0 - sw, 0.12 + Math.sin(up * 1.3) * 1.25, z * (0.2 + Math.cos(up * 1.3) * 1.3 * reach));
+      // (held up in a great V — Marco's wings of fire rise over him, they never lie flat — and beating within it)
+      R.J[s].set(0.08 - sw * 0.5, 0.12 + 0.35 + Math.sin(up) * 0.5, z * (0.2 + Math.cos(up) * 0.6 * reach));
+      R.E[s].set(0.0 - sw, 0.12 + 0.95 + Math.sin(up * 1.3) * 0.9, z * (0.2 + Math.cos(up * 1.3) * 1.25 * reach));
     }
     this.trail.set(-1, -0.15 + 0.1 * fk, 0).normalize();
     this.wings.update(t, dt, R, this.dims, this.trail, true, false);
     for (const F of this.flames) F.f.update(t, dt, F.size, _tmp.set(-0.15 - sp * 0.03, 0, 0), true);
+    // the streamers: off the base of the tail, back and a little down, rippling as they stream (longer in flight)
+    const Lt = 2.4 + 1.8 * fk;
+    for (const S of this.streamers) {
+      const N = S.pts.length;
+      for (let i = 0; i < N; i++) {
+        const u = i / (N - 1);
+        S.pts[i].set(-0.42 - u * Lt, -0.02 - u * (0.25 - 0.2 * fk) + Math.sin(t * 3.2 - u * 6 + S.k) * 0.12 * u, S.k * (0.08 + u * 0.35) + Math.sin(t * 2.6 - u * 5 + S.k * 2) * 0.1 * u);
+      }
+      S.tb.set(S.pts, (i) => 0.11 * (1 - i / (N - 1)) + 0.025);
+      S.tip.group.position.copy(S.pts[N - 1]);
+      S.tip.update(t, dt, 0.35, _tmp.set(-0.3, 0, 0), true);
+    }
     const down = a.state === 'knocked' || a.state === 'dead';
     this.group.rotation.x = down ? 1.2 : 0;
   }
-  dispose() { this.wings.dispose(); for (const F of this.flames) F.f.dispose(); }
+  dispose() { this.wings.dispose(); for (const F of this.flames) F.f.dispose(); for (const S of this.streamers) { S.tip.dispose(); S.tb.geo.dispose(); } }
 }
 
 // ------------------------------------------------------------------ the Azure Dragon

@@ -300,7 +300,10 @@ const WING_FRAG = /* glsl */`
     vec3 c = mix(uRim, uMid, mid);
     c = mix(c, uHot * 1.1, hot);
     c = mix(c, uCore * 1.3, core);
-    // gold where the feathers burn out at their tips, as Marco's are drawn
+    // patches of gold flame licking through the blue all over the wing, as Marco's are drawn
+    float pt = smoothstep(0.64, 0.68, fnoise(vec3(fs * 0.85, va * 2.3 - t * 1.3, 13.0))) * smoothstep(0.18, 0.22, d) * (1.0 - core) * uTipGold;
+    c = mix(c, mix(uFire, uGold * 1.2, smoothstep(0.3, 0.36, d)), pt * 0.9);
+    // gold where the feathers burn out at their tips
     float g = smoothstep(0.7, 0.74, vv + (n2 - 0.5) * 0.3) * uTipGold;
     c = mix(c, mix(uFire, uGold * 1.25, mid), g);
     gl_FragColor = vec4(c, uAlpha);
@@ -407,7 +410,7 @@ export class PhoenixWings {
         // the feathers stream back, swept out and a touch down, longer toward the hand
         // (swept up and back in a great V, as Marco's are — so they read from the front and the side too, never edge-on)
         _d.copy(trail).multiplyScalar(0.6).addScaledVector(_o, 0.15 + 0.3 * u).addScaledVector(_Y, 0.25 + 0.45 * u).normalize();
-        const chord = (0.65 + 1.55 * Math.pow(u, 1.1)) * (0.25 + 0.75 * g);
+        const chord = (0.65 + 1.55 * Math.pow(u, 1.1)) * (0.25 + 0.75 * g) * (this.chordK || 1);
         for (let j = 0; j < NV; j++) {
           const k = (i * NV + j) * 3;
           if (j === 0) {
