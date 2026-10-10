@@ -655,7 +655,12 @@ class ActorView {
     const t = a.controller?.target;
     const fighting = !!t && (t.isPlayer || t.faction === 'player') && a.controller.state !== 'idle';
     const bigBar = a.boss && a.game?.bossTarget === a && !a.game.ui?.el?.boss?.classList.contains('hidden');
-    const bar = !a.isPlayer && (a.damageShown > 0 || fighting) && idle && !a.hideBar && !bigBar && dist < 36 ? clamp(a.hp / a.d.maxHp, 0, 1) : null;
+    // (and only once they've actually been hit: nobody at full health has one)
+    const hurt = a.hp < a.d.maxHp - 0.01;
+    const want = !a.isPlayer && hurt && (a.damageShown > 0 || fighting) && idle && !a.hideBar && !bigBar && dist < 36;
+    // (it fades in and out rather than popping)
+    this.barA = clamp((this.barA || 0) + (want ? 0.2 : -0.06), 0, 1);
+    const bar = this.barA > 0 && !a.isPlayer && idle && !bigBar ? clamp(a.hp / a.d.maxHp, 0, 1) : null;
     const d = this.model.d;
     const top = (d.hip0 + d.chestLen + d.neck + d.hc + d.headR * Math.max(1.15, this.model.body.meta.top) + (this.model.body.hatKind ? 0.12 : 0)) * s + 0.12;
     const k = clamp(dist / 8, 0.32, 1.8) / s;
@@ -664,7 +669,8 @@ class ActorView {
       this.label.sprite.visible = true;
       this.label.set(name, a.nameColor || '#ffffff', bar, a.faction === 'player' ? '#66bb6a' : '#ef5350');
       this.label.sprite.position.set(0, top / s, 0);
-      this.label.sprite.scale.set(2.2 * k, 0.62 * k, 1);
+      this.label.mat.opacity = this.barA;
+      this.label.sprite.scale.set(1.5 * k, 1.5 * k * 40 / 256, 1);
     } else if (this.label) this.label.sprite.visible = false;
     if (a.questMarker && dist < 60) {
       if (!this.marker) { this.marker = new Marker(); this.root.add(this.marker.sprite); }

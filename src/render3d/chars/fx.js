@@ -27,37 +27,60 @@ export function brightness(col) {
 }
 
 // ------------------------------------------------------------------ labels
-/** Name + health bar above a character (a sprite, redrawn only on change). */
+/**
+ * The health bar over someone you've hurt (a sprite, redrawn only on
+ * change): slim, ink-edged, its fill shading red to deep crimson, with the
+ * blow you just struck showing as a pale chip that drains away after it.
+ */
 export class Label {
   constructor() {
-    this.c = canvas(256, 72);
+    this.c = canvas(256, 40);
     this.g = this.c.getContext('2d');
     this.tex = tex(this.c);
     this.mat = new THREE.SpriteMaterial({ map: this.tex, transparent: true, depthWrite: false, fog: false });
     this.sprite = new THREE.Sprite(this.mat);
-    this.sprite.scale.set(2.2, 0.62, 1);
+    this.sprite.scale.set(2.2, 0.34, 1);
     this.sprite.center.set(0.5, 0);
     this.sprite.renderOrder = 5;
     this.key = '';
+    this.lag = null; this.t = 0;
   }
-  /** name: text or null; bar: fraction 0..1 or null; barCol */
+  /** name: unused (no name tags); bar: fraction 0..1 or null; barCol */
   set(name, color, bar, barCol) {
-    const key = `${name}|${color}|${bar === null ? '' : Math.round(bar * 60)}|${barCol}`;
+    const now = performance.now() / 1000, dt = Math.min(0.1, this.t ? now - this.t : 0);
+    this.t = now;
+    if (bar === null) {
+      this.lag = null;
+      if (this.key) { this.key = ''; this.g.clearRect(0, 0, 256, 40); this.tex.needsUpdate = true; }
+      return;
+    }
+    // (the chip: holds a moment, then drains down to the bar)
+    if (this.lag === null || bar > this.lag) { this.lag = bar; this.hold = 0; }
+    else if (this.lag > bar) {
+      this.hold = (this.hold || 0) + dt;
+      if (this.hold > 0.35) this.lag = Math.max(bar, this.lag - dt * 0.6);
+    } else this.hold = 0;
+    const key = `${Math.round(bar * 120)}|${Math.round(this.lag * 120)}|${barCol}`;
     if (key === this.key) return;
     this.key = key;
-    const g = this.g;
-    g.clearRect(0, 0, 256, 72);
-    if (bar !== null) {
-      g.fillStyle = 'rgba(0,0,0,0.62)'; g.beginPath(); g.roundRect(56, 52, 144, 13, 5); g.fill();
-      g.fillStyle = barCol; g.beginPath(); g.roundRect(59, 55, Math.max(0, 138 * Math.min(1, bar)), 7, 3); g.fill();
+    const g = this.g, X = 40, Y = 12, W = 176, H = 14;
+    g.clearRect(0, 0, 256, 40);
+    // ink edge and dark well
+    g.fillStyle = 'rgba(10,8,12,0.9)'; g.beginPath(); g.roundRect(X - 3, Y - 3, W + 6, H + 6, 6); g.fill();
+    g.fillStyle = 'rgba(60,50,56,0.85)'; g.beginPath(); g.roundRect(X, Y, W, H, 4); g.fill();
+    const f = Math.max(0, Math.min(1, bar)), l = Math.max(f, Math.min(1, this.lag));
+    if (l > f) { g.fillStyle = '#fff3c4'; g.beginPath(); g.roundRect(X, Y, W * l, H, 4); g.fill(); }
+    if (f > 0) {
+      const gr = g.createLinearGradient(0, Y, 0, Y + H);
+      const ally = barCol === '#66bb6a';
+      gr.addColorStop(0, ally ? '#a5e8a0' : '#ff8a80'); gr.addColorStop(0.45, barCol); gr.addColorStop(1, ally ? '#2e7d32' : '#9a1b1b');
+      g.fillStyle = gr; g.beginPath(); g.roundRect(X, Y, Math.max(4, W * f), H, 4); g.fill();
+      // a gloss along the top
+      g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(X + 2, Y + 2, Math.max(0, W * f - 4), 3);
     }
-    if (name) {
-      g.font = 'bold 26px Nunito, "Trebuchet MS", sans-serif';
-      g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,0.75)'; g.lineJoin = 'round';
-      g.strokeText(name, 128, 30, 248);
-      g.fillStyle = color || '#ffffff'; g.fillText(name, 128, 30, 248);
-    }
+    // quarter ticks
+    g.fillStyle = 'rgba(10,8,12,0.55)';
+    for (let i = 1; i < 4; i++) g.fillRect(X + (W * i) / 4 - 1, Y, 2, H);
     this.tex.needsUpdate = true;
   }
   dispose() { this.tex.dispose(); this.mat.dispose(); }

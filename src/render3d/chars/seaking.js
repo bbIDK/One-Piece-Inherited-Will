@@ -133,7 +133,7 @@ export class SeaKingView {
     const cam = ctx.camera;
     const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
     const k = Math.min(2.4, Math.max(0.5, dist / 8));
-    this.label.sprite.scale.set(2.2 * k, 0.62 * k, 1);
+    this.label.sprite.scale.set(2.2 * k, 2.2 * k * 40 / 256, 1);
   }
 
   dispose() { this.label.dispose(); this.root.removeFromParent(); }
