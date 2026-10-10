@@ -339,6 +339,9 @@ export class Actor extends Entity {
     if (this.controller && this.controller.onHurt) this.controller.onHurt(this, att, game);
     if (game.onDamage) game.onDamage(this, att, n, h);
     if (this.hp <= 0) {
+      // (how it ended: a Devil Fruit power, a Haki blow, a house coming down on them, or far more than it took — someone who
+      // was only ever a bystander doesn't get up from that: see reputation.js)
+      this.killingBlow = h ? { fruit: !!(h.def?.source?.startsWith('fruit') || h.def?.source?.startsWith('haki')), crush: !!h.crush, over: -this.hp > this.d.maxHp * 0.5 } : null;
       this.hp = 0;
       this.knockOut(game, att);
     }

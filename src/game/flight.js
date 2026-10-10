@@ -74,8 +74,10 @@ export function flightOf(a) {
     const form = (a.buffs || []).find((b) => b.form)?.form;
     for (const t of f.techniques) {
       if (!t.flight) continue;
-      if (t.flight.forms && !t.flight.forms.includes(form)) continue;
-      const s = { ...DEF, ...t.flight, fruit: true, tech: t.id };
+      let fl = t.flight;
+      // (a flight only some form of the fruit has; out of it, its `otherwise` — Kaido's flame clouds — or none)
+      if (fl.forms && !fl.forms.includes(form)) { if (!fl.otherwise) continue; fl = { ...fl, ...fl.otherwise }; }
+      const s = { ...DEF, ...fl, fruit: true, tech: t.id };
       s.gauge = Math.round(s.gauge * k * 10) / 10;
       if (!best || s.gauge > best.gauge) best = s;
     }

@@ -25,6 +25,7 @@ const _swing = [0, 0];
 import { Ship } from '../game/ship.js';
 import { buildBuilding, setNightWindows } from './buildings3d.js';
 import { FarBuildings } from './farbuildings.js';
+import { Debris } from './debris3d.js';
 import { RoofIndex } from './roofs.js';
 import { COLLIDE } from '../world/objects.js';
 import { PROP_BUILDERS, VIEWS, FRAME_HOOKS, registerPropBuilder } from './registry.js';
@@ -196,6 +197,8 @@ export class Renderer3D {
       landDrawn: (x, y) => this.terrain.landDrawn(x, y),
     };
     this.buildingsFar = new FarBuildings(this.props, this.ctx);
+    // (buildings brought down falling to pieces: game/destruction.js)
+    this.debris = new Debris(this.props, this);
     Object.defineProperty(this.ctx, 'camera', { get: () => this.rig.camera });
     Object.defineProperty(this.ctx, 'world', { get: () => this.world });
     Object.defineProperty(this.ctx, 'yaw', { get: () => this.rig.yaw });
@@ -479,6 +482,7 @@ export class Renderer3D {
     this.sky.shadowAt(0, this.rig.footY ?? this.ground(ox, oy), 0, Math.cos(this.rig.yaw), Math.sin(this.rig.yaw), ox, oy);
 
     this.updateProps(game, ox, oy, env, sailing);
+    if (this.propOrigin) this.debris.update(dt, w, this.propOrigin);
     this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
     this.forest.aim(camYaw3);
     prof('r.props', t0); t0 = performance.now();
@@ -908,6 +912,26 @@ export class Renderer3D {
     this.buildingsFar.add(o, true);
     this.buildingsFar.show(o, true);
     this.retiring.set(o, v);
+  }
+
+  /** How tall building b's model stands (if it's built), for the pieces it falls into. */
+  builtHeight(b) { return this.built.get(b)?.userData?.height || 0; }
+
+  /**
+   * The town changing (game/destruction.js): a building brought down goes
+   * from the scene — its model and its far block — at once (its pieces are
+   * the debris now); one put back up is built again at the next look round.
+   */
+  ruinProp(e) {
+    const b = e.b;
+    if (e.kind === 'fall') {
+      const v = this.built.get(b);
+      if (v !== undefined) this.dropProp(b, v);
+      this.buildingsFar.remove(b);
+    } else if (e.kind === 'restore') {
+      this.scan = null; // (a full look: its far block and its model come back)
+      this.propsDirty = true;
+    }
   }
 
   /** Take a built prop out of the scene and forget it. */

@@ -8,6 +8,7 @@
 // metres in front); ang: the tilt's (or the split's) direction — 'facing',
 // 'side' (rolled across you), or 'back'; the rest as world/deform.js.
 import { addDeform } from '../world/deform.js';
+import { techScale } from './abilities.js';
 
 export const TERRAFORM = {
   // Gura Gura: the land and the sea rock and split
@@ -39,13 +40,50 @@ export const TERRAFORM = {
   ope_takt: { kind: 'rise', at: 'target', r: 4, amp: 3, rise: 0.5, hold: 3, fall: 2 },
 };
 
-/** Technique `a` (an actor's action) has just struck: its mark on the ground, if it leaves one. */
+/**
+ * Technique `a` (an actor's action) has just struck: its mark on the ground,
+ * if it leaves one. It grows with the move (abilities.js techScale: mastery,
+ * Haki, the awakened form) — wider, deeper — and the bigger it is the longer
+ * the ground takes to settle. What it heaves or splits, the town on it takes
+ * too (game/destruction.js). Whitebeard's Sky Tilt, awakened at full mastery,
+ * is Marineford: the whole island and the sea round it tilted like a deck,
+ * every building on it brought down.
+ */
 export function terraform(actor, a, ang, game) {
   const T = TERRAFORM[a.def.id] || (a.def.base && TERRAFORM[a.def.base]);
   if (!T || actor.inWater || actor.onShip || actor.deck) return null;
   let x = actor.x, y = actor.y;
+  const f = a.scale ?? techScale(actor, a.def);
   if (T.at === 'target' && a.tx !== undefined) { x = a.tx; y = a.ty; }
-  else if (T.at === 'ahead') { x = actor.x + Math.cos(ang) * (T.dist || 8); y = actor.y + Math.sin(ang) * (T.dist || 8); }
+  else if (T.at === 'ahead') { x = actor.x + Math.cos(ang) * (T.dist || 8) * f; y = actor.y + Math.sin(ang) * (T.dist || 8) * f; }
   const dir = T.ang === 'side' ? ang + Math.PI / 2 : T.ang === 'back' ? ang + Math.PI : ang;
-  return addDeform({ ...T, x: game.world?.wx ? game.world.wx(x) : x, y, ang: dir });
+  let r = T.r * f, amp = T.amp * Math.min(f, 3.5), hold = T.hold * (2 + f), fall = T.fall * (1.5 + f * 0.5);
+  const w = game.world;
+  const isl = T.kind === 'tilt' ? w?.islandAt?.(x, y) || w?.nearestIsland?.(x, y, 80) : null;
+  const marineford = a.def.id === 'gura_tilt' && (actor.fruitMastery || 0) >= 100 && actor.buffs?.some((b) => b.form === 'awake') && isl;
+  if (marineford) {
+    // the island's whole breadth and a sea's width beyond it, rocked a good 15°
+    const b = isl.bbox;
+    r = Math.max(r, Math.hypot(b.hw, (b.y1 - b.y0) / 2) * 1.5 + 30);
+    amp = r * 0.3;
+    hold = 45; fall = 18;
+  }
+  const d = addDeform({ ...T, r, amp, hold, fall, x: w?.wx ? w.wx(x) : x, y, ang: dir });
+  // what it moves of the town comes down with it
+  const D = game.destruction;
+  if (D && (actor.isPlayer || actor.summonedBy?.isPlayer)) {
+    if (marineford) {
+      const n = D.levelAll(x, y, r, 6000, actor, 30);
+      if (n && actor.isPlayer) game.log?.(`The whole island tilts! ${n} buildings come down.`, '#ffcc80');
+      game.fx?.pressure?.(4, '#9fd9ef', 0.6);
+      game.fx?.shake?.(1.6);
+    } else {
+      // (a tilt rocks everything on it, hardest at its rising edge; a crater or a split wrecks what's over it)
+      const reach = T.kind === 'tilt' ? r * 0.75 : T.kind === 'trench' ? r : r * 0.9;
+      const power = amp * 90 * f;
+      if (T.kind === 'trench') for (let t = 0; t <= r; t += 3) D.strike(x + Math.cos(dir) * t, y + Math.sin(dir) * t, T.w * f + 2, power, actor);
+      else D.strike(x, y, reach, power, actor);
+    }
+  }
+  return d;
 }

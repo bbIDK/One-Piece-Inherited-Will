@@ -447,7 +447,7 @@ export class Voyage {
     const act = p.action;
     if (act) {
       if (act !== this.actRef) { this.actRef = act; this.actN++; }
-      m.a = [this.actN, act.def.id, r2(act.t), r2(act.def.noSpeedup ? 1 : p.atkSpeed()), act.def.m1Chain ? 1 : 0];
+      m.a = [this.actN, act.def.id, r2(act.t), r2(act.def.noSpeedup ? 1 : p.atkSpeed()), act.def.m1Chain ? 1 : 0, r2(act.scale ?? 1)];
     } else this.actRef = null;
     const dash = p.dash?.dodge ? p.dash : null;
     if (dash) {

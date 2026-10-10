@@ -187,7 +187,7 @@ export class Remote {
       if (def0) {
         const def = s.am ? { ...def0, m1Chain: true } : def0;
         const rate = def.noSpeedup ? 1 : s.ar || 1;
-        a.action = { def, t: (s.at || 0) + (s.lag || 0) * rate, step: 0, angle: a.facing, rate, end: abilityTotal(def), net: true };
+        a.action = { def, t: (s.at || 0) + (s.lag || 0) * rate, step: 0, angle: a.facing, rate, end: abilityTotal(def), net: true, scale: s.as || 1 };
         game.audio?.sfx(def.sfxStart || 'whoosh', a);
         if (def.say && game.fx && (s.at || 0) < 0.3) game.fx.text(a.x, a.y - 2.1, def.say, '#ffffff', 0.34, { life: 1.2 });
       }
@@ -222,6 +222,10 @@ export class Remote {
       }
     }
     if (a.dash) { a.dash.t -= dt; if (a.dash.t <= 0) a.dash = null; }
+    // (their Haki coming on: the coat spreading, the black lightning crackling up — as yours does)
+    if (a.armament && !this.armWas) game.fx?.hakiOn?.(a, 'armament');
+    if (a.conquerorInfused && !this.infWas) game.fx?.tech?.(a, { fx: { impact: 0.1, ring: 3, color: '#000000' } }, { def: { id: 'haki_infusion' }, angle: a.facing }, 'fx');
+    this.armWas = a.armament; this.infWas = a.conquerorInfused;
     // (a blow landing on them over there: the flash of it here)
     const hs = s.hs || 0;
     if (hs > this.lastHs + 0.05) a.flashT = 0.12;

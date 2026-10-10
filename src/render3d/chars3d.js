@@ -15,7 +15,7 @@ import { Actor } from '../game/actor.js';
 import { CharacterModel } from './chars/model.js';
 import { expression } from './chars/face.js';
 import { B } from './chars/bones.js';
-import { Label, Marker, Glow, Aura, iceShell, Stars, rootRing, guardShimmer } from './chars/fx.js';
+import { Label, Marker, Glow, Aura, iceShell, Stars, rootRing, guardShimmer, FlameCloud } from './chars/fx.js';
 import { SeaKingView } from './chars/seaking.js';
 import { SeaCowView, FightingFishView } from './chars/seacreature.js';
 import { Trail } from './chars/trail.js';
@@ -608,6 +608,13 @@ class ActorView {
       _v2.x -= 0.8; _v2.y += 0.15;
       this.wings.update(t, wdt, rig, m.d, _v2.normalize(), phoenix, !!a.action);
     } else if (this.wings) this.wings.group.visible = false;
+    // Kaido's flame cloud under the feet, flying as a man or half-dragon (the whole dragon makes its own: chars/zoan.js)
+    const fcloud = a.flying && a.flightRide === 'flamecloud' && !this.zoan?.beast && near;
+    if (fcloud || this.fcloud) {
+      if (!this.fcloud) { this.fcloud = new FlameCloud(); m.group.add(this.fcloud.group); }
+      this.fcloud.group.visible = !!fcloud;
+      if (fcloud) this.fcloud.update(t);
+    }
     // energy: charge-ups and element glows on the striking limb
     let gi = 0;
     // (in first person the view's own arms carry the glows and the trails —

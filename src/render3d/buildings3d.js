@@ -589,7 +589,10 @@ function buildBuilding0(b, ctx) {
     const jz = f > 0 && V.jetty ? V.jetty : 0; // (upper floors of a jettied house stand out)
     W.front.forEach((x, i) => {
       if (f > 0 && V.balcony && Math.abs(x - V.balcony.x) < V.balcony.w / 2 + 0.3 && f === 1) return; // (the balcony door is there)
-      const flowers = (S.flowers || V.flowers) && (i + f + (b.v || 0)) % 2 === 0;
+      // (no flower box under the first floor's front windows of a building with a name board over its door:
+      // the board hangs just there — finish() — and the box stood out through its lettering)
+      const board = f === 1 && (b.role || 'house') !== 'house' && b.name && b.fw >= 4;
+      const flowers = !board && (S.flowers || V.flowers) && (i + f + (b.v || 0)) % 2 === 0;
       windowAt(k, b, S, x, y, winW, winH, jz, lit(b, wi++), wallCol, flowers, pane);
     });
     for (const sx of [-1, 1]) {

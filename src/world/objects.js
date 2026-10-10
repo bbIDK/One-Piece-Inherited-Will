@@ -364,6 +364,39 @@ export class ObjectIndex {
     b.cols = null; b.doorCol = null; b.floor = null; b.stepsFloor = null; b.furnished = false;
   }
 
+  /**
+   * A building knocked down (game/destruction.js): it stays in the index (its
+   * place in the town, its name, who lives there), but nothing of it stands —
+   * no walls, no floor, no blocked ground — and it isn't drawn (hidden) until
+   * restore() puts it back up.
+   */
+  ruin(obj) {
+    if (obj.ruined) return;
+    obj.ruined = true;
+    obj.hidden = true;
+    if (obj.veranda) { this.world.removeFloor(obj.veranda); obj.veranda = null; }
+    for (const c of obj.colCols || []) this.world.removeCol(c);
+    obj.colCols = null;
+    if (obj.enterable) { this.removeInterior(obj); obj.doorBox = null; obj.doorOpen = false; this.stamp(obj, 0); }
+    else if (obj.hut) { for (const c of obj.cols || []) this.world.removeCol(c); obj.cols = null; this.stamp(obj, 0); }
+    else if (obj.soft) this.removeCollider(obj);
+    else if (obj.block) this.stamp(obj, 0);
+  }
+
+  /** A ruined building rebuilt: as it stood before (ruin). */
+  restore(obj) {
+    if (!obj.ruined) return;
+    obj.ruined = false;
+    obj.hidden = false;
+    const c = obj.block && colliderOf(obj);
+    if (obj.enterable) { this.stamp(obj, 2); this.addInterior(obj); }
+    else if (obj.hut) { this.stamp(obj, 2); this.addHutWall(obj); }
+    else if (obj.soft) { if (c) this.addCollider(obj, c); }
+    else if (obj.block) this.stamp(obj, 1);
+    if (obj.kind === 'building' && obj.style === 'chinese') this.addColumns(obj);
+    if (obj.kind === 'building' && obj.style === 'wano' && obj.block && !isHut(obj)) this.addVeranda(obj);
+  }
+
   remove(obj) {
     const list = this.chunks.get(obj._chunk);
     if (list) {

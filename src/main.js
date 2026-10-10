@@ -58,6 +58,7 @@ import { addItem, useItem } from './game/inventory.js';
 import { ITEMS } from './data/items.js';
 import { installReputation } from './game/reputation.js';
 import { installBuildings } from './game/buildings.js';
+import { installDestruction } from './game/destruction.js';
 import { installTownLife } from './game/townlife.js';
 import { installSeaLife } from './game/sealife.js';
 import { clamAt } from './world/seabed.js';
@@ -296,6 +297,7 @@ async function start() {
   installLegends(game);
   installWorld(game);
   installReputation(game);
+  installDestruction(game);
   installBuildings(game);
   installTownLife(game);
   installSeaLife(game);

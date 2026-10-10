@@ -196,7 +196,15 @@ export function installReputation(game) {
     if (!c || !p || a.isPlayer || a.spar || a.def?.duel) return;
     if (att && !att.isPlayer && (att.crewId || att.summonedBy?.isPlayer)) att = p;
     if (!att?.isPlayer) return;
-    if (a.faction === 'civilian' && !a.def?.hostile) crime(game, 1000000, 'beat up an innocent', { rep: 6 });
+    if (a.faction === 'civilian' && !a.def?.hostile) {
+      // a bystander struck down by a Devil Fruit, a Haki blow or a house falling on them — or far harder than it took — doesn't get up
+      const k = a.killingBlow;
+      if (k && (k.fruit || k.crush || k.over)) {
+        a.killed = true; a.recoverAfter = null;
+        game.fx?.text?.(a.x, a.y - 1.6, 'KILLED', '#ff5252', 0.4);
+        crime(game, 3000000, 'killed an innocent', { rep: 10 });
+      } else crime(game, 1000000, 'beat up an innocent', { rep: 6 });
+    }
     else if (CRIMINALS.has(a.faction)) {
       const tf = threatFactor(a.power(), p.power());
       if (a.boss || a.named) changeRep(game, a.boss ? 4 : 2, `defeated ${a.name}`);

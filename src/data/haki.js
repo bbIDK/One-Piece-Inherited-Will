@@ -31,10 +31,10 @@ export const HAKI_ABILITIES = [
     steps: [{ hit: { shape: 'arc', range: 1.7, arc: 1.2, offset: 0.3, damage: 60, knockback: 10, stun: 0.9, heavy: true, unblockable: true, haki: true, trueDamage: true, impactFrame: true } }] },
   { id: 'haki_futuresight', name: 'Future Sight', icon: '🔮', hakiType: 'observation', anim: 'cast', windup: 0.2, recover: 0.1, cd: 12, cost: { haki: 30 }, desc: 'See a few seconds into the future: you evade almost everything for a short time.', learn: { haki: 'observation', level: 65 },
     steps: [{ fx: { ring: 2, color: '#ce93d8' } }, { buff: { id: 'future_sight', name: 'Future Sight', dur: 6, mods: { evade: 0.75 }, fpTint: 'rgba(255,43,61,0.35)' } }] },
-  { id: 'haki_conqueror', name: "Conqueror's Burst", icon: '👑', hakiType: 'conqueror', anim: 'cast', windup: 0.45, recover: 0.3, cd: 1, cost: { haki: 35 }, desc: 'Release your will. Weak foes faint; strong ones flinch. No cooldown: as often as your Haki lasts.', learn: { haki: 'conqueror', level: 1 },
+  { id: 'haki_conqueror', name: "Conqueror's Burst", icon: '👑', hakiType: 'conqueror', anim: 'cast', windup: 0.45, recover: 0.3, cd: 1, cost: { haki: 15 }, desc: 'Release your will. Weak foes faint; strong ones flinch. No cooldown: as often as your Haki lasts.', learn: { haki: 'conqueror', level: 1 },
     steps: [{ conqueror: { range: 9, damage: 10 } }] },
   { id: 'haki_infusion', name: "Conqueror's Infusion", icon: '⚡', hakiType: 'conqueror', anim: 'cast', windup: 0.25, recover: 0.1, cd: 0.5, cost: { haki: 10 }, toggle: 'infusion', desc: 'Coat your fists and blades in Conqueror\'s Haki: black lightning crackles with every blow, and your hits land far harder. Stays on, burning Haki, until you let it go (press again) or your Haki runs dry.', learn: { haki: 'conqueror', level: 10 },
-    steps: [{ fx: { impact: 0.1, ring: 3, color: '#000000' } }, { buff: { id: 'infusion', name: "Conqueror's Infusion", dur: 1e6, mods: { damage: 1.6 }, conquerorInfused: true, aura: 'rgba(0,0,0,0.85)', drain: { haki: 3 } } }] },
+    steps: [{ fx: { impact: 0.1, ring: 3, color: '#000000' } }, { buff: { id: 'infusion', name: "Conqueror's Infusion", dur: 1e6, mods: { damage: 1.6 }, conquerorInfused: true, aura: 'rgba(0,0,0,0.85)', drain: { haki: 1 } } }] },
 ];
 
 registerAbilities(HAKI_ABILITIES.map((a) => ({ ...a, source: 'haki:' + a.hakiType })), 'haki');

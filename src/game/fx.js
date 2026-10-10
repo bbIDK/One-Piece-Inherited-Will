@@ -292,6 +292,8 @@ export class FX {
   zone(zone, spec, actor, action) { return this.cfx(() => CFX.zoneFx(this, zone, spec, actor, action)); }
   explosion(x, y, e, owner) { return this.cfx(() => CFX.explosionFx(this, x, y, e, owner)); }
   projTrail(p, t) { return this.cfx(() => CFX.projTrailFx(this, p, t)); }
+  /** A shot flying wreathed in Conqueror's Infusion. */
+  infused(p, owner) { return this.cfx(() => CFX.infusedShotFx(this, p, owner)); }
   conqueror(actor, c) { return this.cfx(() => CFX.conquerorFx(this, actor, c)); }
   /** Two kings' Conqueror's colliding: the sky splits. */
   clash(a, b) { return this.cfx(() => CFX.clashFx(this, a, b)); }

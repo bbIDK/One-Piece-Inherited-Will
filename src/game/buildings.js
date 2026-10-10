@@ -75,7 +75,7 @@ export function installBuildings(game) {
       if (!p || !w?.objects) return;
       if ((B.t -= dt) <= 0) {
         B.t = 0.5;
-        B.near = w.objects.near(p.x, p.y, 45, (o) => o.enterable);
+        B.near = w.objects.near(p.x, p.y, 45, (o) => o.enterable && !o.ruined);
         for (const b of B.near) w.objects.addFurniture(b);
         B.guardBases(p);
         B.questIn.clear();

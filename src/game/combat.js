@@ -140,6 +140,8 @@ export class Combat {
       }
       if (h.hitShips && !h.cancelled) this.hitShips(h);
       if (h.owner?.isPlayer && !h.cancelled) this.hitDummies(h);
+      // (and what it reaches of the town: game/destruction.js)
+      if (!h.cancelled && !h.wrecked && game.destruction) game.destruction.fromHitbox(h);
       if (h.t >= h.duration) this.hitboxes.splice(i, 1);
     }
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -167,7 +169,11 @@ export class Combat {
       dead = p.traveled >= p.range || p.t > (p.life ?? 6);
       if (!p.passWalls && !dead) {
         const t = game.world.type(p.x, p.y);
-        if (game.world.solid(p.x, p.y) || game.world.hitsProp(p.x, p.y, 0.04, true) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
+        if (game.world.solid(p.x, p.y) || game.world.hitsProp(p.x, p.y, 0.04, true) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) {
+          dead = true;
+          // (a wall in the way takes the shot: game/destruction.js)
+          if (game.destruction && !p.explodes) game.destruction.fromShot(p);
+        }
       }
       // (swallowed by a Black Hole; sent back by a Repel or a Balloon)
       if (!dead && !p.ghost && game.areaZones?.length && absorbShot(game, p)) dead = true;
@@ -234,7 +240,12 @@ export class Combat {
     if (h.room && this.game.world.distance(h.room.x, h.room.y, target.x, target.y) > h.room.r + (target.r || 0.3)) return false;
     // (up in the air: a blow reaches only what's about level with it)
     if ((owner.flying || target.flying) && !reachesUp(owner, target, h, this.game)) return false;
-    return hostile(owner, target) || (owner.isPlayer && target.provoked) || (target.isPlayer && owner.provoked) || h.hitsAll;
+    if (hostile(owner, target) || (owner.isPlayer && target.provoked) || (target.isPlayer && owner.provoked) || h.hitsAll) return true;
+    // your blows land on anyone in the way — townsfolk, Marines, shopkeepers — not on your
+    // own crew, not on the people the story needs (a quest's giver), not on a spar partner
+    // you haven't squared up to; a house brought down by you falls on whoever's in it
+    const you = owner.isPlayer || owner.summonedBy?.isPlayer;
+    return !!(you && target.faction !== 'player' && !target.isPlayer && !target.npcId && !target.def?.protected && !target.crewId && !target.netRemote);
   }
 
   /**

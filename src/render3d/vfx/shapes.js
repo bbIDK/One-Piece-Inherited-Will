@@ -91,7 +91,7 @@ SHAPES.flare = {
     const grow = k < 0.2 ? easeOut(k / 0.2) : 1;
     const fade = (1 - k) * a;
     const R = s.size * (0.4 + 0.6 * grow);
-    const X = v.lx(s.x), Z = v.lz(s.y), Y = v.groundOf(s) + z;
+    const X = v.lx(s.x), Z = v.lz(s.y), Y = s.Y ?? v.groundOf(s) + z;
     const c = col(s.color || '#fff59d');
     v.sprites.vel(v.sprites.put(SK.STAR, X, Y, Z, R * 1.25, c, fade, WHITE, 1, s.rot ?? (0.2 + k * 0.6), s.seed, k), 0, 0, 0, v.pull);
     v.sprites.vel(v.sprites.put(SK.GLOW, X, Y, Z, R * 0.6, c, fade * 0.4, WHITE, 1, 0, s.seed, k), 0, 0, 0, v.pull);
@@ -403,8 +403,9 @@ SHAPES.beam = {
     const flick = 0.82 + 0.18 * Math.sin(v.time * 55 + s.seed);
     const wd = (s.width || 0.6) * flick * (1 - k * 0.45);
     const ex = s.x + Math.cos(s.angle) * L, ey = s.y + Math.sin(s.angle) * L;
-    const X0 = v.lx(s.x), Z0 = v.lz(s.y), Y0 = v.groundOf(s) + z;
-    const X1 = v.lx(ex), Z1 = v.lz(ey), Y1 = v.ground(ex, ey) + z;
+    // (from the mouth or the hand that loosed it — z0, or Y0 over the sea — to chest height at its end: z1)
+    const X0 = v.lx(s.x), Z0 = v.lz(s.y), Y0 = s.Y0 ?? v.groundOf(s) + (s.z0 ?? z);
+    const X1 = v.lx(ex), Z1 = v.lz(ey), Y1 = v.ground(ex, ey) + (s.z1 ?? z);
     D[0] = X1 - X0; D[1] = Y1 - Y0; D[2] = Z1 - Z0;
     const L3 = Math.hypot(D[0], D[1], D[2]);
     norm3(D);

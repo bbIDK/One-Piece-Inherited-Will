@@ -543,9 +543,52 @@ export function techFx(fx, actor, s, a, kind, extra = {}) {
     else if (DEFAULTS[kind]) DEFAULTS[kind](fx, actor, s, a, extra);
     // (an awakened move: the fruit's own colour bursting off its user as it goes, on top of its usual look — once a move)
     if (def.awakened && a && !a._awFx && kind !== 'fx') { a._awFx = true; awakenedFx(fx, actor, def); }
+    // (Conqueror's Infusion: every technique wreathed in the king's black lightning)
+    // (Armament: the move coated black, a glossy sheen and dark flecks off it)
+    if (actor && (actor.conquerorInfused || actor.armament) && (kind === 'hit' || kind === 'dash' || kind === 'proj')) infusedTechFx(fx, actor, s, a, kind, extra);
   } catch (e) {
     if (!fx._techWarned) { fx._techWarned = true; console.warn('technique fx', def.id, kind, e); }
   }
+}
+
+/**
+ * Conqueror's Infusion through a technique: black lightning (in the king's
+ * colour at its core) crawling over the whole of it — round a blast's ring,
+ * down a wave's line, along a sweep's arc, off the body as it charges — with
+ * a crack of it leaping from the user. Sized by the step (it grows with the move).
+ */
+function infusedTechFx(fx, actor, s, a, kind, extra) {
+  const kc = sigOf(actor).conqueror, as = (actor.look && actor.look.scale) || 1;
+  const h = (kind === 'dash' ? s.dash?.hit : s.hit) || {};
+  const ang = a?.angle ?? actor.facing ?? 0, ca = Math.cos(ang), sa = Math.sin(ang);
+  const R = Math.max(1.2, h.range || (s.proj ? 2 : 1.6));
+  const pts = [];
+  if (kind === 'proj') { for (let i = 0; i < 3; i++) pts.push([actor.x + ca * rnd(0.4, 1.4), actor.y + sa * rnd(0.3, 1)]); }
+  else if (h.shape === 'circle' || h.shape === 'ring') { for (let i = 0; i < 5 + Math.min(10, R | 0); i++) { const t = rnd(0, TAU), r = R * rnd(0.4, 1); pts.push([(extra?.x ?? actor.x) + Math.cos(t) * r, (extra?.y ?? actor.y) + 0.4 + Math.sin(t) * r]); } }
+  else if (h.shape === 'line') { for (let i = 0; i < 4 + Math.min(10, R / 1.5 | 0); i++) { const d = R * rnd(0.1, 1), w = (h.width || 1) * rnd(-0.5, 0.5); pts.push([actor.x + ca * d - sa * w, actor.y + sa * d + ca * w]); } }
+  else { const arc = h.arc ?? 1.8; for (let i = 0; i < 5; i++) { const t = ang + rnd(-arc / 2, arc / 2), r = R * rnd(0.5, 1); pts.push([actor.x + Math.cos(t) * r, actor.y + Math.sin(t) * r]); } }
+  if (!actor.conquerorInfused) {
+    // Armament only: hardened black — a dark ring snapping out where it lands, black flecks off the whole of it
+    const sh = sigOf(actor).armament;
+    for (const [x, y] of pts) sparks(fx, x, y, rnd(0.4, 1.2), rnd(0, TAU), 2, ['#0b0a10', '#1a1622', sh], { speed: 3 + R * 0.4, life: 0.25, size: 0.08 });
+    const end = pts[pts.length - 1];
+    if (end) fx.ring(end[0], end[1], 0.1, 0.5 + R * 0.25, '#0b0a10', 0.22, 0.09, { z: 0.8, flat: 0.8, noCore: true });
+    if (end) fx.ring(end[0], end[1], 0.08, 0.35 + R * 0.18, sh, 0.18, 0.04, { z: 0.82, flat: 0.8, noCore: true, add: true });
+    return;
+  }
+  // the crack from the user to the farthest of it, and black lightning all over the rest
+  const far = pts.reduce((m, p) => ((p[0] - actor.x) ** 2 + (p[1] - actor.y) ** 2 > (m[0] - actor.x) ** 2 + (m[1] - actor.y) ** 2 ? p : m), pts[0]);
+  if (far) fx.bolt(actor.x, actor.y, far[0], far[1], '#000000', 0.2, 0.07, { z0: 0.95 * as, z1: rnd(0.4, 1.2), branches: 2, core: kc });
+  for (const [x, y] of pts) miniBolts(fx, x, y, rnd(0.3, 1.4), 2, 0.6 + R * 0.08, Math.random() < 0.65 ? '#000000' : kc, kc);
+}
+
+/** A shot under Conqueror's Infusion: black lightning crackling off it as it flies (every few frames). */
+export function infusedShotFx(fx, p, owner) {
+  p._infT = (p._infT || 0) + 1;
+  if (p._infT % 3) return;
+  if (!owner.conquerorInfused) { sparks(fx, p.x, p.y, 0.8, Math.atan2(-p.vy, -p.vx), 2, ['#0b0a10', '#1a1622', sigOf(owner).armament], { speed: 2, life: 0.25, size: 0.07 }); return; }
+  const kc = sigOf(owner).conqueror, R = 0.5 + (p.size || 1) * 0.35;
+  miniBolts(fx, p.x, p.y, 0.8 + rnd(-0.3, 0.3), 2, R, Math.random() < 0.65 ? '#000000' : kc, kc);
 }
 
 /** An awakened move's mark: a ring and sparks of the fruit's colour, white at the heart, and a short glare. */
@@ -634,10 +677,28 @@ function lineSpikes(fx, x, y, ang, L, kind, col, width = 0.6) {
   fx.add('spikes', { x, y, pts, kind, color: col || (kind === 'ice' ? '#b3e5fc' : kind === 'sand' ? '#d7b56d' : '#8d6e63'), edge: kind === 'ice' ? '#e1f5fe' : '#6d4c41', life: 1.2 });
 }
 
+/**
+ * Where a beam leaves from: a breath from the mouth (a zoan's, where its
+ * model last put it: render3d/chars/zoan.js mouth — the dragon's jaws, high
+ * over the field), anything else from the hand thrust out in front, at the
+ * height of the shoulder of a body that size. { x, y, z0 (m over the ground)
+ * or Y0 (m over the sea), from: forward offset }.
+ */
+export function beamOrigin(actor, a) {
+  const m = actor._mouthAt, now = typeof performance !== 'undefined' ? performance.now() / 1000 : 0;
+  const breath = a?.def?.anim === 'breath' || /breath|bolo|kaifu/.test(a?.def?.id || '');
+  if (m && breath && now - m.t < 0.6) return { x: actor.x + m.dx, y: actor.y + m.dy, Y0: m.h };
+  const sc = (actor.look && actor.look.scale) || 1, ang = a?.angle ?? actor.facing ?? 0;
+  const fwd = breath ? 0.25 * sc : 0.5 * sc;
+  return { x: actor.x + Math.cos(ang) * fwd, y: actor.y + Math.sin(ang) * fwd, z0: (breath ? 1.5 : 1.15) * sc };
+}
+
 function beamFx(fx, actor, s, a, h, ang, range, col, E) {
   const style = beamStyle(h.element, a.def);
-  fx.beam(actor.x, actor.y, ang, range, h.width || 0.6, col, h.duration ? Math.max(0.26, h.duration) : 0.3, s.core || '#ffffff', { style });
-  fx.add('flare', { x: actor.x + Math.cos(ang) * 0.5, y: actor.y + Math.sin(ang) * 0.35, z: 0.75, size: 0.6 + (h.width || 0.6) * 0.3, color: col, life: 0.22 });
+  const o = beamOrigin(actor, a);
+  // (it starts at the mouth or the hand, and comes down to chest height where it ends: on the foe it's aimed at)
+  fx.beam(o.x, o.y, ang, range, h.width || 0.6, col, h.duration ? Math.max(0.26, h.duration) : 0.3, s.core || '#ffffff', { style, z0: o.z0, Y0: o.Y0, z1: 0.8 });
+  fx.add('flare', { x: o.x, y: o.y, z: o.z0 ?? 0.75, Y: o.Y0, size: 0.6 + (h.width || 0.6) * 0.3, color: col, life: 0.22 });
   const W = h.width || 0.6;
   if (style === 'ice') lineSpikes(fx, actor.x, actor.y, ang, range, 'ice', null, W * 0.5);
   else if (style === 'sand') lineSpikes(fx, actor.x, actor.y, ang, range, 'sand', null, W * 0.5);
@@ -1877,9 +1938,10 @@ export function conquerorFx(fx, actor, c) {
   fx.crack(x, y, Math.min(4.5, R * 0.4), 3);
   dust(fx, x, y, 22, { speed: R * 1.1, size: 0.34 });
   calloutOver(fx, actor, 1.8 * s, 'DOOON!!', col, 0.7);
-  fx.impactFrame(0.07, col);
+  fx.impactFrame(0.12, col);
   fx.screenShock(x, y, 1.1 * s, 0.8, 1);
-  fx.pressure(1.4, col, 0.85);
+  // (the world washed in the king's colour a good while, deeper the further the will reaches)
+  fx.pressure(3 + Math.min(2, R / 12), col, Math.min(1, 0.85 + R / 120));
   fx.shake(0.85);
   fx.focus(x, y, 0.32);
 }

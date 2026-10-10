@@ -61,7 +61,7 @@ export function findInteraction(game, p) {
   if (game.buildings) game.buildings.candidates(p, cands);
   if (w.objects) {
     for (const o of w.objects.near(p.x, p.y, 3.2)) {
-      if (o.enterable) continue; // walk in (see game/buildings.js)
+      if (o.enterable || o.ruined) continue; // walk in (see game/buildings.js); a ruin has no door
       if (o.kind === 'building' && o.role && o.role !== 'house' && o.door) {
         const f = bfront(o);
         const d = w.distance(p.x, p.y, o.door.x + f.x * 0.3, o.door.y + f.y * 0.3);

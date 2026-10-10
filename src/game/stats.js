@@ -28,7 +28,7 @@ export function derive(a, mods = {}) {
     dmg: 1 + a.str * 0.028,
     def: clamp(a.end * 0.0035 + (mods.armor || 0), 0, 0.55),
     hpRegen: 0.25 + a.vit * 0.02,
-    hakiRegen: 1.5 + a.wil * 0.06,
+    hakiRegen: 4.5 + a.wil * 0.15,
     atkSpeed: 1 + a.agi * 0.003,
   };
 }

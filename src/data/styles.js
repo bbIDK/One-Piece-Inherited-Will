@@ -298,7 +298,7 @@ export const WEAPON_STYLE = { sword: 'ittoryu', gun: 'sniper', staff: 'weather_s
 
 // register everything as abilities
 for (const [sid, s] of Object.entries(STYLES)) {
-  const list = [...s.m1, s.heavy, ...(s.plainHeavy ? [s.plainHeavy] : []), ...s.techniques].map((a) => ({ ...a, style: sid, source: 'style:' + sid, weapon: a.weapon ?? s.weapon ?? undefined }));
+  const list = [...s.m1.map((a) => ({ ...a, m1: true })), s.heavy, ...(s.plainHeavy ? [s.plainHeavy] : []), ...s.techniques].map((a) => ({ ...a, style: sid, source: 'style:' + sid, weapon: a.weapon ?? s.weapon ?? undefined }));
   registerAbilities(list, 'style:' + sid);
   s.m1Ids = s.m1.map((a) => a.id);
   s.heavyId = s.heavy.id;

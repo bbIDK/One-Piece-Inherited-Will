@@ -643,6 +643,32 @@ export const SFX = {
       v.sample(0, 'rubble_1', { gain: 0.25, rate: 0.65, lp: 2500 });
     },
   },
+  /** A blow landing on a wall: the crunch of plaster and timber, bits pattering down. */
+  wallhit: {
+    prio: 5, cd: 0.08, max: 2, send: 0.15, drive: 1.2,
+    play(v) {
+      v.thump(0, { f0: 120, f1: 55, dur: 0.18, gain: 0.3 });
+      v.noise(0, 0.22, { type: 'lowpass', freq: 700, gain: 0.32 });
+      v.crackle(0.01, 0.3, 10, { freq: 1600, gain: 0.09, q: 4 });
+      v.sample(0.02, 'rubble_1', { gain: 0.18, rate: 1.1, lp: 3500 });
+    },
+  },
+  /** A building coming down: the crack of it giving way, the long roar of timber and stone falling, the rumble, the dust settling. */
+  collapse: {
+    prio: 8, cd: 0.12, max: 3, send: 0.35, drive: 2.2, duck: 0.4,
+    play(v, k) {
+      const s = k.w || 1;
+      v.noise(0, 0.05, { type: 'highpass', freq: 1400, gain: 0.35 * s, attack: 0.0008 });
+      v.creak(0, 0.5, { rate: 30, rate1: 14, freqs: [150, 260, 430], q: 5, gain: 0.18 * s });
+      v.thump(0.15, { f0: 70, f1: 24, dur: 1.2, gain: 0.8 * s });
+      v.noise(0.12, 1.8, { color: 'pink', type: 'lowpass', freq: 700, sweep: 80, gain: 0.65 * s });
+      v.crackle(0.15, 1.4, 30, { freq: 1300, gain: 0.13 * s, q: 4 });
+      v.sample(0.15, 'rubble_1', { gain: 0.45 * s, rate: 0.7 });
+      v.sample(0.4, 'rubble_1', { gain: 0.3 * s, rate: 0.55, lp: 1800 });
+      const e = v.echo(0.3, 0.35, 700, 0.3);
+      v.noise(0.15, 0.7, { color: 'pink', type: 'lowpass', freq: 500, gain: 0.35 * s, dest: e });
+    },
+  },
   /** Out of shot: the hammer falls on nothing. */
   dry: {
     prio: 6, cd: 0.3, max: 1, send: 0.08,

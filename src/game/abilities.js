@@ -256,7 +256,66 @@ export function updateAbility(actor, dt, game) {
   }
 }
 
+/**
+ * How much bigger a technique has grown with whoever uses it — every punch,
+ * slash, slam, shot and Devil Fruit power. Its level is what it's fought with:
+ * fruit mastery for a fruit's (as it was new to them; about half again at
+ * mastery 50; ×2.2 at full mastery), the style's or the weapon's mastery for
+ * the rest (×1.7 at full). Haki makes it bigger again: Armament a little, more
+ * the stronger it is; Conqueror's Infusion a lot (×1.8 at full Conqueror's).
+ * A third more in the awakened form (an awakened move has that built in). Its
+ * blows reach further, its shots and blasts are bigger, its fields wider —
+ * and its look grows with it (the visuals read the same step). Up to ×5.
+ */
+export function techScale(actor, def) {
+  if (!def || !actor) return 1;
+  const src = def.source || '', lv = (v) => Math.min(100, Math.max(0, v || 0)) / 100;
+  let f;
+  if (src.startsWith('fruit')) f = 1 + 1.2 * Math.pow(lv(actor.fruitMastery), 1.3);
+  else if (src.startsWith('haki')) f = 1 + 0.9 * Math.pow(lv(actor.hakiLevel?.(src.split(':')[1])), 1.2);
+  else {
+    const sm = actor.styleMastery ? lv(actor.styleMastery(def.style || actor.style)) : 0;
+    const wm = actor.weaponMastery ? lv(actor.weaponMastery[weaponKindOf(actor, def)]) : 0;
+    f = 1 + 0.7 * Math.pow(Math.max(sm, wm), 1.3);
+  }
+  if (actor.armament) f *= 1.1 + 0.25 * lv(actor.hakiLevel?.('armament'));
+  if (actor.conquerorInfused) f *= 1.25 + 0.55 * lv(actor.hakiLevel?.('conqueror'));
+  if (!def.awakened && src.startsWith('fruit') && actor.buffs?.some((b) => b.form === 'awake')) f *= 1.35;
+  return Math.min(5, f);
+}
+/** (the old name) */
+export const fruitScale = techScale;
+
+const GROWN = new WeakMap();
+const r2 = (v) => Math.round(v * 100) / 100;
+/** Step `s` grown by `f` (fruitScale), kept, so each size is made once. */
+export function growStep(s, f) {
+  if (!s || f <= 1.02) return s;
+  const q = Math.round(f * 20) / 20;
+  let m = GROWN.get(s);
+  if (!m) GROWN.set(s, (m = new Map()));
+  let o = m.get(q);
+  if (o) return o;
+  o = { ...s, grown: q };
+  if (s.hit) {
+    // (a punch reaches a little further; a blast, a wave, a sweep grows whole)
+    const h = s.hit, k = h.shape === 'arc' || !h.shape ? Math.sqrt(q) : h.shape === 'line' ? Math.pow(q, 0.85) : q;
+    o.hit = { ...h, range: r2((h.range || 1.4) * k), ...(h.width ? { width: r2(h.width * q) } : {}) };
+  }
+  if (s.proj) {
+    const p = s.proj;
+    o.proj = { ...p, radius: r2((p.radius ?? 0.3) * Math.sqrt(q)), size: r2((p.size ?? 1) * q), range: r2((p.range ?? 10) * Math.sqrt(q)), ...(p.explode ? { explode: { ...p.explode, range: r2((p.explode.range || 1.8) * q) } } : {}) };
+  }
+  if (s.zone && !s.zone.grow) o.zone = { ...s.zone, range: r2(s.zone.range * q) };
+  if (s.pull) o.pull = { ...s.pull, range: r2(s.pull.range * q) };
+  if (s.fx?.ring) o.fx = { ...s.fx, ring: r2(s.fx.ring * q) };
+  if (s.dash?.hit) o.dash = { ...s.dash, hit: { ...s.dash.hit, range: r2((s.dash.hit.range || 1.1) * Math.sqrt(q)) } };
+  m.set(q, o);
+  return o;
+}
+
 function runStep(actor, s, game, a) {
+  s = growStep(s, a.scale ?? (a.scale = techScale(actor, a.def)));
   const ang = s.angleOffset ? a.angle + s.angleOffset : a.angle;
   const mult = a.mult;
   const col = ELEMENT_COLORS[s.hit?.element || s.proj?.element || 'physical'];
@@ -307,7 +366,7 @@ function runStep(actor, s, game, a) {
         // (a shot, not a blow: a sword can turn it aside with a parry — unless it goes off on impact)
         isProj: true, explodes: !!p.explode,
         onEnd: p.explode ? (pr, g) => explode(pr, g, p.explode, mult) : null,
-        trail: p.trail ? (pr, g) => trail(pr, g, p.trail) : null,
+        trail: p.trail || actor.conquerorInfused || actor.armament ? (pr, g) => { if (p.trail) trail(pr, g, p.trail); if (actor.conquerorInfused || actor.armament) g.fx.infused?.(pr, actor); } : null,
         draw: drawProjectile,
       });
     }
@@ -431,6 +490,9 @@ function runStep(actor, s, game, a) {
  * anyone. `zones` collects the fields drawn, for the caller to run down.
  */
 export function ghostStep(actor, s, game, a, zones) {
+  // (as big as theirs is: their mastery and Haki grew it over there — the scale comes with it)
+  const s0 = s;
+  s = growStep(s, a.scale || 1);
   const ang = s.angleOffset ? a.angle + s.angleOffset : a.angle;
   const col = ELEMENT_COLORS[s.hit?.element || s.proj?.element || 'physical'];
   const fx = game.fx;
@@ -481,6 +543,8 @@ export function ghostStep(actor, s, game, a, zones) {
   if (s.pull) fx.tech(actor, s, a, 'pull');
   if (s.fx) fx.tech(actor, s.fx.color ? s : { ...s, fx: { ...s.fx, color: col } }, a, 'fx');
   if (s.sfx) game.audio?.sfx(s.sfx, actor);
+  // their Conqueror's let loose: the burst, its black lightning, the world washed in their colour (its reach grown with their will)
+  if (s0.conqueror) { game.fx.conqueror(actor, { ...s0.conqueror, range: s0.conqueror.range * (1 + ((a.scale || 1) - 1) * 2.4) }); game.audio?.sfx('conqueror', actor); }
 }
 
 /** A bullet from a gun (not a slingshot's pellet). */
@@ -514,6 +578,8 @@ export const INFUSED_REACH = 0.9;
  */
 export function conquerorBurst(actor, game, c, mult) {
   const lvl = actor.hakiLevel('conqueror') || 20;
+  // (the stronger the will, the further it reaches: ×3.2 at full Conqueror's, and a little more infused)
+  c = { ...c, range: c.range * (1 + 2.2 * Math.pow(Math.min(100, lvl) / 100, 1.2)) * (actor.conquerorInfused ? 1.15 : 1) };
   const my = actor.power();
   // another king within reach: the two wills meet (game/haki.js clashes)
   let rival = null, rd = Infinity;

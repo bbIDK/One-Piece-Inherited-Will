@@ -430,8 +430,10 @@ export const FRUITS = {
     techniques: [
       T(0, { id: 'seiryu_bolo', name: 'Bolo Breath', icon: '🐉', anim: 'breath', windup: 0.5, recover: 0.4, cd: 7, say: 'Bolo Breath!', steps: [{ hit: { shape: 'line', range: 11, width: 1.8, damage: 44, knockback: 6, stun: 0.5, element: 'fire', status: { burn: 3 }, heavy: true, hitShips: true }, vfx: 'beam', color: '#ff7043' }] }),
       T(25, { id: 'seiryu_kaifu', name: 'Kaifu', icon: '🌬', anim: 'breath', windup: 0.35, recover: 0.3, cd: 6, desc: 'Wind blades from the dragon\'s whiskers.', steps: [{ proj: { speed: 18, range: 12, radius: 0.5, damage: 18, count: 3, spread: 0.5, sprite: 'airslash', slashing: true, pierce: true } }] }),
-      T(35, { id: 'seiryu_fly', name: 'Azure Dragon Flight', desc: 'As the whole Azure Dragon, fly on the clouds you make. Fly, or land again (or press Space again in the air). Only the full dragon flies.',
-        flight: { style: 'dragon', ride: 'cloud', gauge: 40, speed: 11, climb: 6, ceiling: 60, drain: 0.6, sea: 3, refill: 6, color: '#90caf9', forms: ['dragon'] } }),
+      T(35, { id: 'seiryu_fly', name: 'Azure Dragon Flight', desc: 'Fly on the clouds you make: as the whole Azure Dragon, on its own; as a man or half-dragon, riding the flame clouds (Kaen Kumo) under your feet. Fly, or land again (or press Space again in the air).',
+        flight: { style: 'dragon', ride: 'cloud', gauge: 40, speed: 11, climb: 6, ceiling: 60, drain: 0.6, sea: 3, refill: 6, color: '#90caf9', forms: ['dragon'],
+          // (not the dragon: the flame clouds — Kaido's Kaen Kumo — carry him)
+          otherwise: { style: 'ride', ride: 'flamecloud', speed: 9, climb: 5, color: '#ffab40' } } }),
       T(50, { id: 'seiryu_raimei', name: 'Raimei Hakke', icon: '⚡', anim: 'heavy', windup: 0.6, recover: 0.5, cd: 14, desc: 'Thunder Bagua: a club blow that shakes the heavens.', steps: [{ hit: { shape: 'arc', range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: 'lightning', impactFrame: true, shake: 0.9 } }] }),
       T(40, { id: 'seiryu_kamaitachi', name: 'Kamaitachi Rusukaina', anim: 'breath', windup: 0.5, recover: 0.4, cd: 10, desc: 'The dragon\'s whiskers whip up a gale of blades: a storm of them sweeps the ground in front of you.',
         steps: [{ proj: { speed: 20, range: 13, radius: 0.5, damage: 16, count: 7, spread: 1.3, sprite: 'airslash', slashing: true, pierce: true } }] }),
@@ -442,7 +444,7 @@ export const FRUITS = {
     ],
     // (the whole Azure Dragon is a form, opened by fighting: data/fruitForms.js)
     more: [
-      T(10, { id: 'seiryu_hybrid', name: 'Dragon Hybrid Form', icon: '🐲', anim: 'flex', windup: 0.6, recover: 0.1, cd: 8, say: 'Hybrid form...', desc: 'Half man, half dragon: horns, scales, a dragon\'s tail and claws. (Only the full dragon flies.)',
+      T(10, { id: 'seiryu_hybrid', name: 'Dragon Hybrid Form', icon: '🐲', anim: 'flex', windup: 0.6, recover: 0.1, cd: 8, say: 'Hybrid form...', desc: 'Half man, half dragon: horns, scales, a dragon\'s tail and claws. (It flies on flame clouds; the full dragon on its own.)',
         steps: [{ fx: { burst: 18, color: '#90caf9', kind: 'smoke', ring: 2 } }, { at: 0.55, buff: { id: 'dragon_hybrid', form: 'hybrid', name: 'Dragon Hybrid', dur: Infinity, mods: { damage: 1.35, defMul: 0.75, scale: 1.45 }, look: ZOAN_LOOK.dragon_hybrid } }] }),
       T(80, { id: 'seiryu_form', name: 'Dragon Form', icon: '🐉', anim: 'cast', windup: 1.0, recover: 0.1, cd: 10, desc: 'Become the whole Azure Dragon: a serpent of blue scales tens of metres long that flies on its own clouds.',
         steps: [{ fx: { burst: 30, color: '#90caf9', kind: 'smoke', ring: 5, shake: 0.5 } }, { at: 0.9, buff: { id: 'dragon', form: 'dragon', name: 'Azure Dragon', dur: Infinity, mods: { damage: 1.6, defMul: 0.55, scale: 2.4 }, look: ZOAN_LOOK.dragon } }] }),

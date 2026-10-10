@@ -216,9 +216,9 @@ export function readState(m) {
     s.au = num(m.ab[2], -400, 400); s.av = num(m.ab[3], -100, 100); s.ah = num(m.ab[4], -50, 200);
   }
   // (a technique under way: which one, how far into it, how fast they move, and whether it's a basic swing of a combo)
-  if (Array.isArray(m.a) && (m.a.length === 4 || m.a.length === 5)) {
+  if (Array.isArray(m.a) && m.a.length >= 4 && m.a.length <= 6) {
     const id = ident(m.a[1]);
-    if (id) { s.an = int(m.a[0], 0, 1e9, 0); s.aid = id; s.at = num(m.a[2], 0, 60); s.ar = num(m.a[3], 0.1, 10, 1); s.am = !!m.a[4]; }
+    if (id) { s.an = int(m.a[0], 0, 1e9, 0); s.aid = id; s.at = num(m.a[2], 0, 60); s.ar = num(m.a[3], 0.1, 10, 1); s.am = !!m.a[4]; s.as = num(m.a[5], 0.2, 6, 1); }
   }
   if (Array.isArray(m.dg) && m.dg.length === 4 && m.dg.every(finite)) {
     s.gn = int(m.dg[0], 0, 1e9, 0); s.gvx = num(m.dg[1], -100, 100); s.gvy = num(m.dg[2], -100, 100); s.gt = num(m.dg[3], 0, 2);

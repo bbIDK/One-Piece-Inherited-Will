@@ -98,10 +98,11 @@ test('who flies: the Phoenix and the Dragon, Logia riders — from the first bit
     assert.ok(master.gauge > fresh.gauge, `${fruit}: longer once mastered (${fresh.gauge} → ${master.gauge})`);
     assert.equal(flightOf(dragon(body(g, { fruit, mastery: 40 }))).gauge, master.gauge, `${fruit}: as long as it gets by 40`);
   }
-  // (in human shape, or half a dragon, Kaido doesn't fly; the Phoenix flies in any shape)
-  assert.equal(flightOf(body(g, { fruit: 'uo_seiryu' })), null, 'no flight in human shape');
+  // (in human shape, or half a dragon, Kaido rides his flame clouds; as the dragon it flies on its own; the Phoenix flies in any shape)
+  assert.equal(flightOf(body(g, { fruit: 'uo_seiryu' })).ride, 'flamecloud', 'on flame clouds in human shape');
   const hy = body(g, { fruit: 'uo_seiryu' }); hy.addBuff({ id: 'dragon_hybrid', form: 'hybrid', dur: Infinity });
-  assert.equal(flightOf(hy), null, 'nor in the hybrid');
+  assert.equal(flightOf(hy).ride, 'flamecloud', 'and in the hybrid');
+  assert.equal(flightOf(dragon(body(g, { fruit: 'uo_seiryu' }))).style, 'dragon', 'the dragon flies as itself');
   assert.equal(flightOf(body(g, { fruit: 'moku' })).ride, 'smoke');
   assert.equal(flightOf(body(g, { fruit: 'zushi' })).ride, 'rock');
   for (const fruit of ['gomu', 'mera', 'hie', 'goro', 'magu', 'ope', 'bara']) assert.equal(flightOf(body(g, { fruit })), null, `${fruit} doesn't fly`);

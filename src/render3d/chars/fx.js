@@ -431,6 +431,52 @@ export function rootRing() {
   return new THREE.Mesh(ROOT.g, ROOT.m);
 }
 
+/**
+ * Kaido's flame cloud (Kaen Kumo), ridden as a man or half-dragon: a puffy
+ * white cloud under the feet, lumpy and a little uneven, with tongues of
+ * orange flame licking up round its rim. update(t) makes it boil and flicker.
+ */
+let FCLOUD = null;
+export class FlameCloud {
+  constructor() {
+    if (!FCLOUD) FCLOUD = {
+      s: new THREE.SphereGeometry(1, 10, 7),
+      c: new THREE.ConeGeometry(0.16, 0.6, 6).translate(0, 0.3, 0),
+      cloud: new THREE.MeshToonMaterial({ color: 0xf4f6fa }),
+      flame: new THREE.MeshBasicMaterial({ color: 0xff8f00, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }),
+      core: new THREE.MeshBasicMaterial({ color: 0xffe082, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }),
+    };
+    const F = FCLOUD;
+    this.group = new THREE.Group();
+    this.puffs = [];
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * TAU, r = i === 0 ? 0 : 0.55 + (i % 2) * 0.12;
+      const m = new THREE.Mesh(F.s, F.cloud);
+      const k = i === 0 ? 0.62 : 0.34 + (i % 3) * 0.06;
+      m.position.set(Math.cos(a) * r, i === 0 ? 0 : -0.04 + (i % 2) * 0.06, Math.sin(a) * r * 0.85);
+      m.scale.set(k * 1.15, k * 0.6, k);
+      m.userData.k = k; m.userData.ph = i * 1.7;
+      this.group.add(m);
+      this.puffs.push(m);
+    }
+    this.flames = [];
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * TAU;
+      const m = new THREE.Mesh(F.c, i % 2 ? F.core : F.flame);
+      m.position.set(Math.cos(a) * 0.72, 0.05, Math.sin(a) * 0.6);
+      m.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5);
+      m.userData.ph = i * 2.3;
+      this.group.add(m);
+      this.flames.push(m);
+    }
+    this.group.position.y = -0.18;
+  }
+  update(t) {
+    for (const m of this.puffs) { const k = m.userData.k * (1 + 0.06 * Math.sin(t * 3 + m.userData.ph)); m.scale.set(k * 1.15, k * 0.6, k); }
+    for (const m of this.flames) { const f = 0.7 + 0.45 * Math.abs(Math.sin(t * 9 + m.userData.ph)); m.scale.set(1, f, 1); }
+  }
+}
+
 let SHIM = null;
 const SHIM_VERT = /* glsl */`
   varying vec2 vUv;
