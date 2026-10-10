@@ -18,12 +18,14 @@
 // and its weight get through, and a flurry holds them down instead of pumping.
 //
 // Each effect is a voice (see synth.js): a little chain of oscillators and
-// filtered noise with one gain at its end. Each kind of sound (blows, moves,
+// filtered noise — and a recorded layer or two (samples.js) — with one gain at
+// its end. Each kind of sound (blows, moves,
 // abilities, foley, the world's) has its own share of the voices, so a storm's
 // creaks can never crowd out a punch: when a share is full the least important
 // of that kind makes way (faded out over a few milliseconds, never cut), and a
 // landed blow is never refused — at worst an older blow's tail makes room.
 import { Voice } from './synth.js';
+import { loadSamples, pickSample } from './samples.js';
 
 // how many voices each bus may have at once, and each kind of effect (a phone gets fewer)
 const CAP = { sfx: 28, npc: 10, amb: 12, ui: 6 };
@@ -107,7 +109,12 @@ export class Engine {
     this.ducks = new Map();
     this.makeNoise();
     this.makeRooms();
+    // (the recorded layers decode in the background: till then the effects play synthesised alone)
+    this.samplesReady = loadSamples(ctx).catch(() => 0);
   }
+
+  /** A decoded recording by name or group (samples.js), or null while there's none yet. */
+  sample(name) { return pickSample(name); }
 
   now() { return this.ctx.currentTime; }
 

@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { embedSfx } from './sfx-embed.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const watch = process.argv.includes('--watch');
@@ -72,6 +73,8 @@ function writeArtifactPage(code) {
 }
 
 mkdirSync(join(root, 'dist'), { recursive: true });
+// (the recorded effects in assets/sfx, packed into the bundle: see tools/sfx-embed.mjs)
+embedSfx();
 if (watch) {
   const ctx = await esbuild.context({
     ...options,

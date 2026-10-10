@@ -1,16 +1,31 @@
 # Audio: the sound of Inherited Will
 
-Everything you hear is synthesised in the browser with WebAudio: no recorded
-or downloaded audio, ever. The references below (the One Piece anime, the
-Pirate Warriors / World Seeker / Odyssey / Burning Blood games, foley and
+Almost everything you hear is synthesised in the browser with WebAudio. The
+exception is a small set of short CC0 recordings (`assets/sfx`, credited in
+`assets/sfx/CREDITS.md`: a pane of glass shattering, an earthquake's rumble, a
+flame's roar, ice cracking, an electric crackle, a heavy punch's thud...)
+layered *under* the synthesised effects where a recording sells what
+synthesis can't. The references below (the One Piece anime, the Pirate
+Warriors / World Seeker / Odyssey / Burning Blood games, foley and
 procedural-audio practice) informed the *design*; nothing is sampled from them.
+
+**Recorded layers.** `tools/sfx-embed.mjs` (run by `tools/build.mjs`) packs
+`assets/sfx/*.mp3` into `src/audio/samples.data.js` as base64, so a single-file
+build or a host that serves only the script still has them. `samples.js`
+decodes them in the background when the sound first comes on (the fights'
+ones first) and trims the decoder's lead-in; `Voice.sample(dt, name, {gain,
+rate, offset, dur, fade, attack, lp, hp})` plays one through the voice's own
+chain (so its bus, drive, room and volume settings apply). `fire_1`, `fire_2`…
+are variants asked for as `fire`. A layer that isn't decoded yet (or never
+is) is simply left out: every effect still plays, synthesised alone.
 
 Code: `src/audio/` — `engine.js` (the mixer), `synth.js` (a voice's building
 blocks), `motifs.js` (what things are made of), `sfx.js` (every effect),
 `steps.js` (footsteps), `music.js` (composer, instruments, decks),
 `themes.js` (each place's music), `director.js` (what music plays),
 `ambience.js` (beds and spots), `foley.js` (the game-watching foley),
-`audio.js` (the facade the game calls). Checks: `tools/scenarios-audio.mjs`.
+`samples.js` (the recorded layers), `audio.js` (the facade the game calls).
+Checks: `tools/scenarios-audio.mjs`.
 
 ## 1. What One Piece sounds like (research takeaways)
 
@@ -79,7 +94,10 @@ A technique's sound starts with its wind-up and fires its release at the
 moment its first blow lands (the step's time, slowed as the game slows a
 foe's readable wind-up). Fruits: Gomu stretch → snap (Gatling: a volley,
 Gear Second: heartbeat pump and steam, Gear Fourth: bounce and Haki, Gear
-Fifth: the Drums of Liberation), Gura trembling air → glass crack, Ope ROOM
+Fifth: the Drums of Liberation), Gura trembling air and a groaning ground →
+a hairline crack, then the sky shattering (a white snap, recorded glass
+breaking, shards raining), a recorded sub-boom and the earthquake rolling on
+with rock breaking in it (the Tsunami adds an aftershock), Ope ROOM
 hum / Shambles shwip-pop / Amputate's long cut, Bara pops, Bomu fuse hiss,
 Hana petal slaps and a chime, Ito twang, Mochi squelch, Horo ghostly wail,
 Kage bats, Doku hiss and bubbles, Noro slowing whine, Bari glassy FM, Suke

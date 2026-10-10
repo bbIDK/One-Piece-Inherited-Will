@@ -115,6 +115,44 @@ export class Voice {
     parts.forEach((m, i) => this.tone(dt, dur * (1 - i * 0.12), { freq: base * m * (1 - spread / 2 + Math.random() * spread), gain: gain / (1 + i * 0.6), attack: 0.002, dest }));
   }
 
+  /**
+   * A recorded layer (samples.js): `name` a sample or a group of variants, at
+   * `rate` (its pitch and speed — nudged by the voice's jitter and by `vary`),
+   * `gain`, from `offset` seconds in; `attack` fades it in, `dur` cuts it short
+   * with a `fade`, `lp`/`hp` filter it. Null, and nothing played, while it
+   * isn't decoded yet (the synthesised layers stand on their own).
+   */
+  sample(dt, name, { gain = 0.5, rate = 1, vary = 0.04, offset = 0, dur = 0, fade = 0.1, attack = 0, lp = 0, hp = 0, dest } = {}) {
+    const buf = this.E.sample?.(name);
+    if (!buf) return null;
+    const c = this.c, t = this.at(dt);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const r = Math.max(0.25, Math.min(4, rate * this.pj * (1 + (Math.random() * 2 - 1) * vary)));
+    src.playbackRate.value = r;
+    const full = Math.max(0.02, (buf.duration - offset) / r), len = dur > 0 ? Math.min(dur, full) : full;
+    const g = c.createGain(), p = g.gain;
+    if (attack > 0 || len < full) {
+      p.value = 0;
+      p.setValueAtTime(attack > 0 ? 0 : gain, t);
+      if (attack > 0) p.linearRampToValueAtTime(gain, t + Math.min(attack, len * 0.9));
+      // (cut short: faded, never clipped off)
+      if (len < full) { p.setValueAtTime(gain, Math.max(t + Math.min(attack, len * 0.9), t + len - fade)); p.linearRampToValueAtTime(0, t + len); }
+    } else p.value = gain;
+    let head = src;
+    for (const [type, f] of [['lowpass', lp], ['highpass', hp]]) {
+      if (!(f > 0)) continue;
+      const fl = c.createBiquadFilter();
+      fl.type = type; fl.frequency.value = minF(f); fl.Q.value = 0.6;
+      head.connect(fl); head = fl;
+    }
+    head.connect(g); g.connect(dest || this.in);
+    src.start(t, Math.max(0, offset));
+    src.stop(t + len + 0.02);
+    this.done(t + len + 0.02);
+    return g;
+  }
+
   /** Debris, sparks, splinters, grains: `n` tiny random pops over `dur`. */
   crackle(dt, dur, n, { freq = 3000, gain = 0.12, spread = 0.6, q = 2.2, dest, len = 0.025 } = {}) {
     for (let i = 0; i < n; i++) {

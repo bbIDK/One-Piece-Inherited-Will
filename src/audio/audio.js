@@ -1,9 +1,11 @@
-// Procedural audio: every sound effect is synthesised with WebAudio, and the
+// Procedural audio: every sound effect is synthesised with WebAudio (a few
+// short CC0 recordings layered under the big ones: samples.js), and the
 // music is composed on the fly — calm pieces with quiet between them, a
-// fight's music that builds with the fight (no recorded assets).
+// fight's music that builds with the fight.
 //
 //   engine.js    the mixer: buses, rooms, the voice limit, the underwater muffle
 //   synth.js     a voice's building blocks (noise, tones, rings, creaks, bubbles…)
+//   samples.js   the recorded layers (glass shattering, a quake, fire, ice…), decoded in the background
 //   motifs.js    the sounds things are made of (a flame, ice forming, a rubber snap)
 //   sfx.js       every effect by name, and each technique's own start
 //   steps.js     footsteps by what's underfoot

@@ -8,6 +8,11 @@
 // a parry is a bright KIIN, Whitebeard's quake cracks the air like glass
 // before the boom, Enel's thunder buzzes and rumbles (GORO GORO), Aokiji's ice
 // crackles as it forms (PAKIN), Kizaru's light whines up and goes PYUN.
+//
+// Where a recording sells it better (a flame's roar, ice breaking, glass
+// shattering, the ground shaking), a recorded layer (`v.sample`, see
+// samples.js) goes under the synthesis — and is simply left out while it
+// isn't decoded yet.
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 /**
@@ -23,6 +28,8 @@ export function flame(v, t, s = 1, { dur = 0.5, low = 380, high = 1400 } = {}) {
   v.whoosh(t, 0.1 * s + 0.12, { f0: low, f1: high, q: 0.7, gain: 0.24 * s, peak: 0.3, color: 'pink' });
   v.crackle(t + 0.04, L * 0.9, Math.round(10 * s), { freq: 2600, gain: 0.06, q: 3 });
   v.noise(t + 0.03, L * 0.8, { type: 'highpass', freq: 5000, gain: 0.02, attack: 0.05 });
+  // (a real flame's roar under it: a short burst for a small one, the long roar for a big one)
+  v.sample(t, L > 0.7 ? 'fire_1' : 'fire', { gain: 0.36 * q, rate: 1.1 - 0.12 * Math.min(1.5, s), dur: L + 0.35, fade: 0.3 });
 }
 
 /** Magma: a heavy roar, thick low bubbles, the sizzle of what it touches (JUUU). */
@@ -32,6 +39,9 @@ export function lava(v, t, s = 1, dur = 0.6) {
   v.noise(t + 0.04, dur * s, { type: 'highpass', freq: 4500, gain: 0.025, attack: 0.05 });
   v.noise(t + 0.02, dur * s * 0.8, { freq: 900, q: 0.8, gain: 0.08, attack: 0.04 });
   v.crackle(t + 0.05, dur * s * 0.9, Math.round(12 * s), { freq: 3200, gain: 0.025, q: 3 });
+  // (recorded: the roar slowed to a heavy churn, and molten rock boiling)
+  v.sample(t, 'fire_roar', { gain: 0.42 * s, rate: 0.72, dur: dur * s + 0.4, fade: 0.35, lp: 2400 });
+  v.sample(t + 0.04, 'boil', { gain: 0.25 * s, rate: 0.8, dur: dur * s + 0.3, fade: 0.3 });
 }
 
 /**
@@ -55,6 +65,9 @@ export function ice(v, t, s = 1, spreadDur = 0.35) {
   v.noise(t + 0.01, spreadDur * s + 0.25, { type: 'highpass', freq: 4200, gain: 0.06 * s, attack: 0.05, curve: 'lin' });
   v.ring(t + 0.003, rnd(2250, 2600), 0.45 * s, 0.05, [1, 1.34, 1.87, 2.51]);
   v.fm(t + 0.004, 0.4 * s, { freq: rnd(3100, 3500), ratio: 1.73, index: 1.2, gain: 0.015 });
+  // (recorded: ice breaking, and the crisp snap of it)
+  v.sample(t, 'ice', { gain: 0.32 * s, rate: 1.05 - 0.1 * Math.min(1.5, s) });
+  v.sample(t + 0.004, 'ice_snap', { gain: 0.18 * s });
 }
 
 /**
@@ -67,6 +80,9 @@ export function zapBurst(v, t, s = 1, dur = 0.3) {
   v.zap(t, dur * s, { f0: 60, f1: 600, gain: 0.08 * s, step: 0.01 });
   v.noise(t, dur * s, { type: 'highpass', freq: 4200, gain: 0.08 * s, attack: 0.003 });
   v.thump(t, { f0: 120, f1: 45, dur: 0.15, gain: 0.25 * s });
+  // (recorded: a discharge's crack and its sizzle)
+  v.sample(t, 'spark', { gain: 0.45 * s });
+  v.sample(t, 'zap_1', { gain: 0.38 * s, rate: 1.15, dur: dur * s + 0.25, fade: 0.2 });
 }
 
 /**
@@ -85,6 +101,10 @@ export function strike(v, t, s = 1, roll = 1.6) {
   v.zap(t + 0.01, 0.16 * s, { f0: 60, f1: 500, gain: 0.05 * s, step: 0.008 });
   v.noise(t + 0.01, 0.5, { type: 'highpass', freq: 5000, gain: 0.07 * s, attack: 0.004 });
   rumble(v, t + 0.1, s, roll, { lp: 230 });
+  // (recorded: the bolt's crack and sizzle, and real thunder rolling on under the long ones)
+  v.sample(t, 'spark', { gain: 0.55 * s, rate: 0.9 });
+  v.sample(t + 0.002, 'zap', { gain: 0.42 * s, rate: 0.95 });
+  if (roll >= 1.5) v.sample(t + 0.04, 'thunder', { gain: 0.55 * s, offset: 0.15, dur: roll + 0.6, fade: 0.8, rate: 0.95 });
 }
 
 /**
@@ -101,6 +121,7 @@ export function glassCrack(v, t, s = 1) {
   v.noise(t, 0.018, { type: 'highpass', freq: 4000, gain: 0.45 * s, attack: 0.0006 });
   v.crackle(t, 0.12 * s, Math.round(14 * s), { freq: 5200, spread: 0.9, q: 3, gain: 0.1 });
   for (let i = 0; i < 2; i++) v.ring(t + rnd(0.005, 0.06), rnd(2700, 3500), 0.3 * s, 0.022, [1, 1.62, 2.3]);
+  v.sample(t, 'shatter', { gain: 0.3 * s, rate: 1.15, dur: 0.35, fade: 0.15 });
 }
 
 /**
@@ -114,13 +135,21 @@ export function shatter(v, t, s = 1) {
   for (let i = 0; i < 4; i++) v.ring(t + rnd(0, 0.03), rnd(1900, 3600), 0.42 * s, rnd(0.05, 0.12), [1, 1.53, 2.27, 3.1], { spread: 0.006 });
   v.crackle(t + 0.005, 0.3 * s, Math.round(30 * s), { freq: 4800, spread: 1.2, q: 2.5, gain: 0.16 * s, len: 0.008 });
   v.crackle(t + 0.12, 0.7 * s, Math.round(18 * s), { freq: 6500, spread: 0.8, q: 5, gain: 0.06 * s, len: 0.012 });
+  // (recorded: the crunch of a thick pane giving way, two breaks over each other, the shards falling)
+  v.sample(t, 'glass_crunch', { gain: 0.6 * s, rate: 0.8 });
+  v.sample(t, 'shatter_1', { gain: 0.55 * s, rate: 0.92 });
+  v.sample(t + 0.012, Math.random() < 0.5 ? 'shatter_2' : 'shatter_3', { gain: 0.4 * s });
+  v.sample(t + 0.18, 'glass_tinkle', { gain: 0.28 * s, rate: 0.95 });
 }
 
 /** A deep boom: the DOGOON under a big blow, a quake, an explosion. */
 export function boom(v, t, s = 1, { f0 = 90, f1 = 26, dur = 0.7 } = {}) {
   v.thump(t, { f0, f1, dur: dur * s, gain: 0.8 * Math.min(1.2, s) });
   v.noise(t, dur * 0.9 * s, { color: 'pink', type: 'lowpass', freq: 600, sweep: 90, gain: 0.4 * s, attack: 0.004 });
+  // (recorded: a low blast, pitched with the boom)
+  v.sample(t, 'boom', { gain: 0.5 * Math.min(1.3, s), rate: clampR(f0 / 90), dur: dur * s + 0.3, fade: 0.3 });
 }
+const clampR = (x) => Math.max(0.6, Math.min(1.5, x));
 
 /** Rubber pulled taut (Gomu Gomu): a wobbling rising groan and the squeak of it. */
 export function stretch(v, t, dur, s = 1) {

@@ -2,7 +2,9 @@
 // from the motifs in motifs.js and the voice's own building blocks (see
 // synth.js) — a transient to hear it land, a body with weight, a tail — and
 // each a little different every time it plays (round-robin variants, pitch
-// and timing jitter). docs/AUDIO.md describes the palette.
+// and timing jitter) — with a recorded layer under it where a recording sells
+// it (`v.sample`: samples.js; left out till it's decoded). docs/AUDIO.md
+// describes the palette.
 //
 // An entry: { bus, prio (how much it matters), cd (the least time between two
 // of them), max (how many may overlap), send (room echo), drive (grit),
@@ -76,14 +78,17 @@ export function swing(v, t, kind = 'fists', s = 1) {
     case 'sword': // a thin, bright swish
       v.whoosh(t, 0.15 * s, { f0: 2400, f1: 6200, q: 2.2, gain: 0.3 * s, peak: 0.55 });
       v.whoosh(t + 0.01, 0.12 * s, { f0: 900, f1: 1600, q: 0.8, gain: 0.13 * s, peak: 0.5 });
+      v.sample(t + 0.03 * s, 'blade', { gain: 0.16 * s, rate: 1.1 });
       break;
     case 'legs': // a fuller, lower sweep — and the trouser leg flapping
       v.whoosh(t, 0.2 * s, { f0: 300, f1: 1100, q: 0.9, gain: 0.5 * s, peak: 0.5, color: 'pink', flutter: 24 });
       v.whoosh(t + 0.02, 0.15 * s, { f0: 900, f1: 1800, q: 1, gain: 0.12 * s, peak: 0.5 });
+      v.sample(t + 0.06 * s, 'swish', { gain: 0.3 * s, rate: 0.85 });
       break;
     case 'heavy': // a big wind-up thrown hard
       v.whoosh(t, 0.3 * s, { f0: 220, f1: 950, q: 0.8, gain: 0.55 * s, peak: 0.6, color: 'pink' });
       v.whoosh(t + 0.08, 0.2 * s, { f0: 1400, f1: 700, q: 0.9, gain: 0.14 * s });
+      v.sample(t + 0.12 * s, 'swish', { gain: 0.32 * s, rate: 0.7 });
       break;
     case 'staff': // wood through the air: a hollow whirr
       v.whoosh(t, 0.22 * s, { f0: 500, f1: 1500, q: 2.5, gain: 0.34 * s, peak: 0.5 });
@@ -95,6 +100,7 @@ export function swing(v, t, kind = 'fists', s = 1) {
     default: // fists: short and punchy
       v.whoosh(t, 0.15 * s, { f0: 500, f1: 1800, q: 1.1, gain: 0.34 * s, peak: 0.45 });
       v.whoosh(t + 0.03, 0.11 * s, { f0: 1600, f1: 900, q: 0.9, gain: 0.1 * s, peak: 0.5 });
+      v.sample(t + 0.04 * s, 'swish', { gain: 0.24 * s, rate: 1.1 });
   }
 }
 
@@ -157,6 +163,8 @@ export const SFX = {
       v.noise(0.004, 0.1 + 0.08 * w, { type: 'lowpass', freq: k.kick ? 450 : 600, sweep: 160, q: 0.7, gain: 0.2 + 0.15 * w, attack: 0.006 });
       // and the air knocked out past it, the blow's short tail
       v.noise(0.03, 0.16 + 0.06 * w, { freq: 1000, sweep: 450, q: 0.8, gain: 0.09 + 0.05 * w, attack: 0.012 });
+      // (recorded: a heavy punch's thud under the synthesised crack)
+      v.sample(0.003, 'punch', { gain: 0.2 + 0.22 * w, rate: (k.kick ? 0.85 : 1.08) * (1.1 - 0.15 * w) });
       if (k.armament) hakiClank(v, 0.002, 0.7 + 0.4 * w, vo(k));
       if (k.ryou) ryouLayer(v, 0.004, 0.8 + 0.3 * w, vo(k));
       if (k.counter) { v.noise(0, 0.03, { freq: 2500, q: 2, gain: 0.25 }); v.thump(0.02, { f0: 110, f1: 45, dur: 0.25, gain: 0.35 }); }
@@ -177,6 +185,10 @@ export const SFX = {
       v.thump(0.045, { f0: 95, f1: 38, dur: 0.45, gain: 0.32 + 0.12 * w });
       v.crackle(0.05, 0.3, 12, { freq: 1600, gain: 0.12 });
       v.noise(0.05, 0.35, { freq: 1200, sweep: 500, q: 0.7, gain: 0.08, attack: 0.02 });
+      // (recorded: the thud, a blast of air behind it, grit thrown up)
+      v.sample(0.002, 'punch', { gain: 0.5, rate: k.kick ? 0.75 : 0.85 });
+      v.sample(0.01, 'explode_1', { gain: 0.14 + 0.12 * w, rate: 1.15, lp: 2500 });
+      v.sample(0.05, 'rubble', { gain: 0.12 * w, rate: 0.9 });
       if (k.armament) hakiClank(v, 0.003, 1.2, vo(k));
       if (k.ryou) ryouLayer(v, 0.005, 1.2, vo(k));
       if (k.counter) v.noise(0, 0.04, { freq: 2600, q: 2, gain: 0.25 });
@@ -190,6 +202,7 @@ export const SFX = {
       v.noise(0.001, 0.085, { freq: 5200 * r(), sweep: 2200, q: 1.6, gain: 0.3, attack: 0.002 });
       v.thump(0, { f0: 230, f1: 80, dur: 0.07, gain: 0.26 });
       bladeRing(v, 0.004, [1480, 1620, 1360][k.rr] * r(), 0.42, 0.06);
+      v.sample(0, 'blade', { gain: 0.3, rate: 1.05 });
       if (k.armament) hakiClank(v, 0.003, 0.7, vo(k));
     },
   },
@@ -202,6 +215,7 @@ export const SFX = {
       v.noise(0.002, 0.16, { freq: 4200 * r(), sweep: 1500, q: 1.2, gain: 0.34, attack: 0.002 });
       v.thump(0, { f0: 150, f1: 38, dur: 0.26, gain: 0.55 });
       bladeRing(v, 0.008, [1100, 1220, 980][k.rr] * r(), 0.75, 0.08);
+      v.sample(0, 'blade', { gain: 0.4, rate: 0.85 });
       if (k.armament) hakiClank(v, 0.004, 1, vo(k));
     },
   },
@@ -254,6 +268,8 @@ export const SFX = {
       v.thump(0, { f0: 160, f1: 40, dur: 0.25, gain: 0.45 });
       v.noise(0, 0.26, { type: 'lowpass', freq: 600, gain: 0.3 });
       v.tone(0.02, 0.35, { freq: 300, to: 70, type: 'sawtooth', gain: 0.1 });
+      v.sample(0, 'glass_crunch', { gain: 0.35, rate: 1.2 });
+      v.sample(0.01, 'rubble_2', { gain: 0.22, rate: 1.1 });
     },
   },
   /** A dodge: cloth and air rushing past, a scuff of the feet. */
@@ -275,6 +291,7 @@ export const SFX = {
       surfaceHit(v, 0.17, k.surf || 'dirt', 0.8);
       v.crackle(0.05, 0.3, 6, { freq: 1000, gain: 0.07 });
       v.whoosh(0, 0.15, { f0: 1200, f1: 500, gain: 0.05 });
+      v.sample(0, 'punch', { gain: 0.4, rate: 0.7 });
     },
   },
   /** Knocked down: the breath going out of you, a falling wail (the anime's sad trombone, not quite). */
@@ -501,7 +518,10 @@ export const SFX = {
       // (as thunder is recorded: a near one the crack and then 63–500 Hz rolling on for seconds; a far one only the low roll)
       const far = k.far ?? Math.random(), d = 0.08 + far * 2.4, s = 1 - far * 0.5;
       if (far < 0.45) M.strike(v, d, 0.9 - far, 3 + far * 2);
-      else { v.noise(d, 0.3, { color: 'pink', type: 'lowpass', freq: 600 - far * 300, gain: 0.2 * s, attack: 0.06 }); M.rumble(v, d + 0.05, 1.3 * s, 3.2, { lp: 260 - far * 120 }); }
+      else {
+        v.noise(d, 0.3, { color: 'pink', type: 'lowpass', freq: 600 - far * 300, gain: 0.2 * s, attack: 0.06 }); M.rumble(v, d + 0.05, 1.3 * s, 3.2, { lp: 260 - far * 120 });
+        v.sample(d, 'thunder', { gain: 0.55 * s, rate: 0.9 - 0.15 * far, lp: 900 - far * 450, offset: 0.25 });
+      }
       const e = v.echo(0.55, 0.3, 400, 0.4);
       v.noise(d + 0.1, 1.4, { color: 'brown', type: 'lowpass', freq: 200, gain: 0.3 * s, dest: e });
     },
@@ -509,7 +529,7 @@ export const SFX = {
   water: { prio: 5, cd: 0.07, max: 3, send: 0.12, play: (v) => { v.thump(0, { f0: 140, f1: 60, dur: 0.08, gain: 0.2 }); M.splash(v, 0, 0.9); } },
   swamp: {
     prio: 5, cd: 0.08, max: 3, send: 0.1,
-    play(v) { v.bubbles(0, 0.45, 7, { f: 150, spread: 0.6, rise: 1.6, gain: 0.12, dur: 0.12 }); v.noise(0, 0.4, { type: 'lowpass', freq: 300, gain: 0.2 }); },
+    play(v) { v.bubbles(0, 0.45, 7, { f: 150, spread: 0.6, rise: 1.6, gain: 0.12, dur: 0.12 }); v.noise(0, 0.4, { type: 'lowpass', freq: 300, gain: 0.2 }); v.sample(0, 'boil', { gain: 0.3, rate: 0.75, dur: 0.6, fade: 0.25 }); },
   },
   poison: {
     prio: 5, cd: 0.08, max: 3, send: 0.12,
@@ -518,16 +538,18 @@ export const SFX = {
       v.crackle(0.02, 0.4, 12, { freq: 5000, gain: 0.035, q: 3 });
       v.bubbles(0.03, 0.35, 5, { f: 700, gain: 0.04 });
       v.tone(0, 0.45, { freq: 180, to: 120, type: 'sawtooth', gain: 0.06, vib: { rate: 9, depth: 18 } });
+      v.sample(0.02, 'bubble', { gain: 0.2, rate: 1.4 });
     },
   },
   gas: { prio: 4, cd: 0.1, max: 2, send: 0.1, play: (v) => { v.noise(0, 0.55, { type: 'highpass', freq: 4500, q: 0.4, sweep: 2500, gain: 0.12, attack: 0.05 }); v.noise(0, 0.3, { type: 'lowpass', freq: 500, gain: 0.08, attack: 0.03 }); } },
-  smoke: { prio: 5, cd: 0.07, max: 3, send: 0.15, play: (v) => { v.noise(0, 0.4, { type: 'lowpass', freq: 650 * r(), q: 0.5, sweep: 220, gain: 0.3, attack: 0.03 }); v.whoosh(0, 0.3, { f0: 300, f1: 900, gain: 0.08, color: 'pink' }); } },
+  smoke: { prio: 5, cd: 0.07, max: 3, send: 0.15, play: (v) => { v.noise(0, 0.4, { type: 'lowpass', freq: 650 * r(), q: 0.5, sweep: 220, gain: 0.3, attack: 0.03 }); v.whoosh(0, 0.3, { f0: 300, f1: 900, gain: 0.08, color: 'pink' }); v.sample(0, 'whoosh', { gain: 0.25, rate: 0.45, lp: 1800 }); } },
   sand: {
     prio: 5, cd: 0.07, max: 3, send: 0.1,
     play(v) {
       v.noise(0, 0.42, { freq: 1900 * r(), q: 0.45, sweep: 900, gain: 0.22, attack: 0.02 });
       v.crackle(0, 0.4, 22, { freq: 4200, gain: 0.045, q: 2.5 });
       v.noise(0.02, 0.3, { type: 'highpass', freq: 3200, gain: 0.05, attack: 0.03 });
+      v.sample(0, 'sand', { gain: 0.38, rate: 1.1, dur: 0.5, fade: 0.2 });
     },
   },
   /** PIKA: a bright flash of light that lands with weight (a kick at the speed of light). */
@@ -539,6 +561,7 @@ export const SFX = {
       v.tone(0, 0.3, { freq: 1760, to: 3520, gain: 0.1, attack: 0.002 });
       v.ring(0.03, 2640, 0.55, 0.03, [1, 1.5, 2]);
       M.shimmer(v, 0.02, 0.8, 0.45);
+      v.sample(0, 'light_1', { gain: 0.42 });
     },
   },
   /** ZUZUZU: darkness swallowing — a slow swell inward, a sub, grit. */
@@ -548,6 +571,7 @@ export const SFX = {
       M.suction(v, 0, 0.5, 1);
       v.tone(0, 0.5, { freq: 55, to: 30, gain: 0.42, attack: 0.15 });
       v.crackle(0.05, 0.4, 8, { freq: 900, gain: 0.06, q: 1.5 });
+      v.sample(0, 'dark', { gain: 0.05, rate: 0.6, lp: 900 });
     },
   },
   /** GOGOGO: the air cracks like glass, then the DOGOON and the shaking ground. */
@@ -562,6 +586,10 @@ export const SFX = {
       v.tone(0.05, 1.4, { freq: 52, to: 32, gain: 0.4, vib: { rate: 13, depth: 7 } });
       M.rumble(v, 0.08, 1.1, 1.6, { lp: 240 });
       v.crackle(0.15, 1, 12, { freq: 1100, gain: 0.07 });
+      // (recorded: the sub-boom you feel, the ground shaking, rock breaking)
+      v.sample(0.01, 'sub_boom', { gain: 0.6, rate: 0.95, dur: 1.8, fade: 0.8 });
+      v.sample(0.05, 'quake', { gain: 0.45, rate: 0.9, dur: 1.5, fade: 0.8 });
+      v.sample(0.04, 'rubble', { gain: 0.28, rate: 0.85 });
     },
   },
   /** PIN: a wire-thin string — a twang, the whip of it. */
@@ -582,6 +610,9 @@ export const SFX = {
       v.thump(0, { f0: 72, f1: 26, dur: 0.9, gain: 0.85 * s });
       v.noise(0, 1.1, { color: 'pink', type: 'lowpass', freq: 900, sweep: 55, gain: 0.7 * s });
       v.crackle(0.08, 0.7, 16, { freq: 1800, gain: 0.1 });
+      v.sample(0, 'explode', { gain: 0.5 * s, rate: 0.9 });
+      v.sample(0.01, 'boom', { gain: 0.4 * s });
+      v.sample(0.06, 'rubble_1', { gain: 0.16 * s, rate: 0.85 });
       const e = v.echo(0.28, 0.3, 900, 0.32);
       v.noise(0, 0.5, { color: 'pink', type: 'lowpass', freq: 700, gain: 0.4 * s, dest: e });
     },
@@ -594,6 +625,8 @@ export const SFX = {
       v.thump(0, { f0: [88, 80, 96][k.rr] * r(), f1: 30, dur: 0.8, gain: 0.85 });
       v.noise(0, 1.3, { color: 'pink', type: 'lowpass', freq: 600, sweep: 60, gain: 0.55 });
       v.noise(0.05, 0.4, { type: 'highpass', freq: 3000, gain: 0.04, attack: 0.05 });
+      v.sample(0, 'explode_1', { gain: 0.4, rate: [1.1, 1, 1.2][k.rr] });
+      v.sample(0, 'boom', { gain: 0.32, rate: 1.1 });
       const e = v.echo(0.42, 0.32, 700, 0.4);
       v.noise(0, 0.6, { color: 'pink', type: 'lowpass', freq: 500, gain: 0.45, dest: e });
     },
@@ -607,6 +640,7 @@ export const SFX = {
       v.crackle(0, 0.45, 16, { freq: 1300, gain: 0.12, q: 4 });
       v.creak(0.05, 0.6, { rate: 42, rate1: 24, freqs: [180, 310, 520], q: 5, gain: 0.14 });
       v.noise(0.03, 0.4, { type: 'lowpass', freq: 900, sweep: 250, gain: 0.14 });
+      v.sample(0, 'rubble_1', { gain: 0.25, rate: 0.65, lp: 2500 });
     },
   },
   /** Out of shot: the hammer falls on nothing. */
@@ -1325,18 +1359,40 @@ for (const [kind, names] of Object.entries(KINDS)) for (const n of names) if (SF
 // like what they swing. Each entry is play(v, k) with k.rel the release time,
 // k.def the technique.
 
-/** Gura Gura: the tremble building as it charges (k.rel), then the shatter, the air crack, the sub-boom and the quake rolling on. */
+/**
+ * Gura Gura: the air trembling as it charges (k.rel) and the ground already
+ * groaning under it, a hairline crack running through the air — then the sky
+ * shattering like a pane of glass (a hard white crack, the break, the shards
+ * raining down), the DOGOON you feel in your chest (a sub-boom, a second wave
+ * behind it) and the quake rolling on with rock breaking in it. `s` how big
+ * (1 a blow, 1.5 the tsunami).
+ */
 const GURA = (v, k, s = 1) => {
   const r = Math.max(0.12, k.rel || 0);
+  // (the recorded layers grow less than the synthesis: a bigger quake is longer and lower, not just louder)
+  const q = Math.min(1.2, s);
+  // the charge
   v.tone(0, r + 0.05, { freq: 38, to: 46, gain: 0.32 * s, attack: r * 0.9, curve: 'lin', vib: { rate: 14, depth: 6 } });
   v.noise(0, r, { color: 'brown', type: 'lowpass', freq: 220, gain: 0.3 * s, attack: r * 0.85, curve: 'lin' });
   v.crackle(Math.max(0, r - 0.2), 0.2, 6, { freq: 6000, gain: 0.04, q: 4 });
+  v.sample(0, 'quake', { gain: 0.32 * q, rate: 0.75, attack: r * 0.9, dur: r + 0.08, fade: 0.06, lp: 600 });
+  if (r > 0.2) M.glassCrack(v, r - 0.08, 0.45 * s);
+  // the crack of the air shattering: a split-second white snap, then the glass
+  v.noise(r, 0.004, { type: 'highpass', freq: 1500, gain: 1.1 * s, attack: 0.0003 });
+  v.noise(r, 0.03, { freq: 2600, q: 0.5, gain: 0.6 * s, attack: 0.0005 });
   M.shatter(v, r, 1.3 * s);
   v.noise(r, 0.05, { freq: 700, q: 0.6, gain: 0.7 * s, attack: 0.0006 });
+  // the DOGOON: the boom, the sub under it, a second wave behind
   M.boom(v, r, 1.6 * s, { f0: 120, f1: 22, dur: 1.1 });
+  v.sample(r, 'sub_boom', { gain: 0.85 * q, rate: 0.9 });
+  v.sample(r + 0.01, 'explode_2', { gain: 0.32 * q, rate: 0.72, lp: 1600 });
   v.thump(r + 0.09, { f0: 70, f1: 28, dur: 0.6, gain: 0.55 * s });
+  // the quake rolling on: the ground shaking, rock cracking and falling
   v.tone(r + 0.03, 1.6 * s, { freq: 48, to: 30, gain: 0.38 * s, vib: { rate: 11, depth: 8 } });
   M.rumble(v, r + 0.08, 1.2 * s, 1.8, { lp: 210 });
+  v.sample(r + 0.05, 'quake', { gain: 0.7 * q, rate: 0.85, dur: 1.9 * s + 0.4, fade: 1.1 });
+  v.sample(r + 0.06, 'rubble_1', { gain: 0.36 * q, rate: 0.8 });
+  v.sample(r + 0.32, 'rubble_2', { gain: 0.26 * q, rate: 0.72 });
   v.crackle(r + 0.2, 1.2 * s, 16, { freq: 1100, gain: 0.08 * s });
 };
 const STRETCH = (v, k, s = 1) => { M.stretch(v, 0, Math.max(0.12, k.rel), s); M.snap(v, k.rel, s); };
@@ -1363,7 +1419,15 @@ export const FRUIT_TECH = {
     default: STRETCH,
   },
   gura: {
-    gura_tsunami: (v, k) => { GURA(v, k, 1.5); M.rumble(v, k.rel + 0.3, 1.4, 2.4, { lp: 180 }); },
+    // (the sea itself shaken: the quake, an aftershock cracking the sky again, the swell rolling in on a long rumble)
+    gura_tsunami: (v, k) => {
+      GURA(v, k, 1.5);
+      const r = Math.max(0.12, k.rel || 0);
+      M.rumble(v, r + 0.3, 1.4, 2.4, { lp: 180 });
+      M.shatter(v, r + 0.5, 0.7);
+      M.boom(v, r + 0.52, 1, { f0: 80, f1: 24, dur: 0.9 });
+      v.sample(r + 0.9, 'quake', { gain: 0.5, rate: 0.7, attack: 0.4, dur: 2.2, fade: 1.2, lp: 400 });
+    },
     // the air trembling as the fist draws back, then the sky cracking open: the shatter, the
     // sub-boom you feel in your chest, and the ground rolling on under it
     default: (v, k) => GURA(v, k, 1),
@@ -1437,11 +1501,11 @@ export const FRUIT_TECH = {
   },
   mera: {
     mera_kyokaen: (v, k) => { M.flame(v, k.rel, 1.5, { dur: 1.2 }); v.whoosh(k.rel, 0.6, { f0: 200, f1: 800, q: 0.5, gain: 0.18, color: 'pink' }); },
-    mera_entei: (v, k) => { v.whoosh(0, Math.max(0.6, k.rel), { f0: 200, f1: 900, q: 0.5, gain: 0.25, peak: 0.95, flutter: 10, color: 'pink' }); M.flame(v, k.rel, 1.8, { dur: 1 }); },
+    mera_entei: (v, k) => { v.whoosh(0, Math.max(0.6, k.rel), { f0: 200, f1: 900, q: 0.5, gain: 0.25, peak: 0.95, flutter: 10, color: 'pink' }); v.sample(0, 'fire_roar', { gain: 0.35, rate: 0.85, attack: Math.max(0.6, k.rel) * 0.8, dur: Math.max(0.6, k.rel) + 0.2, fade: 0.2 }); M.flame(v, k.rel, 1.8, { dur: 1 }); },
     default: (v, k) => { v.whoosh(0, Math.max(0.15, k.rel), { f0: 300, f1: 1500, q: 0.6, gain: 0.1, peak: 0.9, color: 'pink' }); M.flame(v, k.rel, 1.1); },
   },
   hie: {
-    hie_ageand: (v, k) => { v.noise(0, Math.max(0.4, k.rel), { type: 'highpass', freq: 3000, gain: 0.06, attack: 0.3, curve: 'lin' }); M.ice(v, k.rel, 1.5, 1.1); },
+    hie_ageand: (v, k) => { v.noise(0, Math.max(0.4, k.rel), { type: 'highpass', freq: 3000, gain: 0.06, attack: 0.3, curve: 'lin' }); v.sample(Math.max(0, k.rel - 0.75), 'freeze', { gain: 0.4, dur: 0.85, fade: 0.1 }); M.ice(v, k.rel, 1.5, 1.1); },
     default: (v, k) => { v.noise(0, Math.max(0.15, k.rel), { type: 'highpass', freq: 3500, gain: 0.05, attack: 0.1, curve: 'lin' }); v.crackle(0, Math.max(0.15, k.rel), 5, { freq: 7000, gain: 0.02, q: 5 }); M.ice(v, k.rel, 0.8); },
   },
   goro: {
@@ -1453,27 +1517,29 @@ export const FRUIT_TECH = {
       // static gathering (the hair on your neck), then VARI
       v.zap(0, Math.max(0.15, k.rel), { f0: 40, f1: 220, gain: 0.03, step: 0.02 });
       v.crackle(0, Math.max(0.15, k.rel), 6, { freq: 5000, gain: 0.025 });
+      v.sample(0, 'buzz', { gain: 0.16, attack: Math.max(0.1, k.rel) * 0.8, dur: Math.max(0.15, k.rel) + 0.05, fade: 0.05 });
       M.zapBurst(v, k.rel, 1, 0.25);
     },
   },
-  suna: { default: (v, k) => { v.whoosh(0, Math.max(0.2, k.rel) + 0.2, { f0: 600, f1: 2200, q: 0.5, gain: 0.12, peak: 0.6 }); v.crackle(0, Math.max(0.2, k.rel) + 0.2, 20, { freq: 4500, gain: 0.03, q: 2.5 }); } },
-  moku: { default: (v, k) => { for (let i = 0; i < 3; i++) v.noise(i * 0.08, 0.3, { type: 'lowpass', freq: 600, sweep: 250, gain: 0.25, attack: 0.04 }); v.whoosh(k.rel, 0.3, { f0: 300, f1: 1000, gain: 0.3, color: 'pink' }); } },
+  suna: { default: (v, k) => { v.whoosh(0, Math.max(0.2, k.rel) + 0.2, { f0: 600, f1: 2200, q: 0.5, gain: 0.12, peak: 0.6 }); v.crackle(0, Math.max(0.2, k.rel) + 0.2, 20, { freq: 4500, gain: 0.03, q: 2.5 }); v.sample(Math.max(0, k.rel - 0.15), 'sand', { gain: 0.45, rate: 0.95 }); } },
+  moku: { default: (v, k) => { for (let i = 0; i < 3; i++) v.noise(i * 0.08, 0.3, { type: 'lowpass', freq: 600, sweep: 250, gain: 0.25, attack: 0.04 }); v.whoosh(k.rel, 0.3, { f0: 300, f1: 1000, gain: 0.3, color: 'pink' }); v.sample(k.rel, 'whoosh', { gain: 0.35, rate: 0.5, lp: 2000 }); } },
   pika: {
-    pika_yata: (v) => { M.shimmer(v, 0, 1, 0.25); v.whoosh(0.02, 0.12, { f0: 3000, f1: 8000, q: 1.5, gain: 0.1, peak: 0.2 }); },
-    pika_flash: (v, k) => { v.tone(0, Math.max(0.2, k.rel), { freq: 900, to: 5000, gain: 0.05, attack: Math.max(0.15, k.rel) * 0.9, curve: 'lin' }); M.shimmer(v, k.rel, 1, 0.5); v.noise(k.rel, 0.02, { type: 'highpass', freq: 5000, gain: 0.2, attack: 0.0005 }); },
+    pika_yata: (v) => { M.shimmer(v, 0, 1, 0.25); v.whoosh(0.02, 0.12, { f0: 3000, f1: 8000, q: 1.5, gain: 0.1, peak: 0.2 }); v.sample(0, 'light_1', { gain: 0.4, rate: 1.1 }); },
+    pika_flash: (v, k) => { v.tone(0, Math.max(0.2, k.rel), { freq: 900, to: 5000, gain: 0.05, attack: Math.max(0.15, k.rel) * 0.9, curve: 'lin' }); v.sample(0, 'light_2', { gain: 0.3, attack: Math.max(0.15, k.rel) * 0.8, dur: Math.max(0.2, k.rel) + 0.3, fade: 0.25 }); M.shimmer(v, k.rel, 1, 0.5); v.noise(k.rel, 0.02, { type: 'highpass', freq: 5000, gain: 0.2, attack: 0.0005 }); v.sample(k.rel, 'light_1', { gain: 0.45 }); },
     default: (v, k) => {
       // a high whine charging, then PYUN
       v.tone(0, Math.max(0.15, k.rel), { freq: 800, to: 4000, gain: 0.04, attack: Math.max(0.1, k.rel) * 0.9, curve: 'lin' });
       v.noise(k.rel, 0.008, { type: 'highpass', freq: 6000, gain: 0.2, attack: 0.0005 });
       v.tone(k.rel, 0.14, { freq: 4000, to: 1500, gain: 0.07 });
       v.fm(k.rel, 0.2, { freq: 2500, ratio: 1.5, index: 2, gain: 0.03 });
+      v.sample(k.rel, 'light_1', { gain: 0.38, rate: 1.05 });
     },
   },
-  magu: { magu_bakuretsu: (v, k) => { M.rumble(v, 0, 0.8, Math.max(0.3, k.rel), { lp: 140 }); M.boom(v, k.rel, 1.3); M.flame(v, k.rel + 0.05, 1.4, { dur: 0.9 }); }, default: (v, k) => { v.bubbles(0, Math.max(0.2, k.rel), 6, { f: 130, rise: 1.4, gain: 0.08, dur: 0.1 }); v.noise(0, Math.max(0.2, k.rel), { color: 'brown', type: 'lowpass', freq: 400, gain: 0.2, attack: 0.1 }); v.whoosh(k.rel, 0.4, { f0: 200, f1: 900, q: 0.6, gain: 0.18, color: 'pink' }); M.hiss(v, k.rel, 0.4, 0.8, 5000); } },
+  magu: { magu_bakuretsu: (v, k) => { M.rumble(v, 0, 0.8, Math.max(0.3, k.rel), { lp: 140 }); M.boom(v, k.rel, 1.3); M.flame(v, k.rel + 0.05, 1.4, { dur: 0.9 }); v.sample(k.rel, 'explode_2', { gain: 0.45, rate: 0.85 }); M.lava(v, k.rel + 0.1, 0.8, 0.8); }, default: (v, k) => { v.bubbles(0, Math.max(0.2, k.rel), 6, { f: 130, rise: 1.4, gain: 0.08, dur: 0.1 }); v.noise(0, Math.max(0.2, k.rel), { color: 'brown', type: 'lowpass', freq: 400, gain: 0.2, attack: 0.1 }); v.whoosh(k.rel, 0.4, { f0: 200, f1: 900, q: 0.6, gain: 0.18, color: 'pink' }); M.hiss(v, k.rel, 0.4, 0.8, 5000); } },
   yami: {
-    yami_kurouzu: (v) => M.suction(v, 0, 0.9, 1.3),
+    yami_kurouzu: (v) => { M.suction(v, 0, 0.9, 1.3); v.sample(0, 'dark', { gain: 0.12, rate: 0.6, lp: 1000 }); v.sample(0.1, 'drain', { gain: 0.1, rate: 0.7, lp: 900 }); },
     yami_abyss: (v, k) => { M.suction(v, 0, Math.max(0.5, k.rel) + 1.2, 1.6); M.rumble(v, 0, 1, Math.max(0.5, k.rel) + 1, { lp: 120 }); },
-    default: (v, k) => { M.suction(v, 0, Math.max(0.3, k.rel) + 0.2, 0.9); v.crackle(0, 0.5, 8, { freq: 700, gain: 0.04, q: 1.5 }); },
+    default: (v, k) => { M.suction(v, 0, Math.max(0.3, k.rel) + 0.2, 0.9); v.crackle(0, 0.5, 8, { freq: 700, gain: 0.04, q: 1.5 }); v.sample(Math.max(0, k.rel - 0.1), 'dark', { gain: 0.1, rate: 0.65, lp: 1000 }); },
   },
 };
 
