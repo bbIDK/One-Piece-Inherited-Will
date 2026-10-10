@@ -13,7 +13,7 @@ import { FOG } from '../fog.js';
 import { sunSelf } from '../sunshadow.js';
 import { detailTexture } from './detail.js';
 
-const BODY_KEY = 'op-char-body-6';
+const BODY_KEY = 'op-char-body-7';
 const INK = 0x24160f;
 
 let GRAD = null;
@@ -84,6 +84,10 @@ export function bodyMaterial(opts = {}) {
     // beat behind it, and a blow thrown back or a kick's lean left it out in
     // front of your own collar, looking down into it)
     uNear: { value: 0 },
+    // a Zoan's coat on the skin (chars/zoan.js zoanSkin): where the body is the colour uZoan.rgb, uZoan.w
+    // 1 a leopard's rosettes, 2 a dragon's scales spreading over it in patches; uZoanA the marks' colour,
+    // uZoanB the scales' own
+    uZoan: { value: new THREE.Vector4(0, 0, 0, 0) }, uZoanA: { value: new THREE.Color(0x2a1a10) }, uZoanB: { value: new THREE.Color(0x3f8fe0) },
   };
   const m = new THREE.MeshToonMaterial({ vertexColors: true, map: detailTexture(), gradientMap: charGradient(), fog: opts.fog ?? true });
   m.defines = { ...m.defines, SUN_SELF: sunSelf(opts.self ?? SELF_SHADE) };
@@ -92,12 +96,25 @@ export function bodyMaterial(opts = {}) {
     Object.assign(sh.uniforms, FOG, u);
     celShading(sh);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aPart;\nattribute float aLimb;\nvarying float vPart;\nvarying float vLimb;\nvarying float vObjY;\nvarying vec3 vObjP;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPart = aPart;\nvLimb = aLimb;')
+      .replace('#include <common>', '#include <common>\nattribute float aPart;\nattribute float aLimb;\nvarying float vPart;\nvarying float vLimb;\nvarying float vObjY;\nvarying vec3 vObjP;\nvarying vec3 vBindP;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPart = aPart;\nvLimb = aLimb;\nvBindP = position;')
       .replace('#include <skinning_vertex>', '#include <skinning_vertex>\nvObjY = transformed.y;\nvObjP = transformed;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-varying float vPart; varying float vLimb; varying float vObjY; varying vec3 vObjP;
+varying float vPart; varying float vLimb; varying float vObjY; varying vec3 vObjP; varying vec3 vBindP;
+uniform vec4 uZoan; uniform vec3 uZoanA; uniform vec3 uZoanB;
+// (cellular noise: the distance to the nearest of a jittered grid of points, and that point's own random)
+vec2 zcell(vec3 p) {
+  vec3 i = floor(p), f = fract(p);
+  float best = 9.0, id = 0.0;
+  for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++) {
+    vec3 g = vec3(float(x), float(y), float(z));
+    vec3 o = vec3(bhash(i + g), bhash(i + g + 17.3), bhash(i + g + 41.7));
+    float d = length(g + o * 0.8 + 0.1 - f);
+    if (d < best) { best = d; id = bhash(i + g + 7.1); }
+  }
+  return vec2(best, id);
+}
 uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec4 uHakiRip; uniform vec3 uHakiCol; uniform vec3 uHakiSheen;
 uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead; uniform float uNear;
 uniform float uFlame; uniform vec4 uTorso; uniform vec4 uRimFx; uniform float uShadow;
@@ -130,6 +147,27 @@ float legK = lR * uLegFx.x + lL * uLegFx.y;
 diffuseColor.rgb = mix(diffuseColor.rgb, uHakiCol, hakiK);
 diffuseColor.rgb = mix(diffuseColor.rgb, uLegFxCol, legK * 0.8);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.7, 0.88, 1.0), uFreeze * 0.55);
+// (a Zoan's coat: rosettes, or scales, on what's skin — vertices of the skin's own colour — not on clothes)
+if (uZoan.w > 0.5 && vPart < 4.5 && distance(vColor.rgb, uZoan.rgb) < 0.035) {
+  if (uZoan.w < 1.5) {
+    vec2 c = zcell(vBindP * 15.0);
+    float br = bnoise(vBindP * 40.0);
+    float ring = smoothstep(0.2, 0.24, c.x) * (1.0 - smoothstep(0.34, 0.38, c.x)) * step(0.32, br + c.y * 0.4);
+    float dot1 = 1.0 - smoothstep(0.16, 0.2, c.x);
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.86, 0.7, 0.5), dot1 * 0.6);
+    diffuseColor.rgb = mix(diffuseColor.rgb, uZoanA, ring);
+  } else {
+    // scales in patches over the shoulders, arms and flanks: overlapping rows, a dark edge to each
+    float patchK = smoothstep(0.42, 0.5, bnoise(vBindP * 4.0) * 0.7 + abs(vBindP.z) * 1.4 + (vLimb > 0.5 ? 0.25 : 0.0));
+    vec3 q = vBindP * 34.0;
+    float row = floor(q.y);
+    float cx = fract(q.x * 0.5 + q.z * 0.5 + row * 0.5) - 0.5;
+    float edge = fract(q.y) + cx * cx * 1.6;
+    float rim = smoothstep(0.78, 0.9, edge);
+    vec3 sc = mix(uZoanB, uZoanB * 0.55, rim);
+    diffuseColor.rgb = mix(diffuseColor.rgb, sc, patchK);
+  }
+}
 diffuseColor.rgb = mix(diffuseColor.rgb, uFlashCol, uFlash);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>

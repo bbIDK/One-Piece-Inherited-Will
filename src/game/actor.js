@@ -196,6 +196,11 @@ export class Actor extends Entity {
     let speedMul = mods.speedMul;
     for (const b of this.buffs) if (b.mods?.speedMul) speedMul *= b.mods.speedMul;
     mods.speedMul = speedMul;
+    // (a body blown up by a form — a Zoan's beast, a giant's shape — is that much easier to hit: its
+    // hurtbox grows with it, a little less than its size, so a dragon isn't a pinhead to strike at)
+    if (this._r0 === undefined) this._r0 = this.r;
+    const sc = (this.buffs || []).reduce((m, b) => m * (b.mods?.scale || 1), 1);
+    this.hurtR = sc > 1 ? this._r0 * Math.min(4, 1 + (sc - 1) * 0.75) : this._r0;
     // (you, the hero: half as much life again, and a deeper well of Haki)
     if (this.isPlayer) { mods.heroHp = 1.5; mods.heroHaki = 1.6; }
     const old = this.d;
@@ -251,7 +256,8 @@ export class Actor extends Entity {
   get maxOxygen() { return this.gills ? Infinity : 24 + (this.attrs?.end || 0) * 0.35 + (this.attrs?.vit || 0) * 0.1; }
 
   addBuff(b) {
-    this.buffs = this.buffs.filter((x) => x.id !== b.id);
+    // (one form at a time: a Zoan's hybrid gives way to its beast, and so on)
+    this.buffs = this.buffs.filter((x) => x.id !== b.id && !(b.form && x.form));
     const buff = { ...b, t: b.dur ?? 10 };
     this.buffs.push(buff);
     if (b.forceArmament) this.armament = true;

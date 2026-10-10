@@ -166,7 +166,8 @@ function coreMat(seed) {
 const _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _sz = new THREE.Vector2();
 
 export class BackFlame {
-  constructor(seed = Math.random() * 100) {
+  /** `cols`: the fire's bands ({ uRim, uMid, uHot, uCore }: the Lunarian's orange by default), `glowCol` the glow round it. */
+  constructor(seed = Math.random() * 100, cols = COLS, glowCol = '#ff6d2a') {
     this.group = new THREE.Group();
     this.mats = [];
     const add = (mat, sc, x, z, ry = 0, order = 2) => {
@@ -178,9 +179,9 @@ export class BackFlame {
       return m;
     };
     // the main flame, two lesser ones licking up either side of it (out over the wings), and the heart
-    add(bodyMat(seed), [1, 1], 0, 0);
-    add(bodyMat(seed + 3.7), [0.62, 0.72], -0.05, 0.1, 0.4);
-    add(bodyMat(seed + 7.3), [0.58, 0.64], -0.04, -0.11, -0.5);
+    add(bodyMat(seed, cols), [1, 1], 0, 0);
+    add(bodyMat(seed + 3.7, cols), [0.62, 0.72], -0.05, 0.1, 0.4);
+    add(bodyMat(seed + 7.3, cols), [0.58, 0.64], -0.04, -0.11, -0.5);
     add(coreMat(seed + 1.9), [0.55, 0.62], 0.02, 0, 0, 3);
     // sparks streaming off the tips
     this.sparkMat = new THREE.ShaderMaterial({
@@ -197,7 +198,7 @@ export class BackFlame {
     };
     this.group.add(this.sparks);
     // the glow round it all
-    this.glowMat = glowSpriteMat('#ff6d2a').clone();
+    this.glowMat = glowSpriteMat(glowCol).clone();
     this.glowMat.opacity = 0.42;
     this.glow = new THREE.Sprite(this.glowMat);
     this.glow.position.set(0, 0.42, 0);
@@ -307,7 +308,7 @@ const WING_FRAG = /* glsl */`
 `;
 // (the share of a wing's sheet, in v, that's the fringe of fire ahead of the arm)
 const WING_FRONT = 0.14;
-const WING_COLS = { uRim: '#1673c9', uMid: '#2fc8ee', uHot: '#7fe8fb', uCore: '#d9fbff', uGold: '#ffd23f', uFire: '#ff8a1c' };
+export const WING_COLS = { uRim: '#1673c9', uMid: '#2fc8ee', uHot: '#7fe8fb', uCore: '#d9fbff', uGold: '#ffd23f', uFire: '#ff8a1c' };
 
 function wingMat(seed, n, gold, front = 0) {
   const u = { uTime: { value: 0 }, uSeed: { value: seed }, uAlpha: { value: 1 }, uN: { value: n }, uTipGold: { value: gold }, uFront: { value: front } };

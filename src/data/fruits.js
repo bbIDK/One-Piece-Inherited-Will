@@ -19,7 +19,7 @@
 // flight.js. The Logia, Paramecia and Zoan rules (intangibility and what gets
 // through it, rubber, blades that can't cut) are in game/combat.js.
 import { registerAbilities } from '../game/abilities.js';
-import { attachKits, AWAKEN_MASTERY } from './fruitForms.js';
+import { attachKits, AWAKEN_MASTERY, ZOAN_LOOK } from './fruitForms.js';
 
 const T = (mastery, a) => ({ ...a, mastery });
 
@@ -371,13 +371,13 @@ export const FRUITS = {
     name: 'Hito Hito no Mi', en: 'Human-Human Fruit', type: 'Zoan', rarity: 'uncommon', color: '#f8bbd0', weight: 2.5,
     desc: 'Grants the intelligence and form of a human. Tony Tony Chopper ate it as a reindeer, and learned to take a different shape for each need.',
     techniques: [
-      T(0, { id: 'hito_heavy', name: 'Heavy Point', icon: '💪', anim: 'flex', windup: 0.4, recover: 0.1, cd: 25, steps: [{ buff: { id: 'heavy_point', name: 'Heavy Point', dur: 15, mods: { damage: 1.4, defMul: 0.8, scale: 1.3 }, look: { hat: 'antlers', bulk: 1.3 } } }] }),
+      T(0, { id: 'hito_heavy', name: 'Heavy Point', icon: '💪', anim: 'flex', windup: 0.4, recover: 0.1, cd: 8, desc: 'Grow into a towering, furry, muscle-bound reindeer-man: hit harder, take more. (The form key switches it on and off.)', steps: [{ fx: { burst: 14, color: '#a1887f', kind: 'smoke' } }, { at: 0.35, buff: { id: 'heavy_point', form: 'heavy', name: 'Heavy Point', dur: Infinity, mods: { damage: 1.3, defMul: 0.8, scale: 1.3 }, look: ZOAN_LOOK.heavy } }] }),
       T(10, { id: 'hito_guard', name: 'Guard Point', anim: 'block', windup: 0.1, recover: 0.1, cd: 14, desc: 'Puff up into a great ball of fur: blows bounce off the fluff (but you can hardly move).', steps: [{ buff: { id: 'guard_point', name: 'Guard Point', dur: 3.5, mods: { defMul: 0.25, speedMul: 0.4 }, look: { bulk: 1.9 } } }] }),
       T(20, { id: 'hito_horn', name: 'Horn Point: Kokutei Roseo', icon: '🦌', anim: 'thrust', windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
       T(30, { id: 'hito_arm', name: 'Arm Point: Kokutei Cross', anim: 'punch', windup: 0.25, recover: 0.3, cd: 6, desc: 'Arms like a gorilla\'s: both hooves driven into them crossed — and the mark of the cross left behind.',
         steps: [{ buff: { id: 'arm_point', name: 'Arm Point', dur: 1.2, look: { bulk: 1.25 } } }, { at: 0.25, hit: { shape: 'arc', range: 1.9, arc: 1.2, offset: 0.3, damage: 34, knockback: 10, stun: 0.6, heavy: true, guardBreak: true, impactFrame: true } }] }),
-      T(40, { id: 'hito_walk', name: 'Walk Point', anim: 'flex', windup: 0.25, recover: 0.1, cd: 20, desc: 'Down on four hooves like a true reindeer: you run a great deal faster.',
-        steps: [{ buff: { id: 'walk_point', name: 'Walk Point', dur: 12, mods: { speedMul: 1.45 }, look: { hat: 'antlers' } } }] }),
+      T(40, { id: 'hito_walk', name: 'Walk Point', anim: 'flex', windup: 0.25, recover: 0.1, cd: 8, desc: 'Down on four hooves like a true reindeer: you run a great deal faster.',
+        steps: [{ fx: { burst: 12, color: '#a1887f', kind: 'smoke' } }, { at: 0.25, buff: { id: 'walk_point', form: 'walk', name: 'Walk Point', dur: Infinity, mods: { speedMul: 1.45, scale: 1.15 }, look: ZOAN_LOOK.walk } }] }),
       T(50, { id: 'hito_jump', name: 'Jumping Point', anim: 'thrust', windup: 0.25, recover: 0.35, cd: 9, desc: 'Legs built to leap: bound high over them and come down hooves first.',
         steps: [{ dash: { dist: 7, time: 0.4, iframes: 0.3, air: true, hit: { damage: 26, knockback: 8, stun: 0.6, launch: 3 } } }] }),
       T(60, { id: 'hito_brain', name: 'Brain Point: Scope', anim: 'pray', windup: 0.3, recover: 0.2, cd: 30, desc: 'Look through the lens of your hooves and find their weak spot: for a while every blow lands where it hurts most.',
@@ -385,14 +385,14 @@ export const FRUITS = {
     ],
     // (Monster Point is a form, opened by fighting: data/fruitForms.js)
     more: [
-      T(50, { id: 'hito_monster', name: 'Monster Point', icon: '👹', anim: 'flex', windup: 0.8, recover: 0.1, cd: 90, desc: 'A Rumble Ball overdose: enormous power, barely controllable.', steps: [{ buff: { id: 'monster', form: 'monster', name: 'Monster Point', dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, aura: 'rgba(121,85,72,0.8)', look: { hat: 'antlers', bulk: 1.45, sleeve: '#8d6e63' } } }] }),
+      T(50, { id: 'hito_monster', name: 'Monster Point', icon: '👹', anim: 'flex', windup: 0.8, recover: 0.1, cd: 90, desc: 'A Rumble Ball overdose: enormous power, barely controllable.', steps: [{ buff: { id: 'monster', form: 'monster', name: 'Monster Point', dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, look: ZOAN_LOOK.monster } }] }),
     ],
   },
   neko_leopard: {
     name: 'Neko Neko no Mi, Model: Leopard', en: 'Cat-Cat Fruit, Leopard', type: 'Zoan', rarity: 'rare', color: '#ffb74d', weight: 1.2,
     desc: 'Become a leopard or a half-leopard warrior. Rob Lucci\'s ferocious fruit.',
     techniques: [
-      T(0, { id: 'neko_hybrid', name: 'Hybrid Form', icon: '🐆', anim: 'flex', windup: 0.4, recover: 0.1, cd: 30, steps: [{ buff: { id: 'leopard', name: 'Leopard Form', dur: 20, mods: { damage: 1.45, speedMul: 1.2, defMul: 0.85 }, aura: 'rgba(255,183,77,0.6)', look: { spots: true, ears: 'round', tail: 'thin', fur: '#ffb74d', hand: '#ffb74d' } } }] }),
+      T(0, { id: 'neko_hybrid', name: 'Hybrid Form', icon: '🐆', anim: 'flex', windup: 0.4, recover: 0.1, cd: 8, desc: 'Half man, half leopard: a towering, spotted, clawed killer — every blow harder and faster. (The form key switches it on and off.)', steps: [{ fx: { burst: 14, color: '#ffb74d', kind: 'smoke' } }, { at: 0.35, buff: { id: 'leopard', form: 'hybrid', name: 'Leopard Hybrid', dur: Infinity, mods: { damage: 1.35, speedMul: 1.15, defMul: 0.85, scale: 1.3 }, look: ZOAN_LOOK.leopard_hybrid } }] }),
       T(20, { id: 'neko_claw', name: 'Leopard Claw', icon: '🐾', anim: 'claw', windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: 'arc', range: 1.9, arc: 1.8, offset: 0.2, damage: 22, knockback: 3, stun: 0.4, slashing: true, status: { bleed: 4 } }, vfx: 'slash', color: '#ffb74d' }] }),
       T(50, { id: 'neko_pounce', name: 'Hunting Pounce', icon: '🐅', anim: 'thrust', windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 8, time: 0.25, iframes: 0.2, hit: { damage: 40, knockback: 5, stun: 0.8, heavy: true } } }] }),
       T(30, { id: 'neko_shigan', name: 'Shigan: Ouren', anim: 'point', windup: 0.2, recover: 0.3, cd: 6, desc: 'Finger Pistol, Yellow Lotus: a leopard\'s fingers driven through them again and again, faster than they can follow.',
@@ -410,13 +410,18 @@ export const FRUITS = {
       T(15, { id: 'phoenix_fly', name: 'Phoenix Flight', icon: '🕊', desc: 'Spread your wings of blue flame and take to the sky — no one stays up longer than the Phoenix. Fly, or land again (or press Space again in the air).',
         flight: { style: 'phoenix', gauge: 30, speed: 12, climb: 7, ceiling: 45, drain: 0.5, sea: 3.5, refill: 4, color: '#4dd0e1' } }),
       T(30, { id: 'phoenix_brand', name: 'Phoenix Brand', icon: '🔥', anim: 'kick', windup: 0.3, recover: 0.3, cd: 7, desc: 'A kick wreathed in blue flame — from the sky, a dive straight down onto the target.', steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.2, air: true, dive: true, hit: { damage: 40, knockback: 8, stun: 0.6, heavy: true } }, phoenix: 0.8 }] }),
-      T(45, { id: 'phoenix_form', name: 'Phoenix Hybrid Form', anim: 'flex', windup: 0.35, recover: 0.1, cd: 45, desc: 'Your arms become wings of blue flame: you hit harder, move faster, and the flames heal you as you fight.',
-        steps: [{ buff: { id: 'phoenix_form', name: 'Phoenix Form', dur: 20, phoenix: true, regen: 6, mods: { damage: 1.25, speedMul: 1.15 }, aura: 'rgba(77,208,225,0.6)' } }] }),
+      T(45, { id: 'phoenix_form', name: 'Phoenix Hybrid Form', anim: 'flex', windup: 0.35, recover: 0.1, cd: 8, desc: 'Your arms become wings of blue flame: you hit harder, move faster, and the flames heal you as you fight.',
+        steps: [{ buff: { id: 'phoenix_form', form: 'hybrid', name: 'Phoenix Hybrid', dur: Infinity, phoenix: true, regen: 3, mods: { damage: 1.2, speedMul: 1.15 } } }] }),
       T(70, { id: 'phoenix_rebirth', name: 'Rebirth Flames', icon: '♾', anim: 'cast', windup: 0.6, recover: 0.2, cd: 120, desc: 'Burn away all harm: a full heal, every ailment cleansed, and a burst of blue fire.', steps: [{ heal: 400, color: '#4dd0e1', phoenix: 3 }, { hit: { shape: 'circle', range: 3, damage: 30, knockback: 6, element: 'fire' }, vfx: 'ring', color: '#4dd0e1' }, { self: { cleanse: true } }] }),
       T(40, { id: 'phoenix_pyreapple', name: 'Phoenix Pyreapple', anim: 'sweep', windup: 0.3, recover: 0.35, cd: 9, desc: 'Wings of blue flame swept round in a great arc: they burn whoever they touch — and the flames that touch you, heal.',
         steps: [{ hit: { shape: 'arc', range: 3.6, arc: 2.6, offset: 0.2, damage: 34, knockback: 8, stun: 0.5, element: 'fire', status: { burn: 2 } }, vfx: 'slash', color: '#4dd0e1' }, { heal: 20, color: '#4dd0e1' }] }),
       T(55, { id: 'phoenix_talon', name: 'Phoenix Talons', anim: 'claw', windup: 0.2, recover: 0.3, cd: 6, desc: 'A great bird\'s talons, wreathed in blue fire, raked down through them.',
         steps: [{ hit: { shape: 'arc', range: 2.2, arc: 1.3, offset: 0.2, damage: 30, knockback: 4, stun: 0.5, slashing: true, element: 'fire', status: { bleed: 2 } }, vfx: 'slash', color: '#4dd0e1' }] }),
+    ],
+    // (the full Phoenix is a form, opened by fighting: data/fruitForms.js)
+    more: [
+      T(45, { id: 'phoenix_full', name: 'Phoenix Form', icon: '🐦', anim: 'cast', windup: 0.6, recover: 0.1, cd: 8, desc: 'Become the Phoenix itself: a great bird of blue flame with a tail of gold — the flames heal you as you fight.',
+        steps: [{ fx: { burst: 24, color: '#4dd0e1', kind: 'smoke', ring: 3 }, phoenix: 1 }, { at: 0.55, buff: { id: 'phoenix_bird', form: 'phoenix', name: 'Phoenix', dur: Infinity, regen: 4, mods: { damage: 1.3, speedMul: 1.25, defMul: 0.85, scale: 1.5 }, look: ZOAN_LOOK.phoenix } }] }),
     ],
   },
   uo_seiryu: {
@@ -425,8 +430,8 @@ export const FRUITS = {
     techniques: [
       T(0, { id: 'seiryu_bolo', name: 'Bolo Breath', icon: '🐉', anim: 'breath', windup: 0.5, recover: 0.4, cd: 7, say: 'Bolo Breath!', steps: [{ hit: { shape: 'line', range: 11, width: 1.8, damage: 44, knockback: 6, stun: 0.5, element: 'fire', status: { burn: 3 }, heavy: true, hitShips: true }, vfx: 'beam', color: '#ff7043' }] }),
       T(25, { id: 'seiryu_kaifu', name: 'Kaifu', icon: '🌬', anim: 'breath', windup: 0.35, recover: 0.3, cd: 6, desc: 'Wind blades from the dragon\'s whiskers.', steps: [{ proj: { speed: 18, range: 12, radius: 0.5, damage: 18, count: 3, spread: 0.5, sprite: 'airslash', slashing: true, pierce: true } }] }),
-      T(35, { id: 'seiryu_fly', name: 'Azure Dragon Flight', desc: 'Take the Azure Dragon\'s shape and fly on the clouds it makes. Fly, or land again (or press Space again in the air).',
-        flight: { style: 'dragon', ride: 'cloud', gauge: 40, speed: 11, climb: 6, ceiling: 60, drain: 0.6, sea: 3, refill: 6, color: '#90caf9' } }),
+      T(35, { id: 'seiryu_fly', name: 'Azure Dragon Flight', desc: 'As the whole Azure Dragon, fly on the clouds you make. Fly, or land again (or press Space again in the air). Only the full dragon flies.',
+        flight: { style: 'dragon', ride: 'cloud', gauge: 40, speed: 11, climb: 6, ceiling: 60, drain: 0.6, sea: 3, refill: 6, color: '#90caf9', forms: ['dragon'] } }),
       T(50, { id: 'seiryu_raimei', name: 'Raimei Hakke', icon: '⚡', anim: 'heavy', windup: 0.6, recover: 0.5, cd: 14, desc: 'Thunder Bagua: a club blow that shakes the heavens.', steps: [{ hit: { shape: 'arc', range: 3, arc: 1.4, offset: 0.4, damage: 95, knockback: 16, stun: 1.2, heavy: true, guardBreak: true, element: 'lightning', impactFrame: true, shake: 0.9 } }] }),
       T(40, { id: 'seiryu_kamaitachi', name: 'Kamaitachi Rusukaina', anim: 'breath', windup: 0.5, recover: 0.4, cd: 10, desc: 'The dragon\'s whiskers whip up a gale of blades: a storm of them sweeps the ground in front of you.',
         steps: [{ proj: { speed: 20, range: 13, radius: 0.5, damage: 16, count: 7, spread: 1.3, sprite: 'airslash', slashing: true, pierce: true } }] }),
@@ -437,7 +442,10 @@ export const FRUITS = {
     ],
     // (the whole Azure Dragon is a form, opened by fighting: data/fruitForms.js)
     more: [
-      T(80, { id: 'seiryu_form', name: 'Dragon Form', icon: '🐲', anim: 'cast', windup: 1.0, recover: 0.1, cd: 120, steps: [{ buff: { id: 'dragon', form: 'dragon', name: 'Azure Dragon', dur: 25, mods: { damage: 2, defMul: 0.4, scale: 1.6 }, aura: 'rgba(66,165,245,0.8)', look: { dragonForm: true } } }] }),
+      T(10, { id: 'seiryu_hybrid', name: 'Dragon Hybrid Form', icon: '🐲', anim: 'flex', windup: 0.6, recover: 0.1, cd: 8, say: 'Hybrid form...', desc: 'Half man, half dragon: horns, scales, a dragon\'s tail and claws. (Only the full dragon flies.)',
+        steps: [{ fx: { burst: 18, color: '#90caf9', kind: 'smoke', ring: 2 } }, { at: 0.55, buff: { id: 'dragon_hybrid', form: 'hybrid', name: 'Dragon Hybrid', dur: Infinity, mods: { damage: 1.35, defMul: 0.75, scale: 1.45 }, look: ZOAN_LOOK.dragon_hybrid } }] }),
+      T(80, { id: 'seiryu_form', name: 'Dragon Form', icon: '🐉', anim: 'cast', windup: 1.0, recover: 0.1, cd: 10, desc: 'Become the whole Azure Dragon: a serpent of blue scales tens of metres long that flies on its own clouds.',
+        steps: [{ fx: { burst: 30, color: '#90caf9', kind: 'smoke', ring: 5, shake: 0.5 } }, { at: 0.9, buff: { id: 'dragon', form: 'dragon', name: 'Azure Dragon', dur: Infinity, mods: { damage: 1.6, defMul: 0.55, scale: 2.4 }, look: ZOAN_LOOK.dragon } }] }),
     ],
   },
 

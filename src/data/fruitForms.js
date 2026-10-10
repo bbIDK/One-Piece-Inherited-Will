@@ -196,6 +196,33 @@ const GEAR5 = {
   ],
 };
 
+// ------------------------------------------------------------------ the Zoans
+// A Zoan's forms are its beasts: a hybrid (half man, half beast — still on two
+// legs, fighting with the moves you know) and, where the anime has one, the
+// whole beast. Each form's buff carries one of these looks: `zoan` names the
+// beast the 3D view builds (render3d/chars/zoan.js) — on the body for a
+// hybrid (its head, tail, claws and fur), in place of the body for a whole
+// beast (a leopard, a reindeer, the Phoenix, the Azure Dragon) — and the rest
+// dresses the body under it (fur for skin, bare-chested, built up).
+const FURRED = { topStyle: 'bare', shoeStyle: 'bare', waist: 'none', frame: 'brawny', sleeve: null, coat: null, hat: null };
+export const ZOAN_LOOK = {
+  // (Rob Lucci: a towering leopard-headed man, golden fur and black rosettes, a long tail, claws)
+  leopard_hybrid: { ...FURRED, zoan: 'leopard_hybrid', skin: '#e9a845', hand: '#e9a845', fur: '#e9a845', bottom: '#1d1d24', bottomStyle: 'trousers', muscle: 1.2, bulk: 1.2, spots: true },
+  // (Chopper's Heavy Point: a big furry reindeer-man, antlers through his pink hat, orange shorts)
+  heavy: { ...FURRED, zoan: 'heavy', skin: '#8a5a3c', hand: '#8a5a3c', fur: '#8a5a3c', bottom: '#ef7d32', bottomStyle: 'shorts', muscle: 1.1, bulk: 1.3 },
+  // (Monster Point: a hulking shaggy monster, antlers like a tree)
+  monster: { ...FURRED, zoan: 'monster', skin: '#6e4a35', hand: '#6e4a35', fur: '#6e4a35', bottom: '#ef7d32', bottomStyle: 'shorts', muscle: 1.2, bulk: 1.55 },
+  // (Kaido's hybrid: a giant of a man, branched golden horns, blue scales over him, a dragon's tail, claws, a wild black mane)
+  dragon_hybrid: { ...FURRED, zoan: 'dragon_hybrid', bottom: '#ece6d6', bottomStyle: 'hakama', waist: 'sash', waistCol: '#6a3fa0', hair: 'long', hairColor: '#141414', muscle: 1.2, bulk: 1.35, scales: '#3f8fe0' },
+  // the whole beasts
+  leopard: { zoan: 'leopard' },
+  walk: { zoan: 'walk' },
+  phoenix: { zoan: 'phoenix' },
+  dragon: { zoan: 'dragon' },
+};
+/** A Zoan form: switched on by `activate` (a base technique or its own), no moves of its own — the base set, in the beast. */
+const zoanForm = (id, name, short, mastery, activate, desc, extra = {}) => ({ id, name, short, mastery, activate, desc, ...extra });
+
 // ------------------------------------------------------------------ the kits
 /**
  * Per fruit: `heavy` (its own heavy blow — an id, or a def; while it cools
@@ -247,7 +274,15 @@ export const KITS = {
       steps: [{ fx: { burst: 24, color: '#f48fb1', kind: 'petal', ring: 3, impact: 0.06 } }, { at: 0.5, buff: { id: 'demonio', name: 'Demonio Fleur', dur: 14, mods: { damage: 1.35, defMul: 0.8, scale: 1.6 }, aura: 'rgba(136,14,79,0.8)' } }] },
   ] } },
   // (a Zoan's beast in every blow)
-  neko_leopard: { m1: { dmg: 1.2 } },
+  neko_leopard: {
+    m1: { dmg: 1.2 },
+    forms: [
+      zoanForm('hybrid', 'Leopard Hybrid', 'Hybrid', 5, 'neko_hybrid', 'Half man, half leopard: a towering spotted killer on two legs.', { m1: { dmg: 1.3, status: { bleed: 0.6 } } }),
+      zoanForm('leopard', 'Full Leopard', 'Leopard', 35, { id: 'neko_full', name: 'Leopard Form', icon: '🐆', anim: 'flex', windup: 0.4, recover: 0.1, cd: 8, desc: 'Down on all fours as a great leopard: blindingly fast, every blow a mauling.',
+        steps: [{ fx: { burst: 16, color: '#ffb74d', kind: 'smoke' } }, { at: 0.35, buff: { id: 'leopard_full', form: 'leopard', name: 'Leopard', dur: Infinity, mods: { speedMul: 1.45, damage: 1.25, atkSpeed: 1.15, scale: 1.35 }, look: ZOAN_LOOK.leopard } }] },
+      'A great leopard on all fours: very fast, every blow a mauling.', { m1: { dmg: 1.35, reach: 1.2, status: { bleed: 1 } } }),
+    ],
+  },
   doku: { m1: { element: 'poison', status: { poison: 2 } }, awakening: { name: 'Awakened Venom', extra: [
     { id: 'doku_venom_demon', name: 'Venom Demon: Hell\'s Judgement', icon: '☠', anim: 'thrust', windup: 0.5, recover: 0.45, cd: 16, say: 'Venom Demon... Hell\'s Judgement!', desc: 'Awakened: a demon of poison wraps you and you charge — the ground it crosses stays a pool of venom.',
       steps: [{ dash: { dist: 10, time: 0.45, iframes: 0.4, hit: { damage: 60, knockback: 10, stun: 0.7, heavy: true, element: 'poison', status: { poison: 4 } } } }, { at: 0.95, zone: { range: 3.5, duration: 5, interval: 0.5, damage: 8, element: 'poison', status: { poison: 2 }, color: '#7b1fa2', kind: 'gas' } }] },
@@ -283,8 +318,18 @@ export const KITS = {
     { id: 'yami_abyss', name: 'Kurozu: Abyss', icon: '🌑', anim: 'raise', windup: 0.6, recover: 0.4, cd: 22, say: 'Abyss!', desc: 'Awakened: the dark spreads out from you over the whole field and drags everyone in it down and in.',
       steps: [{ zone: { range: 8, duration: 5, interval: 0.4, damage: 9, element: 'dark', color: '#120a1a', kind: 'dark', pull: 2.5, slow: 0.5, absorb: true } }] },
   ] } },
-  hito: { m1: { dmg: 1.1 }, forms: [{ id: 'monster', name: 'Monster Point', short: 'Monster', mastery: 50, activate: 'hito_monster', desc: 'A Rumble Ball overdose: a towering monster, enormous power, barely controlled.', m1: { dmg: 1.5, reach: 1.4 } }] },
-  uo_seiryu: { m1: { dmg: 1.2 }, forms: [{ id: 'dragon', name: 'Azure Dragon Form', short: 'Dragon', mastery: 40, activate: 'seiryu_form', desc: 'Take the Azure Dragon\'s whole shape: bigger and stronger, every breath a furnace.', m1: { dmg: 1.4, reach: 1.4 } }] },
+  hito: { m1: { dmg: 1.1 }, forms: [
+    zoanForm('heavy', 'Heavy Point', 'Heavy', 5, 'hito_heavy', 'A big, furry, muscle-bound reindeer-man.', { m1: { dmg: 1.25 } }),
+    zoanForm('walk', 'Walk Point', 'Walk', 20, 'hito_walk', 'A reindeer on four hooves: a great deal faster.', { m1: { dmg: 1.1 } }),
+    { id: 'monster', name: 'Monster Point', short: 'Monster', mastery: 50, activate: 'hito_monster', desc: 'A Rumble Ball overdose: a towering monster, enormous power, barely controlled.', m1: { dmg: 1.5, reach: 1.4 } }] },
+  tori_phoenix: { forms: [
+    zoanForm('hybrid', 'Phoenix Hybrid', 'Hybrid', 10, 'phoenix_form', 'Arms become wings of blue flame: faster, harder, healing as you fight.'),
+    zoanForm('phoenix', 'Full Phoenix', 'Phoenix', 45, 'phoenix_full', 'The Phoenix itself: a great bird of blue flame with a tail of gold.', { m1: { dmg: 1.2, element: 'fire', reach: 1.25 } }),
+  ] },
+  uo_seiryu: { m1: { dmg: 1.2 }, forms: [
+    zoanForm('hybrid', 'Dragon Hybrid', 'Hybrid', 10, 'seiryu_hybrid', 'Half man, half dragon: horns, scales, a tail and claws — a giant\'s strength.', { m1: { dmg: 1.3, reach: 1.2 } }),
+    { id: 'dragon', name: 'Azure Dragon Form', short: 'Dragon', mastery: 40, activate: 'seiryu_form', desc: 'Take the Azure Dragon\'s whole shape: enormous, every breath a furnace — and the sky is yours.', m1: { dmg: 1.4, reach: 1.6 } },
+  ] },
 };
 
 /**

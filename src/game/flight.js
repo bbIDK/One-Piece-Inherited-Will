@@ -70,8 +70,11 @@ export function flightOf(a) {
   const f = a?.fruitDef;
   if (f) {
     const k = 0.6 + 0.4 * Math.min(1, (a.fruitMastery || 0) / FLY_MASTERY);
+    // (a flight only some form of the fruit has — the Azure Dragon's, once transformed — waits for it)
+    const form = (a.buffs || []).find((b) => b.form)?.form;
     for (const t of f.techniques) {
       if (!t.flight) continue;
+      if (t.flight.forms && !t.flight.forms.includes(form)) continue;
       const s = { ...DEF, ...t.flight, fruit: true, tech: t.id };
       s.gauge = Math.round(s.gauge * k * 10) / 10;
       if (!best || s.gauge > best.gauge) best = s;
@@ -239,6 +242,8 @@ export function flyStep(a, dt, game) {
     fall(a, game);
     return;
   }
+  // (the form that flies gone — the dragon back in human shape — and down you come)
+  if (S.forms && !S.forms.includes((a.buffs || []).find((b) => b.form)?.form) && !F.landing) F.landing = true;
   // the gauge
   const sea = overOpenSea(game, a.x, a.y);
   const moving = Math.hypot(i.mx, i.my) > 0.1;

@@ -176,7 +176,7 @@ export class Combat {
       if (!dead && !p.ghost) {
         for (const a of actors) {
           if (p.hit.has(a.id) || !this.canHit(p.owner, a, p)) continue;
-          if (game.world.dist2(p.x, p.y, a.x, a.y - 0.5) > (p.radius + a.r + 0.2) ** 2) continue;
+          if (game.world.dist2(p.x, p.y, a.x, a.y - 0.5) > (p.radius + (a.hurtR || a.r) + 0.2) ** 2) continue;
           p.hit.add(a.id);
           p.angle = Math.atan2(p.vy, p.vx);
           this.applyHit(p.owner, a, p);
@@ -263,7 +263,7 @@ export class Combat {
     const w = this.game.world;
     const dx = w.dx(h.x, a.x), dy = (a.y - 0.4) - h.y;
     const d = Math.hypot(dx, dy);
-    const rr = a.r + 0.15;
+    const rr = (a.hurtR || a.r) + 0.15;
     if (h.shape === 'circle') return d <= h.range + rr;
     if (h.shape === 'arc') {
       if (d > h.range + rr) return false;

@@ -95,6 +95,8 @@ for (const [fid, F] of Object.entries(FRUITS)) {
         stepAll(g, abilityTotal(getAbility('ope_room')) + 0.1);
         assert.ok(g.areaZones.some((z) => z.kind === 'room' && z.owner === you), 'there is a Room');
       }
+      // (a flight only a form has — the Azure Dragon's — flies once you've taken that form)
+      if (def.flight?.forms) you.addBuff({ id: 'form_' + def.flight.forms[0], form: def.flight.forms[0], dur: Infinity });
       const before = { you: snapshot(you), foe: snapshot(foe), far: snapshot(far) };
       const hp0 = foe.hp + far.hp;
       let ok;

@@ -5,6 +5,7 @@
 // The camera works in the renderer's floating-origin space: the player's
 // tile position is the origin, so positions are small and the wrap-around
 // world just works.
+import { ZOAN_CAM, BEASTS } from './chars/zoan.js';
 import * as THREE from 'three';
 import { interiorRect, heightsOf } from '../world/interiors.js';
 import { helmPoint } from './ships3d.js';
@@ -412,7 +413,14 @@ export class CameraRig {
       // what the camera circles, and how far out: you — or, at the helm or the
       // oars, your ship, from further out the bigger she is (the mouse wheel
       // still pulls it in and out)
-      let ox = 0, oz = 0, oy = gh + eyeH * 0.9, d = this.tp.dist, own = null;
+      // (a body a form has blown up — a Zoan's beast above all, Kaido's dragon tens of metres long:
+      // the camera stands back from it and looks at its head, easing out and in as it changes)
+      const zb = (p.buffs || []).find((b) => b.look?.zoan || b.mods?.scale);
+      const zk = zb ? (zb.mods?.scale || 1) : 1, zz = zb?.look?.zoan;
+      const wantF = Math.pow(zk, 0.85) * (ZOAN_CAM[zz] || 1), wantH = zz === 'dragon' ? zk * 1.25 : zz && BEASTS.has(zz) ? zk * 0.75 : zk;
+      this.formD = (this.formD ?? 1) + (wantF - (this.formD ?? 1)) * Math.min(1, dt * 3);
+      this.formH = (this.formH ?? 1) + (wantH - (this.formH ?? 1)) * Math.min(1, dt * 3);
+      let ox = 0, oz = 0, oy = gh + eyeH * 0.9 * (sailing ? 1 : this.formH), d = this.tp.dist * (sailing ? 1 : this.formD), own = null;
       // (aiming down a gun's sights: in close over the shoulder — see the fov below)
       this.aimK = (this.aimK || 0) + ((p.aiming ? 1 : 0) - (this.aimK || 0)) * Math.min(1, dt * 10);
       d *= 1 - 0.45 * this.aimK;

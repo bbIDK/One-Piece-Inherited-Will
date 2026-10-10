@@ -90,12 +90,18 @@ test('who flies: the Phoenix and the Dragon, Logia riders — from the first bit
   assert.equal(flightOf(body(g, { race: 'lunarian' })).style, 'wings');
   // (a fruit's flight is part of its base set: yours on eating it — its mastery keeps you up longer)
   const S = { tori_phoenix: 'phoenix', uo_seiryu: 'dragon', moku: 'ride', suna: 'ride', zushi: 'ride', pika: 'float', ito: 'float' };
+  // (the Azure Dragon flies only as the whole dragon: its form's buff on)
+  const dragon = (a) => { if (a.fruit === 'uo_seiryu') a.addBuff({ id: 'dragon', form: 'dragon', dur: Infinity }); return a; };
   for (const [fruit, style] of Object.entries(S)) {
-    const fresh = flightOf(body(g, { fruit, mastery: 0 })), master = flightOf(body(g, { fruit, mastery: 100 }));
+    const fresh = flightOf(dragon(body(g, { fruit, mastery: 0 }))), master = flightOf(dragon(body(g, { fruit, mastery: 100 })));
     assert.equal(fresh.style, style, `${fruit} at mastery 0`);
     assert.ok(master.gauge > fresh.gauge, `${fruit}: longer once mastered (${fresh.gauge} → ${master.gauge})`);
-    assert.equal(flightOf(body(g, { fruit, mastery: 40 })).gauge, master.gauge, `${fruit}: as long as it gets by 40`);
+    assert.equal(flightOf(dragon(body(g, { fruit, mastery: 40 }))).gauge, master.gauge, `${fruit}: as long as it gets by 40`);
   }
+  // (in human shape, or half a dragon, Kaido doesn't fly; the Phoenix flies in any shape)
+  assert.equal(flightOf(body(g, { fruit: 'uo_seiryu' })), null, 'no flight in human shape');
+  const hy = body(g, { fruit: 'uo_seiryu' }); hy.addBuff({ id: 'dragon_hybrid', form: 'hybrid', dur: Infinity });
+  assert.equal(flightOf(hy), null, 'nor in the hybrid');
   assert.equal(flightOf(body(g, { fruit: 'moku' })).ride, 'smoke');
   assert.equal(flightOf(body(g, { fruit: 'zushi' })).ride, 'rock');
   for (const fruit of ['gomu', 'mera', 'hie', 'goro', 'magu', 'ope', 'bara']) assert.equal(flightOf(body(g, { fruit })), null, `${fruit} doesn't fly`);

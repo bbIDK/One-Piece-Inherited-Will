@@ -20,6 +20,7 @@ import { Glow } from './fx.js';
 import { holdItem, heldSize } from './helditem.js';
 import { rubberFist, fistState } from './rubber.js';
 import { actorPose, rigOptions, currentLook, weaponOf, weaponKey, stationSpot, stationReach } from './pose.js';
+import { BEASTS, zoanSkin } from './zoan.js';
 import { FRUITS } from '../../data/fruits.js';
 import { coatBody } from './haki.js';
 import { shipDims, shipLift } from '../../world/hull.js';
@@ -141,6 +142,7 @@ class Viewmodel {
     m.visibleParts = HIDE.map((i) => [i, false]);
     m.face.visible = false;
     if (m.bubble) m.bubble.visible = false;
+    zoanSkin(m, look); // (a hybrid's arms in its fur: a leopard's rosettes, a dragon's scales)
     this.body.add(m.group);
     this.model = m;
     this.fixup();
@@ -169,7 +171,8 @@ class Viewmodel {
     if (!this.model || key !== this.key || this.baseLook !== p.look) { this.key = key; this.baseLook = p.look; this.build(p, look, wpn); }
     const m = this.model;
     m.setShaded(!ctx?.world?.roomOf?.(p));
-    const hidden = p.state === 'knocked' || p.state === 'dead' || p.hidden;
+    // (as a whole beast — a leopard, a reindeer, the Phoenix, the Azure Dragon — there are no arms to see)
+    const hidden = p.state === 'knocked' || p.state === 'dead' || p.hidden || BEASTS.has(look.zoan);
     this.root.visible = !hidden;
     p._fpArms = false;
     if (hidden) return;

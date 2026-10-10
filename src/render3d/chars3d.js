@@ -31,6 +31,7 @@ import { WakeTrail } from './wake3d.js';
 import { deckBalance, balanceState, clearBalance } from './chars/balance.js';
 import { coatBody, senseOf } from './chars/haki.js';
 import { gearOf, formRig, formBody, shadowRise } from './chars/forms.js';
+import { ZoanForm } from './chars/zoan.js';
 import { sigOf } from '../game/haki.js';
 
 const TAU = Math.PI * 2;
@@ -106,6 +107,8 @@ class ActorView {
     // (start at the detail its distance calls for: no near model built just to swap it out)
     this.model = new CharacterModel(this.look, this.wpn, { fingers: !!a.isPlayer, lod: a.isPlayer ? 0 : lodFor(opts.dist ?? 0, -1) });
     this.yaw.add(this.model.group);
+    // (a Zoan's beast: on the body for a hybrid, in its place for the whole beast — chars/zoan.js)
+    this.zoan = this.look.zoan ? new ZoanForm(this, this.model, this.look, a.seed || 0) : null;
     this.o = {};
     this.label = null; this.marker = null; this.aura = null; this.glows = []; this.ice = null; this.stars = null;
     this.rootFx = null; this.shimmer = null; this.backFlame = null; this.trail = null;
@@ -305,6 +308,11 @@ class ActorView {
     m.setShaded(!ctx.world?.roomOf?.(a));
     this.bodyParts(a);
     if (a.isPlayer) this.ownBody(fp, a, ctx, env);
+    if (this.zoan) {
+      const zdt = Math.min(0.1, Math.max(0, env.time - (this.zoanT ?? env.time)));
+      this.zoanT = env.time;
+      this.zoan.update(this, a, env, ctx, fp, zdt);
+    }
   }
 
   /**
@@ -540,7 +548,7 @@ class ActorView {
     const near = dist < 45;
     // aura (not round your own eyes in first person: the view's edges take its tint instead)
     // (the blaze hugging the figure — flameaura.js — and the flecks drifting up off it)
-    if (pose.aura && near && !(a.isPlayer && ctx.mode === 'first')) {
+    if (pose.aura && near && !(a.isPlayer && ctx.mode === 'first') && !this.zoan?.beast) {
       if (!this.flame) this.flame = new FlameAura(m);
       this.flame.visible = true;
       this.flame.set(pose.aura, t, m.d.hip0, m.d.Bk);
@@ -554,7 +562,7 @@ class ActorView {
     }
     // the Lunarian flame on the back, between the wings (out in the sea, and
     // not over your own shoulders in first person: you'd be looking out of it)
-    const lit = !!this.look.backFlame && a.flameLit !== false && !a.inWater && !(a.isPlayer && ctx.mode === 'first');
+    const lit = !!this.look.backFlame && a.flameLit !== false && !a.inWater && !(a.isPlayer && ctx.mode === 'first') && !this.zoan?.beast;
     if ((lit || this.backFlame?.grow > 0.02) && near) {
       const chest = m.bones[B.chest];
       if (!this.backFlame) this.backFlame = new BackFlame(a.seed || 0);
@@ -586,7 +594,8 @@ class ActorView {
       this.backFlame.update(t, fdt, 1.1 * (this.flameBk ?? m.d.Bk), _v2, lit);
     } else if (this.backFlame) this.backFlame.group.visible = false;
     // the Phoenix's wings of blue flame: flying as the Phoenix, or while its form is on
-    const phoenix = (a.flying && a.flightStyle === 'phoenix') || !!a.phoenixForm;
+    // (not on the whole Phoenix: the bird has wings of its own — chars/zoan.js)
+    const phoenix = ((a.flying && a.flightStyle === 'phoenix') || !!a.phoenixForm) && !this.zoan?.beast;
     if ((phoenix || this.wings?.grow > 0.02) && near && !(a.isPlayer && ctx.mode === 'first')) {
       if (!this.wings) { this.wings = new PhoenixWings(a.seed || 0); m.group.add(this.wings.group); }
       const wdt = Math.min(0.1, Math.max(0, t - (this.wingT ?? t)));
@@ -743,6 +752,7 @@ class ActorView {
   }
 
   dispose() {
+    this.zoan?.dispose(this.a);
     this.model.dispose();
     this.wake?.dispose();
     this.label?.dispose();
