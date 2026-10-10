@@ -1315,20 +1315,18 @@ function styleExtras(k, b, S, fw, fd, H, door, dd, wallCol, roofCol, winter, ex 
     // boarded-up planks across a window and a crooked weathervane
     if (clearOfDoor(-fw / 2 + 0.3, -fw / 2 + 1.4)) B(k, -fw / 2 + 0.3, 1.4, 0.06, -fw / 2 + 1.4, 1.52, 0.1, '#5d4037', { rot: [0, 0, 0.3] });
   }
-  if (b.style === 'port' && role === 'house' && fw >= 4) {
-    // a crate by the wall (not in front of the door)
-    const sx = door.x > 0 ? -1 : 1;
-    const x0 = sx > 0 ? fw / 2 - 1.1 : -fw / 2 + 0.3, x1 = x0 + 0.8;
-    if (clearOfDoor(x0, x1)) B(k, x0, 0, 0.1, x1, 0.8, 0.9, '#b08850', { outline: 0.02 });
-  }
+  // (no crate built into the port houses' walls: a plain box against every one of them looked bad)
   if (b.pirate) {
-    // a crude Jolly Roger nailed over the door: pirates live here
-    const x = door.x, y = dd.top + 0.14;
-    B(k, x - 0.42, y, 0.04, x + 0.42, y + 0.56, 0.07, '#141414', { outline: 0.01 });
-    k.add(new THREE.SphereGeometry(0.12, 8, 6), { at: [x, y + 0.33, 0.08], scale: [1, 0.95, 0.35], color: '#f5f5f5' });
-    B(k, x - 0.07, y + 0.19, 0.07, x + 0.07, y + 0.25, 0.1, '#f5f5f5');
-    for (const sx of [-1, 1]) k.add(box(0.46, 0.045, 0.02), { at: [x, y + 0.1, 0.085], rot: [0, 0, sx * 0.62], color: '#f5f5f5' });
-    for (const sx of [-1, 1]) B(k, x + sx * 0.045 - 0.025, y + 0.32, 0.115, x + sx * 0.045 + 0.025, y + 0.37, 0.12, '#141414');
+    // a Jolly Roger nailed over the door: pirates live here — big enough to
+    // read from across the street, on a pale-edged board standing off the wall
+    const x = door.x, y = dd.top + 0.12, S = Math.max(1, Math.min(1.35, (H - 0.15 - y) / 0.64));
+    B(k, x - 0.5 * S, y - 0.03, 0.03, x + 0.5 * S, y + 0.62 * S + 0.03, 0.06, '#8d6e4a', { outline: 0.012 });
+    B(k, x - 0.46 * S, y, 0.06, x + 0.46 * S, y + 0.62 * S, 0.09, '#141414', { outline: 0.01 });
+    const z = 0.09;
+    k.add(new THREE.SphereGeometry(0.12 * S, 8, 6), { at: [x, y + 0.37 * S, z + 0.04], scale: [1, 0.95, 0.35], color: '#f5f5f5' });
+    B(k, x - 0.07 * S, y + 0.21 * S, z + 0.03, x + 0.07 * S, y + 0.28 * S, z + 0.06, '#f5f5f5');
+    for (const sx of [-1, 1]) k.add(box(0.5 * S, 0.05 * S, 0.02), { at: [x, y + 0.11 * S, z + 0.045], rot: [0, 0, sx * 0.62], color: '#f5f5f5' });
+    for (const sx of [-1, 1]) B(k, x + sx * 0.05 * S - 0.03 * S, y + 0.35 * S, z + 0.075, x + sx * 0.05 * S + 0.03 * S, y + 0.41 * S, z + 0.085, '#141414');
   }
   if (winter && (b.style !== 'snow')) {
     // snow drifts along the walls

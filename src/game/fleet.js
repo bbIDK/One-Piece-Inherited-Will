@@ -58,6 +58,20 @@ export function ownsShip(game, pred = () => true) {
   return (game.ships || []).some((s) => s.owner === 'player' && !s.sunk && pred(s.def));
 }
 
+/**
+ * A quest that would hand you a ship of `type`: only if every ship you own
+ * is worse (by her worth: what a shipwright asks for her). With one as good
+ * or better you're told so and given nothing. Returns true when she's yours to take.
+ */
+export function shipRewardWanted(game, type, giver = 'They') {
+  const want = SHIPS[type]?.price || 0;
+  const f = game.state?.char?.fleet || [];
+  const best = Math.max(0, ...f.map((e) => SHIPS[e.type]?.price || 0), ...(game.ships || []).filter((s) => s.owner === 'player' && !s.sunk).map((s) => s.def?.price || 0));
+  if (best < want) return true;
+  game.ui?.toast('NO NEW SHIP', `${giver} would have given you a ${SHIPS[type]?.name || type} — but the ship you have is as good or better.`, '#b0bec5');
+  return false;
+}
+
 /** Is the player aboard her (at the helm or the oars, or anywhere on her decks)? */
 export const aboard = (p, s) => !!p && !!s && ((p.mode === 'sail' && p.ship === s) || p.deck?.ship === s);
 

@@ -1,4 +1,5 @@
 // East Blue content pack: the canon arcs of the "weakest sea".
+import { shipRewardWanted } from '../game/fleet.js';
 import './bossMoves.js';
 import { spawnNow, findActor, aggro, seaBoss, despawn } from './helpers.js';
 import { makeEnemy } from '../game/npcs.js';
@@ -589,7 +590,7 @@ const quests = [
       const dock = isl?.docks.find((d) => d.name === "Kaya's Mansion") || isl?.docks[0];
       // (there's only the one Going Merry: never a second, whoever saved Kaya before)
       const have = (ctx.char.fleet || []).some((f) => /going merry/i.test(f.name || '')) || (g.ships || []).some((s) => /going merry/i.test(s.name || '') && !s.sunk);
-      if (dock && !have) { g.giveShip('caravel', dock.moor.x, dock.moor.y, 'Going Merry'); g.ui.toast('A NEW SHIP!', 'Kaya gives you a caravel — the Going Merry!', '#ffe082'); }
+      if (dock && !have && shipRewardWanted(g, 'caravel', 'Kaya')) { g.giveShip('caravel', dock.moor.x, dock.moor.y, 'Going Merry'); g.ui.toast('A NEW SHIP!', 'Kaya gives you a caravel — the Going Merry!', '#ffe082'); }
     } },
   { id: 'baratie_krieg', name: 'The Sea Restaurant', island: 'baratie', kind: 'story', summary: 'A starving Krieg pirate named Gin is adrift near the Baratie.',
     stages: [

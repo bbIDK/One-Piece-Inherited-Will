@@ -272,7 +272,7 @@ export function generateIsland(world, def, noise, rng) {
       // road from the town to the dock
       if (dd.near) {
         const town = rec.towns.find((t) => t.id === dd.near || t.name === dd.near);
-        if (town) connectRoad(world, town.x, town.y, dock.land.x, dock.land.y, town.roadTile || T.DIRT);
+        if (town) routeRoad(world, town.plaza?.x ?? town.x, town.plaza?.y ?? town.y, dock.land.x, dock.land.y, town.roadTile || T.DIRT);
       }
     }
   }
@@ -285,7 +285,7 @@ export function generateIsland(world, def, noise, rng) {
   for (const t of rec.towns.slice(1)) {
     if ((def.towns || []).find((d) => (d.id || d.name) === (t.id || t.name))?.noRoad) continue;
     const a = rec.towns[0].plaza, b = t.plaza;
-    if (!walkable(world, rec.landBox, a.x, a.y + 2, b.x, b.y + 2)) connectRoad(world, a.x, a.y, b.x, b.y, t.roadTile || T.DIRT);
+    if (!walkable(world, rec.landBox, a.x, a.y + 2, b.x, b.y + 2)) routeRoad(world, a.x, a.y, b.x, b.y, t.roadTile || T.DIRT);
   }
 
   // (a drum's face stays a cliff, whatever was laid across it since — and a terrace's walls stone)
@@ -829,6 +829,71 @@ function shipwrightStand(world, at, { lastA, half, headHalf, qh, vx, vy, px, py 
  * meets a town's wall, and cuts a pass where it meets cliff or mountainside
  * (a town up on a hill can be ringed by its own cliffs).
  */
+/**
+ * A road from (ax, ay) to (bx, by) that goes round what's built (a path
+ * found over the tiles, never through a house), keeping to the streets
+ * already laid where it can and a step off the walls; laid two tiles wide.
+ * Where there's no way round, the straight road (connectRoad).
+ */
+export function routeRoad(world, ax, ay, bx, by, tile) {
+  const x0 = Math.floor(ax), y0 = Math.floor(ay), x1 = Math.floor(bx), y1 = Math.floor(by);
+  const ddx = world.dx(x0, x1), m = 40;
+  const ox = Math.min(0, ddx) - m, oy = Math.min(y0, y1) - m;
+  const W = Math.abs(ddx) + 2 * m + 1, H = Math.abs(y1 - y0) + 2 * m + 1;
+  if (W * H > 600000) return connectRoad(world, ax, ay, bx, by, tile);
+  const at = (i) => ({ x: world.wx(x0 + ox + (i % W)), y: oy + Math.floor(i / W) });
+  const PAVED = new Set([T.COBBLE, T.STONE, T.MARBLE, T.PLANK, T.BRIDGE]);
+  const cost = (x, y) => {
+    const t = world.type(x, y);
+    if (world.isBlocked(x, y)) return Infinity;
+    if (t === T.MOUNTAIN || t === T.CLIFF || t === T.WALL) return 6;
+    if (IS_LIQUID[t] && t !== T.BRIDGE) return Infinity;
+    if (OVERLAY[t] || !WALKABLE[t]) return t === T.BRIDGE ? 0.5 : Infinity;
+    let c = PAVED.has(t) ? 0.45 : t === tile || t === T.DIRT ? 0.6 : 1;
+    // (a step off the walls of the houses)
+    for (const [ex, ey] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (world.isBlocked(x + ex, y + ey)) { c += 1.2; break; }
+    return c;
+  };
+  const N = W * H, g = new Float32Array(N).fill(Infinity), from = new Int32Array(N).fill(-1), done = new Uint8Array(N);
+  const s = (y0 - oy) * W + (-ox), goal = (y1 - oy) * W + (ddx - ox);
+  // (a binary heap of [f, i])
+  const heap = [];
+  const push = (f, i) => { heap.push([f, i]); let k = heap.length - 1; while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let mi = k; if (l < heap.length && heap[l][0] < heap[mi][0]) mi = l; if (r < heap.length && heap[r][0] < heap[mi][0]) mi = r; if (mi === k) break; [heap[mi], heap[k]] = [heap[k], heap[mi]]; k = mi; } } return top; };
+  const hx = goal % W, hy = Math.floor(goal / W);
+  g[s] = 0; push(0, s);
+  let it = 0;
+  while (heap.length && it++ < 400000) {
+    const [, i] = pop();
+    if (done[i]) continue;
+    done[i] = 1;
+    if (i === goal) break;
+    const cx = i % W, cy = Math.floor(i / W);
+    for (const [ex, ey] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = cx + ex, ny = cy + ey;
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+      const j = ny * W + nx;
+      if (done[j]) continue;
+      const p = at(j), c = j === goal ? 1 : cost(p.x, p.y);
+      if (!Number.isFinite(c)) continue;
+      const ng = g[i] + c;
+      if (ng < g[j]) { g[j] = ng; from[j] = i; push(ng + 0.45 * (Math.abs(nx - hx) + Math.abs(ny - hy)), j); }
+    }
+  }
+  if (!done[goal]) return connectRoad(world, ax, ay, bx, by, tile);
+  for (let i = goal; i >= 0; i = from[i]) {
+    const p = at(i);
+    for (const [ex, ey] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) {
+      const x = world.wx(p.x + ex), y = p.y + ey;
+      let cur = world.type(x, y);
+      if (cur === T.MOUNTAIN || cur === T.CLIFF || cur === T.WALL) { world.setType(x, y, tile); continue; }
+      if (IS_LIQUID[cur] || OVERLAY[cur] || !WALKABLE[cur] || PAVED.has(cur) || cur === T.FARM || world.isBlocked(x, y)) continue;
+      world.setType(x, y, tile);
+    }
+    if (i === s) break;
+  }
+}
+
 export function connectRoad(world, ax, ay, bx, by, tile) {
   const dx = world.dx(ax, bx), dy = by - ay;
   const steps = Math.ceil(Math.hypot(dx, dy) * 2);

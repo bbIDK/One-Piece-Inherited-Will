@@ -19,6 +19,7 @@
 // way, the Grand Line won't let you sail past the island your story is on,
 // and if your road changes (a Marine who deserts, a hunter who raises a
 // flag) the story follows you.
+import { shipRewardWanted } from '../game/fleet.js';
 import { CHAPTERS, PROLOGUES, TARGETS, PLANS, PATHS3 } from './main/define.js';
 import './main/blues.js';
 import './main/grandLine.js';
@@ -141,6 +142,7 @@ function giveShip(g, type, name) {
   const dock = isl?.docks?.[0];
   const p = g.player;
   const pos = dock ? dock.moor : { x: p.x, y: p.y + 6 };
+  if (!shipRewardWanted(g, type)) return null;
   const s = g.giveShip(type, pos.x, pos.y, name);
   s?.unstick?.(g.world);
   g.ui.toast('A NEW SHIP!', `${name || type} is moored ${dock ? 'at the pier' : 'nearby'}.`, '#ffe082');

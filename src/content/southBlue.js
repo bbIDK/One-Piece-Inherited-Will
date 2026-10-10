@@ -9,6 +9,7 @@
 //  Centaurea ........ the Revolutionary South Army takes the Royal Fortress
 //  Kutsukku Island .. Victoria's murder unites Kid, Killer, Heat and Wire
 //  Tumi, Evil Black Drum, Samba, Taya, Roshwan, Vespa: side stories & cameos
+import { shipRewardWanted } from '../game/fleet.js';
 import './bossMoves.js';
 import { spawnNow, findActor, aggro, despawn } from './helpers.js';
 import { makeEnemy } from '../game/npcs.js';
@@ -1651,7 +1652,7 @@ const quests = [
     onComplete: (ctx, g) => {
       const isl = islandRec(g, 'briss_kingdom');
       const dock = isl?.docks?.[0];
-      if (dock) { g.giveShip('sloop', dock.moor.x, dock.moor.y, 'St. Briss II'); g.ui.toast('A NEW SHIP!', 'Master Carvel gives you a sloop — the St. Briss II!', '#ffe082'); }
+      if (dock && shipRewardWanted(g, 'sloop', 'Master Carvel')) { g.giveShip('sloop', dock.moor.x, dock.moor.y, 'St. Briss II'); g.ui.toast('A NEW SHIP!', 'Master Carvel gives you a sloop — the St. Briss II!', '#ffe082'); }
     },
   },
   {

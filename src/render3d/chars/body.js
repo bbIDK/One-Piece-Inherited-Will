@@ -41,6 +41,8 @@ export function outfitOf(look) {
   const fem = !!look.fem;
   let top = look.topStyle;
   if (!TOP_STYLES.includes(top)) top = look.openShirt ? (look.noSleeves ? 'vest' : 'open') : look.noSleeves ? 'tank' : look.sleeve ? 'shirt' : 'tee';
+  // (no tank top on a man: on a broad chest it read as a strapless tube — a tee instead)
+  if (!fem && top === 'tank') top = 'tee';
   let sleeves = look.sleeves || SLEEVES_OF[top] || 'short';
   if (look.noSleeves && sleeves !== 'none' && top !== 'jacket' && top !== 'coat') sleeves = 'none';
   let bottom = look.bottomStyle;

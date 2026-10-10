@@ -12,7 +12,7 @@ const KINDS = {
   lantern: { h: 1.6, r: 4.6, col: [1, 0.55, 0.32], power: 0.75 },
   campfire: { h: 0.55, r: 6.5, col: [1, 0.58, 0.26], power: 1.1, fire: true },
 };
-const NLIGHTS = 5, MAX_POOLS = 160;
+const NLIGHTS = 8, MAX_POOLS = 160;
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 
 function poolTexture() {
@@ -72,7 +72,7 @@ class LampLight {
     this.t -= dt;
     if (this.t <= 0) {
       this.t = 0.4;
-      this.near = w.objects.near(ox, oy, 75, (o) => !!KINDS[o.kind]);
+      this.near = w.objects.near(ox, oy, 110, (o) => !!KINDS[o.kind]);
     }
     const t = env.time;
     const cands = [];
@@ -127,13 +127,19 @@ class LampLight {
       cands.push({ d: -1, x: w.dx(ox, c.x), y: floor + 2.1, z: c.y - oy, k: (0.35 + night * 0.65) * 0.5, col: [1, 0.8, 0.56], range: 6 });
     }
     cands.sort((a, b) => a.d - b.d);
+    // (the nearest few shine for real; each fades as it nears the edge of
+    // that few — by the distance of the first left out — so a lamp comes
+    // and goes smoothly as you walk, never popping on or off)
+    const next = cands[NLIGHTS], dOut = next ? Math.sqrt(Math.max(0, next.d)) : Infinity;
     for (let i = 0; i < NLIGHTS; i++) {
       const L = this.lights[i], c = cands[i];
       if (!c) { L.intensity = 0; continue; }
+      const di = Math.sqrt(Math.max(0, c.d));
+      const fade = dOut === Infinity ? 1 : clamp01((dOut - di) / Math.max(2, dOut * 0.3));
       L.position.set(c.x, c.y, c.z);
       L.color.setRGB(c.col[0], c.col[1], c.col[2]);
       L.distance = c.range;
-      L.intensity = 5 * c.k;
+      L.intensity = 5 * c.k * fade;
     }
   }
 }

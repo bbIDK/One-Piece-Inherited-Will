@@ -161,15 +161,15 @@ export const MINK_KINDS = [
 const W = (s) => s.split(' ').map((t) => { const [k, w] = t.split(':'); return [k, +w || 1]; });
 const DRESS = {
   civilian: {
-    m: { top: W('tee:4 shirt:3 open:1 tank:1 striped:1 vest:0.5'), bottom: W('trousers:4 capri:2 shorts:2 baggy:1 slim:1'), waist: W('belt:3 none:3 sash:1'), shoes: W('shoes:3 sandals:3 boots:2') },
+    m: { top: W('tee:4 shirt:3 open:1 striped:1 vest:0.5'), bottom: W('trousers:4 capri:2 shorts:2 baggy:1 slim:1'), waist: W('belt:3 none:3 sash:1'), shoes: W('shoes:3 sandals:3 boots:2') },
     f: { top: W('tee:3 tank:2 shirt:2 dress:3 crop:1'), bottom: W('skirt:3 longskirt:2 trousers:2 capri:1 shorts:1 slim:1'), waist: W('none:3 belt:2 sash:1'), shoes: W('shoes:3 sandals:3 boots:1') },
   },
   pirate: {
-    m: { top: W('striped:3 open:3 vest:2 tee:2 bare:1 tank:1'), bottom: W('baggy:4 capri:2 shorts:2 trousers:2'), waist: W('sash:5 belt:3'), shoes: W('boots:5 sandals:2') },
+    m: { top: W('striped:3 open:3 vest:2 tee:2 bare:1'), bottom: W('baggy:4 capri:2 shorts:2 trousers:2'), waist: W('sash:5 belt:3'), shoes: W('boots:5 sandals:2') },
     f: { top: W('crop:3 tank:2 open:1 striped:1 bikini:1'), bottom: W('trousers:2 shorts:2 capri:2 skirt:1 baggy:1'), waist: W('sash:4 belt:3'), shoes: W('boots:5 sandals:2') },
   },
   bandit: {
-    m: { top: W('vest:3 open:2 tank:2 bare:1'), bottom: W('baggy:4 trousers:2 capri:1'), waist: W('sash:4 belt:2'), shoes: W('boots:3 sandals:2') },
+    m: { top: W('vest:3 open:2 bare:1'), bottom: W('baggy:4 trousers:2 capri:1'), waist: W('sash:4 belt:2'), shoes: W('boots:3 sandals:2') },
     f: { top: W('crop:2 tank:2 vest:1'), bottom: W('trousers:2 baggy:2 shorts:1'), waist: W('sash:3 belt:2'), shoes: W('boots:3 sandals:1') },
   },
   marine: {
@@ -201,11 +201,11 @@ const DRESS = {
     f: { top: W('coat:3 shirt:1 dress:1'), bottom: W('trousers:2 longskirt:1 slim:1'), waist: W('belt:1 none:1'), shoes: W('boots:1') },
   },
   sky: {
-    m: { top: W('tank:2 tee:2 open:2 vest:1'), bottom: W('baggy:3 shorts:2 capri:1'), waist: W('sash:3 none:1'), shoes: W('sandals:4 bare:1') },
+    m: { top: W('tee:2 open:2 vest:1'), bottom: W('baggy:3 shorts:2 capri:1'), waist: W('sash:3 none:1'), shoes: W('sandals:4 bare:1') },
     f: { top: W('dress:2 tank:2 crop:2'), bottom: W('skirt:2 longskirt:2 baggy:1'), waist: W('sash:2 none:2'), shoes: W('sandals:4') },
   },
   fishman: {
-    m: { top: W('open:3 tank:2 bare:2 vest:1 shirt:1'), bottom: W('shorts:3 baggy:2 trousers:1'), waist: W('sash:2 belt:2 none:1'), shoes: W('sandals:3 bare:2 boots:1') },
+    m: { top: W('open:3 bare:2 vest:1 shirt:1'), bottom: W('shorts:3 baggy:2 trousers:1'), waist: W('sash:2 belt:2 none:1'), shoes: W('sandals:3 bare:2 boots:1') },
     f: { top: W('crop:2 tank:2 bikini:2 dress:1'), bottom: W('skirt:2 shorts:2 longskirt:1'), waist: W('none:2 sash:1'), shoes: W('sandals:3 bare:1') },
   },
 };

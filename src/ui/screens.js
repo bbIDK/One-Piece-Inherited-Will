@@ -366,7 +366,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
         );
       } else {
         const o = outfitOf(L);
-        const TOPS = [['tee', 'Tee'], ['shirt', 'Shirt'], ['tank', 'Tank top'], ['vest', 'Open vest'], ['open', 'Open shirt'], ['striped', 'Sailor stripes'], ['jacket', 'Suit jacket'], ['kimono', 'Kimono'], ['coat', 'Long coat'], ['bare', L.fem ? 'Chest wrap' : 'Bare-chested']];
+        const TOPS = [['tee', 'Tee'], ['shirt', 'Shirt'], ...(L.fem ? [['tank', 'Tank top']] : []), ['vest', 'Open vest'], ['open', 'Open shirt'], ['striped', 'Sailor stripes'], ['jacket', 'Suit jacket'], ['kimono', 'Kimono'], ['coat', 'Long coat'], ['bare', L.fem ? 'Chest wrap' : 'Bare-chested']];
         if (L.fem) TOPS.push(['crop', 'Crop top'], ['bikini', 'Bikini top'], ['dress', 'Dress']);
         const BOTS = [['trousers', 'Trousers'], ['shorts', 'Shorts'], ['capri', 'Rolled-up'], ['baggy', 'Baggy'], ['slim', 'Slim'], ['hakama', 'Hakama']];
         if (L.fem) BOTS.push(['skirt', 'Skirt'], ['longskirt', 'Long skirt']);
