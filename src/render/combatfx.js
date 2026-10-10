@@ -1345,7 +1345,10 @@ sig('ito_overheat', { beam: 'string' });
 sig('ito_birdcage', {
   // the cage of strings — kept on the field so it can close in (powers.js zoneRules)
   zone(fx, actor, spec, a, zone) {
+    zone.r0 = zone.r;
     zone.shape = fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'cage', color: zone.color, zone, life: 1e6 });
+    // (and the furrows its strings slice in the ground as it closes, left long after)
+    fx.add('cagecuts', { x: zone.x, y: zone.y, r0: zone.r, cage: zone, n: Math.max(24, Math.min(80, Math.round(zone.r * 2.6))), seed: 0, life: zone.t + 40 });
     for (let i = 0; i < 12; i++) { const th = (i / 12) * TAU; fx.add('strings', { x: actor.x, y: actor.y, x1: zone.x + Math.cos(th) * zone.r, y1: zone.y + Math.sin(th) * zone.r * 0.62, color: '#f8bbd0', n: 1, life: 0.7 }); }
     return true;
   },

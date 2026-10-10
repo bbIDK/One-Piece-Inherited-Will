@@ -1202,6 +1202,33 @@ SHAPES.skid = {
 };
 const SKID = [-0.14, 0.14];
 
+/**
+ * The Birdcage's cuts in the ground: a furrow sliced by each string as the
+ * cage closed in, from where it first stood to where it's got to — dark,
+ * with a pale lip of turned earth, left a long while after it's gone.
+ */
+SHAPES.cagecuts = {
+  draw(v, s, k, a) {
+    const al = Math.min(1, (1 - k) * 4) * a;
+    if (al < 0.01) return;
+    const z = s.cage, R0 = s.r0, R1 = Math.max(0.4, z ? z.r : s.r0);
+    if (R0 - R1 < 0.3) return;
+    const dark = col('#1a110b'), lip = col('#d9c7a8');
+    const n = s.n || 32, w = v.world;
+    for (let i = 0; i < n; i++) {
+      const th = (i / n) * TAU;
+      v.ribbons.start(RK.CRACK, RM.FLAT, dark, al * 0.95, lip, 0);
+      const m = Math.max(2, Math.min(14, Math.ceil((R0 - R1) / 1.2)));
+      for (let j = 0; j <= m; j++) {
+        const rr = R0 + (R1 - R0) * (j / m) + (hash(i * 7 + j) - 0.5) * 0.15;
+        const px = w.wx(s.x + Math.cos(th) * rr), py = s.y + Math.sin(th) * rr;
+        v.ribbons.point(v.lx(px), v.ground(px, py) + 0.035, v.lz(py), 0.09);
+      }
+      v.ribbons.finish();
+    }
+  },
+};
+
 // ------------------------------------------------------------------ zones
 // (Kurohige's darkness is ink-black, only its fringe catching a purple light)
 const DARKNESS = col('#120a1a');
@@ -1244,7 +1271,32 @@ SHAPES.zone = {
     else if (kind === 'storm') {
       v.tubes.put(TK.FUNNEL, X, G - 0.05, Z, 0, 1, 0, R * 1.3, R * 0.25, R, c, a * 0.75, c2, 0, k, s.seed);
     } else if (kind === 'cage') {
-      v.shells.put(VK.DOME, X, G, Z, R, 0, 1, 0, 1, col(s.color || '#f8bbd0'), a, WHITE, 0.35, 1, s.seed, 0.96);
+      // the Birdcage: a towering bell of taut strings from the ground all round up to
+      // one point high in the sky (a faint sheen between them), every one of them
+      // a blade — it closes in until there's nothing left inside it
+      const cc = col(s.color || '#f8bbd0');
+      const R0 = s.zone?.r0 || s.r;
+      const Hc = 8 + R0 * 1.5;
+      v.shells.put(VK.DOME, X, G, Z, R, 0, Hc / Math.max(1, R), 0, 1, cc, a * 0.35, WHITE, 0.35, 1, s.seed, 0.96);
+      const n = Math.max(24, Math.min(80, Math.round(R0 * 2.6)));
+      const w = v.world;
+      for (let i = 0; i < n; i++) {
+        const th = (i / n) * TAU;
+        const bx = s.x + Math.cos(th) * R, by = s.y + Math.sin(th) * R;
+        const gb = v.ground(w.wx(bx), by);
+        const hum = Math.sin(v.time * 9 + i * 1.7) * 0.04;
+        v.ribbons.start(RK.THIN, RM.FACE, cc, a * 0.95, WHITE, 0.7);
+        for (let j = 0; j <= 10; j++) {
+          const t = j / 10;
+          // (a bell: steep at the foot, rounding in to the top)
+          const rr = R * Math.pow(Math.cos(t * PI / 2), 0.55) + Math.sin(t * PI) * hum * R;
+          const y = gb + (G + Hc - gb) * t;
+          v.ribbons.point(X + Math.cos(th) * rr, y, Z + Math.sin(th) * rr, 0.05 - 0.03 * t);
+        }
+        v.ribbons.finish();
+      }
+      // (where the strings meet: a knot of light high over it)
+      v.sprites.put(SK.STAR, X, G + Hc, Z, 1.2, cc, a, WHITE, 1, v.time, s.seed, 0.5);
     } else if (kind === 'dark') {
       // darkness welling up out of the pool
       for (let i = 0; i < 7; i++) {

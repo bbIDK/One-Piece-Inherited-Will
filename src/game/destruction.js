@@ -18,6 +18,7 @@ import { floorOf } from '../world/objects.js';
 
 /** Seconds a ruin stands before it's rebuilt (the least of it: bigger blows leave longer ruins). */
 export const REBUILD = 300;
+const TAU = Math.PI * 2;
 
 const FIRE = new Set(['fire', 'magma', 'bluefire', 'explosion']);
 const ICE = new Set(['ice', 'snow']);
@@ -337,6 +338,12 @@ export function installDestruction(game) {
       if (h.shape === 'line') {
         const ca = Math.cos(h.angle || 0), sa = Math.sin(h.angle || 0), wd = (h.width || 1) / 2 + 0.6;
         for (let d = 0; d <= R; d += Math.max(1.5, wd)) D.strike(h.x + ca * d, h.y + 0.4 + sa * d, wd, power, h.owner, { element: h.element });
+        return;
+      }
+      if (h.shape === 'ring') {
+        // (a ring — the Birdcage's strings at its edge: what stands on the line of it, all the way round)
+        const wd = (h.width || 1) / 2 + 0.6, n = Math.max(8, Math.ceil((TAU * R) / Math.max(1.6, wd * 1.6)));
+        for (let i = 0; i < n; i++) { const t = (i / n) * TAU; D.strike(game.world.wx(h.x + Math.cos(t) * R), h.y + 0.4 + Math.sin(t) * R, wd, power, h.owner, { element: h.element }); }
         return;
       }
       if (h.shape === 'arc' || !h.shape) {
