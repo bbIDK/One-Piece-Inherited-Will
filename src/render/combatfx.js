@@ -188,7 +188,9 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
     if ((w >= 0.7 || crit || h.impactFrame || down) && (o.playerInvolved || tgt.boss) && !counter) {
       const blade = !!(att && att.weapon && att.weapon.kind === 'sword') || !!(st && st.arcs);
       const big = crit || h.impactFrame || w >= 1 || down;
-      soundOn(fx, tgt, cx, cy, sfxWord(elem, blade, big, !!(att && att.armament)), sfxColor(elem, blade, col), 0.5 + 0.3 * Math.min(1, w) + (big ? 0.15 : 0), { z: z + 0.45, gap: down ? 0 : undefined });
+      // (a move with its own word says that instead: Bell's GOOONG)
+      const own = (h.def || att?.action?.def)?.word;
+      soundOn(fx, tgt, cx, cy, own || sfxWord(elem, blade, big, !!(att && att.armament)), sfxColor(elem, blade, col), 0.5 + 0.3 * Math.min(1, w) + (big ? 0.15 : 0), { z: z + 0.45, gap: down ? 0 : undefined });
     }
     tgt.hitFx = { t0: game.env ? game.env.time : fx.time, w, ang, prev: tgt.hitFx ? tgt.hitFx.t0 : -9 };
   }
@@ -1486,11 +1488,10 @@ sig('gomu_bell', {
   hit(fx, actor, s, a, hb) {
     DEFAULTS.hit(fx, actor, s, a, hb);
     const [px, py] = fwd(actor, hb.angle, 1.0);
-    fx.add('impact', { x: px, y: py, z: 1.55, angle: hb.angle, size: 1.3, color: '#fff59d', core: '#ffffff', life: 0.22, spikes: 16, lines: 10 });
+    fx.add('impact', { x: px, y: py, z: 1.55, angle: hb.angle, size: 0.85, color: '#fff59d', core: '#ffffff', life: 0.2, spikes: 16, lines: 10 });
     vibration(fx, px, py, 1.6, 2.2, '#fff59d', 5);
     for (let i = 0; i < 3; i++) fx.ring(px, py, 0.1, 1.2 + i * 0.7, i ? '#fff59d' : '#ffffff', 0.35, 0.09 - i * 0.02, { z: 1.55, flat: 0, delay: i * 0.07, add: true });
-    fx.add('flare', { x: px, y: py, z: 1.55, size: 1.4, color: '#ffffff', life: 0.22 });
-    fx.callout(px, py - 2.2, 'GONG!', '#fff59d', 0.6, { life: 0.9 });
+    fx.add('flare', { x: px, y: py, z: 1.55, size: 0.6, color: '#ffffff', life: 0.15 });
     fx.shake(0.45, hb.angle);
   },
 });

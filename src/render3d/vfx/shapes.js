@@ -700,7 +700,7 @@ function room(v, s, R, a) {
   const Rr = s.r * open;
   if (Rr < 0.05) return;
   const flash = Math.max(0, 1 - age / 0.3);
-  v.shells.put(VK.ROOM, X, G, Z, Rr, 0, 1, 0, 1, c, a, ROOM_LINE, 0.2, flash * flash, s.seed, 1);
+  v.shells.put(VK.ROOM, X, G, Z, Rr, 0, 1, 0, 1, c, a, ROOM_LINE, 0.2, flash * flash * 0.45, s.seed, 1);
   const patch = v.patch(s, s.x, s.y, Rr + 0.6);
   // its foot on the ground: a crisp bright line, a faint tint inside
   v.groundRing(patch, s.x, s.y, Rr, 0.05, c, a * 0.95, WHITE, 1, 0.75, 0, 0, 0, 9, 0, s.seed, 0);

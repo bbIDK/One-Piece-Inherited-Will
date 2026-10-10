@@ -40,7 +40,7 @@ export const FRUITS = {
         steps: [{ hit: { shape: 'line', range: 5.5, width: 0.9, damage: 20, knockback: 9, stun: 0.45, heavy: true }, vfx: 'stab' }] }),
       T(35, { id: 'gomu_spear', name: 'Gum-Gum Spear', anim: 'kick_high', windup: 0.3, recover: 0.35, cd: 7, say: 'Gomu Gomu no... Yari!', desc: 'Both feet pressed together and stretched out like a spearhead: it drives straight through whoever is in front of you.',
         steps: [{ hit: { shape: 'line', range: 6.5, width: 1.0, damage: 30, knockback: 10, stun: 0.6, heavy: true, guardBreak: true }, vfx: 'stab' }] }),
-      T(40, { id: 'gomu_bell', name: 'Gum-Gum Bell', anim: 'grab', windup: 0.25, recover: 0.35, cd: 9, say: 'Gomu Gomu no... Kane!', desc: 'Grab hold of them, stretch your head right back — and let it fly into theirs like the clapper of a bell.',
+      T(40, { id: 'gomu_bell', name: 'Gum-Gum Bell', anim: 'grab', word: 'GOOOONG!!', windup: 0.25, recover: 0.35, cd: 9, say: 'Gomu Gomu no... Kane!', desc: 'Grab hold of them, stretch your head right back — and let it fly into theirs like the clapper of a bell.',
         steps: [{ pull: { range: 5, strength: 12, stun: 0.5, to: 1.2 } }, { at: 0.45, hit: { shape: 'arc', range: 1.8, arc: 1.4, offset: 0.2, damage: 32, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true, shake: 0.4 } }] }),
     ],
     // (the Gears: Second and Fourth are switched on by these — see data/fruitForms.js — and so is Third by
