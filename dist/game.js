@@ -15811,9 +15811,9 @@
           const t = game.world.type(p.x, p.y);
           if (game.world.solid(p.x, p.y) || game.world.hitsProp(p.x, p.y, 0.04, true) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
         }
-        if (!dead && game.areaZones?.length && absorbShot(game, p)) dead = true;
-        if (!dead) reflectShot(game, p, actors);
-        if (!dead) {
+        if (!dead && !p.ghost && game.areaZones?.length && absorbShot(game, p)) dead = true;
+        if (!dead && !p.ghost) reflectShot(game, p, actors);
+        if (!dead && !p.ghost) {
           for (const a of actors) {
             if (p.hit.has(a.id) || !this.canHit(p.owner, a, p)) continue;
             if (game.world.dist2(p.x, p.y, a.x, a.y - 0.5) > (p.radius + a.r + 0.2) ** 2) continue;
@@ -17368,6 +17368,87 @@
       }
     }
     if (s.fx) game.fx.tech(actor, s.fx.color ? s : { ...s, fx: { ...s.fx, color: col2 } }, a, "fx");
+    if (s.sfx) game.audio?.sfx(s.sfx, actor);
+  }
+  function ghostStep(actor, s, game, a, zones) {
+    const ang = s.angleOffset ? a.angle + s.angleOffset : a.angle;
+    const col2 = ELEMENT_COLORS[s.hit?.element || s.proj?.element || "physical"];
+    const fx = game.fx;
+    if (s.hit) {
+      const h2 = s.hit, off = h2.offset ?? 0, reach3 = actor.reach ?? 1;
+      const hb = {
+        owner: actor,
+        x: game.world.wx(actor.x + Math.cos(ang) * off * reach3),
+        y: actor.y - 0.4 + Math.sin(ang) * off * reach3,
+        shape: h2.shape || "arc",
+        range: (h2.range || 1.4) * (h2.shape === "circle" ? 1 : reach3),
+        arc: h2.arc ?? 1.8,
+        width: h2.width,
+        angle: ang,
+        element: h2.element || "physical",
+        duration: h2.duration ?? 0.1,
+        heavy: h2.heavy,
+        slashing: h2.slashing,
+        follow: h2.follow,
+        offX: Math.cos(ang) * off * reach3,
+        offY: -0.4 + Math.sin(ang) * off * reach3,
+        radial: h2.radial,
+        blast: h2.blast,
+        def: a.def,
+        ghost: true
+      };
+      fx.tech(actor, s, a, "hit", hb);
+      if (h2.shake) fx.shake(h2.shake * 0.5, ang);
+    }
+    if (s.proj) {
+      const p = s.proj, n = p.count || 1;
+      for (let i = 0; i < n; i++) {
+        const spread2 = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) : 0;
+        const pa = ang + spread2, sp = p.speed || 14;
+        const sx = actor.x + Math.cos(pa) * 0.6, sy = actor.y - 0.5 + Math.sin(pa) * 0.6;
+        game.combat.projectile({
+          owner: actor,
+          ghost: true,
+          x: game.world.wx(sx),
+          y: sy,
+          vx: Math.cos(pa) * sp,
+          vy: Math.sin(pa) * sp,
+          range: p.range || 10,
+          radius: p.radius || 0.3,
+          damage: 0,
+          element: p.element || "physical",
+          sprite: p.sprite || "orb",
+          color: p.color || col2,
+          size: p.size || 1,
+          stretch: p.stretch ? actor : null,
+          passWalls: p.passWalls,
+          hitShips: false,
+          def: a.def,
+          isProj: false,
+          // (a shot that goes off: the blast, to look at)
+          onEnd: p.explode ? (pr, g) => g.fx.tech(actor, s, a, "hit", { owner: actor, x: pr.x, y: pr.y, shape: "circle", range: p.explode.range || 2, angle: 0, element: p.explode.element || p.element || "physical", def: a.def, blast: true, ghost: true }) : null,
+          draw: drawProjectile
+        });
+      }
+      fx.tech(actor, s, a, "proj");
+    }
+    if (s.dash) fx.tech(actor, s, a, "dash");
+    if (s.teleport) {
+      const d = s.teleport.dist || 0;
+      fx.tech(actor, s, a, "teleport", { x0: actor.x - Math.cos(ang) * d * 0.5, y0: actor.y - Math.sin(ang) * d * 0.5 });
+    }
+    if (s.buff) fx.tech(actor, s, a, "buff", { buff: { ...s.buff, t: s.buff.duration || 1 } });
+    if (s.heal) fx.tech(actor, s, a, "heal");
+    if (s.zone) {
+      const z = s.zone;
+      const zx = z.atTarget ? actor.x + Math.cos(ang) * Math.min(6, (z.range || 2) + 2) : actor.x + Math.cos(ang) * (z.offset || 0);
+      const zy = z.atTarget ? actor.y + Math.sin(ang) * Math.min(6, (z.range || 2) + 2) : actor.y + Math.sin(ang) * (z.offset || 0);
+      const zone = { owner: actor, x: game.world.wx(zx), y: zy, r: z.range, t: z.duration, interval: z.interval || 0.5, damage: 0, element: z.element || "physical", color: z.color || col2, kind: z.kind || "field", def: a.def, ghost: true };
+      fx.zone(zone, z, actor, a);
+      zones?.push(zone);
+    }
+    if (s.pull) fx.tech(actor, s, a, "pull");
+    if (s.fx) fx.tech(actor, s.fx.color ? s : { ...s, fx: { ...s.fx, color: col2 } }, a, "fx");
     if (s.sfx) game.audio?.sfx(s.sfx, actor);
   }
   function def_isPhysical(h2) {
@@ -84885,6 +84966,21 @@ ${GLSL}
         this.recs.delete(p);
       };
     }
+    /**
+     * A great fireball being raised overhead (Entei and its like: chars3d.js
+     * sets a._sunCharge while the charge lasts) — the same sun that's then
+     * hurled, swelling as it gathers.
+     */
+    chargeSuns(game) {
+      const v = this.v, now3 = performance.now();
+      this._rec = this._rec || new Rec();
+      for (const a of game.actors || []) {
+        const c = a._sunCharge;
+        if (!c || now3 - c.at > 120) continue;
+        sun(v, this._rec, c.X, c.Y, c.Z, c.R, 1, 0, SUN_FC, (a.seed || 1) * 97 | 0, v.time);
+        v.sprites.put(SK2.GLOW, c.X, c.Y, c.Z, c.R * 3.2, SUN_FC, 0.18, SUN_CORE, 1, 0, 7, 0);
+      }
+    }
     landing(p, r4) {
       r4.back(0, P3);
       const L3 = this.land, o = this.landI++ % LAND * LF, sp = Math.hypot(p.vx, p.vy) || 1;
@@ -84953,6 +85049,7 @@ ${GLSL}
         }
       }
       this.recs.forEach(this._sweep);
+      this.chargeSuns(game);
       const L3 = this.land;
       for (let i = 0; i < LAND; i++) {
         const o = i * LF, age = v.time - L3[o + 5];
@@ -85232,6 +85329,7 @@ ${GLSL}
     trail2(v, r4, RK.FIRE, fc, 1, HOT2, 0.6, R5 * 0.9, 0.2, 16);
   }
   var SUN_CORE = col("#ffd04a");
+  var SUN_FC = col("#ff7a1a");
   function iceBird(v, r4, X2, Y2, Z2, R5, dx, dz, c, seed, t) {
     const S6 = v.solids.shards, lx = -dz, lz = dx;
     const flap = Math.sin(t * 13 + seed) * 0.45;
@@ -94349,8 +94447,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (ch && ch.k > 0) {
         const k = Math.min(1, ch.k);
         const hand = ch.at === "hB" ? rig.E[1] : rig.E[0];
-        if (ch.kind === "sun") glow3("#ff9100", 0.3 + k * 1.6, _v9.copy(hand).add(_v24.set(0, 0.5 + k * 0.9, 0)));
-        else if (ch.kind === "dark") glow3("#4a148c", 0.2 + k * 0.4, hand);
+        if (ch.kind === "sun") {
+          _v9.copy(hand).add(_v24.set(0, 0.5 + k * 1.4, 0));
+          glow3("#ff9100", 0.4 + k * 1.2, _v9);
+          m.group.localToWorld(_v24.copy(_v9));
+          a._sunCharge = { X: _v24.x, Y: _v24.y, Z: _v24.z, R: (0.25 + k * 1.55) * (this.root.scale.x || 1), at: performance.now() };
+        } else if (ch.kind === "dark") glow3("#4a148c", 0.2 + k * 0.4, hand);
         else if (ch.kind === "oni") glow3("#b71c1c", 0.4 + k * 0.5, rig.headC);
         else glow3(ch.color || "#ffffff", 0.12 + (ch.size || 0.22) * k * 1.4 * (0.9 + 0.1 * Math.sin(t * 30)), hand);
       }
@@ -113122,7 +113224,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         g.setTransform(1, 0, 0, 1, 0, 0);
         const c = this.flashColor;
         g.fillStyle = c ? c : "#ffffff";
-        g.globalAlpha = Math.min(1, this.flash * 2);
+        g.globalAlpha = Math.min(0.55, this.flash * 1.6);
         g.fillRect(0, 0, W4, H5);
         g.globalAlpha = 1;
       }
@@ -127526,7 +127628,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       g: num(m.g, -2e3, 5e3),
       hs: num(m.hs, 0, 10),
       c: num(m.c, 0, 1),
-      hb: !!m.hb
+      hb: !!m.hb,
+      // (crouched: sneaking along)
+      cr: !!m.cr
     };
     if (Array.isArray(m.dk) && m.dk.length === 3 && m.dk.every(finite)) {
       s.du = num(m.dk[0], -400, 400);
@@ -127770,6 +127874,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       this.actN = -1;
       this.dodgeN = -1;
       this.lastHs = 0;
+      this.zones = [];
       this.joinedAt = Date.now();
     }
     /** What to call them: their pirate's name, once they've chosen one. */
@@ -127942,7 +128047,28 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           const want = (s.at || 0) + (s.lag || 0) * act2.rate;
           if (Math.abs(want - act2.t) > 0.15) act2.t = want;
         }
+        const steps = act2.def.steps || [];
+        act2.angle = a.facing;
+        while (act2.step < steps.length && act2.t >= (steps[act2.step].at ?? act2.def.windup ?? 0)) {
+          const at4 = steps[act2.step].at ?? act2.def.windup ?? 0;
+          if (act2.t - at4 < 0.5) {
+            try {
+              ghostStep(a, steps[act2.step], game, act2, this.zones);
+            } catch (e) {
+              if (!this.warned) {
+                this.warned = true;
+                console.warn("net technique", act2.def.id, e);
+              }
+            }
+          }
+          act2.step++;
+        }
         if (act2.t >= act2.end) a.action = null;
+      }
+      for (let i = this.zones.length - 1; i >= 0; i--) {
+        const z = this.zones[i];
+        z.t -= dt;
+        if (z.t <= 0) this.zones.splice(i, 1);
       }
       if (s.gn && s.gn !== this.dodgeN) {
         this.dodgeN = s.gn;
@@ -127963,6 +128089,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (a.flashT > 0) a.flashT = Math.max(0, a.flashT - dt);
     }
     dispose() {
+      for (const z of this.zones) z.t = 0;
+      this.zones.length = 0;
       this.actor = null;
       this.ship = null;
     }
