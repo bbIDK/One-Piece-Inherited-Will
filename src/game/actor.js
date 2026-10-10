@@ -1171,6 +1171,13 @@ export class Actor extends Entity {
         }
       }
     }
+    // (the Baratie's gunwale runs round her deck: you walk up to it, not out
+    // over the sea through it — over it only with a jump, to dive off; her
+    // gangway to the pier is open)
+    if (g && g.world === w && !this.belowDeck && !(this.z > 0.4) && w.dockAt?.(this.x, this.y)?.deck) {
+      const m = r + 0.12;
+      for (const [px, py] of [[x + m, y], [x - m, y], [x, y + m], [x, y - m]]) if (!w.isDock(px, py)) return false;
+    }
     if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
     if (!this.passable(w, x - r, y) || !this.passable(w, x + r, y) || !this.passable(w, x, y - r) || !this.passable(w, x, y + r)) return false;
     // (walls keep a big body its own width off them: a big man's shoulders
