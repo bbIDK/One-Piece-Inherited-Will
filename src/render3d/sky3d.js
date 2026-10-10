@@ -129,7 +129,8 @@ const FRAG = /* glsl */`
       float lon = atan(dot(sd3, MWB), dot(sd3, MWA)) / 6.2831853;
       vec4 mn = N0(vec2(lon * 3.0, lat * 1.4 + 0.5));
       float band = exp(-lat * lat / (0.012 + 0.02 * mn.g));
-      float rift = exp(-pow((lat - 0.015 * sin(lon * 31.4)) / 0.018, 2.0)) * smoothstep(0.35, 0.75, mn.r);
+      float riftD = (lat - 0.015 * sin(lon * 31.4)) / 0.018;
+      float rift = exp(-riftD * riftD) * smoothstep(0.35, 0.75, mn.r);
       float mw = band * (0.45 + 0.9 * mn.b * mn.r) * (1.0 - 0.7 * rift);
       stars += mix(vec3(0.42, 0.5, 0.75), vec3(0.75, 0.66, 0.55), mn.a * band) * mw * 0.09;
       // stars in three layers: many faint, some brighter, a few bright

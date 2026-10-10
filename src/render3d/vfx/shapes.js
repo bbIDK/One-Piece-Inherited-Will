@@ -17,6 +17,7 @@ import { RK, RM } from './ribbons.js';
 import { SF, ZK } from './surfaces.js';
 import { VK, TK } from './volumes.js';
 import { OK, putAlong } from './solids.js';
+import { ICE_TOP } from '../../world/deform.js';
 
 const WHITE = col('#ffffff');
 const PI = Math.PI;
@@ -368,6 +369,20 @@ SHAPES.ring = {
 };
 const RING_DUST = col('#d9cfc4'), RING_TMP = new Float32Array(4);
 const mixCol = (a, b, t, o) => { for (let i = 0; i < 3; i++) o[i] = a[i] + (b[i] - a[i]) * t; o[3] = 1; return o; };
+/** Grit kicked up round a circle on the ground (radius rad, in place of a line painted there), tinted toward c. */
+function dustRing(v, patch, s, rad, k, alpha, c, size = 0.5) {
+  const X = v.lx(s.x), Z = v.lz(s.y);
+  const n = Math.max(10, Math.min(36, Math.round(rad * 3.2)));
+  const dc = mixCol(RING_DUST, c, 0.25, RING_TMP);
+  for (let i = 0; i < n; i++) {
+    const h = hash((s.seed || 0) * 3.7 + i * 1.31);
+    const th = (i + h * 0.8) / n * TAU, rr = rad * (0.93 + 0.12 * h);
+    const cs = Math.cos(th), sn = Math.sin(th);
+    const gy = patch.get(cs * rr, sn * rr);
+    const sz = (0.35 + 0.6 * k) * size * 2 * (0.6 + 0.8 * h) * Math.min(1.8, 0.7 + rad * 0.15);
+    v.sprites.put(SK.DUST, X + cs * rr, gy + 0.15 + (0.3 + 0.6 * h) * k, Z + sn * rr, sz, dc, Math.min(1, alpha * 1.4) * (0.6 + 0.4 * h), dc, 0, h * 6, (s.seed || 0) + i, k);
+  }
+}
 
 // ------------------------------------------------------------------ beams & lightning
 const BEAM_CORE = { fire: '#fff3c4', light: '#ffffff', energy: '#ffffff', ice: '#ffffff', water: '#e1f5fe', wind: '#ffffff', gravity: '#ede7f6', quake: '#ffffff' };
@@ -648,7 +663,7 @@ SHAPES.pillar = {
       v.tubes.put(TK.BEAM, X, G, Z, 0, 1, 0, H, R * 0.07, R * 0.05, c2, fade * 0.5, c2, 0.8, k, s.seed + 7);
       if (k < 0.7) {
         const rk = easeOut(k / 0.7), patch = v.patch(s, s.x, s.y, R * 3);
-        v.groundRing(patch, s.x, s.y, R * (0.4 + 2.4 * rk), 0.04 + 0.12 * (1 - rk), c, fade * (1 - rk), WHITE, 1, 0.8, v.low ? 0 : 0.5 * (1 - rk), 0.5, 0, 9, 0, s.seed, rk);
+        if (!v.low) dustRing(v, patch, s, R * (0.4 + 2.4 * rk), rk, fade * (1 - rk) * 0.8, c, 0.4);
       }
     } else {
       v.tubes.put(TK.PILLAR, X, G - 0.1, Z, 0, 1, 0, H, R * 1.35, R * 1.0, c, fade * 0.4, c2, 0.6, k, s.seed);
@@ -673,8 +688,9 @@ SHAPES.dome = {
     const c = col(s.color || '#ffffff');
     const hk = (s.hk ?? 0.55) * 1.6;
     v.shells.put(VK.DOME, X, G, Z, R, 0, 1, 0, 1, c, a, WHITE, 0.35, s.kind === 'cage' ? 1 : 0, s.seed, hk);
-    const patch = v.patch(s, s.x, s.y, R + 0.3);
-    v.groundRing(patch, s.x, s.y, R, 0.07, c, a * 0.85, WHITE, 1, 0.6, 0, 0, 0, 9, 0, s.seed, 0);
+    // (where it meets the ground: grit thrown up as it opens, nothing painted there)
+    const age = s.age || 0;
+    if (age < 0.8 && !v.low) dustRing(v, v.patch(s, s.x, s.y, R + 0.3), s, R, age / 0.8, a * (1 - age / 0.8), c, 0.45);
   },
 };
 
@@ -709,6 +725,53 @@ SHAPES.sense = {
   },
 };
 
+/**
+ * The sea frozen over by the Hie Hie no Mi (Ice Age): a sheet of pale ice
+ * spreading out over the water from where it was cast, its edge ragged and
+ * heaved up into broken slabs, frost feathering across it — solid enough to
+ * stand on (render3d/height.js: the ground there is the ice) — and thawing
+ * back into the sea at the end.
+ */
+SHAPES.seaice = {
+  draw(v, s, k, a) {
+    const life = s.max || 1, t = k * life;
+    const grow = easeOut(Math.min(1, t / 0.5)) * (1 - Math.max(0, (t - (life - 2.5)) / 2.5));
+    if (grow < 0.02) return;
+    const R = s.r * grow, X = v.lx(s.x), Z = v.lz(s.y);
+    const id = s.id || 0;
+    const rag = (th) => 1 + 0.07 * Math.sin(th * 7 + id) + 0.04 * Math.sin(th * 17 + id * 3);
+    const S = v.surf, NR = 14, NA = 48;
+    if (!S.room((NR + 1) * (NA + 1), NR * NA * 2)) return;
+    S.style(SF.FILL, ICE_BODY, a * 0.96, ICE_EDGE, 0, k, s.seed || 0);
+    const v0 = S.nv;
+    for (let j = 0; j <= NR; j++) {
+      for (let i = 0; i <= NA; i++) {
+        const th = (i / NA) * TAU, rr = (j / NR) * R * rag(th) * 0.995;
+        // (the sea frozen, not the land: a flat sheet at the ice's top, the land
+        // standing up through it hides it — never sloped up a shore towards the eye)
+        const gy = ICE_TOP * grow + 0.02;
+        S.vert(X + Math.cos(th) * rr, gy, Z + Math.sin(th) * rr, Math.cos(th) * j / NR, Math.sin(th) * j / NR, 0, 0);
+      }
+    }
+    S.grid(v0, NA + 1, NR + 1);
+    // frost feathering across it
+    const patch = v.patch(s, s.x, s.y, R);
+    v.decal(patch, s.x, s.y, R * 0.98, id, SF.FROST, ICE_FROST, a * 0.9, WHITE, 0.04, k, s.seed || 0, 0, 0, 0, 10, 0.06);
+    // slabs of it heaved up round the ragged edge
+    if (v.low) return;
+    for (let i = 0; i < 18; i++) {
+      const h = hash(id * 1.7 + i * 2.9), th = (i + h) / 18 * TAU, rr = R * rag(th) * (0.96 + 0.06 * h);
+      const x = s.x + Math.cos(th) * rr, y = s.y + Math.sin(th) * rr;
+      const g0 = v.view.ground(x, y);
+      if (g0 > ICE_TOP + 0.25) continue;
+      const gy = Math.max(g0, ICE_TOP * grow);
+      const L = (0.6 + 0.9 * h) * Math.min(1.4, 0.5 + s.r * 0.05);
+      putAlong(v.solids.crystals, v.lx(x), gy - 0.1, v.lz(y), Math.cos(th) * 0.5, 0.85, Math.sin(th) * 0.5, L * grow, 0.3 + 0.25 * h, h * 3, ICE_SLAB, OK.ICE, 0, id + i, 0.3);
+    }
+  },
+};
+const ICE_BODY = col('#cdeefb'), ICE_EDGE = col('#ffffff'), ICE_FROST = col('#e3f6ff'), ICE_SLAB = col('#d6f1fb');
+
 SHAPES.haoshoku = {
   draw(v, s, k, a) {
     const R = s.r * easeOut(Math.min(1, k * 1.7));
@@ -716,8 +779,8 @@ SHAPES.haoshoku = {
     const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s);
     const c = col(s.color || '#d50000');
     v.shells.put(VK.HAKI, X, G, Z, R, 0, 1, 0, 1, c, a, c, 0.85, k, s.seed || 0, 0.62);
-    const patch = v.patch(s, s.x, s.y, R + 0.4);
-    v.groundRing(patch, s.x, s.y, R, 0.14, col('#060309'), a * (1 - k) * 0.85, c, 0.5, 0.7, 0, 0, 0, 9, 0, s.seed || 0, 0);
+    // the ground under it: dust and grit blasted out ahead of the wave (no line on the floor)
+    if (!v.low) dustRing(v, v.patch(s, s.x, s.y, R + 0.4), s, R, k, a * (1 - k), c, 0.6);
   },
 };
 
@@ -741,14 +804,7 @@ function room(v, s, R, a) {
   const flash = Math.max(0, 1 - age / 0.3);
   v.shells.put(VK.ROOM, X, G, Z, Rr, 0, 1, 0, 1, c, a, ROOM_LINE, 0.2, flash * flash * 0.45, s.seed, 1);
   const patch = v.patch(s, s.x, s.y, Rr + 0.6);
-  // its foot on the ground: a crisp bright line, a faint tint inside
-  v.groundRing(patch, s.x, s.y, Rr, 0.05, c, a * 0.95, WHITE, 1, 0.75, 0, 0, 0, 9, 0, s.seed, 0);
-  v.decal(patch, s.x, s.y, Rr, 0, SF.ZONE, c, a * 0.6, WHITE, 0.15, 0, s.seed, ZK.room, 0, 0, 10);
-  // the opening's shock: a ring racing out over the ground just ahead of the skin
-  if (age < 0.5) {
-    const q = age / 0.5;
-    v.groundRing(patch, s.x, s.y, Rr * (0.9 + q * 0.25), 0.12 * (1 - q), WHITE, a * (1 - q), c, 1, 0.9, 0, 0, 0, 9, 0, s.seed, 0);
-  }
+  // (nothing painted on the ground: the skin itself shows where it stands)
   // the dust the opening kicks up: cream bands of it whirling round its foot, settling (as the anime draws it)
   if (age < 1.6) {
     const q = age / 1.6, fade = a * (1 - q) * Math.min(1, age / 0.15);
@@ -806,7 +862,8 @@ SHAPES.vortex = {
     const dark = s.kind === 'dark';
     const c = col(dark ? '#7e57c2' : s.color || '#ffffff'), c2 = col(dark ? '#1a0033' : s.color2 || '#ffffff');
     const patch = v.patch(s, s.x, s.y, R);
-    v.decal(patch, s.x, s.y, R, 0, SF.SWIRL, c, a, c2, dark ? 0.2 : 0.5, k, s.seed, dark ? -1 : 0, s.arms || 5, spin, 8);
+    // (only darkness pools on the ground: a wind or sand swirl is all funnel, no pattern painted under it)
+    if (dark) v.decal(patch, s.x, s.y, R, 0, SF.SWIRL, c, a, c2, 0.2, k, s.seed, -1, s.arms || 5, spin, 8);
     const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s);
     if (dark) {
       // a sphere of nothing at its heart, purple light round its rim
@@ -928,6 +985,12 @@ SHAPES.meteor = {
     if (t >= 1) {
       const f = 1 - Math.min(1, (age - fall) / 0.35);
       if (f <= 0) return;
+      if (s.kind === 'mochi') {
+        // a lump of mochi landing: it splats down into a soft mound and sinks back into the ground
+        const q = 1 - f, r = R * (1.1 + 0.5 * easeOut(Math.min(1, q * 3)));
+        v.shells.put(VK.GOO, X, G - r * (0.35 + 0.5 * q), Z, r, 0, 1, 0, 0.55, glow, a * Math.min(1, f * 2), MOCHI_SHADE, 0, k, s.seed);
+        return;
+      }
       const patch = v.patch(s, s.x, s.y, R * 2);
       v.decal(patch, s.x, s.y, R * 2, 0, SF.GLOW, glow, f * a * 0.8, WHITE, 0.8, k, s.seed, 0, 0, 0, 5);
       v.sprites.put(SK.FLASH, X, G + R * 0.4, Z, R * 1.4 * (1.25 - f * 0.25), glow, f * f * a * 0.7, WHITE, 0.8, 0, s.seed, k);
@@ -1165,7 +1228,12 @@ SHAPES.zone = {
     const patch = v.patch(s, s.x, s.y, s.r);
     const zk = ZK[kind] ?? 0;
     const spin = v.time * (kind === 'dark' ? -3 : 5);
-    v.decal(patch, s.x, s.y, R, 0, SF.ZONE, c, a, c2, kind === 'dark' ? 0.2 : 0.4, k, s.seed, zk, kind === 'dark' ? 6 : 5, spin, 10);
+    // Nothing painted on the floor: only darkness pools there (a ragged pool,
+    // no line round it) and frost creeps over it; every other area is what
+    // stands in it.
+    if (kind === 'dark') v.decal(patch, s.x, s.y, R, 0, SF.ZONE, c, a, c2, 0.2, k, s.seed, zk, 6, spin, 10);
+    // (the sea's own ice sheet carries its frost when the sea froze too)
+    else if (kind === 'ice' && !s.zone?.ice) v.decal(patch, s.x, s.y, Math.min(R, 7), 0, SF.FROST, c, a * 0.9, WHITE, 0.04, k, s.seed, 0, 0, 0, 10, 0.05);
     const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s);
     if (kind === 'thunder') {
       cloud(v, X, G + 9 + R * 0.2, Z, Math.max(3.2, R * 1.5), col('#37474f'), a, s.seed);
@@ -1237,7 +1305,13 @@ SHAPES.zone = {
         const r = (0.5 + 0.4 * hash(s.seed + i * 3)) * Math.sin(ph * PI);
         v.shells.put(VK.GOO, X + Math.cos(th) * rr, G - r * 0.25, Z + Math.sin(th) * rr, r, 0, 1, 0, 0.85, c, a, MOCHI_SHADE, 0, k, s.seed + i);
       }
-    } else if (kind === 'field') {
+    } else if (kind === 'field' || kind === 'plant') {
+      // a low haze of it hanging over the ground, rolling slowly
+      for (let i = 0; i < 6; i++) {
+        const ph = (v.time * 0.3 + hash(s.seed + i * 5)) % 1, cyc = Math.floor(v.time * 0.3 + hash(s.seed + i * 5));
+        const th = hash(s.seed + i * 13 + cyc) * TAU, rr = Math.sqrt(hash(s.seed + i * 17 + cyc)) * R * 0.8;
+        v.sprites.put(SK.SMOKE, X + Math.cos(th) * rr, G + 0.12 + ph * 0.4, Z + Math.sin(th) * rr, (0.4 + 0.35 * ph) * Math.min(1.5, 0.6 + R / 4), c, a * Math.sin(ph * PI) * 0.3, c2, 0, ph * 2, s.seed + i, 0.2 + ph * 0.5);
+      }
       for (let i = 0; i < 5; i++) {
         const ph = (v.time * 0.8 + hash(s.seed + i)) % 1;
         const cyc = Math.floor(v.time * 0.8 + hash(s.seed + i));

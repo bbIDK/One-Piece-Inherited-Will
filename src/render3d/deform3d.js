@@ -33,6 +33,8 @@ export const anyDeform = () => DEFORM.list.length > 0;
 export const DEFORM_GLSL = /* glsl */`
   uniform vec4 uDefA[${DEF_N}];
   uniform vec4 uDefB[${DEF_N}];
+  // (squares written out: GLSL's pow is undefined for a negative base)
+  float defSq(float x) { return x * x; }
   float defSst(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
   float deformH(vec2 p, float mask) {
     float h = 0.0;
@@ -40,6 +42,8 @@ export const DEFORM_GLSL = /* glsl */`
       vec4 A = uDefA[i], B = uDefB[i];
       if (abs(A.w) < 1e-4) continue;
       float kind = B.x;
+      // (ice — kind 5 — doesn't shape the ground; under it the sea is hidden: mask 2)
+      if (kind > 4.5) { if (mask > 1.5 && length(p - A.xy) < A.z) h -= 3.0 * min(1.0, abs(A.w) * 1.4); continue; }
       if (mask > 1.5 && kind > 1.5) continue;
       vec2 l = p - A.xy;
       float r = A.z, amp = A.w, c = B.y, s = B.z, w = B.w;
@@ -49,13 +53,13 @@ export const DEFORM_GLSL = /* glsl */`
       } else if (kind < 2.5) {
         if (q < 1.5) {
           float bowl = q < 1.0 ? -amp * (1.0 - q * q) : 0.0;
-          h += bowl + amp * 0.3 * exp(-pow((q - 1.0) / 0.18, 2.0));
+          h += bowl + amp * 0.3 * exp(-defSq((q - 1.0) / 0.18));
         }
       } else if (kind < 3.5) {
         float u = l.x * c + l.y * s, v = -l.x * s + l.y * c;
         if (u > -w && u < r + w) {
           float run = defSst(-w, w * 0.5, u) * (1.0 - defSst(r - w * 1.5, r + w, u));
-          h += -amp * exp(-pow(v / w, 2.0)) * run + amp * 0.18 * exp(-pow((abs(v) - w * 1.3) / (w * 0.5), 2.0)) * run;
+          h += -amp * exp(-defSq(v / w)) * run + amp * 0.18 * exp(-defSq((abs(v) - w * 1.3) / (w * 0.5))) * run;
         }
       } else {
         if (q < 1.0) h += amp * (1.0 - defSst(0.0, 1.0, q));

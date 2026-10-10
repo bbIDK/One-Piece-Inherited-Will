@@ -101,7 +101,8 @@ const FS = /* glsl */`
         float body = 1.0 - smoothstep(0.55, 1.0, r + (n - 0.5) * 0.4);
         c = mix(vCol.rgb, vec3(1.3, 1.4, 1.5), edge);
         a = body * mix(0.35, 0.95, edge);
-        w = edge * 0.4;
+        // (glowing only as far as asked: a wide sheet of frost mustn't bloom over the whole screen)
+        w = edge * 0.4 * min(1.0, vCol2.a / 0.3);
       } else if (kind == ${SF.TELE}) {
         // a wind-up warning: the area, filling as the blow comes, its edge pulsing
         float pulse = 0.5 + 0.5 * sin(uTime * 22.0);
@@ -154,9 +155,10 @@ const FS = /* glsl */`
             float hole = 1.0 - smoothstep(0.28, 0.4, r);
             c = mix(vCol2.rgb, vCol.rgb * 1.25, arm * 0.8);
             c = mix(c, vec3(0.0), hole);
-            c = mix(c, vCol.rgb * 1.8, rim);
-            a = max(max(pool * mix(0.8, 0.97, arm), hole), rim * 0.9);
-            w = (arm * 0.3 + rim * 0.6) * (1.0 - hole);
+            // (the fringe only a faint glint on the ink: no bright line round it)
+            c = mix(c, vCol.rgb * 1.4, rim * 0.35);
+            a = max(max(pool * mix(0.8, 0.97, arm), hole), rim * 0.3);
+            w = (arm * 0.3 + rim * 0.15) * (1.0 - hole);
           } else {
             a = body * (0.16 + 0.55 * arm);
             c = mix(vCol.rgb, vCol2.rgb * 1.3, arm);

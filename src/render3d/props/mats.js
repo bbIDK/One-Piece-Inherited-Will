@@ -77,7 +77,10 @@ const RIDE = `
     mat4 dM = modelMatrix;
   #endif
     vec4 dW = dM * vec4(transformed, 1.0);
-    transformed.y += deformH(dW.xz, 1.0) / max(length(dM[1].xyz), 1e-3);
+    // (straight up in the world, taken back into the mesh's own frame: a mesh
+    // laid on its side or squashed flat must not be stretched along its own axis)
+    float dH = deformH(dW.xz, 1.0);
+    if (dH != 0.0) transformed += (inverse(dM) * vec4(0.0, dH, 0.0, 0.0)).xyz;
   }
 `;
 

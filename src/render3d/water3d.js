@@ -56,6 +56,8 @@ const SHIPS_N = 8;
 // under way, TRACK_N points each (render x, z, half-width, brightness)
 const WAKES_N = 4, TRACK = 10;
 const HULLS = /* glsl */`
+  // (squares written out: GLSL's pow is undefined for a negative base)
+  float wSq(float x) { return x * x; }
   uniform vec4 uShips[${SHIPS_N}];
   uniform vec4 uShipD[${SHIPS_N}];
   uniform float uShipK[${SHIPS_N}];   // how sharply each is turning (1/m: + to starboard)
@@ -109,11 +111,11 @@ const VERT = /* glsl */`
       if (f.z < -0.5 || f.z > 1.5 || f.w > D.y * 2.0 + 3.0) continue;
       float spd = clamp(D.z / 8.0, 0.0, 1.2);
       float o = max(f.w, 0.0);
-      float stem = exp(-pow((f.z - 0.98) * D.x / (1.2 + D.y * 0.25), 2.0) - pow(o / (0.9 + D.y * 0.12), 2.0));
+      float stem = exp(-wSq((f.z - 0.98) * D.x / (1.2 + D.y * 0.25)) - wSq(o / (0.9 + D.y * 0.12)));
       float side = exp(-pow(o / 1.6, 2.0)) * smoothstep(0.1, 0.3, f.z) * (1.0 - smoothstep(0.6, 0.85, f.z));
       // (and the bow wave's crest rolling out from her shoulders and away aft: the sea itself, heaped)
       float back = (0.95 - f.z) * D.x, crestAt = D.y * 0.1 + back * 0.32;
-      float crest = exp(-pow((o - crestAt) / (0.6 + back * 0.05), 2.0)) * smoothstep(0.0, 2.0, back) * (1.0 - smoothstep(D.x * 0.3, D.x * 0.9, back));
+      float crest = exp(-wSq((o - crestAt) / (0.6 + back * 0.05))) * smoothstep(0.0, 2.0, back) * (1.0 - smoothstep(D.x * 0.3, D.x * 0.9, back));
       h += (stem * (0.18 + 0.55 * spd) - side * 0.16 * spd + crest * 0.28 * spd) * step(0.0, f.w + 0.4);
     }
     return h;
@@ -213,7 +215,7 @@ const FRAG = /* glsl */`
       float ph = fract(t * (0.9 + 0.3 * fk) + hash(i + fk * 5.1));
       vec2 d = f - (0.2 + 0.6 * hc);
       float r = length(d), rr = ph * 0.42;
-      float w = exp(-pow((r - rr) * 22.0, 2.0)) * (1.0 - ph) * (1.0 - ph);
+      float w = exp(-wSq((r - rr) * 22.0)) * (1.0 - ph) * (1.0 - ph);
       g += d / max(r, 0.001) * w * cos((r - rr) * 55.0);
     }
     return g;

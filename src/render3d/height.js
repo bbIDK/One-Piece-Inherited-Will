@@ -15,7 +15,7 @@ import { PLINTH, STEPS_MAX } from '../world/interiors.js';
 import { bw, bl, bfoot } from '../world/bframe.js';
 import { drumAt, drumTop, nearDrum, drumTile } from '../world/drums.js';
 import { terraceAt, terraceGround } from '../world/terraces.js';
-import { DEFORM, deformAt } from '../world/deform.js';
+import { DEFORM, deformAt, iceCover, ICE_TOP } from '../world/deform.js';
 
 export const SEA_Y = 0;
 export const DECK_Y = 0.55; // top of bridges (and sea-train tracks)
@@ -350,6 +350,8 @@ export class HeightField {
     if (OVERLAY[t]) return deckTop(w, x, y) + dz;
     if (w.quays.size && w.isQuay(x, y)) return DOCK_Y + dz;
     const h0 = this.terrain0(x, y), h = h0 + dz;
+    // (the sea frozen into a road of ice by the Hie Hie no Mi: stood on, not swum in)
+    if (IS_LIQUID[t] && DEFORM.list.length && t !== T.LAVA && iceCover(x, y)) return Math.max(h, SEA_Y + ICE_TOP);
     if (IS_LIQUID[t]) return Math.max(h, t === T.RAPIDS ? waterLevel(w, x, y) : SEA_Y);
     const f = w.floorRec ? w.floorRec(x, y) : null;
     if (!f) return h;

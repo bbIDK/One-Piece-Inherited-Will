@@ -28,6 +28,7 @@ import { POWERS } from './powers.js';
 import { ownRoom } from './room.js';
 import { maneStep } from './mane.js';
 import { terraform } from './terraform.js';
+import { addDeform } from '../world/deform.js';
 import { flyableAt } from './flight.js';
 import { clashes, FUTURE_SIGHT, sigOf } from './haki.js';
 
@@ -379,6 +380,9 @@ function runStep(actor, s, game, a) {
     // (one of a kind at a time: a new ROOM replaces the last)
     if (z.single) for (const o of game.areaZones) if (o.owner === actor && o.kind === zone.kind) o.t = 0;
     game.addZone(zone);
+    // (Ice Age: the sea itself frozen into a road of ice — stood on, drawn — till it thaws: world/deform.js)
+    if (z.freezeWater) zone.ice = addDeform({ kind: 'ice', x: zone.x, y: zone.y, r: zone.r, rise: 0.5, hold: Math.max(1, z.duration - 2.5), fall: 2.5 });
+    if (zone.ice) game.fx.add('seaice', { x: zone.x, y: zone.y, r: zone.r, id: zone.ice.id, life: z.duration, seed: zone.ice.id, until: () => zone.t > -2.5 });
     game.fx.zone(zone, z, actor, a); // clouds, vortices, cages, sprouting arms, meteors...
   }
   if (s.power) {

@@ -12,7 +12,7 @@ const MAX = 8;
 /** The live deformations, and the time they're read at (game time, seconds). */
 export const DEFORM = { list: [], now: 0, world: null, seq: 0 };
 
-const KINDS = { tilt: 1, crater: 2, trench: 3, rise: 4 };
+const KINDS = { tilt: 1, crater: 2, trench: 3, rise: 4, ice: 5 };
 
 /**
  * A deformation: `kind` tilt (one side up, the other down, the sea with it),
@@ -35,9 +35,11 @@ export function addDeform(o) {
 
 /** Advance to game time `now`, dropping those that have settled. */
 export function tickDeform(now, world) {
+  // (another world — a zone, a new game — or time run back: what was moved belongs to the old one)
+  if ((world && DEFORM.world && world !== DEFORM.world) || now < DEFORM.now - 1) DEFORM.list.length = 0;
   DEFORM.now = now;
   if (world) DEFORM.world = world;
-  if (DEFORM.list.length) DEFORM.list = DEFORM.list.filter((d) => now - d.t0 < d.rise + d.hold + d.fall);
+  if (DEFORM.list.length) DEFORM.list = DEFORM.list.filter((d) => now - d.t0 < d.rise + d.hold + d.fall && d.t0 - now < 30);
 }
 
 export function clearDeform() { DEFORM.list.length = 0; }
@@ -81,12 +83,37 @@ export function shapeAt(kind, lx, ly, r, amp, c, s, w) {
     const run = sst(-w, w * 0.5, u) * (1 - sst(r - w * 1.5, r + w, u));
     return -amp * Math.exp(-((v / w) ** 2)) * run + amp * 0.18 * Math.exp(-(((Math.abs(v) - w * 1.3) / (w * 0.5)) ** 2)) * run;
   }
+  // (ice: the sea frozen over — no change to the ground's shape; see iceCover)
+  if (kind === 5) return 0;
   if (kind === 4) {
     // rise: heaved up in a mound
     if (q >= 1) return 0;
     return amp * (1 - sst(0, 1, q));
   }
   return 0;
+}
+
+/** The top of the ice a Hie Hie technique froze the sea into (metres over the sea's level). */
+export const ICE_TOP = 0.32;
+
+/**
+ * Is the sea at world (x, y) frozen over just now (Ice Age: a road of ice)?
+ * The edge of the sheet is ragged, as broken ice is.
+ */
+export function iceCover(x, y) {
+  const L = DEFORM.list;
+  if (!L.length) return false;
+  const w = DEFORM.world;
+  for (const d of L) {
+    if (d.kind !== 5) continue;
+    const e = envelope(d);
+    if (e < 0.25) continue;
+    const lx = w?.dx ? w.dx(d.x, x) : x - d.x, ly = y - d.y;
+    const th = Math.atan2(ly, lx);
+    const rag = 1 + 0.07 * Math.sin(th * 7 + d.id) + 0.04 * Math.sin(th * 17 + d.id * 3);
+    if (Math.hypot(lx, ly) < d.r * rag * Math.min(1, e * 1.3)) return true;
+  }
+  return false;
 }
 
 /**

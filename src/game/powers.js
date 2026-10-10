@@ -13,6 +13,7 @@
 //    sent back the way they came).
 //  * The look of the helpless states a power leaves (Mes: a heart in a cube;
 //    Amputate: a body in pieces; Parasite: strings; a stolen shadow).
+import { iceCover } from '../world/deform.js';
 import { angleDiff } from '../core/math.js';
 import { shambles, takt, roomFollows } from './room.js';
 
@@ -37,6 +38,7 @@ export const POWERS = { shambles, takt, release };
 // ------------------------------------------------------------------ fields
 /** Is there ice underfoot at (x, y) — Ice Age's frozen sea — just now? */
 export function iceAt(game, x, y) {
+  if (iceCover(x, y)) return true;
   const zs = game?.areaZones;
   if (!zs || !zs.length) return false;
   for (const z of zs) if (z.freezeWater && z.t > 0 && game.world.distance(z.x, z.y, x, y) <= z.r) return true;

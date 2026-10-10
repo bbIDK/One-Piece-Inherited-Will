@@ -287,7 +287,7 @@ test('Ice Age freezes the sea into a road; when it thaws, a Devil Fruit user is 
   assert.ok(you.canOccupy(g.world, X0 + 4, Y0), 'a road of ice');
   you.x = X0 + 4; step(g, 0.5);
   assert.equal(you.inWater, false, 'standing on the frozen sea');
-  step(g, 13);
+  step(g, 26);
   assert.equal(iceAt(g, X0 + 4, Y0), false, 'thawed');
   assert.equal(you.inWater, true, 'back in the sea');
 });
