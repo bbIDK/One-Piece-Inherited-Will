@@ -156,7 +156,7 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
     const col = st ? st.spark[1] || st.spark[0] : E.c;
     fx.add('impact', { x: cx, y: cy, z, angle: ang, size: 0.24 + 0.42 * w, color: crit ? '#ffd740' : col, core: '#ffffff', life: 0.1 + 0.09 * w, spikes: 8 + Math.round(w * 5), lines: 2 + Math.round(w * 5) });
     sparks(fx, cx, cy, z, ang, Math.round(3 + 9 * w), crit ? ['#ffd740', '#fff59d', '#ffffff'] : st ? st.spark : E.spark, { speed: 5 + 6 * w, life: 0.2 + 0.14 * w, size: 0.07 + 0.05 * w });
-    elemHit(fx, elem, E, cx, cy, z, ang, w);
+    elemHit(fx, E === ELEM.bluefire ? 'bluefire' : elem, E, cx, cy, z, ang, w);
     if (st) styleHit(fx, st, def, tgt, cx, cy, z, ang, w);
     if (w >= 0.68) {
       fx.ring(tgt.x, tgt.y, 0.25, 0.9 + 0.8 * w, rgba(col, 0.9), 0.3, 0.08 + 0.06 * w, { z: 0.06, flat: 0.55, add: true });
