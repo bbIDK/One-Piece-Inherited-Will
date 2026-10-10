@@ -708,11 +708,27 @@ function stemNeck(k, from, via, to, r, color) {
   k.add(new THREE.SphereGeometry(r * 1.25, 10, 8), { at: [via[0], via[1], 0], color, outline: 0.015 });
 }
 
+/** A tube that tapers from radius r0 at its start to r1 at its end (a neck, a horn, a tail). */
+function taperTube(curve, segs, r0, r1, radial = 8) {
+  const g = tube(curve, segs, 1, radial), P = g.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i <= segs; i++) {
+    const c = curve.getPointAt(i / segs), r = r0 + (r1 - r0) * (i / segs);
+    for (let j = 0; j <= radial; j++) {
+      const n = i * (radial + 1) + j;
+      if (n >= P.count) break;
+      v.fromBufferAttribute(P, n).sub(c).multiplyScalar(r).add(c);
+      P.setXYZ(n, v.x, v.y, v.z);
+    }
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
 function bigFigurehead(k, def, d, P) {
   const L = d.L, B = d.B;
   const stem = [L / 2 - 0.1, d.fore ? d.deckY + d.hf * 0.35 : d.deckY + 0.35];
   const fh = def.figurehead;
-  const s = B / 7 * (fh === 'seagull' || fh === 'whale' ? 1 : 1.5);
+  const s = B / 7 * (fh === 'seagull' || fh === 'whale' ? 1 : fh === 'mermaid' ? 2.2 : 1.5);
   if (fh === 'ram' || fh === 'lion') {
     // the Going Merry's sheep, the Thousand Sunny's sunflower lion: big and
     // round, up on the stem head where the crew sit on them
@@ -802,53 +818,137 @@ function bigFigurehead(k, def, d, P) {
     return;
   }
   if (fh === 'dragon') {
-    // a green dragon rearing from the stem, jaws open
-    const green = '#2e7d32', gold = '#e8c26b';
-    const neck = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(stem[0] - 1.0, stem[1] - 0.6 * s, 0), new THREE.Vector3(stem[0] + 0.1, stem[1] + 0.1 * s, 0), new THREE.Vector3(stem[0] + 0.5 * s, stem[1] + 0.4 * s, 0),
-      new THREE.Vector3(stem[0] + 0.7 * s, stem[1] + 1.2 * s, 0), new THREE.Vector3(stem[0] + 1.2 * s, stem[1] + 1.8 * s, 0),
-    ]);
-    k.add(tube(neck, 12, 0.34 * s, 8), { color: green, outline: 0.03 });
-    const hc = [stem[0] + 1.45 * s, stem[1] + 2.0 * s, 0];
-    k.add(new THREE.SphereGeometry(0.5 * s, 12, 9), { at: hc, scale: [1.2, 0.85, 0.85], color: green, outline: 0.03 });
-    k.add(box(0.9 * s, 0.28 * s, 0.5 * s), { at: [hc[0] + 0.55 * s, hc[1] - 0.05 * s, 0], color: green, outline: 0.02 });
-    k.add(box(0.8 * s, 0.14 * s, 0.44 * s), { at: [hc[0] + 0.45 * s, hc[1] - 0.42 * s, 0], rot: [0, 0, -0.35], color: '#1b5e20', outline: 0.02 });
-    for (const z of [-1, 1]) {
-      k.add(cone(0.1 * s, 0.75 * s, 6), { at: [hc[0] - 0.2 * s, hc[1] + 0.25 * s, z * 0.25 * s], rot: [z * 0.5, 0, 1.9], color: gold, outline: 0.015 });
-      k.add(new THREE.SphereGeometry(0.1 * s, 8, 6), { at: [hc[0] + 0.25 * s, hc[1] + 0.22 * s, z * 0.36 * s], color: '#ffd54f', glow: '#ffb300' });
-      for (let i = 0; i < 3; i++) k.add(cone(0.035 * s, 0.14 * s, 4), { at: [hc[0] + (0.75 - i * 0.2) * s, hc[1] - 0.2 * s, z * 0.2 * s], rot: [Math.PI, 0, 0], color: '#ffffff' });
+    // a sea dragon rearing from the stem: a scaled neck thick at the bow and
+    // tapering up to a long-snouted head, jaws open on two rows of fangs, swept
+    // horns, glowing eyes, whiskers trailing back and a gold fin down its spine
+    const green = '#2e7d32', belly = '#c5b358', gold = '#e8c26b', dark = '#1b5e20';
+    const pts = [[stem[0] - 1.0, stem[1] - 0.6 * s], [stem[0] + 0.1, stem[1] + 0.1 * s], [stem[0] + 0.55 * s, stem[1] + 0.55 * s], [stem[0] + 0.62 * s, stem[1] + 1.25 * s], [stem[0] + 1.0 * s, stem[1] + 1.8 * s], [stem[0] + 1.35 * s, stem[1] + 2.0 * s]];
+    const neck = new THREE.CatmullRomCurve3(pts.map(([x, y]) => new THREE.Vector3(x, y, 0)));
+    k.add(taperTube(neck, 24, 0.42 * s, 0.22 * s), { color: green, outline: 0.03 });
+    // (its belly plates, down the front of the neck)
+    for (let i = 1; i < 9; i++) {
+      const u = 0.12 + i * 0.09, P = neck.getPointAt(u), T = neck.getTangentAt(u), r = (0.42 - 0.2 * u) * s;
+      k.add(new THREE.SphereGeometry(1, 8, 5), { at: [P.x + T.y * r * 0.82, P.y - T.x * r * 0.82, 0], scale: [r * 0.5, r * 0.32, r * 0.75], rot: [0, 0, Math.atan2(T.y, T.x)], color: belly });
+      // (and the spine's fin, over the back)
+      k.add(cone(0.1 * s, 0.34 * s * (1 - u * 0.4), 4), { at: [P.x - T.y * r * 0.95, P.y + T.x * r * 0.95, 0], rot: [0, 0, Math.atan2(T.y, T.x) - Math.PI / 2 + 0.5], scale: [1, 1, 0.35], color: gold, outline: 0.01 });
     }
-    for (let i = 0; i < 5; i++) k.add(cone(0.12 * s, 0.35 * s, 4), { at: [stem[0] + (0.3 + i * 0.25) * s, stem[1] + (0.1 + i * 0.45) * s, 0], rot: [0, 0, 0.6], color: gold });
+    const hc = [stem[0] + 1.5 * s, stem[1] + 2.05 * s, 0];
+    // skull, brow and the long snout
+    k.add(new THREE.SphereGeometry(0.42 * s, 14, 10), { at: hc, scale: [1.15, 0.9, 0.95], color: green, outline: 0.03 });
+    k.add(new THREE.SphereGeometry(0.3 * s, 12, 8), { at: [hc[0] + 0.55 * s, hc[1] + 0.02 * s, 0], scale: [1.7, 0.62, 0.78], color: green, outline: 0.025 });
+    k.add(new THREE.SphereGeometry(0.1 * s, 8, 6), { at: [hc[0] + 1.02 * s, hc[1] + 0.04 * s, 0], scale: [1, 0.8, 1.6], color: dark });
+    // the lower jaw hanging open
+    k.save(); k.translate(hc[0] + 0.05 * s, hc[1] - 0.18 * s, 0); k.rotateZ(-0.42);
+    k.add(new THREE.SphereGeometry(0.26 * s, 12, 8), { at: [0.5 * s, 0, 0], scale: [1.9, 0.38, 0.7], color: green, outline: 0.02 });
+    for (const z of [-1, 1]) for (let i = 0; i < 4; i++) k.add(cone(0.035 * s, 0.14 * s, 4), { at: [(0.35 + i * 0.16) * s, 0.12 * s, z * 0.12 * s], color: '#fffdf2' });
+    k.add(new THREE.SphereGeometry(0.2 * s, 8, 6), { at: [0.48 * s, 0.03 * s, 0], scale: [1.6, 0.25, 0.45], color: '#8e2430' });
+    k.restore();
+    for (const z of [-1, 1]) {
+      // fangs hanging from the upper jaw
+      for (let i = 0; i < 4; i++) k.add(cone(0.04 * s, 0.17 * s, 4), { at: [hc[0] + (0.4 + i * 0.17) * s, hc[1] - 0.2 * s, z * 0.15 * s], rot: [Math.PI, 0, 0], color: '#fffdf2' });
+      // nostril, brow ridge, glowing eye
+      k.add(new THREE.SphereGeometry(0.04 * s, 6, 4), { at: [hc[0] + 1.06 * s, hc[1] + 0.1 * s, z * 0.09 * s], color: '#0d2b10' });
+      k.add(new THREE.SphereGeometry(0.15 * s, 8, 6), { at: [hc[0] + 0.24 * s, hc[1] + 0.25 * s, z * 0.24 * s], scale: [1.6, 0.6, 0.8], color: dark, outline: 0.01 });
+      k.add(new THREE.SphereGeometry(0.085 * s, 8, 6), { at: [hc[0] + 0.3 * s, hc[1] + 0.16 * s, z * 0.31 * s], color: '#ffd54f', glow: '#ffb300' });
+      k.add(new THREE.SphereGeometry(0.035 * s, 6, 4), { at: [hc[0] + 0.35 * s, hc[1] + 0.16 * s, z * 0.37 * s], scale: [0.5, 1.6, 0.5], color: '#1d1d1d' });
+      // horns sweeping back off the brow
+      const horn = new THREE.CatmullRomCurve3([new THREE.Vector3(hc[0] + 0.05 * s, hc[1] + 0.3 * s, z * 0.22 * s), new THREE.Vector3(hc[0] - 0.4 * s, hc[1] + 0.55 * s, z * 0.32 * s), new THREE.Vector3(hc[0] - 0.95 * s, hc[1] + 0.6 * s, z * 0.4 * s), new THREE.Vector3(hc[0] - 1.3 * s, hc[1] + 0.85 * s, z * 0.42 * s)]);
+      k.add(taperTube(horn, 12, 0.1 * s, 0.015 * s), { color: gold, outline: 0.012 });
+      // whiskers trailing back from the snout
+      const wh = new THREE.CatmullRomCurve3([new THREE.Vector3(hc[0] + 0.95 * s, hc[1] - 0.02 * s, z * 0.14 * s), new THREE.Vector3(hc[0] + 0.7 * s, hc[1] - 0.25 * s, z * 0.5 * s), new THREE.Vector3(hc[0] + 0.1 * s, hc[1] - 0.45 * s, z * 0.75 * s), new THREE.Vector3(hc[0] - 0.6 * s, hc[1] - 0.35 * s, z * 0.85 * s)]);
+      k.add(taperTube(wh, 14, 0.03 * s, 0.008 * s), { color: gold });
+      // a frill of fins behind the jaw
+      for (let i = 0; i < 3; i++) k.add(cone(0.09 * s, 0.4 * s, 4), { at: [hc[0] - (0.2 + i * 0.12) * s, hc[1] - 0.05 * s + i * 0.08 * s, z * 0.32 * s], rot: [z * (1.2 + i * 0.2), 0, 1.8], scale: [1, 1, 0.3], color: gold, outline: 0.01 });
+    }
     return;
   }
   if (fh === 'lion_gold') {
-    const hc = [stem[0] + 0.7 * s, stem[1] + 1.2 * s, 0];
-    stemNeck(k, [stem[0] - 1.0, stem[1] - 0.6], [stem[0] + 0.05, stem[1] + 0.1], hc, 0.34 * s, '#c9a227');
-    for (let i = 0; i < 16; i++) {
-      const a = i / 16 * TAU;
-      k.save(); k.translate(hc[0] - 0.18 * s, hc[1], 0); k.rotateX(a);
-      k.add(cone(0.34 * s, 0.85 * s, 6), { at: [0, 0.72 * s, 0], color: i % 2 ? '#e0b12b' : '#c9962a', outline: 0.02 });
-      k.restore();
+    // a golden lion roaring off the stem: a full face — brow, muzzle, nose,
+    // open jaws — in a thick mane of carved locks, ears pricked through it
+    const hc = [stem[0] + 0.75 * s, stem[1] + 1.25 * s, 0];
+    const gold = '#f2cc4a', deep = '#c9962a', mid = '#e0b12b';
+    stemNeck(k, [stem[0] - 1.0, stem[1] - 0.6], [stem[0] + 0.05, stem[1] + 0.1], [hc[0] - 0.3 * s, hc[1] - 0.2 * s], 0.36 * s, deep);
+    // the mane: a full round of locks behind the face, two rings deep, and its bulk behind
+    k.add(new THREE.SphereGeometry(0.95 * s, 16, 12), { at: [hc[0] - 0.3 * s, hc[1], 0], scale: [0.7, 1, 1], color: deep, outline: 0.03 });
+    for (const [ring, n, len, rad, col] of [[0, 18, 0.95, 0.3, mid], [1, 14, 0.7, 0.26, deep]]) {
+      for (let i = 0; i < n; i++) {
+        const a = (i + ring * 0.5) / n * TAU;
+        k.save(); k.translate(hc[0] - (0.12 + ring * 0.25) * s, hc[1], 0); k.rotateX(a); k.rotateZ(-0.35 - ring * 0.25);
+        k.add(cone(rad * s, len * s, 6), { at: [0, (0.62 + ring * 0.1) * s + len * s * 0.4, 0], scale: [0.55, 1, 1], color: col, outline: 0.015 });
+        k.restore();
+      }
     }
-    k.add(new THREE.SphereGeometry(0.85 * s, 14, 10), { at: hc, scale: [0.75, 1, 1], color: '#f2cc4a', outline: 0.04 });
-    for (const z of [-1, 1]) k.add(new THREE.SphereGeometry(0.13 * s, 8, 6), { at: [hc[0] + 0.58 * s, hc[1] + 0.22 * s, z * 0.32 * s], color: '#1d1d1d' });
-    k.add(new THREE.SphereGeometry(0.17 * s, 8, 6), { at: [hc[0] + 0.66 * s, hc[1] - 0.1 * s, 0], color: '#8d5524' });
+    // the face: a broad skull, cheeks swelling either side of the muzzle, a heavy brow
+    k.add(new THREE.SphereGeometry(0.62 * s, 16, 12), { at: hc, scale: [0.85, 0.95, 0.9], color: gold, outline: 0.03 });
+    k.add(new THREE.SphereGeometry(0.4 * s, 12, 8), { at: [hc[0] + 0.32 * s, hc[1] + 0.3 * s, 0], scale: [0.9, 0.4, 1.2], color: gold, outline: 0.015 });
+    for (const z of [-1, 1]) {
+      k.add(new THREE.SphereGeometry(0.24 * s, 10, 8), { at: [hc[0] + 0.5 * s, hc[1] - 0.12 * s, z * 0.17 * s], color: gold, outline: 0.015 });
+      // deep-set eyes under the brow
+      k.add(new THREE.SphereGeometry(0.1 * s, 8, 6), { at: [hc[0] + 0.5 * s, hc[1] + 0.17 * s, z * 0.27 * s], scale: [0.6, 0.75, 1], color: '#3a2a10' });
+      k.add(new THREE.SphereGeometry(0.045 * s, 6, 4), { at: [hc[0] + 0.55 * s, hc[1] + 0.18 * s, z * 0.27 * s], color: '#fff3c4', glow: '#ffcf70' });
+      // ears pricked up out of the mane
+      k.add(new THREE.SphereGeometry(0.16 * s, 8, 6), { at: [hc[0] + 0.05 * s, hc[1] + 0.58 * s, z * 0.42 * s], scale: [0.5, 1, 0.8], color: gold, outline: 0.015 });
+      k.add(new THREE.SphereGeometry(0.1 * s, 6, 5), { at: [hc[0] + 0.1 * s, hc[1] + 0.58 * s, z * 0.42 * s], scale: [0.4, 0.8, 0.6], color: deep });
+      // fangs at the corners of the open mouth
+      k.add(cone(0.05 * s, 0.2 * s, 5), { at: [hc[0] + 0.62 * s, hc[1] - 0.3 * s, z * 0.12 * s], rot: [Math.PI, 0, 0], color: '#fffdf2' });
+      k.add(cone(0.045 * s, 0.16 * s, 5), { at: [hc[0] + 0.58 * s, hc[1] - 0.58 * s, z * 0.11 * s], color: '#fffdf2' });
+    }
+    // the nose, broad and flat on the end of the muzzle
+    k.add(new THREE.SphereGeometry(0.16 * s, 10, 6), { at: [hc[0] + 0.72 * s, hc[1] + 0.02 * s, 0], scale: [0.7, 0.55, 1.1], color: '#8d5524', outline: 0.012 });
+    // the open mouth and the jaw under it
+    k.add(new THREE.SphereGeometry(0.22 * s, 10, 8), { at: [hc[0] + 0.5 * s, hc[1] - 0.42 * s, 0], scale: [0.8, 0.7, 1], color: '#7a1f1f' });
+    k.add(new THREE.SphereGeometry(0.26 * s, 10, 8), { at: [hc[0] + 0.42 * s, hc[1] - 0.66 * s, 0], scale: [0.9, 0.45, 0.9], color: gold, outline: 0.015 });
     return;
   }
   if (fh === 'mermaid') {
-    // a gilded mermaid leaning out under the bowsprit, her tail curled along the stem
-    const skin = '#f2d5b8', hair = '#e6b422', tail = '#2a9d8f';
-    const body = [stem[0] + 0.5 * s, stem[1] + 0.9 * s, 0];
-    stemNeck(k, [stem[0] - 0.9, stem[1] - 0.5], [stem[0] + 0.05, stem[1] + 0.1], [body[0] + 0.4 * s, body[1] + 0.35 * s], 0.22 * s, skin);
-    k.add(new THREE.SphereGeometry(0.22 * s, 10, 8), { at: [body[0] + 0.45 * s, body[1] + 0.45 * s, 0], color: skin, outline: 0.02 });
-    k.add(new THREE.SphereGeometry(0.26 * s, 10, 8), { at: [body[0] + 0.36 * s, body[1] + 0.52 * s, 0], scale: [1.1, 1, 1.05], color: hair, outline: 0.02 });
-    k.add(cyl(0.06 * s, 0.06 * s, 0.7 * s, 5), { at: [body[0] + 0.2 * s, body[1] + 0.2 * s, 0.22 * s], rot: [0, 0, -1.1], color: skin });
+    // a mermaid leaning out from the stem, arms swept back, her hair streaming
+    // down her back; her tail curls down the stem to a fluke at the cutwater
+    const skin = '#f2d5b8', hair = '#e6b422', tail = '#2a9d8f', fin = '#e8c26b';
+    const hip = [stem[0] + 0.3 * s, stem[1] + 0.55 * s];
+    const lean = 0.62; // (leaning out over the sea, as a figurehead does)
+    k.save(); k.translate(hip[0], hip[1], 0); k.rotateZ(-lean);
+    // torso: hips, waist, ribs, bust, shoulders
+    const prof = [[0, 0], [0.24, 0.02], [0.2, 0.22], [0.17, 0.36], [0.22, 0.52], [0.24, 0.62], [0.2, 0.72], [0.1, 0.8], [0, 0.82]].map(([r, y]) => [r * s, y * s]);
+    k.add(lathe(prof, 14), { scale: [0.85, 1, 1], color: skin, outline: 0.02 });
+    // a girdle of gold scales where the tail begins
+    k.add(new THREE.TorusGeometry(0.22 * s, 0.04 * s, 6, 16), { at: [0, 0.06 * s, 0], rot: [Math.PI / 2, 0, 0], scale: [0.85, 1, 1], color: fin });
+    k.add(cyl(0.06 * s, 0.07 * s, 0.12 * s, 8), { at: [0, 0.82 * s, 0], color: skin });
+    // head, face turned out to sea and a little up
+    const H = [0.04 * s, 1.05 * s, 0];
+    k.add(new THREE.SphereGeometry(0.17 * s, 14, 10), { at: H, scale: [1, 1.12, 0.95], color: skin, outline: 0.02 });
+    k.add(new THREE.SphereGeometry(0.05 * s, 6, 4), { at: [H[0] + 0.16 * s, H[1] - 0.02 * s, 0], color: skin });
+    for (const z of [-1, 1]) k.add(new THREE.SphereGeometry(0.025 * s, 6, 4), { at: [H[0] + 0.14 * s, H[1] + 0.04 * s, z * 0.065 * s], color: '#2c4a6e' });
+    k.add(new THREE.SphereGeometry(0.18 * s, 12, 8, 0, TAU, 0, Math.PI * 0.6), { at: [H[0] - 0.03 * s, H[1] + 0.01 * s, 0], rot: [0, 0, 1.15], scale: [1.08, 1.15, 1.06], color: hair, outline: 0.015 });
+    // her hair in long locks down her back, lifting in the wind
+    for (let i = 0; i < 5; i++) {
+      const z = (i - 2) * 0.06 * s;
+      const c = new THREE.CatmullRomCurve3([new THREE.Vector3(H[0] - 0.08 * s, H[1] + 0.08 * s, z), new THREE.Vector3(H[0] - 0.24 * s, H[1] - 0.12 * s, z * 1.6), new THREE.Vector3(H[0] - 0.3 * s, H[1] - 0.5 * s, z * 2), new THREE.Vector3(H[0] - 0.42 * s + (i % 2) * 0.06 * s, H[1] - 0.85 * s, z * 2.2)]);
+      k.add(taperTube(c, 10, 0.06 * s, 0.015 * s), { color: hair, outline: 0.01 });
+    }
+    // arms swept back along her sides, hands open behind her
+    for (const z of [-1, 1]) {
+      const sh = [0, 0.72 * s, z * 0.2 * s], el = [-0.2 * s, 0.5 * s, z * 0.3 * s], hd = [-0.42 * s, 0.38 * s, z * 0.3 * s];
+      const arm = new THREE.CatmullRomCurve3([sh, el, hd].map((q) => new THREE.Vector3(...q)));
+      k.add(taperTube(arm, 10, 0.055 * s, 0.035 * s), { color: skin, outline: 0.012 });
+      k.add(new THREE.SphereGeometry(0.05 * s, 8, 6), { at: hd, scale: [1.4, 0.6, 1], color: skin });
+    }
+    k.restore();
+    // the tail: from her hips, curling down and back along the stem to the fluke
+    const ca = Math.cos(-lean), sa = Math.sin(-lean);
+    const loc = (x, y) => [hip[0] + x * ca - y * sa, hip[1] + x * sa + y * ca];
+    const t0 = loc(0, 0.04 * s);
     const tl = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(body[0] - 0.2 * s, body[1] - 0.8 * s, 0), new THREE.Vector3(stem[0] - 0.2, stem[1] - 0.6 * s, 0),
-      new THREE.Vector3(stem[0] - 0.7, stem[1] - 1.3 * s, 0), new THREE.Vector3(stem[0] - 0.9, stem[1] - 2.0 * s, 0),
+      new THREE.Vector3(t0[0], t0[1], 0), new THREE.Vector3(stem[0] + 0.05, stem[1] - 0.15 * s, 0.05 * s),
+      new THREE.Vector3(stem[0] - 0.35, stem[1] - 0.9 * s, -0.04 * s), new THREE.Vector3(stem[0] - 0.75, stem[1] - 1.6 * s, 0.04 * s), new THREE.Vector3(stem[0] - 0.95, stem[1] - 2.1 * s, 0),
     ]);
-    k.add(tube(tl, 12, 0.2 * s, 8), { color: tail, outline: 0.02 });
-    k.add(cone(0.35 * s, 0.5 * s, 4), { at: [stem[0] - 0.9, stem[1] - 2.3 * s, 0], rot: [Math.PI, 0, 0], scale: [1, 1, 0.3], color: tail });
+    k.add(taperTube(tl, 22, 0.22 * s, 0.07 * s), { color: tail, outline: 0.02 });
+    // gold scale-bands along it, and a fin at each side halfway down
+    for (let i = 1; i < 7; i++) {
+      const u = i / 7.5, P = tl.getPointAt(u), T = tl.getTangentAt(u), r = (0.22 - 0.15 * u) * s;
+      k.add(new THREE.TorusGeometry(r * 1.01, 0.012 * s, 4, 12), { at: [P.x, P.y, P.z], rot: [Math.PI / 2, 0, Math.atan2(T.y, T.x) - Math.PI / 2], color: fin });
+    }
+    const end = tl.getPointAt(1), eT = tl.getTangentAt(1), ea = Math.atan2(eT.y, eT.x);
+    for (const z of [-1, 1]) k.add(cone(0.22 * s, 0.6 * s, 5), { at: [end.x + Math.cos(ea) * 0.15 * s, end.y + Math.sin(ea) * 0.15 * s, z * 0.16 * s], rot: [z * 0.9, 0, ea - Math.PI / 2], scale: [1, 1, 0.25], color: fin, outline: 0.012 });
     return;
   }
   // (no figurehead: a plain stem head)
