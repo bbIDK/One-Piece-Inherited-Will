@@ -12,7 +12,7 @@ import { VS_COMMON, FS_COMMON, vfxMaterial, dynAttr, upload } from './kit.js';
 /** Sprite kinds (the fragment shader's switch). */
 export const SK = {
   GLOW: 0, FIRE: 1, EMBER: 2, STAR: 3, BURST: 4, SMOKE: 5, DUST: 6, STREAK: 7, DROP: 8,
-  RING: 9, BUBBLE: 10, PETAL: 11, SQUARE: 12, CLOUD: 13, FLASH: 14, HEART: 15, SPECK: 16,
+  RING: 9, BUBBLE: 10, PETAL: 11, SQUARE: 12, CLOUD: 13, FLASH: 14, HEART: 15, SPECK: 16, DOT: 17,
 };
 
 const VS = /* glsl */`
@@ -211,6 +211,10 @@ const FS = /* glsl */`
       float e = max(abs(p.x), abs(p.y));
       a = 1.0 - smoothstep(0.9, 1.0, e);
       c = mix(vec3(0.1, 0.07, 0.07), vCol.rgb, step(e, 0.74));
+    } else if (kind == ${SK.DOT}) {
+      // a solid round dot (an eye, a pupil): crisp edged, flat colour
+      a = 1.0 - smoothstep(0.82, 1.0, r);
+      c = vCol.rgb;
     } else if (kind == ${SK.SPECK}) {
       float e = max(abs(p.x), abs(p.y));
       a = 1.0 - smoothstep(0.7, 1.0, e);

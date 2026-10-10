@@ -17,6 +17,7 @@ import { bolt, crown } from './shapes.js';
 
 const H = 18; // positions remembered
 const WHITE = col('#ffffff');
+const INK = col('#2a1630');
 const HOT = col('#fff3c4');
 const DARK_RED = col('#c62828');
 
@@ -371,18 +372,46 @@ function draw(v, pr, r, Y, sc) {
     }
     case 'string': {
       const sc = col(pr.color || '#f8bbd0');
-      for (let i = -1; i <= 1; i++) {
-        v.ribbons.start(RK.THIN, RM.FACE, sc, 1, WHITE, 0.5)
-          .point(X - dx * 1.4 - dz * i * 0.07, Y + i * 0.05, Z - dz * 1.4 + dx * i * 0.07, 0.012)
-          .point(X + dx * 0.3, Y, Z + dz * 0.3, 0.01)
+      // (strings fanned from the fingertips: back to the hand that threw them,
+      // if it's near — Parasite's strings stay tied to their puppeteer)
+      const o = pr.owner, hx = o ? v.world.dx(v.ox, o.x) : X - dx * 1.4, hz = o ? o.y + 0.5 - v.oy : Z - dz * 1.4;
+      const far = Math.hypot(hx - X, hz - Z) > 14;
+      const bx = far ? X - dx * 1.4 : hx, bz = far ? Z - dz * 1.4 : hz, by = far ? Y : Y + 0.05;
+      const n = pr.status?.puppet ? 5 : 3;
+      for (let i = 0; i < n; i++) {
+        const f = i - (n - 1) / 2;
+        const sag = 0.06 + 0.03 * Math.sin(t * 9 + i);
+        v.ribbons.start(RK.THIN, RM.FACE, sc, 1, WHITE, 0.6)
+          .point(bx - dz * f * 0.05, by + f * 0.03, bz + dx * f * 0.05, 0.014)
+          .point((bx + X) / 2 - dz * f * 0.12, (by + Y) / 2 - sag, (bz + Z) / 2 + dx * f * 0.12, 0.012)
+          .point(X + dx * 0.2 - dz * f * 0.08, Y + f * 0.04, Z + dz * 0.2 + dx * f * 0.08, 0.01)
           .finish();
       }
+      v.sprites.put(SK.GLOW, X, Y, Z, 0.35 * s, sc, 0.5, WHITE, 1, 0, seed, 0);
       break;
     }
     case 'ghost': {
+      // a Hollow: a pale teardrop with a sad little face toward you, stubby
+      // arms, a wisp of a tail curling away behind it as it drifts and bobs
       const gc = col(pr.color || '#e1bee7');
-      v.shells.put(VK.ORB, X, Y + Math.sin(t * 8) * 0.05, Z, 0.28 * s, 0, 1, 0, 1.25, gc, 0.85, WHITE, 0.4, 0, seed);
-      trail(v, r, RK.SMOKE, gc, 0.5, WHITE, 0, 0.18 * s, 0.1, 8);
+      const R = 0.42 * s, bob = Math.sin(t * 5 + seed) * 0.08 * s, sway = Math.sin(t * 3.3 + seed) * 0.12;
+      const gy = Y + 0.25 * s + bob;
+      v.shells.put(VK.ORB, X, gy, Z, R, 0, 1, 0, 1.35, gc, 0.8, WHITE, 0.55, 0, seed);
+      v.sprites.put(SK.GLOW, X, gy, Z, R * 2.6, gc, 0.35, WHITE, 0.6, 0, seed, 0);
+      // the tail: smaller and fainter puffs trailing back and down, swaying
+      for (let i = 1; i <= 4; i++) {
+        const k = i / 4, sw = Math.sin(t * 6 - i * 0.9 + seed) * 0.12 * s * k;
+        v.shells.put(VK.ORB, X - dx * R * 1.1 * i * 0.7 - dz * sw, gy - R * (0.55 + 0.25 * k), Z - dz * R * 1.1 * i * 0.7 + dx * sw, R * (0.62 - 0.12 * i), 0, 1, 0, 1, gc, 0.65 * (1 - k * 0.6), WHITE, 0.4, 0, seed + i);
+      }
+      // the face, on the side you see: two droopy eyes and a wailing mouth
+      const fx = -v.cf[0], fz = -v.cf[2], fl = Math.hypot(fx, fz) || 1;
+      const nx = fx / fl, nz = fz / fl, rx = -nz, rz = nx;
+      const face = (u, w, size, a) => v.sprites.put(SK.DOT, X + nx * R * 0.92 + rx * u * R, gy + w * R, Z + nz * R * 0.92 + rz * u * R, size * R, INK, a, INK, 0, 0, seed, 0);
+      face(-0.3, 0.18, 0.32, 0.9); face(0.3, 0.18, 0.32, 0.9);
+      face(0, -0.22, 0.26 + 0.06 * Math.sin(t * 7), 0.75);
+      // stubby arms out to the sides, waving
+      for (const sd of [-1, 1]) v.sprites.put(SK.PETAL, X + rx * sd * R * 1.05, gy - R * 0.1 + Math.sin(t * 8 + sd) * 0.04, Z + rz * sd * R * 1.05, R * 0.55, gc, 0.8, WHITE, 0.3, sd * (0.9 + sway), seed, 0);
+      trail(v, r, RK.SMOKE, gc, 0.35, WHITE, 0, 0.22 * s, 0.1, 8);
       break;
     }
     case 'bat': {
