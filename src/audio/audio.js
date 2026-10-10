@@ -17,7 +17,7 @@
 //
 // docs/AUDIO.md describes the palette and the rules of the mix.
 import { Engine } from './engine.js';
-import { SFX, techStart, FLAVOUR } from './sfx.js';
+import { SFX, techStart, FLAVOUR, M1_HIT } from './sfx.js';
 import { footstep } from './steps.js';
 import { Music } from './music.js';
 import { Director } from './director.js';
@@ -205,6 +205,10 @@ export class Audio {
     let def = SFX[name];
     if (HITS[name] && at && g) this.hitContext(at, k, name);
     if (name === 'haki' && k.hit) { key = 'haki_hit'; def = { ...def, kind: 'hit' }; }
+    // (a fruit's plain blow, M1: a punch with the element's snap on it — not
+    // the element's full hit, which is its techniques': sfx.js M1_HIT)
+    let m1El = null;
+    if (k.m1 && k.fruit && HITS[name] && !/^(punch|slash|haki)/.test(name)) { m1El = name; key = 'punch'; def = SFX.punch; }
     if (HAKI_VOICED.has(name) && k.voice === undefined) k.voice = at?.hakiSig?.voice ?? 0.5;
     if (name === 'block' && at) { k.sword = !!(at.hasWeapon?.('sword') && at.drawn !== false); k.armament = !!at.armament; }
     if (name === 'parry' && at) k.perfect = !!at.parryPerfect;
@@ -243,6 +247,7 @@ export class Audio {
     v.pj = 0.97 + Math.random() * 0.06;
     k.rr = this.E.variant(key, def.variants || 1);
     def.play(v, k);
+    if (m1El) M1_HIT[m1El]?.(v, k);
     if (k.fruit && FLAVOUR[k.fruit]) FLAVOUR[k.fruit](v, k);
     v.end += v.tail || 0;
     // the side-chain: a blow of your fight (or a big moment near you) dips the beds, the others and the music under it
@@ -268,6 +273,7 @@ export class Audio {
     const def = att.action?.def;
     k.kick = KICKS.test(def?.anim || '') || att.style === 'black_leg' || att.style === 'okama_kenpo';
     if (def?.fruit) k.fruit = def.fruit;
+    k.m1 = !!def?.m1Chain;
   }
 
   /** A technique's start (an actor's move just begun): its wind-up, and its release on the first blow. */

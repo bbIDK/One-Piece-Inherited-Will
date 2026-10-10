@@ -100,11 +100,19 @@ export function strike(v, t, s = 1, roll = 1.6) {
   v.noise(t + 0.002, 0.28, { color: 'pink', type: 'lowpass', freq: 1500, sweep: 220, gain: 0.38 * s });
   v.zap(t + 0.01, 0.16 * s, { f0: 60, f1: 500, gain: 0.05 * s, step: 0.008 });
   v.noise(t + 0.01, 0.5, { type: 'highpass', freq: 5000, gain: 0.07 * s, attack: 0.004 });
+  // the KRA-KOOM: the body of the blast in the mids (where small speakers
+  // carry it — a strike that's only crack and sub is a ping on a laptop),
+  // a hard boom under it, and the air split twice more as the bolt forks
+  v.noise(t + 0.003, 0.16, { freq: 700, q: 0.5, gain: 0.7 * s, attack: 0.001 });
+  v.noise(t + 0.006, 0.22, { freq: 260, q: 0.7, gain: 0.55 * s, attack: 0.002 });
+  boom(v, t + 0.004, 0.75 * s, { f0: 110, f1: 32, dur: 0.6 });
+  for (const d of [0.045, 0.09]) v.noise(t + d + rnd(0, 0.02), 0.012, { type: 'highpass', freq: 1800, gain: 0.45 * s, attack: 0.0005 });
   rumble(v, t + 0.1, s, roll, { lp: 230 });
-  // (recorded: the bolt's crack and sizzle, and real thunder rolling on under the long ones)
-  v.sample(t, 'spark', { gain: 0.55 * s, rate: 0.9 });
-  v.sample(t + 0.002, 'zap', { gain: 0.42 * s, rate: 0.95 });
-  if (roll >= 1.5) v.sample(t + 0.04, 'thunder', { gain: 0.55 * s, offset: 0.15, dur: roll + 0.6, fade: 0.8, rate: 0.95 });
+  // (recorded: the bolt's crack and sizzle, a blast, and real thunder rolling on after it)
+  v.sample(t, 'spark', { gain: 0.6 * s, rate: 0.9 });
+  v.sample(t + 0.002, 'zap', { gain: 0.45 * s, rate: 0.95 });
+  v.sample(t + 0.004, 'explode_1', { gain: 0.3 * s, rate: 1.15, dur: 0.6, fade: 0.3 });
+  if (roll >= 1) v.sample(t + 0.04, 'thunder', { gain: 0.6 * s, offset: 0.15, dur: roll + 0.6, fade: 0.8, rate: 0.95 });
 }
 
 /**

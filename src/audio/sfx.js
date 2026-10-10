@@ -1514,11 +1514,13 @@ export const FRUIT_TECH = {
     goro_raigo: (v, k) => { M.rumble(v, 0, 1.4, Math.max(1, k.rel) + 1, { lp: 140 }); v.zap(0.3, 1, { f0: 40, f1: 160, gain: 0.03 }); M.strike(v, Math.max(1, k.rel), 1.4, 3); },
     goro_kari: (v, k) => { v.zap(0, Math.max(0.3, k.rel), { f0: 40, f1: 180, gain: 0.04 }); M.strike(v, k.rel, 1.2, 1.8); },
     default: (v, k) => {
-      // static gathering (the hair on your neck), then VARI
-      v.zap(0, Math.max(0.15, k.rel), { f0: 40, f1: 220, gain: 0.03, step: 0.02 });
-      v.crackle(0, Math.max(0.15, k.rel), 6, { freq: 5000, gain: 0.025 });
-      v.sample(0, 'buzz', { gain: 0.16, attack: Math.max(0.1, k.rel) * 0.8, dur: Math.max(0.15, k.rel) + 0.05, fade: 0.05 });
-      M.zapBurst(v, k.rel, 1, 0.25);
+      // static gathering (the hair on your neck), then VARI — a real strike:
+      // the crack of the air, the blast, thunder rolling off after it
+      v.zap(0, Math.max(0.15, k.rel), { f0: 40, f1: 220, gain: 0.04, step: 0.02 });
+      v.crackle(0, Math.max(0.15, k.rel), 8, { freq: 5000, gain: 0.04 });
+      v.sample(0, 'buzz', { gain: 0.22, attack: Math.max(0.1, k.rel) * 0.8, dur: Math.max(0.15, k.rel) + 0.05, fade: 0.05 });
+      M.zapBurst(v, k.rel, 0.8, 0.25);
+      M.strike(v, k.rel, 1.05, 1.2);
     },
   },
   suna: { default: (v, k) => { v.whoosh(0, Math.max(0.2, k.rel) + 0.2, { f0: 600, f1: 2200, q: 0.5, gain: 0.12, peak: 0.6 }); v.crackle(0, Math.max(0.2, k.rel) + 0.2, 20, { freq: 4500, gain: 0.03, q: 2.5 }); v.sample(Math.max(0, k.rel - 0.15), 'sand', { gain: 0.45, rate: 0.95 }); } },
@@ -1571,6 +1573,50 @@ export const STYLE_TECH = {
  * A Devil Fruit's touch on a blow it lands (over the blow's own sound): the
  * rubber's boing, a body part's "pon", mochi's squelch, steel's ring...
  */
+/**
+ * A fruit's touch on its plain swing (M1), as the fist goes: small — a lick of
+ * fire, a fizz of static, a breath of frost — under the swing, never the
+ * technique's own sound.
+ */
+const M1_SWING = {
+  gomu: (v, k) => M.stretch(v, 0, Math.max(0.1, k.rel * 0.8), 0.6),
+  mera: (v, k) => v.whoosh(Math.max(0, k.rel - 0.12), 0.16, { f0: 260, f1: 900, q: 0.6, gain: 0.08, peak: 0.6, color: 'pink' }),
+  magu: (v, k) => v.noise(Math.max(0, k.rel - 0.1), 0.14, { color: 'brown', type: 'lowpass', freq: 500, gain: 0.12, attack: 0.04 }),
+  hie: (v, k) => v.noise(Math.max(0, k.rel - 0.1), 0.14, { type: 'highpass', freq: 5000, gain: 0.04, attack: 0.04 }),
+  goro: (v, k) => { v.zap(Math.max(0, k.rel - 0.12), 0.14, { f0: 60, f1: 300, gain: 0.025, step: 0.015 }); v.crackle(Math.max(0, k.rel - 0.1), 0.1, 3, { freq: 4500, gain: 0.03 }); },
+  pika: (v, k) => v.tone(Math.max(0, k.rel - 0.1), 0.12, { freq: 2400, to: 4200, gain: 0.02, attack: 0.08, curve: 'lin' }),
+  suna: (v, k) => v.noise(Math.max(0, k.rel - 0.12), 0.16, { freq: 3500, q: 0.6, gain: 0.04, attack: 0.05 }),
+  moku: (v, k) => v.noise(Math.max(0, k.rel - 0.12), 0.18, { type: 'lowpass', freq: 700, gain: 0.08, attack: 0.05 }),
+  yami: (v, k) => M.suction(v, Math.max(0, k.rel - 0.15), 0.15, 0.4),
+  gura: (v, k) => v.thump(Math.max(0, k.rel - 0.06), { f0: 70, f1: 40, dur: 0.12, gain: 0.12 }),
+  tori_phoenix: (v, k) => v.whoosh(Math.max(0, k.rel - 0.12), 0.16, { f0: 400, f1: 1500, q: 0.6, gain: 0.07, peak: 0.6, color: 'pink' }),
+};
+
+/**
+ * A fruit's plain blow landing (M1): the punch, and on it the fruit's own
+ * snap — by the element it hits with — short and light, so a technique's
+ * hit (the full strike, the burst of flame) still stands above it.
+ */
+export const M1_HIT = {
+  fire: (v) => { M.flame(v, 0, 0.35, { dur: 0.22 }); },
+  magma: (v) => { M.lava(v, 0, 0.4, 0.25); },
+  bluefire: (v) => { M.flame(v, 0, 0.3, { dur: 0.2, low: 500, high: 1800 }); },
+  ice: (v) => { M.ice(v, 0, 0.45, 0.12); },
+  snow: (v) => { v.noise(0, 0.12, { type: 'lowpass', freq: 2500, gain: 0.12, attack: 0.004 }); },
+  lightning: (v) => { v.noise(0, 0.006, { type: 'highpass', freq: 2000, gain: 0.5, attack: 0.0004 }); v.crackle(0.002, 0.08, 7, { freq: 3200, spread: 1, gain: 0.18, q: 1, len: 0.005 }); v.zap(0, 0.1, { f0: 80, f1: 700, gain: 0.04, step: 0.008 }); v.sample(0, 'spark', { gain: 0.3, rate: 1.1 }); },
+  sand: (v) => { v.noise(0, 0.18, { freq: 3800, q: 0.5, gain: 0.08, attack: 0.004 }); v.sample(0, 'sand', { gain: 0.2, rate: 1.2, dur: 0.25, fade: 0.1 }); },
+  smoke: (v) => { v.noise(0, 0.2, { type: 'lowpass', freq: 700, sweep: 300, gain: 0.16, attack: 0.01 }); },
+  light: (v) => { v.noise(0, 0.01, { type: 'highpass', freq: 5000, gain: 0.2, attack: 0.0005 }); M.shimmer(v, 0, 0.5, 0.15); },
+  dark: (v) => { M.suction(v, 0, 0.18, 0.5); v.sample(0, 'dark', { gain: 0.15, dur: 0.25, fade: 0.1 }); },
+  quake: (v) => { M.glassCrack(v, 0, 0.4); v.thump(0.002, { f0: 80, f1: 34, dur: 0.25, gain: 0.35 }); },
+  poison: (v) => { v.bubble(0.01, { f: 320, rise: 1.6, dur: 0.07, gain: 0.07 }); M.hiss(v, 0, 0.12, 0.5, 4200); },
+  gas: (v) => M.hiss(v, 0, 0.18, 0.6, 3500),
+  explosion: (v) => M.boom(v, 0, 0.35, { f0: 120, f1: 40, dur: 0.3 }),
+  string: (v) => v.ring(0, rnd(1500, 1800), 0.2, 0.025, [1, 2.01, 3.03], { spread: 0.004 }),
+  water: (v) => M.splash(v, 0, 0.35),
+  swamp: (v) => v.bubble(0.01, { f: 140, rise: 1.4, dur: 0.1, gain: 0.08 }),
+};
+
 export const FLAVOUR = {
   gomu: (v) => v.tone(0.005, 0.16, { freq: 320, to: 130, type: 'triangle', gain: 0.06, vib: { rate: 24, depth: 22 } }),
   bara: (v) => M.pop(v, 0, 0.5, 340),
@@ -1607,6 +1653,15 @@ function animKind(anim, weapon) {
 export function techStart(v, def, { rel = 0, weapon = 'fists', gun = null, heavy = false, voice } = {}) {
   const k = { rel: Math.max(0, rel), def, voice };
   const fr = def.fruit && FRUIT_TECH[def.fruit];
+  // (the fruit's plain blows — M1 — swing as fists do, with the fruit's touch on
+  // the swing; its techniques have their own sounds, the blows aren't them)
+  if (fr && def.m1Chain) {
+    const kind = animKind(def.anim, weapon);
+    const s = Math.min(1, Math.max(0.45, k.rel / (SWING_LEN[kind] * 0.95)));
+    swing(v, Math.max(0, k.rel - SWING_LEN[kind] * s * 0.95), kind, s);
+    M1_SWING[def.fruit]?.(v, k);
+    return;
+  }
   if (fr) { (fr[def.id] || (def.base && fr[def.base]) || fr.default || STRETCH)(v, k); return; }
   if (STYLE_TECH[def.id]) { STYLE_TECH[def.id](v, k); return; }
   // (Conqueror's: the pressure gathering through the wind-up; the DOOON comes with the burst itself — abilities.js)
