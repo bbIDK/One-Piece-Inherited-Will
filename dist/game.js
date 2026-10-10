@@ -10874,6 +10874,8 @@
     swamp: { c: "#6d4c41", spark: ["#6d4c41", "#8d6e63"], kind: "drop" }
   };
   var elemOf = (e) => ELEM[e] || ELEM.physical;
+  var phoenixy = (actor, def) => (def?.id || "").startsWith("phoenix") || actor?.fruit === "tori_phoenix";
+  var elemFor = (e, actor, def) => e === "fire" && phoenixy(actor, def) ? ELEM.bluefire : elemOf(e);
   var STYLE_FX = {
     brawler: { trail: "#fff3e0", spark: ["#ffffff", "#ffe0b2", "#fff8e1"] },
     ittoryu: { trail: "#e3f2fd", spark: ["#ffffff", "#e3f2fd"], arcs: 1 },
@@ -10894,6 +10896,7 @@
     if (!def || !(def.source || "").startsWith("style")) return null;
     return STYLE_FX[def.style || actor && actor.style] || null;
   }
+  var BLADE_LEN = { hie_saber: 1.5, pika_murakumo: 1.4, mochi_zangiri: 1.2 };
   var BLADES = {
     hie_saber: "#b3e5fc",
     pika_murakumo: "#fff59d",
@@ -10949,7 +10952,7 @@
     const game = fx.game;
     const final = o.final || 0, crit = !!o.crit, blocked = !!o.blocked, counter2 = !!o.counter;
     const elem = o.el || "physical";
-    const E = elemOf(elem);
+    const E = elemFor(elem, att, h2?.def);
     const ang = o.ang ?? 0;
     const def = h2.def || (att && att.action ? att.action.def : null);
     const st = att && !h2.sprite ? styleOf(def, att) : null;
@@ -10975,7 +10978,7 @@
       const col2 = st ? st.spark[1] || st.spark[0] : E.c;
       fx.add("impact", { x: cx, y: cy, z, angle: ang, size: 0.24 + 0.42 * w, color: crit ? "#ffd740" : col2, core: "#ffffff", life: 0.1 + 0.09 * w, spikes: 8 + Math.round(w * 5), lines: 2 + Math.round(w * 5) });
       sparks(fx, cx, cy, z, ang, Math.round(3 + 9 * w), crit ? ["#ffd740", "#fff59d", "#ffffff"] : st ? st.spark : E.spark, { speed: 5 + 6 * w, life: 0.2 + 0.14 * w, size: 0.07 + 0.05 * w });
-      elemHit(fx, elem, E, cx, cy, z, ang, w);
+      elemHit(fx, E === ELEM.bluefire ? "bluefire" : elem, E, cx, cy, z, ang, w);
       if (st) styleHit(fx, st, def, tgt, cx, cy, z, ang, w);
       if (w >= 0.68) {
         fx.ring(tgt.x, tgt.y, 0.25, 0.9 + 0.8 * w, rgba(col2, 0.9), 0.3, 0.08 + 0.06 * w, { z: 0.06, flat: 0.55, add: true });
@@ -11497,7 +11500,7 @@
       const h2 = s.hit, def = a.def;
       const ang = hb.angle;
       const reach3 = actor.reach ?? 1;
-      const E = elemOf(h2.element);
+      const E = elemFor(h2.element, actor, def);
       const st = styleOf(def, actor);
       const col2 = s.color || h2.color || (h2.element && h2.element !== "physical" ? E.c : st ? st.trail : "#ffffff");
       const vfx = s.vfx || h2.vfx;
@@ -11518,7 +11521,7 @@
     proj(fx, actor, s, a) {
       const p = s.proj;
       const ang = a.angle + (s.angleOffset || 0);
-      const E = elemOf(p.element);
+      const E = elemFor(p.element, actor, a.def);
       const col2 = p.color || E.c;
       const gun = weaponFor(a.def, actor) === "gun" || p.sprite === "bullet";
       const hx = actor.x + Math.cos(ang) * 0.55, hy = actor.y + Math.sin(ang) * 0.4;
@@ -12499,7 +12502,8 @@
   sig("bara_senbei", { dash(fx, actor, s, a) {
     DEFAULTS.dash(fx, actor, s, a);
     actor._ghostTint = "#ffcdd2";
-    fx.add("vortex", { x: actor.x, y: actor.y, follow: actor, r: 1.1, h: 0.4, kind: "wind", life: s.dash.time + 0.1, spin: 14, arms: 3 });
+    fx.add("vortex", { x: actor.x, y: actor.y, follow: actor, r: 1.4, h: 0.5, kind: "wind", life: s.dash.time + 0.15, spin: 18, arms: 5 });
+    for (let i = 0; i < 5; i++) fx.ring(actor.x, actor.y, 0.6, 1.5, i % 2 ? "#ffffff" : "#ffcdd2", 0.16, 0.06, { z: 0.55, flat: 1, delay: i * 0.06, add: true, follow: actor });
   } });
   sig("bara_muggy", { proj(fx, actor, s, a) {
     const [px2, py2] = fwd(actor, a.angle, 0.6);
@@ -13254,7 +13258,7 @@
     const elem = main2.hit?.element || main2.proj?.element || main2.dash?.hit?.element || main2.zone?.element || (elemBuff ? elemBuff.element : null);
     const sg = sigFor(def) || {};
     const st = styleOf(def, actor);
-    const E = elem ? elemOf(elem) : null;
+    const E = elem ? elemFor(elem, actor, def) : null;
     const k = t < w ? clamp012(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
     const trail3 = sg.trail || (E && elem !== "physical" ? E.c : st ? st.trail : "#ffffff");
     const fxElem = sg.elem || (elem && elem !== "physical" ? elem : st && st.elem) || null;
@@ -13267,7 +13271,7 @@
     const blade2 = sg.blade || BLADES[def.id] || (def.base ? BLADES[def.base] : null);
     if (blade2) {
       out.blade = blade2;
-      out.bladeLen = 1;
+      out.bladeLen = BLADE_LEN[def.id] || BLADE_LEN[def.base] || 1;
     }
     if (t < w && w >= 0.3 && !def.m1Chain) {
       const ch = sg.charge !== void 0 ? sg.charge : defaultCharge(def, actor, elem, st);
@@ -19334,7 +19338,7 @@
           cd: 4,
           say: "Bara Bara Ho!",
           desc: "A hand flung off with knives fanned between its fingers: three blades come at them at once.",
-          steps: [{ proj: { speed: 22, range: 10, radius: 0.25, damage: 10, count: 3, spread: 0.35, sprite: "iceshard", color: "#cfd8dc", slashing: true } }]
+          steps: [{ proj: { speed: 22, range: 10, radius: 0.25, damage: 10, count: 3, spread: 0.35, sprite: "knife", color: "#cfd8dc", slashing: true } }]
         }),
         T(30, {
           id: "bara_senbei",
@@ -63009,6 +63013,27 @@ void main() {
   var PILE = "#5a3e2b";
   var ROPE = "#c8b89a";
   var IRON = "#2e2a28";
+  var PALETTES = {
+    oak: { seam: "#5d4030", trim: "#6d4c33", pile: "#5a3e2b", rope: "#c8b89a", iron: "#2e2a28", deck: 10119740 },
+    silver: { seam: "#55524c", trim: "#77716a", pile: "#5c5650", rope: "#cbbfa6", iron: "#3a3634", deck: 10195332 },
+    tarred: { seam: "#2a221d", trim: "#3a2f28", pile: "#2e2622", rope: "#bfae8c", iron: "#24211f", deck: 6179386 },
+    lacquer: { seam: "#4a1a14", trim: "#8e2b22", pile: "#6a1f18", rope: "#e8d6a8", iron: "#2b2421", deck: 9067062 },
+    sand: { seam: "#8a6a44", trim: "#b08b5b", pile: "#8d6e4a", rope: "#ddc79c", iron: "#4a3a2c", deck: 12886644 },
+    painted: { seam: "#b9b2a0", trim: "#ece6d6", pile: "#f2efe6", rope: "#d98fb0", iron: "#6b6f7a", deck: 14208436 },
+    stained: { seam: "#2f241b", trim: "#3e2e22", pile: "#3a2c21", rope: "#bda986", iron: "#3a3f44", deck: 7228466 }
+  };
+  var BY_STYLE = { wano: "lacquer", chinese: "lacquer", desert: "sand", snow: "tarred", sky: "painted", candy: "painted", city: "stained", noble: "stained", marine: "stained", future: "stained", spooky: "tarred" };
+  function dockPalette(world, x, y) {
+    const isl = world.islandAt?.(x, y) || world.nearestIsland?.(x, y, 120);
+    if (!isl) return PALETTES.oak;
+    const style = isl.towns?.[0]?.style || isl.style;
+    if (BY_STYLE[style]) return PALETTES[BY_STYLE[style]];
+    if (isl.climate === "snow" || isl.climate === "polar") return PALETTES.tarred;
+    if (isl.climate === "desert") return PALETTES.sand;
+    let h2 = 0;
+    for (const c of String(isl.id || isl.name || "")) h2 = h2 * 31 + c.charCodeAt(0) >>> 0;
+    return [PALETTES.oak, PALETTES.silver, PALETTES.oak, PALETTES.tarred, PALETTES.stained][h2 % 5];
+  }
   var STEEL = "#8a9499";
   var SLEEPER = "#5d4a3a";
   var STONE = ["#a39c90", "#978f83", "#9d968a"];
@@ -63016,6 +63041,12 @@ void main() {
   var WALLSTONE = "#857d71";
   var WEED = "#4f5a44";
   function dockDetails(world, x0, y0, size2 = CHUNK, hf = null) {
+    const pal = dockPalette(world, x0 + size2 / 2, y0 + size2 / 2);
+    SEAM = pal.seam;
+    TRIM = pal.trim;
+    PILE = pal.pile;
+    ROPE = pal.rope;
+    IRON = pal.iron;
     const k = new Mesher();
     const type = (i, j) => world.type(x0 + i, y0 + j);
     const water3 = (i, j) => {
@@ -63244,6 +63275,7 @@ void main() {
       this.material = terrainMaterial();
       this.uOrigin = this.material.userData.uOrigin;
       this.deckMat = new MeshToonMaterial({ color: 10119740, gradientMap: toonGradient() });
+      this.deckMats = /* @__PURE__ */ new Map();
       this.postMat = new MeshToonMaterial({ color: 6111280, gradientMap: toonGradient() });
       this.wallMat = new MeshToonMaterial({ color: 9076592, gradientMap: toonGradient() });
       this.world = null;
@@ -63259,6 +63291,17 @@ void main() {
       this.budget = BUILD_BUDGET_MS;
     }
     /** Fast graphics draws less terrain detail nearby. */
+    /** The deck material for a chunk: its island's dock timber (props/docks.js dockPalette), shared per colour. */
+    deckMatFor(world, x0, y0) {
+      const col2 = dockPalette(world, x0 + CHUNK / 2, y0 + CHUNK / 2).deck;
+      let m = this.deckMats.get(col2);
+      if (!m) {
+        m = this.deckMat.clone();
+        m.color.setHex(col2);
+        this.deckMats.set(col2, m);
+      }
+      return m;
+    }
     setDetail(q2) {
       this.quality = q2;
       this.nearR = q2 === "low" ? 4 : NEAR_R;
@@ -63590,8 +63633,8 @@ void main() {
         if (m) root4.add(m);
         return;
       }
-      if (decks2.length) root4.add(deckBoxes(decks2, x0, y0, (i, j) => w.type(i, j) === T2.BRIDGE, (cx, cy) => hf.deckCorner(cx, cy), this.deckMat));
-      if (piers.length) root4.add(boxes(piers, 1, 0.26, 1, DOCK_Y - 0.13, this.deckMat));
+      if (decks2.length) root4.add(deckBoxes(decks2, x0, y0, (i, j) => w.type(i, j) === T2.BRIDGE, (cx, cy) => hf.deckCorner(cx, cy), this.deckMatFor(w, x0, y0)));
+      if (piers.length) root4.add(boxes(piers, 1, 0.26, 1, DOCK_Y - 0.13, this.deckMatFor(w, x0, y0)));
       if (posts.length) root4.add(boxes(posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, this.postMat, 0.15, postSpans));
       if (walls.length) {
         const m = boxes(walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, this.wallMat, 0, spans);
@@ -83743,6 +83786,24 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
     band3.translate(0, -0.56, 0);
     return flat(merge([g, band3]));
   }
+  function knifeGeo() {
+    const sh = new Shape();
+    sh.moveTo(-0.09, 0);
+    sh.lineTo(0.09, 0);
+    sh.lineTo(0.08, 0.6);
+    sh.quadraticCurveTo(0.05, 0.9, 0, 1.05);
+    sh.quadraticCurveTo(-0.02, 0.8, -0.09, 0.62);
+    sh.closePath();
+    const blade2 = new ExtrudeGeometry(sh, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.01, bevelSegments: 1, curveSegments: 4 });
+    blade2.translate(0, 0, -0.015);
+    const guard2 = new BoxGeometry(0.34, 0.05, 0.08);
+    guard2.translate(0, -0.02, 0);
+    const grip = new CylinderGeometry(0.045, 0.05, 0.4, 6);
+    grip.translate(0, -0.25, 0);
+    const pommel = new SphereGeometry(0.06, 6, 4);
+    pommel.translate(0, -0.47, 0);
+    return flat(merge([blade2, guard2, grip, pommel]));
+  }
   function limbGeo() {
     return flat(new CylinderGeometry(0.85, 1, 2, 10));
   }
@@ -83848,7 +83909,8 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       this.fists = new SolidBatch(fistGeo(), 48, "vfx-fists");
       this.cuffs = new SolidBatch(cuffGeo(), 48, "vfx-cuffs");
       this.limbs = new SolidBatch(limbGeo(), 48, "vfx-limbs");
-      this.all = [this.crystals, this.shards, this.rocks, this.blocks, this.fists, this.cuffs, this.limbs];
+      this.knives = new SolidBatch(knifeGeo(), 64, "vfx-knives");
+      this.all = [this.crystals, this.shards, this.rocks, this.blocks, this.fists, this.cuffs, this.limbs, this.knives];
     }
     begin() {
       for (let i = 0; i < this.all.length; i++) this.all[i].begin();
@@ -85337,14 +85399,21 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
         }
         const ow = pr.owner, L3 = ow?.look || {};
         if (ow && pr.sprite === "barafist") ow._baraHand = performance.now() / 1e3;
-        const R5 = 0.2 * s * (L3.scale || 1);
+        const R5 = 0.3 * s * (L3.scale || 1);
         const skin = col(L3.skin || (pr.color && pr.color !== "#ffccbc" ? pr.color : "#f1c9a0"));
         const sleeve = col(L3.coat || L3.top || "#e53935");
         const roll2 = Math.sin(t * 9 + seed) * 0.35;
         putAlong(v.solids.fists, X2, Y2, Z2, dx, 0, dz, R5, R5, roll2, skin, OK2.SKIN, 0, seed, 0);
         putAlong(v.solids.cuffs, X2, Y2, Z2, dx, 0, dz, R5, R5, roll2, sleeve, OK2.PLAIN, 0, seed, 0);
-        trail2(v, r4, RK.SPEED, WHITE6, 0.7, WHITE6, 0.3, R5 * 0.6, 0.1, 6);
-        if (sp > 10) speedLines(v, X2, Y2, Z2, dx, dz, R5, seed, t);
+        trail2(v, r4, RK.SPEED, WHITE6, 0.85, WHITE6, 0.4, R5 * 0.8, 0.12, 8);
+        speedLines(v, X2, Y2, Z2, dx, dz, R5, seed, t);
+        break;
+      }
+      case "knife": {
+        const kc = col(pr.color || "#cfd8dc");
+        putAlong(v.solids.knives, X2, Y2, Z2, dx, 0, dz, 0.42 * s, 0.42 * s, t * 14 + seed, kc, OK2.PLAIN, 0, seed, 0);
+        v.sprites.put(SK2.STAR, X2 + dx * 0.35 * s, Y2, Z2 + dz * 0.35 * s, 0.14 * s, WHITE6, 0.8, WHITE6, 1, t * 10, seed, 0);
+        trail2(v, r4, RK.SPEED, WHITE6, 0.55, WHITE6, 0.3, 0.05 * s, 0.1, 6);
         break;
       }
       case "iceshard": {
@@ -90665,6 +90734,36 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     return EBLADE;
   }
+  var ICEBLADE = null;
+  function iceBladeGeo() {
+    if (ICEBLADE) return ICEBLADE;
+    const parts = [];
+    const main2 = new three_module_exports.OctahedronGeometry(1, 0);
+    main2.scale(0.54, 0.075, 0.03);
+    main2.translate(0.54, 0, 0);
+    parts.push(main2);
+    for (let i = 0; i < 7; i++) {
+      const t = 0.18 + i * 0.12, side = i % 2 ? 1 : -1;
+      const sp = new three_module_exports.ConeGeometry(0.025, 0.12 + i % 3 * 0.04, 4);
+      sp.rotateZ(-side * (Math.PI / 2 - 0.5));
+      sp.translate(t, side * 0.07, 0);
+      parts.push(sp);
+    }
+    let n = 0;
+    for (const g of parts) n += (g.index ? g.toNonIndexed() : g).attributes.position.count;
+    const pos = new Float32Array(n * 3);
+    let o = 0;
+    for (let g of parts) {
+      if (g.index) g = g.toNonIndexed();
+      pos.set(g.attributes.position.array, o);
+      o += g.attributes.position.array.length;
+    }
+    ICEBLADE = new three_module_exports.BufferGeometry();
+    ICEBLADE.setAttribute("position", new three_module_exports.BufferAttribute(pos, 3));
+    ICEBLADE.computeVertexNormals();
+    ICEBLADE.userData.shared = true;
+    return ICEBLADE;
+  }
   var HeldWeapon = class {
     constructor(kind, opts = {}) {
       this.kind = kind;
@@ -90686,6 +90785,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         this.core = new three_module_exports.Mesh(energyBladeGeo(), glowMaterial("#ffffff", 0.9));
         this.core.scale.set(0.95, 0.4, 0.6);
         this.mesh.add(this.core);
+        if (/^#(b3e5fc|e1f5fe|81d4fa)$/i.test(opts.color || "")) {
+          const crystal2 = new three_module_exports.Mesh(iceBladeGeo(), glowMaterial("#e8f7ff", 0.55));
+          this.mesh.add(crystal2);
+          this.mesh.material.opacity = 0.45;
+        }
         this.group.add(this.mesh);
         return;
       }
