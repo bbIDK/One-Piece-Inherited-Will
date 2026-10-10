@@ -7,7 +7,7 @@ import { T, IS_LIQUID, OVERLAY, PALETTE } from '../world/tiles.js';
 import { CHUNK, DECK_Y, DOCK_Y, WALL_H, HeightField } from './height.js';
 import { toonGradient } from './materials.js';
 import { FOG } from './fog.js';
-import { dockDetails } from './props/docks.js';
+import { dockDetails, dockPalette } from './props/docks.js';
 import { vcMat } from './props/mats.js';
 
 const NEAR_R = 6; // chunks of full detail around the camera
@@ -38,6 +38,7 @@ export class TerrainManager {
     this.material = terrainMaterial();
     this.uOrigin = this.material.userData.uOrigin;
     this.deckMat = new THREE.MeshToonMaterial({ color: 0x9a6a3c, gradientMap: toonGradient() });
+    this.deckMats = new Map();
     this.postMat = new THREE.MeshToonMaterial({ color: 0x5d4030, gradientMap: toonGradient() });
     this.wallMat = new THREE.MeshToonMaterial({ color: 0x8a7f70, gradientMap: toonGradient() });
     this.world = null;
@@ -53,6 +54,14 @@ export class TerrainManager {
   }
 
   /** Fast graphics draws less terrain detail nearby. */
+  /** The deck material for a chunk: its island's dock timber (props/docks.js dockPalette), shared per colour. */
+  deckMatFor(world, x0, y0) {
+    const col = dockPalette(world, x0 + CHUNK / 2, y0 + CHUNK / 2).deck;
+    let m = this.deckMats.get(col);
+    if (!m) { m = this.deckMat.clone(); m.color.setHex(col); this.deckMats.set(col, m); }
+    return m;
+  }
+
   setDetail(q) {
     this.quality = q;
     this.nearR = q === 'low' ? 4 : NEAR_R;
@@ -364,8 +373,8 @@ export class TerrainManager {
       if (m) root.add(m);
       return;
     }
-    if (decks.length) root.add(deckBoxes(decks, x0, y0, (i, j) => w.type(i, j) === T.BRIDGE, (cx, cy) => hf.deckCorner(cx, cy), this.deckMat));
-    if (piers.length) root.add(boxes(piers, 1, 0.26, 1, DOCK_Y - 0.13, this.deckMat));
+    if (decks.length) root.add(deckBoxes(decks, x0, y0, (i, j) => w.type(i, j) === T.BRIDGE, (cx, cy) => hf.deckCorner(cx, cy), this.deckMatFor(w, x0, y0)));
+    if (piers.length) root.add(boxes(piers, 1, 0.26, 1, DOCK_Y - 0.13, this.deckMatFor(w, x0, y0)));
     if (posts.length) root.add(boxes(posts, 0.22, 3.2, 0.22, DECK_Y - 1.7, this.postMat, 0.15, postSpans));
     if (walls.length) {
       const m = boxes(walls, 1, WALL_H, 1, 0.4 + WALL_H / 2, this.wallMat, 0, spans);

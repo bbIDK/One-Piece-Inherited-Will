@@ -18,12 +18,42 @@ import { vcMat } from './mats.js';
 import { T, IS_LIQUID, OVERLAY } from '../../world/tiles.js';
 import { DECK_Y, DOCK_Y, WALL_H, CHUNK, HIGH_DECK } from '../height.js';
 
-const SEAM = '#5d4030', TRIM = '#6d4c33', PILE = '#5a3e2b', ROPE = '#c8b89a', IRON = '#2e2a28';
+let SEAM = '#5d4030', TRIM = '#6d4c33', PILE = '#5a3e2b', ROPE = '#c8b89a', IRON = '#2e2a28';
+// Each island's docks are its own: built of what's to hand there and kept the
+// way its people keep things — sea-silvered planks in a fishing village, tarred
+// black timber in the snow, lacquered red posts in Wano, sandstone-pale wood in
+// the desert, painted white in the sky — so no two harbours look stamped out
+// of one mould. (The deck's own colour goes with it: see dockPalette.deck.)
+const PALETTES = {
+  oak: { seam: '#5d4030', trim: '#6d4c33', pile: '#5a3e2b', rope: '#c8b89a', iron: '#2e2a28', deck: 0x9a6a3c },
+  silver: { seam: '#55524c', trim: '#77716a', pile: '#5c5650', rope: '#cbbfa6', iron: '#3a3634', deck: 0x9b9184 },
+  tarred: { seam: '#2a221d', trim: '#3a2f28', pile: '#2e2622', rope: '#bfae8c', iron: '#24211f', deck: 0x5e4a3a },
+  lacquer: { seam: '#4a1a14', trim: '#8e2b22', pile: '#6a1f18', rope: '#e8d6a8', iron: '#2b2421', deck: 0x8a5a36 },
+  sand: { seam: '#8a6a44', trim: '#b08b5b', pile: '#8d6e4a', rope: '#ddc79c', iron: '#4a3a2c', deck: 0xc4a274 },
+  painted: { seam: '#b9b2a0', trim: '#ece6d6', pile: '#f2efe6', rope: '#d98fb0', iron: '#6b6f7a', deck: 0xd8cdb4 },
+  stained: { seam: '#2f241b', trim: '#3e2e22', pile: '#3a2c21', rope: '#bda986', iron: '#3a3f44', deck: 0x6e4c32 },
+};
+const BY_STYLE = { wano: 'lacquer', chinese: 'lacquer', desert: 'sand', snow: 'tarred', sky: 'painted', candy: 'painted', city: 'stained', noble: 'stained', marine: 'stained', future: 'stained', spooky: 'tarred' };
+/** The dock palette for the island nearest (x, y). */
+export function dockPalette(world, x, y) {
+  const isl = world.islandAt?.(x, y) || world.nearestIsland?.(x, y, 120);
+  if (!isl) return PALETTES.oak;
+  const style = isl.towns?.[0]?.style || isl.style;
+  if (BY_STYLE[style]) return PALETTES[BY_STYLE[style]];
+  if (isl.climate === 'snow' || isl.climate === 'polar') return PALETTES.tarred;
+  if (isl.climate === 'desert') return PALETTES.sand;
+  // (anywhere else, one of the everyday kinds, the same each time for the same island)
+  let h = 0;
+  for (const c of String(isl.id || isl.name || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return [PALETTES.oak, PALETTES.silver, PALETTES.oak, PALETTES.tarred, PALETTES.stained][h % 5];
+}
 const STEEL = '#8a9499', SLEEPER = '#5d4a3a';
 const STONE = ['#a39c90', '#978f83', '#9d968a'], COPING = '#b3ada2', WALLSTONE = '#857d71', WEED = '#4f5a44';
 
 /** A Mesh with the detail for chunk (x0, y0), or null when it has no decks, quays or walls. */
 export function dockDetails(world, x0, y0, size = CHUNK, hf = null) {
+  const pal = dockPalette(world, x0 + size / 2, y0 + size / 2);
+  SEAM = pal.seam; TRIM = pal.trim; PILE = pal.pile; ROPE = pal.rope; IRON = pal.iron;
   const k = new Mesher();
   const type = (i, j) => world.type(x0 + i, y0 + j);
   const water = (i, j) => { const t = type(i, j); return IS_LIQUID[t] && !OVERLAY[t]; };
