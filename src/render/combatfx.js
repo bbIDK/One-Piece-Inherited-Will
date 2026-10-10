@@ -19,6 +19,8 @@ export const ELEM = {
   physical: { c: '#ffffff', spark: ['#ffffff', '#fff8e1', '#ffe0b2'], kind: 'spark' },
   slash: { c: '#e3f2fd', spark: ['#ffffff', '#e3f2fd'], kind: 'spark' },
   fire: { c: '#ff7043', spark: ['#ffca28', '#ff7043', '#ff5722', '#fff176'], kind: 'fire', add: true },
+  // (the Phoenix's fire: blue, edged with gold)
+  bluefire: { c: '#4fc3f7', spark: ['#e0f7fa', '#4dd0e1', '#29b6f6', '#fff176'], kind: 'fire', add: true },
   bluefire: { c: '#4dd0e1', spark: ['#4dd0e1', '#80deea', '#e0f7fa'], kind: 'fire', add: true },
   magma: { c: '#ff5722', spark: ['#ff6f00', '#ffab40', '#bf360c'], kind: 'ember', add: true },
   ice: { c: '#81d4fa', spark: ['#e1f5fe', '#b3e5fc', '#ffffff'], kind: 'shard' },
@@ -39,6 +41,9 @@ export const ELEM = {
   swamp: { c: '#6d4c41', spark: ['#6d4c41', '#8d6e63'], kind: 'drop' },
 };
 const elemOf = (e) => ELEM[e] || ELEM.physical;
+/** An element as this attacker's power shows it (a Phoenix's fire burns blue). */
+const phoenixy = (actor, def) => (def?.id || '').startsWith('phoenix') || actor?.fruit === 'tori_phoenix';
+const elemFor = (e, actor, def) => (e === 'fire' && phoenixy(actor, def) ? ELEM.bluefire : elemOf(e));
 
 /** Each style's colour/effect language. */
 export const STYLE_FX = {
@@ -127,7 +132,7 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
   const game = fx.game;
   const final = o.final || 0, crit = !!o.crit, blocked = !!o.blocked, counter = !!o.counter;
   const elem = o.el || 'physical';
-  const E = elemOf(elem);
+  const E = elemFor(elem, att, h?.def);
   const ang = o.ang ?? 0;
   const def = h.def || (att && att.action ? att.action.def : null);
   const st = att && !h.sprite ? styleOf(def, att) : null;
@@ -693,7 +698,7 @@ const DEFAULTS = {
     const h = s.hit, def = a.def;
     const ang = hb.angle;
     const reach = actor.reach ?? 1;
-    const E = elemOf(h.element);
+    const E = elemFor(h.element, actor, def);
     const st = styleOf(def, actor);
     const col = s.color || h.color || (h.element && h.element !== 'physical' ? E.c : st ? st.trail : '#ffffff');
     const vfx = s.vfx || h.vfx;
@@ -715,7 +720,7 @@ const DEFAULTS = {
   proj(fx, actor, s, a) {
     const p = s.proj;
     const ang = a.angle + (s.angleOffset || 0);
-    const E = elemOf(p.element);
+    const E = elemFor(p.element, actor, a.def);
     const col = p.color || E.c;
     const gun = weaponFor(a.def, actor) === 'gun' || p.sprite === 'bullet';
     const hx = actor.x + Math.cos(ang) * 0.55, hy = actor.y + Math.sin(ang) * 0.4;
@@ -2133,7 +2138,7 @@ export function actorVisuals(actor, act, clip) {
   const elem = main.hit?.element || main.proj?.element || main.dash?.hit?.element || main.zone?.element || (elemBuff ? elemBuff.element : null);
   const sg = sigFor(def) || {};
   const st = styleOf(def, actor);
-  const E = elem ? elemOf(elem) : null;
+  const E = elem ? elemFor(elem, actor, def) : null;
   const k = t < w ? clamp01(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
   const trail = sg.trail || (E && elem !== 'physical' ? E.c : st ? st.trail : '#ffffff');
   const fxElem = sg.elem || (elem && elem !== 'physical' ? elem : st && st.elem) || null;
