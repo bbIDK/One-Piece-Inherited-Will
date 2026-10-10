@@ -627,7 +627,9 @@ class ActorView {
 
   labels(a, env, dist, s) {
     const idle = a.state === 'idle';
-    const name = a.showName && idle && dist < 36 ? (a.unmet ? '???' : a.name) : null;
+    // (no name tags over anyone — crewmates included: only the marks over
+    // their heads, and a health bar in a fight. You learn names by talking)
+    const name = null;
     // (a health bar over anyone hurt a moment ago, or in a fight with you or
     // your crew — not only for a few seconds after each blow; a boss has the
     // big bar at the top of the screen instead, while it's up for them)

@@ -203,7 +203,9 @@ export function makeNPC(def, x, y, extra = {}) {
   if (st) a.act3d = { pose: st, prop: null, h: 0, stance: true };
   if (def.hostile) a.aggroPlayer = true;
   // (a crew who keep to themselves till you start it, or their story does)
-  if (def.calm) a.calm = true;
+  // (and nobody the story sends you to — a Marine officer you're meant to
+  // talk to never jumps a pirate on sight: Fullbody on the Baratie)
+  if (def.calm || (def.story && !def.hostile && !def.boss)) a.calm = true;
   return a;
 }
 
