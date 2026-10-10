@@ -10900,8 +10900,8 @@
   function dust(fx, x, y, n, o = {}) {
     fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU5, speed: o.speed ?? 2.2, z: o.z ?? 0.08, vz: o.vz ?? 0.6, g: 1.2, life: o.life ?? 0.5, size: o.size ?? 0.17, grow: o.grow ?? 0.3, color: o.color || ["#d7ccc8", "#bcaaa4", "#efebe9"], kind: "dust", drag: 3 });
   }
-  function glow(fx, x, y, z, size, color, life2 = 0.2) {
-    fx.particle({ x, y, z, size, color, kind: "glow", life: life2, g: 0, drag: 0, vz: 0, add: true });
+  function glow(fx, x, y, z, size2, color, life2 = 0.2) {
+    fx.particle({ x, y, z, size: size2, color, kind: "glow", life: life2, g: 0, drag: 0, vz: 0, add: true });
   }
   function flames(fx, x, y, z, n, cols, o = {}) {
     fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU5, speed: o.speed ?? 2, z, vz: o.vz ?? 2.4, g: -2.5, life: o.life ?? 0.5, size: o.size ?? 0.2, grow: -0.15, color: cols, kind: "fire", drag: 3 });
@@ -11153,26 +11153,26 @@
     const w = fx.game.world;
     return a === p ? 0 : w ? w.distance(p.x, p.y, a.x, a.y) : Math.hypot(a.x - p.x, a.y - p.y);
   }
-  function calloutOver(fx, a, lift, str, col2, size) {
+  function calloutOver(fx, a, lift, str, col2, size2) {
     const p = ownEyes(fx);
-    if (!p) return fx.callout(a.x, a.y - lift, str, col2, size);
+    if (!p) return fx.callout(a.x, a.y - lift, str, col2, size2);
     if (fromPlayer(fx, p, a) < 3) {
       const [x, y, z2] = inView(fx, 2.6, 0.12);
-      return fx.callout(x, y, str, col2, size, { z: z2 });
+      return fx.callout(x, y, str, col2, size2, { z: z2 });
     }
     const v = fx.game.view3d, s = a.look && a.look.scale || 1;
     let z = 1.6 + lift;
     while (z > 1.1 * s && v.project(a.x, a.y, z)[1] < v.proj.ch * 0.3) z -= 0.1;
-    return fx.callout(a.x, a.y, str, col2, size, { z });
+    return fx.callout(a.x, a.y, str, col2, size2, { z });
   }
-  function soundOn(fx, a, x, y, str, col2, size, o) {
+  function soundOn(fx, a, x, y, str, col2, size2, o) {
     const p = ownEyes(fx);
     const d = p ? fromPlayer(fx, p, a) : Infinity;
     if (d < 3) {
       const at4 = a === p ? inView(fx, 2, -0.42, -0.25) : inView(fx, 2.4, -0.12, 0.2);
-      return fx.sfx?.(at4[0], at4[1], str, col2, size, { ...o, z: at4[2] });
+      return fx.sfx?.(at4[0], at4[1], str, col2, size2, { ...o, z: at4[2] });
     }
-    return fx.sfx?.(x, y, str, col2, size, o);
+    return fx.sfx?.(x, y, str, col2, size2, o);
   }
   function blockFx(fx, tgt, ang, w, z) {
     const fa = ang + Math.PI;
@@ -21948,16 +21948,16 @@
     return d;
   }
   function shipClassLine(d) {
-    const size = d.length < 5 ? "Boat" : d.length < 26 ? "Small ship" : d.length < 40 ? "Ship" : d.length < 56 ? "Big ship" : "Great ship";
+    const size2 = d.length < 5 ? "Boat" : d.length < 26 ? "Small ship" : d.length < 40 ? "Ship" : d.length < 56 ? "Big ship" : "Great ship";
     const rig = d.masts ? `${d.masts} mast${d.masts > 1 ? "s" : ""}` : "oars";
-    return `${size} \xB7 ${d.length} m \xB7 ${rig}`;
+    return `${size2} \xB7 ${d.length} m \xB7 ${rig}`;
   }
 
   // src/render/ship.js
   var TAU7 = Math.PI * 2;
-  function drawJollyRoger(g, jr = {}, size = 1, bg = "#111") {
+  function drawJollyRoger(g, jr = {}, size2 = 1, bg = "#111") {
     g.save();
-    g.scale(size, size);
+    g.scale(size2, size2);
     const fg = jr.color || "#f5f6fa";
     const accC = jr.acc || jr.accColor || "#c0392b";
     const disc2 = (x, y, r4) => {
@@ -22241,9 +22241,9 @@
     }
     g.restore();
   }
-  function drawMarineEmblem(g, size = 1) {
+  function drawMarineEmblem(g, size2 = 1) {
     g.save();
-    g.scale(size, size);
+    g.scale(size2, size2);
     g.strokeStyle = "#2874a6";
     g.fillStyle = "#2874a6";
     g.lineCap = "round";
@@ -32018,8 +32018,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return this;
     }
-    setFromCenterAndSize(center, size) {
-      const halfSize = _vector$b.copy(size).multiplyScalar(0.5);
+    setFromCenterAndSize(center, size2) {
+      const halfSize = _vector$b.copy(size2).multiplyScalar(0.5);
       this.min.copy(center).sub(halfSize);
       this.max.copy(center).add(halfSize);
       return this;
@@ -34642,15 +34642,15 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       } else if (m = /^\#([A-Fa-f\d]+)$/.exec(style)) {
         const hex3 = m[1];
-        const size = hex3.length;
-        if (size === 3) {
+        const size2 = hex3.length;
+        if (size2 === 3) {
           return this.setRGB(
             parseInt(hex3.charAt(0), 16) / 15,
             parseInt(hex3.charAt(1), 16) / 15,
             parseInt(hex3.charAt(2), 16) / 15,
             colorSpace
           );
-        } else if (size === 6) {
+        } else if (size2 === 6) {
           return this.setHex(parseInt(hex3, 16), colorSpace);
         } else {
           console.warn("THREE.Color: Invalid hex color " + style);
@@ -37004,10 +37004,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     }
   };
   var WebGLCubeRenderTarget = class extends WebGLRenderTarget {
-    constructor(size = 1, options = {}) {
-      super(size, size, options);
+    constructor(size2 = 1, options = {}) {
+      super(size2, size2, options);
       this.isWebGLCubeRenderTarget = true;
-      const image = { width: size, height: size, depth: 1 };
+      const image = { width: size2, height: size2, depth: 1 };
       const images = [image, image, image, image, image, image];
       this.texture = new CubeTexture(images, options.mapping, options.wrapS, options.wrapT, options.magFilter, options.minFilter, options.format, options.type, options.anisotropy, options.colorSpace);
       this.texture.isRenderTargetTexture = true;
@@ -37330,7 +37330,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     function createBuffer(attribute, bufferType) {
       const array = attribute.array;
       const usage = attribute.usage;
-      const size = array.byteLength;
+      const size2 = array.byteLength;
       const buffer = gl.createBuffer();
       gl.bindBuffer(bufferType, buffer);
       gl.bufferData(bufferType, array, usage);
@@ -37364,7 +37364,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         type,
         bytesPerElement: array.BYTES_PER_ELEMENT,
         version: attribute.version,
-        size
+        size: size2
       };
     }
     function updateBuffer(buffer, attribute, bufferType) {
@@ -38541,11 +38541,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         }
       }
     }
-    function vertexAttribPointer(index, size, type, normalized, stride, offset, integer) {
+    function vertexAttribPointer(index, size2, type, normalized, stride, offset, integer) {
       if (integer === true) {
-        gl.vertexAttribIPointer(index, size, type, stride, offset);
+        gl.vertexAttribIPointer(index, size2, type, stride, offset);
       } else {
-        gl.vertexAttribPointer(index, size, type, normalized, stride, offset);
+        gl.vertexAttribPointer(index, size2, type, normalized, stride, offset);
       }
     }
     function setupVertexAttributes(object, material2, program2, geometry) {
@@ -38563,7 +38563,7 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           }
           if (geometryAttribute !== void 0) {
             const normalized = geometryAttribute.normalized;
-            const size = geometryAttribute.itemSize;
+            const size2 = geometryAttribute.itemSize;
             const attribute = attributes.get(geometryAttribute);
             if (attribute === void 0) continue;
             const buffer = attribute.buffer;
@@ -38590,11 +38590,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
               for (let i = 0; i < programAttribute.locationSize; i++) {
                 vertexAttribPointer(
                   programAttribute.location + i,
-                  size / programAttribute.locationSize,
+                  size2 / programAttribute.locationSize,
                   type,
                   normalized,
                   stride * bytesPerElement,
-                  (offset + size / programAttribute.locationSize * i) * bytesPerElement,
+                  (offset + size2 / programAttribute.locationSize * i) * bytesPerElement,
                   integer
                 );
               }
@@ -38615,11 +38615,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
               for (let i = 0; i < programAttribute.locationSize; i++) {
                 vertexAttribPointer(
                   programAttribute.location + i,
-                  size / programAttribute.locationSize,
+                  size2 / programAttribute.locationSize,
                   type,
                   normalized,
-                  size * bytesPerElement,
-                  size / programAttribute.locationSize * i * bytesPerElement,
+                  size2 * bytesPerElement,
+                  size2 / programAttribute.locationSize * i * bytesPerElement,
                   integer
                 );
               }
@@ -39274,8 +39274,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           cubeCamera.up.set(0, upSign[i], 0);
           cubeCamera.lookAt(0, 0, forwardSign[i]);
         }
-        const size = this._cubeSize;
-        _setViewport(cubeUVRenderTarget, col2 * size, i > 2 ? size : 0, size, size);
+        const size2 = this._cubeSize;
+        _setViewport(cubeUVRenderTarget, col2 * size2, i > 2 ? size2 : 0, size2, size2);
         renderer.setRenderTarget(cubeUVRenderTarget);
         if (useSolidColor) {
           renderer.render(backgroundBox, cubeCamera);
@@ -39305,8 +39305,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       const mesh = new Mesh(this._lodPlanes[0], material2);
       const uniforms = material2.uniforms;
       uniforms["envMap"].value = texture2;
-      const size = this._cubeSize;
-      _setViewport(cubeUVRenderTarget, 0, 0, 3 * size, 2 * size);
+      const size2 = this._cubeSize;
+      _setViewport(cubeUVRenderTarget, 0, 0, 3 * size2, 2 * size2);
       renderer.setRenderTarget(cubeUVRenderTarget);
       renderer.render(mesh, _flatCamera);
     }
@@ -46077,10 +46077,10 @@ void main() {
       const bindingPointIndex = allocateBindingPointIndex();
       uniformsGroup.__bindingPointIndex = bindingPointIndex;
       const buffer = gl.createBuffer();
-      const size = uniformsGroup.__size;
+      const size2 = uniformsGroup.__size;
       const usage = uniformsGroup.usage;
       gl.bindBuffer(gl.UNIFORM_BUFFER, buffer);
-      gl.bufferData(gl.UNIFORM_BUFFER, size, usage);
+      gl.bufferData(gl.UNIFORM_BUFFER, size2, usage);
       gl.bindBuffer(gl.UNIFORM_BUFFER, null);
       gl.bindBufferBase(gl.UNIFORM_BUFFER, bindingPointIndex, buffer);
       return buffer;
@@ -48569,12 +48569,12 @@ void main() {
       return new _Skeleton(this.bones, this.boneInverses);
     }
     computeBoneTexture() {
-      let size = Math.sqrt(this.bones.length * 4);
-      size = Math.ceil(size / 4) * 4;
-      size = Math.max(size, 4);
-      const boneMatrices = new Float32Array(size * size * 4);
+      let size2 = Math.sqrt(this.bones.length * 4);
+      size2 = Math.ceil(size2 / 4) * 4;
+      size2 = Math.max(size2, 4);
+      const boneMatrices = new Float32Array(size2 * size2 * 4);
       boneMatrices.set(this.boneMatrices);
-      const boneTexture = new DataTexture(boneMatrices, size, size, RGBAFormat, FloatType);
+      const boneTexture = new DataTexture(boneMatrices, size2, size2, RGBAFormat, FloatType);
       boneTexture.needsUpdate = true;
       this.boneMatrices = boneMatrices;
       this.boneTexture = boneTexture;
@@ -48886,25 +48886,25 @@ void main() {
       this._initIndirectTexture();
     }
     _initMatricesTexture() {
-      let size = Math.sqrt(this._maxInstanceCount * 4);
-      size = Math.ceil(size / 4) * 4;
-      size = Math.max(size, 4);
-      const matricesArray = new Float32Array(size * size * 4);
-      const matricesTexture = new DataTexture(matricesArray, size, size, RGBAFormat, FloatType);
+      let size2 = Math.sqrt(this._maxInstanceCount * 4);
+      size2 = Math.ceil(size2 / 4) * 4;
+      size2 = Math.max(size2, 4);
+      const matricesArray = new Float32Array(size2 * size2 * 4);
+      const matricesTexture = new DataTexture(matricesArray, size2, size2, RGBAFormat, FloatType);
       this._matricesTexture = matricesTexture;
     }
     _initIndirectTexture() {
-      let size = Math.sqrt(this._maxInstanceCount);
-      size = Math.ceil(size);
-      const indirectArray = new Uint32Array(size * size);
-      const indirectTexture = new DataTexture(indirectArray, size, size, RedIntegerFormat, UnsignedIntType);
+      let size2 = Math.sqrt(this._maxInstanceCount);
+      size2 = Math.ceil(size2);
+      const indirectArray = new Uint32Array(size2 * size2);
+      const indirectTexture = new DataTexture(indirectArray, size2, size2, RedIntegerFormat, UnsignedIntType);
       this._indirectTexture = indirectTexture;
     }
     _initColorsTexture() {
-      let size = Math.sqrt(this._maxInstanceCount);
-      size = Math.ceil(size);
-      const colorsArray = new Float32Array(size * size * 4).fill(1);
-      const colorsTexture = new DataTexture(colorsArray, size, size, RGBAFormat, FloatType);
+      let size2 = Math.sqrt(this._maxInstanceCount);
+      size2 = Math.ceil(size2);
+      const colorsArray = new Float32Array(size2 * size2 * 4).fill(1);
+      const colorsTexture = new DataTexture(colorsArray, size2, size2, RGBAFormat, FloatType);
       colorsTexture.colorSpace = ColorManagement.workingColorSpace;
       this._colorsTexture = colorsTexture;
     }
@@ -52152,9 +52152,9 @@ void main() {
           const ahole = holes[h2];
           vertices = vertices.concat(ahole);
         }
-        function scalePt2(pt, vec, size) {
+        function scalePt2(pt, vec, size2) {
           if (!vec) console.error("THREE.ExtrudeGeometry: vec does not exist");
-          return pt.clone().addScaledVector(vec, size);
+          return pt.clone().addScaledVector(vec, size2);
         }
         const vlen = vertices.length, flen = faces.length;
         function getBevelVec(inPt, inPrev, inNext) {
@@ -54872,7 +54872,7 @@ void main() {
             return response;
           }
           const callbacks = loading[url];
-          const reader = response.body.getReader();
+          const reader2 = response.body.getReader();
           const contentLength = response.headers.get("X-File-Size") || response.headers.get("Content-Length");
           const total = contentLength ? parseInt(contentLength) : 0;
           const lengthComputable = total !== 0;
@@ -54881,7 +54881,7 @@ void main() {
             start(controller) {
               readData();
               function readData() {
-                reader.read().then(({ done: done6, value }) => {
+                reader2.read().then(({ done: done6, value }) => {
                   if (done6) {
                     controller.close();
                   } else {
@@ -59035,8 +59035,8 @@ void main() {
       }
       return this;
     }
-    setFromCenterAndSize(center, size) {
-      const halfSize = _vector$4.copy(size).multiplyScalar(0.5);
+    setFromCenterAndSize(center, size2) {
+      const halfSize = _vector$4.copy(size2).multiplyScalar(0.5);
       this.min.copy(center).sub(halfSize);
       this.max.copy(center).add(halfSize);
       return this;
@@ -59358,14 +59358,14 @@ void main() {
   var _color1 = /* @__PURE__ */ new Color();
   var _color2 = /* @__PURE__ */ new Color();
   var HemisphereLightHelper = class extends Object3D {
-    constructor(light, size, color) {
+    constructor(light, size2, color) {
       super();
       this.light = light;
       this.matrix = light.matrixWorld;
       this.matrixAutoUpdate = false;
       this.color = color;
       this.type = "HemisphereLightHelper";
-      const geometry = new OctahedronGeometry(size);
+      const geometry = new OctahedronGeometry(size2);
       geometry.rotateY(Math.PI * 0.5);
       this.material = new MeshBasicMaterial({ wireframe: true, fog: false, toneMapped: false });
       if (this.color === void 0) this.material.vertexColors = true;
@@ -59398,12 +59398,12 @@ void main() {
     }
   };
   var GridHelper = class extends LineSegments {
-    constructor(size = 10, divisions = 10, color1 = 4473924, color2 = 8947848) {
+    constructor(size2 = 10, divisions = 10, color1 = 4473924, color2 = 8947848) {
       color1 = new Color(color1);
       color2 = new Color(color2);
       const center = divisions / 2;
-      const step2 = size / divisions;
-      const halfSize = size / 2;
+      const step2 = size2 / divisions;
+      const halfSize = size2 / 2;
       const vertices = [], colors = [];
       for (let i = 0, j = 0, k = -halfSize; i <= divisions; i++, k += step2) {
         vertices.push(-halfSize, 0, k, halfSize, 0, k);
@@ -59480,30 +59480,30 @@ void main() {
   var _v2 = /* @__PURE__ */ new Vector3();
   var _v3 = /* @__PURE__ */ new Vector3();
   var DirectionalLightHelper = class extends Object3D {
-    constructor(light, size, color) {
+    constructor(light, size2, color) {
       super();
       this.light = light;
       this.matrix = light.matrixWorld;
       this.matrixAutoUpdate = false;
       this.color = color;
       this.type = "DirectionalLightHelper";
-      if (size === void 0) size = 1;
+      if (size2 === void 0) size2 = 1;
       let geometry = new BufferGeometry();
       geometry.setAttribute("position", new Float32BufferAttribute([
-        -size,
-        size,
+        -size2,
+        size2,
         0,
-        size,
-        size,
+        size2,
+        size2,
         0,
-        size,
-        -size,
+        size2,
+        -size2,
         0,
-        -size,
-        -size,
+        -size2,
+        -size2,
         0,
-        -size,
-        size,
+        -size2,
+        size2,
         0
       ], 3));
       const material2 = new LineBasicMaterial({ fog: false, toneMapped: false });
@@ -59794,7 +59794,7 @@ void main() {
     }
   };
   var PlaneHelper = class extends Line {
-    constructor(plane2, size = 1, hex3 = 16776960) {
+    constructor(plane2, size2 = 1, hex3 = 16776960) {
       const color = hex3;
       const positions = [1, -1, 0, -1, 1, 0, -1, -1, 0, 1, 1, 0, -1, 1, 0, -1, -1, 0, 1, -1, 0, 1, 1, 0];
       const geometry = new BufferGeometry();
@@ -59803,7 +59803,7 @@ void main() {
       super(geometry, new LineBasicMaterial({ color, toneMapped: false }));
       this.type = "PlaneHelper";
       this.plane = plane2;
-      this.size = size;
+      this.size = size2;
       const positions2 = [1, 1, 0, -1, 1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, 1, -1, 0];
       const geometry2 = new BufferGeometry();
       geometry2.setAttribute("position", new Float32BufferAttribute(positions2, 3));
@@ -59884,26 +59884,26 @@ void main() {
     }
   };
   var AxesHelper = class extends LineSegments {
-    constructor(size = 1) {
+    constructor(size2 = 1) {
       const vertices = [
         0,
         0,
         0,
-        size,
+        size2,
         0,
         0,
         0,
         0,
         0,
         0,
-        size,
+        size2,
         0,
         0,
         0,
         0,
         0,
         0,
-        size
+        size2
       ];
       const colors = [
         1,
@@ -61222,9 +61222,9 @@ void main() {
       this.renderer = renderer;
       this._pixelRatio = renderer.getPixelRatio();
       if (renderTarget === void 0) {
-        const size = renderer.getSize(new Vector2());
-        this._width = size.width;
-        this._height = size.height;
+        const size2 = renderer.getSize(new Vector2());
+        this._width = size2.width;
+        this._height = size2.height;
         renderTarget = new WebGLRenderTarget(this._width * this._pixelRatio, this._height * this._pixelRatio, { type: HalfFloatType });
         renderTarget.texture.name = "EffectComposer.rt1";
       } else {
@@ -61302,10 +61302,10 @@ void main() {
     }
     reset(renderTarget) {
       if (renderTarget === void 0) {
-        const size = this.renderer.getSize(new Vector2());
+        const size2 = this.renderer.getSize(new Vector2());
         this._pixelRatio = this.renderer.getPixelRatio();
-        this._width = size.width;
-        this._height = size.height;
+        this._width = size2.width;
+        this._height = size2.height;
         renderTarget = this.renderTarget1.clone();
         renderTarget.setSize(this._width * this._pixelRatio, this._height * this._pixelRatio);
       }
@@ -62254,7 +62254,7 @@ void main() {
     constructor(renderer, scene, camera, { lite = false } = {}) {
       this.kind = lite ? "lite" : "full";
       this.renderer = renderer;
-      const size = renderer.getDrawingBufferSize(new Vector2());
+      const size2 = renderer.getDrawingBufferSize(new Vector2());
       this.composer = new EffectComposer(renderer);
       if (lite) {
         this.renderPass = new RenderPass(scene, camera);
@@ -62262,7 +62262,7 @@ void main() {
       } else {
         this.scenePass = new SceneInkPass(scene, camera);
         this.composer.addPass(this.scenePass);
-        this.bloom = new UnrealBloomPass(new Vector2(size.x, size.y), 0.32, 0.55, 0.92);
+        this.bloom = new UnrealBloomPass(new Vector2(size2.x, size2.y), 0.32, 0.55, 0.92);
         this.composer.addPass(this.bloom);
       }
       this.composer.addPass(new OutputPass());
@@ -62878,7 +62878,7 @@ void main() {
   var COPING = "#b3ada2";
   var WALLSTONE = "#857d71";
   var WEED = "#4f5a44";
-  function dockDetails(world, x0, y0, size = CHUNK, hf = null) {
+  function dockDetails(world, x0, y0, size2 = CHUNK, hf = null) {
     const k = new Mesher();
     const type = (i, j) => world.type(x0 + i, y0 + j);
     const water3 = (i, j) => {
@@ -62891,8 +62891,8 @@ void main() {
     const wall = (i, j) => type(i, j) === T2.WALL;
     const floor2 = (x, z) => hf ? hf.terrain(x0 + x, y0 + z) : -3;
     let any = false;
-    for (let j = 0; j < size; j++) {
-      for (let i = 0; i < size; i++) {
+    for (let j = 0; j < size2; j++) {
+      for (let i = 0; i < size2; i++) {
         const t = type(i, j);
         if (OVERLAY[t]) {
           any = true;
@@ -68847,20 +68847,20 @@ ${GLSL}
     t.clearRect(0, 0, px2, px2);
     return s;
   }
-  function mk(size) {
+  function mk(size2) {
     const dpr = typeof devicePixelRatio === "number" && devicePixelRatio || 1;
     const res = Math.max(2, Math.min(3, Math.ceil(dpr)));
-    const px2 = Math.max(8, Math.round(size * res));
+    const px2 = Math.max(8, Math.round(size2 * res));
     const c = document.createElement("canvas");
     c.width = c.height = px2;
-    c.style.width = c.style.height = size + "px";
+    c.style.width = c.style.height = size2 + "px";
     const g = c.getContext("2d", CTX);
     const k = px2 / U2;
     g.setTransform(k, 0, 0, k, 0, 0);
     g.lineJoin = "round";
     g.lineCap = "round";
-    const olPx = Math.min(2.1, Math.max(1, 0.7 + size * 0.0145));
-    return { c, g, k, px: px2, size, res, small: size <= 28, ol: olPx * U2 / size, rimPx: Math.min(1.5, Math.max(0.65, size * 0.019)) * res, post: [] };
+    const olPx = Math.min(2.1, Math.max(1, 0.7 + size2 * 0.0145));
+    return { c, g, k, px: px2, size: size2, res, small: size2 <= 28, ol: olPx * U2 / size2, rimPx: Math.min(1.5, Math.max(0.65, size2 * 0.019)) * res, post: [] };
   }
   function lsc(I2) {
     const m = I2.g.getTransform();
@@ -69071,16 +69071,16 @@ ${GLSL}
     }
     g.restore();
   }
-  function render(key2, size, draw2, opts = {}) {
-    size = Math.max(8, Math.round(size || 48));
-    const ck = key2 + "@" + size;
+  function render(key2, size2, draw2, opts = {}) {
+    size2 = Math.max(8, Math.round(size2 || 48));
+    const ck = key2 + "@" + size2;
     let c = cache.get(ck);
     if (c) return c;
-    const I2 = mk(size);
+    const I2 = mk(size2);
     if (opts.bold) {
       I2.ol *= opts.bold;
       I2.rimPx *= opts.bold;
-      I2.small = I2.small || size <= 48;
+      I2.small = I2.small || size2 <= 48;
     }
     try {
       draw2(I2);
@@ -69092,7 +69092,7 @@ ${GLSL}
       I2.post = [];
       D.pouch(I2, {});
     }
-    if (opts.rim !== false) rim(I2, opts.rimPx ?? I2.rimPx, opts.halo === false ? 0 : Math.max(0.7, size * 0.014) * I2.res);
+    if (opts.rim !== false) rim(I2, opts.rimPx ?? I2.rimPx, opts.halo === false ? 0 : Math.max(0.7, size2 * 0.014) * I2.res);
     for (const [fn, behind, m] of I2.post) {
       const g = I2.g;
       g.save();
@@ -73281,23 +73281,23 @@ ${GLSL}
     part2(I2, star(32, 32, 4, 19, 5), "#8e2f2a", { sd: 1, hd: 0.8, ol: I2.ol * 0.7 });
     fl(I2, circle(32, 32, 2.4), C2.gold);
   };
-  function itemIcon(idOrDef, size = 48) {
+  function itemIcon(idOrDef, size2 = 48) {
     const isStr = typeof idOrDef === "string";
     const d = isStr ? ITEMS[idOrDef] : idOrDef;
     const id = isStr ? idOrDef : idOfDef(d);
     const key2 = "item:" + (id || `${d?.type || "?"}/${d?.name || "?"}`);
-    const hit = cache.get(key2 + "@" + Math.max(8, Math.round(size || 48)));
+    const hit = cache.get(key2 + "@" + Math.max(8, Math.round(size2 || 48)));
     if (hit) return hit;
     const r4 = resolveItem(id, d);
     const fn = D[r4.fn] ? r4.fn : "pouch";
-    return render(key2, size, (I2) => D[fn](I2, { ...r4.o, def: d, id }), { tag: fn, fallback: r4.fallback || fn !== r4.fn });
+    return render(key2, size2, (I2) => D[fn](I2, { ...r4.o, def: d, id }), { tag: fn, fallback: r4.fallback || fn !== r4.fn });
   }
-  function skillIcon(def, size = 48) {
+  function skillIcon(def, size2 = 48) {
     const key2 = "skill:" + (def?.id || def?.name || "?");
-    const hit = cache.get(key2 + "@" + Math.max(8, Math.round(size || 48)));
+    const hit = cache.get(key2 + "@" + Math.max(8, Math.round(size2 || 48)));
     if (hit) return hit;
     const r4 = resolveSkill(def);
-    return render(key2, size, (I2) => {
+    return render(key2, size2, (I2) => {
       const c = skillBadge(I2, r4.badge);
       clip(I2, circle(32, 32, WIN3 + 0.4), () => {
         if (r4.o.aura) fl(I2, circle(32, 34, 22), rg(I2, 32, 34, 24, [[0, fade(r4.o.aura === true ? "#c9a0ff" : r4.o.aura, 0.8)], [1, fade(r4.o.aura === true ? "#c9a0ff" : r4.o.aura, 0)]]));
@@ -73314,9 +73314,9 @@ ${GLSL}
       }
     }, { tag: r4.motif, halo: false });
   }
-  function uiIcon(name, size = 32) {
+  function uiIcon(name, size2 = 32) {
     const fn = UI[name];
-    return render("ui:" + name, size, (I2) => (fn || UI.compass)(I2), { tag: fn ? name : "compass", fallback: !fn, bold: 1.2 });
+    return render("ui:" + name, size2, (I2) => (fn || UI.compass)(I2), { tag: fn ? name : "compass", fallback: !fn, bold: 1.2 });
   }
   var urls = /* @__PURE__ */ new WeakMap();
   function iconURL(canvas2) {
@@ -77848,11 +77848,11 @@ ${GLSL}
     }
     cells2.delete(h2.key);
   }
-  function viewDist(x0, y0, size) {
+  function viewDist(x0, y0, size2) {
     const w = VIEW.world;
     if (!w) return 0;
     const dx = w.dx(VIEW.x, x0), dy = y0 - VIEW.y;
-    const nx = Math.max(dx, Math.min(0, dx + size)), ny = Math.max(dy, Math.min(0, dy + size));
+    const nx = Math.max(dx, Math.min(0, dx + size2)), ny = Math.max(dy, Math.min(0, dy + size2));
     return Math.hypot(nx, ny);
   }
   function cellFor(o, ctx, parent) {
@@ -81970,8 +81970,8 @@ ${GLSL}
     }
     return m;
   }
-  function dynAttr(n, size, instanced2, Arr = Float32Array) {
-    const a = instanced2 ? new InstancedBufferAttribute(new Arr(n * size), size) : new BufferAttribute(new Arr(n * size), size);
+  function dynAttr(n, size2, instanced2, Arr = Float32Array) {
+    const a = instanced2 ? new InstancedBufferAttribute(new Arr(n * size2), size2) : new BufferAttribute(new Arr(n * size2), size2);
     a.setUsage(DynamicDrawUsage);
     a.vfxRange = { start: 0, count: 0 };
     return a;
@@ -82269,16 +82269,16 @@ ${GLSL}
      * alpha, core colour and additive weight (0 covers … 1 adds light), screen
      * rotation, seed, age (0..1). Returns its index (for vel()), or -1 when full.
      */
-    put(kind, x, y, z, size, c, alpha2, c2, w, rot = 0, seed = 0, k = 0) {
+    put(kind, x, y, z, size2, c, alpha2, c2, w, rot = 0, seed = 0, k = 0) {
       const i = this.n;
-      if (i >= this.max || !(alpha2 > 3e-3) || !(size > 1e-3)) return -1;
+      if (i >= this.max || !(alpha2 > 3e-3) || !(size2 > 1e-3)) return -1;
       this.n++;
       const o = i * 4;
       const P6 = this.P, C3 = this.C, C22 = this.C2, R5 = this.R, V5 = this.V;
       P6[o] = x;
       P6[o + 1] = y;
       P6[o + 2] = z;
-      P6[o + 3] = size;
+      P6[o + 3] = size2;
       C3[o] = c[0];
       C3[o + 1] = c[1];
       C3[o + 2] = c[2];
@@ -83838,9 +83838,9 @@ ${GLSL}
         const z = s.z ?? 0.4;
         if (v.onSelf(s, z)) return;
         const X2 = v.lx(s.x), Z2 = v.lz(s.y), Y2 = v.groundOf(s) + z;
-        const size = rad / 0.8 + width;
-        const i = v.sprites.put(SK2.RING, X2, Y2, Z2, size, c, alpha2, c2, w, 0, s.seed, k);
-        v.sprites.vel(i, Math.min(0.5, width / size * 1.4), (s.wobble || 0) * (1 - k), s.lobes || 9, core);
+        const size2 = rad / 0.8 + width;
+        const i = v.sprites.put(SK2.RING, X2, Y2, Z2, size2, c, alpha2, c2, w, 0, s.seed, k);
+        v.sprites.vel(i, Math.min(0.5, width / size2 * 1.4), (s.wobble || 0) * (1 - k), s.lobes || 9, core);
         if (rad > 0.25 && !dark && !v.low) v.shells.put(VK.BUBBLE, X2, Y2, Z2, rad * 0.92, 0, 1, 0, 1, c, alpha2 * 0.35, WHITE4, 0.4, k, s.seed);
         return;
       }
@@ -85952,10 +85952,10 @@ ${GLSL}
         const ph = (t + (o.x * 0.37 + o.y * 0.61) % 2.3) % 2.3 / 2.3;
         const tw = Math.exp(-Math.pow((ph - 0.12) / 0.045, 2));
         const fade2 = Math.min(1, (FAR - d) / 20) * Math.min(1, (d - 0.6) / (NEAR2 - 0.6));
-        const size = Math.max(0.5, d * 0.034) * (0.7 + 0.9 * tw);
+        const size2 = Math.max(0.5, d * 0.034) * (0.7 + 0.9 * tw);
         const back = Math.min(0.35, d * 0.05) / d;
         sp.position.set(sx - dx * back, fh - dh * back, sz - dz * back);
-        sp.scale.set(size, size, 1);
+        sp.scale.set(size2, size2, 1);
         const m = sp.material;
         m.rotation = tw * 0.6 + o.x * 0.1;
         m.opacity = Math.min(1, fade2 * (0.6 + 0.4 * tw) * (0.9 + 0.3 * dark));
@@ -91253,44 +91253,73 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
   var Label = class {
     constructor() {
-      this.c = canvas(256, 72);
+      this.c = canvas(256, 40);
       this.g = this.c.getContext("2d");
       this.tex = tex2(this.c);
       this.mat = new SpriteMaterial({ map: this.tex, transparent: true, depthWrite: false, fog: false });
       this.sprite = new Sprite(this.mat);
-      this.sprite.scale.set(2.2, 0.62, 1);
+      this.sprite.scale.set(2.2, 0.34, 1);
       this.sprite.center.set(0.5, 0);
       this.sprite.renderOrder = 5;
       this.key = "";
+      this.lag = null;
+      this.t = 0;
     }
-    /** name: text or null; bar: fraction 0..1 or null; barCol */
+    /** name: unused (no name tags); bar: fraction 0..1 or null; barCol */
     set(name, color, bar2, barCol) {
-      const key2 = `${name}|${color}|${bar2 === null ? "" : Math.round(bar2 * 60)}|${barCol}`;
+      const now3 = performance.now() / 1e3, dt = Math.min(0.1, this.t ? now3 - this.t : 0);
+      this.t = now3;
+      if (bar2 === null) {
+        this.lag = null;
+        if (this.key) {
+          this.key = "";
+          this.g.clearRect(0, 0, 256, 40);
+          this.tex.needsUpdate = true;
+        }
+        return;
+      }
+      if (this.lag === null || bar2 > this.lag) {
+        this.lag = bar2;
+        this.hold = 0;
+      } else if (this.lag > bar2) {
+        this.hold = (this.hold || 0) + dt;
+        if (this.hold > 0.35) this.lag = Math.max(bar2, this.lag - dt * 0.6);
+      } else this.hold = 0;
+      const key2 = `${Math.round(bar2 * 120)}|${Math.round(this.lag * 120)}|${barCol}`;
       if (key2 === this.key) return;
       this.key = key2;
-      const g = this.g;
-      g.clearRect(0, 0, 256, 72);
-      if (bar2 !== null) {
-        g.fillStyle = "rgba(0,0,0,0.62)";
+      const g = this.g, X2 = 40, Y2 = 12, W4 = 176, H5 = 14;
+      g.clearRect(0, 0, 256, 40);
+      g.fillStyle = "rgba(10,8,12,0.9)";
+      g.beginPath();
+      g.roundRect(X2 - 3, Y2 - 3, W4 + 6, H5 + 6, 6);
+      g.fill();
+      g.fillStyle = "rgba(60,50,56,0.85)";
+      g.beginPath();
+      g.roundRect(X2, Y2, W4, H5, 4);
+      g.fill();
+      const f = Math.max(0, Math.min(1, bar2)), l = Math.max(f, Math.min(1, this.lag));
+      if (l > f) {
+        g.fillStyle = "#fff3c4";
         g.beginPath();
-        g.roundRect(56, 52, 144, 13, 5);
-        g.fill();
-        g.fillStyle = barCol;
-        g.beginPath();
-        g.roundRect(59, 55, Math.max(0, 138 * Math.min(1, bar2)), 7, 3);
+        g.roundRect(X2, Y2, W4 * l, H5, 4);
         g.fill();
       }
-      if (name) {
-        g.font = 'bold 26px Nunito, "Trebuchet MS", sans-serif';
-        g.textAlign = "center";
-        g.textBaseline = "middle";
-        g.lineWidth = 6;
-        g.strokeStyle = "rgba(0,0,0,0.75)";
-        g.lineJoin = "round";
-        g.strokeText(name, 128, 30, 248);
-        g.fillStyle = color || "#ffffff";
-        g.fillText(name, 128, 30, 248);
+      if (f > 0) {
+        const gr = g.createLinearGradient(0, Y2, 0, Y2 + H5);
+        const ally = barCol === "#66bb6a";
+        gr.addColorStop(0, ally ? "#a5e8a0" : "#ff8a80");
+        gr.addColorStop(0.45, barCol);
+        gr.addColorStop(1, ally ? "#2e7d32" : "#9a1b1b");
+        g.fillStyle = gr;
+        g.beginPath();
+        g.roundRect(X2, Y2, Math.max(4, W4 * f), H5, 4);
+        g.fill();
+        g.fillStyle = "rgba(255,255,255,0.28)";
+        g.fillRect(X2 + 2, Y2 + 2, Math.max(0, W4 * f - 4), 3);
       }
+      g.fillStyle = "rgba(10,8,12,0.55)";
+      for (let i = 1; i < 4; i++) g.fillRect(X2 + W4 * i / 4 - 1, Y2, 2, H5);
       this.tex.needsUpdate = true;
     }
     dispose() {
@@ -91472,12 +91501,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.sprite.add(this.core);
       this.color = color;
     }
-    set(color, size, pos) {
+    set(color, size2, pos) {
       if (color !== this.color) {
         this.color = color;
         this.sprite.material = glowSpriteMat(color);
       }
-      this.sprite.scale.setScalar(Math.max(1e-3, size));
+      this.sprite.scale.setScalar(Math.max(1e-3, size2));
       if (pos) this.sprite.position.copy(pos);
     }
   };
@@ -91891,7 +91920,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const cam = ctx.camera;
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
       const k = Math.min(2.4, Math.max(0.5, dist / 8));
-      this.label.sprite.scale.set(2.2 * k, 0.62 * k, 1);
+      this.label.sprite.scale.set(2.2 * k, 2.2 * k * 40 / 256, 1);
     }
     dispose() {
       this.label.dispose();
@@ -91972,7 +92001,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const cam = ctx.camera;
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
       const k = Math.min(2.4, Math.max(0.5, dist / 8));
-      this.label.sprite.scale.set(2 * k, 0.56 * k, 1);
+      this.label.sprite.scale.set(2 * k, 2 * k * 40 / 256, 1);
     }
     dispose() {
       this.label.dispose();
@@ -92427,7 +92456,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
      * (the group's frame — the opposite of the way they're moving), which the
      * flame leans into on a spring; `lit`: burning (grows) or going out (shrinks).
      */
-    update(t, dt, size, drift, lit2 = true) {
+    update(t, dt, size2, drift, lit2 = true) {
       this.grow += ((lit2 ? 1 : 0) - this.grow) * Math.min(1, dt * (lit2 ? 5 : 8));
       this.group.visible = this.grow > 0.02;
       if (!this.group.visible) return;
@@ -92436,8 +92465,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.leanV.y += ((drift.y - this.lean.y) * k - this.leanV.y * c) * dt;
       this.leanV.z += ((drift.z - this.lean.z) * k - this.leanV.z * c) * dt;
       this.lean.addScaledVector(this.leanV, dt);
-      this.group.scale.setScalar(size);
-      _v7.copy(this.lean).divideScalar(Math.max(0.01, size));
+      this.group.scale.setScalar(size2);
+      _v7.copy(this.lean).divideScalar(Math.max(0.01, size2));
       for (const m of this.mats) {
         const u = m.uniforms;
         u.uTime.value = t;
@@ -93474,7 +93503,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     effects(p, pose, A2, env2) {
       const m = this.model, rig = m.rig;
       let gi = 0;
-      const glow3 = (col2, size, pos) => {
+      const glow3 = (col2, size2, pos) => {
         let g = this.glows[gi];
         if (!g) {
           g = this.glows[gi] = new Glow(col2);
@@ -93486,7 +93515,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         if (g.sprite.parent !== m.group) m.group.add(g.sprite);
         g.sprite.visible = true;
         const near = _v23.copy(pos).applyMatrix4(m.group.matrix).applyMatrix4(this.body.matrix).length();
-        g.set(col2, size * clamp6((near - 0.25) / 0.3, 0, 1), pos);
+        g.set(col2, size2 * clamp6((near - 0.25) / 0.3, 0, 1), pos);
         gi++;
       };
       const t = env2.time;
@@ -94259,7 +94288,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         this.wings.update(t, wdt, rig, m.d, _v24.normalize(), phoenix);
       } else if (this.wings) this.wings.group.visible = false;
       let gi = 0;
-      const glow3 = (col2, size, pos) => {
+      const glow3 = (col2, size2, pos) => {
         if (!near) return;
         let g = this.glows[gi];
         if (!g) {
@@ -94267,7 +94296,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           m.group.add(g.sprite);
         }
         g.sprite.visible = true;
-        g.set(col2, size, pos);
+        g.set(col2, size2, pos);
         gi++;
       };
       const ch = pose.charge;
@@ -94349,7 +94378,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const t = a.controller?.target;
       const fighting = !!t && (t.isPlayer || t.faction === "player") && a.controller.state !== "idle";
       const bigBar = a.boss && a.game?.bossTarget === a && !a.game.ui?.el?.boss?.classList.contains("hidden");
-      const bar2 = !a.isPlayer && (a.damageShown > 0 || fighting) && idle && !a.hideBar && !bigBar && dist < 36 ? clamp8(a.hp / a.d.maxHp, 0, 1) : null;
+      const hurt = a.hp < a.d.maxHp - 0.01;
+      const want = !a.isPlayer && hurt && (a.damageShown > 0 || fighting) && idle && !a.hideBar && !bigBar && dist < 36;
+      this.barA = clamp8((this.barA || 0) + (want ? 0.2 : -0.06), 0, 1);
+      const bar2 = this.barA > 0 && !a.isPlayer && idle && !bigBar ? clamp8(a.hp / a.d.maxHp, 0, 1) : null;
       const d = this.model.d;
       const top = (d.hip0 + d.chestLen + d.neck + d.hc + d.headR * Math.max(1.15, this.model.body.meta.top) + (this.model.body.hatKind ? 0.12 : 0)) * s + 0.12;
       const k = clamp8(dist / 8, 0.32, 1.8) / s;
@@ -94361,7 +94393,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         this.label.sprite.visible = true;
         this.label.set(name, a.nameColor || "#ffffff", bar2, a.faction === "player" ? "#66bb6a" : "#ef5350");
         this.label.sprite.position.set(0, top / s, 0);
-        this.label.sprite.scale.set(2.2 * k, 0.62 * k, 1);
+        this.label.mat.opacity = this.barA;
+        this.label.sprite.scale.set(1.5 * k, 1.5 * k * 40 / 256, 1);
       } else if (this.label) this.label.sprite.visible = false;
       if (a.questMarker && dist < 60) {
         if (!this.marker) {
@@ -99376,11 +99409,11 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       let ng = 0, nw = 0;
       for (const s of this.list) {
         const k = (time - s.t) / s.life;
-        const size = s.water ? 0.08 + k * 0.5 : 0.12 + k * 0.22;
+        const size2 = s.water ? 0.08 + k * 0.5 : 0.12 + k * 0.22;
         const m = s.water ? this.water : this.ground;
         const n = s.water ? nw++ : ng++;
         this.p.set(w.dx(v.ox, s.x), s.h + 0.03, s.y - v.oy);
-        this.s.set(size, 1, size);
+        this.s.set(size2, 1, size2);
         this.m4.compose(this.p, this.q, this.s);
         m.setMatrixAt(n, this.m4);
         const f = (1 - k) * (1 - k) * bright * (s.water ? 0.5 : 0.6);
@@ -102223,12 +102256,12 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     const stack = [];
     for (let s = 0; s < L3.length; s++) {
       if (!L3[s] || comp[s] >= 0) continue;
-      let size = 0;
+      let size2 = 0;
       stack.push(s);
       comp[s] = id;
       while (stack.length) {
         const k = stack.pop();
-        size++;
+        size2++;
         const i = k % LW3, j = k / LW3 | 0;
         const nb = [i > 0 ? k - 1 : -1, i < LW3 - 1 ? k + 1 : -1, j > 0 ? k - LW3 : -1, j < LH - 1 ? k + LW3 : -1];
         for (const q2 of nb) if (q2 >= 0 && L3[q2] && comp[q2] < 0) {
@@ -102236,8 +102269,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
           stack.push(q2);
         }
       }
-      if (size > bestSize) {
-        bestSize = size;
+      if (size2 > bestSize) {
+        bestSize = size2;
         best = id;
       }
       id++;
@@ -112346,7 +112379,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
      * texts stack upward instead of piling on top of each other. `o.z`: a
      * height to start at, as it is (no lifting over whoever's beneath).
      */
-    text(x, y, str, color = "#fff", size = 0.42, o = {}) {
+    text(x, y, str, color = "#fff", size2 = 0.42, o = {}) {
       str = String(str);
       const lift = o.z === void 0 ? this.lift3d(x, y, true) : 0;
       if (lift) y += lift;
@@ -112369,7 +112402,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         z: (o.z ?? 1.6) + bump2 * 0.34 + lift,
         str,
         color,
-        size,
+        size: size2,
         life: life2,
         max: life2,
         vz: num2 ? 2.4 : 2,
@@ -112386,19 +112419,19 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
      * A manga sound word at a hit ("DON!", "ZUBAN!", "GOOO!"): big, tilted,
      * inked, popping in and hanging a moment. Rate-limited so fights stay readable.
      */
-    sfx(x, y, str, color = "#ffd54f", size = 0.7, o = {}) {
+    sfx(x, y, str, color = "#ffd54f", size2 = 0.7, o = {}) {
       const now3 = this.time;
       if (now3 - (this._sfxT ?? -9) < (o.gap ?? 0.28)) return null;
       this._sfxT = now3;
       const life2 = o.life ?? 0.75;
-      const t = { x: x + (Math.random() - 0.5) * 0.4, y, z: (o.z ?? 1.25) + Math.random() * 0.3, str, color, size, life: life2, max: life2, vz: 0.35, pop: 0, age: 0, kind: "sfx", rot: (Math.random() - 0.5) * 0.5 };
+      const t = { x: x + (Math.random() - 0.5) * 0.4, y, z: (o.z ?? 1.25) + Math.random() * 0.3, str, color, size: size2, life: life2, max: life2, vz: 0.35, pop: 0, age: 0, kind: "sfx", rot: (Math.random() - 0.5) * 0.5 };
       this.texts.push(t);
       if (this.texts.length > 48) this.texts.shift();
       return t;
     }
     /** Callout text over a spot (merged when repeated). */
-    callout(x, y, str, color = "#fff", size = 0.4, o = {}) {
-      return this.text(x, y, str, color, size, { life: 0.9, ...o });
+    callout(x, y, str, color = "#fff", size2 = 0.4, o = {}) {
+      return this.text(x, y, str, color, size2, { life: 0.9, ...o });
     }
     /** Damage number over a target; rapid hits on the same target add up. */
     damage(tgt, n, o = {}) {
@@ -112469,8 +112502,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       return this.add("ring", { x, y, r0, r1: r12, color, life: life2, width, ...o });
     }
     /** A ring spreading on the water's surface at (x, y) (drawn by the 3D view: render3d/ripples3d.js). */
-    ripple(x, y, size = 1, strength = 1) {
-      this.ripples.push({ x, y, size, strength });
+    ripple(x, y, size2 = 1, strength = 1) {
+      this.ripples.push({ x, y, size: size2, strength });
       if (this.ripples.length > 40) this.ripples.shift();
     }
     slash(x, y, angle, radius, arc, color = "#fff", life2 = 0.18, width = 0.25) {
@@ -116104,7 +116137,10 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
 .buffs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
 .buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }
 
-.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }
+.hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); width: max-content; display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: end; }
+.hb-wing { display: flex; gap: 6px; align-items: flex-end; }
+.hb-wing.l { justify-self: end; }
+.hb-wing.r { justify-self: start; }
 /* the bottom dock: health (left) and Haki (right) over the hotbar, the ship button raised in the middle */
 .dock { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
 .dock .hotbar { position: static; transform: none; align-items: flex-end; }
@@ -116117,16 +116153,18 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
 .dock-bars .bar.hk > span { transform: scaleX(-1); right: auto; left: 8px; }
 .dock-bars .bar.hidden { display: block !important; visibility: hidden; }
 .dock-gap { width: 92px; flex: none; }
-.shipbtn { position: relative; width: 58px; height: 58px; margin: 0 4px; flex: none; border-radius: 50%; display: grid; place-items: center; align-content: center; gap: 0;
-  background: radial-gradient(circle at 50% 35%, #2b4a66, #10202e 70%); border: 3px solid #c9a24a; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.55), inset 0 2px 6px rgba(255,255,255,.12);
-  cursor: var(--cur-ptr); transition: transform .12s ease, border-color .2s, box-shadow .2s; }
-.shipbtn:hover { transform: translateY(-2px) scale(1.04); }
-.shipbtn:active { transform: scale(.96); }
-.shipbtn .ico img { display: block; filter: drop-shadow(0 1px 1px #000); }
-.shipbtn .lbl { font: 800 9.5px Nunito; letter-spacing: .4px; text-transform: uppercase; color: #f5e6c4; text-shadow: 0 1px 2px #000; margin-top: 1px; white-space: nowrap; }
+.shipbtn { position: relative; width: 58px; height: 58px; margin: 0 4px; flex: none; border-radius: 50%; display: grid; place-items: center; text-align: center;
+  background: radial-gradient(circle at 50% 30%, #3a6286, #1a3248 55%, #0b1722 100%); border: 3px solid #c9a24a;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 5px 0 #6b5220, 0 8px 16px rgba(0,0,0,.55), inset 0 3px 6px rgba(255,255,255,.22), inset 0 -5px 8px rgba(0,0,0,.45);
+  cursor: var(--cur-ptr); transition: transform .12s ease, border-color .2s, box-shadow .12s; }
+.shipbtn:hover { transform: translateY(-2px); }
+.shipbtn:active { transform: translateY(3px); box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 2px 0 #6b5220, 0 4px 8px rgba(0,0,0,.5), inset 0 3px 8px rgba(0,0,0,.4); }
+.shipbtn .lbl { font: 800 10.5px/1.1 Nunito; letter-spacing: .3px; text-transform: uppercase; color: #f5e6c4; text-shadow: 0 1px 2px #000; white-space: normal; width: 44px; }
 .shipbtn.sails { border-color: #e9d9a6; }
-.shipbtn.up { border-color: #f1c40f; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 0 16px rgba(241,196,15,.6), inset 0 2px 6px rgba(255,255,255,.15); }
+.shipbtn.up { border-color: #f1c40f; background: radial-gradient(circle at 50% 30%, #7a6224, #3f3010 60%, #1d1607 100%); }
 .shipbtn.none { opacity: .55; filter: grayscale(.6); }
+.shipbtn.blank { cursor: default; }
+.shipbtn.blank:hover, .shipbtn.blank:active { transform: none; }
 .slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: var(--cur-ptr); }
 .slot .ico { display: grid; place-items: center; }
 .slot .ico img { display: block; }
@@ -116662,7 +116700,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
   .slots { grid-template-columns: 1fr; }
   .roll-cols { grid-template-columns: 1fr; }
 }
-@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar { gap: 4px; } }
+@media (max-width: 860px) { .slot { width: 44px; height: 44px; } .hotbar, .hb-wing { gap: 4px; } }
 @media (max-height: 640px) {
   .sidebar { top: 170px; gap: 3px; }
   .log { max-height: clamp(60px, calc(100vh - 500px), 130px); }
@@ -116741,6 +116779,7 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 #ui.touch.menu-open .sidebar { left: auto; top: 8px; width: auto; }
 #ui.touch .side-btn.s-map { margin-top: 0; margin-left: 6px; }
 #ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }
+#ui.touch .hb-wing { gap: 4px; }
 #ui.touch .dock { bottom: 6px; transform: translateX(calc(-50% - 60px)); }
 #ui.touch .dock .hotbar { transform: none; }
 #ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }
@@ -117544,7 +117583,7 @@ button:disabled { cursor: not-allowed; }
     workStage(world, c, t0, budget);
     (c.ms || (c.ms = [0, 0, 0]))[st] += performance.now() - tw0;
   }
-  function workStage(world, c, t0, BUDGET2) {
+  function workStage(world, c, t0, BUDGET3) {
     if (c.stage === 0) {
       const n = c.gw * c.gh;
       if (!c.type) {
@@ -117563,7 +117602,7 @@ button:disabled { cursor: not-allowed; }
           c.dist[k] = (world.distRaw(x, y) - 128) * 0.25;
           c.mot[k] = vnoise4(x * 0.18, y * 0.18);
         }
-        if ((c.read & 15) === 0 && performance.now() - t0 > BUDGET2) return;
+        if ((c.read & 15) === 0 && performance.now() - t0 > BUDGET3) return;
       }
       c.img = c.canvas.getContext("2d").createImageData(c.cw, c.ch);
       c.stage = 1;
@@ -117571,12 +117610,12 @@ button:disabled { cursor: not-allowed; }
     if (c.stage === 1) {
       while (c.row < c.ch) {
         paintRow(c, c.row++);
-        if ((c.row & 7) === 0 && performance.now() - t0 > BUDGET2) return;
+        if ((c.row & 7) === 0 && performance.now() - t0 > BUDGET3) return;
       }
       c.canvas.getContext("2d").putImageData(c.img, 0, 0);
       c.img = null;
       c.stage = 2;
-      if (performance.now() - t0 > BUDGET2) return;
+      if (performance.now() - t0 > BUDGET3) return;
     }
     if (c.stage === 2) {
       drawTrees(world, c);
@@ -118557,19 +118596,19 @@ button:disabled { cursor: not-allowed; }
     };
     const icons = [];
     const fits = (list, sx, sy, w2, h2) => !list.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2);
-    const pin = (cls, icon, size, text2, x, y, room2 = false) => {
+    const pin = (cls, icon, size2, text2, x, y, room2 = false) => {
       const [sx, sy] = toS(x, y);
       if (sx < -100 || sy < -40 || sx > r4.cw + 100 || sy > r4.ch + 40) return;
       if (room2) {
-        if (!fits(icons, sx, sy, size * 0.42, size * 0.42)) return;
-        icons.push({ x: sx, y: sy, w: size * 0.42, h: size * 0.42 });
+        if (!fits(icons, sx, sy, size2 * 0.42, size2 * 0.42)) return;
+        icons.push({ x: sx, y: sy, w: size2 * 0.42, h: size2 * 0.42 });
         if (text2) {
-          const w2 = text2.length * 3.3, tx = sx + size * 0.4 + w2;
+          const w2 = text2.length * 3.3, tx = sx + size2 * 0.4 + w2;
           if (fits(placed, tx, sy, w2, 7) && fits(icons, tx, sy, w2, 7)) placed.push({ x: tx, y: sy, w: w2, h: 7 });
           else text2 = null;
         }
       }
-      layer.appendChild(h("div.wm-pin" + cls, { style: { left: sx + "px", top: sy + "px" } }, uiImg(icon, size), text2 ? h("span", text2) : null));
+      layer.appendChild(h("div.wm-pin" + cls, { style: { left: sx + "px", top: sy + "px" } }, uiImg(icon, size2), text2 ? h("span", text2) : null));
     };
     if (zone) add7(".sea", w.name, w.width / 2, 14 / z, { fontSize: "26px" });
     const seaA = (1 - Math.max(0, Math.min(1, (z - 0.45) / 0.5))).toFixed(2);
@@ -118734,11 +118773,11 @@ button:disabled { cursor: not-allowed; }
       if (!w || !p || !w.map) return;
       const view = c.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
       const css2 = view + 2 * MARGIN2;
-      const size = Math.round(css2 * dpr);
+      const size2 = Math.round(css2 * dpr);
       const buf = this.buf || (this.buf = document.createElement("canvas"));
-      if (buf.width !== size) {
-        buf.width = size;
-        buf.height = size;
+      if (buf.width !== size2) {
+        buf.width = size2;
+        buf.height = size2;
       }
       const g = buf.getContext("2d");
       const sailing = p.mode === "sail";
@@ -118750,7 +118789,7 @@ button:disabled { cursor: not-allowed; }
       if (recheck) this.check = RECHECK;
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.fillStyle = `rgb(${BLANK.map((v) => v | 0)})`;
-      g.fillRect(0, 0, size, size);
+      g.fillRect(0, 0, size2, size2);
       const toS = (x, y) => [w.dx(p.x, x) * z + css2 / 2, (y - p.y) * z + css2 / 2];
       const m = w.map, mx = w.width / m.w, my = w.height / m.h;
       const half2 = css2 / 2 / z;
@@ -118822,19 +118861,19 @@ button:disabled { cursor: not-allowed; }
       const at4 = this.at, buf = this.buf;
       if (!buf || !at4 || at4.w !== w || !p) return;
       const css2 = c.clientWidth || 190, dpr = Math.min(2, window.devicePixelRatio || 1);
-      const size = Math.round(css2 * dpr);
-      if (c.width !== size) {
-        c.width = size;
-        c.height = size;
+      const size2 = Math.round(css2 * dpr);
+      if (c.width !== size2) {
+        c.width = size2;
+        c.height = size2;
       }
       const g = c.getContext("2d");
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.globalCompositeOperation = "source-over";
       g.fillStyle = `rgb(${BLANK.map((v) => v | 0)})`;
-      g.fillRect(0, 0, size, size);
+      g.fillRect(0, 0, size2, size2);
       const k = css2 / at4.css, bs = buf.width * k;
       const ox = -w.dx(at4.x, p.x) * at4.z * k * dpr, oy = -(p.y - at4.y) * at4.z * k * dpr;
-      g.drawImage(buf, (size - bs) / 2 + ox, (size - bs) / 2 + oy, bs, bs);
+      g.drawImage(buf, (size2 - bs) / 2 + ox, (size2 - bs) / 2 + oy, bs, bs);
       const z = at4.z * k, r4 = css2 / 2 - 2;
       g.setTransform(dpr, 0, 0, dpr, css2 / 2 * dpr, css2 / 2 * dpr);
       for (const s of game.ships) {
@@ -118901,7 +118940,7 @@ button:disabled { cursor: not-allowed; }
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.globalCompositeOperation = "destination-in";
       g.beginPath();
-      g.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+      g.arc(size2 / 2, size2 / 2, size2 / 2, 0, Math.PI * 2);
       g.fill();
       g.globalCompositeOperation = "source-over";
       if (game.view3d?.active) return;
@@ -123699,14 +123738,8 @@ ${s.why[0].toUpperCase() + s.why.slice(1)}` : ""}`;
     if (!force && ui.cache.spPlace === k) return ui.cache.spOver || 0;
     ui.cache.spPlace = k;
     const left = (W4 - hw) / 2, right = left + hw, top = H5 - 10 - hh;
-    let shift = Math.max(0, right - (W4 - 14 - pw - 12));
-    const most = Math.max(0, Math.min(left - 14, W4 * 0.25));
-    let up = 0;
-    if (shift > most) {
-      shift = 0;
-      up = H5 - top + 8;
-    }
-    bar2.style.marginLeft = shift ? `${-Math.round(shift)}px` : "";
+    const up = right > W4 - 14 - pw - 12 ? H5 - top + 8 : 0;
+    bar2.style.marginLeft = "";
     E.skills.style.bottom = up ? `${Math.round(up)}px` : "";
     E.track.style.marginTop = "";
     const sTop = H5 - (up || 14) - ph;
@@ -125336,10 +125369,7 @@ Trains by: ${TRAINS_BY[k]}` },
     }
     if (st.mode === "sails") {
       const s2 = st.ship;
-      if (s2.def.oarsOnly) {
-        game.log("A rowboat has no sail: sit at her oars (E) and row her.", "#b0bec5");
-        return false;
-      }
+      if (s2.def.oarsOnly) return false;
       s2.setSails(!st.on);
       game.log(st.on ? `Sails in: the ${s2.name} slows.` : `All sail set on the ${s2.name}!`, "#ffe082");
       return true;
@@ -125532,6 +125562,8 @@ Trains by: ${TRAINS_BY[k]}` },
       E.buffs = h("div.buffs");
       this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.hp.el, E.needs, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
       E.hotbar = h("div.hotbar");
+      E.hbL = h("div.hb-wing.l");
+      E.hbR = h("div.hb-wing.r");
       E.acts = {};
       for (const [k, key2, name, tip] of [["dodge", "Q", "Dodge", "Dash out of the way, untouchable for an instant. It comes back after a moment."], ["guard", "F", "Block", "Hold to block. Tap it just as a blow lands to PARRY (a yellow glint shows the moment): they reel, and your next strike is a COUNTER. Mashing it won't parry. A red-glint blow smashes a guard aside \u2014 dodge those: the guard can't come up again until this fills."]]) {
         const a = { el: h("div.slot.toggle.act." + k, { title: `${name} (${key2})
@@ -125544,7 +125576,7 @@ ${tip}` }), cd: h("div.cd") };
           });
         }
         E.acts[k] = a;
-        E.hotbar.appendChild(a.el);
+        E.hbL.appendChild(a.el);
       }
       E.slots = [];
       for (let i = 0; i < HOTBAR_SIZE; i++) {
@@ -125582,16 +125614,15 @@ ${tip}` }), cd: h("div.cd") };
         });
         E.slots.push(s);
         if (i === HOTBAR_SIZE / 2) {
-          E.shipBtn = h("div.shipbtn.interactive", { title: "Your ship" }, h("span.ico", uiImg("ship", 30)), h("span.lbl", "Ship"));
+          E.shipBtn = h("div.shipbtn.interactive", { title: "Your ship" }, h("span.lbl", "Ship"));
           E.shipBtn.addEventListener("click", () => {
             if (!this.blocksInput() && this.game) {
               pressShipButton(this.game);
               this.shipT = 0;
             }
           });
-          E.hotbar.appendChild(E.shipBtn);
         }
-        E.hotbar.appendChild(s.el);
+        (i < HOTBAR_SIZE / 2 ? E.hbL : E.hbR).appendChild(s.el);
       }
       E.toggles = {};
       for (const t of HAKI_TOGGLES) {
@@ -125608,8 +125639,9 @@ ${tip}` }), cd: h("div.cd") };
           inp.simKey(t.key, false);
         });
         E.toggles[t.type] = { el, k };
-        E.hotbar.appendChild(el);
+        E.hbR.appendChild(el);
       }
+      E.hotbar.append(E.hbL, E.shipBtn, E.hbR);
       this.hud.appendChild(E.hotbar);
       E.prompt = h("div.prompt.hidden.interactive", { on: { click: () => {
         const inp = this.game?.input;
@@ -126132,9 +126164,11 @@ ${tip}` }), cd: h("div.cd") };
         E.shipBtn.classList.toggle("none", st.mode === "none");
         E.shipBtn.classList.toggle("sails", st.mode === "sails");
         E.shipBtn.classList.toggle("up", st.mode === "sails" && !!st.on);
-        const lbl = st.mode === "none" ? "No ship" : st.mode === "call" ? "Call ship" : st.on ? "Furl sails" : "Set sail";
+        const oars = st.mode === "sails" && !!st.ship?.def?.oarsOnly;
+        E.shipBtn.classList.toggle("blank", oars);
+        const lbl = oars ? "" : st.mode === "none" ? "No ship" : st.mode === "call" ? "Call ship" : st.on ? "Furl sails" : "Set sail";
         E.shipBtn.lastChild.textContent = lbl;
-        E.shipBtn.title = st.mode === "none" ? "You don't own a ship: the shipwright on any pier sells them." : st.mode === "call" ? `Bring the ${st.entry.name} round onto the water in front of you (there must be room for her). Choose your ship in the menu: Tab \u2192 Shipyard.` : st.on ? `Take in the ${st.ship.name}'s sails` : `Set all sail on the ${st.ship.name}`;
+        E.shipBtn.title = oars ? "" : st.mode === "none" ? "You don't own a ship: the shipwright on any pier sells them." : st.mode === "call" ? `Bring the ${st.entry.name} round onto the water in front of you (there must be room for her). Choose your ship in the menu: Tab \u2192 Shipyard.` : st.on ? `Take in the ${st.ship.name}'s sails` : `Set all sail on the ${st.ship.name}`;
       }
       const S6 = game.survival, nd = S6?.enabled?.() ? S6.needs() : null;
       if (!!nd !== this.cache.needsOn) {
@@ -126508,6 +126542,204 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     };
   }
 
+  // src/net/room.js
+  var KEEP_MS = 3e3;
+  var BUDGET2 = 3700;
+  var PIECE = 900;
+  var FLUSH_MS = 40;
+  var LATEST = /* @__PURE__ */ new Set(["st", "lk", "sh", "env"]);
+  var roomP = null;
+  function claudeRoom() {
+    if (roomP) return roomP;
+    roomP = (async () => {
+      for (let i = 0; i < 30 && typeof globalThis.claude?.use !== "function"; i++) {
+        if (globalThis.IW_HOST !== "artifact") return null;
+        await new Promise((r4) => setTimeout(r4, 100));
+      }
+      const use = globalThis.claude?.use;
+      if (typeof use !== "function") return null;
+      try {
+        return await Promise.race([Promise.resolve(use.call(globalThis.claude, "room")), new Promise((r4) => setTimeout(() => r4(null), 12e3))]) || null;
+      } catch {
+        return null;
+      }
+    })();
+    return roomP;
+  }
+  var ascii = (o) => JSON.stringify(o).replace(/[\u007f-￿]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+  var size = (o) => JSON.stringify(o).length;
+  function outbox({ keep = KEEP_MS, budget = BUDGET2, piece: piece3 = PIECE, now: now3 = () => Date.now() } = {}) {
+    let seq = 0;
+    let out = [];
+    const wait = [];
+    const used = () => size(out.flatMap((m) => m.parts));
+    const fits = (m) => size(out.flatMap((x) => x.parts).concat(m.parts)) <= budget;
+    const pump = () => {
+      const t = now3();
+      let changed = false;
+      const kept = out.filter((m) => LATEST.has(m.k) || t - m.at < keep);
+      if (kept.length !== out.length) {
+        out = kept;
+        changed = true;
+      }
+      while (wait.length) {
+        const m = wait[0];
+        const old = LATEST.has(m.k) ? out.findIndex((x) => x.k === m.k && x.to === m.to) : -1;
+        const without = old >= 0 ? out.filter((_, i) => i !== old) : out;
+        if (size(without.flatMap((x) => x.parts).concat(m.parts)) > budget) {
+          if (size(m.parts) > budget) {
+            wait.shift();
+            continue;
+          }
+          const early = without.filter((x) => LATEST.has(x.k) || t - x.at < 400);
+          if (early.length !== without.length && size(early.flatMap((x) => x.parts).concat(m.parts)) <= budget) {
+            out = early;
+          } else break;
+        } else out = without;
+        wait.shift();
+        m.at = t;
+        out.push(m);
+        changed = true;
+      }
+      return changed;
+    };
+    return {
+      add(msg, to = "*") {
+        const s = ++seq, text2 = ascii(msg), n = Math.max(1, Math.ceil(text2.length / piece3)), parts = [];
+        for (let i = 0; i < n; i++) parts.push([s, to, i, n, text2.slice(i * piece3, (i + 1) * piece3)]);
+        const k = msg && typeof msg.k === "string" ? msg.k : "";
+        const w = LATEST.has(k) ? wait.findIndex((x) => x.k === k && x.to === to) : -1;
+        const m = { seq: s, to, k, at: 0, parts };
+        if (w >= 0) wait.splice(w, 1);
+        wait.push(m);
+        return pump();
+      },
+      pump,
+      entries: () => out.flatMap((m) => m.parts),
+      used,
+      fits,
+      waiting: () => wait.length
+    };
+  }
+  function reader(self2) {
+    let last = 0;
+    return (entries2) => {
+      if (!Array.isArray(entries2)) return [];
+      const got = /* @__PURE__ */ new Map();
+      for (const e of entries2) {
+        if (!Array.isArray(e) || e.length !== 5) continue;
+        const [s, to, i, n, text2] = e;
+        if (!Number.isInteger(s) || s <= last || to !== "*" && to !== self2 || !Number.isInteger(i) || !Number.isInteger(n) || n < 1 || n > 8 || i < 0 || i >= n || typeof text2 !== "string") continue;
+        const m = got.get(s) || { n, parts: [] };
+        m.parts[i] = text2;
+        got.set(s, m);
+      }
+      const out = [];
+      for (const s of [...got.keys()].sort((a, b) => a - b)) {
+        const m = got.get(s);
+        if (m.parts.filter((x) => typeof x === "string").length !== m.n) continue;
+        try {
+          out.push(JSON.parse(m.parts.join("")));
+        } catch {
+        }
+        last = s;
+      }
+      return out;
+    };
+  }
+  async function roomTransport(room2, code, h2 = {}) {
+    const name = "iw-" + String(code).toLowerCase().replace(/[^a-z0-9]/g, "");
+    let R5 = null, lobby = false;
+    try {
+      R5 = await room2.join(name);
+    } catch (e) {
+      if (e?.code === "not_granted") throw new Error("This page can't reach the claude.ai room.");
+      R5 = room2;
+      lobby = true;
+    }
+    let selfId2 = null;
+    for (let i = 0; i < 50 && !selfId2; i++) {
+      selfId2 = (R5.peers() || []).find((p) => p.sameTab)?.peer || (room2.peers() || []).find((p) => p.sameTab)?.peer || null;
+      if (!selfId2) await new Promise((r4) => setTimeout(r4, 100));
+    }
+    if (!selfId2) throw new Error("The claude.ai room didn't answer.");
+    const box2 = outbox();
+    const others = /* @__PURE__ */ new Map();
+    let left = false, dirty = true, lastPush = 0;
+    const push = () => {
+      if (left || !dirty) return;
+      const t = Date.now();
+      if (t - lastPush < FLUSH_MS) return;
+      lastPush = t;
+      dirty = false;
+      R5.presence(lobby ? { iw: name, o: box2.entries() } : { o: box2.entries() }).catch(() => {
+        dirty = true;
+      });
+    };
+    const mine = (p) => p && !p.sameTab && p.kind === "viewer" && (!lobby || p.presence?.iw === name);
+    const see = (p) => {
+      if (!mine(p)) return;
+      let read2 = others.get(p.peer);
+      if (!read2) {
+        read2 = reader(selfId2);
+        others.set(p.peer, read2);
+        h2.onPeerJoin?.(p.peer);
+      }
+      for (const m of read2(p.presence?.o)) if (!left) h2.onMessage?.(m, p.peer);
+    };
+    const gone2 = (id) => {
+      if (others.delete(id)) h2.onPeerLeave?.(id);
+    };
+    const subs = [
+      R5.onPeers((ch) => {
+        for (const p of ch.joined) see(p);
+        for (const p of ch.updated) {
+          if (lobby && others.has(p.peer) && p.presence?.iw !== name) gone2(p.peer);
+          else see(p);
+        }
+        for (const p of ch.left) gone2(p.peer);
+      }, (e) => h2.onError?.(e?.message || "the room closed"))
+    ];
+    const timer = setInterval(() => {
+      if (box2.pump()) dirty = true;
+      push();
+    }, FLUSH_MS);
+    push();
+    return {
+      kind: "room",
+      selfId: selfId2,
+      send(msg, to) {
+        if (left) return;
+        if (box2.add(msg, to || "*")) dirty = true;
+        push();
+      },
+      peers: () => [...others.keys()],
+      relays: () => ({ open: R5.connected() ? 1 : 0, all: 1 }),
+      leave() {
+        if (left) return;
+        box2.add({ k: "bye" }, "*");
+        dirty = true;
+        lastPush = 0;
+        push();
+        left = true;
+        clearInterval(timer);
+        for (const u of subs) {
+          try {
+            u();
+          } catch {
+          }
+        }
+        setTimeout(() => {
+          try {
+            if (lobby) R5.presence({ iw: null, o: null });
+            else R5.leave();
+          } catch {
+          }
+        }, 400);
+      }
+    };
+  }
+
   // src/net/transport.js
   var APP_ID = "inherited-will.one-piece-roguelike";
   var ROOM = (code) => `voyage-${code}`;
@@ -126569,8 +126801,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const turns = out.filter((x) => [].concat(x.urls).some((u) => /^turns?:/i.test(u)));
     return turns.concat(OPEN_RELAY);
   }
-  function openTransport(kind, code, handlers = {}, opts = {}) {
-    return kind === "local" ? Promise.resolve(localTransport(code, handlers, opts)) : trysteroTransport(code, handlers, opts);
+  async function openTransport(kind, code, handlers = {}, opts = {}) {
+    if (kind === "local") return localTransport(code, handlers, opts);
+    const room2 = opts.room === void 0 ? await claudeRoom() : opts.room;
+    if (room2) return roomTransport(room2, code, handlers);
+    return trysteroTransport(code, handlers, opts);
   }
   async function trysteroTransport(code, h2, opts) {
     const T5 = await Promise.resolve().then(() => (init_dist3(), dist_exports));
@@ -164125,8 +164360,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       return;
     }
     const kind = animKind(def.anim, weapon);
-    const size = heavy || /heavy|cleave|tora|iai|slam/.test(def.anim || "") ? 1.3 : 1;
-    const s = Math.min(size, Math.max(0.45, k.rel / (SWING_LEN[kind] * 0.95)));
+    const size2 = heavy || /heavy|cleave|tora|iai|slam/.test(def.anim || "") ? 1.3 : 1;
+    const s = Math.min(size2, Math.max(0.45, k.rel / (SWING_LEN[kind] * 0.95)));
     swing(v, Math.max(0, k.rel - SWING_LEN[kind] * s * 0.95), kind, s);
     if (weapon === "sword" && /iai/.test(def.anim || "")) v.ring(k.rel + 0.04, 2300, 0.45, 0.025, [1, 2.04, 2.75]);
   }
@@ -167863,6 +168098,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
 
   // src/main.js
+  var roomReady = false;
+  claudeRoom().then((r4) => {
+    roomReady = !!r4;
+  });
   var root3 = document.createElement("div");
   root3.id = "game";
   root3.style.cssText = "position:fixed;inset:0;overflow:hidden;background:#0b1622";
@@ -168279,7 +168518,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           titleTab = t;
           showTitle();
         },
-        multiplayer: () => multiplayerPane({ slots, recent: recentVoyages(), local: netKind() === "local", offsite: globalThis.IW_HOST === "artifact", onHost: hostVoyage, onJoin: joinVoyage }),
+        multiplayer: () => multiplayerPane({ slots, recent: recentVoyages(), local: netKind() === "local", offsite: globalThis.IW_HOST === "artifact" && !roomReady, onHost: hostVoyage, onJoin: joinVoyage }),
         onPlay: (s) => {
           useSlot(s);
           const saved = loadChar();
