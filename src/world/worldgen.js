@@ -427,11 +427,11 @@ export const MARY_GEOISE_DEF = {
   tagline: 'The Holy Land. Home of the Celestial Dragons, 10,000 metres above the sea.',
   towns: [{ id: 'holy_land', name: 'The Holy Land', dx: 0, dy: -0.05, w: csize(36), h: csize(70), style: 'noble', walls: false, plaza: 'fountain',
     buildings: [
-      { role: 'palace', name: 'Pangaea Castle', w: 12, d: 7, hgt: 6 },
+      { role: 'palace', name: 'Gate of Pangaea Castle', w: 12, d: 7, hgt: 6 },
       { role: 'hall', name: 'Reverie Assembly Hall' },
       { role: 'house', name: "Celestial Dragons' Mansion" },
       { role: 'church', name: 'Chapel of the First Twenty' },
-    ], houses: 8 }],
+    ], houses: 26 }],
 };
 
 function buildMaryGeoise(world, rng) {
@@ -449,6 +449,11 @@ function buildMaryGeoise(world, rng) {
   rec.spots.bondola_newworld = { x: csize(16), y: EQ + 3 };
   rec.spots.bondola_paradise = { x: world.wx(-csize(16)), y: EQ + 3 };
   rec.spots.empty_throne = { x: town.plaza.x, y: town.plaza.y - 6 };
+  // Pangaea Castle, standing over the Holy Land at its north end, facing the town
+  const castle = { kind: 'pangaea', x: 0, y: EQ - csize(44), yaw: 0, block: true, far: 3200, name: 'Pangaea Castle' };
+  placeObject(world, castle);
+  rec.landmarks.push(castle);
+  rec.spots.pangaea_castle = { x: 0, y: castle.y + 18 };
   placeObject(world, { kind: 'elevator', x: world.wx(-csize(19)), y: EQ + 1, block: true, interact: 'Ride the Bondola down to the Paradise side', use: 'bondola', port: 'down_paradise' });
   placeObject(world, { kind: 'elevator', x: csize(19), y: EQ + 1, block: true, interact: 'Ride the Bondola down to the New World side', use: 'bondola', port: 'down_newworld' });
   world.islands.push(rec);

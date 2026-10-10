@@ -38,7 +38,7 @@ const npcs = [
         ] },
     } }),
   },
-  { id: 'cp0_guard_1', name: 'CP0 Agent', title: 'Cipher Pol Aigis Zero', island: 'mary_geoise', at: { town: 'holy_land', building: 'Pangaea Castle' }, faction: 'cp', level: 70, named: true,
+  { id: 'cp0_guard_1', name: 'CP0 Agent', title: 'Cipher Pol Aigis Zero', island: 'mary_geoise', at: { town: 'holy_land', building: 'Gate of Pangaea Castle' }, faction: 'cp', level: 70, named: true,
     look: { hair: 'short', hairColor: '#212121', top: '#fafafa', bottom: '#fafafa', coat: '#fafafa', hat: 'bubble' }, style: 'rokushiki', moves: ['roku_soru', 'roku_rankyaku', 'roku_tekkai', 'roku_rokuogan'], skill: 0.7,
     haki: { armament: 40, observation: 40 }, lethal: true, when: (c) => !!c.flags.punchedDragon, hostile: true },
   { id: 'cp0_guard_2', name: 'CP0 Agent', title: 'Cipher Pol Aigis Zero', island: 'mary_geoise', at: { town: 'holy_land', building: 'Reverie Assembly Hall' }, faction: 'cp', level: 70, named: true,

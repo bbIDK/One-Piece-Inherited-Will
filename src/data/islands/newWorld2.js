@@ -43,10 +43,19 @@ export const NEW_WORLD_2 = [
   },
 
   // --------------------------------------------------------- Wano Country
+  // Walled in by sheer cliffs all round (`cliffRing`, open only at the ports
+  // and the beaches), the great waterfall the carp climb pouring down them
+  // into the sea; Mt. Fuji over the Flower Capital, the Shogun's castle up
+  // on its crag above the city (render3d/props/wano.js).
   {
     id: 'wano', name: 'Wano Country', sea: 'new_world', x: 1185, y: 880, w: 290, h: 212,
     climate: 'sakura', rough: 0.18, trees: ['sakura', 'pine', 'bamboo', 'sakura'], treeDensity: 0.06,
     population: [['human', 100]],
+    cliffRing: {
+      h: 50,
+      falls: [{ dx: 0.98, dy: 0.18, name: 'The Climbing Koi Waterfall',
+        lore: 'The great waterfall where Wano\'s river pours off the cliffs into the sea. The giant carp climb it — and a ship lashed to one can ride it all the way up. Most that try are smashed on the rocks below. That is how Wano has stayed closed for so long.' }],
+    },
     blobs: [
       [0, 0, 0.82, 0.8],
       [-0.62, 0.02, 0.38, 0.52], // Kibi
@@ -70,6 +79,9 @@ export const NEW_WORLD_2 = [
       { name: 'Kibi', tile: T.ROCK, dx: -0.76, dy: -0.02, rx: 0.18, ry: 0.34 },
       { name: 'Flower Capital', tile: T.SAKURA, dx: -0.05, dy: 0.14, rx: 0.3, ry: 0.26 },
       { name: 'Paradise Farm', tile: T.FARM, dx: 0.16, dy: 0.66, rx: 0.07, ry: 0.06 },
+      // (rice paddies)
+      { name: 'Rice paddies of Kibi', tile: T.FARM, dx: -0.5, dy: 0.12, rx: 0.06, ry: 0.07 },
+      { name: 'Rice paddies of Hakumai', tile: T.FARM, dx: 0.4, dy: -0.55, rx: 0.06, ry: 0.05 },
     ],
     // the river that splits Wano into its regions, and the Great Bridges over it
     rivers: [
@@ -126,6 +138,10 @@ export const NEW_WORLD_2 = [
       { dx: -0.12, dy: -0.72, dir: 'n', name: 'Kaeru Port' },
     ],
     landmarks: [
+      { kind: 'wanofuji', dx: 0.18, dy: -0.32, r: 58, h: 140, cliff: true, far: 5000, name: 'Mt. Fuji' },
+      { kind: 'wanocastle', dx: -0.05, dy: -0.25, r: 18, h: 26, cliff: true, far: 3200, name: "The Shogun's Castle",
+        lore: 'The Shogun\'s castle on its crag of rock over the Flower Capital: white walls, tier on tier of dark roofs, gold fish on the ridge. The great hall you can enter stands at the foot of the rock.' },
+      { kind: 'torii', dx: 0.18, dy: 0.2, name: 'Torii of the Flower Capital Shrine' },
       { kind: 'building', role: 'palace', name: 'Shogun Castle', npc: 'momonosuke_wano', fw: 14, fd: 8, hgt: 6, style: 'wano', roofType: 'pagoda', wall: '#efebe9', roof: '#263238', dx: -0.05, dy: -0.11, spot: 'shogun_castle' },
       { kind: 'poneglyph', road: true, dx: 0.3, dy: -0.11, poneglyph: 'road_wano', name: 'Road Poneglyph of Wano (Mt. Fuji cavern)', spot: 'fuji_poneglyph' },
       { kind: 'ruins', dx: 0.05, dy: 0.52, name: 'Ruins of Oden Castle', spot: 'oden_castle' },
@@ -164,9 +180,10 @@ export const NEW_WORLD_2 = [
     lakes: [{ dx: 0.52, dy: 0.12, rx: 0.1, ry: 0.08, tile: T.POND }],
     paint: [{ op: 'path', points: [[0, 0.8], [0, 0.1]], width: 3, tile: T.STONE, onlyLand: true }],
     landmarks: [
+      { kind: 'skulldome', dx: 0, dy: -0.45, cliff: true, far: 4000, name: 'The Skull of Onigashima',
+        lore: 'The island\'s skull: a dome of bone-white rock with two great horns, its eyes burning through the night of the Fire Festival. Kaido\'s castle stands on its crown, and the Skull Dome — the Live Floor, the banquet halls — is down in its jaws. A giant\'s katana is driven into the rock beside it.' },
       { kind: 'building', role: 'palace', name: 'Skull Dome', fw: 16, fd: 8, hgt: 7, style: 'wano', roofType: 'pagoda', wall: '#d7ccc8', roof: '#212121', dx: 0, dy: -0.02, spot: 'skull_dome' },
       { kind: 'torii', dx: 0, dy: 0.78, name: 'The Great Torii of Onigashima', spot: 'torii_gate' },
-      { kind: 'pillar', dx: -0.22, dy: 0.6, name: 'Giant katana' },
       { kind: 'lantern', dx: 0.22, dy: 0.6, light: true },
       { kind: 'statue', dx: -0.1, dy: 0.7, name: 'Kitsune statue' },
       { kind: 'statue', dx: 0.1, dy: 0.7, name: 'Kitsune statue' },

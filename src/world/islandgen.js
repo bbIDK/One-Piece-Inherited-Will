@@ -180,10 +180,15 @@ export function generateIsland(world, def, noise, rng) {
     // paint an organic patch of a ground type (forest, desert, farmland...)
     const c = P(f);
     const rx = rel(f.rx ?? f.r ?? 0.3, hw), ry = rel(f.ry ?? f.r ?? 0.3, hh);
+    // (`half: [nx, ny, d]`: only on one side of a straight line across the
+    // island, nx·dx + ny·dy ≥ d in its own fractions, a little ragged —
+    // Punk Hazard's fire and ice meeting along one sharp edge)
+    const H = f.half;
     stampEllipse(world, c.x, c.y, rx, ry, noise, f.rough ?? 0.35, (x, y) => {
       const t = world.type(x, y);
       if (IS_LIQUID[t] || !WALKABLE[t]) return;
       if (t === beach && !f.overBeach) return;
+      if (H && (world.dx(cx, x + 0.5) / hw) * H[0] + ((y + 0.5 - cy) / hh) * H[1] + noise.noise2(x * 0.09, y * 0.09) * 0.012 < H[2]) return;
       world.setTile(x, y, f.tile, undefined, f.climate ?? undefined);
     });
     if (f.name) rec.landmarks.push({ type: 'area', name: f.name, x: c.x, y: c.y, r: Math.max(rx, ry) });
@@ -349,6 +354,9 @@ export function generateIsland(world, def, noise, rng) {
     const c = P(s);
     rec.spots[s.id] = { x: c.x, y: c.y, ...s, dx: undefined, dy: undefined };
   }
+
+  // (a ring of sheer cliffs round the coast, open at the landings: Wano)
+  if (def.cliffRing) placeCliffRing(world, rec, def.cliffRing, P);
 
   // vegetation ----------------------------------------------------------------
   def._clearings = rec.clearings;
@@ -1106,6 +1114,81 @@ function plateSpires(world, rec, d, sp, rng) {
     placeObject(world, o);
     rec.landmarks.push(o);
     placed++;
+  }
+}
+
+/**
+ * A ring of sheer cliffs standing round an island's coast (Wano: the country
+ * walled in high above the sea). Rays out from its middle find the coast;
+ * the wall runs along it in arcs (render3d/props/wano.js `cliffwall`), its
+ * outer face at the water's edge, open wherever there's a landing, a town on
+ * the shore, a named spot or a gap in `f.gaps` ({ dx, dy, r }) — and a great
+ * waterfall pouring down it at each of `f.falls` ({ dx, dy, name }).
+ */
+function placeCliffRing(world, rec, f, P) {
+  const N = f.n ?? 720, H = f.h ?? 46;
+  const R = Math.hypot(rec.bbox.hw, (rec.bbox.y1 - rec.bbox.y0) / 2) + 4;
+  const wet = (x, y) => { const t = world.type(world.wx(Math.floor(x)), Math.floor(y)); return IS_LIQUID[t] || OVERLAY[t]; };
+  // (the outermost land along each ray, a little smoothed)
+  const raw = [];
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2, ux = Math.cos(a), uy = Math.sin(a);
+    let d = R;
+    while (d > 8 && wet(rec.x + ux * d, rec.y + uy * d)) d -= 0.5;
+    raw.push(d);
+  }
+  const rr = raw.map((_, i) => [-3, -2, -1, 0, 1, 2, 3].map((k) => raw[(i + k + N) % N]).sort((p, q) => p - q)[3]);
+  const pts = rr.map((d, i) => { const a = (i / N) * Math.PI * 2; return { x: rec.x + Math.cos(a) * d, y: rec.y + Math.sin(a) * d }; });
+  // outward normals, square to the coast
+  for (let i = 0; i < N; i++) {
+    const p = pts[(i + N - 2) % N], q = pts[(i + 2) % N];
+    let nx = q.y - p.y, ny = -(q.x - p.x);
+    const l = Math.hypot(nx, ny) || 1;
+    nx /= l; ny /= l;
+    if (nx * (pts[i].x - rec.x) + ny * (pts[i].y - rec.y) < 0) { nx = -nx; ny = -ny; }
+    pts[i].nx = nx; pts[i].ny = ny;
+  }
+  // where it stays open
+  const holes = [];
+  for (const dk of rec.docks) holes.push({ x: dk.land.x, y: dk.land.y, r: 30 });
+  for (const s of Object.values(rec.spots)) holes.push({ x: s.x, y: s.y, r: 20 });
+  for (const g of f.gaps || []) { const c = P(g); holes.push({ x: c.x, y: c.y, r: g.r ?? 30 }); }
+  const inTown = (x, y) => rec.towns.some((t) => x > t.x0 - 12 && x < t.x1 + 12 && y > t.y0 - 12 && y < t.y1 + 12);
+  const open = pts.map((p) => {
+    const ix = p.x - p.nx * 10, iy = p.y - p.ny * 10;
+    return holes.some((h) => Math.hypot(world.dx(h.x, p.x), p.y - h.y) < h.r) || inTown(ix, iy);
+  });
+  // (start the arcs at a gap, so none runs across where the ring closes)
+  let s0 = open.findIndex((v) => v);
+  if (s0 < 0) s0 = 0;
+  let run = [];
+  const flush = () => {
+    if (run.length >= 4) {
+      const m = run[Math.floor(run.length / 2)];
+      const o = { kind: 'cliffwall', x: m.x, y: m.y, h: H, seed: (m.x * 0.37 + m.y * 0.11) % 97, block: true, far: 2600, name: f.name || 'Cliffs' };
+      o.pts = run.map((p) => [+(world.dx(m.x, p.x)).toFixed(2), +(p.y - m.y).toFixed(2), +p.nx.toFixed(3), +p.ny.toFixed(3)]);
+      placeObject(world, o);
+      rec.landmarks.push(o);
+    }
+    run = [];
+  };
+  for (let k = 0; k <= N; k++) {
+    const i = (s0 + k) % N;
+    if (open[i] || k === N) { flush(); continue; }
+    run.push(pts[i]);
+    // (arcs of about 50 points, each overlapping the next by one)
+    if (run.length >= 50) { const last = run[run.length - 1]; flush(); run.push(last); }
+  }
+  // the falls: where each comes over the cliff's lip, facing out to sea
+  for (const fl of f.falls || []) {
+    const c = P(fl);
+    let best = 0;
+    for (let i = 1; i < N; i++) if (Math.hypot(pts[i].x - c.x, pts[i].y - c.y) < Math.hypot(pts[best].x - c.x, pts[best].y - c.y)) best = i;
+    const p = pts[best];
+    const o = { kind: 'carpfall', x: p.x + p.nx * 2, y: p.y + p.ny * 2, yaw: Math.atan2(p.nx, p.ny), h: H, block: false, far: 2600, cliff: true, name: fl.name };
+    if (fl.lore) { o.lore = fl.lore; o.interact = `Examine ${fl.name}`; o.use = 'lore'; o.interactRange = 6; }
+    placeObject(world, o);
+    rec.landmarks.push(o);
   }
 }
 

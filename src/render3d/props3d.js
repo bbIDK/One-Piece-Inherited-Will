@@ -14,5 +14,8 @@ import './props/landmarks.js';
 import './props/baratie.js';
 import './props/water7.js';
 import './props/elbaf.js';
+import './props/marygeoise.js';
+import './props/punkhazard.js';
+import './props/wano.js';
 
 export { instancerStats } from './props/instancer.js';

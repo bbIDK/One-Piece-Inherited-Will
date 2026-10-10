@@ -387,6 +387,8 @@ function cases() {
 async function renderCase(c, secs = 2.5, volume = 1) {
   const off = offline(secs);
   const a = lab(off, { volume, music: 0 });
+  // (the recorded layers decoded first: the first render waits for them, the rest find them in the bank)
+  await a.E.samplesReady;
   c.play(a);
   const buf = await off.startRendering();
   return buf;

@@ -132,24 +132,43 @@ export const NEW_WORLD = [
   },
 
   // --------------------------------------------------------------- Punk Hazard
-  // Half fire, half ice: Admirals Akainu and Aokiji fought here for ten days.
+  // Half fire, half ice: Admirals Akainu and Aokiji fought here for ten days,
+  // and the island is cut in two along one sharp line (the `half` of each
+  // area), north-west to south-east through the lake in its middle. East of
+  // it the Burning Lands: red volcanoes, lava running to the sea, fires on
+  // the scorched ground (render3d/props/punkhazard.js). West of it the
+  // Frozen Lands: snow, jagged peaks of ice, the lake frozen over — and
+  // Caesar Clown's domed research facility.
   {
     id: 'punk_hazard', name: 'Punk Hazard', sea: 'new_world', x: 290, y: 986, w: 170, h: 130,
     climate: 'volcanic', rough: 0.22,
     blobs: [[0, 0, 0.82, 0.78], [-0.5, 0.15, 0.45, 0.55], [0.5, -0.1, 0.45, 0.55]],
     mountains: [
-      { name: 'Frozen Peaks', dx: -0.62, dy: -0.4, r: 0.2, h: 0.95, snow: true },
-      { name: 'Burning Mountain', dx: 0.62, dy: -0.4, r: 0.2, h: 0.95 },
+      { name: 'The Burning Mountain', dx: 0.5, dy: -0.4, r: 0.18, h: 0.95, peak: T.RED_ROCK },
+      { name: 'The Frozen Peaks', dx: -0.55, dy: 0.55, r: 0.14, h: 0.9, snow: true },
     ],
     areas: [
-      { name: 'The Frozen Lands', tile: T.SNOW, climate: CLIMATE.WINTER, dx: -0.52, dy: 0.0, rx: 0.52, ry: 1.2, rough: 0.2, overBeach: true },
-      { name: 'The Burning Lands', tile: T.ASH, climate: CLIMATE.VOLCANIC, dx: 0.52, dy: 0.0, rx: 0.5, ry: 1.2, rough: 0.2 },
-      { name: 'Frozen Lake', tile: T.ICE, climate: CLIMATE.WINTER, dx: -0.55, dy: 0.42, rx: 0.14, ry: 0.12 },
+      { name: 'The Burning Lands', tile: T.ASH, climate: CLIMATE.VOLCANIC, dx: 0.5, dy: 0, rx: 0.95, ry: 1.3, rough: 0.08, overBeach: true, half: [0.9, -0.44, 0.05] },
+      { name: 'The Frozen Lands', tile: T.SNOW, climate: CLIMATE.WINTER, dx: -0.5, dy: 0, rx: 0.95, ry: 1.3, rough: 0.08, overBeach: true, half: [-0.9, 0.44, -0.05] },
+      // (crags of red rock standing out of the ash)
+      ...[[0.7, -0.1], [0.3, -0.52], [0.82, 0.3], [0.62, 0.18], [0.2, -0.25], [0.45, -0.7], [0.9, -0.12], [0.36, 0.25], [0.7, 0.62], [0.12, -0.05]].map(([dx, dy], i) => ({ tile: T.RED_ROCK, climate: CLIMATE.VOLCANIC, dx, dy, r: 0.03 + (i % 3) * 0.012, rough: 0.6 })),
     ],
-    lakes: [{ dx: 0.56, dy: 0.4, rx: 0.1, ry: 0.1, tile: T.LAVA }],
-    trees: ['dead', 'snowpine', 'rock'], treeDensity: 0.03,
+    lakes: [
+      // the lake in the middle: frozen over on the ice side, open water toward the fire
+      { dx: -0.08, dy: 0.3, rx: 0.17, ry: 0.2, tile: T.ICE },
+      { dx: 0.08, dy: 0.24, rx: 0.12, ry: 0.17, tile: T.POND },
+      { dx: 0.56, dy: 0.38, rx: 0.07, ry: 0.07, tile: T.LAVA },
+      { dx: 0.76, dy: -0.25, rx: 0.045, ry: 0.045, tile: T.LAVA },
+    ],
+    // (lava running down from the Burning Mountain to the sea)
+    rivers: [
+      { points: [[0.44, -0.24], [0.55, -0.02], [0.74, 0.1], [0.98, 0.18]], width: 3, tile: T.LAVA },
+      { points: [[0.64, -0.5], [0.8, -0.58], [1.0, -0.7]], width: 2, tile: T.LAVA },
+    ],
+    trees: ['dead', 'rock'], treeDensity: 0.012,
+    treesByClimate: { [CLIMATE.WINTER]: ['deadsnow', 'snowpine', 'deadsnow'] }, densityByClimate: { [CLIMATE.WINTER]: 0.012 },
     towns: [{
-      id: 'ph_laboratory', name: "Caesar's Laboratory", dx: 0.0, dy: 0.08, w: 46, h: 32, style: 'future', walls: true, dockDir: 's', plaza: 'platform',
+      id: 'ph_laboratory', name: "Caesar's Laboratory", dx: -0.45, dy: 0.05, w: 34, h: 24, style: 'future', walls: true, dockDir: 'w', plaza: 'platform',
       buildings: [
         { role: 'hall', name: 'Research Building R-66', npc: 'nw_caesar', w: 10, d: 6, hgt: 5, wall: '#eceff1', roof: '#8e24aa' },
         { role: 'hall', name: 'Biscuits Room', npc: 'nw_mocha', w: 8, d: 5, wall: '#fff3e0', roof: '#ffb74d' },
@@ -158,16 +177,26 @@ export const NEW_WORLD = [
       houses: 1,
     }],
     landmarks: [
-      { kind: 'tent', dx: -0.64, dy: 0.08, name: "Trafalgar Law's camp", spot: 'law_camp' },
-      { kind: 'campfire', dx: -0.6, dy: 0.13 },
+      { kind: 'phlab', dx: -0.45, dy: -0.32, cliff: true, far: 2000, name: 'Research Facility (the R-66 domes)',
+        lore: 'The Government\'s old research facility, domes and smokestacks half buried in snow. Since Vegapunk left, Caesar Clown has made it his own: the children he "cares for" sleep in the Biscuits Room, and something called SAD is brewed deep inside.' },
+      { kind: 'phvolcano', dx: 0.5, dy: -0.4, r: 58, h: 80, rTop: 0.22, cliff: true, far: 3200, name: 'The Burning Mountain' },
+      { kind: 'phvolcano', dx: 0.8, dy: 0.02, r: 14, h: 20, flows: 2, cliff: true, far: 1800, name: 'Smoking crater' },
+      { kind: 'phvolcano', dx: 0.22, dy: -0.66, r: 13, h: 17, flows: 1, cliff: true, far: 1800, name: 'Smoking crater' },
+      { kind: 'phvolcano', dx: 0.6, dy: 0.5, r: 12, h: 15, flows: 1, cliff: true, far: 1800, name: 'Smoking crater' },
+      { kind: 'phicepeaks', dx: -0.55, dy: 0.55, cliff: true, far: 2600, name: 'The Frozen Peaks', peaks: [[0, 0, 26, 64], [-24, 10, 18, 44], [22, 14, 16, 38], [-6, -22, 14, 30], [30, -12, 12, 26]] },
+      // (fires burning on the scorched ground)
+      ...[[0.3, -0.3, 7], [0.62, -0.12, 6], [0.4, 0.1, 8], [0.72, 0.3, 6], [0.33, 0.42, 7], [0.86, -0.3, 5], [0.12, -0.45, 6], [0.48, 0.66, 7], [0.62, -0.78, 5], [0.24, 0.2, 5], [0.55, 0.2, 6], [0.78, 0.45, 5], [0.38, -0.6, 6], [0.05, -0.7, 5], [0.9, 0.1, 4]]
+        .map(([dx, dy, r]) => ({ kind: 'phflames', dx, dy, r, block: false, far: 700 })),
+      { kind: 'tent', dx: -0.8, dy: 0.3, name: "Trafalgar Law's camp", spot: 'law_camp' },
+      { kind: 'campfire', dx: -0.76, dy: 0.34 },
       { kind: 'tent', dx: 0.42, dy: 0.55, name: 'G-5 field camp', spot: 'g5_camp' },
-      { kind: 'shipwreck', dx: -0.78, dy: 0.5, name: 'Wrecked tanker' },
+      { kind: 'shipwreck', dx: -0.85, dy: 0.55, name: 'Wrecked tanker' },
       { kind: 'skull', dx: 0.3, dy: -0.15, name: 'Ruined Government research facility', lore: 'A plaque half-buried in ash: "World Government Research Facility — Dr. Vegapunk." Four years ago a chemical-weapon accident poisoned the whole island and the Government sealed it off. Two years ago, Admirals Aokiji and Akainu fought here for ten days. Half the island never stopped burning; the other half never thawed.' },
     ],
     spots: [
-      { id: 'centaur_patrol', dx: -0.38, dy: -0.25 },
-      { id: 'sad_room', dx: 0.12, dy: -0.12 },
-      { id: 'lab_gate', dx: 0.0, dy: 0.42 },
+      { id: 'centaur_patrol', dx: -0.3, dy: 0.52 },
+      { id: 'sad_room', dx: -0.2, dy: -0.2 },
+      { id: 'lab_gate', dx: -0.45, dy: 0.3 },
     ],
     logNext: ['dressrosa', 'green_bit', 'applenine_island'], logTime: 1,
     danger: 8,

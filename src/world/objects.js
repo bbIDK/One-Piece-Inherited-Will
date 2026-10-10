@@ -56,6 +56,21 @@ export const ADAM = {
   roots: [[0.25, 20, 6.2], [0.95, 15, 5], [1.6, 22, 6.5], [2.3, 14, 4.6], [2.95, 19, 5.8], [3.65, 16, 5.2], [4.35, 21, 6.4], [5.05, 13, 4.4], [5.7, 18, 5.6]],
 };
 
+/** Pangaea Castle on Mary Geoise (render3d/props/marygeoise.js): its footprint, w across (x) by d deep (z, front +z). */
+export const PANGAEA = { w: 48, d: 30 };
+
+/**
+ * Caesar's research facility on Punk Hazard (render3d/props/punkhazard.js):
+ * its domes [x, z, radius, wall height] and smokestacks [x, z, radius, height],
+ * front +z.
+ */
+export const PHLAB = {
+  domes: [[0, -6, 15, 9], [-21, 2, 9, 7], [20, 0, 10, 8], [-9, 17, 6.5, 5], [10, 16, 6, 5]],
+  stacks: [[-6, -22, 2.2, 46], [3, -23, 2.0, 40], [12, -19, 1.8, 36], [-15, -15, 1.6, 30]],
+};
+/** Onigashima's skull (render3d/props/wano.js): its radius, its height (m). */
+export const SKULL = { r: 34, h: 58 };
+
 /** A prop's collider (see COLLIDE; scaled by its size). */
 export function colliderOf(o) {
   if (o.kind === 'tree') return TRUNK[o.sub || 'oak'] ?? COLLIDE.tree;
@@ -78,10 +93,24 @@ export function colliderOf(o) {
     }
     return { circles: c };
   }
+  // (Pangaea Castle: solid over its whole footprint, the plinth's steps in front left open)
+  if (o.kind === 'pangaea') {
+    const c = [];
+    for (let x = -PANGAEA.w / 2 + 3; x <= PANGAEA.w / 2 - 3 + 1e-6; x += 4.2) for (let z = -PANGAEA.d / 2 + 3; z <= PANGAEA.d / 2 - 3 + 1e-6; z += 4.2) c.push([x, z, 3.1]);
+    return { circles: c };
+  }
   if (o.kind === 'spire') return { circles: [[0, 0, (o.r || 4) * 0.95]] };
   if (o.kind === 'adamroot') return { circles: [[0, 3, 2.7], [0, 7, 2.3], [0, 11, 1.9], [0, 15, 1.4], [0, 18.5, 1.0]] };
   // (Water 7's Great Fountain: its basin, all round — render3d/props/water7.js)
   if (o.kind === 'greatfountain') return { circles: [[0, 0, 10.1]] };
+  // (the New World's set pieces — Punk Hazard, Wano, Onigashima: render3d/props/punkhazard.js, wano.js —
+  // solid round their feet; their sizes ride on the object)
+  if (o.kind === 'cliffwall') return { circles: (o.pts || []).filter((_, i) => i % 2 === 0).map(([x, z, nx, nz]) => [x - nx * 8, z - nz * 8, 9.5]) };
+  if (o.kind === 'phvolcano' || o.kind === 'wanofuji') return { circles: [[0, 0, (o.r || 20) * 0.86]] };
+  if (o.kind === 'phicepeaks') return { circles: (o.peaks || []).map(([x, z, r]) => [x, z, r * 0.78]) };
+  if (o.kind === 'phlab') return { circles: PHLAB.domes.map(([x, z, r]) => [x, z, r + 0.4]).concat(PHLAB.stacks.map(([x, z, r]) => [x, z, r + 0.2])) };
+  if (o.kind === 'wanocastle') return { circles: [[0, 0, (o.r || 14) * 0.95]] };
+  if (o.kind === 'skulldome') return { circles: [[0, -4, SKULL.r * 0.97], [-SKULL.r * 0.75, 6, SKULL.r * 0.42], [SKULL.r * 0.75, 6, SKULL.r * 0.42]] };
   // a Galley-La dock's shed: its side walls, its back wall either side of the
   // great doorway, the ship on the stocks down the middle and the crane — its
   // front open to the sea (the shed's own frame: x across, z out to sea)
