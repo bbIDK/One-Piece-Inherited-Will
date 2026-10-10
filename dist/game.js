@@ -13045,8 +13045,7 @@
       return;
     }
     const R5 = senseRange(a.hakiLevel ? a.hakiLevel("observation") : 0);
-    fx.ring(a.x, a.y, 0.5, R5, sig2.observation, 0.7, 0.13, { flat: 0.5, add: true });
-    fx.ring(a.x, a.y, 0.3, R5 * 0.6, sig2.observation, 0.75, 0.07, { flat: 0.5, add: true, delay: 0.16 });
+    fx.add("sense", { x: a.x, y: a.y, z: 1.55 * s, r: R5, color: sig2.observation, life: 0.95, seed: Math.random() * 100 });
     fx.add("flare", { x: a.x, y: a.y, z: 1.62 * s, size: 0.7 * s, color: sig2.observation, life: 0.32 });
   }
   function hakiSpentFx(fx, a, type) {
@@ -13599,7 +13598,7 @@
   // src/world/deform.js
   var MAX = 8;
   var DEFORM = { list: [], now: 0, world: null, seq: 0 };
-  var KINDS = { tilt: 1, crater: 2, trench: 3, rise: 4 };
+  var KINDS = { tilt: 1, crater: 2, trench: 3, rise: 4, ice: 5 };
   function addDeform(o) {
     const d = {
       kind: KINDS[o.kind] || 1,
@@ -13623,9 +13622,10 @@
     return d;
   }
   function tickDeform(now3, world) {
+    if (world && DEFORM.world && world !== DEFORM.world || now3 < DEFORM.now - 1) DEFORM.list.length = 0;
     DEFORM.now = now3;
     if (world) DEFORM.world = world;
-    if (DEFORM.list.length) DEFORM.list = DEFORM.list.filter((d) => now3 - d.t0 < d.rise + d.hold + d.fall);
+    if (DEFORM.list.length) DEFORM.list = DEFORM.list.filter((d) => now3 - d.t0 < d.rise + d.hold + d.fall && d.t0 - now3 < 30);
   }
   var sst = (a, b, x) => {
     const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -13659,11 +13659,28 @@
       const run = sst(-w, w * 0.5, u) * (1 - sst(r4 - w * 1.5, r4 + w, u));
       return -amp * Math.exp(-((v / w) ** 2)) * run + amp * 0.18 * Math.exp(-(((Math.abs(v) - w * 1.3) / (w * 0.5)) ** 2)) * run;
     }
+    if (kind === 5) return 0;
     if (kind === 4) {
       if (q2 >= 1) return 0;
       return amp * (1 - sst(0, 1, q2));
     }
     return 0;
+  }
+  var ICE_TOP = 0.32;
+  function iceCover(x, y) {
+    const L3 = DEFORM.list;
+    if (!L3.length) return false;
+    const w = DEFORM.world;
+    for (const d of L3) {
+      if (d.kind !== 5) continue;
+      const e = envelope(d);
+      if (e < 0.25) continue;
+      const lx = w?.dx ? w.dx(d.x, x) : x - d.x, ly = y - d.y;
+      const th = Math.atan2(ly, lx);
+      const rag = 1 + 0.07 * Math.sin(th * 7 + d.id) + 0.04 * Math.sin(th * 17 + d.id * 3);
+      if (Math.hypot(lx, ly) < d.r * rag * Math.min(1, e * 1.3)) return true;
+    }
+    return false;
   }
   function deformAt(x, y, sea = false) {
     const L3 = DEFORM.list;
@@ -15629,6 +15646,7 @@
   }
   var POWERS = { shambles, takt, release };
   function iceAt(game, x, y) {
+    if (iceCover(x, y)) return true;
     const zs = game?.areaZones;
     if (!zs || !zs.length) return false;
     for (const z of zs) if (z.freezeWater && z.t > 0 && game.world.distance(z.x, z.y, x, y) <= z.r) return true;
@@ -17602,6 +17620,8 @@
         for (const o of game.areaZones) if (o.owner === actor && o.kind === zone.kind) o.t = 0;
       }
       game.addZone(zone);
+      if (z.freezeWater) zone.ice = addDeform({ kind: "ice", x: zone.x, y: zone.y, r: zone.r, rise: 0.5, hold: Math.max(1, z.duration - 2.5), fall: 2.5 });
+      if (zone.ice) game.fx.add("seaice", { x: zone.x, y: zone.y, r: zone.r, id: zone.ice.id, life: z.duration, seed: zone.ice.id, until: () => zone.t > -2.5 });
       game.fx.zone(zone, z, actor, a);
     }
     if (s.power) {
@@ -20559,7 +20579,7 @@
           cd: 14,
           desc: "Freeze everything around you solid \u2014 the ground, and the sea itself, which becomes a road of ice while it lasts.",
           say: "Ice Age!",
-          steps: [{ hit: { shape: "circle", range: 5, damage: 30, knockback: 1, stun: 0.3, element: "ice", status: { freeze: 2.5 }, heavy: true }, vfx: "ring", color: "#e1f5fe" }, { zone: { range: 6.5, duration: 12, interval: 1, damage: 0, color: "#e1f5fe", kind: "ice", slow: 0.5, freezeWater: true } }]
+          steps: [{ hit: { shape: "circle", range: 5, damage: 30, knockback: 1, stun: 0.3, element: "ice", status: { freeze: 2.5 }, heavy: true }, vfx: "ring", color: "#e1f5fe" }, { zone: { range: 16, duration: 24, interval: 1, damage: 0, color: "#e1f5fe", kind: "ice", slow: 0.5, freezeWater: true } }]
         }),
         T(50, { id: "hie_iceball", name: "Ice Ball", anim: "cast", windup: 0.35, recover: 0.3, cd: 10, desc: "Encase the target in a ball of ice.", steps: [{ proj: { speed: 14, range: 10, radius: 0.6, damage: 24, sprite: "iceshard", size: 2, color: "#e1f5fe", element: "ice", status: { freeze: 2.2 } } }] }),
         T(65, { id: "hie_time", name: "Ice Time Capsule", icon: "\u{1F9CA}", anim: "cast", windup: 0.7, recover: 0.4, cd: 25, desc: "A wave of ice that freezes everything along its path solid.", steps: [{ hit: { shape: "line", range: 10, width: 2.5, damage: 60, knockback: 2, element: "ice", status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: "beam", color: "#e1f5fe" }] }),
@@ -21685,6 +21705,7 @@
       if (OVERLAY[t]) return deckTop(w, x, y) + dz;
       if (w.quays.size && w.isQuay(x, y)) return DOCK_Y + dz;
       const h0 = this.terrain0(x, y), h2 = h0 + dz;
+      if (IS_LIQUID[t] && DEFORM.list.length && t !== T2.LAVA && iceCover(x, y)) return Math.max(h2, SEA_Y + ICE_TOP);
       if (IS_LIQUID[t]) return Math.max(h2, t === T2.RAPIDS ? waterLevel(w, x, y) : SEA_Y);
       const f = w.floorRec ? w.floorRec(x, y) : null;
       if (!f) return h2;
@@ -24795,26 +24816,7 @@
       out.air = f.techniques.filter((t) => t.flight).map((t) => ({ id: t.id, def: getAbility(t.id) }));
       out.m1 = { source: "fruit:" + p.fruit, fruit: p.fruit, ...f.m1 || {}, ...form?.m1 || {} };
       out.heavy = form ? form.heavy || null : f.heavy || null;
-      for (const F4 of f.forms || []) {
-        const lack = F4.needs && !(p.hakiLevel?.(F4.needs) > 0);
-        const why = m < F4.mastery ? `fruit mastery ${F4.mastery}${F4.needs ? ` \xB7 ${hakiKnown(p) ? hakiName(F4.needs) + " Haki" : "and a power yet to awaken"}` : ""}` : lack ? `needs ${hakiKnown(p) ? hakiName(F4.needs) + " Haki" : "a power yet to awaken"}` : "";
-        out.forms.push({ id: F4.id, name: F4.name, short: F4.short || F4.name, entry: ENTRY.form(F4.id), open: m >= F4.mastery, why, on: fb?.form === F4.id, activate: F4.activate });
-      }
-      const aw = f.awakening;
-      if (aw) {
-        const ready2 = !!c.fruitAwakened;
-        out.forms.push({
-          id: "awake",
-          name: aw.name,
-          short: aw.short || aw.name,
-          entry: ENTRY.awake,
-          open: ready2,
-          awakening: true,
-          on: fb?.form === "awake",
-          activate: aw.activate,
-          why: ready2 ? "" : m < AWAKEN_MASTERY ? `awakening: fruit mastery ${AWAKEN_MASTERY}, then a moment in battle` : "awakening: ready \u2014 a hard fight will bring it out"
-        });
-      }
+      out.forms = fruitFormsOf(p);
       out.next = out.forms.filter((F4) => !F4.open).slice(0, 1).map((F4) => ({ name: F4.name, why: F4.why }));
       return out;
     }
@@ -24915,6 +24917,33 @@
     const key2 = K.skills[i];
     const when = st.weapon ? `with your ${st.weapon === "sword" ? "sword" : st.weapon} drawn` : "with your fists up";
     return `${key2 ? `on ${keyLabel(key2)}` : `skill ${i + 1}, with no key yet (Settings, Controls)`} ${when}`;
+  }
+  function fruitFormsOf(p) {
+    const f = FRUITS[p?.fruit];
+    if (!f) return [];
+    const c = p.char || {}, fb = formBuff(p), m = p.fruitMastery || 0;
+    const out = [];
+    for (const F4 of f.forms || []) {
+      const lack = F4.needs && !(p.hakiLevel?.(F4.needs) > 0);
+      const why = m < F4.mastery ? `fruit mastery ${F4.mastery} (now ${Math.floor(m)})${F4.needs ? ` \xB7 ${hakiKnown(p) ? hakiName(F4.needs) + " Haki" : "and a power yet to awaken"}` : ""}` : lack ? `needs ${hakiKnown(p) ? hakiName(F4.needs) + " Haki" : "a power yet to awaken"}` : "";
+      out.push({ id: F4.id, name: F4.name, short: F4.short || F4.name, entry: ENTRY.form(F4.id), open: m >= F4.mastery, why, on: fb?.form === F4.id, activate: F4.activate });
+    }
+    const aw = f.awakening;
+    if (aw) {
+      const ready2 = !!c.fruitAwakened;
+      out.push({
+        id: "awake",
+        name: aw.name,
+        short: aw.short || aw.name,
+        entry: ENTRY.awake,
+        open: ready2,
+        awakening: true,
+        on: fb?.form === "awake",
+        activate: aw.activate,
+        why: ready2 ? "" : m < AWAKEN_MASTERY ? `awakening: fruit mastery ${AWAKEN_MASTERY} (now ${Math.floor(m)}), then a moment in battle` : "awakening: ready \u2014 a hard fight will bring it out"
+      });
+    }
+    return out;
   }
 
   // src/game/actor.js
@@ -61289,6 +61318,8 @@ void main() {
     `
   uniform vec4 uDefA[${DEF_N}];
   uniform vec4 uDefB[${DEF_N}];
+  // (squares written out: GLSL's pow is undefined for a negative base)
+  float defSq(float x) { return x * x; }
   float defSst(float a, float b, float x) { float t = clamp((x - a) / (b - a), 0.0, 1.0); return t * t * (3.0 - 2.0 * t); }
   float deformH(vec2 p, float mask) {
     float h = 0.0;
@@ -61296,6 +61327,8 @@ void main() {
       vec4 A = uDefA[i], B = uDefB[i];
       if (abs(A.w) < 1e-4) continue;
       float kind = B.x;
+      // (ice \u2014 kind 5 \u2014 doesn't shape the ground; under it the sea is hidden: mask 2)
+      if (kind > 4.5) { if (mask > 1.5 && length(p - A.xy) < A.z) h -= 3.0 * min(1.0, abs(A.w) * 1.4); continue; }
       if (mask > 1.5 && kind > 1.5) continue;
       vec2 l = p - A.xy;
       float r = A.z, amp = A.w, c = B.y, s = B.z, w = B.w;
@@ -61305,13 +61338,13 @@ void main() {
       } else if (kind < 2.5) {
         if (q < 1.5) {
           float bowl = q < 1.0 ? -amp * (1.0 - q * q) : 0.0;
-          h += bowl + amp * 0.3 * exp(-pow((q - 1.0) / 0.18, 2.0));
+          h += bowl + amp * 0.3 * exp(-defSq((q - 1.0) / 0.18));
         }
       } else if (kind < 3.5) {
         float u = l.x * c + l.y * s, v = -l.x * s + l.y * c;
         if (u > -w && u < r + w) {
           float run = defSst(-w, w * 0.5, u) * (1.0 - defSst(r - w * 1.5, r + w, u));
-          h += -amp * exp(-pow(v / w, 2.0)) * run + amp * 0.18 * exp(-pow((abs(v) - w * 1.3) / (w * 0.5), 2.0)) * run;
+          h += -amp * exp(-defSq(v / w)) * run + amp * 0.18 * exp(-defSq((abs(v) - w * 1.3) / (w * 0.5))) * run;
         }
       } else {
         if (q < 1.0) h += amp * (1.0 - defSst(0.0, 1.0, q));
@@ -63259,7 +63292,10 @@ void main() {
     mat4 dM = modelMatrix;
   #endif
     vec4 dW = dM * vec4(transformed, 1.0);
-    transformed.y += deformH(dW.xz, 1.0) / max(length(dM[1].xyz), 1e-3);
+    // (straight up in the world, taken back into the mesh's own frame: a mesh
+    // laid on its side or squashed flat must not be stretched along its own axis)
+    float dH = deformH(dW.xz, 1.0);
+    if (dH != 0.0) transformed += (inverse(dM) * vec4(0.0, dH, 0.0, 0.0)).xyz;
   }
 `;
   function toonMat(opts, fade2) {
@@ -64299,6 +64335,8 @@ void main() {
   var HULLS = (
     /* glsl */
     `
+  // (squares written out: GLSL's pow is undefined for a negative base)
+  float wSq(float x) { return x * x; }
   uniform vec4 uShips[${SHIPS_N}];
   uniform vec4 uShipD[${SHIPS_N}];
   uniform float uShipK[${SHIPS_N}];   // how sharply each is turning (1/m: + to starboard)
@@ -64354,11 +64392,11 @@ void main() {
       if (f.z < -0.5 || f.z > 1.5 || f.w > D.y * 2.0 + 3.0) continue;
       float spd = clamp(D.z / 8.0, 0.0, 1.2);
       float o = max(f.w, 0.0);
-      float stem = exp(-pow((f.z - 0.98) * D.x / (1.2 + D.y * 0.25), 2.0) - pow(o / (0.9 + D.y * 0.12), 2.0));
+      float stem = exp(-wSq((f.z - 0.98) * D.x / (1.2 + D.y * 0.25)) - wSq(o / (0.9 + D.y * 0.12)));
       float side = exp(-pow(o / 1.6, 2.0)) * smoothstep(0.1, 0.3, f.z) * (1.0 - smoothstep(0.6, 0.85, f.z));
       // (and the bow wave's crest rolling out from her shoulders and away aft: the sea itself, heaped)
       float back = (0.95 - f.z) * D.x, crestAt = D.y * 0.1 + back * 0.32;
-      float crest = exp(-pow((o - crestAt) / (0.6 + back * 0.05), 2.0)) * smoothstep(0.0, 2.0, back) * (1.0 - smoothstep(D.x * 0.3, D.x * 0.9, back));
+      float crest = exp(-wSq((o - crestAt) / (0.6 + back * 0.05))) * smoothstep(0.0, 2.0, back) * (1.0 - smoothstep(D.x * 0.3, D.x * 0.9, back));
       h += (stem * (0.18 + 0.55 * spd) - side * 0.16 * spd + crest * 0.28 * spd) * step(0.0, f.w + 0.4);
     }
     return h;
@@ -64460,7 +64498,7 @@ void main() {
       float ph = fract(t * (0.9 + 0.3 * fk) + hash(i + fk * 5.1));
       vec2 d = f - (0.2 + 0.6 * hc);
       float r = length(d), rr = ph * 0.42;
-      float w = exp(-pow((r - rr) * 22.0, 2.0)) * (1.0 - ph) * (1.0 - ph);
+      float w = exp(-wSq((r - rr) * 22.0)) * (1.0 - ph) * (1.0 - ph);
       g += d / max(r, 0.001) * w * cos((r - rr) * 55.0);
     }
     return g;
@@ -65660,7 +65698,8 @@ ${GLSL}
       float lon = atan(dot(sd3, MWB), dot(sd3, MWA)) / 6.2831853;
       vec4 mn = N0(vec2(lon * 3.0, lat * 1.4 + 0.5));
       float band = exp(-lat * lat / (0.012 + 0.02 * mn.g));
-      float rift = exp(-pow((lat - 0.015 * sin(lon * 31.4)) / 0.018, 2.0)) * smoothstep(0.35, 0.75, mn.r);
+      float riftD = (lat - 0.015 * sin(lon * 31.4)) / 0.018;
+      float rift = exp(-riftD * riftD) * smoothstep(0.35, 0.75, mn.r);
       float mw = band * (0.45 + 0.9 * mn.b * mn.r) * (1.0 - 0.7 * rift);
       stars += mix(vec3(0.42, 0.5, 0.75), vec3(0.75, 0.66, 0.55), mn.a * band) * mw * 0.09;
       // stars in three layers: many faint, some brighter, a few bright
@@ -78201,7 +78240,7 @@ vec3 paneView(vec3 dir, float night) {
     domes: [[0, -6, 15, 9], [-21, 2, 9, 7], [20, 0, 10, 8], [-9, 17, 6.5, 5], [10, 16, 6, 5]],
     stacks: [[-6, -22, 2.2, 46], [3, -23, 2, 40], [12, -19, 1.8, 36], [-15, -15, 1.6, 30]]
   };
-  var SKULL = { r: 34, h: 58 };
+  var SKULL = { r: 34, h: 72 };
   function colliderOf(o) {
     if (o.kind === "tree") return TRUNK2[o.sub || "oak"] ?? COLLIDE.tree;
     if (TRUNK2[o.kind] !== void 0) return TRUNK2[o.kind];
@@ -82907,6 +82946,7 @@ vec3 paneView(vec3 dir, float night) {
     root4.userData.founded = true;
     return root4;
   });
+  var TONGUE2 = new LatheGeometry([[0, 0], [0.75, 0.08], [1, 0.25], [0.8, 0.45], [0.45, 0.7], [0.15, 0.9], [0, 1]].map(([r4, y]) => new Vector2(r4, y)), 7);
   reg7("phflames", (o) => {
     const R5 = o.r || 4, seed = (o.x * 0.31 + o.y * 0.17) % 50;
     const outer = new Mesher(), inner = new Mesher(), bed2 = new Mesher();
@@ -82914,8 +82954,8 @@ vec3 paneView(vec3 dir, float night) {
     for (let i = 0; i < n; i++) {
       const a = hashN(i, seed) * Math.PI * 2, d = R5 * Math.sqrt(hashN(i, seed + 1)), h2 = (2.4 + hashN(i, seed + 2) * 4.6) * (1 - d / R5 * 0.45);
       const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      outer.add(new ConeGeometry(h2 * 0.3, h2, 6), { at: [x, h2 / 2 - 0.1, z], rot: [0, a, (hashN(i, 7) - 0.5) * 0.3] });
-      inner.add(new ConeGeometry(h2 * 0.16, h2 * 0.62, 6), { at: [x, h2 * 0.31, z] });
+      outer.add(TONGUE2, { at: [x, -0.1, z], scale: [h2 * 0.3, h2, h2 * 0.3], rot: [0, a, (hashN(i, 7) - 0.5) * 0.3] });
+      inner.add(TONGUE2, { at: [x, 0, z], scale: [h2 * 0.16, h2 * 0.62, h2 * 0.16] });
       bed2.add(new DodecahedronGeometry(0.5 + hashN(i, 9) * 0.6, 0), { at: [x, 0, z], color: "#2a1712", flat: true });
     }
     const root4 = new Group();
@@ -82933,30 +82973,40 @@ vec3 paneView(vec3 dir, float night) {
   var ICE = col("#9ccbe6");
   var ICE_HI = col("#d6ecf8");
   var SNOW2 = col("#f4f9fd");
-  reg7("phicepeaks", (o) => {
+  reg7("phicepeaks", (o, ctx) => {
     const peaks = o.peaks || [[0, 0, 20, 50]];
     const seed = o.x * 0.07 % 10;
-    const key2 = `phicepeaks:${peaks.map((p) => p.map(Math.round).join(",")).join(";")}:${Math.round(seed)}`;
+    const g0 = ctx.ground(o.x, o.y);
+    const foot = peaks.map(([px2, pz2, R5]) => {
+      let g = ctx.ground(o.x + px2, o.y + pz2);
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * Math.PI * 2;
+        g = Math.min(g, ctx.ground(o.x + px2 + Math.cos(a) * R5, o.y + pz2 + Math.sin(a) * R5));
+      }
+      return g - g0;
+    });
+    const key2 = `phicepeaks:${peaks.map((p) => p.map(Math.round).join(",")).join(";")}:${Math.round(seed)}:${foot.map(Math.round).join(",")}`;
     const geo2 = model(key2, (k) => {
       const tmp2 = new Color();
-      peaks.forEach(([px2, pz2, R5, H5], q2) => {
-        const sd = seed + q2 * 3.1;
+      peaks.forEach(([px2, pz2, R5, H0], q2) => {
+        const sd = seed + q2 * 3.1, fy = foot[q2], H5 = H0 + Math.max(0, -fy) * 0.5;
         const surf2 = (a, s, i) => {
           const tw = s * 0.9 + sd;
           const aa = a + tw * 0.4;
           const jag = 1 + 0.32 * (hashN(i + Math.round(s * 10) * 7, sd) - 0.5);
           const r4 = (s < 0 ? R5 * 1.1 : R5 * (1 - s) ** 1.15) * jag;
-          const y = s < 0 ? -4 : H5 * s * (s > 0.97 ? 1 : 1 + 0.06 * Math.sin(a * 3 + sd));
+          const y = fy + (s < 0 ? -6 : H5 * s * (s > 0.97 ? 1 : 1 + 0.06 * Math.sin(a * 3 + sd)));
           return [px2 + Math.cos(aa) * r4, y, pz2 + Math.sin(aa) * r4];
         };
         k.add(moundGeo(surf2, [-0.05, 0, 0.2, 0.4, 0.58, 0.74, 0.88, 1], 7), {
-          color: (p, n) => n.y > 0.5 ? SNOW2 : tmp2.copy(ICE).lerp(ICE_HI, Math.max(0, n.x * 0.5 + n.z * 0.5 + 0.3)).lerp(SNOW2, Math.max(0, (p.y / H5 - 0.75) * 2)),
+          color: (p, n) => n.y > 0.5 ? SNOW2 : tmp2.copy(ICE).lerp(ICE_HI, Math.max(0, n.x * 0.5 + n.z * 0.5 + 0.3)).lerp(SNOW2, Math.max(0, ((p.y - fy) / H5 - 0.75) * 2)),
           flat: true,
           outline: 0.3
         });
         for (let i = 0; i < 6; i++) {
           const a = hashN(i, sd) * Math.PI * 2, d = R5 * (0.9 + hashN(i, sd + 1) * 0.4), h2 = R5 * (0.25 + hashN(i, sd + 2) * 0.35);
-          k.add(new ConeGeometry(h2 * 0.22, h2, 5), { at: [px2 + Math.cos(a) * d, h2 * 0.4, pz2 + Math.sin(a) * d], rot: [(hashN(i, 4) - 0.5) * 0.7, a, (hashN(i, 5) - 0.5) * 0.7], color: (p, n) => n.y > 0.6 ? SNOW2 : ICE_HI, flat: true, outline: 0.08 });
+          const gx = px2 + Math.cos(a) * d, gz = pz2 + Math.sin(a) * d;
+          k.add(new ConeGeometry(h2 * 0.22, h2, 5), { at: [gx, ctx.ground(o.x + gx, o.y + gz) - g0 + h2 * 0.4, gz], rot: [(hashN(i, 4) - 0.5) * 0.7, a, (hashN(i, 5) - 0.5) * 0.7], color: (p, n) => n.y > 0.6 ? SNOW2 : ICE_HI, flat: true, outline: 0.08 });
         }
       });
     });
@@ -83363,7 +83413,7 @@ vec3 paneView(vec3 dir, float night) {
       const tmp2 = new Color();
       const rock = (a, s, i) => {
         const jag = 1 + 0.16 * (hashN(i + Math.round(s * 10) * 17, 9) - 0.5);
-        return [Math.cos(a) * R5 * (1.45 - s * 0.5) * jag, -4 + s * 16, Math.sin(a) * R5 * (1.45 - s * 0.5) * jag];
+        return [Math.cos(a) * R5 * (1.45 - s * 0.5) * jag, -4 + s * 11, Math.sin(a) * R5 * (1.45 - s * 0.5) * jag];
       };
       k.add(moundGeo(rock, [0, 0.35, 0.7, 1], 22), { color: (p, nn) => nn.y > 0.6 ? ROCKO_HI : ROCKO, flat: true, outline: 0.3 });
       const cy = Hs - R5 * 0.95;
@@ -84318,7 +84368,8 @@ vec3 paneView(vec3 dir, float night) {
         float body = 1.0 - smoothstep(0.55, 1.0, r + (n - 0.5) * 0.4);
         c = mix(vCol.rgb, vec3(1.3, 1.4, 1.5), edge);
         a = body * mix(0.35, 0.95, edge);
-        w = edge * 0.4;
+        // (glowing only as far as asked: a wide sheet of frost mustn't bloom over the whole screen)
+        w = edge * 0.4 * min(1.0, vCol2.a / 0.3);
       } else if (kind == ${SF.TELE}) {
         // a wind-up warning: the area, filling as the blow comes, its edge pulsing
         float pulse = 0.5 + 0.5 * sin(uTime * 22.0);
@@ -84371,9 +84422,10 @@ vec3 paneView(vec3 dir, float night) {
             float hole = 1.0 - smoothstep(0.28, 0.4, r);
             c = mix(vCol2.rgb, vCol.rgb * 1.25, arm * 0.8);
             c = mix(c, vec3(0.0), hole);
-            c = mix(c, vCol.rgb * 1.8, rim);
-            a = max(max(pool * mix(0.8, 0.97, arm), hole), rim * 0.9);
-            w = (arm * 0.3 + rim * 0.6) * (1.0 - hole);
+            // (the fringe only a faint glint on the ink: no bright line round it)
+            c = mix(c, vCol.rgb * 1.4, rim * 0.35);
+            a = max(max(pool * mix(0.8, 0.97, arm), hole), rim * 0.3);
+            w = (arm * 0.3 + rim * 0.15) * (1.0 - hole);
           } else {
             a = body * (0.16 + 0.55 * arm);
             c = mix(vCol.rgb, vCol2.rgb * 1.3, arm);
@@ -85537,23 +85589,50 @@ vec3 paneView(vec3 dir, float night) {
       if ((s.flat ?? 0.62) >= 0.75) {
         const z = s.z ?? 0.4;
         if (v.onSelf(s, z)) return;
-        const X2 = v.lx(s.x), Z2 = v.lz(s.y), Y2 = v.groundOf(s) + z;
+        const X3 = v.lx(s.x), Z3 = v.lz(s.y), Y2 = v.groundOf(s) + z;
         const size2 = rad / 0.8 + width;
-        const i = v.sprites.put(SK2.RING, X2, Y2, Z2, size2, c, alpha2, c2, w, 0, s.seed, k);
+        const i = v.sprites.put(SK2.RING, X3, Y2, Z3, size2, c, alpha2, c2, w, 0, s.seed, k);
         v.sprites.vel(i, Math.min(0.5, width / size2 * 1.4), (s.wobble || 0) * (1 - k), s.lobes || 9, core);
-        if (rad > 0.25 && !dark && !v.low) v.shells.put(VK.BUBBLE, X2, Y2, Z2, rad * 0.92, 0, 1, 0, 1, c, alpha2 * 0.35, WHITE6, 0.4, k, s.seed);
+        if (rad > 0.25 && !dark && !v.low) v.shells.put(VK.BUBBLE, X3, Y2, Z3, rad * 0.92, 0, 1, 0, 1, c, alpha2 * 0.35, WHITE6, 0.4, k, s.seed);
         return;
       }
       const R1 = Math.max(s.r0, s.r1) * (1 + (s.wobble || 0)) + width;
       const patch4 = v.patch(s, s.x, s.y, R1);
-      const wh = v.low ? 0 : dark ? Math.min(1.2, 0.3 + width * 2.5) : Math.min(0.9, 0.12 + width * 2.4) * (1 - k * 0.4);
-      v.groundRing(patch4, s.x, s.y, rad, width * 0.5, c, alpha2, c2, w, core, wh, dark ? 0.5 : 0.55, (s.wobble || 0) * (1 - k), s.lobes || 9, v.time * 40, s.seed, k);
-      if (s.fill) {
-        const fc = col3(s.fill === true ? s.color : s.fill);
-        v.decal(patch4, s.x, s.y, rad, 0, SF.FILL, fc, alpha2 * 0.22, fc, w * 0.5, k, s.seed, 0, 0, 0, 6);
+      const wh = v.low || !dark ? 0 : Math.min(1.2, 0.3 + width * 2.5);
+      if (wh > 0) v.groundRing(patch4, s.x, s.y, rad, 0, c, alpha2 * (dark ? 1 : 0.8), c2, w, core, wh, dark ? 0.5 : 0.42, (s.wobble || 0) * (1 - k), s.lobes || 9, v.time * 40, s.seed, k);
+      const X2 = v.lx(s.x), Z2 = v.lz(s.y);
+      const n = Math.max(10, Math.min(36, Math.round(rad * 3.2)));
+      const dc = dark ? c : mixCol(RING_DUST, c, s.add ? 0.4 : 0.25, RING_TMP);
+      for (let i = 0; i < n; i++) {
+        const h2 = hash8((s.seed || 0) * 3.7 + i * 1.31);
+        const th = (i + h2 * 0.8) / n * TAU12, rr = rad * (0.93 + 0.12 * h2);
+        const cs = Math.cos(th), sn = Math.sin(th);
+        const gy = patch4.get(cs * rr, sn * rr);
+        const sz = (0.35 + 0.6 * k + width * 1.5) * (0.6 + 0.8 * h2) * Math.min(1.8, 0.7 + rad * 0.15);
+        v.sprites.put(SK2.DUST, X2 + cs * rr, gy + 0.15 + (0.3 + 0.6 * h2) * k, Z2 + sn * rr, sz, dc, Math.min(1, alpha2 * 1.4) * (0.6 + 0.4 * h2), dc, 0, h2 * 6, (s.seed || 0) + i, k);
       }
     }
   };
+  var RING_DUST = col3("#d9cfc4");
+  var RING_TMP = new Float32Array(4);
+  var mixCol = (a, b, t, o) => {
+    for (let i = 0; i < 3; i++) o[i] = a[i] + (b[i] - a[i]) * t;
+    o[3] = 1;
+    return o;
+  };
+  function dustRing(v, patch4, s, rad, k, alpha2, c, size2 = 0.5) {
+    const X2 = v.lx(s.x), Z2 = v.lz(s.y);
+    const n = Math.max(10, Math.min(36, Math.round(rad * 3.2)));
+    const dc = mixCol(RING_DUST, c, 0.25, RING_TMP);
+    for (let i = 0; i < n; i++) {
+      const h2 = hash8((s.seed || 0) * 3.7 + i * 1.31);
+      const th = (i + h2 * 0.8) / n * TAU12, rr = rad * (0.93 + 0.12 * h2);
+      const cs = Math.cos(th), sn = Math.sin(th);
+      const gy = patch4.get(cs * rr, sn * rr);
+      const sz = (0.35 + 0.6 * k) * size2 * 2 * (0.6 + 0.8 * h2) * Math.min(1.8, 0.7 + rad * 0.15);
+      v.sprites.put(SK2.DUST, X2 + cs * rr, gy + 0.15 + (0.3 + 0.6 * h2) * k, Z2 + sn * rr, sz, dc, Math.min(1, alpha2 * 1.4) * (0.6 + 0.4 * h2), dc, 0, h2 * 6, (s.seed || 0) + i, k);
+    }
+  }
   var BEAM_CORE = { fire: "#fff3c4", light: "#ffffff", energy: "#ffffff", ice: "#ffffff", water: "#e1f5fe", wind: "#ffffff", gravity: "#ede7f6", quake: "#ffffff" };
   SHAPES.beam = {
     draw(v, s, k, a) {
@@ -85823,7 +85902,7 @@ vec3 paneView(vec3 dir, float night) {
         v.tubes.put(TK.BEAM, X2, G4, Z2, 0, 1, 0, H5, R5 * 0.07, R5 * 0.05, c2, fade2 * 0.5, c2, 0.8, k, s.seed + 7);
         if (k < 0.7) {
           const rk = easeOut(k / 0.7), patch5 = v.patch(s, s.x, s.y, R5 * 3);
-          v.groundRing(patch5, s.x, s.y, R5 * (0.4 + 2.4 * rk), 0.04 + 0.12 * (1 - rk), c, fade2 * (1 - rk), WHITE6, 1, 0.8, v.low ? 0 : 0.5 * (1 - rk), 0.5, 0, 9, 0, s.seed, rk);
+          if (!v.low) dustRing(v, patch5, s, R5 * (0.4 + 2.4 * rk), rk, fade2 * (1 - rk) * 0.8, c, 0.4);
         }
       } else {
         v.tubes.put(TK.PILLAR, X2, G4 - 0.1, Z2, 0, 1, 0, H5, R5 * 1.35, R5 * 1, c, fade2 * 0.4, c2, 0.6, k, s.seed);
@@ -85847,10 +85926,66 @@ vec3 paneView(vec3 dir, float night) {
       const c = col3(s.color || "#ffffff");
       const hk = (s.hk ?? 0.55) * 1.6;
       v.shells.put(VK.DOME, X2, G4, Z2, R5, 0, 1, 0, 1, c, a, WHITE6, 0.35, s.kind === "cage" ? 1 : 0, s.seed, hk);
-      const patch4 = v.patch(s, s.x, s.y, R5 + 0.3);
-      v.groundRing(patch4, s.x, s.y, R5, 0.07, c, a * 0.85, WHITE6, 1, 0.6, 0, 0, 0, 9, 0, s.seed, 0);
+      const age = s.age || 0;
+      if (age < 0.8 && !v.low) dustRing(v, v.patch(s, s.x, s.y, R5 + 0.3), s, R5, age / 0.8, a * (1 - age / 0.8), c, 0.45);
     }
   };
+  SHAPES.sense = {
+    draw(v, s, k, a) {
+      const X2 = v.lx(s.x), Z2 = v.lz(s.y), G4 = v.groundOf(s), Y2 = G4 + (s.z || 1.5);
+      const c = col3(s.color || "#80deea");
+      for (const [d, m] of [[0, 1], [0.22, 0.55]]) {
+        const kk = (k - d) / (1 - d);
+        if (kk <= 0 || kk >= 1) continue;
+        const R5 = s.r * easeOut(kk);
+        if (R5 > 0.2) v.shells.put(VK.BUBBLE, X2, Y2, Z2, R5, 0, 1, 0, 1, c, a * (1 - kk) * 0.4 * m, WHITE6, 0.8, 0.35 + kk * 0.5, (s.seed || 0) + d);
+      }
+      if (v.low) return;
+      for (let i = 0; i < 14; i++) {
+        const h2 = hash8((s.seed || 0) + i * 2.3), th = h2 * TAU12, el = (hash8(i * 7.1 + 1) - 0.3) * 1.2;
+        const rr = s.r * 0.7 * (1 - k) * (0.4 + 0.6 * hash8(i * 3.3));
+        v.sprites.put(SK2.STAR, X2 + Math.cos(th) * rr, Y2 + el * rr * 0.4, Z2 + Math.sin(th) * rr, 0.16 + 0.12 * h2, c, a * Math.sin(k * Math.PI), WHITE6, 1, k * 3 + h2, i, k);
+      }
+    }
+  };
+  SHAPES.seaice = {
+    draw(v, s, k, a) {
+      const life2 = s.max || 1, t = k * life2;
+      const grow = easeOut(Math.min(1, t / 0.5)) * (1 - Math.max(0, (t - (life2 - 2.5)) / 2.5));
+      if (grow < 0.02) return;
+      const R5 = s.r * grow, X2 = v.lx(s.x), Z2 = v.lz(s.y);
+      const id = s.id || 0;
+      const rag = (th) => 1 + 0.07 * Math.sin(th * 7 + id) + 0.04 * Math.sin(th * 17 + id * 3);
+      const S6 = v.surf, NR = 14, NA = 48;
+      if (!S6.room((NR + 1) * (NA + 1), NR * NA * 2)) return;
+      S6.style(SF.FILL, ICE_BODY, a * 0.96, ICE_EDGE, 0, k, s.seed || 0);
+      const v0 = S6.nv;
+      for (let j = 0; j <= NR; j++) {
+        for (let i = 0; i <= NA; i++) {
+          const th = i / NA * TAU12, rr = j / NR * R5 * rag(th) * 0.995;
+          const gy = ICE_TOP * grow + 0.02;
+          S6.vert(X2 + Math.cos(th) * rr, gy, Z2 + Math.sin(th) * rr, Math.cos(th) * j / NR, Math.sin(th) * j / NR, 0, 0);
+        }
+      }
+      S6.grid(v0, NA + 1, NR + 1);
+      const patch4 = v.patch(s, s.x, s.y, R5);
+      v.decal(patch4, s.x, s.y, R5 * 0.98, id, SF.FROST, ICE_FROST, a * 0.9, WHITE6, 0.04, k, s.seed || 0, 0, 0, 0, 10, 0.06);
+      if (v.low) return;
+      for (let i = 0; i < 18; i++) {
+        const h2 = hash8(id * 1.7 + i * 2.9), th = (i + h2) / 18 * TAU12, rr = R5 * rag(th) * (0.96 + 0.06 * h2);
+        const x = s.x + Math.cos(th) * rr, y = s.y + Math.sin(th) * rr;
+        const g0 = v.view.ground(x, y);
+        if (g0 > ICE_TOP + 0.25) continue;
+        const gy = Math.max(g0, ICE_TOP * grow);
+        const L3 = (0.6 + 0.9 * h2) * Math.min(1.4, 0.5 + s.r * 0.05);
+        putAlong(v.solids.crystals, v.lx(x), gy - 0.1, v.lz(y), Math.cos(th) * 0.5, 0.85, Math.sin(th) * 0.5, L3 * grow, 0.3 + 0.25 * h2, h2 * 3, ICE_SLAB, OK2.ICE, 0, id + i, 0.3);
+      }
+    }
+  };
+  var ICE_BODY = col3("#cdeefb");
+  var ICE_EDGE = col3("#ffffff");
+  var ICE_FROST = col3("#e3f6ff");
+  var ICE_SLAB = col3("#d6f1fb");
   SHAPES.haoshoku = {
     draw(v, s, k, a) {
       const R5 = s.r * easeOut(Math.min(1, k * 1.7));
@@ -85858,8 +85993,7 @@ vec3 paneView(vec3 dir, float night) {
       const X2 = v.lx(s.x), Z2 = v.lz(s.y), G4 = v.groundOf(s);
       const c = col3(s.color || "#d50000");
       v.shells.put(VK.HAKI, X2, G4, Z2, R5, 0, 1, 0, 1, c, a, c, 0.85, k, s.seed || 0, 0.62);
-      const patch4 = v.patch(s, s.x, s.y, R5 + 0.4);
-      v.groundRing(patch4, s.x, s.y, R5, 0.14, col3("#060309"), a * (1 - k) * 0.85, c, 0.5, 0.7, 0, 0, 0, 9, 0, s.seed || 0, 0);
+      if (!v.low) dustRing(v, v.patch(s, s.x, s.y, R5 + 0.4), s, R5, k, a * (1 - k), c, 0.6);
     }
   };
   function room(v, s, R5, a) {
@@ -85872,12 +86006,6 @@ vec3 paneView(vec3 dir, float night) {
     const flash = Math.max(0, 1 - age / 0.3);
     v.shells.put(VK.ROOM, X2, G4, Z2, Rr, 0, 1, 0, 1, c, a, ROOM_LINE, 0.2, flash * flash * 0.45, s.seed, 1);
     const patch4 = v.patch(s, s.x, s.y, Rr + 0.6);
-    v.groundRing(patch4, s.x, s.y, Rr, 0.05, c, a * 0.95, WHITE6, 1, 0.75, 0, 0, 0, 9, 0, s.seed, 0);
-    v.decal(patch4, s.x, s.y, Rr, 0, SF.ZONE, c, a * 0.6, WHITE6, 0.15, 0, s.seed, ZK.room, 0, 0, 10);
-    if (age < 0.5) {
-      const q2 = age / 0.5;
-      v.groundRing(patch4, s.x, s.y, Rr * (0.9 + q2 * 0.25), 0.12 * (1 - q2), WHITE6, a * (1 - q2), c, 1, 0.9, 0, 0, 0, 9, 0, s.seed, 0);
-    }
     if (age < 1.6) {
       const q2 = age / 1.6, fade2 = a * (1 - q2) * Math.min(1, age / 0.15);
       for (let r4 = 0; r4 < 4; r4++) {
@@ -85929,7 +86057,7 @@ vec3 paneView(vec3 dir, float night) {
       const dark = s.kind === "dark";
       const c = col3(dark ? "#7e57c2" : s.color || "#ffffff"), c2 = col3(dark ? "#1a0033" : s.color2 || "#ffffff");
       const patch4 = v.patch(s, s.x, s.y, R5);
-      v.decal(patch4, s.x, s.y, R5, 0, SF.SWIRL, c, a, c2, dark ? 0.2 : 0.5, k, s.seed, dark ? -1 : 0, s.arms || 5, spin, 8);
+      if (dark) v.decal(patch4, s.x, s.y, R5, 0, SF.SWIRL, c, a, c2, 0.2, k, s.seed, -1, s.arms || 5, spin, 8);
       const X2 = v.lx(s.x), Z2 = v.lz(s.y), G4 = v.groundOf(s);
       if (dark) {
         v.shells.put(VK.DARK, X2, G4 + 0.35 * R5, Z2, R5 * 0.32, 0, 1, 0, 1, c, a, col3("#b388ff"), 0, k, s.seed);
@@ -86029,6 +86157,11 @@ vec3 paneView(vec3 dir, float night) {
       if (t >= 1) {
         const f = 1 - Math.min(1, (age - fall2) / 0.35);
         if (f <= 0) return;
+        if (s.kind === "mochi") {
+          const q2 = 1 - f, r4 = R5 * (1.1 + 0.5 * easeOut(Math.min(1, q2 * 3)));
+          v.shells.put(VK.GOO, X2, G4 - r4 * (0.35 + 0.5 * q2), Z2, r4, 0, 1, 0, 0.55, glow3, a * Math.min(1, f * 2), MOCHI_SHADE, 0, k, s.seed);
+          return;
+        }
         const patch4 = v.patch(s, s.x, s.y, R5 * 2);
         v.decal(patch4, s.x, s.y, R5 * 2, 0, SF.GLOW, glow3, f * a * 0.8, WHITE6, 0.8, k, s.seed, 0, 0, 0, 5);
         v.sprites.put(SK2.FLASH, X2, G4 + R5 * 0.4, Z2, R5 * 1.4 * (1.25 - f * 0.25), glow3, f * f * a * 0.7, WHITE6, 0.8, 0, s.seed, k);
@@ -86089,6 +86222,7 @@ vec3 paneView(vec3 dir, float night) {
   var EDGES2 = [0, 1, 1, 3, 3, 2, 2, 0, 4, 5, 5, 7, 7, 6, 6, 4, 0, 4, 1, 5, 2, 6, 3, 7];
   SHAPES.tele = {
     draw(v, s, k, a) {
+      if (!s.floor) return;
       const c = col3(s.color || "rgba(255,60,60,1)");
       if (s.shape === "circle") {
         const patch4 = v.patch(s, s.x, s.y, s.r);
@@ -86240,7 +86374,8 @@ vec3 paneView(vec3 dir, float night) {
       const patch4 = v.patch(s, s.x, s.y, s.r);
       const zk = ZK[kind] ?? 0;
       const spin = v.time * (kind === "dark" ? -3 : 5);
-      v.decal(patch4, s.x, s.y, R5, 0, SF.ZONE, c, a, c2, kind === "dark" ? 0.2 : 0.4, k, s.seed, zk, kind === "dark" ? 6 : 5, spin, 10);
+      if (kind === "dark") v.decal(patch4, s.x, s.y, R5, 0, SF.ZONE, c, a, c2, 0.2, k, s.seed, zk, 6, spin, 10);
+      else if (kind === "ice" && !s.zone?.ice) v.decal(patch4, s.x, s.y, Math.min(R5, 7), 0, SF.FROST, c, a * 0.9, WHITE6, 0.04, k, s.seed, 0, 0, 0, 10, 0.05);
       const X2 = v.lx(s.x), Z2 = v.lz(s.y), G4 = v.groundOf(s);
       if (kind === "thunder") {
         cloud(v, X2, G4 + 9 + R5 * 0.2, Z2, Math.max(3.2, R5 * 1.5), col3("#37474f"), a, s.seed);
@@ -86303,7 +86438,12 @@ vec3 paneView(vec3 dir, float night) {
           const r4 = (0.5 + 0.4 * hash8(s.seed + i * 3)) * Math.sin(ph * PI);
           v.shells.put(VK.GOO, X2 + Math.cos(th) * rr, G4 - r4 * 0.25, Z2 + Math.sin(th) * rr, r4, 0, 1, 0, 0.85, c, a, MOCHI_SHADE, 0, k, s.seed + i);
         }
-      } else if (kind === "field") {
+      } else if (kind === "field" || kind === "plant") {
+        for (let i = 0; i < 6; i++) {
+          const ph = (v.time * 0.3 + hash8(s.seed + i * 5)) % 1, cyc = Math.floor(v.time * 0.3 + hash8(s.seed + i * 5));
+          const th = hash8(s.seed + i * 13 + cyc) * TAU12, rr = Math.sqrt(hash8(s.seed + i * 17 + cyc)) * R5 * 0.8;
+          v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G4 + 0.12 + ph * 0.4, Z2 + Math.sin(th) * rr, (0.4 + 0.35 * ph) * Math.min(1.5, 0.6 + R5 / 4), c, a * Math.sin(ph * PI) * 0.3, c2, 0, ph * 2, s.seed + i, 0.2 + ph * 0.5);
+        }
         for (let i = 0; i < 5; i++) {
           const ph = (v.time * 0.8 + hash8(s.seed + i)) % 1;
           const cyc = Math.floor(v.time * 0.8 + hash8(s.seed + i));
@@ -87658,14 +87798,16 @@ vec3 paneView(vec3 dir, float night) {
         P6[i * 4 + 2] = rr;
         P6[i * 4 + 3] = patch4.get(cs * rr, sn * rr);
       }
-      S6.style(SF.BAND, c, alpha2, c2, w, k, seed);
-      const v0 = S6.nv;
-      for (let i = 0; i <= n; i++) {
-        const cs = P6[i * 4], sn = P6[i * 4 + 1], rr = P6[i * 4 + 2], gy = P6[i * 4 + 3] + 0.05;
-        S6.vert(X2 + cs * (rr - hw), gy, Z2 + sn * (rr - hw), i / n, -1, core);
-        S6.vert(X2 + cs * (rr + hw), gy, Z2 + sn * (rr + hw), i / n, 1, core);
+      if (hw > 0) {
+        S6.style(SF.BAND, c, alpha2, c2, w, k, seed);
+        const v0 = S6.nv;
+        for (let i = 0; i <= n; i++) {
+          const cs = P6[i * 4], sn = P6[i * 4 + 1], rr = P6[i * 4 + 2], gy = P6[i * 4 + 3] + 0.05;
+          S6.vert(X2 + cs * (rr - hw), gy, Z2 + sn * (rr - hw), i / n, -1, core);
+          S6.vert(X2 + cs * (rr + hw), gy, Z2 + sn * (rr + hw), i / n, 1, core);
+        }
+        S6.grid(v0, 2, n + 1);
       }
-      S6.grid(v0, 2, n + 1);
       if (wall) {
         S6.style(SF.WALL, c, alpha2 * wallAlpha, c2, w, k, seed);
         const v1 = S6.nv;
@@ -89866,7 +90008,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     stern: "M0.19 -0.18 Q0.4 -0.29 0.6 -0.32 M-0.19 -0.18 Q-0.4 -0.29 -0.6 -0.32"
   };
   var MOUTH_COL2 = "#5c1c20";
-  var TONGUE2 = "#e0626a";
+  var TONGUE3 = "#e0626a";
   var TEETH2 = "#ffffff";
   var MOUTHS2 = {
     fierce: "M-0.14 0.66 Q0 0.58 0.14 0.66",
@@ -90158,7 +90300,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       g.save();
       g.clip(mp);
       if (tongue) {
-        g.fillStyle = TONGUE2;
+        g.fillStyle = TONGUE3;
         g.beginPath();
         g.ellipse(tongue[0], tongue[1], tongue[2], tongue[3], 0, 0, TAU15);
         g.fill();
@@ -127135,7 +127277,7 @@ ${lock2 || (formId === "awake" ? "Press to switch it on \u2014 again to switch i
       m1Name,
       heavyName,
       Math.ceil(heavyCd * 2),
-      ms.forms.map((F4) => [F4.id, F4.open, F4.on, hotKey(p, F4.entry)]),
+      (ms.forms.length ? ms.forms : fruitFormsOf(p)).map((F4) => [F4.id, F4.open, F4.on, hotKey(p, F4.entry)]),
       ms.next,
       fb ? [fb.form, Math.ceil(fb.t)] : null,
       hotKey(p, ENTRY.fruit),
@@ -127188,9 +127330,10 @@ ${s.why[0].toUpperCase() + s.why.slice(1)}` : ""}`;
       if (more > 0) box2.appendChild(h("div.sp-more", `+${more} more to learn \u2014 Skills (Tab)`));
       if (!shown.length) box2.appendChild(h("div.sp-more", ms.kind === "weapon" ? "No techniques for it yet: a trainer teaches them." : "No techniques yet: trainers teach them, a Devil Fruit gives them."));
       box2.appendChild(h("div.sp-mouse", h("span", h("kbd", "LMB"), " ", m1Name), h("span" + (heavyCd > 0 ? ".cd" : ""), h("kbd", "RMB"), " ", heavyName, heavyCd > 0 ? h("i", " " + fmt(heavyCd)) : null)));
-      if (ms.forms.length) {
+      const forms = ms.forms.length ? ms.forms : fruitFormsOf(p);
+      if (forms.length) {
         const fk = keyLabel(K.form[0]);
-        box2.appendChild(h("div.sp-forms", K.form[0] ? h("b.sp-fk", { title: `${fk}: the next form (and back to the base set)` }, fk) : null, ms.forms.map((F4) => {
+        box2.appendChild(h("div.sp-forms", K.form[0] ? h("b.sp-fk", { title: `${fk}: the next form (and back to the base set)` }, fk) : null, forms.map((F4) => {
           const k = hotKey(p, F4.entry);
           return h(
             "span.sp-chip" + (F4.on ? ".on" : "") + (F4.open ? "" : ".locked") + (F4.awakening ? ".aw" : ""),
