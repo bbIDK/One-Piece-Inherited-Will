@@ -4803,15 +4803,15 @@
   });
   var DRESS = {
     civilian: {
-      m: { top: W("tee:4 shirt:3 open:1 tank:1 striped:1 vest:0.5"), bottom: W("trousers:4 capri:2 shorts:2 baggy:1 slim:1"), waist: W("belt:3 none:3 sash:1"), shoes: W("shoes:3 sandals:3 boots:2") },
+      m: { top: W("tee:4 shirt:3 open:1 striped:1 vest:0.5"), bottom: W("trousers:4 capri:2 shorts:2 baggy:1 slim:1"), waist: W("belt:3 none:3 sash:1"), shoes: W("shoes:3 sandals:3 boots:2") },
       f: { top: W("tee:3 tank:2 shirt:2 dress:3 crop:1"), bottom: W("skirt:3 longskirt:2 trousers:2 capri:1 shorts:1 slim:1"), waist: W("none:3 belt:2 sash:1"), shoes: W("shoes:3 sandals:3 boots:1") }
     },
     pirate: {
-      m: { top: W("striped:3 open:3 vest:2 tee:2 bare:1 tank:1"), bottom: W("baggy:4 capri:2 shorts:2 trousers:2"), waist: W("sash:5 belt:3"), shoes: W("boots:5 sandals:2") },
+      m: { top: W("striped:3 open:3 vest:2 tee:2 bare:1"), bottom: W("baggy:4 capri:2 shorts:2 trousers:2"), waist: W("sash:5 belt:3"), shoes: W("boots:5 sandals:2") },
       f: { top: W("crop:3 tank:2 open:1 striped:1 bikini:1"), bottom: W("trousers:2 shorts:2 capri:2 skirt:1 baggy:1"), waist: W("sash:4 belt:3"), shoes: W("boots:5 sandals:2") }
     },
     bandit: {
-      m: { top: W("vest:3 open:2 tank:2 bare:1"), bottom: W("baggy:4 trousers:2 capri:1"), waist: W("sash:4 belt:2"), shoes: W("boots:3 sandals:2") },
+      m: { top: W("vest:3 open:2 bare:1"), bottom: W("baggy:4 trousers:2 capri:1"), waist: W("sash:4 belt:2"), shoes: W("boots:3 sandals:2") },
       f: { top: W("crop:2 tank:2 vest:1"), bottom: W("trousers:2 baggy:2 shorts:1"), waist: W("sash:3 belt:2"), shoes: W("boots:3 sandals:1") }
     },
     marine: {
@@ -4843,11 +4843,11 @@
       f: { top: W("coat:3 shirt:1 dress:1"), bottom: W("trousers:2 longskirt:1 slim:1"), waist: W("belt:1 none:1"), shoes: W("boots:1") }
     },
     sky: {
-      m: { top: W("tank:2 tee:2 open:2 vest:1"), bottom: W("baggy:3 shorts:2 capri:1"), waist: W("sash:3 none:1"), shoes: W("sandals:4 bare:1") },
+      m: { top: W("tee:2 open:2 vest:1"), bottom: W("baggy:3 shorts:2 capri:1"), waist: W("sash:3 none:1"), shoes: W("sandals:4 bare:1") },
       f: { top: W("dress:2 tank:2 crop:2"), bottom: W("skirt:2 longskirt:2 baggy:1"), waist: W("sash:2 none:2"), shoes: W("sandals:4") }
     },
     fishman: {
-      m: { top: W("open:3 tank:2 bare:2 vest:1 shirt:1"), bottom: W("shorts:3 baggy:2 trousers:1"), waist: W("sash:2 belt:2 none:1"), shoes: W("sandals:3 bare:2 boots:1") },
+      m: { top: W("open:3 bare:2 vest:1 shirt:1"), bottom: W("shorts:3 baggy:2 trousers:1"), waist: W("sash:2 belt:2 none:1"), shoes: W("sandals:3 bare:2 boots:1") },
       f: { top: W("crop:2 tank:2 bikini:2 dress:1"), bottom: W("skirt:2 shorts:2 longskirt:1"), waist: W("none:2 sash:1"), shoes: W("sandals:3 bare:1") }
     }
   };
@@ -14809,7 +14809,7 @@
       const cp = d.comp;
       if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h2 > d.holdY - 0.05 && h2 < d.deckY + 0.05) return false;
     }
-    const rail = d.big ? 1 : 0.8, at4 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
+    const rail = d.big ? 0.75 : 0.6, at4 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
     if (d.castle && at4(d.tq) && h2 < d.yq + rail || d.poop && at4(d.tp) && h2 < d.yp + rail || d.fore && at4(d.tf) && h2 < d.yf + rail) return true;
     if (h2 > topAt(d, t)) return false;
     if (v > hb * d.walk - 0.05 || h2 < d.deckY - 0.1) return true;
@@ -24925,6 +24925,7 @@
     }
     takeDamage(n, att, h2, game) {
       if (this.state === "dead" || n <= 0) return;
+      if (this.boss && !this.introDone && (att?.isPlayer || att?.faction === "player") && game.bossIntroPending?.(this)) return;
       if (this.fruitDef?.passive?.immuneSlash && h2?.slashing && !att?.armament) {
         game.fx.text(this.x, this.y - 1.3, "NO EFFECT", "#ffccbc", 0.3);
         return;
@@ -25732,7 +25733,8 @@
           if (pk?.plank === this.deck.plank && Math.abs(pk.e) < Math.abs(this.deck.e) - 1e-4) return this.deckStep(pk);
         }
         if (this.deck.plank && !(this.z > 0.4)) return false;
-        if (this.feetH(g) < g.railAt(sh, x, y) - RAIL_CLEAR) return false;
+        const vault = this.z > 0.25 ? 0.55 : RAIL_CLEAR;
+        if (this.feetH(g) < g.railAt(sh, x, y) - vault) return false;
       }
       if (g && g.world === w) {
         const L3 = this.ledgeAt(g, x, y);
@@ -61139,7 +61141,7 @@ void main() {
     const to = "RE_Direct( directLight, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );";
     const body = a >= 0 && b > a ? chunk.slice(a, b) : "";
     if (!body.includes(from) || !body.includes(to)) return chunk;
-    const gated = body.replace(from, "if ( pointLight.color.r + pointLight.color.g + pointLight.color.b > 0.0 ) {\n		" + from).replace(to, to + "\n		}");
+    const gated = body.replace(from, "if ( pointLight.color.r + pointLight.color.g + pointLight.color.b > 0.0 ) {\n		" + from).replace(from, from + "\n		directLight.color *= smoothstep( -0.02, 0.12, dot( geometryNormal, directLight.direction ) );").replace(to, to + "\n		}");
     return chunk.slice(0, a) + gated + chunk.slice(b);
   });
 
@@ -64185,7 +64187,9 @@ void main() {
         // (down the middle: churned water, paler, flecked with foam)
         float mid = (1.0 - smoothstep(hw * 0.35, hw * 0.85, d)) * br;
         // (which way the churned water runs here: back along her track, newest to oldest)
-        if (mid > churn) fdir = ab / sqrt(l2);
+        // (summed, weighted by how much of it is here: through a turn the
+        // segments' directions blend, never switch from one pixel to the next)
+        fdir += ab / sqrt(l2) * mid;
         churn = max(churn, mid);
         // (the arms: a ridge of the sea at either edge)
         float wr = 0.45 + hw * 0.16, e = (d - hw) / wr, ridge = exp(-e * e) * br;
@@ -64194,9 +64198,16 @@ void main() {
       }
     }
     if (foam <= 0.0 && churn <= 0.0) return vec4(0.0);
-    // (its lace streams away down the track as the water settles behind her, not across it)
-    vec2 q = p - fdir * t * 0.9;
-    float lace = noise(q * vec2(1.3, 1.9) + vec2(t * 0.2, -t * 0.15)) * 0.6 + noise(q * 3.7 - t * 0.3) * 0.4;
+    // (its lace streams away down the track as the water settles behind her,
+    // not across it \u2014 moved on a little and blended back, two phases apart:
+    // carried by the whole of the time, a turn's change of direction tore the
+    // lace into blotches that jumped about)
+    fdir = fdir / max(length(fdir), 0.001);
+    float ph = fract(t * 0.25), ph2 = fract(t * 0.25 + 0.5), wl = abs(2.0 * ph - 1.0);
+    vec2 q1 = p - fdir * ph * 3.6, q2 = p - fdir * ph2 * 3.6 + vec2(5.3, 2.1);
+    float lace1 = noise(q1 * vec2(1.3, 1.9)) * 0.6 + noise(q1 * 3.7) * 0.4;
+    float lace2 = noise(q2 * vec2(1.3, 1.9)) * 0.6 + noise(q2 * 3.7) * 0.4;
+    float lace = mix(lace1, lace2, wl);
     return vec4(clamp(foam * smoothstep(0.38, 0.7, lace + foam * 0.25), 0.0, 1.0), churn, sl);
   }
   // caustic network: the edges between moving Voronoi cells
@@ -65798,13 +65809,13 @@ ${GLSL}
       hull: H5,
       upper: marine2 ? C("#f5f6fa") : white ? C("#f7f3ea") : shade2(H5, 0.06),
       cap: marine2 ? C("#1b4f72") : white ? C("#7a5a3c") : shade2(H5, -0.5),
-      stripe: C(def.stripe || (marine2 ? "#1b4f72" : "#c8962e")),
+      stripe: def.trim ? shade2(def.trim, -0.08) : C(def.stripe || (marine2 ? "#1b4f72" : "#c8962e")),
       plank: marine2 ? C("#e9edf1") : H5,
       plank2: marine2 ? C("#dfe4ea") : shade2(H5, -0.1),
       bottom: C(def.bottom || (marine2 ? "#5b6770" : "#3a2c22")),
       deck: marine2 ? C("#c9b28f") : C("#b88c5c"),
       front: marine2 ? C("#eef1f4") : white ? C("#efe6d4") : C(def.front || "#8e3b2a"),
-      trim: C("#d4ac0d"),
+      trim: C(def.trim || "#d4ac0d"),
       wood: C("#6d4c33"),
       dark: C("#2b1d14"),
       iron: C("#2d3436"),
@@ -65817,6 +65828,59 @@ ${GLSL}
   function skinYaw(d, t, y, s) {
     const e = 4e-3, w1 = skinAt(d, Math.min(1, t + e), y), w0 = skinAt(d, Math.max(0, t - e), y);
     return -Math.atan(s * (w1 - w0) / (2 * e * d.L));
+  }
+  function sternHoles(d) {
+    const out = [];
+    for (const r4 of d.rooms || []) for (const wd of r4.windows || []) out.push({ y0: r4.floor + 0.75, y1: r4.floor + 1.65, z0: wd.v - wd.w / 2, z1: wd.v + wd.w / 2 });
+    return out;
+  }
+  function wallWithHoles(pos, idx, triCol, x, ys, wAt, holes, col2) {
+    const lo = Math.min(...ys), hi = Math.max(...ys);
+    const lv = new Set(ys);
+    for (const hh of holes) {
+      if (hh.y0 > lo && hh.y0 < hi) lv.add(hh.y0);
+      if (hh.y1 > lo && hh.y1 < hi) lv.add(hh.y1);
+    }
+    const levels = [...lv].sort((a, b) => b - a);
+    for (let i = 0; i < levels.length - 1; i++) {
+      const yT = levels[i], yB = levels[i + 1];
+      if (yT - yB < 1e-4) continue;
+      const wT = wAt(yT), wB = wAt(yB), ym = (yT + yB) / 2;
+      const cut3 = holes.filter((hh) => hh.y0 < ym && hh.y1 > ym).map((hh) => [hh.z0, hh.z1]).sort((a, b) => a[0] - b[0]);
+      const segs = [];
+      let z = null;
+      for (const [a, b] of cut3) {
+        segs.push([z, a]);
+        z = b;
+      }
+      segs.push([z, null]);
+      const c = col2(ym);
+      for (const [za, zb] of segs) {
+        const zTa = za ?? -wT, zBa = za ?? -wB, zTb = zb ?? wT, zBb = zb ?? wB;
+        if (zTb - zTa < 1e-4 && zBb - zBa < 1e-4) continue;
+        const v = pos.length / 3;
+        pos.push(x, yT, zTa, x, yT, zTb, x, yB, zBa, x, yB, zBb);
+        idx.push(v, v + 2, v + 1, v + 1, v + 2, v + 3);
+        triCol.push(c, c);
+      }
+    }
+  }
+  function slabWithHoles(k, x, th, y0, y1, w, holes, color) {
+    const lv = /* @__PURE__ */ new Set([y0, y1]);
+    for (const hh of holes) {
+      if (hh.y0 > y0 && hh.y0 < y1) lv.add(hh.y0);
+      if (hh.y1 > y0 && hh.y1 < y1) lv.add(hh.y1);
+    }
+    const levels = [...lv].sort((a, b) => a - b);
+    for (let i = 0; i < levels.length - 1; i++) {
+      const a = levels[i], b = levels[i + 1], ym = (a + b) / 2;
+      const cut3 = holes.filter((hh) => hh.y0 < ym && hh.y1 > ym).map((hh) => [Math.max(-w, hh.z0), Math.min(w, hh.z1)]).sort((p, q2) => p[0] - q2[0]);
+      let z = -w;
+      for (const [c0, c1] of [...cut3, [w, w]]) {
+        if (c0 - z > 0.01) k.add(box(th, b - a, c0 - z), { at: [x, a, (z + c0) / 2], color });
+        z = Math.max(z, c1);
+      }
+    }
   }
   function bigHull(def, d) {
     const P6 = bigPalette(def);
@@ -65889,11 +65953,23 @@ ${GLSL}
         }
       }
     }
-    for (let j = 0; j < NP - 1; j++) {
-      const A2 = vid(0, 1, j), B5 = vid(0, 0, j), Cc2 = vid(0, 1, j + 1), D4 = vid(0, 0, j + 1);
-      idx.push(A2, Cc2, B5, B5, Cc2, D4);
-      const col2 = j < 1 ? P6.cap : j < 4 ? P6.upper : P6.bottom;
-      triCol.push(col2, col2);
+    {
+      const pr = profile(d, 0), hb0 = hbAt(0, d.B), x0 = xAt(d, 0);
+      const ys = pr.map(([, y]) => y);
+      const at4 = (y) => {
+        for (let j = 0; j < pr.length - 1; j++) {
+          const [w0, y0] = pr[j], [w1, y1] = pr[j + 1];
+          if (y <= y0 && y >= y1 || y >= y0 && y <= y1) {
+            const k2 = Math.abs(y1 - y0) < 1e-6 ? 0 : (y - y0) / (y1 - y0);
+            return { w: (w0 + (w1 - w0) * k2) * hb0, j };
+          }
+        }
+        return { w: pr[pr.length - 1][0] * hb0, j: pr.length - 2 };
+      };
+      wallWithHoles(pos, idx, triCol, x0, ys, (y) => at4(y).w, sternHoles(d), (y) => {
+        const j = at4(y).j;
+        return j < 1 ? P6.cap : j < 4 ? P6.upper : P6.bottom;
+      });
     }
     const g = new BufferGeometry();
     g.setAttribute("position", new Float32BufferAttribute(pos, 3));
@@ -65957,7 +66033,7 @@ ${GLSL}
     }
     const ys = floorAt(d, 0.01), ts = topAt(d, 0) - 0.1;
     const wi = Math.min(innerAt(d, 0, ys), innerAt(d, 0, ts)) + 0.04;
-    k.add(box(0.2, ts - ys + 0.04, wi * 2), { at: [xAt(d, 0) + 0.12, ys - 0.02, 0], color: shade2(P6.upper, -0.12) });
+    slabWithHoles(k, xAt(d, 0) + 0.12, 0.2, ys - 0.02, ts + 0.02, wi, sternHoles(d), shade2(P6.upper, -0.12));
   }
   function deckGrid(k, d, P6, t0, t1, y, vIn = null, down = false, col0 = null) {
     if (t1 <= t0) return;
@@ -66087,13 +66163,24 @@ ${GLSL}
   function stern(k, d, P6) {
     const x0 = -d.L / 2 - 0.03;
     const half2 = (y) => skinAt(d, 4e-3, y) * 0.9;
+    const holes = sternHoles(d);
     const rowAt = (y0, y1) => {
       const w = half2((y0 + y1) / 2);
-      const n = Math.max(2, Math.floor(w * 2 / 1.15));
-      const ww = Math.min(0.8, w * 2 / n - 0.3);
+      let n = Math.max(2, Math.floor(w * 2 / 1.15));
+      let ww = Math.min(0.8, w * 2 / n - 0.3);
+      const open = holes.filter((hh) => Math.abs(hh.y0 - y0) < 0.35);
+      if (open.length) {
+        n = open.length;
+        ww = open[0].z1 - open[0].z0;
+        y0 = open[0].y0;
+        y1 = open[0].y1;
+      }
       for (let i = 0; i < n; i++) {
-        const z = -w + (i + 0.5) * (w * 2) / n;
-        k.add(box(0.06, y1 - y0, ww), { at: [x0, y0, z], color: P6.glass, glow: "#ffc766", pane: true });
+        const z = open.length ? (open[i].z0 + open[i].z1) / 2 : -w + (i + 0.5) * (w * 2) / n;
+        if (open.length) {
+          k.add(box(0.03, y1 - y0, ww), { at: [x0, y0, z], color: P6.glass, pane: true });
+          for (const sz of [-1, 1]) k.add(box(0.1, y1 - y0, 0.06), { at: [x0 - 0.02, y0, z + sz * (ww / 2 + 0.03)], color: P6.trim });
+        } else k.add(box(0.06, y1 - y0, ww), { at: [x0, y0, z], color: P6.glass, glow: "#ffc766", pane: true });
         k.add(box(0.08, 0.08, ww + 0.14), { at: [x0 - 0.01, y1, z], color: P6.trim });
         k.add(box(0.08, 0.08, ww + 0.14), { at: [x0 - 0.01, y0 - 0.08, z], color: P6.trim });
       }
@@ -66175,14 +66262,14 @@ ${GLSL}
     for (const dr of ds) {
       k.add(box(0.14, h2 - dh, dr.w), { at: [x - face * 0.07, y0 + dh, dr.v], color: P6.front });
       for (const e of [-1, 1]) k.add(box(0.1, dh, 0.08), { at: [x + face * 0.02, y0, dr.v + e * (dr.w / 2 + 0.02)], color: P6.trim, outline: 8e-3 });
-      k.add(box(0.1, 0.12, dr.w + 0.24), { at: [x + face * 0.03, y0 + dh, dr.v], color: P6.trim });
+      k.add(box(0.1, 0.12, dr.w + 0.24), { at: [x + face * 0.03, y0 + dh - 0.01, dr.v], color: P6.trim });
       const lf = dr.leaf;
       if (lf) k.add(box(0.05, dh - 0.06, lf.v1 - lf.v0), { at: [lf.u, y0 + 0.02, (lf.v0 + lf.v1) / 2], color: shade2(P6.dark, 0.25), outline: 8e-3 });
       const lz = dr.v + (dr.v > 0 ? -1 : 1) * (dr.w / 2 + 0.3);
       if (Math.abs(lz) < w - 0.2) k.add(cyl(0.1, 0.12, 0.32, 6), { at: [x + face * 0.14, y0 + 1.75, lz], color: "#fff3c4", glow: "#ffcf70", flicker: 0.25, outline: 0.01 });
     }
-    for (const zz of [-w + 0.1, w - 0.1]) k.add(box(0.1, h2, 0.16), { at: [x, y0, zz], color: shade2(P6.front, -0.25) });
-    k.add(box(0.12, 0.14, w * 2), { at: [x + face * 0.02, y1 - 0.18, 0], color: P6.trim });
+    for (const zz of [-w + 0.1, w - 0.1]) k.add(box(0.1, h2 - 0.01, 0.16), { at: [x, y0, zz], color: shade2(P6.front, -0.25) });
+    k.add(box(0.12, 0.14, w * 2 - 0.02), { at: [x + face * 0.02, y1 - 0.18, 0], color: P6.trim });
     for (const zz of f.windows) {
       k.add(box(0.18, 0.11, 0.78), { at: [x - face * 0.07, y0 + 1.72, zz], color: P6.trim, outline: 8e-3 });
       k.add(box(0.18, 0.11, 0.78), { at: [x - face * 0.07, y0 + 0.86, zz], color: P6.trim, outline: 8e-3 });
@@ -66346,11 +66433,22 @@ ${GLSL}
       const t = 0.9, y = topAt(d, t) - 1.1, a = 1.6 + d.B * 0.08, ta = a * 0.3 / d.L;
       let w = 0;
       for (const tt of [t - ta, t, t + ta]) for (const yy of [y - a * 0.6 - 0.1, y - a * 0.3, y, y + a * 0.4]) w = Math.max(w, skinAt(d, tt, yy));
-      const z = s * (w + 0.2);
-      k.add(cyl(0.07, 0.07, a, 6), { at: [xAt(d, t), y - a * 0.6, z], color: P6.iron, outline: 0.012 });
-      k.add(torus(a * 0.28, 0.07, 5, 10, Math.PI), { at: [xAt(d, t), y - a * 0.6, z], rot: [0, 0, Math.PI], color: P6.iron, outline: 0.012 });
-      const yc = topAt(d, t) - 0.25, zi = skinAt(d, t, yc) - 0.15, zo = w + 0.3;
-      k.add(box(0.12, 0.12, zo - zi), { at: [xAt(d, t), yc, s * (zi + zo) / 2], color: P6.wood });
+      const st = a * 0.34, z = s * (w + 0.22 + st), x = xAt(d, t), base2 = y - a * 0.6, R5 = a * 0.3;
+      k.add(cyl(0.055, 0.075, a, 8), { at: [x, base2, z], color: P6.iron, outline: 0.012 });
+      k.add(new SphereGeometry(0.11, 8, 6), { at: [x, base2 + 0.02, z], color: P6.iron, outline: 0.012 });
+      k.add(torus(R5, 0.065, 6, 14, Math.PI), { at: [x, base2 + R5, z], rot: [0, 0, Math.PI], color: P6.iron, outline: 0.012 });
+      for (const e of [-1, 1]) {
+        k.add(box(0.05, a * 0.3, a * 0.22), { at: [x + e * (R5 + 0.02), base2 + R5 - a * 0.2, z], color: P6.iron, outline: 0.01 });
+        k.add(cone(0.06, a * 0.12, 6), { at: [x + e * R5, base2 + R5 + a * 0.1 - 0.02, z], color: P6.iron, outline: 0.01 });
+      }
+      const ys = base2 + a - 0.32;
+      k.add(box(0.14, 0.14, st * 2), { at: [x, ys, z], color: P6.wood, outline: 0.012 });
+      for (const e of [-1, 1]) k.add(box(0.16, 0.16, 0.05), { at: [x, ys - 0.01, z + e * st * 0.6], color: P6.iron });
+      const yc = topAt(d, t) - 0.25, zi = skinAt(d, t, yc) - 0.15, zo = Math.abs(z) + 0.12;
+      k.add(torus(0.17, 0.03, 5, 12), { at: [x, base2 + a + 0.13, z], rot: [0, Math.PI / 2, 0], color: P6.iron, outline: 8e-3 });
+      if (yc > base2 + a + 0.3) k.add(cyl(0.035, 0.035, yc - (base2 + a + 0.28), 5), { at: [x, base2 + a + 0.28, z], color: "#8a7350" });
+      k.add(box(0.14, 0.14, zo - zi), { at: [x, yc, s * (zi + zo) / 2], color: P6.wood, outline: 0.01 });
+      k.add(box(0.16, 0.16, 0.04), { at: [x, yc - 0.01, s * (zo - 0.04)], color: P6.iron });
     }
     for (const u of d.mastU) {
       const t = (u + d.L / 2) / d.L;
@@ -66680,16 +66778,7 @@ ${GLSL}
       k.add(cyl(0.08, 0.12 + d.L * 3e-3, b.len * 0.45, 7), { at: [0, b.len * 0.6, 0], color: wood, outline: 0.015 });
       k.restore();
     }
-    const ty = topAt(d, 0.01), fs = flagstaff(d);
-    k.add(cyl(0.05, 0.08, fs.len, 6), { at: [fs.x, fs.y, 0], rot: [0, 0, fs.rake], color: dark, outline: 0.012 });
-    k.add(cyl(0.1, 0.1, 0.08, 8), { at: [fs.x - Math.sin(fs.rake) * (ty - 0.25 - fs.y), ty - 0.25, 0], color: "#3a3a3a" });
-    k.add(box(0.5, 0.06, 0.08), { at: [fs.x - 0.25 - Math.sin(fs.rake) * (ty - 0.25 - fs.y), ty - 0.23, 0], color: "#3a3a3a" });
     return k.build(true);
-  }
-  function flagstaff(d) {
-    const x = -d.L / 2 + 0.75, y = floorAt(d, 0.75 / d.L + 4e-3, 0), ty = topAt(d, 0.01);
-    const len = ty - y + 3.2, rake2 = 0.18;
-    return { x, y, len, rake: rake2, top: [x - Math.sin(rake2) * len, y + Math.cos(rake2) * len] };
   }
   function bigRigging(d, plan, def) {
     const pts = [];
@@ -67018,10 +67107,13 @@ ${GLSL}
         endWall(k, d, r4.t1, r4.floor, top, -1, true);
       } else if (r4.kind === "forecastle") endWall(k, d, r4.t1, r4.floor, top, -1);
       else {
-        endWall(k, d, r4.t0, r4.floor, top, 1);
+        const holes = (r4.windows || []).map((wd) => ({ y0: r4.floor + 0.75, y1: r4.floor + 1.65, z0: wd.v - wd.w / 2, z1: wd.v + wd.w / 2 }));
+        slabWithHoles(k, xAt(d, r4.t0) - 0.05, 0.1, r4.floor, top, innerAt(d, r4.t0, (r4.floor + top) / 2) + 0.05, holes, IN.wall2);
         const x = xAt(d, r4.t0);
         for (const wd of r4.windows || []) {
-          k.add(box(0.04, 0.9, wd.w), { at: [x + 0.01, r4.floor + 0.75, wd.v], color: "#a9d6ee", glow: "#ffd58a" });
+          k.add(box(0.12, 0.06, wd.w + 0.1), { at: [x + 0.04, r4.floor + 1.63, wd.v], color: IN.beam });
+          const deep = Math.max(0.1, x - xAt(d, 0));
+          for (const sz of [-1, 1]) k.add(box(deep + 0.02, 0.9, 0.04), { at: [x + 0.01 - deep / 2, r4.floor + 0.75, wd.v + sz * (wd.w / 2 + 0.01)], color: IN.beam });
           k.add(box(0.06, 0.05, wd.w - 0.02), { at: [x + 0.02, r4.floor + 1.18, wd.v], color: IN.beam });
           k.add(box(0.06, 0.9, 0.05), { at: [x + 0.02, r4.floor + 0.75, wd.v], color: IN.beam });
           k.add(box(0.12, 0.06, wd.w + 0.1), { at: [x + 0.04, r4.floor + 0.72, wd.v], color: IN.beam });
@@ -67313,12 +67405,12 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
   return pow(mix(col, sky, clamp(0.04 + fr * 0.4, 0.0, 0.5) * (1.0 - night * 0.6)), vec3(2.2));
 }`;
   function paneMaterial(floorY = 0) {
-    const u = { uEye: { value: new Vector3() }, uFloorY: { value: floorY }, uNight: { value: 0 } };
+    const u = { uEye: { value: new Vector3() }, uFloorY: { value: floorY }, uNight: { value: 0 }, uOpen: { value: 0 } };
     const m = new MeshBasicMaterial({ color: 16777215 });
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, u);
       sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vPaneP;\nvarying vec3 vPaneN;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvPaneP = position;\nvPaneN = normal;");
-      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vPaneP;\nvarying vec3 vPaneN;\nuniform vec3 uEye;\nuniform float uFloorY;\nuniform float uNight;\n" + ROOM).replace("vec4 diffuseColor = vec4( diffuse, opacity );", "vec4 diffuseColor = vec4( paneRoom(vPaneP, uEye, vPaneN, uFloorY, uNight), opacity );");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vPaneP;\nvarying vec3 vPaneN;\nuniform vec3 uEye;\nuniform float uFloorY;\nuniform float uNight;\nuniform float uOpen;\n" + ROOM).replace("vec4 diffuseColor = vec4( diffuse, opacity );", "if (uOpen > 0.5 && vPaneN.x < -0.9) discard;\nvec4 diffuseColor = vec4( paneRoom(vPaneP, uEye, vPaneN, uFloorY, uNight), opacity );");
     };
     m.customProgramCacheKey = () => "windowpane";
     m.userData.pane = u;
@@ -67335,6 +67427,41 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       mat.userData.pane.uEye.value.setFromMatrixPosition(cam.matrixWorld).applyMatrix4(_inv);
     };
     return mesh;
+  }
+  var VIEW = `
+vec3 paneView(vec3 dir, float night) {
+  vec3 d = normalize(dir);
+  float up = d.y;
+  vec3 zen = mix(vec3(0.36, 0.6, 0.86), vec3(0.03, 0.05, 0.12), night);
+  vec3 hor = mix(vec3(0.82, 0.9, 0.96), vec3(0.12, 0.14, 0.24), night);
+  vec3 seaH = mix(vec3(0.42, 0.6, 0.7), vec3(0.06, 0.09, 0.15), night);
+  vec3 seaD = mix(vec3(0.1, 0.32, 0.46), vec3(0.01, 0.03, 0.07), night);
+  vec3 sky = mix(hor, zen, pow(clamp(up, 0.0, 1.0), 0.55));
+  // (a few soft cloud bands across the sky)
+  float cl = smoothstep(0.55, 0.9, sin(atan(d.z, d.x) * 7.0 + up * 23.0) * 0.5 + 0.5) * smoothstep(0.0, 0.08, up) * (1.0 - smoothstep(0.25, 0.5, up));
+  sky = mix(sky, mix(vec3(1.0), vec3(0.2, 0.22, 0.3), night), cl * 0.35);
+  vec3 sea = mix(seaH, seaD, pow(clamp(-up, 0.0, 1.0), 0.45));
+  vec3 col = mix(sea, sky, smoothstep(-0.006, 0.006, up));
+  // (the glass catching the lamp-light of the cabin a little, at night)
+  col += vec3(0.05, 0.035, 0.01) * night;
+  return pow(col, vec3(2.2));
+}`;
+  function viewMaterial() {
+    const u = { uNight: { value: 0 } };
+    const m = new MeshBasicMaterial({ color: 16777215, side: DoubleSide });
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, u);
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vViewDir;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvViewDir = (modelMatrix * vec4(position, 1.0)).xyz - cameraPosition;");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vViewDir;\nuniform float uNight;\n" + VIEW).replace("vec4 diffuseColor = vec4( diffuse, opacity );", "vec4 diffuseColor = vec4( paneView(vViewDir, uNight), opacity );");
+    };
+    m.customProgramCacheKey = () => "windowview";
+    m.userData.pane = u;
+    return m;
+  }
+  function viewMesh(geo2) {
+    const pg = geo2?.userData?.panes;
+    if (!pg) return null;
+    return new Mesh(pg, viewMaterial());
   }
 
   // src/render3d/ships3d.js
@@ -67402,14 +67529,14 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       plank2: warship ? C("#dfe4ea") : shade2(H5, -0.08),
       bottom: def.seastone ? C("#5b6770") : warship ? C("#5b6770") : shade2(H5, -0.3),
       deck: def.figurehead === "lion" ? C("#6fb34a") : def.seastone && !warship ? C("#cfd8dc") : warship ? C("#c9b28f") : shade2(H5, 0.2),
-      trim: warship ? C("#1b4f72") : def.length >= 8 ? C("#d4ac0d") : shade2(H5, -0.4),
+      trim: warship ? C("#1b4f72") : def.trim ? C(def.trim) : def.length >= 8 ? C("#d4ac0d") : shade2(H5, -0.4),
       wood: C("#6d4c33"),
       dark: C("#2b1d14")
     };
   }
   var hullCache = /* @__PURE__ */ new Map();
   function hullGeometry(def) {
-    const key2 = `${def.length}|${def.beam}|${def.color}|${def.figurehead}|${def.cannons}|${def.paddle}|${def.sail}|${def.seastone}|${def.masts}`;
+    const key2 = `${def.length}|${def.beam}|${def.color}|${def.trim}|${def.figurehead}|${def.cannons}|${def.paddle}|${def.sail}|${def.seastone}|${def.masts}`;
     let g = hullCache.get(key2);
     if (g) return g;
     const d = shipDims(def);
@@ -67631,7 +67758,7 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
   function interiorGeometry(def) {
     const d = shipDims(def);
     if (!d.big) return null;
-    const key2 = `${def.length}|${def.beam}|${def.color}|${def.cannons}|${def.sail}|${def.masts}`;
+    const key2 = `${def.length}|${def.beam}|${def.color}|${def.trim}|${def.cannons}|${def.sail}|${def.masts}`;
     let g = insideCache.get(key2);
     if (!g) {
       const m = bigInterior(def, d), t = bigTreasure(def, d);
@@ -67771,17 +67898,6 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
     const bg = kind === "marine" ? "#f5f6fa" : sailColor || "#efe6cf";
     g.fillStyle = bg;
     g.fillRect(0, 0, 256, 256);
-    g.strokeStyle = "rgba(80,60,40,0.22)";
-    g.lineWidth = 3;
-    for (let x = 32; x < 256; x += 42) {
-      g.beginPath();
-      g.moveTo(x, 0);
-      g.lineTo(x, 256);
-      g.stroke();
-    }
-    g.strokeStyle = "rgba(80,60,40,0.35)";
-    g.lineWidth = 5;
-    g.strokeRect(2, 2, 252, 252);
     if (kind === "marine") {
       g.setTransform(140, 0, 0, 140, 128, 150);
       drawMarineEmblem(g, 1);
@@ -67792,7 +67908,13 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       g.fillText("MARINE", 128, 70);
     } else if (jr) {
       g.setTransform(150, 0, 0, 150, 128, 132);
-      drawJollyRoger(g, { ...jr, color: jr.bg || "#141414" }, 1, bg);
+      const lum4 = (c) => {
+        const k = new Color(c);
+        return 0.3 * k.r + 0.59 * k.g + 0.11 * k.b;
+      };
+      const fg = jr.color || "#f5f5f5", ground = jr.bg || "#141414";
+      if (Math.abs(lum4(fg) - lum4(bg)) > 0.22) drawJollyRoger(g, jr, 1, ground);
+      else drawJollyRoger(g, { ...jr, color: ground }, 1, bg);
     }
     g.setTransform(1, 0, 0, 1, 0, 0);
     tex3.needsUpdate = true;
@@ -67964,7 +68086,7 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
   function paintedDef(s) {
     let def = s.def;
     const P6 = s.paint;
-    if (P6 && def.sail !== "marine" && !def.special) def = { ...def, ...P6.color ? { color: P6.color } : {}, ...P6.figurehead ? { figurehead: P6.figurehead } : {} };
+    if (P6 && def.sail !== "marine" && !def.special) def = { ...def, ...P6.color ? { color: P6.color } : {}, ...P6.trim ? { trim: P6.trim } : {}, ...P6.figurehead ? { figurehead: P6.figurehead } : {} };
     if (def.figurehead === "ram" && !isMerry(s)) def = { ...def, figurehead: "none" };
     if (def.figurehead === "scroll") def = { ...def, figurehead: "none" };
     return def;
@@ -68000,6 +68122,8 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
           this.chestAt = ig.chestAt;
           this.inside.add(this.chest);
         }
+        this.views = viewMesh(ig.main);
+        if (this.views) this.inside.add(this.views);
         root4.add(this.inside);
       }
       const plan = d.big ? bigMastPlan(d) : mastPlan(def, d);
@@ -68011,7 +68135,7 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       const sailCol = kind === "marine" || def.sail === "marine" ? "#f5f6fa" : s.paint?.sail || s.sailColor || "#efe6cf";
       this.sails = [];
       this.braces = [];
-      this.ownMats = this.panes ? [this.panes.material] : [];
+      this.ownMats = [this.panes?.material, this.views?.material].filter(Boolean);
       this.cloth = { t: { value: 0 }, amp: { value: 0 }, gust: { value: 1 } };
       const own = (m) => {
         this.ownMats.push(m);
@@ -68141,15 +68265,6 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
         flag.userData.base = fg.attributes.position.array.slice();
         root4.add(flag);
         this.flag = flag;
-        if (d.big) {
-          const eg = fg.clone();
-          const ens = new Mesh(eg, fmat);
-          const st = flagstaff(d);
-          ens.position.set(st.top[0] - 0.1, st.top[1] - 0.75 * fs * 0.5, 0);
-          ens.userData.base = eg.attributes.position.array.slice();
-          root4.add(ens);
-          this.ensign = ens;
-        }
         const pole = new Mesher();
         pole.add(cyl(0.015 * fs, 0.02 * fs, 0.55 * fs, 4), { at: [mx, mm.h, 0], color: "#3e2723" });
         const pm = new Mesh(pole.build(false), SOLID());
@@ -68243,7 +68358,9 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       }
     }
     update(env2, rx, rz, windAngle, ctx) {
-      if (this.panes) this.panes.material.userData.pane.uNight.value = Math.min(1, Math.max(0, (0.78 - (env2.daylight ?? 1)) / 0.45 + (env2.storm || 0) * 0.3));
+      const night = Math.min(1, Math.max(0, (0.78 - (env2.daylight ?? 1)) / 0.45 + (env2.storm || 0) * 0.3));
+      if (this.panes) this.panes.material.userData.pane.uNight.value = night;
+      if (this.views) this.views.material.userData.pane.uNight.value = night;
       const s = this.ship;
       const r4 = this.root;
       if (!this.wake) {
@@ -68321,6 +68438,7 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       if (this.inside) {
         const cam = ctx?.camera;
         this.inside.visible = !!cam && cam.position.distanceTo(r4.position) < this.d.L * 0.6 + 12;
+        if (this.panes) this.panes.material.userData.pane.uOpen.value = this.inside.visible ? 1 : 0;
         const pl = ctx?.game?.player;
         this.inside.castShadow = this.overhead.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);
         if (this.chest && (s.owner === "player" || s.faction === "player")) this.chest.visible = false;
@@ -77068,18 +77186,15 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
     if (b.style === "spooky") {
       if (clearOfDoor(-fw / 2 + 0.3, -fw / 2 + 1.4)) B2(k, -fw / 2 + 0.3, 1.4, 0.06, -fw / 2 + 1.4, 1.52, 0.1, "#5d4037", { rot: [0, 0, 0.3] });
     }
-    if (b.style === "port" && role === "house" && fw >= 4) {
-      const sx = door.x > 0 ? -1 : 1;
-      const x0 = sx > 0 ? fw / 2 - 1.1 : -fw / 2 + 0.3, x1 = x0 + 0.8;
-      if (clearOfDoor(x0, x1)) B2(k, x0, 0, 0.1, x1, 0.8, 0.9, "#b08850", { outline: 0.02 });
-    }
     if (b.pirate) {
-      const x = door.x, y = dd.top + 0.14;
-      B2(k, x - 0.42, y, 0.04, x + 0.42, y + 0.56, 0.07, "#141414", { outline: 0.01 });
-      k.add(new SphereGeometry(0.12, 8, 6), { at: [x, y + 0.33, 0.08], scale: [1, 0.95, 0.35], color: "#f5f5f5" });
-      B2(k, x - 0.07, y + 0.19, 0.07, x + 0.07, y + 0.25, 0.1, "#f5f5f5");
-      for (const sx of [-1, 1]) k.add(box(0.46, 0.045, 0.02), { at: [x, y + 0.1, 0.085], rot: [0, 0, sx * 0.62], color: "#f5f5f5" });
-      for (const sx of [-1, 1]) B2(k, x + sx * 0.045 - 0.025, y + 0.32, 0.115, x + sx * 0.045 + 0.025, y + 0.37, 0.12, "#141414");
+      const x = door.x, y = dd.top + 0.12, S7 = Math.max(1, Math.min(1.35, (H5 - 0.15 - y) / 0.64));
+      B2(k, x - 0.5 * S7, y - 0.03, 0.03, x + 0.5 * S7, y + 0.62 * S7 + 0.03, 0.06, "#8d6e4a", { outline: 0.012 });
+      B2(k, x - 0.46 * S7, y, 0.06, x + 0.46 * S7, y + 0.62 * S7, 0.09, "#141414", { outline: 0.01 });
+      const z = 0.09;
+      k.add(new SphereGeometry(0.12 * S7, 8, 6), { at: [x, y + 0.37 * S7, z + 0.04], scale: [1, 0.95, 0.35], color: "#f5f5f5" });
+      B2(k, x - 0.07 * S7, y + 0.21 * S7, z + 0.03, x + 0.07 * S7, y + 0.28 * S7, z + 0.06, "#f5f5f5");
+      for (const sx of [-1, 1]) k.add(box(0.5 * S7, 0.05 * S7, 0.02), { at: [x, y + 0.11 * S7, z + 0.045], rot: [0, 0, sx * 0.62], color: "#f5f5f5" });
+      for (const sx of [-1, 1]) B2(k, x + sx * 0.05 * S7 - 0.03 * S7, y + 0.35 * S7, z + 0.075, x + sx * 0.05 * S7 + 0.03 * S7, y + 0.41 * S7, z + 0.085, "#141414");
     }
     if (winter && b.style !== "snow") {
       for (const sx of [-1, 1]) if (ex(sx, 1) && clearOfDoor(sx * (fw / 2 - 0.2) - 0.7, sx * (fw / 2 - 0.2) + 0.7)) k.add(new SphereGeometry(0.5, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), { at: [sx * (fw / 2 - 0.2), -0.1, 0.1], scale: [1.4, 0.6, 1], color: "#ffffff" });
@@ -78054,7 +78169,7 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
   var _s = new Vector3();
   var _e = new Euler();
   var WHITE2 = new Color(1, 1, 1);
-  var VIEW = { x: 0, y: 0, world: null };
+  var VIEW2 = { x: 0, y: 0, world: null };
   var Batch = class {
     constructor(home2, key2, part5) {
       this.home = home2;
@@ -78167,9 +78282,9 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
     cells2.delete(h2.key);
   }
   function viewDist(x0, y0, size2) {
-    const w = VIEW.world;
+    const w = VIEW2.world;
     if (!w) return 0;
-    const dx = w.dx(VIEW.x, x0), dy = y0 - VIEW.y;
+    const dx = w.dx(VIEW2.x, x0), dy = y0 - VIEW2.y;
     const nx = Math.max(dx, Math.min(0, dx + size2)), ny = Math.max(dy, Math.min(0, dy + size2));
     return Math.hypot(nx, ny);
   }
@@ -78180,7 +78295,7 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
     let c = cells2.get(key2);
     if (!c) {
       c = { key: key2, wid, x0: cx * CELL4, y0: cy * CELL4, size: CELL4, px: 0, pz: 0, batches: /* @__PURE__ */ new Map(), parent, markers: /* @__PURE__ */ new Set(), rep: null, far: false, merged: false, sup: null };
-      const d = VIEW.world === ctx?.world ? viewDist(c.x0, c.y0, CELL4) : 0;
+      const d = VIEW2.world === ctx?.world ? viewDist(c.x0, c.y0, CELL4) : 0;
       c.far = d > LOD2.far;
       if (d > LOD2.merge) join(c);
       cells2.set(key2, c);
@@ -78373,9 +78488,9 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
   function frame2(env2, ctx) {
     const v3 = ctx?.game?.view3d;
     if (v3 && ctx.world) {
-      VIEW.x = v3.ox;
-      VIEW.y = v3.oy;
-      VIEW.world = ctx.world;
+      VIEW2.x = v3.ox;
+      VIEW2.y = v3.oy;
+      VIEW2.world = ctx.world;
     }
     let moves = 0;
     for (const cell of cells2.values()) {
@@ -80130,9 +80245,17 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       });
       return root4;
     }
+    if (o.lying) {
+      const wheel2 = add(root4, millWheel());
+      wheel2.rotation.set(Math.PI / 2, 0, hash3(o.x, o.y) * 6);
+      wheel2.position.set(0, 0.42, 0);
+      root4.rotation.z = 0.06;
+      return root4;
+    }
     add(root4, millFrame());
     const wheel = add(root4, millWheel());
     wheel.position.set(0, 1.75, 0);
+    root4.rotation.y = o.yaw || 0;
     animate(root4, (t) => {
       wheel.rotation.z = -t * 0.35;
     });
@@ -82365,7 +82488,8 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
     CLOUD: 13,
     FLASH: 14,
     HEART: 15,
-    SPECK: 16
+    SPECK: 16,
+    DOT: 17
   };
   var VS = (
     /* glsl */
@@ -82567,6 +82691,10 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       float e = max(abs(p.x), abs(p.y));
       a = 1.0 - smoothstep(0.9, 1.0, e);
       c = mix(vec3(0.1, 0.07, 0.07), vCol.rgb, step(e, 0.74));
+    } else if (kind == ${SK2.DOT}) {
+      // a solid round dot (an eye, a pupil): crisp edged, flat colour
+      a = 1.0 - smoothstep(0.82, 1.0, r);
+      c = vCol.rgb;
     } else if (kind == ${SK2.SPECK}) {
       float e = max(abs(p.x), abs(p.y));
       a = 1.0 - smoothstep(0.7, 1.0, e);
@@ -85167,6 +85295,7 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
   // src/render3d/vfx/projectiles.js
   var H2 = 18;
   var WHITE6 = col("#ffffff");
+  var INK3 = col("#2a1630");
   var HOT2 = col("#fff3c4");
   var DARK_RED = col("#c62828");
   var Rec = class {
@@ -85548,15 +85677,36 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       }
       case "string": {
         const sc2 = col(pr.color || "#f8bbd0");
-        for (let i = -1; i <= 1; i++) {
-          v.ribbons.start(RK.THIN, RM2.FACE, sc2, 1, WHITE6, 0.5).point(X2 - dx * 1.4 - dz * i * 0.07, Y2 + i * 0.05, Z2 - dz * 1.4 + dx * i * 0.07, 0.012).point(X2 + dx * 0.3, Y2, Z2 + dz * 0.3, 0.01).finish();
+        const o = pr.owner, hx = o ? v.world.dx(v.ox, o.x) : X2 - dx * 1.4, hz = o ? o.y + 0.5 - v.oy : Z2 - dz * 1.4;
+        const far = Math.hypot(hx - X2, hz - Z2) > 14;
+        const bx = far ? X2 - dx * 1.4 : hx, bz = far ? Z2 - dz * 1.4 : hz, by = far ? Y2 : Y2 + 0.05;
+        const n = pr.status?.puppet ? 5 : 3;
+        for (let i = 0; i < n; i++) {
+          const f = i - (n - 1) / 2;
+          const sag = 0.06 + 0.03 * Math.sin(t * 9 + i);
+          v.ribbons.start(RK.THIN, RM2.FACE, sc2, 1, WHITE6, 0.6).point(bx - dz * f * 0.05, by + f * 0.03, bz + dx * f * 0.05, 0.014).point((bx + X2) / 2 - dz * f * 0.12, (by + Y2) / 2 - sag, (bz + Z2) / 2 + dx * f * 0.12, 0.012).point(X2 + dx * 0.2 - dz * f * 0.08, Y2 + f * 0.04, Z2 + dz * 0.2 + dx * f * 0.08, 0.01).finish();
         }
+        v.sprites.put(SK2.GLOW, X2, Y2, Z2, 0.35 * s, sc2, 0.5, WHITE6, 1, 0, seed, 0);
         break;
       }
       case "ghost": {
         const gc2 = col(pr.color || "#e1bee7");
-        v.shells.put(VK.ORB, X2, Y2 + Math.sin(t * 8) * 0.05, Z2, 0.28 * s, 0, 1, 0, 1.25, gc2, 0.85, WHITE6, 0.4, 0, seed);
-        trail2(v, r4, RK.SMOKE, gc2, 0.5, WHITE6, 0, 0.18 * s, 0.1, 8);
+        const R5 = 0.42 * s, bob = Math.sin(t * 5 + seed) * 0.08 * s, sway = Math.sin(t * 3.3 + seed) * 0.12;
+        const gy = Y2 + 0.25 * s + bob;
+        v.shells.put(VK.ORB, X2, gy, Z2, R5, 0, 1, 0, 1.35, gc2, 0.8, WHITE6, 0.55, 0, seed);
+        v.sprites.put(SK2.GLOW, X2, gy, Z2, R5 * 2.6, gc2, 0.35, WHITE6, 0.6, 0, seed, 0);
+        for (let i = 1; i <= 4; i++) {
+          const k = i / 4, sw2 = Math.sin(t * 6 - i * 0.9 + seed) * 0.12 * s * k;
+          v.shells.put(VK.ORB, X2 - dx * R5 * 1.1 * i * 0.7 - dz * sw2, gy - R5 * (0.55 + 0.25 * k), Z2 - dz * R5 * 1.1 * i * 0.7 + dx * sw2, R5 * (0.62 - 0.12 * i), 0, 1, 0, 1, gc2, 0.65 * (1 - k * 0.6), WHITE6, 0.4, 0, seed + i);
+        }
+        const fx = -v.cf[0], fz = -v.cf[2], fl2 = Math.hypot(fx, fz) || 1;
+        const nx = fx / fl2, nz = fz / fl2, rx = -nz, rz = nx;
+        const face = (u, w, size2, a) => v.sprites.put(SK2.DOT, X2 + nx * R5 * 0.92 + rx * u * R5, gy + w * R5, Z2 + nz * R5 * 0.92 + rz * u * R5, size2 * R5, INK3, a, INK3, 0, 0, seed, 0);
+        face(-0.3, 0.18, 0.32, 0.9);
+        face(0.3, 0.18, 0.32, 0.9);
+        face(0, -0.22, 0.26 + 0.06 * Math.sin(t * 7), 0.75);
+        for (const sd of [-1, 1]) v.sprites.put(SK2.PETAL, X2 + rx * sd * R5 * 1.05, gy - R5 * 0.1 + Math.sin(t * 8 + sd) * 0.04, Z2 + rz * sd * R5 * 1.05, R5 * 0.55, gc2, 0.8, WHITE6, 0.3, sd * (0.9 + sway), seed, 0);
+        trail2(v, r4, RK.SMOKE, gc2, 0.35, WHITE6, 0, 0.22 * s, 0.1, 8);
         break;
       }
       case "bat": {
@@ -87318,6 +87468,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     const fem = !!look.fem;
     let top = look.topStyle;
     if (!TOP_STYLES.includes(top)) top = look.openShirt ? look.noSleeves ? "vest" : "open" : look.noSleeves ? "tank" : look.sleeve ? "shirt" : "tee";
+    if (!fem && top === "tank") top = "tee";
     let sleeves = look.sleeves || SLEEVES_OF[top] || "short";
     if (look.noSleeves && sleeves !== "none" && top !== "jacket" && top !== "coat") sleeves = "none";
     let bottom = look.bottomStyle;
@@ -88131,7 +88282,7 @@ ${NOISE2}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
 
   // src/render3d/chars/mats.js
   var BODY_KEY = "op-char-body-6";
-  var INK3 = 2364943;
+  var INK4 = 2364943;
   var GRAD = null;
   function charGradient() {
     if (GRAD) return GRAD;
@@ -88254,7 +88405,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     m.customProgramCacheKey = () => BODY_KEY;
     return m;
   }
-  function outlineMaterial2(width = 0.0105, color = INK3, opts = {}) {
+  function outlineMaterial2(width = 0.0105, color = INK4, opts = {}) {
     const u = { uOutline: { value: width } };
     const m = new MeshBasicMaterial({ color, side: BackSide, fog: opts.fog ?? true });
     m.userData.u = u;
@@ -88332,7 +88483,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var FACE_W = 192;
   var FACE_H = Math.round((FACE_TOP - FACE_BOTTOM) * FACE_S2);
   var TAU15 = Math.PI * 2;
-  var INK4 = "#2a1a1e";
+  var INK5 = "#2a1a1e";
   function hex2(col2, fb) {
     if (typeof col2 !== "string") return fb;
     if (col2[0] === "#") return col2.length === 4 || col2.length === 7 ? col2 : col2.length > 7 ? col2.slice(0, 7) : fb;
@@ -88561,7 +88712,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       g.lineJoin = "round";
       if (closed) {
         g.lineWidth = X2.eyes === "ko" ? 0.05 : 0.075;
-        g.strokeStyle = look.kind === "Panda" ? "#f4f1ea" : INK4;
+        g.strokeStyle = look.kind === "Panda" ? "#f4f1ea" : INK5;
         if (X2.eyes === "ko") {
           g.rotate(-st.tilt);
           g.scale(x < 0 ? -1 : 1, 1);
@@ -88601,12 +88752,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         g.fill();
       }
       g.restore();
-      g.strokeStyle = INK4;
+      g.strokeStyle = INK5;
       g.lineWidth = st.lid;
       g.stroke(E.lid);
       if (st.flick) {
         const f = st.flick;
-        g.fillStyle = INK4;
+        g.fillStyle = INK5;
         g.beginPath();
         g.moveTo(E.ox - 0.06, E.oy - 0.035);
         g.quadraticCurveTo(E.ox + 0.05 * f, E.oy - 0.06 * f, E.ox + 0.1 * f, E.oy - 0.1 * f);
@@ -88779,7 +88930,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       g.fillStyle = "#ffffff";
       g.fill(pp2(THIRD2));
       g.lineWidth = 0.025;
-      g.strokeStyle = INK4;
+      g.strokeStyle = INK5;
       g.stroke(pp2(THIRD2));
       g.fillStyle = hex2(look.eyeColor, "#8e44ad");
       g.beginPath();
@@ -91691,12 +91842,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
   var Label = class {
     constructor() {
-      this.c = canvas(256, 40);
+      this.c = canvas(256, 56);
       this.g = this.c.getContext("2d");
       this.tex = tex2(this.c);
       this.mat = new SpriteMaterial({ map: this.tex, transparent: true, depthWrite: false, fog: false });
       this.sprite = new Sprite(this.mat);
-      this.sprite.scale.set(2.2, 0.34, 1);
+      this.sprite.scale.set(2.2, 0.48, 1);
       this.sprite.center.set(0.5, 0);
       this.sprite.renderOrder = 5;
       this.key = "";
@@ -91704,14 +91855,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.t = 0;
     }
     /** name: unused (no name tags); bar: fraction 0..1 or null; barCol */
-    set(name, color, bar2, barCol) {
+    set(name, color, bar2, barCol, text2 = null) {
       const now3 = performance.now() / 1e3, dt = Math.min(0.1, this.t ? now3 - this.t : 0);
       this.t = now3;
       if (bar2 === null) {
         this.lag = null;
         if (this.key) {
           this.key = "";
-          this.g.clearRect(0, 0, 256, 40);
+          this.g.clearRect(0, 0, 256, 56);
           this.tex.needsUpdate = true;
         }
         return;
@@ -91723,11 +91874,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         this.hold = (this.hold || 0) + dt;
         if (this.hold > 0.35) this.lag = Math.max(bar2, this.lag - dt * 0.6);
       } else this.hold = 0;
-      const key2 = `${Math.round(bar2 * 120)}|${Math.round(this.lag * 120)}|${barCol}`;
+      const key2 = `${Math.round(bar2 * 120)}|${Math.round(this.lag * 120)}|${barCol}|${text2}`;
       if (key2 === this.key) return;
       this.key = key2;
-      const g = this.g, X2 = 40, Y2 = 12, W4 = 176, H5 = 14;
-      g.clearRect(0, 0, 256, 40);
+      const g = this.g, X2 = 40, Y2 = 28, W4 = 176, H5 = 14;
+      g.clearRect(0, 0, 256, 56);
+      if (text2) {
+        g.font = "bold 17px Nunito, system-ui, sans-serif";
+        g.textAlign = "center";
+        g.textBaseline = "alphabetic";
+        g.lineWidth = 4;
+        g.strokeStyle = "rgba(10,8,12,0.9)";
+        g.strokeText(text2, 128, 22);
+        g.fillStyle = "#fff";
+        g.fillText(text2, 128, 22);
+      }
       g.fillStyle = "rgba(10,8,12,0.9)";
       g.beginPath();
       g.roundRect(X2 - 3, Y2 - 3, W4 + 6, H5 + 6, 6);
@@ -92353,7 +92514,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.bodyG.position.y = knocked ? -Math.min(3.5, kt * 1.2) : 0;
       this.bodyG.rotation.x = knocked ? Math.min(1.4, kt * 0.9) : 0;
       const showBar = (a.damageShown > 0 || a.boss) && !a.boss && a.state === "idle" && !a.hideBar;
-      this.label.set(a.showName && a.state === "idle" ? a.name : null, a.nameColor || "#fff", showBar ? Math.max(0, a.hp / a.d.maxHp) : null, "#ef5350");
+      this.label.set(a.showName && a.state === "idle" ? a.name : null, a.nameColor || "#fff", showBar ? Math.max(0, a.hp / a.d.maxHp) : null, "#ef5350", showBar ? `${Math.max(0, Math.ceil(a.hp))} / ${Math.round(a.d.maxHp)}` : null);
       this.label.sprite.position.set(0, 6.4, 0);
       const cam = ctx.camera;
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
@@ -92434,7 +92595,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.body.rotation.x = knocked ? Math.min(Math.PI, kt * 2.4) : 0;
       this.body.position.y = knocked ? -Math.min(2.5, kt * 0.8) : 0;
       const showBar = a.damageShown > 0 && a.state === "idle";
-      this.label.set(a.showName && a.state === "idle" ? a.name : null, a.nameColor || "#fff", showBar ? Math.max(0, a.hp / a.d.maxHp) : null, "#ef5350");
+      this.label.set(a.showName && a.state === "idle" ? a.name : null, a.nameColor || "#fff", showBar ? Math.max(0, a.hp / a.d.maxHp) : null, "#ef5350", showBar ? `${Math.max(0, Math.ceil(a.hp))} / ${Math.round(a.d.maxHp)}` : null);
       this.label.sprite.position.set(0, this.labelY * (a.look?.scale || 1), 0);
       const cam = ctx.camera;
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
@@ -94834,7 +94995,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           this.root.add(this.label.sprite);
         }
         this.label.sprite.visible = true;
-        this.label.set(name, a.nameColor || "#ffffff", bar2, a.faction === "player" ? "#66bb6a" : "#ef5350");
+        this.label.set(name, a.nameColor || "#ffffff", bar2, a.faction === "player" ? "#66bb6a" : "#ef5350", bar2 !== null ? `${Math.max(0, Math.ceil(a.hp))} / ${Math.round(a.d.maxHp)}` : null);
         this.label.sprite.position.set(0, top / s, 0);
         this.label.mat.opacity = this.barA;
         this.label.sprite.scale.set(1.5 * k, 1.5 * k * 40 / 256, 1);
@@ -96077,7 +96238,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         near.push([a, dx, dy, d2]);
       }
       near.sort((a, b) => a[3] - b[3]);
-      let i = 0, made = 0;
+      let i = 0, made = 0, posed = 0;
       for (const [a, dx, dy, d2] of near) {
         seen.add(a);
         let v = this.actorViews.get(a);
@@ -96120,9 +96281,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           i++;
           continue;
         }
+        if (a !== p && d2 > 30 * 30 && !a.controller?.target && (this.frame + i) % (d2 > 50 * 50 ? 3 : 2) !== 0) {
+          i++;
+          continue;
+        }
+        const tp = performance.now();
         v.update(a, env2, this.ctx, { camYaw3, redraw: i < 18 || (this.frame + i) % 3 === 0 });
+        prof("e.pose", tp);
+        posed++;
         i++;
       }
+      this.posedN = posed;
+      this.nearN = near.length;
       for (const [a, v] of this.actorViews) {
         if (seen.has(a)) continue;
         this.detach(v.root);
@@ -98392,7 +98562,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     lantern: { h: 1.6, r: 4.6, col: [1, 0.55, 0.32], power: 0.75 },
     campfire: { h: 0.55, r: 6.5, col: [1, 0.58, 0.26], power: 1.1, fire: true }
   };
-  var NLIGHTS = 4;
+  var NLIGHTS = 8;
   var MAX_POOLS = 160;
   var clamp018 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
   function poolTexture() {
@@ -98460,7 +98630,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       this.t -= dt;
       if (this.t <= 0) {
         this.t = 0.4;
-        this.near = w.objects.near(ox, oy, 75, (o) => !!KINDS3[o.kind]);
+        this.near = w.objects.near(ox, oy, 110, (o) => !!KINDS3[o.kind]);
       }
       const t = env2.time;
       const cands = [];
@@ -98497,7 +98667,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
             const cd = (q2.x - cam.position.x) ** 2 + (q2.y - cam.position.y) ** 2 + (q2.z - cam.position.z) ** 2;
             if (cd > 60 * 60) continue;
             const fl2 = 0.9 + 0.1 * Math.sin(t * 9 + i * 1.7) * Math.sin(t * 5.3 + i);
-            cands.push({ d: cd, x: q2.x, y: q2.y, z: q2.z, k: night * fl2 * 0.8, col: [1, 0.6, 0.32], range: 7.5 });
+            const below = mesh !== sv.hull, kk = below ? Math.max(night, 0.55) : night;
+            cands.push({ d: cd, x: q2.x, y: q2.y, z: q2.z, k: kk * fl2 * (below ? 0.95 : 0.8), col: [1, 0.6, 0.32], range: below ? 11 : 8.5 });
           }
         }
       }
@@ -98510,16 +98681,19 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         cands.push({ d: -1, x: w.dx(ox, c.x), y: floor2 + 2.1, z: c.y - oy, k: (0.35 + night * 0.65) * 0.5, col: [1, 0.8, 0.56], range: 6 });
       }
       cands.sort((a, b) => a.d - b.d);
+      const next2 = cands[NLIGHTS], dOut = next2 ? Math.sqrt(Math.max(0, next2.d)) : Infinity;
       for (let i = 0; i < NLIGHTS; i++) {
         const L3 = this.lights[i], c = cands[i];
         if (!c) {
           L3.intensity = 0;
           continue;
         }
+        const di = Math.sqrt(Math.max(0, c.d));
+        const fade2 = dOut === Infinity ? 1 : clamp018((dOut - di) / Math.max(2, dOut * 0.3));
         L3.position.set(c.x, c.y, c.z);
         L3.color.setRGB(c.col[0], c.col[1], c.col[2]);
         L3.distance = c.range;
-        L3.intensity = 5 * c.k;
+        L3.intensity = 5 * c.k * fade2;
       }
     }
   };
@@ -99287,9 +99461,11 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       }
       const S6 = RAIN[this.where] || RAIN.ground;
       if (RAIN_HITS.length) {
-        const hits2 = RAIN_HITS.splice(0).sort((a, b) => a.d - b.d).slice(0, 6);
+        this.dropTok = Math.min(2, (this.dropTok ?? 2) + dt * 9);
+        const hits2 = RAIN_HITS.splice(0).sort((a, b) => a.d - b.d).slice(0, Math.floor(this.dropTok));
         const E2 = this.A.E;
         for (const h2 of hits2) {
+          this.dropTok--;
           const kind = h2.on === "roof" ? this.where === "inside" ? "dup" : "tik" : h2.on === "water" ? "plip" : this.where === "leaves" || this.where === "deck" || this.where === "town" ? S6.drop : "pat";
           const near = 1 / (1 + h2.d / 2.5);
           const v2 = E2.open("amb:rain", { bus: "amb", vol: this.level * (0.35 + near), pan: Math.max(-0.9, Math.min(0.9, h2.pan * (0.4 + 0.6 * Math.min(1, h2.d / 2)))), lp: this.where === "inside" ? 1200 : 9e3 - 5e3 * (1 - near), send: 0.04, prio: 1, max: 6 });
@@ -102513,7 +102689,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         rec.docks.push(dock);
         if (dd.near) {
           const town = rec.towns.find((t) => t.id === dd.near || t.name === dd.near);
-          if (town) connectRoad(world, town.x, town.y, dock.land.x, dock.land.y, town.roadTile || T2.DIRT);
+          if (town) routeRoad(world, town.plaza?.x ?? town.x, town.plaza?.y ?? town.y, dock.land.x, dock.land.y, town.roadTile || T2.DIRT);
         }
       }
     }
@@ -102527,7 +102703,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     for (const t of rec.towns.slice(1)) {
       if ((def.towns || []).find((d) => (d.id || d.name) === (t.id || t.name))?.noRoad) continue;
       const a = rec.towns[0].plaza, b = t.plaza;
-      if (!walkable(world, rec.landBox, a.x, a.y + 2, b.x, b.y + 2)) connectRoad(world, a.x, a.y, b.x, b.y, t.roadTile || T2.DIRT);
+      if (!walkable(world, rec.landBox, a.x, a.y + 2, b.x, b.y + 2)) routeRoad(world, a.x, a.y, b.x, b.y, t.roadTile || T2.DIRT);
     }
     for (const d of rec.drums || []) stampDrum(world, d, clim, true);
     if (rec.terrace) stampTerrace(world, rec.terrace, clim, true);
@@ -102564,6 +102740,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
       delete o.dx;
       delete o.dy;
+      if (o.kind === "wheel" && !/ferris/i.test(o.name || "")) millrace(world, o);
       settleLandmark(world, rec, o, ground);
       if (o.block === void 0) o.block = true;
       if (o.kind === "building" && o.role && !o.door) o.door = bw(o, 0, 0.5);
@@ -102618,6 +102795,38 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       }
     }
     return false;
+  }
+  function millrace(world, o) {
+    if (o.dry) return;
+    const x0 = Math.floor(o.x), y0 = Math.floor(o.y);
+    const find = (R5, ok) => {
+      let best = null, bd = Infinity;
+      for (let dy2 = -R5; dy2 <= R5; dy2++) for (let dx2 = -R5; dx2 <= R5; dx2++) {
+        const d2 = dx2 * dx2 + dy2 * dy2;
+        if (d2 >= bd || d2 > R5 * R5) continue;
+        const t = world.type(x0 + dx2, y0 + dy2);
+        if (!ok(t)) continue;
+        for (const [ex, ey] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          if (!world.isLiquid(x0 + dx2 + ex, y0 + dy2 + ey) && !world.isBlocked(x0 + dx2 + ex, y0 + dy2 + ey)) {
+            best = { x: x0 + dx2, y: y0 + dy2, ex, ey };
+            bd = d2;
+            break;
+          }
+        }
+      }
+      return best;
+    };
+    const w = find(40, (t) => t === T2.RIVER || t === T2.POND) || find(12, (t) => IS_LIQUID[t]);
+    if (!w) {
+      o.lying = true;
+      o.block = false;
+      return;
+    }
+    const dx = -w.ex, dy = -w.ey;
+    o.x = w.x + 0.5 - w.ex * 0.5 + dx * 0.4;
+    o.y = w.y + 0.5 - w.ey * 0.5 + dy * 0.4;
+    o.yaw = Math.atan2(dx, dy);
+    o.water = true;
   }
   var SHORE_KINDS = /* @__PURE__ */ new Set(["boat", "shipwreck", "anchor", "bubble", "mooring", "buoy", "rapids", "geyser"]);
   function settleLandmark(world, rec, o, ground) {
@@ -103005,6 +103214,98 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       return { x, y, face: Math.atan2(-vy - py2 * sb * 0.6, -vx - px2 * sb * 0.6) };
     }
     return null;
+  }
+  function routeRoad(world, ax, ay, bx, by, tile) {
+    const x0 = Math.floor(ax), y0 = Math.floor(ay), x1 = Math.floor(bx), y1 = Math.floor(by);
+    const ddx = world.dx(x0, x1), m = 40;
+    const ox = Math.min(0, ddx) - m, oy = Math.min(y0, y1) - m;
+    const W4 = Math.abs(ddx) + 2 * m + 1, H5 = Math.abs(y1 - y0) + 2 * m + 1;
+    if (W4 * H5 > 6e5) return connectRoad(world, ax, ay, bx, by, tile);
+    const at4 = (i) => ({ x: world.wx(x0 + ox + i % W4), y: oy + Math.floor(i / W4) });
+    const PAVED2 = /* @__PURE__ */ new Set([T2.COBBLE, T2.STONE, T2.MARBLE, T2.PLANK, T2.BRIDGE]);
+    const cost = (x, y) => {
+      const t = world.type(x, y);
+      if (world.isBlocked(x, y)) return Infinity;
+      if (t === T2.MOUNTAIN || t === T2.CLIFF || t === T2.WALL) return 6;
+      if (IS_LIQUID[t] && t !== T2.BRIDGE) return Infinity;
+      if (OVERLAY[t] || !WALKABLE[t]) return t === T2.BRIDGE ? 0.5 : Infinity;
+      let c = PAVED2.has(t) ? 0.45 : t === tile || t === T2.DIRT ? 0.6 : 1;
+      for (const [ex, ey] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (world.isBlocked(x + ex, y + ey)) {
+        c += 1.2;
+        break;
+      }
+      return c;
+    };
+    const N8 = W4 * H5, g = new Float32Array(N8).fill(Infinity), from = new Int32Array(N8).fill(-1), done6 = new Uint8Array(N8);
+    const s = (y0 - oy) * W4 + -ox, goal = (y1 - oy) * W4 + (ddx - ox);
+    const heap = [];
+    const push = (f, i) => {
+      heap.push([f, i]);
+      let k = heap.length - 1;
+      while (k > 0) {
+        const p = k - 1 >> 1;
+        if (heap[p][0] <= heap[k][0]) break;
+        [heap[p], heap[k]] = [heap[k], heap[p]];
+        k = p;
+      }
+    };
+    const pop2 = () => {
+      const top = heap[0], last = heap.pop();
+      if (heap.length) {
+        heap[0] = last;
+        let k = 0;
+        for (; ; ) {
+          const l = 2 * k + 1, r4 = l + 1;
+          let mi = k;
+          if (l < heap.length && heap[l][0] < heap[mi][0]) mi = l;
+          if (r4 < heap.length && heap[r4][0] < heap[mi][0]) mi = r4;
+          if (mi === k) break;
+          [heap[mi], heap[k]] = [heap[k], heap[mi]];
+          k = mi;
+        }
+      }
+      return top;
+    };
+    const hx = goal % W4, hy = Math.floor(goal / W4);
+    g[s] = 0;
+    push(0, s);
+    let it = 0;
+    while (heap.length && it++ < 4e5) {
+      const [, i] = pop2();
+      if (done6[i]) continue;
+      done6[i] = 1;
+      if (i === goal) break;
+      const cx = i % W4, cy = Math.floor(i / W4);
+      for (const [ex, ey] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + ex, ny = cy + ey;
+        if (nx < 0 || ny < 0 || nx >= W4 || ny >= H5) continue;
+        const j = ny * W4 + nx;
+        if (done6[j]) continue;
+        const p = at4(j), c = j === goal ? 1 : cost(p.x, p.y);
+        if (!Number.isFinite(c)) continue;
+        const ng = g[i] + c;
+        if (ng < g[j]) {
+          g[j] = ng;
+          from[j] = i;
+          push(ng + 0.45 * (Math.abs(nx - hx) + Math.abs(ny - hy)), j);
+        }
+      }
+    }
+    if (!done6[goal]) return connectRoad(world, ax, ay, bx, by, tile);
+    for (let i = goal; i >= 0; i = from[i]) {
+      const p = at4(i);
+      for (const [ex, ey] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) {
+        const x = world.wx(p.x + ex), y = p.y + ey;
+        let cur = world.type(x, y);
+        if (cur === T2.MOUNTAIN || cur === T2.CLIFF || cur === T2.WALL) {
+          world.setType(x, y, tile);
+          continue;
+        }
+        if (IS_LIQUID[cur] || OVERLAY[cur] || !WALKABLE[cur] || PAVED2.has(cur) || cur === T2.FARM || world.isBlocked(x, y)) continue;
+        world.setType(x, y, tile);
+      }
+      if (i === s) break;
+    }
   }
   function connectRoad(world, ax, ay, bx, by, tile) {
     const dx = world.dx(ax, bx), dy = by - ay;
@@ -110101,7 +110402,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       climate: "rocky",
       mountains: [{ name: "The Clock Tower Crag", dx: 0, dy: -0.2, r: 0.3, h: 1, cliff: 200 }],
       town: { name: "Gearwork Harbour", style: "city", dock: "s", plaza: "statue", buildings: [["hall", "Trump Siblings' Clock Fortress"], ["weapons", "Cog & Spring Armoury"], "inn", "bar"] },
-      marks: [["tower", 0, -0.35, "The Great Clock"], ["wheel", 0.3, 0.1], ["wheel", -0.3, 0.15]],
+      marks: [["tower", 0, -0.35, "The Great Clock"], ["wheel", 0.3, 0.1, null, { dry: true }], ["wheel", -0.3, 0.15, null, { dry: true }]],
       logNext: ["hannabal", "crown_island"],
       danger: 4,
       music: "town",
@@ -111144,6 +111445,19 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     ["Sky", "#9cc3e0"],
     ["Violet", "#8e6bb0"]
   ];
+  var TRIM_PAINTS = [
+    ["Gold", "#d4ac0d"],
+    ["Brass", "#b8862f"],
+    ["Ivory", "#efe3c4"],
+    ["Pearl", "#f6f4ee"],
+    ["Black", "#262224"],
+    ["Crimson", "#a8322a"],
+    ["Navy", "#22406e"],
+    ["Sea green", "#2e7a5c"],
+    ["Sky", "#8fc1e3"],
+    ["Violet", "#7c58a6"],
+    ["Copper", "#b0633a"]
+  ];
   var FIGUREHEADS = [["none", "None"], ["mermaid", "Gilded mermaid"], ["dragon", "Dragon"], ["lion_gold", "Golden lion"], ["whale", "White whale"]];
   var paintable = (def) => !!def && def.sail !== "marine" && !def.special;
   function openShipDesigner(game, type, { name = "", paint: paint2 = null, title: title2 = "", ok = "Launch her", jr = null } = {}) {
@@ -111153,6 +111467,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: name || SHIPS[type].name,
       color: paint2?.color || def.color || HULL_PAINTS[0][1],
       sail: paint2?.sail || SAIL_CLOTHS[0][1],
+      trim: paint2?.trim || TRIM_PAINTS[0][1],
       figurehead: paint2?.figurehead || (big2 && FIGUREHEADS.some(([k]) => k === def.figurehead) ? def.figurehead : "none")
     };
     return new Promise((resolve) => {
@@ -111174,7 +111489,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       }));
       const body = h("div.ship-designer");
       const draw2 = () => {
-        stage2.set({ color: st.color, sail: st.sail, figurehead: big2 ? st.figurehead : null });
+        stage2.set({ color: st.color, trim: st.trim, sail: st.sail, figurehead: big2 ? st.figurehead : null });
         body.replaceChildren(
           h("h2", title2 || `Fit out your ${SHIPS[type].name}`),
           h(
@@ -111188,6 +111503,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
               } } }),
               h("label.sd-label", "Hull"),
               swatches(HULL_PAINTS, "color"),
+              h("label.sd-label", "Trim"),
+              swatches(TRIM_PAINTS, "trim"),
               def.oarsOnly ? null : [h("label.sd-label", "Sails"), swatches(SAIL_CLOTHS, "sail")],
               big2 ? [h("label.sd-label", "Figurehead"), h("div.sd-figs", FIGUREHEADS.map(([k, label]) => h("button.btn.small" + (st.figurehead === k ? ".gold" : ""), { on: { click: () => {
                 st.figurehead = k;
@@ -111199,7 +111516,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
           h(
             "div.sd-buttons",
             h("button.btn", { on: { click: () => finish2(null) } }, "Cancel"),
-            h("button.btn.gold", { on: { click: () => finish2({ name: (st.name || "").trim().slice(0, 24) || SHIPS[type].name, paint: { color: st.color, sail: def.oarsOnly ? null : st.sail, figurehead: big2 ? st.figurehead : null } }) } }, ok)
+            h("button.btn.gold", { on: { click: () => finish2({ name: (st.name || "").trim().slice(0, 24) || SHIPS[type].name, paint: { color: st.color, trim: st.trim, sail: def.oarsOnly ? null : st.sail, figurehead: big2 ? st.figurehead : null } }) } }, ok)
           )
         );
       };
@@ -111291,7 +111608,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     return {
       el,
       set(p) {
-        stub.paint = { color: p.color, sail: p.sail, figurehead: p.figurehead || void 0 };
+        stub.paint = { color: p.color, trim: p.trim, sail: p.sail, figurehead: p.figurehead || void 0 };
         build5();
       },
       dispose() {
@@ -115125,7 +115442,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
   var LEGACY_LEGACY = `${PREFIX}:legacy:v1`;
   var KEY_SETTINGS = `${PREFIX}:settings:v1`;
   var KEY_LAST = `${PREFIX}:lastSlot`;
-  var SLOT_COUNT = 3;
+  var SLOT_COUNT = 6;
   var slot = 1;
   var key = (s, what) => `${PREFIX}:slot${s}:${what}:v1`;
   function read(k) {
@@ -115424,6 +115741,14 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     if (f?.length) return f.some((e) => SHIPS[e.type] && pred(shipStats(e.type, e.upgrades)));
     return (game.ships || []).some((s) => s.owner === "player" && !s.sunk && pred(s.def));
   }
+  function shipRewardWanted(game, type, giver2 = "They") {
+    const want = SHIPS[type]?.price || 0;
+    const f = game.state?.char?.fleet || [];
+    const best = Math.max(0, ...f.map((e) => SHIPS[e.type]?.price || 0), ...(game.ships || []).filter((s) => s.owner === "player" && !s.sunk).map((s) => s.def?.price || 0));
+    if (best < want) return true;
+    game.ui?.toast("NO NEW SHIP", `${giver2} would have given you a ${SHIPS[type]?.name || type} \u2014 but the ship you have is as good or better.`, "#b0bec5");
+    return false;
+  }
   var aboard = (p, s) => !!p && !!s && (p.mode === "sail" && p.ship === s || p.deck?.ship === s);
   function dockOf(w, s) {
     let best = null, bd = Infinity;
@@ -115491,7 +115816,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
 
   // src/game/lineage.js
   var TRAITS = {
-    will_of_d: { name: "Will of D.", rarity: "legendary", weight: 0, desc: `Your name carries a hidden "D." \u2014 the mark of those who laugh in the face of death. Fate bends around you, and the world's powers will come to fear the name.`, attrs: { wil: 3 } },
+    will_of_d: { name: "Will of D.", rarity: "legendary", weight: 0, desc: `Your name carries a hidden "D." \u2014 the mark of those who laugh in the face of death. Once each life a finishing blow somehow misses you; +3 Willpower; far likelier to be born with Conqueror's Haki. And it runs in the blood: every child of your line is born with the D. and your family name.`, attrs: { wil: 3 } },
     // hidden: never shown until it awakens
     conqueror: { name: "King's Disposition", rarity: "legendary", weight: 0, hidden: true, desc: "You were born with the qualities of a king. It awakened the first time your will was truly tested.", latent: "A Haki master sensed it in you: the qualities of a king. It will wake the day your will is truly tested." },
     iron_stomach: { name: "Iron Stomach", rarity: "common", weight: 10, desc: "Food heals 30% more." },
@@ -115548,7 +115873,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       const t2 = rng4.weighted(pool2);
       if (!traits.includes(t2)) traits.push(t2);
     }
-    if (rng4.chance(dChance(legacy))) traits.push("will_of_d");
+    if (legacy?.family?.d || rng4.chance(dChance(legacy))) traits.push("will_of_d");
     if (rng4.chance(kingChance(traits.includes("will_of_d"), false))) traits.push("conqueror");
     return { race, traits, seed };
   }
@@ -115559,8 +115884,14 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     for (const k of ATTR_KEYS) attrs[k] += (race.stats[k] || 0) + perkLevel(legacy, "attrs") * 2;
     for (const t of birth.traits) for (const [k, v] of Object.entries(TRAITS[t]?.attrs || {})) attrs[k] += v;
     for (const k of ATTR_KEYS) attrs[k] = Math.max(1, attrs[k]);
-    let name = (choices.name || "Nameless").trim().slice(0, 28) || "Nameless";
-    if (birth.traits.includes("will_of_d")) name = nameWithD(name);
+    const hasD = birth.traits.includes("will_of_d");
+    const family = legacy.family?.d && legacy.family.name || choices.family || "";
+    const given = choices.first || "";
+    let name = (choices.first !== void 0 ? [family, given].filter(Boolean).join(" ") : choices.name || "").trim().slice(0, 28) || "Nameless";
+    if (hasD) {
+      name = nameWithD(name);
+      if (family) legacy.family = { name: family, d: true, since: legacy.family?.since || legacy.generation };
+    }
     const lives = Math.min(5, race.lives + perkLevel(legacy, "lives"));
     let style = "brawler";
     const masteries = { brawler: 0 };
@@ -115591,6 +115922,10 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       runSeed: Math.floor(rng4.next() * 1e9),
       generation: legacy.generation,
       name,
+      family: family || null,
+      given: given || null,
+      // the Blue they chose to be born in (races born in more than one: see resolveSpawn)
+      homeSea: choices.sea || null,
       race: birth.race,
       traits: birth.traits.slice(),
       look: choices.look || makeLook(birth.race, birth.seed),
@@ -115710,7 +116045,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
   function resolveSpawn(world, char, avoid = /* @__PURE__ */ new Set()) {
     const rng4 = new RNG(char.runSeed + ":spawn");
     const race = RACES[char.race];
-    const sea = rng4.pick(race.spawnSeas);
+    const pick0 = rng4.pick(race.spawnSeas);
+    const sea = char.homeSea && race.spawnSeas.includes(char.homeSea) ? char.homeSea : pick0;
     const seaRegion = SEA_IDS[sea];
     const allTowns = [];
     for (const isl2 of world.islands) for (const t2 of isl2.towns) allTowns.push({ isl: isl2, t: t2 });
@@ -117159,13 +117495,23 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         this.engaged = p.state === "idle" && this.actorsNear(p.x, p.y, 40).some((a) => a !== p && a.alive && a.state === "idle" && a.controller?.target === p && (a.controller.state === "chase" || a.controller.state === "attack"));
       }
       p.inCombat = this.combatT > 0 || !!this.engaged;
+      this.frameNo = (this.frameNo || 0) + 1;
       for (let i = this.actors.length - 1; i >= 0; i--) {
         const a = this.actors[i];
         if (!a.alive) {
           this.actors.splice(i, 1);
           continue;
         }
-        if (a !== p && this.world.dist2(a.x, a.y, p.x, p.y) > 70 * 70 && !a.persistent) continue;
+        const d2 = a === p ? 0 : this.world.dist2(a.x, a.y, p.x, p.y);
+        if (d2 > 70 * 70 && !a.persistent) continue;
+        if (d2 > 40 * 40 && !a.persistent && !a.controller?.target && !a.inWater && !a.onShip && !a.deck) {
+          a._skipDt = (a._skipDt || 0) + simDt;
+          if ((this.frameNo || 0) + i & 1) continue;
+          a.update(Math.min(0.1, a._skipDt), this);
+          a._skipDt = 0;
+          continue;
+        }
+        a._skipDt = 0;
         a.update(simDt, this);
       }
       prof("s.actors", t0);
@@ -117597,7 +117943,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
 .bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }
 .bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }
 .bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }
-.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }
+.bossbar .bar { height: 18px; border-color: rgba(241,196,15,.6); }
+.bossbar .bar > span { font-size: 12px; font-weight: 800; }
 .bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }
 
 .shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }
@@ -117821,6 +118168,7 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 #ui.menu-open .side-btn.rail { display: flex; }
 #ui.menu-open .side-btn.pill, #ui.menu-open .side-btn.t-only { display: none; }
 #ui.panel-open:not(.menu-open) .sidebar { display: none; }
+#ui.over-menu .sidebar { display: none; }
 .side-btn.pill { width: auto; align-self: flex-start; }
 .side-btn.pill .lbl { flex: none; margin-right: 4px; }
 /* (Map and Game after the sections: a little apart from them) */
@@ -118524,6 +118872,10 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .cine-name { color: #fff; font: 400 clamp(42px, 7vw, 92px)/1 'Pirata One', Georgia, serif; letter-spacing: 1px; }
 .cine-bounty { color: #f5e6c4; font: 400 clamp(18px, 2.6vw, 32px) 'Bangers', Impact, sans-serif; letter-spacing: 2px; margin-top: 4px; }
 .cine-bounty small { font-size: .6em; margin-right: 8px; color: #ffab91; letter-spacing: 3px; }
+.cine-card.has-poster { display: flex; align-items: center; gap: 22px; }
+.cine-poster { transform: skewX(8deg) rotate(-3deg); flex: none; filter: drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+.cine-poster .poster { width: clamp(130px, 15vw, 190px); margin: 0; text-shadow: none; }
+.cine-poster .poster canvas { width: 100%; height: auto; }
 .hud.cine-dim { opacity: 0; transition: opacity .3s ease; }
 
 /* the cursor: a ship's-pointer arrow in the UI's own parchment, ink and gold
@@ -120099,7 +120451,7 @@ button:disabled { cursor: not-allowed; }
   var MARGIN2 = 32;
   var PARCH2 = [240, 224, 186];
   var BLANK = [PARCH2[0] * 0.98, PARCH2[1] * 0.96, PARCH2[2] * 0.92];
-  var INK5 = [71, 51, 31];
+  var INK6 = [71, 51, 31];
   var smooth12 = (a, b, x) => {
     const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
     return t * t * (3 - 2 * t);
@@ -120433,9 +120785,9 @@ button:disabled { cursor: not-allowed; }
         if (m.dist) {
           const sd = (m.dist[mj * m.w + mi] - 128) * 0.25;
           const ink2 = (1 - smooth12(0, mx * 0.9 + 0.25, Math.abs(sd))) * 0.85;
-          r4 += (INK5[0] - r4) * ink2;
-          gg += (INK5[1] - gg) * ink2;
-          b += (INK5[2] - b) * ink2;
+          r4 += (INK6[0] - r4) * ink2;
+          gg += (INK6[1] - gg) * ink2;
+          b += (INK6[2] - b) * ink2;
         }
         const fog = w.fog ? w.fog[fy * w.fogW + Math.floor((mi + 0.5) * mx / F4)] / 255 : 1;
         const k = smooth12(0.05, 0.6, fog) * 0.85 + seen;
@@ -121136,9 +121488,17 @@ button:disabled { cursor: not-allowed; }
     );
   }
   function creationScreen(ui, legacy, { onDone, onBack }) {
-    let rerolls = perkLevel(legacy, "reroll");
-    let birth = rollBirth(legacy, Math.floor(Math.random() * 1e9));
+    let rerolls = Math.max(0, perkLevel(legacy, "reroll") - (legacy.pendingBirth?.flips || 0));
+    let birth = legacy.pendingBirth?.birth || rollBirth(legacy, Math.floor(Math.random() * 1e9));
     if (ui.game?.debugBirth) birth = { ...birth, ...ui.game.debugBirth };
+    const keep = () => {
+      legacy.pendingBirth = { birth, flips: perkLevel(legacy, "reroll") - rerolls };
+      try {
+        saveLegacy(legacy);
+      } catch (e) {
+      }
+    };
+    keep();
     const state = { name: "", look: null, story: "calling" };
     const root4 = h("div.screen");
     ui.showScreen(root4);
@@ -121183,16 +121543,13 @@ button:disabled { cursor: not-allowed; }
       const btns = h(
         "div.roll-btns",
         { style: { opacity: 0 } },
-        h("button.btn.gold", { on: { click: stepIdentity } }, "Accept my fate"),
+        h("button.btn.gold", { on: { click: stepIdentity } }, "Continue"),
         rerolls > 0 ? h("button.btn", { on: { click: () => {
           rerolls--;
           birth = rollBirth(legacy, Math.floor(Math.random() * 1e9));
+          keep();
           stepRoll(true);
-        } } }, `Flip Fate's Coin (${rerolls} left)`) : null,
-        h("button.btn", { on: { click: () => {
-          stopAnim();
-          onBack();
-        } } }, "Back")
+        } } }, `Flip Fate's Coin (${rerolls} left)`) : null
       );
       const willLine = h("div.will-line", uiImg("reputation", 16), ` Your lineage's Inherited Will: ${legacy.will}` + (legacy.generation > 1 ? ` \xB7 generation ${legacy.generation}` : ""));
       const panel = h("div.panel.race-roll", h("h2", legacy.generation > 1 ? `Generation ${legacy.generation} is born\u2026` : "A child is born\u2026"), nameEl, rarEl, dEl, info, btns, willLine);
@@ -121213,7 +121570,8 @@ button:disabled { cursor: not-allowed; }
           dEl.append(
             h("div.d-stamp", "D."),
             h("div.d-title", "THE WILL OF D."),
-            h("p", "A hidden initial runs in your blood. Those who carry it laugh in the face of death \u2014 and the powers of the world fear the name. (", pct(chance), " of births)")
+            h("p", legacy.family?.d ? `The D. of the ${legacy.family.name} family runs in your blood, as it did in your parent's.` : h("span", "A hidden initial runs in your blood. (", pct(chance), " of births)")),
+            h("p.muted", "Once each life a finishing blow misses you \xB7 +3 Willpower \xB7 far likelier to have Conqueror's Haki \xB7 every child of your line will carry the D. and your family name.")
           );
           dEl.classList.remove("miss");
           dEl.classList.add("hit");
@@ -121251,45 +121609,57 @@ button:disabled { cursor: not-allowed; }
         state.look.build = 0.5;
       }
       const L3 = state.look;
+      const familyFixed = legacy.family?.d && hasD() ? legacy.family.name : null;
       if (state.first === void 0) {
-        const [f, ...rest] = (state.name || "").trim().split(/\s+/).filter(Boolean);
-        state.first = f || randomFirst(L3.fem);
-        state.last = rest.join("") || (f ? "" : randomLast());
-        state.firstRolled = !f;
+        state.first = randomFirst(L3.fem);
+        state.last = familyFixed || randomLast();
       }
+      if (familyFixed) state.last = familyFixed;
+      const seas = RACES[birth.race].spawnSeas;
+      if (!state.sea || !seas.includes(state.sea)) state.sea = seas[Math.floor(Math.random() * seas.length)];
       const race = birth.race;
       const finalName = h("div.final-name");
       const updateName = () => {
-        state.name = [state.first, state.last].filter(Boolean).join(" ");
+        state.name = [state.last, state.first].filter(Boolean).join(" ");
         clear(finalName);
         const n = state.name || "Nameless";
         finalName.append(h("span.muted", "You will be known as "), h("b", hasD() ? nameWithD(n) : n));
       };
-      const word = (e) => {
-        const v = e.target.value.replace(/\s+/g, "");
-        if (v !== e.target.value) e.target.value = v;
-        return v;
+      const pickList = (list, value, set) => h(
+        "select.name-pick",
+        { on: { change: (e) => {
+          set(e.target.value);
+          updateName();
+        } } },
+        ...[...new Set(list)].sort((a, b) => a.localeCompare(b)).map((n) => h("option", { value: n, ...n === value ? { selected: true } : {} }, n))
+      );
+      const firstBox = h("div", { style: { display: "flex", gap: "6px" } });
+      const lastBox = h("div", { style: { display: "flex", gap: "6px" } });
+      const renderFirst = () => {
+        clear(firstBox);
+        firstBox.append(pickList(L3.fem ? FEMALE_FIRST : MALE_FIRST, state.first, (v) => {
+          state.first = v;
+        }), h("button.btn", { on: { click: rollFirst } }, "Random"));
       };
-      const firstInput = h("input.name", { value: state.first, maxLength: 14, spellcheck: false, placeholder: "First name", on: { input: (e) => {
-        state.first = word(e);
-        state.firstRolled = false;
-        updateName();
-      } } });
-      const lastInput = h("input.name", { value: state.last, maxLength: 16, spellcheck: false, placeholder: "Family name", on: { input: (e) => {
-        state.last = word(e);
-        updateName();
-      } } });
+      const renderLast = () => {
+        clear(lastBox);
+        if (familyFixed) lastBox.append(h("div.name-fixed", h("b", familyFixed), h("span.muted", " \u2014 your family's name, with its D.")));
+        else lastBox.append(pickList(SURNAMES, state.last, (v) => {
+          state.last = v;
+        }), h("button.btn", { on: { click: rollLast } }, "Random"));
+      };
       const rollFirst = () => {
         state.first = randomFirst(L3.fem, state.first);
-        state.firstRolled = true;
-        firstInput.value = state.first;
+        renderFirst();
         updateName();
       };
       const rollLast = () => {
         state.last = randomLast(state.last);
-        lastInput.value = state.last;
+        renderLast();
         updateName();
       };
+      renderFirst();
+      renderLast();
       updateName();
       const row = (label, ...kids) => h("div.opt-row", h("div.opt-label", label), ...kids);
       const swatch = (key2, colors) => h("div.swatches", ...colors.map((c) => h("button" + (L3[key2] === c ? ".on" : ""), { title: c, style: { background: c }, on: { click: () => {
@@ -121324,7 +121694,7 @@ button:disabled { cursor: not-allowed; }
         if (!fem && ["skirt", "longskirt"].includes(L3.bottomStyle)) L3.bottomStyle = "trousers";
         if (L3.eyeShape !== "fish") L3.eyeShape = eyeShapeOf2({ ...L3, eyeShape: L3.eyeShape });
         if (fem && L3.bust === void 0) L3.bust = 1;
-        if (other && state.firstRolled) rollFirst();
+        if (other) rollFirst();
         renderGender();
       };
       renderGender();
@@ -121341,12 +121711,26 @@ button:disabled { cursor: not-allowed; }
         );
       };
       renderStory();
+      const seaEl = h("div");
+      const renderSea = () => {
+        clear(seaEl);
+        if (seas.length < 2) {
+          seaEl.append(row("Born in", h("div.muted", `the ${SEA_NAMES[seas[0]] || "sea"} \u2014 your people's home`)));
+          return;
+        }
+        seaEl.append(row("Born in", chips2(state.sea, seas, seas.map((x) => SEA_NAMES[x]), (v) => {
+          state.sea = v;
+          renderSea();
+        })));
+      };
+      renderSea();
       const right = h(
         "div",
-        row("First name", h("div", { style: { display: "flex", gap: "6px" } }, firstInput, h("button.btn", { on: { click: rollFirst } }, "Random"))),
-        row("Family name", h("div", { style: { display: "flex", gap: "6px" } }, lastInput, h("button.btn", { on: { click: rollLast } }, "Random"))),
+        row("Family name", lastBox),
+        row("Given name", firstBox),
         finalName,
         genderEl,
+        seaEl,
         storyEl,
         tabsEl,
         optsEl,
@@ -121359,14 +121743,14 @@ button:disabled { cursor: not-allowed; }
         h("div.creation-grid", left, right),
         h(
           "div.creation-foot",
-          h("div.muted", `${raceLabel(L3)} \xB7 born in ${born.spawnSeas.length > 1 ? "one of the four Blues" : "the " + SEA_NAMES[born.spawnSeas[0]]}`),
+          h("div.muted", `${raceLabel(L3)} \xB7 born in the ${SEA_NAMES[state.sea] || "Blues"}`),
           h(
             "div",
             { style: { display: "flex", gap: "10px" } },
             h("button.btn", { on: { click: () => stepRoll(false) } }, "Back"),
             h("button.btn.red.big", { on: { click: () => {
               stopAnim();
-              onDone(birth, { name: (state.name || "").trim() || "Nameless", look: state.look, story: state.story });
+              onDone(birth, { name: (state.name || "").trim() || "Nameless", first: state.first, family: state.last, sea: state.sea, look: state.look, story: state.story });
             } } }, "Set Sail")
           )
         )
@@ -121478,7 +121862,7 @@ button:disabled { cursor: not-allowed; }
           );
         } else {
           const o = outfitOf(L3);
-          const TOPS3 = [["tee", "Tee"], ["shirt", "Shirt"], ["tank", "Tank top"], ["vest", "Open vest"], ["open", "Open shirt"], ["striped", "Sailor stripes"], ["jacket", "Suit jacket"], ["kimono", "Kimono"], ["coat", "Long coat"], ["bare", L3.fem ? "Chest wrap" : "Bare-chested"]];
+          const TOPS3 = [["tee", "Tee"], ["shirt", "Shirt"], ...L3.fem ? [["tank", "Tank top"]] : [], ["vest", "Open vest"], ["open", "Open shirt"], ["striped", "Sailor stripes"], ["jacket", "Suit jacket"], ["kimono", "Kimono"], ["coat", "Long coat"], ["bare", L3.fem ? "Chest wrap" : "Bare-chested"]];
           if (L3.fem) TOPS3.push(["crop", "Crop top"], ["bikini", "Bikini top"], ["dress", "Dress"]);
           const BOTS = [["trousers", "Trousers"], ["shorts", "Shorts"], ["capri", "Rolled-up"], ["baggy", "Baggy"], ["slim", "Slim"], ["hakama", "Hakama"]];
           if (L3.fem) BOTS.push(["skirt", "Skirt"], ["longskirt", "Long skirt"]);
@@ -127403,6 +127787,7 @@ ${tip}` }), cd: h("div.cd") };
       for (const [id, el] of Object.entries(this.el.sideBtns)) el.classList.toggle("on", id === sec);
       this.root.classList.toggle("menu-open", !!sec);
       this.root.classList.toggle("panel-open", !!top);
+      this.root.classList.toggle("over-menu", !!sec && !!top && !this.sectionOf(top.id));
       if (RETURN_TO.has(sec)) this.lastSection = sec;
       const edit = !!top && (top.id === "inventory" || top.id === "skills");
       this.root.classList.toggle("hb-edit", edit);
@@ -127778,6 +128163,8 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const bb = E.boss.children[1];
         bb.firstChild.style.width = 100 * clamp(boss.hp / boss.d.maxHp, 0, 1) + "%";
         bb.children[1].style.width = 100 * clamp(boss.hp / boss.d.maxHp, 0, 1) + "%";
+        const ht = `${Math.max(0, Math.ceil(boss.hp)).toLocaleString()} / ${Math.round(boss.d.maxHp).toLocaleString()}`;
+        if (bb.children[2] && bb.children[2].textContent !== ht) bb.children[2].textContent = ht;
       }
       this.spT = (this.spT || 0) - 1 / 60;
       if (this.spT <= 0) {
@@ -130719,6 +131106,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const legacy = loadLegacy();
     const char = createCharacter(legacy, birth, choices);
     legacy.heirloom = null;
+    delete legacy.pendingBirth;
     saveLegacy(legacy);
     const world = game.surface;
     const spawn = resolveSpawn(world, char, heldTowns(world, allNpcDefs(), allGroups(), char));
@@ -133761,8 +134149,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     a.aggroPlayer = true;
     if (a.controller) {
       a.controller.kind = "hostile";
-      a.controller.target = game.player;
-      a.controller.state = "chase";
+      a.controller.aggroRange = Math.max(a.controller.aggroRange || 0, 18);
+      if (!a.controller.home) a.controller.home = { x: a.x, y: a.y };
     }
     a.stationary = false;
     if (a.boss) game.bossTarget = a;
@@ -135226,6 +135614,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
             if (b) B5.questIn.add(b);
           }
         }
+        if (B5.near.length) B5.folk = game.actorsNear(p.x, p.y, 48);
         for (const b of B5.near) B5.door(b, p, dt);
         const room2 = w.roomOf(p);
         if (room2 !== B5.room) {
@@ -135245,8 +135634,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const locked = !broken && B5.isLocked(b);
         let want = broken, blocking = false;
         if (!want) {
-          for (const a of game.actorsNear(d.mid.x, d.mid.y, 2.1)) {
-            if (!a.alive || a.state === "dead" || a.onShip) continue;
+          for (const a of B5.folk || game.actorsNear(d.mid.x, d.mid.y, 2.1)) {
+            if (!a.alive || a.state === "dead" || a.onShip || w.dist2(a.x, a.y, d.mid.x, d.mid.y) > 2.1 * 2.1) continue;
             const q2 = bl(b, a.x, a.y, w);
             const dx = Math.abs(q2.lx - d.lx), dy = Math.abs(q2.lz + WALL_T / 2);
             if (b.doorOpen && dx < d.dw / 2 + a.r && dy < WALL_T / 2 + a.r - 0.08) blocking = true;
@@ -137347,7 +137736,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const isl = g.surface.islands.find((i) => i.id === "gecko_islands");
         const dock = isl?.docks.find((d) => d.name === "Kaya's Mansion") || isl?.docks[0];
         const have = (ctx.char.fleet || []).some((f) => /going merry/i.test(f.name || "")) || (g.ships || []).some((s) => /going merry/i.test(s.name || "") && !s.sunk);
-        if (dock && !have) {
+        if (dock && !have && shipRewardWanted(g, "caravel", "Kaya")) {
           g.giveShip("caravel", dock.moor.x, dock.moor.y, "Going Merry");
           g.ui.toast("A NEW SHIP!", "Kaya gives you a caravel \u2014 the Going Merry!", "#ffe082");
         }
@@ -144326,7 +144715,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       onComplete: (ctx, g) => {
         const isl = islandRec(g, "briss_kingdom");
         const dock = isl?.docks?.[0];
-        if (dock) {
+        if (dock && shipRewardWanted(g, "sloop", "Master Carvel")) {
           g.giveShip("sloop", dock.moor.x, dock.moor.y, "St. Briss II");
           g.ui.toast("A NEW SHIP!", "Master Carvel gives you a sloop \u2014 the St. Briss II!", "#ffe082");
         }
@@ -162428,6 +162817,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const dock = isl?.docks?.[0];
     const p = g.player;
     const pos = dock ? dock.moor : { x: p.x, y: p.y + 6 };
+    if (!shipRewardWanted(g, type)) return null;
     const s = g.giveShip(type, pos.x, pos.y, name);
     s?.unstick?.(g.world);
     g.ui.toast("A NEW SHIP!", `${name || type} is moored ${dock ? "at the pier" : "nearby"}.`, "#ffe082");
@@ -162450,6 +162840,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       when: ct.when,
       ai: ct.ai,
       story: true,
+      // (the people of the story are introduced the first time you speak with them: questgivers.js introOnTalk)
+      introCutscene: ct.introCutscene ?? true,
       // (how they stand waiting for you: a pirate daring you, fists on hips or arms folded; a Marine at ease; a hunter sizing you up)
       stance: ct.stance !== void 0 ? ct.stance : path2 === "pirate" ? id.length % 2 ? "hips" : "fold" : path2 === "marine" ? "attention" : path2 === "hunter" ? "fold" : void 0,
       dialogue: (ctx) => storyTree(ctx, id, null)
@@ -163616,6 +164008,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   var CAP_LOW = { sfx: 18, npc: 6, amb: 7, ui: 4 };
   var KIND2 = { hit: 9, tech: 6, move: 6, foley: 6, world: 5 };
   var KIND_LOW = { hit: 6, tech: 4, move: 4, foley: 4, world: 3 };
+  var START_RATE = 60;
+  var START_BURST = 24;
+  var TOTAL = 44;
+  var TOTAL_LOW = 28;
   var HIT_GUARD = 0.14;
   var CLIP_HEAD = 1.4;
   var CEIL = 0.98;
@@ -163676,6 +164072,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       this.tapBuf = new Float32Array(1024);
       this.deadT = 0;
       this.voices = { sfx: [], npc: [], amb: [], ui: [] };
+      this.retired = [];
+      this.tokens = START_BURST;
+      this.tokT = 0;
+      this.total = low ? TOTAL_LOW : TOTAL;
+      this.strainUntil = 0;
       this.rr = {};
       this.ducks = /* @__PURE__ */ new Map();
       this.makeNoise();
@@ -163914,8 +164315,17 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     open(name, { bus = "sfx", vol = 1, pan = 0, lp = 0, send = 0, drive: drv = 0, prio = 5, max = 4, at: at4 = null, kind = "foley" } = {}) {
       const c = this.ctx, t = at4 ?? this.now();
       const list = this.voices[bus];
-      for (let i = list.length - 1; i >= 0; i--) if (list[i].end < t) list.splice(i, 1);
+      for (let i = list.length - 1; i >= 0; i--) if (list[i].end < t) this.retired.push(list.splice(i, 1)[0]);
+      this.retire(t);
       const hit = kind === "hit";
+      const strained = t < this.strainUntil;
+      if (strained && !hit && bus !== "ui" && prio < 6) return null;
+      if (this.tokT) this.tokens = Math.min(START_BURST, this.tokens + (t - this.tokT) * START_RATE * (strained ? 0.4 : 1));
+      this.tokT = t;
+      if (!hit && bus !== "ui") {
+        if (this.tokens < 1) return null;
+        this.tokens--;
+      }
       let same = 0, oldest = null;
       for (const v2 of list) if (v2.name === name) {
         same++;
@@ -163928,10 +164338,15 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         for (const v2 of list) if (v2.kind === kind) n++;
         if (n >= kc && !this.makeRoom(list, t, hit, prio, vol, (v2) => v2.kind === kind) && !hit) return null;
       }
-      if (list.length >= this.cap[bus] && !this.makeRoom(list, t, hit, prio, vol) && !(hit && list.length < this.cap[bus] + 6)) return null;
+      const cap3 = strained ? Math.ceil(this.cap[bus] * 0.6) : this.cap[bus];
+      if (list.length >= cap3 && !this.makeRoom(list, t, hit, prio, vol) && !(hit && list.length < cap3 + 6)) return null;
+      const all2 = this.voices.sfx.length + this.voices.npc.length + this.voices.amb.length + this.voices.ui.length;
+      const total = strained ? Math.ceil(this.total * 0.6) : this.total;
+      if (!hit && bus !== "ui" && (all2 >= total || this.retired.length > total * 2)) return null;
       const out = c.createGain();
       out.gain.value = vol;
       let tail2 = out;
+      const chain4 = [out];
       if (lp > 0 && lp < 18e3) {
         const f = c.createBiquadFilter();
         f.type = "lowpass";
@@ -163939,12 +164354,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         f.Q.value = 0.5;
         tail2.connect(f);
         tail2 = f;
+        chain4.push(f);
       }
       if (pan && c.createStereoPanner) {
         const p = c.createStereoPanner();
         p.pan.value = Math.max(-1, Math.min(1, pan));
         tail2.connect(p);
         tail2 = p;
+        chain4.push(p);
       }
       tail2.connect(this[bus]);
       if (send > 0 && bus !== "ui") {
@@ -163952,6 +164369,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         s.gain.value = send;
         out.connect(s);
         s.connect(this.room);
+        chain4.push(s);
       }
       let input = out;
       if (drv > 0) {
@@ -163959,13 +164377,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         pre.gain.value = 1 + drv;
         const ws = c.createWaveShaper();
         ws.curve = this.clipCurve;
-        ws.oversample = "2x";
+        ws.oversample = "none";
         pre.connect(ws);
         ws.connect(out);
         input = pre;
       }
       const v = new Voice(this, input, t, { name, prio, vol, out });
       v.kind = kind;
+      v.chain = chain4;
       list.push(v);
       return v;
     }
@@ -164000,7 +164419,36 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       g.linearRampToValueAtTime(0, t + 0.012);
       v.end = t;
       const i = list.indexOf(v);
-      if (i >= 0) list.splice(i, 1);
+      if (i >= 0) {
+        list.splice(i, 1);
+        this.retired.push(v);
+      }
+    }
+    /**
+     * Unplug the voices that have been silent a while (their echoes rung out):
+     * left connected, every sound ever played stays in the mix's graph, and the
+     * audio thread works through more of them each second till it can't keep up.
+     */
+    retire(t) {
+      const R5 = this.retired;
+      if (!R5.length) return;
+      let w = 0;
+      for (let i = 0; i < R5.length; i++) {
+        const v = R5[i];
+        if (v.end + (v.tail || 0) + 0.3 < t) {
+          for (const n of v.chain || []) {
+            try {
+              n.disconnect();
+            } catch {
+            }
+          }
+          try {
+            v.in?.disconnect?.();
+          } catch {
+          }
+        } else R5[w++] = v;
+      }
+      R5.length = w;
     }
     /**
      * Run `fn` once `sec` more seconds of sound have played (letting go of a
@@ -168280,6 +168728,16 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       }
       const now3 = this.E.now(), dt = Math.min(0.5, Math.max(0, now3 - (this.clock ?? now3)));
       this.clock = now3;
+      const wall = performance.now() / 1e3;
+      if (this.wall0 == null || wall - this.wall0 > 3) {
+        this.wall0 = wall;
+        this.aud0 = now3;
+      } else if (wall - this.wall0 >= 1) {
+        const rate = (now3 - this.aud0) / (wall - this.wall0);
+        if (rate < 0.94 && !document.hidden) this.E.strainUntil = now3 + 6;
+        this.wall0 = wall;
+        this.aud0 = now3;
+      }
       this.healT = (this.healT || 0) + dt;
       if (this.healT >= 0.25) {
         try {
@@ -169447,11 +169905,23 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (v?.rig) v.rig.mode = "third";
       C3.el = h("div.cine", h("div.cine-bar.top"), h("div.cine-bar.bot"), h("div.cine-skip", "Space to skip"));
       if (spec.card) {
+        let poster = null;
+        if (spec.card.bounty && spec.card.look) {
+          try {
+            poster = wantedPoster({ name: spec.card.name, look: spec.card.look, bounty: spec.card.bounty, fruit: spec.card.fruit || null, stats: { kills: spec.card.kills ?? 12 }, equipped: { weapons: spec.card.weapons || [] }, inventory: [] });
+          } catch (e) {
+            poster = null;
+          }
+        }
         C3.card = h(
-          "div.cine-card" + (spec.card.kind === "meet" ? ".meet" : ""),
-          spec.card.title ? h("div.cine-title", spec.card.title) : null,
-          h("div.cine-name", spec.card.name),
-          spec.card.bounty ? h("div.cine-bounty", h("small", "BOUNTY"), bountyText(spec.card.bounty)) : null
+          "div.cine-card" + (spec.card.kind === "meet" ? ".meet" : "") + (poster ? ".has-poster" : ""),
+          poster ? h("div.cine-poster", poster) : null,
+          h(
+            "div.cine-text",
+            spec.card.title ? h("div.cine-title", spec.card.title) : null,
+            h("div.cine-name", spec.card.name),
+            spec.card.bounty && !poster ? h("div.cine-bounty", h("small", "BOUNTY"), bountyText(spec.card.bounty)) : null
+          )
         );
         C3.el.appendChild(C3.card);
       }
@@ -169532,23 +170002,63 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     if (run) C3.onEnd?.();
   }
   function installBossIntros(game) {
-    game.on("tick", () => {
-      const b = game.bossTarget, p = game.player, c = game.state?.char;
-      if (!b || !p || !c || game.cine || !b.alive || b.state !== "idle" || p.mode === "sail" || p.state !== "idle") return;
-      if (game.ui?.blocksInput?.() || !game.view3d?.rig) return;
-      const id = b.npcId || b.name;
-      const seen = c.flags.bossIntro || (c.flags.bossIntro = {});
-      if (seen[id]) return;
-      const d = game.world.distance(p.x, p.y, b.x, b.y);
-      if (d > 26) return;
-      seen[id] = 1;
+    const seenOf = () => {
+      const c = game.state?.char;
+      return c ? c.flags.bossIntro || (c.flags.bossIntro = {}) : null;
+    };
+    const idOf = (b) => b.npcId || b.name;
+    const can = (b) => {
+      const p = game.player;
+      return !!(p && !game.cine && b.alive && b.state === "idle" && p.mode !== "sail" && game.view3d?.rig && !game.ui?.blocksInput?.());
+    };
+    const play = (b) => {
+      const seen = seenOf(), p = game.player;
+      if (!seen) return false;
+      seen[idOf(b)] = 1;
+      b.introDone = true;
       game.playCinematic({
         shots: bossIntroShots(b, p),
-        card: { name: b.name, title: b.title || "", bounty: b.bountyValue || b.def?.bounty || 0 },
+        card: { name: b.name, title: b.title || "", bounty: b.bountyValue || b.def?.bounty || 0, look: b.look, fruit: b.fruit, weapons: b.def?.weapon ? [b.def.weapon] : [] },
         onEnd: () => {
           if (b.alertLine) game.fx?.text?.(b.x, b.y - 2.4, b.alertLine, "#ffcdd2", 0.35, { life: 2.6 });
         }
       });
+      return true;
+    };
+    game.bossIntroPending = (b) => {
+      if (!b?.boss || b.introDone) return false;
+      const seen = seenOf();
+      if (!seen || seen[idOf(b)]) {
+        b.introDone = true;
+        return false;
+      }
+      if (!can(b)) return false;
+      return play(b);
+    };
+    let scanT = 0;
+    game.on("tick", (dt) => {
+      const p = game.player, c = game.state?.char;
+      if (!p || !c || game.cine || p.mode === "sail" || p.state !== "idle") return;
+      if (game.ui?.blocksInput?.() || !game.view3d?.rig) return;
+      const seen = seenOf();
+      let b = game.bossTarget && game.bossTarget.alive && game.bossTarget.state === "idle" && !seen[idOf(game.bossTarget)] ? game.bossTarget : null;
+      if (!b && (scanT -= dt) <= 0) {
+        scanT = 0.25;
+        let best = 1e9;
+        for (const a of game.actorsNear(p.x, p.y, 24)) {
+          if (!a.boss || !a.alive || a.state !== "idle" || a.introDone || seen[idOf(a)] || a.faction === "player" || a.isPlayer) continue;
+          if (!(a.hostile || a.controller?.kind === "hostile" || a.def?.hostile)) continue;
+          if (game.world.roomOf?.(a) !== game.world.roomOf?.(p)) continue;
+          const d = game.world.distance(p.x, p.y, a.x, a.y);
+          if (d < best) {
+            best = d;
+            b = a;
+          }
+        }
+      }
+      if (!b) return;
+      if (game.world.distance(p.x, p.y, b.x, b.y) > 26) return;
+      play(b);
     });
   }
 
@@ -170596,7 +171106,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         onDelete: async (s) => {
           const info = slotInfo(s);
           const who = info.char ? `${info.char.name} and the` : "The";
-          if (!await ui.ask({ title: `Delete lineage ${s}?`, text: `${who} whole bloodline \u2014 Inherited Will, perks and the Hall of Legends \u2014 will be erased for good.`, ok: "Delete forever", cancel: "Keep it", danger: true })) return;
+          if (!await ui.ask({ title: `Delete lineage ${s}?`, text: `${who} whole bloodline \u2014 every generation, the family name and its D., Inherited Will, perks and the Hall of Legends \u2014 will be erased for good. The slot starts again from generation 1.`, ok: "Delete forever", cancel: "Keep it", danger: true })) return;
           clearSlot(s);
           showTitle();
         },
