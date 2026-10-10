@@ -104,7 +104,7 @@ export function installQuestGivers(game) {
     const met = c.flags.metIntro || (c.flags.metIntro = {});
     for (const a of game.actorsNear(p.x, p.y, MEET)) {
       if (!a._staged || !a.alive || a.state !== 'idle' || !a.npcId || met[a.npcId]) continue;
-      if (!onSight(a)) continue;
+      if (!onSight(a) || hidden(game, a, p)) continue;
       if (w.distance(a.x, a.y, p.x, p.y) > MEET) continue;
       met[a.npcId] = 1;
       game.playCinematic({
@@ -124,6 +124,9 @@ export function installQuestGivers(game) {
     if (!c || !a?.npcId || !a.unmet || game.cine || !game.view3d?.rig || p?.mode !== 'foot') return false;
     const met = c.flags.metIntro || (c.flags.metIntro = {});
     met[a.npcId] = 1; a.unmet = false;
+    // (not one for everybody: the legends, and anyone marked for it — and
+    // never where the camera can't get at them, indoors behind walls)
+    if (!(onSight(a) || a.def?.introCutscene) || hidden(game, a, p)) return false;
     game.playCinematic({
       mood: 'meet',
       shots: meetShots(a, p, game.world),
@@ -133,6 +136,12 @@ export function installQuestGivers(game) {
     return true;
   };
   return Q;
+}
+
+/** Indoors (they or you): the shots swing out to 7 m and would be looking at a wall. */
+function hidden(game, a, p) {
+  const w = game.world;
+  return !!(w.roomOf?.(a) || w.roomOf?.(p));
 }
 
 /** The ones you're introduced to just by coming near: legends, cameos. */

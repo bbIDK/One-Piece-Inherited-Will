@@ -226,7 +226,9 @@ const FRAG = /* glsl */`
       if (bank > 0.01) {
         float topH = bank * (0.02 + 0.09 * bn.g);
         // a lumpy upper edge (in two scales) over a straight base
-        float lumps = (N0(ap * 1.3 + vec2(y * 3.0, 0.3)).r - 0.5) * 0.06 + (N0(ap * 4.1 + 1.3).g - 0.5) * 0.02;
+        // (round the compass only: varied with the height too, the edge folded
+        // over itself into drips and loose blobs hanging off the top)
+        float lumps = (N0(ap * 1.3 + 0.3).r - 0.5) * 0.06 + (N0(ap * 4.1 + 1.3).g - 0.5) * 0.02;
         float inside = topH + lumps * (0.4 + bank) - y;
         if (inside > 0.0) {
           float body = smoothstep(0.0, 0.004, inside) * smoothstep(-0.012, 0.003, y);
@@ -306,7 +308,9 @@ const FRAG = /* glsl */`
         cc += uSunCol * (1.0 - smoothstep(th, th + 0.07, n0)) * pow(sd, 4.0) * 1.4 * clearSky;
         cc += uFlashCol * flash * 0.35;
         cc = mix(cc, uHorizon, (1.0 - smoothstep(0.03, 0.22, y)) * 0.25);
-        col = mix(col, cc, edge * smoothstep(0.03, 0.1, y));
+        // (gone toward the horizon, where they'd shrink into a scatter of
+        // floating scraps over the banks: the banks hold the horizon)
+        col = mix(col, cc, edge * smoothstep(0.08, 0.2, y));
       }
     }
 
