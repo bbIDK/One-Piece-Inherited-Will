@@ -137,6 +137,16 @@ export class Audio {
     }
     const now = this.E.now(), dt = Math.min(0.5, Math.max(0, now - (this.clock ?? now)));
     this.clock = now;
+    // (is the audio thread keeping up? its clock falls behind the wall clock
+    // when it can't render in time — the crackle, then the silence. While it
+    // lags, the mix sheds load: engine.js strain)
+    const wall = performance.now() / 1000;
+    if (this.wall0 == null || wall - this.wall0 > 3) { this.wall0 = wall; this.aud0 = now; }
+    else if (wall - this.wall0 >= 1) {
+      const rate = (now - this.aud0) / (wall - this.wall0);
+      if (rate < 0.94 && !document.hidden) this.E.strainUntil = now + 6;
+      this.wall0 = wall; this.aud0 = now;
+    }
     // (and keep the mix itself alive: engine.js heal)
     this.healT = (this.healT || 0) + dt;
     if (this.healT >= 0.25) { try { if (this.E.heal(this.healT)) console.warn('audio: the mix stalled and was rebuilt'); } catch { /* never mind */ } this.healT = 0; }

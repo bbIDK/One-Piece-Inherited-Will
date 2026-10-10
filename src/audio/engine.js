@@ -34,7 +34,9 @@ const KIND_LOW = { hit: 6, tech: 4, move: 4, foley: 4, world: 3 };
 // blows wait their turn: a downpour's drops or a crowd's chatter can't flood
 // the audio thread with thousands of new nodes a second (it stutters, then
 // falls silent)
-const START_RATE = 90, START_BURST = 36;
+const START_RATE = 60, START_BURST = 24;
+// all the voices of every bus together, at most (the audio thread's budget)
+const TOTAL = 44, TOTAL_LOW = 28;
 // a blow's first moments are its own: nothing may take its voice before this (seconds)
 const HIT_GUARD = 0.14;
 // the soft clipper's reach: input up to ±1.4 is rounded into ±0.98
@@ -98,6 +100,9 @@ export class Engine {
     this.retired = [];
     // how many new sounds may start: a bucket refilled at a steady rate (see open)
     this.tokens = START_BURST; this.tokT = 0;
+    this.total = low ? TOTAL_LOW : TOTAL;
+    // (till when the audio thread's been found lagging: the mix sheds load — see open)
+    this.strainUntil = 0;
     this.rr = {}; // round-robin counters by sound
     this.ducks = new Map();
     this.makeNoise();
@@ -306,8 +311,11 @@ export class Engine {
     for (let i = list.length - 1; i >= 0; i--) if (list[i].end < t) this.retired.push(list.splice(i, 1)[0]);
     this.retire(t);
     const hit = kind === 'hit';
+    // (the audio thread lagging behind: only what matters starts, and fewer voices at once)
+    const strained = t < this.strainUntil;
+    if (strained && !hit && bus !== 'ui' && prio < 6) return null;
     // (too many starting at once: everything but a blow (or the menus) waits)
-    if (this.tokT) this.tokens = Math.min(START_BURST, this.tokens + (t - this.tokT) * START_RATE);
+    if (this.tokT) this.tokens = Math.min(START_BURST, this.tokens + (t - this.tokT) * START_RATE * (strained ? 0.4 : 1));
     this.tokT = t;
     if (!hit && bus !== 'ui') { if (this.tokens < 1) return null; this.tokens--; }
     let same = 0, oldest = null;
@@ -319,7 +327,12 @@ export class Engine {
       let n = 0; for (const v of list) if (v.kind === kind) n++;
       if (n >= kc && !this.makeRoom(list, t, hit, prio, vol, (v) => v.kind === kind) && !hit) return null;
     }
-    if (list.length >= this.cap[bus] && !this.makeRoom(list, t, hit, prio, vol) && !(hit && list.length < this.cap[bus] + 6)) return null;
+    const cap = strained ? Math.ceil(this.cap[bus] * 0.6) : this.cap[bus];
+    if (list.length >= cap && !this.makeRoom(list, t, hit, prio, vol) && !(hit && list.length < cap + 6)) return null;
+    // (and every bus together: the voices still ringing, and those fading whose nodes are still in the graph)
+    const all = this.voices.sfx.length + this.voices.npc.length + this.voices.amb.length + this.voices.ui.length;
+    const total = strained ? Math.ceil(this.total * 0.6) : this.total;
+    if (!hit && bus !== 'ui' && (all >= total || this.retired.length > total * 2)) return null;
     const out = c.createGain();
     out.gain.value = vol;
     let tail = out;
@@ -339,7 +352,7 @@ export class Engine {
       // (driven hard into the clipper, a blow lands at full weight: the soft
       // clipper at the end of the chain rounds off a pile-up of them)
       const pre = c.createGain(); pre.gain.value = 1 + drv;
-      const ws = c.createWaveShaper(); ws.curve = this.clipCurve; ws.oversample = '2x';
+      const ws = c.createWaveShaper(); ws.curve = this.clipCurve; ws.oversample = 'none';
       pre.connect(ws); ws.connect(out);
       input = pre;
     }

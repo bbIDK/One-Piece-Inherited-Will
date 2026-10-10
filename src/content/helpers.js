@@ -42,7 +42,10 @@ export function aggro(game, a) {
   if (!a) return;
   a.provoked = true;
   a.aggroPlayer = true;
-  if (a.controller) { a.controller.kind = 'hostile'; a.controller.target = game.player; a.controller.state = 'chase'; }
+  // (out for you — but they have to see you first: no knowing where you are
+  // through the houses the moment a quest names them. They wait where they
+  // are, and come for you once you're in sight — ai.js findTarget)
+  if (a.controller) { a.controller.kind = 'hostile'; a.controller.aggroRange = Math.max(a.controller.aggroRange || 0, 18); if (!a.controller.home) a.controller.home = { x: a.x, y: a.y }; }
   a.stationary = false;
   if (a.boss) game.bossTarget = a;
 }
