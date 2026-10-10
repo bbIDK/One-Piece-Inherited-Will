@@ -598,6 +598,12 @@ class ActorView {
       driftInto(this.yaw, -mvx * 0.06, -mvy * 0.06, _v2);
       _v2.x -= 0.8; _v2.y += 0.15;
       this.wings.update(t, wdt, rig, m.d, _v2.normalize(), phoenix);
+      // (the wings burn as the techniques' own blue fire: vfx/projectiles.js phoenixFire)
+      if (this.wings.group.visible) {
+        this.wings.group.updateWorldMatrix(true, false);
+        const pf = a._phoenixFire || (a._phoenixFire = { arr: new Float32Array(320 * 5), n: 0 });
+        pf.n = this.wings.fireOut(pf.arr); pf.grow = this.wings.grow; pf.S = this.root.scale.x || 1; pf.seen = 0;
+      }
     } else if (this.wings) this.wings.group.visible = false;
     // energy: charge-ups and element glows on the striking limb
     let gi = 0;

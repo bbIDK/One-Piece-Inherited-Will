@@ -100,6 +100,48 @@ export class Projectiles {
     }
   }
 
+  /**
+   * The Phoenix's wings and tail, burning: each point of the wing laid out by
+   * chars3d (flame.js PhoenixWings.fireOut) a tongue of the same blue fire
+   * the fruit's techniques throw — white-hot along the arm, deepening to blue
+   * toward the feather ends, gold flickering at the tips — each one cycling
+   * through its flicker so the wing roils as it's held out.
+   */
+  phoenixFire(game) {
+    const v = this.v, t = v.time, NV = 6;
+    for (const a of game.actors || []) {
+      const f = a._phoenixFire;
+      if (!f || ++f.seen > 2 || !f.n) continue;
+      const A = f.arr, g = f.grow, S = f.S, sd = a.seed || 0;
+      let base = 0;
+      for (const [nu, tail] of [[18, false], [18, false], [9, true]]) {
+        for (let i = 0; i < nu; i++) {
+          // (the wing as separate feathers of flame streaming back off the
+          // arm, gaps between them — every other one; the arm itself burns all along)
+          const feather = tail || i % 2 === 0, u = i / (nu - 1);
+          for (let j = 0; j < NV - 1; j++) {
+            if (!feather && j > 0) break;
+            for (const s of [0, 0.5]) {
+              const o0 = (base + i * NV + j) * 5, o1 = o0 + 5;
+              const x = A[o0] + (A[o1] - A[o0]) * s, y = A[o0 + 1] + (A[o1 + 1] - A[o0 + 1]) * s, z = A[o0 + 2] + (A[o1 + 2] - A[o0 + 2]) * s;
+              const w = (j + s) / (NV - 1);
+              const h = hash(i * 3.1 + j * 1.7 + s + sd), k = 0.08 + 0.4 * ((t * (1.4 + h) + h * 7) % 1);
+              // (thick at the arm, tapering to a point down the feather)
+              const sz = ((tail ? 0.3 : 0.24 + 0.16 * u) * (1 - 0.62 * w) + 0.05) * S * g;
+              v.sprites.put(SK.FIRE, x, y, z, sz, w > 0.55 ? PHX_RIM : PHX_MID, 0.92 * g, w < 0.25 ? PHX_CORE : PHX_HOT, 0.6, 0, (i * 13 + j * 5 + 3) % 50, k);
+            }
+          }
+          // gold flames at the feather tips, as Marco's are drawn
+          if (feather) {
+            const o = (base + i * NV + NV - 1) * 5, h = hash(i * 5.3 + sd), k = 0.1 + 0.4 * ((t * (1.7 + h) + h * 3) % 1);
+            v.sprites.put(SK.FIRE, A[o], A[o + 1], A[o + 2], (tail ? 0.2 : 0.15) * S * g, PHX_GOLD, g, PHX_GOLD_HOT, 0.7, 0, (i * 7 + 1) % 50, k);
+          }
+        }
+        base += nu * NV;
+      }
+    }
+  }
+
   /** Raigo gathering: a thundercloud swelling high over the caster, ever darker and wider. */
   chargeStorms(game) {
     const v = this.v;
@@ -158,6 +200,7 @@ export class Projectiles {
     this.chargeSuns(game);
     this.chargeSpears(game);
     this.chargeStorms(game);
+    this.phoenixFire(game);
     const L = this.land;
     for (let i = 0; i < LAND; i++) {
       const o = i * LF, age = v.time - L[o + 5];
@@ -516,6 +559,7 @@ function sun(v, r, X, Y, Z, R, dx, dz, fc, seed, t) {
   trail(v, r, RK.FIRE, fc, 1, HOT, 0.6, R * 0.9, 0.2, 16);
 }
 const SUN_CORE = col('#ffd04a'), SUN_FC = col('#ff7a1a'), STORM_C = col('#37474f');
+const PHX_RIM = col('#1673c9'), PHX_MID = col('#2fc8ee'), PHX_HOT = col('#7fe8fb'), PHX_CORE = col('#d9fbff'), PHX_GOLD = col('#ffb300'), PHX_GOLD_HOT = col('#fff3a0');
 
 /**
  * Pheasant Beak: a great bird of ice — a crystal body and beak, wings of

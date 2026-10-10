@@ -334,13 +334,15 @@ export class PhoenixWings {
       const mat = wingMat(seed + side * 7.7, 7, 1);
       const m = new THREE.Mesh(sheetGeo(this.NU, this.NV), mat);
       m.frustumCulled = false; m.renderOrder = 2;
+      // (laid out here, but drawn as fire by the effects: fireOut)
+      m.visible = false;
       this.group.add(m);
       return { m, mat, side };
     });
     this.TU = 9;
     const tmat = wingMat(seed + 31, 5, 1);
     this.tail = new THREE.Mesh(sheetGeo(this.TU, this.NV), tmat);
-    this.tail.frustumCulled = false; this.tail.renderOrder = 2;
+    this.tail.frustumCulled = false; this.tail.renderOrder = 2; this.tail.visible = false;
     this.tailMat = tmat;
     this.group.add(this.tail);
     this.grow = 0;
@@ -405,6 +407,30 @@ export class PhoenixWings {
     }
     this.tail.geometry.attributes.position.needsUpdate = true;
     this.tailMat.uniforms.uTime.value = t;
+  }
+
+  /**
+   * The wings as points of fire, in world space (after update(); the group's
+   * world matrix current): [x, y, z, u, v] each into `out` — u along the span
+   * (or across the tail's fan), v back along the feather, the tail's flagged
+   * by u ≥ 2. Drawn as the same blue fire as the fruit's techniques
+   * (vfx/projectiles.js phoenixFire), the sheets themselves left unseen.
+   */
+  fireOut(out) {
+    const M = this.group.matrixWorld;
+    let n = 0;
+    const take = (geo, tail) => {
+      const pos = geo.attributes.position.array, uv = geo.attributes.uv.array;
+      for (let k = 0; k < uv.length / 2 && n * 5 + 5 <= out.length; k++) {
+        _p.fromArray(pos, k * 3).applyMatrix4(M);
+        const o = n * 5;
+        out[o] = _p.x; out[o + 1] = _p.y; out[o + 2] = _p.z; out[o + 3] = uv[k * 2] + (tail ? 2 : 0); out[o + 4] = uv[k * 2 + 1];
+        n++;
+      }
+    };
+    for (const w of this.wings) take(w.m.geometry, false);
+    take(this.tail.geometry, true);
+    return n;
   }
 
   dispose() {
