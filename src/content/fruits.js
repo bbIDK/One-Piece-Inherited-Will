@@ -110,6 +110,10 @@ export function installFruits(game) {
   };
   game.on('characterStart', ({ char, isNew }) => {
     if (!isNew) catchUpFruit(game, char);
+    else if (char.fruitBorn && FRUITS[char.fruit]) {
+      const f = FRUITS[char.fruit];
+      game.log(`You ate the ${f.name} as a child — ${f.en}, a ${f.type}. You can never swim, but its powers are yours: they're on the hotbar and your skill keys. Fighting worthy foes with it opens up the rest.`, '#ffab91');
+    }
     if (!char.world.fruitSpawns) {
       const rng = new RNG(char.runSeed + ':fruits');
       const isles = game.surface.islands.filter((i) => i.name && !i.def.noFruit && i.def.sea);
@@ -117,7 +121,7 @@ export function installFruits(game) {
       // fruits whose users died come back into the world (once each), the rest are rolled
       const canon = new Set(allNpcDefs().filter((d) => d.fruit).map((d) => d.fruit));
       const reborn = [...new Set(game.state.legacy?.reincarnatedFruits || [])].filter((f) => FRUITS[f] && !canon.has(f));
-      const n = 7;
+      const n = 14;
       for (let k = 0; k < n; k++) {
         const isl = rng.pick(isles);
         let fid = k < reborn.length ? reborn[reborn.length - 1 - k] : game.rollFruit(rng);
@@ -196,7 +200,7 @@ export function installFruits(game) {
     if (seen[isl.id]) return;
     seen[isl.id] = 1;
     const rng = new RNG(`${c.runSeed}:tree-fruit:${isl.id}`);
-    if (!rng.chance(0.18)) return;
+    if (!rng.chance(0.3)) return;
     const o = fruitTreeNear(game, isl.x + rng.range(-isl.def.w / 4, isl.def.w / 4), isl.y + rng.range(-isl.def.h / 4, isl.def.h / 4), Math.max(isl.def.w, isl.def.h) / 2);
     if (!o || DEVIL.get(fruitKey(game.surface.id, o)) || fruitPicked(game.surface.id, o, 0, game.env.day)) return;
     const fid = game.rollFruit(rng);
@@ -214,6 +218,22 @@ export function installFruits(game) {
       g.groundItems = g.groundItems || [];
       if (!g.groundItems.some((it) => it.fruitSpawn === f)) g.groundItems.push({ x: p.x, y: p.y, id: 'fruit_' + f.fruit, label: 'a strange swirled fruit', fruitSpawn: f });
     }
+  });
+  // a beaten boss sometimes leaves a Devil Fruit behind (one still out in the
+  // world): it rolls out where they fell, swirled and glinting
+  game.on('bossDefeated', (a) => {
+    const c = game.state?.char;
+    if (!c || !a || a.netRemote) return;
+    const rng = new RNG(`${c.runSeed}:boss-fruit:${a.npcId || a.name}`);
+    if (!rng.chance(0.35)) return;
+    const fid = game.rollFruit(rng);
+    if (!fid) return;
+    const isl = game.world === game.surface ? game.surface.islands.find((i) => game.surface.distance(a.x, a.y, i.x, i.y) < Math.max(i.def?.w || 0, i.def?.h || 0)) : null;
+    const f = { island: isl?.id ?? null, fruit: fid, x: a.x, y: a.y, taken: false, drop: true };
+    (c.world.fruitSpawns ||= []).push(f);
+    (game.groundItems ||= []).push({ x: a.x, y: a.y, id: 'fruit_' + fid, label: 'a strange swirled fruit', fruitSpawn: f });
+    game.fx?.burst?.(a.x, a.y - 0.6, 24, { color: [FRUITS[fid].color, '#ffffff'], speed: 4, g: 0, life: 0.9, kind: 'star' });
+    game.log(`Something rolls out of ${a.name}'s things as they fall: a strange swirled fruit. A Devil Fruit!`, '#ffab91');
   });
   game.on('pickup', (it) => {
     const g = game;

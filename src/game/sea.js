@@ -275,7 +275,7 @@ class SeaSystem {
           const item = rng.pick(['meat', 'fish_stew', 'sake', 'bandage', 'gold_coins', 'cola', 'rice_ball']);
           addItem(g, item, 1);
           if (rng.chance(0.3)) earn(g, rng.int(200, 1500), 'floating barrel');
-          if (rng.chance(0.04)) this.fruitFromBarrel(rng);
+          if (rng.chance(0.08)) this.fruitFromBarrel(rng);
           g.audio?.sfx('coin');
         }
       }
@@ -403,7 +403,7 @@ class SeaSystem {
       if (s.faction === 'civilian') crime(g, 2000000, 'sank a merchant ship', { rep: 10 });
       const rng = new RNG(Math.floor(s.x * 13 + s.y));
       if (rng.chance(0.25)) addItem(g, rng.pick(['jewels', 'gold_coins', 'sea_king_steak', 'rumble_ball']), 1);
-      if (rng.chance(0.03)) this.fruitFromBarrel(rng);
+      if (rng.chance(0.06)) this.fruitFromBarrel(rng);
     }
   }
 

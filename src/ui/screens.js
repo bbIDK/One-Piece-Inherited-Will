@@ -8,7 +8,7 @@ import { EYES_M, EYES_F, EYE_NAMES, eyeShapeOf } from '../render3d/chars/face.js
 import { headParams, FACE_SHAPES, CHINS, NOSES, NOSE_TIPS } from '../render3d/chars/build.js';
 import { FRAME, FRAMES_M, FRAMES_F, FRAME_NAMES, frameId } from '../render3d/chars/bones.js';
 import { LEGENDS } from '../data/dreams.js';
-import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, nameWithD, weaponFromChar } from '../game/lineage.js';
+import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, fruitBirthChance, nameWithD, weaponFromChar } from '../game/lineage.js';
 import { ITEMS } from '../data/items.js';
 import { FRUITS } from '../data/fruits.js';
 import { keysOf, keyLabel } from '../game/keys.js';
@@ -16,6 +16,7 @@ import { formatBerries } from '../core/math.js';
 import { itemImg, uiImg } from './icon.js';
 import { createPreview, renderPortrait } from './preview3d.js';
 import { saveLegacy } from '../game/save.js';
+import { allNpcDefs } from '../game/npcs.js';
 
 /** What each race's height looks like (height isn't customisable: it's in the blood). */
 const HEIGHT_NOTE = {
@@ -126,7 +127,9 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
   // (the birth is rolled once and kept with the lineage until it's lived: you
   // are who you are — leaving the screen and coming back doesn't roll again)
   let rerolls = Math.max(0, perkLevel(legacy, 'reroll') - (legacy.pendingBirth?.flips || 0));
-  let birth = legacy.pendingBirth?.birth || rollBirth(legacy, Math.floor(Math.random() * 1e9));
+  // (canon users keep their fruits: one of those can't be yours at birth)
+  const canonFruits = () => allNpcDefs().map((d) => d.fruit).filter(Boolean);
+  let birth = legacy.pendingBirth?.birth || rollBirth(legacy, Math.floor(Math.random() * 1e9), canonFruits());
   if (ui.game?.debugBirth) birth = { ...birth, ...ui.game.debugBirth }; // test harness only
   const keep = () => { legacy.pendingBirth = { birth, flips: perkLevel(legacy, 'reroll') - rerolls }; try { saveLegacy(legacy); } catch (e) { /* (no storage) */ } };
   keep();
@@ -152,6 +155,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
     const nameEl = h('div.race', { style: { color: rar.color } }, '???');
     const rarEl = h('div.rarity', { style: { color: rar.color } }, '');
     const dEl = h('div.d-reveal');
+    const fEl = h('div.d-reveal.f-reveal');
     const info = h('div.roll-info', { style: { opacity: 0 } },
       h('p', { style: { maxWidth: '560px', margin: '6px auto' } }, race.desc),
       h('p', h('b', 'Birthplace: '), race.origin, ' ', h('span.tag', race.spawnSeas.map((s) => SEA_NAMES[s]).join(' / '))),
@@ -163,9 +167,9 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
     );
     const btns = h('div.roll-btns', { style: { opacity: 0 } },
       h('button.btn.gold', { on: { click: stepIdentity } }, 'Continue'),
-      rerolls > 0 ? h('button.btn', { on: { click: () => { rerolls--; birth = rollBirth(legacy, Math.floor(Math.random() * 1e9)); keep(); stepRoll(true); } } }, `Flip Fate's Coin (${rerolls} left)`) : null);
+      rerolls > 0 ? h('button.btn', { on: { click: () => { rerolls--; birth = rollBirth(legacy, Math.floor(Math.random() * 1e9), canonFruits()); keep(); stepRoll(true); } } }, `Flip Fate's Coin (${rerolls} left)`) : null);
     const willLine = h('div.will-line', uiImg('reputation', 16), ` Your lineage's Inherited Will: ${legacy.will}` + (legacy.generation > 1 ? ` · generation ${legacy.generation}` : ''));
-    const panel = h('div.panel.race-roll', h('h2', legacy.generation > 1 ? `Generation ${legacy.generation} is born…` : 'A child is born…'), nameEl, rarEl, dEl, info, btns, willLine);
+    const panel = h('div.panel.race-roll', h('h2', legacy.generation > 1 ? `Generation ${legacy.generation} is born…` : 'A child is born…'), nameEl, rarEl, dEl, fEl, info, btns, willLine);
     root.appendChild(panel);
     const ids = Object.keys(RACES);
     const t0 = performance.now();
@@ -180,6 +184,18 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       // the D.: a second, separate roll of fate
       clear(dEl);
       const chance = dChance(legacy);
+      // and a Devil Fruit, eaten as a child (a third roll)
+      clear(fEl);
+      const fr = birth.fruit && FRUITS[birth.fruit];
+      if (fr) {
+        fEl.append(h('div.f-title', { style: { color: fr.color } }, 'BORN WITH A DEVIL FRUIT'),
+          h('div.f-name', fr.name), h('p.muted', `${fr.en} — ${fr.type}. You ate it as a child: its first powers are yours from the start, and you can never swim. (`, pct(fruitBirthChance(birth.traits)), ' of births)'));
+        fEl.classList.add('hit');
+        later(spin ? 1500 : 0, () => { fEl.classList.add('show'); ui.game?.audio?.sfx('fanfare'); });
+      } else {
+        fEl.append(h('p.muted', `No Devil Fruit this time — ${pct(fruitBirthChance(birth.traits))} of children have eaten one.`));
+        fEl.classList.add('miss', 'show');
+      }
       if (hasD()) {
         dEl.append(h('div.d-stamp', 'D.'), h('div.d-title', 'THE WILL OF D.'),
           h('p', legacy.family?.d ? `The D. of the ${legacy.family.name} family runs in your blood, as it did in your parent's.` : h('span', 'A hidden initial runs in your blood. (', pct(chance), ' of births)')),

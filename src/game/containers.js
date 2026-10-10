@@ -70,7 +70,7 @@ function roll(kind, rng, tier, o = {}) {
   return { berries, items };
 }
 // (a Devil Fruit's chance, by what holds it)
-const DEVIL = { treasure: 0.06, hoard: 0.05, ship: 0.04 };
+const DEVIL = { treasure: 0.12, hoard: 0.1, ship: 0.08 };
 
 export function installContainers(game) {
   const store = () => {

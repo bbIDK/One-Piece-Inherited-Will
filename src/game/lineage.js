@@ -8,7 +8,7 @@ import { RNG } from '../core/rng.js';
 import { RACES, rollRace, makeLook } from '../data/races.js';
 import { ITEMS } from '../data/items.js';
 import { STYLES, WEAPON_STYLE } from '../data/styles.js';
-import { FRUITS, unlockedFruitTechniques } from '../data/fruits.js';
+import { FRUITS, FRUIT_IDS, unlockedFruitTechniques } from '../data/fruits.js';
 import { DREAMS, LEGENDS } from '../data/dreams.js';
 import { Actor } from './actor.js';
 import { baseAttrs, ATTR_KEYS } from './stats.js';
@@ -77,7 +77,16 @@ export function nameWithD(name) {
   return parts.length > 1 ? `${parts[0]} D. ${parts.slice(1).join(' ')}` : `${name} D.`;
 }
 
-export function rollBirth(legacy, seed) {
+/** The odds of being born having already eaten a Devil Fruit (see rollBirth). */
+export function fruitBirthChance(traits = []) {
+  return 0.15 + (traits.includes('will_of_d') ? 0.1 : 0) + (traits.includes('lucky') ? 0.05 : 0);
+}
+
+/**
+ * `taken`: fruits that can't be yours at birth (canon users' fruits — the
+ * screen passes them; a fruit is still one of a kind in the world).
+ */
+export function rollBirth(legacy, seed, taken = []) {
   const rng = new RNG(seed);
   const boosts = {};
   if (perkLevel(legacy, 'rare_races')) for (const r of ['buccaneer', 'three_eye', 'lunarian']) boosts[r] = 2;
@@ -91,7 +100,15 @@ export function rollBirth(legacy, seed) {
   if (legacy?.family?.d || rng.chance(dChance(legacy))) traits.push('will_of_d');
   // (the qualities of a king: see haki.js KING — rare, likelier with the "D.", and the bloodline multiplies either)
   if (rng.chance(kingChance(traits.includes('will_of_d'), false))) traits.push('conqueror');
-  return { race, traits, seed };
+  // a third roll of fate: a child who ate a Devil Fruit (as Luffy did at seven)
+  let fruit = null;
+  const frng = new RNG(seed + ':fruit');
+  if (frng.chance(fruitBirthChance(traits))) {
+    const skip = new Set(taken);
+    const list = FRUIT_IDS.filter((id) => !skip.has(id) && FRUITS[id].weight > 0).map((id) => [id, FRUITS[id].weight]);
+    if (list.length) fruit = frng.weighted(list);
+  }
+  return { race, traits, seed, fruit };
 }
 
 /** Build a fresh character record from the birth roll + creation choices. */
@@ -181,6 +198,16 @@ export function createCharacter(legacy, birth, choices) {
     createdAt: Date.now(),
   };
   if (perkLevel(legacy, 'chart')) char.discovered = (legacy.charted || []).slice();
+  // born having eaten one: its base techniques yours, on the hotbar (as eatFruit)
+  if (birth.fruit && FRUITS[birth.fruit]) {
+    char.fruit = birth.fruit;
+    char.fruitsEaten = 1;
+    char.fruitAwakened = false;
+    char.fruitBorn = true;
+    char.world.fruitsTaken = [birth.fruit];
+    for (const tid of unlockedFruitTechniques(birth.fruit, 0)) if (!techniques.includes(tid)) techniques.push(tid);
+    addToHotbar(char, ENTRY.fruit);
+  }
   // their Haki's own colours and voice, from their birth (see haki.js)
   char.hakiSig = hakiSignature(char.runSeed);
   return char;
