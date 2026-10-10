@@ -577,7 +577,7 @@
           throw mkErr(`failed to parse JSON: ${s}`);
         }
       };
-      strToNum = (str, limit = Number.MAX_SAFE_INTEGER) => str.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % limit;
+      strToNum = (str2, limit = Number.MAX_SAFE_INTEGER) => str2.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % limit;
       defaultRetryMs = 3333;
       maxRetryMs = 6e4;
       socketRetryPeriods = {};
@@ -703,11 +703,11 @@
       strToSha1 = {};
       pack = (buff) => btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(buff))));
       unpack = (packed) => {
-        const str = atob(packed);
-        return new Uint8Array(str.length).map((_, i) => str.charCodeAt(i)).buffer;
+        const str2 = atob(packed);
+        return new Uint8Array(str2.length).map((_, i) => str2.charCodeAt(i)).buffer;
       };
-      hashWith = async (algorithm, str) => new Uint8Array(await crypto.subtle.digest(algorithm, encodeBytes(str)));
-      sha1 = async (str) => strToSha1[str] ?? (strToSha1[str] = Array.from(await hashWith("SHA-1", str)).map((b) => b.toString(36)).join(""));
+      hashWith = async (algorithm, str2) => new Uint8Array(await crypto.subtle.digest(algorithm, encodeBytes(str2)));
+      sha1 = async (str2) => strToSha1[str2] ?? (strToSha1[str2] = Array.from(await hashWith("SHA-1", str2)).map((b) => b.toString(36)).join(""));
       genKey = async (secret, appId, roomId) => crypto.subtle.importKey("raw", await crypto.subtle.digest({ name: "SHA-256" }, encodeBytes(`${secret}:${appId}:${roomId}`)), { name: algo }, false, ["encrypt", "decrypt"]);
       deriveRoomNamespace = async (appId, roomId) => toHex(await hashWith("SHA-256", `${libName}:${appId}:${roomId}`));
       joinChar = "$";
@@ -4549,10 +4549,10 @@
   };
 
   // src/core/rng.js
-  function hashString(str) {
+  function hashString(str2) {
     let h2 = 2166136261 >>> 0;
-    for (let i = 0; i < str.length; i++) {
-      h2 ^= str.charCodeAt(i);
+    for (let i = 0; i < str2.length; i++) {
+      h2 ^= str2.charCodeAt(i);
       h2 = Math.imul(h2, 16777619);
     }
     return h2 >>> 0;
@@ -11153,26 +11153,26 @@
     const w = fx.game.world;
     return a === p ? 0 : w ? w.distance(p.x, p.y, a.x, a.y) : Math.hypot(a.x - p.x, a.y - p.y);
   }
-  function calloutOver(fx, a, lift, str, col2, size2) {
+  function calloutOver(fx, a, lift, str2, col2, size2) {
     const p = ownEyes(fx);
-    if (!p) return fx.callout(a.x, a.y - lift, str, col2, size2);
+    if (!p) return fx.callout(a.x, a.y - lift, str2, col2, size2);
     if (fromPlayer(fx, p, a) < 3) {
       const [x, y, z2] = inView(fx, 2.6, 0.12);
-      return fx.callout(x, y, str, col2, size2, { z: z2 });
+      return fx.callout(x, y, str2, col2, size2, { z: z2 });
     }
     const v = fx.game.view3d, s = a.look && a.look.scale || 1;
     let z = 1.6 + lift;
     while (z > 1.1 * s && v.project(a.x, a.y, z)[1] < v.proj.ch * 0.3) z -= 0.1;
-    return fx.callout(a.x, a.y, str, col2, size2, { z });
+    return fx.callout(a.x, a.y, str2, col2, size2, { z });
   }
-  function soundOn(fx, a, x, y, str, col2, size2, o) {
+  function soundOn(fx, a, x, y, str2, col2, size2, o) {
     const p = ownEyes(fx);
     const d = p ? fromPlayer(fx, p, a) : Infinity;
     if (d < 3) {
       const at4 = a === p ? inView(fx, 2, -0.42, -0.25) : inView(fx, 2.4, -0.12, 0.2);
-      return fx.sfx?.(at4[0], at4[1], str, col2, size2, { ...o, z: at4[2] });
+      return fx.sfx?.(at4[0], at4[1], str2, col2, size2, { ...o, z: at4[2] });
     }
-    return fx.sfx?.(x, y, str, col2, size2, o);
+    return fx.sfx?.(x, y, str2, col2, size2, o);
   }
   function blockFx(fx, tgt, ang, w, z) {
     const fa = ang + Math.PI;
@@ -14686,8 +14686,9 @@
       }
     }
     c.h = S6[0];
-    c.p = softClamp(S6[2], BOAT_FEEL.pitchMax);
-    c.r = softClamp(S6[4], BOAT_FEEL.rollMax);
+    const Ls = ship.def?.length || 6, small = Math.max(0.3, Math.min(1, Ls / 12));
+    c.p = softClamp(S6[2] * small, BOAT_FEEL.pitchMax * small);
+    c.r = softClamp(S6[4] * (0.5 + 0.5 * small), BOAT_FEEL.rollMax);
     return c;
   }
   function shipBob(ship, time) {
@@ -16959,16 +16960,16 @@
   function powerFor(actor, def) {
     const src = def.source || "";
     if (actor.dmgOverride) return actor.dmgOverride * actor.buffMul("damage");
-    const str = actor.d ? actor.d.dmg : 1;
+    const str2 = actor.d ? actor.d.dmg : 1;
     let m = 1;
     if (src.startsWith("fruit")) {
       const fm = actor.fruitMastery || 0;
-      m = (0.7 + str * 0.35) * (1 + fm * 0.022);
+      m = (0.7 + str2 * 0.35) * (1 + fm * 0.022);
     } else if (src.startsWith("haki")) {
-      m = (0.6 + str * 0.3) * (1 + (actor.hakiLevel(def.hakiType || "armament") || 0) * 0.02) * (1 + (actor.attrs?.wil || 0) * 0.01);
+      m = (0.6 + str2 * 0.3) * (1 + (actor.hakiLevel(def.hakiType || "armament") || 0) * 0.02) * (1 + (actor.attrs?.wil || 0) * 0.01);
     } else {
       const sm2 = actor.styleMastery ? actor.styleMastery(def.style || actor.style) : 0;
-      m = str * (1 + sm2 * 0.012);
+      m = str2 * (1 + sm2 * 0.012);
       if (def.weapon && actor.weaponMul) m *= actor.weaponMul(def.weapon);
       if (actor.weaponMastery) m *= 1 + (actor.weaponMastery[weaponKindOf(actor, def)] || 0) * 6e-3;
     }
@@ -32118,9 +32119,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     intersectsBox(box2) {
       return box2.max.x >= this.min.x && box2.min.x <= this.max.x && box2.max.y >= this.min.y && box2.min.y <= this.max.y && box2.max.z >= this.min.z && box2.min.z <= this.max.z;
     }
-    intersectsSphere(sphere2) {
-      this.clampPoint(sphere2.center, _vector$b);
-      return _vector$b.distanceToSquared(sphere2.center) <= sphere2.radius * sphere2.radius;
+    intersectsSphere(sphere3) {
+      this.clampPoint(sphere3.center, _vector$b);
+      return _vector$b.distanceToSquared(sphere3.center) <= sphere3.radius * sphere3.radius;
     }
     intersectsPlane(plane2) {
       let min2, max;
@@ -32310,9 +32311,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       this.radius = Math.sqrt(maxRadiusSq);
       return this;
     }
-    copy(sphere2) {
-      this.center.copy(sphere2.center);
-      this.radius = sphere2.radius;
+    copy(sphere3) {
+      this.center.copy(sphere3.center);
+      this.radius = sphere3.radius;
       return this;
     }
     isEmpty() {
@@ -32329,9 +32330,9 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     distanceToPoint(point) {
       return point.distanceTo(this.center) - this.radius;
     }
-    intersectsSphere(sphere2) {
-      const radiusSum = this.radius + sphere2.radius;
-      return sphere2.center.distanceToSquared(this.center) <= radiusSum * radiusSum;
+    intersectsSphere(sphere3) {
+      const radiusSum = this.radius + sphere3.radius;
+      return sphere3.center.distanceToSquared(this.center) <= radiusSum * radiusSum;
     }
     intersectsBox(box2) {
       return box2.intersectsSphere(this);
@@ -32382,25 +32383,25 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return this;
     }
-    union(sphere2) {
-      if (sphere2.isEmpty()) {
+    union(sphere3) {
+      if (sphere3.isEmpty()) {
         return this;
       }
       if (this.isEmpty()) {
-        this.copy(sphere2);
+        this.copy(sphere3);
         return this;
       }
-      if (this.center.equals(sphere2.center) === true) {
-        this.radius = Math.max(this.radius, sphere2.radius);
+      if (this.center.equals(sphere3.center) === true) {
+        this.radius = Math.max(this.radius, sphere3.radius);
       } else {
-        _v2$3.subVectors(sphere2.center, this.center).setLength(sphere2.radius);
-        this.expandByPoint(_v1$6.copy(sphere2.center).add(_v2$3));
-        this.expandByPoint(_v1$6.copy(sphere2.center).sub(_v2$3));
+        _v2$3.subVectors(sphere3.center, this.center).setLength(sphere3.radius);
+        this.expandByPoint(_v1$6.copy(sphere3.center).add(_v2$3));
+        this.expandByPoint(_v1$6.copy(sphere3.center).sub(_v2$3));
       }
       return this;
     }
-    equals(sphere2) {
-      return sphere2.center.equals(this.center) && sphere2.radius === this.radius;
+    equals(sphere3) {
+      return sphere3.center.equals(this.center) && sphere3.radius === this.radius;
     }
     clone() {
       return new this.constructor().copy(this);
@@ -32518,11 +32519,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       }
       return sqrDist;
     }
-    intersectSphere(sphere2, target2) {
-      _vector$a.subVectors(sphere2.center, this.origin);
+    intersectSphere(sphere3, target2) {
+      _vector$a.subVectors(sphere3.center, this.origin);
       const tca = _vector$a.dot(this.direction);
       const d2 = _vector$a.dot(_vector$a) - tca * tca;
-      const radius2 = sphere2.radius * sphere2.radius;
+      const radius2 = sphere3.radius * sphere3.radius;
       if (d2 > radius2) return null;
       const thc = Math.sqrt(radius2 - d2);
       const t0 = tca - thc;
@@ -32531,8 +32532,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       if (t0 < 0) return this.at(t1, target2);
       return this.at(t0, target2);
     }
-    intersectsSphere(sphere2) {
-      return this.distanceSqToPoint(sphere2.center) <= sphere2.radius * sphere2.radius;
+    intersectsSphere(sphere3) {
+      return this.distanceSqToPoint(sphere3.center) <= sphere3.radius * sphere3.radius;
     }
     distanceToPlane(plane2) {
       const denominator = plane2.normal.dot(this.direction);
@@ -37145,8 +37146,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     distanceToPoint(point) {
       return this.normal.dot(point) + this.constant;
     }
-    distanceToSphere(sphere2) {
-      return this.distanceToPoint(sphere2.center) - sphere2.radius;
+    distanceToSphere(sphere3) {
+      return this.distanceToPoint(sphere3.center) - sphere3.radius;
     }
     projectPoint(point, target2) {
       return target2.copy(point).addScaledVector(this.normal, -this.distanceToPoint(point));
@@ -37174,8 +37175,8 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     intersectsBox(box2) {
       return box2.intersectsPlane(this);
     }
-    intersectsSphere(sphere2) {
-      return sphere2.intersectsPlane(this);
+    intersectsSphere(sphere3) {
+      return sphere3.intersectsPlane(this);
     }
     coplanarPoint(target2) {
       return target2.copy(this.normal).multiplyScalar(-this.constant);
@@ -37259,10 +37260,10 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       _sphere$5.applyMatrix4(sprite.matrixWorld);
       return this.intersectsSphere(_sphere$5);
     }
-    intersectsSphere(sphere2) {
+    intersectsSphere(sphere3) {
       const planes = this.planes;
-      const center = sphere2.center;
-      const negRadius = -sphere2.radius;
+      const center = sphere3.center;
+      const negRadius = -sphere3.radius;
       for (let i = 0; i < 6; i++) {
         const distance = planes[i].distanceToPoint(center);
         if (distance < negRadius) {
@@ -49176,12 +49177,12 @@ void main() {
         return null;
       }
       const bound = this._bounds[geometryId];
-      const sphere2 = bound.sphere;
+      const sphere3 = bound.sphere;
       const geometry = this.geometry;
       if (bound.sphereInitialized === false) {
-        sphere2.makeEmpty();
+        sphere3.makeEmpty();
         this.getBoundingBoxAt(geometryId, _box$1);
-        _box$1.getCenter(sphere2.center);
+        _box$1.getCenter(sphere3.center);
         const index = geometry.index;
         const position = geometry.attributes.position;
         const drawRange = this._drawRanges[geometryId];
@@ -49192,12 +49193,12 @@ void main() {
             iv = index.getX(iv);
           }
           _vector$5.fromBufferAttribute(position, iv);
-          maxRadiusSq = Math.max(maxRadiusSq, sphere2.center.distanceToSquared(_vector$5));
+          maxRadiusSq = Math.max(maxRadiusSq, sphere3.center.distanceToSquared(_vector$5));
         }
-        sphere2.radius = Math.sqrt(maxRadiusSq);
+        sphere3.radius = Math.sqrt(maxRadiusSq);
         bound.sphereInitialized = true;
       }
-      target2.copy(sphere2);
+      target2.copy(sphere3);
       return target2;
     }
     setMatrixAt(instanceId, matrix) {
@@ -56584,14 +56585,14 @@ void main() {
             const box2 = new Box3();
             box2.min.fromArray(bound.boxMin);
             box2.max.fromArray(bound.boxMax);
-            const sphere2 = new Sphere();
-            sphere2.radius = bound.sphereRadius;
-            sphere2.center.fromArray(bound.sphereCenter);
+            const sphere3 = new Sphere();
+            sphere3.radius = bound.sphereRadius;
+            sphere3.center.fromArray(bound.sphereCenter);
             return {
               boxInitialized: bound.boxInitialized,
               box: box2,
               sphereInitialized: bound.sphereInitialized,
-              sphere: sphere2
+              sphere: sphere3
             };
           });
           object._maxInstanceCount = data.maxInstanceCount;
@@ -62429,6 +62430,9 @@ void main() {
   }
   function blob(r4, detail = 1) {
     return new IcosahedronGeometry(r4, detail);
+  }
+  function sphere(r4, ws = 8, hs = 6, phiStart = 0, phiLen = Math.PI * 2, thStart = 0, thLen = Math.PI) {
+    return new SphereGeometry(r4, ws, hs, phiStart, phiLen, thStart, thLen);
   }
   function lathe(pts, seg2 = 10) {
     return new LatheGeometry(pts.map(([r4, y]) => new Vector2(Math.max(1e-4, r4), y)), seg2);
@@ -80222,22 +80226,64 @@ ${GLSL}
     }
   });
   reg2("poneglyph", (o, ctx) => simple(o, ctx, "poneglyph:" + (o.road ? 1 : 0), poneglyphGeo(o.road ? 1 : 0), { yaw: 0, scale: 1 }));
-  var statueGeo = () => model("statue", (k) => {
-    const stone = "#a3adb0", base2 = "#8a8378";
-    k.add(box(1.8, 1.1, 1.8), { at: [0, -0.2, 0], color: base2, outline: 0.03 });
-    k.add(box(2, 0.18, 2), { at: [0, 0.9, 0], color: shade2(base2, 0.1) });
-    k.add(box(1.5, 0.16, 1.5), { at: [0, -0.2, 0], color: shade2(base2, -0.1) });
+  var _sq = new Quaternion();
+  var _se = new Euler();
+  var _sv3 = new Vector3();
+  var _sup = new Vector3(0, 1, 0);
+  var statueGeo = () => model("statue:2", (k) => {
+    const stone = "#a69e8f", bronze = "#5d8c7b", dark = "#3e6658", hi = "#7fae9b";
+    const limb4 = (a, b, r0, r12, col2 = bronze, joint = true) => {
+      _sv3.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+      const len = _sv3.length();
+      _sq.setFromUnitVectors(_sup, _sv3.normalize());
+      _se.setFromQuaternion(_sq, "XYZ");
+      k.add(cyl(r12, r0, len, 8), { at: a, rot: [_se.x, _se.y, _se.z], color: col2, outline: 0.012 });
+      if (joint) k.add(sphere(r12 * 1.05, 8, 6), { at: b, color: col2 });
+    };
+    k.add(box(2.3, 0.22, 2.3), { at: [0, -0.22, 0], color: shade2(stone, -0.12), outline: 0.03 });
+    k.add(box(1.95, 0.12, 1.95), { at: [0, 0, 0], color: shade2(stone, -0.05) });
+    k.add(box(1.6, 0.86, 1.6), { at: [0, 0.12, 0], color: stone, outline: 0.03 });
+    k.add(box(1.85, 0.1, 1.85), { at: [0, 0.98, 0], color: shade2(stone, 0.08), outline: 0.02 });
+    k.add(box(1.72, 0.06, 1.72), { at: [0, 0.93, 0], color: shade2(stone, -0.08) });
+    k.add(box(0.86, 0.42, 0.04), { at: [0, 0.34, 0.81], color: bronze, outline: 0.012 });
+    k.add(box(0.7, 0.04, 0.02), { at: [0, 0.6, 0.83], color: hi });
+    k.add(box(0.6, 0.03, 0.02), { at: [0, 0.48, 0.83], color: hi });
+    k.add(box(0.5, 0.03, 0.02), { at: [0, 0.41, 0.83], color: hi });
     k.save();
     k.translate(0, 1.08, 0);
-    for (const s of [-1, 1]) k.add(cyl(0.16, 0.2, 1.3, 7), { at: [s * 0.22, 0, 0], color: stone, outline: 0.02 });
-    k.add(cyl(0.42, 0.34, 1.2, 8), { at: [0, 1.25, 0], color: stone, outline: 0.03 });
-    k.add(new SphereGeometry(0.3, 10, 8), { at: [0, 2.72, 0], color: stone, outline: 0.02 });
-    k.add(cyl(0.34, 0.34, 0.12, 10), { at: [0, 2.9, 0], color: stone });
-    k.add(cyl(0.16, 0.22, 0.28, 8), { at: [0, 2.98, 0], color: stone });
-    k.add(cyl(0.1, 0.12, 0.95, 6), { at: [0.45, 2.25, 0], rot: [0, 0, -2.6], color: stone, outline: 0.015 });
-    k.add(box(0.07, 1.3, 0.16), { at: [0.9, 2.95, 0], rot: [0, 0, -0.25], color: "#cfd8dc", outline: 0.012 });
-    k.add(cyl(0.1, 0.12, 0.9, 6), { at: [-0.44, 2.35, 0], rot: [0, 0, 0.35], color: stone, outline: 0.015 });
-    k.add(slab([[-0.55, 0], [0.55, 0], [0.4, 1.3], [-0.4, 1.3]], 0.1), { at: [0, 1.25, -0.4], color: shade2(stone, -0.1) });
+    k.add(cyl(0.62, 0.66, 0.08, 14), { at: [0, 0, 0], color: dark, outline: 0.015 });
+    limb4([-0.15, 1, 0.02], [-0.19, 0.56, 0.2], 0.12, 0.1, dark);
+    limb4([-0.19, 0.56, 0.2], [-0.2, 0.16, 0.24], 0.1, 0.085, dark);
+    limb4([0.15, 1, -0.02], [0.2, 0.55, -0.16], 0.12, 0.1, dark);
+    limb4([0.2, 0.55, -0.16], [0.21, 0.16, -0.3], 0.1, 0.085, dark);
+    for (const [x, z] of [[-0.2, 0.24], [0.21, -0.3]]) {
+      k.add(cyl(0.11, 0.1, 0.34, 8), { at: [x, 0.06, z], color: bronze, outline: 0.012 });
+      k.add(cyl(0.13, 0.12, 0.08, 8), { at: [x, 0.36, z], color: hi });
+      k.add(box(0.18, 0.08, 0.32), { at: [x, 0.04, z + 0.06], color: bronze, outline: 0.012 });
+    }
+    k.add(lathe([[0.42, 0.5], [0.36, 0.72], [0.3, 0.95], [0.28, 1.04]], 12), { at: [0, 0, 0], color: bronze, outline: 0.02, double: true });
+    k.add(lathe([[0.28, 1], [0.31, 1.25], [0.35, 1.5], [0.33, 1.66], [0.16, 1.76], [0.1, 1.8]], 12), { at: [0, 0, 0], color: bronze, outline: 0.02 });
+    k.add(torus(0.29, 0.035, 5, 14), { at: [0, 1.04, 0], rot: [Math.PI / 2, 0, 0], color: dark });
+    k.add(box(0.1, 0.09, 0.04), { at: [0, 1, 0.3], color: hi });
+    for (const sx of [-1, 1]) k.add(box(0.1, 0.42, 0.03), { at: [sx * 0.11, 1.26, 0.31], rot: [0.1, 0, sx * 0.18], color: hi });
+    for (let i = 0; i < 4; i++) k.add(sphere(0.022, 6, 4), { at: [0, 1.12 + i * 0.1, 0.33], color: hi });
+    for (const sx of [-1, 1]) k.add(cyl(0.13, 0.11, 0.05, 10), { at: [sx * 0.35, 1.64, 0], rot: [0, 0, sx * -0.25], color: hi, outline: 0.01 });
+    k.add(ribbon([[0, 1.68, -0.24, 0.36], [0, 1.4, -0.36, 0.42], [0, 1, -0.46, 0.47], [0.05, 0.55, -0.52, 0.5], [0.1, 0.3, -0.5, 0.48]], { side: [1, 0, 0], fold: 0.35 }), { color: dark, outline: 0.015, double: true });
+    k.add(cyl(0.08, 0.09, 0.14, 8), { at: [0, 1.76, 0], color: bronze });
+    k.add(sphere(0.16, 10, 8), { at: [0, 1.99, 0.01], color: bronze, outline: 0.015 });
+    k.add(box(0.2, 0.1, 0.16), { at: [0, 1.86, 0.04], color: bronze });
+    k.add(cone(0.035, 0.08, 5), { at: [0, 1.97, 0.16], rot: [Math.PI / 2, 0, 0], color: bronze });
+    k.add(box(0.2, 0.06, 0.06), { at: [0, 1.88, 0.12], color: dark });
+    k.add(lathe([[0.3, 0], [0.3, 0.025], [0.17, 0.05], [0.16, 0.18], [0, 0.2]], 3), { at: [0, 2.08, 0], rot: [0, Math.PI / 6, 0], color: dark, outline: 0.015, double: true });
+    limb4([0.34, 1.62, 0], [0.56, 1.92, 0.08], 0.09, 0.08);
+    limb4([0.56, 1.92, 0.08], [0.62, 2.3, 0.16], 0.08, 0.07);
+    k.add(sphere(0.075, 8, 6), { at: [0.63, 2.36, 0.17], color: bronze });
+    k.add(box(0.26, 0.04, 0.06), { at: [0.63, 2.4, 0.17], rot: [0, 0, -0.2], color: hi, outline: 0.01 });
+    k.add(slab([[-0.035, 0], [0.035, 0], [0.05, 0.7], [0, 1], [-0.02, 0.7]], 0.02), { at: [0.65, 2.42, 0.18], rot: [0.25, 0, -0.2], color: "#c5d2cc", outline: 8e-3 });
+    limb4([-0.34, 1.62, 0], [-0.56, 1.32, 0.04], 0.09, 0.08);
+    limb4([-0.56, 1.32, 0.04], [-0.33, 1.1, 0.14], 0.08, 0.07);
+    k.add(sphere(0.075, 8, 6), { at: [-0.31, 1.08, 0.15], color: bronze });
+    k.add(slab([[-0.3, 0], [0.3, 0], [0.38, -0.45], [-0.25, -0.5]], 0.03), { at: [0, 0.95, -0.28], rot: [0.35, 0, 0], color: bronze, outline: 0.01 });
     k.restore();
   });
   reg2("statue", (o, ctx) => simple(o, ctx, "statue", statueGeo(), { yaw: 0 }));
@@ -83239,8 +83285,8 @@ ${GLSL}
   };
   var Shells = class extends Instanced {
     constructor(max = 160) {
-      const sphere2 = new SphereGeometry(1, 40, 24);
-      super(sphere2, ["iPos", "iAxis", "iCol", "iCol2", "iPrm"], max, vfxMaterial({ vertexShader: SHELL_VS, fragmentShader: SHELL_FS }), 5, "vfx-shells");
+      const sphere3 = new SphereGeometry(1, 40, 24);
+      super(sphere3, ["iPos", "iAxis", "iCol", "iCol2", "iPrm"], max, vfxMaterial({ vertexShader: SHELL_VS, fragmentShader: SHELL_FS }), 5, "vfx-shells");
     }
     /**
      * A shell: kind, centre, radius, stretch along an axis (unit vector; 1 = round),
@@ -88731,7 +88777,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const x = pax - bax * h2, y = pay2 - bay * h2, z = paz - baz * h2;
     return Math.sqrt(x * x + y * y + z * z) - r4;
   }
-  var sphere = (px2, py2, pz2, r4) => Math.sqrt(px2 * px2 + py2 * py2 + pz2 * pz2) - r4;
+  var sphere2 = (px2, py2, pz2, r4) => Math.sqrt(px2 * px2 + py2 * py2 + pz2 * pz2) - r4;
   var FACE_SHAPES = ["oval", "round", "square", "long", "heart"];
   var CHINS = ["pointed", "round", "strong"];
   var NOSES2 = ["small", "normal", "big", "button", "hooked", "long", "red"];
@@ -88800,9 +88846,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     if (n) {
       const tx = 0.92 + n.len * 1.45, ty = -0.4 * n.h;
       let nd = capsule(x, y, z * 1.25, 0.92, 0, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
-      if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.19, z, n.r0 + n.hook), 0.05);
-      nd = smin(nd, sphere(x - tx + 0.01, y - ty, z, n.tip), 0.05);
-      nd = smin(nd, sphere(x - tx + 0.07, y - ty + 0.03, az - 0.07, n.wing), 0.04);
+      if (n.hook) nd = smin(nd, sphere2(x - 0.92 - n.len * 0.55, y + 0.19, z, n.r0 + n.hook), 0.05);
+      nd = smin(nd, sphere2(x - tx + 0.01, y - ty, z, n.tip), 0.05);
+      nd = smin(nd, sphere2(x - tx + 0.07, y - ty + 0.03, az - 0.07, n.wing), 0.04);
       d = smin(d, nd, 0.06);
     }
     return d;
@@ -90428,7 +90474,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var SKIRT_T = [0.4, 0.7, 1, 0.35, 0.7, 1];
   var SKIRT_REACH = Math.PI / SKIRT_N * 2;
   var SKIRT_FADE = 0.35;
-  var _sq = new Quaternion();
+  var _sq2 = new Quaternion();
   var _sax = new Vector3();
   var _spts = Array.from({ length: SKIRT_T.length * 2 }, () => new Vector3());
   var _srad = new Float32Array(SKIRT_T.length * 2);
@@ -90916,14 +90962,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const rT = 0.088 * (F4.th || 1) * Bk + 0.028, rS = 0.056 * (F4.ca || 1) * Bk + 0.024;
       const [Dp, Wp] = skirtWaist(d);
       const hHem = -S6.yb, hK = S6.hK, two = hK > 0;
-      _sq.copy(rig.quat[B4.hips]).invert();
+      _sq2.copy(rig.quat[B4.hips]).invert();
       const H5 = rig.pos[B4.hips];
       let n = 0;
       for (const [hi, ki, fi] of LEG3) {
         const A2 = rig.pos[hi], K = rig.pos[ki], Ft = rig.pos[fi];
         for (let s = 0; s < SKIRT_T.length; s++) {
           const t = SKIRT_T[s], P6 = _spts[n];
-          (s < 3 ? P6.lerpVectors(A2, K, t) : P6.lerpVectors(K, Ft, t)).sub(H5).applyQuaternion(_sq);
+          (s < 3 ? P6.lerpVectors(A2, K, t) : P6.lerpVectors(K, Ft, t)).sub(H5).applyQuaternion(_sq2);
           _srad[n] = s < 3 ? rT - 0.018 * t : rS - 0.012 * t;
           _sleg[n] = s < 3 ? t === 1 ? 2 : 0 : 1;
           n++;
@@ -112379,14 +112425,14 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
      * texts stack upward instead of piling on top of each other. `o.z`: a
      * height to start at, as it is (no lifting over whoever's beneath).
      */
-    text(x, y, str, color = "#fff", size2 = 0.42, o = {}) {
-      str = String(str);
+    text(x, y, str2, color = "#fff", size2 = 0.42, o = {}) {
+      str2 = String(str2);
       const lift = o.z === void 0 ? this.lift3d(x, y, true) : 0;
       if (lift) y += lift;
-      const num2 = NUMERIC.test(str);
+      const num2 = NUMERIC.test(str2);
       if (!num2) {
         for (const t2 of this.texts) {
-          if (t2.str === str && Math.abs(t2.x - x) < 1 && Math.abs(t2.y - y) < 1 && t2.age < 0.4) {
+          if (t2.str === str2 && Math.abs(t2.x - x) < 1 && Math.abs(t2.y - y) < 1 && t2.age < 0.4) {
             t2.life = t2.max;
             t2.pop = 0;
             return t2;
@@ -112400,7 +112446,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         x: x + (Math.random() - 0.5) * (num2 ? 0.5 : 0.15),
         y,
         z: (o.z ?? 1.6) + bump2 * 0.34 + lift,
-        str,
+        str: str2,
         color,
         size: size2,
         life: life2,
@@ -112419,19 +112465,19 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
      * A manga sound word at a hit ("DON!", "ZUBAN!", "GOOO!"): big, tilted,
      * inked, popping in and hanging a moment. Rate-limited so fights stay readable.
      */
-    sfx(x, y, str, color = "#ffd54f", size2 = 0.7, o = {}) {
+    sfx(x, y, str2, color = "#ffd54f", size2 = 0.7, o = {}) {
       const now3 = this.time;
       if (now3 - (this._sfxT ?? -9) < (o.gap ?? 0.28)) return null;
       this._sfxT = now3;
       const life2 = o.life ?? 0.75;
-      const t = { x: x + (Math.random() - 0.5) * 0.4, y, z: (o.z ?? 1.25) + Math.random() * 0.3, str, color, size: size2, life: life2, max: life2, vz: 0.35, pop: 0, age: 0, kind: "sfx", rot: (Math.random() - 0.5) * 0.5 };
+      const t = { x: x + (Math.random() - 0.5) * 0.4, y, z: (o.z ?? 1.25) + Math.random() * 0.3, str: str2, color, size: size2, life: life2, max: life2, vz: 0.35, pop: 0, age: 0, kind: "sfx", rot: (Math.random() - 0.5) * 0.5 };
       this.texts.push(t);
       if (this.texts.length > 48) this.texts.shift();
       return t;
     }
     /** Callout text over a spot (merged when repeated). */
-    callout(x, y, str, color = "#fff", size2 = 0.4, o = {}) {
-      return this.text(x, y, str, color, size2, { life: 0.9, ...o });
+    callout(x, y, str2, color = "#fff", size2 = 0.4, o = {}) {
+      return this.text(x, y, str2, color, size2, { life: 0.9, ...o });
     }
     /** Damage number over a target; rapid hits on the same target add up. */
     damage(tgt, n, o = {}) {
@@ -114662,10 +114708,10 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     out.push(cur ? run : -run);
     return out;
   }
-  function decodeFog(enc, fog) {
-    if (!enc) return;
+  function decodeFog(enc2, fog) {
+    if (!enc2) return;
     let i = 0;
-    for (const r4 of enc) {
+    for (const r4 of enc2) {
       const n = Math.abs(r4), v = r4 > 0 ? 255 : 0;
       fog.fill(v, i, i + n);
       i += n;
@@ -118612,7 +118658,14 @@ button:disabled { cursor: not-allowed; }
     };
     if (zone) add7(".sea", w.name, w.width / 2, 14 / z, { fontSize: "26px" });
     const seaA = (1 - Math.max(0, Math.min(1, (z - 0.45) / 0.5))).toFixed(2);
-    if (!zone && seaA > 0) for (const s of SEA_LABELS) add7(".sea", s.name, s.x, s.y, s.vertical ? { writingMode: "vertical-rl", fontSize: Math.max(16, 26 * z / 0.3) + "px", opacity: seaA } : { fontSize: Math.min(44, Math.max(14, 30 * z / 0.3)) + "px", opacity: seaA });
+    const along2 = (x, y) => {
+      let a = (proj?.north?.(x, y) || 0) - Math.PI / 2;
+      a = Math.atan2(Math.sin(a), Math.cos(a));
+      if (a > Math.PI / 2) a -= Math.PI;
+      else if (a <= -Math.PI / 2) a += Math.PI;
+      return { transform: `translate(-50%, -50%) rotate(${a.toFixed(3)}rad)`, whiteSpace: "nowrap" };
+    };
+    if (!zone && seaA > 0) for (const s of SEA_LABELS) add7(".sea", s.name, s.x, s.y, s.vertical ? { ...proj ? along2(s.x, s.y) : { writingMode: "vertical-rl" }, fontSize: Math.max(16, 26 * z / 0.3) + "px", opacity: seaA } : { fontSize: Math.min(44, Math.max(14, 30 * z / 0.3)) + "px", opacity: seaA });
     const act2 = game.quests.active().sort((a, b) => (a.def.kind === "main") - (b.def.kind === "main"));
     for (const { id, def } of act2) {
       const m = game.quests.marker(id);
@@ -122728,10 +122781,10 @@ button:disabled { cursor: not-allowed; }
       const perk = 1 + (this.game.state.legacy?.perks?.haki || 0) * 0.5;
       if (type === "armament") {
         const wm = Math.max(0, ...Object.values(c.weaponMastery || {}));
-        const str = c.attrs.str;
-        if (str < 22 && wm < 35) return;
-        const sure = str >= 45 || wm >= 80;
-        const chance = (4e-3 + Math.max(0, str - 22) * 6e-4 + Math.max(0, wm - 35) * 3e-4) * perk;
+        const str2 = c.attrs.str;
+        if (str2 < 22 && wm < 35) return;
+        const sure = str2 >= 45 || wm >= 80;
+        const chance = (4e-3 + Math.max(0, str2 - 22) * 6e-4 + Math.max(0, wm - 35) * 3e-4) * perk;
         if (sure || Math.random() < chance) this.awakenHaki("armament", 3, "In the middle of the fight your arm turns black as iron. Something in you has hardened.");
       } else if (type === "observation") {
         const agi = c.attrs.agi;
@@ -126740,6 +126793,287 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     };
   }
 
+  // src/net/relay.js
+  var BROKERS = [
+    { url: "wss://broker.emqx.io:8084/mqtt" },
+    { url: "wss://broker.hivemq.com:8884/mqtt" },
+    { url: "wss://public.cloud.shiftr.io", user: "public", pass: "public" }
+  ];
+  var ROOT3 = "iw1";
+  var BEAT_MS = 2e3;
+  var QUIET_MS = 15e3;
+  var enc = new TextEncoder();
+  var dec = new TextDecoder();
+  var randomId = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+  function concat(parts) {
+    const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let o = 0;
+    for (const p of parts) {
+      out.set(p, o);
+      o += p.length;
+    }
+    return out;
+  }
+  function str(s) {
+    const b = enc.encode(s);
+    return concat([Uint8Array.of(b.length >> 8, b.length & 255), b]);
+  }
+  function packet(type, parts) {
+    const body = concat(parts), len = [];
+    let n = body.length;
+    do {
+      let d = n % 128;
+      n = Math.floor(n / 128);
+      if (n > 0) d |= 128;
+      len.push(d);
+    } while (n > 0);
+    return concat([Uint8Array.of(type, ...len), body]);
+  }
+  var Mqtt = class _Mqtt {
+    static connect(broker, clientId, timeout = 7e3, WS = globalThis.WebSocket) {
+      return new Promise((resolve, reject) => {
+        let ws;
+        try {
+          ws = new WS(broker.url, "mqtt");
+        } catch (e) {
+          reject(e);
+          return;
+        }
+        ws.binaryType = "arraybuffer";
+        const m = new _Mqtt(ws);
+        const fail = (why) => {
+          clearTimeout(t);
+          m.close();
+          reject(new Error(why));
+        };
+        const t = setTimeout(() => fail("no answer"), timeout);
+        ws.onopen = () => {
+          const flags = 2 | (broker.user ? 128 : 0) | (broker.pass ? 64 : 0);
+          m.raw(packet(16, [
+            str("MQTT"),
+            Uint8Array.of(4, flags, 0, 60),
+            str(clientId),
+            ...broker.user ? [str(broker.user)] : [],
+            ...broker.pass ? [str(broker.pass)] : []
+          ]));
+        };
+        ws.onerror = () => fail("socket error");
+        ws.onclose = () => fail("closed");
+        m.onConnack = (rc) => {
+          if (rc !== 0) {
+            fail(`refused (${rc})`);
+            return;
+          }
+          clearTimeout(t);
+          ws.onerror = null;
+          ws.onclose = () => m.lost();
+          resolve(m);
+        };
+      });
+    }
+    constructor(ws) {
+      this.ws = ws;
+      this.buf = new Uint8Array(0);
+      this.nextId = 1;
+      this.dead = false;
+      this.onMessage = null;
+      this.onClose = null;
+      this.onConnack = null;
+      ws.onmessage = (e) => this.data(new Uint8Array(e.data));
+      this.pinger = setInterval(() => this.raw(Uint8Array.of(192, 0)), 25e3);
+    }
+    raw(bytes) {
+      if (this.dead || this.ws.readyState !== 1) return false;
+      try {
+        this.ws.send(bytes);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    subscribe(topic) {
+      const id = this.nextId++ & 65535 || 1;
+      this.raw(packet(130, [Uint8Array.of(id >> 8, id & 255), str(topic), Uint8Array.of(0)]));
+    }
+    publish(topic, bytes) {
+      return this.raw(packet(48, [str(topic), bytes]));
+    }
+    // (packets can arrive split across messages, or several in one)
+    data(bytes) {
+      this.buf = this.buf.length ? concat([this.buf, bytes]) : bytes;
+      for (; ; ) {
+        const b = this.buf;
+        if (b.length < 2) return;
+        let len = 0, mul2 = 1, i = 1;
+        for (; i < 5; i++) {
+          if (i >= b.length) return;
+          len += (b[i] & 127) * mul2;
+          mul2 *= 128;
+          if (!(b[i] & 128)) break;
+        }
+        const start4 = i + 1;
+        if (b.length < start4 + len) return;
+        this.handle(b[0] >> 4, b[0] & 15, b.subarray(start4, start4 + len));
+        this.buf = b.subarray(start4 + len);
+      }
+    }
+    handle(type, flags, body) {
+      if (type === 2) this.onConnack?.(body[1]);
+      else if (type === 3) {
+        const tl = body[0] << 8 | body[1];
+        const topic = dec.decode(body.subarray(2, 2 + tl));
+        const qos = flags >> 1 & 3;
+        this.onMessage?.(topic, body.slice(2 + tl + (qos ? 2 : 0)));
+      }
+    }
+    lost() {
+      if (this.dead) return;
+      this.close();
+      this.onClose?.();
+    }
+    close() {
+      if (this.dead) return;
+      this.dead = true;
+      clearInterval(this.pinger);
+      try {
+        if (this.ws.readyState === 1) this.ws.send(Uint8Array.of(224, 0));
+      } catch {
+      }
+      try {
+        this.ws.close();
+      } catch {
+      }
+    }
+  };
+  async function sealFor(code) {
+    const h2 = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(`inherited-will relay ${code}`)));
+    const key2 = await crypto.subtle.importKey("raw", h2.slice(16), "AES-GCM", false, ["encrypt", "decrypt"]);
+    const room2 = `${ROOT3}/${[...h2.slice(0, 8)].map((b) => b.toString(16).padStart(2, "0")).join("")}`;
+    return {
+      all: `${room2}/all`,
+      to: (id) => `${room2}/${id}`,
+      async seal(obj) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        return concat([iv, new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key2, enc.encode(JSON.stringify(obj))))]);
+      },
+      async open(bytes) {
+        try {
+          const d = JSON.parse(dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.slice(0, 12) }, key2, bytes.slice(12))));
+          return d && typeof d === "object" ? d : null;
+        } catch {
+          return null;
+        }
+      }
+    };
+  }
+  async function relayTransport(code, h2 = {}, { brokers = BROKERS, selfId: selfId2 = randomId(), WS = globalThis.WebSocket } = {}) {
+    const seal = await sealFor(code);
+    const conns = [];
+    const peers = /* @__PURE__ */ new Map();
+    const seen = /* @__PURE__ */ new Map();
+    let left = false, n = 0;
+    const say2 = (topic, obj) => {
+      if (left && !obj.bye) return;
+      seal.seal(obj).then((bytes) => {
+        for (const m of conns) if (m && !m.dead) m.publish(topic, bytes);
+      });
+    };
+    const meet = (id) => {
+      const fresh = !peers.has(id);
+      peers.set(id, Date.now());
+      if (fresh) {
+        h2.onPeerJoin?.(id);
+        say2(seal.to(id), { f: selfId2, hi: 1 });
+      }
+    };
+    const part5 = (id) => {
+      if (peers.delete(id)) {
+        seen.delete(id);
+        h2.onPeerLeave?.(id);
+      }
+    };
+    const take = (f, num2, d) => {
+      let s = seen.get(f);
+      if (!s) {
+        s = /* @__PURE__ */ new Set();
+        seen.set(f, s);
+      }
+      if (s.has(num2)) return;
+      s.add(num2);
+      if (s.size > 400) {
+        const it = s.values();
+        for (let i = 0; i < 200; i++) s.delete(it.next().value);
+      }
+      h2.onMessage?.(d, f);
+    };
+    const got = (d) => {
+      if (left || !d || typeof d.f !== "string" || !/^[a-z0-9]{4,16}$/.test(d.f) || d.f === selfId2) return;
+      if (d.bye) {
+        part5(d.f);
+        return;
+      }
+      meet(d.f);
+      if (typeof d.n === "number" && d.d !== void 0) take(d.f, d.n, d.d);
+    };
+    const add7 = (m) => {
+      conns.push(m);
+      m.onMessage = (topic, bytes) => seal.open(bytes).then(got);
+      m.onClose = () => {
+        const i = conns.indexOf(m);
+        if (i >= 0) conns[i] = null;
+      };
+      m.subscribe(seal.all);
+      m.subscribe(seal.to(selfId2));
+      say2(seal.all, { f: selfId2, hi: 1 });
+    };
+    await new Promise((resolve, reject) => {
+      let settled = 0, ok = false;
+      brokers.forEach((b, i) => Mqtt.connect(b, `iw-${selfId2}-${i}`, 7e3, WS).then((m) => {
+        if (left) {
+          m.close();
+          return;
+        }
+        add7(m);
+        if (!ok) {
+          ok = true;
+          resolve();
+        }
+      }, () => {
+        if (++settled === brokers.length && !ok && !conns.length) reject(new Error("None of the relays could be reached."));
+      }));
+    });
+    const timer = setInterval(() => {
+      say2(seal.all, { f: selfId2, hi: 1 });
+      const now3 = Date.now();
+      for (const [id, t] of peers) if (now3 - t > QUIET_MS) part5(id);
+    }, BEAT_MS);
+    return {
+      kind: "relay",
+      selfId: selfId2,
+      send(msg, to) {
+        say2(to ? seal.to(to) : seal.all, { f: selfId2, n: ++n, d: msg });
+      },
+      /** The next message number (the direct line numbers its messages the same way, so a thing heard both ways is taken once). */
+      next: () => ++n,
+      sendNumbered(num2, msg, to) {
+        say2(to ? seal.to(to) : seal.all, { f: selfId2, n: num2, d: msg });
+      },
+      take,
+      meet,
+      peers: () => [...peers.keys()],
+      relays: () => ({ open: conns.filter((m) => m && !m.dead).length, all: brokers.length }),
+      leave() {
+        if (left) return;
+        say2(seal.all, { f: selfId2, bye: 1 });
+        left = true;
+        clearInterval(timer);
+        setTimeout(() => {
+          for (const m of conns) m?.close();
+        }, 300);
+      }
+    };
+  }
+
   // src/net/transport.js
   var APP_ID = "inherited-will.one-piece-roguelike";
   var ROOM = (code) => `voyage-${code}`;
@@ -126760,9 +127094,21 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     return urls2.length ? urls2.slice(0, 8) : null;
   }
   var TURN_KEY = "iw.turn";
-  var OPEN_RELAY = [
+  var OPEN_RELAY_STATIC = [
     { urls: ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443", "turn:openrelay.metered.ca:443?transport=tcp"], username: "openrelayproject", credential: "openrelayproject" }
   ];
+  async function openRelay() {
+    try {
+      const te = new TextEncoder();
+      const username = `${Math.floor(Date.now() / 1e3) + 24 * 3600}:inheritedwill`;
+      const key2 = await crypto.subtle.importKey("raw", te.encode("openrelayprojectsecret"), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+      const sig2 = new Uint8Array(await crypto.subtle.sign("HMAC", key2, te.encode(username)));
+      const host = "staticauth.openrelay.metered.ca";
+      return [{ urls: [`turn:${host}:80`, `turn:${host}:80?transport=tcp`, `turn:${host}:443`, `turns:${host}:443?transport=tcp`], username, credential: btoa(String.fromCharCode(...sig2)) }, ...OPEN_RELAY_STATIC];
+    } catch {
+      return OPEN_RELAY_STATIC;
+    }
+  }
   function savedTurn(store = globalThis.localStorage) {
     try {
       const v = JSON.parse(store?.getItem(TURN_KEY) || "null");
@@ -126799,13 +127145,111 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       }
     } else if (s?.urls) out.push({ urls: [].concat(s.urls), username: s.username || void 0, credential: s.credential || void 0 });
     const turns = out.filter((x) => [].concat(x.urls).some((u) => /^turns?:/i.test(u)));
-    return turns.concat(OPEN_RELAY);
+    return turns.concat(await openRelay());
   }
   async function openTransport(kind, code, handlers = {}, opts = {}) {
     if (kind === "local") return localTransport(code, handlers, opts);
     const room2 = opts.room === void 0 ? await claudeRoom() : opts.room;
     if (room2) return roomTransport(room2, code, handlers);
-    return trysteroTransport(code, handlers, opts);
+    return webTransport(code, handlers, opts);
+  }
+  async function webTransport(code, h2, opts) {
+    let relay = null;
+    const direct = /* @__PURE__ */ new Map();
+    const relayP = relayTransport(code, h2).catch(() => null);
+    const T5 = await Promise.resolve().then(() => (init_dist3(), dist_exports)).catch(() => null);
+    let room2 = null, act2 = null;
+    if (T5) {
+      const urls2 = opts.relays || relayUrls();
+      let turnConfig = opts.turn;
+      if (!turnConfig) {
+        try {
+          turnConfig = await turnServers();
+        } catch {
+          turnConfig = OPEN_RELAY_STATIC;
+        }
+      }
+      try {
+        room2 = T5.joinRoom({ appId: APP_ID, relayConfig: { warnOnRelayFailure: false, ...urls2 ? { urls: urls2 } : {} }, turnConfig, ...opts.config || {} }, ROOM(code), {
+          onJoinError: () => {
+          }
+        });
+        act2 = room2.makeAction("iw2");
+      } catch {
+        room2 = null;
+      }
+    }
+    relay = await relayP;
+    if (!relay) {
+      try {
+        room2?.leave();
+      } catch {
+      }
+      return trysteroTransport(code, h2, opts);
+    }
+    const me = relay.selfId;
+    if (act2) {
+      act2.onMessage = (env2, ctx) => {
+        if (!env2 || typeof env2.f !== "string" || env2.f === me) return;
+        direct.set(env2.f, ctx.peerId);
+        relay.meet(env2.f);
+        if (typeof env2.n === "number" && env2.d !== void 0) relay.take(env2.f, env2.n, env2.d);
+      };
+      room2.onPeerJoin = (tid) => {
+        try {
+          act2.send({ f: me, hi: 1 }, { target: tid })?.catch?.(() => {
+          });
+        } catch {
+        }
+      };
+      room2.onPeerLeave = (tid) => {
+        for (const [k, v] of direct) if (v === tid) direct.delete(k);
+      };
+    }
+    let left = false;
+    const sendDirect = (env2, tid) => {
+      try {
+        act2.send(env2, tid ? { target: tid } : void 0)?.catch?.(() => {
+        });
+      } catch {
+      }
+    };
+    return {
+      kind: "web",
+      selfId: me,
+      send(msg, to) {
+        if (left) return;
+        const n = relay.next(), env2 = { f: me, n, d: msg };
+        if (to) {
+          const tid = act2 && direct.get(to);
+          if (tid) sendDirect(env2, tid);
+          else relay.sendNumbered(n, msg, to);
+          return;
+        }
+        const all2 = relay.peers();
+        if (act2 && direct.size) sendDirect(env2);
+        if (!act2 || all2.some((id) => !direct.has(id))) relay.sendNumbered(n, msg);
+      },
+      peers: () => relay.peers(),
+      relays() {
+        const r4 = relay.relays();
+        let open = r4.open, all2 = r4.all;
+        for (const s of Object.values(T5?.getRelaySockets?.() || {})) {
+          all2++;
+          if (s && s.readyState === 1) open++;
+        }
+        return { open, all: all2, direct: direct.size };
+      },
+      leave() {
+        if (left) return;
+        left = true;
+        relay.leave();
+        try {
+          room2?.leave();
+        } catch {
+        }
+      }
+    };
   }
   async function trysteroTransport(code, h2, opts) {
     const T5 = await Promise.resolve().then(() => (init_dist3(), dist_exports));
@@ -126815,7 +127259,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       try {
         turnConfig = await turnServers();
       } catch {
-        turnConfig = OPEN_RELAY;
+        turnConfig = OPEN_RELAY_STATIC;
       }
     }
     const room2 = T5.joinRoom({ appId: APP_ID, relayConfig: { warnOnRelayFailure: false, ...urls2 ? { urls: urls2 } : {} }, turnConfig, ...opts.config || {} }, ROOM(code), {
@@ -129397,7 +129841,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (typeof tree === "function") tree = tree(ctx);
       if (!tree) return;
       if (npc?.def?.recruit && this.game.crew) tree = this.game.crew.decorate(tree, npc);
-      for (const dec of this.decorators) tree = dec(tree, npc, ctx) || tree;
+      for (const dec2 of this.decorators) tree = dec2(tree, npc, ctx) || tree;
       this.active = { npc, tree, ctx, node: null, typing: 0, full: "" };
       this.game.paused = true;
       if (npc && this.game.player) {
