@@ -502,7 +502,8 @@ export const scenarios = {
         }
       };
       const frames = [];
-      const brawler = () => { const L = window.LAB; L.arena(); L.equip({ style: 'brawler' }); L.dummy(1.9, 0, { hpMul: 400 }); };
+      await page.evaluate((st) => { window.__style = st; }, args.style || 'brawler');
+      const brawler = () => { const L = window.LAB; L.arena(); L.equip({ style: window.__style }); L.dummy(1.9, 0, { hpMul: 400 }); };
       const m1 = () => { const g = window.OP.game, p = g.player; p.combo.step = 0; p.combo.window = 0; window.OP.input.mouse.down = [true, false, false]; window.OP.input.mouse.pressed = [true, false, false]; };
       await film(frames, 'm1', brawler, m1, [0.05, 0.08, 0.3, 0.55, 0.62, 0.95, 1.05]);
       await page.evaluate(() => { window.OP.input.mouse.down = [false, false, false]; });
@@ -520,7 +521,7 @@ export const scenarios = {
         const src = (await import('../src/game/abilities.js')).getAbility(id).source || '';
         const fruit = src.startsWith('fruit:') ? src.slice(6) : null;
         const w = info.w;
-        await film(tf, id, `(() => { const L = window.LAB; L.arena(); L.equip({ fruit: ${JSON.stringify(fruit)}, style: 'brawler' }); L.dummy(${info.ranged ? 5 : 2.2}, 0, { hpMul: 400 }); })()`,
+        await film(tf, id, `(() => { const L = window.LAB; L.arena(); L.equip({ fruit: ${JSON.stringify(fruit)}, style: window.__style }); L.dummy(${info.ranged ? 5 : 2.2}, 0, { hpMul: 400 }); })()`,
           `(() => { const L = window.LAB, g = window.OP.game; L.refill(); if (!g.player.tryTechnique(${JSON.stringify(id)}, g, L.target)) console.log('technique refused ${id}'); })()`,
           (args.times ? String(args.times).split(',').map(Number) : [w * 0.6, w + 0.05, w + 0.2, w + 0.45]).map((x) => Math.round(x * 60) / 60));
       }
