@@ -1,6 +1,6 @@
 // Part 2: The Grand Line (Paradise). Down the torrent from Reverse Mountain to
 // the Twin Cape lighthouse, where Crocus tells you what the Log Pose will do:
-// lock onto one of seven islands, and set your road. Every road is its own
+// lock onto one of the islands off the cape, and set your road. Every road is its own
 // adventure. Pirate roads all end at the Sabaody Archipelago, the doorway to
 // the New World; the Marines' at Marineford, Navy Headquarters; the hunters'
 // at Enies Lobby, where the World Government's court pays out the greatest
@@ -27,7 +27,7 @@ chapter('gl_twin_cape', { part: 2, island: 'twin_cape', opensStory: true, noLog:
     free: 'Then sail your own way. The Grand Line doesn\'t care why you came — only whether you can live through it. Laboon and I will be here.',
     done: [
       'Laboon hasn\'t rammed the Red Line since you left. A promise is a powerful thing.',
-      'Listen well. Every island here has its own magnetism, and the Log Pose follows it. From this cape, seven roads lead into the Grand Line. Your needle will choose one of them.',
+      'Listen well. Every island here has its own magnetism, and the Log Pose follows it. From this cape, ten roads lead into the Grand Line. Your needle will choose one of them.',
       (ctx) => `${onward(ctx.char, 'There — the log has set. It points to')} Wherever it takes you, your story is there. Don't sail past it: without its log, the Grand Line will only turn you round.`,
     ],
     after: 'Keep your promise to Laboon. He\'ll wait for you. He\'s good at that.',
@@ -364,20 +364,29 @@ target({ id: 'mq_gl_grimm', island: 'enies_lobby', name: 'Captain "Lockjaw" Grim
 
 // ================================================================= the roads
 export const GL_ROADS = {
+  // (the wider Grand Line's stops are in grandLine2.js; the first three
+  // pirate roads there each follow a thread of their own)
   pirate: [
-    { id: 'cactus', chain: ['gl_cactus', 'gl_little_garden', 'gl_drum', 'gl_alabasta', 'gl_sabaody'] },
-    { id: 'kenzan', chain: ['gl_kenzan', 'gl_little_garden', 'gl_jaya', 'gl_water7', 'gl_sabaody'] },
-    { id: 'foolshout', chain: ['gl_foolshout', 'gl_drum', 'gl_spa', 'gl_thriller', 'gl_sabaody'] },
-    { id: 'ruluka', chain: ['gl_ruluka', 'gl_jaya', 'gl_long_ring', 'gl_water7', 'gl_sabaody'] },
-    { id: 'vira', chain: ['gl_vira', 'gl_drum', 'gl_alabasta', 'gl_thriller', 'gl_sabaody'] },
+    { id: 'cactus', chain: ['gl_cactus', 'gl_little_garden', 'gl_drum', 'gl_alabasta', 'gl_driftwood', 'gl_delta', 'gl_sabaody'] },
+    { id: 'kenzan', chain: ['gl_kenzan', 'gl_little_garden', 'gl_jaya', 'gl_lanternfish', 'gl_water7', 'gl_mecha', 'gl_sabaody'] },
+    { id: 'foolshout', chain: ['gl_foolshout', 'gl_drum', 'gl_omatsuri', 'gl_spa', 'gl_thriller', 'gl_hammerhead', 'gl_sabaody'] },
+    { id: 'ruluka', chain: ['gl_ruluka', 'gl_jaya', 'gl_long_ring', 'gl_banaro', 'gl_water7', 'gl_whistle', 'gl_sabaody'] },
+    { id: 'vira', chain: ['gl_vira', 'gl_drum', 'gl_alabasta', 'gl_asuka', 'gl_thriller', 'gl_sabaody'] },
+    { id: 'warship', chain: ['gl_warship', 'gl_clockwork', 'gl_crown', 'gl_omatsuri', 'gl_driftwood', 'gl_delta', 'gl_sabaody'] },
+    { id: 'dead_end', chain: ['gl_hannabal', 'gl_kettle', 'gl_mirage', 'gl_asuka', 'gl_whistle', 'gl_hammerhead', 'gl_sabaody'] },
+    { id: 'lanterns', chain: ['gl_saltpetre', 'gl_bellwether', 'gl_lanternfish', 'gl_banaro', 'gl_tumbleweed', 'gl_mecha', 'gl_mistletoe', 'gl_sabaody'] },
   ],
   marine: [
-    { id: 'g8_south', chain: ['gl_navarone', 'gl_drum', 'gl_alabasta', 'gl_sabaody', 'gl_marineford'] },
-    { id: 'g8_north', chain: ['gl_navarone', 'gl_little_garden', 'gl_thriller', 'gl_sabaody', 'gl_marineford'] },
+    { id: 'g8_south', chain: ['gl_navarone', 'gl_drum', 'gl_alabasta', 'gl_asuka', 'gl_sabaody', 'gl_marineford'] },
+    { id: 'g8_north', chain: ['gl_navarone', 'gl_little_garden', 'gl_mecha', 'gl_thriller', 'gl_sabaody', 'gl_marineford'] },
+    { id: 'g8_warship', chain: ['gl_navarone', 'gl_warship', 'gl_clockwork', 'gl_crown', 'gl_delta', 'gl_sabaody', 'gl_marineford'] },
+    { id: 'g8_lanterns', chain: ['gl_navarone', 'gl_saltpetre', 'gl_bellwether', 'gl_banaro', 'gl_tumbleweed', 'gl_mistletoe', 'gl_sabaody', 'gl_marineford'] },
   ],
   hunter: [
-    { id: 'kyuka', chain: ['gl_kyuka', 'gl_jaya', 'gl_long_ring', 'gl_enies'] },
-    { id: 'whisky', chain: ['gl_cactus', 'gl_drum', 'gl_alabasta', 'gl_enies'] },
+    { id: 'kyuka', chain: ['gl_kyuka', 'gl_jaya', 'gl_long_ring', 'gl_tumbleweed', 'gl_enies'] },
+    { id: 'whisky', chain: ['gl_cactus', 'gl_drum', 'gl_alabasta', 'gl_driftwood', 'gl_enies'] },
+    { id: 'dead_end', chain: ['gl_hannabal', 'gl_kettle', 'gl_mirage', 'gl_asuka', 'gl_whistle', 'gl_enies'] },
+    { id: 'lanterns', chain: ['gl_saltpetre', 'gl_lanternfish', 'gl_banaro', 'gl_tumbleweed', 'gl_mecha', 'gl_enies'] },
   ],
 };
 

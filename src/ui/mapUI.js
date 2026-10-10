@@ -21,18 +21,18 @@ export const POI = {
 const SCALES = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
 
 const SEA_LABELS = [
-  { name: 'EAST BLUE', x: chart(3070), y: chart(390) },
-  { name: 'NORTH BLUE', x: chart(1020), y: chart(390) },
-  { name: 'WEST BLUE', x: chart(1020), y: chart(1660) },
-  { name: 'SOUTH BLUE', x: chart(3070), y: chart(1660) },
-  { name: 'PARADISE', x: chart(3070), y: EQ + chart(150) },
-  { name: 'NEW WORLD', x: chart(1020), y: EQ + chart(150) },
+  { name: 'EAST BLUE', x: chart(3070), y: chart(286) },
+  { name: 'NORTH BLUE', x: chart(1020), y: chart(286) },
+  { name: 'WEST BLUE', x: chart(1020), y: chart(1762) },
+  { name: 'SOUTH BLUE', x: chart(3070), y: chart(1762) },
+  { name: 'PARADISE', x: chart(3070), y: EQ + chart(250) },
+  { name: 'NEW WORLD', x: chart(1020), y: EQ + chart(250) },
   { name: 'GRAND LINE', x: chart(2560), y: GL_TOP + chart(28) },
   { name: 'GRAND LINE', x: chart(1530), y: GL_TOP + chart(28) },
   { name: 'CALM BELT', x: chart(2900), y: GL_TOP - chart(36) },
   { name: 'CALM BELT', x: chart(2900), y: GL_BOTTOM + chart(36) },
-  { name: 'RED LINE', x: RM_X, y: chart(300), vertical: true },
-  { name: 'RED LINE', x: chart(12), y: chart(300), vertical: true },
+  { name: 'RED LINE', x: RM_X, y: chart(230), vertical: true },
+  { name: 'RED LINE', x: chart(12), y: chart(230), vertical: true },
 ];
 
 export function installMap(game) {

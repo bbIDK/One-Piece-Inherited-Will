@@ -5,7 +5,7 @@ import { T } from '../../world/tiles.js';
 
 export const EAST_BLUE = [
   {
-    id: 'dawn_island', name: 'Dawn Island', sea: 'east_blue', x: 3790, y: 300, w: 210, h: 140,
+    id: 'dawn_island', name: 'Dawn Island', sea: 'east_blue', x: 3790, y: 221, w: 210, h: 140,
     climate: 'temperate', rough: 0.22,
     blobs: [[0, 0, 0.85, 0.8], [-0.55, 0.3, 0.45, 0.45], [0.55, -0.2, 0.5, 0.55]],
     mountains: [{ name: 'Mt. Colubo', dx: 0.05, dy: -0.15, r: 0.28, h: 0.9 }],
@@ -44,12 +44,12 @@ export const EAST_BLUE = [
     danger: 1,
   },
   {
-    id: 'goat_island', name: 'Goat Island', sea: 'east_blue', x: 3625, y: 440, w: 44, h: 36, climate: 'tropical', rough: 0.35,
+    id: 'goat_island', name: 'Goat Island', sea: 'east_blue', x: 3625, y: 321, w: 44, h: 36, climate: 'tropical', rough: 0.35,
     landmarks: [{ kind: 'tent', dx: 0, dy: 0.1, v: 1 }, { kind: 'campfire', dx: 0.2, dy: 0.2 }, { kind: 'cannon', dx: -0.3, dy: 0.4 }],
     danger: 1,
   },
   {
-    id: 'shells_island', name: 'Yotsuba Island', sea: 'east_blue', x: 3450, y: 265, w: 120, h: 90, climate: 'temperate', rough: 0.25,
+    id: 'shells_island', name: 'Yotsuba Island', sea: 'east_blue', x: 3450, y: 197, w: 120, h: 90, climate: 'temperate', rough: 0.25,
     blobs: [[0, 0, 0.8, 0.8], [-0.5, -0.5, 0.35, 0.35], [0.5, -0.5, 0.35, 0.35], [0.5, 0.5, 0.35, 0.35]],
     towns: [
       {
@@ -72,7 +72,7 @@ export const EAST_BLUE = [
     danger: 1,
   },
   {
-    id: 'shimotsuki', name: 'Shimotsuki Village', sea: 'east_blue', x: 3570, y: 130, w: 100, h: 78, climate: 'sakura', rough: 0.25,
+    id: 'shimotsuki', name: 'Shimotsuki Village', sea: 'east_blue', x: 3570, y: 100, w: 100, h: 78, climate: 'sakura', rough: 0.25,
     areas: [{ tile: T.FARM, dx: -0.4, dy: 0.25, rx: 0.3, ry: 0.2, name: 'Rice paddies' }, { tile: T.FOREST, dx: 0.4, dy: -0.3, rx: 0.35, ry: 0.3 }],
     towns: [
       {
@@ -88,7 +88,7 @@ export const EAST_BLUE = [
     danger: 1,
   },
   {
-    id: 'organ_islands', name: 'Organ Islands', sea: 'east_blue', x: 3240, y: 350, w: 125, h: 90, climate: 'temperate', rough: 0.3,
+    id: 'organ_islands', name: 'Organ Islands', sea: 'east_blue', x: 3240, y: 257, w: 125, h: 90, climate: 'temperate', rough: 0.3,
     archipelago: true,
     blobs: [[0, 0, 0.7, 0.75], [0.75, 0.45, 0.25, 0.25], [-0.75, -0.5, 0.2, 0.2]],
     towns: [
@@ -107,12 +107,12 @@ export const EAST_BLUE = [
     danger: 1,
   },
   {
-    id: 'rare_animals', name: 'Island of Rare Animals', sea: 'east_blue', x: 3085, y: 235, w: 48, h: 42, climate: 'jungle', rough: 0.35,
+    id: 'rare_animals', name: 'Island of Rare Animals', sea: 'east_blue', x: 3085, y: 175, w: 48, h: 42, climate: 'jungle', rough: 0.35,
     landmarks: [{ kind: 'chest', dx: 0.1, dy: -0.2, name: "Gaimon's treasure box", spot: 'gaimon' }],
     danger: 1,
   },
   {
-    id: 'gecko_islands', name: 'Gecko Islands', sea: 'east_blue', x: 3010, y: 475, w: 145, h: 110, climate: 'temperate', rough: 0.25,
+    id: 'gecko_islands', name: 'Gecko Islands', sea: 'east_blue', x: 3010, y: 346, w: 145, h: 110, climate: 'temperate', rough: 0.25,
     areas: [{ tile: T.FOREST, dx: -0.3, dy: -0.3, rx: 0.35, ry: 0.35 }, { tile: T.FARM, dx: 0.1, dy: 0.35, rx: 0.2, ry: 0.12 }],
     towns: [
       {
@@ -142,7 +142,7 @@ export const EAST_BLUE = [
     // 'baratie'), two masts with striped sails fore and aft of it. (Her hull,
     // head, tail, masts and signs: render3d/props/baratie.js, which counts on
     // these measures.)
-    id: 'baratie', name: 'Baratie', sea: 'east_blue', x: 2850, y: 570, w: 27, h: 9, climate: 'temperate',
+    id: 'baratie', name: 'Baratie', sea: 'east_blue', x: 2850, y: 414, w: 27, h: 9, climate: 'temperate',
     ground: T.PLANK, beach: T.PLANK, rough: 0.0, elevRate: 0, noiseScale: 0.01, beachWidth: 0,
     shipDeck: true,
     blobs: [[0, 0, 0.78, 1], [0.5, 0, 0.5, 0.82], [-0.5, 0, 0.5, 0.9]],
@@ -157,7 +157,7 @@ export const EAST_BLUE = [
     danger: 1,
   },
   {
-    id: 'conomi_islands', name: 'Conomi Islands', sea: 'east_blue', x: 2660, y: 420, w: 210, h: 150, climate: 'tropical', rough: 0.24,
+    id: 'conomi_islands', name: 'Conomi Islands', sea: 'east_blue', x: 2660, y: 307, w: 210, h: 150, climate: 'tropical', rough: 0.24,
     blobs: [[0, 0, 0.8, 0.75], [-0.55, 0.35, 0.4, 0.4], [0.6, -0.35, 0.35, 0.4]],
     mountains: [{ dx: 0.1, dy: -0.3, r: 0.22, h: 0.6 }],
     areas: [
@@ -187,13 +187,13 @@ export const EAST_BLUE = [
     danger: 2,
   },
   {
-    id: 'oykot', name: 'Oykot Kingdom', sea: 'east_blue', x: 3880, y: 610, w: 125, h: 90, climate: 'temperate', rough: 0.25,
+    id: 'oykot', name: 'Oykot Kingdom', sea: 'east_blue', x: 3880, y: 443, w: 125, h: 90, climate: 'temperate', rough: 0.25,
     towns: [{ id: 'oykot_castle_town', name: 'Oykot Castle Town', dx: 0, dy: 0.1, w: 44, h: 30, style: 'town', walls: true, dockDir: 'w', plaza: 'statue',
       buildings: [{ role: 'palace', name: 'Oykot Castle' }, { role: 'shop', name: 'Royal Bazaar' }, { role: 'inn', name: 'Crown Inn' }] }],
     danger: 1,
   },
   {
-    id: 'polestar_islands', name: 'Polestar Islands', sea: 'east_blue', x: 2385, y: 590, w: 160, h: 115, climate: 'temperate', rough: 0.22,
+    id: 'polestar_islands', name: 'Polestar Islands', sea: 'east_blue', x: 2385, y: 428, w: 160, h: 115, climate: 'temperate', rough: 0.22,
     blobs: [[0, 0, 0.85, 0.8], [0.6, 0.45, 0.35, 0.3]],
     towns: [
       {
@@ -215,13 +215,13 @@ export const EAST_BLUE = [
     danger: 2,
   },
   {
-    id: 'mirror_ball', name: 'Mirror Ball Island', sea: 'east_blue', x: 3390, y: 650, w: 72, h: 55, climate: 'spring', rough: 0.25,
+    id: 'mirror_ball', name: 'Mirror Ball Island', sea: 'east_blue', x: 3390, y: 471, w: 72, h: 55, climate: 'spring', rough: 0.25,
     towns: [{ id: 'mirror_ball_town', name: 'Mirror Ball Town', dx: 0, dy: 0, w: 28, h: 20, style: 'town', dockDir: 'n',
       buildings: [{ role: 'shop', name: 'Doskoi Panda Boutique' }, { role: 'bar', name: 'Dance Hall' }] }],
     danger: 1,
   },
   {
-    id: 'tequila_wolf', name: 'Tequila Wolf', sea: 'east_blue', x: 3935, y: 170, w: 110, h: 50, climate: 'winter', rough: 0.2,
+    id: 'tequila_wolf', name: 'Tequila Wolf', sea: 'east_blue', x: 3935, y: 129, w: 110, h: 50, climate: 'winter', rough: 0.2,
     blobs: [[-0.7, 0, 0.3, 0.8], [0.7, 0, 0.3, 0.8]],
     archipelago: true,
     paint: [{ op: 'path', points: [[-0.5, 0], [0.5, 0]], width: 4, tile: T.BRIDGE }],
@@ -229,16 +229,16 @@ export const EAST_BLUE = [
     danger: 2,
   },
   {
-    id: 'cozia', name: 'Cozia', sea: 'east_blue', x: 3620, y: 660, w: 70, h: 56, climate: 'temperate', rough: 0.3,
+    id: 'cozia', name: 'Cozia', sea: 'east_blue', x: 3620, y: 478, w: 70, h: 56, climate: 'temperate', rough: 0.3,
     towns: [{ id: 'cozia_town', name: 'Cozia', dx: 0, dy: 0, w: 26, h: 18, style: 'village', buildings: [{ role: 'inn', name: 'Cozia Inn' }] }],
     danger: 1,
   },
   {
-    id: 'sixis', name: 'Sixis', sea: 'east_blue', x: 3160, y: 660, w: 52, h: 40, climate: 'tropical', rough: 0.35, danger: 1,
+    id: 'sixis', name: 'Sixis', sea: 'east_blue', x: 3160, y: 478, w: 52, h: 40, climate: 'tropical', rough: 0.35, danger: 1,
     landmarks: [{ kind: 'boat', dx: 0.2, dy: 0.5 }, { kind: 'campfire', dx: 0, dy: 0.2 }],
   },
   {
-    id: 'satsuruzo', name: 'Satsuruzo Kingdom', sea: 'east_blue', x: 2900, y: 160, w: 92, h: 70, climate: 'temperate', rough: 0.28,
+    id: 'satsuruzo', name: 'Satsuruzo Kingdom', sea: 'east_blue', x: 2900, y: 122, w: 92, h: 70, climate: 'temperate', rough: 0.28,
     towns: [{ id: 'satsuruzo_town', name: 'Satsuruzo', dx: 0, dy: 0.1, w: 32, h: 22, style: 'town', buildings: [{ role: 'shop', name: 'Satsuruzo Market' }, { role: 'marine_base', name: 'Recruitment Office' }] }],
     danger: 1,
   },

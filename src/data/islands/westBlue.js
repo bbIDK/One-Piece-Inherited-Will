@@ -13,7 +13,7 @@ import { T } from '../../world/tiles.js';
 export const WEST_BLUE = [
   // ------------------------------------------------------------------ Ohara
   {
-    id: 'ohara', name: 'Ohara', sea: 'west_blue', x: 300, y: 1720, w: 180, h: 130,
+    id: 'ohara', name: 'Ohara', sea: 'west_blue', x: 300, y: 1807, w: 180, h: 130,
     climate: 'temperate', rough: 0.22,
     blobs: [[0, 0, 0.82, 0.78], [-0.5, 0.3, 0.42, 0.45], [0.55, -0.25, 0.4, 0.45]],
     areas: [
@@ -64,7 +64,7 @@ export const WEST_BLUE = [
   {
     // The unnamed island "far to the northeast of Ohara" where an eight-year-old
     // Nico Robin boarded a passenger ship and was spotted by the Marines.
-    id: 'passage_isle', name: 'Passage Island', sea: 'west_blue', x: 560, y: 1560, w: 110, h: 80,
+    id: 'passage_isle', name: 'Passage Island', sea: 'west_blue', x: 560, y: 1692, w: 110, h: 80,
     climate: 'temperate', rough: 0.28,
     blobs: [[0, 0, 0.85, 0.8], [0.4, 0.35, 0.4, 0.4]],
     areas: [{ tile: T.FARM, dx: -0.4, dy: -0.25, rx: 0.2, ry: 0.15, name: 'Potato fields' }, { tile: T.FOREST, dx: 0.3, dy: -0.35, rx: 0.25, ry: 0.25 }],
@@ -95,7 +95,7 @@ export const WEST_BLUE = [
     // God Valley sank beneath the sea after the God Valley Incident and was
     // declared never to have existed. Only the broken "praying hands" still
     // break the surface.
-    id: 'god_valley', name: 'God Valley', sea: 'west_blue', x: 710, y: 1400, w: 120, h: 80,
+    id: 'god_valley', name: 'God Valley', sea: 'west_blue', x: 710, y: 1578, w: 120, h: 80,
     climate: 'rocky', rough: 0.38, archipelago: true,
     blobs: [[-0.4, 0, 0.42, 0.72], [0.4, 0.05, 0.42, 0.66], [0.02, 0.62, 0.16, 0.18], [0.82, -0.62, 0.12, 0.15], [-0.82, 0.58, 0.12, 0.14]],
     mountains: [
@@ -138,7 +138,7 @@ export const WEST_BLUE = [
   {
     // "The Land of Instrument Makers", destroyed by the World Government 60
     // years ago. A few craftsmen have come back to Cello Port.
-    id: 'esperia', name: 'Esperia Kingdom', sea: 'west_blue', x: 860, y: 1830, w: 200, h: 120,
+    id: 'esperia', name: 'Esperia Kingdom', sea: 'west_blue', x: 860, y: 1885, w: 200, h: 120,
     climate: 'autumn', rough: 0.22, archipelago: true,
     blobs: [[-0.16, 0, 0.72, 0.85], [0.8, 0.36, 0.18, 0.28]],
     mountains: [{ name: 'Palace Heights', dx: -0.2, dy: -0.42, r: 0.2, h: 0.4 }],
@@ -194,7 +194,7 @@ export const WEST_BLUE = [
   {
     // 花ノ国, "the Country of Flowers": a Chinese-style kingdom among tall
     // rock spires, home of the Chinjao Family and the Happo Navy.
-    id: 'kano_country', name: 'Kano Country', sea: 'west_blue', x: 1080, y: 1590, w: 260, h: 170,
+    id: 'kano_country', name: 'Kano Country', sea: 'west_blue', x: 1080, y: 1714, w: 260, h: 170,
     climate: 'spring', rough: 0.22,
     blobs: [[0, 0, 0.85, 0.8], [-0.55, 0.35, 0.4, 0.4], [0.55, -0.35, 0.38, 0.4]],
     mountains: [
@@ -259,7 +259,7 @@ export const WEST_BLUE = [
     ],
   },
   {
-    id: 'ballywood', name: 'Ballywood Kingdom', sea: 'west_blue', x: 1180, y: 1400, w: 170, h: 90,
+    id: 'ballywood', name: 'Ballywood Kingdom', sea: 'west_blue', x: 1180, y: 1578, w: 170, h: 90,
     climate: 'tropical', rough: 0.22,
     blobs: [[0, 0, 0.85, 0.8], [-0.5, -0.3, 0.35, 0.4]],
     mountains: [{ name: 'Mount Marquee', dx: -0.5, dy: -0.45, r: 0.16, h: 0.55 }],
@@ -301,7 +301,7 @@ export const WEST_BLUE = [
   // ---------------------------------------------------------------- Toroa
   {
     // Hometown of Byron, "descended from a long line of musicians".
-    id: 'toroa', name: 'Toroa', sea: 'west_blue', x: 1390, y: 1870, w: 140, h: 96,
+    id: 'toroa', name: 'Toroa', sea: 'west_blue', x: 1390, y: 1914, w: 140, h: 96,
     climate: 'temperate', rough: 0.25,
     blobs: [[0, 0, 0.85, 0.8], [0.45, -0.35, 0.4, 0.4]],
     areas: [
@@ -338,7 +338,7 @@ export const WEST_BLUE = [
   {
     // 双蛇島, "Twin Snakes Island": a gambling town. A blind man lost everything
     // at its tables and now guards the house to pay it back.
-    id: 'soja_island', name: 'Soja Island', sea: 'west_blue', x: 1620, y: 1690, w: 160, h: 104,
+    id: 'soja_island', name: 'Soja Island', sea: 'west_blue', x: 1620, y: 1785, w: 160, h: 104,
     climate: 'tropical', rough: 0.26,
     blobs: [[-0.45, -0.12, 0.5, 0.36], [0.45, 0.12, 0.5, 0.36], [0, 0, 0.3, 0.5]],
     areas: [{ tile: T.SAND, dx: -0.7, dy: 0.2, rx: 0.12, ry: 0.1 }, { tile: T.FOREST, dx: 0.62, dy: 0.18, rx: 0.2, ry: 0.18 }],
@@ -371,7 +371,7 @@ export const WEST_BLUE = [
 
   // --------------------------------------------------------- Ilisia Kingdom
   {
-    id: 'ilisia', name: 'Ilisia Kingdom', sea: 'west_blue', x: 1500, y: 1440, w: 220, h: 120,
+    id: 'ilisia', name: 'Ilisia Kingdom', sea: 'west_blue', x: 1500, y: 1607, w: 220, h: 120,
     climate: 'temperate', rough: 0.2,
     blobs: [[0, 0, 0.85, 0.8], [-0.55, 0.3, 0.4, 0.45], [0.6, -0.2, 0.35, 0.45]],
     mountains: [{ name: 'Castle Hill', dx: -0.02, dy: -0.62, r: 0.1, h: 0.4 }],
@@ -416,7 +416,7 @@ export const WEST_BLUE = [
 
   // --------------------------------------------------- Marine 80th Branch
   {
-    id: 'marine_80th', name: 'Marine 80th Branch', sea: 'west_blue', x: 1765, y: 1565, w: 100, h: 70,
+    id: 'marine_80th', name: 'Marine 80th Branch', sea: 'west_blue', x: 1765, y: 1696, w: 100, h: 70,
     climate: 'temperate', rough: 0.18,
     towns: [
       {
@@ -445,7 +445,7 @@ export const WEST_BLUE = [
   {
     // Las Camp, a stretch of sea in the West Blue plagued by pirates — and the
     // home turf of the Fire Tank Family, one of the Five Families of the West.
-    id: 'las_camp', name: 'Las Camp', sea: 'west_blue', x: 1700, y: 1890, w: 170, h: 100,
+    id: 'las_camp', name: 'Las Camp', sea: 'west_blue', x: 1700, y: 1928, w: 170, h: 100,
     climate: 'temperate', rough: 0.28, archipelago: true,
     blobs: [[-0.1, 0, 0.75, 0.8], [0.8, 0.36, 0.16, 0.24], [0.74, -0.52, 0.13, 0.18]],
     areas: [{ tile: T.GRAVEL, dx: 0.36, dy: 0.28, rx: 0.12, ry: 0.1, name: 'Raiders\' landing' }],
@@ -486,7 +486,7 @@ export const WEST_BLUE = [
   {
     // A canon kingdom (canon never says which sea it is in — the game places
     // it in the West Blue). Famous here for its kickers and their colosseum.
-    id: 'asshina', name: 'Asshina Gainone Kingdom', sea: 'west_blue', x: 520, y: 1880, w: 150, h: 100,
+    id: 'asshina', name: 'Asshina Gainone Kingdom', sea: 'west_blue', x: 520, y: 1921, w: 150, h: 100,
     climate: 'tropical', rough: 0.24,
     blobs: [[0, 0, 0.85, 0.8], [-0.4, -0.35, 0.4, 0.4]],
     mountains: [{ dx: -0.5, dy: -0.5, r: 0.14, h: 0.6, name: 'Stilt Mountain' }],

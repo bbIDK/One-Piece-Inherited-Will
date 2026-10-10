@@ -19,7 +19,7 @@ export const SOUTH_BLUE = [
   // The St. Briss sailed from here 210 years ago and was condemned to Cloud
   // Drifting in Skypiea. Like its South Blue neighbours, Briss coats its teeth with tar.
   {
-    id: 'briss_kingdom', name: 'Briss Kingdom', sea: 'south_blue', x: 2430, y: 1495, w: 170, h: 120,
+    id: 'briss_kingdom', name: 'Briss Kingdom', sea: 'south_blue', x: 2430, y: 1646, w: 170, h: 120,
     climate: 'temperate', rough: 0.22,
     blobs: [[0.05, 0.02, 0.84, 0.82], [-0.6, -0.28, 0.34, 0.3], [0.55, 0.42, 0.34, 0.3]],
     mountains: [{ name: 'Pitch Hills', dx: 0.5, dy: -0.38, r: 0.18, h: 0.5 }],
@@ -64,7 +64,7 @@ export const SOUTH_BLUE = [
   // Two years before the Straw Hats reached Water 7, the Revolutionary Army
   // fought "an unknown force" for Centaurea and won: another country fell.
   {
-    id: 'centaurea', name: 'Centaurea', sea: 'south_blue', x: 2785, y: 1452, w: 220, h: 150,
+    id: 'centaurea', name: 'Centaurea', sea: 'south_blue', x: 2785, y: 1615, w: 220, h: 150,
     climate: 'autumn', rough: 0.22,
     blobs: [[0, 0, 0.86, 0.8], [0.5, 0.42, 0.4, 0.34], [-0.55, -0.35, 0.38, 0.34]],
     mountains: [{ name: 'Knapweed Heights', dx: 0.48, dy: -0.42, r: 0.18, h: 0.6 }],
@@ -124,7 +124,7 @@ export const SOUTH_BLUE = [
   // A three-year civil war. The Revolutionary Army was busy with Gray Terminal
   // refugees — so Kuma came alone and destroyed the tower.
   {
-    id: 'tumi', name: 'Tumi', sea: 'south_blue', x: 3090, y: 1422, w: 120, h: 90,
+    id: 'tumi', name: 'Tumi', sea: 'south_blue', x: 3090, y: 1594, w: 120, h: 90,
     climate: 'autumn', rough: 0.26,
     blobs: [[0, 0, 0.86, 0.82], [0.5, 0.35, 0.34, 0.34]],
     areas: [
@@ -157,7 +157,7 @@ export const SOUTH_BLUE = [
   // boxing here; a young boxer called Foxy lost his licence for bringing a
   // weapon into the ring.
   {
-    id: 'karate_island', name: 'Karate Island', sea: 'south_blue', x: 3370, y: 1446, w: 140, h: 110,
+    id: 'karate_island', name: 'Karate Island', sea: 'south_blue', x: 3370, y: 1611, w: 140, h: 110,
     climate: 'tropical', rough: 0.24,
     blobs: [[0, 0.05, 0.86, 0.8], [0.36, -0.48, 0.34, 0.34]],
     mountains: [{ name: 'Thousand-Step Peak', dx: 0.4, dy: -0.5, r: 0.18, h: 0.7 }],
@@ -201,7 +201,7 @@ export const SOUTH_BLUE = [
   // finest medical library in the South Blue. Wandering Mink traders settled
   // among them generations ago.
   {
-    id: 'torino_kingdom', name: 'Torino Kingdom', sea: 'south_blue', x: 3702, y: 1452, w: 124, h: 104,
+    id: 'torino_kingdom', name: 'Torino Kingdom', sea: 'south_blue', x: 3702, y: 1615, w: 124, h: 104,
     climate: 'tropical', rough: 0.28,
     blobs: [[0, 0, 0.86, 0.84], [-0.5, 0.46, 0.32, 0.3]],
     mountains: [{ name: 'Roots of the Great Tree', dx: 0.12, dy: -0.22, r: 0.16, h: 0.3 }],
@@ -246,7 +246,7 @@ export const SOUTH_BLUE = [
   // gang bosses — Kid, Killer, Heat and Wire — until a rival gang murdered
   // their friend Victoria and Kid united them all.
   {
-    id: 'kutsukku_island', name: 'Kutsukku Island', sea: 'south_blue', x: 2500, y: 1706, w: 240, h: 170,
+    id: 'kutsukku_island', name: 'Kutsukku Island', sea: 'south_blue', x: 2500, y: 1797, w: 240, h: 170,
     climate: 'autumn', rough: 0.24,
     blobs: [[0, 0, 0.86, 0.84], [-0.52, -0.46, 0.34, 0.3], [0.52, 0.5, 0.34, 0.3]],
     areas: [
@@ -313,7 +313,7 @@ export const SOUTH_BLUE = [
   // his execution the Marines scoured the island for his unborn child. Rouge
   // carried Ace for twenty months to hide him.
   {
-    id: 'baterilla', name: 'Baterilla', sea: 'south_blue', x: 2890, y: 1665, w: 150, h: 104,
+    id: 'baterilla', name: 'Baterilla', sea: 'south_blue', x: 2890, y: 1767, w: 150, h: 104,
     climate: 'tropical', rough: 0.26,
     blobs: [[0.02, 0.05, 0.88, 0.8], [0.45, -0.42, 0.36, 0.34], [-0.55, -0.32, 0.3, 0.3]],
     mountains: [{ name: 'Sunset Hill', dx: 0.55, dy: -0.5, r: 0.14, h: 0.35 }],
@@ -367,7 +367,7 @@ export const SOUTH_BLUE = [
   // Bekori came back to burn the "deadweight" and Kuma destroyed his palace
   // alone: the Solo Revolution.
   {
-    id: 'sorbet_kingdom', name: 'Sorbet Kingdom', sea: 'south_blue', x: 3270, y: 1690, w: 280, h: 200,
+    id: 'sorbet_kingdom', name: 'Sorbet Kingdom', sea: 'south_blue', x: 3270, y: 1785, w: 280, h: 200,
     climate: 'tropical', rough: 0.24,
     blobs: [[0, 0.02, 0.86, 0.8], [0, -0.52, 0.52, 0.36], [-0.5, 0.45, 0.4, 0.38], [0.5, 0.45, 0.4, 0.38]],
     mountains: [
@@ -437,7 +437,7 @@ export const SOUTH_BLUE = [
   // King Moqueca's kingdom of drums and carnival. The dancer Pascia, later sold
   // at the Sabaody auction, came from the South Blue.
   {
-    id: 'samba_kingdom', name: 'Samba Kingdom', sea: 'south_blue', x: 3650, y: 1665, w: 150, h: 100,
+    id: 'samba_kingdom', name: 'Samba Kingdom', sea: 'south_blue', x: 3650, y: 1767, w: 150, h: 100,
     climate: 'tropical', rough: 0.26,
     blobs: [[0, 0, 0.86, 0.8], [0.52, 0.36, 0.36, 0.34], [-0.5, -0.4, 0.3, 0.3]],
     areas: [
@@ -476,7 +476,7 @@ export const SOUTH_BLUE = [
   // Birthplace of the giantess Ida, who left for a circus in the Bunt Kingdom
   // and later ran a bar in Elbaf.
   {
-    id: 'samuwanai_island', name: 'Samuwanai Island', sea: 'south_blue', x: 3930, y: 1640, w: 46, h: 40,
+    id: 'samuwanai_island', name: 'Samuwanai Island', sea: 'south_blue', x: 3930, y: 1749, w: 46, h: 40,
     climate: 'tropical', rough: 0.3,
     landmarks: [
       { kind: 'ruins', dx: -0.1, dy: -0.1, name: 'Giant-sized cottage' },
@@ -492,7 +492,7 @@ export const SOUTH_BLUE = [
   // Kuzan (Aokiji) was born in one of its territories and left thirty years
   // before the present.
   {
-    id: 'vespa_kingdom', name: 'Vespa Kingdom', sea: 'south_blue', x: 2440, y: 1910, w: 120, h: 80,
+    id: 'vespa_kingdom', name: 'Vespa Kingdom', sea: 'south_blue', x: 2440, y: 1942, w: 120, h: 80,
     climate: 'temperate', rough: 0.24,
     blobs: [[0, 0, 0.86, 0.8], [0.5, -0.35, 0.34, 0.3]],
     areas: [{ tile: T.FARM, name: 'Vineyards', dx: 0.4, dy: -0.25, rx: 0.2, ry: 0.15 }],
@@ -518,7 +518,7 @@ export const SOUTH_BLUE = [
   // Aramaki (Ryokugyu) was a police officer here before he was arrested and
   // drafted into the Marines by the World Government.
   {
-    id: 'taya_kingdom', name: 'Taya Kingdom', sea: 'south_blue', x: 2800, y: 1895, w: 140, h: 100,
+    id: 'taya_kingdom', name: 'Taya Kingdom', sea: 'south_blue', x: 2800, y: 1931, w: 140, h: 100,
     climate: 'temperate', rough: 0.24,
     blobs: [[0, 0, 0.86, 0.8], [0.45, -0.35, 0.36, 0.34]],
     areas: [{ name: 'Deep Taya Forest', tile: T.FOREST, dx: 0.32, dy: -0.12, rx: 0.36, ry: 0.4 }],
@@ -548,7 +548,7 @@ export const SOUTH_BLUE = [
   // King Beer VI and his nesting-doll daughters, the Matryo Princesses:
   // Matryosaka, Matryosuka, Matryoseka and the smallest, Matryosoka.
   {
-    id: 'roshwan_kingdom', name: 'Roshwan Kingdom', sea: 'south_blue', x: 3190, y: 1900, w: 170, h: 110,
+    id: 'roshwan_kingdom', name: 'Roshwan Kingdom', sea: 'south_blue', x: 3190, y: 1935, w: 170, h: 110,
     climate: 'winter', rough: 0.22,
     blobs: [[0, 0, 0.86, 0.82], [0.5, -0.3, 0.36, 0.34]],
     mountains: [{ name: 'Frostfang Ridge', dx: 0.5, dy: -0.34, r: 0.16, h: 0.7 }],
@@ -579,7 +579,7 @@ export const SOUTH_BLUE = [
   // After Wapol Konzern made him rich again, the World Nobles gave Wapol a
   // new kingdom in the South Blue: a huge castle under stormy skies.
   {
-    id: 'evil_black_drum', name: 'Evil Black Drum Kingdom', sea: 'south_blue', x: 3620, y: 1895, w: 150, h: 110,
+    id: 'evil_black_drum', name: 'Evil Black Drum Kingdom', sea: 'south_blue', x: 3620, y: 1931, w: 150, h: 110,
     climate: 'winter', rough: 0.24,
     blobs: [[0, 0, 0.86, 0.82], [0.46, -0.4, 0.34, 0.3]],
     mountains: [{ name: 'Tin-Plate Crag', dx: 0.45, dy: -0.4, r: 0.16, h: 0.75 }],

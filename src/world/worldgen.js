@@ -482,8 +482,8 @@ function scatterIslets(world, noise, rng) {
     for (const o of world.islets) if (world.distance(x, y, o.x, o.y) < o.r + r + chart(40)) { ok = false; break; }
     if (!ok) continue;
     const calm = reg === REGION.CALM_NORTH || reg === REGION.CALM_SOUTH;
-    const cold = y < chart(260) || y > H - chart(260);
-    const tropical = !cold && Math.abs(y - EQ) < chart(500);
+    const cold = y < chart(190) || y > H - chart(190);
+    const tropical = !cold && Math.abs(y - EQ) < chart(620);
     const kind = rng.next();
     let ground = T.GRASS, clim = CLIMATE.TEMPERATE, trees = 'oak';
     if (cold) { ground = T.SNOW; clim = CLIMATE.WINTER; trees = 'snowpine'; }

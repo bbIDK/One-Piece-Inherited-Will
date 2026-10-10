@@ -19,7 +19,7 @@ export const PARADISE_1 = [
   // keeps the northern lighthouse. Laboon floats in the bay to the west,
   // facing the Red Line.
   {
-    id: 'twin_cape', name: 'Twin Cape', sea: 'paradise', x: 2268, y: 1025, w: 76, h: 150,
+    id: 'twin_cape', name: 'Twin Cape', sea: 'paradise', x: 2268, y: 1026, w: 76, h: 150,
     climate: 'temperate', rough: 0.1, archipelago: true,
     blobs: [[0.04, -0.6, 0.92, 0.29], [-0.45, -0.52, 0.42, 0.2], [0.04, 0.6, 0.92, 0.29], [-0.45, 0.52, 0.42, 0.2]],
     trees: ['palm', 'bush'], treeDensity: 0.03,
@@ -40,13 +40,13 @@ export const PARADISE_1 = [
       { id: 'harpoon_point', dx: -0.8, dy: -0.62 },
     ],
     docks: [{ dx: 0.62, dy: -0.6, dir: 'e', len: 5, name: 'Twin Cape Pier' }],
-    logNext: ['cactus_island', 'kyuka_island', 'kenzan_island', 'foolshout_island', 'ruluka_island', 'navarone', 'vira'], logTime: 1,
+    logNext: ['cactus_island', 'kyuka_island', 'kenzan_island', 'foolshout_island', 'ruluka_island', 'navarone', 'vira', 'warship_island', 'hannabal', 'saltpetre_isle'], logTime: 1,
     danger: 3, tagline: 'The canal down Reverse Mountain ends here — and a whale still waits for friends who never came back.', music: 'grandline',
   },
 
   // ------------------------------------------------- the seven routes: 1. Navarone (G-8)
   {
-    id: 'navarone', name: 'Navarone', sea: 'paradise', x: 2268, y: 882, w: 58, h: 56,
+    id: 'navarone', name: 'Navarone', sea: 'paradise', x: 2268, y: 740, w: 58, h: 56,
     climate: 'temperate', rough: 0.18,
     blobs: [[0, 0.05, 0.9, 0.85], [0.55, -0.55, 0.3, 0.3]],
     mountains: [{ name: 'The Hedgehog', dx: 0.4, dy: -0.45, r: 0.2, h: 0.8 }],
@@ -71,7 +71,7 @@ export const PARADISE_1 = [
 
   // ------------------------------------------------- 2. Ruluka Island (anime)
   {
-    id: 'ruluka_island', name: 'Ruluka Island', sea: 'paradise', x: 2268, y: 1168, w: 58, h: 56,
+    id: 'ruluka_island', name: 'Ruluka Island', sea: 'paradise', x: 2268, y: 1312, w: 58, h: 56,
     climate: 'spring', rough: 0.22,
     towns: [{
       id: 'ruluka_town', name: 'Ruluka', dx: 0, dy: 0.1, w: 40, h: 28, style: 'town', dockDir: 'w', plaza: 'fountain',
@@ -91,7 +91,7 @@ export const PARADISE_1 = [
 
   // ------------------------------------------------- 3. Kenzan Island
   {
-    id: 'kenzan_island', name: 'Kenzan Island', sea: 'paradise', x: 2378, y: 948, w: 72, h: 60,
+    id: 'kenzan_island', name: 'Kenzan Island', sea: 'paradise', x: 2378, y: 872, w: 72, h: 60,
     climate: 'rocky', rough: 0.26, ground: T.GRASS,
     mountains: [
       { name: 'Sword Peak', dx: -0.5, dy: -0.5, r: 0.1, h: 1.3 },
@@ -116,7 +116,7 @@ export const PARADISE_1 = [
 
   // ------------------------------------------------- 4. Foolshout Island
   {
-    id: 'foolshout_island', name: 'Foolshout Island', sea: 'paradise', x: 2376, y: 1088, w: 70, h: 58,
+    id: 'foolshout_island', name: 'Foolshout Island', sea: 'paradise', x: 2376, y: 1152, w: 70, h: 58,
     climate: 'tropical', rough: 0.24,
     blobs: [[0, 0, 0.9, 0.85], [-0.6, 0.45, 0.35, 0.3]],
     areas: [{ tile: T.FARM, dx: 0.3, dy: -0.3, rx: 0.2, ry: 0.15 }],
@@ -138,7 +138,7 @@ export const PARADISE_1 = [
 
   // ------------------------------------------------- 5. Cactus Island (Whisky Peak)
   {
-    id: 'cactus_island', name: 'Cactus Island', sea: 'paradise', x: 2508, y: 1012, w: 116, h: 92,
+    id: 'cactus_island', name: 'Cactus Island', sea: 'paradise', x: 2508, y: 1000, w: 116, h: 92,
     climate: 'desert', rough: 0.22,
     blobs: [[0, 0, 0.92, 0.85], [0.55, -0.4, 0.4, 0.4]],
     trees: ['cactus', 'deadbush', 'palm'], treeDensity: 0.02,
@@ -170,7 +170,7 @@ export const PARADISE_1 = [
 
   // ------------------------------------------------- 6. Kyuka Island
   {
-    id: 'kyuka_island', name: 'Kyuka Island', sea: 'paradise', x: 2500, y: 880, w: 72, h: 56,
+    id: 'kyuka_island', name: 'Kyuka Island', sea: 'paradise', x: 2500, y: 736, w: 72, h: 56,
     climate: 'tropical', rough: 0.2,
     mountains: [{ name: 'Umbrella Hill', dx: 0.35, dy: -0.25, r: 0.22, h: 0.55 }],
     lakes: [{ dx: -0.3, dy: -0.35, rx: 0.07, ry: 0.06 }, { dx: -0.12, dy: -0.4, rx: 0.05, ry: 0.05 }],
@@ -192,7 +192,7 @@ export const PARADISE_1 = [
 
   // ------------------------------------------------- 7. Vira
   {
-    id: 'vira', name: 'Vira', sea: 'paradise', x: 2508, y: 1152, w: 78, h: 58,
+    id: 'vira', name: 'Vira', sea: 'paradise', x: 2508, y: 1280, w: 78, h: 58,
     climate: 'spring', rough: 0.22,
     areas: [{ name: 'Burnt quarter', tile: T.ASH, dx: 0.45, dy: -0.3, rx: 0.16, ry: 0.14 }, { tile: T.FARM, dx: -0.5, dy: 0.3, rx: 0.18, ry: 0.12 }],
     towns: [{
@@ -214,7 +214,7 @@ export const PARADISE_1 = [
   // A prehistoric island: circular, jungle, a volcano whose eruptions start
   // each round of the giants' hundred-year duel. The log takes a YEAR.
   {
-    id: 'little_garden', name: 'Little Garden', sea: 'paradise', x: 2692, y: 885, w: 124, h: 92,
+    id: 'little_garden', name: 'Little Garden', sea: 'paradise', x: 2692, y: 746, w: 124, h: 92,
     climate: 'prehistoric', rough: 0.2,
     blobs: [[0, 0, 0.92, 0.9]],
     mountains: [{ name: 'The Volcano', dx: 0.02, dy: -0.35, r: 0.17, h: 1.05, peak: T.ROCK }],
@@ -244,7 +244,7 @@ export const PARADISE_1 = [
   // short of climbing the cliff. Bighorn lies by the river where ships dock;
   // Gyasta by its frozen lake.
   {
-    id: 'drum_island', name: 'Drum Island', sea: 'paradise', x: 2690, y: 1126, w: 132, h: 112,
+    id: 'drum_island', name: 'Drum Island', sea: 'paradise', x: 2690, y: 1228, w: 132, h: 112,
     climate: 'winter', rough: 0.2,
     blobs: [[0, 0, 0.92, 0.9], [-0.5, 0.45, 0.4, 0.35]],
     drums: [
@@ -305,7 +305,7 @@ export const PARADISE_1 = [
   // "Island of Nothing": not an island at all but the droppings of the Island
   // Eater, the giant goldfish of Little Garden's seas.
   {
-    id: 'nanimonai_island', name: 'Nanimonai Island', sea: 'paradise', x: 2794, y: 972, w: 32, h: 26,
+    id: 'nanimonai_island', name: 'Nanimonai Island', sea: 'paradise', x: 2794, y: 920, w: 32, h: 26,
     climate: 'marsh', rough: 0.3, treeDensity: 0.01, noDock: true,
     landmarks: [{ kind: 'sign', dx: 0, dy: 0, name: 'Nanimonai Island — there is nothing here', spot: 'nothing', lore: '"NANIMONAI ISLAND. There is nothing here." (Underneath, in a giant\'s enormous handwriting:) "DON\'T DIG. — the Giant Warrior Pirates"' }, { kind: 'bones', dx: 0.35, dy: 0.2 }],
     logNext: ['alabasta'], logTime: 1,
@@ -317,7 +317,7 @@ export const PARADISE_1 = [
   // Rainbase, Yuba, the Spiders Café, Erumalu. East bank: Alubarna (plateau,
   // palace, Tomb of the Kings), Nanohana (southern port), Katorea (oasis).
   {
-    id: 'alabasta', name: 'Alabasta Kingdom', sea: 'paradise', x: 2976, y: 1112, w: 282, h: 200,
+    id: 'alabasta', name: 'Alabasta Kingdom', sea: 'paradise', x: 2976, y: 1200, w: 282, h: 200,
     climate: 'desert', rough: 0.16,
     blobs: [[0, 0, 0.95, 0.9], [0.35, 0.55, 0.45, 0.35], [-0.6, -0.45, 0.35, 0.35]],
     trees: ['cactus', 'deadbush', 'palm'], treeDensity: 0.012,
@@ -423,7 +423,7 @@ export const PARADISE_1 = [
   // into the sky 400 years ago. Mock Town on the west coast, Cricket's house
   // on the east. The Knock Up Stream erupts to the south.
   {
-    id: 'jaya', name: 'Jaya', sea: 'paradise', x: 2915, y: 877, w: 124, h: 86,
+    id: 'jaya', name: 'Jaya', sea: 'paradise', x: 2915, y: 730, w: 124, h: 86,
     climate: 'jungle', rough: 0.3,
     blobs: [[-0.55, 0, 0.42, 0.85], [0.1, -0.55, 0.72, 0.32], [0.1, 0.55, 0.72, 0.32]],
     archipelago: false,
@@ -459,7 +459,7 @@ export const PARADISE_1 = [
   // A chain of long, thin islands in a ring (really one island whose
   // connecting path surfaces once a year). Everything here grows long.
   {
-    id: 'long_ring_long_land', name: 'Long Ring Long Land', sea: 'paradise', x: 3064, y: 874, w: 124, h: 68,
+    id: 'long_ring_long_land', name: 'Long Ring Long Land', sea: 'paradise', x: 3064, y: 724, w: 124, h: 68,
     climate: 'temperate', rough: 0.12, archipelago: true,
     blobs: [
       [-0.05, -0.72, 0.62, 0.16], [0.72, -0.2, 0.14, 0.42], [0.1, 0.62, 0.62, 0.3], [-0.72, 0.05, 0.14, 0.45],

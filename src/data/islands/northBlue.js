@@ -21,7 +21,7 @@ import { T } from '../../world/tiles.js';
 export const NORTH_BLUE = [
   // ------------------------------------------------------------ Downs
   {
-    id: 'downs', name: 'Downs', sea: 'north_blue', x: 190, y: 170, w: 90, h: 70,
+    id: 'downs', name: 'Downs', sea: 'north_blue', x: 190, y: 129, w: 90, h: 70,
     climate: 'marsh', rough: 0.3,
     blobs: [[0, 0, 0.85, 0.8], [0.4, 0.35, 0.35, 0.35]],
     areas: [
@@ -58,7 +58,7 @@ export const NORTH_BLUE = [
 
   // ------------------------------------------------------------ Flevance
   {
-    id: 'flevance', name: 'Flevance', sea: 'north_blue', x: 560, y: 190, w: 210, h: 150,
+    id: 'flevance', name: 'Flevance', sea: 'north_blue', x: 560, y: 143, w: 210, h: 150,
     climate: 'winter', rough: 0.24,
     blobs: [[0, 0, 0.85, 0.8], [-0.55, 0.35, 0.4, 0.4], [0.5, -0.35, 0.45, 0.4]],
     mountains: [{ name: 'Amber Lead Hills', dx: 0.55, dy: -0.45, r: 0.2, h: 0.55 }],
@@ -109,7 +109,7 @@ export const NORTH_BLUE = [
 
   // ----------------------------------------------------- Whiteland Kingdom
   {
-    id: 'whiteland', name: 'Whiteland Kingdom', sea: 'north_blue', x: 1000, y: 120, w: 130, h: 80,
+    id: 'whiteland', name: 'Whiteland Kingdom', sea: 'north_blue', x: 1000, y: 93, w: 130, h: 80,
     climate: 'winter', rough: 0.25,
     blobs: [[0, 0, 0.85, 0.8], [0.45, 0.3, 0.35, 0.35]],
     mountains: [{ name: 'Penguin Rock', dx: -0.5, dy: -0.3, r: 0.22, h: 0.7 }],
@@ -136,7 +136,7 @@ export const NORTH_BLUE = [
 
   // ------------------------------------------------------- Lvneel Kingdom
   {
-    id: 'lvneel', name: 'Lvneel Kingdom', sea: 'north_blue', x: 960, y: 330, w: 240, h: 160,
+    id: 'lvneel', name: 'Lvneel Kingdom', sea: 'north_blue', x: 960, y: 243, w: 240, h: 160,
     climate: 'temperate', rough: 0.22,
     blobs: [[0, 0, 0.85, 0.8], [-0.55, -0.3, 0.4, 0.45], [0.55, 0.3, 0.4, 0.4]],
     mountains: [{ name: 'Lvneel Hills', dx: -0.55, dy: -0.4, r: 0.18, h: 0.45 }],
@@ -192,7 +192,7 @@ export const NORTH_BLUE = [
 
   // ---------------------------------------------------------- Deul Kingdom
   {
-    id: 'deul', name: 'Deul Kingdom', sea: 'north_blue', x: 1440, y: 190, w: 190, h: 130,
+    id: 'deul', name: 'Deul Kingdom', sea: 'north_blue', x: 1440, y: 143, w: 190, h: 130,
     climate: 'temperate', rough: 0.24,
     blobs: [[0, 0, 0.85, 0.8], [0.5, 0.35, 0.35, 0.35], [-0.5, -0.35, 0.35, 0.35]],
     mountains: [{ name: 'Eagle Crag', dx: 0.55, dy: -0.45, r: 0.18, h: 0.6 }],
@@ -228,7 +228,7 @@ export const NORTH_BLUE = [
   // snail-ships, interlocked around the Vinsmoke Castle. At anchor near the
   // Red Line — Germa's snails can climb it.
   {
-    id: 'germa_kingdom', name: 'Germa Kingdom', sea: 'north_blue', x: 1790, y: 330, w: 120, h: 90,
+    id: 'germa_kingdom', name: 'Germa Kingdom', sea: 'north_blue', x: 1790, y: 243, w: 120, h: 90,
     climate: 'temperate', ground: T.COBBLE, beach: T.PLANK, rough: 0.04, noiseScale: 0.02, elevRate: 0.5, beachWidth: 1,
     archipelago: true,
     blobs: [[0, 0, 0.48, 0.48], [0.62, -0.52, 0.26, 0.3], [0.62, 0.52, 0.26, 0.3], [-0.66, 0.02, 0.28, 0.36]],
@@ -273,7 +273,7 @@ export const NORTH_BLUE = [
 
   // --------------------------------------------------------- Spider Miles
   {
-    id: 'spider_miles', name: 'Spider Miles', sea: 'north_blue', x: 330, y: 420, w: 170, h: 120,
+    id: 'spider_miles', name: 'Spider Miles', sea: 'north_blue', x: 330, y: 307, w: 170, h: 120,
     climate: 'rocky', rough: 0.24,
     blobs: [[0, 0, 0.85, 0.8], [0.5, 0.4, 0.4, 0.35], [-0.5, -0.4, 0.35, 0.35]],
     areas: [
@@ -330,7 +330,7 @@ export const NORTH_BLUE = [
 
   // --------------------------------------------------------------- Rakesh
   {
-    id: 'rakesh', name: 'Rakesh', sea: 'north_blue', x: 200, y: 620, w: 130, h: 95,
+    id: 'rakesh', name: 'Rakesh', sea: 'north_blue', x: 200, y: 450, w: 130, h: 95,
     climate: 'autumn', rough: 0.26,
     blobs: [[0, 0, 0.85, 0.8], [0.45, 0.35, 0.4, 0.4], [-0.5, -0.3, 0.35, 0.35]],
     mountains: [{ name: 'Rakesh Heights', dx: -0.55, dy: -0.38, r: 0.2, h: 0.5 }],
@@ -367,7 +367,7 @@ export const NORTH_BLUE = [
 
   // --------------------------------------------------------------- Notice
   {
-    id: 'notice', name: 'Notice', sea: 'north_blue', x: 640, y: 470, w: 140, h: 100,
+    id: 'notice', name: 'Notice', sea: 'north_blue', x: 640, y: 343, w: 140, h: 100,
     climate: 'spring', rough: 0.22,
     blobs: [[0, 0, 0.85, 0.8], [0.5, -0.35, 0.35, 0.35]],
     areas: [
@@ -404,7 +404,7 @@ export const NORTH_BLUE = [
 
   // --------------------------------------------------------- Kuen Village
   {
-    id: 'kuen', name: 'Kuen Village', sea: 'north_blue', x: 780, y: 640, w: 120, h: 90,
+    id: 'kuen', name: 'Kuen Village', sea: 'north_blue', x: 780, y: 464, w: 120, h: 90,
     climate: 'autumn', ground: T.DIRT, rough: 0.26,
     blobs: [[0, 0, 0.85, 0.8], [-0.45, -0.35, 0.4, 0.35]],
     mountains: [{ name: 'Kuen Mountain', dx: -0.55, dy: -0.45, r: 0.2, h: 0.5 }],
@@ -437,7 +437,7 @@ export const NORTH_BLUE = [
 
   // -------------------------------------------------------- Rubeck Island
   {
-    id: 'rubeck', name: 'Rubeck Island', sea: 'north_blue', x: 1180, y: 480, w: 70, h: 55,
+    id: 'rubeck', name: 'Rubeck Island', sea: 'north_blue', x: 1180, y: 350, w: 70, h: 55,
     climate: 'winter', rough: 0.25,
     towns: [{
       id: 'rubeck_camp', name: 'Marine Exchange Camp', dx: 0, dy: 0.1, w: 32, h: 24, style: 'marine', dockDir: 's', plaza: 'flagpole',
@@ -456,7 +456,7 @@ export const NORTH_BLUE = [
 
   // -------------------------------------------------------- Minion Island
   {
-    id: 'minion_island', name: 'Minion Island', sea: 'north_blue', x: 1400, y: 440, w: 140, h: 110,
+    id: 'minion_island', name: 'Minion Island', sea: 'north_blue', x: 1400, y: 321, w: 140, h: 110,
     climate: 'winter', rough: 0.26,
     blobs: [[0, 0, 0.85, 0.8], [0.45, -0.4, 0.35, 0.35], [-0.5, 0.4, 0.35, 0.3]],
     mountains: [{ name: 'Minion Hills', dx: -0.5, dy: -0.35, r: 0.2, h: 0.4 }],
@@ -488,7 +488,7 @@ export const NORTH_BLUE = [
   // in the shape of a swallow at its heart. Heavy winters. Pleasure Town is
   // its town (One Piece novel Law).
   {
-    id: 'swallow_island', name: 'Swallow Island', sea: 'north_blue', x: 1300, y: 630, w: 150, h: 110,
+    id: 'swallow_island', name: 'Swallow Island', sea: 'north_blue', x: 1300, y: 457, w: 150, h: 110,
     climate: 'winter', rough: 0.2,
     blobs: [
       [0.05, 0, 0.45, 0.36], [0.52, -0.08, 0.22, 0.24],

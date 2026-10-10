@@ -25,7 +25,7 @@ function odds(climate, n = 4000, seed = 7) {
 const sum = (o, ks) => ks.reduce((a, k) => a + (o[k] || 0), 0);
 
 // spots on the chart (world tiles)
-const EAST_BLUE = { x: RM_X + 3000, y: EQ - 3000 }; // north-east of Reverse Mountain
+const EAST_BLUE = { x: RM_X + 3000, y: EQ - 4000 }; // north-east of Reverse Mountain
 const PARADISE = { x: RM_X + 3000, y: EQ + 200 };
 const NEW_WORLD = { x: RM_X - 3000, y: EQ - 200 };
 const CALM = { x: RM_X + 3000, y: (CB_TOP + GL_TOP) / 2 };

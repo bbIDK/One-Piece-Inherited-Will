@@ -837,7 +837,7 @@ export class UI {
     }
     // location
     const isl = game.currentIsland;
-    const rmHere = game.world.zone === 0 && !isl?.name && Math.abs(game.world.dx(p.x, RM_X)) < 1000 && Math.abs(p.y - EQ) < 2300 && regionAt(p.x, p.y) === REGION.RED_LINE;
+    const rmHere = game.world.zone === 0 && !isl?.name && Math.abs(game.world.dx(p.x, RM_X)) < 1000 && Math.abs(p.y - EQ) < 3500 && regionAt(p.x, p.y) === REGION.RED_LINE;
     // (up on the Red Line's rock itself: not the open sea)
     const onRedLine = !isl?.name && game.world.zone === 0 && !p.inWater && p.mode !== 'sail' && regionAt(p.x, p.y) === REGION.RED_LINE && !game.world.isLiquid(p.x, p.y);
     const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : rmHere ? 'Reverse Mountain' : onRedLine ? 'The Red Line' : 'Open Sea';

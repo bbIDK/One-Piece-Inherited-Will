@@ -187,5 +187,5 @@ export function installLegends(game) {
 /** The All Blue's position differs for every lineage (seeded). */
 export function allBluePoint(c) {
   const r = ((c.runSeed || 1) % 1000) / 1000;
-  return { x: chart(260 + r * 1400), y: chart(880 + ((c.runSeed || 7) % 7) * 45) };
+  return { x: chart(260 + r * 1400), y: chart(736 + ((c.runSeed || 7) % 7) * 90) };
 }

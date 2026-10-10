@@ -37,6 +37,6 @@ test('colder toward the poles, by night, and in the snow; the Blues cold and war
   assert.ok(temperature('desert', 0.2, 15) > 35);
   assert.equal(seaClimate(REGION.NORTH_BLUE, 400, H, CB_TOP, CB_BOTTOM), 'cold_sea');
   assert.equal(seaClimate(REGION.SOUTH_BLUE, CB_BOTTOM + 200, H, CB_TOP, CB_BOTTOM), 'warm_sea');
-  assert.equal(seaClimate(REGION.EAST_BLUE, 3000, H, CB_TOP, CB_BOTTOM), 'east_blue');
+  assert.equal(seaClimate(REGION.EAST_BLUE, 2000, H, CB_TOP, CB_BOTTOM), 'east_blue');
   assert.equal(seaClimate(REGION.PARADISE, 400, H, CB_TOP, CB_BOTTOM), 'paradise');
 });

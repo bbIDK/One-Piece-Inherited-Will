@@ -36,17 +36,17 @@ function span(isl, a, b, rx, ry) {
 }
 
 // ------------------------------------------------------------ geometry
-const W7 = { x: 3300, y: 1000, w: 220, h: 160 };
+const W7 = { x: 3300, y: 976, w: 220, h: 160 };
 const W7_UPPER = { style: 'noble', plaza: false, ground: T.STONE, road: T.STONE, plazaTile: T.STONE };
-const EL = { x: 3505, y: 1010, w: 110, h: 100 };
-const TB = { x: 3675, y: 1010, w: 160, h: 130 };
-const SB = { x: 3880, y: 1060, w: 180, h: 140 };
-const MF = { x: 3880, y: 890, w: 150, h: 100 };
-const KG = { x: 3610, y: 866, w: 76, h: 56 };
-const IDN = { x: 3650, y: 1262, w: 64, h: 48 };
-const RU = { x: 3380, y: 776, w: 80, h: 46 };
-const SPA = { x: 3620, y: 1170, w: 56, h: 44 };
-const BO = { x: 3385, y: 1165, w: 90, h: 70 };
+const EL = { x: 3505, y: 996, w: 110, h: 100 };
+const TB = { x: 3675, y: 996, w: 160, h: 130 };
+const SB = { x: 3880, y: 1096, w: 180, h: 140 };
+const MF = { x: 3880, y: 756, w: 150, h: 100 };
+const KG = { x: 3610, y: 708, w: 76, h: 56 };
+const IDN = { x: 3650, y: 1462, w: 64, h: 48 };
+const RU = { x: 3380, y: 576, w: 80, h: 46 };
+const SPA = { x: 3620, y: 1316, w: 56, h: 44 };
+const BO = { x: 3385, y: 1306, w: 90, h: 70 };
 
 // Sabaody's 79 Yarukiman Mangroves, grouped as the canon districts.
 const GROVES = [
@@ -170,7 +170,7 @@ export const PARADISE_2 = [
     tagline: 'The City of Water — a city in terraces round the Great Fountain, home of Galley-La, the finest shipwrights in the world.',
   },
   {
-    id: 'st_poplar', name: 'St. Poplar', sea: 'paradise', x: 3232, y: 862, w: 64, h: 46, climate: 'spring', rough: 0.2,
+    id: 'st_poplar', name: 'St. Poplar', sea: 'paradise', x: 3232, y: 700, w: 64, h: 46, climate: 'spring', rough: 0.2,
     areas: [{ name: 'Poplar timber groves', tile: T.FOREST, dx: 0.45, dy: 0.2, rx: 0.2, ry: 0.3 }],
     towns: [{
       id: 'st_poplar_town', name: 'St. Poplar', dx: -0.05, dy: -0.08, w: 40, h: 26, style: 'town', dockDir: 'w', plaza: 'fountain',
@@ -185,7 +185,7 @@ export const PARADISE_2 = [
     logNext: ['water_7'], logTime: 1, danger: 4, tagline: 'The Town of the Spring Queen — one hour from Water 7 by sea train.',
   },
   {
-    id: 'pucci', name: 'Pucci', sea: 'paradise', x: 3345, y: 862, w: 60, h: 44, climate: 'temperate', rough: 0.2,
+    id: 'pucci', name: 'Pucci', sea: 'paradise', x: 3345, y: 700, w: 60, h: 44, climate: 'temperate', rough: 0.2,
     areas: [{ name: 'Orchards', tile: T.FARM, dx: -0.45, dy: 0.25, rx: 0.15, ry: 0.15 }],
     towns: [{
       id: 'pucci_town', name: 'Pucci', dx: 0.05, dy: -0.08, w: 38, h: 24, style: 'town', dockDir: 'e', plaza: 'fountain',
@@ -199,7 +199,7 @@ export const PARADISE_2 = [
     logNext: ['water_7'], logTime: 1, danger: 4, tagline: 'The Gourmet City. Every street smells of something delicious.',
   },
   {
-    id: 'san_faldo', name: 'San Faldo', sea: 'paradise', x: 3260, y: 1160, w: 76, h: 52, climate: 'temperate', rough: 0.2,
+    id: 'san_faldo', name: 'San Faldo', sea: 'paradise', x: 3260, y: 1296, w: 76, h: 52, climate: 'temperate', rough: 0.2,
     towns: [{
       id: 'san_faldo_town', name: 'San Faldo', dx: 0.02, dy: 0.06, w: 46, h: 28, style: 'city', dockDir: 's', plaza: 'platform',
       buildings: [
@@ -442,7 +442,7 @@ export const PARADISE_2 = [
     tagline: 'The ruins of a war-torn kingdom, where baboons learned to fight by watching men — and the world\'s greatest swordsman lives.',
   },
   {
-    id: 'namakura', name: 'Namakura Island', sea: 'paradise', x: 3725, y: 862, w: 56, h: 44, climate: 'tropical', rough: 0.3,
+    id: 'namakura', name: 'Namakura Island', sea: 'paradise', x: 3725, y: 700, w: 56, h: 44, climate: 'tropical', rough: 0.3,
     towns: [{
       id: 'namakura_village', name: 'Namakura Village', dx: 0, dy: 0.05, w: 30, h: 20, style: 'tribal', dockDir: 'n', plaza: 'platform',
       buildings: [{ role: 'hall', name: "Village Elder's Hut", npc: 'p2_namakura_elder' }, { role: 'market', name: 'Namakura Market' }],
@@ -451,7 +451,7 @@ export const PARADISE_2 = [
     logNext: ['sabaody'], logTime: 1, danger: 5, tagline: 'An island of tall tales, where a talking skeleton was once mistaken for the devil.',
   },
   {
-    id: 'karakuri', name: 'Karakuri Island', sea: 'paradise', x: 3520, y: 1150, w: 80, h: 70, climate: 'winter', rough: 0.25,
+    id: 'karakuri', name: 'Karakuri Island', sea: 'paradise', x: 3520, y: 1276, w: 80, h: 70, climate: 'winter', rough: 0.25,
     towns: [{
       id: 'baldimore', name: 'Future Land Baldimore', dx: 0.05, dy: 0.05, w: 40, h: 26, style: 'future', dockDir: 's', plaza: 'fountain',
       buildings: [
@@ -476,7 +476,7 @@ export const PARADISE_2 = [
     logNext: ['sabaody'], logTime: 1, danger: 6, tagline: 'A jungle of monstrous plants and insects. Only a Forest Scholar calls it home.',
   },
   {
-    id: 'momoiro', name: 'Momoiro Island', sea: 'paradise', x: 3715, y: 1165, w: 76, h: 64, climate: 'sakura', rough: 0.22,
+    id: 'momoiro', name: 'Momoiro Island', sea: 'paradise', x: 3715, y: 1306, w: 76, h: 64, climate: 'sakura', rough: 0.22,
     areas: [{ name: 'Pink meadows', tile: T.FLOWERS, dx: -0.4, dy: -0.35, rx: 0.25, ry: 0.2 }],
     towns: [{
       id: 'kamabakka', name: 'Kamabakka Kingdom', dx: 0.02, dy: 0.05, w: 46, h: 30, style: 'candy', dockDir: 'w', plaza: 'fountain',
@@ -507,7 +507,7 @@ export const PARADISE_2 = [
     danger: 7, tagline: 'A Calm Belt island of savage beasts, north-west of Amazon Lily. A fine place to train for two years.',
   },
   {
-    id: 'amazon_lily', name: 'Amazon Lily', sea: 'calm_belt', x: 3560, y: 784, w: 130, h: 56, climate: 'jungle', rough: 0.18, population: [['human', 100]],
+    id: 'amazon_lily', name: 'Amazon Lily', sea: 'calm_belt', x: 3560, y: 584, w: 130, h: 56, climate: 'jungle', rough: 0.18, population: [['human', 100]],
     blobs: [[0, 0, 0.95, 0.9]],
     mountains: [{ name: 'Western cliffs', dx: -0.8, dy: -0.1, r: 0.1, h: 0.8 }, { name: 'Eastern cliffs', dx: 0.8, dy: -0.1, r: 0.1, h: 0.8 }],
     towns: [{

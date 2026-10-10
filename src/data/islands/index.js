@@ -7,6 +7,7 @@ import { PARADISE_1 } from './paradise1.js';
 import { PARADISE_2 } from './paradise2.js';
 import { NEW_WORLD } from './newWorld.js';
 import { NEW_WORLD_2 } from './newWorld2.js';
+import { PARADISE_3, NEW_WORLD_3 } from './grandLine3.js';
 
 import { POS_SCALE, SIZE_SCALE } from '../../world/constants.js';
 import { MARINE_POSTS } from './marinePosts.js';
@@ -37,5 +38,20 @@ function marinePosts(d) {
   return d;
 }
 
-export const ALL_ISLANDS = [...EAST_BLUE, ...NORTH_BLUE, ...WEST_BLUE, ...SOUTH_BLUE, ...PARADISE_1, ...PARADISE_2, ...NEW_WORLD, ...NEW_WORLD_2].map(marinePosts).map(toWorld);
+/**
+ * The islands between the Grand Line's old rows (grandLine3.js) join the Log
+ * Pose's web: the nearest older islands behind each one (to the west) can lock
+ * onto it too. (Chart units, before toWorld.)
+ */
+function joinLogs(old, added) {
+  for (const n of added) {
+    const behind = old.filter((o) => o.sea === n.sea && o.x < n.x && o.logNext?.length && !o.logSpins && !o.hidden)
+      .sort((a, b) => Math.hypot(a.x - n.x, a.y - n.y) - Math.hypot(b.x - n.x, b.y - n.y)).slice(0, 2);
+    for (const o of behind) if (!o.logNext.includes(n.id)) o.logNext = [...o.logNext, n.id];
+  }
+}
+const GL_OLD = [...PARADISE_1, ...PARADISE_2, ...NEW_WORLD, ...NEW_WORLD_2];
+if (!GL_OLD.some((o) => o.logNext?.includes(PARADISE_3[0].id))) joinLogs(GL_OLD, [...PARADISE_3, ...NEW_WORLD_3]);
+
+export const ALL_ISLANDS = [...EAST_BLUE, ...NORTH_BLUE, ...WEST_BLUE, ...SOUTH_BLUE, ...PARADISE_1, ...PARADISE_2, ...PARADISE_3, ...NEW_WORLD, ...NEW_WORLD_2, ...NEW_WORLD_3].map(marinePosts).map(toWorld);
 export const ISLAND_BY_ID = Object.fromEntries(ALL_ISLANDS.map((i) => [i.id, i]));

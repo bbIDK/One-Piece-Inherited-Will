@@ -98,7 +98,7 @@ export const CLIMATES = {
 };
 
 /** How far from the poles the cold seas reach, and how far out from the Calm Belts the warm ones. */
-export const COLD_ROWS = 1300, WARM_ROWS = 800;
+export const COLD_ROWS = 1000, WARM_ROWS = 600;
 
 /**
  * The sea's climate at (x, y): its region's — except across the Blues, cold

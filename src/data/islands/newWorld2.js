@@ -16,7 +16,7 @@ import { T, CLIMATE } from '../../world/tiles.js';
 export const NEW_WORLD_2 = [
   // ------------------------------------------------------------ Foodvalten
   {
-    id: 'foodvalten', name: 'Foodvalten', sea: 'new_world', x: 1082, y: 1150, w: 76, h: 60,
+    id: 'foodvalten', name: 'Foodvalten', sea: 'new_world', x: 1082, y: 1276, w: 76, h: 60,
     climate: 'spring', rough: 0.28, trees: ['oak', 'bush', 'blossom'],
     blobs: [[0, 0, 0.85, 0.8], [-0.45, -0.35, 0.35, 0.3]],
     areas: [{ tile: T.FARM, name: 'Feather-fields', dx: -0.5, dy: 0.45, rx: 0.2, ry: 0.14 }],
@@ -44,7 +44,7 @@ export const NEW_WORLD_2 = [
 
   // --------------------------------------------------------- Wano Country
   {
-    id: 'wano', name: 'Wano Country', sea: 'new_world', x: 1185, y: 952, w: 290, h: 212,
+    id: 'wano', name: 'Wano Country', sea: 'new_world', x: 1185, y: 880, w: 290, h: 212,
     climate: 'sakura', rough: 0.18, trees: ['sakura', 'pine', 'bamboo', 'sakura'], treeDensity: 0.06,
     population: [['human', 100]],
     blobs: [
@@ -155,7 +155,7 @@ export const NEW_WORLD_2 = [
 
   // ---------------------------------------------------------- Onigashima
   {
-    id: 'onigashima', name: 'Onigashima', sea: 'new_world', x: 1205, y: 1140, w: 110, h: 90,
+    id: 'onigashima', name: 'Onigashima', sea: 'new_world', x: 1205, y: 1256, w: 110, h: 90,
     climate: 'rocky', rough: 0.22, trees: ['dead', 'pine', 'rock'], treeDensity: 0.02,
     weather: { storm: 0.45 }, // thunderheads hang over Kaido's island
     blobs: [[0, 0.05, 0.8, 0.72], [-0.52, -0.62, 0.2, 0.3], [0.52, -0.62, 0.2, 0.3], [0, 0.62, 0.42, 0.3]],
@@ -188,7 +188,7 @@ export const NEW_WORLD_2 = [
 
   // ---------------------------------------------------------------- Baltigo
   {
-    id: 'baltigo', name: 'Baltigo', sea: 'new_world', x: 1317, y: 1150, w: 60, h: 56,
+    id: 'baltigo', name: 'Baltigo', sea: 'new_world', x: 1317, y: 1276, w: 60, h: 56,
     climate: 'rocky', ground: T.MARBLE, beach: T.SAND, rough: 0.3, trees: ['rock'], treeDensity: 0.004,
     mountains: [
       { dx: -0.5, dy: -0.55, r: 0.1, h: 1.1 },
@@ -214,7 +214,7 @@ export const NEW_WORLD_2 = [
 
   // --------------------------------------------------------- Winner Island
   {
-    id: 'winner_island', name: 'Winner Island', sea: 'new_world', x: 1405, y: 876, w: 80, h: 60,
+    id: 'winner_island', name: 'Winner Island', sea: 'new_world', x: 1405, y: 728, w: 80, h: 60,
     climate: 'rocky', rough: 0.3, trees: ['jungle', 'palm', 'rock'], treeDensity: 0.05,
     mountains: [
       { dx: -0.32, dy: -0.32, r: 0.18, h: 0.85 },
@@ -234,7 +234,7 @@ export const NEW_WORLD_2 = [
 
   // --------------------------------------------------------- Gartel Island
   {
-    id: 'gartel_island', name: 'Gartel Island', sea: 'new_world', x: 1405, y: 983, w: 84, h: 90,
+    id: 'gartel_island', name: 'Gartel Island', sea: 'new_world', x: 1405, y: 942, w: 84, h: 90,
     climate: 'temperate', rough: 0.25, trees: ['oak', 'pine', 'bush'],
     mountains: [{ name: 'Gartel Range', dx: 0.1, dy: -0.5, r: 0.22, h: 0.9 }],
     towns: [{
@@ -258,7 +258,7 @@ export const NEW_WORLD_2 = [
 
   // --------------------------------------------------------------- Egghead
   {
-    id: 'egghead', name: 'Egghead', sea: 'new_world', x: 1440, y: 1110, w: 130, h: 100,
+    id: 'egghead', name: 'Egghead', sea: 'new_world', x: 1440, y: 1196, w: 130, h: 100,
     climate: 'tropical', rough: 0.2, trees: ['palm', 'jungle', 'bush'], treeDensity: 0.04,
     population: [['human', 100]],
     blobs: [[0, 0, 0.85, 0.8], [0.38, -0.38, 0.5, 0.46]],
@@ -311,7 +311,7 @@ export const NEW_WORLD_2 = [
     // Underworld at its foot — snowbound, dim and misty, spires of rock
     // standing about it and the tree's roots reaching down into it. Above the
     // plate, the trunk climbs on to the canopies of the Heaven World.
-    id: 'elbaf', name: 'Elbaph', sea: 'new_world', x: 1600, y: 930, w: 230, h: 190,
+    id: 'elbaf', name: 'Elbaph', sea: 'new_world', x: 1600, y: 836, w: 230, h: 190,
     climate: 'winter', rough: 0.22, trees: ['snowpine', 'snowpine', 'deadsnow'], treeDensity: 0.06,
     // (the Sun World up on the canopy is open grassland and groves)
     treesByClimate: { [CLIMATE.TEMPERATE]: ['oak', 'oak', 'pine', 'oak', 'bush'] }, densityByClimate: { [CLIMATE.TEMPERATE]: 0.018 },
@@ -409,7 +409,7 @@ export const NEW_WORLD_2 = [
 
   // ------------------------------------------------------------- Hachinosu
   {
-    id: 'hachinosu', name: 'Hachinosu', sea: 'new_world', x: 1600, y: 1135, w: 110, h: 90,
+    id: 'hachinosu', name: 'Hachinosu', sea: 'new_world', x: 1600, y: 1246, w: 110, h: 90,
     climate: 'rocky', ground: T.ROCK, rough: 0.26, trees: ['palm'], treeDensity: 0.03,
     blobs: [[0, 0, 0.85, 0.8], [0.4, 0.4, 0.4, 0.35]],
     towns: [{
@@ -441,7 +441,7 @@ export const NEW_WORLD_2 = [
   // Base of Buggy's Delivery, now the headquarters of the Cross Guild (Buggy,
   // Crocodile and Mihawk), who put bounties on Marines.
   {
-    id: 'karai_bari', name: 'Karai Bari Island', sea: 'new_world', x: 1790, y: 876, w: 80, h: 60,
+    id: 'karai_bari', name: 'Karai Bari Island', sea: 'new_world', x: 1790, y: 728, w: 80, h: 60,
     climate: 'tropical', rough: 0.25, trees: ['palm', 'palm', 'bush'],
     mountains: [{ dx: 0.12, dy: -0.62, r: 0.2, h: 0.9 }, { dx: -0.45, dy: -0.55, r: 0.14, h: 0.7 }],
     towns: [{
@@ -466,7 +466,7 @@ export const NEW_WORLD_2 = [
   // The last island any Log Pose can reach. It has no `logNext` on purpose:
   // canon says the needles only spin here (the pack's install() clears the log).
   {
-    id: 'lodestar', name: 'Lodestar Island', sea: 'new_world', x: 1790, y: 1175, w: 90, h: 60,
+    id: 'lodestar', name: 'Lodestar Island', sea: 'new_world', x: 1790, y: 1326, w: 90, h: 60,
     climate: 'rocky', rough: 0.3, trees: ['pine', 'rock'], treeDensity: 0.03,
     areas: [{ tile: T.GRASS, dx: -0.2, dy: 0.1, rx: 0.45, ry: 0.35 }],
     landmarks: [
@@ -487,7 +487,7 @@ export const NEW_WORLD_2 = [
 
   // ------------------------------------------------------------- Laugh Tale
   {
-    id: 'laugh_tale', name: 'Laugh Tale', sea: 'new_world', x: 1795, y: 1025, w: 90, h: 72, hidden: true,
+    id: 'laugh_tale', name: 'Laugh Tale', sea: 'new_world', x: 1795, y: 1026, w: 90, h: 72, hidden: true,
     climate: 'temperate', beach: T.ROCK, rough: 0.35, trees: ['oak', 'pine', 'jungle'], treeDensity: 0.06,
     blobs: [[0, 0, 0.85, 0.8], [0.3, -0.35, 0.4, 0.35]],
     mountains: [

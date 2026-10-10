@@ -10,7 +10,7 @@ import { T, CLIMATE } from '../../world/tiles.js';
 export const NEW_WORLD = [
   // ------------------------------------------------------------ New Marineford
   {
-    id: 'new_marineford', name: 'New Marineford', sea: 'new_world', x: 150, y: 872, w: 76, h: 60,
+    id: 'new_marineford', name: 'New Marineford', sea: 'new_world', x: 150, y: 720, w: 76, h: 60,
     climate: 'rocky', rough: 0.2,
     blobs: [[0, 0, 0.85, 0.85], [-0.45, 0.4, 0.35, 0.35]],
     areas: [{ name: 'Parade Ground', tile: T.STONE, dx: 0.05, dy: 0.5, rx: 0.3, ry: 0.12 }],
@@ -38,7 +38,7 @@ export const NEW_WORLD = [
 
   // ----------------------------------------------------------------- G-5 base
   {
-    id: 'g5_base', name: 'Marine Base G-5', sea: 'new_world', x: 150, y: 1160, w: 56, h: 44,
+    id: 'g5_base', name: 'Marine Base G-5', sea: 'new_world', x: 150, y: 1296, w: 56, h: 44,
     climate: 'rocky', rough: 0.25,
     towns: [{
       id: 'g5_base_town', name: 'G-5 Base', dx: 0, dy: -0.05, w: 36, h: 26, style: 'marine', walls: true, dockDir: 'n', plaza: 'flagpole',
@@ -58,7 +58,7 @@ export const NEW_WORLD = [
 
   // ------------------------------------------------------------- Raijin Island
   {
-    id: 'raijin_island', name: 'Raijin Island', sea: 'new_world', x: 268, y: 868, w: 66, h: 52,
+    id: 'raijin_island', name: 'Raijin Island', sea: 'new_world', x: 268, y: 712, w: 66, h: 52,
     climate: 'rocky', rough: 0.3,
     areas: [
       { name: 'Scorched Plain', tile: T.ASH, dx: 0.25, dy: -0.2, rx: 0.3, ry: 0.25 },
@@ -86,7 +86,7 @@ export const NEW_WORLD = [
 
   // ---------------------------------------------------------- Risky Red Island
   {
-    id: 'risky_red_island', name: 'Risky Red Island', sea: 'new_world', x: 300, y: 1150, w: 74, h: 56,
+    id: 'risky_red_island', name: 'Risky Red Island', sea: 'new_world', x: 300, y: 1276, w: 74, h: 56,
     climate: 'rocky', ground: T.DIRT, beach: T.GRAVEL, rough: 0.3,
     mountains: [{ name: 'The Red Crags', dx: 0.28, dy: -0.22, r: 0.28, h: 0.85, peak: T.RED_ROCK, cliff: 205 }],
     areas: [{ tile: T.ASH, dx: -0.35, dy: 0.25, rx: 0.2, ry: 0.15 }],
@@ -110,7 +110,7 @@ export const NEW_WORLD = [
 
   // ----------------------------------------------------------- Mystoria Island
   {
-    id: 'mystoria_island', name: 'Mystoria Island', sea: 'new_world', x: 400, y: 870, w: 64, h: 50,
+    id: 'mystoria_island', name: 'Mystoria Island', sea: 'new_world', x: 400, y: 716, w: 64, h: 50,
     climate: 'autumn', rough: 0.3,
     areas: [{ name: 'Misty Wood', tile: T.FOREST, dx: 0.3, dy: -0.2, rx: 0.3, ry: 0.3 }],
     towns: [{
@@ -134,7 +134,7 @@ export const NEW_WORLD = [
   // --------------------------------------------------------------- Punk Hazard
   // Half fire, half ice: Admirals Akainu and Aokiji fought here for ten days.
   {
-    id: 'punk_hazard', name: 'Punk Hazard', sea: 'new_world', x: 290, y: 1005, w: 170, h: 130,
+    id: 'punk_hazard', name: 'Punk Hazard', sea: 'new_world', x: 290, y: 986, w: 170, h: 130,
     climate: 'volcanic', rough: 0.22,
     blobs: [[0, 0, 0.82, 0.78], [-0.5, 0.15, 0.45, 0.55], [0.5, -0.1, 0.45, 0.55]],
     mountains: [
@@ -178,7 +178,7 @@ export const NEW_WORLD = [
   // The Land of Love and Passion. Acacia (SW, the Colosseum), Primula (NW),
   // Carta (E), the King's Plateau in the centre with the Royal Palace on top.
   {
-    id: 'dressrosa', name: 'Dressrosa', sea: 'new_world', x: 555, y: 1040, w: 280, h: 196,
+    id: 'dressrosa', name: 'Dressrosa', sea: 'new_world', x: 555, y: 1056, w: 280, h: 196,
     climate: 'spring', rough: 0.2,
     blobs: [[0, 0, 0.88, 0.84], [-0.55, 0.42, 0.4, 0.4], [0.55, 0.38, 0.4, 0.42], [0.0, -0.58, 0.34, 0.34]],
     mountains: [
@@ -251,7 +251,7 @@ export const NEW_WORLD = [
 
   // ----------------------------------------------------------------- Green Bit
   {
-    id: 'green_bit', name: 'Green Bit', sea: 'new_world', x: 555, y: 880, w: 96, h: 60,
+    id: 'green_bit', name: 'Green Bit', sea: 'new_world', x: 555, y: 736, w: 96, h: 60,
     climate: 'jungle', rough: 0.25,
     areas: [{ name: 'Giant Plant Forest', tile: T.JUNGLE, dx: -0.1, dy: -0.15, rx: 0.6, ry: 0.5 }],
     towns: [{
@@ -275,7 +275,7 @@ export const NEW_WORLD = [
 
   // --------------------------------------------------------- Applenine Island
   {
-    id: 'applenine_island', name: 'Applenine Island', sea: 'new_world', x: 470, y: 1188, w: 60, h: 44,
+    id: 'applenine_island', name: 'Applenine Island', sea: 'new_world', x: 470, y: 1352, w: 60, h: 44,
     climate: 'winter', rough: 0.25,
     areas: [{ name: 'The Colossal Apple', tile: T.SNOW, dx: 0.28, dy: -0.22, rx: 0.05, ry: 0.05 }],
     paint: [
@@ -295,7 +295,7 @@ export const NEW_WORLD = [
 
   // -------------------------------------------------------------------- Sphinx
   {
-    id: 'sphinx', name: 'Sphinx', sea: 'new_world', x: 690, y: 872, w: 64, h: 52,
+    id: 'sphinx', name: 'Sphinx', sea: 'new_world', x: 690, y: 720, w: 64, h: 52,
     climate: 'temperate', rough: 0.28,
     trees: ['pine', 'pine', 'bush'],
     mountains: [{ name: 'Valley Mountains', dx: 0.15, dy: -0.3, r: 0.32, h: 0.9 }],
@@ -322,7 +322,7 @@ export const NEW_WORLD = [
   // The Mokomo Dukedom on the back of the elephant Zunesha. A "phantom
   // island": no Log Pose points here — only a Vivre Card.
   {
-    id: 'zou', name: 'Zou', sea: 'new_world', x: 845, y: 878, w: 150, h: 92,
+    id: 'zou', name: 'Zou', sea: 'new_world', x: 845, y: 732, w: 150, h: 92,
     climate: 'temperate', rough: 0.12,
     population: [['mink', 94], ['human', 6]],
     blobs: [[0, 0, 0.88, 0.85], [0.72, -0.12, 0.24, 0.3]],
@@ -357,7 +357,7 @@ export const NEW_WORLD = [
   // --------------------------------------------------------- Whole Cake Island
   // The heart of Totto Land, Big Mom's 35-island nation of all races.
   {
-    id: 'whole_cake_island', name: 'Whole Cake Island', sea: 'new_world', x: 846, y: 1062, w: 250, h: 204,
+    id: 'whole_cake_island', name: 'Whole Cake Island', sea: 'new_world', x: 846, y: 1100, w: 250, h: 204,
     climate: 'candy', rough: 0.2,
     population: [['human', 58], ['fishman', 12], ['mink', 12], ['buccaneer', 6], ['skypiean', 6], ['three_eye', 3]],
     blobs: [[0, 0, 0.88, 0.84], [-0.45, 0.45, 0.45, 0.4], [0.5, -0.4, 0.4, 0.4]],
@@ -403,7 +403,7 @@ export const NEW_WORLD = [
 
   // -------------------------------------------------------------- Cacao Island
   {
-    id: 'cacao_island', name: 'Cacao Island', sea: 'new_world', x: 660, y: 1188, w: 60, h: 48,
+    id: 'cacao_island', name: 'Cacao Island', sea: 'new_world', x: 660, y: 1352, w: 60, h: 48,
     climate: 'candy', ground: T.DIRT, beach: T.CAKE, rough: 0.25,
     population: [['human', 71], ['fishman', 12], ['mink', 12], ['three_eye', 5]],
     towns: [{

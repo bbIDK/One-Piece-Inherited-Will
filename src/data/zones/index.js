@@ -87,8 +87,8 @@ export const ZONES = {
     // (where a coated ship comes down: off Mermaid Cove's harbour)
     arrive: { x: 500, y: 270, heading: Math.PI },
     exits: [
-      { id: 'new_world', x: 91, y: 127, r: 16, to: 'surface', surface: { x: chart(118), y: chart(990) }, label: 'Rise to the New World' },
-      { id: 'paradise', x: 549, y: 393, r: 16, to: 'surface', surface: { x: chart(3985), y: chart(1070) }, label: 'Rise back to Sabaody' },
+      { id: 'new_world', x: 91, y: 127, r: 16, to: 'surface', surface: { x: chart(118), y: chart(956) }, label: 'Rise to the New World' },
+      { id: 'paradise', x: 549, y: 393, r: 16, to: 'surface', surface: { x: chart(3985), y: chart(1106) }, label: 'Rise back to Sabaody' },
     ],
     islands: [
       {

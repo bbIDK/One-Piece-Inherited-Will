@@ -34,7 +34,7 @@ export const csize = (v) => Math.round(v * SIZE_SCALE);
 export const W = chart(4096); // 24576
 export const H = chart(2048); // 12288
 export const EQ = chart(1024); // equator (Grand Line centre row)
-export const GL_HALF = chart(200); // half height of the Grand Line
+export const GL_HALF = chart(400); // half height of the Grand Line (a long voyage across, rows of islands)
 export const CB = chart(100); // width of each Calm Belt (a long, windless crossing)
 export const RL_HALF = chart(46); // half width of the Red Line
 export const RM_X = chart(2048); // Reverse Mountain meridian
@@ -94,7 +94,7 @@ export function dxWrap(a, b) {
 export const distWrap = (ax, ay, bx, by) => Math.hypot(dxWrap(ax, bx), by - ay);
 
 // Reverse Mountain's massif (see reverseMountain.js: rx, ry) counts as the Red Line
-const RMX = 900, RMY = 2150;
+const RMX = 900, RMY = 3300;
 /** Analytic region of a world position (ignores the Red Line's ragged coast). */
 export function regionAt(x, y) {
   x = wrapX(x);

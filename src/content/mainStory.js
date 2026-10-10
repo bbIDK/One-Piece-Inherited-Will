@@ -22,6 +22,7 @@
 import { CHAPTERS, PROLOGUES, TARGETS, PLANS, PATHS3 } from './main/define.js';
 import './main/blues.js';
 import './main/grandLine.js';
+import './main/grandLine2.js';
 import './main/newWorld.js';
 import { PATHS, PART_NAMES } from './main/paths.js';
 import { questDef } from '../game/quests.js';

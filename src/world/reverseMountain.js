@@ -16,7 +16,7 @@ export const RM = {
   x: RM_X,
   y: EQ,
   rx: 900, // the massif's reach across the Red Line (the coast bulges out this far)…
-  ry: 2150, // …and along it
+  ry: 3300, // …and along it (past the Calm Belt, into the Blues)
   top: 160, // water level of the summit pool, metres above the sea
   poolR: 56, // (room for the greatest ships to turn out into the torrent)
   halfW: 17, // half the width of a canal (a great galleon rides it with room either side)
@@ -31,9 +31,9 @@ export const RM = {
 // +y; each canal's sx, sy turn them toward its Blue: north is −y)
 // (the last point is inside the summit pool, so the canal runs right into it)
 // (each opens out of the Red Line's cliff into its Blue, beyond the Calm
-// Belt — 1,800 m from the summit's row — and runs inside the rock all the
+// Belt — 3,000 m from the summit's row — and runs inside the rock all the
 // way past it, the gorge along the Red Line, then up the mountain)
-const UP_PTS = [[780, 2260], [440, 2190], [236, 2085], [205, 1800], [182, 1400], [150, 950], [70, 420], [24, 70], [8, 22]];
+const UP_PTS = [[780, 3460], [440, 3390], [236, 3285], [205, 3000], [192, 2400], [182, 1800], [168, 1400], [150, 950], [70, 420], [24, 70], [8, 22]];
 const EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
 export const CANALS = [
   { id: 'east_blue', sx: 1, sy: -1 },
@@ -120,7 +120,7 @@ const POOL_CURL = 0.2;
  */
 export function canalAt(x, y, reach = 40, out = HIT) {
   const dxs = x - RM.x, dys = y - RM.y;
-  if (Math.abs(dxs) > 1400 || Math.abs(dys) > 2200) return null;
+  if (Math.abs(dxs) > 1400 || Math.abs(dys) > 3500) return null;
   const pd = Math.hypot(dxs, dys);
   if (pd < RM.poolR) {
     out.canal = CANALS[4]; out.i = 0; out.d = 0; out.s = 0; out.level = RM.top; out.pool = true;

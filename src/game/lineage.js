@@ -617,8 +617,27 @@ export { DREAMS, FRUITS, STYLES, unlockedFruitTechniques };
  * The layout of the world a character's positions were saved in. 1: the seas
  * 1.5× the chart; 2: the seas 6× (islands 2.25×) — see POS_SCALE.
  */
-export const WORLD_VERSION = 2;
+export const WORLD_VERSION = 3;
 const OLD_SCALE = 1.5;
+
+// 3: the Grand Line twice as wide (GL_HALF 200 → 400 chart rows), its islands
+// spread out from the equator, the Calm Belts moved out with it and the Blues
+// drawn in toward the poles. Chart rows, old → new and back:
+const BLUE_K = 498 / 698;
+export function relayRow(y) {
+  if (y < 724) return 26 + (y - 26) * BLUE_K;
+  if (y < 824) return y - 200;
+  if (y <= 1224) return 1024 + (y - 1024) * 2;
+  if (y <= 1324) return y + 200;
+  return 2022 - (2022 - y) * BLUE_K;
+}
+export function unrelayRow(y) {
+  if (y < 524) return 26 + (y - 26) / BLUE_K;
+  if (y < 624) return y + 200;
+  if (y <= 1424) return 1024 + (y - 1024) / 2;
+  if (y <= 1524) return y - 200;
+  return 2022 - (2022 - y) / BLUE_K;
+}
 
 /**
  * Move a character saved on an older, smaller world onto this one: a place on
@@ -627,13 +646,16 @@ const OLD_SCALE = 1.5;
  * islands they know.
  */
 export function migrateWorld(char, world, islandDefs) {
-  if ((char.worldVer || 1) >= WORLD_VERSION) return false;
+  const ver = char.worldVer || 1;
+  if (ver >= WORLD_VERSION) return false;
+  // (v2 positions, in this world's island defs: where each island used to be)
+  const oldY = (d) => unrelayRow(d.y / POS_SCALE) * POS_SCALE;
   const move = (pt) => {
     if (!pt || typeof pt.x !== 'number' || (pt.zone && pt.zone !== 'surface')) return;
     // the nearest charted island, where it used to be
     let best = null, bd = Infinity;
     for (const d of islandDefs) {
-      const ox = (d.x / POS_SCALE) * OLD_SCALE, oy = (d.y / POS_SCALE) * OLD_SCALE;
+      const ox = (d.x / POS_SCALE) * OLD_SCALE, oy = (oldY(d) / POS_SCALE) * OLD_SCALE;
       const r = (Math.max(d.w, d.h) / SIZE_SCALE) * OLD_SCALE * 0.5;
       const dd = Math.hypot(pt.x - ox, pt.y - oy) - r;
       if (dd < bd) { bd = dd; best = { d, ox, oy }; }
@@ -641,7 +663,7 @@ export function migrateWorld(char, world, islandDefs) {
     if (best && bd < 40) {
       const k = SIZE_SCALE / OLD_SCALE;
       pt.x = best.d.x + (pt.x - best.ox) * k;
-      pt.y = best.d.y + (pt.y - best.oy) * k;
+      pt.y = oldY(best.d) + (pt.y - best.oy) * k;
     } else {
       pt.x *= POS_SCALE / OLD_SCALE;
       pt.y *= POS_SCALE / OLD_SCALE;
@@ -655,9 +677,25 @@ export function migrateWorld(char, world, islandDefs) {
       }
     }
   };
-  move(char.pos); move(char.rest); move(char.spawn);
-  for (const s of char.ships || []) if (!s.zone || s.zone === 'surface') move(s);
-  for (const s of char.zoneShips || []) move(s);
+  // v2 → v3: a place on or near an island moves with it; out at sea, its row is re-laid
+  const relay = (pt) => {
+    if (!pt || typeof pt.y !== 'number' || (pt.zone && pt.zone !== 'surface')) return;
+    let best = null, bd = Infinity;
+    for (const d of islandDefs) {
+      const dd = Math.hypot(world.dx(d.x, pt.x), pt.y - oldY(d)) - Math.max(d.w, d.h) * 0.5;
+      if (dd < bd) { bd = dd; best = d; }
+    }
+    if (best && bd < 400) pt.y += best.y - oldY(best);
+    else pt.y = relayRow(pt.y / POS_SCALE) * POS_SCALE;
+    if (pt.tx != null && pt.ty != null) pt.tx = undefined; // (fruit spawns: find their tree again)
+  };
+  const all = (fn) => {
+    fn(char.pos); fn(char.rest); fn(char.spawn);
+    for (const s of char.ships || []) if (!s.zone || s.zone === 'surface') fn(s);
+  };
+  if (ver < 2) { all(move); for (const s of char.zoneShips || []) move(s); }
+  all(relay);
+  for (const f of char.world?.fruitSpawns || []) relay(f);
   char.fogSurface = null; // (the chart is redrawn from the islands they know)
   char.worldVer = WORLD_VERSION;
   return true;
