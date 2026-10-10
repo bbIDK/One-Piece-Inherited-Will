@@ -80,7 +80,7 @@ export const TRACK_N = 10;
  * smear).
  */
 export class WakeTrail {
-  constructor({ n = 36, life = 4.2, every = 0.11, y = 0.04, grain = 0.3, drift = 0.17, turn = 0.05, fadeIn = 0.8 } = {}) {
+  constructor({ n = 64, life = 4.2, every = 0.11, y = 0.04, grain = 0.3, drift = 0.17, turn = 0.05, fadeIn = 0.8 } = {}) {
     this.n = n; this.life = life; this.every = every; this.y = y; this.grain = grain; this.drift = drift; this.turn = turn; this.fadeIn = fadeIn;
     this.pts = []; // { x, y, h (heading), t, sp, s (distance along the track) }
     this.rows = n + 1; // (and the source itself, ahead of them)
@@ -115,8 +115,13 @@ export class WakeTrail {
     if (src) {
       const q = P[0];
       const dh = q ? Math.abs(Math.atan2(Math.sin(src.h - q.h), Math.cos(src.h - q.h))) : 0;
-      if (!q || time - this.lastT > this.every || (dh > this.turn && time - this.lastT > 1 / 40)) {
-        const d = q ? Math.hypot(w.dx(q.x, src.x), src.y - q.y) : 0;
+      const d = q ? Math.hypot(w.dx(q.x, src.x), src.y - q.y) : 0;
+      // (only where she's moved on a little: points dropped on top of each
+      // other through a turn — or swinging round on the spot — gave the
+      // ribbon cross-sections at every angle, and filled the trail's points
+      // in a second, cutting it short)
+      const gap = Math.max(0.25, (src.sp || 0) * 0.05);
+      if (!q || (d > gap && (time - this.lastT > this.every || (dh > this.turn && time - this.lastT > 1 / 40)))) {
         // (a long way from the last one — a ship set down somewhere new: a fresh trail)
         if (q && d > 60) P.length = 0;
         this.lastT = time;
@@ -183,13 +188,21 @@ export class WakeTrail {
     // (the track itself, for a sea that draws the wake into its own surface:
     // a few points along it, the newest first — world x, y, half-width, brightness)
     if (this.keepTrack) {
-      const T = this.track || (this.track = []), m = Math.min(TRACK_N, n);
+      // (at even distances along it, between the points it left — not at
+      // every so-many points: those jumped from one point to the next as each
+      // was dropped, and in a turn, where they come thick, the wake skipped about)
+      const T = this.track || (this.track = []), m = TRACK_N;
       T.length = 0;
+      const L = sHead - rows[n - 1].s;
+      let i = 0;
       for (let k = 0; k < m; k++) {
-        const i = m === 1 ? 0 : Math.round((k / (m - 1)) * (n - 1)), q = rows[i];
-        const [half, bright] = shape(q, (time - q.t) / this.life);
-        const run = sHead - q.s, fade = run <= 0 ? 0 : run >= this.fadeIn ? 1 : run / this.fadeIn;
-        T.push(q.x, q.y, half, bright * fade);
+        const sk = sHead - L * (k / (m - 1));
+        while (i < n - 2 && rows[i + 1].s > sk) i++;
+        const a = rows[i], b = rows[i + 1], span = a.s - b.s;
+        const f = span > 1e-6 ? Math.min(1, Math.max(0, (a.s - sk) / span)) : 0;
+        const [ha, ba] = shape(a, (time - a.t) / this.life), [hb, bb] = shape(b, (time - b.t) / this.life);
+        const run = sHead - sk, fade = run <= 0 ? 0 : run >= this.fadeIn ? 1 : run / this.fadeIn;
+        T.push(a.x + w.dx(a.x, b.x) * f, a.y + (b.y - a.y) * f, ha + (hb - ha) * f, (ba + (bb - ba) * f) * fade);
       }
     }
     g.attributes.position.needsUpdate = true;
