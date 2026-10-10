@@ -653,7 +653,8 @@ export class FX {
       g.setTransform(1, 0, 0, 1, 0, 0);
       const c = this.flashColor;
       g.fillStyle = c ? c : '#ffffff';
-      g.globalAlpha = Math.min(1, this.flash * 2);
+      // (a flash, never a white-out: whatever's happening stays in sight through it)
+      g.globalAlpha = Math.min(0.55, this.flash * 1.6);
       g.fillRect(0, 0, W, H);
       g.globalAlpha = 1;
     }

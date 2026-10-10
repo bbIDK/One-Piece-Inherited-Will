@@ -584,7 +584,14 @@ class ActorView {
     if (ch && ch.k > 0) {
       const k = Math.min(1, ch.k);
       const hand = ch.at === 'hB' ? rig.E[1] : rig.E[0];
-      if (ch.kind === 'sun') glow('#ff9100', 0.3 + k * 1.6, _v.copy(hand).add(_v2.set(0, 0.5 + k * 0.9, 0)));
+      if (ch.kind === 'sun') {
+        // (a second sun swelling over the raised hand: drawn by the effects as
+        // the real thing — vfx/projectiles.js chargeSuns — with a soft glow here)
+        _v.copy(hand).add(_v2.set(0, 0.5 + k * 1.4, 0));
+        glow('#ff9100', 0.4 + k * 1.2, _v);
+        m.group.localToWorld(_v2.copy(_v));
+        a._sunCharge = { X: _v2.x, Y: _v2.y, Z: _v2.z, R: (0.25 + k * 1.55) * (this.root.scale.x || 1), at: performance.now() };
+      }
       else if (ch.kind === 'dark') glow('#4a148c', 0.2 + k * 0.4, hand);
       else if (ch.kind === 'oni') glow('#b71c1c', 0.4 + k * 0.5, rig.headC);
       else glow(ch.color || '#ffffff', 0.12 + (ch.size || 0.22) * k * 1.4 * (0.9 + 0.1 * Math.sin(t * 30)), hand);

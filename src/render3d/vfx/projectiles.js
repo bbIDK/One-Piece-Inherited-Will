@@ -54,6 +54,23 @@ export class Projectiles {
     };
   }
 
+  /**
+   * A great fireball being raised overhead (Entei and its like: chars3d.js
+   * sets a._sunCharge while the charge lasts) — the same sun that's then
+   * hurled, swelling as it gathers.
+   */
+  chargeSuns(game) {
+    const v = this.v, now = performance.now();
+    this._rec = this._rec || new Rec();
+    for (const a of game.actors || []) {
+      const c = a._sunCharge;
+      if (!c || now - c.at > 120) continue;
+      sun(v, this._rec, c.X, c.Y, c.Z, c.R, 1, 0, SUN_FC, ((a.seed || 1) * 97) | 0, v.time);
+      // (heat shimmering up off it, embers rising)
+      v.sprites.put(SK.GLOW, c.X, c.Y, c.Z, c.R * 3.2, SUN_FC, 0.18, SUN_CORE, 1, 0, 7, 0);
+    }
+  }
+
   landing(p, r) {
     r.back(0, P);
     const L = this.land, o = (this.landI++ % LAND) * LF, sp = Math.hypot(p.vx, p.vy) || 1;
@@ -98,6 +115,7 @@ export class Projectiles {
       }
     }
     this.recs.forEach(this._sweep);
+    this.chargeSuns(game);
     const L = this.land;
     for (let i = 0; i < LAND; i++) {
       const o = i * LF, age = v.time - L[o + 5];
@@ -395,7 +413,7 @@ function sun(v, r, X, Y, Z, R, dx, dz, fc, seed, t) {
   v.sprites.put(SK.GLOW, X, Y, Z, R * 1.7, fc, 0.28, SUN_CORE, 1, 0, seed, 0);
   trail(v, r, RK.FIRE, fc, 1, HOT, 0.6, R * 0.9, 0.2, 16);
 }
-const SUN_CORE = col('#ffd04a');
+const SUN_CORE = col('#ffd04a'), SUN_FC = col('#ff7a1a');
 
 /**
  * Pheasant Beak: a great bird of ice — a crystal body and beak, wings of
