@@ -193,11 +193,19 @@ function draw(v, pr, r, Y, sc) {
       // a stretching punch: the arm reaching out is the character's own (its
       // rig); here only the rubbery whip of speed lines along it
       if (o) { rubberLines(v, o, X, Y, Z, dx, dz, s, seed, t); break; }
-      // a fist flying on its own (Bara Bara): a fist, a streak behind it
-      const R = 0.24 * s;
-      const skin = col(pr.sprite === 'barafist' && pr.color && pr.color !== '#ffccbc' ? pr.color : '#f1c9a0');
-      putAlong(v.solids.blocks, X, Y, Z, dx, 0, dz, R * 1.7, R * 1.7, 0, skin, OK.SKIN, 0, seed, 0);
-      trail(v, r, RK.SPEED, WHITE, 0.7, WHITE, 0.3, R * 0.5, 0.1, 6);
+      // a hand flying on its own (Bara Bara): the thrower's own fist, cut off
+      // clean at the wrist with the cuff of their sleeve still round it,
+      // knuckles first, wobbling a little in the air — and, while it's away,
+      // missing from the end of their arm (chars3d.js bodyParts)
+      const ow = pr.owner, L = ow?.look || {};
+      if (ow && pr.sprite === 'barafist') ow._baraHand = performance.now() / 1000;
+      const R = 0.2 * s * (L.scale || 1);
+      const skin = col(L.skin || (pr.color && pr.color !== '#ffccbc' ? pr.color : '#f1c9a0'));
+      const sleeve = col(L.coat || L.top || '#e53935');
+      const roll = Math.sin(t * 9 + seed) * 0.35;
+      putAlong(v.solids.fists, X, Y, Z, dx, 0, dz, R, R, roll, skin, OK.SKIN, 0, seed, 0);
+      putAlong(v.solids.cuffs, X, Y, Z, dx, 0, dz, R, R, roll, sleeve, OK.PLAIN, 0, seed, 0);
+      trail(v, r, RK.SPEED, WHITE, 0.7, WHITE, 0.3, R * 0.6, 0.1, 6);
       if (sp > 10) speedLines(v, X, Y, Z, dx, dz, R, seed, t);
       break;
     }

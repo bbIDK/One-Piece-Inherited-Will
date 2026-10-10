@@ -124,6 +124,42 @@ function blockGeo() {
   g.computeVertexNormals();
   return g;
 }
+/**
+ * A clenched fist as a Bara Bara hand flies (the length along +y, knuckles
+ * leading; +x the back of the hand): the back of it, the row of knuckles,
+ * the curled fingers under them, the thumb wrapped across, and the wrist —
+ * cut clean off, a flat end — trailing behind. (Its sleeve: cuffGeo.)
+ */
+function fistGeo() {
+  const parts = [];
+  const add = (g, x, y, z, rx = 0, ry = 0, rz = 0) => { g.rotateX(rx); g.rotateY(ry); g.rotateZ(rz); g.translate(x, y, z); parts.push(g); };
+  // the back of the hand and the palm: a rounded block
+  const b = new THREE.BoxGeometry(0.62, 0.78, 0.8, 2, 2, 2);
+  const p = b.attributes.position, q = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) { q.set(p.getX(i), p.getY(i), p.getZ(i)); q.lerp(q.clone().normalize().multiplyScalar(0.5), 0.3); p.setXYZ(i, q.x, q.y, q.z); }
+  add(b, 0, 0, 0);
+  // the knuckles: four, in a row across the front, the middle two proudest
+  for (let i = 0; i < 4; i++) add(new THREE.SphereGeometry(0.17, 8, 6), 0.14, 0.4 + (i === 1 || i === 2 ? 0.03 : 0), -0.29 + i * 0.193);
+  // the curled fingers under them, folded into the palm
+  for (let i = 0; i < 4; i++) add(new THREE.CapsuleGeometry(0.1, 0.18, 3, 6), -0.16, 0.36, -0.29 + i * 0.193, 0, 0, Math.PI / 2);
+  // the thumb, across the front of the fingers
+  add(new THREE.CapsuleGeometry(0.1, 0.34, 3, 6), -0.3, 0.2, -0.1, Math.PI / 2, 0, 0.25);
+  // the wrist, cut off clean
+  add(new THREE.CylinderGeometry(0.27, 0.3, 0.42, 10), 0, -0.56, 0);
+  return flat(merge(parts));
+}
+/** The sleeve's cuff round a flying hand's wrist (in the fist's frame), its end cut off too. */
+function cuffGeo() {
+  const g = new THREE.CylinderGeometry(0.38, 0.4, 0.34, 10);
+  g.translate(0, -0.72, 0);
+  const band = new THREE.TorusGeometry(0.39, 0.05, 4, 12);
+  band.rotateX(Math.PI / 2); band.translate(0, -0.56, 0);
+  return flat(merge([g, band]));
+}
+/** A length of limb (a sleeved forearm, a trouser leg), along y from -1 to 1, cut flat at both ends. */
+function limbGeo() {
+  return flat(new THREE.CylinderGeometry(0.85, 1, 2, 10));
+}
 function merge(list) {
   let n = 0;
   for (const g of list) n += (g.index ? g.toNonIndexed() : g).attributes.position.count;
@@ -199,7 +235,10 @@ export class Solids {
     this.shards = new SolidBatch(shardGeo(), 640, 'vfx-shards');
     this.rocks = new SolidBatch(rockGeo(), 320, 'vfx-rocks');
     this.blocks = new SolidBatch(blockGeo(), 96, 'vfx-blocks');
-    this.all = [this.crystals, this.shards, this.rocks, this.blocks];
+    this.fists = new SolidBatch(fistGeo(), 48, 'vfx-fists');
+    this.cuffs = new SolidBatch(cuffGeo(), 48, 'vfx-cuffs');
+    this.limbs = new SolidBatch(limbGeo(), 48, 'vfx-limbs');
+    this.all = [this.crystals, this.shards, this.rocks, this.blocks, this.fists, this.cuffs, this.limbs];
   }
   begin() { for (let i = 0; i < this.all.length; i++) this.all[i].begin(); }
   end() { for (let i = 0; i < this.all.length; i++) this.all[i].end(); }

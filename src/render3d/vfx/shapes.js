@@ -1235,13 +1235,34 @@ SHAPES.pieces = {
     if (fade < 0.05) return;
     const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s);
     const R = s.r || 2.4, t = v.time;
-    const skin = col(s.skin || '#f1c9a0'), top = col(s.top || '#e53935'), bottom = col(s.bottom || '#1565c0');
-    for (let i = 0; i < 10; i++) {
-      const th = t * (2.5 + (i % 3)) + i * 2.39;
-      const r = R * (0.35 + 0.65 * hash(s.seed + i));
-      const px = X + Math.cos(th) * r, pz = Z + Math.sin(th) * r, py = G + 0.7 + Math.sin(t * 7 + i) * 0.3 + hash(s.seed + i * 3) * 0.6;
-      const kind = i % 3, sz = kind ? 0.22 : 0.16;
-      putAlong(v.solids.blocks, px, py, pz, Math.cos(th * 2), Math.sin(th * 1.3), Math.sin(th * 2), sz * (kind ? 1.6 : 1), sz, th, kind === 0 ? skin : kind === 1 ? top : bottom, OK.SKIN, 1 - fade, i, 0);
+    const skin = col(s.skin || '#f1c9a0'), top = col(s.top || '#e53935'), bottom = col(s.bottom || '#1565c0'), boot = col(s.boot || '#3e2723');
+    // the user's own limbs, come apart at the shoulders and hips (hidden on
+    // the body meanwhile: chars3d.js bodyParts), whirling round and darting
+    // in and out: two fists with their sleeves, two forearms, two legs with
+    // their boots — each one recognisably what it is, not a block of colour
+    const sc = s.scale || 1;
+    for (let i = 0; i < 6; i++) {
+      const sp = 2.6 + (i % 3) * 0.7;
+      const th = t * sp + i * 1.047 + (s.seed || 0);
+      // (each one swings out to strike and back in, on its own beat)
+      const dart = Math.max(0, Math.sin(t * 5.5 + i * 1.7));
+      const r = R * (0.45 + 0.4 * hash((s.seed || 0) + i)) + dart * 0.6;
+      const px = X + Math.cos(th) * r, pz = Z + Math.sin(th) * r;
+      const py = G + (i < 4 ? 1.15 : 0.55) * sc + Math.sin(t * 6 + i) * 0.22;
+      // flying round the circle, pointing the way it goes, tumbling a little
+      const fx = -Math.sin(th), fz = Math.cos(th), fy = Math.sin(t * 3 + i) * 0.35;
+      const tumble = t * (i % 2 ? 4 : -4) + i;
+      if (i < 2) {
+        const Rf = 0.13 * sc;
+        putAlong(v.solids.fists, px, py, pz, fx, fy, fz, Rf, Rf, tumble, skin, OK.SKIN, 1 - fade, i, 0);
+        putAlong(v.solids.cuffs, px, py, pz, fx, fy, fz, Rf, Rf, tumble, top, OK.PLAIN, 1 - fade, i, 0);
+      } else if (i < 4) {
+        putAlong(v.solids.limbs, px, py, pz, fx, fy + 0.4, fz, 0.17 * sc, 0.065 * sc, tumble, top, OK.PLAIN, 1 - fade, i, 0);
+      } else {
+        // a leg: the trouser leg, the boot at its end
+        putAlong(v.solids.limbs, px, py + 0.2 * sc, pz, fx * 0.3, 1, fz * 0.3, 0.24 * sc, 0.08 * sc, tumble, bottom, OK.PLAIN, 1 - fade, i, 0);
+        putAlong(v.solids.blocks, px + fx * 0.06, py - 0.08 * sc, pz + fz * 0.06, fx, 0, fz, 0.16 * sc, 0.09 * sc, 0, boot, OK.PLAIN, 1 - fade, i, 0);
+      }
     }
   },
 };

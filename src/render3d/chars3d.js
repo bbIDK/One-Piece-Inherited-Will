@@ -274,7 +274,26 @@ class ActorView {
     // (far off, the ink pass's outlines are enough, when it's on)
     m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
     m.setShaded(!ctx.world?.roomOf?.(a));
+    this.bodyParts(a);
     if (a.isPlayer) this.ownBody(fp, a, ctx, env);
+  }
+
+  /**
+   * Bara Bara: a hand that's flying off at someone isn't on the end of its
+   * arm (render3d/vfx/projectiles.js); in the Festival the arms and legs are
+   * off whirling round (vfx/shapes.js pieces) — the head and the body float
+   * on where they were.
+   */
+  bodyParts(a) {
+    const now = performance.now() / 1000;
+    const hand = !!a._baraHand && now - a._baraHand < 0.15;
+    const limbs = !!a._baraLimbs && now < a._baraLimbs;
+    if (!hand && !limbs && !this._partsOff) return;
+    const bones = this.model.bones;
+    const set = (i, off) => bones[i].scale.setScalar(off ? 0 : 1);
+    set(B.handL, hand || limbs);
+    for (const i of [B.uarmR, B.uarmL, B.thighR, B.thighL]) set(i, limbs);
+    this._partsOff = hand || limbs;
   }
 
   /**

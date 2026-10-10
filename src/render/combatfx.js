@@ -1240,7 +1240,12 @@ sig('ope_shockwille', {
 });
 
 // ---- Paramecia (misc)
-sig('bara_festival', { hit(fx, actor, s, a) { const l = lastLook(actor); fx.add('pieces', { x: actor.x, y: actor.y, follow: actor, r: 2.6, skin: l.skin, top: l.top, bottom: l.bottom, life: s.hit.duration || 1.2 }); } });
+sig('bara_festival', { hit(fx, actor, s, a) {
+  const l = lastLook(actor), life = s.hit.duration || 1.2;
+  fx.add('pieces', { x: actor.x, y: actor.y, follow: actor, r: 2.6, skin: l.skin, top: l.coat || l.top, bottom: l.bottom, boot: l.boots || l.shoes, scale: l.scale || 1, life });
+  // (the limbs come off the body while they're out: chars3d.js bodyParts)
+  actor._baraLimbs = performance.now() / 1000 + life;
+} });
 sig('bara_escape', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); const l = lastLook(actor); fx.burst(actor.x, actor.y, 8, { kind: 'square', color: [l.skin || '#f1c9a0', l.top || '#e53935', l.bottom || '#1565c0'], speed: 3, z: 0.7, vz: 2, g: 8, life: 0.5, size: 0.14 }); } });
 sig('bomu_kick bomu_breeze', {
   hit(fx, actor, s, a, hb) {
