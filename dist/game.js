@@ -16016,6 +16016,19 @@
     w = Math.min(1.25, w);
     return counter2 ? Math.min(1.5, w + 0.3) : w;
   }
+  var FIRE_EL = /* @__PURE__ */ new Set(["fire", "magma", "bluefire"]);
+  var ICE_EL = /* @__PURE__ */ new Set(["ice", "snow"]);
+  function shatterIce(tgt, att, game, k = 0.08) {
+    if (!tgt.status?.freeze) return;
+    delete tgt.status.freeze;
+    game.fx?.burst?.(tgt.x, tgt.y - 0.6, 18, { color: ["#e1f5fe", "#b3e5fc", "#ffffff"], speed: 4.5, spread: Math.PI * 2, z: 1, vz: 2.5, g: 9, life: 0.8, kind: "shard", size: 0.12, drag: 1 });
+    game.audio?.sfx("ice", tgt);
+    const n = Math.round(tgt.d.maxHp * k * (tgt.boss ? 0.4 : 1));
+    if (n > 0 && tgt.alive && tgt.state !== "dead" && tgt.state !== "knocked") {
+      game.fx?.text?.(tgt.x, tgt.y - 1.6, "SHATTER", "#b3e5fc", 0.4);
+      tgt.takeDamage(n, att, { element: "ice" }, game);
+    }
+  }
   var Combat = class {
     constructor(game) {
       this.game = game;
@@ -16158,6 +16171,10 @@
       p.cued = true;
       const k = pl.observation ? 1 : T5.cue;
       if (k > 0) game.fx.parryCue?.({ x: p.x, y: p.y, z: 0.9, follow: p }, false, k * 0.8);
+    }
+    /** A frozen body's ice shatters (actor.js when it thaws out too). */
+    shatter(tgt, att, k) {
+      shatterIce(tgt, att, this.game, k);
     }
     canHit(owner, target2, h2) {
       if (!target2.alive || target2 === owner) return false;
@@ -16358,7 +16375,16 @@
         let stun = counter2 ? Math.max(h2.stun || 0, PARRY.counterStun) : h2.stun;
         if (tgt.isPlayer && stun > T5.stunCap) stun = T5.stunCap;
         if (stun && (counter2 || !(unshakable(tgt) && !h2.guardBreak && stun < 0.6))) tgt.stagger(stun * (tgt.stunResist ?? 1));
+        if (tgt.status.freeze && !ICE_EL.has(h2.element) && tgt.alive) shatterIce(tgt, att, game, 0.12);
         if (h2.status) for (const [k, v] of Object.entries(h2.status)) tgt.addStatus(k, v, att);
+        if (att && FIRE_EL.has(h2.element) && !h2.status?.burn) tgt.addStatus("burn", 1.5 + Math.min(4, (h2.damage || 0) / 30), att);
+        if (att && ICE_EL.has(h2.element) && !h2.status?.freeze && !tgt.status.freeze) {
+          tgt.chill = (tgt.chill || 0) + (h2.heavy ? 0.55 : 0.3) + Math.min(0.6, (h2.damage || 0) / Math.max(1, tgt.d.maxHp) * 2);
+          if (tgt.chill >= 1) {
+            tgt.chill = 0;
+            tgt.addStatus("freeze", h2.heavy ? 2.6 : 1.7, att);
+          }
+        }
         if (h2.launch && !tgt.flying && !tgt.inWater && !tgt.climb && !tgt.onShip && !((tgt.z || 0) > 0.3) && tgt.state === "idle") {
           tgt.vz = Math.max(tgt.vz || 0, h2.launch * (tgt.boss ? 0.5 : 1));
           tgt.z = Math.max(tgt.z || 0, 0.02);
@@ -24089,7 +24115,7 @@
         if (Math.abs(t - tc) * d.L > r4) continue;
         if (feet2 === null) feet2 = a.feetH(game);
         const hh = feet2 - shipLift(s, time, u, v, 0), top = topAt(d, tc);
-        if (hh >= top - RAIL_CLEAR) continue;
+        if (hh >= top - (a.z > 0.25 ? 0.95 : RAIL_CLEAR)) continue;
         const y1 = Math.min(top, hh + 1.7 * sc);
         const side = Math.max(sideAt(d, tc, hh), sideAt(d, tc, (hh + y1) / 2), sideAt(d, tc, y1));
         const depth = side + r4 - Math.abs(v);
@@ -26124,8 +26150,13 @@
           this.hitstun = Math.max(this.hitstun, 0.12);
           game.fx.burst(this.x, this.y - 0.7, 3, { color: "#fff176", speed: 3, g: 0, life: 0.15, kind: "line" });
         }
+        if (k === "freeze" && s.t <= 0 && game.combat?.shatter) {
+          game.combat.shatter(this, s.src, 0.06);
+          continue;
+        }
         if (s.t <= 0) delete st[k];
       }
+      if (this.chill) this.chill = Math.max(0, this.chill - dt * 0.2);
       if (this.helpless()) {
         this.action = null;
         this.blocking = false;
@@ -26292,7 +26323,7 @@
           if (pk?.plank === this.deck.plank && Math.abs(pk.e) < Math.abs(this.deck.e) - 1e-4) return this.deckStep(pk);
         }
         if (this.deck.plank && !(this.z > 0.4)) return false;
-        const vault = this.z > 0.25 ? 0.55 : RAIL_CLEAR;
+        const vault = this.z > 0.25 ? 0.95 : RAIL_CLEAR;
         if (this.feetH(g) < g.railAt(sh, x, y) - vault) return false;
       }
       if (g && g.world === w) {
@@ -80859,6 +80890,8 @@ vec3 paneView(vec3 dir, float night) {
 
   // src/render3d/debris3d.js
   var MAX2 = 3200;
+  var ICE_MAT = null;
+  var SPIKE_MAT = null;
   var G3 = 18;
   var _m2 = new Matrix4();
   var _q3 = new Quaternion();
@@ -80900,9 +80933,70 @@ vec3 paneView(vec3 dir, float night) {
     clear() {
       this.list.length = 0;
       this.mesh.count = 0;
+      for (const g of this.shells?.values() || []) g.removeFromParent();
+      this.shells?.clear();
+    }
+    /**
+     * A building frozen solid (game/destruction.js freeze): a shell of clear
+     * blue ice over the whole of it, icicles hanging off its eaves and spikes
+     * of ice standing out of its walls. Off again (thawed), or burst apart
+     * (shatter): the shell flies to pieces of ice.
+     */
+    iceShell(b, on, shatter2) {
+      this.shells || (this.shells = /* @__PURE__ */ new Map());
+      const old = this.shells.get(b);
+      if (old) {
+        old.removeFromParent();
+        this.shells.delete(b);
+      }
+      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+      const H5 = Math.max(3, this.view.builtHeight?.(b) || 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6);
+      if (on) {
+        ICE_MAT || (ICE_MAT = new MeshPhongMaterial({ color: 12577279, emissive: 2781082, emissiveIntensity: 0.35, specular: 16777215, shininess: 90, transparent: true, opacity: 0.55, depthWrite: false }));
+        SPIKE_MAT || (SPIKE_MAT = new MeshPhongMaterial({ color: 14808574, emissive: 5219281, emissiveIntensity: 0.3, shininess: 80, transparent: true, opacity: 0.85 }));
+        const g = new Group();
+        const box2 = new Mesh(new BoxGeometry(fw + 0.5, H5 + 0.6, fd + 0.5), ICE_MAT);
+        box2.position.set(0, (H5 + 0.6) / 2 - 0.1, -fd / 2);
+        box2.renderOrder = 3;
+        g.add(box2);
+        const cone2 = new ConeGeometry(0.22, 1, 5);
+        const n = Math.round(10 + fw * fd * 0.4);
+        for (let i = 0; i < n; i++) {
+          const sp = new Mesh(cone2, SPIKE_MAT);
+          const side = Math.floor(Math.random() * 5), u = Math.random();
+          const L3 = rnd2(0.6, 1.8);
+          if (side === 4) {
+            sp.position.set((u - 0.5) * fw, H5 + 0.4 + L3 / 2, -Math.random() * fd);
+          } else if (side < 2) {
+            sp.position.set((u - 0.5) * fw, rnd2(0.3, H5), side ? -fd - 0.25 - L3 * 0.3 : 0.25 + L3 * 0.3);
+            sp.rotation.x = side ? -1.2 : 1.2;
+          } else {
+            sp.position.set(side === 2 ? -fw / 2 - 0.25 - L3 * 0.3 : fw / 2 + 0.25 + L3 * 0.3, rnd2(0.3, H5), -u * fd);
+            sp.rotation.z = side === 2 ? 1.2 : -1.2;
+          }
+          sp.rotation.y += rnd2(-0.4, 0.4);
+          sp.scale.set(rnd2(0.7, 1.4), L3, rnd2(0.7, 1.4));
+          g.add(sp);
+        }
+        g.userData.b = b;
+        this.mesh.parent.add(g);
+        this.shells.set(b, g);
+        return;
+      }
+      if (shatter2) {
+        const base2 = this.view.ground(b.x, b.y), q2 = { x: b.x, y: b.y };
+        const n = Math.round(30 + fw * fd);
+        for (let i = 0; i < n; i++) {
+          const sz = rnd2(0.25, 0.8);
+          const p = this.piece(b, base2, rnd2(-fw / 2, fw / 2), rnd2(0.2, H5), -rnd2(0, fd), sz, sz * rnd2(0.4, 1), sz * rnd2(0.5, 1), Math.random() < 0.5 ? "#bfe9ff" : "#e1f5fe", { chip: true, life: 6 });
+          this.throwFrom(p, q2.x, q2.y, 9);
+          p.vh += 2;
+        }
+      }
     }
     /** The colours a building is made of: its walls, its roof, timber, stone. */
     palette(b) {
+      if (b.charred) return { wall: "#3e3530", roof: "#2a2220", wood: "#1f1a17", dark: "#151110", stone: "#4a4644", plaster: "#5a524c" };
       const wall = b.wall || "#d7ccc8", roof = b.roof || "#8d4f3a";
       return { wall, roof, wood: "#6d4c41", dark: "#4e342e", stone: "#9e9e9e", plaster: "#efebe9" };
     }
@@ -80960,6 +81054,10 @@ vec3 paneView(vec3 dir, float night) {
     /** Building b brought down by a blow from (x, y). */
     fall(b, x, y, power, delay = 0) {
       const view = this.view;
+      if (b._holes) {
+        this.list = this.list.filter((p) => !(p.b === b && p.hole));
+        b._holes = null;
+      }
       const base2 = view.ground(b.x, b.y);
       const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
       const H5 = Math.max(3, view.builtHeight?.(b) || 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6);
@@ -81005,15 +81103,86 @@ vec3 paneView(vec3 dir, float night) {
       for (let i = 0; i < heap; i++) {
         const u = rnd2(-0.5, 0.5), v = rnd2(0, 1), edge = 1 - Math.max(Math.abs(u) * 2, Math.abs(v - 0.5) * 2);
         const s = rnd2(0.6, 1.5);
-        const p = this.piece(b, base2, u * fw * 0.95, Math.max(0.1, edge * H5 * 0.28 * rnd2(0.5, 1)), -v * fd, s, s * rnd2(0.3, 0.7), s * rnd2(0.6, 1.1), Math.random() < 0.5 ? P6.wall : Math.random() < 0.5 ? P6.roof : P6.wood, { delay: delay + 0.35 + rnd2(0, 0.5), grow: 0.6 });
+        const sy = s * rnd2(0.3, 0.7);
+        const lift = sy * 0.35 + Math.max(0, edge) * Math.min(1.1, H5 * 0.1) * rnd2(0.4, 1);
+        const p = this.piece(b, base2, u * fw * 0.95, 0, -v * fd, s, sy, s * rnd2(0.6, 1.1), Math.random() < 0.5 ? P6.wall : Math.random() < 0.5 ? P6.roof : P6.wood, { delay: delay + 0.35 + rnd2(0, 0.5), grow: 0.6 });
+        p.h = view.ground(p.x, p.y) + lift;
+        p.lift = lift;
         p.rest = true;
-        p.rx = rnd2(-0.5, 0.5);
-        p.rz = rnd2(-0.5, 0.5);
+        p.rx = rnd2(-0.35, 0.35);
+        p.rz = rnd2(-0.35, 0.35);
         p.ry += rnd2(-1, 1);
       }
     }
     /** A few bits knocked off b where a blow landed near (x, y). */
-    chip(b, x, y, n) {
+    /**
+     * A hole knocked in b's wall where a blow landed: a ragged dark breach
+     * (the room behind it in shadow) ringed with splintered boards and broken
+     * plaster sticking out. Another blow near it makes it bigger; a building
+     * that comes down takes its holes with it. `k`: how big, 0..1+.
+     */
+    hole(b, base2, lx, lz, hy, k, P6) {
+      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+      const dF = Math.abs(lz), dB = Math.abs(lz + fd), dL = Math.abs(lx + fw / 2), dR = Math.abs(lx - fw / 2);
+      const m = Math.min(dF, dB, dL, dR), side = m === dF ? "F" : m === dB ? "B" : m === dL ? "L" : "R";
+      const along2 = side === "F" || side === "B";
+      const out = side === "F" ? 1 : side === "B" ? -1 : side === "R" ? 1 : -1;
+      if (along2) {
+        lx = Math.max(-fw / 2 + 0.5, Math.min(fw / 2 - 0.5, lx));
+        lz = side === "F" ? 0.03 : -fd - 0.03;
+      } else {
+        lz = Math.max(-fd + 0.5, Math.min(-0.5, lz));
+        lx = (fw / 2 + 0.03) * out;
+      }
+      b._holes || (b._holes = []);
+      let H0 = b._holes.find((o) => Math.abs(o.lx - lx) + Math.abs(o.lz - lz) + Math.abs(o.hy - hy) < 1.1);
+      if (H0) {
+        H0.k = Math.min(2.2, H0.k + k * 0.6);
+        const old = new Set(H0.parts);
+        this.list = this.list.filter((p) => !old.has(p));
+      } else b._holes.push(H0 = { lx, lz, hy, k: Math.min(2, k) });
+      const R5 = 0.35 + 0.7 * H0.k;
+      const th = 0.08, dark = "#24170f", inner = "#4a3426";
+      const sz = (w, h2) => along2 ? [w, h2, th] : [th, h2, w];
+      H0.parts = [];
+      for (let i = 0; i < 7; i++) {
+        const core = i >= 3;
+        const f = core ? 0.75 : 1;
+        const w = R5 * rnd2(0.9, 1.5) * f, h2 = R5 * rnd2(0.8, 1.3) * f, ox = rnd2(-0.3, 0.3) * R5, oy = rnd2(-0.3, 0.3) * R5;
+        const [sx, sy, sz2] = sz(w, h2);
+        const off = core ? out * 0.02 : 0;
+        const p = this.piece(b, base2, lx + (along2 ? ox : off), hy + oy, lz + (along2 ? off : ox), sx, sy, sz2, core ? dark : inner, { life: 0 });
+        p.rest = true;
+        p.hole = true;
+        p.rx = 0;
+        p.rz = rnd2(-0.6, 0.6);
+        H0.parts.push(p);
+      }
+      for (let i = 0; i < 2 + Math.round(H0.k); i++) {
+        const len = R5 * rnd2(1.2, 2);
+        const [sx, sy, sz2] = sz(len, 0.08);
+        const p = this.piece(b, base2, lx + (along2 ? rnd2(-0.3, 0.3) * R5 : out * 0.04), hy + rnd2(-0.5, 0.5) * R5, lz + (along2 ? out * 0.04 : rnd2(-0.3, 0.3) * R5), sx, sy, sz2, P6.wood, { life: 0 });
+        p.rest = true;
+        p.hole = true;
+        p.rx = 0;
+        p.rz = rnd2(-0.9, 0.9);
+        H0.parts.push(p);
+      }
+      const n = 6 + Math.round(H0.k * 5);
+      for (let i = 0; i < n; i++) {
+        const t = i / n * Math.PI * 2 + rnd2(-0.2, 0.2), r4 = R5 * rnd2(0.75, 1);
+        const ex = Math.cos(t) * r4, ey = Math.sin(t) * r4 * 0.85;
+        const len = rnd2(0.18, 0.4) * (0.7 + H0.k * 0.4), wd = rnd2(0.06, 0.12);
+        const [sx, sy, sz2] = sz(Math.random() < 0.5 ? len : wd, Math.random() < 0.5 ? wd : len);
+        const p = this.piece(b, base2, lx + (along2 ? ex : out * 0.05), hy + ey, lz + (along2 ? out * 0.05 : ex), sx, sy, sz2, Math.random() < 0.55 ? P6.wall : P6.wood, { life: 0 });
+        p.rest = true;
+        p.hole = true;
+        p.rx = rnd2(-0.6, 0.6);
+        p.rz = rnd2(-0.8, 0.8);
+        H0.parts.push(p);
+      }
+    }
+    chip(b, x, y, n, k = 0.4, hy = null) {
       const view = this.view, w = this.world;
       const base2 = view.ground(b.x, b.y);
       const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
@@ -81024,14 +81193,135 @@ vec3 paneView(vec3 dir, float night) {
       let lx = dx * c - dy * s, lz = dx * s + dy * c;
       lx = Math.max(-fw / 2, Math.min(fw / 2, lx));
       lz = Math.max(-fd, Math.min(0, lz));
+      const at4 = hy ?? Math.min(H5 * 0.7, k > 0.5 ? rnd2(0.9, 2.4) : rnd2(1, 1.6));
+      this.hole(b, base2, lx, lz, at4, k, P6);
       for (let i = 0; i < n; i++) {
         const sz = rnd2(0.12, 0.35);
-        const p = this.piece(b, base2, lx + rnd2(-0.4, 0.4), rnd2(0.4, Math.min(H5 * 0.6, 3)), lz + rnd2(-0.2, 0.2), sz, sz * rnd2(0.5, 1), sz, Math.random() < 0.7 ? P6.wall : P6.wood, { chip: true, life: 25 });
+        const p = this.piece(b, base2, lx + rnd2(-0.4, 0.4), at4 + rnd2(-0.4, 0.4), lz + rnd2(-0.2, 0.2), sz, sz * rnd2(0.5, 1), sz, Math.random() < 0.7 ? P6.wall : P6.wood, { chip: true, life: 25 });
         this.throwFrom(p, x, y, 5);
       }
     }
+    /**
+     * A building giving way by stages (game/destruction.js strike): at the first,
+     * a corner of its roof breaks up and slides off, a wall caves in; at the
+     * second, more of the roof goes, the walls open up on every side, and the
+     * whole of it leans — one more good blow and it's down.
+     */
+    stage(b, st, x, y) {
+      if (b.ruined) return;
+      const view = this.view, w = this.world;
+      const base2 = view.ground(b.x, b.y);
+      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+      const H5 = Math.max(3, view.builtHeight?.(b) || 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6);
+      const P6 = this.palette(b);
+      const a = bangle(b), c = Math.round(Math.cos(a)), sn = Math.round(Math.sin(a));
+      const dx = w.dx(b.x, x), dy = y - b.y;
+      const near = Math.sign(dx * c - dy * sn) || 1;
+      const nr = st === 1 ? 10 : 18;
+      for (let i = 0; i < nr; i++) {
+        const lx = near * rnd2(0, fw / 2), lz = -rnd2(0, fd);
+        const roof = Math.random() < 0.7;
+        const p = roof ? this.piece(b, base2, lx, H5 * rnd2(0.8, 1.02), lz, rnd2(0.9, 1.9), rnd2(0.1, 0.18), rnd2(0.7, 1.4), Math.random() < 0.85 ? P6.roof : P6.dark, { delay: rnd2(0, 0.4), life: 0 }) : this.piece(b, base2, lx, H5 * rnd2(0.7, 0.95), lz, 0.16, 0.16, rnd2(1.2, 2.6), P6.wood, { delay: rnd2(0, 0.4) });
+        p.vx = rnd2(-1, 1) + near * c * rnd2(1, 3);
+        p.vy = rnd2(-1, 1) - near * sn * rnd2(1, 3);
+        p.vh = rnd2(0.5, 2.5);
+        p.wx = rnd2(-3, 3);
+        p.wy = rnd2(-2, 2);
+        p.wz = rnd2(-3, 3);
+      }
+      for (let i = 0; i < (st === 1 ? 4 : 8); i++) {
+        const lx = near * rnd2(0.1, fw / 2 - 0.3), lz = -rnd2(0.4, fd - 0.4);
+        const p = this.piece(b, base2, lx, H5 * rnd2(0.86, 0.97), lz, rnd2(0.8, 1.4), 0.12, rnd2(0.7, 1.2), "#24170f", { life: 0 });
+        p.rest = true;
+        p.hole = true;
+        p.rx = rnd2(-0.5, 0.5);
+        p.rz = rnd2(-0.5, 0.5);
+        (b._holes || (b._holes = [])).push({ lx, lz, hy: H5, k: 0, parts: [p] });
+      }
+      for (let i = 0; i < (st === 1 ? 4 : 8); i++) {
+        const lx = near * rnd2(0.2, fw / 2 - 0.2), lz = -rnd2(0.3, fd - 0.3);
+        const p = this.piece(b, base2, lx, H5 * rnd2(0.9, 1.05), lz, 0.14, rnd2(1.2, 2.2), 0.14, P6.wood, { life: 0 });
+        p.rest = true;
+        p.hole = true;
+        p.rx = rnd2(-0.8, 0.8);
+        p.rz = rnd2(-0.8, 0.8);
+        (b._holes || (b._holes = [])).push({ lx, lz, hy: H5, k: 0, parts: [p] });
+      }
+      const holes = st === 1 ? 2 : 4;
+      for (let i = 0; i < holes; i++) {
+        const side = Math.floor(Math.random() * 4), u = rnd2(0.2, 0.8);
+        const lx = side === 2 ? -fw / 2 : side === 3 ? fw / 2 : (u - 0.5) * fw, lz = side === 0 ? 0 : side === 1 ? -fd : -u * fd;
+        this.hole(b, base2, lx, lz, rnd2(1, Math.max(1.2, H5 * 0.75)), rnd2(0.9, 1.6) + st * 0.2, P6);
+      }
+      for (let i = 0; i < 14 * st; i++) {
+        const s0 = rnd2(0.25, 0.6);
+        const p = this.piece(b, base2, rnd2(-fw / 2, fw / 2), rnd2(1, H5 * 0.9), -rnd2(0, fd), s0, s0 * rnd2(0.5, 1), s0, Math.random() < 0.6 ? P6.wall : P6.plaster, { chip: true, life: 40, delay: rnd2(0, 0.5) });
+        this.throwFrom(p, b.x, b.y, 3);
+      }
+      const lean = st >= 2 ? 0.075 : 0.03;
+      (this.leaning || (this.leaning = /* @__PURE__ */ new Map())).set(b, { x: rnd2(-1, 1) * lean * 0.6, z: near * lean });
+    }
+    /**
+     * One of the town's loose things smashed (game/destruction.js smash): a tree
+     * snapped — its trunk in logs, its crown in green clumps — or a stall, lamp,
+     * well or fountain broken into its timber and stone, thrown from the blow.
+     * `lite`: one of a great many at once (an island levelled): fewer pieces.
+     */
+    smash(o, x, y, power, delay = 0, lite = false) {
+      const view = this.view, w = this.world;
+      const base2 = view.ground(o.x, o.y), s = o.s || 1;
+      const k = Math.min(12, 3 + Math.sqrt(power) * 0.15);
+      const add7 = (lx, ly, lz, sx, sy, sz, col4, life2 = 0) => {
+        const p = this.add({ b: o, x: w.wx(o.x + lx), y: o.y + lz, h: base2 + ly, sx, sy, sz, col: col4, vx: 0, vy: 0, vh: 0, rx: 0, ry: rnd2(0, 6.28), rz: 0, wx: 0, wy: 0, wz: 0, t: -delay, rest: false, chip: !!life2, life: life2, grow: 0, sink: 0 });
+        this.throwFrom(p, x, y, k);
+        return p;
+      };
+      const L3 = lite ? 0.45 : 1;
+      if (o.kind === "tree" || o.kind === "bush" || o.kind === "cactus") {
+        const tree = o.kind === "tree";
+        const H5 = tree ? 4.5 * s : o.kind === "cactus" ? 2.4 * s : 0.9 * s;
+        const sub = o.sub || "";
+        const leaf2 = /snow/.test(sub) ? ["#e3f2fd", "#4f7a5a"] : /sakura|blossom/.test(sub) ? ["#f8bbd0", "#f48fb1"] : /dead|spooky/.test(sub) ? ["#5d4037", "#4e342e"] : /pine/.test(sub) ? ["#2e6b3a", "#245a30"] : /palm|jungle/.test(sub) ? ["#4caf50", "#2e7d32"] : ["#5aa64a", "#3d8a3a"];
+        const bark = /palm/.test(sub) ? "#a1887f" : o.kind === "cactus" ? "#558b2f" : "#6d4c41";
+        if (tree || o.kind === "cactus") {
+          const st = this.add({ b: o, x: o.x, y: o.y, h: base2 + 0.25, sx: 0.4 * s, sy: 0.5, sz: 0.4 * s, col: bark, vx: 0, vy: 0, vh: 0, rx: 0, ry: 0, rz: 0, wx: 0, wy: 0, wz: 0, t: 0, rest: true, chip: false, life: 0, grow: 0, sink: 0 });
+          st.lift = 0.25;
+          const nl = tree ? 3 : 2;
+          for (let i = 0; i < nl; i++) {
+            const p = add7(0, 0.6 + (i + 0.5) * (H5 * 0.55) / nl, 0, 0.32 * s, H5 * 0.55 / nl, 0.32 * s, bark);
+            p.rx = rnd2(-0.3, 0.3);
+          }
+        }
+        const nc = Math.round((tree ? 9 : 4) * L3);
+        for (let i = 0; i < nc; i++) {
+          const c0 = rnd2(0.5, 1.1) * s * (tree ? 1 : 0.6);
+          add7(rnd2(-1, 1) * s, H5 * rnd2(0.6, 1), rnd2(-1, 1) * s, c0, c0 * rnd2(0.6, 0.9), c0, Math.random() < 0.6 ? leaf2[0] : leaf2[1], 30);
+        }
+        return;
+      }
+      const stone = /fountain|well|statue|totem|rock|crystal|cannon|mooring/.test(o.kind);
+      const cloth = /stall|tent|flag/.test(o.kind);
+      const big2 = /fountain|statue|windmill|waterwheel|tent|well/.test(o.kind);
+      const R5 = (big2 ? 1.4 : 0.6) * s, Hh = (big2 ? 2.4 : 1.2) * s;
+      const n = Math.round((big2 ? 22 : 8) * L3);
+      const cols = stone ? ["#b0aaa4", "#9e9890", "#8a847c", "#c8c2ba"] : ["#8d6e63", "#6d4c41", "#a1887f", "#5d4037"];
+      for (let i = 0; i < n; i++) {
+        const sz = rnd2(0.15, big2 ? 0.6 : 0.35) * s;
+        const slab2 = Math.random() < 0.4;
+        const col4 = cloth && Math.random() < 0.35 ? o.color || o.awning || (Math.random() < 0.5 ? "#c62828" : "#f5f5f5") : cols[Math.floor(Math.random() * cols.length)];
+        add7(rnd2(-R5, R5), rnd2(0.1, Hh), rnd2(-R5, R5), slab2 ? sz * 2.2 : sz, slab2 ? sz * 0.35 : sz * rnd2(0.6, 1), slab2 ? sz * 1.4 : sz, col4);
+      }
+      if (/fountain|well/.test(o.kind)) for (let i = 0; i < 6 * L3; i++) add7(rnd2(-R5, R5) * 0.6, 0.3, rnd2(-R5, R5) * 0.6, rnd2(0.3, 0.6), 0.05, rnd2(0.3, 0.6), "#64b5f6", 12);
+    }
     /** b standing again: its rubble sinks away. */
     restore(b) {
+      b._holes = null;
+      this.leaning?.delete(b);
+      const v = this.view.built?.get(b);
+      if (v) {
+        v.rotation.x = 0;
+        v.rotation.z = 0;
+      }
       for (const p of this.list) if (p.b === b) {
         p.sink = 1;
         p.rest = true;
@@ -81050,8 +81340,12 @@ vec3 paneView(vec3 dir, float night) {
         this.rev = world.ruinRev;
         for (const e of ev) {
           if (e.kind === "fall") this.fall(e.b, e.x, e.y, e.power, e.delay || 0);
-          else if (e.kind === "chip") this.chip(e.b, e.x, e.y, e.n);
+          else if (e.kind === "chip") this.chip(e.b, e.x, e.y, e.n, e.k, e.hy);
           else if (e.kind === "restore") this.restore(e.b);
+          else if (e.kind === "stage") this.stage(e.b, e.stage, e.x, e.y);
+          else if (e.kind === "smash") this.smash(e.b, e.x, e.y, e.power, e.delay || 0, e.lite);
+          else if (e.kind === "ice") this.iceShell(e.b, e.on, e.shatter);
+          else if (e.kind === "fixture") this.view.dropFixture?.(e.o);
           this.view.ruinProp?.(e);
         }
         ev.length = 0;
@@ -81098,10 +81392,45 @@ vec3 paneView(vec3 dir, float night) {
               p.rx *= 0.8;
               p.rz *= 0.8;
               p.wx = p.wy = p.wz = 0;
-              if (Math.hypot(p.vx, p.vy) < 0.3) p.rest = true;
+              if (Math.hypot(p.vx, p.vy) < 0.3) {
+                p.rest = true;
+                p.lift = p.h - view.ground(p.x, p.y);
+              }
             }
           }
         }
+      }
+      if (L3.length) {
+        const m = Math.min(L3.length, 160);
+        for (let k = 0; k < m; k++) {
+          const p = L3[this.snapI = ((this.snapI || 0) + 1) % L3.length];
+          if (!p || !p.rest || p.hole || p.sink > 0 || p.lift === void 0) continue;
+          const h2 = view.ground(p.x, p.y) + p.lift;
+          if (Math.abs(h2 - p.h) > 0.03) {
+            p.h = h2;
+            moving = true;
+          }
+        }
+      }
+      if (this.leaning?.size) for (const [b, Ln] of this.leaning) {
+        if (b.ruined || !b.stage) {
+          this.leaning.delete(b);
+          const v2 = view.built?.get(b);
+          if (v2) {
+            v2.rotation.x = 0;
+            v2.rotation.z = 0;
+          }
+          continue;
+        }
+        const v = view.built?.get(b);
+        if (v) {
+          v.rotation.x = Ln.x;
+          v.rotation.z = Ln.z;
+        }
+      }
+      if (this.shells?.size) for (const [b, g] of this.shells) {
+        g.position.set(world.dx(O.x, b.x), view.ground(b.x, b.y), b.y - O.y);
+        g.rotation.y = bangle(b);
       }
       if (!moving && O.x === this.ox && O.y === this.oy) return;
       this.ox = O.x;
@@ -99329,6 +99658,12 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.buildingsFar.add(o, true);
       this.buildingsFar.show(o, true);
       this.retiring.set(o, v);
+    }
+    /** Something fixed to a building that came down (a sign, a lamp, an awning): gone with it, at once. */
+    dropFixture(o) {
+      const v = this.built.get(o);
+      if (v !== void 0) this.dropProp(o, v);
+      this.propsDirty = true;
     }
     /** How tall building b's model stands (if it's built), for the pieces it falls into. */
     builtHeight(b) {
@@ -119390,7 +119725,10 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const parts = name.split(/\s+/);
     return parts.length > 1 ? `${parts[0]} D. ${parts.slice(1).join(" ")}` : `${name} D.`;
   }
-  function rollBirth(legacy, seed) {
+  function fruitBirthChance(traits = []) {
+    return 0.15 + (traits.includes("will_of_d") ? 0.1 : 0) + (traits.includes("lucky") ? 0.05 : 0);
+  }
+  function rollBirth(legacy, seed, taken = []) {
     const rng4 = new RNG(seed);
     const boosts = {};
     if (perkLevel(legacy, "rare_races")) for (const r4 of ["buccaneer", "three_eye", "lunarian"]) boosts[r4] = 2;
@@ -119404,7 +119742,14 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     }
     if (legacy?.family?.d || rng4.chance(dChance(legacy))) traits.push("will_of_d");
     if (rng4.chance(kingChance(traits.includes("will_of_d"), false))) traits.push("conqueror");
-    return { race, traits, seed };
+    let fruit = null;
+    const frng = new RNG(seed + ":fruit");
+    if (frng.chance(fruitBirthChance(traits))) {
+      const skip = new Set(taken);
+      const list = FRUIT_IDS.filter((id) => !skip.has(id) && FRUITS[id].weight > 0).map((id) => [id, FRUITS[id].weight]);
+      if (list.length) fruit = frng.weighted(list);
+    }
+    return { race, traits, seed, fruit };
   }
   function createCharacter(legacy, birth, choices) {
     const race = RACES[birth.race];
@@ -119515,6 +119860,15 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       createdAt: Date.now()
     };
     if (perkLevel(legacy, "chart")) char.discovered = (legacy.charted || []).slice();
+    if (birth.fruit && FRUITS[birth.fruit]) {
+      char.fruit = birth.fruit;
+      char.fruitsEaten = 1;
+      char.fruitAwakened = false;
+      char.fruitBorn = true;
+      char.world.fruitsTaken = [birth.fruit];
+      for (const tid of unlockedFruitTechniques(birth.fruit, 0)) if (!techniques.includes(tid)) techniques.push(tid);
+      addToHotbar(char, ENTRY.fruit);
+    }
     char.hakiSig = hakiSignature(char.runSeed);
     return char;
   }
@@ -121933,6 +122287,9 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .d-stamp { font: 400 72px 'Pirata One', serif; color: #8e1b16; line-height: .9; text-shadow: 0 3px 0 rgba(0,0,0,.25); }
 .d-reveal.show .d-stamp { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }
 @keyframes dstamp { 0% { transform: scale(3) rotate(-12deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-4deg); } }
+.f-title { font: 400 22px 'Bangers', sans-serif; letter-spacing: 4px; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
+.f-name { font: 400 34px 'Pirata One', serif; }
+.f-reveal.show .f-name { animation: dstamp .7s cubic-bezier(.2,1.6,.4,1) both; }
 .d-title { font: 400 24px 'Bangers', sans-serif; letter-spacing: 5px; color: #8e1b16; }
 .final-name { margin: 2px 0 8px; font-size: 14px; }
 .final-name b { font: 400 22px 'Pirata One', serif; color: #5a2d0c; }
@@ -124903,1655 +125260,6 @@ button:disabled { cursor: not-allowed; }
     "Ravenscar"
   ];
 
-  // src/ui/screens.js
-  var HEIGHT_NOTE = {
-    human: "Humans stand at an ordinary height.",
-    buccaneer: "Buccaneers stand head and shoulders above everyone.",
-    fishman: "Fish-Men are tall and broad.",
-    mink: "Minks are about as tall as humans.",
-    skypiean: "Skypieans are human-sized, with small wings.",
-    three_eye: "The Three-Eye Tribe are human-sized.",
-    lunarian: "Lunarians are tall, with black wings."
-  };
-  function applyLook(L3, race) {
-    const base2 = race === "buccaneer" ? 1.25 : race === "fishman" ? 1.1 : 1;
-    L3.bulk = +(base2 * (0.84 + (L3.build ?? 0.5) * 0.36)).toFixed(3);
-    if (race === "mink") {
-      const k = MINK_KINDS.find((m) => m.name === L3.kind);
-      if (k) Object.assign(L3, { ears: k.ears, fur: k.fur, tail: k.tail, muzzle: k.muzzle, skin: k.fur, hairColor: k.fur, hand: k.fur });
-    }
-    if (race === "fishman") {
-      const k = FISHMAN_KINDS.find((m) => m.name === L3.kind);
-      if (k) L3.skin = k.skin;
-    }
-  }
-  var SEA_NAMES = { east_blue: "East Blue", north_blue: "North Blue", west_blue: "West Blue", south_blue: "South Blue" };
-  var pct = (x) => `${Math.round(x * 1e3) / 10}%`;
-  function portrait(look, w = 96, hgt = 110, bg = null) {
-    const cv = h("canvas.portrait", { width: w * 2, height: hgt * 2, style: { width: w + "px", height: hgt + "px" } });
-    const g = cv.getContext("2d");
-    if (bg) {
-      g.fillStyle = bg;
-      g.fillRect(0, 0, w * 2, hgt * 2);
-    }
-    if (look) {
-      const img2 = renderPortrait(look, { w, h: hgt, view: w < 64 ? "bust" : "full" });
-      if (img2) g.drawImage(img2, 0, 0, w * 2, hgt * 2);
-    }
-    return cv;
-  }
-  function titleScreen(ui, { slots, onPlay, onNew, onDelete, onHall, onWill, onHelp, onSettings, tab = "single", onTab, multiplayer }) {
-    const multi = tab === "multi" && !!multiplayer;
-    const tabs = onTab ? h(
-      "div.mode-tabs",
-      h("button" + (multi ? "" : ".on"), { on: { click: () => onTab("single") } }, uiImg("character", 20), "Singleplayer"),
-      h("button" + (multi ? ".on" : ""), { on: { click: () => onTab("multi") } }, uiImg("crew", 20), "Multiplayer")
-    ) : null;
-    const el = h(
-      "div.screen.title-screen",
-      h(
-        "div.title",
-        h("h1", "Inherited Will"),
-        h("h2", "A One Piece Roguelike"),
-        tabs,
-        multi ? multiplayer() : h("div.slots", slots.map((s) => slotCard(s, { onPlay, onNew, onDelete, onHall, onWill }))),
-        h(
-          "div.title-links",
-          h("button.btn", { on: { click: onHelp } }, uiImg("help", 18), "How to Play"),
-          h("button.btn", { on: { click: onSettings } }, uiImg("settings", 18), "Settings")
-        )
-      ),
-      h("div.foot", "Unofficial fan game. ONE PIECE \xA9 Eiichiro Oda / Shueisha / Toei Animation. All art in this game is procedurally drawn.")
-    );
-    ui.showScreen(el);
-  }
-  function slotCard(info, { onPlay, onNew, onDelete, onHall, onWill }) {
-    const { slot: slot2, char, legacy } = info;
-    const head = h(
-      "div.slot-head",
-      h("span", `Lineage ${slot2}`),
-      !info.empty ? h("button.link", { title: "Delete this lineage for good", on: { click: () => onDelete(slot2) } }, "Delete") : null
-    );
-    if (info.empty) {
-      return h(
-        "div.slot-card.empty",
-        head,
-        h("div.slot-empty", h("div.big", "Empty"), h("p", "A new bloodline, waiting to be born.")),
-        h("div.slot-actions", h("button.btn.red", { on: { click: () => onNew(slot2) } }, "Begin a Lineage"))
-      );
-    }
-    const gen = legacy?.generation || char?.generation || 1;
-    const will = legacy?.will || 0;
-    const meta = h(
-      "div.slot-meta",
-      h("span", `Generation ${gen}`),
-      h("span", { title: "Inherited Will \u2014 spend it on your bloodline" }, uiImg("reputation", 14), ` ${will} Will`)
-    );
-    if (char) {
-      const race = RACES[char.race];
-      const faction = char.faction === "marine" ? `Marine ${char.marineRank || "Recruit"}` : char.crewName ? `Captain of the ${char.crewName}` : char.faction === "pirate" ? "Pirate" : "Wanderer";
-      const saved = char.lastSaved ? new Date(char.lastSaved) : null;
-      return h(
-        "div.slot-card",
-        head,
-        h(
-          "div.slot-body",
-          portrait(char.look, 84, 96),
-          h(
-            "div.slot-info",
-            h("div.nm", char.name),
-            h("div.sub", `${race?.name || char.race} \xB7 ${faction}`),
-            h("div.sub", `Day ${char.world?.day || 1} \xB7 ${char.lives}/${char.maxLives} lives${char.bounty ? " \xB7 " + formatBerries(char.bounty) : ""}`),
-            saved ? h("div.sub.faint", `Saved ${saved.toLocaleDateString()} ${saved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`) : null
-          )
-        ),
-        meta,
-        h(
-          "div.slot-actions",
-          h("button.btn.gold", { on: { click: () => onPlay(slot2) } }, "Continue"),
-          h("button.btn", { on: { click: () => onWill(slot2) } }, "Will"),
-          h("button.btn", { on: { click: () => onHall(slot2) } }, `Hall (${legacy?.hall?.length || 0})`),
-          h("button.btn.red.small", { title: "Abandon this character and start a new one in this lineage", on: { click: () => onNew(slot2) } }, "Abandon")
-        )
-      );
-    }
-    const last2 = legacy?.hall?.[0];
-    return h(
-      "div.slot-card",
-      head,
-      h(
-        "div.slot-body",
-        last2 ? portrait(last2.look, 84, 96) : null,
-        h(
-          "div.slot-info",
-          h("div.nm", last2 ? `${last2.name}` : "The next generation"),
-          h("div.sub", last2 ? `Fell on day ${last2.days}. Their will lives on.` : "Ready to be born.")
-        )
-      ),
-      meta,
-      h(
-        "div.slot-actions",
-        h("button.btn.red", { on: { click: () => onNew(slot2) } }, `Begin Generation ${gen}`),
-        h("button.btn", { on: { click: () => onWill(slot2) } }, "Will"),
-        h("button.btn", { on: { click: () => onHall(slot2) } }, `Hall (${legacy?.hall?.length || 0})`)
-      )
-    );
-  }
-  function creationScreen(ui, legacy, { onDone, onBack }) {
-    let rerolls = Math.max(0, perkLevel(legacy, "reroll") - (legacy.pendingBirth?.flips || 0));
-    let birth = legacy.pendingBirth?.birth || rollBirth(legacy, Math.floor(Math.random() * 1e9));
-    if (ui.game?.debugBirth) birth = { ...birth, ...ui.game.debugBirth };
-    const keep = () => {
-      legacy.pendingBirth = { birth, flips: perkLevel(legacy, "reroll") - rerolls };
-      try {
-        saveLegacy(legacy);
-      } catch (e) {
-      }
-    };
-    keep();
-    const state = { name: "", look: null, story: "calling" };
-    const root4 = h("div.screen");
-    ui.showScreen(root4);
-    let raf = 0;
-    let timers = [];
-    let previewCleanup = null;
-    const stopAnim = () => {
-      window.cancelAnimationFrame(raf);
-      for (const t of timers) clearTimeout(t);
-      timers = [];
-      previewCleanup?.();
-      previewCleanup = null;
-    };
-    const later = (ms, fn) => timers.push(setTimeout(fn, ms));
-    const hasD = () => birth.traits.includes("will_of_d");
-    function stepRoll(spin = true) {
-      stopAnim();
-      clear(root4);
-      state.look = null;
-      const race = RACES[birth.race];
-      const rar = RARITY[race.rarity];
-      const shown = birth.traits.filter((t) => TRAITS[t] && !TRAITS[t].hidden && t !== "will_of_d");
-      const nameEl = h("div.race", { style: { color: rar.color } }, "???");
-      const rarEl = h("div.rarity", { style: { color: rar.color } }, "");
-      const dEl = h("div.d-reveal");
-      const info = h(
-        "div.roll-info",
-        { style: { opacity: 0 } },
-        h("p", { style: { maxWidth: "560px", margin: "6px auto" } }, race.desc),
-        h("p", h("b", "Birthplace: "), race.origin, " ", h("span.tag", race.spawnSeas.map((s) => SEA_NAMES[s]).join(" / "))),
-        h(
-          "div.roll-cols",
-          h("div", h("h3", "Racial traits"), ...race.traits.map((t) => h("div.li", t))),
-          h(
-            "div",
-            h("h3", "Born with"),
-            ...shown.map((t) => h("div.li", h("b", TRAITS[t].name + ": "), TRAITS[t].desc)),
-            h("div.li.muted", `${Math.min(5, race.lives + perkLevel(legacy, "lives"))} lives (vivre cards)`)
-          )
-        )
-      );
-      const btns = h(
-        "div.roll-btns",
-        { style: { opacity: 0 } },
-        h("button.btn.gold", { on: { click: stepIdentity } }, "Continue"),
-        rerolls > 0 ? h("button.btn", { on: { click: () => {
-          rerolls--;
-          birth = rollBirth(legacy, Math.floor(Math.random() * 1e9));
-          keep();
-          stepRoll(true);
-        } } }, `Flip Fate's Coin (${rerolls} left)`) : null
-      );
-      const willLine = h("div.will-line", uiImg("reputation", 16), ` Your lineage's Inherited Will: ${legacy.will}` + (legacy.generation > 1 ? ` \xB7 generation ${legacy.generation}` : ""));
-      const panel = h("div.panel.race-roll", h("h2", legacy.generation > 1 ? `Generation ${legacy.generation} is born\u2026` : "A child is born\u2026"), nameEl, rarEl, dEl, info, btns, willLine);
-      root4.appendChild(panel);
-      const ids = Object.keys(RACES);
-      const t0 = performance.now();
-      const dur = spin ? 1800 : 0;
-      let lastI = -1;
-      const reveal = () => {
-        nameEl.textContent = race.name;
-        nameEl.style.color = rar.color;
-        rarEl.textContent = rar.label.toUpperCase();
-        info.style.opacity = 1;
-        ui.game?.audio?.sfx(race.rarity === "legendary" || race.rarity === "epic" ? "fanfare" : "reveal");
-        clear(dEl);
-        const chance = dChance(legacy);
-        if (hasD()) {
-          dEl.append(
-            h("div.d-stamp", "D."),
-            h("div.d-title", "THE WILL OF D."),
-            h("p", legacy.family?.d ? `The D. of the ${legacy.family.name} family runs in your blood, as it did in your parent's.` : h("span", "A hidden initial runs in your blood. (", pct(chance), " of births)")),
-            h("p.muted", "Once each life a finishing blow misses you \xB7 +3 Willpower \xB7 far likelier to have Conqueror's Haki \xB7 every child of your line will carry the D. and your family name.")
-          );
-          dEl.classList.remove("miss");
-          dEl.classList.add("hit");
-          later(spin ? 900 : 0, () => {
-            dEl.classList.add("show");
-            ui.game?.audio?.sfx("fanfare");
-            btns.style.opacity = 1;
-          });
-        } else {
-          dEl.append(h("p.muted", `No "D." in your name this time \u2014 only ${pct(chance)} of births carry the Will of D.`));
-          dEl.classList.add("miss", "show");
-          btns.style.opacity = 1;
-        }
-      };
-      const tick7 = (now3) => {
-        const k = Math.max(0, (now3 - t0) / Math.max(1, dur));
-        if (k < 1) {
-          const i = Math.floor(Math.pow(k, 0.5) * 40) % ids.length;
-          if (i !== lastI) {
-            lastI = i;
-            ui.game?.audio?.sfx("roll_tick", null, { pitch: 1 + k * 0.25 });
-          }
-          nameEl.textContent = RACES[ids[i]].name;
-          nameEl.style.color = RARITY[RACES[ids[i]].rarity].color;
-          raf = requestAnimationFrame(tick7);
-        } else reveal();
-      };
-      raf = requestAnimationFrame(tick7);
-    }
-    function stepIdentity() {
-      stopAnim();
-      clear(root4);
-      if (!state.look) {
-        state.look = makeLook(birth.race, birth.seed);
-        state.look.build = 0.5;
-      }
-      const L3 = state.look;
-      const familyFixed = legacy.family?.d && hasD() ? legacy.family.name : null;
-      if (state.first === void 0) {
-        state.first = randomFirst(L3.fem);
-        state.last = familyFixed || randomLast();
-      }
-      if (familyFixed) state.last = familyFixed;
-      const seas = RACES[birth.race].spawnSeas;
-      if (!state.sea || !seas.includes(state.sea)) state.sea = seas[Math.floor(Math.random() * seas.length)];
-      const race = birth.race;
-      const finalName = h("div.final-name");
-      const updateName = () => {
-        state.name = [state.last, state.first].filter(Boolean).join(" ");
-        clear(finalName);
-        const n = state.name || "Nameless";
-        finalName.append(h("span.muted", "You will be known as "), h("b", hasD() ? nameWithD(n) : n));
-      };
-      const pickList = (list, value, set) => h(
-        "select.name-pick",
-        { on: { change: (e) => {
-          set(e.target.value);
-          updateName();
-        } } },
-        ...[...new Set(list)].sort((a, b) => a.localeCompare(b)).map((n) => h("option", { value: n, ...n === value ? { selected: true } : {} }, n))
-      );
-      const firstBox = h("div", { style: { display: "flex", gap: "6px" } });
-      const lastBox = h("div", { style: { display: "flex", gap: "6px" } });
-      const renderFirst = () => {
-        clear(firstBox);
-        firstBox.append(pickList(L3.fem ? FEMALE_FIRST : MALE_FIRST, state.first, (v) => {
-          state.first = v;
-        }), h("button.btn", { on: { click: rollFirst } }, "Random"));
-      };
-      const renderLast = () => {
-        clear(lastBox);
-        if (familyFixed) lastBox.append(h("div.name-fixed", h("b", familyFixed), h("span.muted", " \u2014 your family's name, with its D.")));
-        else lastBox.append(pickList(SURNAMES, state.last, (v) => {
-          state.last = v;
-        }), h("button.btn", { on: { click: rollLast } }, "Random"));
-      };
-      const rollFirst = () => {
-        state.first = randomFirst(L3.fem, state.first);
-        renderFirst();
-        updateName();
-      };
-      const rollLast = () => {
-        state.last = randomLast(state.last);
-        renderLast();
-        updateName();
-      };
-      renderFirst();
-      renderLast();
-      updateName();
-      const row = (label, ...kids) => h("div.opt-row", h("div.opt-label", label), ...kids);
-      const swatch = (key2, colors) => h("div.swatches", ...colors.map((c) => h("button" + (L3[key2] === c ? ".on" : ""), { title: c, style: { background: c }, on: { click: () => {
-        L3[key2] = c;
-        changed();
-      } } })));
-      const chips2 = (current2, values2, labels, set) => h("div.swatches", ...values2.map((v, i) => h("button.chip" + (current2 === v ? ".on" : ""), { on: { click: () => {
-        set(v);
-        changed();
-      } } }, labels ? labels[i] : v)));
-      const opts = (key2, values2, labels) => chips2(L3[key2], values2, labels, (v) => {
-        L3[key2] = v;
-      });
-      const previewBox = h("div.preview3d");
-      const left = h(
-        "div",
-        previewBox,
-        h("p.muted", { style: { textAlign: "center", margin: "6px 0 0" } }, raceLabel(L3)),
-        h("p.muted", { style: { textAlign: "center", margin: "2px 0 0", fontSize: "12px" } }, HEIGHT_NOTE[race] || "Your height comes from your race.")
-      );
-      const tabsEl = h("div.tabs.look-tabs");
-      const optsEl = h("div.look-opts");
-      const genderEl = h("div");
-      const renderGender = () => {
-        clear(genderEl);
-        genderEl.appendChild(row("You are", chips2(L3.fem ? "f" : "m", ["m", "f"], ["Male", "Female"], (v) => setGender(v === "f"))));
-      };
-      const setGender = (fem) => {
-        const other = !!L3.fem !== fem;
-        L3.fem = fem;
-        if (!fem && ["dress", "crop", "bikini"].includes(L3.topStyle)) L3.topStyle = "tee";
-        if (!fem && ["skirt", "longskirt"].includes(L3.bottomStyle)) L3.bottomStyle = "trousers";
-        if (L3.eyeShape !== "fish") L3.eyeShape = eyeShapeOf2({ ...L3, eyeShape: L3.eyeShape });
-        if (fem && L3.bust === void 0) L3.bust = 1;
-        if (other) rollFirst();
-        renderGender();
-      };
-      renderGender();
-      const storyEl = h("div.story-pick");
-      const renderStory = () => {
-        clear(storyEl);
-        const opt = (v, label) => h("button.chip" + (state.story === v ? ".on" : ""), { on: { click: () => {
-          state.story = v;
-          renderStory();
-        } } }, label);
-        storyEl.append(
-          row("Your story", h("div.swatches", opt("calling", "Find your calling"), opt("free", "Sail your own way"))),
-          h("p.muted.story-note", state.story === "free" ? "No main story: sail off into the seas and start your own journey \u2014 no chapters, no story markers, just the sea, its side quests, trainers and bounties, and the people you meet. You can still take up a road later (the Quests section of the menu, Tab)." : "Three people on your home island can set you on a road \u2014 Pirate, Marine or Bounty Hunter \u2014 and the main story follows it through the Blues, the Grand Line and the New World. Or you can turn them all down and sail your own way.")
-        );
-      };
-      renderStory();
-      const seaEl = h("div");
-      const renderSea = () => {
-        clear(seaEl);
-        if (seas.length < 2) {
-          seaEl.append(row("Born in", h("div.muted", `the ${SEA_NAMES[seas[0]] || "sea"} \u2014 your people's home`)));
-          return;
-        }
-        seaEl.append(row("Born in", chips2(state.sea, seas, seas.map((x) => SEA_NAMES[x]), (v) => {
-          state.sea = v;
-          renderSea();
-        })));
-      };
-      renderSea();
-      const right = h(
-        "div",
-        row("Family name", lastBox),
-        row("Given name", firstBox),
-        finalName,
-        genderEl,
-        seaEl,
-        storyEl,
-        tabsEl,
-        optsEl,
-        h("p.muted", { style: { marginTop: "12px" } }, "No destiny is chosen for you. Pirate, Marine, adventurer, bounty hunter or none of these \u2014 the sea is free, and what you become is up to you. You can found your own pirate crew and raise your Jolly Roger later, from the Crew menu.")
-      );
-      const born = RACES[birth.race];
-      const panel = h(
-        "div.panel.wide",
-        h("h2", "Who are you?"),
-        h("div.creation-grid", left, right),
-        h(
-          "div.creation-foot",
-          h("div.muted", `${raceLabel(L3)} \xB7 born in the ${SEA_NAMES[state.sea] || "Blues"}`),
-          h(
-            "div",
-            { style: { display: "flex", gap: "10px" } },
-            h("button.btn", { on: { click: () => stepRoll(false) } }, "Back"),
-            h("button.btn.red.big", { on: { click: () => {
-              stopAnim();
-              onDone(birth, { name: (state.name || "").trim() || "Nameless", first: state.first, family: state.last, sea: state.sea, look: state.look, story: state.story });
-            } } }, "Set Sail")
-          )
-        )
-      );
-      root4.appendChild(panel);
-      applyLook(L3, race);
-      let preview = null;
-      try {
-        preview = createPreview(previewBox, L3, { game: ui.game });
-      } catch (e) {
-        console.warn("3D preview unavailable", e);
-      }
-      previewCleanup = () => {
-        preview?.dispose();
-        preview = null;
-      };
-      const TABS2 = [["face", "Face"], ["hair", "Hair"], ["body", "Body"], ["clothes", "Clothes"]];
-      const renderTabs = () => {
-        clear(tabsEl);
-        for (const [id, name] of TABS2) tabsEl.appendChild(h("button" + (state.tab === id ? ".on" : ""), { on: { click: () => {
-          state.tab = id;
-          renderTabs();
-          renderOpts();
-        } } }, name));
-      };
-      const skinnable = ["human", "three_eye", "buccaneer", "skypiean", "lunarian"].includes(race);
-      const renderOpts = () => {
-        clear(optsEl);
-        const tab = state.tab;
-        preview?.setFraming?.(tab === "face" || tab === "hair" ? "face" : "full");
-        if (tab === "face") {
-          add4(
-            optsEl,
-            row("Eyes", (() => {
-              const set = [...L3.fem ? EYES_F : EYES_M, ...race === "fishman" ? ["fish"] : []];
-              return chips2(eyeShapeOf2(L3), set, set.map((e) => EYE_NAMES[e]), (v) => {
-                L3.eyeShape = v;
-              });
-            })()),
-            row("Eye colour", swatch("eyeColor", ["#222222", "#3b2a1a", "#6d4c41", "#1e3799", "#0984e3", "#00a8a8", "#27ae60", "#6c5ce7", "#8e44ad", "#c0392b", "#e1b12c", "#b2bec3"])),
-            row("Look", chips2(L3.frown ? "stern" : "easy", ["easy", "stern"], ["Easy-going", "Stern"], (v) => {
-              L3.frown = v === "stern";
-            })),
-            row("Mouth", chips2(L3.grin ? "grin" : L3.mouth || "smile", ["smile", "flat", "grin"], ["Smile", "Calm", "Big grin"], (v) => {
-              L3.grin = v === "grin";
-              L3.mouth = v === "grin" ? void 0 : v;
-            })),
-            row("Face shape", chips2(headParams(L3).shape, FACE_SHAPES, ["Oval", "Round", "Square", "Long", "Heart"], (v) => {
-              L3.faceShape = v;
-            })),
-            row("Jaw", chips2(L3.jaw ?? 0.5, [0.25, 0.5, 0.75, 1], ["Narrow", "Medium", "Wide", "Very wide"], (v) => {
-              L3.jaw = v;
-            })),
-            row("Chin", chips2(headParams(L3).chin, CHINS, ["Pointed", "Round", "Strong"], (v) => {
-              L3.chin = v;
-            })),
-            race !== "mink" && race !== "fishman" ? row("Nose", chips2(headParams(L3).nose, NOSES2, ["Small", "Normal", "Big", "Button", "Hooked", "Long", "Red ball"], (v) => {
-              L3.noseShape = v;
-              L3.nose = v === "long" ? "long" : v === "red" ? "red" : void 0;
-            })) : null,
-            race !== "mink" && race !== "fishman" && !["long", "red"].includes(headParams(L3).nose) ? row("Nose tip", chips2(headParams(L3).tip, NOSE_TIPS, ["Straight", "Downturned", "Upturned"], (v) => {
-              L3.noseTip = v;
-            })) : null,
-            row("Eyebrows", chips2(L3.browHeight || "mid", ["low", "mid", "high"], ["Low-set", "Middle", "High-set"], (v) => {
-              L3.browHeight = v;
-            })),
-            row("Brow shape", chips2(L3.browShape || "natural", ["natural", "arched", "straight", "thick", "thin"], ["Natural", "Arched", "Straight", "Thick", "Thin"], (v) => {
-              L3.browShape = v;
-            })),
-            row("Cheekbones", chips2(L3.cheek ?? 0.5, [0, 0.5, 1], ["Soft", "Defined", "High"], (v) => {
-              L3.cheek = v;
-            })),
-            row("Brow", chips2(headParams(L3).brow, [0, 0.5, 1], ["Smooth", "Medium", "Heavy"], (v) => {
-              L3.brow = v;
-            })),
-            row("Teeth", chips2(L3.sharpTeeth ? "sharp" : "normal", ["normal", "sharp"], ["Normal", "Sharp"], (v) => {
-              L3.sharpTeeth = v === "sharp";
-            })),
-            row("Scar", chips2(L3.scarEye ? "eye" : L3.scarCheek ? "cheek" : "none", ["none", "eye", "cheek"], ["None", "Across the eye", "Under the eye"], (v) => {
-              L3.scarEye = v === "eye";
-              L3.scarCheek = v === "cheek";
-            }))
-          );
-        } else if (tab === "hair") {
-          add4(
-            optsEl,
-            row("Style", opts("hair", ["short", "messy", "spiky", "crop", "sidefringe", "slick", "pompadour", "long", "wavy", "bob", "ponytail", "twintails", "braid", "bun", "buzz", "curly", "afro", "topknot", "mohawk", "bald"], ["Short", "Messy", "Spiky", "Crop", "Swept fringe", "Slicked back", "Pompadour", "Long", "Wavy", "Bob", "Ponytail", "Twin tails", "Braid", "Bun", "Buzz", "Curly", "Afro", "Topknot", "Mohawk", "Bald"])),
-            race !== "mink" ? row("Colour", swatch("hairColor", ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#e84393", "#8e44ad", "#2980b9", "#2ecc71", "#dfe6e9"])) : h("p.muted", "Minks grow fur of their kind.")
-          );
-        } else if (tab === "body") {
-          const build5 = h("input.build-slider", { type: "range", min: 0, max: 1, step: 0.05, value: L3.build ?? 0.5, on: { input: (e) => {
-            L3.build = Number(e.target.value);
-            applyLook(L3, race);
-            preview?.setLook(L3);
-          } } });
-          const mus = L3.muscle ?? 0.5;
-          add4(
-            optsEl,
-            // (a frame brings the muscle it usually carries; Muscle can change it after)
-            row("Frame", (() => {
-              const set = L3.fem ? FRAMES_F : FRAMES_M;
-              return chips2(frameId(L3), set, set.map((f) => FRAME_NAMES[f]), (v) => {
-                L3.frame = v;
-                L3.muscle = FRAME[v].mus ?? 0.55;
-              });
-            })()),
-            row("Build", h("div.build-row", h("span.muted", "Thin"), build5, h("span.muted", "Wide"))),
-            row("Muscle", chips2(mus < 0.35 ? 0.2 : mus < 0.75 ? 0.55 : 1, [0.2, 0.55, 1], ["Lean", "Toned", "Muscular"], (v) => {
-              L3.muscle = v;
-            })),
-            L3.fem ? row("Figure", chips2((L3.bust ?? 1) < 0.9 ? 0.8 : (L3.bust ?? 1) < 1.15 ? 1 : 1.3, [0.8, 1, 1.3], ["Slim", "Average", "Curvy"], (v) => {
-              L3.bust = v;
-            })) : null,
-            h("p.muted", { style: { margin: "0 0 8px", fontSize: "12px" } }, "Your height is set by your race. " + (HEIGHT_NOTE[race] || "")),
-            skinnable ? row("Skin", swatch("skin", ["#fbe3cf", "#f9dcc4", "#f1c9a0", "#e0ac7e", "#c68642", "#a0643a", "#7a4a2a", "#5c3a21"])) : null,
-            race === "mink" ? row("Mink", opts("kind", MINK_KINDS.map((k) => k.name))) : null,
-            race === "fishman" ? row("Fish-Man kind", opts("kind", FISHMAN_KINDS.map((k) => k.name))) : null
-          );
-        } else {
-          const o = outfitOf(L3);
-          const TOPS3 = [["tee", "Tee"], ["shirt", "Shirt"], ...L3.fem ? [["tank", "Tank top"]] : [], ["vest", "Open vest"], ["open", "Open shirt"], ["striped", "Sailor stripes"], ["jacket", "Suit jacket"], ["kimono", "Kimono"], ["coat", "Long coat"], ["bare", L3.fem ? "Chest wrap" : "Bare-chested"]];
-          if (L3.fem) TOPS3.push(["crop", "Crop top"], ["bikini", "Bikini top"], ["dress", "Dress"]);
-          const BOTS = [["trousers", "Trousers"], ["shorts", "Shorts"], ["capri", "Rolled-up"], ["baggy", "Baggy"], ["slim", "Slim"], ["hakama", "Hakama"]];
-          if (L3.fem) BOTS.push(["skirt", "Skirt"], ["longskirt", "Long skirt"]);
-          const setTop = (v) => {
-            L3.topStyle = v;
-            L3.openShirt = void 0;
-            L3.noSleeves = void 0;
-            if (v === "coat" && !L3.coat) L3.coat = "#5d4037";
-            if (v !== "coat" && L3.coat && !L3.keepCoat) L3.coat = void 0;
-          };
-          const COLS3 = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#a0522d", "#ffffff"];
-          const under = L3.fem && (o.top === "vest" || o.top === "open");
-          const two = under || ["striped", "jacket", "kimono", "coat"].includes(o.top);
-          add4(
-            optsEl,
-            row("Top", chips2(o.top, TOPS3.map((t) => t[0]), TOPS3.map((t) => t[1]), setTop)),
-            o.top !== "bare" ? row(o.top === "coat" ? "Coat colour" : "Colour", o.top === "coat" ? swatch("coat", ["#5d4037", "#37474f", "#1b5e20", "#4a148c", "#b71c1c", "#fafafa", "#212121", "#0d47a1"]) : swatch("top", COLS3)) : null,
-            two ? row(o.top === "striped" ? "Stripes" : o.top === "kimono" ? "Collar" : under ? "Top under" : "Shirt under", swatch("top2", ["#f5f5f5", "#fff8e1", "#90caf9", "#212121", "#c62828", "#fce4ec", "#ffd54f"])) : null,
-            row("Bottoms", chips2(o.skirt && !L3.fem ? "trousers" : o.bottom, BOTS.map((t) => t[0]), BOTS.map((t) => t[1]), (v) => {
-              L3.bottomStyle = v;
-            })),
-            row("Colour", swatch("bottom", ["#2d3436", "#1e3799", "#1e63b8", "#3b3b98", "#6d4c41", "#636e72", "#0a3d62", "#b8860b", "#e1b12c", "#f5f6fa"])),
-            row("Waist", chips2(o.waist, ["belt", "sash", "haramaki", "obi", "none"], ["Belt", "Sash", "Belly wrap", "Obi", "Nothing"], (v) => {
-              L3.waist = v;
-            })),
-            o.waist !== "none" ? row(o.waist === "belt" ? "Belt" : "Wrap colour", o.waist === "belt" ? swatch("belt", ["#3b2a1a", "#212121", "#6d4c41", "#8d6e4a", "#c62828"]) : swatch("waistCol", ["#f4c430", "#c62828", "#1e88e5", "#2e7d32", "#6a1b9a", "#ef6c00", "#fafafa", "#212121"])) : null,
-            row("Footwear", chips2(o.shoes, ["boots", "shoes", "sandals", "geta", "bare"], ["Boots", "Shoes", "Sandals", "Geta", "Barefoot"], (v) => {
-              L3.shoeStyle = v;
-              L3.sandals = void 0;
-            })),
-            o.shoes !== "bare" ? row("Colour", swatch("shoes", ["#3b2a1a", "#2d3436", "#8d6e4a", "#c8a878", "#c0392b", "#f5f6fa"])) : null
-          );
-        }
-      };
-      function changed() {
-        applyLook(L3, race);
-        preview?.setLook(L3);
-        renderOpts();
-      }
-      if (!state.tab) state.tab = "face";
-      renderTabs();
-      renderOpts();
-    }
-    stepRoll(true);
-  }
-  function lifeLostScreen(ui, { cause, lives, onContinue }) {
-    const cards = [];
-    for (let i = 0; i < lives + 1; i++) cards.push(h("div.vivre" + (i === lives ? ".burning" : ""), { style: { width: "36px", height: "48px" } }));
-    const el = h("div.screen", h(
-      "div.panel",
-      { style: { textAlign: "center", width: "min(560px, 92vw)" } },
-      h("h2", "A vivre card burns\u2026"),
-      h("div.lives", { style: { justifyContent: "center", margin: "14px 0" } }, cards),
-      h("p", cause),
-      h("p", h("b", lives === 1 ? "You have ONE life left. The next death is the end of this journey." : `${lives} lives remain.`)),
-      h("button.btn.gold", { on: { click: onContinue } }, "Rise again")
-    ));
-    ui.showScreen(el);
-  }
-  function lineageEndScreen(ui, { char, cause, will, legacy, onNext }) {
-    const heirloomOptions = [];
-    for (const it of char.inventory || []) {
-      const d = ITEMS[it.id];
-      if (!d || !["hat", "coat", "weapon", "accessory"].includes(d.type)) continue;
-      if (!heirloomOptions.find((o) => o.id === it.id)) heirloomOptions.push({ id: it.id, d });
-    }
-    let chosen = null;
-    const list = h("div.list");
-    const renderList = () => {
-      clear(list);
-      if (!heirloomOptions.length) list.appendChild(h("p.muted", "You owned nothing worth passing down. Your successor starts with only your will."));
-      for (const o of heirloomOptions) {
-        list.appendChild(h(
-          "div.row-item" + (chosen === o.id ? ".picked" : ""),
-          { style: { cursor: "var(--cur-ptr)" }, on: { click: () => {
-            chosen = o.id;
-            renderList();
-          } } },
-          itemImg(o.id, 30, ".ico"),
-          h("div.grow", h("b", o.d.name), h("div.sub", o.d.desc || o.d.grade || o.d.type))
-        ));
-      }
-    };
-    renderList();
-    const legends = (char.legends || []).map((id) => LEGENDS[id]).filter(Boolean);
-    const el = h("div.screen", h(
-      "div.panel.wide",
-      h("h2", "Your journey has ended."),
-      h(
-        "div",
-        { style: { display: "flex", gap: "20px", flexWrap: "wrap" } },
-        wantedPoster(char),
-        h(
-          "div",
-          { style: { flex: 1, minWidth: "280px" } },
-          h("p", h("b", char.name), ` \u2014 ${raceLabel(char.look)}, generation ${char.generation}.`),
-          h("p", cause),
-          h("p", `Survived ${char.world?.day || 1} days \xB7 ${(char.discovered || []).length} islands discovered \xB7 ${(char.bosses || []).length} great foes defeated${char.bounty ? " \xB7 bounty " + formatBerries(char.bounty) : ""}${char.fruit ? " \xB7 ate the " + FRUITS[char.fruit].name : ""}.`),
-          legends.length ? h("p", h("b", "Legends: "), legends.map((l) => l.name).join(", ")) : null,
-          char.fruit ? h("p.muted", `Somewhere in the world, the ${FRUITS[char.fruit].name} has been reborn inside an ordinary fruit\u2026`) : null,
-          h("p", { style: { fontSize: "20px" } }, h("b", `+${will} Inherited Will`)),
-          h("h3", "Pass on an heirloom"),
-          h("p.muted", "Like the straw hat passed from Roger to Shanks to Luffy, choose one item for your successor to inherit."),
-          list,
-          h(
-            "div",
-            { style: { marginTop: "12px", display: "flex", justifyContent: "flex-end" } },
-            h("button.btn.gold", { on: { click: () => {
-              if (chosen) legacy.heirloom = { id: chosen, from: char.name };
-              onNext();
-            } } }, "Continue")
-          )
-        )
-      )
-    ));
-    ui.showScreen(el);
-  }
-  function legacyShopScreen(ui, legacy, { onDone, save, doneLabel = "Begin the next generation" }) {
-    const root4 = h("div.screen");
-    ui.showScreen(root4);
-    const render2 = () => {
-      clear(root4);
-      const cards = Object.entries(PERKS).map(([id, p]) => {
-        const lvl = perkLevel(legacy, id);
-        const cost = perkCost(legacy, id);
-        return h(
-          "div.card.perk",
-          h("h4", uiImg(p.icon, 22), " ", p.name, h("span.tag", `Lv ${lvl}/${p.costs.length}`)),
-          h("div", p.desc),
-          h("div", { style: { marginTop: "6px" } }, cost == null ? h("span.muted", "Mastered") : h("button.btn" + (legacy.will >= cost ? ".gold" : ""), { disabled: legacy.will < cost, on: { click: () => {
-            legacy.will -= cost;
-            legacy.perks[id] = lvl + 1;
-            save();
-            render2();
-          } } }, `Inherit \u2014 ${cost} Will`))
-        );
-      });
-      root4.appendChild(h(
-        "div.panel.wide",
-        h("h2", "The Inherited Will"),
-        h("p", "Your ancestors' deeds live on. Every life earns Inherited Will \u2014 for the islands it charted, the foes it bested, the days it survived and the legends it wrote. Spend it to shape every generation that follows. ", h("b", `Will: ${legacy.will}`)),
-        legacy.heirloom ? h("p", "Heirloom waiting for the next generation: ", itemImg(legacy.heirloom.id, 20), ` ${ITEMS[legacy.heirloom.id]?.name} (from ${legacy.heirloom.from}).`) : null,
-        h("div.grid2", cards),
-        h("div", { style: { marginTop: "12px", display: "flex", justifyContent: "flex-end" } }, h("button.btn.red", { on: { click: onDone } }, doneLabel))
-      ));
-    };
-    render2();
-  }
-  function hallScreen(ui, legacy, { onBack }) {
-    const rows = (legacy.hall || []).map((e) => {
-      const legends = (e.legends || []).map((id) => LEGENDS[id]?.name).filter(Boolean);
-      const role = e.marineRank ? `Marine ${e.marineRank}` : e.crewName ? `captain of the ${e.crewName}` : e.faction === "pirate" ? "pirate" : "wanderer";
-      return h(
-        "div.row-item",
-        e.look ? portrait(e.look, 40, 46) : uiImg("bounty", 30),
-        h(
-          "div.grow",
-          h("b", e.name),
-          ` \u2014 ${RACES[e.race]?.name || e.race}, ${role}, generation ${e.generation}`,
-          h("div.sub", `${e.days} days \xB7 ${e.islands} islands \xB7 ${e.bosses} great foes${e.bounty ? " \xB7 " + formatBerries(e.bounty) : ""}`),
-          legends.length ? h("div.sub", { style: { color: "#7a4a06", fontWeight: 800 } }, "Legends: " + legends.join(", ")) : null,
-          h("div.sub", e.cause)
-        ),
-        h("span.price", `+${e.will} Will`)
-      );
-    });
-    ui.showScreen(h("div.screen", h(
-      "div.panel.wide",
-      h("h2", "Hall of Legends"),
-      rows.length ? h("div.list", rows) : h("p", "No legends yet. Every legend starts with a single voyage."),
-      h("div", { style: { marginTop: "12px", textAlign: "right" } }, h("button.btn", { on: { click: onBack } }, "Back"))
-    )));
-  }
-  function helpContent(char, settings) {
-    const haki = !!(char && (char.haki?.armament || char.haki?.observation || char.haki?.conqueror));
-    const k = (key2, text2) => h("div", h("kbd", key2), text2);
-    const K = keysOf(settings);
-    const skillKeys = K.skills.filter(Boolean).slice(0, 5).map(keyLabel).join(" ");
-    return h(
-      "div",
-      h("h2", "How to Play"),
-      h("p", "Inherited Will is a roguelike set on the whole Blue Planet of One Piece. You are born in one of the four Blues depending on your race. Nobody tells you what to become: sail where you like, climb Reverse Mountain into the Grand Line, cross the Red Line, join the Marines, become a pirate, hunt treasure \u2014 or all of it."),
-      h("p", h("b", "Lives: "), "You have a few vivre cards. Get knocked down and you can mash SPACE to get back up; if an enemy finishes you, a vivre card burns. Lose them all and your journey ends \u2014 your Inherited Will, an heirloom, and your charted islands pass to the next generation."),
-      h("p", h("b", "Getting stronger: "), "There are no points to spend. Your body grows by use: landing blows builds Strength, dodging and parrying builds Agility, blocking builds Endurance, taking punishment builds Vitality, and refusing to stay down builds Willpower. Every weapon type has its own mastery that rises the more you fight with it \u2014 and deals more damage as it does. Worthy opponents teach you far more than weak ones; masters and trainers can push you further, and beating a great foe brings a breakthrough."),
-      haki ? h("p", h("b", "Haki: "), "Your spirit has awakened. Haki grows as you use it in battle and with a master's training.") : h("p.muted", "Some say that those who push their body and spirit far enough awaken something more\u2026"),
-      h("h3", "Controls"),
-      h(
-        "div.kbd-help",
-        k("Mouse", "look around (click the game to capture the mouse, Esc frees it)"),
-        k("P", "first person / third person (or scroll the wheel all the way in, and out again)"),
-        k("WASD", "move where you look / steer ship"),
-        k("Space", "jump; at a pier, a bank or a ship's side, climb up (ship: row)"),
-        k("Shift", "hold to sprint (ship: Coup de Burst); tap in first person to dodge"),
-        k("Ctrl", "third person: shift lock (the character faces where you look); swimming or flying, down"),
-        k("Q", "dash / dodge \u2014 it comes back after a moment (the Q slot left of the hotbar fills up again)"),
-        k("Right mouse", "heavy attack; hold and drag to turn the camera in third person without shift lock"),
-        k("Left click", "attack combo (ship: cannons)"),
-        k("Right click", "heavy attack"),
-        k("F", "hold to block \u2014 or tap it just as a blow lands (the yellow glint) to PARRY: they reel, and your next strike is a COUNTER. Mashing it won't parry. A red-glint blow smashes a guard aside, so dodge those"),
-        k("1-9, 0", "hotbar: take out what's on it \u2014 your Devil Fruit (and its forms), a weapon (again to put it away), food (in your hand: hold the right mouse button to eat it), a Dial"),
-        k(skillKeys || "Skill keys", "the skills of whatever is out: your fists', the drawn weapon's, the Devil Fruit's \u2014 the panel at the bottom right shows them, and what opens next (click a key there, or Settings \u2192 Controls, to change it)"),
-        haki ? k("R / T", "Armament / Observation Haki (once awakened)") : null,
-        haki ? k(K.haki.filter(Boolean).map(keyLabel).join(" ") || "Haki keys", `the techniques of the Haki that's on${char.haki?.conqueror ? " \u2014 the first, a king's Conqueror's" : ""}`) : null,
-        k("E", "interact / talk / pick fruit / take the helm or the oars / search a knocked-out foe"),
-        k("Ctrl / Space (swimming)", "dive / swim up \u2014 or look down and swim"),
-        k(keyLabel(K.form?.[0] || "B"), "switch form: a Gear, an awakened fruit (once you have one)"),
-        k("H", "draw / sheathe your weapon"),
-        k("Tab", "the menu \u2014 Inventory, Character, Skills, Journal, Crew and Quests down its side; it opens where you were last, Tab again closes it"),
-        k("M", "world map"),
-        k("Esc", "pause menu"),
-        k("Mouse wheel", "camera distance (third person)"),
-        k("Enter", "multiplayer: chat to the crew (Enter sends, Esc cancels); who's aboard is the Voyage section of the menu"),
-        char?.creative ? k("F1", "the creative panel (creative mode): Devil Fruits, items, races, Haki, foes, ships, the world") : null
-      ),
-      h("p.muted", "The Menu button on the left of the screen opens the menu too. Open the Inventory or Skills menu and drag food, weapons, Dials and your Devil Fruit straight onto your hotbar at the bottom of the screen (a weapon you wear hangs at your hip or on your back: its key draws it, and again sheathes it); drag hotbar slots to rearrange them, right-click one to clear it."),
-      h("p", h("b", "Devil Fruits: "), "eat one and all its base techniques are yours at once: take it out with its hotbar key and they're on the skill keys, its power in your every blow. Fight worthy foes with it and its mastery grows \u2014 its blows hit harder, and its forms open up (Gum-Gum's Gears, Amaru, Monster Point...): with the fruit out, the form key goes through them, and some leave you spent when they wear off. Master it fully (mastery 100: Skills shows how far along you are), then be brought down, or to a quarter of your health, by a boss or a foe near your strength \u2014 and it awakens there and then: from then on its awakened set (bigger, stronger, faster) is last on the form key, yours to switch on and off."),
-      h("p", h("b", "On a phone or tablet: "), "your left thumb moves (push the stick all the way to run; at sea it steers and sets the sails) and your right thumb drags to look around. The round buttons jump, attack, heavy attack, dodge and block; tap Use or the prompt to talk and interact, and tap a hotbar slot to take something out \u2014 its skills come up as round buttons beside the pad. The buttons at the top open the menu, the world map and the camera view. Play with the phone held sideways."),
-      h("h3", "Reputation"),
-      h("p", "People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation. Crimes \u2014 robbing shops and houses, picking pockets, attacking townsfolk, Marines or merchant ships \u2014 put a bounty on your head instead, and bounties grow the way they do in One Piece: a few hundred thousand berries for a petty thief in the East Blue, millions on the Grand Line, far more in the New World. Anyone with a bounty is a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks \u2014 all the way to commanding fleets. A Marine who breaks the law loses standing, and is thrown out when nobody trusts them any more."),
-      h("h3", "Sailing"),
-      h("p", "A rowboat has no mast or sail: sit at her oars (E at the seat) and set a pace: W quickens it and she keeps rowing at it, S eases it off to a stop (and, pressed again, backs water), and A/D pull one oar to turn her \u2014 no wind needed, though the currents still carry you. Anything bigger sails: W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
-      h("h3", "The sea"),
-      h("p", "Swim anywhere. Dive with Ctrl (or look down and swim) to explore the reefs, kelp forests and the dark deep water in the middle of the ocean; the bubbles under your health show how long you can hold your breath \u2014 come up for air before they pop. Grab fish with an attack as they swim past, prise giant clams open for pearls, and watch out past the reef: Sea Cows hunt swimmers in the Blues, and horned Fighting Fish in the Grand Line. Fish-Men swim fast and breathe water. Devil Fruit users cannot swim at all: they thrash for a few seconds (the bubbles count them down), then the sea drags them under, and they come out of it weak \u2014 keep a crewmate close to haul you out, or grab a line thrown from your ship."),
-      h("h3", "Ships, raids and being wanted"),
-      h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols (who come after you once you're wanted), and pirates, who keep to their own business \u2014 unless you fire on them or board them. Stop, and a ship that's after you comes alongside and heaves to. Fire on a merchant and she may heave to. To board and raid a ship, leave your helm and jump across onto her deck \u2014 over her rail, coming down on her deck from above: her side is a wall to anyone below it (a rowboat's low side you jump over from the water) \u2014 or swim to her and climb the ladder down her side amidships (E at its foot). Stopped alongside her, your crew run a plank across between your rails: walk over on it. Beat the crew on her deck, go down the hatch amidships and plunder the treasure chest in her hold (her cannonballs come across to your ship too), and take what's in it (a raided ship isn't yours to sail away: new ships come from the shipwrights). At your own wheel, E leaves the helm so you can walk your deck \u2014 under sail she sails on, holding her course, till you take the wheel again to steer or lower the sails (her bulwark is a low wall: jump over it for a swim, or onto the pier she's tied up at). Ships come in every size, from your first rowboat to sloops, caravels, galleons and One Piece-scale men-o'-war and Yonko flagships \u2014 and every one with a sail is a ship you can live on: walk her decks, climb the stairs to the quarterdeck, go in through the door under it to the captain's cabin (a table with the chart, a bunk, the sea chest), into the crew's forecastle on the bigger ones, and down the hatch amidships to the hold, where the cargo and the treasure chest are (on the big ships, a gun deck with cannons at every port). Her guns fire cannonballs, one a gun, and they run out: the count is by your wheel, and a shipwright restocks you. Your crew stand their stations on deck while you steer. Your own ships can't break. Every pier has a shipwright: talk to them (E) to bring any ship you own round to that pier, or to buy a new one. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
-      h("h3", "Crossing the Red Line"),
-      h("p", "Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government \u2014 and those it permits."),
-      h("h3", "Crew and the One Piece"),
-      h("p", "Found your own pirate crew and design your Jolly Roger from the Crew menu (Tab); it flies from your ship's sails. Recruit companions you meet along the way. Poneglyphs can only be read by an archaeologist. Four Road Poneglyphs point the way to Laugh Tale. Pick fruit and coconuts from trees when you are hungry."),
-      h("h3", "Sailing with friends"),
-      h("p", "Multiplayer, on the title screen: one of you hosts a voyage with one of their lineages and passes on the six-letter code; the others join with it, each bringing a pirate from their own lineages (or a newborn one). Everyone sails the same world \u2014 the host's days, hours and weather are everyone's \u2014 and keeps their own save. You see each other, your ships and your fights; foes and townsfolk are each your own. Press Enter to chat, and P for who's aboard and where (and to go and stand beside a friend who's ashore).")
-    );
-  }
-  function posterPose(char) {
-    const b = char.bounty || 0, kills = char.stats?.kills || 0, look = { ...char.look };
-    const tier = b >= 5e8 ? 4 : b >= 1e8 ? 3 : b >= 3e7 ? 2 : b >= 1e6 ? 1 : 0;
-    const w = weaponFromChar(char), blade2 = w && w.kind === "sword";
-    if (tier === 0) return { look: { ...look, mouth: "smile" }, act: null, weapon: null };
-    if (tier === 4) return { look, act: "poster-roar", weapon: null };
-    if (char.fruit && tier >= 2) return { look, act: "poster-power", weapon: null };
-    if (blade2 && kills >= 10) return { look, act: "poster-blade", weapon: w };
-    if (tier === 1) return { look: { ...look, grin: true }, act: "poster-fist", weapon: null };
-    return { look, act: kills >= 25 ? "poster-fold" : "poster-point", weapon: null };
-  }
-  function wantedPoster(char) {
-    const cv = h("canvas", { width: 240, height: 200 });
-    const g = cv.getContext("2d");
-    g.fillStyle = "#e8d5a8";
-    g.fillRect(0, 0, 240, 200);
-    g.fillStyle = "#d4bd8a";
-    for (let i = 0; i < 40; i++) g.fillRect(i * 53 % 240, i * 37 % 200, 3, 3);
-    const pp3 = char.look ? posterPose(char) : null;
-    const img2 = pp3 ? renderPortrait(pp3.look, { w: 240, h: 200, view: "bust", act: pp3.act, weapon: pp3.weapon }) : null;
-    if (img2) g.drawImage(img2, 0, 0, 240, 200);
-    g.globalCompositeOperation = "multiply";
-    g.fillStyle = "#d9c28f";
-    g.fillRect(0, 0, 240, 200);
-    g.globalCompositeOperation = "source-over";
-    const bounty = char.bounty ? formatBerries(char.bounty).replace("\u0E3F", "\u0E3F ") + "-" : "\u0E3F 0-";
-    return h("div.poster", h("div.w", "WANTED"), cv, h("div.doa", "DEAD OR ALIVE"), h("div.nm", char.name), h("div.amt", bounty), h("div.mar", "MARINE"));
-  }
-  var pickNew = (list, not) => {
-    let n;
-    do
-      n = list[Math.floor(Math.random() * list.length)];
-    while (n === not && list.length > 1);
-    return n;
-  };
-  var randomFirst = (fem, not) => pickNew(fem ? FEMALE_FIRST : MALE_FIRST, not);
-  var randomLast = (not) => pickNew(SURNAMES, not);
-
-  // src/game/rumors.js
-  var SEA_TIPS = {
-    [REGION.EAST_BLUE]: [
-      "They call the East Blue the weakest sea. Funny \u2014 the Pirate King was born here.",
-      'Loguetown is the "town of the beginning and the end". Gol D. Roger was executed on the platform in its square. Every pirate heading for the Grand Line stops there \u2014 and so do the Marines.',
-      "To reach the Grand Line you sail to Reverse Mountain, at the southwest edge of the East Blue where the Red Line meets the four seas. The current carries you UP the mountain. Steer true or you'll smash into the canal walls.",
-      "Don't even think about crossing the Calm Belt. No wind, no current \u2014 and it's the nest of the Sea Kings.",
-      "A Fish-Man named Arlong took over the Conomi Islands. The villagers pay him tribute or die.",
-      `There's a floating restaurant called the Baratie out past the Gecko Islands. The head chef, "Red Leg" Zeff, was once a pirate captain.`,
-      'The Marine captain in Shells Town, "Axe-Hand" Morgan, rules that town like a tyrant.',
-      "If you want to learn the sword, the Isshin Dojo in Shimotsuki Village takes students."
-    ],
-    [REGION.NORTH_BLUE]: [
-      "The North Blue has cold seas and colder people. The Donquixote Family started out in Spider Miles, you know.",
-      "Lvneel is the homeland of Noland the Liar, who claimed he saw a city of gold on an island in the Grand Line.",
-      "Flevance, the White Town, was destroyed by its neighbours. They said the amber lead sickness was contagious. It wasn't.",
-      "Reverse Mountain lies at the southeast corner of the North Blue. Ride the canal up the mountain to enter the Grand Line.",
-      "The Vinsmoke family once ruled the whole North Blue. Their kingdom, Germa, now roams the seas on giant snail ships."
-    ],
-    [REGION.WEST_BLUE]: [
-      "The West Blue is ruled from the shadows by the mafia families. Watch your purse.",
-      "Ohara was an island of scholars, burned to ash by a Buster Call for studying the Poneglyphs. A few survivors still camp in the ruins.",
-      "The Chinjao Family of Kano Country teaches the Hasshoken \u2014 a fist that vibrates through armour.",
-      "Reverse Mountain rises at the northeast corner of the West Blue."
-    ],
-    [REGION.SOUTH_BLUE]: [
-      "The South Blue is full of giant animals \u2014 gryphons, super sparrows, birds the size of houses in the Torino Kingdom.",
-      "Karate Island is where fighters from all over come to train until their fists bleed.",
-      "Baterilla... the Marines once searched every pregnant woman on that island, looking for the Pirate King's child.",
-      "Reverse Mountain lies at the northwest corner of the South Blue, where the four seas meet.",
-      "The Sorbet Kingdom once had a kind king named Kuma. They say he was a Buccaneer."
-    ],
-    [REGION.PARADISE]: [
-      "In the Grand Line your compass is useless. Trust the Log Pose and nothing else.",
-      "From Reverse Mountain there are seven routes, all ending at the Sabaody Archipelago.",
-      "Islands in the Grand Line each have their own climate. The sea between them goes mad.",
-      "To cross the Red Line, pirates must have their ship coated at Sabaody and sink ten thousand metres to Fish-Man Island. Only the World Government may pass over Mary Geoise.",
-      "The Knock Up Stream near Jaya shoots ships into the sky. Nobody believes the sky islands are real... except the ones who've been.",
-      "Never, ever touch a Celestial Dragon. An Admiral will come.",
-      "The Warlords of the Sea have government pardons. Crocodile of Alabasta is treated like a hero there."
-    ],
-    [REGION.NEW_WORLD]: [
-      "In the New World, Haki is everything. If you can't use it, turn back now.",
-      "You need a three-needle Log Pose here. Islands change their magnetism on a whim.",
-      "The Four Emperors rule these seas: Big Mom in Totto Land, Kaido in Wano, Red-Haired Shanks, and... they say Blackbeard now.",
-      "Laugh Tale cannot be found with a Log Pose. You need the four Road Poneglyphs.",
-      "Zou is not an island. It's on the back of an elephant that has walked the sea for a thousand years."
-    ],
-    [REGION.CALM_NORTH]: ["You're in the Calm Belt?! Get out before the Sea Kings wake!"],
-    [REGION.CALM_SOUTH]: ["You're in the Calm Belt?! Get out before the Sea Kings wake!"]
-  };
-  var LORE = [
-    `Twenty-two years ago, Gol D. Roger's last words started the Great Pirate Era: "My treasure? If you want it, you can have it! I left everything I own in that place!"`,
-    "The Void Century: one hundred years of history, erased. Only the Poneglyphs remember \u2014 and reading them is a crime.",
-    "Poneglyphs come in three kinds: historical ones, instructional ones, and four red Road Poneglyphs that point to Laugh Tale.",
-    "Haki comes in three colours: Armament, Observation, and the rare Conqueror's \u2014 the Haki of kings.",
-    "Devil Fruits: Paramecia change the body, Zoan transform it into beasts, Logia turn it into an element. Every user becomes a hammer in the sea.",
-    "When a Devil Fruit user dies, their power is reborn in an ordinary fruit somewhere nearby.",
-    "The Red Line is the only continent in the world. It circles the planet. Where it crosses the Grand Line stand Reverse Mountain \u2014 and on the opposite side, Mary Geoise.",
-    "Seastone emits the same energy as the sea itself. It weakens Devil Fruit users on touch, and Marines line their hulls with it to cross the Calm Belt unnoticed.",
-    'The Rokushiki are six superhuman arts taught to the Marines and to Cipher Pol: Soru, Geppo, Tekkai, Shigan, Rankyaku and Kami-e. Strength is measured in "Doriki".',
-    'Some families carry the initial "D." in their name. The World Government fears it. Nobody knows why.',
-    "Vivre Cards are made from a person's fingernail. They point toward that person \u2014 and burn away as their life fades.",
-    'Log Poses must stay on an island a while to "set" before they point to the next one. Eternal Poses always point to a single island.'
-  ];
-  function rumorFor(game, island, rng4, npc, tavern, kind) {
-    if (kind === "lore") {
-      const c0 = game.state?.char;
-      const known0 = !!(c0?.haki && (c0.haki.armament || c0.haki.observation || c0.haki.conqueror));
-      return rng4.pick(known0 ? LORE : LORE.filter((l) => !/haki/i.test(l)));
-    }
-    const p = game.player;
-    const reg9 = regionAt(p.x, p.y);
-    const pool2 = [];
-    if (island?.def?.rumors) pool2.push(...island.def.rumors, ...island.def.rumors);
-    pool2.push(...SEA_TIPS[reg9] || []);
-    if (tavern) pool2.push(...LORE.slice(0, 6));
-    const fr = game.fruitRumor?.(rng4);
-    if (fr && rng4.chance(tavern ? 0.45 : 0.2)) return fr;
-    const c = game.state?.char;
-    if (c?.bounty && rng4.chance(0.2)) return `"Hey... aren't you the one on that wanted poster? \u0E3F${c.bounty.toLocaleString()}... I didn't see anything!"`;
-    const quest = game.questRumor?.(island, rng4);
-    if (quest && rng4.chance(0.35)) return quest;
-    const known = !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
-    const heard = known ? pool2 : pool2.filter((l) => !/haki|mantra/i.test(l));
-    const line2 = heard.length ? rng4.pick(heard) : "Nice weather today.";
-    return npc ? `"${line2.replace(/^"|"$/g, "")}"` : line2;
-  }
-
-  // src/game/npcs.js
-  function shadowLook(L3) {
-    const k = "#120c18";
-    return { ...L3, shadow: true, skin: k, top: k, bottom: k, hairColor: k, shoes: k, hand: k, hatColor: k, belt: k, sleeve: k, eyeColor: k, coat: L3.coat ? k : void 0, vest: L3.vest ? k : void 0, fur: L3.fur ? k : void 0, wings: void 0, backFlame: false };
-  }
-  var NPC_DEFS = /* @__PURE__ */ new Map();
-  var GROUPS = [];
-  function registerNPCs(list) {
-    for (const n of list) NPC_DEFS.set(n.id, n);
-  }
-  function registerGroups(list) {
-    for (const g of list) GROUPS.push(g);
-  }
-  var npcDef = (id) => NPC_DEFS.get(id);
-  var allNpcDefs = () => [...NPC_DEFS.values()];
-  var allGroups = () => GROUPS.slice();
-  var ARCHETYPES = {
-    bandit: { name: "Mountain Bandit", faction: "bandit", style: "brawler", look: { top: "#6d4c41", hat: "bandana", hatColor: "#8d6e63" }, skill: 0.15, barks: ["Hand over your money!", "Heh heh heh!"] },
-    pirate: { name: "Pirate Grunt", faction: "pirate", style: "ittoryu", weapon: "sword", look: { top: "#37474f", hat: "bandana", hatColor: "#b71c1c" }, skill: 0.2, barks: ["Yo-ho!", "Get 'em!"] },
-    pirate_gunner: { name: "Pirate Gunner", faction: "pirate", style: "sniper", weapon: "gun", ranged: true, look: { top: "#5d4037", hat: "tricorne" }, skill: 0.15 },
-    marine: { name: "Marine", faction: "marine", style: "ittoryu", weapon: "sword", look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine" }, skill: 0.25, lethal: false, barks: ["For Justice!", "Halt, pirate!"] },
-    marine_rifle: { name: "Marine Rifleman", faction: "marine", style: "sniper", weapon: "gun", ranged: true, look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine" }, skill: 0.2, lethal: false },
-    marine_officer: { name: "Marine Officer", faction: "marine", style: "rokushiki", look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine", coat: "#fafafa", coatText: "JUSTICE" }, skill: 0.5, lethal: false, moves: ["roku_soru", "roku_rankyaku"] },
-    swordsman: { name: "Wandering Swordsman", faction: "rival", style: "nitoryu", weapon: "sword", look: { top: "#455a64", hat: "headband", hatColor: "#212121" }, skill: 0.45, moves: ["nito_taka"] },
-    brute: { name: "Brute", faction: "pirate", style: "brawler", look: { top: "#795548" }, bulk: 1.35, skill: 0.1, moves: ["brawl_tackle", "brawl_headbutt"], hpMul: 1.6 },
-    fishman_thug: { name: "Fish-Man Pirate", faction: "pirate", race: "fishman", style: "fishman_karate", look: {}, skill: 0.3, moves: ["fmk_uchimizu"], hpMul: 1.2 },
-    baroque: { name: "Baroque Works Agent", faction: "baroque", style: "sniper", weapon: "gun", look: { top: "#212121", hat: "cowboy", hatColor: "#212121" }, skill: 0.35, moves: ["snipe_explode"] },
-    cp: { name: "Cipher Pol Agent", faction: "cp", style: "rokushiki", look: { top: "#212121", bottom: "#212121" }, skill: 0.6, moves: ["roku_soru", "roku_rankyaku", "roku_tekkai"] },
-    zombie: { name: "Zombie", faction: "zombie", style: "brawler", look: { top: "#4e342e", skin: "#9e9d89" }, skill: 0.05, barks: ["Uuurgh..."] },
-    beast: { name: "Wild Boar", faction: "beast", style: "brawler", beast: "boar", look: { top: "#6d4c41", skin: "#6d4c41", hair: "bald", ears: "round", fur: "#6d4c41", muzzle: true, tail: "thin" }, skill: 0, hpMul: 1.3 },
-    tiger: { name: "Mountain Tiger", faction: "beast", style: "electro", beast: "tiger", look: { skin: "#f39c12", fur: "#f39c12", hairColor: "#f39c12", ears: "round", tail: "thin", muzzle: true, top: "#f39c12", bottom: "#e67e22", hair: "bald", furFace: true }, skill: 0.2, hpMul: 1.5 },
-    dinosaur: { name: "Dinosaur", faction: "beast", style: "brawler", look: { skin: "#558b2f", top: "#558b2f", bottom: "#33691e", hair: "bald", fin: true, muzzle: true, tail: "fluffy", fur: "#558b2f" }, bulk: 1.6, scale: 1.5, hpMul: 2.5, skill: 0 },
-    gorilla: { name: "Snow Gorilla", faction: "beast", style: "brawler", look: { skin: "#eceff1", fur: "#eceff1", hairColor: "#eceff1", top: "#eceff1", bottom: "#cfd8dc", ears: "round", furFace: true, muzzle: true, hair: "bald" }, bulk: 1.4, hpMul: 1.8, skill: 0.1 },
-    pacifista: { name: "Pacifista", faction: "marine", style: "brawler", look: { top: "#263238", bottom: "#263238", skin: "#607d8b", hat: "bandana", hatColor: "#263238" }, bulk: 1.5, scale: 1.4, hpMul: 3, skill: 0.3, moves: ["kuma_laser"], lethal: true }
-  };
-  var WOMEN = /\b(Makino|Dadan|Alvida|Rika|Kaya|Nojiko|Bell-?m[eè]re|Tashigi|Kuina|Nami|Robin|Vivi|Kureha|Conis|Laki|Aisa|Hina|Isuka|Hancock|Sandersonia|Marigold|Nyon|Perona|Kalifa|Bonney|Shirahoshi|Otohime|Shyarly|Big Mom|Linlin|Pudding|Smoothie|Br[uû]l[eé]e|Galette|Flampe|Praline|Amande|Chiffon|Lola|Viola|Rebecca|Monet|Baby 5|Koala|Carrot|Wanda|Yamato|Hiyori|Kiku|Tama|Ulti|Black Maria|Sugar|Kokoro|Chimney|Shakky|Valentine|Doublefinger|Goldenweek|All ?Sunday|Merry ?Christmas|Paula|Porche|Cindry|Stussy|Lilith|Jewelry|Catarina|Tsuru|Gion|Momousagi|Olvia|Toki|Rouge|Uta|Betty|Hibari|Carina|Mozu|Kiwi|Ishley|Nico)\b/i;
-  var ROLE_OF = { pirate: "pirate", bandit: "bandit", marine: "marine", cp: "agent", baroque: "agent", rival: "swordsman", beast: "beast", fishman: "fishman" };
-  function npcLook(def) {
-    let role = def.role || (def.beast || def.faction === "beast" ? "beast" : ROLE_OF[def.faction]) || "civilian";
-    if (role === "marine" && (def.look?.coat || def.boss || def.named)) role = "officer";
-    const lookOver = { ...def.look || {}, role };
-    if (def.bulk && lookOver.bulk === void 0) lookOver.bulk = def.bulk;
-    if (lookOver.fem === void 0 && def.name && WOMEN.test(def.name)) lookOver.fem = true;
-    if (lookOver.fem === void 0 && (def.named || def.boss || def.dialogue)) lookOver.fem = false;
-    const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || "human", def.seed ?? hashSeed(def.id || def.name), lookOver);
-    if (def.bulk) look.bulk = def.bulk;
-    if (def.scale) look.scale = def.scale;
-    return look;
-  }
-  function standingHeight(look) {
-    const d = dims(look);
-    return (d.hip0 + d.chestLen + d.neck + d.hc + d.headR * 1.05) * (look.scale || 1) + 0.12;
-  }
-  function buildingOf(island, def) {
-    if (typeof def.at === "function") return null;
-    const pl = def.at || {};
-    if (pl.spot && island.spots[pl.spot]) return null;
-    const walkIn2 = (b) => b?.enterable ? b : null;
-    for (const town of island.towns) {
-      if (pl.town && town.id !== pl.town) continue;
-      if (pl.dock || pl.door) return null;
-      if (pl.building) {
-        const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
-        if (b) return walkIn2(b);
-      }
-      if (pl.plaza || !pl.building && !pl.dx && !pl.door || pl.town && !pl.dx) return null;
-    }
-    for (const town of island.towns) {
-      const b = town.buildings.find((x) => x.npc === def.id);
-      if (b) return walkIn2(b);
-    }
-    return null;
-  }
-  function sizeBuildingsForOccupants(world) {
-    for (const def of NPC_DEFS.values()) {
-      const island = world.islands.find((i) => i.id === def.island);
-      const b = island && buildingOf(island, def);
-      if (!b) continue;
-      const need = (standingHeight(npcLook(def)) + 0.3) / 2.75;
-      if (need <= styleScale(b) + 0.01) continue;
-      b.tall = Math.round(need * 20) / 20 + 0.05;
-      delete b._layout;
-      if (world.objects) {
-        world.objects.removeInterior(b);
-        world.objects.addInterior(b);
-      }
-    }
-  }
-  var WANO = /* @__PURE__ */ new Set(["wano", "onigashima"]);
-  function defaultBlade(def, k) {
-    const f = def.faction || "civilian", lvl = def.level ?? 6, who = `${def.name || ""} ${def.title || ""}`;
-    if (f === "marine" || /guard|knight|fencer|soldier|royal/i.test(who)) return "marine_saber";
-    if (WANO.has(def.island) || /samurai|ronin/i.test(who)) return "wano_katana";
-    if (f === "beast" || f === "zombie") return "rusty_katana";
-    const h2 = hashSeed(def.id || def.name || "") + k;
-    if (f === "pirate" || f === "bandit") return (lvl >= 40 ? ["cutlass", "fine_katana"] : ["cutlass", "cutlass", "rusty_katana"])[h2 % (lvl >= 40 ? 2 : 3)];
-    return lvl >= 12 ? "fine_katana" : "rusty_katana";
-  }
-  function npcWeapon(def) {
-    const count2 = STYLES2[def.style]?.swords || 1;
-    const w = { kind: def.weapon, power: def.weaponPower || 1.2, count: count2 };
-    if (def.weapon === "sword") w.ids = Array.from({ length: count2 }, (_, k) => def.blades?.[k] || def.blades?.[0] || defaultBlade(def, k));
-    return w;
-  }
-  function makeNPC(def, x, y, extra = {}) {
-    const L3 = def.level ?? 6;
-    const look = npcLook(def);
-    const attrs = def.attrs || { str: L3, agi: L3, end: L3, vit: L3, wil: L3 };
-    const a = new Actor({
-      x,
-      y,
-      name: def.name,
-      title: def.title,
-      look,
-      race: def.race || look.race,
-      faction: def.faction || "civilian",
-      attrs,
-      style: def.style || "brawler",
-      fruit: def.fruit || null,
-      fruitMastery: def.fruitMastery ?? (def.fruit ? 60 : 0),
-      weapon: def.weapon ? npcWeapon(def) : null,
-      hakiSkill: def.haki || {},
-      boss: def.boss,
-      hpMul: (def.hpMul || 1) * (def.boss ? 2.2 : 1),
-      lethal: def.lethal ?? true,
-      poise: def.poise,
-      dmgMul: def.dmgMul,
-      defMul: def.defMul,
-      ...extra
-    });
-    a.npcId = def.id || null;
-    a.hakiSig = npcHakiSig(def);
-    a.masteries = { [a.style]: def.mastery ?? Math.min(100, L3 * 1.5) };
-    const moves = def.boss && def.haki?.conqueror > 0 && !(def.moves || []).includes("haki_conqueror") ? [...def.moves || [], "haki_conqueror"] : def.moves || [];
-    a.techniques = moves;
-    a.tier = def.tier || Math.max(1, Math.round(L3 / 12));
-    a.named = !!def.named || !!def.boss;
-    a.bountyValue = def.bounty;
-    a.infamy = def.infamy;
-    a.reward = def.reward;
-    a.breakthrough = def.breakthrough;
-    a.alertLine = def.alert;
-    a.defeatLine = def.defeatLine;
-    a.talk = def.dialogue ? { def } : null;
-    a.def = def;
-    if (def.armament) a.armament = true;
-    if (def.invulnerable) a.invulnerable = true;
-    if (def.logia && !a.fruitDef?.logia) a.fakeLogia = { logia: true, weakTo: def.logia.weakTo || [], color: def.logia.color || "#fff" };
-    if (def.recover) a.recoverAfter = def.recover;
-    if (def.fixedPower) a.fixedPower = def.fixedPower;
-    a.showName = def.showName ?? (!!def.dialogue || !!def.boss || !!def.named);
-    a.nameColor = def.boss ? "#ff8a80" : def.dialogue ? "#ffe082" : "#fff";
-    const kind = def.ai || (def.hostile ? "hostile" : def.dialogue ? "guard" : "wander");
-    a.controller = new AIController({
-      kind,
-      home: { x, y },
-      skill: def.skill ?? (def.boss ? 0.55 : 0.25),
-      moves,
-      aggroRange: def.aggroRange ?? (def.boss ? 12 : 8),
-      ranged: def.ranged,
-      leash: def.leash ?? (def.boss ? 18 : 16),
-      phases: def.phases,
-      barks: def.barks
-    });
-    if (kind === "guard" || kind === "idle") {
-      a.stationary = true;
-      a.faceHome = Math.PI / 2;
-    }
-    const st = def.stance === void 0 ? stanceFor2(def) : def.stance;
-    if (st) a.act3d = { pose: st, prop: null, h: 0, stance: true };
-    if (def.hostile) a.aggroPlayer = true;
-    if (def.calm || def.story && !def.hostile && !def.boss) a.calm = true;
-    return a;
-  }
-  function stanceFor2(def) {
-    if (def.townsfolk || def.crew || def.hostile && !def.boss) return null;
-    if (!def.boss && !def.dialogue) return null;
-    if (def.shop || def.role === "shop" || def.role === "vendor" || def.role === "inn") return null;
-    const h2 = hashSeed(def.id || def.name || "");
-    if (def.faction === "marine") return def.boss ? def.weapon ? "shoulder" : "fold" : "attention";
-    if (def.boss) {
-      if (def.weapon && /sword|katana|blade|saber|sabre|cutlass|axe|scythe|mace|club/i.test(String(def.weapon.id || def.weapon))) return "shoulder";
-      return ["fold", "hips", "fistpalm"][h2 % 3];
-    }
-    if (/scholar|doctor|archaeolog|navigator|professor|sage|elder/i.test(`${def.title || ""} ${def.role || ""}`)) return "think";
-    if (def.faction === "pirate" || def.faction === "bandit") return h2 % 2 ? "fold" : "hips";
-    if (/hunter/i.test(`${def.title || ""} ${def.role || ""} ${def.faction || ""}`)) return "fold";
-    return null;
-  }
-  function hashSeed(s) {
-    let h2 = 7;
-    for (const ch of String(s)) h2 = h2 * 31 + ch.charCodeAt(0) >>> 0;
-    return h2;
-  }
-  function makeEnemy(arch, level, x, y, over = {}) {
-    const A2 = ARCHETYPES[arch] || ARCHETYPES.bandit;
-    over = Object.fromEntries(Object.entries(over || {}).filter(([, v]) => v !== void 0));
-    return makeNPC({
-      ...A2,
-      level,
-      hostile: true,
-      name: over.name || A2.name,
-      look: { ...A2.look || {}, ...over.look || {} },
-      moves: over.moves || A2.moves,
-      id: over.id,
-      seed: over.seed ?? Math.floor(Math.random() * 1e9),
-      // every grunt looks different
-      hpMul: (A2.hpMul || 1) * (over.hpMul || 1),
-      skill: over.skill ?? A2.skill,
-      ...over
-    }, x, y);
-  }
-  function npcBuilder(ctx) {
-    const { island, game, spawner, list, rng: rng4 } = ctx;
-    const c = game.state?.char;
-    if (!c) return;
-    for (const t of island.towns || []) for (const b of t.buildings) {
-      b.npcCount = 0;
-      b.guestCount = 0;
-    }
-    for (const def of NPC_DEFS.values()) {
-      if (def.island !== island.id) continue;
-      if (def.when && !def.when(c, game)) continue;
-      if (def.boss && c.bosses.includes(def.id) && !def.respawn) continue;
-      if (def.once && c.defeated[def.id]) continue;
-      if ((c.crew || []).some((m) => m.id === def.id) || c.flags["leftCrew_" + def.id]) continue;
-      const pos = placeNPC(game, island, def, rng4, spawner);
-      if (!pos) continue;
-      const a = makeNPC(def, pos.x, pos.y);
-      a.game = game;
-      if (pos.face !== void 0) a.facing = a.faceHome = pos.face;
-      if (pos.inside) {
-        a.homeB = pos.building;
-        a.facing = a.faceHome = Math.PI / 2;
-        a.stationary = true;
-        a.wanderBox = interiorRect(pos.building);
-      }
-      game.addActor(a);
-      list.push(a);
-      if (pos.building && !pos.guest) pos.building.npcSpawned = true;
-    }
-    for (const grp of GROUPS) {
-      if (grp.island !== island.id) continue;
-      if (grp.when && !grp.when(c, game)) continue;
-      if (grp.cleared && c.flags[grp.cleared]) continue;
-      const base2 = grp.spot ? island.spots[grp.spot] : { x: island.x + (grp.dx || 0) * island.def.w / 2, y: island.y + (grp.dy || 0) * island.def.h / 2 };
-      if (!base2) continue;
-      for (const e of grp.enemies) {
-        const [arch, lvl, over] = Array.isArray(e) ? e : [e, grp.level || 6, {}];
-        const p = spawner.findFree(base2.x, base2.y, grp.radius || 5, rng4);
-        if (!p) continue;
-        const a = makeEnemy(arch, lvl, p.x, p.y, over || {});
-        a.game = game;
-        if (grp.leash) a.controller.leash = grp.leash;
-        if (grp.calm) a.calm = true;
-        game.addActor(a);
-        list.push(a);
-      }
-    }
-  }
-  function clear2(spawner, x, y, rng4, extra = {}) {
-    const p = spawner.freeSpot(x, y) ? { x, y } : spawner.findFree(x, y, 2.5, rng4) || spawner.findFree(x, y, 5, rng4) || { x, y };
-    return { ...p, ...extra };
-  }
-  function inside(b, guest = false) {
-    if (!b.enterable) return null;
-    const L3 = layoutOf(b);
-    const spots = guest ? L3.residents.slice().reverse() : [L3.keeper, ...L3.residents].filter(Boolean);
-    const k = guest ? b.guestCount = (b.guestCount || 0) + 1 : b.npcCount = (b.npcCount || 0) + 1;
-    const s = spots[k - 1];
-    if (!s) return null;
-    return { ...bw(b, s.x, s.z), building: b, inside: true, guest };
-  }
-  function whereNPC(game, id) {
-    const def = NPC_DEFS.get(id);
-    if (!def) return null;
-    const w = game.world;
-    const key2 = `${w.id}:${id}`;
-    const now3 = game.time || 0;
-    const C3 = game._whereNPC || (game._whereNPC = /* @__PURE__ */ new Map());
-    const hit = C3.get(key2);
-    if (hit && now3 - hit.t < 3) return hit.v;
-    let v = null;
-    const island = w.islands.find((i) => i.id === def.island);
-    if (island) {
-      const q2 = placeGuess(game, island, def);
-      if (q2) v = { x: q2.x, y: q2.y, place: def.name, zone: w === game.surface ? null : w.id };
-    } else v = { island: def.island };
-    C3.set(key2, { t: now3, v });
-    return v;
-  }
-  function placeGuess(game, island, def) {
-    let pl = {};
-    try {
-      pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
-    } catch (e) {
-      pl = {};
-    }
-    const inB = (b) => {
-      if (b.enterable) {
-        const L3 = layoutOf(b), s = pl.guest ? L3.residents[L3.residents.length - 1] : L3.keeper || L3.residents[0];
-        if (s) return bw(b, s.x, s.z);
-      }
-      return bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
-    };
-    if (pl.inside) {
-      const b = (island.landmarks || []).find((l) => l.kind === "building" && (l.role === pl.inside || l.name === pl.inside));
-      if (b) return inB(b);
-    }
-    if (pl.spot && island.spots[pl.spot]) {
-      const s = island.spots[pl.spot];
-      return { x: s.x + (pl.ox || 0), y: s.y + (pl.oy || 0) };
-    }
-    for (const town of island.towns) {
-      if (pl.town && town.id !== pl.town) continue;
-      if (pl.dock) {
-        const d = island.docks.slice().sort((a, b) => Math.hypot(a.land.x - town.x, a.land.y - town.y) - Math.hypot(b.land.x - town.x, b.land.y - town.y))[0];
-        if (d) return { x: d.land.x + (pl.ox || 0), y: d.land.y + (pl.oy || 0) };
-      }
-      if (pl.door) {
-        const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
-        if (b) return bw(b, doorLocalX(b) + (pl.ox ?? 1.6), 1.6);
-      }
-      if (pl.building) {
-        const b = town.buildings.find((x) => x.name === pl.building || def.id && x.npc === def.id || x.role === pl.building);
-        if (b) return inB(b);
-      }
-      if (pl.plaza || !pl.building && !pl.dx && !pl.door || pl.town && !pl.dx) {
-        const sq = pl.ox === void 0 && pl.oy === void 0 ? squareSpot(town, def.id) : null;
-        return sq ? { x: sq.x, y: sq.y } : { x: town.plaza.x + (pl.ox || 1.5), y: town.plaza.y + 2.5 + (pl.oy || 0) };
-      }
-    }
-    for (const town of island.towns) {
-      const b = town.buildings.find((x) => def.id && x.npc === def.id);
-      if (b) return inB(b);
-    }
-    const lm = island.landmarks.find((l) => def.id && l.npc === def.id);
-    if (lm) return { x: lm.x + 0.6, y: lm.y + 1.2 };
-    if (pl.dx !== void 0) return { x: island.x + pl.dx * island.def.w / 2, y: island.y + pl.dy * island.def.h / 2 };
-    return { x: island.x, y: island.y };
-  }
-  function placeFor(game, island, def) {
-    return placeNPC(game, island, def, Math, game.spawner);
-  }
-  function squareSpot(town, id = "") {
-    const S6 = town.square, P6 = town.plaza;
-    if (!S6 || !P6) return null;
-    let h2 = 2166136261;
-    for (let i = 0; i < id.length; i++) h2 = Math.imul(h2 ^ id.charCodeAt(i), 16777619);
-    const u = (h2 >>> 0) % 1e3 / 1e3, side = h2 >>> 11 & 1 ? 1 : -1;
-    const along2 = (u * 2 - 1) * Math.max(0.5, S6.along - 1.6), across = side * Math.max(0.8, S6.across - 0.7);
-    const x = P6.x + 0.5 + (S6.horiz ? along2 : across), y = P6.y + 0.5 + (S6.horiz ? across : along2);
-    const face = Math.atan2(P6.y + 0.5 - y, P6.x + 0.5 - x);
-    return { x, y, face };
-  }
-  function openOutside(game, spawner, b, ox, rng4) {
-    const w = game.world, dx0 = doorLocalX(b);
-    const xs = ox !== void 0 ? [dx0 + ox] : [dx0 + 1.6, dx0 - 1.6, dx0 + 2.4, dx0 - 2.4, dx0 + 1.2, dx0 - 1.2];
-    let best = null, bs = -Infinity;
-    for (const x02 of xs) for (const z of [1.6, 2.4, 3.2]) {
-      const q3 = bw(b, x02, z);
-      if (!spawner.freeSpot(q3.x, q3.y)) continue;
-      let open = 0;
-      for (let k = 0; k < 12; k++) {
-        const a = k / 12 * Math.PI * 2;
-        for (const r5 of [1.2, 2.2]) if (w.walkable(q3.x + Math.cos(a) * r5, q3.y + Math.sin(a) * r5) && !w.isBlocked(q3.x + Math.cos(a) * r5, q3.y + Math.sin(a) * r5)) open++;
-      }
-      const things = w.objects?.near ? w.objects.near(q3.x, q3.y, 1.6, (o) => o.block !== false && o.kind !== "building").length : 0;
-      const score = open - things * 5 - Math.abs(x02 - dx0) * 0.6 - (z - 1.6) * 0.8;
-      if (score > bs) {
-        bs = score;
-        best = { x: q3.x, y: q3.y, face: outFrom(b, x02) };
-      }
-    }
-    if (best) return best;
-    const x0 = dx0 + (ox ?? 1.6), q2 = bw(b, x0, 1.6), r4 = clear2(spawner, q2.x, q2.y, rng4);
-    if (r4) r4.face = outFrom(b, x0);
-    return r4;
-  }
-  function outFrom(b, x0) {
-    const a = bw(b, x0, 0.5), c = bw(b, x0, 2.5);
-    return Math.atan2(c.y - a.y, c.x - a.x);
-  }
-  function placeNPC(game, island, def, rng4, spawner) {
-    const q2 = placeNPC0(game, island, def, rng4, spawner);
-    if (q2 && q2.face === void 0 && q2.inside === void 0) {
-      const t = (island.towns || []).reduce((m, x) => !m || Math.hypot(x.x - q2.x, x.y - q2.y) < Math.hypot(m.x - q2.x, m.y - q2.y) ? x : m, null);
-      if (t && Math.hypot(t.plaza.x - q2.x, t.plaza.y - q2.y) > 1.5) q2.face = Math.atan2(t.plaza.y - q2.y, t.plaza.x - q2.x);
-    }
-    return q2;
-  }
-  function placeNPC0(game, island, def, rng4, spawner) {
-    const pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
-    if (pl.inside) {
-      const b = (island.landmarks || []).find((l) => l.kind === "building" && (l.role === pl.inside || l.name === pl.inside));
-      const q2 = b && inside(b, pl.guest);
-      if (q2) return q2;
-    }
-    if (pl.spot && island.spots[pl.spot]) {
-      const s = island.spots[pl.spot];
-      const x = s.x + (pl.ox || 0), y = s.y + (pl.oy || 0);
-      if (spawner.freeSpot(x, y)) return { x, y };
-      return spawner.findFree(x, y, 2.5, rng4) || spawner.findFree(s.x, s.y, 3, rng4) || s;
-    }
-    for (const town of island.towns) {
-      if (pl.town && town.id !== pl.town) continue;
-      if (pl.dock) {
-        const d = island.docks.slice().sort((a, b) => Math.hypot(a.land.x - town.x, a.land.y - town.y) - Math.hypot(b.land.x - town.x, b.land.y - town.y))[0];
-        if (d) {
-          const q2 = spawner.findFree(d.land.x + (pl.ox || 0), d.land.y + (pl.oy || 0), 4, rng4) || spawner.findFree(town.plaza.x, town.plaza.y + 2.5, 4, rng4);
-          const e = d.end || d.head;
-          if (q2 && e) q2.face = Math.atan2(e.y - d.land.y, e.x - d.land.x);
-          return q2;
-        }
-      }
-      if (pl.door) {
-        const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
-        if (b) {
-          const r4 = openOutside(game, spawner, b, pl.ox, rng4);
-          if (r4) return r4;
-        }
-      }
-      if (pl.building) {
-        const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
-        if (b) {
-          const q2 = bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
-          return inside(b, pl.guest) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
-        }
-      }
-      if (pl.plaza || !pl.building && !pl.dx && !pl.door || pl.town && !pl.dx) {
-        const sq = pl.ox === void 0 && pl.oy === void 0 ? squareSpot(town, def.id) : null;
-        if (sq) {
-          const q2 = spawner.findFree(sq.x, sq.y, 2.5, rng4);
-          if (q2) {
-            q2.face = sq.face;
-            return q2;
-          }
-        }
-        return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5 + (pl.oy || 0), 3, rng4);
-      }
-    }
-    for (const town of island.towns) {
-      const b = town.buildings.find((x) => x.npc === def.id);
-      if (b) {
-        const q2 = bw(b, doorLocalX(b) + 0.9, 1.4);
-        return inside(b) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
-      }
-    }
-    const lm = island.landmarks.find((l) => l.npc === def.id);
-    if (lm) return clear2(spawner, lm.x + 0.6, lm.y + 1.2, rng4);
-    if (pl.dx !== void 0) return spawner.findFree(island.x + pl.dx * island.def.w / 2, island.y + pl.dy * island.def.h / 2, 5, rng4);
-    return spawner.findFree(island.x, island.y, 10, rng4);
-  }
-  var Interactions = class {
-    constructor(game) {
-      this.game = game;
-      game.on("talk", (a) => this.talk(a));
-      game.on("enterBuilding", (b) => this.building(b));
-      game.on("knockDoor", (b) => this.knock(b));
-      game.on("openChest", (o) => this.chest(o));
-      game.on("trainDummy", (o) => this.dummy(o));
-      game.on("openService", (kind, arg, npc) => this.service(kind, arg, npc));
-      game.on("quickHeal", () => this.quickHeal());
-      this.objectHandlers = {};
-      game.on("useObject", (o) => this.objectHandlers[o.use]?.(o, game));
-      game.summon = (owner, spec) => {
-        const n = spec.count || 1;
-        for (let i = 0; i < n; i++) {
-          const ang = spec.at === "shadow" ? (owner.facing || 0) + Math.PI + (i - (n - 1) / 2) * 0.6 : Math.random() * Math.PI * 2;
-          const r4 = spec.at === "shadow" ? 1.1 : 2;
-          const p = game.spawner.findFree(owner.x + Math.cos(ang) * r4, owner.y + Math.sin(ang) * r4, 3) || { x: owner.x, y: owner.y + 1 };
-          const a = makeEnemy(spec.archetype || "pirate", spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: typeof spec.look === "string" ? void 0 : spec.look, moves: spec.moves, hpMul: spec.hpMul });
-          a.game = game;
-          a.bornT = game.env.time;
-          if (spec.at === "shadow") a.facing = owner.facing || 0;
-          if (spec.look === "shadow") a.look = shadowLook(owner.look || {});
-          else if (spec.look === "copy") {
-            a.look = { ...owner.look || {} };
-            a.name = spec.name || owner.name;
-          }
-          a.summonColor = spec.look === "copy" ? spec.color || ["#f48fb1", "#ffffff"] : null;
-          a.faction = owner.faction;
-          a.summonedBy = owner;
-          a.summonT = spec.duration || 30;
-          a.aggroPlayer = owner.aggroPlayer || owner.faction !== "player";
-          if (owner.isPlayer || owner.faction === "player") {
-            a.aggroPlayer = false;
-            a.controller = new AIController({ kind: "follower", skill: 0.3, moves: spec.moves || [] });
-          } else if (owner.controller?.target) {
-            a.controller.target = owner.controller.target;
-            a.controller.state = "chase";
-          }
-          game.addActor(a);
-          if (spec.look === "copy") game.fx.burst(a.x, a.y - 0.6, 26, { kind: "petal", color: spec.color || ["#f48fb1", "#ffffff"], speed: 3, z: 0.2, vz: 2.5, g: 1.5, life: 1, size: 0.11 });
-          else if (spec.look !== "shadow") game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || "#eeeeee", speed: 3, g: 0, life: 0.4, kind: "smoke", size: 0.3 });
-        }
-      };
-      game.on("tick", (dt) => {
-        for (const a of game.actors) {
-          if (!a.summonedBy) continue;
-          a.summonT -= dt;
-          if (a.summonT <= 0 || !a.summonedBy.alive || a.summonedBy.state === "knocked") {
-            a.alive = false;
-            if (a.look?.shadow) game.fx.burst(a.x, a.y, 8, { color: ["#120a1a", "#2a1838"], speed: 1, z: 0.1, vz: 1.2, g: 0, life: 0.5, kind: "smoke", size: 0.22 });
-            else if (a.summonColor) game.fx.burst(a.x, a.y - 0.6, 18, { kind: "petal", color: Array.isArray(a.summonColor) ? a.summonColor : [a.summonColor, "#ffffff"], speed: 2.5, z: 0.6, vz: 1.5, g: 1, life: 0.9, size: 0.1 });
-            else game.fx.burst(a.x, a.y - 0.6, 8, { color: "#eeeeee", speed: 2, g: 0, life: 0.3, kind: "smoke" });
-          }
-        }
-      });
-      this.onObject("lore", (o) => {
-        game.dialogue.open(null, { start: "a", nodes: { a: { speaker: o.name || "Inscription", text: typeof o.lore === "function" ? o.lore(game.state.char, game) : o.lore } } });
-        if (o.loreEvent) game.emit("questEvent", o.loreEvent, o);
-      });
-      let mt = 0;
-      game.on("tick", (dt) => {
-        if ((mt -= dt) > 0) return;
-        mt = 0.5;
-        const c = game.state?.char;
-        if (!c) return;
-        for (const a of game.actors) {
-          if (a.recoverAfter && a.state === "knocked" && a.knockT > a.recoverAfter && a.alive && (a.knockT > Math.max(60, a.recoverAfter) || !game.player || game.world.distance(game.player.x, game.player.y, a.x, a.y) > 30)) {
-            a.state = "idle";
-            a.hp = Math.round(a.d.maxHp * 0.5);
-            a.provoked = false;
-            a.aggroPlayer = !!a.def?.hostile;
-            if (a.controller) {
-              a.controller.target = null;
-              a.controller.state = "return";
-            }
-            if (game.bossTarget === a) game.bossTarget = null;
-            game.fx.text(a.x, a.y - 2, a.def?.recoverLine || "...Hah. You win.", "#fff", 0.32);
-          }
-          const m = a.def?.marker;
-          if (!m && !a.npcId || !a.alive) continue;
-          try {
-            a.questMarker = game.storyMarker?.(a) || (m ? m(c, game) : null) || game.crew?.marker?.(a) || null;
-          } catch (e) {
-            a.questMarker = null;
-          }
-        }
-      });
-    }
-    onObject(id, fn) {
-      this.objectHandlers[id] = fn;
-    }
-    islandOf(x, y) {
-      const w = this.game.world;
-      return w.islandAt(x, y) || w.nearestIsland(x, y, 60);
-    }
-    talk(a) {
-      const g = this.game;
-      const def = a.def;
-      if (def && def.dialogue) {
-        if (g.questGivers?.introOnTalk(a)) return;
-        const tree = typeof def.dialogue === "string" ? def.dialogue : def.dialogue;
-        g.dialogue.open(a, tree);
-        g.emit("talked", def.id);
-        return;
-      }
-      if (a.talk?.kind === "keeper") {
-        this.building(a.talk.building);
-        return;
-      }
-      if (a.talk?.kind === "townsfolk") {
-        const rng4 = new RNG(a.talk.seed + g.env.day);
-        const isl = this.islandOf(a.x, a.y);
-        g.dialogue.open(a, { start: "a", nodes: {
-          a: { text: rumorFor(g, isl, rng4, a), choices: [
-            { text: "Thanks. Take care.", end: true },
-            { text: "Pick their pocket while they talk. (a crime)", do: () => {
-              g.dialogue.close();
-              const r4 = pickpocket(g, a);
-              if (r4 === "caught") g.fx.text(a.x, a.y - 2, "HEY! THIEF!", "#ff5252", 0.45);
-            }, end: true }
-          ] }
-        } });
-      }
-    }
-    building(b) {
-      const g = this.game;
-      const isl = this.islandOf(b.x, b.y);
-      const town = isl?.towns.find((t) => t.id === b.town);
-      const npc = b.npc && npcDef(b.npc);
-      if (npc && npc.dialogue && !(npc.boss && g.state.char.bosses.includes(npc.id))) {
-        const live = g.actors.find((x) => x.npcId === npc.id && x.state === "idle");
-        if (live) {
-          g.dialogue.open(live, npc.dialogue);
-          return;
-        }
-      }
-      this.service(b.role, { building: b, island: isl, town });
-    }
-    service(kind, arg = {}, npc) {
-      const g = this.game;
-      let { building, island, town } = arg || {};
-      if (!island) island = this.islandOf(g.player.x, g.player.y);
-      if (!building) building = { name: npc?.def?.shopName || npc?.name, role: kind, shop: arg?.shop };
-      const dock = island?.docks?.[0];
-      switch (kind) {
-        case "shop":
-        case "market":
-        case "weapons":
-        case "bank":
-          openShop(g, { ...building, shop: arg?.shop || building.shop }, island);
-          break;
-        case "tavern":
-        case "bar":
-        case "restaurant":
-        case "cafe":
-          this.tavern(building, island);
-          break;
-        case "inn":
-          openInn(g, building, island, town);
-          break;
-        case "doctor":
-          openDoctor(g, building, island, arg?.doc || (npc?.def?.doctor ? { ...npc.def.doctor, id: npc.def.id, name: npc.name } : null));
-          break;
-        case "shipwright":
-          openShipyard(g, { ...building, adam: arg?.adam || npc?.def?.adam, coating: arg?.coating }, island, dock);
-          break;
-        case "dojo":
-        case "trainer":
-          openTrainer(g, arg?.trainer || npc?.def?.trainer || building.trainer || "dojo_generic", npc?.name);
-          break;
-        case "marine_base":
-          g.emit("marineOffice", building, island);
-          break;
-        case "bounty":
-          g.emit("bountyBoard", building, island);
-          break;
-        case "library":
-          this.library(building, island);
-          break;
-        case "palace":
-        case "hall":
-        case "church":
-        case "house":
-        default:
-          g.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Door", text: flavorFor(building) } } });
-      }
-    }
-    tavern(building, island) {
-      const g = this.game;
-      const rng4 = new RNG(Math.floor(g.time) + (building.id || 0));
-      g.dialogue.open(null, {
-        start: "a",
-        nodes: {
-          a: {
-            speaker: building.name || "Tavern",
-            text: `The tavern is loud with sailors' songs. The barkeep polishes a mug. "What'll it be?"`,
-            choices: [
-              { text: "Buy food and drink", do: (c) => {
-                c.open("shop", { building: { ...building, role: "tavern" }, island });
-              } },
-              { text: "Buy a round and listen for rumours (\u0E3F100)", do: (c) => c.pay(100) ? "r" : "a" },
-              { text: `Rent a room upstairs for the night (${formatBerries(g.services.innPrice(island))}) \u2014 wake here if you fall`, do: () => {
-                g.dialogue.close();
-                g.services.rest(island, island?.towns?.find((t) => t.id === building.town));
-              }, end: true },
-              { text: "Leave", end: true }
-            ]
-          },
-          r: { speaker: "Sailor at the bar", text: () => rumorFor(g, island, rng4, null, true), next: "a" }
-        }
-      });
-    }
-    library(building, island) {
-      const g = this.game;
-      const c = g.state.char;
-      const key2 = "read_" + (building.id || building.name);
-      const first = !c.flags[key2];
-      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Library", text: () => {
-        if (first) {
-          c.flags[key2] = true;
-          g.progression.raiseAttr("wil", 1);
-        }
-        return (first ? "(+1 Willpower) " : "") + rumorFor(g, island, new RNG(building.id || 1), null, true, "lore");
-      } } } });
-    }
-    knock(b) {
-      const g = this.game, c = g.state.char;
-      const B5 = g.buildings;
-      const rng4 = new RNG((b.id || 1) * 13 + g.env.day * 7 + Math.floor(g.env.clock));
-      g.audio?.sfx("knock");
-      const kick = { text: b.pirate ? "Kick down the door." : "Kick down the door. (a crime)", do: () => {
-        g.dialogue.close();
-        B5 ? B5.breakDoor(b) : robHouse(g, b);
-      }, end: true };
-      const leave = { text: "Leave them be.", end: true };
-      if (b.pirate) {
-        const line2 = rng4.pick([`"Who's there?! Scram before we gut ya!"`, `"Password?" ...You don't know it. "Then get lost!"`, `(Laughter and clinking mugs behind the door. It stops.) "...Who's knockin'?"`, `"If yer a Marine, we ain't here!"`]);
-        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: line2 + " (A crude Jolly Roger is scratched into the door. Pirates don't call the Marines.)", choices: [leave, kick] } } });
-        return;
-      }
-      if ((b.role || "house") !== "house") {
-        const opens = B5 ? B5.opensAt(b) : 7;
-        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: b.name || "Door", text: `Nobody answers. A sign hangs on the door: CLOSED \u2014 OPEN FROM ${opens}:00.`, choices: [{ text: "Come back later.", end: true }, kick] } } });
-        return;
-      }
-      const night = g.env.clock < 6 || g.env.clock >= 21;
-      const home2 = g.actors.some((a) => a.homeB === b && a.alive && a.state === "idle");
-      const wanted2 = (g.wanted?.tier() ?? 0) >= 2;
-      const invite = home2 && !night && !wanted2 && rng4.chance((b.npc ? 0.85 : 0.3) + (c.reputation || 0) / 200);
-      const lines2 = !home2 ? ["(No answer. Nobody seems to be home.)", "(Silence. The curtains are drawn.)"] : night ? [`"It's the middle of the night! Go away!"`, `"We're sleeping! Come back in the morning!"`, "(A candle is snuffed out behind the window.)"] : [`"Who's there? ...Go away, we don't want trouble."`, '"Nobody home!" (someone is clearly home)', `"If you're a pirate, keep walking!"`, '"Shh! The baby is sleeping."', '"Are you the new postman? No? Then shoo."'];
-      if (invite) {
-        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: rng4.pick(['"Oh, a traveller? Come in, come in \u2014 mind your head."', `"Well, don't just stand there \u2014 come in! The kettle's on."`, `"Aren't you the one folk say helped out around here? Come in!"`]), choices: [
-          { text: "Step inside.", do: () => {
-            c.flags["invited_" + (B5 ? B5.key(b) : b.id)] = g.env.day;
-            g.dialogue.close();
-            if (!c.flags["door_" + b.id]) {
-              c.flags["door_" + b.id] = true;
-              addItem(g, "rice_ball", 1);
-            }
-          }, end: true },
-          leave
-        ] } } });
-        return;
-      }
-      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: rng4.pick(lines2), choices: [leave, kick] } } });
-    }
-    chest(o) {
-      const g = this.game, c = g.state.char;
-      const key2 = "chest_" + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`);
-      if (c.world.chests[key2] && !c.world.containers?.[key2]) {
-        o.opened = true;
-        g.log("Empty. You took it all.", "#b0bec5");
-        return;
-      }
-      const luck = c.traits.includes("lucky") ? 1.5 : 1;
-      const first = !c.world.containers?.[key2];
-      g.containers.open(key2, "treasure", {
-        title: o.tier > 2 ? "A treasure chest" : "A chest",
-        sub: "The lid creaks open\u2026",
-        o: { tier: o.tier || 1, luck, item: o.item },
-        onEmpty: () => {
-          c.world.chests[key2] = true;
-          o.opened = true;
-        }
-      });
-      if (first) g.fx.burst(o.x, o.y - 0.5, 20, { color: ["#ffd54f", "#fff59d"], speed: 4, vz: 4, g: 8, life: 0.8, kind: "star" });
-    }
-    dummy(o) {
-      this.game.log("Strike the dummy to practise: every blow that lands is a little mastery, up to the basics.", "#90caf9");
-    }
-    quickHeal() {
-      const g = this.game, c = g.state.char;
-      const foods = ["meat", "fish_stew", "rice_ball", "tangerine", "sea_king_steak", "baratie_course", "bandage"];
-      const id = foods.find((f) => c.inventory.some((i) => i.id === f));
-      if (!id) {
-        g.log("You have nothing to eat!", "#ff8a80");
-        return;
-      }
-      useItem(g, id);
-    }
-  };
-  function flavorFor(b) {
-    switch (b.role) {
-      case "palace":
-        return 'Guards cross their spears in front of the gate. "The palace is closed to commoners."';
-      case "hall":
-        return "The great doors are shut tight.";
-      case "church":
-        return "Candles flicker inside. A priest nods at you silently.";
-      case "bank":
-        return "A clerk counts berries behind iron bars.";
-      default:
-        return "The door is locked.";
-    }
-  }
-
   // src/data/zones/index.js
   var ZONES = {
     skypiea: {
@@ -127752,6 +126460,1674 @@ button:disabled { cursor: not-allowed; }
       if (c.faction !== "marine" && owed > 0) c.bounty = roundBounty((c.bounty || 0) + owed);
     });
   }
+
+  // src/game/rumors.js
+  var SEA_TIPS = {
+    [REGION.EAST_BLUE]: [
+      "They call the East Blue the weakest sea. Funny \u2014 the Pirate King was born here.",
+      'Loguetown is the "town of the beginning and the end". Gol D. Roger was executed on the platform in its square. Every pirate heading for the Grand Line stops there \u2014 and so do the Marines.',
+      "To reach the Grand Line you sail to Reverse Mountain, at the southwest edge of the East Blue where the Red Line meets the four seas. The current carries you UP the mountain. Steer true or you'll smash into the canal walls.",
+      "Don't even think about crossing the Calm Belt. No wind, no current \u2014 and it's the nest of the Sea Kings.",
+      "A Fish-Man named Arlong took over the Conomi Islands. The villagers pay him tribute or die.",
+      `There's a floating restaurant called the Baratie out past the Gecko Islands. The head chef, "Red Leg" Zeff, was once a pirate captain.`,
+      'The Marine captain in Shells Town, "Axe-Hand" Morgan, rules that town like a tyrant.',
+      "If you want to learn the sword, the Isshin Dojo in Shimotsuki Village takes students."
+    ],
+    [REGION.NORTH_BLUE]: [
+      "The North Blue has cold seas and colder people. The Donquixote Family started out in Spider Miles, you know.",
+      "Lvneel is the homeland of Noland the Liar, who claimed he saw a city of gold on an island in the Grand Line.",
+      "Flevance, the White Town, was destroyed by its neighbours. They said the amber lead sickness was contagious. It wasn't.",
+      "Reverse Mountain lies at the southeast corner of the North Blue. Ride the canal up the mountain to enter the Grand Line.",
+      "The Vinsmoke family once ruled the whole North Blue. Their kingdom, Germa, now roams the seas on giant snail ships."
+    ],
+    [REGION.WEST_BLUE]: [
+      "The West Blue is ruled from the shadows by the mafia families. Watch your purse.",
+      "Ohara was an island of scholars, burned to ash by a Buster Call for studying the Poneglyphs. A few survivors still camp in the ruins.",
+      "The Chinjao Family of Kano Country teaches the Hasshoken \u2014 a fist that vibrates through armour.",
+      "Reverse Mountain rises at the northeast corner of the West Blue."
+    ],
+    [REGION.SOUTH_BLUE]: [
+      "The South Blue is full of giant animals \u2014 gryphons, super sparrows, birds the size of houses in the Torino Kingdom.",
+      "Karate Island is where fighters from all over come to train until their fists bleed.",
+      "Baterilla... the Marines once searched every pregnant woman on that island, looking for the Pirate King's child.",
+      "Reverse Mountain lies at the northwest corner of the South Blue, where the four seas meet.",
+      "The Sorbet Kingdom once had a kind king named Kuma. They say he was a Buccaneer."
+    ],
+    [REGION.PARADISE]: [
+      "In the Grand Line your compass is useless. Trust the Log Pose and nothing else.",
+      "From Reverse Mountain there are seven routes, all ending at the Sabaody Archipelago.",
+      "Islands in the Grand Line each have their own climate. The sea between them goes mad.",
+      "To cross the Red Line, pirates must have their ship coated at Sabaody and sink ten thousand metres to Fish-Man Island. Only the World Government may pass over Mary Geoise.",
+      "The Knock Up Stream near Jaya shoots ships into the sky. Nobody believes the sky islands are real... except the ones who've been.",
+      "Never, ever touch a Celestial Dragon. An Admiral will come.",
+      "The Warlords of the Sea have government pardons. Crocodile of Alabasta is treated like a hero there."
+    ],
+    [REGION.NEW_WORLD]: [
+      "In the New World, Haki is everything. If you can't use it, turn back now.",
+      "You need a three-needle Log Pose here. Islands change their magnetism on a whim.",
+      "The Four Emperors rule these seas: Big Mom in Totto Land, Kaido in Wano, Red-Haired Shanks, and... they say Blackbeard now.",
+      "Laugh Tale cannot be found with a Log Pose. You need the four Road Poneglyphs.",
+      "Zou is not an island. It's on the back of an elephant that has walked the sea for a thousand years."
+    ],
+    [REGION.CALM_NORTH]: ["You're in the Calm Belt?! Get out before the Sea Kings wake!"],
+    [REGION.CALM_SOUTH]: ["You're in the Calm Belt?! Get out before the Sea Kings wake!"]
+  };
+  var LORE = [
+    `Twenty-two years ago, Gol D. Roger's last words started the Great Pirate Era: "My treasure? If you want it, you can have it! I left everything I own in that place!"`,
+    "The Void Century: one hundred years of history, erased. Only the Poneglyphs remember \u2014 and reading them is a crime.",
+    "Poneglyphs come in three kinds: historical ones, instructional ones, and four red Road Poneglyphs that point to Laugh Tale.",
+    "Haki comes in three colours: Armament, Observation, and the rare Conqueror's \u2014 the Haki of kings.",
+    "Devil Fruits: Paramecia change the body, Zoan transform it into beasts, Logia turn it into an element. Every user becomes a hammer in the sea.",
+    "When a Devil Fruit user dies, their power is reborn in an ordinary fruit somewhere nearby.",
+    "The Red Line is the only continent in the world. It circles the planet. Where it crosses the Grand Line stand Reverse Mountain \u2014 and on the opposite side, Mary Geoise.",
+    "Seastone emits the same energy as the sea itself. It weakens Devil Fruit users on touch, and Marines line their hulls with it to cross the Calm Belt unnoticed.",
+    'The Rokushiki are six superhuman arts taught to the Marines and to Cipher Pol: Soru, Geppo, Tekkai, Shigan, Rankyaku and Kami-e. Strength is measured in "Doriki".',
+    'Some families carry the initial "D." in their name. The World Government fears it. Nobody knows why.',
+    "Vivre Cards are made from a person's fingernail. They point toward that person \u2014 and burn away as their life fades.",
+    'Log Poses must stay on an island a while to "set" before they point to the next one. Eternal Poses always point to a single island.'
+  ];
+  function rumorFor(game, island, rng4, npc, tavern, kind) {
+    if (kind === "lore") {
+      const c0 = game.state?.char;
+      const known0 = !!(c0?.haki && (c0.haki.armament || c0.haki.observation || c0.haki.conqueror));
+      return rng4.pick(known0 ? LORE : LORE.filter((l) => !/haki/i.test(l)));
+    }
+    const p = game.player;
+    const reg9 = regionAt(p.x, p.y);
+    const pool2 = [];
+    if (island?.def?.rumors) pool2.push(...island.def.rumors, ...island.def.rumors);
+    pool2.push(...SEA_TIPS[reg9] || []);
+    if (tavern) pool2.push(...LORE.slice(0, 6));
+    const fr = game.fruitRumor?.(rng4);
+    if (fr && rng4.chance(tavern ? 0.45 : 0.2)) return fr;
+    const c = game.state?.char;
+    if (c?.bounty && rng4.chance(0.2)) return `"Hey... aren't you the one on that wanted poster? \u0E3F${c.bounty.toLocaleString()}... I didn't see anything!"`;
+    const quest = game.questRumor?.(island, rng4);
+    if (quest && rng4.chance(0.35)) return quest;
+    const known = !!(c?.haki && (c.haki.armament || c.haki.observation || c.haki.conqueror));
+    const heard = known ? pool2 : pool2.filter((l) => !/haki|mantra/i.test(l));
+    const line2 = heard.length ? rng4.pick(heard) : "Nice weather today.";
+    return npc ? `"${line2.replace(/^"|"$/g, "")}"` : line2;
+  }
+
+  // src/game/npcs.js
+  function shadowLook(L3) {
+    const k = "#120c18";
+    return { ...L3, shadow: true, skin: k, top: k, bottom: k, hairColor: k, shoes: k, hand: k, hatColor: k, belt: k, sleeve: k, eyeColor: k, coat: L3.coat ? k : void 0, vest: L3.vest ? k : void 0, fur: L3.fur ? k : void 0, wings: void 0, backFlame: false };
+  }
+  var NPC_DEFS = /* @__PURE__ */ new Map();
+  var GROUPS = [];
+  function registerNPCs(list) {
+    for (const n of list) NPC_DEFS.set(n.id, n);
+  }
+  function registerGroups(list) {
+    for (const g of list) GROUPS.push(g);
+  }
+  var npcDef = (id) => NPC_DEFS.get(id);
+  var allNpcDefs = () => [...NPC_DEFS.values()];
+  var allGroups = () => GROUPS.slice();
+  var ARCHETYPES = {
+    bandit: { name: "Mountain Bandit", faction: "bandit", style: "brawler", look: { top: "#6d4c41", hat: "bandana", hatColor: "#8d6e63" }, skill: 0.15, barks: ["Hand over your money!", "Heh heh heh!"] },
+    pirate: { name: "Pirate Grunt", faction: "pirate", style: "ittoryu", weapon: "sword", look: { top: "#37474f", hat: "bandana", hatColor: "#b71c1c" }, skill: 0.2, barks: ["Yo-ho!", "Get 'em!"] },
+    pirate_gunner: { name: "Pirate Gunner", faction: "pirate", style: "sniper", weapon: "gun", ranged: true, look: { top: "#5d4037", hat: "tricorne" }, skill: 0.15 },
+    marine: { name: "Marine", faction: "marine", style: "ittoryu", weapon: "sword", look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine" }, skill: 0.25, lethal: false, barks: ["For Justice!", "Halt, pirate!"] },
+    marine_rifle: { name: "Marine Rifleman", faction: "marine", style: "sniper", weapon: "gun", ranged: true, look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine" }, skill: 0.2, lethal: false },
+    marine_officer: { name: "Marine Officer", faction: "marine", style: "rokushiki", look: { top: "#ffffff", bottom: "#1b4f72", hat: "marine", coat: "#fafafa", coatText: "JUSTICE" }, skill: 0.5, lethal: false, moves: ["roku_soru", "roku_rankyaku"] },
+    swordsman: { name: "Wandering Swordsman", faction: "rival", style: "nitoryu", weapon: "sword", look: { top: "#455a64", hat: "headband", hatColor: "#212121" }, skill: 0.45, moves: ["nito_taka"] },
+    brute: { name: "Brute", faction: "pirate", style: "brawler", look: { top: "#795548" }, bulk: 1.35, skill: 0.1, moves: ["brawl_tackle", "brawl_headbutt"], hpMul: 1.6 },
+    fishman_thug: { name: "Fish-Man Pirate", faction: "pirate", race: "fishman", style: "fishman_karate", look: {}, skill: 0.3, moves: ["fmk_uchimizu"], hpMul: 1.2 },
+    baroque: { name: "Baroque Works Agent", faction: "baroque", style: "sniper", weapon: "gun", look: { top: "#212121", hat: "cowboy", hatColor: "#212121" }, skill: 0.35, moves: ["snipe_explode"] },
+    cp: { name: "Cipher Pol Agent", faction: "cp", style: "rokushiki", look: { top: "#212121", bottom: "#212121" }, skill: 0.6, moves: ["roku_soru", "roku_rankyaku", "roku_tekkai"] },
+    zombie: { name: "Zombie", faction: "zombie", style: "brawler", look: { top: "#4e342e", skin: "#9e9d89" }, skill: 0.05, barks: ["Uuurgh..."] },
+    beast: { name: "Wild Boar", faction: "beast", style: "brawler", beast: "boar", look: { top: "#6d4c41", skin: "#6d4c41", hair: "bald", ears: "round", fur: "#6d4c41", muzzle: true, tail: "thin" }, skill: 0, hpMul: 1.3 },
+    tiger: { name: "Mountain Tiger", faction: "beast", style: "electro", beast: "tiger", look: { skin: "#f39c12", fur: "#f39c12", hairColor: "#f39c12", ears: "round", tail: "thin", muzzle: true, top: "#f39c12", bottom: "#e67e22", hair: "bald", furFace: true }, skill: 0.2, hpMul: 1.5 },
+    dinosaur: { name: "Dinosaur", faction: "beast", style: "brawler", look: { skin: "#558b2f", top: "#558b2f", bottom: "#33691e", hair: "bald", fin: true, muzzle: true, tail: "fluffy", fur: "#558b2f" }, bulk: 1.6, scale: 1.5, hpMul: 2.5, skill: 0 },
+    gorilla: { name: "Snow Gorilla", faction: "beast", style: "brawler", look: { skin: "#eceff1", fur: "#eceff1", hairColor: "#eceff1", top: "#eceff1", bottom: "#cfd8dc", ears: "round", furFace: true, muzzle: true, hair: "bald" }, bulk: 1.4, hpMul: 1.8, skill: 0.1 },
+    pacifista: { name: "Pacifista", faction: "marine", style: "brawler", look: { top: "#263238", bottom: "#263238", skin: "#607d8b", hat: "bandana", hatColor: "#263238" }, bulk: 1.5, scale: 1.4, hpMul: 3, skill: 0.3, moves: ["kuma_laser"], lethal: true }
+  };
+  var WOMEN = /\b(Makino|Dadan|Alvida|Rika|Kaya|Nojiko|Bell-?m[eè]re|Tashigi|Kuina|Nami|Robin|Vivi|Kureha|Conis|Laki|Aisa|Hina|Isuka|Hancock|Sandersonia|Marigold|Nyon|Perona|Kalifa|Bonney|Shirahoshi|Otohime|Shyarly|Big Mom|Linlin|Pudding|Smoothie|Br[uû]l[eé]e|Galette|Flampe|Praline|Amande|Chiffon|Lola|Viola|Rebecca|Monet|Baby 5|Koala|Carrot|Wanda|Yamato|Hiyori|Kiku|Tama|Ulti|Black Maria|Sugar|Kokoro|Chimney|Shakky|Valentine|Doublefinger|Goldenweek|All ?Sunday|Merry ?Christmas|Paula|Porche|Cindry|Stussy|Lilith|Jewelry|Catarina|Tsuru|Gion|Momousagi|Olvia|Toki|Rouge|Uta|Betty|Hibari|Carina|Mozu|Kiwi|Ishley|Nico)\b/i;
+  var ROLE_OF = { pirate: "pirate", bandit: "bandit", marine: "marine", cp: "agent", baroque: "agent", rival: "swordsman", beast: "beast", fishman: "fishman" };
+  function npcLook(def) {
+    let role = def.role || (def.beast || def.faction === "beast" ? "beast" : ROLE_OF[def.faction]) || "civilian";
+    if (role === "marine" && (def.look?.coat || def.boss || def.named)) role = "officer";
+    const lookOver = { ...def.look || {}, role };
+    if (def.bulk && lookOver.bulk === void 0) lookOver.bulk = def.bulk;
+    if (lookOver.fem === void 0 && def.name && WOMEN.test(def.name)) lookOver.fem = true;
+    if (lookOver.fem === void 0 && (def.named || def.boss || def.dialogue)) lookOver.fem = false;
+    const look = def.fullLook ? { ...def.fullLook } : makeLook(def.race || "human", def.seed ?? hashSeed(def.id || def.name), lookOver);
+    if (def.bulk) look.bulk = def.bulk;
+    if (def.scale) look.scale = def.scale;
+    return look;
+  }
+  function standingHeight(look) {
+    const d = dims(look);
+    return (d.hip0 + d.chestLen + d.neck + d.hc + d.headR * 1.05) * (look.scale || 1) + 0.12;
+  }
+  function buildingOf(island, def) {
+    if (typeof def.at === "function") return null;
+    const pl = def.at || {};
+    if (pl.spot && island.spots[pl.spot]) return null;
+    const walkIn2 = (b) => b?.enterable ? b : null;
+    for (const town of island.towns) {
+      if (pl.town && town.id !== pl.town) continue;
+      if (pl.dock || pl.door) return null;
+      if (pl.building) {
+        const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
+        if (b) return walkIn2(b);
+      }
+      if (pl.plaza || !pl.building && !pl.dx && !pl.door || pl.town && !pl.dx) return null;
+    }
+    for (const town of island.towns) {
+      const b = town.buildings.find((x) => x.npc === def.id);
+      if (b) return walkIn2(b);
+    }
+    return null;
+  }
+  function sizeBuildingsForOccupants(world) {
+    for (const def of NPC_DEFS.values()) {
+      const island = world.islands.find((i) => i.id === def.island);
+      const b = island && buildingOf(island, def);
+      if (!b) continue;
+      const need = (standingHeight(npcLook(def)) + 0.3) / 2.75;
+      if (need <= styleScale(b) + 0.01) continue;
+      b.tall = Math.round(need * 20) / 20 + 0.05;
+      delete b._layout;
+      if (world.objects) {
+        world.objects.removeInterior(b);
+        world.objects.addInterior(b);
+      }
+    }
+  }
+  var WANO = /* @__PURE__ */ new Set(["wano", "onigashima"]);
+  function defaultBlade(def, k) {
+    const f = def.faction || "civilian", lvl = def.level ?? 6, who = `${def.name || ""} ${def.title || ""}`;
+    if (f === "marine" || /guard|knight|fencer|soldier|royal/i.test(who)) return "marine_saber";
+    if (WANO.has(def.island) || /samurai|ronin/i.test(who)) return "wano_katana";
+    if (f === "beast" || f === "zombie") return "rusty_katana";
+    const h2 = hashSeed(def.id || def.name || "") + k;
+    if (f === "pirate" || f === "bandit") return (lvl >= 40 ? ["cutlass", "fine_katana"] : ["cutlass", "cutlass", "rusty_katana"])[h2 % (lvl >= 40 ? 2 : 3)];
+    return lvl >= 12 ? "fine_katana" : "rusty_katana";
+  }
+  function npcWeapon(def) {
+    const count2 = STYLES2[def.style]?.swords || 1;
+    const w = { kind: def.weapon, power: def.weaponPower || 1.2, count: count2 };
+    if (def.weapon === "sword") w.ids = Array.from({ length: count2 }, (_, k) => def.blades?.[k] || def.blades?.[0] || defaultBlade(def, k));
+    return w;
+  }
+  function makeNPC(def, x, y, extra = {}) {
+    const L3 = def.level ?? 6;
+    const look = npcLook(def);
+    const attrs = def.attrs || { str: L3, agi: L3, end: L3, vit: L3, wil: L3 };
+    const a = new Actor({
+      x,
+      y,
+      name: def.name,
+      title: def.title,
+      look,
+      race: def.race || look.race,
+      faction: def.faction || "civilian",
+      attrs,
+      style: def.style || "brawler",
+      fruit: def.fruit || null,
+      fruitMastery: def.fruitMastery ?? (def.fruit ? 60 : 0),
+      weapon: def.weapon ? npcWeapon(def) : null,
+      hakiSkill: def.haki || {},
+      boss: def.boss,
+      hpMul: (def.hpMul || 1) * (def.boss ? 2.2 : 1),
+      lethal: def.lethal ?? true,
+      poise: def.poise,
+      dmgMul: def.dmgMul,
+      defMul: def.defMul,
+      ...extra
+    });
+    a.npcId = def.id || null;
+    a.hakiSig = npcHakiSig(def);
+    a.masteries = { [a.style]: def.mastery ?? Math.min(100, L3 * 1.5) };
+    const moves = def.boss && def.haki?.conqueror > 0 && !(def.moves || []).includes("haki_conqueror") ? [...def.moves || [], "haki_conqueror"] : def.moves || [];
+    a.techniques = moves;
+    a.tier = def.tier || Math.max(1, Math.round(L3 / 12));
+    a.named = !!def.named || !!def.boss;
+    a.bountyValue = def.bounty;
+    a.infamy = def.infamy;
+    a.reward = def.reward;
+    a.breakthrough = def.breakthrough;
+    a.alertLine = def.alert;
+    a.defeatLine = def.defeatLine;
+    a.talk = def.dialogue ? { def } : null;
+    a.def = def;
+    if (def.armament) a.armament = true;
+    if (def.invulnerable) a.invulnerable = true;
+    if (def.logia && !a.fruitDef?.logia) a.fakeLogia = { logia: true, weakTo: def.logia.weakTo || [], color: def.logia.color || "#fff" };
+    if (def.recover) a.recoverAfter = def.recover;
+    if (def.fixedPower) a.fixedPower = def.fixedPower;
+    a.showName = def.showName ?? (!!def.dialogue || !!def.boss || !!def.named);
+    a.nameColor = def.boss ? "#ff8a80" : def.dialogue ? "#ffe082" : "#fff";
+    const kind = def.ai || (def.hostile ? "hostile" : def.dialogue ? "guard" : "wander");
+    a.controller = new AIController({
+      kind,
+      home: { x, y },
+      skill: def.skill ?? (def.boss ? 0.55 : 0.25),
+      moves,
+      aggroRange: def.aggroRange ?? (def.boss ? 12 : 8),
+      ranged: def.ranged,
+      leash: def.leash ?? (def.boss ? 18 : 16),
+      phases: def.phases,
+      barks: def.barks
+    });
+    if (kind === "guard" || kind === "idle") {
+      a.stationary = true;
+      a.faceHome = Math.PI / 2;
+    }
+    const st = def.stance === void 0 ? stanceFor2(def) : def.stance;
+    if (st) a.act3d = { pose: st, prop: null, h: 0, stance: true };
+    if (def.hostile) a.aggroPlayer = true;
+    if (def.calm || def.story && !def.hostile && !def.boss) a.calm = true;
+    return a;
+  }
+  function stanceFor2(def) {
+    if (def.townsfolk || def.crew || def.hostile && !def.boss) return null;
+    if (!def.boss && !def.dialogue) return null;
+    if (def.shop || def.role === "shop" || def.role === "vendor" || def.role === "inn") return null;
+    const h2 = hashSeed(def.id || def.name || "");
+    if (def.faction === "marine") return def.boss ? def.weapon ? "shoulder" : "fold" : "attention";
+    if (def.boss) {
+      if (def.weapon && /sword|katana|blade|saber|sabre|cutlass|axe|scythe|mace|club/i.test(String(def.weapon.id || def.weapon))) return "shoulder";
+      return ["fold", "hips", "fistpalm"][h2 % 3];
+    }
+    if (/scholar|doctor|archaeolog|navigator|professor|sage|elder/i.test(`${def.title || ""} ${def.role || ""}`)) return "think";
+    if (def.faction === "pirate" || def.faction === "bandit") return h2 % 2 ? "fold" : "hips";
+    if (/hunter/i.test(`${def.title || ""} ${def.role || ""} ${def.faction || ""}`)) return "fold";
+    return null;
+  }
+  function hashSeed(s) {
+    let h2 = 7;
+    for (const ch of String(s)) h2 = h2 * 31 + ch.charCodeAt(0) >>> 0;
+    return h2;
+  }
+  function makeEnemy(arch, level, x, y, over = {}) {
+    const A2 = ARCHETYPES[arch] || ARCHETYPES.bandit;
+    over = Object.fromEntries(Object.entries(over || {}).filter(([, v]) => v !== void 0));
+    return makeNPC({
+      ...A2,
+      level,
+      hostile: true,
+      name: over.name || A2.name,
+      look: { ...A2.look || {}, ...over.look || {} },
+      moves: over.moves || A2.moves,
+      id: over.id,
+      seed: over.seed ?? Math.floor(Math.random() * 1e9),
+      // every grunt looks different
+      hpMul: (A2.hpMul || 1) * (over.hpMul || 1),
+      skill: over.skill ?? A2.skill,
+      ...over
+    }, x, y);
+  }
+  function npcBuilder(ctx) {
+    const { island, game, spawner, list, rng: rng4 } = ctx;
+    const c = game.state?.char;
+    if (!c) return;
+    for (const t of island.towns || []) for (const b of t.buildings) {
+      b.npcCount = 0;
+      b.guestCount = 0;
+    }
+    for (const def of NPC_DEFS.values()) {
+      if (def.island !== island.id) continue;
+      if (def.when && !def.when(c, game)) continue;
+      if (def.boss && c.bosses.includes(def.id) && !def.respawn) continue;
+      if (def.once && c.defeated[def.id]) continue;
+      if ((c.crew || []).some((m) => m.id === def.id) || c.flags["leftCrew_" + def.id]) continue;
+      const pos = placeNPC(game, island, def, rng4, spawner);
+      if (!pos) continue;
+      const a = makeNPC(def, pos.x, pos.y);
+      a.game = game;
+      if (pos.face !== void 0) a.facing = a.faceHome = pos.face;
+      if (pos.inside) {
+        a.homeB = pos.building;
+        a.facing = a.faceHome = Math.PI / 2;
+        a.stationary = true;
+        a.wanderBox = interiorRect(pos.building);
+      }
+      game.addActor(a);
+      list.push(a);
+      if (pos.building && !pos.guest) pos.building.npcSpawned = true;
+    }
+    for (const grp of GROUPS) {
+      if (grp.island !== island.id) continue;
+      if (grp.when && !grp.when(c, game)) continue;
+      if (grp.cleared && c.flags[grp.cleared]) continue;
+      const base2 = grp.spot ? island.spots[grp.spot] : { x: island.x + (grp.dx || 0) * island.def.w / 2, y: island.y + (grp.dy || 0) * island.def.h / 2 };
+      if (!base2) continue;
+      for (const e of grp.enemies) {
+        const [arch, lvl, over] = Array.isArray(e) ? e : [e, grp.level || 6, {}];
+        const p = spawner.findFree(base2.x, base2.y, grp.radius || 5, rng4);
+        if (!p) continue;
+        const a = makeEnemy(arch, lvl, p.x, p.y, over || {});
+        a.game = game;
+        if (grp.leash) a.controller.leash = grp.leash;
+        if (grp.calm) a.calm = true;
+        game.addActor(a);
+        list.push(a);
+      }
+    }
+  }
+  function clear2(spawner, x, y, rng4, extra = {}) {
+    const p = spawner.freeSpot(x, y) ? { x, y } : spawner.findFree(x, y, 2.5, rng4) || spawner.findFree(x, y, 5, rng4) || { x, y };
+    return { ...p, ...extra };
+  }
+  function inside(b, guest = false) {
+    if (!b.enterable) return null;
+    const L3 = layoutOf(b);
+    const spots = guest ? L3.residents.slice().reverse() : [L3.keeper, ...L3.residents].filter(Boolean);
+    const k = guest ? b.guestCount = (b.guestCount || 0) + 1 : b.npcCount = (b.npcCount || 0) + 1;
+    const s = spots[k - 1];
+    if (!s) return null;
+    return { ...bw(b, s.x, s.z), building: b, inside: true, guest };
+  }
+  function whereNPC(game, id) {
+    const def = NPC_DEFS.get(id);
+    if (!def) return null;
+    const w = game.world;
+    const key2 = `${w.id}:${id}`;
+    const now3 = game.time || 0;
+    const C3 = game._whereNPC || (game._whereNPC = /* @__PURE__ */ new Map());
+    const hit = C3.get(key2);
+    if (hit && now3 - hit.t < 3) return hit.v;
+    let v = null;
+    const island = w.islands.find((i) => i.id === def.island);
+    if (island) {
+      const q2 = placeGuess(game, island, def);
+      if (q2) v = { x: q2.x, y: q2.y, place: def.name, zone: w === game.surface ? null : w.id };
+    } else v = { island: def.island };
+    C3.set(key2, { t: now3, v });
+    return v;
+  }
+  function placeGuess(game, island, def) {
+    let pl = {};
+    try {
+      pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
+    } catch (e) {
+      pl = {};
+    }
+    const inB = (b) => {
+      if (b.enterable) {
+        const L3 = layoutOf(b), s = pl.guest ? L3.residents[L3.residents.length - 1] : L3.keeper || L3.residents[0];
+        if (s) return bw(b, s.x, s.z);
+      }
+      return bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
+    };
+    if (pl.inside) {
+      const b = (island.landmarks || []).find((l) => l.kind === "building" && (l.role === pl.inside || l.name === pl.inside));
+      if (b) return inB(b);
+    }
+    if (pl.spot && island.spots[pl.spot]) {
+      const s = island.spots[pl.spot];
+      return { x: s.x + (pl.ox || 0), y: s.y + (pl.oy || 0) };
+    }
+    for (const town of island.towns) {
+      if (pl.town && town.id !== pl.town) continue;
+      if (pl.dock) {
+        const d = island.docks.slice().sort((a, b) => Math.hypot(a.land.x - town.x, a.land.y - town.y) - Math.hypot(b.land.x - town.x, b.land.y - town.y))[0];
+        if (d) return { x: d.land.x + (pl.ox || 0), y: d.land.y + (pl.oy || 0) };
+      }
+      if (pl.door) {
+        const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
+        if (b) return bw(b, doorLocalX(b) + (pl.ox ?? 1.6), 1.6);
+      }
+      if (pl.building) {
+        const b = town.buildings.find((x) => x.name === pl.building || def.id && x.npc === def.id || x.role === pl.building);
+        if (b) return inB(b);
+      }
+      if (pl.plaza || !pl.building && !pl.dx && !pl.door || pl.town && !pl.dx) {
+        const sq = pl.ox === void 0 && pl.oy === void 0 ? squareSpot(town, def.id) : null;
+        return sq ? { x: sq.x, y: sq.y } : { x: town.plaza.x + (pl.ox || 1.5), y: town.plaza.y + 2.5 + (pl.oy || 0) };
+      }
+    }
+    for (const town of island.towns) {
+      const b = town.buildings.find((x) => def.id && x.npc === def.id);
+      if (b) return inB(b);
+    }
+    const lm = island.landmarks.find((l) => def.id && l.npc === def.id);
+    if (lm) return { x: lm.x + 0.6, y: lm.y + 1.2 };
+    if (pl.dx !== void 0) return { x: island.x + pl.dx * island.def.w / 2, y: island.y + pl.dy * island.def.h / 2 };
+    return { x: island.x, y: island.y };
+  }
+  function placeFor(game, island, def) {
+    return placeNPC(game, island, def, Math, game.spawner);
+  }
+  function squareSpot(town, id = "") {
+    const S6 = town.square, P6 = town.plaza;
+    if (!S6 || !P6) return null;
+    let h2 = 2166136261;
+    for (let i = 0; i < id.length; i++) h2 = Math.imul(h2 ^ id.charCodeAt(i), 16777619);
+    const u = (h2 >>> 0) % 1e3 / 1e3, side = h2 >>> 11 & 1 ? 1 : -1;
+    const along2 = (u * 2 - 1) * Math.max(0.5, S6.along - 1.6), across = side * Math.max(0.8, S6.across - 0.7);
+    const x = P6.x + 0.5 + (S6.horiz ? along2 : across), y = P6.y + 0.5 + (S6.horiz ? across : along2);
+    const face = Math.atan2(P6.y + 0.5 - y, P6.x + 0.5 - x);
+    return { x, y, face };
+  }
+  function openOutside(game, spawner, b, ox, rng4) {
+    const w = game.world, dx0 = doorLocalX(b);
+    const xs = ox !== void 0 ? [dx0 + ox] : [dx0 + 1.6, dx0 - 1.6, dx0 + 2.4, dx0 - 2.4, dx0 + 1.2, dx0 - 1.2];
+    let best = null, bs = -Infinity;
+    for (const x02 of xs) for (const z of [1.6, 2.4, 3.2]) {
+      const q3 = bw(b, x02, z);
+      if (!spawner.freeSpot(q3.x, q3.y)) continue;
+      let open = 0;
+      for (let k = 0; k < 12; k++) {
+        const a = k / 12 * Math.PI * 2;
+        for (const r5 of [1.2, 2.2]) if (w.walkable(q3.x + Math.cos(a) * r5, q3.y + Math.sin(a) * r5) && !w.isBlocked(q3.x + Math.cos(a) * r5, q3.y + Math.sin(a) * r5)) open++;
+      }
+      const things = w.objects?.near ? w.objects.near(q3.x, q3.y, 1.6, (o) => o.block !== false && o.kind !== "building").length : 0;
+      const score = open - things * 5 - Math.abs(x02 - dx0) * 0.6 - (z - 1.6) * 0.8;
+      if (score > bs) {
+        bs = score;
+        best = { x: q3.x, y: q3.y, face: outFrom(b, x02) };
+      }
+    }
+    if (best) return best;
+    const x0 = dx0 + (ox ?? 1.6), q2 = bw(b, x0, 1.6), r4 = clear2(spawner, q2.x, q2.y, rng4);
+    if (r4) r4.face = outFrom(b, x0);
+    return r4;
+  }
+  function outFrom(b, x0) {
+    const a = bw(b, x0, 0.5), c = bw(b, x0, 2.5);
+    return Math.atan2(c.y - a.y, c.x - a.x);
+  }
+  function placeNPC(game, island, def, rng4, spawner) {
+    const q2 = placeNPC0(game, island, def, rng4, spawner);
+    if (q2 && q2.face === void 0 && q2.inside === void 0) {
+      const t = (island.towns || []).reduce((m, x) => !m || Math.hypot(x.x - q2.x, x.y - q2.y) < Math.hypot(m.x - q2.x, m.y - q2.y) ? x : m, null);
+      if (t && Math.hypot(t.plaza.x - q2.x, t.plaza.y - q2.y) > 1.5) q2.face = Math.atan2(t.plaza.y - q2.y, t.plaza.x - q2.x);
+    }
+    return q2;
+  }
+  function placeNPC0(game, island, def, rng4, spawner) {
+    const pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
+    if (pl.inside) {
+      const b = (island.landmarks || []).find((l) => l.kind === "building" && (l.role === pl.inside || l.name === pl.inside));
+      const q2 = b && inside(b, pl.guest);
+      if (q2) return q2;
+    }
+    if (pl.spot && island.spots[pl.spot]) {
+      const s = island.spots[pl.spot];
+      const x = s.x + (pl.ox || 0), y = s.y + (pl.oy || 0);
+      if (spawner.freeSpot(x, y)) return { x, y };
+      return spawner.findFree(x, y, 2.5, rng4) || spawner.findFree(s.x, s.y, 3, rng4) || s;
+    }
+    for (const town of island.towns) {
+      if (pl.town && town.id !== pl.town) continue;
+      if (pl.dock) {
+        const d = island.docks.slice().sort((a, b) => Math.hypot(a.land.x - town.x, a.land.y - town.y) - Math.hypot(b.land.x - town.x, b.land.y - town.y))[0];
+        if (d) {
+          const q2 = spawner.findFree(d.land.x + (pl.ox || 0), d.land.y + (pl.oy || 0), 4, rng4) || spawner.findFree(town.plaza.x, town.plaza.y + 2.5, 4, rng4);
+          const e = d.end || d.head;
+          if (q2 && e) q2.face = Math.atan2(e.y - d.land.y, e.x - d.land.x);
+          return q2;
+        }
+      }
+      if (pl.door) {
+        const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
+        if (b) {
+          const r4 = openOutside(game, spawner, b, pl.ox, rng4);
+          if (r4) return r4;
+        }
+      }
+      if (pl.building) {
+        const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);
+        if (b) {
+          const q2 = bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
+          return inside(b, pl.guest) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
+        }
+      }
+      if (pl.plaza || !pl.building && !pl.dx && !pl.door || pl.town && !pl.dx) {
+        const sq = pl.ox === void 0 && pl.oy === void 0 ? squareSpot(town, def.id) : null;
+        if (sq) {
+          const q2 = spawner.findFree(sq.x, sq.y, 2.5, rng4);
+          if (q2) {
+            q2.face = sq.face;
+            return q2;
+          }
+        }
+        return spawner.findFree(town.plaza.x + (pl.ox || 1.5), town.plaza.y + 2.5 + (pl.oy || 0), 3, rng4);
+      }
+    }
+    for (const town of island.towns) {
+      const b = town.buildings.find((x) => x.npc === def.id);
+      if (b) {
+        const q2 = bw(b, doorLocalX(b) + 0.9, 1.4);
+        return inside(b) || clear2(spawner, q2.x, q2.y, rng4, { building: b });
+      }
+    }
+    const lm = island.landmarks.find((l) => l.npc === def.id);
+    if (lm) return clear2(spawner, lm.x + 0.6, lm.y + 1.2, rng4);
+    if (pl.dx !== void 0) return spawner.findFree(island.x + pl.dx * island.def.w / 2, island.y + pl.dy * island.def.h / 2, 5, rng4);
+    return spawner.findFree(island.x, island.y, 10, rng4);
+  }
+  var Interactions = class {
+    constructor(game) {
+      this.game = game;
+      game.on("talk", (a) => this.talk(a));
+      game.on("enterBuilding", (b) => this.building(b));
+      game.on("knockDoor", (b) => this.knock(b));
+      game.on("openChest", (o) => this.chest(o));
+      game.on("trainDummy", (o) => this.dummy(o));
+      game.on("openService", (kind, arg, npc) => this.service(kind, arg, npc));
+      game.on("quickHeal", () => this.quickHeal());
+      this.objectHandlers = {};
+      game.on("useObject", (o) => this.objectHandlers[o.use]?.(o, game));
+      game.summon = (owner, spec) => {
+        const n = spec.count || 1;
+        for (let i = 0; i < n; i++) {
+          const ang = spec.at === "shadow" ? (owner.facing || 0) + Math.PI + (i - (n - 1) / 2) * 0.6 : Math.random() * Math.PI * 2;
+          const r4 = spec.at === "shadow" ? 1.1 : 2;
+          const p = game.spawner.findFree(owner.x + Math.cos(ang) * r4, owner.y + Math.sin(ang) * r4, 3) || { x: owner.x, y: owner.y + 1 };
+          const a = makeEnemy(spec.archetype || "pirate", spec.level || Math.max(3, Math.round((owner.attrs?.str || 8) * 0.8)), p.x, p.y, { name: spec.name, look: typeof spec.look === "string" ? void 0 : spec.look, moves: spec.moves, hpMul: spec.hpMul });
+          a.game = game;
+          a.bornT = game.env.time;
+          if (spec.at === "shadow") a.facing = owner.facing || 0;
+          if (spec.look === "shadow") a.look = shadowLook(owner.look || {});
+          else if (spec.look === "copy") {
+            a.look = { ...owner.look || {} };
+            a.name = spec.name || owner.name;
+          }
+          a.summonColor = spec.look === "copy" ? spec.color || ["#f48fb1", "#ffffff"] : null;
+          a.faction = owner.faction;
+          a.summonedBy = owner;
+          a.summonT = spec.duration || 30;
+          a.aggroPlayer = owner.aggroPlayer || owner.faction !== "player";
+          if (owner.isPlayer || owner.faction === "player") {
+            a.aggroPlayer = false;
+            a.controller = new AIController({ kind: "follower", skill: 0.3, moves: spec.moves || [] });
+          } else if (owner.controller?.target) {
+            a.controller.target = owner.controller.target;
+            a.controller.state = "chase";
+          }
+          game.addActor(a);
+          if (spec.look === "copy") game.fx.burst(a.x, a.y - 0.6, 26, { kind: "petal", color: spec.color || ["#f48fb1", "#ffffff"], speed: 3, z: 0.2, vz: 2.5, g: 1.5, life: 1, size: 0.11 });
+          else if (spec.look !== "shadow") game.fx.burst(a.x, a.y - 0.6, 12, { color: spec.color || "#eeeeee", speed: 3, g: 0, life: 0.4, kind: "smoke", size: 0.3 });
+        }
+      };
+      game.on("tick", (dt) => {
+        for (const a of game.actors) {
+          if (!a.summonedBy) continue;
+          a.summonT -= dt;
+          if (a.summonT <= 0 || !a.summonedBy.alive || a.summonedBy.state === "knocked") {
+            a.alive = false;
+            if (a.look?.shadow) game.fx.burst(a.x, a.y, 8, { color: ["#120a1a", "#2a1838"], speed: 1, z: 0.1, vz: 1.2, g: 0, life: 0.5, kind: "smoke", size: 0.22 });
+            else if (a.summonColor) game.fx.burst(a.x, a.y - 0.6, 18, { kind: "petal", color: Array.isArray(a.summonColor) ? a.summonColor : [a.summonColor, "#ffffff"], speed: 2.5, z: 0.6, vz: 1.5, g: 1, life: 0.9, size: 0.1 });
+            else game.fx.burst(a.x, a.y - 0.6, 8, { color: "#eeeeee", speed: 2, g: 0, life: 0.3, kind: "smoke" });
+          }
+        }
+      });
+      this.onObject("lore", (o) => {
+        game.dialogue.open(null, { start: "a", nodes: { a: { speaker: o.name || "Inscription", text: typeof o.lore === "function" ? o.lore(game.state.char, game) : o.lore } } });
+        if (o.loreEvent) game.emit("questEvent", o.loreEvent, o);
+      });
+      let mt = 0;
+      game.on("tick", (dt) => {
+        if ((mt -= dt) > 0) return;
+        mt = 0.5;
+        const c = game.state?.char;
+        if (!c) return;
+        for (const a of game.actors) {
+          if (a.recoverAfter && a.state === "knocked" && a.knockT > a.recoverAfter && a.alive && (a.knockT > Math.max(60, a.recoverAfter) || !game.player || game.world.distance(game.player.x, game.player.y, a.x, a.y) > 30)) {
+            a.state = "idle";
+            a.hp = Math.round(a.d.maxHp * 0.5);
+            a.provoked = false;
+            a.aggroPlayer = !!a.def?.hostile;
+            if (a.controller) {
+              a.controller.target = null;
+              a.controller.state = "return";
+            }
+            if (game.bossTarget === a) game.bossTarget = null;
+            game.fx.text(a.x, a.y - 2, a.def?.recoverLine || "...Hah. You win.", "#fff", 0.32);
+          }
+          const m = a.def?.marker;
+          if (!m && !a.npcId || !a.alive) continue;
+          try {
+            a.questMarker = game.storyMarker?.(a) || (m ? m(c, game) : null) || game.crew?.marker?.(a) || null;
+          } catch (e) {
+            a.questMarker = null;
+          }
+        }
+      });
+    }
+    onObject(id, fn) {
+      this.objectHandlers[id] = fn;
+    }
+    islandOf(x, y) {
+      const w = this.game.world;
+      return w.islandAt(x, y) || w.nearestIsland(x, y, 60);
+    }
+    talk(a) {
+      const g = this.game;
+      const def = a.def;
+      if (def && def.dialogue) {
+        if (g.questGivers?.introOnTalk(a)) return;
+        const tree = typeof def.dialogue === "string" ? def.dialogue : def.dialogue;
+        g.dialogue.open(a, tree);
+        g.emit("talked", def.id);
+        return;
+      }
+      if (a.talk?.kind === "keeper") {
+        this.building(a.talk.building);
+        return;
+      }
+      if (a.talk?.kind === "townsfolk") {
+        const rng4 = new RNG(a.talk.seed + g.env.day);
+        const isl = this.islandOf(a.x, a.y);
+        g.dialogue.open(a, { start: "a", nodes: {
+          a: { text: rumorFor(g, isl, rng4, a), choices: [
+            { text: "Thanks. Take care.", end: true },
+            { text: "Pick their pocket while they talk. (a crime)", do: () => {
+              g.dialogue.close();
+              const r4 = pickpocket(g, a);
+              if (r4 === "caught") g.fx.text(a.x, a.y - 2, "HEY! THIEF!", "#ff5252", 0.45);
+            }, end: true }
+          ] }
+        } });
+      }
+    }
+    building(b) {
+      const g = this.game;
+      const isl = this.islandOf(b.x, b.y);
+      const town = isl?.towns.find((t) => t.id === b.town);
+      const npc = b.npc && npcDef(b.npc);
+      if (npc && npc.dialogue && !(npc.boss && g.state.char.bosses.includes(npc.id))) {
+        const live = g.actors.find((x) => x.npcId === npc.id && x.state === "idle");
+        if (live) {
+          g.dialogue.open(live, npc.dialogue);
+          return;
+        }
+      }
+      this.service(b.role, { building: b, island: isl, town });
+    }
+    service(kind, arg = {}, npc) {
+      const g = this.game;
+      let { building, island, town } = arg || {};
+      if (!island) island = this.islandOf(g.player.x, g.player.y);
+      if (!building) building = { name: npc?.def?.shopName || npc?.name, role: kind, shop: arg?.shop };
+      const dock = island?.docks?.[0];
+      switch (kind) {
+        case "shop":
+        case "market":
+        case "weapons":
+        case "bank":
+          openShop(g, { ...building, shop: arg?.shop || building.shop }, island);
+          break;
+        case "tavern":
+        case "bar":
+        case "restaurant":
+        case "cafe":
+          this.tavern(building, island);
+          break;
+        case "inn":
+          openInn(g, building, island, town);
+          break;
+        case "doctor":
+          openDoctor(g, building, island, arg?.doc || (npc?.def?.doctor ? { ...npc.def.doctor, id: npc.def.id, name: npc.name } : null));
+          break;
+        case "shipwright":
+          openShipyard(g, { ...building, adam: arg?.adam || npc?.def?.adam, coating: arg?.coating }, island, dock);
+          break;
+        case "dojo":
+        case "trainer":
+          openTrainer(g, arg?.trainer || npc?.def?.trainer || building.trainer || "dojo_generic", npc?.name);
+          break;
+        case "marine_base":
+          g.emit("marineOffice", building, island);
+          break;
+        case "bounty":
+          g.emit("bountyBoard", building, island);
+          break;
+        case "library":
+          this.library(building, island);
+          break;
+        case "palace":
+        case "hall":
+        case "church":
+        case "house":
+        default:
+          g.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Door", text: flavorFor(building) } } });
+      }
+    }
+    tavern(building, island) {
+      const g = this.game;
+      const rng4 = new RNG(Math.floor(g.time) + (building.id || 0));
+      g.dialogue.open(null, {
+        start: "a",
+        nodes: {
+          a: {
+            speaker: building.name || "Tavern",
+            text: `The tavern is loud with sailors' songs. The barkeep polishes a mug. "What'll it be?"`,
+            choices: [
+              { text: "Buy food and drink", do: (c) => {
+                c.open("shop", { building: { ...building, role: "tavern" }, island });
+              } },
+              { text: "Buy a round and listen for rumours (\u0E3F100)", do: (c) => c.pay(100) ? "r" : "a" },
+              { text: `Rent a room upstairs for the night (${formatBerries(g.services.innPrice(island))}) \u2014 wake here if you fall`, do: () => {
+                g.dialogue.close();
+                g.services.rest(island, island?.towns?.find((t) => t.id === building.town));
+              }, end: true },
+              { text: "Leave", end: true }
+            ]
+          },
+          r: { speaker: "Sailor at the bar", text: () => rumorFor(g, island, rng4, null, true), next: "a" }
+        }
+      });
+    }
+    library(building, island) {
+      const g = this.game;
+      const c = g.state.char;
+      const key2 = "read_" + (building.id || building.name);
+      const first = !c.flags[key2];
+      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: building.name || "Library", text: () => {
+        if (first) {
+          c.flags[key2] = true;
+          g.progression.raiseAttr("wil", 1);
+        }
+        return (first ? "(+1 Willpower) " : "") + rumorFor(g, island, new RNG(building.id || 1), null, true, "lore");
+      } } } });
+    }
+    knock(b) {
+      const g = this.game, c = g.state.char;
+      const B5 = g.buildings;
+      const rng4 = new RNG((b.id || 1) * 13 + g.env.day * 7 + Math.floor(g.env.clock));
+      g.audio?.sfx("knock");
+      const kick = { text: b.pirate ? "Kick down the door." : "Kick down the door. (a crime)", do: () => {
+        g.dialogue.close();
+        B5 ? B5.breakDoor(b) : robHouse(g, b);
+      }, end: true };
+      const leave = { text: "Leave them be.", end: true };
+      if (b.pirate) {
+        const line2 = rng4.pick([`"Who's there?! Scram before we gut ya!"`, `"Password?" ...You don't know it. "Then get lost!"`, `(Laughter and clinking mugs behind the door. It stops.) "...Who's knockin'?"`, `"If yer a Marine, we ain't here!"`]);
+        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: line2 + " (A crude Jolly Roger is scratched into the door. Pirates don't call the Marines.)", choices: [leave, kick] } } });
+        return;
+      }
+      if ((b.role || "house") !== "house") {
+        const opens = B5 ? B5.opensAt(b) : 7;
+        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: b.name || "Door", text: `Nobody answers. A sign hangs on the door: CLOSED \u2014 OPEN FROM ${opens}:00.`, choices: [{ text: "Come back later.", end: true }, kick] } } });
+        return;
+      }
+      const night = g.env.clock < 6 || g.env.clock >= 21;
+      const home2 = g.actors.some((a) => a.homeB === b && a.alive && a.state === "idle");
+      const wanted2 = (g.wanted?.tier() ?? 0) >= 2;
+      const invite = home2 && !night && !wanted2 && rng4.chance((b.npc ? 0.85 : 0.3) + (c.reputation || 0) / 200);
+      const lines2 = !home2 ? ["(No answer. Nobody seems to be home.)", "(Silence. The curtains are drawn.)"] : night ? [`"It's the middle of the night! Go away!"`, `"We're sleeping! Come back in the morning!"`, "(A candle is snuffed out behind the window.)"] : [`"Who's there? ...Go away, we don't want trouble."`, '"Nobody home!" (someone is clearly home)', `"If you're a pirate, keep walking!"`, '"Shh! The baby is sleeping."', '"Are you the new postman? No? Then shoo."'];
+      if (invite) {
+        g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: rng4.pick(['"Oh, a traveller? Come in, come in \u2014 mind your head."', `"Well, don't just stand there \u2014 come in! The kettle's on."`, `"Aren't you the one folk say helped out around here? Come in!"`]), choices: [
+          { text: "Step inside.", do: () => {
+            c.flags["invited_" + (B5 ? B5.key(b) : b.id)] = g.env.day;
+            g.dialogue.close();
+            if (!c.flags["door_" + b.id]) {
+              c.flags["door_" + b.id] = true;
+              addItem(g, "rice_ball", 1);
+            }
+          }, end: true },
+          leave
+        ] } } });
+        return;
+      }
+      g.dialogue.open(null, { start: "a", nodes: { a: { speaker: "Behind the door", text: rng4.pick(lines2), choices: [leave, kick] } } });
+    }
+    chest(o) {
+      const g = this.game, c = g.state.char;
+      const key2 = "chest_" + (o.key || `${Math.round(o.x)}_${Math.round(o.y)}`);
+      if (c.world.chests[key2] && !c.world.containers?.[key2]) {
+        o.opened = true;
+        g.log("Empty. You took it all.", "#b0bec5");
+        return;
+      }
+      const luck = c.traits.includes("lucky") ? 1.5 : 1;
+      const first = !c.world.containers?.[key2];
+      g.containers.open(key2, "treasure", {
+        title: o.tier > 2 ? "A treasure chest" : "A chest",
+        sub: "The lid creaks open\u2026",
+        o: { tier: o.tier || 1, luck, item: o.item },
+        onEmpty: () => {
+          c.world.chests[key2] = true;
+          o.opened = true;
+        }
+      });
+      if (first) g.fx.burst(o.x, o.y - 0.5, 20, { color: ["#ffd54f", "#fff59d"], speed: 4, vz: 4, g: 8, life: 0.8, kind: "star" });
+    }
+    dummy(o) {
+      this.game.log("Strike the dummy to practise: every blow that lands is a little mastery, up to the basics.", "#90caf9");
+    }
+    quickHeal() {
+      const g = this.game, c = g.state.char;
+      const foods = ["meat", "fish_stew", "rice_ball", "tangerine", "sea_king_steak", "baratie_course", "bandage"];
+      const id = foods.find((f) => c.inventory.some((i) => i.id === f));
+      if (!id) {
+        g.log("You have nothing to eat!", "#ff8a80");
+        return;
+      }
+      useItem(g, id);
+    }
+  };
+  function flavorFor(b) {
+    switch (b.role) {
+      case "palace":
+        return 'Guards cross their spears in front of the gate. "The palace is closed to commoners."';
+      case "hall":
+        return "The great doors are shut tight.";
+      case "church":
+        return "Candles flicker inside. A priest nods at you silently.";
+      case "bank":
+        return "A clerk counts berries behind iron bars.";
+      default:
+        return "The door is locked.";
+    }
+  }
+
+  // src/ui/screens.js
+  var HEIGHT_NOTE = {
+    human: "Humans stand at an ordinary height.",
+    buccaneer: "Buccaneers stand head and shoulders above everyone.",
+    fishman: "Fish-Men are tall and broad.",
+    mink: "Minks are about as tall as humans.",
+    skypiean: "Skypieans are human-sized, with small wings.",
+    three_eye: "The Three-Eye Tribe are human-sized.",
+    lunarian: "Lunarians are tall, with black wings."
+  };
+  function applyLook(L3, race) {
+    const base2 = race === "buccaneer" ? 1.25 : race === "fishman" ? 1.1 : 1;
+    L3.bulk = +(base2 * (0.84 + (L3.build ?? 0.5) * 0.36)).toFixed(3);
+    if (race === "mink") {
+      const k = MINK_KINDS.find((m) => m.name === L3.kind);
+      if (k) Object.assign(L3, { ears: k.ears, fur: k.fur, tail: k.tail, muzzle: k.muzzle, skin: k.fur, hairColor: k.fur, hand: k.fur });
+    }
+    if (race === "fishman") {
+      const k = FISHMAN_KINDS.find((m) => m.name === L3.kind);
+      if (k) L3.skin = k.skin;
+    }
+  }
+  var SEA_NAMES = { east_blue: "East Blue", north_blue: "North Blue", west_blue: "West Blue", south_blue: "South Blue" };
+  var pct = (x) => `${Math.round(x * 1e3) / 10}%`;
+  function portrait(look, w = 96, hgt = 110, bg = null) {
+    const cv = h("canvas.portrait", { width: w * 2, height: hgt * 2, style: { width: w + "px", height: hgt + "px" } });
+    const g = cv.getContext("2d");
+    if (bg) {
+      g.fillStyle = bg;
+      g.fillRect(0, 0, w * 2, hgt * 2);
+    }
+    if (look) {
+      const img2 = renderPortrait(look, { w, h: hgt, view: w < 64 ? "bust" : "full" });
+      if (img2) g.drawImage(img2, 0, 0, w * 2, hgt * 2);
+    }
+    return cv;
+  }
+  function titleScreen(ui, { slots, onPlay, onNew, onDelete, onHall, onWill, onHelp, onSettings, tab = "single", onTab, multiplayer }) {
+    const multi = tab === "multi" && !!multiplayer;
+    const tabs = onTab ? h(
+      "div.mode-tabs",
+      h("button" + (multi ? "" : ".on"), { on: { click: () => onTab("single") } }, uiImg("character", 20), "Singleplayer"),
+      h("button" + (multi ? ".on" : ""), { on: { click: () => onTab("multi") } }, uiImg("crew", 20), "Multiplayer")
+    ) : null;
+    const el = h(
+      "div.screen.title-screen",
+      h(
+        "div.title",
+        h("h1", "Inherited Will"),
+        h("h2", "A One Piece Roguelike"),
+        tabs,
+        multi ? multiplayer() : h("div.slots", slots.map((s) => slotCard(s, { onPlay, onNew, onDelete, onHall, onWill }))),
+        h(
+          "div.title-links",
+          h("button.btn", { on: { click: onHelp } }, uiImg("help", 18), "How to Play"),
+          h("button.btn", { on: { click: onSettings } }, uiImg("settings", 18), "Settings")
+        )
+      ),
+      h("div.foot", "Unofficial fan game. ONE PIECE \xA9 Eiichiro Oda / Shueisha / Toei Animation. All art in this game is procedurally drawn.")
+    );
+    ui.showScreen(el);
+  }
+  function slotCard(info, { onPlay, onNew, onDelete, onHall, onWill }) {
+    const { slot: slot2, char, legacy } = info;
+    const head = h(
+      "div.slot-head",
+      h("span", `Lineage ${slot2}`),
+      !info.empty ? h("button.link", { title: "Delete this lineage for good", on: { click: () => onDelete(slot2) } }, "Delete") : null
+    );
+    if (info.empty) {
+      return h(
+        "div.slot-card.empty",
+        head,
+        h("div.slot-empty", h("div.big", "Empty"), h("p", "A new bloodline, waiting to be born.")),
+        h("div.slot-actions", h("button.btn.red", { on: { click: () => onNew(slot2) } }, "Begin a Lineage"))
+      );
+    }
+    const gen = legacy?.generation || char?.generation || 1;
+    const will = legacy?.will || 0;
+    const meta = h(
+      "div.slot-meta",
+      h("span", `Generation ${gen}`),
+      h("span", { title: "Inherited Will \u2014 spend it on your bloodline" }, uiImg("reputation", 14), ` ${will} Will`)
+    );
+    if (char) {
+      const race = RACES[char.race];
+      const faction = char.faction === "marine" ? `Marine ${char.marineRank || "Recruit"}` : char.crewName ? `Captain of the ${char.crewName}` : char.faction === "pirate" ? "Pirate" : "Wanderer";
+      const saved = char.lastSaved ? new Date(char.lastSaved) : null;
+      return h(
+        "div.slot-card",
+        head,
+        h(
+          "div.slot-body",
+          portrait(char.look, 84, 96),
+          h(
+            "div.slot-info",
+            h("div.nm", char.name),
+            h("div.sub", `${race?.name || char.race} \xB7 ${faction}`),
+            h("div.sub", `Day ${char.world?.day || 1} \xB7 ${char.lives}/${char.maxLives} lives${char.bounty ? " \xB7 " + formatBerries(char.bounty) : ""}`),
+            saved ? h("div.sub.faint", `Saved ${saved.toLocaleDateString()} ${saved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`) : null
+          )
+        ),
+        meta,
+        h(
+          "div.slot-actions",
+          h("button.btn.gold", { on: { click: () => onPlay(slot2) } }, "Continue"),
+          h("button.btn", { on: { click: () => onWill(slot2) } }, "Will"),
+          h("button.btn", { on: { click: () => onHall(slot2) } }, `Hall (${legacy?.hall?.length || 0})`),
+          h("button.btn.red.small", { title: "Abandon this character and start a new one in this lineage", on: { click: () => onNew(slot2) } }, "Abandon")
+        )
+      );
+    }
+    const last2 = legacy?.hall?.[0];
+    return h(
+      "div.slot-card",
+      head,
+      h(
+        "div.slot-body",
+        last2 ? portrait(last2.look, 84, 96) : null,
+        h(
+          "div.slot-info",
+          h("div.nm", last2 ? `${last2.name}` : "The next generation"),
+          h("div.sub", last2 ? `Fell on day ${last2.days}. Their will lives on.` : "Ready to be born.")
+        )
+      ),
+      meta,
+      h(
+        "div.slot-actions",
+        h("button.btn.red", { on: { click: () => onNew(slot2) } }, `Begin Generation ${gen}`),
+        h("button.btn", { on: { click: () => onWill(slot2) } }, "Will"),
+        h("button.btn", { on: { click: () => onHall(slot2) } }, `Hall (${legacy?.hall?.length || 0})`)
+      )
+    );
+  }
+  function creationScreen(ui, legacy, { onDone, onBack }) {
+    let rerolls = Math.max(0, perkLevel(legacy, "reroll") - (legacy.pendingBirth?.flips || 0));
+    const canonFruits = () => allNpcDefs().map((d) => d.fruit).filter(Boolean);
+    let birth = legacy.pendingBirth?.birth || rollBirth(legacy, Math.floor(Math.random() * 1e9), canonFruits());
+    if (ui.game?.debugBirth) birth = { ...birth, ...ui.game.debugBirth };
+    const keep = () => {
+      legacy.pendingBirth = { birth, flips: perkLevel(legacy, "reroll") - rerolls };
+      try {
+        saveLegacy(legacy);
+      } catch (e) {
+      }
+    };
+    keep();
+    const state = { name: "", look: null, story: "calling" };
+    const root4 = h("div.screen");
+    ui.showScreen(root4);
+    let raf = 0;
+    let timers = [];
+    let previewCleanup = null;
+    const stopAnim = () => {
+      window.cancelAnimationFrame(raf);
+      for (const t of timers) clearTimeout(t);
+      timers = [];
+      previewCleanup?.();
+      previewCleanup = null;
+    };
+    const later = (ms, fn) => timers.push(setTimeout(fn, ms));
+    const hasD = () => birth.traits.includes("will_of_d");
+    function stepRoll(spin = true) {
+      stopAnim();
+      clear(root4);
+      state.look = null;
+      const race = RACES[birth.race];
+      const rar = RARITY[race.rarity];
+      const shown = birth.traits.filter((t) => TRAITS[t] && !TRAITS[t].hidden && t !== "will_of_d");
+      const nameEl = h("div.race", { style: { color: rar.color } }, "???");
+      const rarEl = h("div.rarity", { style: { color: rar.color } }, "");
+      const dEl = h("div.d-reveal");
+      const fEl = h("div.d-reveal.f-reveal");
+      const info = h(
+        "div.roll-info",
+        { style: { opacity: 0 } },
+        h("p", { style: { maxWidth: "560px", margin: "6px auto" } }, race.desc),
+        h("p", h("b", "Birthplace: "), race.origin, " ", h("span.tag", race.spawnSeas.map((s) => SEA_NAMES[s]).join(" / "))),
+        h(
+          "div.roll-cols",
+          h("div", h("h3", "Racial traits"), ...race.traits.map((t) => h("div.li", t))),
+          h(
+            "div",
+            h("h3", "Born with"),
+            ...shown.map((t) => h("div.li", h("b", TRAITS[t].name + ": "), TRAITS[t].desc)),
+            h("div.li.muted", `${Math.min(5, race.lives + perkLevel(legacy, "lives"))} lives (vivre cards)`)
+          )
+        )
+      );
+      const btns = h(
+        "div.roll-btns",
+        { style: { opacity: 0 } },
+        h("button.btn.gold", { on: { click: stepIdentity } }, "Continue"),
+        rerolls > 0 ? h("button.btn", { on: { click: () => {
+          rerolls--;
+          birth = rollBirth(legacy, Math.floor(Math.random() * 1e9), canonFruits());
+          keep();
+          stepRoll(true);
+        } } }, `Flip Fate's Coin (${rerolls} left)`) : null
+      );
+      const willLine = h("div.will-line", uiImg("reputation", 16), ` Your lineage's Inherited Will: ${legacy.will}` + (legacy.generation > 1 ? ` \xB7 generation ${legacy.generation}` : ""));
+      const panel = h("div.panel.race-roll", h("h2", legacy.generation > 1 ? `Generation ${legacy.generation} is born\u2026` : "A child is born\u2026"), nameEl, rarEl, dEl, fEl, info, btns, willLine);
+      root4.appendChild(panel);
+      const ids = Object.keys(RACES);
+      const t0 = performance.now();
+      const dur = spin ? 1800 : 0;
+      let lastI = -1;
+      const reveal = () => {
+        nameEl.textContent = race.name;
+        nameEl.style.color = rar.color;
+        rarEl.textContent = rar.label.toUpperCase();
+        info.style.opacity = 1;
+        ui.game?.audio?.sfx(race.rarity === "legendary" || race.rarity === "epic" ? "fanfare" : "reveal");
+        clear(dEl);
+        const chance = dChance(legacy);
+        clear(fEl);
+        const fr = birth.fruit && FRUITS[birth.fruit];
+        if (fr) {
+          fEl.append(
+            h("div.f-title", { style: { color: fr.color } }, "BORN WITH A DEVIL FRUIT"),
+            h("div.f-name", fr.name),
+            h("p.muted", `${fr.en} \u2014 ${fr.type}. You ate it as a child: its first powers are yours from the start, and you can never swim. (`, pct(fruitBirthChance(birth.traits)), " of births)")
+          );
+          fEl.classList.add("hit");
+          later(spin ? 1500 : 0, () => {
+            fEl.classList.add("show");
+            ui.game?.audio?.sfx("fanfare");
+          });
+        } else {
+          fEl.append(h("p.muted", `No Devil Fruit this time \u2014 ${pct(fruitBirthChance(birth.traits))} of children have eaten one.`));
+          fEl.classList.add("miss", "show");
+        }
+        if (hasD()) {
+          dEl.append(
+            h("div.d-stamp", "D."),
+            h("div.d-title", "THE WILL OF D."),
+            h("p", legacy.family?.d ? `The D. of the ${legacy.family.name} family runs in your blood, as it did in your parent's.` : h("span", "A hidden initial runs in your blood. (", pct(chance), " of births)")),
+            h("p.muted", "Once each life a finishing blow misses you \xB7 +3 Willpower \xB7 far likelier to have Conqueror's Haki \xB7 every child of your line will carry the D. and your family name.")
+          );
+          dEl.classList.remove("miss");
+          dEl.classList.add("hit");
+          later(spin ? 900 : 0, () => {
+            dEl.classList.add("show");
+            ui.game?.audio?.sfx("fanfare");
+            btns.style.opacity = 1;
+          });
+        } else {
+          dEl.append(h("p.muted", `No "D." in your name this time \u2014 only ${pct(chance)} of births carry the Will of D.`));
+          dEl.classList.add("miss", "show");
+          btns.style.opacity = 1;
+        }
+      };
+      const tick7 = (now3) => {
+        const k = Math.max(0, (now3 - t0) / Math.max(1, dur));
+        if (k < 1) {
+          const i = Math.floor(Math.pow(k, 0.5) * 40) % ids.length;
+          if (i !== lastI) {
+            lastI = i;
+            ui.game?.audio?.sfx("roll_tick", null, { pitch: 1 + k * 0.25 });
+          }
+          nameEl.textContent = RACES[ids[i]].name;
+          nameEl.style.color = RARITY[RACES[ids[i]].rarity].color;
+          raf = requestAnimationFrame(tick7);
+        } else reveal();
+      };
+      raf = requestAnimationFrame(tick7);
+    }
+    function stepIdentity() {
+      stopAnim();
+      clear(root4);
+      if (!state.look) {
+        state.look = makeLook(birth.race, birth.seed);
+        state.look.build = 0.5;
+      }
+      const L3 = state.look;
+      const familyFixed = legacy.family?.d && hasD() ? legacy.family.name : null;
+      if (state.first === void 0) {
+        state.first = randomFirst(L3.fem);
+        state.last = familyFixed || randomLast();
+      }
+      if (familyFixed) state.last = familyFixed;
+      const seas = RACES[birth.race].spawnSeas;
+      if (!state.sea || !seas.includes(state.sea)) state.sea = seas[Math.floor(Math.random() * seas.length)];
+      const race = birth.race;
+      const finalName = h("div.final-name");
+      const updateName = () => {
+        state.name = [state.last, state.first].filter(Boolean).join(" ");
+        clear(finalName);
+        const n = state.name || "Nameless";
+        finalName.append(h("span.muted", "You will be known as "), h("b", hasD() ? nameWithD(n) : n));
+      };
+      const pickList = (list, value, set) => h(
+        "select.name-pick",
+        { on: { change: (e) => {
+          set(e.target.value);
+          updateName();
+        } } },
+        ...[...new Set(list)].sort((a, b) => a.localeCompare(b)).map((n) => h("option", { value: n, ...n === value ? { selected: true } : {} }, n))
+      );
+      const firstBox = h("div", { style: { display: "flex", gap: "6px" } });
+      const lastBox = h("div", { style: { display: "flex", gap: "6px" } });
+      const renderFirst = () => {
+        clear(firstBox);
+        firstBox.append(pickList(L3.fem ? FEMALE_FIRST : MALE_FIRST, state.first, (v) => {
+          state.first = v;
+        }), h("button.btn", { on: { click: rollFirst } }, "Random"));
+      };
+      const renderLast = () => {
+        clear(lastBox);
+        if (familyFixed) lastBox.append(h("div.name-fixed", h("b", familyFixed), h("span.muted", " \u2014 your family's name, with its D.")));
+        else lastBox.append(pickList(SURNAMES, state.last, (v) => {
+          state.last = v;
+        }), h("button.btn", { on: { click: rollLast } }, "Random"));
+      };
+      const rollFirst = () => {
+        state.first = randomFirst(L3.fem, state.first);
+        renderFirst();
+        updateName();
+      };
+      const rollLast = () => {
+        state.last = randomLast(state.last);
+        renderLast();
+        updateName();
+      };
+      renderFirst();
+      renderLast();
+      updateName();
+      const row = (label, ...kids) => h("div.opt-row", h("div.opt-label", label), ...kids);
+      const swatch = (key2, colors) => h("div.swatches", ...colors.map((c) => h("button" + (L3[key2] === c ? ".on" : ""), { title: c, style: { background: c }, on: { click: () => {
+        L3[key2] = c;
+        changed();
+      } } })));
+      const chips2 = (current2, values2, labels, set) => h("div.swatches", ...values2.map((v, i) => h("button.chip" + (current2 === v ? ".on" : ""), { on: { click: () => {
+        set(v);
+        changed();
+      } } }, labels ? labels[i] : v)));
+      const opts = (key2, values2, labels) => chips2(L3[key2], values2, labels, (v) => {
+        L3[key2] = v;
+      });
+      const previewBox = h("div.preview3d");
+      const left = h(
+        "div",
+        previewBox,
+        h("p.muted", { style: { textAlign: "center", margin: "6px 0 0" } }, raceLabel(L3)),
+        h("p.muted", { style: { textAlign: "center", margin: "2px 0 0", fontSize: "12px" } }, HEIGHT_NOTE[race] || "Your height comes from your race.")
+      );
+      const tabsEl = h("div.tabs.look-tabs");
+      const optsEl = h("div.look-opts");
+      const genderEl = h("div");
+      const renderGender = () => {
+        clear(genderEl);
+        genderEl.appendChild(row("You are", chips2(L3.fem ? "f" : "m", ["m", "f"], ["Male", "Female"], (v) => setGender(v === "f"))));
+      };
+      const setGender = (fem) => {
+        const other = !!L3.fem !== fem;
+        L3.fem = fem;
+        if (!fem && ["dress", "crop", "bikini"].includes(L3.topStyle)) L3.topStyle = "tee";
+        if (!fem && ["skirt", "longskirt"].includes(L3.bottomStyle)) L3.bottomStyle = "trousers";
+        if (L3.eyeShape !== "fish") L3.eyeShape = eyeShapeOf2({ ...L3, eyeShape: L3.eyeShape });
+        if (fem && L3.bust === void 0) L3.bust = 1;
+        if (other) rollFirst();
+        renderGender();
+      };
+      renderGender();
+      const storyEl = h("div.story-pick");
+      const renderStory = () => {
+        clear(storyEl);
+        const opt = (v, label) => h("button.chip" + (state.story === v ? ".on" : ""), { on: { click: () => {
+          state.story = v;
+          renderStory();
+        } } }, label);
+        storyEl.append(
+          row("Your story", h("div.swatches", opt("calling", "Find your calling"), opt("free", "Sail your own way"))),
+          h("p.muted.story-note", state.story === "free" ? "No main story: sail off into the seas and start your own journey \u2014 no chapters, no story markers, just the sea, its side quests, trainers and bounties, and the people you meet. You can still take up a road later (the Quests section of the menu, Tab)." : "Three people on your home island can set you on a road \u2014 Pirate, Marine or Bounty Hunter \u2014 and the main story follows it through the Blues, the Grand Line and the New World. Or you can turn them all down and sail your own way.")
+        );
+      };
+      renderStory();
+      const seaEl = h("div");
+      const renderSea = () => {
+        clear(seaEl);
+        if (seas.length < 2) {
+          seaEl.append(row("Born in", h("div.muted", `the ${SEA_NAMES[seas[0]] || "sea"} \u2014 your people's home`)));
+          return;
+        }
+        seaEl.append(row("Born in", chips2(state.sea, seas, seas.map((x) => SEA_NAMES[x]), (v) => {
+          state.sea = v;
+          renderSea();
+        })));
+      };
+      renderSea();
+      const right = h(
+        "div",
+        row("Family name", lastBox),
+        row("Given name", firstBox),
+        finalName,
+        genderEl,
+        seaEl,
+        storyEl,
+        tabsEl,
+        optsEl,
+        h("p.muted", { style: { marginTop: "12px" } }, "No destiny is chosen for you. Pirate, Marine, adventurer, bounty hunter or none of these \u2014 the sea is free, and what you become is up to you. You can found your own pirate crew and raise your Jolly Roger later, from the Crew menu.")
+      );
+      const born = RACES[birth.race];
+      const panel = h(
+        "div.panel.wide",
+        h("h2", "Who are you?"),
+        h("div.creation-grid", left, right),
+        h(
+          "div.creation-foot",
+          h("div.muted", `${raceLabel(L3)} \xB7 born in the ${SEA_NAMES[state.sea] || "Blues"}`),
+          h(
+            "div",
+            { style: { display: "flex", gap: "10px" } },
+            h("button.btn", { on: { click: () => stepRoll(false) } }, "Back"),
+            h("button.btn.red.big", { on: { click: () => {
+              stopAnim();
+              onDone(birth, { name: (state.name || "").trim() || "Nameless", first: state.first, family: state.last, sea: state.sea, look: state.look, story: state.story });
+            } } }, "Set Sail")
+          )
+        )
+      );
+      root4.appendChild(panel);
+      applyLook(L3, race);
+      let preview = null;
+      try {
+        preview = createPreview(previewBox, L3, { game: ui.game });
+      } catch (e) {
+        console.warn("3D preview unavailable", e);
+      }
+      previewCleanup = () => {
+        preview?.dispose();
+        preview = null;
+      };
+      const TABS2 = [["face", "Face"], ["hair", "Hair"], ["body", "Body"], ["clothes", "Clothes"]];
+      const renderTabs = () => {
+        clear(tabsEl);
+        for (const [id, name] of TABS2) tabsEl.appendChild(h("button" + (state.tab === id ? ".on" : ""), { on: { click: () => {
+          state.tab = id;
+          renderTabs();
+          renderOpts();
+        } } }, name));
+      };
+      const skinnable = ["human", "three_eye", "buccaneer", "skypiean", "lunarian"].includes(race);
+      const renderOpts = () => {
+        clear(optsEl);
+        const tab = state.tab;
+        preview?.setFraming?.(tab === "face" || tab === "hair" ? "face" : "full");
+        if (tab === "face") {
+          add4(
+            optsEl,
+            row("Eyes", (() => {
+              const set = [...L3.fem ? EYES_F : EYES_M, ...race === "fishman" ? ["fish"] : []];
+              return chips2(eyeShapeOf2(L3), set, set.map((e) => EYE_NAMES[e]), (v) => {
+                L3.eyeShape = v;
+              });
+            })()),
+            row("Eye colour", swatch("eyeColor", ["#222222", "#3b2a1a", "#6d4c41", "#1e3799", "#0984e3", "#00a8a8", "#27ae60", "#6c5ce7", "#8e44ad", "#c0392b", "#e1b12c", "#b2bec3"])),
+            row("Look", chips2(L3.frown ? "stern" : "easy", ["easy", "stern"], ["Easy-going", "Stern"], (v) => {
+              L3.frown = v === "stern";
+            })),
+            row("Mouth", chips2(L3.grin ? "grin" : L3.mouth || "smile", ["smile", "flat", "grin"], ["Smile", "Calm", "Big grin"], (v) => {
+              L3.grin = v === "grin";
+              L3.mouth = v === "grin" ? void 0 : v;
+            })),
+            row("Face shape", chips2(headParams(L3).shape, FACE_SHAPES, ["Oval", "Round", "Square", "Long", "Heart"], (v) => {
+              L3.faceShape = v;
+            })),
+            row("Jaw", chips2(L3.jaw ?? 0.5, [0.25, 0.5, 0.75, 1], ["Narrow", "Medium", "Wide", "Very wide"], (v) => {
+              L3.jaw = v;
+            })),
+            row("Chin", chips2(headParams(L3).chin, CHINS, ["Pointed", "Round", "Strong"], (v) => {
+              L3.chin = v;
+            })),
+            race !== "mink" && race !== "fishman" ? row("Nose", chips2(headParams(L3).nose, NOSES2, ["Small", "Normal", "Big", "Button", "Hooked", "Long", "Red ball"], (v) => {
+              L3.noseShape = v;
+              L3.nose = v === "long" ? "long" : v === "red" ? "red" : void 0;
+            })) : null,
+            race !== "mink" && race !== "fishman" && !["long", "red"].includes(headParams(L3).nose) ? row("Nose tip", chips2(headParams(L3).tip, NOSE_TIPS, ["Straight", "Downturned", "Upturned"], (v) => {
+              L3.noseTip = v;
+            })) : null,
+            row("Eyebrows", chips2(L3.browHeight || "mid", ["low", "mid", "high"], ["Low-set", "Middle", "High-set"], (v) => {
+              L3.browHeight = v;
+            })),
+            row("Brow shape", chips2(L3.browShape || "natural", ["natural", "arched", "straight", "thick", "thin"], ["Natural", "Arched", "Straight", "Thick", "Thin"], (v) => {
+              L3.browShape = v;
+            })),
+            row("Cheekbones", chips2(L3.cheek ?? 0.5, [0, 0.5, 1], ["Soft", "Defined", "High"], (v) => {
+              L3.cheek = v;
+            })),
+            row("Brow", chips2(headParams(L3).brow, [0, 0.5, 1], ["Smooth", "Medium", "Heavy"], (v) => {
+              L3.brow = v;
+            })),
+            row("Teeth", chips2(L3.sharpTeeth ? "sharp" : "normal", ["normal", "sharp"], ["Normal", "Sharp"], (v) => {
+              L3.sharpTeeth = v === "sharp";
+            })),
+            row("Scar", chips2(L3.scarEye ? "eye" : L3.scarCheek ? "cheek" : "none", ["none", "eye", "cheek"], ["None", "Across the eye", "Under the eye"], (v) => {
+              L3.scarEye = v === "eye";
+              L3.scarCheek = v === "cheek";
+            }))
+          );
+        } else if (tab === "hair") {
+          add4(
+            optsEl,
+            row("Style", opts("hair", ["short", "messy", "spiky", "crop", "sidefringe", "slick", "pompadour", "long", "wavy", "bob", "ponytail", "twintails", "braid", "bun", "buzz", "curly", "afro", "topknot", "mohawk", "bald"], ["Short", "Messy", "Spiky", "Crop", "Swept fringe", "Slicked back", "Pompadour", "Long", "Wavy", "Bob", "Ponytail", "Twin tails", "Braid", "Bun", "Buzz", "Curly", "Afro", "Topknot", "Mohawk", "Bald"])),
+            race !== "mink" ? row("Colour", swatch("hairColor", ["#1e1e1e", "#3b2a1a", "#6b4423", "#c69c6d", "#f2d16b", "#e67e22", "#c0392b", "#e84393", "#8e44ad", "#2980b9", "#2ecc71", "#dfe6e9"])) : h("p.muted", "Minks grow fur of their kind.")
+          );
+        } else if (tab === "body") {
+          const build5 = h("input.build-slider", { type: "range", min: 0, max: 1, step: 0.05, value: L3.build ?? 0.5, on: { input: (e) => {
+            L3.build = Number(e.target.value);
+            applyLook(L3, race);
+            preview?.setLook(L3);
+          } } });
+          const mus = L3.muscle ?? 0.5;
+          add4(
+            optsEl,
+            // (a frame brings the muscle it usually carries; Muscle can change it after)
+            row("Frame", (() => {
+              const set = L3.fem ? FRAMES_F : FRAMES_M;
+              return chips2(frameId(L3), set, set.map((f) => FRAME_NAMES[f]), (v) => {
+                L3.frame = v;
+                L3.muscle = FRAME[v].mus ?? 0.55;
+              });
+            })()),
+            row("Build", h("div.build-row", h("span.muted", "Thin"), build5, h("span.muted", "Wide"))),
+            row("Muscle", chips2(mus < 0.35 ? 0.2 : mus < 0.75 ? 0.55 : 1, [0.2, 0.55, 1], ["Lean", "Toned", "Muscular"], (v) => {
+              L3.muscle = v;
+            })),
+            L3.fem ? row("Figure", chips2((L3.bust ?? 1) < 0.9 ? 0.8 : (L3.bust ?? 1) < 1.15 ? 1 : 1.3, [0.8, 1, 1.3], ["Slim", "Average", "Curvy"], (v) => {
+              L3.bust = v;
+            })) : null,
+            h("p.muted", { style: { margin: "0 0 8px", fontSize: "12px" } }, "Your height is set by your race. " + (HEIGHT_NOTE[race] || "")),
+            skinnable ? row("Skin", swatch("skin", ["#fbe3cf", "#f9dcc4", "#f1c9a0", "#e0ac7e", "#c68642", "#a0643a", "#7a4a2a", "#5c3a21"])) : null,
+            race === "mink" ? row("Mink", opts("kind", MINK_KINDS.map((k) => k.name))) : null,
+            race === "fishman" ? row("Fish-Man kind", opts("kind", FISHMAN_KINDS.map((k) => k.name))) : null
+          );
+        } else {
+          const o = outfitOf(L3);
+          const TOPS3 = [["tee", "Tee"], ["shirt", "Shirt"], ...L3.fem ? [["tank", "Tank top"]] : [], ["vest", "Open vest"], ["open", "Open shirt"], ["striped", "Sailor stripes"], ["jacket", "Suit jacket"], ["kimono", "Kimono"], ["coat", "Long coat"], ["bare", L3.fem ? "Chest wrap" : "Bare-chested"]];
+          if (L3.fem) TOPS3.push(["crop", "Crop top"], ["bikini", "Bikini top"], ["dress", "Dress"]);
+          const BOTS = [["trousers", "Trousers"], ["shorts", "Shorts"], ["capri", "Rolled-up"], ["baggy", "Baggy"], ["slim", "Slim"], ["hakama", "Hakama"]];
+          if (L3.fem) BOTS.push(["skirt", "Skirt"], ["longskirt", "Long skirt"]);
+          const setTop = (v) => {
+            L3.topStyle = v;
+            L3.openShirt = void 0;
+            L3.noSleeves = void 0;
+            if (v === "coat" && !L3.coat) L3.coat = "#5d4037";
+            if (v !== "coat" && L3.coat && !L3.keepCoat) L3.coat = void 0;
+          };
+          const COLS3 = ["#d63031", "#0984e3", "#00b894", "#fdcb6e", "#e17055", "#6c5ce7", "#2d3436", "#dfe6e9", "#e84393", "#00cec9", "#a0522d", "#ffffff"];
+          const under = L3.fem && (o.top === "vest" || o.top === "open");
+          const two = under || ["striped", "jacket", "kimono", "coat"].includes(o.top);
+          add4(
+            optsEl,
+            row("Top", chips2(o.top, TOPS3.map((t) => t[0]), TOPS3.map((t) => t[1]), setTop)),
+            o.top !== "bare" ? row(o.top === "coat" ? "Coat colour" : "Colour", o.top === "coat" ? swatch("coat", ["#5d4037", "#37474f", "#1b5e20", "#4a148c", "#b71c1c", "#fafafa", "#212121", "#0d47a1"]) : swatch("top", COLS3)) : null,
+            two ? row(o.top === "striped" ? "Stripes" : o.top === "kimono" ? "Collar" : under ? "Top under" : "Shirt under", swatch("top2", ["#f5f5f5", "#fff8e1", "#90caf9", "#212121", "#c62828", "#fce4ec", "#ffd54f"])) : null,
+            row("Bottoms", chips2(o.skirt && !L3.fem ? "trousers" : o.bottom, BOTS.map((t) => t[0]), BOTS.map((t) => t[1]), (v) => {
+              L3.bottomStyle = v;
+            })),
+            row("Colour", swatch("bottom", ["#2d3436", "#1e3799", "#1e63b8", "#3b3b98", "#6d4c41", "#636e72", "#0a3d62", "#b8860b", "#e1b12c", "#f5f6fa"])),
+            row("Waist", chips2(o.waist, ["belt", "sash", "haramaki", "obi", "none"], ["Belt", "Sash", "Belly wrap", "Obi", "Nothing"], (v) => {
+              L3.waist = v;
+            })),
+            o.waist !== "none" ? row(o.waist === "belt" ? "Belt" : "Wrap colour", o.waist === "belt" ? swatch("belt", ["#3b2a1a", "#212121", "#6d4c41", "#8d6e4a", "#c62828"]) : swatch("waistCol", ["#f4c430", "#c62828", "#1e88e5", "#2e7d32", "#6a1b9a", "#ef6c00", "#fafafa", "#212121"])) : null,
+            row("Footwear", chips2(o.shoes, ["boots", "shoes", "sandals", "geta", "bare"], ["Boots", "Shoes", "Sandals", "Geta", "Barefoot"], (v) => {
+              L3.shoeStyle = v;
+              L3.sandals = void 0;
+            })),
+            o.shoes !== "bare" ? row("Colour", swatch("shoes", ["#3b2a1a", "#2d3436", "#8d6e4a", "#c8a878", "#c0392b", "#f5f6fa"])) : null
+          );
+        }
+      };
+      function changed() {
+        applyLook(L3, race);
+        preview?.setLook(L3);
+        renderOpts();
+      }
+      if (!state.tab) state.tab = "face";
+      renderTabs();
+      renderOpts();
+    }
+    stepRoll(true);
+  }
+  function lifeLostScreen(ui, { cause, lives, onContinue }) {
+    const cards = [];
+    for (let i = 0; i < lives + 1; i++) cards.push(h("div.vivre" + (i === lives ? ".burning" : ""), { style: { width: "36px", height: "48px" } }));
+    const el = h("div.screen", h(
+      "div.panel",
+      { style: { textAlign: "center", width: "min(560px, 92vw)" } },
+      h("h2", "A vivre card burns\u2026"),
+      h("div.lives", { style: { justifyContent: "center", margin: "14px 0" } }, cards),
+      h("p", cause),
+      h("p", h("b", lives === 1 ? "You have ONE life left. The next death is the end of this journey." : `${lives} lives remain.`)),
+      h("button.btn.gold", { on: { click: onContinue } }, "Rise again")
+    ));
+    ui.showScreen(el);
+  }
+  function lineageEndScreen(ui, { char, cause, will, legacy, onNext }) {
+    const heirloomOptions = [];
+    for (const it of char.inventory || []) {
+      const d = ITEMS[it.id];
+      if (!d || !["hat", "coat", "weapon", "accessory"].includes(d.type)) continue;
+      if (!heirloomOptions.find((o) => o.id === it.id)) heirloomOptions.push({ id: it.id, d });
+    }
+    let chosen = null;
+    const list = h("div.list");
+    const renderList = () => {
+      clear(list);
+      if (!heirloomOptions.length) list.appendChild(h("p.muted", "You owned nothing worth passing down. Your successor starts with only your will."));
+      for (const o of heirloomOptions) {
+        list.appendChild(h(
+          "div.row-item" + (chosen === o.id ? ".picked" : ""),
+          { style: { cursor: "var(--cur-ptr)" }, on: { click: () => {
+            chosen = o.id;
+            renderList();
+          } } },
+          itemImg(o.id, 30, ".ico"),
+          h("div.grow", h("b", o.d.name), h("div.sub", o.d.desc || o.d.grade || o.d.type))
+        ));
+      }
+    };
+    renderList();
+    const legends = (char.legends || []).map((id) => LEGENDS[id]).filter(Boolean);
+    const el = h("div.screen", h(
+      "div.panel.wide",
+      h("h2", "Your journey has ended."),
+      h(
+        "div",
+        { style: { display: "flex", gap: "20px", flexWrap: "wrap" } },
+        wantedPoster(char),
+        h(
+          "div",
+          { style: { flex: 1, minWidth: "280px" } },
+          h("p", h("b", char.name), ` \u2014 ${raceLabel(char.look)}, generation ${char.generation}.`),
+          h("p", cause),
+          h("p", `Survived ${char.world?.day || 1} days \xB7 ${(char.discovered || []).length} islands discovered \xB7 ${(char.bosses || []).length} great foes defeated${char.bounty ? " \xB7 bounty " + formatBerries(char.bounty) : ""}${char.fruit ? " \xB7 ate the " + FRUITS[char.fruit].name : ""}.`),
+          legends.length ? h("p", h("b", "Legends: "), legends.map((l) => l.name).join(", ")) : null,
+          char.fruit ? h("p.muted", `Somewhere in the world, the ${FRUITS[char.fruit].name} has been reborn inside an ordinary fruit\u2026`) : null,
+          h("p", { style: { fontSize: "20px" } }, h("b", `+${will} Inherited Will`)),
+          h("h3", "Pass on an heirloom"),
+          h("p.muted", "Like the straw hat passed from Roger to Shanks to Luffy, choose one item for your successor to inherit."),
+          list,
+          h(
+            "div",
+            { style: { marginTop: "12px", display: "flex", justifyContent: "flex-end" } },
+            h("button.btn.gold", { on: { click: () => {
+              if (chosen) legacy.heirloom = { id: chosen, from: char.name };
+              onNext();
+            } } }, "Continue")
+          )
+        )
+      )
+    ));
+    ui.showScreen(el);
+  }
+  function legacyShopScreen(ui, legacy, { onDone, save, doneLabel = "Begin the next generation" }) {
+    const root4 = h("div.screen");
+    ui.showScreen(root4);
+    const render2 = () => {
+      clear(root4);
+      const cards = Object.entries(PERKS).map(([id, p]) => {
+        const lvl = perkLevel(legacy, id);
+        const cost = perkCost(legacy, id);
+        return h(
+          "div.card.perk",
+          h("h4", uiImg(p.icon, 22), " ", p.name, h("span.tag", `Lv ${lvl}/${p.costs.length}`)),
+          h("div", p.desc),
+          h("div", { style: { marginTop: "6px" } }, cost == null ? h("span.muted", "Mastered") : h("button.btn" + (legacy.will >= cost ? ".gold" : ""), { disabled: legacy.will < cost, on: { click: () => {
+            legacy.will -= cost;
+            legacy.perks[id] = lvl + 1;
+            save();
+            render2();
+          } } }, `Inherit \u2014 ${cost} Will`))
+        );
+      });
+      root4.appendChild(h(
+        "div.panel.wide",
+        h("h2", "The Inherited Will"),
+        h("p", "Your ancestors' deeds live on. Every life earns Inherited Will \u2014 for the islands it charted, the foes it bested, the days it survived and the legends it wrote. Spend it to shape every generation that follows. ", h("b", `Will: ${legacy.will}`)),
+        legacy.heirloom ? h("p", "Heirloom waiting for the next generation: ", itemImg(legacy.heirloom.id, 20), ` ${ITEMS[legacy.heirloom.id]?.name} (from ${legacy.heirloom.from}).`) : null,
+        h("div.grid2", cards),
+        h("div", { style: { marginTop: "12px", display: "flex", justifyContent: "flex-end" } }, h("button.btn.red", { on: { click: onDone } }, doneLabel))
+      ));
+    };
+    render2();
+  }
+  function hallScreen(ui, legacy, { onBack }) {
+    const rows = (legacy.hall || []).map((e) => {
+      const legends = (e.legends || []).map((id) => LEGENDS[id]?.name).filter(Boolean);
+      const role = e.marineRank ? `Marine ${e.marineRank}` : e.crewName ? `captain of the ${e.crewName}` : e.faction === "pirate" ? "pirate" : "wanderer";
+      return h(
+        "div.row-item",
+        e.look ? portrait(e.look, 40, 46) : uiImg("bounty", 30),
+        h(
+          "div.grow",
+          h("b", e.name),
+          ` \u2014 ${RACES[e.race]?.name || e.race}, ${role}, generation ${e.generation}`,
+          h("div.sub", `${e.days} days \xB7 ${e.islands} islands \xB7 ${e.bosses} great foes${e.bounty ? " \xB7 " + formatBerries(e.bounty) : ""}`),
+          legends.length ? h("div.sub", { style: { color: "#7a4a06", fontWeight: 800 } }, "Legends: " + legends.join(", ")) : null,
+          h("div.sub", e.cause)
+        ),
+        h("span.price", `+${e.will} Will`)
+      );
+    });
+    ui.showScreen(h("div.screen", h(
+      "div.panel.wide",
+      h("h2", "Hall of Legends"),
+      rows.length ? h("div.list", rows) : h("p", "No legends yet. Every legend starts with a single voyage."),
+      h("div", { style: { marginTop: "12px", textAlign: "right" } }, h("button.btn", { on: { click: onBack } }, "Back"))
+    )));
+  }
+  function helpContent(char, settings) {
+    const haki = !!(char && (char.haki?.armament || char.haki?.observation || char.haki?.conqueror));
+    const k = (key2, text2) => h("div", h("kbd", key2), text2);
+    const K = keysOf(settings);
+    const skillKeys = K.skills.filter(Boolean).slice(0, 5).map(keyLabel).join(" ");
+    return h(
+      "div",
+      h("h2", "How to Play"),
+      h("p", "Inherited Will is a roguelike set on the whole Blue Planet of One Piece. You are born in one of the four Blues depending on your race. Nobody tells you what to become: sail where you like, climb Reverse Mountain into the Grand Line, cross the Red Line, join the Marines, become a pirate, hunt treasure \u2014 or all of it."),
+      h("p", h("b", "Lives: "), "You have a few vivre cards. Get knocked down and you can mash SPACE to get back up; if an enemy finishes you, a vivre card burns. Lose them all and your journey ends \u2014 your Inherited Will, an heirloom, and your charted islands pass to the next generation."),
+      h("p", h("b", "Getting stronger: "), "There are no points to spend. Your body grows by use: landing blows builds Strength, dodging and parrying builds Agility, blocking builds Endurance, taking punishment builds Vitality, and refusing to stay down builds Willpower. Every weapon type has its own mastery that rises the more you fight with it \u2014 and deals more damage as it does. Worthy opponents teach you far more than weak ones; masters and trainers can push you further, and beating a great foe brings a breakthrough."),
+      haki ? h("p", h("b", "Haki: "), "Your spirit has awakened. Haki grows as you use it in battle and with a master's training.") : h("p.muted", "Some say that those who push their body and spirit far enough awaken something more\u2026"),
+      h("h3", "Controls"),
+      h(
+        "div.kbd-help",
+        k("Mouse", "look around (click the game to capture the mouse, Esc frees it)"),
+        k("P", "first person / third person (or scroll the wheel all the way in, and out again)"),
+        k("WASD", "move where you look / steer ship"),
+        k("Space", "jump; at a pier, a bank or a ship's side, climb up (ship: row)"),
+        k("Shift", "hold to sprint (ship: Coup de Burst); tap in first person to dodge"),
+        k("Ctrl", "third person: shift lock (the character faces where you look); swimming or flying, down"),
+        k("Q", "dash / dodge \u2014 it comes back after a moment (the Q slot left of the hotbar fills up again)"),
+        k("Right mouse", "heavy attack; hold and drag to turn the camera in third person without shift lock"),
+        k("Left click", "attack combo (ship: cannons)"),
+        k("Right click", "heavy attack"),
+        k("F", "hold to block \u2014 or tap it just as a blow lands (the yellow glint) to PARRY: they reel, and your next strike is a COUNTER. Mashing it won't parry. A red-glint blow smashes a guard aside, so dodge those"),
+        k("1-9, 0", "hotbar: take out what's on it \u2014 your Devil Fruit (and its forms), a weapon (again to put it away), food (in your hand: hold the right mouse button to eat it), a Dial"),
+        k(skillKeys || "Skill keys", "the skills of whatever is out: your fists', the drawn weapon's, the Devil Fruit's \u2014 the panel at the bottom right shows them, and what opens next (click a key there, or Settings \u2192 Controls, to change it)"),
+        haki ? k("R / T", "Armament / Observation Haki (once awakened)") : null,
+        haki ? k(K.haki.filter(Boolean).map(keyLabel).join(" ") || "Haki keys", `the techniques of the Haki that's on${char.haki?.conqueror ? " \u2014 the first, a king's Conqueror's" : ""}`) : null,
+        k("E", "interact / talk / pick fruit / take the helm or the oars / search a knocked-out foe"),
+        k("Ctrl / Space (swimming)", "dive / swim up \u2014 or look down and swim"),
+        k(keyLabel(K.form?.[0] || "B"), "switch form: a Gear, an awakened fruit (once you have one)"),
+        k("H", "draw / sheathe your weapon"),
+        k("Tab", "the menu \u2014 Inventory, Character, Skills, Journal, Crew and Quests down its side; it opens where you were last, Tab again closes it"),
+        k("M", "world map"),
+        k("Esc", "pause menu"),
+        k("Mouse wheel", "camera distance (third person)"),
+        k("Enter", "multiplayer: chat to the crew (Enter sends, Esc cancels); who's aboard is the Voyage section of the menu"),
+        char?.creative ? k("F1", "the creative panel (creative mode): Devil Fruits, items, races, Haki, foes, ships, the world") : null
+      ),
+      h("p.muted", "The Menu button on the left of the screen opens the menu too. Open the Inventory or Skills menu and drag food, weapons, Dials and your Devil Fruit straight onto your hotbar at the bottom of the screen (a weapon you wear hangs at your hip or on your back: its key draws it, and again sheathes it); drag hotbar slots to rearrange them, right-click one to clear it."),
+      h("p", h("b", "Devil Fruits: "), "eat one and all its base techniques are yours at once: take it out with its hotbar key and they're on the skill keys, its power in your every blow. Fight worthy foes with it and its mastery grows \u2014 its blows hit harder, and its forms open up (Gum-Gum's Gears, Amaru, Monster Point...): with the fruit out, the form key goes through them, and some leave you spent when they wear off. Master it fully (mastery 100: Skills shows how far along you are), then be brought down, or to a quarter of your health, by a boss or a foe near your strength \u2014 and it awakens there and then: from then on its awakened set (bigger, stronger, faster) is last on the form key, yours to switch on and off."),
+      h("p", h("b", "On a phone or tablet: "), "your left thumb moves (push the stick all the way to run; at sea it steers and sets the sails) and your right thumb drags to look around. The round buttons jump, attack, heavy attack, dodge and block; tap Use or the prompt to talk and interact, and tap a hotbar slot to take something out \u2014 its skills come up as round buttons beside the pad. The buttons at the top open the menu, the world map and the camera view. Play with the phone held sideways."),
+      h("h3", "Reputation"),
+      h("p", "People remember what you do. Helping islands, finishing quests and defeating pirates raises your reputation. Crimes \u2014 robbing shops and houses, picking pockets, attacking townsfolk, Marines or merchant ships \u2014 put a bounty on your head instead, and bounties grow the way they do in One Piece: a few hundred thousand berries for a petty thief in the East Blue, millions on the Grand Line, far more in the New World. Anyone with a bounty is a pirate in the eyes of the world. With a good reputation and no bounty you can enlist at a Marine base and climb the ranks \u2014 all the way to commanding fleets. A Marine who breaks the law loses standing, and is thrown out when nobody trusts them any more."),
+      h("h3", "Sailing"),
+      h("p", "A rowboat has no mast or sail: sit at her oars (E at the seat) and set a pace: W quickens it and she keeps rowing at it, S eases it off to a stop (and, pressed again, backs water), and A/D pull one oar to turn her \u2014 no wind needed, though the currents still carry you. Anything bigger sails: W/S raise and lower the sails; the wind matters. The Calm Belts around the Grand Line have no wind and are full of Sea Kings \u2014 the only safe way in is up Reverse Mountain, in the middle of the Red Line where all four Blues meet. In the Grand Line normal compasses fail: you need a Log Pose. Stay on an island until the log sets, then follow the needle."),
+      h("h3", "The sea"),
+      h("p", "Swim anywhere. Dive with Ctrl (or look down and swim) to explore the reefs, kelp forests and the dark deep water in the middle of the ocean; the bubbles under your health show how long you can hold your breath \u2014 come up for air before they pop. Grab fish with an attack as they swim past, prise giant clams open for pearls, and watch out past the reef: Sea Cows hunt swimmers in the Blues, and horned Fighting Fish in the Grand Line. Fish-Men swim fast and breathe water. Devil Fruit users cannot swim at all: they thrash for a few seconds (the bubbles count them down), then the sea drags them under, and they come out of it weak \u2014 keep a crewmate close to haul you out, or grab a line thrown from your ship."),
+      h("h3", "Ships, raids and being wanted"),
+      h("p", "Other ships sail the seas: merchantmen and fishing boats, Marine patrols (who come after you once you're wanted), and pirates, who keep to their own business \u2014 unless you fire on them or board them. Stop, and a ship that's after you comes alongside and heaves to. Fire on a merchant and she may heave to. To board and raid a ship, leave your helm and jump across onto her deck \u2014 over her rail, coming down on her deck from above: her side is a wall to anyone below it (a rowboat's low side you jump over from the water) \u2014 or swim to her and climb the ladder down her side amidships (E at its foot). Stopped alongside her, your crew run a plank across between your rails: walk over on it. Beat the crew on her deck, go down the hatch amidships and plunder the treasure chest in her hold (her cannonballs come across to your ship too), and take what's in it (a raided ship isn't yours to sail away: new ships come from the shipwrights). At your own wheel, E leaves the helm so you can walk your deck \u2014 under sail she sails on, holding her course, till you take the wheel again to steer or lower the sails (her bulwark is a low wall: jump over it for a swim, or onto the pier she's tied up at). Ships come in every size, from your first rowboat to sloops, caravels, galleons and One Piece-scale men-o'-war and Yonko flagships \u2014 and every one with a sail is a ship you can live on: walk her decks, climb the stairs to the quarterdeck, go in through the door under it to the captain's cabin (a table with the chart, a bunk, the sea chest), into the crew's forecastle on the bigger ones, and down the hatch amidships to the hold, where the cargo and the treasure chest are (on the big ships, a gun deck with cannons at every port). Her guns fire cannonballs, one a gun, and they run out: the count is by your wheel, and a shipwright restocks you. Your crew stand their stations on deck while you steer. Your own ships can't break. Every pier has a shipwright: talk to them (E) to bring any ship you own round to that pier, or to buy a new one. Raiding or stealing from anyone but pirates is piracy, and your bounty grows. A small bounty goes unnoticed, but once your poster is worth something the Marines know your face on sight \u2014 a hood hides it, until you fight or steal in it."),
+      h("h3", "Crossing the Red Line"),
+      h("p", "Paradise ends at the Red Line. Pirates cross the way the Straw Hats did: have your ship coated at the Sabaody Archipelago, then dive 10,000 metres to Fish-Man Island and rise into the New World. The Red Ports and their Bondola lifts to Mary Geoise are for the World Government \u2014 and those it permits."),
+      h("h3", "Crew and the One Piece"),
+      h("p", "Found your own pirate crew and design your Jolly Roger from the Crew menu (Tab); it flies from your ship's sails. Recruit companions you meet along the way. Poneglyphs can only be read by an archaeologist. Four Road Poneglyphs point the way to Laugh Tale. Pick fruit and coconuts from trees when you are hungry."),
+      h("h3", "Sailing with friends"),
+      h("p", "Multiplayer, on the title screen: one of you hosts a voyage with one of their lineages and passes on the six-letter code; the others join with it, each bringing a pirate from their own lineages (or a newborn one). Everyone sails the same world \u2014 the host's days, hours and weather are everyone's \u2014 and keeps their own save. You see each other, your ships and your fights; foes and townsfolk are each your own. Press Enter to chat, and P for who's aboard and where (and to go and stand beside a friend who's ashore).")
+    );
+  }
+  function posterPose(char) {
+    const b = char.bounty || 0, kills = char.stats?.kills || 0, look = { ...char.look };
+    const tier = b >= 5e8 ? 4 : b >= 1e8 ? 3 : b >= 3e7 ? 2 : b >= 1e6 ? 1 : 0;
+    const w = weaponFromChar(char), blade2 = w && w.kind === "sword";
+    if (tier === 0) return { look: { ...look, mouth: "smile" }, act: null, weapon: null };
+    if (tier === 4) return { look, act: "poster-roar", weapon: null };
+    if (char.fruit && tier >= 2) return { look, act: "poster-power", weapon: null };
+    if (blade2 && kills >= 10) return { look, act: "poster-blade", weapon: w };
+    if (tier === 1) return { look: { ...look, grin: true }, act: "poster-fist", weapon: null };
+    return { look, act: kills >= 25 ? "poster-fold" : "poster-point", weapon: null };
+  }
+  function wantedPoster(char) {
+    const cv = h("canvas", { width: 240, height: 200 });
+    const g = cv.getContext("2d");
+    g.fillStyle = "#e8d5a8";
+    g.fillRect(0, 0, 240, 200);
+    g.fillStyle = "#d4bd8a";
+    for (let i = 0; i < 40; i++) g.fillRect(i * 53 % 240, i * 37 % 200, 3, 3);
+    const pp3 = char.look ? posterPose(char) : null;
+    const img2 = pp3 ? renderPortrait(pp3.look, { w: 240, h: 200, view: "bust", act: pp3.act, weapon: pp3.weapon }) : null;
+    if (img2) g.drawImage(img2, 0, 0, 240, 200);
+    g.globalCompositeOperation = "multiply";
+    g.fillStyle = "#d9c28f";
+    g.fillRect(0, 0, 240, 200);
+    g.globalCompositeOperation = "source-over";
+    const bounty = char.bounty ? formatBerries(char.bounty).replace("\u0E3F", "\u0E3F ") + "-" : "\u0E3F 0-";
+    return h("div.poster", h("div.w", "WANTED"), cv, h("div.doa", "DEAD OR ALIVE"), h("div.nm", char.name), h("div.amt", bounty), h("div.mar", "MARINE"));
+  }
+  var pickNew = (list, not) => {
+    let n;
+    do
+      n = list[Math.floor(Math.random() * list.length)];
+    while (n === not && list.length > 1);
+    return n;
+  };
+  var randomFirst = (fem, not) => pickNew(fem ? FEMALE_FIRST : MALE_FIRST, not);
+  var randomLast = (not) => pickNew(SURNAMES, not);
 
   // src/game/progression.js
   var DUMMY_CAP = 15;
@@ -136850,7 +137226,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
             const item = rng4.pick(["meat", "fish_stew", "sake", "bandage", "gold_coins", "cola", "rice_ball"]);
             addItem(g, item, 1);
             if (rng4.chance(0.3)) earn(g, rng4.int(200, 1500), "floating barrel");
-            if (rng4.chance(0.04)) this.fruitFromBarrel(rng4);
+            if (rng4.chance(0.08)) this.fruitFromBarrel(rng4);
             g.audio?.sfx("coin");
           }
         }
@@ -136967,7 +137343,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         if (s.faction === "civilian") crime(g, 2e6, "sank a merchant ship", { rep: 10 });
         const rng4 = new RNG(Math.floor(s.x * 13 + s.y));
         if (rng4.chance(0.25)) addItem(g, rng4.pick(["jewels", "gold_coins", "sea_king_steak", "rumble_ball"]), 1);
-        if (rng4.chance(0.03)) this.fruitFromBarrel(rng4);
+        if (rng4.chance(0.06)) this.fruitFromBarrel(rng4);
       }
     }
     spawnFlotsam(p, s) {
@@ -139620,6 +139996,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
 
   // src/game/destruction.js
   var REBUILD = 300;
+  var FIRE2 = /* @__PURE__ */ new Set(["fire", "magma", "bluefire", "explosion"]);
+  var ICE3 = /* @__PURE__ */ new Set(["ice", "snow"]);
   function buildingHp(b) {
     const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), H5 = 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6;
     return Math.round(fw * fd * H5 * 2.2);
@@ -139632,6 +140010,39 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const f = h2.owner && def ? techScale(h2.owner, def) : 1;
     return (h2.damage || 0) * k * f * f * (h2.blast || h2.heavy ? 1.3 : 1);
   }
+  var SMASH = {
+    tree: 70,
+    bush: 6,
+    lamp: 14,
+    barrel: 8,
+    crate: 8,
+    cask: 8,
+    fountain: 140,
+    tent: 30,
+    windmill: 260,
+    campfire: 6,
+    well: 70,
+    signboard: 12,
+    stall: 30,
+    statue: 160,
+    bench: 10,
+    cart: 22,
+    fence: 8,
+    haystack: 8,
+    totem: 60,
+    cactus: 18,
+    mushroom: 14,
+    mooring: 20,
+    table: 10,
+    scarecrow: 10,
+    crystal: 40,
+    rock: 120,
+    lantern: 8,
+    flag: 10,
+    cannon: 60,
+    waterwheel: 120
+  };
+  var smashable = (o) => SMASH[o.kind] !== void 0 && !o.hidden && !o.ruined && !o.far && !o.unbreakable && !o.quest;
   function installDestruction(game) {
     const D4 = {
       /** The rect a building stands on, as world { x0, y0, x1, y1 }. */
@@ -139657,33 +140068,216 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
        * it reaches takes it (less towards the edge); one with nothing left falls.
        */
       strike(x, y, r4, power, att, o = {}) {
+        var _a4;
         if (!(power > 0)) return 0;
         let n = 0;
+        const el = o.element || "physical";
         for (const [b, d] of D4.near(x, y, r4)) {
           const k = 1 - 0.5 * (d / Math.max(0.5, r4));
-          b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - power * k;
+          let pw = power;
+          if (b.frozen && !ICE3.has(el)) {
+            pw *= 2;
+            D4.shatter(b, att);
+            if (b.ruined) {
+              n++;
+              continue;
+            }
+          }
+          b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - pw * k;
+          if (FIRE2.has(el)) D4.ignite(b, power, att);
+          else if (ICE3.has(el)) D4.freeze(b, power, att);
           b.hitT = game.time;
+          if (!b.damaged) {
+            b.damaged = true;
+            ((_a4 = game.world).damaged || (_a4.damaged = [])).push(b);
+          }
           if (b.hp <= 0) {
-            D4.collapse(b, x, y, power, att, o);
+            D4.collapse(b, x, y, pw, att, o);
             n++;
             continue;
           }
-          D4.event({ kind: "chip", b, x, y, n: Math.min(10, 2 + Math.round(power / 120)) });
+          const frac2 = b.hp / (b.maxHp || buildingHp(b)), st = frac2 < 0.34 ? 2 : frac2 < 0.67 ? 1 : 0;
+          if (st > (b.stage || 0)) {
+            b.stage = st;
+            D4.event({ kind: "stage", b, stage: st, x, y });
+            const q2 = bfoot(b);
+            game.fx?.burst?.((q2.x0 + q2.x1) / 2, (q2.y0 + q2.y1) / 2, 14, { color: ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 2.5, spread: Math.PI * 2, z: 2.5, vz: 1, g: -0.2, life: 1.4, kind: "smoke", size: 0.8, grow: 1.4, drag: 1.6 });
+            game.audio?.sfx("collapse", { x, y }, { w: 0.35 });
+          }
+          D4.event({ kind: "chip", b, x, y, n: Math.min(10, 2 + Math.round(pw / 120)), k: Math.min(1.6, 0.25 + pw * k / (b.maxHp || buildingHp(b)) * 2.5) });
           if (Math.random() < 0.5) game.audio?.sfx("wallhit", { x, y });
         }
+        D4.smashNear(x, y, r4, power, att);
         return n;
+      },
+      /** The loose things round (x, y) a blow of `power` reaches: those it's enough for are smashed. */
+      smashNear(x, y, r4, power, att, o = {}) {
+        const w = game.world;
+        if (!w?.objects || !(power > 0)) return 0;
+        let n = 0;
+        for (const p of w.objects.near(x, y, r4 + 1, smashable)) {
+          const d = w.distance(x, y, p.x, p.y);
+          if (d > r4 + 0.6 * (p.s || 1)) continue;
+          if (floorOf(p) || /dock|pier|bridge|quay|jetty|plank/.test(p.kind)) continue;
+          p.hp = (p.hp ?? SMASH[p.kind] * (p.s || 1)) - power * (1 - 0.5 * d / Math.max(0.5, r4));
+          if (p.hp > 0) continue;
+          D4.smash(p, x, y, power, att, { delay: o.speed ? d / o.speed : 0, lite: o.lite, long: o.long });
+          n++;
+        }
+        return n;
+      },
+      /** One loose thing smashed: gone from the world (its pieces are debris now) until the town's put right. */
+      smash(p, x, y, power, att, o = {}) {
+        const w = game.world;
+        if (p.ruined) return;
+        w.objects.ruin(p);
+        p.rebuildAt = game.time + REBUILD * (1 + Math.min(2, power / 2500)) * (o.long || 1);
+        (w.smashed || (w.smashed = [])).push(p);
+        D4.event({ kind: "fixture", o: p });
+        D4.event({ kind: "smash", b: p, x, y, power, delay: o.delay || 0, lite: !!o.lite });
+        if (!o.delay && Math.random() < 0.5) game.audio?.sfx(p.kind === "tree" ? "collapse" : "wallhit", { x: p.x, y: p.y }, { w: 0.3 });
+      },
+      /**
+       * Fire on a building: it catches and burns a while — flames out of its
+       * windows and over its roof, smoke, the walls blackening — taking damage
+       * all the while; enough of it and it burns down. A bigger fire burns
+       * longer. (Water, ice put it out.)
+       */
+      ignite(b, power, att) {
+        var _a4;
+        if (b.ruined) return;
+        if (b.frozen) {
+          D4.thaw(b);
+          return;
+        }
+        const dur = Math.min(30, 6 + power / 40);
+        if (!b.burning) {
+          b.burning = { until: game.time + dur, att, power, acc: 0 };
+          ((_a4 = game.world).burning || (_a4.burning = [])).push(b);
+          D4.event({ kind: "burn", b, on: true });
+        } else b.burning.until = Math.max(b.burning.until, game.time + dur * 0.6);
+        b.charred = true;
+      },
+      /** Ice on a building: frozen solid in a shell of ice, until it shatters (with it, much of the house). */
+      freeze(b, power, att) {
+        var _a4;
+        if (b.ruined) return;
+        if (b.burning) {
+          D4.douse(b);
+          return;
+        }
+        const dur = Math.min(20, 5 + power / 60);
+        if (!b.frozen) {
+          b.frozen = { until: game.time + dur, att, power };
+          ((_a4 = game.world).frozen || (_a4.frozen = [])).push(b);
+          D4.event({ kind: "ice", b, on: true });
+          game.audio?.sfx("ice", { x: b.x, y: b.y });
+        } else b.frozen.until = Math.max(b.frozen.until, game.time + dur * 0.5);
+      },
+      douse(b) {
+        if (!b.burning) return;
+        b.burning = null;
+        D4.event({ kind: "burn", b, on: false });
+      },
+      thaw(b) {
+        if (!b.frozen) return;
+        b.frozen = null;
+        D4.event({ kind: "ice", b, on: false, shatter: false });
+      },
+      /** The ice round a building breaks: the shell flies apart, and the walls it held go with it. */
+      shatter(b, att) {
+        const F4 = b.frozen;
+        if (!F4) return;
+        b.frozen = null;
+        D4.event({ kind: "ice", b, on: false, shatter: true });
+        game.audio?.sfx("ice", { x: b.x, y: b.y });
+        const q2 = bfoot(b), cx = (q2.x0 + q2.x1) / 2, cy = (q2.y0 + q2.y1) / 2;
+        game.fx?.burst?.(cx, cy, 30, { color: ["#e1f5fe", "#b3e5fc", "#ffffff"], speed: 6, spread: Math.PI * 2, z: 1.5, vz: 3, g: 9, life: 1.1, kind: "shard", size: 0.16, drag: 1 });
+        b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - (F4.power * 1.5 + (b.maxHp || buildingHp(b)) * 0.45);
+        if (b.hp <= 0) D4.collapse(b, cx, cy, F4.power * 2, att || F4.att);
+        game.combat?.hitbox({ owner: att || F4.att || null, x: cx, y: cy, shape: "circle", range: Math.hypot(q2.x1 - q2.x0, q2.y1 - q2.y0) / 2 + 1.5, damage: 20 + F4.power * 0.05, knockback: 6, stun: 0.5, element: "ice", duration: 0.1, radial: true, blast: true, crush: true });
+      },
+      /** Burning and frozen buildings, as time goes by. */
+      elements(dt) {
+        const w = game.world, p = game.player;
+        if (w?.burning?.length) {
+          for (let i = w.burning.length - 1; i >= 0; i--) {
+            const b = w.burning[i], B5 = b.burning;
+            if (!B5 || b.ruined) {
+              if (B5) D4.douse(b);
+              w.burning.splice(i, 1);
+              continue;
+            }
+            b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - (b.maxHp || buildingHp(b)) * 0.035 * dt;
+            b.hitT = game.time;
+            const q2 = bfoot(b), cx = (q2.x0 + q2.x1) / 2, cy = (q2.y0 + q2.y1) / 2;
+            if (b.hp <= 0) {
+              D4.collapse(b, cx, cy, 400, B5.att);
+              w.burning.splice(i, 1);
+              continue;
+            }
+            if (game.time > B5.until) {
+              D4.douse(b);
+              w.burning.splice(i, 1);
+              continue;
+            }
+            if (p && w.distance(p.x, p.y, cx, cy) < 90 && (B5.acc = (B5.acc || 0) + dt) > 0.12) {
+              B5.acc = 0;
+              const H5 = 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6;
+              for (let k = 0; k < 3; k++) {
+                const fx0 = q2.x0 + Math.random() * (q2.x1 - q2.x0), fy0 = q2.y0 + Math.random() * (q2.y1 - q2.y0);
+                game.fx?.burst?.(fx0, fy0, 3, { color: ["#ff6d00", "#ffab00", "#ffd54f"], speed: 0.6, z: Math.random() * H5, vz: 3, g: -3, life: 0.7, kind: "fire", size: 0.45, grow: 0.6 });
+              }
+              game.fx?.burst?.(cx, cy, 2, { color: ["#424242", "#616161", "#757575"], speed: 0.4, z: H5 + 0.5, vz: 2.2, g: -1.5, life: 2.5, kind: "smoke", size: 0.9, grow: 1.4, drag: 0.6 });
+            }
+            if (Math.random() < dt * 1.5) game.combat?.hitbox({ owner: B5.att || null, x: cx, y: cy, shape: "circle", range: Math.hypot(q2.x1 - q2.x0, q2.y1 - q2.y0) / 2 + 0.4, damage: 4, knockback: 0, stun: 0, element: "fire", status: { burn: 2 }, duration: 0.05, radial: true, crush: true });
+          }
+        }
+        if (w?.frozen?.length) {
+          for (let i = w.frozen.length - 1; i >= 0; i--) {
+            const b = w.frozen[i], F4 = b.frozen;
+            if (!F4 || b.ruined) {
+              if (F4) D4.thaw(b);
+              w.frozen.splice(i, 1);
+              continue;
+            }
+            if (game.time > F4.until) {
+              w.frozen.splice(i, 1);
+              D4.shatter(b, F4.att);
+            }
+          }
+        }
       },
       /** Building b brought down by a blow from (x, y). */
       collapse(b, x, y, power, att, o = {}) {
         const w = game.world;
         if (b.ruined || !w?.objects) return;
         w.objects.ruin(b);
+        const fq = bfoot(b);
+        b.fixtures = w.objects.query(fq.x0 - 1.5, fq.y0 - 1.5, fq.x1 + 1.5, fq.y1 + 1.5).filter((o2) => {
+          if (o2 === b || o2.hidden || o2.kind === "building" || o2.kind === "tree" || o2.far || floorOf(o2) || /dock|pier|bridge|quay|jetty|plank/.test(o2.kind)) return false;
+          const ox = w.wx(o2.x);
+          return ox > fq.x0 - 1.2 && ox < fq.x1 + 1.2 && o2.y > fq.y0 - 1.2 && o2.y < fq.y1 + 1.2;
+        });
+        for (const o2 of b.fixtures) {
+          w.objects.ruin(o2);
+          D4.event({ kind: "fixture", o: o2 });
+        }
+        if (b.burning) {
+          b.burning = null;
+          D4.event({ kind: "burn", b, on: false });
+        }
+        if (b.frozen) {
+          b.frozen = null;
+          D4.event({ kind: "ice", b, on: false, shatter: true });
+        }
         const q2 = bfoot(b), cx = (q2.x0 + q2.x1) / 2, cy = (q2.y0 + q2.y1) / 2;
         const span2 = Math.hypot(q2.x1 - q2.x0, q2.y1 - q2.y0) / 2;
         b.ruinT = game.time;
         b.rebuildAt = game.time + REBUILD * (1 + Math.min(2, power / 2500)) * (o.long || 1);
         (w.ruins || (w.ruins = [])).push(b);
         D4.event({ kind: "fall", b, x, y, power, delay: o.delay || 0 });
+        D4.smashNear(cx, cy, span2 + 1.5, Math.max(power, 200), att, { lite: o.long > 1 });
         game.combat?.hitbox({ owner: att || null, x: cx, y: cy, shape: "circle", range: span2 + 0.5, damage: 25 + Math.min(220, power * 0.06), knockback: 6, stun: 1, element: "physical", duration: 0.1, radial: true, heavy: true, blast: true, hitsAll: !att, crush: true });
         const fx = game.fx;
         if (fx) {
@@ -139705,23 +140299,55 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           D4.collapse(b, x, y, power, att, { delay: d / speed2, long: 1.5 });
           n++;
         }
+        n += D4.smashNear(x, y, r4, 1e6, att, { speed: speed2, lite: true, long: 1.5 });
         return n;
       },
       event(e) {
         const w = game.world;
         if (!w) return;
         (w.ruinEvents || (w.ruinEvents = [])).push(e);
-        if (w.ruinEvents.length > 400) w.ruinEvents.splice(0, w.ruinEvents.length - 400);
+        if (w.ruinEvents.length > 12e3) w.ruinEvents.splice(0, w.ruinEvents.length - 12e3);
         w.ruinRev = (w.ruinRev || 0) + 1;
       },
       wrecked: [],
       /** Rebuild what's stood ruined long enough (not under your nose: once you're a little way off, or it's been a long while). */
       update() {
         const w = game.world, p = game.player;
+        if (w?.damaged?.length) {
+          for (let i = w.damaged.length - 1; i >= 0; i--) {
+            const b = w.damaged[i];
+            if (b.ruined) {
+              b.damaged = false;
+              w.damaged.splice(i, 1);
+              continue;
+            }
+            if (game.time - (b.hitT || 0) < REBUILD * 0.6 || p && w.distance(p.x, p.y, b.x, b.y) < 20) continue;
+            b.hp = void 0;
+            b.stage = 0;
+            b.damaged = false;
+            b.charred = false;
+            w.damaged.splice(i, 1);
+            D4.event({ kind: "restore", b });
+          }
+        }
         if (D4.wrecked.length) {
           const n = D4.wrecked.length, b = D4.wrecked[0];
           D4.wrecked.length = 0;
           game.reputation?.crime?.(25e4 * n, n > 1 ? `wrecked ${n} buildings` : `wrecked ${b.name ? "the " + b.name : "a house"}`, { quiet: n < 3, rep: Math.min(10, n) });
+        }
+        if (w?.smashed?.length) {
+          for (let i = w.smashed.length - 1; i >= 0; i--) {
+            const o = w.smashed[i];
+            if (!o.ruined) {
+              w.smashed.splice(i, 1);
+              continue;
+            }
+            if (game.time < o.rebuildAt || p && w.distance(p.x, p.y, o.x, o.y) < 25 && game.time < o.rebuildAt + 240) continue;
+            w.objects.restore(o);
+            o.hp = void 0;
+            w.smashed.splice(i, 1);
+            D4.event({ kind: "restore", b: o });
+          }
         }
         if (!w?.ruins?.length) return;
         for (let i = w.ruins.length - 1; i >= 0; i--) {
@@ -139734,7 +140360,15 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           if (p && w.distance(p.x, p.y, b.x, b.y) < 30 && game.time < b.rebuildAt + 240) continue;
           if (p && w.distance(p.x, p.y, b.x, b.y) < 3 + Math.hypot(b.fw || 3, b.fd || 3)) continue;
           w.objects.restore(b);
+          for (const o of b.fixtures || []) {
+            w.objects.restore(o);
+            D4.event({ kind: "restore", b: o });
+          }
+          b.fixtures = null;
           b.hp = void 0;
+          b.stage = 0;
+          b.damaged = false;
+          b.charred = false;
           w.ruins.splice(i, 1);
           D4.event({ kind: "restore", b });
         }
@@ -139748,25 +140382,28 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const R5 = h2.range || 1.4;
         if (h2.shape === "line") {
           const ca = Math.cos(h2.angle || 0), sa = Math.sin(h2.angle || 0), wd = (h2.width || 1) / 2 + 0.6;
-          for (let d = 0; d <= R5; d += Math.max(1.5, wd)) D4.strike(h2.x + ca * d, h2.y + 0.4 + sa * d, wd, power, h2.owner);
+          for (let d = 0; d <= R5; d += Math.max(1.5, wd)) D4.strike(h2.x + ca * d, h2.y + 0.4 + sa * d, wd, power, h2.owner, { element: h2.element });
           return;
         }
         if (h2.shape === "arc" || !h2.shape) {
           const a = h2.angle || 0;
-          D4.strike(h2.x + Math.cos(a) * R5 * 0.5, h2.y + 0.4 + Math.sin(a) * R5 * 0.5, R5 * 0.6 + 0.4, power, h2.owner);
+          D4.strike(h2.x + Math.cos(a) * R5 * 0.5, h2.y + 0.4 + Math.sin(a) * R5 * 0.5, R5 * 0.6 + 0.4, power, h2.owner, { element: h2.element });
           return;
         }
-        D4.strike(h2.x, h2.y + 0.4, R5 + 0.3, power, h2.owner);
+        D4.strike(h2.x, h2.y + 0.4, R5 + 0.3, power, h2.owner, { element: h2.element });
       },
       /** A shot of yours stopped by a wall: the wall takes it. */
       fromShot(p) {
         if (!wrecker(p.owner)) return;
         const power = structPower(p) * 0.8;
-        if (power >= 4) D4.strike(p.x, p.y, 0.8 + 0.4 * (p.size || 1), power, p.owner);
+        if (power >= 4) D4.strike(p.x, p.y, 0.8 + 0.4 * (p.size || 1), power, p.owner, { element: p.element });
       }
     };
     game.destruction = D4;
-    game.on?.("tick", () => D4.update());
+    game.on?.("tick", (dt) => {
+      D4.update();
+      D4.elements(dt || 1 / 60);
+    });
     return D4;
   }
 
@@ -139958,13 +140595,17 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     };
     game.on("characterStart", ({ char, isNew }) => {
       if (!isNew) catchUpFruit(game, char);
+      else if (char.fruitBorn && FRUITS[char.fruit]) {
+        const f = FRUITS[char.fruit];
+        game.log(`You ate the ${f.name} as a child \u2014 ${f.en}, a ${f.type}. You can never swim, but its powers are yours: they're on the hotbar and your skill keys. Fighting worthy foes with it opens up the rest.`, "#ffab91");
+      }
       if (!char.world.fruitSpawns) {
         const rng4 = new RNG(char.runSeed + ":fruits");
         const isles = game.surface.islands.filter((i) => i.name && !i.def.noFruit && i.def.sea);
         const spawns = [];
         const canon = new Set(allNpcDefs().filter((d) => d.fruit).map((d) => d.fruit));
         const reborn = [...new Set(game.state.legacy?.reincarnatedFruits || [])].filter((f) => FRUITS[f] && !canon.has(f));
-        const n = 7;
+        const n = 14;
         for (let k = 0; k < n; k++) {
           const isl = rng4.pick(isles);
           let fid = k < reborn.length ? reborn[reborn.length - 1 - k] : game.rollFruit(rng4);
@@ -140039,7 +140680,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (seen[isl.id]) return;
       seen[isl.id] = 1;
       const rng4 = new RNG(`${c.runSeed}:tree-fruit:${isl.id}`);
-      if (!rng4.chance(0.18)) return;
+      if (!rng4.chance(0.3)) return;
       const o = fruitTreeNear(game, isl.x + rng4.range(-isl.def.w / 4, isl.def.w / 4), isl.y + rng4.range(-isl.def.h / 4, isl.def.h / 4), Math.max(isl.def.w, isl.def.h) / 2);
       if (!o || DEVIL.get(fruitKey(game.surface.id, o)) || fruitPicked(game.surface.id, o, 0, game.env.day)) return;
       const fid = game.rollFruit(rng4);
@@ -140055,6 +140696,21 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         g.groundItems = g.groundItems || [];
         if (!g.groundItems.some((it) => it.fruitSpawn === f)) g.groundItems.push({ x: p.x, y: p.y, id: "fruit_" + f.fruit, label: "a strange swirled fruit", fruitSpawn: f });
       }
+    });
+    game.on("bossDefeated", (a) => {
+      var _a4;
+      const c = game.state?.char;
+      if (!c || !a || a.netRemote) return;
+      const rng4 = new RNG(`${c.runSeed}:boss-fruit:${a.npcId || a.name}`);
+      if (!rng4.chance(0.35)) return;
+      const fid = game.rollFruit(rng4);
+      if (!fid) return;
+      const isl = game.world === game.surface ? game.surface.islands.find((i) => game.surface.distance(a.x, a.y, i.x, i.y) < Math.max(i.def?.w || 0, i.def?.h || 0)) : null;
+      const f = { island: isl?.id ?? null, fruit: fid, x: a.x, y: a.y, taken: false, drop: true };
+      ((_a4 = c.world).fruitSpawns || (_a4.fruitSpawns = [])).push(f);
+      (game.groundItems || (game.groundItems = [])).push({ x: a.x, y: a.y, id: "fruit_" + fid, label: "a strange swirled fruit", fruitSpawn: f });
+      game.fx?.burst?.(a.x, a.y - 0.6, 24, { color: [FRUITS[fid].color, "#ffffff"], speed: 4, g: 0, life: 0.9, kind: "star" });
+      game.log(`Something rolls out of ${a.name}'s things as they fall: a strange swirled fruit. A Devil Fruit!`, "#ffab91");
     });
     game.on("pickup", (it) => {
       const g = game;
@@ -173585,7 +174241,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }
     return { berries, items: items9 };
   }
-  var DEVIL2 = { treasure: 0.06, hoard: 0.05, ship: 0.04 };
+  var DEVIL2 = { treasure: 0.12, hoard: 0.1, ship: 0.08 };
   function installContainers(game) {
     const store = () => {
       const c = game.state.char;
