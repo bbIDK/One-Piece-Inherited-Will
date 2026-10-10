@@ -172,13 +172,15 @@ export class Debris {
       ev.length = 0;
     }
     const view = this.view, L = this.list;
-    let n = 0;
+    let n = 0, moving = L.length !== this.drawn;
     for (let i = L.length - 1; i >= 0; i--) {
       const p = L[i];
       p.t += dt;
       if (p.sink > 0) { p.h -= dt * 0.8; p.sink -= dt * 0.4; if (p.sink <= 0) { L.splice(i, 1); continue; } }
       else if (p.chip && p.t > p.life) { p.sink = 1; }
+      if (p.sink > 0 || (p.grow && p.t < p.grow + 0.1) || (p.t < 0.05 && p.t > -0.05)) moving = true;
       if (p.t >= 0 && !p.rest) {
+        moving = true;
         p.vh -= G * dt;
         p.x = world.wx(p.x + p.vx * dt); p.y += p.vy * dt; p.h += p.vh * dt;
         p.rx += p.wx * dt; p.ry += p.wy * dt; p.rz += p.wz * dt;
@@ -195,7 +197,10 @@ export class Debris {
         }
       }
     }
-    // draw them (relative to the props' origin, as everything in that group is)
+    // draw them (relative to the props' origin, as everything in that group is) — only when
+    // something's moved: a settled heap of rubble is left as it was drawn
+    if (!moving && O.x === this.ox && O.y === this.oy) return;
+    this.ox = O.x; this.oy = O.y; this.drawn = L.length;
     const M = this.mesh, cols = M.instanceColor.array;
     for (const p of L) {
       if (n >= MAX) break;

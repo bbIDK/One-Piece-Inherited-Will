@@ -102,7 +102,8 @@ export function installDestruction(game) {
       }
       game.audio?.sfx('collapse', { x: cx, y: cy }, { w: Math.min(1, 0.4 + span / 12) });
       if (att?.isPlayer || att?.summonedBy?.isPlayer) {
-        game.reputation?.crime?.(b.pirate ? 0 : 250000, `wrecked ${b.name ? 'the ' + b.name : 'a house'}`, { quiet: true, rep: 1 });
+        // (the bounty for it, all at once for a street that comes down together: see update)
+        if (!b.pirate) D.wrecked.push(b);
         game.emit?.('buildingWrecked', b);
       }
     },
@@ -126,9 +127,16 @@ export function installDestruction(game) {
       w.ruinRev = (w.ruinRev || 0) + 1;
     },
 
+    wrecked: [],
+
     /** Rebuild what's stood ruined long enough (not under your nose: once you're a little way off, or it's been a long while). */
     update() {
       const w = game.world, p = game.player;
+      if (D.wrecked.length) {
+        const n = D.wrecked.length, b = D.wrecked[0];
+        D.wrecked.length = 0;
+        game.reputation?.crime?.(250000 * n, n > 1 ? `wrecked ${n} buildings` : `wrecked ${b.name ? 'the ' + b.name : 'a house'}`, { quiet: n < 3, rep: Math.min(10, n) });
+      }
       if (!w?.ruins?.length) return;
       for (let i = w.ruins.length - 1; i >= 0; i--) {
         const b = w.ruins[i];
