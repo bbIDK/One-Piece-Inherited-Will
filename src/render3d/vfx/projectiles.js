@@ -440,9 +440,21 @@ function draw(v, pr, r, Y, sc) {
       break;
     }
     case 'paw': {
-      const wob = 1 + 0.05 * Math.sin(t * 14);
-      v.shells.put(VK.WATER, X, Y, Z, 0.36 * s * wob, 0, 1, 0, 1, col('#ffffff'), 0.7, WHITE, 0, 0, seed);
-      for (let i = 0; i < 3; i++) v.shells.put(VK.WATER, X + (i - 1) * 0.22 * s * -dz, Y + 0.35 * s, Z + (i - 1) * 0.22 * s * dx, 0.11 * s, 0, 1, 0, 1, col('#ffffff'), 0.7, WHITE, 0, 0, seed + i);
+      // a paw of compressed air, as Kuma pushes it out: a big round pad and
+      // four toe beans fanned over it, face-on to where it flies, quivering
+      const wob = 1 + 0.05 * Math.sin(t * 14), R = 0.36 * s * wob, nx = -dz, nz = dx;
+      const big = s >= 2, Y0 = Y + (big ? R * 0.4 : 0);
+      v.shells.put(VK.WATER, X, Y0, Z, R, dx, 0, dz, 0.65, col('#ffffff'), big ? 0.55 : 0.7, WHITE, 0, 0, seed);
+      for (let i = 0; i < 4; i++) {
+        const u = (i - 1.5) / 1.5, th = u * 0.95;
+        const ox = Math.sin(th) * R * 1.05, oy = Math.cos(th) * R * 1.05 + R * 0.12;
+        v.shells.put(VK.WATER, X + nx * ox, Y0 + oy, Z + nz * ox, R * (0.3 - 0.05 * Math.abs(u)), dx, 0, dz, 0.7, col('#ffffff'), big ? 0.55 : 0.7, WHITE, 0, 0, seed + i);
+      }
+      if (big) {
+        // (the air shimmering round it, the ground churned beneath)
+        v.sprites.put(SK.RING, X, Y0, Z, R * 2.6 * (1 + 0.04 * Math.sin(t * 20)), col('#e0f7fa'), 0.35, WHITE, 0.6, 0, seed, 0.3);
+        trail(v, r, RK.SMOKE, col('#e0f7fa'), 0.4, WHITE, 0, R * 0.5, 0.3, 10);
+      }
       break;
     }
     case 'smokefist':

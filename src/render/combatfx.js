@@ -1310,7 +1310,7 @@ sig('nikyu_travel', {
   },
 });
 sig('nikyu_pain', { heal(fx, actor, s, a) { DEFAULTS.heal(fx, actor, s, a); fx.burst(actor.x, actor.y, 1, { kind: 'bubble', color: '#ffffff', speed: 0.3, z: 1.2, vz: 1.2, g: -0.6, life: 1.4, size: 0.5 }); } });
-sig('nikyu_ursus', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.ring(px, py, 0.2, 2, '#ffffff', 0.4, 0.12, { z: 0.8, add: true }); smoke(fx, px, py, 0.8, 10, ['#ffffff', '#e0f7fa'], { speed: 3 }); } });
+sig('nikyu_ursus', { charge: { kind: 'glow', color: '#ffffff', size: 0.6 }, proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.ring(px, py, 0.2, 2, '#ffffff', 0.4, 0.12, { z: 0.8, add: true }); smoke(fx, px, py, 0.8, 10, ['#ffffff', '#e0f7fa'], { speed: 3 }); } });
 sig('kage_steal', { hit(fx, actor, s, a, hb) { const [px, py] = fwd(actor, hb.angle, 1.6); fx.add('claw', { x: px, y: py, z: 0.1, angle: hb.angle, size: 1.1, color: '#263238', life: 0.5, n: 2, tilt: 0 }); smoke(fx, px, py, 0.3, 8, ['#263238', '#37474f', '#000000'], { speed: 1.5 }); } });
 // Doppelman: the caster's own shadow peels up off the ground beside them and
 // stands — a pool of dark spreading from their feet to where it rises, the
