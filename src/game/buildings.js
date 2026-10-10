@@ -86,6 +86,8 @@ export function installBuildings(game) {
           if (b) B.questIn.add(b);
         }
       }
+      // (who's about, once a frame: each door looks only through them, not through everyone on the island)
+      if (B.near.length) B.folk = game.actorsNear(p.x, p.y, 48);
       for (const b of B.near) B.door(b, p, dt);
       // walking in and out
       const room = w.roomOf(p);
@@ -107,8 +109,8 @@ export function installBuildings(game) {
       const locked = !broken && B.isLocked(b);
       let want = broken, blocking = false;
       if (!want) {
-        for (const a of game.actorsNear(d.mid.x, d.mid.y, 2.1)) {
-          if (!a.alive || a.state === 'dead' || a.onShip) continue;
+        for (const a of B.folk || game.actorsNear(d.mid.x, d.mid.y, 2.1)) {
+          if (!a.alive || a.state === 'dead' || a.onShip || w.dist2(a.x, a.y, d.mid.x, d.mid.y) > 2.1 * 2.1) continue;
           const q = bl(b, a.x, a.y, w);
           const dx = Math.abs(q.lx - d.lx), dy = Math.abs(q.lz + WALL_T / 2);
           // someone standing in the open doorway: don't shut it on them (just

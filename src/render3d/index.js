@@ -1135,7 +1135,7 @@ export class Renderer3D {
       near.push([a, dx, dy, d2]);
     }
     near.sort((a, b) => a[3] - b[3]);
-    let i = 0, made = 0;
+    let i = 0, made = 0, posed = 0;
     for (const [a, dx, dy, d2] of near) {
       seen.add(a);
       let v = this.actorViews.get(a);
@@ -1184,9 +1184,15 @@ export class Renderer3D {
       // the bones, the cloth, the face — it's out of sight, so nothing's lost)
       const sc = a.look?.scale || 1;
       if (a !== p && d2 > 64 && !_frus.intersectsSphere(_sph.set(_sphC.set(dx, gh + (a.z || 0) + sc, dy), 2.4 * sc + 1)) && (this.frame + i) % 6 !== 0) { i++; continue; }
+      // (and far off, a few pixels tall: posed every second or third frame — their
+      // animation runs on the clock, so they move as smoothly, just in coarser steps)
+      if (a !== p && d2 > 30 * 30 && !a.controller?.target && (this.frame + i) % (d2 > 50 * 50 ? 3 : 2) !== 0) { i++; continue; }
+      const tp = performance.now();
       v.update(a, env, this.ctx, { camYaw3, redraw: i < 18 || (this.frame + i) % 3 === 0 });
+      prof('e.pose', tp); posed++;
       i++;
     }
+    this.posedN = posed; this.nearN = near.length;
     for (const [a, v] of this.actorViews) {
       if (seen.has(a)) continue;
       this.detach(v.root); v.dispose?.();

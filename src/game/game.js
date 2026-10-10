@@ -161,10 +161,21 @@ export class Game {
     p.inCombat = this.combatT > 0 || !!this.engaged;
 
     // actors
+    this.frameNo = (this.frameNo || 0) + 1;
     for (let i = this.actors.length - 1; i >= 0; i--) {
       const a = this.actors[i];
       if (!a.alive) { this.actors.splice(i, 1); continue; }
-      if (a !== p && this.world.dist2(a.x, a.y, p.x, p.y) > 70 * 70 && !a.persistent) continue;
+      const d2 = a === p ? 0 : this.world.dist2(a.x, a.y, p.x, p.y);
+      if (d2 > 70 * 70 && !a.persistent) continue;
+      // (far off and going about their day, people think and walk every other
+      // frame, over the two frames' time: a crowded town costs half as much)
+      if (d2 > 40 * 40 && !a.persistent && !a.controller?.target && !a.inWater && !a.onShip && !a.deck) {
+        a._skipDt = (a._skipDt || 0) + simDt;
+        if (((this.frameNo || 0) + i) & 1) continue;
+        a.update(Math.min(0.1, a._skipDt), this); a._skipDt = 0;
+        continue;
+      }
+      a._skipDt = 0;
       a.update(simDt, this);
     }
     prof('s.actors', t0); t0 = performance.now();
