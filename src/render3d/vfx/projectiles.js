@@ -217,14 +217,14 @@ function draw(v, pr, r, Y, sc) {
       // missing from the end of their arm (chars3d.js bodyParts)
       const ow = pr.owner, L = ow?.look || {};
       if (ow && pr.sprite === 'barafist') ow._baraHand = performance.now() / 1000;
-      const R = 0.2 * s * (L.scale || 1);
+      const R = 0.3 * s * (L.scale || 1);
       const skin = col(L.skin || (pr.color && pr.color !== '#ffccbc' ? pr.color : '#f1c9a0'));
       const sleeve = col(L.coat || L.top || '#e53935');
       const roll = Math.sin(t * 9 + seed) * 0.35;
       putAlong(v.solids.fists, X, Y, Z, dx, 0, dz, R, R, roll, skin, OK.SKIN, 0, seed, 0);
       putAlong(v.solids.cuffs, X, Y, Z, dx, 0, dz, R, R, roll, sleeve, OK.PLAIN, 0, seed, 0);
-      trail(v, r, RK.SPEED, WHITE, 0.7, WHITE, 0.3, R * 0.6, 0.1, 6);
-      if (sp > 10) speedLines(v, X, Y, Z, dx, dz, R, seed, t);
+      trail(v, r, RK.SPEED, WHITE, 0.85, WHITE, 0.4, R * 0.8, 0.12, 8);
+      speedLines(v, X, Y, Z, dx, dz, R, seed, t);
       break;
     }
     case 'knife': {

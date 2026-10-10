@@ -1504,7 +1504,7 @@ sig('gura_tilt', {
 });
 // Chop-Chop: hands flung off like knives; a spinning top of a body; the Muggy Ball
 sig('bara_knives', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); sparkle(fx, px, py, 0.9, 4, ['#ffffff', '#eceff1']); fx.burst(px, py, 6, { angle: a.angle, spread: 0.8, speed: 6, kind: 'line', color: '#eceff1', z: 0.9, g: 0, life: 0.15, size: 0.05 }); } });
-sig('bara_senbei', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#ffcdd2'; fx.add('vortex', { x: actor.x, y: actor.y, follow: actor, r: 1.1, h: 0.4, kind: 'wind', life: s.dash.time + 0.1, spin: 14, arms: 3 }); } });
+sig('bara_senbei', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#ffcdd2'; fx.add('vortex', { x: actor.x, y: actor.y, follow: actor, r: 1.4, h: 0.5, kind: 'wind', life: s.dash.time + 0.15, spin: 18, arms: 5 }); for (let i = 0; i < 5; i++) fx.ring(actor.x, actor.y, 0.6, 1.5, i % 2 ? '#ffffff' : '#ffcdd2', 0.16, 0.06, { z: 0.55, flat: 1, delay: i * 0.06, add: true, follow: actor }); } });
 sig('bara_muggy', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); fx.burst(px, py, 6, { kind: 'spark', color: ['#ffab40', '#fff3c4'], speed: 3, z: 1, g: 2, life: 0.3, size: 0.08 }); smoke(fx, px, py, 1, 4, ['#9e9e9e', '#bdbdbd'], { size: 0.18 }); } });
 // Bomb-Bomb: every blow goes off
 sig('bomu_fist bomu_stomp', {
