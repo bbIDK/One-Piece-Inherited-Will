@@ -186,8 +186,12 @@ export class Debris {
     for (let i = 0; i < heap; i++) {
       const u = rnd(-0.5, 0.5), v = rnd(0, 1), edge = 1 - Math.max(Math.abs(u) * 2, Math.abs(v - 0.5) * 2);
       const s = rnd(0.6, 1.5);
-      const p = this.piece(b, base, u * fw * 0.95, Math.max(0.1, edge * H * 0.28 * rnd(0.5, 1)), -v * fd, s, s * rnd(0.3, 0.7), s * rnd(0.6, 1.1), Math.random() < 0.5 ? P.wall : Math.random() < 0.5 ? P.roof : P.wood, { delay: delay + 0.35 + rnd(0, 0.5), grow: 0.6 });
-      p.rest = true; p.rx = rnd(-0.5, 0.5); p.rz = rnd(-0.5, 0.5); p.ry += rnd(-1, 1);
+      const sy = s * rnd(0.3, 0.7);
+      // (a low mound on the ground it stood on, never stacked up in the air: lift is its height above the ground)
+      const lift = sy * 0.35 + Math.max(0, edge) * Math.min(1.1, H * 0.1) * rnd(0.4, 1);
+      const p = this.piece(b, base, u * fw * 0.95, 0, -v * fd, s, sy, s * rnd(0.6, 1.1), Math.random() < 0.5 ? P.wall : Math.random() < 0.5 ? P.roof : P.wood, { delay: delay + 0.35 + rnd(0, 0.5), grow: 0.6 });
+      p.h = view.ground(p.x, p.y) + lift; p.lift = lift;
+      p.rest = true; p.rx = rnd(-0.35, 0.35); p.rz = rnd(-0.35, 0.35); p.ry += rnd(-1, 1);
     }
   }
 
@@ -212,16 +216,28 @@ export class Debris {
     let H0 = b._holes.find((o) => Math.abs(o.lx - lx) + Math.abs(o.lz - lz) + Math.abs(o.hy - hy) < 1.1);
     if (H0) { H0.k = Math.min(2.2, H0.k + k * 0.6); const old = new Set(H0.parts); this.list = this.list.filter((p) => !old.has(p)); }
     else b._holes.push(H0 = { lx, lz, hy, k: Math.min(2, k) });
-    const R = 0.28 + 0.55 * H0.k;
-    const th = 0.08, dark = '#1a120c';
+    const R = 0.35 + 0.7 * H0.k;
+    const th = 0.08, dark = '#24170f', inner = '#4a3426';
     const sz = (w, h) => (along ? [w, h, th] : [th, h, w]);
     H0.parts = [];
-    // the breach: a few overlapping dark slabs, a ragged outline not a square
-    for (let i = 0; i < 4; i++) {
-      const w = R * rnd(0.9, 1.5), h = R * rnd(0.8, 1.3), ox = rnd(-0.25, 0.25) * R, oy = rnd(-0.25, 0.25) * R;
+    // the breach: overlapping slabs, a ragged outline not a square — the broken
+    // edge of the wall's thickness lighter round it, the dark of the room in the middle
+    for (let i = 0; i < 7; i++) {
+      const core = i >= 3;
+      const f = core ? 0.75 : 1;
+      const w = R * rnd(0.9, 1.5) * f, h = R * rnd(0.8, 1.3) * f, ox = rnd(-0.3, 0.3) * R, oy = rnd(-0.3, 0.3) * R;
       const [sx, sy, sz2] = sz(w, h);
-      const p = this.piece(b, base, lx + (along ? ox : 0), hy + oy, lz + (along ? 0 : ox), sx, sy, sz2, dark, { life: 0 });
-      p.rest = true; p.hole = true; p.rx = 0; p.rz = rnd(-0.4, 0.4);
+      const off = core ? out * 0.02 : 0;
+      const p = this.piece(b, base, lx + (along ? ox : off), hy + oy, lz + (along ? off : ox), sx, sy, sz2, core ? dark : inner, { life: 0 });
+      p.rest = true; p.hole = true; p.rx = 0; p.rz = rnd(-0.6, 0.6);
+      H0.parts.push(p);
+    }
+    // broken laths and a snapped beam across it, inside
+    for (let i = 0; i < 2 + Math.round(H0.k); i++) {
+      const len = R * rnd(1.2, 2);
+      const [sx, sy, sz2] = sz(len, 0.08);
+      const p = this.piece(b, base, lx + (along ? rnd(-0.3, 0.3) * R : out * 0.04), hy + rnd(-0.5, 0.5) * R, lz + (along ? out * 0.04 : rnd(-0.3, 0.3) * R), sx, sy, sz2, P.wood, { life: 0 });
+      p.rest = true; p.hole = true; p.rx = 0; p.rz = rnd(-0.9, 0.9);
       H0.parts.push(p);
     }
     // splintered boards and broken plaster round its edge, bent out toward the blow
@@ -260,9 +276,122 @@ export class Debris {
     }
   }
 
+  /**
+   * A building giving way by stages (game/destruction.js strike): at the first,
+   * a corner of its roof breaks up and slides off, a wall caves in; at the
+   * second, more of the roof goes, the walls open up on every side, and the
+   * whole of it leans — one more good blow and it's down.
+   */
+  stage(b, st, x, y) {
+    if (b.ruined) return;
+    const view = this.view, w = this.world;
+    const base = view.ground(b.x, b.y);
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+    const H = Math.max(3, view.builtHeight?.(b) || 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6);
+    const P = this.palette(b);
+    // (which end of it: the one nearest the blow)
+    const a = bangle(b), c = Math.round(Math.cos(a)), sn = Math.round(Math.sin(a));
+    const dx = w.dx(b.x, x), dy = y - b.y;
+    const near = Math.sign(dx * c - dy * sn) || 1;
+    // roof slabs and rafters breaking off that end and sliding to the ground
+    const nr = st === 1 ? 10 : 18;
+    for (let i = 0; i < nr; i++) {
+      const lx = near * rnd(0, fw / 2), lz = -rnd(0, fd);
+      const roof = Math.random() < 0.7;
+      const p = roof
+        ? this.piece(b, base, lx, H * rnd(0.8, 1.02), lz, rnd(0.9, 1.9), rnd(0.1, 0.18), rnd(0.7, 1.4), Math.random() < 0.85 ? P.roof : P.dark, { delay: rnd(0, 0.4), life: 0 })
+        : this.piece(b, base, lx, H * rnd(0.7, 0.95), lz, 0.16, 0.16, rnd(1.2, 2.6), P.wood, { delay: rnd(0, 0.4) });
+      p.vx = rnd(-1, 1) + near * c * rnd(1, 3); p.vy = rnd(-1, 1) - near * sn * rnd(1, 3); p.vh = rnd(0.5, 2.5);
+      p.wx = rnd(-3, 3); p.wy = rnd(-2, 2); p.wz = rnd(-3, 3);
+    }
+    // a breach in its roof on that side: the tiles gone, snapped rafters sticking up out of it
+    for (let i = 0; i < (st === 1 ? 4 : 8); i++) {
+      const lx = near * rnd(0.1, fw / 2 - 0.3), lz = -rnd(0.4, fd - 0.4);
+      const p = this.piece(b, base, lx, H * rnd(0.86, 0.97), lz, rnd(0.8, 1.4), 0.12, rnd(0.7, 1.2), '#24170f', { life: 0 });
+      p.rest = true; p.hole = true; p.rx = rnd(-0.5, 0.5); p.rz = rnd(-0.5, 0.5);
+      (b._holes ||= []).push({ lx, lz, hy: H, k: 0, parts: [p] });
+    }
+    for (let i = 0; i < (st === 1 ? 4 : 8); i++) {
+      const lx = near * rnd(0.2, fw / 2 - 0.2), lz = -rnd(0.3, fd - 0.3);
+      const p = this.piece(b, base, lx, H * rnd(0.9, 1.05), lz, 0.14, rnd(1.2, 2.2), 0.14, P.wood, { life: 0 });
+      p.rest = true; p.hole = true; p.rx = rnd(-0.8, 0.8); p.rz = rnd(-0.8, 0.8);
+      (b._holes ||= []).push({ lx, lz, hy: H, k: 0, parts: [p] });
+    }
+    // walls caving in: big ragged breaches on several sides, high and low
+    const holes = st === 1 ? 2 : 4;
+    for (let i = 0; i < holes; i++) {
+      const side = Math.floor(Math.random() * 4), u = rnd(0.2, 0.8);
+      const lx = side === 2 ? -fw / 2 : side === 3 ? fw / 2 : (u - 0.5) * fw, lz = side === 0 ? 0 : side === 1 ? -fd : -u * fd;
+      this.hole(b, base, lx, lz, rnd(1, Math.max(1.2, H * 0.75)), rnd(0.9, 1.6) + st * 0.2, P);
+    }
+    // masonry and plaster raining off it
+    for (let i = 0; i < 14 * st; i++) {
+      const s0 = rnd(0.25, 0.6);
+      const p = this.piece(b, base, rnd(-fw / 2, fw / 2), rnd(1, H * 0.9), -rnd(0, fd), s0, s0 * rnd(0.5, 1), s0, Math.random() < 0.6 ? P.wall : P.plaster, { chip: true, life: 40, delay: rnd(0, 0.5) });
+      this.throwFrom(p, b.x, b.y, 3);
+    }
+    // (the last stage: it leans away from the blows)
+    const lean = st >= 2 ? 0.075 : 0.03;
+    (this.leaning ||= new Map()).set(b, { x: rnd(-1, 1) * lean * 0.6, z: near * lean });
+  }
+
+  /**
+   * One of the town's loose things smashed (game/destruction.js smash): a tree
+   * snapped — its trunk in logs, its crown in green clumps — or a stall, lamp,
+   * well or fountain broken into its timber and stone, thrown from the blow.
+   * `lite`: one of a great many at once (an island levelled): fewer pieces.
+   */
+  smash(o, x, y, power, delay = 0, lite = false) {
+    const view = this.view, w = this.world;
+    const base = view.ground(o.x, o.y), s = o.s || 1;
+    const k = Math.min(12, 3 + Math.sqrt(power) * 0.15);
+    const add = (lx, ly, lz, sx, sy, sz, col, life = 0) => {
+      const p = this.add({ b: o, x: w.wx(o.x + lx), y: o.y + lz, h: base + ly, sx, sy, sz, col, vx: 0, vy: 0, vh: 0, rx: 0, ry: rnd(0, 6.28), rz: 0, wx: 0, wy: 0, wz: 0, t: -delay, rest: false, chip: !!life, life, grow: 0, sink: 0 });
+      this.throwFrom(p, x, y, k);
+      return p;
+    };
+    const L = lite ? 0.45 : 1;
+    if (o.kind === 'tree' || o.kind === 'bush' || o.kind === 'cactus') {
+      const tree = o.kind === 'tree';
+      const H = tree ? 4.5 * s : o.kind === 'cactus' ? 2.4 * s : 0.9 * s;
+      const sub = o.sub || '';
+      const leaf = /snow/.test(sub) ? ['#e3f2fd', '#4f7a5a'] : /sakura|blossom/.test(sub) ? ['#f8bbd0', '#f48fb1'] : /dead|spooky/.test(sub) ? ['#5d4037', '#4e342e'] : /pine/.test(sub) ? ['#2e6b3a', '#245a30'] : /palm|jungle/.test(sub) ? ['#4caf50', '#2e7d32'] : ['#5aa64a', '#3d8a3a'];
+      const bark = /palm/.test(sub) ? '#a1887f' : o.kind === 'cactus' ? '#558b2f' : '#6d4c41';
+      if (tree || o.kind === 'cactus') {
+        // the trunk, in two or three logs (the lowest snapped off at the stump, the stump left standing)
+        const st = this.add({ b: o, x: o.x, y: o.y, h: base + 0.25, sx: 0.4 * s, sy: 0.5, sz: 0.4 * s, col: bark, vx: 0, vy: 0, vh: 0, rx: 0, ry: 0, rz: 0, wx: 0, wy: 0, wz: 0, t: 0, rest: true, chip: false, life: 0, grow: 0, sink: 0 });
+        st.lift = 0.25;
+        const nl = tree ? 3 : 2;
+        for (let i = 0; i < nl; i++) { const p = add(0, 0.6 + (i + 0.5) * (H * 0.55) / nl, 0, 0.32 * s, (H * 0.55) / nl, 0.32 * s, bark); p.rx = rnd(-0.3, 0.3); }
+      }
+      // its crown, in clumps
+      const nc = Math.round((tree ? 9 : 4) * L);
+      for (let i = 0; i < nc; i++) { const c0 = rnd(0.5, 1.1) * s * (tree ? 1 : 0.6); add(rnd(-1, 1) * s, H * rnd(0.6, 1), rnd(-1, 1) * s, c0, c0 * rnd(0.6, 0.9), c0, Math.random() < 0.6 ? leaf[0] : leaf[1], 30); }
+      return;
+    }
+    // everything else: its timber, its stone, its cloth (stall awnings, tents)
+    const stone = /fountain|well|statue|totem|rock|crystal|cannon|mooring/.test(o.kind);
+    const cloth = /stall|tent|flag/.test(o.kind);
+    const big = /fountain|statue|windmill|waterwheel|tent|well/.test(o.kind);
+    const R = (big ? 1.4 : 0.6) * s, Hh = (big ? 2.4 : 1.2) * s;
+    const n = Math.round((big ? 22 : 8) * L);
+    const cols = stone ? ['#b0aaa4', '#9e9890', '#8a847c', '#c8c2ba'] : ['#8d6e63', '#6d4c41', '#a1887f', '#5d4037'];
+    for (let i = 0; i < n; i++) {
+      const sz = rnd(0.15, big ? 0.6 : 0.35) * s;
+      const slab = Math.random() < 0.4;
+      const col = cloth && Math.random() < 0.35 ? (o.color || o.awning || (Math.random() < 0.5 ? '#c62828' : '#f5f5f5')) : cols[Math.floor(Math.random() * cols.length)];
+      add(rnd(-R, R), rnd(0.1, Hh), rnd(-R, R), slab ? sz * 2.2 : sz, slab ? sz * 0.35 : sz * rnd(0.6, 1), slab ? sz * 1.4 : sz, col);
+    }
+    // (a fountain or well broken open spills its water)
+    if (/fountain|well/.test(o.kind)) for (let i = 0; i < 6 * L; i++) add(rnd(-R, R) * 0.6, 0.3, rnd(-R, R) * 0.6, rnd(0.3, 0.6), 0.05, rnd(0.3, 0.6), '#64b5f6', 12);
+  }
+
   /** b standing again: its rubble sinks away. */
   restore(b) {
     b._holes = null;
+    this.leaning?.delete(b);
+    const v = this.view.built?.get(b);
+    if (v) { v.rotation.x = 0; v.rotation.z = 0; }
     for (const p of this.list) if (p.b === b) { p.sink = 1; p.rest = true; }
   }
 
@@ -277,6 +406,8 @@ export class Debris {
         if (e.kind === 'fall') this.fall(e.b, e.x, e.y, e.power, e.delay || 0);
         else if (e.kind === 'chip') this.chip(e.b, e.x, e.y, e.n, e.k, e.hy);
         else if (e.kind === 'restore') this.restore(e.b);
+        else if (e.kind === 'stage') this.stage(e.b, e.stage, e.x, e.y);
+        else if (e.kind === 'smash') this.smash(e.b, e.x, e.y, e.power, e.delay || 0, e.lite);
         else if (e.kind === 'ice') this.iceShell(e.b, e.on, e.shatter);
         else if (e.kind === 'fixture') this.view.dropFixture?.(e.o);
         this.view.ruinProp?.(e);
@@ -304,10 +435,27 @@ export class Debris {
             p.vh = 0; p.vx *= 0.7; p.vy *= 0.7;
             // (lying down on its flattest side as it comes to rest)
             p.rx *= 0.8; p.rz *= 0.8; p.wx = p.wy = p.wz = 0;
-            if (Math.hypot(p.vx, p.vy) < 0.3) p.rest = true;
+            if (Math.hypot(p.vx, p.vy) < 0.3) { p.rest = true; p.lift = p.h - view.ground(p.x, p.y); }
           }
         }
       }
+    }
+    // the ground under the rubble moves (a quake's tilt healing, a crater filling): what lies on it
+    // goes with it, a slice of it each frame — never left hanging in the air or buried
+    if (L.length) {
+      const m = Math.min(L.length, 160);
+      for (let k = 0; k < m; k++) {
+        const p = L[(this.snapI = ((this.snapI || 0) + 1) % L.length)];
+        if (!p || !p.rest || p.hole || p.sink > 0 || p.lift === undefined) continue;
+        const h = view.ground(p.x, p.y) + p.lift;
+        if (Math.abs(h - p.h) > 0.03) { p.h = h; moving = true; }
+      }
+    }
+    // a building on its last legs leans (its model tipped a little off true)
+    if (this.leaning?.size) for (const [b, Ln] of this.leaning) {
+      if (b.ruined || !b.stage) { this.leaning.delete(b); const v = view.built?.get(b); if (v) { v.rotation.x = 0; v.rotation.z = 0; } continue; }
+      const v = view.built?.get(b);
+      if (v) { v.rotation.x = Ln.x; v.rotation.z = Ln.z; }
     }
     // (the ice round a frozen house, set where it stands)
     if (this.shells?.size) for (const [b, g] of this.shells) { g.position.set(world.dx(O.x, b.x), view.ground(b.x, b.y), b.y - O.y); g.rotation.y = bangle(b); }

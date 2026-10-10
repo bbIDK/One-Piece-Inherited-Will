@@ -44,6 +44,17 @@ export function structPower(h) {
   return (h.damage || 0) * k * f * f * (h.blast || h.heavy ? 1.3 : 1);
 }
 
+/**
+ * The town's loose things a blow can smash too (trees snapped, stalls and
+ * lamps knocked flat, a fountain or a well broken open): how much each takes.
+ */
+export const SMASH = {
+  tree: 70, bush: 6, lamp: 14, barrel: 8, crate: 8, cask: 8, fountain: 140, tent: 30, windmill: 260, campfire: 6,
+  well: 70, signboard: 12, stall: 30, statue: 160, bench: 10, cart: 22, fence: 8, haystack: 8, totem: 60, cactus: 18,
+  mushroom: 14, mooring: 20, table: 10, scarecrow: 10, crystal: 40, rock: 120, lantern: 8, flag: 10, cannon: 60, waterwheel: 120,
+};
+const smashable = (o) => SMASH[o.kind] !== undefined && !o.hidden && !o.ruined && !o.far && !o.unbreakable && !o.quest;
+
 export function installDestruction(game) {
   const D = {
     /** The rect a building stands on, as world { x0, y0, x1, y1 }. */
@@ -83,12 +94,51 @@ export function installDestruction(game) {
         b.hitT = game.time;
         if (!b.damaged) { b.damaged = true; (game.world.damaged ||= []).push(b); }
         if (b.hp <= 0) { D.collapse(b, x, y, pw, att, o); n++; continue; }
+        // (it gives a little at a time: its roof breaking up, the walls opening, the whole of it leaning — debris3d.js stage)
+        const frac = b.hp / (b.maxHp || buildingHp(b)), st = frac < 0.34 ? 2 : frac < 0.67 ? 1 : 0;
+        if (st > (b.stage || 0)) {
+          b.stage = st;
+          D.event({ kind: 'stage', b, stage: st, x, y });
+          const q = bfoot(b);
+          game.fx?.burst?.((q.x0 + q.x1) / 2, (q.y0 + q.y1) / 2, 14, { color: ['#d7ccc8', '#bcaaa4', '#efebe9'], speed: 2.5, spread: Math.PI * 2, z: 2.5, vz: 1, g: -0.2, life: 1.4, kind: 'smoke', size: 0.8, grow: 1.4, drag: 1.6 });
+          game.audio?.sfx('collapse', { x, y }, { w: 0.35 });
+        }
         // (bits of it knocked off, more the harder it's hit)
         // (and a hole punched in it there, bigger the bigger the blow against how stout it is: debris3d.js hole)
         D.event({ kind: 'chip', b, x, y, n: Math.min(10, 2 + Math.round(pw / 120)), k: Math.min(1.6, 0.25 + (pw * k) / (b.maxHp || buildingHp(b)) * 2.5) });
         if (Math.random() < 0.5) game.audio?.sfx('wallhit', { x, y });
       }
+      D.smashNear(x, y, r, power, att);
       return n;
+    },
+
+    /** The loose things round (x, y) a blow of `power` reaches: those it's enough for are smashed. */
+    smashNear(x, y, r, power, att, o = {}) {
+      const w = game.world;
+      if (!w?.objects || !(power > 0)) return 0;
+      let n = 0;
+      for (const p of w.objects.near(x, y, r + 1, smashable)) {
+        const d = w.distance(x, y, p.x, p.y);
+        if (d > r + 0.6 * (p.s || 1)) continue;
+        if (floorOf(p) || /dock|pier|bridge|quay|jetty|plank/.test(p.kind)) continue;
+        p.hp = (p.hp ?? SMASH[p.kind] * (p.s || 1)) - power * (1 - 0.5 * d / Math.max(0.5, r));
+        if (p.hp > 0) continue;
+        D.smash(p, x, y, power, att, { delay: o.speed ? d / o.speed : 0, lite: o.lite, long: o.long });
+        n++;
+      }
+      return n;
+    },
+
+    /** One loose thing smashed: gone from the world (its pieces are debris now) until the town's put right. */
+    smash(p, x, y, power, att, o = {}) {
+      const w = game.world;
+      if (p.ruined) return;
+      w.objects.ruin(p);
+      p.rebuildAt = game.time + REBUILD * (1 + Math.min(2, power / 2500)) * (o.long || 1);
+      (w.smashed ||= []).push(p);
+      D.event({ kind: 'fixture', o: p });
+      D.event({ kind: 'smash', b: p, x, y, power, delay: o.delay || 0, lite: !!o.lite });
+      if (!o.delay && Math.random() < 0.5) game.audio?.sfx(p.kind === 'tree' ? 'collapse' : 'wallhit', { x: p.x, y: p.y }, { w: 0.3 });
     },
 
     /**
@@ -189,6 +239,8 @@ export function installDestruction(game) {
       b.rebuildAt = game.time + REBUILD * (1 + Math.min(2, power / 2500)) * (o.long || 1);
       (w.ruins ||= []).push(b);
       D.event({ kind: 'fall', b, x, y, power, delay: o.delay || 0 });
+      // (and what stood round it — trees, lamps, a stall — goes down under it)
+      D.smashNear(cx, cy, span + 1.5, Math.max(power, 200), att, { lite: o.long > 1 });
       // whoever's under it is caught (from the one who brought it down: a crime on folk who did nothing)
       game.combat?.hitbox({ owner: att || null, x: cx, y: cy, shape: 'circle', range: span + 0.5, damage: 25 + Math.min(220, power * 0.06), knockback: 6, stun: 1, element: 'physical', duration: 0.1, radial: true, heavy: true, blast: true, hitsAll: !att, crush: true });
       // dust rolling out from its feet, the crash
@@ -214,6 +266,8 @@ export function installDestruction(game) {
         D.collapse(b, x, y, power, att, { delay: d / speed, long: 1.5 });
         n++;
       }
+      // everything else on it flattened with the wave: trees, stalls, the fountain, the well
+      n += D.smashNear(x, y, r, 1e6, att, { speed, lite: true, long: 1.5 });
       return n;
     },
 
@@ -221,7 +275,7 @@ export function installDestruction(game) {
       const w = game.world;
       if (!w) return;
       (w.ruinEvents ||= []).push(e);
-      if (w.ruinEvents.length > 400) w.ruinEvents.splice(0, w.ruinEvents.length - 400);
+      if (w.ruinEvents.length > 12000) w.ruinEvents.splice(0, w.ruinEvents.length - 12000);
       w.ruinRev = (w.ruinRev || 0) + 1;
     },
 
@@ -236,7 +290,7 @@ export function installDestruction(game) {
           const b = w.damaged[i];
           if (b.ruined) { b.damaged = false; w.damaged.splice(i, 1); continue; }
           if (game.time - (b.hitT || 0) < REBUILD * 0.6 || (p && w.distance(p.x, p.y, b.x, b.y) < 20)) continue;
-          b.hp = undefined; b.damaged = false; b.charred = false; w.damaged.splice(i, 1);
+          b.hp = undefined; b.stage = 0; b.damaged = false; b.charred = false; w.damaged.splice(i, 1);
           D.event({ kind: 'restore', b });
         }
       }
@@ -244,6 +298,18 @@ export function installDestruction(game) {
         const n = D.wrecked.length, b = D.wrecked[0];
         D.wrecked.length = 0;
         game.reputation?.crime?.(250000 * n, n > 1 ? `wrecked ${n} buildings` : `wrecked ${b.name ? 'the ' + b.name : 'a house'}`, { quiet: n < 3, rep: Math.min(10, n) });
+      }
+      // smashed trees and stalls back as they were, the same way (not under your nose)
+      if (w?.smashed?.length) {
+        for (let i = w.smashed.length - 1; i >= 0; i--) {
+          const o = w.smashed[i];
+          if (!o.ruined) { w.smashed.splice(i, 1); continue; }
+          if (game.time < o.rebuildAt || (p && w.distance(p.x, p.y, o.x, o.y) < 25 && game.time < o.rebuildAt + 240)) continue;
+          w.objects.restore(o);
+          o.hp = undefined;
+          w.smashed.splice(i, 1);
+          D.event({ kind: 'restore', b: o });
+        }
       }
       if (!w?.ruins?.length) return;
       for (let i = w.ruins.length - 1; i >= 0; i--) {
@@ -255,7 +321,7 @@ export function installDestruction(game) {
         w.objects.restore(b);
         for (const o of b.fixtures || []) { w.objects.restore(o); D.event({ kind: 'restore', b: o }); }
         b.fixtures = null;
-        b.hp = undefined; b.damaged = false; b.charred = false;
+        b.hp = undefined; b.stage = 0; b.damaged = false; b.charred = false;
         w.ruins.splice(i, 1);
         D.event({ kind: 'restore', b });
       }
