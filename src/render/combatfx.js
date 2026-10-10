@@ -85,7 +85,7 @@ function glow(fx, x, y, z, size, color, life = 0.2) {
   fx.particle({ x, y, z, size, color, kind: 'glow', life, g: 0, drag: 0, vz: 0, add: true });
 }
 function flames(fx, x, y, z, n, cols, o = {}) {
-  fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU, speed: o.speed ?? 2, z, vz: o.vz ?? 2.4, g: -2.5, life: o.life ?? 0.5, size: o.size ?? 0.2, grow: -0.15, color: cols, kind: 'fire', drag: 3 });
+  fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU, speed: o.speed ?? 2, z, vz: o.vz ?? 2.4, g: -2.5, life: o.life ?? 0.5, size: o.size ?? 0.2, grow: -0.15, color: cols, kind: 'fire', drag: 3, hot: o.hot });
 }
 function embers(fx, x, y, z, n, cols) {
   fx.burst(x, y, n, { speed: 2.4, z, vz: 3, g: 2, life: 0.8, size: 0.07, color: cols || ['#ffab40', '#ff6f00', '#ffd54f'], kind: 'ember', drag: 1.5 });
@@ -1475,13 +1475,21 @@ sig('magu_ryusei zushi_meteor mochi_chikara hana_gigante hana_clutch', {
 // ---- the newer techniques (data/fruits.js), each with its own look
 // Gum-Gum: a head flung back and swung like a bell's clapper; a fist tunnelling under them
 sig('gomu_bell', {
-  pull(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 1.4); fx.burst(px, py, 6, { angle: a.angle + Math.PI, spread: 0.5, speed: 6, kind: 'line', color: '#ffffff', z: 1, vz: 0, g: 0, life: 0.18, size: 0.05 }); },
+  // hands on them, and the neck stretches out behind: the head flung back to swing (chars3d.js bellHead)
+  pull(fx, actor, s, a) {
+    const [px, py] = fwd(actor, a.angle + Math.PI, 0.6);
+    fx.burst(px, py, 6, { angle: a.angle + Math.PI, spread: 0.5, speed: 6, kind: 'line', color: '#ffffff', z: 1.6, vz: 0.5, g: 0, life: 0.18, size: 0.05 });
+  },
+  // the head lands like the clapper of a bell: a ringing GONG, rings of sound shuddering out, a hard white flash
   hit(fx, actor, s, a, hb) {
     DEFAULTS.hit(fx, actor, s, a, hb);
-    const [px, py] = fwd(actor, hb.angle, 0.9);
-    vibration(fx, px, py, 1.5, 1.6, '#fff59d', 4);
-    fx.add('flare', { x: px, y: py, z: 1.5, size: 1.1, color: '#ffffff', life: 0.22 });
-    fx.callout(px, py - 2.2, 'GONG!', '#fff59d', 0.5, { life: 0.8 });
+    const [px, py] = fwd(actor, hb.angle, 1.0);
+    fx.add('impact', { x: px, y: py, z: 1.55, angle: hb.angle, size: 1.3, color: '#fff59d', core: '#ffffff', life: 0.22, spikes: 16, lines: 10 });
+    vibration(fx, px, py, 1.6, 2.2, '#fff59d', 5);
+    for (let i = 0; i < 3; i++) fx.ring(px, py, 0.1, 1.2 + i * 0.7, i ? '#fff59d' : '#ffffff', 0.35, 0.09 - i * 0.02, { z: 1.55, flat: 0, delay: i * 0.07, add: true });
+    fx.add('flare', { x: px, y: py, z: 1.55, size: 1.4, color: '#ffffff', life: 0.22 });
+    fx.callout(px, py - 2.2, 'GONG!', '#fff59d', 0.6, { life: 0.9 });
+    fx.shake(0.45, hb.angle);
   },
 });
 sig('gomu_mogura_pistol', {
@@ -1700,14 +1708,14 @@ sig('phoenix_fly phoenix_brand', {
   dash(fx, actor, s, a) {
     DEFAULTS.dash(fx, actor, s, a);
     actor._ghostTint = '#4dd0e1'; actor._ghostAdd = true;
-    flames(fx, actor.x, actor.y, 0.7, 14, ['#4dd0e1', '#80deea', '#fff59d'], { speed: 2 });
+    flames(fx, actor.x, actor.y, 0.7, 14, ['#29b6f6', '#4dd0e1', '#80deea'], { hot: '#fff3a0', speed: 2 });
   },
 });
 sig('phoenix_rebirth', { heal(fx, actor, s, a) { DEFAULTS.heal(fx, actor, s, a); fx.add('pillar', { x: actor.x, y: actor.y, r: 1, h: 5, color: '#4dd0e1', core: '#e0f7fa', life: 0.7, kind: 'fire' }); } });
 sig('phoenix_form', {
   // the arms catch light: blue flames bloom out along them (the wings are the animation's)
   buff(fx, actor, s, a, ex) {
-    flames(fx, actor.x, actor.y, 1.1, 20, ['#4dd0e1', '#80deea', '#fff59d'], { speed: 3, vz: 2, life: 0.8, size: 0.2 });
+    flames(fx, actor.x, actor.y, 1.1, 20, ['#29b6f6', '#4dd0e1', '#80deea'], { hot: '#fff3a0', speed: 3, vz: 2, life: 0.8, size: 0.2 });
     fx.ring(actor.x, actor.y, 0.2, 2, '#4dd0e1', 0.45, 0.12, { add: true });
     fx.add('pillar', { x: actor.x, y: actor.y, r: 0.7, h: 3.2, color: '#4dd0e1', core: '#fff59d', life: 0.45, kind: 'fire' });
   },

@@ -57,6 +57,8 @@ const sphere = (px, py, pz, r) => Math.sqrt(px * px + py * py + pz * pz) - r;
 export const FACE_SHAPES = ['oval', 'round', 'square', 'long', 'heart'];
 export const CHINS = ['pointed', 'round', 'strong'];
 export const NOSES = ['small', 'normal', 'big', 'button', 'hooked', 'long', 'red'];
+/** How the nose's tip turns, seen in profile. */
+export const NOSE_TIPS = ['straight', 'down', 'up'];
 const NOSE_DIM = {
   small: { len: 0.1, h: 1.0, r0: 0.028, tip: 0.045, wing: 0.034 },
   normal: { len: 0.14, h: 1, r0: 0.034, tip: 0.055, wing: 0.042 },
@@ -73,9 +75,10 @@ export function headParams(look) {
   let nose = NOSES.includes(look.noseShape) ? look.noseShape : look.nose === 'long' ? 'long' : look.nose === 'red' ? 'red' : fem ? 'small' : ['normal', 'normal', 'small', 'big', 'hooked'][(seed >> 1) % 5];
   if (look.race === 'mink' || look.muzzle || look.race === 'fishman') nose = 'flat';
   const q = (v, d) => Math.round((v ?? d) * 4) / 4; // quarter steps (shared geometry)
-  return { fem, shape, chin, nose, jaw: q(look.jaw, 0.5), cheek: q(look.cheek, fem ? 0.5 : 0.5), brow: q(look.brow, fem ? 0.25 : 0.6) };
+  const tip = NOSE_TIPS.includes(look.noseTip) ? look.noseTip : ['straight', 'straight', 'up', 'down'][(seed >> 3) % 4];
+  return { fem, shape, chin, nose, tip, jaw: q(look.jaw, 0.5), cheek: q(look.cheek, fem ? 0.5 : 0.5), brow: q(look.brow, fem ? 0.25 : 0.6) };
 }
-const headKey = (hp) => `${hp.fem ? 'f' : 'm'}.${hp.shape}.${hp.chin}.${hp.nose}.${hp.jaw}.${hp.cheek}.${hp.brow}`;
+const headKey = (hp) => `${hp.fem ? 'f' : 'm'}.${hp.shape}.${hp.chin}.${hp.nose}.${hp.tip}.${hp.jaw}.${hp.cheek}.${hp.brow}`;
 
 /** Resolved proportions for the distance field. */
 function headKind(hp) {
@@ -95,6 +98,7 @@ function headKind(hp) {
   k.cheek = hp.cheek;
   k.brow = hp.brow;
   k.nose = NOSE_DIM[hp.nose] || null;
+  k.tip = hp.tip;
   k.fem = hp.fem;
   return k;
 }
@@ -147,9 +151,13 @@ function sdfHead(x, y, z, k, outer = false) {
   if (n) {
     // (a sharp anime bridge: narrow, running straight down from between the brows)
     const tx = 0.92 + n.len * 1.45, ty = -0.4 * n.h;
-    let nd = capsule(x, y, z * 1.25, 0.92, 0.0, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
+    // (the tip in profile: straight on down the bridge, turned down over the
+    // nostrils, or turned up — a ski-slope bridge, the tip lifted and pushed out)
+    const T = k.tip === 'down' ? { x: -0.03, y: -0.055, b: 0 } : k.tip === 'up' ? { x: 0.035, y: 0.06, b: -0.03 } : { x: 0.012, y: -0.01, b: 0 };
+    let nd = capsule(x, y, z * 1.25, 0.92, 0.0, 0, tx + T.b, ty + 0.02 + T.b, 0, n.r0 * 1.1);
+    if (k.tip === 'up') nd = smin(nd, capsule(x, y, z * 1.25, tx + T.b, ty + 0.02 + T.b, 0, tx + T.x, ty + T.y, 0, n.r0), 0.04);
     if (n.hook) nd = smin(nd, sphere(x - 0.92 - n.len * 0.55, y + 0.19, z, n.r0 + n.hook), 0.05);
-    nd = smin(nd, sphere(x - tx + 0.01, y - ty, z, n.tip), 0.05);
+    nd = smin(nd, sphere(x - tx - T.x + 0.01, y - ty - T.y, z, n.tip), 0.05);
     nd = smin(nd, sphere(x - tx + 0.07, y - ty + 0.03, az - 0.07, n.wing), 0.04);
     d = smin(d, nd, 0.06);
   }

@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { VS_COMMON, FS_COMMON, vfxMaterial, dynAttr, upload } from './kit.js';
 
-export const VK = { BUBBLE: 0, FIRE: 1, DOME: 2, DARK: 3, ORB: 4, WATER: 5, GOO: 6, HAKI: 7 };
+export const VK = { BUBBLE: 0, FIRE: 1, DOME: 2, DARK: 3, ORB: 4, WATER: 5, GOO: 6, HAKI: 7, ROOM: 8 };
 export const TK = { BEAM: 0, PILLAR: 1, FUNNEL: 2, FIRE: 3, DARK: 4 };
 
 // ------------------------------------------------------------------ shells
@@ -38,6 +38,11 @@ const SHELL_VS = /* glsl */`
       float d = textureLod(uNoise, uv * vec2(3.0, 2.0) + vec2(uTime * 0.25, iPrm.z * 0.1), 0.0).r - 0.5;
       p += n * d * 0.18;
     } else if (kind == ${VK.DOME}) {
+      p.y *= iPrm.w;
+    } else if (kind == ${VK.ROOM}) {
+      // (the Room's skin breathes: slow, shallow swells crawling over it)
+      float d = textureLod(uNoise, uv * vec2(4.0, 2.0) + vec2(uTime * 0.05, -uTime * 0.04 + iPrm.z * 0.1), 0.0).r - 0.5;
+      p += n * d * 0.025;
       p.y *= iPrm.w;
     } else if (kind == ${VK.HAKI}) {
       // (a wave of will: squat, its skin rippling as it goes)
@@ -111,6 +116,26 @@ const SHELL_FS = /* glsl */`
       float inside = gl_FrontFacing ? 1.0 : 0.22;
       a = (0.07 + rim * 0.4 + max(lm, lp * 0.6) * 0.22 + scan * 0.18 + base * 0.2) * inside;
       c = mix(vCol.rgb * 0.9, vCol2.rgb * 1.3, max(rim, max(lm, scan) * 0.6));
+    } else if (kind == ${VK.ROOM}) {
+      // the Room: a clean bubble of pale blue — clear at its heart, the space
+      // inside just tinted, a soft glow toward its edge and a crisp darker
+      // line right on it, the way it's drawn in the anime; faint bands of light
+      // drifting slowly over it; a bright band where it meets the ground.
+      // k: the cast — a flash of white over the whole skin as it snaps open.
+      if (vY < -0.02) discard;
+      float sw = texture2D(uNoise, vUv * vec2(3.0, 1.5) + vec2(uTime * 0.03, -uTime * 0.05 + seed * 0.1)).g;
+      float band = smoothstep(0.55, 0.75, sw) * (1.0 - smoothstep(0.75, 0.95, sw));
+      float glow = pow(fr, 2.2);
+      float line = smoothstep(0.86, 0.9, fr) * (1.0 - smoothstep(0.965, 0.99, fr));
+      float base = 1.0 - smoothstep(0.0, 0.12, vY);
+      // (from inside — the camera in the Room, as it usually is — the far wall
+      // still tints everything past it: you see you're in it)
+      float inside = gl_FrontFacing ? 1.0 : 0.85;
+      c = mix(vCol.rgb, vCol2.rgb * 1.25, glow * 0.8 + band * 0.4 + base * 0.6);
+      c = mix(c, vCol.rgb * vec3(0.45, 0.62, 0.95), line);
+      c = mix(c, vec3(1.3), k);
+      a = (0.12 + glow * 0.4 + band * 0.1 + line * 0.6 + base * 0.35 + k * 0.5) * inside;
+      w = 0.15 + base * 0.4 + k * 0.6;
     } else if (kind == ${VK.HAKI}) {
       // Conqueror's going out: clear in the middle, a band of black at its
       // skin, the king's own colour burning along its very edge, torn by the

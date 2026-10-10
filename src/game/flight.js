@@ -402,7 +402,11 @@ function takeoffFx(a, game, S) {
   fx.burst(a.x, a.y, 10, { color: ['#d7ccc8', '#efebe9'], speed: 3, g: 1.2, z, vz: 0.6, life: 0.5, kind: 'dust', size: 0.2, grow: 0.4 });
   fx.ring(a.x, a.y, 0.2, 1.6, S.color || '#ffffff', 0.35, 0.1, { z, flat: 0.55, add: true });
   const c = S.color || '#ffffff';
-  if (S.style === 'phoenix') fx.burst(a.x, a.y, 18, { color: ['#4dd0e1', '#80deea', '#fff59d'], speed: 3, g: -1, z: z + 1, vz: 1.5, life: 0.7, kind: 'fire', size: 0.2 });
+  // (the wings unfurl in a rush of blue flame: tongues licking up, sparks of gold)
+  if (S.style === 'phoenix') {
+    fx.burst(a.x, a.y, 10, { color: ['#29b6f6', '#4fc3f7'], hot: '#e6fbff', speed: 2.5, g: -1, z: z + 1, vz: 1.5, life: 0.55, kind: 'fire', size: 0.18 });
+    fx.burst(a.x, a.y, 8, { color: '#ffd54a', speed: 4, g: 0, z: z + 1.1, vz: 1, life: 0.4, kind: 'spark', size: 0.05 });
+  }
   else if (S.style === 'dragon') fx.burst(a.x, a.y, 14, { color: ['#eceff1', '#cfd8dc', '#ffffff'], speed: 3, g: 0, z: z + 0.3, life: 0.9, kind: 'smoke', size: 0.5, grow: 0.6 });
   else if (S.style === 'wings') fx.burst(a.x, a.y, 10, { color: ['#212121', '#37474f'], speed: 3, g: 2, z: z + 1.2, vz: 1, life: 0.8, kind: 'leaf', size: 0.12 });
   else fx.burst(a.x, a.y, 12, { color: [c, '#ffffff'], speed: 2.5, g: 0, z: z + 0.2, life: 0.6, kind: S.ride === 'light' ? 'glow' : S.ride === 'sand' ? 'sand' : 'smoke', size: 0.3, grow: 0.3 });
@@ -419,8 +423,11 @@ function trailFx(a, game, S, dt) {
   const back = { vx: -(a.vx || 0) * 0.25, vy: -(a.vy || 0) * 0.25 };
   switch (S.style) {
     case 'phoenix':
-      // (blue flames streaming off the wings and the tail)
-      for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r() * 1.4, y: a.y + r() * 0.6, z: z + 1.1 + r() * 0.5, ...back, vz: 0.5, g: -0.6, life: 0.5, size: 0.16, grow: -0.12, color: ['#4dd0e1', '#80deea', '#26c6da', '#fff59d'][k + (Math.random() < 0.5 ? 0 : 2)], kind: 'fire' });
+      // (the wings are the flames: only a few sparks shed off the feather tips — cyan, now and then gold — streaking back)
+      if (Math.random() < 0.6) {
+        const side = Math.random() < 0.5 ? 1 : -1, c = Math.cos(a.facing), s = Math.sin(a.facing);
+        fx.particle({ x: a.x - s * side * 1.3 - c * 0.5, y: a.y + c * side * 1.3 - s * 0.5, z: z + 1.1 + r() * 0.3, ...back, vz: 0.3, g: 0, life: 0.35, size: 0.05, color: Math.random() < 0.25 ? '#ffd54a' : '#80e4ff', kind: 'spark' });
+      }
       break;
     case 'dragon':
       fx.particle({ x: a.x + r() * 1.6, y: a.y + r() * 0.8, z: z + 0.1, ...back, vz: -0.2, g: 0, life: 1.1, size: 0.45, grow: 0.5, color: Math.random() < 0.5 ? '#eceff1' : '#cfd8dc', kind: 'smoke' });

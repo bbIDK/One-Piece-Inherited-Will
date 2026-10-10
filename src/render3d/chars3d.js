@@ -39,6 +39,22 @@ const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _eyeP = new THREE.Vec
 const _sp3 = [0, 0, 0], _eu = new THREE.Euler(), _qh = new THREE.Quaternion(), _up3 = new THREE.Vector3(0, 1, 0);
 const _fq = new THREE.Quaternion(), _fq2 = new THREE.Quaternion();
 const _fs1 = new THREE.Vector3(), _fs2 = new THREE.Vector3();
+
+/**
+ * Gum-Gum Bell, the head's flight (the bones' frame: -x ahead, +y up), by
+ * the move's clock: hands on them first; then the head drawn back and up on a
+ * neck stretched out behind, quivering at full stretch; let go, it whips
+ * forward into theirs as the blow lands (0.45 s); then it snaps home.
+ */
+function bellHead(t, out) {
+  const e = (x) => 1 - (1 - x) * (1 - x);
+  if (t < 0.22 || t > 0.72) return null;
+  if (t < 0.37) { const k = e((t - 0.22) / 0.15); return out.set(1.7 * k, 0.45 * k + Math.sin(t * 90) * 0.02 * k, 0); }
+  if (t < 0.45) { const k = (t - 0.37) / 0.08, q = k * k; return out.set(1.7 - 2.55 * q, 0.45 - 0.55 * q, 0); }
+  if (t < 0.52) return out.set(-0.85, -0.1, 0);
+  const k = (t - 0.52) / 0.2, q = 1 - k * k * (0.6 + 0.4 * k);
+  return out.set(-0.85 * q, -0.1 * q, 0);
+}
 // knocked off your feet, on the way down (see ActorView.update): arched back
 // with the arms thrown up over the head, the legs going out from under you
 const FALLING = { ...LYING, l: -0.32, ht: -0.4, hF: [0.0, -0.33], hB: [-0.08, -0.29], eF: 0.5, eB: 0.5, fF: [0.17, -0.07], fB: [0.03, -0.02], face: 'hurt' };
@@ -209,6 +225,8 @@ class ActorView {
         o.reachR = R[0]; o.reachL = R[1];
         o.rubber = false; // (hands that hold on: never a rubber arm reaching after them)
       } else if (a.fruit === 'gomu') this.stretchTarget(a, ctx, s, o, dtv);
+      // (Gum-Gum Bell: the head flung back on its stretched neck and swung into theirs)
+      o.headOff = a.fruit === 'gomu' && a.action?.def?.id === 'gomu_bell' ? bellHead(a.action.t, this._bellOff || (this._bellOff = new THREE.Vector3())) : null;
       const knocked = pose.state === 'knocked' || pose.state === 'dead';
       let PP = P;
       if (a.isPlayer && ctx.mode === 'first' && P.b && P.b[0] < 0) PP = { ...P, b: [P.b[0] * 0.3, P.b[1]] };

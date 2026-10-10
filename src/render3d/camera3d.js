@@ -316,6 +316,13 @@ export class CameraRig {
       this.yaw = (((this.yaw + t * 2.4 * dt) % TAU) + TAU) % TAU;
       this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + l * 1.4 * dt));
     }
+    // (on the mast's rungs the camera eases round behind you — off the ladder
+    // side, never with the mast between it and you)
+    if (p.climb?.mast && !p.climb.top && !this.shot) {
+      const want = p.facing ?? this.yaw;
+      let d = ((want - this.yaw) % TAU + TAU * 1.5) % TAU - TAU / 2;
+      this.yaw = (((this.yaw + d * Math.min(1, dt * 2.5)) % TAU) + TAU) % TAU;
+    }
     const cam = this.camera;
     const sailing = p.mode === 'sail' && p.ship;
     const scale = p.look?.scale || 1;

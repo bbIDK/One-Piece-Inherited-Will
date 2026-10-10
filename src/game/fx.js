@@ -173,7 +173,7 @@ export class FX {
         z: (o.z ?? 0.6) + (o.zJitter ? (Math.random() - 0.5) * o.zJitter : 0), vz: o.vz !== undefined ? o.vz * (0.5 + Math.random()) : Math.random() * 3,
         g: o.g ?? 9, life: (o.life ?? 0.5) * (0.6 + Math.random() * 0.8), size: (o.size ?? 0.1) * (0.6 + Math.random() * 0.8),
         color: Array.isArray(o.color) ? o.color[Math.floor(Math.random() * o.color.length)] : o.color || '#fff',
-        kind: o.kind || 'spark', drag: o.drag ?? 3, grow: o.grow ?? 0, add: o.add, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 12,
+        kind: o.kind || 'spark', drag: o.drag ?? 3, grow: o.grow ?? 0, add: o.add, hot: o.hot, rot: Math.random() * TAU, vr: (Math.random() - 0.5) * 12,
       });
     }
     this._inBurst = false;

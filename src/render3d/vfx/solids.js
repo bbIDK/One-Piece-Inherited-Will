@@ -246,7 +246,7 @@ export class Solids {
     this.shards = new SolidBatch(shardGeo(), 640, 'vfx-shards');
     this.rocks = new SolidBatch(rockGeo(), 320, 'vfx-rocks');
     this.blocks = new SolidBatch(blockGeo(), 96, 'vfx-blocks');
-    this.fists = new SolidBatch(fistGeo(), 48, 'vfx-fists');
+    this.fists = new SolidBatch(fistGeo(), 96, 'vfx-fists');
     this.cuffs = new SolidBatch(cuffGeo(), 48, 'vfx-cuffs');
     this.limbs = new SolidBatch(limbGeo(), 48, 'vfx-limbs');
     this.knives = new SolidBatch(knifeGeo(), 64, 'vfx-knives');

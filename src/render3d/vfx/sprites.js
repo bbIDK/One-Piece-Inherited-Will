@@ -103,7 +103,8 @@ const FS = /* glsl */`
       float body = smoothstep(0.0, 0.05, d);
       float mid = smoothstep(0.24, 0.29, d);
       float core = smoothstep(0.47, 0.52, d);
-      vec3 rim = vCol.rgb * vec3(0.9, 0.3, 0.16);
+      // (a warm fire reddens at its rim; a cold one — blue, green, violet — deepens in its own hue)
+      vec3 rim = mix(vCol.rgb * vec3(0.32, 0.5, 0.9), vCol.rgb * vec3(0.9, 0.3, 0.16), step(vCol.b, vCol.r));
       c = mix(rim, vCol.rgb * 1.15, mid);
       c = mix(c, vCol2.rgb * 1.7, core);
       a = body;

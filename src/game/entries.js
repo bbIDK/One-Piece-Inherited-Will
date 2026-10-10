@@ -118,7 +118,13 @@ export function cycleForm(game, p) {
   const f = FRUITS[p?.fruit];
   if (!f) { game.log('You have no Devil Fruit power.', '#ff8a80'); return false; }
   const order = [...(f.forms || []).map((F) => F.id), ...(f.awakening ? ['awake'] : [])].filter((id) => !formLock(p, id));
-  if (!order.length) { game.log(`No form of the ${f.name} to switch to yet: they open with mastery (Skills, K).`, '#ffab91'); return false; }
+  if (!order.length) {
+    const first = (f.forms || [])[0];
+    const why = first ? formLock(p, first.id) : null;
+    game.log(`No form of the ${f.name} to switch to yet${first ? ` — ${first.name}: ${why || 'locked'}` : ''}. Forms open with fruit mastery (Tab → Skills).`, '#ffab91');
+    game.ui?.toast?.('No form yet', first ? `${first.name}: ${why || 'locked'}` : 'Forms open with mastery', '#ffab91');
+    return false;
+  }
   const cur = movesetKind(p) === 'fruit' ? formBuff(p)?.form || null : null;
   const i = cur ? order.indexOf(cur) : -1;
   // (the last one on: back to the base set)

@@ -50,7 +50,7 @@ export function drawParticles(v, parts) {
         S.put(SK.DUST, X, Y, Z, sz * 1.4, c, al, c, 0, p.rot || 0, (p.max * 89.1) % 50, k);
         break;
       case 'fire':
-        S.put(SK.FIRE, X, Y, Z, sz * (0.75 + 0.55 * life) * 1.6, c, Math.min(1, al * 1.2), HOT, add ? 0.7 : 0.2, 0, (p.max * 71.9) % 50, k);
+        S.put(SK.FIRE, X, Y, Z, sz * (0.75 + 0.55 * life) * 1.6, c, Math.min(1, al * 1.2), p.hot ? col(p.hot) : HOT, add ? 0.7 : 0.2, 0, (p.max * 71.9) % 50, k);
         break;
       case 'glow':
         S.put(SK.GLOW, X, Y, Z, sz, c, al, lit ? WHITE : c, lit, 0, 0, k);

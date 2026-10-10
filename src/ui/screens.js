@@ -5,7 +5,7 @@ import { MALE_FIRST, FEMALE_FIRST, SURNAMES } from '../data/names.js';
 import { RACES, RARITY, makeLook, raceLabel, MINK_KINDS, FISHMAN_KINDS } from '../data/races.js';
 import { outfitOf } from '../render3d/chars/body.js';
 import { EYES_M, EYES_F, EYE_NAMES, eyeShapeOf } from '../render3d/chars/face.js';
-import { headParams, FACE_SHAPES, CHINS, NOSES } from '../render3d/chars/build.js';
+import { headParams, FACE_SHAPES, CHINS, NOSES, NOSE_TIPS } from '../render3d/chars/build.js';
 import { FRAME, FRAMES_M, FRAMES_F, FRAME_NAMES, frameId } from '../render3d/chars/bones.js';
 import { LEGENDS } from '../data/dreams.js';
 import { TRAITS, PERKS, perkLevel, perkCost, rollBirth, dChance, nameWithD, weaponFromChar } from '../game/lineage.js';
@@ -337,6 +337,9 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
           row('Jaw', chips(L.jaw ?? 0.5, [0.25, 0.5, 0.75, 1], ['Narrow', 'Medium', 'Wide', 'Very wide'], (v) => { L.jaw = v; })),
           row('Chin', chips(headParams(L).chin, CHINS, ['Pointed', 'Round', 'Strong'], (v) => { L.chin = v; })),
           race !== 'mink' && race !== 'fishman' ? row('Nose', chips(headParams(L).nose, NOSES, ['Small', 'Normal', 'Big', 'Button', 'Hooked', 'Long', 'Red ball'], (v) => { L.noseShape = v; L.nose = v === 'long' ? 'long' : v === 'red' ? 'red' : undefined; })) : null,
+          race !== 'mink' && race !== 'fishman' && !['long', 'red'].includes(headParams(L).nose) ? row('Nose tip', chips(headParams(L).tip, NOSE_TIPS, ['Straight', 'Downturned', 'Upturned'], (v) => { L.noseTip = v; })) : null,
+          row('Eyebrows', chips(L.browHeight || 'mid', ['low', 'mid', 'high'], ['Low-set', 'Middle', 'High-set'], (v) => { L.browHeight = v; })),
+          row('Brow shape', chips(L.browShape || 'natural', ['natural', 'arched', 'straight', 'thick', 'thin'], ['Natural', 'Arched', 'Straight', 'Thick', 'Thin'], (v) => { L.browShape = v; })),
           row('Cheekbones', chips(L.cheek ?? 0.5, [0, 0.5, 1], ['Soft', 'Defined', 'High'], (v) => { L.cheek = v; })),
           row('Brow', chips(headParams(L).brow, [0, 0.5, 1], ['Smooth', 'Medium', 'Heavy'], (v) => { L.brow = v; })),
           row('Teeth', chips(L.sharpTeeth ? 'sharp' : 'normal', ['normal', 'sharp'], ['Normal', 'Sharp'], (v) => { L.sharpTeeth = v === 'sharp'; })),

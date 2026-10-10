@@ -624,6 +624,8 @@ function controlsSection(game, rerender) {
     h('div.key-grid', Array.from({ length: SKILL_SLOTS }, (_, i) => slot('skills', i, `Skill ${i + 1}`, ms?.skills[i] ? `· ${ms.skills[i].def.name}` : ''))),
     h('h4.grp', 'Haki keys'),
     h('div.key-grid', Array.from({ length: HAKI_SLOTS }, (_, i) => slot('haki', i, `Haki ${i + 1}`, hg?.rows.find((r) => r.slot === i) ? `· ${hg.rows.find((r) => r.slot === i).def.name}` : i === 0 ? '· a king\'s Conqueror\'s' : ''))),
+    h('h4.grp', 'Form key'),
+    h('div.key-grid', slot('form', 0, 'Switch form', '· Gears, Monster Point, awakening… (the fruit\'s forms in turn, then back)')),
     h('div.set-row', h('button.btn', { on: { click: () => { resetKeys(s); game.applySettings(true); game.ui.cache.skills = null; rerender(); } } }, 'Back to the default keys')),
     h('details.game-keys', h('summary', 'The keys the game keeps'),
       h('div.key-grid', [...uses].map(([what, ks]) => h('div.key-row', h('span.nm', what[0].toUpperCase() + what.slice(1)), h('span', ks.map((k) => h('kbd.keycap', keyLabel(k)))))))));

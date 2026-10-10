@@ -667,22 +667,42 @@ SHAPES.haoshoku = {
 };
 
 /**
- * The Room (Ope Ope): a translucent pale-blue dome where it was cast, a thin
- * bright rim round its skin and where it meets the ground, lines over it, a
- * faint square grid on its floor and a scan ring sweeping out across it.
- * Drawn for a 'dome' or a 'zone' of kind 'room', wherever the shape is
- * (a zone stays where it was put).
+ * The Room (Ope Ope): a clean bubble of pale blue where it was cast. It snaps
+ * open from the caster's raised palm — a small bright sphere bursting out to
+ * its full size with a little overshoot, a white flash across its skin and a
+ * ring racing over the ground ahead of it — and then simply hangs there:
+ * clear at its heart, a soft glow and a crisp line at its edge, a bright band
+ * where it meets the ground, a few pale motes drifting up inside it. Drawn
+ * for a 'dome' or a 'zone' of kind 'room' (a zone stays where it was put).
  */
 function room(v, s, R, a) {
   const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s);
   const c = col(s.color || '#81d4fa');
-  // (lines and rim a pale ice blue, the skin tinting what's inside rather than lighting it up)
-  v.shells.put(VK.DOME, X, G, Z, R, 0, 1, 0, 1, c, a, ROOM_LINE, 0.2, 0, s.seed, (s.hk ?? 0.55) * 1.6);
-  const patch = v.patch(s, s.x, s.y, R + 0.3);
-  v.decal(patch, s.x, s.y, R, 0, SF.ZONE, c, a, WHITE, 0.3, 0, s.seed, ZK.room, 0, 0, 10);
-  v.groundRing(patch, s.x, s.y, R, 0.07, c, a * 0.85, WHITE, 1, 0.6, 0, 0, 0, 9, 0, s.seed, 0);
-  const ph = (v.time * 0.5) % 1;
-  v.groundRing(patch, s.x, s.y, R * ph, 0.035, c, a * 0.45 * (1 - ph), WHITE, 1, 0.5, 0, 0, 0, 9, 0, s.seed, 0);
+  const age = s.age || 0;
+  // (opening: out from nothing in a quarter second, a touch past full and back)
+  const open = age < 0.25 ? easeOut(age / 0.25) * 1.06 : age < 0.4 ? 1.06 - 0.06 * easeOut((age - 0.25) / 0.15) : 1;
+  const Rr = s.r * open;
+  if (Rr < 0.05) return;
+  const flash = Math.max(0, 1 - age / 0.3);
+  v.shells.put(VK.ROOM, X, G, Z, Rr, 0, 1, 0, 1, c, a, ROOM_LINE, 0.2, flash * flash, s.seed, 1);
+  const patch = v.patch(s, s.x, s.y, Rr + 0.6);
+  // its foot on the ground: a crisp bright line, a faint tint inside
+  v.groundRing(patch, s.x, s.y, Rr, 0.05, c, a * 0.95, WHITE, 1, 0.75, 0, 0, 0, 9, 0, s.seed, 0);
+  v.decal(patch, s.x, s.y, Rr, 0, SF.ZONE, c, a * 0.6, WHITE, 0.15, 0, s.seed, ZK.room, 0, 0, 10);
+  // the opening's shock: a ring racing out over the ground just ahead of the skin
+  if (age < 0.5) {
+    const q = age / 0.5;
+    v.groundRing(patch, s.x, s.y, Rr * (0.9 + q * 0.25), 0.12 * (1 - q), WHITE, a * (1 - q), c, 1, 0.9, 0, 0, 0, 9, 0, s.seed, 0);
+  }
+  // pale motes drifting slowly up inside it (little cubes, Ope's mark)
+  const t = v.time;
+  for (let i = 0; i < 12; i++) {
+    const ph = (t * 0.12 + hash(s.seed + i * 7)) % 1;
+    const th = hash(s.seed + i * 3) * TAU + t * 0.05, rr = Rr * Math.sqrt(hash(s.seed + i * 5)) * 0.85;
+    const h = ph * Rr * 0.8;
+    if (Math.hypot(rr, h) > Rr * 0.92) continue;
+    v.sprites.put(SK.SQUARE, X + Math.cos(th) * rr, G + 0.2 + h, Z + Math.sin(th) * rr, 0.07, c, a * Math.sin(ph * PI) * 0.7, WHITE, 0.6, t * 0.8 + i, i, ph);
+  }
 }
 
 /** A hex-celled barrier wall curving round the front of an actor (Bari Bari). */
@@ -855,7 +875,7 @@ SHAPES.meteor = {
     const kind = s.kind || 'rock';
     if (kind === 'mochi') v.shells.put(VK.GOO, px, py, pz, R, D[0], D[1], D[2], 1.15, col('#fff8e1'), a, col('#bcaaa4'), 0, k, s.seed);
     else if (kind === 'hand') putAlong(v.solids.blocks, px, py, pz, -D[0], -D[1], -D[2], R * 1.6, R * 1.6, s.seed, col(s.color || '#f1c9a0'), OK.SKIN, 0, s.seed, 0);
-    else if (kind === 'fist') putAlong(v.solids.blocks, px, py, pz, D[0], D[1], D[2], R * 1.8, R * 1.8, s.seed, col(s.color || '#bf360c'), OK.MAGMA, 0, s.seed, 1);
+    else if (kind === 'fist') putAlong(v.solids.fists, px, py, pz, D[0], D[1], D[2], R * 1.3, R * 1.3, s.seed, col(s.color || '#bf360c'), OK.MAGMA, 0, s.seed, 1);
     else putAlong(v.solids.rocks, px, py, pz, D[0], D[1], D[2], R * 1.1, R * 1.2, v.time * 2 + s.seed, col(s.color || '#5d4037'), OK.MAGMA, 0, s.seed, 1);
     // a fiery trail back up its path
     if (kind !== 'hand') {
@@ -1205,16 +1225,20 @@ SHAPES.gatling = {
       const th = ang + (hash(seed + 3) - 0.5) * (s.arc || 0.9) * (big > 1.5 ? 0.6 : 1);
       const ct = Math.cos(th), st = Math.sin(th);
       const px = X + ct * d, pz = Z + st * d, py = G + (1.1 + (hash(seed + 7) - 0.5) * 0.7) * sc;
-      const R = 0.12 * big * sc;
-      const w0 = 0.075 * sc * Math.min(big, 1.7), w1 = 0.062 * sc * Math.min(big, 2);
+      const R = 0.16 * big * sc;
+      const w0 = 0.075 * sc * Math.min(big, 1.7), w1 = 0.065 * sc * Math.min(big, 2);
+      const roll = (hash(seed + 11) - 0.5) * 0.7;
       for (let b = 0; b < 3; b++) {
-        // (the blur: copies trailing back the way it swung, fainter each)
-        const off = b * 0.14 * sc * side, al = a * pop * (b === 0 ? 0.92 : b === 1 ? 0.34 : 0.15);
-        const ox = -st * off, oz = ct * off;
-        const ex = px - ct * R + ox, ez = pz - st * R + oz;
+        // the blur: the arm as it was a moment back, swung off to the side it
+        // came from — a solid fist and arm in front, two fainter copies behind
+        const off = b * 0.16 * sc * side, al = a * pop * (b === 0 ? 1 : b === 1 ? 0.42 : 0.18);
+        const ox = -st * off, oz = ct * off, oy = -b * 0.03 * sc;
+        // (the wrist, where the arm meets the fist)
+        const ex = px - ct * R * 0.7 + ox, ey = py + oy, ez = pz - st * R * 0.7 + oz;
         v.ribbons.start(RK.TUBE, RM.FACE, skin, al, ink, 0)
-          .point(shx, shy, shz, w0).point((shx + ex) * 0.5, (shy + py) * 0.5 + 0.03 * sc, (shz + ez) * 0.5, (w0 + w1) * 0.5).point(ex, py, ez, w1).finish();
-        putAlong(v.solids.blocks, px + ox, py, pz + oz, ct, 0, st, R * 2.1, R * 1.9, seed, skin, OK.SKIN, b === 0 ? 0 : b === 1 ? 0.6 : 0.82, seed, 0);
+          .point(shx, shy, shz, w0).point((shx + ex) * 0.5, (shy + ey) * 0.5 + 0.04 * sc, (shz + ez) * 0.5, (w0 + w1) * 0.5).point(ex, ey, ez, w1).finish();
+        // (the copies crumble away: only the real one is whole)
+        putAlong(v.solids.fists, px + ox, py + oy, pz + oz, ct, 0, st, R, R, roll, skin, OK.SKIN, b === 0 ? 0 : b === 1 ? 0.45 : 0.75, seed, 0);
       }
       // speed lines streaming off the fist
       v.ribbons.start(RK.SPEED, RM.FACE, WHITE, a * 0.75 * pop, WHITE, 0.4)

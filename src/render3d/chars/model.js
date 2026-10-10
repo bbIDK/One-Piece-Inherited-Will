@@ -373,6 +373,8 @@ export class CharacterModel {
       bones[i].position.copy(rig.pos[i]);
       bones[i].quaternion.copy(rig.quat[i]);
     }
+    // (a head flung off on a stretched neck: Gum-Gum Bell — chars3d.js bellHead)
+    if (o.headOff) bones[B.head].position.add(o.headOff);
     for (const i of LIMBS) bones[i].scale.set(1, rig.len[i], 1);
     // the rubber chains: stretched along with the forearm (or shin) at rest, their own length when it runs out
     for (let k = 0; k < 2; k++) {

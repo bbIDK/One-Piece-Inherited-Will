@@ -89,6 +89,10 @@ const BROWS = {
   neutral: 'M0.2 -0.19 Q0.4 -0.3 0.6 -0.22 M-0.2 -0.19 Q-0.4 -0.3 -0.6 -0.22',
 };
 // men: thick, straight and low over the eyes; women: thin and arched
+// (brow height: an offset in the painting; shape: how deep its curve, how thick its line)
+const BROW_Y = -0.21;
+const BROW_HEIGHTS = { low: 0.05, mid: 0, high: -0.06 };
+const BROW_SHAPES = { natural: { arch: 1, w: 1 }, arched: { arch: 1.9, w: 0.95 }, straight: { arch: 0.25, w: 1 }, thick: { arch: 0.9, w: 1.55 }, thin: { arch: 1.1, w: 0.6 } };
 const BROWS_M = {
   fierce: 'M0.14 -0.08 Q0.36 -0.17 0.64 -0.27 M-0.14 -0.08 Q-0.36 -0.17 -0.64 -0.27',
   worried: 'M0.18 -0.27 Q0.42 -0.27 0.62 -0.14 M-0.18 -0.27 Q-0.42 -0.27 -0.62 -0.14',
@@ -208,7 +212,7 @@ export function faceKey(look) {
   const skin = look.furWhite ? '#fafafa' : (look.fur && look.furFace ? look.fur : look.skin);
   return `${eyeShapeOf(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.fem ? 'F' : 'M'}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === 'mink' ? 1 : 0}`
     + `${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.scarCheek ? 1 : 0}${look.goggles === true ? 1 : 0}`
-    + `|${look.kind === 'Panda' ? 'P' : ''}|${look.nose || (look.kind === 'Saw Shark' ? 'saw' : '')}|${look.fem ? 'F' : ''}`;
+    + `|${look.kind === 'Panda' ? 'P' : ''}|${look.nose || (look.kind === 'Saw Shark' ? 'saw' : '')}|${look.fem ? 'F' : ''}|${look.browHeight || ''}${look.browShape || ''}`;
 }
 
 // ------------------------------------------------------------------ painting
@@ -384,7 +388,13 @@ export function paintFace(g, look, X) {
   drawMouth(g, look, X);
   const BR = look.fem ? BROWS_F : BROWS_M;
   g.save(); g.translate(0, EYE_LIFT);
-  g.lineWidth = look.fem ? 0.062 : 0.1; g.strokeStyle = brow; g.stroke(pp(BR[X.brow] || BR.neutral));
+  // the brows: set low (close over the eyes) or high, and their shape —
+  // arched, straight, thick or thin — the expression bending them as ever
+  const bh = BROW_HEIGHTS[look.browHeight] || 0, bs = BROW_SHAPES[look.browShape] || BROW_SHAPES.natural;
+  g.save();
+  g.translate(0, bh + BROW_Y); g.scale(1, bs.arch); g.translate(0, -BROW_Y);
+  g.lineWidth = (look.fem ? 0.062 : 0.1) * bs.w; g.strokeStyle = brow; g.stroke(pp(BR[X.brow] || BR.neutral));
+  g.restore();
   if (look.thirdEye) {
     g.fillStyle = '#ffffff'; g.fill(pp(THIRD)); g.lineWidth = 0.025; g.strokeStyle = INK; g.stroke(pp(THIRD));
     g.fillStyle = hex(look.eyeColor, '#8e44ad'); g.beginPath(); g.ellipse(0, -0.11, 0.06, 0.1, 0, 0, TAU); g.fill();

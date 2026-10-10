@@ -171,15 +171,13 @@ const FS = /* glsl */`
           a = (1.0 - smoothstep(0.96, 1.0, r)) * 0.22 + rim * 0.6 + ripple * 0.5;
           c = mix(vCol.rgb, vCol2.rgb * 1.6, max(rim, ripple));
         } else if (zk == ${ZK.room}) {
-          // the Room's floor: a faint square grid (the cube-cutting feel of
-          // the Ope Ope), a bright rim where the dome meets the ground
-          vec2 g = abs(fract(q * 4.0 + 0.5) - 0.5);
-          float line = 1.0 - smoothstep(0.012, 0.03, min(g.x, g.y));
+          // the Room's floor: the pale blue it tints the ground, deepening
+          // toward its edge (no pattern: the skin over it carries the look)
           float inside = 1.0 - smoothstep(0.95, 0.99, r);
           float rim = 1.0 - smoothstep(0.0, 0.035, abs(r - 0.975));
-          a = inside * (0.05 + 0.2 * line) + rim * 0.6;
-          c = mix(vCol.rgb, vCol2.rgb * 1.3, max(rim, line * 0.5));
-          w = 0.3 + 0.3 * rim;
+          a = inside * (0.06 + 0.16 * smoothstep(0.4, 0.95, r)) + rim * 0.5;
+          c = mix(vCol.rgb, vCol2.rgb * 1.3, rim);
+          w = 0.2 + 0.3 * rim;
         } else if (zk == ${ZK.ice}) {
           float cell = texture2D(uNoise, q * 1.1 + seed).a;
           float edge = 1.0 - smoothstep(0.02, 0.08, cell);
