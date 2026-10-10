@@ -65,7 +65,8 @@ export function pressShipButton(game) {
   }
   if (st.mode === 'sails') {
     const s = st.ship;
-    if (s.def.oarsOnly) { game.log('A rowboat has no sail: sit at her oars (E) and row her.', '#b0bec5'); return false; }
+    // (a rowboat has no sail: the button's blank by her, and does nothing)
+    if (s.def.oarsOnly) return false;
     s.setSails(!st.on);
     game.log(st.on ? `Sails in: the ${s.name} slows.` : `All sail set on the ${s.name}!`, '#ffe082');
     return true;

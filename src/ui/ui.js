@@ -104,7 +104,10 @@ export class UI {
     // weapon, your Devil Fruit, one of its forms (hotbar.js). Click a slot to
     // use it; drag slots to rearrange them. With the Inventory or Skills open
     // it's where you drop them (or click a slot to put what you picked there).
+    // (two wings either side of the ship button, so it's always dead centre:
+    // Q and F hang off the left wing, the Haki toggles off the right)
     E.hotbar = h('div.hotbar');
+    E.hbL = h('div.hb-wing.l'); E.hbR = h('div.hb-wing.r');
     // dodging (Q) and blocking (F), left of the hotbar: no stamina, they come
     // back on cooldowns — a dodge after a moment, a guard smashed aside by a
     // heavy blow after a little longer
@@ -114,7 +117,7 @@ export class UI {
       a.el.append(h('span.ico', uiImg(k, 28)), h('span.k', key), a.cd);
       if (k === 'dodge') { a.el.classList.add('interactive'); a.el.addEventListener('click', () => { if (!this.blocksInput()) this.game?.player?.controller?.requestDodge?.(); }); }
       E.acts[k] = a;
-      E.hotbar.appendChild(a.el);
+      E.hbL.appendChild(a.el);
     }
     E.slots = [];
     for (let i = 0; i < HOTBAR_SIZE; i++) {
@@ -144,11 +147,10 @@ export class UI {
       E.slots.push(s);
       // (the ship button, in the middle of them: see game/shipcall.js)
       if (i === HOTBAR_SIZE / 2) {
-        E.shipBtn = h('div.shipbtn.interactive', { title: 'Your ship' }, h('span.ico', uiImg('ship', 30)), h('span.lbl', 'Ship'));
+        E.shipBtn = h('div.shipbtn.interactive', { title: 'Your ship' }, h('span.lbl', 'Ship'));
         E.shipBtn.addEventListener('click', () => { if (!this.blocksInput() && this.game) { pressShipButton(this.game); this.shipT = 0; } });
-        E.hotbar.appendChild(E.shipBtn);
       }
-      E.hotbar.appendChild(s.el);
+      (i < HOTBAR_SIZE / 2 ? E.hbL : E.hbR).appendChild(s.el);
     }
     E.toggles = {};
     for (const t of HAKI_TOGGLES) {
@@ -162,8 +164,9 @@ export class UI {
         inp.simKey(t.key, true); inp.simKey(t.key, false);
       });
       E.toggles[t.type] = { el, k };
-      E.hotbar.appendChild(el);
+      E.hbR.appendChild(el);
     }
+    E.hotbar.append(E.hbL, E.shipBtn, E.hbR);
     // the bottom of the screen: your health and Haki over the hotbar, the ship button at its heart
     this.hud.appendChild(E.hotbar);
     // the interaction prompt; tapping it does the same as E
@@ -651,9 +654,12 @@ export class UI {
       E.shipBtn.classList.toggle('none', st.mode === 'none');
       E.shipBtn.classList.toggle('sails', st.mode === 'sails');
       E.shipBtn.classList.toggle('up', st.mode === 'sails' && !!st.on);
-      const lbl = st.mode === 'none' ? 'No ship' : st.mode === 'call' ? 'Call ship' : st.on ? 'Furl sails' : 'Set sail';
+      // (a rowboat has no sail to set: the circle stays blank by her)
+      const oars = st.mode === 'sails' && !!st.ship?.def?.oarsOnly;
+      E.shipBtn.classList.toggle('blank', oars);
+      const lbl = oars ? '' : st.mode === 'none' ? 'No ship' : st.mode === 'call' ? 'Call ship' : st.on ? 'Furl sails' : 'Set sail';
       E.shipBtn.lastChild.textContent = lbl;
-      E.shipBtn.title = st.mode === 'none' ? 'You don\'t own a ship: the shipwright on any pier sells them.'
+      E.shipBtn.title = oars ? '' : st.mode === 'none' ? 'You don\'t own a ship: the shipwright on any pier sells them.'
         : st.mode === 'call' ? `Bring the ${st.entry.name} round onto the water in front of you (there must be room for her). Choose your ship in the menu: Tab → Shipyard.`
         : st.on ? `Take in the ${st.ship.name}'s sails` : `Set all sail on the ${st.ship.name}`;
     }

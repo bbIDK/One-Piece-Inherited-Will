@@ -35,6 +35,10 @@ import { loadChar, loadLegacy, loadSettings, saveSettings, clearChar, saveLegacy
 import { titleScreen, creationScreen, hallScreen, helpContent, legacyShopScreen } from './ui/screens.js';
 import { installNet, startVoyage } from './net/session.js';
 import { netKind } from './net/transport.js';
+import { claudeRoom } from './net/room.js';
+// (on the game's claude.ai page, voyages sail through its room: asked at once, the answer ready by the menu)
+let roomReady = false;
+claudeRoom().then((r) => { roomReady = !!r; });
 import { newCode, showCode } from './net/code.js';
 import { multiplayerPane, hostLobby, joinSearch, joinPick, voyageError } from './ui/voyage.js';
 import { installVoyageHud } from './ui/voyageHud.js';
@@ -481,7 +485,7 @@ async function start() {
       slots,
       tab: titleTab,
       onTab: (t) => { titleTab = t; showTitle(); },
-      multiplayer: () => multiplayerPane({ slots, recent: recentVoyages(), local: netKind() === 'local', offsite: globalThis.IW_HOST === 'artifact', onHost: hostVoyage, onJoin: joinVoyage }),
+      multiplayer: () => multiplayerPane({ slots, recent: recentVoyages(), local: netKind() === 'local', offsite: globalThis.IW_HOST === 'artifact' && !roomReady, onHost: hostVoyage, onJoin: joinVoyage }),
       onPlay: (s) => {
         useSlot(s);
         const saved = loadChar();

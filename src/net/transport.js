@@ -1,5 +1,5 @@
 // The line between the players' games: a room named by the voyage's code, in
-// which every game hears every other. Two kinds, the same to the game:
+// which every game hears every other. Three kinds, the same to the game:
 //
 //  - trystero: WebRTC, straight from browser to browser, the games finding
 //    each other through public Nostr relays (no server of our own, so it
@@ -9,12 +9,16 @@
 //  - local: a BroadcastChannel between pages of this site open in the one
 //    browser — for the automated tests (a sandbox may not reach the relays)
 //    and for trying a voyage out in two tabs. ?net=local picks it.
+//  - room: on the game's claude.ai page (the published artifact), the
+//    page's own room there (room.js) — the only way out of that page.
 //
 // openTransport(kind, code, handlers) → a transport:
 //   { kind, selfId, send(msg, to?), peers(), relays(), leave() }
 // with handlers { onMessage(msg, from), onPeerJoin(id), onPeerLeave(id), onError(text) }.
 // Nothing here touches the network until a voyage is hosted or joined
 // (trystero isn't even loaded before then).
+import { claudeRoom, roomTransport } from './room.js';
+
 export const APP_ID = 'inherited-will.one-piece-roguelike';
 const ROOM = (code) => `voyage-${code}`;
 
@@ -89,8 +93,12 @@ export async function turnServers(search = globalThis.location?.search || '', st
   return turns.concat(OPEN_RELAY);
 }
 
-export function openTransport(kind, code, handlers = {}, opts = {}) {
-  return kind === 'local' ? Promise.resolve(localTransport(code, handlers, opts)) : trysteroTransport(code, handlers, opts);
+export async function openTransport(kind, code, handlers = {}, opts = {}) {
+  if (kind === 'local') return localTransport(code, handlers, opts);
+  // (on the game's claude.ai page, its room: the page may open no connection of its own there)
+  const room = opts.room === undefined ? await claudeRoom() : opts.room;
+  if (room) return roomTransport(room, code, handlers);
+  return trysteroTransport(code, handlers, opts);
 }
 
 // ------------------------------------------------------------------ trystero

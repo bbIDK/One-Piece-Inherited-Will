@@ -7,7 +7,7 @@
 // keys. Click a key on it to change it (rebind.js).
 //
 // It keeps clear of everything else at the bottom: level with the hotbar
-// where there's room beside it (the hotbar steps left a little if it must),
+// where there's room beside it,
 // above it where there isn't — and the quest tracker moves up out of its way.
 // On a touch screen the skills are buttons instead (touch.js); at the helm
 // the ship's panel has the corner.
@@ -182,8 +182,8 @@ export function drawSkillsHud(ui, game, p) {
 
 /**
  * Keep the panel clear of the rest of the HUD: level with the hotbar if
- * there's room to its right (the hotbar stepping left a little for it, if
- * that's all it takes), else just above it; the quest tracker moved up out
+ * there's room to its right (the hotbar never moves: the ship button stays
+ * dead centre), else just above it; the quest tracker moved up out
  * of its way, as far as the minimap's names allow. Returns by how much it
  * would still reach into what's above it (0 or less: it fits).
  */
@@ -198,12 +198,10 @@ function place(ui, force = false) {
   ui.cache.spPlace = k;
   // (the hotbar is centred, 14 px up: where it is without any shift)
   const left = (W - hw) / 2, right = left + hw, top = H - 10 - hh;
-  let shift = Math.max(0, right - (W - 14 - pw - 12));
-  // (as far as it may go: never past the left edge, nor more than a quarter of the way across)
-  const most = Math.max(0, Math.min(left - 14, W * 0.25));
-  let up = 0;
-  if (shift > most) { shift = 0; up = H - top + 8; }
-  bar.style.marginLeft = shift ? `${-Math.round(shift)}px` : '';
+  // (the hotbar never moves: the ship button stays dead centre — the
+  // panel goes up above it instead where they'd overlap)
+  const up = right > W - 14 - pw - 12 ? H - top + 8 : 0;
+  bar.style.marginLeft = '';
   E.skills.style.bottom = up ? `${Math.round(up)}px` : '';
   // what's above it on the right: the minimap and its names, and the quest tracker
   E.track.style.marginTop = '';
