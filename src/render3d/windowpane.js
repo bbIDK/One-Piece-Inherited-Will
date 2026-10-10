@@ -72,3 +72,52 @@ export function paneMesh(geo, floorY) {
   };
   return mesh;
 }
+
+// ---------------------------------------------------------------- the view out
+// A window seen from inside a cabin: the sea and the sky beyond the glass, as
+// they lie from where you stand — the horizon at your eye's height, the sky
+// paling toward it, the sea darkening below, a sheen on the glass — by day
+// and by night (no lamp-lit panel glowing like a light).
+const VIEW = `
+vec3 paneView(vec3 dir, float night) {
+  vec3 d = normalize(dir);
+  float up = d.y;
+  vec3 zen = mix(vec3(0.36, 0.6, 0.86), vec3(0.03, 0.05, 0.12), night);
+  vec3 hor = mix(vec3(0.82, 0.9, 0.96), vec3(0.12, 0.14, 0.24), night);
+  vec3 seaH = mix(vec3(0.42, 0.6, 0.7), vec3(0.06, 0.09, 0.15), night);
+  vec3 seaD = mix(vec3(0.1, 0.32, 0.46), vec3(0.01, 0.03, 0.07), night);
+  vec3 sky = mix(hor, zen, pow(clamp(up, 0.0, 1.0), 0.55));
+  // (a few soft cloud bands across the sky)
+  float cl = smoothstep(0.55, 0.9, sin(atan(d.z, d.x) * 7.0 + up * 23.0) * 0.5 + 0.5) * smoothstep(0.0, 0.08, up) * (1.0 - smoothstep(0.25, 0.5, up));
+  sky = mix(sky, mix(vec3(1.0), vec3(0.2, 0.22, 0.3), night), cl * 0.35);
+  vec3 sea = mix(seaH, seaD, pow(clamp(-up, 0.0, 1.0), 0.45));
+  vec3 col = mix(sea, sky, smoothstep(-0.006, 0.006, up));
+  // (the glass catching the lamp-light of the cabin a little, at night)
+  col += vec3(0.05, 0.035, 0.01) * night;
+  return pow(col, vec3(2.2));
+}`;
+
+/** A view-out material (sky and sea through the glass); uNight as for the panes. */
+export function viewMaterial() {
+  const u = { uNight: { value: 0 } };
+  const m = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, u);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vViewDir;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvViewDir = (modelMatrix * vec4(position, 1.0)).xyz - cameraPosition;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vViewDir;\nuniform float uNight;\n' + VIEW)
+      .replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( paneView(vViewDir, uNight), opacity );');
+  };
+  m.customProgramCacheKey = () => 'windowview';
+  m.userData.pane = u;
+  return m;
+}
+
+/** The view-out mesh for an interior geometry with panes (kit.js `pane`), or null. */
+export function viewMesh(geo) {
+  const pg = geo?.userData?.panes;
+  if (!pg) return null;
+  return new THREE.Mesh(pg, viewMaterial());
+}

@@ -83,7 +83,7 @@ class SeaBeastView {
     this.body.rotation.x = knocked ? Math.min(Math.PI, kt * 2.4) : 0;
     this.body.position.y = knocked ? -Math.min(2.5, kt * 0.8) : 0;
     const showBar = a.damageShown > 0 && a.state === 'idle';
-    this.label.set(a.showName && a.state === 'idle' ? a.name : null, a.nameColor || '#fff', showBar ? Math.max(0, a.hp / a.d.maxHp) : null, '#ef5350');
+    this.label.set(a.showName && a.state === 'idle' ? a.name : null, a.nameColor || '#fff', showBar ? Math.max(0, a.hp / a.d.maxHp) : null, '#ef5350', showBar ? `${Math.max(0, Math.ceil(a.hp))} / ${Math.round(a.d.maxHp)}` : null);
     this.label.sprite.position.set(0, this.labelY * (a.look?.scale || 1), 0);
     const cam = ctx.camera;
     const dist = cam ? cam.position.distanceTo(this.root.position) : 10;

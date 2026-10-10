@@ -678,7 +678,7 @@ class ActorView {
     if (name || bar !== null) {
       if (!this.label) { this.label = new Label(); this.root.add(this.label.sprite); }
       this.label.sprite.visible = true;
-      this.label.set(name, a.nameColor || '#ffffff', bar, a.faction === 'player' ? '#66bb6a' : '#ef5350');
+      this.label.set(name, a.nameColor || '#ffffff', bar, a.faction === 'player' ? '#66bb6a' : '#ef5350', bar !== null ? `${Math.max(0, Math.ceil(a.hp))} / ${Math.round(a.d.maxHp)}` : null);
       this.label.sprite.position.set(0, top / s, 0);
       this.label.mat.opacity = this.barA;
       this.label.sprite.scale.set(1.5 * k, 1.5 * k * 40 / 256, 1);

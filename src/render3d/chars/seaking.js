@@ -128,7 +128,7 @@ export class SeaKingView {
     this.bodyG.rotation.x = knocked ? Math.min(1.4, kt * 0.9) : 0;
     // name + health
     const showBar = (a.damageShown > 0 || a.boss) && !a.boss && a.state === 'idle' && !a.hideBar;
-    this.label.set(a.showName && a.state === 'idle' ? a.name : null, a.nameColor || '#fff', showBar ? Math.max(0, a.hp / a.d.maxHp) : null, '#ef5350');
+    this.label.set(a.showName && a.state === 'idle' ? a.name : null, a.nameColor || '#fff', showBar ? Math.max(0, a.hp / a.d.maxHp) : null, '#ef5350', showBar ? `${Math.max(0, Math.ceil(a.hp))} / ${Math.round(a.d.maxHp)}` : null);
     this.label.sprite.position.set(0, 6.4, 0);
     const cam = ctx.camera;
     const dist = cam ? cam.position.distanceTo(this.root.position) : 10;

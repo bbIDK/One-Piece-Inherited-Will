@@ -502,7 +502,7 @@ async function start() {
       onDelete: async (s) => {
         const info = slotInfo(s);
         const who = info.char ? `${info.char.name} and the` : 'The';
-        if (!(await ui.ask({ title: `Delete lineage ${s}?`, text: `${who} whole bloodline — Inherited Will, perks and the Hall of Legends — will be erased for good.`, ok: 'Delete forever', cancel: 'Keep it', danger: true }))) return;
+        if (!(await ui.ask({ title: `Delete lineage ${s}?`, text: `${who} whole bloodline — every generation, the family name and its D., Inherited Will, perks and the Hall of Legends — will be erased for good. The slot starts again from generation 1.`, ok: 'Delete forever', cancel: 'Keep it', danger: true }))) return;
         clearSlot(s);
         showTitle();
       },

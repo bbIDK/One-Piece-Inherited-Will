@@ -34,24 +34,24 @@ export function brightness(col) {
  */
 export class Label {
   constructor() {
-    this.c = canvas(256, 40);
+    this.c = canvas(256, 56);
     this.g = this.c.getContext('2d');
     this.tex = tex(this.c);
     this.mat = new THREE.SpriteMaterial({ map: this.tex, transparent: true, depthWrite: false, fog: false });
     this.sprite = new THREE.Sprite(this.mat);
-    this.sprite.scale.set(2.2, 0.34, 1);
+    this.sprite.scale.set(2.2, 0.48, 1);
     this.sprite.center.set(0.5, 0);
     this.sprite.renderOrder = 5;
     this.key = '';
     this.lag = null; this.t = 0;
   }
   /** name: unused (no name tags); bar: fraction 0..1 or null; barCol */
-  set(name, color, bar, barCol) {
+  set(name, color, bar, barCol, text = null) {
     const now = performance.now() / 1000, dt = Math.min(0.1, this.t ? now - this.t : 0);
     this.t = now;
     if (bar === null) {
       this.lag = null;
-      if (this.key) { this.key = ''; this.g.clearRect(0, 0, 256, 40); this.tex.needsUpdate = true; }
+      if (this.key) { this.key = ''; this.g.clearRect(0, 0, 256, 56); this.tex.needsUpdate = true; }
       return;
     }
     // (the chip: holds a moment, then drains down to the bar)
@@ -60,11 +60,17 @@ export class Label {
       this.hold = (this.hold || 0) + dt;
       if (this.hold > 0.35) this.lag = Math.max(bar, this.lag - dt * 0.6);
     } else this.hold = 0;
-    const key = `${Math.round(bar * 120)}|${Math.round(this.lag * 120)}|${barCol}`;
+    const key = `${Math.round(bar * 120)}|${Math.round(this.lag * 120)}|${barCol}|${text}`;
     if (key === this.key) return;
     this.key = key;
-    const g = this.g, X = 40, Y = 12, W = 176, H = 14;
-    g.clearRect(0, 0, 256, 40);
+    const g = this.g, X = 40, Y = 28, W = 176, H = 14;
+    g.clearRect(0, 0, 256, 56);
+    // their health in numbers, over the bar
+    if (text) {
+      g.font = 'bold 17px Nunito, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+      g.lineWidth = 4; g.strokeStyle = 'rgba(10,8,12,0.9)'; g.strokeText(text, 128, 22);
+      g.fillStyle = '#fff'; g.fillText(text, 128, 22);
+    }
     // ink edge and dark well
     g.fillStyle = 'rgba(10,8,12,0.9)'; g.beginPath(); g.roundRect(X - 3, Y - 3, W + 6, H + 6, 6); g.fill();
     g.fillStyle = 'rgba(60,50,56,0.85)'; g.beginPath(); g.roundRect(X, Y, W, H, 4); g.fill();

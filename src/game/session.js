@@ -132,6 +132,7 @@ export function startNewCharacter(game, birth, choices) {
   const legacy = loadLegacy();
   const char = createCharacter(legacy, birth, choices);
   legacy.heirloom = null; // it has been handed over
+  delete legacy.pendingBirth; // (the birth that was rolled has now been lived)
   saveLegacy(legacy);
   const world = game.surface;
   // (never in a town held by a crew who'd set on you the moment you woke)

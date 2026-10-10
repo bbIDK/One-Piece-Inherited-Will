@@ -64,7 +64,7 @@ function coatMaterial() {
   return coatMat;
 }
 import { WakeTrail } from './wake3d.js';
-import { paneMesh } from './windowpane.js';
+import { paneMesh, viewMesh } from './windowpane.js';
 
 export { shipDims, helmPoint };
 
@@ -777,6 +777,9 @@ export class ShipView {
         this.chestAt = ig.chestAt;
         this.inside.add(this.chest);
       }
+      // (the stern windows, seen from inside: the sea and sky beyond them)
+      this.views = viewMesh(ig.main);
+      if (this.views) this.inside.add(this.views);
       root.add(this.inside);
     }
     // masts (a rowboat has none)
@@ -790,7 +793,7 @@ export class ShipView {
     const sailCol = kind === 'marine' || def.sail === 'marine' ? '#f5f6fa' : s.paint?.sail || s.sailColor || '#efe6cf';
     this.sails = [];
     this.braces = [];
-    this.ownMats = this.panes ? [this.panes.material] : [];
+    this.ownMats = [this.panes?.material, this.views?.material].filter(Boolean);
     this.cloth = { t: { value: 0 }, amp: { value: 0 }, gust: { value: 1 } };
     const own = (m) => { this.ownMats.push(m); return m; };
     this.ghostables = [];
@@ -1029,7 +1032,9 @@ export class ShipView {
   }
 
   update(env, rx, rz, windAngle, ctx) {
-    if (this.panes) this.panes.material.userData.pane.uNight.value = Math.min(1, Math.max(0, (0.78 - (env.daylight ?? 1)) / 0.45 + (env.storm || 0) * 0.3));
+    const night = Math.min(1, Math.max(0, (0.78 - (env.daylight ?? 1)) / 0.45 + (env.storm || 0) * 0.3));
+    if (this.panes) this.panes.material.userData.pane.uNight.value = night;
+    if (this.views) this.views.material.userData.pane.uNight.value = night;
     const s = this.ship;
     const r = this.root;
     // the foam trail on the water (a sibling of the ship, not riding it)

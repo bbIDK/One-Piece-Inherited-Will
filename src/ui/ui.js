@@ -874,6 +874,8 @@ export class UI {
       const bb = E.boss.children[1];
       bb.firstChild.style.width = (100 * clamp(boss.hp / boss.d.maxHp, 0, 1)) + '%';
       bb.children[1].style.width = (100 * clamp(boss.hp / boss.d.maxHp, 0, 1)) + '%';
+      const ht = `${Math.max(0, Math.ceil(boss.hp)).toLocaleString()} / ${Math.round(boss.d.maxHp).toLocaleString()}`;
+      if (bb.children[2] && bb.children[2].textContent !== ht) bb.children[2].textContent = ht;
     }
     // what's out, and its skills on their keys
     this.spT = (this.spT || 0) - 1 / 60;

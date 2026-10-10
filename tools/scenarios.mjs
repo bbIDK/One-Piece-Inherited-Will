@@ -16,12 +16,13 @@ export const scenarios = {
     async run(page, snap) {
       await page.evaluate(() => localStorage.clear());
       await waitReady(page);
+      await page.waitForFunction(() => document.querySelector('#boot')?.classList.contains('hidden') ?? true, null, { timeout: 600000, polling: 500 });
       await frames(page, 3);
       await snap('slots');
       await page.getByText('Begin a Lineage').first().click();
       await page.waitForTimeout(3200);
       await snap('roll');
-      await page.getByText('Accept my fate').click();
+      await page.getByRole('button', { name: 'Continue', exact: true }).click();
       await frames(page, 8);
       await snap('identity');
       // customise: sharp eyes and a big grin, a mohawk, a wide build, an open shirt
@@ -58,6 +59,7 @@ export const scenarios = {
       await frames(page, 5);
       await step(page, 1);
       await snap('spawned');
+      console.log('char', JSON.stringify(await page.evaluate(() => { const c = window.OP.game.state.char; return { name: c.name, family: c.family, given: c.given, homeSea: c.homeSea, spawn: c.spawn?.sea }; })));
       const info = await page.evaluate(() => { const c = window.OP.game.state.char; return { name: c.name, race: c.race, spawn: c.spawn, look: { eyeShape: c.look.eyeShape, grin: c.look.grin, hair: c.look.hair, build: c.look.build, bulk: c.look.bulk, fem: c.look.fem, muscle: c.look.muscle, topStyle: c.look.topStyle, bottomStyle: c.look.bottomStyle, waist: c.look.waist, shoeStyle: c.look.shoeStyle } }; });
       console.log('spawn', JSON.stringify(info));
     },

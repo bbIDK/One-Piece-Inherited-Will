@@ -22,7 +22,7 @@ import { HOTBAR_SIZE, ENTRY, addToHotbar, stripForms } from './hotbar.js';
 
 // --------------------------------------------------------------- birth traits
 export const TRAITS = {
-  will_of_d: { name: 'Will of D.', rarity: 'legendary', weight: 0, desc: 'Your name carries a hidden "D." — the mark of those who laugh in the face of death. Fate bends around you, and the world\'s powers will come to fear the name.', attrs: { wil: 3 } },
+  will_of_d: { name: 'Will of D.', rarity: 'legendary', weight: 0, desc: 'Your name carries a hidden "D." — the mark of those who laugh in the face of death. Once each life a finishing blow somehow misses you; +3 Willpower; far likelier to be born with Conqueror\'s Haki. And it runs in the blood: every child of your line is born with the D. and your family name.', attrs: { wil: 3 } },
   // hidden: never shown until it awakens
   conqueror: { name: "King's Disposition", rarity: 'legendary', weight: 0, hidden: true, desc: 'You were born with the qualities of a king. It awakened the first time your will was truly tested.', latent: 'A Haki master sensed it in you: the qualities of a king. It will wake the day your will is truly tested.' },
   iron_stomach: { name: 'Iron Stomach', rarity: 'common', weight: 10, desc: 'Food heals 30% more.' },
@@ -66,7 +66,10 @@ export function perkCost(legacy, id) {
 /** Chance of being born with the hidden "D." in your name. */
 export function dChance(legacy) { return 0.05 * (perkLevel(legacy, 'will_of_d') ? 3 : 1); }
 
-/** Insert the "D." into a name: "Kaito Stormwell" → "Kaito D. Stormwell". */
+/**
+ * Insert the "D." into a name. Names are family name first, as in One Piece
+ * ("Monkey Luffy" → "Monkey D. Luffy").
+ */
 export function nameWithD(name) {
   name = (name || 'Nameless').trim();
   if (/(^| )D\.( |$)/.test(name)) return name;
@@ -84,7 +87,8 @@ export function rollBirth(legacy, seed) {
   const pool = Object.entries(TRAITS).filter(([, t]) => t.weight > 0).map(([id, t]) => [id, t.weight]);
   traits.push(rng.weighted(pool));
   if (rng.chance(0.25)) { const t2 = rng.weighted(pool); if (!traits.includes(t2)) traits.push(t2); }
-  if (rng.chance(dChance(legacy))) traits.push('will_of_d');
+  // (a line that carries the D. passes it on to every child: see createCharacter)
+  if (legacy?.family?.d || rng.chance(dChance(legacy))) traits.push('will_of_d');
   // (the qualities of a king: see haki.js KING — rare, likelier with the "D.", and the bloodline multiplies either)
   if (rng.chance(kingChance(traits.includes('will_of_d'), false))) traits.push('conqueror');
   return { race, traits, seed };
@@ -98,8 +102,16 @@ export function createCharacter(legacy, birth, choices) {
   for (const k of ATTR_KEYS) attrs[k] += (race.stats[k] || 0) + perkLevel(legacy, 'attrs') * 2;
   for (const t of birth.traits) for (const [k, v] of Object.entries(TRAITS[t]?.attrs || {})) attrs[k] += v;
   for (const k of ATTR_KEYS) attrs[k] = Math.max(1, attrs[k]);
-  let name = (choices.name || 'Nameless').trim().slice(0, 28) || 'Nameless';
-  if (birth.traits.includes('will_of_d')) name = nameWithD(name);
+  // the family name first, then the given name (as in One Piece); a line of
+  // the D. keeps its family name and its D. from one generation to the next
+  const hasD = birth.traits.includes('will_of_d');
+  const family = (legacy.family?.d && legacy.family.name) || choices.family || '';
+  const given = choices.first || '';
+  let name = (choices.first !== undefined ? [family, given].filter(Boolean).join(' ') : (choices.name || '')).trim().slice(0, 28) || 'Nameless';
+  if (hasD) {
+    name = nameWithD(name);
+    if (family) legacy.family = { name: family, d: true, since: legacy.family?.since || legacy.generation };
+  }
   const lives = Math.min(5, race.lives + perkLevel(legacy, 'lives'));
   let style = 'brawler';
   const masteries = { brawler: 0 };
@@ -122,6 +134,9 @@ export function createCharacter(legacy, birth, choices) {
     runSeed: Math.floor(rng.next() * 1e9),
     generation: legacy.generation,
     name,
+    family: family || null, given: given || null,
+    // the Blue they chose to be born in (races born in more than one: see resolveSpawn)
+    homeSea: choices.sea || null,
     race: birth.race,
     traits: birth.traits.slice(),
     look: choices.look || makeLook(birth.race, birth.seed),
@@ -242,7 +257,8 @@ function isletBeach(world, o, a0) {
 export function resolveSpawn(world, char, avoid = new Set()) {
   const rng = new RNG(char.runSeed + ':spawn');
   const race = RACES[char.race];
-  const sea = rng.pick(race.spawnSeas);
+  const pick0 = rng.pick(race.spawnSeas);
+  const sea = char.homeSea && race.spawnSeas.includes(char.homeSea) ? char.homeSea : pick0;
   const seaRegion = SEA_IDS[sea];
   const allTowns = [];
   for (const isl of world.islands) for (const t of isl.towns) allTowns.push({ isl, t });

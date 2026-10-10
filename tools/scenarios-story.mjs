@@ -261,9 +261,9 @@ export const scenarios = {
       // ---- the creation screen: the story, or none
       // (the loading screen may still be fading over the title: out of the way)
       await page.evaluate(() => { document.getElementById('boot')?.classList.add('hidden'); window.OP.game.debugBirth = { race: 'human', traits: ['lucky'], seed: 12345 }; window.__st.click('Begin a Lineage'); });
-      await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /Accept my fate/.test(b.innerText)), null, { timeout: 60000 });
+      await page.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => /^Continue$/.test(b.innerText.trim())), null, { timeout: 60000 });
       await page.waitForTimeout(2400);
-      await page.evaluate(() => window.__st.click('Accept my fate'));
+      await page.evaluate(() => window.__st.click('Continue'));
       await page.waitForFunction(() => !!document.querySelector('.story-pick'), null, { timeout: 60000 });
       await page.waitForTimeout(1500);
       await snap('free-01-creation-calling');

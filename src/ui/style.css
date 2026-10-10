@@ -163,7 +163,8 @@
 .bossbar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: min(560px, 60vw); text-align: center; }
 .bossbar h3 { margin: 0 0 3px; font: 400 26px 'Pirata One', serif; text-shadow: 0 2px 0 #000; }
 .bossbar h3 small { font: 600 12px Nunito; color: var(--gold); display: block; letter-spacing: 1px; }
-.bossbar .bar { height: 16px; border-color: rgba(241,196,15,.6); }
+.bossbar .bar { height: 18px; border-color: rgba(241,196,15,.6); }
+.bossbar .bar > span { font-size: 12px; font-weight: 800; }
 .bossbar .bar > i { background: linear-gradient(#ff8a80, #b71c1c); }
 
 .shiphud { position: absolute; right: 14px; bottom: 14px; width: 220px; background: rgba(10,20,30,.78); border-radius: 12px; padding: 8px 10px; border: 1px solid var(--border); font-size: 12px; }

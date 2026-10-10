@@ -15,6 +15,7 @@ import { keysOf, keyLabel } from '../game/keys.js';
 import { formatBerries } from '../core/math.js';
 import { itemImg, uiImg } from './icon.js';
 import { createPreview, renderPortrait } from './preview3d.js';
+import { saveLegacy } from '../game/save.js';
 
 /** What each race's height looks like (height isn't customisable: it's in the blood). */
 const HEIGHT_NOTE = {
@@ -122,9 +123,13 @@ function slotCard(info, { onPlay, onNew, onDelete, onHall, onWill }) {
 
 // --------------------------------------------------------------- creation
 export function creationScreen(ui, legacy, { onDone, onBack }) {
-  let rerolls = perkLevel(legacy, 'reroll');
-  let birth = rollBirth(legacy, Math.floor(Math.random() * 1e9));
+  // (the birth is rolled once and kept with the lineage until it's lived: you
+  // are who you are — leaving the screen and coming back doesn't roll again)
+  let rerolls = Math.max(0, perkLevel(legacy, 'reroll') - (legacy.pendingBirth?.flips || 0));
+  let birth = legacy.pendingBirth?.birth || rollBirth(legacy, Math.floor(Math.random() * 1e9));
   if (ui.game?.debugBirth) birth = { ...birth, ...ui.game.debugBirth }; // test harness only
+  const keep = () => { legacy.pendingBirth = { birth, flips: perkLevel(legacy, 'reroll') - rerolls }; try { saveLegacy(legacy); } catch (e) { /* (no storage) */ } };
+  keep();
   // (story: 'calling' — the three people on your home island can set you on a road — or 'free': sail your own way, no main story)
   const state = { name: '', look: null, story: 'calling' };
   const root = h('div.screen');
@@ -157,9 +162,8 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
           h('div.li.muted', `${Math.min(5, race.lives + perkLevel(legacy, 'lives'))} lives (vivre cards)`))),
     );
     const btns = h('div.roll-btns', { style: { opacity: 0 } },
-      h('button.btn.gold', { on: { click: stepIdentity } }, 'Accept my fate'),
-      rerolls > 0 ? h('button.btn', { on: { click: () => { rerolls--; birth = rollBirth(legacy, Math.floor(Math.random() * 1e9)); stepRoll(true); } } }, `Flip Fate's Coin (${rerolls} left)`) : null,
-      h('button.btn', { on: { click: () => { stopAnim(); onBack(); } } }, 'Back'));
+      h('button.btn.gold', { on: { click: stepIdentity } }, 'Continue'),
+      rerolls > 0 ? h('button.btn', { on: { click: () => { rerolls--; birth = rollBirth(legacy, Math.floor(Math.random() * 1e9)); keep(); stepRoll(true); } } }, `Flip Fate's Coin (${rerolls} left)`) : null);
     const willLine = h('div.will-line', uiImg('reputation', 16), ` Your lineage's Inherited Will: ${legacy.will}` + (legacy.generation > 1 ? ` · generation ${legacy.generation}` : ''));
     const panel = h('div.panel.race-roll', h('h2', legacy.generation > 1 ? `Generation ${legacy.generation} is born…` : 'A child is born…'), nameEl, rarEl, dEl, info, btns, willLine);
     root.appendChild(panel);
@@ -178,7 +182,8 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       const chance = dChance(legacy);
       if (hasD()) {
         dEl.append(h('div.d-stamp', 'D.'), h('div.d-title', 'THE WILL OF D.'),
-          h('p', 'A hidden initial runs in your blood. Those who carry it laugh in the face of death — and the powers of the world fear the name. (', pct(chance), ' of births)'));
+          h('p', legacy.family?.d ? `The D. of the ${legacy.family.name} family runs in your blood, as it did in your parent's.` : h('span', 'A hidden initial runs in your blood. (', pct(chance), ' of births)')),
+          h('p.muted', 'Once each life a finishing blow misses you · +3 Willpower · far likelier to have Conqueror\'s Haki · every child of your line will carry the D. and your family name.'));
         dEl.classList.remove('miss');
         dEl.classList.add('hit');
         later(spin ? 900 : 0, () => { dEl.classList.add('show'); ui.game?.audio?.sfx('fanfare'); btns.style.opacity = 1; });
@@ -212,25 +217,36 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
     // a first name and a family name, a word each (a man's first name for a
     // man, a woman's for a woman: rolled again when you change which, unless
     // you typed it yourself)
-    if (state.first === undefined) {
-      const [f, ...rest] = (state.name || '').trim().split(/\s+/).filter(Boolean);
-      state.first = f || randomFirst(L.fem); state.last = rest.join('') || (f ? '' : randomLast());
-      state.firstRolled = !f;
-    }
+    // (names are picked from the lists or rolled — not typed; a family of the
+    // D. keeps its name from one generation to the next)
+    const familyFixed = legacy.family?.d && hasD() ? legacy.family.name : null;
+    if (state.first === undefined) { state.first = randomFirst(L.fem); state.last = familyFixed || randomLast(); }
+    if (familyFixed) state.last = familyFixed;
+    // the Blue you're born in (races born in more than one may choose)
+    const seas = RACES[birth.race].spawnSeas;
+    if (!state.sea || !seas.includes(state.sea)) state.sea = seas[Math.floor(Math.random() * seas.length)];
     const race = birth.race;
     const finalName = h('div.final-name');
     const updateName = () => {
-      state.name = [state.first, state.last].filter(Boolean).join(' ');
+      // family name first, as in One Piece: "Monkey D. Luffy"
+      state.name = [state.last, state.first].filter(Boolean).join(' ');
       clear(finalName);
       const n = state.name || 'Nameless';
       finalName.append(h('span.muted', 'You will be known as '), h('b', hasD() ? nameWithD(n) : n));
     };
-    // (one word: no spaces in it)
-    const word = (e) => { const v = e.target.value.replace(/\s+/g, ''); if (v !== e.target.value) e.target.value = v; return v; };
-    const firstInput = h('input.name', { value: state.first, maxLength: 14, spellcheck: false, placeholder: 'First name', on: { input: (e) => { state.first = word(e); state.firstRolled = false; updateName(); } } });
-    const lastInput = h('input.name', { value: state.last, maxLength: 16, spellcheck: false, placeholder: 'Family name', on: { input: (e) => { state.last = word(e); updateName(); } } });
-    const rollFirst = () => { state.first = randomFirst(L.fem, state.first); state.firstRolled = true; firstInput.value = state.first; updateName(); };
-    const rollLast = () => { state.last = randomLast(state.last); lastInput.value = state.last; updateName(); };
+    const pickList = (list, value, set) => h('select.name-pick', { on: { change: (e) => { set(e.target.value); updateName(); } } },
+      ...[...new Set(list)].sort((a, b) => a.localeCompare(b)).map((n) => h('option', { value: n, ...(n === value ? { selected: true } : {}) }, n)));
+    const firstBox = h('div', { style: { display: 'flex', gap: '6px' } });
+    const lastBox = h('div', { style: { display: 'flex', gap: '6px' } });
+    const renderFirst = () => { clear(firstBox); firstBox.append(pickList(L.fem ? FEMALE_FIRST : MALE_FIRST, state.first, (v) => { state.first = v; }), h('button.btn', { on: { click: rollFirst } }, 'Random')); };
+    const renderLast = () => {
+      clear(lastBox);
+      if (familyFixed) lastBox.append(h('div.name-fixed', h('b', familyFixed), h('span.muted', ' — your family\'s name, with its D.')));
+      else lastBox.append(pickList(SURNAMES, state.last, (v) => { state.last = v; }), h('button.btn', { on: { click: rollLast } }, 'Random'));
+    };
+    const rollFirst = () => { state.first = randomFirst(L.fem, state.first); renderFirst(); updateName(); };
+    const rollLast = () => { state.last = randomLast(state.last); renderLast(); updateName(); };
+    renderFirst(); renderLast();
     updateName();
     const row = (label, ...kids) => h('div.opt-row', h('div.opt-label', label), ...kids);
     const swatch = (key, colors) => h('div.swatches', ...colors.map((c) => h('button' + (L[key] === c ? '.on' : ''), { title: c, style: { background: c }, on: { click: () => { L[key] = c; changed(); } } })));
@@ -257,7 +273,7 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
       if (!fem && ['skirt', 'longskirt'].includes(L.bottomStyle)) L.bottomStyle = 'trousers';
       if (L.eyeShape !== 'fish') L.eyeShape = eyeShapeOf({ ...L, eyeShape: L.eyeShape });
       if (fem && L.bust === undefined) L.bust = 1;
-      if (other && state.firstRolled) rollFirst();
+      if (other) rollFirst();
       renderGender();
     };
     renderGender();
@@ -272,19 +288,26 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
           : 'Three people on your home island can set you on a road — Pirate, Marine or Bounty Hunter — and the main story follows it through the Blues, the Grand Line and the New World. Or you can turn them all down and sail your own way.'));
     };
     renderStory();
+    const seaEl = h('div');
+    const renderSea = () => {
+      clear(seaEl);
+      if (seas.length < 2) { seaEl.append(row('Born in', h('div.muted', `the ${SEA_NAMES[seas[0]] || 'sea'} — your people's home`))); return; }
+      seaEl.append(row('Born in', chips(state.sea, seas, seas.map((x) => SEA_NAMES[x]), (v) => { state.sea = v; renderSea(); })));
+    };
+    renderSea();
     const right = h('div',
-      row('First name', h('div', { style: { display: 'flex', gap: '6px' } }, firstInput, h('button.btn', { on: { click: rollFirst } }, 'Random'))),
-      row('Family name', h('div', { style: { display: 'flex', gap: '6px' } }, lastInput, h('button.btn', { on: { click: rollLast } }, 'Random'))),
-      finalName, genderEl, storyEl, tabsEl, optsEl,
+      row('Family name', lastBox),
+      row('Given name', firstBox),
+      finalName, genderEl, seaEl, storyEl, tabsEl, optsEl,
       h('p.muted', { style: { marginTop: '12px' } }, 'No destiny is chosen for you. Pirate, Marine, adventurer, bounty hunter or none of these — the sea is free, and what you become is up to you. You can found your own pirate crew and raise your Jolly Roger later, from the Crew menu.'),
     );
     const born = RACES[birth.race];
     const panel = h('div.panel.wide', h('h2', 'Who are you?'), h('div.creation-grid', left, right),
       h('div.creation-foot',
-        h('div.muted', `${raceLabel(L)} · born in ${born.spawnSeas.length > 1 ? 'one of the four Blues' : 'the ' + SEA_NAMES[born.spawnSeas[0]]}`),
+        h('div.muted', `${raceLabel(L)} · born in the ${SEA_NAMES[state.sea] || 'Blues'}`),
         h('div', { style: { display: 'flex', gap: '10px' } },
           h('button.btn', { on: { click: () => stepRoll(false) } }, 'Back'),
-          h('button.btn.red.big', { on: { click: () => { stopAnim(); onDone(birth, { name: (state.name || '').trim() || 'Nameless', look: state.look, story: state.story }); } } }, 'Set Sail'))));
+          h('button.btn.red.big', { on: { click: () => { stopAnim(); onDone(birth, { name: (state.name || '').trim() || 'Nameless', first: state.first, family: state.last, sea: state.sea, look: state.look, story: state.story }); } } }, 'Set Sail'))));
     root.appendChild(panel);
     applyLook(L, race);
     let preview = null;

@@ -30,6 +30,11 @@ const CAP = { sfx: 28, npc: 10, amb: 12, ui: 6 };
 const CAP_LOW = { sfx: 18, npc: 6, amb: 7, ui: 4 };
 const KIND = { hit: 9, tech: 6, move: 6, foley: 6, world: 5 };
 const KIND_LOW = { hit: 6, tech: 4, move: 4, foley: 4, world: 3 };
+// how many sounds may start each second, and in a burst — past that, all but
+// blows wait their turn: a downpour's drops or a crowd's chatter can't flood
+// the audio thread with thousands of new nodes a second (it stutters, then
+// falls silent)
+const START_RATE = 90, START_BURST = 36;
 // a blow's first moments are its own: nothing may take its voice before this (seconds)
 const HIT_GUARD = 0.14;
 // the soft clipper's reach: input up to ±1.4 is rounded into ±0.98
@@ -88,6 +93,11 @@ export class Engine {
     this.tapBuf = new Float32Array(1024);
     this.deadT = 0;
     this.voices = { sfx: [], npc: [], amb: [], ui: [] };
+    // voices that have finished (or made way), waiting for their last echo to
+    // die before their nodes are unplugged from the mix (see retire)
+    this.retired = [];
+    // how many new sounds may start: a bucket refilled at a steady rate (see open)
+    this.tokens = START_BURST; this.tokT = 0;
     this.rr = {}; // round-robin counters by sound
     this.ducks = new Map();
     this.makeNoise();
@@ -292,9 +302,14 @@ export class Engine {
   open(name, { bus = 'sfx', vol = 1, pan = 0, lp = 0, send = 0, drive: drv = 0, prio = 5, max = 4, at = null, kind = 'foley' } = {}) {
     const c = this.ctx, t = at ?? this.now();
     const list = this.voices[bus];
-    // (forget the ones that have finished)
-    for (let i = list.length - 1; i >= 0; i--) if (list[i].end < t) list.splice(i, 1);
+    // (forget the ones that have finished, and unplug the long-silent)
+    for (let i = list.length - 1; i >= 0; i--) if (list[i].end < t) this.retired.push(list.splice(i, 1)[0]);
+    this.retire(t);
     const hit = kind === 'hit';
+    // (too many starting at once: everything but a blow (or the menus) waits)
+    if (this.tokT) this.tokens = Math.min(START_BURST, this.tokens + (t - this.tokT) * START_RATE);
+    this.tokT = t;
+    if (!hit && bus !== 'ui') { if (this.tokens < 1) return null; this.tokens--; }
     let same = 0, oldest = null;
     for (const v of list) if (v.name === name) { same++; if (!oldest || v.t0 < oldest.t0) oldest = v; }
     if (same >= max && oldest && this.mayTake(oldest, hit, prio, vol, t, true)) this.steal(oldest, t, list);
@@ -308,16 +323,17 @@ export class Engine {
     const out = c.createGain();
     out.gain.value = vol;
     let tail = out;
+    const chain = [out];
     if (lp > 0 && lp < 18000) {
       const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; f.Q.value = 0.5;
-      tail.connect(f); tail = f;
+      tail.connect(f); tail = f; chain.push(f);
     }
     if (pan && c.createStereoPanner) {
       const p = c.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
-      tail.connect(p); tail = p;
+      tail.connect(p); tail = p; chain.push(p);
     }
     tail.connect(this[bus]);
-    if (send > 0 && bus !== 'ui') { const s = c.createGain(); s.gain.value = send; out.connect(s); s.connect(this.room); }
+    if (send > 0 && bus !== 'ui') { const s = c.createGain(); s.gain.value = send; out.connect(s); s.connect(this.room); chain.push(s); }
     let input = out;
     if (drv > 0) {
       // (driven hard into the clipper, a blow lands at full weight: the soft
@@ -329,6 +345,7 @@ export class Engine {
     }
     const v = new Voice(this, input, t, { name, prio, vol, out });
     v.kind = kind;
+    v.chain = chain;
     list.push(v);
     return v;
   }
@@ -367,7 +384,26 @@ export class Engine {
     g.linearRampToValueAtTime(0, t + 0.012);
     v.end = t;
     const i = list.indexOf(v);
-    if (i >= 0) list.splice(i, 1);
+    if (i >= 0) { list.splice(i, 1); this.retired.push(v); }
+  }
+
+  /**
+   * Unplug the voices that have been silent a while (their echoes rung out):
+   * left connected, every sound ever played stays in the mix's graph, and the
+   * audio thread works through more of them each second till it can't keep up.
+   */
+  retire(t) {
+    const R = this.retired;
+    if (!R.length) return;
+    let w = 0;
+    for (let i = 0; i < R.length; i++) {
+      const v = R[i];
+      if (v.end + (v.tail || 0) + 0.3 < t) {
+        for (const n of v.chain || []) { try { n.disconnect(); } catch { /* gone */ } }
+        try { v.in?.disconnect?.(); } catch { /* gone */ }
+      } else R[w++] = v;
+    }
+    R.length = w;
   }
 
   /**

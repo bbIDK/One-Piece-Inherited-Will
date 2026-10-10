@@ -166,7 +166,7 @@ export const scenarios = {
       await page.getByText('Begin a Lineage').first().click();
       await page.waitForTimeout(3600);
       await snap('d-reveal');
-      await page.getByText('Accept my fate').click();
+      await page.getByRole('button', { name: 'Continue', exact: true }).click();
       await frames(page, 3);
       await snap('d-identity');
       await page.getByRole('button', { name: 'Set Sail', exact: true }).click();

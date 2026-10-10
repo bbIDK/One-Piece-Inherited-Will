@@ -1452,12 +1452,13 @@ export function bigInterior(def, d) {
     if (r.kind === 'hold') { endWall(k, d, r.t0, r.floor, top, 1, true); endWall(k, d, r.t1, r.floor, top, -1, true); }
     else if (r.kind === 'forecastle') endWall(k, d, r.t1, r.floor, top, -1);
     else {
-      // the stern: panelled, with the gallery windows glowing (see hull.js sternWindows)
+      // the stern: panelled, with the gallery windows looking out astern (see hull.js sternWindows)
       endWall(k, d, r.t0, r.floor, top, 1);
       const x = xAt(d, r.t0);
       for (const wd of r.windows || []) {
         // (the sea and sky beyond the glass: pale by day, lit from within by night)
-        k.add(box(0.04, 0.9, wd.w), { at: [x + 0.01, r.floor + 0.75, wd.v], color: '#a9d6ee', glow: '#ffd58a' });
+        // (glass you see out through: the sea and the sky, as they lie from where you stand — windowpane.js viewMesh)
+        k.add(box(0.04, 0.9, wd.w), { at: [x + 0.01, r.floor + 0.75, wd.v], color: '#a9d6ee', pane: true });
         k.add(box(0.06, 0.05, wd.w - 0.02), { at: [x + 0.02, r.floor + 1.18, wd.v], color: IN.beam }); // (a centimetre short of the glass's sides, not ending in their planes)
         k.add(box(0.06, 0.9, 0.05), { at: [x + 0.02, r.floor + 0.75, wd.v], color: IN.beam });
         k.add(box(0.12, 0.06, wd.w + 0.1), { at: [x + 0.04, r.floor + 0.72, wd.v], color: IN.beam });

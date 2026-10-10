@@ -1,4 +1,4 @@
-// Persistence. Three lineage slots; each holds one active character plus the
+// Persistence. Six lineage slots; each holds one active character plus the
 // lineage (legacy) that outlives it. There is no manual save to reload: the
 // game saves itself (and whenever you choose Save), and death is written
 // immediately — just like Rogue Lineage.
@@ -9,7 +9,7 @@ const LEGACY_CHAR = `${PREFIX}:char:v1`; // pre-slot saves
 const LEGACY_LEGACY = `${PREFIX}:legacy:v1`;
 const KEY_SETTINGS = `${PREFIX}:settings:v1`;
 const KEY_LAST = `${PREFIX}:lastSlot`;
-export const SLOT_COUNT = 3;
+export const SLOT_COUNT = 6;
 
 let slot = 1;
 const key = (s, what) => `${PREFIX}:slot${s}:${what}:v1`;

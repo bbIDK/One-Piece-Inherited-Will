@@ -303,9 +303,13 @@ class Rain {
     const S = RAIN[this.where] || RAIN.ground;
     // the drops you see land, heard where they land (the nearest few; the engine keeps only so many voices)
     if (RAIN_HITS.length) {
-      const hits = RAIN_HITS.splice(0).sort((a, b) => a.d - b.d).slice(0, 6);
+      // (a handful of voices a second, each with the few nearest drops in it —
+      // not a voice a drop every frame: that floods the audio thread)
+      this.dropTok = Math.min(2, (this.dropTok ?? 2) + dt * 9);
+      const hits = RAIN_HITS.splice(0).sort((a, b) => a.d - b.d).slice(0, Math.floor(this.dropTok));
       const E = this.A.E;
       for (const h of hits) {
+        this.dropTok--;
         const kind = h.on === 'roof' ? (this.where === 'inside' ? 'dup' : 'tik') : h.on === 'water' ? 'plip' : this.where === 'leaves' || this.where === 'deck' || this.where === 'town' ? S.drop : 'pat';
         const near = 1 / (1 + h.d / 2.5);
         const v = E.open('amb:rain', { bus: 'amb', vol: this.level * (0.35 + near), pan: Math.max(-0.9, Math.min(0.9, h.pan * (0.4 + 0.6 * Math.min(1, h.d / 2)))), lp: this.where === 'inside' ? 1200 : 9000 - 5000 * (1 - near), send: 0.04, prio: 1, max: 6 });
