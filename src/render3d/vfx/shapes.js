@@ -748,7 +748,7 @@ SHAPES.barrier = {
     const S = v.surf, cols = 9, rows = 5;
     if (!S.room(cols * rows, (cols - 1) * (rows - 1) * 2)) return;
     S.style(SF.PANEL, c, a * 0.9, WHITE, 0.85, k, s.seed);
-    const v0 = S.nv, Rc = 0.85, span = 0.8 * grow, H = 1.75 * grow;
+    const v0 = S.nv, Rc = s.r || 0.85, span = (s.span || 0.8) * grow, H = (s.h || 1.75) * grow;
     for (let j = 0; j < rows; j++) {
       for (let i = 0; i < cols; i++) {
         const u = (i / (cols - 1)) * 2 - 1, vv = j / (rows - 1);

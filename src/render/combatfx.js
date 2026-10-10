@@ -66,10 +66,10 @@ function styleOf(def, actor) {
 }
 
 // (how long a fruit's blade is: Aokiji's Ice Saber is a full sword's length and more)
-const BLADE_LEN = { hie_saber: 1.5, pika_murakumo: 1.4, mochi_zangiri: 1.2 };
+const BLADE_LEN = { doru_ken: 1.4, hie_saber: 1.5, pika_murakumo: 1.4, mochi_zangiri: 1.2 };
 // energy blades held during fruit slashes
 const BLADES = {
-  hie_saber: '#b3e5fc', pika_murakumo: '#fff59d', noro_mirror: '#80deea', ope_amputate: '#b3e5fc',
+  doru_ken: '#fff8e1', hie_saber: '#b3e5fc', pika_murakumo: '#fff59d', noro_mirror: '#80deea', ope_amputate: '#b3e5fc',
   supa_sparkling: '#eceff1', zushi_blade: '#b39ddb', mochi_zangiri: '#fff8e1',
 };
 
@@ -1631,7 +1631,7 @@ sig('sube_skin', { buff(fx, actor) { sparkle(fx, actor.x, actor.y, 1, 10, ['#fce
 sig('sube_spin', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); fx.add('vortex', { x: actor.x, y: actor.y, follow: actor, r: 1.4, h: 0.3, kind: 'wind', life: 0.4, spin: 18, arms: 3 }); sparkle(fx, actor.x, actor.y, 0.6, 6, ['#fce4ec', '#ffffff']); } });
 // Wax-Wax: wax hardened into blades, harpoons and walls
 sig('doru_ken doru_mori', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.6); sparkle(fx, px, py, 0.9, 4, ['#fffde7', '#ffffff']); } });
-sig('doru_wall', { buff(fx, actor, s, a, ex) { const b = ex.buff; fx.add('barrier', { x: actor.x, y: actor.y, follow: actor, color: '#fff9c4', life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(b) }); sparkle(fx, actor.x, actor.y, 1, 5, ['#fffde7', '#ffffff']); } });
+sig('doru_wall', { buff(fx, actor, s, a, ex) { const b = ex.buff; fx.add('barrier', { x: actor.x, y: actor.y, follow: actor, color: '#fff9c4', r: 1.25, span: 1.05, h: 3.2, life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(b) }); sparkle(fx, actor.x, actor.y, 1, 5, ['#fffde7', '#ffffff']); } });
 sig('doru_service', { zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'field', color: '#fff9c4', zone, life: 1e6 }); fx.burst(zone.x, zone.y, 14, { kind: 'drop', color: ['#fffde7', '#fff59d'], speed: 3, z: 3, vz: 1, g: 9, life: 0.6, size: 0.09 }); return true; } });
 // Spike-Spike: blades out of every limb
 sig('supa_claw supa_atomic', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); sparks(fx, actor.x + Math.cos(hb.angle) * 1, actor.y + Math.sin(hb.angle) * 0.7, 0.9, hb.angle, 8, ['#eceff1', '#ffffff', '#b0bec5']); } });
