@@ -1,5 +1,5 @@
 // The line between the players' games: a room named by the voyage's code, in
-// which every game hears every other. Three kinds, the same to the game:
+// which every game hears every other. Its kinds, the same to the game:
 //
 //  - trystero: WebRTC, straight from browser to browser, the games finding
 //    each other through public Nostr relays (no server of our own, so it
@@ -9,6 +9,9 @@
 //  - local: a BroadcastChannel between pages of this site open in the one
 //    browser — for the automated tests (a sandbox may not reach the relays)
 //    and for trying a voyage out in two tabs. ?net=local picks it.
+//  - web (the real thing, off claude.ai): trystero's direct line and the
+//    message relay (relay.js: public MQTT brokers) at once — whichever
+//    gets through (webTransport below).
 //  - room: on the game's claude.ai page (the published artifact), the
 //    page's own room there (room.js) — the only way out of that page.
 //
@@ -18,6 +21,7 @@
 // Nothing here touches the network until a voyage is hosted or joined
 // (trystero isn't even loaded before then).
 import { claudeRoom, roomTransport } from './room.js';
+import { relayTransport } from './relay.js';
 
 export const APP_ID = 'inherited-will.one-piece-roguelike';
 const ROOM = (code) => `voyage-${code}`;
@@ -58,9 +62,24 @@ export function relayUrls(search = globalThis.location?.search || '') {
  *    free relay — best effort: it may be busy or gone).
  */
 export const TURN_KEY = 'iw.turn';
-const OPEN_RELAY = [
+const OPEN_RELAY_STATIC = [
   { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' },
 ];
+/**
+ * The Open Relay Project's free TURN (metered.ca): short-lived passwords made
+ * from its shared secret, on ports 80 and 443 over UDP, TCP and TLS, so they
+ * get through most firewalls (the old fixed password, as a last resort).
+ */
+export async function openRelay() {
+  try {
+    const te = new TextEncoder();
+    const username = `${Math.floor(Date.now() / 1000) + 24 * 3600}:inheritedwill`;
+    const key = await crypto.subtle.importKey('raw', te.encode('openrelayprojectsecret'), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+    const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, te.encode(username)));
+    const host = 'staticauth.openrelay.metered.ca';
+    return [{ urls: [`turn:${host}:80`, `turn:${host}:80?transport=tcp`, `turn:${host}:443`, `turns:${host}:443?transport=tcp`], username, credential: btoa(String.fromCharCode(...sig)) }, ...OPEN_RELAY_STATIC];
+  } catch { return OPEN_RELAY_STATIC; } // (no WebCrypto off a secure page)
+}
 
 /** The saved Connection setting: { url } (a credentials URL) or { urls, username, credential }, or null. */
 export function savedTurn(store = globalThis.localStorage) {
@@ -90,7 +109,7 @@ export async function turnServers(search = globalThis.location?.search || '', st
   } else if (s?.urls) out.push({ urls: [].concat(s.urls), username: s.username || undefined, credential: s.credential || undefined });
   // (only TURN entries: trystero brings its own STUN)
   const turns = out.filter((x) => [].concat(x.urls).some((u) => /^turns?:/i.test(u)));
-  return turns.concat(OPEN_RELAY);
+  return turns.concat(await openRelay());
 }
 
 export async function openTransport(kind, code, handlers = {}, opts = {}) {
@@ -98,7 +117,88 @@ export async function openTransport(kind, code, handlers = {}, opts = {}) {
   // (on the game's claude.ai page, its room: the page may open no connection of its own there)
   const room = opts.room === undefined ? await claudeRoom() : opts.room;
   if (room) return roomTransport(room, code, handlers);
-  return trysteroTransport(code, handlers, opts);
+  return webTransport(code, handlers, opts);
+}
+
+// ------------------------------------------------------------------ web
+/**
+ * Off claude.ai, three routes at once, as many as get through: straight from
+ * browser to browser (WebRTC, through a TURN relay where a router won't let
+ * it straight through: trystero below), and the message relay (relay.js:
+ * public MQTT brokers over a secure WebSocket, for networks that let no
+ * WebRTC through at all — schools, offices, mobile data). Who's aboard comes
+ * from both; each message goes straight to whoever has a direct line, and by
+ * the relay to anyone without one (numbered, so one heard both ways is taken
+ * once). If the relay can't be reached at all, the direct line alone.
+ */
+async function webTransport(code, h, opts) {
+  let relay = null;
+  const direct = new Map(); // our id for a game → its trystero id
+  const relayP = relayTransport(code, h).catch(() => null);
+  // (the direct line: its messages carry our own ids, so the two routes agree on who's who)
+  const T = await import('trystero').catch(() => null);
+  let room = null, act = null;
+  if (T) {
+    const urls = opts.relays || relayUrls();
+    let turnConfig = opts.turn;
+    if (!turnConfig) { try { turnConfig = await turnServers(); } catch { turnConfig = OPEN_RELAY_STATIC; } }
+    try {
+      room = T.joinRoom({ appId: APP_ID, relayConfig: { warnOnRelayFailure: false, ...(urls ? { urls } : {}) }, turnConfig, ...(opts.config || {}) }, ROOM(code), {
+        onJoinError: () => { /* (no direct line to them: the relay carries it) */ },
+      });
+      act = room.makeAction('iw2');
+    } catch { room = null; }
+  }
+  relay = await relayP;
+  if (!relay) {
+    // (no relay at all: the direct line as it always was)
+    try { room?.leave(); } catch { /* (already) */ }
+    return trysteroTransport(code, h, opts);
+  }
+  const me = relay.selfId;
+  if (act) {
+    act.onMessage = (env, ctx) => {
+      if (!env || typeof env.f !== 'string' || env.f === me) return;
+      direct.set(env.f, ctx.peerId);
+      relay.meet(env.f);
+      if (typeof env.n === 'number' && env.d !== undefined) relay.take(env.f, env.n, env.d);
+    };
+    room.onPeerJoin = (tid) => { try { act.send({ f: me, hi: 1 }, { target: tid })?.catch?.(() => {}); } catch { /* (gone) */ } };
+    room.onPeerLeave = (tid) => { for (const [k, v] of direct) if (v === tid) direct.delete(k); };
+  }
+  let left = false;
+  const sendDirect = (env, tid) => { try { act.send(env, tid ? { target: tid } : undefined)?.catch?.(() => {}); } catch { /* (gone meanwhile) */ } };
+  return {
+    kind: 'web',
+    selfId: me,
+    send(msg, to) {
+      if (left) return;
+      const n = relay.next(), env = { f: me, n, d: msg };
+      if (to) {
+        const tid = act && direct.get(to);
+        if (tid) sendDirect(env, tid); else relay.sendNumbered(n, msg, to);
+        return;
+      }
+      // (straight to everyone on a direct line; and by the relay too if anyone
+      // isn't on one — whoever hears it both ways takes it once)
+      const all = relay.peers();
+      if (act && direct.size) sendDirect(env);
+      if (!act || all.some((id) => !direct.has(id))) relay.sendNumbered(n, msg);
+    },
+    peers: () => relay.peers(),
+    relays() {
+      const r = relay.relays();
+      let open = r.open, all = r.all;
+      for (const s of Object.values(T?.getRelaySockets?.() || {})) { all++; if (s && s.readyState === 1) open++; }
+      return { open, all, direct: direct.size };
+    },
+    leave() {
+      if (left) return;
+      left = true;
+      relay.leave();
+      try { room?.leave(); } catch { /* (already) */ }
+    },
+  };
 }
 
 // ------------------------------------------------------------------ trystero
@@ -107,7 +207,7 @@ async function trysteroTransport(code, h, opts) {
   const urls = opts.relays || relayUrls();
   // (TURN relays, for networks that won't let browsers talk directly: see turnServers)
   let turnConfig = opts.turn;
-  if (!turnConfig) { try { turnConfig = await turnServers(); } catch { turnConfig = OPEN_RELAY; } }
+  if (!turnConfig) { try { turnConfig = await turnServers(); } catch { turnConfig = OPEN_RELAY_STATIC; } }
   const room = T.joinRoom({ appId: APP_ID, relayConfig: { warnOnRelayFailure: false, ...(urls ? { urls } : {}) }, turnConfig, ...(opts.config || {}) }, ROOM(code), {
     // (two games that met but couldn't open a line to each other: usually a
     // network that won't let browsers talk directly — see the README)

@@ -7,7 +7,7 @@
 // signposts and Laboon. Static parts are merged, cached geometries; the moving
 // parts animate every frame through animate() (see mats.js).
 import * as THREE from 'three';
-import { Mesher, box, cbox, cyl, cone, lathe, torus, extrude, slab, ribbon, blob, C, shade, hash, rng } from './kit.js';
+import { Mesher, box, cbox, cyl, cone, lathe, torus, extrude, slab, ribbon, blob, sphere, C, shade, hash, rng } from './kit.js';
 import { vcMat, glowMat, meshOf, animate, bindCtx, STATE, U } from './mats.js';
 import { model, simple, signModel, footY, postFeet } from './street.js';
 import { registerPropBuilder } from '../registry.js';
@@ -881,22 +881,76 @@ const poneglyphGeo = (red) => model('poneglyph:' + red, (k) => {
 reg('poneglyph', (o, ctx) => simple(o, ctx, 'poneglyph:' + (o.road ? 1 : 0), poneglyphGeo(o.road ? 1 : 0), { yaw: 0, scale: 1 }));
 
 // ------------------------------------------------------------ statue
-const statueGeo = () => model('statue', (k) => {
-  const stone = '#a3adb0', base = '#8a8378';
-  k.add(box(1.8, 1.1, 1.8), { at: [0, -0.2, 0], color: base, outline: 0.03 });
-  k.add(box(2.0, 0.18, 2.0), { at: [0, 0.9, 0], color: shade(base, 0.1) });
-  k.add(box(1.5, 0.16, 1.5), { at: [0, -0.2, 0], color: shade(base, -0.1) });
+// (a town's hero in bronze gone green with the sea air, on a stepped stone
+// plinth with a plaque: a sea captain in a long coat and tricorn, cape
+// thrown back, cutlass raised, the other hand on the hip — the stance of a
+// founder's monument)
+const _sq = new THREE.Quaternion(), _se = new THREE.Euler(), _sv = new THREE.Vector3(), _sup = new THREE.Vector3(0, 1, 0);
+const statueGeo = () => model('statue:2', (k) => {
+  const stone = '#a69e8f', bronze = '#5d8c7b', dark = '#3e6658', hi = '#7fae9b';
+  // a limb from a to b (a tapered cylinder), with a joint ball at b
+  const limb = (a, b, r0, r1, col = bronze, joint = true) => {
+    _sv.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    const len = _sv.length();
+    _sq.setFromUnitVectors(_sup, _sv.normalize()); _se.setFromQuaternion(_sq, 'XYZ');
+    k.add(cyl(r1, r0, len, 8), { at: a, rot: [_se.x, _se.y, _se.z], color: col, outline: 0.012 });
+    if (joint) k.add(sphere(r1 * 1.05, 8, 6), { at: b, color: col });
+  };
+  // the plinth: a step, the die with its plaque, a moulded cornice
+  k.add(box(2.3, 0.22, 2.3), { at: [0, -0.22, 0], color: shade(stone, -0.12), outline: 0.03 });
+  k.add(box(1.95, 0.12, 1.95), { at: [0, 0, 0], color: shade(stone, -0.05) });
+  k.add(box(1.6, 0.86, 1.6), { at: [0, 0.12, 0], color: stone, outline: 0.03 });
+  k.add(box(1.85, 0.1, 1.85), { at: [0, 0.98, 0], color: shade(stone, 0.08), outline: 0.02 });
+  k.add(box(1.72, 0.06, 1.72), { at: [0, 0.93, 0], color: shade(stone, -0.08) });
+  k.add(box(0.86, 0.42, 0.04), { at: [0, 0.34, 0.81], color: bronze, outline: 0.012 });
+  k.add(box(0.7, 0.04, 0.02), { at: [0, 0.6, 0.83], color: hi });
+  k.add(box(0.6, 0.03, 0.02), { at: [0, 0.48, 0.83], color: hi });
+  k.add(box(0.5, 0.03, 0.02), { at: [0, 0.41, 0.83], color: hi });
   k.save(); k.translate(0, 1.08, 0);
-  for (const s of [-1, 1]) k.add(cyl(0.16, 0.2, 1.3, 7), { at: [s * 0.22, 0, 0], color: stone, outline: 0.02 });
-  k.add(cyl(0.42, 0.34, 1.2, 8), { at: [0, 1.25, 0], color: stone, outline: 0.03 });
-  k.add(new THREE.SphereGeometry(0.3, 10, 8), { at: [0, 2.72, 0], color: stone, outline: 0.02 });
-  k.add(cyl(0.34, 0.34, 0.12, 10), { at: [0, 2.9, 0], color: stone });
-  k.add(cyl(0.16, 0.22, 0.28, 8), { at: [0, 2.98, 0], color: stone });
-  // one arm raised with a sword, one at the side
-  k.add(cyl(0.1, 0.12, 0.95, 6), { at: [0.45, 2.25, 0], rot: [0, 0, -2.6], color: stone, outline: 0.015 });
-  k.add(box(0.07, 1.3, 0.16), { at: [0.9, 2.95, 0], rot: [0, 0, -0.25], color: '#cfd8dc', outline: 0.012 });
-  k.add(cyl(0.1, 0.12, 0.9, 6), { at: [-0.44, 2.35, 0], rot: [0, 0, 0.35], color: stone, outline: 0.015 });
-  k.add(slab([[-0.55, 0], [0.55, 0], [0.4, 1.3], [-0.4, 1.3]], 0.1), { at: [0, 1.25, -0.4], color: shade(stone, -0.1) });
+  // a bronze ground slab under the feet
+  k.add(cyl(0.62, 0.66, 0.08, 14), { at: [0, 0, 0], color: dark, outline: 0.015 });
+  // legs in a striding stance: the left forward, the right back
+  limb([-0.15, 1.0, 0.02], [-0.19, 0.56, 0.2], 0.12, 0.1, dark);
+  limb([-0.19, 0.56, 0.2], [-0.2, 0.16, 0.24], 0.1, 0.085, dark);
+  limb([0.15, 1.0, -0.02], [0.2, 0.55, -0.16], 0.12, 0.1, dark);
+  limb([0.2, 0.55, -0.16], [0.21, 0.16, -0.3], 0.1, 0.085, dark);
+  // tall boots with turned-down cuffs
+  for (const [x, z] of [[-0.2, 0.24], [0.21, -0.3]]) {
+    k.add(cyl(0.11, 0.1, 0.34, 8), { at: [x, 0.06, z], color: bronze, outline: 0.012 });
+    k.add(cyl(0.13, 0.12, 0.08, 8), { at: [x, 0.36, z], color: hi });
+    k.add(box(0.18, 0.08, 0.32), { at: [x, 0.04, z + 0.06], color: bronze, outline: 0.012 });
+  }
+  // the long coat: flared skirts to the knee, the body above, a belt and buckle
+  k.add(lathe([[0.42, 0.5], [0.36, 0.72], [0.3, 0.95], [0.28, 1.04]], 12), { at: [0, 0, 0], color: bronze, outline: 0.02, double: true });
+  k.add(lathe([[0.28, 1.0], [0.31, 1.25], [0.35, 1.5], [0.33, 1.66], [0.16, 1.76], [0.1, 1.8]], 12), { at: [0, 0, 0], color: bronze, outline: 0.02 });
+  k.add(torus(0.29, 0.035, 5, 14), { at: [0, 1.04, 0], rot: [Math.PI / 2, 0, 0], color: dark });
+  k.add(box(0.1, 0.09, 0.04), { at: [0, 1.0, 0.3], color: hi });
+  // lapels and a row of buttons down the front
+  for (const sx of [-1, 1]) k.add(box(0.1, 0.42, 0.03), { at: [sx * 0.11, 1.26, 0.31], rot: [0.1, 0, sx * 0.18], color: hi });
+  for (let i = 0; i < 4; i++) k.add(sphere(0.022, 6, 4), { at: [0, 1.12 + i * 0.1, 0.33], color: hi });
+  // epaulettes
+  for (const sx of [-1, 1]) k.add(cyl(0.13, 0.11, 0.05, 10), { at: [sx * 0.35, 1.64, 0], rot: [0, 0, sx * -0.25], color: hi, outline: 0.01 });
+  // the cape thrown back off the shoulders, falling in folds behind
+  k.add(ribbon([[0, 1.68, -0.24, 0.36], [0, 1.4, -0.36, 0.42], [0, 1.0, -0.46, 0.47], [0.05, 0.55, -0.52, 0.5], [0.1, 0.3, -0.5, 0.48]], { side: [1, 0, 0], fold: 0.35 }), { color: dark, outline: 0.015, double: true });
+  // the neck, the head with its jaw and nose, the tricorn
+  k.add(cyl(0.08, 0.09, 0.14, 8), { at: [0, 1.76, 0], color: bronze });
+  k.add(sphere(0.16, 10, 8), { at: [0, 1.99, 0.01], color: bronze, outline: 0.015 });
+  k.add(box(0.2, 0.1, 0.16), { at: [0, 1.86, 0.04], color: bronze });
+  k.add(cone(0.035, 0.08, 5), { at: [0, 1.97, 0.16], rot: [Math.PI / 2, 0, 0], color: bronze });
+  k.add(box(0.2, 0.06, 0.06), { at: [0, 1.88, 0.12], color: dark });
+  k.add(lathe([[0.3, 0], [0.3, 0.025], [0.17, 0.05], [0.16, 0.18], [0.0, 0.2]], 3), { at: [0, 2.08, 0], rot: [0, Math.PI / 6, 0], color: dark, outline: 0.015, double: true });
+  // the right arm raised, the cutlass held high and forward
+  limb([0.34, 1.62, 0], [0.56, 1.92, 0.08], 0.09, 0.08);
+  limb([0.56, 1.92, 0.08], [0.62, 2.3, 0.16], 0.08, 0.07);
+  k.add(sphere(0.075, 8, 6), { at: [0.63, 2.36, 0.17], color: bronze });
+  k.add(box(0.26, 0.04, 0.06), { at: [0.63, 2.4, 0.17], rot: [0, 0, -0.2], color: hi, outline: 0.01 });
+  k.add(slab([[-0.035, 0], [0.035, 0], [0.05, 0.7], [0.0, 1.0], [-0.02, 0.7]], 0.02), { at: [0.65, 2.42, 0.18], rot: [0.25, 0, -0.2], color: '#c5d2cc', outline: 0.008 });
+  // the left arm bent, its fist on the hip
+  limb([-0.34, 1.62, 0], [-0.56, 1.32, 0.04], 0.09, 0.08);
+  limb([-0.56, 1.32, 0.04], [-0.33, 1.1, 0.14], 0.08, 0.07);
+  k.add(sphere(0.075, 8, 6), { at: [-0.31, 1.08, 0.15], color: bronze });
+  // a coat tail flaring out behind the stride
+  k.add(slab([[-0.3, 0], [0.3, 0], [0.38, -0.45], [-0.25, -0.5]], 0.03), { at: [0, 0.95, -0.28], rot: [0.35, 0, 0], color: bronze, outline: 0.01 });
   k.restore();
 });
 reg('statue', (o, ctx) => simple(o, ctx, 'statue', statueGeo(), { yaw: 0 }));
