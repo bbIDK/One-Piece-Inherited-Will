@@ -41,7 +41,7 @@ export const FRUITS = {
       T(35, { id: 'gomu_spear', name: 'Gum-Gum Spear', anim: 'kick_high', windup: 0.3, recover: 0.35, cd: 7, say: 'Gomu Gomu no... Yari!', desc: 'Both feet pressed together and stretched out like a spearhead: it drives straight through whoever is in front of you.',
         steps: [{ hit: { shape: 'line', range: 6.5, width: 1.0, damage: 30, knockback: 10, stun: 0.6, heavy: true, guardBreak: true }, vfx: 'stab' }] }),
       T(40, { id: 'gomu_bell', name: 'Gum-Gum Bell', anim: 'grab', windup: 0.25, recover: 0.35, cd: 9, say: 'Gomu Gomu no... Kane!', desc: 'Grab hold of them, stretch your head right back — and let it fly into theirs like the clapper of a bell.',
-        steps: [{ pull: { range: 5, strength: 12, stun: 0.5 } }, { at: 0.45, hit: { shape: 'arc', range: 1.8, arc: 1.4, offset: 0.2, damage: 32, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true, shake: 0.4 } }] }),
+        steps: [{ pull: { range: 5, strength: 12, stun: 0.5, to: 1.2 } }, { at: 0.45, hit: { shape: 'arc', range: 1.8, arc: 1.4, offset: 0.2, damage: 32, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true, shake: 0.4 } }] }),
     ],
     // (the Gears: Second and Fourth are switched on by these — see data/fruitForms.js — and so is Third by
     // its own; the old Gear Third and Gear Fifth stay for whoever uses them as single moves)
@@ -471,7 +471,7 @@ export const FRUITS = {
       T(50, { id: 'hie_iceball', name: 'Ice Ball', anim: 'cast', windup: 0.35, recover: 0.3, cd: 10, desc: 'Encase the target in a ball of ice.', steps: [{ proj: { speed: 14, range: 10, radius: 0.6, damage: 24, sprite: 'iceshard', size: 2, color: '#e1f5fe', element: 'ice', status: { freeze: 2.2 } } }] }),
       T(65, { id: 'hie_time', name: 'Ice Time Capsule', icon: '🧊', anim: 'cast', windup: 0.7, recover: 0.4, cd: 25, desc: 'A wave of ice that freezes everything along its path solid.', steps: [{ hit: { shape: 'line', range: 10, width: 2.5, damage: 60, knockback: 2, element: 'ice', status: { freeze: 3.5 }, heavy: true, unblockable: true }, vfx: 'beam', color: '#e1f5fe' }] }),
       T(45, { id: 'hie_partisan', name: 'Ice Block: Partisan', icon: '❄', anim: 'cast', windup: 0.35, recover: 0.35, cd: 8, desc: 'A volley of ice spears.',
-        steps: [{ proj: { speed: 24, range: 14, radius: 0.35, damage: 18, count: 5, spread: 0.55, sprite: 'iceshard', size: 1.4, color: '#e1f5fe', element: 'ice', status: { freeze: 0.6 }, pierce: true } }] }),
+        steps: [{ proj: { speed: 24, range: 14, radius: 0.35, damage: 18, count: 5, spread: 0.55, sprite: 'icespear', size: 1.2, color: '#e1f5fe', element: 'ice', status: { freeze: 0.6 }, pierce: true } }] }),
       T(55, { id: 'hie_icetime', name: 'Ice Time', anim: 'palm', windup: 0.2, recover: 0.3, cd: 12, desc: 'A touch of your hand and the cold runs right through them: frozen solid where they stand.',
         steps: [{ hit: { shape: 'arc', range: 1.7, arc: 1.0, offset: 0.2, damage: 24, knockback: 0, stun: 0.3, element: 'ice', status: { freeze: 3.2 }, unblockable: true } }] }),
     ],

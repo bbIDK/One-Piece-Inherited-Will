@@ -103,6 +103,19 @@ export function glassCrack(v, t, s = 1) {
   for (let i = 0; i < 2; i++) v.ring(t + rnd(0.005, 0.06), rnd(2700, 3500), 0.3 * s, 0.022, [1, 1.62, 2.3]);
 }
 
+/**
+ * The sky itself shattering (the Gura Gura no Mi at full strength): a hard
+ * white crack, a fan of glassy partials ringing out, shards raining down in
+ * a falling spray and a long tinkling tail — far bigger than glassCrack.
+ */
+export function shatter(v, t, s = 1) {
+  v.noise(t, 0.012, { type: 'highpass', freq: 2500, gain: 0.95 * s, attack: 0.0004 });
+  v.noise(t, 0.06, { freq: 1800, q: 0.7, gain: 0.55 * s, attack: 0.0008 });
+  for (let i = 0; i < 4; i++) v.ring(t + rnd(0, 0.03), rnd(1900, 3600), 0.42 * s, rnd(0.05, 0.12), [1, 1.53, 2.27, 3.1], { spread: 0.006 });
+  v.crackle(t + 0.005, 0.3 * s, Math.round(30 * s), { freq: 4800, spread: 1.2, q: 2.5, gain: 0.16 * s, len: 0.008 });
+  v.crackle(t + 0.12, 0.7 * s, Math.round(18 * s), { freq: 6500, spread: 0.8, q: 5, gain: 0.06 * s, len: 0.012 });
+}
+
 /** A deep boom: the DOGOON under a big blow, a quake, an explosion. */
 export function boom(v, t, s = 1, { f0 = 90, f1 = 26, dur = 0.7 } = {}) {
   v.thump(t, { f0, f1, dur: dur * s, gain: 0.8 * Math.min(1.2, s) });

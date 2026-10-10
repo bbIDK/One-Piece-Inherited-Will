@@ -133,9 +133,11 @@ const SHELL_FS = /* glsl */`
       float inside = gl_FrontFacing ? 1.0 : 0.85;
       c = mix(vCol.rgb, vCol2.rgb * 1.25, glow * 0.8 + band * 0.4 + base * 0.6);
       c = mix(c, vCol.rgb * vec3(0.45, 0.62, 0.95), line);
-      c = mix(c, vec3(1.3), k);
-      a = (0.12 + glow * 0.4 + band * 0.1 + line * 0.6 + base * 0.35 + k * 0.5) * inside;
-      w = 0.15 + base * 0.4 + k * 0.6;
+      c = mix(c, vec3(1.15), k * 0.6);
+      a = (0.12 + glow * 0.4 + band * 0.1 + line * 0.6 + base * 0.35 + k * 0.18) * inside;
+      // (the far wall seen from inside: a clear pale-blue veil over everything past it)
+      if (!gl_FrontFacing) a = max(a, 0.2 + 0.25 * smoothstep(0.0, 0.5, 1.0 - abs(vObj.y)));
+      w = 0.15 + base * 0.4 + k * 0.3;
     } else if (kind == ${VK.HAKI}) {
       // Conqueror's going out: clear in the middle, a band of black at its
       // skin, the king's own colour burning along its very edge, torn by the

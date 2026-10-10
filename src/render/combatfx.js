@@ -1135,7 +1135,9 @@ sig('gomu_gear5', {
 sig('gura_punch', {
   hit(fx, actor, s, a, hb) {
     const [px, py] = fwd(actor, hb.angle, 1.1);
-    fx.add('aircrack', { x: px, y: py, z: 0.8, size: 1.3, life: 0.55 });
+    fx.add('aircrack', { x: px, y: py, z: 1.1, size: 2.6, life: 0.7 });
+    fx.add('flare', { x: px, y: py, z: 1.1, size: 1.6, color: '#e0f7fa', life: 0.18 });
+    fx.shake(0.4, hb.angle);
     for (let i = 0; i < 3; i++) fx.ring(px, py, 0.1, 1.2 + i * 0.7, '#e0f7fa', 0.45, 0.1, { z: 0.8, flat: 0.8, delay: i * 0.05, add: true });
     fx.focus(px, py, 0.2);
   },

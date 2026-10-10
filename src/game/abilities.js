@@ -385,7 +385,13 @@ function runStep(actor, s, game, a) {
       if (!game.combat.canHit(actor, e, {})) continue;
       const dx = game.world.dx(e.x, actor.x), dy = actor.y - e.y;
       const d = Math.hypot(dx, dy) || 1;
-      e.knock(dx / d * s.pull.strength, dy / d * s.pull.strength);
+      // (a grab — Gum-Gum Bell — hauls them right in, to arm's length in front: wherever there's room for them)
+      const to = s.pull.to;
+      if (to && d > to && !e.boss) {
+        const nx = game.world.wx(actor.x - dx / d * to), ny = actor.y - dy / d * to;
+        if (!e.canOccupy || e.canOccupy(game.world, nx, ny)) { e.x = nx; e.y = ny; e.kb.x = e.kb.y = 0; }
+        else e.knock(dx / d * s.pull.strength, dy / d * s.pull.strength);
+      } else e.knock(dx / d * s.pull.strength, dy / d * s.pull.strength);
       if (s.pull.stun) e.stagger(s.pull.stun);
       if (s.pull.nullify) e.addStatus('seastone', s.pull.nullify);
     }

@@ -109,7 +109,7 @@ SHAPES.aircrack = {
     const X = v.lx(s.x), Z = v.lz(s.y), Y = v.groundOf(s) + z;
     const c = col(s.color || '#e0f7fa');
     const r = v.cr, u = v.cu;
-    const n = s.n || 9;
+    const n = s.n || 13;
     for (let i = 0; i < n; i++) {
       const th = (i / n) * TAU + (hash(s.seed + i) - 0.5) * 0.5;
       const L = R * (0.6 + 0.5 * hash(s.seed + i * 3));
@@ -121,6 +121,22 @@ SHAPES.aircrack = {
         v.ribbons.point(X + r[0] * cs + u[0] * sn, Y + r[1] * cs + u[1] * sn, Z + r[2] * cs + u[2] * sn, 0.032 * (1.1 - j * 0.25));
       }
       v.ribbons.finish();
+      // (each crack forks as it runs out, the way the sky splits in the anime)
+      {
+        const rr0 = (L * 2) / 3, o0 = (hash(s.seed + i * 7 + 2) - 0.5) * 0.5;
+        const bx = Math.cos(th + o0) * rr0, by = Math.sin(th + o0) * rr0;
+        const fa = th + o0 + (hash(s.seed + i * 11) < 0.5 ? 0.45 : -0.45), fl = L * 0.45;
+        const fx2 = bx + Math.cos(fa) * fl, fy2 = by + Math.sin(fa) * fl;
+        v.ribbons.start(RK.LINE, RM.FACE, c, fade * 0.9, WHITE, 0.6)
+          .point(X + r[0] * bx + u[0] * by, Y + r[1] * bx + u[1] * by, Z + r[2] * bx + u[2] * by, 0.022)
+          .point(X + r[0] * fx2 + u[0] * fy2, Y + r[1] * fx2 + u[1] * fy2, Z + r[2] * fx2 + u[2] * fy2, 0.012).finish();
+        // and a second ring of shard edges, further out
+        const th3 = th + TAU / n, r3 = L * 0.88;
+        const d1 = Math.cos(th) * r3, e1 = Math.sin(th) * r3, d3 = Math.cos(th3) * r3 * 0.92, e3 = Math.sin(th3) * r3 * 0.92;
+        v.ribbons.start(RK.LINE, RM.FACE, c, fade * 0.6, WHITE, 0.6)
+          .point(X + r[0] * d1 + u[0] * e1, Y + r[1] * d1 + u[1] * e1, Z + r[2] * d1 + u[2] * e1, 0.016)
+          .point(X + r[0] * d3 + u[0] * e3, Y + r[1] * d3 + u[1] * e3, Z + r[2] * d3 + u[2] * e3, 0.016).finish();
+      }
       // the shard edges between the radial cracks
       const th2 = th + TAU / n, r2 = L * 0.55;
       const c1 = Math.cos(th) * r2, s1 = Math.sin(th) * r2, c3 = Math.cos(th2) * r2 * 0.95, s3 = Math.sin(th2) * r2 * 0.95;
@@ -694,6 +710,19 @@ function room(v, s, R, a) {
     const q = age / 0.5;
     v.groundRing(patch, s.x, s.y, Rr * (0.9 + q * 0.25), 0.12 * (1 - q), WHITE, a * (1 - q), c, 1, 0.9, 0, 0, 0, 9, 0, s.seed, 0);
   }
+  // the dust the opening kicks up: cream bands of it whirling round its foot, settling (as the anime draws it)
+  if (age < 1.6) {
+    const q = age / 1.6, fade = a * (1 - q) * Math.min(1, age / 0.15);
+    for (let r = 0; r < 4; r++) {
+      const ph0 = r * 1.7 + (s.seed || 0) + age * (1.6 - r * 0.2), h0 = 0.15 + r * 0.22;
+      v.ribbons.start(RK.SMOKE, RM.FACE, DUST, fade * 0.85, DUST2, 0);
+      for (let j = 0; j <= 10; j++) {
+        const th = ph0 + j * 0.24, rr = Rr * (1.0 + 0.04 * Math.sin(j + r)) + 0.3 * q;
+        v.ribbons.point(X + Math.cos(th) * rr, G + h0 + 0.12 * Math.sin(j * 0.9 + r), Z + Math.sin(th) * rr, (0.14 + 0.1 * Math.sin((j / 10) * PI)) * (1 + q));
+      }
+      v.ribbons.finish();
+    }
+  }
   // pale motes drifting slowly up inside it (little cubes, Ope's mark)
   const t = v.time;
   for (let i = 0; i < 12; i++) {
@@ -1065,6 +1094,8 @@ const SKID = [-0.14, 0.14];
 const DARKNESS = col('#311b92');
 const SCORCH_COL = col('rgba(30,18,12,1)'), BOLT_EMBER = col('#ffd54f');
 const ROOM_LINE = col('#e1f5fe');
+const SMEAR = col('#e3f4ff');
+const DUST = col('#efe2c0'), DUST2 = col('#fffaf0');
 const ZONE_COL = { dark: ['#7e57c2', '#12001c'], ice: ['#e1f5fe', '#ffffff'], storm: ['#e1c16e', '#fff3c4'], gravity: ['#b39ddb', '#ede7f6'], mochi: ['#e8dcc4', '#fff8e1'] };
 const FIELD_FIRE = col('#ff7a1a'), FIELD_FIRE_CORE = col('#ffe08a'), GAS_LIGHT = col('#e1bee7'), MOCHI_SHADE = col('#d7ccc8');
 /**
@@ -1228,25 +1259,28 @@ SHAPES.gatling = {
       const R = 0.16 * big * sc;
       const w0 = 0.075 * sc * Math.min(big, 1.7), w1 = 0.065 * sc * Math.min(big, 2);
       const roll = (hash(seed + 11) - 0.5) * 0.7;
-      for (let b = 0; b < 3; b++) {
-        // the blur: the arm as it was a moment back, swung off to the side it
-        // came from — a solid fist and arm in front, two fainter copies behind
-        const off = b * 0.16 * sc * side, al = a * pop * (b === 0 ? 1 : b === 1 ? 0.42 : 0.18);
-        const ox = -st * off, oz = ct * off, oy = -b * 0.03 * sc;
-        // (the wrist, where the arm meets the fist)
-        const ex = px - ct * R * 0.7 + ox, ey = py + oy, ez = pz - st * R * 0.7 + oz;
-        v.ribbons.start(RK.TUBE, RM.FACE, skin, al, ink, 0)
-          .point(shx, shy, shz, w0).point((shx + ex) * 0.5, (shy + ey) * 0.5 + 0.04 * sc, (shz + ez) * 0.5, (w0 + w1) * 0.5).point(ex, ey, ez, w1).finish();
-        // (the copies crumble away: only the real one is whole)
-        putAlong(v.solids.fists, px + ox, py + oy, pz + oz, ct, 0, st, R, R, roll, skin, OK.SKIN, b === 0 ? 0 : b === 1 ? 0.45 : 0.75, seed, 0);
+      // the arm itself, in the body's own skin, and its fist — solid
+      const ex = px - ct * R * 0.7, ez = pz - st * R * 0.7;
+      v.ribbons.start(RK.TUBE, RM.FACE, skin, a * pop, ink, 0)
+        .point(shx, shy, shz, w0).point((shx + ex) * 0.5, (shy + py) * 0.5 + 0.04 * sc, (shz + ez) * 0.5, (w0 + w1) * 0.5).point(ex, py, ez, w1).finish();
+      putAlong(v.solids.fists, px, py, pz, ct, 0, st, R, R, roll, skin, OK.SKIN, 0, seed, 0);
+      // and behind it the blur the anime draws: pale, see-through white-blue smears
+      // where the arm just was, fanned off the way it swung (Jet Gatling)
+      for (let b = 1; b < 3; b++) {
+        const off = b * 0.2 * sc * side, ox = -st * off, oz = ct * off, oy = -b * 0.05 * sc;
+        v.ribbons.start(RK.TUBE, RM.FACE, SMEAR, a * pop * (b === 1 ? 0.45 : 0.25), SMEAR, 0)
+          .point(shx, shy, shz, w0 * 1.1).point((shx + px) * 0.5 + ox * 0.6, (shy + py) * 0.5 + oy, (shz + pz) * 0.5 + oz * 0.6, w1 * 1.6).point(px + ox, py + oy, pz + oz, R * 0.9).finish();
       }
       // speed lines streaming off the fist
       v.ribbons.start(RK.SPEED, RM.FACE, WHITE, a * 0.75 * pop, WHITE, 0.4)
         .point(px - ct * R * 1.2, py + R * 0.5, pz - st * R * 1.2, 0.02)
         .point(px - ct * (R + 0.6 * pop), py + R * 0.5, pz - st * (R + 0.6 * pop), 0.01).finish();
       if (ph > 0.45 && ph < 0.62) {
-        const j = v.sprites.put(SK.BURST, px + ct * R, py, pz + st * R, 0.3 * sc * Math.sqrt(big), col('#fff8e1'), a, WHITE, 0.6, seed, seed, (ph - 0.45) / 0.17);
+        // where it lands: a white pop, round and hard-edged
+        const q = (ph - 0.45) / 0.17;
+        const j = v.sprites.put(SK.BURST, px + ct * R, py, pz + st * R, 0.34 * sc * Math.sqrt(big), col('#fff8e1'), a, WHITE, 0.6, seed, seed, q);
         v.sprites.vel(j, 7, 0, 0, 0);
+        v.sprites.put(SK.RING, px + ct * R * 1.2, py, pz + st * R * 1.2, (0.15 + q * 0.4) * sc * Math.sqrt(big), WHITE, a * (1 - q), WHITE, 0.4, 0, seed, q);
       }
     }
   },

@@ -336,3 +336,16 @@ filter is only the fallback with no post pass.
 
 Look at them with `node tools/shot.mjs haki-3d`, `combat-3d --ids=…` and the
 form looks in third person close up.
+
+## Revamp 3: what the references say (80.lv "VFX Staples", SunStrike "VFX for Games" / "Timing in Animation")
+
+- Every effect is three layers on their own clocks: **anticipation** (telegraphs the blow; even 2 frames changes the feel),
+  **climax** (most elements, highest contrast and saturation, the flash on the exact contact frame) and **dissipation**
+  (short, low contrast, low opacity — clear before the next action).
+- Hit-stop 2–6 frames scaled by the blow's weight (combat.js blowWeight → fx.stop), a camera kick and a one-frame flash that peaks on impact.
+- Arrive → overshoot → settle, each step about half the last (the Room's opening, Bell's head).
+- Rank effects by gameplay weight and spend contrast to match: a jab never glows like an awakening.
+- Colour encodes the element, scale encodes power; a cold fire deepens in its own hue at the rim (never browns).
+- Prefer recognisable *objects* to particles: real fists for a Gatling, real feathers of flame for the Phoenix,
+  a real stretched neck for Bell. Particles are accents, not the effect.
+- Judge every technique in a live camera (tools/scenarios-zzvfx3.mjs --cam), not in isolation.

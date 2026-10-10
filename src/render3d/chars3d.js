@@ -227,6 +227,17 @@ class ActorView {
       } else if (a.fruit === 'gomu') this.stretchTarget(a, ctx, s, o, dtv);
       // (Gum-Gum Bell: the head flung back on its stretched neck and swung into theirs)
       o.headOff = a.fruit === 'gomu' && a.action?.def?.id === 'gomu_bell' ? bellHead(a.action.t, this._bellOff || (this._bellOff = new THREE.Vector3())) : null;
+      // (and the arms: stretched out and wrapped round them, hands locked at their back, the while)
+      const bt = o.headOff || (a.action?.def?.id === 'gomu_bell' && a.action.t > 0.15 && a.action.t < 0.7) ? a.action?.target : null;
+      if (bt && bt.alive !== false && a.fruit === 'gomu') {
+        const w = ctx.world, f = this.visF ?? a.facing ?? 0, c = Math.cos(f), sn = Math.sin(f);
+        const dx = w ? w.dx(a.x, bt.x) : bt.x - a.x, dy = bt.y - a.y;
+        const fx = (dx * c + dy * sn) / s, fz = (-dx * sn + dy * c) / s, y = m.rig.S[0].y - 0.1;
+        const R2 = this._bellHands || (this._bellHands = [new THREE.Vector3(), new THREE.Vector3()]);
+        // (round behind them: a little past their middle, either side)
+        R2[0].set(fx + 0.22, y, fz + 0.18); R2[1].set(fx + 0.22, y, fz - 0.18);
+        o.reachR = R2[0]; o.reachL = R2[1]; o.reachRK = 1; o.reachLK = 1;
+      }
       const knocked = pose.state === 'knocked' || pose.state === 'dead';
       let PP = P;
       if (a.isPlayer && ctx.mode === 'first' && P.b && P.b[0] < 0) PP = { ...P, b: [P.b[0] * 0.3, P.b[1]] };

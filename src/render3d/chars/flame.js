@@ -259,7 +259,7 @@ const WING_VERT = /* glsl */`
 `;
 const WING_FRAG = /* glsl */`
   uniform float uTime, uSeed, uAlpha, uN, uTipGold;
-  uniform vec3 uRim, uMid, uHot, uCore, uGold;
+  uniform vec3 uRim, uMid, uHot, uCore, uGold, uFire;
   varying vec2 vUv;
   ${NOISE}
   void main() {
@@ -267,31 +267,33 @@ const WING_FRAG = /* glsl */`
     float u = vUv.x, v = vUv.y;
     float fu = u * uN, f = fract(fu), fid = floor(fu);
     float cf = abs(f * 2.0 - 1.0);
-    // each feather drawn out to a point (and every other one a little shorter: overlapping rows)
-    float tip = (1.0 - 0.34 * pow(cf, 1.3)) * (0.9 + 0.1 * mod(fid, 2.0));
-    // the tips lick about, more the further back
-    float lick = (fnoise(vec3(fu * 1.7, v * 3.0 - t * 4.2, t * 0.6 + fid)) - 0.5) * 0.2 * v;
+    // each feather drawn out to a point, the edge ragged with licking flame (Marco's wings: Wano)
+    float tip = (1.0 - 0.3 * pow(cf, 1.3)) * (0.9 + 0.1 * mod(fid, 2.0));
+    float lick = (fnoise(vec3(fu * 2.4, v * 4.0 - t * 4.6, t * 0.7 + fid)) - 0.5) * 0.34 * (0.25 + v);
     float edge = tip + lick;
     if (v > edge) discard;
-    // a thin cut between the feathers, opening up toward the tips
-    float split = smoothstep(0.45, 0.95, v / edge);
-    if (cf > 1.0 - 0.16 * split) discard;
-    // tongues of colour streaming back along each feather
-    float tongue = fnoise(vec3(fu * 2.3, v * 2.2 - t * 3.4, fid * 1.7));
-    float heat = 1.0 - v / edge + (tongue - 0.5) * 0.45 - cf * 0.18;
-    float rim = min(edge - v, (1.0 - cf) * 0.12 / max(0.2, split));
-    vec3 col = mix(uRim, uMid, step(0.035, rim));
-    col = mix(col, uHot, step(0.55, heat));
-    col = mix(col, uCore, step(0.82, heat));
-    // gold at the tips of the long feathers
-    float gold = step(0.8, v / edge) * step(cf, 0.55) * step(0.035, rim) * uTipGold;
-    col = mix(col, uGold, gold);
-    // (bright enough at the heart for the bloom to catch)
-    col *= 1.0 + 0.35 * step(0.82, heat);
+    float split = smoothstep(0.5, 0.95, v / edge);
+    if (cf > 1.0 - 0.14 * split) discard;
+    // turquoise, paler and speckled toward the arm, a deeper blue only right at the ragged edge
+    float speck = fnoise(vec3(fu * 6.0, v * 14.0 - t * 1.2, fid));
+    float heat = 1.0 - v / edge + (speck - 0.5) * 0.5;
+    float rim = edge - v;
+    vec3 col = mix(uRim, uMid, smoothstep(0.02, 0.05, rim));
+    col = mix(col, uHot, step(0.5, heat));
+    col = mix(col, uCore, step(0.85, heat) * 0.8);
+    // the quill down each feather, a fine darker line
+    col = mix(col, uRim, (1.0 - smoothstep(0.03, 0.07, cf)) * smoothstep(0.15, 0.4, v) * 0.45);
+    // gold-and-orange flames dotted over it — along the arm and at the feather tips — flickering
+    float g = fnoise(vec3(fu * 2.2 + 3.1, v * 5.0 - t * 2.4, t * 0.9 + fid * 0.5));
+    float where = max(1.0 - smoothstep(0.08, 0.32, v), smoothstep(0.62, 0.9, v / edge)) * uTipGold;
+    float fl = smoothstep(0.62, 0.68, g) * where;
+    col = mix(col, uGold, fl);
+    col = mix(col, uFire, smoothstep(0.74, 0.8, g) * where);
+    col *= 1.0 + 0.3 * step(0.85, heat) + 0.25 * fl;
     gl_FragColor = vec4(col, uAlpha);
   }
 `;
-const WING_COLS = { uRim: '#0b3d91', uMid: '#1e9be8', uHot: '#62d6ff', uCore: '#e6fbff', uGold: '#ffd54a' };
+const WING_COLS = { uRim: '#1673c9', uMid: '#2fc8ee', uHot: '#7fe8fb', uCore: '#d9fbff', uGold: '#ffd23f', uFire: '#ff8a1c' };
 
 function wingMat(seed, n, gold) {
   const u = { uTime: { value: 0 }, uSeed: { value: seed }, uAlpha: { value: 1 }, uN: { value: n }, uTipGold: { value: gold } };
@@ -360,7 +362,7 @@ export class PhoenixWings {
       // out from the body: away from the other shoulder, level
       _o.subVectors(S, S2); _o.y = 0; _o.normalize();
       // (past the hand: the arm's line carried on a little, for the longest feathers to grow from)
-      _e.subVectors(E, J).normalize().multiplyScalar(0.22).add(E);
+      _e.subVectors(E, J).normalize().multiplyScalar(0.45).add(E);
       const pos = w.m.geometry.attributes.position.array;
       for (let i = 0; i < this.NU; i++) {
         const u = i / (this.NU - 1);
@@ -371,8 +373,9 @@ export class PhoenixWings {
         // (in close to the body at the shoulder, so there's no gap under the arm)
         if (u < 0.12) _p.addScaledVector(_o, -(0.12 - u) * 0.6);
         // the feathers stream back, swept out and a touch down, longer toward the hand
-        _d.copy(trail).addScaledVector(_o, 0.12 + 0.32 * u).addScaledVector(_Y, -0.18).normalize();
-        const chord = (0.42 + 0.95 * Math.pow(u, 1.15)) * (0.25 + 0.75 * g);
+        // (swept up and back in a great V, as Marco's are — so they read from the front and the side too, never edge-on)
+        _d.copy(trail).multiplyScalar(0.6).addScaledVector(_o, 0.15 + 0.3 * u).addScaledVector(_Y, 0.25 + 0.45 * u).normalize();
+        const chord = (0.65 + 1.55 * Math.pow(u, 1.1)) * (0.25 + 0.75 * g);
         for (let j = 0; j < NV; j++) {
           const v = j / (NV - 1);
           // (a little camber: the feathers droop as they trail)
@@ -392,7 +395,7 @@ export class PhoenixWings {
     for (let i = 0; i < this.TU; i++) {
       const u = i / (this.TU - 1), f = u * 2 - 1;
       _d.copy(trail).addScaledVector(_Y, -0.35).addScaledVector(_o, f * 0.55).normalize();
-      const chord = (0.75 + 0.45 * (1 - f * f)) * (0.25 + 0.75 * g);
+      const chord = (1.0 + 0.8 * (1 - f * f)) * (0.25 + 0.75 * g);
       for (let j = 0; j < NV; j++) {
         const v = j / (NV - 1), k = (i * NV + j) * 3;
         pos[k] = _p.x + _o.x * f * 0.1 + _d.x * chord * v;

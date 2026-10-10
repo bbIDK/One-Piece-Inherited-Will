@@ -555,7 +555,7 @@ export const SFX = {
     prio: 8, cd: 0.1, max: 2, send: 0.3, drive: 2.5, duck: 0.5, side: 1, hold: 0.4,
     play(v) {
       // the air cracking like glass; the ground's own deep crack — stone giving way — and the boom; the rumble shaking on
-      M.glassCrack(v, 0, 1);
+      M.shatter(v, 0, 0.8);
       v.noise(0.004, 0.09, { freq: 520, q: 0.8, gain: 0.5, attack: 0.002 });
       v.crackle(0.006, 0.25, 14, { freq: 900, spread: 1, q: 1.5, gain: 0.18, len: 0.02 });
       M.boom(v, 0.01, 1, { f0: 100, f1: 30, dur: 0.75 });
@@ -1325,6 +1325,20 @@ for (const [kind, names] of Object.entries(KINDS)) for (const n of names) if (SF
 // like what they swing. Each entry is play(v, k) with k.rel the release time,
 // k.def the technique.
 
+/** Gura Gura: the tremble building as it charges (k.rel), then the shatter, the air crack, the sub-boom and the quake rolling on. */
+const GURA = (v, k, s = 1) => {
+  const r = Math.max(0.12, k.rel || 0);
+  v.tone(0, r + 0.05, { freq: 38, to: 46, gain: 0.32 * s, attack: r * 0.9, curve: 'lin', vib: { rate: 14, depth: 6 } });
+  v.noise(0, r, { color: 'brown', type: 'lowpass', freq: 220, gain: 0.3 * s, attack: r * 0.85, curve: 'lin' });
+  v.crackle(Math.max(0, r - 0.2), 0.2, 6, { freq: 6000, gain: 0.04, q: 4 });
+  M.shatter(v, r, 1.3 * s);
+  v.noise(r, 0.05, { freq: 700, q: 0.6, gain: 0.7 * s, attack: 0.0006 });
+  M.boom(v, r, 1.6 * s, { f0: 120, f1: 22, dur: 1.1 });
+  v.thump(r + 0.09, { f0: 70, f1: 28, dur: 0.6, gain: 0.55 * s });
+  v.tone(r + 0.03, 1.6 * s, { freq: 48, to: 30, gain: 0.38 * s, vib: { rate: 11, depth: 8 } });
+  M.rumble(v, r + 0.08, 1.2 * s, 1.8, { lp: 210 });
+  v.crackle(r + 0.2, 1.2 * s, 16, { freq: 1100, gain: 0.08 * s });
+};
 const STRETCH = (v, k, s = 1) => { M.stretch(v, 0, Math.max(0.12, k.rel), s); M.snap(v, k.rel, s); };
 
 /** Devil Fruit techniques by fruit (and the signature ones by id). */
@@ -1349,13 +1363,10 @@ export const FRUIT_TECH = {
     default: STRETCH,
   },
   gura: {
-    gura_tsunami: (v, k) => { v.noise(0, Math.max(0.4, k.rel), { color: 'brown', type: 'lowpass', freq: 160, gain: 0.35, attack: Math.max(0.3, k.rel) * 0.8, curve: 'lin' }); M.glassCrack(v, k.rel, 1.4); M.boom(v, k.rel, 1.4); },
-    default: (v, k) => {
-      // the air begins to tremble, then cracks like glass
-      v.noise(0, Math.max(0.15, k.rel), { color: 'brown', type: 'lowpass', freq: 200, gain: 0.25, attack: Math.max(0.1, k.rel) * 0.8, curve: 'lin' });
-      v.crackle(Math.max(0, k.rel - 0.15), 0.15, 4, { freq: 6000, gain: 0.03, q: 4 });
-      M.glassCrack(v, k.rel, 1);
-    },
+    gura_tsunami: (v, k) => { GURA(v, k, 1.5); M.rumble(v, k.rel + 0.3, 1.4, 2.4, { lp: 180 }); },
+    // the air trembling as the fist draws back, then the sky cracking open: the shatter, the
+    // sub-boom you feel in your chest, and the ground rolling on under it
+    default: (v, k) => GURA(v, k, 1),
   },
   ope: {
     ope_room: (v) => {

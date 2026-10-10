@@ -237,6 +237,18 @@ function draw(v, pr, r, Y, sc) {
       trail(v, r, RK.SPEED, WHITE, 0.55, WHITE, 0.3, 0.05 * s, 0.1, 6);
       break;
     }
+    case 'icespear': {
+      // Ice Block: Partisan — a partisan of ice: a long shaft, a broad pointed head, two
+      // curled hooks either side of its foot (as Aokiji's are drawn), a frost trail
+      const ic = col(pr.color || '#e1f5fe'), L = 1.6 * s, nx = -dz, nz = dx;
+      putAlong(v.solids.shards, X - dx * L * 0.35, Y, Z - dz * L * 0.35, dx, 0, dz, L * 0.75, 0.06 * s, 0, ic, OK.ICE, 0, seed, 0.1);
+      putAlong(v.solids.crystals, X + dx * L * 0.12, Y, Z + dz * L * 0.12, dx, 0, dz, 0.55 * s, 0.17 * s, 0, ic, OK.ICE, 0, seed, 0.2);
+      for (const sd of [1, -1]) {
+        putAlong(v.solids.shards, X - dx * 0.12 * s + nx * sd * 0.16 * s, Y + 0.04 * s, Z - dz * 0.12 * s + nz * sd * 0.16 * s, -dx * 0.6 + nx * sd, 0.4, -dz * 0.6 + nz * sd, 0.32 * s, 0.06 * s, sd, ic, OK.ICE, 0, seed + sd, 0.1);
+      }
+      trail(v, r, RK.SMOKE, col('#e1f5fe'), 0.55, WHITE, 0, 0.12 * s, 0.35, 8);
+      break;
+    }
     case 'iceshard': {
       const ic = col(pr.color || '#b3e5fc');
       putAlong(v.solids.shards, X, Y, Z, dx, 0, dz, 0.5 * s, 0.22 * s, t * 8, ic, OK.ICE, 0, seed, 0.15);
