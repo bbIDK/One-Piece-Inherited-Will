@@ -1132,6 +1132,7 @@ export class ShipView {
     if (this.inside) {
       const cam = ctx?.camera;
       this.inside.visible = !!cam && cam.position.distanceTo(r.position) < this.d.L * 0.6 + 12;
+      if (this.panes) this.panes.material.userData.pane.uOpen.value = this.inside.visible ? 1 : 0;
       // (its shadows — the decks overhead darkening the rooms — only while you're in one)
       const pl = ctx?.game?.player;
       this.inside.castShadow = this.overhead.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);

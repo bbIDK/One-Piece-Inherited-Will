@@ -190,6 +190,16 @@ export const scenarios = {
           p.z = 0;
           g.view3d.rig.yaw = side + Math.PI; g.view3d.rig.pitch = 0.16;
         });
+        // (from astern, close: into the cabins through the gallery windows)
+        if (views.includes('stern')) await look('stern', () => {
+          const g = window.OP.game, p = g.player, s = window.__ship, d = window.OP.debug.dims(s);
+          g.settings.view = 'first'; g.applySettings();
+          const back = s.heading + Math.PI, R = d.L / 2 + 3.5;
+          if (p.deck) { p.deck.ship.aboard?.delete(p); p.deck = null; }
+          window.OP.teleport(s.x + Math.cos(back) * R, s.y + Math.sin(back) * R);
+          g.creative.on || g.creative.set(true, true); if (!p.flying) g.creative.fly(); p.z = d.deckY + 0.6;
+          g.view3d.rig.yaw = s.heading; g.view3d.rig.pitch = 0.05;
+        });
         await page.evaluate((v) => { const g = window.OP.game; g.settings.view = v; g.applySettings(); }, args.view || 'first');
         if (views.includes('deck')) await look('deck', () => {
           const g = window.OP.game, s = window.__ship, d = window.OP.debug.dims(s);

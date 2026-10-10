@@ -12,6 +12,7 @@
 // plays nobody fights (ai.js holds them), you're untouchable, and the HUD
 // steps back behind the bars.
 import { h } from '../ui/dom.js';
+import { wantedPoster } from '../ui/screens.js';
 
 const SKIP = ['Space', 'Enter', 'E', 'Escape'];
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -44,10 +45,18 @@ export function installCinematics(game) {
     if (v?.rig) v.rig.mode = 'third';
     C.el = h('div.cine', h('div.cine-bar.top'), h('div.cine-bar.bot'), h('div.cine-skip', 'Space to skip'));
     if (spec.card) {
-      C.card = h('div.cine-card' + (spec.card.kind === 'meet' ? '.meet' : ''),
-        spec.card.title ? h('div.cine-title', spec.card.title) : null,
-        h('div.cine-name', spec.card.name),
-        spec.card.bounty ? h('div.cine-bounty', h('small', 'BOUNTY'), bountyText(spec.card.bounty)) : null);
+      // (anyone with a price on their head: their wanted poster beside the
+      // name, posed the way their bounty and their fights have them)
+      let poster = null;
+      if (spec.card.bounty && spec.card.look) {
+        try { poster = wantedPoster({ name: spec.card.name, look: spec.card.look, bounty: spec.card.bounty, fruit: spec.card.fruit || null, stats: { kills: spec.card.kills ?? 12 }, equipped: { weapons: spec.card.weapons || [] }, inventory: [] }); } catch (e) { poster = null; }
+      }
+      C.card = h('div.cine-card' + (spec.card.kind === 'meet' ? '.meet' : '') + (poster ? '.has-poster' : ''),
+        poster ? h('div.cine-poster', poster) : null,
+        h('div.cine-text',
+          spec.card.title ? h('div.cine-title', spec.card.title) : null,
+          h('div.cine-name', spec.card.name),
+          spec.card.bounty && !poster ? h('div.cine-bounty', h('small', 'BOUNTY'), bountyText(spec.card.bounty)) : null));
       C.el.appendChild(C.card);
     }
     document.body.appendChild(C.el);
@@ -121,20 +130,58 @@ function endCine(game, run) {
  * not when they're already in the thick of a fight.
  */
 export function installBossIntros(game) {
-  game.on('tick', () => {
-    const b = game.bossTarget, p = game.player, c = game.state?.char;
-    if (!b || !p || !c || game.cine || !b.alive || b.state !== 'idle' || p.mode === 'sail' || p.state !== 'idle') return;
-    if (game.ui?.blocksInput?.() || !game.view3d?.rig) return;
-    const id = b.npcId || b.name;
-    const seen = c.flags.bossIntro || (c.flags.bossIntro = {});
-    if (seen[id]) return;
-    const d = game.world.distance(p.x, p.y, b.x, b.y);
-    if (d > 26) return;
-    seen[id] = 1;
+  const seenOf = () => { const c = game.state?.char; return c ? (c.flags.bossIntro || (c.flags.bossIntro = {})) : null; };
+  const idOf = (b) => b.npcId || b.name;
+  const can = (b) => {
+    const p = game.player;
+    return !!(p && !game.cine && b.alive && b.state === 'idle' && p.mode !== 'sail' && game.view3d?.rig && !game.ui?.blocksInput?.());
+  };
+  const play = (b) => {
+    const seen = seenOf(), p = game.player;
+    if (!seen) return false;
+    seen[idOf(b)] = 1;
+    b.introDone = true;
     game.playCinematic({
       shots: bossIntroShots(b, p),
-      card: { name: b.name, title: b.title || '', bounty: b.bountyValue || b.def?.bounty || 0 },
+      card: { name: b.name, title: b.title || '', bounty: b.bountyValue || b.def?.bounty || 0, look: b.look, fruit: b.fruit, weapons: b.def?.weapon ? [b.def.weapon] : [] },
       onEnd: () => { if (b.alertLine) game.fx?.text?.(b.x, b.y - 2.4, b.alertLine, '#ffcdd2', 0.35, { life: 2.6 }); },
     });
+    return true;
+  };
+  /**
+   * A boss you haven't been introduced to can't be hurt yet: the first blow
+   * (from close or from afar) brings on their intro instead — the fight
+   * starts after it, never before (see Actor.takeDamage).
+   */
+  game.bossIntroPending = (b) => {
+    if (!b?.boss || b.introDone) return false;
+    const seen = seenOf();
+    if (!seen || seen[idOf(b)]) { b.introDone = true; return false; }
+    if (!can(b)) return false;
+    return play(b);
+  };
+  let scanT = 0;
+  game.on('tick', (dt) => {
+    const p = game.player, c = game.state?.char;
+    if (!p || !c || game.cine || p.mode === 'sail' || p.state !== 'idle') return;
+    if (game.ui?.blocksInput?.() || !game.view3d?.rig) return;
+    const seen = seenOf();
+    // the one you're fighting, or (every quarter second) any boss you've come
+    // near: the intro as you come face to face, before a blow is struck
+    let b = game.bossTarget && game.bossTarget.alive && game.bossTarget.state === 'idle' && !seen[idOf(game.bossTarget)] ? game.bossTarget : null;
+    if (!b && (scanT -= dt) <= 0) {
+      scanT = 0.25;
+      let best = 1e9;
+      for (const a of game.actorsNear(p.x, p.y, 24)) {
+        if (!a.boss || !a.alive || a.state !== 'idle' || a.introDone || seen[idOf(a)] || a.faction === 'player' || a.isPlayer) continue;
+        if (!(a.hostile || a.controller?.kind === 'hostile' || a.def?.hostile)) continue;
+        if (game.world.roomOf?.(a) !== game.world.roomOf?.(p)) continue;
+        const d = game.world.distance(p.x, p.y, a.x, a.y);
+        if (d < best) { best = d; b = a; }
+      }
+    }
+    if (!b) return;
+    if (game.world.distance(p.x, p.y, b.x, b.y) > 26) return;
+    play(b);
   });
 }

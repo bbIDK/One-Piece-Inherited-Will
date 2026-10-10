@@ -47,7 +47,7 @@ export const PARADISE_3 = [
     id: 'clockwork_island', name: 'Clockwork Island', sea: 'paradise', x: 2600, y: 1400, w: 70, h: 70, climate: 'rocky',
     mountains: [{ name: 'The Clock Tower Crag', dx: 0, dy: -0.2, r: 0.3, h: 1, cliff: 200 }],
     town: { name: 'Gearwork Harbour', style: 'city', dock: 's', plaza: 'statue', buildings: [['hall', 'Trump Siblings\' Clock Fortress'], ['weapons', 'Cog & Spring Armoury'], 'inn', 'bar'] },
-    marks: [['tower', 0, -0.35, 'The Great Clock'], ['wheel', 0.3, 0.1], ['wheel', -0.3, 0.15]],
+    marks: [['tower', 0, -0.35, 'The Great Clock'], ['wheel', 0.3, 0.1, null, { dry: true }], ['wheel', -0.3, 0.15, null, { dry: true }]],
     logNext: ['hannabal', 'crown_island'], danger: 4, music: 'town',
     tagline: 'An island wound like a clock, with a fortress on top that strikes the hour. (Film tale.)',
   }),

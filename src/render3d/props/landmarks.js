@@ -477,9 +477,18 @@ reg('wheel', (o) => {
     });
     return root;
   }
+  if (o.lying) {
+    // (an old wheel off its frame, lying in the grass: no water to turn it)
+    const wheel = add(root, millWheel());
+    wheel.rotation.set(Math.PI / 2, 0, hash(o.x, o.y) * 6);
+    wheel.position.set(0, 0.42, 0);
+    root.rotation.z = 0.06;
+    return root;
+  }
   add(root, millFrame());
   const wheel = add(root, millWheel());
   wheel.position.set(0, 1.75, 0);
+  root.rotation.y = o.yaw || 0;
   animate(root, (t) => { wheel.rotation.z = -t * 0.35; });
   return root;
 });

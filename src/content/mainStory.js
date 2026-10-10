@@ -153,6 +153,8 @@ function contactNpc(id, ch, path) {
   return {
     id, name: ct.name, title: ct.title, island: ch.island, at: ct.at || { plaza: true }, look: ct.look, race: ct.race, level: ct.level ?? 10,
     faction: ct.faction || 'civilian', style: ct.style, weapon: ct.weapon, when: ct.when, ai: ct.ai, story: true,
+    // (the people of the story are introduced the first time you speak with them: questgivers.js introOnTalk)
+    introCutscene: ct.introCutscene ?? true,
     // (how they stand waiting for you: a pirate daring you, fists on hips or arms folded; a Marine at ease; a hunter sizing you up)
     stance: ct.stance !== undefined ? ct.stance : path === 'pirate' ? (id.length % 2 ? 'hips' : 'fold') : path === 'marine' ? 'attention' : path === 'hunter' ? 'fold' : undefined,
     dialogue: (ctx) => storyTree(ctx, id, null),

@@ -302,6 +302,8 @@ export class Actor extends Entity {
 
   takeDamage(n, att, h, game) {
     if (this.state === 'dead' || n <= 0) return;
+    // (a boss you've not yet come face to face with: their intro first, then the fight)
+    if (this.boss && !this.introDone && (att?.isPlayer || att?.faction === 'player') && game.bossIntroPending?.(this)) return;
     if (this.fruitDef?.passive?.immuneSlash && h?.slashing && !(att?.armament)) {
       game.fx.text(this.x, this.y - 1.3, 'NO EFFECT', '#ffccbc', 0.3);
       return;

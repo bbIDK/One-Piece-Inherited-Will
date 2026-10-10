@@ -42,7 +42,7 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
 
 /** A pane material for one ship (its own uniforms: the eye and the deck it's set to). */
 export function paneMaterial(floorY = 0) {
-  const u = { uEye: { value: new THREE.Vector3() }, uFloorY: { value: floorY }, uNight: { value: 0 } };
+  const u = { uEye: { value: new THREE.Vector3() }, uFloorY: { value: floorY }, uNight: { value: 0 }, uOpen: { value: 0 } };
   const m = new THREE.MeshBasicMaterial({ color: 0xffffff });
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, u);
@@ -50,8 +50,9 @@ export function paneMaterial(floorY = 0) {
       .replace('#include <common>', '#include <common>\nvarying vec3 vPaneP;\nvarying vec3 vPaneN;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPaneP = position;\nvPaneN = normal;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vPaneP;\nvarying vec3 vPaneN;\nuniform vec3 uEye;\nuniform float uFloorY;\nuniform float uNight;\n' + ROOM)
-      .replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( paneRoom(vPaneP, uEye, vPaneN, uFloorY, uNight), opacity );');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vPaneP;\nvarying vec3 vPaneN;\nuniform vec3 uEye;\nuniform float uFloorY;\nuniform float uNight;\nuniform float uOpen;\n' + ROOM)
+      // (the stern's gallery windows are real openings: up close, where the cabin behind them is drawn, their pane steps aside — see bigship.js sternHoles)
+      .replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'if (uOpen > 0.5 && vPaneN.x < -0.9) discard;\nvec4 diffuseColor = vec4( paneRoom(vPaneP, uEye, vPaneN, uFloorY, uNight), opacity );');
   };
   m.customProgramCacheKey = () => 'windowpane';
   m.userData.pane = u;

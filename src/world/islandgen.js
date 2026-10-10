@@ -334,6 +334,7 @@ export function generateIsland(world, def, noise, rng) {
     const c = P(lm);
     const o = { ...lm, x: c.x, y: c.y, kind: lm.kind || lm.type };
     delete o.dx; delete o.dy;
+    if (o.kind === 'wheel' && !/ferris/i.test(o.name || '')) millrace(world, o);
     settleLandmark(world, rec, o, ground);
     if (o.block === undefined) o.block = true;
     if (o.kind === 'building' && o.role && !o.door) o.door = bw(o, 0, 0.5);
@@ -383,6 +384,40 @@ function walkable(world, box, ax, ay, bx, by) {
 }
 
 // things that belong in or by the water: left where the data puts them
+/**
+ * A mill wheel turns in running water: moved to the nearest bank of a river
+ * or pond (else, close by, the sea), its axle into the bank and its paddles
+ * dipping in the water. With no water near, it's an old wheel lying on its
+ * side in the grass (scrap, not a mill turning on dry ground). `dry`: the
+ * wheel of a machine (Clockwork Island's), left where it stands.
+ */
+function millrace(world, o) {
+  if (o.dry) return; // (a machine's wheel, the clockwork's: no water wanted)
+  const x0 = Math.floor(o.x), y0 = Math.floor(o.y);
+  const find = (R, ok) => {
+    let best = null, bd = Infinity;
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const d2 = dx * dx + dy * dy;
+      if (d2 >= bd || d2 > R * R) continue;
+      const t = world.type(x0 + dx, y0 + dy);
+      if (!ok(t)) continue;
+      // (a bank: dry ground beside it)
+      for (const [ex, ey] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (!world.isLiquid(x0 + dx + ex, y0 + dy + ey) && !world.isBlocked(x0 + dx + ex, y0 + dy + ey)) { best = { x: x0 + dx, y: y0 + dy, ex, ey }; bd = d2; break; }
+      }
+    }
+    return best;
+  };
+  const w = find(40, (t) => t === T.RIVER || t === T.POND) || find(12, (t) => IS_LIQUID[t]);
+  if (!w) { o.lying = true; o.block = false; return; }
+  // (the land->water way, across the bank)
+  const dx = -w.ex, dy = -w.ey;
+  o.x = w.x + 0.5 - w.ex * 0.5 + dx * 0.4;
+  o.y = w.y + 0.5 - w.ey * 0.5 + dy * 0.4;
+  o.yaw = Math.atan2(dx, dy);
+  o.water = true;
+}
+
 const SHORE_KINDS = new Set(['boat', 'shipwreck', 'anchor', 'bubble', 'mooring', 'buoy', 'rapids', 'geyser']);
 
 /**

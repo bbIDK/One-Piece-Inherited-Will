@@ -1091,6 +1091,10 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 .cine-name { color: #fff; font: 400 clamp(42px, 7vw, 92px)/1 'Pirata One', Georgia, serif; letter-spacing: 1px; }
 .cine-bounty { color: #f5e6c4; font: 400 clamp(18px, 2.6vw, 32px) 'Bangers', Impact, sans-serif; letter-spacing: 2px; margin-top: 4px; }
 .cine-bounty small { font-size: .6em; margin-right: 8px; color: #ffab91; letter-spacing: 3px; }
+.cine-card.has-poster { display: flex; align-items: center; gap: 22px; }
+.cine-poster { transform: skewX(8deg) rotate(-3deg); flex: none; filter: drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+.cine-poster .poster { width: clamp(130px, 15vw, 190px); margin: 0; text-shadow: none; }
+.cine-poster .poster canvas { width: 100%; height: auto; }
 .hud.cine-dim { opacity: 0; transition: opacity .3s ease; }
 
 /* the cursor: a ship's-pointer arrow in the UI's own parchment, ink and gold

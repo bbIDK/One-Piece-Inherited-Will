@@ -68,6 +68,66 @@ function skinYaw(d, t, y, s) {
   return -Math.atan(s * (w1 - w0) / (2 * e * d.L));
 }
 
+// ---------------------------------------------------------------- the stern windows' openings
+/**
+ * The gallery windows across the stern that are real openings — through
+ * the transom, its lining and the cabin's end wall behind — one row for each
+ * cabin with windows (hull.js sternWindows): [{ y0, y1, z0, z1 }].
+ */
+function sternHoles(d) {
+  const out = [];
+  for (const r of d.rooms || []) for (const wd of r.windows || []) out.push({ y0: r.floor + 0.75, y1: r.floor + 1.65, z0: wd.v - wd.w / 2, z1: wd.v + wd.w / 2 });
+  return out;
+}
+
+/**
+ * A flat wall across the ship (in the y-z plane at x), from y0 to y1, its
+ * edges at +-w(y), with rectangular holes cut out: quads appended to the raw
+ * arrays (pos, idx) the way the hull's skin is built, `col(y)` each band's colour.
+ */
+function wallWithHoles(pos, idx, triCol, x, ys, wAt, holes, col) {
+  const lo = Math.min(...ys), hi = Math.max(...ys);
+  const lv = new Set(ys);
+  for (const hh of holes) { if (hh.y0 > lo && hh.y0 < hi) lv.add(hh.y0); if (hh.y1 > lo && hh.y1 < hi) lv.add(hh.y1); }
+  const levels = [...lv].sort((a, b) => b - a);
+  for (let i = 0; i < levels.length - 1; i++) {
+    const yT = levels[i], yB = levels[i + 1];
+    if (yT - yB < 1e-4) continue;
+    const wT = wAt(yT), wB = wAt(yB), ym = (yT + yB) / 2;
+    // (the openings this band crosses, left to right)
+    const cut = holes.filter((hh) => hh.y0 < ym && hh.y1 > ym).map((hh) => [hh.z0, hh.z1]).sort((a, b) => a[0] - b[0]);
+    const segs = [];
+    let z = null;
+    for (const [a, b] of cut) { segs.push([z, a]); z = b; }
+    segs.push([z, null]);
+    const c = col(ym);
+    for (const [za, zb] of segs) {
+      const zTa = za ?? -wT, zBa = za ?? -wB, zTb = zb ?? wT, zBb = zb ?? wB;
+      if (zTb - zTa < 1e-4 && zBb - zBa < 1e-4) continue;
+      const v = pos.length / 3;
+      pos.push(x, yT, zTa, x, yT, zTb, x, yB, zBa, x, yB, zBb);
+      idx.push(v, v + 2, v + 1, v + 1, v + 2, v + 3);
+      triCol.push(c, c);
+    }
+  }
+}
+
+/** A box-thick wall (centre x, thickness th) from y0 to y1 and z from -w to w, with the holes left open. */
+function slabWithHoles(k, x, th, y0, y1, w, holes, color) {
+  const lv = new Set([y0, y1]);
+  for (const hh of holes) { if (hh.y0 > y0 && hh.y0 < y1) lv.add(hh.y0); if (hh.y1 > y0 && hh.y1 < y1) lv.add(hh.y1); }
+  const levels = [...lv].sort((a, b) => a - b);
+  for (let i = 0; i < levels.length - 1; i++) {
+    const a = levels[i], b = levels[i + 1], ym = (a + b) / 2;
+    const cut = holes.filter((hh) => hh.y0 < ym && hh.y1 > ym).map((hh) => [Math.max(-w, hh.z0), Math.min(w, hh.z1)]).sort((p, q) => p[0] - q[0]);
+    let z = -w;
+    for (const [c0, c1] of [...cut, [w, w]]) {
+      if (c0 - z > 0.01) k.add(box(th, b - a, c0 - z), { at: [x, a, (z + c0) / 2], color });
+      z = Math.max(z, c1);
+    }
+  }
+}
+
 // ---------------------------------------------------------------- hull, decks and fittings
 export function bigHull(def, d) {
   const P = bigPalette(def);
@@ -147,12 +207,19 @@ function shell(k, d, P) {
       }
     }
   }
-  // the transom across the stern
-  for (let j = 0; j < NP - 1; j++) {
-    const A = vid(0, 1, j), B = vid(0, 0, j), Cc = vid(0, 1, j + 1), D = vid(0, 0, j + 1);
-    idx.push(A, Cc, B, B, Cc, D);
-    const col = j < 1 ? P.cap : j < 4 ? P.upper : P.bottom;
-    triCol.push(col, col);
+  // the transom across the stern (with the gallery windows open through it)
+  {
+    const pr = profile(d, 0), hb0 = hbAt(0, d.B), x0 = xAt(d, 0);
+    const ys = pr.map(([, y]) => y);
+    // (its half-width at y, along the profile; the colour of its band there)
+    const at = (y) => {
+      for (let j = 0; j < pr.length - 1; j++) {
+        const [w0, y0] = pr[j], [w1, y1] = pr[j + 1];
+        if ((y <= y0 && y >= y1) || (y >= y0 && y <= y1)) { const k2 = Math.abs(y1 - y0) < 1e-6 ? 0 : (y - y0) / (y1 - y0); return { w: (w0 + (w1 - w0) * k2) * hb0, j }; }
+      }
+      return { w: pr[pr.length - 1][0] * hb0, j: pr.length - 2 };
+    };
+    wallWithHoles(pos, idx, triCol, x0, ys, (y) => at(y).w, sternHoles(d), (y) => { const j = at(y).j; return j < 1 ? P.cap : j < 4 ? P.upper : P.bottom; });
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -224,7 +291,7 @@ function bulwarks(k, d, P) {
   // where she's broader, its ends stood out of her quarters)
   const ys = floorAt(d, 0.01), ts = topAt(d, 0) - 0.1;
   const wi = Math.min(innerAt(d, 0, ys), innerAt(d, 0, ts)) + 0.04;
-  k.add(box(0.2, ts - ys + 0.04, wi * 2), { at: [xAt(d, 0) + 0.12, ys - 0.02, 0], color: shade(P.upper, -0.12) });
+  slabWithHoles(k, xAt(d, 0) + 0.12, 0.2, ys - 0.02, ts + 0.02, wi, sternHoles(d), shade(P.upper, -0.12));
 }
 
 /**
@@ -365,13 +432,21 @@ function gunports(k, d, P) {
 function stern(k, d, P) {
   const x0 = -d.L / 2 - 0.03;
   const half = (y) => skinAt(d, 0.004, y) * 0.9;
+  const holes = sternHoles(d);
   const rowAt = (y0, y1) => {
     const w = half((y0 + y1) / 2);
-    const n = Math.max(2, Math.floor((w * 2) / 1.15));
-    const ww = Math.min(0.8, (w * 2) / n - 0.3);
+    let n = Math.max(2, Math.floor((w * 2) / 1.15));
+    let ww = Math.min(0.8, (w * 2) / n - 0.3);
+    // (a row in front of a cabin: its windows are that cabin's, open right through)
+    const open = holes.filter((hh) => Math.abs(hh.y0 - y0) < 0.35);
+    if (open.length) { n = open.length; ww = open[0].z1 - open[0].z0; y0 = open[0].y0; y1 = open[0].y1; }
     for (let i = 0; i < n; i++) {
-      const z = -w + (i + 0.5) * (w * 2) / n;
-      k.add(box(0.06, y1 - y0, ww), { at: [x0, y0, z], color: P.glass, glow: '#ffc766', pane: true });
+      const z = open.length ? (open[i].z0 + open[i].z1) / 2 : -w + (i + 0.5) * (w * 2) / n;
+      // (the open ones keep a pane only for the far view: hidden up close, windowpane.js uOpen)
+      if (open.length) {
+        k.add(box(0.03, y1 - y0, ww), { at: [x0, y0, z], color: P.glass, pane: true });
+        for (const sz of [-1, 1]) k.add(box(0.1, y1 - y0, 0.06), { at: [x0 - 0.02, y0, z + sz * (ww / 2 + 0.03)], color: P.trim });
+      } else k.add(box(0.06, y1 - y0, ww), { at: [x0, y0, z], color: P.glass, glow: '#ffc766', pane: true });
       k.add(box(0.08, 0.08, ww + 0.14), { at: [x0 - 0.01, y1, z], color: P.trim });
       k.add(box(0.08, 0.08, ww + 0.14), { at: [x0 - 0.01, y0 - 0.08, z], color: P.trim });
     }
@@ -462,7 +537,7 @@ function cabinFront(k, d, P, r) {
     // inside, folded back flat against the wall
     k.add(box(0.14, h - dh, dr.w), { at: [x - face * 0.07, y0 + dh, dr.v], color: P.front });
     for (const e of [-1, 1]) k.add(box(0.1, dh, 0.08), { at: [x + face * 0.02, y0, dr.v + e * (dr.w / 2 + 0.02)], color: P.trim, outline: 0.008 });
-    k.add(box(0.1, 0.12, dr.w + 0.24), { at: [x + face * 0.03, y0 + dh, dr.v], color: P.trim });
+    k.add(box(0.1, 0.12, dr.w + 0.24), { at: [x + face * 0.03, y0 + dh - 0.01, dr.v], color: P.trim }); // (a centimetre under the lintel's soffit, not in its plane)
     const lf = dr.leaf;
     if (lf) k.add(box(0.05, dh - 0.06, lf.v1 - lf.v0), { at: [lf.u, y0 + 0.02, (lf.v0 + lf.v1) / 2], color: shade(P.dark, 0.25), outline: 0.008 });
     // a lantern beside the door
@@ -470,8 +545,9 @@ function cabinFront(k, d, P, r) {
     if (Math.abs(lz) < w - 0.2) k.add(cyl(0.1, 0.12, 0.32, 6), { at: [x + face * 0.14, y0 + 1.75, lz], color: '#fff3c4', glow: '#ffcf70', flicker: 0.25, outline: 0.01 });
   }
   // pilasters and a moulding under the deck above
-  for (const zz of [-w + 0.1, w - 0.1]) k.add(box(0.1, h, 0.16), { at: [x, y0, zz], color: shade(P.front, -0.25) });
-  k.add(box(0.12, 0.14, w * 2), { at: [x + face * 0.02, y1 - 0.18, 0], color: P.trim });
+  // (each a centimetre short of the wall's top and ends: seen now through the stern windows)
+  for (const zz of [-w + 0.1, w - 0.1]) k.add(box(0.1, h - 0.01, 0.16), { at: [x, y0, zz], color: shade(P.front, -0.25) });
+  k.add(box(0.12, 0.14, w * 2 - 0.02), { at: [x + face * 0.02, y1 - 0.18, 0], color: P.trim });
   // windows either side of the doors
   for (const zz of f.windows) {
     // an open casement: its frame round the opening and a cross of glazing bars (no painted pane)
@@ -1453,12 +1529,15 @@ export function bigInterior(def, d) {
     else if (r.kind === 'forecastle') endWall(k, d, r.t1, r.floor, top, -1);
     else {
       // the stern: panelled, with the gallery windows looking out astern (see hull.js sternWindows)
-      endWall(k, d, r.t0, r.floor, top, 1);
+      // (its windows open right through to the sea astern: you see out, and in from outside)
+      const holes = (r.windows || []).map((wd) => ({ y0: r.floor + 0.75, y1: r.floor + 1.65, z0: wd.v - wd.w / 2, z1: wd.v + wd.w / 2 }));
+      slabWithHoles(k, xAt(d, r.t0) - 0.05, 0.1, r.floor, top, innerAt(d, r.t0, (r.floor + top) / 2) + 0.05, holes, IN.wall2);
       const x = xAt(d, r.t0);
       for (const wd of r.windows || []) {
-        // (the sea and sky beyond the glass: pale by day, lit from within by night)
-        // (glass you see out through: the sea and the sky, as they lie from where you stand — windowpane.js viewMesh)
-        k.add(box(0.04, 0.9, wd.w), { at: [x + 0.01, r.floor + 0.75, wd.v], color: '#a9d6ee', pane: true });
+        // (the window's head, and its sides through the thickness of the stern to the transom)
+        k.add(box(0.12, 0.06, wd.w + 0.1), { at: [x + 0.04, r.floor + 1.63, wd.v], color: IN.beam });
+        const deep = Math.max(0.1, x - xAt(d, 0));
+        for (const sz of [-1, 1]) k.add(box(deep + 0.02, 0.9, 0.04), { at: [x + 0.01 - deep / 2, r.floor + 0.75, wd.v + sz * (wd.w / 2 + 0.01)], color: IN.beam }); // (a centimetre proud of the walls' cut edges)
         k.add(box(0.06, 0.05, wd.w - 0.02), { at: [x + 0.02, r.floor + 1.18, wd.v], color: IN.beam }); // (a centimetre short of the glass's sides, not ending in their planes)
         k.add(box(0.06, 0.9, 0.05), { at: [x + 0.02, r.floor + 0.75, wd.v], color: IN.beam });
         k.add(box(0.12, 0.06, wd.w + 0.1), { at: [x + 0.04, r.floor + 0.72, wd.v], color: IN.beam });
