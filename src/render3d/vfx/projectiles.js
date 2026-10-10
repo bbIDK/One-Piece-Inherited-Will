@@ -227,6 +227,15 @@ function draw(v, pr, r, Y, sc) {
       if (sp > 10) speedLines(v, X, Y, Z, dx, dz, R, seed, t);
       break;
     }
+    case 'knife': {
+      // a thrown knife (Buggy's, flung from a cut-off hand): steel, point
+      // first, spinning a little on its long axis, a bright glint along the edge
+      const kc = col(pr.color || '#cfd8dc');
+      putAlong(v.solids.knives, X, Y, Z, dx, 0, dz, 0.42 * s, 0.42 * s, t * 14 + seed, kc, OK.PLAIN, 0, seed, 0);
+      v.sprites.put(SK.STAR, X + dx * 0.35 * s, Y, Z + dz * 0.35 * s, 0.14 * s, WHITE, 0.8, WHITE, 1, t * 10, seed, 0);
+      trail(v, r, RK.SPEED, WHITE, 0.55, WHITE, 0.3, 0.05 * s, 0.1, 6);
+      break;
+    }
     case 'iceshard': {
       const ic = col(pr.color || '#b3e5fc');
       putAlong(v.solids.shards, X, Y, Z, dx, 0, dz, 0.5 * s, 0.22 * s, t * 8, ic, OK.ICE, 0, seed, 0.15);

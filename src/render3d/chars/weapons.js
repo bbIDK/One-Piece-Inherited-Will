@@ -78,6 +78,33 @@ export function energyBladeGeo() {
   return EBLADE;
 }
 
+let ICEBLADE = null;
+/** The Ice Saber's crystal: a long faceted blade along +x with frost teeth up its edges. */
+function iceBladeGeo() {
+  if (ICEBLADE) return ICEBLADE;
+  const parts = [];
+  const main = new THREE.OctahedronGeometry(1, 0);
+  main.scale(0.54, 0.075, 0.03); main.translate(0.54, 0, 0);
+  parts.push(main);
+  for (let i = 0; i < 7; i++) {
+    const t = 0.18 + i * 0.12, side = i % 2 ? 1 : -1;
+    const sp = new THREE.ConeGeometry(0.025, 0.12 + (i % 3) * 0.04, 4);
+    sp.rotateZ(-side * (Math.PI / 2 - 0.5));
+    sp.translate(t, side * 0.07, 0);
+    parts.push(sp);
+  }
+  let n = 0;
+  for (const g of parts) n += (g.index ? g.toNonIndexed() : g).attributes.position.count;
+  const pos = new Float32Array(n * 3);
+  let o = 0;
+  for (let g of parts) { if (g.index) g = g.toNonIndexed(); pos.set(g.attributes.position.array, o); o += g.attributes.position.array.length; }
+  ICEBLADE = new THREE.BufferGeometry();
+  ICEBLADE.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  ICEBLADE.computeVertexNormals();
+  ICEBLADE.userData.shared = true;
+  return ICEBLADE;
+}
+
 /** A held weapon: a mesh plus its ink outline. */
 export class HeldWeapon {
   constructor(kind, opts = {}) {
@@ -101,6 +128,13 @@ export class HeldWeapon {
       this.core = new THREE.Mesh(energyBladeGeo(), glowMaterial('#ffffff', 0.9));
       this.core.scale.set(0.95, 0.4, 0.6);
       this.mesh.add(this.core);
+      // (ice — the Ice Saber — is a blade of real crystal: faceted, edged with
+      // jagged teeth of frost, the glow inside it)
+      if (/^#(b3e5fc|e1f5fe|81d4fa)$/i.test(opts.color || '')) {
+        const crystal = new THREE.Mesh(iceBladeGeo(), glowMaterial('#e8f7ff', 0.55));
+        this.mesh.add(crystal);
+        this.mesh.material.opacity = 0.45;
+      }
       this.group.add(this.mesh);
       return;
     }

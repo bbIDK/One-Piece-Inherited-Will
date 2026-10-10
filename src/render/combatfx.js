@@ -62,6 +62,8 @@ function styleOf(def, actor) {
   return STYLE_FX[def.style || (actor && actor.style)] || null;
 }
 
+// (how long a fruit's blade is: Aokiji's Ice Saber is a full sword's length and more)
+const BLADE_LEN = { hie_saber: 1.5, pika_murakumo: 1.4, mochi_zangiri: 1.2 };
 // energy blades held during fruit slashes
 const BLADES = {
   hie_saber: '#b3e5fc', pika_murakumo: '#fff59d', noro_mirror: '#80deea', ope_amputate: '#b3e5fc',
@@ -2138,7 +2140,7 @@ export function actorVisuals(actor, act, clip) {
   out.fx = { elem: fxElem, color: E ? E.c : trail, trail, limb: sg.limb || clip.limb, k, additive: !!(E && E.add), claw: st && st.claw };
   if (diable && (clip.limb === 'fF' || clip.limb === 'fB')) { out.fx.elem = 'fire'; out.fx.trail = '#ff9800'; out.fx.additive = true; }
   const blade = sg.blade || BLADES[def.id] || (def.base ? BLADES[def.base] : null);
-  if (blade) { out.blade = blade; out.bladeLen = 1.0; }
+  if (blade) { out.blade = blade; out.bladeLen = BLADE_LEN[def.id] || BLADE_LEN[def.base] || 1.0; }
   if (t < w && w >= 0.3 && !def.m1Chain) {
     const ch = sg.charge !== undefined ? sg.charge : defaultCharge(def, actor, elem, st);
     if (ch) out.charge = { ...ch, k: t / w };

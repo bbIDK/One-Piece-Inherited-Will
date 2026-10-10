@@ -122,7 +122,7 @@ export const FRUITS = {
       T(20, { id: 'bara_festival', name: 'Chop-Chop Festival', icon: '🎪', anim: 'cast', windup: 0.3, recover: 0.4, cd: 10, desc: 'Scatter into a hundred pieces that pummel everything nearby.', steps: [{ hit: { shape: 'circle', range: 3.2, damage: 6, knockback: 1.5, stun: 0.15, duration: 1.2, interval: 0.15 }, vfx: 'ring' }] }),
       T(40, { id: 'bara_escape', name: 'Emergency Escape', icon: '🎈', anim: 'fly', windup: 0.05, recover: 0.1, cd: 8, desc: 'Your pieces fly off every which way and come back together somewhere safer.', steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.3, air: true } }] }),
       T(10, { id: 'bara_knives', name: 'Chop-Chop Knives', anim: 'cross', windup: 0.15, recover: 0.25, cd: 4, say: 'Bara Bara Ho!', desc: 'A hand flung off with knives fanned between its fingers: three blades come at them at once.',
-        steps: [{ proj: { speed: 22, range: 10, radius: 0.25, damage: 10, count: 3, spread: 0.35, sprite: 'iceshard', color: '#cfd8dc', slashing: true } }] }),
+        steps: [{ proj: { speed: 22, range: 10, radius: 0.25, damage: 10, count: 3, spread: 0.35, sprite: 'knife', color: '#cfd8dc', slashing: true } }] }),
       T(30, { id: 'bara_senbei', name: 'Chop-Chop Senbei', anim: 'sweep', windup: 0.2, recover: 0.3, cd: 7, desc: 'Chop-Chop Pancake: your feet stay on the ground and your lower half spins off through them like a saw blade.',
         steps: [{ dash: { dist: 7, time: 0.35, iframes: 0.2, hit: { damage: 22, knockback: 6, stun: 0.5, range: 1.3 } } }] }),
       T(55, { id: 'bara_muggy', name: 'Muggy Ball', anim: 'shoot', windup: 0.45, recover: 0.4, cd: 16, say: 'Muggy Ball!', desc: 'Buggy\'s own cannonball, lit and hurled by hand: it bursts with the force of a whole broadside.',

@@ -156,6 +156,17 @@ function cuffGeo() {
   band.rotateX(Math.PI / 2); band.translate(0, -0.56, 0);
   return flat(merge([g, band]));
 }
+/** A thrown knife: a pointed blade along +y, its guard and grip behind it. */
+function knifeGeo() {
+  const sh = new THREE.Shape();
+  sh.moveTo(-0.09, 0); sh.lineTo(0.09, 0); sh.lineTo(0.08, 0.6); sh.quadraticCurveTo(0.05, 0.9, 0, 1.05); sh.quadraticCurveTo(-0.02, 0.8, -0.09, 0.62); sh.closePath();
+  const blade = new THREE.ExtrudeGeometry(sh, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.01, bevelSegments: 1, curveSegments: 4 });
+  blade.translate(0, 0, -0.015);
+  const guard = new THREE.BoxGeometry(0.34, 0.05, 0.08); guard.translate(0, -0.02, 0);
+  const grip = new THREE.CylinderGeometry(0.045, 0.05, 0.4, 6); grip.translate(0, -0.25, 0);
+  const pommel = new THREE.SphereGeometry(0.06, 6, 4); pommel.translate(0, -0.47, 0);
+  return flat(merge([blade, guard, grip, pommel]));
+}
 /** A length of limb (a sleeved forearm, a trouser leg), along y from -1 to 1, cut flat at both ends. */
 function limbGeo() {
   return flat(new THREE.CylinderGeometry(0.85, 1, 2, 10));
@@ -238,7 +249,8 @@ export class Solids {
     this.fists = new SolidBatch(fistGeo(), 48, 'vfx-fists');
     this.cuffs = new SolidBatch(cuffGeo(), 48, 'vfx-cuffs');
     this.limbs = new SolidBatch(limbGeo(), 48, 'vfx-limbs');
-    this.all = [this.crystals, this.shards, this.rocks, this.blocks, this.fists, this.cuffs, this.limbs];
+    this.knives = new SolidBatch(knifeGeo(), 64, 'vfx-knives');
+    this.all = [this.crystals, this.shards, this.rocks, this.blocks, this.fists, this.cuffs, this.limbs, this.knives];
   }
   begin() { for (let i = 0; i < this.all.length; i++) this.all[i].begin(); }
   end() { for (let i = 0; i < this.all.length; i++) this.all[i].end(); }
