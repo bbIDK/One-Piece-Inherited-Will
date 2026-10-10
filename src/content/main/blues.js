@@ -131,7 +131,7 @@ chapter('eb_baratie', { part: 1, island: 'baratie', place: 'the Baratie', role: 
   marine: {
     name: 'The Sea Restaurant', lure: 'Don Krieg\'s armada was sighted near the Baratie',
     summary: 'Don Krieg\'s armada — the biggest fleet in the East Blue — was seen heading for the Baratie. Lieutenant Fullbody is already there, having dinner.',
-    contact: { name: 'Lieutenant Fullbody', title: '"Ironfist", 153rd Branch', look: LOOK.officer({ hair: 'short', hairColor: '#5d4037', coat: '#fafafa' }), faction: 'marine', at: { spot: 'baratie_deck', ox: 4 }, where: 'on the deck of the Baratie', level: 14, style: 'brawler' },
+    contact: { name: 'Lieutenant Fullbody', title: '"Ironfist", 153rd Branch', look: LOOK.officer({ hair: 'short', hairColor: '#5d4037', coat: '#fafafa' }), faction: 'marine', at: { inside: 'restaurant', guest: true, spot: 'baratie_deck', ox: 4 }, where: 'at dinner in the Baratie', level: 14, style: 'brawler' },
     meet: ['A recruit? Good. Stand there and look useful. I am having dinner with a lady.', '...Fine. Don Krieg escaped from the Navy\'s last net, and his men are starving. If they come here, they\'ll take the restaurant. Old Zeff wants help. Go and help him.'],
     tasks: [T.quest('baratie_krieg', 'Defend the Baratie from Don Krieg\'s armada ("Red Leg" Zeff).', 'zeff'), PATTY.marine],
     wait: 'I would help, but my soup is getting cold.',

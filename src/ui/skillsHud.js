@@ -191,19 +191,19 @@ function place(ui, force = false) {
   const E = ui.el;
   const W = window.innerWidth || 1280, H = window.innerHeight || 720;
   const pw = E.skills.offsetWidth || 230, ph = E.skills.offsetHeight || 0;
-  const hw = E.hotbar.offsetWidth, hh = E.hotbar.offsetHeight;
+  const bar = E.dock || E.hotbar, hw = bar.offsetWidth, hh = bar.offsetHeight;
   const trackOn = !E.track.classList.contains('hidden');
   const k = [W, H, pw, ph, hw, hh, trackOn && E.track.offsetHeight].join();
   if (!force && ui.cache.spPlace === k) return ui.cache.spOver || 0;
   ui.cache.spPlace = k;
   // (the hotbar is centred, 14 px up: where it is without any shift)
-  const left = (W - hw) / 2, right = left + hw, top = H - 14 - hh;
+  const left = (W - hw) / 2, right = left + hw, top = H - 10 - hh;
   let shift = Math.max(0, right - (W - 14 - pw - 12));
   // (as far as it may go: never past the left edge, nor more than a quarter of the way across)
   const most = Math.max(0, Math.min(left - 14, W * 0.25));
   let up = 0;
   if (shift > most) { shift = 0; up = H - top + 8; }
-  E.hotbar.style.marginLeft = shift ? `${-Math.round(shift)}px` : '';
+  bar.style.marginLeft = shift ? `${-Math.round(shift)}px` : '';
   E.skills.style.bottom = up ? `${Math.round(up)}px` : '';
   // what's above it on the right: the minimap and its names, and the quest tracker
   E.track.style.marginTop = '';

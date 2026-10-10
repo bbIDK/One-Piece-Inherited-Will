@@ -459,7 +459,7 @@ const SMEAR = {
   cleave: 'down', iai: 'across', dual1: 'down', dual2: 'down', dual3: 'up', dualx: 'down', tora: 'down', bladespin: 'across', axe: 'down', axe2: 'up',
   staff: 'down', staff2: 'up', rise_slash: 'rise', uppercut: 'rise', rise_kick: 'rise', axe_slam: 'slam', axe_kick: 'slam', stomp: 'slam', slam: 'slam',
   // kicks sweep low
-  kick: 'low', kick_high: 'across', kick_low: 'low', kick_spin: 'low', sweep: 'low', mouton: 'low', ballet_kick: 'low', pirouette: 'low', jete: 'low',
+  kick: 'low', bl_snap: 'low', bl_round: 'across', kick_high: 'across', kick_low: 'low', kick_spin: 'low', sweep: 'low', mouton: 'low', ballet_kick: 'low', pirouette: 'low', jete: 'low',
   arabesque: 'low', handstand: 'low',
   gatling: 'flurry', shoot: 'shot', aim: 'shot', flick: 'shot', throw: 'straight',
 };

@@ -30,7 +30,7 @@ const HAKI_VOICED = new Set(['haki', 'haki_obs', 'haki_off', 'haki_out', 'foresi
 // footsteps' level among the rest (a step should sit some 15–20 dB under a punch, not 30)
 const STEP = 3.8;
 // the moves done with the legs
-const KICKS = /kick|knee|mouton|jete|arabesque|pirouette|rankyaku|concasse/;
+const KICKS = /kick|bl_snap|bl_round|knee|mouton|jete|arabesque|pirouette|rankyaku|concasse/;
 
 /** What a technique is swung with (as game/abilities.js weaponKindOf reckons it). */
 function weaponOf(actor, def) {

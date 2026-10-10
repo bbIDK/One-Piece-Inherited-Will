@@ -303,7 +303,7 @@ const npcs = [
 
   // ------------------------------------------------------------ Baratie
   {
-    id: 'zeff', name: '"Red Leg" Zeff', title: 'Head chef of the Baratie', island: 'baratie', at: { spot: 'baratie_deck' }, trainer: 'zeff',
+    id: 'zeff', name: '"Red Leg" Zeff', title: 'Head chef of the Baratie', island: 'baratie', at: { inside: 'restaurant', spot: 'baratie_deck' }, trainer: 'zeff',
     look: { hair: 'long', hairColor: '#fff59d', top: '#fafafa', bottom: '#212121', skin: '#f1c9a0', hat: 'captain', hatColor: '#fafafa' }, level: 30,
     marker: (c, g) => (!g.quests.state('baratie_krieg') ? '!' : g.quests.stageId('baratie_krieg') === 'report' ? '?' : null),
     dialogue: (ctx) => ({ start: 'a', nodes: {
@@ -321,7 +321,7 @@ const npcs = [
       thx: { text: '"You protected my restaurant. As thanks, I\'ll teach you Black Leg for free — if you\'ve got the legs for it. And the cooks will always have a plate for you."' },
     } }),
   },
-  { id: 'gin', name: 'Gin', title: '"Man-Demon", Krieg Pirates', island: 'baratie', at: { spot: 'baratie_deck', ox: 3 },
+  { id: 'gin', name: 'Gin', title: '"Man-Demon", Krieg Pirates', island: 'baratie', at: { spot: 'baratie_deck', ox: 9, oy: 1.2 },
     look: { hair: 'short', hairColor: '#212121', top: '#455a64', bottom: '#263238', hat: 'bandana', hatColor: '#9e9e9e' }, level: 12,
     marker: (c, g) => (g.quests.stageId('baratie_krieg') === 'feed' ? '?' : null),
     when: (c, g) => !g.quests.isDone('baratie_krieg') && g.quests.stageId('baratie_krieg') !== 'krieg',
@@ -331,7 +331,7 @@ const npcs = [
       b: { text: '(Gin eats, crying.) "...Thank you. I\'m sorry. Don Krieg is coming. Fifty ships went into the Grand Line, and one came back. He wants this restaurant. Run..."' } } }),
   },
   {
-    id: 'johnny', name: 'Johnny', title: 'Bounty hunter', island: 'baratie', at: { spot: 'baratie_deck', ox: -5 }, level: 7, style: 'ittoryu', weapon: 'sword',
+    id: 'johnny', name: 'Johnny', title: 'Bounty hunter', island: 'baratie', at: { spot: 'baratie_deck', ox: -9, oy: -0.6 }, level: 7, style: 'ittoryu', weapon: 'sword',
     look: { hair: 'short', hairColor: '#212121', top: '#8d6e63', bottom: '#3e2723', goggles: true, swords: 1 },
     recruit: {
       role: 'swordsman', fighter: true, requires: (c) => !!c.flags.yosakuCured,
@@ -355,7 +355,7 @@ const npcs = [
     } }),
   },
   {
-    id: 'yosaku', name: 'Yosaku', title: 'Bounty hunter', island: 'baratie', at: { spot: 'baratie_deck', ox: -6.5 }, level: 7, style: 'ittoryu', weapon: 'sword',
+    id: 'yosaku', name: 'Yosaku', title: 'Bounty hunter', island: 'baratie', at: { spot: 'baratie_deck', ox: -10.2, oy: 0.5 }, level: 7, style: 'ittoryu', weapon: 'sword',
     look: { hair: 'short', hairColor: '#6d4c41', top: '#43a047', bottom: '#2e7d32', hat: 'bandana', hatColor: '#1b5e20', swords: 1 },
     recruit: {
       role: 'swordsman', fighter: true, requires: (c) => !!c.flags.yosakuCured,
@@ -372,7 +372,7 @@ const npcs = [
     dialogue: (ctx) => ({ start: 'a', nodes: { a: { text: () => ctx.flag('yosakuCured') ? '"Never felt better! Scurvy, huh? I\'ll never skip my fruit again."' : '"(Yosaku lies pale on the deck, groaning. His gums are bleeding.)"' } } }),
   },
   {
-    id: 'patty', name: 'Patty', title: 'Cook of the Baratie', island: 'baratie', at: { spot: 'baratie_deck', ox: 2 }, level: 9,
+    id: 'patty', name: 'Patty', title: 'Cook of the Baratie', island: 'baratie', at: { inside: 'restaurant', spot: 'baratie_deck', ox: 2 }, level: 9,
     look: { hair: 'bald', skin: '#e0ac7e', top: '#fafafa', bottom: '#212121', hat: 'captain', hatColor: '#fafafa', bulk: 1.2 },
     recruit: {
       role: 'cook', fighter: false, requires: (c, g) => g.quests.isDone('baratie_krieg'),
@@ -393,7 +393,7 @@ const npcs = [
     look: { hair: 'short', hairColor: '#212121', top: '#ffd54f', bottom: '#5d4037', skin: '#e0ac7e', bulk: 1.5, coat: '#b71c1c' }, bulk: 1.5, defMul: 0.8, moves: ['krieg_mh5', 'krieg_spears', 'krieg_cape'],
     bounty: 17000000, infamy: true, breakthrough: 3, skill: 0.4, alert: 'I am the strongest! Give me your ship and your food!',
     when: (c, g) => g.quests.stageId('baratie_krieg') === 'krieg' },
-  { id: 'mihawk_cameo', name: 'Dracule Mihawk', title: '"Hawk-Eyes", World\'s Greatest Swordsman', island: 'baratie', at: { spot: 'baratie_deck', ox: 5 }, ai: 'idle',
+  { id: 'mihawk_cameo', name: 'Dracule Mihawk', title: '"Hawk-Eyes", World\'s Greatest Swordsman', island: 'baratie', at: { spot: 'baratie_deck', ox: 13, oy: -1.5 }, ai: 'idle',
     look: { hair: 'short', hairColor: '#212121', top: '#212121', bottom: '#3e2723', coat: '#212121', hat: 'captain', hatColor: '#212121', eyeColor: '#fbc02d', swords: 1 }, level: 100, fixedPower: 99999,
     when: (c) => c.flags.mihawkBaratie && !c.flags.mihawkMet,
     dialogue: (ctx) => ({ start: 'a', nodes: {

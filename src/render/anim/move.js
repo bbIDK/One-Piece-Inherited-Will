@@ -438,12 +438,30 @@ export function climbPose(P, c) {
   const k = c.k;
   P.eF = 1; P.eB = 1; P.hand = 'fist'; P.handB = 'fist';
   if (c.ladder && k < 0.82) {
-    // (one rung every 0.3 m climbed: the hands and feet in turn)
-    const ph = (c.rise || 0) / 0.3 * Math.PI, sF = Math.sin(ph), sB = -sF;
-    P.l = 0.08; P.b = [0.03, 0.06];
-    P.hF = [0.16, -0.3 - 0.16 * Math.max(0, sF)]; P.hB = [0.16, -0.3 - 0.16 * Math.max(0, sB)];
-    P.fF = [0.1, -0.08 - 0.2 * Math.max(0, sB)]; P.fB = [0.1, -0.08 - 0.2 * Math.max(0, sF)];
-    P.ht = -0.1;
+    // Hand over hand, as you really climb one: each hand closes on a rung
+    // and stays on it — the body rising past it, so it comes down from over
+    // your head toward your shoulder — then lets go and reaches up past the
+    // other for the next rung but one; the opposite foot does the same on
+    // the rungs below (a step up as that hand reaches). A cycle is two rungs
+    // (0.6 m) climbed; the two sides half a cycle apart, so one hand always holds.
+    const cyc = (c.rise || 0) / 0.6;
+    const limb = (u, top, low, out) => {
+      u -= Math.floor(u);
+      // (holding: 78% of the cycle, sliding down with the climb; reaching: the rest, an eased lift)
+      if (u < 0.78) return [out, top + (low - top) * (u / 0.78), 1];
+      const r = sm01((u - 0.78) / 0.22);
+      return [out - 0.05 * Math.sin(r * Math.PI), low + (top - low) * r, 0];
+    };
+    const [hxF, hyF, gF] = limb(cyc, -0.5, -0.06, 0.2), [hxB, hyB, gB] = limb(cyc + 0.5, -0.5, -0.06, 0.2);
+    // (the feet: the left foot steps as the right hand reaches)
+    const [fxF, fyF] = limb(cyc + 0.5 + 0.12, -0.34, 0.02, 0.12), [fxB, fyB] = limb(cyc + 0.12, -0.34, 0.02, 0.12);
+    P.l = 0.06; P.b = [0.03, 0.05];
+    P.hF = [hxF, hyF]; P.hB = [hxB, hyB];
+    P.fF = [fxF, fyF]; P.fB = [fxB, fyB];
+    // (the hand on a rung is closed round it; the reaching one opens for the next)
+    P.hand = gF ? 'fist' : 'palm'; P.handB = gB ? 'fist' : 'palm';
+    // (looking up the ladder a little, toward the hand that reaches)
+    P.ht = -0.14;
     return;
   }
   const m = c.ladder ? (k - 0.82) / 0.18 : k;

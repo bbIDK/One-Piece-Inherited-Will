@@ -348,6 +348,10 @@ export function placeGuess(game, island, def) {
     }
     return bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
   };
+  if (pl.inside) {
+    const b = (island.landmarks || []).find((l) => l.kind === 'building' && (l.role === pl.inside || l.name === pl.inside));
+    if (b) return inB(b);
+  }
   if (pl.spot && island.spots[pl.spot]) { const s = island.spots[pl.spot]; return { x: s.x + (pl.ox || 0), y: s.y + (pl.oy || 0) }; }
   for (const town of island.towns) {
     if (pl.town && town.id !== pl.town) continue;
@@ -417,6 +421,13 @@ function placeNPC(game, island, def, rng, spawner) {
 
 function placeNPC0(game, island, def, rng, spawner) {
   const pl = (typeof def.at === 'function' ? def.at(game.state?.char, game) : def.at) || {};
+  // indoors, in one of the island's own buildings (one with no town round it:
+  // the Baratie's restaurant) — at its counter, its stove, or at a table
+  if (pl.inside) {
+    const b = (island.landmarks || []).find((l) => l.kind === 'building' && (l.role === pl.inside || l.name === pl.inside));
+    const q = b && inside(b, pl.guest);
+    if (q) return q;
+  }
   if (pl.spot && island.spots[pl.spot]) {
     const s = island.spots[pl.spot];
     const x = s.x + (pl.ox || 0), y = s.y + (pl.oy || 0);

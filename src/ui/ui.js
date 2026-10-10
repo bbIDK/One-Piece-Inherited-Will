@@ -11,6 +11,7 @@ import { Waypoints } from './waypoints.js';
 import { Minimap } from './minimap.js';
 import { assignHotbar } from './panels.js';
 import { HOTBAR_SIZE, HOTBAR_KEYS, isMoveset, ENTRY } from '../game/hotbar.js';
+import { shipButtonState, pressShipButton } from '../game/shipcall.js';
 import { syncPause } from './pause.js';
 import { drawSkillsHud, entryView, panelRow } from './skillsHud.js';
 import { captureKey } from './rebind.js';
@@ -27,13 +28,14 @@ const SECTIONS = [
   { id: 'skills', label: 'Skills' },
   { id: 'journal', label: 'Journal' },
   { id: 'crew', label: 'Crew' },
+  { id: 'shipyard', label: 'Shipyard', icon: 'ship' },
   { id: 'quests', label: 'Quests' },
   { id: 'map', label: 'Map', key: 'M', away: true },
   { id: 'menu', label: 'Game', key: 'Esc', icon: 'settings', away: true },
 ];
 const AWAY = new Set(SECTIONS.filter((b) => b.away).map((b) => b.id));
 // (what Tab opens again: the section you were last in)
-const RETURN_TO = new Set(['inventory', 'character', 'skills', 'journal', 'crew', 'quests', 'voyage']);
+const RETURN_TO = new Set(['inventory', 'character', 'skills', 'journal', 'crew', 'shipyard', 'quests', 'voyage']);
 // on phones there's no keyboard: the map and the camera get buttons of their own
 const TOUCH_BTNS = [
   { id: 'map', label: 'Map' },
@@ -97,7 +99,7 @@ export class UI {
     E.lives = h('div.lives');
     E.bounty = h('div.hud-bounty');
     E.buffs = h('div.buffs');
-    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.needs, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
+    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.needs, E.o2, E.fly.el, E.lives, E.bounty, E.buffs));
     // hotbar: ten slots (1-9, 0), each something you take out: food, a
     // weapon, your Devil Fruit, one of its forms (hotbar.js). Click a slot to
     // use it; drag slots to rearrange them. With the Inventory or Skills open
@@ -140,6 +142,12 @@ export class UI {
         this.clearSlot(i);
       });
       E.slots.push(s);
+      // (the ship button, in the middle of them: see game/shipcall.js)
+      if (i === HOTBAR_SIZE / 2) {
+        E.shipBtn = h('div.shipbtn.interactive', { title: 'Your ship' }, h('span.ico', uiImg('ship', 30)), h('span.lbl', 'Ship'));
+        E.shipBtn.addEventListener('click', () => { if (!this.blocksInput() && this.game) { pressShipButton(this.game); this.shipT = 0; } });
+        E.hotbar.appendChild(E.shipBtn);
+      }
       E.hotbar.appendChild(s.el);
     }
     E.toggles = {};
@@ -156,7 +164,9 @@ export class UI {
       E.toggles[t.type] = { el, k };
       E.hotbar.appendChild(el);
     }
-    this.hud.appendChild(E.hotbar);
+    // the bottom of the screen: your health and Haki over the hotbar, the ship button at its heart
+    E.dock = h('div.dock', h('div.dock-bars', E.hp.el, h('div.dock-gap'), E.hk.el), E.hotbar);
+    this.hud.appendChild(E.dock);
     // the interaction prompt; tapping it does the same as E
     E.prompt = h('div.prompt.hidden.interactive', { on: { click: () => { const inp = this.game?.input; if (inp && !this.blocksInput()) { inp.simKey('E', true); inp.simKey('E', false); } } } });
     this.hud.appendChild(E.prompt);
@@ -634,6 +644,20 @@ export class UI {
     const title = ch.title || (ch.faction === 'marine' ? `Marine ${ch.marineRank || 'Recruit'}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === 'pirate' ? 'Pirate' : 'Wanderer');
     this.set(E.sub, 'sub', `${raceLabel(p.look)} · ${title} · Doriki ${p.power().toLocaleString()}`);
     E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
+    // the ship button: call her up, or her sails up and down
+    this.shipT = (this.shipT ?? 0) - 1;
+    if (this.shipT <= 0 && E.shipBtn) {
+      this.shipT = 12;
+      const st = shipButtonState(game);
+      E.shipBtn.classList.toggle('none', st.mode === 'none');
+      E.shipBtn.classList.toggle('sails', st.mode === 'sails');
+      E.shipBtn.classList.toggle('up', st.mode === 'sails' && !!st.on);
+      const lbl = st.mode === 'none' ? 'No ship' : st.mode === 'call' ? 'Call ship' : st.on ? 'Furl sails' : 'Set sail';
+      E.shipBtn.lastChild.textContent = lbl;
+      E.shipBtn.title = st.mode === 'none' ? 'You don\'t own a ship: the shipwright on any pier sells them.'
+        : st.mode === 'call' ? `Bring the ${st.entry.name} round onto the water in front of you (there must be room for her). Choose your ship in the menu: Tab → Shipyard.`
+        : st.on ? `Take in the ${st.ship.name}'s sails` : `Set all sail on the ${st.ship.name}`;
+    }
     // needs: food, water, warmth (hidden in creative, or with the setting off)
     const S = game.survival, nd = S?.enabled?.() ? S.needs() : null;
     if (!!nd !== this.cache.needsOn) { E.needs.classList.toggle('hidden', !nd); this.cache.needsOn = !!nd; }

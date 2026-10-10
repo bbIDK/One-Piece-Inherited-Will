@@ -1544,6 +1544,9 @@ export class Actor extends Entity {
     let u, v, h;
     if (k < 0.82) {
       h = h0 + (top - h0) * rise;
+      // (how far up the rungs: what the hands and feet keep time with — not
+      // the height over the sea, which heaves with her)
+      c.rise = h - h0;
       const g = smooth01(0, 0.12, k);
       u = c.u0 + (l.u - c.u0) * g; v = c.v0 + (hb(h) - c.v0) * g;
     } else {
@@ -2007,7 +2010,7 @@ export class Actor extends Entity {
     if (air) pose.air = { up: air === 'up', k: this.jumpK || 0 };
     // hauling yourself up a ledge, or hand over hand up a ladder (render/anim/move.js climbPose)
     const cl = this.climb;
-    if (cl && !cl.ride && !act) pose.climb = { k: Math.min(1, cl.t / (cl.T || 1)), ladder: !!cl.to?.ladder, rise: (this.z || 0) + (cl.t || 0) * 0.01 };
+    if (cl && !cl.ride && !act) pose.climb = { k: Math.min(1, cl.t / (cl.T || 1)), ladder: !!cl.to?.ladder, rise: cl.rise ?? (this.z || 0) };
     if (this.blocking) { pose.block = this.blockTime; pose.armedBlock = pose.armed; }
     if (dodging && !act) {
       const d = this.dash;

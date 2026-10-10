@@ -72,6 +72,28 @@
 .buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }
 
 .hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }
+/* the bottom dock: health (left) and Haki (right) over the hotbar, the ship button raised in the middle */
+.dock { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.dock .hotbar { position: static; transform: none; align-items: flex-end; }
+.dock-bars { display: flex; align-items: center; gap: 0; padding: 0 2px; }
+.dock-bars .bar { flex: 1; height: 15px; margin: 0; border-radius: 8px; }
+.dock-bars .bar > i, .dock-bars .bar > b { border-radius: 8px; }
+.dock-bars .bar > span { top: 0; font-size: 10.5px; }
+.dock-bars .bar.hp > span { right: auto; left: 8px; }
+.dock-bars .bar.hk { transform: scaleX(-1); }
+.dock-bars .bar.hk > span { transform: scaleX(-1); right: auto; left: 8px; }
+.dock-bars .bar.hidden { display: block !important; visibility: hidden; }
+.dock-gap { width: 92px; flex: none; }
+.shipbtn { position: relative; width: 74px; height: 74px; margin: -26px 6px 0; flex: none; border-radius: 50%; display: grid; place-items: center; align-content: center; gap: 0;
+  background: radial-gradient(circle at 50% 35%, #2b4a66, #10202e 70%); border: 3px solid #c9a24a; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.55), inset 0 2px 6px rgba(255,255,255,.12);
+  cursor: var(--cur-ptr); transition: transform .12s ease, border-color .2s, box-shadow .2s; }
+.shipbtn:hover { transform: translateY(-2px) scale(1.04); }
+.shipbtn:active { transform: scale(.96); }
+.shipbtn .ico img { display: block; filter: drop-shadow(0 1px 1px #000); }
+.shipbtn .lbl { font: 800 9.5px Nunito; letter-spacing: .4px; text-transform: uppercase; color: #f5e6c4; text-shadow: 0 1px 2px #000; margin-top: 1px; white-space: nowrap; }
+.shipbtn.sails { border-color: #e9d9a6; }
+.shipbtn.up { border-color: #f1c40f; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 0 16px rgba(241,196,15,.6), inset 0 2px 6px rgba(255,255,255,.15); }
+.shipbtn.none { opacity: .55; filter: grayscale(.6); }
 .slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: var(--cur-ptr); }
 .slot .ico { display: grid; place-items: center; }
 .slot .ico img { display: block; }
@@ -107,10 +129,10 @@
 @keyframes actperfect { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 1), 0 3px 8px rgba(0,0,0,.45); border-color: #fff; background-color: rgba(255, 253, 231, .55); } 100% { box-shadow: 0 0 0 16px rgba(255, 255, 255, 0), 0 3px 8px rgba(0,0,0,.45); } }
 .slot.act.guard.counter { border-color: #ffab40; box-shadow: 0 0 14px rgba(255, 171, 64, .85); }
 
-.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }
+.prompt { position: absolute; left: 50%; bottom: 122px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }
 .prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }
 
-.log { position: absolute; left: 14px; bottom: 82px; width: 420px; max-height: clamp(70px, calc(100vh - 550px), 170px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }
+.log { position: absolute; left: 14px; bottom: 112px; width: 420px; max-height: clamp(70px, calc(100vh - 550px), 170px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }
 .log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }
 @keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
@@ -686,6 +708,8 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 #ui.touch.menu-open .sidebar { left: auto; top: 8px; width: auto; }
 #ui.touch .side-btn.s-map { margin-top: 0; margin-left: 6px; }
 #ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }
+#ui.touch .dock { bottom: 6px; transform: translateX(calc(-50% - 60px)); }
+#ui.touch .dock .hotbar { transform: none; }
 #ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }
 #ui.touch .slot .ico img { width: 30px; height: 30px; }
 #ui.touch .slot .nm { display: none; }
@@ -1076,3 +1100,4 @@ html.mdown {
 html, body { cursor: var(--cur); }
 button, a[href], select, summary, label[for] { cursor: var(--cur-ptr); }
 button:disabled { cursor: not-allowed; }
+.tag.gold { background: #c79a0b; color: #fffbe6; }

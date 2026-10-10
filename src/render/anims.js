@@ -179,6 +179,15 @@ const CLIPS = {
   // ---------------------------------------------------------------- kicks
   // a snap kick: the knee chambered high, the leg whipped out level, the hips turned over into it and the body back to balance it
   kick: (w, T, c) => ({ keys: strike(w, T, S(c, { load: { b: [0, 0.06], l: -0.12, hp: -0.12, fF: [0.13, -0.32], fB: [-0.07, 0], ...arms(c, { hF: [0.18, 0.02], hB: [0.08, 0.1] }), face: 'fierce' }, hit: { b: [0.05, -0.02], l: -0.26, hp: 0.35, tw: -0.1, ht: 0.1, fF: [0.68, -0.42], fB: [-0.09, 0], sm: 0.1, ...arms(c, { hF: [0.08, 0.14], hB: [-0.16, 0.14] }), face: 'fierce' }, follow: { fF: [0.6, -0.36], l: -0.22 } })), legs: true }),
+  // Black Leg (Sanji): kicks from a cook's stance, hands in his pockets.
+  // The snap: the knee drawn up high and tight first (the chamber), then the
+  // leg whipped out straight from it, toe pointed, the body leaning back to
+  // balance it — and drawn back into the chamber before it comes down.
+  bl_snap: (w, T, c) => ({ keys: strike(w, T, S(c, { loadAt: 0.62, load: { b: [0, 0.07], l: -0.04, hp: -0.18, tw: 0.12, fF: [0.2, -0.46], fB: [-0.06, 0], ...arms(c, { hF: [0.12, 0.08], hB: [0.04, 0.12] }), face: 'fierce' }, hit: { b: [0.04, -0.01], l: -0.3, hp: 0.32, tw: -0.06, ht: 0.12, fF: [0.8, -0.58], fB: [-0.1, 0], sm: 0.12, ...arms(c, { hF: [0.06, 0.16], hB: [-0.14, 0.14] }), face: 'fierce' }, follow: { fF: [0.3, -0.48], l: -0.14, hp: 0.12 }, loadEase: 'inout', hitEase: 'snap' })), legs: true }),
+  // the roundhouse: a pivot on the standing foot, the hips turned right
+  // over, the leg swinging round high and flat at the head, the body
+  // leaning away from it — a long, smooth arc, not a jab
+  bl_round: (w, T, c) => ({ keys: strike(w, T, S(c, { loadAt: 0.58, load: { b: [0, 0.08], l: -0.08, hp: -0.38, tw: -0.22, ls: 0.06, fF: [0.14, -0.5], fB: [-0.05, 0], ...arms(c, { hF: [0.14, 0.04], hB: [0.06, 0.1] }), face: 'fierce' }, hit: { b: [0.02, -0.02], l: -0.42, hp: 0.6, tw: 0.28, ls: -0.16, ht: 0.22, fF: [0.66, -0.92], fB: [-0.07, 0], sm: 0.14, ...arms(c, { hF: [-0.16, 0.1], hB: [0.26, -0.02] }), face: 'shout' }, follow: { fF: [0.34, -0.58], l: -0.22, hp: 0.34, tw: 0.16 }, loadEase: 'inout' })), legs: true }),
   kick_high: (w, T, c) => ({ keys: strike(w, T, S(c, { load: { b: [0, 0.07], l: -0.16, hp: -0.15, fF: [0.04, -0.38], fB: [-0.05, 0], ...arms(c, { hF: [0.16, 0.0], hB: [0.1, 0.06] }), face: 'fierce' }, hit: { b: [0.02, -0.02], l: -0.46, hp: 0.42, ls: -0.06, ht: 0.2, fF: [0.57, -0.85], fB: [-0.06, 0], sm: 0.1, ...arms(c, { hF: [-0.18, 0.1], hB: [0.28, -0.04] }), face: 'fierce' }, follow: { l: -0.32, fF: [0.46, -0.62] } })), legs: true }),
   // a whirling kick: a turn the other way, the leg whipped round, and the body spun on through after it
   kick_spin: (w, T, c) => ({ keys: strike(w, T, S(c, { followAt: 0.35, load: { sp: -0.06, b: [0, 0.07], l: -0.08, hp: -0.25, fF: [0.06, -0.24], ...arms(c, { hF: [0.2, 0.0], hB: [0.0, 0.1] }), face: 'fierce' }, hit: { sp: 0, b: [0.03, -0.01], l: -0.3, hp: 0.5, ls: -0.1, fF: [0.7, -0.55], fB: [-0.06, 0], sm: 0.12, ...arms(c, { hF: [-0.12, 0.12], hB: [0.24, -0.06] }), face: 'shout' }, follow: { sp: 0.55, fF: [0.36, -0.38], l: -0.18 }, end: spun(c) })), legs: true }),
@@ -307,7 +316,7 @@ const CLIPS = {
 const LIMB = {
   gigant: 'hF', bazooka: 'hF',
   cross: 'hB', palm2: 'hB', shigan2: 'hB', claw2: 'hB', grab2: 'hB', dual2: 'wB',
-  kick: 'fF', kick_high: 'fF', kick_low: 'fF', kick_spin: 'fF', sweep: 'fF', knee: 'fF', axe_kick: 'fF', rise_kick: 'fF', mouton: 'fF', handstand: 'fF', flying_kick: 'fF', stomp: 'fF',
+  kick: 'fF', bl_snap: 'fF', bl_round: 'fF', kick_high: 'fF', kick_low: 'fF', kick_spin: 'fF', sweep: 'fF', knee: 'fF', axe_kick: 'fF', rise_kick: 'fF', mouton: 'fF', handstand: 'fF', flying_kick: 'fF', stomp: 'fF',
   ballet_kick: 'fF', pirouette: 'fF', jete: 'fF', arabesque: 'fB', rocket: 'hF',
   slash: 'wF', slash2: 'wF', rise_slash: 'wF', slash3: 'wF', stab: 'wF', cleave: 'wF', iai: 'wF', dual1: 'wF', dual3: 'wF', dualx: 'wF', dual_stab: 'wF', tora: 'wF', bladespin: 'wF',
   axe: 'wF', axe2: 'wF', axe_slam: 'wF', staff: 'wF', staff2: 'wF', staff_jab: 'wF', shoot: 'wF', aim: 'wF', headbutt: 'head', breath: 'head',
@@ -324,7 +333,7 @@ const SM_CH = { hF: 'smF', hB: 'smB', fF: 'smfF', fB: 'smfB' };
 // where they come in the chain.
 const CLIP_WEIGHT = {
   light: 'jab cross palm palm2 shigan shigan2 claw claw2 grab grab2 chop chop2 kick slash slash2 dual1 dual2 dual3 staff staff2 shoot flick ballet_kick pirouette',
-  medium: 'hook kick_high kick_spin sweep rise_slash stab dual_stab staff_jab thrust throw point push raise room pull pray hana spread guardup flex blink jete knee rise_kick pistol skyward breath',
+  medium: 'hook bl_snap bl_round kick_high kick_spin sweep rise_slash stab dual_stab staff_jab thrust throw point push raise room pull pray hana spread guardup flex blink jete knee rise_kick pistol skyward breath',
   heavy: 'uppercut haymaker palm_double claw_x headbutt charge mouton axe_kick flying_kick stomp arabesque cleave iai dualx tora bladespin axe axe2 aim slam rankyaku vibe_palm rocket fly hiken groundpalm summon powerup tilt bazooka gatling kneel quake handstand slash3',
   massive: 'axe_slam kaishin sunraise will gigant',
 };

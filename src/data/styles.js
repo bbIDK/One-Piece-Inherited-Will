@@ -95,8 +95,8 @@ export const STYLES = {
     name: 'Black Leg Style', icon: '🦵', weapon: null, legs: true,
     desc: 'Taught by "Red Leg" Zeff at the Baratie. A cook\'s hands are for cooking — fight with your legs alone.',
     m1: [
-      m1('bleg_1', 'black_leg', 'kick', 7, { range: 1.6 }),
-      m1('bleg_2', 'black_leg', 'kick_high', 7, { range: 1.6 }),
+      m1('bleg_1', 'black_leg', 'bl_snap', 7, { range: 1.6 }),
+      m1('bleg_2', 'black_leg', 'bl_round', 7, { range: 1.6 }),
       m1('bleg_3', 'black_leg', 'kick_spin', 7, { range: 1.6, windup: 0.12, recover: 0.22 }),
       m1('bleg_4', 'black_leg', 'rise_kick', 12, { windup: 0.11, range: 1.8, kb: 4.5, recover: 0.3, name: 'Collier' }),
     ],

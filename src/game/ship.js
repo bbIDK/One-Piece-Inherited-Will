@@ -360,6 +360,7 @@ export class Ship extends Entity {
 
   /** Set all sail (true) or take it all in (false): no half measures. */
   setSails(on) {
+    // (its sound: foley.js, as the canvas moves)
     this.sail = on ? 1 : 0;
     if (on) this.anchored = false;
   }

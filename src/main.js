@@ -83,6 +83,7 @@ import { installCinematics, installBossIntros } from './game/cinematic.js';
 import { installCursor } from './ui/cursor.js';
 import { Crew } from './game/crew.js';
 import { openCrew } from './ui/crewPanel.js';
+import { openShipyard } from './ui/shipyardPanel.js';
 import { openQuests } from './ui/questsPanel.js';
 import { installFactions } from './game/factions.js';
 import { installLegends } from './game/legends.js';
@@ -336,6 +337,7 @@ async function start() {
     skills: () => openSkills(game),
     journal: () => openJournal(game),
     crew: () => openCrew(game),
+    shipyard: () => openShipyard(game),
     quests: () => openQuests(game),
     menu: () => ui.openMenu(),
     help: () => ui.openPanel(helpContent(game.state?.char, game.settings), { wide: true, id: 'help' }),
