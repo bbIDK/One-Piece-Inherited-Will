@@ -81,6 +81,21 @@ export function blowWeight(att, tgt, h, final, crit, counter) {
   return counter ? Math.min(1.5, w + 0.3) : w;
 }
 
+const FIRE_EL = new Set(['fire', 'magma', 'bluefire']);
+const ICE_EL = new Set(['ice', 'snow']);
+/**
+ * The ice round a frozen body bursts: shards everywhere, and a share of their
+ * health with it (`k`: of their most; a boss's ice is thinner), and they're free.
+ */
+export function shatterIce(tgt, att, game, k = 0.08) {
+  if (!tgt.status?.freeze) return;
+  delete tgt.status.freeze;
+  game.fx?.burst?.(tgt.x, tgt.y - 0.6, 18, { color: ['#e1f5fe', '#b3e5fc', '#ffffff'], speed: 4.5, spread: Math.PI * 2, z: 1, vz: 2.5, g: 9, life: 0.8, kind: 'shard', size: 0.12, drag: 1 });
+  game.audio?.sfx('ice', tgt);
+  const n = Math.round(tgt.d.maxHp * k * (tgt.boss ? 0.4 : 1));
+  if (n > 0 && tgt.alive && tgt.state !== 'dead' && tgt.state !== 'knocked') { game.fx?.text?.(tgt.x, tgt.y - 1.6, 'SHATTER', '#b3e5fc', 0.4); tgt.takeDamage(n, att, { element: 'ice' }, game); }
+}
+
 export class Combat {
   constructor(game) {
     this.game = game;
@@ -223,6 +238,9 @@ export class Combat {
     const k = pl.observation ? 1 : T.cue;
     if (k > 0) game.fx.parryCue?.({ x: p.x, y: p.y, z: 0.9, follow: p }, false, k * 0.8);
   }
+
+  /** A frozen body's ice shatters (actor.js when it thaws out too). */
+  shatter(tgt, att, k) { shatterIce(tgt, att, this.game, k); }
 
   canHit(owner, target, h) {
     if (!target.alive || target === owner) return false;
@@ -468,7 +486,16 @@ export class Combat {
       let stun = counter ? Math.max(h.stun || 0, PARRY.counterStun) : h.stun;
       if (tgt.isPlayer && stun > T.stunCap) stun = T.stunCap;
       if (stun && (counter || !(unshakable(tgt) && !h.guardBreak && stun < 0.6))) tgt.stagger(stun * (tgt.stunResist ?? 1));
+      // (a body frozen solid, struck by anything but more ice: the ice shatters, and takes them with it)
+      if (tgt.status.freeze && !ICE_EL.has(h.element) && tgt.alive) shatterIce(tgt, att, game, 0.12);
       if (h.status) for (const [k, v] of Object.entries(h.status)) tgt.addStatus(k, v, att);
+      // the elements catch: fire sets them burning a while (longer the bigger the blow); ice
+      // chills them, blow on blow, till they freeze solid (a heavy blow of it sooner)
+      if (att && FIRE_EL.has(h.element) && !h.status?.burn) tgt.addStatus('burn', 1.5 + Math.min(4, (h.damage || 0) / 30), att);
+      if (att && ICE_EL.has(h.element) && !h.status?.freeze && !tgt.status.freeze) {
+        tgt.chill = (tgt.chill || 0) + (h.heavy ? 0.55 : 0.3) + Math.min(0.6, (h.damage || 0) / Math.max(1, tgt.d.maxHp) * 2);
+        if (tgt.chill >= 1) { tgt.chill = 0; tgt.addStatus('freeze', h.heavy ? 2.6 : 1.7, att); }
+      }
       // (a quake throws them off their feet; a heavy blow knocks a flier out of the sky)
       if (h.launch && !tgt.flying && !tgt.inWater && !tgt.climb && !tgt.onShip && !((tgt.z || 0) > 0.3) && tgt.state === 'idle') {
         tgt.vz = Math.max(tgt.vz || 0, h.launch * (tgt.boss ? 0.5 : 1));

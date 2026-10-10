@@ -139,7 +139,8 @@ export function installDecks(game) {
       if (Math.abs(t - tc) * d.L > r) continue;
       if (feet === null) feet = a.feetH(game);
       const hh = feet - shipLift(s, time, u, v, 0), top = topAt(d, tc);
-      if (hh >= top - RAIL_CLEAR) continue;
+      // (in a jump, hands on her rail and over it: the same reach as getting off her — actor.js)
+      if (hh >= top - (a.z > 0.25 ? 0.95 : RAIL_CLEAR)) continue;
       // (the body from the feet up to the head, or as far as her rail)
       const y1 = Math.min(top, hh + 1.7 * sc);
       const side = Math.max(sideAt(d, tc, hh), sideAt(d, tc, (hh + y1) / 2), sideAt(d, tc, y1));

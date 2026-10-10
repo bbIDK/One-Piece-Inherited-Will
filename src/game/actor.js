@@ -972,8 +972,11 @@ export class Actor extends Entity {
         }
       }
       if (k === 'shock' && Math.random() < dt * 3) { this.hitstun = Math.max(this.hitstun, 0.12); game.fx.burst(this.x, this.y - 0.7, 3, { color: '#fff176', speed: 3, g: 0, life: 0.15, kind: 'line' }); }
+      // (frozen solid till the ice gives: it bursts off them, and hurts)
+      if (k === 'freeze' && s.t <= 0 && game.combat?.shatter) { game.combat.shatter(this, s.src, 0.06); continue; }
       if (s.t <= 0) delete st[k];
     }
+    if (this.chill) this.chill = Math.max(0, this.chill - dt * 0.2);
     if (this.helpless()) { this.action = null; this.blocking = false; }
     if (st.seastone && this.armament && this.fruit) { /* seastone doesn't stop haki */ }
   }
@@ -1166,8 +1169,10 @@ export class Actor extends Entity {
       // (a gangway has a rope along each side: off it, over the water, only with a jump)
       if (this.deck.plank && !(this.z > 0.4)) return false;
       // (off the edge of her deck is her bulwark: over it only with your feet up at its top)
-      // (in a jump, a leg swung over it: your feet up near its top will do)
-      const vault = this.z > 0.25 ? 0.55 : RAIL_CLEAR;
+      // (in a jump, hands on its top and a leg swung over it: your feet up within
+      // a short reach of its top will do — even where her side sweeps up high
+      // at the bow and stern, over her forecastle's and poop's balustrades)
+      const vault = this.z > 0.25 ? 0.95 : RAIL_CLEAR;
       if (this.feetH(g) < g.railAt(sh, x, y) - vault) return false;
     }
     // a ledge too high to step onto: a pier or a quay out of the sea, a ship's

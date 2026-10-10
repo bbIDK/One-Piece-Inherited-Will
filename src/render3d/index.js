@@ -914,6 +914,13 @@ export class Renderer3D {
     this.retiring.set(o, v);
   }
 
+  /** Something fixed to a building that came down (a sign, a lamp, an awning): gone with it, at once. */
+  dropFixture(o) {
+    const v = this.built.get(o);
+    if (v !== undefined) this.dropProp(o, v);
+    this.propsDirty = true; // (and its sprite, if it's one)
+  }
+
   /** How tall building b's model stands (if it's built), for the pieces it falls into. */
   builtHeight(b) { return this.built.get(b)?.userData?.height || 0; }
 

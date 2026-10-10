@@ -14,9 +14,13 @@
 //   { kind: 'restore', b }            — b standing again
 import { techScale } from './abilities.js';
 import { bfoot } from '../world/bframe.js';
+import { floorOf } from '../world/objects.js';
 
 /** Seconds a ruin stands before it's rebuilt (the least of it: bigger blows leave longer ruins). */
 export const REBUILD = 300;
+
+const FIRE = new Set(['fire', 'magma', 'bluefire', 'explosion']);
+const ICE = new Set(['ice', 'snow']);
 
 /** A building's strength: its size (floor × height), so a shed goes in a blow or two and a fort takes a beating. */
 export function buildingHp(b) {
@@ -67,16 +71,99 @@ export function installDestruction(game) {
     strike(x, y, r, power, att, o = {}) {
       if (!(power > 0)) return 0;
       let n = 0;
+      const el = o.element || 'physical';
       for (const [b, d] of D.near(x, y, r)) {
         const k = 1 - 0.5 * (d / Math.max(0.5, r));
-        b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - power * k;
+        // (a house in ice shatters at a blow that isn't ice: the ice and the walls in it, twice over)
+        let pw = power;
+        if (b.frozen && !ICE.has(el)) { pw *= 2; D.shatter(b, att); if (b.ruined) { n++; continue; } }
+        b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - pw * k;
+        if (FIRE.has(el)) D.ignite(b, power, att);
+        else if (ICE.has(el)) D.freeze(b, power, att);
         b.hitT = game.time;
-        if (b.hp <= 0) { D.collapse(b, x, y, power, att, o); n++; continue; }
+        if (!b.damaged) { b.damaged = true; (game.world.damaged ||= []).push(b); }
+        if (b.hp <= 0) { D.collapse(b, x, y, pw, att, o); n++; continue; }
         // (bits of it knocked off, more the harder it's hit)
-        D.event({ kind: 'chip', b, x, y, n: Math.min(10, 2 + Math.round(power / 120)) });
+        // (and a hole punched in it there, bigger the bigger the blow against how stout it is: debris3d.js hole)
+        D.event({ kind: 'chip', b, x, y, n: Math.min(10, 2 + Math.round(pw / 120)), k: Math.min(1.6, 0.25 + (pw * k) / (b.maxHp || buildingHp(b)) * 2.5) });
         if (Math.random() < 0.5) game.audio?.sfx('wallhit', { x, y });
       }
       return n;
+    },
+
+    /**
+     * Fire on a building: it catches and burns a while — flames out of its
+     * windows and over its roof, smoke, the walls blackening — taking damage
+     * all the while; enough of it and it burns down. A bigger fire burns
+     * longer. (Water, ice put it out.)
+     */
+    ignite(b, power, att) {
+      if (b.ruined) return;
+      if (b.frozen) { D.thaw(b); return; } // (fire on ice: it melts, and that's all)
+      const dur = Math.min(30, 6 + power / 40);
+      if (!b.burning) { b.burning = { until: game.time + dur, att, power, acc: 0 }; (game.world.burning ||= []).push(b); D.event({ kind: 'burn', b, on: true }); }
+      else b.burning.until = Math.max(b.burning.until, game.time + dur * 0.6);
+      b.charred = true;
+    },
+    /** Ice on a building: frozen solid in a shell of ice, until it shatters (with it, much of the house). */
+    freeze(b, power, att) {
+      if (b.ruined) return;
+      if (b.burning) { D.douse(b); return; } // (ice on a fire: put out)
+      const dur = Math.min(20, 5 + power / 60);
+      if (!b.frozen) { b.frozen = { until: game.time + dur, att, power }; (game.world.frozen ||= []).push(b); D.event({ kind: 'ice', b, on: true }); game.audio?.sfx('ice', { x: b.x, y: b.y }); }
+      else b.frozen.until = Math.max(b.frozen.until, game.time + dur * 0.5);
+    },
+    douse(b) { if (!b.burning) return; b.burning = null; D.event({ kind: 'burn', b, on: false }); },
+    thaw(b) { if (!b.frozen) return; b.frozen = null; D.event({ kind: 'ice', b, on: false, shatter: false }); },
+    /** The ice round a building breaks: the shell flies apart, and the walls it held go with it. */
+    shatter(b, att) {
+      const F = b.frozen;
+      if (!F) return;
+      b.frozen = null;
+      D.event({ kind: 'ice', b, on: false, shatter: true });
+      game.audio?.sfx('ice', { x: b.x, y: b.y });
+      const q = bfoot(b), cx = (q.x0 + q.x1) / 2, cy = (q.y0 + q.y1) / 2;
+      game.fx?.burst?.(cx, cy, 30, { color: ['#e1f5fe', '#b3e5fc', '#ffffff'], speed: 6, spread: Math.PI * 2, z: 1.5, vz: 3, g: 9, life: 1.1, kind: 'shard', size: 0.16, drag: 1 });
+      // (as much again as froze it, and half the house besides: a frozen house is a brittle one)
+      b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - (F.power * 1.5 + (b.maxHp || buildingHp(b)) * 0.45);
+      if (b.hp <= 0) D.collapse(b, cx, cy, F.power * 2, att || F.att);
+      // (and whoever stands by it takes the shards)
+      game.combat?.hitbox({ owner: att || F.att || null, x: cx, y: cy, shape: 'circle', range: Math.hypot(q.x1 - q.x0, q.y1 - q.y0) / 2 + 1.5, damage: 20 + F.power * 0.05, knockback: 6, stun: 0.5, element: 'ice', duration: 0.1, radial: true, blast: true, crush: true });
+    },
+    /** Burning and frozen buildings, as time goes by. */
+    elements(dt) {
+      const w = game.world, p = game.player;
+      if (w?.burning?.length) {
+        for (let i = w.burning.length - 1; i >= 0; i--) {
+          const b = w.burning[i], B = b.burning;
+          if (!B || b.ruined) { if (B) D.douse(b); w.burning.splice(i, 1); continue; }
+          // (it burns: an eighth of it a second, and down it comes when there's nothing left)
+          b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - (b.maxHp || buildingHp(b)) * 0.035 * dt;
+          b.hitT = game.time;
+          const q = bfoot(b), cx = (q.x0 + q.x1) / 2, cy = (q.y0 + q.y1) / 2;
+          if (b.hp <= 0) { D.collapse(b, cx, cy, 400, B.att); w.burning.splice(i, 1); continue; }
+          if (game.time > B.until) { D.douse(b); w.burning.splice(i, 1); continue; }
+          // flames licking up its walls and over its roof, and the smoke (only what you can see)
+          if (p && w.distance(p.x, p.y, cx, cy) < 90 && (B.acc = (B.acc || 0) + dt) > 0.12) {
+            B.acc = 0;
+            const H = 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6;
+            for (let k = 0; k < 3; k++) {
+              const fx0 = q.x0 + Math.random() * (q.x1 - q.x0), fy0 = q.y0 + Math.random() * (q.y1 - q.y0);
+              game.fx?.burst?.(fx0, fy0, 3, { color: ['#ff6d00', '#ffab00', '#ffd54f'], speed: 0.6, z: Math.random() * H, vz: 3, g: -3, life: 0.7, kind: 'fire', size: 0.45, grow: 0.6 });
+            }
+            game.fx?.burst?.(cx, cy, 2, { color: ['#424242', '#616161', '#757575'], speed: 0.4, z: H + 0.5, vz: 2.2, g: -1.5, life: 2.5, kind: 'smoke', size: 0.9, grow: 1.4, drag: 0.6 });
+          }
+          // (whoever's inside or right against it gets burnt)
+          if (Math.random() < dt * 1.5) game.combat?.hitbox({ owner: B.att || null, x: cx, y: cy, shape: 'circle', range: Math.hypot(q.x1 - q.x0, q.y1 - q.y0) / 2 + 0.4, damage: 4, knockback: 0, stun: 0, element: 'fire', status: { burn: 2 }, duration: 0.05, radial: true, crush: true });
+        }
+      }
+      if (w?.frozen?.length) {
+        for (let i = w.frozen.length - 1; i >= 0; i--) {
+          const b = w.frozen[i], F = b.frozen;
+          if (!F || b.ruined) { if (F) D.thaw(b); w.frozen.splice(i, 1); continue; }
+          if (game.time > F.until) { w.frozen.splice(i, 1); D.shatter(b, F.att); }
+        }
+      }
     },
 
     /** Building b brought down by a blow from (x, y). */
@@ -84,6 +171,17 @@ export function installDestruction(game) {
       const w = game.world;
       if (b.ruined || !w?.objects) return;
       w.objects.ruin(b);
+      // (and whatever's fixed to it or stood against it — its sign, its lamps, its awning, the
+      // barrels by its wall, its steps — goes with it, and comes back when it's rebuilt)
+      const fq = bfoot(b);
+      b.fixtures = w.objects.query(fq.x0 - 1.5, fq.y0 - 1.5, fq.x1 + 1.5, fq.y1 + 1.5).filter((o) => {
+        if (o === b || o.hidden || o.kind === 'building' || o.kind === 'tree' || o.far || floorOf(o) || /dock|pier|bridge|quay|jetty|plank/.test(o.kind)) return false;
+        const ox = w.wx(o.x);
+        return ox > fq.x0 - 1.2 && ox < fq.x1 + 1.2 && o.y > fq.y0 - 1.2 && o.y < fq.y1 + 1.2;
+      });
+      for (const o of b.fixtures) { w.objects.ruin(o); D.event({ kind: 'fixture', o }); }
+      if (b.burning) { b.burning = null; D.event({ kind: 'burn', b, on: false }); }
+      if (b.frozen) { b.frozen = null; D.event({ kind: 'ice', b, on: false, shatter: true }); }
       const q = bfoot(b), cx = (q.x0 + q.x1) / 2, cy = (q.y0 + q.y1) / 2;
       const span = Math.hypot(q.x1 - q.x0, q.y1 - q.y0) / 2;
       // a ruin stands a while: the bigger the blow that did it, the longer
@@ -132,6 +230,16 @@ export function installDestruction(game) {
     /** Rebuild what's stood ruined long enough (not under your nose: once you're a little way off, or it's been a long while). */
     update() {
       const w = game.world, p = game.player;
+      // walls holed but still standing are patched up after a while (not while you're beside them)
+      if (w?.damaged?.length) {
+        for (let i = w.damaged.length - 1; i >= 0; i--) {
+          const b = w.damaged[i];
+          if (b.ruined) { b.damaged = false; w.damaged.splice(i, 1); continue; }
+          if (game.time - (b.hitT || 0) < REBUILD * 0.6 || (p && w.distance(p.x, p.y, b.x, b.y) < 20)) continue;
+          b.hp = undefined; b.damaged = false; b.charred = false; w.damaged.splice(i, 1);
+          D.event({ kind: 'restore', b });
+        }
+      }
       if (D.wrecked.length) {
         const n = D.wrecked.length, b = D.wrecked[0];
         D.wrecked.length = 0;
@@ -145,7 +253,9 @@ export function installDestruction(game) {
         if (p && w.distance(p.x, p.y, b.x, b.y) < 30 && game.time < b.rebuildAt + 240) continue;
         if (p && w.distance(p.x, p.y, b.x, b.y) < 3 + Math.hypot(b.fw || 3, b.fd || 3)) continue; // (never rebuilt round you)
         w.objects.restore(b);
-        b.hp = undefined;
+        for (const o of b.fixtures || []) { w.objects.restore(o); D.event({ kind: 'restore', b: o }); }
+        b.fixtures = null;
+        b.hp = undefined; b.damaged = false; b.charred = false;
         w.ruins.splice(i, 1);
         D.event({ kind: 'restore', b });
       }
@@ -160,26 +270,26 @@ export function installDestruction(game) {
       const R = h.range || 1.4;
       if (h.shape === 'line') {
         const ca = Math.cos(h.angle || 0), sa = Math.sin(h.angle || 0), wd = (h.width || 1) / 2 + 0.6;
-        for (let d = 0; d <= R; d += Math.max(1.5, wd)) D.strike(h.x + ca * d, h.y + 0.4 + sa * d, wd, power, h.owner);
+        for (let d = 0; d <= R; d += Math.max(1.5, wd)) D.strike(h.x + ca * d, h.y + 0.4 + sa * d, wd, power, h.owner, { element: h.element });
         return;
       }
       if (h.shape === 'arc' || !h.shape) {
         // (a sweep in front of them: the half of the circle it covers)
         const a = h.angle || 0;
-        D.strike(h.x + Math.cos(a) * R * 0.5, h.y + 0.4 + Math.sin(a) * R * 0.5, R * 0.6 + 0.4, power, h.owner);
+        D.strike(h.x + Math.cos(a) * R * 0.5, h.y + 0.4 + Math.sin(a) * R * 0.5, R * 0.6 + 0.4, power, h.owner, { element: h.element });
         return;
       }
-      D.strike(h.x, h.y + 0.4, R + 0.3, power, h.owner);
+      D.strike(h.x, h.y + 0.4, R + 0.3, power, h.owner, { element: h.element });
     },
 
     /** A shot of yours stopped by a wall: the wall takes it. */
     fromShot(p) {
       if (!wrecker(p.owner)) return;
       const power = structPower(p) * 0.8;
-      if (power >= 4) D.strike(p.x, p.y, 0.8 + 0.4 * (p.size || 1), power, p.owner);
+      if (power >= 4) D.strike(p.x, p.y, 0.8 + 0.4 * (p.size || 1), power, p.owner, { element: p.element });
     },
   };
   game.destruction = D;
-  game.on?.('tick', () => D.update());
+  game.on?.('tick', (dt) => { D.update(); D.elements(dt || 1 / 60); });
   return D;
 }
