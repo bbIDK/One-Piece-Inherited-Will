@@ -1630,6 +1630,7 @@ export class Actor extends Entity {
       if (i.sprint && (i.mx || i.my) && !this.eating && (!this.inWater || this.gills) && this.sprintOk(dt)) sp *= this.inWater ? 1.35 : 1.55;
       if (this.eating) sp *= 0.45; // (a slow walk with your mouth full)
       if (this.crouch) sp *= 0.5; // (sneaking)
+      if (this.aiming) sp *= 0.45; // (stepping steady, a gun up to the eye)
       if (this.blocking) sp *= 0.4;
       if (this.action) sp *= this.action.def.moveMul ?? (this.action.def.m1Chain ? 0.55 : 0.25);
       if (this.hitstun > 0 || this.status.root || this.helpless()) sp = 0;
@@ -2009,6 +2010,8 @@ export class Actor extends Entity {
     pose.counterAge = now - this.counterT;
     if (this.charging > 0 && !act && !swim) pose.charge = this.charging;
     if (this.crouchK > 0 && !act && !swim && !air && !busy) pose.crouch = this.crouchK;
+    // (a gun held up to the eye, aiming: playerController.js)
+    if (this.aiming && !act && !swim && wpn?.kind === 'gun') pose.aimGun = true;
     if (air) pose.air = { up: air === 'up', k: this.jumpK || 0 };
     // hauling yourself up a ledge, or hand over hand up a ladder (render/anim/move.js climbPose)
     const cl = this.climb;

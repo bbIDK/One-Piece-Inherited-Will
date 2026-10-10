@@ -572,8 +572,12 @@ class ActorView {
     } else if (this.wings) this.wings.group.visible = false;
     // energy: charge-ups and element glows on the striking limb
     let gi = 0;
+    // (in first person the view's own arms carry the glows and the trails —
+    // viewmodel.js — and drawn here too they hung where your body's hidden
+    // arms are: a second pair of hands, in light, beside the first)
+    const ownFp = a.isPlayer && ctx.mode === 'first';
     const glow = (col, size, pos) => {
-      if (!near) return;
+      if (!near || ownFp) return;
       let g = this.glows[gi];
       if (!g) { g = this.glows[gi] = new Glow(col); m.group.add(g.sprite); }
       g.sprite.visible = true;
@@ -610,7 +614,7 @@ class ActorView {
     if (a.armament && pose.anim && near) glow(sigOf(a).armament, 0.13, rig.E[pose.anim.limb === 'hB' ? 1 : 0]);
     for (let i = gi; i < this.glows.length; i++) this.glows[i].sprite.visible = false;
     // slash / strike trails
-    if (pose.anim && !pose.noTrails && dist < 30) {
+    if (pose.anim && !pose.noTrails && dist < 30 && !ownFp) {
       if (!this.trail) { this.trail = new Trail(); m.group.add(this.trail.mesh); }
       this.trail.update(m, a, pose, P, o);
     } else if (this.trail) this.trail.hide();

@@ -675,6 +675,8 @@ export function restPose(pose) {
   if (pose.activity) activityPose(P, pose.activity, t);
   if (pose.bounce && !pose.flight) gear4Bounce(P, t, pose.moving);
   if (pose.crouch) crouchPose(P, pose.crouch, pose);
+  // a gun up to the eye, aiming: both hands on it, the barrel level, the body turned side-on behind it
+  if (pose.aimGun) { P.hF = [0.43, -0.04]; P.wF = 0; P.hB = [0.3, 0.05]; P.tw = 0.3; P.ht = 0.06; P.eF = 1; P.eB = 1; P.face = 'fierce'; }
   if (pose.charge) chargePose(P, pose.charge, t);
   if (pose.air && !pose.flight) airPose(P, pose.air);
   if (pose.climb) climbPose(P, pose.climb);

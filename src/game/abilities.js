@@ -285,14 +285,18 @@ function runStep(actor, s, game, a) {
   if (s.proj) {
     const p = s.proj;
     const n = p.count || 1;
+    // a firearm's bullet: small and fast, as a real one is; aimed down the
+    // sights (the right button held: playerController.js), faster again, true
+    // and harder-hitting
+    const fire = firearm(actor, p), aimed = fire && actor.aiming;
     for (let i = 0; i < n; i++) {
-      const spread = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) : (p.jitter ? (Math.random() - 0.5) * p.jitter : 0);
+      const spread = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) * (aimed ? 0.5 : 1) : (p.jitter && !aimed ? (Math.random() - 0.5) * p.jitter : 0);
       const pa = ang + spread;
-      const sp = p.speed || 14;
+      const sp = (p.speed || 14) * (fire ? 2.2 : 1) * (aimed ? 1.35 : 1);
       const sx = actor.x + Math.cos(pa) * 0.6, sy = actor.y - 0.5 + Math.sin(pa) * 0.6;
       game.combat.projectile({
         owner: actor, x: game.world.wx(sx), y: sy, vx: Math.cos(pa) * sp, vy: Math.sin(pa) * sp,
-        range: p.range || 10, radius: p.radius || 0.3, damage: (p.damage || 5) * mult, element: p.element || 'physical',
+        range: (p.range || 10) * (aimed ? 1.6 : fire ? 1.25 : 1), radius: p.radius || 0.3, damage: (p.damage || 5) * mult * (aimed ? 1.35 : 1), element: p.element || 'physical',
         knockback: p.knockback ?? 2, stun: p.stun ?? 0.2, status: p.status, pierce: p.pierce, homing: p.homing,
         target: a.target, sprite: p.sprite || 'orb', color: p.color || col, size: p.size || 1, haki: actor.armament && p.element === undefined,
         stretch: p.stretch ? actor : null, passWalls: p.passWalls, hitShips: p.hitShips ?? true, shipDamage: p.shipDamage,
@@ -430,7 +434,7 @@ export function ghostStep(actor, s, game, a, zones) {
     const p = s.proj, n = p.count || 1;
     for (let i = 0; i < n; i++) {
       const spread = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) : 0;
-      const pa = ang + spread, sp = p.speed || 14;
+      const pa = ang + spread, sp = (p.speed || 14) * (firearm(actor, p) ? 2.2 : 1);
       const sx = actor.x + Math.cos(pa) * 0.6, sy = actor.y - 0.5 + Math.sin(pa) * 0.6;
       game.combat.projectile({
         owner: actor, ghost: true, x: game.world.wx(sx), y: sy, vx: Math.cos(pa) * sp, vy: Math.sin(pa) * sp,
@@ -462,6 +466,11 @@ export function ghostStep(actor, s, game, a, zones) {
   if (s.pull) fx.tech(actor, s, a, 'pull');
   if (s.fx) fx.tech(actor, s.fx.color ? s : { ...s, fx: { ...s.fx, color: col } }, a, 'fx');
   if (s.sfx) game.audio?.sfx(s.sfx, actor);
+}
+
+/** A bullet from a gun (not a slingshot's pellet). */
+function firearm(actor, p) {
+  return p.sprite === 'bullet' && actor.weapon?.kind === 'gun' && !(actor.weapon.ids || []).some((id) => /sling|kabuto/.test(id));
 }
 
 function def_isPhysical(h) { return !h.element || h.element === 'physical'; }

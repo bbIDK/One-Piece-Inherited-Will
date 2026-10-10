@@ -115,7 +115,17 @@ export class PlayerController {
     // food in hand (picked on the hotbar): the right button eats it instead of a heavy blow
     const held = this.holding(p, game);
     const rightClick = freeMouse ? inp.mouse.released[2] && v3.rig.takeRightClick() : inp.mousePressed(2);
-    if (rightClick && !held) buf.heavy = 0.25;
+    // a gun out (not a slingshot): the right button held aims down the sights —
+    // the view in close over the shoulder, a slower, steadier step, and the shots
+    // faster, truer and harder (abilities.js). Held a moment, the left button
+    // fires the gun's heavy shot (Deadly Aim) instead of a plain one.
+    const gun = p.weapon?.kind === 'gun' && !(p.weapon.ids || []).some((id) => /sling|kabuto/.test(id));
+    const aimNow = gun && !freeMouse && !held && inp.mouseDown(2) && !p.inWater && !p.flying && !p.seat && !p.climb && p.state === 'idle';
+    if (aimNow && !p.aiming) game.hint?.('gunaim', 'Aiming: hold the right mouse button to aim down the sights, click to fire. Hold your aim a moment for a heavy shot.');
+    p.aiming = aimNow;
+    this.aimHold = aimNow ? (this.aimHold || 0) + dt : 0;
+    if (rightClick && !held && !(gun && !freeMouse)) buf.heavy = 0.25;
+    if (aimNow && this.aimHold >= 0.6 && inp.mousePressed(0) && !p.action) { buf.heavy = 0.25; buf.m1 = 0; this.aimHold = 0; }
     if (held) this.eat(p, game, dt, held, rightClick, freeMouse ? null : inp.mouseDown(2));
     if (tapDodge && !(v3 && v3.rig.mode === 'third')) buf.dodge = 0.16;
     // in third person Ctrl toggles shift lock (Shift is for running)

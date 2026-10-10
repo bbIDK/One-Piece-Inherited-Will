@@ -19,6 +19,7 @@ import { hash01 } from '../../core/rng.js';
 const _v = new THREE.Vector3();
 const _n = new THREE.Vector3();
 const _m3 = new THREE.Matrix3();
+const _lc = new THREE.Vector3();
 const OUTLINE = new THREE.Color(0x1d130c);
 
 /** Build-time switches: KIT.noOutline builds the far (distance LOD) variant of a model. */
@@ -172,6 +173,7 @@ export function slab(points, depth, bevel = 0) {
 export class Mesher {
   constructor() {
     this.pos = []; this.nor = []; this.col = []; this.tnt = []; this.glw = []; this.idx = [];
+    this.lamps = []; // (where its lanterns burn: see lamplight.js)
     this.m = new THREE.Matrix4();
     this.stack = [];
   }
@@ -216,6 +218,12 @@ export class Mesher {
     const tint = o.tint ? 1 : 0;
     const gl = o.glow ? C(o.glow) : null;
     const fl = o.flicker || 0;
+    // (a flickering flame — a lantern, a fire — is a light, and its centre is kept)
+    if (gl && fl > 0 && o.lamp !== false) {
+      if (!g.boundingBox) g.computeBoundingBox();
+      g.boundingBox.getCenter(_lc).applyMatrix4(M);
+      this.lamps.push(_lc.x, _lc.y, _lc.z);
+    }
     const geomN = o.outline && !KIT.noOutline ? new Float32Array(P.count * 3) : null;
     // (plain arrays are read directly: this loop runs for every vertex of every model)
     const direct = !P.isInterleavedBufferAttribute && !NA.isInterleavedBufferAttribute && P.itemSize === 3 && NA.itemSize === 3 && !P.normalized && !NA.normalized;
@@ -314,6 +322,7 @@ export class Mesher {
     this.col.push(...other.col);
     this.tnt.push(...other.tnt);
     this.glw.push(...other.glw);
+    for (let i = 0; i < other.lamps.length; i += 3) { _lc.set(other.lamps[i], other.lamps[i + 1], other.lamps[i + 2]).applyMatrix4(M); this.lamps.push(_lc.x, _lc.y, _lc.z); }
     for (const t of other.idx) this.idx.push(t + base);
     return this;
   }
@@ -330,6 +339,7 @@ export class Mesher {
     g.computeBoundingSphere();
     g.computeBoundingBox();
     if (shared) g.userData.shared = true;
+    if (this.lamps.length) g.userData.lamps = this.lamps.slice();
     return g;
   }
 }

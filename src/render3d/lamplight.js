@@ -99,6 +99,22 @@ class LampLight {
     this.pools.count = n;
     this.pools.instanceMatrix.needsUpdate = true;
     if (this.pools.instanceColor) this.pools.instanceColor.needsUpdate = true;
+    // the lanterns aboard the ships about (stern lanterns, the ones by the cabin
+    // doors, and below decks while you're down there): the nearest light the deck
+    for (const sv of v.shipViews?.values?.() || []) {
+      for (const mesh of [sv.hull, sv.inside?.visible ? sv.inside : null]) {
+        const L = mesh?.geometry?.userData?.lamps;
+        if (!L || !mesh.parent) continue;
+        for (let i = 0; i < L.length; i += 3) {
+          const q = this.p.set(L[i], L[i + 1], L[i + 2]);
+          mesh.localToWorld(q);
+          const cd = (q.x - cam.position.x) ** 2 + (q.y - cam.position.y) ** 2 + (q.z - cam.position.z) ** 2;
+          if (cd > 60 * 60) continue;
+          const fl = 0.9 + 0.1 * Math.sin(t * 9 + i * 1.7) * Math.sin(t * 5.3 + i);
+          cands.push({ d: cd, x: q.x, y: q.y, z: q.z, k: night * fl * 0.8, col: [1, 0.6, 0.32], range: 7.5 });
+        }
+      }
+    }
     // indoors: the room's own lamp
     const p = game.player;
     const room = p && w.interiorAt ? w.roomOf(p) : null;

@@ -406,6 +406,9 @@ export class CameraRig {
       // oars, your ship, from further out the bigger she is (the mouse wheel
       // still pulls it in and out)
       let ox = 0, oz = 0, oy = gh + eyeH * 0.9, d = this.tp.dist, own = null;
+      // (aiming down a gun's sights: in close over the shoulder — see the fov below)
+      this.aimK = (this.aimK || 0) + ((p.aiming ? 1 : 0) - (this.aimK || 0)) * Math.min(1, dt * 10);
+      d *= 1 - 0.45 * this.aimK;
       // (flying fast, the camera hangs further back: the speed reads, and so does the body laid out flat)
       if (fly) d *= 1 + 0.3 * Math.min(1, Math.hypot(p.vx || 0, p.vy || 0) / 14);
       if (sailing) {
@@ -422,7 +425,7 @@ export class CameraRig {
       let cx = ox - fx * d * cp, cz = oz - fz * d * cp, cy = oy + (sailing ? 1.4 : this.tp.height * scale) * Math.max(1, d / 8) - spch * d * 0.6;
       // shift lock looks over the right shoulder
       // (and even without it, a little off to the right: the body to one side of the crosshair, not under it)
-      this.shoulder = (this.shoulder || 0) + ((sailing ? 0 : this.shiftLock ? 0.7 : 0.45 * scale) - (this.shoulder || 0)) * Math.min(1, dt * 8);
+      this.shoulder = (this.shoulder || 0) + ((sailing ? 0 : this.shiftLock || p.aiming ? 0.7 : 0.45 * scale) - (this.shoulder || 0)) * Math.min(1, dt * 8);
       cx += -fz * this.shoulder; cz += fx * this.shoulder;
       const w = game.world;
       const room = !sailing && w?.roomOf?.(p);
@@ -567,7 +570,8 @@ export class CameraRig {
     // a quick widening of the view during dodges and dashes (and with a flight's speed)
     const dashing = !!p.dash;
     const flyFov = fly ? 9 * Math.min(1, Math.hypot(p.vx || 0, p.vy || 0) / 16) : 0;
-    const fov = this.baseFov + (sprint ? 7 : 0) + (dashing ? 6 : 0) + flyFov;
+    this.aimF = (this.aimF || 0) + ((p.aiming ? 1 : 0) - (this.aimF || 0)) * Math.min(1, dt * 10);
+    const fov = (this.baseFov + (sprint ? 7 : 0) + (dashing ? 6 : 0) + flyFov) * (1 - 0.32 * this.aimF);
     if (Math.abs(cam.fov - fov) > 0.05) { cam.fov += (fov - cam.fov) * Math.min(1, dt * 6); cam.updateProjectionMatrix(); }
     // (tests: a camera set down anywhere — rig.shot = { from: [x, y, h], at:
     // [x, y, h] }, in world tiles and metres — to look at something closely)

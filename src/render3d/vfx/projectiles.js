@@ -248,7 +248,7 @@ function draw(v, pr, r, Y, sc) {
     case 'bullet': {
       const j = v.sprites.put(SK.STREAK, X, Y, Z, 0.035, col('#ffd54f'), 1, WHITE, 1, 0, seed, 0);
       v.sprites.vel(j, dx, 0, dz, Math.min(1.6, 0.3 + sp * 0.05));
-      v.sprites.put(SK.GLOW, X, Y, Z, 0.12, col('#ffe082'), 0.8, WHITE, 1, 0, seed, 0);
+      v.sprites.put(SK.GLOW, X, Y, Z, 0.07, col('#ffe082'), 0.8, WHITE, 1, 0, seed, 0);
       break;
     }
     case 'thunder': {

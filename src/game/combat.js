@@ -151,12 +151,19 @@ export class Combat {
         const sp = Math.hypot(p.vx, p.vy);
         p.vx = Math.cos(na) * sp; p.vy = Math.sin(na) * sp;
       }
-      const sx = p.vx * dt, sy = p.vy * dt;
+      // (a fast shot — a bullet — goes in short steps, so it never passes
+      // through someone, or a wall, between one frame and the next)
+      const sx0 = p.vx * dt, sy0 = p.vy * dt, nSub = Math.min(8, Math.max(1, Math.ceil(Math.hypot(sx0, sy0) / 0.45)));
+      let dead = false;
+      for (let sub = 0; sub < nSub && !dead; sub++) {
+      const sx = sx0 / nSub, sy = sy0 / nSub;
       p.x = game.world.wx(p.x + sx); p.y += sy;
       p.traveled += Math.hypot(sx, sy);
-      if (p.trail) p.trail(p, game);
-      if (p.isProj && !p.cued) this.shotGlint(p);
-      let dead = p.traveled >= p.range || p.t > (p.life ?? 6);
+      if (sub === nSub - 1) {
+        if (p.trail) p.trail(p, game);
+        if (p.isProj && !p.cued) this.shotGlint(p);
+      }
+      dead = p.traveled >= p.range || p.t > (p.life ?? 6);
       if (!p.passWalls && !dead) {
         const t = game.world.type(p.x, p.y);
         if (game.world.solid(p.x, p.y) || game.world.hitsProp(p.x, p.y, 0.04, true) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
@@ -182,6 +189,7 @@ export class Combat {
             if (on) { s.damage(p.shipDamage ?? p.damage, p.owner, p); dead = true; break; }
           }
         }
+      }
       }
       if (dead) {
         p.alive = false;
