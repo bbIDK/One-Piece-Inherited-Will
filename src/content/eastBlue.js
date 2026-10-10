@@ -238,7 +238,7 @@ const npcs = [
   { id: 'cabaji', name: 'Acrobat Cabaji', title: 'Chief of Staff, Buggy Pirates', island: 'organ_islands', at: { town: 'orange_town', plaza: true, ox: 4 }, hostile: true, calm: true, named: true, faction: 'pirate', level: 9,
     look: { hair: 'long', hairColor: '#212121', top: '#1a237e', bottom: '#fafafa', scarEye: true }, style: 'ittoryu', weapon: 'sword', moves: ['cabaji_fire', 'cabaji_dash'], bounty: 5000000, infamy: true, skill: 0.35, when: (c) => !c.defeated.cabaji },
   {
-    id: 'buggy', name: 'Buggy the Clown', title: 'Captain of the Buggy Pirates', island: 'organ_islands', at: { town: 'orange_town', building: 'Buggy Pirates HQ (Tavern)' }, hostile: true, boss: true, hpMul: 0.95, faction: 'pirate', level: 11,
+    id: 'buggy', name: 'Buggy the Clown', title: 'Captain of the Buggy Pirates', island: 'organ_islands', at: { spot: 'bigtop', ox: 1.6, oy: 0.6 }, hostile: true, boss: true, hpMul: 0.95, faction: 'pirate', level: 11,
     look: { hair: 'long', hairColor: '#1976d2', top: '#e53935', bottom: '#1565c0', skin: '#fafafa', nose: 'red', hat: 'captain', hatColor: '#6d4c41', coat: '#e53935' },
     fruit: 'bara', fruitMastery: 45, moves: ['bara_cannon', 'bara_festival', 'buggy_ball', 'buggy_knives'], bounty: 15000000, infamy: true, breakthrough: 3, skill: 0.3,
     alert: 'Who are you calling a big red nose?!', barks: ['Flashy!', 'Gyahahaha!'],
@@ -514,7 +514,7 @@ const groups = [
   { island: 'shells_island', town: 'marine_153', spot: 'execution_yard', radius: 4, enemies: [['marine', 5, { name: 'Morgan\'s Marine', lethal: false }], ['marine_rifle', 5, { name: 'Morgan\'s Rifleman' }]], when: (c, g) => g.quests.stageId('pirate_hunter') === 'morgan' },
   // (Buggy's crew lord it over Orange Town, but leave a newcomer be — till
   // someone lays a hand on one of them, or stands up to their captain)
-  { island: 'organ_islands', dx: 0, dy: 0.1, radius: 7, calm: true, enemies: [['pirate', 6, { name: 'Buggy Pirate' }], ['pirate', 6, { name: 'Buggy Pirate' }], ['pirate_gunner', 6, { name: 'Buggy Cannoneer' }], ['beast', 8, { name: 'Richie the Lion', look: { fur: '#f6b93b', skin: '#f6b93b', hairColor: '#e67e22', hair: 'afro' } }]], when: (c) => !c.bosses.includes('buggy') },
+  { island: 'organ_islands', spot: 'bigtop', radius: 5, calm: true, enemies: [['pirate', 6, { name: 'Buggy Pirate' }], ['pirate', 6, { name: 'Buggy Pirate' }], ['pirate_gunner', 6, { name: 'Buggy Cannoneer' }], ['beast', 8, { name: 'Richie the Lion', look: { fur: '#f6b93b', skin: '#f6b93b', hairColor: '#e67e22', hair: 'afro' } }]], when: (c) => !c.bosses.includes('buggy') },
   { island: 'gecko_islands', spot: 'north_slope', radius: 6, enemies: BLACK_CAT_CREW, when: (c, g) => g.quests.stageId('black_cat_plot') === 'slope' },
   { island: 'baratie', spot: 'baratie_deck', radius: 4, enemies: [['pirate', 10, { name: 'Krieg Pirate' }], ['pirate_gunner', 10, { name: 'Krieg Gunner' }], ['pirate', 10, { name: 'Pearl the Iron Wall', hpMul: 2, look: { bulk: 1.4 } }]], when: (c, g) => g.quests.stageId('baratie_krieg') === 'krieg' },
   { island: 'conomi_islands', dx: 0.55, dy: -0.15, radius: 7, enemies: [['fishman_thug', 9], ['fishman_thug', 9], ['fishman_thug', 10], ['fishman_thug', 10]], when: (c) => !c.bosses.includes('arlong') },

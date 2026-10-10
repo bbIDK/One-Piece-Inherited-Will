@@ -96,12 +96,14 @@ export const EAST_BLUE = [
         id: 'orange_town', name: 'Orange Town', dx: 0.0, dy: 0.1, w: 44, h: 32, style: 'town', dockDir: 'w', plaza: 'fountain',
         buildings: [
           { role: 'shop', name: 'Pet Food Shop', npc: 'chouchou' },
-          { role: 'bar', name: 'Buggy Pirates HQ (Tavern)', npc: 'buggy' },
+          { role: 'bar', name: 'Buggy Pirates HQ (Tavern)' },
           { role: 'doctor', name: 'Town Clinic', npc: 'boodle' },
           { role: 'inn', name: 'Orange Inn' },
         ],
       },
     ],
+    // the Buggy Pirates' circus tent, at the top of the town: where the clown holds court
+    landmarks: [{ kind: 'bigtop', dx: 0.02, dy: -0.5, name: 'Buggy\'s Big Top', fw: 18, fd: 18, block: false, spot: 'bigtop' }],
     danger: 1,
   },
   {

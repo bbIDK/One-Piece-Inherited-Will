@@ -1248,3 +1248,108 @@ reg('downcurrent', () => {
 });
 
 export { bubbleMaterial as bubbleMat };
+
+// ------------------------------------------------------------ Buggy's Big Top
+// The Buggy Pirates' circus in Orange Town, as in the anime: a big top in
+// their red and yellow, its canvas up on a ring of striped poles (open all
+// round under the eaves — you walk straight in), a scalloped valance, the
+// king pole up the middle with the Buggy Pirates' flag (the skull with the
+// round red nose) over it; inside, the sawdust ring and the Buggy Ball
+// cannon on its platform at the back, a heap of its shot beside it.
+const BIGTOP = { R: 8.6, eave: 4.3, apex: 11.6, n: 16 };
+const bigtopGeo = () => model('bigtop', (k) => {
+  const { R, eave, apex, n } = BIGTOP;
+  const RED = '#d32f2f', YEL = '#fbc02d', WHITE = '#fafafa';
+  // the canvas: a cone of alternating gores, seen from outside and from under it
+  const pos = [], tri = [];
+  const P = (a, r, y) => [Math.cos(a) * r, y, Math.sin(a) * r];
+  for (let i = 0; i < n; i++) {
+    const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2, c = i % 2 ? RED : YEL;
+    // (in two bands, the lower one a little flatter: the canvas sags between its ropes)
+    const mid = [R * 0.55, eave + (apex - eave) * 0.52];
+    for (const [r0, y0, r1, y1] of [[R + 0.35, eave, mid[0], mid[1]], [mid[0], mid[1], 0.3, apex]]) {
+      const p00 = P(a0, r0, y0), p01 = P(a1, r0, y0), p10 = P(a0, r1, y1), p11 = P(a1, r1, y1);
+      pos.push(...p00, ...p10, ...p01, ...p01, ...p10, ...p11);
+      tri.push(c, c);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  k.add(g, { split: true, color: (p, nn, i) => tri[Math.floor(i / 3)], double: true, backShade: 0.7, outline: 0.06 });
+  // the valance round the eave: a scallop under each gore, and a white band
+  for (let i = 0; i < n * 2; i++) {
+    const a = (i + 0.5) / (n * 2) * Math.PI * 2, w = (R + 0.35) * Math.PI * 2 / (n * 2);
+    k.save(); k.translate(Math.cos(a) * (R + 0.36), eave, Math.sin(a) * (R + 0.36)); k.rotateY(-a + Math.PI / 2);
+    k.add(box(w + 0.02, 0.32, 0.03), { at: [0, -0.32, 0], color: WHITE });
+    k.add(new THREE.CircleGeometry(w / 2, 10, Math.PI, Math.PI), { at: [0, -0.32, 0.005], color: i % 2 ? RED : YEL, double: true, backShade: 0.85 });
+    k.restore();
+  }
+  // the ring of poles under the eave, striped like candy, and the king pole
+  for (let i = 0; i < n; i += 2) {
+    const a = i / n * Math.PI * 2, x = Math.cos(a) * R, z = Math.sin(a) * R;
+    k.add(cyl(0.13, 0.15, eave, 8), { at: [x, 0, z], color: WHITE, outline: 0.02 });
+    for (let y = 0.25; y < eave - 0.2; y += 0.7) k.add(cyl(0.155, 0.155, 0.3, 8), { at: [x, y, z], color: RED });
+    k.add(new THREE.SphereGeometry(0.2, 8, 6), { at: [x, eave + 0.05, z], color: YEL });
+  }
+  k.add(cyl(0.22, 0.28, apex + 1.4, 10), { color: '#8d6e4a', outline: 0.02 });
+  k.add(new THREE.SphereGeometry(0.3, 10, 8), { at: [0, apex + 1.5, 0], color: YEL, outline: 0.015 });
+  // the ring: sawdust inside a low red-and-white kerb
+  k.add(cyl(5.2, 5.2, 0.03, 32), { at: [0, 0.01, 0], color: '#e6c58f' });
+  for (let i = 0; i < 24; i++) {
+    const a = i / 24 * Math.PI * 2;
+    k.save(); k.translate(Math.cos(a) * 5.35, 0, Math.sin(a) * 5.35); k.rotateY(-a);
+    k.add(box(0.22, 0.42, 1.42), { color: i % 2 ? RED : WHITE, outline: 0.012 });
+    k.restore();
+  }
+  // the Buggy Ball cannon on its platform at the back (-x), muzzle to the ring
+  k.add(box(3.2, 0.7, 2.6), { at: [-7.0, 0, 0], color: '#6d4c33', outline: 0.025 });
+  k.add(box(1.6, 0.6, 1.4), { at: [-7.0, 0.7, 0], color: RED, outline: 0.02 });
+  for (const s of [-1, 1]) k.add(torus(0.5, 0.1, 6, 14), { at: [-7.0, 1.0, s * 0.78], color: '#3e2723' });
+  k.add(cyl(0.42, 0.62, 2.6, 14), { at: [-7.4, 1.5, 0], rot: [0, 0, -Math.PI / 2 + 0.18], color: '#263238', outline: 0.03 });
+  k.add(torus(0.46, 0.09, 6, 16), { at: [-4.85, 1.95, 0], rot: [0, Math.PI / 2, 0], color: '#37474f' });
+  for (let i = 0; i < 6; i++) k.add(new THREE.SphereGeometry(0.3, 10, 8), { at: [-6.6 + (i % 3) * 0.62, 0.7 + 0.3 + Math.floor(i / 3) * 0.5, 1.7 + (i % 2) * 0.1], color: '#1c1c1c', outline: 0.012 });
+  // barrels and crates of the crew's loot round the walls
+  for (const [x, z] of [[3.6, 6.8], [4.3, 6.2], [-3.2, -7.1], [6.6, -3.6]]) k.add(cyl(0.38, 0.42, 0.95, 10), { at: [x, 0, z], color: '#8d5b33', outline: 0.015 });
+  for (const [x, z] of [[-2.4, 7.3], [6.9, 2.8]]) k.add(box(0.9, 0.8, 0.9), { at: [x, 0, z], color: '#a1784f', outline: 0.015 });
+});
+
+function buggyFlagMaterial() {
+  let m = flagMats.get('buggy');
+  if (m) return m;
+  const { ctx: g, tex } = canvasTexture(256, 170);
+  g.fillStyle = '#141414'; g.fillRect(0, 0, 256, 170);
+  g.setTransform(110, 0, 0, 110, 128, 88); drawJollyRoger(g, { skull: 'classic', bones: 'cross' }, 1, '#141414');
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  // (Buggy's own: the round red clown's nose)
+  g.fillStyle = '#e53935'; g.beginPath(); g.arc(128, 100, 11, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.6)'; g.beginPath(); g.arc(124, 96, 3.5, 0, Math.PI * 2); g.fill();
+  tex.needsUpdate = true;
+  m = new THREE.MeshToonMaterial({ map: tex, side: THREE.DoubleSide });
+  flagMats.set('buggy', m);
+  return m;
+}
+
+reg('bigtop', (o, ctx) => {
+  const root = group('bigtop');
+  add(root, bigtopGeo());
+  root.rotation.y = o.yaw || 0;
+  const geo = new THREE.PlaneGeometry(2.4, 1.6, 10, 3);
+  geo.translate(1.2, 0, 0);
+  const flag = new THREE.Mesh(geo, buggyFlagMaterial());
+  flag.castShadow = true;
+  flag.position.set(0.22, BIGTOP.apex + 0.6, 0);
+  root.add(flag);
+  const base = geo.attributes.position.array.slice();
+  animate(root, (t, env) => {
+    flag.rotation.y = Math.PI - (env?.windAngle || 0) - root.rotation.y;
+    const a = geo.attributes.position, amp = 0.7 + (env?.windStrength ?? 1) * 0.4;
+    for (let i = 0; i < a.count; i++) {
+      const x = base[i * 3];
+      a.array[i * 3 + 2] = base[i * 3 + 2] + Math.sin(t * 6 + x * 2.6) * 0.12 * x / 2.4 * amp * 1.6;
+      a.array[i * 3 + 1] = base[i * 3 + 1] - x * x * 0.02;
+    }
+    a.needsUpdate = true;
+  });
+  return root;
+});

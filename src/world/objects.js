@@ -93,6 +93,15 @@ export function colliderOf(o) {
     c.push([8.8, 10.1, 0.5]);
     return { circles: c };
   }
+  // Buggy's Big Top: its ring of poles, the king pole, the cannon's
+  // platform at the back (render3d/props/landmarks.js); under the canvas
+  // between the poles you walk straight in
+  if (o.kind === 'bigtop') {
+    const c = [[0, 0, 0.35]];
+    for (let i = 0; i < 16; i += 2) { const a = i / 16 * Math.PI * 2; c.push([Math.cos(a) * 8.6, Math.sin(a) * 8.6, 0.25]); }
+    for (const z of [-0.9, 0, 0.9]) c.push([-7.0, z, 1.0]);
+    return { circles: c };
+  }
   // (the Baratie: her two masts stand on her deck — render3d/props/baratie.js; the rest of her is round it)
   if (o.kind === 'baratie') return { circles: [[-18.5, 0, 0.55], [18.5, 0, 0.55]] };
   if (o.kind === 'gate') {
