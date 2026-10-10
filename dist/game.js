@@ -11,10 +11,10 @@
   };
   var __publicField = (obj, key2, value) => __defNormalProp(obj, typeof key2 !== "symbol" ? key2 + "" : key2, value);
 
-  // node_modules/@noble/secp256k1/index.js
+  // ../../../../../../home/user/One-piece-game/node_modules/@noble/secp256k1/index.js
   var freeze, P4, N7, Gx, Gy, secp256k1_CURVE, L, isBytes, abytes, cloneBytes, snapshotBytes, padh, bytesToHex, hexToBytes, subtle, concatBytes, randomBytes, big, arange, M2, modN, invert, _hash, callHash, callHashAsync, apoint, E_BADPOINT, koblitz, FpIsValid, FpIsValidNot0, FnIsValidNot0, isEven, getPrefix, lift_x, _Point, Point, G3, I, doubleScalarMulUns, bytesToNumBE, sliceBytesNumBE, numTo32b, secretKeyToScalar, _sha, hashes, randomSecretKey, createKeygen, getTag, taggedHash, taggedHashAsync, extpubSchnorr, bytesModN, challenge, challengeAsync, pubSchnorr, keygenSchnorr, prepSigSchnorr, extractK, createSigSchnorr, E_INVSIG, signSchnorr, signSchnorrAsync, callSyncAsyncFn, _verifSchnorr, verifySchnorr, verifySchnorrAsync, schnorr, precompute, Gpows, ctneg, wNAF;
   var init_secp256k1 = __esm({
-    "node_modules/@noble/secp256k1/index.js"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@noble/secp256k1/index.js"() {
       freeze = Object.freeze;
       P4 = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2fn;
       N7 = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
@@ -520,10 +520,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/utils.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/utils.mjs
   var floor, min, sin, libName, alloc, charSet, genId, selfId, all, isBrowser, entries, fromEntries, keys, values, noOp, candidateType, resetTimer, mkErr, toErrorMessage, toError, encoder, decoder, encodeBytes, decodeBytes, toHex, topicPath, shuffle, getRelays, toJson, fromJson, strToNum, defaultRetryMs, maxRetryMs, socketRetryPeriods, reconnectionLockingPromise, resolver, pauseRelayReconnection, resumeRelayReconnection, makeSocket, createRelayManager, watchOnline;
   var init_utils = __esm({
-    "node_modules/@trystero-p2p/core/dist/utils.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/utils.mjs"() {
       ({ floor, min, sin } = Math);
       libName = "Trystero";
       alloc = (n, f) => Array(n).fill(void 0).map(f);
@@ -694,10 +694,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/crypto.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/crypto.mjs
   var algo, strToSha1, pack, unpack, hashWith, sha1, genKey, deriveRoomNamespace, joinChar, ivJoinChar, encrypt, decrypt;
   var init_crypto = __esm({
-    "node_modules/@trystero-p2p/core/dist/crypto.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/crypto.mjs"() {
       init_utils();
       algo = "AES-GCM";
       strToSha1 = {};
@@ -729,10 +729,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/offer-pool.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/offer-pool.mjs
   var offerTtl, offerLeaseTtlMs, poolSize, OfferPool;
   var init_offer_pool = __esm({
-    "node_modules/@trystero-p2p/core/dist/offer-pool.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/offer-pool.mjs"() {
       init_utils();
       offerTtl = 57333;
       offerLeaseTtlMs = 18e4;
@@ -880,10 +880,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/handshake.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/handshake.mjs
   var overlapRoomPasswordErr, createPasswordHandshake, toHandshakeErrorMessage, createHandshakeManager;
   var init_handshake = __esm({
-    "node_modules/@trystero-p2p/core/dist/handshake.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/handshake.mjs"() {
       init_utils();
       init_crypto();
       overlapRoomPasswordErr = mkErr("incorrect password for overlapping room");
@@ -1022,10 +1022,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/peer.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/peer.mjs
   var iceTimeout, disconnectedCloseDelayMs, iceStateEvent, iceConnectionStateEvent, offerType, answerType, outOfRangePattern, rewriteMdnsCandidatesToLoopback, peer_default, defaultIceServers;
   var init_peer = __esm({
-    "node_modules/@trystero-p2p/core/dist/peer.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/peer.mjs"() {
       init_utils();
       iceTimeout = 15e3;
       disconnectedCloseDelayMs = 5e3;
@@ -1330,10 +1330,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/action-wire.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/action-wire.mjs
   var TypedArray, typeByteLimit, typeIndex, nonceIndex, tagIndex, progressIndex, payloadIndex, chunkSize, oneByteMax, twoByteMax, buffLowEvent, channelCloseEvent, channelErrorEvent, backpressureWaitTimeoutMs, toByteArray, waitForBufferedAmountLow, createActionWireManager;
   var init_action_wire = __esm({
-    "node_modules/@trystero-p2p/core/dist/action-wire.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/action-wire.mjs"() {
       init_utils();
       TypedArray = Object.getPrototypeOf(Uint8Array);
       typeByteLimit = 32;
@@ -1523,10 +1523,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/actions.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/actions.mjs
   var requestHandlerBufferMs, makeActionError, throwIfAborted, getRequestMetadata, getResponseMetadata, withMetadata, createActionManager;
   var init_actions = __esm({
-    "node_modules/@trystero-p2p/core/dist/actions.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/actions.mjs"() {
       init_utils();
       init_action_wire();
       requestHandlerBufferMs = 500;
@@ -1838,10 +1838,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/media.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/media.mjs
   var toPendingMediaMeta, makeKeyGetter, createMediaIdentityCache, createMediaManager;
   var init_media = __esm({
-    "node_modules/@trystero-p2p/core/dist/media.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/media.mjs"() {
       init_utils();
       toPendingMediaMeta = (value) => {
         if (value && typeof value === "object" && !Array.isArray(value) && typeof value.k === "string") return {
@@ -1990,10 +1990,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/room.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/room.mjs
   var unloadEvent, defaultHandshakeTimeoutMs, internalNs, beforeUnloadRoomCleanups, cleanupActiveRoomsOnBeforeUnload, registerBeforeUnloadCleanup, room_default;
   var init_room = __esm({
-    "node_modules/@trystero-p2p/core/dist/room.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/room.mjs"() {
       init_utils();
       init_handshake();
       init_actions();
@@ -2213,10 +2213,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/shared-peer.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/shared-peer.mjs
   var roomFrameVersion, roomPresenceFrameVersion, wrapRoomFrame, wrapRoomPresenceFrame, unwrapFrame, isPeerUnderlyingStale, getConnectedPeerHealth, SharedPeerManager;
   var init_shared_peer = __esm({
-    "node_modules/@trystero-p2p/core/dist/shared-peer.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/shared-peer.mjs"() {
       init_utils();
       init_media();
       roomFrameVersion = 1;
@@ -2575,10 +2575,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/signal-handler.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/signal-handler.mjs
   var offerPostAnswerTtlMs, offerIdSize, disconnectedPeerGraceMs, answeringTtlMs, legacyCandidateKey, offerRelayPlaceholder, signalKeys, toPayload, getString, hasInvalidSignalField, publishCipheredSignalingMessage, makeState, hasTurnServer, getSdpExchangeConnectionError, reportSdpExchangeConnectionFailure, getState, updateStatus, clearAnswering, clearConnectedPeer, clearOfferRelay, clearOfferRelayIfPlaceholder, hasRemoteDescription, resetOfferState, scheduleAnsweringExpiry, flushBufferedCandidates, scheduleOfferExpiry, ensureOffer, handleAnnouncement, handleOffer, handleCandidate, handleAnswer, prunePendingOffer, createSignalHandler;
   var init_signal_handler = __esm({
-    "node_modules/@trystero-p2p/core/dist/signal-handler.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/signal-handler.mjs"() {
       init_utils();
       init_crypto();
       init_offer_pool();
@@ -3018,10 +3018,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/strategy.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/strategy.mjs
   var announceIntervalMs, announceWarmupIntervalsMs, passiveActivationGraceMs, sharedPeerIdleMsDefault, strategy_default;
   var init_strategy = __esm({
-    "node_modules/@trystero-p2p/core/dist/strategy.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/strategy.mjs"() {
       init_utils();
       init_crypto();
       init_offer_pool();
@@ -3392,10 +3392,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/topic-strategy.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/topic-strategy.mjs
   var signalKeys2, defaultSteadyAnnounceIntervalMs, toPayload2, getString2, hasInvalidSignalField2, shouldActivatePassiveRoom, requireContext, subscriptionContext, publishContext, topic_strategy_default;
   var init_topic_strategy = __esm({
-    "node_modules/@trystero-p2p/core/dist/topic-strategy.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/topic-strategy.mjs"() {
       init_utils();
       init_strategy();
       signalKeys2 = [
@@ -3493,9 +3493,9 @@
     }
   });
 
-  // node_modules/@trystero-p2p/core/dist/index.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/index.mjs
   var init_dist = __esm({
-    "node_modules/@trystero-p2p/core/dist/index.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/core/dist/index.mjs"() {
       init_utils();
       init_crypto();
       init_strategy();
@@ -3503,10 +3503,10 @@
     }
   });
 
-  // node_modules/@trystero-p2p/nostr/dist/index.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/nostr/dist/index.mjs
   var relayManager, defaultRedundancy, tag, eventMsgType, secretKey, publicKey, pubkey, subIdToTopic, msgHandlers, kindCache, maxTopicsPerSubscription, steadyAnnounceIntervalMs, maxRelayBackoffMs, relayAckTimeoutMs, relayBackoffs, retiredRelays, pendingAnnouncementAcks, backoffRelay, getRelayBackoffMs, nextAnnounce, stopAnnouncing, retireRelay, trackAnnouncementAck, acknowledgeEvent, now2, topicToKind, createEvent, subscribe, batchers, resolveBatchFlush, batchAdd, batchRemove, scheduleBatchFlush, waitForBatchFlush, flushBatch, resubscribeOnReconnect, joinRoom, getRelaySockets, defaultRelayUrls;
   var init_dist2 = __esm({
-    "node_modules/@trystero-p2p/nostr/dist/index.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/@trystero-p2p/nostr/dist/index.mjs"() {
       init_secp256k1();
       init_dist();
       relayManager = createRelayManager((client) => client.socket);
@@ -3783,7 +3783,7 @@
     }
   });
 
-  // node_modules/trystero/dist/index.mjs
+  // ../../../../../../home/user/One-piece-game/node_modules/trystero/dist/index.mjs
   var dist_exports = {};
   __export(dist_exports, {
     createEvent: () => createEvent,
@@ -3796,7 +3796,7 @@
     subscribe: () => subscribe
   });
   var init_dist3 = __esm({
-    "node_modules/trystero/dist/index.mjs"() {
+    "../../../../../../home/user/One-piece-game/node_modules/trystero/dist/index.mjs"() {
       init_dist2();
     }
   });
@@ -5861,10 +5861,10 @@
     const g0 = gap(k0, k1), g1 = gap(k1, k2), g2 = gap(k2, k3);
     const t = ((u - k1[0]) % 1 + 1) % 1 / g1;
     const t2 = t * t, t3 = t2 * t;
-    const h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h01 = -2 * t3 + 3 * t2, h11 = t3 - t2;
+    const h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h012 = -2 * t3 + 3 * t2, h11 = t3 - t2;
     for (let j = 1; j < k1.length; j++) {
       const m12 = (k2[j] - k0[j]) / (g0 + g1), m2 = (k3[j] - k1[j]) / (g1 + g2);
-      out[j - 1] = h00 * k1[j] + h10 * g1 * m12 + h01 * k2[j] + h11 * g1 * m2;
+      out[j - 1] = h00 * k1[j] + h10 * g1 * m12 + h012 * k2[j] + h11 * g1 * m2;
     }
     return out;
   }
@@ -10917,7 +10917,7 @@
     fx.particle({ x, y, z, size: size2, color, kind: "glow", life: life2, g: 0, drag: 0, vz: 0, add: true });
   }
   function flames(fx, x, y, z, n, cols, o = {}) {
-    fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU5, speed: o.speed ?? 2, z, vz: o.vz ?? 2.4, g: -2.5, life: o.life ?? 0.5, size: o.size ?? 0.2, grow: -0.15, color: cols, kind: "fire", drag: 3 });
+    fx.burst(x, y, n, { angle: o.angle, spread: o.spread ?? TAU5, speed: o.speed ?? 2, z, vz: o.vz ?? 2.4, g: -2.5, life: o.life ?? 0.5, size: o.size ?? 0.2, grow: -0.15, color: cols, kind: "fire", drag: 3, hot: o.hot });
   }
   function embers(fx, x, y, z, n, cols) {
     fx.burst(x, y, n, { speed: 2.4, z, vz: 3, g: 2, life: 0.8, size: 0.07, color: cols || ["#ffab40", "#ff6f00", "#ffd54f"], kind: "ember", drag: 1.5 });
@@ -11005,7 +11005,8 @@
       if ((w >= 0.7 || crit || h2.impactFrame || down) && (o.playerInvolved || tgt.boss) && !counter2) {
         const blade2 = !!(att && att.weapon && att.weapon.kind === "sword") || !!(st && st.arcs);
         const big2 = crit || h2.impactFrame || w >= 1 || down;
-        soundOn(fx, tgt, cx, cy, sfxWord(elem, blade2, big2, !!(att && att.armament)), sfxColor(elem, blade2, col2), 0.5 + 0.3 * Math.min(1, w) + (big2 ? 0.15 : 0), { z: z + 0.45, gap: down ? 0 : void 0 });
+        const own = (h2.def || att?.action?.def)?.word;
+        soundOn(fx, tgt, cx, cy, own || sfxWord(elem, blade2, big2, !!(att && att.armament)), sfxColor(elem, blade2, col2), 0.5 + 0.3 * Math.min(1, w) + (big2 ? 0.15 : 0), { z: z + 0.45, gap: down ? 0 : void 0 });
       }
       tgt.hitFx = { t0: game.env ? game.env.time : fx.time, w, ang, prev: tgt.hitFx ? tgt.hitFx.t0 : -9 };
     }
@@ -11569,11 +11570,10 @@
       const R5 = s.pull.range;
       const col2 = s.color || "#7e57c2";
       const ang = a.angle;
-      fx.add("vortex", { x: actor.x + Math.cos(ang) * 0.6, y: actor.y + Math.sin(ang) * 0.4, r: 1.1, kind: "dark", life: 0.6, spin: -8, arms: 5 });
-      fx.ring(actor.x, actor.y, R5, 0.3, col2, 0.5, 0.3);
+      fx.add("vortex", { x: actor.x + Math.cos(ang) * 0.6, y: actor.y + Math.sin(ang) * 0.4, r: 1.5, kind: "dark", life: 0.7, spin: -8, arms: 5 });
       for (let i = 0; i < 18; i++) {
-        const th = rnd(0, TAU5), rr = R5 * rnd(0.5, 0.95);
-        fx.particle({ x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr * 0.7, z: rnd(0.3, 1.2), vx: -Math.cos(th) * rr * 2.2, vy: -Math.sin(th) * rr * 1.6, vz: 0, g: 0, drag: 0.5, life: 0.45, size: 0.12, color: i % 2 ? "#311b92" : "#7e57c2", kind: "spark", add: false });
+        const th = ang + rnd(-0.35, 0.35), rr = R5 * rnd(0.3, 0.9);
+        fx.particle({ x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr, z: rnd(0.4, 1.3), vx: -Math.cos(th) * rr * 2.2, vy: -Math.sin(th) * rr * 2.2, vz: 0, g: 0, drag: 0.5, life: 0.45, size: 0.14, color: i % 3 ? "#120a1a" : col2, kind: "spark", add: false });
       }
     },
     buff(fx, actor, s, a, ex) {
@@ -11969,7 +11969,9 @@
   sig("gura_punch", {
     hit(fx, actor, s, a, hb) {
       const [px2, py2] = fwd(actor, hb.angle, 1.1);
-      fx.add("aircrack", { x: px2, y: py2, z: 0.8, size: 1.3, life: 0.55 });
+      fx.add("aircrack", { x: px2, y: py2, z: 1.1, size: 2.6, life: 0.7 });
+      fx.add("flare", { x: px2, y: py2, z: 1.1, size: 1.6, color: "#e0f7fa", life: 0.18 });
+      fx.shake(0.4, hb.angle);
       for (let i = 0; i < 3; i++) fx.ring(px2, py2, 0.1, 1.2 + i * 0.7, "#e0f7fa", 0.45, 0.1, { z: 0.8, flat: 0.8, delay: i * 0.05, add: true });
       fx.focus(px2, py2, 0.2);
     }
@@ -12266,9 +12268,9 @@
       const R5 = s.hit.range || 3;
       for (let i = 0; i < 6; i++) {
         const th = i / 6 * TAU5;
-        fx.add("pillar", { x: actor.x + Math.cos(th) * R5 * 0.75, y: actor.y + Math.sin(th) * R5 * 0.5, r: 0.35, h: 3, color: "#ff7043", core: "#ffeb3b", life: 0.6, kind: "fire", delay: i * 0.03 });
+        fx.add("pillar", { x: actor.x + Math.cos(th) * R5 * 0.75, y: actor.y + Math.sin(th) * R5 * 0.75, r: 0.45, h: 4, color: "#ff7043", core: "#ffeb3b", life: 0.6, kind: "fire", delay: i * 0.03 });
       }
-      fx.add("pillar", { x: actor.x, y: actor.y, r: 0.8, h: 4.5, color: "#ff5722", core: "#ffeb3b", life: 0.6, kind: "fire" });
+      fx.add("pillar", { x: actor.x, y: actor.y, r: 1.7, h: 11, color: "#ff5722", core: "#ffeb3b", life: 0.9, kind: "fire" });
       fx.add("scorch", { x: actor.x, y: actor.y, r: R5 * 0.8, life: 3 });
     }
   });
@@ -12305,13 +12307,14 @@
     zone(fx, actor, spec, a, zone) {
       fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "thunder", color: zone.color, zone, life: 1e6 });
       fx.add("pillar", { x: zone.x, y: zone.y, r: zone.r * 0.55, h: 10, color: "#fff176", core: "#ffffff", life: 0.5, kind: "lightning" });
+      fx.add("pillar", { x: zone.x, y: zone.y, r: zone.r * 0.7, h: 16, color: "#b3e5fc", core: "#ffffff", life: 0.7 });
       fx.bolt(zone.x, zone.y - 0.01, zone.x, zone.y, "#fff176", 0.5, 0.2, { z0: 10, z1: 0.1, branches: 4 });
       fx.flashScreen(0.08, "rgba(255,253,231,1)");
       return true;
     }
   });
   sig("goro_raigo", {
-    charge: { kind: "bolt", color: "#fff176" },
+    charge: { kind: "storm", color: "#fff176" },
     zone(fx, actor, spec, a, zone) {
       fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "thunder", color: zone.color, zone, life: 1e6 });
       fx.add("cloud", { x: zone.x, y: zone.y, r: zone.r * 0.9, z: 6.5, life: 3.2, color: "#212121", glow: "#fff176" });
@@ -12373,7 +12376,7 @@
     teleport(fx, actor, s, a, ex) {
       const w = fx.game.world;
       const dx = w ? w.dx(ex.x0, actor.x) : actor.x - ex.x0, dy = actor.y - ex.y0;
-      fx.beam(ex.x0, ex.y0, Math.atan2(dy, dx), Math.hypot(dx, dy), 0.35, "#fff59d", 0.22, "#ffffff", { style: "light", z: 0.8 });
+      fx.beam(ex.x0, ex.y0, Math.atan2(dy, dx), Math.hypot(dx, dy), 0.35, "#fff59d", 0.45, "#ffffff", { style: "light", z: 0.8 });
       ghostsAlong(fx, actor, ex.x0, ex.y0, 3, "#fff59d", { add: true });
       fx.add("flare", { x: actor.x, y: actor.y, z: 0.85, size: 1.4, color: "#fff59d", life: 0.3 });
       fx.flashScreen(0.05, "rgba(255,253,231,1)");
@@ -12454,16 +12457,20 @@
     }
   });
   sig("gomu_bell", {
+    // hands on them, and the neck stretches out behind: the head flung back to swing (chars3d.js bellHead)
     pull(fx, actor, s, a) {
-      const [px2, py2] = fwd(actor, a.angle, 1.4);
-      fx.burst(px2, py2, 6, { angle: a.angle + Math.PI, spread: 0.5, speed: 6, kind: "line", color: "#ffffff", z: 1, vz: 0, g: 0, life: 0.18, size: 0.05 });
+      const [px2, py2] = fwd(actor, a.angle + Math.PI, 0.6);
+      fx.burst(px2, py2, 6, { angle: a.angle + Math.PI, spread: 0.5, speed: 6, kind: "line", color: "#ffffff", z: 1.6, vz: 0.5, g: 0, life: 0.18, size: 0.05 });
     },
+    // the head lands like the clapper of a bell: a ringing GONG, rings of sound shuddering out, a hard white flash
     hit(fx, actor, s, a, hb) {
       DEFAULTS.hit(fx, actor, s, a, hb);
-      const [px2, py2] = fwd(actor, hb.angle, 0.9);
-      vibration(fx, px2, py2, 1.5, 1.6, "#fff59d", 4);
-      fx.add("flare", { x: px2, y: py2, z: 1.5, size: 1.1, color: "#ffffff", life: 0.22 });
-      fx.callout(px2, py2 - 2.2, "GONG!", "#fff59d", 0.5, { life: 0.8 });
+      const [px2, py2] = fwd(actor, hb.angle, 1);
+      fx.add("impact", { x: px2, y: py2, z: 1.55, angle: hb.angle, size: 0.85, color: "#fff59d", core: "#ffffff", life: 0.2, spikes: 16, lines: 10 });
+      vibration(fx, px2, py2, 1.6, 2.2, "#fff59d", 5);
+      for (let i = 0; i < 3; i++) fx.ring(px2, py2, 0.1, 1.2 + i * 0.7, i ? "#fff59d" : "#ffffff", 0.35, 0.09 - i * 0.02, { z: 1.55, flat: 0, delay: i * 0.07, add: true });
+      fx.add("flare", { x: px2, y: py2, z: 1.55, size: 0.6, color: "#ffffff", life: 0.15 });
+      fx.shake(0.45, hb.angle);
     }
   });
   sig("gomu_mogura_pistol", {
@@ -12759,7 +12766,7 @@
       return true;
     }
   });
-  sig("hie_partisan", { proj(fx, actor, s, a) {
+  sig("hie_partisan", { charge: { kind: "spears", color: "#e1f5fe", n: 5 }, proj(fx, actor, s, a) {
     const [px2, py2] = fwd(actor, a.angle, 0.7);
     shards(fx, px2, py2, 0.9, 8, null, a.angle);
   } });
@@ -12828,7 +12835,7 @@
   sig("yami_kurouzu", { charge: { kind: "dark" } });
   sig("yami_blackhole", { charge: { kind: "dark" }, zone(fx, actor, spec, a, zone) {
     fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "dark", color: "#311b92", zone, life: 1e6 });
-    smoke(fx, actor.x, actor.y, 0.3, 12, ["#12001c", "#311b92"], { speed: 3 });
+    smoke(fx, actor.x, actor.y, 0.3, 12, ["#0a0410", "#1a0d24"], { speed: 3 });
     return true;
   } });
   sig("yami_liberation", {
@@ -12854,7 +12861,7 @@
       DEFAULTS.dash(fx, actor, s, a);
       actor._ghostTint = "#4dd0e1";
       actor._ghostAdd = true;
-      flames(fx, actor.x, actor.y, 0.7, 14, ["#4dd0e1", "#80deea", "#fff59d"], { speed: 2 });
+      flames(fx, actor.x, actor.y, 0.7, 14, ["#29b6f6", "#4dd0e1", "#80deea"], { hot: "#fff3a0", speed: 2 });
     }
   });
   sig("phoenix_rebirth", { heal(fx, actor, s, a) {
@@ -12864,7 +12871,7 @@
   sig("phoenix_form", {
     // the arms catch light: blue flames bloom out along them (the wings are the animation's)
     buff(fx, actor, s, a, ex) {
-      flames(fx, actor.x, actor.y, 1.1, 20, ["#4dd0e1", "#80deea", "#fff59d"], { speed: 3, vz: 2, life: 0.8, size: 0.2 });
+      flames(fx, actor.x, actor.y, 1.1, 20, ["#29b6f6", "#4dd0e1", "#80deea"], { hot: "#fff3a0", speed: 3, vz: 2, life: 0.8, size: 0.2 });
       fx.ring(actor.x, actor.y, 0.2, 2, "#4dd0e1", 0.45, 0.12, { add: true });
       fx.add("pillar", { x: actor.x, y: actor.y, r: 0.7, h: 3.2, color: "#4dd0e1", core: "#fff59d", life: 0.45, kind: "fire" });
     }
@@ -14785,7 +14792,7 @@
     const n = d.mastU.length, m = n >= 3 ? 1 : 0, mu = d.mastU[m];
     const k = MAST_KS(n)[m], base2 = floorAt(d, (mu + d.L / 2) / d.L);
     const H5 = d.mastH * k, h2 = base2 + (H5 - base2) * 0.76, mr = d.mastR * Math.sqrt(k);
-    const out = { m, u: mu + mr * 1.1, y: h2 + 0.13, r: 0.75, mu, base: base2, mr };
+    const out = { m, u: mu + mr * 1.1, y: h2 + 0.13, r: 1.15, mu, base: base2, mr };
     Object.defineProperty(d, "_nest", { value: out, enumerable: false });
     return out;
   }
@@ -15281,8 +15288,10 @@
     fx.burst(a.x, a.y, 10, { color: ["#d7ccc8", "#efebe9"], speed: 3, g: 1.2, z, vz: 0.6, life: 0.5, kind: "dust", size: 0.2, grow: 0.4 });
     fx.ring(a.x, a.y, 0.2, 1.6, S6.color || "#ffffff", 0.35, 0.1, { z, flat: 0.55, add: true });
     const c = S6.color || "#ffffff";
-    if (S6.style === "phoenix") fx.burst(a.x, a.y, 18, { color: ["#4dd0e1", "#80deea", "#fff59d"], speed: 3, g: -1, z: z + 1, vz: 1.5, life: 0.7, kind: "fire", size: 0.2 });
-    else if (S6.style === "dragon") fx.burst(a.x, a.y, 14, { color: ["#eceff1", "#cfd8dc", "#ffffff"], speed: 3, g: 0, z: z + 0.3, life: 0.9, kind: "smoke", size: 0.5, grow: 0.6 });
+    if (S6.style === "phoenix") {
+      fx.burst(a.x, a.y, 10, { color: ["#29b6f6", "#4fc3f7"], hot: "#e6fbff", speed: 2.5, g: -1, z: z + 1, vz: 1.5, life: 0.55, kind: "fire", size: 0.18 });
+      fx.burst(a.x, a.y, 8, { color: "#ffd54a", speed: 4, g: 0, z: z + 1.1, vz: 1, life: 0.4, kind: "spark", size: 0.05 });
+    } else if (S6.style === "dragon") fx.burst(a.x, a.y, 14, { color: ["#eceff1", "#cfd8dc", "#ffffff"], speed: 3, g: 0, z: z + 0.3, life: 0.9, kind: "smoke", size: 0.5, grow: 0.6 });
     else if (S6.style === "wings") fx.burst(a.x, a.y, 10, { color: ["#212121", "#37474f"], speed: 3, g: 2, z: z + 1.2, vz: 1, life: 0.8, kind: "leaf", size: 0.12 });
     else fx.burst(a.x, a.y, 12, { color: [c, "#ffffff"], speed: 2.5, g: 0, z: z + 0.2, life: 0.6, kind: S6.ride === "light" ? "glow" : S6.ride === "sand" ? "sand" : "smoke", size: 0.3, grow: 0.3 });
   }
@@ -15296,7 +15305,10 @@
     const back = { vx: -(a.vx || 0) * 0.25, vy: -(a.vy || 0) * 0.25 };
     switch (S6.style) {
       case "phoenix":
-        for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 1.4, y: a.y + r4() * 0.6, z: z + 1.1 + r4() * 0.5, ...back, vz: 0.5, g: -0.6, life: 0.5, size: 0.16, grow: -0.12, color: ["#4dd0e1", "#80deea", "#26c6da", "#fff59d"][k + (Math.random() < 0.5 ? 0 : 2)], kind: "fire" });
+        if (Math.random() < 0.6) {
+          const side = Math.random() < 0.5 ? 1 : -1, c = Math.cos(a.facing), s = Math.sin(a.facing);
+          fx.particle({ x: a.x - s * side * 1.3 - c * 0.5, y: a.y + c * side * 1.3 - s * 0.5, z: z + 1.1 + r4() * 0.3, ...back, vz: 0.3, g: 0, life: 0.35, size: 0.05, color: Math.random() < 0.25 ? "#ffd54a" : "#80e4ff", kind: "spark" });
+        }
         break;
       case "dragon":
         fx.particle({ x: a.x + r4() * 1.6, y: a.y + r4() * 0.8, z: z + 0.1, ...back, vz: -0.2, g: 0, life: 1.1, size: 0.45, grow: 0.5, color: Math.random() < 0.5 ? "#eceff1" : "#cfd8dc", kind: "smoke" });
@@ -17370,7 +17382,15 @@
         if (!game.combat.canHit(actor, e, {})) continue;
         const dx = game.world.dx(e.x, actor.x), dy = actor.y - e.y;
         const d = Math.hypot(dx, dy) || 1;
-        e.knock(dx / d * s.pull.strength, dy / d * s.pull.strength);
+        const to = s.pull.to;
+        if (to && d > to && !e.boss) {
+          const nx = game.world.wx(actor.x - dx / d * to), ny = actor.y - dy / d * to;
+          if (!e.canOccupy || e.canOccupy(game.world, nx, ny)) {
+            e.x = nx;
+            e.y = ny;
+            e.kb.x = e.kb.y = 0;
+          } else e.knock(dx / d * s.pull.strength, dy / d * s.pull.strength);
+        } else e.knock(dx / d * s.pull.strength, dy / d * s.pull.strength);
         if (s.pull.stun) e.stagger(s.pull.stun);
         if (s.pull.nullify) e.addStatus("seastone", s.pull.nullify);
       }
@@ -19060,12 +19080,13 @@
           id: "gomu_bell",
           name: "Gum-Gum Bell",
           anim: "grab",
+          word: "GOOOONG!!",
           windup: 0.25,
           recover: 0.35,
           cd: 9,
           say: "Gomu Gomu no... Kane!",
           desc: "Grab hold of them, stretch your head right back \u2014 and let it fly into theirs like the clapper of a bell.",
-          steps: [{ pull: { range: 5, strength: 12, stun: 0.5 } }, { at: 0.45, hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 32, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true, shake: 0.4 } }]
+          steps: [{ pull: { range: 5, strength: 12, stun: 0.5, to: 1.2 } }, { at: 0.45, hit: { shape: "arc", range: 1.8, arc: 1.4, offset: 0.2, damage: 32, knockback: 12, stun: 0.9, heavy: true, guardBreak: true, impactFrame: true, shake: 0.4 } }]
         })
       ],
       // (the Gears: Second and Fourth are switched on by these — see data/fruitForms.js — and so is Third by
@@ -19619,7 +19640,7 @@
       passive: { resist: ["poison"] },
       techniques: [
         T(0, { id: "doku_fist", name: "Poison Fist", icon: "\u2620", anim: "punch", windup: 0.15, recover: 0.25, cd: 3, steps: [{ hit: { shape: "arc", range: 1.6, arc: 1.2, offset: 0.2, damage: 12, knockback: 3, stun: 0.3, element: "poison", status: { poison: 5 } } }] }),
-        T(20, { id: "doku_hydra", name: "Hydra", icon: "\u{1F40D}", anim: "cast", windup: 0.4, recover: 0.4, cd: 9, say: "Hydra!", steps: [{ proj: { speed: 13, range: 12, radius: 0.7, damage: 26, count: 3, spread: 0.4, sprite: "hydra", element: "poison", status: { poison: 6 }, homing: 1.5, trail: { color: "#8e24aa", kind: "smoke" } } }] }),
+        T(20, { id: "doku_hydra", name: "Hydra", icon: "\u{1F40D}", anim: "cast", windup: 0.4, recover: 0.4, cd: 9, say: "Hydra!", steps: [{ proj: { speed: 13, range: 12, radius: 0.8, damage: 26, count: 3, spread: 0.4, size: 2, sprite: "hydra", element: "poison", status: { poison: 6 }, homing: 1.5, trail: { color: "#8e24aa", kind: "smoke" } } }] }),
         T(50, { id: "doku_venom", name: "Venom Demon", icon: "\u{1F479}", anim: "cast", windup: 0.8, recover: 0.5, cd: 40, desc: "Venom Demon: Hell's Judgement \u2014 a giant of poison, and everything around it rots.", steps: [{ zone: { range: 4.5, duration: 8, interval: 0.5, damage: 12, element: "poison", status: { poison: 4 }, color: "#8e24aa", kind: "field" } }] }),
         T(10, {
           id: "doku_fugu",
@@ -20248,7 +20269,7 @@
       desc: "Become fire itself: blows pass through you, and whatever you touch burns. Magma burns hotter still. Portgas D. Ace's fruit \u2014 later the Colosseum prize of Dressrosa.",
       passive: { logia: true, element: "fire", resist: ["fire"], weakTo: ["magma", "water"] },
       techniques: [
-        T(0, { id: "mera_hiken", name: "Hiken", icon: "\u{1F525}", anim: "punch", windup: 0.3, recover: 0.3, cd: 4, say: "Hiken!", desc: "Fire Fist: a fist of flame that burns through everything in its path.", steps: [{ proj: { speed: 16, range: 12, radius: 0.8, damage: 26, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 5, trail: { color: ["#ff7043", "#ffca28"] } } }] }),
+        T(0, { id: "mera_hiken", name: "Hiken", icon: "\u{1F525}", anim: "punch", windup: 0.3, recover: 0.3, cd: 4, say: "Hiken!", desc: "Fire Fist: a fist of flame that burns through everything in its path.", steps: [{ proj: { speed: 16, range: 12, radius: 1.1, damage: 26, size: 2.4, sprite: "firefist", element: "fire", pierce: true, status: { burn: 3 }, knockback: 5, trail: { color: ["#ff7043", "#ffca28"] } } }] }),
         T(15, {
           id: "mera_hidaruma",
           name: "Hotarubi: Hidaruma",
@@ -20258,11 +20279,11 @@
           recover: 0.3,
           cd: 7,
           desc: 'Fireflies: green lights drift slowly onto the target \u2014 then all at once, "Hidaruma", every one bursts into flame.',
-          steps: [{ proj: { speed: 6, range: 9, radius: 0.35, damage: 3, count: 5, spread: 1.4, sprite: "fireball", color: "#aeea00", size: 0.6, element: "fire", homing: 2.5, explode: { range: 1.3, damage: 9, element: "fire", status: { burn: 2 }, colors: ["#ff7043", "#ffca28", "#aeea00"] } } }]
+          steps: [{ proj: { speed: 4, range: 9, radius: 0.35, damage: 3, count: 7, spread: 1.6, sprite: "firefly", color: "#aeea00", size: 1, element: "fire", homing: 2.5, explode: { range: 1.3, damage: 9, element: "fire", status: { burn: 2 }, colors: ["#ff7043", "#ffca28", "#aeea00"] } } }]
         }),
         T(25, { id: "mera_higan", name: "Higan", anim: "point", windup: 0.2, recover: 0.3, cd: 5, say: "Higan!", desc: "Fire Gun: bullets of flame from your fingertips.", steps: [{ proj: { speed: 26, range: 11, radius: 0.18, damage: 6, count: 5, spread: 0.18, sprite: "fireball", size: 0.5, element: "fire", status: { burn: 1.5 }, knockback: 1 } }] }),
         T(35, { id: "mera_enkai", name: "Enkai: Hibashira", icon: "\u{1F30B}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, desc: "Flame Commandment, Fire Pillar: a pillar of flame erupts around you.", steps: [{ hit: { shape: "circle", range: 3, damage: 36, knockback: 8, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true }, vfx: "ring" }] }),
-        T(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "raise", windup: 1.1, recover: 0.5, cd: 40, desc: "Great Flame Commandment: a second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 2.2, damage: 40, size: 4, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] }),
+        T(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "raise", windup: 1.1, recover: 0.5, cd: 40, desc: "Great Flame Commandment: a second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 3, damage: 40, size: 6, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] }),
         T(30, {
           id: "mera_kagero",
           name: "Kagero",
@@ -20316,11 +20337,11 @@
           name: "Ice Block: Partisan",
           icon: "\u2744",
           anim: "cast",
-          windup: 0.35,
+          windup: 0.6,
           recover: 0.35,
           cd: 8,
           desc: "A volley of ice spears.",
-          steps: [{ proj: { speed: 24, range: 14, radius: 0.35, damage: 18, count: 5, spread: 0.55, sprite: "iceshard", size: 1.4, color: "#e1f5fe", element: "ice", status: { freeze: 0.6 }, pierce: true } }]
+          steps: [{ proj: { speed: 24, range: 14, radius: 0.35, damage: 18, count: 5, spread: 0.55, sprite: "icespear", size: 1.2, color: "#e1f5fe", element: "ice", status: { freeze: 0.6 }, pierce: true } }]
         }),
         T(55, {
           id: "hie_icetime",
@@ -20345,7 +20366,7 @@
       passive: { logia: true, element: "lightning", resist: ["lightning"], weakTo: ["rubber"] },
       techniques: [
         T(0, { id: "goro_vari", name: "Vari", icon: "\u26A1", anim: "point", windup: 0.2, recover: 0.25, cd: 3, desc: "A hundred million volts from your fingertip.", steps: [{ hit: { shape: "line", range: 8, width: 0.8, damage: 22, knockback: 2, stun: 0.5, element: "lightning", status: { shock: 1 } }, vfx: "beam", color: "#fff176" }] }),
-        T(15, { id: "goro_sango", name: "Sango", icon: "\u{1F409}", anim: "cast", windup: 0.4, recover: 0.3, cd: 8, desc: "A great bolt in the shape of a dragon.", steps: [{ proj: { speed: 20, range: 14, radius: 0.9, damage: 34, sprite: "thunder", size: 2, element: "lightning", pierce: true, status: { shock: 1.2 } } }] }),
+        T(15, { id: "goro_sango", name: "Sango", icon: "\u{1F409}", anim: "cast", windup: 0.4, recover: 0.3, cd: 8, desc: "A great bolt in the shape of a dragon.", steps: [{ proj: { speed: 20, range: 14, radius: 1.2, damage: 34, sprite: "thunder", size: 3.2, element: "lightning", pierce: true, status: { shock: 1.2 } } }] }),
         T(35, { id: "goro_elthor", name: "El Thor", icon: "\u{1F329}", anim: "raise", windup: 0.7, recover: 0.4, cd: 14, desc: "A pillar of divine lightning straight down from the sky.", say: "El Thor!", steps: [{ zone: { range: 2.8, duration: 0.8, interval: 0.4, damage: 45, element: "lightning", status: { shock: 1.5 }, color: "#fff176", atTarget: true, kind: "thunder" } }] }),
         T(45, { id: "goro_mamaragan", name: "Mamaragan", anim: "raise", windup: 0.6, recover: 0.4, cd: 16, say: "Mamaragan!", desc: "Lightning falls from the sky all around you, again and again.", steps: [{ zone: { range: 6, duration: 1.6, interval: 0.25, damage: 12, element: "lightning", status: { shock: 0.8 }, color: "#fff176", kind: "thunder" } }] }),
         T(85, { id: "goro_raigo", name: "Raigo", icon: "\u{1F311}", anim: "summon", windup: 1.4, recover: 0.6, cd: 90, desc: "A thundercloud large enough to erase an island.", steps: [{ zone: { range: 7, duration: 3, interval: 0.3, damage: 22, element: "lightning", status: { shock: 0.5 }, color: "#fff176", kind: "thunder" } }] }),
@@ -21461,9 +21482,11 @@
       const y0 = this.floorY(b) - front;
       if (y0 > STEPS_MAX + 0.01) return h2;
       const n = Math.max(1, Math.round(y0 / 0.2));
-      const { lz } = bl(b, x, y, this.world);
+      const { lx, lz } = bl(b, x, y, this.world);
       const i = Math.floor(lz / 0.32);
       if (i < 0 || i >= n) return h2;
+      const f = b.stepsFloor;
+      if (f && f.dw !== void 0 && Math.abs(lx - f.steps) > f.dw / 2 + 0.2 + i * 0.05) return h2;
       return front + y0 - (i + 1) * y0 / (n + 1);
     }
     floorY(b) {
@@ -21719,6 +21742,8 @@
       else if (ends.length === 2) {
         const a = dist[0].get(k) ?? 1e6, b = dist[1].get(k) ?? 1e6;
         h2 = (ends[0].land * b + ends[1].land * a) / (a + b);
+        const L3 = a + b;
+        if (L3 > 16 && a < 1e5 && b < 1e5) h2 += Math.min(6, (L3 - 16) * 0.12) * Math.sin(Math.PI * a / L3);
       } else if (ends.length) {
         let sw2 = 0, sh = 0;
         ends.forEach((e, n) => {
@@ -25700,6 +25725,10 @@
     /** The body is a circle around (x, y) (the 3D model stands centred on it). */
     canOccupy(w, x, y) {
       const r4 = this.r, e = r4 * 0.85;
+      if (this.flying && this.game?.world === w && this.game.view3d?.roofAt && w.isBlocked(x, y)) {
+        const top = this.game.view3d.roofAt(x, y);
+        if (top && this.feetH(this.game) > top.h + 0.3) return true;
+      }
       if (this.feetRef != null && this.game?.world === w) {
         const top = this.game.view3d.roofAt(x, y);
         if (top) {
@@ -28769,7 +28798,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
 
   // src/game/survival.js
   var FOOD_SECONDS = 6e3;
-  var WATER_SECONDS = 4e3;
   var BODY = 37;
   var FRESH = /* @__PURE__ */ new Set([T2.RIVER, T2.POND, T2.CANAL]);
   function nourishment(d) {
@@ -28794,9 +28822,6 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
     if (felt < 12) return BODY - (12 - felt) * 0.18;
     if (felt > 30) return BODY + (felt - 30) * 0.2;
     return BODY;
-  }
-  function thirstRate(felt, body, busy = 0) {
-    return (1 + Math.max(0, felt - 24) / 9 + Math.max(0, body - 37.5) * 0.6) * (1 + busy * 0.3);
   }
   function installSurvival(game) {
     const S6 = { sipT: 0, warned: {} };
@@ -28859,11 +28884,11 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
       n.body += (target2 - n.body) * Math.min(1, dt / 150);
       const busy = (p.sprinting || p.inCombat || p.action ? 1 : 0) + (p.inWater && !p.gills ? 0.5 : 0);
       const fishy = c.race === "fishman" && p.inWater ? 0.2 : 1;
-      n.water = Math.max(0, n.water - dt / WATER_SECONDS * thirstRate(felt, n.body, busy) * fishy);
+      n.water = 1;
       n.food = Math.max(0, n.food - dt / FOOD_SECONDS * (1 + Math.max(0, BODY - n.body) * 0.4) * (1 + busy * 0.25));
       S6.sipT -= dt;
       const fresh = FRESH.has(w.type(p.x, p.y)) || [0, 1.6, 3.2, 4.8].some((a) => FRESH.has(w.type(p.x + Math.cos(a) * 1.2, p.y + Math.sin(a) * 1.2)));
-      S6.canDrink = fresh && n.water < 0.98;
+      S6.canDrink = false;
       if (S6.canDrink && p.crouch && p.state === "idle" && !p.action) {
         n.water = Math.min(1, n.water + dt * 0.12);
         if (S6.sipT <= 0) {
@@ -28871,24 +28896,22 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
           game.audio?.sfx("sip", p);
         }
         game.hint?.("drink_stream", "Crouched at fresh water (Alt), you drink your fill.");
-      } else if (fresh && n.water < 0.6) game.hint?.("drink_here", "Fresh water: crouch here (Alt) to drink.");
+      }
       let hurt = 0;
       if (n.food <= 0) hurt += 0.35;
-      if (n.water <= 0) hurt += 0.7;
       if (n.body < 35) hurt += (35 - n.body) * 0.6;
       if (n.body > 39) hurt += (n.body - 39) * 0.8;
       p.needsHurt = hurt > 0;
-      p.regenMul = 0.3 + 1.7 * Math.min(1, (n.food + n.water) / 2);
+      p.regenMul = 0.3 + 1.7 * Math.min(1, n.food);
       if (hurt > 0 && p.hp > 1) p.hp = Math.max(1, p.hp - hurt * dt * (p.d.maxHp / 150));
       warn("food", n.food < 0.2, n.food <= 0 ? "You are starving: eat something, or you will keep weakening." : "You're getting hungry.", "#ffcc80");
-      warn("water", n.water < 0.2, "You're thirsty. Drink: a flask, a coconut, or crouch at a stream.", "#81d4fa");
       warn("cold", n.body < 35.6, "You're freezing. Get indoors, or put on a coat or a cloak.", "#b3e5fc");
-      warn("hot", n.body > 38.6, "You're overheating. Get into the shade, indoors, or drink.", "#ffab91");
+      warn("hot", n.body > 38.6, "You're overheating. Get into the shade or indoors.", "#ffab91");
     });
     return S6;
   }
 
-  // node_modules/three/build/three.module.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/build/three.module.js
   var three_module_exports = {};
   __export(three_module_exports, {
     ACESFilmicToneMapping: () => ACESFilmicToneMapping,
@@ -61145,7 +61168,7 @@ void main() {
     return chunk.slice(0, a) + gated + chunk.slice(b);
   });
 
-  // node_modules/three/examples/jsm/shaders/CopyShader.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/shaders/CopyShader.js
   var CopyShader = {
     name: "CopyShader",
     uniforms: {
@@ -61185,7 +61208,7 @@ void main() {
     )
   };
 
-  // node_modules/three/examples/jsm/postprocessing/Pass.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/postprocessing/Pass.js
   var Pass = class {
     constructor() {
       this.isPass = true;
@@ -61229,7 +61252,7 @@ void main() {
     }
   };
 
-  // node_modules/three/examples/jsm/postprocessing/ShaderPass.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/postprocessing/ShaderPass.js
   var ShaderPass = class extends Pass {
     constructor(shader, textureID) {
       super();
@@ -61269,7 +61292,7 @@ void main() {
     }
   };
 
-  // node_modules/three/examples/jsm/postprocessing/MaskPass.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/postprocessing/MaskPass.js
   var MaskPass = class extends Pass {
     constructor(scene, camera) {
       super();
@@ -61326,7 +61349,7 @@ void main() {
     }
   };
 
-  // node_modules/three/examples/jsm/postprocessing/EffectComposer.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/postprocessing/EffectComposer.js
   var EffectComposer = class {
     constructor(renderer, renderTarget) {
       this.renderer = renderer;
@@ -61448,7 +61471,7 @@ void main() {
     }
   };
 
-  // node_modules/three/examples/jsm/postprocessing/RenderPass.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/postprocessing/RenderPass.js
   var RenderPass = class extends Pass {
     constructor(scene, camera, overrideMaterial = null, clearColor = null, clearAlpha = null) {
       super();
@@ -61499,7 +61522,7 @@ void main() {
     }
   };
 
-  // node_modules/three/examples/jsm/shaders/LuminosityHighPassShader.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/shaders/LuminosityHighPassShader.js
   var LuminosityHighPassShader = {
     name: "LuminosityHighPassShader",
     shaderID: "luminosityHighPass",
@@ -61552,7 +61575,7 @@ void main() {
     )
   };
 
-  // node_modules/three/examples/jsm/postprocessing/UnrealBloomPass.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/postprocessing/UnrealBloomPass.js
   var UnrealBloomPass = class _UnrealBloomPass extends Pass {
     constructor(resolution, strength, radius, threshold) {
       super();
@@ -61808,7 +61831,7 @@ void main() {
   UnrealBloomPass.BlurDirectionX = new Vector2(1, 0);
   UnrealBloomPass.BlurDirectionY = new Vector2(0, 1);
 
-  // node_modules/three/examples/jsm/shaders/OutputShader.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/shaders/OutputShader.js
   var OutputShader = {
     name: "OutputShader",
     uniforms: {
@@ -61892,7 +61915,7 @@ void main() {
     )
   };
 
-  // node_modules/three/examples/jsm/postprocessing/OutputPass.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/postprocessing/OutputPass.js
   var OutputPass = class extends Pass {
     constructor() {
       super();
@@ -61939,7 +61962,7 @@ void main() {
     }
   };
 
-  // node_modules/three/examples/jsm/shaders/FXAAShader.js
+  // ../../../../../../home/user/One-piece-game/node_modules/three/examples/jsm/shaders/FXAAShader.js
   var FXAAShader = {
     name: "FXAAShader",
     uniforms: {
@@ -62652,6 +62675,15 @@ void main() {
      * and o.scale place it relative to the current transform.
      */
     add(geo2, o = {}) {
+      if (o.pane === "open" && !this.isPane) {
+        if (!this.openPanes) {
+          this.openPanes = new _Mesher();
+          this.openPanes.isPane = true;
+        }
+        this.openPanes.m.copy(this.m);
+        this.openPanes.add(geo2, { ...o, pane: false, outline: 0 });
+        return this;
+      }
       if (o.pane && !this.isPane) {
         if (!this.panes) {
           this.panes = new _Mesher();
@@ -62799,6 +62831,14 @@ void main() {
         this.panes.m.copy(this.m);
         this.panes.merge(other.panes);
       }
+      if (other.openPanes) {
+        if (!this.openPanes) {
+          this.openPanes = new _Mesher();
+          this.openPanes.isPane = true;
+        }
+        this.openPanes.m.copy(this.m);
+        this.openPanes.merge(other.openPanes);
+      }
       for (let i = 0; i < other.lamps.length; i += 3) {
         _lc.set(other.lamps[i], other.lamps[i + 1], other.lamps[i + 2]).applyMatrix4(M3);
         this.lamps.push(_lc.x, _lc.y, _lc.z);
@@ -62820,6 +62860,7 @@ void main() {
       if (shared2) g.userData.shared = true;
       if (this.lamps.length) g.userData.lamps = this.lamps.slice();
       if (this.panes?.pos.length) g.userData.panes = this.panes.build(shared2);
+      if (this.openPanes?.pos.length) g.userData.openPanes = this.openPanes.build(shared2);
       return g;
     }
   };
@@ -65391,7 +65432,8 @@ ${GLSL}
         float lumps = (N0(ap * 1.3 + 0.3).r - 0.5) * 0.06 + (N0(ap * 4.1 + 1.3).g - 0.5) * 0.02;
         float inside = topH + lumps * (0.4 + bank) - y;
         if (inside > 0.0) {
-          float body = smoothstep(0.0, 0.004, inside) * smoothstep(-0.012, 0.003, y);
+          // (its ends round the compass and its foot fade out: no hard line where a bank stops, or where it meets the sea)
+          float body = smoothstep(0.0, 0.004, inside) * smoothstep(-0.012, 0.012, y) * smoothstep(0.01, 0.2, bank);
           float up = clamp(y / max(topH, 0.004), 0.0, 1.0);
           float toward = dot(ap, sunH);
           float lit = clamp(0.25 + up * 0.5 + toward * 0.25 * sunUp + (inside < 0.01 ? 0.12 : 0.0), 0.0, 1.0);
@@ -65399,7 +65441,7 @@ ${GLSL}
           cc += uSunCol * (1.0 - smoothstep(0.0, 0.01, inside)) * pow(sd, 6.0) * 0.6 * clearSky;
           cc += uFlashCol * flash * 0.3;
           // the farthest melt into the haze at the horizon
-          cc = mix(cc, uHorizon, (1.0 - smoothstep(0.0, 0.06, y)) * 0.5);
+          cc = mix(cc, uHorizon, (1.0 - smoothstep(-0.006, 0.07, y)) * 0.85);
           col = mix(col, cc, body * (0.6 + 0.35 * bank));
         }
       }
@@ -66178,7 +66220,7 @@ ${GLSL}
       for (let i = 0; i < n; i++) {
         const z = open.length ? (open[i].z0 + open[i].z1) / 2 : -w + (i + 0.5) * (w * 2) / n;
         if (open.length) {
-          k.add(box(0.03, y1 - y0, ww), { at: [x0, y0, z], color: P6.glass, pane: true });
+          k.add(box(0.03, y1 - y0, ww), { at: [x0, y0, z], color: P6.glass, pane: "open" });
           for (const sz of [-1, 1]) k.add(box(0.1, y1 - y0, 0.06), { at: [x0 - 0.02, y0, z + sz * (ww / 2 + 0.03)], color: P6.trim });
         } else k.add(box(0.06, y1 - y0, ww), { at: [x0, y0, z], color: P6.glass, glow: "#ffc766", pane: true });
         k.add(box(0.08, 0.08, ww + 0.14), { at: [x0 - 0.01, y1, z], color: P6.trim });
@@ -66759,7 +66801,7 @@ ${GLSL}
       k.add(box(0.14, 0.12, tw * 0.75), { at: [m.x + r4 * 1.2, m.h2, 0], color: wood, outline: 0.01 });
       k.add(box(tl * 0.6, 0.12, 0.14), { at: [m.x + r4 * 1.2, m.h2, 0], color: wood, outline: 0.01 });
       if (m.main) {
-        const y = m.h2 + 0.1, R5 = 0.75;
+        const y = m.h2 + 0.1, R5 = 1.15;
         k.add(cyl(R5, R5 * 0.85, 1, 12, true), { at: [m.x + r4 * 1.1, y, 0], color: "#8d6e4a", double: true, outline: 0.02 });
         k.add(cyl(R5 * 0.85, R5 * 0.85, 0.06, 12), { at: [m.x + r4 * 1.1, y, 0], color: "#6d4c33" });
         k.add(torus(R5, 0.05, 4, 14), { at: [m.x + r4 * 1.1, y + 1, 0], rot: [Math.PI / 2, 0, 0], color: "#5d4037" });
@@ -67417,8 +67459,8 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
     return m;
   }
   var _inv = new Matrix4();
-  function paneMesh(geo2, floorY) {
-    const pg = geo2?.userData?.panes;
+  function paneMesh(geo2, floorY, which = "panes") {
+    const pg = geo2?.userData?.[which];
     if (!pg) return null;
     const mat = paneMaterial(floorY);
     const mesh = new Mesh(pg, mat);
@@ -68106,6 +68148,8 @@ vec3 paneView(vec3 dir, float night) {
       this.hull = hull;
       this.panes = paneMesh(hull.geometry, d.deckY);
       if (this.panes) hull.add(this.panes);
+      this.openPanes = paneMesh(hull.geometry, d.deckY, "openPanes");
+      if (this.openPanes) hull.add(this.openPanes);
       const ig = interiorGeometry(def);
       if (ig) {
         this.inside = new Mesh(ig.main, SOLID());
@@ -68135,7 +68179,7 @@ vec3 paneView(vec3 dir, float night) {
       const sailCol = kind === "marine" || def.sail === "marine" ? "#f5f6fa" : s.paint?.sail || s.sailColor || "#efe6cf";
       this.sails = [];
       this.braces = [];
-      this.ownMats = [this.panes?.material, this.views?.material].filter(Boolean);
+      this.ownMats = [this.panes?.material, this.openPanes?.material, this.views?.material].filter(Boolean);
       this.cloth = { t: { value: 0 }, amp: { value: 0 }, gust: { value: 1 } };
       const own = (m) => {
         this.ownMats.push(m);
@@ -68360,6 +68404,7 @@ vec3 paneView(vec3 dir, float night) {
     update(env2, rx, rz, windAngle, ctx) {
       const night = Math.min(1, Math.max(0, (0.78 - (env2.daylight ?? 1)) / 0.45 + (env2.storm || 0) * 0.3));
       if (this.panes) this.panes.material.userData.pane.uNight.value = night;
+      if (this.openPanes) this.openPanes.material.userData.pane.uNight.value = night;
       if (this.views) this.views.material.userData.pane.uNight.value = night;
       const s = this.ship;
       const r4 = this.root;
@@ -68438,7 +68483,7 @@ vec3 paneView(vec3 dir, float night) {
       if (this.inside) {
         const cam = ctx?.camera;
         this.inside.visible = !!cam && cam.position.distanceTo(r4.position) < this.d.L * 0.6 + 12;
-        if (this.panes) this.panes.material.userData.pane.uOpen.value = this.inside.visible ? 1 : 0;
+        if (this.openPanes) this.openPanes.visible = !this.inside.visible;
         const pl = ctx?.game?.player;
         this.inside.castShadow = this.overhead.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);
         if (this.chest && (s.owner === "player" || s.faction === "player")) this.chest.visible = false;
@@ -68841,6 +68886,11 @@ vec3 paneView(vec3 dir, float night) {
         this.yaw = ((this.yaw + t * 2.4 * dt) % TAU9 + TAU9) % TAU9;
         this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + l * 1.4 * dt));
       }
+      if (p.climb?.mast && !p.climb.top && !this.shot) {
+        const want = p.facing ?? this.yaw;
+        let d = ((want - this.yaw) % TAU9 + TAU9 * 1.5) % TAU9 - TAU9 / 2;
+        this.yaw = ((this.yaw + d * Math.min(1, dt * 2.5)) % TAU9 + TAU9) % TAU9;
+      }
       const cam = this.camera;
       const sailing = p.mode === "sail" && p.ship;
       const scale = p.look?.scale || 1;
@@ -68943,7 +68993,7 @@ vec3 paneView(vec3 dir, float night) {
           cz = Math.max(r4.y0 + 0.25, Math.min(r4.y1 - 0.25, p.y + cz)) - p.y;
           cy = Math.min(cy, ground(p.x, p.y) + heightsOf(room2).ceil - 0.3);
         } else if (w) {
-          const ships = game.ships?.length && game.shipSolidAt;
+          const ships = game.ships?.length && game.shipSolidAt && !p.climb?.mast;
           const px2 = p.x + ox, pz2 = p.y + oz;
           let ux = cx - ox, uz = cz - oz, uy = cy - oy, k = 1, lift = 0;
           const len = Math.hypot(ux, uz) || 1;
@@ -78037,7 +78087,8 @@ vec3 paneView(vec3 dir, float night) {
       b.doorCol = w.addCol({ ...b.doorBox });
       b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -2e-3), h: PLINTH, o: b, interior: true };
       w.addFloor(b.floor);
-      b.stepsFloor = { ...bbox(b, d.x - d.dw / 2 - 0.2, d.x + d.dw / 2 + 0.2, 2e-3, 1.3), h: 0, o: b, steps: d.x };
+      const nMax = Math.ceil(STEPS_MAX / 0.2);
+      b.stepsFloor = { ...bbox(b, d.x - d.dw / 2 - 0.2 - nMax * 0.05, d.x + d.dw / 2 + 0.2 + nMax * 0.05, 2e-3, nMax * 0.32 + 0.05), h: 0, o: b, steps: d.x, dw: d.dw, door: bw(b, d.x, 0) };
       w.addFloor(b.stepsFloor);
     }
     /** The furniture collides too (laid out lazily: when someone comes near or the island fills with people). */
@@ -82583,7 +82634,8 @@ vec3 paneView(vec3 dir, float night) {
       float body = smoothstep(0.0, 0.05, d);
       float mid = smoothstep(0.24, 0.29, d);
       float core = smoothstep(0.47, 0.52, d);
-      vec3 rim = vCol.rgb * vec3(0.9, 0.3, 0.16);
+      // (a warm fire reddens at its rim; a cold one \u2014 blue, green, violet \u2014 deepens in its own hue)
+      vec3 rim = mix(vCol.rgb * vec3(0.32, 0.5, 0.9), vCol.rgb * vec3(0.9, 0.3, 0.16), step(vCol.b, vCol.r));
       c = mix(rim, vCol.rgb * 1.15, mid);
       c = mix(c, vCol2.rgb * 1.7, core);
       a = body;
@@ -83230,15 +83282,13 @@ vec3 paneView(vec3 dir, float night) {
           a = (1.0 - smoothstep(0.96, 1.0, r)) * 0.22 + rim * 0.6 + ripple * 0.5;
           c = mix(vCol.rgb, vCol2.rgb * 1.6, max(rim, ripple));
         } else if (zk == ${ZK.room}) {
-          // the Room's floor: a faint square grid (the cube-cutting feel of
-          // the Ope Ope), a bright rim where the dome meets the ground
-          vec2 g = abs(fract(q * 4.0 + 0.5) - 0.5);
-          float line = 1.0 - smoothstep(0.012, 0.03, min(g.x, g.y));
+          // the Room's floor: the pale blue it tints the ground, deepening
+          // toward its edge (no pattern: the skin over it carries the look)
           float inside = 1.0 - smoothstep(0.95, 0.99, r);
           float rim = 1.0 - smoothstep(0.0, 0.035, abs(r - 0.975));
-          a = inside * (0.05 + 0.2 * line) + rim * 0.6;
-          c = mix(vCol.rgb, vCol2.rgb * 1.3, max(rim, line * 0.5));
-          w = 0.3 + 0.3 * rim;
+          a = inside * (0.06 + 0.16 * smoothstep(0.4, 0.95, r)) + rim * 0.5;
+          c = mix(vCol.rgb, vCol2.rgb * 1.3, rim);
+          w = 0.2 + 0.3 * rim;
         } else if (zk == ${ZK.ice}) {
           float cell = texture2D(uNoise, q * 1.1 + seed).a;
           float edge = 1.0 - smoothstep(0.02, 0.08, cell);
@@ -83417,7 +83467,7 @@ vec3 paneView(vec3 dir, float night) {
   };
 
   // src/render3d/vfx/volumes.js
-  var VK = { BUBBLE: 0, FIRE: 1, DOME: 2, DARK: 3, ORB: 4, WATER: 5, GOO: 6, HAKI: 7 };
+  var VK = { BUBBLE: 0, FIRE: 1, DOME: 2, DARK: 3, ORB: 4, WATER: 5, GOO: 6, HAKI: 7, ROOM: 8 };
   var TK = { BEAM: 0, PILLAR: 1, FUNNEL: 2, FIRE: 3, DARK: 4 };
   var SHELL_VS = (
     /* glsl */
@@ -83446,6 +83496,11 @@ vec3 paneView(vec3 dir, float night) {
       float d = textureLod(uNoise, uv * vec2(3.0, 2.0) + vec2(uTime * 0.25, iPrm.z * 0.1), 0.0).r - 0.5;
       p += n * d * 0.18;
     } else if (kind == ${VK.DOME}) {
+      p.y *= iPrm.w;
+    } else if (kind == ${VK.ROOM}) {
+      // (the Room's skin breathes: slow, shallow swells crawling over it)
+      float d = textureLod(uNoise, uv * vec2(4.0, 2.0) + vec2(uTime * 0.05, -uTime * 0.04 + iPrm.z * 0.1), 0.0).r - 0.5;
+      p += n * d * 0.025;
       p.y *= iPrm.w;
     } else if (kind == ${VK.HAKI}) {
       // (a wave of will: squat, its skin rippling as it goes)
@@ -83522,6 +83577,28 @@ vec3 paneView(vec3 dir, float night) {
       float inside = gl_FrontFacing ? 1.0 : 0.22;
       a = (0.07 + rim * 0.4 + max(lm, lp * 0.6) * 0.22 + scan * 0.18 + base * 0.2) * inside;
       c = mix(vCol.rgb * 0.9, vCol2.rgb * 1.3, max(rim, max(lm, scan) * 0.6));
+    } else if (kind == ${VK.ROOM}) {
+      // the Room: a clean bubble of pale blue \u2014 clear at its heart, the space
+      // inside just tinted, a soft glow toward its edge and a crisp darker
+      // line right on it, the way it's drawn in the anime; faint bands of light
+      // drifting slowly over it; a bright band where it meets the ground.
+      // k: the cast \u2014 a flash of white over the whole skin as it snaps open.
+      if (vY < -0.02) discard;
+      float sw = texture2D(uNoise, vUv * vec2(3.0, 1.5) + vec2(uTime * 0.03, -uTime * 0.05 + seed * 0.1)).g;
+      float band = smoothstep(0.55, 0.75, sw) * (1.0 - smoothstep(0.75, 0.95, sw));
+      float glow = pow(fr, 2.2);
+      float line = smoothstep(0.86, 0.9, fr) * (1.0 - smoothstep(0.965, 0.99, fr));
+      float base = 1.0 - smoothstep(0.0, 0.12, vY);
+      // (from inside \u2014 the camera in the Room, as it usually is \u2014 the far wall
+      // still tints everything past it: you see you're in it)
+      float inside = gl_FrontFacing ? 1.0 : 0.85;
+      c = mix(vCol.rgb, vCol2.rgb * 1.25, glow * 0.8 + band * 0.4 + base * 0.6);
+      c = mix(c, vCol.rgb * vec3(0.45, 0.62, 0.95), line);
+      c = mix(c, vec3(1.15), k * 0.6);
+      a = (0.12 + glow * 0.4 + band * 0.1 + line * 0.6 + base * 0.35 + k * 0.18) * inside;
+      // (the far wall seen from inside: a clear pale-blue veil over everything past it)
+      if (!gl_FrontFacing) a = max(a, 0.2 + 0.25 * smoothstep(0.0, 0.5, 1.0 - abs(vObj.y)));
+      w = 0.15 + base * 0.4 + k * 0.3;
     } else if (kind == ${VK.HAKI}) {
       // Conqueror's going out: clear in the middle, a band of black at its
       // skin, the king's own colour burning along its very edge, torn by the
@@ -84034,7 +84111,7 @@ vec3 paneView(vec3 dir, float night) {
       this.shards = new SolidBatch(shardGeo(), 640, "vfx-shards");
       this.rocks = new SolidBatch(rockGeo(), 320, "vfx-rocks");
       this.blocks = new SolidBatch(blockGeo(), 96, "vfx-blocks");
-      this.fists = new SolidBatch(fistGeo(), 48, "vfx-fists");
+      this.fists = new SolidBatch(fistGeo(), 96, "vfx-fists");
       this.cuffs = new SolidBatch(cuffGeo(), 48, "vfx-cuffs");
       this.limbs = new SolidBatch(limbGeo(), 48, "vfx-limbs");
       this.knives = new SolidBatch(knifeGeo(), 64, "vfx-knives");
@@ -84160,7 +84237,7 @@ vec3 paneView(vec3 dir, float night) {
       const X2 = v.lx(s.x), Z2 = v.lz(s.y), Y2 = v.groundOf(s) + z;
       const c = col(s.color || "#e0f7fa");
       const r4 = v.cr, u = v.cu;
-      const n = s.n || 9;
+      const n = s.n || 13;
       for (let i = 0; i < n; i++) {
         const th = i / n * TAU12 + (hash8(s.seed + i) - 0.5) * 0.5;
         const L3 = R5 * (0.6 + 0.5 * hash8(s.seed + i * 3));
@@ -84172,6 +84249,16 @@ vec3 paneView(vec3 dir, float night) {
           v.ribbons.point(X2 + r4[0] * cs + u[0] * sn, Y2 + r4[1] * cs + u[1] * sn, Z2 + r4[2] * cs + u[2] * sn, 0.032 * (1.1 - j * 0.25));
         }
         v.ribbons.finish();
+        {
+          const rr0 = L3 * 2 / 3, o0 = (hash8(s.seed + i * 7 + 2) - 0.5) * 0.5;
+          const bx = Math.cos(th + o0) * rr0, by = Math.sin(th + o0) * rr0;
+          const fa = th + o0 + (hash8(s.seed + i * 11) < 0.5 ? 0.45 : -0.45), fl2 = L3 * 0.45;
+          const fx2 = bx + Math.cos(fa) * fl2, fy2 = by + Math.sin(fa) * fl2;
+          v.ribbons.start(RK.LINE, RM2.FACE, c, fade2 * 0.9, WHITE4, 0.6).point(X2 + r4[0] * bx + u[0] * by, Y2 + r4[1] * bx + u[1] * by, Z2 + r4[2] * bx + u[2] * by, 0.022).point(X2 + r4[0] * fx2 + u[0] * fy2, Y2 + r4[1] * fx2 + u[1] * fy2, Z2 + r4[2] * fx2 + u[2] * fy2, 0.012).finish();
+          const th3 = th + TAU12 / n, r32 = L3 * 0.88;
+          const d1 = Math.cos(th) * r32, e1 = Math.sin(th) * r32, d3 = Math.cos(th3) * r32 * 0.92, e3 = Math.sin(th3) * r32 * 0.92;
+          v.ribbons.start(RK.LINE, RM2.FACE, c, fade2 * 0.6, WHITE4, 0.6).point(X2 + r4[0] * d1 + u[0] * e1, Y2 + r4[1] * d1 + u[1] * e1, Z2 + r4[2] * d1 + u[2] * e1, 0.016).point(X2 + r4[0] * d3 + u[0] * e3, Y2 + r4[1] * d3 + u[1] * e3, Z2 + r4[2] * d3 + u[2] * e3, 0.016).finish();
+        }
         const th2 = th + TAU12 / n, r22 = L3 * 0.55;
         const c1 = Math.cos(th) * r22, s1 = Math.sin(th) * r22, c3 = Math.cos(th2) * r22 * 0.95, s3 = Math.sin(th2) * r22 * 0.95;
         v.ribbons.start(RK.LINE, RM2.FACE, c, fade2 * 0.85, WHITE4, 0.6).point(X2 + r4[0] * c1 + u[0] * s1, Y2 + r4[1] * c1 + u[1] * s1, Z2 + r4[2] * c1 + u[2] * s1, 0.022).point(X2 + r4[0] * c3 + u[0] * s3, Y2 + r4[1] * c3 + u[1] * s3, Z2 + r4[2] * c3 + u[2] * s3, 0.022).finish();
@@ -84419,8 +84506,9 @@ vec3 paneView(vec3 dir, float night) {
       } else if (style === "sand" || style === "mochi") {
         v.tubes.put(TK.FUNNEL, bx, by, bz, D2[0], D2[1], D2[2], BL, wd * 0.45, wd * 0.6, c, fade2, col(style === "sand" ? "#fff3c4" : "#ffffff"), 0, k, s.seed);
       } else {
-        v.tubes.put(TK.BEAM, bx, by, bz, D2[0], D2[1], D2[2], BL, wd * 0.62, wd * 0.72, c, fade2 * 0.8, c2, 0.6, k, s.seed);
-        v.tubes.put(TK.BEAM, bx, by, bz, D2[0], D2[1], D2[2], BL, wd * 0.2, wd * 0.24, c2, fade2, c2, 0.9, k, s.seed + 5);
+        const qk = style === "quake" ? 0.25 : 1;
+        v.tubes.put(TK.BEAM, bx, by, bz, D2[0], D2[1], D2[2], BL, wd * 0.62, wd * 0.72, c, fade2 * 0.8 * qk, c2, 0.6, k, s.seed);
+        if (qk === 1) v.tubes.put(TK.BEAM, bx, by, bz, D2[0], D2[1], D2[2], BL, wd * 0.2, wd * 0.24, c2, fade2, c2, 0.9, k, s.seed + 5);
         if (style === "quake") {
           perp(D2, A, B3);
           const n = Math.max(3, Math.round(L32 / 1.2));
@@ -84671,12 +84759,39 @@ vec3 paneView(vec3 dir, float night) {
   function room(v, s, R5, a) {
     const X2 = v.lx(s.x), Z2 = v.lz(s.y), G4 = v.groundOf(s);
     const c = col(s.color || "#81d4fa");
-    v.shells.put(VK.DOME, X2, G4, Z2, R5, 0, 1, 0, 1, c, a, ROOM_LINE, 0.2, 0, s.seed, (s.hk ?? 0.55) * 1.6);
-    const patch4 = v.patch(s, s.x, s.y, R5 + 0.3);
-    v.decal(patch4, s.x, s.y, R5, 0, SF.ZONE, c, a, WHITE4, 0.3, 0, s.seed, ZK.room, 0, 0, 10);
-    v.groundRing(patch4, s.x, s.y, R5, 0.07, c, a * 0.85, WHITE4, 1, 0.6, 0, 0, 0, 9, 0, s.seed, 0);
-    const ph = v.time * 0.5 % 1;
-    v.groundRing(patch4, s.x, s.y, R5 * ph, 0.035, c, a * 0.45 * (1 - ph), WHITE4, 1, 0.5, 0, 0, 0, 9, 0, s.seed, 0);
+    const age = s.age || 0;
+    const open = age < 0.25 ? easeOut(age / 0.25) * 1.06 : age < 0.4 ? 1.06 - 0.06 * easeOut((age - 0.25) / 0.15) : 1;
+    const Rr = s.r * open;
+    if (Rr < 0.05) return;
+    const flash = Math.max(0, 1 - age / 0.3);
+    v.shells.put(VK.ROOM, X2, G4, Z2, Rr, 0, 1, 0, 1, c, a, ROOM_LINE, 0.2, flash * flash * 0.45, s.seed, 1);
+    const patch4 = v.patch(s, s.x, s.y, Rr + 0.6);
+    v.groundRing(patch4, s.x, s.y, Rr, 0.05, c, a * 0.95, WHITE4, 1, 0.75, 0, 0, 0, 9, 0, s.seed, 0);
+    v.decal(patch4, s.x, s.y, Rr, 0, SF.ZONE, c, a * 0.6, WHITE4, 0.15, 0, s.seed, ZK.room, 0, 0, 10);
+    if (age < 0.5) {
+      const q2 = age / 0.5;
+      v.groundRing(patch4, s.x, s.y, Rr * (0.9 + q2 * 0.25), 0.12 * (1 - q2), WHITE4, a * (1 - q2), c, 1, 0.9, 0, 0, 0, 9, 0, s.seed, 0);
+    }
+    if (age < 1.6) {
+      const q2 = age / 1.6, fade2 = a * (1 - q2) * Math.min(1, age / 0.15);
+      for (let r4 = 0; r4 < 4; r4++) {
+        const ph0 = r4 * 1.7 + (s.seed || 0) + age * (1.6 - r4 * 0.2), h0 = 0.15 + r4 * 0.22;
+        v.ribbons.start(RK.SMOKE, RM2.FACE, DUST2, fade2 * 0.85, DUST22, 0);
+        for (let j = 0; j <= 10; j++) {
+          const th = ph0 + j * 0.24, rr = Rr * (1 + 0.04 * Math.sin(j + r4)) + 0.3 * q2;
+          v.ribbons.point(X2 + Math.cos(th) * rr, G4 + h0 + 0.12 * Math.sin(j * 0.9 + r4), Z2 + Math.sin(th) * rr, (0.14 + 0.1 * Math.sin(j / 10 * PI)) * (1 + q2));
+        }
+        v.ribbons.finish();
+      }
+    }
+    const t = v.time;
+    for (let i = 0; i < 12; i++) {
+      const ph = (t * 0.12 + hash8(s.seed + i * 7)) % 1;
+      const th = hash8(s.seed + i * 3) * TAU12 + t * 0.05, rr = Rr * Math.sqrt(hash8(s.seed + i * 5)) * 0.85;
+      const h2 = ph * Rr * 0.8;
+      if (Math.hypot(rr, h2) > Rr * 0.92) continue;
+      v.sprites.put(SK2.SQUARE, X2 + Math.cos(th) * rr, G4 + 0.2 + h2, Z2 + Math.sin(th) * rr, 0.07, c, a * Math.sin(ph * PI) * 0.7, WHITE4, 0.6, t * 0.8 + i, i, ph);
+    }
   }
   SHAPES.barrier = {
     draw(v, s, k, a) {
@@ -84823,7 +84938,7 @@ vec3 paneView(vec3 dir, float night) {
       const kind = s.kind || "rock";
       if (kind === "mochi") v.shells.put(VK.GOO, px2, py2, pz2, R5, D2[0], D2[1], D2[2], 1.15, col("#fff8e1"), a, col("#bcaaa4"), 0, k, s.seed);
       else if (kind === "hand") putAlong(v.solids.blocks, px2, py2, pz2, -D2[0], -D2[1], -D2[2], R5 * 1.6, R5 * 1.6, s.seed, col(s.color || "#f1c9a0"), OK2.SKIN, 0, s.seed, 0);
-      else if (kind === "fist") putAlong(v.solids.blocks, px2, py2, pz2, D2[0], D2[1], D2[2], R5 * 1.8, R5 * 1.8, s.seed, col(s.color || "#bf360c"), OK2.MAGMA, 0, s.seed, 1);
+      else if (kind === "fist") putAlong(v.solids.fists, px2, py2, pz2, D2[0], D2[1], D2[2], R5 * 1.3, R5 * 1.3, s.seed, col(s.color || "#bf360c"), OK2.MAGMA, 0, s.seed, 1);
       else putAlong(v.solids.rocks, px2, py2, pz2, D2[0], D2[1], D2[2], R5 * 1.1, R5 * 1.2, v.time * 2 + s.seed, col(s.color || "#5d4037"), OK2.MAGMA, 0, s.seed, 1);
       if (kind !== "hand") {
         v.ribbons.start(kind === "mochi" ? RK.SMOKE : RK.FIRE, RM2.FACE, glow3, a, col("#fff3c4"), 0.6);
@@ -84903,14 +85018,16 @@ vec3 paneView(vec3 dir, float night) {
       if (!r4.data) {
         const d = [];
         const jag = (x0, y0, ang, len, segs, sd) => {
-          const line2 = [x0, y0, v.ground(x0, y0)];
+          const h0 = v.ground(x0, y0), line2 = [x0, y0, h0];
           let px2 = x0, py2 = y0;
           for (let j = 1; j <= segs; j++) {
             const a2 = ang + (hash8(sd + j * 13) - 0.5) * 1.1;
             const st = len / segs * (0.7 + 0.6 * hash8(sd + j * 7));
             px2 += Math.cos(a2) * st;
             py2 += Math.sin(a2) * st;
-            line2.push(px2, py2, v.ground(px2, py2));
+            const h2 = v.ground(px2, py2);
+            if (!(Math.abs(h2 - h0) < 1.5)) break;
+            line2.push(px2, py2, h2);
           }
           return line2;
         };
@@ -84919,8 +85036,8 @@ vec3 paneView(vec3 dir, float night) {
           const len = s.r * (0.65 + 0.55 * hash8(s.seed * 3 + i));
           const line2 = jag(s.x, s.y, ang, len, 7, s.seed + i * 31);
           d.push(line2);
-          if (hash8(s.seed + i * 5) > 0.4) {
-            const j = 3 + Math.floor(hash8(s.seed + i * 17) * 3);
+          const j = 3 + Math.floor(hash8(s.seed + i * 17) * 3);
+          if (hash8(s.seed + i * 5) > 0.4 && line2.length / 3 > j) {
             const b = ang + (hash8(s.seed + i * 9) > 0.5 ? 0.75 : -0.75);
             d.push(jag(line2[j * 3], line2[j * 3 + 1], b, len * 0.38, 3, s.seed + i * 47));
           }
@@ -84932,6 +85049,7 @@ vec3 paneView(vec3 dir, float night) {
       const hw0 = Math.min(0.16, 0.05 + s.r * 0.04);
       for (let i = 0; i < r4.data.length; i++) {
         const L3 = r4.data[i], m = L3.length / 3;
+        if (m < 2) continue;
         const branch = i > 0 && r4.data[i - 1].length > L3.length + 6;
         v.ribbons.start(RK.CRACK, RM2.FLAT, dark, alpha2 * 0.95, lip, 0);
         for (let j = 0; j < m; j++) {
@@ -84990,10 +85108,13 @@ vec3 paneView(vec3 dir, float night) {
     }
   };
   var SKID = [-0.14, 0.14];
-  var DARKNESS = col("#311b92");
+  var DARKNESS = col("#120a1a");
   var SCORCH_COL = col("rgba(30,18,12,1)");
   var BOLT_EMBER = col("#ffd54f");
   var ROOM_LINE = col("#e1f5fe");
+  var SMEAR = col("#e3f4ff");
+  var DUST2 = col("#efe2c0");
+  var DUST22 = col("#fffaf0");
   var ZONE_COL = { dark: ["#7e57c2", "#12001c"], ice: ["#e1f5fe", "#ffffff"], storm: ["#e1c16e", "#fff3c4"], gravity: ["#b39ddb", "#ede7f6"], mochi: ["#e8dcc4", "#fff8e1"] };
   var FIELD_FIRE = col("#ff7a1a");
   var FIELD_FIRE_CORE = col("#ffe08a");
@@ -85122,19 +85243,22 @@ vec3 paneView(vec3 dir, float night) {
         const th = ang + (hash8(seed + 3) - 0.5) * (s.arc || 0.9) * (big2 > 1.5 ? 0.6 : 1);
         const ct = Math.cos(th), st = Math.sin(th);
         const px2 = X2 + ct * d, pz2 = Z2 + st * d, py2 = G4 + (1.1 + (hash8(seed + 7) - 0.5) * 0.7) * sc;
-        const R5 = 0.12 * big2 * sc;
-        const w0 = 0.075 * sc * Math.min(big2, 1.7), w1 = 0.062 * sc * Math.min(big2, 2);
-        for (let b = 0; b < 3; b++) {
-          const off = b * 0.14 * sc * side, al = a * pop2 * (b === 0 ? 0.92 : b === 1 ? 0.34 : 0.15);
-          const ox = -st * off, oz = ct * off;
-          const ex = px2 - ct * R5 + ox, ez = pz2 - st * R5 + oz;
-          v.ribbons.start(RK.TUBE, RM2.FACE, skin, al, ink2, 0).point(shx, shy, shz, w0).point((shx + ex) * 0.5, (shy + py2) * 0.5 + 0.03 * sc, (shz + ez) * 0.5, (w0 + w1) * 0.5).point(ex, py2, ez, w1).finish();
-          putAlong(v.solids.blocks, px2 + ox, py2, pz2 + oz, ct, 0, st, R5 * 2.1, R5 * 1.9, seed, skin, OK2.SKIN, b === 0 ? 0 : b === 1 ? 0.6 : 0.82, seed, 0);
+        const R5 = 0.16 * big2 * sc;
+        const w0 = 0.075 * sc * Math.min(big2, 1.7), w1 = 0.065 * sc * Math.min(big2, 2);
+        const roll2 = (hash8(seed + 11) - 0.5) * 0.7;
+        const ex = px2 - ct * R5 * 0.7, ez = pz2 - st * R5 * 0.7;
+        v.ribbons.start(RK.TUBE, RM2.FACE, skin, a * pop2, ink2, 0).point(shx, shy, shz, w0).point((shx + ex) * 0.5, (shy + py2) * 0.5 + 0.04 * sc, (shz + ez) * 0.5, (w0 + w1) * 0.5).point(ex, py2, ez, w1).finish();
+        putAlong(v.solids.fists, px2, py2, pz2, ct, 0, st, R5, R5, roll2, skin, OK2.SKIN, 0, seed, 0);
+        for (let b = 1; b < 3; b++) {
+          const off = b * 0.2 * sc * side, ox = -st * off, oz = ct * off, oy = -b * 0.05 * sc;
+          v.ribbons.start(RK.TUBE, RM2.FACE, SMEAR, a * pop2 * (b === 1 ? 0.45 : 0.25), SMEAR, 0).point(shx, shy, shz, w0 * 1.1).point((shx + px2) * 0.5 + ox * 0.6, (shy + py2) * 0.5 + oy, (shz + pz2) * 0.5 + oz * 0.6, w1 * 1.6).point(px2 + ox, py2 + oy, pz2 + oz, R5 * 0.9).finish();
         }
         v.ribbons.start(RK.SPEED, RM2.FACE, WHITE4, a * 0.75 * pop2, WHITE4, 0.4).point(px2 - ct * R5 * 1.2, py2 + R5 * 0.5, pz2 - st * R5 * 1.2, 0.02).point(px2 - ct * (R5 + 0.6 * pop2), py2 + R5 * 0.5, pz2 - st * (R5 + 0.6 * pop2), 0.01).finish();
         if (ph > 0.45 && ph < 0.62) {
-          const j = v.sprites.put(SK2.BURST, px2 + ct * R5, py2, pz2 + st * R5, 0.3 * sc * Math.sqrt(big2), col("#fff8e1"), a, WHITE4, 0.6, seed, seed, (ph - 0.45) / 0.17);
+          const q2 = (ph - 0.45) / 0.17;
+          const j = v.sprites.put(SK2.BURST, px2 + ct * R5, py2, pz2 + st * R5, 0.34 * sc * Math.sqrt(big2), col("#fff8e1"), a, WHITE4, 0.6, seed, seed, q2);
           v.sprites.vel(j, 7, 0, 0, 0);
+          v.sprites.put(SK2.RING, px2 + ct * R5 * 1.2, py2, pz2 + st * R5 * 1.2, (0.15 + q2 * 0.4) * sc * Math.sqrt(big2), WHITE4, a * (1 - q2), WHITE4, 0.4, 0, seed, q2);
         }
       }
     }
@@ -85250,7 +85374,7 @@ vec3 paneView(vec3 dir, float night) {
           S6.put(SK2.DUST, X2, Y2, Z2, sz * 1.4, c, al, c, 0, p.rot || 0, p.max * 89.1 % 50, k);
           break;
         case "fire":
-          S6.put(SK2.FIRE, X2, Y2, Z2, sz * (0.75 + 0.55 * life2) * 1.6, c, Math.min(1, al * 1.2), HOT, add7 ? 0.7 : 0.2, 0, p.max * 71.9 % 50, k);
+          S6.put(SK2.FIRE, X2, Y2, Z2, sz * (0.75 + 0.55 * life2) * 1.6, c, Math.min(1, al * 1.2), p.hot ? col(p.hot) : HOT, add7 ? 0.7 : 0.2, 0, p.max * 71.9 % 50, k);
           break;
         case "glow":
           S6.put(SK2.GLOW, X2, Y2, Z2, sz, c, al, lit2 ? WHITE5 : c, lit2, 0, 0, k);
@@ -85353,13 +85477,84 @@ vec3 paneView(vec3 dir, float night) {
      * hurled, swelling as it gathers.
      */
     chargeSuns(game) {
-      const v = this.v, now3 = performance.now();
+      const v = this.v;
       this._rec = this._rec || new Rec();
       for (const a of game.actors || []) {
         const c = a._sunCharge;
-        if (!c || now3 - c.at > 120) continue;
+        if (!c || ++c.seen > 2) continue;
         sun(v, this._rec, c.X, c.Y, c.Z, c.R, 1, 0, SUN_FC, (a.seed || 1) * 97 | 0, v.time);
         v.sprites.put(SK2.GLOW, c.X, c.Y, c.Z, c.R * 3.2, SUN_FC, 0.18, SUN_CORE, 1, 0, 7, 0);
+      }
+    }
+    /**
+     * Partisan forming: a fan of ice spears hanging in the air round the
+     * caster's shoulders, points forward, growing out of nothing as the
+     * charge builds (chars3d.js sets a._spearCharge) — then thrown.
+     */
+    chargeSpears(game) {
+      const v = this.v;
+      for (const a of game.actors || []) {
+        const c = a._spearCharge;
+        if (!c || ++c.seen > 2) continue;
+        const n = c.n, S6 = c.S, ic = col(c.color || "#e1f5fe"), lx = -c.dz, lz = c.dx;
+        for (let i = 0; i < n; i++) {
+          const g = Math.max(0, Math.min(1, c.k * 1.6 - i * (0.6 / n)));
+          if (g <= 0) continue;
+          const u = n > 1 ? i / (n - 1) * 2 - 1 : 0, ring4 = 1.6 + 0.3 * Math.abs(u);
+          const X2 = c.X + lx * u * ring4 * S6 - c.dx * 0.35 * S6, Z2 = c.Z + lz * u * ring4 * S6 - c.dz * 0.35 * S6;
+          const Y2 = c.Y + (0.9 - 0.8 * u * u) * S6 + Math.sin(v.time * 3 + i) * 0.04;
+          const L3 = 2.3 * S6 * (0.4 + 0.6 * g);
+          putAlong(v.solids.shards, X2 - c.dx * L3 * 0.35, Y2, Z2 - c.dz * L3 * 0.35, c.dx, 0, c.dz, L3 * 0.75, 0.08 * S6, 0, ic, OK2.ICE, 1 - g, i, 0.1);
+          putAlong(v.solids.crystals, X2 + c.dx * L3 * 0.12, Y2, Z2 + c.dz * L3 * 0.12, c.dx, 0, c.dz, 0.75 * S6 * g, 0.24 * S6, 0, ic, OK2.ICE, 1 - g, i, 0.2);
+          v.sprites.put(SK2.STAR, X2 + c.dx * L3 * 0.4, Y2, Z2 + c.dz * L3 * 0.4, 0.12 * S6, WHITE6, 0.6 * g, WHITE6, 1, v.time * 4 + i, i, 0);
+        }
+      }
+    }
+    /**
+     * The Phoenix's wings and tail, burning: each point of the wing laid out by
+     * chars3d (flame.js PhoenixWings.fireOut) a tongue of the same blue fire
+     * the fruit's techniques throw — white-hot along the arm, deepening to blue
+     * toward the feather ends, gold flickering at the tips — each one cycling
+     * through its flicker so the wing roils as it's held out.
+     */
+    phoenixFire(game) {
+      const v = this.v, t = v.time, NV2 = 6;
+      for (const a of game.actors || []) {
+        const f = a._phoenixFire;
+        if (!f || ++f.seen > 2 || !f.n) continue;
+        const A2 = f.arr, g = f.grow, S6 = f.S, sd = a.seed || 0;
+        let base2 = 0;
+        for (const [nu, tail2] of [[18, false], [18, false], [9, true]]) {
+          for (let i = 0; i < nu; i++) {
+            const feather = tail2 || i % 2 === 0, u = i / (nu - 1);
+            for (let j = 0; j < NV2 - 1; j++) {
+              if (!feather && j > 0) break;
+              for (const s of [0, 0.5]) {
+                const o0 = (base2 + i * NV2 + j) * 5, o1 = o0 + 5;
+                const x = A2[o0] + (A2[o1] - A2[o0]) * s, y = A2[o0 + 1] + (A2[o1 + 1] - A2[o0 + 1]) * s, z = A2[o0 + 2] + (A2[o1 + 2] - A2[o0 + 2]) * s;
+                const w = (j + s) / (NV2 - 1);
+                const h2 = hash8(i * 3.1 + j * 1.7 + s + sd), k = 0.08 + 0.4 * ((t * (1.4 + h2) + h2 * 7) % 1);
+                const sz = ((tail2 ? 0.3 : 0.24 + 0.16 * u) * (1 - 0.62 * w) + 0.05) * S6 * g;
+                v.sprites.put(SK2.FIRE, x, y, z, sz, w > 0.55 ? PHX_RIM : PHX_MID, 0.92 * g, w < 0.25 ? PHX_CORE : PHX_HOT, 0.6, 0, (i * 13 + j * 5 + 3) % 50, k);
+              }
+            }
+            if (feather) {
+              const o = (base2 + i * NV2 + NV2 - 1) * 5, h2 = hash8(i * 5.3 + sd), k = 0.1 + 0.4 * ((t * (1.7 + h2) + h2 * 3) % 1);
+              v.sprites.put(SK2.FIRE, A2[o], A2[o + 1], A2[o + 2], (tail2 ? 0.2 : 0.15) * S6 * g, PHX_GOLD, g, PHX_GOLD_HOT, 0.7, 0, (i * 7 + 1) % 50, k);
+            }
+          }
+          base2 += nu * NV2;
+        }
+      }
+    }
+    /** Raigo gathering: a thundercloud swelling high over the caster, ever darker and wider. */
+    chargeStorms(game) {
+      const v = this.v;
+      for (const a of game.actors || []) {
+        const c = a._stormCharge;
+        if (!c || ++c.seen > 2) continue;
+        const k = c.k, R5 = 1.5 + 7.5 * k * k;
+        cloud(v, c.X, c.Y + 6 + 4 * k, c.Z, R5, STORM_C, Math.min(1, 0.3 + k), (a.seed || 1) * 31 | 0);
       }
     }
     landing(p, r4) {
@@ -85431,6 +85626,9 @@ vec3 paneView(vec3 dir, float night) {
       }
       this.recs.forEach(this._sweep);
       this.chargeSuns(game);
+      this.chargeSpears(game);
+      this.chargeStorms(game);
+      this.phoenixFire(game);
       const L3 = this.land;
       for (let i = 0; i < LAND; i++) {
         const o = i * LF, age = v.time - L3[o + 5];
@@ -85512,6 +85710,14 @@ vec3 paneView(vec3 dir, float night) {
         trail2(v, r4, RK.FIRE, fc, 1, HOT2, 0.6, R5 * 0.95, 0.15, 12);
         break;
       }
+      case "firefly": {
+        const gc2 = col(pr.color || "#aeea00"), R5 = 0.16 * s;
+        const fl2 = 0.75 + 0.25 * Math.sin(t * 23 + seed), bob = Math.sin(t * 5 + seed) * 0.12;
+        v.sprites.put(SK2.GLOW, X2, Y2 + bob, Z2, R5 * 3.4, gc2, 0.5 * fl2, col("#f4ff81"), 1, 0, seed, 0);
+        v.sprites.put(SK2.GLOW, X2, Y2 + bob, Z2, R5 * 1.1, col("#f4ff81"), fl2, WHITE6, 1, 0, seed + 1, 0);
+        trail2(v, r4, RK.SMOKE, gc2, 0.35, gc2, 0, R5 * 0.5, 0.2, 6);
+        break;
+      }
       case "magmafist": {
         const R5 = 0.38 * s;
         putAlong(v.solids.blocks, X2, Y2, Z2, dx, 0, dz, R5 * 1.8, R5 * 1.8, t * 3, col("#4e342e"), OK2.MAGMA, 0, seed, 1);
@@ -85543,6 +85749,16 @@ vec3 paneView(vec3 dir, float night) {
         putAlong(v.solids.knives, X2, Y2, Z2, dx, 0, dz, 0.42 * s, 0.42 * s, t * 14 + seed, kc, OK2.PLAIN, 0, seed, 0);
         v.sprites.put(SK2.STAR, X2 + dx * 0.35 * s, Y2, Z2 + dz * 0.35 * s, 0.14 * s, WHITE6, 0.8, WHITE6, 1, t * 10, seed, 0);
         trail2(v, r4, RK.SPEED, WHITE6, 0.55, WHITE6, 0.3, 0.05 * s, 0.1, 6);
+        break;
+      }
+      case "icespear": {
+        const ic = col(pr.color || "#e1f5fe"), L3 = 1.6 * s, nx = -dz, nz = dx;
+        putAlong(v.solids.shards, X2 - dx * L3 * 0.35, Y2, Z2 - dz * L3 * 0.35, dx, 0, dz, L3 * 0.75, 0.06 * s, 0, ic, OK2.ICE, 0, seed, 0.1);
+        putAlong(v.solids.crystals, X2 + dx * L3 * 0.12, Y2, Z2 + dz * L3 * 0.12, dx, 0, dz, 0.55 * s, 0.17 * s, 0, ic, OK2.ICE, 0, seed, 0.2);
+        for (const sd of [1, -1]) {
+          putAlong(v.solids.shards, X2 - dx * 0.12 * s + nx * sd * 0.16 * s, Y2 + 0.04 * s, Z2 - dz * 0.12 * s + nz * sd * 0.16 * s, -dx * 0.6 + nx * sd, 0.4, -dz * 0.6 + nz * sd, 0.32 * s, 0.06 * s, sd, ic, OK2.ICE, 0, seed + sd, 0.1);
+        }
+        trail2(v, r4, RK.SMOKE, col("#e1f5fe"), 0.55, WHITE6, 0, 0.12 * s, 0.35, 8);
         break;
       }
       case "iceshard": {
@@ -85654,11 +85870,22 @@ vec3 paneView(vec3 dir, float night) {
         }
         break;
       }
-      case "poison":
-      case "hydra": {
+      case "poison": {
         const pc = col("#7b1fa2");
-        v.shells.put(VK.GOO, X2, Y2, Z2, (pr.sprite === "hydra" ? 0.32 : 0.36) * s, dx, 0, dz, 1.3, pc, 1, col("#2a0a36"), 0, 0, seed);
+        v.shells.put(VK.GOO, X2, Y2, Z2, 0.36 * s, dx, 0, dz, 1.3, pc, 1, col("#2a0a36"), 0, 0, seed);
         trail2(v, r4, RK.TUBE, col("#6a1b9a"), 0.9, col("#2a0a36"), 0, 0.15 * s, 0.3, 10);
+        break;
+      }
+      case "hydra": {
+        const pc = col("#7b1fa2"), dk3 = col("#2a0a36"), R5 = 0.3 * s, nx = -dz, nz = dx;
+        const sway = Math.sin(t * 7 + seed) * 0.08 * s;
+        const hx = X2 + nx * sway, hz = Z2 + nz * sway;
+        v.shells.put(VK.GOO, hx, Y2, hz, R5, dx, 0.12, dz, 1.9, pc, 1, dk3, 0, 0, seed);
+        v.shells.put(VK.GOO, hx + dx * R5 * 1.3, Y2 + R5 * 0.35, hz + dz * R5 * 1.3, R5 * 0.55, dx, 0.35, dz, 1.9, pc, 1, dk3, 0, 0, seed + 1);
+        v.shells.put(VK.GOO, hx + dx * R5 * 1.2, Y2 - R5 * 0.35, hz + dz * R5 * 1.2, R5 * 0.45, dx, -0.4, dz, 1.8, pc, 1, dk3, 0, 0, seed + 2);
+        for (const sd of [1, -1]) putAlong(v.solids.shards, hx - dx * R5 * 0.4 + nx * sd * R5 * 0.45, Y2 + R5 * 0.7, hz - dz * R5 * 0.4 + nz * sd * R5 * 0.45, -dx, 0.6, -dz, R5 * 1.1, R5 * 0.18, 0, col("#4a148c"), OK2.PLAIN, 0, seed + sd, 0);
+        v.sprites.put(SK2.DROP, hx + dx * R5 * 1.4, Y2 - R5 * 0.6 - (t * 2 + h01(seed)) % 1 * 0.5, hz + dz * R5 * 1.4, 0.09 * s, col("#ab47bc"), 0.9, pc, 0, 0, seed, 0);
+        trail2(v, r4, RK.TUBE, col("#6a1b9a"), 0.95, dk3, 0, R5 * 0.8, 0.45, 18);
         break;
       }
       case "mochi": {
@@ -85737,8 +85964,16 @@ vec3 paneView(vec3 dir, float night) {
     v.sprites.put(SK2.GLOW, X2, Y2, Z2, R5 * 1.7, fc, 0.28, SUN_CORE, 1, 0, seed, 0);
     trail2(v, r4, RK.FIRE, fc, 1, HOT2, 0.6, R5 * 0.9, 0.2, 16);
   }
+  var h01 = (n) => hash8(n * 1.7);
   var SUN_CORE = col("#ffd04a");
   var SUN_FC = col("#ff7a1a");
+  var STORM_C = col("#37474f");
+  var PHX_RIM = col("#1673c9");
+  var PHX_MID = col("#2fc8ee");
+  var PHX_HOT = col("#7fe8fb");
+  var PHX_CORE = col("#d9fbff");
+  var PHX_GOLD = col("#ffb300");
+  var PHX_GOLD_HOT = col("#fff3a0");
   function iceBird(v, r4, X2, Y2, Z2, R5, dx, dz, c, seed, t) {
     const S6 = v.solids.shards, lx = -dz, lz = dx;
     const flap = Math.sin(t * 13 + seed) * 0.45;
@@ -88544,6 +88779,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     return SPIRAL2;
   }
+  var BROW_Y = -0.21;
+  var BROW_HEIGHTS = { low: 0.05, mid: 0, high: -0.06 };
+  var BROW_SHAPES = { natural: { arch: 1, w: 1 }, arched: { arch: 1.9, w: 0.95 }, straight: { arch: 0.25, w: 1 }, thick: { arch: 0.9, w: 1.55 }, thin: { arch: 1.1, w: 0.6 } };
   var BROWS_M = {
     fierce: "M0.14 -0.08 Q0.36 -0.17 0.64 -0.27 M-0.14 -0.08 Q-0.36 -0.17 -0.64 -0.27",
     worried: "M0.18 -0.27 Q0.42 -0.27 0.62 -0.14 M-0.18 -0.27 Q-0.42 -0.27 -0.62 -0.14",
@@ -88661,7 +88899,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   function faceKey(look) {
     const hairCol = look.furWhite ? "#fafafa" : look.nika ? "#ffffff" : look.hairColor;
     const skin = look.furWhite ? "#fafafa" : look.fur && look.furFace ? look.fur : look.skin;
-    return `${eyeShapeOf2(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.fem ? "F" : "M"}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === "mink" ? 1 : 0}${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.scarCheek ? 1 : 0}${look.goggles === true ? 1 : 0}|${look.kind === "Panda" ? "P" : ""}|${look.nose || (look.kind === "Saw Shark" ? "saw" : "")}|${look.fem ? "F" : ""}`;
+    return `${eyeShapeOf2(look)}|${look.eyeColor}|${hairCol}|${skin}|${look.fem ? "F" : "M"}|${look.furWhite ? 1 : 0}${look.muzzle ? 1 : 0}${look.race === "mink" ? 1 : 0}${look.gills ? 1 : 0}${look.grin || look.nika ? 1 : 0}${look.sharpTeeth ? 1 : 0}${look.thirdEye ? 1 : 0}${look.scarEye ? 1 : 0}${look.scarCheek ? 1 : 0}${look.goggles === true ? 1 : 0}|${look.kind === "Panda" ? "P" : ""}|${look.nose || (look.kind === "Saw Shark" ? "saw" : "")}|${look.fem ? "F" : ""}|${look.browHeight || ""}${look.browShape || ""}`;
   }
   var WHITES = /* @__PURE__ */ new Map();
   function eyeWhite(st, key2) {
@@ -88923,9 +89161,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const BR = look.fem ? BROWS_F : BROWS_M;
     g.save();
     g.translate(0, EYE_LIFT);
-    g.lineWidth = look.fem ? 0.062 : 0.1;
+    const bh = BROW_HEIGHTS[look.browHeight] || 0, bs = BROW_SHAPES[look.browShape] || BROW_SHAPES.natural;
+    g.save();
+    g.translate(0, bh + BROW_Y);
+    g.scale(1, bs.arch);
+    g.translate(0, -BROW_Y);
+    g.lineWidth = (look.fem ? 0.062 : 0.1) * bs.w;
     g.strokeStyle = brow;
     g.stroke(pp2(BR[X2.brow] || BR.neutral));
+    g.restore();
     if (look.thirdEye) {
       g.fillStyle = "#ffffff";
       g.fill(pp2(THIRD2));
@@ -89289,6 +89533,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var FACE_SHAPES = ["oval", "round", "square", "long", "heart"];
   var CHINS = ["pointed", "round", "strong"];
   var NOSES2 = ["small", "normal", "big", "button", "hooked", "long", "red"];
+  var NOSE_TIPS = ["straight", "down", "up"];
   var NOSE_DIM = {
     small: { len: 0.1, h: 1, r0: 0.028, tip: 0.045, wing: 0.034 },
     normal: { len: 0.14, h: 1, r0: 0.034, tip: 0.055, wing: 0.042 },
@@ -89304,9 +89549,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     let nose = NOSES2.includes(look.noseShape) ? look.noseShape : look.nose === "long" ? "long" : look.nose === "red" ? "red" : fem ? "small" : ["normal", "normal", "small", "big", "hooked"][(seed >> 1) % 5];
     if (look.race === "mink" || look.muzzle || look.race === "fishman") nose = "flat";
     const q2 = (v, d) => Math.round((v ?? d) * 4) / 4;
-    return { fem, shape, chin, nose, jaw: q2(look.jaw, 0.5), cheek: q2(look.cheek, fem ? 0.5 : 0.5), brow: q2(look.brow, fem ? 0.25 : 0.6) };
+    const tip = NOSE_TIPS.includes(look.noseTip) ? look.noseTip : ["straight", "straight", "up", "down"][(seed >> 3) % 4];
+    return { fem, shape, chin, nose, tip, jaw: q2(look.jaw, 0.5), cheek: q2(look.cheek, fem ? 0.5 : 0.5), brow: q2(look.brow, fem ? 0.25 : 0.6) };
   }
-  var headKey = (hp) => `${hp.fem ? "f" : "m"}.${hp.shape}.${hp.chin}.${hp.nose}.${hp.jaw}.${hp.cheek}.${hp.brow}`;
+  var headKey = (hp) => `${hp.fem ? "f" : "m"}.${hp.shape}.${hp.chin}.${hp.nose}.${hp.tip}.${hp.jaw}.${hp.cheek}.${hp.brow}`;
   function headKind(hp) {
     const S6 = {
       oval: { cw: 0.72, jw: 0.5, jy: -0.58, cy: -1.03, jr: 0.16 },
@@ -89327,6 +89573,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     k.cheek = hp.cheek;
     k.brow = hp.brow;
     k.nose = NOSE_DIM[hp.nose] || null;
+    k.tip = hp.tip;
     k.fem = hp.fem;
     return k;
   }
@@ -89353,9 +89600,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const n = k.nose;
     if (n) {
       const tx = 0.92 + n.len * 1.45, ty = -0.4 * n.h;
-      let nd = capsule(x, y, z * 1.25, 0.92, 0, 0, tx, ty + 0.02, 0, n.r0 * 1.1);
+      const T5 = k.tip === "down" ? { x: -0.03, y: -0.055, b: 0 } : k.tip === "up" ? { x: 0.035, y: 0.06, b: -0.03 } : { x: 0.012, y: -0.01, b: 0 };
+      let nd = capsule(x, y, z * 1.25, 0.92, 0, 0, tx + T5.b, ty + 0.02 + T5.b, 0, n.r0 * 1.1);
+      if (k.tip === "up") nd = smin(nd, capsule(x, y, z * 1.25, tx + T5.b, ty + 0.02 + T5.b, 0, tx + T5.x, ty + T5.y, 0, n.r0), 0.04);
       if (n.hook) nd = smin(nd, sphere2(x - 0.92 - n.len * 0.55, y + 0.19, z, n.r0 + n.hook), 0.05);
-      nd = smin(nd, sphere2(x - tx + 0.01, y - ty, z, n.tip), 0.05);
+      nd = smin(nd, sphere2(x - tx - T5.x + 0.01, y - ty - T5.y, z, n.tip), 0.05);
       nd = smin(nd, sphere2(x - tx + 0.07, y - ty + 0.03, az - 0.07, n.wing), 0.04);
       d = smin(d, nd, 0.06);
     }
@@ -91333,6 +91582,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         bones2[i].position.copy(rig.pos[i]);
         bones2[i].quaternion.copy(rig.quat[i]);
       }
+      if (o.headOff) bones2[B4.head].position.add(o.headOff);
       for (const i of LIMBS) bones2[i].scale.set(1, rig.len[i], 1);
       for (let k = 0; k < 2; k++) {
         const inf = Math.max((k === 0 ? P6.inF : P6.inB) || 0, (k === 0 ? o.infR : o.infL) || 0), g2 = 1 + 1.6 * inf;
@@ -92992,7 +93242,6 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     return SPARKS;
   }
   var COLS2 = { uRim: "#d42a16", uMid: "#ff6a12", uHot: "#ffb52e", uCore: "#fff0b8" };
-  var PHOENIX = { uRim: "#1259c3", uMid: "#1fa2ef", uHot: "#7fdcff", uCore: "#fff3a0" };
   function bodyMat(seed, cols = COLS2) {
     const u = { uTime: { value: 0 }, uSeed: { value: seed }, uGrow: { value: 1 }, uAlpha: { value: 1 }, uLean: { value: new Vector3() } };
     for (const [k, c] of Object.entries(cols)) u[k] = { value: new Color(c) };
@@ -93089,58 +93338,195 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _Y = new Vector3(0, 1, 0);
   var _p4 = new Vector3();
   var _d5 = new Vector3();
+  var _o = new Vector3();
+  var _e3 = new Vector3();
+  var WING_VERT = (
+    /* glsl */
+    `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+  );
+  var WING_FRAG = (
+    /* glsl */
+    `
+  uniform float uTime, uSeed, uAlpha, uN, uTipGold;
+  uniform vec3 uRim, uMid, uHot, uCore, uGold, uFire;
+  varying vec2 vUv;
+  ${NOISE3}
+  void main() {
+    float t = uTime + uSeed;
+    float u = vUv.x, v = vUv.y;
+    float fu = u * uN, f = fract(fu), fid = floor(fu);
+    float cf = abs(f * 2.0 - 1.0);
+    // each feather drawn out to a point, the edge ragged with licking flame (Marco's wings: Wano)
+    float tip = (1.0 - 0.3 * pow(cf, 1.3)) * (0.9 + 0.1 * mod(fid, 2.0));
+    float lick = (fnoise(vec3(fu * 2.4, v * 4.0 - t * 4.6, t * 0.7 + fid)) - 0.5) * 0.34 * (0.25 + v);
+    float edge = tip + lick;
+    if (v > edge) discard;
+    float split = smoothstep(0.5, 0.95, v / edge);
+    if (cf > 1.0 - 0.14 * split) discard;
+    // turquoise, paler and speckled toward the arm, a deeper blue only right at the ragged edge
+    float speck = fnoise(vec3(fu * 6.0, v * 14.0 - t * 1.2, fid));
+    float heat = 1.0 - v / edge + (speck - 0.5) * 0.5;
+    float rim = edge - v;
+    vec3 col = mix(uRim, uMid, smoothstep(0.02, 0.05, rim));
+    col = mix(col, uHot, step(0.5, heat));
+    col = mix(col, uCore, step(0.85, heat) * 0.8);
+    // the quill down each feather, a fine darker line
+    col = mix(col, uRim, (1.0 - smoothstep(0.03, 0.07, cf)) * smoothstep(0.15, 0.4, v) * 0.45);
+    // gold-and-orange flames dotted over it \u2014 along the arm and at the feather tips \u2014 flickering
+    float g = fnoise(vec3(fu * 2.2 + 3.1, v * 5.0 - t * 2.4, t * 0.9 + fid * 0.5));
+    float where = max(1.0 - smoothstep(0.08, 0.32, v), smoothstep(0.62, 0.9, v / edge)) * uTipGold;
+    float fl = smoothstep(0.62, 0.68, g) * where;
+    col = mix(col, uGold, fl);
+    col = mix(col, uFire, smoothstep(0.74, 0.8, g) * where);
+    col *= 1.0 + 0.3 * step(0.85, heat) + 0.25 * fl;
+    gl_FragColor = vec4(col, uAlpha);
+  }
+`
+  );
+  var WING_COLS = { uRim: "#1673c9", uMid: "#2fc8ee", uHot: "#7fe8fb", uCore: "#d9fbff", uGold: "#ffd23f", uFire: "#ff8a1c" };
+  function wingMat(seed, n, gold) {
+    const u = { uTime: { value: 0 }, uSeed: { value: seed }, uAlpha: { value: 1 }, uN: { value: n }, uTipGold: { value: gold } };
+    for (const [k, c] of Object.entries(WING_COLS)) u[k] = { value: new Color(c) };
+    return new ShaderMaterial({ uniforms: u, vertexShader: WING_VERT, fragmentShader: WING_FRAG, transparent: true, depthWrite: true, side: DoubleSide });
+  }
+  function sheetGeo(NU, NV2) {
+    const g = new BufferGeometry();
+    const pos = new Float32Array(NU * NV2 * 3), uv = new Float32Array(NU * NV2 * 2), idx = [];
+    for (let i = 0; i < NU; i++) for (let j = 0; j < NV2; j++) {
+      const k = i * NV2 + j;
+      uv[k * 2] = i / (NU - 1);
+      uv[k * 2 + 1] = j / (NV2 - 1);
+    }
+    for (let i = 0; i < NU - 1; i++) for (let j = 0; j < NV2 - 1; j++) {
+      const a = i * NV2 + j, b = a + NV2;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+    g.setAttribute("position", new BufferAttribute(pos, 3));
+    g.setAttribute("uv", new BufferAttribute(uv, 2));
+    g.setIndex(idx);
+    g.boundingSphere = new Sphere(new Vector3(0, 1, 0), 4);
+    return g;
+  }
   var PhoenixWings = class {
     constructor(seed = 0) {
       this.group = new Group();
-      this.tongues = [];
-      for (let side = 0; side < 2; side++) for (let i = 0; i < 6; i++) this.add(seed + side * 13 + i * 2.1, { side, i });
-      for (let i = 0; i < 3; i++) this.add(seed + 50 + i * 3.3, { tail: i });
+      this.NU = 18;
+      this.NV = 6;
+      this.wings = [0, 1].map((side) => {
+        const mat = wingMat(seed + side * 7.7, 7, 1);
+        const m = new Mesh(sheetGeo(this.NU, this.NV), mat);
+        m.frustumCulled = false;
+        m.renderOrder = 2;
+        m.visible = false;
+        this.group.add(m);
+        return { m, mat, side };
+      });
+      this.TU = 9;
+      const tmat = wingMat(seed + 31, 5, 1);
+      this.tail = new Mesh(sheetGeo(this.TU, this.NV), tmat);
+      this.tail.frustumCulled = false;
+      this.tail.renderOrder = 2;
+      this.tail.visible = false;
+      this.tailMat = tmat;
+      this.group.add(this.tail);
       this.grow = 0;
-    }
-    add(seed, slot2) {
-      const mat = bodyMat(seed, PHOENIX);
-      const m = new Mesh(flameGeo2(), mat);
-      m.renderOrder = 2;
-      this.group.add(m);
-      this.tongues.push({ m, mat, slot: slot2 });
     }
     /**
      * Burn for a frame. `rig`: the body's solved rig (S, J, E: shoulders, elbows,
      * hands; hip, qChest); `d`: its dims; `trail`: the way the flames stream, in
      * the body's frame (+x ahead, +y up, +z its right; a unit vector); `lit`:
-     * burning (grows) or going out (dies back).
+     * burning (unfurls) or going out (folds away).
      */
     update(t, dt, rig, d, trail3, lit2 = true) {
       this.grow += ((lit2 ? 1 : 0) - this.grow) * Math.min(1, dt * (lit2 ? 6 : 8));
       this.group.visible = this.grow > 0.02;
       if (!this.group.visible) return;
-      for (const { m, mat, slot: slot2 } of this.tongues) {
-        let len, wide;
-        if (slot2.tail !== void 0) {
-          const f = slot2.tail - 1;
-          _p4.set(-0.12 * d.Bk, d.chestLen * 0.22, f * 0.07).applyQuaternion(rig.qChest).add(rig.hip);
-          _d5.copy(trail3).addScaledVector(_Y, -0.25);
-          _d5.z += f * 0.3;
-          len = 0.95 - Math.abs(f) * 0.18;
-          wide = 0.5;
-        } else {
-          const k = slot2.i / 5, S6 = rig.S[slot2.side], J = rig.J[slot2.side], E = rig.E[slot2.side];
-          if (k < 0.5) _p4.lerpVectors(S6, J, k * 2);
-          else _p4.lerpVectors(J, E, (k - 0.5) * 2);
-          _d5.copy(trail3).addScaledVector(_Y, 0.12 - k * 0.1);
-          _d5.z += (slot2.side === 0 ? 1 : -1) * (0.25 + k * 0.3);
-          len = 0.45 + 0.7 * k;
-          wide = 0.62 - 0.18 * k;
+      const g = this.grow, NV2 = this.NV;
+      for (const w of this.wings) {
+        const S6 = rig.S[w.side], J = rig.J[w.side], E = rig.E[w.side], S22 = rig.S[1 - w.side];
+        _o.subVectors(S6, S22);
+        _o.y = 0;
+        _o.normalize();
+        _e3.subVectors(E, J).normalize().multiplyScalar(0.45).add(E);
+        const pos2 = w.m.geometry.attributes.position.array;
+        for (let i = 0; i < this.NU; i++) {
+          const u = i / (this.NU - 1);
+          if (u < 0.42) _p4.lerpVectors(S6, J, u / 0.42);
+          else if (u < 0.86) _p4.lerpVectors(J, E, (u - 0.42) / 0.44);
+          else _p4.lerpVectors(E, _e3, (u - 0.86) / 0.14);
+          if (u < 0.12) _p4.addScaledVector(_o, -(0.12 - u) * 0.6);
+          _d5.copy(trail3).multiplyScalar(0.6).addScaledVector(_o, 0.15 + 0.3 * u).addScaledVector(_Y, 0.25 + 0.45 * u).normalize();
+          const chord = (0.65 + 1.55 * Math.pow(u, 1.1)) * (0.25 + 0.75 * g);
+          for (let j = 0; j < NV2; j++) {
+            const v = j / (NV2 - 1);
+            const k = (i * NV2 + j) * 3;
+            pos2[k] = _p4.x + _d5.x * chord * v;
+            pos2[k + 1] = _p4.y + _d5.y * chord * v - 0.1 * v * v * chord;
+            pos2[k + 2] = _p4.z + _d5.z * chord * v;
+          }
         }
-        m.position.copy(_p4);
-        m.quaternion.setFromUnitVectors(_Y, _d5.normalize());
-        m.scale.set(wide * this.grow, len * (0.4 + 0.6 * this.grow), wide * this.grow);
-        mat.uniforms.uTime.value = t;
-        mat.uniforms.uGrow.value = this.grow;
+        w.m.geometry.attributes.position.needsUpdate = true;
+        w.mat.uniforms.uTime.value = t;
       }
+      _p4.set(-0.12 * d.Bk, d.chestLen * 0.15, 0).applyQuaternion(rig.qChest).add(rig.hip);
+      _o.set(-trail3.z, 0, trail3.x);
+      if (_o.lengthSq() < 1e-4) _o.set(0, 0, 1);
+      _o.normalize();
+      const pos = this.tail.geometry.attributes.position.array;
+      for (let i = 0; i < this.TU; i++) {
+        const u = i / (this.TU - 1), f = u * 2 - 1;
+        _d5.copy(trail3).addScaledVector(_Y, -0.35).addScaledVector(_o, f * 0.55).normalize();
+        const chord = (1 + 0.8 * (1 - f * f)) * (0.25 + 0.75 * g);
+        for (let j = 0; j < NV2; j++) {
+          const v = j / (NV2 - 1), k = (i * NV2 + j) * 3;
+          pos[k] = _p4.x + _o.x * f * 0.1 + _d5.x * chord * v;
+          pos[k + 1] = _p4.y + _d5.y * chord * v;
+          pos[k + 2] = _p4.z + _o.z * f * 0.1 + _d5.z * chord * v;
+        }
+      }
+      this.tail.geometry.attributes.position.needsUpdate = true;
+      this.tailMat.uniforms.uTime.value = t;
+    }
+    /**
+     * The wings as points of fire, in world space (after update(); the group's
+     * world matrix current): [x, y, z, u, v] each into `out` — u along the span
+     * (or across the tail's fan), v back along the feather, the tail's flagged
+     * by u ≥ 2. Drawn as the same blue fire as the fruit's techniques
+     * (vfx/projectiles.js phoenixFire), the sheets themselves left unseen.
+     */
+    fireOut(out) {
+      const M3 = this.group.matrixWorld;
+      let n = 0;
+      const take = (geo2, tail2) => {
+        const pos = geo2.attributes.position.array, uv = geo2.attributes.uv.array;
+        for (let k = 0; k < uv.length / 2 && n * 5 + 5 <= out.length; k++) {
+          _p4.fromArray(pos, k * 3).applyMatrix4(M3);
+          const o = n * 5;
+          out[o] = _p4.x;
+          out[o + 1] = _p4.y;
+          out[o + 2] = _p4.z;
+          out[o + 3] = uv[k * 2] + (tail2 ? 2 : 0);
+          out[o + 4] = uv[k * 2 + 1];
+          n++;
+        }
+      };
+      for (const w of this.wings) take(w.m.geometry, false);
+      take(this.tail.geometry, true);
+      return n;
     }
     dispose() {
-      for (const { mat } of this.tongues) mat.dispose();
+      for (const w of this.wings) {
+        w.mat.dispose();
+        w.m.geometry.dispose();
+      }
+      this.tailMat.dispose();
+      this.tail.geometry.dispose();
     }
   };
   function driftInto(parent, wx, wz, out) {
@@ -94424,6 +94810,21 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _fq2 = new Quaternion();
   var _fs1 = new Vector3();
   var _fs2 = new Vector3();
+  function bellHead(t, out) {
+    const e = (x) => 1 - (1 - x) * (1 - x);
+    if (t < 0.22 || t > 0.72) return null;
+    if (t < 0.37) {
+      const k2 = e((t - 0.22) / 0.15);
+      return out.set(1.7 * k2, 0.45 * k2 + Math.sin(t * 90) * 0.02 * k2, 0);
+    }
+    if (t < 0.45) {
+      const k2 = (t - 0.37) / 0.08, q3 = k2 * k2;
+      return out.set(1.7 - 2.55 * q3, 0.45 - 0.55 * q3, 0);
+    }
+    if (t < 0.52) return out.set(-0.85, -0.1, 0);
+    const k = (t - 0.52) / 0.2, q2 = 1 - k * k * (0.6 + 0.4 * k);
+    return out.set(-0.85 * q2, -0.1 * q2, 0);
+  }
   var FALLING = { ...LYING2, l: -0.32, ht: -0.4, hF: [0, -0.33], hB: [-0.08, -0.29], eF: 0.5, eB: 0.5, fF: [0.17, -0.07], fB: [0.03, -0.02], face: "hurt" };
   function lodFor(dist, cur) {
     const near = cur === 0 ? 10.5 : 7.5, mid = cur === 1 ? 22 : 25.5;
@@ -94563,6 +94964,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           o.reachL = R5[1];
           o.rubber = false;
         } else if (a.fruit === "gomu") this.stretchTarget(a, ctx, s, o, dtv);
+        o.headOff = a.fruit === "gomu" && a.action?.def?.id === "gomu_bell" ? bellHead(a.action.t, this._bellOff || (this._bellOff = new Vector3())) : null;
+        const bt = o.headOff || a.action?.def?.id === "gomu_bell" && a.action.t > 0.15 && a.action.t < 0.7 ? a.action?.target : null;
+        if (bt && bt.alive !== false && a.fruit === "gomu") {
+          const w = ctx.world, f = this.visF ?? a.facing ?? 0, c = Math.cos(f), sn = Math.sin(f);
+          const dx = w ? w.dx(a.x, bt.x) : bt.x - a.x, dy = bt.y - a.y;
+          const fx = (dx * c + dy * sn) / s, fz = (-dx * sn + dy * c) / s, y = m.rig.S[0].y - 0.1;
+          const R22 = this._bellHands || (this._bellHands = [new Vector3(), new Vector3()]);
+          R22[0].set(fx + 0.22, y, fz + 0.18);
+          R22[1].set(fx + 0.22, y, fz - 0.18);
+          o.reachR = R22[0];
+          o.reachL = R22[1];
+          o.reachRK = 1;
+          o.reachLK = 1;
+        }
         const knocked = pose.state === "knocked" || pose.state === "dead";
         let PP = P6;
         if (a.isPlayer && ctx.mode === "first" && P6.b && P6.b[0] < 0) PP = { ...P6, b: [P6.b[0] * 0.3, P6.b[1]] };
@@ -94885,6 +95300,14 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         _v24.x -= 0.8;
         _v24.y += 0.15;
         this.wings.update(t, wdt, rig, m.d, _v24.normalize(), phoenix);
+        if (this.wings.group.visible) {
+          this.wings.group.updateWorldMatrix(true, false);
+          const pf = a._phoenixFire || (a._phoenixFire = { arr: new Float32Array(320 * 5), n: 0 });
+          pf.n = this.wings.fireOut(pf.arr);
+          pf.grow = this.wings.grow;
+          pf.S = this.root.scale.x || 1;
+          pf.seen = 0;
+        }
       } else if (this.wings) this.wings.group.visible = false;
       let gi = 0;
       const ownFp = a.isPlayer && ctx.mode === "first";
@@ -94904,10 +95327,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const k = Math.min(1, ch.k);
         const hand = ch.at === "hB" ? rig.E[1] : rig.E[0];
         if (ch.kind === "sun") {
-          _v9.copy(hand).add(_v24.set(0, 0.5 + k * 1.4, 0));
-          glow3("#ff9100", 0.4 + k * 1.2, _v9);
+          const sR = 0.3 + 3 * k * k * (3 - 2 * k);
+          _v9.copy(hand).add(_v24.set(0, 0.25 + sR, 0));
+          glow3("#ff9100", 0.4 + k * 1.2, hand);
           m.group.localToWorld(_v24.copy(_v9));
-          a._sunCharge = { X: _v24.x, Y: _v24.y, Z: _v24.z, R: (0.25 + k * 1.55) * (this.root.scale.x || 1), at: performance.now() };
+          a._sunCharge = { X: _v24.x, Y: _v24.y, Z: _v24.z, R: sR * (this.root.scale.x || 1), seen: 0 };
+        } else if (ch.kind === "spears") {
+          m.group.localToWorld(_v24.copy(rig.neck));
+          const fa = a.facing ?? 0;
+          a._spearCharge = { X: _v24.x, Y: _v24.y, Z: _v24.z, dx: Math.cos(fa), dz: Math.sin(fa), k, S: this.root.scale.x || 1, n: ch.n || 5, color: ch.color, seen: 0 };
+          glow3(ch.color || "#e1f5fe", 0.15 + k * 0.3, hand);
+        } else if (ch.kind === "storm") {
+          m.group.localToWorld(_v24.copy(rig.headC));
+          a._stormCharge = { X: _v24.x, Y: _v24.y, Z: _v24.z, k, seen: 0 };
+          glow3(ch.color || "#fff176", 0.15 + k * 0.35, hand);
         } else if (ch.kind === "dark") glow3("#4a148c", 0.2 + k * 0.4, hand);
         else if (ch.kind === "oni") glow3("#b71c1c", 0.4 + k * 0.5, rig.headC);
         else glow3(ch.color || "#ffffff", 0.12 + (ch.size || 0.22) * k * 1.4 * (0.9 + 0.1 * Math.sin(t * 30)), hand);
@@ -98563,7 +98996,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     campfire: { h: 0.55, r: 6.5, col: [1, 0.58, 0.26], power: 1.1, fire: true }
   };
   var NLIGHTS = 8;
-  var MAX_POOLS = 160;
+  var MAX_POOLS = 700;
   var clamp018 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
   function poolTexture() {
     const S6 = 128, c = document.createElement("canvas");
@@ -98630,7 +99063,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       this.t -= dt;
       if (this.t <= 0) {
         this.t = 0.4;
-        this.near = w.objects.near(ox, oy, 110, (o) => !!KINDS3[o.kind]);
+        this.near = w.objects.near(ox, oy, 360, (o) => !!KINDS3[o.kind]);
       }
       const t = env2.time;
       const cands = [];
@@ -98668,7 +99101,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
             if (cd > 60 * 60) continue;
             const fl2 = 0.9 + 0.1 * Math.sin(t * 9 + i * 1.7) * Math.sin(t * 5.3 + i);
             const below = mesh !== sv.hull, kk = below ? Math.max(night, 0.55) : night;
-            cands.push({ d: cd, x: q2.x, y: q2.y, z: q2.z, k: kk * fl2 * (below ? 0.95 : 0.8), col: [1, 0.6, 0.32], range: below ? 11 : 8.5 });
+            cands.push({ d: cd, x: q2.x, y: q2.y, z: q2.z, k: kk * fl2 * (below ? 0.55 : 0.6), col: [1, 0.62, 0.36], range: below ? 11 : 8.5 });
           }
         }
       }
@@ -98678,7 +99111,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         const floor2 = v.terrain?.hf?.floorY ? v.terrain.hf.floorY(room2) : ctx.ground(p.x, p.y);
         const fd = room2.fd || 3;
         const c = bw(room2, 0, -fd / 2);
-        cands.push({ d: -1, x: w.dx(ox, c.x), y: floor2 + 2.1, z: c.y - oy, k: (0.35 + night * 0.65) * 0.5, col: [1, 0.8, 0.56], range: 6 });
+        cands.push({ d: -1, x: w.dx(ox, c.x), y: floor2 + 2.4, z: c.y - oy, k: (0.35 + night * 0.65) * 0.26, col: [1, 0.8, 0.56], range: 9 });
       }
       cands.sort((a, b) => a.d - b.d);
       const next2 = cands[NLIGHTS], dOut = next2 ? Math.sqrt(Math.max(0, next2.d)) : Infinity;
@@ -100238,7 +100671,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       this.mesh.visible = on;
     }
   };
-  var DUST2 = { n: 3200, box: 30, tall: 6, below: 2.2, fall: 0.6, near: 1.2 };
+  var DUST3 = { n: 3200, box: 30, tall: 6, below: 2.2, fall: 0.6, near: 1.2 };
   var Precipitation = class {
     constructor(scene) {
       this.shelter = new Shelter();
@@ -100246,7 +100679,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       const sq = [-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0];
       this.rain = fallMesh(RAIN2, RAIN_VS, RAIN_FS, quad2, this.shelter, { uLen: { value: 0.55 }, uWidth: { value: 0.011 } });
       this.snow = fallMesh(SNOW2, SNOW_VS, SNOW_FS, sq, this.shelter, { uSize: { value: 0.05 } });
-      this.dust = fallMesh(DUST2, RAIN_VS, RAIN_FS, quad2, this.shelter, { uLen: { value: 0.75 }, uWidth: { value: 9e-3 } });
+      this.dust = fallMesh(DUST3, RAIN_VS, RAIN_FS, quad2, this.shelter, { uLen: { value: 0.75 }, uWidth: { value: 9e-3 } });
       scene.add(this.rain, this.snow, this.dust);
       this.splash = new Splashes(scene);
       this.bolt = new Lightning(scene);
@@ -100296,7 +100729,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         const grey = ash > (env2.snow || 0) ? 1 : 0;
         set(this.snow, SNOW2, 0.2 + snow2 * 0.8, (1.1 + (env2.storm || 0) * 2.2) * (grey ? 0.6 : 1), grey ? [0.32, 0.3, 0.3] : [1, 1, 1], grey ? 0.75 : 0.9);
       }
-      if (this.dust.visible) set(this.dust, DUST2, dust2, 11, [0.86, 0.68, 0.45], 0.16 + dust2 * 0.26);
+      if (this.dust.visible) set(this.dust, DUST3, dust2, 11, [0.86, 0.68, 0.45], 0.16 + dust2 * 0.26);
     }
     /** Every weather's shaders shown for the warm-up compile (Renderer3D.warmUp), then put back. */
     warm(on) {
@@ -101658,11 +102091,18 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       if (!this.floors.size) return null;
       const list = this.floors.get(this.colKey(Math.floor(this.wx(x) / 4), Math.floor(y / 4)));
       if (!list) return null;
+      let steps = null, sd = Infinity;
       for (const f of list) {
         const dx = this.dx(f.x0, x);
-        if (dx >= 0 && dx <= f.x1 - f.x0 && y >= f.y0 && y <= f.y1) return f;
+        if (!(dx >= 0 && dx <= f.x1 - f.x0 && y >= f.y0 && y <= f.y1)) continue;
+        if (f.steps === void 0) return f;
+        const d = f.door ? Math.hypot(this.dx(f.door.x, x), y - f.door.y) : 0;
+        if (d < sd) {
+          sd = d;
+          steps = f;
+        }
       }
-      return null;
+      return steps;
     }
     /** Height of a raised floor under (x, y), or 0. */
     floorAt(x, y) {
@@ -109120,8 +109560,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       ],
       paint: [
         // the iron bridge to Green Bit (closed for 200 years because of the Fighting Fish),
-        // all the way across the channel to its gate on the island's south shore
-        { op: "path", points: [[0, -86], [0, -405]], width: 4, tile: T2.BRIDGE }
+        // a short way across the narrow channel to its gate on the island's south shore
+        { op: "path", points: [[0, -86], [0, -150]], width: 4, tile: T2.BRIDGE }
       ],
       towns: [
         {
@@ -109213,9 +109653,9 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Green Bit",
       sea: "new_world",
       x: 555,
-      y: 736,
-      w: 96,
-      h: 60,
+      y: 872,
+      w: 130,
+      h: 80,
       climate: "jungle",
       rough: 0.25,
       areas: [{ name: "Giant Plant Forest", tile: T2.JUNGLE, dx: -0.1, dy: -0.15, rx: 0.6, ry: 0.5 }],
@@ -113423,7 +113863,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     if (sc > MAX_SC * 1.5) return null;
     return [a[0], a[1], Math.max(26, Math.min(56, sc * 0.55))];
   }
-  var SMEAR = {
+  var SMEAR2 = {
     // straight strikes: a streak from the striking side toward the crosshair
     jab: "straight",
     cross: "straight",
@@ -113534,7 +113974,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     const melee = def.m1Chain || src.startsWith("style") || (def.steps || []).some((s) => s.hit && !s.proj);
     if (!melee) return;
     const clip2 = clipOfPlayer(p, act2);
-    const kind = SMEAR[clip2.name];
+    const kind = SMEAR2[clip2.name];
     if (!kind) return;
     const t = act2.t;
     const t0 = clip2.trailFrom, t1 = Math.max(t0 + 0.05, clip2.trailTo);
@@ -114003,6 +114443,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
           drag: o.drag ?? 3,
           grow: o.grow ?? 0,
           add: o.add,
+          hot: o.hot,
           rot: Math.random() * TAU,
           vr: (Math.random() - 0.5) * 12
         });
@@ -116564,7 +117005,10 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     }
     const order = [...(f.forms || []).map((F4) => F4.id), ...f.awakening ? ["awake"] : []].filter((id) => !formLock(p, id));
     if (!order.length) {
-      game.log(`No form of the ${f.name} to switch to yet: they open with mastery (Skills, K).`, "#ffab91");
+      const first = (f.forms || [])[0];
+      const why = first ? formLock(p, first.id) : null;
+      game.log(`No form of the ${f.name} to switch to yet${first ? ` \u2014 ${first.name}: ${why || "locked"}` : ""}. Forms open with fruit mastery (Tab \u2192 Skills).`, "#ffab91");
+      game.ui?.toast?.("No form yet", first ? `${first.name}: ${why || "locked"}` : "Forms open with mastery", "#ffab91");
       return false;
     }
     const cur = movesetKind(p) === "fruit" ? formBuff(p)?.form || null : null;
@@ -116941,6 +117385,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       } else if (buf.jump > 0 && p.tryJump(game, 0)) buf.jump = 0;
       if (p.climb?.to?.ladder || p.climb?.mast) {
         p.climbInput = (inp.isDown("W") || inp.isDown("ArrowUp") ? 1 : 0) - (inp.isDown("S") || inp.isDown("ArrowDown") ? 1 : 0);
+        p.climbStrafe = (inp.isDown("D") || inp.isDown("ArrowRight") ? 1 : 0) - (inp.isDown("A") || inp.isDown("ArrowLeft") ? 1 : 0);
         if (inp.wasPressed("Space")) p.letGo = true;
       } else {
         p.climbInput = 0;
@@ -121811,6 +122256,15 @@ button:disabled { cursor: not-allowed; }
               L3.noseShape = v;
               L3.nose = v === "long" ? "long" : v === "red" ? "red" : void 0;
             })) : null,
+            race !== "mink" && race !== "fishman" && !["long", "red"].includes(headParams(L3).nose) ? row("Nose tip", chips2(headParams(L3).tip, NOSE_TIPS, ["Straight", "Downturned", "Upturned"], (v) => {
+              L3.noseTip = v;
+            })) : null,
+            row("Eyebrows", chips2(L3.browHeight || "mid", ["low", "mid", "high"], ["Low-set", "Middle", "High-set"], (v) => {
+              L3.browHeight = v;
+            })),
+            row("Brow shape", chips2(L3.browShape || "natural", ["natural", "arched", "straight", "thick", "thin"], ["Natural", "Arched", "Straight", "Thick", "Thin"], (v) => {
+              L3.browShape = v;
+            })),
             row("Cheekbones", chips2(L3.cheek ?? 0.5, [0, 0.5, 1], ["Soft", "Defined", "High"], (v) => {
               L3.cheek = v;
             })),
@@ -122578,6 +123032,30 @@ button:disabled { cursor: not-allowed; }
     const face = Math.atan2(P6.y + 0.5 - y, P6.x + 0.5 - x);
     return { x, y, face };
   }
+  function openOutside(game, spawner, b, ox, rng4) {
+    const w = game.world, dx0 = doorLocalX(b);
+    const xs = ox !== void 0 ? [dx0 + ox] : [dx0 + 1.6, dx0 - 1.6, dx0 + 2.4, dx0 - 2.4, dx0 + 1.2, dx0 - 1.2];
+    let best = null, bs = -Infinity;
+    for (const x02 of xs) for (const z of [1.6, 2.4, 3.2]) {
+      const q3 = bw(b, x02, z);
+      if (!spawner.freeSpot(q3.x, q3.y)) continue;
+      let open = 0;
+      for (let k = 0; k < 12; k++) {
+        const a = k / 12 * Math.PI * 2;
+        for (const r5 of [1.2, 2.2]) if (w.walkable(q3.x + Math.cos(a) * r5, q3.y + Math.sin(a) * r5) && !w.isBlocked(q3.x + Math.cos(a) * r5, q3.y + Math.sin(a) * r5)) open++;
+      }
+      const things = w.objects?.near ? w.objects.near(q3.x, q3.y, 1.6, (o) => o.block !== false && o.kind !== "building").length : 0;
+      const score = open - things * 5 - Math.abs(x02 - dx0) * 0.6 - (z - 1.6) * 0.8;
+      if (score > bs) {
+        bs = score;
+        best = { x: q3.x, y: q3.y, face: outFrom(b, x02) };
+      }
+    }
+    if (best) return best;
+    const x0 = dx0 + (ox ?? 1.6), q2 = bw(b, x0, 1.6), r4 = clear2(spawner, q2.x, q2.y, rng4);
+    if (r4) r4.face = outFrom(b, x0);
+    return r4;
+  }
   function outFrom(b, x0) {
     const a = bw(b, x0, 0.5), c = bw(b, x0, 2.5);
     return Math.atan2(c.y - a.y, c.x - a.x);
@@ -122617,9 +123095,8 @@ button:disabled { cursor: not-allowed; }
       if (pl.door) {
         const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
         if (b) {
-          const x0 = doorLocalX(b) + (pl.ox ?? 1.6), q2 = bw(b, x0, 1.6), r4 = clear2(spawner, q2.x, q2.y, rng4);
-          if (r4) r4.face = outFrom(b, x0);
-          return r4;
+          const r4 = openOutside(game, spawner, b, pl.ox, rng4);
+          if (r4) return r4;
         }
       }
       if (pl.building) {
@@ -125149,7 +125626,7 @@ button:disabled { cursor: not-allowed; }
           fleetInfo(game)
         )));
       } else if (!c.crewName) {
-        if (!found.name) found.name = `${c.name.split(" ")[0]} Pirates`;
+        if (!found.name) found.name = `${c.given || c.name.split(" ").filter((w) => w !== "D.").pop()} Pirates`;
         const input = h("input.name", { value: found.name, maxLength: 28, spellcheck: false, on: { input: (e) => {
           found.name = e.target.value;
         } } });
@@ -125958,7 +126435,6 @@ ${s.why[0].toUpperCase() + s.why.slice(1)}` : ""}`;
     if (d.type === "food") {
       const n = nourishment(d);
       if (n.food >= 0.01) parts.push(`Hunger +${Math.round(n.food * 100)}%`);
-      if (n.water >= 0.01) parts.push(`Thirst +${Math.round(n.water * 100)}%`);
     } else if (d.heal) parts.push(d.heal > 9999 ? "Full health" : `+${d.heal} health${d.apply === "wrap" ? ` (${d.useTime || 3.5}s to apply)` : ""}`);
     if (d.buff) parts.push(`${d.buff.name} for ${d.buff.dur}s`);
     return parts.join(" \xB7 ");
@@ -126515,6 +126991,8 @@ Trains by: ${TRAINS_BY[k]}` },
       h("div.key-grid", Array.from({ length: SKILL_SLOTS }, (_, i) => slot2("skills", i, `Skill ${i + 1}`, ms?.skills[i] ? `\xB7 ${ms.skills[i].def.name}` : ""))),
       h("h4.grp", "Haki keys"),
       h("div.key-grid", Array.from({ length: HAKI_SLOTS }, (_, i) => slot2("haki", i, `Haki ${i + 1}`, hg?.rows.find((r4) => r4.slot === i) ? `\xB7 ${hg.rows.find((r4) => r4.slot === i).def.name}` : i === 0 ? "\xB7 a king's Conqueror's" : ""))),
+      h("h4.grp", "Form key"),
+      h("div.key-grid", slot2("form", 0, "Switch form", "\xB7 Gears, Monster Point, awakening\u2026 (the fruit's forms in turn, then back)")),
       h("div.set-row", h("button.btn", { on: { click: () => {
         resetKeys(s);
         game.applySettings(true);
@@ -126729,7 +127207,7 @@ Trains by: ${TRAINS_BY[k]}` },
         slider2("Music", "music"),
         slider2("Screen shake", "shake"),
         check("Show tutorial hints", "showHints"),
-        check("Survival needs: hunger, thirst and body temperature", "survival"),
+        check("Survival needs: hunger and body temperature", "survival"),
         controlsSection(game, render2),
         h("p.muted", "Press P in game (or scroll all the way in or out) to switch between first and third person. Settings are saved in this browser.")
       );
@@ -127313,7 +127791,6 @@ Trains by: ${TRAINS_BY[k]}` },
       E.needs = h(
         "div.needs",
         h("div.need", ns('<path d="M10.5 2.2a3.6 3.6 0 0 1 1.3 5.7L8.6 11l.9.9a1.3 1.3 0 1 1-1.6 1.9 1.3 1.3 0 1 1-1.9-1.6l.9.9 3.1-3.2a3.6 3.6 0 0 1 .5-7.7z" fill="#e9a35b"/>'), E.food.el),
-        h("div.need", ns('<path d="M8 1.5C6 5 3.8 7.4 3.8 10a4.2 4.2 0 0 0 8.4 0C12.2 7.4 10 5 8 1.5z" fill="#4fc3f7"/>'), E.water.el),
         h("div.need", ns('<path d="M6.6 2.5a1.4 1.4 0 0 1 2.8 0v6.2a3 3 0 1 1-2.8 0z" fill="none" stroke="#f5e6c4" stroke-width="1.2"/><circle cx="8" cy="11.3" r="1.7" fill="#ff7043"/>'), E.heat.el)
       );
       E.lives = h("div.lives");
@@ -163367,9 +163844,10 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         choices: [
           ...offers.map((o) => ({ text: o.ch.v[o.path].accept || `I'll take the road of the ${PATHS[o.path].name}.`, if: () => !roadClosed(c, o.path), next: "mq_ok_" + o.path })),
           ...offers.map((o) => ({ text: () => `(The road of the ${PATHS[o.path].name} is closed to you: ${roadClosed(c, o.path)})`, if: () => !!roadClosed(c, o.path), next: pitchEnd })),
-          { text: "Are there other roads?", if: () => others.length > 0, next: "mq_o" },
-          ...extraChoices(v.contact, "mq_p0"),
-          { text: "I'll sail my own way \u2014 no road for me. (No main story)", if: () => !c.freeSail, next: "mq_free" },
+          // (only taking the road is marked as the quest: the rest is talk)
+          { text: "Are there other roads?", if: () => others.length > 0, next: "mq_o", quest: false },
+          ...extraChoices(v.contact, "mq_p0").map((x) => ({ ...x, quest: false })),
+          { text: "I'll sail my own way \u2014 no road for me. (No main story)", if: () => !c.freeSail, next: "mq_free", quest: false },
           { text: "Not yet.", end: true }
         ]
       }));
@@ -164573,10 +165051,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     v.noise(t, dur * s, { color: "brown", type: "lowpass", freq: lp, sweep: lp * 0.45, gain: 0.4 * s, attack: 0.02 });
     for (let i = 0; i < 2 + Math.round(s * 2); i++) v.noise(t + rnd3(0.06, dur * 0.65) * s, rnd3(0.3, 0.7) * dur * s, { color: "brown", type: "lowpass", freq: lp * rnd3(0.7, 1.2), gain: rnd3(0.14, 0.3) * s, attack: rnd3(0.04, 0.16), curve: "lin" });
   }
-  function glassCrack(v, t, s = 1) {
-    v.noise(t, 0.018, { type: "highpass", freq: 4e3, gain: 0.45 * s, attack: 6e-4 });
-    v.crackle(t, 0.12 * s, Math.round(14 * s), { freq: 5200, spread: 0.9, q: 3, gain: 0.1 });
-    for (let i = 0; i < 2; i++) v.ring(t + rnd3(5e-3, 0.06), rnd3(2700, 3500), 0.3 * s, 0.022, [1, 1.62, 2.3]);
+  function shatter(v, t, s = 1) {
+    v.noise(t, 0.012, { type: "highpass", freq: 2500, gain: 0.95 * s, attack: 4e-4 });
+    v.noise(t, 0.06, { freq: 1800, q: 0.7, gain: 0.55 * s, attack: 8e-4 });
+    for (let i = 0; i < 4; i++) v.ring(t + rnd3(0, 0.03), rnd3(1900, 3600), 0.42 * s, rnd3(0.05, 0.12), [1, 1.53, 2.27, 3.1], { spread: 6e-3 });
+    v.crackle(t + 5e-3, 0.3 * s, Math.round(30 * s), { freq: 4800, spread: 1.2, q: 2.5, gain: 0.16 * s, len: 8e-3 });
+    v.crackle(t + 0.12, 0.7 * s, Math.round(18 * s), { freq: 6500, spread: 0.8, q: 5, gain: 0.06 * s, len: 0.012 });
   }
   function boom(v, t, s = 1, { f0 = 90, f1 = 26, dur = 0.7 } = {}) {
     v.thump(t, { f0, f1, dur: dur * s, gain: 0.8 * Math.min(1.2, s) });
@@ -165326,7 +165806,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       side: 1,
       hold: 0.4,
       play(v) {
-        glassCrack(v, 0, 1);
+        shatter(v, 0, 0.8);
         v.noise(4e-3, 0.09, { freq: 520, q: 0.8, gain: 0.5, attack: 2e-3 });
         v.crackle(6e-3, 0.25, 14, { freq: 900, spread: 1, q: 1.5, gain: 0.18, len: 0.02 });
         boom(v, 0.01, 1, { f0: 100, f1: 30, dur: 0.75 });
@@ -166382,6 +166862,19 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     world: ["thunder", "hull_creak", "rigging", "hull_slap", "bell", "seaking"]
   };
   for (const [kind, names] of Object.entries(KINDS5)) for (const n of names) if (SFX2[n]) SFX2[n].kind = kind;
+  var GURA = (v, k, s = 1) => {
+    const r4 = Math.max(0.12, k.rel || 0);
+    v.tone(0, r4 + 0.05, { freq: 38, to: 46, gain: 0.32 * s, attack: r4 * 0.9, curve: "lin", vib: { rate: 14, depth: 6 } });
+    v.noise(0, r4, { color: "brown", type: "lowpass", freq: 220, gain: 0.3 * s, attack: r4 * 0.85, curve: "lin" });
+    v.crackle(Math.max(0, r4 - 0.2), 0.2, 6, { freq: 6e3, gain: 0.04, q: 4 });
+    shatter(v, r4, 1.3 * s);
+    v.noise(r4, 0.05, { freq: 700, q: 0.6, gain: 0.7 * s, attack: 6e-4 });
+    boom(v, r4, 1.6 * s, { f0: 120, f1: 22, dur: 1.1 });
+    v.thump(r4 + 0.09, { f0: 70, f1: 28, dur: 0.6, gain: 0.55 * s });
+    v.tone(r4 + 0.03, 1.6 * s, { freq: 48, to: 30, gain: 0.38 * s, vib: { rate: 11, depth: 8 } });
+    rumble(v, r4 + 0.08, 1.2 * s, 1.8, { lp: 210 });
+    v.crackle(r4 + 0.2, 1.2 * s, 16, { freq: 1100, gain: 0.08 * s });
+  };
   var STRETCH = (v, k, s = 1) => {
     stretch2(v, 0, Math.max(0.12, k.rel), s);
     snap(v, k.rel, s);
@@ -166439,15 +166932,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     },
     gura: {
       gura_tsunami: (v, k) => {
-        v.noise(0, Math.max(0.4, k.rel), { color: "brown", type: "lowpass", freq: 160, gain: 0.35, attack: Math.max(0.3, k.rel) * 0.8, curve: "lin" });
-        glassCrack(v, k.rel, 1.4);
-        boom(v, k.rel, 1.4);
+        GURA(v, k, 1.5);
+        rumble(v, k.rel + 0.3, 1.4, 2.4, { lp: 180 });
       },
-      default: (v, k) => {
-        v.noise(0, Math.max(0.15, k.rel), { color: "brown", type: "lowpass", freq: 200, gain: 0.25, attack: Math.max(0.1, k.rel) * 0.8, curve: "lin" });
-        v.crackle(Math.max(0, k.rel - 0.15), 0.15, 4, { freq: 6e3, gain: 0.03, q: 4 });
-        glassCrack(v, k.rel, 1);
-      }
+      // the air trembling as the fist draws back, then the sky cracking open: the shatter, the
+      // sub-boom you feel in your chest, and the ground rolling on under it
+      default: (v, k) => GURA(v, k, 1)
     },
     ope: {
       ope_room: (v) => {
@@ -168959,6 +169449,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
 
   // src/game/masthead.js
   var CLIMB_SPEED = 1.7;
+  var _pt = [0, 0, 0];
   function mastLadder(ship) {
     const d = shipDims(ship.def), nest = mastNest(d);
     if (!nest) return null;
@@ -169021,26 +169512,62 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       return;
     }
     const inp = p.climbInput || 0;
+    const n = c.L.nest, time = game.env?.time || 0;
+    if (c.top) {
+      const cs = Math.cos(s.heading), sn = Math.sin(s.heading);
+      const yaw = game.view3d?.rig?.yaw ?? s.heading, fw = inp, st = p.climbStrafe || 0;
+      const wx = Math.cos(yaw) * fw - Math.sin(yaw) * st, wy = Math.sin(yaw) * fw + Math.cos(yaw) * st;
+      let du = wx * cs + wy * sn, dv = -wx * sn + wy * cs;
+      c.nu = c.nu ?? 0;
+      c.nv = c.nv ?? 0;
+      c.nu += du * 1.6 * dt;
+      c.nv += dv * 1.6 * dt;
+      const R5 = n.r - 0.3, rr = Math.hypot(c.nu, c.nv);
+      if (rr > R5) {
+        c.nu *= R5 / rr;
+        c.nv *= R5 / rr;
+      }
+      const mu = n.mu - (n.u - 0.15), mr = n.mr * 0.8 + 0.3, md = Math.hypot(c.nu - mu, c.nv);
+      if (md < mr) {
+        const k = mr / Math.max(md, 1e-3);
+        c.nu = mu + (c.nu - mu) * k;
+        c.nv *= k;
+      }
+      if (fw || st) p.facing = Math.atan2(wy, wx);
+      const atHead = Math.hypot(c.nu, c.nv) < 0.6;
+      if (inp < 0 && atHead) {
+        c.top = false;
+        c.k = 0.999;
+        c.nu = c.nv = 0;
+      } else {
+        const P7 = shipPoint(s, time, n.u - 0.15 + c.nu, c.nv, n.y + 0.06, _pt);
+        p.x = game.world.wx(s.x + P7[0]);
+        p.y = s.y + P7[2];
+        p.z = P7[1] - p.groundAt(game, p.x, p.y);
+        p.airT = 0.1;
+        p.moving = !!(fw || st);
+        return;
+      }
+    }
     c.k = Math.max(0, Math.min(1, c.k + inp * CLIMB_SPEED * dt / c.H));
     if (c.k <= 0 && inp < 0) {
       p.climb = null;
       placeOnDeck(game, p, s, c.L.t, 0);
       return;
     }
-    const n = c.L.nest, time = game.env?.time || 0;
     const into = Math.max(0, (c.k - 0.94) / 0.06);
     const u = c.L.u - 0.32 + (n.u - 0.15 - (c.L.u - 0.32)) * into;
     const hh = n.base + c.H * Math.min(1, c.k / 0.94) + Math.sin(Math.PI * into) * 0.25;
-    const cs = Math.cos(s.heading), sn = Math.sin(s.heading);
-    p.x = game.world.wx(s.x + u * cs);
-    p.y = s.y + u * sn;
-    p.z = shipLift(s, time, u, 0, hh) - p.groundAt(game, p.x, p.y);
+    const P6 = shipPoint(s, time, u, 0, hh, _pt);
+    p.x = game.world.wx(s.x + P6[0]);
+    p.y = s.y + P6[2];
+    p.z = P6[1] - p.groundAt(game, p.x, p.y);
     if (c.k < 0.94) p.facing = s.heading;
     p.airT = 0.1;
     c.top = c.k >= 1;
     if (c.top && !c.saidTop && p.isPlayer) {
       c.saidTop = true;
-      game.hint?.("nest", "In the crow's nest: look out over the sea. S climbs back down.");
+      game.hint?.("nest", "In the crow's nest: walk about with W A S D and look out over the sea. Back at the ladder, S climbs down.");
     }
   }
 
@@ -170688,7 +171215,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     "Enemies hunt you by sight. Break the line of sight and they will lose you.",
     "Every life that ends passes its Will on to the next generation.",
     "Bandages and medical kits are wrapped on over a few seconds: get clear of the fight first.",
-    "Hungry or thirsty, you heal slowly. Eat, drink \u2014 or crouch at a stream to drink your fill.",
+    "Hungry, you heal slowly. Eat to keep your strength up.",
     "An island with a Devil Fruit on it calls to you: follow the sound, then the shine.",
     "On a big ship, climb the mainmast ladder to the crow's nest to look out over the sea."
   ];
