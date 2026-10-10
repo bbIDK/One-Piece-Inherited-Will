@@ -455,11 +455,27 @@ function draw(v, pr, r, Y, sc) {
       }
       break;
     }
-    case 'poison':
-    case 'hydra': {
+    case 'poison': {
       const pc = col('#7b1fa2');
-      v.shells.put(VK.GOO, X, Y, Z, (pr.sprite === 'hydra' ? 0.32 : 0.36) * s, dx, 0, dz, 1.3, pc, 1, col('#2a0a36'), 0, 0, seed);
+      v.shells.put(VK.GOO, X, Y, Z, 0.36 * s, dx, 0, dz, 1.3, pc, 1, col('#2a0a36'), 0, 0, seed);
       trail(v, r, RK.TUBE, col('#6a1b9a'), 0.9, col('#2a0a36'), 0, 0.15 * s, 0.3, 10);
+      break;
+    }
+    case 'hydra': {
+      // Hydra, as Magellan looses it: a dragon of venom — a long thick
+      // body of purple goo snaking after a horned head, jaws gaping, venom
+      // dripping from them
+      const pc = col('#7b1fa2'), dk = col('#2a0a36'), R = 0.3 * s, nx = -dz, nz = dx;
+      const sway = Math.sin(t * 7 + seed) * 0.08 * s;
+      const hx = X + nx * sway, hz = Z + nz * sway;
+      v.shells.put(VK.GOO, hx, Y, hz, R, dx, 0.12, dz, 1.9, pc, 1, dk, 0, 0, seed);
+      // the jaws: upper and lower, parted
+      v.shells.put(VK.GOO, hx + dx * R * 1.3, Y + R * 0.35, hz + dz * R * 1.3, R * 0.55, dx, 0.35, dz, 1.9, pc, 1, dk, 0, 0, seed + 1);
+      v.shells.put(VK.GOO, hx + dx * R * 1.2, Y - R * 0.35, hz + dz * R * 1.2, R * 0.45, dx, -0.4, dz, 1.8, pc, 1, dk, 0, 0, seed + 2);
+      // horns swept back
+      for (const sd of [1, -1]) putAlong(v.solids.shards, hx - dx * R * 0.4 + nx * sd * R * 0.45, Y + R * 0.7, hz - dz * R * 0.4 + nz * sd * R * 0.45, -dx, 0.6, -dz, R * 1.1, R * 0.18, 0, col('#4a148c'), OK.PLAIN, 0, seed + sd, 0);
+      v.sprites.put(SK.DROP, hx + dx * R * 1.4, Y - R * 0.6 - ((t * 2 + h01(seed)) % 1) * 0.5, hz + dz * R * 1.4, 0.09 * s, col('#ab47bc'), 0.9, pc, 0, 0, seed, 0);
+      trail(v, r, RK.TUBE, col('#6a1b9a'), 0.95, dk, 0, R * 0.8, 0.45, 18);
       break;
     }
     case 'mochi': {
@@ -558,6 +574,7 @@ function sun(v, r, X, Y, Z, R, dx, dz, fc, seed, t) {
   v.sprites.put(SK.GLOW, X, Y, Z, R * 1.7, fc, 0.28, SUN_CORE, 1, 0, seed, 0);
   trail(v, r, RK.FIRE, fc, 1, HOT, 0.6, R * 0.9, 0.2, 16);
 }
+const h01 = (n) => hash(n * 1.7) ;
 const SUN_CORE = col('#ffd04a'), SUN_FC = col('#ff7a1a'), STORM_C = col('#37474f');
 const PHX_RIM = col('#1673c9'), PHX_MID = col('#2fc8ee'), PHX_HOT = col('#7fe8fb'), PHX_CORE = col('#d9fbff'), PHX_GOLD = col('#ffb300'), PHX_GOLD_HOT = col('#fff3a0');
 

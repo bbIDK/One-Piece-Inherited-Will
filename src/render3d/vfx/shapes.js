@@ -427,8 +427,11 @@ SHAPES.beam = {
     } else if (style === 'sand' || style === 'mochi') {
       v.tubes.put(TK.FUNNEL, bx, by, bz, D[0], D[1], D[2], BL, wd * 0.45, wd * 0.6, c, fade, col(style === 'sand' ? '#fff3c4' : '#ffffff'), 0, k, s.seed);
     } else {
-      v.tubes.put(TK.BEAM, bx, by, bz, D[0], D[1], D[2], BL, wd * 0.62, wd * 0.72, c, fade * 0.8, c2, 0.6, k, s.seed);
-      v.tubes.put(TK.BEAM, bx, by, bz, D[0], D[1], D[2], BL, wd * 0.2, wd * 0.24, c2, fade, c2, 0.9, k, s.seed + 5);
+      // (a quake is a shockwave through the air, not a ray of light: only a
+      // faint wash along it, the cracking rings carry it)
+      const qk = style === 'quake' ? 0.25 : 1;
+      v.tubes.put(TK.BEAM, bx, by, bz, D[0], D[1], D[2], BL, wd * 0.62, wd * 0.72, c, fade * 0.8 * qk, c2, 0.6, k, s.seed);
+      if (qk === 1) v.tubes.put(TK.BEAM, bx, by, bz, D[0], D[1], D[2], BL, wd * 0.2, wd * 0.24, c2, fade, c2, 0.9, k, s.seed + 5);
       if (style === 'quake') {
         perp(D, A, B);
         const n = Math.max(3, Math.round(L3 / 1.2));
@@ -996,13 +999,18 @@ SHAPES.crack = {
       // jagged: each fissure zig-zags out in short kinks, some fork
       const d = [];
       const jag = (x0, y0, ang, len, segs, sd) => {
-        const line = [x0, y0, v.ground(x0, y0)];
+        const h0 = v.ground(x0, y0), line = [x0, y0, h0];
         let px = x0, py = y0;
         for (let j = 1; j <= segs; j++) {
           const a2 = ang + (hash(sd + j * 13) - 0.5) * 1.1;
           const st = (len / segs) * (0.7 + 0.6 * hash(sd + j * 7));
           px += Math.cos(a2) * st; py += Math.sin(a2) * st;
-          line.push(px, py, v.ground(px, py));
+          // (a fissure runs along the ground: it stops at a drop or a bank,
+          // rather than climbing the face of it — off over the sea or up a cliff
+          // it stood as a long black line up into the sky)
+          const h = v.ground(px, py);
+          if (!(Math.abs(h - h0) < 1.5)) break;
+          line.push(px, py, h);
         }
         return line;
       };
@@ -1011,8 +1019,8 @@ SHAPES.crack = {
         const len = s.r * (0.65 + 0.55 * hash(s.seed * 3 + i));
         const line = jag(s.x, s.y, ang, len, 7, s.seed + i * 31);
         d.push(line);
-        if (hash(s.seed + i * 5) > 0.4) {
-          const j = 3 + Math.floor(hash(s.seed + i * 17) * 3);
+        const j = 3 + Math.floor(hash(s.seed + i * 17) * 3);
+        if (hash(s.seed + i * 5) > 0.4 && line.length / 3 > j) {
           const b = ang + (hash(s.seed + i * 9) > 0.5 ? 0.75 : -0.75);
           d.push(jag(line[j * 3], line[j * 3 + 1], b, len * 0.38, 3, s.seed + i * 47));
         }
@@ -1024,6 +1032,7 @@ SHAPES.crack = {
     const hw0 = Math.min(0.16, 0.05 + s.r * 0.04);
     for (let i = 0; i < r.data.length; i++) {
       const L = r.data[i], m = L.length / 3;
+      if (m < 2) continue;
       const branch = i > 0 && r.data[i - 1].length > L.length + 6;
       v.ribbons.start(RK.CRACK, RM.FLAT, dark, alpha * 0.95, lip, 0);
       for (let j = 0; j < m; j++) {
