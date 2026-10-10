@@ -16,7 +16,7 @@ import { itemImg, skillImg } from './icon.js';
 import { getAbility } from '../game/abilities.js';
 import { STYLES } from '../data/styles.js';
 import { FRUITS } from '../data/fruits.js';
-import { movesetOf, hakiGroupOf, movesetKind, formBuff } from '../game/moveset.js';
+import { movesetOf, hakiGroupOf, movesetKind, formBuff, fruitFormsOf } from '../game/moveset.js';
 import { formLock } from '../game/entries.js';
 import { keysOf, keyLabel, SKILL_SLOTS } from '../game/keys.js';
 import { ENTRY, formOfEntry, HOTBAR_KEYS } from '../game/hotbar.js';
@@ -96,7 +96,7 @@ export function drawSkillsHud(ui, game, p) {
   const free = !game.view3d?.active || !game.view3d.rig.locked;
   const capture = ui.capturing ? `${ui.capturing.group}${ui.capturing.slot}` : '';
   const key = JSON.stringify([ms.kind, ms.title, ms.sub, ms.color, all.map((s) => [s.id, s.locked, s.why, K.skills[s.i], Math.ceil(cd(s.id) * 2)]), m1Name, heavyName, Math.ceil(heavyCd * 2),
-    ms.forms.map((F) => [F.id, F.open, F.on, hotKey(p, F.entry)]), ms.next, fb ? [fb.form, Math.ceil(fb.t)] : null, hotKey(p, ENTRY.fruit), free, capture,
+    (ms.forms.length ? ms.forms : fruitFormsOf(p)).map((F) => [F.id, F.open, F.on, hotKey(p, F.entry)]), ms.next, fb ? [fb.form, Math.ceil(fb.t)] : null, hotKey(p, ENTRY.fruit), free, capture,
     hg && [hg.title, hg.rows.map((r) => [r.id, r.slot, r.locked, K.haki[r.slot], Math.ceil(cd(r.id) * 2)]), Math.floor(p.hakiLevel(hg.active || 'conqueror'))]]);
   E.skills.classList.remove('hidden');
   if (key === ui.cache.skills) {
@@ -139,10 +139,12 @@ export function drawSkillsHud(ui, game, p) {
     if (more > 0) box.appendChild(h('div.sp-more', `+${more} more to learn — Skills (Tab)`));
     if (!shown.length) box.appendChild(h('div.sp-more', ms.kind === 'weapon' ? 'No techniques for it yet: a trainer teaches them.' : 'No techniques yet: trainers teach them, a Devil Fruit gives them.'));
     box.appendChild(h('div.sp-mouse', h('span', h('kbd', 'LMB'), ' ', m1Name), h('span' + (heavyCd > 0 ? '.cd' : ''), h('kbd', 'RMB'), ' ', heavyName, heavyCd > 0 ? h('i', ' ' + fmt(heavyCd)) : null)));
-    if (ms.forms.length) {
-      // (the form key — Z — goes through them in turn; one on the hotbar has its own key too)
+    // (the fruit's forms and the key that switches them — B — shown whatever
+    // is out: from fists or a sword, the key takes the fruit out in its first form)
+    const forms = ms.forms.length ? ms.forms : fruitFormsOf(p);
+    if (forms.length) {
       const fk = keyLabel(K.form[0]);
-      box.appendChild(h('div.sp-forms', K.form[0] ? h('b.sp-fk', { title: `${fk}: the next form (and back to the base set)` }, fk) : null, ms.forms.map((F) => {
+      box.appendChild(h('div.sp-forms', K.form[0] ? h('b.sp-fk', { title: `${fk}: the next form (and back to the base set)` }, fk) : null, forms.map((F) => {
         const k = hotKey(p, F.entry);
         return h('span.sp-chip' + (F.on ? '.on' : '') + (F.open ? '' : '.locked') + (F.awakening ? '.aw' : ''), { title: F.open ? `${F.name}: ${fk} goes through the forms${k ? `, ${k} switches this one` : ''}` : `${F.name}: ${F.why}` },
           k && F.open ? h('b', k) : null, F.short);

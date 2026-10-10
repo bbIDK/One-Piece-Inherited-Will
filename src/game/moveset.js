@@ -88,17 +88,7 @@ export function movesetOf(p) {
     out.m1 = { source: 'fruit:' + p.fruit, fruit: p.fruit, ...(f.m1 || {}), ...(form?.m1 || {}) };
     out.heavy = form ? form.heavy || null : f.heavy || null;
     // the forms (on the hotbar once open), and the awakening
-    for (const F of f.forms || []) {
-      const lack = F.needs && !(p.hakiLevel?.(F.needs) > 0);
-      const why = m < F.mastery ? `fruit mastery ${F.mastery}${F.needs ? ` · ${hakiKnown(p) ? hakiName(F.needs) + ' Haki' : 'and a power yet to awaken'}` : ''}` : lack ? `needs ${hakiKnown(p) ? hakiName(F.needs) + ' Haki' : 'a power yet to awaken'}` : '';
-      out.forms.push({ id: F.id, name: F.name, short: F.short || F.name, entry: ENTRY.form(F.id), open: m >= F.mastery, why, on: fb?.form === F.id, activate: F.activate });
-    }
-    const aw = f.awakening;
-    if (aw) {
-      const ready = !!c.fruitAwakened;
-      out.forms.push({ id: 'awake', name: aw.name, short: aw.short || aw.name, entry: ENTRY.awake, open: ready, awakening: true, on: fb?.form === 'awake', activate: aw.activate,
-        why: ready ? '' : m < AWAKEN_MASTERY ? `awakening: fruit mastery ${AWAKEN_MASTERY}, then a moment in battle` : 'awakening: ready — a hard fight will bring it out' });
-    }
+    out.forms = fruitFormsOf(p);
     out.next = out.forms.filter((F) => !F.open).slice(0, 1).map((F) => ({ name: F.name, why: F.why }));
     return out;
   }
@@ -229,4 +219,28 @@ export function skillHome(id, settings) {
   const key = K.skills[i];
   const when = st.weapon ? `with your ${st.weapon === 'sword' ? 'sword' : st.weapon} drawn` : 'with your fists up';
   return `${key ? `on ${keyLabel(key)}` : `skill ${i + 1}, with no key yet (Settings, Controls)`} ${when}`;
+}
+
+/**
+ * The fruit's forms (its Gears, Monster Point, the awakening) as the form key
+ * goes through them — whatever is out just now: { id, name, short, entry,
+ * open, why (what opens it), on, awakening, activate }. Empty with no fruit.
+ */
+export function fruitFormsOf(p) {
+  const f = FRUITS[p?.fruit];
+  if (!f) return [];
+  const c = p.char || {}, fb = formBuff(p), m = p.fruitMastery || 0;
+  const out = [];
+  for (const F of f.forms || []) {
+    const lack = F.needs && !(p.hakiLevel?.(F.needs) > 0);
+    const why = m < F.mastery ? `fruit mastery ${F.mastery} (now ${Math.floor(m)})${F.needs ? ` · ${hakiKnown(p) ? hakiName(F.needs) + ' Haki' : 'and a power yet to awaken'}` : ''}` : lack ? `needs ${hakiKnown(p) ? hakiName(F.needs) + ' Haki' : 'a power yet to awaken'}` : '';
+    out.push({ id: F.id, name: F.name, short: F.short || F.name, entry: ENTRY.form(F.id), open: m >= F.mastery, why, on: fb?.form === F.id, activate: F.activate });
+  }
+  const aw = f.awakening;
+  if (aw) {
+    const ready = !!c.fruitAwakened;
+    out.push({ id: 'awake', name: aw.name, short: aw.short || aw.name, entry: ENTRY.awake, open: ready, awakening: true, on: fb?.form === 'awake', activate: aw.activate,
+      why: ready ? '' : m < AWAKEN_MASTERY ? `awakening: fruit mastery ${AWAKEN_MASTERY} (now ${Math.floor(m)}), then a moment in battle` : 'awakening: ready — a hard fight will bring it out' });
+  }
+  return out;
 }

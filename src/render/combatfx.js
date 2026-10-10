@@ -1889,8 +1889,8 @@ export function conquerorFx(fx, actor, c) {
  * Haki switched on. Armament: a black ring snapping round the fists, black
  * flecks flying up the arms as the coat spreads (the coat itself is the
  * body's: render3d/chars/haki.js), and a glint in its sheen at the fist as
- * it sets hard. Observation: a sonar pulse — a thin ring of its tint racing
- * out over the ground as far as it senses, its echo, a glint at the eyes.
+ * it sets hard. Observation: the sense swelling out through the air as far
+ * as it reaches (a clear sphere of its tint, its echo), a glint at the eyes.
  */
 export function hakiOnFx(fx, a, type) {
   const sig = sigOf(a), s = (a.look && a.look.scale) || 1;
@@ -1903,8 +1903,8 @@ export function hakiOnFx(fx, a, type) {
     return;
   }
   const R = senseRange(a.hakiLevel ? a.hakiLevel('observation') : 0);
-  fx.ring(a.x, a.y, 0.5, R, sig.observation, 0.7, 0.13, { flat: 0.5, add: true });
-  fx.ring(a.x, a.y, 0.3, R * 0.6, sig.observation, 0.75, 0.07, { flat: 0.5, add: true, delay: 0.16 });
+  // (the sense swelling out through the air round the head, as far as it reaches: render3d/vfx/shapes.js sense)
+  fx.add('sense', { x: a.x, y: a.y, z: 1.55 * s, r: R, color: sig.observation, life: 0.95, seed: Math.random() * 100 });
   fx.add('flare', { x: a.x, y: a.y, z: 1.62 * s, size: 0.7 * s, color: sig.observation, life: 0.32 });
 }
 

@@ -346,17 +346,28 @@ SHAPES.ring = {
       if (rad > 0.25 && !dark && !v.low) v.shells.put(VK.BUBBLE, X, Y, Z, rad * 0.92, 0, 1, 0, 1, c, alpha * 0.35, WHITE, 0.4, k, s.seed);
       return;
     }
+    // A shockwave over the ground: never a line painted on the floor — the air
+    // itself, a low wave front leaning out as it races away, and the dust and
+    // grit it kicks up along it (tinted the power's colour), thinning as it goes.
     const R1 = Math.max(s.r0, s.r1) * (1 + (s.wobble || 0)) + width;
     const patch = v.patch(s, s.x, s.y, R1);
-    // (the low setting keeps the band and drops the wall)
-    const wh = v.low ? 0 : dark ? Math.min(1.2, 0.3 + width * 2.5) : Math.min(0.9, 0.12 + width * 2.4) * (1 - k * 0.4);
-    v.groundRing(patch, s.x, s.y, rad, width * 0.5, c, alpha, c2, w, core, wh, dark ? 0.5 : 0.55, (s.wobble || 0) * (1 - k), s.lobes || 9, v.time * 40, s.seed, k);
-    if (s.fill) {
-      const fc = col(s.fill === true ? s.color : s.fill);
-      v.decal(patch, s.x, s.y, rad, 0, SF.FILL, fc, alpha * 0.22, fc, w * 0.5, k, s.seed, 0, 0, 0, 6);
+    const wh = v.low || !dark ? 0 : Math.min(1.2, 0.3 + width * 2.5);
+    if (wh > 0) v.groundRing(patch, s.x, s.y, rad, 0, c, alpha * (dark ? 1 : 0.8), c2, w, core, wh, dark ? 0.5 : 0.42, (s.wobble || 0) * (1 - k), s.lobes || 9, v.time * 40, s.seed, k);
+    const X = v.lx(s.x), Z = v.lz(s.y);
+    const n = Math.max(10, Math.min(36, Math.round(rad * 3.2)));
+    const dc = dark ? c : mixCol(RING_DUST, c, s.add ? 0.4 : 0.25, RING_TMP);
+    for (let i = 0; i < n; i++) {
+      const h = hash((s.seed || 0) * 3.7 + i * 1.31);
+      const th = (i + h * 0.8) / n * TAU, rr = rad * (0.93 + 0.12 * h);
+      const cs = Math.cos(th), sn = Math.sin(th);
+      const gy = patch.get(cs * rr, sn * rr);
+      const sz = (0.35 + 0.6 * k + width * 1.5) * (0.6 + 0.8 * h) * Math.min(1.8, 0.7 + rad * 0.15);
+      v.sprites.put(SK.DUST, X + cs * rr, gy + 0.15 + (0.3 + 0.6 * h) * k, Z + sn * rr, sz, dc, Math.min(1, alpha * 1.4) * (0.6 + 0.4 * h), dc, 0, h * 6, (s.seed || 0) + i, k);
     }
   },
 };
+const RING_DUST = col('#d9cfc4'), RING_TMP = new Float32Array(4);
+const mixCol = (a, b, t, o) => { for (let i = 0; i < 3; i++) o[i] = a[i] + (b[i] - a[i]) * t; o[3] = 1; return o; };
 
 // ------------------------------------------------------------------ beams & lightning
 const BEAM_CORE = { fire: '#fff3c4', light: '#ffffff', energy: '#ffffff', ice: '#ffffff', water: '#e1f5fe', wind: '#ffffff', gravity: '#ede7f6', quake: '#ffffff' };
@@ -673,6 +684,31 @@ SHAPES.dome = {
  * goes, its edge burning in their own colour; a black ring racing over the
  * ground under it.
  */
+/**
+ * Observation Haki reaching out: no line on the floor — the sense itself, a
+ * clear sphere of its tint swelling out from the head as far as it reaches,
+ * bright only at its rim and thinning as it goes, an echo close behind it,
+ * and motes of light in the air drawn in toward the one sensing.
+ */
+SHAPES.sense = {
+  draw(v, s, k, a) {
+    const X = v.lx(s.x), Z = v.lz(s.y), G = v.groundOf(s), Y = G + (s.z || 1.5);
+    const c = col(s.color || '#80deea');
+    for (const [d, m] of [[0, 1], [0.22, 0.55]]) {
+      const kk = (k - d) / (1 - d);
+      if (kk <= 0 || kk >= 1) continue;
+      const R = s.r * easeOut(kk);
+      if (R > 0.2) v.shells.put(VK.BUBBLE, X, Y, Z, R, 0, 1, 0, 1, c, a * (1 - kk) * 0.4 * m, WHITE, 0.8, 0.35 + kk * 0.5, (s.seed || 0) + d);
+    }
+    if (v.low) return;
+    for (let i = 0; i < 14; i++) {
+      const h = hash((s.seed || 0) + i * 2.3), th = h * TAU, el = (hash(i * 7.1 + 1) - 0.3) * 1.2;
+      const rr = s.r * 0.7 * (1 - k) * (0.4 + 0.6 * hash(i * 3.3));
+      v.sprites.put(SK.STAR, X + Math.cos(th) * rr, Y + el * rr * 0.4, Z + Math.sin(th) * rr, 0.16 + 0.12 * h, c, a * Math.sin(k * Math.PI), WHITE, 1, k * 3 + h, i, k);
+    }
+  },
+};
+
 SHAPES.haoshoku = {
   draw(v, s, k, a) {
     const R = s.r * easeOut(Math.min(1, k * 1.7));
@@ -959,6 +995,9 @@ const EDGES = [0, 1, 1, 3, 3, 2, 2, 0, 4, 5, 5, 7, 7, 6, 6, 4, 0, 4, 1, 5, 2, 6,
 /** Enemy wind-up telegraphs: the true hit area on the ground, filling as the blow comes, its edge pulsing. */
 SHAPES.tele = {
   draw(v, s, k, a) {
+    // (no shapes painted on the floor: a foe's blow is read from its wind-up
+    // and the glint before it lands — abilities.js glint — not a red decal)
+    if (!s.floor) return;
     const c = col(s.color || 'rgba(255,60,60,1)');
     if (s.shape === 'circle') {
       const patch = v.patch(s, s.x, s.y, s.r);

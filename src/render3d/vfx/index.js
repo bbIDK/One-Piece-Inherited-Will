@@ -289,14 +289,17 @@ export class VFX {
       const rr = wobA ? R * (1 + wobA * Math.sin(th * lobes + phase)) : R;
       P[i * 4] = cs; P[i * 4 + 1] = sn; P[i * 4 + 2] = rr; P[i * 4 + 3] = patch.get(cs * rr, sn * rr);
     }
-    S.style(SF.BAND, c, alpha, c2, w, k, seed);
-    const v0 = S.nv;
-    for (let i = 0; i <= n; i++) {
-      const cs = P[i * 4], sn = P[i * 4 + 1], rr = P[i * 4 + 2], gy = P[i * 4 + 3] + 0.05;
-      S.vert(X + cs * (rr - hw), gy, Z + sn * (rr - hw), i / n, -1, core);
-      S.vert(X + cs * (rr + hw), gy, Z + sn * (rr + hw), i / n, 1, core);
+    // (hw 0: no band on the floor at all — only the wave standing up off it)
+    if (hw > 0) {
+      S.style(SF.BAND, c, alpha, c2, w, k, seed);
+      const v0 = S.nv;
+      for (let i = 0; i <= n; i++) {
+        const cs = P[i * 4], sn = P[i * 4 + 1], rr = P[i * 4 + 2], gy = P[i * 4 + 3] + 0.05;
+        S.vert(X + cs * (rr - hw), gy, Z + sn * (rr - hw), i / n, -1, core);
+        S.vert(X + cs * (rr + hw), gy, Z + sn * (rr + hw), i / n, 1, core);
+      }
+      S.grid(v0, 2, n + 1);
     }
-    S.grid(v0, 2, n + 1);
     if (wall) {
       S.style(SF.WALL, c, alpha * wallAlpha, c2, w, k, seed);
       const v1 = S.nv;
