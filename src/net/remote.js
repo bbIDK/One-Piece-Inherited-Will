@@ -10,7 +10,7 @@
 import { Actor } from '../game/actor.js';
 import { Ship } from '../game/ship.js';
 import { shipGone } from '../game/decks.js';
-import { getAbility, abilityTotal } from '../game/abilities.js';
+import { getAbility, abilityTotal, ghostStep } from '../game/abilities.js';
 import { SHIPS } from '../data/ships.js';
 import { RACES } from '../data/races.js';
 import { gaitCadence } from '../render/anims.js';
@@ -38,6 +38,7 @@ export class Remote {
     this.now = null; // the state drawn this frame
     this.visible = false;
     this.actN = -1; this.dodgeN = -1; this.lastHs = 0;
+    this.zones = [];
     this.joinedAt = Date.now();
   }
 
@@ -196,8 +197,21 @@ export class Remote {
       act.t += dt * act.rate;
       // (kept in step with theirs, should this game have stalled a moment)
       if (s.aid && s.an === this.actN) { const want = (s.at || 0) + (s.lag || 0) * act.rate; if (Math.abs(want - act.t) > 0.15) act.t = want; }
+      // what it looks like as it goes: each step's smear, shot, streak or field
+      // as it comes — drawn and heard here, touching no one (abilities.js
+      // ghostStep). (A step long gone when it reached us is skipped: no
+      // fireworks for something that's over.)
+      const steps = act.def.steps || [];
+      act.angle = a.facing;
+      while (act.step < steps.length && act.t >= (steps[act.step].at ?? act.def.windup ?? 0)) {
+        const at = steps[act.step].at ?? act.def.windup ?? 0;
+        if (act.t - at < 0.5) { try { ghostStep(a, steps[act.step], game, act, this.zones); } catch (e) { if (!this.warned) { this.warned = true; console.warn('net technique', act.def.id, e); } } }
+        act.step++;
+      }
       if (act.t >= act.end) a.action = null;
     }
+    // (their fields here run down as theirs do)
+    for (let i = this.zones.length - 1; i >= 0; i--) { const z = this.zones[i]; z.t -= dt; if (z.t <= 0) this.zones.splice(i, 1); }
     if (s.gn && s.gn !== this.dodgeN) {
       this.dodgeN = s.gn;
       const left = 0.22 - (s.gt || 0) - (s.lag || 0);
@@ -215,7 +229,7 @@ export class Remote {
     if (a.flashT > 0) a.flashT = Math.max(0, a.flashT - dt);
   }
 
-  dispose() { this.actor = null; this.ship = null; }
+  dispose() { for (const z of this.zones) z.t = 0; this.zones.length = 0; this.actor = null; this.ship = null; }
 }
 
 function makeActor(L) {

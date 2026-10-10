@@ -197,6 +197,8 @@ export function readState(m) {
     d: num(m.d, 0, 2000), wd: num(m.wd, 0, 5), mz: num(m.mz, -1, 1),
     g: num(m.g, -2000, 5000), hs: num(m.hs, 0, 10), c: num(m.c, 0, 1),
     hb: !!m.hb,
+    // (crouched: sneaking along)
+    cr: !!m.cr,
   };
   if (Array.isArray(m.dk) && m.dk.length === 3 && m.dk.every(finite)) { s.du = num(m.dk[0], -400, 400); s.dv = num(m.dk[1], -100, 100); s.dh = num(m.dk[2], -50, 200); }
   if (Array.isArray(m.s) && m.s.length >= 5 && m.s.slice(0, 5).every(finite) && typeof m.si === 'string') {

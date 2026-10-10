@@ -404,6 +404,66 @@ function runStep(actor, s, game, a) {
   if (s.sfx) game.audio?.sfx(s.sfx, actor);
 }
 
+/**
+ * Another player's technique, as it's drawn here (net/remote.js): every
+ * step's look and sound — the swing's smear, the shot flying (harmless: their
+ * own does the harm, in their game), the dash's streaks, the light-speed
+ * streak, the transformation, the field going up — and nothing that touches
+ * anyone. `zones` collects the fields drawn, for the caller to run down.
+ */
+export function ghostStep(actor, s, game, a, zones) {
+  const ang = s.angleOffset ? a.angle + s.angleOffset : a.angle;
+  const col = ELEMENT_COLORS[s.hit?.element || s.proj?.element || 'physical'];
+  const fx = game.fx;
+  if (s.hit) {
+    const h = s.hit, off = h.offset ?? 0, reach = actor.reach ?? 1;
+    const hb = {
+      owner: actor, x: game.world.wx(actor.x + Math.cos(ang) * off * reach), y: actor.y - 0.4 + Math.sin(ang) * off * reach,
+      shape: h.shape || 'arc', range: (h.range || 1.4) * (h.shape === 'circle' ? 1 : reach), arc: h.arc ?? 1.8, width: h.width, angle: ang,
+      element: h.element || 'physical', duration: h.duration ?? 0.1, heavy: h.heavy, slashing: h.slashing, follow: h.follow,
+      offX: Math.cos(ang) * off * reach, offY: -0.4 + Math.sin(ang) * off * reach, radial: h.radial, blast: h.blast, def: a.def, ghost: true,
+    };
+    fx.tech(actor, s, a, 'hit', hb);
+    if (h.shake) fx.shake(h.shake * 0.5, ang);
+  }
+  if (s.proj) {
+    const p = s.proj, n = p.count || 1;
+    for (let i = 0; i < n; i++) {
+      const spread = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) : 0;
+      const pa = ang + spread, sp = p.speed || 14;
+      const sx = actor.x + Math.cos(pa) * 0.6, sy = actor.y - 0.5 + Math.sin(pa) * 0.6;
+      game.combat.projectile({
+        owner: actor, ghost: true, x: game.world.wx(sx), y: sy, vx: Math.cos(pa) * sp, vy: Math.sin(pa) * sp,
+        range: p.range || 10, radius: p.radius || 0.3, damage: 0, element: p.element || 'physical', sprite: p.sprite || 'orb', color: p.color || col,
+        size: p.size || 1, stretch: p.stretch ? actor : null, passWalls: p.passWalls, hitShips: false, def: a.def, isProj: false,
+        // (a shot that goes off: the blast, to look at)
+        onEnd: p.explode ? (pr, g) => g.fx.tech(actor, s, a, 'hit', { owner: actor, x: pr.x, y: pr.y, shape: 'circle', range: p.explode.range || 2, angle: 0, element: p.explode.element || p.element || 'physical', def: a.def, blast: true, ghost: true }) : null,
+        draw: drawProjectile,
+      });
+    }
+    fx.tech(actor, s, a, 'proj');
+  }
+  if (s.dash) fx.tech(actor, s, a, 'dash');
+  if (s.teleport) {
+    // (where they went: where they'll be drawn in a moment, as their states come in)
+    const d = s.teleport.dist || 0;
+    fx.tech(actor, s, a, 'teleport', { x0: actor.x - Math.cos(ang) * d * 0.5, y0: actor.y - Math.sin(ang) * d * 0.5 });
+  }
+  if (s.buff) fx.tech(actor, s, a, 'buff', { buff: { ...s.buff, t: s.buff.duration || 1 } });
+  if (s.heal) fx.tech(actor, s, a, 'heal');
+  if (s.zone) {
+    const z = s.zone;
+    const zx = z.atTarget ? actor.x + Math.cos(ang) * Math.min(6, (z.range || 2) + 2) : actor.x + Math.cos(ang) * (z.offset || 0);
+    const zy = z.atTarget ? actor.y + Math.sin(ang) * Math.min(6, (z.range || 2) + 2) : actor.y + Math.sin(ang) * (z.offset || 0);
+    const zone = { owner: actor, x: game.world.wx(zx), y: zy, r: z.range, t: z.duration, interval: z.interval || 0.5, damage: 0, element: z.element || 'physical', color: z.color || col, kind: z.kind || 'field', def: a.def, ghost: true };
+    fx.zone(zone, z, actor, a);
+    zones?.push(zone);
+  }
+  if (s.pull) fx.tech(actor, s, a, 'pull');
+  if (s.fx) fx.tech(actor, s.fx.color ? s : { ...s, fx: { ...s.fx, color: col } }, a, 'fx');
+  if (s.sfx) game.audio?.sfx(s.sfx, actor);
+}
+
 function def_isPhysical(h) { return !h.element || h.element === 'physical'; }
 
 function explode(p, game, e, mult) {

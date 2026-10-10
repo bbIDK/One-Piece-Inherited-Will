@@ -162,9 +162,10 @@ export class Combat {
         if (game.world.solid(p.x, p.y) || game.world.hitsProp(p.x, p.y, 0.04, true) || t === 25 || t === 26 || t === 27 || t === 41 || t === 50) dead = true;
       }
       // (swallowed by a Black Hole; sent back by a Repel or a Balloon)
-      if (!dead && game.areaZones?.length && absorbShot(game, p)) dead = true;
-      if (!dead) reflectShot(game, p, actors);
-      if (!dead) {
+      if (!dead && !p.ghost && game.areaZones?.length && absorbShot(game, p)) dead = true;
+      if (!dead && !p.ghost) reflectShot(game, p, actors);
+      // (another player's shot as it's drawn here: it flies and looks the same, and hits nothing — theirs does the harm, over there)
+      if (!dead && !p.ghost) {
         for (const a of actors) {
           if (p.hit.has(a.id) || !this.canHit(p.owner, a, p)) continue;
           if (game.world.dist2(p.x, p.y, a.x, a.y - 0.5) > (p.radius + a.r + 0.2) ** 2) continue;
