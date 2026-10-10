@@ -226,14 +226,16 @@ export class PlayerController {
     const inp = game.input, K = keysOf(game.settings);
     for (let i = 0; i < K.skills.length; i++) if (pressed(inp, K.skills[i])) this.skillBuf = { group: 'skills', i, t: SKILL_BUFFER };
     for (let i = 0; i < K.haki.length; i++) if (pressed(inp, K.haki[i])) this.skillBuf = { group: 'haki', i, t: SKILL_BUFFER };
-    // (the fruit's next form: Z — the Gears, the awakened set)
-    if (pressed(inp, K.form[0])) cycleForm(game, p);
+    // (the fruit's next form: B — the Gears, the awakened set; kept, like a
+    // skill key, when it's pressed mid-move, and switched as soon as it can)
+    if (pressed(inp, K.form[0])) this.skillBuf = { group: 'form', i: 0, t: SKILL_BUFFER };
     const b = this.skillBuf;
     if (!b) return;
     b.t -= dt;
     if (!p.canAct() && b.t > 0) return;
     this.skillBuf = null;
-    if (b.group === 'haki') this.useHaki(p, game, b.i, aim, wx, wy);
+    if (b.group === 'form') cycleForm(game, p);
+    else if (b.group === 'haki') this.useHaki(p, game, b.i, aim, wx, wy);
     else this.useSkill(p, game, b.i, aim, wx, wy);
   }
 

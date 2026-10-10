@@ -54,6 +54,9 @@ export function formLock(p, formId) {
   const F = f.forms.find((x) => x.id === formId);
   if (!F) return `The ${f.name} has no such form.`;
   if ((p.fruitMastery || 0) < F.mastery) return `${F.name} opens at fruit mastery ${F.mastery}: fight worthy foes with the ${f.name}.`;
+  // (a form that takes Haki — Gear Fourth, Armament — is shut until that Haki wakes: the form key passes it by)
+  const need = getAbility(F.activate)?.requiresHaki;
+  if (need && !p.hakiLevel?.(need)) return `${F.name} needs ${need[0].toUpperCase() + need.slice(1)} Haki.`;
   return '';
 }
 
@@ -95,8 +98,16 @@ export function takeOut(game, p, id) {
   if (!def) return false;
   // (it can't be switched on just now — coming back, no Haki for it, busy: the activation says why)
   if (!p.canAct() || !canUse(p, def) || (def.requiresHaki && !p.hakiLevel(def.requiresHaki))) {
-    if ((p.cooldowns[def.id] || 0) > 0) game.ui?.flashSlot?.(id);
-    return p.tryTechnique(def.id, game);
+    const cd = p.cooldowns[def.id] || 0;
+    if (cd > 0) game.ui?.flashSlot?.(id);
+    const ok = p.tryTechnique(def.id, game);
+    // (never a silent no: say why the form didn't come)
+    if (!ok) {
+      const why = cd > 0 ? `${F.name} is coming back: ${Math.ceil(cd)}s` : !p.canAct() ? `Not mid-move — ${F.name} when you're free` : `${F.name} can't be used just now`;
+      game.log(`${why}.`, '#ffab91');
+      game.ui?.toast?.(F.name, why, f.color);
+    }
+    return ok;
   }
   fruitOut(game, p);
   // (from one form straight into another: the first ends, and what it leaves you with comes —
@@ -129,7 +140,11 @@ export function cycleForm(game, p) {
   const i = cur ? order.indexOf(cur) : -1;
   // (the last one on: back to the base set)
   if (cur && i === order.length - 1) { p.endForm(); return true; }
-  const next = order[i + 1];
+  // (the next one that's ready: one still coming back is passed by — if none
+  // are, the first says how long, rather than the key doing nothing)
+  const cdOf = (id) => { const F = id === 'awake' ? f.awakening : f.forms.find((x) => x.id === id); return p.cooldowns[getAbility(F?.activate)?.id] || 0; };
+  const rest = order.slice(i + 1);
+  const next = rest.find((id) => cdOf(id) <= 0) || rest[0];
   return takeOut(game, p, next === 'awake' ? ENTRY.awake : ENTRY.form(next));
 }
 
