@@ -231,6 +231,8 @@ export class Combat {
     if (h.friendly) return false;
     if (owner && owner.faction === 'player' && target.faction === 'player') return false;
     if (!owner) return true;
+    // (another player: only in a fight you're both up for — PvP on, yours and theirs: net/session.js)
+    if (target.netRemote) return !!(owner.isPlayer && this.game.settings?.pvp && target.pvp && target.state === 'idle');
     if (target.invulnerable) return false;
     // up on a big ship's quarterdeck, out of reach of a blade swung on the main deck below (shots and blasts still carry)
     if (owner.deck && target.deck && owner.deck.ship === target.deck.ship && h.vx === undefined && !h.radial) {

@@ -71,7 +71,7 @@ export class Remote {
     this.lookKey = key;
     this.info = L;
     this.name = L.name;
-    const a = this.actor || (this.actor = makeActor(L));
+    const a = this.actor || (this.actor = makeActor(L, this));
     a.name = L.name;
     // (a new look object: the 3D view sees it and builds the model afresh)
     a.look = { ...L.look, race: L.look.race || L.race };
@@ -236,9 +236,17 @@ export class Remote {
   dispose() { for (const z of this.zones) z.t = 0; this.zones.length = 0; this.actor = null; this.ship = null; }
 }
 
-function makeActor(L) {
+function makeActor(L, r) {
   const a = new Actor({ name: L.name, look: { ...L.look }, race: RACES[L.race] ? L.race : 'human' });
   a.netRemote = true;
+  // PvP (both up for it: combat.js canHit): your blow on them here goes to their game,
+  // which takes it as its own (session.js receive 'hit'); here only the flash of it
+  a.takeDamage = (n, att, h) => {
+    if (!att?.isPlayer || !(n > 0)) return;
+    r.voyage.send({ k: 'hit', d: Math.round(n), st: Math.round((h?.stun || 0) * 100) / 100, el: h?.element || 'physical', hv: h?.heavy ? 1 : 0 }, r.id);
+    a.flashT = 0.12;
+  };
+  a.knock = (vx, vy) => r.voyage.send({ k: 'kb', x: Math.round(vx * 100) / 100, y: Math.round(vy * 100) / 100 }, r.id);
   a.showName = true;
   a.nameColor = MATE_COLOR;
   a.faction = 'neutral';
@@ -266,6 +274,7 @@ function poseActor(a, s, dt, ship, w, on = null) {
   a.drawn = !!(B & BIT.drawn);
   a.armament = !!(B & BIT.armament);
   a.conquerorInfused = !!(B & BIT.conqueror);
+  a.pvp = !!(B & BIT.pvp);
   const st = B & BIT.dead ? 'dead' : B & BIT.knocked ? 'knocked' : 'idle';
   a.knockT = st === 'knocked' ? (a.state === 'knocked' ? (a.knockT || 0) + dt : 0) : 0;
   a.state = st;

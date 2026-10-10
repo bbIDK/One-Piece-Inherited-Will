@@ -11,6 +11,7 @@ import { errorText } from '../net/session.js';
 import { MATE_COLOR } from '../net/remote.js';
 import { CHAT_MAX, BIT } from '../net/protocol.js';
 import { RACES } from '../data/races.js';
+import { saveSettings } from '../game/save.js';
 import { REGION_INFO, regionAt } from '../world/constants.js';
 import { fmtDist } from './compass.js';
 import { findShore } from '../game/interact.js';
@@ -149,6 +150,14 @@ export function installVoyageHud(game, ui) {
     const copy = h('button.btn.gold.small', { on: { click: () => copyCode(v.code, copy) } }, 'Copy code');
     // (on a phone there's no Enter: the chat opens from here)
     const chat = h('button.btn.gold', { title: 'Say something to the crew (Enter)', on: { click: () => { ui.closeAll(); openChat(); } } }, 'Say something');
+    // PvP: fight the crew (both of you have to have it on; nobody dies of it — one goes down on one knee)
+    const pvpLabel = () => `PvP: ${game.settings.pvp ? 'On' : 'Off'}`;
+    const pvp = h('button.btn', { title: 'Fight your crewmates. Both of you need it on; a fight ends with one of you beaten, never dead.', on: { click: () => {
+      game.settings.pvp = !game.settings.pvp;
+      pvp.textContent = pvpLabel();
+      saveSettings(game.settings);
+      game.log(game.settings.pvp ? 'PvP on: crewmates who have it on too can fight you (and you them).' : 'PvP off: your blows pass your crewmates by.', game.settings.pvp ? '#ffcc80' : '#b0bec5');
+    } } }, pvpLabel());
     const leave = h('button.btn.red', { on: { click: async () => {
       const was = v, hosting = was?.role === 'host';
       if (!was) return;
@@ -162,7 +171,7 @@ export function installVoyageHud(game, ui) {
       h('div.panel-top', h('h2', 'The voyage'), h('div.vy-code-line', h('b', showCode(v.code)), copy)),
       h('p.muted', v.role === 'host' ? 'You\'re hosting: your world\'s days, hours and weather are everyone\'s. Pass the code on and friends can join while you play.' : `You're aboard ${v.hostName || 'the host'}'s voyage: their world sets the day, the hour and the weather. Your pirate and their save are your own.`),
       rows,
-      h('div.row-end.vy-btns', chat, leave));
+      h('div.row-end.vy-btns', pvp, chat, leave));
     // the rows are made again only when who's aboard changes; their words and buttons,
     // every second, in place (a button rebuilt under the pointer would miss its click)
     const update = () => {

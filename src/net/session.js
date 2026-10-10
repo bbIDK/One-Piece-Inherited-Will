@@ -11,7 +11,7 @@
 // game.net is the voyage while there is one (null otherwise: singleplayer
 // never opens a connection, and nothing here runs).
 import { openTransport, netKind } from './transport.js';
-import { PROTO, REV, SEND_HZ, IDLE_MS, MAX_PLAYERS, NAME_MAX, CHAT_MAX, BIT, readHello, readEnv, readLook, readShip, readState, readSay, stateChanged, worldSig, cleanText, r2, r3 } from './protocol.js';
+import { PROTO, REV, SEND_HZ, IDLE_MS, MAX_PLAYERS, NAME_MAX, CHAT_MAX, BIT, num, readHello, readEnv, readLook, readShip, readState, readSay, stateChanged, worldSig, cleanText, r2, r3 } from './protocol.js';
 import { Remote, MATE_COLOR } from './remote.js';
 import { deckLift } from '../world/hull.js';
 import { shipGone } from '../game/decks.js';
@@ -173,6 +173,26 @@ export class Voyage {
       }
       case 'gone': if (r.play) { r.gone(); this.emit('note', `${r.label}'s journey has ended. The next of their line is on the way.`, '#b0bec5'); this.emit('roster'); } break;
       case 'bye': this.drop(from); break;
+      // PvP: a blow of theirs landing on you, as their game saw it — only while you're both up for it.
+      // Never to the death: a fight between crewmates ends with one of them down on one knee.
+      case 'hit': case 'kb': {
+        const g = this.game, p = g.player;
+        if (!p || !g.settings?.pvp || !r.actor?.pvp || p.state !== 'idle') break;
+        if (m.k === 'kb') { p.knock(num(m.x, -60, 60), num(m.y, -60, 60)); break; }
+        const d = num(m.d, 0, 5000), st = num(m.st, 0, 3);
+        p.takeDamage(Math.min(d, Math.max(0, p.hp - 1)), r.actor, { element: String(m.el || 'physical').slice(0, 16), heavy: !!m.hv, stun: st }, g);
+        p.hitstun = Math.max(p.hitstun || 0, st);
+        g.fx?.burst?.(p.x, p.y - 0.6, 6, { color: ['#ffffff', '#ffe082'], speed: 3, life: 0.25, size: 0.08 });
+        g.audio?.sfx(m.hv ? 'punch_heavy' : 'punch', p);
+        if (p.hp <= 1) {
+          p.hp = 1;
+          g.fx?.text?.(p.x, p.y - 2, 'DEFEATED', '#ff8a80', 0.5);
+          this.send({ k: 'won' }, from);
+          this.emit('note', `${r.label} beat you in a fight.`, '#ffcc80');
+        }
+        break;
+      }
+      case 'won': if (r.actor?.pvp) this.emit('note', `You beat ${r.label} in a fight!`, '#ffd54f'); break;
       default: break;
     }
   }
@@ -417,6 +437,8 @@ export class Voyage {
     if (p.flying) b |= BIT.flying;
     if (p.climb) b |= BIT.climb;
     if (p.conquerorInfused) b |= BIT.conqueror;
+    // (up for a fight with the crew: see receive 'hit')
+    if (this.game.settings?.pvp) b |= BIT.pvp;
     const m = {
       k: 'st', t: Math.round(now), w: g.inZone?.() || '',
       x: r2(p.x), y: r2(p.y), z: r2(p.z), f: r3(p.facing), vx: r2(p.vx), vy: r2(p.vy), vz: r2(p.vz), sp: r2(p.speed), st: p.style,

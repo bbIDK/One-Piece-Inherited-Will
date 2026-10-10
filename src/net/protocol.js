@@ -36,7 +36,7 @@ export const CHAT_MAX = 200;
 /** What a state's `b` bits say. */
 export const BIT = {
   moving: 1, sprint: 2, water: 4, under: 8, sinking: 16, block: 32, drawn: 64, armament: 128,
-  knocked: 256, dead: 512, flying: 1024, climb: 2048, roofed: 4096, helm: 8192, conqueror: 16384,
+  knocked: 256, dead: 512, flying: 1024, climb: 2048, roofed: 4096, helm: 8192, conqueror: 16384, pvp: 32768,
 };
 
 // --------------------------------------------------------------- reading values
