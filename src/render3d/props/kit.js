@@ -194,6 +194,13 @@ export class Mesher {
    * and o.scale place it relative to the current transform.
    */
   add(geo, o = {}) {
+    // (a window's pane goes in a geometry of its own, drawn with a room behind it: windowpane.js)
+    if (o.pane && !this.isPane) {
+      if (!this.panes) { this.panes = new Mesher(); this.panes.isPane = true; }
+      this.panes.m.copy(this.m);
+      this.panes.add(geo, { ...o, pane: false, outline: 0 });
+      return this;
+    }
     let g = geo;
     if (o.flat) { g = g.index ? g.toNonIndexed() : g; g.computeVertexNormals(); }
     else if (o.split && g.index) g = g.toNonIndexed(); // per-face colours, smooth normals
@@ -322,6 +329,11 @@ export class Mesher {
     this.col.push(...other.col);
     this.tnt.push(...other.tnt);
     this.glw.push(...other.glw);
+    if (other.panes) {
+      if (!this.panes) { this.panes = new Mesher(); this.panes.isPane = true; }
+      this.panes.m.copy(this.m);
+      this.panes.merge(other.panes);
+    }
     for (let i = 0; i < other.lamps.length; i += 3) { _lc.set(other.lamps[i], other.lamps[i + 1], other.lamps[i + 2]).applyMatrix4(M); this.lamps.push(_lc.x, _lc.y, _lc.z); }
     for (const t of other.idx) this.idx.push(t + base);
     return this;
@@ -340,6 +352,7 @@ export class Mesher {
     g.computeBoundingBox();
     if (shared) g.userData.shared = true;
     if (this.lamps.length) g.userData.lamps = this.lamps.slice();
+    if (this.panes?.pos.length) g.userData.panes = this.panes.build(shared);
     return g;
   }
 }

@@ -64,6 +64,7 @@ function coatMaterial() {
   return coatMat;
 }
 import { WakeTrail } from './wake3d.js';
+import { paneMesh } from './windowpane.js';
 
 export { shipDims, helmPoint };
 
@@ -207,7 +208,7 @@ export function hullGeometry(def) {
     const xq = xAt(d, d.tq), w = 0.995 * hbAt(d.tq, d.B) - inset;
     k.add(box(0.12, d.hq, w * 2), { at: [xq + 0.06, d.deckY, 0], color: shade(P.bulwark, -0.05), outline: 0.02 });
     k.add(box(0.06, 1.45, 0.75), { at: [xq + 0.13, d.deckY, 0], color: P.dark });
-    for (const s of [-1, 1]) k.add(box(0.06, 0.35, 0.3), { at: [xq + 0.13, d.deckY + d.hq * 0.45, s * w * 0.55], color: '#2d4150', glow: '#ffc766' });
+    for (const s of [-1, 1]) k.add(box(0.06, 0.35, 0.3), { at: [xq + 0.13, d.deckY + d.hq * 0.45, s * w * 0.55], color: '#2d4150', glow: '#ffc766', pane: true });
     // rail with balusters along the front edge
     k.add(box(0.08, 0.06, w * 2), { at: [xq + 0.04, d.yq + 0.72, 0], color: P.cap });
     for (let z = -w + 0.15; z < w; z += 0.26) k.add(cyl(0.03, 0.035, 0.72, 5, true), { at: [xq + 0.04, d.yq, z], color: shade(P.bulwark, 0.1) });
@@ -216,10 +217,10 @@ export function hullGeometry(def) {
     for (let i = 0; i < steps; i++) k.add(box(0.28, 0.07, 0.6), { at: [xq + 0.25 + (steps - i) * 0.26, d.deckY + (i + 1) * d.hq / (steps + 1), w - 0.4], color: P.wood });
     // stern windows and a trim band
     const x0 = -d.L / 2 - 0.004, wt = hbAt(0, d.B) * 0.965;
-    for (let i = -1; i <= 1; i++) k.add(box(0.05, 0.36, 0.28), { at: [x0, d.deckY + d.hq * 0.3, i * wt * 0.55], color: '#2d4150', glow: '#ffc766' });
+    for (let i = -1; i <= 1; i++) k.add(box(0.05, 0.36, 0.28), { at: [x0, d.deckY + d.hq * 0.3, i * wt * 0.55], color: '#2d4150', glow: '#ffc766', pane: true });
     k.add(box(0.05, 0.08, wt * 2), { at: [x0, d.deckY + d.hq * 0.3 + 0.44, 0], color: P.trim });
     // side windows in the stern castle
-    for (const s of [-1, 1]) for (const t of [0.06, 0.16]) k.add(box(0.26, 0.26, 0.05), { at: [xAt(d, t), d.deckY + 0.1, s * (hbAt(t, d.B) * 0.975 + 0.012)], color: '#2d4150', glow: '#ffc766' });
+    for (const s of [-1, 1]) for (const t of [0.06, 0.16]) k.add(box(0.26, 0.26, 0.05), { at: [xAt(d, t), d.deckY + 0.1, s * (hbAt(t, d.B) * 0.975 + 0.012)], color: '#2d4150', glow: '#ffc766', pane: true });
     // stern lanterns
     for (const s of [-1, 1]) {
       const lx = -d.L / 2 + 0.2, lz = s * (hbAt(0.02, d.B) * 0.9 - 0.1), ly = topAt(d, 0.02);
@@ -752,6 +753,9 @@ export class ShipView {
     hull.castShadow = true; hull.receiveShadow = true;
     root.add(hull);
     this.hull = hull;
+    // (her windows: glass with a room behind, not painted panels — windowpane.js)
+    this.panes = paneMesh(hull.geometry, d.deckY);
+    if (this.panes) hull.add(this.panes);
     // below decks and in the cabins (only drawn when the camera's close by)
     const ig = interiorGeometry(def);
     if (ig) {
@@ -786,7 +790,7 @@ export class ShipView {
     const sailCol = kind === 'marine' || def.sail === 'marine' ? '#f5f6fa' : s.paint?.sail || s.sailColor || '#efe6cf';
     this.sails = [];
     this.braces = [];
-    this.ownMats = [];
+    this.ownMats = this.panes ? [this.panes.material] : [];
     this.cloth = { t: { value: 0 }, amp: { value: 0 }, gust: { value: 1 } };
     const own = (m) => { this.ownMats.push(m); return m; };
     this.ghostables = [];
@@ -1025,6 +1029,7 @@ export class ShipView {
   }
 
   update(env, rx, rz, windAngle, ctx) {
+    if (this.panes) this.panes.material.userData.pane.uNight.value = Math.min(1, Math.max(0, (0.78 - (env.daylight ?? 1)) / 0.45 + (env.storm || 0) * 0.3));
     const s = this.ship;
     const r = this.root;
     // the foam trail on the water (a sibling of the ship, not riding it)

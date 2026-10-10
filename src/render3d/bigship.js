@@ -371,7 +371,7 @@ function stern(k, d, P) {
     const ww = Math.min(0.8, (w * 2) / n - 0.3);
     for (let i = 0; i < n; i++) {
       const z = -w + (i + 0.5) * (w * 2) / n;
-      k.add(box(0.06, y1 - y0, ww), { at: [x0, y0, z], color: P.glass, glow: '#ffc766' });
+      k.add(box(0.06, y1 - y0, ww), { at: [x0, y0, z], color: P.glass, glow: '#ffc766', pane: true });
       k.add(box(0.08, 0.08, ww + 0.14), { at: [x0 - 0.01, y1, z], color: P.trim });
       k.add(box(0.08, 0.08, ww + 0.14), { at: [x0 - 0.01, y0 - 0.08, z], color: P.trim });
     }
@@ -405,7 +405,7 @@ function stern(k, d, P) {
     const len = d.L * 0.07;
     k.save(); k.translate(xAt(d, t), 0, s * w); k.rotateY(skinYaw(d, t, ym, s));
     k.add(box(len, y1 - y0, 0.5), { at: [0, y0, s * 0.1], color: P.upper, outline: 0.02 });
-    k.add(box(len * 0.8, (y1 - y0) * 0.55, 0.06), { at: [0, y0 + (y1 - y0) * 0.22, s * 0.36], color: P.glass, glow: '#ffc766' });
+    k.add(box(len * 0.8, (y1 - y0) * 0.55, 0.06), { at: [0, y0 + (y1 - y0) * 0.22, s * 0.36], color: P.glass, glow: '#ffc766', pane: true });
     k.add(cone(0.42, 0.9, 6), { at: [0, y0, s * 0.12], rot: [Math.PI, 0, 0], scale: [len * 1.1, 1, 0.62], color: P.trim, outline: 0.015 });
     k.add(cone(0.42, 0.7, 6), { at: [0, y1, s * 0.12], scale: [len * 1.1, 1, 0.62], color: P.cap, outline: 0.015 });
     k.restore();
