@@ -1075,8 +1075,11 @@ function waveRide(ship, time) {
     }
   }
   c.h = S[0];
-  c.p = softClamp(S[2], BOAT_FEEL.pitchMax);
-  c.r = softClamp(S[4], BOAT_FEEL.rollMax);
+  // (a little boat doesn't stand on her nose in every short sea: her pitch,
+  // and a little of her roll, kept to her size — a rowboat a few degrees)
+  const Ls = ship.def?.length || 6, small = Math.max(0.3, Math.min(1, Ls / 12));
+  c.p = softClamp(S[2] * small, BOAT_FEEL.pitchMax * small);
+  c.r = softClamp(S[4] * (0.5 + 0.5 * small), BOAT_FEEL.rollMax);
   return c;
 }
 

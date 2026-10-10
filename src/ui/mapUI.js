@@ -313,7 +313,15 @@ function drawLabels(game, r, cam, layer, proj = null) {
   if (zone) add('.sea', w.name, w.width / 2, 14 / z, { fontSize: '26px' });
   // (the seas' names: big from afar, fading as you close in on an island)
   const seaA = (1 - Math.max(0, Math.min(1, (z - 0.45) / 0.5))).toFixed(2);
-  if (!zone && seaA > 0) for (const s of SEA_LABELS) add('.sea', s.name, s.x, s.y, s.vertical ? { writingMode: 'vertical-rl', fontSize: Math.max(16, 26 * z / 0.3) + 'px', opacity: seaA } : { fontSize: Math.min(44, Math.max(14, 30 * z / 0.3)) + 'px', opacity: seaA });
+  // (the Red Line's name runs along it: on the globe, along the meridian as
+  // it's turned there — and never upside down, whichever way that is)
+  const along = (x, y) => {
+    let a = (proj?.north?.(x, y) || 0) - Math.PI / 2;
+    a = Math.atan2(Math.sin(a), Math.cos(a));
+    if (a > Math.PI / 2) a -= Math.PI; else if (a <= -Math.PI / 2) a += Math.PI;
+    return { transform: `translate(-50%, -50%) rotate(${a.toFixed(3)}rad)`, whiteSpace: 'nowrap' };
+  };
+  if (!zone && seaA > 0) for (const s of SEA_LABELS) add('.sea', s.name, s.x, s.y, s.vertical ? { ...(proj ? along(s.x, s.y) : { writingMode: 'vertical-rl' }), fontSize: Math.max(16, 26 * z / 0.3) + 'px', opacity: seaA } : { fontSize: Math.min(44, Math.max(14, 30 * z / 0.3)) + 'px', opacity: seaA });
   // quests (the main story's objective gold, on top; side quests sky blue — as on the compass and over the world)
   const act = game.quests.active().sort((a, b) => (a.def.kind === 'main') - (b.def.kind === 'main'));
   for (const { id, def } of act) {
