@@ -2041,7 +2041,10 @@ export class Actor extends Entity {
     if (air) pose.air = { up: air === 'up', k: this.jumpK || 0 };
     // hauling yourself up a ledge, or hand over hand up a ladder (render/anim/move.js climbPose)
     const cl = this.climb;
-    if (cl && !cl.ride && !act) pose.climb = { k: Math.min(1, cl.t / (cl.T || 1)), ladder: !!cl.to?.ladder, rise: cl.rise ?? (this.z || 0) };
+    // (up the mast's ladder: hand over hand the whole way, by how far up it you are — game/masthead.js —
+    // and walking about once you're in the nest; a ledge or a ladder's own clock otherwise)
+    if (cl?.mast) { if (!cl.top && !act) pose.climb = { k: 0.5, ladder: true, rise: cl.k * (cl.H || 1) }; }
+    else if (cl && !cl.ride && !act) pose.climb = { k: Math.min(1, (cl.t || 0) / (cl.T || 1)), ladder: !!cl.to?.ladder, rise: cl.rise ?? (this.z || 0) };
     if (this.blocking) { pose.block = this.blockTime; pose.armedBlock = pose.armed; }
     if (dodging && !act) {
       const d = this.dash;
