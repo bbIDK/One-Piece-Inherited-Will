@@ -179,6 +179,8 @@ reg('phvolcano', (o, ctx) => {
 });
 
 // ------------------------------------------------------------ fires on the scorched ground
+/** A tongue of flame, a metre high: fat at its foot, licking up to a point. */
+const TONGUE = new THREE.LatheGeometry([[0, 0], [0.75, 0.08], [1, 0.25], [0.8, 0.45], [0.45, 0.7], [0.15, 0.9], [0, 1]].map(([r, y]) => new THREE.Vector2(r, y)), 7);
 /** A patch of fire: tongues of flame, tall and short, flickering (`o.r` metres across). */
 reg('phflames', (o) => {
   const R = o.r || 4, seed = (o.x * 0.31 + o.y * 0.17) % 50;
@@ -187,8 +189,8 @@ reg('phflames', (o) => {
   for (let i = 0; i < n; i++) {
     const a = hashN(i, seed) * Math.PI * 2, d = R * Math.sqrt(hashN(i, seed + 1)), h = (2.4 + hashN(i, seed + 2) * 4.6) * (1 - d / R * 0.45);
     const x = Math.cos(a) * d, z = Math.sin(a) * d;
-    outer.add(new THREE.ConeGeometry(h * 0.3, h, 6), { at: [x, h / 2 - 0.1, z], rot: [0, a, (hashN(i, 7) - 0.5) * 0.3] });
-    inner.add(new THREE.ConeGeometry(h * 0.16, h * 0.62, 6), { at: [x, h * 0.31, z] });
+    outer.add(TONGUE, { at: [x, -0.1, z], scale: [h * 0.3, h, h * 0.3], rot: [0, a, (hashN(i, 7) - 0.5) * 0.3] });
+    inner.add(TONGUE, { at: [x, 0, z], scale: [h * 0.16, h * 0.62, h * 0.16] });
     bed.add(new THREE.DodecahedronGeometry(0.5 + hashN(i, 9) * 0.6, 0), { at: [x, 0, z], color: '#2a1712', flat: true });
   }
   const root = new THREE.Group();
@@ -208,31 +210,39 @@ reg('phflames', (o) => {
 const ICE = col('#9ccbe6'), ICE_HI = col('#d6ecf8'), SNOW = col('#f4f9fd');
 
 /** Peaks of ice and snow, `o.peaks` [[x, z, radius, height]…] about its foot: jagged, faceted, white-capped. */
-reg('phicepeaks', (o) => {
+reg('phicepeaks', (o, ctx) => {
   const peaks = o.peaks || [[0, 0, 20, 50]];
   const seed = (o.x * 0.07) % 10;
-  const key = `phicepeaks:${peaks.map((p) => p.map(Math.round).join(',')).join(';')}:${Math.round(seed)}`;
+  // (each peak stands on the ground under it, its foot sunk to the lowest ground round it)
+  const g0 = ctx.ground(o.x, o.y);
+  const foot = peaks.map(([px, pz, R]) => {
+    let g = ctx.ground(o.x + px, o.y + pz);
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; g = Math.min(g, ctx.ground(o.x + px + Math.cos(a) * R, o.y + pz + Math.sin(a) * R)); }
+    return g - g0;
+  });
+  const key = `phicepeaks:${peaks.map((p) => p.map(Math.round).join(',')).join(';')}:${Math.round(seed)}:${foot.map(Math.round).join(',')}`;
   const geo = model(key, (k) => {
     const tmp = new THREE.Color();
-    peaks.forEach(([px, pz, R, H], q) => {
-      const sd = seed + q * 3.1;
+    peaks.forEach(([px, pz, R, H0], q) => {
+      const sd = seed + q * 3.1, fy = foot[q], H = H0 + Math.max(0, -fy) * 0.5;
       const surf = (a, s, i) => {
         // (each course turned a little and its corners pushed in and out: shards, not a cone)
         const tw = s * 0.9 + sd;
         const aa = a + tw * 0.4;
         const jag = 1 + 0.32 * (hashN(i + Math.round(s * 10) * 7, sd) - 0.5);
         const r = (s < 0 ? R * 1.1 : R * (1 - s) ** 1.15) * jag;
-        const y = s < 0 ? -4 : H * s * (s > 0.97 ? 1 : 1 + 0.06 * Math.sin(a * 3 + sd));
+        const y = fy + (s < 0 ? -6 : H * s * (s > 0.97 ? 1 : 1 + 0.06 * Math.sin(a * 3 + sd)));
         return [px + Math.cos(aa) * r, y, pz + Math.sin(aa) * r];
       };
       k.add(moundGeo(surf, [-0.05, 0, 0.2, 0.4, 0.58, 0.74, 0.88, 1], 7), {
-        color: (p, n) => (n.y > 0.5 ? SNOW : tmp.copy(ICE).lerp(ICE_HI, Math.max(0, n.x * 0.5 + n.z * 0.5 + 0.3)).lerp(SNOW, Math.max(0, (p.y / H - 0.75) * 2))),
+        color: (p, n) => (n.y > 0.5 ? SNOW : tmp.copy(ICE).lerp(ICE_HI, Math.max(0, n.x * 0.5 + n.z * 0.5 + 0.3)).lerp(SNOW, Math.max(0, ((p.y - fy) / H - 0.75) * 2))),
         flat: true, outline: 0.3,
       });
       // shards of ice standing round its foot
       for (let i = 0; i < 6; i++) {
         const a = hashN(i, sd) * Math.PI * 2, d = R * (0.9 + hashN(i, sd + 1) * 0.4), h = R * (0.25 + hashN(i, sd + 2) * 0.35);
-        k.add(new THREE.ConeGeometry(h * 0.22, h, 5), { at: [px + Math.cos(a) * d, h * 0.4, pz + Math.sin(a) * d], rot: [(hashN(i, 4) - 0.5) * 0.7, a, (hashN(i, 5) - 0.5) * 0.7], color: (p, n) => (n.y > 0.6 ? SNOW : ICE_HI), flat: true, outline: 0.08 });
+        const gx = px + Math.cos(a) * d, gz = pz + Math.sin(a) * d;
+        k.add(new THREE.ConeGeometry(h * 0.22, h, 5), { at: [gx, ctx.ground(o.x + gx, o.y + gz) - g0 + h * 0.4, gz], rot: [(hashN(i, 4) - 0.5) * 0.7, a, (hashN(i, 5) - 0.5) * 0.7], color: (p, n) => (n.y > 0.6 ? SNOW : ICE_HI), flat: true, outline: 0.08 });
       }
     });
   });

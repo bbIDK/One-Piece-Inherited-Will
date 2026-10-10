@@ -69,7 +69,7 @@ export const PHLAB = {
   stacks: [[-6, -22, 2.2, 46], [3, -23, 2.0, 40], [12, -19, 1.8, 36], [-15, -15, 1.6, 30]],
 };
 /** Onigashima's skull (render3d/props/wano.js): its radius, its height (m). */
-export const SKULL = { r: 34, h: 58 };
+export const SKULL = { r: 34, h: 72 };
 
 /** A prop's collider (see COLLIDE; scaled by its size). */
 export function colliderOf(o) {

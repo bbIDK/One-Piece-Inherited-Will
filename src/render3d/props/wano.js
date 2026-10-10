@@ -354,7 +354,7 @@ reg('skulldome', (o, ctx) => {
     // the rock it rises out of
     const rock = (a, s, i) => {
       const jag = 1 + 0.16 * (hashN(i + Math.round(s * 10) * 17, 9) - 0.5);
-      return [Math.cos(a) * R * (1.45 - s * 0.5) * jag, -4 + s * 16, Math.sin(a) * R * (1.45 - s * 0.5) * jag];
+      return [Math.cos(a) * R * (1.45 - s * 0.5) * jag, -4 + s * 11, Math.sin(a) * R * (1.45 - s * 0.5) * jag];
     };
     k.add(moundGeo(rock, [0, 0.35, 0.7, 1], 22), { color: (p, nn) => (nn.y > 0.6 ? ROCKO_HI : ROCKO), flat: true, outline: 0.3 });
     // the cranium: a dome, a little longer than wide, the face toward +z
