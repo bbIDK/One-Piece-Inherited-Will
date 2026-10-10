@@ -497,16 +497,28 @@ const PAVING = /* glsl */`
   }
 `;
 
+import { DEF_UNIFORMS, DEFORM_GLSL } from './deform3d.js';
+
 function terrainMaterial() {
   const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() });
   const uOrigin = { value: new THREE.Vector2() };
   const uDetail = { value: detailTexture() };
   m.userData.uOrigin = uOrigin;
   m.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, FOG, { uOrigin, uDetail, uCTime: CTIME });
+    Object.assign(shader.uniforms, FOG, DEF_UNIFORMS, { uOrigin, uDetail, uCTime: CTIME });
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nuniform vec2 uOrigin;\nattribute vec3 pave;\nvarying vec3 vPave;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvec4 tWorld = modelMatrix * vec4(transformed, 1.0);\nvTerrainXZ = tWorld.xz + uOrigin;\nvTerrainUp = normalize(objectNormal).y;\nvTerrainY = tWorld.y;\nvPave = pave;')
+      .replace('#include <common>', '#include <common>\nuniform vec2 uOrigin;\nattribute vec3 pave;\nvarying vec3 vPave;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;\n' + DEFORM_GLSL)
+      // (the ground a Devil Fruit has moved: raised or sunk, and lit as its new slope — world/deform.js)
+      .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+        vec2 dP = (modelMatrix * vec4(position, 1.0)).xz;
+        float dH = deformH(dP, 1.0);
+        if (abs(dH) > 1e-4 || deformH(dP + vec2(0.6, 0.0), 1.0) != 0.0) {
+          float gx = (deformH(dP + vec2(0.5, 0.0), 1.0) - deformH(dP - vec2(0.5, 0.0), 1.0));
+          float gz = (deformH(dP + vec2(0.0, 0.5), 1.0) - deformH(dP - vec2(0.0, 0.5), 1.0));
+          vec3 n0 = normalize(objectNormal);
+          objectNormal = normalize(vec3(n0.x / max(n0.y, 0.2) - gx, 1.0, n0.z / max(n0.y, 0.2) - gz));
+        }`)
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed.y += dH;\nvec4 tWorld = modelMatrix * vec4(transformed, 1.0);\nvTerrainXZ = tWorld.xz + uOrigin;\nvTerrainUp = normalize(objectNormal).y;\nvTerrainY = tWorld.y;\nvPave = pave;')
       .replace('varying float vTerrainUp;', 'varying float vTerrainUp;\nvarying float vTerrainY;');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform sampler2D uDetail;\nuniform float uCTime;\nvarying vec3 vPave;\nvarying vec2 vTerrainXZ;\nvarying float vTerrainUp;\nvarying float vTerrainY;\n' + CAUSTIC + PAVING)
@@ -535,7 +547,7 @@ function terrainMaterial() {
           }
         }`);
   };
-  m.customProgramCacheKey = () => 'terrain-detail-paved-3';
+  m.customProgramCacheKey = () => 'terrain-detail-paved-4';
   return m;
 }
 

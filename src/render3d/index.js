@@ -4,6 +4,7 @@
 // where one is registered, sprites otherwise), characters, ships and
 // projectiles. The existing 2D overlay canvas stays on top for effects,
 // weather and damage numbers, projected through the 3D camera.
+import { updateDeform3d } from './deform3d.js';
 import { prof } from '../core/prof.js';
 import * as THREE from 'three';
 import { FOG } from './fog.js'; // the atmospheric fog shader chunks (before any material compiles)
@@ -471,6 +472,7 @@ export class Renderer3D {
     // the floor of the open sea (far from any land) is only drawn for a swimmer
     this.terrain.setSeaFloor(p.inWater || this.isUnder ? (p.gills ? 4 : 3) : 0);
     this.terrain.update(ox, oy);
+    updateDeform3d(w, ox, oy);
     prof('r.terrain', t0); t0 = performance.now();
     CTIME.value = env.time;
     // the sun's shadow map follows you, reaching out ahead the way you look

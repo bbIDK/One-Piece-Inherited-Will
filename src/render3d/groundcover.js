@@ -12,6 +12,7 @@ import { registerFrameHook } from './registry.js';
 import { T, IS_LIQUID, OVERLAY, CLIMATE } from '../world/tiles.js';
 import { toonGradient } from './materials.js';
 import { FOG } from './fog.js';
+import { DEF_UNIFORMS, DEFORM_GLSL } from './deform3d.js';
 import { prof } from '../core/prof.js';
 import { WedgeSet } from './wedges.js';
 
@@ -260,10 +261,11 @@ function coverMaterial(kind) {
   const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient(), side: soft ? THREE.DoubleSide : THREE.FrontSide });
   const sway = SWAY[kind] || 0;
   m.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, FOG, { uTime, uHull, uHullSz });
+    Object.assign(sh.uniforms, FOG, DEF_UNIFORMS, { uTime, uHull, uHullSz });
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', `#include <common>\nuniform vec4 uHull[${MAXH}];\nuniform vec2 uHullSz[${MAXH}];`)
-      .replace('#include <project_vertex>', HULL_GLSL + '\n#include <project_vertex>');
+      .replace('#include <common>', `#include <common>\nuniform vec4 uHull[${MAXH}];\nuniform vec2 uHullSz[${MAXH}];\n${DEFORM_GLSL}`)
+      // (riding the ground a Devil Fruit has moved: world/deform.js)
+      .replace('#include <project_vertex>', `{ vec4 dq = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0); transformed.y += deformH(dq.xz, 1.0) / max(length(instanceMatrix[1].xyz), 1e-3); }\n` + HULL_GLSL + '\n#include <project_vertex>');
     if (kind === 'grass' || kind === 'crop') {
       // blades take the light of the ground they stand on, whichever side you see
       sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>

@@ -9,6 +9,7 @@
 //   * the "sway" variant bends tall vegetation in the wind.
 // tick() is called every frame (from buildings3d.setNightWindows) and drives
 // the shared uniforms and the animated props (flags, windmills, fires…).
+import { DEF_UNIFORMS, DEFORM_GLSL } from '../deform3d.js';
 import * as THREE from 'three';
 import { toonGradient } from '../materials.js';
 import { FOG } from '../fog.js';
@@ -67,6 +68,19 @@ void main() {
 
 const matCache = new Map();
 
+// (riding the moved ground: each vertex raised or lowered as the ground under it is)
+const RIDE = `
+  {
+  #ifdef USE_INSTANCING
+    mat4 dM = modelMatrix * instanceMatrix;
+  #else
+    mat4 dM = modelMatrix;
+  #endif
+    vec4 dW = dM * vec4(transformed, 1.0);
+    transformed.y += deformH(dW.xz, 1.0) / max(length(dM[1].xyz), 1e-3);
+  }
+`;
+
 /** The shared toon material, or (fade) a see-through copy of it with a uniform of its own. */
 function toonMat(opts, fade) {
   const m = new THREE.MeshToonMaterial({
@@ -74,6 +88,9 @@ function toonMat(opts, fade) {
     transparent: !!opts.transparent, opacity: opts.opacity ?? 1, depthWrite: opts.depthWrite !== false,
   });
   const sway = !!opts.sway;
+  // (standing on the ground, it rides the ground a Devil Fruit moves — deform3d.js —
+  // all but what floats or is carried: ships, planks between them, things in hand)
+  const ride = opts.ride !== false;
   const uFade = fade ? { value: 1 } : null;
   m.onBeforeCompile = (sh) => {
     // (the world's haze and the weather's mists, like everything else: fog.js)
@@ -81,9 +98,15 @@ function toonMat(opts, fade) {
     sh.uniforms.uTime = U.time;
     sh.uniforms.uNight = U.night;
     sh.uniforms.uWind = U.wind;
+    if (ride) Object.assign(sh.uniforms, DEF_UNIFORMS);
     sh.vertexShader = 'attribute float tint;\nattribute vec4 glow;\nvarying vec3 vGlow;\nuniform float uTime;\nuniform float uNight;\nuniform float uWind;\n' + (fade ? 'varying float vShell;\n' : '') + sh.vertexShader
       .replace('#include <color_vertex>', COLOR_VERTEX + (fade ? '\tvShell = 1.0 - step( -0.5, glow.a );\n' : ''))
       .replace('#include <begin_vertex>', sway ? SWAY : '#include <begin_vertex>');
+    if (ride) {
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\n' + DEFORM_GLSL)
+        .replace('#include <project_vertex>', RIDE + '#include <project_vertex>');
+    }
     sh.fragmentShader = 'varying vec3 vGlow;\n' + sh.fragmentShader
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance += vGlow;');
     if (fade) {
@@ -91,7 +114,7 @@ function toonMat(opts, fade) {
       sh.fragmentShader = sh.fragmentShader.replace('void main() {', FADE_FRAG);
     }
   };
-  m.customProgramCacheKey = () => 'opvc' + (sway ? '-sway' : '') + (fade ? '-fade' : '');
+  m.customProgramCacheKey = () => 'opvc' + (sway ? '-sway' : '') + (fade ? '-fade' : '') + (ride ? '-ride' : '');
   if (fade) m.userData.fade = uFade;
   return m;
 }
@@ -105,7 +128,7 @@ function toonMat(opts, fade) {
  * the renderer look up its shader afresh every time it switches.)
  */
 export function vcMat(opts = {}) {
-  const key = `${opts.sway ? 's' : ''}|${opts.side || 0}|${opts.transparent ? opts.opacity ?? 0.5 : 1}|${opts.depthWrite === false ? 0 : 1}|${opts.inst || ''}`;
+  const key = `${opts.sway ? 's' : ''}|${opts.ride === false ? 'n' : ''}|${opts.side || 0}|${opts.transparent ? opts.opacity ?? 0.5 : 1}|${opts.depthWrite === false ? 0 : 1}|${opts.inst || ''}`;
   let m = matCache.get(key);
   if (m) return m;
   m = toonMat(opts, false);

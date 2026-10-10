@@ -15,6 +15,7 @@
 // JavaScript's 64-bit ones — a sin()-based hash of big numbers doesn't — so
 // what floats here stays on the water drawn there.)
 import { CANALS } from '../world/reverseMountain.js';
+import { DEFORM, deformAt } from '../world/deform.js';
 
 export const SWELL_GLSL = /* glsl */`
   float sHash(vec2 p) {
@@ -150,7 +151,9 @@ export function swellAt(x, y, t = S.t) {
   const liquid = LIQUID[k < 16 ? k : 255];
   if (!liquid) return 0;
   const shore = 0.35 + 0.65 * sst(0.5, -7, w.sd ? w.sd(x, y) : -32);
-  return swells(x, y, t, d) * S.amp * shore * liquid * (w.reverseMountain ? calmAt(w, x, y) : 1);
+  // (and the sea tilted with the land under a quake: world/deform.js)
+  const tilt = DEFORM.list.length ? deformAt(x, y, true) * sst(-1.5, -8, w.sd ? w.sd(x, y) : -32) : 0;
+  return swells(x, y, t, d) * S.amp * shore * liquid * (w.reverseMountain ? calmAt(w, x, y) : 1) + tilt;
 }
 /** Is there a swell at all just now (the sea out of doors, not the Calm Belt's glass)? */
 export const swellOn = () => !!(S.world && S.amp > 0.01);

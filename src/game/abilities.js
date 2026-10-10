@@ -27,6 +27,7 @@ import { tierOf, stretchWindup } from './difficulty.js';
 import { POWERS } from './powers.js';
 import { ownRoom } from './room.js';
 import { maneStep } from './mane.js';
+import { terraform } from './terraform.js';
 import { flyableAt } from './flight.js';
 import { clashes, FUTURE_SIGHT, sigOf } from './haki.js';
 
@@ -359,6 +360,8 @@ function runStep(actor, s, game, a) {
   }
   // (the Phoenix's regenerating flames: its hybrid form shows while they burn)
   if (s.mane) maneStep(actor, s.mane, game);
+  // (the first blow of a technique that moves the ground: it moves — for a while)
+  if (!a.terraformed && (s.hit || s.zone || s.proj || s.dash)) { a.terraformed = true; terraform(actor, a, ang, game); }
   if (s.phoenix) actor.phoenixUntil = Math.max(actor.phoenixUntil || 0, (game.env?.time ?? game.time ?? 0) + s.phoenix);
   if (s.zone) {
     const z = s.zone;

@@ -1,4 +1,5 @@
 // The Game: owns the world, entities and subsystems and runs the main loop.
+import { tickDeform, DEFORM } from '../world/deform.js';
 import { PROF, prof } from '../core/prof.js';
 import { FX } from './fx.js';
 import { Combat } from './combat.js';
@@ -145,6 +146,9 @@ export class Game {
     prof('s.ui', t0);
     if (this.paused || !this.player) { this.input.endFrame(); return; }
     this.time += dt;
+    // (ground a Devil Fruit has moved settles back: world/deform.js)
+    tickDeform(this.time, this.world);
+    this.deform = DEFORM;
     t0 = performance.now();
     this.env.update(dt, this);
     this.fx.update(dt);

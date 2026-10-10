@@ -608,8 +608,8 @@ function oarGeometry(d) {
 
 // ---------------------------------------------------------------- the view
 const REST_OAR = { a: -1.15, b: 0.12, f: 1 }; // (trailing aft alongside, blades out of the water)
-const SOLID = () => vcMat();
-const GHOST = () => vcMat({ transparent: true, opacity: 0.15, depthWrite: false });
+const SOLID = () => vcMat({ ride: false });
+const GHOST = () => vcMat({ transparent: true, opacity: 0.15, depthWrite: false, ride: false });
 
 // ---------------------------------------------------------------- stand-in crew
 // Plain figures for a ship's company at a distance: whoever has the helm (at

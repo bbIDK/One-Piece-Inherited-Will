@@ -15,6 +15,7 @@ import { PLINTH, STEPS_MAX } from '../world/interiors.js';
 import { bw, bl, bfoot } from '../world/bframe.js';
 import { drumAt, drumTop, nearDrum, drumTile } from '../world/drums.js';
 import { terraceAt, terraceGround } from '../world/terraces.js';
+import { DEFORM, deformAt } from '../world/deform.js';
 
 export const SEA_Y = 0;
 export const DECK_Y = 0.55; // top of bridges (and sea-train tracks)
@@ -311,8 +312,17 @@ export class HeightField {
     return g;
   }
 
-  /** Height of the terrain surface at (x, y), matching the rendered mesh. */
+  /**
+   * Height of the terrain surface at (x, y), matching the rendered mesh —
+   * with whatever a Devil Fruit has moved it by just now (world/deform.js).
+   */
   terrain(x, y) {
+    const h = this.terrain0(x, y);
+    return DEFORM.list.length ? h + deformAt(x, y) : h;
+  }
+
+  /** The terrain's own height at (x, y), as built. */
+  terrain0(x, y) {
     const w = this.world;
     x = w.wx(x);
     if (y < 0 || y >= w.height || (!w.wrap && (x < 0 || x >= w.width))) return -12;
@@ -328,20 +338,25 @@ export class HeightField {
     return a + (d - c) * fx + (c - a) * fy;
   }
 
-  /** Where feet rest at (x, y): decks, quays and wall tops over the terrain. */
+  /**
+   * Where feet rest at (x, y): decks, quays and wall tops over the terrain —
+   * all of it moved, for a while, with the ground a Devil Fruit has moved
+   * (world/deform.js), as it's drawn.
+   */
   ground(x, y) {
     const w = this.world, t = w.type(x, y);
-    if (t === T.BRIDGE) return this.deckAt(x, y);
-    if (OVERLAY[t]) return deckTop(w, x, y);
-    if (w.quays.size && w.isQuay(x, y)) return DOCK_Y;
-    const h = this.terrain(x, y);
+    const dz = DEFORM.list.length ? deformAt(x, y) : 0;
+    if (t === T.BRIDGE) return this.deckAt(x, y) + dz;
+    if (OVERLAY[t]) return deckTop(w, x, y) + dz;
+    if (w.quays.size && w.isQuay(x, y)) return DOCK_Y + dz;
+    const h0 = this.terrain0(x, y), h = h0 + dz;
     if (IS_LIQUID[t]) return Math.max(h, t === T.RAPIDS ? waterLevel(w, x, y) : SEA_Y);
     const f = w.floorRec ? w.floorRec(x, y) : null;
     if (!f) return h;
-    if (f.interior) return this.floorY(f.o);
-    if (f.steps !== undefined) return Math.max(h, this.stepTop(f.o, x, y, h));
+    if (f.interior) return this.floorY(f.o) + dz;
+    if (f.steps !== undefined) return Math.max(h, this.stepTop(f.o, x, y, h0) + dz);
     // (a ring or stage is level, standing on the ground at its middle like its model)
-    if (f.o) return f.top ?? (f.top = this.terrain(f.o.x, f.o.y) + f.h);
+    if (f.o) return (f.top ?? (f.top = this.terrain0(f.o.x, f.o.y) + f.h)) + dz;
     return h + f.h;
   }
 

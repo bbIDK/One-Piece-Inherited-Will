@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { curveStmt } from './curvature.js';
 import { SWELL_GLSL, swellAmp, setSwell, calmPoints } from './swell.js';
 import { regionAt, REGION } from '../world/constants.js';
+import { DEF_UNIFORMS, DEFORM_GLSL } from './deform3d.js';
 
 // The wind swells (see swell.js: the same waves are worked out there for the
 // things that float on them)
@@ -91,6 +92,7 @@ const VERT = /* glsl */`
 
   ${SWELL}
   ${CALM}
+  ${DEFORM_GLSL}
   ${HULLS}
 
   // where a hull pushes the sea aside: heaped up at her stem (the faster she
@@ -134,6 +136,9 @@ const VERT = /* glsl */`
     // (reckoned from the eye — the disc's middle — as swellAt reckons it, so what floats sits on it)
     float h = swells(P, uTime, length(wp.xz), slope);
     wp.y += h * A;
+    // (the sea tilted with the land under a quake: world/deform.js)
+    // (the open sea, not the shallows: there the land's own tilt shows, the sea lapping on it)
+    wp.y += deformH(wp.xz, 2.0) * step(0.5, liquid) * smoothstep(-1.5, -8.0, sd);
     // (only near the eye: the disc's too coarse further off)
     if (length(wp.xz) < 160.0) wp.y += hullPush(wp.xz) * step(0.5, liquid);
     vSwell = vec3(slope * A, h * step(0.001, A));
@@ -625,6 +630,8 @@ export class Water {
       },
     ]);
     // the water writes depth, so the ink outlines see its surface (not the sea floor under it)
+    // (the sea tilted by a quake shares the ground's deformations: deform3d.js)
+    Object.assign(this.uniforms, DEF_UNIFORMS);
     this.material = new THREE.ShaderMaterial({
       uniforms: this.uniforms, vertexShader: VERT, fragmentShader: FRAG,
       transparent: true, depthWrite: true, fog: true, side: THREE.DoubleSide,

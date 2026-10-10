@@ -167,7 +167,7 @@ export function heldItemMesh(id, opts = {}) {
 let _vm = null, _held = null;
 function vmMat() {
   if (_vm) return _vm;
-  const base = vcMat();
+  const base = vcMat({ ride: false });
   _vm = base.clone();
   _vm.onBeforeCompile = base.onBeforeCompile; // (the tint and glow attributes: see props/mats)
   _vm.customProgramCacheKey = () => 'opvc-vm';
@@ -179,7 +179,7 @@ function vmMat() {
 /** What a character holds takes the sun's shadow, though not its own hand's (see SELF_SHADE). */
 function heldMat() {
   if (_held) return _held;
-  const base = vcMat();
+  const base = vcMat({ ride: false });
   _held = base.clone();
   _held.onBeforeCompile = base.onBeforeCompile;
   _held.customProgramCacheKey = () => 'opvc-held';

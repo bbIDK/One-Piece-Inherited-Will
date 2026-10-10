@@ -32,14 +32,14 @@ function build(P) {
   root.name = 'gangway';
   const runs = [0, 1, 2].map((i) => {
     const len = L.s[i + 1] - L.s[i];
-    const m = new THREE.Mesh(runGeometry(i === 1 ? Math.max(2, Math.round(len / 0.5)) : Math.max(3, Math.round(len / 0.3)), i === 1), vcMat());
+    const m = new THREE.Mesh(runGeometry(i === 1 ? Math.max(2, Math.round(len / 0.5)) : Math.max(3, Math.round(len / 0.3)), i === 1), vcMat({ ride: false }));
     m.castShadow = true; m.receiveShadow = true;
     m.rotation.order = 'YXZ';
     root.add(m);
     return m;
   });
   postGeo ||= (() => { const k = new Mesher(); k.add(cyl(0.035, 0.04, 0.96, 6), { color: DARK }); return k.build(true); })();
-  const posts = [0, 1, 2, 3].map(() => { const m = new THREE.Mesh(postGeo, vcMat()); m.castShadow = true; root.add(m); return m; });
+  const posts = [0, 1, 2, 3].map(() => { const m = new THREE.Mesh(postGeo, vcMat({ ride: false })); m.castShadow = true; root.add(m); return m; });
   return { root, runs, posts };
 }
 
