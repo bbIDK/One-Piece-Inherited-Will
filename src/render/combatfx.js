@@ -19,8 +19,6 @@ export const ELEM = {
   physical: { c: '#ffffff', spark: ['#ffffff', '#fff8e1', '#ffe0b2'], kind: 'spark' },
   slash: { c: '#e3f2fd', spark: ['#ffffff', '#e3f2fd'], kind: 'spark' },
   fire: { c: '#ff7043', spark: ['#ffca28', '#ff7043', '#ff5722', '#fff176'], kind: 'fire', add: true },
-  // (the Phoenix's fire: blue, edged with gold)
-  bluefire: { c: '#4fc3f7', spark: ['#e0f7fa', '#4dd0e1', '#29b6f6', '#fff176'], kind: 'fire', add: true },
   bluefire: { c: '#4dd0e1', spark: ['#4dd0e1', '#80deea', '#e0f7fa'], kind: 'fire', add: true },
   magma: { c: '#ff5722', spark: ['#ff6f00', '#ffab40', '#bf360c'], kind: 'ember', add: true },
   ice: { c: '#81d4fa', spark: ['#e1f5fe', '#b3e5fc', '#ffffff'], kind: 'shard' },
