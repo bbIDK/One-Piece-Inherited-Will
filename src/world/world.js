@@ -24,6 +24,9 @@ const PRISTINE_MAX = 6000; // procedural blocks kept filled in (≈ 30 MB)
 /** The per-tile variation byte (0..127): a hash of the position. */
 export const variantAt = (x, y) => (Math.imul((Math.imul(y, 0x9E3779B1) ^ x) >>> 0, 2654435761) >>> 25) & 127;
 
+/** How tall the low things you can jump over are (m): over their tops, they're no wall. */
+const PROP_TOP = { signboard: 1.15, barrel: 1.0, crate: 0.9, planter: 0.6, sacks: 0.75, chest: 0.65, mooring: 0.6, haystack: 1.2, bench: 0.5, stump: 0.5, rock: 0.7 };
+
 export class World {
   constructor(width, height, { wrap = true, zone = 0, id = 'surface', fill = T.SEA, fogCell = 8 } = {}) {
     this.width = width;
@@ -443,7 +446,7 @@ export class World {
   roomOf(a) { return a.roofed || a.upTop ? null : this.interiorAt(a.x, a.y); }
 
   /** Does a circle of radius r at (x, y) overlap a small prop (lamp, barrel, tree trunk...)? */
-  hitsProp(x, y, r, wallsOnly = false) {
+  hitsProp(x, y, r, wallsOnly = false, feet = null) {
     if (!this.colliders.size) return false;
     for (let cy = Math.floor((y - r) / 4); cy <= Math.floor((y + r) / 4); cy++) {
       for (let cx = Math.floor((x - r) / 4); cx <= Math.floor((x + r) / 4); cx++) {
@@ -451,6 +454,8 @@ export class World {
         if (!list) continue;
         for (const c of list) {
           if (wallsOnly && !c.wall) continue;
+          // (over the top of something low — a sandwich board, a barrel — in a jump: clear of it)
+          if (feet !== null && c.o && PROP_TOP[c.o.kind] !== undefined && feet >= PROP_TOP[c.o.kind] * (c.o.s || 1)) continue;
           const dx = this.dx(c.x, x), dy = y - c.y;
           if (c.r !== undefined) { const rr = c.r + r; if (dx * dx + dy * dy < rr * rr) return true; }
           else {

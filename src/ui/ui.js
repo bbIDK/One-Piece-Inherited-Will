@@ -99,7 +99,7 @@ export class UI {
     E.lives = h('div.lives');
     E.bounty = h('div.hud-bounty');
     E.buffs = h('div.buffs');
-    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.needs, E.o2, E.fly.el, E.lives, E.bounty, E.buffs));
+    this.hud.appendChild(h('div.hud-player', E.name, E.sub, E.hp.el, E.needs, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
     // hotbar: ten slots (1-9, 0), each something you take out: food, a
     // weapon, your Devil Fruit, one of its forms (hotbar.js). Click a slot to
     // use it; drag slots to rearrange them. With the Inventory or Skills open
@@ -165,8 +165,7 @@ export class UI {
       E.hotbar.appendChild(el);
     }
     // the bottom of the screen: your health and Haki over the hotbar, the ship button at its heart
-    E.dock = h('div.dock', h('div.dock-bars', E.hp.el, h('div.dock-gap'), E.hk.el), E.hotbar);
-    this.hud.appendChild(E.dock);
+    this.hud.appendChild(E.hotbar);
     // the interaction prompt; tapping it does the same as E
     E.prompt = h('div.prompt.hidden.interactive', { on: { click: () => { const inp = this.game?.input; if (inp && !this.blocksInput()) { inp.simKey('E', true); inp.simKey('E', false); } } } });
     this.hud.appendChild(E.prompt);

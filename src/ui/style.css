@@ -84,7 +84,7 @@
 .dock-bars .bar.hk > span { transform: scaleX(-1); right: auto; left: 8px; }
 .dock-bars .bar.hidden { display: block !important; visibility: hidden; }
 .dock-gap { width: 92px; flex: none; }
-.shipbtn { position: relative; width: 74px; height: 74px; margin: -26px 6px 0; flex: none; border-radius: 50%; display: grid; place-items: center; align-content: center; gap: 0;
+.shipbtn { position: relative; width: 58px; height: 58px; margin: 0 4px; flex: none; border-radius: 50%; display: grid; place-items: center; align-content: center; gap: 0;
   background: radial-gradient(circle at 50% 35%, #2b4a66, #10202e 70%); border: 3px solid #c9a24a; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.55), inset 0 2px 6px rgba(255,255,255,.12);
   cursor: var(--cur-ptr); transition: transform .12s ease, border-color .2s, box-shadow .2s; }
 .shipbtn:hover { transform: translateY(-2px) scale(1.04); }
@@ -129,10 +129,10 @@
 @keyframes actperfect { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 1), 0 3px 8px rgba(0,0,0,.45); border-color: #fff; background-color: rgba(255, 253, 231, .55); } 100% { box-shadow: 0 0 0 16px rgba(255, 255, 255, 0), 0 3px 8px rgba(0,0,0,.45); } }
 .slot.act.guard.counter { border-color: #ffab40; box-shadow: 0 0 14px rgba(255, 171, 64, .85); }
 
-.prompt { position: absolute; left: 50%; bottom: 122px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }
+.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }
 .prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }
 
-.log { position: absolute; left: 14px; bottom: 112px; width: 420px; max-height: clamp(70px, calc(100vh - 550px), 170px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }
+.log { position: absolute; left: 14px; bottom: 82px; width: 420px; max-height: clamp(70px, calc(100vh - 550px), 170px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }
 .log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }
 @keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 

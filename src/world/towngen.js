@@ -481,7 +481,8 @@ function layTown(world, town, rng, noise, dry) {
       }
     }
   }
-  const propKinds = town.style === 'village' || town.style === 'tribal' ? ['barrel', 'crate', 'haystack'] : ['barrel', 'crate', 'barrel'];
+  // (no crates stacked along the streets: they cluttered every alley)
+  const propKinds = town.style === 'village' || town.style === 'tribal' ? ['barrel', 'haystack', 'barrel'] : ['barrel'];
   for (const b of buildings) {
     // barrels and crates at the corner of the front (more at shops and taverns)
     const n = b.role !== 'house' ? 2 : rng.chance(0.3) ? 1 : 0;

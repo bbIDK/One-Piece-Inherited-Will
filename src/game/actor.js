@@ -1185,7 +1185,9 @@ export class Actor extends Entity {
     // that close, and getting clear)
     const body = 0.24 * Math.min(3, this.look?.scale || 1);
     if (body > r * 0.9 && w.hitsProp(x, y, body, true) && !w.hitsProp(this.x, this.y, body, true)) return false;
-    return !w.hitsProp(x, y, r * 0.9);
+    // (low things — a barrel, a sandwich board — you can jump clear over)
+    const feet = (this.z || 0) > 0.05 ? this.z : null;
+    return !w.hitsProp(x, y, r * 0.9, false, feet);
   }
 
   /**
