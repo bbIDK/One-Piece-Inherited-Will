@@ -25654,7 +25654,8 @@
       if (!this.passable(w, x - r4, y) || !this.passable(w, x + r4, y) || !this.passable(w, x, y - r4) || !this.passable(w, x, y + r4)) return false;
       const body = 0.24 * Math.min(3, this.look?.scale || 1);
       if (body > r4 * 0.9 && w.hitsProp(x, y, body, true) && !w.hitsProp(this.x, this.y, body, true)) return false;
-      return !w.hitsProp(x, y, r4 * 0.9);
+      const feet2 = (this.z || 0) > 0.05 ? this.z : null;
+      return !w.hitsProp(x, y, r4 * 0.9, false, feet2);
     }
     /**
      * Where feet rest at (x, y) off a deck: the ground, a pier or a quay — over
@@ -100526,6 +100527,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
   var MIXED = 255;
   var PRISTINE_MAX = 6e3;
   var variantAt = (x, y) => Math.imul((Math.imul(y, 2654435761) ^ x) >>> 0, 2654435761) >>> 25 & 127;
+  var PROP_TOP = { signboard: 1.15, barrel: 1, crate: 0.9, planter: 0.6, sacks: 0.75, chest: 0.65, mooring: 0.6, haystack: 1.2, bench: 0.5, stump: 0.5, rock: 0.7 };
   var World = class {
     constructor(width, height, { wrap: wrap2 = true, zone = 0, id = "surface", fill: fill2 = T2.SEA, fogCell = 8 } = {}) {
       this.width = width;
@@ -101010,7 +101012,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       return a.roofed || a.upTop ? null : this.interiorAt(a.x, a.y);
     }
     /** Does a circle of radius r at (x, y) overlap a small prop (lamp, barrel, tree trunk...)? */
-    hitsProp(x, y, r4, wallsOnly = false) {
+    hitsProp(x, y, r4, wallsOnly = false, feet2 = null) {
       if (!this.colliders.size) return false;
       for (let cy = Math.floor((y - r4) / 4); cy <= Math.floor((y + r4) / 4); cy++) {
         for (let cx = Math.floor((x - r4) / 4); cx <= Math.floor((x + r4) / 4); cx++) {
@@ -101018,6 +101020,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
           if (!list) continue;
           for (const c of list) {
             if (wallsOnly && !c.wall) continue;
+            if (feet2 !== null && c.o && PROP_TOP[c.o.kind] !== void 0 && feet2 >= PROP_TOP[c.o.kind] * (c.o.s || 1)) continue;
             const dx = this.dx(c.x, x), dy = y - c.y;
             if (c.r !== void 0) {
               const rr = c.r + r4;
@@ -101656,7 +101659,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         }
       }
     }
-    const propKinds = town.style === "village" || town.style === "tribal" ? ["barrel", "crate", "haystack"] : ["barrel", "crate", "barrel"];
+    const propKinds = town.style === "village" || town.style === "tribal" ? ["barrel", "haystack", "barrel"] : ["barrel"];
     for (const b of buildings) {
       const n = b.role !== "house" ? 2 : rng4.chance(0.3) ? 1 : 0;
       for (let k = 0; k < n; k++) {
@@ -116114,7 +116117,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
 .dock-bars .bar.hk > span { transform: scaleX(-1); right: auto; left: 8px; }
 .dock-bars .bar.hidden { display: block !important; visibility: hidden; }
 .dock-gap { width: 92px; flex: none; }
-.shipbtn { position: relative; width: 74px; height: 74px; margin: -26px 6px 0; flex: none; border-radius: 50%; display: grid; place-items: center; align-content: center; gap: 0;
+.shipbtn { position: relative; width: 58px; height: 58px; margin: 0 4px; flex: none; border-radius: 50%; display: grid; place-items: center; align-content: center; gap: 0;
   background: radial-gradient(circle at 50% 35%, #2b4a66, #10202e 70%); border: 3px solid #c9a24a; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.55), inset 0 2px 6px rgba(255,255,255,.12);
   cursor: var(--cur-ptr); transition: transform .12s ease, border-color .2s, box-shadow .2s; }
 .shipbtn:hover { transform: translateY(-2px) scale(1.04); }
@@ -116159,10 +116162,10 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
 @keyframes actperfect { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 1), 0 3px 8px rgba(0,0,0,.45); border-color: #fff; background-color: rgba(255, 253, 231, .55); } 100% { box-shadow: 0 0 0 16px rgba(255, 255, 255, 0), 0 3px 8px rgba(0,0,0,.45); } }
 .slot.act.guard.counter { border-color: #ffab40; box-shadow: 0 0 14px rgba(255, 171, 64, .85); }
 
-.prompt { position: absolute; left: 50%; bottom: 122px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }
+.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }
 .prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }
 
-.log { position: absolute; left: 14px; bottom: 112px; width: 420px; max-height: clamp(70px, calc(100vh - 550px), 170px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }
+.log { position: absolute; left: 14px; bottom: 82px; width: 420px; max-height: clamp(70px, calc(100vh - 550px), 170px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }
 .log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }
 @keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
@@ -125527,7 +125530,7 @@ Trains by: ${TRAINS_BY[k]}` },
       E.lives = h("div.lives");
       E.bounty = h("div.hud-bounty");
       E.buffs = h("div.buffs");
-      this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.needs, E.o2, E.fly.el, E.lives, E.bounty, E.buffs));
+      this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.hp.el, E.needs, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
       E.hotbar = h("div.hotbar");
       E.acts = {};
       for (const [k, key2, name, tip] of [["dodge", "Q", "Dodge", "Dash out of the way, untouchable for an instant. It comes back after a moment."], ["guard", "F", "Block", "Hold to block. Tap it just as a blow lands to PARRY (a yellow glint shows the moment): they reel, and your next strike is a COUNTER. Mashing it won't parry. A red-glint blow smashes a guard aside \u2014 dodge those: the guard can't come up again until this fills."]]) {
@@ -125607,8 +125610,7 @@ ${tip}` }), cd: h("div.cd") };
         E.toggles[t.type] = { el, k };
         E.hotbar.appendChild(el);
       }
-      E.dock = h("div.dock", h("div.dock-bars", E.hp.el, h("div.dock-gap"), E.hk.el), E.hotbar);
-      this.hud.appendChild(E.dock);
+      this.hud.appendChild(E.hotbar);
       E.prompt = h("div.prompt.hidden.interactive", { on: { click: () => {
         const inp = this.game?.input;
         if (inp && !this.blocksInput()) {
