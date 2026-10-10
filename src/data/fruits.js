@@ -343,10 +343,10 @@ export const FRUITS = {
     desc: 'Touch a face with your right hand and copy it perfectly. Marines won\'t recognise you. (Bon Clay.)',
     passive: { disguise: true },
     techniques: [
-      T(0, { id: 'mane_disguise', name: 'Mimicry', icon: '🎭', anim: 'pray', windup: 0.4, recover: 0.2, cd: 60, desc: 'Disguise yourself: Marines and bounty hunters ignore you until you attack.', steps: [{ buff: { id: 'disguise', name: 'Disguised', dur: 90, mods: { stealth: 0.5 }, disguise: true } }] }),
-      T(20, { id: 'mane_memoir', name: 'Memoir Strike', icon: '💭', anim: 'kick', windup: 0.2, recover: 0.3, cd: 8, desc: 'Take a friend\'s face — the enemy hesitates to strike.', steps: [{ hit: { shape: 'arc', range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] }),
+      T(0, { id: 'mane_disguise', name: 'Mimicry', icon: '🎭', anim: 'pray', windup: 0.4, recover: 0.2, cd: 2, desc: 'Your right hand to a face: become them — face, build, clothes and all. Whoever\'s beside you, or the last face your blows touched. Again to be yourself. In a Marine\'s face the Marines take you for one of their own — until you strike one.', steps: [{ mane: 'mimic' }] }),
+      T(20, { id: 'mane_memoir', name: 'Memoir Strike', icon: '💭', anim: 'kick', windup: 0.2, recover: 0.3, cd: 8, desc: 'Take a friend\'s face — the enemy hesitates to strike.', steps: [{ mane: 'memoir' }, { hit: { shape: 'arc', range: 1.8, arc: 1.4, offset: 0.2, damage: 20, knockback: 5, stun: 1.4 } }] }),
       T(30, { id: 'mane_montage', name: 'Mane Mane Montage', anim: 'pray', windup: 0.3, recover: 0.3, cd: 14, desc: 'Your face a jumble of every face you\'ve ever touched: whoever looks at you is too bewildered to move for a moment.',
-        steps: [{ hit: { shape: 'arc', range: 3.2, arc: 1.6, offset: 0.2, damage: 6, stun: 1.6, status: { despair: 1.2 } }, vfx: 'ring', color: '#f06292' }] }),
+        steps: [{ mane: 'montage' }, { hit: { shape: 'arc', range: 3.2, arc: 1.6, offset: 0.2, damage: 6, stun: 1.6, status: { despair: 1.2 } }, vfx: 'ring', color: '#f06292' }] }),
     ],
   },
   zushi: {

@@ -24,6 +24,7 @@ import { plankJoins, PLANK_W } from './gangway.js';
 import { bw } from '../world/bframe.js';
 import { heightsOf } from '../world/interiors.js';
 import { attackSpec, infuse } from './moveset.js';
+import { maneTick } from './mane.js';
 const GAME_G = 22; // (gravity for jumps and falls: heavier than Earth's, for a snappy hop)
 const _sv = [0, 0], _sv2 = [0, 0];
 /** How fast a point aboard ship `s` is moving over the world (m/s): her way along her heading, and her turn swinging it round her middle (v = ω × r). */
@@ -789,6 +790,7 @@ export class Actor extends Entity {
   update(dt, game) {
     if (!this.alive) return;
     this.sortY = this.y;
+    if (this.fruit === 'mane') maneTick(this, dt);
     if (this.state === 'knocked') {
       this.knockT += dt;
       this.updateVertical(dt, game);

@@ -26,6 +26,7 @@ import { drawProjectile } from '../render/projectiles.js';
 import { tierOf, stretchWindup } from './difficulty.js';
 import { POWERS } from './powers.js';
 import { ownRoom } from './room.js';
+import { maneStep } from './mane.js';
 import { flyableAt } from './flight.js';
 import { clashes, FUTURE_SIGHT, sigOf } from './haki.js';
 
@@ -357,6 +358,7 @@ function runStep(actor, s, game, a) {
     game.fx.tech(actor, s, a, 'heal');
   }
   // (the Phoenix's regenerating flames: its hybrid form shows while they burn)
+  if (s.mane) maneStep(actor, s.mane, game);
   if (s.phoenix) actor.phoenixUntil = Math.max(actor.phoenixUntil || 0, (game.env?.time ?? game.time ?? 0) + s.phoenix);
   if (s.zone) {
     const z = s.zone;

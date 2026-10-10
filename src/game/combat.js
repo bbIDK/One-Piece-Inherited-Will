@@ -38,6 +38,7 @@ import { barrierStops, reflectShot, absorbShot } from './powers.js';
 import { reachesUp, downFlyer } from './flight.js';
 import { raceHit, unshakable } from './racial.js';
 import { hardening, hasRyou, RYOU } from './haki.js';
+import { touchFace } from './mane.js';
 
 const ELEMENT_COLORS = {
   physical: '#ffffff', fire: '#ff7b39', ice: '#9be7ff', lightning: '#fff176', sand: '#e1c16e', smoke: '#cfd8dc',
@@ -482,6 +483,7 @@ export class Combat {
     // feedback: impact star, sparks, hit-stop, camera kick and a combined damage
     // number, all scaled by the weight of the blow (see render/combatfx.js)
     fx.hit(att, tgt, h, { final, crit, blocked, el, ang: kbAng, playerInvolved: isPlayerInvolved, w, counter, ryou });
+    if (att?.fruit === 'mane' && !blocked) touchFace(att, tgt, game);
     if (att?.isPlayer) game.emit('playerLanded', tgt, { final, crit, blocked, counter });
     const thud = h.slashing ? (h.heavy ? 'slash_heavy' : 'slash_hit') : (h.heavy ? 'punch_heavy' : 'punch');
     game.audio?.sfx(blocked ? 'block' : h.sfxHit || (el === 'physical' ? thud : el), tgt);

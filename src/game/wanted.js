@@ -33,7 +33,11 @@ export function installWanted(game) {
   // fighting (or thieving) in a hood gives your face away
   const blow = () => {
     const p = game.player;
-    if (!p || !hooded(game)) return;
+    if (!p) return;
+    // (in a copied face, striking them gives you away: the face comes off)
+    const mask = p.buffs?.find((b) => b.id === 'disguise');
+    if (mask) { p.buffs = p.buffs.filter((b) => b !== mask); p.recalc?.(); game.log('Your copied face slips as you strike — they know you now!', '#ffab91'); }
+    if (!hooded(game)) return;
     p.hoodBlownT = 40;
     game.log('Your hood slips in the struggle — they\'ve seen your face!', '#ffab91');
   };
@@ -47,8 +51,10 @@ function tick(game, W, dt) {
   if (p.hoodBlownT > 0) p.hoodBlownT = Math.max(0, p.hoodBlownT - dt);
   const tier = wantedTier(game);
   const hood = hooded(game);
+  // in a face copied with the Mane Mane no Mi, nobody knows you at all
+  const mimic = !!p.buffs?.some((b) => b.disguise);
   // (older checks — Marine bases, AI targeting — read this flag)
-  p.disguised = hood;
+  p.disguised = hood || mimic;
   W.spotted = Math.max(0, W.spotted - dt);
   W.t -= dt;
   if (W.t > 0) return;
@@ -62,7 +68,7 @@ function tick(game, W, dt) {
     if (a === p || a.faction !== 'marine' || !a.controller || a.state !== 'idle' || a.controller.kind === 'follower') continue;
     if (a.provoked) continue;
     const d = game.world.distance(a.x, a.y, p.x, p.y);
-    const inView = tier >= 2 && !aboard && d < range && (!game.world.interiorAt || sameSpace(game, a, p));
+    const inView = tier >= 2 && !aboard && !mimic && d < range && (!game.world.interiorAt || sameSpace(game, a, p));
     if (!inView) { a.suspect = Math.max(0, (a.suspect || 0) - step * 0.4); continue; }
     const rate = (tier >= 3 ? 1.1 : 0.6) * (1 - (d / range) * 0.6) * (hood ? 0.4 : 1);
     const before = a.suspect || 0;
