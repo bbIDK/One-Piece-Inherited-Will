@@ -6027,14 +6027,24 @@
     P6.hand = "fist";
     P6.handB = "fist";
     if (c.ladder && k < 0.82) {
-      const ph = (c.rise || 0) / 0.3 * Math.PI, sF = Math.sin(ph), sB = -sF;
-      P6.l = 0.08;
-      P6.b = [0.03, 0.06];
-      P6.hF = [0.16, -0.3 - 0.16 * Math.max(0, sF)];
-      P6.hB = [0.16, -0.3 - 0.16 * Math.max(0, sB)];
-      P6.fF = [0.1, -0.08 - 0.2 * Math.max(0, sB)];
-      P6.fB = [0.1, -0.08 - 0.2 * Math.max(0, sF)];
-      P6.ht = -0.1;
+      const cyc = (c.rise || 0) / 0.6;
+      const limb4 = (u, top, low, out) => {
+        u -= Math.floor(u);
+        if (u < 0.78) return [out, top + (low - top) * (u / 0.78), 1];
+        const r4 = sm01((u - 0.78) / 0.22);
+        return [out - 0.05 * Math.sin(r4 * Math.PI), low + (top - low) * r4, 0];
+      };
+      const [hxF, hyF, gF] = limb4(cyc, -0.5, -0.06, 0.2), [hxB, hyB, gB] = limb4(cyc + 0.5, -0.5, -0.06, 0.2);
+      const [fxF, fyF] = limb4(cyc + 0.5 + 0.12, -0.34, 0.02, 0.12), [fxB, fyB] = limb4(cyc + 0.12, -0.34, 0.02, 0.12);
+      P6.l = 0.06;
+      P6.b = [0.03, 0.05];
+      P6.hF = [hxF, hyF];
+      P6.hB = [hxB, hyB];
+      P6.fF = [fxF, fyF];
+      P6.fB = [fxB, fyB];
+      P6.hand = gF ? "fist" : "palm";
+      P6.handB = gB ? "fist" : "palm";
+      P6.ht = -0.14;
       return;
     }
     const m = c.ladder ? (k - 0.82) / 0.18 : k;
@@ -6599,6 +6609,15 @@
     // ---------------------------------------------------------------- kicks
     // a snap kick: the knee chambered high, the leg whipped out level, the hips turned over into it and the body back to balance it
     kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.06], l: -0.12, hp: -0.12, fF: [0.13, -0.32], fB: [-0.07, 0], ...arms(c, { hF: [0.18, 0.02], hB: [0.08, 0.1] }), face: "fierce" }, hit: { b: [0.05, -0.02], l: -0.26, hp: 0.35, tw: -0.1, ht: 0.1, fF: [0.68, -0.42], fB: [-0.09, 0], sm: 0.1, ...arms(c, { hF: [0.08, 0.14], hB: [-0.16, 0.14] }), face: "fierce" }, follow: { fF: [0.6, -0.36], l: -0.22 } })), legs: true }),
+    // Black Leg (Sanji): kicks from a cook's stance, hands in his pockets.
+    // The snap: the knee drawn up high and tight first (the chamber), then the
+    // leg whipped out straight from it, toe pointed, the body leaning back to
+    // balance it — and drawn back into the chamber before it comes down.
+    bl_snap: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.62, load: { b: [0, 0.07], l: -0.04, hp: -0.18, tw: 0.12, fF: [0.2, -0.46], fB: [-0.06, 0], ...arms(c, { hF: [0.12, 0.08], hB: [0.04, 0.12] }), face: "fierce" }, hit: { b: [0.04, -0.01], l: -0.3, hp: 0.32, tw: -0.06, ht: 0.12, fF: [0.8, -0.58], fB: [-0.1, 0], sm: 0.12, ...arms(c, { hF: [0.06, 0.16], hB: [-0.14, 0.14] }), face: "fierce" }, follow: { fF: [0.3, -0.48], l: -0.14, hp: 0.12 }, loadEase: "inout", hitEase: "snap" })), legs: true }),
+    // the roundhouse: a pivot on the standing foot, the hips turned right
+    // over, the leg swinging round high and flat at the head, the body
+    // leaning away from it — a long, smooth arc, not a jab
+    bl_round: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.58, load: { b: [0, 0.08], l: -0.08, hp: -0.38, tw: -0.22, ls: 0.06, fF: [0.14, -0.5], fB: [-0.05, 0], ...arms(c, { hF: [0.14, 0.04], hB: [0.06, 0.1] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.42, hp: 0.6, tw: 0.28, ls: -0.16, ht: 0.22, fF: [0.66, -0.92], fB: [-0.07, 0], sm: 0.14, ...arms(c, { hF: [-0.16, 0.1], hB: [0.26, -0.02] }), face: "shout" }, follow: { fF: [0.34, -0.58], l: -0.22, hp: 0.34, tw: 0.16 }, loadEase: "inout" })), legs: true }),
     kick_high: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.07], l: -0.16, hp: -0.15, fF: [0.04, -0.38], fB: [-0.05, 0], ...arms(c, { hF: [0.16, 0], hB: [0.1, 0.06] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.46, hp: 0.42, ls: -0.06, ht: 0.2, fF: [0.57, -0.85], fB: [-0.06, 0], sm: 0.1, ...arms(c, { hF: [-0.18, 0.1], hB: [0.28, -0.04] }), face: "fierce" }, follow: { l: -0.32, fF: [0.46, -0.62] } })), legs: true }),
     // a whirling kick: a turn the other way, the leg whipped round, and the body spun on through after it
     kick_spin: (w, T5, c) => ({ keys: strike(w, T5, S(c, { followAt: 0.35, load: { sp: -0.06, b: [0, 0.07], l: -0.08, hp: -0.25, fF: [0.06, -0.24], ...arms(c, { hF: [0.2, 0], hB: [0, 0.1] }), face: "fierce" }, hit: { sp: 0, b: [0.03, -0.01], l: -0.3, hp: 0.5, ls: -0.1, fF: [0.7, -0.55], fB: [-0.06, 0], sm: 0.12, ...arms(c, { hF: [-0.12, 0.12], hB: [0.24, -0.06] }), face: "shout" }, follow: { sp: 0.55, fF: [0.36, -0.38], l: -0.18 }, end: spun(c) })), legs: true }),
@@ -6729,6 +6748,8 @@
     grab2: "hB",
     dual2: "wB",
     kick: "fF",
+    bl_snap: "fF",
+    bl_round: "fF",
     kick_high: "fF",
     kick_low: "fF",
     kick_spin: "fF",
@@ -6775,7 +6796,7 @@
   var SM_CH = { hF: "smF", hB: "smB", fF: "smfF", fB: "smfB" };
   var CLIP_WEIGHT = {
     light: "jab cross palm palm2 shigan shigan2 claw claw2 grab grab2 chop chop2 kick slash slash2 dual1 dual2 dual3 staff staff2 shoot flick ballet_kick pirouette",
-    medium: "hook kick_high kick_spin sweep rise_slash stab dual_stab staff_jab thrust throw point push raise room pull pray hana spread guardup flex blink jete knee rise_kick pistol skyward breath",
+    medium: "hook bl_snap bl_round kick_high kick_spin sweep rise_slash stab dual_stab staff_jab thrust throw point push raise room pull pray hana spread guardup flex blink jete knee rise_kick pistol skyward breath",
     heavy: "uppercut haymaker palm_double claw_x headbutt charge mouton axe_kick flying_kick stomp arabesque cleave iai dualx tora bladespin axe axe2 aim slam rankyaku vibe_palm rocket fly hiken groundpalm summon powerup tilt bazooka gatling kneel quake handstand slash3",
     massive: "axe_slam kaishin sunraise will gigant"
   };
@@ -12066,8 +12087,9 @@
     }
   });
   sig("bara_festival", { hit(fx, actor, s, a) {
-    const l = lastLook(actor);
-    fx.add("pieces", { x: actor.x, y: actor.y, follow: actor, r: 2.6, skin: l.skin, top: l.top, bottom: l.bottom, life: s.hit.duration || 1.2 });
+    const l = lastLook(actor), life2 = s.hit.duration || 1.2;
+    fx.add("pieces", { x: actor.x, y: actor.y, follow: actor, r: 2.6, skin: l.skin, top: l.coat || l.top, bottom: l.bottom, boot: l.boots || l.shoes, scale: l.scale || 1, life: life2 });
+    actor._baraLimbs = performance.now() / 1e3 + life2;
   } });
   sig("bara_escape", { dash(fx, actor, s, a) {
     DEFAULTS.dash(fx, actor, s, a);
@@ -17688,8 +17710,8 @@
       legs: true,
       desc: `Taught by "Red Leg" Zeff at the Baratie. A cook's hands are for cooking \u2014 fight with your legs alone.`,
       m1: [
-        m1("bleg_1", "black_leg", "kick", 7, { range: 1.6 }),
-        m1("bleg_2", "black_leg", "kick_high", 7, { range: 1.6 }),
+        m1("bleg_1", "black_leg", "bl_snap", 7, { range: 1.6 }),
+        m1("bleg_2", "black_leg", "bl_round", 7, { range: 1.6 }),
         m1("bleg_3", "black_leg", "kick_spin", 7, { range: 1.6, windup: 0.12, recover: 0.22 }),
         m1("bleg_4", "black_leg", "rise_kick", 12, { windup: 0.11, range: 1.8, kb: 4.5, recover: 0.3, name: "Collier" })
       ],
@@ -22432,7 +22454,7 @@
   var OAR_READY = { a: 0.15, b: 0.22, f: 1 };
   var OAR_REST = { a: -1.15, b: 0.12, f: 1 };
   var _sp = [0, 0];
-  var SEA_PACE = 2;
+  var SEA_PACE = 1.5;
   var NONE = [];
   function theirShips(game) {
     return game.net?.ships || NONE;
@@ -22583,7 +22605,7 @@
         const pull = this.captain ? (this.rowL + this.rowR) / 2 : this.rowL ? this.sail : 0;
         target2 = this.def.speed * pull * (pull < 0 ? 0.55 : 1) * (0.78 + 0.44 * this.drive);
       } else {
-        this.sailSet += (this.sail - this.sailSet) * Math.min(1, dt * 1.5);
+        this.sailSet = this.sailSet < this.sail ? Math.min(this.sail, this.sailSet + dt * 2.2) : Math.max(this.sail, this.sailSet - dt * 2.6);
         const rel3 = Math.cos(angleDiff(this.heading, windA));
         const windFactor = (0.62 + 0.38 * clamp((rel3 + 0.4) / 1.4, 0, 1)) * windS;
         target2 = this.def.speed * SEA_PACE * this.sailSet * windFactor * (this.owner === "player" ? game.crewMods?.speedMul || 1 : 1);
@@ -22746,6 +22768,11 @@
         for (const [px2, py2] of pts) if (hullGap(o, w.dx(o.x, px2), py2 - o.y) <= 0) return o;
       }
       return null;
+    }
+    /** Set all sail (true) or take it all in (false): no half measures. */
+    setSails(on) {
+      this.sail = on ? 1 : 0;
+      if (on) this.anchored = false;
     }
     /** Lying still: moored, anchored, hove to or just stopped — no way on her, no sail set, nobody rowing. */
     get still() {
@@ -25619,6 +25646,10 @@
           }
         }
       }
+      if (g && g.world === w && !this.belowDeck && !(this.z > 0.4) && w.dockAt?.(this.x, this.y)?.deck) {
+        const m = r4 + 0.12;
+        for (const [px2, py2] of [[x + m, y], [x - m, y], [x, y + m], [x, y - m]]) if (!w.isDock(px2, py2)) return false;
+      }
       if (!(this.passable(w, x - e, y - e) && this.passable(w, x + e, y - e) && this.passable(w, x - e, y + e) && this.passable(w, x + e, y + e))) return false;
       if (!this.passable(w, x - r4, y) || !this.passable(w, x + r4, y) || !this.passable(w, x, y - r4) || !this.passable(w, x, y + r4)) return false;
       const body = 0.24 * Math.min(3, this.look?.scale || 1);
@@ -26011,6 +26042,7 @@
       let u, v, h2;
       if (k < 0.82) {
         h2 = h0 + (top - h0) * rise;
+        c.rise = h2 - h0;
         const g = smooth012(0, 0.12, k);
         u = c.u0 + (l.u - c.u0) * g;
         v = c.v0 + (hb(h2) - c.v0) * g;
@@ -26509,7 +26541,7 @@
       if (this.crouchK > 0 && !act2 && !swim && !air && !busy) pose.crouch = this.crouchK;
       if (air) pose.air = { up: air === "up", k: this.jumpK || 0 };
       const cl = this.climb;
-      if (cl && !cl.ride && !act2) pose.climb = { k: Math.min(1, cl.t / (cl.T || 1)), ladder: !!cl.to?.ladder, rise: (this.z || 0) + (cl.t || 0) * 0.01 };
+      if (cl && !cl.ride && !act2) pose.climb = { k: Math.min(1, cl.t / (cl.T || 1)), ladder: !!cl.to?.ladder, rise: cl.rise ?? (this.z || 0) };
       if (this.blocking) {
         pose.block = this.blockTime;
         pose.armedBlock = pose.armed;
@@ -28428,7 +28460,7 @@
       const met = c.flags.metIntro || (c.flags.metIntro = {});
       for (const a of game.actorsNear(p.x, p.y, MEET)) {
         if (!a._staged || !a.alive || a.state !== "idle" || !a.npcId || met[a.npcId]) continue;
-        if (!onSight(a)) continue;
+        if (!onSight(a) || hidden(game, a, p)) continue;
         if (w.distance(a.x, a.y, p.x, p.y) > MEET) continue;
         met[a.npcId] = 1;
         game.playCinematic({
@@ -28445,6 +28477,7 @@
       const met = c.flags.metIntro || (c.flags.metIntro = {});
       met[a.npcId] = 1;
       a.unmet = false;
+      if (!(onSight(a) || a.def?.introCutscene) || hidden(game, a, p)) return false;
       game.playCinematic({
         mood: "meet",
         shots: meetShots(a, p, game.world),
@@ -28456,6 +28489,10 @@
       return true;
     };
     return Q2;
+  }
+  function hidden(game, a, p) {
+    const w = game.world;
+    return !!(w.roomOf?.(a) || w.roomOf?.(p));
   }
   function onSight(a) {
     const d = a.def || {};
@@ -65157,7 +65194,9 @@ ${GLSL}
       if (bank > 0.01) {
         float topH = bank * (0.02 + 0.09 * bn.g);
         // a lumpy upper edge (in two scales) over a straight base
-        float lumps = (N0(ap * 1.3 + vec2(y * 3.0, 0.3)).r - 0.5) * 0.06 + (N0(ap * 4.1 + 1.3).g - 0.5) * 0.02;
+        // (round the compass only: varied with the height too, the edge folded
+        // over itself into drips and loose blobs hanging off the top)
+        float lumps = (N0(ap * 1.3 + 0.3).r - 0.5) * 0.06 + (N0(ap * 4.1 + 1.3).g - 0.5) * 0.02;
         float inside = topH + lumps * (0.4 + bank) - y;
         if (inside > 0.0) {
           float body = smoothstep(0.0, 0.004, inside) * smoothstep(-0.012, 0.003, y);
@@ -65237,7 +65276,9 @@ ${GLSL}
         cc += uSunCol * (1.0 - smoothstep(th, th + 0.07, n0)) * pow(sd, 4.0) * 1.4 * clearSky;
         cc += uFlashCol * flash * 0.35;
         cc = mix(cc, uHorizon, (1.0 - smoothstep(0.03, 0.22, y)) * 0.25);
-        col = mix(col, cc, edge * smoothstep(0.03, 0.1, y));
+        // (gone toward the horizon, where they'd shrink into a scatter of
+        // floating scraps over the banks: the banks hold the horizon)
+        col = mix(col, cc, edge * smoothstep(0.08, 0.2, y));
       }
     }
 
@@ -66831,7 +66872,7 @@ ${GLSL}
   var WK = ACROSS.length;
   var TRACK_N = 10;
   var WakeTrail = class {
-    constructor({ n = 36, life: life2 = 4.2, every = 0.11, y = 0.04, grain = 0.3, drift = 0.17, turn = 0.05, fadeIn = 0.8 } = {}) {
+    constructor({ n = 64, life: life2 = 4.2, every = 0.11, y = 0.04, grain = 0.3, drift = 0.17, turn = 0.05, fadeIn = 0.8 } = {}) {
       this.n = n;
       this.life = life2;
       this.every = every;
@@ -66871,8 +66912,9 @@ ${GLSL}
       if (src) {
         const q2 = P6[0];
         const dh = q2 ? Math.abs(Math.atan2(Math.sin(src.h - q2.h), Math.cos(src.h - q2.h))) : 0;
-        if (!q2 || time - this.lastT > this.every || dh > this.turn && time - this.lastT > 1 / 40) {
-          const d = q2 ? Math.hypot(w.dx(q2.x, src.x), src.y - q2.y) : 0;
+        const d = q2 ? Math.hypot(w.dx(q2.x, src.x), src.y - q2.y) : 0;
+        const gap = Math.max(0.25, (src.sp || 0) * 0.05);
+        if (!q2 || d > gap && (time - this.lastT > this.every || dh > this.turn && time - this.lastT > 1 / 40)) {
           if (q2 && d > 60) P6.length = 0;
           this.lastT = time;
           P6.unshift({ x: src.x, y: src.y, h: src.h, t: time, sp: src.sp, s: P6[0] ? P6[0].s + d : 0 });
@@ -66951,13 +66993,18 @@ ${GLSL}
         }
       }
       if (this.keepTrack) {
-        const T5 = this.track || (this.track = []), m = Math.min(TRACK_N, n);
+        const T5 = this.track || (this.track = []), m = TRACK_N;
         T5.length = 0;
+        const L3 = sHead - rows[n - 1].s;
+        let i = 0;
         for (let k = 0; k < m; k++) {
-          const i = m === 1 ? 0 : Math.round(k / (m - 1) * (n - 1)), q2 = rows[i];
-          const [half2, bright] = shape(q2, (time - q2.t) / this.life);
-          const run = sHead - q2.s, fade2 = run <= 0 ? 0 : run >= this.fadeIn ? 1 : run / this.fadeIn;
-          T5.push(q2.x, q2.y, half2, bright * fade2);
+          const sk = sHead - L3 * (k / (m - 1));
+          while (i < n - 2 && rows[i + 1].s > sk) i++;
+          const a = rows[i], b = rows[i + 1], span2 = a.s - b.s;
+          const f = span2 > 1e-6 ? Math.min(1, Math.max(0, (a.s - sk) / span2)) : 0;
+          const [ha, ba] = shape(a, (time - a.t) / this.life), [hb, bb] = shape(b, (time - b.t) / this.life);
+          const run = sHead - sk, fade2 = run <= 0 ? 0 : run >= this.fadeIn ? 1 : run / this.fadeIn;
+          T5.push(a.x + w.dx(a.x, b.x) * f, a.y + (b.y - a.y) * f, ha + (hb - ha) * f, (ba + (bb - ba) * f) * fade2);
         }
       }
       g.attributes.position.needsUpdate = true;
@@ -77361,6 +77408,15 @@ ${GLSL}
       c.push([8.8, 10.1, 0.5]);
       return { circles: c };
     }
+    if (o.kind === "bigtop") {
+      const c = [[0, 0, 0.35]];
+      for (let i = 0; i < 16; i += 2) {
+        const a = i / 16 * Math.PI * 2;
+        c.push([Math.cos(a) * 8.6, Math.sin(a) * 8.6, 0.25]);
+      }
+      for (const z of [-0.9, 0, 0.9]) c.push([-7, z, 1]);
+      return { circles: c };
+    }
     if (o.kind === "baratie") return { circles: [[-18.5, 0, 0.55], [18.5, 0, 0.55]] };
     if (o.kind === "gate") {
       const k = /justice/i.test(o.name || "") ? 2.2 : 1;
@@ -80506,6 +80562,105 @@ ${GLSL}
     root4.add(m);
     return root4;
   });
+  var BIGTOP = { R: 8.6, eave: 4.3, apex: 11.6, n: 16 };
+  var bigtopGeo = () => model("bigtop", (k) => {
+    const { R: R5, eave, apex, n } = BIGTOP;
+    const RED2 = "#d32f2f", YEL = "#fbc02d", WHITE9 = "#fafafa";
+    const pos = [], tri2 = [];
+    const P6 = (a, r4, y) => [Math.cos(a) * r4, y, Math.sin(a) * r4];
+    for (let i = 0; i < n; i++) {
+      const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2, c = i % 2 ? RED2 : YEL;
+      const mid = [R5 * 0.55, eave + (apex - eave) * 0.52];
+      for (const [r0, y0, r12, y1] of [[R5 + 0.35, eave, mid[0], mid[1]], [mid[0], mid[1], 0.3, apex]]) {
+        const p00 = P6(a0, r0, y0), p01 = P6(a1, r0, y0), p10 = P6(a0, r12, y1), p11 = P6(a1, r12, y1);
+        pos.push(...p00, ...p10, ...p01, ...p01, ...p10, ...p11);
+        tri2.push(c, c);
+      }
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    g.computeVertexNormals();
+    k.add(g, { split: true, color: (p, nn, i) => tri2[Math.floor(i / 3)], double: true, backShade: 0.7, outline: 0.06 });
+    for (let i = 0; i < n * 2; i++) {
+      const a = (i + 0.5) / (n * 2) * Math.PI * 2, w = (R5 + 0.35) * Math.PI * 2 / (n * 2);
+      k.save();
+      k.translate(Math.cos(a) * (R5 + 0.36), eave, Math.sin(a) * (R5 + 0.36));
+      k.rotateY(-a + Math.PI / 2);
+      k.add(box(w + 0.02, 0.32, 0.03), { at: [0, -0.32, 0], color: WHITE9 });
+      k.add(new CircleGeometry(w / 2, 10, Math.PI, Math.PI), { at: [0, -0.32, 5e-3], color: i % 2 ? RED2 : YEL, double: true, backShade: 0.85 });
+      k.restore();
+    }
+    for (let i = 0; i < n; i += 2) {
+      const a = i / n * Math.PI * 2, x = Math.cos(a) * R5, z = Math.sin(a) * R5;
+      k.add(cyl(0.13, 0.15, eave, 8), { at: [x, 0, z], color: WHITE9, outline: 0.02 });
+      for (let y = 0.25; y < eave - 0.2; y += 0.7) k.add(cyl(0.155, 0.155, 0.3, 8), { at: [x, y, z], color: RED2 });
+      k.add(new SphereGeometry(0.2, 8, 6), { at: [x, eave + 0.05, z], color: YEL });
+    }
+    k.add(cyl(0.22, 0.28, apex + 1.4, 10), { color: "#8d6e4a", outline: 0.02 });
+    k.add(new SphereGeometry(0.3, 10, 8), { at: [0, apex + 1.5, 0], color: YEL, outline: 0.015 });
+    k.add(cyl(5.2, 5.2, 0.03, 32), { at: [0, 0.01, 0], color: "#e6c58f" });
+    for (let i = 0; i < 24; i++) {
+      const a = i / 24 * Math.PI * 2;
+      k.save();
+      k.translate(Math.cos(a) * 5.35, 0, Math.sin(a) * 5.35);
+      k.rotateY(-a);
+      k.add(box(0.22, 0.42, 1.42), { color: i % 2 ? RED2 : WHITE9, outline: 0.012 });
+      k.restore();
+    }
+    k.add(box(3.2, 0.7, 2.6), { at: [-7, 0, 0], color: "#6d4c33", outline: 0.025 });
+    k.add(box(1.6, 0.6, 1.4), { at: [-7, 0.7, 0], color: RED2, outline: 0.02 });
+    for (const s of [-1, 1]) k.add(torus(0.5, 0.1, 6, 14), { at: [-7, 1, s * 0.78], color: "#3e2723" });
+    k.add(cyl(0.42, 0.62, 2.6, 14), { at: [-7.4, 1.5, 0], rot: [0, 0, -Math.PI / 2 + 0.18], color: "#263238", outline: 0.03 });
+    k.add(torus(0.46, 0.09, 6, 16), { at: [-4.85, 1.95, 0], rot: [0, Math.PI / 2, 0], color: "#37474f" });
+    for (let i = 0; i < 6; i++) k.add(new SphereGeometry(0.3, 10, 8), { at: [-6.6 + i % 3 * 0.62, 0.7 + 0.3 + Math.floor(i / 3) * 0.5, 1.7 + i % 2 * 0.1], color: "#1c1c1c", outline: 0.012 });
+    for (const [x, z] of [[3.6, 6.8], [4.3, 6.2], [-3.2, -7.1], [6.6, -3.6]]) k.add(cyl(0.38, 0.42, 0.95, 10), { at: [x, 0, z], color: "#8d5b33", outline: 0.015 });
+    for (const [x, z] of [[-2.4, 7.3], [6.9, 2.8]]) k.add(box(0.9, 0.8, 0.9), { at: [x, 0, z], color: "#a1784f", outline: 0.015 });
+  });
+  function buggyFlagMaterial() {
+    let m = flagMats.get("buggy");
+    if (m) return m;
+    const { ctx: g, tex: tex3 } = canvasTexture(256, 170);
+    g.fillStyle = "#141414";
+    g.fillRect(0, 0, 256, 170);
+    g.setTransform(110, 0, 0, 110, 128, 88);
+    drawJollyRoger(g, { skull: "classic", bones: "cross" }, 1, "#141414");
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = "#e53935";
+    g.beginPath();
+    g.arc(128, 100, 11, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = "rgba(255,255,255,.6)";
+    g.beginPath();
+    g.arc(124, 96, 3.5, 0, Math.PI * 2);
+    g.fill();
+    tex3.needsUpdate = true;
+    m = new MeshToonMaterial({ map: tex3, side: DoubleSide });
+    flagMats.set("buggy", m);
+    return m;
+  }
+  reg2("bigtop", (o, ctx) => {
+    const root4 = group("bigtop");
+    add(root4, bigtopGeo());
+    root4.rotation.y = o.yaw || 0;
+    const geo2 = new PlaneGeometry(2.4, 1.6, 10, 3);
+    geo2.translate(1.2, 0, 0);
+    const flag = new Mesh(geo2, buggyFlagMaterial());
+    flag.castShadow = true;
+    flag.position.set(0.22, BIGTOP.apex + 0.6, 0);
+    root4.add(flag);
+    const base2 = geo2.attributes.position.array.slice();
+    animate(root4, (t, env2) => {
+      flag.rotation.y = Math.PI - (env2?.windAngle || 0) - root4.rotation.y;
+      const a = geo2.attributes.position, amp = 0.7 + (env2?.windStrength ?? 1) * 0.4;
+      for (let i = 0; i < a.count; i++) {
+        const x = base2[i * 3];
+        a.array[i * 3 + 2] = base2[i * 3 + 2] + Math.sin(t * 6 + x * 2.6) * 0.12 * x / 2.4 * amp * 1.6;
+        a.array[i * 3 + 1] = base2[i * 3 + 1] - x * x * 0.02;
+      }
+      a.needsUpdate = true;
+    });
+    return root4;
+  });
 
   // src/render3d/props/baratie.js
   var reg3 = (kind, fn) => registerPropBuilder(kind, (o, ctx) => {
@@ -83239,6 +83394,40 @@ ${GLSL}
     g.computeVertexNormals();
     return g;
   }
+  function fistGeo() {
+    const parts = [];
+    const add7 = (g, x, y, z, rx = 0, ry = 0, rz = 0) => {
+      g.rotateX(rx);
+      g.rotateY(ry);
+      g.rotateZ(rz);
+      g.translate(x, y, z);
+      parts.push(g);
+    };
+    const b = new BoxGeometry(0.62, 0.78, 0.8, 2, 2, 2);
+    const p = b.attributes.position, q2 = new Vector3();
+    for (let i = 0; i < p.count; i++) {
+      q2.set(p.getX(i), p.getY(i), p.getZ(i));
+      q2.lerp(q2.clone().normalize().multiplyScalar(0.5), 0.3);
+      p.setXYZ(i, q2.x, q2.y, q2.z);
+    }
+    add7(b, 0, 0, 0);
+    for (let i = 0; i < 4; i++) add7(new SphereGeometry(0.17, 8, 6), 0.14, 0.4 + (i === 1 || i === 2 ? 0.03 : 0), -0.29 + i * 0.193);
+    for (let i = 0; i < 4; i++) add7(new CapsuleGeometry(0.1, 0.18, 3, 6), -0.16, 0.36, -0.29 + i * 0.193, 0, 0, Math.PI / 2);
+    add7(new CapsuleGeometry(0.1, 0.34, 3, 6), -0.3, 0.2, -0.1, Math.PI / 2, 0, 0.25);
+    add7(new CylinderGeometry(0.27, 0.3, 0.42, 10), 0, -0.56, 0);
+    return flat(merge(parts));
+  }
+  function cuffGeo() {
+    const g = new CylinderGeometry(0.38, 0.4, 0.34, 10);
+    g.translate(0, -0.72, 0);
+    const band3 = new TorusGeometry(0.39, 0.05, 4, 12);
+    band3.rotateX(Math.PI / 2);
+    band3.translate(0, -0.56, 0);
+    return flat(merge([g, band3]));
+  }
+  function limbGeo() {
+    return flat(new CylinderGeometry(0.85, 1, 2, 10));
+  }
   function merge(list) {
     let n = 0;
     for (const g of list) n += (g.index ? g.toNonIndexed() : g).attributes.position.count;
@@ -83338,7 +83527,10 @@ ${GLSL}
       this.shards = new SolidBatch(shardGeo(), 640, "vfx-shards");
       this.rocks = new SolidBatch(rockGeo(), 320, "vfx-rocks");
       this.blocks = new SolidBatch(blockGeo(), 96, "vfx-blocks");
-      this.all = [this.crystals, this.shards, this.rocks, this.blocks];
+      this.fists = new SolidBatch(fistGeo(), 48, "vfx-fists");
+      this.cuffs = new SolidBatch(cuffGeo(), 48, "vfx-cuffs");
+      this.limbs = new SolidBatch(limbGeo(), 48, "vfx-limbs");
+      this.all = [this.crystals, this.shards, this.rocks, this.blocks, this.fists, this.cuffs, this.limbs];
     }
     begin() {
       for (let i = 0; i < this.all.length; i++) this.all[i].begin();
@@ -84445,13 +84637,27 @@ ${GLSL}
       if (fade2 < 0.05) return;
       const X2 = v.lx(s.x), Z2 = v.lz(s.y), G4 = v.groundOf(s);
       const R5 = s.r || 2.4, t = v.time;
-      const skin = col(s.skin || "#f1c9a0"), top = col(s.top || "#e53935"), bottom = col(s.bottom || "#1565c0");
-      for (let i = 0; i < 10; i++) {
-        const th = t * (2.5 + i % 3) + i * 2.39;
-        const r4 = R5 * (0.35 + 0.65 * hash8(s.seed + i));
-        const px2 = X2 + Math.cos(th) * r4, pz2 = Z2 + Math.sin(th) * r4, py2 = G4 + 0.7 + Math.sin(t * 7 + i) * 0.3 + hash8(s.seed + i * 3) * 0.6;
-        const kind = i % 3, sz = kind ? 0.22 : 0.16;
-        putAlong(v.solids.blocks, px2, py2, pz2, Math.cos(th * 2), Math.sin(th * 1.3), Math.sin(th * 2), sz * (kind ? 1.6 : 1), sz, th, kind === 0 ? skin : kind === 1 ? top : bottom, OK2.SKIN, 1 - fade2, i, 0);
+      const skin = col(s.skin || "#f1c9a0"), top = col(s.top || "#e53935"), bottom = col(s.bottom || "#1565c0"), boot2 = col(s.boot || "#3e2723");
+      const sc = s.scale || 1;
+      for (let i = 0; i < 6; i++) {
+        const sp = 2.6 + i % 3 * 0.7;
+        const th = t * sp + i * 1.047 + (s.seed || 0);
+        const dart = Math.max(0, Math.sin(t * 5.5 + i * 1.7));
+        const r4 = R5 * (0.45 + 0.4 * hash8((s.seed || 0) + i)) + dart * 0.6;
+        const px2 = X2 + Math.cos(th) * r4, pz2 = Z2 + Math.sin(th) * r4;
+        const py2 = G4 + (i < 4 ? 1.15 : 0.55) * sc + Math.sin(t * 6 + i) * 0.22;
+        const fx = -Math.sin(th), fz = Math.cos(th), fy = Math.sin(t * 3 + i) * 0.35;
+        const tumble = t * (i % 2 ? 4 : -4) + i;
+        if (i < 2) {
+          const Rf = 0.13 * sc;
+          putAlong(v.solids.fists, px2, py2, pz2, fx, fy, fz, Rf, Rf, tumble, skin, OK2.SKIN, 1 - fade2, i, 0);
+          putAlong(v.solids.cuffs, px2, py2, pz2, fx, fy, fz, Rf, Rf, tumble, top, OK2.PLAIN, 1 - fade2, i, 0);
+        } else if (i < 4) {
+          putAlong(v.solids.limbs, px2, py2, pz2, fx, fy + 0.4, fz, 0.17 * sc, 0.065 * sc, tumble, top, OK2.PLAIN, 1 - fade2, i, 0);
+        } else {
+          putAlong(v.solids.limbs, px2, py2 + 0.2 * sc, pz2, fx * 0.3, 1, fz * 0.3, 0.24 * sc, 0.08 * sc, tumble, bottom, OK2.PLAIN, 1 - fade2, i, 0);
+          putAlong(v.solids.blocks, px2 + fx * 0.06, py2 - 0.08 * sc, pz2 + fz * 0.06, fx, 0, fz, 0.16 * sc, 0.09 * sc, 0, boot2, OK2.PLAIN, 1 - fade2, i, 0);
+        }
       }
     }
   };
@@ -84795,10 +85001,15 @@ ${GLSL}
           rubberLines(v, o, X2, Y2, Z2, dx, dz, s, seed, t);
           break;
         }
-        const R5 = 0.24 * s;
-        const skin = col(pr.sprite === "barafist" && pr.color && pr.color !== "#ffccbc" ? pr.color : "#f1c9a0");
-        putAlong(v.solids.blocks, X2, Y2, Z2, dx, 0, dz, R5 * 1.7, R5 * 1.7, 0, skin, OK2.SKIN, 0, seed, 0);
-        trail2(v, r4, RK.SPEED, WHITE6, 0.7, WHITE6, 0.3, R5 * 0.5, 0.1, 6);
+        const ow = pr.owner, L3 = ow?.look || {};
+        if (ow && pr.sprite === "barafist") ow._baraHand = performance.now() / 1e3;
+        const R5 = 0.2 * s * (L3.scale || 1);
+        const skin = col(L3.skin || (pr.color && pr.color !== "#ffccbc" ? pr.color : "#f1c9a0"));
+        const sleeve = col(L3.coat || L3.top || "#e53935");
+        const roll2 = Math.sin(t * 9 + seed) * 0.35;
+        putAlong(v.solids.fists, X2, Y2, Z2, dx, 0, dz, R5, R5, roll2, skin, OK2.SKIN, 0, seed, 0);
+        putAlong(v.solids.cuffs, X2, Y2, Z2, dx, 0, dz, R5, R5, roll2, sleeve, OK2.PLAIN, 0, seed, 0);
+        trail2(v, r4, RK.SPEED, WHITE6, 0.7, WHITE6, 0.3, R5 * 0.6, 0.1, 6);
         if (sp > 10) speedLines(v, X2, Y2, Z2, dx, dz, R5, seed, t);
         break;
       }
@@ -92985,10 +93196,10 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       }
       const m = this.model;
       m.setShaded(!ctx?.world?.roomOf?.(p));
-      const hidden = p.state === "knocked" || p.state === "dead" || p.hidden;
-      this.root.visible = !hidden;
+      const hidden2 = p.state === "knocked" || p.state === "dead" || p.hidden;
+      this.root.visible = !hidden2;
       p._fpArms = false;
-      if (hidden) return;
+      if (hidden2) return;
       const { pose, P: P6 } = actorPose(p, env2, look);
       const o = rigOptions(p, pose, P6, this.o);
       o.wpn = wpn;
@@ -93777,7 +93988,25 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (lod !== m.lod) m.setLod(lod);
       m.outline.visible = dist < (ctx.game?.view3d?.post ? 34 : 55) && this.alpha > 0.5;
       m.setShaded(!ctx.world?.roomOf?.(a));
+      this.bodyParts(a);
       if (a.isPlayer) this.ownBody(fp, a, ctx, env2);
+    }
+    /**
+     * Bara Bara: a hand that's flying off at someone isn't on the end of its
+     * arm (render3d/vfx/projectiles.js); in the Festival the arms and legs are
+     * off whirling round (vfx/shapes.js pieces) — the head and the body float
+     * on where they were.
+     */
+    bodyParts(a) {
+      const now3 = performance.now() / 1e3;
+      const hand = !!a._baraHand && now3 - a._baraHand < 0.15;
+      const limbs = !!a._baraLimbs && now3 < a._baraLimbs;
+      if (!hand && !limbs && !this._partsOff) return;
+      const bones2 = this.model.bones;
+      const set = (i, off) => bones2[i].scale.setScalar(off ? 0 : 1);
+      set(B4.handL, hand || limbs);
+      for (const i of [B4.uarmR, B4.uarmL, B4.thighR, B4.thighL]) set(i, limbs);
+      this._partsOff = hand || limbs;
     }
     /**
      * First person: your own body under your eyes — look down and there are
@@ -94115,7 +94344,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     labels(a, env2, dist, s) {
       const idle = a.state === "idle";
-      const name = a.showName && idle && dist < 36 ? a.unmet ? "???" : a.name : null;
+      const name = null;
       const t = a.controller?.target;
       const fighting = !!t && (t.isPlayer || t.faction === "player") && a.controller.state !== "idle";
       const bigBar = a.boss && a.game?.bossTarget === a && !a.game.ui?.el?.boss?.classList.contains("hidden");
@@ -98278,11 +98507,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     /** Head for `to` from time `t`, most of the way there in `sec`. */
     go(to, t, sec) {
       const now3 = this.at(t), p = this.p, tc = Math.max(4e-3, sec / 3);
-      if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t);
-      else {
-        p.cancelScheduledValues(t);
-        p.setValueAtTime(now3, t);
-      }
+      p.cancelScheduledValues(t);
+      p.setValueAtTime(now3, t);
       p.setTargetAtTime(to, t, tc);
       this.v0 = now3;
       this.to = to;
@@ -103440,12 +103666,14 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
           plaza: "fountain",
           buildings: [
             { role: "shop", name: "Pet Food Shop", npc: "chouchou" },
-            { role: "bar", name: "Buggy Pirates HQ (Tavern)", npc: "buggy" },
+            { role: "bar", name: "Buggy Pirates HQ (Tavern)" },
             { role: "doctor", name: "Town Clinic", npc: "boodle" },
             { role: "inn", name: "Orange Inn" }
           ]
         }
       ],
+      // the Buggy Pirates' circus tent, at the top of the town: where the clown holds court
+      landmarks: [{ kind: "bigtop", dx: 0.02, dy: -0.5, name: "Buggy's Big Top", fw: 18, fd: 18, block: false, spot: "bigtop" }],
       danger: 1
     },
     {
@@ -111577,6 +111805,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     slam: "slam",
     // kicks sweep low
     kick: "low",
+    bl_snap: "low",
+    bl_round: "across",
     kick_high: "across",
     kick_low: "low",
     kick_spin: "low",
@@ -115282,11 +115512,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       } else {
         const steer = s.def.turn * (game.crewMods?.turnMul || 1) * (0.35 + 0.65 * clamp(Math.abs(s.speed) / 3, 0, 1));
         s.steer(turn, steer, dt);
-        if (ahead) {
-          s.sail = Math.min(1, s.sail + dt * 0.9);
-          s.anchored = false;
-        }
-        if (back) s.sail = Math.max(0, s.sail - dt * 1.2);
+        if (inp.wasPressed("W") || inp.wasPressed("ArrowUp") || tc && tc.my < -0.45 && s.sail < 1) s.setSails(true);
+        if (inp.wasPressed("S") || inp.wasPressed("ArrowDown") || tc && tc.my > 0.45 && s.sail > 0) s.setSails(false);
         s.rowing = inp.isDown("Space") ? 1 : 0;
         if (s.rowing) s.anchored = false;
       }
@@ -115875,6 +116102,28 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
 .buff { font-size: 11px; padding: 2px 6px; background: rgba(0,0,0,.55); border-radius: 10px; border: 1px solid rgba(255,255,255,.2); }
 
 .hotbar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: flex-end; }
+/* the bottom dock: health (left) and Haki (right) over the hotbar, the ship button raised in the middle */
+.dock { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+.dock .hotbar { position: static; transform: none; align-items: flex-end; }
+.dock-bars { display: flex; align-items: center; gap: 0; padding: 0 2px; }
+.dock-bars .bar { flex: 1; height: 15px; margin: 0; border-radius: 8px; }
+.dock-bars .bar > i, .dock-bars .bar > b { border-radius: 8px; }
+.dock-bars .bar > span { top: 0; font-size: 10.5px; }
+.dock-bars .bar.hp > span { right: auto; left: 8px; }
+.dock-bars .bar.hk { transform: scaleX(-1); }
+.dock-bars .bar.hk > span { transform: scaleX(-1); right: auto; left: 8px; }
+.dock-bars .bar.hidden { display: block !important; visibility: hidden; }
+.dock-gap { width: 92px; flex: none; }
+.shipbtn { position: relative; width: 74px; height: 74px; margin: -26px 6px 0; flex: none; border-radius: 50%; display: grid; place-items: center; align-content: center; gap: 0;
+  background: radial-gradient(circle at 50% 35%, #2b4a66, #10202e 70%); border: 3px solid #c9a24a; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 4px 14px rgba(0,0,0,.55), inset 0 2px 6px rgba(255,255,255,.12);
+  cursor: var(--cur-ptr); transition: transform .12s ease, border-color .2s, box-shadow .2s; }
+.shipbtn:hover { transform: translateY(-2px) scale(1.04); }
+.shipbtn:active { transform: scale(.96); }
+.shipbtn .ico img { display: block; filter: drop-shadow(0 1px 1px #000); }
+.shipbtn .lbl { font: 800 9.5px Nunito; letter-spacing: .4px; text-transform: uppercase; color: #f5e6c4; text-shadow: 0 1px 2px #000; margin-top: 1px; white-space: nowrap; }
+.shipbtn.sails { border-color: #e9d9a6; }
+.shipbtn.up { border-color: #f1c40f; box-shadow: 0 0 0 2px rgba(0,0,0,.55), 0 0 16px rgba(241,196,15,.6), inset 0 2px 6px rgba(255,255,255,.15); }
+.shipbtn.none { opacity: .55; filter: grayscale(.6); }
 .slot { width: 54px; height: 54px; border-radius: 10px; background: rgba(10,20,30,.78); border: 2px solid rgba(255,255,255,.18); position: relative; display: grid; place-items: center; font-size: 24px; box-shadow: 0 3px 8px rgba(0,0,0,.45); overflow: hidden; cursor: var(--cur-ptr); }
 .slot .ico { display: grid; place-items: center; }
 .slot .ico img { display: block; }
@@ -115910,10 +116159,10 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
 @keyframes actperfect { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 1), 0 3px 8px rgba(0,0,0,.45); border-color: #fff; background-color: rgba(255, 253, 231, .55); } 100% { box-shadow: 0 0 0 16px rgba(255, 255, 255, 0), 0 3px 8px rgba(0,0,0,.45); } }
 .slot.act.guard.counter { border-color: #ffab40; box-shadow: 0 0 14px rgba(255, 171, 64, .85); }
 
-.prompt { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }
+.prompt { position: absolute; left: 50%; bottom: 122px; transform: translateX(-50%); background: rgba(10,20,30,.82); padding: 7px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid var(--border); white-space: nowrap; }
 .prompt kbd { background: var(--parch); color: var(--ink); border-radius: 5px; padding: 1px 7px; margin-right: 8px; font-family: Nunito; font-weight: 800; }
 
-.log { position: absolute; left: 14px; bottom: 82px; width: 420px; max-height: clamp(70px, calc(100vh - 550px), 170px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }
+.log { position: absolute; left: 14px; bottom: 112px; width: 420px; max-height: clamp(70px, calc(100vh - 550px), 170px); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; font-size: 13px; }
 .log div { background: rgba(0,0,0,.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 1px #000; animation: logfade 12s forwards; width: fit-content; max-width: 100%; }
 @keyframes logfade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
 
@@ -116054,6 +116303,9 @@ a.btn { display: inline-block; text-decoration: none; }
 .dialogue .choices button { text-align: left; background: rgba(109,76,51,.12); border: 1px solid rgba(109,76,51,.45); color: var(--ink); border-radius: 8px; padding: 7px 12px; font: 700 14px Nunito; cursor: var(--cur-ptr); }
 .dialogue .choices button:hover { background: rgba(192,57,43,.2); }
 .dialogue .choices button .n { color: var(--red); margin-right: 8px; }
+.dialogue .choices button.quest { background: linear-gradient(90deg, rgba(241,196,15,.42), rgba(241,196,15,.16)); border-color: #c79a0b; box-shadow: inset 3px 0 0 #c79a0b; }
+.dialogue .choices button.quest:hover { background: linear-gradient(90deg, rgba(241,196,15,.6), rgba(241,196,15,.28)); }
+.dialogue .choices button .qmark { display: inline-grid; place-items: center; width: 17px; height: 17px; margin-right: 7px; border-radius: 50%; background: #c79a0b; color: #fffbe6; font: 800 12px Nunito; vertical-align: 1px; }
 .dialogue .cont { text-align: right; font-size: 12px; opacity: .7; }
 
 /* wanted poster */
@@ -116486,6 +116738,8 @@ button.link { background: none; border: none; color: #ffab91; font: 700 12px Nun
 #ui.touch.menu-open .sidebar { left: auto; top: 8px; width: auto; }
 #ui.touch .side-btn.s-map { margin-top: 0; margin-left: 6px; }
 #ui.touch .hotbar { bottom: 8px; transform: translateX(calc(-50% - 60px)); gap: 4px; }
+#ui.touch .dock { bottom: 6px; transform: translateX(calc(-50% - 60px)); }
+#ui.touch .dock .hotbar { transform: none; }
 #ui.touch .slot { width: 44px; height: 44px; border-radius: 9px; }
 #ui.touch .slot .ico img { width: 30px; height: 30px; }
 #ui.touch .slot .nm { display: none; }
@@ -116876,6 +117130,7 @@ html.mdown {
 html, body { cursor: var(--cur); }
 button, a[href], select, summary, label[for] { cursor: var(--cur-ptr); }
 button:disabled { cursor: not-allowed; }
+.tag.gold { background: #c79a0b; color: #fffbe6; }
 `;
 
   // src/ui/icon.js
@@ -120338,7 +120593,7 @@ button:disabled { cursor: not-allowed; }
     const st = def.stance === void 0 ? stanceFor2(def) : def.stance;
     if (st) a.act3d = { pose: st, prop: null, h: 0, stance: true };
     if (def.hostile) a.aggroPlayer = true;
-    if (def.calm) a.calm = true;
+    if (def.calm || def.story && !def.hostile && !def.boss) a.calm = true;
     return a;
   }
   function stanceFor2(def) {
@@ -120472,6 +120727,10 @@ button:disabled { cursor: not-allowed; }
       }
       return bw(b, doorLocalX(b) + (pl.ox || 0.9), 1.4);
     };
+    if (pl.inside) {
+      const b = (island.landmarks || []).find((l) => l.kind === "building" && (l.role === pl.inside || l.name === pl.inside));
+      if (b) return inB(b);
+    }
     if (pl.spot && island.spots[pl.spot]) {
       const s = island.spots[pl.spot];
       return { x: s.x + (pl.ox || 0), y: s.y + (pl.oy || 0) };
@@ -120532,6 +120791,11 @@ button:disabled { cursor: not-allowed; }
   }
   function placeNPC0(game, island, def, rng4, spawner) {
     const pl = (typeof def.at === "function" ? def.at(game.state?.char, game) : def.at) || {};
+    if (pl.inside) {
+      const b = (island.landmarks || []).find((l) => l.kind === "building" && (l.role === pl.inside || l.name === pl.inside));
+      const q2 = b && inside(b, pl.guest);
+      if (q2) return q2;
+    }
     if (pl.spot && island.spots[pl.spot]) {
       const s = island.spots[pl.spot];
       const x = s.x + (pl.ox || 0), y = s.y + (pl.oy || 0);
@@ -123426,12 +123690,12 @@ ${s.why[0].toUpperCase() + s.why.slice(1)}` : ""}`;
     const E = ui.el;
     const W4 = window.innerWidth || 1280, H5 = window.innerHeight || 720;
     const pw = E.skills.offsetWidth || 230, ph = E.skills.offsetHeight || 0;
-    const hw = E.hotbar.offsetWidth, hh = E.hotbar.offsetHeight;
+    const bar2 = E.dock || E.hotbar, hw = bar2.offsetWidth, hh = bar2.offsetHeight;
     const trackOn = !E.track.classList.contains("hidden");
     const k = [W4, H5, pw, ph, hw, hh, trackOn && E.track.offsetHeight].join();
     if (!force && ui.cache.spPlace === k) return ui.cache.spOver || 0;
     ui.cache.spPlace = k;
-    const left = (W4 - hw) / 2, right = left + hw, top = H5 - 14 - hh;
+    const left = (W4 - hw) / 2, right = left + hw, top = H5 - 10 - hh;
     let shift = Math.max(0, right - (W4 - 14 - pw - 12));
     const most = Math.max(0, Math.min(left - 14, W4 * 0.25));
     let up = 0;
@@ -123439,7 +123703,7 @@ ${s.why[0].toUpperCase() + s.why.slice(1)}` : ""}`;
       shift = 0;
       up = H5 - top + 8;
     }
-    E.hotbar.style.marginLeft = shift ? `${-Math.round(shift)}px` : "";
+    bar2.style.marginLeft = shift ? `${-Math.round(shift)}px` : "";
     E.skills.style.bottom = up ? `${Math.round(up)}px` : "";
     E.track.style.marginTop = "";
     const sTop = H5 - (up || 14) - ph;
@@ -125024,6 +125288,85 @@ Trains by: ${TRAINS_BY[k]}` },
     render2();
   }
 
+  // src/game/shipcall.js
+  function chosenShip(c) {
+    const f = fleetOf(c);
+    return f.find((e) => e.uid === c.activeShip) || f[0] || null;
+  }
+  var nearOf = (s) => Math.max(45, s.def.length * 1.6);
+  function shipButtonState(game) {
+    const c = game.state?.char, p = game.player;
+    if (!c || !p) return { mode: "none" };
+    const e = chosenShip(c);
+    if (!e || !SHIPS[e.type]) return { mode: "none" };
+    const s = liveShip(game, e.uid);
+    const on = p.mode === "sail" ? p.ship : p.deck?.ship;
+    if (on && on.owner === "player" && !on.sunk) return { mode: "sails", ship: on, entry: e, on: on.sail > 0 };
+    if (s && game.world.distance(p.x, p.y, s.x, s.y) < nearOf(s)) return { mode: "sails", ship: s, entry: e, on: s.sail > 0 };
+    return { mode: "call", entry: e };
+  }
+  function berthAhead(game, type, x, y, h2, upgrades = []) {
+    const w = game.world;
+    const probe = new Ship({ type, x, y, heading: h2, owner: "player", faction: "player", upgrades });
+    const L3 = probe.def.length, B5 = probe.def.beam;
+    const near = L3 * 0.5 + B5 * 0.5 + 2.5, far = near + Math.max(18, L3 * 0.8);
+    probe.strict = true;
+    try {
+      for (let d = near; d <= far; d += 1.5) {
+        for (const da of [0, 0.25, -0.25, 0.5, -0.5]) {
+          const a = h2 + da, cx = x + Math.cos(a) * d, cy = y + Math.sin(a) * d;
+          for (const hh of [h2, h2 + Math.PI / 2, h2 - Math.PI / 2]) {
+            if (probe.fits(w, cx, cy, hh) && !probe.shipIn(game, cx, cy, hh)) return { x: cx, y: cy, heading: hh };
+          }
+        }
+      }
+    } finally {
+      probe.strict = false;
+    }
+    return null;
+  }
+  function pressShipButton(game) {
+    const st = shipButtonState(game), p = game.player, c = game.state?.char;
+    if (st.mode === "none") {
+      game.ui?.toast("NO SHIP", "You don't own a ship yet: the shipwright on any pier sells them.", "#ff8a80");
+      return false;
+    }
+    if (st.mode === "sails") {
+      const s2 = st.ship;
+      if (s2.def.oarsOnly) {
+        game.log("A rowboat has no sail: sit at her oars (E) and row her.", "#b0bec5");
+        return false;
+      }
+      s2.setSails(!st.on);
+      game.log(st.on ? `Sails in: the ${s2.name} slows.` : `All sail set on the ${s2.name}!`, "#ffe082");
+      return true;
+    }
+    if (game.inZone?.()) {
+      game.log("Not here: there's no open sea to bring her round on.", "#ff8a80");
+      return false;
+    }
+    if (p.mode === "sail" || p.deck?.ship) {
+      game.log("You're aboard another ship.", "#ff8a80");
+      return false;
+    }
+    const e = st.entry;
+    const spot = berthAhead(game, e.type, p.x, p.y, p.facing ?? 0, e.upgrades);
+    if (!spot) {
+      game.ui?.toast("NO ROOM", `Not enough open water in front of you for the ${e.name}. Face the sea, clear of the shore and other ships.`, "#ff8a80");
+      return false;
+    }
+    for (const o of liveShips(game)) if (!aboard(p, o)) layUp(game, o);
+    const s = game.giveShip(e.type, spot.x, spot.y, e.name, { uid: e.uid, heading: spot.heading, upgrades: (e.upgrades || []).slice(), coated: e.coated, shot: e.shot, paint: e.paint });
+    s.anchored = true;
+    s.speed = 0;
+    p.ship = s;
+    c.activeShip = s.uid;
+    game.audio?.sfx("splash", s);
+    game.fx?.burst?.(s.x, s.y, 24, { color: ["#e1f5fe", "#ffffff"], speed: 4, g: 5, life: 0.8, kind: "smoke", size: 0.4 });
+    game.log(`The ${s.name} comes round. Climb aboard and take her ${s.def.oarsOnly ? "oars" : "wheel"} \u2014 press the ship button again to set sail.`, "#ffe082");
+    return true;
+  }
+
   // src/ui/pause.js
   function pausesWorld(ui) {
     return (ui.stack || []).some((e) => e.pause) || !!ui.dialogueEl;
@@ -125108,12 +125451,13 @@ Trains by: ${TRAINS_BY[k]}` },
     { id: "skills", label: "Skills" },
     { id: "journal", label: "Journal" },
     { id: "crew", label: "Crew" },
+    { id: "shipyard", label: "Shipyard", icon: "ship" },
     { id: "quests", label: "Quests" },
     { id: "map", label: "Map", key: "M", away: true },
     { id: "menu", label: "Game", key: "Esc", icon: "settings", away: true }
   ];
   var AWAY = new Set(SECTIONS.filter((b) => b.away).map((b) => b.id));
-  var RETURN_TO = /* @__PURE__ */ new Set(["inventory", "character", "skills", "journal", "crew", "quests", "voyage"]);
+  var RETURN_TO = /* @__PURE__ */ new Set(["inventory", "character", "skills", "journal", "crew", "shipyard", "quests", "voyage"]);
   var TOUCH_BTNS = [
     { id: "map", label: "Map" },
     { id: "view", label: "View" }
@@ -125183,7 +125527,7 @@ Trains by: ${TRAINS_BY[k]}` },
       E.lives = h("div.lives");
       E.bounty = h("div.hud-bounty");
       E.buffs = h("div.buffs");
-      this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.hp.el, E.needs, E.o2, E.fly.el, E.hk.el, E.lives, E.bounty, E.buffs));
+      this.hud.appendChild(h("div.hud-player", E.name, E.sub, E.needs, E.o2, E.fly.el, E.lives, E.bounty, E.buffs));
       E.hotbar = h("div.hotbar");
       E.acts = {};
       for (const [k, key2, name, tip] of [["dodge", "Q", "Dodge", "Dash out of the way, untouchable for an instant. It comes back after a moment."], ["guard", "F", "Block", "Hold to block. Tap it just as a blow lands to PARRY (a yellow glint shows the moment): they reel, and your next strike is a COUNTER. Mashing it won't parry. A red-glint blow smashes a guard aside \u2014 dodge those: the guard can't come up again until this fills."]]) {
@@ -125234,6 +125578,16 @@ ${tip}` }), cd: h("div.cd") };
           this.clearSlot(i);
         });
         E.slots.push(s);
+        if (i === HOTBAR_SIZE / 2) {
+          E.shipBtn = h("div.shipbtn.interactive", { title: "Your ship" }, h("span.ico", uiImg("ship", 30)), h("span.lbl", "Ship"));
+          E.shipBtn.addEventListener("click", () => {
+            if (!this.blocksInput() && this.game) {
+              pressShipButton(this.game);
+              this.shipT = 0;
+            }
+          });
+          E.hotbar.appendChild(E.shipBtn);
+        }
         E.hotbar.appendChild(s.el);
       }
       E.toggles = {};
@@ -125253,7 +125607,8 @@ ${tip}` }), cd: h("div.cd") };
         E.toggles[t.type] = { el, k };
         E.hotbar.appendChild(el);
       }
-      this.hud.appendChild(E.hotbar);
+      E.dock = h("div.dock", h("div.dock-bars", E.hp.el, h("div.dock-gap"), E.hk.el), E.hotbar);
+      this.hud.appendChild(E.dock);
       E.prompt = h("div.prompt.hidden.interactive", { on: { click: () => {
         const inp = this.game?.input;
         if (inp && !this.blocksInput()) {
@@ -125768,6 +126123,17 @@ ${tip}` }), cd: h("div.cd") };
       const title2 = ch.title || (ch.faction === "marine" ? `Marine ${ch.marineRank || "Recruit"}` : ch.crewName ? `Captain of the ${ch.crewName}` : ch.faction === "pirate" ? "Pirate" : "Wanderer");
       this.set(E.sub, "sub", `${raceLabel(p.look)} \xB7 ${title2} \xB7 Doriki ${p.power().toLocaleString()}`);
       E.hp.set(p.hp / p.d.maxHp, `${Math.ceil(p.hp)} / ${p.d.maxHp}`);
+      this.shipT = (this.shipT ?? 0) - 1;
+      if (this.shipT <= 0 && E.shipBtn) {
+        this.shipT = 12;
+        const st = shipButtonState(game);
+        E.shipBtn.classList.toggle("none", st.mode === "none");
+        E.shipBtn.classList.toggle("sails", st.mode === "sails");
+        E.shipBtn.classList.toggle("up", st.mode === "sails" && !!st.on);
+        const lbl = st.mode === "none" ? "No ship" : st.mode === "call" ? "Call ship" : st.on ? "Furl sails" : "Set sail";
+        E.shipBtn.lastChild.textContent = lbl;
+        E.shipBtn.title = st.mode === "none" ? "You don't own a ship: the shipwright on any pier sells them." : st.mode === "call" ? `Bring the ${st.entry.name} round onto the water in front of you (there must be room for her). Choose your ship in the menu: Tab \u2192 Shipyard.` : st.on ? `Take in the ${st.ship.name}'s sails` : `Set all sail on the ${st.ship.name}`;
+      }
       const S6 = game.survival, nd = S6?.enabled?.() ? S6.needs() : null;
       if (!!nd !== this.cache.needsOn) {
         E.needs.classList.toggle("hidden", !nd);
@@ -126014,7 +126380,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         const hull = s.unbreakable ? "Hull sound \xB7 can't break" : `Hull ${Math.ceil(s.hull)}/${s.maxHull}`;
         const html = `<div class="row"><b>${s.name}</b><span>${s.def.name}</span></div>
         <div class="bar hull"><i style="width:${s.unbreakable ? 100 : 100 * s.hull / s.maxHull}%"></i><span>${hull}</span></div>
-        ${oars ? `<div class="bar sail"><i style="width:${100 * Math.abs(s.rowPow || 0)}%"></i><span>${(s.rowPow || 0) < -0.03 ? "Backing water" : (s.rowPow || 0) > 0.03 ? `Oars ${Math.round(s.rowPow * 100)}%` : "Oars shipped"} \xB7 W/S pace</span></div>` : `<div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>Sails ${Math.round(s.sailSet * 100)}%</span></div>`}
+        ${oars ? `<div class="bar sail"><i style="width:${100 * Math.abs(s.rowPow || 0)}%"></i><span>${(s.rowPow || 0) < -0.03 ? "Backing water" : (s.rowPow || 0) > 0.03 ? `Oars ${Math.round(s.rowPow * 100)}%` : "Oars shipped"} \xB7 W/S pace</span></div>` : `<div class="bar sail"><i style="width:${100 * s.sailSet}%"></i><span>${s.sail > 0 ? s.sailSet < 0.98 ? "Setting sail" : "Sails set" : s.sailSet > 0.02 ? "Taking in sail" : "Sails furled"} \xB7 W/S</span></div>`}
         <div class="row"><span>Speed ${Math.abs(s.speed).toFixed(1)} kn</span>${oars ? "" : `<span>Wind <span class="wind" style="transform:rotate(${env2.windAngle.toFixed(2)}rad)"><i></i></span> ${game.isCalmAt(p.x, p.y) ? "none (Calm Belt!)" : Math.round(env2.windStrength * 100) + "%"}</span>`}</div>
         ${s.def.cannons ? `<div class="row"><span>Cannonballs ${s.shot}/${s.shotCap}</span><span>${s.shot <= 0 ? "none left!" : s.cannonCd > 0 ? "reloading\u2026" : "ready"}</span></div>` : ""}`;
         if (this.cache.shipHtml !== html) {
@@ -128830,8 +129196,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       const text2 = typeof node.text === "function" ? node.text(a.ctx) : node.text || "";
       a.full = text2;
       a.typing = 0;
-      const choices = (node.choices || []).filter((c) => !c.if || c.if(a.ctx)).map((c) => ({ ...c, label: typeof c.text === "function" ? c.text(a.ctx) : c.text }));
-      a.choices = choices;
+      const choices = (node.choices || []).filter((c) => !c.if || c.if(a.ctx)).map((c) => ({ ...c, label: typeof c.text === "function" ? c.text(a.ctx) : c.text, isQuest: questChoice(c) }));
+      a.choices = [...choices.filter((c) => c.isQuest), ...choices.filter((c) => !c.isQuest)];
       this.render();
     }
     render() {
@@ -128867,7 +129233,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       const a = this.active;
       clear(a.choicesEl);
       a.choices.forEach((c, i) => {
-        a.choicesEl.appendChild(h("button", { on: { click: () => this.choose(i) } }, h("span.n", `${i + 1}.`), c.label));
+        a.choicesEl.appendChild(h("button" + (c.isQuest ? ".quest" : ""), { on: { click: () => this.choose(i) } }, h("span.n", `${i + 1}.`), c.isQuest ? h("span.qmark", "!") : null, c.label));
       });
     }
     advance() {
@@ -128931,6 +129297,15 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (a?.tree?.onClose) a.tree.onClose(a.ctx);
     }
   };
+  var QUEST_DO = /\.(startQuest|complete|stage)\s*\(/;
+  var QUEST_IF = /\.(quest|stageId)\s*\(/;
+  function questChoice(c) {
+    if (c.quest !== void 0) return !!c.quest;
+    if (typeof c.next === "string" && c.next.startsWith("mq_")) return true;
+    if (typeof c.do === "function" && QUEST_DO.test(String(c.do))) return true;
+    if (typeof c.if === "function" && QUEST_IF.test(String(c.if))) return true;
+    return false;
+  }
 
   // src/game/services.js
   var Services = class {
@@ -134189,7 +134564,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "Buggy the Clown",
       title: "Captain of the Buggy Pirates",
       island: "organ_islands",
-      at: { town: "orange_town", building: "Buggy Pirates HQ (Tavern)" },
+      at: { spot: "bigtop", ox: 1.6, oy: 0.6 },
       hostile: true,
       boss: true,
       hpMul: 0.95,
@@ -134333,7 +134708,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: '"Red Leg" Zeff',
       title: "Head chef of the Baratie",
       island: "baratie",
-      at: { spot: "baratie_deck" },
+      at: { inside: "restaurant", spot: "baratie_deck" },
       trainer: "zeff",
       look: { hair: "long", hairColor: "#fff59d", top: "#fafafa", bottom: "#212121", skin: "#f1c9a0", hat: "captain", hatColor: "#fafafa" },
       level: 30,
@@ -134363,7 +134738,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "Gin",
       title: '"Man-Demon", Krieg Pirates',
       island: "baratie",
-      at: { spot: "baratie_deck", ox: 3 },
+      at: { spot: "baratie_deck", ox: 9, oy: 1.2 },
       look: { hair: "short", hairColor: "#212121", top: "#455a64", bottom: "#263238", hat: "bandana", hatColor: "#9e9e9e" },
       level: 12,
       marker: (c, g) => g.quests.stageId("baratie_krieg") === "feed" ? "?" : null,
@@ -134384,7 +134759,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "Johnny",
       title: "Bounty hunter",
       island: "baratie",
-      at: { spot: "baratie_deck", ox: -5 },
+      at: { spot: "baratie_deck", ox: -9, oy: -0.6 },
       level: 7,
       style: "ittoryu",
       weapon: "sword",
@@ -134424,7 +134799,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "Yosaku",
       title: "Bounty hunter",
       island: "baratie",
-      at: { spot: "baratie_deck", ox: -6.5 },
+      at: { spot: "baratie_deck", ox: -10.2, oy: 0.5 },
       level: 7,
       style: "ittoryu",
       weapon: "sword",
@@ -134450,7 +134825,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "Patty",
       title: "Cook of the Baratie",
       island: "baratie",
-      at: { spot: "baratie_deck", ox: 2 },
+      at: { inside: "restaurant", spot: "baratie_deck", ox: 2 },
       level: 9,
       look: { hair: "bald", skin: "#e0ac7e", top: "#fafafa", bottom: "#212121", hat: "captain", hatColor: "#fafafa", bulk: 1.2 },
       recruit: {
@@ -134497,7 +134872,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "Dracule Mihawk",
       title: `"Hawk-Eyes", World's Greatest Swordsman`,
       island: "baratie",
-      at: { spot: "baratie_deck", ox: 5 },
+      at: { spot: "baratie_deck", ox: 13, oy: -1.5 },
       ai: "idle",
       look: { hair: "short", hairColor: "#212121", top: "#212121", bottom: "#3e2723", coat: "#212121", hat: "captain", hatColor: "#212121", eyeColor: "#fbc02d", swords: 1 },
       level: 100,
@@ -134785,7 +135160,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     { island: "shells_island", town: "marine_153", spot: "execution_yard", radius: 4, enemies: [["marine", 5, { name: "Morgan's Marine", lethal: false }], ["marine_rifle", 5, { name: "Morgan's Rifleman" }]], when: (c, g) => g.quests.stageId("pirate_hunter") === "morgan" },
     // (Buggy's crew lord it over Orange Town, but leave a newcomer be — till
     // someone lays a hand on one of them, or stands up to their captain)
-    { island: "organ_islands", dx: 0, dy: 0.1, radius: 7, calm: true, enemies: [["pirate", 6, { name: "Buggy Pirate" }], ["pirate", 6, { name: "Buggy Pirate" }], ["pirate_gunner", 6, { name: "Buggy Cannoneer" }], ["beast", 8, { name: "Richie the Lion", look: { fur: "#f6b93b", skin: "#f6b93b", hairColor: "#e67e22", hair: "afro" } }]], when: (c) => !c.bosses.includes("buggy") },
+    { island: "organ_islands", spot: "bigtop", radius: 5, calm: true, enemies: [["pirate", 6, { name: "Buggy Pirate" }], ["pirate", 6, { name: "Buggy Pirate" }], ["pirate_gunner", 6, { name: "Buggy Cannoneer" }], ["beast", 8, { name: "Richie the Lion", look: { fur: "#f6b93b", skin: "#f6b93b", hairColor: "#e67e22", hair: "afro" } }]], when: (c) => !c.bosses.includes("buggy") },
     { island: "gecko_islands", spot: "north_slope", radius: 6, enemies: BLACK_CAT_CREW, when: (c, g) => g.quests.stageId("black_cat_plot") === "slope" },
     { island: "baratie", spot: "baratie_deck", radius: 4, enemies: [["pirate", 10, { name: "Krieg Pirate" }], ["pirate_gunner", 10, { name: "Krieg Gunner" }], ["pirate", 10, { name: "Pearl the Iron Wall", hpMul: 2, look: { bulk: 1.4 } }]], when: (c, g) => g.quests.stageId("baratie_krieg") === "krieg" },
     { island: "conomi_islands", dx: 0.55, dy: -0.15, radius: 7, enemies: [["fishman_thug", 9], ["fishman_thug", 9], ["fishman_thug", 10], ["fishman_thug", 10]], when: (c) => !c.bosses.includes("arlong") },
@@ -158365,7 +158740,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       name: "The Sea Restaurant",
       lure: "Don Krieg's armada was sighted near the Baratie",
       summary: "Don Krieg's armada \u2014 the biggest fleet in the East Blue \u2014 was seen heading for the Baratie. Lieutenant Fullbody is already there, having dinner.",
-      contact: { name: "Lieutenant Fullbody", title: '"Ironfist", 153rd Branch', look: LOOK.officer({ hair: "short", hairColor: "#5d4037", coat: "#fafafa" }), faction: "marine", at: { spot: "baratie_deck", ox: 4 }, where: "on the deck of the Baratie", level: 14, style: "brawler" },
+      contact: { name: "Lieutenant Fullbody", title: '"Ironfist", 153rd Branch', look: LOOK.officer({ hair: "short", hairColor: "#5d4037", coat: "#fafafa" }), faction: "marine", at: { inside: "restaurant", guest: true, spot: "baratie_deck", ox: 4 }, where: "at dinner in the Baratie", level: 14, style: "brawler" },
       meet: ["A recruit? Good. Stand there and look useful. I am having dinner with a lady.", "...Fine. Don Krieg escaped from the Navy's last net, and his men are starving. If they come here, they'll take the restaurant. Old Zeff wants help. Go and help him."],
       tasks: [T3.quest("baratie_krieg", `Defend the Baratie from Don Krieg's armada ("Red Leg" Zeff).`, "zeff"), PATTY.marine],
       wait: "I would help, but my soup is getting cold.",
@@ -160961,7 +161336,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       this.clip.oversample = "none";
       this.clip.connect(c.destination);
       this.limiter = c.createDynamicsCompressor ? c.createDynamicsCompressor() : null;
-      const head = c.createGain();
+      const head = this.head = c.createGain();
       head.gain.value = 1 / CLIP_HEAD;
       if (this.limiter) {
         for (const k of Object.keys(LIM)) this.limiter[k].value = LIM[k];
@@ -160997,6 +161372,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       this.duckGain.connect(this.muffle);
       this.ui = c.createGain();
       this.ui.connect(this.master);
+      this.tapIn = c.createAnalyser();
+      this.tapIn.fftSize = 1024;
+      this.tapOut = c.createAnalyser();
+      this.tapOut.fftSize = 1024;
+      this.master.connect(this.tapIn);
+      this.clip.connect(this.tapOut);
+      this.tapBuf = new Float32Array(1024);
+      this.deadT = 0;
       this.voices = { sfx: [], npc: [], amb: [], ui: [] };
       this.rr = {};
       this.ducks = /* @__PURE__ */ new Map();
@@ -161005,6 +161388,83 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }
     now() {
       return this.ctx.currentTime;
+    }
+    /** RMS of what an analyser hears just now (NaN if anything in it isn't a number). */
+    rms(a) {
+      const b = this.tapBuf;
+      a.getFloatTimeDomainData(b);
+      let sum = 0;
+      for (let i = 0; i < b.length; i++) sum += b[i] * b[i];
+      return Math.sqrt(sum / b.length);
+    }
+    /**
+     * Keep the mix alive (called a few times a second). One bad sample — a
+     * number blown up to infinity, or not a number at all — stalls the filters
+     * and the limiter it passes through: the limiter clamps everything down
+     * and takes seconds to let go, a filter's state goes to NaN and stays
+     * there. All of it fell silent, then came back on its own (or didn't). If
+     * the mix goes in but nothing comes out, or what comes out isn't a number,
+     * the filters and the limiter are made anew. Returns true when it healed.
+     */
+    heal(dt) {
+      const a = this.rms(this.tapIn), b = this.rms(this.tapOut);
+      const bad = !Number.isFinite(a) || !Number.isFinite(b);
+      const dead = a > 4e-3 && b < a * 0.02;
+      this.deadT = bad ? 1 : dead ? this.deadT + dt : 0;
+      if (this.deadT < 0.6) return false;
+      this.deadT = 0;
+      this.rebuildTail();
+      return true;
+    }
+    /** New muffle and shelter filters and a new limiter, wired in as the old ones were. */
+    rebuildTail() {
+      const c = this.ctx;
+      const fresh = (old, type, q2) => {
+        const f = c.createBiquadFilter();
+        f.type = type;
+        f.frequency.value = Number.isFinite(old.frequency.value) ? old.frequency.value : 2e4;
+        f.Q.value = q2;
+        try {
+          old.disconnect();
+        } catch {
+        }
+        return f;
+      };
+      const muffle = fresh(this.muffle, "lowpass", 0.6), shelter = fresh(this.shelter, "lowpass", 0.5);
+      for (const n of [this.sfx, this.npcDuck, this.duckGain]) {
+        try {
+          n.disconnect(this.muffle);
+        } catch {
+        }
+        n.connect(muffle);
+      }
+      try {
+        this.ambDuck.disconnect(this.shelter);
+      } catch {
+      }
+      this.ambDuck.connect(shelter);
+      shelter.connect(muffle);
+      muffle.connect(this.master);
+      this.muffle = muffle;
+      this.shelter = shelter;
+      if (this.limiter) {
+        const lim = c.createDynamicsCompressor();
+        for (const k of Object.keys(LIM)) lim[k].value = LIM[k];
+        try {
+          this.head.disconnect(this.limiter);
+          this.limiter.disconnect();
+        } catch {
+        }
+        this.head.connect(lim);
+        lim.connect(this.clip);
+        this.limiter = lim;
+      }
+      const t = this.now();
+      for (const p of [this.duckGain.gain, this.ambDuck.gain, this.npcDuck.gain]) {
+        p.cancelScheduledValues(t);
+        p.setValueAtTime(1, t);
+      }
+      this.ducks.clear();
     }
     /** Volumes from the settings: effects (and the beds with them), and music (`sec` 0: at once). */
     setVolumes(sfx, music, sec = 0.05) {
@@ -161079,11 +161539,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       d.to = to;
       d.until = Math.max(until, d.until);
       d.rel = rel3;
-      if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t);
-      else {
-        p.cancelScheduledValues(t);
-        p.setValueAtTime(p.value, t);
-      }
+      p.cancelScheduledValues(t);
+      p.setValueAtTime(Math.min(1, Math.max(0.05, Number.isFinite(p.value) ? p.value : 1)), t);
       p.setTargetAtTime(to, t, att / 3);
       p.setTargetAtTime(1, d.until, rel3 / 4);
     }
@@ -163779,6 +164236,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     yo: [0, 2, 5, 7, 9],
     penta: [0, 2, 4, 7, 9]
   };
+  var AHEAD2 = 1.5;
   var RHYTHMS = {
     straight: [[2, 2, 4, 2, 2, 4], [3, 1, 2, 2, 4, -4], [2, 2, 2, 2, 6, -2], [1, 1, 2, 4, 2, 2, 4], [4, 2, 2, 8]],
     lilt: [[3, 3, 2, 1, 3], [2, 1, 2, 1, 6], [3, 2, 1, 3, -3], [2, 1, 3, 2, 1, 3], [1, 1, 1, 3, 6]]
@@ -164197,15 +164655,15 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       const b = this.beat, k = Math.ceil((now3 + lead - this.t0) / b);
       return this.t0 + k * b;
     }
-    /** Schedule what's due in the next half second. False once the piece has run out. */
+    /** Schedule what's due in the next AHEAD seconds. False once the piece has run out. */
     schedule(now3) {
       if (this.ended) return false;
-      if (this.t < now3 - 0.25) {
+      if (this.t < now3 - 0.6) {
         const skip = Math.ceil((now3 - this.t) / this.barDur);
         this.t += skip * this.barDur;
         this.bar += skip;
       }
-      while (this.t < now3 + 0.5 && this.t < this.stopAt) {
+      while (this.t < now3 + AHEAD2 && this.t < this.stopAt) {
         if (this.bar >= this.S.bars) {
           if (!this.loop) {
             this.ended = true;
@@ -165418,7 +165876,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   var HITS = { punch: 1, punch_heavy: 1, slash_hit: 1, slash_heavy: 1, fire: 1, magma: 1, ice: 1, snow: 1, lightning: 1, water: 1, swamp: 1, poison: 1, gas: 1, smoke: 1, sand: 1, light: 1, dark: 1, quake: 1, string: 1, explosion: 1, haki: 1 };
   var HAKI_VOICED = /* @__PURE__ */ new Set(["haki", "haki_obs", "haki_off", "haki_out", "foresight", "conqueror", "conqueror_rise", "conqueror_clash"]);
   var STEP4 = 3.8;
-  var KICKS = /kick|knee|mouton|jete|arabesque|pirouette|rankyaku|concasse/;
+  var KICKS = /kick|bl_snap|bl_round|knee|mouton|jete|arabesque|pirouette|rankyaku|concasse/;
   function weaponOf2(actor, def) {
     if (def.weapon) return def.weapon;
     const src = def.source || "";
@@ -165527,6 +165985,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       }
       const now3 = this.E.now(), dt = Math.min(0.5, Math.max(0, now3 - (this.clock ?? now3)));
       this.clock = now3;
+      this.healT = (this.healT || 0) + dt;
+      if (this.healT >= 0.25) {
+        try {
+          if (this.E.heal(this.healT)) console.warn("audio: the mix stalled and was rebuilt");
+        } catch {
+        }
+        this.healT = 0;
+      }
       try {
         this.director.update(this.game);
         this.foley.menus();
@@ -166801,6 +167267,73 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     window.addEventListener("blur", up);
   }
 
+  // src/ui/shipyardPanel.js
+  var distText2 = (d) => d >= 1e3 ? `${(d / 1e3).toFixed(1)} km` : `${Math.round(d)} m`;
+  function openShipyard2(game) {
+    const ui = game.ui, c = game.state.char;
+    const body = h("div.shipyard");
+    const entry = ui.openPanel(body, { wide: true, id: "shipyard" });
+    if (!entry) return null;
+    const where = (e) => {
+      const s = liveShip(game, e.uid), p = game.player;
+      if (!s) return "In the yards";
+      if (aboard(p, s)) return "You're aboard her";
+      return `Afloat \xB7 ${distText2(game.world.distance(p.x, p.y, s.x, s.y))} away`;
+    };
+    const choose = (e) => {
+      c.activeShip = e.uid;
+      persist(game);
+      game.audio?.sfx("ui_click");
+      render2();
+    };
+    const fitOut = async (e) => {
+      const got = await openShipDesigner(game, e.type, { name: e.name, paint: e.paint, title: `Fit out the ${e.name}`, ok: "Done" });
+      if (!got || !entry.el.isConnected) return;
+      e.paint = got.paint;
+      e.name = got.name;
+      const s = liveShip(game, e.uid);
+      if (s) {
+        s.paint = got.paint;
+        s.name = got.name;
+      }
+      persist(game);
+      render2();
+    };
+    const render2 = () => {
+      clear(body);
+      const fleet = fleetOf(c), cur = chosenShip(c);
+      add4(
+        body,
+        h("div.panel-top", h("h2", "Shipyard")),
+        h("p.muted", "The ship you choose is the one the ship button (the round one in the middle of your hotbar) calls up onto the water in front of you \u2014 press it again to set her sails, and again to take them in. New ships are sold by the shipwright on any pier.")
+      );
+      const list = h("div.list");
+      for (const e of fleet) {
+        if (!SHIPS[e.type]) continue;
+        const d = shipStats(e.type, e.upgrades), on = cur === e;
+        list.appendChild(h(
+          "div.row-item" + (on ? ".here" : ""),
+          uiImg("ship", 34, ".ico"),
+          h(
+            "div.grow",
+            h("b", e.name),
+            h("span.tag", d.name),
+            on ? h("span.tag.gold", "Sailing") : null,
+            h("div.sub", where(e)),
+            h("div.sub", shipClassLine(d)),
+            h("div.sub", shipStatLine(d))
+          ),
+          paintable(SHIPS[e.type]) ? h("button.btn", { title: "Her name, paint, sails and figurehead", on: { click: () => fitOut(e) } }, "Customise") : null,
+          h("button.btn.gold", { disabled: on, on: { click: () => choose(e) } }, on ? "Chosen" : "Sail this one")
+        ));
+      }
+      if (!fleet.length) list.appendChild(h("p", "You don't own a ship yet. The shipwright on any pier sells them."));
+      add4(body, list);
+    };
+    render2();
+    return entry;
+  }
+
   // src/game/legends.js
   var LORE2 = {
     alabasta: "The text speaks of an ancient weapon \u2014 Pluton \u2014 and of the place where it sleeps. No wonder a certain Warlord wanted it read.",
@@ -167568,6 +168101,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       skills: () => openSkills(game),
       journal: () => openJournal(game),
       crew: () => openCrew(game),
+      shipyard: () => openShipyard2(game),
       quests: () => openQuests(game),
       menu: () => ui.openMenu(),
       help: () => ui.openPanel(helpContent(game.state?.char, game.settings), { wide: true, id: "help" }),
