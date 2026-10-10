@@ -1149,7 +1149,9 @@ export class Actor extends Entity {
       // (a gangway has a rope along each side: off it, over the water, only with a jump)
       if (this.deck.plank && !(this.z > 0.4)) return false;
       // (off the edge of her deck is her bulwark: over it only with your feet up at its top)
-      if (this.feetH(g) < g.railAt(sh, x, y) - RAIL_CLEAR) return false;
+      // (in a jump, a leg swung over it: your feet up near its top will do)
+      const vault = this.z > 0.25 ? 0.55 : RAIL_CLEAR;
+      if (this.feetH(g) < g.railAt(sh, x, y) - vault) return false;
     }
     // a ledge too high to step onto: a pier or a quay out of the sea, a ship's
     // side (a wall: you come over her rail from above), the shore from a deck

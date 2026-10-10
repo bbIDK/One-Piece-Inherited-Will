@@ -528,6 +528,8 @@ export class UI {
     for (const [id, el] of Object.entries(this.el.sideBtns)) el.classList.toggle('on', id === sec);
     this.root.classList.toggle('menu-open', !!sec);
     this.root.classList.toggle('panel-open', !!top);
+    // (a window opened over the menu — the ship designer from the Shipyard: the sections stand back)
+    this.root.classList.toggle('over-menu', !!sec && !!top && !this.sectionOf(top.id));
     if (RETURN_TO.has(sec)) this.lastSection = sec;
     // the hotbar takes drops while the Inventory or Skills is open
     const edit = !!top && (top.id === 'inventory' || top.id === 'skills');

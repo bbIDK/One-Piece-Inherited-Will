@@ -1264,7 +1264,8 @@ export function hullSolid(ship, dx, dy, h) {
     if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h > d.holdY - 0.05 && h < d.deckY + 0.05) return false;
   }
   // the rails along the fronts of the raised decks (and the forecastle's after edge)
-  const rail = d.big ? 1 : 0.8, at = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
+  // (solid to a little under their top: a jump clears them, like the bulwarks)
+  const rail = d.big ? 0.75 : 0.6, at = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
   if ((d.castle && at(d.tq) && h < d.yq + rail) || (d.poop && at(d.tp) && h < d.yp + rail) || (d.fore && at(d.tf) && h < d.yf + rail)) return true;
   if (h > topAt(d, t)) return false;
   if (v > hb * d.walk - 0.05 || h < d.deckY - 0.1) return true;

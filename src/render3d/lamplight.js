@@ -12,7 +12,7 @@ const KINDS = {
   lantern: { h: 1.6, r: 4.6, col: [1, 0.55, 0.32], power: 0.75 },
   campfire: { h: 0.55, r: 6.5, col: [1, 0.58, 0.26], power: 1.1, fire: true },
 };
-const NLIGHTS = 4, MAX_POOLS = 160;
+const NLIGHTS = 5, MAX_POOLS = 160;
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 
 function poolTexture() {
@@ -111,7 +111,9 @@ class LampLight {
           const cd = (q.x - cam.position.x) ** 2 + (q.y - cam.position.y) ** 2 + (q.z - cam.position.z) ** 2;
           if (cd > 60 * 60) continue;
           const fl = 0.9 + 0.1 * Math.sin(t * 9 + i * 1.7) * Math.sin(t * 5.3 + i);
-          cands.push({ d: cd, x: q.x, y: q.y, z: q.z, k: night * fl * 0.8, col: [1, 0.6, 0.32], range: 7.5 });
+          // (below decks, lit day and night, reaching the length of the room: not just the spot by the lamp)
+          const below = mesh !== sv.hull, kk = below ? Math.max(night, 0.55) : night;
+          cands.push({ d: cd, x: q.x, y: q.y, z: q.z, k: kk * fl * (below ? 0.95 : 0.8), col: [1, 0.6, 0.32], range: below ? 11 : 8.5 });
         }
       }
     }

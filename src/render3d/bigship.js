@@ -41,13 +41,13 @@ export function bigPalette(def) {
     hull: H,
     upper: marine ? C('#f5f6fa') : white ? C('#f7f3ea') : shade(H, 0.06),
     cap: marine ? C('#1b4f72') : white ? C('#7a5a3c') : shade(H, -0.5),
-    stripe: C(def.stripe || (marine ? '#1b4f72' : '#c8962e')),
+    stripe: def.trim ? shade(def.trim, -0.08) : C(def.stripe || (marine ? '#1b4f72' : '#c8962e')),
     plank: marine ? C('#e9edf1') : H,
     plank2: marine ? C('#dfe4ea') : shade(H, -0.1),
     bottom: C(def.bottom || (marine ? '#5b6770' : '#3a2c22')),
     deck: marine ? C('#c9b28f') : C('#b88c5c'),
     front: marine ? C('#eef1f4') : white ? C('#efe6d4') : C(def.front || '#8e3b2a'),
-    trim: C('#d4ac0d'),
+    trim: C(def.trim || '#d4ac0d'),
     wood: C('#6d4c33'),
     dark: C('#2b1d14'),
     iron: C('#2d3436'),
@@ -747,17 +747,35 @@ function fittings(k, d, P) {
     k.add(lathe([[0.2, 0], [0.16, 0.1], [0.12, 0.3], [0.1, 0.36], [0.01, 0.38]], 10), { at: [x, y + 0.95, 0], color: P.trim });
   }
   // catted anchors at the bow (hanging clear of her side all the way down:
-  // she's broader lower down, and aft, than where the ring's made fast)
+  // she's broader lower down, and aft, than where the ring's made fast): an
+  // admiralty anchor — the shank, its ring, the wooden stock across it, the
+  // crown and two arms curving up to broad flukes and pointed bills
   for (const s of [-1, 1]) {
     const t = 0.9, y = topAt(d, t) - 1.1, a = 1.6 + d.B * 0.08, ta = a * 0.3 / d.L;
     let w = 0;
     for (const tt of [t - ta, t, t + ta]) for (const yy of [y - a * 0.6 - 0.1, y - a * 0.3, y, y + a * 0.4]) w = Math.max(w, skinAt(d, tt, yy));
-    const z = s * (w + 0.2);
-    k.add(cyl(0.07, 0.07, a, 6), { at: [xAt(d, t), y - a * 0.6, z], color: P.iron, outline: 0.012 });
-    k.add(torus(a * 0.28, 0.07, 5, 10, Math.PI), { at: [xAt(d, t), y - a * 0.6, z], rot: [0, 0, Math.PI], color: P.iron, outline: 0.012 });
+    // (the stock reaches across her side: the anchor hangs out by half its length)
+    const st = a * 0.34, z = s * (w + 0.22 + st), x = xAt(d, t), base = y - a * 0.6, R = a * 0.3;
+    k.add(cyl(0.055, 0.075, a, 8), { at: [x, base, z], color: P.iron, outline: 0.012 });
+    // the crown, and the arms in a U from it
+    k.add(new THREE.SphereGeometry(0.11, 8, 6), { at: [x, base + 0.02, z], color: P.iron, outline: 0.012 });
+    k.add(torus(R, 0.065, 6, 14, Math.PI), { at: [x, base + R, z], rot: [0, 0, Math.PI], color: P.iron, outline: 0.012 });
+    for (const e of [-1, 1]) {
+      // a fluke on each arm's end (a broad iron palm, across the arm), and its bill
+      k.add(box(0.05, a * 0.3, a * 0.22), { at: [x + e * (R + 0.02), base + R - a * 0.2, z], color: P.iron, outline: 0.01 });
+      k.add(cone(0.06, a * 0.12, 6), { at: [x + e * R, base + R + a * 0.1 - 0.02, z], color: P.iron, outline: 0.01 });
+    }
+    // the stock (oak, iron-banded), square across the arms, under the ring
+    const ys = base + a - 0.32;
+    k.add(box(0.14, 0.14, st * 2), { at: [x, ys, z], color: P.wood, outline: 0.012 });
+    for (const e of [-1, 1]) k.add(box(0.16, 0.16, 0.05), { at: [x, ys - 0.01, z + e * st * 0.6], color: P.iron });
+    // the ring at the head of the shank, and its rope up to the cathead
+    const yc = topAt(d, t) - 0.25, zi = skinAt(d, t, yc) - 0.15, zo = Math.abs(z) + 0.12;
+    k.add(torus(0.17, 0.03, 5, 12), { at: [x, base + a + 0.13, z], rot: [0, Math.PI / 2, 0], color: P.iron, outline: 0.008 });
+    if (yc > base + a + 0.3) k.add(cyl(0.035, 0.035, yc - (base + a + 0.28), 5), { at: [x, base + a + 0.28, z], color: '#8a7350' });
     // (the cathead: out from her rail to over the anchor)
-    const yc = topAt(d, t) - 0.25, zi = skinAt(d, t, yc) - 0.15, zo = w + 0.3;
-    k.add(box(0.12, 0.12, zo - zi), { at: [xAt(d, t), yc, s * (zi + zo) / 2], color: P.wood });
+    k.add(box(0.14, 0.14, zo - zi), { at: [x, yc, s * (zi + zo) / 2], color: P.wood, outline: 0.01 });
+    k.add(box(0.16, 0.16, 0.04), { at: [x, yc - 0.01, s * (zo - 0.04)], color: P.iron });
   }
   // channels: the ledges the shrouds come down to, beside each mast
   for (const u of d.mastU) {
@@ -1137,13 +1155,6 @@ export function bigMastGeometry(def, d, plan) {
     k.add(cyl(0.08, 0.12 + d.L * 0.003, b.len * 0.45, 7), { at: [0, b.len * 0.6, 0], color: wood, outline: 0.015 });
     k.restore();
   }
-  // a flagstaff at the taffrail for the ensign
-  // (stepped on the deck right by the taffrail, an iron band holding it to
-  // the rail, raking aft over the stern: not standing on air at rail height)
-  const ty = topAt(d, 0.01), fs = flagstaff(d);
-  k.add(cyl(0.05, 0.08, fs.len, 6), { at: [fs.x, fs.y, 0], rot: [0, 0, fs.rake], color: dark, outline: 0.012 });
-  k.add(cyl(0.1, 0.1, 0.08, 8), { at: [fs.x - Math.sin(fs.rake) * (ty - 0.25 - fs.y), ty - 0.25, 0], color: '#3a3a3a' });
-  k.add(box(0.5, 0.06, 0.08), { at: [fs.x - 0.25 - Math.sin(fs.rake) * (ty - 0.25 - fs.y), ty - 0.23, 0], color: '#3a3a3a' });
   return k.build(true);
 }
 

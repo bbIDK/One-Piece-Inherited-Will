@@ -22,6 +22,10 @@ patch('lights_fragment_begin', 'the point light loop', (chunk) => {
   if (!body.includes(from) || !body.includes(to)) return chunk;
   const gated = body
     .replace(from, 'if ( pointLight.color.r + pointLight.color.g + pointLight.color.b > 0.0 ) {\n\t\t' + from)
+    // (and only on the faces turned toward it: toon shading lights a face
+    // turned away at 70% — a lamp in a ship's hold shone through her side
+    // onto the hull outside, and up through the deck)
+    .replace(from, from + '\n\t\tdirectLight.color *= smoothstep( -0.02, 0.12, dot( geometryNormal, directLight.direction ) );')
     .replace(to, to + '\n\t\t}');
   return chunk.slice(0, a) + gated + chunk.slice(b);
 });

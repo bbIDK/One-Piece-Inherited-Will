@@ -388,6 +388,7 @@ img.icon { vertical-align: middle; image-rendering: auto; }
 #ui.menu-open .side-btn.rail { display: flex; }
 #ui.menu-open .side-btn.pill, #ui.menu-open .side-btn.t-only { display: none; }
 #ui.panel-open:not(.menu-open) .sidebar { display: none; }
+#ui.over-menu .sidebar { display: none; }
 .side-btn.pill { width: auto; align-self: flex-start; }
 .side-btn.pill .lbl { flex: none; margin-right: 4px; }
 /* (Map and Game after the sections: a little apart from them) */

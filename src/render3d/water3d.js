@@ -305,7 +305,9 @@ const FRAG = /* glsl */`
         // (down the middle: churned water, paler, flecked with foam)
         float mid = (1.0 - smoothstep(hw * 0.35, hw * 0.85, d)) * br;
         // (which way the churned water runs here: back along her track, newest to oldest)
-        if (mid > churn) fdir = ab / sqrt(l2);
+        // (summed, weighted by how much of it is here: through a turn the
+        // segments' directions blend, never switch from one pixel to the next)
+        fdir += ab / sqrt(l2) * mid;
         churn = max(churn, mid);
         // (the arms: a ridge of the sea at either edge)
         float wr = 0.45 + hw * 0.16, e = (d - hw) / wr, ridge = exp(-e * e) * br;
@@ -314,9 +316,16 @@ const FRAG = /* glsl */`
       }
     }
     if (foam <= 0.0 && churn <= 0.0) return vec4(0.0);
-    // (its lace streams away down the track as the water settles behind her, not across it)
-    vec2 q = p - fdir * t * 0.9;
-    float lace = noise(q * vec2(1.3, 1.9) + vec2(t * 0.2, -t * 0.15)) * 0.6 + noise(q * 3.7 - t * 0.3) * 0.4;
+    // (its lace streams away down the track as the water settles behind her,
+    // not across it — moved on a little and blended back, two phases apart:
+    // carried by the whole of the time, a turn's change of direction tore the
+    // lace into blotches that jumped about)
+    fdir = fdir / max(length(fdir), 0.001);
+    float ph = fract(t * 0.25), ph2 = fract(t * 0.25 + 0.5), wl = abs(2.0 * ph - 1.0);
+    vec2 q1 = p - fdir * ph * 3.6, q2 = p - fdir * ph2 * 3.6 + vec2(5.3, 2.1);
+    float lace1 = noise(q1 * vec2(1.3, 1.9)) * 0.6 + noise(q1 * 3.7) * 0.4;
+    float lace2 = noise(q2 * vec2(1.3, 1.9)) * 0.6 + noise(q2 * 3.7) * 0.4;
+    float lace = mix(lace1, lace2, wl);
     return vec4(clamp(foam * smoothstep(0.38, 0.7, lace + foam * 0.25), 0.0, 1.0), churn, sl);
   }
   // caustic network: the edges between moving Voronoi cells

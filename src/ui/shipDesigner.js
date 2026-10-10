@@ -20,6 +20,11 @@ export const SAIL_CLOTHS = [
   ['Canvas', '#efe6cf'], ['Bleached', '#fbf8f1'], ['Tan', '#d8b98a'], ['Ochre', '#c98d3a'], ['Crimson', '#b33a2e'],
   ['Black', '#2b2a2c'], ['Sky', '#9cc3e0'], ['Violet', '#8e6bb0'],
 ];
+/** The trim: her wales, mouldings and the gilding round her stern. */
+export const TRIM_PAINTS = [
+  ['Gold', '#d4ac0d'], ['Brass', '#b8862f'], ['Ivory', '#efe3c4'], ['Pearl', '#f6f4ee'], ['Black', '#262224'], ['Crimson', '#a8322a'],
+  ['Navy', '#22406e'], ['Sea green', '#2e7a5c'], ['Sky', '#8fc1e3'], ['Violet', '#7c58a6'], ['Copper', '#b0633a'],
+];
 /** Figureheads a ship of the line can carry (or none). */
 export const FIGUREHEADS = [['none', 'None'], ['mermaid', 'Gilded mermaid'], ['dragon', 'Dragon'], ['lion_gold', 'Golden lion'], ['whale', 'White whale']];
 
@@ -38,6 +43,7 @@ export function openShipDesigner(game, type, { name = '', paint = null, title = 
     name: name || SHIPS[type].name,
     color: paint?.color || def.color || HULL_PAINTS[0][1],
     sail: paint?.sail || SAIL_CLOTHS[0][1],
+    trim: paint?.trim || TRIM_PAINTS[0][1],
     figurehead: paint?.figurehead || (big && FIGUREHEADS.some(([k]) => k === def.figurehead) ? def.figurehead : 'none'),
   };
   return new Promise((resolve) => {
@@ -50,7 +56,7 @@ export function openShipDesigner(game, type, { name = '', paint = null, title = 
     }));
     const body = h('div.ship-designer');
     const draw = () => {
-      stage.set({ color: st.color, sail: st.sail, figurehead: big ? st.figurehead : null });
+      stage.set({ color: st.color, trim: st.trim, sail: st.sail, figurehead: big ? st.figurehead : null });
       body.replaceChildren(
         h('h2', title || `Fit out your ${SHIPS[type].name}`),
         h('div.sd-wrap', stage.el,
@@ -58,12 +64,13 @@ export function openShipDesigner(game, type, { name = '', paint = null, title = 
             h('label.sd-label', 'Her name'),
             h('input.sd-name', { value: st.name, maxLength: 24, on: { input: (e) => { st.name = e.target.value; } } }),
             h('label.sd-label', 'Hull'), swatches(HULL_PAINTS, 'color'),
+            h('label.sd-label', 'Trim'), swatches(TRIM_PAINTS, 'trim'),
             def.oarsOnly ? null : [h('label.sd-label', 'Sails'), swatches(SAIL_CLOTHS, 'sail')],
             big ? [h('label.sd-label', 'Figurehead'), h('div.sd-figs', FIGUREHEADS.map(([k, label]) => h('button.btn.small' + (st.figurehead === k ? '.gold' : ''), { on: { click: () => { st.figurehead = k; draw(); } } }, label)))] : h('p.muted', 'A ship her size carries no figurehead; the ships of the line do.'),
             h('p.muted', 'Drag her to turn her round.'))),
         h('div.sd-buttons',
           h('button.btn', { on: { click: () => finish(null) } }, 'Cancel'),
-          h('button.btn.gold', { on: { click: () => finish({ name: (st.name || '').trim().slice(0, 24) || SHIPS[type].name, paint: { color: st.color, sail: def.oarsOnly ? null : st.sail, figurehead: big ? st.figurehead : null } }) } }, ok)));
+          h('button.btn.gold', { on: { click: () => finish({ name: (st.name || '').trim().slice(0, 24) || SHIPS[type].name, paint: { color: st.color, trim: st.trim, sail: def.oarsOnly ? null : st.sail, figurehead: big ? st.figurehead : null } }) } }, ok)));
     };
     draw();
     const entry = ui.openPanel(body, { wide: true, onClose: () => { if (!done) { done = true; stage.dispose(); resolve(null); } } });
@@ -119,7 +126,7 @@ function shipStage(type, jr) {
   raf = requestAnimationFrame(frame);
   return {
     el,
-    set(p) { stub.paint = { color: p.color, sail: p.sail, figurehead: p.figurehead || undefined }; build(); },
+    set(p) { stub.paint = { color: p.color, trim: p.trim, sail: p.sail, figurehead: p.figurehead || undefined }; build(); },
     dispose() { cancelAnimationFrame(raf); if (view) { scene.remove(view.root); view.dispose?.(); } renderer?.dispose(); },
   };
 }

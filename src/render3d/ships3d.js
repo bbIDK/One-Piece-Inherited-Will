@@ -17,7 +17,7 @@ import { Mesher, box, cyl, cone, torus, tube, C, shade } from './props/kit.js';
 import { vcMat, U } from './props/mats.js';
 import { swellAt } from './swell.js';
 import { shipDims, helmPoint, hbAt, topAt, xAt, floorAt, shipRock, shipBob, smallProfile, wheelSpec } from '../world/hull.js';
-import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging, bigPalette, wheelParts, noSprit, flagstaff } from './bigship.js';
+import { bigHull, bigInterior, bigTreasure, bigMastPlan, bigSailPlan, bigMastGeometry, bigRigging, bigPalette, wheelParts, noSprit } from './bigship.js';
 
 // a coated ship's bubble (see the coating, below): a soap film, its colours
 // running with the angle you see it at, bright at its rim — from either side
@@ -88,7 +88,7 @@ function palette(def) {
     plank2: warship ? C('#dfe4ea') : shade(H, -0.08),
     bottom: def.seastone ? C('#5b6770') : warship ? C('#5b6770') : shade(H, -0.3),
     deck: def.figurehead === 'lion' ? C('#6fb34a') : def.seastone && !warship ? C('#cfd8dc') : warship ? C('#c9b28f') : shade(H, 0.2),
-    trim: warship ? C('#1b4f72') : def.length >= 8 ? C('#d4ac0d') : shade(H, -0.4),
+    trim: warship ? C('#1b4f72') : def.trim ? C(def.trim) : def.length >= 8 ? C('#d4ac0d') : shade(H, -0.4),
     wood: C('#6d4c33'),
     dark: C('#2b1d14'),
   };
@@ -98,7 +98,7 @@ function palette(def) {
 const hullCache = new Map();
 
 export function hullGeometry(def) {
-  const key = `${def.length}|${def.beam}|${def.color}|${def.figurehead}|${def.cannons}|${def.paddle}|${def.sail}|${def.seastone}|${def.masts}`;
+  const key = `${def.length}|${def.beam}|${def.color}|${def.trim}|${def.figurehead}|${def.cannons}|${def.paddle}|${def.sail}|${def.seastone}|${def.masts}`;
   let g = hullCache.get(key);
   if (g) return g;
   const d = shipDims(def);
@@ -348,7 +348,7 @@ const insideCache = new Map();
 export function interiorGeometry(def) {
   const d = shipDims(def);
   if (!d.big) return null;
-  const key = `${def.length}|${def.beam}|${def.color}|${def.cannons}|${def.sail}|${def.masts}`;
+  const key = `${def.length}|${def.beam}|${def.color}|${def.trim}|${def.cannons}|${def.sail}|${def.masts}`;
   let g = insideCache.get(key);
   if (!g) {
     const m = bigInterior(def, d), t = bigTreasure(def, d);
@@ -501,10 +501,7 @@ function sailTexture(kind, jr, sailColor) {
   const bg = kind === 'marine' ? '#f5f6fa' : sailColor || '#efe6cf';
   g.fillStyle = bg;
   g.fillRect(0, 0, 256, 256);
-  g.strokeStyle = 'rgba(80,60,40,0.22)'; g.lineWidth = 3;
-  for (let x = 32; x < 256; x += 42) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 256); g.stroke(); }
-  g.strokeStyle = 'rgba(80,60,40,0.35)'; g.lineWidth = 5;
-  g.strokeRect(2, 2, 252, 252);
+  // (plain cloth: no painted seams or border — drawn lines on a sail looked low-poly and cheap)
   if (kind === 'marine') {
     g.setTransform(140, 0, 0, 140, 128, 150);
     drawMarineEmblem(g, 1);
@@ -512,9 +509,15 @@ function sailTexture(kind, jr, sailColor) {
     g.fillStyle = '#1b4f72'; g.font = 'bold 40px Nunito, "Trebuchet MS", sans-serif'; g.textAlign = 'center';
     g.fillText('MARINE', 128, 70);
   } else if (jr) {
-    // (painted on the canvas as the flag is, in the flag's own colour: the skull dark on the sail, its eyes the sail showing through)
+    // (the crew's own flag, in its own colours — its skull, eyes and bones in
+    // the flag's colours — where they show on the cloth; on a sail the same
+    // colour as the skull, painted in the flag's ground instead, the sail
+    // showing through its eyes)
     g.setTransform(150, 0, 0, 150, 128, 132);
-    drawJollyRoger(g, { ...jr, color: jr.bg || '#141414' }, 1, bg);
+    const lum = (c) => { const k = new THREE.Color(c); return 0.3 * k.r + 0.59 * k.g + 0.11 * k.b; };
+    const fg = jr.color || '#f5f5f5', ground = jr.bg || '#141414';
+    if (Math.abs(lum(fg) - lum(bg)) > 0.22) drawJollyRoger(g, jr, 1, ground);
+    else drawJollyRoger(g, { ...jr, color: ground }, 1, bg);
   }
   g.setTransform(1, 0, 0, 1, 0, 0);
   tex.needsUpdate = true;
@@ -734,7 +737,7 @@ function clothify(mesh, U, tri) {
 export function paintedDef(s) {
   let def = s.def;
   const P = s.paint;
-  if (P && def.sail !== 'marine' && !def.special) def = { ...def, ...(P.color ? { color: P.color } : {}), ...(P.figurehead ? { figurehead: P.figurehead } : {}) };
+  if (P && def.sail !== 'marine' && !def.special) def = { ...def, ...(P.color ? { color: P.color } : {}), ...(P.trim ? { trim: P.trim } : {}), ...(P.figurehead ? { figurehead: P.figurehead } : {}) };
   if (def.figurehead === 'ram' && !isMerry(s)) def = { ...def, figurehead: 'none' };
   if (def.figurehead === 'scroll') def = { ...def, figurehead: 'none' };
   return def;
@@ -926,16 +929,7 @@ export class ShipView {
       flag.userData.base = fg.attributes.position.array.slice();
       root.add(flag);
       this.flag = flag;
-      if (d.big) {
-        // the ensign, flying from the flagstaff at the taffrail
-        const eg = fg.clone();
-        const ens = new THREE.Mesh(eg, fmat);
-        const st = flagstaff(d);
-        ens.position.set(st.top[0] - 0.1, st.top[1] - 0.75 * fs * 0.5, 0);
-        ens.userData.base = eg.attributes.position.array.slice();
-        root.add(ens);
-        this.ensign = ens;
-      }
+      // (no ensign at the taffrail as well: her colours fly from the main)
       const pole = new Mesher();
       pole.add(cyl(0.015 * fs, 0.02 * fs, 0.55 * fs, 4), { at: [mx, mm.h, 0], color: '#3e2723' });
       const pm = new THREE.Mesh(pole.build(false), SOLID());
