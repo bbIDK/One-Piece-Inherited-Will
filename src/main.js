@@ -118,7 +118,7 @@ const TIPS = [
   'Enemies hunt you by sight. Break the line of sight and they will lose you.',
   'Every life that ends passes its Will on to the next generation.',
   'Bandages and medical kits are wrapped on over a few seconds: get clear of the fight first.',
-  'Hungry or thirsty, you heal slowly. Eat, drink — or crouch at a stream to drink your fill.',
+  'Hungry, you heal slowly. Eat to keep your strength up.',
   'An island with a Devil Fruit on it calls to you: follow the sound, then the shine.',
   'On a big ship, climb the mainmast ladder to the crow\'s nest to look out over the sea.',
 ];

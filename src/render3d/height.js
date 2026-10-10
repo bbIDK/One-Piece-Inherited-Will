@@ -382,9 +382,12 @@ export class HeightField {
     // (a door higher than a flight of steps goes opens onto the drop: none drawn, none to walk on)
     if (y0 > STEPS_MAX + 0.01) return h;
     const n = Math.max(1, Math.round(y0 / 0.2));
-    const { lz } = bl(b, x, y, this.world);
+    const { lx, lz } = bl(b, x, y, this.world);
     const i = Math.floor(lz / 0.32);
     if (i < 0 || i >= n) return h;
+    // (each step a little wider than the one above it: see buildings3d doorAt)
+    const f = b.stepsFloor;
+    if (f && f.dw !== undefined && Math.abs(lx - f.steps) > f.dw / 2 + 0.2 + i * 0.05) return h;
     return front + y0 - (i + 1) * y0 / (n + 1);
   }
 

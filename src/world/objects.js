@@ -1,7 +1,7 @@
 // Props placed in the world (trees, rocks, buildings, docks furniture...).
 // Stored in a chunked spatial index so rendering and interaction only look
 // at nearby objects.
-import { isEnterable, isPirateHouse, layoutOf, doorOf, WALL_T, PLINTH } from './interiors.js';
+import { isEnterable, isPirateHouse, layoutOf, doorOf, WALL_T, PLINTH, STEPS_MAX } from './interiors.js';
 import { bw, bbox, bfoot } from './bframe.js';
 import { hash01 } from '../core/rng.js';
 
@@ -304,7 +304,9 @@ export class ObjectIndex {
     b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -0.002), h: PLINTH, o: b, interior: true };
     w.addFloor(b.floor);
     // the steps up to the door: you walk up them (their heights: see render3d/height.js)
-    b.stepsFloor = { ...bbox(b, d.x - d.dw / 2 - 0.2, d.x + d.dw / 2 + 0.2, 0.002, 1.3), h: 0, o: b, steps: d.x };
+    // (as far out as the longest flight runs — up to STEPS_MAX high, a step every 0.2 m, each 0.32 deep and a little wider than the one above)
+    const nMax = Math.ceil(STEPS_MAX / 0.2);
+    b.stepsFloor = { ...bbox(b, d.x - d.dw / 2 - 0.2 - nMax * 0.05, d.x + d.dw / 2 + 0.2 + nMax * 0.05, 0.002, nMax * 0.32 + 0.05), h: 0, o: b, steps: d.x, dw: d.dw, door: bw(b, d.x, 0) };
     w.addFloor(b.stepsFloor);
   }
 

@@ -195,6 +195,13 @@ export class Mesher {
    */
   add(geo, o = {}) {
     // (a window's pane goes in a geometry of its own, drawn with a room behind it: windowpane.js)
+    // (pane: 'open' — the glass of a real opening, drawn only from afar: a geometry of its own again)
+    if (o.pane === 'open' && !this.isPane) {
+      if (!this.openPanes) { this.openPanes = new Mesher(); this.openPanes.isPane = true; }
+      this.openPanes.m.copy(this.m);
+      this.openPanes.add(geo, { ...o, pane: false, outline: 0 });
+      return this;
+    }
     if (o.pane && !this.isPane) {
       if (!this.panes) { this.panes = new Mesher(); this.panes.isPane = true; }
       this.panes.m.copy(this.m);
@@ -334,6 +341,11 @@ export class Mesher {
       this.panes.m.copy(this.m);
       this.panes.merge(other.panes);
     }
+    if (other.openPanes) {
+      if (!this.openPanes) { this.openPanes = new Mesher(); this.openPanes.isPane = true; }
+      this.openPanes.m.copy(this.m);
+      this.openPanes.merge(other.openPanes);
+    }
     for (let i = 0; i < other.lamps.length; i += 3) { _lc.set(other.lamps[i], other.lamps[i + 1], other.lamps[i + 2]).applyMatrix4(M); this.lamps.push(_lc.x, _lc.y, _lc.z); }
     for (const t of other.idx) this.idx.push(t + base);
     return this;
@@ -353,6 +365,7 @@ export class Mesher {
     if (shared) g.userData.shared = true;
     if (this.lamps.length) g.userData.lamps = this.lamps.slice();
     if (this.panes?.pos.length) g.userData.panes = this.panes.build(shared);
+    if (this.openPanes?.pos.length) g.userData.openPanes = this.openPanes.build(shared);
     return g;
   }
 }

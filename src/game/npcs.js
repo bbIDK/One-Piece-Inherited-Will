@@ -404,6 +404,32 @@ export function squareSpot(town, id = '') {
 }
 
 /** Which way someone outside a building's door faces: out from it, onto the street. */
+/**
+ * Out on the street before a building's door, where there's room to stand:
+ * of a few spots either side of the door and a step or three out, the one
+ * with the most open ground round it — not squeezed into an alley beside a
+ * sandwich board, not in the doorway itself. Facing the street.
+ */
+function openOutside(game, spawner, b, ox, rng) {
+  const w = game.world, dx0 = doorLocalX(b);
+  const xs = ox !== undefined ? [dx0 + ox] : [dx0 + 1.6, dx0 - 1.6, dx0 + 2.4, dx0 - 2.4, dx0 + 1.2, dx0 - 1.2];
+  let best = null, bs = -Infinity;
+  for (const x0 of xs) for (const z of [1.6, 2.4, 3.2]) {
+    const q = bw(b, x0, z);
+    if (!spawner.freeSpot(q.x, q.y)) continue;
+    // (open ground round it: free tiles in a ring, and nothing standing close)
+    let open = 0;
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; for (const r of [1.2, 2.2]) if (w.walkable(q.x + Math.cos(a) * r, q.y + Math.sin(a) * r) && !w.isBlocked(q.x + Math.cos(a) * r, q.y + Math.sin(a) * r)) open++; }
+    const things = w.objects?.near ? w.objects.near(q.x, q.y, 1.6, (o) => o.block !== false && o.kind !== 'building').length : 0;
+    const score = open - things * 5 - Math.abs(x0 - dx0) * 0.6 - (z - 1.6) * 0.8;
+    if (score > bs) { bs = score; best = { x: q.x, y: q.y, face: outFrom(b, x0) }; }
+  }
+  if (best) return best;
+  const x0 = dx0 + (ox ?? 1.6), q = bw(b, x0, 1.6), r = clear(spawner, q.x, q.y, rng);
+  if (r) r.face = outFrom(b, x0);
+  return r;
+}
+
 function outFrom(b, x0) {
   const a = bw(b, x0, 0.5), c = bw(b, x0, 2.5);
   return Math.atan2(c.y - a.y, c.x - a.x);
@@ -450,7 +476,7 @@ function placeNPC0(game, island, def, rng, spawner) {
     // on the street outside a building (whoever keeps it stays inside)
     if (pl.door) {
       const b = town.buildings.find((x) => x.name === pl.door || x.role === pl.door);
-      if (b) { const x0 = doorLocalX(b) + (pl.ox ?? 1.6), q = bw(b, x0, 1.6), r = clear(spawner, q.x, q.y, rng); if (r) r.face = outFrom(b, x0); return r; }
+      if (b) { const r = openOutside(game, spawner, b, pl.ox, rng); if (r) return r; }
     }
     if (pl.building) {
       const b = town.buildings.find((x) => x.name === pl.building || x.npc === def.id || x.role === pl.building);

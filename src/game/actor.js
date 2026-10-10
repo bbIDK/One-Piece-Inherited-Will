@@ -1098,6 +1098,12 @@ export class Actor extends Entity {
   /** The body is a circle around (x, y) (the 3D model stands centred on it). */
   canOccupy(w, x, y) {
     const r = this.r, e = r * 0.85;
+    // (flying over a town: a house below you is no wall — over its roof's
+    // height there's only air; under it, it's solid as ever)
+    if (this.flying && this.game?.world === w && this.game.view3d?.roofAt && w.isBlocked(x, y)) {
+      const top = this.game.view3d.roofAt(x, y);
+      if (top && this.feetH(this.game) > top.h + 0.3) return true;
+    }
     // up on the roofs (or in the air over them): a roof at your feet or below
     // them is somewhere to be, whatever stands in the street under it; one
     // too high (a chimney, a taller house) is a wall — and in the air, an

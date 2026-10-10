@@ -12,7 +12,7 @@ const KINDS = {
   lantern: { h: 1.6, r: 4.6, col: [1, 0.55, 0.32], power: 0.75 },
   campfire: { h: 0.55, r: 6.5, col: [1, 0.58, 0.26], power: 1.1, fire: true },
 };
-const NLIGHTS = 8, MAX_POOLS = 160;
+const NLIGHTS = 8, MAX_POOLS = 700;
 const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 
 function poolTexture() {
@@ -72,7 +72,7 @@ class LampLight {
     this.t -= dt;
     if (this.t <= 0) {
       this.t = 0.4;
-      this.near = w.objects.near(ox, oy, 110, (o) => !!KINDS[o.kind]);
+      this.near = w.objects.near(ox, oy, 360, (o) => !!KINDS[o.kind]);
     }
     const t = env.time;
     const cands = [];
@@ -113,7 +113,7 @@ class LampLight {
           const fl = 0.9 + 0.1 * Math.sin(t * 9 + i * 1.7) * Math.sin(t * 5.3 + i);
           // (below decks, lit day and night, reaching the length of the room: not just the spot by the lamp)
           const below = mesh !== sv.hull, kk = below ? Math.max(night, 0.55) : night;
-          cands.push({ d: cd, x: q.x, y: q.y, z: q.z, k: kk * fl * (below ? 0.95 : 0.8), col: [1, 0.6, 0.32], range: below ? 11 : 8.5 });
+          cands.push({ d: cd, x: q.x, y: q.y, z: q.z, k: kk * fl * (below ? 0.55 : 0.6), col: [1, 0.62, 0.36], range: below ? 11 : 8.5 });
         }
       }
     }
@@ -124,7 +124,8 @@ class LampLight {
       const floor = v.terrain?.hf?.floorY ? v.terrain.hf.floorY(room) : ctx.ground(p.x, p.y);
       const fd = room.fd || 3;
       const c = bw(room, 0, -fd / 2);
-      cands.push({ d: -1, x: w.dx(ox, c.x), y: floor + 2.1, z: c.y - oy, k: (0.35 + night * 0.65) * 0.5, col: [1, 0.8, 0.56], range: 6 });
+      // (a warm room light, not a spotlight: soft, and reaching the corners)
+      cands.push({ d: -1, x: w.dx(ox, c.x), y: floor + 2.4, z: c.y - oy, k: (0.35 + night * 0.65) * 0.26, col: [1, 0.8, 0.56], range: 9 });
     }
     cands.sort((a, b) => a.d - b.d);
     // (the nearest few shine for real; each fades as it nears the edge of

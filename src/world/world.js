@@ -432,11 +432,18 @@ export class World {
     if (!this.floors.size) return null;
     const list = this.floors.get(this.colKey(Math.floor(this.wx(x) / 4), Math.floor(y / 4)));
     if (!list) return null;
+    // (a building's floor before the steps up to any door: those reach well
+    // out into the street, for the longest flight there could be; of two
+    // flights, the one whose door is nearer)
+    let steps = null, sd = Infinity;
     for (const f of list) {
       const dx = this.dx(f.x0, x);
-      if (dx >= 0 && dx <= f.x1 - f.x0 && y >= f.y0 && y <= f.y1) return f;
+      if (!(dx >= 0 && dx <= f.x1 - f.x0 && y >= f.y0 && y <= f.y1)) continue;
+      if (f.steps === undefined) return f;
+      const d = f.door ? Math.hypot(this.dx(f.door.x, x), y - f.door.y) : 0;
+      if (d < sd) { sd = d; steps = f; }
     }
-    return null;
+    return steps;
   }
   /** Height of a raised floor under (x, y), or 0. */
   floorAt(x, y) { return this.floorRec(x, y)?.h || 0; }

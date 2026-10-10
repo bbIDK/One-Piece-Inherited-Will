@@ -759,6 +759,9 @@ export class ShipView {
     // (her windows: glass with a room behind, not painted panels — windowpane.js)
     this.panes = paneMesh(hull.geometry, d.deckY);
     if (this.panes) hull.add(this.panes);
+    // (the stern windows' glass: seen from afar only — close by, or from inside, they're open: you see the real cabin, the real sea)
+    this.openPanes = paneMesh(hull.geometry, d.deckY, 'openPanes');
+    if (this.openPanes) hull.add(this.openPanes);
     // below decks and in the cabins (only drawn when the camera's close by)
     const ig = interiorGeometry(def);
     if (ig) {
@@ -796,7 +799,7 @@ export class ShipView {
     const sailCol = kind === 'marine' || def.sail === 'marine' ? '#f5f6fa' : s.paint?.sail || s.sailColor || '#efe6cf';
     this.sails = [];
     this.braces = [];
-    this.ownMats = [this.panes?.material, this.views?.material].filter(Boolean);
+    this.ownMats = [this.panes?.material, this.openPanes?.material, this.views?.material].filter(Boolean);
     this.cloth = { t: { value: 0 }, amp: { value: 0 }, gust: { value: 1 } };
     const own = (m) => { this.ownMats.push(m); return m; };
     this.ghostables = [];
@@ -1028,6 +1031,7 @@ export class ShipView {
   update(env, rx, rz, windAngle, ctx) {
     const night = Math.min(1, Math.max(0, (0.78 - (env.daylight ?? 1)) / 0.45 + (env.storm || 0) * 0.3));
     if (this.panes) this.panes.material.userData.pane.uNight.value = night;
+    if (this.openPanes) this.openPanes.material.userData.pane.uNight.value = night;
     if (this.views) this.views.material.userData.pane.uNight.value = night;
     const s = this.ship;
     const r = this.root;
@@ -1126,7 +1130,7 @@ export class ShipView {
     if (this.inside) {
       const cam = ctx?.camera;
       this.inside.visible = !!cam && cam.position.distanceTo(r.position) < this.d.L * 0.6 + 12;
-      if (this.panes) this.panes.material.userData.pane.uOpen.value = this.inside.visible ? 1 : 0;
+      if (this.openPanes) this.openPanes.visible = !this.inside.visible;
       // (its shadows — the decks overhead darkening the rooms — only while you're in one)
       const pl = ctx?.game?.player;
       this.inside.castShadow = this.overhead.castShadow = !!(pl?.deck?.room && pl.deck.ship === s);

@@ -725,9 +725,10 @@ function storyNodes(ctx, npcId) {
       choices: [
         ...offers.map((o) => ({ text: o.ch.v[o.path].accept || `I'll take the road of the ${PATHS[o.path].name}.`, if: () => !roadClosed(c, o.path), next: 'mq_ok_' + o.path })),
         ...offers.map((o) => ({ text: () => `(The road of the ${PATHS[o.path].name} is closed to you: ${roadClosed(c, o.path)})`, if: () => !!roadClosed(c, o.path), next: pitchEnd })),
-        { text: 'Are there other roads?', if: () => others.length > 0, next: 'mq_o' },
-        ...extraChoices(v.contact, 'mq_p0'),
-        { text: 'I\'ll sail my own way — no road for me. (No main story)', if: () => !c.freeSail, next: 'mq_free' },
+        // (only taking the road is marked as the quest: the rest is talk)
+        { text: 'Are there other roads?', if: () => others.length > 0, next: 'mq_o', quest: false },
+        ...extraChoices(v.contact, 'mq_p0').map((x) => ({ ...x, quest: false })),
+        { text: 'I\'ll sail my own way — no road for me. (No main story)', if: () => !c.freeSail, next: 'mq_free', quest: false },
         { text: 'Not yet.', end: true },
       ],
     }));

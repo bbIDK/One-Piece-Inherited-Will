@@ -61,8 +61,8 @@ export function paneMaterial(floorY = 0) {
 
 const _inv = new THREE.Matrix4();
 /** The pane mesh for a hull geometry that has panes (kit.js `pane`), or null. */
-export function paneMesh(geo, floorY) {
-  const pg = geo?.userData?.panes;
+export function paneMesh(geo, floorY, which = 'panes') {
+  const pg = geo?.userData?.[which];
   if (!pg) return null;
   const mat = paneMaterial(floorY);
   const mesh = new THREE.Mesh(pg, mat);

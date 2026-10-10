@@ -160,7 +160,7 @@ export function statLine(d) {
     // (food fills you up — and a full belly heals you faster — but it's no medicine)
     const n = nourishment(d);
     if (n.food >= 0.01) parts.push(`Hunger +${Math.round(n.food * 100)}%`);
-    if (n.water >= 0.01) parts.push(`Thirst +${Math.round(n.water * 100)}%`);
+
   } else if (d.heal) parts.push(d.heal > 9999 ? 'Full health' : `+${d.heal} health${d.apply === 'wrap' ? ` (${d.useTime || 3.5}s to apply)` : ''}`);
   if (d.buff) parts.push(`${d.buff.name} for ${d.buff.dur}s`);
   return parts.join(' · ');
@@ -768,7 +768,7 @@ export function openSettings(game) {
       h('h3', 'Sound & feel'),
       slider('Sound effects', 'volume'), slider('Music', 'music'), slider('Screen shake', 'shake'),
       check('Show tutorial hints', 'showHints'),
-      check('Survival needs: hunger, thirst and body temperature', 'survival'),
+      check('Survival needs: hunger and body temperature', 'survival'),
       controlsSection(game, render),
       h('p.muted', 'Press P in game (or scroll all the way in or out) to switch between first and third person. Settings are saved in this browser.'));
   };

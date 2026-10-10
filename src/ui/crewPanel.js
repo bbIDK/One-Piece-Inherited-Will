@@ -76,7 +76,8 @@ export function openCrew(game) {
         h('button.btn', { on: { click: () => { c.uniform = c.uniform === false; refreshPlayer(game); persist(game); render(); } } }, c.uniform === false ? 'Put the uniform on' : 'Take the uniform off'),
         fleetInfo(game))));
     } else if (!c.crewName) {
-      if (!found.name) found.name = `${c.name.split(' ')[0]} Pirates`;
+      // (named for the captain's first name — the family name goes first in theirs)
+      if (!found.name) found.name = `${c.given || c.name.split(' ').filter((w) => w !== 'D.').pop()} Pirates`;
       const input = h('input.name', { value: found.name, maxLength: 28, spellcheck: false, on: { input: (e) => { found.name = e.target.value; } } });
       add(body, h('h2', 'Crew'),
         h('div.card.found',

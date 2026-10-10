@@ -153,6 +153,7 @@ export class PlayerController {
     // on a ship's ladder you climb it yourself: W up, S down, Space lets go (actor.js updateClimb)
     if (p.climb?.to?.ladder || p.climb?.mast) {
       p.climbInput = (inp.isDown('W') || inp.isDown('ArrowUp') ? 1 : 0) - (inp.isDown('S') || inp.isDown('ArrowDown') ? 1 : 0);
+      p.climbStrafe = (inp.isDown('D') || inp.isDown('ArrowRight') ? 1 : 0) - (inp.isDown('A') || inp.isDown('ArrowLeft') ? 1 : 0);
       if (inp.wasPressed('Space')) p.letGo = true;
     } else { p.climbInput = 0; p.letGo = false; }
     // Alt crouches: you sneak about (slower, quieter, harder to spot) while it's

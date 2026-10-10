@@ -447,7 +447,10 @@ export class CameraRig {
         // the land pulls the camera in (never in among her own sails and
         // rigging), and other ships just pass between — unless the camera
         // would end up inside one: then it comes in to her near side.
-        const ships = game.ships?.length && game.shipSolidAt;
+        // (up the mast or in the crow's nest, the ship's own masts, yards and
+        // sails all round you would pull the camera into your head — and you'd
+        // vanish: there it swings free of her)
+        const ships = game.ships?.length && game.shipSolidAt && !p.climb?.mast;
         const px = p.x + ox, pz = p.y + oz;
         let ux = cx - ox, uz = cz - oz, uy = cy - oy, k = 1, lift = 0;
         const len = Math.hypot(ux, uz) || 1;

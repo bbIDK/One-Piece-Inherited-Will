@@ -94,7 +94,6 @@ export class UI {
     E.heat.el.title = 'Body temperature: the air pulls it. Too cold or too hot, you weaken. Shelter, coats and drinks help.';
     E.needs = h('div.needs',
       h('div.need', ns('<path d="M10.5 2.2a3.6 3.6 0 0 1 1.3 5.7L8.6 11l.9.9a1.3 1.3 0 1 1-1.6 1.9 1.3 1.3 0 1 1-1.9-1.6l.9.9 3.1-3.2a3.6 3.6 0 0 1 .5-7.7z" fill="#e9a35b"/>'), E.food.el),
-      h('div.need', ns('<path d="M8 1.5C6 5 3.8 7.4 3.8 10a4.2 4.2 0 0 0 8.4 0C12.2 7.4 10 5 8 1.5z" fill="#4fc3f7"/>'), E.water.el),
       h('div.need', ns('<path d="M6.6 2.5a1.4 1.4 0 0 1 2.8 0v6.2a3 3 0 1 1-2.8 0z" fill="none" stroke="#f5e6c4" stroke-width="1.2"/><circle cx="8" cy="11.3" r="1.7" fill="#ff7043"/>'), E.heat.el));
     E.lives = h('div.lives');
     E.bounty = h('div.hud-bounty');

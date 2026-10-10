@@ -444,7 +444,7 @@ function stern(k, d, P) {
       const z = open.length ? (open[i].z0 + open[i].z1) / 2 : -w + (i + 0.5) * (w * 2) / n;
       // (the open ones keep a pane only for the far view: hidden up close, windowpane.js uOpen)
       if (open.length) {
-        k.add(box(0.03, y1 - y0, ww), { at: [x0, y0, z], color: P.glass, pane: true });
+        k.add(box(0.03, y1 - y0, ww), { at: [x0, y0, z], color: P.glass, pane: 'open' });
         for (const sz of [-1, 1]) k.add(box(0.1, y1 - y0, 0.06), { at: [x0 - 0.02, y0, z + sz * (ww / 2 + 0.03)], color: P.trim });
       } else k.add(box(0.06, y1 - y0, ww), { at: [x0, y0, z], color: P.glass, glow: '#ffc766', pane: true });
       k.add(box(0.08, 0.08, ww + 0.14), { at: [x0 - 0.01, y1, z], color: P.trim });
@@ -1135,7 +1135,7 @@ export function bigMastGeometry(def, d, plan) {
     k.add(box(tl * 0.6, 0.12, 0.14), { at: [m.x + r * 1.2, m.h2, 0], color: wood, outline: 0.01 });
     if (m.main) {
       // the crow's nest, up on the main topmast
-      const y = m.h2 + 0.1, R = 0.75;
+      const y = m.h2 + 0.1, R = 1.15; // (room to walk about in: see game/masthead.js)
       k.add(cyl(R, R * 0.85, 1.0, 12, true), { at: [m.x + r * 1.1, y, 0], color: '#8d6e4a', double: true, outline: 0.02 });
       k.add(cyl(R * 0.85, R * 0.85, 0.06, 12), { at: [m.x + r * 1.1, y, 0], color: '#6d4c33' });
       k.add(torus(R, 0.05, 4, 14), { at: [m.x + r * 1.1, y + 1.0, 0], rot: [Math.PI / 2, 0, 0], color: '#5d4037' });

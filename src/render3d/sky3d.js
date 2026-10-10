@@ -231,7 +231,8 @@ const FRAG = /* glsl */`
         float lumps = (N0(ap * 1.3 + 0.3).r - 0.5) * 0.06 + (N0(ap * 4.1 + 1.3).g - 0.5) * 0.02;
         float inside = topH + lumps * (0.4 + bank) - y;
         if (inside > 0.0) {
-          float body = smoothstep(0.0, 0.004, inside) * smoothstep(-0.012, 0.003, y);
+          // (its ends round the compass and its foot fade out: no hard line where a bank stops, or where it meets the sea)
+          float body = smoothstep(0.0, 0.004, inside) * smoothstep(-0.012, 0.012, y) * smoothstep(0.01, 0.2, bank);
           float up = clamp(y / max(topH, 0.004), 0.0, 1.0);
           float toward = dot(ap, sunH);
           float lit = clamp(0.25 + up * 0.5 + toward * 0.25 * sunUp + (inside < 0.01 ? 0.12 : 0.0), 0.0, 1.0);
@@ -239,7 +240,7 @@ const FRAG = /* glsl */`
           cc += uSunCol * (1.0 - smoothstep(0.0, 0.01, inside)) * pow(sd, 6.0) * 0.6 * clearSky;
           cc += uFlashCol * flash * 0.3;
           // the farthest melt into the haze at the horizon
-          cc = mix(cc, uHorizon, (1.0 - smoothstep(0.0, 0.06, y)) * 0.5);
+          cc = mix(cc, uHorizon, (1.0 - smoothstep(-0.006, 0.07, y)) * 0.85);
           col = mix(col, cc, body * (0.6 + 0.35 * bank));
         }
       }

@@ -1229,7 +1229,7 @@ export function mastNest(d) {
   const n = d.mastU.length, m = n >= 3 ? 1 : 0, mu = d.mastU[m];
   const k = MAST_KS(n)[m], base = floorAt(d, (mu + d.L / 2) / d.L);
   const H = d.mastH * k, h2 = base + (H - base) * 0.76, mr = d.mastR * Math.sqrt(k);
-  const out = { m, u: mu + mr * 1.1, y: h2 + 0.13, r: 0.75, mu, base, mr };
+  const out = { m, u: mu + mr * 1.1, y: h2 + 0.13, r: 1.15, mu, base, mr };
   Object.defineProperty(d, '_nest', { value: out, enumerable: false });
   return out;
 }

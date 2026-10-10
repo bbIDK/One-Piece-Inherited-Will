@@ -108,34 +108,33 @@ export function installSurvival(game) {
     n.body += (target - n.body) * Math.min(1, dt / 150);
     const busy = (p.sprinting || p.inCombat || p.action ? 1 : 0) + (p.inWater && !p.gills ? 0.5 : 0);
     const fishy = c.race === 'fishman' && p.inWater ? 0.2 : 1;
-    n.water = Math.max(0, n.water - dt / WATER_SECONDS * thirstRate(felt, n.body, busy) * fishy);
+    // (no thirst: only hunger counts — water's always full)
+    n.water = 1; void fishy;
     n.food = Math.max(0, n.food - dt / FOOD_SECONDS * (1 + Math.max(0, BODY - n.body) * 0.4) * (1 + busy * 0.25));
 
     // drinking: crouched at (or in) a stream, a pond, a canal
     S.sipT -= dt;
     const fresh = FRESH.has(w.type(p.x, p.y)) || [0, 1.6, 3.2, 4.8].some((a) => FRESH.has(w.type(p.x + Math.cos(a) * 1.2, p.y + Math.sin(a) * 1.2)));
-    S.canDrink = fresh && n.water < 0.98;
+    S.canDrink = false; void fresh;
     if (S.canDrink && p.crouch && p.state === 'idle' && !p.action) {
       n.water = Math.min(1, n.water + dt * 0.12);
       if (S.sipT <= 0) { S.sipT = 0.7; game.audio?.sfx('sip', p); }
       game.hint?.('drink_stream', 'Crouched at fresh water (Alt), you drink your fill.');
-    } else if (fresh && n.water < 0.6) game.hint?.('drink_here', 'Fresh water: crouch here (Alt) to drink.');
+    }
 
     // in need: no healing, and slowly weaker (never past your last breath)
     let hurt = 0;
     if (n.food <= 0) hurt += 0.35;
-    if (n.water <= 0) hurt += 0.7;
     if (n.body < 35) hurt += (35 - n.body) * 0.6;
     if (n.body > 39) hurt += (n.body - 39) * 0.8;
     p.needsHurt = hurt > 0;
     // (well fed and watered you heal quickly; running on empty, barely)
-    p.regenMul = 0.3 + 1.7 * Math.min(1, (n.food + n.water) / 2);
+    p.regenMul = 0.3 + 1.7 * Math.min(1, n.food);
     if (hurt > 0 && p.hp > 1) p.hp = Math.max(1, p.hp - hurt * dt * (p.d.maxHp / 150));
 
     warn('food', n.food < 0.2, n.food <= 0 ? 'You are starving: eat something, or you will keep weakening.' : 'You\'re getting hungry.', '#ffcc80');
-    warn('water', n.water < 0.2, 'You\'re thirsty. Drink: a flask, a coconut, or crouch at a stream.', '#81d4fa');
     warn('cold', n.body < 35.6, 'You\'re freezing. Get indoors, or put on a coat or a cloak.', '#b3e5fc');
-    warn('hot', n.body > 38.6, 'You\'re overheating. Get into the shade, indoors, or drink.', '#ffab91');
+    warn('hot', n.body > 38.6, 'You\'re overheating. Get into the shade or indoors.', '#ffab91');
   });
   return S;
 }

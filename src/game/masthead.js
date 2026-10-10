@@ -3,10 +3,11 @@
 // W up, S down, Space lets go; at the top you're in the nest, looking out
 // over the sea (S climbs back down). All of it rides with the ship as she
 // sails, rolls and pitches.
-import { shipDims, mastNest, shipLift } from '../world/hull.js';
+import { shipDims, mastNest, shipPoint } from '../world/hull.js';
 import { placeOnDeck } from './decks.js';
 
 const CLIMB_SPEED = 1.7; // m a second up (or down) the rungs
+const _pt = [0, 0, 0];
 
 /** Where the ladder is on a ship: { nest, u (the rungs), footU (where you stand to climb), t (of the foot) } — or null. */
 export function mastLadder(ship) {
@@ -62,6 +63,33 @@ function mastStep(game, p, dt) {
   if (!s || s.sunk || s.alive === false) { p.climb = null; p.vz = -0.01; return; }
   if (p.letGo) { p.letGo = false; p.climb = null; p.vz = -0.01; p.lastG = null; return; }
   const inp = p.climbInput || 0;
+  const n = c.L.nest, time = game.env?.time || 0;
+  // up in the nest: walk about in it (W A S D, as the camera looks); back
+  // to the ladder's head and S takes you down again
+  if (c.top) {
+    const cs = Math.cos(s.heading), sn = Math.sin(s.heading);
+    const yaw = game.view3d?.rig?.yaw ?? s.heading, fw = inp, st = p.climbStrafe || 0;
+    const wx = Math.cos(yaw) * fw - Math.sin(yaw) * st, wy = Math.sin(yaw) * fw + Math.cos(yaw) * st;
+    // (in her own frame: along her, and across)
+    let du = wx * cs + wy * sn, dv = -wx * sn + wy * cs;
+    c.nu = c.nu ?? 0; c.nv = c.nv ?? 0;
+    c.nu += du * 1.6 * dt; c.nv += dv * 1.6 * dt;
+    const R = n.r - 0.3, rr = Math.hypot(c.nu, c.nv);
+    if (rr > R) { c.nu *= R / rr; c.nv *= R / rr; }
+    // (the mast itself, through the floor: you step round it)
+    const mu = n.mu - (n.u - 0.15), mr = n.mr * 0.8 + 0.3, md = Math.hypot(c.nu - mu, c.nv);
+    if (md < mr) { const k = mr / Math.max(md, 1e-3); c.nu = mu + (c.nu - mu) * k; c.nv *= k; }
+    if (fw || st) p.facing = Math.atan2(wy, wx);
+    const atHead = Math.hypot(c.nu, c.nv) < 0.6;
+    if (inp < 0 && atHead) { c.top = false; c.k = 0.999; c.nu = c.nv = 0; }
+    else {
+      const P = shipPoint(s, time, n.u - 0.15 + c.nu, c.nv, n.y + 0.06, _pt);
+      p.x = game.world.wx(s.x + P[0]); p.y = s.y + P[2];
+      p.z = P[1] - p.groundAt(game, p.x, p.y);
+      p.airT = 0.1; p.moving = !!(fw || st);
+      return;
+    }
+  }
   c.k = Math.max(0, Math.min(1, c.k + (inp * CLIMB_SPEED * dt) / c.H));
   if (c.k <= 0 && inp < 0) {
     // (back down at its foot: on the deck again)
@@ -69,17 +97,18 @@ function mastStep(game, p, dt) {
     placeOnDeck(game, p, s, c.L.t, 0);
     return;
   }
-  const n = c.L.nest, time = game.env?.time || 0;
   // on the rungs, facing the mast; over the top's rim into the nest at the very end
   const into = Math.max(0, (c.k - 0.94) / 0.06);
   const u = c.L.u - 0.32 + (n.u - 0.15 - (c.L.u - 0.32)) * into;
   const hh = n.base + c.H * Math.min(1, c.k / 0.94) + Math.sin(Math.PI * into) * 0.25;
-  const cs = Math.cos(s.heading), sn = Math.sin(s.heading);
-  p.x = game.world.wx(s.x + u * cs);
-  p.y = s.y + u * sn;
-  p.z = shipLift(s, time, u, 0, hh) - p.groundAt(game, p.x, p.y);
+  // (riding with her all of it — heave, roll and pitch, which swing a mast's
+  // head a long way to and fro — not just up and down)
+  const P = shipPoint(s, time, u, 0, hh, _pt);
+  p.x = game.world.wx(s.x + P[0]);
+  p.y = s.y + P[2];
+  p.z = P[1] - p.groundAt(game, p.x, p.y);
   if (c.k < 0.94) p.facing = s.heading;
   p.airT = 0.1;
   c.top = c.k >= 1;
-  if (c.top && !c.saidTop && p.isPlayer) { c.saidTop = true; game.hint?.('nest', 'In the crow\'s nest: look out over the sea. S climbs back down.'); }
+  if (c.top && !c.saidTop && p.isPlayer) { c.saidTop = true; game.hint?.('nest', 'In the crow\'s nest: walk about with W A S D and look out over the sea. Back at the ladder, S climbs down.'); }
 }
