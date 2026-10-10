@@ -16166,6 +16166,7 @@
       if (h2.friendly) return false;
       if (owner && owner.faction === "player" && target2.faction === "player") return false;
       if (!owner) return true;
+      if (target2.netRemote) return !!(owner.isPlayer && this.game.settings?.pvp && target2.pvp && target2.state === "idle");
       if (target2.invulnerable) return false;
       if (owner.deck && target2.deck && owner.deck.ship === target2.deck.ship && h2.vx === void 0 && !h2.radial) {
         if (Math.abs(owner.deck.h + (owner.z || 0) - target2.deck.h - (target2.z || 0)) > 1.6) return false;
@@ -67959,7 +67960,10 @@ ${GLSL}
     vec3 c = mix(uRim, uMid, mid);
     c = mix(c, uHot * 1.1, hot);
     c = mix(c, uCore * 1.3, core);
-    // gold where the feathers burn out at their tips, as Marco's are drawn
+    // patches of gold flame licking through the blue all over the wing, as Marco's are drawn
+    float pt = smoothstep(0.64, 0.68, fnoise(vec3(fs * 0.85, va * 2.3 - t * 1.3, 13.0))) * smoothstep(0.18, 0.22, d) * (1.0 - core) * uTipGold;
+    c = mix(c, mix(uFire, uGold * 1.2, smoothstep(0.3, 0.36, d)), pt * 0.9);
+    // gold where the feathers burn out at their tips
     float g = smoothstep(0.7, 0.74, vv + (n2 - 0.5) * 0.3) * uTipGold;
     c = mix(c, mix(uFire, uGold * 1.25, mid), g);
     gl_FragColor = vec4(c, uAlpha);
@@ -68050,7 +68054,7 @@ ${GLSL}
           else _p2.lerpVectors(E, _e2, (u - 0.86) / 0.14);
           if (u < 0.12) _p2.addScaledVector(_o, -(0.12 - u) * 0.6);
           _d.copy(trail3).multiplyScalar(0.6).addScaledVector(_o, 0.15 + 0.3 * u).addScaledVector(_Y, 0.25 + 0.45 * u).normalize();
-          const chord = (0.65 + 1.55 * Math.pow(u, 1.1)) * (0.25 + 0.75 * g);
+          const chord = (0.65 + 1.55 * Math.pow(u, 1.1)) * (0.25 + 0.75 * g) * (this.chordK || 1);
           for (let j = 0; j < NV2; j++) {
             const k = (i * NV2 + j) * 3;
             if (j === 0) {
@@ -68516,10 +68520,10 @@ transformed += normal * ${w.toFixed(4)};`);
       this.group = group(parent);
       this.body = group(this.group, [0, 1, 0]);
       const blue = toon("#36c3ef", { emissive: "#0b4f9e" }), pale = toon("#bff3ff", { emissive: "#2a8fc0" }), gold = toon("#ffcd3c", { emissive: "#a05a00" });
-      part2(this.body, SPH, blue, [0.48, 0.3, 0.3], [0, 0, 0], [0, 0, 0], 0.025);
-      part2(this.body, SPH, pale, [0.34, 0.22, 0.22], [0.16, -0.06, 0], [0, 0, 0], 0);
-      part2(this.body, SPH, blue, [0.18, 0.3, 0.16], [0.42, 0.2, 0], [0, 0, -0.6], 0.02);
-      this.head = group(this.body, [0.62, 0.42, 0]);
+      part2(this.body, SPH, blue, [0.5, 0.22, 0.22], [0, 0, 0], [0, 0, 0], 0.025);
+      part2(this.body, SPH, pale, [0.34, 0.17, 0.17], [0.18, -0.04, 0], [0, 0, 0], 0);
+      part2(this.body, SPH, blue, [0.13, 0.36, 0.12], [0.48, 0.26, 0], [0, 0, -0.55], 0.02);
+      this.head = group(this.body, [0.68, 0.55, 0]);
       part2(this.head, SPH, blue, [0.2, 0.18, 0.17], [0, 0, 0], [0, 0, 0], 0.02);
       part2(this.head, CONE, gold, [0.07, 0.26, 0.06], [0.14, -0.03, 0], [0, 0, -Math.PI / 2 - 0.25], 0.015);
       for (const z of [-1, 1]) {
@@ -68546,7 +68550,22 @@ transformed += normal * ${w.toFixed(4)};`);
         F4.at.add(F4.f.group);
       }
       this.wings = new PhoenixWings(seed);
+      this.wings.group.scale.setScalar(1.7);
+      this.wings.chordK = 1.7;
       this.body.add(this.wings.group);
+      const streak = toon("#36c3ef", { emissive: "#1b88d8" });
+      this.streamers = [-1, 0, 1].map((k) => {
+        const tb = new Tube(16, 5, streak, 0.012);
+        this.body.add(tb.mesh);
+        const tip = new BackFlame(seed + 11 + k, GOLD5, "#ffc04d");
+        this.body.add(tip.group);
+        return { tb, k, tip, pts: Array.from({ length: 16 }, () => new Vector3()) };
+      });
+      const navy2 = toon("#1a2a6c");
+      const mark = group(this.body, [0.49, 0.02, 0], [0, Math.PI / 2, 0]);
+      part2(mark, SPH, navy2, [0.035, 0.12, 0.012], [0, 0, 0], [0, 0, 0], 0);
+      part2(mark, SPH, navy2, [0.1, 0.03, 0.012], [0, 0.04, 0], [0, 0, 0], 0);
+      for (const sd of [-1, 1]) part2(mark, SPH, navy2, [0.07, 0.02, 0.012], [sd * 0.06, -0.07, 0], [0, 0, sd * 0.35], 0);
       this.rig = { S: [new Vector3(), new Vector3()], J: [new Vector3(), new Vector3()], E: [new Vector3(), new Vector3()], hip: new Vector3(-0.35, -0.02, 0), qChest: new Quaternion() };
       this.dims = { Bk: 1.3, chestLen: 0.2 };
       this.trail = new Vector3(-1, 0, 0);
@@ -68574,18 +68593,33 @@ transformed += normal * ${w.toFixed(4)};`);
         const z = s === 0 ? 1 : -1;
         const up = beat4, sw2 = 0.15;
         R5.S[s].set(0.08, 0.12, z * 0.2);
-        R5.J[s].set(0.08 - sw2 * 0.5, 0.12 + Math.sin(up) * 0.6, z * (0.2 + Math.cos(up) * 0.6 * reach3));
-        R5.E[s].set(0 - sw2, 0.12 + Math.sin(up * 1.3) * 1.25, z * (0.2 + Math.cos(up * 1.3) * 1.3 * reach3));
+        R5.J[s].set(0.08 - sw2 * 0.5, 0.12 + 0.35 + Math.sin(up) * 0.5, z * (0.2 + Math.cos(up) * 0.6 * reach3));
+        R5.E[s].set(0 - sw2, 0.12 + 0.95 + Math.sin(up * 1.3) * 0.9, z * (0.2 + Math.cos(up * 1.3) * 1.25 * reach3));
       }
       this.trail.set(-1, -0.15 + 0.1 * fk, 0).normalize();
       this.wings.update(t, dt, R5, this.dims, this.trail, true, false);
       for (const F4 of this.flames) F4.f.update(t, dt, F4.size, _tmp.set(-0.15 - sp * 0.03, 0, 0), true);
+      const Lt = 2.4 + 1.8 * fk;
+      for (const S6 of this.streamers) {
+        const N8 = S6.pts.length;
+        for (let i = 0; i < N8; i++) {
+          const u = i / (N8 - 1);
+          S6.pts[i].set(-0.42 - u * Lt, -0.02 - u * (0.25 - 0.2 * fk) + Math.sin(t * 3.2 - u * 6 + S6.k) * 0.12 * u, S6.k * (0.08 + u * 0.35) + Math.sin(t * 2.6 - u * 5 + S6.k * 2) * 0.1 * u);
+        }
+        S6.tb.set(S6.pts, (i) => 0.11 * (1 - i / (N8 - 1)) + 0.025);
+        S6.tip.group.position.copy(S6.pts[N8 - 1]);
+        S6.tip.update(t, dt, 0.35, _tmp.set(-0.3, 0, 0), true);
+      }
       const down = a.state === "knocked" || a.state === "dead";
       this.group.rotation.x = down ? 1.2 : 0;
     }
     dispose() {
       this.wings.dispose();
       for (const F4 of this.flames) F4.f.dispose();
+      for (const S6 of this.streamers) {
+        S6.tip.dispose();
+        S6.tb.geo.dispose();
+      }
     }
   };
   var DN = 120;
@@ -132655,7 +132689,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     climb: 2048,
     roofed: 4096,
     helm: 8192,
-    conqueror: 16384
+    conqueror: 16384,
+    pvp: 32768
   };
   var finite = (v) => typeof v === "number" && Number.isFinite(v);
   var num = (v, lo, hi, d = 0) => finite(v) ? v < lo ? lo : v > hi ? hi : v : d;
@@ -133076,7 +133111,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       this.lookKey = key2;
       this.info = L3;
       this.name = L3.name;
-      const a = this.actor || (this.actor = makeActor2(L3));
+      const a = this.actor || (this.actor = makeActor2(L3, this));
       a.name = L3.name;
       a.look = { ...L3.look, race: L3.look.race || L3.race };
       a.race = RACES[L3.race] ? L3.race : "human";
@@ -133263,9 +133298,15 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       this.ship = null;
     }
   };
-  function makeActor2(L3) {
+  function makeActor2(L3, r4) {
     const a = new Actor({ name: L3.name, look: { ...L3.look }, race: RACES[L3.race] ? L3.race : "human" });
     a.netRemote = true;
+    a.takeDamage = (n, att, h2) => {
+      if (!att?.isPlayer || !(n > 0)) return;
+      r4.voyage.send({ k: "hit", d: Math.round(n), st: Math.round((h2?.stun || 0) * 100) / 100, el: h2?.element || "physical", hv: h2?.heavy ? 1 : 0 }, r4.id);
+      a.flashT = 0.12;
+    };
+    a.knock = (vx, vy) => r4.voyage.send({ k: "kb", x: Math.round(vx * 100) / 100, y: Math.round(vy * 100) / 100 }, r4.id);
     a.showName = true;
     a.nameColor = MATE_COLOR;
     a.faction = "neutral";
@@ -133296,6 +133337,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     a.drawn = !!(B5 & BIT.drawn);
     a.armament = !!(B5 & BIT.armament);
     a.conquerorInfused = !!(B5 & BIT.conqueror);
+    a.pvp = !!(B5 & BIT.pvp);
     const st = B5 & BIT.dead ? "dead" : B5 & BIT.knocked ? "knocked" : "idle";
     a.knockT = st === "knocked" ? a.state === "knocked" ? (a.knockT || 0) + dt : 0 : 0;
     a.state = st;
@@ -133545,6 +133587,32 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           break;
         case "bye":
           this.drop(from);
+          break;
+        // PvP: a blow of theirs landing on you, as their game saw it — only while you're both up for it.
+        // Never to the death: a fight between crewmates ends with one of them down on one knee.
+        case "hit":
+        case "kb": {
+          const g = this.game, p = g.player;
+          if (!p || !g.settings?.pvp || !r4.actor?.pvp || p.state !== "idle") break;
+          if (m.k === "kb") {
+            p.knock(num(m.x, -60, 60), num(m.y, -60, 60));
+            break;
+          }
+          const d = num(m.d, 0, 5e3), st = num(m.st, 0, 3);
+          p.takeDamage(Math.min(d, Math.max(0, p.hp - 1)), r4.actor, { element: String(m.el || "physical").slice(0, 16), heavy: !!m.hv, stun: st }, g);
+          p.hitstun = Math.max(p.hitstun || 0, st);
+          g.fx?.burst?.(p.x, p.y - 0.6, 6, { color: ["#ffffff", "#ffe082"], speed: 3, life: 0.25, size: 0.08 });
+          g.audio?.sfx(m.hv ? "punch_heavy" : "punch", p);
+          if (p.hp <= 1) {
+            p.hp = 1;
+            g.fx?.text?.(p.x, p.y - 2, "DEFEATED", "#ff8a80", 0.5);
+            this.send({ k: "won" }, from);
+            this.emit("note", `${r4.label} beat you in a fight.`, "#ffcc80");
+          }
+          break;
+        }
+        case "won":
+          if (r4.actor?.pvp) this.emit("note", `You beat ${r4.label} in a fight!`, "#ffd54f");
           break;
         default:
           break;
@@ -133815,6 +133883,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (p.flying) b |= BIT.flying;
       if (p.climb) b |= BIT.climb;
       if (p.conquerorInfused) b |= BIT.conqueror;
+      if (this.game.settings?.pvp) b |= BIT.pvp;
       const m = {
         k: "st",
         t: Math.round(now3),
@@ -134437,6 +134506,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         ui.closeAll();
         openChat();
       } } }, "Say something");
+      const pvpLabel = () => `PvP: ${game.settings.pvp ? "On" : "Off"}`;
+      const pvp = h("button.btn", { title: "Fight your crewmates. Both of you need it on; a fight ends with one of you beaten, never dead.", on: { click: () => {
+        game.settings.pvp = !game.settings.pvp;
+        pvp.textContent = pvpLabel();
+        saveSettings(game.settings);
+        game.log(game.settings.pvp ? "PvP on: crewmates who have it on too can fight you (and you them)." : "PvP off: your blows pass your crewmates by.", game.settings.pvp ? "#ffcc80" : "#b0bec5");
+      } } }, pvpLabel());
       const leave = h("button.btn.red", { on: { click: async () => {
         const was = v, hosting = was?.role === "host";
         if (!was) return;
@@ -134450,7 +134526,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         h("div.panel-top", h("h2", "The voyage"), h("div.vy-code-line", h("b", showCode(v.code)), copy2)),
         h("p.muted", v.role === "host" ? "You're hosting: your world's days, hours and weather are everyone's. Pass the code on and friends can join while you play." : `You're aboard ${v.hostName || "the host"}'s voyage: their world sets the day, the hour and the weather. Your pirate and their save are your own.`),
         rows,
-        h("div.row-end.vy-btns", chat, leave)
+        h("div.row-end.vy-btns", pvp, chat, leave)
       );
       const update = () => {
         if (!v) {
