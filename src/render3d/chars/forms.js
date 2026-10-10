@@ -70,6 +70,8 @@ export function shadowRise(a, t) {
  * actor's view (its memory), `m` its model, `o` the rig options it was posed
  * with, `t` the time, `fp` your own body seen from your eyes.
  */
+const STEEL = 0x8f9ba3;
+
 export function formBody(view, a, m, o, t, gear, fp) {
   const u = m.fx, d = m.d;
   // Gear Third: the swollen fist black with Armament (once you have it)
@@ -85,6 +87,19 @@ export function formBody(view, a, m, o, t, gear, fp) {
     u.uFlame.value = 1;
     u.uTorso.value.set(d.hip0 + d.chestLen * 0.45, d.hip0 + d.chestLen, d.shW + 0.06, 1);
   } else if (u.uFlame.value || u.uTorso.value.w) { u.uFlame.value = 0; u.uTorso.value.w = 0; }
+  // Spider (Supa Supa): the whole body turned to steel — the coat's shading
+  // over every limb and the torso, in steel grey with a hard white sheen
+  if (a.hasBuff?.('steel')) {
+    u.uHaki.value.set(1, 1, 1, 1);
+    u.uHakiRip.value.set(0, 0, 0, 0);
+    u.uTorso.value.set(0, 0.01, 1, 1);
+    u.uHakiCol.value.set(STEEL); u.uHakiSheen.value.set(0xffffff);
+    view._steel = true;
+  } else if (view._steel) {
+    view._steel = false;
+    u.uHakiCol.value.set(0x0b0a10); u.uTorso.value.w = 0;
+    if (view.coat) view.coat.sheen = null;
+  }
   // Future Sight: the red outline — pulsing while the technique's on, flaring with a vision
   const fs = a.hasBuff?.('future_sight') ? 0.42 + 0.18 * Math.sin(t * 7) : 0;
   const vis = a._visionT !== undefined && t - a._visionT >= 0 && t - a._visionT < 0.45 ? 1 - (t - a._visionT) / 0.45 : 0;

@@ -1634,7 +1634,20 @@ sig('doru_ken doru_mori', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, 
 sig('doru_wall', { buff(fx, actor, s, a, ex) { const b = ex.buff; fx.add('barrier', { x: actor.x, y: actor.y, follow: actor, color: '#fff9c4', r: 1.25, span: 1.05, h: 3.2, life: 1e6, until: () => actor.alive !== false && actor.buffs.includes(b) }); sparkle(fx, actor.x, actor.y, 1, 5, ['#fffde7', '#ffffff']); } });
 sig('doru_service', { zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'field', color: '#fff9c4', zone, life: 1e6 }); fx.burst(zone.x, zone.y, 14, { kind: 'drop', color: ['#fffde7', '#fff59d'], speed: 3, z: 3, vz: 1, g: 9, life: 0.6, size: 0.09 }); return true; } });
 // Spike-Spike: blades out of every limb
-sig('supa_claw supa_atomic', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); sparks(fx, actor.x + Math.cos(hb.angle) * 1, actor.y + Math.sin(hb.angle) * 0.7, 0.9, hb.angle, 8, ['#eceff1', '#ffffff', '#b0bec5']); } });
+sig('supa_claw supa_atomic', {
+  hit(fx, actor, s, a, hb) {
+    DEFAULTS.hit(fx, actor, s, a, hb);
+    sparks(fx, actor.x + Math.cos(hb.angle) * 1, actor.y + Math.sin(hb.angle) * 0.7, 0.9, hb.angle, 8, ['#eceff1', '#ffffff', '#b0bec5']);
+    if (a.def.id === 'supa_claw') {
+      // (a blade from every fingertip: five steel rakes)
+      const [px, py] = fwd(actor, hb.angle, 1.3);
+      fx.add('claw', { x: px, y: py, z: 0.9, angle: hb.angle, size: 1.2, color: '#eceff1', life: 0.35, n: 5, tilt: 0.6 });
+    } else {
+      // (the arms whirling blades: steel arcs scything round and round)
+      for (let i = 0; i < 10; i++) fx.add('crescent', { x: actor.x, y: actor.y, angle: hb.angle + i * 2.2, radius: 1.6 + (i % 3) * 0.35, arc: 1.4, width: 0.1, color: '#eceff1', dir: i % 2 ? 1 : -1, life: 0.22, delay: i * 0.07, z: 0.7 + (i % 3) * 0.25 });
+    }
+  },
+});
 sig('supa_spiral', { dash(fx, actor, s, a) { DEFAULTS.dash(fx, actor, s, a); actor._ghostTint = '#eceff1'; fx.add('vortex', { x: actor.x, y: actor.y, follow: actor, r: 0.9, h: 0.9, kind: 'wind', life: s.dash.time + 0.1, spin: 22, arms: 4 }); } });
 // Paw-Paw: paws of air slapped out; a hop that's gone in a blink
 sig('nikyu_tsuppari', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.ring(px, py, 0.1, 1, '#ffffff', 0.25, 0.08, { z: 0.9, add: true }); } });
@@ -1730,7 +1743,15 @@ sig('phoenix_form', {
 sig('seiryu_bolo', { beam: 'fire' });
 sig('seiryu_kaifu', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.burst(px, py, 8, { angle: a.angle, spread: 1, speed: 7, kind: 'line', color: '#e3f2fd', z: 1, g: 0, life: 0.25, size: 0.05 }); } });
 sig('seiryu_raimei', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1.8); miniBolts(fx, px, py, 0.8, 6, 2, '#fff176'); fx.bolt(px, py - 0.01, px, py, '#fff176', 0.3, 0.14, { z0: 8, z1: 0.3, branches: 3 }); } });
-sig('hito_heavy hito_guard hito_monster neko_hybrid seiryu_form mane_disguise doru_armor supa_spider', {
+// Spider: no puff of smoke — the body sets hard as steel with a ring and a glint
+sig('supa_spider', {
+  buff(fx, actor, s, a, ex) {
+    DEFAULTS.buff(fx, actor, s, a, ex);
+    sparkle(fx, actor.x, actor.y, 1.1, 8, ['#ffffff', '#eceff1', '#b0bec5']);
+    fx.ring(actor.x, actor.y, 0.2, 1.6, '#eceff1', 0.3, 0.06, { z: 1, flat: 0, add: true });
+  },
+});
+sig('hito_heavy hito_guard hito_monster neko_hybrid seiryu_form mane_disguise doru_armor', {
   buff(fx, actor, s, a, ex) {
     DEFAULTS.buff(fx, actor, s, a, ex);
     smoke(fx, actor.x, actor.y, 0.8, 14, ['#ffffff', '#eceff1', '#cfd8dc'], { speed: 3, size: 0.4 });
