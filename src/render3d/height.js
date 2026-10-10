@@ -351,7 +351,7 @@ export class HeightField {
     if (w.quays.size && w.isQuay(x, y)) return DOCK_Y + dz;
     const h0 = this.terrain0(x, y), h = h0 + dz;
     // (the sea frozen into a road of ice by the Hie Hie no Mi: stood on, not swum in)
-    if (IS_LIQUID[t] && DEFORM.list.length && t !== T.LAVA && iceCover(x, y)) return Math.max(h, SEA_Y + ICE_TOP);
+    if (IS_LIQUID[t] && (DEFORM.list.length || DEFORM.pads.length) && t !== T.LAVA && iceCover(x, y)) return Math.max(h, SEA_Y + ICE_TOP);
     if (IS_LIQUID[t]) return Math.max(h, t === T.RAPIDS ? waterLevel(w, x, y) : SEA_Y);
     const f = w.floorRec ? w.floorRec(x, y) : null;
     if (!f) return h;

@@ -10,7 +10,7 @@
 const MAX = 8;
 
 /** The live deformations, and the time they're read at (game time, seconds). */
-export const DEFORM = { list: [], now: 0, world: null, seq: 0 };
+export const DEFORM = { list: [], pads: [], now: 0, world: null, seq: 0 };
 
 const KINDS = { tilt: 1, crater: 2, trench: 3, rise: 4, ice: 5 };
 
@@ -40,9 +40,21 @@ export function tickDeform(now, world) {
   DEFORM.now = now;
   if (world) DEFORM.world = world;
   if (DEFORM.list.length) DEFORM.list = DEFORM.list.filter((d) => now - d.t0 < d.rise + d.hold + d.fall && d.t0 - now < 30);
+  if (DEFORM.pads.length) DEFORM.pads = DEFORM.pads.filter((d) => now < d.end && d.t0 - now < 30);
 }
 
-export function clearDeform() { DEFORM.list.length = 0; }
+export function clearDeform() { DEFORM.list.length = 0; DEFORM.pads.length = 0; }
+
+/**
+ * A pad of ice frozen under an ice user's feet as they walk out over the sea
+ * (game/powers.js iceWalk): stood on like the Ice Age's sheet (iceCover),
+ * thawing back into the sea after `hold` seconds.
+ */
+export function addIcePad(x, y, r, hold = 8) {
+  const P = DEFORM.pads;
+  P.push({ x, y, r, t0: DEFORM.now, end: DEFORM.now + hold });
+  while (P.length > 80) P.shift();
+}
 
 const sst = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
@@ -102,8 +114,14 @@ export const ICE_TOP = 0.32;
  */
 export function iceCover(x, y) {
   const L = DEFORM.list;
-  if (!L.length) return false;
   const w = DEFORM.world;
+  // (the pads frozen underfoot as an ice user walks the sea: shrinking as they thaw)
+  for (const d of DEFORM.pads) {
+    const left = d.end - DEFORM.now, k = Math.min(1, left / 1.5);
+    const lx = w?.dx ? w.dx(d.x, x) : x - d.x;
+    if (Math.hypot(lx, y - d.y) < d.r * k) return true;
+  }
+  if (!L.length) return false;
   for (const d of L) {
     if (d.kind !== 5) continue;
     const e = envelope(d);

@@ -89,7 +89,7 @@ test('who flies: the Phoenix and the Dragon, Logia riders — from the first bit
   assert.equal(flightOf(body(g, { race: 'skypiean' })), null, 'a Skypiean\'s wings are too small');
   assert.equal(flightOf(body(g, { race: 'lunarian' })).style, 'wings');
   // (a fruit's flight is part of its base set: yours on eating it — its mastery keeps you up longer)
-  const S = { tori_phoenix: 'phoenix', uo_seiryu: 'dragon', moku: 'ride', suna: 'ride', zushi: 'ride', pika: 'float', ito: 'float' };
+  const S = { tori_phoenix: 'phoenix', uo_seiryu: 'dragon', moku: 'ride', suna: 'jet', zushi: 'ride', pika: 'jet', ito: 'swing', mera: 'jet', magu: 'jet' };
   // (the Azure Dragon flies only as the whole dragon: its form's buff on)
   const dragon = (a) => { if (a.fruit === 'uo_seiryu') a.addBuff({ id: 'dragon', form: 'dragon', dur: Infinity }); return a; };
   for (const [fruit, style] of Object.entries(S)) {
@@ -105,7 +105,13 @@ test('who flies: the Phoenix and the Dragon, Logia riders — from the first bit
   assert.equal(flightOf(dragon(body(g, { fruit: 'uo_seiryu' }))).style, 'dragon', 'the dragon flies as itself');
   assert.equal(flightOf(body(g, { fruit: 'moku' })).ride, 'smoke');
   assert.equal(flightOf(body(g, { fruit: 'zushi' })).ride, 'rock');
-  for (const fruit of ['gomu', 'mera', 'hie', 'goro', 'magu', 'ope', 'bara']) assert.equal(flightOf(body(g, { fruit })), null, `${fruit} doesn't fly`);
+  // (fire, magma, sand and light fly on jets from the feet: magma slowest, light fastest)
+  const sp = (fruit) => flightOf(body(g, { fruit })).speed;
+  for (const fruit of ['mera', 'magu', 'suna', 'pika']) assert.equal(flightOf(body(g, { fruit })).style, 'jet', fruit);
+  assert.ok(sp('magu') < sp('suna') && sp('magu') < sp('mera'), 'magma is the slowest');
+  assert.ok(sp('mera') < sp('tori_phoenix') && sp('suna') < sp('pika'), 'phoenix and light faster than fire and sand');
+  assert.equal(flightOf(body(g, { fruit: 'ito' })).style, 'swing');
+  for (const fruit of ['gomu', 'hie', 'goro', 'ope', 'bara']) assert.equal(flightOf(body(g, { fruit })), null, `${fruit} doesn't fly`);
   // (a Lunarian who eats the Phoenix flies as the Phoenix: the longer flight)
   assert.equal(flightOf(body(g, { race: 'lunarian', fruit: 'tori_phoenix' })).style, 'phoenix');
 });

@@ -130,7 +130,8 @@ class ActorView {
     // at the helm (or the oars) you're drawn where the work is — standing to
     // the wheel, or rowing — riding with your ship
     const helm = a.isPlayer && a.mode === 'sail' && a.ship && !a.ship.sunk ? a.station() : null;
-    this.root.visible = !(a.isPlayer && a.mode === 'sail' && !helm);
+    // (the light sprinting through the sky IS light: no body, only the star and its trail — game/flight.js)
+    this.root.visible = !(a.isPlayer && a.mode === 'sail' && !helm) && !a.lightBeam;
     if (helm) this.placeAtStation(a, helm, env, ctx);
     else if (this.tilted) { this.root.quaternion.identity(); this.tilted = false; }
     // in the water the body settles to a new height over a moment — treading

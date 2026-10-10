@@ -1,4 +1,5 @@
 // Entry point: boot the world, show the title, run the loop.
+import { takeOff } from './game/flight.js';
 import { installQuestGivers } from './game/questgivers.js';
 import { installSurvival } from './game/survival.js';
 import * as THREE from 'three';
@@ -147,7 +148,7 @@ function hideBoot(now = false) {
 }
 const nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
 
-const debug = { ready: false, shipDesigner: openShipDesigner };
+const debug = { ready: false, shipDesigner: openShipDesigner, takeOff };
 window.OP = debug;
 
 async function start() {

@@ -13,7 +13,7 @@
 //    sent back the way they came).
 //  * The look of the helpless states a power leaves (Mes: a heart in a cube;
 //    Amputate: a body in pieces; Parasite: strings; a stolen shadow).
-import { iceCover } from '../world/deform.js';
+import { iceCover, addIcePad } from '../world/deform.js';
 import { angleDiff } from '../core/math.js';
 import { shambles, takt, roomFollows } from './room.js';
 
@@ -43,6 +43,38 @@ export function iceAt(game, x, y) {
   if (!zs || !zs.length) return false;
   for (const z of zs) if (z.freezeWater && z.t > 0 && game.world.distance(z.x, z.y, x, y) <= z.r) return true;
   return false;
+}
+
+/**
+ * An ice user walks on the sea (Aokiji riding his bike over it): wherever
+ * their feet are about to come down on open water, it freezes into a pad of
+ * ice under them — a road of ice behind them that thaws back into the sea
+ * a few seconds later. Not while flying, swimming, or under the sea.
+ */
+export function iceWalk(game, dt) {
+  const w = game.world;
+  if (!w?.isLiquid) return;
+  for (const a of game.actors) {
+    if (a.fruit !== 'hie' || !a.alive || a.flying || a.under || a.onShip || a.deck) continue;
+    if (a.isPlayer === false && game.player && w.dist2(a.x, a.y, game.player.x, game.player.y) > 60 * 60) continue;
+    if ((a._iceT = (a._iceT || 0) - dt) > 0) continue;
+    a._iceT = 0.1;
+    // (where they are, and a step or two ahead on the way they're going — the ice there before the foot is)
+    const sp = Math.hypot(a.vx || 0, a.vy || 0);
+    let made = false;
+    for (const ahead of [0, 0.25, 0.5]) {
+      const x = w.wx(a.x + (a.vx || 0) * ahead), y = a.y + (a.vy || 0) * ahead;
+      if (!w.isLiquid(x, y) || w.isOverlay?.(x, y) || iceAt(game, x, y)) continue;
+      const r = 1.7 + Math.min(1.2, sp * 0.08);
+      addIcePad(x, y, r, 8);
+      game.fx.add('seaice', { x, y, r: r * 1.05, id: Math.floor(Math.random() * 1e6), seed: Math.random() * 100, life: 8, lite: true });
+      made = true;
+    }
+    if (made && Math.random() < 0.3) {
+      game.fx.burst(a.x, a.y, 4, { color: ['#e1f5fe', '#ffffff'], speed: 1.5, g: 2, z: 0.3, vz: 1, life: 0.5, kind: 'shard', size: 0.06 });
+      game.audio?.sfx('ice', { x: a.x, y: a.y }, { vol: 0.25 });
+    }
+  }
 }
 
 /**

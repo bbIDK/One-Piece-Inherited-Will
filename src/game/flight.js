@@ -207,6 +207,7 @@ function endFlight(a, game, vz) {
   a.flightRide = null;
   a.flightTired = false;
   a.flightClimb = 0; a.flightBank = 0;
+  a.lightBeam = false; a.swingAnchor = null;
   a.z = Math.max(0, (a.alt ?? g) - g);
   a.vz = a.z > 0.02 ? vz : 0;
   a.alt = null;
@@ -262,14 +263,20 @@ export function flyStep(a, dt, game) {
     a.flightTired = true;
     if (a.isPlayer) game.log(sea ? 'Your strength gives out over the open sea — you\'re coming down!' : 'Your strength gives out — you\'re coming down.', '#ff8a80');
   }
-  // across the sky
-  let sp = S.speed * (i.sprint && !F.tired ? 1.6 : 1) * (F.tired ? 0.7 : 1);
+  // (strings: swinging from string to string while there's somewhere to go — swingStep)
+  if (S.style === 'swing' && !F.landing && !F.tired && swingStep(a, dt, game, S, F)) return;
+  if (S.style === 'swing') { F.sw = null; a.swingAnchor = null; }
+  // across the sky — the light, sprinting, IS light: a golden star streaking across it
+  const beam = !!S.beam && i.sprint && moving && !F.tired && !a.action;
+  if (beam && !a.lightBeam) { game.audio?.sfx('light', a); game.fx.ring(a.x, a.y, 0.2, 2.2, '#fff59d', 0.25, 0.1, { z: (a.z || 0) + 1, add: true }); }
+  a.lightBeam = beam;
+  let sp = S.speed * (beam ? S.beam : i.sprint && !F.tired ? 1.6 : 1) * (F.tired ? 0.7 : 1);
   if (a.action) sp *= a.action.def.moveMul ?? (a.action.def.m1Chain ? 0.6 : 0.4);
   if (a.hitstun > 0) sp = 0;
   if (a.status.slowmo) sp *= 0.2;
   if (a.status.chill) sp *= 0.6;
   if (a.zoneSlow) sp *= a.zoneSlow;
-  const k = Math.min(1, dt * 3.5);
+  const k = Math.min(1, dt * (beam ? 9 : 3.5));
   const hv0 = Math.atan2(a.vy, a.vx), s0 = Math.hypot(a.vx, a.vy);
   a.vx += (i.mx * sp - a.vx) * k; a.vy += (i.my * sp - a.vy) * k;
   let vx = a.vx, vy = a.vy;
@@ -289,6 +296,8 @@ export function flyStep(a, dt, game) {
   else if (F.landing) vz = -S.dive;
   else if (F.tired) vz = -3.5;
   else vz = (i.mz || 0) * ((i.mz || 0) > 0 ? S.climb : S.dive);
+  // (hanging from your strings with nowhere to swing: you sink, slowly)
+  if (S.style === 'swing' && !i.mz && !F.lift) vz = -2;
   const sw = swoopAlt(a, game);
   if (sw !== null) vz = clamp((sw - a.alt) * 6, -16, Math.max(vz, 3));
   a.alt += vz * dt;
@@ -317,6 +326,69 @@ export function flyStep(a, dt, game) {
   trailFx(a, game, S, dt);
   // down onto something: landed (on purpose, run dry, or down onto the sea)
   if (a.alt <= floor + 0.05 && vz <= 0 && F.t > 0.3 && (F.landing || F.tired || (i.mz || 0) < 0)) land(a, game);
+}
+
+/**
+ * Swinging on strings (Ito Ito: Spider-Man's web-swing, as games do it): a
+ * string shot up and ahead onto the clouds, and the body swung through an
+ * arc under it — down, fastest at the bottom, up the far side — then the
+ * next string, on and on the way you're going. Shift: longer strings, faster
+ * swings; Space hauls up the string (the next anchor higher), Alt lets it
+ * out. A swing in progress finishes even if you let go of the keys, carrying
+ * you on. False when there's nowhere to swing (no way held): then you hang.
+ */
+function swingStep(a, dt, game, S, F) {
+  const i = a.intent, w = game.world;
+  const m = Math.hypot(i.mx, i.my);
+  let W = F.sw;
+  if (!W || W.u >= 1) {
+    if (m < 0.2) return false;
+    const L = i.sprint ? 12.5 : 9.5, th0 = 0.95;
+    const dx = i.mx / m, dy = i.my / m;
+    const ax = w.wx(a.x + dx * L * Math.sin(th0)), ay = a.y + dy * L * Math.sin(th0);
+    const g = Math.max(groundBase(game, a.x, a.y), groundBase(game, ax, ay), floorUnder(a, game, ax, ay));
+    let ah = a.alt + L * Math.cos(th0) + ((i.mz || 0) > 0 ? S.climb * 0.45 : (i.mz || 0) < 0 ? -2.5 : 0);
+    // (the bottom of the arc clear of the ground, and of whatever stands under it)
+    ah = Math.max(ah, g + 1.4 + L);
+    const ceil = groundBase(game, a.x, a.y) + (overOpenSea(game, a.x, a.y) ? SEA_CEILING : S.ceiling) + L;
+    ah = Math.min(ah, Math.max(ceil, a.alt + L * Math.cos(th0)));
+    W = F.sw = { ax, ay, ah, dx, dy, L, th0, u: 0, T: (i.sprint ? 0.95 : 1.15) * Math.sqrt(L / 9.5), h0: a.alt, x0: a.x, y0: a.y };
+    game.audio?.sfx('string', a, { vol: 0.5 });
+    // (the string itself, from the hand up to where it's caught, for as long as this swing lasts)
+    const sw = W;
+    game.fx.add('rope', { x: a.x, y: a.y, follow: a, sw, color: S.color || '#f8bbd0', life: W.T + 0.2, until: () => F.sw === sw && a.flying });
+  }
+  W.u = Math.min(1, W.u + dt / W.T);
+  const th = W.th0 * (2 * W.u - 1);
+  const tx = w.wx(W.ax + W.dx * W.L * Math.sin(th)), ty = W.ay + W.dy * W.L * Math.sin(th);
+  // (eased from where the string caught you onto its arc, over the first part of the swing)
+  const blend = Math.min(1, W.u * 3.5);
+  const arcH = W.ah - W.L * Math.cos(th);
+  const nh = W.h0 + (arcH - W.h0) * (blend * blend * (3 - 2 * blend));
+  const ox = a.x, oy = a.y, oh = a.alt;
+  const mx = w.dx(a.x, tx), my = ty - a.y;
+  const n = Math.max(1, Math.ceil(Math.hypot(mx, my) / 0.25));
+  let blocked = false;
+  a.alt = nh;
+  for (let s = 0; s < n && !blocked; s++) {
+    const nx = w.wx(a.x + mx / n), ny = a.y + my / n;
+    if (flyableAt(a, game, nx, ny)) { a.x = nx; a.y = ny; } else blocked = true;
+  }
+  const floor = floorUnder(a, game, a.x, a.y);
+  if (a.alt < floor + 0.3) a.alt = floor + 0.3;
+  const vx = w.dx(ox, a.x) / Math.max(dt, 1e-3), vy = (a.y - oy) / Math.max(dt, 1e-3);
+  a.vx = vx; a.vy = vy;
+  if (blocked) { F.sw = null; a.swingAnchor = null; a.vx *= 0.2; a.vy *= 0.2; return true; }
+  const g = groundBase(game, a.x, a.y);
+  a.z = a.alt - g;
+  const sp = Math.hypot(vx, vy);
+  a.flightSpeed = sp; a.flightClimb = (a.alt - oh) / Math.max(dt, 1e-3);
+  a.flightBank = 0;
+  a.moving = sp > 0.4; a.speed = sp;
+  if (!a.isPlayer) a.facing += angleDiff(a.facing, Math.atan2(W.dy, W.dx)) * Math.min(1, dt * 8);
+  a.swingAnchor = { x: W.ax, y: W.ay, h: W.ah };
+  a.swingTh = th / W.th0;
+  return true;
 }
 
 /**
@@ -445,6 +517,43 @@ function trailFx(a, game, S, dt) {
       break;
     case 'ride':
       fx.particle({ x: a.x + r() * 0.6, y: a.y + r() * 0.4, z: Math.max(0, z - 0.15), ...back, vz: -0.4, g: 0, life: 0.8, size: S.ride === 'rock' ? 0.12 : 0.35, grow: S.ride === 'rock' ? 0 : 0.4, color: S.color || '#eceff1', kind: S.ride === 'sand' ? 'sand' : S.ride === 'rock' ? 'dust' : 'smoke' });
+      break;
+    case 'jet': {
+      // jets out of the soles of the feet (Iron Man, Ace's Hiken flight): straight down
+      // hovering, streaming back as the body lays out flat at speed
+      const fsp = a.flightSpeed || 0, cruise = Math.min(1, Math.max(0, (fsp - 1.2) / 8)), rr = 0.1 + 0.95 * cruise * (1 - Math.max(0, Math.min(1, (a.flightClimb || 0) / 6)) * 0.6);
+      const c = Math.cos(a.facing), s = Math.sin(a.facing), up = [Math.sin(rr) * c, Math.sin(rr) * s, Math.cos(rr)];
+      const fx0 = a.x - up[0] * 0.95, fy0 = a.y - up[1] * 0.95, fz = z + 0.95 - up[2] * 0.95;
+      const jet = (sp, k) => ({ vx: -up[0] * sp + (a.vx || 0) * k, vy: -up[1] * sp + (a.vy || 0) * k, vz: -up[2] * sp });
+      if (S.ride === 'light') {
+        if (a.lightBeam) {
+          // (the body gone: a golden star where it is, a long gold trail behind)
+          fx.particle({ x: a.x, y: a.y, z: z + 1, vx: 0, vy: 0, vz: 0, g: 0, life: 0.07, size: 1.1, color: '#fff8e1', kind: 'star' });
+          for (let k = 0; k < 3; k++) fx.particle({ x: a.x - (a.vx || 0) * 0.016 * k, y: a.y - (a.vy || 0) * 0.016 * k, z: z + 1 + r() * 0.1, vx: 0, vy: 0, vz: 0, g: 0, life: 0.6, size: 0.45 - k * 0.08, color: k ? '#ffd54f' : '#fff59d', kind: 'glow' });
+          fx.particle({ x: a.x, y: a.y, z: z + 1, vx: -(a.vx || 0) * 0.08, vy: -(a.vy || 0) * 0.08, vz: 0, g: 0, life: 0.3, size: 0.06, color: '#ffffff', kind: 'line' });
+        } else {
+          // (light under the soles, steady — no sparks shed about)
+          for (let k = 0; k < 2; k++) fx.particle({ x: fx0, y: fy0, z: fz - 0.05 - k * 0.1, ...jet(1.5, 1), g: 0, life: 0.07, size: 0.24 - k * 0.07, color: k ? '#fff59d' : '#ffffff', kind: 'glow' });
+        }
+        break;
+      }
+      if (S.ride === 'fire') {
+        for (let k = 0; k < 3; k++) fx.particle({ x: fx0 + r() * 0.15, y: fy0 + r() * 0.15, z: fz, ...jet(8 + Math.random() * 3, 0.8), g: -1, life: 0.2 + Math.random() * 0.08, size: 0.17, grow: 0.8, color: k ? '#ff7043' : '#ffca28', kind: 'fire' });
+        if (Math.random() < 0.3) fx.particle({ x: fx0, y: fy0, z: fz, ...jet(6, 0.6), vz: -up[2] * 6 + 1.5, g: 2, life: 0.5, size: 0.04, color: '#ffe082', kind: 'spark' });
+      } else if (S.ride === 'magma') {
+        // (heavy, dark-red, spitting molten rock that drips and scorches the ground below)
+        for (let k = 0; k < 2; k++) fx.particle({ x: fx0 + r() * 0.15, y: fy0 + r() * 0.15, z: fz, ...jet(5 + Math.random() * 2, 0.6), g: -0.5, life: 0.28, size: 0.2, grow: 0.6, color: k ? '#e64a19' : '#ff6f00', kind: 'fire' });
+        if (Math.random() < 0.5) fx.particle({ x: fx0, y: fy0, z: fz, ...jet(3, 0.5), g: 14, life: 1.2, size: 0.08 + Math.random() * 0.05, color: Math.random() < 0.5 ? '#ff5722' : '#ffab40', kind: 'spark' });
+        if (Math.random() < 0.35) fx.particle({ x: fx0, y: fy0, z: fz + 0.2, vx: back.vx, vy: back.vy, vz: 0.8, g: 0, life: 1.1, size: 0.3, grow: 0.8, color: '#3e2723', kind: 'smoke' });
+        if (z < 8 && Math.random() < 0.06) game.fx.add('scorch', { x: a.x + r(), y: a.y + r(), r: 0.5 + Math.random() * 0.4, life: 8, color: 'rgba(40,18,10,1)', rim: '#ff6f00', seed: Math.random() * 100 });
+      } else {
+        // sand pouring out of the feet in a torrent
+        for (let k = 0; k < 3; k++) fx.particle({ x: fx0 + r() * 0.2, y: fy0 + r() * 0.2, z: fz, ...jet(6 + Math.random() * 2, 0.6), g: 1, life: 0.45, size: 0.22, grow: 0.7, color: k ? '#e1c16e' : '#cdae5a', kind: 'sand' });
+      }
+      break;
+    }
+    case 'swing':
+      if (a.swingAnchor && Math.random() < 0.3) fx.particle({ x: a.x, y: a.y, z: z + 1.9, ...back, vz: 0, g: 0, life: 0.25, size: 0.04, color: '#f8bbd0', kind: 'line' });
       break;
     case 'float':
       // (strings running up from the hands to the clouds; a body of light shedding light)

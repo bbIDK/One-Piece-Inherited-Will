@@ -48,14 +48,14 @@ function attitude(F, max) {
 export function flightPose(P, pose) {
   const F = pose.flight;
   const t = F.t || 0, style = F.style || 'hero';
-  const A = attitude(F, style === 'ride' || style === 'float' ? 0.32 : style === 'geppo' ? 0.42 : 1.22);
+  const A = attitude(F, style === 'ride' || style === 'float' ? 0.32 : style === 'geppo' ? 0.42 : style === 'swing' ? 0.2 : style === 'jet' ? 1.05 : 1.22);
   const side = clamp((F.side || 0) / 8, -1, 1);
   P.wF = null; P.wB = null;
   P.sm = 0; P.smF = 0; P.smB = 0; P.smfF = 0; P.smfB = 0;
   P.tw = 0; P.hp = 0; P.ls = 0;
   (STYLE[style] || STYLE.hero)(P, F, A, t);
   // pitched by the speed, rolled into the turn (and toward a sideways drift)
-  if (style !== 'ride') P.r = (P.r || 0) + A.r;
+  if (style !== 'ride' && !(style === 'swing' && F.sw != null)) P.r = (P.r || 0) + A.r;
   P.bk = clamp((F.bank || 0) + side * 0.35, -0.85, 0.85) * (style === 'float' || style === 'ride' ? 0.5 : 1);
   P.ht = (P.ht || 0) - (P.r || 0) * 0.62; // (the head stays up, looking where it goes)
   P.hand = P.hand || 'fist'; P.handB = P.handB || 'fist';
@@ -134,6 +134,38 @@ const STYLE = {
     P.eF = 0.6; P.eB = 0.6; P.hand = 'relaxed'; P.handB = 'palm';
     P.tw = 0.18 + 0.1 * A.cruise; P.hp = 0.2;
     P.ht = -lean * 0.4;
+  },
+  // jets from the feet (Iron Man, Ace): legs straight and together, the feet the
+  // nozzles; hovering upright with the arms down and out, palms to the ground,
+  // steadying; laid out flat at speed, the arms swept back along the sides
+  jet(P, F, A, t) {
+    const w = t * 2.3;
+    P.b = [0, 0.005 * Math.sin(w)];
+    P.l = 0.02;
+    const hov = [0.03, 0.36], fly = [-0.07, 0.4];
+    P.hF = mixP(hov, fly, A.cruise); P.hB = mixP([0.0, 0.37], [-0.08, 0.4], A.cruise);
+    P.zF = mixN(0.2, 0.06, A.cruise) + 0.01 * Math.sin(w); P.zB = mixN(0.22, 0.06, A.cruise) - 0.01 * Math.sin(w + 1);
+    P.eF = 0.2; P.eB = 0.2; P.hand = 'palm'; P.handB = 'palm';
+    // (the legs straight down, a hair apart; the toes pointed down the jet)
+    P.fF = [0.02, -0.01]; P.fB = [-0.02, -0.02];
+    P.zfF = 0.03; P.zfB = 0.03;
+    P.ht = 0.02;
+  },
+  // hanging from a string and swinging (Spider-Man): the hand up on the string,
+  // the other out for balance, the legs sweeping through the arc — tucked
+  // under at the bottom, swung out ahead up the far side
+  swing(P, F, A, t) {
+    if (F.sw == null) { STYLE.float(P, F, A, t); P.hF = [0.06, -0.44]; P.zF = 0.06; P.eF = 0.1; P.hand = 'fist'; return; }
+    const s = F.sw; // -1 (caught, behind the anchor) .. 1 (up the far side)
+    P.r = -s * 0.75;
+    P.b = [0, 0.01];
+    P.hF = [0.04, -0.46]; P.zF = 0.04; P.eF = 0.08; P.hand = 'fist';
+    P.hB = [0.1 - 0.22 * s, 0.22 + 0.06 * Math.abs(s)]; P.zB = 0.22; P.eB = 0.5; P.handB = 'relaxed';
+    const tuck = 1 - Math.abs(s);
+    P.fF = [-0.1 + 0.26 * (s + 1) / 2, -0.08 - 0.12 * tuck]; P.fB = [-0.14 + 0.22 * (s + 1) / 2, -0.04 - 0.06 * tuck];
+    P.zfF = 0.03; P.zfB = 0.02;
+    P.l = 0.05 + 0.1 * tuck;
+    P.ht = 0.06 * s;
   },
   // weightless: upright, easy, drifting
   float(P, F, A, t) {
@@ -279,7 +311,7 @@ export function flightState(a, now) {
     S.h = h;
   } else S.h = null;
   S.bank += (want - S.bank) * Math.min(1, dt * 4);
-  return { style: S.style, t: now - S.t0, up: now - S.upT, fwd: vx * c + vy * s, side: -vx * s + vy * c, climb: S.climb, bank: S.bank, speed: sp };
+  return { style: S.style, t: now - S.t0, up: now - S.upT, fwd: vx * c + vy * s, side: -vx * s + vy * c, climb: S.climb, bank: S.bank, speed: sp, sw: a.swingAnchor ? a.swingTh ?? 0 : null };
 }
 
 /** A hand target eased toward a flight's (for the first-person arms: see chars/viewmodel.js). */

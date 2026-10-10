@@ -9,7 +9,7 @@ import { regionAt, REGION, REGION_INFO, isCalmBelt } from '../world/constants.js
 import { clamp, lerp, TAU } from '../core/math.js';
 import { PlayerController } from './playerController.js';
 import { Spawner } from './spawner.js';
-import { zoneRules } from './powers.js';
+import { zoneRules, iceWalk } from './powers.js';
 
 export class Game {
   constructor({ renderer, input, ui, audio, world }) {
@@ -164,7 +164,8 @@ export class Game {
     }
     p.inCombat = this.combatT > 0 || !!this.engaged;
 
-    // actors
+    // actors (an ice user freezing the sea under their feet first, so there's ice to step on)
+    iceWalk(this, simDt);
     this.frameNo = (this.frameNo || 0) + 1;
     for (let i = this.actors.length - 1; i >= 0; i--) {
       const a = this.actors[i];

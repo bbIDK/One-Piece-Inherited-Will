@@ -634,6 +634,28 @@ SHAPES.strings = {
   },
 };
 
+/**
+ * A swinging string (Ito Ito's Sora no Michi, game/flight.js swingStep): taut
+ * from the swinger's raised hand up to where it's caught in the sky, a
+ * glint where it's hooked; shot up fast at the start of the swing.
+ */
+SHAPES.rope = {
+  draw(v, s, k, a) {
+    const f = s.follow, W = s.sw;
+    if (!f || !W || f.alt == null) return;
+    const c = col(s.color || '#f8bbd0');
+    const hx = v.lx(f.x), hz = v.lz(f.y), hy = f.alt + 1.95 * (f.look?.scale || 1);
+    const ax = v.lx(W.ax), az = v.lz(W.ay), ay = W.ah;
+    // (shot up from the hand: it reaches the sky over the first tenth of a second)
+    const reach = Math.min(1, (s.age || 0) / 0.1);
+    const ex = hx + (ax - hx) * reach, ey = hy + (ay - hy) * reach, ez = hz + (az - hz) * reach;
+    v.ribbons.start(RK.THIN, RM.FACE, c, a, WHITE, 0.7);
+    for (let j = 0; j <= 6; j++) { const t = j / 6; v.ribbons.point(hx + (ex - hx) * t, hy + (ey - hy) * t, hz + (ez - hz) * t, 0.03); }
+    v.ribbons.finish();
+    if (reach >= 1) v.sprites.put(SK.STAR, ax, ay, az, 0.35, c, a * 0.8, WHITE, 1, v.time, 0, 0.5);
+  },
+};
+
 // ------------------------------------------------------------------ columns, domes, barriers, funnels, clouds
 /** Pillars: light, fire, lightning, darkness, ice, water — rising out of a glow on the ground. */
 SHAPES.pillar = {
@@ -741,7 +763,7 @@ SHAPES.seaice = {
     const R = s.r * grow, X = v.lx(s.x), Z = v.lz(s.y);
     const id = s.id || 0;
     const rag = (th) => 1 + 0.07 * Math.sin(th * 7 + id) + 0.04 * Math.sin(th * 17 + id * 3);
-    const S = v.surf, NR = 14, NA = 48;
+    const S = v.surf, NR = s.lite ? 4 : 14, NA = s.lite ? 18 : 48;
     if (!S.room((NR + 1) * (NA + 1), NR * NA * 2)) return;
     S.style(SF.FILL, ICE_BODY, a * 0.96, ICE_EDGE, 0, k, s.seed || 0);
     const v0 = S.nv;
@@ -760,8 +782,9 @@ SHAPES.seaice = {
     v.decal(patch, s.x, s.y, R * 0.98, id, SF.FROST, ICE_FROST, a * 0.9, WHITE, 0.04, k, s.seed || 0, 0, 0, 0, 10, 0.06);
     // slabs of it heaved up round the ragged edge
     if (v.low) return;
-    for (let i = 0; i < 18; i++) {
-      const h = hash(id * 1.7 + i * 2.9), th = (i + h) / 18 * TAU, rr = R * rag(th) * (0.96 + 0.06 * h);
+    const ns = s.lite ? 6 : 18;
+    for (let i = 0; i < ns; i++) {
+      const h = hash(id * 1.7 + i * 2.9), th = (i + h) / ns * TAU, rr = R * rag(th) * (0.96 + 0.06 * h);
       const x = s.x + Math.cos(th) * rr, y = s.y + Math.sin(th) * rr;
       const g0 = v.view.ground(x, y);
       if (g0 > ICE_TOP + 0.25) continue;
