@@ -649,6 +649,10 @@ function buildSpan(w, tx, ty) {
     else if (ends.length === 2) {
       const a = dist[0].get(k) ?? 1e6, b = dist[1].get(k) ?? 1e6;
       h = (ends[0].land * b + ends[1].land * a) / (a + b);
+      // (a long span bows up in a gentle arch over the channel, as the iron
+      // bridge between Dressrosa and Green Bit does — a short one stays flat)
+      const L = a + b;
+      if (L > 16 && a < 1e5 && b < 1e5) h += Math.min(6, (L - 16) * 0.12) * Math.sin(Math.PI * a / L);
     } else if (ends.length) {
       let sw = 0, sh = 0;
       ends.forEach((e, n) => { const d = dist[n].get(k) ?? 1e6; const wt = 1 / (d * d); sw += wt; sh += wt * e.land; });

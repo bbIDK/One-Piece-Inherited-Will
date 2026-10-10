@@ -1091,7 +1091,8 @@ SHAPES.skid = {
 const SKID = [-0.14, 0.14];
 
 // ------------------------------------------------------------------ zones
-const DARKNESS = col('#311b92');
+// (Kurohige's darkness is ink-black, only its fringe catching a purple light)
+const DARKNESS = col('#120a1a');
 const SCORCH_COL = col('rgba(30,18,12,1)'), BOLT_EMBER = col('#ffd54f');
 const ROOM_LINE = col('#e1f5fe');
 const SMEAR = col('#e3f4ff');

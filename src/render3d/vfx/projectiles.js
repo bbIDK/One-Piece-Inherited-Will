@@ -13,7 +13,7 @@ import { RK, RM } from './ribbons.js';
 import { SF } from './surfaces.js';
 import { VK } from './volumes.js';
 import { OK, putAlong } from './solids.js';
-import { bolt, crown } from './shapes.js';
+import { bolt, crown, cloud } from './shapes.js';
 
 const H = 18; // positions remembered
 const WHITE = col('#ffffff');
@@ -61,14 +61,53 @@ export class Projectiles {
    * hurled, swelling as it gathers.
    */
   chargeSuns(game) {
-    const v = this.v, now = performance.now();
+    const v = this.v;
     this._rec = this._rec || new Rec();
     for (const a of game.actors || []) {
       const c = a._sunCharge;
-      if (!c || now - c.at > 120) continue;
+      // (stale once two frames have gone by without the charge being set
+      // again — counted in frames, not ms, so a slow frame doesn't drop it)
+      if (!c || ++c.seen > 2) continue;
       sun(v, this._rec, c.X, c.Y, c.Z, c.R, 1, 0, SUN_FC, ((a.seed || 1) * 97) | 0, v.time);
       // (heat shimmering up off it, embers rising)
       v.sprites.put(SK.GLOW, c.X, c.Y, c.Z, c.R * 3.2, SUN_FC, 0.18, SUN_CORE, 1, 0, 7, 0);
+    }
+  }
+
+  /**
+   * Partisan forming: a fan of ice spears hanging in the air round the
+   * caster's shoulders, points forward, growing out of nothing as the
+   * charge builds (chars3d.js sets a._spearCharge) — then thrown.
+   */
+  chargeSpears(game) {
+    const v = this.v;
+    for (const a of game.actors || []) {
+      const c = a._spearCharge;
+      if (!c || ++c.seen > 2) continue;
+      const n = c.n, S = c.S, ic = col(c.color || '#e1f5fe'), lx = -c.dz, lz = c.dx;
+      for (let i = 0; i < n; i++) {
+        // (staggered: each spear grows in a beat after the one before)
+        const g = Math.max(0, Math.min(1, c.k * 1.6 - i * (0.6 / n)));
+        if (g <= 0) continue;
+        const u = n > 1 ? i / (n - 1) * 2 - 1 : 0, ring = 1.6 + 0.3 * Math.abs(u);
+        const X = c.X + lx * u * ring * S - c.dx * 0.35 * S, Z = c.Z + lz * u * ring * S - c.dz * 0.35 * S;
+        const Y = c.Y + (0.9 - 0.8 * u * u) * S + Math.sin(v.time * 3 + i) * 0.04;
+        const L = 2.3 * S * (0.4 + 0.6 * g);
+        putAlong(v.solids.shards, X - c.dx * L * 0.35, Y, Z - c.dz * L * 0.35, c.dx, 0, c.dz, L * 0.75, 0.08 * S, 0, ic, OK.ICE, 1 - g, i, 0.1);
+        putAlong(v.solids.crystals, X + c.dx * L * 0.12, Y, Z + c.dz * L * 0.12, c.dx, 0, c.dz, 0.75 * S * g, 0.24 * S, 0, ic, OK.ICE, 1 - g, i, 0.2);
+        v.sprites.put(SK.STAR, X + c.dx * L * 0.4, Y, Z + c.dz * L * 0.4, 0.12 * S, WHITE, 0.6 * g, WHITE, 1, v.time * 4 + i, i, 0);
+      }
+    }
+  }
+
+  /** Raigo gathering: a thundercloud swelling high over the caster, ever darker and wider. */
+  chargeStorms(game) {
+    const v = this.v;
+    for (const a of game.actors || []) {
+      const c = a._stormCharge;
+      if (!c || ++c.seen > 2) continue;
+      const k = c.k, R = 1.5 + 7.5 * k * k;
+      cloud(v, c.X, c.Y + 6 + 4 * k, c.Z, R, STORM_C, Math.min(1, 0.3 + k), ((a.seed || 1) * 31) | 0);
     }
   }
 
@@ -117,6 +156,8 @@ export class Projectiles {
     }
     this.recs.forEach(this._sweep);
     this.chargeSuns(game);
+    this.chargeSpears(game);
+    this.chargeStorms(game);
     const L = this.land;
     for (let i = 0; i < LAND; i++) {
       const o = i * LF, age = v.time - L[o + 5];
@@ -197,6 +238,17 @@ function draw(v, pr, r, Y, sc) {
       v.shells.put(VK.FIRE, X, Y, Z, R, dx, 0, dz, fist ? 1.7 : 1.3, fc, 1, HOT, 0.6, 0, seed);
       v.sprites.put(SK.GLOW, X, Y, Z, R * 2.2, fc, 0.55, HOT, 1, 0, seed, 0);
       trail(v, r, RK.FIRE, fc, 1, HOT, 0.6, R * 0.95, 0.15, 12);
+      break;
+    }
+    case 'firefly': {
+      // Hotarubi: a firefly of green fire — a small soft lime light that
+      // bobs and flickers as it drifts, a faint tail, no flame on it yet
+      // (it only bursts into fire when Hidaruma sets them off)
+      const gc = col(pr.color || '#aeea00'), R = 0.16 * s;
+      const fl = 0.75 + 0.25 * Math.sin(t * 23 + seed), bob = Math.sin(t * 5 + seed) * 0.12;
+      v.sprites.put(SK.GLOW, X, Y + bob, Z, R * 3.4, gc, 0.5 * fl, col('#f4ff81'), 1, 0, seed, 0);
+      v.sprites.put(SK.GLOW, X, Y + bob, Z, R * 1.1, col('#f4ff81'), fl, WHITE, 1, 0, seed + 1, 0);
+      trail(v, r, RK.SMOKE, gc, 0.35, gc, 0, R * 0.5, 0.2, 6);
       break;
     }
     case 'magmafist': {
@@ -463,7 +515,7 @@ function sun(v, r, X, Y, Z, R, dx, dz, fc, seed, t) {
   v.sprites.put(SK.GLOW, X, Y, Z, R * 1.7, fc, 0.28, SUN_CORE, 1, 0, seed, 0);
   trail(v, r, RK.FIRE, fc, 1, HOT, 0.6, R * 0.9, 0.2, 16);
 }
-const SUN_CORE = col('#ffd04a'), SUN_FC = col('#ff7a1a');
+const SUN_CORE = col('#ffd04a'), SUN_FC = col('#ff7a1a'), STORM_C = col('#37474f');
 
 /**
  * Pheasant Beak: a great bird of ice — a crystal body and beak, wings of

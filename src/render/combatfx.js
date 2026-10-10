@@ -765,11 +765,13 @@ const DEFAULTS = {
     const R = s.pull.range;
     const col = s.color || '#7e57c2';
     const ang = a.angle;
-    fx.add('vortex', { x: actor.x + Math.cos(ang) * 0.6, y: actor.y + Math.sin(ang) * 0.4, r: 1.1, kind: 'dark', life: 0.6, spin: -8, arms: 5 });
-    fx.ring(actor.x, actor.y, R, 0.3, col, 0.5, 0.3);
+    // (a vortex of darkness in the hand, ink streaming in to it along the
+    // line of the pull — not a ring laid over the ground, which draped
+    // jagged over every hill in reach)
+    fx.add('vortex', { x: actor.x + Math.cos(ang) * 0.6, y: actor.y + Math.sin(ang) * 0.4, r: 1.5, kind: 'dark', life: 0.7, spin: -8, arms: 5 });
     for (let i = 0; i < 18; i++) {
-      const th = rnd(0, TAU), rr = R * rnd(0.5, 0.95);
-      fx.particle({ x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr * 0.7, z: rnd(0.3, 1.2), vx: -Math.cos(th) * rr * 2.2, vy: -Math.sin(th) * rr * 1.6, vz: 0, g: 0, drag: 0.5, life: 0.45, size: 0.12, color: i % 2 ? '#311b92' : '#7e57c2', kind: 'spark', add: false });
+      const th = ang + rnd(-0.35, 0.35), rr = R * rnd(0.3, 0.9);
+      fx.particle({ x: actor.x + Math.cos(th) * rr, y: actor.y + Math.sin(th) * rr, z: rnd(0.4, 1.3), vx: -Math.cos(th) * rr * 2.2, vy: -Math.sin(th) * rr * 2.2, vz: 0, g: 0, drag: 0.5, life: 0.45, size: 0.14, color: i % 3 ? '#120a1a' : col, kind: 'spark', add: false });
     }
   },
   buff(fx, actor, s, a, ex) {
@@ -1342,8 +1344,8 @@ sig('mera_enkai', {
   hit(fx, actor, s, a, hb) {
     DEFAULTS.hit(fx, actor, s, a, hb);
     const R = s.hit.range || 3;
-    for (let i = 0; i < 6; i++) { const th = (i / 6) * TAU; fx.add('pillar', { x: actor.x + Math.cos(th) * R * 0.75, y: actor.y + Math.sin(th) * R * 0.5, r: 0.35, h: 3, color: '#ff7043', core: '#ffeb3b', life: 0.6, kind: 'fire', delay: i * 0.03 }); }
-    fx.add('pillar', { x: actor.x, y: actor.y, r: 0.8, h: 4.5, color: '#ff5722', core: '#ffeb3b', life: 0.6, kind: 'fire' });
+    for (let i = 0; i < 6; i++) { const th = (i / 6) * TAU; fx.add('pillar', { x: actor.x + Math.cos(th) * R * 0.75, y: actor.y + Math.sin(th) * R * 0.75, r: 0.45, h: 4, color: '#ff7043', core: '#ffeb3b', life: 0.6, kind: 'fire', delay: i * 0.03 }); }
+    fx.add('pillar', { x: actor.x, y: actor.y, r: 1.7, h: 11, color: '#ff5722', core: '#ffeb3b', life: 0.9, kind: 'fire' });
     fx.add('scorch', { x: actor.x, y: actor.y, r: R * 0.8, life: 3 });
   },
 });
@@ -1367,13 +1369,15 @@ sig('goro_elthor', {
   zone(fx, actor, spec, a, zone) {
     fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'thunder', color: zone.color, zone, life: 1e6 });
     fx.add('pillar', { x: zone.x, y: zone.y, r: zone.r * 0.55, h: 10, color: '#fff176', core: '#ffffff', life: 0.5, kind: 'lightning' });
+    // (El Thor as drawn: a great column of blue-white light straight down from the sky)
+    fx.add('pillar', { x: zone.x, y: zone.y, r: zone.r * 0.7, h: 16, color: '#b3e5fc', core: '#ffffff', life: 0.7 });
     fx.bolt(zone.x, zone.y - 0.01, zone.x, zone.y, '#fff176', 0.5, 0.2, { z0: 10, z1: 0.1, branches: 4 });
     fx.flashScreen(0.08, 'rgba(255,253,231,1)');
     return true;
   },
 });
 sig('goro_raigo', {
-  charge: { kind: 'bolt', color: '#fff176' },
+  charge: { kind: 'storm', color: '#fff176' },
   zone(fx, actor, spec, a, zone) {
     fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'thunder', color: zone.color, zone, life: 1e6 });
     fx.add('cloud', { x: zone.x, y: zone.y, r: zone.r * 0.9, z: 6.5, life: 3.2, color: '#212121', glow: '#fff176' });
@@ -1418,7 +1422,7 @@ sig('pika_yata', {
   teleport(fx, actor, s, a, ex) {
     const w = fx.game.world;
     const dx = w ? w.dx(ex.x0, actor.x) : actor.x - ex.x0, dy = actor.y - ex.y0;
-    fx.beam(ex.x0, ex.y0, Math.atan2(dy, dx), Math.hypot(dx, dy), 0.35, '#fff59d', 0.22, '#ffffff', { style: 'light', z: 0.8 });
+    fx.beam(ex.x0, ex.y0, Math.atan2(dy, dx), Math.hypot(dx, dy), 0.35, '#fff59d', 0.45, '#ffffff', { style: 'light', z: 0.8 });
     ghostsAlong(fx, actor, ex.x0, ex.y0, 3, '#fff59d', { add: true });
     fx.add('flare', { x: actor.x, y: actor.y, z: 0.85, size: 1.4, color: '#fff59d', life: 0.3 });
     fx.flashScreen(0.05, 'rgba(255,253,231,1)');
@@ -1666,7 +1670,7 @@ sig('mera_kyokaen', {
   },
 });
 // Ice-Ice: a touch that freezes
-sig('hie_partisan', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.7); shards(fx, px, py, 0.9, 8, null, a.angle); } });
+sig('hie_partisan', { charge: { kind: 'spears', color: '#e1f5fe', n: 5 }, proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.7); shards(fx, px, py, 0.9, 8, null, a.angle); } });
 sig('hie_icetime', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); ringSpikes(fx, px, py, 0.9, 7, 'ice'); shards(fx, px, py, 0.8, 10); } });
 // Rumble: a lightning bolt grabbed and swung; a thunder beast; a thunder ball
 sig('goro_kari', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); for (let i = 0; i < 4; i++) { const th = rnd(0, TAU), rr = rnd(0.5, s.hit.range || 3); fx.bolt(actor.x + Math.cos(th) * rr, actor.y + Math.sin(th) * rr * 0.6, actor.x + Math.cos(th) * rr, actor.y + Math.sin(th) * rr * 0.6, '#fff176', 0.3, 0.08, { z0: 7, z1: 0, branches: 2 }); } fx.flashScreen(0.08, 'rgba(255,253,231,1)'); } });
@@ -1694,7 +1698,7 @@ sig('magu_bakuretsu', {
 sig('yami_abyss', { charge: { kind: 'dark' }, zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'dark', color: zone.color, zone, life: 1e6 }); fx.add('vortex', { x: zone.x, y: zone.y, r: 2, kind: 'dark', life: zone.t, spin: -5, arms: 6 }); smoke(fx, zone.x, zone.y, 0.4, 16, ['#12001c', '#311b92'], { speed: 4 }); return true; } });
 
 sig('yami_kurouzu', { charge: { kind: 'dark' } });
-sig('yami_blackhole', { charge: { kind: 'dark' }, zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'dark', color: '#311b92', zone, life: 1e6 }); smoke(fx, actor.x, actor.y, 0.3, 12, ['#12001c', '#311b92'], { speed: 3 }); return true; } });
+sig('yami_blackhole', { charge: { kind: 'dark' }, zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'dark', color: '#311b92', zone, life: 1e6 }); smoke(fx, actor.x, actor.y, 0.3, 12, ['#0a0410', '#1a0d24'], { speed: 3 }); return true; } });
 sig('yami_liberation', {
   hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); smoke(fx, actor.x, actor.y, 0.8, 20, ['#12001c', '#311b92', '#4a148c'], { speed: 5, size: 0.4 }); fx.add('pillar', { x: actor.x, y: actor.y, r: 1, h: 5, color: '#311b92', core: '#b388ff', life: 0.5, kind: 'dark' }); },
   // (what the darkness swallowed, all coming back out at once)

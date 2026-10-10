@@ -194,8 +194,8 @@ export const NEW_WORLD = [
     ],
     paint: [
       // the iron bridge to Green Bit (closed for 200 years because of the Fighting Fish),
-      // all the way across the channel to its gate on the island's south shore
-      { op: 'path', points: [[0.0, -86], [0.0, -405]], width: 4, tile: T.BRIDGE },
+      // a short way across the narrow channel to its gate on the island's south shore
+      { op: 'path', points: [[0.0, -86], [0.0, -150]], width: 4, tile: T.BRIDGE },
     ],
     towns: [
       {
@@ -251,7 +251,7 @@ export const NEW_WORLD = [
 
   // ----------------------------------------------------------------- Green Bit
   {
-    id: 'green_bit', name: 'Green Bit', sea: 'new_world', x: 555, y: 736, w: 96, h: 60,
+    id: 'green_bit', name: 'Green Bit', sea: 'new_world', x: 555, y: 872, w: 130, h: 80,
     climate: 'jungle', rough: 0.25,
     areas: [{ name: 'Giant Plant Forest', tile: T.JUNGLE, dx: -0.1, dy: -0.15, rx: 0.6, ry: 0.5 }],
     towns: [{

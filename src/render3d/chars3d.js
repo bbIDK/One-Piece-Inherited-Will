@@ -620,10 +620,28 @@ class ActorView {
       if (ch.kind === 'sun') {
         // (a second sun swelling over the raised hand: drawn by the effects as
         // the real thing — vfx/projectiles.js chargeSuns — with a soft glow here)
-        _v.copy(hand).add(_v2.set(0, 0.5 + k * 1.4, 0));
-        glow('#ff9100', 0.4 + k * 1.2, _v);
+        // (as in the anime it dwarfs the caster: several times their height,
+        // held up on one hand, its underside just clear of the palm)
+        const sR = 0.3 + 3.0 * k * k * (3 - 2 * k);
+        _v.copy(hand).add(_v2.set(0, 0.25 + sR, 0));
+        glow('#ff9100', 0.4 + k * 1.2, hand);
         m.group.localToWorld(_v2.copy(_v));
-        a._sunCharge = { X: _v2.x, Y: _v2.y, Z: _v2.z, R: (0.25 + k * 1.55) * (this.root.scale.x || 1), at: performance.now() };
+        a._sunCharge = { X: _v2.x, Y: _v2.y, Z: _v2.z, R: sR * (this.root.scale.x || 1), seen: 0 };
+      }
+      else if (ch.kind === 'spears') {
+        // (Partisan: the spears of ice form in a fan round the caster, points
+        // forward, before the volley — drawn by the effects, vfx/projectiles.js)
+        m.group.localToWorld(_v2.copy(rig.neck));
+        const fa = a.facing ?? 0;
+        a._spearCharge = { X: _v2.x, Y: _v2.y, Z: _v2.z, dx: Math.cos(fa), dz: Math.sin(fa), k, S: this.root.scale.x || 1, n: ch.n || 5, color: ch.color, seen: 0 };
+        glow(ch.color || '#e1f5fe', 0.15 + k * 0.3, hand);
+      }
+      else if (ch.kind === 'storm') {
+        // (Raigo: the great thundercloud gathering overhead before it falls —
+        // drawn by the effects, vfx/projectiles.js chargeStorms)
+        m.group.localToWorld(_v2.copy(rig.headC));
+        a._stormCharge = { X: _v2.x, Y: _v2.y, Z: _v2.z, k, seen: 0 };
+        glow(ch.color || '#fff176', 0.15 + k * 0.35, hand);
       }
       else if (ch.kind === 'dark') glow('#4a148c', 0.2 + k * 0.4, hand);
       else if (ch.kind === 'oni') glow('#b71c1c', 0.4 + k * 0.5, rig.headC);
