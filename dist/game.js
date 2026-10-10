@@ -1959,15 +1959,15 @@
           },
           receiveRemoteStream: (id, stream) => {
             if (!isActive(id)) return;
-            const next = pendingStreamMetas[id]?.shift();
-            if (!next) return;
-            emitStream(id, next.key, stream, next.metadata);
+            const next2 = pendingStreamMetas[id]?.shift();
+            if (!next2) return;
+            emitStream(id, next2.key, stream, next2.metadata);
           },
           receiveRemoteTrack: (id, track, stream) => {
             if (!isActive(id)) return;
-            const next = pendingTrackMetas[id]?.shift();
-            if (!next) return;
-            emitTrack(id, next.key, track, stream, next.metadata);
+            const next2 = pendingTrackMetas[id]?.shift();
+            if (!next2) return;
+            emitTrack(id, next2.key, track, stream, next2.metadata);
           },
           clearPeer: (id) => {
             delete pendingStreamMetas[id];
@@ -7123,7 +7123,7 @@
     return P6;
   }
   function gear4Bounce(P6, t, moving) {
-    const per = moving ? 0.5 : 0.62, ph = t / per % 1;
+    const per2 = moving ? 0.5 : 0.62, ph = t / per2 % 1;
     const contact = 0.2;
     let z = 0, sq = 1, knee = 0;
     if (ph < contact) {
@@ -11011,8 +11011,8 @@
     }
     if (final > 0) fx.damage(tgt, final, { crit, blocked, toPlayer: tgt.isPlayer, color: counter2 ? "#ffab40" : void 0 });
     if (o.playerInvolved) {
-      const stop2 = blocked ? 0.035 : h2.interval ? 0.018 : 0.028 + 0.075 * Math.min(1, w) + (crit ? 0.03 : 0) + (counter2 ? 0.05 : 0);
-      fx.stop(stop2);
+      const stop3 = blocked ? 0.035 : h2.interval ? 0.018 : 0.028 + 0.075 * Math.min(1, w) + (crit ? 0.03 : 0) + (counter2 ? 0.05 : 0);
+      fx.stop(stop3);
       fx.kick(ang, blocked ? 2.5 : 1.5 + 8 * Math.min(1, w));
       if (!blocked && w >= 0.7) fx.shake(0.12 + 0.25 * (w - 0.7));
       if (!blocked && h2.impactFrame) {
@@ -13342,7 +13342,7 @@
   var W2 = chart(4096);
   var H = chart(2048);
   var EQ = chart(1024);
-  var GL_HALF = chart(200);
+  var GL_HALF = chart(400);
   var CB = chart(100);
   var RL_HALF = chart(46);
   var RM_X = chart(2048);
@@ -13388,7 +13388,7 @@
   };
   var wrapX = (x) => (x % W2 + W2) % W2;
   var RMX = 900;
-  var RMY = 2150;
+  var RMY = 3300;
   function regionAt(x, y) {
     x = wrapX(x);
     if (y < POLAR || y >= H - POLAR) return REGION.POLAR;
@@ -13412,8 +13412,8 @@
     y: EQ,
     rx: 900,
     // the massif's reach across the Red Line (the coast bulges out this far)…
-    ry: 2150,
-    // …and along it
+    ry: 3300,
+    // …and along it (past the Calm Belt, into the Blues)
     top: 160,
     // water level of the summit pool, metres above the sea
     poolR: 56,
@@ -13431,7 +13431,7 @@
     downSpeed: 28
     // …and of the torrent down
   };
-  var UP_PTS = [[780, 2260], [440, 2190], [236, 2085], [205, 1800], [182, 1400], [150, 950], [70, 420], [24, 70], [8, 22]];
+  var UP_PTS = [[780, 3460], [440, 3390], [236, 3285], [205, 3e3], [192, 2400], [182, 1800], [168, 1400], [150, 950], [70, 420], [24, 70], [8, 22]];
   var EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
   var CANALS = [
     { id: "east_blue", sx: 1, sy: -1 },
@@ -13507,7 +13507,7 @@
   var POOL_CURL = 0.2;
   function canalAt(x, y, reach3 = 40, out = HIT) {
     const dxs = x - RM.x, dys = y - RM.y;
-    if (Math.abs(dxs) > 1400 || Math.abs(dys) > 2200) return null;
+    if (Math.abs(dxs) > 1400 || Math.abs(dys) > 3500) return null;
     const pd = Math.hypot(dxs, dys);
     if (pd < RM.poolR) {
       out.canal = CANALS[4];
@@ -23747,11 +23747,11 @@
       const st = dk3.lvl, up = upper(st), lo = lower(st);
       return end(st, there === up || there !== lo && path2[up]?.[there] !== lo);
     }
-    const next = path2[here]?.[there];
-    if (!next) return null;
+    const next2 = path2[here]?.[there];
+    if (!next2) return null;
     let best = null, bd = Infinity;
     for (const st of d.stairs) {
-      if (!(upper(st) === here && lower(st) === next || lower(st) === here && upper(st) === next)) continue;
+      if (!(upper(st) === here && lower(st) === next2 || lower(st) === here && upper(st) === next2)) continue;
       const p = end(st, lower(st) !== here);
       const dd = w.distance(a.x, a.y, p.x, p.y) + w.distance(p.x, p.y, tx, ty) * 0.5;
       if (dd < bd) {
@@ -40907,12 +40907,12 @@ Eating a Devil Fruit takes away your ability to swim \u2014 forever. Eating a se
         break;
       } else {
         const map = container.map;
-        let next = map[id];
-        if (next === void 0) {
-          next = new StructuredUniform(id);
-          addUniform(container, next);
+        let next2 = map[id];
+        if (next2 === void 0) {
+          next2 = new StructuredUniform(id);
+          addUniform(container, next2);
         }
-        container = next;
+        container = next2;
       }
     }
   }
@@ -51815,21 +51815,21 @@ void main() {
   function earcutLinked(ear, triangles, dim, minX, minY, invSize, pass) {
     if (!ear) return;
     if (!pass && invSize) indexCurve(ear, minX, minY, invSize);
-    let stop2 = ear, prev, next;
+    let stop3 = ear, prev, next2;
     while (ear.prev !== ear.next) {
       prev = ear.prev;
-      next = ear.next;
+      next2 = ear.next;
       if (invSize ? isEarHashed(ear, minX, minY, invSize) : isEar(ear)) {
         triangles.push(prev.i / dim | 0);
         triangles.push(ear.i / dim | 0);
-        triangles.push(next.i / dim | 0);
+        triangles.push(next2.i / dim | 0);
         removeNode(ear);
-        ear = next.next;
-        stop2 = next.next;
+        ear = next2.next;
+        stop3 = next2.next;
         continue;
       }
-      ear = next;
-      if (ear === stop2) {
+      ear = next2;
+      if (ear === stop3) {
         if (!pass) {
           earcutLinked(filterPoints(ear), triangles, dim, minX, minY, invSize, 1);
         } else if (pass === 1) {
@@ -51954,7 +51954,7 @@ void main() {
       p = p.next;
     } while (p !== outerNode);
     if (!m) return null;
-    const stop2 = m, mx = m.x, my = m.y;
+    const stop3 = m, mx = m.x, my = m.y;
     let tanMin = Infinity, tan;
     p = m;
     do {
@@ -51966,7 +51966,7 @@ void main() {
         }
       }
       p = p.next;
-    } while (p !== stop2);
+    } while (p !== stop3);
     return m;
   }
   function sectorContainsSector(m, p) {
@@ -63122,8 +63122,8 @@ void main() {
         k.add(cyl(0.15, 0.18, top + up - f, 8), { at: [px2, f, pz2], color: PILE, outline: 0.015 });
         if (rail) k.add(cyl(0.17, 0.17, 0.06, 8), { at: [px2, top + up, pz2], color: "#4a3223" });
         const nx = alongEdgeX ? px2 + 2 : px2, nz = alongEdgeX ? pz2 : pz2 + 2;
-        const next = alongEdgeX ? pier(i + 1, j) && water3(i + 1 + dx, j + dz) : pier(i, j + 1) && water3(i + dx, j + 1 + dz);
-        if (next) {
+        const next2 = alongEdgeX ? pier(i + 1, j) && water3(i + 1 + dx, j + dz) : pier(i, j + 1) && water3(i + dx, j + 1 + dz);
+        if (next2) {
           const y0b = -0.2, y1b = top - 0.6, len = Math.hypot(2, y1b - y0b), ang = Math.atan2(y1b - y0b, 2);
           for (const flip of [1, -1]) {
             k.save();
@@ -76514,16 +76514,16 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       let parts = [[Math.min(a0, a1), Math.max(a0, a1)]];
       for (const o of list) {
         if (o.y1 <= y0 || o.y0 >= y1) continue;
-        const next = [];
+        const next2 = [];
         for (const [p, q2] of parts) {
           if (o.a1 <= p || o.a0 >= q2) {
-            next.push([p, q2]);
+            next2.push([p, q2]);
             continue;
           }
-          if (o.a0 > p) next.push([p, o.a0]);
-          if (o.a1 < q2) next.push([o.a1, q2]);
+          if (o.a0 > p) next2.push([p, o.a0]);
+          if (o.a1 < q2) next2.push([o.a1, q2]);
         }
-        parts = next;
+        parts = next2;
       }
       return parts.filter(([p, q2]) => q2 - p > 0.02);
     };
@@ -80110,7 +80110,7 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
       gond.frustumCulled = false;
       root4.add(gond);
       const base2 = gg.attributes.position.array.slice();
-      const per = gg.attributes.position.count / 12;
+      const per2 = gg.attributes.position.count / 12;
       animate(root4, (t) => {
         const a0 = t * 0.12;
         wheel2.rotation.z = a0;
@@ -80119,7 +80119,7 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
           const ang = a0 + i / 12 * Math.PI * 2;
           const cx = Math.cos(ang) * 7.4, cy = 8.8 + Math.sin(ang) * 7.4;
           const sway = Math.sin(t * 1.3 + i) * 0.04;
-          for (let v = i * per; v < (i + 1) * per; v++) {
+          for (let v = i * per2; v < (i + 1) * per2; v++) {
             const lx = base2[v * 3] - i * 100, ly = base2[v * 3 + 1];
             a[v * 3] = cx + lx + ly * sway;
             a[v * 3 + 1] = cy + ly;
@@ -81753,8 +81753,8 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
     const top = TIERS2[2][0] + 1 + 3.5;
     const N8 = 64;
     const drop = new IcosahedronGeometry(0.11, 0);
-    const dp = drop.attributes.position.array, per = dp.length;
-    const arr = new Float32Array(per * N8);
+    const dp = drop.attributes.position.array, per2 = dp.length;
+    const arr = new Float32Array(per2 * N8);
     const g = new BufferGeometry();
     g.setAttribute("position", new BufferAttribute(arr, 3));
     const drops = new Mesh(g, glowMat(13625588, { opacity: 0.85 }));
@@ -81769,10 +81769,10 @@ vec3 paneRoom(vec3 p, vec3 eye, vec3 n, float floorY, float night) {
         const ph = (t * 0.55 + k / N8) % 1;
         const r4 = 0.2 + ph * 2.1, y = top + 6.2 * Math.sin(ph * Math.PI * 0.62) - ph * ph * 4.5;
         const cx = Math.cos(a) * r4, cz = Math.sin(a) * r4;
-        for (let v = 0; v < per; v += 3) {
-          arr[k * per + v] = dp[v] + cx;
-          arr[k * per + v + 1] = dp[v + 1] + y;
-          arr[k * per + v + 2] = dp[v + 2] + cz;
+        for (let v = 0; v < per2; v += 3) {
+          arr[k * per2 + v] = dp[v] + cx;
+          arr[k * per2 + v + 1] = dp[v + 1] + y;
+          arr[k * per2 + v + 2] = dp[v + 2] + cz;
         }
       }
       g.attributes.position.needsUpdate = true;
@@ -99376,8 +99376,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     cricket: {
       gap: 3,
       play(v) {
-        const f = rnd2(3900, 4900), n = 3 + Math.floor(Math.random() * 3), per = rnd2(0.024, 0.034), span2 = rnd2(2.5, 6);
-        for (let t = 0; t < span2; t += rnd2(0.45, 1.1)) for (let i = 0; i < n; i++) v.tone(t + i * per, 0.016, { freq: f, gain: 0.012 * (i ? 1 : 0.7), attack: 3e-3 });
+        const f = rnd2(3900, 4900), n = 3 + Math.floor(Math.random() * 3), per2 = rnd2(0.024, 0.034), span2 = rnd2(2.5, 6);
+        for (let t = 0; t < span2; t += rnd2(0.45, 1.1)) for (let i = 0; i < n; i++) v.tone(t + i * per2, 0.016, { freq: f, gain: 0.012 * (i ? 1 : 0.7), attack: 3e-3 });
       }
     },
     /** An owl: hoo... hoo-hoo. */
@@ -100470,8 +100470,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
   var ROOT_DK = new Color("#2a1f17");
   var MOSS2 = new Color("#33502f");
   function rim2(d) {
-    const per = 2 * Math.PI * Math.sqrt((d.R * d.R + d.Ry * d.Ry) / 2);
-    const n = Math.max(120, Math.round(per / 2));
+    const per2 = 2 * Math.PI * Math.sqrt((d.R * d.R + d.Ry * d.Ry) / 2);
+    const n = Math.max(120, Math.round(per2 / 2));
     const out = [];
     for (let i = 0; i < n; i++) {
       const a = i / n * Math.PI * 2, r4 = drumR(d, a);
@@ -100535,9 +100535,9 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       { step: 5.6, out: 3, y: H5 - 3.9, r: [5, 6.6], sq: 0.62, c0: LEAF_LO2, c1: LEAF2, jy: 1 },
       { step: 7, out: 2.4, y: H5 - 8.2, r: [4.2, 5.6], sq: 0.7, c0: LEAF_DK, c1: LEAF_LO2, jy: 0.8 }
     ];
-    const per = pts.length * 2;
+    const per2 = pts.length * 2;
     rows.forEach((row, ri) => {
-      const n = Math.round(per / row.step);
+      const n = Math.round(per2 / row.step);
       for (let i = 0; i < n; i++) {
         const p = pts[Math.floor(i / n * pts.length)];
         if (inGap(gaps, p.x, p.y, ri ? 0 : 1)) continue;
@@ -103396,16 +103396,16 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         world.setType(x, y, world.type(x, y) === T2.SNOWROCK ? T2.SNOW : T2.ROCK);
         for (const [i, j] of [[0, 0], [1, 0], [0, 1], [1, 1]]) heights.delete(key2(x + i, y + j));
       }
-      const seen = /* @__PURE__ */ new Set(), next = [];
+      const seen = /* @__PURE__ */ new Set(), next2 = [];
       for (let k = 0; k < todo.length; k += 2) {
         for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
           const x = todo[k] + i, y = todo[k + 1] + j, s = key2(x, y);
           if (seen.has(s)) continue;
           seen.add(s);
-          if (gentle(x, y)) next.push(x, y);
+          if (gentle(x, y)) next2.push(x, y);
         }
       }
-      todo = next;
+      todo = next2;
     }
   }
   var POLE_EDGE = chart(20);
@@ -103738,8 +103738,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       }
       if (!ok) continue;
       const calm = reg6 === REGION.CALM_NORTH || reg6 === REGION.CALM_SOUTH;
-      const cold = y < chart(260) || y > H - chart(260);
-      const tropical = !cold && Math.abs(y - EQ) < chart(500);
+      const cold = y < chart(190) || y > H - chart(190);
+      const tropical = !cold && Math.abs(y - EQ) < chart(620);
       const kind = rng4.next();
       let ground = T2.GRASS, clim = CLIMATE.TEMPERATE, trees = "oak";
       if (cold) {
@@ -103983,7 +103983,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Dawn Island",
       sea: "east_blue",
       x: 3790,
-      y: 300,
+      y: 221,
       w: 210,
       h: 140,
       climate: "temperate",
@@ -104046,7 +104046,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Goat Island",
       sea: "east_blue",
       x: 3625,
-      y: 440,
+      y: 321,
       w: 44,
       h: 36,
       climate: "tropical",
@@ -104059,7 +104059,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Yotsuba Island",
       sea: "east_blue",
       x: 3450,
-      y: 265,
+      y: 197,
       w: 120,
       h: 90,
       climate: "temperate",
@@ -104107,7 +104107,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Shimotsuki Village",
       sea: "east_blue",
       x: 3570,
-      y: 130,
+      y: 100,
       w: 100,
       h: 78,
       climate: "sakura",
@@ -104139,7 +104139,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Organ Islands",
       sea: "east_blue",
       x: 3240,
-      y: 350,
+      y: 257,
       w: 125,
       h: 90,
       climate: "temperate",
@@ -104174,7 +104174,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Island of Rare Animals",
       sea: "east_blue",
       x: 3085,
-      y: 235,
+      y: 175,
       w: 48,
       h: 42,
       climate: "jungle",
@@ -104187,7 +104187,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Gecko Islands",
       sea: "east_blue",
       x: 3010,
-      y: 475,
+      y: 346,
       w: 145,
       h: 110,
       climate: "temperate",
@@ -104241,7 +104241,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Baratie",
       sea: "east_blue",
       x: 2850,
-      y: 570,
+      y: 414,
       w: 27,
       h: 9,
       climate: "temperate",
@@ -104268,7 +104268,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Conomi Islands",
       sea: "east_blue",
       x: 2660,
-      y: 420,
+      y: 307,
       w: 210,
       h: 150,
       climate: "tropical",
@@ -104340,7 +104340,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Oykot Kingdom",
       sea: "east_blue",
       x: 3880,
-      y: 610,
+      y: 443,
       w: 125,
       h: 90,
       climate: "temperate",
@@ -104365,7 +104365,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Polestar Islands",
       sea: "east_blue",
       x: 2385,
-      y: 590,
+      y: 428,
       w: 160,
       h: 115,
       climate: "temperate",
@@ -104404,7 +104404,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Mirror Ball Island",
       sea: "east_blue",
       x: 3390,
-      y: 650,
+      y: 471,
       w: 72,
       h: 55,
       climate: "spring",
@@ -104427,7 +104427,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Tequila Wolf",
       sea: "east_blue",
       x: 3935,
-      y: 170,
+      y: 129,
       w: 110,
       h: 50,
       climate: "winter",
@@ -104443,7 +104443,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Cozia",
       sea: "east_blue",
       x: 3620,
-      y: 660,
+      y: 478,
       w: 70,
       h: 56,
       climate: "temperate",
@@ -104456,7 +104456,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Sixis",
       sea: "east_blue",
       x: 3160,
-      y: 660,
+      y: 478,
       w: 52,
       h: 40,
       climate: "tropical",
@@ -104469,7 +104469,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Satsuruzo Kingdom",
       sea: "east_blue",
       x: 2900,
-      y: 160,
+      y: 122,
       w: 92,
       h: 70,
       climate: "temperate",
@@ -104487,7 +104487,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Downs",
       sea: "north_blue",
       x: 190,
-      y: 170,
+      y: 129,
       w: 90,
       h: 70,
       climate: "marsh",
@@ -104539,7 +104539,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Flevance",
       sea: "north_blue",
       x: 560,
-      y: 190,
+      y: 143,
       w: 210,
       h: 150,
       climate: "winter",
@@ -104605,7 +104605,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Whiteland Kingdom",
       sea: "north_blue",
       x: 1e3,
-      y: 120,
+      y: 93,
       w: 130,
       h: 80,
       climate: "winter",
@@ -104647,7 +104647,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Lvneel Kingdom",
       sea: "north_blue",
       x: 960,
-      y: 330,
+      y: 243,
       w: 240,
       h: 160,
       climate: "temperate",
@@ -104726,7 +104726,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Deul Kingdom",
       sea: "north_blue",
       x: 1440,
-      y: 190,
+      y: 143,
       w: 190,
       h: 130,
       climate: "temperate",
@@ -104778,7 +104778,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Germa Kingdom",
       sea: "north_blue",
       x: 1790,
-      y: 330,
+      y: 243,
       w: 120,
       h: 90,
       climate: "temperate",
@@ -104843,7 +104843,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Spider Miles",
       sea: "north_blue",
       x: 330,
-      y: 420,
+      y: 307,
       w: 170,
       h: 120,
       climate: "rocky",
@@ -104923,7 +104923,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Rakesh",
       sea: "north_blue",
       x: 200,
-      y: 620,
+      y: 450,
       w: 130,
       h: 95,
       climate: "autumn",
@@ -104974,7 +104974,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Notice",
       sea: "north_blue",
       x: 640,
-      y: 470,
+      y: 343,
       w: 140,
       h: 100,
       climate: "spring",
@@ -105025,7 +105025,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Kuen Village",
       sea: "north_blue",
       x: 780,
-      y: 640,
+      y: 464,
       w: 120,
       h: 90,
       climate: "autumn",
@@ -105074,7 +105074,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Rubeck Island",
       sea: "north_blue",
       x: 1180,
-      y: 480,
+      y: 350,
       w: 70,
       h: 55,
       climate: "winter",
@@ -105107,7 +105107,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Minion Island",
       sea: "north_blue",
       x: 1400,
-      y: 440,
+      y: 321,
       w: 140,
       h: 110,
       climate: "winter",
@@ -105153,7 +105153,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Swallow Island",
       sea: "north_blue",
       x: 1300,
-      y: 630,
+      y: 457,
       w: 150,
       h: 110,
       climate: "winter",
@@ -105218,7 +105218,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Ohara",
       sea: "west_blue",
       x: 300,
-      y: 1720,
+      y: 1807,
       w: 180,
       h: 130,
       climate: "temperate",
@@ -105309,7 +105309,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Passage Island",
       sea: "west_blue",
       x: 560,
-      y: 1560,
+      y: 1692,
       w: 110,
       h: 80,
       climate: "temperate",
@@ -105354,7 +105354,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "God Valley",
       sea: "west_blue",
       x: 710,
-      y: 1400,
+      y: 1578,
       w: 120,
       h: 80,
       climate: "rocky",
@@ -105412,7 +105412,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Esperia Kingdom",
       sea: "west_blue",
       x: 860,
-      y: 1830,
+      y: 1885,
       w: 200,
       h: 120,
       climate: "autumn",
@@ -105515,7 +105515,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Kano Country",
       sea: "west_blue",
       x: 1080,
-      y: 1590,
+      y: 1714,
       w: 260,
       h: 170,
       climate: "spring",
@@ -105609,7 +105609,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Ballywood Kingdom",
       sea: "west_blue",
       x: 1180,
-      y: 1400,
+      y: 1578,
       w: 170,
       h: 90,
       climate: "tropical",
@@ -105668,7 +105668,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Toroa",
       sea: "west_blue",
       x: 1390,
-      y: 1870,
+      y: 1914,
       w: 140,
       h: 96,
       climate: "temperate",
@@ -105721,7 +105721,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Soja Island",
       sea: "west_blue",
       x: 1620,
-      y: 1690,
+      y: 1785,
       w: 160,
       h: 104,
       climate: "tropical",
@@ -105770,7 +105770,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Ilisia Kingdom",
       sea: "west_blue",
       x: 1500,
-      y: 1440,
+      y: 1607,
       w: 220,
       h: 120,
       climate: "temperate",
@@ -105839,7 +105839,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Marine 80th Branch",
       sea: "west_blue",
       x: 1765,
-      y: 1565,
+      y: 1696,
       w: 100,
       h: 70,
       climate: "temperate",
@@ -105885,7 +105885,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Las Camp",
       sea: "west_blue",
       x: 1700,
-      y: 1890,
+      y: 1928,
       w: 170,
       h: 100,
       climate: "temperate",
@@ -105944,7 +105944,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Asshina Gainone Kingdom",
       sea: "west_blue",
       x: 520,
-      y: 1880,
+      y: 1921,
       w: 150,
       h: 100,
       climate: "tropical",
@@ -105996,7 +105996,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Briss Kingdom",
       sea: "south_blue",
       x: 2430,
-      y: 1495,
+      y: 1646,
       w: 170,
       h: 120,
       climate: "temperate",
@@ -106056,7 +106056,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Centaurea",
       sea: "south_blue",
       x: 2785,
-      y: 1452,
+      y: 1615,
       w: 220,
       h: 150,
       climate: "autumn",
@@ -106147,7 +106147,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Tumi",
       sea: "south_blue",
       x: 3090,
-      y: 1422,
+      y: 1594,
       w: 120,
       h: 90,
       climate: "autumn",
@@ -106194,7 +106194,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Karate Island",
       sea: "south_blue",
       x: 3370,
-      y: 1446,
+      y: 1611,
       w: 140,
       h: 110,
       climate: "tropical",
@@ -106252,7 +106252,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Torino Kingdom",
       sea: "south_blue",
       x: 3702,
-      y: 1452,
+      y: 1615,
       w: 124,
       h: 104,
       climate: "tropical",
@@ -106311,7 +106311,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Kutsukku Island",
       sea: "south_blue",
       x: 2500,
-      y: 1706,
+      y: 1797,
       w: 240,
       h: 170,
       climate: "autumn",
@@ -106416,7 +106416,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Baterilla",
       sea: "south_blue",
       x: 2890,
-      y: 1665,
+      y: 1767,
       w: 150,
       h: 104,
       climate: "tropical",
@@ -106492,7 +106492,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Sorbet Kingdom",
       sea: "south_blue",
       x: 3270,
-      y: 1690,
+      y: 1785,
       w: 280,
       h: 200,
       climate: "tropical",
@@ -106594,7 +106594,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Samba Kingdom",
       sea: "south_blue",
       x: 3650,
-      y: 1665,
+      y: 1767,
       w: 150,
       h: 100,
       climate: "tropical",
@@ -106647,7 +106647,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Samuwanai Island",
       sea: "south_blue",
       x: 3930,
-      y: 1640,
+      y: 1749,
       w: 46,
       h: 40,
       climate: "tropical",
@@ -106669,7 +106669,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Vespa Kingdom",
       sea: "south_blue",
       x: 2440,
-      y: 1910,
+      y: 1942,
       w: 120,
       h: 80,
       climate: "temperate",
@@ -106709,7 +106709,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Taya Kingdom",
       sea: "south_blue",
       x: 2800,
-      y: 1895,
+      y: 1931,
       w: 140,
       h: 100,
       climate: "temperate",
@@ -106753,7 +106753,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Roshwan Kingdom",
       sea: "south_blue",
       x: 3190,
-      y: 1900,
+      y: 1935,
       w: 170,
       h: 110,
       climate: "winter",
@@ -106798,7 +106798,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Evil Black Drum Kingdom",
       sea: "south_blue",
       x: 3620,
-      y: 1895,
+      y: 1931,
       w: 150,
       h: 110,
       climate: "winter",
@@ -106846,7 +106846,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Twin Cape",
       sea: "paradise",
       x: 2268,
-      y: 1025,
+      y: 1026,
       w: 76,
       h: 150,
       climate: "temperate",
@@ -106872,7 +106872,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         { id: "harpoon_point", dx: -0.8, dy: -0.62 }
       ],
       docks: [{ dx: 0.62, dy: -0.6, dir: "e", len: 5, name: "Twin Cape Pier" }],
-      logNext: ["cactus_island", "kyuka_island", "kenzan_island", "foolshout_island", "ruluka_island", "navarone", "vira"],
+      logNext: ["cactus_island", "kyuka_island", "kenzan_island", "foolshout_island", "ruluka_island", "navarone", "vira", "warship_island", "hannabal", "saltpetre_isle"],
       logTime: 1,
       danger: 3,
       tagline: "The canal down Reverse Mountain ends here \u2014 and a whale still waits for friends who never came back.",
@@ -106884,7 +106884,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Navarone",
       sea: "paradise",
       x: 2268,
-      y: 882,
+      y: 740,
       w: 58,
       h: 56,
       climate: "temperate",
@@ -106929,7 +106929,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Ruluka Island",
       sea: "paradise",
       x: 2268,
-      y: 1168,
+      y: 1312,
       w: 58,
       h: 56,
       climate: "spring",
@@ -106966,7 +106966,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Kenzan Island",
       sea: "paradise",
       x: 2378,
-      y: 948,
+      y: 872,
       w: 72,
       h: 60,
       climate: "rocky",
@@ -107011,7 +107011,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Foolshout Island",
       sea: "paradise",
       x: 2376,
-      y: 1088,
+      y: 1152,
       w: 70,
       h: 58,
       climate: "tropical",
@@ -107050,7 +107050,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Cactus Island",
       sea: "paradise",
       x: 2508,
-      y: 1012,
+      y: 1e3,
       w: 116,
       h: 92,
       climate: "desert",
@@ -107103,7 +107103,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Kyuka Island",
       sea: "paradise",
       x: 2500,
-      y: 880,
+      y: 736,
       w: 72,
       h: 56,
       climate: "tropical",
@@ -107142,7 +107142,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Vira",
       sea: "paradise",
       x: 2508,
-      y: 1152,
+      y: 1280,
       w: 78,
       h: 58,
       climate: "spring",
@@ -107182,7 +107182,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Little Garden",
       sea: "paradise",
       x: 2692,
-      y: 885,
+      y: 746,
       w: 124,
       h: 92,
       climate: "prehistoric",
@@ -107222,7 +107222,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Drum Island",
       sea: "paradise",
       x: 2690,
-      y: 1126,
+      y: 1228,
       w: 132,
       h: 112,
       climate: "winter",
@@ -107321,7 +107321,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Nanimonai Island",
       sea: "paradise",
       x: 2794,
-      y: 972,
+      y: 920,
       w: 32,
       h: 26,
       climate: "marsh",
@@ -107344,7 +107344,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Alabasta Kingdom",
       sea: "paradise",
       x: 2976,
-      y: 1112,
+      y: 1200,
       w: 282,
       h: 200,
       climate: "desert",
@@ -107506,7 +107506,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Jaya",
       sea: "paradise",
       x: 2915,
-      y: 877,
+      y: 730,
       w: 124,
       h: 86,
       climate: "jungle",
@@ -107559,7 +107559,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Long Ring Long Land",
       sea: "paradise",
       x: 3064,
-      y: 874,
+      y: 724,
       w: 124,
       h: 68,
       climate: "temperate",
@@ -107616,17 +107616,17 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     const s = r4 - 4;
     return { op: "path", points: [[(ax + ux * s) / hw, (ay + uy * s) / hh], [(bx - ux * s) / hw, (by - uy * s) / hh]], width: 3, tile: T2.BRIDGE };
   }
-  var W7 = { x: 3300, y: 1e3, w: 220, h: 160 };
+  var W7 = { x: 3300, y: 976, w: 220, h: 160 };
   var W7_UPPER = { style: "noble", plaza: false, ground: T2.STONE, road: T2.STONE, plazaTile: T2.STONE };
-  var EL2 = { x: 3505, y: 1010, w: 110, h: 100 };
-  var TB = { x: 3675, y: 1010, w: 160, h: 130 };
-  var SB = { x: 3880, y: 1060, w: 180, h: 140 };
-  var MF = { x: 3880, y: 890, w: 150, h: 100 };
-  var KG = { x: 3610, y: 866, w: 76, h: 56 };
-  var IDN = { x: 3650, y: 1262, w: 64, h: 48 };
-  var RU = { x: 3380, y: 776, w: 80, h: 46 };
-  var SPA = { x: 3620, y: 1170, w: 56, h: 44 };
-  var BO = { x: 3385, y: 1165, w: 90, h: 70 };
+  var EL2 = { x: 3505, y: 996, w: 110, h: 100 };
+  var TB = { x: 3675, y: 996, w: 160, h: 130 };
+  var SB = { x: 3880, y: 1096, w: 180, h: 140 };
+  var MF = { x: 3880, y: 756, w: 150, h: 100 };
+  var KG = { x: 3610, y: 708, w: 76, h: 56 };
+  var IDN = { x: 3650, y: 1462, w: 64, h: 48 };
+  var RU = { x: 3380, y: 576, w: 80, h: 46 };
+  var SPA = { x: 3620, y: 1316, w: 56, h: 44 };
+  var BO = { x: 3385, y: 1306, w: 90, h: 70 };
   var GROVES = [
     { dx: -0.52, dy: 0.3 },
     // Groves 1-9 (lawless; Human Auctioning House)
@@ -107826,7 +107826,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "St. Poplar",
       sea: "paradise",
       x: 3232,
-      y: 862,
+      y: 700,
       w: 64,
       h: 46,
       climate: "spring",
@@ -107860,7 +107860,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Pucci",
       sea: "paradise",
       x: 3345,
-      y: 862,
+      y: 700,
       w: 60,
       h: 44,
       climate: "temperate",
@@ -107893,7 +107893,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "San Faldo",
       sea: "paradise",
       x: 3260,
-      y: 1160,
+      y: 1296,
       w: 76,
       h: 52,
       climate: "temperate",
@@ -108318,7 +108318,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Namakura Island",
       sea: "paradise",
       x: 3725,
-      y: 862,
+      y: 700,
       w: 56,
       h: 44,
       climate: "tropical",
@@ -108346,7 +108346,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Karakuri Island",
       sea: "paradise",
       x: 3520,
-      y: 1150,
+      y: 1276,
       w: 80,
       h: 70,
       climate: "winter",
@@ -108402,7 +108402,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Momoiro Island",
       sea: "paradise",
       x: 3715,
-      y: 1165,
+      y: 1306,
       w: 76,
       h: 64,
       climate: "sakura",
@@ -108459,7 +108459,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Amazon Lily",
       sea: "calm_belt",
       x: 3560,
-      y: 784,
+      y: 584,
       w: 130,
       h: 56,
       climate: "jungle",
@@ -108528,7 +108528,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "New Marineford",
       sea: "new_world",
       x: 150,
-      y: 872,
+      y: 720,
       w: 76,
       h: 60,
       climate: "rocky",
@@ -108577,7 +108577,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Marine Base G-5",
       sea: "new_world",
       x: 150,
-      y: 1160,
+      y: 1296,
       w: 56,
       h: 44,
       climate: "rocky",
@@ -108613,7 +108613,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Raijin Island",
       sea: "new_world",
       x: 268,
-      y: 868,
+      y: 712,
       w: 66,
       h: 52,
       climate: "rocky",
@@ -108657,7 +108657,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Risky Red Island",
       sea: "new_world",
       x: 300,
-      y: 1150,
+      y: 1276,
       w: 74,
       h: 56,
       climate: "rocky",
@@ -108700,7 +108700,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Mystoria Island",
       sea: "new_world",
       x: 400,
-      y: 870,
+      y: 716,
       w: 64,
       h: 50,
       climate: "autumn",
@@ -108739,7 +108739,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Punk Hazard",
       sea: "new_world",
       x: 290,
-      y: 1005,
+      y: 986,
       w: 170,
       h: 130,
       climate: "volcanic",
@@ -108800,7 +108800,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Dressrosa",
       sea: "new_world",
       x: 555,
-      y: 1040,
+      y: 1056,
       w: 280,
       h: 196,
       climate: "spring",
@@ -108912,7 +108912,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Green Bit",
       sea: "new_world",
       x: 555,
-      y: 880,
+      y: 736,
       w: 96,
       h: 60,
       climate: "jungle",
@@ -108951,7 +108951,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Applenine Island",
       sea: "new_world",
       x: 470,
-      y: 1188,
+      y: 1352,
       w: 60,
       h: 44,
       climate: "winter",
@@ -108986,7 +108986,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Sphinx",
       sea: "new_world",
       x: 690,
-      y: 872,
+      y: 720,
       w: 64,
       h: 52,
       climate: "temperate",
@@ -109028,7 +109028,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Zou",
       sea: "new_world",
       x: 845,
-      y: 878,
+      y: 732,
       w: 150,
       h: 92,
       climate: "temperate",
@@ -109078,7 +109078,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Whole Cake Island",
       sea: "new_world",
       x: 846,
-      y: 1062,
+      y: 1100,
       w: 250,
       h: 204,
       climate: "candy",
@@ -109150,7 +109150,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Cacao Island",
       sea: "new_world",
       x: 660,
-      y: 1188,
+      y: 1352,
       w: 60,
       h: 48,
       climate: "candy",
@@ -109190,7 +109190,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Foodvalten",
       sea: "new_world",
       x: 1082,
-      y: 1150,
+      y: 1276,
       w: 76,
       h: 60,
       climate: "spring",
@@ -109239,7 +109239,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Wano Country",
       sea: "new_world",
       x: 1185,
-      y: 952,
+      y: 880,
       w: 290,
       h: 212,
       climate: "sakura",
@@ -109418,7 +109418,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Onigashima",
       sea: "new_world",
       x: 1205,
-      y: 1140,
+      y: 1256,
       w: 110,
       h: 90,
       climate: "rocky",
@@ -109462,7 +109462,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Baltigo",
       sea: "new_world",
       x: 1317,
-      y: 1150,
+      y: 1276,
       w: 60,
       h: 56,
       climate: "rocky",
@@ -109515,7 +109515,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Winner Island",
       sea: "new_world",
       x: 1405,
-      y: 876,
+      y: 728,
       w: 80,
       h: 60,
       climate: "rocky",
@@ -109545,7 +109545,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Gartel Island",
       sea: "new_world",
       x: 1405,
-      y: 983,
+      y: 942,
       w: 84,
       h: 90,
       climate: "temperate",
@@ -109590,7 +109590,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Egghead",
       sea: "new_world",
       x: 1440,
-      y: 1110,
+      y: 1196,
       w: 130,
       h: 100,
       climate: "tropical",
@@ -109676,7 +109676,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Elbaph",
       sea: "new_world",
       x: 1600,
-      y: 930,
+      y: 836,
       w: 230,
       h: 190,
       climate: "winter",
@@ -109840,7 +109840,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Hachinosu",
       sea: "new_world",
       x: 1600,
-      y: 1135,
+      y: 1246,
       w: 110,
       h: 90,
       climate: "rocky",
@@ -109896,7 +109896,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Karai Bari Island",
       sea: "new_world",
       x: 1790,
-      y: 876,
+      y: 728,
       w: 80,
       h: 60,
       climate: "tropical",
@@ -109945,7 +109945,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Lodestar Island",
       sea: "new_world",
       x: 1790,
-      y: 1175,
+      y: 1326,
       w: 90,
       h: 60,
       climate: "rocky",
@@ -109991,7 +109991,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       name: "Laugh Tale",
       sea: "new_world",
       x: 1795,
-      y: 1025,
+      y: 1026,
       w: 90,
       h: 72,
       hidden: true,
@@ -110048,6 +110048,861 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     }
   ];
 
+  // src/data/islands/grandLine3.js
+  function isle(o) {
+    const { town, marks, ...d } = o;
+    const def = { rough: 0.22, logTime: 1, ...d };
+    if (town) {
+      def.towns = [{
+        id: `${o.id}_town`,
+        name: town.name,
+        dx: town.dx ?? -0.1,
+        dy: town.dy ?? 0.1,
+        w: town.w || 34,
+        h: town.h || 22,
+        style: town.style || "town",
+        dockDir: town.dock || "s",
+        plaza: town.plaza ?? "well",
+        buildings: town.buildings.map((b) => Array.isArray(b) ? { role: b[0], name: b[1], ...b[2] || {} } : { role: b }),
+        houses: town.houses ?? 3
+      }];
+    }
+    if (marks) def.landmarks = marks.map(([kind, dx, dy, name, extra]) => ({ kind, dx, dy, ...name ? { name } : {}, ...extra || {} }));
+    return def;
+  }
+  var PARADISE_3 = [
+    // ------------------------------------------------------------ Warship Island (anime)
+    isle({
+      id: "warship_island",
+      name: "Warship Island",
+      sea: "paradise",
+      x: 2440,
+      y: 1380,
+      w: 84,
+      h: 64,
+      climate: "tropical",
+      mountains: [{ name: "Dragon's Nest", dx: 0.3, dy: -0.3, r: 0.25, h: 0.7 }],
+      town: { name: "Warship Village", style: "village", dock: "w", buildings: [["inn", "The Sennen Inn"], ["doctor", "Grandpa Boo's"], "shop"] },
+      marks: [["ruins", 0.35, -0.35, "The Lost Island shrine"], ["bones", 0.5, -0.1], ["sign", -0.4, 0.4, "Warship Island \u2014 Marine supply post"]],
+      logNext: ["clockwork_island", "hannabal"],
+      danger: 3,
+      music: "town",
+      tagline: "A girl who hears animals, a thousand-year dragon, and the Marines who want its secret. (Anime tale.)"
+    }),
+    // ------------------------------------------------------------ Clockwork Island (film)
+    isle({
+      id: "clockwork_island",
+      name: "Clockwork Island",
+      sea: "paradise",
+      x: 2600,
+      y: 1400,
+      w: 70,
+      h: 70,
+      climate: "rocky",
+      mountains: [{ name: "The Clock Tower Crag", dx: 0, dy: -0.2, r: 0.3, h: 1, cliff: 200 }],
+      town: { name: "Gearwork Harbour", style: "city", dock: "s", plaza: "statue", buildings: [["hall", "Trump Siblings' Clock Fortress"], ["weapons", "Cog & Spring Armoury"], "inn", "bar"] },
+      marks: [["tower", 0, -0.35, "The Great Clock"], ["wheel", 0.3, 0.1], ["wheel", -0.3, 0.15]],
+      logNext: ["hannabal", "crown_island"],
+      danger: 4,
+      music: "town",
+      tagline: "An island wound like a clock, with a fortress on top that strikes the hour. (Film tale.)"
+    }),
+    // ------------------------------------------------------------ Hannabal (film: the Dead End race)
+    isle({
+      id: "hannabal",
+      name: "Hannabal Harbour",
+      sea: "paradise",
+      x: 2580,
+      y: 1120,
+      w: 92,
+      h: 60,
+      climate: "temperate",
+      town: { name: "Hannabal", style: "port", dock: "e", w: 44, h: 26, plaza: "flagpole", buildings: [["bar", "The Dead End Saloon"], ["bounty", "Race Office"], ["shipwright", "Hannabal Slipway"], "inn", "shop", ["market", "Gambler's Row"]] },
+      marks: [["flagpole", 0.4, 0.3, "The Dead End starting line"], ["boat", 0.5, 0.45], ["boat", 0.55, 0.2]],
+      logNext: ["kettle_island", "drum_island"],
+      danger: 4,
+      music: "town",
+      tagline: "A smugglers' port where the deadliest boat race on the Grand Line begins. (Film tale.)"
+    }),
+    // ------------------------------------------------------------ Crown Island (film)
+    isle({
+      id: "crown_island",
+      name: "Crown Island",
+      sea: "paradise",
+      x: 2800,
+      y: 1385,
+      w: 110,
+      h: 80,
+      climate: "jungle",
+      mountains: [{ name: "Crown Peak", dx: 0.1, dy: -0.25, r: 0.25, h: 0.9 }],
+      town: { name: "Animal Kingdom", style: "tribal", dock: "w", buildings: [["palace", "The Antler Throne"], ["doctor", "Herb Hut"], "shop"] },
+      marks: [["statue", 0.1, -0.35, "The Antler Crown"], ["totem", -0.3, -0.1], ["totem", 0.4, 0.2]],
+      logNext: ["omatsuri_island", "alabasta"],
+      danger: 4,
+      music: "town",
+      tagline: "An island of strange animals who need a king \u2014 and crowned a reindeer once. (Film tale.)"
+    }),
+    // ------------------------------------------------------------ Omatsuri Island (film)
+    isle({
+      id: "omatsuri_island",
+      name: "Omatsuri Island",
+      sea: "paradise",
+      x: 3020,
+      y: 1385,
+      w: 100,
+      h: 72,
+      climate: "tropical",
+      town: { name: "Festival Resort", style: "noble", dock: "n", plaza: "fountain", buildings: [["hall", "Baron Omatsuri's Trials"], ["restaurant", "Goldfish Grill"], "inn", "bar", ["shop", "Prize Stall"]] },
+      marks: [["statue", 0.35, -0.2, "The Lily Carnation"], ["grave", -0.4, -0.3], ["grave", -0.45, -0.2], ["lantern", 0.1, 0.4]],
+      logNext: ["monsoon_key", "asuka_island"],
+      danger: 5,
+      music: "night",
+      tagline: "A holiday island of games and prizes. The baron who runs it has lost crews before. (Film tale.)"
+    }),
+    // ------------------------------------------------------------ Asuka Island (film)
+    isle({
+      id: "asuka_island",
+      name: "Asuka Island",
+      sea: "paradise",
+      x: 3200,
+      y: 1140,
+      w: 90,
+      h: 70,
+      climate: "sakura",
+      mountains: [{ name: "Seven Star Hill", dx: 0.3, dy: -0.2, r: 0.22, h: 0.7 }],
+      town: { name: "Asuka Village", style: "wano", dock: "s", buildings: [["dojo", "Hall of the Seven Stars"], ["inn", "Moonlit Inn"], "shop"] },
+      marks: [["torii", 0.3, -0.35, "Shrine of the Sacred Sword"], ["statue", 0.25, -0.15], ["lantern", -0.2, 0.3]],
+      logNext: ["water_7", "whistle_rock"],
+      danger: 5,
+      music: "town",
+      tagline: "A quiet island of cherry trees, and the cursed sword Shichiseiken sealed in its shrine. (Film tale.)"
+    }),
+    // ------------------------------------------------------------ Banaro Island (canon)
+    isle({
+      id: "banaro_island",
+      name: "Banaro Island",
+      sea: "paradise",
+      x: 3150,
+      y: 860,
+      w: 88,
+      h: 60,
+      climate: "desert",
+      areas: [{ name: "The scorched quarter", tile: T2.ASH, dx: 0.1, dy: 0, rx: 0.28, ry: 0.22 }],
+      town: { name: "Banaro", style: "desert", dock: "w", buildings: [["bar", "The Last Bar"], "inn", "shop"] },
+      marks: [["ruins", 0.15, 0, "Where fire met darkness"], ["ruins", 0.3, 0.1], ["ruins", -0.05, -0.15], ["skull", 0.4, -0.3]],
+      logNext: ["water_7", "tumbleweed_island"],
+      danger: 6,
+      music: "night",
+      tagline: "Half a town, burnt black. Fire Fist Ace fought Blackbeard here \u2014 and lost."
+    }),
+    // ------------------------------------------------------------ Mecha Island (film)
+    isle({
+      id: "mecha_island",
+      name: "Mecha Island",
+      sea: "paradise",
+      x: 3460,
+      y: 840,
+      w: 96,
+      h: 76,
+      climate: "rocky",
+      mountains: [{ name: "Karakuri Castle crag", dx: 0, dy: -0.15, r: 0.3, h: 0.95, cliff: 180 }],
+      town: { name: "Karakuri Town", style: "future", dock: "s", buildings: [["palace", "Karakuri Castle"], ["weapons", "Ratchet's Workshop"], "inn", "shop"] },
+      marks: [["tower", 0, -0.3, "The Golden Crown tower"], ["wheel", -0.3, 0.1], ["crystal", 0.35, -0.1]],
+      logNext: ["enies_lobby", "mistletoe_island"],
+      danger: 5,
+      music: "town",
+      tagline: "A castle full of clockwork soldiers, and a lord hunting the treasure of the Golden Crown. (Film tale.)"
+    }),
+    // ------------------------------------------------------------ Delta Island (film)
+    isle({
+      id: "delta_island",
+      name: "Delta Island",
+      sea: "paradise",
+      x: 3580,
+      y: 1160,
+      w: 120,
+      h: 80,
+      climate: "tropical",
+      town: { name: "Pirates Expo", style: "city", dock: "w", w: 46, h: 28, plaza: "platform", buildings: [["hall", "Festa's Expo Hall"], ["market", "The Grand Fair"], ["bar", "Expo Tavern"], ["restaurant", "Pirate Food Court"], "inn", ["weapons", "Treasure Hunters' Supply"]] },
+      marks: [["flagpole", 0.3, -0.3, "The Expo flag"], ["stall", 0.1, 0.3], ["stall", -0.2, 0.35], ["tent", 0.4, 0.1]],
+      logNext: ["sabaody", "hammerhead_island"],
+      danger: 6,
+      music: "town",
+      tagline: "The Pirates Festival: every crew on the sea, one treasure hunt, and a Marine trap waiting. (Film tale.)"
+    }),
+    // ===================================================== the game's own (Paradise)
+    isle({
+      id: "saltpetre_isle",
+      name: "Saltpetre Isle",
+      sea: "paradise",
+      x: 2420,
+      y: 660,
+      w: 66,
+      h: 52,
+      climate: "rocky",
+      town: { name: "Bangtown", style: "town", dock: "s", buildings: [["shop", "Firework Works"], ["weapons", "Powder Merchant"], "inn"] },
+      marks: [["cannon", 0.3, -0.2], ["cannon", 0.35, -0.05], ["barrel", 0.2, 0.2]],
+      logNext: ["kyuka_island", "bellwether_island"],
+      danger: 3,
+      music: "town",
+      tagline: "Fireworks makers. Every night something goes up; most nights it's on purpose."
+    }),
+    isle({
+      id: "bellwether_island",
+      name: "Bellwether Island",
+      sea: "paradise",
+      x: 2760,
+      y: 650,
+      w: 80,
+      h: 60,
+      climate: "autumn",
+      areas: [{ tile: T2.FARM, dx: -0.4, dy: -0.2, rx: 0.2, ry: 0.15 }],
+      town: { name: "Bellwether", style: "village", dock: "s", buildings: [["inn", "The Woolly Ram"], "shop", ["restaurant", "Mutton Kitchen"]] },
+      marks: [["windmill", -0.35, 0.25], ["haystack", -0.2, -0.35], ["fence", 0.3, 0.3]],
+      logNext: ["little_garden", "lanternfish_cove"],
+      danger: 3,
+      music: "town",
+      tagline: "Shepherds and bells. The sheep are the size of houses and the wolves are worse."
+    }),
+    isle({
+      id: "kettle_island",
+      name: "Kettle Island",
+      sea: "paradise",
+      x: 2760,
+      y: 1060,
+      w: 76,
+      h: 64,
+      climate: "volcanic",
+      mountains: [{ name: "The Kettle", dx: 0.1, dy: -0.1, r: 0.3, h: 0.9 }],
+      lakes: [{ name: "Boiling spring", dx: -0.35, dy: 0.25, rx: 0.08, ry: 0.07, tile: T2.POND }],
+      town: { name: "Steamworks", style: "town", dock: "w", buildings: [["weapons", "Kettle Forge"], ["inn", "Hot Springs Lodge"], "shop"] },
+      marks: [["crystal", 0.2, -0.3], ["campfire", -0.3, 0.1]],
+      logNext: ["mirage_atoll", "nanimonai_island"],
+      danger: 4,
+      music: "town",
+      tagline: "Smiths who forge with the volcano's own heat, and hot springs that will boil an egg."
+    }),
+    isle({
+      id: "gourd_island",
+      name: "Gourd Island",
+      sea: "paradise",
+      x: 2590,
+      y: 1290,
+      w: 64,
+      h: 54,
+      climate: "tropical",
+      areas: [{ tile: T2.FARM, dx: 0.3, dy: 0.2, rx: 0.2, ry: 0.15 }],
+      town: { name: "Calabash", style: "village", dock: "w", buildings: [["bar", "The Hollow Gourd"], "shop", "inn"] },
+      marks: [["barrel", 0.1, 0.3], ["barrel", 0.15, 0.35]],
+      logNext: ["drum_island", "crown_island"],
+      danger: 3,
+      music: "town",
+      tagline: "Gourds for bottles, gourds for boats, gourds for houses. They brew a strong one."
+    }),
+    isle({
+      id: "mirage_atoll",
+      name: "Mirage Atoll",
+      sea: "paradise",
+      x: 2900,
+      y: 1080,
+      w: 90,
+      h: 70,
+      climate: "desert",
+      lakes: [{ name: "The lagoon", dx: 0, dy: 0, rx: 0.2, ry: 0.18 }],
+      town: { name: "Shimmer", style: "desert", dock: "s", dx: 0.3, dy: 0.25, buildings: [["inn", "Oasis House"], "shop", ["bar", "The Mirage"]] },
+      marks: [["ruins", -0.35, -0.2, "The town that isn't there"], ["pillar", -0.4, 0], ["pillar", -0.3, -0.35]],
+      logNext: ["alabasta", "driftwood_republic"],
+      danger: 4,
+      music: "sea",
+      tagline: "A ring of sand around a lagoon. Sailors see a city on the far shore. There is no city."
+    }),
+    isle({
+      id: "lanternfish_cove",
+      name: "Lanternfish Cove",
+      sea: "paradise",
+      x: 3010,
+      y: 650,
+      w: 70,
+      h: 54,
+      climate: "marsh",
+      town: { name: "Glimmerdock", style: "port", dock: "e", buildings: [["restaurant", "Lantern Grill"], ["inn", "Deep Glow Inn"], "shop"] },
+      marks: [["lantern", 0.3, 0.2], ["lantern", 0.35, 0.3], ["lantern", 0.25, 0.4], ["boat", 0.5, 0.3]],
+      logNext: ["jaya", "banaro_island"],
+      danger: 4,
+      music: "night",
+      tagline: "Dark half the year. The fish in the bay give the only light, and the fishermen sell it in jars."
+    }),
+    isle({
+      id: "driftwood_republic",
+      name: "Driftwood Republic",
+      sea: "paradise",
+      x: 3120,
+      y: 1010,
+      w: 84,
+      h: 66,
+      climate: "temperate",
+      town: { name: "Flotsam", style: "port", dock: "e", w: 40, h: 26, plaza: "flagpole", buildings: [["hall", "Parliament of Wrecks"], ["shipwright", "Salvage Yard"], ["bar", "The Bilge"], "inn", "shop"] },
+      marks: [["shipwreck", -0.35, 0.3], ["shipwreck", 0.4, -0.3], ["anchor", 0.1, 0.4]],
+      logNext: ["water_7", "asuka_island"],
+      danger: 4,
+      music: "town",
+      tagline: "A republic built out of every ship the Grand Line ever wrecked. Everyone gets a vote; nobody agrees."
+    }),
+    isle({
+      id: "monsoon_key",
+      name: "Monsoon Key",
+      sea: "paradise",
+      x: 3240,
+      y: 1400,
+      w: 70,
+      h: 56,
+      climate: "jungle",
+      town: { name: "Raintown", style: "village", dock: "n", buildings: [["inn", "The Dry Bed"], "shop", ["doctor", "Fever Clinic"]] },
+      marks: [["lighthouse", 0.4, -0.3, "Storm Light"], ["boat", -0.4, -0.35]],
+      logNext: ["san_faldo", "boin"],
+      danger: 5,
+      music: "sea",
+      tagline: "It rains three hundred days a year here, and on the other sixty-five it pours."
+    }),
+    isle({
+      id: "whistle_rock",
+      name: "Whistle Rock",
+      sea: "paradise",
+      x: 3410,
+      y: 1120,
+      w: 60,
+      h: 56,
+      climate: "rocky",
+      mountains: [{ name: "The Whistle", dx: 0, dy: 0, r: 0.35, h: 1, cliff: 150 }],
+      town: { name: "Hollow Holm", style: "village", dock: "s", dx: 0, dy: 0.35, buildings: [["inn", "The Wind's Rest"], "shop"] },
+      marks: [["pillar", 0.3, -0.2], ["pillar", -0.3, -0.25], ["bell", 0, -0.4, "The Wind Bell"]],
+      logNext: ["enies_lobby", "karakuri"],
+      danger: 5,
+      music: "sea",
+      tagline: "A rock full of holes. When the wind blows it sings \u2014 loud enough to steer ships by."
+    }),
+    isle({
+      id: "pearl_shoals",
+      name: "Pearl Shoals",
+      sea: "paradise",
+      x: 3470,
+      y: 1395,
+      w: 76,
+      h: 50,
+      climate: "tropical",
+      archipelago: true,
+      town: { name: "Nacre", style: "port", dock: "n", buildings: [["market", "Pearl Exchange"], ["bank", "Shell Bank"], "inn"] },
+      marks: [["boat", 0.3, -0.3], ["boat", -0.3, -0.35], ["chest", 0.1, 0.2]],
+      logNext: ["spa_island", "karakuri"],
+      danger: 5,
+      music: "town",
+      tagline: "Divers who hold their breath for ten minutes, and pearls that pay for whole ships."
+    }),
+    isle({
+      id: "tumbleweed_island",
+      name: "Tumbleweed Island",
+      sea: "paradise",
+      x: 3320,
+      y: 830,
+      w: 70,
+      h: 56,
+      climate: "desert",
+      town: { name: "Dustwater", style: "desert", dock: "e", buildings: [["bar", "The Dry Gulch"], ["bounty", "Sheriff's Office"], "inn", "shop"] },
+      marks: [["grave", -0.35, -0.3], ["grave", -0.3, -0.25], ["sign", 0.3, 0.3, "WANTED: anyone"]],
+      logNext: ["water_7", "mecha_island"],
+      danger: 5,
+      music: "town",
+      tagline: "One street, one saloon, one sheriff, and more bounty hunters than pirates."
+    }),
+    isle({
+      id: "mistletoe_island",
+      name: "Mistletoe Island",
+      sea: "paradise",
+      x: 3720,
+      y: 860,
+      w: 76,
+      h: 60,
+      climate: "winter",
+      town: { name: "Hollyhearth", style: "snow", dock: "s", buildings: [["inn", "The Warm Hearth"], ["restaurant", "Mulled Kitchen"], "shop"] },
+      marks: [["lantern", 0.2, 0.2], ["statue", -0.1, -0.3, "The Snow Saint"]],
+      logNext: ["marineford", "thriller_bark"],
+      danger: 5,
+      music: "town",
+      tagline: "A winter island where it's always the night before a holiday, and everyone is kind. Suspiciously kind."
+    }),
+    isle({
+      id: "hammerhead_island",
+      name: "Hammerhead Island",
+      sea: "paradise",
+      x: 3770,
+      y: 1180,
+      w: 80,
+      h: 56,
+      climate: "rocky",
+      town: { name: "Breaker's Yard", style: "port", dock: "w", buildings: [["shipwright", "Hammerhead Breakers"], ["bar", "The Rivet"], "shop"] },
+      marks: [["shipwreck", 0.3, -0.2], ["anchor", 0.35, 0.2], ["crate", -0.2, 0.3]],
+      logNext: ["sabaody"],
+      danger: 6,
+      music: "town",
+      tagline: "Where ships that won't reach the New World are broken up and sold by the plank."
+    }),
+    isle({
+      id: "sundial_island",
+      name: "Sundial Island",
+      sea: "paradise",
+      x: 3820,
+      y: 1400,
+      w: 64,
+      h: 56,
+      climate: "spring",
+      town: { name: "Noonshade", style: "town", dock: "n", buildings: [["library", "Observatory of Hours"], "inn", "shop"] },
+      marks: [["pillar", 0, -0.2, "The Great Gnomon"], ["bench", 0.2, 0.1]],
+      logNext: ["sabaody"],
+      danger: 5,
+      music: "town",
+      tagline: "A whole island laid out as a sundial. They keep the Grand Line's time \u2014 badly."
+    })
+  ];
+  var NEW_WORLD_3 = [
+    // ------------------------------------------------------------ Prodence (canon)
+    isle({
+      id: "prodence",
+      name: "Prodence Kingdom",
+      sea: "new_world",
+      x: 420,
+      y: 880,
+      w: 120,
+      h: 90,
+      climate: "temperate",
+      mountains: [{ dx: 0.4, dy: -0.3, r: 0.2, h: 0.6 }],
+      town: { name: "Prodence", style: "noble", dock: "w", w: 44, h: 28, plaza: "statue", buildings: [["palace", "King Elizabello's Palace"], ["dojo", "Hall of the King Punch"], "inn", "shop", "bar"] },
+      marks: [["statue", 0.1, -0.3, "The King Punch"], ["flagpole", -0.3, 0.3]],
+      logNext: ["dressrosa", "silver_mine"],
+      danger: 7,
+      music: "town",
+      tagline: "A warrior king whose one punch takes an hour to wind up \u2014 and can knock down a fortress."
+    }),
+    // ------------------------------------------------------------ Silver Mine (anime)
+    isle({
+      id: "silver_mine",
+      name: "Silver Mine",
+      sea: "new_world",
+      x: 250,
+      y: 1140,
+      w: 90,
+      h: 70,
+      climate: "rocky",
+      mountains: [{ name: "The Mine Mountain", dx: 0, dy: -0.15, r: 0.35, h: 1, cliff: 160 }],
+      town: { name: "Minehead", style: "ruins", dock: "s", dx: 0, dy: 0.35, buildings: [["hall", "Byrnndi World's Office"], "shop", "inn"] },
+      marks: [["gate", 0, 0, "The mine entrance"], ["crate", 0.3, 0.2], ["tent", -0.3, 0.2]],
+      logNext: ["dressrosa", "risky_red_island"],
+      danger: 7,
+      music: "night",
+      tagline: "Captives dig silver for a pirate who controls the island itself. (Anime tale.)"
+    }),
+    // ------------------------------------------------------------ Lulusia (canon: erased)
+    isle({
+      id: "lulusia",
+      name: "Lulusia (ruins)",
+      sea: "new_world",
+      x: 690,
+      y: 880,
+      w: 110,
+      h: 90,
+      climate: "volcanic",
+      noFruit: true,
+      lakes: [{ name: "The crater", dx: 0, dy: 0, rx: 0.35, ry: 0.3 }],
+      marks: [["ruins", 0.4, 0.3, "What was left of Lulusia"], ["ruins", -0.4, 0.3], ["grave", 0.45, -0.3], ["sign", 0.5, 0.1, "Lulusia Kingdom \u2014 erased from the sky"]],
+      logNext: ["zou", "whole_cake_island"],
+      danger: 8,
+      noDock: true,
+      music: "night",
+      tagline: "A kingdom erased from the map by a light from the sky. Only the crater is left."
+    }),
+    // ------------------------------------------------------------ Totto Land
+    isle({
+      id: "jam_island",
+      name: "Jam Island",
+      sea: "new_world",
+      x: 960,
+      y: 960,
+      w: 70,
+      h: 56,
+      climate: "candy",
+      lakes: [{ name: "Jam lake", dx: 0.2, dy: -0.2, rx: 0.12, ry: 0.1, tile: T2.POND }],
+      town: { name: "Marmalade", style: "candy", dock: "w", buildings: [["restaurant", "Jam Kitchen"], ["inn", "Sweet Dreams Inn"], "shop"] },
+      marks: [["statue", 0, -0.35, "Minister of Jam"]],
+      logNext: ["whole_cake_island", "nuts_island"],
+      danger: 7,
+      music: "town",
+      tagline: "Totto Land: the jam runs in rivers, and Big Mom wants her tax in sweets."
+    }),
+    isle({
+      id: "nuts_island",
+      name: "Nuts Island",
+      sea: "new_world",
+      x: 1e3,
+      y: 1120,
+      w: 66,
+      h: 56,
+      climate: "candy",
+      town: { name: "Hazel Harbour", style: "candy", dock: "s", buildings: [["shop", "Nut Roaster"], ["inn", "The Shell"], "bar"] },
+      marks: [["totem", 0.3, -0.2]],
+      logNext: ["whole_cake_island", "milk_island"],
+      danger: 7,
+      music: "town",
+      tagline: "Totto Land: trees heavy with nuts the size of cannonballs. Mind your head."
+    }),
+    isle({
+      id: "milk_island",
+      name: "Milk Island",
+      sea: "new_world",
+      x: 820,
+      y: 1380,
+      w: 70,
+      h: 54,
+      climate: "candy",
+      rivers: [{ name: "Milk river", points: [[-0.9, 0], [-0.2, 0.05], [0.9, -0.05]], width: 4 }],
+      town: { name: "Creamery", style: "candy", dock: "n", buildings: [["cafe", "Milk Bar"], "shop", "inn"] },
+      marks: [["arch", 0, 0, "The milk river crossing"]],
+      logNext: ["whole_cake_island", "cacao_island"],
+      danger: 7,
+      music: "town",
+      tagline: "Totto Land: a river of milk runs through it \u2014 a mirror for anyone with the right fruit."
+    }),
+    isle({
+      id: "candy_island",
+      name: "Candy Island",
+      sea: "new_world",
+      x: 650,
+      y: 1220,
+      w: 66,
+      h: 56,
+      climate: "candy",
+      town: { name: "Sugarloaf", style: "candy", dock: "e", buildings: [["shop", "Candy Works"], ["restaurant", "Sweets Hall"], "inn"] },
+      marks: [["statue", 0.2, -0.3, "Minister of Candy"]],
+      logNext: ["whole_cake_island", "cacao_island"],
+      danger: 7,
+      music: "town",
+      tagline: "Totto Land: candy-glass houses, and everyone smiles \u2014 they have to."
+    }),
+    // ------------------------------------------------------------ Little East Blue (anime)
+    isle({
+      id: "little_east_blue",
+      name: "Little East Blue",
+      sea: "new_world",
+      x: 1040,
+      y: 760,
+      w: 90,
+      h: 70,
+      climate: "spring",
+      town: { name: "Little Foosha", style: "village", dock: "s", buildings: [["bar", "Partys Bar (copy)"], ["restaurant", "Little Baratie"], "inn", "shop"] },
+      marks: [["windmill", -0.35, -0.2], ["statue", 0.2, -0.3, "Little Shells Town's Marine"], ["boat", 0.4, 0.4]],
+      logNext: ["wano", "zou"],
+      danger: 7,
+      music: "town",
+      tagline: "A New World island built to look like home for people who left the East Blue. (Anime tale.)"
+    }),
+    // ------------------------------------------------------------ Gran Tesoro (film)
+    isle({
+      id: "gran_tesoro",
+      name: "Gran Tesoro",
+      sea: "new_world",
+      x: 1180,
+      y: 1390,
+      w: 110,
+      h: 70,
+      climate: "tropical",
+      town: { name: "Gran Tesoro", style: "city", dock: "n", w: 48, h: 30, plaza: "fountain", buildings: [["bank", "Tesoro's Treasury"], ["hall", "The Grand Casino"], ["bar", "High Rollers"], ["restaurant", "Golden Buffet"], "inn", "shop"] },
+      marks: [["statue", 0, -0.35, "Gild Tesoro in gold"], ["tower", 0.4, -0.2], ["lamp", -0.2, 0.3]],
+      logNext: ["egghead", "baltigo"],
+      danger: 8,
+      music: "night",
+      tagline: "A city of gold that floats, and a casino where every debt is paid in years. (Film tale.)"
+    }),
+    // ------------------------------------------------------------ Firstan (film: End Point)
+    isle({
+      id: "firstan",
+      name: "Firstan (End Point)",
+      sea: "new_world",
+      x: 1480,
+      y: 1380,
+      w: 80,
+      h: 64,
+      climate: "volcanic",
+      mountains: [{ name: "Dyna Rock vent", dx: 0, dy: -0.1, r: 0.3, h: 0.9 }],
+      town: { name: "Firstan Outpost", style: "marine", dock: "w", dy: 0.35, buildings: [["marine_base", "Abandoned Marine Lab"], "shop"] },
+      marks: [["crystal", 0, -0.3, "Dyna Stones"], ["cannon", 0.3, 0.2]],
+      logNext: ["hachinosu", "lodestar"],
+      danger: 9,
+      music: "battle",
+      tagline: "One of three End Points. Blow them all up, said Z, and the New World drowns in magma. (Film tale.)"
+    }),
+    // ------------------------------------------------------------ Mariners' Grave
+    isle({
+      id: "mariners_grave",
+      name: "Mariners' Grave",
+      sea: "new_world",
+      x: 1650,
+      y: 1070,
+      w: 90,
+      h: 76,
+      climate: "gloom",
+      town: { name: "Last Harbour", style: "spooky", dock: "w", buildings: [["church", "Chapel of the Drowned"], ["bar", "The Final Round"], "inn"] },
+      marks: [["grave", 0.2, -0.2], ["grave", 0.3, -0.25], ["grave", 0.25, -0.1], ["shipwreck", 0.45, 0.3], ["sign", -0.4, 0.4, "Every crew that never reached Laugh Tale"]],
+      logNext: ["laugh_tale", "lodestar"],
+      danger: 9,
+      music: "night",
+      tagline: "The last island before the end of the world, where the crews who never made it are buried."
+    }),
+    // ===================================================== the game's own (New World)
+    isle({
+      id: "thunder_spire",
+      name: "Thunder Spire",
+      sea: "new_world",
+      x: 190,
+      y: 1e3,
+      w: 60,
+      h: 56,
+      climate: "rocky",
+      mountains: [{ name: "The Spire", dx: 0, dy: 0, r: 0.3, h: 1, cliff: 220 }],
+      town: { name: "Rodfoot", style: "village", dock: "e", dy: 0.35, buildings: [["inn", "The Grounded Inn"], "shop"] },
+      marks: [["tower", 0, -0.2, "The lightning rod"]],
+      logNext: ["punk_hazard", "prodence"],
+      danger: 7,
+      music: "sea",
+      tagline: "Lightning strikes the spire every hour. The village runs its forges on it."
+    }),
+    isle({
+      id: "obsidian_reach",
+      name: "Obsidian Reach",
+      sea: "new_world",
+      x: 420,
+      y: 1240,
+      w: 80,
+      h: 60,
+      climate: "volcanic",
+      town: { name: "Glassblade", style: "town", dock: "n", buildings: [["weapons", "Black Glass Smithy"], "inn", "bar"] },
+      marks: [["crystal", 0.3, -0.2], ["crystal", -0.3, 0.2]],
+      logNext: ["dressrosa", "applenine_island"],
+      danger: 7,
+      music: "town",
+      tagline: "Black glass beaches, and swords that cut sharper than steel \u2014 once."
+    }),
+    isle({
+      id: "tidewrack",
+      name: "Tidewrack",
+      sea: "new_world",
+      x: 160,
+      y: 1395,
+      w: 70,
+      h: 50,
+      climate: "marsh",
+      town: { name: "Lowwater", style: "port", dock: "n", buildings: [["shipwright", "Wrack Wrights"], "bar", "inn"] },
+      marks: [["shipwreck", 0.3, 0.2], ["shipwreck", -0.4, -0.1]],
+      logNext: ["risky_red_island", "obsidian_reach"],
+      danger: 7,
+      music: "sea",
+      tagline: "At low tide the whole bay is wrecks. At high tide, so is anything that's anchored wrong."
+    }),
+    isle({
+      id: "crimson_atoll",
+      name: "Crimson Atoll",
+      sea: "new_world",
+      x: 560,
+      y: 1400,
+      w: 80,
+      h: 56,
+      climate: "tropical",
+      lakes: [{ dx: 0, dy: 0, rx: 0.18, ry: 0.15 }],
+      town: { name: "Redreef", style: "port", dock: "n", dx: 0.3, buildings: [["bar", "Coral Cantina"], "inn", "shop"] },
+      marks: [["boat", -0.4, 0.3]],
+      logNext: ["candy_island", "cacao_island"],
+      danger: 7,
+      music: "town",
+      tagline: "Red coral under red water. The pirates say the colour is the coral. The pirates lie."
+    }),
+    isle({
+      id: "seabreak_citadel",
+      name: "Seabreak Citadel",
+      sea: "new_world",
+      x: 980,
+      y: 660,
+      w: 80,
+      h: 60,
+      climate: "rocky",
+      town: { name: "Seabreak", style: "marine", dock: "s", buildings: [["marine_base", "G-3 Citadel"], ["bounty", "Bounty Desk"], "inn", "shop"] },
+      marks: [["cannon", 0.3, -0.2], ["cannon", -0.3, -0.2], ["tower", 0, -0.35, "The Breakwater Tower"]],
+      logNext: ["zou", "little_east_blue"],
+      danger: 7,
+      music: "town",
+      tagline: "A Marine fortress on the edge of the Calm Belt. Its guns face the New World, not out."
+    }),
+    isle({
+      id: "glass_dune",
+      name: "Glass Dune",
+      sea: "new_world",
+      x: 1290,
+      y: 660,
+      w: 90,
+      h: 60,
+      climate: "desert",
+      town: { name: "Prism", style: "desert", dock: "s", buildings: [["inn", "The Cool Cellar"], ["market", "Glass Bazaar"], "shop"] },
+      marks: [["crystal", -0.3, -0.2], ["crystal", 0.35, -0.15], ["ruins", 0.2, 0.3]],
+      logNext: ["winner_island", "wano"],
+      danger: 8,
+      music: "town",
+      tagline: "A desert of sand melted to glass. At noon it blinds you; at night it rings."
+    }),
+    isle({
+      id: "hollow_moon",
+      name: "Hollow Moon Isle",
+      sea: "new_world",
+      x: 1560,
+      y: 680,
+      w: 70,
+      h: 56,
+      climate: "gloom",
+      town: { name: "Crescent", style: "spooky", dock: "s", buildings: [["library", "The Moon Archive"], "inn"] },
+      marks: [["ruins", 0, -0.3, "The crescent arch"], ["crystal", 0.3, 0.1]],
+      logNext: ["elbaf", "karai_bari"],
+      danger: 8,
+      music: "night",
+      tagline: "Its people say they came from the Moon. Their carvings say the same thing."
+    }),
+    isle({
+      id: "krakens_rest",
+      name: "Kraken's Rest",
+      sea: "new_world",
+      x: 1700,
+      y: 900,
+      w: 80,
+      h: 60,
+      climate: "tropical",
+      town: { name: "Tentacle Bay", style: "port", dock: "w", buildings: [["bar", "The Ink Pot"], "inn", "shop"] },
+      marks: [["bones", 0.3, -0.2, "The kraken's beak"], ["bones", 0.4, 0]],
+      logNext: ["laugh_tale", "karai_bari"],
+      danger: 9,
+      music: "sea",
+      tagline: "Built on the back of a kraken that died here centuries ago. Probably died."
+    }),
+    isle({
+      id: "emberfall",
+      name: "Emberfall",
+      sea: "new_world",
+      x: 1e3,
+      y: 1300,
+      w: 76,
+      h: 60,
+      climate: "volcanic",
+      mountains: [{ name: "Emberfall Peak", dx: 0.2, dy: -0.2, r: 0.3, h: 1 }],
+      town: { name: "Cinders", style: "town", dock: "w", buildings: [["weapons", "Lava Forge"], "inn", "bar"] },
+      marks: [["campfire", -0.3, 0.2]],
+      logNext: ["foodvalten", "gran_tesoro"],
+      danger: 8,
+      music: "town",
+      tagline: "Ash falls like snow here. The smiths say it makes the best steel in the New World."
+    }),
+    isle({
+      id: "frostfang",
+      name: "Frostfang",
+      sea: "new_world",
+      x: 1440,
+      y: 1060,
+      w: 80,
+      h: 64,
+      climate: "winter",
+      mountains: [{ name: "The Fang", dx: 0, dy: -0.15, r: 0.3, h: 1, snow: true }],
+      town: { name: "Fanghold", style: "snow", dock: "s", buildings: [["inn", "The Bearskin"], ["dojo", "Ice Hall"], "shop"] },
+      marks: [["statue", 0.3, 0.2, "The Frozen Admiral"]],
+      logNext: ["egghead", "elbaf"],
+      danger: 8,
+      music: "town",
+      tagline: "Half of it froze in one night when two admirals fought. The other half is still arguing about it."
+    }),
+    isle({
+      id: "verdigris_isle",
+      name: "Verdigris Isle",
+      sea: "new_world",
+      x: 1300,
+      y: 1060,
+      w: 70,
+      h: 56,
+      climate: "jungle",
+      town: { name: "Copperton", style: "ruins", dock: "w", buildings: [["library", "Copper Archive"], "inn"] },
+      marks: [["statue", 0.2, -0.3, "The Green Giant"], ["poneglyph", -0.3, -0.2, null, { spot: "verdigris_stone" }]],
+      logNext: ["egghead", "frostfang"],
+      danger: 8,
+      music: "night",
+      tagline: "A jungle grown over a city of green copper statues, all facing the same way."
+    }),
+    isle({
+      id: "starfall_crater",
+      name: "Starfall Crater",
+      sea: "new_world",
+      x: 1740,
+      y: 1210,
+      w: 80,
+      h: 70,
+      climate: "rocky",
+      lakes: [{ name: "The crater lake", dx: 0, dy: 0, rx: 0.25, ry: 0.2 }],
+      town: { name: "Skyfall", style: "village", dock: "w", dx: -0.35, buildings: [["library", "Stargazers' Hall"], "inn"] },
+      marks: [["crystal", 0.3, -0.3, "The fallen star"]],
+      logNext: ["lodestar", "laugh_tale"],
+      danger: 9,
+      music: "night",
+      tagline: "Something fell from the sky here and made a lake. It still glows on moonless nights."
+    }),
+    isle({
+      id: "aurora_isle",
+      name: "Aurora Isle",
+      sea: "new_world",
+      x: 310,
+      y: 650,
+      w: 70,
+      h: 52,
+      climate: "winter",
+      town: { name: "Northlight", style: "snow", dock: "s", buildings: [["inn", "The Lantern Lodge"], "shop"] },
+      marks: [["lantern", 0.2, -0.2]],
+      logNext: ["green_bit", "mystoria_island"],
+      danger: 7,
+      music: "night",
+      tagline: "At the very edge of the Calm Belt, where the sky burns green every night."
+    }),
+    isle({
+      id: "wyrmbone_isle",
+      name: "Wyrmbone Isle",
+      sea: "new_world",
+      x: 1160,
+      y: 1130,
+      w: 86,
+      h: 60,
+      climate: "prehistoric",
+      town: { name: "Ribcage", style: "tribal", dock: "e", buildings: [["hall", "The Skull Lodge"], "shop"] },
+      marks: [["bones", 0, -0.1, "The Wyrm's spine"], ["bones", 0.2, -0.05], ["bones", -0.2, -0.15], ["skull", 0.4, -0.1]],
+      logNext: ["onigashima", "verdigris_isle"],
+      danger: 8,
+      music: "sea",
+      tagline: "The ribs of a dragon bigger than the island, and a tribe that lives between them."
+    }),
+    isle({
+      id: "brimstone_key",
+      name: "Brimstone Key",
+      sea: "new_world",
+      x: 560,
+      y: 1230,
+      w: 60,
+      h: 50,
+      climate: "volcanic",
+      town: { name: "Sulphur Steps", style: "village", dock: "w", buildings: [["doctor", "Sulphur Baths"], "inn"] },
+      marks: [["crystal", 0.2, -0.2]],
+      logNext: ["candy_island", "whole_cake_island"],
+      danger: 7,
+      music: "town",
+      tagline: "It stinks of rotten eggs and cures any rash on the Grand Line."
+    })
+  ];
+
   // src/data/islands/marinePosts.js
   var MARINE_POSTS = {
     shimotsuki_village: "Shimotsuki Marine Post",
@@ -110094,7 +110949,15 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     }
     return d;
   }
-  var ALL_ISLANDS = [...EAST_BLUE, ...NORTH_BLUE, ...WEST_BLUE, ...SOUTH_BLUE, ...PARADISE_1, ...PARADISE_2, ...NEW_WORLD, ...NEW_WORLD_2].map(marinePosts).map(toWorld);
+  function joinLogs(old, added) {
+    for (const n of added) {
+      const behind = old.filter((o) => o.sea === n.sea && o.x < n.x && o.logNext?.length && !o.logSpins && !o.hidden).sort((a, b) => Math.hypot(a.x - n.x, a.y - n.y) - Math.hypot(b.x - n.x, b.y - n.y)).slice(0, 2);
+      for (const o of behind) if (!o.logNext.includes(n.id)) o.logNext = [...o.logNext, n.id];
+    }
+  }
+  var GL_OLD = [...PARADISE_1, ...PARADISE_2, ...NEW_WORLD, ...NEW_WORLD_2];
+  if (!GL_OLD.some((o) => o.logNext?.includes(PARADISE_3[0].id))) joinLogs(GL_OLD, [...PARADISE_3, ...NEW_WORLD_3]);
+  var ALL_ISLANDS = [...EAST_BLUE, ...NORTH_BLUE, ...WEST_BLUE, ...SOUTH_BLUE, ...PARADISE_1, ...PARADISE_2, ...PARADISE_3, ...NEW_WORLD, ...NEW_WORLD_2, ...NEW_WORLD_3].map(marinePosts).map(toWorld);
   var ISLAND_BY_ID = Object.fromEntries(ALL_ISLANDS.map((i) => [i.id, i]));
 
   // src/core/input.js
@@ -113656,8 +114519,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     sky: { w: { clear: 1 }, dur: [600, 900], k: [1, 1], wind: 0.8 },
     none: { w: { clear: 1 }, dur: [600, 900], k: [1, 1], wind: 0.5 }
   };
-  var COLD_ROWS = 1300;
-  var WARM_ROWS = 800;
+  var COLD_ROWS = 1e3;
+  var WARM_ROWS = 600;
   function seaClimate(region, y, H5, CB_TOP2, CB_BOTTOM2) {
     const blue = region === REGION.EAST_BLUE || region === REGION.NORTH_BLUE || region === REGION.WEST_BLUE || region === REGION.SOUTH_BLUE;
     if (blue && H5) {
@@ -115182,15 +116045,32 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
     saveLegacy(legacy);
     return will;
   }
-  var WORLD_VERSION = 2;
+  var WORLD_VERSION = 3;
   var OLD_SCALE = 1.5;
+  var BLUE_K = 498 / 698;
+  function relayRow(y) {
+    if (y < 724) return 26 + (y - 26) * BLUE_K;
+    if (y < 824) return y - 200;
+    if (y <= 1224) return 1024 + (y - 1024) * 2;
+    if (y <= 1324) return y + 200;
+    return 2022 - (2022 - y) * BLUE_K;
+  }
+  function unrelayRow(y) {
+    if (y < 524) return 26 + (y - 26) / BLUE_K;
+    if (y < 624) return y + 200;
+    if (y <= 1424) return 1024 + (y - 1024) / 2;
+    if (y <= 1524) return y - 200;
+    return 2022 - (2022 - y) / BLUE_K;
+  }
   function migrateWorld(char, world, islandDefs) {
-    if ((char.worldVer || 1) >= WORLD_VERSION) return false;
+    const ver = char.worldVer || 1;
+    if (ver >= WORLD_VERSION) return false;
+    const oldY = (d) => unrelayRow(d.y / POS_SCALE) * POS_SCALE;
     const move = (pt) => {
       if (!pt || typeof pt.x !== "number" || pt.zone && pt.zone !== "surface") return;
       let best = null, bd = Infinity;
       for (const d of islandDefs) {
-        const ox = d.x / POS_SCALE * OLD_SCALE, oy = d.y / POS_SCALE * OLD_SCALE;
+        const ox = d.x / POS_SCALE * OLD_SCALE, oy = oldY(d) / POS_SCALE * OLD_SCALE;
         const r4 = Math.max(d.w, d.h) / SIZE_SCALE * OLD_SCALE * 0.5;
         const dd = Math.hypot(pt.x - ox, pt.y - oy) - r4;
         if (dd < bd) {
@@ -115201,7 +116081,7 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       if (best && bd < 40) {
         const k = SIZE_SCALE / OLD_SCALE;
         pt.x = best.d.x + (pt.x - best.ox) * k;
-        pt.y = best.d.y + (pt.y - best.oy) * k;
+        pt.y = oldY(best.d) + (pt.y - best.oy) * k;
       } else {
         pt.x *= POS_SCALE / OLD_SCALE;
         pt.y *= POS_SCALE / OLD_SCALE;
@@ -115217,11 +116097,32 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
         }
       }
     };
-    move(char.pos);
-    move(char.rest);
-    move(char.spawn);
-    for (const s of char.ships || []) if (!s.zone || s.zone === "surface") move(s);
-    for (const s of char.zoneShips || []) move(s);
+    const relay = (pt) => {
+      if (!pt || typeof pt.y !== "number" || pt.zone && pt.zone !== "surface") return;
+      let best = null, bd = Infinity;
+      for (const d of islandDefs) {
+        const dd = Math.hypot(world.dx(d.x, pt.x), pt.y - oldY(d)) - Math.max(d.w, d.h) * 0.5;
+        if (dd < bd) {
+          bd = dd;
+          best = d;
+        }
+      }
+      if (best && bd < 400) pt.y += best.y - oldY(best);
+      else pt.y = relayRow(pt.y / POS_SCALE) * POS_SCALE;
+      if (pt.tx != null && pt.ty != null) pt.tx = void 0;
+    };
+    const all2 = (fn) => {
+      fn(char.pos);
+      fn(char.rest);
+      fn(char.spawn);
+      for (const s of char.ships || []) if (!s.zone || s.zone === "surface") fn(s);
+    };
+    if (ver < 2) {
+      all2(move);
+      for (const s of char.zoneShips || []) move(s);
+    }
+    all2(relay);
+    for (const f of char.world?.fruitSpawns || []) relay(f);
     char.fogSurface = null;
     char.worldVer = WORLD_VERSION;
     return true;
@@ -115336,8 +116237,8 @@ uniform vec2 uHullSz[${MAXH}];`).replace("#include <project_vertex>", HULL_GLSL 
       p.endForm();
       return true;
     }
-    const next = order[i + 1];
-    return takeOut(game, p, next === "awake" ? ENTRY.awake : ENTRY.form(next));
+    const next2 = order[i + 1];
+    return takeOut(game, p, next2 === "awake" ? ENTRY.awake : ENTRY.form(next2));
   }
   function keepEntries(p) {
     if (!p) return;
@@ -118762,18 +119663,18 @@ button:disabled { cursor: not-allowed; }
   };
   var SCALES = [5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4, 2e4];
   var SEA_LABELS = [
-    { name: "EAST BLUE", x: chart(3070), y: chart(390) },
-    { name: "NORTH BLUE", x: chart(1020), y: chart(390) },
-    { name: "WEST BLUE", x: chart(1020), y: chart(1660) },
-    { name: "SOUTH BLUE", x: chart(3070), y: chart(1660) },
-    { name: "PARADISE", x: chart(3070), y: EQ + chart(150) },
-    { name: "NEW WORLD", x: chart(1020), y: EQ + chart(150) },
+    { name: "EAST BLUE", x: chart(3070), y: chart(286) },
+    { name: "NORTH BLUE", x: chart(1020), y: chart(286) },
+    { name: "WEST BLUE", x: chart(1020), y: chart(1762) },
+    { name: "SOUTH BLUE", x: chart(3070), y: chart(1762) },
+    { name: "PARADISE", x: chart(3070), y: EQ + chart(250) },
+    { name: "NEW WORLD", x: chart(1020), y: EQ + chart(250) },
     { name: "GRAND LINE", x: chart(2560), y: GL_TOP + chart(28) },
     { name: "GRAND LINE", x: chart(1530), y: GL_TOP + chart(28) },
     { name: "CALM BELT", x: chart(2900), y: GL_TOP - chart(36) },
     { name: "CALM BELT", x: chart(2900), y: GL_BOTTOM + chart(36) },
-    { name: "RED LINE", x: RM_X, y: chart(300), vertical: true },
-    { name: "RED LINE", x: chart(12), y: chart(300), vertical: true }
+    { name: "RED LINE", x: RM_X, y: chart(230), vertical: true },
+    { name: "RED LINE", x: chart(12), y: chart(230), vertical: true }
   ];
   function installMap(game) {
     const ui = game.ui;
@@ -121842,8 +122743,8 @@ button:disabled { cursor: not-allowed; }
       // (where a coated ship comes down: off Mermaid Cove's harbour)
       arrive: { x: 500, y: 270, heading: Math.PI },
       exits: [
-        { id: "new_world", x: 91, y: 127, r: 16, to: "surface", surface: { x: chart(118), y: chart(990) }, label: "Rise to the New World" },
-        { id: "paradise", x: 549, y: 393, r: 16, to: "surface", surface: { x: chart(3985), y: chart(1070) }, label: "Rise back to Sabaody" }
+        { id: "new_world", x: 91, y: 127, r: 16, to: "surface", surface: { x: chart(118), y: chart(956) }, label: "Rise to the New World" },
+        { id: "paradise", x: 549, y: 393, r: 16, to: "surface", surface: { x: chart(3985), y: chart(1106) }, label: "Rise back to Sabaody" }
       ],
       islands: [
         {
@@ -126841,7 +127742,7 @@ Click or press ${HOTBAR_KEYS[i]} to ${use} \xB7 drag to rearrange` : "Empty \u20
         if (inter) E.prompt.append(h("kbd", pKey), inter.label);
       }
       const isl = game.currentIsland;
-      const rmHere = game.world.zone === 0 && !isl?.name && Math.abs(game.world.dx(p.x, RM_X)) < 1e3 && Math.abs(p.y - EQ) < 2300 && regionAt(p.x, p.y) === REGION.RED_LINE;
+      const rmHere = game.world.zone === 0 && !isl?.name && Math.abs(game.world.dx(p.x, RM_X)) < 1e3 && Math.abs(p.y - EQ) < 3500 && regionAt(p.x, p.y) === REGION.RED_LINE;
       const onRedLine2 = !isl?.name && game.world.zone === 0 && !p.inWater && p.mode !== "sail" && regionAt(p.x, p.y) === REGION.RED_LINE && !game.world.isLiquid(p.x, p.y);
       const locName = game.world.zone !== 0 ? game.world.name : isl && isl.name ? isl.name : rmHere ? "Reverse Mountain" : onRedLine2 ? "The Red Line" : "Open Sea";
       this.set(E.loc, "loc", locName);
@@ -130376,8 +131277,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       }
       if (a.choices.length) return;
       const n = a.node.next;
-      const next = typeof n === "function" ? n(a.ctx) : n;
-      if (next) this.show(next);
+      const next2 = typeof n === "function" ? n(a.ctx) : n;
+      if (next2) this.show(next2);
       else this.close();
     }
     choose(i) {
@@ -130385,18 +131286,18 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       if (!a) return;
       const c = a.choices[i];
       if (!c) return;
-      let next = c.next;
+      let next2 = c.next;
       if (c.do) {
         const r4 = c.do(a.ctx);
-        if (typeof r4 === "string") next = r4;
+        if (typeof r4 === "string") next2 = r4;
       }
       if (!this.active) return;
-      if (typeof next === "function") next = next(a.ctx);
-      if (c.end || !next) {
+      if (typeof next2 === "function") next2 = next2(a.ctx);
+      if (c.end || !next2) {
         this.close();
         return;
       }
-      this.show(next);
+      this.show(next2);
     }
     keys(inp) {
       const a = this.active;
@@ -131867,11 +132768,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       lp.progress = Math.min(1, (lp.progress || 0) + dt / secs);
       if (lp.progress >= 1) {
         lp.last = isl.id;
-        const next = isl.def.logNext;
-        lp.options = next.slice();
+        const next2 = isl.def.logNext;
+        lp.options = next2.slice();
         const rng4 = new RNG(c.runSeed + isl.id);
-        const unknown = next.filter((id) => !c.discovered.includes(id));
-        lp.target = unknown.length ? rng4.pick(unknown) : rng4.pick(next);
+        const unknown = next2.filter((id) => !c.discovered.includes(id));
+        lp.target = unknown.length ? rng4.pick(unknown) : rng4.pick(next2);
         lp.progress = 0;
         if (!this.pose()?.eternal) this.announce("LOG SET");
         else g.log(`The Log Pose in your bag has set: its needle swings toward ${c.discovered.includes(lp.target) ? this.island(lp.target)?.name : "an unknown island"}.`, "#81d4fa");
@@ -145959,12 +146860,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     { island: "upper_yard", spot: "ordeal_iron", radius: 4, enemies: [["p1_holy", 30, { name: "Holy" }]], when: (c) => !c.bosses.includes("p1_ohm") },
     { island: "long_ring_long_land", spot: "dbf_beach", radius: 6, enemies: FOXY_CREW, when: (c, g) => stg2(g, "p1_davy_back_fight") === "combat" }
   ];
-  var skipIf = (qid, stageId, next, cond) => (ctx, g) => {
+  var skipIf = (qid, stageId, next2, cond) => (ctx, g) => {
     const c = g.state?.char;
     if (!c || !cond(c, g)) return;
     setTimeout(() => {
       if (g.quests.stageId(qid) === stageId) {
-        if (next) g.quests.setStage(qid, next);
+        if (next2) g.quests.setStage(qid, next2);
         else g.quests.complete(qid);
       }
     }, 0);
@@ -158472,7 +159373,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }
     body.appendChild(board2);
     let i = 0;
-    const next = () => {
+    const next2 = () => {
       if (i >= looks.length || !board2.isConnected && i > 0) return;
       const [cv, who] = looks[i++];
       const pp3 = posterPose(who);
@@ -158485,9 +159386,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       g.fillStyle = "#d9c28f";
       g.fillRect(0, 0, 150, 124);
       g.globalCompositeOperation = "source-over";
-      setTimeout(next, 30);
+      setTimeout(next2, 30);
     };
-    setTimeout(next, 30);
+    setTimeout(next2, 30);
     if (c.faction === "pirate") body.append(h("p.muted", "The clerk eyes you nervously and keeps one hand near the Den Den Mushi."));
   }
 
@@ -160580,7 +161481,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       free: "Then sail your own way. The Grand Line doesn't care why you came \u2014 only whether you can live through it. Laboon and I will be here.",
       done: [
         "Laboon hasn't rammed the Red Line since you left. A promise is a powerful thing.",
-        "Listen well. Every island here has its own magnetism, and the Log Pose follows it. From this cape, seven roads lead into the Grand Line. Your needle will choose one of them.",
+        "Listen well. Every island here has its own magnetism, and the Log Pose follows it. From this cape, ten roads lead into the Grand Line. Your needle will choose one of them.",
         (ctx) => `${onward(ctx.char, "There \u2014 the log has set. It points to")} Wherever it takes you, your story is there. Don't sail past it: without its log, the Grand Line will only turn you round.`
       ],
       after: "Keep your promise to Laboon. He'll wait for you. He's good at that."
@@ -160954,20 +161855,29 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     alert: "No cell holds Lockjaw Grimm!"
   });
   var GL_ROADS = {
+    // (the wider Grand Line's stops are in grandLine2.js; the first three
+    // pirate roads there each follow a thread of their own)
     pirate: [
-      { id: "cactus", chain: ["gl_cactus", "gl_little_garden", "gl_drum", "gl_alabasta", "gl_sabaody"] },
-      { id: "kenzan", chain: ["gl_kenzan", "gl_little_garden", "gl_jaya", "gl_water7", "gl_sabaody"] },
-      { id: "foolshout", chain: ["gl_foolshout", "gl_drum", "gl_spa", "gl_thriller", "gl_sabaody"] },
-      { id: "ruluka", chain: ["gl_ruluka", "gl_jaya", "gl_long_ring", "gl_water7", "gl_sabaody"] },
-      { id: "vira", chain: ["gl_vira", "gl_drum", "gl_alabasta", "gl_thriller", "gl_sabaody"] }
+      { id: "cactus", chain: ["gl_cactus", "gl_little_garden", "gl_drum", "gl_alabasta", "gl_driftwood", "gl_delta", "gl_sabaody"] },
+      { id: "kenzan", chain: ["gl_kenzan", "gl_little_garden", "gl_jaya", "gl_lanternfish", "gl_water7", "gl_mecha", "gl_sabaody"] },
+      { id: "foolshout", chain: ["gl_foolshout", "gl_drum", "gl_omatsuri", "gl_spa", "gl_thriller", "gl_hammerhead", "gl_sabaody"] },
+      { id: "ruluka", chain: ["gl_ruluka", "gl_jaya", "gl_long_ring", "gl_banaro", "gl_water7", "gl_whistle", "gl_sabaody"] },
+      { id: "vira", chain: ["gl_vira", "gl_drum", "gl_alabasta", "gl_asuka", "gl_thriller", "gl_sabaody"] },
+      { id: "warship", chain: ["gl_warship", "gl_clockwork", "gl_crown", "gl_omatsuri", "gl_driftwood", "gl_delta", "gl_sabaody"] },
+      { id: "dead_end", chain: ["gl_hannabal", "gl_kettle", "gl_mirage", "gl_asuka", "gl_whistle", "gl_hammerhead", "gl_sabaody"] },
+      { id: "lanterns", chain: ["gl_saltpetre", "gl_bellwether", "gl_lanternfish", "gl_banaro", "gl_tumbleweed", "gl_mecha", "gl_mistletoe", "gl_sabaody"] }
     ],
     marine: [
-      { id: "g8_south", chain: ["gl_navarone", "gl_drum", "gl_alabasta", "gl_sabaody", "gl_marineford"] },
-      { id: "g8_north", chain: ["gl_navarone", "gl_little_garden", "gl_thriller", "gl_sabaody", "gl_marineford"] }
+      { id: "g8_south", chain: ["gl_navarone", "gl_drum", "gl_alabasta", "gl_asuka", "gl_sabaody", "gl_marineford"] },
+      { id: "g8_north", chain: ["gl_navarone", "gl_little_garden", "gl_mecha", "gl_thriller", "gl_sabaody", "gl_marineford"] },
+      { id: "g8_warship", chain: ["gl_navarone", "gl_warship", "gl_clockwork", "gl_crown", "gl_delta", "gl_sabaody", "gl_marineford"] },
+      { id: "g8_lanterns", chain: ["gl_navarone", "gl_saltpetre", "gl_bellwether", "gl_banaro", "gl_tumbleweed", "gl_mistletoe", "gl_sabaody", "gl_marineford"] }
     ],
     hunter: [
-      { id: "kyuka", chain: ["gl_kyuka", "gl_jaya", "gl_long_ring", "gl_enies"] },
-      { id: "whisky", chain: ["gl_cactus", "gl_drum", "gl_alabasta", "gl_enies"] }
+      { id: "kyuka", chain: ["gl_kyuka", "gl_jaya", "gl_long_ring", "gl_tumbleweed", "gl_enies"] },
+      { id: "whisky", chain: ["gl_cactus", "gl_drum", "gl_alabasta", "gl_driftwood", "gl_enies"] },
+      { id: "dead_end", chain: ["gl_hannabal", "gl_kettle", "gl_mirage", "gl_asuka", "gl_whistle", "gl_enies"] },
+      { id: "lanterns", chain: ["gl_saltpetre", "gl_lanternfish", "gl_banaro", "gl_tumbleweed", "gl_mecha", "gl_enies"] }
     ]
   };
   PLANS[2] = (c, path2) => {
@@ -160979,6 +161889,263 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const done6 = new Set((c.main?.done || []).map((q2) => q2.split(":")[1]));
     return ["gl_twin_cape", ...road.chain].filter((id) => CHAPTERS.has(id) && !(done6.has(id) && id !== "gl_twin_cape"));
   };
+
+  // src/content/main/grandLine2.js
+  var LEAD2 = { pirate: "Your log has set for", marine: "Your orders now point to", hunter: "The next big poster is on" };
+  var next = (ctx) => onward(ctx.char, LEAD2[ctx.char?.main?.path] || LEAD2.pirate);
+  var per = (o) => (ctx) => o[ctx.char?.main?.path] ?? o.all ?? o.pirate;
+  function stop2(id, island, s) {
+    const town = `${island}_town`;
+    const bosses = [s.boss2, s.boss].filter(Boolean).map((b) => target({ island, faction: "pirate", boss: true, at: { town, dock: true, ox: 3 }, ...b }));
+    const descs = [s.task2, s.task].filter(Boolean);
+    chapter(id, { part: 2, island, place: s.place }, {
+      all: {
+        name: s.name,
+        lure: s.lure,
+        summary: s.summary,
+        contact: { at: { town, plaza: true, ox: 4 }, where: s.where, ...s.contact },
+        meet: s.meet.map((l) => typeof l === "string" ? l : per(l)),
+        tasks: bosses.map((b, i) => T3.defeat(b, descs[i] || "Beat them.")),
+        wait: s.wait,
+        done: [...(s.done || []).map((l) => typeof l === "string" ? l : per(l)), next],
+        after: s.after
+      }
+    });
+  }
+  stop2("gl_warship", "warship_island", {
+    name: "The Thousand-Year Dragon",
+    lure: "a girl on Warship Island who can hear animals is being hunted by the Marines",
+    summary: "Apis, a girl who ate the Whisper-Whisper Fruit, ran from a Marine ship with a secret: a thousand-year dragon, and the Lost Island where its kind went to die. A rogue Marine captain wants that secret badly.",
+    contact: { name: "Apis", title: "Girl of Warship Island", look: { hair: "ponytail", hairColor: "#4e342e", top: "#ef9a9a", bottom: "#5d4037" } },
+    where: "in Warship Village",
+    meet: [
+      { pirate: "You're pirates? Good \u2014 pirates don't take orders from Captain Nelson Royale.", marine: "A Marine... Please, not all Marines are like Nelson Royale. Prove it.", hunter: "A bounty hunter? Captain Nelson Royale's a Marine, not a pirate \u2014 but nobody else will stop him." },
+      "Ryuuji is a dragon, a thousand years old, and he's dying. Nelson Royale wants the secret of his long life. His men are in the village right now."
+    ],
+    boss2: { id: "mq_gl2_eric", name: "Eric the Whirlwind", title: "Royale's Hired Blade", faction: "bandit", level: 23, hpMul: 0.8, bounty: 0, look: { hair: "long", hairColor: "#90a4ae", top: "#455a64", bottom: "#263238" }, style: "ittoryu", skill: 0.35, alert: "Kama-Kama! The wind cuts!" },
+    task2: "Drive off Eric the Whirlwind, Royale's hired blade.",
+    boss: { id: "mq_gl2_royale", name: "Captain Nelson Royale", title: "Rogue Marine Captain", faction: "rival", level: 25, hpMul: 1.1, bounty: 0, look: { hair: "short", hairColor: "#212121", top: "#fafafa", bottom: "#1b4f72", hat: "marine", coat: "#fafafa", bulk: 1.3 }, style: "brawler", skill: 0.4, alert: "That dragon's secret belongs to me!" },
+    task: "Defeat Captain Nelson Royale before he takes the dragon's secret.",
+    wait: "Royale's men came in by the docks. Please hurry.",
+    done: ["Ryuuji can rest now. He wanted to see the Lost Island one last time \u2014 and he did. Thank you."],
+    after: "When the wind is right, I can still hear Ryuuji singing."
+  });
+  stop2("gl_clockwork", "clockwork_island", {
+    name: "The Clockwork Fortress",
+    lure: "a fortress that strikes the hour sits on top of Clockwork Island, full of stolen treasure",
+    summary: "The Trump Siblings rule Clockwork Island from the fortress in its clock tower, and steal from every ship that docks. Their latest prize is a ship's whole crew.",
+    contact: { name: "Borodo", title: "Ex-Pirate Treasure Hunter", look: { hair: "bald", top: "#795548", bottom: "#3e2723", bulk: 1.4 } },
+    where: "at the Gearwork Harbour square",
+    meet: ["The Trump Siblings took my crew's treasure and my crew with it. They're locked in the clock's gears up there.", "Bear King, their captain, wears a crown of clockwork. Climb the tower and knock it off his head."],
+    boss: { id: "mq_gl2_bear_king", name: "Bear King", title: "Captain of the Trump Siblings", level: 27, hpMul: 1.2, bounty: 52e6, look: { hair: "spiky", hairColor: "#212121", top: "#b71c1c", bottom: "#212121", hat: "captain", bulk: 1.5 }, style: "brawler", skill: 0.4, alert: "Trump card! I always hold it!" },
+    task: "Take down Bear King, captain of the Trump Siblings (\u0E3F52,000,000).",
+    wait: "The Clock Fortress is up the crag. Listen for the hour.",
+    done: ["My crew's free, and the clock's stopped for good. Never liked the ticking."]
+  });
+  stop2("gl_crown", "crown_island", {
+    name: "The Antler Crown",
+    lure: "the animals of Crown Island need a king \u2014 and a hunter has stolen the crown",
+    summary: "Crown Island's strange animals choose their king by his antlers. A poacher named Count Butler has taken the crown and the antlers both, and is drinking a potion to become king himself.",
+    contact: { name: "Mobambi", title: "Young Deer of Crown Island", look: { hair: "short", hairColor: "#8d6e63", top: "#a1887f", bottom: "#6d4c41" } },
+    where: "at the Animal Kingdom",
+    meet: ["The crown's been stolen! Count Butler took it \u2014 and the King's antlers too.", "He's mixing a potion to make himself an animal and our king. Stop him, please \u2014 the whole island is hiding."],
+    boss: { id: "mq_gl2_butler", name: "Count Butler", title: "Poacher Lord", level: 29, hpMul: 1.25, bounty: 66e6, look: { hair: "short", hairColor: "#9e9e9e", top: "#4a148c", bottom: "#212121", hat: "tophat", coat: "#311b92" }, style: "brawler", skill: 0.4, alert: "A crown fit for a beast!" },
+    task: "Take the Antler Crown back from Count Butler.",
+    wait: "The Count is in the Antler Throne. Mind the traps.",
+    done: ["The crown is back where it belongs. The animals have chosen a new king \u2014 a good one."]
+  });
+  stop2("gl_omatsuri", "omatsuri_island", {
+    name: "The Baron's Trials",
+    lure: "Omatsuri Island promises every crew a holiday \u2014 and some never leave",
+    summary: `Baron Omatsuri runs the island's "trials" for visiting crews. Crews who fail are scattered, or worse. A flower on the hill seems to whisper to him.`,
+    contact: { name: "Muchigoro", title: "Island Hostess", look: { hair: "long", hairColor: "#f8bbd0", top: "#f06292", bottom: "#4a148c" } },
+    where: "at the Festival Resort",
+    meet: ["Welcome, welcome! Join the Baron's Trials \u2014 prizes for everyone!", "...Psst. Don't. Crews who win too many trials vanish. The Baron talks to that flower on the hill all night. Please \u2014 put a stop to it."],
+    boss: { id: "mq_gl2_omatsuri", name: "Baron Omatsuri", title: "Master of the Trials", level: 31, hpMul: 1.3, bounty: 8e7, look: { hair: "curly", hairColor: "#ff7043", top: "#ffffff", bottom: "#d32f2f", hat: "tophat", hatColor: "#d32f2f" }, style: "sniper", skill: 0.45, alert: "The trials aren't over!" },
+    task: "Win the last trial: beat Baron Omatsuri.",
+    wait: "The Baron's trials are in the great hall.",
+    done: ["The flower's cut, and the Baron is just a sad old man now. He lost his crew once, too."]
+  });
+  stop2("gl_delta", "delta_island", {
+    name: "The Pirates Expo",
+    lure: "the Pirates Festival is on at Delta Island \u2014 every crew on the sea, chasing one treasure",
+    summary: "Buena Festa has thrown the Pirates Expo on Delta Island: a treasure hunt for Roger's lost treasure. The whole thing is a trap \u2014 Festa wants every crew in one place, and so does the Navy.",
+    contact: { name: "Ann", title: "Lost Girl at the Expo", look: { hair: "short", hairColor: "#212121", top: "#424242", bottom: "#212121", hat: "hood" } },
+    where: "at the Expo grounds",
+    meet: ["You came for the treasure? So did everyone. It's a bomb. Festa wants a war, and the Marines want everyone in one cage.", { pirate: "Stop Festa before he lights it, and you'll sail out of here with your crew \u2014 the Marines can't catch what isn't trapped.", marine: "If you're a real Marine, stop Festa's bomb. The Navy's trap doesn't care who's standing on the island.", hunter: "Festa's poster is old, but it's real. Bring him down, and you'll have saved half the pirates you'd have hunted \u2014 and their bounties for later." }],
+    boss: { id: "mq_gl2_festa", name: "Buena Festa", title: "The Festival Man", level: 37, hpMul: 1.5, bounty: 16e7, look: { hair: "afro", hairColor: "#ff5722", top: "#ffeb3b", bottom: "#212121", hat: "tophat", bulk: 1.4 }, style: "brawler", skill: 0.5, alert: "Let's make this festival unforgettable!" },
+    task: "Stop Buena Festa (\u0E3F160,000,000) before the Expo blows.",
+    wait: "Festa is in the Expo Hall. The fuse is short.",
+    done: ["The bomb's out, the Expo's over, and somewhere Festa is still laughing about it. Sabaody is close now."]
+  });
+  stop2("gl_hannabal", "hannabal", {
+    name: "The Dead End Race",
+    lure: "the deadliest race on the Grand Line starts from Hannabal \u2014 and the prize is a fortune",
+    summary: "The Dead End race runs from Hannabal to the end of Paradise, anything goes. The organiser, a smuggler called Gasparde, uses it to find the toughest crews \u2014 and sink them.",
+    contact: { name: "Shuraiya", title: "Bounty Hunter with a Grudge", look: { hair: "long", hairColor: "#3e2723", top: "#212121", bottom: "#4e342e", hat: "cowboy", hatColor: "#212121" } },
+    where: "at the Dead End Saloon",
+    meet: ["You're in the race? Then watch Gasparde's men. He signs up the strong crews and sends his thugs to sink them before the finish.", "His first mate runs the starting line. Teach him some manners, and Gasparde will notice you."],
+    boss: { id: "mq_gl2_needles", name: "Needles", title: "Gasparde's First Mate", level: 23, hpMul: 0.9, bounty: 24e6, look: { hair: "mohawk", hairColor: "#4caf50", top: "#212121", bottom: "#424242" }, style: "brawler", skill: 0.35, alert: "Nobody wins Gasparde's race!" },
+    task: "Beat Needles at the Dead End starting line.",
+    wait: "Needles runs the starting line on the docks.",
+    done: ["Gasparde's noticed you now. He'll be at the finish. So will I."]
+  });
+  stop2("gl_kettle", "kettle_island", {
+    name: "The Volcano Forge",
+    lure: "the forges of Kettle Island make blades worth stopping for \u2014 if the race lets you",
+    summary: "Kettle Island's smiths forge with the volcano's heat. A gang of race wreckers has taken the forge to arm Gasparde's fleet.",
+    contact: { name: "Old Sootbeard", title: "Master Smith", look: { hair: "bald", top: "#5d4037", bottom: "#3e2723", bulk: 1.5 } },
+    where: "at the Kettle Forge",
+    meet: ["Gasparde's wreckers have my forge. They're making harpoons for his ships \u2014 harpoons for YOUR ship.", "Their boss is Cinder Kate. Throw her out, and I'll put an edge on anything you own."],
+    boss: { id: "mq_gl2_cinder", name: "Cinder Kate", title: "Wrecker Boss", level: 25, hpMul: 1, bounty: 41e6, look: { hair: "ponytail", hairColor: "#ff5722", top: "#3e2723", bottom: "#212121" }, style: "brawler", skill: 0.4, alert: "This forge burns for Gasparde!" },
+    task: "Throw Cinder Kate out of the Kettle Forge.",
+    wait: "The forge is up by the boiling spring. Hot work.",
+    done: ["My forge is mine again. Next time you're by, bring me something worth sharpening."]
+  });
+  stop2("gl_mirage", "mirage_atoll", {
+    name: "The Town That Isn't There",
+    lure: "sailors on Mirage Atoll see a city across the lagoon that isn't there \u2014 and ships disappear chasing it",
+    summary: "The mirage on Mirage Atoll lures ships onto the reef. This year, someone is helping it along with lanterns \u2014 and looting the wrecks.",
+    contact: { name: "Sabiha", title: "Lagoon Pilot", look: { hair: "long", hairColor: "#212121", top: "#ffe082", bottom: "#8d6e63", hat: "turban" } },
+    where: "in Shimmer",
+    meet: ['Every night, lights on the far shore \u2014 "the city". The ships steer for it, and the reef takes them.', "It's the Sand Rats, wreckers working for Gasparde. Their boss hides in the ruins on the far side."],
+    boss: { id: "mq_gl2_sandrat", name: "Sandrat Sully", title: "Wrecker of the Atoll", level: 27, hpMul: 1.1, bounty: 49e6, look: { hair: "buzz", hairColor: "#d7ccc8", top: "#a1887f", bottom: "#6d4c41", hat: "bandana" }, style: "sniper", skill: 0.4, alert: "You followed the lights, didn't you?" },
+    task: "Put out the false lights: beat Sandrat Sully in the ruins.",
+    wait: "The ruins are across the lagoon. Watch the reef.",
+    done: ["No lights tonight. Just the mirage, and the mirage never sank anyone on its own."]
+  });
+  stop2("gl_driftwood", "driftwood_republic", {
+    name: "The Parliament of Wrecks",
+    lure: "the Driftwood Republic is voting on whether to sell itself to a pirate",
+    summary: "The Driftwood Republic is a city built of wrecks, run by a parliament that never agrees. A pirate called Admiral Plank has bought enough votes to make himself President-for-life.",
+    contact: { name: "Speaker Hulla", title: "Speaker of the Parliament", look: { hair: "curly", hairColor: "#bdbdbd", top: "#1565c0", bottom: "#212121" } },
+    where: "outside the Parliament of Wrecks",
+    meet: ["Order! Order! ...Nobody listens. Admiral Plank \u2014 not a real admiral \u2014 has bought half the parliament.", "Tomorrow he's President-for-life. Unless somebody shows the Republic he's just a pirate with a hat."],
+    boss: { id: "mq_gl2_plank", name: '"Admiral" Plank', title: "Would-Be President", level: 30, hpMul: 1.2, bounty: 72e6, look: { hair: "short", hairColor: "#795548", top: "#283593", bottom: "#212121", hat: "tricorne", coat: "#1a237e" }, style: "ittoryu", skill: 0.45, alert: "I have the votes!" },
+    task: 'Unseat "Admiral" Plank (\u0E3F72,000,000).',
+    wait: "Plank holds court on the docks.",
+    done: ["The vote's tomorrow, and for once we all agree: no Plank. Come back for the party."]
+  });
+  stop2("gl_asuka", "asuka_island", {
+    name: "The Cursed Sword",
+    lure: "Asuka Island's shrine holds the cursed sword Shichiseiken \u2014 and a swordsman has come to take it",
+    summary: "Saga, a swordsman of Asuka Island, has drawn the cursed sword Shichiseiken. The sword is eating him alive, and the seven stars are lining up.",
+    contact: { name: "Maya", title: "Shrine Maiden", look: { hair: "long", hairColor: "#212121", top: "#ffffff", bottom: "#c62828" } },
+    where: "at the Hall of the Seven Stars",
+    meet: ["Saga drew the Shichiseiken. He was the kindest man on the island. Now the sword speaks through him.", "When the seven stars line up tonight, it will be too late. Beat him \u2014 break the sword's grip on him."],
+    boss: { id: "mq_gl2_saga", name: "Saga", title: "Bearer of the Shichiseiken", level: 32, hpMul: 1.3, bounty: 0, faction: "rival", look: { hair: "long", hairColor: "#cfd8dc", top: "#37474f", bottom: "#212121" }, style: "ittoryu", skill: 0.55, alert: "The sword... wants... blood!" },
+    task: "Free Saga from the cursed sword: beat him at the shrine.",
+    wait: "Saga is at the shrine on the hill. The stars are rising.",
+    done: ["The sword is sealed again, and Saga is himself. He'll never touch a blade again \u2014 he says."]
+  });
+  stop2("gl_whistle", "whistle_rock", {
+    name: "The Singing Rock",
+    lure: "the wind bell on Whistle Rock has been stolen, and ships are going blind in the fog",
+    summary: "Whistle Rock sings in the wind, and ships steer by it through the fog. Someone has plugged the holes and stolen the Wind Bell \u2014 and the reefs are filling with wrecks.",
+    contact: { name: "Keeper Fennel", title: "Bell-Keeper", look: { hair: "long", hairColor: "#eeeeee", top: "#90a4ae", bottom: "#455a64" } },
+    where: "in Hollow Holm",
+    meet: ["Without the Wind Bell, the rock is silent, and the fog is full of reefs.", "It was Gasparde's men again \u2014 they want the race through here blind. Their captain's camped at the bell tower."],
+    boss: { id: "mq_gl2_mute", name: "Mute Morrow", title: "Gasparde's Captain", level: 33, hpMul: 1.25, bounty: 88e6, look: { hair: "buzz", hairColor: "#424242", top: "#263238", bottom: "#212121", hat: "hood" }, style: "rokushiki", skill: 0.45, alert: "..." },
+    task: "Get the Wind Bell back from Mute Morrow.",
+    wait: "The bell tower is at the top of the rock.",
+    done: ["Hear that? The rock is singing again. Ships will find their way tonight."]
+  });
+  stop2("gl_hammerhead", "hammerhead_island", {
+    name: "The Finish Line",
+    lure: "the Dead End race finishes at Hammerhead Island \u2014 and Gasparde is waiting",
+    summary: "The Dead End race ends at the breakers' yard on Hammerhead Island. Gasparde, the ex-Marine who runs it, means to sink the winners and keep the prize.",
+    contact: { name: "Shuraiya", title: "Bounty Hunter with a Grudge", look: { hair: "long", hairColor: "#3e2723", top: "#212121", bottom: "#4e342e", hat: "cowboy", hatColor: "#212121" }, key: "shuraiya" },
+    where: "at Breaker's Yard",
+    meet: ["You made it. So did Gasparde. He killed my family, years ago, and he's laughing on that dock.", "He ate the Candy-Candy Fruit \u2014 he melts like syrup. Hit him hard enough, though, and he'll set."],
+    boss: { id: "mq_gl2_gasparde", name: "Gasparde", title: "Former Marine Captain", level: 38, hpMul: 1.55, bounty: 198e6, look: { hair: "short", hairColor: "#4e342e", top: "#212121", bottom: "#212121", coat: "#37474f", bulk: 1.3, scarEye: true }, style: "brawler", skill: 0.5, alert: "The race ends here \u2014 for you." },
+    task: "Win the Dead End: beat Gasparde (\u0E3F198,000,000) at the finish.",
+    wait: "Gasparde is on the breakers' dock.",
+    done: ["It's over. The prize is yours. I'll take the quiet.", "Sabaody is just past here. The race is done \u2014 but the Grand Line isn't."]
+  });
+  stop2("gl_saltpetre", "saltpetre_isle", {
+    name: "Fireworks and Gunpowder",
+    lure: "the fireworks makers of Saltpetre Isle are selling powder to a crew with a black flag",
+    summary: "Saltpetre Isle makes the Grand Line's fireworks \u2014 and its gunpowder. A crew flying a strange black flag has bought every barrel, and won't pay.",
+    contact: { name: "Pop Gunsmoke", title: "Firework Master", look: { hair: "afro", hairColor: "#9e9e9e", top: "#e65100", bottom: "#3e2723" } },
+    where: "at the Firework Works",
+    meet: [`Black flag, three skulls on it, and a captain who laughs "zehahaha" \u2014 no, he wasn't here himself. His bosun was.`, "The bosun's still here, loading MY powder onto THEIR ship. Stop him, and I'll tell you where they were going."],
+    boss: { id: "mq_gl2_bosun", name: "Bosun Grit", title: "Bosun of a Black-Flag Crew", level: 23, hpMul: 0.9, bounty: 26e6, look: { hair: "buzz", hairColor: "#212121", top: "#212121", bottom: "#424242", bulk: 1.4 }, style: "brawler", skill: 0.35, alert: "The Captain wants that powder!" },
+    task: "Stop Bosun Grit taking the powder.",
+    wait: "Grit is loading barrels at the docks.",
+    done: ["They were heading north, along the Calm Belt. Following someone, the bosun said. A man with a fire for a fist."]
+  });
+  stop2("gl_bellwether", "bellwether_island", {
+    name: "Wolves of Bellwether",
+    lure: "the shepherds of Bellwether Island are losing their sheep \u2014 and their sons \u2014 to wolves on two legs",
+    summary: "Bellwether Island's giant sheep are being stolen by a gang of rustlers who wear wolf skins. They have taken the shepherds' sons too, to mind the stolen flocks.",
+    contact: { name: "Granny Hogget", title: "Head Shepherd", look: { hair: "ponytail", hairColor: "#eeeeee", top: "#8d6e63", bottom: "#5d4037" } },
+    where: "in Bellwether",
+    meet: ["The Wolf Pack took my grandson with the flock. They hide in the hills past the windmill.", "Their leader calls himself Fang. Bring my boy home."],
+    boss: { id: "mq_gl2_fang", name: "Fang", title: "Leader of the Wolf Pack", level: 26, hpMul: 1, bounty: 45e6, look: { hair: "long", hairColor: "#757575", top: "#616161", bottom: "#424242", hat: "hood", hatColor: "#757575" }, style: "brawler", skill: 0.4, alert: "Awoooo!" },
+    task: "Beat Fang and bring the shepherds' sons home.",
+    wait: "The Wolf Pack is in the hills. Follow the bleating.",
+    done: ["My boy is home. He says the Pack were selling wool to a ship with a black flag. Everyone's selling to that ship."]
+  });
+  stop2("gl_lanternfish", "lanternfish_cove", {
+    name: "The Dark Half of the Year",
+    lure: "Lanternfish Cove is dark half the year, and someone is stealing its light",
+    summary: "In Lanternfish Cove the only light comes from glowing fish, sold in jars. A pirate called the Candle has netted the whole bay and is selling the town its own light back.",
+    contact: { name: "Wick", title: "Lamplighter", look: { hair: "short", hairColor: "#ffca28", top: "#263238", bottom: "#37474f" } },
+    where: "in Glimmerdock",
+    meet: ["The Candle's nets are across the whole bay. No fish, no light. People are falling off the piers in the dark.", "He keeps the jars on his ship at the end of the long pier. Cut the nets \u2014 and cut him down."],
+    boss: { id: "mq_gl2_candle", name: "The Candle", title: "Light Thief", level: 28, hpMul: 1.1, bounty: 58e6, look: { hair: "spiky", hairColor: "#ffeb3b", top: "#212121", bottom: "#212121", bulk: 0.9 }, style: "sniper", skill: 0.45, alert: "Want some light? It'll cost you." },
+    task: "Free the lanternfish: beat the Candle.",
+    wait: "The Candle's ship is at the end of the long pier.",
+    done: ["Look at the bay \u2014 it's glowing again! The Candle said he was paid to keep the cove dark for a ship passing north. A black flag."]
+  });
+  stop2("gl_banaro", "banaro_island", {
+    name: "Where the Fire Went Out",
+    lure: "Banaro Island is half burnt black \u2014 and the people who did it are still there",
+    summary: "Banaro Island is where Fire Fist Ace caught up with Blackbeard, and lost. The town is half ash. A few of Blackbeard's hangers-on stayed to pick it clean.",
+    contact: { name: "Mama Cinza", title: "Last Bar Owner", look: { hair: "curly", hairColor: "#9e9e9e", top: "#5d4037", bottom: "#3e2723" } },
+    where: "at the Last Bar",
+    meet: ["Fire and darkness, that night. The darkness won. Ace was taken to the Marines alive.", { pirate: "Blackbeard's gone, but his leftovers are robbing what's left of us. You're a pirate \u2014 show them what a real one looks like.", marine: "The Navy took Ace and left us the ashes. The least you can do is take Blackbeard's leftovers too.", hunter: "Blackbeard's leftovers have bounties. Small ones. Take them anyway \u2014 for us." }],
+    boss: { id: "mq_gl2_ashjaw", name: "Ashjaw Bronn", title: "Blackbeard Hanger-on", level: 31, hpMul: 1.25, bounty: 74e6, look: { hair: "long", hairColor: "#212121", top: "#212121", bottom: "#3e2723", bulk: 1.5, scarEye: true }, style: "brawler", skill: 0.45, alert: "Zehahaha \u2014 that's how the Captain laughs. I'm practising." },
+    task: "Drive Ashjaw Bronn (\u0E3F74,000,000) out of Banaro.",
+    wait: "Ashjaw's lot are picking through the scorched quarter.",
+    done: ["Banaro will rebuild. Ace would've liked that."]
+  });
+  stop2("gl_tumbleweed", "tumbleweed_island", {
+    name: "One Sheriff Too Many",
+    lure: "Tumbleweed Island has more bounty hunters than pirates \u2014 and a sheriff who sells the posters",
+    summary: "Dustwater has one street, one saloon and one sheriff, who rigs the island's bounty board: he forges posters on honest folk and splits the reward with his deputies.",
+    contact: { name: "Clem", title: "Saloon Pianist", look: { hair: "short", hairColor: "#795548", top: "#fff3e0", bottom: "#4e342e", hat: "cowboy" } },
+    where: "at the Dry Gulch",
+    meet: ["See that board? Half those faces never robbed nobody. Sheriff Drawl draws the posters himself.", { pirate: "He'll have one of you up there by morning. Get him first.", marine: "The Navy pays those posters. You're paying a crook. Arrest him.", hunter: "Every fake poster makes a real hunter look like a crook. Bring him in." }],
+    boss: { id: "mq_gl2_drawl", name: "Sheriff Drawl", title: "Crooked Lawman", level: 33, hpMul: 1.25, bounty: 9e7, look: { hair: "short", hairColor: "#d7ccc8", top: "#5d4037", bottom: "#3e2723", hat: "cowboy", hatColor: "#3e2723" }, style: "sniper", skill: 0.5, alert: "Draw!" },
+    task: "Take Sheriff Drawl's badge.",
+    wait: "Drawl sits outside the Sheriff's Office all day.",
+    done: ["The board's cleaned up. Only real pirates on it now \u2014 and a few of them sailed north this week, flying black."]
+  });
+  stop2("gl_mecha", "mecha_island", {
+    name: "The Golden Crown",
+    lure: "Karakuri Castle on Mecha Island is full of clockwork soldiers, and its lord is hunting the Golden Crown",
+    summary: "Lord Ratchet of Mecha Island has an army of clockwork soldiers and a legend: the treasure of the Golden Crown, buried under the island. He's digging it up with the islanders' hands.",
+    contact: { name: "Granny Mechanic", title: "Old Toymaker", look: { hair: "ponytail", hairColor: "#e0e0e0", top: "#6d4c41", bottom: "#3e2723" } },
+    where: "in Karakuri Town",
+    meet: ["My son Ratchet built every soldier in that castle. Now he thinks the Golden Crown will make his mother proud.", `The "treasure" will sink the whole island. Stop him, but... please don't break him.`],
+    boss: { id: "mq_gl2_ratchet", name: "Lord Ratchet", title: "Master of Karakuri Castle", level: 35, hpMul: 1.4, bounty: 112e6, look: { hair: "spiky", hairColor: "#ffb300", top: "#ffd54f", bottom: "#5d4037", hat: "captain", hatColor: "#ffb300" }, style: "brawler", skill: 0.45, alert: "My soldiers never tire!" },
+    task: "Stop Lord Ratchet (\u0E3F112,000,000) before he digs up the Golden Crown.",
+    wait: "Ratchet is in Karakuri Castle, up the crag.",
+    done: ["The island is still here. Ratchet is grounded. Forever."]
+  });
+  stop2("gl_mistletoe", "mistletoe_island", {
+    name: "The Night Before",
+    lure: "on Mistletoe Island it's always the night before a holiday \u2014 and someone wants to keep it that way",
+    summary: "Mistletoe Island never gets to its holiday morning. A woman with a Devil Fruit froze the island's calendar, and its people are too happy to notice they've been prisoners for years.",
+    contact: { name: "Little Tinsel", title: "Girl Who Remembers", look: { hair: "ponytail", hairColor: "#d32f2f", top: "#2e7d32", bottom: "#c62828", hat: "beanie" } },
+    where: "in Hollyhearth",
+    meet: ["It's been the night before for six years. Everyone else forgets every morning. I don't.", "Madame Evergreen lives in the Snow Saint's house. She said holidays are better waited for. Make it morning, please."],
+    boss: { id: "mq_gl2_evergreen", name: "Madame Evergreen", title: "Keeper of the Night Before", level: 37, hpMul: 1.45, bounty: 14e7, look: { hair: "long", hairColor: "#e8f5e9", top: "#1b5e20", bottom: "#ffffff", coat: "#2e7d32" }, style: "sniper", skill: 0.5, alert: "Not yet. Never yet." },
+    task: "Wake Mistletoe Island: beat Madame Evergreen.",
+    wait: "She's by the Snow Saint, on the hill.",
+    done: ["IT'S MORNING! It's actually morning! ...Is this what presents are?", "Marineford is south of here. The black flag passed the island last week \u2014 going the same way."]
+  });
 
   // src/content/main/newWorld.js
   var beaten2 = (id) => (c) => (c.bosses || []).includes(id) || !!c.defeated?.[id];
@@ -168637,7 +169804,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   }
   function allBluePoint(c) {
     const r4 = (c.runSeed || 1) % 1e3 / 1e3;
-    return { x: chart(260 + r4 * 1400), y: chart(880 + (c.runSeed || 7) % 7 * 45) };
+    return { x: chart(260 + r4 * 1400), y: chart(736 + (c.runSeed || 7) % 7 * 90) };
   }
 
   // src/game/news.js
@@ -169201,9 +170368,9 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     installContent(game);
     installNet(game);
     const voyageHud = installVoyageHud(game, ui);
-    const toTitle = (afterDeath, next) => {
+    const toTitle = (afterDeath, next2) => {
       if (!afterDeath && game.player && game.state?.char && !game.state.char.dead) persist(game);
-      if (next === "create") game.net?.leftWorld();
+      if (next2 === "create") game.net?.leftWorld();
       else game.net?.close("quit");
       if (sail2) {
         sail2 = null;
@@ -169219,7 +170386,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       ui.setHudVisible(false);
       game.paused = false;
       view3d?.setActive(false);
-      if (next === "create") openCreation();
+      if (next2 === "create") openCreation();
       else showTitle();
     };
     installSession(game, { onReturnToTitle: toTitle });
