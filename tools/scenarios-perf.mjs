@@ -36,11 +36,11 @@ async function measure(page, label, n = 60) {
     return {
       fps: +(n / (wall / 1000)).toFixed(1), frameMs: +(wall / n).toFixed(1), simFrames: F,
       calls: info.render.calls, tris: info.render.triangles, geos: info.memory.geometries, tex: info.memory.textures, progs: info.programs?.length,
-      objs, meshes, actors: window.OP.game.actors.length,
+      objs, meshes, actors: window.OP.game.actors.length, posed: v.posedN, near: v.nearN,
       parts: parts.slice(0, 24),
     };
   }, n);
-  console.log(`== ${label}: ${res.fps} fps (${res.frameMs} ms/frame) · ${res.calls} calls · ${res.tris} tris · ${res.geos} geos · ${res.tex} tex · ${res.progs} programs · ${res.objs} objects (${res.meshes} meshes) · ${res.actors} actors`);
+  console.log(`== ${label}: ${res.fps} fps (${res.frameMs} ms/frame) · ${res.calls} calls · ${res.tris} tris · ${res.geos} geos · ${res.tex} tex · ${res.progs} programs · ${res.objs} objects (${res.meshes} meshes) · ${res.actors} actors (${res.near} near, ${res.posed} posed)`);
   console.log('   ' + res.parts.map(([k, v]) => `${k} ${v}`).join(' | '));
   return res;
 }
