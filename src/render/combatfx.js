@@ -153,9 +153,12 @@ export function hitFeedback(fx, att, tgt, h, o = {}) {
   const down = final > 0 && tgt.state === 'knocked';
   if (blocked) blockFx(fx, tgt, ang, w, z);
   else if (final > 0 || h.trueDamage) {
-    const col = st ? st.spark[1] || st.spark[0] : E.c;
+    // (an elemental hit flashes in its element's colours — a Phoenix's blue
+    // fire stays blue — the style's own only for plain blows)
+    const sty = st && !(h.element && h.element !== 'physical') ? st : null;
+    const col = sty ? sty.spark[1] || sty.spark[0] : E.c;
     fx.add('impact', { x: cx, y: cy, z, angle: ang, size: 0.24 + 0.42 * w, color: crit ? '#ffd740' : col, core: '#ffffff', life: 0.1 + 0.09 * w, spikes: 8 + Math.round(w * 5), lines: 2 + Math.round(w * 5) });
-    sparks(fx, cx, cy, z, ang, Math.round(3 + 9 * w), crit ? ['#ffd740', '#fff59d', '#ffffff'] : st ? st.spark : E.spark, { speed: 5 + 6 * w, life: 0.2 + 0.14 * w, size: 0.07 + 0.05 * w });
+    sparks(fx, cx, cy, z, ang, Math.round(3 + 9 * w), crit ? ['#ffd740', '#fff59d', '#ffffff'] : sty ? sty.spark : E.spark, { speed: 5 + 6 * w, life: 0.2 + 0.14 * w, size: 0.07 + 0.05 * w });
     elemHit(fx, E === ELEM.bluefire ? 'bluefire' : elem, E, cx, cy, z, ang, w);
     if (st) styleHit(fx, st, def, tgt, cx, cy, z, ang, w);
     if (w >= 0.68) {
@@ -1668,7 +1671,7 @@ sig('hito_arm hito_walk hito_jump hito_brain', { buff(fx, actor, s, a, ex) { DEF
 // Leopard: a finger gun; the Six Kings' Gun
 sig('neko_rokuogan', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); for (let i = 0; i < 3; i++) fx.ring(px, py, 0.1, 1.5 + i * 0.8, '#ffffff', 0.4, 0.1, { z: 0.9, flat: 0.85, delay: i * 0.05, wobble: 0.15, lobes: 9, add: true }); fx.add('aircrack', { x: px, y: py, z: 0.9, size: 1.1, life: 0.45 }); fx.shake(0.4, hb.angle); } });
 // Phoenix: blue flame
-sig('phoenix_pyreapple phoenix_talon', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); flames(fx, px, py, 0.8, 14, ['#4fc3f7', '#81d4fa', '#fff176'], { speed: 2.5, size: 0.22 }); } });
+sig('phoenix_pyreapple phoenix_talon', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); flames(fx, px, py, 0.8, 14, ['#4fc3f7', '#81d4fa', '#e0f7fa'], { speed: 2.5, size: 0.22, hot: '#e0f7fa' }); } });
 // Azure Dragon: blades of wind; a whirlwind; a heavenly strike
 sig('seiryu_kamaitachi', { proj(fx, actor, s, a) { const [px, py] = fwd(actor, a.angle, 0.8); fx.add('crescent', { x: px, y: py, angle: a.angle, radius: 1.2, arc: 1.8, width: 0.2, color: '#e3f2fd', core: '#ffffff', life: 0.25, z: 1 }); } });
 sig('seiryu_tatsumaki', { zone(fx, actor, spec, a, zone) { fx.add('zone', { x: zone.x, y: zone.y, r: zone.r, kind: 'storm', color: '#e3f2fd', zone, life: 1e6 }); smoke(fx, zone.x, zone.y, 0.5, 12, ['#e3f2fd', '#ffffff'], { speed: 3, size: 0.45 }); return true; } });

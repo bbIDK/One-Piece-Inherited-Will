@@ -242,6 +242,7 @@ export class BackFlame {
   }
 }
 
+const _j = new THREE.Vector3(), _h = new THREE.Vector3(), _a = new THREE.Vector3();
 const _Y = new THREE.Vector3(0, 1, 0), _p = new THREE.Vector3(), _d = new THREE.Vector3(), _o = new THREE.Vector3(), _e = new THREE.Vector3();
 
 // The wing's skin: a sheet of blue flame cut into long pointed feathers along
@@ -258,54 +259,72 @@ const WING_VERT = /* glsl */`
   }
 `;
 const WING_FRAG = /* glsl */`
-  uniform float uTime, uSeed, uAlpha, uN, uTipGold;
+  uniform float uTime, uSeed, uAlpha, uN, uTipGold, uFront;
   uniform vec3 uRim, uMid, uHot, uCore, uGold, uFire;
   varying vec2 vUv;
   ${NOISE}
   void main() {
     float t = uTime + uSeed;
-    float u = vUv.x, v = vUv.y;
-    float fu = u * uN, f = fract(fu), fid = floor(fu);
-    float cf = abs(f * 2.0 - 1.0);
-    // each feather drawn out to a point, the edge ragged with licking flame (Marco's wings: Wano)
-    float tip = (1.0 - 0.3 * pow(cf, 1.3)) * (0.9 + 0.1 * mod(fid, 2.0));
-    float lick = (fnoise(vec3(fu * 2.4, v * 4.0 - t * 4.6, t * 0.7 + fid)) - 0.5) * 0.34 * (0.25 + v);
-    float edge = tip + lick;
-    if (v > edge) discard;
-    float split = smoothstep(0.5, 0.95, v / edge);
-    if (cf > 1.0 - 0.14 * split) discard;
-    // turquoise, paler and speckled toward the arm, a deeper blue only right at the ragged edge
-    float speck = fnoise(vec3(fu * 6.0, v * 14.0 - t * 1.2, fid));
-    float heat = 1.0 - v / edge + (speck - 0.5) * 0.5;
-    float rim = edge - v;
-    vec3 col = mix(uRim, uMid, smoothstep(0.02, 0.05, rim));
-    col = mix(col, uHot, step(0.5, heat));
-    col = mix(col, uCore, step(0.85, heat) * 0.8);
-    // the quill down each feather, a fine darker line
-    col = mix(col, uRim, (1.0 - smoothstep(0.03, 0.07, cf)) * smoothstep(0.15, 0.4, v) * 0.45);
-    // gold-and-orange flames dotted over it — along the arm and at the feather tips — flickering
-    float g = fnoise(vec3(fu * 2.2 + 3.1, v * 5.0 - t * 2.4, t * 0.9 + fid * 0.5));
-    float where = max(1.0 - smoothstep(0.08, 0.32, v), smoothstep(0.62, 0.9, v / edge)) * uTipGold;
-    float fl = smoothstep(0.62, 0.68, g) * where;
-    col = mix(col, uGold, fl);
-    col = mix(col, uFire, smoothstep(0.74, 0.8, g) * where);
-    col *= 1.0 + 0.3 * step(0.85, heat) + 0.25 * fl;
-    gl_FragColor = vec4(col, uAlpha);
+    float u = vUv.x;
+    // va: 0 on the arm, 1 at the longest feather's tip, below 0 the fringe
+    // of fire licking up off the arm (uFront of the sheet's rows)
+    float va = (vUv.y - uFront) / (1.0 - uFront);
+    float fu = u * uN;
+    // each feather a tongue of flame that sways as it streams back: bent side
+    // to side by a wave running down it, and by noise, more toward its tip
+    float tipw = max(va, 0.0);
+    float sway = sin(va * 5.0 - t * 7.0 + floor(fu) * 1.7) * 0.08 * tipw
+               + (fnoise(vec3(fu * 0.8, va * 2.0 - t * 2.2, 1.0)) - 0.5) * 0.4 * tipw;
+    float fs = fu + sway, fid = floor(fs);
+    float cf = abs(fract(fs) * 2.0 - 1.0);
+    float n = fnoise(vec3(fs * 1.3, va * 3.2 - t * 2.6, fid * 0.37));
+    float n2 = fnoise(vec3(fs * 3.1 + 7.0, va * 7.0 - t * 4.1, t * 0.6));
+    // (every feather its own length, flickering longer and shorter)
+    float len = 0.74 + 0.16 * fract(sin(fid * 12.9898 + uSeed) * 43758.5) + (fnoise(vec3(fid * 0.7, t * 1.6, 2.0)) - 0.5) * 0.26;
+    float vv = va / len;
+    // a tongue: the feathers one sheet at the root, each narrowing to a point at its tip
+    float body = 1.3 * (1.0 - pow(clamp(vv, 0.0, 1.0), 1.5)) - cf + (n - 0.5) * 0.4 * tipw;
+    // the fringe off the arm: little tongues licking up and flickering
+    float fr = uFront / (1.0 - uFront);
+    float tn = fnoise(vec3(u * uN * 4.5, t * 2.4 - va * 3.0, 9.0));
+    float front = uFront > 0.0 ? (va + fr * (0.2 + 0.8 * pow(tn, 1.3))) * 7.0 : 1.0;
+    float d = min(body, front);
+    if (d < 0.0) discard;
+    // three hard bands like the techniques' fire: a deep blue rim, the cyan body,
+    // the white-hot heart along the arm, streaks of heat flowing back off it
+    float mid = smoothstep(0.1, 0.13, d);
+    float streak = fnoise(vec3(fs * 2.2, va * 1.6 - t * 3.4, 5.0));
+    float hot = smoothstep(0.66, 0.7, streak + (1.0 - vv) * 0.28) * smoothstep(0.22, 0.26, d);
+    float core = smoothstep(0.2, 0.16, va + (n2 - 0.5) * 0.16) * smoothstep(0.3, 0.34, d);
+    vec3 c = mix(uRim, uMid, mid);
+    c = mix(c, uHot * 1.1, hot);
+    c = mix(c, uCore * 1.3, core);
+    // gold where the feathers burn out at their tips, as Marco's are drawn
+    float g = smoothstep(0.7, 0.74, vv + (n2 - 0.5) * 0.3) * uTipGold;
+    c = mix(c, mix(uFire, uGold * 1.25, mid), g);
+    gl_FragColor = vec4(c, uAlpha);
   }
 `;
+// (the share of a wing's sheet, in v, that's the fringe of fire ahead of the arm)
+const WING_FRONT = 0.14;
 const WING_COLS = { uRim: '#1673c9', uMid: '#2fc8ee', uHot: '#7fe8fb', uCore: '#d9fbff', uGold: '#ffd23f', uFire: '#ff8a1c' };
 
-function wingMat(seed, n, gold) {
-  const u = { uTime: { value: 0 }, uSeed: { value: seed }, uAlpha: { value: 1 }, uN: { value: n }, uTipGold: { value: gold } };
+function wingMat(seed, n, gold, front = 0) {
+  const u = { uTime: { value: 0 }, uSeed: { value: seed }, uAlpha: { value: 1 }, uN: { value: n }, uTipGold: { value: gold }, uFront: { value: front } };
   for (const [k, c] of Object.entries(WING_COLS)) u[k] = { value: new THREE.Color(c) };
   return new THREE.ShaderMaterial({ uniforms: u, vertexShader: WING_VERT, fragmentShader: WING_FRAG, transparent: true, depthWrite: true, side: THREE.DoubleSide });
 }
 
-/** A sheet NU × NV whose vertices are laid out each frame (uv: u along the span, v back along the chord). */
-function sheetGeo(NU, NV) {
+/**
+ * A sheet NU × NV whose vertices are laid out each frame (uv: u along the
+ * span, v back along the chord). With `front`, its first row is a fringe
+ * ahead of the leading edge (v 0..front) and the rest the chord (front..1).
+ */
+function sheetGeo(NU, NV, front = 0) {
   const g = new THREE.BufferGeometry();
   const pos = new Float32Array(NU * NV * 3), uv = new Float32Array(NU * NV * 2), idx = [];
-  for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) { const k = i * NV + j; uv[k * 2] = i / (NU - 1); uv[k * 2 + 1] = j / (NV - 1); }
+  const vOf = (j) => (front ? (j === 0 ? 0 : front + (1 - front) * (j - 1) / (NV - 2)) : j / (NV - 1));
+  for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) { const k = i * NV + j; uv[k * 2] = i / (NU - 1); uv[k * 2 + 1] = vOf(j); }
   for (let i = 0; i < NU - 1; i++) for (let j = 0; j < NV - 1; j++) {
     const a = i * NV + j, b = a + NV;
     idx.push(a, b, a + 1, b, b + 1, a + 1);
@@ -331,18 +350,16 @@ export class PhoenixWings {
     this.group = new THREE.Group();
     this.NU = 18; this.NV = 6;
     this.wings = [0, 1].map((side) => {
-      const mat = wingMat(seed + side * 7.7, 7, 1);
-      const m = new THREE.Mesh(sheetGeo(this.NU, this.NV), mat);
+      const mat = wingMat(seed + side * 7.7, 7, 1, WING_FRONT);
+      const m = new THREE.Mesh(sheetGeo(this.NU, this.NV, WING_FRONT), mat);
       m.frustumCulled = false; m.renderOrder = 2;
-      // (laid out here, but drawn as fire by the effects: fireOut)
-      m.visible = false;
       this.group.add(m);
       return { m, mat, side };
     });
     this.TU = 9;
     const tmat = wingMat(seed + 31, 5, 1);
     this.tail = new THREE.Mesh(sheetGeo(this.TU, this.NV), tmat);
-    this.tail.frustumCulled = false; this.tail.renderOrder = 2; this.tail.visible = false;
+    this.tail.frustumCulled = false; this.tail.renderOrder = 2;
     this.tailMat = tmat;
     this.group.add(this.tail);
     this.grow = 0;
@@ -352,17 +369,29 @@ export class PhoenixWings {
    * Burn for a frame. `rig`: the body's solved rig (S, J, E: shoulders, elbows,
    * hands; hip, qChest); `d`: its dims; `trail`: the way the flames stream, in
    * the body's frame (+x ahead, +y up, +z its right; a unit vector); `lit`:
-   * burning (unfurls) or going out (folds away).
+   * burning (unfurls) or going out (folds away); `hold`: a technique's
+   * under way — the wings stay spread wide, steady, rather than following
+   * the arms through the swing (they'd fold and crumple into the body).
    */
-  update(t, dt, rig, d, trail, lit = true) {
+  update(t, dt, rig, d, trail, lit = true, hold = false) {
     this.grow += ((lit ? 1 : 0) - this.grow) * Math.min(1, dt * (lit ? 6 : 8));
+    this.hold = (this.hold || 0) + ((hold ? 1 : 0) - (this.hold || 0)) * Math.min(1, dt * (hold ? 14 : 5));
     this.group.visible = this.grow > 0.02;
     if (!this.group.visible) return;
     const g = this.grow, NV = this.NV;
     for (const w of this.wings) {
-      const S = rig.S[w.side], J = rig.J[w.side], E = rig.E[w.side], S2 = rig.S[1 - w.side];
+      const S = rig.S[w.side], S2 = rig.S[1 - w.side];
       // out from the body: away from the other shoulder, level
       _o.subVectors(S, S2); _o.y = 0; _o.normalize();
+      // (the arm as the rig has it, or — mid-technique — held out level and a little raised)
+      const J = _j.copy(rig.J[w.side]), E = _h.copy(rig.E[w.side]);
+      if (this.hold > 0.001) {
+        const l1 = S.distanceTo(rig.J[w.side]), l2 = rig.J[w.side].distanceTo(rig.E[w.side]);
+        _a.copy(S).addScaledVector(_o, l1 * 0.97).addScaledVector(_Y, l1 * 0.22);
+        J.lerp(_a, this.hold);
+        _a.addScaledVector(_o, l2 * 0.95).addScaledVector(_Y, l2 * 0.32);
+        E.lerp(_a, this.hold);
+      }
       // (past the hand: the arm's line carried on a little, for the longest feathers to grow from)
       _e.subVectors(E, J).normalize().multiplyScalar(0.45).add(E);
       const pos = w.m.geometry.attributes.position.array;
@@ -379,9 +408,15 @@ export class PhoenixWings {
         _d.copy(trail).multiplyScalar(0.6).addScaledVector(_o, 0.15 + 0.3 * u).addScaledVector(_Y, 0.25 + 0.45 * u).normalize();
         const chord = (0.65 + 1.55 * Math.pow(u, 1.1)) * (0.25 + 0.75 * g);
         for (let j = 0; j < NV; j++) {
-          const v = j / (NV - 1);
-          // (a little camber: the feathers droop as they trail)
           const k = (i * NV + j) * 3;
+          if (j === 0) {
+            // (the fringe: fire licking up off the arm and a little ahead)
+            const f = chord * WING_FRONT / (1 - WING_FRONT);
+            pos[k] = _p.x - trail.x * f * 0.35; pos[k + 1] = _p.y + f; pos[k + 2] = _p.z - trail.z * f * 0.35;
+            continue;
+          }
+          const v = (j - 1) / (NV - 2);
+          // (a little camber: the feathers droop as they trail)
           pos[k] = _p.x + _d.x * chord * v;
           pos[k + 1] = _p.y + _d.y * chord * v - 0.1 * v * v * chord;
           pos[k + 2] = _p.z + _d.z * chord * v;
@@ -407,30 +442,6 @@ export class PhoenixWings {
     }
     this.tail.geometry.attributes.position.needsUpdate = true;
     this.tailMat.uniforms.uTime.value = t;
-  }
-
-  /**
-   * The wings as points of fire, in world space (after update(); the group's
-   * world matrix current): [x, y, z, u, v] each into `out` — u along the span
-   * (or across the tail's fan), v back along the feather, the tail's flagged
-   * by u ≥ 2. Drawn as the same blue fire as the fruit's techniques
-   * (vfx/projectiles.js phoenixFire), the sheets themselves left unseen.
-   */
-  fireOut(out) {
-    const M = this.group.matrixWorld;
-    let n = 0;
-    const take = (geo, tail) => {
-      const pos = geo.attributes.position.array, uv = geo.attributes.uv.array;
-      for (let k = 0; k < uv.length / 2 && n * 5 + 5 <= out.length; k++) {
-        _p.fromArray(pos, k * 3).applyMatrix4(M);
-        const o = n * 5;
-        out[o] = _p.x; out[o + 1] = _p.y; out[o + 2] = _p.z; out[o + 3] = uv[k * 2] + (tail ? 2 : 0); out[o + 4] = uv[k * 2 + 1];
-        n++;
-      }
-    };
-    for (const w of this.wings) take(w.m.geometry, false);
-    take(this.tail.geometry, true);
-    return n;
   }
 
   dispose() {
