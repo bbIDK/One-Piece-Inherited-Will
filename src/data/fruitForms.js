@@ -213,7 +213,7 @@ export const ZOAN_LOOK = {
   // (Monster Point: a hulking shaggy monster, antlers like a tree)
   monster: { ...FURRED, zoan: 'monster', skin: '#6e4a35', hand: '#6e4a35', fur: '#6e4a35', bottom: '#ef7d32', bottomStyle: 'shorts', muscle: 1.2, bulk: 1.55 },
   // (Kaido's hybrid: a giant of a man, branched golden horns, blue scales over him, a dragon's tail, claws, a wild black mane)
-  dragon_hybrid: { ...FURRED, zoan: 'dragon_hybrid', bottom: '#ece6d6', bottomStyle: 'hakama', waist: 'sash', waistCol: '#6a3fa0', hair: 'long', hairColor: '#141414', muscle: 1.2, bulk: 1.35, scales: '#3f8fe0' },
+  dragon_hybrid: { ...FURRED, zoan: 'dragon_hybrid', skin: '#c98d5c', hand: '#c98d5c', bottom: '#ece6d6', bottomStyle: 'hakama', waist: 'sash', waistCol: '#6a3fa0', hair: 'long', hairColor: '#141414', muscle: 1.2, bulk: 1.35, scales: '#3f8fe0' },
   // the whole beasts
   leopard: { zoan: 'leopard' },
   walk: { zoan: 'walk' },
@@ -249,7 +249,7 @@ export const KITS = {
     awakening: {
       name: 'K-ROOM', desc: 'Awakening: your ROOM goes where you go — always in it, always the surgeon. Radio Knife, Shock Wille, Puncture Wille.',
       skills: [
-        awaken('ope_room', { name: 'ROOM', desc: 'Open a ROOM — awakened, it goes where you go, so you are always in it.', k: { dur: 1.3 } }),
+        awaken('ope_room', { name: 'ROOM', desc: 'Open a ROOM — awakened, it goes where you go, so you are always in it.', k: { dur: 1.5, size: 1.6 } }),
         awaken('ope_shambles', { name: 'Shambles', desc: 'Change places with anyone in your ROOM — awakened, it goes where you go.' }),
         awaken('ope_radio', { name: 'Radio Knife' }),
         'ope_shockwille',

@@ -103,6 +103,16 @@ export function bodyMaterial(opts = {}) {
       .replace('#include <common>', `#include <common>
 varying float vPart; varying float vLimb; varying float vObjY; varying vec3 vObjP; varying vec3 vBindP;
 uniform vec4 uZoan; uniform vec3 uZoanA; uniform vec3 uZoanB;
+uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec4 uHakiRip; uniform vec3 uHakiCol; uniform vec3 uHakiSheen;
+uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead; uniform float uNear;
+uniform float uFlame; uniform vec4 uTorso; uniform vec4 uRimFx; uniform float uShadow;
+float bhash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float bnoise(vec3 x) {
+  vec3 i = floor(x), f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(bhash(i), bhash(i + vec3(1, 0, 0)), f.x), mix(bhash(i + vec3(0, 1, 0)), bhash(i + vec3(1, 1, 0)), f.x), f.y),
+             mix(mix(bhash(i + vec3(0, 0, 1)), bhash(i + vec3(1, 0, 1)), f.x), mix(bhash(i + vec3(0, 1, 1)), bhash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
 // (cellular noise: the distance to the nearest of a jittered grid of points, and that point's own random)
 vec2 zcell(vec3 p) {
   vec3 i = floor(p), f = fract(p);
@@ -114,16 +124,6 @@ vec2 zcell(vec3 p) {
     if (d < best) { best = d; id = bhash(i + g + 7.1); }
   }
   return vec2(best, id);
-}
-uniform float uFlash; uniform vec3 uFlashCol; uniform vec4 uHaki; uniform vec4 uHakiRip; uniform vec3 uHakiCol; uniform vec3 uHakiSheen;
-uniform vec2 uLegFx; uniform vec3 uLegFxCol; uniform float uFreeze; uniform float uClipY; uniform float uHideArms; uniform float uHideHead; uniform float uNear;
-uniform float uFlame; uniform vec4 uTorso; uniform vec4 uRimFx; uniform float uShadow;
-float bhash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
-float bnoise(vec3 x) {
-  vec3 i = floor(x), f = fract(x);
-  f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(mix(bhash(i), bhash(i + vec3(1, 0, 0)), f.x), mix(bhash(i + vec3(0, 1, 0)), bhash(i + vec3(1, 1, 0)), f.x), f.y),
-             mix(mix(bhash(i + vec3(0, 0, 1)), bhash(i + vec3(1, 0, 1)), f.x), mix(bhash(i + vec3(0, 1, 1)), bhash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
 }`)
       .replace('#include <color_fragment>', `#include <color_fragment>
 float pR = step(0.5, vPart) * step(vPart, 1.5), pL = step(1.5, vPart) * step(vPart, 2.5);

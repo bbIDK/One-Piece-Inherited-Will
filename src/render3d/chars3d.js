@@ -681,7 +681,8 @@ class ActorView {
       this.ice.scale.set(m.d.Bk, (m.d.hip0 + m.d.chestLen + m.d.neck + m.d.headR * 2.2) / 1.95, m.d.Bk);
     } else if (this.ice) this.ice.visible = false;
     // rooted: vines round the feet
-    if (a.status && a.status.root) {
+    // (never on someone down or dead: what held them is gone, and a ring on the floor round a body reads as a mark painted there)
+    if (a.status && a.status.root && a.state !== 'knocked' && a.state !== 'dead' && a.alive !== false) {
       if (!this.rootFx) { this.rootFx = rootRing(); this.root.add(this.rootFx); }
       this.rootFx.visible = true;
       this.rootFx.position.y = 0.06;

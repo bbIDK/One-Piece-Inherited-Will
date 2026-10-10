@@ -88,21 +88,21 @@ test('ROOM opens where it is cast and stays there: the surgeon walks off, the Ro
   assert.ok(z, 'a zone of kind room');
   assert.equal(z.owner, you);
   assert.ok(Math.abs(z.x - X0) < 0.01 && Math.abs(z.y - Y0) < 0.01, 'centred where it was cast');
-  assert.ok(z.r >= 6.5 && z.r < 7, `a little Room at mastery 0 (${z.r})`);
+  assert.ok(z.r >= 16 && z.r < 17, `a Room at mastery 0 at mastery 0 (${z.r})`);
   assert.ok(you.hasBuff('room'), 'its chip on the HUD');
   you.x += 5; step(g, 1);
   assert.equal(z.x, X0, 'it did not follow');
   assert.ok(ownRoom(you, g), 'still inside it, 5 m off its middle');
-  you.x += 4; step(g, 0.1);
+  you.x += 13; step(g, 0.1);
   assert.equal(ownRoom(you, g), null, 'out of it now');
   // (a bigger Room for a surgeon who's mastered it, and a new one replaces the last)
   you.fruitMastery = 100; you.x = X0; you.cooldowns = {};
   assert.ok(use(g, you, 'ope_room'));
   const rooms = g.areaZones.filter((r) => r.kind === 'room' && r.t > 0);
   assert.equal(rooms.length, 1, 'one Room at a time');
-  assert.ok(rooms[0].r >= 9.5, `grown with mastery (${rooms[0].r})`);
+  assert.ok(rooms[0].r >= 20, `grown with mastery (${rooms[0].r})`);
   // (it fades with time)
-  step(g, 17);
+  step(g, 41);
   assert.equal(g.areaZones.filter((r) => r.kind === 'room').length, 0, 'gone after its time');
 });
 

@@ -31,6 +31,7 @@ const CAM_SOLID = {
 };
 const TREE_H = { pine: 5.8, snowpine: 5.8, jungle: 6.2, palm: 5, bamboo: 4.5, cactus: 2.8, dead: 3.5, deadsnow: 3.5, spooky: 4.7, lollipop: 3.8, candycane: 2.4, coral: 2.3, kelp: 3.1, sakura: 4.2, blossom: 4.2 };
 const CAM_R = 0.3; // m the camera keeps clear of a core (its near plane, and a little)
+const ROOF_PROBE = [[0, 0], [0.6, 0], [-0.6, 0], [0, 0.6], [0, -0.6]];
 const ARM_MIN = 1.1; // m: a prop never pulls the camera in closer to you than this (it fades instead)
 
 export class CameraRig {
@@ -489,18 +490,21 @@ export class CameraRig {
         const hitAt = (up) => {
           for (let i = 1; i <= n; i++) {
             const t = i / n, bx = px + ux * t, bz = pz + uz * t, by = oy + (uy + up) * t;
-            if ((w.isBlocked(bx, bz) && !(roofs && roofs.roofAt(bx, bz)?.h < by - 0.3)) || (ships && !own && game.shipSolidAt(bx, bz, by, true))) return t;
+            if ((w.isBlocked(bx, bz) && !(roofs && roofs.roofAt(bx, bz)?.h < by - 0.8)) || (ships && !own && game.shipSolidAt(bx, bz, by, true))) return t;
           }
           return 0;
         };
         let hit = hitAt(0);
-        if (!own && ships) {
+        if ((!own && ships) || p.flying) {
           // (on a deck with a rail or a low cabin behind you, the camera rises
           // to look over it; a wall too high for that, it comes right in behind
-          // your head — see chars3d.js: then you're not drawn over the view)
+          // your head — see chars3d.js: then you're not drawn over the view.
+          // Flying low over the rooftops, it rises over the houses behind you
+          // rather than come in through them into your head)
           let want = 0;
-          if (hit && hit * len < 2) for (const up of [0.6, 1.2, 1.8]) if (!hitAt(up)) { want = up; break; }
-          this.camLift = (this.camLift || 0) + (want - (this.camLift || 0)) * Math.min(1, dt * 6);
+          if (p.flying) { if (hit) { want = 9; for (const up of [1, 2, 3.5, 5, 7]) if (!hitAt(up)) { want = up; break; } } }
+          else if (hit && hit * len < 2) for (const up of [0.6, 1.2, 1.8]) if (!hitAt(up)) { want = up; break; }
+          this.camLift = (this.camLift || 0) + (want - (this.camLift || 0)) * Math.min(1, dt * (p.flying ? 10 : 6));
           if (this.camLift > 0.01) { lift = this.camLift; uy += lift; cy = oy + uy; hit = hitAt(0); }
         } else this.camLift = 0;
         if (hit) k = Math.max(kMin, hit - 0.3 / len);
@@ -533,6 +537,16 @@ export class CameraRig {
         let under = ground(p.x + cx, p.y + cz) + 0.4;
         const rf = p.roofed ? game.view3d?.roofAt?.(p.x + cx, p.y + cz, oy) : null;
         if (rf && rf.h + 0.4 > under) under = rf.h + 0.4;
+        // (flying over the rooftops, or level with them: the camera rides over a
+        // roof it's above, a lens-width clear of it all round — never inside the house)
+        const roofs3 = game.view3d?.roofAt ? game.view3d : null;
+        if (roofs3 && !p.belowDeck && !room) {
+          for (const [qx, qz] of ROOF_PROBE) {
+            const rx = p.x + cx + qx, rz = p.y + cz + qz;
+            const r3 = w.isBlocked(rx, rz) ? roofs3.roofAt(rx, rz) : null;
+            if (r3 && r3.h < oy + 2.5 && r3.h + 0.7 > under) under = r3.h + 0.7;
+          }
+        }
         if (cy < under) cy = under;
       }
       cam.position.set(cx, cy, cz);

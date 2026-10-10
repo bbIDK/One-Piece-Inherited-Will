@@ -80,7 +80,7 @@ export const FRUITS = {
     techniques: [
       T(0, { id: 'ope_room', name: 'ROOM', icon: '🔵', anim: 'raise', windup: 0.35, recover: 0.25, cd: 18, say: 'ROOM.',
         desc: 'Open a ROOM: a pale blue sphere that stays where you cast it (it grows with your mastery). Your other techniques work inside it — draw the fight in.',
-        steps: [{ zone: { kind: 'room', range: 6.5, grow: 0.035, duration: 16, damage: 0, color: '#81d4fa', single: true, whileOwner: true } }, { buff: { id: 'room', name: 'ROOM', dur: 16 } }] }),
+        steps: [{ zone: { kind: 'room', range: 16, grow: 0.05, duration: 40, damage: 0, color: '#81d4fa', single: true, whileOwner: true } }, { buff: { id: 'room', name: 'ROOM', dur: 40 } }] }),
       T(10, { id: 'ope_shambles', name: 'Shambles', icon: '🔀', anim: 'point', windup: 0.12, recover: 0.15, cd: 2.5, room: 'need', say: 'Shambles.',
         desc: 'In your Room: change places with whoever you aim at — a foe mid-swing finds themselves somewhere else — or be wherever in it you aim.',
         steps: [{ power: { kind: 'shambles' } }] }),

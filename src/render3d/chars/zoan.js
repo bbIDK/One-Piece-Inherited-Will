@@ -528,7 +528,9 @@ class Phoenix {
 }
 
 // ------------------------------------------------------------------ the Azure Dragon
-const DN = 96, DM = 18, DL = 24; // rings, round each, and its length (metres at scale 1)
+const DN = 120, DM = 18, DL = 34;
+/** How high the Azure Dragon's head floats when it isn't flying (metres at scale 1): it hangs in the air on its clouds. */
+const HOVER = 2.6; // rings, round each, and its length (metres at scale 1)
 const _p0 = new THREE.Vector3(), _p1 = new THREE.Vector3(), _q0 = new THREE.Quaternion(), _m4 = new THREE.Matrix4(), _e0 = new THREE.Euler();
 /** Kaido's dragon: rides the root (not turned with the facing) — its body lies along the way its head has come. */
 class Dragon {
@@ -556,6 +558,17 @@ class Dragon {
     this.mane.frustumCulled = false; this.mane.castShadow = true;
     this.group.add(this.mane);
     this.whiskers = [-1, 1].map(() => { const w = new Tube(10, 5, toon('#e8d9a8'), 0.012); this.group.add(w.mesh); return { tube: w, pts: Array.from({ length: 10 }, () => new THREE.Vector3()) }; });
+    // the clouds it makes and rides on, always (the Azure Dragon never lies on the ground)
+    const cloudMat = toon('#f4f6fa');
+    this.clouds = Array.from({ length: 7 }, (_, k) => {
+      const g = group(this.group);
+      for (let j = 0; j < 5; j++) {
+        const a = j / 5 * TAU + k;
+        part(g, SPH, cloudMat, [0.9 - (j % 2) * 0.25, 0.42, 0.75], [Math.cos(a) * 0.75, (j % 3) * 0.12, Math.sin(a) * 0.55], [0, a, 0], 0.03);
+      }
+      part(g, SPH, cloudMat, [1.1, 0.55, 0.95], [0, 0.18, 0], [0, 0, 0], 0.03);
+      return g;
+    });
     this.flyK = 0; this.t0 = null;
   }
 
@@ -626,10 +639,11 @@ class Dragon {
   coil(a, w, rootY, s, f) {
     this.trail.length = 0;
     const c = Math.cos(f), sn = Math.sin(f);
-    for (let i = 0; i <= 70; i++) {
+    for (let i = 0; i <= 100; i++) {
       const d = i * 0.42;
       // (back from the head in loose loops, sinking toward the ground)
-      const lx = -d * 0.6, lz = Math.sin(d * 0.32) * 3.2 * Math.min(1, d / 5), ly = Math.max(0.55, 1.6 - d * 0.07);
+      // (held up in the air on its clouds, looping back from the head in great S-curves)
+      const lx = -d * 0.62, lz = Math.sin(d * 0.26) * 4.2 * Math.min(1, d / 5), ly = HOVER - 1.1 * Math.sin(d * 0.17) - d * 0.012;
       this.trail.push({ x: a.x + (lx * c - lz * sn) * s, y: a.y + (lx * sn + lz * c) * s, h: rootY + ly * s });
     }
   }
@@ -642,7 +656,7 @@ class Dragon {
     const fk = this.flyK;
     const rootY = root.position.y;
     // the head: a little above the ground on its cloud (or in the sky), riding where the actor is
-    const h0 = 1.6 * (1 - fk) + 0.6 * fk;
+    const h0 = HOVER * (1 - fk) + 0.6 * fk;
     const headH = rootY + h0 * s;
     if (!this.trail.length || this.t0 === null) this.coil(a, w, rootY, s, f);
     this.t0 = t;
@@ -675,8 +689,7 @@ class Dragon {
     // undulating: a wave running down the body, side to side, and up and down in the air
     const mv = clamp(sp / 6, 0, 1);
     this.wph = (this.wph || 0) + dt * (1.2 + mv * 3.5);
-    const amp = 0.35 + 0.55 * mv, ampY = (0.2 + 0.5 * mv) * (0.4 + 0.6 * fk);
-    const sag = 1 - fk; // (on the ground the body lies along it, low)
+    const amp = 0.45 + 0.55 * mv, ampY = 0.55 + 0.45 * mv;
     for (let i = 0; i < DN; i++) {
       const u = i / (DN - 1), d = u * DL;
       const P = at(d, this.pts[i]);
@@ -688,14 +701,15 @@ class Dragon {
       P.x += -_tmp.z * wv; P.z += _tmp.x * wv;
       P.y += Math.sin(d * 0.4 - this.wph * 0.8) * ampY * env;
       // (lying down: the body settles toward the ground past the neck, its belly on it)
-      if (sag > 0.01) P.y = P.y + (Math.max(0.5, Math.min(P.y, 0.62 + 0.2 * Math.sin(d * 0.3))) - P.y) * smooth(0.04, 0.2, u) * sag;
-      if (P.y < 0.4) P.y = 0.4;
+      // (a slow heave of the whole length as it hangs in the air, never down on the ground)
+      P.y += Math.sin(t * 0.6 + u * 4) * 0.25 * env;
+      if (P.y < 1.1) P.y = 1.1;
     }
     // where the neck meets the head: the head's own forward way
     this.pts[0].set(0, h0, 0);
     this.tube.set(this.pts, (i) => {
       const u = i / (DN - 1);
-      return (0.36 + 0.24 * smooth(0, 0.12, u)) * (1 - smooth(0.45, 1, u) * 0.88) * (1 + 0.03 * Math.sin(u * 60));
+      return (0.3 + 0.12 * smooth(0, 0.1, u)) * (1 - smooth(0.4, 1, u) * 0.85) * (1 + 0.03 * Math.sin(u * 60));
     });
     // the head: facing the actor's way, nodding with the climb, the jaw working
     let pitch = clamp((a.flightClimb || 0) * 0.04, -0.5, 0.5) + Math.sin(t * 1.1) * 0.04;
@@ -728,12 +742,20 @@ class Dragon {
       Lb.up.rotation.set(Lb.z * (0.5 + fk * 0.2), 0, 0.6 + Math.sin(ph) * (0.25 + 0.35 * mv) + fk * 0.5);
       Lb.lo.rotation.set(0, 0, -0.9 - Math.cos(ph) * 0.2);
     }
+    // the clouds under it, drifting along under the body's low places
+    for (let k = 0; k < this.clouds.length; k++) {
+      const i = Math.min(DN - 1, Math.round((0.12 + k * 0.12) * (DN - 1)));
+      const C = this.clouds[k], r = T.R[i];
+      C.position.set(T.P[i].x, T.P[i].y - r - 0.25 + Math.sin(t * 0.9 + k) * 0.08, T.P[i].z);
+      C.rotation.y = t * 0.1 + k;
+      C.scale.setScalar(0.8 - k * 0.05);
+    }
     // the mane: a ragged black flame on every stretch of the spine, leaning back
     const mp = this.manePos;
     for (let k = 0; k < this.NF; k++) {
       const u = (k + 0.5) / this.NF * 0.97, i = Math.min(DN - 2, Math.floor(u * (DN - 1)));
       const r = T.R[i], P = T.P[i], U = T.U[i], Tg = T.T[i];
-      const hgt = (0.85 - 0.6 * u) * (0.75 + 0.35 * Math.sin(k * 2.3)) + Math.sin(t * 6 + k) * 0.05;
+      const hgt = (0.5 - 0.35 * u) * (0.75 + 0.35 * Math.sin(k * 2.3)) + Math.sin(t * 6 + k) * 0.04;
       const half = DL / this.NF * 0.75;
       const put = (n, along, up) => {
         mp[(k * 5 + n) * 3] = P.x + U.x * (r * 0.92 + up) + Tg.x * along;
