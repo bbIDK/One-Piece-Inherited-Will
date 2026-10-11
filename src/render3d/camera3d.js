@@ -547,7 +547,10 @@ export class CameraRig {
             const rx = p.x + cx + qx, rz = p.y + cz + qz;
             const r3 = roofs3.roofAt(rx, rz);
             // (over the walls, or in among the eaves that overhang them — a lens in the thickness of a roof sees inside the house)
-            if (r3 && (w.isBlocked(rx, rz) || cy > r3.h - 1.5) && r3.h < oy + 2.5 && r3.h + 0.7 > under) under = r3.h + 0.7;
+            // (the eaves count only when you're up there with them — flying, or on the roofs: walking
+            // under an awning or an overhang, the camera stays down with you rather than leaping over it)
+            const high = p.flying || p.roofed || oy > r3.h - 1;
+            if (r3 && (w.isBlocked(rx, rz) || (high && cy > r3.h - 1.5)) && r3.h < oy + 2.5 && r3.h + 0.7 > under) under = r3.h + 0.7;
           }
         }
         if (cy < under) cy = under;

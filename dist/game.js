@@ -72503,7 +72503,8 @@ vec3 paneView(vec3 dir, float night) {
             for (const [qx, qz] of ROOF_PROBE) {
               const rx = p.x + cx + qx, rz = p.y + cz + qz;
               const r32 = roofs3.roofAt(rx, rz);
-              if (r32 && (w.isBlocked(rx, rz) || cy > r32.h - 1.5) && r32.h < oy + 2.5 && r32.h + 0.7 > under) under = r32.h + 0.7;
+              const high = p.flying || p.roofed || oy > r32.h - 1;
+              if (r32 && (w.isBlocked(rx, rz) || high && cy > r32.h - 1.5) && r32.h < oy + 2.5 && r32.h + 0.7 > under) under = r32.h + 0.7;
             }
           }
           if (cy < under) cy = under;
