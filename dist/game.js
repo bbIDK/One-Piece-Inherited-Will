@@ -87149,7 +87149,8 @@ vec3 paneView(vec3 dir, float night) {
       for (const sz of [-1, 1]) {
         k.add(new CylinderGeometry(8 * S6, 9.5 * S6, 34 * S6, 20), { at: [-8 * S6, -12 * S6, sz * 14 * S6], color: hide(3.2 * S6), outline: 0.4 });
       }
-      k.add(new SphereGeometry(24 * S6, 32, 20), { at: [-18 * S6, 6 * S6, 0], scale: [1, 0.78, 1.12], color: hide(4.5 * S6, "x"), outline: 0.6 });
+      k.add(new SphereGeometry(28 * S6, 32, 20), { at: [-24 * S6, 4 * S6, 0], scale: [1.15, 0.8, 1.15], color: hide(4.5 * S6, "x"), outline: 0.6 });
+      k.add(new SphereGeometry(20 * S6, 28, 18), { at: [-2 * S6, 2 * S6, 0], scale: [0.9, 1.1, 1.1], color: hide(3.4 * S6), outline: 0.4 });
       k.add(new SphereGeometry(R5, 36, 24), { at: [0, 26 * S6, 0], scale: [0.95, 1.08, 1], color: hide(3.6 * S6), outline: 0.6 });
       for (const sz of [-1, 1]) k.add(new SphereGeometry(11 * S6, 24, 16), { at: [-3 * S6, 39 * S6, sz * 6.5 * S6], scale: [1.05, 0.8, 1], color: hide(3.6 * S6), outline: 0.4 });
       for (const sz of [-1, 1]) {
@@ -113452,7 +113453,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       landmarks: [
         { kind: "building", role: "hall", name: "The Whale", npc: "nw_nekomamushi", fw: 9, fd: 6, hgt: 7, wall: "#6d4c41", roof: "#2e7d32", roofType: "hut", dx: 0.5, dy: -0.2, spot: "the_whale" },
         { kind: "poneglyph", road: true, poneglyph: "road_zou", name: "Road Poneglyph (in the Whale's tail)", dx: 0.38, dy: -0.34, spot: "zou_poneglyph" },
-        { kind: "zunesha", dx: 1.28, dy: 0.02, water: true, far: 5e3, name: "Zunesha", lore: "The elephant's head rises out of the sea higher than any building in Kurau City, its trunk hanging down into the waves. Zunesha has carried the minks on its back for a thousand years, walking the sea as punishment for a crime nobody remembers. Every so often it breathes, and the whole island rises and settles under your feet." },
+        { kind: "zunesha", dx: 1.04, dy: 0.02, water: true, far: 5e3, name: "Zunesha", lore: "The elephant's head rises out of the sea higher than any building in Kurau City, its trunk hanging down into the waves. Zunesha has carried the minks on its back for a thousand years, walking the sea as punishment for a crime nobody remembers. Every so often it breathes, and the whole island rises and settles under your feet." },
         { kind: "gate", dx: -0.84, dy: 0.02, name: "Front Gate of the Mokomo Dukedom", spot: "front_gate", lore: '"MOKOMO DUKEDOM." The steel gate has been ripped off its hinges by something enormous. Beyond it, the whole island rises and falls gently: you are standing on the back of Zunesha, an elephant that has walked the sea for a thousand years.' }
       ],
       spots: [{ id: "whale_forest", dx: 0.42, dy: 0.02 }, { id: "rightflank", dx: -0.1, dy: 0.56 }],

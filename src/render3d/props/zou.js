@@ -36,7 +36,9 @@ reg('zunesha', (o) => {
       k.add(new THREE.CylinderGeometry(8 * S, 9.5 * S, 34 * S, 20), { at: [-8 * S, -12 * S, sz * 14 * S], color: hide(3.2 * S), outline: 0.4 });
     }
     // the shoulders and the neck, rising out of the island's east end
-    k.add(new THREE.SphereGeometry(24 * S, 32, 20), { at: [-18 * S, 6 * S, 0], scale: [1, 0.78, 1.12], color: hide(4.5 * S, 'x'), outline: 0.6 });
+    k.add(new THREE.SphereGeometry(28 * S, 32, 20), { at: [-24 * S, 4 * S, 0], scale: [1.15, 0.8, 1.15], color: hide(4.5 * S, 'x'), outline: 0.6 });
+    // the chest, down into the sea under the head (no head floating on the water)
+    k.add(new THREE.SphereGeometry(20 * S, 28, 18), { at: [-2 * S, 2 * S, 0], scale: [0.9, 1.1, 1.1], color: hide(3.4 * S), outline: 0.4 });
     // the head, and the great domed brow over it — two lobes, as an Asian elephant has
     k.add(new THREE.SphereGeometry(R, 36, 24), { at: [0, 26 * S, 0], scale: [0.95, 1.08, 1.0], color: hide(3.6 * S), outline: 0.6 });
     for (const sz of [-1, 1]) k.add(new THREE.SphereGeometry(11 * S, 24, 16), { at: [-3 * S, 39 * S, sz * 6.5 * S], scale: [1.05, 0.8, 1], color: hide(3.6 * S), outline: 0.4 });
