@@ -84,7 +84,7 @@ function shipStage(type, jr) {
   el.appendChild(canvas);
   let renderer = null;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); renderer.debug.checkShaderErrors = false;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   } catch (e) { el.appendChild(h('p.muted', 'No 3D preview on this device.')); }

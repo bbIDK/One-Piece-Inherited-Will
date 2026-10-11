@@ -14,7 +14,7 @@ function sharedRenderer() {
   if (shared) return shared;
   const canvas = document.createElement('canvas');
   canvas.className = 'preview3d-canvas';
-  const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); r.debug.checkShaderErrors = false;
   r.outputColorSpace = THREE.SRGBColorSpace;
   r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   r.setClearColor(0x000000, 0);

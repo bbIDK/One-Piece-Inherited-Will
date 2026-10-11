@@ -157,6 +157,9 @@ export class Renderer3D {
     this.msaa = game?.settings?.quality === 'low';
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: this.msaa, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // (no error check on every new shader: reading its log makes the browser wait for the compile to finish —
+    // a hitch each time something new comes into view — and undoes the background compiling below. ?glcheck turns it back on.)
+    this.renderer.debug.checkShaderErrors = /[?&]glcheck\b/.test(location.search);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     // count a whole frame (scene + post passes) in renderer.info, reset in draw()

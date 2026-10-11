@@ -99162,6 +99162,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.msaa = game?.settings?.quality === "low";
       this.renderer = new WebGLRenderer({ canvas: canvas2, antialias: this.msaa, powerPreference: "high-performance" });
       this.renderer.outputColorSpace = SRGBColorSpace;
+      this.renderer.debug.checkShaderErrors = /[?&]glcheck\b/.test(location.search);
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = PCFSoftShadowMap;
       this.renderer.info.autoReset = false;
@@ -105028,6 +105029,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const canvas2 = document.createElement("canvas");
     canvas2.className = "preview3d-canvas";
     const r4 = new WebGLRenderer({ canvas: canvas2, antialias: true, alpha: true });
+    r4.debug.checkShaderErrors = false;
     r4.outputColorSpace = SRGBColorSpace;
     r4.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     r4.setClearColor(0, 0);
@@ -115751,6 +115753,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     let renderer = null;
     try {
       renderer = new WebGLRenderer({ canvas: canvas2, antialias: true, alpha: true });
+      renderer.debug.checkShaderErrors = false;
       renderer.outputColorSpace = SRGBColorSpace;
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     } catch (e) {
@@ -124245,6 +124248,7 @@ button:disabled { cursor: not-allowed; }
         try {
           this.renderer = new WebGLRenderer({ canvas: this.el, antialias: true, alpha: true });
           this.renderer.outputColorSpace = SRGBColorSpace;
+          this.renderer.debug.checkShaderErrors = false;
         } catch (e) {
           return;
         }

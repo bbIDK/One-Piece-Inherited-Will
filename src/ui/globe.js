@@ -452,7 +452,7 @@ export class GlobeView {
 
   render() {
     if (!this.renderer) {
-      try { this.renderer = new THREE.WebGLRenderer({ canvas: this.el, antialias: true, alpha: true }); this.renderer.outputColorSpace = THREE.SRGBColorSpace; } catch (e) { return; }
+      try { this.renderer = new THREE.WebGLRenderer({ canvas: this.el, antialias: true, alpha: true }); this.renderer.outputColorSpace = THREE.SRGBColorSpace; this.renderer.debug.checkShaderErrors = false; } catch (e) { return; }
     }
     const cw = this.el.clientWidth || 1280, ch = this.el.clientHeight || 720, dpr = Math.min(2, window.devicePixelRatio || 1);
     if (this.el.width !== Math.round(cw * dpr) || this.el.height !== Math.round(ch * dpr)) { this.renderer.setPixelRatio(dpr); this.renderer.setSize(cw, ch, false); }
