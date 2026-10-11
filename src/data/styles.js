@@ -102,9 +102,9 @@ export const STYLES = {
     ],
     heavy: { id: 'bleg_heavy', name: 'Mouton Shot', anim: 'mouton', windup: 0.32, recover: 0.35, cd: 1.4, say: 'Mouton Shot!', steps: [{ hit: { shape: 'arc', range: 1.8, arc: 1.2, offset: 0.3, damage: 20, knockback: 9, stun: 0.5, heavy: true, guardBreak: true } }] },
     techniques: [
-      { id: 'bleg_party', name: 'Party Table Kick Course', icon: '🍽', anim: 'kick', windup: 0.2, recover: 0.4, cd: 6, desc: 'A handstand spin-kick hitting everything around you.', say: 'Party Table Kick Course!',
+      { id: 'bleg_party', name: 'Party Table Kick Course', icon: '🍽', anim: 'handstand', windup: 0.2, recover: 0.4, cd: 6, desc: 'A handstand spin-kick hitting everything around you.', say: 'Party Table Kick Course!',
         steps: [{ hit: { shape: 'circle', range: 2.4, damage: 8, knockback: 3.5, stun: 0.3, duration: 0.5, interval: 0.12 }, vfx: 'ring' }], learn: { mastery: 0, price: 2500 } },
-      { id: 'bleg_antimanner', name: 'Anti-Manner Kick Course', icon: '🚀', anim: 'kick', windup: 0.25, recover: 0.35, cd: 7, desc: 'A rising kick that launches the target and stuns them.', say: 'Anti-Manner Kick Course!',
+      { id: 'bleg_antimanner', name: 'Anti-Manner Kick Course', icon: '🚀', anim: 'rise_kick', windup: 0.25, recover: 0.35, cd: 7, desc: 'A rising kick that launches the target and stuns them.', say: 'Anti-Manner Kick Course!',
         steps: [{ hit: { shape: 'arc', range: 1.6, arc: 1.2, offset: 0.2, damage: 22, knockback: 2, stun: 1.3, heavy: true } }], learn: { mastery: 15, price: 6000 } },
       { id: 'bleg_concasse', name: 'Concassé', icon: '🔨', anim: 'axe_kick', windup: 0.4, recover: 0.4, cd: 9, desc: 'A crushing heel drop from above that cracks the ground.', say: 'Concassé!',
         steps: [{ dash: { dist: 3, time: 0.2, iframes: 0.2 } }, { at: 0.62, hit: { shape: 'circle', range: 1.9, damage: 30, knockback: 5, stun: 0.7, heavy: true, guardBreak: true, shake: 0.4 }, vfx: 'ring' }], learn: { mastery: 30, price: 14000 } },
