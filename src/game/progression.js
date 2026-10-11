@@ -49,7 +49,7 @@ export const WEAPON_KINDS = { fists: 'Fists', legs: 'Legs', sword: 'Swords', gun
 export class Progression {
   constructor(game) {
     this.game = game;
-    game.on('playerHit', (target, dmg) => this.onPlayerHit(target, dmg));
+    game.on('playerHit', (target, dmg, h) => this.onPlayerHit(target, dmg, h));
     game.on('knockout', (a, att) => this.onKnockout(a, att));
     game.on('playerEvaded', (att) => this.onEvade(att));
     game.on('playerBlocked', (att) => this.onBlocked(att));
@@ -78,17 +78,23 @@ export class Progression {
   }
 
   // ------------------------------------------------------------ fighting
-  onPlayerHit(target, dmg) {
+  onPlayerHit(target, dmg, h) {
     const g = this.game, p = g.player, c = this.char;
     if (!c || !target.d) return;
-    const tf = this.worth(target);
+    // (the move that landed this blow — a shockwave or a fireball lands after its swing is over — else the one under way)
+    const def = h?.def || p.action?.def || {};
+    const src = def.source || '';
+    let tf = this.worth(target);
     if (tf <= 0) {
-      if (!this.weakNote) { this.weakNote = true; g.hint('weak', 'Beating up weak opponents teaches you nothing. You grow by training and by fighting people who are a real threat to you.'); }
-      return;
+      // (the basics are learned on anyone: while what you're fighting with is still raw, even a weaker foe teaches a little)
+      const raw = src.startsWith('fruit') ? p.fruitMastery : src.startsWith('haki') ? 0 : p.masteries[p.style] ?? c.weaponMastery?.[weaponKindOf(p, def)];
+      if ((raw || 0) < 25) tf = 0.25;
+      else {
+        if (!this.weakNote) { this.weakNote = true; g.hint('weak', 'Beating up weak opponents teaches you nothing. You grow by training and by fighting people who are a real threat to you.'); }
+        return;
+      }
     }
     const frac = Math.min(0.3, dmg / target.d.maxHp);
-    const def = p.action?.def || {};
-    const src = def.source || '';
     let gain = frac * tf * 6;
     if (c.traits.includes('born_fighter')) gain *= 1.15;
     if (src.startsWith('fruit') && c.fruit) {

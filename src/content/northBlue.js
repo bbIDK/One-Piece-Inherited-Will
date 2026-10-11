@@ -19,7 +19,7 @@
 // from Dressrosa, 16 years after this snapshot, so lower period values are used
 // here (the Blue-sea scale, and the 30M Impel Down threshold, stay sane).
 // Barrels' and Bacca's bounties are unknown in canon.
-import { spawnNow, findActor, aggro, seaBoss, despawn } from './helpers.js';
+import { spawnNow, findActor, aggro, despawn } from './helpers.js';
 
 const at = (ctx, id, stage) => ctx.game.quests.stageId(id) === stage;
 const done = (ctx, id) => ctx.game.quests.isDone(id);
@@ -371,7 +371,7 @@ const npcs = [
         a: {
           text: () => {
             if (done(ctx, 'nb_liar_noland')) return `"Carry the log well. If you ever reach Jaya, find Noland's descendant, Montblanc Cricket. Tell him the archive of Lvneel remembers the truth — even if the Crown never will."`;
-            if (at(ctx, 'nb_liar_noland', 'report')) return `"The Sea King is slain? Then you have done what the picture book says a KING did." (He smiles thinly.) "The log tells it otherwise: ADMIRAL Noland dragged that beast aboard alone, while His Majesty hid below deck."`;
+            if (at(ctx, 'nb_liar_noland', 'report')) return `"You stood where he died, and heard the town still laughing at him." (He smiles thinly.) "The log tells it otherwise: ADMIRAL Noland dragged that Sea King aboard alone, while His Majesty hid below deck."`;
             if (at(ctx, 'nb_liar_noland', 'archive')) return `"You have the picture book? Good — you know what the Crown tells children. Now read what it wrote in private." (He unlocks a cabinet sealed with royal wax.) "The ship's log of the royal expedition to Jaya. Four hundred years old."`;
             if (ctx.char.race === 'skypiean') return `"...Wings? Then the stories are true. Noland wrote of fish that swim through clouds, and a golden bell ringing above Jaya. Welcome to the Royal Archive, child of the sky. I have thirty years of questions for you."`;
             return `"Welcome to the Royal Archive. Every child in the North Blue learns 'Liar Noland' before they can read. I have spent thirty years in these stacks, and I will tell you a secret: I do not believe a word of it."`;
@@ -381,12 +381,12 @@ const npcs = [
             { text: 'Why don\'t you believe it?', if: () => !ctx.quest('nb_liar_noland'), next: 'why' },
             { text: 'Let\'s find out the truth.', if: () => !ctx.quest('nb_liar_noland'), do: (c) => c.startQuest('nb_liar_noland'), end: true },
             { text: 'Read the sealed log.', if: () => at(ctx, 'nb_liar_noland', 'archive'), next: 'log' },
-            { text: 'The Sea King is dead.', if: () => at(ctx, 'nb_liar_noland', 'report'), do: (c) => c.complete('nb_liar_noland'), next: 'end' },
+            { text: 'I stood where he died.', if: () => at(ctx, 'nb_liar_noland', 'report'), do: (c) => c.complete('nb_liar_noland'), next: 'end' },
             { text: 'Goodbye.', end: true },
           ],
         },
         why: { text: `"Noland was an admiral and a botanist. He took his crew into the Grand Line and brought them home — more than once. Liars don't come home from the Grand Line. And who published the picture book? The very king who hanged him. Buy a copy next door and read it with a clear head."`, next: 'a' },
-        log: { text: `"'A Sea King rose off our bow. His Majesty fled below. Admiral Noland dove into the sea with his sword and a rope, and the beast was served at supper.' ...There are Sea Kings off Lvneel to this day. Stand where Noland died — then go and do what the book claims a king did."`, onEnter: (c) => c.stage('nb_liar_noland', 'stand') },
+        log: { text: `"'A Sea King rose off our bow. His Majesty fled below. Admiral Noland dove into the sea with his sword and a rope, and the beast was served at supper.' ...Stand where Noland died, and then come back and tell me he was a liar."`, onEnter: (c) => c.stage('nb_liar_noland', 'stand') },
         end: { text: `"Take this copy of the log — with Noland's own route to Jaya in the margins. Follow it if you ever sail the Grand Line. His descendant still dives for the City of Gold there, they say. And people laugh at him too."` },
       },
     }),
@@ -1179,7 +1179,6 @@ const quests = [
       { id: 'archive', desc: 'Bring the picture book to Archivist Pell at the Royal Archive.' },
       { id: 'stand', desc: 'Stand where Noland was executed — the old stand east of the town.', goal: { type: 'reach', island: 'lvneel', spot: 'noland_stand', r: 3 },
         onComplete: (ctx, g) => g.ui.banner('"That\'s it!"', 'Lvneel, four hundred years ago', '"...The City of Gold must have sunk into the sea!" — the last words of Montblanc Noland, admiral, explorer and botanist, before the axe fell.', 7) },
-      { id: 'seaking', desc: 'The picture book says the KING slew a Sea King. Sail out south of Lvneel harbour and slay the one that haunts these waters.', goal: { type: 'defeat', npc: 'nb_lvneel_seaking', island: 'lvneel', spot: 'lvneel_seaking' } },
       { id: 'report', desc: 'Report to Archivist Pell.' },
     ],
     rewards: { berries: 12000, points: 2, items: [['nb_expedition_log', 1]], flag: 'nbNolandTruth' },
@@ -1352,25 +1351,6 @@ const abilities = [
 
 // -------------------------------------------------------------- install
 function install(game) {
-  // The Sea King of the Lvneel picture book surfaces south of the harbour
-  let tt = 0;
-  game.on('tick', (dt) => {
-    const c = game.state?.char;
-    if (!c || !game.surface || game.world !== game.surface) return;
-    tt -= dt;
-    if (tt > 0) return;
-    tt = 0.5;
-    if (game.quests.stageId('nb_liar_noland') === 'seaking' && !findActor(game, 'nb_lvneel_seaking')) {
-      const isl = game.surface.islands.find((i) => i.id === 'lvneel');
-      const s = isl?.spots?.lvneel_seaking;
-      if (s && game.world.distance(game.player.x, game.player.y, s.x, s.y) < 28 && game.world.isLiquid(s.x, s.y)) {
-        const k = seaBoss(game, { id: 'nb_lvneel_seaking', name: 'Sea King of Lvneel', title: 'The beast from the picture book', level: 18, hpMul: 3.4, color: '#5e35b1', breakthrough: 3 }, s.x, s.y);
-        k.npcId = 'nb_lvneel_seaking';
-        game.ui.banner('SEA KING', 'Off the coast of Lvneel', 'The sea heaves. The beast from the picture book is real — and hungry.', 4);
-      }
-    }
-  });
-
   game.on('enterIsland', (isl) => {
     const c = game.state?.char;
     if (!c || !isl) return;
@@ -1403,6 +1383,6 @@ function install(game) {
 
 export default {
   id: 'northBlue', npcs, groups, quests, items, trainers, stock, archetypes, abilities,
-  dynamicIds: ['nb_lvneel_seaking'],
+  dynamicIds: [],
   install,
 };

@@ -9,6 +9,7 @@
 // 'side' (rolled across you), or 'back'; the rest as world/deform.js.
 import { addDeform } from '../world/deform.js';
 import { techScale } from './abilities.js';
+import { wallStrength } from './destruction.js';
 
 export const TERRAFORM = {
   // Gura Gura: the land and the sea rock and split
@@ -79,8 +80,11 @@ export function terraform(actor, a, ang, game) {
       game.fx?.shake?.(1.6);
     } else {
       // (a tilt rocks everything on it, hardest at its rising edge; a crater or a split wrecks what's over it)
-      const reach = T.kind === 'tilt' ? r * 0.75 : T.kind === 'trench' ? r : r * 0.9;
-      const power = amp * 90 * f;
+      // (and how much of a town it brings down is how far you've mastered the fruit: a fresh Gura user
+      // cracks walls and rattles a house or two — the same quake from a master levels the street)
+      const ws = wallStrength(actor);
+      const reach = (T.kind === 'tilt' ? r * 0.75 : T.kind === 'trench' ? r : r * 0.9) * (0.35 + 0.65 * Math.min(1, ws * 1.4));
+      const power = amp * 90 * f * ws;
       if (T.kind === 'trench') for (let t = 0; t <= r; t += 3) D.strike(x + Math.cos(dir) * t, y + Math.sin(dir) * t, T.w * f + 2, power, actor);
       else D.strike(x, y, reach, power, actor);
     }

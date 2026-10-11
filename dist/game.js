@@ -17465,6 +17465,945 @@
     }
   }
 
+  // src/world/objects.js
+  var CHUNK = 32;
+  var COLLIDE = {
+    // street furniture
+    lamp: 0.16,
+    lantern: 0.2,
+    sign: 0.15,
+    flagpole: 0.15,
+    mooring: 0.2,
+    barrel: 0.34,
+    crate: 0.42,
+    haystack: 0.6,
+    chest: 0.4,
+    planter: 0.3,
+    sacks: 0.45,
+    weaponrack: 0.4,
+    signboard: 0.3,
+    bench: [0.8, 0.3],
+    stall: [0.95, 0.4],
+    fence: [0.54, 0.1],
+    tent: [1.2, 1],
+    campfire: 0.45,
+    well: 0.95,
+    fountain: 1.55,
+    // (its basin's step)
+    // nature
+    tree: 0.3,
+    rock: 0.5,
+    mushroom: 0.25,
+    crystal: 0.4,
+    // landmarks (sized like their models; gates and arches you walk through)
+    statue: 0.7,
+    pillar: 0.45,
+    totem: 0.35,
+    dummy: 0.28,
+    cannon: 0.55,
+    anchor: 0.2,
+    grave: 0.3,
+    bell: 0.6,
+    ruins: 0.8,
+    poneglyph: [0.8, 0.35],
+    boat: [1.4, 0.6],
+    shipwreck: [2.5, 1.2],
+    lighthouse: 1.6,
+    tower: 2,
+    windmill: 1.5,
+    wheel: 1,
+    elevator: 1.5,
+    ryugu: 8.2,
+    // (Ryugu Palace's coral stalk, at its foot)
+    gate: 0,
+    torii: 0,
+    arch: 0,
+    bones: 0,
+    skull: 0,
+    bubble: 0,
+    platform: 0
+    // a raised floor you walk onto (see floorOf)
+  };
+  function floorOf(o) {
+    if (o.kind !== "platform") return null;
+    const n = o.name || "";
+    const s = o.s || 1;
+    if (/ring/i.test(n)) return { hw: 2.3 * s, hd: 2.3 * s, oy: 0, h: 0.88 * s };
+    if (/stage|carnival/i.test(n)) return { hw: 2.4 * s, hd: 1.7 * s, oy: 0, h: 1.02 * s };
+    return { hw: 1.8 * s, hd: 1.4 * s, oy: -0.2 * s, h: 2.4 * s };
+  }
+  var TRUNK2 = {
+    oak: 0.26,
+    autumn: 0.26,
+    cottoncandy: 0.26,
+    cloudtree: 0.26,
+    palm: 0.23,
+    pine: 0.21,
+    snowpine: 0.21,
+    jungle: 0.45,
+    cactus: 0.32,
+    dead: 0.22,
+    deadsnow: 0.22,
+    spooky: 0.22,
+    lollipop: 0.09,
+    candycane: 0.16,
+    bamboo: 0.3,
+    coral: 0.13,
+    kelp: 0.3,
+    sakura: 0.28,
+    blossom: 0.28
+  };
+  var ADAM = {
+    trunk: 31,
+    roots: [[0.25, 20, 6.2], [0.95, 15, 5], [1.6, 22, 6.5], [2.3, 14, 4.6], [2.95, 19, 5.8], [3.65, 16, 5.2], [4.35, 21, 6.4], [5.05, 13, 4.4], [5.7, 18, 5.6]]
+  };
+  var PANGAEA = { w: 48, d: 30 };
+  var PHLAB = {
+    domes: [[0, -6, 15, 9], [-21, 2, 9, 7], [20, 0, 10, 8], [-9, 17, 6.5, 5], [10, 16, 6, 5]],
+    stacks: [[-6, -22, 2.2, 46], [3, -23, 2, 40], [12, -19, 1.8, 36], [-15, -15, 1.6, 30]]
+  };
+  var SKULL = { r: 34, h: 72 };
+  function colliderOf(o) {
+    if (o.kind === "tree") return TRUNK2[o.sub || "oak"] ?? COLLIDE.tree;
+    if (TRUNK2[o.kind] !== void 0) return TRUNK2[o.kind];
+    if (o.kind === "boat" && /flagship|perfume/i.test(o.name || "")) return [3.3, 1.15];
+    if (o.kind === "torii") return { circles: [[-1.55, 0, 0.3], [1.55, 0, 0.3]] };
+    if (o.kind === "adamtree") {
+      const c = [[0, 0, ADAM.trunk + 1]];
+      for (const [a, len, r0] of ADAM.roots) {
+        for (let t = 0.25; t <= 1.001; t += 0.25) {
+          const d = ADAM.trunk + len * t, r4 = r0 * (1 - t * 0.7) * 0.8;
+          c.push([Math.cos(a) * d, Math.sin(a) * d, Math.max(0.8, r4)]);
+        }
+      }
+      return { circles: c };
+    }
+    if (o.kind === "pangaea") {
+      const c = [];
+      for (let x = -PANGAEA.w / 2 + 3; x <= PANGAEA.w / 2 - 3 + 1e-6; x += 4.2) for (let z = -PANGAEA.d / 2 + 3; z <= PANGAEA.d / 2 - 3 + 1e-6; z += 4.2) c.push([x, z, 3.1]);
+      return { circles: c };
+    }
+    if (o.kind === "spire") return { circles: [[0, 0, (o.r || 4) * 0.95]] };
+    if (o.kind === "adamroot") return { circles: [[0, 3, 2.7], [0, 7, 2.3], [0, 11, 1.9], [0, 15, 1.4], [0, 18.5, 1]] };
+    if (o.kind === "greatfountain") return { circles: [[0, 0, 10.1]] };
+    if (o.kind === "cliffwall") return { circles: (o.pts || []).filter((_, i) => i % 2 === 0).map(([x, z, nx, nz]) => [x - nx * 8, z - nz * 8, 9.5]) };
+    if (o.kind === "phvolcano" || o.kind === "wanofuji") return { circles: [[0, 0, (o.r || 20) * 0.86]] };
+    if (o.kind === "phicepeaks") return { circles: (o.peaks || []).map(([x, z, r4]) => [x, z, r4 * 0.78]) };
+    if (o.kind === "phlab") return { circles: PHLAB.domes.map(([x, z, r4]) => [x, z, r4 + 0.4]).concat(PHLAB.stacks.map(([x, z, r4]) => [x, z, r4 + 0.2])) };
+    if (o.kind === "yarukiman") return { circles: [[0, 0, 7.4]] };
+    if (o.kind === "zunesha") {
+      const S6 = o.s || 1;
+      return { circles: [[0, 0, 15 * S6], [-8 * S6, -14 * S6, 9 * S6], [-8 * S6, 14 * S6, 9 * S6], [16 * S6, 2 * S6, 6 * S6]] };
+    }
+    if (o.kind === "wanocastle") return { circles: [[0, 0, (o.r || 14) * 0.95]] };
+    if (o.kind === "skulldome") return { circles: [[0, -4, SKULL.r * 0.97], [-SKULL.r * 0.75, 6, SKULL.r * 0.42], [SKULL.r * 0.75, 6, SKULL.r * 0.42]] };
+    if (o.kind === "galleydock") {
+      const c = [];
+      for (let z = -10.6; z <= 8.4; z += 0.85) c.push([-10, z, 0.45], [10, z, 0.45]);
+      for (let x = -9.6; x <= 9.6; x += 0.85) if (Math.abs(x) > 3.6) c.push([x, -11, 0.45]);
+      for (let z = -5.6; z <= 7.6; z += 1.65) c.push([0, z, 3.4]);
+      c.push([8.8, 10.1, 0.5]);
+      return { circles: c };
+    }
+    if (o.kind === "bigtop") {
+      const c = [[0, 0, 0.35]];
+      for (let i = 0; i < 16; i += 2) {
+        const a = i / 16 * Math.PI * 2;
+        c.push([Math.cos(a) * 8.6, Math.sin(a) * 8.6, 0.25]);
+      }
+      for (const z of [-0.9, 0, 0.9]) c.push([-7, z, 1]);
+      return { circles: c };
+    }
+    if (o.kind === "baratie") return { circles: [[-18.5, 0, 0.55], [18.5, 0, 0.55]] };
+    if (o.kind === "gate") {
+      const k = /justice/i.test(o.name || "") ? 2.2 : 1;
+      return { circles: [-1, 1].flatMap((sx) => [[sx * 3.5 * k, -0.45 * k, 0.78 * k], [sx * 3.5 * k, 0.45 * k, 0.78 * k]]) };
+    }
+    if (o.kind === "arch") {
+      const n = o.name || "";
+      if (/heaven/i.test(n)) return { circles: [[-3.2, 0, 0.9], [3.2, 0, 0.9]] };
+      if (/mine|hatch|laboratory/i.test(n)) return COLLIDE.arch;
+      const [x, r4, d] = /one piece|resting/i.test(n) ? [3.1, 0.5, 1.6] : [1.92, 0.38, 1.2];
+      return { circles: [-1, 1].flatMap((sx) => [[sx * x, d * 0.25, r4], [sx * x, d * 0.75, r4]]) };
+    }
+    if (o.kind === "bell") return /harbou?r/i.test(o.name || "") ? [0.72, 0.2] : { circles: [[-1.55, 0, 0.26], [1.55, 0, 0.26]] };
+    if (o.kind === "ruins") {
+      const n = 3 + Math.floor(hash01(o.x, o.y, 2) * 3) % 2, a = -0.95, b = 0.6 * n - 1.45;
+      const m = Math.ceil((b - a) / 0.35) + 1;
+      return { circles: Array.from({ length: m }, (_, i) => [a + (b - a) * i / (m - 1), 0, 0.28]) };
+    }
+    return COLLIDE[o.kind];
+  }
+  var TURN = {
+    boat: (o) => hash01(o.x, o.y) * Math.PI * 2,
+    shipwreck: (o) => hash01(o.x, o.y) * Math.PI * 2,
+    tent: (o) => (hash01(o.x, o.y, 5) - 0.5) * 0.5,
+    ruins: (o) => hash01(o.x, o.y) * Math.PI * 2
+  };
+  var ROUND = /* @__PURE__ */ new Set(["barrel", "roundtable", "dummy", "plant"]);
+  var nextObjectId = 1;
+  var ObjectIndex = class {
+    constructor(world) {
+      this.world = world;
+      this.cw = Math.ceil(world.width / CHUNK);
+      this.ch = Math.ceil(world.height / CHUNK);
+      this.chunks = /* @__PURE__ */ new Map();
+      this.byId = /* @__PURE__ */ new Map();
+      this.count = 0;
+    }
+    key(cx, cy) {
+      return cy * this.cw + cx;
+    }
+    add(obj) {
+      var _a4;
+      obj.id = obj.id || nextObjectId++;
+      obj.x = this.world.wx(obj.x);
+      const cx = Math.floor(obj.x / CHUNK), cy = Math.floor(obj.y / CHUNK);
+      const k = this.key(cx, cy);
+      let list = this.chunks.get(k);
+      if (!list) this.chunks.set(k, list = []);
+      list.push(obj);
+      obj._chunk = k;
+      this.byId.set(obj.id, obj);
+      this.count++;
+      if (obj.far) ((_a4 = this.world).farObjects || (_a4.farObjects = [])).push(obj);
+      const fl2 = floorOf(obj);
+      if (fl2) this.world.addFloor({ x0: obj.x - fl2.hw, x1: obj.x + fl2.hw, y0: obj.y + fl2.oy - fl2.hd, y1: obj.y + fl2.oy + fl2.hd, h: fl2.h, o: obj });
+      if (obj.yaw === void 0 && TURN[obj.kind]) obj.yaw = TURN[obj.kind](obj);
+      const c = obj.block && colliderOf(obj);
+      if (obj.block && isEnterable(obj)) {
+        obj.enterable = true;
+        obj.pirate = isPirateHouse(obj);
+        this.align(obj);
+        this.stamp(obj, 2);
+        this.addInterior(obj);
+      } else if (obj.block && isHut(obj)) {
+        obj.hut = true;
+        this.align(obj);
+        this.stamp(obj, 2);
+        this.addHutWall(obj);
+      } else if (c !== void 0 && obj.block && (fl2 || (obj.fw || 1) <= 2 && (obj.fd || 1) <= 2)) {
+        obj.soft = true;
+        if (c) this.addCollider(obj, c);
+      } else if (obj.block) {
+        this.align(obj);
+        this.stamp(obj, 1);
+      }
+      if (obj.kind === "building" && obj.style === "chinese") this.addColumns(obj);
+      if (obj.kind === "building" && obj.style === "wano" && obj.block && !isHut(obj)) this.addVeranda(obj);
+      return obj;
+    }
+    /** A Wano house's raised wooden veranda along its front (see buildings3d engawa): a floor you step up onto. */
+    addVeranda(b) {
+      const fw = Math.max(2, b.fw || 3);
+      const att = b.attach || {};
+      b.veranda = { ...bbox(b, -fw / 2 - (att.left ? 0 : 0.1), fw / 2 + (att.right ? 0 : 0.1), 2e-3, 0.9), h: 0.42, o: b };
+      this.world.addFloor(b.veranda);
+    }
+    /** The red columns along a Chinese front stand out from the wall: they're solid (see buildings3d 'column'). */
+    addColumns(b) {
+      const fw = Math.max(2, b.fw || 3);
+      const n = Math.max(2, Math.round(fw / 1.6));
+      const d = b.enterable ? doorOf(b) : null;
+      b.colCols = [];
+      for (let i = 0; i <= n; i++) {
+        const x = -fw / 2 + i * fw / n;
+        if (d && x > d.x - d.dw / 2 - 0.33 && x < d.x + d.dw / 2 + 0.33) continue;
+        b.colCols.push(this.world.addCol({ ...bw(b, x, 0.25), r: 0.2, o: b }));
+      }
+    }
+    /**
+     * A hut's elliptical wall (see render3d/buildings3d hut) as a chain of
+     * circles along its long axis, each the biggest that fits inside the
+     * ellipse there, the last ones round its ends: within a few centimetres of
+     * the drawn wall and never outside it.
+     */
+    addHutWall(b) {
+      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+      const A2 = Math.max(fw, fd) / 2, Bm = Math.min(fw, fd) / 2;
+      const end = A2 - Bm * Bm / A2;
+      const inside2 = (u) => {
+        let d = Infinity;
+        for (let i = 0; i <= 48; i++) {
+          const t = i / 48 * Math.PI;
+          d = Math.min(d, Math.hypot(A2 * Math.cos(t) - u, Bm * Math.sin(t)));
+        }
+        return d;
+      };
+      const n = end > 0.01 ? Math.ceil(2 * end / 0.5) + 1 : 1;
+      b.cols = [];
+      for (let i = 0; i < n; i++) {
+        const u = n === 1 ? 0 : -end + 2 * end * i / (n - 1);
+        const p = fw >= fd ? bw(b, u, -fd / 2) : bw(b, 0, -fd / 2 + u);
+        b.cols.push(this.world.addCol({ x: p.x, y: p.y, r: inside2(u) - 0.02, o: b }));
+      }
+    }
+    addCollider(obj, c) {
+      const s = obj.s || 1, w = this.world;
+      if (c.circles) {
+        const yaw2 = obj.yaw || 0, cs2 = Math.cos(yaw2), sn2 = Math.sin(yaw2);
+        obj.cols = c.circles.map(([lx, lz, r4]) => w.addCol({ x: obj.x + (lx * cs2 + lz * sn2) * s, y: obj.y + (-lx * sn2 + lz * cs2) * s, r: r4 * s, o: obj }));
+        obj.col = obj.cols[0];
+        return;
+      }
+      if (!Array.isArray(c)) {
+        obj.col = w.addCol({ x: obj.x, y: obj.y, r: c * s, o: obj });
+        return;
+      }
+      let hw = c[0] * s, hd = c[1] * s;
+      const yaw = obj.yaw || 0, sn = Math.sin(yaw), cs = Math.cos(yaw);
+      if (Math.abs(Math.sin(2 * yaw)) < 0.08) {
+        if (Math.abs(sn) > 0.7) [hw, hd] = [hd, hw];
+        obj.col = w.addCol({ x: obj.x, y: obj.y, hw, hd, o: obj });
+        return;
+      }
+      const long = hw >= hd, L3 = long ? hw : hd, R5 = long ? hd : hw;
+      const ax = long ? cs : sn, ay = long ? -sn : cs;
+      const n = Math.max(1, Math.ceil(2 * (L3 - R5) / R5) + 1);
+      obj.cols = [];
+      for (let i = 0; i < n; i++) {
+        const u = n === 1 ? 0 : -(L3 - R5) + 2 * (L3 - R5) * i / (n - 1);
+        obj.cols.push(w.addCol({ x: obj.x + ax * u, y: obj.y + ay * u, r: R5, o: obj }));
+      }
+      obj.col = obj.cols[0];
+    }
+    removeCollider(obj) {
+      if (!obj.col) return;
+      for (const c of obj.cols || [obj.col]) this.world.removeCol(c);
+      obj.col = null;
+      obj.cols = null;
+    }
+    /** Walls (with a doorway) and the ground floor of an enterable building (furniture: see addFurniture). */
+    addInterior(b) {
+      const w = this.world;
+      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), T5 = WALL_T;
+      const d = doorOf(b);
+      const cols = [];
+      const rect2 = (x0, x1, z0, z1) => {
+        const r4 = bbox(b, x0, x1, z0, z1);
+        return { x: (r4.x0 + r4.x1) / 2, y: (r4.y0 + r4.y1) / 2, hw: (r4.x1 - r4.x0) / 2, hd: (r4.y1 - r4.y0) / 2 };
+      };
+      const box2 = (x0, x1, z0, z1, extra) => {
+        if (x1 - x0 < 0.01 || z1 - z0 < 0.01) return null;
+        const col6 = w.addCol({ ...rect2(x0, x1, z0, z1), o: b, ...extra });
+        cols.push(col6);
+        return col6;
+      };
+      const wall = { wall: true };
+      box2(-fw / 2, d.x - d.dw / 2, -T5, 0, wall);
+      box2(d.x + d.dw / 2, fw / 2, -T5, 0, wall);
+      box2(-fw / 2, fw / 2, -fd, -fd + T5, wall);
+      box2(-fw / 2, -fw / 2 + T5, -fd, 0, wall);
+      box2(fw / 2 - T5, fw / 2, -fd, 0, wall);
+      b.cols = cols;
+      b.doorBox = { ...rect2(d.x - d.dw / 2, d.x + d.dw / 2, -T5, 0), o: b, wall: true, door: true };
+      b.doorCol = w.addCol({ ...b.doorBox });
+      b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -2e-3), h: PLINTH, o: b, interior: true };
+      w.addFloor(b.floor);
+      const nMax = Math.ceil(STEPS_MAX / 0.2);
+      b.stepsFloor = { ...bbox(b, d.x - d.dw / 2 - 0.2 - nMax * 0.05, d.x + d.dw / 2 + 0.2 + nMax * 0.05, 2e-3, nMax * 0.32 + 0.05), h: 0, o: b, steps: d.x, dw: d.dw, door: bw(b, d.x, 0) };
+      w.addFloor(b.stepsFloor);
+    }
+    /** The furniture collides too (laid out lazily: when someone comes near or the island fills with people). */
+    addFurniture(b) {
+      if (b.furnished || !b.enterable) return;
+      b.furnished = true;
+      const w = this.world, L3 = layoutOf(b);
+      for (const it of L3.items) {
+        if (it.ghost || !it.rect) continue;
+        const r4 = it.rect, sh = 0.03;
+        if (ROUND.has(it.k)) b.cols.push(w.addCol({ ...bw(b, it.x, it.z), r: Math.min(r4.x1 - r4.x0, r4.z1 - r4.z0) / 2 - sh, o: b }));
+        else {
+          const q2 = bbox(b, r4.x0 + sh, r4.x1 - sh, r4.z0 + sh, r4.z1 - sh);
+          b.cols.push(w.addCol({ x: (q2.x0 + q2.x1) / 2, y: (q2.y0 + q2.y1) / 2, hw: (q2.x1 - q2.x0) / 2, hd: (q2.y1 - q2.y0) / 2, o: b }));
+        }
+      }
+    }
+    removeInterior(b) {
+      const w = this.world;
+      for (const c of b.cols || []) w.removeCol(c);
+      if (b.doorCol) w.removeCol(b.doorCol);
+      if (b.floor) w.removeFloor(b.floor);
+      if (b.stepsFloor) w.removeFloor(b.stepsFloor);
+      b.cols = null;
+      b.doorCol = null;
+      b.floor = null;
+      b.stepsFloor = null;
+      b.furnished = false;
+    }
+    /**
+     * A building knocked down (game/destruction.js): it stays in the index (its
+     * place in the town, its name, who lives there), but nothing of it stands —
+     * no walls, no floor, no blocked ground — and it isn't drawn (hidden) until
+     * restore() puts it back up.
+     */
+    ruin(obj) {
+      if (obj.ruined) return;
+      obj.ruined = true;
+      obj.hidden = true;
+      if (obj.veranda) {
+        this.world.removeFloor(obj.veranda);
+        obj.veranda = null;
+      }
+      for (const c of obj.colCols || []) this.world.removeCol(c);
+      obj.colCols = null;
+      if (obj.enterable) {
+        this.removeInterior(obj);
+        obj.doorBox = null;
+        obj.doorOpen = false;
+        this.stamp(obj, 0);
+      } else if (obj.hut) {
+        for (const c of obj.cols || []) this.world.removeCol(c);
+        obj.cols = null;
+        this.stamp(obj, 0);
+      } else if (obj.soft) this.removeCollider(obj);
+      else if (obj.block) this.stamp(obj, 0);
+    }
+    /** A ruined building rebuilt: as it stood before (ruin). */
+    restore(obj) {
+      if (!obj.ruined) return;
+      obj.ruined = false;
+      obj.hidden = false;
+      const c = obj.block && colliderOf(obj);
+      if (obj.enterable) {
+        this.stamp(obj, 2);
+        this.addInterior(obj);
+      } else if (obj.hut) {
+        this.stamp(obj, 2);
+        this.addHutWall(obj);
+      } else if (obj.soft) {
+        if (c) this.addCollider(obj, c);
+      } else if (obj.block) this.stamp(obj, 1);
+      if (obj.kind === "building" && obj.style === "chinese") this.addColumns(obj);
+      if (obj.kind === "building" && obj.style === "wano" && obj.block && !isHut(obj)) this.addVeranda(obj);
+    }
+    remove(obj) {
+      const list = this.chunks.get(obj._chunk);
+      if (list) {
+        const i = list.indexOf(obj);
+        if (i >= 0) list.splice(i, 1);
+      }
+      if (obj.far && this.world.farObjects) this.world.farObjects = this.world.farObjects.filter((o) => o !== obj);
+      this.byId.delete(obj.id);
+      this.count--;
+      if (obj.veranda) {
+        this.world.removeFloor(obj.veranda);
+        obj.veranda = null;
+      }
+      if (obj.enterable) {
+        this.removeInterior(obj);
+        this.stamp(obj, 0);
+      } else if (obj.hut) {
+        for (const c of obj.cols || []) this.world.removeCol(c);
+        obj.cols = null;
+        this.stamp(obj, 0);
+      } else if (obj.soft) this.removeCollider(obj);
+      else if (obj.block) this.stamp(obj, 0);
+    }
+    /**
+     * Set something that blocks whole tiles onto the tile grid (a landmark
+     * placed by its spot can stand a fraction of a tile off it): its tiles are
+     * whole ones and its model is drawn where it stands, so off the grid a
+     * strip of blocked tiles along one side had nothing drawn on it (an
+     * invisible wall) and the other side's wall hung over open ground.
+     */
+    align(obj) {
+      let fx, fy;
+      if (obj.rot) {
+        const r4 = bfoot(obj);
+        fx = r4.x0;
+        fy = r4.y0;
+      } else {
+        fx = obj.x - (obj.fw || 1) / 2;
+        fy = obj.y - (obj.fd || 1);
+      }
+      obj.x = this.world.wx(obj.x + Math.round(fx) - fx);
+      obj.y += Math.round(fy) - fy;
+    }
+    /** Mark or clear the tiles covered by an object's footprint. */
+    stamp(obj, v) {
+      const w = this.world;
+      const fp = footprint2(obj);
+      for (let y = fp.y0; y < fp.y1; y++) {
+        for (let x = fp.x0; x < fp.x1; x++) {
+          if (y < 0 || y >= w.height) continue;
+          w.setBlocked(x, y, v);
+        }
+      }
+    }
+    /** Objects whose chunk intersects the rect [x0,x1]x[y0,y1] (x may wrap). */
+    query(x0, y0, x1, y1, out = []) {
+      const pad2 = 2;
+      const cx0 = Math.floor(x0 / CHUNK) - pad2, cx1 = Math.floor(x1 / CHUNK) + pad2;
+      const cy0 = Math.max(0, Math.floor(y0 / CHUNK) - pad2), cy1 = Math.min(this.ch - 1, Math.floor(y1 / CHUNK) + pad2);
+      for (let cy = cy0; cy <= cy1; cy++) {
+        for (let cx = cx0; cx <= cx1; cx++) {
+          const wcx = this.world.wrap ? (cx % this.cw + this.cw) % this.cw : cx;
+          if (wcx < 0 || wcx >= this.cw) continue;
+          const list = this.chunks.get(this.key(wcx, cy));
+          if (list) for (const o of list) out.push(o);
+        }
+      }
+      return out;
+    }
+    near(x, y, r4, filter) {
+      const out = [];
+      for (const o of this.query(x - r4, y - r4, x + r4, y + r4)) {
+        if (this.world.dist2(x, y, o.x, o.y) <= r4 * r4 && (!filter || filter(o))) out.push(o);
+      }
+      return out;
+    }
+  };
+  function isHut(o) {
+    return o.kind === "building" && (o.style === "tribal" || o.roofType === "hut");
+  }
+  function footprint2(o) {
+    if (o.rot) {
+      const r4 = bfoot(o);
+      const x02 = Math.floor(r4.x0 + 1e-3), y02 = Math.floor(r4.y0 + 1e-3);
+      return { x0: x02, y0: y02, x1: x02 + Math.round(r4.x1 - r4.x0), y1: y02 + Math.round(r4.y1 - r4.y0) };
+    }
+    const w = o.fw || 1, d = o.fd || 1;
+    const x0 = Math.floor(o.x - w / 2 + 1e-3), y0 = Math.floor(o.y - d + 1e-3);
+    return { x0, y0, x1: x0 + w, y1: y0 + d };
+  }
+
+  // src/game/destruction.js
+  var REBUILD = 300;
+  var TAU7 = Math.PI * 2;
+  var FIRE = /* @__PURE__ */ new Set(["fire", "magma", "bluefire", "explosion"]);
+  var ICE = /* @__PURE__ */ new Set(["ice", "snow"]);
+  function buildingHp(b) {
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), H5 = 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6;
+    return Math.round(fw * fd * H5 * 2.2);
+  }
+  var wrecker = (o) => !!o && (o.isPlayer || o.summonedBy?.isPlayer);
+  function wallStrength(a) {
+    if (!a) return 1;
+    const best = Math.max(a.fruitMastery || 0, ...Object.values(a.masteries || {}), (a.hakiSkill?.armament || 0) * 2, 0);
+    return Math.max(0.05, Math.min(1, Math.pow(best / 70, 1.4)));
+  }
+  function structPower(h2) {
+    const def = h2.def || h2.owner?.action?.def;
+    const src = def?.source || "";
+    const k = src.startsWith("fruit") ? 3 : def?.m1 ? 0.3 : def ? 1.2 : 0.25;
+    const f = h2.owner && def ? techScale(h2.owner, def) : 1;
+    const pw = (h2.damage || 0) * k * f * f * (h2.blast || h2.heavy ? 1.3 : 1) * wallStrength(h2.owner);
+    return def?.m1 && wallStrength(h2.owner) < 0.35 ? 0 : pw;
+  }
+  var SMASH = {
+    tree: 70,
+    bush: 6,
+    lamp: 14,
+    barrel: 8,
+    crate: 8,
+    cask: 8,
+    fountain: 140,
+    tent: 30,
+    windmill: 260,
+    campfire: 6,
+    well: 70,
+    signboard: 12,
+    stall: 30,
+    statue: 160,
+    bench: 10,
+    cart: 22,
+    fence: 8,
+    haystack: 8,
+    totem: 60,
+    cactus: 18,
+    mushroom: 14,
+    mooring: 20,
+    table: 10,
+    scarecrow: 10,
+    crystal: 40,
+    rock: 120,
+    lantern: 8,
+    flag: 10,
+    cannon: 60,
+    waterwheel: 120
+  };
+  var TREES = /* @__PURE__ */ new Set(["tree", "bush", "cactus"]);
+  var smashable = (o) => SMASH[o.kind] !== void 0 && !o.hidden && !o.ruined && !o.far && !o.unbreakable && !o.quest;
+  function installDestruction(game) {
+    const D4 = {
+      /** The rect a building stands on, as world { x0, y0, x1, y1 }. */
+      rect(b) {
+        return bfoot(b);
+      },
+      /** Buildings standing within r of (x, y) (their footprints, not their middles). */
+      near(x, y, r4) {
+        const w = game.world;
+        if (!w?.objects) return [];
+        const out = [];
+        for (const b of w.objects.near(x, y, r4 + 14, (o) => o.kind === "building" && !o.ruined && !o.unbreakable)) {
+          const q2 = bfoot(b);
+          const dx = Math.max(0, Math.abs(w.dx((q2.x0 + q2.x1) / 2, x)) - (q2.x1 - q2.x0) / 2);
+          const dy = Math.max(0, Math.abs(y - (q2.y0 + q2.y1) / 2) - (q2.y1 - q2.y0) / 2);
+          const d = Math.hypot(dx, dy);
+          if (d <= r4) out.push([b, d]);
+        }
+        return out;
+      },
+      /**
+       * A blow's worth of `power` landing round (x, y), reaching r: each building
+       * it reaches takes it (less towards the edge); one with nothing left falls.
+       */
+      strike(x, y, r4, power, att, o = {}) {
+        var _a4;
+        if (!(power > 0)) return 0;
+        let n = 0;
+        const el = o.element || "physical";
+        for (const [b, d] of D4.near(x, y, r4)) {
+          const k = 1 - 0.5 * (d / Math.max(0.5, r4));
+          let pw = power;
+          if (b.frozen && !ICE.has(el)) {
+            pw *= 2;
+            D4.shatter(b, att);
+            if (b.ruined) {
+              n++;
+              continue;
+            }
+          }
+          b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - pw * k;
+          if (FIRE.has(el)) D4.ignite(b, power, att);
+          else if (ICE.has(el)) D4.freeze(b, power, att);
+          b.hitT = game.time;
+          if (!b.damaged) {
+            b.damaged = true;
+            ((_a4 = game.world).damaged || (_a4.damaged = [])).push(b);
+          }
+          if (b.hp <= 0) {
+            D4.collapse(b, x, y, pw, att, o);
+            n++;
+            continue;
+          }
+          const frac2 = b.hp / (b.maxHp || buildingHp(b)), st = frac2 < 0.34 ? 2 : frac2 < 0.67 ? 1 : 0;
+          if (st > (b.stage || 0)) {
+            b.stage = st;
+            D4.event({ kind: "stage", b, stage: st, x, y });
+            const q2 = bfoot(b);
+            game.fx?.burst?.((q2.x0 + q2.x1) / 2, (q2.y0 + q2.y1) / 2, 14, { color: ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 2.5, spread: Math.PI * 2, z: 2.5, vz: 1, g: -0.2, life: 1.4, kind: "smoke", size: 0.8, grow: 1.4, drag: 1.6 });
+            game.audio?.sfx("collapse", { x, y }, { w: 0.35 });
+          }
+          D4.event({ kind: "chip", b, x, y, n: Math.min(10, 2 + Math.round(pw / 120)), k: Math.min(1.6, 0.25 + pw * k / (b.maxHp || buildingHp(b)) * 2.5) });
+          if (Math.random() < 0.5) game.audio?.sfx("wallhit", { x, y });
+        }
+        D4.smashNear(x, y, r4, power, att);
+        return n;
+      },
+      /** The loose things round (x, y) a blow of `power` reaches: those it's enough for are smashed. */
+      smashNear(x, y, r4, power, att, o = {}) {
+        const w = game.world;
+        if (!w?.objects || !(power > 0)) return 0;
+        let n = 0;
+        for (const p of w.objects.near(x, y, r4 + 1, o.noTrees ? (q2) => smashable(q2) && !TREES.has(q2.kind) : smashable)) {
+          const d = w.distance(x, y, p.x, p.y);
+          if (d > r4 + 0.6 * (p.s || 1)) continue;
+          if (floorOf(p) || /dock|pier|bridge|quay|jetty|plank/.test(p.kind)) continue;
+          p.hp = (p.hp ?? SMASH[p.kind] * (p.s || 1)) - power * (1 - 0.5 * d / Math.max(0.5, r4));
+          if (p.hp > 0) continue;
+          D4.smash(p, x, y, power, att, { delay: o.speed ? d / o.speed : 0, lite: o.lite, long: o.long });
+          n++;
+        }
+        return n;
+      },
+      /** One loose thing smashed: gone from the world (its pieces are debris now) until the town's put right. */
+      smash(p, x, y, power, att, o = {}) {
+        const w = game.world;
+        if (p.ruined) return;
+        w.objects.ruin(p);
+        p.rebuildAt = game.time + REBUILD * (1 + Math.min(2, power / 2500)) * (o.long || 1);
+        (w.smashed || (w.smashed = [])).push(p);
+        D4.event({ kind: "fixture", o: p });
+        D4.event({ kind: "smash", b: p, x, y, power, delay: o.delay || 0, lite: !!o.lite });
+        if (!o.delay && Math.random() < 0.5) game.audio?.sfx(p.kind === "tree" ? "collapse" : "wallhit", { x: p.x, y: p.y }, { w: 0.3 });
+        if (/tree|bush|cactus/.test(p.kind) && game.fx && !o.lite) {
+          const s = p.s || 1, near = !game.player || w.distance(p.x, p.y, game.player.x, game.player.y) < 45;
+          if (near) {
+            game.fx.burst(p.x, p.y, 10, { color: ["#4caf50", "#2e7d32", "#81c784"], speed: 4, spread: Math.PI * 2, z: 2.5 * s, vz: 2, g: 3, life: 0.9, kind: "leaf", size: 0.14, delay: o.delay || 0 });
+            game.fx.burst(p.x, p.y, 5, { color: ["#8d6e63", "#6d4c41"], speed: 5, spread: Math.PI * 2, z: 1.2 * s, vz: 3, g: 12, life: 0.7, kind: "dust", size: 0.1, delay: o.delay || 0 });
+          }
+        }
+      },
+      /**
+       * Fire on a building: it catches and burns a while — flames out of its
+       * windows and over its roof, smoke, the walls blackening — taking damage
+       * all the while; enough of it and it burns down. A bigger fire burns
+       * longer. (Water, ice put it out.)
+       */
+      ignite(b, power, att) {
+        var _a4;
+        if (b.ruined) return;
+        if (b.frozen) {
+          D4.thaw(b);
+          return;
+        }
+        const dur = Math.min(30, 6 + power / 40);
+        if (!b.burning) {
+          b.burning = { until: game.time + dur, att, power, acc: 0 };
+          ((_a4 = game.world).burning || (_a4.burning = [])).push(b);
+          D4.event({ kind: "burn", b, on: true });
+        } else b.burning.until = Math.max(b.burning.until, game.time + dur * 0.6);
+        b.charred = true;
+      },
+      /** Ice on a building: frozen solid in a shell of ice, until it shatters (with it, much of the house). */
+      freeze(b, power, att) {
+        var _a4;
+        if (b.ruined) return;
+        if (b.burning) {
+          D4.douse(b);
+          return;
+        }
+        const dur = Math.min(20, 5 + power / 60);
+        if (!b.frozen) {
+          b.frozen = { until: game.time + dur, att, power };
+          ((_a4 = game.world).frozen || (_a4.frozen = [])).push(b);
+          D4.event({ kind: "ice", b, on: true });
+          game.audio?.sfx("ice", { x: b.x, y: b.y });
+        } else b.frozen.until = Math.max(b.frozen.until, game.time + dur * 0.5);
+      },
+      douse(b) {
+        if (!b.burning) return;
+        b.burning = null;
+        D4.event({ kind: "burn", b, on: false });
+      },
+      thaw(b) {
+        if (!b.frozen) return;
+        b.frozen = null;
+        D4.event({ kind: "ice", b, on: false, shatter: false });
+      },
+      /** The ice round a building breaks: the shell flies apart, and the walls it held go with it. */
+      shatter(b, att) {
+        const F4 = b.frozen;
+        if (!F4) return;
+        b.frozen = null;
+        D4.event({ kind: "ice", b, on: false, shatter: true });
+        game.audio?.sfx("ice", { x: b.x, y: b.y });
+        const q2 = bfoot(b), cx = (q2.x0 + q2.x1) / 2, cy = (q2.y0 + q2.y1) / 2;
+        game.fx?.burst?.(cx, cy, 30, { color: ["#e1f5fe", "#b3e5fc", "#ffffff"], speed: 6, spread: Math.PI * 2, z: 1.5, vz: 3, g: 9, life: 1.1, kind: "shard", size: 0.16, drag: 1 });
+        b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - (F4.power * 1.5 + (b.maxHp || buildingHp(b)) * 0.45);
+        if (b.hp <= 0) D4.collapse(b, cx, cy, F4.power * 2, att || F4.att);
+        game.combat?.hitbox({ owner: att || F4.att || null, x: cx, y: cy, shape: "circle", range: Math.hypot(q2.x1 - q2.x0, q2.y1 - q2.y0) / 2 + 1.5, damage: 20 + F4.power * 0.05, knockback: 6, stun: 0.5, element: "ice", duration: 0.1, radial: true, blast: true, crush: true });
+      },
+      /** Burning and frozen buildings, as time goes by. */
+      elements(dt) {
+        const w = game.world, p = game.player;
+        if (w?.burning?.length) {
+          for (let i = w.burning.length - 1; i >= 0; i--) {
+            const b = w.burning[i], B5 = b.burning;
+            if (!B5 || b.ruined) {
+              if (B5) D4.douse(b);
+              w.burning.splice(i, 1);
+              continue;
+            }
+            b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - (b.maxHp || buildingHp(b)) * 0.035 * dt;
+            b.hitT = game.time;
+            const q2 = bfoot(b), cx = (q2.x0 + q2.x1) / 2, cy = (q2.y0 + q2.y1) / 2;
+            if (b.hp <= 0) {
+              D4.collapse(b, cx, cy, 400, B5.att);
+              w.burning.splice(i, 1);
+              continue;
+            }
+            if (game.time > B5.until) {
+              D4.douse(b);
+              w.burning.splice(i, 1);
+              continue;
+            }
+            if (p && w.distance(p.x, p.y, cx, cy) < 90 && (B5.acc = (B5.acc || 0) + dt) > 0.12) {
+              B5.acc = 0;
+              const H5 = 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6;
+              for (let k = 0; k < 3; k++) {
+                const fx0 = q2.x0 + Math.random() * (q2.x1 - q2.x0), fy0 = q2.y0 + Math.random() * (q2.y1 - q2.y0);
+                game.fx?.burst?.(fx0, fy0, 3, { color: ["#ff6d00", "#ffab00", "#ffd54f"], speed: 0.6, z: Math.random() * H5, vz: 3, g: -3, life: 0.7, kind: "fire", size: 0.45, grow: 0.6 });
+              }
+              game.fx?.burst?.(cx, cy, 2, { color: ["#424242", "#616161", "#757575"], speed: 0.4, z: H5 + 0.5, vz: 2.2, g: -1.5, life: 2.5, kind: "smoke", size: 0.9, grow: 1.4, drag: 0.6 });
+            }
+            if (Math.random() < dt * 1.5) game.combat?.hitbox({ owner: B5.att || null, x: cx, y: cy, shape: "circle", range: Math.hypot(q2.x1 - q2.x0, q2.y1 - q2.y0) / 2 + 0.4, damage: 4, knockback: 0, stun: 0, element: "fire", status: { burn: 2 }, duration: 0.05, radial: true, crush: true });
+          }
+        }
+        if (w?.frozen?.length) {
+          for (let i = w.frozen.length - 1; i >= 0; i--) {
+            const b = w.frozen[i], F4 = b.frozen;
+            if (!F4 || b.ruined) {
+              if (F4) D4.thaw(b);
+              w.frozen.splice(i, 1);
+              continue;
+            }
+            if (game.time > F4.until) {
+              w.frozen.splice(i, 1);
+              D4.shatter(b, F4.att);
+            }
+          }
+        }
+      },
+      /** Building b brought down by a blow from (x, y). */
+      collapse(b, x, y, power, att, o = {}) {
+        const w = game.world;
+        if (b.ruined || !w?.objects) return;
+        w.objects.ruin(b);
+        const fq = bfoot(b);
+        b.fixtures = w.objects.query(fq.x0 - 1.5, fq.y0 - 1.5, fq.x1 + 1.5, fq.y1 + 1.5).filter((o2) => {
+          if (o2 === b || o2.hidden || o2.kind === "building" || o2.kind === "tree" || o2.far || floorOf(o2) || /dock|pier|bridge|quay|jetty|plank/.test(o2.kind)) return false;
+          const ox = w.wx(o2.x);
+          return ox > fq.x0 - 1.2 && ox < fq.x1 + 1.2 && o2.y > fq.y0 - 1.2 && o2.y < fq.y1 + 1.2;
+        });
+        for (const o2 of b.fixtures) {
+          w.objects.ruin(o2);
+          D4.event({ kind: "fixture", o: o2 });
+        }
+        if (b.burning) {
+          b.burning = null;
+          D4.event({ kind: "burn", b, on: false });
+        }
+        if (b.frozen) {
+          b.frozen = null;
+          D4.event({ kind: "ice", b, on: false, shatter: true });
+        }
+        const q2 = bfoot(b), cx = (q2.x0 + q2.x1) / 2, cy = (q2.y0 + q2.y1) / 2;
+        const span2 = Math.hypot(q2.x1 - q2.x0, q2.y1 - q2.y0) / 2;
+        b.ruinT = game.time;
+        b.rebuildAt = game.time + REBUILD * (1 + Math.min(2, power / 2500)) * (o.long || 1);
+        (w.ruins || (w.ruins = [])).push(b);
+        D4.event({ kind: "fall", b, x, y, power, delay: o.delay || 0 });
+        D4.smashNear(cx, cy, span2 + 1.5, Math.max(power, 200), att, { lite: o.long > 1 });
+        game.combat?.hitbox({ owner: att || null, x: cx, y: cy, shape: "circle", range: span2 + 0.5, damage: 25 + Math.min(220, power * 0.06), knockback: 6, stun: 1, element: "physical", duration: 0.1, radial: true, heavy: true, blast: true, hitsAll: !att, crush: true });
+        const fx = game.fx;
+        if (fx) {
+          fx.burst(cx, cy, 26, { color: ["#d7ccc8", "#bcaaa4", "#efebe9", "#a1887f"], speed: 3 + span2 * 0.4, spread: Math.PI * 2, z: 0.6, vz: 1.4, g: -0.2, life: 1.8, kind: "smoke", size: 0.9, grow: 1.6, drag: 1.6, delay: o.delay || 0 });
+          const p = game.player;
+          if (p && w.distance(p.x, p.y, cx, cy) < 45) fx.shake?.(Math.min(0.7, 0.25 + span2 * 0.04));
+        }
+        game.audio?.sfx("collapse", { x: cx, y: cy }, { w: Math.min(1, 0.4 + span2 / 12) });
+        if (att?.isPlayer || att?.summonedBy?.isPlayer) {
+          if (!b.pirate) D4.wrecked.push(b);
+          game.emit?.("buildingWrecked", b);
+        }
+      },
+      /** Every building of the island round (x, y) — or in r of it — brought down, a wave rolling out from (x, y) (Whitebeard's awakened Sky Tilt). */
+      levelAll(x, y, r4, power, att, speed2 = 40) {
+        const w = game.world;
+        let n = 0;
+        for (const [b, d] of D4.near(x, y, r4)) {
+          D4.collapse(b, x, y, power, att, { delay: d / speed2, long: 1.5 });
+          n++;
+        }
+        n += D4.smashNear(x, y, r4, 1e6, att, { speed: speed2, lite: true, long: 1.5, noTrees: true });
+        return n;
+      },
+      event(e) {
+        const w = game.world;
+        if (!w) return;
+        (w.ruinEvents || (w.ruinEvents = [])).push(e);
+        if (w.ruinEvents.length > 12e3) w.ruinEvents.splice(0, w.ruinEvents.length - 12e3);
+        w.ruinRev = (w.ruinRev || 0) + 1;
+      },
+      wrecked: [],
+      /** Rebuild what's stood ruined long enough (not under your nose: once you're a little way off, or it's been a long while). */
+      update() {
+        const w = game.world, p = game.player;
+        if (w?.damaged?.length) {
+          for (let i = w.damaged.length - 1; i >= 0; i--) {
+            const b = w.damaged[i];
+            if (b.ruined) {
+              b.damaged = false;
+              w.damaged.splice(i, 1);
+              continue;
+            }
+            if (game.time - (b.hitT || 0) < REBUILD * 0.6 || p && w.distance(p.x, p.y, b.x, b.y) < 20) continue;
+            b.hp = void 0;
+            b.stage = 0;
+            b.damaged = false;
+            b.charred = false;
+            w.damaged.splice(i, 1);
+            D4.event({ kind: "restore", b });
+          }
+        }
+        if (D4.wrecked.length) {
+          const n = D4.wrecked.length, b = D4.wrecked[0];
+          D4.wrecked.length = 0;
+          game.reputation?.crime?.(25e4 * n, n > 1 ? `wrecked ${n} buildings` : `wrecked ${b.name ? "the " + b.name : "a house"}`, { quiet: n < 3, rep: Math.min(10, n) });
+        }
+        if (w?.smashed?.length) {
+          for (let i = w.smashed.length - 1; i >= 0; i--) {
+            const o = w.smashed[i];
+            if (!o.ruined) {
+              w.smashed.splice(i, 1);
+              continue;
+            }
+            if (game.time < o.rebuildAt || p && w.distance(p.x, p.y, o.x, o.y) < 25 && game.time < o.rebuildAt + 240) continue;
+            w.objects.restore(o);
+            o.hp = void 0;
+            w.smashed.splice(i, 1);
+            D4.event({ kind: "restore", b: o });
+          }
+        }
+        if (!w?.ruins?.length) return;
+        for (let i = w.ruins.length - 1; i >= 0; i--) {
+          const b = w.ruins[i];
+          if (!b.ruined) {
+            w.ruins.splice(i, 1);
+            continue;
+          }
+          if (game.time < b.rebuildAt) continue;
+          if (p && w.distance(p.x, p.y, b.x, b.y) < 30 && game.time < b.rebuildAt + 240) continue;
+          if (p && w.distance(p.x, p.y, b.x, b.y) < 3 + Math.hypot(b.fw || 3, b.fd || 3)) continue;
+          w.objects.restore(b);
+          for (const o of b.fixtures || []) {
+            w.objects.restore(o);
+            D4.event({ kind: "restore", b: o });
+          }
+          b.fixtures = null;
+          b.hp = void 0;
+          b.stage = 0;
+          b.damaged = false;
+          b.charred = false;
+          w.ruins.splice(i, 1);
+          D4.event({ kind: "restore", b });
+        }
+      },
+      /** A hitbox of yours going off: what it reaches of the town takes it (once per building per hitbox). */
+      fromHitbox(h2) {
+        if (!wrecker(h2.owner) || h2.wrecked || h2.crush) return;
+        h2.wrecked = true;
+        const power = structPower(h2);
+        if (power < 4) return;
+        const R5 = h2.range || 1.4;
+        if (h2.shape === "line") {
+          const ca = Math.cos(h2.angle || 0), sa = Math.sin(h2.angle || 0), wd = (h2.width || 1) / 2 + 0.6;
+          for (let d = 0; d <= R5; d += Math.max(1.5, wd)) D4.strike(h2.x + ca * d, h2.y + 0.4 + sa * d, wd, power, h2.owner, { element: h2.element });
+          return;
+        }
+        if (h2.shape === "ring") {
+          const wd = (h2.width || 1) / 2 + 0.6, n = Math.max(8, Math.ceil(TAU7 * R5 / Math.max(1.6, wd * 1.6)));
+          for (let i = 0; i < n; i++) {
+            const t = i / n * TAU7;
+            D4.strike(game.world.wx(h2.x + Math.cos(t) * R5), h2.y + 0.4 + Math.sin(t) * R5, wd, power, h2.owner, { element: h2.element });
+          }
+          return;
+        }
+        if (h2.shape === "arc" || !h2.shape) {
+          const a = h2.angle || 0;
+          D4.strike(h2.x + Math.cos(a) * R5 * 0.5, h2.y + 0.4 + Math.sin(a) * R5 * 0.5, R5 * 0.6 + 0.4, power, h2.owner, { element: h2.element });
+          return;
+        }
+        D4.strike(h2.x, h2.y + 0.4, R5 + 0.3, power, h2.owner, { element: h2.element });
+      },
+      /** A shot of yours stopped by a wall: the wall takes it. */
+      fromShot(p) {
+        if (!wrecker(p.owner)) return;
+        const power = structPower(p) * 0.8;
+        if (power >= 4) D4.strike(p.x, p.y, 0.8 + 0.4 * (p.size || 1), power, p.owner, { element: p.element });
+      }
+    };
+    game.destruction = D4;
+    game.on?.("tick", (dt) => {
+      D4.update();
+      D4.elements(dt || 1 / 60);
+    });
+    return D4;
+  }
+
   // src/game/terraform.js
   var TERRAFORM = {
     // Gura Gura: the land and the sea rock and split
@@ -17528,8 +18467,9 @@
         game.fx?.pressure?.(4, "#9fd9ef", 0.6);
         game.fx?.shake?.(1.6);
       } else {
-        const reach3 = T5.kind === "tilt" ? r4 * 0.75 : T5.kind === "trench" ? r4 : r4 * 0.9;
-        const power = amp * 90 * f;
+        const ws = wallStrength(actor);
+        const reach3 = (T5.kind === "tilt" ? r4 * 0.75 : T5.kind === "trench" ? r4 : r4 * 0.9) * (0.35 + 0.65 * Math.min(1, ws * 1.4));
+        const power = amp * 90 * f * ws;
         if (T5.kind === "trench") for (let t = 0; t <= r4; t += 3) D4.strike(x + Math.cos(dir) * t, y + Math.sin(dir) * t, T5.w * f + 2, power, actor);
         else D4.strike(x, y, reach3, power, actor);
       }
@@ -21869,7 +22809,7 @@
   var HIGH_DECK = 2.2;
   var deckTop = (world, x, y) => world.docks?.size && world.isDock(x, y) ? DOCK_Y : DECK_Y;
   var WALL_H = 3.2;
-  var CHUNK = 32;
+  var CHUNK2 = 32;
   var ELEV_K = 0.075;
   var BOOST = new Float32Array(256);
   BOOST[T2.MOUNTAIN] = 7;
@@ -22047,8 +22987,8 @@
     constructor(world) {
       this.world = world;
       this.chunks = /* @__PURE__ */ new Map();
-      this.cw = Math.ceil(world.width / CHUNK);
-      this.ch = Math.ceil(world.height / CHUNK);
+      this.cw = Math.ceil(world.width / CHUNK2);
+      this.ch = Math.ceil(world.height / CHUNK2);
     }
     key(cx, cy) {
       return cy * 1e5 + cx;
@@ -22060,15 +23000,15 @@
       const k = this.key(cx, cy);
       let g = this.chunks.get(k);
       if (g) return g;
-      const N8 = CHUNK + 1;
+      const N8 = CHUNK2 + 1;
       g = new Float32Array(N8 * N8);
-      const x0 = cx * CHUNK, y0 = cy * CHUNK;
+      const x0 = cx * CHUNK2, y0 = cy * CHUNK2;
       for (let j = 0; j < N8; j++) {
         for (let i = 0; i < N8; i++) g[j * N8 + i] = cornerHeight(w, x0 + i, y0 + j);
       }
       this.raiseAbutments(g, x0, y0);
       if (w.objects) {
-        for (const b of w.objects.query(x0 - 12, y0 - 12, x0 + CHUNK + 12, y0 + CHUNK + 12)) {
+        for (const b of w.objects.query(x0 - 12, y0 - 12, x0 + CHUNK2 + 12, y0 + CHUNK2 + 12)) {
           if (!b.enterable) continue;
           const r4 = bfoot(b);
           const bx0 = r4.x0, bx1 = r4.x1, by0 = r4.y0, by1 = r4.y1;
@@ -22107,12 +23047,12 @@
       const w = this.world;
       x = w.wx(x);
       if (y < 0 || y >= w.height || !w.wrap && (x < 0 || x >= w.width)) return -12;
-      const cx = Math.floor(x / CHUNK), cy = Math.floor(y / CHUNK);
+      const cx = Math.floor(x / CHUNK2), cy = Math.floor(y / CHUNK2);
       const g = this.grid(cx, cy);
-      const lx = x - cx * CHUNK, ly = y - cy * CHUNK;
-      const i = Math.min(CHUNK - 1, Math.floor(lx)), j = Math.min(CHUNK - 1, Math.floor(ly));
+      const lx = x - cx * CHUNK2, ly = y - cy * CHUNK2;
+      const i = Math.min(CHUNK2 - 1, Math.floor(lx)), j = Math.min(CHUNK2 - 1, Math.floor(ly));
       const fx = lx - i, fy = ly - j;
-      const N8 = CHUNK + 1;
+      const N8 = CHUNK2 + 1;
       const a = g[j * N8 + i], b = g[j * N8 + i + 1], c = g[(j + 1) * N8 + i], d = g[(j + 1) * N8 + i + 1];
       if (fx >= fy) return a + (b - a) * fx + (d - b) * fy;
       return a + (d - c) * fx + (c - a) * fy;
@@ -22284,10 +23224,10 @@
      * already higher keeps its height).
      */
     raiseAbutments(g, x0, y0) {
-      const w = this.world, N8 = CHUNK + 1, R5 = ABUT_R;
+      const w = this.world, N8 = CHUNK2 + 1, R5 = ABUT_R;
       let ends = null;
-      for (let y = y0 - R5 - 1; y <= y0 + CHUNK + R5; y++) {
-        for (let x = x0 - R5 - 1; x <= x0 + CHUNK + R5; x++) {
+      for (let y = y0 - R5 - 1; y <= y0 + CHUNK2 + R5; y++) {
+        for (let x = x0 - R5 - 1; x <= x0 + CHUNK2 + R5; x++) {
           if (w.type(x, y) !== T2.BRIDGE) continue;
           const s = this.span(x, y);
           if (!s || !s.ends.length) continue;
@@ -22344,8 +23284,8 @@
     }
     /** Invalidate after the tile map changed in a rectangle (tiles). */
     invalidate(x0, y0, x1, y1) {
-      for (let cy = Math.floor((y0 - 1) / CHUNK); cy <= Math.floor((y1 + 1) / CHUNK); cy++) {
-        for (let cx = Math.floor((x0 - 1) / CHUNK); cx <= Math.floor((x1 + 1) / CHUNK); cx++) {
+      for (let cy = Math.floor((y0 - 1) / CHUNK2); cy <= Math.floor((y1 + 1) / CHUNK2); cy++) {
+        for (let cx = Math.floor((x0 - 1) / CHUNK2); cx <= Math.floor((x1 + 1) / CHUNK2); cx++) {
           const wcx = this.world.wrap ? (cx % this.cw + this.cw) % this.cw : cx;
           this.chunks.delete(this.key(wcx, cy));
         }
@@ -22774,7 +23714,7 @@
   }
 
   // src/render/ship.js
-  var TAU7 = Math.PI * 2;
+  var TAU8 = Math.PI * 2;
   function drawJollyRoger(g, jr = {}, size2 = 1, bg = "#111") {
     g.save();
     g.scale(size2, size2);
@@ -22782,7 +23722,7 @@
     const accC = jr.acc || jr.accColor || "#c0392b";
     const disc2 = (x, y, r4) => {
       g.beginPath();
-      g.arc(x, y, r4, 0, TAU7);
+      g.arc(x, y, r4, 0, TAU8);
       g.fill();
     };
     g.strokeStyle = fg;
@@ -22865,7 +23805,7 @@
     const [rx, ry, jw, jh] = shape;
     g.fillStyle = fg;
     g.beginPath();
-    g.ellipse(0, -0.05, rx, ry, 0, 0, TAU7);
+    g.ellipse(0, -0.05, rx, ry, 0, 0, TAU8);
     g.fill();
     g.beginPath();
     g.moveTo(-jw / 2, 0.1);
@@ -22886,8 +23826,8 @@
     g.fillStyle = bg;
     const eye = skull4 === "grin" ? 0.07 : skull4 === "round" ? 0.095 : 0.085, ex = skull4 === "long" ? 0.095 : skull4 === "round" ? 0.13 : 0.11;
     g.beginPath();
-    g.ellipse(-ex, -0.05, eye, eye * 1.15, 0, 0, TAU7);
-    if (skull4 !== "eyepatch") g.ellipse(ex, -0.05, eye, eye * 1.15, 0, 0, TAU7);
+    g.ellipse(-ex, -0.05, eye, eye * 1.15, 0, 0, TAU8);
+    if (skull4 !== "eyepatch") g.ellipse(ex, -0.05, eye, eye * 1.15, 0, 0, TAU8);
     g.fill();
     g.beginPath();
     g.moveTo(0, 0.04);
@@ -22910,7 +23850,7 @@
       g.lineTo(rx, 0);
       g.stroke();
       g.beginPath();
-      g.ellipse(ex, -0.05, eye * 1.25, eye * 1.2, 0.35, 0, TAU7);
+      g.ellipse(ex, -0.05, eye * 1.25, eye * 1.2, 0.35, 0, TAU8);
       g.fill();
     }
     const mark = jr.mark || "none";
@@ -22972,7 +23912,7 @@
     if (acc === "strawhat") {
       g.fillStyle = "#f2d16b";
       g.beginPath();
-      g.ellipse(0, top + 0.08, 0.44, 0.1, 0, 0, TAU7);
+      g.ellipse(0, top + 0.08, 0.44, 0.1, 0, 0, TAU8);
       g.fill();
       g.beginPath();
       g.ellipse(0, top + 0.02, 0.24, 0.16, 0, Math.PI, 0);
@@ -23026,7 +23966,7 @@
     } else if (acc === "tophat") {
       g.fillStyle = jr.acc || "#2d3436";
       g.beginPath();
-      g.ellipse(0, top + 0.08, 0.36, 0.06, 0, 0, TAU7);
+      g.ellipse(0, top + 0.08, 0.36, 0.06, 0, 0, TAU8);
       g.fill();
       g.fillRect(-0.2, top - 0.3, 0.4, 0.38);
       g.fillStyle = "#c0392b";
@@ -23056,7 +23996,7 @@
       g.strokeStyle = jr.acc || "#f1c40f";
       g.lineWidth = 0.04;
       g.beginPath();
-      g.ellipse(0, top - 0.1, 0.25, 0.07, 0, 0, TAU7);
+      g.ellipse(0, top - 0.1, 0.25, 0.07, 0, 0, TAU8);
       g.stroke();
     }
     g.restore();
@@ -23075,7 +24015,7 @@
     g.quadraticCurveTo(0.22, -0.3, 0.42, -0.05);
     g.stroke();
     g.beginPath();
-    g.ellipse(0, 0.02, 0.08, 0.12, 0, 0, TAU7);
+    g.ellipse(0, 0.02, 0.08, 0.12, 0, 0, TAU8);
     g.fill();
     g.lineWidth = 0.06;
     g.beginPath();
@@ -23093,7 +24033,7 @@
     g.scale(1, 1 + bobRoll);
     g.fillStyle = "rgba(0,20,40,0.28)";
     g.beginPath();
-    g.ellipse(0.1, 0.12, L3 * 0.55, B5 * 0.62, 0, 0, TAU7);
+    g.ellipse(0.1, 0.12, L3 * 0.55, B5 * 0.62, 0, 0, TAU8);
     g.fill();
     const hullCol = def.color || "#8d5b33";
     const hullPath = () => {
@@ -23140,25 +24080,25 @@
     if (def.figurehead === "ram") {
       g.fillStyle = "#f5f6fa";
       g.beginPath();
-      g.arc(L3 * 0.52, 0, 0.26, 0, TAU7);
+      g.arc(L3 * 0.52, 0, 0.26, 0, TAU8);
       g.fill();
       g.strokeStyle = "#d4a373";
       g.lineWidth = 0.08;
       g.beginPath();
-      g.arc(L3 * 0.5, -0.12, 0.12, 0, TAU7);
-      g.arc(L3 * 0.5, 0.12, 0.12, 0, TAU7);
+      g.arc(L3 * 0.5, -0.12, 0.12, 0, TAU8);
+      g.arc(L3 * 0.5, 0.12, 0.12, 0, TAU8);
       g.stroke();
     } else if (def.figurehead === "lion") {
       g.fillStyle = "#f39c12";
       for (let k = 0; k < 10; k++) {
-        const a = k / 10 * TAU7;
+        const a = k / 10 * TAU8;
         g.beginPath();
-        g.arc(L3 * 0.52 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.14, 0, TAU7);
+        g.arc(L3 * 0.52 + Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.14, 0, TAU8);
         g.fill();
       }
       g.fillStyle = "#fdcb6e";
       g.beginPath();
-      g.arc(L3 * 0.52, 0, 0.26, 0, TAU7);
+      g.arc(L3 * 0.52, 0, 0.26, 0, TAU8);
       g.fill();
     } else if (def.figurehead === "seagull") {
       g.fillStyle = "#f5f6fa";
@@ -23221,7 +24161,7 @@
       g.restore();
       g.fillStyle = "#4e342e";
       g.beginPath();
-      g.arc(mx, 0, 0.12, 0, TAU7);
+      g.arc(mx, 0, 0.12, 0, TAU8);
       g.fill();
     }
     const marineFlag = def.sail === "marine" || st.marine;
@@ -23252,7 +24192,7 @@
         const ph = (t * 0.7 + k / 3) % 1;
         g.fillStyle = `rgba(60,60,60,${0.5 * (1 - ph)})`;
         g.beginPath();
-        g.arc(-L3 * 0.2 + k * 0.3, -ph * 1.5, 0.2 + ph * 0.4, 0, TAU7);
+        g.arc(-L3 * 0.2 + k * 0.3, -ph * 1.5, 0.2 + ph * 0.4, 0, TAU8);
         g.fill();
       }
     }
@@ -23261,7 +24201,7 @@
       g.fillStyle = "rgba(200,240,255,0.18)";
       g.lineWidth = 0.06;
       g.beginPath();
-      g.ellipse(0, 0, L3 * 0.7, B5 * 1.2, 0, 0, TAU7);
+      g.ellipse(0, 0, L3 * 0.7, B5 * 1.2, 0, 0, TAU8);
       g.fill();
       g.stroke();
     }
@@ -63871,7 +64811,7 @@ void main() {
   var COPING = "#b3ada2";
   var WALLSTONE = "#857d71";
   var WEED = "#4f5a44";
-  function dockDetails(world, x0, y0, size2 = CHUNK, hf = null) {
+  function dockDetails(world, x0, y0, size2 = CHUNK2, hf = null) {
     const pal = dockPalette(world, x0 + size2 / 2, y0 + size2 / 2);
     SEAM = pal.seam;
     TRIM = pal.trim;
@@ -64124,7 +65064,7 @@ void main() {
     /** Fast graphics draws less terrain detail nearby. */
     /** The deck material for a chunk: its island's dock timber (props/docks.js dockPalette), shared per colour. */
     deckMatFor(world, x0, y0) {
-      const col6 = dockPalette(world, x0 + CHUNK / 2, y0 + CHUNK / 2).deck;
+      const col6 = dockPalette(world, x0 + CHUNK2 / 2, y0 + CHUNK2 / 2).deck;
       let m = this.deckMats.get(col6);
       if (!m) {
         m = this.deckMat.clone();
@@ -64159,7 +65099,7 @@ void main() {
      * the camera's chunk (see wanted): where the fog must close in.
      */
     get extent() {
-      return this.farR * CHUNK;
+      return this.farR * CHUNK2;
     }
     setWorld(world) {
       for (const c of this.live.values()) this.disposeChunk(c);
@@ -64168,8 +65108,8 @@ void main() {
       this.want = null;
       this.world = world;
       this.hf = new HeightField(world);
-      this.cw = Math.ceil(world.width / CHUNK);
-      this.ch = Math.ceil(world.height / CHUNK);
+      this.cw = Math.ceil(world.width / CHUNK2);
+      this.ch = Math.ceil(world.height / CHUNK2);
       const has2 = new Uint8Array(this.cw * this.ch);
       for (let cy = 0; cy < this.ch; cy++) {
         for (let cx = 0; cx < this.cw; cx++) if (world.blockHasLand(cx, cy)) has2[cy * this.cw + cx] = 1;
@@ -64194,7 +65134,7 @@ void main() {
     landDrawn(x, y) {
       const w = this.world;
       if (!w || !this.want) return false;
-      const k = Math.floor(y / CHUNK) * 1e5 + Math.floor(w.wx(x) / CHUNK);
+      const k = Math.floor(y / CHUNK2) * 1e5 + Math.floor(w.wx(x) / CHUNK2);
       return !this.want.has(k) || this.live.has(k);
     }
     groundAt(x, y) {
@@ -64212,7 +65152,7 @@ void main() {
       if (this.uOrigin) this.uOrigin.value.set(this.world ? this.world.wx(ox) : ox, oy);
       const w = this.world;
       if (!w) return;
-      const ccx = Math.floor(w.wx(ox) / CHUNK), ccy = Math.floor(oy / CHUNK);
+      const ccx = Math.floor(w.wx(ox) / CHUNK2), ccy = Math.floor(oy / CHUNK2);
       const at4 = this.wantAt;
       if (!at4 || at4[0] !== ccx || at4[1] !== ccy || at4[2] !== this.nearR || at4[3] !== this.farR || at4[4] !== this.floorR) {
         this.wantAt = [ccx, ccy, this.nearR, this.farR, this.floorR];
@@ -64223,7 +65163,7 @@ void main() {
       if (this.missing) this.buildMissing();
       for (const c of this.live.values()) {
         if (!c.mesh) continue;
-        const rx = w.wrap ? w.dx(ox, c.x0 + CHUNK / 2) - CHUNK / 2 : c.x0 - ox;
+        const rx = w.wrap ? w.dx(ox, c.x0 + CHUNK2 / 2) - CHUNK2 / 2 : c.x0 - ox;
         c.mesh.position.set(rx, 0, c.y0 - oy);
       }
     }
@@ -64313,10 +65253,10 @@ void main() {
     buildChunk(cx, cy, lod) {
       const w = this.world;
       const g = this.hf.grid(cx, cy);
-      const x0 = cx * CHUNK, y0 = cy * CHUNK;
-      const N8 = CHUNK + 1;
+      const x0 = cx * CHUNK2, y0 = cy * CHUNK2;
+      const N8 = CHUNK2 + 1;
       const step2 = lod;
-      const n = CHUNK / step2 + 1;
+      const n = CHUNK2 / step2 + 1;
       const pos = new Float32Array(n * n * 3);
       const col6 = new Float32Array(n * n * 3);
       const pave = new Float32Array(n * n * 3);
@@ -64408,8 +65348,8 @@ void main() {
       const w = this.world;
       const decks2 = [], piers = [], walls = [], posts = [], piles = [], quayed = [];
       let quays = 0;
-      for (let j = 0; j < CHUNK; j++) {
-        for (let i = 0; i < CHUNK; i++) {
+      for (let j = 0; j < CHUNK2; j++) {
+        for (let i = 0; i < CHUNK2; i++) {
           const t = w.type(x0 + i, y0 + j);
           const third = (x0 + i) % 3 === 0 && (y0 + j) % 3 === 0;
           if (OVERLAY[t]) {
@@ -64474,7 +65414,7 @@ void main() {
       }
       if (decks2.length || piers.length || walls.length || quays) {
         try {
-          const det = dockDetails(w, x0, y0, CHUNK, this.hf);
+          const det = dockDetails(w, x0, y0, CHUNK2, this.hf);
           if (det) root4.add(det);
         } catch (e) {
           console.warn("dock details failed", e);
@@ -67190,7 +68130,7 @@ ${GLSL}
   }
 
   // src/render3d/chars/fx.js
-  var TAU8 = Math.PI * 2;
+  var TAU9 = Math.PI * 2;
   function canvas(w, h2) {
     const c = document.createElement("canvas");
     c.width = w;
@@ -67673,9 +68613,9 @@ ${GLSL}
       this.moteMat.dispose();
     }
   };
-  var ICE = null;
+  var ICE2 = null;
   function iceShell() {
-    if (!ICE) {
+    if (!ICE2) {
       const g = new IcosahedronGeometry(1, 1);
       const p = g.attributes.position;
       for (let i = 0; i < p.count; i++) {
@@ -67685,9 +68625,9 @@ ${GLSL}
       }
       g.computeVertexNormals();
       const m = new MeshPhongMaterial({ color: 11789820, emissive: 1718864, specular: 16777215, shininess: 80, transparent: true, opacity: 0.5, depthWrite: false, flatShading: true });
-      ICE = { g, m };
+      ICE2 = { g, m };
     }
-    const mesh = new Mesh(ICE.g, ICE.m);
+    const mesh = new Mesh(ICE2.g, ICE2.m);
     mesh.renderOrder = 3;
     return mesh;
   }
@@ -67698,7 +68638,7 @@ ${GLSL}
     g.translate(32, 32);
     g.beginPath();
     for (let i = 0; i < 10; i++) {
-      const r4 = i % 2 ? 11 : 26, a = -Math.PI / 2 + i / 10 * TAU8;
+      const r4 = i % 2 ? 11 : 26, a = -Math.PI / 2 + i / 10 * TAU9;
       g.lineTo(Math.cos(a) * r4, Math.sin(a) * r4);
     }
     g.closePath();
@@ -67723,7 +68663,7 @@ ${GLSL}
     }
     update(t, r4 = 0.3) {
       for (let k = 0; k < 3; k++) {
-        const a = t * 5 + k * TAU8 / 3;
+        const a = t * 5 + k * TAU9 / 3;
         this.s[k].position.set(Math.cos(a) * r4, Math.sin(a * 2) * 0.04, Math.sin(a) * r4);
         this.s[k].scale.setScalar(0.13 * (0.85 + 0.15 * Math.sin(a * 2)));
       }
@@ -67748,7 +68688,7 @@ ${GLSL}
       this.group = new Group();
       this.puffs = [];
       for (let i = 0; i < 9; i++) {
-        const a = i / 9 * TAU8, r4 = i === 0 ? 0 : 0.55 + i % 2 * 0.12;
+        const a = i / 9 * TAU9, r4 = i === 0 ? 0 : 0.55 + i % 2 * 0.12;
         const m = new Mesh(F4.s, F4.cloud);
         const k = i === 0 ? 0.62 : 0.34 + i % 3 * 0.06;
         m.position.set(Math.cos(a) * r4, i === 0 ? 0 : -0.04 + i % 2 * 0.06, Math.sin(a) * r4 * 0.85);
@@ -67760,7 +68700,7 @@ ${GLSL}
       }
       this.flames = [];
       for (let i = 0; i < 10; i++) {
-        const a = i / 10 * TAU8;
+        const a = i / 10 * TAU9;
         const m = new Mesh(F4.c, i % 2 ? F4.core : F4.flame);
         m.position.set(Math.cos(a) * 0.72, 0.05, Math.sin(a) * 0.6);
         m.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5);
@@ -68286,7 +69226,7 @@ ${GLSL}
   }
 
   // src/render3d/chars/zoan.js
-  var TAU9 = Math.PI * 2;
+  var TAU10 = Math.PI * 2;
   var clamp4 = (v, a, b) => v < a ? a : v > b ? b : v;
   var smooth5 = (a, b, x) => {
     const t = clamp4((x - a) / (b - a), 0, 1);
@@ -68431,7 +69371,7 @@ transformed += normal * ${w.toFixed(4)};`);
         this.U[i].copy(_nr);
         this.R[i] = r4;
         for (let j = 0; j <= M3; j++) {
-          const th = j / M3 * TAU9, c = Math.cos(th), sn = Math.sin(th);
+          const th = j / M3 * TAU10, c = Math.cos(th), sn = Math.sin(th);
           const k = i * (M3 + 1) + j;
           const nx = _nr.x * c + _sd.x * sn, ny = _nr.y * c + _sd.y * sn, nz = _nr.z * c + _sd.z * sn;
           pos[k * 3] = pts[i].x + nx * r4;
@@ -68560,7 +69500,7 @@ transformed += normal * ${w.toFixed(4)};`);
     part2(h2, SPH, "#3a2014", [0.22, 0.04, 0.3], [0.78, -0.42, 0], [0, 0, 0.2], 0);
     if (o.monster) {
       for (let i = 0; i < 14; i++) {
-        const a = i / 14 * TAU9;
+        const a = i / 14 * TAU10;
         part2(h2, CONE, fur, [0.16, 0.5, 0.16], [-0.25 + Math.cos(a) * 0.2, 0.05 + Math.sin(a) * 0.55, Math.sin(a * 2) * 0.1 + (i % 2 ? 0.5 : -0.5)], [Math.sin(a) * 0.6 + (i % 2 ? -0.8 : 0.8), 0, Math.PI / 2 + Math.cos(a) * 0.9], 0.02);
       }
       antlers(h2, "#c8a46a", true, [-0.1, 0.55, 0.3]);
@@ -68652,12 +69592,12 @@ transformed += normal * ${w.toFixed(4)};`);
       const mk3 = this.moveK;
       const amp = (0.35 + 0.35 * run) * mk3;
       for (let i = 0; i < 4; i++) {
-        const L3 = this.legs[i], ph = (this.phase + off[i]) * TAU9;
+        const L3 = this.legs[i], ph = (this.phase + off[i]) * TAU10;
         const sw2 = Math.sin(ph) * amp, lift = Math.max(0, Math.cos(ph)) * mk3;
         L3.j.rotation.z = sw2;
         L3.knee.rotation.z = (L3.front ? -1 : 1) * (0.12 + lift * (0.7 + run * 0.4));
       }
-      let pitch = gal ? Math.sin(this.phase * TAU9) * 0.08 : 0, y = this.H + Math.abs(Math.sin(this.phase * TAU9 * 2)) * 0.03 * mk3, x = 0;
+      let pitch = gal ? Math.sin(this.phase * TAU10) * 0.08 : 0, y = this.H + Math.abs(Math.sin(this.phase * TAU10 * 2)) * 0.03 * mk3, x = 0;
       if (act2) {
         const wnd = act2.def?.windup ?? 0.2, tt = act2.t || 0;
         const up = smooth5(0, Math.max(0.05, wnd), tt), go = smooth5(wnd, wnd + 0.12, tt) * (1 - smooth5(wnd + 0.2, wnd + 0.55, tt));
@@ -68846,7 +69786,7 @@ transformed += normal * ${w.toFixed(4)};`);
       this.clouds = Array.from({ length: 7 }, (_, k) => {
         const g2 = group(this.group);
         for (let j = 0; j < 5; j++) {
-          const a = j / 5 * TAU9 + k;
+          const a = j / 5 * TAU10 + k;
           part2(g2, SPH, cloudMat, [0.9 - j % 2 * 0.25, 0.42, 0.75], [Math.cos(a) * 0.75, j % 3 * 0.12, Math.sin(a) * 0.55], [0, a, 0], 0.03);
         }
         part2(g2, SPH, cloudMat, [1.1, 0.55, 0.95], [0, 0.18, 0], [0, 0, 0], 0.03);
@@ -68899,7 +69839,7 @@ transformed += normal * ${w.toFixed(4)};`);
       part2(lo, SPH, blue, [0.13, 0.3, 0.13], [0, -0.24, 0], [0, 0, 0], 0.025);
       part2(lo, TOR, "#1a1a24", [0.14, 0.14, 0.14], [0, -0.44, 0], [Math.PI / 2, 0, 0], 0.012);
       for (let i = 0; i < 6; i++) {
-        const a = i / 6 * TAU9;
+        const a = i / 6 * TAU10;
         part2(lo, CONE, "#2a2a36", [0.025, 0.1, 0.025], [Math.cos(a) * 0.17, -0.44, Math.sin(a) * 0.17], [Math.sin(a) * 1.57, 0, -Math.cos(a) * 1.57], 0);
       }
       const hand = group(lo, [0, -0.55, 0]);
@@ -69255,7 +70195,7 @@ transformed += normal * ${w.toFixed(4)};`);
     for (let i = 0; i < p.length; i += 3) p[i] += rakeDx(d, p[i], p[i + 1]);
   }
   var noSprit = (fh) => !!fh && fh !== "none";
-  var TAU10 = Math.PI * 2;
+  var TAU11 = Math.PI * 2;
   function bigPalette(def) {
     const H5 = C(def.color || "#6b4526");
     const marine2 = def.sail === "marine";
@@ -69838,7 +70778,7 @@ transformed += normal * ${w.toFixed(4)};`);
     k.add(torus(R5, 0.045, 6, 28), { color: "#7b5230", outline: 0.012 });
     for (let i = 0; i < 8; i++) {
       k.save();
-      k.rotateZ(i / 8 * TAU10);
+      k.rotateZ(i / 8 * TAU11);
       k.add(cyl(0.026, 0.034, R5 + 0.14, 6), { color: "#7b5230" });
       k.add(lathe([[0.028, 0], [0.042, 0.04], [0.03, 0.1], [0.046, 0.15], [0.036, 0.19], [1e-3, 0.2]], 7), { at: [0, R5 + 0.1, 0], color: "#8d6038", outline: 6e-3 });
       k.restore();
@@ -69855,7 +70795,7 @@ transformed += normal * ${w.toFixed(4)};`);
     }
     if (d.boat) {
       const b = d.boat, len = b.u1 - b.u0, xc = (b.u0 + b.u1) / 2;
-      const hullG = new SphereGeometry(1, 14, 6, 0, TAU10, Math.PI / 2, Math.PI / 2);
+      const hullG = new SphereGeometry(1, 14, 6, 0, TAU11, Math.PI / 2, Math.PI / 2);
       k.add(hullG, { at: [xc, dk3 + 0.95, 0], scale: [len / 2, 0.62, b.w / 2], color: "#f2efe6", double: true, outline: 0.02 });
       k.add(torus(1, 0.035, 4, 24), { at: [xc, dk3 + 0.95, 0], rot: [Math.PI / 2, 0, 0], scale: [len / 2, b.w / 2, 1], color: P6.cap });
       for (const f of [-0.28, 0.28]) k.add(box(0.28, 0.46, b.w * 0.9), { at: [xc + f * len, dk3, 0], color: P6.wood, outline: 0.012 });
@@ -69866,7 +70806,7 @@ transformed += normal * ${w.toFixed(4)};`);
     if (d.binnacleU !== null) {
       const fy = d.yq;
       k.add(box(0.45, 0.95, 0.45), { at: [d.binnacleU, fy, 0], color: P6.wood, outline: 0.012 });
-      k.add(new SphereGeometry(0.2, 10, 6, 0, TAU10, 0, Math.PI / 2), { at: [d.binnacleU, fy + 0.95, 0], color: "#cfe8ef", glow: "#fff1c1" });
+      k.add(new SphereGeometry(0.2, 10, 6, 0, TAU11, 0, Math.PI / 2), { at: [d.binnacleU, fy + 0.95, 0], color: "#cfe8ef", glow: "#fff1c1" });
     }
     for (const u of d.mastU) {
       const t = (u + d.L / 2) / d.L, fl2 = floorAt(d, t), r4 = d.mastR;
@@ -69962,7 +70902,7 @@ transformed += normal * ${w.toFixed(4)};`);
         for (let i = 0; i < 16; i++) {
           k.save();
           k.translate(hc2[0] - 0.08 * g, hc2[1], 0);
-          k.rotateX(i / 16 * TAU10);
+          k.rotateX(i / 16 * TAU11);
           k.add(cone(0.17 * g, 0.42 * g, 6), { at: [0, 0.38 * g, 0], color: i % 2 ? "#f39c12" : "#e67e22", outline: 0.015 });
           k.restore();
         }
@@ -69978,7 +70918,7 @@ transformed += normal * ${w.toFixed(4)};`);
       const cy = (top + bot) / 2, ry = (top - bot) / 2;
       const rz = hbAt(0.86, B5) * 1.04;
       const white = C("#f4f1ea");
-      const head = new SphereGeometry(1, 28, 18, 0, TAU10, 0, Math.PI), hp = head.attributes.position;
+      const head = new SphereGeometry(1, 28, 18, 0, TAU11, 0, Math.PI), hp = head.attributes.position;
       for (let i = 0; i < hp.count; i++) {
         let x = cx + hp.getX(i) * B5 * 0.66, y = cy + hp.getY(i) * ry;
         const z = hp.getZ(i) * rz;
@@ -70061,7 +71001,7 @@ transformed += normal * ${w.toFixed(4)};`);
       k.add(new SphereGeometry(0.95 * s, 16, 12), { at: [hc2[0] - 0.3 * s, hc2[1], 0], scale: [0.7, 1, 1], color: deep, outline: 0.03 });
       for (const [ring4, n, len, rad, col6] of [[0, 18, 0.95, 0.3, mid], [1, 14, 0.7, 0.26, deep]]) {
         for (let i = 0; i < n; i++) {
-          const a = (i + ring4 * 0.5) / n * TAU10;
+          const a = (i + ring4 * 0.5) / n * TAU11;
           k.save();
           k.translate(hc2[0] - (0.12 + ring4 * 0.25) * s, hc2[1], 0);
           k.rotateX(a);
@@ -70101,7 +71041,7 @@ transformed += normal * ${w.toFixed(4)};`);
       k.add(new SphereGeometry(0.17 * s, 14, 10), { at: H5, scale: [1, 1.12, 0.95], color: skin, outline: 0.02 });
       k.add(new SphereGeometry(0.05 * s, 6, 4), { at: [H5[0] + 0.16 * s, H5[1] - 0.02 * s, 0], color: skin });
       for (const z of [-1, 1]) k.add(new SphereGeometry(0.025 * s, 6, 4), { at: [H5[0] + 0.14 * s, H5[1] + 0.04 * s, z * 0.065 * s], color: "#2c4a6e" });
-      k.add(new SphereGeometry(0.18 * s, 12, 8, 0, TAU10, 0, Math.PI * 0.6), { at: [H5[0] - 0.03 * s, H5[1] + 0.01 * s, 0], rot: [0, 0, 1.15], scale: [1.08, 1.15, 1.06], color: hair, outline: 0.015 });
+      k.add(new SphereGeometry(0.18 * s, 12, 8, 0, TAU11, 0, Math.PI * 0.6), { at: [H5[0] - 0.03 * s, H5[1] + 0.01 * s, 0], rot: [0, 0, 1.15], scale: [1.08, 1.15, 1.06], color: hair, outline: 0.015 });
       for (let i = 0; i < 5; i++) {
         const z = (i - 2) * 0.06 * s;
         const c = new CatmullRomCurve3([new Vector3(H5[0] - 0.08 * s, H5[1] + 0.08 * s, z), new Vector3(H5[0] - 0.24 * s, H5[1] - 0.12 * s, z * 1.6), new Vector3(H5[0] - 0.3 * s, H5[1] - 0.5 * s, z * 2), new Vector3(H5[0] - 0.42 * s + i % 2 * 0.06 * s, H5[1] - 0.85 * s, z * 2.2)]);
@@ -71992,7 +72932,7 @@ vec3 paneView(vec3 dir, float night) {
   // src/render3d/camera3d.js
   var _dsw = [0, 0];
   var TP_MIN = 1.1;
-  var TAU11 = Math.PI * 2;
+  var TAU12 = Math.PI * 2;
   var CAM_SOLID = {
     tree: [5.3],
     rock: [0.85, 0.75],
@@ -72184,7 +73124,7 @@ vec3 paneView(vec3 dir, float night) {
     }
     /** Turn by angles (radians): used by mouse look and by touch drags. */
     lookBy(dyaw, dpitch) {
-      this.yaw = ((this.yaw + dyaw) % TAU11 + TAU11) % TAU11;
+      this.yaw = ((this.yaw + dyaw) % TAU12 + TAU12) % TAU12;
       this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + dpitch));
     }
     resize(w, h2) {
@@ -72297,13 +73237,13 @@ vec3 paneView(vec3 dir, float night) {
           if (Math.abs(ex) > 0.55) t += Math.sign(ex) * (Math.abs(ex) - 0.55) / 0.45 * 1.6;
           if (Math.abs(ey) > 0.6) l -= Math.sign(ey) * (Math.abs(ey) - 0.6) / 0.4 * 1;
         }
-        this.yaw = ((this.yaw + t * 2.4 * dt) % TAU11 + TAU11) % TAU11;
+        this.yaw = ((this.yaw + t * 2.4 * dt) % TAU12 + TAU12) % TAU12;
         this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch + l * 1.4 * dt));
       }
       if (p.climb?.mast && !p.climb.top && !this.shot) {
         const want = p.facing ?? this.yaw;
-        let d = ((want - this.yaw) % TAU11 + TAU11 * 1.5) % TAU11 - TAU11 / 2;
-        this.yaw = ((this.yaw + d * Math.min(1, dt * 2.5)) % TAU11 + TAU11) % TAU11;
+        let d = ((want - this.yaw) % TAU12 + TAU12 * 1.5) % TAU12 - TAU12 / 2;
+        this.yaw = ((this.yaw + d * Math.min(1, dt * 2.5)) % TAU12 + TAU12) % TAU12;
       }
       const cam = this.camera;
       const sailing = p.mode === "sail" && p.ship;
@@ -72612,7 +73552,7 @@ vec3 paneView(vec3 dir, float night) {
   };
 
   // src/render/icons.js
-  var TAU12 = Math.PI * 2;
+  var TAU13 = Math.PI * 2;
   var OUT2 = "#2b1d14";
   var U2 = 64;
   var colCache = /* @__PURE__ */ new Map();
@@ -72698,12 +73638,12 @@ vec3 paneView(vec3 dir, float night) {
   };
   function circle(x, y, r4) {
     const p = new Path2D();
-    p.arc(x, y, r4, 0, TAU12);
+    p.arc(x, y, r4, 0, TAU13);
     return p;
   }
   function ellipse(x, y, rx, ry, rot = 0) {
     const p = new Path2D();
-    p.ellipse(x, y, rx, ry, rot, 0, TAU12);
+    p.ellipse(x, y, rx, ry, rot, 0, TAU13);
     return p;
   }
   function rrect2(x, y, w, h2, r4 = 0) {
@@ -72745,7 +73685,7 @@ vec3 paneView(vec3 dir, float night) {
   function spiral2(cx, cy, r4, turns = 1.6, rot = 0, dir = 1) {
     const p = new Path2D(), n = Math.ceil(turns * 26);
     for (let i = 0; i <= n; i++) {
-      const t = i / n, a = rot + dir * t * turns * TAU12, rr = r4 * (0.12 + 0.88 * t);
+      const t = i / n, a = rot + dir * t * turns * TAU13, rr = r4 * (0.12 + 0.88 * t);
       const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
       i ? p.lineTo(x, y) : p.moveTo(x, y);
     }
@@ -72874,7 +73814,7 @@ vec3 paneView(vec3 dir, float night) {
     g.globalAlpha = a;
     g.fillStyle = "#ffffff";
     g.beginPath();
-    g.ellipse(x, y, rx, ry, rot, 0, TAU12);
+    g.ellipse(x, y, rx, ry, rot, 0, TAU13);
     g.fill();
     g.restore();
   }
@@ -72976,7 +73916,7 @@ vec3 paneView(vec3 dir, float night) {
       h2 = scr("halo", I2.px);
       const u = h2.getContext("2d", CTX);
       for (let i = 0; i < 16; i++) {
-        const a = i / 16 * TAU12;
+        const a = i / 16 * TAU13;
         u.drawImage(s, Math.cos(a) * (rpx + hpx), Math.sin(a) * (rpx + hpx));
       }
       u.globalCompositeOperation = "source-in";
@@ -72988,7 +73928,7 @@ vec3 paneView(vec3 dir, float night) {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalCompositeOperation = "destination-over";
     for (let i = 0; i < 12; i++) {
-      const a = i / 12 * TAU12;
+      const a = i / 12 * TAU13;
       g.drawImage(s, Math.cos(a) * rpx, Math.sin(a) * rpx);
     }
     if (h2) {
@@ -73350,7 +74290,7 @@ vec3 paneView(vec3 dir, float night) {
     part3(I2, circle(26, 42, 11), C2.wood, { sd: 2, hd: 1.4 });
     part3(I2, circle(26, 42, 3.4), C2.brass, { sd: 0.6, hd: 0.4 });
     for (let i = 0; i < 6; i++) {
-      const a = i / 6 * TAU12;
+      const a = i / 6 * TAU13;
       ln(I2, `M${26 + Math.cos(a) * 4} ${42 + Math.sin(a) * 4} L${26 + Math.cos(a) * 9.5} ${42 + Math.sin(a) * 9.5}`, C2.woodD, 1.6);
     }
   };
@@ -73952,7 +74892,7 @@ vec3 paneView(vec3 dir, float night) {
   function sealP(cx, cy, r4) {
     const pts = [];
     for (let i = 0; i < 28; i++) {
-      const a = i / 28 * TAU12, rr = r4 * (1 + 0.09 * Math.sin(a * 7 + 1));
+      const a = i / 28 * TAU13, rr = r4 * (1 + 0.09 * Math.sin(a * 7 + 1));
       pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]);
     }
     return poly(pts);
@@ -73988,10 +74928,10 @@ vec3 paneView(vec3 dir, float night) {
   function sakura(I2, x, y, r4, col6, rot = 0, o = {}) {
     const petal = "M0 0 C-6 -4 -8.5 -10 -5 -15 C-3.4 -16.5 -1.4 -16.2 0 -14 C1.4 -16.2 3.4 -16.5 5 -15 C8.5 -10 6 -4 0 0 Z";
     const ps = [];
-    for (let i = 0; i < 5; i++) ps.push(xf(petal, { ox: 0, oy: 0, x, y, r: rot + i / 5 * TAU12, s: r4 / 16 }));
+    for (let i = 0; i < 5; i++) ps.push(xf(petal, { ox: 0, oy: 0, x, y, r: rot + i / 5 * TAU13, s: r4 / 16 }));
     part3(I2, union(...ps), col6, { sd: r4 * 0.12, hd: r4 * 0.08, ol: o.ol });
     if (!I2.small && r4 > 8) for (let i = 0; i < 5; i++) {
-      const a = rot + i / 5 * TAU12 - Math.PI / 2;
+      const a = rot + i / 5 * TAU13 - Math.PI / 2;
       ln(I2, `M${x} ${y} L${x + Math.cos(a) * r4 * 0.42} ${y + Math.sin(a) * r4 * 0.42}`, dk2(col6, 0.35), Math.max(0.8, r4 * 0.06));
       fl(I2, circle(x + Math.cos(a) * r4 * 0.44, y + Math.sin(a) * r4 * 0.44, Math.max(0.7, r4 * 0.06)), "#f7d34a");
     }
@@ -74081,7 +75021,7 @@ vec3 paneView(vec3 dir, float night) {
     part3(I2, dough, "#d99450", { rule: "evenodd", sd: 3, hd: 1.6 });
     const pts = [];
     for (let i = 0; i < 60; i++) {
-      const a = i / 60 * TAU12, r4 = 21.5 + Math.sin(a * 7 + 0.6) * 1.2 + (Math.sin(a) > 0.2 ? Math.max(0, Math.sin(a * 6 + 1)) * 2.4 : 0);
+      const a = i / 60 * TAU13, r4 = 21.5 + Math.sin(a * 7 + 0.6) * 1.2 + (Math.sin(a) > 0.2 ? Math.max(0, Math.sin(a * 6 + 1)) * 2.4 : 0);
       pts.push([32 + Math.cos(a) * r4, 33 + Math.sin(a) * r4 * 0.74]);
     }
     const fr = poly(pts);
@@ -74090,7 +75030,7 @@ vec3 paneView(vec3 dir, float night) {
     if (!I2.small) {
       const cols = ["#ffffff", "#f6d02a", "#5bc0eb", "#8cc152", "#ffffff"];
       for (let i = 0; i < 14; i++) {
-        const a = i / 14 * TAU12 + 0.3, r4 = 14.5 + i % 3 * 1.8, x = 32 + Math.cos(a) * r4, y = 33 + Math.sin(a) * r4 * 0.74;
+        const a = i / 14 * TAU13 + 0.3, r4 = 14.5 + i % 3 * 1.8, x = 32 + Math.cos(a) * r4, y = 33 + Math.sin(a) * r4 * 0.74;
         fl(I2, xf(rrect2(x - 1.9, y - 0.65, 3.8, 1.3, 0.65), { ox: x, oy: y, r: i * 1.3 }), cols[i % 5]);
       }
     }
@@ -74323,7 +75263,7 @@ vec3 paneView(vec3 dir, float night) {
     glow2(I2, circle(32, 21, 19), "#fff6c8", 0.55);
     part3(I2, circle(32, 21, 13.5), "#f7f4ea", { sd: 1.6, shT: 0.12, hd: 1, ol: I2.ol * 0.8 });
     if (!I2.small) for (let i = 0; i < 16; i++) {
-      const a = i / 16 * TAU12;
+      const a = i / 16 * TAU13;
       ln(I2, `M${32 + Math.cos(a) * 3} ${21 + Math.sin(a) * 3} L${32 + Math.cos(a) * 11.4} ${21 + Math.sin(a) * 11.4}`, "#cfc8b4", 0.8);
       fl(I2, circle(32 + Math.cos(a) * 11.8, 21 + Math.sin(a) * 11.8, 1.1), "#ffffff");
     }
@@ -74842,10 +75782,10 @@ vec3 paneView(vec3 dir, float night) {
     part3(I2, "M28 42 C22 50 14 54 5 52 C9 45 18 41 28 42 Z", dk2(C2.leaf, 0.08), { sd: 1, hd: 0.8 });
     const petal = "M0 0 C-10 -4 -13 -14 -8.5 -19.5 C-4.5 -23.5 4.5 -23.5 8.5 -19.5 C13 -14 10 -4 0 0 Z";
     const ps = [];
-    for (let i = 0; i < 5; i++) ps.push(xf(petal, { ox: 0, oy: 0, x: 31, y: 30, r: 0.3 + i / 5 * TAU12, s: 1.05 }));
+    for (let i = 0; i < 5; i++) ps.push(xf(petal, { ox: 0, oy: 0, x: 31, y: 30, r: 0.3 + i / 5 * TAU13, s: 1.05 }));
     part3(I2, union(...ps), col6, { sd: 2.4, hd: 1.6 });
     if (!I2.small) for (let i = 0; i < 5; i++) {
-      const a = 0.3 + i / 5 * TAU12 - Math.PI / 2;
+      const a = 0.3 + i / 5 * TAU13 - Math.PI / 2;
       ln(I2, `M${31 + Math.cos(a) * 5} ${30 + Math.sin(a) * 5} L${31 + Math.cos(a) * 14} ${30 + Math.sin(a) * 14}`, dk2(col6, 0.3), 1, { a: 0.7 });
     }
     fl(I2, circle(31, 30, 5.5), dk2(col6, 0.5));
@@ -75018,7 +75958,7 @@ vec3 paneView(vec3 dir, float night) {
       part3(I2, p, lt(c, (1 - a) * 2), { rule: "evenodd", sd: 1.2, hd: 0.8 });
     }
     if (!I2.small) for (let i = 0; i < 18; i++) {
-      const a = i / 18 * TAU12;
+      const a = i / 18 * TAU13;
       ln(I2, `M${32 + Math.cos(a) * 19.5} ${36 + Math.sin(a) * 14} L${32 + Math.cos(a + 0.12) * 23} ${36 + Math.sin(a + 0.12) * 16.6}`, dk2(c, 0.35), 1);
     }
     tube2(I2, "M54 36 C58 44 56 52 50 58", c, 4);
@@ -75065,7 +76005,7 @@ vec3 paneView(vec3 dir, float night) {
     clip(I2, path2, () => {
       let k = 0;
       for (let y = y0; y <= y1; y += step2 * 0.86) for (let x = x0 + (Math.round((y - y0) / (step2 * 0.86)) % 2 ? step2 / 2 : 0); x <= x1; x += step2) {
-        const q2 = hash5(seed + ":" + k++), jx = ((q2 & 15) / 15 - 0.5) * rr * 0.45, jy = ((q2 >> 4 & 15) / 15 - 0.5) * rr * 0.45, rot = (q2 >> 8 & 63) / 63 * TAU12, dir = q2 & 4096 ? 1 : -1;
+        const q2 = hash5(seed + ":" + k++), jx = ((q2 & 15) / 15 - 0.5) * rr * 0.45, jy = ((q2 >> 4 & 15) / 15 - 0.5) * rr * 0.45, rot = (q2 >> 8 & 63) / 63 * TAU13, dir = q2 & 4096 ? 1 : -1;
         const sp = spiral2(x + jx, y + jy, rr, I2.small ? 1.2 : 1.45, rot, dir);
         if (!I2.small) ln(I2, xf(sp, { x: -0.6, y: -0.6 }), hi, w * 0.5, { a: 0.75 });
         ln(I2, sp, sw2, w);
@@ -75551,7 +76491,7 @@ vec3 paneView(vec3 dir, float night) {
   function crackLines(I2, x, y, r4, col6) {
     const d = [];
     for (let i = 0; i < 7; i++) {
-      const a = i / 7 * TAU12 + 0.3, a2 = a + 0.35, r23 = r4 * (0.55 + i % 2 * 0.2);
+      const a = i / 7 * TAU13 + 0.3, a2 = a + 0.35, r23 = r4 * (0.55 + i % 2 * 0.2);
       d.push(`M${x} ${y} L${x + Math.cos(a) * r23} ${y + Math.sin(a) * r23} L${x + Math.cos(a2) * r4} ${y + Math.sin(a2) * r4}`);
     }
     ln(I2, d.join(" "), OUT2, 3.4);
@@ -75711,7 +76651,7 @@ vec3 paneView(vec3 dir, float night) {
       glow2(I2, circle(32, 30, 22), c, 0.35);
       part3(I2, circle(32, 30, 16), c, { sd: 2, hd: 1.4, hi: "#ffffff" });
       if (!I2.small) for (const [x, y, r4] of [[26, 26, 3], [36, 34, 2.4], [37, 23, 1.6]]) fl(I2, circle(x, y, r4), dk2(c, 0.12));
-    } else part3(I2, crescentP(32, 31, 15, 0.9, 0.9 + TAU12 * 0.7, 12, 0.5), c, { sd: 1.6, hd: 1.2, hi: "#ffffff" });
+    } else part3(I2, crescentP(32, 31, 15, 0.9, 0.9 + TAU13 * 0.7, 12, 0.5), c, { sd: 1.6, hd: 1.2, hi: "#ffffff" });
     if (o.bolt) {
       bolt(I2, { s: 0.36, ox: 32, oy: 32, x: 15, y: 15 });
       bolt(I2, { s: 0.3, ox: 32, oy: 32, x: -16, y: 16, r: 0.3 });
@@ -75721,7 +76661,7 @@ vec3 paneView(vec3 dir, float night) {
     for (const r4 of [13, 19]) ln(I2, arcPath(30, 50, r4, Math.PI * 1.08, Math.PI * 1.92), "#ffffff", 2, { a: 0.75 });
     part3(I2, cloudP(30, 50, 0.72), "#ffffff", { sd: 1.2, shT: 0.2, hd: 0.8 });
     tf(I2, { r: -1.1, s: 0.62, x: 4, y: -12 }, () => legShape(I2, o.c || "#4a5068", "#1f1b22"));
-    if (o.moon) part3(I2, crescentP(46, 18, 7, 0.9, 0.9 + TAU12 * 0.7, 5.5, 0.4), "#fff1b0", { sd: 0.8, hd: 0.6 });
+    if (o.moon) part3(I2, crescentP(46, 18, 7, 0.9, 0.9 + TAU13 * 0.7, 5.5, 0.4), "#fff1b0", { sd: 0.8, hd: 0.6 });
   };
   SK.ice = (I2, o) => {
     const c = o.c || "#bfefff";
@@ -75763,13 +76703,13 @@ vec3 paneView(vec3 dir, float night) {
   SK.mirror = (I2, o) => {
     const oct = [];
     for (let i = 0; i < 8; i++) {
-      const a = i / 8 * TAU12 + Math.PI / 8;
+      const a = i / 8 * TAU13 + Math.PI / 8;
       oct.push([32 + Math.cos(a) * 20, 32 + Math.sin(a) * 20]);
     }
     part3(I2, poly(oct), o.c || "#e0b24a", { sd: 2, hd: 1.4 });
     const inner = [];
     for (let i = 0; i < 8; i++) {
-      const a = i / 8 * TAU12 + Math.PI / 8;
+      const a = i / 8 * TAU13 + Math.PI / 8;
       inner.push([32 + Math.cos(a) * 15, 32 + Math.sin(a) * 15]);
     }
     part3(I2, poly(inner), "#dff4ff", { sd: 1, hd: 0, ol: I2.ol * 0.7 });
@@ -75800,7 +76740,7 @@ vec3 paneView(vec3 dir, float night) {
   SK.vortex = (I2, o) => {
     const c = o.c || "#7a4fc8";
     part3(I2, circle(32, 32, 22), "#1a1024", { sd: 0, hd: 0 });
-    for (let i = 0; i < 3; i++) ln(I2, spiral2(32, 32, 20, 1.3, i * TAU12 / 3, 1), c, 3 - i * 0.4, { a: 0.9 });
+    for (let i = 0; i < 3; i++) ln(I2, spiral2(32, 32, 20, 1.3, i * TAU13 / 3, 1), c, 3 - i * 0.4, { a: 0.9 });
     fl(I2, circle(32, 32, 5), "#05020a");
     if (o.ring) {
       part3(I2, xf(crescentP(32, 32, 26, 0.2, 2.9, 3.4), { sy: 0.4, oy: 32 }), "#c9a0ff", { sd: 0.6, hd: 0.4, ol: I2.ol * 0.7 });
@@ -75866,7 +76806,7 @@ vec3 paneView(vec3 dir, float night) {
   SK.flower = (I2, o) => {
     if (o.arms) {
       for (let i = 0; i < 6; i++) {
-        const a = i / 6 * TAU12 - Math.PI / 2;
+        const a = i / 6 * TAU13 - Math.PI / 2;
         tf(I2, { r: a + Math.PI / 2, ox: 32, oy: 32 }, () => {
           tube2(I2, "M32 32 L32 14", SKIN, 5.4);
           part3(I2, ellipse(32, 11, 4.2, 5), SKIN, { sd: 0.8, hd: 0.6 });
@@ -75957,7 +76897,7 @@ vec3 paneView(vec3 dir, float night) {
     const h2 = (x, y, r4) => {
       const p = [];
       for (let i = 0; i < 6; i++) {
-        const a = i / 6 * TAU12;
+        const a = i / 6 * TAU13;
         p.push([x + Math.cos(a) * r4, y + Math.sin(a) * r4]);
       }
       return poly(p);
@@ -76005,7 +76945,7 @@ vec3 paneView(vec3 dir, float night) {
   };
   SK.bladeFlower = (I2, o) => {
     const c = o.c || "#dfe7ee";
-    for (let i = 0; i < 8; i++) part3(I2, xf("M32 32 L28 12 C30 6 34 6 36 12 Z", { r: i / 8 * TAU12 + 0.2 }), c, { sd: 0.8, hd: 0.6, hi: "#ffffff" });
+    for (let i = 0; i < 8; i++) part3(I2, xf("M32 32 L28 12 C30 6 34 6 36 12 Z", { r: i / 8 * TAU13 + 0.2 }), c, { sd: 0.8, hd: 0.6, hi: "#ffffff" });
     part3(I2, circle(32, 32, 6), "#8a949b", { sd: 1, hd: 0.8 });
   };
   SK.shield = (I2, o) => {
@@ -76293,7 +77233,7 @@ vec3 paneView(vec3 dir, float night) {
     ln(I2, circle(32, 32, 19), OUT2, 4.4);
     ln(I2, circle(32, 32, 19), "#e0b24a", 2.4);
     for (let i = 0; i < 6; i++) {
-      const a = i / 6 * TAU12 - Math.PI / 2, x = 32 + Math.cos(a) * 19, y = 32 + Math.sin(a) * 19;
+      const a = i / 6 * TAU13 - Math.PI / 2, x = 32 + Math.cos(a) * 19, y = 32 + Math.sin(a) * 19;
       part3(I2, circle(x, y, 5.2), "#c8372d", { sd: 0.8, hd: 0.6 });
       if (!I2.small) ln(I2, spiral2(x, y, 3.2, 1, a), "#f6d24a", 1);
     }
@@ -76355,7 +77295,7 @@ vec3 paneView(vec3 dir, float night) {
   var HAKI_BADGE = { armament: "#5a3f86", observation: "#1f7a86", conqueror: "#8a1c2a" };
   var ELEM_BADGE = { fire: "#c24a26", ice: "#3a86b8", snow: "#3a86b8", lightning: "#3c3f86", water: "#1f78a0", poison: "#6d2a86", gas: "#6d2a86", sand: "#a8843e", smoke: "#6f7f8a", light: "#b8901e", magma: "#8a2a18", dark: "#4a2a86", explosion: "#c0762a", quake: "#3d7f93", haki: "#8a1c2a" };
   var ANIM_BADGE = { slash: "#4a5a6a", punch: "#8a4a2a", kick: "#5a6f96", shoot: "#6a5a3a", thrust: "#5a5a66", heavy: "#7a3a2a", grab: "#6a4a5a", cast: "#4a4a7a", block: "#4a6a7a" };
-  var FIRE = ["#e8452c", "#f7931e", "#ffe066"];
+  var FIRE2 = ["#e8452c", "#f7931e", "#ffe066"];
   var BLUEFIRE = ["#3ab8ec", "#8fe8ff", "#e8fcff"];
   var BLACKFIST = "#2a2530";
   var SKILL_MAP = {
@@ -76615,7 +77555,7 @@ vec3 paneView(vec3 dir, float night) {
     snipe_heavy: ["crosshair"],
     snipe_explode: ["bomb"],
     snipe_tabasco: ["chili"],
-    snipe_firebird: ["bird", { cols: FIRE, fire: true }],
+    snipe_firebird: ["bird", { cols: FIRE2, fire: true }],
     snipe_popgreen: ["sprout"],
     snipe_kabuto: ["pellet", { many: true, cols: ["#ffd23f", "#ff7a5a", "#8fd8ff"] }],
     okama_pirouette: ["swan", { spin: true }],
@@ -76877,7 +77817,7 @@ vec3 paneView(vec3 dir, float night) {
   function cogP(x, y, r12, r23, teeth, hole) {
     const pts = [];
     for (let i = 0; i < teeth * 4; i++) {
-      const a = i / (teeth * 4) * TAU12, r4 = i % 4 < 2 ? r12 : r23;
+      const a = i / (teeth * 4) * TAU13, r4 = i % 4 < 2 ? r12 : r23;
       pts.push([x + Math.cos(a) * r4, y + Math.sin(a) * r4]);
     }
     const p = poly(pts);
@@ -76926,7 +77866,7 @@ vec3 paneView(vec3 dir, float night) {
   UI.menu = (I2) => {
     const wood = "#8e5a30";
     for (let i = 0; i < 8; i++) {
-      const a = i / 8 * TAU12;
+      const a = i / 8 * TAU13;
       tube2(I2, `M${32 + Math.cos(a) * 8} ${32 + Math.sin(a) * 8} L${32 + Math.cos(a) * 28} ${32 + Math.sin(a) * 28}`, wood, 4.2);
     }
     const rim3 = new Path2D();
@@ -77181,7 +78121,7 @@ vec3 paneView(vec3 dir, float night) {
     part3(I2, star(32, 32, 12, 28, 18, 0.1), "#f7c948", { sd: 1.2, hd: 1 });
     part3(I2, circle(32, 32, 15), "#ffd23f", { sd: 2.2, hd: 1.6 });
   };
-  UI.moon = (I2) => part3(I2, crescentP(32, 32, 20, 0.9, 0.9 + TAU12 * 0.7, 16, 0.5), "#f6e7a8", { sd: 2, hd: 1.4 });
+  UI.moon = (I2) => part3(I2, crescentP(32, 32, 20, 0.9, 0.9 + TAU13 * 0.7, 16, 0.5), "#f6e7a8", { sd: 2, hd: 1.4 });
   UI.anchor = (I2, gold) => {
     const c = gold === true ? "#d6a23e" : "#6c7780";
     const r4 = new Path2D();
@@ -77243,7 +78183,7 @@ vec3 paneView(vec3 dir, float night) {
   }
 
   // src/render/sprites.js
-  var TAU13 = Math.PI * 2;
+  var TAU14 = Math.PI * 2;
   var PX = 64;
   var cache2 = /* @__PURE__ */ new Map();
   function cachedSprite(key2, wTiles, hTiles, draw2) {
@@ -77262,7 +78202,7 @@ vec3 paneView(vec3 dir, float night) {
   }
   function blob2(g, x, y, r4, fill2, outline) {
     g.beginPath();
-    g.arc(x, y, r4, 0, TAU13);
+    g.arc(x, y, r4, 0, TAU14);
     g.fillStyle = fill2;
     g.fill();
     if (outline) {
@@ -77275,7 +78215,7 @@ vec3 paneView(vec3 dir, float night) {
     const dark = shade(base2, -0.28), light = shade(base2, 0.22), line2 = shade(base2, -0.5);
     const pts = [];
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU13 + seed;
+      const a = i / n * TAU14 + seed;
       pts.push([cx + Math.cos(a) * r4 * 0.45, cy + Math.sin(a) * r4 * 0.35, r4 * (0.55 + (i * 37 + seed * 11) % 7 / 20)]);
     }
     pts.push([cx, cy - r4 * 0.15, r4 * 0.7]);
@@ -77313,7 +78253,7 @@ vec3 paneView(vec3 dir, float night) {
         g.strokeStyle = c2;
         g.lineWidth = 0.03;
         g.beginPath();
-        g.ellipse(x, y, r4 * 0.55, r4 * 1.25, 0.5, 0, TAU13);
+        g.ellipse(x, y, r4 * 0.55, r4 * 1.25, 0.5, 0, TAU14);
         g.fill();
         g.stroke();
         continue;
@@ -77321,7 +78261,7 @@ vec3 paneView(vec3 dir, float night) {
       blob2(g, x, y, r4, c1, c2);
       g.fillStyle = "rgba(255,255,255,0.35)";
       g.beginPath();
-      g.arc(x - r4 * 0.35, y - r4 * 0.35, r4 * 0.3, 0, TAU13);
+      g.arc(x - r4 * 0.35, y - r4 * 0.35, r4 * 0.3, 0, TAU14);
       g.fill();
     }
   }
@@ -77329,7 +78269,7 @@ vec3 paneView(vec3 dir, float night) {
     const r4 = (n) => (v * 9301 + n * 49297) % 233280 / 233280;
     g.fillStyle = "rgba(0,0,0,0.22)";
     g.beginPath();
-    g.ellipse(0.15, -0.05, 0.75, 0.28, 0, 0, TAU13);
+    g.ellipse(0.15, -0.05, 0.75, 0.28, 0, 0, TAU14);
     g.fill();
     switch (sub) {
       case "palm": {
@@ -77353,7 +78293,7 @@ vec3 paneView(vec3 dir, float night) {
         const top = [lean, -2.5];
         const fronds = 7;
         for (let i = 0; i < fronds; i++) {
-          const a = i / fronds * TAU13 + r4(2);
+          const a = i / fronds * TAU14 + r4(2);
           const len = 1.1 + r4(i + 3) * 0.35;
           const ex = top[0] + Math.cos(a) * len, ey = top[1] + Math.sin(a) * len * 0.55 + 0.35;
           g.strokeStyle = i % 2 ? "#2f9e44" : "#37b24d";
@@ -77462,7 +78402,7 @@ vec3 paneView(vec3 dir, float night) {
         g.strokeStyle = "#ffffff";
         g.lineWidth = 0.12;
         g.beginPath();
-        for (let a = 0; a < TAU13 * 2.2; a += 0.2) {
+        for (let a = 0; a < TAU14 * 2.2; a += 0.2) {
           const rr2 = 0.06 + a * 0.045;
           g.lineTo(Math.cos(a) * rr2, -2.2 + Math.sin(a) * rr2);
         }
@@ -77498,7 +78438,7 @@ vec3 paneView(vec3 dir, float night) {
           for (let y = 0.5; y < hh; y += 0.55) g.fillRect(x - 0.08, -y, 0.16, 0.04);
           g.fillStyle = "#9ccc65";
           g.beginPath();
-          g.ellipse(x + 0.2, -hh + 0.2, 0.28, 0.08, -0.5, 0, TAU13);
+          g.ellipse(x + 0.2, -hh + 0.2, 0.28, 0.08, -0.5, 0, TAU14);
           g.fill();
         }
         break;
@@ -77565,7 +78505,7 @@ vec3 paneView(vec3 dir, float night) {
     return cachedSprite(`rock:${v}`, 1.6, 1.4, (g) => {
       g.fillStyle = "rgba(0,0,0,0.2)";
       g.beginPath();
-      g.ellipse(0.05, -0.05, 0.6, 0.2, 0, 0, TAU13);
+      g.ellipse(0.05, -0.05, 0.6, 0.2, 0, 0, TAU14);
       g.fill();
       const col6 = ["#8e8a82", "#9a948a", "#7f7a72", "#a39d92"][v % 4];
       g.fillStyle = shade(col6, -0.25);
@@ -77601,7 +78541,7 @@ vec3 paneView(vec3 dir, float night) {
     return cachedSprite(`bush:${sub}:${v}`, 1.4, 1.2, (g) => {
       g.fillStyle = "rgba(0,0,0,0.18)";
       g.beginPath();
-      g.ellipse(0, -0.03, 0.5, 0.16, 0, 0, TAU13);
+      g.ellipse(0, -0.03, 0.5, 0.16, 0, 0, TAU14);
       g.fill();
       if (sub === "fern") {
         g.strokeStyle = "#2e7d32";
@@ -77641,7 +78581,7 @@ vec3 paneView(vec3 dir, float night) {
       case "barrel": {
         g.fillStyle = "rgba(0,0,0,0.2)";
         g.beginPath();
-        g.ellipse(0, 0, 0.35, 0.12, 0, 0, TAU13);
+        g.ellipse(0, 0, 0.35, 0.12, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#8d5b33";
         g.beginPath();
@@ -77654,7 +78594,7 @@ vec3 paneView(vec3 dir, float night) {
         g.fillRect(-0.3, -0.2, 0.6, 0.06);
         g.fillStyle = "#6d4526";
         g.beginPath();
-        g.ellipse(0, -0.75, 0.3, 0.1, 0, 0, TAU13);
+        g.ellipse(0, -0.75, 0.3, 0.1, 0, 0, TAU14);
         g.fill();
         break;
       }
@@ -77679,7 +78619,7 @@ vec3 paneView(vec3 dir, float night) {
       case "haystack": {
         g.fillStyle = "#d4ac0d";
         g.beginPath();
-        g.ellipse(0, -0.35, 0.55, 0.45, 0, 0, TAU13);
+        g.ellipse(0, -0.35, 0.55, 0.45, 0, 0, TAU14);
         g.fill();
         g.strokeStyle = "#b7950b";
         g.lineWidth = 0.03;
@@ -77709,7 +78649,7 @@ vec3 paneView(vec3 dir, float night) {
         } else {
           g.fillStyle = night ? "#ff8a5c" : "#e74c3c";
           g.beginPath();
-          g.ellipse(0, -2.05, 0.2, 0.26, 0, 0, TAU13);
+          g.ellipse(0, -2.05, 0.2, 0.26, 0, 0, TAU14);
           g.fill();
           g.fillStyle = "#2d3436";
           g.fillRect(-0.12, -2.34, 0.24, 0.06);
@@ -77720,15 +78660,15 @@ vec3 paneView(vec3 dir, float night) {
       case "well": {
         g.fillStyle = "rgba(0,0,0,0.2)";
         g.beginPath();
-        g.ellipse(0, 0, 0.8, 0.25, 0, 0, TAU13);
+        g.ellipse(0, 0, 0.8, 0.25, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#8e8a82";
         g.beginPath();
-        g.ellipse(0, -0.3, 0.7, 0.35, 0, 0, TAU13);
+        g.ellipse(0, -0.3, 0.7, 0.35, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#26465b";
         g.beginPath();
-        g.ellipse(0, -0.35, 0.5, 0.22, 0, 0, TAU13);
+        g.ellipse(0, -0.35, 0.5, 0.22, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#6d4c33";
         g.fillRect(-0.62, -1.4, 0.1, 1.1);
@@ -77745,28 +78685,28 @@ vec3 paneView(vec3 dir, float night) {
       case "fountain": {
         g.fillStyle = "rgba(0,0,0,0.2)";
         g.beginPath();
-        g.ellipse(0, 0, 1.3, 0.4, 0, 0, TAU13);
+        g.ellipse(0, 0, 1.3, 0.4, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#cfc8ba";
         g.beginPath();
-        g.ellipse(0, -0.25, 1.2, 0.5, 0, 0, TAU13);
+        g.ellipse(0, -0.25, 1.2, 0.5, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#4fb3d9";
         g.beginPath();
-        g.ellipse(0, -0.3, 1, 0.38, 0, 0, TAU13);
+        g.ellipse(0, -0.3, 1, 0.38, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#b8b0a2";
         g.fillRect(-0.12, -1.2, 0.24, 0.9);
         g.fillStyle = "#cfc8ba";
         g.beginPath();
-        g.ellipse(0, -1.2, 0.45, 0.16, 0, 0, TAU13);
+        g.ellipse(0, -1.2, 0.45, 0.16, 0, 0, TAU14);
         g.fill();
         for (let k = 0; k < 6; k++) {
-          const a = k / 6 * TAU13 + t * 0.5;
+          const a = k / 6 * TAU14 + t * 0.5;
           const ph = (t * 1.5 + k / 6) % 1;
           g.fillStyle = `rgba(200,235,255,${0.8 - ph * 0.6})`;
           g.beginPath();
-          g.arc(Math.cos(a) * ph * 0.7, -1.3 + ph * ph * 1 - ph * 0.6, 0.06, 0, TAU13);
+          g.arc(Math.cos(a) * ph * 0.7, -1.3 + ph * ph * 1 - ph * 0.6, 0.06, 0, TAU14);
           g.fill();
         }
         break;
@@ -77832,7 +78772,7 @@ vec3 paneView(vec3 dir, float night) {
       case "statue": {
         g.fillStyle = "rgba(0,0,0,0.2)";
         g.beginPath();
-        g.ellipse(0, 0, 0.8, 0.25, 0, 0, TAU13);
+        g.ellipse(0, 0, 0.8, 0.25, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#b8b0a2";
         g.fillRect(-0.6, -0.8, 1.2, 0.8);
@@ -77856,7 +78796,7 @@ vec3 paneView(vec3 dir, float night) {
       case "lighthouse": {
         g.fillStyle = "rgba(0,0,0,0.25)";
         g.beginPath();
-        g.ellipse(0.2, 0, 1.2, 0.35, 0, 0, TAU13);
+        g.ellipse(0.2, 0, 1.2, 0.35, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#fdfefe";
         g.beginPath();
@@ -77909,12 +78849,12 @@ vec3 paneView(vec3 dir, float night) {
         g.fillRect(-0.1, -0.5, 0.2, 0.5);
         g.fillStyle = "#795548";
         g.beginPath();
-        g.ellipse(0, -0.5, 0.12, 0.05, 0, 0, TAU13);
+        g.ellipse(0, -0.5, 0.12, 0.05, 0, 0, TAU14);
         g.fill();
         g.strokeStyle = "#c8b89a";
         g.lineWidth = 0.04;
         g.beginPath();
-        g.arc(0, -0.3, 0.13, 0, TAU13);
+        g.arc(0, -0.3, 0.13, 0, TAU14);
         g.stroke();
         break;
       }
@@ -77961,7 +78901,7 @@ vec3 paneView(vec3 dir, float night) {
           const s = 0.5 + 0.5 * Math.sin(t * 3 + (o.id || 0));
           g.fillStyle = `rgba(255,230,120,${0.35 * s})`;
           g.beginPath();
-          g.arc(0, -0.5, 0.7, 0, TAU13);
+          g.arc(0, -0.5, 0.7, 0, TAU14);
           g.fill();
         }
         break;
@@ -78037,7 +78977,7 @@ vec3 paneView(vec3 dir, float night) {
         g.fillRect(-0.5, -1.25, 1, 0.1);
         g.fillStyle = "#d4ac0d";
         g.beginPath();
-        g.ellipse(0, -1, 0.28, 0.45, 0, 0, TAU13);
+        g.ellipse(0, -1, 0.28, 0.45, 0, 0, TAU14);
         g.fill();
         blob2(g, 0, -1.7, 0.2, "#e8d5b5");
         g.strokeStyle = "#8d6e4a";
@@ -78053,11 +78993,11 @@ vec3 paneView(vec3 dir, float night) {
         g.rotate(-0.2);
         g.fillStyle = "#8d5b33";
         g.beginPath();
-        g.ellipse(0, -0.3, 1.1, 0.4, 0, 0, TAU13);
+        g.ellipse(0, -0.3, 1.1, 0.4, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#6d4526";
         g.beginPath();
-        g.ellipse(0, -0.35, 0.9, 0.26, 0, 0, TAU13);
+        g.ellipse(0, -0.35, 0.9, 0.26, 0, 0, TAU14);
         g.fill();
         g.restore();
         break;
@@ -78095,12 +79035,12 @@ vec3 paneView(vec3 dir, float night) {
         g.fillStyle = "rgba(210,240,255,0.25)";
         g.lineWidth = 0.04;
         g.beginPath();
-        g.arc(0, -1.5 + bob, r4, 0, TAU13);
+        g.arc(0, -1.5 + bob, r4, 0, TAU14);
         g.fill();
         g.stroke();
         g.fillStyle = "rgba(255,255,255,0.8)";
         g.beginPath();
-        g.arc(-r4 * 0.35, -1.5 + bob - r4 * 0.35, r4 * 0.2, 0, TAU13);
+        g.arc(-r4 * 0.35, -1.5 + bob - r4 * 0.35, r4 * 0.2, 0, TAU14);
         g.fill();
         break;
       }
@@ -78138,7 +79078,7 @@ vec3 paneView(vec3 dir, float night) {
         g.rotate(t * 0.8);
         g.fillStyle = "#efebe9";
         for (let k = 0; k < 4; k++) {
-          g.rotate(TAU13 / 4);
+          g.rotate(TAU14 / 4);
           g.fillRect(0.1, -0.12, 1.6, 0.24);
         }
         g.restore();
@@ -78198,7 +79138,7 @@ vec3 paneView(vec3 dir, float night) {
         g.lineTo(0.35, -1.3);
         g.stroke();
         g.beginPath();
-        g.arc(0, -1.7, 0.14, 0, TAU13);
+        g.arc(0, -1.7, 0.14, 0, TAU14);
         g.stroke();
         break;
       }
@@ -78213,7 +79153,7 @@ vec3 paneView(vec3 dir, float night) {
         const red = !!o.road;
         g.fillStyle = "rgba(0,0,0,0.25)";
         g.beginPath();
-        g.ellipse(0, 0, 1.1, 0.3, 0, 0, TAU13);
+        g.ellipse(0, 0, 1.1, 0.3, 0, 0, TAU14);
         g.fill();
         g.fillStyle = red ? "#8e2b22" : "#37474f";
         g.fillRect(-0.95, -1.9, 1.9, 1.9);
@@ -78288,7 +79228,7 @@ vec3 paneView(vec3 dir, float night) {
       case "portal": {
         g.fillStyle = "rgba(0,0,0,0.55)";
         g.beginPath();
-        g.ellipse(0, -0.2, 1, 0.5, 0, 0, TAU13);
+        g.ellipse(0, -0.2, 1, 0.5, 0, 0, TAU14);
         g.fill();
         g.fillStyle = "#5d5d5d";
         for (let k = 0; k < 4; k++) g.fillRect(-0.8 + k * 0.1, -0.5 + k * 0.12, 1.6 - k * 0.2, 0.1);
@@ -78346,8 +79286,8 @@ vec3 paneView(vec3 dir, float night) {
         blob2(g, 0, -0.9, 0.8, "#ecf0f1");
         g.fillStyle = "#2d3436";
         g.beginPath();
-        g.arc(-0.28, -1, 0.18, 0, TAU13);
-        g.arc(0.28, -1, 0.18, 0, TAU13);
+        g.arc(-0.28, -1, 0.18, 0, TAU14);
+        g.arc(0.28, -1, 0.18, 0, TAU14);
         g.fill();
         g.fillRect(-0.3, -0.45, 0.6, 0.1);
         break;
@@ -78387,8 +79327,8 @@ vec3 paneView(vec3 dir, float night) {
         g.fill();
         g.fillStyle = "#fff";
         g.beginPath();
-        g.arc(-0.2, -0.95, 0.08, 0, TAU13);
-        g.arc(0.18, -1, 0.06, 0, TAU13);
+        g.arc(-0.2, -0.95, 0.08, 0, TAU14);
+        g.arc(0.18, -1, 0.06, 0, TAU14);
         g.fill();
         break;
       }
@@ -78396,10 +79336,10 @@ vec3 paneView(vec3 dir, float night) {
         g.strokeStyle = "#6d4c41";
         g.lineWidth = 0.12;
         g.beginPath();
-        g.arc(0, -1.2, 0.8, 0, TAU13);
+        g.arc(0, -1.2, 0.8, 0, TAU14);
         g.stroke();
         for (let k = 0; k < 8; k++) {
-          const a = k * TAU13 / 8 + t * 0.2;
+          const a = k * TAU14 / 8 + t * 0.2;
           g.beginPath();
           g.moveTo(0, -1.2);
           g.lineTo(Math.cos(a) * 1.05, -1.2 + Math.sin(a) * 1.05);
@@ -78410,7 +79350,7 @@ vec3 paneView(vec3 dir, float night) {
       default: {
         g.fillStyle = "#e17055";
         g.beginPath();
-        g.arc(0, -0.6, 0.3, 0, TAU13);
+        g.arc(0, -0.6, 0.3, 0, TAU14);
         g.fill();
       }
     }
@@ -81751,509 +82691,6 @@ vec3 paneView(vec3 dir, float night) {
     if (hi - lo > 0.6) return own;
     const tx = fx - i, tz = fz - j;
     return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
-  }
-
-  // src/world/objects.js
-  var CHUNK2 = 32;
-  var COLLIDE = {
-    // street furniture
-    lamp: 0.16,
-    lantern: 0.2,
-    sign: 0.15,
-    flagpole: 0.15,
-    mooring: 0.2,
-    barrel: 0.34,
-    crate: 0.42,
-    haystack: 0.6,
-    chest: 0.4,
-    planter: 0.3,
-    sacks: 0.45,
-    weaponrack: 0.4,
-    signboard: 0.3,
-    bench: [0.8, 0.3],
-    stall: [0.95, 0.4],
-    fence: [0.54, 0.1],
-    tent: [1.2, 1],
-    campfire: 0.45,
-    well: 0.95,
-    fountain: 1.55,
-    // (its basin's step)
-    // nature
-    tree: 0.3,
-    rock: 0.5,
-    mushroom: 0.25,
-    crystal: 0.4,
-    // landmarks (sized like their models; gates and arches you walk through)
-    statue: 0.7,
-    pillar: 0.45,
-    totem: 0.35,
-    dummy: 0.28,
-    cannon: 0.55,
-    anchor: 0.2,
-    grave: 0.3,
-    bell: 0.6,
-    ruins: 0.8,
-    poneglyph: [0.8, 0.35],
-    boat: [1.4, 0.6],
-    shipwreck: [2.5, 1.2],
-    lighthouse: 1.6,
-    tower: 2,
-    windmill: 1.5,
-    wheel: 1,
-    elevator: 1.5,
-    ryugu: 8.2,
-    // (Ryugu Palace's coral stalk, at its foot)
-    gate: 0,
-    torii: 0,
-    arch: 0,
-    bones: 0,
-    skull: 0,
-    bubble: 0,
-    platform: 0
-    // a raised floor you walk onto (see floorOf)
-  };
-  function floorOf(o) {
-    if (o.kind !== "platform") return null;
-    const n = o.name || "";
-    const s = o.s || 1;
-    if (/ring/i.test(n)) return { hw: 2.3 * s, hd: 2.3 * s, oy: 0, h: 0.88 * s };
-    if (/stage|carnival/i.test(n)) return { hw: 2.4 * s, hd: 1.7 * s, oy: 0, h: 1.02 * s };
-    return { hw: 1.8 * s, hd: 1.4 * s, oy: -0.2 * s, h: 2.4 * s };
-  }
-  var TRUNK2 = {
-    oak: 0.26,
-    autumn: 0.26,
-    cottoncandy: 0.26,
-    cloudtree: 0.26,
-    palm: 0.23,
-    pine: 0.21,
-    snowpine: 0.21,
-    jungle: 0.45,
-    cactus: 0.32,
-    dead: 0.22,
-    deadsnow: 0.22,
-    spooky: 0.22,
-    lollipop: 0.09,
-    candycane: 0.16,
-    bamboo: 0.3,
-    coral: 0.13,
-    kelp: 0.3,
-    sakura: 0.28,
-    blossom: 0.28
-  };
-  var ADAM = {
-    trunk: 31,
-    roots: [[0.25, 20, 6.2], [0.95, 15, 5], [1.6, 22, 6.5], [2.3, 14, 4.6], [2.95, 19, 5.8], [3.65, 16, 5.2], [4.35, 21, 6.4], [5.05, 13, 4.4], [5.7, 18, 5.6]]
-  };
-  var PANGAEA = { w: 48, d: 30 };
-  var PHLAB = {
-    domes: [[0, -6, 15, 9], [-21, 2, 9, 7], [20, 0, 10, 8], [-9, 17, 6.5, 5], [10, 16, 6, 5]],
-    stacks: [[-6, -22, 2.2, 46], [3, -23, 2, 40], [12, -19, 1.8, 36], [-15, -15, 1.6, 30]]
-  };
-  var SKULL = { r: 34, h: 72 };
-  function colliderOf(o) {
-    if (o.kind === "tree") return TRUNK2[o.sub || "oak"] ?? COLLIDE.tree;
-    if (TRUNK2[o.kind] !== void 0) return TRUNK2[o.kind];
-    if (o.kind === "boat" && /flagship|perfume/i.test(o.name || "")) return [3.3, 1.15];
-    if (o.kind === "torii") return { circles: [[-1.55, 0, 0.3], [1.55, 0, 0.3]] };
-    if (o.kind === "adamtree") {
-      const c = [[0, 0, ADAM.trunk + 1]];
-      for (const [a, len, r0] of ADAM.roots) {
-        for (let t = 0.25; t <= 1.001; t += 0.25) {
-          const d = ADAM.trunk + len * t, r4 = r0 * (1 - t * 0.7) * 0.8;
-          c.push([Math.cos(a) * d, Math.sin(a) * d, Math.max(0.8, r4)]);
-        }
-      }
-      return { circles: c };
-    }
-    if (o.kind === "pangaea") {
-      const c = [];
-      for (let x = -PANGAEA.w / 2 + 3; x <= PANGAEA.w / 2 - 3 + 1e-6; x += 4.2) for (let z = -PANGAEA.d / 2 + 3; z <= PANGAEA.d / 2 - 3 + 1e-6; z += 4.2) c.push([x, z, 3.1]);
-      return { circles: c };
-    }
-    if (o.kind === "spire") return { circles: [[0, 0, (o.r || 4) * 0.95]] };
-    if (o.kind === "adamroot") return { circles: [[0, 3, 2.7], [0, 7, 2.3], [0, 11, 1.9], [0, 15, 1.4], [0, 18.5, 1]] };
-    if (o.kind === "greatfountain") return { circles: [[0, 0, 10.1]] };
-    if (o.kind === "cliffwall") return { circles: (o.pts || []).filter((_, i) => i % 2 === 0).map(([x, z, nx, nz]) => [x - nx * 8, z - nz * 8, 9.5]) };
-    if (o.kind === "phvolcano" || o.kind === "wanofuji") return { circles: [[0, 0, (o.r || 20) * 0.86]] };
-    if (o.kind === "phicepeaks") return { circles: (o.peaks || []).map(([x, z, r4]) => [x, z, r4 * 0.78]) };
-    if (o.kind === "phlab") return { circles: PHLAB.domes.map(([x, z, r4]) => [x, z, r4 + 0.4]).concat(PHLAB.stacks.map(([x, z, r4]) => [x, z, r4 + 0.2])) };
-    if (o.kind === "yarukiman") return { circles: [[0, 0, 7.4]] };
-    if (o.kind === "zunesha") {
-      const S6 = o.s || 1;
-      return { circles: [[0, 0, 15 * S6], [-8 * S6, -14 * S6, 9 * S6], [-8 * S6, 14 * S6, 9 * S6], [16 * S6, 2 * S6, 6 * S6]] };
-    }
-    if (o.kind === "wanocastle") return { circles: [[0, 0, (o.r || 14) * 0.95]] };
-    if (o.kind === "skulldome") return { circles: [[0, -4, SKULL.r * 0.97], [-SKULL.r * 0.75, 6, SKULL.r * 0.42], [SKULL.r * 0.75, 6, SKULL.r * 0.42]] };
-    if (o.kind === "galleydock") {
-      const c = [];
-      for (let z = -10.6; z <= 8.4; z += 0.85) c.push([-10, z, 0.45], [10, z, 0.45]);
-      for (let x = -9.6; x <= 9.6; x += 0.85) if (Math.abs(x) > 3.6) c.push([x, -11, 0.45]);
-      for (let z = -5.6; z <= 7.6; z += 1.65) c.push([0, z, 3.4]);
-      c.push([8.8, 10.1, 0.5]);
-      return { circles: c };
-    }
-    if (o.kind === "bigtop") {
-      const c = [[0, 0, 0.35]];
-      for (let i = 0; i < 16; i += 2) {
-        const a = i / 16 * Math.PI * 2;
-        c.push([Math.cos(a) * 8.6, Math.sin(a) * 8.6, 0.25]);
-      }
-      for (const z of [-0.9, 0, 0.9]) c.push([-7, z, 1]);
-      return { circles: c };
-    }
-    if (o.kind === "baratie") return { circles: [[-18.5, 0, 0.55], [18.5, 0, 0.55]] };
-    if (o.kind === "gate") {
-      const k = /justice/i.test(o.name || "") ? 2.2 : 1;
-      return { circles: [-1, 1].flatMap((sx) => [[sx * 3.5 * k, -0.45 * k, 0.78 * k], [sx * 3.5 * k, 0.45 * k, 0.78 * k]]) };
-    }
-    if (o.kind === "arch") {
-      const n = o.name || "";
-      if (/heaven/i.test(n)) return { circles: [[-3.2, 0, 0.9], [3.2, 0, 0.9]] };
-      if (/mine|hatch|laboratory/i.test(n)) return COLLIDE.arch;
-      const [x, r4, d] = /one piece|resting/i.test(n) ? [3.1, 0.5, 1.6] : [1.92, 0.38, 1.2];
-      return { circles: [-1, 1].flatMap((sx) => [[sx * x, d * 0.25, r4], [sx * x, d * 0.75, r4]]) };
-    }
-    if (o.kind === "bell") return /harbou?r/i.test(o.name || "") ? [0.72, 0.2] : { circles: [[-1.55, 0, 0.26], [1.55, 0, 0.26]] };
-    if (o.kind === "ruins") {
-      const n = 3 + Math.floor(hash01(o.x, o.y, 2) * 3) % 2, a = -0.95, b = 0.6 * n - 1.45;
-      const m = Math.ceil((b - a) / 0.35) + 1;
-      return { circles: Array.from({ length: m }, (_, i) => [a + (b - a) * i / (m - 1), 0, 0.28]) };
-    }
-    return COLLIDE[o.kind];
-  }
-  var TURN = {
-    boat: (o) => hash01(o.x, o.y) * Math.PI * 2,
-    shipwreck: (o) => hash01(o.x, o.y) * Math.PI * 2,
-    tent: (o) => (hash01(o.x, o.y, 5) - 0.5) * 0.5,
-    ruins: (o) => hash01(o.x, o.y) * Math.PI * 2
-  };
-  var ROUND = /* @__PURE__ */ new Set(["barrel", "roundtable", "dummy", "plant"]);
-  var nextObjectId = 1;
-  var ObjectIndex = class {
-    constructor(world) {
-      this.world = world;
-      this.cw = Math.ceil(world.width / CHUNK2);
-      this.ch = Math.ceil(world.height / CHUNK2);
-      this.chunks = /* @__PURE__ */ new Map();
-      this.byId = /* @__PURE__ */ new Map();
-      this.count = 0;
-    }
-    key(cx, cy) {
-      return cy * this.cw + cx;
-    }
-    add(obj) {
-      var _a4;
-      obj.id = obj.id || nextObjectId++;
-      obj.x = this.world.wx(obj.x);
-      const cx = Math.floor(obj.x / CHUNK2), cy = Math.floor(obj.y / CHUNK2);
-      const k = this.key(cx, cy);
-      let list = this.chunks.get(k);
-      if (!list) this.chunks.set(k, list = []);
-      list.push(obj);
-      obj._chunk = k;
-      this.byId.set(obj.id, obj);
-      this.count++;
-      if (obj.far) ((_a4 = this.world).farObjects || (_a4.farObjects = [])).push(obj);
-      const fl2 = floorOf(obj);
-      if (fl2) this.world.addFloor({ x0: obj.x - fl2.hw, x1: obj.x + fl2.hw, y0: obj.y + fl2.oy - fl2.hd, y1: obj.y + fl2.oy + fl2.hd, h: fl2.h, o: obj });
-      if (obj.yaw === void 0 && TURN[obj.kind]) obj.yaw = TURN[obj.kind](obj);
-      const c = obj.block && colliderOf(obj);
-      if (obj.block && isEnterable(obj)) {
-        obj.enterable = true;
-        obj.pirate = isPirateHouse(obj);
-        this.align(obj);
-        this.stamp(obj, 2);
-        this.addInterior(obj);
-      } else if (obj.block && isHut(obj)) {
-        obj.hut = true;
-        this.align(obj);
-        this.stamp(obj, 2);
-        this.addHutWall(obj);
-      } else if (c !== void 0 && obj.block && (fl2 || (obj.fw || 1) <= 2 && (obj.fd || 1) <= 2)) {
-        obj.soft = true;
-        if (c) this.addCollider(obj, c);
-      } else if (obj.block) {
-        this.align(obj);
-        this.stamp(obj, 1);
-      }
-      if (obj.kind === "building" && obj.style === "chinese") this.addColumns(obj);
-      if (obj.kind === "building" && obj.style === "wano" && obj.block && !isHut(obj)) this.addVeranda(obj);
-      return obj;
-    }
-    /** A Wano house's raised wooden veranda along its front (see buildings3d engawa): a floor you step up onto. */
-    addVeranda(b) {
-      const fw = Math.max(2, b.fw || 3);
-      const att = b.attach || {};
-      b.veranda = { ...bbox(b, -fw / 2 - (att.left ? 0 : 0.1), fw / 2 + (att.right ? 0 : 0.1), 2e-3, 0.9), h: 0.42, o: b };
-      this.world.addFloor(b.veranda);
-    }
-    /** The red columns along a Chinese front stand out from the wall: they're solid (see buildings3d 'column'). */
-    addColumns(b) {
-      const fw = Math.max(2, b.fw || 3);
-      const n = Math.max(2, Math.round(fw / 1.6));
-      const d = b.enterable ? doorOf(b) : null;
-      b.colCols = [];
-      for (let i = 0; i <= n; i++) {
-        const x = -fw / 2 + i * fw / n;
-        if (d && x > d.x - d.dw / 2 - 0.33 && x < d.x + d.dw / 2 + 0.33) continue;
-        b.colCols.push(this.world.addCol({ ...bw(b, x, 0.25), r: 0.2, o: b }));
-      }
-    }
-    /**
-     * A hut's elliptical wall (see render3d/buildings3d hut) as a chain of
-     * circles along its long axis, each the biggest that fits inside the
-     * ellipse there, the last ones round its ends: within a few centimetres of
-     * the drawn wall and never outside it.
-     */
-    addHutWall(b) {
-      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-      const A2 = Math.max(fw, fd) / 2, Bm = Math.min(fw, fd) / 2;
-      const end = A2 - Bm * Bm / A2;
-      const inside2 = (u) => {
-        let d = Infinity;
-        for (let i = 0; i <= 48; i++) {
-          const t = i / 48 * Math.PI;
-          d = Math.min(d, Math.hypot(A2 * Math.cos(t) - u, Bm * Math.sin(t)));
-        }
-        return d;
-      };
-      const n = end > 0.01 ? Math.ceil(2 * end / 0.5) + 1 : 1;
-      b.cols = [];
-      for (let i = 0; i < n; i++) {
-        const u = n === 1 ? 0 : -end + 2 * end * i / (n - 1);
-        const p = fw >= fd ? bw(b, u, -fd / 2) : bw(b, 0, -fd / 2 + u);
-        b.cols.push(this.world.addCol({ x: p.x, y: p.y, r: inside2(u) - 0.02, o: b }));
-      }
-    }
-    addCollider(obj, c) {
-      const s = obj.s || 1, w = this.world;
-      if (c.circles) {
-        const yaw2 = obj.yaw || 0, cs2 = Math.cos(yaw2), sn2 = Math.sin(yaw2);
-        obj.cols = c.circles.map(([lx, lz, r4]) => w.addCol({ x: obj.x + (lx * cs2 + lz * sn2) * s, y: obj.y + (-lx * sn2 + lz * cs2) * s, r: r4 * s, o: obj }));
-        obj.col = obj.cols[0];
-        return;
-      }
-      if (!Array.isArray(c)) {
-        obj.col = w.addCol({ x: obj.x, y: obj.y, r: c * s, o: obj });
-        return;
-      }
-      let hw = c[0] * s, hd = c[1] * s;
-      const yaw = obj.yaw || 0, sn = Math.sin(yaw), cs = Math.cos(yaw);
-      if (Math.abs(Math.sin(2 * yaw)) < 0.08) {
-        if (Math.abs(sn) > 0.7) [hw, hd] = [hd, hw];
-        obj.col = w.addCol({ x: obj.x, y: obj.y, hw, hd, o: obj });
-        return;
-      }
-      const long = hw >= hd, L3 = long ? hw : hd, R5 = long ? hd : hw;
-      const ax = long ? cs : sn, ay = long ? -sn : cs;
-      const n = Math.max(1, Math.ceil(2 * (L3 - R5) / R5) + 1);
-      obj.cols = [];
-      for (let i = 0; i < n; i++) {
-        const u = n === 1 ? 0 : -(L3 - R5) + 2 * (L3 - R5) * i / (n - 1);
-        obj.cols.push(w.addCol({ x: obj.x + ax * u, y: obj.y + ay * u, r: R5, o: obj }));
-      }
-      obj.col = obj.cols[0];
-    }
-    removeCollider(obj) {
-      if (!obj.col) return;
-      for (const c of obj.cols || [obj.col]) this.world.removeCol(c);
-      obj.col = null;
-      obj.cols = null;
-    }
-    /** Walls (with a doorway) and the ground floor of an enterable building (furniture: see addFurniture). */
-    addInterior(b) {
-      const w = this.world;
-      const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), T5 = WALL_T;
-      const d = doorOf(b);
-      const cols = [];
-      const rect2 = (x0, x1, z0, z1) => {
-        const r4 = bbox(b, x0, x1, z0, z1);
-        return { x: (r4.x0 + r4.x1) / 2, y: (r4.y0 + r4.y1) / 2, hw: (r4.x1 - r4.x0) / 2, hd: (r4.y1 - r4.y0) / 2 };
-      };
-      const box2 = (x0, x1, z0, z1, extra) => {
-        if (x1 - x0 < 0.01 || z1 - z0 < 0.01) return null;
-        const col6 = w.addCol({ ...rect2(x0, x1, z0, z1), o: b, ...extra });
-        cols.push(col6);
-        return col6;
-      };
-      const wall = { wall: true };
-      box2(-fw / 2, d.x - d.dw / 2, -T5, 0, wall);
-      box2(d.x + d.dw / 2, fw / 2, -T5, 0, wall);
-      box2(-fw / 2, fw / 2, -fd, -fd + T5, wall);
-      box2(-fw / 2, -fw / 2 + T5, -fd, 0, wall);
-      box2(fw / 2 - T5, fw / 2, -fd, 0, wall);
-      b.cols = cols;
-      b.doorBox = { ...rect2(d.x - d.dw / 2, d.x + d.dw / 2, -T5, 0), o: b, wall: true, door: true };
-      b.doorCol = w.addCol({ ...b.doorBox });
-      b.floor = { ...bbox(b, -fw / 2, fw / 2, -fd, -2e-3), h: PLINTH, o: b, interior: true };
-      w.addFloor(b.floor);
-      const nMax = Math.ceil(STEPS_MAX / 0.2);
-      b.stepsFloor = { ...bbox(b, d.x - d.dw / 2 - 0.2 - nMax * 0.05, d.x + d.dw / 2 + 0.2 + nMax * 0.05, 2e-3, nMax * 0.32 + 0.05), h: 0, o: b, steps: d.x, dw: d.dw, door: bw(b, d.x, 0) };
-      w.addFloor(b.stepsFloor);
-    }
-    /** The furniture collides too (laid out lazily: when someone comes near or the island fills with people). */
-    addFurniture(b) {
-      if (b.furnished || !b.enterable) return;
-      b.furnished = true;
-      const w = this.world, L3 = layoutOf(b);
-      for (const it of L3.items) {
-        if (it.ghost || !it.rect) continue;
-        const r4 = it.rect, sh = 0.03;
-        if (ROUND.has(it.k)) b.cols.push(w.addCol({ ...bw(b, it.x, it.z), r: Math.min(r4.x1 - r4.x0, r4.z1 - r4.z0) / 2 - sh, o: b }));
-        else {
-          const q2 = bbox(b, r4.x0 + sh, r4.x1 - sh, r4.z0 + sh, r4.z1 - sh);
-          b.cols.push(w.addCol({ x: (q2.x0 + q2.x1) / 2, y: (q2.y0 + q2.y1) / 2, hw: (q2.x1 - q2.x0) / 2, hd: (q2.y1 - q2.y0) / 2, o: b }));
-        }
-      }
-    }
-    removeInterior(b) {
-      const w = this.world;
-      for (const c of b.cols || []) w.removeCol(c);
-      if (b.doorCol) w.removeCol(b.doorCol);
-      if (b.floor) w.removeFloor(b.floor);
-      if (b.stepsFloor) w.removeFloor(b.stepsFloor);
-      b.cols = null;
-      b.doorCol = null;
-      b.floor = null;
-      b.stepsFloor = null;
-      b.furnished = false;
-    }
-    /**
-     * A building knocked down (game/destruction.js): it stays in the index (its
-     * place in the town, its name, who lives there), but nothing of it stands —
-     * no walls, no floor, no blocked ground — and it isn't drawn (hidden) until
-     * restore() puts it back up.
-     */
-    ruin(obj) {
-      if (obj.ruined) return;
-      obj.ruined = true;
-      obj.hidden = true;
-      if (obj.veranda) {
-        this.world.removeFloor(obj.veranda);
-        obj.veranda = null;
-      }
-      for (const c of obj.colCols || []) this.world.removeCol(c);
-      obj.colCols = null;
-      if (obj.enterable) {
-        this.removeInterior(obj);
-        obj.doorBox = null;
-        obj.doorOpen = false;
-        this.stamp(obj, 0);
-      } else if (obj.hut) {
-        for (const c of obj.cols || []) this.world.removeCol(c);
-        obj.cols = null;
-        this.stamp(obj, 0);
-      } else if (obj.soft) this.removeCollider(obj);
-      else if (obj.block) this.stamp(obj, 0);
-    }
-    /** A ruined building rebuilt: as it stood before (ruin). */
-    restore(obj) {
-      if (!obj.ruined) return;
-      obj.ruined = false;
-      obj.hidden = false;
-      const c = obj.block && colliderOf(obj);
-      if (obj.enterable) {
-        this.stamp(obj, 2);
-        this.addInterior(obj);
-      } else if (obj.hut) {
-        this.stamp(obj, 2);
-        this.addHutWall(obj);
-      } else if (obj.soft) {
-        if (c) this.addCollider(obj, c);
-      } else if (obj.block) this.stamp(obj, 1);
-      if (obj.kind === "building" && obj.style === "chinese") this.addColumns(obj);
-      if (obj.kind === "building" && obj.style === "wano" && obj.block && !isHut(obj)) this.addVeranda(obj);
-    }
-    remove(obj) {
-      const list = this.chunks.get(obj._chunk);
-      if (list) {
-        const i = list.indexOf(obj);
-        if (i >= 0) list.splice(i, 1);
-      }
-      if (obj.far && this.world.farObjects) this.world.farObjects = this.world.farObjects.filter((o) => o !== obj);
-      this.byId.delete(obj.id);
-      this.count--;
-      if (obj.veranda) {
-        this.world.removeFloor(obj.veranda);
-        obj.veranda = null;
-      }
-      if (obj.enterable) {
-        this.removeInterior(obj);
-        this.stamp(obj, 0);
-      } else if (obj.hut) {
-        for (const c of obj.cols || []) this.world.removeCol(c);
-        obj.cols = null;
-        this.stamp(obj, 0);
-      } else if (obj.soft) this.removeCollider(obj);
-      else if (obj.block) this.stamp(obj, 0);
-    }
-    /**
-     * Set something that blocks whole tiles onto the tile grid (a landmark
-     * placed by its spot can stand a fraction of a tile off it): its tiles are
-     * whole ones and its model is drawn where it stands, so off the grid a
-     * strip of blocked tiles along one side had nothing drawn on it (an
-     * invisible wall) and the other side's wall hung over open ground.
-     */
-    align(obj) {
-      let fx, fy;
-      if (obj.rot) {
-        const r4 = bfoot(obj);
-        fx = r4.x0;
-        fy = r4.y0;
-      } else {
-        fx = obj.x - (obj.fw || 1) / 2;
-        fy = obj.y - (obj.fd || 1);
-      }
-      obj.x = this.world.wx(obj.x + Math.round(fx) - fx);
-      obj.y += Math.round(fy) - fy;
-    }
-    /** Mark or clear the tiles covered by an object's footprint. */
-    stamp(obj, v) {
-      const w = this.world;
-      const fp = footprint2(obj);
-      for (let y = fp.y0; y < fp.y1; y++) {
-        for (let x = fp.x0; x < fp.x1; x++) {
-          if (y < 0 || y >= w.height) continue;
-          w.setBlocked(x, y, v);
-        }
-      }
-    }
-    /** Objects whose chunk intersects the rect [x0,x1]x[y0,y1] (x may wrap). */
-    query(x0, y0, x1, y1, out = []) {
-      const pad2 = 2;
-      const cx0 = Math.floor(x0 / CHUNK2) - pad2, cx1 = Math.floor(x1 / CHUNK2) + pad2;
-      const cy0 = Math.max(0, Math.floor(y0 / CHUNK2) - pad2), cy1 = Math.min(this.ch - 1, Math.floor(y1 / CHUNK2) + pad2);
-      for (let cy = cy0; cy <= cy1; cy++) {
-        for (let cx = cx0; cx <= cx1; cx++) {
-          const wcx = this.world.wrap ? (cx % this.cw + this.cw) % this.cw : cx;
-          if (wcx < 0 || wcx >= this.cw) continue;
-          const list = this.chunks.get(this.key(wcx, cy));
-          if (list) for (const o of list) out.push(o);
-        }
-      }
-      return out;
-    }
-    near(x, y, r4, filter) {
-      const out = [];
-      for (const o of this.query(x - r4, y - r4, x + r4, y + r4)) {
-        if (this.world.dist2(x, y, o.x, o.y) <= r4 * r4 && (!filter || filter(o))) out.push(o);
-      }
-      return out;
-    }
-  };
-  function isHut(o) {
-    return o.kind === "building" && (o.style === "tribal" || o.roofType === "hut");
-  }
-  function footprint2(o) {
-    if (o.rot) {
-      const r4 = bfoot(o);
-      const x02 = Math.floor(r4.x0 + 1e-3), y02 = Math.floor(r4.y0 + 1e-3);
-      return { x0: x02, y0: y02, x1: x02 + Math.round(r4.x1 - r4.x0), y1: y02 + Math.round(r4.y1 - r4.y0) };
-    }
-    const w = o.fw || 1, d = o.fd || 1;
-    const x0 = Math.floor(o.x - w / 2 + 1e-3), y0 = Math.floor(o.y - d + 1e-3);
-    return { x0, y0, x1: x0 + w, y1: y0 + d };
   }
 
   // src/render3d/props/instancer.js
@@ -86631,7 +87068,7 @@ vec3 paneView(vec3 dir, float night) {
     });
     return root4;
   });
-  var ICE2 = col("#9ccbe6");
+  var ICE3 = col("#9ccbe6");
   var ICE_HI = col("#d6ecf8");
   var SNOW2 = col("#f4f9fd");
   reg7("phicepeaks", (o, ctx) => {
@@ -86660,7 +87097,7 @@ vec3 paneView(vec3 dir, float night) {
           return [px2 + Math.cos(aa) * r4, y, pz2 + Math.sin(aa) * r4];
         };
         k.add(moundGeo(surf2, [-0.05, 0, 0.2, 0.4, 0.58, 0.74, 0.88, 1], 7), {
-          color: (p, n) => n.y > 0.5 ? SNOW2 : tmp2.copy(ICE2).lerp(ICE_HI, Math.max(0, n.x * 0.5 + n.z * 0.5 + 0.3)).lerp(SNOW2, Math.max(0, ((p.y - fy) / H5 - 0.75) * 2)),
+          color: (p, n) => n.y > 0.5 ? SNOW2 : tmp2.copy(ICE3).lerp(ICE_HI, Math.max(0, n.x * 0.5 + n.z * 0.5 + 0.3)).lerp(SNOW2, Math.max(0, ((p.y - fy) / H5 - 0.75) * 2)),
           flat: true,
           outline: 0.3
         });
@@ -87269,7 +87706,7 @@ vec3 paneView(vec3 dir, float night) {
   });
 
   // src/render3d/vfx/kit.js
-  var TAU14 = Math.PI * 2;
+  var TAU15 = Math.PI * 2;
   var clamp017 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   var easeOut = (k) => 1 - (1 - k) * (1 - k) * (1 - k);
   function hash8(n) {
@@ -89166,7 +89603,7 @@ vec3 paneView(vec3 dir, float night) {
       v.planeRing(X2 + D2[0] * 0.08, Y2, Z2 + D2[2] * 0.08, A[0], A[1], A[2], B4[0], B4[1], B4[2], rr, s.size * 0.09 * (1 - k), c, fade2 * 0.9, c2, 0.6, 0.8, s.seed, k, 36);
       const n = s.lines ?? 5;
       for (let j = 0; j < n; j++) {
-        const th = hash8(s.seed + j * 17) * TAU14;
+        const th = hash8(s.seed + j * 17) * TAU15;
         const lean = 0.25 + 0.5 * hash8(s.seed + j * 5);
         Cc[0] = A[0] * Math.cos(th) + B4[0] * Math.sin(th) + D2[0] * lean;
         Cc[1] = A[1] * Math.cos(th) + B4[1] * Math.sin(th) + D2[1] * lean;
@@ -89204,7 +89641,7 @@ vec3 paneView(vec3 dir, float night) {
       const r4 = v.cr, u = v.cu;
       const n = s.n || 13;
       for (let i = 0; i < n; i++) {
-        const th = i / n * TAU14 + (hash8(s.seed + i) - 0.5) * 0.5;
+        const th = i / n * TAU15 + (hash8(s.seed + i) - 0.5) * 0.5;
         const L3 = R5 * (0.6 + 0.5 * hash8(s.seed + i * 3));
         v.ribbons.start(RK.LINE, RM2.FACE, c, fade2, WHITE6, 0.6);
         v.ribbons.point(X2, Y2, Z2, 0.035);
@@ -89220,11 +89657,11 @@ vec3 paneView(vec3 dir, float night) {
           const fa = th + o0 + (hash8(s.seed + i * 11) < 0.5 ? 0.45 : -0.45), fl2 = L3 * 0.45;
           const fx2 = bx + Math.cos(fa) * fl2, fy2 = by + Math.sin(fa) * fl2;
           v.ribbons.start(RK.LINE, RM2.FACE, c, fade2 * 0.9, WHITE6, 0.6).point(X2 + r4[0] * bx + u[0] * by, Y2 + r4[1] * bx + u[1] * by, Z2 + r4[2] * bx + u[2] * by, 0.022).point(X2 + r4[0] * fx2 + u[0] * fy2, Y2 + r4[1] * fx2 + u[1] * fy2, Z2 + r4[2] * fx2 + u[2] * fy2, 0.012).finish();
-          const th3 = th + TAU14 / n, r32 = L3 * 0.88;
+          const th3 = th + TAU15 / n, r32 = L3 * 0.88;
           const d1 = Math.cos(th) * r32, e1 = Math.sin(th) * r32, d3 = Math.cos(th3) * r32 * 0.92, e3 = Math.sin(th3) * r32 * 0.92;
           v.ribbons.start(RK.LINE, RM2.FACE, c, fade2 * 0.6, WHITE6, 0.6).point(X2 + r4[0] * d1 + u[0] * e1, Y2 + r4[1] * d1 + u[1] * e1, Z2 + r4[2] * d1 + u[2] * e1, 0.016).point(X2 + r4[0] * d3 + u[0] * e3, Y2 + r4[1] * d3 + u[1] * e3, Z2 + r4[2] * d3 + u[2] * e3, 0.016).finish();
         }
-        const th2 = th + TAU14 / n, r23 = L3 * 0.55;
+        const th2 = th + TAU15 / n, r23 = L3 * 0.55;
         const c1 = Math.cos(th) * r23, s1 = Math.sin(th) * r23, c3 = Math.cos(th2) * r23 * 0.95, s3 = Math.sin(th2) * r23 * 0.95;
         v.ribbons.start(RK.LINE, RM2.FACE, c, fade2 * 0.85, WHITE6, 0.6).point(X2 + r4[0] * c1 + u[0] * s1, Y2 + r4[1] * c1 + u[1] * s1, Z2 + r4[2] * c1 + u[2] * s1, 0.022).point(X2 + r4[0] * c3 + u[0] * s3, Y2 + r4[1] * c3 + u[1] * s3, Z2 + r4[2] * c3 + u[2] * s3, 0.022).finish();
       }
@@ -89412,7 +89849,7 @@ vec3 paneView(vec3 dir, float night) {
       const dc = dark ? c : mixCol(RING_DUST, c, s.add ? 0.4 : 0.25, RING_TMP);
       for (let i = 0; i < n; i++) {
         const h2 = hash8((s.seed || 0) * 3.7 + i * 1.31);
-        const th = (i + h2 * 0.8) / n * TAU14, rr = rad * (0.93 + 0.12 * h2);
+        const th = (i + h2 * 0.8) / n * TAU15, rr = rad * (0.93 + 0.12 * h2);
         const cs = Math.cos(th), sn = Math.sin(th);
         const gy = patch4.get(cs * rr, sn * rr);
         const sz = (0.35 + 0.6 * k + width * 1.5) * (0.6 + 0.8 * h2) * Math.min(1.8, 0.7 + rad * 0.15);
@@ -89433,7 +89870,7 @@ vec3 paneView(vec3 dir, float night) {
     const dc = mixCol(RING_DUST, c, 0.25, RING_TMP);
     for (let i = 0; i < n; i++) {
       const h2 = hash8((s.seed || 0) * 3.7 + i * 1.31);
-      const th = (i + h2 * 0.8) / n * TAU14, rr = rad * (0.93 + 0.12 * h2);
+      const th = (i + h2 * 0.8) / n * TAU15, rr = rad * (0.93 + 0.12 * h2);
       const cs = Math.cos(th), sn = Math.sin(th);
       const gy = patch4.get(cs * rr, sn * rr);
       const sz = (0.35 + 0.6 * k) * size2 * 2 * (0.6 + 0.8 * h2) * Math.min(1.8, 0.7 + rad * 0.15);
@@ -89480,7 +89917,7 @@ vec3 paneView(vec3 dir, float night) {
         for (let j = 0; j < 3; j++) {
           v.ribbons.start(RK.LINE, RM2.FACE, c, fade2, ROPE_HOT, 0.6);
           for (let i = 0; i <= n; i++) {
-            const t = i / n, ph = j * TAU14 / 3 + t * BL * 4.5 - v.time * 14;
+            const t = i / n, ph = j * TAU15 / 3 + t * BL * 4.5 - v.time * 14;
             const rr = wd * 0.3 * (0.45 + 0.55 * Math.sin(t * PI)), ca = Math.cos(ph) * rr, sa = Math.sin(ph) * rr;
             v.ribbons.point(bx + D2[0] * BL * t + A[0] * ca + B4[0] * sa, by + D2[1] * BL * t + A[1] * ca + B4[1] * sa, bz + D2[2] * BL * t + A[2] * ca + B4[2] * sa, wd * 0.09);
           }
@@ -89559,7 +89996,7 @@ vec3 paneView(vec3 dir, float night) {
       }
       R5.finish();
       for (let b = 0; b < bi; b++) {
-        const ba = hash8(seed + b * 3) * TAU14, bl2 = (0.35 + hash8(seed + b * 5) * 0.6) * Math.min(2.5, L3 * 0.35);
+        const ba = hash8(seed + b * 3) * TAU15, bl2 = (0.35 + hash8(seed + b * 5) * 0.6) * Math.min(2.5, L3 * 0.35);
         const fx = FORK[b * 3], fy = FORK[b * 3 + 1], fz = FORK[b * 3 + 2];
         const ex = fx + (Cc[0] * 0.6 + A[0] * Math.cos(ba) + B4[0] * Math.sin(ba)) * bl2, ey = fy + (Cc[1] * 0.6 + A[1] * Math.cos(ba) + B4[1] * Math.sin(ba)) * bl2, ez = fz + (Cc[2] * 0.6 + A[2] * Math.cos(ba) + B4[2] * Math.sin(ba)) * bl2;
         R5.start(RK.GLOW, RM2.FACE, cc, al * 0.85, cc2, w);
@@ -89580,7 +90017,7 @@ vec3 paneView(vec3 dir, float night) {
   function crown2(v, X2, Y2, Z2, R5, c, c2, alpha2, seed, t, n, k = 0.15) {
     const cr = v.cr, cu = v.cu;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU14 + Math.sin(t * 1.7 + i * 1.7) * 0.12 + hash8(seed + i) * 0.3;
+      const a = i / n * TAU15 + Math.sin(t * 1.7 + i * 1.7) * 0.12 + hash8(seed + i) * 0.3;
       const ca = Math.cos(a), sa = Math.sin(a);
       const rr = R5 * (0.86 + 0.08 * hash8(seed + i * 3));
       const sz = R5 * (0.32 + 0.16 * hash8(seed + i * 5)) * (0.85 + 0.15 * Math.sin(t * 9 + i * 2.3));
@@ -89706,7 +90143,7 @@ vec3 paneView(vec3 dir, float night) {
       } else if (kind === "lightning") {
         const t = Math.floor(v.time * 20);
         for (let i = 0; i < 5; i++) {
-          const th = hash8(s.seed + i * 3 + t) * TAU14, rr = R5 * (0.1 + 0.6 * hash8(s.seed + i + t));
+          const th = hash8(s.seed + i * 3 + t) * TAU15, rr = R5 * (0.1 + 0.6 * hash8(s.seed + i + t));
           const th2 = th + (hash8(s.seed + i * 7 + t) - 0.5) * 1.6, rr2 = R5 * 0.35 * hash8(s.seed + i * 11 + t);
           bolt2(
             v,
@@ -89767,7 +90204,7 @@ vec3 paneView(vec3 dir, float night) {
       }
       if (v.low) return;
       for (let i = 0; i < 14; i++) {
-        const h2 = hash8((s.seed || 0) + i * 2.3), th = h2 * TAU14, el = (hash8(i * 7.1 + 1) - 0.3) * 1.2;
+        const h2 = hash8((s.seed || 0) + i * 2.3), th = h2 * TAU15, el = (hash8(i * 7.1 + 1) - 0.3) * 1.2;
         const rr = s.r * 0.7 * (1 - k) * (0.4 + 0.6 * hash8(i * 3.3));
         v.sprites.put(SK2.STAR, X2 + Math.cos(th) * rr, Y2 + el * rr * 0.4, Z2 + Math.sin(th) * rr, 0.16 + 0.12 * h2, c, a * Math.sin(k * Math.PI), WHITE6, 1, k * 3 + h2, i, k);
       }
@@ -89787,7 +90224,7 @@ vec3 paneView(vec3 dir, float night) {
       const v0 = S6.nv;
       for (let j = 0; j <= NR; j++) {
         for (let i = 0; i <= NA; i++) {
-          const th = i / NA * TAU14, rr = j / NR * R5 * rag(th) * 0.995;
+          const th = i / NA * TAU15, rr = j / NR * R5 * rag(th) * 0.995;
           const gy = ICE_TOP * grow + 0.02;
           S6.vert(X2 + Math.cos(th) * rr, gy, Z2 + Math.sin(th) * rr, Math.cos(th) * j / NR, Math.sin(th) * j / NR, 0, 0);
         }
@@ -89798,7 +90235,7 @@ vec3 paneView(vec3 dir, float night) {
       if (v.low) return;
       const ns = s.lite ? 6 : 18;
       for (let i = 0; i < ns; i++) {
-        const h2 = hash8(id * 1.7 + i * 2.9), th = (i + h2) / ns * TAU14, rr = R5 * rag(th) * (0.96 + 0.06 * h2);
+        const h2 = hash8(id * 1.7 + i * 2.9), th = (i + h2) / ns * TAU15, rr = R5 * rag(th) * (0.96 + 0.06 * h2);
         const x = s.x + Math.cos(th) * rr, y = s.y + Math.sin(th) * rr;
         const g0 = v.view.ground(x, y);
         if (g0 > ICE_TOP + 0.25) continue;
@@ -89847,7 +90284,7 @@ vec3 paneView(vec3 dir, float night) {
     const t = v.time;
     for (let i = 0; i < 12; i++) {
       const ph = (t * 0.12 + hash8(s.seed + i * 7)) % 1;
-      const th = hash8(s.seed + i * 3) * TAU14 + t * 0.05, rr = Rr * Math.sqrt(hash8(s.seed + i * 5)) * 0.85;
+      const th = hash8(s.seed + i * 3) * TAU15 + t * 0.05, rr = Rr * Math.sqrt(hash8(s.seed + i * 5)) * 0.85;
       const h2 = ph * Rr * 0.8;
       if (Math.hypot(rr, h2) > Rr * 0.92) continue;
       v.sprites.put(SK2.SQUARE, X2 + Math.cos(th) * rr, G5 + 0.2 + h2, Z2 + Math.sin(th) * rr, 0.07, c, a * Math.sin(ph * PI) * 0.7, WHITE6, 0.6, t * 0.8 + i, i, ph);
@@ -89908,7 +90345,7 @@ vec3 paneView(vec3 dir, float night) {
   function cloud(v, X2, Y2, Z2, R5, c, a, seed, flash = STORM_FLASH) {
     const t = v.time;
     for (let i = 0; i < 18; i++) {
-      const th = hash8(seed + i * 3.7) * TAU14 + t * 0.05 * (i % 2 ? 1 : -1);
+      const th = hash8(seed + i * 3.7) * TAU15 + t * 0.05 * (i % 2 ? 1 : -1);
       const rr = R5 * Math.sqrt(hash8(seed + i * 5.3)) * 0.92;
       const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr;
       const y = Y2 + (hash8(seed + i * 7.1) - 0.5) * R5 * 0.16 + Math.sin(t * 0.9 + i * 1.3) * R5 * 0.03;
@@ -89919,7 +90356,7 @@ vec3 paneView(vec3 dir, float night) {
     const f = Math.floor(t * 9);
     for (let j = 0; j < 3; j++) {
       if (hash8(seed + j * 13 + f) < 0.55) continue;
-      const th = hash8(seed + j * 17 + f) * TAU14, rr = R5 * 0.6 * hash8(seed + j * 19 + f);
+      const th = hash8(seed + j * 17 + f) * TAU15, rr = R5 * 0.6 * hash8(seed + j * 19 + f);
       const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr;
       v.sprites.put(SK2.GLOW, x, Y2 - R5 * 0.05, z, R5 * 0.4, flash, a * 0.6, WHITE6, 1, 0, seed + j, 0);
       if (!j) bolt2(v, x, Y2 - R5 * 0.1, z, x + (hash8(seed + f) - 0.5) * R5 * 0.8, Y2 - R5 * 0.5, z + (hash8(seed + f * 3) - 0.5) * R5 * 0.8, 0.05, R5 * 0.1, seed + f, flash, a * 0.9, 1);
@@ -89962,7 +90399,7 @@ vec3 paneView(vec3 dir, float night) {
         const lean = 0.18 + Math.abs(p.lean || 0) * 0.8;
         const ldx = dx / rl * lean + (hash8(s.seed + i * 3) - 0.5) * 0.25, ldz = dy / rl * lean + (hash8(s.seed + i * 5) - 0.5) * 0.25;
         const G5 = r4.data[i] - 0.12;
-        putAlong(batch, v.lx(wx), G5, v.lz(wy), ldx, 1, ldz, h2, wd, hash8(s.seed + i) * TAU14, c, kind, dissolve, hash8(s.seed + i * 7) * 10, kind === OK2.ICE ? 0.08 : 0);
+        putAlong(batch, v.lx(wx), G5, v.lz(wy), ldx, 1, ldz, h2, wd, hash8(s.seed + i) * TAU15, c, kind, dissolve, hash8(s.seed + i * 7) * 10, kind === OK2.ICE ? 0.08 : 0);
       }
       if (s.kind === "ice" && !v.low) {
         const patch4 = v.patch(s, s.x, s.y, r4.n);
@@ -89993,7 +90430,7 @@ vec3 paneView(vec3 dir, float night) {
         v.sprites.put(SK2.FLASH, X2, G5 + R5 * 0.4, Z2, R5 * 1.4 * (1.25 - f * 0.25), glow3, f * f * a * 0.7, WHITE6, 0.8, 0, s.seed, k);
         return;
       }
-      const da = hash8(s.seed) * TAU14, drift = (s.drift || 1.5) * (1 - t);
+      const da = hash8(s.seed) * TAU15, drift = (s.drift || 1.5) * (1 - t);
       const hz = (s.h || 9) * (1 - t * t);
       const px2 = X2 + Math.cos(da) * drift, pz2 = Z2 + Math.sin(da) * drift, py2 = G5 + hz + R5 * 0.6;
       D2[0] = -Math.cos(da) * (s.drift || 1.5) / fall2;
@@ -90098,7 +90535,7 @@ vec3 paneView(vec3 dir, float night) {
           return line2;
         };
         for (let i = 0; i < n; i++) {
-          const ang = i / n * TAU14 + s.seed + (hash8(s.seed + i) - 0.5) * 0.5;
+          const ang = i / n * TAU15 + s.seed + (hash8(s.seed + i) - 0.5) * 0.5;
           const len = s.r * (0.65 + 0.55 * hash8(s.seed * 3 + i));
           const line2 = jag(s.x, s.y, ang, len, 7, s.seed + i * 31);
           d.push(line2);
@@ -90134,7 +90571,7 @@ vec3 paneView(vec3 dir, float night) {
           if (L3.length < (j + 1) * 3) continue;
           const px2 = L3[j * 3], py2 = L3[j * 3 + 1];
           const sz = (0.13 + 0.17 * hash8(s.seed + i * 11)) * Math.max(0.7, Math.min(1.6, s.r * 0.6)) * Math.min(1, k * 14);
-          putAlong(v.solids.rocks, v.lx(px2), L3[j * 3 + 2] + sz * (0.2 - sink * 0.9), v.lz(py2), hash8(s.seed + i) - 0.5, 1, hash8(s.seed + i * 2) - 0.5, sz * 1.3, sz, hash8(s.seed + i * 3) * TAU14, earth, OK2.ROCK, sink * 0.8, i, 0);
+          putAlong(v.solids.rocks, v.lx(px2), L3[j * 3 + 2] + sz * (0.2 - sink * 0.9), v.lz(py2), hash8(s.seed + i) - 0.5, 1, hash8(s.seed + i * 2) - 0.5, sz * 1.3, sz, hash8(s.seed + i * 3) * TAU15, earth, OK2.ROCK, sink * 0.8, i, 0);
         }
       }
     }
@@ -90183,7 +90620,7 @@ vec3 paneView(vec3 dir, float night) {
       const dark = col5("#1a110b"), lip = col5("#d9c7a8");
       const n = s.n || 32, w = v.world;
       for (let i = 0; i < n; i++) {
-        const th = i / n * TAU14;
+        const th = i / n * TAU15;
         v.ribbons.start(RK.CRACK, RM2.FLAT, dark, al * 0.95, lip, 0);
         const m = Math.max(2, Math.min(14, Math.ceil((R0 - R1) / 1.2)));
         for (let j = 0; j <= m; j++) {
@@ -90237,7 +90674,7 @@ vec3 paneView(vec3 dir, float night) {
         const n = Math.max(24, Math.min(80, Math.round(R0 * 2.6)));
         const w = v.world;
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU14;
+          const th = i / n * TAU15;
           const bx = s.x + Math.cos(th) * R5, by = s.y + Math.sin(th) * R5;
           const gb = v.ground(w.wx(bx), by);
           const hum = Math.sin(v.time * 9 + i * 1.7) * 0.04;
@@ -90254,12 +90691,12 @@ vec3 paneView(vec3 dir, float night) {
       } else if (kind === "dark") {
         for (let i = 0; i < 7; i++) {
           const ph = (v.time * 0.55 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.55 + hash8(s.seed + i));
-          const th = hash8(s.seed + i * 7 + cyc) * TAU14, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.75;
+          const th = hash8(s.seed + i * 7 + cyc) * TAU15, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.75;
           v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G5 + 0.1 + ph * 1.1, Z2 + Math.sin(th) * rr, 0.25 + 0.35 * ph, DARKNESS, a * Math.sin(ph * PI) * 0.9, DARKNESS, 0, ph * 2, s.seed + i, 0.15 + ph * 0.6);
         }
       } else if (kind === "gravity") {
         for (let i = 0; i < 10; i++) {
-          const th = hash8(s.seed + i) * TAU14, rr = Math.sqrt(hash8(s.seed + i * 3)) * R5 * 0.9;
+          const th = hash8(s.seed + i) * TAU15, rr = Math.sqrt(hash8(s.seed + i * 3)) * R5 * 0.9;
           const ph = (v.time * 1.6 + hash8(s.seed + i * 7)) % 1;
           const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, top = G5 + 3.2 * (1 - ph);
           v.ribbons.start(RK.SPEED, RM2.FACE, c2, a * 0.8, c2, 0.5).point(x, top + 0.7, z, 0.02).point(x, top, z, 0.014).finish();
@@ -90269,7 +90706,7 @@ vec3 paneView(vec3 dir, float night) {
         if (!r4.data) {
           const pts = [], n = Math.max(3, Math.round(s.r * 3));
           for (let i = 0; i < n; i++) {
-            const th = i / n * TAU14 + hash8(s.seed + i), rr = s.r * (0.3 + 0.6 * hash8(s.seed + i * 3));
+            const th = i / n * TAU15 + hash8(s.seed + i), rr = s.r * (0.3 + 0.6 * hash8(s.seed + i * 3));
             pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr, L: 0.9, ang: th, delay: i * 0.03, seed: i });
           }
           r4.data = pts;
@@ -90278,13 +90715,13 @@ vec3 paneView(vec3 dir, float night) {
       } else if (kind === "gas") {
         for (let i = 0; i < 9; i++) {
           const ph = (v.time * 0.35 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.35 + hash8(s.seed + i));
-          const th = hash8(s.seed + i * 7 + cyc) * TAU14, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.8;
+          const th = hash8(s.seed + i * 7 + cyc) * TAU15, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.8;
           v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G5 + 0.15 + ph * 0.7, Z2 + Math.sin(th) * rr, (0.35 + 0.4 * ph) * Math.min(1.6, 0.6 + R5 / 4), c, a * Math.sin(ph * PI) * 0.5, GAS_LIGHT, 0, ph * 2, s.seed + i, 0.15 + ph * 0.6);
         }
       } else if (kind === "fire") {
         for (let i = 0; i < 12; i++) {
           const ph = (v.time * 1.2 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 1.2 + hash8(s.seed + i));
-          const th = hash8(s.seed + i * 7 + cyc) * TAU14, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.85;
+          const th = hash8(s.seed + i * 7 + cyc) * TAU15, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.85;
           const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, h2 = 0.3 + 0.35 * hash8(s.seed + i * 13);
           v.sprites.put(SK2.FIRE, x, G5 + h2 * (0.6 + ph * 0.8), z, h2 * (1 - ph * 0.5), i % 3 ? FIELD_FIRE : DEEP_FIRE, a * Math.sin(ph * PI), FIELD_FIRE_CORE, 0.5, 0, s.seed + i * 7, 0.15 + ph * 0.5);
           if (i % 3 === 0) v.sprites.put(SK2.EMBER, x, G5 + 0.4 + ph * 2.4, z, 0.035, FIELD_FIRE_CORE, a * (1 - ph), WHITE6, 1, 0, s.seed + i, ph);
@@ -90292,7 +90729,7 @@ vec3 paneView(vec3 dir, float night) {
       } else if (kind === "strings") {
         for (let i = 0; i < 14; i++) {
           const ph = (v.time * 0.9 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.9 + hash8(s.seed + i));
-          const th = hash8(s.seed + i * 7 + cyc) * TAU14, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.9;
+          const th = hash8(s.seed + i * 7 + cyc) * TAU15, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.9;
           const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, lean = (hash8(s.seed + i * 5 + cyc) - 0.5) * 3;
           const head = G5 + 16 * Math.max(0, 1 - ph * 2.2), tail2 = Math.min(G5 + 22, head + 9);
           const f = a * (ph < 0.75 ? 0.9 : (1 - ph) * 3.6);
@@ -90301,14 +90738,14 @@ vec3 paneView(vec3 dir, float night) {
       } else if (kind === "mochi") {
         for (let i = 0; i < 6; i++) {
           const ph = (v.time * 0.45 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.45 + hash8(s.seed + i));
-          const th = hash8(s.seed + i * 7 + cyc) * TAU14, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.75;
+          const th = hash8(s.seed + i * 7 + cyc) * TAU15, rr = Math.sqrt(hash8(s.seed + i * 11 + cyc)) * R5 * 0.75;
           const r4 = (0.5 + 0.4 * hash8(s.seed + i * 3)) * Math.sin(ph * PI);
           v.shells.put(VK.GOO, X2 + Math.cos(th) * rr, G5 - r4 * 0.25, Z2 + Math.sin(th) * rr, r4, 0, 1, 0, 0.85, c, a, MOCHI_SHADE, 0, k, s.seed + i);
         }
       } else if (kind === "field" || kind === "plant") {
         for (let i = 0; i < 6; i++) {
           const ph = (v.time * 0.3 + hash8(s.seed + i * 5)) % 1, cyc = Math.floor(v.time * 0.3 + hash8(s.seed + i * 5));
-          const th = hash8(s.seed + i * 13 + cyc) * TAU14, rr = Math.sqrt(hash8(s.seed + i * 17 + cyc)) * R5 * 0.8;
+          const th = hash8(s.seed + i * 13 + cyc) * TAU15, rr = Math.sqrt(hash8(s.seed + i * 17 + cyc)) * R5 * 0.8;
           v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G5 + 0.12 + ph * 0.4, Z2 + Math.sin(th) * rr, (0.4 + 0.35 * ph) * Math.min(1.5, 0.6 + R5 / 4), c, a * Math.sin(ph * PI) * 0.3, c2, 0, ph * 2, s.seed + i, 0.2 + ph * 0.5);
         }
         for (let i = 0; i < 5; i++) {
@@ -90440,7 +90877,7 @@ vec3 paneView(vec3 dir, float night) {
       putAlong(v.solids.blocks, hx, hy + hr * 0.4, hz, ca * 0.3, 1, sa * 0.3, hr * 2, hr * 2, p.ang, skin, OK2.SKIN, 0, i, 0);
       if (t < 0.5) {
         for (let j = 0; j < 5; j++) {
-          const th = j / 5 * TAU14 + (p.seed || 0), r4 = 0.1 + t * 0.6;
+          const th = j / 5 * TAU15 + (p.seed || 0), r4 = 0.1 + t * 0.6;
           v.sprites.put(SK2.PETAL, X2 + Math.cos(th) * r4, G5 + 0.05 + t * 0.4, Z2 + Math.sin(th) * r4, big2 ? 0.16 : 0.08, petal, fade2 * (1 - t * 2), petal, 0, th, j, t);
         }
       }
@@ -90507,7 +90944,7 @@ vec3 paneView(vec3 dir, float night) {
           break;
         case "shard": {
           if (low && i & 1) break;
-          const r4 = p.rot || 0, q2 = hash8((p.max || 0) * 13.7) * TAU14;
+          const r4 = p.rot || 0, q2 = hash8((p.max || 0) * 13.7) * TAU15;
           const icy = c[2] > c[0] * 1.1 || c[0] > 0.8 && c[1] > 0.8 && c[2] > 0.8;
           putAlong(v.solids.shards, X2, Y2, Z2, Math.cos(r4) * Math.cos(q2), Math.sin(r4), Math.cos(r4) * Math.sin(q2), sz * 1.25, sz * 1, r4 * 0.7, c, icy ? OK2.ICE : OK2.WAX, k > 0.75 ? (k - 0.75) * 4 : 0, p.max * 7.1 % 10, 0.1);
           break;
@@ -90721,7 +91158,7 @@ vec3 paneView(vec3 dir, float night) {
     v.sprites.vel(j, 0.04 + 0.12 * fade2, 0.14 * fade2, 7, 0.8);
     const lx = -dz, lz = dx, bx = X2 - dx * 0.4, bz = Z2 - dz * 0.4;
     for (let n = 0; n < 8; n++) {
-      const th = n / 8 * TAU14 + hash8(seed + n) * 0.5, ca = Math.cos(th), sa = Math.sin(th);
+      const th = n / 8 * TAU15 + hash8(seed + n) * 0.5, ca = Math.cos(th), sa = Math.sin(th);
       const r12 = (1.9 - 1.1 * k) * s, r0 = r12 * (0.45 + 0.15 * hash8(seed + n * 3));
       v.ribbons.start(RK.SPEED, RM2.FACE, WHITE8, fade2 * 0.85, WHITE8, 0.4).point(bx + lx * ca * r12, Y2 + sa * r12, bz + lz * ca * r12, 0.03 * s).point(bx + lx * ca * r0, Y2 + sa * r0, bz + lz * ca * r0, 4e-3).finish();
     }
@@ -90885,7 +91322,7 @@ vec3 paneView(vec3 dir, float night) {
         } else {
           const fl2 = Math.floor(t * 20);
           for (let i = 0; i < 4; i++) {
-            const a = hash8(seed + i * 3 + fl2) * TAU14, e = (hash8(seed + i * 5 + fl2) - 0.5) * 2;
+            const a = hash8(seed + i * 3 + fl2) * TAU15, e = (hash8(seed + i * 5 + fl2) - 0.5) * 2;
             bolt2(v, X2, Y2, Z2, X2 + Math.cos(a) * 0.5 * s, Y2 + e * 0.4 * s, Z2 + Math.sin(a) * 0.5 * s, 0.05, 0.12, seed + i + fl2, lc, 1, 0);
           }
           v.sprites.put(SK2.GLOW, X2, Y2, Z2, 0.35 * s, lc, 0.75, WHITE8, 1, 0, seed, 0);
@@ -91105,7 +91542,7 @@ vec3 paneView(vec3 dir, float night) {
     const lx = -dz, lz = dx, f = Math.floor(t * 30);
     v.ribbons.start(RK.SPEED, RM2.FACE, WHITE8, 0.32, WHITE8, 0.2).point(sx + ax * 0.15, sy + ay * 0.15, sz + az * 0.15, 0.05 * s).point(X2 - dx * 0.15, Y2, Z2 - dz * 0.15, 0.2 * s).finish();
     for (let i = 0; i < 6; i++) {
-      const th = hash8(seed + i * 7 + f) * TAU14, rr = (0.16 + 0.12 * hash8(seed + i)) * s;
+      const th = hash8(seed + i * 7 + f) * TAU15, rr = (0.16 + 0.12 * hash8(seed + i)) * s;
       const ox = lx * Math.cos(th) * rr, oy = Math.sin(th) * rr, oz = lz * Math.cos(th) * rr;
       const q0 = 0.08 + 0.12 * hash8(seed + i * 3 + f), q1 = Math.min(0.95, q0 + 0.35 + 0.45 * hash8(seed + i * 5 + f));
       const wob = Math.sin(t * 40 + i * 1.7) * 0.05 * s;
@@ -91115,7 +91552,7 @@ vec3 paneView(vec3 dir, float night) {
   function speedLines(v, X2, Y2, Z2, dx, dz, R5, seed, t) {
     const f = Math.floor(t * 30);
     for (let i = 0; i < 4; i++) {
-      const a = hash8(seed + i * 7 + f) * TAU14, rr = R5 * (1.1 + hash8(seed + i) * 0.6);
+      const a = hash8(seed + i * 7 + f) * TAU15, rr = R5 * (1.1 + hash8(seed + i) * 0.6);
       const ox = -dz * Math.cos(a) * rr, oy = Math.sin(a) * rr, oz = dx * Math.cos(a) * rr;
       const L3 = 0.5 + hash8(seed + i * 3 + f) * 0.6;
       v.ribbons.start(RK.SPEED, RM2.FACE, WHITE8, 0.8, WHITE8, 0.3).point(X2 + ox - dx * 0.2, Y2 + oy, Z2 + oz - dz * 0.2, 0.02).point(X2 + ox - dx * (0.2 + L3), Y2 + oy, Z2 + oz - dz * (0.2 + L3), 8e-3).finish();
@@ -91658,7 +92095,7 @@ vec3 paneView(vec3 dir, float night) {
       const lean = 1 + 0.12 * wh / Math.max(R5, 0.3);
       const P6 = this._ring || (this._ring = new Float32Array(73 * 4));
       for (let i = 0; i <= n; i++) {
-        const th = i / n * TAU14, cs = Math.cos(th), sn = Math.sin(th);
+        const th = i / n * TAU15, cs = Math.cos(th), sn = Math.sin(th);
         const rr = wobA ? R5 * (1 + wobA * Math.sin(th * lobes + phase)) : R5;
         P6[i * 4] = cs;
         P6[i * 4 + 1] = sn;
@@ -91690,7 +92127,7 @@ vec3 paneView(vec3 dir, float night) {
      * A ring band in a plane through (X, Y, Z) (3D, already local) spanned by
      * unit vectors a and b: radius R, half-width hw.
      */
-    planeRing(X2, Y2, Z2, ax, ay, az, bx, by, bz, R5, hw, c, alpha2, c2, w, core = 0.7, seed = 0, k = 0, n = 40, a0 = 0, a1 = TAU14) {
+    planeRing(X2, Y2, Z2, ax, ay, az, bx, by, bz, R5, hw, c, alpha2, c2, w, core = 0.7, seed = 0, k = 0, n = 40, a0 = 0, a1 = TAU15) {
       const S6 = this.surf;
       if (!S6.room((n + 1) * 2, n * 2)) return;
       S6.style(SF.BAND, c, alpha2, c2, w, k, seed);
@@ -92005,7 +92442,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
   // src/render3d/chars/detail.js
   var W3 = 1024;
   var H3 = 1024;
-  var TAU15 = Math.PI * 2;
+  var TAU16 = Math.PI * 2;
   var R3 = {
     torsoLean: [0, 0, 512, 256],
     torsoMusc: [512, 0, 512, 256],
@@ -92035,7 +92472,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     const r4 = RECTS[region];
     return [r4[0] + (r4[2] - r4[0]) * u, r4[1] + (r4[3] - r4[1]) * v];
   }
-  var torsoUV = (region, a, s) => atlasUV(region, (a + Math.PI) / TAU15, (s + 0.1) / 1.1);
+  var torsoUV = (region, a, s) => atlasUV(region, (a + Math.PI) / TAU16, (s + 0.1) / 1.1);
   var angOfZ = (zn) => Math.sign(zn) * Math.asin(Math.min(1, Math.pow(Math.abs(zn), 1 / 0.78)));
   function painter(g, name) {
     const [x, y, w, h2] = R3[name];
@@ -92044,7 +92481,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       T(zn, s, back = false) {
         let a = angOfZ(zn);
         if (back) a = (a >= 0 ? Math.PI : -Math.PI) - a;
-        return [x + (a + Math.PI) / TAU15 * w, y + (1 - (s + 0.1) / 1.1) * h2];
+        return [x + (a + Math.PI) / TAU16 * w, y + (1 - (s + 0.1) / 1.1) * h2];
       },
       /** Canvas point for a limb point (angle th in degrees from the limb's +X, t along). */
       L(th, t) {
@@ -92113,7 +92550,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     g.globalAlpha = 0.85;
     const [nx, ny] = P6.T(0, 0.19);
     g.beginPath();
-    g.ellipse(nx, ny, 3.2, 4.4, 0, 0, TAU15);
+    g.ellipse(nx, ny, 3.2, 4.4, 0, 0, TAU16);
     g.fill();
     g.globalAlpha = 1;
     stroke(g, curve(P6, (t) => [1e-3, 0.12 + t * 0.72], 10, true), 2.4, soft, 0.6);
@@ -92132,7 +92569,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     g.globalAlpha = 0.8;
     const [nx, ny] = P6.T(0, 0.19);
     g.beginPath();
-    g.ellipse(nx, ny, 2.6, 4.2, 0, 0, TAU15);
+    g.ellipse(nx, ny, 2.6, 4.2, 0, 0, TAU16);
     g.fill();
     g.globalAlpha = 1;
     stroke(g, curve(P6, (t) => [1e-3, 0.2 + t * 0.6], 10, true), 2, 175, 0.45);
@@ -92217,7 +92654,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
   }
 
   // src/render3d/chars/body.js
-  var TAU16 = Math.PI * 2;
+  var TAU17 = Math.PI * 2;
   var clamp5 = (v, a, b) => v < a ? a : v > b ? b : v;
   var sstep = (a, b, x) => {
     const t = clamp5((x - a) / (b - a), 0, 1);
@@ -92448,7 +92885,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
   function band2(pt, rows, a0, a1, U4, inward = false, uv = null, exact = false) {
     U4 = Math.max(1, Math.round(U4));
     const V5 = rows.length - 1;
-    const full = typeof a0 === "number" && typeof a1 === "number" && a1 - a0 >= TAU16 - 1e-6;
+    const full = typeof a0 === "number" && typeof a1 === "number" && a1 - a0 >= TAU17 - 1e-6;
     const at4 = (i, j) => {
       const h2 = rows[j];
       const A0 = typeof a0 === "function" ? a0(h2) : a0, A1 = typeof a1 === "function" ? a1(h2) : a1;
@@ -92697,7 +93134,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const w = 0.8 * sstep(d.chestLen + d.neck * 0.05, neckTop, y);
       return w > 2e-3 ? [B.head, w] : null;
     } });
-    const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU16 - a(s);
+    const edge = (a) => (s) => a(s), rest = (a) => (s) => TAU17 - a(s);
     const lie = (aFn, s, a) => 0.3 + 0.7 * sstep(0, 0.35, Math.abs(a) - aFn(s));
     const garment = (aFn, off, mS, dOff = 0) => (s, a) => torsoPt(sh, s, a, off * lie(aFn, s, a) + dOff, mS);
     const shell2 = (rows, aFn, off, mS, col6, lin2) => {
@@ -92729,7 +93166,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         const tmS = openKim ? 1 : 0.2;
         const tpK = garment(open, kim ? 0.014 : 0.012, tmS, 5e-3);
         add7(band2(tpK, up, (s) => open(s), (s) => open(s) + tw, Math.max(3, U4 / 6), false, null, true), M(), trim, B.chest);
-        add7(band2(tpK, up, (s) => TAU16 - open(s) - tw, (s) => TAU16 - open(s), Math.max(3, U4 / 6), false, null, true), M(), trim, B.chest);
+        add7(band2(tpK, up, (s) => TAU17 - open(s) - tw, (s) => TAU17 - open(s), Math.max(3, U4 / 6), false, null, true), M(), trim, B.chest);
         if (!kim) for (let k = 0; k < 2; k++) {
           const p = torsoPt(sh, 0.3 - k * 0.14, 0, 0.017, 0.2);
           add7(Prim.sphere(6, 4), M(p[0], p[1], p[2], 0, 0, 0, 0.011), shade(col6, -0.35), B.chest);
@@ -92742,8 +93179,8 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       if (TOP2 === "jacket") {
         const rows2 = cloth ? [0.075, 0, -0.08, -0.16] : [0.075, -0.16];
         const pp3 = (y, a) => pelvisPt(sh, y, a, 0.022 + (0.075 - y) * 0.12);
-        add7(band2(pp3, rows2, 0.22, TAU16 - 0.22, U4), M(), col6, B.hips);
-        if (cloth) add7(band2((y, a) => pelvisPt(sh, y, a, 0.017 + (0.075 - y) * 0.12), rows2, 0.22, TAU16 - 0.22, U4, true), M(), shade(col6, -0.3), B.hips);
+        add7(band2(pp3, rows2, 0.22, TAU17 - 0.22, U4), M(), col6, B.hips);
+        if (cloth) add7(band2((y, a) => pelvisPt(sh, y, a, 0.017 + (0.075 - y) * 0.12), rows2, 0.22, TAU17 - 0.22, U4, true), M(), shade(col6, -0.3), B.hips);
       }
     }
     if (look.vest && TOP2 !== "vest") {
@@ -92753,7 +93190,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     if (loose && !o.skirt) {
       const hem = cloth ? [0.075, 0.03, -0.02, -0.07, -0.12] : [0.075, -0.12];
       const off = (y) => 0.016 + (0.075 - y) * 0.1;
-      const a0 = TOP2 === "open" ? 0.3 : -Math.PI, a1 = TOP2 === "open" ? TAU16 - 0.3 : Math.PI;
+      const a0 = TOP2 === "open" ? 0.3 : -Math.PI, a1 = TOP2 === "open" ? TAU17 - 0.3 : Math.PI;
       add7(band2((y, a) => pelvisPt(sh, y, a, off(y)), hem, a0, a1, U4), M(), pal.top, B.hips);
       if (cloth) add7(band2((y, a) => pelvisPt(sh, y, a, off(y) - 6e-3), hem, a0, a1, U4, true), M(), cc.lining, B.hips);
     }
@@ -92804,13 +93241,13 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
           return w2 > 2e-3 ? [B.hips, B.chest, w2] : [B.hips, 0, 0];
         }
         let a = Math.atan2(z / Wh, x / Dh);
-        if (a < 0) a += TAU16;
-        const f = a / TAU16 * SKIRT_N, i = Math.floor(f) % SKIRT_N, j = (i + 1) % SKIRT_N, w = f - Math.floor(f);
+        if (a < 0) a += TAU17;
+        const f = a / TAU17 * SKIRT_N, i = Math.floor(f) % SKIRT_N, j = (i + 1) % SKIRT_N, w = f - Math.floor(f);
         if (!bends) return [B["skirt" + i], B["skirt" + j], w];
         const t = sstep(SS.hK - 0.07, SS.hK + 0.07, -y);
         return [B["skirt" + i], B["skirt" + j], B["skirtK" + i], B["skirtK" + j], w * (1 - t), (1 - w) * t, w * t];
       } };
-      add7(band2((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U4, false, (y, a) => atlasUV("skirt", (a + Math.PI) / TAU16, 1 - clamp5((0.08 - y) / (0.08 - yb), 0, 1))), M(), col6, B.hips, 0, skirtW);
+      add7(band2((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U4, false, (y, a) => atlasUV("skirt", (a + Math.PI) / TAU17, 1 - clamp5((0.08 - y) / (0.08 - yb), 0, 1))), M(), col6, B.hips, 0, skirtW);
       if (cloth) add7(band2((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, U4, true), M(), shade(col6, -0.35), B.hips, 0, skirtW);
       skirtInfo = { yb, Wh, Dh, hK: bends ? SS.hK : 0 };
     }
@@ -92913,7 +93350,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
   function neckGeo(nk, y0, y1, o, cloth) {
     const U4 = cloth ? 14 : 7, V5 = cloth ? 6 : 2, C3 = cloth ? 3 : 1, VV = V5 + C3;
     const g = grid((u, v) => {
-      const a = -Math.PI + u * TAU16, j = Math.round(v * VV);
+      const a = -Math.PI + u * TAU17, j = Math.round(v * VV);
       if (j < C3) {
         const t = j / C3 * Math.PI / 2, r5 = nk * 0.98 * Math.sin(t);
         return [Math.cos(a) * r5 * 1.05, y1 + nk * 0.5 * Math.cos(t), Math.sin(a) * r5 * 1.28];
@@ -92987,19 +93424,19 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
     const rows = cut2(TR, -0.1, 0.99);
     const open = (s) => 0.5 + sstep(0.75, 1, s) * 0.3;
     const pt = (k) => (s, a) => torsoPt(sh, s, a, off(s) - k, 0);
-    add7(band2(pt(0), rows, open, (s) => TAU16 - open(s), U4), M(), c, B.chest);
-    if (cloth) add7(band2(pt(6e-3), rows, open, (s) => TAU16 - open(s), U4, true), M(), lining2, B.chest);
+    add7(band2(pt(0), rows, open, (s) => TAU17 - open(s), U4), M(), c, B.chest);
+    if (cloth) add7(band2(pt(6e-3), rows, open, (s) => TAU17 - open(s), U4, true), M(), lining2, B.chest);
     const cr = cloth ? [1.1, 1.04, 0.98] : [1.1, 0.98];
     const col6 = (s, a) => {
       const p = torsoPt(sh, 0.97, a, 0.03, 0);
       const k = 1 + (s - 0.97) * 1.6;
       return [p[0] * k, s * sh.cl, p[2] * k];
     };
-    add7(band2(col6, cr, 1.25, TAU16 - 1.25, Math.max(4, U4 / 2)), M(), c, B.chest);
+    add7(band2(col6, cr, 1.25, TAU17 - 1.25, Math.max(4, U4 / 2)), M(), c, B.chest);
     if (cloth) add7(band2((s, a) => {
       const p = col6(s, a);
       return [p[0] * 0.95, p[1], p[2] * 0.95];
-    }, cr, 1.25, TAU16 - 1.25, Math.max(4, U4 / 2), true), M(), lining2, B.chest);
+    }, cr, 1.25, TAU17 - 1.25, Math.max(4, U4 / 2), true), M(), lining2, B.chest);
     return coatTail(add7, sh, c, U4, cloth, d, off(-0.1));
   }
   function coatTail(add7, sh, c, U4, cloth, d, off0) {
@@ -93011,18 +93448,18 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const k = 1 + clamp5(-y / L3, 0, 1) * C3.flare;
       return [p[0] * k - 8e-3, y, p[2] * k];
     };
-    const openT = C3.open, span2 = TAU16 - 2 * openT;
+    const openT = C3.open, span2 = TAU17 - 2 * openT;
     const skin = { skin: (x, y, z) => {
       if (y > -0.02) return [B.chest, 0, 0];
       let a = Math.atan2(z / C3.Wp, x / C3.Dp);
-      if (a < 0) a += TAU16;
+      if (a < 0) a += TAU17;
       const f = clamp5((a - openT) / span2, 0, 1) * (COAT_N - 1);
       const i = Math.min(COAT_N - 2, Math.floor(f)), j = i + 1, w = f - i;
       const t = sstep(hK - 0.06, hK + 0.06, -y);
       return [B["coat" + i], B["coat" + j], B["coatK" + i], B["coatK" + j], w * (1 - t), (1 - w) * t, w * t];
     } };
-    add7(band2(tp(0), tr, openT, TAU16 - openT, U4), M(), c, B.hips, 0, skin);
-    if (cloth) add7(band2(tp(6e-3), half(tr), openT, TAU16 - openT, U4 / 2, true), M(), lining2, B.hips, 0, skin);
+    add7(band2(tp(0), tr, openT, TAU17 - openT, U4), M(), c, B.hips, 0, skin);
+    if (cloth) add7(band2(tp(6e-3), half(tr), openT, TAU17 - openT, U4 / 2, true), M(), lining2, B.hips, 0, skin);
     return C3;
   }
   function mantle(add7, sh, c, U4, cloth, d) {
@@ -93288,7 +93725,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var eyeScale = (look) => look.fem ? 1.14 : 1.1;
   var FACE_W = 192;
   var FACE_H = Math.round((FACE_TOP - FACE_BOTTOM) * FACE_S2);
-  var TAU17 = Math.PI * 2;
+  var TAU18 = Math.PI * 2;
   var INK6 = "#2a1a1e";
   function hex2(col6, fb) {
     if (typeof col6 !== "string") return fb;
@@ -93539,25 +93976,25 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (st.beady) {
         g.fillStyle = "#16100f";
         g.beginPath();
-        g.ellipse(0, 0.05, 0.05, 0.065, 0, 0, TAU17);
+        g.ellipse(0, 0.05, 0.05, 0.065, 0, 0, TAU18);
         g.fill();
       } else {
         const rx = 0.125 * ir * Math.min(1.08, st.w), ry = (st.round ? 0.125 : 0.19) * ir;
         g.fillStyle = iris;
         g.beginPath();
-        g.ellipse(ix, iy, rx, ry, 0, 0, TAU17);
+        g.ellipse(ix, iy, rx, ry, 0, 0, TAU18);
         g.fill();
         g.fillStyle = lt2;
         g.beginPath();
-        g.ellipse(ix, iy + ry * 0.52, rx * 0.68, ry * 0.36, 0, 0, TAU17);
+        g.ellipse(ix, iy + ry * 0.52, rx * 0.68, ry * 0.36, 0, 0, TAU18);
         g.fill();
         g.fillStyle = pupil;
         g.beginPath();
-        g.ellipse(ix, iy + 0.012, rx * 0.5, ry * 0.55, 0, 0, TAU17);
+        g.ellipse(ix, iy + 0.012, rx * 0.5, ry * 0.55, 0, 0, TAU18);
         g.fill();
         g.fillStyle = "rgba(40,20,30,0.28)";
         g.beginPath();
-        g.ellipse(0, E.top - 0.02, 0.3, 0.09, 0, 0, TAU17);
+        g.ellipse(0, E.top - 0.02, 0.3, 0.09, 0, 0, TAU18);
         g.fill();
       }
       g.restore();
@@ -93605,17 +94042,17 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         g.fillStyle = "#ffffff";
         const cy = ey + 0.02 + st.drop * 0.1 + (fierce ? 0.03 : -0.02);
         g.beginPath();
-        g.arc(x - 0.06 * ES, ey + (cy - ey) * ES, (st.hl > 1 ? 0.056 : 0.045) * (id === "fish" ? 0.8 : 1), 0, TAU17);
+        g.arc(x - 0.06 * ES, ey + (cy - ey) * ES, (st.hl > 1 ? 0.056 : 0.045) * (id === "fish" ? 0.8 : 1), 0, TAU18);
         g.fill();
         if (st.hl > 1) {
           g.beginPath();
-          g.arc(x + 0.055 * ES, ey + 0.14 * ES, 0.028, 0, TAU17);
+          g.arc(x + 0.055 * ES, ey + 0.14 * ES, 0.028, 0, TAU18);
           g.fill();
         }
       } else if (st.beady) {
         g.fillStyle = "#ffffff";
         g.beginPath();
-        g.arc(x - 0.015, ey + 0.03, 0.016, 0, TAU17);
+        g.arc(x - 0.015, ey + 0.03, 0.016, 0, TAU18);
         g.fill();
       }
     }
@@ -93660,7 +94097,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       if (tongue) {
         g.fillStyle = TONGUE3;
         g.beginPath();
-        g.ellipse(tongue[0], tongue[1], tongue[2], tongue[3], 0, 0, TAU17);
+        g.ellipse(tongue[0], tongue[1], tongue[2], tongue[3], 0, 0, TAU18);
         g.fill();
       }
       g.fillStyle = TEETH2;
@@ -93697,13 +94134,13 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     if (look.muzzle) {
       g.fillStyle = skin.muzzle;
       g.beginPath();
-      g.ellipse(0, 0.56, 0.36, 0.27, 0, 0, TAU17);
+      g.ellipse(0, 0.56, 0.36, 0.27, 0, 0, TAU18);
       g.fill();
       g.fillStyle = "#2d2226";
       g.fill(pp2(NOSE_ANIMAL2));
       g.fillStyle = "rgba(255,255,255,0.7)";
       g.beginPath();
-      g.ellipse(-0.04, 0.35, 0.03, 0.02, 0, 0, TAU17);
+      g.ellipse(-0.04, 0.35, 0.03, 0.02, 0, 0, TAU18);
       g.fill();
     }
     if (look.gills) {
@@ -93716,8 +94153,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       g.fillStyle = skin.blush;
       g.globalAlpha = 0.5;
       g.beginPath();
-      g.ellipse(-0.66, 0.46, 0.14, 0.07, 0, 0, TAU17);
-      g.ellipse(0.66, 0.46, 0.14, 0.07, 0, 0, TAU17);
+      g.ellipse(-0.66, 0.46, 0.14, 0.07, 0, 0, TAU18);
+      g.ellipse(0.66, 0.46, 0.14, 0.07, 0, 0, TAU18);
       g.fill();
       g.globalAlpha = 1;
     }
@@ -93749,15 +94186,15 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       g.stroke(pp2(THIRD2));
       g.fillStyle = hex2(look.eyeColor, "#8e44ad");
       g.beginPath();
-      g.ellipse(0, -0.11, 0.06, 0.1, 0, 0, TAU17);
+      g.ellipse(0, -0.11, 0.06, 0.1, 0, 0, TAU18);
       g.fill();
       g.fillStyle = "#1a1020";
       g.beginPath();
-      g.ellipse(0, -0.1, 0.028, 0.05, 0, 0, TAU17);
+      g.ellipse(0, -0.1, 0.028, 0.05, 0, 0, TAU18);
       g.fill();
       g.fillStyle = "#ffffff";
       g.beginPath();
-      g.arc(-0.02, -0.15, 0.025, 0, TAU17);
+      g.arc(-0.02, -0.15, 0.025, 0, TAU18);
       g.fill();
     }
     if (look.goggles === true) {
@@ -94074,7 +94511,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
 
   // src/render3d/chars/build.js
-  var TAU18 = Math.PI * 2;
+  var TAU19 = Math.PI * 2;
   var DEG2 = Math.PI / 180;
   var DETAIL = {
     0: { head: [20, 16], cap: [16, 6], cone: 5, sph: [7, 5], blob: [10, 7], limb: [9, 3], lathe: 14, rbox: [7, 6], rboxS: [6, 5], hat: 18, hatS: [12, 7], fringe: 1, hands: 1, cloth: 1, lock: [5, 4] },
@@ -94293,7 +94730,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var headLevel = (lod) => lod === 0 ? "near" : lod === 2 ? "mid" : "far";
   var phOf = (G5, i) => {
     const u = i / G5.U;
-    return (u + G5.warp * Math.sin((u - 0.5) * TAU18) / TAU18) * TAU18 - Math.PI;
+    return (u + G5.warp * Math.sin((u - 0.5) * TAU19) / TAU19) * TAU19 - Math.PI;
   };
   function headPoint(G5, i, j) {
     const ph = phOf(G5, i), th = G5.rows[j] * DEG2;
@@ -94365,7 +94802,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   }
   function capGeo(rs, thF, thS, thB, zig = null, U4 = 16, V5 = 6) {
     return grid((u, v) => {
-      const ph = Math.PI + u * TAU18;
+      const ph = Math.PI + u * TAU19;
       const c = Math.cos(ph);
       let th = thS + (thF - thS) * Math.pow(Math.max(0, c), 1.4) + (thB - thS) * Math.pow(Math.max(0, -c), 1.4);
       if (zig && v >= 1) th += zig(ph);
@@ -94445,7 +94882,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       side = norm(side);
       const nrm = cross(d, side);
       const r4 = w * Math.pow(s, 0.9) * (1 + 0.35 * Math.sin(Math.PI * Math.min(1, t * 1.8)));
-      const ang = u * TAU18, cu = Math.cos(ang) * r4, su = Math.sin(ang) * r4 * flat3;
+      const ang = u * TAU19, cu = Math.cos(ang) * r4, su = Math.sin(ang) * r4 * flat3;
       return [p[0] + side[0] * cu + nrm[0] * su, p[1] + side[1] * cu + nrm[1] * su, p[2] + side[2] * cu + nrm[2] * su];
     }, U4, V5);
   }
@@ -94652,7 +95089,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       h2.cap(1.08, 58, 100, 118);
       blob3(h2, [-0.36, 0.56, 0], 1.42, [0, 0, 0], [h2.q.blob[0] + 2, h2.q.blob[1] + 2]);
       for (let i = 0; i < 9; i++) {
-        const a = i / 9 * TAU18;
+        const a = i / 9 * TAU19;
         const c = [-0.36 + Math.cos(a) * 1.32 * 0.72, 0.56 + Math.sin(a) * 1.32, Math.sin(a * 2.3) * 0.5];
         if (c[0] > 0.2 && c[1] < 0.1) continue;
         blob3(h2, c, 0.36, [0, 0, 0], h2.q.sph);
@@ -94724,7 +95161,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       h2.addC(Prim.frustum(0.8, h2.q.hat), M(0, 0.86, 0, 0, 0, 0, [1, 0.62, 1]), c, h2.bone);
       dome(h2, 1.16, [0.8, 0.26, 0.8], c);
       for (let i = 0; i < 3; i++) {
-        const a = i / 3 * TAU18 + Math.PI / 3;
+        const a = i / 3 * TAU19 + Math.PI / 3;
         const x = Math.cos(a), z = Math.sin(a);
         h2.addC(Prim.rbox(0.3, h2.q.rboxS[0], h2.q.rboxS[1]), mul(M(x * 1.02, 0.78, z * 1.02, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.36, 0.06, 1])), c, h2.bone);
         h2.addC(Prim.box(), mul(M(x * 1.14, 0.92, z * 1.14, 0, -a, 0), M(0, 0, 0, 0, 0, 0.9, [0.06, 0.04, 0.9])), GOLD4, h2.bone);
@@ -94810,7 +95247,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       const y = top - 0.12;
       h2.add(lathe2([[0.62, y], [0.66, y + 0.3]], h2.q.hat), M(), c, h2.bone);
       for (let i = 0; i < 5; i++) {
-        const a = i / 5 * TAU18;
+        const a = i / 5 * TAU19;
         spike({ ...h2, col: lin(c) }, [Math.cos(a) * 0.64, y + 0.26, Math.sin(a) * 0.64], [Math.cos(a) * 0.7, y + 0.62, Math.sin(a) * 0.7], 0.14, 0.1, 4);
       }
       h2.addC(Prim.sphere(h2.q.sph[0], h2.q.sph[1]), M(0.66, y + 0.14, 0, 0, 0, 0, 0.09), "#e53935", h2.bone);
@@ -95832,7 +96269,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var DOWN = new Vector3(0, -1, 0);
   var _dr = Array.from({ length: 8 }, () => new Vector3());
   var smooth6 = (x) => x * x * (3 - 2 * x);
-  var TAU19 = Math.PI * 2;
+  var TAU20 = Math.PI * 2;
   var LEG3 = [[B.thighR, B.shinR, B.footR], [B.thighL, B.shinL, B.footL]];
   var SKIRT_T = [0.4, 0.7, 1, 0.35, 0.7, 1];
   var SKIRT_REACH = Math.PI / SKIRT_N * 2;
@@ -95843,8 +96280,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _srad = new Float32Array(SKIRT_T.length * 2);
   var _sleg = new Uint8Array(SKIRT_T.length * 2);
   function panelNeed(u, h2, r4, len, psi, a, reach3 = SKIRT_REACH) {
-    let da = Math.abs(psi - a) % TAU19;
-    if (da > Math.PI) da = TAU19 - da;
+    let da = Math.abs(psi - a) % TAU20;
+    if (da > Math.PI) da = TAU20 - da;
     if (da > reach3 + SKIRT_FADE || h2 < -0.05 || h2 > len + 0.05) return -1;
     const fade2 = da <= reach3 ? 1 : 1 - (da - reach3) / SKIRT_FADE;
     const R5 = Math.hypot(u, h2);
@@ -96341,7 +96778,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       }
       const fall2 = Math.min(0.2, dt || 0.016) * 2.6;
       for (let i = 0; i < SKIRT_N; i++) {
-        const a = i / SKIRT_N * TAU19, ca = Math.cos(a), sa = Math.sin(a);
+        const a = i / SKIRT_N * TAU20, ca = Math.cos(a), sa = Math.sin(a);
         const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S6.Dh, sa * S6.Wh);
         const phi0 = Math.atan2(rh - rp, hHem);
         let phiA = phi0;
@@ -96630,7 +97067,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   };
 
   // src/render3d/chars/seaking.js
-  var TAU20 = Math.PI * 2;
+  var TAU21 = Math.PI * 2;
   var SPH2 = new SphereGeometry(1, 16, 12);
   var CONE2 = new ConeGeometry(1, 1, 6);
   CONE2.translate(0, 0.5, 0);
@@ -98342,7 +98779,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   };
 
   // src/render3d/chars3d.js
-  var TAU21 = Math.PI * 2;
+  var TAU22 = Math.PI * 2;
   var clamp9 = (v, a, b) => v < a ? a : v > b ? b : v;
   var _v9 = new Vector3();
   var _v24 = new Vector3();
@@ -98560,7 +98997,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const want = helm ? helm.ship.heading : a.facing || 0;
         if (this.visF === void 0 || dtv >= 1 || knocked || helm) this.visF = want;
         else this.visF += angleDiff(this.visF, want) * (1 - Math.exp(-dtv * (a.isPlayer ? 24 : a.action ? 20 : 10)));
-        this.yaw.rotation.y = -(this.visF + (P6.sp || 0) * TAU21);
+        this.yaw.rotation.y = -(this.visF + (P6.sp || 0) * TAU22);
         if (dist < 32) m.swing(this.lastT < 0 ? 1 : dtv, this.root);
         m.setExpression(expression2(look, pose, P6, pose.time || 0));
         this.effects(a, pose, P6, o, env2, ctx, camYaw3, dist, s);
@@ -98745,7 +99182,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const f = a.facing || 0;
         const dx = cam.position.x - this.root.position.x, dz = cam.position.z - this.root.position.z;
         let d = Math.atan2(dz, dx) - f;
-        d = ((d + Math.PI) % TAU21 + TAU21) % TAU21 - Math.PI;
+        d = ((d + Math.PI) % TAU22 + TAU22) % TAU22 - Math.PI;
         y = clamp9(-d, -1, 1);
         if (Math.abs(d) > 1.9) y = 0;
       }
@@ -101356,7 +101793,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
 
   // src/render3d/seabed.js
-  var TAU22 = Math.PI * 2;
+  var TAU23 = Math.PI * 2;
   var CELL6 = 16;
   var KINDS3 = ["branch", "brain", "table", "fan", "tube", "anemone", "kelp", "seagrass", "boulder", "star", "clam"];
   var MAX6 = { branch: 1400, brain: 1e3, table: 420, fan: 800, tube: 600, anemone: 700, kelp: 1500, seagrass: 5e3, boulder: 1100, star: 500, clam: 60 };
@@ -101446,7 +101883,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const parts = [], r4 = rng3(11);
     const n = 6;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU22 + r4() * 0.6;
+      const a = i / n * TAU23 + r4() * 0.6;
       const tilt = 0.2 + r4() * 0.5, L3 = 0.2 + r4() * 0.14;
       const base2 = V3(Math.cos(a) * 0.04, 0, Math.sin(a) * 0.04);
       const mid = V3(base2.x + Math.cos(a) * Math.sin(tilt) * L3, L3 * Math.cos(tilt), base2.z + Math.sin(a) * Math.sin(tilt) * L3);
@@ -101526,7 +101963,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     parts.push(foot);
     const n = 14;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU22;
+      const a = i / n * TAU23;
       const L3 = 0.2 + i % 3 * 0.04, out = 0.45 + i % 2 * 0.25;
       const r0 = 0.08;
       const g = ribbon2([[0, 0.12, r0, 0.022], [0, 0.12 + L3 * 0.6, r0 + L3 * 0.5 * out, 0.016], [0, 0.12 + L3, r0 + L3 * out, 4e-3]]);
@@ -101556,7 +101993,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const parts = [];
     const n = 6;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU22 + i * 0.9;
+      const a = i / n * TAU23 + i * 0.9;
       const h2 = 0.38 + i % 3 * 0.1, lean = 0.08 + i % 2 * 0.06, r0 = 0.03 + i % 2 * 0.03;
       const g = ribbon2([[0, 0, r0, 0.018], [0, h2 * 0.55, r0 + lean * 0.4, 0.016], [0, h2, r0 + lean, 6e-3]]);
       g.rotateY(Math.PI / 2 - a);
@@ -101575,7 +102012,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const pos = [];
     const arms3 = 5, ro = 0.13, ri = 0.05, hc2 = 0.03;
     for (let i = 0; i < arms3 * 2; i++) {
-      const a0 = i / (arms3 * 2) * TAU22, a1 = (i + 1) / (arms3 * 2) * TAU22;
+      const a0 = i / (arms3 * 2) * TAU23, a1 = (i + 1) / (arms3 * 2) * TAU23;
       const r0 = i % 2 ? ri : ro, r12 = i % 2 ? ro : ri;
       pos.push(0, hc2, 0, Math.cos(a1) * r12, 8e-3, Math.sin(a1) * r12, Math.cos(a0) * r0, 8e-3, Math.sin(a0) * r0);
     }
@@ -101703,7 +102140,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         if (depth > 1.2 && r4 < (depth > 16 ? 0.03 : 0.012)) put2("boulder", x + r12, y + r32, r4 * 90, 0.7 + r23 * 2.2, 1, rgb(depth > 20 ? [0.36, 0.4, 0.44] : [0.5, 0.52, 0.46]), 0.12);
         if (depth > 22 && r23 < 6e-3) put2("tube", x + r32, y + r12, r23 * 90, 1 + r4, 1, rgb([0.5, 0.4, 0.6], 0.8));
         if (depth > 0.6 && depth < 12 && r23 > 0.992) put2("star", x + r12, y + r4, r23 * 90, 0.8 + r32 * 0.8, 1, rgb(pick2(STARS, r32)), 0);
-        if (clamAt(world, x, y, depth)) put2("clam", x + 0.5, y + 0.5, r12 * TAU22, 1.3 + r23 * 0.5, 1, rgb([0.86, 0.82, 0.72]), 0.05);
+        if (clamAt(world, x, y, depth)) put2("clam", x + 0.5, y + 0.5, r12 * TAU23, 1.3 + r23 * 0.5, 1, rgb([0.86, 0.82, 0.72]), 0.05);
       }
     }
     return out;
@@ -102122,7 +102559,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }, "rm-canals");
 
   // src/render3d/sealife3d.js
-  var TAU23 = Math.PI * 2;
+  var TAU24 = Math.PI * 2;
   var MAX_FISH = 260;
   function sphereInto(pos, eye, cx, cy, cz, r4, tag2, seg2 = 6) {
     const g = new SphereGeometry(r4, seg2, Math.max(3, seg2 - 2)).toNonIndexed();
@@ -102138,7 +102575,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const ring4 = (x, h2, w) => {
       const r4 = [];
       for (let i = 0; i < n; i++) {
-        const a = i / n * TAU23;
+        const a = i / n * TAU24;
         r4.push([x, Math.cos(a) * h2, Math.sin(a) * w]);
       }
       return r4;
@@ -115841,7 +116278,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
 
   // src/render/fxshapes.js
-  var TAU24 = Math.PI * 2;
+  var TAU25 = Math.PI * 2;
   var easeOut2 = (k) => 1 - (1 - k) ** 3;
   var clamp019 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function hash13(n) {
@@ -115850,12 +116287,12 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
   function ellipsePath(g, rx, ry) {
     g.beginPath();
-    g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU24);
+    g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU25);
   }
   function spiky(g, R5, n, seed, sx = 1) {
     g.beginPath();
     for (let i = 0; i < n * 2; i++) {
-      const a = i / (n * 2) * TAU24;
+      const a = i / (n * 2) * TAU25;
       const rr = i % 2 ? R5 * (0.26 + 0.08 * hash13(seed + i)) : R5 * (0.62 + 0.55 * hash13(seed + i * 3.1));
       const x = Math.cos(a) * rr * sx, y = Math.sin(a) * rr;
       if (i) g.lineTo(x, y);
@@ -115885,16 +116322,16 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       if (s.shape === "circle") {
         g.globalAlpha = a * (0.1 + 0.12 * k);
         g.beginPath();
-        g.arc(0, 0, s.r, 0, TAU24);
+        g.arc(0, 0, s.r, 0, TAU25);
         g.fill();
         g.globalAlpha = a * (0.3 + 0.35 * k);
         g.beginPath();
-        g.arc(0, 0, s.r * easeOut2(k), 0, TAU24);
+        g.arc(0, 0, s.r * easeOut2(k), 0, TAU25);
         g.fill();
         g.globalAlpha = a * (0.55 + 0.4 * pulse * k);
         g.lineWidth = 0.05 + 0.04 * k;
         g.beginPath();
-        g.arc(0, 0, s.r, 0, TAU24);
+        g.arc(0, 0, s.r, 0, TAU25);
         g.stroke();
       } else if (s.shape === "arc") {
         const a0 = s.angle - s.arc / 2, a1 = s.angle + s.arc / 2;
@@ -115952,7 +116389,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const ang = i / n * TAU24 + s.seed + (hash13(s.seed + i) - 0.5) * 0.5;
+          const ang = i / n * TAU25 + s.seed + (hash13(s.seed + i) - 0.5) * 0.5;
           let px2 = 0, py2 = 0;
           g.moveTo(0, 0);
           const len = s.r * (0.6 + 0.5 * hash13(s.seed * 3 + i));
@@ -115983,7 +116420,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     gr.addColorStop(1, rgba(col6, 0));
     g.fillStyle = gr;
     g.beginPath();
-    g.arc(0, 0, Math.max(1e-3, r4), 0, TAU24);
+    g.arc(0, 0, Math.max(1e-3, r4), 0, TAU25);
     g.fill();
     g.restore();
   }
@@ -116004,7 +116441,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.lineWidth = 0.06;
         g.beginPath();
         for (let i = 0; i < 9; i++) {
-          const a0 = i / 9 * TAU24 + s.seed, a1 = a0 + 0.35;
+          const a0 = i / 9 * TAU25 + s.seed, a1 = a0 + 0.35;
           g.moveTo(Math.cos(a0) * s.r * 0.85, Math.sin(a0) * s.r * 0.51);
           g.lineTo(Math.cos(a1) * s.r * 0.95, Math.sin(a1) * s.r * 0.57);
         }
@@ -116056,7 +116493,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           g.beginPath();
           const n = 48;
           for (let i = 0; i <= n; i++) {
-            const th = i / n * TAU24;
+            const th = i / n * TAU25;
             const wr = rad * (1 + s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40));
             const x = Math.cos(th) * wr, y = Math.sin(th) * wr * ry;
             if (i) g.lineTo(x, y);
@@ -116172,7 +116609,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       g.globalAlpha = a * fade2 * 0.4;
       g.fillStyle = s.color || "#fff59d";
       g.beginPath();
-      g.arc(0, 0, R5 * 0.55, 0, TAU24);
+      g.arc(0, 0, R5 * 0.55, 0, TAU25);
       g.fill();
       g.globalAlpha = a * fade2 * 0.95;
       starPath(g, 0, 0, R5, 4, 0.12, 0);
@@ -116320,7 +116757,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.globalAlpha = fade2 * 0.9;
         g.fillStyle = "#ffffff";
         g.beginPath();
-        g.arc(0, 0, wd * 0.9, 0, TAU24);
+        g.arc(0, 0, wd * 0.9, 0, TAU25);
         g.fill();
         starPath(g, 0, 0, wd * 1.8, 4, 0.12, c.t * 3);
         g.fill();
@@ -116328,7 +116765,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       g.globalAlpha = fade2 * 0.8;
       g.fillStyle = s.core || "#ffffff";
       g.beginPath();
-      g.arc(L3, 0, wd * 0.55, 0, TAU24);
+      g.arc(L3, 0, wd * 0.55, 0, TAU25);
       g.fill();
     }
   };
@@ -116378,7 +116815,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       g.globalAlpha = a * fade2 * 0.25;
       g.fillStyle = s.color || "#e0f7fa";
       g.beginPath();
-      g.arc(0, 0, R5 * 0.35, 0, TAU24);
+      g.arc(0, 0, R5 * 0.35, 0, TAU25);
       g.fill();
       g.lineCap = "round";
       g.lineJoin = "miter";
@@ -116389,7 +116826,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU24 + (hash13(s.seed + i) - 0.5) * 0.5;
+          const th = i / n * TAU25 + (hash13(s.seed + i) - 0.5) * 0.5;
           let x = 0, y = 0;
           g.moveTo(0, 0);
           const L3 = R5 * (0.6 + 0.5 * hash13(s.seed + i * 3));
@@ -116399,7 +116836,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
             y = Math.sin(th + o) * r4;
             g.lineTo(x, y);
           }
-          const th2 = th + TAU24 / n;
+          const th2 = th + TAU25 / n;
           const r23 = L3 * 0.55;
           g.moveTo(Math.cos(th) * r23, Math.sin(th) * r23);
           g.lineTo(Math.cos(th2) * r23 * 0.95, Math.sin(th2) * r23 * 0.95);
@@ -116507,7 +116944,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.beginPath();
         for (let i = 1; i < 4; i++) {
           const f = i / 4;
-          g.ellipse(0, -H5 * f * 0.85, R5 * Math.sqrt(1 - f * f), R5 * 0.1 * (1 - f), 0, 0, TAU24);
+          g.ellipse(0, -H5 * f * 0.85, R5 * Math.sqrt(1 - f * f), R5 * 0.1 * (1 - f), 0, 0, TAU25);
         }
         g.stroke();
       }
@@ -116541,7 +116978,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           const cx = col6 * hr * 1.5 * (side ? 0.35 : 1), cy = row * hr * 1.73 + (col6 & 1 ? hr * 0.86 : 0);
           if (Math.abs(cx) > W4 / 2 - 0.05 || Math.abs(cy) > H5 / 2 - 0.05) continue;
           for (let i = 0; i <= 6; i++) {
-            const th = i / 6 * TAU24;
+            const th = i / 6 * TAU25;
             const x = cx + Math.cos(th) * hr * 0.55 * (side ? 0.35 : 1), y = cy + Math.sin(th) * hr * 0.55;
             if (i) g.lineTo(x, y);
             else g.moveTo(x, y);
@@ -116580,7 +117017,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.beginPath();
         for (let j = 0; j <= 16; j++) {
           const u = j / 16;
-          const th = spin + i / arms3 * TAU24 + u * 3.2;
+          const th = spin + i / arms3 * TAU25 + u * 3.2;
           const r4 = R5 * (1 - u * 0.85);
           const x = Math.cos(th) * r4, y = Math.sin(th) * r4 * 0.62;
           if (j) g.lineTo(x, y);
@@ -116616,13 +117053,13 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       const n = 9;
       for (let pass = 0; pass < 2; pass++) {
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU24;
+          const th = i / n * TAU25;
           const x = Math.cos(th) * R5 * 0.75 + Math.sin(c.t * 0.8 + i) * 0.1, y = Math.sin(th) * R5 * 0.28;
           const rr = R5 * (0.38 + 0.12 * hash13(s.seed + i));
           g.globalAlpha = a * (pass ? 0.9 : 0.5);
           g.fillStyle = pass ? s.color || "#37474f" : "#263238";
           g.beginPath();
-          g.arc(x, y + (pass ? -0.05 : 0.08), rr * (pass ? 0.9 : 1.05), 0, TAU24);
+          g.arc(x, y + (pass ? -0.05 : 0.08), rr * (pass ? 0.9 : 1.05), 0, TAU25);
           g.fill();
         }
       }
@@ -116631,7 +117068,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.globalAlpha = a * 0.5;
         g.fillStyle = s.glow || "#fff59d";
         g.beginPath();
-        g.arc((hash13(Math.floor(c.t * 8) + s.seed) - 0.5) * R5, 0, R5 * 0.35, 0, TAU24);
+        g.arc((hash13(Math.floor(c.t * 8) + s.seed) - 0.5) * R5, 0, R5 * 0.35, 0, TAU25);
         g.fill();
       }
     }
@@ -116684,9 +117121,9 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.globalAlpha = fade2;
         g.fillStyle = s.petal || "#f48fb1";
         for (let i = 0; i < 5; i++) {
-          const th = i / 5 * TAU24 + p.seed;
+          const th = i / 5 * TAU25 + p.seed;
           g.beginPath();
-          g.ellipse(x + Math.cos(th) * 0.09, y + Math.sin(th) * 0.05, 0.08, 0.04, th, 0, TAU24);
+          g.ellipse(x + Math.cos(th) * 0.09, y + Math.sin(th) * 0.05, 0.08, 0.04, th, 0, TAU25);
           g.fill();
         }
         const ang = p.ang;
@@ -116706,7 +117143,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.lineWidth = 0.025;
         const hr = (s.big ? 0.26 : 0.08) * (1 - clutch * 0.2);
         g.beginPath();
-        g.arc(ex, ey, hr, 0, TAU24);
+        g.arc(ex, ey, hr, 0, TAU25);
         g.fill();
         g.stroke();
         if (!clutch) {
@@ -116760,7 +117197,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.arc(0, 0, R5, 0, TAU24);
+        g.arc(0, 0, R5, 0, TAU25);
         g.fill();
         g.stroke();
         g.strokeStyle = s.kind === "mochi" ? "#d7ccc8" : "#ffab40";
@@ -116776,14 +117213,14 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.ellipse(0, 0, R5 * 1.2, R5 * 0.8, 0, 0, TAU24);
+        g.ellipse(0, 0, R5 * 1.2, R5 * 0.8, 0, 0, TAU25);
         g.fill();
         g.stroke();
       } else {
         g.fillStyle = s.color || "#5d4037";
         g.beginPath();
         for (let i = 0; i < 9; i++) {
-          const th = i / 9 * TAU24;
+          const th = i / 9 * TAU25;
           const rr = R5 * (0.8 + 0.3 * hash13(s.seed + i));
           g.lineTo(Math.cos(th) * rr, Math.sin(th) * rr);
         }
@@ -116793,7 +117230,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.fillStyle = s.glow || "#ff9100";
         g.globalAlpha = 0.6 * a;
         g.beginPath();
-        g.arc(R5 * 0.2, R5 * 0.2, R5 * 0.5, 0, TAU24);
+        g.arc(R5 * 0.2, R5 * 0.2, R5 * 0.5, 0, TAU25);
         g.fill();
       }
     }
@@ -116860,8 +117297,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.fillStyle = "#ff5252";
         g.globalAlpha = a * fade2;
         g.beginPath();
-        g.arc(-R5 * 0.18, -R5 * 0.1, R5 * 0.22, 0, TAU24);
-        g.arc(R5 * 0.18, -R5 * 0.1, R5 * 0.22, 0, TAU24);
+        g.arc(-R5 * 0.18, -R5 * 0.1, R5 * 0.22, 0, TAU25);
+        g.arc(R5 * 0.18, -R5 * 0.1, R5 * 0.22, 0, TAU25);
         g.moveTo(-R5 * 0.38, 0);
         g.lineTo(0, R5 * 0.4);
         g.lineTo(R5 * 0.38, 0);
@@ -116934,7 +117371,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.025;
         g.beginPath();
-        g.arc(x, y, 0.13 * (0.7 + pop2 * 0.4), 0, TAU24);
+        g.arc(x, y, 0.13 * (0.7 + pop2 * 0.4), 0, TAU25);
         g.fill();
         g.stroke();
         if (ph > 0.45 && ph < 0.6) {
@@ -116966,7 +117403,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         if (kind === 0) {
           g.fillStyle = s.skin || "#f1c9a0";
           g.beginPath();
-          g.arc(0, 0, 0.12, 0, TAU24);
+          g.arc(0, 0, 0.12, 0, TAU25);
           g.fill();
           g.stroke();
         } else {
@@ -117050,7 +117487,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           g.lineWidth = 0.03;
           g.beginPath();
           for (let i = 0; i < 10; i++) {
-            const th = i / 10 * TAU24 + s.seed;
+            const th = i / 10 * TAU25 + s.seed;
             g.moveTo(0, 0);
             g.lineTo(Math.cos(th) * R5 * 0.9, Math.sin(th) * R5 * 0.55);
           }
@@ -117063,9 +117500,9 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           g.globalAlpha = 0.24 * a;
           g.fillStyle = col6;
           for (let i = 0; i < 6; i++) {
-            const th = i / 6 * TAU24 + c.t * 0.2, rr = R5 * 0.45;
+            const th = i / 6 * TAU25 + c.t * 0.2, rr = R5 * 0.45;
             g.beginPath();
-            g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU24);
+            g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU25);
             g.fill();
           }
           g.globalAlpha = 0.35 * a;
@@ -117080,7 +117517,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
             g.globalAlpha = 0.9 * a;
             g.beginPath();
             for (let i = 0; i < 7; i++) {
-              const th = i / 7 * TAU24 + s.seed;
+              const th = i / 7 * TAU25 + s.seed;
               const x = Math.cos(th) * R5 * 0.7, y = Math.sin(th) * R5 * 0.45;
               g.moveTo(x, y);
               g.quadraticCurveTo(x * 0.5, y * 0.5 - 0.4 - Math.sin(c.t * 3 + i) * 0.1, 0, -0.1);
@@ -117136,7 +117573,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
             s.pts = [];
             const n = Math.max(3, Math.round(R5 * 3));
             for (let i = 0; i < n; i++) {
-              const th = i / n * TAU24 + hash13(s.seed + i);
+              const th = i / n * TAU25 + hash13(s.seed + i);
               const rr = R5 * (0.3 + 0.6 * hash13(s.seed + i * 3));
               s.pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, L: 0.9, ang: th, delay: i * 0.03, seed: i });
             }
@@ -117166,7 +117603,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
             g.strokeStyle = s.color;
             g.lineWidth = 0.025;
             g.beginPath();
-            g.arc(x, y - ph * 0.3, 0.06 + ph * 0.12, 0, TAU24);
+            g.arc(x, y - ph * 0.3, 0.06 + ph * 0.12, 0, TAU25);
             g.stroke();
           }
           break;
@@ -117187,7 +117624,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
 
   // src/render/fx3d.js
-  var TAU25 = Math.PI * 2;
+  var TAU26 = Math.PI * 2;
   var CULL = -9e3;
   var MAX_SC = 380;
   var MIN_SC = 1;
@@ -117290,7 +117727,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     }
     return runs;
   }
-  function circlePts(x, y, R5, h2, n = 40, a0 = 0, a1 = TAU25, wob) {
+  function circlePts(x, y, R5, h2, n = 40, a0 = 0, a1 = TAU26, wob) {
     const pts = [];
     for (let i = 0; i <= n; i++) {
       const th = a0 + (a1 - a0) * (i / n);
@@ -117425,7 +117862,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const h2 = Math.min(s.z ?? 0.4, 0.12);
     const n = Math.max(16, Math.min(56, Math.round(rad * 10)));
     const wob = s.wobble ? (th) => s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40) : null;
-    const runs = ringRuns(r4, circlePts(s.x, s.y, rad, h2, n, 0, TAU25, wob));
+    const runs = ringRuns(r4, circlePts(s.x, s.y, rad, h2, n, 0, TAU26, wob));
     if (!runs.length) return;
     g.globalCompositeOperation = s.add ? "lighter" : "source-over";
     if (s.fill && runs.length === 1 && runs[0].length > n) fillRuns(g, r4, runs, s.fill === true ? s.color : s.fill, alpha2 * 0.22);
@@ -117484,7 +117921,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     g.globalCompositeOperation = "lighter";
     const nM = s.kind === "cage" ? 16 : 10;
     for (let i = 0; i < nM; i++) {
-      const th = i / nM * TAU25 + (s.kind === "room" ? c.t * 0.15 : 0);
+      const th = i / nM * TAU26 + (s.kind === "room" ? c.t * 0.15 : 0);
       const pts = [];
       for (let j = 0; j <= 10; j++) {
         const ph = j / 10 * (Math.PI / 2);
@@ -117795,7 +118232,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       g.globalAlpha = 0.8 * k2;
       g.fillStyle = "#fff59d";
       g.beginPath();
-      g.arc(x, y, H5 * 0.03 * (1 + (1 - k2)), 0, TAU25);
+      g.arc(x, y, H5 * 0.03 * (1 + (1 - k2)), 0, TAU26);
       g.fill();
       g.globalAlpha = 0.5 * k2;
       g.strokeStyle = "#ffe082";
@@ -117945,7 +118382,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const R5 = Math.hypot(W4, H5) * 0.55, n = 40;
     g.beginPath();
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU25 + i * 7919 % 17 * 0.013 + fx.time * 0.3;
+      const a = i / n * TAU26 + i * 7919 % 17 * 0.013 + fx.time * 0.3;
       const r0 = R5 * (0.62 + i * 131 % 7 * 0.04), wd = 4e-3 + i * 53 % 5 * 2e-3;
       g.moveTo(cx + Math.cos(a) * R5 * 1.3, cy + Math.sin(a) * R5 * 1.3);
       g.lineTo(cx + Math.cos(a + wd) * r0, cy + Math.sin(a + wd) * r0);
@@ -121689,12 +122126,12 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       this.ui?.hint(text2);
     }
     // --- events from combat ----------------------------------------------------------
-    onDamage(target2, att, n) {
+    onDamage(target2, att, n, h2) {
       if (target2.isPlayer) {
         this.ui?.onPlayerHurt(n);
         this.emit("playerHurt", att, n);
       }
-      if (att && att.isPlayer) this.emit("playerHit", target2, n);
+      if (att && att.isPlayer) this.emit("playerHit", target2, n, h2);
       if (target2.isPlayer || att && att.isPlayer) {
         this.combatT = 6;
       }
@@ -128506,7 +128943,7 @@ button:disabled { cursor: not-allowed; }
   var Progression = class {
     constructor(game) {
       this.game = game;
-      game.on("playerHit", (target2, dmg) => this.onPlayerHit(target2, dmg));
+      game.on("playerHit", (target2, dmg, h2) => this.onPlayerHit(target2, dmg, h2));
       game.on("knockout", (a, att) => this.onKnockout(a, att));
       game.on("playerEvaded", (att) => this.onEvade(att));
       game.on("playerBlocked", (att) => this.onBlocked(att));
@@ -128549,20 +128986,24 @@ button:disabled { cursor: not-allowed; }
       return threatFactor(a.power(), p.power());
     }
     // ------------------------------------------------------------ fighting
-    onPlayerHit(target2, dmg) {
+    onPlayerHit(target2, dmg, h2) {
       const g = this.game, p = g.player, c = this.char;
       if (!c || !target2.d) return;
-      const tf2 = this.worth(target2);
+      const def = h2?.def || p.action?.def || {};
+      const src = def.source || "";
+      let tf2 = this.worth(target2);
       if (tf2 <= 0) {
-        if (!this.weakNote) {
-          this.weakNote = true;
-          g.hint("weak", "Beating up weak opponents teaches you nothing. You grow by training and by fighting people who are a real threat to you.");
+        const raw = src.startsWith("fruit") ? p.fruitMastery : src.startsWith("haki") ? 0 : p.masteries[p.style] ?? c.weaponMastery?.[weaponKindOf(p, def)];
+        if ((raw || 0) < 25) tf2 = 0.25;
+        else {
+          if (!this.weakNote) {
+            this.weakNote = true;
+            g.hint("weak", "Beating up weak opponents teaches you nothing. You grow by training and by fighting people who are a real threat to you.");
+          }
+          return;
         }
-        return;
       }
       const frac2 = Math.min(0.3, dmg / target2.d.maxHp);
-      const def = p.action?.def || {};
-      const src = def.source || "";
       let gain = frac2 * tf2 * 6;
       if (c.traits.includes("born_fighter")) gain *= 1.15;
       if (src.startsWith("fruit") && c.fruit) {
@@ -133796,7 +134237,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   };
 
   // src/net/remote.js
-  var TAU26 = Math.PI * 2;
+  var TAU27 = Math.PI * 2;
   var MATE_COLOR = "#8fe9f5";
   var CLIMBING = {};
   var Remote = class {
@@ -134093,8 +134534,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     if (s.st) a.style = s.st;
     a.roofed = !!(B5 & BIT.roofed) && s.g !== void 0;
     a.lastG = a.roofed ? s.g : null;
-    if (a.moving && !a.inWater) a.walk += dt * TAU26 * gaitCadence(a.speed / sc, a.intent.sprint);
-    else if (a.moving) a.walk += dt * TAU26 * 1.2;
+    if (a.moving && !a.inWater) a.walk += dt * TAU27 * gaitCadence(a.speed / sc, a.intent.sprint);
+    else if (a.moving) a.walk += dt * TAU27 * 1.2;
     if (ship && B5 & BIT.helm) {
       const stn = { kind: ship.def.oarsOnly ? "row" : "helm", ship }, spot = stationSpot(stn), c = Math.cos(ship.heading), sn = Math.sin(ship.heading);
       a.mode = "sail";
@@ -140438,442 +140879,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     if (a.controller) a.controller.home = { x: a.x, y: a.y };
   }
 
-  // src/game/destruction.js
-  var REBUILD = 300;
-  var TAU27 = Math.PI * 2;
-  var FIRE2 = /* @__PURE__ */ new Set(["fire", "magma", "bluefire", "explosion"]);
-  var ICE3 = /* @__PURE__ */ new Set(["ice", "snow"]);
-  function buildingHp(b) {
-    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), H5 = 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6;
-    return Math.round(fw * fd * H5 * 2.2);
-  }
-  var wrecker = (o) => !!o && (o.isPlayer || o.summonedBy?.isPlayer);
-  function wallStrength(a) {
-    if (!a) return 1;
-    const best = Math.max(a.fruitMastery || 0, ...Object.values(a.masteries || {}), (a.hakiSkill?.armament || 0) * 2, 0);
-    return Math.max(0.05, Math.min(1, Math.pow(best / 70, 1.4)));
-  }
-  function structPower(h2) {
-    const def = h2.def || h2.owner?.action?.def;
-    const src = def?.source || "";
-    const k = src.startsWith("fruit") ? 3 : def?.m1 ? 0.3 : def ? 1.2 : 0.25;
-    const f = h2.owner && def ? techScale(h2.owner, def) : 1;
-    const pw = (h2.damage || 0) * k * f * f * (h2.blast || h2.heavy ? 1.3 : 1) * wallStrength(h2.owner);
-    return def?.m1 && wallStrength(h2.owner) < 0.35 ? 0 : pw;
-  }
-  var SMASH = {
-    tree: 70,
-    bush: 6,
-    lamp: 14,
-    barrel: 8,
-    crate: 8,
-    cask: 8,
-    fountain: 140,
-    tent: 30,
-    windmill: 260,
-    campfire: 6,
-    well: 70,
-    signboard: 12,
-    stall: 30,
-    statue: 160,
-    bench: 10,
-    cart: 22,
-    fence: 8,
-    haystack: 8,
-    totem: 60,
-    cactus: 18,
-    mushroom: 14,
-    mooring: 20,
-    table: 10,
-    scarecrow: 10,
-    crystal: 40,
-    rock: 120,
-    lantern: 8,
-    flag: 10,
-    cannon: 60,
-    waterwheel: 120
-  };
-  var TREES = /* @__PURE__ */ new Set(["tree", "bush", "cactus"]);
-  var smashable = (o) => SMASH[o.kind] !== void 0 && !o.hidden && !o.ruined && !o.far && !o.unbreakable && !o.quest;
-  function installDestruction(game) {
-    const D4 = {
-      /** The rect a building stands on, as world { x0, y0, x1, y1 }. */
-      rect(b) {
-        return bfoot(b);
-      },
-      /** Buildings standing within r of (x, y) (their footprints, not their middles). */
-      near(x, y, r4) {
-        const w = game.world;
-        if (!w?.objects) return [];
-        const out = [];
-        for (const b of w.objects.near(x, y, r4 + 14, (o) => o.kind === "building" && !o.ruined && !o.unbreakable)) {
-          const q2 = bfoot(b);
-          const dx = Math.max(0, Math.abs(w.dx((q2.x0 + q2.x1) / 2, x)) - (q2.x1 - q2.x0) / 2);
-          const dy = Math.max(0, Math.abs(y - (q2.y0 + q2.y1) / 2) - (q2.y1 - q2.y0) / 2);
-          const d = Math.hypot(dx, dy);
-          if (d <= r4) out.push([b, d]);
-        }
-        return out;
-      },
-      /**
-       * A blow's worth of `power` landing round (x, y), reaching r: each building
-       * it reaches takes it (less towards the edge); one with nothing left falls.
-       */
-      strike(x, y, r4, power, att, o = {}) {
-        var _a4;
-        if (!(power > 0)) return 0;
-        let n = 0;
-        const el = o.element || "physical";
-        for (const [b, d] of D4.near(x, y, r4)) {
-          const k = 1 - 0.5 * (d / Math.max(0.5, r4));
-          let pw = power;
-          if (b.frozen && !ICE3.has(el)) {
-            pw *= 2;
-            D4.shatter(b, att);
-            if (b.ruined) {
-              n++;
-              continue;
-            }
-          }
-          b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - pw * k;
-          if (FIRE2.has(el)) D4.ignite(b, power, att);
-          else if (ICE3.has(el)) D4.freeze(b, power, att);
-          b.hitT = game.time;
-          if (!b.damaged) {
-            b.damaged = true;
-            ((_a4 = game.world).damaged || (_a4.damaged = [])).push(b);
-          }
-          if (b.hp <= 0) {
-            D4.collapse(b, x, y, pw, att, o);
-            n++;
-            continue;
-          }
-          const frac2 = b.hp / (b.maxHp || buildingHp(b)), st = frac2 < 0.34 ? 2 : frac2 < 0.67 ? 1 : 0;
-          if (st > (b.stage || 0)) {
-            b.stage = st;
-            D4.event({ kind: "stage", b, stage: st, x, y });
-            const q2 = bfoot(b);
-            game.fx?.burst?.((q2.x0 + q2.x1) / 2, (q2.y0 + q2.y1) / 2, 14, { color: ["#d7ccc8", "#bcaaa4", "#efebe9"], speed: 2.5, spread: Math.PI * 2, z: 2.5, vz: 1, g: -0.2, life: 1.4, kind: "smoke", size: 0.8, grow: 1.4, drag: 1.6 });
-            game.audio?.sfx("collapse", { x, y }, { w: 0.35 });
-          }
-          D4.event({ kind: "chip", b, x, y, n: Math.min(10, 2 + Math.round(pw / 120)), k: Math.min(1.6, 0.25 + pw * k / (b.maxHp || buildingHp(b)) * 2.5) });
-          if (Math.random() < 0.5) game.audio?.sfx("wallhit", { x, y });
-        }
-        D4.smashNear(x, y, r4, power, att);
-        return n;
-      },
-      /** The loose things round (x, y) a blow of `power` reaches: those it's enough for are smashed. */
-      smashNear(x, y, r4, power, att, o = {}) {
-        const w = game.world;
-        if (!w?.objects || !(power > 0)) return 0;
-        let n = 0;
-        for (const p of w.objects.near(x, y, r4 + 1, o.noTrees ? (q2) => smashable(q2) && !TREES.has(q2.kind) : smashable)) {
-          const d = w.distance(x, y, p.x, p.y);
-          if (d > r4 + 0.6 * (p.s || 1)) continue;
-          if (floorOf(p) || /dock|pier|bridge|quay|jetty|plank/.test(p.kind)) continue;
-          p.hp = (p.hp ?? SMASH[p.kind] * (p.s || 1)) - power * (1 - 0.5 * d / Math.max(0.5, r4));
-          if (p.hp > 0) continue;
-          D4.smash(p, x, y, power, att, { delay: o.speed ? d / o.speed : 0, lite: o.lite, long: o.long });
-          n++;
-        }
-        return n;
-      },
-      /** One loose thing smashed: gone from the world (its pieces are debris now) until the town's put right. */
-      smash(p, x, y, power, att, o = {}) {
-        const w = game.world;
-        if (p.ruined) return;
-        w.objects.ruin(p);
-        p.rebuildAt = game.time + REBUILD * (1 + Math.min(2, power / 2500)) * (o.long || 1);
-        (w.smashed || (w.smashed = [])).push(p);
-        D4.event({ kind: "fixture", o: p });
-        D4.event({ kind: "smash", b: p, x, y, power, delay: o.delay || 0, lite: !!o.lite });
-        if (!o.delay && Math.random() < 0.5) game.audio?.sfx(p.kind === "tree" ? "collapse" : "wallhit", { x: p.x, y: p.y }, { w: 0.3 });
-        if (/tree|bush|cactus/.test(p.kind) && game.fx && !o.lite) {
-          const s = p.s || 1, near = !game.player || w.distance(p.x, p.y, game.player.x, game.player.y) < 45;
-          if (near) {
-            game.fx.burst(p.x, p.y, 10, { color: ["#4caf50", "#2e7d32", "#81c784"], speed: 4, spread: Math.PI * 2, z: 2.5 * s, vz: 2, g: 3, life: 0.9, kind: "leaf", size: 0.14, delay: o.delay || 0 });
-            game.fx.burst(p.x, p.y, 5, { color: ["#8d6e63", "#6d4c41"], speed: 5, spread: Math.PI * 2, z: 1.2 * s, vz: 3, g: 12, life: 0.7, kind: "dust", size: 0.1, delay: o.delay || 0 });
-          }
-        }
-      },
-      /**
-       * Fire on a building: it catches and burns a while — flames out of its
-       * windows and over its roof, smoke, the walls blackening — taking damage
-       * all the while; enough of it and it burns down. A bigger fire burns
-       * longer. (Water, ice put it out.)
-       */
-      ignite(b, power, att) {
-        var _a4;
-        if (b.ruined) return;
-        if (b.frozen) {
-          D4.thaw(b);
-          return;
-        }
-        const dur = Math.min(30, 6 + power / 40);
-        if (!b.burning) {
-          b.burning = { until: game.time + dur, att, power, acc: 0 };
-          ((_a4 = game.world).burning || (_a4.burning = [])).push(b);
-          D4.event({ kind: "burn", b, on: true });
-        } else b.burning.until = Math.max(b.burning.until, game.time + dur * 0.6);
-        b.charred = true;
-      },
-      /** Ice on a building: frozen solid in a shell of ice, until it shatters (with it, much of the house). */
-      freeze(b, power, att) {
-        var _a4;
-        if (b.ruined) return;
-        if (b.burning) {
-          D4.douse(b);
-          return;
-        }
-        const dur = Math.min(20, 5 + power / 60);
-        if (!b.frozen) {
-          b.frozen = { until: game.time + dur, att, power };
-          ((_a4 = game.world).frozen || (_a4.frozen = [])).push(b);
-          D4.event({ kind: "ice", b, on: true });
-          game.audio?.sfx("ice", { x: b.x, y: b.y });
-        } else b.frozen.until = Math.max(b.frozen.until, game.time + dur * 0.5);
-      },
-      douse(b) {
-        if (!b.burning) return;
-        b.burning = null;
-        D4.event({ kind: "burn", b, on: false });
-      },
-      thaw(b) {
-        if (!b.frozen) return;
-        b.frozen = null;
-        D4.event({ kind: "ice", b, on: false, shatter: false });
-      },
-      /** The ice round a building breaks: the shell flies apart, and the walls it held go with it. */
-      shatter(b, att) {
-        const F4 = b.frozen;
-        if (!F4) return;
-        b.frozen = null;
-        D4.event({ kind: "ice", b, on: false, shatter: true });
-        game.audio?.sfx("ice", { x: b.x, y: b.y });
-        const q2 = bfoot(b), cx = (q2.x0 + q2.x1) / 2, cy = (q2.y0 + q2.y1) / 2;
-        game.fx?.burst?.(cx, cy, 30, { color: ["#e1f5fe", "#b3e5fc", "#ffffff"], speed: 6, spread: Math.PI * 2, z: 1.5, vz: 3, g: 9, life: 1.1, kind: "shard", size: 0.16, drag: 1 });
-        b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - (F4.power * 1.5 + (b.maxHp || buildingHp(b)) * 0.45);
-        if (b.hp <= 0) D4.collapse(b, cx, cy, F4.power * 2, att || F4.att);
-        game.combat?.hitbox({ owner: att || F4.att || null, x: cx, y: cy, shape: "circle", range: Math.hypot(q2.x1 - q2.x0, q2.y1 - q2.y0) / 2 + 1.5, damage: 20 + F4.power * 0.05, knockback: 6, stun: 0.5, element: "ice", duration: 0.1, radial: true, blast: true, crush: true });
-      },
-      /** Burning and frozen buildings, as time goes by. */
-      elements(dt) {
-        const w = game.world, p = game.player;
-        if (w?.burning?.length) {
-          for (let i = w.burning.length - 1; i >= 0; i--) {
-            const b = w.burning[i], B5 = b.burning;
-            if (!B5 || b.ruined) {
-              if (B5) D4.douse(b);
-              w.burning.splice(i, 1);
-              continue;
-            }
-            b.hp = (b.hp ?? (b.maxHp = buildingHp(b))) - (b.maxHp || buildingHp(b)) * 0.035 * dt;
-            b.hitT = game.time;
-            const q2 = bfoot(b), cx = (q2.x0 + q2.x1) / 2, cy = (q2.y0 + q2.y1) / 2;
-            if (b.hp <= 0) {
-              D4.collapse(b, cx, cy, 400, B5.att);
-              w.burning.splice(i, 1);
-              continue;
-            }
-            if (game.time > B5.until) {
-              D4.douse(b);
-              w.burning.splice(i, 1);
-              continue;
-            }
-            if (p && w.distance(p.x, p.y, cx, cy) < 90 && (B5.acc = (B5.acc || 0) + dt) > 0.12) {
-              B5.acc = 0;
-              const H5 = 2.6 + Math.max(1, (b.hgt || 2) - 1) * 2.6;
-              for (let k = 0; k < 3; k++) {
-                const fx0 = q2.x0 + Math.random() * (q2.x1 - q2.x0), fy0 = q2.y0 + Math.random() * (q2.y1 - q2.y0);
-                game.fx?.burst?.(fx0, fy0, 3, { color: ["#ff6d00", "#ffab00", "#ffd54f"], speed: 0.6, z: Math.random() * H5, vz: 3, g: -3, life: 0.7, kind: "fire", size: 0.45, grow: 0.6 });
-              }
-              game.fx?.burst?.(cx, cy, 2, { color: ["#424242", "#616161", "#757575"], speed: 0.4, z: H5 + 0.5, vz: 2.2, g: -1.5, life: 2.5, kind: "smoke", size: 0.9, grow: 1.4, drag: 0.6 });
-            }
-            if (Math.random() < dt * 1.5) game.combat?.hitbox({ owner: B5.att || null, x: cx, y: cy, shape: "circle", range: Math.hypot(q2.x1 - q2.x0, q2.y1 - q2.y0) / 2 + 0.4, damage: 4, knockback: 0, stun: 0, element: "fire", status: { burn: 2 }, duration: 0.05, radial: true, crush: true });
-          }
-        }
-        if (w?.frozen?.length) {
-          for (let i = w.frozen.length - 1; i >= 0; i--) {
-            const b = w.frozen[i], F4 = b.frozen;
-            if (!F4 || b.ruined) {
-              if (F4) D4.thaw(b);
-              w.frozen.splice(i, 1);
-              continue;
-            }
-            if (game.time > F4.until) {
-              w.frozen.splice(i, 1);
-              D4.shatter(b, F4.att);
-            }
-          }
-        }
-      },
-      /** Building b brought down by a blow from (x, y). */
-      collapse(b, x, y, power, att, o = {}) {
-        const w = game.world;
-        if (b.ruined || !w?.objects) return;
-        w.objects.ruin(b);
-        const fq = bfoot(b);
-        b.fixtures = w.objects.query(fq.x0 - 1.5, fq.y0 - 1.5, fq.x1 + 1.5, fq.y1 + 1.5).filter((o2) => {
-          if (o2 === b || o2.hidden || o2.kind === "building" || o2.kind === "tree" || o2.far || floorOf(o2) || /dock|pier|bridge|quay|jetty|plank/.test(o2.kind)) return false;
-          const ox = w.wx(o2.x);
-          return ox > fq.x0 - 1.2 && ox < fq.x1 + 1.2 && o2.y > fq.y0 - 1.2 && o2.y < fq.y1 + 1.2;
-        });
-        for (const o2 of b.fixtures) {
-          w.objects.ruin(o2);
-          D4.event({ kind: "fixture", o: o2 });
-        }
-        if (b.burning) {
-          b.burning = null;
-          D4.event({ kind: "burn", b, on: false });
-        }
-        if (b.frozen) {
-          b.frozen = null;
-          D4.event({ kind: "ice", b, on: false, shatter: true });
-        }
-        const q2 = bfoot(b), cx = (q2.x0 + q2.x1) / 2, cy = (q2.y0 + q2.y1) / 2;
-        const span2 = Math.hypot(q2.x1 - q2.x0, q2.y1 - q2.y0) / 2;
-        b.ruinT = game.time;
-        b.rebuildAt = game.time + REBUILD * (1 + Math.min(2, power / 2500)) * (o.long || 1);
-        (w.ruins || (w.ruins = [])).push(b);
-        D4.event({ kind: "fall", b, x, y, power, delay: o.delay || 0 });
-        D4.smashNear(cx, cy, span2 + 1.5, Math.max(power, 200), att, { lite: o.long > 1 });
-        game.combat?.hitbox({ owner: att || null, x: cx, y: cy, shape: "circle", range: span2 + 0.5, damage: 25 + Math.min(220, power * 0.06), knockback: 6, stun: 1, element: "physical", duration: 0.1, radial: true, heavy: true, blast: true, hitsAll: !att, crush: true });
-        const fx = game.fx;
-        if (fx) {
-          fx.burst(cx, cy, 26, { color: ["#d7ccc8", "#bcaaa4", "#efebe9", "#a1887f"], speed: 3 + span2 * 0.4, spread: Math.PI * 2, z: 0.6, vz: 1.4, g: -0.2, life: 1.8, kind: "smoke", size: 0.9, grow: 1.6, drag: 1.6, delay: o.delay || 0 });
-          const p = game.player;
-          if (p && w.distance(p.x, p.y, cx, cy) < 45) fx.shake?.(Math.min(0.7, 0.25 + span2 * 0.04));
-        }
-        game.audio?.sfx("collapse", { x: cx, y: cy }, { w: Math.min(1, 0.4 + span2 / 12) });
-        if (att?.isPlayer || att?.summonedBy?.isPlayer) {
-          if (!b.pirate) D4.wrecked.push(b);
-          game.emit?.("buildingWrecked", b);
-        }
-      },
-      /** Every building of the island round (x, y) — or in r of it — brought down, a wave rolling out from (x, y) (Whitebeard's awakened Sky Tilt). */
-      levelAll(x, y, r4, power, att, speed2 = 40) {
-        const w = game.world;
-        let n = 0;
-        for (const [b, d] of D4.near(x, y, r4)) {
-          D4.collapse(b, x, y, power, att, { delay: d / speed2, long: 1.5 });
-          n++;
-        }
-        n += D4.smashNear(x, y, r4, 1e6, att, { speed: speed2, lite: true, long: 1.5, noTrees: true });
-        return n;
-      },
-      event(e) {
-        const w = game.world;
-        if (!w) return;
-        (w.ruinEvents || (w.ruinEvents = [])).push(e);
-        if (w.ruinEvents.length > 12e3) w.ruinEvents.splice(0, w.ruinEvents.length - 12e3);
-        w.ruinRev = (w.ruinRev || 0) + 1;
-      },
-      wrecked: [],
-      /** Rebuild what's stood ruined long enough (not under your nose: once you're a little way off, or it's been a long while). */
-      update() {
-        const w = game.world, p = game.player;
-        if (w?.damaged?.length) {
-          for (let i = w.damaged.length - 1; i >= 0; i--) {
-            const b = w.damaged[i];
-            if (b.ruined) {
-              b.damaged = false;
-              w.damaged.splice(i, 1);
-              continue;
-            }
-            if (game.time - (b.hitT || 0) < REBUILD * 0.6 || p && w.distance(p.x, p.y, b.x, b.y) < 20) continue;
-            b.hp = void 0;
-            b.stage = 0;
-            b.damaged = false;
-            b.charred = false;
-            w.damaged.splice(i, 1);
-            D4.event({ kind: "restore", b });
-          }
-        }
-        if (D4.wrecked.length) {
-          const n = D4.wrecked.length, b = D4.wrecked[0];
-          D4.wrecked.length = 0;
-          game.reputation?.crime?.(25e4 * n, n > 1 ? `wrecked ${n} buildings` : `wrecked ${b.name ? "the " + b.name : "a house"}`, { quiet: n < 3, rep: Math.min(10, n) });
-        }
-        if (w?.smashed?.length) {
-          for (let i = w.smashed.length - 1; i >= 0; i--) {
-            const o = w.smashed[i];
-            if (!o.ruined) {
-              w.smashed.splice(i, 1);
-              continue;
-            }
-            if (game.time < o.rebuildAt || p && w.distance(p.x, p.y, o.x, o.y) < 25 && game.time < o.rebuildAt + 240) continue;
-            w.objects.restore(o);
-            o.hp = void 0;
-            w.smashed.splice(i, 1);
-            D4.event({ kind: "restore", b: o });
-          }
-        }
-        if (!w?.ruins?.length) return;
-        for (let i = w.ruins.length - 1; i >= 0; i--) {
-          const b = w.ruins[i];
-          if (!b.ruined) {
-            w.ruins.splice(i, 1);
-            continue;
-          }
-          if (game.time < b.rebuildAt) continue;
-          if (p && w.distance(p.x, p.y, b.x, b.y) < 30 && game.time < b.rebuildAt + 240) continue;
-          if (p && w.distance(p.x, p.y, b.x, b.y) < 3 + Math.hypot(b.fw || 3, b.fd || 3)) continue;
-          w.objects.restore(b);
-          for (const o of b.fixtures || []) {
-            w.objects.restore(o);
-            D4.event({ kind: "restore", b: o });
-          }
-          b.fixtures = null;
-          b.hp = void 0;
-          b.stage = 0;
-          b.damaged = false;
-          b.charred = false;
-          w.ruins.splice(i, 1);
-          D4.event({ kind: "restore", b });
-        }
-      },
-      /** A hitbox of yours going off: what it reaches of the town takes it (once per building per hitbox). */
-      fromHitbox(h2) {
-        if (!wrecker(h2.owner) || h2.wrecked || h2.crush) return;
-        h2.wrecked = true;
-        const power = structPower(h2);
-        if (power < 4) return;
-        const R5 = h2.range || 1.4;
-        if (h2.shape === "line") {
-          const ca = Math.cos(h2.angle || 0), sa = Math.sin(h2.angle || 0), wd = (h2.width || 1) / 2 + 0.6;
-          for (let d = 0; d <= R5; d += Math.max(1.5, wd)) D4.strike(h2.x + ca * d, h2.y + 0.4 + sa * d, wd, power, h2.owner, { element: h2.element });
-          return;
-        }
-        if (h2.shape === "ring") {
-          const wd = (h2.width || 1) / 2 + 0.6, n = Math.max(8, Math.ceil(TAU27 * R5 / Math.max(1.6, wd * 1.6)));
-          for (let i = 0; i < n; i++) {
-            const t = i / n * TAU27;
-            D4.strike(game.world.wx(h2.x + Math.cos(t) * R5), h2.y + 0.4 + Math.sin(t) * R5, wd, power, h2.owner, { element: h2.element });
-          }
-          return;
-        }
-        if (h2.shape === "arc" || !h2.shape) {
-          const a = h2.angle || 0;
-          D4.strike(h2.x + Math.cos(a) * R5 * 0.5, h2.y + 0.4 + Math.sin(a) * R5 * 0.5, R5 * 0.6 + 0.4, power, h2.owner, { element: h2.element });
-          return;
-        }
-        D4.strike(h2.x, h2.y + 0.4, R5 + 0.3, power, h2.owner, { element: h2.element });
-      },
-      /** A shot of yours stopped by a wall: the wall takes it. */
-      fromShot(p) {
-        if (!wrecker(p.owner)) return;
-        const power = structPower(p) * 0.8;
-        if (power >= 4) D4.strike(p.x, p.y, 0.8 + 0.4 * (p.size || 1), power, p.owner, { element: p.element });
-      }
-    };
-    game.destruction = D4;
-    game.on?.("tick", (dt) => {
-      D4.update();
-      D4.elements(dt || 1 / 60);
-    });
-    return D4;
-  }
-
   // src/game/forage.js
   var PLURAL = { coconut: "coconuts", banana: "bananas", mango: "mangoes", apple: "apples", cherry: "cherries" };
   function installForaging(game) {
@@ -143410,7 +143415,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           a: {
             text: () => {
               if (done2(ctx, "nb_liar_noland")) return `"Carry the log well. If you ever reach Jaya, find Noland's descendant, Montblanc Cricket. Tell him the archive of Lvneel remembers the truth \u2014 even if the Crown never will."`;
-              if (at2(ctx, "nb_liar_noland", "report")) return `"The Sea King is slain? Then you have done what the picture book says a KING did." (He smiles thinly.) "The log tells it otherwise: ADMIRAL Noland dragged that beast aboard alone, while His Majesty hid below deck."`;
+              if (at2(ctx, "nb_liar_noland", "report")) return `"You stood where he died, and heard the town still laughing at him." (He smiles thinly.) "The log tells it otherwise: ADMIRAL Noland dragged that Sea King aboard alone, while His Majesty hid below deck."`;
               if (at2(ctx, "nb_liar_noland", "archive")) return `"You have the picture book? Good \u2014 you know what the Crown tells children. Now read what it wrote in private." (He unlocks a cabinet sealed with royal wax.) "The ship's log of the royal expedition to Jaya. Four hundred years old."`;
               if (ctx.char.race === "skypiean") return `"...Wings? Then the stories are true. Noland wrote of fish that swim through clouds, and a golden bell ringing above Jaya. Welcome to the Royal Archive, child of the sky. I have thirty years of questions for you."`;
               return `"Welcome to the Royal Archive. Every child in the North Blue learns 'Liar Noland' before they can read. I have spent thirty years in these stacks, and I will tell you a secret: I do not believe a word of it."`;
@@ -143420,12 +143425,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
               { text: "Why don't you believe it?", if: () => !ctx.quest("nb_liar_noland"), next: "why" },
               { text: "Let's find out the truth.", if: () => !ctx.quest("nb_liar_noland"), do: (c) => c.startQuest("nb_liar_noland"), end: true },
               { text: "Read the sealed log.", if: () => at2(ctx, "nb_liar_noland", "archive"), next: "log" },
-              { text: "The Sea King is dead.", if: () => at2(ctx, "nb_liar_noland", "report"), do: (c) => c.complete("nb_liar_noland"), next: "end" },
+              { text: "I stood where he died.", if: () => at2(ctx, "nb_liar_noland", "report"), do: (c) => c.complete("nb_liar_noland"), next: "end" },
               { text: "Goodbye.", end: true }
             ]
           },
           why: { text: `"Noland was an admiral and a botanist. He took his crew into the Grand Line and brought them home \u2014 more than once. Liars don't come home from the Grand Line. And who published the picture book? The very king who hanged him. Buy a copy next door and read it with a clear head."`, next: "a" },
-          log: { text: `"'A Sea King rose off our bow. His Majesty fled below. Admiral Noland dove into the sea with his sword and a rope, and the beast was served at supper.' ...There are Sea Kings off Lvneel to this day. Stand where Noland died \u2014 then go and do what the book claims a king did."`, onEnter: (c) => c.stage("nb_liar_noland", "stand") },
+          log: { text: `"'A Sea King rose off our bow. His Majesty fled below. Admiral Noland dove into the sea with his sword and a rope, and the beast was served at supper.' ...Stand where Noland died, and then come back and tell me he was a liar."`, onEnter: (c) => c.stage("nb_liar_noland", "stand") },
           end: { text: `"Take this copy of the log \u2014 with Noland's own route to Jaya in the margins. Follow it if you ever sail the Grand Line. His descendant still dives for the City of Gold there, they say. And people laugh at him too."` }
         }
       })
@@ -144582,7 +144587,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           goal: { type: "reach", island: "lvneel", spot: "noland_stand", r: 3 },
           onComplete: (ctx, g) => g.ui.banner(`"That's it!"`, "Lvneel, four hundred years ago", '"...The City of Gold must have sunk into the sea!" \u2014 the last words of Montblanc Noland, admiral, explorer and botanist, before the axe fell.', 7)
         },
-        { id: "seaking", desc: "The picture book says the KING slew a Sea King. Sail out south of Lvneel harbour and slay the one that haunts these waters.", goal: { type: "defeat", npc: "nb_lvneel_seaking", island: "lvneel", spot: "lvneel_seaking" } },
         { id: "report", desc: "Report to Archivist Pell." }
       ],
       rewards: { berries: 12e3, points: 2, items: [["nb_expedition_log", 1]], flag: "nbNolandTruth" },
@@ -144970,23 +144974,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }
   ];
   function install2(game) {
-    let tt = 0;
-    game.on("tick", (dt) => {
-      const c = game.state?.char;
-      if (!c || !game.surface || game.world !== game.surface) return;
-      tt -= dt;
-      if (tt > 0) return;
-      tt = 0.5;
-      if (game.quests.stageId("nb_liar_noland") === "seaking" && !findActor(game, "nb_lvneel_seaking")) {
-        const isl = game.surface.islands.find((i) => i.id === "lvneel");
-        const s = isl?.spots?.lvneel_seaking;
-        if (s && game.world.distance(game.player.x, game.player.y, s.x, s.y) < 28 && game.world.isLiquid(s.x, s.y)) {
-          const k = seaBoss(game, { id: "nb_lvneel_seaking", name: "Sea King of Lvneel", title: "The beast from the picture book", level: 18, hpMul: 3.4, color: "#5e35b1", breakthrough: 3 }, s.x, s.y);
-          k.npcId = "nb_lvneel_seaking";
-          game.ui.banner("SEA KING", "Off the coast of Lvneel", "The sea heaves. The beast from the picture book is real \u2014 and hungry.", 4);
-        }
-      }
-    });
     game.on("enterIsland", (isl) => {
       const c = game.state?.char;
       if (!c || !isl) return;
@@ -145024,7 +145011,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     stock,
     archetypes,
     abilities,
-    dynamicIds: ["nb_lvneel_seaking"],
+    dynamicIds: [],
     install: install2
   };
 

@@ -113,9 +113,9 @@ export class Game {
   }
 
   // --- events from combat ----------------------------------------------------------
-  onDamage(target, att, n) {
+  onDamage(target, att, n, h) {
     if (target.isPlayer) { this.ui?.onPlayerHurt(n); this.emit('playerHurt', att, n); }
-    if (att && att.isPlayer) this.emit('playerHit', target, n);
+    if (att && att.isPlayer) this.emit('playerHit', target, n, h);
     if (target.isPlayer || (att && att.isPlayer)) { this.combatT = 6; }
   }
   onKnockOut(actor, att) {
