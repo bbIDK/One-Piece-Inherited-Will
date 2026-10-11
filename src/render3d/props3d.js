@@ -18,5 +18,6 @@ import './props/marygeoise.js';
 import './props/punkhazard.js';
 import './props/wano.js';
 import './props/zou.js';
+import './props/sabaody.js';
 
 export { instancerStats } from './props/instancer.js';

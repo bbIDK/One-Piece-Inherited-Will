@@ -363,6 +363,12 @@ export const PARADISE_2 = [
       { kind: 'sign', dx: 0.4, dy: 0.42, name: 'Grove 50' }, { kind: 'sign', dx: -0.12, dy: 0.52, name: 'Grove 66' },
       ...[[-0.62, 0.42], [-0.44, 0.16], [-0.62, -0.18], [-0.4, -0.36], [-0.1, -0.56], [0.12, -0.72], [0.4, -0.18], [0.62, -0.4], [0.62, 0.18], [0.42, 0.4], [-0.1, 0.72], [0.12, 0.54]]
         .map(([dx, dy]) => ({ kind: 'bubble', dx, dy, block: false })),
+      // the Yarukiman Mangroves themselves: one great tree per district, standing in the shallows off its grove (clear
+      // of its landing), its grove's number painted on the bark facing it
+      ...[[0, 1, 195], [1, 13, 262], [2, 33, 240], [3, 41, 15], [4, 50, 345], [5, 66, 120]].map(([i, num, deg]) => {
+        const a = (deg * Math.PI) / 180, g = GROVES[i];
+        return { kind: 'yarukiman', num, dx: g.dx + Math.cos(a) * GR[0] * 1.25, dy: g.dy + Math.sin(a) * GR[1] * 1.25, face: a + Math.PI, water: true, cliff: true, far: 4000, name: `Yarukiman Mangrove (Grove ${num})` };
+      }),
       // (the dive point, out at sea: where the current goes down — see the spot below)
       { kind: 'downcurrent', dx: 115, dy: 0, block: false, water: true, name: 'The dive point' },
     ],
