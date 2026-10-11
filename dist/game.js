@@ -87253,7 +87253,7 @@ vec3 paneView(vec3 dir, float night) {
     body.position.y = -1;
     root4.add(body);
     if (o.num) {
-      const m = new Mesh(new PlaneGeometry(9, 9), new MeshBasicMaterial({ map: numberTexture(o.num), transparent: true, depthWrite: false, fog: true }));
+      const m = new Mesh(new PlaneGeometry(9, 9), new MeshLambertMaterial({ map: numberTexture(o.num), transparent: true, depthWrite: false }));
       const f = o.face || 0;
       m.position.set(Math.cos(f) * (R5 * 0.92 + 0.15), 15, Math.sin(f) * (R5 * 0.92 + 0.15));
       m.rotation.y = Math.PI / 2 - f;

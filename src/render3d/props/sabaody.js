@@ -76,7 +76,7 @@ reg('yarukiman', (o) => {
   root.add(body);
   // the grove's number, painted on the side of the trunk that faces its grove
   if (o.num) {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ map: numberTexture(o.num), transparent: true, depthWrite: false, fog: true }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshLambertMaterial({ map: numberTexture(o.num), transparent: true, depthWrite: false }));
     const f = o.face || 0;
     m.position.set(Math.cos(f) * (R * 0.92 + 0.15), 15, Math.sin(f) * (R * 0.92 + 0.15));
     m.rotation.y = Math.PI / 2 - f;
