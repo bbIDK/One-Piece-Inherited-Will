@@ -491,6 +491,8 @@ export class CameraRig {
           for (let i = 1; i <= n; i++) {
             const t = i / n, bx = px + ux * t, bz = pz + uz * t, by = oy + (uy + up) * t;
             if ((w.isBlocked(bx, bz) && !(roofs && roofs.roofAt(bx, bz)?.h < by - 0.8)) || (ships && !own && game.shipSolidAt(bx, bz, by, true))) return t;
+            // (flying: the eaves overhanging the walls are in the way too, through their thickness)
+            if (p.flying && roofs) { const r = roofs.roofAt(bx, bz); if (r && by < r.h + 0.4 && by > r.h - 1.2) return t; }
           }
           return 0;
         };
@@ -543,8 +545,9 @@ export class CameraRig {
         if (roofs3 && !p.belowDeck && !room) {
           for (const [qx, qz] of ROOF_PROBE) {
             const rx = p.x + cx + qx, rz = p.y + cz + qz;
-            const r3 = w.isBlocked(rx, rz) ? roofs3.roofAt(rx, rz) : null;
-            if (r3 && r3.h < oy + 2.5 && r3.h + 0.7 > under) under = r3.h + 0.7;
+            const r3 = roofs3.roofAt(rx, rz);
+            // (over the walls, or in among the eaves that overhang them — a lens in the thickness of a roof sees inside the house)
+            if (r3 && (w.isBlocked(rx, rz) || cy > r3.h - 1.5) && r3.h < oy + 2.5 && r3.h + 0.7 > under) under = r3.h + 0.7;
           }
         }
         if (cy < under) cy = under;
