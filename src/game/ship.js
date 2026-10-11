@@ -147,6 +147,12 @@ export class Ship extends Entity {
       if (this.sinkT > 4) this.alive = false;
       return;
     }
+    // a big wave's blow (a Sea Monkey's: seamonkeys.js): she heels over and rocks back upright
+    if (this.surge || this.surgeV) {
+      this.surgeV = (this.surgeV || 0) + (-(this.surge || 0) * 3.4 - this.surgeV * 0.9) * dt;
+      this.surge = (this.surge || 0) + this.surgeV * dt;
+      if (Math.abs(this.surge) < 0.002 && Math.abs(this.surgeV) < 0.004) this.surge = this.surgeV = 0;
+    }
     const w = game.world;
     // (from the heading everyone aboard was last carried to: a turn of the
     // helm made since — yours, steered before her update — swings them round
@@ -366,6 +372,12 @@ export class Ship extends Entity {
   }
 
   /** Lying still: moored, anchored, hove to or just stopped — no way on her, no sail set, nobody rowing. */
+  /** Struck by a big wave rolling from `dir` (radians): she heels away from it, `k` radians at most. */
+  waveHit(dir, k = 0.16) {
+    const side = Math.sin(dir - this.heading);
+    this.surgeV = (this.surgeV || 0) + side * k * 3;
+  }
+
   get still() { return this.anchored || (Math.abs(this.speed) < 0.3 && (this.sailSet || 0) < 0.05 && !this.rowing); }
 
   /**

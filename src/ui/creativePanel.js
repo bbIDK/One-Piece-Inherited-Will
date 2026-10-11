@@ -45,6 +45,7 @@ const FACTION_GROUP = { pirate: 'Pirates', marine: 'Marines & the Government', c
 const SHIP_KINDS = [['pirate', 'Pirate'], ['marine', 'Marine'], ['merchant', 'Merchant'], ['fishing', 'Fishing boat']];
 const SEA_HUNTERS = [
   ['seaking', 'Sea King', 'A monster of the Calm Belt: it goes for your ship, or for you in the water.'],
+  ['monkeys', 'Sea Monkeys', 'Giant monkeys at play: every slap of the sea sends a wave that heels your ship over.'],
   ['kraken', 'Kraken', 'A giant octopus of the Grand Line: its arms slam the deck and grip the hull.'],
   ['seacow', 'Sea Cow', 'Hunts swimmers in the Blues — hurt it badly and it bolts.'],
   ['fightfish', 'Fighting Fish', 'Charges swimmers horn-first in the Grand Line.'],

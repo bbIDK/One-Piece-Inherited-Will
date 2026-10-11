@@ -16,6 +16,7 @@ import { TAU, clamp } from '../core/math.js';
 import { drawShip } from '../render/ship.js';
 import { hullGap, hbAt } from '../world/hull.js';
 import { makeKraken } from './kraken.js';
+import { makeSeaMonkeys } from './seamonkeys.js';
 import { sightRange } from './traffic.js';
 
 // the eight points of the compass, round from east (y points south)
@@ -337,14 +338,21 @@ class SeaSystem {
   /** One of the Grand Line's monsters, coming up beside your ship. */
   spawnBeast(p, s, reg, kind = null) {
     const g = this.game, w = g.world;
-    if (g.actors.some((a) => a.alive && (a.look?.race === 'kraken' || a.look?.race === 'seaking'))) return null;
-    kind ||= Math.random() < 0.55 ? 'kraken' : 'seaking';
+    if (g.actors.some((a) => a.alive && ['kraken', 'seaking', 'seamonkey'].includes(a.look?.race))) return null;
     const nw = reg === REGION.NEW_WORLD;
+    if (!kind) { const r = Math.random(); kind = nw ? (r < 0.55 ? 'kraken' : 'seaking') : r < 0.35 ? 'kraken' : r < 0.65 ? 'seaking' : 'monkeys'; }
     const lvl = nw ? 60 + Math.floor(Math.random() * 20) : 32 + Math.floor(Math.random() * 14);
     for (let tries = 0; tries < 8; tries++) {
-      const a = Math.random() * TAU, R = 12 + (s?.def.length || 0) * 0.5;
+      const a = Math.random() * TAU, R = (kind === 'monkeys' ? 48 : 12) + (s?.def.length || 0) * 0.5;
       const x = w.wx(p.x + Math.cos(a) * R), y = p.y + Math.sin(a) * R;
       if (!w.isLiquid(x, y) || w.isOverlay(x, y)) continue;
+      if (kind === 'monkeys') {
+        const k = g.addActor(makeSeaMonkeys(g, x, y));
+        g.fx.burst(x, y, 40, { color: ['#e1f5fe', '#ffffff'], speed: 6, vz: 8, g: 12, life: 1.1, size: 0.3 });
+        g.audio?.sfx('splash_big', { x, y });
+        g.ui.banner('SEA MONKEYS!', '', 'Giant monkeys playing in the sea — every splash sends a wave rolling!', 3);
+        return k;
+      }
       const k = kind === 'kraken' ? makeKraken(g, x, y, lvl) : makeSeaKing(g, x, y, lvl, { title: 'Monster of the Grand Line' });
       g.addActor(k);
       g.fx.ring(x, y, 1, 7, '#e1f5fe', 1.3, 0.3);

@@ -19,6 +19,7 @@ import { getAbility } from './abilities.js';
 import { addToHotbar, dropFromHotbar, ENTRY, isMoveset } from './hotbar.js';
 import { makeSeaKing } from './sea.js';
 import { makeKraken } from './kraken.js';
+import { makeSeaMonkeys } from './seamonkeys.js';
 import { FISH } from './sealife.js';
 import { aggro } from '../content/helpers.js';
 import { clamp, roundBounty, TAU } from '../core/math.js';
@@ -568,6 +569,12 @@ export function installCreative(game) {
         game.fx.ring(at.x, at.y, 1, 6, '#e1f5fe', 1.2, 0.3);
         game.audio?.sfx('seaking');
         return `A level ${lvl} ${k.name} rises from the depths!`;
+      }
+      if (kind === 'monkeys') {
+        const at = C.waterNear(3, 30, 45);
+        if (!at) return 'Sea Monkeys need open water — go down to the sea.';
+        C.keep(makeSeaMonkeys(game, at.x, at.y));
+        return 'A troop of Sea Monkeys surfaces nearby, ready to play!';
       }
       if (kind === 'kraken') {
         const at = C.waterNear(3, 12, 40);

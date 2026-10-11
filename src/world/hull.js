@@ -1095,7 +1095,7 @@ export const pitchRise = (ship, along) => (ship.pitch ? along * Math.tan(ship.pi
 export function shipRock(ship, time) {
   const t = time + (ship.seed || 0), sinking = ship.sunk ? Math.min(1, (ship.sinkT || 0) / 4) : 0;
   const w = waveRide(ship, time);
-  return [Math.sin(t * 0.9) * 0.02 + w.r + sinking * 0.5, Math.sin(t * 1.1) * 0.012 + w.p + (ship.pitch || 0)];
+  return [Math.sin(t * 0.9) * 0.02 + w.r + sinking * 0.5 + (ship.surge || 0), Math.sin(t * 1.1) * 0.012 + w.p + (ship.pitch || 0)];
 }
 /**
  * Where a point aboard rides just now, in metres above the sea: `u` along her
