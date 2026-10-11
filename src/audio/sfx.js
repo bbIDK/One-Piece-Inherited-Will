@@ -1475,7 +1475,14 @@ export const FRUIT_TECH = {
     },
     // the air trembling as the fist draws back, then the sky cracking open: the shatter, the
     // sub-boom you feel in your chest, and the ground rolling on under it
-    default: (v, k) => GURA(v, k, 1),
+    default: (v, k) => {
+      GURA(v, k, 1);
+      // the aftershock: a second, smaller crack and the ground settling
+      const r = Math.max(0.12, k.rel || 0);
+      M.glassCrack(v, r + 0.55, 0.3);
+      v.thump(r + 0.56, { f0: 60, f1: 26, dur: 0.5, gain: 0.35 });
+      v.sample(r + 0.6, 'rubble_1', { gain: 0.22, rate: 0.7 });
+    },
   },
   ope: {
     ope_room: (v) => {
@@ -1632,7 +1639,7 @@ const M1_SWING = {
   suna: (v, k) => v.noise(Math.max(0, k.rel - 0.12), 0.16, { freq: 3500, q: 0.6, gain: 0.04, attack: 0.05 }),
   moku: (v, k) => v.noise(Math.max(0, k.rel - 0.12), 0.18, { type: 'lowpass', freq: 700, gain: 0.08, attack: 0.05 }),
   yami: (v, k) => M.suction(v, Math.max(0, k.rel - 0.15), 0.15, 0.4),
-  gura: (v, k) => v.thump(Math.max(0, k.rel - 0.06), { f0: 70, f1: 40, dur: 0.12, gain: 0.12 }),
+  gura: (v, k) => { const t = Math.max(0, k.rel - 0.12); v.tone(t, 0.14, { freq: 40, to: 48, gain: 0.16, attack: 0.1, curve: 'lin', vib: { rate: 16, depth: 6 } }); v.noise(t, 0.12, { color: 'brown', type: 'lowpass', freq: 240, gain: 0.14, attack: 0.1, curve: 'lin' }); },
   tori_phoenix: (v, k) => v.whoosh(Math.max(0, k.rel - 0.12), 0.16, { f0: 400, f1: 1500, q: 0.6, gain: 0.07, peak: 0.6, color: 'pink' }),
 };
 
@@ -1652,7 +1659,14 @@ export const M1_HIT = {
   smoke: (v) => { v.noise(0, 0.2, { type: 'lowpass', freq: 700, sweep: 300, gain: 0.16, attack: 0.01 }); },
   light: (v) => { v.noise(0, 0.01, { type: 'highpass', freq: 5000, gain: 0.2, attack: 0.0005 }); M.shimmer(v, 0, 0.5, 0.15); },
   dark: (v) => { M.suction(v, 0, 0.18, 0.5); v.sample(0, 'dark', { gain: 0.15, dur: 0.25, fade: 0.1 }); },
-  quake: (v) => { M.glassCrack(v, 0, 0.4); v.thump(0.002, { f0: 80, f1: 34, dur: 0.25, gain: 0.35 }); },
+  quake: (v) => {
+    // a little crack of the air on every punch: the snap, the glass, a thud you feel and the ground grumbling after
+    v.noise(0, 0.004, { type: 'highpass', freq: 1500, gain: 0.55, attack: 0.0003 });
+    M.glassCrack(v, 0, 0.55);
+    v.thump(0.002, { f0: 90, f1: 28, dur: 0.38, gain: 0.55 });
+    v.sample(0.004, 'sub_boom', { gain: 0.35, rate: 1.1, dur: 0.5, fade: 0.25 });
+    v.sample(0.03, 'quake', { gain: 0.3, rate: 0.95, dur: 0.6, fade: 0.4, lp: 500 });
+  },
   poison: (v) => { v.bubble(0.01, { f: 320, rise: 1.6, dur: 0.07, gain: 0.07 }); M.hiss(v, 0, 0.12, 0.5, 4200); },
   gas: (v) => M.hiss(v, 0, 0.18, 0.6, 3500),
   explosion: (v) => M.boom(v, 0, 0.35, { f0: 120, f1: 40, dur: 0.3 }),
