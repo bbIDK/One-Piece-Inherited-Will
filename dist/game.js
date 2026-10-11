@@ -18299,6 +18299,41 @@
         w.ruinRev = (w.ruinRev || 0) + 1;
       },
       wrecked: [],
+      /**
+       * Everything put back as it was, at once: leaving a game for the title (the
+       * world's kept loaded for the backdrop and the next save — a town you levelled
+       * in one life isn't lying in rubble behind the menu, or in your next one).
+       */
+      resetAll() {
+        const w = game.world;
+        if (!w) return;
+        for (const b of w.burning || []) D4.douse(b);
+        for (const b of w.frozen || []) D4.thaw(b);
+        for (const b of w.ruins || []) {
+          if (!b.ruined) continue;
+          w.objects.restore(b);
+          for (const o of b.fixtures || []) {
+            w.objects.restore(o);
+            D4.event({ kind: "restore", b: o });
+          }
+          b.fixtures = null;
+          D4.event({ kind: "restore", b });
+        }
+        for (const o of w.smashed || []) if (o.ruined) {
+          w.objects.restore(o);
+          D4.event({ kind: "restore", b: o });
+        }
+        for (const b of [...w.ruins || [], ...w.damaged || [], ...w.smashed || []]) {
+          b.hp = void 0;
+          b.stage = 0;
+          b.damaged = false;
+          b.charred = false;
+          b._holes = null;
+        }
+        for (const k of ["ruins", "damaged", "smashed", "burning", "frozen"]) if (w[k]) w[k].length = 0;
+        D4.wrecked.length = 0;
+        D4.event({ kind: "wipe" });
+      },
       /** Rebuild what's stood ruined long enough (not under your nose: once you're a little way off, or it's been a long while). */
       update() {
         const w = game.world, p = game.player;
@@ -73443,7 +73478,7 @@ vec3 paneView(vec3 dir, float night) {
             for (const [qx, qz] of ROOF_PROBE) {
               const rx = p.x + cx + qx, rz = p.y + cz + qz;
               const r32 = roofs3.roofAt(rx, rz);
-              const high = p.flying || p.roofed || oy > r32.h - 1;
+              const high = p.flying || p.roofed || r32 && oy > r32.h - 1;
               if (r32 && (w.isBlocked(rx, rz) || high && cy > r32.h - 1.5) && r32.h < oy + 2.5 && r32.h + 0.7 > under) under = r32.h + 0.7;
             }
           }
@@ -82407,6 +82442,11 @@ vec3 paneView(vec3 dir, float night) {
           else if (e.kind === "smash") this.smash(e.b, e.x, e.y, e.power, e.delay || 0, e.lite);
           else if (e.kind === "ice") this.iceShell(e.b, e.on, e.shatter);
           else if (e.kind === "fixture") this.view.dropFixture?.(e.o);
+          else if (e.kind === "wipe") {
+            this.clear();
+            this.leaning?.clear();
+            this.drawn = -1;
+          }
           this.view.ruinProp?.(e);
         }
         ev.length = 0;
@@ -97067,114 +97107,288 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   };
 
   // src/render3d/chars/seaking.js
-  var TAU21 = Math.PI * 2;
   var SPH2 = new SphereGeometry(1, 16, 12);
-  var CONE2 = new ConeGeometry(1, 1, 6);
+  var CONE2 = new ConeGeometry(1, 1, 8);
   CONE2.translate(0, 0.5, 0);
-  function part4(geo2, mat, s, p, parent, outline = 0.06) {
+  var KINDS2 = ["serpent", "croc", "fish", "dragon"];
+  var RINGS = 44;
+  var SIDES = 14;
+  function part4(geo2, mat, s, p, parent, outline = 0.06, r4 = null) {
     const m = new Mesh(geo2, mat);
     m.scale.set(...s);
     m.position.set(...p);
+    if (r4) m.rotation.set(...r4);
     m.castShadow = true;
     if (outline) addOutline(m, outline);
     parent.add(m);
     return m;
   }
+  function tubeMesh(mat) {
+    const g = new BufferGeometry();
+    const n = RINGS * (SIDES + 1);
+    g.setAttribute("position", new BufferAttribute(new Float32Array(n * 3), 3));
+    g.setAttribute("normal", new BufferAttribute(new Float32Array(n * 3), 3));
+    g.setAttribute("color", new BufferAttribute(new Float32Array(n * 3), 3));
+    const idx = [];
+    for (let i = 0; i < RINGS - 1; i++) for (let j = 0; j < SIDES; j++) {
+      const a = i * (SIDES + 1) + j, b = a + SIDES + 1;
+      idx.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+    g.setIndex(idx);
+    g.boundingSphere = new Sphere(new Vector3(), 40);
+    const m = new Mesh(g, mat);
+    m.frustumCulled = false;
+    return m;
+  }
   var SeaKingView = class {
     constructor(a) {
       this.a = a;
+      const seed = Math.abs(Math.floor((a.seed || 0) * 1e3)) || 1;
+      this.kind = a.species || KINDS2[seed % KINDS2.length];
       const col6 = a.bodyColor || "#2e7d32";
-      const body = toon(col6), belly = toon(mixHex(col6, "#fff3e0", 0.5)), dark = toon(mixHex(col6, "#000000", 0.35));
-      const white = toon("#f4f1ea"), red = toon("#c62828"), black = toon("#1a1010");
+      this.cBack = new Color(mixHex(col6, "#000000", 0.18));
+      this.cSide = new Color(col6);
+      this.cBelly = new Color(mixHex(col6, "#fff3e0", 0.62));
+      this.cBand = new Color(mixHex(col6, "#000000", 0.42));
+      const body = toon(col6), belly = toon(mixHex(col6, "#fff3e0", 0.6)), dark = toon(mixHex(col6, "#000000", 0.38)), fin3 = toon(mixHex(col6, "#ffffff", 0.25), { side: DoubleSide });
+      const white = toon("#f4f1ea"), red = toon("#d32f2f"), black = toon("#1a1010"), gum = toon("#8e2430"), yellow = toon("#ffca28");
+      this.mats = { body, belly, dark, fin: fin3 };
       this.root = new Group();
       this.yaw = new Group();
       this.root.add(this.yaw);
       this.bodyG = new Group();
       this.yaw.add(this.bodyG);
-      const S6 = 1;
-      this.neck = [];
-      for (let i = 0; i < 5; i++) {
-        const r4 = 0.95 - i * 0.07;
-        this.neck.push(part4(SPH2, i % 2 ? body : body, [r4, r4, r4 * 0.95], [0, 0, 0], this.bodyG, 0.07));
+      this.S = Math.min(2.6, 1 + Math.max(0, (a.level || 20) - 20) / 45) * (a.boss ? 1.25 : 1);
+      this.bodyMat = new MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() });
+      this.tube = tubeMesh(this.bodyMat);
+      this.tube.castShadow = true;
+      this.line = tubeMesh(outlineMaterial());
+      this.bodyG.add(this.tube, this.line);
+      this.spine = Array.from({ length: RINGS }, () => new Vector3());
+      this.radius = new Float32Array(RINGS);
+      this.frill = [];
+      for (let i = 0; i < 14; i++) {
+        const f = part4(CONE2, fin3, [0.06, 1, 0.5], [0, 0, 0], this.bodyG, 0.025);
+        this.frill.push(f);
       }
+      this.flippers = [-1, 1].map((s) => {
+        const g = new Group();
+        part4(SPH2, fin3, [1.1, 0.08, 0.55], [0.9, 0, s * 0.3], g, 0.03, [0, s * 0.5, 0]);
+        this.bodyG.add(g);
+        return g;
+      });
       this.head = new Group();
       this.bodyG.add(this.head);
-      part4(SPH2, body, [1.75 * S6, 0.95 * S6, 1.2 * S6], [0.5, 0.25, 0], this.head, 0.08);
-      part4(SPH2, belly, [1.5 * S6, 0.45 * S6, 1 * S6], [0.75, -0.25, 0], this.head, 0);
-      part4(SPH2, dark, [0.9, 0.3, 0.35], [1.35, 0.72, 0], this.head, 0.04);
-      for (const s of [-1, 1]) {
-        const h2 = part4(CONE2, white, [0.22, 1.3, 0.22], [-0.45, 0.8, s * 0.55], this.head, 0.03);
-        h2.rotation.set(s * 0.45, 0, 0.9);
-        part4(SPH2, white, [0.28, 0.24, 0.16], [0.95, 0.62, s * 0.92], this.head, 0.03);
-        part4(SPH2, red, [0.12, 0.2, 0.08], [1.02, 0.62, s * 1.02], this.head, 0);
-        part4(SPH2, black, [0.035, 0.14, 0.05], [1.06, 0.62, s * 1.07], this.head, 0);
-        const f = part4(CONE2, dark, [0.18, 1.1, 0.05], [-0.2, 0.1, s * 1.05], this.head, 0.03);
-        f.rotation.set(s * 1.25, 0.3, 1.6);
-      }
-      for (let i = 0; i < 4; i++) {
-        const c = part4(CONE2, dark, [0.14, 0.7 - i * 0.1, 0.06], [-0.1 - i * 0.45, 1.05 - i * 0.12, 0], this.head, 0.03);
-        c.rotation.z = 0.9;
-      }
-      for (let i = 0; i < 6; i++) for (const s of [-1, 1]) {
-        const t = part4(CONE2, white, [0.07, 0.3, 0.07], [1.9 - i * 0.28, -0.05, s * (0.55 - i * 0.02)], this.head, 0);
-        t.rotation.x = Math.PI;
-      }
       this.jaw = new Group();
-      this.jaw.position.set(-0.6, -0.1, 0);
-      this.head.add(this.jaw);
-      part4(SPH2, belly, [1.55, 0.32, 0.95], [1.35, -0.18, 0], this.jaw, 0.06);
-      for (let i = 0; i < 5; i++) for (const s of [-1, 1]) part4(CONE2, white, [0.06, 0.26, 0.06], [2.3 - i * 0.3, -0.05, s * (0.52 - i * 0.03)], this.jaw, 0);
-      part4(SPH2, toon("#8e2430"), [1.2, 0.08, 0.7], [1.3, 0.02, 0], this.jaw, 0);
-      this.humps = [];
-      for (let i = 0; i < 6; i++) {
-        const g = new Group();
-        const r4 = 0.95 - i * 0.08;
-        part4(SPH2, body, [r4 * 1.35, r4, r4 * 0.95], [0, 0, 0], g, 0.06);
-        part4(SPH2, belly, [r4 * 1.2, r4 * 0.5, r4 * 0.8], [0, -r4 * 0.45, 0], g, 0);
-        const sp = part4(CONE2, dark, [0.1, 0.55 * r4, 0.05], [0, r4 * 0.9, 0], g, 0.03);
-        sp.rotation.z = 0.35;
-        this.bodyG.add(g);
-        this.humps.push(g);
-      }
-      this.bodyG.scale.setScalar(1.25);
+      this.buildHead({ body, belly, dark, white, red, black, gum, yellow, fin: fin3 });
       this.label = new Label();
       this.root.add(this.label.sprite);
-      this.lift = 0;
-      this.lunge = 0;
+      this.rear = 0;
+      this.bite = 0;
+      this.sweep = 0;
+      this.spit = 0;
+      this.dive = 0;
+    }
+    buildHead(m) {
+      const h2 = this.head, k = this.kind;
+      const eye = (x, y, z, r4 = 0.26, slit = true) => {
+        for (const s of [-1, 1]) {
+          part4(SPH2, m.white, [r4, r4 * 0.85, r4 * 0.6], [x, y, s * z], h2, 0.03);
+          part4(SPH2, slit ? m.red : m.yellow, [r4 * 0.5, r4 * 0.75, r4 * 0.3], [x + 0.04, y, s * (z + r4 * 0.35)], h2, 0);
+          part4(SPH2, m.black, [r4 * 0.14, r4 * 0.6, r4 * 0.2], [x + 0.06, y, s * (z + r4 * 0.5)], h2, 0);
+          part4(SPH2, m.dark, [r4 * 1.4, r4 * 0.35, r4 * 0.6], [x - 0.05, y + r4 * 0.75, s * z], h2, 0.02, [0, 0, -0.25]);
+        }
+      };
+      const teeth = (parent, n, x0, step2, y, z0, dz, len, down2) => {
+        for (let i = 0; i < n; i++) for (const s of [-1, 1]) {
+          part4(CONE2, m.white, [0.07, len, 0.07], [x0 - i * step2, y, s * (z0 - i * dz)], parent, 0, [down2 ? Math.PI : 0, 0, 0]);
+        }
+      };
+      if (k === "croc") {
+        part4(SPH2, m.body, [2.6, 0.62, 1.1], [1.2, 0.2, 0], h2, 0.08);
+        part4(SPH2, m.dark, [1.2, 0.5, 0.9], [-0.2, 0.55, 0], h2, 0.05);
+        for (const s of [-1, 1]) part4(SPH2, m.dark, [0.18, 0.12, 0.14], [3.6, 0.55, s * 0.32], h2, 0);
+        eye(0.35, 0.92, 0.55, 0.24, true);
+        teeth(h2, 9, 3.4, 0.38, 0, 0.85, 0.01, 0.34, true);
+        this.jaw.position.set(-0.6, -0.1, 0);
+        part4(SPH2, m.belly, [2.5, 0.35, 1], [1.8, -0.22, 0], this.jaw, 0.06);
+        teeth(this.jaw, 8, 3.8, 0.4, -0.05, 0.8, 0.01, 0.28, false);
+        part4(SPH2, m.gum, [2.1, 0.06, 0.75], [1.8, 0.02, 0], this.jaw, 0);
+      } else if (k === "fish") {
+        part4(SPH2, m.body, [1.9, 1.5, 1.45], [0.6, 0.3, 0], h2, 0.09);
+        part4(SPH2, m.belly, [1.6, 0.9, 1.2], [0.85, -0.45, 0], h2, 0);
+        eye(1.1, 0.95, 0.95, 0.42, false);
+        for (const s of [-1, 1]) for (let i = 0; i < 2; i++) {
+          const w = part4(CONE2, m.dark, [0.07, 2.4 - i * 0.6, 0.07], [2, -0.1 - i * 0.2, s * 0.6], h2, 0.02);
+          w.rotation.set(s * (1.9 + i * 0.25), 0, -0.6);
+        }
+        teeth(h2, 5, 2.25, 0.22, -0.2, 0.75, 0.04, 0.3, true);
+        this.jaw.position.set(0.3, -0.45, 0);
+        part4(SPH2, m.belly, [1.7, 0.5, 1.25], [1.1, -0.25, 0], this.jaw, 0.06);
+        teeth(this.jaw, 4, 2.4, 0.24, 0.05, 0.7, 0.05, 0.26, false);
+        part4(SPH2, m.gum, [1.4, 0.08, 0.95], [1.2, 0, 0], this.jaw, 0);
+        for (const s of [-1, 1]) part4(SPH2, m.fin, [0.9, 0.7, 0.08], [-0.6, 0.1, s * 1.25], h2, 0.03, [0, s * 0.6, 0]);
+      } else if (k === "dragon") {
+        part4(SPH2, m.body, [2, 1, 1.15], [0.8, 0.3, 0], h2, 0.08);
+        part4(SPH2, m.dark, [1, 0.32, 0.4], [1.9, 0.82, 0], h2, 0.04);
+        eye(1, 0.75, 0.82, 0.25, true);
+        for (const s of [-1, 1]) {
+          part4(CONE2, m.white, [0.2, 1.9, 0.2], [-0.2, 1, s * 0.55], h2, 0.03, [s * 0.35, 0, 1.1]);
+          part4(CONE2, m.white, [0.12, 0.8, 0.12], [-0.9, 1.6, s * 0.75], h2, 0.02, [s * 0.4, 0, 0.3]);
+          const w = part4(CONE2, m.dark, [0.06, 3.2, 0.06], [2.4, 0.2, s * 0.45], h2, 0.02);
+          w.rotation.set(s * 1.7, 0, -1.2);
+          for (let i = 0; i < 4; i++) part4(CONE2, m.fin, [0.25, 1.4 - i * 0.15, 0.05], [-0.6 - i * 0.3, 0.3 - i * 0.2, s * 0.95], h2, 0.02, [s * (1.3 + i * 0.1), 0, 1.4]);
+        }
+        teeth(h2, 6, 2.5, 0.3, -0.05, 0.6, 0.02, 0.32, true);
+        this.jaw.position.set(-0.5, -0.1, 0);
+        part4(SPH2, m.belly, [1.9, 0.35, 1], [1.6, -0.2, 0], this.jaw, 0.06);
+        teeth(this.jaw, 5, 2.9, 0.3, -0.05, 0.58, 0.02, 0.26, false);
+        part4(SPH2, m.gum, [1.5, 0.06, 0.7], [1.6, 0.02, 0], this.jaw, 0);
+        for (let i = 0; i < 5; i++) part4(CONE2, m.dark, [0.08, 0.7, 0.08], [1.6 - i * 0.4, -0.5, 0], this.jaw, 0.02, [0, 0, Math.PI - 0.3]);
+      } else {
+        part4(SPH2, m.body, [2.1, 0.95, 1.2], [0.7, 0.25, 0], h2, 0.08);
+        part4(SPH2, m.dark, [1.1, 0.3, 0.38], [1.6, 0.72, 0], h2, 0.04);
+        eye(1, 0.65, 0.88, 0.26, true);
+        for (const s of [-1, 1]) {
+          part4(CONE2, m.white, [0.24, 1.6, 0.24], [-0.4, 0.85, s * 0.6], h2, 0.03, [s * 0.45, 0, 1]);
+          part4(CONE2, m.fin, [0.2, 1.2, 0.05], [-0.1, 0.1, s * 1.05], h2, 0.03, [s * 1.25, 0.3, 1.6]);
+        }
+        for (let i = 0; i < 5; i++) part4(CONE2, m.fin, [0.16, 0.9 - i * 0.12, 0.06], [-0.1 - i * 0.45, 1.05 - i * 0.12, 0], h2, 0.03, [0, 0, 0.9]);
+        teeth(h2, 7, 2.3, 0.3, -0.05, 0.58, 0.02, 0.32, true);
+        this.jaw.position.set(-0.6, -0.1, 0);
+        part4(SPH2, m.belly, [1.9, 0.34, 1], [1.5, -0.2, 0], this.jaw, 0.06);
+        teeth(this.jaw, 6, 2.7, 0.32, -0.05, 0.56, 0.02, 0.26, false);
+        part4(SPH2, m.gum, [1.5, 0.07, 0.75], [1.5, 0.02, 0], this.jaw, 0);
+      }
+      h2.add(this.jaw);
+    }
+    /** The spine: coils rolling through the swell behind, then the neck rising in an arc to the head. */
+    layout(t, hx, hy, S6, sinkY) {
+      const sp = this.spine, R5 = this.radius;
+      const L3 = 16 * S6, coil = 0.62;
+      const swim = t * 2.2;
+      const end = new Vector3(0, -0.2 * S6, 0);
+      for (let i = 0; i < RINGS; i++) {
+        const u = i / (RINGS - 1);
+        if (u <= coil) {
+          const v = u / coil;
+          const amp = (0.35 + 0.65 * v) * S6;
+          sp[i].set(-L3 * (1 - v), Math.sin(swim - v * 11) * 0.95 * amp - 0.55 * S6 + v * 0.35 * S6, Math.sin(t * 0.9 + v * 5) * 0.7 * S6 * (1 - v * 0.6));
+          if (i === Math.round(coil * (RINGS - 1))) end.copy(sp[i]);
+        } else {
+          const w = (u - coil) / (1 - coil);
+          const a = end, c = new Vector3(-0.8 * S6, hy * 0.95, 0), b = new Vector3(hx - 0.9 * S6, hy - 0.2 * S6, 0);
+          const q2 = 1 - w;
+          sp[i].set(q2 * q2 * a.x + 2 * q2 * w * c.x + w * w * b.x, q2 * q2 * a.y + 2 * q2 * w * c.y + w * w * b.y, q2 * q2 * a.z + 2 * q2 * w * c.z + w * w * b.z);
+        }
+        sp[i].y += sinkY;
+        R5[i] = S6 * (u < 0.5 ? 0.18 + 0.92 * Math.sin(u / 0.5 * Math.PI * 0.5) : 1.1 - 0.3 * (u - 0.5) / 0.5);
+      }
+    }
+    /** Lay the tube (and its ink line, a lens-width fatter) round the spine; belly pale, back dark, bands across it. */
+    skin() {
+      const sp = this.spine, R5 = this.radius;
+      const P6 = this.tube.geometry.attributes.position.array, N8 = this.tube.geometry.attributes.normal.array, C3 = this.tube.geometry.attributes.color.array;
+      const LP = this.line.geometry.attributes.position.array;
+      const T5 = new Vector3(), U4 = new Vector3(), Sd = new Vector3(), up = new Vector3(0, 1, 0), n = new Vector3(), col6 = new Color();
+      const line2 = 0.07 * this.S;
+      for (let i = 0; i < RINGS; i++) {
+        const a = sp[Math.max(0, i - 1)], b = sp[Math.min(RINGS - 1, i + 1)];
+        T5.subVectors(b, a).normalize();
+        U4.copy(up).addScaledVector(T5, -up.dot(T5));
+        if (U4.lengthSq() < 1e-4) U4.set(1, 0, 0);
+        U4.normalize();
+        Sd.crossVectors(T5, U4).normalize();
+        const band3 = Math.sin(i * 0.9) > 0.55;
+        for (let j = 0; j <= SIDES; j++) {
+          const th = j / SIDES * Math.PI * 2, c = Math.cos(th), s = Math.sin(th);
+          n.copy(U4).multiplyScalar(c).addScaledVector(Sd, s);
+          const k = (i * (SIDES + 1) + j) * 3;
+          P6[k] = sp[i].x + n.x * R5[i];
+          P6[k + 1] = sp[i].y + n.y * R5[i] * 0.9;
+          P6[k + 2] = sp[i].z + n.z * R5[i] * 1.08;
+          LP[k] = sp[i].x + n.x * (R5[i] + line2);
+          LP[k + 1] = sp[i].y + n.y * (R5[i] * 0.9 + line2);
+          LP[k + 2] = sp[i].z + n.z * (R5[i] * 1.08 + line2);
+          N8[k] = n.x;
+          N8[k + 1] = n.y;
+          N8[k + 2] = n.z;
+          if (c < -0.25) col6.copy(this.cBelly);
+          else if (c > 0.55) col6.copy(band3 ? this.cBand : this.cBack);
+          else col6.copy(band3 && c > 0.1 ? this.cBand : this.cSide);
+          C3[k] = col6.r;
+          C3[k + 1] = col6.g;
+          C3[k + 2] = col6.b;
+        }
+      }
+      for (const m of [this.tube, this.line]) {
+        const g = m.geometry;
+        g.attributes.position.needsUpdate = true;
+        if (m === this.tube) {
+          g.attributes.normal.needsUpdate = true;
+          g.attributes.color.needsUpdate = true;
+        }
+      }
+      for (let f = 0; f < this.frill.length; f++) {
+        const i = Math.round(6 + f / (this.frill.length - 1) * (RINGS - 10));
+        const a = sp[i], b = sp[Math.min(RINGS - 1, i + 1)];
+        T5.subVectors(b, a).normalize();
+        const m = this.frill[f];
+        m.position.set(a.x, a.y + R5[i] * 0.85, a.z);
+        m.scale.set(0.06 * this.S, (0.55 + 0.5 * Math.sin(f / this.frill.length * Math.PI)) * this.S, 0.45 * this.S);
+        m.rotation.set(0, 0, Math.atan2(T5.y, T5.x) - Math.PI / 2 + 0.6);
+      }
+      const si = Math.round(RINGS * 0.66), s0 = sp[si];
+      for (const [k, g] of this.flippers.entries()) {
+        const s = k ? 1 : -1;
+        g.position.set(s0.x, s0.y, s0.z + s * R5[si] * 0.9);
+        g.scale.setScalar(this.S);
+        g.rotation.set(s * (0.3 + Math.sin(this.t * 2.4) * 0.25), 0, -0.4);
+      }
     }
     update(a, env2, ctx) {
-      const t = env2.time + (a.seed || 0);
+      const t = this.t = env2.time + (a.seed || 0) * 10;
+      const dt = Math.min(0.2, Math.max(0, env2.time - (this.lastT ?? env2.time - 1 / 60)));
+      this.lastT = env2.time;
+      const S6 = this.S;
       this.yaw.rotation.y = -(a.facing || 0);
-      const act2 = a.action;
-      let rear = 0, bite = 0;
+      const act2 = a.action, kind = act2?.def?.seaking;
+      let rear = 0, bite = 0, sweep2 = 0, spit = 0;
       if (act2) {
-        const w = act2.def.windup ?? 0.9;
-        if (act2.t < w) rear = Math.sin(Math.min(1, act2.t / w) * Math.PI * 0.5);
-        else bite = Math.max(0, 1 - (act2.t - w) / 0.5);
+        const w = act2.def.windup ?? 0.9, p = act2.t < w ? Math.min(1, act2.t / w) : 1, post = Math.max(0, act2.t - w);
+        if (kind === "sweep") sweep2 = act2.t < w ? -p : Math.min(1, post / 0.3) * (1 - Math.max(0, post - 0.4) / 0.6);
+        else if (kind === "spit") {
+          rear = p * 0.6;
+          spit = act2.t < w ? 0 : Math.max(0, 1 - post / 0.8);
+        } else if (act2.t < w) rear = Math.sin(p * Math.PI * 0.5);
+        else bite = Math.max(0, 1 - post / 0.5);
       }
+      const ease4 = (cur, to, k2) => cur + (to - cur) * Math.min(1, dt * k2);
+      this.rear = ease4(this.rear, rear, 9);
+      this.bite = ease4(this.bite, bite, 18);
+      this.sweep = ease4(this.sweep, sweep2, 8);
+      this.spit = ease4(this.spit, spit, 10);
+      this.dive = ease4(this.dive, a.submerged ? 1 : 0, 2.5);
       const knocked = a.state === "knocked" || a.state === "dead";
       const kt = knocked ? a.knockT || 0 : 0;
-      const hx = 0.4 - rear * 1.2 + bite * 2.2, hy = 3.3 + rear * 1 - bite * 1.2 + Math.sin(t * 1.3) * 0.18;
-      for (let i = 0; i < this.neck.length; i++) {
-        const u = (i + 1) / (this.neck.length + 1);
-        const x = -1.6 * (1 - u) * (1 - u) + hx * u * u + -0.8 * 2 * u * (1 - u);
-        const y = -0.6 * (1 - u) * (1 - u) + (hy - 0.3) * u * u + hy * 0.3 * 2 * u * (1 - u);
-        this.neck[i].position.set(x, y, Math.sin(t * 1.1 + i) * 0.1);
+      const sink = -this.dive * 7 * S6 - (knocked ? Math.min(6 * S6, kt * 1.5 * S6) : 0);
+      const hx = (0.6 - this.rear * 1.6 + this.bite * 3.2) * S6, hy = (4.4 + this.rear * 1.6 - this.bite * 1.8 + Math.sin(t * 1.1) * 0.25) * S6;
+      this.layout(t, hx, hy, S6, sink);
+      if (this.sweep) for (let i = 0; i < RINGS * 0.62; i++) {
+        const v = i / (RINGS * 0.62);
+        this.spine[i].z += this.sweep * (1 - v) * (1 - v) * 9 * S6;
       }
-      this.head.position.set(hx, hy, 0);
-      this.head.rotation.z = -0.15 + rear * 0.5 - bite * 0.45 + Math.sin(t * 1.3) * 0.04;
-      this.jaw.rotation.z = -(0.12 + rear * 0.5 + bite * 0.35 + (act2 ? 0 : Math.max(0, Math.sin(t * 0.7)) * 0.15));
-      for (let i = 0; i < this.humps.length; i++) {
-        const g = this.humps[i];
-        const ph = t * 1.5 - i * 0.9;
-        g.position.set(-2.4 - i * 1.35, Math.max(-0.55, Math.sin(ph) * 0.55) - 0.25, Math.sin(t * 0.8 + i * 0.7) * 0.35);
-        g.rotation.z = Math.cos(ph) * 0.3;
-      }
-      this.bodyG.position.y = knocked ? -Math.min(3.5, kt * 1.2) : 0;
-      this.bodyG.rotation.x = knocked ? Math.min(1.4, kt * 0.9) : 0;
+      this.skin();
+      const last2 = this.spine[RINGS - 1], prev = this.spine[RINGS - 3];
+      this.head.position.copy(last2);
+      this.head.scale.setScalar(S6);
+      this.head.rotation.set(Math.sin(t * 0.7) * 0.05, 0, Math.atan2(last2.y - prev.y, last2.x - prev.x) * 0.35 - 0.12 + this.rear * 0.45 - this.bite * 0.55 + this.spit * 0.15);
+      this.jaw.rotation.z = -(0.08 + this.rear * 0.55 + this.bite * 0.3 + this.spit * 0.7 + (act2 ? 0 : Math.max(0, Math.sin(t * 0.6)) * 0.12));
+      this.bodyG.rotation.x = knocked ? Math.min(2.6, kt * 1.2) : 0;
+      this.root.visible = this.dive < 0.97 || knocked;
       const showBar = (a.damageShown > 0 || a.boss) && !a.boss && a.state === "idle" && !a.hideBar;
       this.label.set(a.showName && a.state === "idle" ? a.name : null, a.nameColor || "#fff", showBar ? Math.max(0, a.hp / a.d.maxHp) : null, "#ef5350", showBar ? `${Math.max(0, Math.ceil(a.hp))} / ${Math.round(a.d.maxHp)}` : null);
-      this.label.sprite.position.set(0, 6.4, 0);
+      this.label.sprite.position.set(0, hy + 2.6 * S6, 0);
       const cam = ctx.camera;
       const dist = cam ? cam.position.distanceTo(this.root.position) : 10;
       const k = Math.min(2.4, Math.max(0.5, dist / 8));
@@ -97182,6 +97396,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     }
     dispose() {
       this.label.dispose();
+      this.tube.geometry.dispose();
+      this.line.geometry.dispose();
+      this.bodyMat.dispose();
       this.root.removeFromParent();
     }
   };
@@ -98779,7 +98996,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   };
 
   // src/render3d/chars3d.js
-  var TAU22 = Math.PI * 2;
+  var TAU21 = Math.PI * 2;
   var clamp9 = (v, a, b) => v < a ? a : v > b ? b : v;
   var _v9 = new Vector3();
   var _v24 = new Vector3();
@@ -98997,7 +99214,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const want = helm ? helm.ship.heading : a.facing || 0;
         if (this.visF === void 0 || dtv >= 1 || knocked || helm) this.visF = want;
         else this.visF += angleDiff(this.visF, want) * (1 - Math.exp(-dtv * (a.isPlayer ? 24 : a.action ? 20 : 10)));
-        this.yaw.rotation.y = -(this.visF + (P6.sp || 0) * TAU22);
+        this.yaw.rotation.y = -(this.visF + (P6.sp || 0) * TAU21);
         if (dist < 32) m.swing(this.lastT < 0 ? 1 : dtv, this.root);
         m.setExpression(expression2(look, pose, P6, pose.time || 0));
         this.effects(a, pose, P6, o, env2, ctx, camYaw3, dist, s);
@@ -99182,7 +99399,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const f = a.facing || 0;
         const dx = cam.position.x - this.root.position.x, dz = cam.position.z - this.root.position.z;
         let d = Math.atan2(dz, dx) - f;
-        d = ((d + Math.PI) % TAU22 + TAU22) % TAU22 - Math.PI;
+        d = ((d + Math.PI) % TAU21 + TAU21) % TAU21 - Math.PI;
         y = clamp9(-d, -1, 1);
         if (Math.abs(d) > 1.9) y = 0;
       }
@@ -100158,6 +100375,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.terrain.update(ox, oy);
       this.sky.shadowAt(0, gh, 0, Math.cos(yaw), Math.sin(yaw), ox, oy);
       this.updateProps(game, ox, oy, env2, true);
+      if (this.propOrigin) this.debris.update(1 / 60, w, this.propOrigin);
       this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
       this.forest.aim(camYaw3);
       this.tickProps(env2, 1 / 60);
@@ -101136,7 +101354,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   // src/render3d/groundcover.js
   var CELL5 = 16;
   var NEAR3 = 22;
-  var KINDS2 = ["grass", "flower", "fern", "pebble", "shell", "rock", "crop"];
+  var KINDS3 = ["grass", "flower", "fern", "pebble", "shell", "rock", "crop"];
   var REACH = { crop: 1, grass: 1, flower: 0.72, fern: 0.85, pebble: 0.45, shell: 0.45, rock: 1 };
   var MAXN = { crop: 4200, grass: 5200, flower: 1400, fern: 1100, pebble: 1600, shell: 500, rock: 400 };
   var MAXF = { crop: 9e3, grass: 16e3, flower: 2600, fern: 2e3, pebble: 1400, shell: 400, rock: 1200 };
@@ -101403,7 +101621,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
   function buildCell(world, terrain, cx, cy) {
     const out = {};
-    for (const k of KINDS2) out[k] = [];
+    for (const k of KINDS3) out[k] = [];
     const x0 = cx * CELL5, y0 = cy * CELL5;
     const col6 = new Color();
     const put2 = (k, x, y, rot, s, c) => {
@@ -101493,14 +101711,14 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     }
     return out;
   }
-  var RINGS = /* @__PURE__ */ new Map();
+  var RINGS2 = /* @__PURE__ */ new Map();
   function ring2(cr) {
-    let r4 = RINGS.get(cr);
+    let r4 = RINGS2.get(cr);
     if (!r4) {
       r4 = [];
       for (let j = -cr; j <= cr; j++) for (let i = -cr; i <= cr; i++) r4.push([i, j]);
       r4.sort((a, b) => a[0] * a[0] + a[1] * a[1] - (b[0] * b[0] + b[1] * b[1]));
-      RINGS.set(cr, r4);
+      RINGS2.set(cr, r4);
     }
     return r4;
   }
@@ -101512,7 +101730,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       const near = { grass: grassGeo(), flower: flowerGeo(), fern: fernGeo(), pebble: pebbleGeo(), shell: shellGeo(), rock: rockGeo2(), crop: cropGeo() };
       const far = { grass: grassGeo(true), flower: flowerGeo(true), fern: fernGeo(true), pebble: pebbleGeo(true), shell: near.shell, rock: rockGeo2(true), crop: cropGeo(true) };
       this.sets = {};
-      for (const k of KINDS2) {
+      for (const k of KINDS3) {
         this.sets[k] = new WedgeSet(this.group, k, {
           geo: near[k],
           farGeo: far[k],
@@ -101609,7 +101827,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       const cr = Math.ceil(R5 / CELL5) + 1;
       const ox = (ccx + 0.5) * CELL5, oy = (ccy + 0.5) * CELL5;
       this.origin = { x: ox, y: oy };
-      for (const k of KINDS2) this.sets[k].reset();
+      for (const k of KINDS3) this.sets[k].reset();
       const keep = /* @__PURE__ */ new Set();
       for (const [i, j] of ring2(cr)) {
         const k = this.cellKey(w, ccx + i, ccy + j);
@@ -101617,7 +101835,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         keep.add(k);
         const cell = this.cells.get(k);
         if (!cell) continue;
-        for (const kind of KINDS2) {
+        for (const kind of KINDS3) {
           const list = cell[kind];
           if (!list.length) continue;
           const Rk = R5 * REACH[kind], R22 = Rk * Rk;
@@ -101638,7 +101856,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           }
         }
       }
-      for (const k of KINDS2) this.sets[k].finish();
+      for (const k of KINDS3) this.sets[k].finish();
       if (this.cells.size > 900) {
         for (const k of this.cells.keys()) if (!keep.has(k)) this.cells.delete(k);
       }
@@ -101793,9 +102011,9 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
 
   // src/render3d/seabed.js
-  var TAU23 = Math.PI * 2;
+  var TAU22 = Math.PI * 2;
   var CELL6 = 16;
-  var KINDS3 = ["branch", "brain", "table", "fan", "tube", "anemone", "kelp", "seagrass", "boulder", "star", "clam"];
+  var KINDS4 = ["branch", "brain", "table", "fan", "tube", "anemone", "kelp", "seagrass", "boulder", "star", "clam"];
   var MAX6 = { branch: 1400, brain: 1e3, table: 420, fan: 800, tube: 600, anemone: 700, kelp: 1500, seagrass: 5e3, boulder: 1100, star: 500, clam: 60 };
   var SWAY3 = { fan: 0.5, anemone: 0.7, kelp: 1, seagrass: 0.9 };
   var GLOW3 = { branch: 0.07, brain: 0.04, table: 0.05, fan: 0.08, tube: 0.06, anemone: 0.16, clam: 0.14, star: 0.06 };
@@ -101883,7 +102101,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const parts = [], r4 = rng3(11);
     const n = 6;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU23 + r4() * 0.6;
+      const a = i / n * TAU22 + r4() * 0.6;
       const tilt = 0.2 + r4() * 0.5, L3 = 0.2 + r4() * 0.14;
       const base2 = V3(Math.cos(a) * 0.04, 0, Math.sin(a) * 0.04);
       const mid = V3(base2.x + Math.cos(a) * Math.sin(tilt) * L3, L3 * Math.cos(tilt), base2.z + Math.sin(a) * Math.sin(tilt) * L3);
@@ -101963,7 +102181,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     parts.push(foot);
     const n = 14;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU23;
+      const a = i / n * TAU22;
       const L3 = 0.2 + i % 3 * 0.04, out = 0.45 + i % 2 * 0.25;
       const r0 = 0.08;
       const g = ribbon2([[0, 0.12, r0, 0.022], [0, 0.12 + L3 * 0.6, r0 + L3 * 0.5 * out, 0.016], [0, 0.12 + L3, r0 + L3 * out, 4e-3]]);
@@ -101993,7 +102211,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const parts = [];
     const n = 6;
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU23 + i * 0.9;
+      const a = i / n * TAU22 + i * 0.9;
       const h2 = 0.38 + i % 3 * 0.1, lean = 0.08 + i % 2 * 0.06, r0 = 0.03 + i % 2 * 0.03;
       const g = ribbon2([[0, 0, r0, 0.018], [0, h2 * 0.55, r0 + lean * 0.4, 0.016], [0, h2, r0 + lean, 6e-3]]);
       g.rotateY(Math.PI / 2 - a);
@@ -102012,7 +102230,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const pos = [];
     const arms3 = 5, ro = 0.13, ri = 0.05, hc2 = 0.03;
     for (let i = 0; i < arms3 * 2; i++) {
-      const a0 = i / (arms3 * 2) * TAU23, a1 = (i + 1) / (arms3 * 2) * TAU23;
+      const a0 = i / (arms3 * 2) * TAU22, a1 = (i + 1) / (arms3 * 2) * TAU22;
       const r0 = i % 2 ? ri : ro, r12 = i % 2 ? ro : ri;
       pos.push(0, hc2, 0, Math.cos(a1) * r12, 8e-3, Math.sin(a1) * r12, Math.cos(a0) * r0, 8e-3, Math.sin(a0) * r0);
     }
@@ -102085,7 +102303,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   var pick2 = (list, r4) => list[Math.floor(r4 * list.length) % list.length];
   function buildCell2(world, terrain, cx, cy) {
     const out = {};
-    for (const k of KINDS3) out[k] = [];
+    for (const k of KINDS4) out[k] = [];
     const x0 = cx * CELL6, y0 = cy * CELL6;
     const col6 = new Color();
     const warm = warmth(world, x0 + CELL6 / 2, y0 + CELL6 / 2);
@@ -102140,19 +102358,19 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         if (depth > 1.2 && r4 < (depth > 16 ? 0.03 : 0.012)) put2("boulder", x + r12, y + r32, r4 * 90, 0.7 + r23 * 2.2, 1, rgb(depth > 20 ? [0.36, 0.4, 0.44] : [0.5, 0.52, 0.46]), 0.12);
         if (depth > 22 && r23 < 6e-3) put2("tube", x + r32, y + r12, r23 * 90, 1 + r4, 1, rgb([0.5, 0.4, 0.6], 0.8));
         if (depth > 0.6 && depth < 12 && r23 > 0.992) put2("star", x + r12, y + r4, r23 * 90, 0.8 + r32 * 0.8, 1, rgb(pick2(STARS, r32)), 0);
-        if (clamAt(world, x, y, depth)) put2("clam", x + 0.5, y + 0.5, r12 * TAU23, 1.3 + r23 * 0.5, 1, rgb([0.86, 0.82, 0.72]), 0.05);
+        if (clamAt(world, x, y, depth)) put2("clam", x + 0.5, y + 0.5, r12 * TAU22, 1.3 + r23 * 0.5, 1, rgb([0.86, 0.82, 0.72]), 0.05);
       }
     }
     return out;
   }
-  var RINGS2 = /* @__PURE__ */ new Map();
+  var RINGS3 = /* @__PURE__ */ new Map();
   function ring3(cr) {
-    let r4 = RINGS2.get(cr);
+    let r4 = RINGS3.get(cr);
     if (!r4) {
       r4 = [];
       for (let j = -cr; j <= cr; j++) for (let i = -cr; i <= cr; i++) r4.push([i, j]);
       r4.sort((a, b) => a[0] * a[0] + a[1] * a[1] - (b[0] * b[0] + b[1] * b[1]));
-      RINGS2.set(cr, r4);
+      RINGS3.set(cr, r4);
     }
     return r4;
   }
@@ -102163,7 +102381,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       scene.add(this.group);
       const geos = { branch: branchGeo(), brain: brainGeo(), table: tableGeo(), fan: fanGeo(), tube: tubeGeo2(), anemone: anemoneGeo(), kelp: kelpGeo(), seagrass: seagrassGeo(), boulder: boulderGeo(), star: starGeo(), clam: clamGeo() };
       this.sets = {};
-      for (const k of KINDS3) {
+      for (const k of KINDS4) {
         this.sets[k] = new WedgeSet(this.group, k, {
           geo: geos[k],
           mat: seabedMaterial(k),
@@ -102251,7 +102469,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       const cr = Math.ceil(R5 / CELL6) + 1;
       const ox = (ccx + 0.5) * CELL6, oy = (ccy + 0.5) * CELL6;
       this.origin = { x: ox, y: oy };
-      for (const k of KINDS3) this.sets[k].reset();
+      for (const k of KINDS4) this.sets[k].reset();
       const keep = /* @__PURE__ */ new Set();
       for (const [i, j] of ring3(cr)) {
         const k = this.cellKey(w, ccx + i, ccy + j);
@@ -102259,7 +102477,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         keep.add(k);
         const cell = this.cells.get(k);
         if (!cell) continue;
-        for (const kind of KINDS3) {
+        for (const kind of KINDS4) {
           const list = cell[kind];
           if (!list.length) continue;
           const set = this.sets[kind];
@@ -102274,7 +102492,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           }
         }
       }
-      for (const k of KINDS3) this.sets[k].finish();
+      for (const k of KINDS4) this.sets[k].finish();
       if (this.cells.size > 700) {
         for (const k of this.cells.keys()) if (!keep.has(k)) this.cells.delete(k);
       }
@@ -102559,7 +102777,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }, "rm-canals");
 
   // src/render3d/sealife3d.js
-  var TAU24 = Math.PI * 2;
+  var TAU23 = Math.PI * 2;
   var MAX_FISH = 260;
   function sphereInto(pos, eye, cx, cy, cz, r4, tag2, seg2 = 6) {
     const g = new SphereGeometry(r4, seg2, Math.max(3, seg2 - 2)).toNonIndexed();
@@ -102575,7 +102793,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const ring4 = (x, h2, w) => {
       const r4 = [];
       for (let i = 0; i < n; i++) {
-        const a = i / n * TAU24;
+        const a = i / n * TAU23;
         r4.push([x, Math.cos(a) * h2, Math.sin(a) * w]);
       }
       return r4;
@@ -103030,7 +103248,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }, "sealife");
 
   // src/render3d/lamplight.js
-  var KINDS4 = {
+  var KINDS5 = {
     lamp: { h: 2.62, r: 6.5, col: [1, 0.72, 0.4], power: 1 },
     lantern: { h: 1.6, r: 4.6, col: [1, 0.55, 0.32], power: 0.75 },
     campfire: { h: 0.55, r: 6.5, col: [1, 0.58, 0.26], power: 1.1, fire: true }
@@ -103103,13 +103321,13 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       this.t -= dt;
       if (this.t <= 0) {
         this.t = 0.4;
-        this.near = w.objects.near(ox, oy, 360, (o) => !!KINDS4[o.kind]);
+        this.near = w.objects.near(ox, oy, 360, (o) => !!KINDS5[o.kind]);
       }
       const t = env2.time;
       const cands = [];
       let n = 0;
       for (const o of this.near) {
-        const K = KINDS4[o.kind];
+        const K = KINDS5[o.kind];
         const dx = w.dx(ox, o.x), dz = o.y - oy;
         const gh = ctx.ground(o.x, o.y);
         const fl2 = K.fire ? 0.82 + 0.18 * Math.sin(t * 13 + o.x) * Math.sin(t * 7.3 + o.y) : 0.95 + 0.05 * Math.sin(t * 9 + o.x * 3);
@@ -116278,7 +116496,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
 
   // src/render/fxshapes.js
-  var TAU25 = Math.PI * 2;
+  var TAU24 = Math.PI * 2;
   var easeOut2 = (k) => 1 - (1 - k) ** 3;
   var clamp019 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function hash13(n) {
@@ -116287,12 +116505,12 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
   function ellipsePath(g, rx, ry) {
     g.beginPath();
-    g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU25);
+    g.ellipse(0, 0, Math.max(1e-3, rx), Math.max(1e-3, ry), 0, 0, TAU24);
   }
   function spiky(g, R5, n, seed, sx = 1) {
     g.beginPath();
     for (let i = 0; i < n * 2; i++) {
-      const a = i / (n * 2) * TAU25;
+      const a = i / (n * 2) * TAU24;
       const rr = i % 2 ? R5 * (0.26 + 0.08 * hash13(seed + i)) : R5 * (0.62 + 0.55 * hash13(seed + i * 3.1));
       const x = Math.cos(a) * rr * sx, y = Math.sin(a) * rr;
       if (i) g.lineTo(x, y);
@@ -116322,16 +116540,16 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       if (s.shape === "circle") {
         g.globalAlpha = a * (0.1 + 0.12 * k);
         g.beginPath();
-        g.arc(0, 0, s.r, 0, TAU25);
+        g.arc(0, 0, s.r, 0, TAU24);
         g.fill();
         g.globalAlpha = a * (0.3 + 0.35 * k);
         g.beginPath();
-        g.arc(0, 0, s.r * easeOut2(k), 0, TAU25);
+        g.arc(0, 0, s.r * easeOut2(k), 0, TAU24);
         g.fill();
         g.globalAlpha = a * (0.55 + 0.4 * pulse * k);
         g.lineWidth = 0.05 + 0.04 * k;
         g.beginPath();
-        g.arc(0, 0, s.r, 0, TAU25);
+        g.arc(0, 0, s.r, 0, TAU24);
         g.stroke();
       } else if (s.shape === "arc") {
         const a0 = s.angle - s.arc / 2, a1 = s.angle + s.arc / 2;
@@ -116389,7 +116607,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const ang = i / n * TAU25 + s.seed + (hash13(s.seed + i) - 0.5) * 0.5;
+          const ang = i / n * TAU24 + s.seed + (hash13(s.seed + i) - 0.5) * 0.5;
           let px2 = 0, py2 = 0;
           g.moveTo(0, 0);
           const len = s.r * (0.6 + 0.5 * hash13(s.seed * 3 + i));
@@ -116420,7 +116638,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     gr.addColorStop(1, rgba(col6, 0));
     g.fillStyle = gr;
     g.beginPath();
-    g.arc(0, 0, Math.max(1e-3, r4), 0, TAU25);
+    g.arc(0, 0, Math.max(1e-3, r4), 0, TAU24);
     g.fill();
     g.restore();
   }
@@ -116441,7 +116659,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.lineWidth = 0.06;
         g.beginPath();
         for (let i = 0; i < 9; i++) {
-          const a0 = i / 9 * TAU25 + s.seed, a1 = a0 + 0.35;
+          const a0 = i / 9 * TAU24 + s.seed, a1 = a0 + 0.35;
           g.moveTo(Math.cos(a0) * s.r * 0.85, Math.sin(a0) * s.r * 0.51);
           g.lineTo(Math.cos(a1) * s.r * 0.95, Math.sin(a1) * s.r * 0.57);
         }
@@ -116493,7 +116711,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           g.beginPath();
           const n = 48;
           for (let i = 0; i <= n; i++) {
-            const th = i / n * TAU25;
+            const th = i / n * TAU24;
             const wr = rad * (1 + s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40));
             const x = Math.cos(th) * wr, y = Math.sin(th) * wr * ry;
             if (i) g.lineTo(x, y);
@@ -116609,7 +116827,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       g.globalAlpha = a * fade2 * 0.4;
       g.fillStyle = s.color || "#fff59d";
       g.beginPath();
-      g.arc(0, 0, R5 * 0.55, 0, TAU25);
+      g.arc(0, 0, R5 * 0.55, 0, TAU24);
       g.fill();
       g.globalAlpha = a * fade2 * 0.95;
       starPath(g, 0, 0, R5, 4, 0.12, 0);
@@ -116757,7 +116975,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.globalAlpha = fade2 * 0.9;
         g.fillStyle = "#ffffff";
         g.beginPath();
-        g.arc(0, 0, wd * 0.9, 0, TAU25);
+        g.arc(0, 0, wd * 0.9, 0, TAU24);
         g.fill();
         starPath(g, 0, 0, wd * 1.8, 4, 0.12, c.t * 3);
         g.fill();
@@ -116765,7 +116983,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       g.globalAlpha = fade2 * 0.8;
       g.fillStyle = s.core || "#ffffff";
       g.beginPath();
-      g.arc(L3, 0, wd * 0.55, 0, TAU25);
+      g.arc(L3, 0, wd * 0.55, 0, TAU24);
       g.fill();
     }
   };
@@ -116815,7 +117033,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       g.globalAlpha = a * fade2 * 0.25;
       g.fillStyle = s.color || "#e0f7fa";
       g.beginPath();
-      g.arc(0, 0, R5 * 0.35, 0, TAU25);
+      g.arc(0, 0, R5 * 0.35, 0, TAU24);
       g.fill();
       g.lineCap = "round";
       g.lineJoin = "miter";
@@ -116826,7 +117044,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.lineWidth = lw;
         g.beginPath();
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU25 + (hash13(s.seed + i) - 0.5) * 0.5;
+          const th = i / n * TAU24 + (hash13(s.seed + i) - 0.5) * 0.5;
           let x = 0, y = 0;
           g.moveTo(0, 0);
           const L3 = R5 * (0.6 + 0.5 * hash13(s.seed + i * 3));
@@ -116836,7 +117054,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
             y = Math.sin(th + o) * r4;
             g.lineTo(x, y);
           }
-          const th2 = th + TAU25 / n;
+          const th2 = th + TAU24 / n;
           const r23 = L3 * 0.55;
           g.moveTo(Math.cos(th) * r23, Math.sin(th) * r23);
           g.lineTo(Math.cos(th2) * r23 * 0.95, Math.sin(th2) * r23 * 0.95);
@@ -116944,7 +117162,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.beginPath();
         for (let i = 1; i < 4; i++) {
           const f = i / 4;
-          g.ellipse(0, -H5 * f * 0.85, R5 * Math.sqrt(1 - f * f), R5 * 0.1 * (1 - f), 0, 0, TAU25);
+          g.ellipse(0, -H5 * f * 0.85, R5 * Math.sqrt(1 - f * f), R5 * 0.1 * (1 - f), 0, 0, TAU24);
         }
         g.stroke();
       }
@@ -116978,7 +117196,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           const cx = col6 * hr * 1.5 * (side ? 0.35 : 1), cy = row * hr * 1.73 + (col6 & 1 ? hr * 0.86 : 0);
           if (Math.abs(cx) > W4 / 2 - 0.05 || Math.abs(cy) > H5 / 2 - 0.05) continue;
           for (let i = 0; i <= 6; i++) {
-            const th = i / 6 * TAU25;
+            const th = i / 6 * TAU24;
             const x = cx + Math.cos(th) * hr * 0.55 * (side ? 0.35 : 1), y = cy + Math.sin(th) * hr * 0.55;
             if (i) g.lineTo(x, y);
             else g.moveTo(x, y);
@@ -117017,7 +117235,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.beginPath();
         for (let j = 0; j <= 16; j++) {
           const u = j / 16;
-          const th = spin + i / arms3 * TAU25 + u * 3.2;
+          const th = spin + i / arms3 * TAU24 + u * 3.2;
           const r4 = R5 * (1 - u * 0.85);
           const x = Math.cos(th) * r4, y = Math.sin(th) * r4 * 0.62;
           if (j) g.lineTo(x, y);
@@ -117053,13 +117271,13 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       const n = 9;
       for (let pass = 0; pass < 2; pass++) {
         for (let i = 0; i < n; i++) {
-          const th = i / n * TAU25;
+          const th = i / n * TAU24;
           const x = Math.cos(th) * R5 * 0.75 + Math.sin(c.t * 0.8 + i) * 0.1, y = Math.sin(th) * R5 * 0.28;
           const rr = R5 * (0.38 + 0.12 * hash13(s.seed + i));
           g.globalAlpha = a * (pass ? 0.9 : 0.5);
           g.fillStyle = pass ? s.color || "#37474f" : "#263238";
           g.beginPath();
-          g.arc(x, y + (pass ? -0.05 : 0.08), rr * (pass ? 0.9 : 1.05), 0, TAU25);
+          g.arc(x, y + (pass ? -0.05 : 0.08), rr * (pass ? 0.9 : 1.05), 0, TAU24);
           g.fill();
         }
       }
@@ -117068,7 +117286,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.globalAlpha = a * 0.5;
         g.fillStyle = s.glow || "#fff59d";
         g.beginPath();
-        g.arc((hash13(Math.floor(c.t * 8) + s.seed) - 0.5) * R5, 0, R5 * 0.35, 0, TAU25);
+        g.arc((hash13(Math.floor(c.t * 8) + s.seed) - 0.5) * R5, 0, R5 * 0.35, 0, TAU24);
         g.fill();
       }
     }
@@ -117121,9 +117339,9 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.globalAlpha = fade2;
         g.fillStyle = s.petal || "#f48fb1";
         for (let i = 0; i < 5; i++) {
-          const th = i / 5 * TAU25 + p.seed;
+          const th = i / 5 * TAU24 + p.seed;
           g.beginPath();
-          g.ellipse(x + Math.cos(th) * 0.09, y + Math.sin(th) * 0.05, 0.08, 0.04, th, 0, TAU25);
+          g.ellipse(x + Math.cos(th) * 0.09, y + Math.sin(th) * 0.05, 0.08, 0.04, th, 0, TAU24);
           g.fill();
         }
         const ang = p.ang;
@@ -117143,7 +117361,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.lineWidth = 0.025;
         const hr = (s.big ? 0.26 : 0.08) * (1 - clutch * 0.2);
         g.beginPath();
-        g.arc(ex, ey, hr, 0, TAU25);
+        g.arc(ex, ey, hr, 0, TAU24);
         g.fill();
         g.stroke();
         if (!clutch) {
@@ -117197,7 +117415,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.arc(0, 0, R5, 0, TAU25);
+        g.arc(0, 0, R5, 0, TAU24);
         g.fill();
         g.stroke();
         g.strokeStyle = s.kind === "mochi" ? "#d7ccc8" : "#ffab40";
@@ -117213,14 +117431,14 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.05;
         g.beginPath();
-        g.ellipse(0, 0, R5 * 1.2, R5 * 0.8, 0, 0, TAU25);
+        g.ellipse(0, 0, R5 * 1.2, R5 * 0.8, 0, 0, TAU24);
         g.fill();
         g.stroke();
       } else {
         g.fillStyle = s.color || "#5d4037";
         g.beginPath();
         for (let i = 0; i < 9; i++) {
-          const th = i / 9 * TAU25;
+          const th = i / 9 * TAU24;
           const rr = R5 * (0.8 + 0.3 * hash13(s.seed + i));
           g.lineTo(Math.cos(th) * rr, Math.sin(th) * rr);
         }
@@ -117230,7 +117448,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.fillStyle = s.glow || "#ff9100";
         g.globalAlpha = 0.6 * a;
         g.beginPath();
-        g.arc(R5 * 0.2, R5 * 0.2, R5 * 0.5, 0, TAU25);
+        g.arc(R5 * 0.2, R5 * 0.2, R5 * 0.5, 0, TAU24);
         g.fill();
       }
     }
@@ -117297,8 +117515,8 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.fillStyle = "#ff5252";
         g.globalAlpha = a * fade2;
         g.beginPath();
-        g.arc(-R5 * 0.18, -R5 * 0.1, R5 * 0.22, 0, TAU25);
-        g.arc(R5 * 0.18, -R5 * 0.1, R5 * 0.22, 0, TAU25);
+        g.arc(-R5 * 0.18, -R5 * 0.1, R5 * 0.22, 0, TAU24);
+        g.arc(R5 * 0.18, -R5 * 0.1, R5 * 0.22, 0, TAU24);
         g.moveTo(-R5 * 0.38, 0);
         g.lineTo(0, R5 * 0.4);
         g.lineTo(R5 * 0.38, 0);
@@ -117371,7 +117589,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         g.strokeStyle = "rgba(30,20,20,0.85)";
         g.lineWidth = 0.025;
         g.beginPath();
-        g.arc(x, y, 0.13 * (0.7 + pop2 * 0.4), 0, TAU25);
+        g.arc(x, y, 0.13 * (0.7 + pop2 * 0.4), 0, TAU24);
         g.fill();
         g.stroke();
         if (ph > 0.45 && ph < 0.6) {
@@ -117403,7 +117621,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         if (kind === 0) {
           g.fillStyle = s.skin || "#f1c9a0";
           g.beginPath();
-          g.arc(0, 0, 0.12, 0, TAU25);
+          g.arc(0, 0, 0.12, 0, TAU24);
           g.fill();
           g.stroke();
         } else {
@@ -117487,7 +117705,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           g.lineWidth = 0.03;
           g.beginPath();
           for (let i = 0; i < 10; i++) {
-            const th = i / 10 * TAU25 + s.seed;
+            const th = i / 10 * TAU24 + s.seed;
             g.moveTo(0, 0);
             g.lineTo(Math.cos(th) * R5 * 0.9, Math.sin(th) * R5 * 0.55);
           }
@@ -117500,9 +117718,9 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
           g.globalAlpha = 0.24 * a;
           g.fillStyle = col6;
           for (let i = 0; i < 6; i++) {
-            const th = i / 6 * TAU25 + c.t * 0.2, rr = R5 * 0.45;
+            const th = i / 6 * TAU24 + c.t * 0.2, rr = R5 * 0.45;
             g.beginPath();
-            g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU25);
+            g.ellipse(Math.cos(th) * rr * 0.6, Math.sin(th) * rr * 0.35, rr, rr * 0.6, 0, 0, TAU24);
             g.fill();
           }
           g.globalAlpha = 0.35 * a;
@@ -117517,7 +117735,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
             g.globalAlpha = 0.9 * a;
             g.beginPath();
             for (let i = 0; i < 7; i++) {
-              const th = i / 7 * TAU25 + s.seed;
+              const th = i / 7 * TAU24 + s.seed;
               const x = Math.cos(th) * R5 * 0.7, y = Math.sin(th) * R5 * 0.45;
               g.moveTo(x, y);
               g.quadraticCurveTo(x * 0.5, y * 0.5 - 0.4 - Math.sin(c.t * 3 + i) * 0.1, 0, -0.1);
@@ -117573,7 +117791,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
             s.pts = [];
             const n = Math.max(3, Math.round(R5 * 3));
             for (let i = 0; i < n; i++) {
-              const th = i / n * TAU25 + hash13(s.seed + i);
+              const th = i / n * TAU24 + hash13(s.seed + i);
               const rr = R5 * (0.3 + 0.6 * hash13(s.seed + i * 3));
               s.pts.push({ dx: Math.cos(th) * rr, dy: Math.sin(th) * rr * 0.62, L: 0.9, ang: th, delay: i * 0.03, seed: i });
             }
@@ -117603,7 +117821,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
             g.strokeStyle = s.color;
             g.lineWidth = 0.025;
             g.beginPath();
-            g.arc(x, y - ph * 0.3, 0.06 + ph * 0.12, 0, TAU25);
+            g.arc(x, y - ph * 0.3, 0.06 + ph * 0.12, 0, TAU24);
             g.stroke();
           }
           break;
@@ -117624,7 +117842,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
 
   // src/render/fx3d.js
-  var TAU26 = Math.PI * 2;
+  var TAU25 = Math.PI * 2;
   var CULL = -9e3;
   var MAX_SC = 380;
   var MIN_SC = 1;
@@ -117727,7 +117945,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     }
     return runs;
   }
-  function circlePts(x, y, R5, h2, n = 40, a0 = 0, a1 = TAU26, wob) {
+  function circlePts(x, y, R5, h2, n = 40, a0 = 0, a1 = TAU25, wob) {
     const pts = [];
     for (let i = 0; i <= n; i++) {
       const th = a0 + (a1 - a0) * (i / n);
@@ -117862,7 +118080,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const h2 = Math.min(s.z ?? 0.4, 0.12);
     const n = Math.max(16, Math.min(56, Math.round(rad * 10)));
     const wob = s.wobble ? (th) => s.wobble * (1 - k) * Math.sin(th * (s.lobes || 9) + c.t * 40) : null;
-    const runs = ringRuns(r4, circlePts(s.x, s.y, rad, h2, n, 0, TAU26, wob));
+    const runs = ringRuns(r4, circlePts(s.x, s.y, rad, h2, n, 0, TAU25, wob));
     if (!runs.length) return;
     g.globalCompositeOperation = s.add ? "lighter" : "source-over";
     if (s.fill && runs.length === 1 && runs[0].length > n) fillRuns(g, r4, runs, s.fill === true ? s.color : s.fill, alpha2 * 0.22);
@@ -117921,7 +118139,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     g.globalCompositeOperation = "lighter";
     const nM = s.kind === "cage" ? 16 : 10;
     for (let i = 0; i < nM; i++) {
-      const th = i / nM * TAU26 + (s.kind === "room" ? c.t * 0.15 : 0);
+      const th = i / nM * TAU25 + (s.kind === "room" ? c.t * 0.15 : 0);
       const pts = [];
       for (let j = 0; j <= 10; j++) {
         const ph = j / 10 * (Math.PI / 2);
@@ -118232,7 +118450,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       g.globalAlpha = 0.8 * k2;
       g.fillStyle = "#fff59d";
       g.beginPath();
-      g.arc(x, y, H5 * 0.03 * (1 + (1 - k2)), 0, TAU26);
+      g.arc(x, y, H5 * 0.03 * (1 + (1 - k2)), 0, TAU25);
       g.fill();
       g.globalAlpha = 0.5 * k2;
       g.strokeStyle = "#ffe082";
@@ -118382,7 +118600,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     const R5 = Math.hypot(W4, H5) * 0.55, n = 40;
     g.beginPath();
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU26 + i * 7919 % 17 * 0.013 + fx.time * 0.3;
+      const a = i / n * TAU25 + i * 7919 % 17 * 0.013 + fx.time * 0.3;
       const r0 = R5 * (0.62 + i * 131 % 7 * 0.04), wd = 4e-3 + i * 53 % 5 * 2e-3;
       g.moveTo(cx + Math.cos(a) * R5 * 1.3, cy + Math.sin(a) * R5 * 1.3);
       g.lineTo(cx + Math.cos(a + wd) * r0, cy + Math.sin(a + wd) * r0);
@@ -119403,7 +119621,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   };
 
   // src/game/weather.js
-  var KINDS5 = {
+  var KINDS6 = {
     clear: { cloud: 0.04 },
     fair: { cloud: 0.3 },
     cloudy: { cloud: 0.66 },
@@ -119635,7 +119853,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   }
   var WHITE10 = [1, 1, 1];
   function weatherTargets(kind, k = 1, climate = "temperate", out = {}) {
-    const K = KINDS5[kind] || KINDS5.clear, C3 = CLIMATES2[climate] || CLIMATES2.temperate;
+    const K = KINDS6[kind] || KINDS6.clear, C3 = CLIMATES2[climate] || CLIMATES2.temperate;
     out.cloud = Math.min(1, K.cloud * (K.cloud > 0.6 ? 0.85 + 0.15 * k : 0.7 + 0.3 * k));
     out.rain = (K.rain || 0) * k;
     out.snow = (K.snow || 0) * k;
@@ -119899,7 +120117,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       if (gl && Math.random() < 0.25 && game?.onGrandLineWeather) game.onGrandLineWeather();
     }
     setKind(kind, k = 1) {
-      this.weather = KINDS5[kind] ? kind : "clear";
+      this.weather = KINDS6[kind] ? kind : "clear";
       this.weatherK = k;
       weatherTargets(this.weather, k, this.climate, this.wt);
       this.stormTarget = this.wt.storm;
@@ -119912,7 +120130,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
      * dur: or for this long, sync: a guest taking the host's }.
      */
     setWeather(kind, { k = 1, now: now3 = false, hold = false, dur = 0, sync = false } = {}) {
-      if (!KINDS5[kind]) return false;
+      if (!KINDS6[kind]) return false;
       this.setKind(kind, k);
       if (hold || sync) this.weatherTimer = 1e9;
       else if (dur) this.weatherTimer = dur;
@@ -134237,7 +134455,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   };
 
   // src/net/remote.js
-  var TAU27 = Math.PI * 2;
+  var TAU26 = Math.PI * 2;
   var MATE_COLOR = "#8fe9f5";
   var CLIMBING = {};
   var Remote = class {
@@ -134534,8 +134752,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     if (s.st) a.style = s.st;
     a.roofed = !!(B5 & BIT.roofed) && s.g !== void 0;
     a.lastG = a.roofed ? s.g : null;
-    if (a.moving && !a.inWater) a.walk += dt * TAU27 * gaitCadence(a.speed / sc, a.intent.sprint);
-    else if (a.moving) a.walk += dt * TAU27 * 1.2;
+    if (a.moving && !a.inWater) a.walk += dt * TAU26 * gaitCadence(a.speed / sc, a.intent.sprint);
+    else if (a.moving) a.walk += dt * TAU26 * 1.2;
     if (ship && B5 & BIT.helm) {
       const stn = { kind: ship.def.oarsOnly ? "row" : "helm", ship }, spot = stationSpot(stn), c = Math.cos(ship.heading), sn = Math.sin(ship.heading);
       a.mode = "sail";
@@ -138266,6 +138484,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     g.textAlign = "center";
     g.fillText("?", 0, -0.75 + bob);
   }
+  var SEAKING_KINDS = ["serpent", "croc", "fish", "dragon"];
   function makeSeaKing(game, x, y, level, opts = {}) {
     const k = new Actor({
       x,
@@ -138297,6 +138516,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     k.lethal = true;
     k.aggroPlayer = true;
     k.breakthrough = opts.breakthrough;
+    k.level = level;
+    k.species = opts.species || SEAKING_KINDS[Math.floor(Math.random() * SEAKING_KINDS.length)];
     k.onKO = (a, att, g) => {
       g.fx.burst(a.x, a.y, 40, { color: ["#e1f5fe", "#81d4fa"], speed: 6, vz: 6, g: 10, life: 1, size: 0.2 });
       if (att?.isPlayer) {
@@ -138309,11 +138530,29 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     };
     return k;
   }
+  var SK_MOVES = {
+    bite: { windup: 0.85, recover: 0.6 },
+    sweep: { windup: 1, recover: 0.7, seaking: "sweep" },
+    spit: { windup: 0.9, recover: 0.8, seaking: "spit" },
+    breach: { windup: 0.3, recover: 1 }
+  };
   var SeaKingBrain = class {
     constructor(opts) {
       this.t = 1 + Math.random();
       this.opts = opts;
-      this.submerged = false;
+      this.dive = 0;
+    }
+    begin(k, game, move, extra = 0) {
+      const def = { anim: "heavy", steps: [], ...SK_MOVES[move] };
+      k.action = { def, t: 0, step: 0, total: def.windup + def.recover + extra, mult: 1, angle: k.facing };
+    }
+    strike(k, game, ms, fn) {
+      setTimeout(() => {
+        if (k.alive && k.state === "idle" && !k.submerged) fn();
+      }, ms);
+    }
+    hitShipAt(tgtShip, k, game, x, y, dmg, r4) {
+      if (tgtShip && hullGap(tgtShip, game.world.dx(tgtShip.x, x), y - tgtShip.y) < r4) tgtShip.damage(dmg, k);
     }
     update(k, dt, game) {
       const p = game.player;
@@ -138329,33 +138568,124 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       }
       const dx = game.world.dx(k.x, tx), dy = ty - k.y;
       const d = Math.hypot(dx, dy);
-      k.facing = Math.atan2(dy, dx);
       k.intent.mx = 0;
       k.intent.my = 0;
       if (d > 60) {
         k.alive = false;
         return;
       }
+      const str2 = 1 + k.attrs.str / 25;
+      if (k.submerged) {
+        this.dive -= dt;
+        if (d > 1.5) {
+          k.intent.mx = dx / d * 1.8;
+          k.intent.my = dy / d * 1.8;
+        }
+        if (this.dive <= 0) {
+          k.submerged = false;
+          k.invulnerable = false;
+          const bx = tx, by = ty;
+          game.fx.telegraph(bx, by, "circle", { r: 3.4, life: 0.75, color: "rgba(255,40,40,1)" });
+          game.fx.burst(bx, by, 24, { color: ["#e1f5fe", "#ffffff"], speed: 3, vz: 3, g: 8, life: 0.7, size: 0.18 });
+          setTimeout(() => {
+            if (!k.alive || k.state !== "idle") return;
+            k.x = bx;
+            k.y = by - 0.6;
+            this.begin(k, game, "breach");
+            const dmg = 55 * str2;
+            game.combat.hitbox({ owner: k, x: bx, y: by - 0.4, shape: "circle", range: 3.4, damage: dmg * 0.5, knockback: 14, launch: 9, stun: 0.8, heavy: true, duration: 0.15, radial: true });
+            this.hitShipAt(tgtShip, k, game, bx, by, dmg, 3);
+            game.fx.burst(bx, by, 60, { color: ["#e1f5fe", "#81d4fa", "#ffffff"], speed: 8, vz: 12, g: 12, life: 1.3, size: 0.28 });
+            game.fx.shake(0.8);
+            game.audio?.sfx("crash", { x: bx, y: by });
+          }, 750);
+        }
+        return;
+      }
+      if (!k.action) k.facing = Math.atan2(dy, dx);
       this.t -= dt;
-      if (!k.action && d > 4) {
+      if (!k.action && d > 5) {
         k.intent.mx = dx / d;
         k.intent.my = dy / d;
       }
-      if (this.t <= 0 && d < 7) {
-        this.t = 3 + Math.random() * 2;
-        const bite = Math.random() < 0.6;
-        game.fx.telegraph(tx, ty, "circle", { r: bite ? 2.6 : 4, life: 0.9, color: "rgba(255,40,40,1)" });
-        k.action = { def: { anim: "heavy", steps: [], windup: 0.9, recover: 0.6 }, t: 0, step: 0, total: 1.6, mult: 1, angle: k.facing };
-        setTimeout(() => {
-          if (!k.alive || k.state !== "idle") return;
-          const dmg = (bite ? 60 : 40) * (1 + k.attrs.str / 25);
-          game.combat.hitbox({ owner: k, x: tx, y: ty - 0.4, shape: "circle", range: bite ? 2.6 : 4, damage: dmg * 0.5, knockback: 10, stun: 0.6, heavy: true, duration: 0.1, radial: true });
-          if (tgtShip && hullGap(tgtShip, game.world.dx(tgtShip.x, tx), ty - tgtShip.y) < 2.5) tgtShip.damage(dmg, k);
-          game.fx.burst(tx, ty, 30, { color: ["#e1f5fe", "#81d4fa", "#ffffff"], speed: 6, vz: 7, g: 12, life: 0.9, size: 0.22 });
-          game.fx.shake(0.6);
-          game.audio?.sfx("crash", { x: tx, y: ty });
-        }, 900);
-      }
+      if (this.t > 0 || k.action) return;
+      const r4 = Math.random();
+      if (d < 7) {
+        if (r4 < 0.35) {
+          this.t = 4 + Math.random() * 2;
+          const R5 = 6.5 + (k.level || 20) / 25;
+          game.fx.telegraph(k.x, k.y, "circle", { r: R5, life: 1, color: "rgba(255,40,40,1)" });
+          this.begin(k, game, "sweep");
+          this.strike(k, game, 1e3, () => {
+            const dmg = 45 * str2;
+            game.combat.hitbox({ owner: k, x: k.x, y: k.y, shape: "circle", range: R5, damage: dmg * 0.45, knockback: 16, stun: 0.7, heavy: true, duration: 0.25, radial: true });
+            this.hitShipAt(tgtShip, k, game, k.x, k.y, dmg * 0.8, R5);
+            game.fx.ring(k.x, k.y, 1, R5, "#e1f5fe", 0.6, 0.4, { flat: 0.4 });
+            game.fx.burst(k.x, k.y, 40, { color: ["#e1f5fe", "#ffffff"], speed: 9, vz: 4, g: 10, life: 0.9, size: 0.2 });
+            game.fx.shake(0.5);
+            game.audio?.sfx("crash", { x: k.x, y: k.y });
+          });
+        } else {
+          this.t = 3 + Math.random() * 2;
+          const bx = tx, by = ty;
+          game.fx.telegraph(bx, by, "circle", { r: 2.6, life: 0.85, color: "rgba(255,40,40,1)" });
+          this.begin(k, game, "bite");
+          this.strike(k, game, 850, () => {
+            const dmg = 60 * str2;
+            game.combat.hitbox({ owner: k, x: bx, y: by - 0.4, shape: "circle", range: 2.6, damage: dmg * 0.5, knockback: 10, stun: 0.6, heavy: true, duration: 0.1, radial: true });
+            this.hitShipAt(tgtShip, k, game, bx, by, dmg, 2.5);
+            game.fx.burst(bx, by, 30, { color: ["#e1f5fe", "#81d4fa", "#ffffff"], speed: 6, vz: 7, g: 12, life: 0.9, size: 0.22 });
+            game.fx.shake(0.6);
+            game.audio?.sfx("crash", { x: bx, y: by });
+          });
+        }
+      } else if (d < 26) {
+        if (r4 < 0.55) {
+          this.t = 3.5 + Math.random() * 2;
+          this.begin(k, game, "spit");
+          this.strike(k, game, 900, () => {
+            const a0 = Math.atan2(ty - k.y, game.world.dx(k.x, tx)), sp = 24;
+            for (let i = 0; i < 3; i++) {
+              const a = a0 + (i - 1) * 0.06;
+              setTimeout(() => {
+                if (!k.alive || k.state !== "idle") return;
+                game.combat.projectile({
+                  h0: 4.5,
+                  owner: k,
+                  x: game.world.wx(k.x + Math.cos(a) * 2.5),
+                  y: k.y + Math.sin(a) * 2.5,
+                  vx: Math.cos(a) * sp,
+                  vy: Math.sin(a) * sp,
+                  range: 30,
+                  radius: 0.9,
+                  damage: 18 * str2,
+                  element: "water",
+                  knockback: 9,
+                  stun: 0.3,
+                  sprite: "orb",
+                  color: "#81d4fa",
+                  size: 2.2,
+                  hitShips: true,
+                  shipDamage: 20 * str2,
+                  isProj: true,
+                  unblockable: true,
+                  trail: (pr, g) => {
+                    if (Math.random() < 0.6) g.fx.burst(pr.x, pr.y, 2, { color: ["#e1f5fe", "#81d4fa"], speed: 1, vz: 1, g: 6, life: 0.5, size: 0.2 });
+                  }
+                });
+              }, i * 110);
+            }
+            game.audio?.sfx("splash_big", { x: k.x, y: k.y });
+          });
+        } else {
+          this.t = 5 + Math.random() * 2;
+          k.submerged = true;
+          k.invulnerable = true;
+          this.dive = 1.6 + Math.random() * 0.8;
+          game.fx.burst(k.x, k.y, 30, { color: ["#e1f5fe", "#ffffff"], speed: 5, vz: 5, g: 10, life: 0.9, size: 0.22 });
+          game.audio?.sfx("splash_big", { x: k.x, y: k.y });
+        }
+      } else this.t = 0.5;
     }
   };
   function drawSeaKing(g, env2) {
@@ -153108,12 +153438,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   ];
   function drawWhale(g, env2, marked) {
     const t = env2?.time || 0;
-    const TAU28 = Math.PI * 2;
+    const TAU27 = Math.PI * 2;
     g.save();
     g.translate(0, Math.sin(t * 0.7) * 0.12);
     g.fillStyle = "rgba(255,255,255,0.28)";
     g.beginPath();
-    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU28);
+    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU27);
     g.fill();
     g.fillStyle = "#4e6177";
     g.beginPath();
@@ -153125,7 +153455,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     g.fill();
     g.fillStyle = "#5d7389";
     g.beginPath();
-    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU28);
+    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU27);
     g.fill();
     g.fillStyle = "#d7e1ea";
     g.beginPath();
@@ -153141,16 +153471,16 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }
     g.fillStyle = "#fafafa";
     g.beginPath();
-    g.arc(-6.6, -1.8, 0.45, 0, TAU28);
+    g.arc(-6.6, -1.8, 0.45, 0, TAU27);
     g.fill();
     g.fillStyle = "#1a1a1a";
     g.beginPath();
-    g.arc(-6.7, -1.8, 0.24, 0, TAU28);
+    g.arc(-6.7, -1.8, 0.24, 0, TAU27);
     g.fill();
     if (marked) {
       g.fillStyle = "#fafafa";
       g.beginPath();
-      g.arc(-8.2, -3.1, 0.8, 0, TAU28);
+      g.arc(-8.2, -3.1, 0.8, 0, TAU27);
       g.fill();
       g.strokeStyle = "#fafafa";
       g.lineWidth = 0.25;
@@ -153162,8 +153492,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       g.stroke();
       g.fillStyle = "#1a1a1a";
       g.beginPath();
-      g.arc(-8.45, -3.2, 0.16, 0, TAU28);
-      g.arc(-7.95, -3.2, 0.16, 0, TAU28);
+      g.arc(-8.45, -3.2, 0.16, 0, TAU27);
+      g.arc(-7.95, -3.2, 0.16, 0, TAU27);
       g.fill();
     }
     const ph = t % 14;
@@ -153171,7 +153501,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       const h2 = Math.sin(ph / 1.6 * Math.PI) * 3.2;
       g.fillStyle = "rgba(225,245,254,0.8)";
       g.beginPath();
-      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU28);
+      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU27);
       g.fill();
     }
     g.font = "bold 0.5px Nunito, sans-serif";
@@ -171573,13 +171903,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       v.thump(0.2, { f0: 55, f1: 38, dur: 0.1, gain: 0.12 });
     } }
   };
-  var KINDS6 = {
+  var KINDS7 = {
     hit: ["punch", "punch_heavy", "slash_hit", "slash_heavy", "block", "parry", "guardbreak", "ko", "fire", "magma", "ice", "snow", "lightning", "thunder_small", "water", "swamp", "poison", "gas", "smoke", "sand", "light", "dark", "quake", "string", "explosion", "cannon", "crash", "doorbreak"],
     tech: ["whoosh", "dodge", "haki", "haki_off", "haki_out", "haki_obs", "foresight", "conqueror_rise", "conqueror", "conqueror_clash", "knocked", "getup", "dry"],
     move: ["step", "jump", "jump_big", "land", "land_heavy", "splash", "splash_big", "splash_out", "wade", "gasp", "choke", "swim_pull", "swim_kick", "swim_breath", "swim_under", "tread", "thrash", "dive", "surface", "climb", "board", "oar_catch", "oar_pull", "oar_release"],
     world: ["thunder", "hull_creak", "rigging", "hull_slap", "bell", "seaking"]
   };
-  for (const [kind, names] of Object.entries(KINDS6)) for (const n of names) if (SFX2[n]) SFX2[n].kind = kind;
+  for (const [kind, names] of Object.entries(KINDS7)) for (const n of names) if (SFX2[n]) SFX2[n].kind = kind;
   var GURA = (v, k, s = 1) => {
     const r4 = Math.max(0.12, k.rel || 0);
     const q2 = Math.min(1.2, s);
@@ -176258,6 +176588,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         sail2 = null;
         hideBoot(true);
       }
+      game.destruction?.resetAll();
       game.player = null;
       game.actors = [];
       game.ships = [];
@@ -176614,7 +176945,20 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     Object.defineProperty(debug, "net", { get: () => game.net, enumerable: true });
     showTitle();
     let last2 = performance.now();
+    let frameErrs = 0;
     const frame3 = (now3) => {
+      requestAnimationFrame(frame3);
+      try {
+        frameBody(now3);
+      } catch (e) {
+        if (frameErrs++ < 5) console.error("frame failed", e);
+        if (sail2 && performance.now() - sail2.t0 > 6e3) {
+          hideBoot();
+          sail2 = null;
+        }
+      }
+    };
+    const frameBody = (now3) => {
       const frameMs = now3 - last2;
       const dt = Math.min(0.05, frameMs / 1e3);
       last2 = now3;
@@ -176678,7 +177022,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         ui.update(dt);
         input.endFrame();
       }
-      requestAnimationFrame(frame3);
     };
     requestAnimationFrame(frame3);
   }
