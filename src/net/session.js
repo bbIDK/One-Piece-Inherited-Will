@@ -194,7 +194,7 @@ export class Voyage {
         break;
       }
       // co-op: a shared boss's health, and the blow that ends them (coop.js)
-      case 'bh': case 'bd': if (this.inWorld) this.game.coop?.receive(m, r); break;
+      case 'bh': case 'bd': case 'qe': if (this.inWorld) this.game.coop?.receive(m, r); break;
       case 'won': if (r.actor?.pvp) this.emit('note', `You beat ${r.label} in a fight!`, '#ffd54f'); break;
       default: break;
     }

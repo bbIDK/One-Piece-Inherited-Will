@@ -3,7 +3,7 @@
 // ends them everywhere, the win counting for all who were there.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { installCoop, sharedFoe } from '../src/net/coop.js';
+import { installCoop, sharedFoe, sharedKO } from '../src/net/coop.js';
 
 function fakeGame() {
   const ev = {}, sent = [];
@@ -68,4 +68,25 @@ test('your own finishing blow is sent; nothing goes out off a voyage', () => {
   b.knockOut(g, g.player);
   assert.equal(sent.length, 1);
   g.coop.receive({ k: 'bd', id: 'nobody' }, null);
+});
+
+test('a hostile quest foe downed by a friend counts here too; a townsman is never shared', () => {
+  assert.ok(sharedKO({ npcId: 'thug', hostile: true }));
+  assert.ok(!sharedKO({ npcId: 'baker' }));
+  assert.ok(!sharedFoe({ npcId: 'thug', hostile: true }), 'their health stays their own');
+});
+
+test("quest moments are shared with friends on the same island only, and never echoed back", () => {
+  const { g, sent } = fakeGame();
+  g.currentIsland = { id: 'syrup' };
+  const heard = [];
+  g.on('questEvent', (n) => heard.push(n));
+  g.emit('questEvent', 'bell_rung');
+  assert.deepEqual(sent.at(-1), { k: 'qe', n: 'bell_rung', isl: 'syrup' });
+  const before = sent.length;
+  g.coop.receive({ k: 'qe', n: 'clue_found', isl: 'syrup' }, { label: 'Kaito' });
+  assert.ok(heard.includes('clue_found'));
+  assert.equal(sent.length, before, 'no echo');
+  g.coop.receive({ k: 'qe', n: 'far_away', isl: 'orange_town' }, { label: 'Kaito' });
+  assert.ok(!heard.includes('far_away'));
 });

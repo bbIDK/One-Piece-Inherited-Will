@@ -134119,6 +134119,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   var SEND_GAP = 0.2;
   var NEAR6 = 150;
   var sharedFoe = (a) => !!(a?.npcId && (a.boss || a.named || a.bountyValue || a.def?.story));
+  var sharedKO = (a) => sharedFoe(a) || !!(a?.npcId && (a.hostile || a.def?.hostile));
   var down = (a) => a.state === "knocked" || a.state === "dead" || !a.alive;
   function installCoop(game) {
     const sentT = /* @__PURE__ */ new Map();
@@ -134134,8 +134135,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     });
     game.on("knockout", (a, att) => {
       const v = voyage();
-      if (!v || !sharedFoe(a) || a._netKO || !ours(att)) return;
+      if (!v || !sharedKO(a) || a._netKO || !ours(att)) return;
       v.send({ k: "bd", id: a.npcId });
+    });
+    let echo = false;
+    game.on("questEvent", (name) => {
+      const v = voyage(), isl = game.currentIsland?.id;
+      if (!v || echo || !isl || typeof name !== "string") return;
+      v.send({ k: "qe", n: name.slice(0, 60), isl });
     });
     const find = (id) => {
       const p = game.player;
@@ -134145,6 +134152,16 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     game.coop = {
       /** A message about a shared fight from a friend's game (session.js receive). */
       receive(m, r4) {
+        if (m.k === "qe") {
+          if (typeof m.n !== "string" || m.isl !== game.currentIsland?.id) return;
+          echo = true;
+          try {
+            game.emit("questEvent", m.n.slice(0, 60));
+          } finally {
+            echo = false;
+          }
+          return;
+        }
         const a = find(m.id);
         if (!a) return;
         const p = game.player;
@@ -134405,6 +134422,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         // co-op: a shared boss's health, and the blow that ends them (coop.js)
         case "bh":
         case "bd":
+        case "qe":
           if (this.inWorld) this.game.coop?.receive(m, r4);
           break;
         case "won":

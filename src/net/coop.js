@@ -11,8 +11,10 @@ import { num } from './protocol.js';
 const SEND_GAP = 0.2; // a boss's health, at most five times a second
 const NEAR = 150; // metres: the fight you share is the one you're at
 
-/** Someone whose fight is worth sharing. */
+/** Someone whose fight is worth sharing (their health on every screen). */
 export const sharedFoe = (a) => !!(a?.npcId && (a.boss || a.named || a.bountyValue || a.def?.story));
+/** Someone whose defeat counts for everyone there: those, and any foe a quest might send you after. */
+export const sharedKO = (a) => sharedFoe(a) || !!(a?.npcId && (a.hostile || a.def?.hostile));
 const down = (a) => a.state === 'knocked' || a.state === 'dead' || !a.alive;
 
 export function installCoop(game) {
@@ -31,8 +33,16 @@ export function installCoop(game) {
   });
   game.on('knockout', (a, att) => {
     const v = voyage();
-    if (!v || !sharedFoe(a) || a._netKO || !ours(att)) return;
+    if (!v || !sharedKO(a) || a._netKO || !ours(att)) return;
     v.send({ k: 'bd', id: a.npcId });
+  });
+
+  // a quest's moments (the bell rung, the clue found) — shared with friends on the same island
+  let echo = false;
+  game.on('questEvent', (name) => {
+    const v = voyage(), isl = game.currentIsland?.id;
+    if (!v || echo || !isl || typeof name !== 'string') return;
+    v.send({ k: 'qe', n: name.slice(0, 60), isl });
   });
 
   /** Their copy of the foe, here: the one near you, still standing. */
@@ -45,6 +55,13 @@ export function installCoop(game) {
   game.coop = {
     /** A message about a shared fight from a friend's game (session.js receive). */
     receive(m, r) {
+      if (m.k === 'qe') {
+        // (only where you are too: their bell on another island rings nothing for you)
+        if (typeof m.n !== 'string' || m.isl !== game.currentIsland?.id) return;
+        echo = true;
+        try { game.emit('questEvent', m.n.slice(0, 60)); } finally { echo = false; }
+        return;
+      }
       const a = find(m.id);
       if (!a) return;
       const p = game.player;
