@@ -117,8 +117,10 @@ export class Debris {
 
   add(o) {
     if (this.list.length >= MAX) {
-      // (full: the oldest chips go first, then the oldest of anything)
+      // (full: the oldest chips go first, then the bits of smashed stalls and lamps,
+      // then the oldest of anything — a house's rubble is the last thing to go)
       let i = this.list.findIndex((p) => p.chip);
+      if (i < 0) i = this.list.findIndex((p) => p.b && p.b.kind !== 'building');
       if (i < 0) i = 0;
       this.list.splice(i, 1);
     }
@@ -352,6 +354,9 @@ export class Debris {
     };
     const L = lite ? 0.45 : 1;
     if (o.kind === 'tree' || o.kind === 'bush' || o.kind === 'cactus') {
+      // (trees and bushes don't leave pieces lying about: they burst apart into
+      // leaves and splinters that blow away — game/destruction.js smash's puff)
+      return;
       const tree = o.kind === 'tree';
       const H = tree ? 4.5 * s : o.kind === 'cactus' ? 2.4 * s : 0.9 * s;
       const sub = o.sub || '';

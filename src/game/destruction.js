@@ -54,6 +54,7 @@ export const SMASH = {
   well: 70, signboard: 12, stall: 30, statue: 160, bench: 10, cart: 22, fence: 8, haystack: 8, totem: 60, cactus: 18,
   mushroom: 14, mooring: 20, table: 10, scarecrow: 10, crystal: 40, rock: 120, lantern: 8, flag: 10, cannon: 60, waterwheel: 120,
 };
+const TREES = new Set(['tree', 'bush', 'cactus']);
 const smashable = (o) => SMASH[o.kind] !== undefined && !o.hidden && !o.ruined && !o.far && !o.unbreakable && !o.quest;
 
 export function installDestruction(game) {
@@ -118,7 +119,7 @@ export function installDestruction(game) {
       const w = game.world;
       if (!w?.objects || !(power > 0)) return 0;
       let n = 0;
-      for (const p of w.objects.near(x, y, r + 1, smashable)) {
+      for (const p of w.objects.near(x, y, r + 1, o.noTrees ? (q) => smashable(q) && !TREES.has(q.kind) : smashable)) {
         const d = w.distance(x, y, p.x, p.y);
         if (d > r + 0.6 * (p.s || 1)) continue;
         if (floorOf(p) || /dock|pier|bridge|quay|jetty|plank/.test(p.kind)) continue;
@@ -140,6 +141,14 @@ export function installDestruction(game) {
       D.event({ kind: 'fixture', o: p });
       D.event({ kind: 'smash', b: p, x, y, power, delay: o.delay || 0, lite: !!o.lite });
       if (!o.delay && Math.random() < 0.5) game.audio?.sfx(p.kind === 'tree' ? 'collapse' : 'wallhit', { x: p.x, y: p.y }, { w: 0.3 });
+      // (a tree or a bush bursts apart into leaves and splinters, blown away — nothing left lying)
+      if (/tree|bush|cactus/.test(p.kind) && game.fx && !o.lite) {
+        const s = p.s || 1, near = !game.player || w.distance(p.x, p.y, game.player.x, game.player.y) < 45;
+        if (near) {
+          game.fx.burst(p.x, p.y, 10, { color: ['#4caf50', '#2e7d32', '#81c784'], speed: 4, spread: Math.PI * 2, z: 2.5 * s, vz: 2, g: 3, life: 0.9, kind: 'leaf', size: 0.14, delay: o.delay || 0 });
+          game.fx.burst(p.x, p.y, 5, { color: ['#8d6e63', '#6d4c41'], speed: 5, spread: Math.PI * 2, z: 1.2 * s, vz: 3, g: 12, life: 0.7, kind: 'dust', size: 0.1, delay: o.delay || 0 });
+        }
+      }
     },
 
     /**
@@ -268,7 +277,7 @@ export function installDestruction(game) {
         n++;
       }
       // everything else on it flattened with the wave: trees, stalls, the fountain, the well
-      n += D.smashNear(x, y, r, 1e6, att, { speed, lite: true, long: 1.5 });
+      n += D.smashNear(x, y, r, 1e6, att, { speed, lite: true, long: 1.5, noTrees: true });
       return n;
     },
 

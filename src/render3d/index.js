@@ -42,6 +42,10 @@ const RES_STEPS = [1, 0.88, 0.77, 0.67, 0.58]; // automatic resolution: shares o
 // (people are only moved within ~70 m of the player, and are a few pixels
 // tall beyond: they aren't drawn out to the render distance)
 const ACTOR_RANGE = 75;
+// (and no more than this many drawn at once, nearest first: a crowded harbour
+// town — Briss Royal Port — had well over a hundred whole characters drawn,
+// each a hundred-odd parts, and the frame rate fell through the floor)
+const MAX_ACTOR_VIEWS = 70;
 const PROP_BUDGET_MS = 4; // building props per frame (beyond the nearest)
 // The render distance (Settings) counts in 32 m chunks, like the terrain's.
 // At sea you see half as far again (islands are the view there), up to 32
@@ -1165,9 +1169,12 @@ export class Renderer3D {
       const d2 = dx * dx + dy * dy;
       // (a character already shown stays a little further out: no rebuilding at the edge)
       if (d2 > ACTOR_RANGE * ACTOR_RANGE && (d2 > (ACTOR_RANGE + 10) ** 2 || !this.actorViews.has(a))) continue;
+      // (people indoors are drawn only when you're close by — in there with them, or at the door)
+      if (a !== p && d2 > 14 * 14 && w.interiorAt?.(a.x, a.y) && !a.roofed && !a.upTop && !(p && w.interiorAt?.(p.x, p.y))) continue;
       near.push([a, dx, dy, d2]);
     }
     near.sort((a, b) => a[3] - b[3]);
+    if (near.length > MAX_ACTOR_VIEWS) near.length = MAX_ACTOR_VIEWS;
     let i = 0, made = 0, posed = 0;
     for (const [a, dx, dy, d2] of near) {
       seen.add(a);
