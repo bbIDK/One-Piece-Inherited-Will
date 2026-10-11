@@ -18471,7 +18471,7 @@
           id: "bleg_party",
           name: "Party Table Kick Course",
           icon: "\u{1F37D}",
-          anim: "kick",
+          anim: "handstand",
           windup: 0.2,
           recover: 0.4,
           cd: 6,
@@ -18484,7 +18484,7 @@
           id: "bleg_antimanner",
           name: "Anti-Manner Kick Course",
           icon: "\u{1F680}",
-          anim: "kick",
+          anim: "rise_kick",
           windup: 0.25,
           recover: 0.35,
           cd: 7,
@@ -72442,6 +72442,10 @@ vec3 paneView(vec3 dir, float night) {
             for (let i = 1; i <= n; i++) {
               const t = i / n, bx = px2 + ux * t, bz = pz2 + uz * t, by = oy + (uy + up) * t;
               if (w.isBlocked(bx, bz) && !(roofs && roofs.roofAt(bx, bz)?.h < by - 0.8) || ships && !own && game.shipSolidAt(bx, bz, by, true)) return t;
+              if (p.flying && roofs) {
+                const r4 = roofs.roofAt(bx, bz);
+                if (r4 && by < r4.h + 0.4 && by > r4.h - 1.2) return t;
+              }
             }
             return 0;
           };
@@ -72498,8 +72502,8 @@ vec3 paneView(vec3 dir, float night) {
           if (roofs3 && !p.belowDeck && !room2) {
             for (const [qx, qz] of ROOF_PROBE) {
               const rx = p.x + cx + qx, rz = p.y + cz + qz;
-              const r32 = w.isBlocked(rx, rz) ? roofs3.roofAt(rx, rz) : null;
-              if (r32 && r32.h < oy + 2.5 && r32.h + 0.7 > under) under = r32.h + 0.7;
+              const r32 = roofs3.roofAt(rx, rz);
+              if (r32 && (w.isBlocked(rx, rz) || cy > r32.h - 1.5) && r32.h < oy + 2.5 && r32.h + 0.7 > under) under = r32.h + 0.7;
             }
           }
           if (cy < under) cy = under;
@@ -171439,7 +171443,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       },
       // the air trembling as the fist draws back, then the sky cracking open: the shatter, the
       // sub-boom you feel in your chest, and the ground rolling on under it
-      default: (v, k) => GURA(v, k, 1)
+      default: (v, k) => {
+        GURA(v, k, 1);
+        const r4 = Math.max(0.12, k.rel || 0);
+        glassCrack(v, r4 + 0.55, 0.3);
+        v.thump(r4 + 0.56, { f0: 60, f1: 26, dur: 0.5, gain: 0.35 });
+        v.sample(r4 + 0.6, "rubble_1", { gain: 0.22, rate: 0.7 });
+      }
     },
     ope: {
       ope_room: (v) => {
@@ -171831,7 +171841,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     suna: (v, k) => v.noise(Math.max(0, k.rel - 0.12), 0.16, { freq: 3500, q: 0.6, gain: 0.04, attack: 0.05 }),
     moku: (v, k) => v.noise(Math.max(0, k.rel - 0.12), 0.18, { type: "lowpass", freq: 700, gain: 0.08, attack: 0.05 }),
     yami: (v, k) => suction(v, Math.max(0, k.rel - 0.15), 0.15, 0.4),
-    gura: (v, k) => v.thump(Math.max(0, k.rel - 0.06), { f0: 70, f1: 40, dur: 0.12, gain: 0.12 }),
+    gura: (v, k) => {
+      const t = Math.max(0, k.rel - 0.12);
+      v.tone(t, 0.14, { freq: 40, to: 48, gain: 0.16, attack: 0.1, curve: "lin", vib: { rate: 16, depth: 6 } });
+      v.noise(t, 0.12, { color: "brown", type: "lowpass", freq: 240, gain: 0.14, attack: 0.1, curve: "lin" });
+    },
     tori_phoenix: (v, k) => v.whoosh(Math.max(0, k.rel - 0.12), 0.16, { f0: 400, f1: 1500, q: 0.6, gain: 0.07, peak: 0.6, color: "pink" })
   };
   var M1_HIT = {
@@ -171872,8 +171886,11 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       v.sample(0, "dark", { gain: 0.15, dur: 0.25, fade: 0.1 });
     },
     quake: (v) => {
-      glassCrack(v, 0, 0.4);
-      v.thump(2e-3, { f0: 80, f1: 34, dur: 0.25, gain: 0.35 });
+      v.noise(0, 4e-3, { type: "highpass", freq: 1500, gain: 0.55, attack: 3e-4 });
+      glassCrack(v, 0, 0.55);
+      v.thump(2e-3, { f0: 90, f1: 28, dur: 0.38, gain: 0.55 });
+      v.sample(4e-3, "sub_boom", { gain: 0.35, rate: 1.1, dur: 0.5, fade: 0.25 });
+      v.sample(0.03, "quake", { gain: 0.3, rate: 0.95, dur: 0.6, fade: 0.4, lp: 500 });
     },
     poison: (v) => {
       v.bubble(0.01, { f: 320, rise: 1.6, dur: 0.07, gain: 0.07 });
