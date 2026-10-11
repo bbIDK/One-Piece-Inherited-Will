@@ -15,6 +15,7 @@ import { RNG } from '../core/rng.js';
 import { TAU, clamp } from '../core/math.js';
 import { drawShip } from '../render/ship.js';
 import { hullGap, hbAt } from '../world/hull.js';
+import { makeKraken } from './kraken.js';
 import { sightRange } from './traffic.js';
 
 // the eight points of the compass, round from east (y points south)
@@ -254,6 +255,12 @@ class SeaSystem {
       this.kingT -= dt * (s?.def?.seastone || s?.upgrades?.includes('seastone_keel') ? 0.15 : 1);
       if (this.kingT <= 0) { this.kingT = 22 + Math.random() * 20; this.spawnSeaKing(p, reg); }
     } else this.kingT = Math.max(this.kingT, 6);
+    // the beasts of the open Grand Line: a Kraken rising beside her, or a Sea King strayed out of the Belt
+    // (well out of sight of land, under sail)
+    if (s && !g.currentIsland && !this.rmState && isGrandLine(reg) && !isCalmBelt(reg)) {
+      this.beastT = (this.beastT ?? 150 + Math.random() * 120) - dt;
+      if (this.beastT <= 0) { this.beastT = 220 + Math.random() * 200; if (Math.random() < 0.55) this.spawnBeast(p, s, reg); }
+    }
     // ship encounters (not in sight of land, nor riding Reverse Mountain)
     if (s && !g.currentIsland && !this.rmState) {
       this.encT -= dt;
@@ -325,6 +332,30 @@ class SeaSystem {
       g.emit('questEvent', 'entered_grand_line');
       persist(g);
     } else if (!k && st.t > 4 && !st.top) this.rmState = null; // (swept back out to sea at a gate)
+  }
+
+  /** One of the Grand Line's monsters, coming up beside your ship. */
+  spawnBeast(p, s, reg, kind = null) {
+    const g = this.game, w = g.world;
+    if (g.actors.some((a) => a.alive && (a.look?.race === 'kraken' || a.look?.race === 'seaking'))) return null;
+    kind ||= Math.random() < 0.55 ? 'kraken' : 'seaking';
+    const nw = reg === REGION.NEW_WORLD;
+    const lvl = nw ? 60 + Math.floor(Math.random() * 20) : 32 + Math.floor(Math.random() * 14);
+    for (let tries = 0; tries < 8; tries++) {
+      const a = Math.random() * TAU, R = 12 + (s?.def.length || 0) * 0.5;
+      const x = w.wx(p.x + Math.cos(a) * R), y = p.y + Math.sin(a) * R;
+      if (!w.isLiquid(x, y) || w.isOverlay(x, y)) continue;
+      const k = kind === 'kraken' ? makeKraken(g, x, y, lvl) : makeSeaKing(g, x, y, lvl, { title: 'Monster of the Grand Line' });
+      g.addActor(k);
+      g.fx.ring(x, y, 1, 7, '#e1f5fe', 1.3, 0.3);
+      g.fx.burst(x, y, 40, { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 6, vz: 8, g: 12, life: 1.1, size: 0.24 });
+      g.audio?.sfx('seaking');
+      g.fx.shake(0.5);
+      if (kind === 'kraken') g.ui.banner('KRAKEN!', '', 'Giant arms rise out of the sea around the ship!', 3);
+      else g.ui.banner('SEA KING!', '', 'A monster rises from the depths!', 3);
+      return k;
+    }
+    return null;
   }
 
   spawnSeaKing(p, reg) {

@@ -17,6 +17,7 @@ import { expression } from './chars/face.js';
 import { B } from './chars/bones.js';
 import { Label, Marker, Glow, Aura, iceShell, Stars, rootRing, guardShimmer, FlameCloud } from './chars/fx.js';
 import { SeaKingView } from './chars/seaking.js';
+import { KrakenView } from './chars/kraken.js';
 import { SeaCowView, FightingFishView } from './chars/seacreature.js';
 import { Trail } from './chars/trail.js';
 import { BackFlame, PhoenixWings, driftInto } from './chars/flame.js';
@@ -781,6 +782,7 @@ const baseDraw = Actor.prototype.draw;
 registerActorView((a, ctx, opts) => {
   try {
     if (a.look && a.look.race === 'seaking') return new SeaKingView(a);
+    if (a.look && a.look.race === 'kraken') return new KrakenView(a);
     if (a.look && a.look.race === 'beast_seacow') return new SeaCowView(a);
     if (a.look && a.look.race === 'beast_fightfish') return new FightingFishView(a);
     if (a.draw !== baseDraw) return null; // custom-drawn creatures keep their sprite
