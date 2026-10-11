@@ -318,10 +318,6 @@ export const KITS = {
     { id: 'yami_abyss', name: 'Kurozu: Abyss', icon: '🌑', anim: 'raise', windup: 0.6, recover: 0.4, cd: 22, say: 'Abyss!', desc: 'Awakened: the dark spreads out from you over the whole field and drags everyone in it down and in.',
       steps: [{ zone: { range: 8, duration: 5, interval: 0.4, damage: 9, element: 'dark', color: '#120a1a', kind: 'dark', pull: 2.5, slow: 0.5, absorb: true } }] },
   ] } },
-  hito: { m1: { dmg: 1.1 }, forms: [
-    zoanForm('heavy', 'Heavy Point', 'Heavy', 5, 'hito_heavy', 'A big, furry, muscle-bound reindeer-man.', { m1: { dmg: 1.25 } }),
-    zoanForm('walk', 'Walk Point', 'Walk', 20, 'hito_walk', 'A reindeer on four hooves: a great deal faster.', { m1: { dmg: 1.1 } }),
-    { id: 'monster', name: 'Monster Point', short: 'Monster', mastery: 50, activate: 'hito_monster', desc: 'A Rumble Ball overdose: a towering monster, enormous power, barely controlled.', m1: { dmg: 1.5, reach: 1.4 } }] },
   tori_phoenix: { forms: [
     zoanForm('hybrid', 'Phoenix Hybrid', 'Hybrid', 10, 'phoenix_form', 'Arms become wings of blue flame: faster, harder, healing as you fight.'),
     zoanForm('phoenix', 'Full Phoenix', 'Phoenix', 45, 'phoenix_full', 'The Phoenix itself: a great bird of blue flame with a tail of gold.', { m1: { dmg: 1.2, element: 'fire', reach: 1.25 } }),

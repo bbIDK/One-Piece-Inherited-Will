@@ -37,12 +37,25 @@ export const wrecker = (o) => !!o && (o.isPlayer || o.summonedBy?.isPlayer);
  * power, ×1.2 for a weapon or style technique, about a third for a plain blow (M1),
  * and grown with the move (techScale²: a bigger blast hits a wall harder too).
  */
+/**
+ * How strong someone is against stone and timber, 0.05..1: a beginner's blows
+ * barely mark a wall; mastery of a fruit or a style, or Armament, is what
+ * brings houses down (the best of them; Armament counts double).
+ */
+export function wallStrength(a) {
+  if (!a) return 1;
+  const best = Math.max(a.fruitMastery || 0, ...Object.values(a.masteries || {}), (a.hakiSkill?.armament || 0) * 2, 0);
+  return Math.max(0.05, Math.min(1, Math.pow(best / 70, 1.4)));
+}
+
 export function structPower(h) {
   const def = h.def || h.owner?.action?.def;
   const src = def?.source || '';
   const k = src.startsWith('fruit') ? 3 : def?.m1 ? 0.3 : def ? 1.2 : 0.25;
   const f = h.owner && def ? techScale(h.owner, def) : 1;
-  return (h.damage || 0) * k * f * f * (h.blast || h.heavy ? 1.3 : 1);
+  const pw = (h.damage || 0) * k * f * f * (h.blast || h.heavy ? 1.3 : 1) * wallStrength(h.owner);
+  // (an ordinary punch does nothing to a wall at all until you're strong)
+  return def?.m1 && wallStrength(h.owner) < 0.35 ? 0 : pw;
 }
 
 /**

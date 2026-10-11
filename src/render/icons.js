@@ -2052,7 +2052,7 @@ D.rope = (I) => {
 const FRUIT_SHAPE = {
   gomu: 'round', mera: 'round', ope: 'heart', hie: 'pear', goro: 'melon', yami: 'heart', gura: 'round', pika: 'gourd', magu: 'pear',
   suna: 'banana', moku: 'grape', hana: 'grape', bara: 'melon', ito: 'grape', mochi: 'gourd', horo: 'heart', kage: 'melon', doku: 'grape',
-  hito: 'pear', neko_leopard: 'banana', tori_phoenix: 'pear', uo_seiryu: 'banana', nikyu: 'heart', bari: 'round', supa: 'gourd',
+  neko_leopard: 'banana', tori_phoenix: 'pear', uo_seiryu: 'banana', nikyu: 'heart', bari: 'round', supa: 'gourd',
 };
 const FRUIT_SHAPES = ['round', 'pear', 'grape', 'banana', 'gourd', 'melon', 'heart'];
 const FRUIT_BODY = {
@@ -2975,7 +2975,7 @@ const STYLE_SK = {
 const FRUIT_BADGE = {
   gomu: '#b8433f', gura: '#3d7f93', ope: '#2f6fa0', bara: '#c0563a', bomu: '#c0762a', hana: '#b9507e', ito: '#b04a78', mochi: '#9a7a4a', horo: '#7a4f96',
   kage: '#5a6f86', doku: '#6d2a86', noro: '#2f8a92', bari: '#3f7fae', suke: '#6d7f8c', sube: '#b0607a', doru: '#a08050', supa: '#5f6f7c', nikyu: '#6f6a86',
-  mane: '#b03f6e', zushi: '#5b4a9a', hito: '#b86a82', neko_leopard: '#b8782a', tori_phoenix: '#223a66', uo_seiryu: '#1f2c52', mera: '#c24a26', hie: '#3a86b8',
+  mane: '#b03f6e', zushi: '#5b4a9a', neko_leopard: '#b8782a', tori_phoenix: '#223a66', uo_seiryu: '#1f2c52', mera: '#c24a26', hie: '#3a86b8',
   goro: '#3c3f86', suna: '#a8843e', moku: '#6f7f8a', pika: '#b8901e', magu: '#8a2a18', yami: '#4a2a86',
 };
 const HAKI_BADGE = { armament: '#5a3f86', observation: '#1f7a86', conqueror: '#8a1c2a' };
@@ -3019,7 +3019,6 @@ const SKILL_MAP = {
   mane_disguise: ['masks'], mane_memoir: ['masks', { c: '#f4a3bf' }],
   zushi_press: ['gravity'], zushi_blade: ['claw', { c: '#d8c8ff' }], zushi_meteor: ['meteor'],
   // Zoans
-  hito_heavy: ['antler', { muscle: true }], hito_horn: ['antler', { hat: true }], hito_monster: ['antler', { c: '#8a5a30' }],
   neko_hybrid: ['leopard'], neko_claw: ['claw', { c: '#ffe8c0' }], neko_pounce: ['dash', { c: '#ffe8c0', c2: '#e8a33c' }],
   phoenix_flame: ['heal', { c: '#4dd0e1', flame: BLUEFIRE }], phoenix_fly: ['bird', { cols: BLUEFIRE, fire: true }], phoenix_brand: ['kick', { fx: 'fire', flame: BLUEFIRE, c: '#e8d9a8', shoe: '#6b4a2a' }], phoenix_rebirth: ['bird', { cols: BLUEFIRE, fire: true, flameTail: true }],
   seiryu_bolo: ['dragon', { breath: true }], seiryu_kaifu: ['airblade', { n: 2 }], seiryu_raimei: ['bolt', { two: true }], seiryu_form: ['dragon'],
@@ -3053,7 +3052,6 @@ const SKILL_MAP = {
   nikyu_tsuppari: ['paw', { push: true }], nikyu_hop: ['paw', { arrow: true }],
   mane_montage: ['masks', { c: '#f4a3bf' }],
   zushi_pull: ['gravity'], zushi_lift: ['meteor', { c: '#6d4c41' }],
-  hito_arm: ['antler', { muscle: true }], hito_walk: ['antler'], hito_jump: ['antler', { hat: true }], hito_brain: ['eye', { iris: '#8a5a30' }],
   neko_shigan: ['claw', { c: '#ffe8c0' }], neko_rokuogan: ['palms', { burst: '#ffffff' }],
   phoenix_pyreapple: ['kick', { fx: 'fire', flame: BLUEFIRE, c: '#e8d9a8', shoe: '#6b4a2a' }], phoenix_talon: ['claw', { c: '#4dd0e1' }],
   seiryu_kamaitachi: ['airblade', { n: 2 }], seiryu_tatsumaki: ['tornado', { c: '#e3f2fd' }], seiryu_ragnaraku: ['bolt', { two: true }],

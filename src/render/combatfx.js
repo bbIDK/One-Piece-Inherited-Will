@@ -1731,7 +1731,6 @@ sig('zushi_lift', {
   },
 });
 // Human-Human: the Rumble points
-sig('hito_arm hito_walk hito_jump hito_brain', { buff(fx, actor, s, a, ex) { DEFAULTS.buff(fx, actor, s, a, ex); smoke(fx, actor.x, actor.y, 0.9, 10, ['#ffe0b2', '#ffffff'], { speed: 2, size: 0.3 }); } });
 // Leopard: a finger gun; the Six Kings' Gun
 sig('neko_rokuogan', { hit(fx, actor, s, a, hb) { DEFAULTS.hit(fx, actor, s, a, hb); const [px, py] = fwd(actor, hb.angle, 1); for (let i = 0; i < 3; i++) fx.ring(px, py, 0.1, 1.5 + i * 0.8, '#ffffff', 0.4, 0.1, { z: 0.9, flat: 0.85, delay: i * 0.05, wobble: 0.15, lobes: 9, add: true }); fx.add('aircrack', { x: px, y: py, z: 0.9, size: 1.1, life: 0.45 }); fx.shake(0.4, hb.angle); } });
 // Phoenix: blue flame
@@ -1818,7 +1817,7 @@ sig('supa_spider', {
     fx.ring(actor.x, actor.y, 0.2, 1.6, '#eceff1', 0.3, 0.06, { z: 1, flat: 0, add: true });
   },
 });
-sig('hito_heavy hito_guard hito_monster neko_hybrid seiryu_form mane_disguise doru_armor', {
+sig('neko_hybrid seiryu_form mane_disguise doru_armor', {
   buff(fx, actor, s, a, ex) {
     DEFAULTS.buff(fx, actor, s, a, ex);
     smoke(fx, actor.x, actor.y, 0.8, 14, ['#ffffff', '#eceff1', '#cfd8dc'], { speed: 3, size: 0.4 });

@@ -644,29 +644,48 @@ export const SFX = {
     },
   },
   /** A blow landing on a wall: the crunch of plaster and timber, bits pattering down. */
+  /** A blow into a wall: a deep thud through the timbers, the crack of a beam, plaster and grit pattering down. */
   wallhit: {
-    prio: 5, cd: 0.08, max: 2, send: 0.15, drive: 1.2,
+    prio: 5, cd: 0.08, max: 2, send: 0.18, drive: 1.4,
     play(v) {
-      v.thump(0, { f0: 120, f1: 55, dur: 0.18, gain: 0.3 });
-      v.noise(0, 0.22, { type: 'lowpass', freq: 700, gain: 0.32 });
-      v.crackle(0.01, 0.3, 10, { freq: 1600, gain: 0.09, q: 4 });
-      v.sample(0.02, 'rubble_1', { gain: 0.18, rate: 1.1, lp: 3500 });
+      v.thump(0, { f0: 140, f1: 48, dur: 0.22, gain: 0.42, click: 0.3 });
+      v.noise(0, 0.018, { type: 'highpass', freq: 2200, gain: 0.3, attack: 0.0006 });
+      v.noise(0.004, 0.28, { color: 'pink', type: 'lowpass', freq: 900, sweep: 300, gain: 0.32 });
+      v.creak(0.01, 0.12, { rate: 60, rate1: 30, freqs: [380, 640], q: 6, gain: 0.08 });
+      v.crackle(0.03, 0.45, 12, { freq: 2600, gain: 0.07, q: 3 });
+      v.sample(0.02, 'rubble_2', { gain: 0.26, rate: 1.15, lp: 4200 });
     },
   },
-  /** A building coming down: the crack of it giving way, the long roar of timber and stone falling, the rumble, the dust settling. */
+  /**
+   * A building coming down: the sharp crack of the main beam snapping, a
+   * groan as it leans, then the crash — a huge low boom felt as much as
+   * heard, timber splintering and roof tiles smashing in a long roar of
+   * falling rubble, the rumble rolling away and grit pattering after.
+   */
   collapse: {
-    prio: 8, cd: 0.12, max: 3, send: 0.35, drive: 2.2, duck: 0.4,
+    prio: 8, cd: 0.12, max: 3, send: 0.4, drive: 2.4, duck: 0.45,
     play(v, k) {
       const s = k.w || 1;
-      v.noise(0, 0.05, { type: 'highpass', freq: 1400, gain: 0.35 * s, attack: 0.0008 });
-      v.creak(0, 0.5, { rate: 30, rate1: 14, freqs: [150, 260, 430], q: 5, gain: 0.18 * s });
-      v.thump(0.15, { f0: 70, f1: 24, dur: 1.2, gain: 0.8 * s });
-      v.noise(0.12, 1.8, { color: 'pink', type: 'lowpass', freq: 700, sweep: 80, gain: 0.65 * s });
-      v.crackle(0.15, 1.4, 30, { freq: 1300, gain: 0.13 * s, q: 4 });
-      v.sample(0.15, 'rubble_1', { gain: 0.45 * s, rate: 0.7 });
-      v.sample(0.4, 'rubble_1', { gain: 0.3 * s, rate: 0.55, lp: 1800 });
-      const e = v.echo(0.3, 0.35, 700, 0.3);
-      v.noise(0.15, 0.7, { color: 'pink', type: 'lowpass', freq: 500, gain: 0.35 * s, dest: e });
+      // the beam snapping, and the groan of the frame giving way
+      v.noise(0, 0.03, { type: 'highpass', freq: 1800, gain: 0.45 * s, attack: 0.0005 });
+      v.thump(0, { f0: 220, f1: 90, dur: 0.08, gain: 0.3 * s, click: 0.5 });
+      v.creak(0.03, 0.55, { rate: 26, rate1: 9, freqs: [120, 210, 360], q: 6, gain: 0.2 * s });
+      for (let i = 0; i < 4; i++) v.noise(0.12 + i * 0.09 + Math.random() * 0.05, 0.02, { freq: 2400 + Math.random() * 1800, q: 2, gain: 0.22 * s, attack: 0.0005 });
+      // the crash: a deep boom and a roar of falling stone and timber
+      v.thump(0.32, { f0: 80, f1: 22, dur: 1.6, gain: 1.0 * s });
+      v.thump(0.36, { f0: 160, f1: 50, dur: 0.4, gain: 0.45 * s, click: 0.4 });
+      v.noise(0.3, 2.2, { color: 'brown', type: 'lowpass', freq: 520, sweep: 70, gain: 0.7 * s });
+      v.noise(0.32, 1.3, { color: 'pink', type: 'bandpass', freq: 1400, q: 0.7, sweep: 500, gain: 0.3 * s });
+      // tiles and glass smashing, splinters, then the patter of grit settling
+      v.crackle(0.33, 1.1, 42, { freq: 3200, gain: 0.12 * s, q: 3 });
+      v.crackle(0.5, 1.8, 26, { freq: 900, gain: 0.14 * s, q: 2 });
+      v.crackle(1.4, 1.6, 18, { freq: 4200, gain: 0.05 * s, q: 4 });
+      v.sample(0.32, 'rubble_1', { gain: 0.55 * s, rate: 0.72 });
+      v.sample(0.5, 'rubble_2', { gain: 0.42 * s, rate: 0.85, lp: 3000 });
+      v.sample(0.85, 'rubble_1', { gain: 0.28 * s, rate: 0.55, lp: 1500 });
+      // the rumble rolling away off the walls round it
+      const e = v.echo(0.35, 0.4, 900, 0.35);
+      v.noise(0.32, 0.9, { color: 'pink', type: 'lowpass', freq: 450, gain: 0.38 * s, dest: e });
     },
   },
   /** Out of shot: the hammer falls on nothing. */
@@ -1515,7 +1534,6 @@ export const FRUIT_TECH = {
     zushi_meteor: (v, k) => { v.tone(0, Math.max(0.6, k.rel) + 0.4, { freq: 3200, to: 500, gain: 0.03, attack: 0.2, curve: 'lin' }); v.noise(0, Math.max(0.6, k.rel), { color: 'brown', type: 'lowpass', freq: 200, gain: 0.2, attack: 0.5, curve: 'lin' }); },
     default: (v, k) => { v.tone(0, Math.max(0.3, k.rel) + 0.3, { freq: 42, to: 30, gain: 0.3, attack: 0.08 }); M.suction(v, 0, Math.max(0.3, k.rel) + 0.2, 0.5); },
   },
-  hito: { default: (v, k) => { v.crackle(0, 0.1, 4, { freq: 1800, gain: 0.08 }); M.roar(v, 0.05, 0.6, 0.6, 110); if (k.rel > 0.3) swing(v, k.rel, 'heavy', 1); } },
   neko_leopard: { default: (v, k) => { M.roar(v, 0, 0.7, 0.5, 120); swing(v, k.rel, 'fists', 1.2); } },
   tori_phoenix: { default: (v, k) => { M.flame(v, 0, 0.7, { dur: 0.6, low: 500, high: 1800 }); M.chime(v, 0.15, 0.7, [1318, 1760, 2637]); if (k.rel > 0.1) swing(v, k.rel, 'legs', 1); } },
   uo_seiryu: {

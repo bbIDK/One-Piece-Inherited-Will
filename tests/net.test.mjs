@@ -569,7 +569,7 @@ test('her deck gone from under you: set down where you stood — on the pier the
   const own = new Ship({ type: 'sloop', x: 900, y: 650, heading: 1, owner: 'player', name: 'Thousand Sunny' });
   own.game = g2;
   const luffy = body(g2, 'Luffy'), chopper = body(g2, 'Chopper');
-  luffy.fruit = 'gomu'; chopper.fruit = 'hito';
+  luffy.fruit = 'gomu'; chopper.fruit = 'mera';
   placeOnDeck(g2, luffy, s2, 0.5, 0); placeOnDeck(g2, chopper, s2, 0.6, 0);
   goneFrom(g2, s2, [luffy]);
   assert.equal(luffy.deck, null, 'no ship of his own about: the sea');

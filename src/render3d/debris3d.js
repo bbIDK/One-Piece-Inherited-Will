@@ -270,7 +270,6 @@ export class Debris {
     lx = Math.max(-fw / 2, Math.min(fw / 2, lx)); lz = Math.max(-fd, Math.min(0, lz));
     // where it struck: a fist's height, or — a bigger blow — anywhere up the lower wall
     const at = hy ?? Math.min(H * 0.7, k > 0.5 ? rnd(0.9, 2.4) : rnd(1.0, 1.6));
-    this.hole(b, base, lx, lz, at, k, P);
     for (let i = 0; i < n; i++) {
       const sz = rnd(0.12, 0.35);
       const p = this.piece(b, base, lx + rnd(-0.4, 0.4), at + rnd(-0.4, 0.4), lz + rnd(-0.2, 0.2), sz, sz * rnd(0.5, 1), sz, Math.random() < 0.7 ? P.wall : P.wood, { chip: true, life: 25 });
@@ -305,26 +304,6 @@ export class Debris {
         : this.piece(b, base, lx, H * rnd(0.7, 0.95), lz, 0.16, 0.16, rnd(1.2, 2.6), P.wood, { delay: rnd(0, 0.4) });
       p.vx = rnd(-1, 1) + near * c * rnd(1, 3); p.vy = rnd(-1, 1) - near * sn * rnd(1, 3); p.vh = rnd(0.5, 2.5);
       p.wx = rnd(-3, 3); p.wy = rnd(-2, 2); p.wz = rnd(-3, 3);
-    }
-    // a breach in its roof on that side: the tiles gone, snapped rafters sticking up out of it
-    for (let i = 0; i < (st === 1 ? 4 : 8); i++) {
-      const lx = near * rnd(0.1, fw / 2 - 0.3), lz = -rnd(0.4, fd - 0.4);
-      const p = this.piece(b, base, lx, H * rnd(0.86, 0.97), lz, rnd(0.8, 1.4), 0.12, rnd(0.7, 1.2), '#24170f', { life: 0 });
-      p.rest = true; p.hole = true; p.rx = rnd(-0.5, 0.5); p.rz = rnd(-0.5, 0.5);
-      (b._holes ||= []).push({ lx, lz, hy: H, k: 0, parts: [p] });
-    }
-    for (let i = 0; i < (st === 1 ? 4 : 8); i++) {
-      const lx = near * rnd(0.2, fw / 2 - 0.2), lz = -rnd(0.3, fd - 0.3);
-      const p = this.piece(b, base, lx, H * rnd(0.9, 1.05), lz, 0.14, rnd(1.2, 2.2), 0.14, P.wood, { life: 0 });
-      p.rest = true; p.hole = true; p.rx = rnd(-0.8, 0.8); p.rz = rnd(-0.8, 0.8);
-      (b._holes ||= []).push({ lx, lz, hy: H, k: 0, parts: [p] });
-    }
-    // walls caving in: big ragged breaches on several sides, high and low
-    const holes = st === 1 ? 2 : 4;
-    for (let i = 0; i < holes; i++) {
-      const side = Math.floor(Math.random() * 4), u = rnd(0.2, 0.8);
-      const lx = side === 2 ? -fw / 2 : side === 3 ? fw / 2 : (u - 0.5) * fw, lz = side === 0 ? 0 : side === 1 ? -fd : -u * fd;
-      this.hole(b, base, lx, lz, rnd(1, Math.max(1.2, H * 0.75)), rnd(0.9, 1.6) + st * 0.2, P);
     }
     // masonry and plaster raining off it
     for (let i = 0; i < 14 * st; i++) {

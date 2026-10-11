@@ -355,8 +355,14 @@ function runStep(actor, s, game, a) {
       const spread = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) * (aimed ? 0.5 : 1) : (p.jitter && !aimed ? (Math.random() - 0.5) * p.jitter : 0);
       const pa = ang + spread;
       const sp = (p.speed || 14) * (fire ? 2.2 : 1) * (aimed ? 1.35 : 1);
-      const sx = actor.x + Math.cos(pa) * 0.6, sy = actor.y - 0.5 + Math.sin(pa) * 0.6;
+      // (out of the throwing hand — the right, a little out from the chest — at its height:
+      // up in the air with a flier, high with a giant; a breath from the mouth)
+      const sc = actor.look?.scale || 1, side = 0.22 * sc * (n > 1 ? 0 : 1);
+      const sx = actor.x + Math.cos(pa) * 0.6 * sc - Math.sin(pa) * side, sy = actor.y - 0.5 + Math.sin(pa) * 0.6 * sc + Math.cos(pa) * side;
+      const feet = actor.feetH ? actor.feetH(game) : (actor.z || 0);
+      const h0 = feet + (/breath|roar/.test(a.def.anim || '') || p.mouth ? 1.55 : 1.3) * sc;
       game.combat.projectile({
+        h0,
         owner: actor, x: game.world.wx(sx), y: sy, vx: Math.cos(pa) * sp, vy: Math.sin(pa) * sp,
         range: (p.range || 10) * (aimed ? 1.6 : fire ? 1.25 : 1), radius: p.radius || 0.3, damage: (p.damage || 5) * mult * (aimed ? 1.35 : 1), element: p.element || 'physical',
         knockback: p.knockback ?? 2, stun: p.stun ?? 0.2, status: p.status, pierce: p.pierce, homing: p.homing,

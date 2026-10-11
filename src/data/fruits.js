@@ -367,27 +367,6 @@ export const FRUITS = {
   },
 
   // ------------------------------------------------------------------ ZOAN
-  hito: {
-    name: 'Hito Hito no Mi', en: 'Human-Human Fruit', type: 'Zoan', rarity: 'uncommon', color: '#f8bbd0', weight: 2.5,
-    desc: 'Grants the intelligence and form of a human. Tony Tony Chopper ate it as a reindeer, and learned to take a different shape for each need.',
-    techniques: [
-      T(0, { id: 'hito_heavy', name: 'Heavy Point', icon: '💪', anim: 'flex', windup: 0.4, recover: 0.1, cd: 8, desc: 'Grow into a towering, furry, muscle-bound reindeer-man: hit harder, take more. (The form key switches it on and off.)', steps: [{ fx: { burst: 14, color: '#a1887f', kind: 'smoke' } }, { at: 0.35, buff: { id: 'heavy_point', form: 'heavy', name: 'Heavy Point', dur: Infinity, mods: { damage: 1.3, defMul: 0.8, scale: 1.3 }, look: ZOAN_LOOK.heavy } }] }),
-      T(10, { id: 'hito_guard', name: 'Guard Point', anim: 'block', windup: 0.1, recover: 0.1, cd: 14, desc: 'Puff up into a great ball of fur: blows bounce off the fluff (but you can hardly move).', steps: [{ buff: { id: 'guard_point', name: 'Guard Point', dur: 3.5, mods: { defMul: 0.25, speedMul: 0.4 }, look: { bulk: 1.9 } } }] }),
-      T(20, { id: 'hito_horn', name: 'Horn Point: Kokutei Roseo', icon: '🦌', anim: 'thrust', windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
-      T(30, { id: 'hito_arm', name: 'Arm Point: Kokutei Cross', anim: 'punch', windup: 0.25, recover: 0.3, cd: 6, desc: 'Arms like a gorilla\'s: both hooves driven into them crossed — and the mark of the cross left behind.',
-        steps: [{ buff: { id: 'arm_point', name: 'Arm Point', dur: 1.2, look: { bulk: 1.25 } } }, { at: 0.25, hit: { shape: 'arc', range: 1.9, arc: 1.2, offset: 0.3, damage: 34, knockback: 10, stun: 0.6, heavy: true, guardBreak: true, impactFrame: true } }] }),
-      T(40, { id: 'hito_walk', name: 'Walk Point', anim: 'flex', windup: 0.25, recover: 0.1, cd: 8, desc: 'Down on four hooves like a true reindeer: you run a great deal faster.',
-        steps: [{ fx: { burst: 12, color: '#a1887f', kind: 'smoke' } }, { at: 0.25, buff: { id: 'walk_point', form: 'walk', name: 'Walk Point', dur: Infinity, mods: { speedMul: 1.45, scale: 1.15 }, look: ZOAN_LOOK.walk } }] }),
-      T(50, { id: 'hito_jump', name: 'Jumping Point', anim: 'thrust', windup: 0.25, recover: 0.35, cd: 9, desc: 'Legs built to leap: bound high over them and come down hooves first.',
-        steps: [{ dash: { dist: 7, time: 0.4, iframes: 0.3, air: true, hit: { damage: 26, knockback: 8, stun: 0.6, launch: 3 } } }] }),
-      T(60, { id: 'hito_brain', name: 'Brain Point: Scope', anim: 'pray', windup: 0.3, recover: 0.2, cd: 30, desc: 'Look through the lens of your hooves and find their weak spot: for a while every blow lands where it hurts most.',
-        steps: [{ buff: { id: 'scope', name: 'Scope', dur: 10, mods: { crit: 0.5, damage: 1.15 } } }] }),
-    ],
-    // (Monster Point is a form, opened by fighting: data/fruitForms.js)
-    more: [
-      T(50, { id: 'hito_monster', name: 'Monster Point', icon: '👹', anim: 'flex', windup: 0.8, recover: 0.1, cd: 90, desc: 'A Rumble Ball overdose: enormous power, barely controllable.', steps: [{ buff: { id: 'monster', form: 'monster', name: 'Monster Point', dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, look: ZOAN_LOOK.monster } }] }),
-    ],
-  },
   neko_leopard: {
     name: 'Neko Neko no Mi, Model: Leopard', en: 'Cat-Cat Fruit, Leopard', type: 'Zoan', rarity: 'rare', color: '#ffb74d', weight: 1.2,
     desc: 'Become a leopard or a half-leopard warrior. Rob Lucci\'s ferocious fruit.',

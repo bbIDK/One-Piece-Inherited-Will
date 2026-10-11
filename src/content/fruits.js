@@ -16,8 +16,20 @@ import { DEVIL, fruitOf, fruitKey, fruitCount, fruitPicked } from '../world/frui
  * part of it are gone.
  */
 function catchUpFruit(game, c) {
+  // (a fruit since taken out of the game — the Hito Hito no Mi — swapped for another, unclaimed one)
+  if (c && c.inventory) c.inventory = c.inventory.filter((it) => !(it.id?.startsWith('fruit_') && !FRUITS[it.id.slice(6)]));
+  if (c?.fruit && !FRUITS[c.fruit]) {
+    const gone = c.fruit, rng = new RNG(c.runSeed + ':fruit-swap');
+    c.techniques = (c.techniques || []).filter((id) => !id.startsWith(gone + '_'));
+    c.hotbar = (c.hotbar || []).map((id) => (typeof id === 'string' && (id.startsWith(gone + '_') || id.startsWith('ms:form')) ? null : id));
+    c.fruit = null;
+    const fid = game.rollFruit?.(rng);
+    if (!fid) { c.fruitsEaten = 0; return; }
+    c.fruit = fid; c.fruitAwakened = false;
+    game.log?.(`Your Devil Fruit is gone from the world — in its place, the ${FRUITS[fid].name}.`, '#ffab91');
+  }
   if (!c?.fruit || !FRUITS[c.fruit]) return;
-  const stale = (id) => typeof id === 'string' && /^(gomu|gura|ope|bara|bomu|hana|ito|mochi|horo|kage|doku|noro|bari|suke|sube|doru|supa|nikyu|mane|zushi|hito|neko|phoenix|seiryu|mera|hie|goro|suna|moku|pika|magu|yami)_/.test(id) && !getAbility(id);
+  const stale = (id) => typeof id === 'string' && /^(gomu|gura|ope|bara|bomu|hana|ito|mochi|horo|kage|doku|noro|bari|suke|sube|doru|supa|nikyu|mane|zushi|neko|phoenix|seiryu|mera|hie|goro|suna|moku|pika|magu|yami)_/.test(id) && !getAbility(id);
   c.techniques = (c.techniques || []).filter((id) => !stale(id));
   c.hotbar = (c.hotbar || []).map((id) => (stale(id) ? null : id));
   const fresh = unlockedFruitTechniques(c.fruit, c.fruitMastery || 0).filter((id) => !c.techniques.includes(id));

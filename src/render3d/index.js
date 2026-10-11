@@ -1124,6 +1124,22 @@ export class Renderer3D {
   projY(pr) {
     if (pr.arc) { const f = Math.min(1, (pr.traveled || 0) / (pr.range || 1)); return pr.arc.h0 * (1 - f) + pr.arc.apex * 4 * f * (1 - f) - f * 0.2; }
     if (pr.stretch) return this.fistY(pr);
+    // (thrown from a hand at its own height — game/abilities.js h0 — and flying level from there,
+    // or easing to the chest of what it's thrown at, never into the ground under it)
+    if (pr.h0 != null && pr.sprite !== 'cannonball') {
+      const g = Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5));
+      let y = pr.h0;
+      const t = pr.target;
+      if (t && t.alive !== false && t !== pr.owner) {
+        const tv = this.actorViews.get(t);
+        const chest = (tv ? tv.root.position.y : this.ground(t.x, t.y) + (t.z || 0)) + 1.2 * ((t.look && t.look.scale) || 1);
+        const gone = pr.traveled || 0, rem = Math.hypot(this.world.dx(pr.x, t.x), t.y - (pr.y + 0.5));
+        pr.aimK = Math.max(pr.aimK || 0, gone / Math.max(0.01, gone + rem));
+        const lim = 0.5 * (gone + rem);
+        y += Math.max(-lim, Math.min(lim, chest - y)) * pr.aimK;
+      }
+      return Math.max(y, g + 0.35) + (pr.z || 0);
+    }
     return Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5)) + (pr.sprite === 'cannonball' ? 1.3 : 1.15) + (pr.z || 0);
   }
 

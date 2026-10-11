@@ -167,6 +167,8 @@ export function creationScreen(ui, legacy, { onDone, onBack }) {
     );
     const btns = h('div.roll-btns', { style: { opacity: 0 } },
       h('button.btn.gold', { on: { click: stepIdentity } }, 'Continue'),
+      // (the very first of a line: roll again as often as you like — after that, only Fate's Coin)
+      legacy.generation <= 1 ? h('button.btn', { on: { click: () => { birth = rollBirth(legacy, Math.floor(Math.random() * 1e9), canonFruits()); keep(); stepRoll(true); } } }, 'Reroll') : null,
       rerolls > 0 ? h('button.btn', { on: { click: () => { rerolls--; birth = rollBirth(legacy, Math.floor(Math.random() * 1e9), canonFruits()); keep(); stepRoll(true); } } }, `Flip Fate's Coin (${rerolls} left)`) : null);
     const willLine = h('div.will-line', uiImg('reputation', 16), ` Your lineage's Inherited Will: ${legacy.will}` + (legacy.generation > 1 ? ` · generation ${legacy.generation}` : ''));
     const panel = h('div.panel.race-roll', h('h2', legacy.generation > 1 ? `Generation ${legacy.generation} is born…` : 'A child is born…'), nameEl, rarEl, dEl, fEl, info, btns, willLine);
