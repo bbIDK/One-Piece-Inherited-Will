@@ -109,6 +109,8 @@ export function colliderOf(o) {
   if (o.kind === 'phvolcano' || o.kind === 'wanofuji') return { circles: [[0, 0, (o.r || 20) * 0.86]] };
   if (o.kind === 'phicepeaks') return { circles: (o.peaks || []).map(([x, z, r]) => [x, z, r * 0.78]) };
   if (o.kind === 'phlab') return { circles: PHLAB.domes.map(([x, z, r]) => [x, z, r + 0.4]).concat(PHLAB.stacks.map(([x, z, r]) => [x, z, r + 0.2])) };
+  // (Zunesha's head and forelegs, standing in the sea off Zou's east end: render3d/props/zou.js)
+  if (o.kind === 'zunesha') { const S = o.s || 1; return { circles: [[0, 0, 15 * S], [-8 * S, -14 * S, 9 * S], [-8 * S, 14 * S, 9 * S], [16 * S, 2 * S, 6 * S]] }; }
   if (o.kind === 'wanocastle') return { circles: [[0, 0, (o.r || 14) * 0.95]] };
   if (o.kind === 'skulldome') return { circles: [[0, -4, SKULL.r * 0.97], [-SKULL.r * 0.75, 6, SKULL.r * 0.42], [SKULL.r * 0.75, 6, SKULL.r * 0.42]] };
   // a Galley-La dock's shed: its side walls, its back wall either side of the

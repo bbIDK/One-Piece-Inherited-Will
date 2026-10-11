@@ -375,6 +375,7 @@ export const NEW_WORLD = [
     landmarks: [
       { kind: 'building', role: 'hall', name: 'The Whale', npc: 'nw_nekomamushi', fw: 9, fd: 6, hgt: 7, wall: '#6d4c41', roof: '#2e7d32', roofType: 'hut', dx: 0.5, dy: -0.2, spot: 'the_whale' },
       { kind: 'poneglyph', road: true, poneglyph: 'road_zou', name: "Road Poneglyph (in the Whale's tail)", dx: 0.38, dy: -0.34, spot: 'zou_poneglyph' },
+      { kind: 'zunesha', dx: 1.28, dy: 0.02, water: true, far: 5000, name: 'Zunesha', lore: 'The elephant\'s head rises out of the sea higher than any building in Kurau City, its trunk hanging down into the waves. Zunesha has carried the minks on its back for a thousand years, walking the sea as punishment for a crime nobody remembers. Every so often it breathes, and the whole island rises and settles under your feet.' },
       { kind: 'gate', dx: -0.84, dy: 0.02, name: 'Front Gate of the Mokomo Dukedom', spot: 'front_gate', lore: '"MOKOMO DUKEDOM." The steel gate has been ripped off its hinges by something enormous. Beyond it, the whole island rises and falls gently: you are standing on the back of Zunesha, an elephant that has walked the sea for a thousand years.' },
     ],
     spots: [{ id: 'whale_forest', dx: 0.42, dy: 0.02 }, { id: 'rightflank', dx: -0.1, dy: 0.56 }],

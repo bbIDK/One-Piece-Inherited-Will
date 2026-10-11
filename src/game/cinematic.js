@@ -21,6 +21,12 @@ const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 /** The bounty the way a wanted poster prints it: ฿8,000,000. */
 export function bountyText(n) { return n ? `฿${Math.round(n).toLocaleString('en-US')}` : ''; }
 
+/** Whether a price on their head goes on their card: the law's own people (Marines, CP, the wardens) never carry one. */
+export function outlaw(a) {
+  const f = a?.faction || a?.def?.faction;
+  return !['marine', 'cp', 'navy', 'government', 'civilian'].includes(f);
+}
+
 /** A boss's intro: three shots round them, their card over the second. */
 export function bossIntroShots(boss, player) {
   // (from your side of them, so the first shot has you in the corner of it)
@@ -143,7 +149,7 @@ export function installBossIntros(game) {
     b.introDone = true;
     game.playCinematic({
       shots: bossIntroShots(b, p),
-      card: { name: b.name, title: b.title || '', bounty: b.bountyValue || b.def?.bounty || 0, look: b.look, fruit: b.fruit, weapons: b.def?.weapon ? [b.def.weapon] : [] },
+      card: { name: b.name, title: b.title || '', bounty: outlaw(b) ? b.bountyValue || b.def?.bounty || 0 : 0, look: b.look, fruit: b.fruit, weapons: b.def?.weapon ? [b.def.weapon] : [] },
       onEnd: () => { if (b.alertLine) game.fx?.text?.(b.x, b.y - 2.4, b.alertLine, '#ffcdd2', 0.35, { life: 2.6 }); },
     });
     return true;

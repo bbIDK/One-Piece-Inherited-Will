@@ -17,5 +17,6 @@ import './props/elbaf.js';
 import './props/marygeoise.js';
 import './props/punkhazard.js';
 import './props/wano.js';
+import './props/zou.js';
 
 export { instancerStats } from './props/instancer.js';

@@ -324,7 +324,7 @@ reg('wanocastle', (o, ctx) => {
 const BONE = col('#cfc6b8'), BONE_DK = col('#9d9384'), SOCKET = col('#171110'), HORN = col('#bdb19c'), HORN_DK = col('#8c8170'), ROCKO = col('#5d5651'), ROCKO_HI = col('#7a716a');
 
 /** A tube along `pts` ([x, y, z]…) whose radius goes `radii`: a horn. */
-function tubeGeo(pts, radii, seg = 10) {
+export function tubeGeo(pts, radii, seg = 10) {
   const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)));
   const N = 24, pos = [], idx = [];
   const frames = curve.computeFrenetFrames(N, false);
