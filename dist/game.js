@@ -3801,752 +3801,59 @@
     }
   });
 
-  // src/world/bframe.js
-  var FRONT = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-  var rotOf = (b) => ((b.rot | 0) % 4 + 4) % 4;
-  function bw(b, lx, lz) {
-    switch (rotOf(b)) {
-      case 1:
-        return { x: b.x + lz, y: b.y - lx };
-      case 2:
-        return { x: b.x - lx, y: b.y - lz };
-      case 3:
-        return { x: b.x - lz, y: b.y + lx };
-      default:
-        return { x: b.x + lx, y: b.y + lz };
+  // src/core/math.js
+  var TAU = Math.PI * 2;
+  var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  var lerp = (a, b, t) => a + (b - a) * t;
+  var smoothstep = (a, b, x) => {
+    const t = clamp((x - a) / (b - a), 0, 1);
+    return t * t * (3 - 2 * t);
+  };
+  function angleDiff(a, b) {
+    let d = (b - a) % TAU;
+    if (d > Math.PI) d -= TAU;
+    else if (d <= -Math.PI) d += TAU;
+    return d;
+  }
+  function springStep(x, v, target2, w, dt, zeta = 1, out = [0, 0]) {
+    const e0 = x - target2;
+    if (zeta >= 1) {
+      const c = v + w * e0, k2 = Math.exp(-w * dt);
+      out[0] = target2 + (e0 + c * dt) * k2;
+      out[1] = (v - w * c * dt) * k2;
+      return out;
     }
-  }
-  function bl(b, x, y, world = null) {
-    const dx = world ? world.dx(b.x, x) : x - b.x, dy = y - b.y;
-    switch (rotOf(b)) {
-      case 1:
-        return { lx: -dy, lz: dx };
-      case 2:
-        return { lx: -dx, lz: -dy };
-      case 3:
-        return { lx: dy, lz: -dx };
-      default:
-        return { lx: dx, lz: dy };
-    }
-  }
-  function bbox(b, x0, x1, z0, z1) {
-    const a = bw(b, x0, z0), c = bw(b, x1, z1);
-    return { x0: Math.min(a.x, c.x), x1: Math.max(a.x, c.x), y0: Math.min(a.y, c.y), y1: Math.max(a.y, c.y) };
-  }
-  function bfoot(b) {
-    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-    return bbox(b, -fw / 2, fw / 2, -fd, 0);
-  }
-  function bfront(b) {
-    const f = FRONT[rotOf(b)];
-    return { x: f[0], y: f[1] };
-  }
-  function bfacing(b) {
-    const f = FRONT[rotOf(b)];
-    return Math.atan2(f[1], f[0]);
-  }
-  function bangle(b) {
-    return rotOf(b) * Math.PI / 2;
-  }
-
-  // src/world/interiors.js
-  var WALL_T = 0.22;
-  var PLINTH = 0.35;
-  var STEPS_MAX = 3;
-  var WIN = {
-    village: "cross",
-    town: "cross",
-    port: "cross",
-    city: "tall",
-    desert: "arch",
-    snow: "cross",
-    wano: "shoji",
-    chinese: "lattice",
-    sky: "round",
-    candy: "round",
-    fishman: "round",
-    marine: "tall",
-    noble: "tall",
-    spooky: "gothic",
-    future: "round",
-    tribal: "none",
-    mink: "round",
-    giant: "cross",
-    ruins: "hole"
-  };
-  var DOOR = {
-    village: "plank",
-    town: "panel",
-    port: "plank",
-    city: "panel",
-    desert: "arch",
-    snow: "plank",
-    wano: "noren",
-    chinese: "panel",
-    sky: "arch",
-    candy: "arch",
-    fishman: "arch",
-    marine: "panel",
-    noble: "panel",
-    spooky: "plank",
-    future: "panel",
-    tribal: "hide",
-    mink: "plank",
-    giant: "plank",
-    ruins: "hole"
-  };
-  var winKind = (b) => WIN[b.style] || "cross";
-  var doorKind = (b) => DOOR[b.style] || "plank";
-  var styleScale = (b) => Math.max(b.style === "giant" ? 2.1 : 1, b.tall || 1);
-  var lowStyle = (b) => b.style === "wano";
-  var HOURS = {
-    shop: [7, 21],
-    market: [6, 20],
-    weapons: [8, 20],
-    bank: [8, 18],
-    bounty: [7, 21],
-    library: [8, 20],
-    cafe: [7, 21],
-    restaurant: [10, 23],
-    tavern: [0, 24],
-    bar: [0, 24],
-    inn: [0, 24],
-    doctor: [0, 24],
-    marine_base: [0, 24],
-    church: [6, 22],
-    dojo: [6, 21],
-    trainer: [6, 21],
-    shipwright: [7, 20]
-  };
-  var NOT_ENTERABLE = /* @__PURE__ */ new Set(["palace", "hall", "lighthouse"]);
-  var HUTS = /* @__PURE__ */ new Set(["tribal", "ruins"]);
-  function isEnterable(b) {
-    if (!b || b.kind !== "building" || b.noEnter) return false;
-    const role = b.role || "house";
-    if (NOT_ENTERABLE.has(role) || HUTS.has(b.style)) return false;
-    if (b.roofType === "hut" || b.roofType === "ruin") return false;
-    return (b.fw || 3) >= 3.5 && (b.fd || 3) >= 2.5;
-  }
-  function doorOf(b) {
-    const fw = Math.max(2, b.fw || 3), g = styleScale(b);
-    const role = b.role || "house";
-    const big2 = (role === "marine_base" || role === "palace" || role === "hall" || role === "church") && fw >= 5;
-    const wide = !big2 && role !== "house" && fw >= 4;
-    const x = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b)));
-    return { x, dw: (big2 ? 1.7 : wide ? 1.4 : 1.05) * g, dh: (big2 ? 2.5 : wide ? 2.3 : 2.15) * g, big: big2, kind: doorKind(b) };
-  }
-  function doorLocalX(b) {
-    if (b.doorX !== void 0) return b.doorX;
-    return b.door ? bl(b, b.door.x, b.door.y).lx : 0;
-  }
-  function heightsOf(b) {
-    const g = styleScale(b);
-    const storeys = Math.max(1, Math.min(5, (b.hgt || 2) - 1));
-    const storeyH = 2.75 * g;
-    return { g, storeys, storeyH, ceil: storeys > 1 ? storeyH : 3 * g, H: 3 * g + (storeys - 1) * storeyH };
-  }
-  var hasShutters = (b) => b.style === "village" || b.style === "town";
-  function windowSlots(b, floor2 = 0) {
-    const kind = winKind(b);
-    const none = { front: [], left: [], right: [], w: 0, reach: 0 };
-    if (kind === "none" || kind === "hole") return none;
-    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
-    const d = doorOf(b);
-    const winW = 0.85 * g;
-    const reach3 = winW / 2 + (hasShutters(b) && (kind === "cross" || kind === "tall") ? 0.1 + winW * 0.45 : 0.14);
-    const pitch = 2 * reach3 + 0.3 * g;
-    const spread2 = (len) => {
-      const usable = len - 2 * (0.3 + reach3);
-      if (usable < 0) return [];
-      const n = Math.floor(usable / pitch) + 1;
-      return n === 1 ? [0] : Array.from({ length: n }, (_, i) => -usable / 2 + i * usable / (n - 1));
-    };
-    let front = spread2(fw);
-    if (floor2 === 0) front = front.filter((x) => Math.abs(x - d.x) >= d.dw / 2 + 0.2 + reach3);
-    const zs = fd < 3 ? [] : fd >= 6.5 ? [-fd * 0.3, -fd * 0.7] : [-fd / 2];
-    const at4 = b.attach || {};
-    return { front, left: at4.left ? [] : zs, right: at4.right ? [] : zs, w: winW, reach: reach3 };
-  }
-  function groundWindows(b) {
-    const kind = winKind(b);
-    if (kind === "none" || kind === "hole") return [];
-    const g = styleScale(b);
-    const winW = 0.85 * g, winH = 1.05 * g;
-    const h2 = kind === "tall" ? winH * 1.2 : winH;
-    const y = 1.55 * g;
-    const W4 = windowSlots(b, 0);
-    const out = [];
-    for (const x of W4.front) out.push({ face: "front", u: x, y, w: winW, h: h2, kind, i: out.length });
-    for (const face of ["left", "right"]) for (const z of W4[face]) out.push({ face, u: z, y, w: winW, h: h2, kind, i: out.length });
+    const wd = w * Math.sqrt(1 - zeta * zeta), k = Math.exp(-zeta * w * dt);
+    const B5 = (v + zeta * w * e0) / wd, cs = Math.cos(wd * dt), sn = Math.sin(wd * dt);
+    out[0] = target2 + k * (e0 * cs + B5 * sn);
+    out[1] = k * ((wd * B5 - zeta * w * e0) * cs - (zeta * w * B5 + wd * e0) * sn);
     return out;
   }
-  function interiorRect(b) {
-    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
-    return bbox(b, -fw / 2 + WALL_T, fw / 2 - WALL_T, -fd + WALL_T, -WALL_T);
+  function formatBerries(n) {
+    return "\u0E3F" + Math.round(n).toLocaleString("en-US");
   }
-  function hash(a, b = 0, c = 0) {
-    let h2 = Math.imul(a * 1e3 | 0, 374761393) ^ Math.imul(b * 1e3 | 0, 668265263) ^ Math.imul(c * 1e3 | 0, 1274126177);
-    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
-    return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
+  function roundBounty(b) {
+    if (!(b > 0)) return 0;
+    const mag = Math.pow(10, Math.max(4, Math.floor(Math.log10(b)) - 2));
+    return Math.round(b / mag) * mag;
   }
-  function rng(seed) {
-    let s = Math.floor(seed * 2654435761) >>> 0 || 1;
-    return () => {
-      s ^= s << 13;
-      s >>>= 0;
-      s ^= s >> 17;
-      s ^= s << 5;
-      s >>>= 0;
-      return s / 4294967296;
-    };
+  function hexToRgb(hex3) {
+    const h2 = hex3.replace("#", "");
+    const n = parseInt(h2.length === 3 ? h2.split("").map((c) => c + c).join("") : h2, 16);
+    return [n >> 16 & 255, n >> 8 & 255, n & 255];
   }
-  function isPirateHouse(b) {
-    return (b.role || "house") === "house" && !b.npc && isEnterable(b) && hash(b.x, b.y, 7.7) < 0.09;
+  function rgbToHex(r4, g, b) {
+    return "#" + [r4, g, b].map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("");
   }
-  var rectOf = (x, z, rot, w, d) => {
-    const side = Math.abs(Math.sin(rot)) > 0.5;
-    const hx = (side ? d : w) / 2, hz = (side ? w : d) / 2;
-    return { x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz };
-  };
-  var overlap = (a, b, m = 0) => a.x0 < b.x1 + m && a.x1 > b.x0 - m && a.z0 < b.z1 + m && a.z1 > b.z0 - m;
-  var Placer = class {
-    constructor(L3, R5) {
-      this.L = L3;
-      this.R = R5;
-      this.rects = [];
-      this.keep = [];
-      this.low = [];
-      this.fronts = [];
-    }
-    fits(r4, tall) {
-      const L3 = this.L;
-      if (r4.x0 < L3.x0 - 1e-3 || r4.x1 > L3.x1 + 1e-3 || r4.z0 < L3.z0 - 1e-3 || r4.z1 > L3.z1 + 1e-3) return false;
-      for (const q2 of this.keep) if (overlap(r4, q2)) return false;
-      if (tall) {
-        for (const q2 of this.low) if (overlap(r4, q2)) return false;
-      }
-      for (const q2 of this.rects) if (overlap(r4, q2, 0.04)) return false;
-      for (const q2 of this.fronts) if (overlap(r4, q2)) return false;
-      return true;
-    }
-    /** The floor in front of an item that has to be got at (or null). */
-    frontOf(item, x, z, rot) {
-      if (item.ghost || !ACCESS.has(item.k)) return null;
-      const f = [Math.round(Math.sin(rot)), Math.round(Math.cos(rot))], dd = 0.55;
-      const cx = x + f[0] * (item.d / 2 + dd / 2), cz = z + f[1] * (item.d / 2 + dd / 2);
-      return rectOf(cx, cz, rot, item.w * 0.8, dd);
-    }
-    /** Try to put an item at (x, z) facing `rot`; returns the item or null. */
-    at(item, x, z, rot = 0) {
-      const r4 = rectOf(x, z, rot, item.w, item.d);
-      if (!this.fits(r4, (item.h || 0) > 1.05)) return null;
-      const fr = this.frontOf(item, x, z, rot);
-      if (fr) {
-        for (const q2 of this.rects) if (overlap(fr, q2)) return null;
-      }
-      const it = { ...item, x, z, rot, rect: r4 };
-      if (!item.ghost) this.rects.push(r4);
-      if (fr) this.fronts.push(fr);
-      this.L.items.push(it);
-      return it;
-    }
-    /** Slide an item along a wall ('back' | 'left' | 'right' | 'front'), in the given order. */
-    wall(item, wall, order = "center", gap = 0.02) {
-      const L3 = this.L;
-      let rot, fixed, a0, a1;
-      if (wall === "back") {
-        rot = 0;
-        fixed = L3.z0 + item.d / 2 + gap;
-        a0 = L3.x0 + item.w / 2;
-        a1 = L3.x1 - item.w / 2;
-      } else if (wall === "front") {
-        rot = Math.PI;
-        fixed = L3.z1 - item.d / 2 - gap;
-        a0 = L3.x0 + item.w / 2;
-        a1 = L3.x1 - item.w / 2;
-      } else if (wall === "left") {
-        rot = Math.PI / 2;
-        fixed = L3.x0 + item.d / 2 + gap;
-        a0 = L3.z0 + item.w / 2;
-        a1 = L3.z1 - item.w / 2;
-      } else {
-        rot = -Math.PI / 2;
-        fixed = L3.x1 - item.d / 2 - gap;
-        a0 = L3.z0 + item.w / 2;
-        a1 = L3.z1 - item.w / 2;
-      }
-      if (a1 < a0 - 1e-6) return null;
-      const cands = [];
-      const n = Math.max(1, Math.round((a1 - a0) / 0.1));
-      for (let i = 0; i <= n; i++) cands.push(a0 + (a1 - a0) * (i / n));
-      if (order === "center") {
-        const m = (a0 + a1) / 2;
-        cands.sort((p, q2) => Math.abs(p - m) - Math.abs(q2 - m));
-      } else if (order === "end") cands.reverse();
-      else if (order === "random") cands.sort(() => this.R() - 0.5);
-      for (const a of cands) {
-        const it = wall === "back" || wall === "front" ? this.at(item, a, fixed, rot) : this.at(item, fixed, a, rot);
-        if (it) return it;
-      }
-      return null;
-    }
-    /** Anywhere on the floor (free-standing tables), nearest to (px, pz) first. */
-    free(item, px2 = 0, pz2 = null, rot = 0) {
-      const L3 = this.L;
-      const cz = pz2 ?? (L3.z0 + L3.z1) / 2;
-      const cands = [];
-      for (let x = L3.x0 + item.w / 2; x <= L3.x1 - item.w / 2 + 1e-6; x += 0.15) {
-        for (let z = L3.z0 + item.d / 2; z <= L3.z1 - item.d / 2 + 1e-6; z += 0.15) cands.push([x, z]);
-      }
-      cands.sort((a, b) => Math.hypot(a[0] - px2, a[1] - cz) - Math.hypot(b[0] - px2, b[1] - cz));
-      for (const [x, z] of cands) {
-        const it = this.at(item, x, z, rot);
-        if (it) return it;
-      }
-      return null;
-    }
-    /** Things that don't take floor space (rugs, wall pictures, lamps). */
-    deco(item, x, z, rot = 0) {
-      const it = { ...item, x, z, rot, ghost: true };
-      this.L.items.push(it);
-      return it;
-    }
-  };
-  var F = {
-    bed: { k: "bed", w: 1, d: 2, h: 0.6 },
-    futon: { k: "futon", w: 1, d: 2, h: 0.14, ghost: true },
-    table: { k: "table", w: 0.95, d: 0.8, h: 0.76 },
-    lowTable: { k: "lowtable", w: 1, d: 0.7, h: 0.36 },
-    roundTable: { k: "roundtable", w: 0.9, d: 0.9, h: 0.76 },
-    chair: { k: "chair", w: 0.44, d: 0.44, h: 0.92, ghost: true },
-    stool: { k: "stool", w: 0.38, d: 0.38, h: 0.7, ghost: true },
-    cushion: { k: "cushion", w: 0.5, d: 0.5, h: 0.1, ghost: true },
-    cupboard: { k: "cupboard", w: 0.95, d: 0.45, h: 1.85 },
-    dresser: { k: "dresser", w: 1, d: 0.45, h: 0.9 },
-    tansu: { k: "tansu", w: 0.95, d: 0.45, h: 1.1 },
-    shelf: { k: "shelf", w: 1.2, d: 0.34, h: 1.9 },
-    lowShelf: { k: "lowshelf", w: 1.1, d: 0.36, h: 1 },
-    bookcase: { k: "bookcase", w: 1.2, d: 0.36, h: 2.1 },
-    stove: { k: "stove", w: 0.75, d: 0.6, h: 0.95 },
-    fireplace: { k: "fireplace", w: 1.3, d: 0.5, h: 1.35 },
-    hibachi: { k: "hibachi", w: 0.55, d: 0.55, h: 0.35 },
-    chest: { k: "chest", w: 0.8, d: 0.5, h: 0.55 },
-    barrel: { k: "barrel", w: 0.62, d: 0.62, h: 0.95 },
-    crate: { k: "crate", w: 0.62, d: 0.62, h: 0.6 },
-    sacks: { k: "sacks", w: 0.8, d: 0.55, h: 0.6 },
-    plant: { k: "plant", w: 0.45, d: 0.45, h: 1.1 },
-    counter: { k: "counter", w: 2, d: 0.48, h: 1.02 },
-    desk: { k: "desk", w: 1.3, d: 0.62, h: 0.78 },
-    medbed: { k: "medbed", w: 0.9, d: 1.95, h: 0.68 },
-    // (its head to the wall, as in a ward)
-    cabinet: { k: "medcabinet", w: 1, d: 0.36, h: 1.8 },
-    screen: { k: "screen", w: 1.1, d: 0.12, h: 1.6 },
-    rack: { k: "rack", w: 1.3, d: 0.3, h: 1.6 },
-    armor: { k: "armorstand", w: 0.6, d: 0.5, h: 1.75 },
-    dummy: { k: "dummy", w: 0.55, d: 0.55, h: 1.75 },
-    shrine: { k: "shrine", w: 1.2, d: 0.4, h: 1.2 },
-    pew: { k: "pew", w: 1.9, d: 0.5, h: 0.92 },
-    altar: { k: "altar", w: 1.4, d: 0.6, h: 1 },
-    safe: { k: "safe", w: 0.8, d: 0.7, h: 1.2 },
-    bench: { k: "bench", w: 1.4, d: 0.42, h: 0.46 },
-    board: { k: "board", w: 1.3, d: 0.06, h: 1, ghost: true },
-    filing: { k: "filing", w: 0.6, d: 0.5, h: 1.3 },
-    flag: { k: "flag", w: 1.1, d: 0.05, h: 1.6, ghost: true },
-    stairs: { k: "stairs", w: 2.6, d: 0.95, h: 2.4 },
-    workbench: { k: "workbench", w: 1.7, d: 0.7, h: 0.9 },
-    lumber: { k: "lumber", w: 1.8, d: 0.6, h: 0.7 },
-    hull: { k: "hull", w: 2.4, d: 1.2, h: 1.1 },
-    produce: { k: "produce", w: 1.1, d: 0.6, h: 0.8 }
-  };
-  var ACCESS = /* @__PURE__ */ new Set(["cupboard", "dresser", "tansu", "shelf", "lowshelf", "bookcase", "stove", "fireplace", "medcabinet", "safe", "filing", "workbench", "rack", "shrine", "altar"]);
-  var sized = (it, g) => g === 1 ? it : { ...it, w: it.w * g, d: it.d * g, h: it.h * g };
-  var GROUP = {
-    house: "house",
-    shop: "shop",
-    market: "market",
-    weapons: "weapons",
-    bank: "bank",
-    bounty: "bounty",
-    library: "library",
-    tavern: "tavern",
-    bar: "tavern",
-    inn: "inn",
-    restaurant: "restaurant",
-    cafe: "restaurant",
-    doctor: "doctor",
-    dojo: "dojo",
-    trainer: "dojo",
-    church: "church",
-    marine_base: "marine",
-    shipwright: "shipwright"
-  };
-  var roomOf = (b) => GROUP[b.role || "house"] || "house";
-  var KEEPER = {
-    shop: "Shopkeeper",
-    market: "Grocer",
-    weapons: "Armourer",
-    bank: "Banker",
-    bounty: "Bounty Clerk",
-    library: "Librarian",
-    tavern: "Barkeep",
-    inn: "Innkeeper",
-    restaurant: "Cook",
-    doctor: "Doctor",
-    dojo: "Sensei",
-    church: "Priest",
-    marine: "Marine Officer",
-    shipwright: "Shipwright"
-  };
-  function layoutOf(b) {
-    if (b._layout) return b._layout;
-    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
-    const T5 = WALL_T;
-    const door = doorOf(b);
-    const L3 = { x0: -fw / 2 + T5, x1: fw / 2 - T5, z0: -fd + T5, z1: -T5, door, items: [], use: [], keeper: null, residents: [], rest: null, room: roomOf(b) };
-    const R5 = rng(hash(b.x, b.y, (b.v || 0) + 1));
-    const P6 = new Placer(L3, R5);
-    P6.keep.push({ x0: door.x - door.dw / 2 - 0.22, x1: door.x + door.dw / 2 + 0.22, z0: L3.z1 - Math.max(1, door.dw) - 0.06, z1: L3.z1 + 1 });
-    for (const w of groundWindows(b)) {
-      const hw = w.w / 2 + 0.12;
-      if (w.face === "front") P6.low.push({ x0: w.u - hw, x1: w.u + hw, z0: L3.z1 - 0.7, z1: L3.z1 + 1 });
-      else if (w.face === "left") P6.low.push({ x0: L3.x0 - 1, x1: L3.x0 + 0.7, z0: w.u - hw, z1: w.u + hw });
-      else P6.low.push({ x0: L3.x1 - 0.7, x1: L3.x1 + 1, z0: w.u - hw, z1: w.u + hw });
-    }
-    const S6 = (k) => sized(F[k], g);
-    (ROOMS[L3.room] || ROOMS.house)(P6, L3, b, R5, S6, g);
-    P6.deco({ k: "lamp", w: 0.3, d: 0.3, h: 0.5 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2);
-    b._layout = L3;
-    return L3;
+  function shade(hex3, amt) {
+    const [r4, g, b] = hexToRgb(hex3);
+    if (amt >= 0) return rgbToHex(r4 + (255 - r4) * amt, g + (255 - g) * amt, b + (255 - b) * amt);
+    return rgbToHex(r4 * (1 + amt), g * (1 + amt), b * (1 + amt));
   }
-  function counterRoom(P6, L3, S6, g, { shelf = "goods", len = 2.2, gapBehind = 0.58 } = {}) {
-    const width = L3.x1 - L3.x0;
-    const bd = 0.26 * g;
-    const cw = Math.min(len * g, width - 0.75 * g);
-    const cz = L3.z0 + bd + gapBehind * g + S6("counter").d / 2;
-    const counter2 = P6.at({ ...S6("counter"), w: cw }, L3.x0 + cw / 2 + 0.02, cz, 0) || P6.at({ ...S6("counter"), w: cw * 0.8 }, L3.x0 + cw * 0.4 + 0.02, cz, 0);
-    if (!counter2) return null;
-    const bw2 = Math.min(width - 0.1, cw + 0.4 * g);
-    P6.deco({ k: shelf, w: bw2, d: bd, h: 1.9 * g }, L3.x0 + bw2 / 2 + 0.02, L3.z0 + bd / 2 + 0.01, 0);
-    P6.rects.push({ x0: L3.x0, x1: L3.x0 + bw2 + 0.02, z0: L3.z0, z1: counter2.rect.z0 });
-    P6.keep.push({ x0: counter2.x - 0.55, x1: counter2.x + 0.55, z0: counter2.rect.z1, z1: counter2.rect.z1 + 0.85 });
-    L3.keeper = { x: counter2.x, z: L3.z0 + bd + gapBehind * g * 0.5 };
-    L3.use.push({ kind: "service", x: counter2.x, z: counter2.rect.z1 + 0.45, label: null });
-    return counter2;
+  function mixHex(a, b, t) {
+    const A2 = hexToRgb(a), B5 = hexToRgb(b);
+    return rgbToHex(lerp(A2[0], B5[0], t), lerp(A2[1], B5[1], t), lerp(A2[2], B5[2], t));
   }
-  function bedIn(P6, S6, low, order) {
-    const k = low ? "futon" : "bed";
-    return P6.wall(S6(k), "back", order) || P6.wall(S6(k), "left", "start") || P6.wall(S6(k), "right", "start");
-  }
-  function searchable(L3, it, label) {
-    if (!it) return null;
-    const f = [Math.sin(it.rot), Math.cos(it.rot)];
-    L3.use.push({ kind: "loot", x: it.x + f[0] * (it.d / 2 + 0.42), z: it.z + f[1] * (it.d / 2 + 0.42), label });
-    return it;
-  }
-  function stash(P6, L3, S6, k, walls, label) {
-    for (const [wall, order] of walls) {
-      const it = P6.wall({ ...S6(k), loot: true }, wall, order);
-      if (it) return searchable(L3, it, label);
-    }
-    return null;
-  }
-  function footChest(P6, L3, S6, bed2, label) {
-    if (!bed2 || bed2.rot !== 0) return null;
-    const c = S6("chest"), r4 = bed2.rect;
-    const it = P6.at({ ...c, loot: true }, (r4.x0 + r4.x1) / 2, r4.z1 + c.d / 2 + 0.05, 0);
-    if (it) L3.use.push({ kind: "loot", x: it.x, z: it.rect.z1 + 0.45, label });
-    return it;
-  }
-  function hearthIn(P6, L3, b, S6, low, order) {
-    const k = b.style === "snow" || b.style === "village" || b.style === "giant" ? "fireplace" : low ? "hibachi" : "stove";
-    const st = P6.wall(S6(k), "back", order) || P6.wall(S6(k), "left", "end") || P6.wall(S6(k), "right", "end");
-    if (st) L3.residents.push({ x: st.x + Math.sin(st.rot) * (st.d / 2 + 0.35), z: st.z + Math.cos(st.rot) * (st.d / 2 + 0.35) });
-    return st;
-  }
-  function tableIn(P6, L3, S6, low, kind, x, z, seat) {
-    const tb = P6.free(S6(low ? "lowTable" : kind), x, z);
-    if (!tb) return null;
-    for (const s of [-1, 1]) {
-      const st = S6(low ? "cushion" : seat);
-      const sx = tb.x + s * (tb.w / 2 + st.w * 0.45);
-      if (sx - st.w / 2 < L3.x0 || sx + st.w / 2 > L3.x1) continue;
-      P6.deco(st, sx, tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
-      L3.residents.push({ x: sx, z: tb.z, sit: true, face: s < 0 ? 0 : Math.PI });
-    }
-    return tb;
-  }
-  var sides = (R5) => R5() < 0.5 ? ["start", "end"] : ["end", "start"];
-  var HOMES = {
-    family(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      const bed2 = bedIn(P6, S6, low, end);
-      if (bed2 && L3.x1 - L3.x0 > 5) P6.wall(S6(low ? "futon" : "bed"), "back", other);
-      if (!low) footChest(P6, L3, S6, bed2, "Search the chest");
-      stash(P6, L3, S6, low ? "tansu" : "cupboard", [["left", "random"], ["right", "random"], ["front", "start"]], "Search the cupboard");
-      hearthIn(P6, L3, b, S6, low, other);
-      tableIn(P6, L3, S6, low, "table", (L3.x0 + L3.x1) / 2 + (end === "start" ? 0.8 : -0.8), L3.z0 + (L3.z1 - L3.z0) * 0.55, "chair");
-      P6.wall(S6("shelf"), "right", "random") || P6.wall(S6("lowShelf"), "front", "end");
-      if (R5() < 0.6) P6.wall(S6("barrel"), "front", R5() < 0.5 ? "start" : "end");
-      if (R5() < 0.5) P6.wall(S6("plant"), "front", "end");
-    },
-    // nets, floats and barrels of salt fish; a sea chest by the bed
-    fisher(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      const bed2 = bedIn(P6, S6, low, end);
-      footChest(P6, L3, S6, bed2, "Search the sea chest") || stash(P6, L3, S6, "chest", [["right", "random"], ["left", "random"]], "Search the sea chest");
-      hearthIn(P6, L3, b, S6, low, other);
-      P6.wall(S6("rack"), "left", "random");
-      P6.wall(S6("barrel"), "right", "start");
-      P6.wall(S6("barrel"), "right", "start");
-      P6.wall(S6("crate"), "front", R5() < 0.5 ? "start" : "end");
-      tableIn(P6, L3, S6, low, "roundTable", (L3.x0 + L3.x1) / 2, L3.z0 + (L3.z1 - L3.z0) * 0.6, "stool");
-      stash(P6, L3, S6, low ? "tansu" : "dresser", [["front", "end"], ["left", "end"]], "Search the drawers");
-    },
-    // a carpenter or smith who works at home: a workbench, timber, tools
-    crafter(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      const wb = P6.wall(S6("workbench"), "back", other) || P6.wall(S6("workbench"), "left", "random") || P6.wall(S6("workbench"), "right", "random");
-      if (wb) {
-        const f = [Math.sin(wb.rot), Math.cos(wb.rot)];
-        L3.residents.push({ x: wb.x + f[0] * (wb.d / 2 + 0.3), z: wb.z + f[1] * (wb.d / 2 + 0.3), face: wb.rot + Math.PI });
-      }
-      P6.wall(S6("rack"), "right", "random") || P6.wall(S6("rack"), "left", "random");
-      P6.wall(S6("lumber"), "front", R5() < 0.5 ? "start" : "end") || P6.wall(S6("crate"), "front", "start");
-      const bed2 = bedIn(P6, S6, low, end);
-      footChest(P6, L3, S6, bed2, "Search the tool chest");
-      stash(P6, L3, S6, low ? "tansu" : "dresser", [["left", "random"], ["right", "random"], ["front", "end"]], "Search the drawers");
-      hearthIn(P6, L3, b, S6, low, "center");
-      if (R5() < 0.7) P6.wall(S6("crate"), "right", "end");
-    },
-    // books everywhere, a desk under the lamp
-    scholar(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      P6.wall(S6("bookcase"), "back", other) || P6.wall(S6("shelf"), "back", other);
-      P6.wall(S6("bookcase"), "left", "random") || P6.wall(S6("lowShelf"), "left", "random");
-      const desk = P6.wall(S6("desk"), "right", "random") || P6.free(S6("desk"), 0, (L3.z0 + L3.z1) / 2);
-      if (desk) {
-        const f = [Math.sin(desk.rot), Math.cos(desk.rot)], ch = S6("chair");
-        const cx = desk.x + f[0] * (desk.d / 2 + ch.d * 0.4), cz = desk.z + f[1] * (desk.d / 2 + ch.d * 0.4);
-        P6.deco(ch, cx, cz, desk.rot + Math.PI);
-        L3.residents.push({ x: cx, z: cz, sit: true, face: desk.rot + Math.PI });
-      }
-      const bed2 = bedIn(P6, S6, low, end);
-      footChest(P6, L3, S6, bed2, "Search the chest") || stash(P6, L3, S6, "chest", [["front", "end"], ["left", "end"]], "Search the chest");
-      hearthIn(P6, L3, b, S6, low, "center");
-      if (R5() < 0.7) P6.wall(S6("plant"), "front", "end");
-    },
-    // sacks of grain, barrels, baskets of produce
-    farmer(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      const bed2 = bedIn(P6, S6, low, end);
-      stash(P6, L3, S6, low ? "tansu" : "cupboard", [["right", "random"], ["front", "end"], ["left", "random"]], "Search the cupboard");
-      hearthIn(P6, L3, b, S6, low, other);
-      P6.wall(S6("sacks"), "left", "start");
-      P6.wall(S6("sacks"), "left", "end");
-      P6.wall(S6("produce"), "right", "random") || P6.wall(S6("barrel"), "right", "random");
-      P6.wall(S6("barrel"), "front", R5() < 0.5 ? "start" : "end");
-      tableIn(P6, L3, S6, low, "table", (L3.x0 + L3.x1) / 2, L3.z0 + (L3.z1 - L3.z0) * 0.58, "chair");
-      if (!low) footChest(P6, L3, S6, bed2, "Search the chest");
-    },
-    // an old sea-dog's place: a hammock-bed, a sea chest, a round table and rum
-    sailor(P6, L3, b, R5, S6, g, low) {
-      const [end, other] = sides(R5);
-      const bed2 = bedIn(P6, S6, low, end);
-      footChest(P6, L3, S6, bed2, "Search the sea chest") || stash(P6, L3, S6, "chest", [["left", "random"]], "Search the sea chest");
-      P6.wall(S6("barrel"), "back", other);
-      P6.wall(S6("barrel"), "right", "start");
-      tableIn(P6, L3, S6, low, "roundTable", (L3.x0 + L3.x1) / 2 + (end === "start" ? 0.5 : -0.5), L3.z0 + (L3.z1 - L3.z0) * 0.55, "stool");
-      P6.wall(S6("lowShelf"), "left", "random") || P6.wall(S6("shelf"), "right", "random");
-      hearthIn(P6, L3, b, S6, low, "center");
-      stash(P6, L3, S6, low ? "tansu" : "dresser", [["front", "start"], ["right", "end"]], "Search the drawers");
-    }
-  };
-  var ROOMS = {
-    house(P6, L3, b, R5, S6, g) {
-      const low = lowStyle(b);
-      const kinds = ["family", "family", "fisher", "crafter", "scholar", "farmer", "sailor"];
-      const kind = b.npc ? "family" : kinds[Math.floor(hash(b.x, b.y, 3.3) * kinds.length) % kinds.length];
-      L3.kind = kind;
-      HOMES[kind](P6, L3, b, R5, S6, g, low);
-      if (!L3.use.some((u) => u.kind === "loot")) {
-        const walls = [["left", "random"], ["right", "random"], ["front", "start"], ["front", "end"], ["back", "center"]];
-        if (!stash(P6, L3, S6, "chest", walls, "Search the chest")) {
-          const it = P6.free({ ...S6("chest"), loot: true }, 0, (L3.z0 + L3.z1) / 2);
-          if (it) searchable(L3, it, "Search the chest");
-        }
-      }
-      P6.deco({ k: low ? "tatami" : "rug", w: Math.min(2.2 * g, (L3.x1 - L3.x0) * 0.6), d: Math.min(1.5 * g, (L3.z1 - L3.z0) * 0.5), h: 0.02 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2 + 0.2);
-      P6.deco({ k: R5() < 0.35 ? "poster" : "picture", w: 0.55, d: 0.04, h: 0.7 }, L3.x0 + (L3.x1 - L3.x0) * (0.3 + R5() * 0.4), L3.z0 + 0.02, 0);
-      if (!L3.residents.length) L3.residents.push({ x: (L3.x0 + L3.x1) / 2, z: (L3.z0 + L3.z1) / 2 });
-    },
-    shop(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "goods" });
-      P6.wall(S6("shelf"), "left", "start") || P6.wall(S6("lowShelf"), "left", "start");
-      P6.wall(S6("shelf"), "right", "start") || P6.wall(S6("lowShelf"), "right", "start");
-      P6.wall(S6("barrel"), "front", "start");
-      P6.wall(S6("crate"), "front", "end");
-      if (L3.z1 - L3.z0 > 3) P6.free(S6("produce"), 0, L3.z1 - 1.4);
-      P6.deco({ k: "rug", w: 1.4 * g, d: 0.9 * g, h: 0.02 }, L3.door.x, L3.z1 - 0.7);
-    },
-    market(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "goods" });
-      P6.wall(S6("produce"), "left", "start");
-      P6.wall(S6("produce"), "right", "start");
-      P6.wall(S6("sacks"), "front", "start");
-      P6.wall(S6("barrel"), "front", "end");
-      P6.wall(S6("crate"), "left", "end");
-    },
-    weapons(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "wallrack" });
-      P6.wall(S6("rack"), "left", "start") || P6.wall(S6("rack"), "left", "end");
-      P6.wall(S6("rack"), "right", "start") || P6.wall(S6("armor"), "right", "start");
-      P6.wall(S6("armor"), "front", "start");
-      P6.wall(S6("barrel"), "front", "end");
-    },
-    bank(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "goods", len: 2.6 });
-      P6.wall(S6("safe"), "right", "start");
-      P6.wall(S6("bench"), "left", "end") || P6.wall(S6("bench"), "front", "start");
-      P6.wall(S6("plant"), "front", "end");
-    },
-    bounty(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "goods", len: 1.6 });
-      P6.deco({ k: "wanted", w: Math.min(1.8, L3.z1 - L3.z0 - 0.4), d: 0.04, h: 1 }, L3.x0 + 0.03, (L3.z0 + L3.z1) / 2 + 0.2, Math.PI / 2);
-      P6.wall(S6("filing"), "right", "start");
-      P6.wall(S6("bench"), "front", "start");
-    },
-    library(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "books", len: 1.6 });
-      P6.wall(S6("bookcase"), "left", "start");
-      P6.wall(S6("bookcase"), "left", "end");
-      P6.wall(S6("bookcase"), "right", "start");
-      P6.wall(S6("bookcase"), "right", "end");
-      const tb = P6.free(S6("table"), 0.6, L3.z1 - 1.5);
-      if (tb) for (const s of [-1, 1]) P6.deco(S6("chair"), tb.x + s * (tb.w / 2 + 0.2), tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
-      L3.use.push({ kind: "read", x: L3.x0 + 0.7, z: (L3.z0 + L3.z1) / 2, label: "Browse the shelves" });
-    },
-    tavern(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "bottles", len: 3 });
-      const bar2 = L3.items.find((it) => it.k === "counter");
-      if (bar2) for (let x = bar2.rect.x0 + 0.35; x < bar2.rect.x1 - 0.2; x += 0.62) P6.deco(S6("stool"), x, bar2.rect.z1 + 0.3, 0);
-      for (const px2 of [L3.x0 + 0.9, L3.x1 - 0.9]) {
-        const t = P6.free(S6("roundTable"), px2, L3.z1 - 1.05);
-        if (!t) continue;
-        for (const a of [0, 2.1, 4.2]) {
-          const x = t.x + Math.cos(a) * 0.62, z = t.z + Math.sin(a) * 0.62;
-          if (x < L3.x0 + 0.15 || x > L3.x1 - 0.15 || z < L3.z0 + 0.15 || z > L3.z1 - 0.15) continue;
-          P6.deco(S6("stool"), x, z, 0);
-        }
-        L3.residents.push({ x: t.x + 0.62, z: t.z, sit: true, face: Math.PI / 2 });
-      }
-      P6.wall(S6("barrel"), "right", "end") || P6.wall(S6("barrel"), "front", "end");
-      P6.wall(S6("barrel"), "left", "end");
-      P6.deco({ k: "wanted", w: 0.9, d: 0.04, h: 0.8 }, L3.x1 - 0.03, (L3.z0 + L3.z1) / 2, -Math.PI / 2);
-      L3.rest = bar2 ? { x: bar2.x, z: bar2.rect.z1 + 0.7 } : { x: 0, z: L3.z1 - 1 };
-    },
-    inn(P6, L3, b, R5, S6, g) {
-      ROOMS.tavern(P6, L3, b, R5, S6, g);
-      P6.wall(S6("stairs"), "left", "start") || P6.wall(S6("stairs"), "right", "start");
-    },
-    restaurant(P6, L3, b, R5, S6, g) {
-      counterRoom(P6, L3, S6, g, { shelf: "bottles", len: 2.2 });
-      const W4 = L3.x1 - L3.x0, D4 = L3.z1 - L3.z0;
-      const cols = Math.max(2, Math.floor((W4 - 1) / (3.2 * g)));
-      const small = cols === 2 && D4 - 3 * g < 5.6 * g;
-      const rows = small ? 1 : Math.max(1, Math.min(4, 1 + Math.floor((D4 - 3.7 * g) / (2.4 * g))));
-      let diners = 0;
-      for (let r4 = 0; r4 < rows; r4++) {
-        for (let c = 0; c < cols; c++) {
-          const px2 = small ? c ? L3.x1 - 0.8 : L3.x0 + 0.8 : L3.x0 + 0.5 + (c + 0.5) * (W4 - 1) / cols;
-          const pz2 = L3.z1 - (small ? 1.1 : 1.1 * g + r4 * 2.4 * g);
-          const t = small ? P6.free(S6("table"), px2, pz2) : P6.at(S6("table"), px2, pz2, 0);
-          if (!t) continue;
-          for (const s of [-1, 1]) {
-            const x = t.x + s * (t.w / 2 + 0.22);
-            if (x < L3.x0 + 0.2 || x > L3.x1 - 0.2) continue;
-            P6.deco(S6("chair"), x, t.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
-          }
-          if (small || diners < 6 && (r4 + c) % 2 === 0) {
-            L3.residents.push({ x: t.x + t.w / 2 + 0.22, z: t.z, sit: true, face: -Math.PI / 2 });
-            diners++;
-          }
-        }
-      }
-      P6.wall(S6("plant"), "front", "end");
-    },
-    doctor(P6, L3, b, R5, S6, g) {
-      const desk = P6.wall(S6("desk"), "back", "start", 0.62 * g);
-      if (desk) {
-        L3.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
-        P6.rects.push({ x0: desk.rect.x0, x1: desk.rect.x1, z0: L3.z0, z1: desk.rect.z0 });
-        L3.use.push({ kind: "service", x: desk.x, z: desk.rect.z1 + 0.45, label: null });
-        P6.deco(S6("chair"), desk.x, desk.rect.z0 - 0.3, 0);
-      }
-      P6.wall(S6("cabinet"), "back", "end");
-      const b1 = P6.wall(S6("medbed"), "right", "start") || P6.wall(S6("medbed"), "left", "start");
-      if (b1) L3.residents.push({ x: b1.x, z: b1.z, lie: true, rot: b1.rot });
-      P6.wall(S6("medbed"), "left", "start");
-      P6.wall(S6("screen"), "right", "end");
-      P6.deco({ k: "redcross", w: 0.6, d: 0.03, h: 0.6 }, desk ? desk.x : 0, L3.z0 + 0.02, 0);
-      P6.wall(S6("plant"), "front", "end");
-    },
-    dojo(P6, L3, b, R5, S6, g) {
-      P6.deco({ k: "mats", w: L3.x1 - L3.x0 - 0.4, d: L3.z1 - L3.z0 - 0.3, h: 0.03 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2);
-      const sh = P6.wall(S6("shrine"), "back", "center");
-      L3.keeper = { x: sh ? sh.x : 0, z: (sh ? sh.rect.z1 : L3.z0) + 0.55 };
-      P6.rects.push({ x0: L3.keeper.x - 0.4, x1: L3.keeper.x + 0.4, z0: L3.keeper.z - 0.35, z1: L3.keeper.z + 0.35 });
-      P6.wall(S6("rack"), "left", "start");
-      P6.wall(S6("rack"), "right", "start");
-      P6.free(S6("dummy"), L3.x0 + 1, L3.z1 - 1.2);
-      P6.free(S6("dummy"), L3.x1 - 1, L3.z1 - 1.2);
-      L3.use.push({ kind: "service", x: L3.keeper.x, z: L3.keeper.z + 0.9, label: null });
-    },
-    church(P6, L3, b, R5, S6, g) {
-      const al = P6.wall(S6("altar"), "back", "center", 0.6 * g);
-      if (al) {
-        L3.keeper = { x: al.x, z: al.rect.z0 - 0.3 };
-        P6.rects.push({ x0: al.rect.x0, x1: al.rect.x1, z0: L3.z0, z1: al.rect.z0 });
-        L3.use.push({ kind: "service", x: al.x, z: al.rect.z1 + 0.5, label: null });
-      }
-      for (let z = (al ? al.rect.z1 : L3.z0) + 0.9; z < L3.z1 - 1.2; z += 0.95) {
-        for (const s of [-1, 1]) {
-          const w = Math.min(1.9 * g, (L3.x1 - L3.x0) / 2 - 0.7);
-          if (w < 0.8) continue;
-          P6.at({ ...S6("pew"), w }, s * ((L3.x1 - L3.x0) / 4 + 0.15), z, Math.PI);
-        }
-      }
-      P6.wall(S6("plant"), "front", "start");
-      P6.wall(S6("plant"), "front", "end");
-    },
-    marine(P6, L3, b, R5, S6, g) {
-      const desk = P6.wall(S6("desk"), "back", "center", 0.62 * g);
-      if (desk) {
-        L3.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
-        P6.rects.push({ x0: desk.rect.x0, x1: desk.rect.x1, z0: L3.z0, z1: desk.rect.z0 });
-        L3.use.push({ kind: "service", x: desk.x, z: desk.rect.z1 + 0.45, label: null });
-        P6.deco(S6("chair"), desk.x, desk.rect.z0 - 0.3, 0);
-        P6.deco({ ...S6("flag"), k: "marineflag" }, desk.x, L3.z0 + 0.03, 0);
-      }
-      P6.wall(S6("filing"), "back", "start");
-      P6.wall(S6("filing"), "back", "end");
-      P6.wall(S6("rack"), "left", "start");
-      P6.wall(S6("bench"), "right", "end") || P6.wall(S6("bench"), "front", "start");
-      P6.deco({ k: "wanted", w: 1.2, d: 0.04, h: 0.9 }, L3.x1 - 0.03, (L3.z0 + L3.z1) / 2 - 0.3, -Math.PI / 2);
-      L3.residents.push({ x: L3.x0 + 0.8, z: L3.z1 - 1, guard: true });
-    },
-    shipwright(P6, L3, b, R5, S6, g) {
-      const wb = P6.wall(S6("workbench"), "back", "start", 0.62 * g);
-      if (wb) {
-        L3.keeper = { x: wb.x, z: wb.rect.z0 - 0.32 };
-        P6.rects.push({ x0: wb.rect.x0, x1: wb.rect.x1, z0: L3.z0, z1: wb.rect.z0 });
-        L3.use.push({ kind: "service", x: wb.x, z: wb.rect.z1 + 0.45, label: null });
-      }
-      P6.free(S6("hull"), L3.x1 - 1.6, (L3.z0 + L3.z1) / 2);
-      P6.wall(S6("lumber"), "front", "start") || P6.wall(S6("lumber"), "left", "end");
-      P6.wall(S6("rack"), "right", "start");
-      P6.wall(S6("barrel"), "front", "end");
-    }
-  };
 
   // src/core/rng.js
   function hashString(str2) {
@@ -4977,6 +4284,2863 @@
     return look.kind ? `${r4.name} (${look.kind})` : r4.name;
   }
 
+  // src/world/constants.js
+  var POS_SCALE = 6;
+  var SIZE_SCALE = 2.25;
+  var chart = (v) => Math.round(v * POS_SCALE);
+  var csize = (v) => Math.round(v * SIZE_SCALE);
+  var W2 = chart(4096);
+  var H = chart(2048);
+  var EQ = chart(1024);
+  var GL_HALF = chart(400);
+  var CB = chart(100);
+  var RL_HALF = chart(46);
+  var RM_X = chart(2048);
+  var MG_X = 0;
+  var POLAR = chart(26);
+  var GL_TOP = EQ - GL_HALF;
+  var GL_BOTTOM = EQ + GL_HALF;
+  var CB_TOP = GL_TOP - CB;
+  var CB_BOTTOM = GL_BOTTOM + CB;
+  var REGION = {
+    EAST_BLUE: 1,
+    NORTH_BLUE: 2,
+    WEST_BLUE: 3,
+    SOUTH_BLUE: 4,
+    PARADISE: 5,
+    NEW_WORLD: 6,
+    CALM_NORTH: 7,
+    CALM_SOUTH: 8,
+    RED_LINE: 9,
+    POLAR: 10
+  };
+  var REGION_INFO = {
+    [REGION.EAST_BLUE]: { id: "east_blue", name: "East Blue", danger: 1, color: "#4fb3e8", sea: true },
+    [REGION.NORTH_BLUE]: { id: "north_blue", name: "North Blue", danger: 2, color: "#5a8fd6", sea: true },
+    [REGION.WEST_BLUE]: { id: "west_blue", name: "West Blue", danger: 2, color: "#4a9fc9", sea: true },
+    [REGION.SOUTH_BLUE]: { id: "south_blue", name: "South Blue", danger: 2, color: "#3fc1c9", sea: true },
+    [REGION.PARADISE]: { id: "paradise", name: "Grand Line \u2014 Paradise", danger: 4, color: "#2aa198", sea: true },
+    [REGION.NEW_WORLD]: { id: "new_world", name: "Grand Line \u2014 New World", danger: 7, color: "#6c5ce7", sea: true },
+    [REGION.CALM_NORTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
+    [REGION.CALM_SOUTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
+    [REGION.RED_LINE]: { id: "red_line", name: "Red Line", danger: 5, color: "#b33939", sea: false },
+    [REGION.POLAR]: { id: "polar", name: "Polar Sea", danger: 3, color: "#dfe6e9", sea: true }
+  };
+  var SEA_IDS = {
+    east_blue: REGION.EAST_BLUE,
+    north_blue: REGION.NORTH_BLUE,
+    west_blue: REGION.WEST_BLUE,
+    south_blue: REGION.SOUTH_BLUE,
+    paradise: REGION.PARADISE,
+    new_world: REGION.NEW_WORLD,
+    calm_belt: REGION.CALM_NORTH,
+    red_line: REGION.RED_LINE
+  };
+  var wrapX = (x) => (x % W2 + W2) % W2;
+  var RMX = 900;
+  var RMY = 3300;
+  function regionAt(x, y) {
+    x = wrapX(x);
+    if (y < POLAR || y >= H - POLAR) return REGION.POLAR;
+    if (Math.abs(x - RM_X) < RL_HALF || x < RL_HALF || x >= W2 - RL_HALF) return REGION.RED_LINE;
+    const ey = (y - EQ) / RMY;
+    if (Math.abs(ey) < 1 && Math.abs(x - RM_X) < RMX * Math.sqrt(1 - ey * ey)) return REGION.RED_LINE;
+    const east = x > RM_X;
+    if (y >= GL_TOP && y < GL_BOTTOM) return east ? REGION.PARADISE : REGION.NEW_WORLD;
+    if (y >= CB_TOP && y < GL_TOP) return REGION.CALM_NORTH;
+    if (y >= GL_BOTTOM && y < CB_BOTTOM) return REGION.CALM_SOUTH;
+    if (y < EQ) return east ? REGION.EAST_BLUE : REGION.NORTH_BLUE;
+    return east ? REGION.SOUTH_BLUE : REGION.WEST_BLUE;
+  }
+  var isCalmBelt = (r4) => r4 === REGION.CALM_NORTH || r4 === REGION.CALM_SOUTH;
+  var isGrandLine = (r4) => r4 === REGION.PARADISE || r4 === REGION.NEW_WORLD;
+  var isBlue = (r4) => r4 >= REGION.EAST_BLUE && r4 <= REGION.SOUTH_BLUE;
+
+  // src/world/reverseMountain.js
+  var RM = {
+    x: RM_X,
+    y: EQ,
+    rx: 900,
+    // the massif's reach across the Red Line (the coast bulges out this far)…
+    ry: 3300,
+    // …and along it (past the Calm Belt, into the Blues)
+    top: 160,
+    // water level of the summit pool, metres above the sea
+    poolR: 56,
+    // (room for the greatest ships to turn out into the torrent)
+    halfW: 17,
+    // half the width of a canal (a great galleon rides it with room either side)
+    climb: 740,
+    // the last stretch of each canal, where it climbs the mountain
+    drop: 620,
+    // the torrent down to Paradise
+    cone: { rx: 760, ry: 1250, h: 110 },
+    // the mountain standing on the Red Line
+    upSpeed: 20,
+    // m/s of the currents up the mountain…
+    downSpeed: 28
+    // …and of the torrent down
+  };
+  var UP_PTS = [[780, 3460], [440, 3390], [236, 3285], [205, 3e3], [192, 2400], [182, 1800], [168, 1400], [150, 950], [70, 420], [24, 70], [8, 22]];
+  var EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
+  var CANALS = [
+    { id: "east_blue", sx: 1, sy: -1 },
+    { id: "north_blue", sx: -1, sy: -1 },
+    { id: "west_blue", sx: -1, sy: 1 },
+    { id: "south_blue", sx: 1, sy: 1 },
+    { id: "exit", exit: true }
+  ];
+  var STEP = 4;
+  var CELL = 32;
+  function catmull(pts, step2) {
+    const out = [];
+    const P6 = [pts[0], ...pts, pts[pts.length - 1]];
+    for (let i = 1; i < P6.length - 2; i++) {
+      const [p0, p1, p2, p3] = [P6[i - 1], P6[i], P6[i + 1], P6[i + 2]];
+      const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+      const n = Math.max(1, Math.ceil(len / step2));
+      for (let k = 0; k < n; k++) {
+        const t = k / n, t2 = t * t, t3 = t2 * t;
+        const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+        out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+      }
+    }
+    out.push(pts[pts.length - 1]);
+    return out;
+  }
+  var smooth = (t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+  function build() {
+    for (const c of CANALS) {
+      const pts = c.exit ? EXIT_PTS : UP_PTS.map(([x, y]) => [x * c.sx, y * c.sy]);
+      const raw = catmull(pts, STEP);
+      const n = raw.length;
+      c.x = new Float32Array(n);
+      c.y = new Float32Array(n);
+      c.s = new Float32Array(n);
+      c.lv = new Float32Array(n);
+      c.fx = new Float32Array(n);
+      c.fy = new Float32Array(n);
+      let s = 0;
+      for (let i = 0; i < n; i++) {
+        if (i) s += Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]);
+        c.x[i] = RM.x + raw[i][0];
+        c.y[i] = RM.y + raw[i][1];
+        c.s[i] = s;
+      }
+      c.len = s;
+      for (let i = 0; i < n; i++) {
+        const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
+        const dx = c.x[b] - c.x[a], dy = c.y[b] - c.y[a], d = Math.hypot(dx, dy) || 1;
+        c.fx[i] = dx / d;
+        c.fy[i] = dy / d;
+        const si = c.s[i];
+        c.lv[i] = c.exit ? RM.top * (1 - smooth((si - 30) / RM.drop)) : RM.top * smooth((si - (s - RM.climb)) / RM.climb);
+      }
+    }
+    const grid2 = /* @__PURE__ */ new Map();
+    CANALS.forEach((c, ci) => {
+      for (let i = 0; i < c.x.length; i++) {
+        const k = Math.floor(c.x[i] / CELL) * 65536 + Math.floor(c.y[i] / CELL);
+        let l = grid2.get(k);
+        if (!l) grid2.set(k, l = []);
+        l.push(ci, i);
+      }
+    });
+    RM.grid = grid2;
+  }
+  build();
+  function canalLevel(c, s) {
+    if (c.exit) return RM.top * (1 - smooth((s - 30) / RM.drop));
+    return RM.top * smooth((s - (c.len - RM.climb)) / RM.climb);
+  }
+  var HIT = { canal: null, i: 0, d: 0, s: 0, level: 0, fx: 0, fy: 0, side: 0, pool: false };
+  var POOL_CURL = 0.2;
+  function canalAt(x, y, reach3 = 40, out = HIT) {
+    const dxs = x - RM.x, dys = y - RM.y;
+    if (Math.abs(dxs) > 1400 || Math.abs(dys) > 3500) return null;
+    const pd = Math.hypot(dxs, dys);
+    if (pd < RM.poolR) {
+      out.canal = CANALS[4];
+      out.i = 0;
+      out.d = 0;
+      out.s = 0;
+      out.level = RM.top;
+      out.pool = true;
+      const c2 = pd > 1e-3 ? dxs / pd : 1;
+      const a = smooth((pd - 3) / 7) * (1 - smooth((c2 - 0.7) / 0.27));
+      out.fx = (pd > 1e-3 ? -dxs / pd * a : 0) + (1 - a);
+      out.fy = (pd > 1e-3 ? -dys / pd * a : 0) - (1 - a) * dys * POOL_CURL;
+      const f = Math.hypot(out.fx, out.fy) || 1;
+      out.fx /= f;
+      out.fy /= f;
+      out.side = 0;
+      return out;
+    }
+    let best = -1, bc = 0, bd = reach3 * reach3;
+    const r4 = Math.ceil(reach3 / CELL);
+    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    for (let j = -r4; j <= r4; j++) {
+      for (let i = -r4; i <= r4; i++) {
+        const l = RM.grid.get((cx + i) * 65536 + (cy + j));
+        if (!l) continue;
+        for (let k = 0; k < l.length; k += 2) {
+          const c2 = CANALS[l[k]], si = l[k + 1];
+          const ex = x - c2.x[si], ey = y - c2.y[si];
+          const d2 = ex * ex + ey * ey;
+          if (d2 < bd) {
+            bd = d2;
+            best = si;
+            bc = l[k];
+          }
+        }
+      }
+    }
+    if (best < 0) return null;
+    const c = CANALS[bc];
+    let s = c.s[best], px2 = c.x[best], py2 = c.y[best];
+    const ax = x - px2, ay = y - py2;
+    const along2 = ax * c.fx[best] + ay * c.fy[best];
+    s = Math.max(0, Math.min(c.len, s + along2));
+    const side = ax * -c.fy[best] + ay * c.fx[best];
+    out.canal = c;
+    out.i = best;
+    out.s = s;
+    out.d = Math.abs(side);
+    out.side = side;
+    out.level = canalLevel(c, s);
+    out.fx = c.fx[best];
+    out.fy = c.fy[best];
+    out.pool = false;
+    return out;
+  }
+  function coneAt(x, y) {
+    const C3 = RM.cone;
+    const r4 = Math.hypot((x - RM.x) / C3.rx, (y - RM.y) / C3.ry);
+    if (r4 >= 1) return 0;
+    const k = 1 - r4;
+    return C3.h * k * k * (3 - 2 * k);
+  }
+  var nearRM = (x, y) => Math.abs(x - RM.x) < RM.rx + 500 && Math.abs(y - RM.y) < RM.ry + 400;
+
+  // src/world/deform.js
+  var MAX = 8;
+  var DEFORM = { list: [], pads: [], now: 0, world: null, seq: 0 };
+  var KINDS = { tilt: 1, crater: 2, trench: 3, rise: 4, ice: 5 };
+  function addDeform(o) {
+    const d = {
+      kind: KINDS[o.kind] || 1,
+      x: o.x,
+      y: o.y,
+      r: o.r || 12,
+      amp: o.amp ?? 2,
+      ang: o.ang || 0,
+      w: o.w || 2,
+      rise: o.rise ?? 0.35,
+      hold: o.hold ?? 4,
+      fall: o.fall ?? 3,
+      wob: o.wob || 0,
+      t0: DEFORM.now + (o.delay || 0),
+      id: ++DEFORM.seq
+    };
+    d.c = Math.cos(d.ang);
+    d.s = Math.sin(d.ang);
+    DEFORM.list.push(d);
+    while (DEFORM.list.length > MAX) DEFORM.list.shift();
+    return d;
+  }
+  function tickDeform(now3, world) {
+    if (world && DEFORM.world && world !== DEFORM.world || now3 < DEFORM.now - 1) DEFORM.list.length = 0;
+    DEFORM.now = now3;
+    if (world) DEFORM.world = world;
+    if (DEFORM.list.length) DEFORM.list = DEFORM.list.filter((d) => now3 - d.t0 < d.rise + d.hold + d.fall && d.t0 - now3 < 30);
+    if (DEFORM.pads.length) DEFORM.pads = DEFORM.pads.filter((d) => now3 < d.end && d.t0 - now3 < 30);
+  }
+  function addIcePad(x, y, r4, hold = 8) {
+    const P6 = DEFORM.pads;
+    P6.push({ x, y, r: r4, t0: DEFORM.now, end: DEFORM.now + hold });
+    while (P6.length > 80) P6.shift();
+  }
+  var sst = (a, b, x) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  function envelope(d, now3 = DEFORM.now) {
+    const t = now3 - d.t0;
+    if (t < 0) return 0;
+    let e;
+    if (t < d.rise) e = sst(0, 1, t / d.rise);
+    else if (t < d.rise + d.hold) e = 1;
+    else e = 1 - sst(0, 1, (t - d.rise - d.hold) / d.fall);
+    if (d.wob && t < d.rise + 1.2) e *= 1 + d.wob * Math.sin(t * 38) * Math.exp(-t * 2.2);
+    return e;
+  }
+  function shapeAt(kind, lx, ly, r4, amp, c, s, w) {
+    const dd = Math.hypot(lx, ly), q2 = dd / r4;
+    if (kind === 1) {
+      if (q2 >= 1) return 0;
+      const fade2 = 1 - sst(0.55, 1, q2);
+      return amp * ((lx * c + ly * s) / r4) * fade2;
+    }
+    if (kind === 2) {
+      if (q2 >= 1.5) return 0;
+      const bowl = q2 < 1 ? -amp * (1 - q2 * q2) : 0;
+      return bowl + amp * 0.3 * Math.exp(-(((q2 - 1) / 0.18) ** 2));
+    }
+    if (kind === 3) {
+      const u = lx * c + ly * s, v = -lx * s + ly * c;
+      if (u < -w || u > r4 + w) return 0;
+      const run = sst(-w, w * 0.5, u) * (1 - sst(r4 - w * 1.5, r4 + w, u));
+      return -amp * Math.exp(-((v / w) ** 2)) * run + amp * 0.18 * Math.exp(-(((Math.abs(v) - w * 1.3) / (w * 0.5)) ** 2)) * run;
+    }
+    if (kind === 5) return 0;
+    if (kind === 4) {
+      if (q2 >= 1) return 0;
+      return amp * (1 - sst(0, 1, q2));
+    }
+    return 0;
+  }
+  var ICE_TOP = 0.32;
+  function iceCover(x, y) {
+    const L3 = DEFORM.list;
+    const w = DEFORM.world;
+    for (const d of DEFORM.pads) {
+      const left = d.end - DEFORM.now, k = Math.min(1, left / 1.5);
+      const lx = w?.dx ? w.dx(d.x, x) : x - d.x;
+      if (Math.hypot(lx, y - d.y) < d.r * k) return true;
+    }
+    if (!L3.length) return false;
+    for (const d of L3) {
+      if (d.kind !== 5) continue;
+      const e = envelope(d);
+      if (e < 0.25) continue;
+      const lx = w?.dx ? w.dx(d.x, x) : x - d.x, ly = y - d.y;
+      const th = Math.atan2(ly, lx);
+      const rag = 1 + 0.07 * Math.sin(th * 7 + d.id) + 0.04 * Math.sin(th * 17 + d.id * 3);
+      if (Math.hypot(lx, ly) < d.r * rag * Math.min(1, e * 1.3)) return true;
+    }
+    return false;
+  }
+  function deformAt(x, y, sea = false) {
+    const L3 = DEFORM.list;
+    if (!L3.length) return 0;
+    const w = DEFORM.world;
+    let h2 = 0;
+    for (const d of L3) {
+      if (sea && d.kind !== 1) continue;
+      const lx = w?.dx ? w.dx(d.x, x) : x - d.x, ly = y - d.y;
+      const R5 = d.kind === 3 ? d.r + d.w * 2 : d.r * 1.5;
+      if (Math.abs(lx) > R5 + 2 || Math.abs(ly) > R5 + 2) continue;
+      const e = envelope(d);
+      if (e) h2 += e * shapeAt(d.kind, lx, ly, d.r, d.amp, d.c, d.s, d.w);
+    }
+    return h2;
+  }
+
+  // src/render3d/swell.js
+  var SWELL_GLSL = (
+    /* glsl */
+    `
+  float sHash(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
+  float sNoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(sHash(i), sHash(i + vec2(1, 0)), u.x), mix(sHash(i + vec2(0, 1)), sHash(i + vec2(1, 1)), u.x), u.y);
+  }
+  // two octaves, rotated against each other (no grid-aligned blobs)
+  float sFbm(vec2 p) {
+    float a = sNoise(p);
+    p = mat2(0.8, -0.6, 0.6, 0.8) * p * 2.03 + 17.3;
+    return a * 0.64 + sNoise(p) * 0.36;
+  }
+  // d: how far from the eye (m) \u2014 the shorter trains stop nearer it
+  float swells(vec2 p, float t, float d, out vec2 slope) {
+    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.17, 0.985), D2 = vec2(-0.81, 0.59), D3 = vec2(0.75, -0.66), D4 = vec2(0.42, -0.91);
+    const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854, K4 = 0.1848;   // 46 m, 22 m, 13 m, 8 m; a cross swell of 34 m
+    const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774, W4 = 1.346;       // deep-water speeds
+    // bent crests (a little everywhere, and long slow curves)
+    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0 + (vec2(sNoise(p * 0.0055 + 3.1), sNoise(p * 0.0055 + 9.4)) - 0.5) * 44.0;
+    // wave groups
+    float g0 = (0.36 + 0.45 * sFbm(p * 0.006 + vec2(0.0, t * 0.012) + 91.0)) * (1.0 - smoothstep(160.0, 320.0, d));
+    float g1 = (0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0))) * 0.75 * (1.0 - smoothstep(150.0, 300.0, d));
+    float g2 = (0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025))) * 0.4 * (1.0 - smoothstep(45.0, 100.0, d));
+    float g3 = (0.3 + 0.9 * sFbm(p * 0.026 + 57.0)) * 0.22 * (1.0 - smoothstep(25.0, 55.0, d));
+    // (the cross swell strong in some stretches of sea, gone in others)
+    float g4 = (0.7 * sFbm(p * 0.0045 - 51.0 + vec2(t * 0.01, 0.0)) + 0.15) * 0.8 * (1.0 - smoothstep(160.0, 320.0, d));
+    float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1, a4 = K4 * dot(D4, q) - W4 * t + 2.3;
+    // (peaked: e^(sin a - 1), less its mean 0.466, scaled back to a peak of 1)
+    float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873, e4 = exp(sin(a4) - 1.0) * 1.873;
+    float h = (e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + sin(a3) * g3 + (e4 - 0.873) * g4;
+    slope = (D0 * K0 * e0 * cos(a0) * g0 + D1 * K1 * e1 * cos(a1) * g1 + D2 * K2 * e2 * cos(a2) * g2 + D3 * K3 * cos(a3) * g3 + D4 * K4 * e4 * cos(a4) * g4) / 2.6;
+    return h / 2.6;
+  }
+`
+  );
+  var fract = (v) => v - Math.floor(v);
+  function sHash(x, y) {
+    let a = fract(x * 0.1031), b = fract(y * 0.1031), c = a;
+    const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33);
+    a += d;
+    b += d;
+    c += d;
+    return fract((a + b) * c);
+  }
+  function sNoise(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+    const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+    const a = sHash(ix, iy), b = sHash(ix + 1, iy), c = sHash(ix, iy + 1), d = sHash(ix + 1, iy + 1);
+    const top = a + (b - a) * ux, bot = c + (d - c) * ux;
+    return top + (bot - top) * uy;
+  }
+  function sFbm(x, y) {
+    const a = sNoise(x, y);
+    const px2 = (0.8 * x + 0.6 * y) * 2.03 + 17.3, py2 = (-0.6 * x + 0.8 * y) * 2.03 + 17.3;
+    return a * 0.64 + sNoise(px2, py2) * 0.36;
+  }
+  var sst2 = (a, b, x) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  function swells(x, y, t, d = 0) {
+    const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14 + (sNoise(x * 55e-4 + 3.1, y * 55e-4 + 3.1) - 0.5) * 44;
+    const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14 + (sNoise(x * 55e-4 + 9.4, y * 55e-4 + 9.4) - 0.5) * 44;
+    const g0 = (0.36 + 0.45 * sFbm(x * 6e-3 + 91, y * 6e-3 + t * 0.012 + 91)) * (1 - sst2(160, 320, d));
+    const g1 = (0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011)) * 0.75 * (1 - sst2(150, 300, d));
+    const g2 = (0.3 + 0.9 * sFbm(x * 0.017 + 31, y * 0.017 + 31 - t * 0.025)) * 0.4 * (1 - sst2(45, 100, d));
+    const g3 = (0.3 + 0.9 * sFbm(x * 0.026 + 57, y * 0.026 + 57)) * 0.22 * (1 - sst2(25, 55, d));
+    const g4 = (0.7 * sFbm(x * 45e-4 - 51 + t * 0.01, y * 45e-4 - 51) + 0.15) * 0.8 * (1 - sst2(160, 320, d));
+    const a0 = 0.1366 * (0.86 * qx + 0.51 * qy) - 1.157 * t + 0.6;
+    const a1 = 0.2856 * (0.17 * qx + 0.985 * qy) - 1.673 * t;
+    const a2 = 0.4833 * (-0.81 * qx + 0.59 * qy) - 2.177 * t + 1.7;
+    const a3 = 0.7854 * (0.75 * qx - 0.66 * qy) - 2.774 * t + 4.1;
+    const a4 = 0.1848 * (0.42 * qx - 0.91 * qy) - 1.346 * t + 2.3;
+    const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873, e4 = Math.exp(Math.sin(a4) - 1) * 1.873;
+    return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3 + (e4 - 0.873) * g4) / 2.6;
+  }
+  var swellAmp = (storm, zone, calm = 0) => zone >= 2 ? 0 : (0.85 + storm * 1.4) * (1 - calm * 0.85);
+  var LIQUID = new Float32Array(256).fill(0.15);
+  for (const k of [0, 1, 2, 5, 7]) LIQUID[k] = 1;
+  LIQUID[3] = 0.5;
+  LIQUID[9] = 0;
+  function calmPoints(world) {
+    if (!world?.reverseMountain) return [];
+    if (world.calmPts) return world.calmPts;
+    const out = [];
+    for (const c of CANALS) {
+      if (c.i0 === void 0) continue;
+      const land2 = c.exit ? c.i1 - 3 : c.i0 + 3;
+      const j = Math.max(0, Math.min(c.x.length - 1, land2 + (c.exit ? 12 : -12)));
+      out.push([c.x[j], c.y[j], 170]);
+    }
+    return world.calmPts = out;
+  }
+  function calmAt(w, x, y) {
+    let k = 1;
+    for (const [cx, cy, r4] of calmPoints(w)) k = Math.min(k, sst2(r4 * 0.45, r4, Math.hypot(w.dx ? w.dx(cx, x) : x - cx, y - cy)));
+    return k;
+  }
+  var S = { t: 0, amp: 0, world: null, ox: 0, oy: 0 };
+  function setSwell(t, amp, world, ox, oy) {
+    S.t = t;
+    S.amp = amp;
+    S.world = world;
+    S.ox = ox;
+    S.oy = oy;
+  }
+  function swellAt(x, y, t = S.t) {
+    const w = S.world;
+    if (!w || !S.amp) return 0;
+    const dx = w.dx ? w.dx(S.ox, x) : x - S.ox, dy = y - S.oy;
+    const d = Math.hypot(dx, dy);
+    if (d > 320) return 0;
+    const k = w.type(Math.floor(x), Math.floor(y));
+    const liquid = LIQUID[k < 16 ? k : 255];
+    if (!liquid) return 0;
+    const shore = 0.35 + 0.65 * sst2(0.5, -7, w.sd ? w.sd(x, y) : -32);
+    const tilt = DEFORM.list.length ? deformAt(x, y, true) * sst2(-1.5, -8, w.sd ? w.sd(x, y) : -32) : 0;
+    return swells(x, y, t, d) * S.amp * shore * liquid * (w.reverseMountain ? calmAt(w, x, y) : 1) + tilt;
+  }
+  var swellOn = () => !!(S.world && S.amp > 0.01);
+
+  // src/game/boatFeel.js
+  var BOAT_FEEL = {
+    // ---- steering (the helm you hold with A / D)
+    helmIn: 0.32,
+    // s for the helm to go hard over when you steer (eased in and out, no snap)
+    helmOut: 0.2,
+    // s for it to come back amidships when you let go
+    turnLag: 0.1,
+    // s the hull takes to answer her helm: how long her turn takes to build up, and to die away
+    turnLagPerM: 32e-4,
+    // … and that much more per metre of her length (a big ship swings more slowly)
+    turnRate: 1,
+    // × each class's top turning rate (1 = as the ship tables have it)
+    // ---- the wheel (it turns as you steer and comes back to centre when you let go)
+    wheelMax: 2.2,
+    // radians the wheel is turned hard over (about a third of a turn)
+    wheelSpeed: 14,
+    // how briskly the wheel follows the helm (a spring's rate, per second: higher is snappier)
+    standTilt: 0.5,
+    // how much the helmsman leans with the deck as she rolls and pitches (0 stands bolt upright, 1 tilts with it)
+    // (how far round each hand works a spoke before taking the next one: render3d/chars/pose.js HELM_GRIP)
+    // ---- riding the sea (how she heaves, pitches and rolls on the swell)
+    rideRate: 6.5,
+    // how closely she follows the sea's surface (per second: higher is stiffer, lower floatier)
+    rideRatePerM: -0.055,
+    // … less per metre of her length (a long hull is heavier, slower to answer)
+    rideDamp: 0.9,
+    // 1 = settles without overshooting; a little under 1 gives a buoyant bob
+    rideLead: 1,
+    // how well she keeps up with the swell (1 keeps her waterline on the sea; less lets her lag behind it, floatier)
+    pitchMax: 0.22,
+    // radians she pitches at most (bow up or down)
+    rollMax: 0.26,
+    // radians she rolls at most
+    // ---- speed changes (sails set or taken in, oars, wind round as she turns)
+    speedSmooth: 0.45,
+    // s over which a change in her driving force builds up (under sail)
+    speedSmoothOars: 0.12
+    // … under oars (each stroke still surges her on)
+  };
+
+  // src/world/hull.js
+  var clamp01 = (x) => Math.max(0, Math.min(1, x));
+  var smooth2 = (a, b, x) => {
+    const t = clamp01((x - a) / (b - a));
+    return t * t * (3 - 2 * t);
+  };
+  var BIG_SHIP = 8;
+  var dimsCache = /* @__PURE__ */ new Map();
+  function shipDims(def) {
+    if (def._dims) return def._dims;
+    const key2 = `${def.length}|${def.beam}|${def.masts}|${def.cannons}|${!!def.oarsOnly}`;
+    let d = dimsCache.get(key2);
+    if (!d) {
+      d = def.length >= BIG_SHIP ? bigDims(def) : smallDims(def);
+      dimsCache.set(key2, d);
+    }
+    Object.defineProperty(def, "_dims", { value: d, enumerable: false, configurable: true });
+    return d;
+  }
+  function smallDims(def) {
+    const L3 = def.length, B5 = def.beam;
+    const open = L3 < 3.5;
+    const D4 = B5 * 0.42;
+    const deckY2 = open ? 0.14 : 0.25 + B5 * 0.2;
+    const bulH = open ? 0.36 : 0.3 + B5 * 0.07;
+    const castle2 = L3 >= 5.5, fore = L3 >= 6.8;
+    const hq = castle2 ? 0.85 + (L3 - 5.5) * 0.1 : 0;
+    const hf = fore ? 0.5 : 0;
+    const tq = castle2 ? 0.27 : 0, tf2 = fore ? 0.83 : 1;
+    const masts = def.masts ?? 1;
+    const mastH = masts ? 1.2 + L3 * 0.75 : 0;
+    let helmX = -L3 * 0.42;
+    const d = {
+      L: L3,
+      B: B5,
+      D: D4,
+      open,
+      deckY: deckY2,
+      bulH,
+      castle: castle2,
+      fore,
+      hq,
+      hf,
+      tq,
+      tf: tf2,
+      masts,
+      mastH,
+      helmX,
+      yq: deckY2 + hq,
+      yf: deckY2 + hf,
+      helmFloor: castle2 ? deckY2 + hq : deckY2,
+      big: false,
+      poop: false,
+      hp: 0,
+      tp: 0,
+      sheer: 0.16 * B5,
+      walk: 0.94,
+      stairs: [],
+      solids: []
+    };
+    d.mastU = masts ? Array.from({ length: masts }, (_, m) => masts === 1 ? 0.05 * L3 : L3 * (0.28 - m * (0.56 / Math.max(1, masts - 1)))) : [];
+    d.mastR = 0.05 + L3 * 0.011;
+    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.16 }));
+    if (!open) {
+      const aft = masts > 1 ? d.mastU[masts - 1] : Infinity;
+      d.wheelU = Math.min(helmX + 1, aft - d.mastR - 0.35);
+      d.helmX = helmX = Math.max(-L3 / 2 + 0.3, Math.min(helmX, d.wheelU - 1));
+      d.solids.push({ u: d.wheelU + 0.1, v: 0, r: 0.2 });
+    }
+    if (def.oarsOnly) {
+      const seatT = 0.44, lockT = seatT + 0.4 / L3;
+      d.row = {
+        seatT,
+        seatU: xAt(d, seatT),
+        seatH: 0.3,
+        // (the top of the thwart, over the floor)
+        lockT,
+        lockU: xAt(d, lockT),
+        lockV: hbAt(lockT, B5) * 0.965,
+        lockH: topAt(d, lockT) + 0.04,
+        inboard: 0.56,
+        outboard: 1.5
+      };
+      d.helmX = helmX = d.row.seatU;
+    }
+    return d;
+  }
+  var OAR = { catchA: 0.6, finishA: -0.3, dipB: 0.52, liftB: 0.2 };
+  var ease = (k) => k * k * (3 - 2 * k);
+  function oarStroke(ph, pull = 1) {
+    const { catchA: ca, finishA: fa, dipB, liftB } = OAR;
+    let a, b, f;
+    if (ph < 0.08) {
+      const k = ease(ph / 0.08);
+      a = ca;
+      b = liftB + (dipB - liftB) * k;
+      f = 0;
+    } else if (ph < 0.52) {
+      a = ca + (fa - ca) * ease((ph - 0.08) / 0.44);
+      b = dipB;
+      f = 0;
+    } else if (ph < 0.6) {
+      const k = ease((ph - 0.52) / 0.08);
+      a = fa;
+      b = dipB + (liftB - dipB) * k;
+      f = k;
+    } else {
+      const k = (ph - 0.6) / 0.4;
+      a = fa + (ca - fa) * ease(k);
+      b = liftB + Math.sin(k * Math.PI) * 0.05;
+      f = k < 0.8 ? 1 : 1 - ease((k - 0.8) / 0.2);
+    }
+    if (pull < 0) a = ca + fa - a;
+    return { a, b, f };
+  }
+  function rowLean(ship) {
+    const o = ship.oars;
+    if (!o) return 0;
+    const k = clamp01((OAR.catchA - (o[0].a + o[1].a) / 2) / (OAR.catchA - OAR.finishA));
+    return -0.08 + 0.44 * k;
+  }
+  var oarDrive = (ph) => ph < 0.08 || ph > 0.52 ? 0 : Math.sin((ph - 0.08) / 0.44 * Math.PI);
+  function oarPoints(d, side, a, b) {
+    const r4 = d.row, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    const ox = sa * cb, oy = -sb, oz = side * ca * cb;
+    const px2 = r4.lockU, py2 = r4.lockH, pz2 = side * r4.lockV;
+    return {
+      lock: [px2, py2, pz2],
+      dir: [ox, oy, oz],
+      grip: [px2 - ox * r4.inboard, py2 - oy * r4.inboard, pz2 - oz * r4.inboard],
+      tip: [px2 + ox * r4.outboard, py2 + oy * r4.outboard, pz2 + oz * r4.outboard]
+    };
+  }
+  function bigDims(def) {
+    const L3 = def.length, B5 = def.beam;
+    const D4 = B5 * 0.45;
+    const narrow = B5 < 7;
+    const large = L3 >= 44, mid = !narrow && !large;
+    const deckY2 = 0.6 + Math.min(B5, 11) * 0.2;
+    const bulH = 1.1;
+    const fore = L3 >= 24;
+    const hq = narrow ? 2.4 : Math.min(3, 1.95 + B5 * 0.075), hf = hq - 0.1;
+    const poop = large, hp = poop ? hq - 0.2 : 0;
+    const tq = narrow ? Math.max(0.24, 2.9 / L3) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 1 - Math.max(0.13, 5.4 / L3) : 1, tp = poop ? 0.13 : 0;
+    const yq = deckY2 + hq, yf = deckY2 + hf, yp = yq + hp;
+    const masts = Math.max(1, Math.min(4, def.masts || 3));
+    const tHelm = poop ? tp - 2.2 / L3 : narrow ? 0.08 : 0.1;
+    const d = {
+      L: L3,
+      B: B5,
+      D: D4,
+      open: false,
+      big: true,
+      narrow,
+      deckY: deckY2,
+      bulH,
+      castle: true,
+      fore,
+      poop,
+      hq,
+      hf,
+      hp,
+      tq,
+      tf: tf2,
+      tp,
+      masts,
+      mastH: narrow ? L3 * 0.95 + 3 : L3 + 4,
+      helmX: -L3 / 2 + tHelm * L3,
+      yq,
+      yf,
+      yp,
+      helmFloor: poop ? yp : yq,
+      sheer: Math.min(1.3, 0.4 + L3 * 0.016),
+      walk: 0.86
+    };
+    d.bowY = fore ? yf : deckY2 + 0.9;
+    d.mastU = { 1: [0.06], 2: [0.22, -0.06], 3: large ? [0.27, 0.03, -0.24] : [0.26, 0.02, -0.28], 4: [0.3, 0.1, -0.12, -0.27] }[masts].map((k) => k * L3);
+    d.mastR = Math.min(0.6, 0.05 + L3 * 0.011);
+    d.wheelU = d.helmX + 0.9;
+    const bu = d.wheelU + 1.45;
+    d.binnacleU = !narrow && !poop && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
+    const W4 = narrow ? 1.05 : Math.min(1.6, 0.75 + B5 * 0.055), sides2 = narrow ? [1] : [-1, 1];
+    const run = (rise2) => rise2 * (narrow ? 1.1 : mid ? 1.15 : 1.3);
+    const edge = (t) => hbAt(t, B5) * d.walk - 0.22;
+    d.stairs = [];
+    const flight = (ta, tb, ha, hb, la, lb) => {
+      const vo2 = Math.min(edge(ta), edge(tb)), vi = vo2 - W4;
+      for (const s of sides2) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo2, vb: s > 0 ? vo2 : -vi });
+    };
+    flight(tq, tq + run(hq) / L3, yq, deckY2, "quarter", "main");
+    if (fore) flight(tf2 - run(hf) / L3, tf2, deckY2, yf, "main", "fore");
+    if (poop) flight(tp, tp + run(hp) / L3, yp, yq, "poop", "quarter");
+    const qs = d.stairs.find((s) => s.la === "quarter" && s.lb === "main"), fs = d.stairs.find((s) => s.lb === "fore");
+    const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
+    d.mainT0 = mainT0;
+    d.mainT1 = mainT1;
+    const holdY = deckY2 - Math.max(2.25, Math.min(2.7, 1.9 + B5 * 0.045));
+    d.holdY = holdY;
+    const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
+    let h0 = 0.06, h1 = 0.94;
+    while (h0 < 0.4 && holdHalf(h0) < 0.8) h0 += 5e-3;
+    while (h1 > 0.6 && holdHalf(h1) < 0.8) h1 -= 5e-3;
+    const clearU = (u0, u1, pad2) => d.mastU.every((m) => m < u0 - d.mastR - pad2 || m > u1 + d.mastR + pad2);
+    const clearComp = (u0, u1) => d.mastU.every((m) => m < u0 - d.mastR - 1.2 || m > u1 + d.mastR + 1.5);
+    const rise = deckY2 - holdY;
+    let comp = null;
+    for (const cRun of [...large ? [rise * 1.15, rise, rise * 0.85] : [], rise * 0.55]) {
+      for (let k = 0; k < 160 && !comp; k++) {
+        const tc = (mainT0 + mainT1) / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 3e-3;
+        const t0 = tc - cRun / L3 / 2, t1 = tc + cRun / L3 / 2;
+        if (t0 < mainT0 + 0.5 / L3 || t1 > mainT1 - 1.8 / L3 || t0 < h0 + 1.8 / L3 || t1 > h1 - 0.3 / L3) continue;
+        if (clearComp(xAt(d, t0), xAt(d, t1))) comp = { t0, t1, ladder: cRun < rise * 0.7 };
+      }
+      if (comp) break;
+    }
+    if (!comp) comp = { t0: (mainT0 + mainT1) / 2 - rise * 0.275 / L3, t1: (mainT0 + mainT1) / 2 + rise * 0.275 / L3, ladder: true };
+    const cw = comp.ladder ? 0.9 : 1.3;
+    d.comp = { ...comp, w: cw, u0: xAt(d, comp.t0), u1: xAt(d, comp.t1) };
+    d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY2, la: "hold", lb: "main", s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
+    d.hatchT = (comp.t0 + comp.t1) / 2;
+    const freeT = (want2, len, pad2) => {
+      for (let k = 0; k < 80; k++) {
+        const tc = want2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 6e-3;
+        const u0 = xAt(d, tc) - len / 2, u1 = u0 + len;
+        if (tc - len / L3 / 2 < mainT0 + 0.3 / L3 || tc + len / L3 / 2 > mainT1 - 0.3 / L3) continue;
+        if (!clearU(u0, u1, pad2)) continue;
+        if (u1 > d.comp.u0 - pad2 && u0 < d.comp.u1 + Math.max(pad2, 1.6)) continue;
+        return tc;
+      }
+      return null;
+    };
+    d.capstanT = L3 >= 14 ? freeT(masts >= 4 ? 0.54 : 0.385, 0.9, 0.7) : null;
+    const bl2 = Math.min(6, L3 * 0.14), bt = L3 >= 24 ? freeT(masts >= 4 ? 0.69 : 0.645, bl2, 0.6) : null;
+    if (bt !== null && d.capstanT !== null && Math.abs(xAt(d, bt) - xAt(d, d.capstanT)) < bl2 / 2 + 1.2) d.boat = null;
+    else d.boat = bt !== null ? { u0: (bt - 0.5) * L3 - bl2 / 2, u1: (bt - 0.5) * L3 + bl2 / 2, w: Math.min(2.2, B5 * 0.22) } : null;
+    const gs = Math.max(0.6, Math.min(1, B5 / 6.5));
+    d.gunScale = gs;
+    const rows = [{ y: deckY2 + 0.42, t0: mainT0 + 1.5 / L3, t1: mainT1 - 1.5 / L3, lid: 0.42, open: 1.4, deck: true }];
+    if ((def.cannons || 0) >= 12) rows.push({ y: holdY + 0.42 * Math.max(0.85, gs), t0: Math.max(0.12, h0 + 0.8 / L3), t1: Math.min(0.86, h1 - 0.8 / L3), lid: 0.6, open: 1.05 });
+    const perSide = Math.ceil((def.cannons || 0) / 2);
+    const capU = d.capstanT !== null ? (d.capstanT - 0.5) * L3 : null;
+    const centre = (u) => {
+      let w = 0;
+      for (const m of d.mastU) if (Math.abs(u - m) < d.mastR + 0.6) w = Math.max(w, d.mastR + 0.1);
+      if (capU !== null && Math.abs(u - capU) < 1.17) w = Math.max(w, 0.62);
+      if (d.boat && u > d.boat.u0 - 0.55 && u < d.boat.u1 + 0.55) w = Math.max(w, d.boat.w / 2);
+      if (u > d.comp.u0 - 0.6 && u < d.comp.u1 + 0.6) w = Math.max(w, cw / 2 + 0.05);
+      return w;
+    };
+    const walkway = large ? 0.9 : mid ? 0.7 : 0.45;
+    const offAt = (t) => hbAt(t, B5) * 0.93 - 0.95 * gs;
+    const fitsGun = (t) => {
+      const u = (t - 0.5) * L3, reach3 = 0.5 * gs;
+      return [u - reach3, u, u + reach3].every((uu) => offAt(t) - gunIn(gs) - centre(uu) >= walkway);
+    };
+    const top = rows[0], want = rows.length > 1 ? Math.ceil(perSide / 2) : perSide;
+    const cand = [];
+    for (let t = top.t0; t <= top.t1 + 1e-9; t += 0.1 / L3) if (fitsGun(t)) cand.push(t);
+    const pick6 = [], gap = (1.4 * gs + 0.35) / L3;
+    for (let i = 0; i < want && cand.length; i++) {
+      const aim = want === 1 ? (top.t0 + top.t1) / 2 : top.t0 + (top.t1 - top.t0) * i / (want - 1);
+      let best = null;
+      for (const t of cand) if (pick6.every((q2) => Math.abs(q2 - t) >= gap) && (best === null || Math.abs(t - aim) < Math.abs(best - aim))) best = t;
+      if (best !== null) pick6.push(best);
+    }
+    pick6.sort((a, b) => a - b);
+    d.guns = [];
+    for (const t of pick6) for (const s of [-1, 1]) d.guns.push({ t, u: (t - 0.5) * L3, v: s * offAt(t), s });
+    top.ts = pick6;
+    top.n = pick6.length;
+    for (const r4 of rows) if (!r4.deck) r4.n = Math.max(2, Math.min(16, Math.ceil(perSide / 2), Math.floor((r4.t1 - r4.t0) * L3 / 1.9)));
+    d.gunRows = rows;
+    d.lowGuns = [];
+    const low = rows.find((r4) => !r4.deck);
+    if (low) {
+      for (let i = 0; i < low.n; i++) {
+        const t = low.t0 + (low.t1 - low.t0) * (i + 0.5) / low.n;
+        const off = skinAt(d, t, low.y) - 0.3 - 0.85 * gs;
+        if (t > comp.t0 - 1.6 / L3 && t < comp.t1 + 0.5 / L3 && off - gunIn(gs) - 0.8 < cw / 2 + 0.5) continue;
+        for (const s of [-1, 1]) d.lowGuns.push({ t, u: (t - 0.5) * L3, v: s * off, s });
+      }
+    }
+    const tS = 0.02 + 0.3 / L3;
+    const mastIn = d.mastU.some((m) => m < xAt(d, tq) && m > xAt(d, tq) - 2.6);
+    const doorVs = narrow ? [Math.max(-edge(tq) + 0.75, Math.min(0, qs.va - 0.75))] : mastIn ? [-1, 1].map((s) => s * Math.max(0.95, d.mastR + 1.15)) : [0];
+    d.rooms = [
+      { kind: "cabin", t0: tS, t1: tq, floor: deckY2, ceil: yq - 0.12, top: yq, doors: doorVs.map((v) => ({ t: tq, v, w: 1.05, face: 1 })) }
+    ];
+    if (poop) d.rooms.push({ kind: "captain", t0: tS, t1: tp, floor: yq, ceil: yp - 0.12, top: yp, doors: [{ t: tp, v: 0, w: 1.05, face: 1 }] });
+    if (fore) {
+      let fe = 0.95;
+      while (fe > tf2 + 0.03 && innerAt(d, fe, deckY2 + 1) < 0.85) fe -= 5e-3;
+      const fdv = narrow ? [Math.max(-edge(tf2) + 0.75, Math.min(0, fs.va - 0.75))] : [-0.95, 0.95];
+      d.rooms.push({ kind: "forecastle", t0: tf2, t1: fe, floor: deckY2, ceil: yf - 0.12, top: yf, doors: fdv.map((v) => ({ t: tf2, v, w: 1, face: -1 })) });
+    }
+    d.rooms.push({ kind: "hold", t0: h0, t1: h1, floor: holdY, ceil: deckY2 - 0.12, doors: [] });
+    const upTo = { cabin: ["quarter", "main"], captain: ["poop", "quarter"], forecastle: ["main", "fore"] };
+    for (const r4 of d.rooms) if (r4.doors.length) roomFront(d, r4, d.stairs.filter((s) => s.la === upTo[r4.kind][0] && s.lb === upTo[r4.kind][1]));
+    for (const r4 of d.rooms) if (r4.kind === "cabin" || r4.kind === "captain") r4.windows = sternWindows(d, r4);
+    d.walls = [];
+    for (const r4 of d.rooms) {
+      if (!r4.doors.length) continue;
+      const u = xAt(d, r4.front.t), w = innerAt(d, r4.front.t, r4.floor + 1) + 0.1;
+      let v = -w;
+      for (const dr of [...r4.doors].sort((a, b) => a.v - b.v)) {
+        d.walls.push({ u0: u, v0: v, u1: u, v1: dr.v - dr.w / 2, y0: r4.floor, y1: r4.ceil + 0.12 });
+        v = dr.v + dr.w / 2;
+      }
+      d.walls.push({ u0: u, v0: v, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12 });
+    }
+    for (const r4 of d.rooms) {
+      const hold = r4.kind === "hold";
+      for (const [t, off] of hold ? [[r4.t0, 0], [r4.t1, 0]] : r4.kind === "forecastle" ? [[r4.t1, 0]] : [[r4.t0, 0.05]]) {
+        const u = xAt(d, t) + off, w = (hold ? skinAt(d, t, r4.floor + 0.3) : innerAt(d, t, r4.floor + 1)) + 0.1;
+        d.walls.push({ u0: u, v0: -w, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12, end: true });
+      }
+    }
+    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.08 }));
+    for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: "main", h: 0.95 * gs });
+    for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: "hold", h: 0.95 * gs });
+    if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: "main", h: 1 });
+    d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: d.poop ? "poop" : "quarter" });
+    if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: "quarter", h: 1.2 });
+    if (fore) d.solids.push({ u: (tf2 + 0.03 - 0.5) * L3, v: 0, r: 0.55, lvl: "fore" });
+    if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: "main", h: 1.1 });
+    d.shotPile = null;
+    const mainFirst = [...d.mastU].sort((a, b) => Math.abs(a) - Math.abs(b));
+    const S6 = FURNITURE.shot;
+    for (const m of mainFirst) {
+      for (const [u, v] of [[m + d.mastR + 0.95, 0], [m - d.mastR - 0.95, 0], [m, d.mastR + 0.85], [m, -d.mastR - 0.85]]) {
+        const box2 = { u0: u - S6.w / 2, u1: u + S6.w / 2, v0: v - S6.dp / 2, v1: v + S6.dp / 2 };
+        if (deckClear(d, box2, 0.55)) {
+          d.shotPile = { u, v, ...box2 };
+          break;
+        }
+      }
+      if (d.shotPile) break;
+    }
+    if (d.shotPile) {
+      const p = d.shotPile;
+      d.solids.push({ u0: p.u0, u1: p.u1, v0: p.v0, v1: p.v1, lvl: "main", h: 0.6 });
+    }
+    furnish(d);
+    d.ladders = [];
+    for (const s of [1, -1]) {
+      const t = ladderT(d, def, s, mainT0, mainT1);
+      if (t !== null) d.ladders.push({ t, u: xAt(d, t), s, w: LADDER_W });
+    }
+    return d;
+  }
+  var LADDER_W = 0.62;
+  function ladderT(d, def, s, t0, t1) {
+    const L3 = d.L, mid = (t0 + t1) / 2;
+    for (let k = 0; k < 600; k++) {
+      const t = mid + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.05 / L3;
+      if (t < t0 + 1 / L3 || t > t1 - 1 / L3) continue;
+      const u = xAt(d, t);
+      if ([...d.guns, ...d.lowGuns || []].some((g) => g.s === s && Math.abs(g.u - u) < LADDER_W / 2 + 0.31 + 0.3)) continue;
+      if (d.mastU.some((m) => Math.abs(u - (m - 0.5)) < (2.4 + d.mastR * 2) / 2 + LADDER_W / 2 + 0.25)) continue;
+      if (def.paddle && Math.abs(t - 0.34) < (0.72 * d.B / 3.2 + LADDER_W / 2 + 0.5) / L3) continue;
+      const v = s * (hbAt(t, d.B) * d.walk - 0.5);
+      if (levelAt(d, t, v) !== "main" || solidAt(d, u, v, 0.4, "main") > 0) continue;
+      return t;
+    }
+    return null;
+  }
+  var gunIn = (gs) => 0.92 * gs + 0.05;
+  function gunBox(g, gs) {
+    const a = 0.25 * gs + 0.15, i = gunIn(gs), o = 0.6 * gs;
+    return { u0: g.u - a, u1: g.u + a, v0: g.s > 0 ? g.v - i : g.v - o, v1: g.s > 0 ? g.v + o : g.v + i };
+  }
+  var hits = (a, b, pad2 = 0) => a.u0 < b.u1 + pad2 && a.u1 > b.u0 - pad2 && a.v0 < b.v1 + pad2 && a.v1 > b.v0 - pad2;
+  var nearRing = (a, u, v, r4) => Math.hypot(u - Math.max(a.u0, Math.min(a.u1, u)), v - Math.max(a.v0, Math.min(a.v1, v))) < r4;
+  function deckClear(d, b, pad2) {
+    const t0 = (b.u0 + d.L / 2) / d.L, t1 = (b.u1 + d.L / 2) / d.L;
+    if (t0 < d.tq || t1 > d.tf) return false;
+    for (const t of [t0, t1]) if (Math.max(-b.v0, b.v1) > hbAt(t, d.B) * d.walk - pad2) return false;
+    const cp = d.comp;
+    if (hits(b, { u0: cp.u0, u1: cp.u1 + 1.6, v0: -cp.w / 2 - 0.4, v1: cp.w / 2 + 0.4 }, pad2)) return false;
+    for (const s of d.stairs) if (!s.down && (s.la === "main" || s.lb === "main") && hits(b, { u0: xAt(d, s.ta), u1: xAt(d, s.tb), v0: s.va, v1: s.vb }, pad2)) return false;
+    for (const o of d.solids) {
+      if (o.lvl && o.lvl !== "main") continue;
+      if (o.r !== void 0 ? nearRing(b, o.u, o.v, o.r + pad2) : hits(b, o, pad2)) return false;
+    }
+    return true;
+  }
+  function roomFront(d, r4, stairs2) {
+    const face = r4.kind === "forecastle" ? -1 : 1, t = face > 0 ? r4.t1 : r4.t0, u = xAt(d, t);
+    const w = innerAt(d, t, (r4.floor + r4.top) / 2) + 0.05, dh = Math.min(2.05, r4.top - r4.floor - 0.12);
+    const ds = [...r4.doors].sort((a, b) => a.v - b.v);
+    ds.forEach((dr, i) => {
+      const lo = i ? (ds[i - 1].v + ds[i - 1].w / 2 + dr.v - dr.w / 2) / 2 : -w, hi = i < ds.length - 1 ? (dr.v + dr.w / 2 + ds[i + 1].v - ds[i + 1].w / 2) / 2 : w;
+      const right = hi - (dr.v + dr.w / 2), left = dr.v - dr.w / 2 - lo, sd = right >= left ? 1 : -1;
+      const lw = Math.min(dr.w - 0.1, Math.max(right, left) - 0.12), e = dr.v + sd * (dr.w / 2 + 0.04);
+      dr.dh = dh;
+      dr.leaf = lw > 0.3 ? { u: u - face * 0.12, v0: Math.min(e, e + sd * lw), v1: Math.max(e, e + sd * lw), s: sd } : null;
+    });
+    const clearOfStairs = (zz, half2) => !stairs2.some((st) => zz + half2 > st.va - 0.1 && zz - half2 < st.vb + 0.1);
+    const windows2 = [];
+    if (r4.top - r4.floor > 1.8) {
+      for (let zz = -w + 0.75; zz <= w - 0.75; zz += 1.15) {
+        if (ds.some((dr) => Math.abs(zz - dr.v) < dr.w / 2 + 0.5 || dr.leaf && zz + 0.38 > dr.leaf.v0 && zz - 0.38 < dr.leaf.v1) || !clearOfStairs(zz, 0.4)) continue;
+        windows2.push(zz);
+      }
+    }
+    r4.front = { t, u, face, w, dh, windows: windows2 };
+  }
+  function sternWindows(d, r4) {
+    const w = innerAt(d, r4.t0, r4.floor + 1);
+    if (r4.ceil + 0.1 - r4.floor <= 1.9) return [];
+    const n = Math.max(2, Math.floor(w * 2 / 1.15)), ww = Math.min(0.8, w * 2 / n - 0.3);
+    return Array.from({ length: n }, (_, i) => ({ v: -w + (i + 0.5) * (w * 2) / n, w: ww }));
+  }
+  var FURNITURE = {
+    table: { w: 1.6, dp: 0.9, h: 0.76 },
+    chair: { w: 0.46, dp: 0.46, h: 0.95 },
+    bench: { w: 1.5, dp: 0.36, h: 0.46 },
+    desk: { w: 1.4, dp: 0.75, h: 0.78 },
+    bunk: { w: 2.05, dp: 0.95, h: 0.7 },
+    chest: { w: 0.9, dp: 0.55, h: 0.62 },
+    treasure: { w: 0.9, dp: 0.8, h: 0.98 },
+    shelf: { w: 1.3, dp: 0.38, h: 1.8 },
+    stove: { w: 1.2, dp: 0.9, h: 0.8 },
+    // (the range itself 0.9 × 0.7, on its stone hearth)
+    hammock: { w: 2.1, dp: 0.8, h: 0.62 },
+    barrel: { w: 0.66, dp: 0.66, h: 0.78 },
+    barrels: { w: 1.34, dp: 0.66, h: 0.78 },
+    crate: { w: 0.8, dp: 0.8, h: 1.2 },
+    sacks: { w: 1.2, dp: 0.7, h: 0.48 },
+    shot: { w: 0.6, dp: 0.45, h: 0.48 },
+    lantern: { w: 0.28, dp: 0.36, h: 0.46 }
+  };
+  function footprint(it) {
+    const across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
+    const hu = (across ? it.dp : it.w) / 2, hv = (across ? it.w : it.dp) / 2;
+    return { u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv };
+  }
+  var SEAT_H = { chair: 0.47, bench: FURNITURE.bench.h, barrel: 0.8 };
+  function seatsOf(d) {
+    if (d.seats) return d.seats;
+    const out = [];
+    for (const it of d.furniture || []) {
+      const h2 = SEAT_H[it.kind];
+      if (!h2 || it.ghost || it.y) continue;
+      const face = Math.PI / 2 - (it.rot || 0);
+      if (it.kind !== "bench") {
+        out.push({ u: it.u, v: it.v, floor: it.floor, h: h2, face, kind: it.kind });
+        continue;
+      }
+      const n = Math.max(1, Math.floor(it.w / 0.6)), across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
+      for (let i = 0; i < n; i++) {
+        const o = ((i + 0.5) / n - 0.5) * it.w;
+        out.push({ u: it.u + (across ? 0 : o), v: it.v + (across ? o : 0), floor: it.floor, h: h2, face, kind: "bench" });
+      }
+    }
+    return d.seats = out;
+  }
+  var liningYs = (r4) => r4.kind === "hold" ? [-0.02, 0.55, 1.15, 1.75, r4.ceil + 0.1 - r4.floor] : [-0.02, 0.9, r4.ceil + 0.1 - r4.floor];
+  function liningAt(d, r4, t, y) {
+    const ys = liningYs(r4);
+    const at4 = (yy) => r4.kind === "hold" ? Math.max(0.3, skinAt(d, t, r4.floor + yy) - 0.22) : innerAt(d, t, r4.floor + yy) + 0.01;
+    const yc = Math.max(ys[0], Math.min(ys[ys.length - 1], y));
+    for (let i = 0; i < ys.length - 1; i++) {
+      if (yc <= ys[i + 1]) return at4(ys[i]) + (at4(ys[i + 1]) - at4(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
+    }
+    return at4(ys[ys.length - 1]);
+  }
+  function roomEnds(d, r4) {
+    const a = xAt(d, r4.t0), b = xAt(d, r4.t1);
+    if (r4.kind === "forecastle") return [a + 0.07, b];
+    if (r4.kind === "hold") return [a, b];
+    return [a + 0.1, b - 0.07];
+  }
+  function roomPlacer(d, r4) {
+    const [ua, ub] = roomEnds(d, r4), H5 = r4.ceil - r4.floor;
+    const tOf = (u) => (Math.max(ua, Math.min(ub, u)) + d.L / 2) / d.L;
+    const ys = liningYs(r4);
+    const P6 = { d, r: r4, ua, ub, H: H5, items: [], keep: [], low: [], rings: [] };
+    const reached = /* @__PURE__ */ new Map();
+    P6.reach = (u, y0, y1) => {
+      const key2 = `${Math.round(u * 100)}|${y0}|${y1}`;
+      let m = reached.get(key2);
+      if (m === void 0) {
+        m = Infinity;
+        for (const y of [y0, y1, ...ys.filter((yy) => yy > y0 && yy < y1)]) m = Math.min(m, liningAt(d, r4, tOf(Math.round(u * 100) / 100), y));
+        reached.set(key2, m);
+      }
+      return m - 0.03;
+    };
+    const top = (o) => o.pipe ? H5 - 0.1 : (o.y || 0) + o.h;
+    P6.fits = (it) => {
+      const fp = footprint(it), y0 = it.y || 0, y1 = top(it);
+      if (fp.u0 < ua - 1e-6 || fp.u1 > ub + 1e-6 || y1 > H5 - (it.y ? 0 : 0.06)) return false;
+      for (const u of [fp.u0, (fp.u0 + fp.u1) / 2, fp.u1]) {
+        const w = P6.reach(u, y0, y1);
+        if (fp.v0 < -w - 1e-6 || fp.v1 > w + 1e-6) return false;
+      }
+      if (P6.keep.some((k) => hits(fp, k) && y0 < (k.top ?? Infinity))) return false;
+      if (y1 > 0.72 && P6.low.some((k) => hits(fp, k))) return false;
+      if (P6.rings.some((c) => nearRing(fp, c.u, c.v, c.r))) return false;
+      for (const o of P6.items) if (hits(fp, footprint(o), 0.02) && y0 < top(o) && (o.y || 0) < y1) return false;
+      return true;
+    };
+    P6.put = (it) => {
+      const x = { rot: 0, ...it, room: r4.kind, floor: r4.floor };
+      if (!P6.fits(x)) return null;
+      P6.items.push(x);
+      return x;
+    };
+    const spec = (kind, extra = {}) => ({ kind, ...FURNITURE[kind], ...extra });
+    const sidePlace = (kind, s, u, extra) => {
+      const S6 = spec(kind, extra), y0 = S6.y || 0, y1 = S6.pipe ? H5 - 0.1 : y0 + S6.h;
+      const w = Math.min(P6.reach(u - S6.w / 2, y0, y1), P6.reach(u, y0, y1), P6.reach(u + S6.w / 2, y0, y1));
+      const it = { rot: s > 0 ? Math.PI : 0, ...S6, u, v: s * (w - 0.01 - S6.dp / 2), room: r4.kind, floor: r4.floor };
+      return { it, off: P6.reach(u, y0, y1) - w };
+    };
+    P6.onSide = (kind, s, u, extra = {}) => P6.put(sidePlace(kind, s, u, extra).it);
+    P6.alongSide = (kind, s, from, to, extra = {}) => {
+      const dir = to >= from ? 1 : -1;
+      let best = null;
+      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
+        const c = sidePlace(kind, s, u, extra);
+        if (!P6.fits(c.it)) continue;
+        if (c.off < 0.12) {
+          best = c;
+          break;
+        }
+        if (!best || c.off < best.off - 0.02) best = c;
+      }
+      if (!best) return null;
+      P6.items.push(best.it);
+      return best.it;
+    };
+    P6.row = (kinds, s, from, to, gap, extra = {}) => {
+      const out = [], dir = to >= from ? 1 : -1;
+      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
+        const kind = kinds[out.length % kinds.length], S6 = spec(kind, extra);
+        const it = P6.onSide(kind, s, u + dir * S6.w / 2, extra);
+        if (it) {
+          out.push(it);
+          u += dir * (S6.w + (typeof gap === "function" ? gap(out.length) : gap) - 0.05);
+        }
+      }
+      return out;
+    };
+    P6.onEnd = (kind, e, v, extra = {}) => {
+      const S6 = spec(kind, extra);
+      return P6.put({ ...S6, u: e < 0 ? ua + 0.01 + S6.dp / 2 : ub - 0.01 - S6.dp / 2, v, rot: e < 0 ? Math.PI / 2 : -Math.PI / 2 });
+    };
+    P6.around = (u0, v0, fn) => {
+      for (let k = 0; k < 160; k++) {
+        const u = u0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.1;
+        if (u < ua || u > ub) continue;
+        for (const dv of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9]) {
+          const g = fn(u, v0 + dv);
+          if (g) return g;
+        }
+      }
+      return null;
+    };
+    P6.group = (build5, clear3 = 0.55) => {
+      const mark = P6.items.length;
+      const g = build5();
+      const mine = P6.items.slice(mark);
+      if (g && mine.length) {
+        const b = mine.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
+        if (!P6.items.slice(0, mark).some((o) => !o.ghost && hits(b, footprint(o), clear3) && (o.y || 0) < 1.7)) {
+          P6.keep.push({ u0: b.u0 - clear3, u1: b.u1 + clear3, v0: b.v0 - clear3, v1: b.v1 + clear3, top: 1.7 });
+          return mine;
+        }
+      }
+      P6.items.length = mark;
+      return null;
+    };
+    P6.table = (u, v, len, wid, seats = "chairs") => P6.group(() => {
+      if (!P6.put({ kind: "table", w: len, dp: wid, h: FURNITURE.table.h, u, v, mess: seats === "benches" })) return null;
+      let n = 0;
+      if (seats === "benches") {
+        for (const s of [-1, 1]) if (P6.put({ ...spec("bench"), w: len, u, v: v + s * (wid / 2 + 0.05 + FURNITURE.bench.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
+      } else {
+        const C3 = FURNITURE.chair, k = Math.max(1, Math.min(4, Math.floor((len + 0.1) / 0.75)));
+        for (const s of [-1, 1]) for (let i = 0; i < k; i++) if (P6.put({ ...spec("chair"), u: u - len / 2 + len * (i + 0.5) / k, v: v + s * (wid / 2 + 0.05 + C3.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
+        for (const e of [-1, 1]) if (P6.put({ ...spec("chair"), u: u + e * (len / 2 + 0.05 + C3.dp / 2), v, rot: e > 0 ? -Math.PI / 2 : Math.PI / 2 })) n++;
+      }
+      return n >= 2;
+    });
+    P6.rug = (group7) => {
+      if (!group7) return null;
+      const b = group7.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
+      for (let pad2 = 0.35; pad2 > -0.2; pad2 -= 0.05) {
+        const rug = { kind: "rug", u: (b.u0 + b.u1) / 2, v: (b.v0 + b.v1) / 2, w: b.u1 - b.u0 + 2 * pad2, dp: b.v1 - b.v0 + 2 * pad2, h: 0.02, rot: 0, ghost: true, room: r4.kind, floor: r4.floor };
+        const fp = footprint(rug);
+        if (fp.u0 < ua || fp.u1 > ub || [fp.u0, fp.u1].some((u) => P6.reach(u, 0, 0.02) < Math.max(-fp.v0, fp.v1))) continue;
+        if (P6.items.some((o) => !group7.includes(o) && !o.y && !o.wall && hits(fp, footprint(o)))) continue;
+        P6.items.push(rug);
+        return rug;
+      }
+      return null;
+    };
+    P6.lanterns = () => {
+      const S6 = FURNITURE.lantern, y = Math.min(H5 - 0.12, 2.25) - S6.h, len = ub - ua, n = Math.max(1, Math.round(len / 3.2));
+      const free = (lt2) => {
+        const fp = footprint(lt2);
+        return fp.u0 >= ua && fp.u1 <= ub && !P6.items.some((o) => hits(fp, footprint(o), 0.08) && (o.y || 0) < lt2.y + S6.h && top(o) > lt2.y);
+      };
+      for (let i = 0; i < n; i++) {
+        const u = ua + len * (i + 0.5) / n;
+        let put2 = null;
+        for (const s of i % 2 ? [1, -1] : [-1, 1]) {
+          const w = Math.min(P6.reach(u - S6.w / 2, y, y + S6.h), P6.reach(u, y, y + S6.h), P6.reach(u + S6.w / 2, y, y + S6.h)) + 0.02;
+          const lt2 = { kind: "lantern", ...S6, u, v: s * (w - S6.dp / 2), y, rot: s > 0 ? Math.PI : 0, ghost: true, wall: s, room: r4.kind, floor: r4.floor };
+          if (free(lt2)) {
+            put2 = lt2;
+            break;
+          }
+        }
+        for (const dv of [0, 0.6, -0.6, 1.2, -1.2]) {
+          if (put2) break;
+          const lt2 = { kind: "lantern", ...S6, dp: S6.w, u, v: dv, y: H5 - 0.5, h: 0.5, rot: 0, ghost: true, wall: 0, room: r4.kind, floor: r4.floor };
+          if (free(lt2)) put2 = lt2;
+        }
+        if (put2) P6.items.push(put2);
+      }
+    };
+    for (const dr of r4.doors) {
+      const f = r4.front.face, u = r4.front.u;
+      const inside2 = (a, b) => f > 0 ? { u0: u - b, u1: u - a } : { u0: u + a, u1: u + b };
+      P6.keep.push({ ...inside2(-1, 1.35), v0: dr.v - dr.w / 2 - 0.2, v1: dr.v + dr.w / 2 + 0.2, top: dr.dh + 0.15 });
+      if (dr.leaf) P6.keep.push({ ...inside2(-1, 0.25), v0: dr.leaf.v0 - 0.05, v1: dr.leaf.v1 + 0.05, top: dr.dh + 0.05 });
+    }
+    if (r4.front) for (const zz of r4.front.windows) P6.low.push({ ...r4.front.face > 0 ? { u0: ub - 0.35, u1: ub + 1 } : { u0: ua - 1, u1: ua + 0.35 }, v0: zz - 0.4, v1: zz + 0.4 });
+    for (const wd of r4.windows || []) P6.low.push({ u0: ua - 1, u1: ua + 0.35, v0: wd.v - wd.w / 2 - 0.1, v1: wd.v + wd.w / 2 + 0.1 });
+    for (const m of d.mastU) if (m > ua - 1.5 && m < ub + 1.5) P6.rings.push({ u: m, v: 0, r: d.mastR + 0.08 + 0.45 });
+    if (r4.kind === "hold") {
+      const cp = d.comp;
+      P6.keep.push({ u0: cp.u0 - 1.4, u1: cp.u1 + 0.3, v0: -cp.w / 2 - 0.45, v1: cp.w / 2 + 0.45 });
+      for (const g of d.lowGuns) {
+        const b = gunBox(g, d.gunScale);
+        P6.keep.push({ u0: b.u0 - 0.2, u1: b.u1 + 0.2, v0: g.s > 0 ? b.v0 - 0.9 : b.v0, v1: g.s > 0 ? b.v1 : b.v1 + 0.9, top: 1.3 });
+      }
+    }
+    return P6;
+  }
+  var clampN = (x, a, b) => Math.max(a, Math.min(b, x));
+  var CARGO = ["barrels", "crate", "sacks", "barrel", "crate", "shot", "barrels", "sacks", "barrel"];
+  var ROOMS = {
+    // the great cabin: a bunk along the starboard side with the sea chest at
+    // its foot, books and another chest to port (and on the bigger ships a
+    // second bunk, a water cask and a chest under the stern windows), the
+    // table down the middle with its chairs round it, a rug under it
+    cabin(P6) {
+      const { ua, ub } = P6, len = ub - ua;
+      const bunk = P6.alongSide("bunk", 1, ua + 1.05, ub - 1.05, { head: -1 });
+      if (bunk) P6.alongSide("chest", 1, bunk.u + bunk.w / 2 + 0.5, ub - 0.5, { loot: "cabin" });
+      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "cabin" });
+      if (len > 5.5) P6.alongSide("bunk", -1, ua + 1.05, ub - 1.05, { head: -1 });
+      if (len > 5.5) P6.onEnd("chest", -1, 0);
+      const half2 = P6.reach((ua + ub) / 2, 0, 1);
+      const tl = clampN(len * 0.3, 1.1, 2.6), tw = clampN(half2 * 0.24, 0.75, 1.05);
+      let table = null;
+      for (const [l, w] of [[tl, tw], [Math.max(1, tl * 0.75), Math.max(0.7, tw - 0.1)]]) if (!table) table = P6.around((ua + ub) / 2 - 0.2, 0, (u, v) => P6.table(u, v, l, w));
+      if (len > 5.5) P6.alongSide("barrel", 1, ub - 0.4, ua + 0.4);
+      P6.rug(table);
+      P6.lanterns();
+    },
+    // the captain's cabin under the poop: the desk facing the door, his chair
+    // behind it (his back to the stern windows); a bunk with a chest at its
+    // foot, bookcases and another chest; a rug
+    captain(P6) {
+      const { ua, ub } = P6, C3 = FURNITURE.chair, D4 = FURNITURE.desk;
+      const bunk = P6.alongSide("bunk", 1, ub - 1.05, ua + 1.05, { head: -1 });
+      if (bunk) P6.alongSide("chest", 1, bunk.u - bunk.w / 2 - 0.5, ua + 0.5, { loot: "captain" });
+      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
+      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "captain" });
+      let desk = null;
+      for (let du = 0; du < 2.5 && !desk; du += 0.1) {
+        for (const v of [0, 0.3, -0.3, 0.6, -0.6]) {
+          if (desk) break;
+          const cu = ua + 0.42 + du + C3.dp / 2;
+          desk = P6.group(() => P6.put({ ...FURNITURE.chair, kind: "chair", u: cu, v, rot: Math.PI / 2 }) && P6.put({ ...D4, kind: "desk", u: cu + C3.dp / 2 + 0.05 + D4.dp / 2, v, rot: Math.PI / 2 }));
+        }
+      }
+      P6.rug(desk);
+      P6.lanterns();
+    },
+    // the forecastle: the galley stove, the mess table and its benches, the
+    // crew's hammocks slung up under the deck beams and their sea chests below
+    forecastle(P6) {
+      const { ua, ub, H: H5 } = P6, len = ub - ua;
+      const stove = P6.alongSide("stove", -1, ua + 0.5, ub - 0.5, { pipe: true });
+      if (stove) {
+        const f = footprint(stove);
+        P6.keep.push({ u0: f.u0 - 0.55, u1: f.u1 + 0.55, v0: f.v0 - 0.1, v1: f.v1 + 0.75, top: 1.2 });
+      }
+      P6.row(["chest"], 1, ua + 0.1, ub - 0.1, 1.4, { loot: "crew" });
+      P6.row(["chest"], -1, ua + 1.2, ub - 0.1, 1.6, { loot: "crew" });
+      if (P6.reach(ua + len * 0.45, 0, 1) > 1.7) {
+        const tl = clampN(len * 0.4, 1.1, 2.4);
+        for (const l of [tl, 1.1]) if (P6.around(ua + len * 0.45, 0, (u, v) => P6.table(u, v, l, 0.7, "benches"))) break;
+      }
+      for (const s of [1, -1]) P6.row(["hammock"], s, ua + 0.05, ub - 0.05, 0.12, { y: H5 - 0.64, ghost: true });
+      P6.lanterns();
+    },
+    // the hold: the treasure chest by the foot of the ladder (its lid thrown
+    // back, facing you as you come down), the cargo stowed along both sides —
+    // a second row in a wide hold — with the way down the middle clear (on a
+    // gun deck, what fits between the guns)
+    hold(P6) {
+      const { d, ua, ub } = P6, cp = d.comp, T5 = FURNITURE.treasure;
+      let chest = null;
+      for (let du = 0; du < 3 && !chest; du += 0.1) {
+        for (const s of [-1, 1]) {
+          if (!chest) chest = P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u: cp.u0 - 0.7 - du, v: s * (cp.w / 2 + 0.47 + T5.dp / 2), rot: s < 0 ? 0 : Math.PI });
+        }
+      }
+      if (!chest) P6.around(cp.u0 - 2.2, 0, (u, v) => P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u, v, rot: Math.PI / 2 }));
+      let n = 0;
+      for (const s of [-1, 1]) n += P6.row(CARGO.slice(n % 3), s, ua + 0.3, ub - 0.3, (k) => k % 3 ? 0.15 : 1.1).length;
+      for (const o of P6.items.slice()) {
+        if (o.treasure || o.kind === "shot") continue;
+        const s = Math.sign(o.v), f = footprint(o), kind = ["barrel", "sacks", "barrel", "crate"][Math.floor(Math.abs(o.u) * 3.7) % 4], S6 = FURNITURE[kind];
+        const v = s > 0 ? f.v0 - 0.08 - S6.dp / 2 : f.v1 + 0.08 + S6.dp / 2;
+        if (Math.abs(v) - S6.dp / 2 >= 1.3) P6.put({ ...S6, kind, u: o.u, v, rot: s > 0 ? Math.PI : 0 });
+      }
+      P6.lanterns();
+    }
+  };
+  function furnish(d) {
+    d.furniture = [];
+    for (const r4 of d.rooms) {
+      const P6 = roomPlacer(d, r4);
+      ROOMS[r4.kind](P6);
+      d.furniture.push(...P6.items);
+    }
+    for (const it of d.furniture) if (!it.ghost) d.solids.push({ ...footprint(it), lvl: it.room, h: it.h });
+  }
+  var keelAt = (d, t) => -d.D * (1 - 0.5 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
+  function hullProfile(d, t) {
+    const top = topAt(d, t), dk3 = d.deckY, D4 = d.D;
+    return [
+      [0.875, top],
+      [0.89, top - 0.14],
+      [0.93, dk3 + 0.95],
+      [0.975, dk3 - 0.25],
+      [1, dk3 * 0.42],
+      [0.985, 0],
+      [0.9, -D4 * 0.3],
+      [0.68, -D4 * 0.64],
+      [0.36, -D4 * 0.9],
+      [0, keelAt(d, t)]
+    ];
+  }
+  function smallProfile(d, t) {
+    const top = topAt(d, t), dk3 = d.deckY;
+    return [
+      [0.965, top],
+      [0.975, top - 0.1],
+      [0.995, dk3 + (d.open ? 0.02 : 0)],
+      [1, dk3 - 0.12],
+      [1, dk3 * 0.55],
+      [0.975, dk3 * 0.12],
+      [0.9, -d.D * 0.25],
+      [0.68, -d.D * 0.62],
+      [0.36, -d.D * 0.9],
+      [0, -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4))]
+    ];
+  }
+  function profileWidth(pr, hb, y) {
+    if (y >= pr[0][1]) return pr[0][0] * hb;
+    for (let i = 0; i < pr.length - 1; i++) {
+      const [w0, y0] = pr[i], [w1, y1] = pr[i + 1];
+      if (y <= y0 && y >= y1) return (w0 + (w1 - w0) * (y0 - y) / Math.max(1e-6, y0 - y1)) * hb;
+    }
+    return 0;
+  }
+  function skinAt(d, t, y) {
+    return profileWidth(hullProfile(d, t), hbAt(t, d.B), y);
+  }
+  function sideAt(d, t, y) {
+    return d.big ? skinAt(d, t, y) : profileWidth(smallProfile(d, t), hbAt(t, d.B), y);
+  }
+  var innerAt = (d, t, y) => Math.max(0.05, skinAt(d, t, y) - 0.2);
+  function roomHalf(d, r4, t) {
+    return r4.kind === "hold" ? skinAt(d, t, r4.floor + 0.3) - 0.3 : innerAt(d, t, r4.floor + 1) - 0.08;
+  }
+  function roomAt(d, t, h2) {
+    if (!d.rooms) return null;
+    for (const r4 of d.rooms) if (t >= r4.t0 && t <= r4.t1 && h2 > r4.floor - 0.7 && h2 < r4.ceil - 0.9) return r4;
+    return null;
+  }
+  function wallDepth(d, u, v, fl2, margin) {
+    let depth = 0;
+    for (const w of d.walls || []) {
+      if (fl2 < w.y0 - 0.3 || fl2 > w.y1 - 1) continue;
+      const ex = w.u1 - w.u0, ey = w.v1 - w.v0, l2 = ex * ex + ey * ey;
+      const k = l2 ? Math.max(0, Math.min(1, ((u - w.u0) * ex + (v - w.v0) * ey) / l2)) : 0;
+      const dd = Math.hypot(u - (w.u0 + ex * k), v - (w.v0 + ey * k));
+      depth = Math.max(depth, margin + 0.08 - dd);
+    }
+    return depth;
+  }
+  function wheelSpec(d) {
+    if (d.open) return null;
+    if (d._wheel) return d._wheel;
+    let w;
+    if (d.big) w = { u: d.wheelU, floor: d.helmFloor, hub: d.helmFloor + 0.92, R: 0.56, grip: 0.66 };
+    else {
+      const floor2 = floorAt(d, (d.wheelU + 0.1 + d.L / 2) / d.L);
+      w = { u: d.wheelU, floor: floor2, hub: floor2 + 0.92, R: 0.4, grip: 0.47 };
+    }
+    Object.defineProperty(d, "_wheel", { value: w, enumerable: false });
+    return w;
+  }
+  function helmPoint(def) {
+    const d = shipDims(def);
+    if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
+    return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
+  }
+  function hbAt(t, B5) {
+    if (t > 0.58) {
+      const k = (t - 0.58) / 0.42;
+      return B5 / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(k, 2.2)));
+    }
+    if (t < 0.14) return B5 / 2 * (0.74 + 0.26 * Math.sin(t / 0.14 * Math.PI / 2));
+    return B5 / 2;
+  }
+  function topAt(d, t) {
+    let y = d.deckY + d.bulH + d.sheer * Math.pow(Math.abs(t - 0.45) / 0.55, 2);
+    if (d.castle) y += d.hq * (1 - smooth2(d.tq - 0.015, d.tq + 0.035, t));
+    if (d.poop) y += d.hp * (1 - smooth2(d.tp - 0.012, d.tp + 0.03, t));
+    if (d.fore) y += d.hf * smooth2(d.tf - 0.035, d.tf + 0.015, t);
+    return y;
+  }
+  var xAt = (d, t) => -d.L / 2 + t * d.L;
+  function rakeDx(d, x, y) {
+    if (!d.big) return 0;
+    const t = (x + d.L / 2) / d.L;
+    const hold = d.rooms?.find((r4) => r4.kind === "hold");
+    const tb = hold ? hold.t1 + 5e-3 : 0.9, ts = hold ? hold.t0 - 5e-3 : 0.08;
+    const eb = smooth2(tb, 1, t), es = smooth2(ts, 0, t);
+    if (eb <= 0 && es <= 0) return 0;
+    const top = topAt(d, Math.min(1, Math.max(0, t)));
+    const f = Math.max(0, Math.min(1, (top - y) / (top + d.D)));
+    return -d.L * 0.045 * eb * Math.pow(f, 1.6) + d.L * 0.03 * es * Math.pow(f, 1.4);
+  }
+  function stairAt(d, t, v) {
+    for (const s of d.stairs) if (t >= s.ta && t <= s.tb && v >= s.va && v <= s.vb) return s;
+    return null;
+  }
+  function floorAt(d, t, v = null, h2 = null) {
+    if (v !== null && d.stairs.length) {
+      const s = stairAt(d, t, v);
+      if (s) return s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta);
+    }
+    if (h2 !== null) {
+      const r4 = roomAt(d, t, h2);
+      if (r4) return r4.floor;
+    }
+    if (d.poop && t < d.tp) return d.yp;
+    if (d.castle && t < d.tq) return d.yq;
+    if (d.fore && t > d.tf) return d.yf;
+    return d.deckY;
+  }
+  function levelAt(d, t, v, h2 = null) {
+    const s = v !== null && d.stairs.length ? stairAt(d, t, v) : null;
+    if (s) return s;
+    if (h2 !== null) {
+      const r4 = roomAt(d, t, h2);
+      if (r4) return r4.kind;
+    }
+    if (d.poop && t < d.tp) return "poop";
+    if (d.castle && t < d.tq) return "quarter";
+    if (d.fore && t > d.tf) return "fore";
+    return "main";
+  }
+  function solidAt(d, u, v, margin = 0, lvl = null, above = 0) {
+    let depth = 0;
+    for (const o of d.solids) {
+      if (o.lvl && lvl !== null && o.lvl !== lvl) continue;
+      if (o.h !== void 0 && above > o.h - 0.1) continue;
+      if (o.r !== void 0) depth = Math.max(depth, o.r + margin - Math.hypot(u - o.u, v - o.v));
+      else depth = Math.max(depth, Math.min(u - (o.u0 - margin), o.u1 + margin - u, v - (o.v0 - margin), o.v1 + margin - v));
+    }
+    return depth;
+  }
+  var RIDE_U = [-0.4, -0.2, 0, 0.2, 0.4];
+  var RIDE_V = [-0.8, 0, 0.8];
+  var softClamp = (x, m) => m * Math.tanh(x / m);
+  var _rs = [0, 0];
+  function rideTarget(ship, time, out) {
+    out[0] = out[1] = out[2] = 0;
+    if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return out;
+    const L3 = ship.def.length || 6, B5 = ship.def.beam || L3 * 0.3;
+    const ch = Math.cos(ship.heading), sh = Math.sin(ship.heading);
+    let W4 = 0, Z2 = 0, Wu = 0, Zu = 0, Wv = 0, Zv = 0;
+    const z = _rz;
+    for (let i = 0; i < RIDE_U.length; i++) {
+      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
+      for (let j = 0; j < RIDE_V.length; j++) {
+        const v = RIDE_V[j] * hb, k = i * 3 + j;
+        z[k] = swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
+        W4 += hb;
+        Z2 += hb * z[k];
+      }
+    }
+    const h2 = Z2 / W4;
+    for (let i = 0; i < RIDE_U.length; i++) {
+      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
+      for (let j = 0; j < RIDE_V.length; j++) {
+        const v = RIDE_V[j] * hb, dz = z[i * 3 + j] - h2;
+        Wu += hb * u * u;
+        Zu += hb * u * dz;
+        Wv += hb * v * v;
+        Zv += hb * v * dz;
+      }
+    }
+    out[0] = h2;
+    out[1] = Math.atan(Zu / Wu);
+    out[2] = Math.atan(-Zv / Wv);
+    return out;
+  }
+  var _rz = new Float64Array(15);
+  var _rt = [0, 0, 0];
+  function waveRide(ship, time) {
+    const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0, s: new Float64Array(12), s0: new Float64Array(12), t0: NaN, ok: false });
+    if (c.t === time && c.x === ship.x && c.y === ship.y && c.hd === ship.heading) return c;
+    if (c.t !== time) {
+      c.s0.set(c.s);
+      c.t0 = c.t;
+    }
+    c.t = time;
+    c.x = ship.x;
+    c.y = ship.y;
+    c.hd = ship.heading;
+    const T5 = rideTarget(ship, time, _rt), S6 = c.s, S0 = c.s0, dt = time - c.t0;
+    if (!c.ok || !(dt > 0) || dt > 0.5) {
+      for (let k = 0; k < 3; k++) {
+        S6[k * 2] = T5[k];
+        S6[k * 2 + 1] = 0;
+        S6[6 + k] = T5[k];
+        S6[9 + k] = 0;
+      }
+      c.ok = true;
+    } else {
+      const F4 = BOAT_FEEL, L3 = ship.def?.length || 6;
+      const w = Math.max(1.6, F4.rideRate + F4.rideRatePerM * L3), z = Math.min(1, Math.max(0.3, F4.rideDamp)), lead = 2 * z / w * F4.rideLead;
+      const kv = 1 - Math.exp(-dt / (0.1 + 6e-3 * L3));
+      for (let k = 0; k < 3; k++) {
+        const vS = S0[9 + k] + ((T5[k] - S0[6 + k]) / dt - S0[9 + k]) * kv;
+        springStep(S0[k * 2], S0[k * 2 + 1], T5[k] + vS * lead, w, dt, z, _rs);
+        S6[k * 2] = _rs[0];
+        S6[k * 2 + 1] = _rs[1];
+        S6[6 + k] = T5[k];
+        S6[9 + k] = vS;
+      }
+    }
+    c.h = S6[0];
+    const Ls = ship.def?.length || 6, small = Math.max(0.3, Math.min(1, Ls / 12));
+    c.p = softClamp(S6[2] * small, BOAT_FEEL.pitchMax * small);
+    c.r = softClamp(S6[4] * (0.5 + 0.5 * small), BOAT_FEEL.rollMax);
+    return c;
+  }
+  function shipBob(ship, time) {
+    return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.03 + waveRide(ship, time).h;
+  }
+  function shipRock(ship, time) {
+    const t = time + (ship.seed || 0), sinking = ship.sunk ? Math.min(1, (ship.sinkT || 0) / 4) : 0;
+    const w = waveRide(ship, time);
+    return [Math.sin(t * 0.9) * 0.02 + w.r + sinking * 0.5, Math.sin(t * 1.1) * 0.012 + w.p + (ship.pitch || 0)];
+  }
+  function shipLift(ship, time, u, v, h2) {
+    const [a, b] = shipRock(ship, time);
+    return shipBob(ship, time) + (u * Math.sin(b) + h2 * Math.cos(b)) * Math.cos(a) - v * Math.sin(a);
+  }
+  function shipPoint(ship, time, u, v, h2, out = [0, 0, 0]) {
+    const [a, b] = shipRock(ship, time);
+    const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+    const x1 = u * cb - h2 * sb, y1 = u * sb + h2 * cb;
+    const x2 = x1, y2 = y1 * ca - v * sa, z2 = y1 * sa + v * ca;
+    const ch = Math.cos(ship.heading), shd = Math.sin(ship.heading);
+    out[0] = x2 * ch - z2 * shd;
+    out[1] = shipBob(ship, time) + y2;
+    out[2] = x2 * shd + z2 * ch;
+    return out;
+  }
+  function deckSwing(dk3, time, out = [0, 0]) {
+    out[0] = 0;
+    out[1] = 0;
+    const s = dk3?.ship;
+    if (!s?.def || dk3.plank) return out;
+    const u = dk3.u ?? (dk3.t - 0.5) * s.def.length, v = dk3.v || 0, c = Math.cos(s.heading), sn = Math.sin(s.heading);
+    const q2 = shipPoint(s, time, u, v, dk3.h || 0, _swq);
+    out[0] = q2[0] - (u * c - v * sn);
+    out[1] = q2[2] - (u * sn + v * c);
+    return out;
+  }
+  var _swq = [0, 0, 0];
+  function deckLift(dk3, time) {
+    return dk3.plank ? dk3.plank.liftAt(dk3.k) : shipLift(dk3.ship, time, dk3.u ?? (dk3.t - 0.5) * dk3.ship.def.length, dk3.v || 0, dk3.h);
+  }
+  function deckPoint(ship, dx, dy, margin = 0.2, hRef = null) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = (u + d.L / 2) / d.L;
+    if (t < 0.02 || t > 0.97) return null;
+    const room2 = hRef !== null && d.big ? roomAt(d, t, hRef) : null;
+    if (room2) {
+      const lv = levelAt(d, t, v, hRef);
+      const out2 = { t, u, v, h: floorAt(d, t, v, hRef), edge: roomHalf(d, room2, t) - Math.abs(v), lvl: lv, room: room2 };
+      const depth = Math.max(margin - out2.edge, solidAt(d, u, v, Math.max(0, margin), room2.kind, Math.max(0, hRef - out2.h)), wallDepth(d, u, v, room2.floor, margin));
+      if (depth > 0) out2.solid = depth;
+      return out2;
+    }
+    const hb = hbAt(t, d.B) * d.walk - margin;
+    if (hb <= 0 || Math.abs(v) > hb) return null;
+    const out = { t, u, v, h: floorAt(d, t, v, d.big ? hRef : null), edge: hb - Math.abs(v) };
+    if (d.big) out.lvl = levelAt(d, t, v, hRef);
+    if (d.solids.length) {
+      const lv = typeof out.lvl === "string" ? out.lvl : null;
+      let depth = solidAt(d, u, v, Math.max(0, margin), d.big ? lv ?? "stairs" : null, hRef === null ? 0 : Math.max(0, hRef - out.h));
+      if (d.walls) depth = Math.max(depth, wallDepth(d, u, v, out.h, margin));
+      if (depth > 0) out.solid = depth;
+    }
+    return out;
+  }
+  function hullPoint(ship, dx, dy, pad2 = 0) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = (u + d.L / 2) / d.L, tc = clamp01(t);
+    if (Math.abs(t - tc) * d.L > pad2) return null;
+    if (Math.abs(v) > hbAt(tc, d.B) + pad2) return null;
+    return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
+  }
+  var MAST_KS = (n) => n >= 4 ? [0.92, 1, 0.86, 0.7] : n === 3 ? [0.92, 1, 0.8] : n === 2 ? [1, 0.84] : [1];
+  function mastNest(d) {
+    if (!d.big || !d.mastU?.length) return null;
+    if (d._nest !== void 0) return d._nest;
+    const n = d.mastU.length, m = n >= 3 ? 1 : 0, mu = d.mastU[m];
+    const k = MAST_KS(n)[m], base2 = floorAt(d, (mu + d.L / 2) / d.L);
+    const H5 = d.mastH * k, h2 = base2 + (H5 - base2) * 0.76, mr = d.mastR * Math.sqrt(k);
+    const out = { m, u: mu + mr * 1.1, y: h2 + 0.13, r: 1.15, mu, base: base2, mr };
+    Object.defineProperty(d, "_nest", { value: out, enumerable: false });
+    return out;
+  }
+  function deckToWorld(ship, t, v) {
+    const d = shipDims(ship.def);
+    const u = -d.L / 2 + t * d.L;
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    return { x: ship.x + u * c - v * s, y: ship.y + u * s + v * c, h: floorAt(d, t, v) };
+  }
+  function hullSolid(ship, dx, dy, h2) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = Math.abs(-dx * s + dy * c);
+    const t = (u + d.L / 2) / d.L;
+    if (t < 0 || t > 1 || h2 < -d.D) return false;
+    if (d.mastU && v < d.mastR + 0.2 && h2 < d.mastH && d.mastU.some((m) => Math.abs(u - m) < d.mastR + 0.2)) return true;
+    const hb = hbAt(t, d.B);
+    if (v > hb) return false;
+    if (d.rooms) {
+      for (const r4 of d.rooms) if (t > r4.t0 + 4e-3 && t < r4.t1 - 4e-3 && h2 > r4.floor - 0.05 && h2 < r4.ceil - 0.02 && v < roomHalf(d, r4, t) + 0.05) return false;
+      const cp = d.comp;
+      if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h2 > d.holdY - 0.05 && h2 < d.deckY + 0.05) return false;
+    }
+    const rail = d.big ? 0.75 : 0.6, at4 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
+    if (d.castle && at4(d.tq) && h2 < d.yq + rail || d.poop && at4(d.tp) && h2 < d.yp + rail || d.fore && at4(d.tf) && h2 < d.yf + rail) return true;
+    if (h2 > topAt(d, t)) return false;
+    if (v > hb * d.walk - 0.05 || h2 < d.deckY - 0.1) return true;
+    if (d.poop && t < d.tp) return h2 < d.yp - 0.1;
+    if (d.castle && t < d.tq) return h2 < d.yq - 0.1;
+    if (d.fore && t > d.tf) return h2 < d.yf - 0.1;
+    return false;
+  }
+  function hullGap(ship, dx, dy) {
+    const d = shipDims(ship.def);
+    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
+    const u = dx * c + dy * s, v = -dx * s + dy * c;
+    const t = clamp01((u + d.L / 2) / d.L);
+    const along2 = Math.max(0, Math.abs(u) - d.L / 2);
+    return Math.hypot(along2, Math.max(0, Math.abs(v) - hbAt(t, d.B)));
+  }
+
+  // src/game/flight.js
+  var DEF = { speed: 10, climb: 6, dive: 9, ceiling: 35, drain: 1, sea: 3.5, refill: 6 };
+  var SEA_CEILING = 14;
+  var LOW = 3.5;
+  var helpless = (a) => !!(a.status && (a.status.freeze || a.status.despair || a.status.heartless || a.status.pieces || a.status.lifted || a.status.puppet));
+  var timeOf = (game) => game.env?.time ?? game.time ?? 0;
+  var FLY_MASTERY = 40;
+  function flightOf(a) {
+    let best = null;
+    const f = a?.fruitDef;
+    if (f) {
+      const k = 0.6 + 0.4 * Math.min(1, (a.fruitMastery || 0) / FLY_MASTERY);
+      const form = (a.buffs || []).find((b) => b.form)?.form;
+      for (const t of f.techniques) {
+        if (!t.flight) continue;
+        let fl2 = t.flight;
+        if (fl2.forms && !fl2.forms.includes(form)) {
+          if (!fl2.otherwise) continue;
+          fl2 = { ...fl2, ...fl2.otherwise };
+        }
+        const s = { ...DEF, ...fl2, fruit: true, tech: t.id };
+        s.gauge = Math.round(s.gauge * k * 10) / 10;
+        if (!best || s.gauge > best.gauge) best = s;
+      }
+    }
+    const R5 = RACES[a?.race]?.flight;
+    if (R5 && (!best || R5.gauge > best.gauge)) best = { ...DEF, ...R5, fruit: false };
+    return best;
+  }
+  function groundBase(game, x, y) {
+    return game.view3d ? Math.max(0, game.view3d.ground(x, y)) : 0;
+  }
+  function feetOf(a, game) {
+    if (a.flying && a.alt != null) return a.alt;
+    return a.feetH ? a.feetH(game) : a.z || 0;
+  }
+  function overOpenSea(game, x, y) {
+    const w = game.world;
+    if (!w.isLiquid?.(x, y) || w.isOverlay?.(x, y)) return false;
+    if (game.deckAt && game.ships?.length && game.deckAt(x, y, 0)) return false;
+    return true;
+  }
+  function flyableAt(a, game, x, y, alt = a.alt ?? feetOf(a, game)) {
+    const w = game.world;
+    if (y < 1 || y > w.height - 1) return false;
+    if (w.interiorAt?.(x, y)) return false;
+    const g = groundBase(game, x, y);
+    if (g > alt + 0.6) return false;
+    const roof = game.view3d?.roofAt?.(x, y);
+    if (roof && roof.h > alt + 0.5) return false;
+    if (alt - g < LOW && (w.solid?.(x, y) || w.hitsProp?.(x, y, (a.r || 0.28) * 0.9))) return false;
+    if (game.inShip && game.ships?.length) {
+      for (const s of game.ships) if (game.inShip(s, x, y, alt + 0.9, true)) return false;
+    }
+    return true;
+  }
+  function floorUnder(a, game, x, y) {
+    let f = groundBase(game, x, y);
+    const roof = game.view3d?.roofAt?.(x, y, a.alt + 0.3);
+    if (roof && roof.h > f) f = roof.h;
+    if (game.deckAt && game.ships?.length) {
+      const dk3 = game.deckAt(x, y, 0.1);
+      if (dk3) {
+        const h2 = deckLift(dk3, timeOf(game));
+        if (h2 > f && h2 <= a.alt + 0.3) f = h2;
+      }
+    }
+    return f;
+  }
+  function cantTakeOff(a, game) {
+    const S6 = flightOf(a);
+    if (!S6) return "nowings";
+    if (a.flying) return "flying";
+    if (a.state !== "idle" || a.onShip || a.climb || helpless(a) || a.hitstun > 0.25 || a.status?.grounded) return "busy";
+    if (a.inWater) return "water";
+    const zone = game.world.zone;
+    if (zone === 2 || zone === 3) return "nosky";
+    if (game.world.interiorAt?.(a.x, a.y) && !a.roofed) return "indoors";
+    if (S6.fruit && a.seastoned) return "seastone";
+    if ((a.flightGauge ?? 1) < 0.25) return "tired";
+    return "";
+  }
+  var WHY = {
+    water: "You can't take off from the water.",
+    nosky: "There's no sky to fly in down here.",
+    indoors: "No room to fly in here.",
+    seastone: "Seastone holds your power down.",
+    tired: "Too tired to fly \u2014 catch your breath on solid ground.",
+    busy: ""
+  };
+  function takeOff(a, game) {
+    const why = cantTakeOff(a, game);
+    if (why) {
+      if (a.isPlayer && WHY[why]) game.log(WHY[why], "#ff8a80");
+      return false;
+    }
+    const S6 = flightOf(a);
+    const alt = feetOf(a, game);
+    if (a.deck) {
+      a.deck.ship.aboard?.delete(a);
+      a.deck = null;
+    }
+    a.flying = true;
+    a.flightStyle = S6.style;
+    a.flightRide = S6.ride || null;
+    a.flight = { spec: S6, t: 0, lift: (a.z || 0) > 0.6 ? 0.15 : 0.4, tired: false, landing: false };
+    a.alt = alt;
+    a.vz = 0;
+    a.charging = 0;
+    a.wading = 0;
+    if (!a.dash?.dodge) a.dash = null;
+    if (a.flightGauge === void 0) a.flightGauge = 1;
+    a.flightTired = false;
+    a.takeoffT = timeOf(game);
+    takeoffFx(a, game, S6);
+    game.audio?.sfx("jump_big", a);
+    if (a.isPlayer) {
+      game.emit?.("playerTakeOff", S6.style);
+      game.hint?.("flight", S6.fruit ? "FLYING! Space climbs, Alt dives, Shift for speed. Come down onto the ground (or double-tap Space) to land." : "FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air \u2014 far faster out over the open sea \u2014 and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.");
+    }
+    return true;
+  }
+  function land(a, game, quiet = false) {
+    if (!a.flying || !a.flight) return;
+    endFlight(a, game, -0.01);
+    a.landT = timeOf(game);
+    if (!quiet && (a.z || 0) < 0.6) {
+      game.fx.burst(a.x, a.y, 8, { color: ["#d7ccc8", "#efebe9"], speed: 2.2, g: 1.2, z: 0.1, vz: 0.5, life: 0.45, kind: "dust", size: 0.18, grow: 0.4 });
+      game.audio?.sfx("land", a);
+    }
+  }
+  function fall(a, game) {
+    if (!a.flying || !a.flight) return;
+    endFlight(a, game, Math.min(-1, a.flightClimb || -1));
+  }
+  function endFlight(a, game, vz) {
+    const g = a.groundAt ? a.groundAt(game, a.x, a.y) : 0;
+    a.flying = false;
+    a.flight = null;
+    a.flightStyle = null;
+    a.flightRide = null;
+    a.flightTired = false;
+    a.flightClimb = 0;
+    a.flightBank = 0;
+    a.lightBeam = false;
+    a.swingAnchor = null;
+    a.z = Math.max(0, (a.alt ?? g) - g);
+    a.vz = a.z > 0.02 ? vz : 0;
+    a.alt = null;
+    a.airT = 0;
+    a.lastG = g;
+    a.lastGX = a.x;
+    a.lastGY = a.y;
+  }
+  function downFlyer(a, game) {
+    if (!a.flying || !a.flight) return;
+    fall(a, game);
+    game.fx.text(a.x, a.y - 1.6, "DOWNED!", "#ff8a80", 0.34);
+  }
+  function toggleFlight(a, game) {
+    if (a.flying && a.flight) {
+      a.flight.landing = true;
+      return true;
+    }
+    return takeOff(a, game);
+  }
+  function flyStep(a, dt, game) {
+    const F4 = a.flight, S6 = F4.spec, i = a.intent, w = game.world;
+    F4.t += dt;
+    a.inWater = false;
+    a.under = false;
+    a.depth = 0;
+    a.wading = 0;
+    if (a.alt == null) a.alt = feetOf(a, game);
+    if (a.flightOut || helpless(a) || a.status.grounded || S6.fruit && a.seastoned || w.zone === 2 || w.zone === 3) {
+      a.flightOut = false;
+      fall(a, game);
+      return;
+    }
+    if (S6.forms && !S6.forms.includes((a.buffs || []).find((b) => b.form)?.form) && !F4.landing) F4.landing = true;
+    const sea = overOpenSea(game, a.x, a.y);
+    const moving = Math.hypot(i.mx, i.my) > 0.1;
+    let rate = S6.drain;
+    if (i.sprint && moving) rate *= 1.7;
+    if (F4.lift > 0 || i.mz > 0 && !F4.tired) rate *= 1.3;
+    else if (i.mz < 0 || F4.landing || F4.tired) rate *= 0.5;
+    if (sea) rate *= S6.sea;
+    if (S6.fruit) rate = 0;
+    a.flightGauge = Math.max(0, (a.flightGauge ?? 1) - rate * dt / S6.gauge);
+    if (a.flightGauge <= 0 && !F4.tired) {
+      F4.tired = true;
+      a.flightTired = true;
+      if (a.isPlayer) game.log(sea ? "Your strength gives out over the open sea \u2014 you're coming down!" : "Your strength gives out \u2014 you're coming down.", "#ff8a80");
+    }
+    if (S6.style === "swing" && !F4.landing && !F4.tired && swingStep(a, dt, game, S6, F4)) return;
+    if (S6.style === "swing") {
+      F4.sw = null;
+      a.swingAnchor = null;
+    }
+    const beam2 = !!S6.beam && i.sprint && moving && !F4.tired && !a.action;
+    if (beam2 && !a.lightBeam) {
+      game.audio?.sfx("light", a);
+      game.fx.ring(a.x, a.y, 0.2, 2.2, "#fff59d", 0.25, 0.1, { z: (a.z || 0) + 1, add: true });
+    }
+    a.lightBeam = beam2;
+    let sp = S6.speed * (beam2 ? S6.beam : i.sprint && !F4.tired ? 1.6 : 1) * (F4.tired ? 0.7 : 1);
+    if (a.action) sp *= a.action.def.moveMul ?? (a.action.def.m1Chain ? 0.6 : 0.4);
+    if (a.hitstun > 0) sp = 0;
+    if (a.status.slowmo) sp *= 0.2;
+    if (a.status.chill) sp *= 0.6;
+    if (a.zoneSlow) sp *= a.zoneSlow;
+    const k = Math.min(1, dt * (beam2 ? 9 : 3.5));
+    const hv0 = Math.atan2(a.vy, a.vx), s0 = Math.hypot(a.vx, a.vy);
+    a.vx += (i.mx * sp - a.vx) * k;
+    a.vy += (i.my * sp - a.vy) * k;
+    let vx = a.vx, vy = a.vy;
+    if (a.dash) {
+      vx = a.dash.vx;
+      vy = a.dash.vy;
+      a.dash.t -= dt;
+      if (a.dash.t <= 0) {
+        a.dash = null;
+        a.vx *= 0.3;
+        a.vy *= 0.3;
+      }
+    }
+    vx += a.kb.x;
+    vy += a.kb.y;
+    const decay = Math.exp(-dt * 8);
+    a.kb.x *= decay;
+    a.kb.y *= decay;
+    if (Math.abs(a.kb.x) < 0.05) a.kb.x = 0;
+    if (Math.abs(a.kb.y) < 0.05) a.kb.y = 0;
+    let vz;
+    if (F4.lift > 0) {
+      F4.lift -= dt;
+      vz = S6.climb * 1.2;
+    } else if (F4.landing) vz = -S6.dive;
+    else if (F4.tired) vz = -3.5;
+    else vz = (i.mz || 0) * ((i.mz || 0) > 0 ? S6.climb : S6.dive);
+    if (S6.style === "swing" && !i.mz && !F4.lift) vz = -2;
+    const sw2 = swoopAlt(a, game);
+    if (sw2 !== null) vz = clamp((sw2 - a.alt) * 6, -16, Math.max(vz, 3));
+    a.alt += vz * dt;
+    const n = Math.max(1, Math.ceil(Math.hypot(vx, vy) * dt / 0.25));
+    for (let s = 0; s < n; s++) {
+      const nx = w.wx(a.x + vx * dt / n), ny = a.y + vy * dt / n;
+      if (flyableAt(a, game, nx, a.y)) a.x = nx;
+      else {
+        a.vx *= 0.2;
+        a.kb.x *= -0.3;
+        if (a.dash) a.dash.vx = 0;
+      }
+      if (flyableAt(a, game, a.x, ny)) a.y = ny;
+      else {
+        a.vy *= 0.2;
+        a.kb.y *= -0.3;
+        if (a.dash) a.dash.vy = 0;
+      }
+    }
+    const g = groundBase(game, a.x, a.y);
+    const ceil = g + (sea ? SEA_CEILING : S6.ceiling);
+    if (a.alt > ceil) a.alt = Math.max(ceil, a.alt - 6 * dt);
+    const floor2 = floorUnder(a, game, a.x, a.y);
+    if (a.alt < floor2) a.alt = floor2;
+    a.z = a.alt - g;
+    const sp2 = Math.hypot(vx, vy);
+    a.flightSpeed = sp2;
+    a.flightClimb = vz;
+    const turn = s0 > 1 && sp2 > 1 ? angleDiff(hv0, Math.atan2(a.vy, a.vx)) / Math.max(dt, 1e-3) : 0;
+    a.flightBank = clamp((a.flightBank || 0) + (clamp(turn * 0.35, -1, 1) - (a.flightBank || 0)) * Math.min(1, dt * 5), -1, 1);
+    a.moving = sp2 > 0.4;
+    a.speed = sp2;
+    if (a.moving && !a.action && !a.isPlayer) a.facing += angleDiff(a.facing, Math.atan2(vy, vx)) * Math.min(1, dt * 8);
+    trailFx(a, game, S6, dt);
+    if (a.alt <= floor2 + 0.05 && vz <= 0 && F4.t > 0.3 && (F4.landing || F4.tired || (i.mz || 0) < 0)) land(a, game);
+  }
+  function swingStep(a, dt, game, S6, F4) {
+    const i = a.intent, w = game.world;
+    const m = Math.hypot(i.mx, i.my);
+    let W4 = F4.sw;
+    if (!W4 || W4.u >= 1) {
+      if (m < 0.2) return false;
+      const L3 = i.sprint ? 12.5 : 9.5, th0 = 0.95;
+      const dx = i.mx / m, dy = i.my / m;
+      const ax = w.wx(a.x + dx * L3 * Math.sin(th0)), ay = a.y + dy * L3 * Math.sin(th0);
+      const g2 = Math.max(groundBase(game, a.x, a.y), groundBase(game, ax, ay), floorUnder(a, game, ax, ay));
+      let ah = a.alt + L3 * Math.cos(th0) + ((i.mz || 0) > 0 ? S6.climb * 0.45 : (i.mz || 0) < 0 ? -2.5 : 0);
+      ah = Math.max(ah, g2 + 1.4 + L3);
+      const ceil = groundBase(game, a.x, a.y) + (overOpenSea(game, a.x, a.y) ? SEA_CEILING : S6.ceiling) + L3;
+      ah = Math.min(ah, Math.max(ceil, a.alt + L3 * Math.cos(th0)));
+      W4 = F4.sw = { ax, ay, ah, dx, dy, L: L3, th0, u: 0, T: (i.sprint ? 0.95 : 1.15) * Math.sqrt(L3 / 9.5), h0: a.alt, x0: a.x, y0: a.y };
+      game.audio?.sfx("string", a, { vol: 0.5 });
+      const sw2 = W4;
+      game.fx.add("rope", { x: a.x, y: a.y, follow: a, sw: sw2, color: S6.color || "#f8bbd0", life: W4.T + 0.2, until: () => F4.sw === sw2 && a.flying });
+    }
+    W4.u = Math.min(1, W4.u + dt / W4.T);
+    const th = W4.th0 * (2 * W4.u - 1);
+    const tx = w.wx(W4.ax + W4.dx * W4.L * Math.sin(th)), ty = W4.ay + W4.dy * W4.L * Math.sin(th);
+    const blend2 = Math.min(1, W4.u * 3.5);
+    const arcH = W4.ah - W4.L * Math.cos(th);
+    const nh = W4.h0 + (arcH - W4.h0) * (blend2 * blend2 * (3 - 2 * blend2));
+    const ox = a.x, oy = a.y, oh = a.alt;
+    const mx = w.dx(a.x, tx), my = ty - a.y;
+    const n = Math.max(1, Math.ceil(Math.hypot(mx, my) / 0.25));
+    let blocked = false;
+    a.alt = nh;
+    for (let s = 0; s < n && !blocked; s++) {
+      const nx = w.wx(a.x + mx / n), ny = a.y + my / n;
+      if (flyableAt(a, game, nx, ny)) {
+        a.x = nx;
+        a.y = ny;
+      } else blocked = true;
+    }
+    const floor2 = floorUnder(a, game, a.x, a.y);
+    if (a.alt < floor2 + 0.3) a.alt = floor2 + 0.3;
+    const vx = w.dx(ox, a.x) / Math.max(dt, 1e-3), vy = (a.y - oy) / Math.max(dt, 1e-3);
+    a.vx = vx;
+    a.vy = vy;
+    if (blocked) {
+      F4.sw = null;
+      a.swingAnchor = null;
+      a.vx *= 0.2;
+      a.vy *= 0.2;
+      return true;
+    }
+    const g = groundBase(game, a.x, a.y);
+    a.z = a.alt - g;
+    const sp = Math.hypot(vx, vy);
+    a.flightSpeed = sp;
+    a.flightClimb = (a.alt - oh) / Math.max(dt, 1e-3);
+    a.flightBank = 0;
+    a.moving = sp > 0.4;
+    a.speed = sp;
+    if (!a.isPlayer) a.facing += angleDiff(a.facing, Math.atan2(W4.dy, W4.dx)) * Math.min(1, dt * 8);
+    a.swingAnchor = { x: W4.ax, y: W4.ay, h: W4.ah };
+    a.swingTh = th / W4.th0;
+    return true;
+  }
+  function swoopAlt(a, game) {
+    const act2 = a.action;
+    if (!act2) return null;
+    const def = act2.def;
+    const melee = (def.steps || []).some((s) => s.hit && s.hit.shape !== "line" && !s.proj || s.dash?.hit);
+    if (!melee || act2.t > (def.windup ?? 0.1) + 0.45) return null;
+    const t = act2.target && act2.target.alive !== void 0 && act2.target.state === "idle" ? act2.target : foeBelow(a, game);
+    if (!t) return a.dash?.dive ? groundBase(game, a.x, a.y) + 0.4 : null;
+    return feetOf(t, game) + 0.3;
+  }
+  function foeBelow(a, game) {
+    let best = null, bd = Infinity;
+    for (const e of game.actorsNear(a.x, a.y, 4.5)) {
+      if (e === a || e.state !== "idle" || !game.combat.canHit(a, e, { vx: 0 })) continue;
+      const dx = game.world.dx(a.x, e.x), dy = e.y - a.y;
+      if (Math.abs(angleDiff(a.facing, Math.atan2(dy, dx))) > 1.3) continue;
+      const d = Math.hypot(dx, dy);
+      if (d < bd) {
+        bd = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+  function reachesUp(att, tgt, h2, game) {
+    if (!(att?.flying || tgt.flying)) return true;
+    if (h2.vx !== void 0 || h2.isProj || h2.shape === "line") return true;
+    const groundRef = h2.zone || h2.radial && !h2.follow;
+    const from = groundRef ? groundBase(game, h2.x ?? tgt.x, (h2.y ?? tgt.y) + 0.4) : feetOf(att, game);
+    const gap = Math.abs(from - feetOf(tgt, game));
+    const reach3 = h2.reachZ ?? (h2.radial || h2.shape === "circle" ? Math.max(2.4, (h2.range || 1) * 0.7) : 2.4);
+    return gap <= reach3 * Math.max(att?.look?.scale || 1, tgt.look?.scale || 1);
+  }
+  function refill(a, dt, game) {
+    if (a.flying || !(a.flightGauge < 1)) return;
+    if (a.inWater || (a.z || 0) > 0.05 || a.vz || a.state !== "idle") return;
+    const S6 = flightOf(a);
+    if (!S6) return;
+    a.flightGauge = Math.min(1, a.flightGauge + dt / S6.refill);
+  }
+  function geppoSteps(a) {
+    const t = a.techniques || [];
+    let n = 0;
+    if (t.includes("roku_geppo")) n = Math.max(n, 2 + Math.floor((a.masteries?.rokushiki || 0) / 35));
+    if (t.includes("bleg_skywalk")) n = Math.max(n, 2 + Math.floor((a.masteries?.black_leg || 0) / 35));
+    return n;
+  }
+  function airStep(a, game) {
+    const n = geppoSteps(a);
+    if (!n || a.flying || (a.airSteps || 0) >= n) return false;
+    if (a.state !== "idle" || helpless(a) || a.hitstun > 0 || a.inWater || a.climb || a.onShip) return false;
+    if (!((a.z || 0) > 0.35 || a.vz > 0.5)) return false;
+    const J = a.jumpStats();
+    a.vz = J.v * 0.9;
+    const l = Math.hypot(a.intent.mx, a.intent.my);
+    const dx = l > 0.2 ? a.intent.mx / l : Math.cos(a.facing), dy = l > 0.2 ? a.intent.my / l : Math.sin(a.facing);
+    a.dash = { vx: dx * 9, vy: dy * 9, t: 0.22, ignoreWater: true };
+    a.airSteps = (a.airSteps || 0) + 1;
+    a.flightStyle = "geppo";
+    a.airStepT = timeOf(game);
+    for (let k = 0; k < 2; k++) game.fx.add("ring", { x: a.x, y: a.y, r0: 0.1, r1: 0.7 + k * 0.3, color: "#ffffff", width: 0.07, life: 0.3, z: Math.max(0.05, a.z || 0), flat: 0.8, add: true, delay: k * 0.05 });
+    game.audio?.sfx("jump", a);
+    return true;
+  }
+  function takeoffFx(a, game, S6) {
+    const fx = game.fx, z = Math.max(0.05, a.z || 0);
+    fx.burst(a.x, a.y, 10, { color: ["#d7ccc8", "#efebe9"], speed: 3, g: 1.2, z, vz: 0.6, life: 0.5, kind: "dust", size: 0.2, grow: 0.4 });
+    fx.ring(a.x, a.y, 0.2, 1.6, S6.color || "#ffffff", 0.35, 0.1, { z, flat: 0.55, add: true });
+    const c = S6.color || "#ffffff";
+    if (S6.style === "phoenix") {
+      fx.burst(a.x, a.y, 10, { color: ["#29b6f6", "#4fc3f7"], hot: "#e6fbff", speed: 2.5, g: -1, z: z + 1, vz: 1.5, life: 0.55, kind: "fire", size: 0.18 });
+      fx.burst(a.x, a.y, 8, { color: "#ffd54a", speed: 4, g: 0, z: z + 1.1, vz: 1, life: 0.4, kind: "spark", size: 0.05 });
+    } else if (S6.style === "dragon") fx.burst(a.x, a.y, 14, { color: ["#eceff1", "#cfd8dc", "#ffffff"], speed: 3, g: 0, z: z + 0.3, life: 0.9, kind: "smoke", size: 0.5, grow: 0.6 });
+    else if (S6.style === "wings") fx.burst(a.x, a.y, 10, { color: ["#212121", "#37474f"], speed: 3, g: 2, z: z + 1.2, vz: 1, life: 0.8, kind: "leaf", size: 0.12 });
+    else fx.burst(a.x, a.y, 12, { color: [c, "#ffffff"], speed: 2.5, g: 0, z: z + 0.2, life: 0.6, kind: S6.ride === "light" ? "glow" : S6.ride === "sand" ? "sand" : "smoke", size: 0.3, grow: 0.3 });
+  }
+  function trailFx(a, game, S6, dt) {
+    const p = game.player;
+    if (!p || a !== p && game.world.dist2(a.x, a.y, p.x, p.y) > 40 * 40) return;
+    a._flyFxT = (a._flyFxT || 0) - dt;
+    if (a._flyFxT > 0) return;
+    a._flyFxT = 0.05;
+    const fx = game.fx, z = a.z || 0, r4 = () => Math.random() - 0.5;
+    const back = { vx: -(a.vx || 0) * 0.25, vy: -(a.vy || 0) * 0.25 };
+    switch (S6.style) {
+      case "phoenix":
+        if (Math.random() < 0.6) {
+          const side = Math.random() < 0.5 ? 1 : -1, c = Math.cos(a.facing), s = Math.sin(a.facing);
+          fx.particle({ x: a.x - s * side * 1.3 - c * 0.5, y: a.y + c * side * 1.3 - s * 0.5, z: z + 1.1 + r4() * 0.3, ...back, vz: 0.3, g: 0, life: 0.35, size: 0.05, color: Math.random() < 0.25 ? "#ffd54a" : "#80e4ff", kind: "spark" });
+        }
+        break;
+      case "dragon":
+        fx.particle({ x: a.x + r4() * 1.6, y: a.y + r4() * 0.8, z: z + 0.1, ...back, vz: -0.2, g: 0, life: 1.1, size: 0.45, grow: 0.5, color: Math.random() < 0.5 ? "#eceff1" : "#cfd8dc", kind: "smoke" });
+        if (Math.random() < 0.08) fx.burst(a.x, a.y, 3, { color: "#90caf9", speed: 3, g: 0, z: z + 1, life: 0.15, kind: "line", size: 0.05 });
+        break;
+      case "wings":
+        if (Math.random() < 0.25) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.4, z: z + 1.3, ...back, vz: -0.3, g: 0.6, life: 1.2, size: 0.1, color: "#212121", kind: "leaf", rot: Math.random() * TAU, vr: r4() * 6 });
+        break;
+      case "ride":
+        fx.particle({ x: a.x + r4() * 0.6, y: a.y + r4() * 0.4, z: Math.max(0, z - 0.15), ...back, vz: -0.4, g: 0, life: 0.8, size: S6.ride === "rock" ? 0.12 : 0.35, grow: S6.ride === "rock" ? 0 : 0.4, color: S6.color || "#eceff1", kind: S6.ride === "sand" ? "sand" : S6.ride === "rock" ? "dust" : "smoke" });
+        break;
+      case "jet": {
+        const fsp = a.flightSpeed || 0, cruise = Math.min(1, Math.max(0, (fsp - 1.2) / 8)), rr = 0.1 + 0.95 * cruise * (1 - Math.max(0, Math.min(1, (a.flightClimb || 0) / 6)) * 0.6);
+        const c = Math.cos(a.facing), s = Math.sin(a.facing), up = [Math.sin(rr) * c, Math.sin(rr) * s, Math.cos(rr)];
+        const fx0 = a.x - up[0] * 0.95, fy0 = a.y - up[1] * 0.95, fz = z + 0.95 - up[2] * 0.95;
+        const jet = (sp, k) => ({ vx: -up[0] * sp + (a.vx || 0) * k, vy: -up[1] * sp + (a.vy || 0) * k, vz: -up[2] * sp });
+        if (S6.ride === "light") {
+          if (a.lightBeam) {
+            fx.particle({ x: a.x, y: a.y, z: z + 1, vx: 0, vy: 0, vz: 0, g: 0, life: 0.07, size: 1.1, color: "#fff8e1", kind: "star" });
+            for (let k = 0; k < 3; k++) fx.particle({ x: a.x - (a.vx || 0) * 0.016 * k, y: a.y - (a.vy || 0) * 0.016 * k, z: z + 1 + r4() * 0.1, vx: 0, vy: 0, vz: 0, g: 0, life: 0.6, size: 0.45 - k * 0.08, color: k ? "#ffd54f" : "#fff59d", kind: "glow" });
+            fx.particle({ x: a.x, y: a.y, z: z + 1, vx: -(a.vx || 0) * 0.08, vy: -(a.vy || 0) * 0.08, vz: 0, g: 0, life: 0.3, size: 0.06, color: "#ffffff", kind: "line" });
+          } else {
+            for (let k = 0; k < 2; k++) fx.particle({ x: fx0, y: fy0, z: fz - 0.05 - k * 0.1, ...jet(1.5, 1), g: 0, life: 0.07, size: 0.24 - k * 0.07, color: k ? "#fff59d" : "#ffffff", kind: "glow" });
+          }
+          break;
+        }
+        if (S6.ride === "fire") {
+          for (let k = 0; k < 3; k++) fx.particle({ x: fx0 + r4() * 0.15, y: fy0 + r4() * 0.15, z: fz, ...jet(8 + Math.random() * 3, 0.8), g: -1, life: 0.2 + Math.random() * 0.08, size: 0.17, grow: 0.8, color: k ? "#ff7043" : "#ffca28", kind: "fire" });
+          if (Math.random() < 0.3) fx.particle({ x: fx0, y: fy0, z: fz, ...jet(6, 0.6), vz: -up[2] * 6 + 1.5, g: 2, life: 0.5, size: 0.04, color: "#ffe082", kind: "spark" });
+        } else if (S6.ride === "magma") {
+          for (let k = 0; k < 2; k++) fx.particle({ x: fx0 + r4() * 0.15, y: fy0 + r4() * 0.15, z: fz, ...jet(5 + Math.random() * 2, 0.6), g: -0.5, life: 0.28, size: 0.2, grow: 0.6, color: k ? "#e64a19" : "#ff6f00", kind: "fire" });
+          if (Math.random() < 0.5) fx.particle({ x: fx0, y: fy0, z: fz, ...jet(3, 0.5), g: 14, life: 1.2, size: 0.08 + Math.random() * 0.05, color: Math.random() < 0.5 ? "#ff5722" : "#ffab40", kind: "spark" });
+          if (Math.random() < 0.35) fx.particle({ x: fx0, y: fy0, z: fz + 0.2, vx: back.vx, vy: back.vy, vz: 0.8, g: 0, life: 1.1, size: 0.3, grow: 0.8, color: "#3e2723", kind: "smoke" });
+          if (z < 8 && Math.random() < 0.06) game.fx.add("scorch", { x: a.x + r4(), y: a.y + r4(), r: 0.5 + Math.random() * 0.4, life: 8, color: "rgba(40,18,10,1)", rim: "#ff6f00", seed: Math.random() * 100 });
+        } else {
+          for (let k = 0; k < 3; k++) fx.particle({ x: fx0 + r4() * 0.2, y: fy0 + r4() * 0.2, z: fz, ...jet(6 + Math.random() * 2, 0.6), g: 1, life: 0.45, size: 0.22, grow: 0.7, color: k ? "#e1c16e" : "#cdae5a", kind: "sand" });
+        }
+        break;
+      }
+      case "swing":
+        if (a.swingAnchor && Math.random() < 0.3) fx.particle({ x: a.x, y: a.y, z: z + 1.9, ...back, vz: 0, g: 0, life: 0.25, size: 0.04, color: "#f8bbd0", kind: "line" });
+        break;
+      case "float":
+        if (S6.ride === "strings") for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.5, y: a.y + r4() * 0.25, z: z + 1.4, vx: 0, vy: 0, vz: 12, g: 0, life: 0.4, size: 0.05, color: "#f8bbd0", kind: "line" });
+        else for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.5, z: z + 0.4 + Math.random(), ...back, vz: 0.2, g: 0, life: 0.45, size: 0.2, color: k ? "#ffffff" : S6.color || "#fff59d", kind: "glow" });
+        break;
+      default:
+        break;
+    }
+  }
+  function aiFlight(a, ctl, t, dist, game, sorties = false) {
+    if (!a.flying) a.intent.mz = 0;
+    const S6 = flightOf(a);
+    if (!S6) return;
+    const now3 = game.time || 0;
+    if (!a.flying) {
+      if (ctl.flyNext === void 0) ctl.flyNext = now3 + 6 + Math.random() * 8;
+      const above = !!t.flying && feetOf(t, game) - feetOf(a, game) > 2.2;
+      const sortie = a.boss && sorties && now3 >= ctl.flyNext && dist < 14;
+      if ((above || sortie) && !cantTakeOff(a, game)) {
+        takeOff(a, game);
+        ctl.flyChase = above;
+        ctl.flyUntil = now3 + (above ? 30 : 5 + Math.random() * 3);
+        ctl.flyNext = now3 + 16 + Math.random() * 10;
+      }
+      return;
+    }
+    if (!a.flight) return;
+    if (a.flightGauge < 0.2 || now3 > (ctl.flyUntil ?? 0) && !t.flying || ctl.flyChase && !t.flying) a.flight.landing = true;
+    const want = t.flying ? feetOf(t, game) : feetOf(t, game) + (a.flight.landing ? 0 : 4.5);
+    a.intent.mz = clamp((want - a.alt) / 2, -1, 1);
+  }
+
+  // src/world/bframe.js
+  var FRONT = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+  var rotOf = (b) => ((b.rot | 0) % 4 + 4) % 4;
+  function bw(b, lx, lz) {
+    switch (rotOf(b)) {
+      case 1:
+        return { x: b.x + lz, y: b.y - lx };
+      case 2:
+        return { x: b.x - lx, y: b.y - lz };
+      case 3:
+        return { x: b.x - lz, y: b.y + lx };
+      default:
+        return { x: b.x + lx, y: b.y + lz };
+    }
+  }
+  function bl(b, x, y, world = null) {
+    const dx = world ? world.dx(b.x, x) : x - b.x, dy = y - b.y;
+    switch (rotOf(b)) {
+      case 1:
+        return { lx: -dy, lz: dx };
+      case 2:
+        return { lx: -dx, lz: -dy };
+      case 3:
+        return { lx: dy, lz: -dx };
+      default:
+        return { lx: dx, lz: dy };
+    }
+  }
+  function bbox(b, x0, x1, z0, z1) {
+    const a = bw(b, x0, z0), c = bw(b, x1, z1);
+    return { x0: Math.min(a.x, c.x), x1: Math.max(a.x, c.x), y0: Math.min(a.y, c.y), y1: Math.max(a.y, c.y) };
+  }
+  function bfoot(b) {
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+    return bbox(b, -fw / 2, fw / 2, -fd, 0);
+  }
+  function bfront(b) {
+    const f = FRONT[rotOf(b)];
+    return { x: f[0], y: f[1] };
+  }
+  function bfacing(b) {
+    const f = FRONT[rotOf(b)];
+    return Math.atan2(f[1], f[0]);
+  }
+  function bangle(b) {
+    return rotOf(b) * Math.PI / 2;
+  }
+
+  // src/world/interiors.js
+  var WALL_T = 0.22;
+  var PLINTH = 0.35;
+  var STEPS_MAX = 3;
+  var WIN = {
+    village: "cross",
+    town: "cross",
+    port: "cross",
+    city: "tall",
+    desert: "arch",
+    snow: "cross",
+    wano: "shoji",
+    chinese: "lattice",
+    sky: "round",
+    candy: "round",
+    fishman: "round",
+    marine: "tall",
+    noble: "tall",
+    spooky: "gothic",
+    future: "round",
+    tribal: "none",
+    mink: "round",
+    giant: "cross",
+    ruins: "hole"
+  };
+  var DOOR = {
+    village: "plank",
+    town: "panel",
+    port: "plank",
+    city: "panel",
+    desert: "arch",
+    snow: "plank",
+    wano: "noren",
+    chinese: "panel",
+    sky: "arch",
+    candy: "arch",
+    fishman: "arch",
+    marine: "panel",
+    noble: "panel",
+    spooky: "plank",
+    future: "panel",
+    tribal: "hide",
+    mink: "plank",
+    giant: "plank",
+    ruins: "hole"
+  };
+  var winKind = (b) => WIN[b.style] || "cross";
+  var doorKind = (b) => DOOR[b.style] || "plank";
+  var styleScale = (b) => Math.max(b.style === "giant" ? 2.1 : 1, b.tall || 1);
+  var lowStyle = (b) => b.style === "wano";
+  var HOURS = {
+    shop: [7, 21],
+    market: [6, 20],
+    weapons: [8, 20],
+    bank: [8, 18],
+    bounty: [7, 21],
+    library: [8, 20],
+    cafe: [7, 21],
+    restaurant: [10, 23],
+    tavern: [0, 24],
+    bar: [0, 24],
+    inn: [0, 24],
+    doctor: [0, 24],
+    marine_base: [0, 24],
+    church: [6, 22],
+    dojo: [6, 21],
+    trainer: [6, 21],
+    shipwright: [7, 20]
+  };
+  var NOT_ENTERABLE = /* @__PURE__ */ new Set(["palace", "hall", "lighthouse"]);
+  var HUTS = /* @__PURE__ */ new Set(["tribal", "ruins"]);
+  function isEnterable(b) {
+    if (!b || b.kind !== "building" || b.noEnter) return false;
+    const role = b.role || "house";
+    if (NOT_ENTERABLE.has(role) || HUTS.has(b.style)) return false;
+    if (b.roofType === "hut" || b.roofType === "ruin") return false;
+    return (b.fw || 3) >= 3.5 && (b.fd || 3) >= 2.5;
+  }
+  function doorOf(b) {
+    const fw = Math.max(2, b.fw || 3), g = styleScale(b);
+    const role = b.role || "house";
+    const big2 = (role === "marine_base" || role === "palace" || role === "hall" || role === "church") && fw >= 5;
+    const wide = !big2 && role !== "house" && fw >= 4;
+    const x = Math.max(-fw / 2 + 0.9, Math.min(fw / 2 - 0.9, doorLocalX(b)));
+    return { x, dw: (big2 ? 1.7 : wide ? 1.4 : 1.05) * g, dh: (big2 ? 2.5 : wide ? 2.3 : 2.15) * g, big: big2, kind: doorKind(b) };
+  }
+  function doorLocalX(b) {
+    if (b.doorX !== void 0) return b.doorX;
+    return b.door ? bl(b, b.door.x, b.door.y).lx : 0;
+  }
+  function heightsOf(b) {
+    const g = styleScale(b);
+    const storeys = Math.max(1, Math.min(5, (b.hgt || 2) - 1));
+    const storeyH = 2.75 * g;
+    return { g, storeys, storeyH, ceil: storeys > 1 ? storeyH : 3 * g, H: 3 * g + (storeys - 1) * storeyH };
+  }
+  var hasShutters = (b) => b.style === "village" || b.style === "town";
+  function windowSlots(b, floor2 = 0) {
+    const kind = winKind(b);
+    const none = { front: [], left: [], right: [], w: 0, reach: 0 };
+    if (kind === "none" || kind === "hole") return none;
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
+    const d = doorOf(b);
+    const winW = 0.85 * g;
+    const reach3 = winW / 2 + (hasShutters(b) && (kind === "cross" || kind === "tall") ? 0.1 + winW * 0.45 : 0.14);
+    const pitch = 2 * reach3 + 0.3 * g;
+    const spread2 = (len) => {
+      const usable = len - 2 * (0.3 + reach3);
+      if (usable < 0) return [];
+      const n = Math.floor(usable / pitch) + 1;
+      return n === 1 ? [0] : Array.from({ length: n }, (_, i) => -usable / 2 + i * usable / (n - 1));
+    };
+    let front = spread2(fw);
+    if (floor2 === 0) front = front.filter((x) => Math.abs(x - d.x) >= d.dw / 2 + 0.2 + reach3);
+    const zs = fd < 3 ? [] : fd >= 6.5 ? [-fd * 0.3, -fd * 0.7] : [-fd / 2];
+    const at4 = b.attach || {};
+    return { front, left: at4.left ? [] : zs, right: at4.right ? [] : zs, w: winW, reach: reach3 };
+  }
+  function groundWindows(b) {
+    const kind = winKind(b);
+    if (kind === "none" || kind === "hole") return [];
+    const g = styleScale(b);
+    const winW = 0.85 * g, winH = 1.05 * g;
+    const h2 = kind === "tall" ? winH * 1.2 : winH;
+    const y = 1.55 * g;
+    const W4 = windowSlots(b, 0);
+    const out = [];
+    for (const x of W4.front) out.push({ face: "front", u: x, y, w: winW, h: h2, kind, i: out.length });
+    for (const face of ["left", "right"]) for (const z of W4[face]) out.push({ face, u: z, y, w: winW, h: h2, kind, i: out.length });
+    return out;
+  }
+  function interiorRect(b) {
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3);
+    return bbox(b, -fw / 2 + WALL_T, fw / 2 - WALL_T, -fd + WALL_T, -WALL_T);
+  }
+  function hash(a, b = 0, c = 0) {
+    let h2 = Math.imul(a * 1e3 | 0, 374761393) ^ Math.imul(b * 1e3 | 0, 668265263) ^ Math.imul(c * 1e3 | 0, 1274126177);
+    h2 = Math.imul(h2 ^ h2 >>> 13, 1274126177);
+    return ((h2 ^ h2 >>> 16) >>> 0) / 4294967296;
+  }
+  function rng(seed) {
+    let s = Math.floor(seed * 2654435761) >>> 0 || 1;
+    return () => {
+      s ^= s << 13;
+      s >>>= 0;
+      s ^= s >> 17;
+      s ^= s << 5;
+      s >>>= 0;
+      return s / 4294967296;
+    };
+  }
+  function isPirateHouse(b) {
+    return (b.role || "house") === "house" && !b.npc && isEnterable(b) && hash(b.x, b.y, 7.7) < 0.09;
+  }
+  var rectOf = (x, z, rot, w, d) => {
+    const side = Math.abs(Math.sin(rot)) > 0.5;
+    const hx = (side ? d : w) / 2, hz = (side ? w : d) / 2;
+    return { x0: x - hx, x1: x + hx, z0: z - hz, z1: z + hz };
+  };
+  var overlap = (a, b, m = 0) => a.x0 < b.x1 + m && a.x1 > b.x0 - m && a.z0 < b.z1 + m && a.z1 > b.z0 - m;
+  var Placer = class {
+    constructor(L3, R5) {
+      this.L = L3;
+      this.R = R5;
+      this.rects = [];
+      this.keep = [];
+      this.low = [];
+      this.fronts = [];
+    }
+    fits(r4, tall) {
+      const L3 = this.L;
+      if (r4.x0 < L3.x0 - 1e-3 || r4.x1 > L3.x1 + 1e-3 || r4.z0 < L3.z0 - 1e-3 || r4.z1 > L3.z1 + 1e-3) return false;
+      for (const q2 of this.keep) if (overlap(r4, q2)) return false;
+      if (tall) {
+        for (const q2 of this.low) if (overlap(r4, q2)) return false;
+      }
+      for (const q2 of this.rects) if (overlap(r4, q2, 0.04)) return false;
+      for (const q2 of this.fronts) if (overlap(r4, q2)) return false;
+      return true;
+    }
+    /** The floor in front of an item that has to be got at (or null). */
+    frontOf(item, x, z, rot) {
+      if (item.ghost || !ACCESS.has(item.k)) return null;
+      const f = [Math.round(Math.sin(rot)), Math.round(Math.cos(rot))], dd = 0.55;
+      const cx = x + f[0] * (item.d / 2 + dd / 2), cz = z + f[1] * (item.d / 2 + dd / 2);
+      return rectOf(cx, cz, rot, item.w * 0.8, dd);
+    }
+    /** Try to put an item at (x, z) facing `rot`; returns the item or null. */
+    at(item, x, z, rot = 0) {
+      const r4 = rectOf(x, z, rot, item.w, item.d);
+      if (!this.fits(r4, (item.h || 0) > 1.05)) return null;
+      const fr = this.frontOf(item, x, z, rot);
+      if (fr) {
+        for (const q2 of this.rects) if (overlap(fr, q2)) return null;
+      }
+      const it = { ...item, x, z, rot, rect: r4 };
+      if (!item.ghost) this.rects.push(r4);
+      if (fr) this.fronts.push(fr);
+      this.L.items.push(it);
+      return it;
+    }
+    /** Slide an item along a wall ('back' | 'left' | 'right' | 'front'), in the given order. */
+    wall(item, wall, order = "center", gap = 0.02) {
+      const L3 = this.L;
+      let rot, fixed, a0, a1;
+      if (wall === "back") {
+        rot = 0;
+        fixed = L3.z0 + item.d / 2 + gap;
+        a0 = L3.x0 + item.w / 2;
+        a1 = L3.x1 - item.w / 2;
+      } else if (wall === "front") {
+        rot = Math.PI;
+        fixed = L3.z1 - item.d / 2 - gap;
+        a0 = L3.x0 + item.w / 2;
+        a1 = L3.x1 - item.w / 2;
+      } else if (wall === "left") {
+        rot = Math.PI / 2;
+        fixed = L3.x0 + item.d / 2 + gap;
+        a0 = L3.z0 + item.w / 2;
+        a1 = L3.z1 - item.w / 2;
+      } else {
+        rot = -Math.PI / 2;
+        fixed = L3.x1 - item.d / 2 - gap;
+        a0 = L3.z0 + item.w / 2;
+        a1 = L3.z1 - item.w / 2;
+      }
+      if (a1 < a0 - 1e-6) return null;
+      const cands = [];
+      const n = Math.max(1, Math.round((a1 - a0) / 0.1));
+      for (let i = 0; i <= n; i++) cands.push(a0 + (a1 - a0) * (i / n));
+      if (order === "center") {
+        const m = (a0 + a1) / 2;
+        cands.sort((p, q2) => Math.abs(p - m) - Math.abs(q2 - m));
+      } else if (order === "end") cands.reverse();
+      else if (order === "random") cands.sort(() => this.R() - 0.5);
+      for (const a of cands) {
+        const it = wall === "back" || wall === "front" ? this.at(item, a, fixed, rot) : this.at(item, fixed, a, rot);
+        if (it) return it;
+      }
+      return null;
+    }
+    /** Anywhere on the floor (free-standing tables), nearest to (px, pz) first. */
+    free(item, px2 = 0, pz2 = null, rot = 0) {
+      const L3 = this.L;
+      const cz = pz2 ?? (L3.z0 + L3.z1) / 2;
+      const cands = [];
+      for (let x = L3.x0 + item.w / 2; x <= L3.x1 - item.w / 2 + 1e-6; x += 0.15) {
+        for (let z = L3.z0 + item.d / 2; z <= L3.z1 - item.d / 2 + 1e-6; z += 0.15) cands.push([x, z]);
+      }
+      cands.sort((a, b) => Math.hypot(a[0] - px2, a[1] - cz) - Math.hypot(b[0] - px2, b[1] - cz));
+      for (const [x, z] of cands) {
+        const it = this.at(item, x, z, rot);
+        if (it) return it;
+      }
+      return null;
+    }
+    /** Things that don't take floor space (rugs, wall pictures, lamps). */
+    deco(item, x, z, rot = 0) {
+      const it = { ...item, x, z, rot, ghost: true };
+      this.L.items.push(it);
+      return it;
+    }
+  };
+  var F = {
+    bed: { k: "bed", w: 1, d: 2, h: 0.6 },
+    futon: { k: "futon", w: 1, d: 2, h: 0.14, ghost: true },
+    table: { k: "table", w: 0.95, d: 0.8, h: 0.76 },
+    lowTable: { k: "lowtable", w: 1, d: 0.7, h: 0.36 },
+    roundTable: { k: "roundtable", w: 0.9, d: 0.9, h: 0.76 },
+    chair: { k: "chair", w: 0.44, d: 0.44, h: 0.92, ghost: true },
+    stool: { k: "stool", w: 0.38, d: 0.38, h: 0.7, ghost: true },
+    cushion: { k: "cushion", w: 0.5, d: 0.5, h: 0.1, ghost: true },
+    cupboard: { k: "cupboard", w: 0.95, d: 0.45, h: 1.85 },
+    dresser: { k: "dresser", w: 1, d: 0.45, h: 0.9 },
+    tansu: { k: "tansu", w: 0.95, d: 0.45, h: 1.1 },
+    shelf: { k: "shelf", w: 1.2, d: 0.34, h: 1.9 },
+    lowShelf: { k: "lowshelf", w: 1.1, d: 0.36, h: 1 },
+    bookcase: { k: "bookcase", w: 1.2, d: 0.36, h: 2.1 },
+    stove: { k: "stove", w: 0.75, d: 0.6, h: 0.95 },
+    fireplace: { k: "fireplace", w: 1.3, d: 0.5, h: 1.35 },
+    hibachi: { k: "hibachi", w: 0.55, d: 0.55, h: 0.35 },
+    chest: { k: "chest", w: 0.8, d: 0.5, h: 0.55 },
+    barrel: { k: "barrel", w: 0.62, d: 0.62, h: 0.95 },
+    crate: { k: "crate", w: 0.62, d: 0.62, h: 0.6 },
+    sacks: { k: "sacks", w: 0.8, d: 0.55, h: 0.6 },
+    plant: { k: "plant", w: 0.45, d: 0.45, h: 1.1 },
+    counter: { k: "counter", w: 2, d: 0.48, h: 1.02 },
+    desk: { k: "desk", w: 1.3, d: 0.62, h: 0.78 },
+    medbed: { k: "medbed", w: 0.9, d: 1.95, h: 0.68 },
+    // (its head to the wall, as in a ward)
+    cabinet: { k: "medcabinet", w: 1, d: 0.36, h: 1.8 },
+    screen: { k: "screen", w: 1.1, d: 0.12, h: 1.6 },
+    rack: { k: "rack", w: 1.3, d: 0.3, h: 1.6 },
+    armor: { k: "armorstand", w: 0.6, d: 0.5, h: 1.75 },
+    dummy: { k: "dummy", w: 0.55, d: 0.55, h: 1.75 },
+    shrine: { k: "shrine", w: 1.2, d: 0.4, h: 1.2 },
+    pew: { k: "pew", w: 1.9, d: 0.5, h: 0.92 },
+    altar: { k: "altar", w: 1.4, d: 0.6, h: 1 },
+    safe: { k: "safe", w: 0.8, d: 0.7, h: 1.2 },
+    bench: { k: "bench", w: 1.4, d: 0.42, h: 0.46 },
+    board: { k: "board", w: 1.3, d: 0.06, h: 1, ghost: true },
+    filing: { k: "filing", w: 0.6, d: 0.5, h: 1.3 },
+    flag: { k: "flag", w: 1.1, d: 0.05, h: 1.6, ghost: true },
+    stairs: { k: "stairs", w: 2.6, d: 0.95, h: 2.4 },
+    workbench: { k: "workbench", w: 1.7, d: 0.7, h: 0.9 },
+    lumber: { k: "lumber", w: 1.8, d: 0.6, h: 0.7 },
+    hull: { k: "hull", w: 2.4, d: 1.2, h: 1.1 },
+    produce: { k: "produce", w: 1.1, d: 0.6, h: 0.8 }
+  };
+  var ACCESS = /* @__PURE__ */ new Set(["cupboard", "dresser", "tansu", "shelf", "lowshelf", "bookcase", "stove", "fireplace", "medcabinet", "safe", "filing", "workbench", "rack", "shrine", "altar"]);
+  var sized = (it, g) => g === 1 ? it : { ...it, w: it.w * g, d: it.d * g, h: it.h * g };
+  var GROUP = {
+    house: "house",
+    shop: "shop",
+    market: "market",
+    weapons: "weapons",
+    bank: "bank",
+    bounty: "bounty",
+    library: "library",
+    tavern: "tavern",
+    bar: "tavern",
+    inn: "inn",
+    restaurant: "restaurant",
+    cafe: "restaurant",
+    doctor: "doctor",
+    dojo: "dojo",
+    trainer: "dojo",
+    church: "church",
+    marine_base: "marine",
+    shipwright: "shipwright"
+  };
+  var roomOf = (b) => GROUP[b.role || "house"] || "house";
+  var KEEPER = {
+    shop: "Shopkeeper",
+    market: "Grocer",
+    weapons: "Armourer",
+    bank: "Banker",
+    bounty: "Bounty Clerk",
+    library: "Librarian",
+    tavern: "Barkeep",
+    inn: "Innkeeper",
+    restaurant: "Cook",
+    doctor: "Doctor",
+    dojo: "Sensei",
+    church: "Priest",
+    marine: "Marine Officer",
+    shipwright: "Shipwright"
+  };
+  function layoutOf(b) {
+    if (b._layout) return b._layout;
+    const fw = Math.max(2, b.fw || 3), fd = Math.max(2, b.fd || 3), g = styleScale(b);
+    const T5 = WALL_T;
+    const door = doorOf(b);
+    const L3 = { x0: -fw / 2 + T5, x1: fw / 2 - T5, z0: -fd + T5, z1: -T5, door, items: [], use: [], keeper: null, residents: [], rest: null, room: roomOf(b) };
+    const R5 = rng(hash(b.x, b.y, (b.v || 0) + 1));
+    const P6 = new Placer(L3, R5);
+    P6.keep.push({ x0: door.x - door.dw / 2 - 0.22, x1: door.x + door.dw / 2 + 0.22, z0: L3.z1 - Math.max(1, door.dw) - 0.06, z1: L3.z1 + 1 });
+    for (const w of groundWindows(b)) {
+      const hw = w.w / 2 + 0.12;
+      if (w.face === "front") P6.low.push({ x0: w.u - hw, x1: w.u + hw, z0: L3.z1 - 0.7, z1: L3.z1 + 1 });
+      else if (w.face === "left") P6.low.push({ x0: L3.x0 - 1, x1: L3.x0 + 0.7, z0: w.u - hw, z1: w.u + hw });
+      else P6.low.push({ x0: L3.x1 - 0.7, x1: L3.x1 + 1, z0: w.u - hw, z1: w.u + hw });
+    }
+    const S6 = (k) => sized(F[k], g);
+    (ROOMS2[L3.room] || ROOMS2.house)(P6, L3, b, R5, S6, g);
+    P6.deco({ k: "lamp", w: 0.3, d: 0.3, h: 0.5 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2);
+    b._layout = L3;
+    return L3;
+  }
+  function counterRoom(P6, L3, S6, g, { shelf = "goods", len = 2.2, gapBehind = 0.58 } = {}) {
+    const width = L3.x1 - L3.x0;
+    const bd = 0.26 * g;
+    const cw = Math.min(len * g, width - 0.75 * g);
+    const cz = L3.z0 + bd + gapBehind * g + S6("counter").d / 2;
+    const counter2 = P6.at({ ...S6("counter"), w: cw }, L3.x0 + cw / 2 + 0.02, cz, 0) || P6.at({ ...S6("counter"), w: cw * 0.8 }, L3.x0 + cw * 0.4 + 0.02, cz, 0);
+    if (!counter2) return null;
+    const bw2 = Math.min(width - 0.1, cw + 0.4 * g);
+    P6.deco({ k: shelf, w: bw2, d: bd, h: 1.9 * g }, L3.x0 + bw2 / 2 + 0.02, L3.z0 + bd / 2 + 0.01, 0);
+    P6.rects.push({ x0: L3.x0, x1: L3.x0 + bw2 + 0.02, z0: L3.z0, z1: counter2.rect.z0 });
+    P6.keep.push({ x0: counter2.x - 0.55, x1: counter2.x + 0.55, z0: counter2.rect.z1, z1: counter2.rect.z1 + 0.85 });
+    L3.keeper = { x: counter2.x, z: L3.z0 + bd + gapBehind * g * 0.5 };
+    L3.use.push({ kind: "service", x: counter2.x, z: counter2.rect.z1 + 0.45, label: null });
+    return counter2;
+  }
+  function bedIn(P6, S6, low, order) {
+    const k = low ? "futon" : "bed";
+    return P6.wall(S6(k), "back", order) || P6.wall(S6(k), "left", "start") || P6.wall(S6(k), "right", "start");
+  }
+  function searchable(L3, it, label) {
+    if (!it) return null;
+    const f = [Math.sin(it.rot), Math.cos(it.rot)];
+    L3.use.push({ kind: "loot", x: it.x + f[0] * (it.d / 2 + 0.42), z: it.z + f[1] * (it.d / 2 + 0.42), label });
+    return it;
+  }
+  function stash(P6, L3, S6, k, walls, label) {
+    for (const [wall, order] of walls) {
+      const it = P6.wall({ ...S6(k), loot: true }, wall, order);
+      if (it) return searchable(L3, it, label);
+    }
+    return null;
+  }
+  function footChest(P6, L3, S6, bed2, label) {
+    if (!bed2 || bed2.rot !== 0) return null;
+    const c = S6("chest"), r4 = bed2.rect;
+    const it = P6.at({ ...c, loot: true }, (r4.x0 + r4.x1) / 2, r4.z1 + c.d / 2 + 0.05, 0);
+    if (it) L3.use.push({ kind: "loot", x: it.x, z: it.rect.z1 + 0.45, label });
+    return it;
+  }
+  function hearthIn(P6, L3, b, S6, low, order) {
+    const k = b.style === "snow" || b.style === "village" || b.style === "giant" ? "fireplace" : low ? "hibachi" : "stove";
+    const st = P6.wall(S6(k), "back", order) || P6.wall(S6(k), "left", "end") || P6.wall(S6(k), "right", "end");
+    if (st) L3.residents.push({ x: st.x + Math.sin(st.rot) * (st.d / 2 + 0.35), z: st.z + Math.cos(st.rot) * (st.d / 2 + 0.35) });
+    return st;
+  }
+  function tableIn(P6, L3, S6, low, kind, x, z, seat) {
+    const tb = P6.free(S6(low ? "lowTable" : kind), x, z);
+    if (!tb) return null;
+    for (const s of [-1, 1]) {
+      const st = S6(low ? "cushion" : seat);
+      const sx = tb.x + s * (tb.w / 2 + st.w * 0.45);
+      if (sx - st.w / 2 < L3.x0 || sx + st.w / 2 > L3.x1) continue;
+      P6.deco(st, sx, tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+      L3.residents.push({ x: sx, z: tb.z, sit: true, face: s < 0 ? 0 : Math.PI });
+    }
+    return tb;
+  }
+  var sides = (R5) => R5() < 0.5 ? ["start", "end"] : ["end", "start"];
+  var HOMES = {
+    family(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      const bed2 = bedIn(P6, S6, low, end);
+      if (bed2 && L3.x1 - L3.x0 > 5) P6.wall(S6(low ? "futon" : "bed"), "back", other);
+      if (!low) footChest(P6, L3, S6, bed2, "Search the chest");
+      stash(P6, L3, S6, low ? "tansu" : "cupboard", [["left", "random"], ["right", "random"], ["front", "start"]], "Search the cupboard");
+      hearthIn(P6, L3, b, S6, low, other);
+      tableIn(P6, L3, S6, low, "table", (L3.x0 + L3.x1) / 2 + (end === "start" ? 0.8 : -0.8), L3.z0 + (L3.z1 - L3.z0) * 0.55, "chair");
+      P6.wall(S6("shelf"), "right", "random") || P6.wall(S6("lowShelf"), "front", "end");
+      if (R5() < 0.6) P6.wall(S6("barrel"), "front", R5() < 0.5 ? "start" : "end");
+      if (R5() < 0.5) P6.wall(S6("plant"), "front", "end");
+    },
+    // nets, floats and barrels of salt fish; a sea chest by the bed
+    fisher(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      const bed2 = bedIn(P6, S6, low, end);
+      footChest(P6, L3, S6, bed2, "Search the sea chest") || stash(P6, L3, S6, "chest", [["right", "random"], ["left", "random"]], "Search the sea chest");
+      hearthIn(P6, L3, b, S6, low, other);
+      P6.wall(S6("rack"), "left", "random");
+      P6.wall(S6("barrel"), "right", "start");
+      P6.wall(S6("barrel"), "right", "start");
+      P6.wall(S6("crate"), "front", R5() < 0.5 ? "start" : "end");
+      tableIn(P6, L3, S6, low, "roundTable", (L3.x0 + L3.x1) / 2, L3.z0 + (L3.z1 - L3.z0) * 0.6, "stool");
+      stash(P6, L3, S6, low ? "tansu" : "dresser", [["front", "end"], ["left", "end"]], "Search the drawers");
+    },
+    // a carpenter or smith who works at home: a workbench, timber, tools
+    crafter(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      const wb = P6.wall(S6("workbench"), "back", other) || P6.wall(S6("workbench"), "left", "random") || P6.wall(S6("workbench"), "right", "random");
+      if (wb) {
+        const f = [Math.sin(wb.rot), Math.cos(wb.rot)];
+        L3.residents.push({ x: wb.x + f[0] * (wb.d / 2 + 0.3), z: wb.z + f[1] * (wb.d / 2 + 0.3), face: wb.rot + Math.PI });
+      }
+      P6.wall(S6("rack"), "right", "random") || P6.wall(S6("rack"), "left", "random");
+      P6.wall(S6("lumber"), "front", R5() < 0.5 ? "start" : "end") || P6.wall(S6("crate"), "front", "start");
+      const bed2 = bedIn(P6, S6, low, end);
+      footChest(P6, L3, S6, bed2, "Search the tool chest");
+      stash(P6, L3, S6, low ? "tansu" : "dresser", [["left", "random"], ["right", "random"], ["front", "end"]], "Search the drawers");
+      hearthIn(P6, L3, b, S6, low, "center");
+      if (R5() < 0.7) P6.wall(S6("crate"), "right", "end");
+    },
+    // books everywhere, a desk under the lamp
+    scholar(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      P6.wall(S6("bookcase"), "back", other) || P6.wall(S6("shelf"), "back", other);
+      P6.wall(S6("bookcase"), "left", "random") || P6.wall(S6("lowShelf"), "left", "random");
+      const desk = P6.wall(S6("desk"), "right", "random") || P6.free(S6("desk"), 0, (L3.z0 + L3.z1) / 2);
+      if (desk) {
+        const f = [Math.sin(desk.rot), Math.cos(desk.rot)], ch = S6("chair");
+        const cx = desk.x + f[0] * (desk.d / 2 + ch.d * 0.4), cz = desk.z + f[1] * (desk.d / 2 + ch.d * 0.4);
+        P6.deco(ch, cx, cz, desk.rot + Math.PI);
+        L3.residents.push({ x: cx, z: cz, sit: true, face: desk.rot + Math.PI });
+      }
+      const bed2 = bedIn(P6, S6, low, end);
+      footChest(P6, L3, S6, bed2, "Search the chest") || stash(P6, L3, S6, "chest", [["front", "end"], ["left", "end"]], "Search the chest");
+      hearthIn(P6, L3, b, S6, low, "center");
+      if (R5() < 0.7) P6.wall(S6("plant"), "front", "end");
+    },
+    // sacks of grain, barrels, baskets of produce
+    farmer(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      const bed2 = bedIn(P6, S6, low, end);
+      stash(P6, L3, S6, low ? "tansu" : "cupboard", [["right", "random"], ["front", "end"], ["left", "random"]], "Search the cupboard");
+      hearthIn(P6, L3, b, S6, low, other);
+      P6.wall(S6("sacks"), "left", "start");
+      P6.wall(S6("sacks"), "left", "end");
+      P6.wall(S6("produce"), "right", "random") || P6.wall(S6("barrel"), "right", "random");
+      P6.wall(S6("barrel"), "front", R5() < 0.5 ? "start" : "end");
+      tableIn(P6, L3, S6, low, "table", (L3.x0 + L3.x1) / 2, L3.z0 + (L3.z1 - L3.z0) * 0.58, "chair");
+      if (!low) footChest(P6, L3, S6, bed2, "Search the chest");
+    },
+    // an old sea-dog's place: a hammock-bed, a sea chest, a round table and rum
+    sailor(P6, L3, b, R5, S6, g, low) {
+      const [end, other] = sides(R5);
+      const bed2 = bedIn(P6, S6, low, end);
+      footChest(P6, L3, S6, bed2, "Search the sea chest") || stash(P6, L3, S6, "chest", [["left", "random"]], "Search the sea chest");
+      P6.wall(S6("barrel"), "back", other);
+      P6.wall(S6("barrel"), "right", "start");
+      tableIn(P6, L3, S6, low, "roundTable", (L3.x0 + L3.x1) / 2 + (end === "start" ? 0.5 : -0.5), L3.z0 + (L3.z1 - L3.z0) * 0.55, "stool");
+      P6.wall(S6("lowShelf"), "left", "random") || P6.wall(S6("shelf"), "right", "random");
+      hearthIn(P6, L3, b, S6, low, "center");
+      stash(P6, L3, S6, low ? "tansu" : "dresser", [["front", "start"], ["right", "end"]], "Search the drawers");
+    }
+  };
+  var ROOMS2 = {
+    house(P6, L3, b, R5, S6, g) {
+      const low = lowStyle(b);
+      const kinds = ["family", "family", "fisher", "crafter", "scholar", "farmer", "sailor"];
+      const kind = b.npc ? "family" : kinds[Math.floor(hash(b.x, b.y, 3.3) * kinds.length) % kinds.length];
+      L3.kind = kind;
+      HOMES[kind](P6, L3, b, R5, S6, g, low);
+      if (!L3.use.some((u) => u.kind === "loot")) {
+        const walls = [["left", "random"], ["right", "random"], ["front", "start"], ["front", "end"], ["back", "center"]];
+        if (!stash(P6, L3, S6, "chest", walls, "Search the chest")) {
+          const it = P6.free({ ...S6("chest"), loot: true }, 0, (L3.z0 + L3.z1) / 2);
+          if (it) searchable(L3, it, "Search the chest");
+        }
+      }
+      P6.deco({ k: low ? "tatami" : "rug", w: Math.min(2.2 * g, (L3.x1 - L3.x0) * 0.6), d: Math.min(1.5 * g, (L3.z1 - L3.z0) * 0.5), h: 0.02 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2 + 0.2);
+      P6.deco({ k: R5() < 0.35 ? "poster" : "picture", w: 0.55, d: 0.04, h: 0.7 }, L3.x0 + (L3.x1 - L3.x0) * (0.3 + R5() * 0.4), L3.z0 + 0.02, 0);
+      if (!L3.residents.length) L3.residents.push({ x: (L3.x0 + L3.x1) / 2, z: (L3.z0 + L3.z1) / 2 });
+    },
+    shop(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "goods" });
+      P6.wall(S6("shelf"), "left", "start") || P6.wall(S6("lowShelf"), "left", "start");
+      P6.wall(S6("shelf"), "right", "start") || P6.wall(S6("lowShelf"), "right", "start");
+      P6.wall(S6("barrel"), "front", "start");
+      P6.wall(S6("crate"), "front", "end");
+      if (L3.z1 - L3.z0 > 3) P6.free(S6("produce"), 0, L3.z1 - 1.4);
+      P6.deco({ k: "rug", w: 1.4 * g, d: 0.9 * g, h: 0.02 }, L3.door.x, L3.z1 - 0.7);
+    },
+    market(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "goods" });
+      P6.wall(S6("produce"), "left", "start");
+      P6.wall(S6("produce"), "right", "start");
+      P6.wall(S6("sacks"), "front", "start");
+      P6.wall(S6("barrel"), "front", "end");
+      P6.wall(S6("crate"), "left", "end");
+    },
+    weapons(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "wallrack" });
+      P6.wall(S6("rack"), "left", "start") || P6.wall(S6("rack"), "left", "end");
+      P6.wall(S6("rack"), "right", "start") || P6.wall(S6("armor"), "right", "start");
+      P6.wall(S6("armor"), "front", "start");
+      P6.wall(S6("barrel"), "front", "end");
+    },
+    bank(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "goods", len: 2.6 });
+      P6.wall(S6("safe"), "right", "start");
+      P6.wall(S6("bench"), "left", "end") || P6.wall(S6("bench"), "front", "start");
+      P6.wall(S6("plant"), "front", "end");
+    },
+    bounty(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "goods", len: 1.6 });
+      P6.deco({ k: "wanted", w: Math.min(1.8, L3.z1 - L3.z0 - 0.4), d: 0.04, h: 1 }, L3.x0 + 0.03, (L3.z0 + L3.z1) / 2 + 0.2, Math.PI / 2);
+      P6.wall(S6("filing"), "right", "start");
+      P6.wall(S6("bench"), "front", "start");
+    },
+    library(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "books", len: 1.6 });
+      P6.wall(S6("bookcase"), "left", "start");
+      P6.wall(S6("bookcase"), "left", "end");
+      P6.wall(S6("bookcase"), "right", "start");
+      P6.wall(S6("bookcase"), "right", "end");
+      const tb = P6.free(S6("table"), 0.6, L3.z1 - 1.5);
+      if (tb) for (const s of [-1, 1]) P6.deco(S6("chair"), tb.x + s * (tb.w / 2 + 0.2), tb.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+      L3.use.push({ kind: "read", x: L3.x0 + 0.7, z: (L3.z0 + L3.z1) / 2, label: "Browse the shelves" });
+    },
+    tavern(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "bottles", len: 3 });
+      const bar2 = L3.items.find((it) => it.k === "counter");
+      if (bar2) for (let x = bar2.rect.x0 + 0.35; x < bar2.rect.x1 - 0.2; x += 0.62) P6.deco(S6("stool"), x, bar2.rect.z1 + 0.3, 0);
+      for (const px2 of [L3.x0 + 0.9, L3.x1 - 0.9]) {
+        const t = P6.free(S6("roundTable"), px2, L3.z1 - 1.05);
+        if (!t) continue;
+        for (const a of [0, 2.1, 4.2]) {
+          const x = t.x + Math.cos(a) * 0.62, z = t.z + Math.sin(a) * 0.62;
+          if (x < L3.x0 + 0.15 || x > L3.x1 - 0.15 || z < L3.z0 + 0.15 || z > L3.z1 - 0.15) continue;
+          P6.deco(S6("stool"), x, z, 0);
+        }
+        L3.residents.push({ x: t.x + 0.62, z: t.z, sit: true, face: Math.PI / 2 });
+      }
+      P6.wall(S6("barrel"), "right", "end") || P6.wall(S6("barrel"), "front", "end");
+      P6.wall(S6("barrel"), "left", "end");
+      P6.deco({ k: "wanted", w: 0.9, d: 0.04, h: 0.8 }, L3.x1 - 0.03, (L3.z0 + L3.z1) / 2, -Math.PI / 2);
+      L3.rest = bar2 ? { x: bar2.x, z: bar2.rect.z1 + 0.7 } : { x: 0, z: L3.z1 - 1 };
+    },
+    inn(P6, L3, b, R5, S6, g) {
+      ROOMS2.tavern(P6, L3, b, R5, S6, g);
+      P6.wall(S6("stairs"), "left", "start") || P6.wall(S6("stairs"), "right", "start");
+    },
+    restaurant(P6, L3, b, R5, S6, g) {
+      counterRoom(P6, L3, S6, g, { shelf: "bottles", len: 2.2 });
+      const W4 = L3.x1 - L3.x0, D4 = L3.z1 - L3.z0;
+      const cols = Math.max(2, Math.floor((W4 - 1) / (3.2 * g)));
+      const small = cols === 2 && D4 - 3 * g < 5.6 * g;
+      const rows = small ? 1 : Math.max(1, Math.min(4, 1 + Math.floor((D4 - 3.7 * g) / (2.4 * g))));
+      let diners = 0;
+      for (let r4 = 0; r4 < rows; r4++) {
+        for (let c = 0; c < cols; c++) {
+          const px2 = small ? c ? L3.x1 - 0.8 : L3.x0 + 0.8 : L3.x0 + 0.5 + (c + 0.5) * (W4 - 1) / cols;
+          const pz2 = L3.z1 - (small ? 1.1 : 1.1 * g + r4 * 2.4 * g);
+          const t = small ? P6.free(S6("table"), px2, pz2) : P6.at(S6("table"), px2, pz2, 0);
+          if (!t) continue;
+          for (const s of [-1, 1]) {
+            const x = t.x + s * (t.w / 2 + 0.22);
+            if (x < L3.x0 + 0.2 || x > L3.x1 - 0.2) continue;
+            P6.deco(S6("chair"), x, t.z, s < 0 ? Math.PI / 2 : -Math.PI / 2);
+          }
+          if (small || diners < 6 && (r4 + c) % 2 === 0) {
+            L3.residents.push({ x: t.x + t.w / 2 + 0.22, z: t.z, sit: true, face: -Math.PI / 2 });
+            diners++;
+          }
+        }
+      }
+      P6.wall(S6("plant"), "front", "end");
+    },
+    doctor(P6, L3, b, R5, S6, g) {
+      const desk = P6.wall(S6("desk"), "back", "start", 0.62 * g);
+      if (desk) {
+        L3.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
+        P6.rects.push({ x0: desk.rect.x0, x1: desk.rect.x1, z0: L3.z0, z1: desk.rect.z0 });
+        L3.use.push({ kind: "service", x: desk.x, z: desk.rect.z1 + 0.45, label: null });
+        P6.deco(S6("chair"), desk.x, desk.rect.z0 - 0.3, 0);
+      }
+      P6.wall(S6("cabinet"), "back", "end");
+      const b1 = P6.wall(S6("medbed"), "right", "start") || P6.wall(S6("medbed"), "left", "start");
+      if (b1) L3.residents.push({ x: b1.x, z: b1.z, lie: true, rot: b1.rot });
+      P6.wall(S6("medbed"), "left", "start");
+      P6.wall(S6("screen"), "right", "end");
+      P6.deco({ k: "redcross", w: 0.6, d: 0.03, h: 0.6 }, desk ? desk.x : 0, L3.z0 + 0.02, 0);
+      P6.wall(S6("plant"), "front", "end");
+    },
+    dojo(P6, L3, b, R5, S6, g) {
+      P6.deco({ k: "mats", w: L3.x1 - L3.x0 - 0.4, d: L3.z1 - L3.z0 - 0.3, h: 0.03 }, (L3.x0 + L3.x1) / 2, (L3.z0 + L3.z1) / 2);
+      const sh = P6.wall(S6("shrine"), "back", "center");
+      L3.keeper = { x: sh ? sh.x : 0, z: (sh ? sh.rect.z1 : L3.z0) + 0.55 };
+      P6.rects.push({ x0: L3.keeper.x - 0.4, x1: L3.keeper.x + 0.4, z0: L3.keeper.z - 0.35, z1: L3.keeper.z + 0.35 });
+      P6.wall(S6("rack"), "left", "start");
+      P6.wall(S6("rack"), "right", "start");
+      P6.free(S6("dummy"), L3.x0 + 1, L3.z1 - 1.2);
+      P6.free(S6("dummy"), L3.x1 - 1, L3.z1 - 1.2);
+      L3.use.push({ kind: "service", x: L3.keeper.x, z: L3.keeper.z + 0.9, label: null });
+    },
+    church(P6, L3, b, R5, S6, g) {
+      const al = P6.wall(S6("altar"), "back", "center", 0.6 * g);
+      if (al) {
+        L3.keeper = { x: al.x, z: al.rect.z0 - 0.3 };
+        P6.rects.push({ x0: al.rect.x0, x1: al.rect.x1, z0: L3.z0, z1: al.rect.z0 });
+        L3.use.push({ kind: "service", x: al.x, z: al.rect.z1 + 0.5, label: null });
+      }
+      for (let z = (al ? al.rect.z1 : L3.z0) + 0.9; z < L3.z1 - 1.2; z += 0.95) {
+        for (const s of [-1, 1]) {
+          const w = Math.min(1.9 * g, (L3.x1 - L3.x0) / 2 - 0.7);
+          if (w < 0.8) continue;
+          P6.at({ ...S6("pew"), w }, s * ((L3.x1 - L3.x0) / 4 + 0.15), z, Math.PI);
+        }
+      }
+      P6.wall(S6("plant"), "front", "start");
+      P6.wall(S6("plant"), "front", "end");
+    },
+    marine(P6, L3, b, R5, S6, g) {
+      const desk = P6.wall(S6("desk"), "back", "center", 0.62 * g);
+      if (desk) {
+        L3.keeper = { x: desk.x, z: desk.rect.z0 - 0.32 };
+        P6.rects.push({ x0: desk.rect.x0, x1: desk.rect.x1, z0: L3.z0, z1: desk.rect.z0 });
+        L3.use.push({ kind: "service", x: desk.x, z: desk.rect.z1 + 0.45, label: null });
+        P6.deco(S6("chair"), desk.x, desk.rect.z0 - 0.3, 0);
+        P6.deco({ ...S6("flag"), k: "marineflag" }, desk.x, L3.z0 + 0.03, 0);
+      }
+      P6.wall(S6("filing"), "back", "start");
+      P6.wall(S6("filing"), "back", "end");
+      P6.wall(S6("rack"), "left", "start");
+      P6.wall(S6("bench"), "right", "end") || P6.wall(S6("bench"), "front", "start");
+      P6.deco({ k: "wanted", w: 1.2, d: 0.04, h: 0.9 }, L3.x1 - 0.03, (L3.z0 + L3.z1) / 2 - 0.3, -Math.PI / 2);
+      L3.residents.push({ x: L3.x0 + 0.8, z: L3.z1 - 1, guard: true });
+    },
+    shipwright(P6, L3, b, R5, S6, g) {
+      const wb = P6.wall(S6("workbench"), "back", "start", 0.62 * g);
+      if (wb) {
+        L3.keeper = { x: wb.x, z: wb.rect.z0 - 0.32 };
+        P6.rects.push({ x0: wb.rect.x0, x1: wb.rect.x1, z0: L3.z0, z1: wb.rect.z0 });
+        L3.use.push({ kind: "service", x: wb.x, z: wb.rect.z1 + 0.45, label: null });
+      }
+      P6.free(S6("hull"), L3.x1 - 1.6, (L3.z0 + L3.z1) / 2);
+      P6.wall(S6("lumber"), "front", "start") || P6.wall(S6("lumber"), "left", "end");
+      P6.wall(S6("rack"), "right", "start");
+      P6.wall(S6("barrel"), "front", "end");
+    }
+  };
+
   // src/game/entity.js
   var nextId = 1;
   var Entity = class {
@@ -5018,60 +7182,6 @@
     if (b.faction === "player" && a.aggroPlayer) return true;
     const fa = HOSTILITY[a.faction], fb = HOSTILITY[b.faction];
     return fa && fa.has(b.faction) || fb && fb.has(a.faction) || false;
-  }
-
-  // src/core/math.js
-  var TAU = Math.PI * 2;
-  var clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-  var lerp = (a, b, t) => a + (b - a) * t;
-  var smoothstep = (a, b, x) => {
-    const t = clamp((x - a) / (b - a), 0, 1);
-    return t * t * (3 - 2 * t);
-  };
-  function angleDiff(a, b) {
-    let d = (b - a) % TAU;
-    if (d > Math.PI) d -= TAU;
-    else if (d <= -Math.PI) d += TAU;
-    return d;
-  }
-  function springStep(x, v, target2, w, dt, zeta = 1, out = [0, 0]) {
-    const e0 = x - target2;
-    if (zeta >= 1) {
-      const c = v + w * e0, k2 = Math.exp(-w * dt);
-      out[0] = target2 + (e0 + c * dt) * k2;
-      out[1] = (v - w * c * dt) * k2;
-      return out;
-    }
-    const wd = w * Math.sqrt(1 - zeta * zeta), k = Math.exp(-zeta * w * dt);
-    const B5 = (v + zeta * w * e0) / wd, cs = Math.cos(wd * dt), sn = Math.sin(wd * dt);
-    out[0] = target2 + k * (e0 * cs + B5 * sn);
-    out[1] = k * ((wd * B5 - zeta * w * e0) * cs - (zeta * w * B5 + wd * e0) * sn);
-    return out;
-  }
-  function formatBerries(n) {
-    return "\u0E3F" + Math.round(n).toLocaleString("en-US");
-  }
-  function roundBounty(b) {
-    if (!(b > 0)) return 0;
-    const mag = Math.pow(10, Math.max(4, Math.floor(Math.log10(b)) - 2));
-    return Math.round(b / mag) * mag;
-  }
-  function hexToRgb(hex3) {
-    const h2 = hex3.replace("#", "");
-    const n = parseInt(h2.length === 3 ? h2.split("").map((c) => c + c).join("") : h2, 16);
-    return [n >> 16 & 255, n >> 8 & 255, n & 255];
-  }
-  function rgbToHex(r4, g, b) {
-    return "#" + [r4, g, b].map((v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, "0")).join("");
-  }
-  function shade(hex3, amt) {
-    const [r4, g, b] = hexToRgb(hex3);
-    if (amt >= 0) return rgbToHex(r4 + (255 - r4) * amt, g + (255 - g) * amt, b + (255 - b) * amt);
-    return rgbToHex(r4 * (1 + amt), g * (1 + amt), b * (1 + amt));
-  }
-  function mixHex(a, b, t) {
-    const A2 = hexToRgb(a), B5 = hexToRgb(b);
-    return rgbToHex(lerp(A2[0], B5[0], t), lerp(A2[1], B5[1], t), lerp(A2[2], B5[2], t));
   }
 
   // src/game/stats.js
@@ -5129,7 +7239,7 @@
     },
     soft: (k) => k * k * (3 - 2 * k)
   };
-  var clamp01 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+  var clamp012 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
   var clamp2 = (v, a, b) => v < a ? a : v > b ? b : v;
   var mixN = (a, b, k) => a + (b - a) * k;
   var frac = (x) => x - Math.floor(x);
@@ -5549,7 +7659,7 @@
 
   // src/render/anim/move.js
   function gaitParams(v, sprint) {
-    const k = clamp01((v - 1.4) / 3);
+    const k = clamp012((v - 1.4) / 3);
     const s = sprint ? 1 : 0;
     return {
       k,
@@ -5599,8 +7709,8 @@
     P6.ht = (P6.ht || 0) - P6.l * 0.45;
     const armed = base2.wF !== null && base2.wF !== void 0;
     if (pose.combat && !armed) return;
-    const swF = clamp01(0.5 - a[0] / (2 * g.R)), swB = clamp01(0.5 - b[0] / (2 * g.R));
-    const run = clamp01(g.k * 1.3 - 0.2);
+    const swF = clamp012(0.5 - a[0] / (2 * g.R)), swB = clamp012(0.5 - b[0] / (2 * g.R));
+    const run = clamp012(g.k * 1.3 - 0.2);
     const walkArm = (s) => [mixN(-0.1, 0.14, s), 0.38 - s * 0.03];
     const runArm = (s) => [mixN(-0.14, 0.22 + 0.04 * g.s, s), mixN(0.28, 0.06, s)];
     const wF = walkArm(swF), wB = walkArm(swB), rF = runArm(swF), rB = runArm(swB);
@@ -6140,7 +8250,7 @@
     return out;
   }
   function dodgePose(P6, pose) {
-    const k = clamp01(pose.dodge), kind = pose.dodgeKind || "dash";
+    const k = clamp012(pose.dodge), kind = pose.dodgeKind || "dash";
     const dir = pose.dodgeDir ?? 1, side = pose.dodgeSide ?? (Math.abs(dir) < 0.35 ? 1 : 0);
     const n = Math.hypot(dir, side) || 1;
     const c = dir / n, s = side / n;
@@ -6235,7 +8345,7 @@
   function flightPose(P6, pose) {
     const F4 = pose.flight;
     const t = F4.t || 0, style = F4.style || "hero";
-    const A2 = attitude(F4, style === "ride" || style === "float" ? 0.32 : style === "geppo" ? 0.42 : 1.22);
+    const A2 = attitude(F4, style === "ride" || style === "float" ? 0.32 : style === "geppo" ? 0.42 : style === "swing" ? 0.2 : style === "jet" ? 1.05 : 1.22);
     const side = clamp2((F4.side || 0) / 8, -1, 1);
     P6.wF = null;
     P6.wB = null;
@@ -6248,7 +8358,7 @@
     P6.hp = 0;
     P6.ls = 0;
     (STYLE[style] || STYLE.hero)(P6, F4, A2, t);
-    if (style !== "ride") P6.r = (P6.r || 0) + A2.r;
+    if (style !== "ride" && !(style === "swing" && F4.sw != null)) P6.r = (P6.r || 0) + A2.r;
     P6.bk = clamp2((F4.bank || 0) + side * 0.35, -0.85, 0.85) * (style === "float" || style === "ride" ? 0.5 : 1);
     P6.ht = (P6.ht || 0) - (P6.r || 0) * 0.62;
     P6.hand = P6.hand || "fist";
@@ -6347,6 +8457,59 @@
       P6.tw = 0.18 + 0.1 * A2.cruise;
       P6.hp = 0.2;
       P6.ht = -lean * 0.4;
+    },
+    // jets from the feet (Iron Man, Ace): legs straight and together, the feet the
+    // nozzles; hovering upright with the arms down and out, palms to the ground,
+    // steadying; laid out flat at speed, the arms swept back along the sides
+    jet(P6, F4, A2, t) {
+      const w = t * 2.3;
+      P6.b = [0, 5e-3 * Math.sin(w)];
+      P6.l = 0.02;
+      const hov = [0.03, 0.36], fly = [-0.07, 0.4];
+      P6.hF = mixP(hov, fly, A2.cruise);
+      P6.hB = mixP([0, 0.37], [-0.08, 0.4], A2.cruise);
+      P6.zF = mixN(0.2, 0.06, A2.cruise) + 0.01 * Math.sin(w);
+      P6.zB = mixN(0.22, 0.06, A2.cruise) - 0.01 * Math.sin(w + 1);
+      P6.eF = 0.2;
+      P6.eB = 0.2;
+      P6.hand = "palm";
+      P6.handB = "palm";
+      P6.fF = [0.02, -0.01];
+      P6.fB = [-0.02, -0.02];
+      P6.zfF = 0.03;
+      P6.zfB = 0.03;
+      P6.ht = 0.02;
+    },
+    // hanging from a string and swinging (Spider-Man): the hand up on the string,
+    // the other out for balance, the legs sweeping through the arc — tucked
+    // under at the bottom, swung out ahead up the far side
+    swing(P6, F4, A2, t) {
+      if (F4.sw == null) {
+        STYLE.float(P6, F4, A2, t);
+        P6.hF = [0.06, -0.44];
+        P6.zF = 0.06;
+        P6.eF = 0.1;
+        P6.hand = "fist";
+        return;
+      }
+      const s = F4.sw;
+      P6.r = -s * 0.75;
+      P6.b = [0, 0.01];
+      P6.hF = [0.04, -0.46];
+      P6.zF = 0.04;
+      P6.eF = 0.08;
+      P6.hand = "fist";
+      P6.hB = [0.1 - 0.22 * s, 0.22 + 0.06 * Math.abs(s)];
+      P6.zB = 0.22;
+      P6.eB = 0.5;
+      P6.handB = "relaxed";
+      const tuck = 1 - Math.abs(s);
+      P6.fF = [-0.1 + 0.26 * (s + 1) / 2, -0.08 - 0.12 * tuck];
+      P6.fB = [-0.14 + 0.22 * (s + 1) / 2, -0.04 - 0.06 * tuck];
+      P6.zfF = 0.03;
+      P6.zfB = 0.02;
+      P6.l = 0.05 + 0.1 * tuck;
+      P6.ht = 0.06 * s;
     },
     // weightless: upright, easy, drifting
     float(P6, F4, A2, t) {
@@ -6504,7 +8667,7 @@
       S6.h = h2;
     } else S6.h = null;
     S6.bank += (want - S6.bank) * Math.min(1, dt * 4);
-    return { style: S6.style, t: now3 - S6.t0, up: now3 - S6.upT, fwd: vx * c + vy * s, side: -vx * s + vy * c, climb: S6.climb, bank: S6.bank, speed: sp };
+    return { style: S6.style, t: now3 - S6.t0, up: now3 - S6.upT, fwd: vx * c + vy * s, side: -vx * s + vy * c, climb: S6.climb, bank: S6.bank, speed: sp, sw: a.swingAnchor ? a.swingTh ?? 0 : null };
   }
 
   // src/render/anims.js
@@ -6559,7 +8722,7 @@
     keys2.push({ t: tEnd, p: end, e: "inout" });
     return finalize(keys2);
   }
-  var S = (c, o) => ({
+  var S2 = (c, o) => ({
     ...o,
     stance: o.stance || c.stance,
     weight: o.weight || c.weight,
@@ -6574,169 +8737,169 @@
   var CLIPS = {
     // ---------------------------------------------------------------- fists
     // the lead fist snapped straight out from the chin, the lead foot stepping in under it; the other fist never leaves the chin
-    jab: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.02, 0.06], l: 0.05, tw: -0.12, hp: -0.04, ht: 0.08, hF: [0.13, 0], hB: [0.11, -0.01], face: "fierce" }, hit: { b: [0.1, 0.035], l: 0.2, tw: 0.36, hp: 0.14, ht: 0.02, hF: [0.47, -0.05], hB: [0.1, -0.03], fF: [0.25, 0], fB: [-0.12, -0.01], sm: 0.1, face: "fierce" }, follow: { hF: [0.36, -0.02], tw: 0.28, l: 0.17 } })) }),
+    jab: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.02, 0.06], l: 0.05, tw: -0.12, hp: -0.04, ht: 0.08, hF: [0.13, 0], hB: [0.11, -0.01], face: "fierce" }, hit: { b: [0.1, 0.035], l: 0.2, tw: 0.36, hp: 0.14, ht: 0.02, hF: [0.47, -0.05], hB: [0.1, -0.03], fF: [0.25, 0], fB: [-0.12, -0.01], sm: 0.1, face: "fierce" }, follow: { hF: [0.36, -0.02], tw: 0.28, l: 0.17 } })) }),
     // the rear hand: the hips whip round and drive the shoulder through, the back heel up, the lead fist pulled home
-    cross: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.04, 0.06], l: 0.02, tw: 0.22, hp: 0.12, ht: 0.06, hB: [0.05, 0], hF: [0.22, -0.03], face: "fierce" }, hit: { b: [0.13, 0.04], l: 0.28, tw: -0.62, hp: -0.42, ht: 0, hB: [0.49, -0.05], hF: [0.1, 0], fF: [0.25, 0], fB: [-0.14, -0.05], sm: 0.12, face: "shout" }, follow: { tw: -0.72, l: 0.3, hB: [0.42, -0.02] } })) }),
+    cross: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.04, 0.06], l: 0.02, tw: 0.22, hp: 0.12, ht: 0.06, hB: [0.05, 0], hF: [0.22, -0.03], face: "fierce" }, hit: { b: [0.13, 0.04], l: 0.28, tw: -0.62, hp: -0.42, ht: 0, hB: [0.49, -0.05], hF: [0.1, 0], fF: [0.25, 0], fB: [-0.14, -0.05], sm: 0.12, face: "shout" }, follow: { tw: -0.72, l: 0.3, hB: [0.42, -0.02] } })) }),
     // wide and flat: the elbow up, the fist swung round from the side as the whole body turns into it
-    hook: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.02, 0.08], l: 0.06, tw: -0.4, hp: -0.12, ht: 0.06, hF: [0.1, -0.02], zF: 0.2, eF: -1, hB: [0.12, -0.01], face: "fierce" }, hit: { b: [0.08, 0.06], l: 0.2, tw: 0.62, hp: 0.32, ht: 0.03, hF: [0.36, -0.06], zF: -0.04, eF: -0.8, hB: [0.1, 0], fF: [0.21, 0], fB: [-0.15, -0.04], sm: 0.06, face: "shout" }, follow: { tw: 0.8, l: 0.24, hF: [0.3, -0.03], zF: -0.12, eF: -0.7 } })) }),
+    hook: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.02, 0.08], l: 0.06, tw: -0.4, hp: -0.12, ht: 0.06, hF: [0.1, -0.02], zF: 0.2, eF: -1, hB: [0.12, -0.01], face: "fierce" }, hit: { b: [0.08, 0.06], l: 0.2, tw: 0.62, hp: 0.32, ht: 0.03, hF: [0.36, -0.06], zF: -0.04, eF: -0.8, hB: [0.1, 0], fF: [0.21, 0], fB: [-0.15, -0.04], sm: 0.06, face: "shout" }, follow: { tw: 0.8, l: 0.24, hF: [0.3, -0.03], zF: -0.12, eF: -0.7 } })) }),
     // the finisher: dropped low and coiled, then up off the ground behind the fist
-    uppercut: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.13], l: 0.26, tw: -0.32, hp: -0.16, ht: 0.12, hF: [0.12, 0.3], eF: 1, hB: [0.12, -0.02], fF: [0.2, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.07, -0.07], z: 0.11, l: -0.06, tw: 0.5, hp: 0.28, ht: -0.24, hF: [0.3, -0.33], eF: 0.5, hB: [0.06, 0.1], fF: [0.2, -0.05], fB: [-0.08, -0.18], sm: 0.08, face: "shout" }, follow: { z: 0.05, l: -0.03, hF: [0.27, -0.3] } })), legs: true }),
+    uppercut: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.13], l: 0.26, tw: -0.32, hp: -0.16, ht: 0.12, hF: [0.12, 0.3], eF: 1, hB: [0.12, -0.02], fF: [0.2, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.07, -0.07], z: 0.11, l: -0.06, tw: 0.5, hp: 0.28, ht: -0.24, hF: [0.3, -0.33], eF: 0.5, hB: [0.06, 0.1], fF: [0.2, -0.05], fB: [-0.08, -0.18], sm: 0.08, face: "shout" }, follow: { z: 0.05, l: -0.03, hF: [0.27, -0.3] } })), legs: true }),
     // a dip forward, the arm swung right back with the whole trunk wound up behind it, then everything thrown through it
-    haymaker: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.66, antic: { b: [0.03, 0.07], l: 0.16, tw: 0.12, hF: [0.24, 0], ht: 0.1 }, load: { b: [-0.1, 0.07], l: -0.28, tw: -0.8, hp: -0.32, ht: -0.04, hF: [-0.32, -0.12], zF: 0.06, eF: 0.9, hB: [0.24, -0.02], handB: "palm", fF: [0.24, 0], fB: [-0.19, 0], face: "grit" }, hit: { b: [0.25, 0.05], l: 0.44, tw: 0.78, hp: 0.48, ht: -0.12, hF: [0.5, -0.03], eF: 0.2, hB: [-0.14, 0.16], zB: 0.1, handB: "fist", fF: [0.36, 0], fB: [-0.12, -0.08], sm: 0.14, face: "shout" }, follow: { b: [0.28, 0.08], l: 0.5, tw: 0.9, hF: [0.44, 0.06] } })), jitter: 0.012 }),
+    haymaker: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.66, antic: { b: [0.03, 0.07], l: 0.16, tw: 0.12, hF: [0.24, 0], ht: 0.1 }, load: { b: [-0.1, 0.07], l: -0.28, tw: -0.8, hp: -0.32, ht: -0.04, hF: [-0.32, -0.12], zF: 0.06, eF: 0.9, hB: [0.24, -0.02], handB: "palm", fF: [0.24, 0], fB: [-0.19, 0], face: "grit" }, hit: { b: [0.25, 0.05], l: 0.44, tw: 0.78, hp: 0.48, ht: -0.12, hF: [0.5, -0.03], eF: 0.2, hB: [-0.14, 0.16], zB: 0.1, handB: "fist", fF: [0.36, 0], fB: [-0.12, -0.08], sm: 0.14, face: "shout" }, follow: { b: [0.28, 0.08], l: 0.5, tw: 0.9, hF: [0.44, 0.06] } })), jitter: 0.012 }),
     // Fish-Man Karate: the palm from the hip, the other hand pulled back to its hip as it goes (and the kiai)
-    palm: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: PALMS, load: { b: [-0.02, 0.11], l: 0.02, tw: -0.28, hp: -0.1, hF: [0.03, 0.19], hB: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.13, 0.08], l: 0.18, tw: 0.46, hp: 0.22, hF: [0.49, -0.03], hB: [-0.02, 0.2], hand: "palm", handB: "fist", fF: [0.27, 0], fB: [-0.18, -0.02], sm: 0.08, face: "shout" }, follow: { hF: [0.45, -0.01], l: 0.2 } })) }),
-    palm2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: PALMS, load: { b: [-0.03, 0.11], l: 0, tw: 0.3, hp: 0.12, hB: [0, 0.2], hF: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.14, 0.08], l: 0.24, tw: -0.55, hp: -0.3, hB: [0.5, -0.03], hF: [-0.02, 0.2], hand: "fist", handB: "palm", fF: [0.27, 0], fB: [-0.18, -0.03], sm: 0.08, face: "shout" }, follow: { hB: [0.45, -0.01], l: 0.25 } })) }),
+    palm: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: PALMS, load: { b: [-0.02, 0.11], l: 0.02, tw: -0.28, hp: -0.1, hF: [0.03, 0.19], hB: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.13, 0.08], l: 0.18, tw: 0.46, hp: 0.22, hF: [0.49, -0.03], hB: [-0.02, 0.2], hand: "palm", handB: "fist", fF: [0.27, 0], fB: [-0.18, -0.02], sm: 0.08, face: "shout" }, follow: { hF: [0.45, -0.01], l: 0.2 } })) }),
+    palm2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: PALMS, load: { b: [-0.03, 0.11], l: 0, tw: 0.3, hp: 0.12, hB: [0, 0.2], hF: [0.3, -0.02], hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0.14, 0.08], l: 0.24, tw: -0.55, hp: -0.3, hB: [0.5, -0.03], hF: [-0.02, 0.2], hand: "fist", handB: "palm", fF: [0.27, 0], fB: [-0.18, -0.03], sm: 0.08, face: "shout" }, follow: { hB: [0.45, -0.01], l: 0.25 } })) }),
     // both palms gathered at one hip, the body wound round them, then driven out together (the Shark Tile Fist)
-    palm_double: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: PALMS, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.1, hF: [0.3, 0], hB: [0.28, 0.04] }, load: { b: [-0.08, 0.14], l: -0.16, tw: -0.5, hp: -0.2, hF: [-0.06, 0.2], hB: [-0.1, 0.17], hand: "palm", handB: "palm", fF: [0.23, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.23, 0.08], l: 0.3, tw: 0.2, hp: 0.25, hF: [0.5, -0.07], hB: [0.47, 0.07], hand: "palm", handB: "palm", fF: [0.33, 0], fB: [-0.19, -0.04], smF: 0.1, smB: 0.1, face: "shout" }, follow: { l: 0.34, b: [0.25, 0.1] } })), jitter: 0.01 }),
+    palm_double: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: PALMS, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.1, hF: [0.3, 0], hB: [0.28, 0.04] }, load: { b: [-0.08, 0.14], l: -0.16, tw: -0.5, hp: -0.2, hF: [-0.06, 0.2], hB: [-0.1, 0.17], hand: "palm", handB: "palm", fF: [0.23, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.23, 0.08], l: 0.3, tw: 0.2, hp: 0.25, hF: [0.5, -0.07], hB: [0.47, 0.07], hand: "palm", handB: "palm", fF: [0.33, 0], fB: [-0.19, -0.04], smF: 0.1, smB: 0.1, face: "shout" }, follow: { l: 0.34, b: [0.25, 0.1] } })), jitter: 0.01 }),
     // Shigan: a fencer's lunge behind one stabbing finger, the other hand kept at the small of the back
-    shigan: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.03, 0.05], l: -0.04, tw: -0.15, hp: -0.06, hF: [0.03, -0.06], hand: "finger", face: "fierce" }, hit: { b: [0.18, 0.05], l: 0.3, tw: 0.6, hp: 0.36, hF: [0.53, -0.07], hand: "finger", hB: [-0.14, 0.26], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hF: [0.46, -0.05] } })) }),
-    shigan2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.03, 0.05], l: -0.06, tw: 0.25, hp: 0.1, hB: [0, -0.05], handB: "finger", hF: [0.18, 0.02], face: "fierce" }, hit: { b: [0.19, 0.05], l: 0.32, tw: -0.66, hp: -0.4, hB: [0.53, -0.07], handB: "finger", hF: [-0.1, 0.24], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hB: [0.46, -0.05] } })) }),
+    shigan: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.03, 0.05], l: -0.04, tw: -0.15, hp: -0.06, hF: [0.03, -0.06], hand: "finger", face: "fierce" }, hit: { b: [0.18, 0.05], l: 0.3, tw: 0.6, hp: 0.36, hF: [0.53, -0.07], hand: "finger", hB: [-0.14, 0.26], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hF: [0.46, -0.05] } })) }),
+    shigan2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.03, 0.05], l: -0.06, tw: 0.25, hp: 0.1, hB: [0, -0.05], handB: "finger", hF: [0.18, 0.02], face: "fierce" }, hit: { b: [0.19, 0.05], l: 0.32, tw: -0.66, hp: -0.4, hB: [0.53, -0.07], handB: "finger", hF: [-0.1, 0.24], fF: [0.31, 0], fB: [-0.2, -0.02], sm: 0.16, face: "fierce" }, follow: { hB: [0.46, -0.05] } })) }),
     // a claw raked down from high behind the head (and back up, and both crossing)
-    claw: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: -0.08, b: [-0.02, 0.05], tw: -0.35, ls: -0.08, hF: { a: -2.15, r: 0.38 }, zF: 0.08, hand: "claw", eF: 1, face: "fierce" }, hit: { l: 0.32, b: [0.12, 0.08], tw: 0.5, ls: 0.08, hF: { a: 0.75, r: 0.43 }, zF: -0.08, hand: "claw", fF: [0.24, 0], fB: [-0.15, -0.02], sm: 0.06, face: "shout" }, follow: { hF: { a: 1.15, r: 0.4 }, zF: -0.14, tw: 0.62 } })) }),
-    claw2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: 0.18, b: [0, 0.1], tw: 0.32, hB: { a: 1.7, r: 0.36 }, zB: 0.06, handB: "claw", face: "fierce" }, hit: { l: -0.1, b: [0.1, 0], tw: -0.55, hB: { a: -0.95, r: 0.43 }, zB: -0.06, handB: "claw", hF: [0.12, 0.1], sm: 0.06, face: "shout" }, follow: { hB: { a: -1.25, r: 0.41 } } })) }),
-    claw_x: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.68, antic: { b: [0, 0.1], l: 0.2, hF: [0.2, 0.15], hB: [0.15, 0.18] }, load: { l: -0.24, b: [-0.04, 0.03], ht: -0.12, hF: { a: -2, r: 0.42 }, hB: { a: -1.85, r: 0.4 }, zF: 0.12, zB: 0.12, hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.4, b: [0.18, 0.1], ht: 0.1, hF: { a: 0.95, r: 0.43 }, hB: { a: 0.8, r: 0.42 }, zF: -0.12, zB: -0.12, hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, -0.02], smF: 0.07, smB: 0.07, face: "shout" }, follow: { l: 0.44, b: [0.2, 0.12] } })), jitter: 8e-3 }),
+    claw: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: -0.08, b: [-0.02, 0.05], tw: -0.35, ls: -0.08, hF: { a: -2.15, r: 0.38 }, zF: 0.08, hand: "claw", eF: 1, face: "fierce" }, hit: { l: 0.32, b: [0.12, 0.08], tw: 0.5, ls: 0.08, hF: { a: 0.75, r: 0.43 }, zF: -0.08, hand: "claw", fF: [0.24, 0], fB: [-0.15, -0.02], sm: 0.06, face: "shout" }, follow: { hF: { a: 1.15, r: 0.4 }, zF: -0.14, tw: 0.62 } })) }),
+    claw2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: 0.18, b: [0, 0.1], tw: 0.32, hB: { a: 1.7, r: 0.36 }, zB: 0.06, handB: "claw", face: "fierce" }, hit: { l: -0.1, b: [0.1, 0], tw: -0.55, hB: { a: -0.95, r: 0.43 }, zB: -0.06, handB: "claw", hF: [0.12, 0.1], sm: 0.06, face: "shout" }, follow: { hB: { a: -1.25, r: 0.41 } } })) }),
+    claw_x: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.68, antic: { b: [0, 0.1], l: 0.2, hF: [0.2, 0.15], hB: [0.15, 0.18] }, load: { l: -0.24, b: [-0.04, 0.03], ht: -0.12, hF: { a: -2, r: 0.42 }, hB: { a: -1.85, r: 0.4 }, zF: 0.12, zB: 0.12, hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.4, b: [0.18, 0.1], ht: 0.1, hF: { a: 0.95, r: 0.43 }, hB: { a: 0.8, r: 0.42 }, zF: -0.12, zB: -0.12, hand: "claw", handB: "claw", fF: [0.3, 0], fB: [-0.18, -0.02], smF: 0.07, smB: 0.07, face: "shout" }, follow: { l: 0.44, b: [0.2, 0.12] } })), jitter: 8e-3 }),
     // Ryusoken: the claw cocked by the ear, lunged out open, then crushed shut on what it caught
-    grab: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.02, 0.07], l: -0.06, tw: -0.32, hF: [0.02, -0.12], zF: 0.06, hand: "claw", eF: -0.6, face: "fierce" }, hit: { b: [0.14, 0.04], l: 0.28, tw: 0.5, hp: 0.25, hF: [0.5, -0.06], hand: "claw", fF: [0.26, 0], fB: [-0.15, -0.02], sm: 0.1, face: "shout" }, follow: { hand: "fist", hF: [0.43, -0.02], hr: 0.08, l: 0.22 } })) }),
-    grab2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.02, 0.07], l: -0.08, tw: 0.3, hB: [0, -0.1], zB: 0.06, handB: "claw", eB: -0.6, face: "fierce" }, hit: { b: [0.15, 0.04], l: 0.3, tw: -0.58, hp: -0.3, hB: [0.5, -0.05], handB: "claw", hF: [0.08, 0.12], sm: 0.1, face: "shout" }, follow: { handB: "fist", hB: [0.43, -0.01], hr: -0.08 } })) }),
-    chop: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: -0.14, b: [-0.02, 0.04], tw: -0.3, hF: { a: -2.15, r: 0.37 }, hand: "palm", face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.42, hp: 0.2, hF: { a: 0.6, r: 0.43 }, hand: "palm", fF: [0.24, 0], sm: 0.06, face: "fierce" }, follow: { hF: { a: 0.9, r: 0.42 }, tw: 0.5 } })) }),
-    chop2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: 0.12, b: [0, 0.08], tw: 0.25, hF: { a: 2, r: 0.34 }, hand: "palm", face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.3, hF: { a: -0.62, r: 0.43 }, hand: "palm", sm: 0.06, face: "fierce" }, follow: { hF: { a: -0.9, r: 0.42 } } })) }),
+    grab: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.02, 0.07], l: -0.06, tw: -0.32, hF: [0.02, -0.12], zF: 0.06, hand: "claw", eF: -0.6, face: "fierce" }, hit: { b: [0.14, 0.04], l: 0.28, tw: 0.5, hp: 0.25, hF: [0.5, -0.06], hand: "claw", fF: [0.26, 0], fB: [-0.15, -0.02], sm: 0.1, face: "shout" }, follow: { hand: "fist", hF: [0.43, -0.02], hr: 0.08, l: 0.22 } })) }),
+    grab2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.02, 0.07], l: -0.08, tw: 0.3, hB: [0, -0.1], zB: 0.06, handB: "claw", eB: -0.6, face: "fierce" }, hit: { b: [0.15, 0.04], l: 0.3, tw: -0.58, hp: -0.3, hB: [0.5, -0.05], handB: "claw", hF: [0.08, 0.12], sm: 0.1, face: "shout" }, follow: { handB: "fist", hB: [0.43, -0.01], hr: -0.08 } })) }),
+    chop: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: -0.14, b: [-0.02, 0.04], tw: -0.3, hF: { a: -2.15, r: 0.37 }, hand: "palm", face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.42, hp: 0.2, hF: { a: 0.6, r: 0.43 }, hand: "palm", fF: [0.24, 0], sm: 0.06, face: "fierce" }, follow: { hF: { a: 0.9, r: 0.42 }, tw: 0.5 } })) }),
+    chop2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: 0.12, b: [0, 0.08], tw: 0.25, hF: { a: 2, r: 0.34 }, hand: "palm", face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.3, hF: { a: -0.62, r: 0.43 }, hand: "palm", sm: 0.06, face: "fierce" }, follow: { hF: { a: -0.9, r: 0.42 } } })) }),
     // a long lunging thrust of one arm, the other flung back behind for the reach
-    thrust: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.06, 0.1], l: -0.06, tw: -0.4, hp: -0.15, hF: [0.04, 0.06], hB: [0.2, 0], face: "grit" }, hit: { b: [0.16, 0.05], l: 0.46, tw: 0.6, hp: 0.3, hF: [0.47, -0.01], hB: [-0.22, 0.16], fF: [0.28, 0], fB: [-0.33, -0.08], sm: 0.14, face: "shout" } })) }),
+    thrust: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.06, 0.1], l: -0.06, tw: -0.4, hp: -0.15, hF: [0.04, 0.06], hB: [0.2, 0], face: "grit" }, hit: { b: [0.16, 0.05], l: 0.46, tw: 0.6, hp: 0.3, hF: [0.47, -0.01], hB: [-0.22, 0.16], fF: [0.28, 0], fB: [-0.33, -0.08], sm: 0.14, face: "shout" } })) }),
     // head down, the shoulder first, arms tucked: a battering ram
-    charge: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [-0.06, 0.13], l: 0.12, tw: -0.2, hF: [0.1, 0.18], hB: [-0.1, 0.2], face: "grit" }, hit: { b: [0.12, 0.09], l: 0.6, tw: 0.55, hp: 0.25, ht: -0.25, hF: [0.12, 0.15], hB: [-0.24, 0.18], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
+    charge: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [-0.06, 0.13], l: 0.12, tw: -0.2, hF: [0.1, 0.18], hB: [-0.1, 0.2], face: "grit" }, hit: { b: [0.12, 0.09], l: 0.6, tw: 0.55, hp: 0.25, ht: -0.25, hF: [0.12, 0.15], hB: [-0.24, 0.18], fF: [0.26, 0], fB: [-0.38, -0.1], face: "shout" } })), legs: true }),
     // hands on the other's collar, reared right back, then the brow brought down into them
-    headbutt: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: -0.42, b: [-0.07, 0.03], ht: -0.2, hF: [0.32, -0.02], hB: [0.3, 0.02], hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.55, b: [0.19, 0.06], ht: 0.32, hF: [0.24, 0.06], hB: [0.22, 0.1], hand: "fist", handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], face: "shout" } })) }),
+    headbutt: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: -0.42, b: [-0.07, 0.03], ht: -0.2, hF: [0.32, -0.02], hB: [0.3, 0.02], hand: "claw", handB: "claw", face: "grit" }, hit: { l: 0.55, b: [0.19, 0.06], ht: 0.32, hF: [0.24, 0.06], hB: [0.22, 0.1], hand: "fist", handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], face: "shout" } })) }),
     // ---------------------------------------------------------------- kicks
     // a snap kick: the knee chambered high, the leg whipped out level, the hips turned over into it and the body back to balance it
-    kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.06], l: -0.12, hp: -0.12, fF: [0.13, -0.32], fB: [-0.07, 0], ...arms(c, { hF: [0.18, 0.02], hB: [0.08, 0.1] }), face: "fierce" }, hit: { b: [0.05, -0.02], l: -0.26, hp: 0.35, tw: -0.1, ht: 0.1, fF: [0.68, -0.42], fB: [-0.09, 0], sm: 0.1, ...arms(c, { hF: [0.08, 0.14], hB: [-0.16, 0.14] }), face: "fierce" }, follow: { fF: [0.6, -0.36], l: -0.22 } })), legs: true }),
+    kick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.06], l: -0.12, hp: -0.12, fF: [0.13, -0.32], fB: [-0.07, 0], ...arms(c, { hF: [0.18, 0.02], hB: [0.08, 0.1] }), face: "fierce" }, hit: { b: [0.05, -0.02], l: -0.26, hp: 0.35, tw: -0.1, ht: 0.1, fF: [0.68, -0.42], fB: [-0.09, 0], sm: 0.1, ...arms(c, { hF: [0.08, 0.14], hB: [-0.16, 0.14] }), face: "fierce" }, follow: { fF: [0.6, -0.36], l: -0.22 } })), legs: true }),
     // Black Leg (Sanji): kicks from a cook's stance, hands in his pockets.
     // The snap: the knee drawn up high and tight first (the chamber), then the
     // leg whipped out straight from it, toe pointed, the body leaning back to
     // balance it — and drawn back into the chamber before it comes down.
-    bl_snap: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.62, load: { b: [0, 0.07], l: -0.04, hp: -0.18, tw: 0.12, fF: [0.2, -0.46], fB: [-0.06, 0], ...arms(c, { hF: [0.12, 0.08], hB: [0.04, 0.12] }), face: "fierce" }, hit: { b: [0.04, -0.01], l: -0.3, hp: 0.32, tw: -0.06, ht: 0.12, fF: [0.8, -0.58], fB: [-0.1, 0], sm: 0.12, ...arms(c, { hF: [0.06, 0.16], hB: [-0.14, 0.14] }), face: "fierce" }, follow: { fF: [0.3, -0.48], l: -0.14, hp: 0.12 }, loadEase: "inout", hitEase: "snap" })), legs: true }),
+    bl_snap: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.62, load: { b: [0, 0.07], l: -0.04, hp: -0.18, tw: 0.12, fF: [0.2, -0.46], fB: [-0.06, 0], ...arms(c, { hF: [0.12, 0.08], hB: [0.04, 0.12] }), face: "fierce" }, hit: { b: [0.04, -0.01], l: -0.3, hp: 0.32, tw: -0.06, ht: 0.12, fF: [0.8, -0.58], fB: [-0.1, 0], sm: 0.12, ...arms(c, { hF: [0.06, 0.16], hB: [-0.14, 0.14] }), face: "fierce" }, follow: { fF: [0.3, -0.48], l: -0.14, hp: 0.12 }, loadEase: "inout", hitEase: "snap" })), legs: true }),
     // the roundhouse: a pivot on the standing foot, the hips turned right
     // over, the leg swinging round high and flat at the head, the body
     // leaning away from it — a long, smooth arc, not a jab
-    bl_round: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.58, load: { b: [0, 0.08], l: -0.08, hp: -0.38, tw: -0.22, ls: 0.06, fF: [0.14, -0.5], fB: [-0.05, 0], ...arms(c, { hF: [0.14, 0.04], hB: [0.06, 0.1] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.42, hp: 0.6, tw: 0.28, ls: -0.16, ht: 0.22, fF: [0.66, -0.92], fB: [-0.07, 0], sm: 0.14, ...arms(c, { hF: [-0.16, 0.1], hB: [0.26, -0.02] }), face: "shout" }, follow: { fF: [0.34, -0.58], l: -0.22, hp: 0.34, tw: 0.16 }, loadEase: "inout" })), legs: true }),
-    kick_high: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.07], l: -0.16, hp: -0.15, fF: [0.04, -0.38], fB: [-0.05, 0], ...arms(c, { hF: [0.16, 0], hB: [0.1, 0.06] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.46, hp: 0.42, ls: -0.06, ht: 0.2, fF: [0.57, -0.85], fB: [-0.06, 0], sm: 0.1, ...arms(c, { hF: [-0.18, 0.1], hB: [0.28, -0.04] }), face: "fierce" }, follow: { l: -0.32, fF: [0.46, -0.62] } })), legs: true }),
+    bl_round: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.58, load: { b: [0, 0.08], l: -0.08, hp: -0.38, tw: -0.22, ls: 0.06, fF: [0.14, -0.5], fB: [-0.05, 0], ...arms(c, { hF: [0.14, 0.04], hB: [0.06, 0.1] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.42, hp: 0.6, tw: 0.28, ls: -0.16, ht: 0.22, fF: [0.66, -0.92], fB: [-0.07, 0], sm: 0.14, ...arms(c, { hF: [-0.16, 0.1], hB: [0.26, -0.02] }), face: "shout" }, follow: { fF: [0.34, -0.58], l: -0.22, hp: 0.34, tw: 0.16 }, loadEase: "inout" })), legs: true }),
+    kick_high: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.07], l: -0.16, hp: -0.15, fF: [0.04, -0.38], fB: [-0.05, 0], ...arms(c, { hF: [0.16, 0], hB: [0.1, 0.06] }), face: "fierce" }, hit: { b: [0.02, -0.02], l: -0.46, hp: 0.42, ls: -0.06, ht: 0.2, fF: [0.57, -0.85], fB: [-0.06, 0], sm: 0.1, ...arms(c, { hF: [-0.18, 0.1], hB: [0.28, -0.04] }), face: "fierce" }, follow: { l: -0.32, fF: [0.46, -0.62] } })), legs: true }),
     // a whirling kick: a turn the other way, the leg whipped round, and the body spun on through after it
-    kick_spin: (w, T5, c) => ({ keys: strike(w, T5, S(c, { followAt: 0.35, load: { sp: -0.06, b: [0, 0.07], l: -0.08, hp: -0.25, fF: [0.06, -0.24], ...arms(c, { hF: [0.2, 0], hB: [0, 0.1] }), face: "fierce" }, hit: { sp: 0, b: [0.03, -0.01], l: -0.3, hp: 0.5, ls: -0.1, fF: [0.7, -0.55], fB: [-0.06, 0], sm: 0.12, ...arms(c, { hF: [-0.12, 0.12], hB: [0.24, -0.06] }), face: "shout" }, follow: { sp: 0.55, fF: [0.36, -0.38], l: -0.18 }, end: spun(c) })), legs: true }),
-    sweep: (w, T5, c) => ({ keys: strike(w, T5, S(c, { followAt: 0.35, load: { b: [0, 0.24], l: 0.24, fF: [0.06, -0.04], ...arms(c, { hF: [0.22, 0.32], hB: [-0.04, 0.32] }), face: "fierce" }, hit: { b: [0.02, 0.31], l: 0.32, hp: 0.4, fF: [0.82, -0.05], fB: [-0.2, 0], sm: 0.08, ...arms(c, { hF: [0.26, 0.44], hB: [-0.1, 0.38] }), face: "fierce" }, follow: { sp: 0.5, fF: [0.5, -0.04] }, end: spun(c) })), legs: true }),
+    kick_spin: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { followAt: 0.35, load: { sp: -0.06, b: [0, 0.07], l: -0.08, hp: -0.25, fF: [0.06, -0.24], ...arms(c, { hF: [0.2, 0], hB: [0, 0.1] }), face: "fierce" }, hit: { sp: 0, b: [0.03, -0.01], l: -0.3, hp: 0.5, ls: -0.1, fF: [0.7, -0.55], fB: [-0.06, 0], sm: 0.12, ...arms(c, { hF: [-0.12, 0.12], hB: [0.24, -0.06] }), face: "shout" }, follow: { sp: 0.55, fF: [0.36, -0.38], l: -0.18 }, end: spun(c) })), legs: true }),
+    sweep: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { followAt: 0.35, load: { b: [0, 0.24], l: 0.24, fF: [0.06, -0.04], ...arms(c, { hF: [0.22, 0.32], hB: [-0.04, 0.32] }), face: "fierce" }, hit: { b: [0.02, 0.31], l: 0.32, hp: 0.4, fF: [0.82, -0.05], fB: [-0.2, 0], sm: 0.08, ...arms(c, { hF: [0.26, 0.44], hB: [-0.1, 0.38] }), face: "fierce" }, follow: { sp: 0.5, fF: [0.5, -0.04] }, end: spun(c) })), legs: true }),
     // the Rankyaku finisher: a hop and the leg swept up and over in a crescent, the arms flung out to balance it
-    rankyaku: (w, T5, c) => ({ keys: strike(w, T5, S(c, { followAt: 0.3, load: { b: [0, 0.12], l: 0.08, hp: -0.25, fF: [0.12, -0.18], fB: [-0.08, 0], ...arms(c, { hF: [0.18, 0.06], hB: [0.06, 0.12] }), face: "grit" }, hit: { b: [0.02, -0.04], z: 0.12, l: -0.55, hp: 0.5, ls: -0.16, ht: 0.25, fF: [0.42, -0.98], fB: [-0.06, -0.06], sm: 0.12, ...arms(c, { hF: [-0.12, -0.04], hB: [0.24, -0.16], zF: 0.18, zB: 0.12 }), face: "shout" }, follow: { z: 0.04, l: -0.38, fF: [0.66, -0.48] } })), legs: true }),
+    rankyaku: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { followAt: 0.3, load: { b: [0, 0.12], l: 0.08, hp: -0.25, fF: [0.12, -0.18], fB: [-0.08, 0], ...arms(c, { hF: [0.18, 0.06], hB: [0.06, 0.12] }), face: "grit" }, hit: { b: [0.02, -0.04], z: 0.12, l: -0.55, hp: 0.5, ls: -0.16, ht: 0.25, fF: [0.42, -0.98], fB: [-0.06, -0.06], sm: 0.12, ...arms(c, { hF: [-0.12, -0.04], hB: [0.24, -0.16], zF: 0.18, zB: 0.12 }), face: "shout" }, follow: { z: 0.04, l: -0.38, fF: [0.66, -0.48] } })), legs: true }),
     // Hasshoken: the palm driven in and stopped dead against the body, the whole arm shuddering as the blow goes on through it
-    vibe_palm: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.66, load: { b: [-0.03, 0.09], l: 0, tw: -0.4, hp: -0.15, hF: [0.02, 0.16], hand: "palm", hB: [0.28, -0.02], handB: "palm", face: "grit" }, hit: { b: [0.14, 0.07], l: 0.22, tw: 0.5, hp: 0.3, hF: [0.44, -0.03], hand: "palm", hB: [0, 0.18], handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], sm: 0.05, face: "shout" }, holdT: 0.16, holdK: 0.6 })), shake: { a: 0.014, t: 0.18 } }),
+    vibe_palm: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.66, load: { b: [-0.03, 0.09], l: 0, tw: -0.4, hp: -0.15, hF: [0.02, 0.16], hand: "palm", hB: [0.28, -0.02], handB: "palm", face: "grit" }, hit: { b: [0.14, 0.07], l: 0.22, tw: 0.5, hp: 0.3, hF: [0.44, -0.03], hand: "palm", hB: [0, 0.18], handB: "fist", fF: [0.27, 0], fB: [-0.17, -0.03], sm: 0.05, face: "shout" }, holdT: 0.16, holdK: 0.6 })), shake: { a: 0.014, t: 0.18 } }),
     // both hands on the other's head, pulling it down onto the knee driven up to meet it
-    knee: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.07], l: 0.04, hp: -0.1, fF: [0.1, -0.1], hF: [0.3, -0.04], hB: [0.26, 0], hand: "claw", handB: "claw", face: "fierce" }, hit: { b: [0.08, -0.05], z: 0.07, l: 0.16, hp: 0.3, fF: [0.26, -0.44], fB: [-0.08, -0.02], hF: [0.3, 0.1], hB: [0.27, 0.13], hand: "fist", handB: "fist", ht: 0.15, face: "shout" }, follow: { z: 0 } })), legs: true }),
-    axe_kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.75, load: { z: 0.55, l: -0.34, hp: 0.2, ht: -0.1, fF: [0.18, -0.98], fB: [-0.1, -0.14], ...arms(c, { hF: [-0.12, -0.1], hB: [0.22, -0.22] }), face: "grit" }, hit: { z: 0, b: [0.1, 0.1], l: 0.32, hp: 0, ht: 0.15, fF: [0.58, -0.04], fB: [-0.17, 0], smfF: 0.08, ...arms(c, { hF: [-0.1, 0.22], hB: [0.1, 0.16] }), face: "shout" } })), legs: true }),
+    knee: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.07], l: 0.04, hp: -0.1, fF: [0.1, -0.1], hF: [0.3, -0.04], hB: [0.26, 0], hand: "claw", handB: "claw", face: "fierce" }, hit: { b: [0.08, -0.05], z: 0.07, l: 0.16, hp: 0.3, fF: [0.26, -0.44], fB: [-0.08, -0.02], hF: [0.3, 0.1], hB: [0.27, 0.13], hand: "fist", handB: "fist", ht: 0.15, face: "shout" }, follow: { z: 0 } })), legs: true }),
+    axe_kick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.75, load: { z: 0.55, l: -0.34, hp: 0.2, ht: -0.1, fF: [0.18, -0.98], fB: [-0.1, -0.14], ...arms(c, { hF: [-0.12, -0.1], hB: [0.22, -0.22] }), face: "grit" }, hit: { z: 0, b: [0.1, 0.1], l: 0.32, hp: 0, ht: 0.15, fF: [0.58, -0.04], fB: [-0.17, 0], smfF: 0.08, ...arms(c, { hF: [-0.1, 0.22], hB: [0.1, 0.16] }), face: "shout" } })), legs: true }),
     // Collier: crouched, then up off the ground with the leg swung in an arc to the throat
-    rise_kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.19], l: 0.16, hp: -0.15, fF: [0.28, -0.03], fB: [-0.12, 0], ...arms(c, { hF: [0.1, 0.28], hB: [0, 0.26] }), face: "grit" }, hit: { b: [0.02, -0.05], z: 0.16, l: -0.5, hp: 0.3, ht: 0.2, fF: [0.38, -0.98], fB: [-0.05, -0.04], sm: 0.12, ...arms(c, { hF: [-0.22, 0.1], hB: [0.14, 0.2] }), face: "shout" }, follow: { z: 0.06, fF: [0.42, -0.85] } })), legs: true }),
+    rise_kick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.19], l: 0.16, hp: -0.15, fF: [0.28, -0.03], fB: [-0.12, 0], ...arms(c, { hF: [0.1, 0.28], hB: [0, 0.26] }), face: "grit" }, hit: { b: [0.02, -0.05], z: 0.16, l: -0.5, hp: 0.3, ht: 0.2, fF: [0.38, -0.98], fB: [-0.05, -0.04], sm: 0.12, ...arms(c, { hF: [-0.22, 0.1], hB: [0.14, 0.2] }), face: "shout" }, follow: { z: 0.06, fF: [0.42, -0.85] } })), legs: true }),
     // Mouton Shot: a dip, the knee drawn right up to the chest, then the sole driven out straight with a hop behind it
-    mouton: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.66, antic: { b: [0, 0.1], l: 0.12, fF: [0.2, 0] }, load: { l: -0.36, z: 0.08, hp: -0.2, b: [-0.04, 0.04], ht: 0.12, fF: [-0.05, -0.48], fB: [-0.04, 0], ...arms(c, { hF: [0.1, -0.1] }), face: "grit" }, hit: { l: -0.78, b: [0.27, 0], z: 0.17, hp: 0.35, ht: 0.35, fF: [0.9, -0.56], fB: [-0.12, -0.13], smfF: 0.12, ...arms(c, { hF: [-0.36, 0.25], hB: [-0.32, 0.3] }), face: "shout" }, follow: { z: 0, l: -0.42 } })), legs: true }),
-    handstand: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
-    flying_kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0], face: "grit" }, hit: { z: 0.3, l: -0.34, hp: 0.3, fF: [0.78, -0.46], fB: [-0.06, -0.3], smfF: 0.08, ...arms(c, { hF: [-0.2, 0.05], hB: [0.2, -0.1] }), face: "shout" }, follow: { z: 0 } })), legs: true }),
-    stomp: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { fF: [0.18, -0.55], l: -0.1, ...arms(c, { hF: [0.2, -0.1], hB: [-0.1, -0.1] }), face: "grit" }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
+    mouton: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.66, antic: { b: [0, 0.1], l: 0.12, fF: [0.2, 0] }, load: { l: -0.36, z: 0.08, hp: -0.2, b: [-0.04, 0.04], ht: 0.12, fF: [-0.05, -0.48], fB: [-0.04, 0], ...arms(c, { hF: [0.1, -0.1] }), face: "grit" }, hit: { l: -0.78, b: [0.27, 0], z: 0.17, hp: 0.35, ht: 0.35, fF: [0.9, -0.56], fB: [-0.12, -0.13], smfF: 0.12, ...arms(c, { hF: [-0.36, 0.25], hB: [-0.32, 0.3] }), face: "shout" }, follow: { z: 0, l: -0.42 } })), legs: true }),
+    handstand: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.14], l: 0.3, hF: [0.3, 0.4], hB: [0.2, 0.4] }, hit: { r: Math.PI, b: [0, 0], l: 0, hF: [0.12, -0.72], hB: [-0.08, -0.72], hand: "palm", handB: "palm", fF: [0.58, -0.45], fB: [-0.58, -0.45] }, hold: { r: Math.PI, fF: [0.58, -0.4], fB: [-0.58, -0.5] }, holdT: c.hitDur || 0.4, holdK: 0.85 })), legs: true }),
+    flying_kick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.14], l: 0.2, fF: [0.1, 0], face: "grit" }, hit: { z: 0.3, l: -0.34, hp: 0.3, fF: [0.78, -0.46], fB: [-0.06, -0.3], smfF: 0.08, ...arms(c, { hF: [-0.2, 0.05], hB: [0.2, -0.1] }), face: "shout" }, follow: { z: 0 } })), legs: true }),
+    stomp: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { fF: [0.18, -0.55], l: -0.1, ...arms(c, { hF: [0.2, -0.1], hB: [-0.1, -0.1] }), face: "grit" }, hit: { fF: [0.26, 0], b: [0.04, 0.12], l: 0.2, face: "shout" } })), legs: true }),
     // Okama Kenpo: ballet
-    ballet_kick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: BALLET, load: { b: [0, 0.11], hF: [0.14, 0.24], hB: [-0.08, 0.24], zF: 0.08, zB: 0.08 }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.04], hp: 0.25, hF: [0.34, -0.24], hB: [-0.36, -0.22], zF: 0.12, zB: 0.12, sm: 0.06, face: "fierce" } })), legs: true }),
-    pirouette: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: BALLET, followAt: 0.35, load: { b: [0, 0.1], sp: -0.05, hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 0, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hp: 0.3, hF: [0.14, -0.44], hB: [0, -0.46], zF: 0.05, zB: 0.05, sm: 0.08, face: "fierce" }, follow: { sp: 0.6 }, end: { ...BALLET, sp: 1 } })), legs: true }),
-    jete: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], zF: 0.1, zB: 0.1, smfF: 0.06, face: "fierce" }, follow: { z: 0 } })), legs: true }),
-    arabesque: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], zB: 0.1, smfB: 0.08, face: "fierce" } })), legs: true }),
+    ballet_kick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: BALLET, load: { b: [0, 0.11], hF: [0.14, 0.24], hB: [-0.08, 0.24], zF: 0.08, zB: 0.08 }, hit: { fF: [0.36, -1], fB: [-0.02, 0], l: -0.12, b: [0.02, -0.04], hp: 0.25, hF: [0.34, -0.24], hB: [-0.36, -0.22], zF: 0.12, zB: 0.12, sm: 0.06, face: "fierce" } })), legs: true }),
+    pirouette: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: BALLET, followAt: 0.35, load: { b: [0, 0.1], sp: -0.05, hF: [0.14, 0.2], hB: [-0.1, 0.22] }, hit: { sp: 0, fF: [0.64, -0.55], fB: [0, 0], l: -0.18, hp: 0.3, hF: [0.14, -0.44], hB: [0, -0.46], zF: 0.05, zB: 0.05, sm: 0.08, face: "fierce" }, follow: { sp: 0.6 }, end: { ...BALLET, sp: 1 } })), legs: true }),
+    jete: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: BALLET, load: { b: [0, 0.14], l: 0.1, hF: [0.1, 0.25] }, hit: { z: 0.36, fF: [0.58, -0.26], fB: [-0.56, -0.42], l: 0.12, hF: [0.44, -0.22], hB: [-0.38, -0.14], zF: 0.1, zB: 0.1, smfF: 0.06, face: "fierce" }, follow: { z: 0 } })), legs: true }),
+    arabesque: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: BALLET, load: { b: [0, 0.1], hF: [0.1, 0.2] }, hit: { l: 0.5, b: [0.1, 0], fB: [-0.66, -0.62], fF: [0.04, 0], hF: [0.46, -0.1], hB: [-0.3, -0.14], zB: 0.1, smfB: 0.08, face: "fierce" } })), legs: true }),
     // ---------------------------------------------------------------- blades
     // the blade raised back over the shoulder, the body wound away, then cut down through with the hips behind it
-    slash: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.05], tw: -0.42, hp: -0.15, hF: { a: -2.15, r: 0.35 }, wF: -2.6, hB: [-0.04, 0.18], face: "fierce" }, hit: { l: 0.3, b: [0.14, 0.08], tw: 0.5, hp: 0.3, hF: { a: 0.6, r: 0.43 }, wF: 0.85, hB: [0.16, 0.18], fF: [0.31, 0], fB: [-0.17, -0.02], face: "shout" }, follow: { l: 0.34, tw: 0.62, hF: { a: 0.95, r: 0.42 }, wF: 1.25 } })) }),
-    slash2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), load: { l: 0.14, b: [0, 0.1], tw: 0.3, hp: 0.1, hF: { a: 2.05, r: 0.34 }, wF: 2.5, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.03], tw: -0.35, hp: -0.15, hF: { a: -0.62, r: 0.43 }, wF: -1, face: "fierce" }, follow: { hF: { a: -1, r: 0.42 }, wF: -1.45, tw: -0.42 } })) }),
-    rise_slash: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.17], l: 0.28, tw: -0.4, hp: -0.12, hF: { a: 1.9, r: 0.36 }, wF: 2.55, hB: [0, 0.22], face: "grit" }, hit: { b: [0.12, -0.04], z: 0.06, l: -0.22, tw: 0.42, hp: 0.25, hF: { a: -1.2, r: 0.43 }, wF: -1.55, hB: [-0.12, 0.1], fF: [0.26, 0], fB: [-0.16, -0.06], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.85, l: -0.26 } })) }),
-    slash3: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), loadAt: 0.7, followAt: 0.35, load: { l: -0.22, b: [-0.04, 0.08], tw: -0.5, hF: { a: 2.7, r: 0.36 }, wF: 3, sp: -0.05, face: "grit" }, hit: { sp: 0, l: 0.22, b: [0.16, 0.06], tw: 0.55, hp: 0.3, hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, follow: { sp: 0.55, wF: 0.3 }, end: { ...sw(c), sp: 1 } })) }),
+    slash: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), load: { l: -0.16, b: [-0.03, 0.05], tw: -0.42, hp: -0.15, hF: { a: -2.15, r: 0.35 }, wF: -2.6, hB: [-0.04, 0.18], face: "fierce" }, hit: { l: 0.3, b: [0.14, 0.08], tw: 0.5, hp: 0.3, hF: { a: 0.6, r: 0.43 }, wF: 0.85, hB: [0.16, 0.18], fF: [0.31, 0], fB: [-0.17, -0.02], face: "shout" }, follow: { l: 0.34, tw: 0.62, hF: { a: 0.95, r: 0.42 }, wF: 1.25 } })) }),
+    slash2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), load: { l: 0.14, b: [0, 0.1], tw: 0.3, hp: 0.1, hF: { a: 2.05, r: 0.34 }, wF: 2.5, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.03], tw: -0.35, hp: -0.15, hF: { a: -0.62, r: 0.43 }, wF: -1, face: "fierce" }, follow: { hF: { a: -1, r: 0.42 }, wF: -1.45, tw: -0.42 } })) }),
+    rise_slash: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), loadAt: 0.62, load: { b: [-0.02, 0.17], l: 0.28, tw: -0.4, hp: -0.12, hF: { a: 1.9, r: 0.36 }, wF: 2.55, hB: [0, 0.22], face: "grit" }, hit: { b: [0.12, -0.04], z: 0.06, l: -0.22, tw: 0.42, hp: 0.25, hF: { a: -1.2, r: 0.43 }, wF: -1.55, hB: [-0.12, 0.1], fF: [0.26, 0], fB: [-0.16, -0.06], face: "shout" }, follow: { z: 0, hF: { a: -1.45, r: 0.42 }, wF: -1.85, l: -0.26 } })) }),
+    slash3: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), loadAt: 0.7, followAt: 0.35, load: { l: -0.22, b: [-0.04, 0.08], tw: -0.5, hF: { a: 2.7, r: 0.36 }, wF: 3, sp: -0.05, face: "grit" }, hit: { sp: 0, l: 0.22, b: [0.16, 0.06], tw: 0.55, hp: 0.3, hF: { a: 0.08, r: 0.43 }, wF: 0.06, fF: [0.3, 0], fB: [-0.2, 0], face: "shout" }, follow: { sp: 0.55, wF: 0.3 }, end: { ...sw(c), sp: 1 } })) }),
     // a deep lunge behind the point, the free hand laid along to aim it
-    stab: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), load: { l: -0.14, b: [-0.09, 0.07], tw: -0.45, hp: -0.2, hF: [-0.04, 0.06], wF: 0, hB: [0.14, -0.04], handB: "palm", face: "grit" }, hit: { l: 0.34, b: [0.23, 0.05], tw: 0.55, hp: 0.4, hF: [0.47, -0.03], wF: -0.03, hB: [-0.22, 0.14], handB: "fist", fF: [0.37, 0], fB: [-0.23, -0.03], face: "shout" } })) }),
-    cleave: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: HEAVYW, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.12, hF: [0.2, 0.18], wF: -0.4 }, load: { l: -0.26, b: [-0.06, 0], tw: -0.25, ht: -0.1, hF: { a: -1.85, r: 0.38 }, hB: { a: -1.75, r: 0.34 }, wF: -2.3, face: "grit" }, hit: { l: 0.4, b: [0.23, 0.13], tw: 0.3, hp: 0.3, ht: 0.2, hF: { a: 0.72, r: 0.41 }, hB: { a: 0.82, r: 0.36 }, wF: 0.78, fF: [0.37, 0], fB: [-0.23, 0], face: "shout" }, follow: { l: 0.44, b: [0.25, 0.15], wF: 0.86 } })), jitter: 0.01 }),
+    stab: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), load: { l: -0.14, b: [-0.09, 0.07], tw: -0.45, hp: -0.2, hF: [-0.04, 0.06], wF: 0, hB: [0.14, -0.04], handB: "palm", face: "grit" }, hit: { l: 0.34, b: [0.23, 0.05], tw: 0.55, hp: 0.4, hF: [0.47, -0.03], wF: -0.03, hB: [-0.22, 0.14], handB: "fist", fF: [0.37, 0], fB: [-0.23, -0.03], face: "shout" } })) }),
+    cleave: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: HEAVYW, loadAt: 0.7, antic: { b: [0.02, 0.08], l: 0.12, hF: [0.2, 0.18], wF: -0.4 }, load: { l: -0.26, b: [-0.06, 0], tw: -0.25, ht: -0.1, hF: { a: -1.85, r: 0.38 }, hB: { a: -1.75, r: 0.34 }, wF: -2.3, face: "grit" }, hit: { l: 0.4, b: [0.23, 0.13], tw: 0.3, hp: 0.3, ht: 0.2, hF: { a: 0.72, r: 0.41 }, hB: { a: 0.82, r: 0.36 }, wF: 0.78, fF: [0.37, 0], fB: [-0.23, 0], face: "shout" }, follow: { l: 0.44, b: [0.25, 0.15], wF: 0.86 } })), jitter: 0.01 }),
     // the quick draw: crouched low with the hand on the hilt at the hip, the cut drawn out through the dash, and the blade slid home after
-    iai: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: { ...SWORD, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.17], l: 0.36, tw: -0.5, hp: -0.2, ht: -0.15, hF: [-0.02, 0.32], zF: -0.12, wF: 2.75, hB: [0.02, 0.3], face: "grit" }, hit: { l: 0.5, b: [0.22, 0.09], tw: 0.6, hp: 0.4, hF: [0.47, 0.03], wF: 0.08, hB: [-0.1, 0.24], fB: [-0.37, -0.12], face: "shout" }, follow: { l: 0.2, tw: 0.2, hF: [0.12, 0.27], zF: -0.08, wF: 2.6 } })) }),
+    iai: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: { ...SWORD, hF: [0.04, 0.3], wF: 2.7, hB: [0, 0.3] }, load: { b: [0, 0.17], l: 0.36, tw: -0.5, hp: -0.2, ht: -0.15, hF: [-0.02, 0.32], zF: -0.12, wF: 2.75, hB: [0.02, 0.3], face: "grit" }, hit: { l: 0.5, b: [0.22, 0.09], tw: 0.6, hp: 0.4, hF: [0.47, 0.03], wF: 0.08, hB: [-0.1, 0.24], fB: [-0.37, -0.12], face: "shout" }, follow: { l: 0.2, tw: 0.2, hF: [0.12, 0.27], zF: -0.08, wF: 2.6 } })) }),
     // two blades (Nitoryu): alternating cuts, then an X
-    dual1: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, load: { l: -0.16, tw: -0.4, hF: { a: -2.1, r: 0.34 }, wF: -2.55, face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.45, hp: 0.25, hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" }, follow: { tw: 0.55, wF: 1.1 } })) }),
-    dual2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, load: { l: -0.14, tw: 0.35, hB: { a: -2.2, r: 0.33 }, wB: -2.6, face: "fierce" }, hit: { l: 0.3, b: [0.13, 0.07], tw: -0.5, hp: -0.25, hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" }, follow: { tw: -0.6, wB: 1.15 } })) }),
-    dual3: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, load: { l: 0.12, b: [0, 0.1], tw: 0.2, hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.25, hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
-    dualx: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], ht: -0.08, hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, zF: 0.06, zB: 0.06, face: "grit" }, hit: { l: 0.34, b: [0.18, 0.1], ht: 0.12, hp: 0.2, hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, zF: -0.08, zB: -0.08, fF: [0.31, 0], fB: [-0.2, -0.02], face: "shout" }, follow: { l: 0.38 } })) }),
-    dual_stab: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, load: { l: -0.16, b: [-0.1, 0.07], tw: -0.3, hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "grit" }, hit: { l: 0.36, b: [0.24, 0.05], tw: 0.3, hp: 0.3, hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
+    dual1: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, load: { l: -0.16, tw: -0.4, hF: { a: -2.1, r: 0.34 }, wF: -2.55, face: "fierce" }, hit: { l: 0.28, b: [0.12, 0.07], tw: 0.45, hp: 0.25, hF: { a: 0.55, r: 0.43 }, wF: 0.8, face: "fierce" }, follow: { tw: 0.55, wF: 1.1 } })) }),
+    dual2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, load: { l: -0.14, tw: 0.35, hB: { a: -2.2, r: 0.33 }, wB: -2.6, face: "fierce" }, hit: { l: 0.3, b: [0.13, 0.07], tw: -0.5, hp: -0.25, hB: { a: 0.6, r: 0.43 }, wB: 0.85, hF: [0.14, 0.14], face: "fierce" }, follow: { tw: -0.6, wB: 1.15 } })) }),
+    dual3: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, load: { l: 0.12, b: [0, 0.1], tw: 0.2, hF: { a: 2, r: 0.34 }, wF: 2.45, hB: { a: 2.2, r: 0.32 }, wB: 2.6, face: "fierce" }, hit: { l: -0.14, b: [0.12, 0.02], tw: -0.25, hF: { a: -0.62, r: 0.43 }, wF: -0.95, hB: { a: -0.4, r: 0.42 }, wB: -0.7, face: "fierce" } })) }),
+    dualx: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, loadAt: 0.7, load: { l: -0.2, b: [-0.04, 0.02], ht: -0.08, hF: { a: -2.3, r: 0.34 }, wF: -2.5, hB: { a: -1.6, r: 0.34 }, wB: -1.9, zF: 0.06, zB: 0.06, face: "grit" }, hit: { l: 0.34, b: [0.18, 0.1], ht: 0.12, hp: 0.2, hF: { a: 0.9, r: 0.42 }, wF: 1.1, hB: { a: 0.2, r: 0.43 }, wB: 0.5, zF: -0.08, zB: -0.08, fF: [0.31, 0], fB: [-0.2, -0.02], face: "shout" }, follow: { l: 0.38 } })) }),
+    dual_stab: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, load: { l: -0.16, b: [-0.1, 0.07], tw: -0.3, hF: [-0.04, 0.06], hB: [-0.1, 0.1], wF: 0.05, wB: 0.1, face: "grit" }, hit: { l: 0.36, b: [0.24, 0.05], tw: 0.3, hp: 0.3, hF: [0.46, -0.05], hB: [0.4, 0.04], wF: -0.06, wB: 0.04, fF: [0.38, 0], fB: [-0.24, -0.04], face: "shout" } })) }),
     // Tora Gari: up off the ground with the blades raised high, and down through the landing in one cut
-    tora: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: SWORD2, loadAt: 0.72, load: { z: 0.4, l: -0.32, ht: -0.1, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "grit" }, hit: { z: 0, l: 0.42, b: [0.24, 0.12], ht: 0.18, hp: 0.25, hF: { a: 0.75, r: 0.4 }, hB: { a: 0.9, r: 0.38 }, wF: 0.72, wB: 0.86, zF: 0.08, zB: 0.08, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
-    bladespin: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], tw: -0.4, hF: { a: 2.6, r: 0.38 }, wF: 2.9, face: "grit" }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, zF: 0.1, zB: 0.1, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
+    tora: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: SWORD2, loadAt: 0.72, load: { z: 0.4, l: -0.32, ht: -0.1, hF: { a: -2, r: 0.36 }, hB: { a: -2.2, r: 0.34 }, wF: -2.6, wB: -2.8, fF: [0.12, -0.25], fB: [-0.14, -0.2], face: "grit" }, hit: { z: 0, l: 0.42, b: [0.24, 0.12], ht: 0.18, hp: 0.25, hF: { a: 0.75, r: 0.4 }, hB: { a: 0.9, r: 0.38 }, wF: 0.72, wB: 0.86, zF: 0.08, zB: 0.08, fF: [0.36, 0], fB: [-0.2, 0], face: "shout" } })), jitter: 8e-3 }),
+    bladespin: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: sw(c), load: { l: -0.1, b: [0, 0.1], tw: -0.4, hF: { a: 2.6, r: 0.38 }, wF: 2.9, face: "grit" }, hit: { l: 0.1, hF: [0.42, -0.04], wF: 0.02, hB: [0.36, 0.04], wB: 0.2, zF: 0.1, zB: 0.1, face: "shout" }, holdT: c.hitDur || 0.3, holdK: 0.8 })) }),
     // big weapons: swung with the whole body; the head comes down on the ground in front, not through it
-    axe: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], tw: -0.35, hp: -0.15, ht: -0.1, hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "grit" }, hit: { l: 0.36, b: [0.2, 0.1], tw: 0.3, hp: 0.25, ht: 0.15, hF: { a: 0.62, r: 0.42 }, hB: { a: 0.8, r: 0.36 }, wF: 0.72, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4, wF: 0.8 } })) }),
-    axe2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], tw: 0.3, hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6, face: "grit" }, hit: { l: -0.2, b: [0.16, 0.02], tw: -0.3, hp: -0.2, hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" }, follow: { wF: -1.4, tw: -0.4 } })) }),
-    axe_slam: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], ht: -0.15, hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "grit" }, hit: { z: 0, l: 0.46, b: [0.24, 0.16], ht: 0.2, hF: { a: 0.62, r: 0.43 }, hB: { a: 0.74, r: 0.38 }, wF: 0.58, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.48, b: [0.24, 0.17], wF: 0.64 } })), jitter: 0.012 }),
-    staff: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAFF, load: { l: -0.14, tw: -0.35, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2], face: "fierce" }, hit: { l: 0.26, b: [0.1, 0.05], tw: 0.4, hp: 0.2, hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" }, follow: { tw: 0.5, wF: 0.85 } })) }),
-    staff2: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], tw: 0.3, hF: { a: 1.9, r: 0.34 }, wF: 2.3, face: "fierce" }, hit: { l: -0.12, b: [0.1, 0.02], tw: -0.35, hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" }, follow: { wF: -1.1 } })) }),
-    staff_jab: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], tw: -0.35, hF: [0, 0.06], wF: 0.02, face: "grit" }, hit: { l: 0.3, b: [0.2, 0.04], tw: 0.45, hp: 0.3, hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
+    axe: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: -0.3, b: [-0.05, 0.02], tw: -0.35, hp: -0.15, ht: -0.1, hF: { a: -2.4, r: 0.34 }, hB: { a: -2.3, r: 0.3 }, wF: -2.8, face: "grit" }, hit: { l: 0.36, b: [0.2, 0.1], tw: 0.3, hp: 0.25, ht: 0.15, hF: { a: 0.62, r: 0.42 }, hB: { a: 0.8, r: 0.36 }, wF: 0.72, fF: [0.34, 0], fB: [-0.2, 0], face: "shout" }, follow: { l: 0.4, wF: 0.8 } })) }),
+    axe2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: HEAVYW, loadAt: 0.7, load: { l: 0.1, b: [0, 0.12], tw: 0.3, hF: { a: 2.2, r: 0.34 }, hB: { a: 2.3, r: 0.3 }, wF: 2.6, face: "grit" }, hit: { l: -0.2, b: [0.16, 0.02], tw: -0.3, hp: -0.2, hF: { a: -0.8, r: 0.42 }, hB: { a: -0.6, r: 0.36 }, wF: -1.1, face: "shout" }, follow: { wF: -1.4, tw: -0.4 } })) }),
+    axe_slam: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: HEAVYW, loadAt: 0.74, load: { z: 0.18, l: -0.4, b: [-0.06, -0.02], ht: -0.15, hF: { a: -1.9, r: 0.4 }, hB: { a: -1.8, r: 0.36 }, wF: -1.75, fF: [0.12, -0.1], face: "grit" }, hit: { z: 0, l: 0.46, b: [0.24, 0.16], ht: 0.2, hF: { a: 0.62, r: 0.43 }, hB: { a: 0.74, r: 0.38 }, wF: 0.58, fF: [0.38, 0], fB: [-0.24, 0], face: "shout" }, follow: { l: 0.48, b: [0.24, 0.17], wF: 0.64 } })), jitter: 0.012 }),
+    staff: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAFF, load: { l: -0.14, tw: -0.35, hF: { a: -2, r: 0.34 }, wF: -2.4, hB: [0, 0.2], face: "fierce" }, hit: { l: 0.26, b: [0.1, 0.05], tw: 0.4, hp: 0.2, hF: { a: 0.5, r: 0.43 }, wF: 0.6, face: "fierce" }, follow: { tw: 0.5, wF: 0.85 } })) }),
+    staff2: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAFF, load: { l: 0.1, b: [0, 0.08], tw: 0.3, hF: { a: 1.9, r: 0.34 }, wF: 2.3, face: "fierce" }, hit: { l: -0.12, b: [0.1, 0.02], tw: -0.35, hF: { a: -0.5, r: 0.43 }, wF: -0.8, face: "fierce" }, follow: { wF: -1.1 } })) }),
+    staff_jab: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAFF, load: { l: -0.12, b: [-0.07, 0.06], tw: -0.35, hF: [0, 0.06], wF: 0.02, face: "grit" }, hit: { l: 0.3, b: [0.2, 0.04], tw: 0.45, hp: 0.3, hF: [0.46, -0.02], wF: -0.02, fF: [0.34, 0], fB: [-0.22, -0.02], face: "shout" } })) }),
     // ---------------------------------------------------------------- guns & throws
     // a pistol held out and fired, the recoil kicking the hand up; a slingshot's band
     // drawn back to the cheek and let go, the drawing hand springing open
-    shoot: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.43, -0.04], wF: 0, tw: 0.3, ht: 0.06, hB: c.sling ? [-0.02, -0.07] : [0.3, 0.05], l: 0.04, face: "fierce" }, hit: { hF: c.sling ? [0.42, -0.1] : [0.35, -0.13], wF: c.sling ? -0.15 : -0.45, tw: 0.25, hB: c.sling ? [-0.07, -0.09] : [0.26, 0.04], handB: c.sling ? "palm" : "fist", l: c.sling ? -0.02 : -0.12, b: [-0.08, 0] }, follow: { hF: [0.41, -0.06], wF: -0.12, l: 0, handB: "fist" } })) }),
+    shoot: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: GUN, loadAt: 0.55, load: { hF: [0.43, -0.04], wF: 0, tw: 0.3, ht: 0.06, hB: c.sling ? [-0.02, -0.07] : [0.3, 0.05], l: 0.04, face: "fierce" }, hit: { hF: c.sling ? [0.42, -0.1] : [0.35, -0.13], wF: c.sling ? -0.15 : -0.45, tw: 0.25, hB: c.sling ? [-0.07, -0.09] : [0.26, 0.04], handB: c.sling ? "palm" : "fist", l: c.sling ? -0.02 : -0.12, b: [-0.08, 0] }, follow: { hF: [0.41, -0.06], wF: -0.12, l: 0, handB: "fist" } })) }),
     // a long aim, the eye down the barrel (or along the band), then the shot: a gun's recoil throws the arm up, a slingshot's band snaps the hand open
-    aim: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, tw: 0.35, hr: 0.14, hB: c.sling ? [-0.03, -0.07] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: c.sling ? { hF: [0.42, -0.1], wF: -0.15, l: -0.04, b: [-0.05, 0.05], hr: 0.06 } : { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02], hr: 0 }, hit: c.sling ? { hF: [0.42, -0.1], wF: -0.15, hB: [-0.09, -0.1], handB: "palm", l: -0.04, b: [-0.05, 0.05], face: "shout" } : { hF: [0.3, -0.24], wF: -0.7, hB: [0.24, 0.02], l: -0.16, b: [-0.14, 0.02], face: "shout" } })) }),
-    flick: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { hF: [0.02, 0.2], tw: -0.25, l: -0.06 }, hit: { hF: [0.46, -0.1], tw: 0.35, l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
-    throw: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { hF: { a: -2.4, r: 0.4 }, tw: -0.45, hp: -0.2, l: -0.16, b: [-0.04, 0.04], hB: [0.3, -0.06], handB: "palm", face: "fierce" }, hit: { hF: { a: 0.15, r: 0.43 }, tw: 0.5, hp: 0.3, l: 0.26, b: [0.1, 0.04], hB: [-0.1, 0.16], handB: "fist", hand: "palm", fF: [0.24, 0], fB: [-0.15, -0.03], face: "fierce" } })) }),
+    aim: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: GUN, loadAt: 0.3, load: { hF: [0.44, -0.06], wF: -0.02, tw: 0.35, hr: 0.14, hB: c.sling ? [-0.03, -0.07] : [0.32, -0.01], l: 0.05, b: [0, 0.06], face: "fierce" }, hold: c.sling ? { hF: [0.42, -0.1], wF: -0.15, l: -0.04, b: [-0.05, 0.05], hr: 0.06 } : { hF: [0.3, -0.24], wF: -0.7, l: -0.16, b: [-0.14, 0.02], hr: 0 }, hit: c.sling ? { hF: [0.42, -0.1], wF: -0.15, hB: [-0.09, -0.1], handB: "palm", l: -0.04, b: [-0.05, 0.05], face: "shout" } : { hF: [0.3, -0.24], wF: -0.7, hB: [0.24, 0.02], l: -0.16, b: [-0.14, 0.02], face: "shout" } })) }),
+    flick: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { hF: [0.02, 0.2], tw: -0.25, l: -0.06 }, hit: { hF: [0.46, -0.1], tw: 0.35, l: 0.16, b: [0.06, 0.02], hand: "palm", face: "fierce" } })) }),
+    throw: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { hF: { a: -2.4, r: 0.4 }, tw: -0.45, hp: -0.2, l: -0.16, b: [-0.04, 0.04], hB: [0.3, -0.06], handB: "palm", face: "fierce" }, hit: { hF: { a: 0.15, r: 0.43 }, tw: 0.5, hp: 0.3, l: 0.26, b: [0.1, 0.04], hB: [-0.1, 0.16], handB: "fist", hand: "palm", fF: [0.24, 0], fB: [-0.15, -0.03], face: "fierce" } })) }),
     // ---------------------------------------------------------------- casting
     // both palms driven out together behind a beam
-    push: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.05, 0.11], l: -0.16, tw: -0.25, hF: [-0.12, 0.18], hB: [-0.15, 0.2], hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.12, 0.05], l: 0.24, tw: 0.15, hF: [0.48, -0.07], hB: [0.44, 0.04], hand: "palm", handB: "palm", fF: [0.29, 0], fB: [-0.19, -0.02], face: "shout" } })), jitter: 6e-3 }),
+    push: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [-0.05, 0.11], l: -0.16, tw: -0.25, hF: [-0.12, 0.18], hB: [-0.15, 0.2], hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.17, 0], face: "grit" }, hit: { b: [0.12, 0.05], l: 0.24, tw: 0.15, hF: [0.48, -0.07], hB: [0.44, 0.04], hand: "palm", handB: "palm", fF: [0.29, 0], fB: [-0.19, -0.02], face: "shout" } })), jitter: 6e-3 }),
     // the arm thrown out to point, the body turned side-on behind it
-    point: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, load: { hF: [0.08, 0.06], tw: -0.2, l: -0.06, hB: [0, 0.3], face: "fierce" }, hit: { hF: [0.49, -0.12], hand: "finger", tw: 0.4, hp: 0.15, l: 0.1, hB: [-0.08, 0.3], fF: [0.19, 0], fB: [-0.13, 0], face: "fierce" } })) }),
+    point: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, load: { hF: [0.08, 0.06], tw: -0.2, l: -0.06, hB: [0, 0.3], face: "fierce" }, hit: { hF: [0.49, -0.12], hand: "finger", tw: 0.4, hp: 0.15, l: 0.1, hB: [-0.08, 0.3], fF: [0.19, 0], fB: [-0.13, 0], face: "fierce" } })) }),
     // a hand raised high, then flung forward to send it
-    raise: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, ht: -0.15, tw: -0.25, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.16, tw: 0.35, b: [0.05, 0.04], ht: 0, face: "shout" } })), jitter: 4e-3 }),
+    raise: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.75, load: { hF: [0.1, -0.5], hand: "palm", l: -0.14, ht: -0.15, tw: -0.25, b: [0, 0.02], hB: [-0.06, 0.3], face: "fierce" }, hit: { hF: [0.46, -0.02], hand: "palm", l: 0.16, tw: 0.35, b: [0.05, 0.04], ht: 0, face: "shout" } })), jitter: 4e-3 }),
     // both arms swept up to the sky
-    summon: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.12], l: 0.2, ht: 0.2, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.3, hF: { a: -1.75, r: 0.43 }, hB: { a: -1.4, r: 0.43 }, zF: 0.12, zB: 0.12, hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
+    summon: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.12], l: 0.2, ht: 0.2, hF: [0.14, 0.2], hB: [-0.1, 0.22], hand: "palm", handB: "palm", face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.3, hF: { a: -1.75, r: 0.43 }, hB: { a: -1.4, r: 0.43 }, zF: 0.12, zB: 0.12, hand: "palm", handB: "palm", face: "shout" }, holdT: 0.18 })), jitter: 0.01 }),
     // a transformation: hunched over clenched fists, gathering it in, then thrown open with the head back — the roar
-    powerup: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.78, load: { b: [0, 0.17], l: 0.3, ht: 0.25, hF: [0.04, 0.28], hB: [-0.04, 0.3], zF: 0.06, zB: 0.06, fF: [0.21, 0], fB: [-0.21, 0], zfF: 0.04, zfB: 0.04, face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.25, hF: [0.18, -0.08], hB: [-0.16, -0.06], zF: 0.22, zB: 0.22, hand: "fist", handB: "fist", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.16 })), jitter: 0.012 }),
+    powerup: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.78, load: { b: [0, 0.17], l: 0.3, ht: 0.25, hF: [0.04, 0.28], hB: [-0.04, 0.3], zF: 0.06, zB: 0.06, fF: [0.21, 0], fB: [-0.21, 0], zfF: 0.04, zfB: 0.04, face: "grit" }, hit: { b: [0, -0.03], l: -0.2, ht: -0.25, hF: [0.18, -0.08], hB: [-0.16, -0.06], zF: 0.22, zB: 0.22, hand: "fist", handB: "fist", fF: [0.22, 0], fB: [-0.22, 0], face: "shout" }, holdT: 0.16 })), jitter: 0.012 }),
     // arms crossed before the chest, coiled, then flung wide: a burst from the hands
-    spread: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], l: 0.2, hF: [0.18, 0.06], hB: [0.16, 0.08], zF: -0.12, zB: -0.12, face: "grit" }, hit: { b: [0, -0.02], l: -0.1, hF: [0.36, -0.14], hB: [-0.36, -0.14], zF: 0.14, zB: 0.14, hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.21, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
-    hana: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85, settle: false })) }),
-    slam: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, l: -0.24, ht: -0.15, hF: [0.12, -0.46], hB: [0.05, -0.46], zF: 0.03, zB: 0.03, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "grit" }, hit: { z: 0, b: [0.1, 0.27], l: 0.5, ht: 0.25, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.27, 0], fB: [-0.21, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
+    spread: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.72, load: { b: [0, 0.13], l: 0.2, hF: [0.18, 0.06], hB: [0.16, 0.08], zF: -0.12, zB: -0.12, face: "grit" }, hit: { b: [0, -0.02], l: -0.1, hF: [0.36, -0.14], hB: [-0.36, -0.14], zF: 0.14, zB: 0.14, hand: "palm", handB: "palm", fF: [0.21, 0], fB: [-0.21, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.12 })), jitter: 8e-3 }),
+    hana: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, 0.03], hF: [0.14, 0.02], hB: [0.2, -0.05], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, hit: { b: [0, 0.02], ht: -0.06, hF: [0.19, -0.06], hB: [0.23, -0.13], eF: 1, eB: -1, hand: "palm", handB: "palm", face: "fierce" }, holdT: c.hitDur ? Math.min(0.9, c.hitDur) : 0.22, holdK: 0.85, settle: false })) }),
+    slam: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.72, load: { z: 0.3, l: -0.24, ht: -0.15, hF: [0.12, -0.46], hB: [0.05, -0.46], zF: 0.03, zB: 0.03, fF: [0.1, -0.2], fB: [-0.1, -0.2], face: "grit" }, hit: { z: 0, b: [0.1, 0.27], l: 0.5, ht: 0.25, hF: [0.36, 0.5], hB: [0.3, 0.52], fF: [0.27, 0], fB: [-0.21, 0], face: "shout" } })), legs: true, jitter: 8e-3 }),
     // a punch at the air itself: the fist cocked back, driven out, stopped dead and shuddering
-    quake: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.7, antic: { b: [0.02, 0.07], l: 0.12 }, load: { b: [-0.06, 0.09], l: -0.24, tw: -0.6, hp: -0.25, hF: [-0.24, -0.06], hB: [0.22, 0.04], face: "grit" }, hit: { b: [0.2, 0.06], l: 0.36, tw: 0.6, hp: 0.4, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], sm: 0.06, face: "shout" }, holdT: 0.14 })), jitter: 0.014, shake: { a: 0.012, t: 0.14 } }),
-    pray: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], zF: -0.06, zB: -0.06, hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
-    blink: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
+    quake: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.7, antic: { b: [0.02, 0.07], l: 0.12 }, load: { b: [-0.06, 0.09], l: -0.24, tw: -0.6, hp: -0.25, hF: [-0.24, -0.06], hB: [0.22, 0.04], face: "grit" }, hit: { b: [0.2, 0.06], l: 0.36, tw: 0.6, hp: 0.4, hF: [0.5, -0.05], hB: [-0.1, 0.2], fF: [0.32, 0], fB: [-0.18, 0], sm: 0.06, face: "shout" }, holdT: 0.14 })), jitter: 0.014, shake: { a: 0.012, t: 0.14 } }),
+    pray: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, load: { hF: [0.16, 0.04], hB: [0.14, 0.05], zF: -0.06, zB: -0.06, hand: "palm", handB: "palm", b: [0, 0.03], ht: 0.12 }, hit: { hF: [0.2, -0.3], hB: [-0.18, -0.3], zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", b: [0, -0.02], ht: -0.1 } })) }),
+    blink: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { b: [0, 0.16], l: 0.32, hF: [-0.1, 0.2], hB: [-0.14, 0.22] }, hit: { l: 0.5, b: [0.2, 0.06], hF: [-0.2, 0.2], hB: [-0.24, 0.22], fB: [-0.3, -0.1] } })), legs: true }),
     // Conqueror's Haki: no wind-up to speak of, only stillness — standing tall, chin up, fists at the sides, and a glare
-    will: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.85, load: { b: [-0.02, 0], l: -0.1, ht: -0.16, hF: [0.03, 0.36], hB: [-0.05, 0.36], zF: 0.05, zB: 0.05, face: "glare" }, hit: { b: [0, -0.02], l: -0.14, ht: -0.22, hF: [0.06, 0.34], hB: [-0.08, 0.34], zF: 0.12, zB: 0.12, face: "glare" }, holdT: 0.35, settle: false })) }),
+    will: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.85, load: { b: [-0.02, 0], l: -0.1, ht: -0.16, hF: [0.03, 0.36], hB: [-0.05, 0.36], zF: 0.05, zB: 0.05, face: "glare" }, hit: { b: [0, -0.02], l: -0.14, ht: -0.22, hF: [0.06, 0.34], hB: [-0.08, 0.34], zF: 0.12, zB: 0.12, face: "glare" }, holdT: 0.35, settle: false })) }),
     // braced like iron: the guard locked tight, the feet planted wide
-    guardup: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: GUARD, load: { b: [0, 0.08], hF: [0.15, -0.1], hB: [0.2, -0.02], eB: -1, zF: -0.05 }, hit: { b: [0, 0.1], hF: [0.16, -0.12], hB: [0.2, -0.03], eB: -1, zF: -0.06, zB: -0.04, zfF: 0.05, zfB: 0.05, face: "grit" }, holdT: 0.3, settle: false })) }),
-    flex: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, load: { b: [0, 0.12], l: 0.12, hF: [0.12, 0.2], hB: [-0.1, 0.22], face: "grit" }, hit: { b: [0, 0.1], l: -0.06, ht: -0.12, hF: [0.12, -0.24], hB: [-0.14, -0.24], zF: 0.2, zB: 0.2, eF: 1, eB: 1, face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
-    breath: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "grit" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
-    pull: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", tw: 0.3, l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", tw: -0.3, l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
+    guardup: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: GUARD, load: { b: [0, 0.08], hF: [0.15, -0.1], hB: [0.2, -0.02], eB: -1, zF: -0.05 }, hit: { b: [0, 0.1], hF: [0.16, -0.12], hB: [0.2, -0.03], eB: -1, zF: -0.06, zB: -0.04, zfF: 0.05, zfB: 0.05, face: "grit" }, holdT: 0.3, settle: false })) }),
+    flex: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.12, hF: [0.12, 0.2], hB: [-0.1, 0.22], face: "grit" }, hit: { b: [0, 0.1], l: -0.06, ht: -0.12, hF: [0.12, -0.24], hB: [-0.14, -0.24], zF: 0.2, zB: 0.2, eF: 1, eB: 1, face: "shout" }, holdT: 0.2 })), jitter: 0.012 }),
+    breath: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.75, load: { l: -0.34, ht: -0.22, b: [-0.04, 0.02], hF: [-0.1, 0.18], hB: [-0.16, 0.2], face: "grit" }, hit: { l: 0.36, ht: 0.12, b: [0.08, 0.06], face: "shout", hF: [-0.12, 0.24], hB: [-0.18, 0.26] }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.18 })), jitter: 0.01 }),
+    pull: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, load: { hF: [0.48, -0.06], hand: "claw", tw: 0.3, l: 0.16, b: [0.06, 0.04] }, hit: { hF: [0.08, 0.04], hand: "fist", tw: -0.3, l: -0.22, b: [-0.08, 0.06], face: "shout" } })) }),
     // ---------------------------------------------------------------- Devil Fruit signatures
     // Gum-Gum Pistol: the arm wound far back on its rubber (past where an arm
     // could reach: it stretches), the body twisted away from it and the other
     // hand aiming — then let go
-    pistol: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: -0.24, b: [-0.07, 0.06], tw: -0.75, hp: -0.3, hF: [-1.15, 0], zF: 0.07, stretch: true, hB: [0.3, -0.04], handB: "palm", fF: [0.25, 0], fB: [-0.18, 0], face: "grit" }, hit: { l: 0.28, b: [0.14, 0.03], tw: 0.65, hp: 0.4, hF: [0.47, -0.05], stretch: true, hB: [-0.05, 0.12], handB: "fist", fF: [0.29, 0], fB: [-0.15, -0.05], face: "shout" }, holdT: 0.12 })) }),
+    pistol: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: -0.24, b: [-0.07, 0.06], tw: -0.75, hp: -0.3, hF: [-1.15, 0], zF: 0.07, stretch: true, hB: [0.3, -0.04], handB: "palm", fF: [0.25, 0], fB: [-0.18, 0], face: "grit" }, hit: { l: 0.28, b: [0.14, 0.03], tw: 0.65, hp: 0.4, hF: [0.47, -0.05], stretch: true, hB: [-0.05, 0.12], handB: "fist", fF: [0.29, 0], fB: [-0.15, -0.05], face: "shout" }, holdT: 0.12 })) }),
     // Gum-Gum Bazooka: both arms stretched far back behind on their rubber, then
     // the two palms slammed out together, the arms running out to them (and
     // snapping home after)
-    bazooka: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.7, antic: { b: [0.02, 0.09], l: 0.14, hF: [0.25, 0.05], hB: [0.24, 0.08] }, load: { b: [-0.08, 0.09], l: -0.32, tw: -0.3, hF: [-1.05, 0.02], hB: [-1.08, 0.1], zF: 0.04, zB: 0.04, hand: "palm", handB: "palm", stretch: true, fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.23, 0.05], l: 0.33, tw: 0.15, hp: 0.2, hF: [1.75, -0.04], hB: [1.72, 0.07], zF: -0.08, zB: -0.08, hand: "palm", handB: "palm", stretch: true, fF: [0.34, 0], fB: [-0.16, -0.05], face: "shout" }, hold: { hF: [1.62, -0.03], hB: [1.6, 0.07] }, follow: { hF: [0.3, 0], hB: [0.28, 0.08], zF: 0, zB: 0, stretch: true }, holdT: 0.12, followAt: 0.3 })) }),
+    bazooka: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.7, antic: { b: [0.02, 0.09], l: 0.14, hF: [0.25, 0.05], hB: [0.24, 0.08] }, load: { b: [-0.08, 0.09], l: -0.32, tw: -0.3, hF: [-1.05, 0.02], hB: [-1.08, 0.1], zF: 0.04, zB: 0.04, hand: "palm", handB: "palm", stretch: true, fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.23, 0.05], l: 0.33, tw: 0.15, hp: 0.2, hF: [1.75, -0.04], hB: [1.72, 0.07], zF: -0.08, zB: -0.08, hand: "palm", handB: "palm", stretch: true, fF: [0.34, 0], fB: [-0.16, -0.05], face: "shout" }, hold: { hF: [1.62, -0.03], hB: [1.6, 0.07] }, follow: { hF: [0.3, 0], hB: [0.28, 0.08], zF: 0, zB: 0, stretch: true }, holdT: 0.12, followAt: 0.3 })) }),
     // Gear Third: the thumb bitten and blown into — the arm swelling like a
     // balloon as it's wound back — then the giant fist thrown (it flies on its
     // rubber: the projectile has the arm), the arm going down again after
-    gigant: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.62, antic: { b: [0, 0.05], l: 0.1, ht: 0.1, hF: [0.08, -0.22], eF: 1, hB: [0.1, 0.1], inF: 0.25, face: "grit" }, anticAt: 0.45, load: { b: [-0.07, 0.1], l: -0.22, tw: -0.8, hp: -0.3, ht: 0.06, hF: [-0.62, -0.06], zF: 0.06, stretch: true, hB: [0.3, -0.04], handB: "palm", fF: [0.27, 0], fB: [-0.21, 0], inF: 1, face: "grit" }, hit: { b: [0.16, 0.05], l: 0.3, tw: 0.7, hp: 0.42, hF: [0.5, -0.05], stretch: true, hB: [-0.06, 0.13], handB: "fist", fF: [0.31, 0], fB: [-0.16, -0.05], inF: 1, face: "shout" }, hold: { inF: 1 }, follow: { inF: 0.5 }, holdT: 0.14 })), jitter: 8e-3 }),
+    gigant: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.62, antic: { b: [0, 0.05], l: 0.1, ht: 0.1, hF: [0.08, -0.22], eF: 1, hB: [0.1, 0.1], inF: 0.25, face: "grit" }, anticAt: 0.45, load: { b: [-0.07, 0.1], l: -0.22, tw: -0.8, hp: -0.3, ht: 0.06, hF: [-0.62, -0.06], zF: 0.06, stretch: true, hB: [0.3, -0.04], handB: "palm", fF: [0.27, 0], fB: [-0.21, 0], inF: 1, face: "grit" }, hit: { b: [0.16, 0.05], l: 0.3, tw: 0.7, hp: 0.42, hF: [0.5, -0.05], stretch: true, hB: [-0.06, 0.13], handB: "fist", fF: [0.31, 0], fB: [-0.16, -0.05], inF: 1, face: "shout" }, hold: { inF: 1 }, follow: { inF: 0.5 }, holdT: 0.14 })), jitter: 8e-3 }),
     // a flurry: the stance wide, leaning in behind fists that blur (see samplePose)
-    gatling: (w, T5, c) => ({ keys: strike(w, T5, S(c, { load: { l: -0.14, b: [-0.04, 0.08], tw: -0.2, hF: [-0.16, 0.02], hB: [-0.2, 0.06], fF: [0.26, 0], fB: [-0.2, 0], face: "grit" }, hit: { l: 0.24, b: [0.08, 0.07], ht: 0.05, hF: [0.42, -0.02], hB: [0.38, 0.04], fF: [0.28, 0], fB: [-0.2, -0.02], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
-    kneel: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "grit" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
+    gatling: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { load: { l: -0.14, b: [-0.04, 0.08], tw: -0.2, hF: [-0.16, 0.02], hB: [-0.2, 0.06], fF: [0.26, 0], fB: [-0.2, 0], face: "grit" }, hit: { l: 0.24, b: [0.08, 0.07], ht: 0.05, hF: [0.42, -0.02], hB: [0.38, 0.04], fF: [0.28, 0], fB: [-0.2, -0.02], face: "shout" }, holdT: c.hitDur || 0.6, holdK: 0.85 })) }),
+    kneel: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.5, load: { b: [0, 0.26], l: 0.46, hF: [0.24, 0.52], hB: [-0.1, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "grit" }, hit: { b: [0, 0.24], l: 0.4, hF: [0.24, 0.5], hB: [-0.12, 0.3], fF: [0.3, 0], fB: [-0.26, -0.02], face: "fierce" }, holdT: 0.12 })), legs: true }),
     // Gum-Gum Rocket: both arms shot out far ahead to grab hold, the body
     // leaning back against the pull — then let go of the ground and flung
     // after them, the arms shortening as it flies in
-    rocket: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.75, load: { b: [-0.06, 0.12], l: -0.3, ht: -0.1, hF: [2.3, -0.3], hB: [2.25, -0.24], zF: -0.06, zB: -0.06, hand: "claw", handB: "claw", stretch: true, fF: [0.3, 0], fB: [-0.22, 0], face: "grit" }, hit: { l: 0.62, z: 0.16, ht: -0.4, hF: [1.1, -0.12], hB: [1.06, -0.06], hand: "fist", handB: "fist", stretch: true, fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" }, hold: { hF: [0.55, -0.06], hB: [0.52, 0] }, follow: { stretch: false } })), legs: true }),
-    fly: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true }),
+    rocket: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.75, load: { b: [-0.06, 0.12], l: -0.3, ht: -0.1, hF: [2.3, -0.3], hB: [2.25, -0.24], zF: -0.06, zB: -0.06, hand: "claw", handB: "claw", stretch: true, fF: [0.3, 0], fB: [-0.22, 0], face: "grit" }, hit: { l: 0.62, z: 0.16, ht: -0.4, hF: [1.1, -0.12], hB: [1.06, -0.06], hand: "fist", handB: "fist", stretch: true, fF: [-0.3, -0.3], fB: [-0.42, -0.36], face: "shout" }, hold: { hF: [0.55, -0.06], hB: [0.52, 0] }, follow: { stretch: false } })), legs: true }),
+    fly: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, load: { b: [0, 0.12], l: 0.2 }, hit: { z: 0.5, l: 0.55, hF: [-0.3, 0.1], hB: [-0.34, 0.12], fF: [-0.25, -0.3], fB: [-0.35, -0.2] } })), legs: true }),
     // Hiken: the fist pulled back to the hip in its fire, the body wound round it and the other hand out to aim — then thrown with everything behind it
-    hiken: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.62, antic: { b: [0.02, 0.07], l: 0.1, hF: [0.26, 0] }, load: { b: [-0.08, 0.1], l: -0.12, tw: -0.7, hp: -0.3, ht: 0.05, hF: [-0.2, 0.12], eF: 1, hB: [0.34, -0.06], handB: "palm", fF: [0.27, 0], fB: [-0.21, 0], face: "grit" }, hit: { b: [0.24, 0.06], l: 0.36, tw: 0.75, hp: 0.5, ht: -0.08, hF: [0.5, -0.04], hB: [-0.1, 0.18], handB: "fist", fF: [0.38, 0], fB: [-0.15, -0.07], sm: 0.14, face: "shout" }, follow: { l: 0.4, b: [0.27, 0.08], hF: [0.45, -0.02] }, holdT: 0.14 })), jitter: 6e-3 }),
+    hiken: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.62, antic: { b: [0.02, 0.07], l: 0.1, hF: [0.26, 0] }, load: { b: [-0.08, 0.1], l: -0.12, tw: -0.7, hp: -0.3, ht: 0.05, hF: [-0.2, 0.12], eF: 1, hB: [0.34, -0.06], handB: "palm", fF: [0.27, 0], fB: [-0.21, 0], face: "grit" }, hit: { b: [0.24, 0.06], l: 0.36, tw: 0.75, hp: 0.5, ht: -0.08, hF: [0.5, -0.04], hB: [-0.1, 0.18], handB: "fist", fF: [0.38, 0], fB: [-0.15, -0.07], sm: 0.14, face: "shout" }, follow: { l: 0.4, b: [0.27, 0.08], hF: [0.45, -0.02] }, holdT: 0.14 })), jitter: 6e-3 }),
     // Gura Gura: the fist cocked high by the ear, the elbow up and back, then punched into the empty air in front — where it stops dead and the air cracks
-    kaishin: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.66, antic: { b: [0.02, 0.08], l: 0.12 }, load: { b: [-0.06, 0.12], l: -0.12, tw: -0.62, hp: -0.25, hF: [-0.12, -0.16], eF: -0.5, zF: 0.06, hB: [0.22, 0.04], fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.17, 0.08], l: 0.3, tw: 0.55, hp: 0.4, hF: [0.42, -0.06], eF: 0.6, hB: [-0.08, 0.16], fF: [0.33, 0], fB: [-0.17, -0.04], sm: 0.04, face: "shout" }, holdT: 0.18, holdK: 0.6 })), jitter: 0.016, shake: { a: 0.016, t: 0.2 } }),
+    kaishin: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.66, antic: { b: [0.02, 0.08], l: 0.12 }, load: { b: [-0.06, 0.12], l: -0.12, tw: -0.62, hp: -0.25, hF: [-0.12, -0.16], eF: -0.5, zF: 0.06, hB: [0.22, 0.04], fF: [0.27, 0], fB: [-0.2, 0], face: "grit" }, hit: { b: [0.17, 0.08], l: 0.3, tw: 0.55, hp: 0.4, hF: [0.42, -0.06], eF: 0.6, hB: [-0.08, 0.16], fF: [0.33, 0], fB: [-0.17, -0.04], sm: 0.04, face: "shout" }, holdT: 0.18, holdK: 0.6 })), jitter: 0.016, shake: { a: 0.016, t: 0.2 } }),
     // Seaquake: both hands up gripping the air itself, then the whole body wrenching it round and down — the world tilts
-    tilt: (w, T5, c) => ({ keys: strike(w, T5, S(c, { loadAt: 0.6, load: { b: [0, 0.06], l: -0.1, ht: -0.12, hF: [0.3, -0.18], hB: [0.28, -0.2], zF: 0.18, zB: 0.18, hand: "claw", handB: "claw", fF: [0.24, 0], fB: [-0.2, 0], zfF: 0.05, zfB: 0.05, face: "grit" }, hit: { b: [0.04, 0.14], l: 0.2, ls: 0.35, tw: 0.4, ht: 0.05, hF: [0.32, 0.05], hB: [0.3, -0.25], zF: 0.1, zB: 0.12, hand: "fist", handB: "fist", face: "shout" }, holdT: 0.3 })), jitter: 0.012, shake: { a: 0.012, t: 0.3 } }),
+    tilt: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { loadAt: 0.6, load: { b: [0, 0.06], l: -0.1, ht: -0.12, hF: [0.3, -0.18], hB: [0.28, -0.2], zF: 0.18, zB: 0.18, hand: "claw", handB: "claw", fF: [0.24, 0], fB: [-0.2, 0], zfF: 0.05, zfB: 0.05, face: "grit" }, hit: { b: [0.04, 0.14], l: 0.2, ls: 0.35, tw: 0.4, ht: 0.05, hF: [0.32, 0.05], hB: [0.3, -0.25], zF: 0.1, zB: 0.12, hand: "fist", handB: "fist", face: "shout" }, holdT: 0.3 })), jitter: 0.012, shake: { a: 0.012, t: 0.3 } }),
     // El Thor: the arm thrust up at the sky, the finger raised — and swept down at the target as the bolt falls
-    skyward: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.45, load: { b: [0, 0.03], l: -0.1, ht: -0.25, tw: -0.15, hF: { a: -1.5, r: 0.43 }, hand: "finger", hB: [0.02, 0.32], zB: 0.04, face: "fierce" }, hit: { b: [0.04, 0.07], l: 0.12, ht: 0.05, tw: 0.3, hF: [0.42, 0.12], hand: "finger", hB: [-0.05, 0.3], face: "shout" }, holdT: 0.2 })), jitter: 5e-3 }),
+    skyward: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.45, load: { b: [0, 0.03], l: -0.1, ht: -0.25, tw: -0.15, hF: { a: -1.5, r: 0.43 }, hand: "finger", hB: [0.02, 0.32], zB: 0.04, face: "fierce" }, hit: { b: [0.04, 0.07], l: 0.12, ht: 0.05, tw: 0.3, hF: [0.42, 0.12], hand: "finger", hB: [-0.05, 0.3], face: "shout" }, holdT: 0.2 })), jitter: 5e-3 }),
     // Ice Age: the palm raised high, then down onto one knee and slapped flat on the ground (it freezes out from there)
-    groundpalm: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.55, load: { b: [0, -0.02], z: 0.02, l: -0.08, ht: -0.1, tw: -0.2, hF: { a: -1.3, r: 0.4 }, hand: "palm", hB: [0.05, 0.3], face: "fierce" }, hit: { b: [0.08, 0.34], l: 0.74, ht: -0.32, tw: 0.2, hF: [0.24, 0.72], hand: "palm", hB: [-0.12, 0.25], fF: [0.31, 0], fB: [-0.24, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.3, holdK: 0.8 })), legs: true }),
+    groundpalm: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.55, load: { b: [0, -0.02], z: 0.02, l: -0.08, ht: -0.1, tw: -0.2, hF: { a: -1.3, r: 0.4 }, hand: "palm", hB: [0.05, 0.3], face: "fierce" }, hit: { b: [0.08, 0.34], l: 0.74, ht: -0.32, tw: 0.2, hF: [0.24, 0.72], hand: "palm", hB: [-0.12, 0.25], fF: [0.31, 0], fB: [-0.24, 0], face: "shout" }, holdT: c.hitDur ? Math.min(0.5, c.hitDur) : 0.3, holdK: 0.8 })), legs: true }),
     // ROOM: a hand held up before the face, open as if round a sphere, as the dome spreads out from it
-    room: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.05], l: 0.04, tw: -0.1, hF: [0.16, 0.06], hand: "claw", hB: [0, 0.32], face: "fierce" }, hit: { b: [0, 0.06], l: -0.04, ht: -0.08, tw: 0.15, hF: [0.24, -0.17], zF: 0.03, hand: "claw", eF: 1, hB: [-0.02, 0.32], face: "fierce" }, holdT: 0.28, settle: false })) }),
+    room: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.6, load: { b: [0, 0.05], l: 0.04, tw: -0.1, hF: [0.16, 0.06], hand: "claw", hB: [0, 0.32], face: "fierce" }, hit: { b: [0, 0.06], l: -0.04, ht: -0.08, tw: 0.15, hF: [0.24, -0.17], zF: 0.03, hand: "claw", eF: 1, hB: [-0.02, 0.32], face: "fierce" }, holdT: 0.28, settle: false })) }),
     // Dai Enkai: both hands raised high under the second sun, then one arm hurling it down at them
-    sunraise: (w, T5, c) => ({ keys: strike(w, T5, S(c, { stance: STAND, loadAt: 0.7, load: { b: [0, 0.04], l: -0.18, ht: -0.25, hF: { a: -1.55, r: 0.42 }, hB: { a: -1.45, r: 0.42 }, zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.18, 0], face: "grit" }, hit: { b: [0.16, 0.06], l: 0.32, tw: 0.4, ht: 0, hF: [0.47, -0.08], hB: [-0.1, 0.12], hand: "palm", handB: "fist", fF: [0.3, 0], fB: [-0.17, -0.04], face: "shout" }, holdT: 0.15 })), jitter: 8e-3 })
+    sunraise: (w, T5, c) => ({ keys: strike(w, T5, S2(c, { stance: STAND, loadAt: 0.7, load: { b: [0, 0.04], l: -0.18, ht: -0.25, hF: { a: -1.55, r: 0.42 }, hB: { a: -1.45, r: 0.42 }, zF: 0.08, zB: 0.08, hand: "palm", handB: "palm", fF: [0.2, 0], fB: [-0.18, 0], face: "grit" }, hit: { b: [0.16, 0.06], l: 0.32, tw: 0.4, ht: 0, hF: [0.47, -0.08], hB: [-0.1, 0.12], hand: "palm", handB: "fist", fF: [0.3, 0], fB: [-0.17, -0.04], face: "shout" }, holdT: 0.15 })), jitter: 8e-3 })
   };
   var LIMB = {
     gigant: "hF",
@@ -9518,7 +11681,7 @@
     }
     g.restore();
   }
-  function catmull(p0, p1, p2, p3, t) {
+  function catmull2(p0, p1, p2, p3, t) {
     const t2 = t * t, t3 = t2 * t;
     return [
       0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
@@ -9530,7 +11693,7 @@
     const out = [];
     for (let i = 0; i < pts.length - 1; i++) {
       const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
-      for (let k = 0; k < sub; k++) out.push(catmull(p0, p1, p2, p3, k / sub));
+      for (let k = 0; k < sub; k++) out.push(catmull2(p0, p1, p2, p3, k / sub));
     }
     out.push(pts[pts.length - 1]);
     return out;
@@ -10849,7 +13012,7 @@
   // src/render/combatfx.js
   var TAU5 = Math.PI * 2;
   var rnd = (a, b) => a + Math.random() * (b - a);
-  var clamp012 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  var clamp013 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   var ELEM = {
     physical: { c: "#ffffff", spark: ["#ffffff", "#fff8e1", "#ffe0b2"], kind: "spark" },
     slash: { c: "#e3f2fd", spark: ["#ffffff", "#e3f2fd"], kind: "spark" },
@@ -12202,7 +14365,9 @@
   sig("ito_birdcage", {
     // the cage of strings — kept on the field so it can close in (powers.js zoneRules)
     zone(fx, actor, spec, a, zone) {
+      zone.r0 = zone.r;
       zone.shape = fx.add("zone", { x: zone.x, y: zone.y, r: zone.r, kind: "cage", color: zone.color, zone, life: 1e6 });
+      fx.add("cagecuts", { x: zone.x, y: zone.y, r0: zone.r, cage: zone, n: Math.max(24, Math.min(80, Math.round(zone.r * 2.6))), seed: 0, life: zone.t + 40 });
       for (let i = 0; i < 12; i++) {
         const th = i / 12 * TAU5;
         fx.add("strings", { x: actor.x, y: actor.y, x1: zone.x + Math.cos(th) * zone.r, y1: zone.y + Math.sin(th) * zone.r * 0.62, color: "#f8bbd0", n: 1, life: 0.7 });
@@ -13339,7 +15504,7 @@
     const sg = sigFor(def) || {};
     const st = styleOf(def, actor);
     const E = elem ? elemFor(elem, actor, def) : null;
-    const k = t < w ? clamp012(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
+    const k = t < w ? clamp013(t / Math.max(0.04, w)) : Math.max(0, 1 - (t - w) / 0.3);
     const trail3 = sg.trail || (E && elem !== "physical" ? E.c : st ? st.trail : "#ffffff");
     const fxElem = sg.elem || (elem && elem !== "physical" ? elem : st && st.elem) || null;
     out.fx = { elem: fxElem, color: E ? E.c : trail3, trail: trail3, limb: sg.limb || clip2.limb, k, additive: !!(E && E.add), claw: st && st.claw };
@@ -13412,1603 +15577,6 @@
       drawCharacter(g, ghostLook(look, "#ffffff"), { facing: pose.facing, P: pose.P, time: pose.time, state: "idle", noShadow: true, ghost: true });
       g.restore();
     }
-  }
-
-  // src/world/constants.js
-  var POS_SCALE = 6;
-  var SIZE_SCALE = 2.25;
-  var chart = (v) => Math.round(v * POS_SCALE);
-  var csize = (v) => Math.round(v * SIZE_SCALE);
-  var W2 = chart(4096);
-  var H = chart(2048);
-  var EQ = chart(1024);
-  var GL_HALF = chart(400);
-  var CB = chart(100);
-  var RL_HALF = chart(46);
-  var RM_X = chart(2048);
-  var MG_X = 0;
-  var POLAR = chart(26);
-  var GL_TOP = EQ - GL_HALF;
-  var GL_BOTTOM = EQ + GL_HALF;
-  var CB_TOP = GL_TOP - CB;
-  var CB_BOTTOM = GL_BOTTOM + CB;
-  var REGION = {
-    EAST_BLUE: 1,
-    NORTH_BLUE: 2,
-    WEST_BLUE: 3,
-    SOUTH_BLUE: 4,
-    PARADISE: 5,
-    NEW_WORLD: 6,
-    CALM_NORTH: 7,
-    CALM_SOUTH: 8,
-    RED_LINE: 9,
-    POLAR: 10
-  };
-  var REGION_INFO = {
-    [REGION.EAST_BLUE]: { id: "east_blue", name: "East Blue", danger: 1, color: "#4fb3e8", sea: true },
-    [REGION.NORTH_BLUE]: { id: "north_blue", name: "North Blue", danger: 2, color: "#5a8fd6", sea: true },
-    [REGION.WEST_BLUE]: { id: "west_blue", name: "West Blue", danger: 2, color: "#4a9fc9", sea: true },
-    [REGION.SOUTH_BLUE]: { id: "south_blue", name: "South Blue", danger: 2, color: "#3fc1c9", sea: true },
-    [REGION.PARADISE]: { id: "paradise", name: "Grand Line \u2014 Paradise", danger: 4, color: "#2aa198", sea: true },
-    [REGION.NEW_WORLD]: { id: "new_world", name: "Grand Line \u2014 New World", danger: 7, color: "#6c5ce7", sea: true },
-    [REGION.CALM_NORTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
-    [REGION.CALM_SOUTH]: { id: "calm_belt", name: "Calm Belt", danger: 6, color: "#8395a7", sea: true },
-    [REGION.RED_LINE]: { id: "red_line", name: "Red Line", danger: 5, color: "#b33939", sea: false },
-    [REGION.POLAR]: { id: "polar", name: "Polar Sea", danger: 3, color: "#dfe6e9", sea: true }
-  };
-  var SEA_IDS = {
-    east_blue: REGION.EAST_BLUE,
-    north_blue: REGION.NORTH_BLUE,
-    west_blue: REGION.WEST_BLUE,
-    south_blue: REGION.SOUTH_BLUE,
-    paradise: REGION.PARADISE,
-    new_world: REGION.NEW_WORLD,
-    calm_belt: REGION.CALM_NORTH,
-    red_line: REGION.RED_LINE
-  };
-  var wrapX = (x) => (x % W2 + W2) % W2;
-  var RMX = 900;
-  var RMY = 3300;
-  function regionAt(x, y) {
-    x = wrapX(x);
-    if (y < POLAR || y >= H - POLAR) return REGION.POLAR;
-    if (Math.abs(x - RM_X) < RL_HALF || x < RL_HALF || x >= W2 - RL_HALF) return REGION.RED_LINE;
-    const ey = (y - EQ) / RMY;
-    if (Math.abs(ey) < 1 && Math.abs(x - RM_X) < RMX * Math.sqrt(1 - ey * ey)) return REGION.RED_LINE;
-    const east = x > RM_X;
-    if (y >= GL_TOP && y < GL_BOTTOM) return east ? REGION.PARADISE : REGION.NEW_WORLD;
-    if (y >= CB_TOP && y < GL_TOP) return REGION.CALM_NORTH;
-    if (y >= GL_BOTTOM && y < CB_BOTTOM) return REGION.CALM_SOUTH;
-    if (y < EQ) return east ? REGION.EAST_BLUE : REGION.NORTH_BLUE;
-    return east ? REGION.SOUTH_BLUE : REGION.WEST_BLUE;
-  }
-  var isCalmBelt = (r4) => r4 === REGION.CALM_NORTH || r4 === REGION.CALM_SOUTH;
-  var isGrandLine = (r4) => r4 === REGION.PARADISE || r4 === REGION.NEW_WORLD;
-  var isBlue = (r4) => r4 >= REGION.EAST_BLUE && r4 <= REGION.SOUTH_BLUE;
-
-  // src/world/reverseMountain.js
-  var RM = {
-    x: RM_X,
-    y: EQ,
-    rx: 900,
-    // the massif's reach across the Red Line (the coast bulges out this far)…
-    ry: 3300,
-    // …and along it (past the Calm Belt, into the Blues)
-    top: 160,
-    // water level of the summit pool, metres above the sea
-    poolR: 56,
-    // (room for the greatest ships to turn out into the torrent)
-    halfW: 17,
-    // half the width of a canal (a great galleon rides it with room either side)
-    climb: 740,
-    // the last stretch of each canal, where it climbs the mountain
-    drop: 620,
-    // the torrent down to Paradise
-    cone: { rx: 760, ry: 1250, h: 110 },
-    // the mountain standing on the Red Line
-    upSpeed: 20,
-    // m/s of the currents up the mountain…
-    downSpeed: 28
-    // …and of the torrent down
-  };
-  var UP_PTS = [[780, 3460], [440, 3390], [236, 3285], [205, 3e3], [192, 2400], [182, 1800], [168, 1400], [150, 950], [70, 420], [24, 70], [8, 22]];
-  var EXIT_PTS = [[30, 0], [260, 6], [620, -8], [980, 4], [1230, 0]];
-  var CANALS = [
-    { id: "east_blue", sx: 1, sy: -1 },
-    { id: "north_blue", sx: -1, sy: -1 },
-    { id: "west_blue", sx: -1, sy: 1 },
-    { id: "south_blue", sx: 1, sy: 1 },
-    { id: "exit", exit: true }
-  ];
-  var STEP = 4;
-  var CELL = 32;
-  function catmull2(pts, step2) {
-    const out = [];
-    const P6 = [pts[0], ...pts, pts[pts.length - 1]];
-    for (let i = 1; i < P6.length - 2; i++) {
-      const [p0, p1, p2, p3] = [P6[i - 1], P6[i], P6[i + 1], P6[i + 2]];
-      const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
-      const n = Math.max(1, Math.ceil(len / step2));
-      for (let k = 0; k < n; k++) {
-        const t = k / n, t2 = t * t, t3 = t2 * t;
-        const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
-        out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
-      }
-    }
-    out.push(pts[pts.length - 1]);
-    return out;
-  }
-  var smooth = (t) => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
-  function build() {
-    for (const c of CANALS) {
-      const pts = c.exit ? EXIT_PTS : UP_PTS.map(([x, y]) => [x * c.sx, y * c.sy]);
-      const raw = catmull2(pts, STEP);
-      const n = raw.length;
-      c.x = new Float32Array(n);
-      c.y = new Float32Array(n);
-      c.s = new Float32Array(n);
-      c.lv = new Float32Array(n);
-      c.fx = new Float32Array(n);
-      c.fy = new Float32Array(n);
-      let s = 0;
-      for (let i = 0; i < n; i++) {
-        if (i) s += Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]);
-        c.x[i] = RM.x + raw[i][0];
-        c.y[i] = RM.y + raw[i][1];
-        c.s[i] = s;
-      }
-      c.len = s;
-      for (let i = 0; i < n; i++) {
-        const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1);
-        const dx = c.x[b] - c.x[a], dy = c.y[b] - c.y[a], d = Math.hypot(dx, dy) || 1;
-        c.fx[i] = dx / d;
-        c.fy[i] = dy / d;
-        const si = c.s[i];
-        c.lv[i] = c.exit ? RM.top * (1 - smooth((si - 30) / RM.drop)) : RM.top * smooth((si - (s - RM.climb)) / RM.climb);
-      }
-    }
-    const grid2 = /* @__PURE__ */ new Map();
-    CANALS.forEach((c, ci) => {
-      for (let i = 0; i < c.x.length; i++) {
-        const k = Math.floor(c.x[i] / CELL) * 65536 + Math.floor(c.y[i] / CELL);
-        let l = grid2.get(k);
-        if (!l) grid2.set(k, l = []);
-        l.push(ci, i);
-      }
-    });
-    RM.grid = grid2;
-  }
-  build();
-  function canalLevel(c, s) {
-    if (c.exit) return RM.top * (1 - smooth((s - 30) / RM.drop));
-    return RM.top * smooth((s - (c.len - RM.climb)) / RM.climb);
-  }
-  var HIT = { canal: null, i: 0, d: 0, s: 0, level: 0, fx: 0, fy: 0, side: 0, pool: false };
-  var POOL_CURL = 0.2;
-  function canalAt(x, y, reach3 = 40, out = HIT) {
-    const dxs = x - RM.x, dys = y - RM.y;
-    if (Math.abs(dxs) > 1400 || Math.abs(dys) > 3500) return null;
-    const pd = Math.hypot(dxs, dys);
-    if (pd < RM.poolR) {
-      out.canal = CANALS[4];
-      out.i = 0;
-      out.d = 0;
-      out.s = 0;
-      out.level = RM.top;
-      out.pool = true;
-      const c2 = pd > 1e-3 ? dxs / pd : 1;
-      const a = smooth((pd - 3) / 7) * (1 - smooth((c2 - 0.7) / 0.27));
-      out.fx = (pd > 1e-3 ? -dxs / pd * a : 0) + (1 - a);
-      out.fy = (pd > 1e-3 ? -dys / pd * a : 0) - (1 - a) * dys * POOL_CURL;
-      const f = Math.hypot(out.fx, out.fy) || 1;
-      out.fx /= f;
-      out.fy /= f;
-      out.side = 0;
-      return out;
-    }
-    let best = -1, bc = 0, bd = reach3 * reach3;
-    const r4 = Math.ceil(reach3 / CELL);
-    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
-    for (let j = -r4; j <= r4; j++) {
-      for (let i = -r4; i <= r4; i++) {
-        const l = RM.grid.get((cx + i) * 65536 + (cy + j));
-        if (!l) continue;
-        for (let k = 0; k < l.length; k += 2) {
-          const c2 = CANALS[l[k]], si = l[k + 1];
-          const ex = x - c2.x[si], ey = y - c2.y[si];
-          const d2 = ex * ex + ey * ey;
-          if (d2 < bd) {
-            bd = d2;
-            best = si;
-            bc = l[k];
-          }
-        }
-      }
-    }
-    if (best < 0) return null;
-    const c = CANALS[bc];
-    let s = c.s[best], px2 = c.x[best], py2 = c.y[best];
-    const ax = x - px2, ay = y - py2;
-    const along2 = ax * c.fx[best] + ay * c.fy[best];
-    s = Math.max(0, Math.min(c.len, s + along2));
-    const side = ax * -c.fy[best] + ay * c.fx[best];
-    out.canal = c;
-    out.i = best;
-    out.s = s;
-    out.d = Math.abs(side);
-    out.side = side;
-    out.level = canalLevel(c, s);
-    out.fx = c.fx[best];
-    out.fy = c.fy[best];
-    out.pool = false;
-    return out;
-  }
-  function coneAt(x, y) {
-    const C3 = RM.cone;
-    const r4 = Math.hypot((x - RM.x) / C3.rx, (y - RM.y) / C3.ry);
-    if (r4 >= 1) return 0;
-    const k = 1 - r4;
-    return C3.h * k * k * (3 - 2 * k);
-  }
-  var nearRM = (x, y) => Math.abs(x - RM.x) < RM.rx + 500 && Math.abs(y - RM.y) < RM.ry + 400;
-
-  // src/world/deform.js
-  var MAX = 8;
-  var DEFORM = { list: [], now: 0, world: null, seq: 0 };
-  var KINDS = { tilt: 1, crater: 2, trench: 3, rise: 4, ice: 5 };
-  function addDeform(o) {
-    const d = {
-      kind: KINDS[o.kind] || 1,
-      x: o.x,
-      y: o.y,
-      r: o.r || 12,
-      amp: o.amp ?? 2,
-      ang: o.ang || 0,
-      w: o.w || 2,
-      rise: o.rise ?? 0.35,
-      hold: o.hold ?? 4,
-      fall: o.fall ?? 3,
-      wob: o.wob || 0,
-      t0: DEFORM.now + (o.delay || 0),
-      id: ++DEFORM.seq
-    };
-    d.c = Math.cos(d.ang);
-    d.s = Math.sin(d.ang);
-    DEFORM.list.push(d);
-    while (DEFORM.list.length > MAX) DEFORM.list.shift();
-    return d;
-  }
-  function tickDeform(now3, world) {
-    if (world && DEFORM.world && world !== DEFORM.world || now3 < DEFORM.now - 1) DEFORM.list.length = 0;
-    DEFORM.now = now3;
-    if (world) DEFORM.world = world;
-    if (DEFORM.list.length) DEFORM.list = DEFORM.list.filter((d) => now3 - d.t0 < d.rise + d.hold + d.fall && d.t0 - now3 < 30);
-  }
-  var sst = (a, b, x) => {
-    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-    return t * t * (3 - 2 * t);
-  };
-  function envelope(d, now3 = DEFORM.now) {
-    const t = now3 - d.t0;
-    if (t < 0) return 0;
-    let e;
-    if (t < d.rise) e = sst(0, 1, t / d.rise);
-    else if (t < d.rise + d.hold) e = 1;
-    else e = 1 - sst(0, 1, (t - d.rise - d.hold) / d.fall);
-    if (d.wob && t < d.rise + 1.2) e *= 1 + d.wob * Math.sin(t * 38) * Math.exp(-t * 2.2);
-    return e;
-  }
-  function shapeAt(kind, lx, ly, r4, amp, c, s, w) {
-    const dd = Math.hypot(lx, ly), q2 = dd / r4;
-    if (kind === 1) {
-      if (q2 >= 1) return 0;
-      const fade2 = 1 - sst(0.55, 1, q2);
-      return amp * ((lx * c + ly * s) / r4) * fade2;
-    }
-    if (kind === 2) {
-      if (q2 >= 1.5) return 0;
-      const bowl = q2 < 1 ? -amp * (1 - q2 * q2) : 0;
-      return bowl + amp * 0.3 * Math.exp(-(((q2 - 1) / 0.18) ** 2));
-    }
-    if (kind === 3) {
-      const u = lx * c + ly * s, v = -lx * s + ly * c;
-      if (u < -w || u > r4 + w) return 0;
-      const run = sst(-w, w * 0.5, u) * (1 - sst(r4 - w * 1.5, r4 + w, u));
-      return -amp * Math.exp(-((v / w) ** 2)) * run + amp * 0.18 * Math.exp(-(((Math.abs(v) - w * 1.3) / (w * 0.5)) ** 2)) * run;
-    }
-    if (kind === 5) return 0;
-    if (kind === 4) {
-      if (q2 >= 1) return 0;
-      return amp * (1 - sst(0, 1, q2));
-    }
-    return 0;
-  }
-  var ICE_TOP = 0.32;
-  function iceCover(x, y) {
-    const L3 = DEFORM.list;
-    if (!L3.length) return false;
-    const w = DEFORM.world;
-    for (const d of L3) {
-      if (d.kind !== 5) continue;
-      const e = envelope(d);
-      if (e < 0.25) continue;
-      const lx = w?.dx ? w.dx(d.x, x) : x - d.x, ly = y - d.y;
-      const th = Math.atan2(ly, lx);
-      const rag = 1 + 0.07 * Math.sin(th * 7 + d.id) + 0.04 * Math.sin(th * 17 + d.id * 3);
-      if (Math.hypot(lx, ly) < d.r * rag * Math.min(1, e * 1.3)) return true;
-    }
-    return false;
-  }
-  function deformAt(x, y, sea = false) {
-    const L3 = DEFORM.list;
-    if (!L3.length) return 0;
-    const w = DEFORM.world;
-    let h2 = 0;
-    for (const d of L3) {
-      if (sea && d.kind !== 1) continue;
-      const lx = w?.dx ? w.dx(d.x, x) : x - d.x, ly = y - d.y;
-      const R5 = d.kind === 3 ? d.r + d.w * 2 : d.r * 1.5;
-      if (Math.abs(lx) > R5 + 2 || Math.abs(ly) > R5 + 2) continue;
-      const e = envelope(d);
-      if (e) h2 += e * shapeAt(d.kind, lx, ly, d.r, d.amp, d.c, d.s, d.w);
-    }
-    return h2;
-  }
-
-  // src/render3d/swell.js
-  var SWELL_GLSL = (
-    /* glsl */
-    `
-  float sHash(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
-  }
-  float sNoise(vec2 p) {
-    vec2 i = floor(p), f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(sHash(i), sHash(i + vec2(1, 0)), u.x), mix(sHash(i + vec2(0, 1)), sHash(i + vec2(1, 1)), u.x), u.y);
-  }
-  // two octaves, rotated against each other (no grid-aligned blobs)
-  float sFbm(vec2 p) {
-    float a = sNoise(p);
-    p = mat2(0.8, -0.6, 0.6, 0.8) * p * 2.03 + 17.3;
-    return a * 0.64 + sNoise(p) * 0.36;
-  }
-  // d: how far from the eye (m) \u2014 the shorter trains stop nearer it
-  float swells(vec2 p, float t, float d, out vec2 slope) {
-    const vec2 D0 = vec2(0.86, 0.51), D1 = vec2(0.17, 0.985), D2 = vec2(-0.81, 0.59), D3 = vec2(0.75, -0.66), D4 = vec2(0.42, -0.91);
-    const float K0 = 0.1366, K1 = 0.2856, K2 = 0.4833, K3 = 0.7854, K4 = 0.1848;   // 46 m, 22 m, 13 m, 8 m; a cross swell of 34 m
-    const float W0 = 1.157, W1 = 1.673, W2 = 2.177, W3 = 2.774, W4 = 1.346;       // deep-water speeds
-    // bent crests (a little everywhere, and long slow curves)
-    vec2 q = p + (vec2(sNoise(p * 0.021), sNoise(p * 0.021 + 7.7)) - 0.5) * 14.0 + (vec2(sNoise(p * 0.0055 + 3.1), sNoise(p * 0.0055 + 9.4)) - 0.5) * 44.0;
-    // wave groups
-    float g0 = (0.36 + 0.45 * sFbm(p * 0.006 + vec2(0.0, t * 0.012) + 91.0)) * (1.0 - smoothstep(160.0, 320.0, d));
-    float g1 = (0.35 + 0.9 * sFbm(p * 0.011 + vec2(t * 0.02, 0.0))) * 0.75 * (1.0 - smoothstep(150.0, 300.0, d));
-    float g2 = (0.3 + 0.9 * sFbm(p * 0.017 + 31.0 - vec2(0.0, t * 0.025))) * 0.4 * (1.0 - smoothstep(45.0, 100.0, d));
-    float g3 = (0.3 + 0.9 * sFbm(p * 0.026 + 57.0)) * 0.22 * (1.0 - smoothstep(25.0, 55.0, d));
-    // (the cross swell strong in some stretches of sea, gone in others)
-    float g4 = (0.7 * sFbm(p * 0.0045 - 51.0 + vec2(t * 0.01, 0.0)) + 0.15) * 0.8 * (1.0 - smoothstep(160.0, 320.0, d));
-    float a0 = K0 * dot(D0, q) - W0 * t + 0.6, a1 = K1 * dot(D1, q) - W1 * t, a2 = K2 * dot(D2, q) - W2 * t + 1.7, a3 = K3 * dot(D3, q) - W3 * t + 4.1, a4 = K4 * dot(D4, q) - W4 * t + 2.3;
-    // (peaked: e^(sin a - 1), less its mean 0.466, scaled back to a peak of 1)
-    float e0 = exp(sin(a0) - 1.0) * 1.873, e1 = exp(sin(a1) - 1.0) * 1.873, e2 = exp(sin(a2) - 1.0) * 1.873, e4 = exp(sin(a4) - 1.0) * 1.873;
-    float h = (e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + sin(a3) * g3 + (e4 - 0.873) * g4;
-    slope = (D0 * K0 * e0 * cos(a0) * g0 + D1 * K1 * e1 * cos(a1) * g1 + D2 * K2 * e2 * cos(a2) * g2 + D3 * K3 * cos(a3) * g3 + D4 * K4 * e4 * cos(a4) * g4) / 2.6;
-    return h / 2.6;
-  }
-`
-  );
-  var fract = (v) => v - Math.floor(v);
-  function sHash(x, y) {
-    let a = fract(x * 0.1031), b = fract(y * 0.1031), c = a;
-    const d = a * (b + 33.33) + b * (c + 33.33) + c * (a + 33.33);
-    a += d;
-    b += d;
-    c += d;
-    return fract((a + b) * c);
-  }
-  function sNoise(x, y) {
-    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
-    const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
-    const a = sHash(ix, iy), b = sHash(ix + 1, iy), c = sHash(ix, iy + 1), d = sHash(ix + 1, iy + 1);
-    const top = a + (b - a) * ux, bot = c + (d - c) * ux;
-    return top + (bot - top) * uy;
-  }
-  function sFbm(x, y) {
-    const a = sNoise(x, y);
-    const px2 = (0.8 * x + 0.6 * y) * 2.03 + 17.3, py2 = (-0.6 * x + 0.8 * y) * 2.03 + 17.3;
-    return a * 0.64 + sNoise(px2, py2) * 0.36;
-  }
-  var sst2 = (a, b, x) => {
-    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
-    return t * t * (3 - 2 * t);
-  };
-  function swells(x, y, t, d = 0) {
-    const qx = x + (sNoise(x * 0.021, y * 0.021) - 0.5) * 14 + (sNoise(x * 55e-4 + 3.1, y * 55e-4 + 3.1) - 0.5) * 44;
-    const qy = y + (sNoise(x * 0.021 + 7.7, y * 0.021 + 7.7) - 0.5) * 14 + (sNoise(x * 55e-4 + 9.4, y * 55e-4 + 9.4) - 0.5) * 44;
-    const g0 = (0.36 + 0.45 * sFbm(x * 6e-3 + 91, y * 6e-3 + t * 0.012 + 91)) * (1 - sst2(160, 320, d));
-    const g1 = (0.35 + 0.9 * sFbm(x * 0.011 + t * 0.02, y * 0.011)) * 0.75 * (1 - sst2(150, 300, d));
-    const g2 = (0.3 + 0.9 * sFbm(x * 0.017 + 31, y * 0.017 + 31 - t * 0.025)) * 0.4 * (1 - sst2(45, 100, d));
-    const g3 = (0.3 + 0.9 * sFbm(x * 0.026 + 57, y * 0.026 + 57)) * 0.22 * (1 - sst2(25, 55, d));
-    const g4 = (0.7 * sFbm(x * 45e-4 - 51 + t * 0.01, y * 45e-4 - 51) + 0.15) * 0.8 * (1 - sst2(160, 320, d));
-    const a0 = 0.1366 * (0.86 * qx + 0.51 * qy) - 1.157 * t + 0.6;
-    const a1 = 0.2856 * (0.17 * qx + 0.985 * qy) - 1.673 * t;
-    const a2 = 0.4833 * (-0.81 * qx + 0.59 * qy) - 2.177 * t + 1.7;
-    const a3 = 0.7854 * (0.75 * qx - 0.66 * qy) - 2.774 * t + 4.1;
-    const a4 = 0.1848 * (0.42 * qx - 0.91 * qy) - 1.346 * t + 2.3;
-    const e0 = Math.exp(Math.sin(a0) - 1) * 1.873, e1 = Math.exp(Math.sin(a1) - 1) * 1.873, e2 = Math.exp(Math.sin(a2) - 1) * 1.873, e4 = Math.exp(Math.sin(a4) - 1) * 1.873;
-    return ((e0 - 0.873) * g0 + (e1 - 0.873) * g1 + (e2 - 0.873) * g2 + Math.sin(a3) * g3 + (e4 - 0.873) * g4) / 2.6;
-  }
-  var swellAmp = (storm, zone, calm = 0) => zone >= 2 ? 0 : (0.85 + storm * 1.4) * (1 - calm * 0.85);
-  var LIQUID = new Float32Array(256).fill(0.15);
-  for (const k of [0, 1, 2, 5, 7]) LIQUID[k] = 1;
-  LIQUID[3] = 0.5;
-  LIQUID[9] = 0;
-  function calmPoints(world) {
-    if (!world?.reverseMountain) return [];
-    if (world.calmPts) return world.calmPts;
-    const out = [];
-    for (const c of CANALS) {
-      if (c.i0 === void 0) continue;
-      const land2 = c.exit ? c.i1 - 3 : c.i0 + 3;
-      const j = Math.max(0, Math.min(c.x.length - 1, land2 + (c.exit ? 12 : -12)));
-      out.push([c.x[j], c.y[j], 170]);
-    }
-    return world.calmPts = out;
-  }
-  function calmAt(w, x, y) {
-    let k = 1;
-    for (const [cx, cy, r4] of calmPoints(w)) k = Math.min(k, sst2(r4 * 0.45, r4, Math.hypot(w.dx ? w.dx(cx, x) : x - cx, y - cy)));
-    return k;
-  }
-  var S2 = { t: 0, amp: 0, world: null, ox: 0, oy: 0 };
-  function setSwell(t, amp, world, ox, oy) {
-    S2.t = t;
-    S2.amp = amp;
-    S2.world = world;
-    S2.ox = ox;
-    S2.oy = oy;
-  }
-  function swellAt(x, y, t = S2.t) {
-    const w = S2.world;
-    if (!w || !S2.amp) return 0;
-    const dx = w.dx ? w.dx(S2.ox, x) : x - S2.ox, dy = y - S2.oy;
-    const d = Math.hypot(dx, dy);
-    if (d > 320) return 0;
-    const k = w.type(Math.floor(x), Math.floor(y));
-    const liquid = LIQUID[k < 16 ? k : 255];
-    if (!liquid) return 0;
-    const shore = 0.35 + 0.65 * sst2(0.5, -7, w.sd ? w.sd(x, y) : -32);
-    const tilt = DEFORM.list.length ? deformAt(x, y, true) * sst2(-1.5, -8, w.sd ? w.sd(x, y) : -32) : 0;
-    return swells(x, y, t, d) * S2.amp * shore * liquid * (w.reverseMountain ? calmAt(w, x, y) : 1) + tilt;
-  }
-  var swellOn = () => !!(S2.world && S2.amp > 0.01);
-
-  // src/game/boatFeel.js
-  var BOAT_FEEL = {
-    // ---- steering (the helm you hold with A / D)
-    helmIn: 0.32,
-    // s for the helm to go hard over when you steer (eased in and out, no snap)
-    helmOut: 0.2,
-    // s for it to come back amidships when you let go
-    turnLag: 0.1,
-    // s the hull takes to answer her helm: how long her turn takes to build up, and to die away
-    turnLagPerM: 32e-4,
-    // … and that much more per metre of her length (a big ship swings more slowly)
-    turnRate: 1,
-    // × each class's top turning rate (1 = as the ship tables have it)
-    // ---- the wheel (it turns as you steer and comes back to centre when you let go)
-    wheelMax: 2.2,
-    // radians the wheel is turned hard over (about a third of a turn)
-    wheelSpeed: 14,
-    // how briskly the wheel follows the helm (a spring's rate, per second: higher is snappier)
-    standTilt: 0.5,
-    // how much the helmsman leans with the deck as she rolls and pitches (0 stands bolt upright, 1 tilts with it)
-    // (how far round each hand works a spoke before taking the next one: render3d/chars/pose.js HELM_GRIP)
-    // ---- riding the sea (how she heaves, pitches and rolls on the swell)
-    rideRate: 6.5,
-    // how closely she follows the sea's surface (per second: higher is stiffer, lower floatier)
-    rideRatePerM: -0.055,
-    // … less per metre of her length (a long hull is heavier, slower to answer)
-    rideDamp: 0.9,
-    // 1 = settles without overshooting; a little under 1 gives a buoyant bob
-    rideLead: 1,
-    // how well she keeps up with the swell (1 keeps her waterline on the sea; less lets her lag behind it, floatier)
-    pitchMax: 0.22,
-    // radians she pitches at most (bow up or down)
-    rollMax: 0.26,
-    // radians she rolls at most
-    // ---- speed changes (sails set or taken in, oars, wind round as she turns)
-    speedSmooth: 0.45,
-    // s over which a change in her driving force builds up (under sail)
-    speedSmoothOars: 0.12
-    // … under oars (each stroke still surges her on)
-  };
-
-  // src/world/hull.js
-  var clamp013 = (x) => Math.max(0, Math.min(1, x));
-  var smooth2 = (a, b, x) => {
-    const t = clamp013((x - a) / (b - a));
-    return t * t * (3 - 2 * t);
-  };
-  var BIG_SHIP = 8;
-  var dimsCache = /* @__PURE__ */ new Map();
-  function shipDims(def) {
-    if (def._dims) return def._dims;
-    const key2 = `${def.length}|${def.beam}|${def.masts}|${def.cannons}|${!!def.oarsOnly}`;
-    let d = dimsCache.get(key2);
-    if (!d) {
-      d = def.length >= BIG_SHIP ? bigDims(def) : smallDims(def);
-      dimsCache.set(key2, d);
-    }
-    Object.defineProperty(def, "_dims", { value: d, enumerable: false, configurable: true });
-    return d;
-  }
-  function smallDims(def) {
-    const L3 = def.length, B5 = def.beam;
-    const open = L3 < 3.5;
-    const D4 = B5 * 0.42;
-    const deckY2 = open ? 0.14 : 0.25 + B5 * 0.2;
-    const bulH = open ? 0.36 : 0.3 + B5 * 0.07;
-    const castle2 = L3 >= 5.5, fore = L3 >= 6.8;
-    const hq = castle2 ? 0.85 + (L3 - 5.5) * 0.1 : 0;
-    const hf = fore ? 0.5 : 0;
-    const tq = castle2 ? 0.27 : 0, tf2 = fore ? 0.83 : 1;
-    const masts = def.masts ?? 1;
-    const mastH = masts ? 1.2 + L3 * 0.75 : 0;
-    let helmX = -L3 * 0.42;
-    const d = {
-      L: L3,
-      B: B5,
-      D: D4,
-      open,
-      deckY: deckY2,
-      bulH,
-      castle: castle2,
-      fore,
-      hq,
-      hf,
-      tq,
-      tf: tf2,
-      masts,
-      mastH,
-      helmX,
-      yq: deckY2 + hq,
-      yf: deckY2 + hf,
-      helmFloor: castle2 ? deckY2 + hq : deckY2,
-      big: false,
-      poop: false,
-      hp: 0,
-      tp: 0,
-      sheer: 0.16 * B5,
-      walk: 0.94,
-      stairs: [],
-      solids: []
-    };
-    d.mastU = masts ? Array.from({ length: masts }, (_, m) => masts === 1 ? 0.05 * L3 : L3 * (0.28 - m * (0.56 / Math.max(1, masts - 1)))) : [];
-    d.mastR = 0.05 + L3 * 0.011;
-    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.16 }));
-    if (!open) {
-      const aft = masts > 1 ? d.mastU[masts - 1] : Infinity;
-      d.wheelU = Math.min(helmX + 1, aft - d.mastR - 0.35);
-      d.helmX = helmX = Math.max(-L3 / 2 + 0.3, Math.min(helmX, d.wheelU - 1));
-      d.solids.push({ u: d.wheelU + 0.1, v: 0, r: 0.2 });
-    }
-    if (def.oarsOnly) {
-      const seatT = 0.44, lockT = seatT + 0.4 / L3;
-      d.row = {
-        seatT,
-        seatU: xAt(d, seatT),
-        seatH: 0.3,
-        // (the top of the thwart, over the floor)
-        lockT,
-        lockU: xAt(d, lockT),
-        lockV: hbAt(lockT, B5) * 0.965,
-        lockH: topAt(d, lockT) + 0.04,
-        inboard: 0.56,
-        outboard: 1.5
-      };
-      d.helmX = helmX = d.row.seatU;
-    }
-    return d;
-  }
-  var OAR = { catchA: 0.6, finishA: -0.3, dipB: 0.52, liftB: 0.2 };
-  var ease = (k) => k * k * (3 - 2 * k);
-  function oarStroke(ph, pull = 1) {
-    const { catchA: ca, finishA: fa, dipB, liftB } = OAR;
-    let a, b, f;
-    if (ph < 0.08) {
-      const k = ease(ph / 0.08);
-      a = ca;
-      b = liftB + (dipB - liftB) * k;
-      f = 0;
-    } else if (ph < 0.52) {
-      a = ca + (fa - ca) * ease((ph - 0.08) / 0.44);
-      b = dipB;
-      f = 0;
-    } else if (ph < 0.6) {
-      const k = ease((ph - 0.52) / 0.08);
-      a = fa;
-      b = dipB + (liftB - dipB) * k;
-      f = k;
-    } else {
-      const k = (ph - 0.6) / 0.4;
-      a = fa + (ca - fa) * ease(k);
-      b = liftB + Math.sin(k * Math.PI) * 0.05;
-      f = k < 0.8 ? 1 : 1 - ease((k - 0.8) / 0.2);
-    }
-    if (pull < 0) a = ca + fa - a;
-    return { a, b, f };
-  }
-  function rowLean(ship) {
-    const o = ship.oars;
-    if (!o) return 0;
-    const k = clamp013((OAR.catchA - (o[0].a + o[1].a) / 2) / (OAR.catchA - OAR.finishA));
-    return -0.08 + 0.44 * k;
-  }
-  var oarDrive = (ph) => ph < 0.08 || ph > 0.52 ? 0 : Math.sin((ph - 0.08) / 0.44 * Math.PI);
-  function oarPoints(d, side, a, b) {
-    const r4 = d.row, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
-    const ox = sa * cb, oy = -sb, oz = side * ca * cb;
-    const px2 = r4.lockU, py2 = r4.lockH, pz2 = side * r4.lockV;
-    return {
-      lock: [px2, py2, pz2],
-      dir: [ox, oy, oz],
-      grip: [px2 - ox * r4.inboard, py2 - oy * r4.inboard, pz2 - oz * r4.inboard],
-      tip: [px2 + ox * r4.outboard, py2 + oy * r4.outboard, pz2 + oz * r4.outboard]
-    };
-  }
-  function bigDims(def) {
-    const L3 = def.length, B5 = def.beam;
-    const D4 = B5 * 0.45;
-    const narrow = B5 < 7;
-    const large = L3 >= 44, mid = !narrow && !large;
-    const deckY2 = 0.6 + Math.min(B5, 11) * 0.2;
-    const bulH = 1.1;
-    const fore = L3 >= 24;
-    const hq = narrow ? 2.4 : Math.min(3, 1.95 + B5 * 0.075), hf = hq - 0.1;
-    const poop = large, hp = poop ? hq - 0.2 : 0;
-    const tq = narrow ? Math.max(0.24, 2.9 / L3) : mid ? 0.26 : 0.3, tf2 = fore ? large ? 0.85 : 1 - Math.max(0.13, 5.4 / L3) : 1, tp = poop ? 0.13 : 0;
-    const yq = deckY2 + hq, yf = deckY2 + hf, yp = yq + hp;
-    const masts = Math.max(1, Math.min(4, def.masts || 3));
-    const tHelm = poop ? tp - 2.2 / L3 : narrow ? 0.08 : 0.1;
-    const d = {
-      L: L3,
-      B: B5,
-      D: D4,
-      open: false,
-      big: true,
-      narrow,
-      deckY: deckY2,
-      bulH,
-      castle: true,
-      fore,
-      poop,
-      hq,
-      hf,
-      hp,
-      tq,
-      tf: tf2,
-      tp,
-      masts,
-      mastH: narrow ? L3 * 0.95 + 3 : L3 + 4,
-      helmX: -L3 / 2 + tHelm * L3,
-      yq,
-      yf,
-      yp,
-      helmFloor: poop ? yp : yq,
-      sheer: Math.min(1.3, 0.4 + L3 * 0.016),
-      walk: 0.86
-    };
-    d.bowY = fore ? yf : deckY2 + 0.9;
-    d.mastU = { 1: [0.06], 2: [0.22, -0.06], 3: large ? [0.27, 0.03, -0.24] : [0.26, 0.02, -0.28], 4: [0.3, 0.1, -0.12, -0.27] }[masts].map((k) => k * L3);
-    d.mastR = Math.min(0.6, 0.05 + L3 * 0.011);
-    d.wheelU = d.helmX + 0.9;
-    const bu = d.wheelU + 1.45;
-    d.binnacleU = !narrow && !poop && d.mastU.every((u) => Math.abs(u - bu) > d.mastR + 0.95) && bu < xAt(d, tq) - 0.5 ? bu : null;
-    const W4 = narrow ? 1.05 : Math.min(1.6, 0.75 + B5 * 0.055), sides2 = narrow ? [1] : [-1, 1];
-    const run = (rise2) => rise2 * (narrow ? 1.1 : mid ? 1.15 : 1.3);
-    const edge = (t) => hbAt(t, B5) * d.walk - 0.22;
-    d.stairs = [];
-    const flight = (ta, tb, ha, hb, la, lb) => {
-      const vo2 = Math.min(edge(ta), edge(tb)), vi = vo2 - W4;
-      for (const s of sides2) d.stairs.push({ ta, tb, ha, hb, la, lb, s, va: s > 0 ? vi : -vo2, vb: s > 0 ? vo2 : -vi });
-    };
-    flight(tq, tq + run(hq) / L3, yq, deckY2, "quarter", "main");
-    if (fore) flight(tf2 - run(hf) / L3, tf2, deckY2, yf, "main", "fore");
-    if (poop) flight(tp, tp + run(hp) / L3, yp, yq, "poop", "quarter");
-    const qs = d.stairs.find((s) => s.la === "quarter" && s.lb === "main"), fs = d.stairs.find((s) => s.lb === "fore");
-    const mainT0 = qs.tb, mainT1 = fs ? fs.ta : 0.84;
-    d.mainT0 = mainT0;
-    d.mainT1 = mainT1;
-    const holdY = deckY2 - Math.max(2.25, Math.min(2.7, 1.9 + B5 * 0.045));
-    d.holdY = holdY;
-    const holdHalf = (t) => skinAt(d, t, holdY + 0.3) - 0.3;
-    let h0 = 0.06, h1 = 0.94;
-    while (h0 < 0.4 && holdHalf(h0) < 0.8) h0 += 5e-3;
-    while (h1 > 0.6 && holdHalf(h1) < 0.8) h1 -= 5e-3;
-    const clearU = (u0, u1, pad2) => d.mastU.every((m) => m < u0 - d.mastR - pad2 || m > u1 + d.mastR + pad2);
-    const clearComp = (u0, u1) => d.mastU.every((m) => m < u0 - d.mastR - 1.2 || m > u1 + d.mastR + 1.5);
-    const rise = deckY2 - holdY;
-    let comp = null;
-    for (const cRun of [...large ? [rise * 1.15, rise, rise * 0.85] : [], rise * 0.55]) {
-      for (let k = 0; k < 160 && !comp; k++) {
-        const tc = (mainT0 + mainT1) / 2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 3e-3;
-        const t0 = tc - cRun / L3 / 2, t1 = tc + cRun / L3 / 2;
-        if (t0 < mainT0 + 0.5 / L3 || t1 > mainT1 - 1.8 / L3 || t0 < h0 + 1.8 / L3 || t1 > h1 - 0.3 / L3) continue;
-        if (clearComp(xAt(d, t0), xAt(d, t1))) comp = { t0, t1, ladder: cRun < rise * 0.7 };
-      }
-      if (comp) break;
-    }
-    if (!comp) comp = { t0: (mainT0 + mainT1) / 2 - rise * 0.275 / L3, t1: (mainT0 + mainT1) / 2 + rise * 0.275 / L3, ladder: true };
-    const cw = comp.ladder ? 0.9 : 1.3;
-    d.comp = { ...comp, w: cw, u0: xAt(d, comp.t0), u1: xAt(d, comp.t1) };
-    d.stairs.push({ ta: comp.t0, tb: comp.t1, ha: holdY, hb: deckY2, la: "hold", lb: "main", s: 0, va: -cw / 2, vb: cw / 2, down: true, ladder: comp.ladder });
-    d.hatchT = (comp.t0 + comp.t1) / 2;
-    const freeT = (want2, len, pad2) => {
-      for (let k = 0; k < 80; k++) {
-        const tc = want2 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 6e-3;
-        const u0 = xAt(d, tc) - len / 2, u1 = u0 + len;
-        if (tc - len / L3 / 2 < mainT0 + 0.3 / L3 || tc + len / L3 / 2 > mainT1 - 0.3 / L3) continue;
-        if (!clearU(u0, u1, pad2)) continue;
-        if (u1 > d.comp.u0 - pad2 && u0 < d.comp.u1 + Math.max(pad2, 1.6)) continue;
-        return tc;
-      }
-      return null;
-    };
-    d.capstanT = L3 >= 14 ? freeT(masts >= 4 ? 0.54 : 0.385, 0.9, 0.7) : null;
-    const bl2 = Math.min(6, L3 * 0.14), bt = L3 >= 24 ? freeT(masts >= 4 ? 0.69 : 0.645, bl2, 0.6) : null;
-    if (bt !== null && d.capstanT !== null && Math.abs(xAt(d, bt) - xAt(d, d.capstanT)) < bl2 / 2 + 1.2) d.boat = null;
-    else d.boat = bt !== null ? { u0: (bt - 0.5) * L3 - bl2 / 2, u1: (bt - 0.5) * L3 + bl2 / 2, w: Math.min(2.2, B5 * 0.22) } : null;
-    const gs = Math.max(0.6, Math.min(1, B5 / 6.5));
-    d.gunScale = gs;
-    const rows = [{ y: deckY2 + 0.42, t0: mainT0 + 1.5 / L3, t1: mainT1 - 1.5 / L3, lid: 0.42, open: 1.4, deck: true }];
-    if ((def.cannons || 0) >= 12) rows.push({ y: holdY + 0.42 * Math.max(0.85, gs), t0: Math.max(0.12, h0 + 0.8 / L3), t1: Math.min(0.86, h1 - 0.8 / L3), lid: 0.6, open: 1.05 });
-    const perSide = Math.ceil((def.cannons || 0) / 2);
-    const capU = d.capstanT !== null ? (d.capstanT - 0.5) * L3 : null;
-    const centre = (u) => {
-      let w = 0;
-      for (const m of d.mastU) if (Math.abs(u - m) < d.mastR + 0.6) w = Math.max(w, d.mastR + 0.1);
-      if (capU !== null && Math.abs(u - capU) < 1.17) w = Math.max(w, 0.62);
-      if (d.boat && u > d.boat.u0 - 0.55 && u < d.boat.u1 + 0.55) w = Math.max(w, d.boat.w / 2);
-      if (u > d.comp.u0 - 0.6 && u < d.comp.u1 + 0.6) w = Math.max(w, cw / 2 + 0.05);
-      return w;
-    };
-    const walkway = large ? 0.9 : mid ? 0.7 : 0.45;
-    const offAt = (t) => hbAt(t, B5) * 0.93 - 0.95 * gs;
-    const fitsGun = (t) => {
-      const u = (t - 0.5) * L3, reach3 = 0.5 * gs;
-      return [u - reach3, u, u + reach3].every((uu) => offAt(t) - gunIn(gs) - centre(uu) >= walkway);
-    };
-    const top = rows[0], want = rows.length > 1 ? Math.ceil(perSide / 2) : perSide;
-    const cand = [];
-    for (let t = top.t0; t <= top.t1 + 1e-9; t += 0.1 / L3) if (fitsGun(t)) cand.push(t);
-    const pick6 = [], gap = (1.4 * gs + 0.35) / L3;
-    for (let i = 0; i < want && cand.length; i++) {
-      const aim = want === 1 ? (top.t0 + top.t1) / 2 : top.t0 + (top.t1 - top.t0) * i / (want - 1);
-      let best = null;
-      for (const t of cand) if (pick6.every((q2) => Math.abs(q2 - t) >= gap) && (best === null || Math.abs(t - aim) < Math.abs(best - aim))) best = t;
-      if (best !== null) pick6.push(best);
-    }
-    pick6.sort((a, b) => a - b);
-    d.guns = [];
-    for (const t of pick6) for (const s of [-1, 1]) d.guns.push({ t, u: (t - 0.5) * L3, v: s * offAt(t), s });
-    top.ts = pick6;
-    top.n = pick6.length;
-    for (const r4 of rows) if (!r4.deck) r4.n = Math.max(2, Math.min(16, Math.ceil(perSide / 2), Math.floor((r4.t1 - r4.t0) * L3 / 1.9)));
-    d.gunRows = rows;
-    d.lowGuns = [];
-    const low = rows.find((r4) => !r4.deck);
-    if (low) {
-      for (let i = 0; i < low.n; i++) {
-        const t = low.t0 + (low.t1 - low.t0) * (i + 0.5) / low.n;
-        const off = skinAt(d, t, low.y) - 0.3 - 0.85 * gs;
-        if (t > comp.t0 - 1.6 / L3 && t < comp.t1 + 0.5 / L3 && off - gunIn(gs) - 0.8 < cw / 2 + 0.5) continue;
-        for (const s of [-1, 1]) d.lowGuns.push({ t, u: (t - 0.5) * L3, v: s * off, s });
-      }
-    }
-    const tS = 0.02 + 0.3 / L3;
-    const mastIn = d.mastU.some((m) => m < xAt(d, tq) && m > xAt(d, tq) - 2.6);
-    const doorVs = narrow ? [Math.max(-edge(tq) + 0.75, Math.min(0, qs.va - 0.75))] : mastIn ? [-1, 1].map((s) => s * Math.max(0.95, d.mastR + 1.15)) : [0];
-    d.rooms = [
-      { kind: "cabin", t0: tS, t1: tq, floor: deckY2, ceil: yq - 0.12, top: yq, doors: doorVs.map((v) => ({ t: tq, v, w: 1.05, face: 1 })) }
-    ];
-    if (poop) d.rooms.push({ kind: "captain", t0: tS, t1: tp, floor: yq, ceil: yp - 0.12, top: yp, doors: [{ t: tp, v: 0, w: 1.05, face: 1 }] });
-    if (fore) {
-      let fe = 0.95;
-      while (fe > tf2 + 0.03 && innerAt(d, fe, deckY2 + 1) < 0.85) fe -= 5e-3;
-      const fdv = narrow ? [Math.max(-edge(tf2) + 0.75, Math.min(0, fs.va - 0.75))] : [-0.95, 0.95];
-      d.rooms.push({ kind: "forecastle", t0: tf2, t1: fe, floor: deckY2, ceil: yf - 0.12, top: yf, doors: fdv.map((v) => ({ t: tf2, v, w: 1, face: -1 })) });
-    }
-    d.rooms.push({ kind: "hold", t0: h0, t1: h1, floor: holdY, ceil: deckY2 - 0.12, doors: [] });
-    const upTo = { cabin: ["quarter", "main"], captain: ["poop", "quarter"], forecastle: ["main", "fore"] };
-    for (const r4 of d.rooms) if (r4.doors.length) roomFront(d, r4, d.stairs.filter((s) => s.la === upTo[r4.kind][0] && s.lb === upTo[r4.kind][1]));
-    for (const r4 of d.rooms) if (r4.kind === "cabin" || r4.kind === "captain") r4.windows = sternWindows(d, r4);
-    d.walls = [];
-    for (const r4 of d.rooms) {
-      if (!r4.doors.length) continue;
-      const u = xAt(d, r4.front.t), w = innerAt(d, r4.front.t, r4.floor + 1) + 0.1;
-      let v = -w;
-      for (const dr of [...r4.doors].sort((a, b) => a.v - b.v)) {
-        d.walls.push({ u0: u, v0: v, u1: u, v1: dr.v - dr.w / 2, y0: r4.floor, y1: r4.ceil + 0.12 });
-        v = dr.v + dr.w / 2;
-      }
-      d.walls.push({ u0: u, v0: v, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12 });
-    }
-    for (const r4 of d.rooms) {
-      const hold = r4.kind === "hold";
-      for (const [t, off] of hold ? [[r4.t0, 0], [r4.t1, 0]] : r4.kind === "forecastle" ? [[r4.t1, 0]] : [[r4.t0, 0.05]]) {
-        const u = xAt(d, t) + off, w = (hold ? skinAt(d, t, r4.floor + 0.3) : innerAt(d, t, r4.floor + 1)) + 0.1;
-        d.walls.push({ u0: u, v0: -w, u1: u, v1: w, y0: r4.floor, y1: r4.ceil + 0.12, end: true });
-      }
-    }
-    d.solids = d.mastU.map((u) => ({ u, v: 0, r: d.mastR + 0.08 }));
-    for (const gn of d.guns) d.solids.push({ ...gunBox(gn, gs), lvl: "main", h: 0.95 * gs });
-    for (const gn of d.lowGuns) d.solids.push({ ...gunBox(gn, gs), lvl: "hold", h: 0.95 * gs });
-    if (capU !== null) d.solids.push({ u: capU, v: 0, r: 0.62, lvl: "main", h: 1 });
-    d.solids.push({ u: d.wheelU, v: 0, r: 0.7, lvl: d.poop ? "poop" : "quarter" });
-    if (d.binnacleU !== null) d.solids.push({ u: d.binnacleU, v: 0, r: 0.35, lvl: "quarter", h: 1.2 });
-    if (fore) d.solids.push({ u: (tf2 + 0.03 - 0.5) * L3, v: 0, r: 0.55, lvl: "fore" });
-    if (d.boat) d.solids.push({ u0: d.boat.u0, u1: d.boat.u1, v0: -d.boat.w / 2, v1: d.boat.w / 2, lvl: "main", h: 1.1 });
-    d.shotPile = null;
-    const mainFirst = [...d.mastU].sort((a, b) => Math.abs(a) - Math.abs(b));
-    const S6 = FURNITURE.shot;
-    for (const m of mainFirst) {
-      for (const [u, v] of [[m + d.mastR + 0.95, 0], [m - d.mastR - 0.95, 0], [m, d.mastR + 0.85], [m, -d.mastR - 0.85]]) {
-        const box2 = { u0: u - S6.w / 2, u1: u + S6.w / 2, v0: v - S6.dp / 2, v1: v + S6.dp / 2 };
-        if (deckClear(d, box2, 0.55)) {
-          d.shotPile = { u, v, ...box2 };
-          break;
-        }
-      }
-      if (d.shotPile) break;
-    }
-    if (d.shotPile) {
-      const p = d.shotPile;
-      d.solids.push({ u0: p.u0, u1: p.u1, v0: p.v0, v1: p.v1, lvl: "main", h: 0.6 });
-    }
-    furnish(d);
-    d.ladders = [];
-    for (const s of [1, -1]) {
-      const t = ladderT(d, def, s, mainT0, mainT1);
-      if (t !== null) d.ladders.push({ t, u: xAt(d, t), s, w: LADDER_W });
-    }
-    return d;
-  }
-  var LADDER_W = 0.62;
-  function ladderT(d, def, s, t0, t1) {
-    const L3 = d.L, mid = (t0 + t1) / 2;
-    for (let k = 0; k < 600; k++) {
-      const t = mid + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.05 / L3;
-      if (t < t0 + 1 / L3 || t > t1 - 1 / L3) continue;
-      const u = xAt(d, t);
-      if ([...d.guns, ...d.lowGuns || []].some((g) => g.s === s && Math.abs(g.u - u) < LADDER_W / 2 + 0.31 + 0.3)) continue;
-      if (d.mastU.some((m) => Math.abs(u - (m - 0.5)) < (2.4 + d.mastR * 2) / 2 + LADDER_W / 2 + 0.25)) continue;
-      if (def.paddle && Math.abs(t - 0.34) < (0.72 * d.B / 3.2 + LADDER_W / 2 + 0.5) / L3) continue;
-      const v = s * (hbAt(t, d.B) * d.walk - 0.5);
-      if (levelAt(d, t, v) !== "main" || solidAt(d, u, v, 0.4, "main") > 0) continue;
-      return t;
-    }
-    return null;
-  }
-  var gunIn = (gs) => 0.92 * gs + 0.05;
-  function gunBox(g, gs) {
-    const a = 0.25 * gs + 0.15, i = gunIn(gs), o = 0.6 * gs;
-    return { u0: g.u - a, u1: g.u + a, v0: g.s > 0 ? g.v - i : g.v - o, v1: g.s > 0 ? g.v + o : g.v + i };
-  }
-  var hits = (a, b, pad2 = 0) => a.u0 < b.u1 + pad2 && a.u1 > b.u0 - pad2 && a.v0 < b.v1 + pad2 && a.v1 > b.v0 - pad2;
-  var nearRing = (a, u, v, r4) => Math.hypot(u - Math.max(a.u0, Math.min(a.u1, u)), v - Math.max(a.v0, Math.min(a.v1, v))) < r4;
-  function deckClear(d, b, pad2) {
-    const t0 = (b.u0 + d.L / 2) / d.L, t1 = (b.u1 + d.L / 2) / d.L;
-    if (t0 < d.tq || t1 > d.tf) return false;
-    for (const t of [t0, t1]) if (Math.max(-b.v0, b.v1) > hbAt(t, d.B) * d.walk - pad2) return false;
-    const cp = d.comp;
-    if (hits(b, { u0: cp.u0, u1: cp.u1 + 1.6, v0: -cp.w / 2 - 0.4, v1: cp.w / 2 + 0.4 }, pad2)) return false;
-    for (const s of d.stairs) if (!s.down && (s.la === "main" || s.lb === "main") && hits(b, { u0: xAt(d, s.ta), u1: xAt(d, s.tb), v0: s.va, v1: s.vb }, pad2)) return false;
-    for (const o of d.solids) {
-      if (o.lvl && o.lvl !== "main") continue;
-      if (o.r !== void 0 ? nearRing(b, o.u, o.v, o.r + pad2) : hits(b, o, pad2)) return false;
-    }
-    return true;
-  }
-  function roomFront(d, r4, stairs2) {
-    const face = r4.kind === "forecastle" ? -1 : 1, t = face > 0 ? r4.t1 : r4.t0, u = xAt(d, t);
-    const w = innerAt(d, t, (r4.floor + r4.top) / 2) + 0.05, dh = Math.min(2.05, r4.top - r4.floor - 0.12);
-    const ds = [...r4.doors].sort((a, b) => a.v - b.v);
-    ds.forEach((dr, i) => {
-      const lo = i ? (ds[i - 1].v + ds[i - 1].w / 2 + dr.v - dr.w / 2) / 2 : -w, hi = i < ds.length - 1 ? (dr.v + dr.w / 2 + ds[i + 1].v - ds[i + 1].w / 2) / 2 : w;
-      const right = hi - (dr.v + dr.w / 2), left = dr.v - dr.w / 2 - lo, sd = right >= left ? 1 : -1;
-      const lw = Math.min(dr.w - 0.1, Math.max(right, left) - 0.12), e = dr.v + sd * (dr.w / 2 + 0.04);
-      dr.dh = dh;
-      dr.leaf = lw > 0.3 ? { u: u - face * 0.12, v0: Math.min(e, e + sd * lw), v1: Math.max(e, e + sd * lw), s: sd } : null;
-    });
-    const clearOfStairs = (zz, half2) => !stairs2.some((st) => zz + half2 > st.va - 0.1 && zz - half2 < st.vb + 0.1);
-    const windows2 = [];
-    if (r4.top - r4.floor > 1.8) {
-      for (let zz = -w + 0.75; zz <= w - 0.75; zz += 1.15) {
-        if (ds.some((dr) => Math.abs(zz - dr.v) < dr.w / 2 + 0.5 || dr.leaf && zz + 0.38 > dr.leaf.v0 && zz - 0.38 < dr.leaf.v1) || !clearOfStairs(zz, 0.4)) continue;
-        windows2.push(zz);
-      }
-    }
-    r4.front = { t, u, face, w, dh, windows: windows2 };
-  }
-  function sternWindows(d, r4) {
-    const w = innerAt(d, r4.t0, r4.floor + 1);
-    if (r4.ceil + 0.1 - r4.floor <= 1.9) return [];
-    const n = Math.max(2, Math.floor(w * 2 / 1.15)), ww = Math.min(0.8, w * 2 / n - 0.3);
-    return Array.from({ length: n }, (_, i) => ({ v: -w + (i + 0.5) * (w * 2) / n, w: ww }));
-  }
-  var FURNITURE = {
-    table: { w: 1.6, dp: 0.9, h: 0.76 },
-    chair: { w: 0.46, dp: 0.46, h: 0.95 },
-    bench: { w: 1.5, dp: 0.36, h: 0.46 },
-    desk: { w: 1.4, dp: 0.75, h: 0.78 },
-    bunk: { w: 2.05, dp: 0.95, h: 0.7 },
-    chest: { w: 0.9, dp: 0.55, h: 0.62 },
-    treasure: { w: 0.9, dp: 0.8, h: 0.98 },
-    shelf: { w: 1.3, dp: 0.38, h: 1.8 },
-    stove: { w: 1.2, dp: 0.9, h: 0.8 },
-    // (the range itself 0.9 × 0.7, on its stone hearth)
-    hammock: { w: 2.1, dp: 0.8, h: 0.62 },
-    barrel: { w: 0.66, dp: 0.66, h: 0.78 },
-    barrels: { w: 1.34, dp: 0.66, h: 0.78 },
-    crate: { w: 0.8, dp: 0.8, h: 1.2 },
-    sacks: { w: 1.2, dp: 0.7, h: 0.48 },
-    shot: { w: 0.6, dp: 0.45, h: 0.48 },
-    lantern: { w: 0.28, dp: 0.36, h: 0.46 }
-  };
-  function footprint(it) {
-    const across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
-    const hu = (across ? it.dp : it.w) / 2, hv = (across ? it.w : it.dp) / 2;
-    return { u0: it.u - hu, u1: it.u + hu, v0: it.v - hv, v1: it.v + hv };
-  }
-  var SEAT_H = { chair: 0.47, bench: FURNITURE.bench.h, barrel: 0.8 };
-  function seatsOf(d) {
-    if (d.seats) return d.seats;
-    const out = [];
-    for (const it of d.furniture || []) {
-      const h2 = SEAT_H[it.kind];
-      if (!h2 || it.ghost || it.y) continue;
-      const face = Math.PI / 2 - (it.rot || 0);
-      if (it.kind !== "bench") {
-        out.push({ u: it.u, v: it.v, floor: it.floor, h: h2, face, kind: it.kind });
-        continue;
-      }
-      const n = Math.max(1, Math.floor(it.w / 0.6)), across = Math.abs(Math.sin(it.rot || 0)) > 0.5;
-      for (let i = 0; i < n; i++) {
-        const o = ((i + 0.5) / n - 0.5) * it.w;
-        out.push({ u: it.u + (across ? 0 : o), v: it.v + (across ? o : 0), floor: it.floor, h: h2, face, kind: "bench" });
-      }
-    }
-    return d.seats = out;
-  }
-  var liningYs = (r4) => r4.kind === "hold" ? [-0.02, 0.55, 1.15, 1.75, r4.ceil + 0.1 - r4.floor] : [-0.02, 0.9, r4.ceil + 0.1 - r4.floor];
-  function liningAt(d, r4, t, y) {
-    const ys = liningYs(r4);
-    const at4 = (yy) => r4.kind === "hold" ? Math.max(0.3, skinAt(d, t, r4.floor + yy) - 0.22) : innerAt(d, t, r4.floor + yy) + 0.01;
-    const yc = Math.max(ys[0], Math.min(ys[ys.length - 1], y));
-    for (let i = 0; i < ys.length - 1; i++) {
-      if (yc <= ys[i + 1]) return at4(ys[i]) + (at4(ys[i + 1]) - at4(ys[i])) * (yc - ys[i]) / (ys[i + 1] - ys[i]);
-    }
-    return at4(ys[ys.length - 1]);
-  }
-  function roomEnds(d, r4) {
-    const a = xAt(d, r4.t0), b = xAt(d, r4.t1);
-    if (r4.kind === "forecastle") return [a + 0.07, b];
-    if (r4.kind === "hold") return [a, b];
-    return [a + 0.1, b - 0.07];
-  }
-  function roomPlacer(d, r4) {
-    const [ua, ub] = roomEnds(d, r4), H5 = r4.ceil - r4.floor;
-    const tOf = (u) => (Math.max(ua, Math.min(ub, u)) + d.L / 2) / d.L;
-    const ys = liningYs(r4);
-    const P6 = { d, r: r4, ua, ub, H: H5, items: [], keep: [], low: [], rings: [] };
-    const reached = /* @__PURE__ */ new Map();
-    P6.reach = (u, y0, y1) => {
-      const key2 = `${Math.round(u * 100)}|${y0}|${y1}`;
-      let m = reached.get(key2);
-      if (m === void 0) {
-        m = Infinity;
-        for (const y of [y0, y1, ...ys.filter((yy) => yy > y0 && yy < y1)]) m = Math.min(m, liningAt(d, r4, tOf(Math.round(u * 100) / 100), y));
-        reached.set(key2, m);
-      }
-      return m - 0.03;
-    };
-    const top = (o) => o.pipe ? H5 - 0.1 : (o.y || 0) + o.h;
-    P6.fits = (it) => {
-      const fp = footprint(it), y0 = it.y || 0, y1 = top(it);
-      if (fp.u0 < ua - 1e-6 || fp.u1 > ub + 1e-6 || y1 > H5 - (it.y ? 0 : 0.06)) return false;
-      for (const u of [fp.u0, (fp.u0 + fp.u1) / 2, fp.u1]) {
-        const w = P6.reach(u, y0, y1);
-        if (fp.v0 < -w - 1e-6 || fp.v1 > w + 1e-6) return false;
-      }
-      if (P6.keep.some((k) => hits(fp, k) && y0 < (k.top ?? Infinity))) return false;
-      if (y1 > 0.72 && P6.low.some((k) => hits(fp, k))) return false;
-      if (P6.rings.some((c) => nearRing(fp, c.u, c.v, c.r))) return false;
-      for (const o of P6.items) if (hits(fp, footprint(o), 0.02) && y0 < top(o) && (o.y || 0) < y1) return false;
-      return true;
-    };
-    P6.put = (it) => {
-      const x = { rot: 0, ...it, room: r4.kind, floor: r4.floor };
-      if (!P6.fits(x)) return null;
-      P6.items.push(x);
-      return x;
-    };
-    const spec = (kind, extra = {}) => ({ kind, ...FURNITURE[kind], ...extra });
-    const sidePlace = (kind, s, u, extra) => {
-      const S6 = spec(kind, extra), y0 = S6.y || 0, y1 = S6.pipe ? H5 - 0.1 : y0 + S6.h;
-      const w = Math.min(P6.reach(u - S6.w / 2, y0, y1), P6.reach(u, y0, y1), P6.reach(u + S6.w / 2, y0, y1));
-      const it = { rot: s > 0 ? Math.PI : 0, ...S6, u, v: s * (w - 0.01 - S6.dp / 2), room: r4.kind, floor: r4.floor };
-      return { it, off: P6.reach(u, y0, y1) - w };
-    };
-    P6.onSide = (kind, s, u, extra = {}) => P6.put(sidePlace(kind, s, u, extra).it);
-    P6.alongSide = (kind, s, from, to, extra = {}) => {
-      const dir = to >= from ? 1 : -1;
-      let best = null;
-      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
-        const c = sidePlace(kind, s, u, extra);
-        if (!P6.fits(c.it)) continue;
-        if (c.off < 0.12) {
-          best = c;
-          break;
-        }
-        if (!best || c.off < best.off - 0.02) best = c;
-      }
-      if (!best) return null;
-      P6.items.push(best.it);
-      return best.it;
-    };
-    P6.row = (kinds, s, from, to, gap, extra = {}) => {
-      const out = [], dir = to >= from ? 1 : -1;
-      for (let u = from; dir > 0 ? u <= to + 1e-6 : u >= to - 1e-6; u += dir * 0.05) {
-        const kind = kinds[out.length % kinds.length], S6 = spec(kind, extra);
-        const it = P6.onSide(kind, s, u + dir * S6.w / 2, extra);
-        if (it) {
-          out.push(it);
-          u += dir * (S6.w + (typeof gap === "function" ? gap(out.length) : gap) - 0.05);
-        }
-      }
-      return out;
-    };
-    P6.onEnd = (kind, e, v, extra = {}) => {
-      const S6 = spec(kind, extra);
-      return P6.put({ ...S6, u: e < 0 ? ua + 0.01 + S6.dp / 2 : ub - 0.01 - S6.dp / 2, v, rot: e < 0 ? Math.PI / 2 : -Math.PI / 2 });
-    };
-    P6.around = (u0, v0, fn) => {
-      for (let k = 0; k < 160; k++) {
-        const u = u0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.1;
-        if (u < ua || u > ub) continue;
-        for (const dv of [0, 0.3, -0.3, 0.6, -0.6, 0.9, -0.9]) {
-          const g = fn(u, v0 + dv);
-          if (g) return g;
-        }
-      }
-      return null;
-    };
-    P6.group = (build5, clear3 = 0.55) => {
-      const mark = P6.items.length;
-      const g = build5();
-      const mine = P6.items.slice(mark);
-      if (g && mine.length) {
-        const b = mine.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
-        if (!P6.items.slice(0, mark).some((o) => !o.ghost && hits(b, footprint(o), clear3) && (o.y || 0) < 1.7)) {
-          P6.keep.push({ u0: b.u0 - clear3, u1: b.u1 + clear3, v0: b.v0 - clear3, v1: b.v1 + clear3, top: 1.7 });
-          return mine;
-        }
-      }
-      P6.items.length = mark;
-      return null;
-    };
-    P6.table = (u, v, len, wid, seats = "chairs") => P6.group(() => {
-      if (!P6.put({ kind: "table", w: len, dp: wid, h: FURNITURE.table.h, u, v, mess: seats === "benches" })) return null;
-      let n = 0;
-      if (seats === "benches") {
-        for (const s of [-1, 1]) if (P6.put({ ...spec("bench"), w: len, u, v: v + s * (wid / 2 + 0.05 + FURNITURE.bench.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
-      } else {
-        const C3 = FURNITURE.chair, k = Math.max(1, Math.min(4, Math.floor((len + 0.1) / 0.75)));
-        for (const s of [-1, 1]) for (let i = 0; i < k; i++) if (P6.put({ ...spec("chair"), u: u - len / 2 + len * (i + 0.5) / k, v: v + s * (wid / 2 + 0.05 + C3.dp / 2), rot: s > 0 ? Math.PI : 0 })) n++;
-        for (const e of [-1, 1]) if (P6.put({ ...spec("chair"), u: u + e * (len / 2 + 0.05 + C3.dp / 2), v, rot: e > 0 ? -Math.PI / 2 : Math.PI / 2 })) n++;
-      }
-      return n >= 2;
-    });
-    P6.rug = (group7) => {
-      if (!group7) return null;
-      const b = group7.map(footprint).reduce((a, f) => ({ u0: Math.min(a.u0, f.u0), u1: Math.max(a.u1, f.u1), v0: Math.min(a.v0, f.v0), v1: Math.max(a.v1, f.v1) }));
-      for (let pad2 = 0.35; pad2 > -0.2; pad2 -= 0.05) {
-        const rug = { kind: "rug", u: (b.u0 + b.u1) / 2, v: (b.v0 + b.v1) / 2, w: b.u1 - b.u0 + 2 * pad2, dp: b.v1 - b.v0 + 2 * pad2, h: 0.02, rot: 0, ghost: true, room: r4.kind, floor: r4.floor };
-        const fp = footprint(rug);
-        if (fp.u0 < ua || fp.u1 > ub || [fp.u0, fp.u1].some((u) => P6.reach(u, 0, 0.02) < Math.max(-fp.v0, fp.v1))) continue;
-        if (P6.items.some((o) => !group7.includes(o) && !o.y && !o.wall && hits(fp, footprint(o)))) continue;
-        P6.items.push(rug);
-        return rug;
-      }
-      return null;
-    };
-    P6.lanterns = () => {
-      const S6 = FURNITURE.lantern, y = Math.min(H5 - 0.12, 2.25) - S6.h, len = ub - ua, n = Math.max(1, Math.round(len / 3.2));
-      const free = (lt2) => {
-        const fp = footprint(lt2);
-        return fp.u0 >= ua && fp.u1 <= ub && !P6.items.some((o) => hits(fp, footprint(o), 0.08) && (o.y || 0) < lt2.y + S6.h && top(o) > lt2.y);
-      };
-      for (let i = 0; i < n; i++) {
-        const u = ua + len * (i + 0.5) / n;
-        let put2 = null;
-        for (const s of i % 2 ? [1, -1] : [-1, 1]) {
-          const w = Math.min(P6.reach(u - S6.w / 2, y, y + S6.h), P6.reach(u, y, y + S6.h), P6.reach(u + S6.w / 2, y, y + S6.h)) + 0.02;
-          const lt2 = { kind: "lantern", ...S6, u, v: s * (w - S6.dp / 2), y, rot: s > 0 ? Math.PI : 0, ghost: true, wall: s, room: r4.kind, floor: r4.floor };
-          if (free(lt2)) {
-            put2 = lt2;
-            break;
-          }
-        }
-        for (const dv of [0, 0.6, -0.6, 1.2, -1.2]) {
-          if (put2) break;
-          const lt2 = { kind: "lantern", ...S6, dp: S6.w, u, v: dv, y: H5 - 0.5, h: 0.5, rot: 0, ghost: true, wall: 0, room: r4.kind, floor: r4.floor };
-          if (free(lt2)) put2 = lt2;
-        }
-        if (put2) P6.items.push(put2);
-      }
-    };
-    for (const dr of r4.doors) {
-      const f = r4.front.face, u = r4.front.u;
-      const inside2 = (a, b) => f > 0 ? { u0: u - b, u1: u - a } : { u0: u + a, u1: u + b };
-      P6.keep.push({ ...inside2(-1, 1.35), v0: dr.v - dr.w / 2 - 0.2, v1: dr.v + dr.w / 2 + 0.2, top: dr.dh + 0.15 });
-      if (dr.leaf) P6.keep.push({ ...inside2(-1, 0.25), v0: dr.leaf.v0 - 0.05, v1: dr.leaf.v1 + 0.05, top: dr.dh + 0.05 });
-    }
-    if (r4.front) for (const zz of r4.front.windows) P6.low.push({ ...r4.front.face > 0 ? { u0: ub - 0.35, u1: ub + 1 } : { u0: ua - 1, u1: ua + 0.35 }, v0: zz - 0.4, v1: zz + 0.4 });
-    for (const wd of r4.windows || []) P6.low.push({ u0: ua - 1, u1: ua + 0.35, v0: wd.v - wd.w / 2 - 0.1, v1: wd.v + wd.w / 2 + 0.1 });
-    for (const m of d.mastU) if (m > ua - 1.5 && m < ub + 1.5) P6.rings.push({ u: m, v: 0, r: d.mastR + 0.08 + 0.45 });
-    if (r4.kind === "hold") {
-      const cp = d.comp;
-      P6.keep.push({ u0: cp.u0 - 1.4, u1: cp.u1 + 0.3, v0: -cp.w / 2 - 0.45, v1: cp.w / 2 + 0.45 });
-      for (const g of d.lowGuns) {
-        const b = gunBox(g, d.gunScale);
-        P6.keep.push({ u0: b.u0 - 0.2, u1: b.u1 + 0.2, v0: g.s > 0 ? b.v0 - 0.9 : b.v0, v1: g.s > 0 ? b.v1 : b.v1 + 0.9, top: 1.3 });
-      }
-    }
-    return P6;
-  }
-  var clampN = (x, a, b) => Math.max(a, Math.min(b, x));
-  var CARGO = ["barrels", "crate", "sacks", "barrel", "crate", "shot", "barrels", "sacks", "barrel"];
-  var ROOMS2 = {
-    // the great cabin: a bunk along the starboard side with the sea chest at
-    // its foot, books and another chest to port (and on the bigger ships a
-    // second bunk, a water cask and a chest under the stern windows), the
-    // table down the middle with its chairs round it, a rug under it
-    cabin(P6) {
-      const { ua, ub } = P6, len = ub - ua;
-      const bunk = P6.alongSide("bunk", 1, ua + 1.05, ub - 1.05, { head: -1 });
-      if (bunk) P6.alongSide("chest", 1, bunk.u + bunk.w / 2 + 0.5, ub - 0.5, { loot: "cabin" });
-      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
-      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "cabin" });
-      if (len > 5.5) P6.alongSide("bunk", -1, ua + 1.05, ub - 1.05, { head: -1 });
-      if (len > 5.5) P6.onEnd("chest", -1, 0);
-      const half2 = P6.reach((ua + ub) / 2, 0, 1);
-      const tl = clampN(len * 0.3, 1.1, 2.6), tw = clampN(half2 * 0.24, 0.75, 1.05);
-      let table = null;
-      for (const [l, w] of [[tl, tw], [Math.max(1, tl * 0.75), Math.max(0.7, tw - 0.1)]]) if (!table) table = P6.around((ua + ub) / 2 - 0.2, 0, (u, v) => P6.table(u, v, l, w));
-      if (len > 5.5) P6.alongSide("barrel", 1, ub - 0.4, ua + 0.4);
-      P6.rug(table);
-      P6.lanterns();
-    },
-    // the captain's cabin under the poop: the desk facing the door, his chair
-    // behind it (his back to the stern windows); a bunk with a chest at its
-    // foot, bookcases and another chest; a rug
-    captain(P6) {
-      const { ua, ub } = P6, C3 = FURNITURE.chair, D4 = FURNITURE.desk;
-      const bunk = P6.alongSide("bunk", 1, ub - 1.05, ua + 1.05, { head: -1 });
-      if (bunk) P6.alongSide("chest", 1, bunk.u - bunk.w / 2 - 0.5, ua + 0.5, { loot: "captain" });
-      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
-      P6.alongSide("shelf", -1, ua + 0.7, ub - 0.7);
-      P6.alongSide("chest", -1, ub - 0.5, ua + 0.5, { loot: "captain" });
-      let desk = null;
-      for (let du = 0; du < 2.5 && !desk; du += 0.1) {
-        for (const v of [0, 0.3, -0.3, 0.6, -0.6]) {
-          if (desk) break;
-          const cu = ua + 0.42 + du + C3.dp / 2;
-          desk = P6.group(() => P6.put({ ...FURNITURE.chair, kind: "chair", u: cu, v, rot: Math.PI / 2 }) && P6.put({ ...D4, kind: "desk", u: cu + C3.dp / 2 + 0.05 + D4.dp / 2, v, rot: Math.PI / 2 }));
-        }
-      }
-      P6.rug(desk);
-      P6.lanterns();
-    },
-    // the forecastle: the galley stove, the mess table and its benches, the
-    // crew's hammocks slung up under the deck beams and their sea chests below
-    forecastle(P6) {
-      const { ua, ub, H: H5 } = P6, len = ub - ua;
-      const stove = P6.alongSide("stove", -1, ua + 0.5, ub - 0.5, { pipe: true });
-      if (stove) {
-        const f = footprint(stove);
-        P6.keep.push({ u0: f.u0 - 0.55, u1: f.u1 + 0.55, v0: f.v0 - 0.1, v1: f.v1 + 0.75, top: 1.2 });
-      }
-      P6.row(["chest"], 1, ua + 0.1, ub - 0.1, 1.4, { loot: "crew" });
-      P6.row(["chest"], -1, ua + 1.2, ub - 0.1, 1.6, { loot: "crew" });
-      if (P6.reach(ua + len * 0.45, 0, 1) > 1.7) {
-        const tl = clampN(len * 0.4, 1.1, 2.4);
-        for (const l of [tl, 1.1]) if (P6.around(ua + len * 0.45, 0, (u, v) => P6.table(u, v, l, 0.7, "benches"))) break;
-      }
-      for (const s of [1, -1]) P6.row(["hammock"], s, ua + 0.05, ub - 0.05, 0.12, { y: H5 - 0.64, ghost: true });
-      P6.lanterns();
-    },
-    // the hold: the treasure chest by the foot of the ladder (its lid thrown
-    // back, facing you as you come down), the cargo stowed along both sides —
-    // a second row in a wide hold — with the way down the middle clear (on a
-    // gun deck, what fits between the guns)
-    hold(P6) {
-      const { d, ua, ub } = P6, cp = d.comp, T5 = FURNITURE.treasure;
-      let chest = null;
-      for (let du = 0; du < 3 && !chest; du += 0.1) {
-        for (const s of [-1, 1]) {
-          if (!chest) chest = P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u: cp.u0 - 0.7 - du, v: s * (cp.w / 2 + 0.47 + T5.dp / 2), rot: s < 0 ? 0 : Math.PI });
-        }
-      }
-      if (!chest) P6.around(cp.u0 - 2.2, 0, (u, v) => P6.put({ ...T5, kind: "chest", treasure: true, loot: "hold", u, v, rot: Math.PI / 2 }));
-      let n = 0;
-      for (const s of [-1, 1]) n += P6.row(CARGO.slice(n % 3), s, ua + 0.3, ub - 0.3, (k) => k % 3 ? 0.15 : 1.1).length;
-      for (const o of P6.items.slice()) {
-        if (o.treasure || o.kind === "shot") continue;
-        const s = Math.sign(o.v), f = footprint(o), kind = ["barrel", "sacks", "barrel", "crate"][Math.floor(Math.abs(o.u) * 3.7) % 4], S6 = FURNITURE[kind];
-        const v = s > 0 ? f.v0 - 0.08 - S6.dp / 2 : f.v1 + 0.08 + S6.dp / 2;
-        if (Math.abs(v) - S6.dp / 2 >= 1.3) P6.put({ ...S6, kind, u: o.u, v, rot: s > 0 ? Math.PI : 0 });
-      }
-      P6.lanterns();
-    }
-  };
-  function furnish(d) {
-    d.furniture = [];
-    for (const r4 of d.rooms) {
-      const P6 = roomPlacer(d, r4);
-      ROOMS2[r4.kind](P6);
-      d.furniture.push(...P6.items);
-    }
-    for (const it of d.furniture) if (!it.ghost) d.solids.push({ ...footprint(it), lvl: it.room, h: it.h });
-  }
-  var keelAt = (d, t) => -d.D * (1 - 0.5 * Math.pow(Math.abs(t - 0.45) / 0.55, 4));
-  function hullProfile(d, t) {
-    const top = topAt(d, t), dk3 = d.deckY, D4 = d.D;
-    return [
-      [0.875, top],
-      [0.89, top - 0.14],
-      [0.93, dk3 + 0.95],
-      [0.975, dk3 - 0.25],
-      [1, dk3 * 0.42],
-      [0.985, 0],
-      [0.9, -D4 * 0.3],
-      [0.68, -D4 * 0.64],
-      [0.36, -D4 * 0.9],
-      [0, keelAt(d, t)]
-    ];
-  }
-  function smallProfile(d, t) {
-    const top = topAt(d, t), dk3 = d.deckY;
-    return [
-      [0.965, top],
-      [0.975, top - 0.1],
-      [0.995, dk3 + (d.open ? 0.02 : 0)],
-      [1, dk3 - 0.12],
-      [1, dk3 * 0.55],
-      [0.975, dk3 * 0.12],
-      [0.9, -d.D * 0.25],
-      [0.68, -d.D * 0.62],
-      [0.36, -d.D * 0.9],
-      [0, -d.D * (1 - 0.55 * Math.pow(Math.abs(t - 0.45) / 0.55, 4))]
-    ];
-  }
-  function profileWidth(pr, hb, y) {
-    if (y >= pr[0][1]) return pr[0][0] * hb;
-    for (let i = 0; i < pr.length - 1; i++) {
-      const [w0, y0] = pr[i], [w1, y1] = pr[i + 1];
-      if (y <= y0 && y >= y1) return (w0 + (w1 - w0) * (y0 - y) / Math.max(1e-6, y0 - y1)) * hb;
-    }
-    return 0;
-  }
-  function skinAt(d, t, y) {
-    return profileWidth(hullProfile(d, t), hbAt(t, d.B), y);
-  }
-  function sideAt(d, t, y) {
-    return d.big ? skinAt(d, t, y) : profileWidth(smallProfile(d, t), hbAt(t, d.B), y);
-  }
-  var innerAt = (d, t, y) => Math.max(0.05, skinAt(d, t, y) - 0.2);
-  function roomHalf(d, r4, t) {
-    return r4.kind === "hold" ? skinAt(d, t, r4.floor + 0.3) - 0.3 : innerAt(d, t, r4.floor + 1) - 0.08;
-  }
-  function roomAt(d, t, h2) {
-    if (!d.rooms) return null;
-    for (const r4 of d.rooms) if (t >= r4.t0 && t <= r4.t1 && h2 > r4.floor - 0.7 && h2 < r4.ceil - 0.9) return r4;
-    return null;
-  }
-  function wallDepth(d, u, v, fl2, margin) {
-    let depth = 0;
-    for (const w of d.walls || []) {
-      if (fl2 < w.y0 - 0.3 || fl2 > w.y1 - 1) continue;
-      const ex = w.u1 - w.u0, ey = w.v1 - w.v0, l2 = ex * ex + ey * ey;
-      const k = l2 ? Math.max(0, Math.min(1, ((u - w.u0) * ex + (v - w.v0) * ey) / l2)) : 0;
-      const dd = Math.hypot(u - (w.u0 + ex * k), v - (w.v0 + ey * k));
-      depth = Math.max(depth, margin + 0.08 - dd);
-    }
-    return depth;
-  }
-  function wheelSpec(d) {
-    if (d.open) return null;
-    if (d._wheel) return d._wheel;
-    let w;
-    if (d.big) w = { u: d.wheelU, floor: d.helmFloor, hub: d.helmFloor + 0.92, R: 0.56, grip: 0.66 };
-    else {
-      const floor2 = floorAt(d, (d.wheelU + 0.1 + d.L / 2) / d.L);
-      w = { u: d.wheelU, floor: floor2, hub: floor2 + 0.92, R: 0.4, grip: 0.47 };
-    }
-    Object.defineProperty(d, "_wheel", { value: w, enumerable: false });
-    return w;
-  }
-  function helmPoint(def) {
-    const d = shipDims(def);
-    if (d.row) return { x: d.helmX, floor: d.deckY, eye: d.deckY + d.row.seatH + 0.8, seated: true };
-    return { x: d.helmX, floor: d.helmFloor, eye: d.helmFloor + (d.open ? 1.45 : 1.7) };
-  }
-  function hbAt(t, B5) {
-    if (t > 0.58) {
-      const k = (t - 0.58) / 0.42;
-      return B5 / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(k, 2.2)));
-    }
-    if (t < 0.14) return B5 / 2 * (0.74 + 0.26 * Math.sin(t / 0.14 * Math.PI / 2));
-    return B5 / 2;
-  }
-  function topAt(d, t) {
-    let y = d.deckY + d.bulH + d.sheer * Math.pow(Math.abs(t - 0.45) / 0.55, 2);
-    if (d.castle) y += d.hq * (1 - smooth2(d.tq - 0.015, d.tq + 0.035, t));
-    if (d.poop) y += d.hp * (1 - smooth2(d.tp - 0.012, d.tp + 0.03, t));
-    if (d.fore) y += d.hf * smooth2(d.tf - 0.035, d.tf + 0.015, t);
-    return y;
-  }
-  var xAt = (d, t) => -d.L / 2 + t * d.L;
-  function rakeDx(d, x, y) {
-    if (!d.big) return 0;
-    const t = (x + d.L / 2) / d.L;
-    const hold = d.rooms?.find((r4) => r4.kind === "hold");
-    const tb = hold ? hold.t1 + 5e-3 : 0.9, ts = hold ? hold.t0 - 5e-3 : 0.08;
-    const eb = smooth2(tb, 1, t), es = smooth2(ts, 0, t);
-    if (eb <= 0 && es <= 0) return 0;
-    const top = topAt(d, Math.min(1, Math.max(0, t)));
-    const f = Math.max(0, Math.min(1, (top - y) / (top + d.D)));
-    return -d.L * 0.045 * eb * Math.pow(f, 1.6) + d.L * 0.03 * es * Math.pow(f, 1.4);
-  }
-  function stairAt(d, t, v) {
-    for (const s of d.stairs) if (t >= s.ta && t <= s.tb && v >= s.va && v <= s.vb) return s;
-    return null;
-  }
-  function floorAt(d, t, v = null, h2 = null) {
-    if (v !== null && d.stairs.length) {
-      const s = stairAt(d, t, v);
-      if (s) return s.ha + (s.hb - s.ha) * (t - s.ta) / (s.tb - s.ta);
-    }
-    if (h2 !== null) {
-      const r4 = roomAt(d, t, h2);
-      if (r4) return r4.floor;
-    }
-    if (d.poop && t < d.tp) return d.yp;
-    if (d.castle && t < d.tq) return d.yq;
-    if (d.fore && t > d.tf) return d.yf;
-    return d.deckY;
-  }
-  function levelAt(d, t, v, h2 = null) {
-    const s = v !== null && d.stairs.length ? stairAt(d, t, v) : null;
-    if (s) return s;
-    if (h2 !== null) {
-      const r4 = roomAt(d, t, h2);
-      if (r4) return r4.kind;
-    }
-    if (d.poop && t < d.tp) return "poop";
-    if (d.castle && t < d.tq) return "quarter";
-    if (d.fore && t > d.tf) return "fore";
-    return "main";
-  }
-  function solidAt(d, u, v, margin = 0, lvl = null, above = 0) {
-    let depth = 0;
-    for (const o of d.solids) {
-      if (o.lvl && lvl !== null && o.lvl !== lvl) continue;
-      if (o.h !== void 0 && above > o.h - 0.1) continue;
-      if (o.r !== void 0) depth = Math.max(depth, o.r + margin - Math.hypot(u - o.u, v - o.v));
-      else depth = Math.max(depth, Math.min(u - (o.u0 - margin), o.u1 + margin - u, v - (o.v0 - margin), o.v1 + margin - v));
-    }
-    return depth;
-  }
-  var RIDE_U = [-0.4, -0.2, 0, 0.2, 0.4];
-  var RIDE_V = [-0.8, 0, 0.8];
-  var softClamp = (x, m) => m * Math.tanh(x / m);
-  var _rs = [0, 0];
-  function rideTarget(ship, time, out) {
-    out[0] = out[1] = out[2] = 0;
-    if (!swellOn() || ship.lvl || ship.sunk || !ship.def) return out;
-    const L3 = ship.def.length || 6, B5 = ship.def.beam || L3 * 0.3;
-    const ch = Math.cos(ship.heading), sh = Math.sin(ship.heading);
-    let W4 = 0, Z2 = 0, Wu = 0, Zu = 0, Wv = 0, Zv = 0;
-    const z = _rz;
-    for (let i = 0; i < RIDE_U.length; i++) {
-      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
-      for (let j = 0; j < RIDE_V.length; j++) {
-        const v = RIDE_V[j] * hb, k = i * 3 + j;
-        z[k] = swellAt(ship.x + ch * u - sh * v, ship.y + sh * u + ch * v, time);
-        W4 += hb;
-        Z2 += hb * z[k];
-      }
-    }
-    const h2 = Z2 / W4;
-    for (let i = 0; i < RIDE_U.length; i++) {
-      const u = RIDE_U[i] * L3, hb = hbAt(RIDE_U[i] + 0.5, B5);
-      for (let j = 0; j < RIDE_V.length; j++) {
-        const v = RIDE_V[j] * hb, dz = z[i * 3 + j] - h2;
-        Wu += hb * u * u;
-        Zu += hb * u * dz;
-        Wv += hb * v * v;
-        Zv += hb * v * dz;
-      }
-    }
-    out[0] = h2;
-    out[1] = Math.atan(Zu / Wu);
-    out[2] = Math.atan(-Zv / Wv);
-    return out;
-  }
-  var _rz = new Float64Array(15);
-  var _rt = [0, 0, 0];
-  function waveRide(ship, time) {
-    const c = ship._ride || (ship._ride = { t: NaN, x: NaN, y: NaN, hd: NaN, h: 0, r: 0, p: 0, s: new Float64Array(12), s0: new Float64Array(12), t0: NaN, ok: false });
-    if (c.t === time && c.x === ship.x && c.y === ship.y && c.hd === ship.heading) return c;
-    if (c.t !== time) {
-      c.s0.set(c.s);
-      c.t0 = c.t;
-    }
-    c.t = time;
-    c.x = ship.x;
-    c.y = ship.y;
-    c.hd = ship.heading;
-    const T5 = rideTarget(ship, time, _rt), S6 = c.s, S0 = c.s0, dt = time - c.t0;
-    if (!c.ok || !(dt > 0) || dt > 0.5) {
-      for (let k = 0; k < 3; k++) {
-        S6[k * 2] = T5[k];
-        S6[k * 2 + 1] = 0;
-        S6[6 + k] = T5[k];
-        S6[9 + k] = 0;
-      }
-      c.ok = true;
-    } else {
-      const F4 = BOAT_FEEL, L3 = ship.def?.length || 6;
-      const w = Math.max(1.6, F4.rideRate + F4.rideRatePerM * L3), z = Math.min(1, Math.max(0.3, F4.rideDamp)), lead = 2 * z / w * F4.rideLead;
-      const kv = 1 - Math.exp(-dt / (0.1 + 6e-3 * L3));
-      for (let k = 0; k < 3; k++) {
-        const vS = S0[9 + k] + ((T5[k] - S0[6 + k]) / dt - S0[9 + k]) * kv;
-        springStep(S0[k * 2], S0[k * 2 + 1], T5[k] + vS * lead, w, dt, z, _rs);
-        S6[k * 2] = _rs[0];
-        S6[k * 2 + 1] = _rs[1];
-        S6[6 + k] = T5[k];
-        S6[9 + k] = vS;
-      }
-    }
-    c.h = S6[0];
-    const Ls = ship.def?.length || 6, small = Math.max(0.3, Math.min(1, Ls / 12));
-    c.p = softClamp(S6[2] * small, BOAT_FEEL.pitchMax * small);
-    c.r = softClamp(S6[4] * (0.5 + 0.5 * small), BOAT_FEEL.rollMax);
-    return c;
-  }
-  function shipBob(ship, time) {
-    return (ship.lvl || 0) + 0.05 + Math.sin((time + (ship.seed || 0)) * 1.3) * 0.03 + waveRide(ship, time).h;
-  }
-  function shipRock(ship, time) {
-    const t = time + (ship.seed || 0), sinking = ship.sunk ? Math.min(1, (ship.sinkT || 0) / 4) : 0;
-    const w = waveRide(ship, time);
-    return [Math.sin(t * 0.9) * 0.02 + w.r + sinking * 0.5, Math.sin(t * 1.1) * 0.012 + w.p + (ship.pitch || 0)];
-  }
-  function shipLift(ship, time, u, v, h2) {
-    const [a, b] = shipRock(ship, time);
-    return shipBob(ship, time) + (u * Math.sin(b) + h2 * Math.cos(b)) * Math.cos(a) - v * Math.sin(a);
-  }
-  function shipPoint(ship, time, u, v, h2, out = [0, 0, 0]) {
-    const [a, b] = shipRock(ship, time);
-    const ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
-    const x1 = u * cb - h2 * sb, y1 = u * sb + h2 * cb;
-    const x2 = x1, y2 = y1 * ca - v * sa, z2 = y1 * sa + v * ca;
-    const ch = Math.cos(ship.heading), shd = Math.sin(ship.heading);
-    out[0] = x2 * ch - z2 * shd;
-    out[1] = shipBob(ship, time) + y2;
-    out[2] = x2 * shd + z2 * ch;
-    return out;
-  }
-  function deckSwing(dk3, time, out = [0, 0]) {
-    out[0] = 0;
-    out[1] = 0;
-    const s = dk3?.ship;
-    if (!s?.def || dk3.plank) return out;
-    const u = dk3.u ?? (dk3.t - 0.5) * s.def.length, v = dk3.v || 0, c = Math.cos(s.heading), sn = Math.sin(s.heading);
-    const q2 = shipPoint(s, time, u, v, dk3.h || 0, _swq);
-    out[0] = q2[0] - (u * c - v * sn);
-    out[1] = q2[2] - (u * sn + v * c);
-    return out;
-  }
-  var _swq = [0, 0, 0];
-  function deckLift(dk3, time) {
-    return dk3.plank ? dk3.plank.liftAt(dk3.k) : shipLift(dk3.ship, time, dk3.u ?? (dk3.t - 0.5) * dk3.ship.def.length, dk3.v || 0, dk3.h);
-  }
-  function deckPoint(ship, dx, dy, margin = 0.2, hRef = null) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = -dx * s + dy * c;
-    const t = (u + d.L / 2) / d.L;
-    if (t < 0.02 || t > 0.97) return null;
-    const room2 = hRef !== null && d.big ? roomAt(d, t, hRef) : null;
-    if (room2) {
-      const lv = levelAt(d, t, v, hRef);
-      const out2 = { t, u, v, h: floorAt(d, t, v, hRef), edge: roomHalf(d, room2, t) - Math.abs(v), lvl: lv, room: room2 };
-      const depth = Math.max(margin - out2.edge, solidAt(d, u, v, Math.max(0, margin), room2.kind, Math.max(0, hRef - out2.h)), wallDepth(d, u, v, room2.floor, margin));
-      if (depth > 0) out2.solid = depth;
-      return out2;
-    }
-    const hb = hbAt(t, d.B) * d.walk - margin;
-    if (hb <= 0 || Math.abs(v) > hb) return null;
-    const out = { t, u, v, h: floorAt(d, t, v, d.big ? hRef : null), edge: hb - Math.abs(v) };
-    if (d.big) out.lvl = levelAt(d, t, v, hRef);
-    if (d.solids.length) {
-      const lv = typeof out.lvl === "string" ? out.lvl : null;
-      let depth = solidAt(d, u, v, Math.max(0, margin), d.big ? lv ?? "stairs" : null, hRef === null ? 0 : Math.max(0, hRef - out.h));
-      if (d.walls) depth = Math.max(depth, wallDepth(d, u, v, out.h, margin));
-      if (depth > 0) out.solid = depth;
-    }
-    return out;
-  }
-  function hullPoint(ship, dx, dy, pad2 = 0) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = -dx * s + dy * c;
-    const t = (u + d.L / 2) / d.L, tc = clamp013(t);
-    if (Math.abs(t - tc) * d.L > pad2) return null;
-    if (Math.abs(v) > hbAt(tc, d.B) + pad2) return null;
-    return { t: tc, u, v, top: topAt(d, tc), floor: floorAt(d, tc, v) };
-  }
-  var MAST_KS = (n) => n >= 4 ? [0.92, 1, 0.86, 0.7] : n === 3 ? [0.92, 1, 0.8] : n === 2 ? [1, 0.84] : [1];
-  function mastNest(d) {
-    if (!d.big || !d.mastU?.length) return null;
-    if (d._nest !== void 0) return d._nest;
-    const n = d.mastU.length, m = n >= 3 ? 1 : 0, mu = d.mastU[m];
-    const k = MAST_KS(n)[m], base2 = floorAt(d, (mu + d.L / 2) / d.L);
-    const H5 = d.mastH * k, h2 = base2 + (H5 - base2) * 0.76, mr = d.mastR * Math.sqrt(k);
-    const out = { m, u: mu + mr * 1.1, y: h2 + 0.13, r: 1.15, mu, base: base2, mr };
-    Object.defineProperty(d, "_nest", { value: out, enumerable: false });
-    return out;
-  }
-  function deckToWorld(ship, t, v) {
-    const d = shipDims(ship.def);
-    const u = -d.L / 2 + t * d.L;
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    return { x: ship.x + u * c - v * s, y: ship.y + u * s + v * c, h: floorAt(d, t, v) };
-  }
-  function hullSolid(ship, dx, dy, h2) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = Math.abs(-dx * s + dy * c);
-    const t = (u + d.L / 2) / d.L;
-    if (t < 0 || t > 1 || h2 < -d.D) return false;
-    if (d.mastU && v < d.mastR + 0.2 && h2 < d.mastH && d.mastU.some((m) => Math.abs(u - m) < d.mastR + 0.2)) return true;
-    const hb = hbAt(t, d.B);
-    if (v > hb) return false;
-    if (d.rooms) {
-      for (const r4 of d.rooms) if (t > r4.t0 + 4e-3 && t < r4.t1 - 4e-3 && h2 > r4.floor - 0.05 && h2 < r4.ceil - 0.02 && v < roomHalf(d, r4, t) + 0.05) return false;
-      const cp = d.comp;
-      if (u > cp.u0 && u < cp.u1 && v < cp.w / 2 && h2 > d.holdY - 0.05 && h2 < d.deckY + 0.05) return false;
-    }
-    const rail = d.big ? 0.75 : 0.6, at4 = (tt) => Math.abs(u - xAt(d, tt)) < 0.15;
-    if (d.castle && at4(d.tq) && h2 < d.yq + rail || d.poop && at4(d.tp) && h2 < d.yp + rail || d.fore && at4(d.tf) && h2 < d.yf + rail) return true;
-    if (h2 > topAt(d, t)) return false;
-    if (v > hb * d.walk - 0.05 || h2 < d.deckY - 0.1) return true;
-    if (d.poop && t < d.tp) return h2 < d.yp - 0.1;
-    if (d.castle && t < d.tq) return h2 < d.yq - 0.1;
-    if (d.fore && t > d.tf) return h2 < d.yf - 0.1;
-    return false;
-  }
-  function hullGap(ship, dx, dy) {
-    const d = shipDims(ship.def);
-    const c = Math.cos(ship.heading), s = Math.sin(ship.heading);
-    const u = dx * c + dy * s, v = -dx * s + dy * c;
-    const t = clamp013((u + d.L / 2) / d.L);
-    const along2 = Math.max(0, Math.abs(u) - d.L / 2);
-    return Math.hypot(along2, Math.max(0, Math.abs(v) - hbAt(t, d.B)));
   }
 
   // src/game/difficulty.js
@@ -15138,401 +15706,6 @@
     if (!(w > 0)) return w;
     if (chained) return Math.max(T5.chainWindup, w);
     return Math.max(T5.windupMin, w * T5.windupMul + T5.windupAdd);
-  }
-
-  // src/game/flight.js
-  var DEF = { speed: 10, climb: 6, dive: 9, ceiling: 35, drain: 1, sea: 3.5, refill: 6 };
-  var SEA_CEILING = 14;
-  var LOW = 3.5;
-  var helpless = (a) => !!(a.status && (a.status.freeze || a.status.despair || a.status.heartless || a.status.pieces || a.status.lifted || a.status.puppet));
-  var timeOf = (game) => game.env?.time ?? game.time ?? 0;
-  var FLY_MASTERY = 40;
-  function flightOf(a) {
-    let best = null;
-    const f = a?.fruitDef;
-    if (f) {
-      const k = 0.6 + 0.4 * Math.min(1, (a.fruitMastery || 0) / FLY_MASTERY);
-      const form = (a.buffs || []).find((b) => b.form)?.form;
-      for (const t of f.techniques) {
-        if (!t.flight) continue;
-        let fl2 = t.flight;
-        if (fl2.forms && !fl2.forms.includes(form)) {
-          if (!fl2.otherwise) continue;
-          fl2 = { ...fl2, ...fl2.otherwise };
-        }
-        const s = { ...DEF, ...fl2, fruit: true, tech: t.id };
-        s.gauge = Math.round(s.gauge * k * 10) / 10;
-        if (!best || s.gauge > best.gauge) best = s;
-      }
-    }
-    const R5 = RACES[a?.race]?.flight;
-    if (R5 && (!best || R5.gauge > best.gauge)) best = { ...DEF, ...R5, fruit: false };
-    return best;
-  }
-  function groundBase(game, x, y) {
-    return game.view3d ? Math.max(0, game.view3d.ground(x, y)) : 0;
-  }
-  function feetOf(a, game) {
-    if (a.flying && a.alt != null) return a.alt;
-    return a.feetH ? a.feetH(game) : a.z || 0;
-  }
-  function overOpenSea(game, x, y) {
-    const w = game.world;
-    if (!w.isLiquid?.(x, y) || w.isOverlay?.(x, y)) return false;
-    if (game.deckAt && game.ships?.length && game.deckAt(x, y, 0)) return false;
-    return true;
-  }
-  function flyableAt(a, game, x, y, alt = a.alt ?? feetOf(a, game)) {
-    const w = game.world;
-    if (y < 1 || y > w.height - 1) return false;
-    if (w.interiorAt?.(x, y)) return false;
-    const g = groundBase(game, x, y);
-    if (g > alt + 0.6) return false;
-    const roof = game.view3d?.roofAt?.(x, y);
-    if (roof && roof.h > alt + 0.5) return false;
-    if (alt - g < LOW && (w.solid?.(x, y) || w.hitsProp?.(x, y, (a.r || 0.28) * 0.9))) return false;
-    if (game.inShip && game.ships?.length) {
-      for (const s of game.ships) if (game.inShip(s, x, y, alt + 0.9, true)) return false;
-    }
-    return true;
-  }
-  function floorUnder(a, game, x, y) {
-    let f = groundBase(game, x, y);
-    const roof = game.view3d?.roofAt?.(x, y, a.alt + 0.3);
-    if (roof && roof.h > f) f = roof.h;
-    if (game.deckAt && game.ships?.length) {
-      const dk3 = game.deckAt(x, y, 0.1);
-      if (dk3) {
-        const h2 = deckLift(dk3, timeOf(game));
-        if (h2 > f && h2 <= a.alt + 0.3) f = h2;
-      }
-    }
-    return f;
-  }
-  function cantTakeOff(a, game) {
-    const S6 = flightOf(a);
-    if (!S6) return "nowings";
-    if (a.flying) return "flying";
-    if (a.state !== "idle" || a.onShip || a.climb || helpless(a) || a.hitstun > 0.25 || a.status?.grounded) return "busy";
-    if (a.inWater) return "water";
-    const zone = game.world.zone;
-    if (zone === 2 || zone === 3) return "nosky";
-    if (game.world.interiorAt?.(a.x, a.y) && !a.roofed) return "indoors";
-    if (S6.fruit && a.seastoned) return "seastone";
-    if ((a.flightGauge ?? 1) < 0.25) return "tired";
-    return "";
-  }
-  var WHY = {
-    water: "You can't take off from the water.",
-    nosky: "There's no sky to fly in down here.",
-    indoors: "No room to fly in here.",
-    seastone: "Seastone holds your power down.",
-    tired: "Too tired to fly \u2014 catch your breath on solid ground.",
-    busy: ""
-  };
-  function takeOff(a, game) {
-    const why = cantTakeOff(a, game);
-    if (why) {
-      if (a.isPlayer && WHY[why]) game.log(WHY[why], "#ff8a80");
-      return false;
-    }
-    const S6 = flightOf(a);
-    const alt = feetOf(a, game);
-    if (a.deck) {
-      a.deck.ship.aboard?.delete(a);
-      a.deck = null;
-    }
-    a.flying = true;
-    a.flightStyle = S6.style;
-    a.flightRide = S6.ride || null;
-    a.flight = { spec: S6, t: 0, lift: (a.z || 0) > 0.6 ? 0.15 : 0.4, tired: false, landing: false };
-    a.alt = alt;
-    a.vz = 0;
-    a.charging = 0;
-    a.wading = 0;
-    if (!a.dash?.dodge) a.dash = null;
-    if (a.flightGauge === void 0) a.flightGauge = 1;
-    a.flightTired = false;
-    a.takeoffT = timeOf(game);
-    takeoffFx(a, game, S6);
-    game.audio?.sfx("jump_big", a);
-    if (a.isPlayer) {
-      game.emit?.("playerTakeOff", S6.style);
-      game.hint?.("flight", S6.fruit ? "FLYING! Space climbs, Alt dives, Shift for speed. Come down onto the ground (or double-tap Space) to land." : "FLYING! Space climbs, Alt dives, Shift for speed. Your flight gauge drains in the air \u2014 far faster out over the open sea \u2014 and fills up again on solid ground. Come down onto the ground (or double-tap Space) to land.");
-    }
-    return true;
-  }
-  function land(a, game, quiet = false) {
-    if (!a.flying || !a.flight) return;
-    endFlight(a, game, -0.01);
-    a.landT = timeOf(game);
-    if (!quiet && (a.z || 0) < 0.6) {
-      game.fx.burst(a.x, a.y, 8, { color: ["#d7ccc8", "#efebe9"], speed: 2.2, g: 1.2, z: 0.1, vz: 0.5, life: 0.45, kind: "dust", size: 0.18, grow: 0.4 });
-      game.audio?.sfx("land", a);
-    }
-  }
-  function fall(a, game) {
-    if (!a.flying || !a.flight) return;
-    endFlight(a, game, Math.min(-1, a.flightClimb || -1));
-  }
-  function endFlight(a, game, vz) {
-    const g = a.groundAt ? a.groundAt(game, a.x, a.y) : 0;
-    a.flying = false;
-    a.flight = null;
-    a.flightStyle = null;
-    a.flightRide = null;
-    a.flightTired = false;
-    a.flightClimb = 0;
-    a.flightBank = 0;
-    a.z = Math.max(0, (a.alt ?? g) - g);
-    a.vz = a.z > 0.02 ? vz : 0;
-    a.alt = null;
-    a.airT = 0;
-    a.lastG = g;
-    a.lastGX = a.x;
-    a.lastGY = a.y;
-  }
-  function downFlyer(a, game) {
-    if (!a.flying || !a.flight) return;
-    fall(a, game);
-    game.fx.text(a.x, a.y - 1.6, "DOWNED!", "#ff8a80", 0.34);
-  }
-  function toggleFlight(a, game) {
-    if (a.flying && a.flight) {
-      a.flight.landing = true;
-      return true;
-    }
-    return takeOff(a, game);
-  }
-  function flyStep(a, dt, game) {
-    const F4 = a.flight, S6 = F4.spec, i = a.intent, w = game.world;
-    F4.t += dt;
-    a.inWater = false;
-    a.under = false;
-    a.depth = 0;
-    a.wading = 0;
-    if (a.alt == null) a.alt = feetOf(a, game);
-    if (a.flightOut || helpless(a) || a.status.grounded || S6.fruit && a.seastoned || w.zone === 2 || w.zone === 3) {
-      a.flightOut = false;
-      fall(a, game);
-      return;
-    }
-    if (S6.forms && !S6.forms.includes((a.buffs || []).find((b) => b.form)?.form) && !F4.landing) F4.landing = true;
-    const sea = overOpenSea(game, a.x, a.y);
-    const moving = Math.hypot(i.mx, i.my) > 0.1;
-    let rate = S6.drain;
-    if (i.sprint && moving) rate *= 1.7;
-    if (F4.lift > 0 || i.mz > 0 && !F4.tired) rate *= 1.3;
-    else if (i.mz < 0 || F4.landing || F4.tired) rate *= 0.5;
-    if (sea) rate *= S6.sea;
-    if (S6.fruit) rate = 0;
-    a.flightGauge = Math.max(0, (a.flightGauge ?? 1) - rate * dt / S6.gauge);
-    if (a.flightGauge <= 0 && !F4.tired) {
-      F4.tired = true;
-      a.flightTired = true;
-      if (a.isPlayer) game.log(sea ? "Your strength gives out over the open sea \u2014 you're coming down!" : "Your strength gives out \u2014 you're coming down.", "#ff8a80");
-    }
-    let sp = S6.speed * (i.sprint && !F4.tired ? 1.6 : 1) * (F4.tired ? 0.7 : 1);
-    if (a.action) sp *= a.action.def.moveMul ?? (a.action.def.m1Chain ? 0.6 : 0.4);
-    if (a.hitstun > 0) sp = 0;
-    if (a.status.slowmo) sp *= 0.2;
-    if (a.status.chill) sp *= 0.6;
-    if (a.zoneSlow) sp *= a.zoneSlow;
-    const k = Math.min(1, dt * 3.5);
-    const hv0 = Math.atan2(a.vy, a.vx), s0 = Math.hypot(a.vx, a.vy);
-    a.vx += (i.mx * sp - a.vx) * k;
-    a.vy += (i.my * sp - a.vy) * k;
-    let vx = a.vx, vy = a.vy;
-    if (a.dash) {
-      vx = a.dash.vx;
-      vy = a.dash.vy;
-      a.dash.t -= dt;
-      if (a.dash.t <= 0) {
-        a.dash = null;
-        a.vx *= 0.3;
-        a.vy *= 0.3;
-      }
-    }
-    vx += a.kb.x;
-    vy += a.kb.y;
-    const decay = Math.exp(-dt * 8);
-    a.kb.x *= decay;
-    a.kb.y *= decay;
-    if (Math.abs(a.kb.x) < 0.05) a.kb.x = 0;
-    if (Math.abs(a.kb.y) < 0.05) a.kb.y = 0;
-    let vz;
-    if (F4.lift > 0) {
-      F4.lift -= dt;
-      vz = S6.climb * 1.2;
-    } else if (F4.landing) vz = -S6.dive;
-    else if (F4.tired) vz = -3.5;
-    else vz = (i.mz || 0) * ((i.mz || 0) > 0 ? S6.climb : S6.dive);
-    const sw2 = swoopAlt(a, game);
-    if (sw2 !== null) vz = clamp((sw2 - a.alt) * 6, -16, Math.max(vz, 3));
-    a.alt += vz * dt;
-    const n = Math.max(1, Math.ceil(Math.hypot(vx, vy) * dt / 0.25));
-    for (let s = 0; s < n; s++) {
-      const nx = w.wx(a.x + vx * dt / n), ny = a.y + vy * dt / n;
-      if (flyableAt(a, game, nx, a.y)) a.x = nx;
-      else {
-        a.vx *= 0.2;
-        a.kb.x *= -0.3;
-        if (a.dash) a.dash.vx = 0;
-      }
-      if (flyableAt(a, game, a.x, ny)) a.y = ny;
-      else {
-        a.vy *= 0.2;
-        a.kb.y *= -0.3;
-        if (a.dash) a.dash.vy = 0;
-      }
-    }
-    const g = groundBase(game, a.x, a.y);
-    const ceil = g + (sea ? SEA_CEILING : S6.ceiling);
-    if (a.alt > ceil) a.alt = Math.max(ceil, a.alt - 6 * dt);
-    const floor2 = floorUnder(a, game, a.x, a.y);
-    if (a.alt < floor2) a.alt = floor2;
-    a.z = a.alt - g;
-    const sp2 = Math.hypot(vx, vy);
-    a.flightSpeed = sp2;
-    a.flightClimb = vz;
-    const turn = s0 > 1 && sp2 > 1 ? angleDiff(hv0, Math.atan2(a.vy, a.vx)) / Math.max(dt, 1e-3) : 0;
-    a.flightBank = clamp((a.flightBank || 0) + (clamp(turn * 0.35, -1, 1) - (a.flightBank || 0)) * Math.min(1, dt * 5), -1, 1);
-    a.moving = sp2 > 0.4;
-    a.speed = sp2;
-    if (a.moving && !a.action && !a.isPlayer) a.facing += angleDiff(a.facing, Math.atan2(vy, vx)) * Math.min(1, dt * 8);
-    trailFx(a, game, S6, dt);
-    if (a.alt <= floor2 + 0.05 && vz <= 0 && F4.t > 0.3 && (F4.landing || F4.tired || (i.mz || 0) < 0)) land(a, game);
-  }
-  function swoopAlt(a, game) {
-    const act2 = a.action;
-    if (!act2) return null;
-    const def = act2.def;
-    const melee = (def.steps || []).some((s) => s.hit && s.hit.shape !== "line" && !s.proj || s.dash?.hit);
-    if (!melee || act2.t > (def.windup ?? 0.1) + 0.45) return null;
-    const t = act2.target && act2.target.alive !== void 0 && act2.target.state === "idle" ? act2.target : foeBelow(a, game);
-    if (!t) return a.dash?.dive ? groundBase(game, a.x, a.y) + 0.4 : null;
-    return feetOf(t, game) + 0.3;
-  }
-  function foeBelow(a, game) {
-    let best = null, bd = Infinity;
-    for (const e of game.actorsNear(a.x, a.y, 4.5)) {
-      if (e === a || e.state !== "idle" || !game.combat.canHit(a, e, { vx: 0 })) continue;
-      const dx = game.world.dx(a.x, e.x), dy = e.y - a.y;
-      if (Math.abs(angleDiff(a.facing, Math.atan2(dy, dx))) > 1.3) continue;
-      const d = Math.hypot(dx, dy);
-      if (d < bd) {
-        bd = d;
-        best = e;
-      }
-    }
-    return best;
-  }
-  function reachesUp(att, tgt, h2, game) {
-    if (!(att?.flying || tgt.flying)) return true;
-    if (h2.vx !== void 0 || h2.isProj || h2.shape === "line") return true;
-    const groundRef = h2.zone || h2.radial && !h2.follow;
-    const from = groundRef ? groundBase(game, h2.x ?? tgt.x, (h2.y ?? tgt.y) + 0.4) : feetOf(att, game);
-    const gap = Math.abs(from - feetOf(tgt, game));
-    const reach3 = h2.reachZ ?? (h2.radial || h2.shape === "circle" ? Math.max(2.4, (h2.range || 1) * 0.7) : 2.4);
-    return gap <= reach3 * Math.max(att?.look?.scale || 1, tgt.look?.scale || 1);
-  }
-  function refill(a, dt, game) {
-    if (a.flying || !(a.flightGauge < 1)) return;
-    if (a.inWater || (a.z || 0) > 0.05 || a.vz || a.state !== "idle") return;
-    const S6 = flightOf(a);
-    if (!S6) return;
-    a.flightGauge = Math.min(1, a.flightGauge + dt / S6.refill);
-  }
-  function geppoSteps(a) {
-    const t = a.techniques || [];
-    let n = 0;
-    if (t.includes("roku_geppo")) n = Math.max(n, 2 + Math.floor((a.masteries?.rokushiki || 0) / 35));
-    if (t.includes("bleg_skywalk")) n = Math.max(n, 2 + Math.floor((a.masteries?.black_leg || 0) / 35));
-    return n;
-  }
-  function airStep(a, game) {
-    const n = geppoSteps(a);
-    if (!n || a.flying || (a.airSteps || 0) >= n) return false;
-    if (a.state !== "idle" || helpless(a) || a.hitstun > 0 || a.inWater || a.climb || a.onShip) return false;
-    if (!((a.z || 0) > 0.35 || a.vz > 0.5)) return false;
-    const J = a.jumpStats();
-    a.vz = J.v * 0.9;
-    const l = Math.hypot(a.intent.mx, a.intent.my);
-    const dx = l > 0.2 ? a.intent.mx / l : Math.cos(a.facing), dy = l > 0.2 ? a.intent.my / l : Math.sin(a.facing);
-    a.dash = { vx: dx * 9, vy: dy * 9, t: 0.22, ignoreWater: true };
-    a.airSteps = (a.airSteps || 0) + 1;
-    a.flightStyle = "geppo";
-    a.airStepT = timeOf(game);
-    for (let k = 0; k < 2; k++) game.fx.add("ring", { x: a.x, y: a.y, r0: 0.1, r1: 0.7 + k * 0.3, color: "#ffffff", width: 0.07, life: 0.3, z: Math.max(0.05, a.z || 0), flat: 0.8, add: true, delay: k * 0.05 });
-    game.audio?.sfx("jump", a);
-    return true;
-  }
-  function takeoffFx(a, game, S6) {
-    const fx = game.fx, z = Math.max(0.05, a.z || 0);
-    fx.burst(a.x, a.y, 10, { color: ["#d7ccc8", "#efebe9"], speed: 3, g: 1.2, z, vz: 0.6, life: 0.5, kind: "dust", size: 0.2, grow: 0.4 });
-    fx.ring(a.x, a.y, 0.2, 1.6, S6.color || "#ffffff", 0.35, 0.1, { z, flat: 0.55, add: true });
-    const c = S6.color || "#ffffff";
-    if (S6.style === "phoenix") {
-      fx.burst(a.x, a.y, 10, { color: ["#29b6f6", "#4fc3f7"], hot: "#e6fbff", speed: 2.5, g: -1, z: z + 1, vz: 1.5, life: 0.55, kind: "fire", size: 0.18 });
-      fx.burst(a.x, a.y, 8, { color: "#ffd54a", speed: 4, g: 0, z: z + 1.1, vz: 1, life: 0.4, kind: "spark", size: 0.05 });
-    } else if (S6.style === "dragon") fx.burst(a.x, a.y, 14, { color: ["#eceff1", "#cfd8dc", "#ffffff"], speed: 3, g: 0, z: z + 0.3, life: 0.9, kind: "smoke", size: 0.5, grow: 0.6 });
-    else if (S6.style === "wings") fx.burst(a.x, a.y, 10, { color: ["#212121", "#37474f"], speed: 3, g: 2, z: z + 1.2, vz: 1, life: 0.8, kind: "leaf", size: 0.12 });
-    else fx.burst(a.x, a.y, 12, { color: [c, "#ffffff"], speed: 2.5, g: 0, z: z + 0.2, life: 0.6, kind: S6.ride === "light" ? "glow" : S6.ride === "sand" ? "sand" : "smoke", size: 0.3, grow: 0.3 });
-  }
-  function trailFx(a, game, S6, dt) {
-    const p = game.player;
-    if (!p || a !== p && game.world.dist2(a.x, a.y, p.x, p.y) > 40 * 40) return;
-    a._flyFxT = (a._flyFxT || 0) - dt;
-    if (a._flyFxT > 0) return;
-    a._flyFxT = 0.05;
-    const fx = game.fx, z = a.z || 0, r4 = () => Math.random() - 0.5;
-    const back = { vx: -(a.vx || 0) * 0.25, vy: -(a.vy || 0) * 0.25 };
-    switch (S6.style) {
-      case "phoenix":
-        if (Math.random() < 0.6) {
-          const side = Math.random() < 0.5 ? 1 : -1, c = Math.cos(a.facing), s = Math.sin(a.facing);
-          fx.particle({ x: a.x - s * side * 1.3 - c * 0.5, y: a.y + c * side * 1.3 - s * 0.5, z: z + 1.1 + r4() * 0.3, ...back, vz: 0.3, g: 0, life: 0.35, size: 0.05, color: Math.random() < 0.25 ? "#ffd54a" : "#80e4ff", kind: "spark" });
-        }
-        break;
-      case "dragon":
-        fx.particle({ x: a.x + r4() * 1.6, y: a.y + r4() * 0.8, z: z + 0.1, ...back, vz: -0.2, g: 0, life: 1.1, size: 0.45, grow: 0.5, color: Math.random() < 0.5 ? "#eceff1" : "#cfd8dc", kind: "smoke" });
-        if (Math.random() < 0.08) fx.burst(a.x, a.y, 3, { color: "#90caf9", speed: 3, g: 0, z: z + 1, life: 0.15, kind: "line", size: 0.05 });
-        break;
-      case "wings":
-        if (Math.random() < 0.25) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.4, z: z + 1.3, ...back, vz: -0.3, g: 0.6, life: 1.2, size: 0.1, color: "#212121", kind: "leaf", rot: Math.random() * TAU, vr: r4() * 6 });
-        break;
-      case "ride":
-        fx.particle({ x: a.x + r4() * 0.6, y: a.y + r4() * 0.4, z: Math.max(0, z - 0.15), ...back, vz: -0.4, g: 0, life: 0.8, size: S6.ride === "rock" ? 0.12 : 0.35, grow: S6.ride === "rock" ? 0 : 0.4, color: S6.color || "#eceff1", kind: S6.ride === "sand" ? "sand" : S6.ride === "rock" ? "dust" : "smoke" });
-        break;
-      case "float":
-        if (S6.ride === "strings") for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.5, y: a.y + r4() * 0.25, z: z + 1.4, vx: 0, vy: 0, vz: 12, g: 0, life: 0.4, size: 0.05, color: "#f8bbd0", kind: "line" });
-        else for (let k = 0; k < 2; k++) fx.particle({ x: a.x + r4() * 0.8, y: a.y + r4() * 0.5, z: z + 0.4 + Math.random(), ...back, vz: 0.2, g: 0, life: 0.45, size: 0.2, color: k ? "#ffffff" : S6.color || "#fff59d", kind: "glow" });
-        break;
-      default:
-        break;
-    }
-  }
-  function aiFlight(a, ctl, t, dist, game, sorties = false) {
-    if (!a.flying) a.intent.mz = 0;
-    const S6 = flightOf(a);
-    if (!S6) return;
-    const now3 = game.time || 0;
-    if (!a.flying) {
-      if (ctl.flyNext === void 0) ctl.flyNext = now3 + 6 + Math.random() * 8;
-      const above = !!t.flying && feetOf(t, game) - feetOf(a, game) > 2.2;
-      const sortie = a.boss && sorties && now3 >= ctl.flyNext && dist < 14;
-      if ((above || sortie) && !cantTakeOff(a, game)) {
-        takeOff(a, game);
-        ctl.flyChase = above;
-        ctl.flyUntil = now3 + (above ? 30 : 5 + Math.random() * 3);
-        ctl.flyNext = now3 + 16 + Math.random() * 10;
-      }
-      return;
-    }
-    if (!a.flight) return;
-    if (a.flightGauge < 0.2 || now3 > (ctl.flyUntil ?? 0) && !t.flying || ctl.flyChase && !t.flying) a.flight.landing = true;
-    const want = t.flying ? feetOf(t, game) : feetOf(t, game) + (a.flight.landing ? 0 : 4.5);
-    a.intent.mz = clamp((want - a.alt) / 2, -1, 1);
   }
 
   // src/game/room.js
@@ -15715,6 +15888,30 @@
     if (!zs || !zs.length) return false;
     for (const z of zs) if (z.freezeWater && z.t > 0 && game.world.distance(z.x, z.y, x, y) <= z.r) return true;
     return false;
+  }
+  function iceWalk(game, dt) {
+    const w = game.world;
+    if (!w?.isLiquid) return;
+    for (const a of game.actors) {
+      if (a.fruit !== "hie" || !a.alive || a.flying || a.under || a.onShip || a.deck) continue;
+      if (a.isPlayer === false && game.player && w.dist2(a.x, a.y, game.player.x, game.player.y) > 60 * 60) continue;
+      if ((a._iceT = (a._iceT || 0) - dt) > 0) continue;
+      a._iceT = 0.1;
+      const sp = Math.hypot(a.vx || 0, a.vy || 0);
+      let made = false;
+      for (const ahead of [0, 0.25, 0.5]) {
+        const x = w.wx(a.x + (a.vx || 0) * ahead), y = a.y + (a.vy || 0) * ahead;
+        if (!w.isLiquid(x, y) || w.isOverlay?.(x, y) || iceAt(game, x, y)) continue;
+        const r4 = 1.7 + Math.min(1.2, sp * 0.08);
+        addIcePad(x, y, r4, 8);
+        game.fx.add("seaice", { x, y, r: r4 * 1.05, id: Math.floor(Math.random() * 1e6), seed: Math.random() * 100, life: 8, lite: true });
+        made = true;
+      }
+      if (made && Math.random() < 0.3) {
+        game.fx.burst(a.x, a.y, 4, { color: ["#e1f5fe", "#ffffff"], speed: 1.5, g: 2, z: 0.3, vz: 1, life: 0.5, kind: "shard", size: 0.06 });
+        game.audio?.sfx("ice", { x: a.x, y: a.y }, { vol: 0.25 });
+      }
+    }
   }
   function zoneRules(game, z, dt) {
     const o = z.owner;
@@ -19967,10 +20164,10 @@
         T(40, {
           id: "ito_skypath",
           name: "Sora no Michi",
-          desc: "Sky Path: hook your strings onto the clouds and walk the sky. Fly \u2014 or press Space again in the air.",
-          flight: { style: "float", ride: "strings", gauge: 16, speed: 10, climb: 6, ceiling: 40, sea: 3.5, color: "#f8bbd0" }
+          desc: "Sky Path: hook your strings onto the clouds and swing through the sky, string after string. Double-tap Space to swing (move to swing that way, Shift for longer, faster swings; Space climbs the string).",
+          flight: { style: "swing", ride: "strings", gauge: 16, speed: 13, climb: 7, ceiling: 40, sea: 3.5, color: "#f8bbd0" }
         }),
-        T(70, { id: "ito_birdcage", name: "Birdcage", icon: "\u{1F578}", anim: "summon", windup: 0.8, recover: 0.4, cd: 45, desc: "A cage of strings round the whole area: nobody inside gets out, it closes in \u2014 and its strings cut whatever touches them.", steps: [{ zone: { range: 9, duration: 9, interval: 0.4, damage: 14, color: "#f8bbd0", kind: "cage", cage: true, shrink: 0.55, edge: 1.2 } }] }),
+        T(70, { id: "ito_birdcage", name: "Birdcage", icon: "\u{1F578}", anim: "summon", windup: 0.8, recover: 0.4, cd: 45, desc: "A towering cage of strings over the whole area: nobody inside gets out, and it closes in until there's nothing left inside it \u2014 its strings slicing through the ground, the houses, whoever they touch.", steps: [{ zone: { range: 14, duration: 12, interval: 0.4, damage: 14, color: "#f8bbd0", kind: "cage", cage: true, shrink: 0.93, edge: 1.6 } }] }),
         T(20, {
           id: "ito_tamaito",
           name: "Tamaito",
@@ -20647,7 +20844,7 @@
           name: "Phoenix Flight",
           icon: "\u{1F54A}",
           desc: "Spread your wings of blue flame and take to the sky \u2014 no one stays up longer than the Phoenix. Fly, or land again (or press Space again in the air).",
-          flight: { style: "phoenix", gauge: 30, speed: 12, climb: 7, ceiling: 45, drain: 0.5, sea: 3.5, refill: 4, color: "#4dd0e1" }
+          flight: { style: "phoenix", gauge: 30, speed: 15, climb: 8, ceiling: 45, drain: 0.5, sea: 3.5, refill: 4, color: "#4dd0e1" }
         }),
         T(30, { id: "phoenix_brand", name: "Phoenix Brand", icon: "\u{1F525}", anim: "kick", windup: 0.3, recover: 0.3, cd: 7, desc: "A kick wreathed in blue flame \u2014 from the sky, a dive straight down onto the target.", steps: [{ dash: { dist: 7, time: 0.25, iframes: 0.2, air: true, dive: true, hit: { damage: 40, knockback: 8, stun: 0.6, heavy: true } }, phoenix: 0.8 }] }),
         T(45, {
@@ -20716,8 +20913,8 @@
             style: "dragon",
             ride: "cloud",
             gauge: 40,
-            speed: 11,
-            climb: 6,
+            speed: 15,
+            climb: 7,
             ceiling: 60,
             drain: 0.6,
             sea: 3,
@@ -20813,6 +21010,12 @@
         T(25, { id: "mera_higan", name: "Higan", anim: "point", windup: 0.2, recover: 0.3, cd: 5, say: "Higan!", desc: "Fire Gun: bullets of flame from your fingertips.", steps: [{ proj: { speed: 26, range: 11, radius: 0.18, damage: 6, count: 5, spread: 0.18, sprite: "fireball", size: 0.5, element: "fire", status: { burn: 1.5 }, knockback: 1 } }] }),
         T(35, { id: "mera_enkai", name: "Enkai: Hibashira", icon: "\u{1F30B}", anim: "cast", windup: 0.4, recover: 0.4, cd: 10, desc: "Flame Commandment, Fire Pillar: a pillar of flame erupts around you.", steps: [{ hit: { shape: "circle", range: 3, damage: 36, knockback: 8, stun: 0.5, element: "fire", status: { burn: 3 }, heavy: true }, vfx: "ring" }] }),
         T(70, { id: "mera_entei", name: "Dai Enkai: Entei", icon: "\u2600", anim: "raise", windup: 1.1, recover: 0.5, cd: 40, desc: "Great Flame Commandment: a second sun, hurled.", say: "Dai Enkai... ENTEI!", steps: [{ proj: { speed: 9, range: 13, radius: 3, damage: 40, size: 6, sprite: "fireball", element: "fire", pierce: true, status: { burn: 5 }, explode: { range: 4.5, damage: 100, element: "fire" } } }] }),
+        T(20, {
+          id: "mera_fly",
+          name: "Flame Jets",
+          desc: "Fire roaring out of the soles of your feet carries you up into the sky. Fly \u2014 or press Space again in the air.",
+          flight: { style: "jet", ride: "fire", gauge: 14, speed: 11, climb: 6, ceiling: 35, sea: 3.5, color: "#ff7043" }
+        }),
         T(30, {
           id: "mera_kagero",
           name: "Kagero",
@@ -20950,8 +21153,8 @@
         T(25, {
           id: "suna_ride",
           name: "Sand Glide",
-          desc: "Turn into a sandstorm and ride the wind. Fly \u2014 or press Space again in the air.",
-          flight: { style: "ride", ride: "sand", gauge: 12, speed: 10, climb: 5, ceiling: 25, sea: 4, color: "#e1c16e" }
+          desc: "Blast sand down out of your feet and ride it up into the sky. Fly \u2014 or press Space again in the air.",
+          flight: { style: "jet", ride: "sand", gauge: 12, speed: 11, climb: 5, ceiling: 30, sea: 4, color: "#e1c16e" }
         }),
         T(35, { id: "suna_spada", name: "Desert Spada", icon: "\u{1F5E1}", anim: "grab", windup: 0.3, recover: 0.35, cd: 8, desc: "Blades of sand rip through the ground.", steps: [{ hit: { shape: "line", range: 11, width: 1.2, damage: 40, knockback: 4, stun: 0.5, element: "sand", slashing: true }, vfx: "beam", color: "#e1c16e" }] }),
         T(45, { id: "suna_grip", name: "Dehydrating Grip", anim: "grab", windup: 0.3, recover: 0.35, cd: 10, desc: "Seize the target with your right hand and drain the water from their body: they wither as you hold them.", steps: [{ hit: { shape: "arc", range: 1.6, arc: 1, offset: 0.2, damage: 22, knockback: 1, stun: 0.6, element: "sand", unblockable: true, status: { dry: 5 } } }] }),
@@ -21036,8 +21239,8 @@
         T(45, {
           id: "pika_fly",
           name: "Light Flight",
-          desc: "Become light and drift through the air, fast \u2014 but not for long. Fly \u2014 or press Space again in the air.",
-          flight: { style: "float", ride: "light", gauge: 10, speed: 15, climb: 8, ceiling: 35, sea: 4, color: "#fff59d" }
+          desc: "Light from the soles of your feet carries you up into the sky \u2014 and sprint, and you ARE light: a golden star streaking across the sky faster than anything. Fly \u2014 or press Space again in the air.",
+          flight: { style: "jet", ride: "light", gauge: 10, speed: 16, climb: 9, ceiling: 45, sea: 4, color: "#ffd54f", beam: 4.5 }
         }),
         T(60, { id: "pika_amaterasu", name: "Light Laser", icon: "\u2600", anim: "cast", windup: 0.8, recover: 0.4, cd: 25, desc: "A beam of light from your fingertip that blasts through everything in a line.", steps: [{ hit: { shape: "line", range: 16, width: 1.6, damage: 90, knockback: 8, stun: 0.8, element: "light", heavy: true, impactFrame: true, hitShips: true, shipDamage: 300 }, vfx: "beam", color: "#fff59d" }] }),
         T(20, {
@@ -21063,6 +21266,12 @@
       passive: { logia: true, element: "magma", resist: ["fire", "magma"] },
       techniques: [
         T(0, { id: "magu_daifunka", name: "Dai Funka", icon: "\u{1F30B}", anim: "punch", windup: 0.3, recover: 0.35, cd: 4, say: "Dai Funka!", desc: "Great Eruption: a fist of magma.", steps: [{ proj: { speed: 15, range: 11, radius: 0.9, damage: 34, sprite: "magmafist", size: 1.5, element: "magma", pierce: true, status: { burn: 4 }, knockback: 6, trail: { color: ["#bf360c", "#ff6f00"], kind: "fire" } } }] }),
+        T(25, {
+          id: "magu_fly",
+          name: "Magma Jets",
+          desc: "Magma bursting out of your feet heaves you up into the air \u2014 heavy and slow, dripping molten rock on whatever's under you. Fly \u2014 or press Space again in the air.",
+          flight: { style: "jet", ride: "magma", gauge: 12, speed: 7.5, climb: 4, ceiling: 25, sea: 3.5, color: "#ff5722" }
+        }),
         T(20, { id: "magu_meigo", name: "Meigo", icon: "\u{1F44A}", anim: "thrust", windup: 0.3, recover: 0.35, cd: 8, desc: "Hell Hound: a magma fist that pierces through.", steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 55, knockback: 6, stun: 0.8, element: "magma", status: { burn: 4 }, heavy: true, guardBreak: true } } }] }),
         T(35, { id: "magu_inugami", name: "Inugami Guren", anim: "thrust", windup: 0.5, recover: 0.4, cd: 14, desc: "Dog Bite Crimson Lotus: a giant hound's head of magma lunges along the ground and bites down.", steps: [{ hit: { shape: "line", range: 9, width: 2.2, damage: 60, knockback: 8, stun: 0.7, element: "magma", status: { burn: 4 }, heavy: true, hitShips: true }, vfx: "beam", color: "#ff5722" }] }),
         T(50, { id: "magu_ryusei", name: "Ryusei Kazan", icon: "\u2604", anim: "summon", windup: 1, recover: 0.5, cd: 35, desc: "Meteor Volcano: a rain of magma fists.", steps: [{ zone: { range: 6, duration: 2.5, interval: 0.2, damage: 24, element: "magma", color: "#ff5722", kind: "meteor", status: { burn: 3 } } }] }),
@@ -21983,7 +22192,7 @@
       if (OVERLAY[t]) return deckTop(w, x, y) + dz;
       if (w.quays.size && w.isQuay(x, y)) return DOCK_Y + dz;
       const h0 = this.terrain0(x, y), h2 = h0 + dz;
-      if (IS_LIQUID[t] && DEFORM.list.length && t !== T2.LAVA && iceCover(x, y)) return Math.max(h2, SEA_Y + ICE_TOP);
+      if (IS_LIQUID[t] && (DEFORM.list.length || DEFORM.pads.length) && t !== T2.LAVA && iceCover(x, y)) return Math.max(h2, SEA_Y + ICE_TOP);
       if (IS_LIQUID[t]) return Math.max(h2, t === T2.RAPIDS ? waterLevel(w, x, y) : SEA_Y);
       const f = w.floorRec ? w.floorRec(x, y) : null;
       if (!f) return h2;
@@ -27242,7 +27451,9 @@
       if (this.aiming && !act2 && !swim && wpn?.kind === "gun") pose.aimGun = true;
       if (air) pose.air = { up: air === "up", k: this.jumpK || 0 };
       const cl = this.climb;
-      if (cl && !cl.ride && !act2) pose.climb = { k: Math.min(1, cl.t / (cl.T || 1)), ladder: !!cl.to?.ladder, rise: cl.rise ?? (this.z || 0) };
+      if (cl?.mast) {
+        if (!cl.top && !act2) pose.climb = { k: 0.5, ladder: true, rise: cl.k * (cl.H || 1) };
+      } else if (cl && !cl.ride && !act2) pose.climb = { k: Math.min(1, (cl.t || 0) / (cl.T || 1)), ladder: !!cl.to?.ladder, rise: cl.rise ?? (this.z || 0) };
       if (this.blocking) {
         pose.block = this.blockTime;
         pose.armedBlock = pose.armed;
@@ -81003,6 +81214,7 @@ vec3 paneView(vec3 dir, float night) {
     add(o) {
       if (this.list.length >= MAX2) {
         let i = this.list.findIndex((p) => p.chip);
+        if (i < 0) i = this.list.findIndex((p) => p.b && p.b.kind !== "building");
         if (i < 0) i = 0;
         this.list.splice(i, 1);
       }
@@ -81278,6 +81490,7 @@ vec3 paneView(vec3 dir, float night) {
       };
       const L3 = lite ? 0.45 : 1;
       if (o.kind === "tree" || o.kind === "bush" || o.kind === "cactus") {
+        return;
         const tree = o.kind === "tree";
         const H5 = tree ? 4.5 * s : o.kind === "cactus" ? 2.4 * s : 0.9 * s;
         const sub = o.sub || "";
@@ -89399,6 +89612,24 @@ vec3 paneView(vec3 dir, float night) {
       }
     }
   };
+  SHAPES.rope = {
+    draw(v, s, k, a) {
+      const f = s.follow, W4 = s.sw;
+      if (!f || !W4 || f.alt == null) return;
+      const c = col3(s.color || "#f8bbd0");
+      const hx = v.lx(f.x), hz = v.lz(f.y), hy = f.alt + 1.95 * (f.look?.scale || 1);
+      const ax = v.lx(W4.ax), az = v.lz(W4.ay), ay = W4.ah;
+      const reach3 = Math.min(1, (s.age || 0) / 0.1);
+      const ex = hx + (ax - hx) * reach3, ey = hy + (ay - hy) * reach3, ez = hz + (az - hz) * reach3;
+      v.ribbons.start(RK.THIN, RM2.FACE, c, a, WHITE6, 0.7);
+      for (let j = 0; j <= 6; j++) {
+        const t = j / 6;
+        v.ribbons.point(hx + (ex - hx) * t, hy + (ey - hy) * t, hz + (ez - hz) * t, 0.03);
+      }
+      v.ribbons.finish();
+      if (reach3 >= 1) v.sprites.put(SK2.STAR, ax, ay, az, 0.35, c, a * 0.8, WHITE6, 1, v.time, 0, 0.5);
+    }
+  };
   SHAPES.pillar = {
     draw(v, s, k, a) {
       const grow = easeOut(Math.min(1, k / 0.15));
@@ -89491,7 +89722,7 @@ vec3 paneView(vec3 dir, float night) {
       const R5 = s.r * grow, X2 = v.lx(s.x), Z2 = v.lz(s.y);
       const id = s.id || 0;
       const rag = (th) => 1 + 0.07 * Math.sin(th * 7 + id) + 0.04 * Math.sin(th * 17 + id * 3);
-      const S6 = v.surf, NR = 14, NA = 48;
+      const S6 = v.surf, NR = s.lite ? 4 : 14, NA = s.lite ? 18 : 48;
       if (!S6.room((NR + 1) * (NA + 1), NR * NA * 2)) return;
       S6.style(SF.FILL, ICE_BODY, a * 0.96, ICE_EDGE, 0, k, s.seed || 0);
       const v0 = S6.nv;
@@ -89506,8 +89737,9 @@ vec3 paneView(vec3 dir, float night) {
       const patch4 = v.patch(s, s.x, s.y, R5);
       v.decal(patch4, s.x, s.y, R5 * 0.98, id, SF.FROST, ICE_FROST, a * 0.9, WHITE6, 0.04, k, s.seed || 0, 0, 0, 0, 10, 0.06);
       if (v.low) return;
-      for (let i = 0; i < 18; i++) {
-        const h2 = hash8(id * 1.7 + i * 2.9), th = (i + h2) / 18 * TAU14, rr = R5 * rag(th) * (0.96 + 0.06 * h2);
+      const ns = s.lite ? 6 : 18;
+      for (let i = 0; i < ns; i++) {
+        const h2 = hash8(id * 1.7 + i * 2.9), th = (i + h2) / ns * TAU14, rr = R5 * rag(th) * (0.96 + 0.06 * h2);
         const x = s.x + Math.cos(th) * rr, y = s.y + Math.sin(th) * rr;
         const g0 = v.view.ground(x, y);
         if (g0 > ICE_TOP + 0.25) continue;
@@ -89883,6 +90115,27 @@ vec3 paneView(vec3 dir, float night) {
     }
   };
   var SKID = [-0.14, 0.14];
+  SHAPES.cagecuts = {
+    draw(v, s, k, a) {
+      const al = Math.min(1, (1 - k) * 4) * a;
+      if (al < 0.01) return;
+      const z = s.cage, R0 = s.r0, R1 = Math.max(0.4, z ? z.r : s.r0);
+      if (R0 - R1 < 0.3) return;
+      const dark = col3("#1a110b"), lip = col3("#d9c7a8");
+      const n = s.n || 32, w = v.world;
+      for (let i = 0; i < n; i++) {
+        const th = i / n * TAU14;
+        v.ribbons.start(RK.CRACK, RM2.FLAT, dark, al * 0.95, lip, 0);
+        const m = Math.max(2, Math.min(14, Math.ceil((R0 - R1) / 1.2)));
+        for (let j = 0; j <= m; j++) {
+          const rr = R0 + (R1 - R0) * (j / m) + (hash8(i * 7 + j) - 0.5) * 0.15;
+          const px2 = w.wx(s.x + Math.cos(th) * rr), py2 = s.y + Math.sin(th) * rr;
+          v.ribbons.point(v.lx(px2), v.ground(px2, py2) + 0.035, v.lz(py2), 0.09);
+        }
+        v.ribbons.finish();
+      }
+    }
+  };
   var DARKNESS = col3("#120a1a");
   var SCORCH_COL = col3("rgba(30,18,12,1)");
   var BOLT_EMBER = col3("#ffd54f");
@@ -89918,7 +90171,27 @@ vec3 paneView(vec3 dir, float night) {
       } else if (kind === "storm") {
         v.tubes.put(TK.FUNNEL, X2, G5 - 0.05, Z2, 0, 1, 0, R5 * 1.3, R5 * 0.25, R5, c, a * 0.75, c2, 0, k, s.seed);
       } else if (kind === "cage") {
-        v.shells.put(VK.DOME, X2, G5, Z2, R5, 0, 1, 0, 1, col3(s.color || "#f8bbd0"), a, WHITE6, 0.35, 1, s.seed, 0.96);
+        const cc = col3(s.color || "#f8bbd0");
+        const R0 = s.zone?.r0 || s.r;
+        const Hc = 8 + R0 * 1.5;
+        v.shells.put(VK.DOME, X2, G5, Z2, R5, 0, Hc / Math.max(1, R5), 0, 1, cc, a * 0.35, WHITE6, 0.35, 1, s.seed, 0.96);
+        const n = Math.max(24, Math.min(80, Math.round(R0 * 2.6)));
+        const w = v.world;
+        for (let i = 0; i < n; i++) {
+          const th = i / n * TAU14;
+          const bx = s.x + Math.cos(th) * R5, by = s.y + Math.sin(th) * R5;
+          const gb = v.ground(w.wx(bx), by);
+          const hum = Math.sin(v.time * 9 + i * 1.7) * 0.04;
+          v.ribbons.start(RK.THIN, RM2.FACE, cc, a * 0.95, WHITE6, 0.7);
+          for (let j = 0; j <= 10; j++) {
+            const t = j / 10;
+            const rr = R5 * Math.pow(Math.cos(t * PI / 2), 0.55) + Math.sin(t * PI) * hum * R5;
+            const y = gb + (G5 + Hc - gb) * t;
+            v.ribbons.point(X2 + Math.cos(th) * rr, y, Z2 + Math.sin(th) * rr, 0.05 - 0.03 * t);
+          }
+          v.ribbons.finish();
+        }
+        v.sprites.put(SK2.STAR, X2, G5 + Hc, Z2, 1.2, cc, a, WHITE6, 1, v.time, s.seed, 0.5);
       } else if (kind === "dark") {
         for (let i = 0; i < 7; i++) {
           const ph = (v.time * 0.55 + hash8(s.seed + i)) % 1, cyc = Math.floor(v.time * 0.55 + hash8(s.seed + i));
@@ -98094,7 +98367,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     update(a, env2, ctx, { camYaw3, redraw: redraw2 }) {
       const m = this.model;
       const helm = a.isPlayer && a.mode === "sail" && a.ship && !a.ship.sunk ? a.station() : null;
-      this.root.visible = !(a.isPlayer && a.mode === "sail" && !helm);
+      this.root.visible = !(a.isPlayer && a.mode === "sail" && !helm) && !a.lightBeam;
       if (helm) this.placeAtStation(a, helm, env2, ctx);
       else if (this.tilted) {
         this.root.quaternion.identity();
@@ -98720,6 +98993,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _shockV = new Vector3();
   var RES_STEPS = [1, 0.88, 0.77, 0.67, 0.58];
   var ACTOR_RANGE = 75;
+  var MAX_ACTOR_VIEWS = 70;
   var PROP_BUDGET_MS = 4;
   var CHUNK_M = 32;
   var SEA_MUL = 1.5;
@@ -99919,9 +100193,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const dx = w.dx(ox, a.x), dy = a.y - oy;
         const d2 = dx * dx + dy * dy;
         if (d2 > ACTOR_RANGE * ACTOR_RANGE && (d2 > (ACTOR_RANGE + 10) ** 2 || !this.actorViews.has(a))) continue;
+        if (a !== p && d2 > 14 * 14 && w.interiorAt?.(a.x, a.y) && !a.roofed && !a.upTop && !(p && w.interiorAt?.(p.x, p.y))) continue;
         near.push([a, dx, dy, d2]);
       }
       near.sort((a, b) => a[3] - b[3]);
+      if (near.length > MAX_ACTOR_VIEWS) near.length = MAX_ACTOR_VIEWS;
       let i = 0, made = 0, posed = 0;
       for (const [a, dx, dy, d2] of near) {
         seen.add(a);
@@ -121399,6 +121675,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         this.engaged = p.state === "idle" && this.actorsNear(p.x, p.y, 40).some((a) => a !== p && a.alive && a.state === "idle" && a.controller?.target === p && (a.controller.state === "chase" || a.controller.state === "attack"));
       }
       p.inCombat = this.combatT > 0 || !!this.engaged;
+      iceWalk(this, simDt);
       this.frameNo = (this.frameNo || 0) + 1;
       for (let i = this.actors.length - 1; i >= 0; i--) {
         const a = this.actors[i];
@@ -139996,6 +140273,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
 
   // src/game/destruction.js
   var REBUILD = 300;
+  var TAU27 = Math.PI * 2;
   var FIRE2 = /* @__PURE__ */ new Set(["fire", "magma", "bluefire", "explosion"]);
   var ICE3 = /* @__PURE__ */ new Set(["ice", "snow"]);
   function buildingHp(b) {
@@ -140042,6 +140320,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     cannon: 60,
     waterwheel: 120
   };
+  var TREES = /* @__PURE__ */ new Set(["tree", "bush", "cactus"]);
   var smashable = (o) => SMASH[o.kind] !== void 0 && !o.hidden && !o.ruined && !o.far && !o.unbreakable && !o.quest;
   function installDestruction(game) {
     const D4 = {
@@ -140115,7 +140394,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const w = game.world;
         if (!w?.objects || !(power > 0)) return 0;
         let n = 0;
-        for (const p of w.objects.near(x, y, r4 + 1, smashable)) {
+        for (const p of w.objects.near(x, y, r4 + 1, o.noTrees ? (q2) => smashable(q2) && !TREES.has(q2.kind) : smashable)) {
           const d = w.distance(x, y, p.x, p.y);
           if (d > r4 + 0.6 * (p.s || 1)) continue;
           if (floorOf(p) || /dock|pier|bridge|quay|jetty|plank/.test(p.kind)) continue;
@@ -140136,6 +140415,13 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         D4.event({ kind: "fixture", o: p });
         D4.event({ kind: "smash", b: p, x, y, power, delay: o.delay || 0, lite: !!o.lite });
         if (!o.delay && Math.random() < 0.5) game.audio?.sfx(p.kind === "tree" ? "collapse" : "wallhit", { x: p.x, y: p.y }, { w: 0.3 });
+        if (/tree|bush|cactus/.test(p.kind) && game.fx && !o.lite) {
+          const s = p.s || 1, near = !game.player || w.distance(p.x, p.y, game.player.x, game.player.y) < 45;
+          if (near) {
+            game.fx.burst(p.x, p.y, 10, { color: ["#4caf50", "#2e7d32", "#81c784"], speed: 4, spread: Math.PI * 2, z: 2.5 * s, vz: 2, g: 3, life: 0.9, kind: "leaf", size: 0.14, delay: o.delay || 0 });
+            game.fx.burst(p.x, p.y, 5, { color: ["#8d6e63", "#6d4c41"], speed: 5, spread: Math.PI * 2, z: 1.2 * s, vz: 3, g: 12, life: 0.7, kind: "dust", size: 0.1, delay: o.delay || 0 });
+          }
+        }
       },
       /**
        * Fire on a building: it catches and burns a while — flames out of its
@@ -140299,7 +140585,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
           D4.collapse(b, x, y, power, att, { delay: d / speed2, long: 1.5 });
           n++;
         }
-        n += D4.smashNear(x, y, r4, 1e6, att, { speed: speed2, lite: true, long: 1.5 });
+        n += D4.smashNear(x, y, r4, 1e6, att, { speed: speed2, lite: true, long: 1.5, noTrees: true });
         return n;
       },
       event(e) {
@@ -140383,6 +140669,14 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         if (h2.shape === "line") {
           const ca = Math.cos(h2.angle || 0), sa = Math.sin(h2.angle || 0), wd = (h2.width || 1) / 2 + 0.6;
           for (let d = 0; d <= R5; d += Math.max(1.5, wd)) D4.strike(h2.x + ca * d, h2.y + 0.4 + sa * d, wd, power, h2.owner, { element: h2.element });
+          return;
+        }
+        if (h2.shape === "ring") {
+          const wd = (h2.width || 1) / 2 + 0.6, n = Math.max(8, Math.ceil(TAU27 * R5 / Math.max(1.6, wd * 1.6)));
+          for (let i = 0; i < n; i++) {
+            const t = i / n * TAU27;
+            D4.strike(game.world.wx(h2.x + Math.cos(t) * R5), h2.y + 0.4 + Math.sin(t) * R5, wd, power, h2.owner, { element: h2.element });
+          }
           return;
         }
         if (h2.shape === "arc" || !h2.shape) {
@@ -152639,12 +152933,12 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
   ];
   function drawWhale(g, env2, marked) {
     const t = env2?.time || 0;
-    const TAU27 = Math.PI * 2;
+    const TAU28 = Math.PI * 2;
     g.save();
     g.translate(0, Math.sin(t * 0.7) * 0.12);
     g.fillStyle = "rgba(255,255,255,0.28)";
     g.beginPath();
-    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU27);
+    g.ellipse(0, 0.9, 11.5, 2.4, 0, 0, TAU28);
     g.fill();
     g.fillStyle = "#4e6177";
     g.beginPath();
@@ -152656,7 +152950,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     g.fill();
     g.fillStyle = "#5d7389";
     g.beginPath();
-    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU27);
+    g.ellipse(0, -1.4, 10, 3.4, 0, 0, TAU28);
     g.fill();
     g.fillStyle = "#d7e1ea";
     g.beginPath();
@@ -152672,16 +152966,16 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }
     g.fillStyle = "#fafafa";
     g.beginPath();
-    g.arc(-6.6, -1.8, 0.45, 0, TAU27);
+    g.arc(-6.6, -1.8, 0.45, 0, TAU28);
     g.fill();
     g.fillStyle = "#1a1a1a";
     g.beginPath();
-    g.arc(-6.7, -1.8, 0.24, 0, TAU27);
+    g.arc(-6.7, -1.8, 0.24, 0, TAU28);
     g.fill();
     if (marked) {
       g.fillStyle = "#fafafa";
       g.beginPath();
-      g.arc(-8.2, -3.1, 0.8, 0, TAU27);
+      g.arc(-8.2, -3.1, 0.8, 0, TAU28);
       g.fill();
       g.strokeStyle = "#fafafa";
       g.lineWidth = 0.25;
@@ -152693,8 +152987,8 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       g.stroke();
       g.fillStyle = "#1a1a1a";
       g.beginPath();
-      g.arc(-8.45, -3.2, 0.16, 0, TAU27);
-      g.arc(-7.95, -3.2, 0.16, 0, TAU27);
+      g.arc(-8.45, -3.2, 0.16, 0, TAU28);
+      g.arc(-7.95, -3.2, 0.16, 0, TAU28);
       g.fill();
     }
     const ph = t % 14;
@@ -152702,7 +152996,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       const h2 = Math.sin(ph / 1.6 * Math.PI) * 3.2;
       g.fillStyle = "rgba(225,245,254,0.8)";
       g.beginPath();
-      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU27);
+      g.ellipse(-3, -4.8 - h2 / 2, 0.5 + h2 * 0.2, h2 / 2 + 0.2, 0, 0, TAU28);
       g.fill();
     }
     g.font = "bold 0.5px Nunito, sans-serif";
@@ -175602,7 +175896,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     }, 850);
   }
   var nextFrame = () => new Promise((r4) => requestAnimationFrame(() => setTimeout(r4, 0)));
-  var debug = { ready: false, shipDesigner: openShipDesigner };
+  var debug = { ready: false, shipDesigner: openShipDesigner, takeOff };
   window.OP = debug;
   async function start3() {
     let renderer;
