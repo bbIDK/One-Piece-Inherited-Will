@@ -13,6 +13,7 @@
 import { openTransport, netKind } from './transport.js';
 import { PROTO, REV, SEND_HZ, IDLE_MS, MAX_PLAYERS, NAME_MAX, CHAT_MAX, BIT, num, readHello, readEnv, readLook, readShip, readState, readSay, stateChanged, worldSig, cleanText, r2, r3 } from './protocol.js';
 import { Remote, MATE_COLOR } from './remote.js';
+import { installCoop } from './coop.js';
 import { deckLift } from '../world/hull.js';
 import { shipGone } from '../game/decks.js';
 import { angleDiff } from '../core/math.js';
@@ -192,6 +193,8 @@ export class Voyage {
         }
         break;
       }
+      // co-op: a shared boss's health, and the blow that ends them (coop.js)
+      case 'bh': case 'bd': if (this.inWorld) this.game.coop?.receive(m, r); break;
       case 'won': if (r.actor?.pvp) this.emit('note', `You beat ${r.label} in a fight!`, '#ffd54f'); break;
       default: break;
     }
@@ -573,6 +576,7 @@ export class Voyage {
  */
 export function installNet(game) {
   game.net = null;
+  installCoop(game);
   game.on('characterStart', () => game.net?.onCharacterStart());
   game.on('lineageEnded', () => game.net?.leftWorld());
   window.addEventListener('pagehide', () => game.net?.close('page'));
