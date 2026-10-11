@@ -304,6 +304,31 @@ export function installDestruction(game) {
 
     wrecked: [],
 
+    /**
+     * Everything put back as it was, at once: leaving a game for the title (the
+     * world's kept loaded for the backdrop and the next save — a town you levelled
+     * in one life isn't lying in rubble behind the menu, or in your next one).
+     */
+    resetAll() {
+      const w = game.world;
+      if (!w) return;
+      for (const b of w.burning || []) D.douse(b);
+      for (const b of w.frozen || []) D.thaw(b);
+      for (const b of w.ruins || []) {
+        if (!b.ruined) continue;
+        w.objects.restore(b);
+        for (const o of b.fixtures || []) { w.objects.restore(o); D.event({ kind: 'restore', b: o }); }
+        b.fixtures = null;
+        D.event({ kind: 'restore', b });
+      }
+      for (const o of w.smashed || []) if (o.ruined) { w.objects.restore(o); D.event({ kind: 'restore', b: o }); }
+      for (const b of [...(w.ruins || []), ...(w.damaged || []), ...(w.smashed || [])]) { b.hp = undefined; b.stage = 0; b.damaged = false; b.charred = false; b._holes = null; }
+      for (const k of ['ruins', 'damaged', 'smashed', 'burning', 'frozen']) if (w[k]) w[k].length = 0;
+      D.wrecked.length = 0;
+      // (and every last piece of rubble gone with it, not left to sink away)
+      D.event({ kind: 'wipe' });
+    },
+
     /** Rebuild what's stood ruined long enough (not under your nose: once you're a little way off, or it's been a long while). */
     update() {
       const w = game.world, p = game.player;

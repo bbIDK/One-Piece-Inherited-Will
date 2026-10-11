@@ -434,6 +434,7 @@ function drawBarrel(g, env) {
 }
 
 // --------------------------------------------------------------- Sea Kings
+const SEAKING_KINDS = ['serpent', 'croc', 'fish', 'dragon'];
 export function makeSeaKing(game, x, y, level, opts = {}) {
   const k = new Actor({
     x, y, name: opts.name || 'Sea King', title: opts.title || 'Monster of the Calm Belt', faction: 'seaking',
@@ -455,6 +456,8 @@ export function makeSeaKing(game, x, y, level, opts = {}) {
   k.lethal = true;
   k.aggroPlayer = true;
   k.breakthrough = opts.breakthrough;
+  k.level = level;
+  k.species = opts.species || SEAKING_KINDS[Math.floor(Math.random() * SEAKING_KINDS.length)];
   k.onKO = (a, att, g) => {
     g.fx.burst(a.x, a.y, 40, { color: ['#e1f5fe', '#81d4fa'], speed: 6, vz: 6, g: 10, life: 1, size: 0.2 });
     if (att?.isPlayer) { addItem(g, 'sea_king_steak', 1); g.log('You hauled in a chunk of Sea King. That\'s a feast!', '#ffe082'); }
@@ -463,8 +466,29 @@ export function makeSeaKing(game, x, y, level, opts = {}) {
   return k;
 }
 
+// What a Sea King does, as the anime shows them: it watches from the water,
+// rears up and lunges to bite, swings its whole length round in a tail lash
+// that throws everything off its feet, spits a jet of seawater from range,
+// and sinks out of sight to come up under you somewhere else.
+const SK_MOVES = {
+  bite: { windup: 0.85, recover: 0.6 },
+  sweep: { windup: 1.0, recover: 0.7, seaking: 'sweep' },
+  spit: { windup: 0.9, recover: 0.8, seaking: 'spit' },
+  breach: { windup: 0.3, recover: 1.0 },
+};
+
 class SeaKingBrain {
-  constructor(opts) { this.t = 1 + Math.random(); this.opts = opts; this.submerged = false; }
+  constructor(opts) { this.t = 1 + Math.random(); this.opts = opts; this.dive = 0; }
+  begin(k, game, move, extra = 0) {
+    const def = { anim: 'heavy', steps: [], ...SK_MOVES[move] };
+    k.action = { def, t: 0, step: 0, total: def.windup + def.recover + extra, mult: 1, angle: k.facing };
+  }
+  strike(k, game, ms, fn) {
+    setTimeout(() => { if (k.alive && k.state === 'idle' && !k.submerged) fn(); }, ms);
+  }
+  hitShipAt(tgtShip, k, game, x, y, dmg, r) {
+    if (tgtShip && hullGap(tgtShip, game.world.dx(tgtShip.x, x), y - tgtShip.y) < r) tgtShip.damage(dmg, k);
+  }
   update(k, dt, game) {
     const p = game.player;
     const tgtShip = p.mode === 'sail' && p.ship && !p.ship.sunk ? p.ship : null;
@@ -480,27 +504,98 @@ class SeaKingBrain {
     }
     const dx = game.world.dx(k.x, tx), dy = ty - k.y;
     const d = Math.hypot(dx, dy);
-    k.facing = Math.atan2(dy, dx);
     k.intent.mx = 0; k.intent.my = 0;
     if (d > 60) { k.alive = false; return; }
-    this.t -= dt;
-    if (!k.action && d > 4) { k.intent.mx = dx / d; k.intent.my = dy / d; }
-    if (this.t <= 0 && d < 7) {
-      this.t = 3 + Math.random() * 2;
-      const bite = Math.random() < 0.6;
-      game.fx.telegraph(tx, ty, 'circle', { r: bite ? 2.6 : 4, life: 0.9, color: 'rgba(255,40,40,1)' });
-      k.action = { def: { anim: 'heavy', steps: [], windup: 0.9, recover: 0.6 }, t: 0, step: 0, total: 1.6, mult: 1, angle: k.facing };
-      setTimeout(() => {
-        if (!k.alive || k.state !== 'idle') return;
-        const dmg = (bite ? 60 : 40) * (1 + k.attrs.str / 25);
-        game.combat.hitbox({ owner: k, x: tx, y: ty - 0.4, shape: 'circle', range: bite ? 2.6 : 4, damage: dmg * 0.5, knockback: 10, stun: 0.6, heavy: true, duration: 0.1, radial: true });
-        // (unless she's sailed on out from under it)
-        if (tgtShip && hullGap(tgtShip, game.world.dx(tgtShip.x, tx), ty - tgtShip.y) < 2.5) tgtShip.damage(dmg, k);
-        game.fx.burst(tx, ty, 30, { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 6, vz: 7, g: 12, life: 0.9, size: 0.22 });
-        game.fx.shake(0.6);
-        game.audio?.sfx('crash', { x: tx, y: ty });
-      }, 900);
+    const str = 1 + k.attrs.str / 25;
+    // under the water: gliding in fast and unseen, then up under you
+    if (k.submerged) {
+      this.dive -= dt;
+      if (d > 1.5) { k.intent.mx = (dx / d) * 1.8; k.intent.my = (dy / d) * 1.8; }
+      if (this.dive <= 0) {
+        k.submerged = false; k.invulnerable = false;
+        const bx = tx, by = ty;
+        game.fx.telegraph(bx, by, 'circle', { r: 3.4, life: 0.75, color: 'rgba(255,40,40,1)' });
+        game.fx.burst(bx, by, 24, { color: ['#e1f5fe', '#ffffff'], speed: 3, vz: 3, g: 8, life: 0.7, size: 0.18 });
+        setTimeout(() => {
+          if (!k.alive || k.state !== 'idle') return;
+          k.x = bx; k.y = by - 0.6;
+          this.begin(k, game, 'breach');
+          const dmg = 55 * str;
+          game.combat.hitbox({ owner: k, x: bx, y: by - 0.4, shape: 'circle', range: 3.4, damage: dmg * 0.5, knockback: 14, launch: 9, stun: 0.8, heavy: true, duration: 0.15, radial: true });
+          this.hitShipAt(tgtShip, k, game, bx, by, dmg, 3);
+          game.fx.burst(bx, by, 60, { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 8, vz: 12, g: 12, life: 1.3, size: 0.28 });
+          game.fx.shake(0.8);
+          game.audio?.sfx('crash', { x: bx, y: by });
+        }, 750);
+      }
+      return;
     }
+    if (!k.action) k.facing = Math.atan2(dy, dx);
+    this.t -= dt;
+    if (!k.action && d > 5) { k.intent.mx = dx / d; k.intent.my = dy / d; }
+    if (this.t > 0 || k.action) return;
+    const r = Math.random();
+    if (d < 7) {
+      if (r < 0.35) {
+        // the tail lash: its whole length swung round, all about it
+        this.t = 4 + Math.random() * 2;
+        const R = 6.5 + (k.level || 20) / 25;
+        game.fx.telegraph(k.x, k.y, 'circle', { r: R, life: 1.0, color: 'rgba(255,40,40,1)' });
+        this.begin(k, game, 'sweep');
+        this.strike(k, game, 1000, () => {
+          const dmg = 45 * str;
+          game.combat.hitbox({ owner: k, x: k.x, y: k.y, shape: 'circle', range: R, damage: dmg * 0.45, knockback: 16, stun: 0.7, heavy: true, duration: 0.25, radial: true });
+          this.hitShipAt(tgtShip, k, game, k.x, k.y, dmg * 0.8, R);
+          game.fx.ring(k.x, k.y, 1, R, '#e1f5fe', 0.6, 0.4, { flat: 0.4 });
+          game.fx.burst(k.x, k.y, 40, { color: ['#e1f5fe', '#ffffff'], speed: 9, vz: 4, g: 10, life: 0.9, size: 0.2 });
+          game.fx.shake(0.5);
+          game.audio?.sfx('crash', { x: k.x, y: k.y });
+        });
+      } else {
+        // the bite: rearing up, then down on you
+        this.t = 3 + Math.random() * 2;
+        const bx = tx, by = ty;
+        game.fx.telegraph(bx, by, 'circle', { r: 2.6, life: 0.85, color: 'rgba(255,40,40,1)' });
+        this.begin(k, game, 'bite');
+        this.strike(k, game, 850, () => {
+          const dmg = 60 * str;
+          game.combat.hitbox({ owner: k, x: bx, y: by - 0.4, shape: 'circle', range: 2.6, damage: dmg * 0.5, knockback: 10, stun: 0.6, heavy: true, duration: 0.1, radial: true });
+          this.hitShipAt(tgtShip, k, game, bx, by, dmg, 2.5);
+          game.fx.burst(bx, by, 30, { color: ['#e1f5fe', '#81d4fa', '#ffffff'], speed: 6, vz: 7, g: 12, life: 0.9, size: 0.22 });
+          game.fx.shake(0.6);
+          game.audio?.sfx('crash', { x: bx, y: by });
+        });
+      }
+    } else if (d < 26) {
+      if (r < 0.55) {
+        // the water jet: a torrent of seawater spat from the jaws
+        this.t = 3.5 + Math.random() * 2;
+        this.begin(k, game, 'spit');
+        this.strike(k, game, 900, () => {
+          const a0 = Math.atan2(ty - k.y, game.world.dx(k.x, tx)), sp = 24;
+          for (let i = 0; i < 3; i++) {
+            const a = a0 + (i - 1) * 0.06;
+            setTimeout(() => {
+              if (!k.alive || k.state !== 'idle') return;
+              game.combat.projectile({
+                h0: 4.5, owner: k, x: game.world.wx(k.x + Math.cos(a) * 2.5), y: k.y + Math.sin(a) * 2.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                range: 30, radius: 0.9, damage: 18 * str, element: 'water', knockback: 9, stun: 0.3, sprite: 'orb', color: '#81d4fa', size: 2.2,
+                hitShips: true, shipDamage: 20 * str, isProj: true, unblockable: true,
+                trail: (pr, g) => { if (Math.random() < 0.6) g.fx.burst(pr.x, pr.y, 2, { color: ['#e1f5fe', '#81d4fa'], speed: 1, vz: 1, g: 6, life: 0.5, size: 0.2 }); },
+              });
+            }, i * 110);
+          }
+          game.audio?.sfx('splash_big', { x: k.x, y: k.y });
+        });
+      } else {
+        // down it goes — and up it comes, right under you
+        this.t = 5 + Math.random() * 2;
+        k.submerged = true; k.invulnerable = true;
+        this.dive = 1.6 + Math.random() * 0.8;
+        game.fx.burst(k.x, k.y, 30, { color: ['#e1f5fe', '#ffffff'], speed: 5, vz: 5, g: 10, life: 0.9, size: 0.22 });
+        game.audio?.sfx('splash_big', { x: k.x, y: k.y });
+      }
+    } else this.t = 0.5;
   }
 }
 

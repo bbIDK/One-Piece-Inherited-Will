@@ -667,6 +667,8 @@ export class Renderer3D {
     this.terrain.update(ox, oy);
     this.sky.shadowAt(0, gh, 0, Math.cos(yaw), Math.sin(yaw), ox, oy);
     this.updateProps(game, ox, oy, env, true);
+    // (the town's ruins too — as they are, or put back: never a heap left where the last game had it)
+    if (this.propOrigin) this.debris.update(1 / 60, w, this.propOrigin);
     this.props.position.set(this.propOrigin ? w.dx(ox, this.propOrigin.x) : 0, 0, this.propOrigin ? this.propOrigin.y - oy : 0);
     this.forest.aim(camYaw3);
     this.tickProps(env, 1 / 60);

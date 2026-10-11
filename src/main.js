@@ -315,6 +315,7 @@ async function start() {
     if (next === 'create') game.net?.leftWorld(); else game.net?.close('quit');
     // (back out of the world before its loading screen had gone: it goes now)
     if (sail) { sail = null; hideBoot(true); }
+    game.destruction?.resetAll();
     game.player = null;
     game.actors = [];
     game.ships = [];
@@ -570,7 +571,17 @@ async function start() {
   showTitle();
 
   let last = performance.now();
+  // (one frame that throws never stops the loop: the next is always asked for first,
+  // so a bug in one corner of the world can't freeze the game — or its loading screen)
+  let frameErrs = 0;
   const frame = (now) => {
+    requestAnimationFrame(frame);
+    try { frameBody(now); } catch (e) {
+      if (frameErrs++ < 5) console.error('frame failed', e);
+      if (sail && performance.now() - sail.t0 > 6000) { hideBoot(); sail = null; }
+    }
+  };
+  const frameBody = (now) => {
     const frameMs = now - last;
     const dt = Math.min(0.05, frameMs / 1000);
     last = now;
@@ -632,7 +643,6 @@ async function start() {
       ui.update(dt);
       input.endFrame();
     }
-    requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
 }

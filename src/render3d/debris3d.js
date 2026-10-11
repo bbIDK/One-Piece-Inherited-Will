@@ -394,6 +394,7 @@ export class Debris {
         else if (e.kind === 'smash') this.smash(e.b, e.x, e.y, e.power, e.delay || 0, e.lite);
         else if (e.kind === 'ice') this.iceShell(e.b, e.on, e.shatter);
         else if (e.kind === 'fixture') this.view.dropFixture?.(e.o);
+        else if (e.kind === 'wipe') { this.clear(); this.leaning?.clear(); this.drawn = -1; }
         this.view.ruinProp?.(e);
       }
       ev.length = 0;
