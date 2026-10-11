@@ -14959,10 +14959,6 @@
       return true;
     }
   });
-  sig("hito_arm hito_walk hito_jump hito_brain", { buff(fx, actor, s, a, ex) {
-    DEFAULTS.buff(fx, actor, s, a, ex);
-    smoke(fx, actor.x, actor.y, 0.9, 10, ["#ffe0b2", "#ffffff"], { speed: 2, size: 0.3 });
-  } });
   sig("neko_rokuogan", { hit(fx, actor, s, a, hb) {
     DEFAULTS.hit(fx, actor, s, a, hb);
     const [px2, py2] = fwd(actor, hb.angle, 1);
@@ -15126,7 +15122,7 @@
       fx.ring(actor.x, actor.y, 0.2, 1.6, "#eceff1", 0.3, 0.06, { z: 1, flat: 0, add: true });
     }
   });
-  sig("hito_heavy hito_guard hito_monster neko_hybrid seiryu_form mane_disguise doru_armor", {
+  sig("neko_hybrid seiryu_form mane_disguise doru_armor", {
     buff(fx, actor, s, a, ex) {
       DEFAULTS.buff(fx, actor, s, a, ex);
       smoke(fx, actor.x, actor.y, 0.8, 14, ["#ffffff", "#eceff1", "#cfd8dc"], { speed: 3, size: 0.4 });
@@ -17830,8 +17826,12 @@
         const spread2 = n > 1 ? (i / (n - 1) - 0.5) * (p.spread ?? 0.5) * (aimed ? 0.5 : 1) : p.jitter && !aimed ? (Math.random() - 0.5) * p.jitter : 0;
         const pa = ang + spread2;
         const sp = (p.speed || 14) * (fire ? 2.2 : 1) * (aimed ? 1.35 : 1);
-        const sx = actor.x + Math.cos(pa) * 0.6, sy = actor.y - 0.5 + Math.sin(pa) * 0.6;
+        const sc = actor.look?.scale || 1, side = 0.22 * sc * (n > 1 ? 0 : 1);
+        const sx = actor.x + Math.cos(pa) * 0.6 * sc - Math.sin(pa) * side, sy = actor.y - 0.5 + Math.sin(pa) * 0.6 * sc + Math.cos(pa) * side;
+        const feet2 = actor.feetH ? actor.feetH(game) : actor.z || 0;
+        const h0 = feet2 + (/breath|roar/.test(a.def.anim || "") || p.mouth ? 1.55 : 1.3) * sc;
         game.combat.projectile({
+          h0,
           owner: actor,
           x: game.world.wx(sx),
           y: sy,
@@ -19636,11 +19636,6 @@
         steps: [{ zone: { range: 8, duration: 5, interval: 0.4, damage: 9, element: "dark", color: "#120a1a", kind: "dark", pull: 2.5, slow: 0.5, absorb: true } }]
       }
     ] } },
-    hito: { m1: { dmg: 1.1 }, forms: [
-      zoanForm("heavy", "Heavy Point", "Heavy", 5, "hito_heavy", "A big, furry, muscle-bound reindeer-man.", { m1: { dmg: 1.25 } }),
-      zoanForm("walk", "Walk Point", "Walk", 20, "hito_walk", "A reindeer on four hooves: a great deal faster.", { m1: { dmg: 1.1 } }),
-      { id: "monster", name: "Monster Point", short: "Monster", mastery: 50, activate: "hito_monster", desc: "A Rumble Ball overdose: a towering monster, enormous power, barely controlled.", m1: { dmg: 1.5, reach: 1.4 } }
-    ] },
     tori_phoenix: { forms: [
       zoanForm("hybrid", "Phoenix Hybrid", "Hybrid", 10, "phoenix_form", "Arms become wings of blue flame: faster, harder, healing as you fight."),
       zoanForm("phoenix", "Full Phoenix", "Phoenix", 45, "phoenix_full", "The Phoenix itself: a great bird of blue flame with a tail of gold.", { m1: { dmg: 1.2, element: "fire", reach: 1.25 } })
@@ -20736,64 +20731,6 @@
       ]
     },
     // ------------------------------------------------------------------ ZOAN
-    hito: {
-      name: "Hito Hito no Mi",
-      en: "Human-Human Fruit",
-      type: "Zoan",
-      rarity: "uncommon",
-      color: "#f8bbd0",
-      weight: 2.5,
-      desc: "Grants the intelligence and form of a human. Tony Tony Chopper ate it as a reindeer, and learned to take a different shape for each need.",
-      techniques: [
-        T(0, { id: "hito_heavy", name: "Heavy Point", icon: "\u{1F4AA}", anim: "flex", windup: 0.4, recover: 0.1, cd: 8, desc: "Grow into a towering, furry, muscle-bound reindeer-man: hit harder, take more. (The form key switches it on and off.)", steps: [{ fx: { burst: 14, color: "#a1887f", kind: "smoke" } }, { at: 0.35, buff: { id: "heavy_point", form: "heavy", name: "Heavy Point", dur: Infinity, mods: { damage: 1.3, defMul: 0.8, scale: 1.3 }, look: ZOAN_LOOK.heavy } }] }),
-        T(10, { id: "hito_guard", name: "Guard Point", anim: "block", windup: 0.1, recover: 0.1, cd: 14, desc: "Puff up into a great ball of fur: blows bounce off the fluff (but you can hardly move).", steps: [{ buff: { id: "guard_point", name: "Guard Point", dur: 3.5, mods: { defMul: 0.25, speedMul: 0.4 }, look: { bulk: 1.9 } } }] }),
-        T(20, { id: "hito_horn", name: "Horn Point: Kokutei Roseo", icon: "\u{1F98C}", anim: "thrust", windup: 0.25, recover: 0.3, cd: 7, steps: [{ dash: { dist: 5, time: 0.22, hit: { damage: 28, knockback: 6, stun: 0.6 } } }] }),
-        T(30, {
-          id: "hito_arm",
-          name: "Arm Point: Kokutei Cross",
-          anim: "punch",
-          windup: 0.25,
-          recover: 0.3,
-          cd: 6,
-          desc: "Arms like a gorilla's: both hooves driven into them crossed \u2014 and the mark of the cross left behind.",
-          steps: [{ buff: { id: "arm_point", name: "Arm Point", dur: 1.2, look: { bulk: 1.25 } } }, { at: 0.25, hit: { shape: "arc", range: 1.9, arc: 1.2, offset: 0.3, damage: 34, knockback: 10, stun: 0.6, heavy: true, guardBreak: true, impactFrame: true } }]
-        }),
-        T(40, {
-          id: "hito_walk",
-          name: "Walk Point",
-          anim: "flex",
-          windup: 0.25,
-          recover: 0.1,
-          cd: 8,
-          desc: "Down on four hooves like a true reindeer: you run a great deal faster.",
-          steps: [{ fx: { burst: 12, color: "#a1887f", kind: "smoke" } }, { at: 0.25, buff: { id: "walk_point", form: "walk", name: "Walk Point", dur: Infinity, mods: { speedMul: 1.45, scale: 1.15 }, look: ZOAN_LOOK.walk } }]
-        }),
-        T(50, {
-          id: "hito_jump",
-          name: "Jumping Point",
-          anim: "thrust",
-          windup: 0.25,
-          recover: 0.35,
-          cd: 9,
-          desc: "Legs built to leap: bound high over them and come down hooves first.",
-          steps: [{ dash: { dist: 7, time: 0.4, iframes: 0.3, air: true, hit: { damage: 26, knockback: 8, stun: 0.6, launch: 3 } } }]
-        }),
-        T(60, {
-          id: "hito_brain",
-          name: "Brain Point: Scope",
-          anim: "pray",
-          windup: 0.3,
-          recover: 0.2,
-          cd: 30,
-          desc: "Look through the lens of your hooves and find their weak spot: for a while every blow lands where it hurts most.",
-          steps: [{ buff: { id: "scope", name: "Scope", dur: 10, mods: { crit: 0.5, damage: 1.15 } } }]
-        })
-      ],
-      // (Monster Point is a form, opened by fighting: data/fruitForms.js)
-      more: [
-        T(50, { id: "hito_monster", name: "Monster Point", icon: "\u{1F479}", anim: "flex", windup: 0.8, recover: 0.1, cd: 90, desc: "A Rumble Ball overdose: enormous power, barely controllable.", steps: [{ buff: { id: "monster", form: "monster", name: "Monster Point", dur: 20, mods: { damage: 2.2, defMul: 0.5, scale: 1.8, speedMul: 1.1 }, look: ZOAN_LOOK.monster } }] })
-      ]
-    },
     neko_leopard: {
       name: "Neko Neko no Mi, Model: Leopard",
       en: "Cat-Cat Fruit, Leopard",
@@ -75100,7 +75037,6 @@ vec3 paneView(vec3 dir, float night) {
     horo: "heart",
     kage: "melon",
     doku: "grape",
-    hito: "pear",
     neko_leopard: "banana",
     tori_phoenix: "pear",
     uo_seiryu: "banana",
@@ -76399,7 +76335,6 @@ vec3 paneView(vec3 dir, float night) {
     nikyu: "#6f6a86",
     mane: "#b03f6e",
     zushi: "#5b4a9a",
-    hito: "#b86a82",
     neko_leopard: "#b8782a",
     tori_phoenix: "#223a66",
     uo_seiryu: "#1f2c52",
@@ -76523,9 +76458,6 @@ vec3 paneView(vec3 dir, float night) {
     zushi_blade: ["claw", { c: "#d8c8ff" }],
     zushi_meteor: ["meteor"],
     // Zoans
-    hito_heavy: ["antler", { muscle: true }],
-    hito_horn: ["antler", { hat: true }],
-    hito_monster: ["antler", { c: "#8a5a30" }],
     neko_hybrid: ["leopard"],
     neko_claw: ["claw", { c: "#ffe8c0" }],
     neko_pounce: ["dash", { c: "#ffe8c0", c2: "#e8a33c" }],
@@ -76621,10 +76553,6 @@ vec3 paneView(vec3 dir, float night) {
     mane_montage: ["masks", { c: "#f4a3bf" }],
     zushi_pull: ["gravity"],
     zushi_lift: ["meteor", { c: "#6d4c41" }],
-    hito_arm: ["antler", { muscle: true }],
-    hito_walk: ["antler"],
-    hito_jump: ["antler", { hat: true }],
-    hito_brain: ["eye", { iris: "#8a5a30" }],
     neko_shigan: ["claw", { c: "#ffe8c0" }],
     neko_rokuogan: ["palms", { burst: "#ffffff" }],
     phoenix_pyreapple: ["kick", { fx: "fire", flame: BLUEFIRE, c: "#e8d9a8", shoe: "#6b4a2a" }],
@@ -81406,7 +81334,6 @@ vec3 paneView(vec3 dir, float night) {
       lx = Math.max(-fw / 2, Math.min(fw / 2, lx));
       lz = Math.max(-fd, Math.min(0, lz));
       const at4 = hy ?? Math.min(H5 * 0.7, k > 0.5 ? rnd2(0.9, 2.4) : rnd2(1, 1.6));
-      this.hole(b, base2, lx, lz, at4, k, P6);
       for (let i = 0; i < n; i++) {
         const sz = rnd2(0.12, 0.35);
         const p = this.piece(b, base2, lx + rnd2(-0.4, 0.4), at4 + rnd2(-0.4, 0.4), lz + rnd2(-0.2, 0.2), sz, sz * rnd2(0.5, 1), sz, Math.random() < 0.7 ? P6.wall : P6.wood, { chip: true, life: 25 });
@@ -81440,30 +81367,6 @@ vec3 paneView(vec3 dir, float night) {
         p.wx = rnd2(-3, 3);
         p.wy = rnd2(-2, 2);
         p.wz = rnd2(-3, 3);
-      }
-      for (let i = 0; i < (st === 1 ? 4 : 8); i++) {
-        const lx = near * rnd2(0.1, fw / 2 - 0.3), lz = -rnd2(0.4, fd - 0.4);
-        const p = this.piece(b, base2, lx, H5 * rnd2(0.86, 0.97), lz, rnd2(0.8, 1.4), 0.12, rnd2(0.7, 1.2), "#24170f", { life: 0 });
-        p.rest = true;
-        p.hole = true;
-        p.rx = rnd2(-0.5, 0.5);
-        p.rz = rnd2(-0.5, 0.5);
-        (b._holes || (b._holes = [])).push({ lx, lz, hy: H5, k: 0, parts: [p] });
-      }
-      for (let i = 0; i < (st === 1 ? 4 : 8); i++) {
-        const lx = near * rnd2(0.2, fw / 2 - 0.2), lz = -rnd2(0.3, fd - 0.3);
-        const p = this.piece(b, base2, lx, H5 * rnd2(0.9, 1.05), lz, 0.14, rnd2(1.2, 2.2), 0.14, P6.wood, { life: 0 });
-        p.rest = true;
-        p.hole = true;
-        p.rx = rnd2(-0.8, 0.8);
-        p.rz = rnd2(-0.8, 0.8);
-        (b._holes || (b._holes = [])).push({ lx, lz, hy: H5, k: 0, parts: [p] });
-      }
-      const holes = st === 1 ? 2 : 4;
-      for (let i = 0; i < holes; i++) {
-        const side = Math.floor(Math.random() * 4), u = rnd2(0.2, 0.8);
-        const lx = side === 2 ? -fw / 2 : side === 3 ? fw / 2 : (u - 0.5) * fw, lz = side === 0 ? 0 : side === 1 ? -fd : -u * fd;
-        this.hole(b, base2, lx, lz, rnd2(1, Math.max(1.2, H5 * 0.75)), rnd2(0.9, 1.6) + st * 0.2, P6);
       }
       for (let i = 0; i < 14 * st; i++) {
         const s0 = rnd2(0.25, 0.6);
@@ -100157,6 +100060,20 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         return pr.arc.h0 * (1 - f) + pr.arc.apex * 4 * f * (1 - f) - f * 0.2;
       }
       if (pr.stretch) return this.fistY(pr);
+      if (pr.h0 != null && pr.sprite !== "cannonball") {
+        const g = Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5));
+        let y = pr.h0;
+        const t = pr.target;
+        if (t && t.alive !== false && t !== pr.owner) {
+          const tv = this.actorViews.get(t);
+          const chest = (tv ? tv.root.position.y : this.ground(t.x, t.y) + (t.z || 0)) + 1.2 * (t.look && t.look.scale || 1);
+          const gone2 = pr.traveled || 0, rem = Math.hypot(this.world.dx(pr.x, t.x), t.y - (pr.y + 0.5));
+          pr.aimK = Math.max(pr.aimK || 0, gone2 / Math.max(0.01, gone2 + rem));
+          const lim = 0.5 * (gone2 + rem);
+          y += Math.max(-lim, Math.min(lim, chest - y)) * pr.aimK;
+        }
+        return Math.max(y, g + 0.35) + (pr.z || 0);
+      }
       return Math.max(0.2, this.terrain.terrainAt(pr.x, pr.y + 0.5)) + (pr.sprite === "cannonball" ? 1.3 : 1.15) + (pr.z || 0);
     }
     /**
@@ -127790,6 +127707,12 @@ button:disabled { cursor: not-allowed; }
         "div.roll-btns",
         { style: { opacity: 0 } },
         h("button.btn.gold", { on: { click: stepIdentity } }, "Continue"),
+        // (the very first of a line: roll again as often as you like — after that, only Fate's Coin)
+        legacy.generation <= 1 ? h("button.btn", { on: { click: () => {
+          birth = rollBirth(legacy, Math.floor(Math.random() * 1e9), canonFruits());
+          keep();
+          stepRoll(true);
+        } } }, "Reroll") : null,
         rerolls > 0 ? h("button.btn", { on: { click: () => {
           rerolls--;
           birth = rollBirth(legacy, Math.floor(Math.random() * 1e9), canonFruits());
@@ -140281,12 +140204,18 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     return Math.round(fw * fd * H5 * 2.2);
   }
   var wrecker = (o) => !!o && (o.isPlayer || o.summonedBy?.isPlayer);
+  function wallStrength(a) {
+    if (!a) return 1;
+    const best = Math.max(a.fruitMastery || 0, ...Object.values(a.masteries || {}), (a.hakiSkill?.armament || 0) * 2, 0);
+    return Math.max(0.05, Math.min(1, Math.pow(best / 70, 1.4)));
+  }
   function structPower(h2) {
     const def = h2.def || h2.owner?.action?.def;
     const src = def?.source || "";
     const k = src.startsWith("fruit") ? 3 : def?.m1 ? 0.3 : def ? 1.2 : 0.25;
     const f = h2.owner && def ? techScale(h2.owner, def) : 1;
-    return (h2.damage || 0) * k * f * f * (h2.blast || h2.heavy ? 1.3 : 1);
+    const pw = (h2.damage || 0) * k * f * f * (h2.blast || h2.heavy ? 1.3 : 1) * wallStrength(h2.owner);
+    return def?.m1 && wallStrength(h2.owner) < 0.35 ? 0 : pw;
   }
   var SMASH = {
     tree: 70,
@@ -140804,8 +140733,23 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
 
   // src/content/fruits.js
   function catchUpFruit(game, c) {
+    if (c && c.inventory) c.inventory = c.inventory.filter((it) => !(it.id?.startsWith("fruit_") && !FRUITS[it.id.slice(6)]));
+    if (c?.fruit && !FRUITS[c.fruit]) {
+      const gone2 = c.fruit, rng4 = new RNG(c.runSeed + ":fruit-swap");
+      c.techniques = (c.techniques || []).filter((id) => !id.startsWith(gone2 + "_"));
+      c.hotbar = (c.hotbar || []).map((id) => typeof id === "string" && (id.startsWith(gone2 + "_") || id.startsWith("ms:form")) ? null : id);
+      c.fruit = null;
+      const fid = game.rollFruit?.(rng4);
+      if (!fid) {
+        c.fruitsEaten = 0;
+        return;
+      }
+      c.fruit = fid;
+      c.fruitAwakened = false;
+      game.log?.(`Your Devil Fruit is gone from the world \u2014 in its place, the ${FRUITS[fid].name}.`, "#ffab91");
+    }
     if (!c?.fruit || !FRUITS[c.fruit]) return;
-    const stale = (id) => typeof id === "string" && /^(gomu|gura|ope|bara|bomu|hana|ito|mochi|horo|kage|doku|noro|bari|suke|sube|doru|supa|nikyu|mane|zushi|hito|neko|phoenix|seiryu|mera|hie|goro|suna|moku|pika|magu|yami)_/.test(id) && !getAbility(id);
+    const stale = (id) => typeof id === "string" && /^(gomu|gura|ope|bara|bomu|hana|ito|mochi|horo|kage|doku|noro|bari|suke|sube|doru|supa|nikyu|mane|zushi|neko|phoenix|seiryu|mera|hie|goro|suna|moku|pika|magu|yami)_/.test(id) && !getAbility(id);
     c.techniques = (c.techniques || []).filter((id) => !stale(id));
     c.hotbar = (c.hotbar || []).map((id) => stale(id) ? null : id);
     const fresh = unlockedFruitTechniques(c.fruit, c.fruitMastery || 0).filter((id) => !c.techniques.includes(id));
@@ -170373,38 +170317,53 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
       }
     },
     /** A blow landing on a wall: the crunch of plaster and timber, bits pattering down. */
+    /** A blow into a wall: a deep thud through the timbers, the crack of a beam, plaster and grit pattering down. */
     wallhit: {
       prio: 5,
       cd: 0.08,
       max: 2,
-      send: 0.15,
-      drive: 1.2,
+      send: 0.18,
+      drive: 1.4,
       play(v) {
-        v.thump(0, { f0: 120, f1: 55, dur: 0.18, gain: 0.3 });
-        v.noise(0, 0.22, { type: "lowpass", freq: 700, gain: 0.32 });
-        v.crackle(0.01, 0.3, 10, { freq: 1600, gain: 0.09, q: 4 });
-        v.sample(0.02, "rubble_1", { gain: 0.18, rate: 1.1, lp: 3500 });
+        v.thump(0, { f0: 140, f1: 48, dur: 0.22, gain: 0.42, click: 0.3 });
+        v.noise(0, 0.018, { type: "highpass", freq: 2200, gain: 0.3, attack: 6e-4 });
+        v.noise(4e-3, 0.28, { color: "pink", type: "lowpass", freq: 900, sweep: 300, gain: 0.32 });
+        v.creak(0.01, 0.12, { rate: 60, rate1: 30, freqs: [380, 640], q: 6, gain: 0.08 });
+        v.crackle(0.03, 0.45, 12, { freq: 2600, gain: 0.07, q: 3 });
+        v.sample(0.02, "rubble_2", { gain: 0.26, rate: 1.15, lp: 4200 });
       }
     },
-    /** A building coming down: the crack of it giving way, the long roar of timber and stone falling, the rumble, the dust settling. */
+    /**
+     * A building coming down: the sharp crack of the main beam snapping, a
+     * groan as it leans, then the crash — a huge low boom felt as much as
+     * heard, timber splintering and roof tiles smashing in a long roar of
+     * falling rubble, the rumble rolling away and grit pattering after.
+     */
     collapse: {
       prio: 8,
       cd: 0.12,
       max: 3,
-      send: 0.35,
-      drive: 2.2,
-      duck: 0.4,
+      send: 0.4,
+      drive: 2.4,
+      duck: 0.45,
       play(v, k) {
         const s = k.w || 1;
-        v.noise(0, 0.05, { type: "highpass", freq: 1400, gain: 0.35 * s, attack: 8e-4 });
-        v.creak(0, 0.5, { rate: 30, rate1: 14, freqs: [150, 260, 430], q: 5, gain: 0.18 * s });
-        v.thump(0.15, { f0: 70, f1: 24, dur: 1.2, gain: 0.8 * s });
-        v.noise(0.12, 1.8, { color: "pink", type: "lowpass", freq: 700, sweep: 80, gain: 0.65 * s });
-        v.crackle(0.15, 1.4, 30, { freq: 1300, gain: 0.13 * s, q: 4 });
-        v.sample(0.15, "rubble_1", { gain: 0.45 * s, rate: 0.7 });
-        v.sample(0.4, "rubble_1", { gain: 0.3 * s, rate: 0.55, lp: 1800 });
-        const e = v.echo(0.3, 0.35, 700, 0.3);
-        v.noise(0.15, 0.7, { color: "pink", type: "lowpass", freq: 500, gain: 0.35 * s, dest: e });
+        v.noise(0, 0.03, { type: "highpass", freq: 1800, gain: 0.45 * s, attack: 5e-4 });
+        v.thump(0, { f0: 220, f1: 90, dur: 0.08, gain: 0.3 * s, click: 0.5 });
+        v.creak(0.03, 0.55, { rate: 26, rate1: 9, freqs: [120, 210, 360], q: 6, gain: 0.2 * s });
+        for (let i = 0; i < 4; i++) v.noise(0.12 + i * 0.09 + Math.random() * 0.05, 0.02, { freq: 2400 + Math.random() * 1800, q: 2, gain: 0.22 * s, attack: 5e-4 });
+        v.thump(0.32, { f0: 80, f1: 22, dur: 1.6, gain: 1 * s });
+        v.thump(0.36, { f0: 160, f1: 50, dur: 0.4, gain: 0.45 * s, click: 0.4 });
+        v.noise(0.3, 2.2, { color: "brown", type: "lowpass", freq: 520, sweep: 70, gain: 0.7 * s });
+        v.noise(0.32, 1.3, { color: "pink", type: "bandpass", freq: 1400, q: 0.7, sweep: 500, gain: 0.3 * s });
+        v.crackle(0.33, 1.1, 42, { freq: 3200, gain: 0.12 * s, q: 3 });
+        v.crackle(0.5, 1.8, 26, { freq: 900, gain: 0.14 * s, q: 2 });
+        v.crackle(1.4, 1.6, 18, { freq: 4200, gain: 0.05 * s, q: 4 });
+        v.sample(0.32, "rubble_1", { gain: 0.55 * s, rate: 0.72 });
+        v.sample(0.5, "rubble_2", { gain: 0.42 * s, rate: 0.85, lp: 3e3 });
+        v.sample(0.85, "rubble_1", { gain: 0.28 * s, rate: 0.55, lp: 1500 });
+        const e = v.echo(0.35, 0.4, 900, 0.35);
+        v.noise(0.32, 0.9, { color: "pink", type: "lowpass", freq: 450, gain: 0.38 * s, dest: e });
       }
     },
     /** Out of shot: the hammer falls on nothing. */
@@ -171652,11 +171611,6 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         suction(v, 0, Math.max(0.3, k.rel) + 0.2, 0.5);
       }
     },
-    hito: { default: (v, k) => {
-      v.crackle(0, 0.1, 4, { freq: 1800, gain: 0.08 });
-      roar(v, 0.05, 0.6, 0.6, 110);
-      if (k.rel > 0.3) swing(v, k.rel, "heavy", 1);
-    } },
     neko_leopard: { default: (v, k) => {
       roar(v, 0, 0.7, 0.5, 120);
       swing(v, k.rel, "fists", 1.2);
