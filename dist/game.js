@@ -67857,6 +67857,7 @@ ${GLSL}
     "sheath",
     "hilts",
     "backWpn",
+    "sash",
     ...["R", "L"].flatMap((H5) => ["k1", "k2", "k3", "k4", "j1", "j2", "j3", "j4", "tb", "tc"].map((n) => n + H5)),
     ...Array.from({ length: 12 }, (_, i) => "skirt" + i),
     ...Array.from({ length: 12 }, (_, i) => "skirtK" + i),
@@ -67881,6 +67882,7 @@ ${GLSL}
     wingL: "chest",
     backWpn: "chest",
     tail: "hips",
+    sash: "hips",
     sheath: "hips",
     hilts: "hips",
     hairTail: "head"
@@ -67978,6 +67980,10 @@ ${GLSL}
       wingR: [-0.11 * d.Bk, d.chestLen * 0.8, 0.05],
       wingL: [-0.11 * d.Bk, d.chestLen * 0.8, -0.05]
     };
+    {
+      const [Dp2, Wp2] = skirtWaist(d), a = -1.25;
+      R5.sash = [Math.cos(a) * (Dp2 + 0.02), 0.05, Math.sin(a) * (Wp2 + 0.02)];
+    }
     const [Dp, Wp] = skirtWaist(d);
     const L3 = skirtShape(d, true), f = L3.hK / -L3.yb;
     for (let i = 0; i < SKIRT_N; i++) {
@@ -68040,6 +68046,7 @@ ${GLSL}
     child("wingR", "chest", R5.wingR);
     child("wingL", "chest", R5.wingL);
     child("hairTail", "head", R5.hairTail);
+    child("sash", "hips", R5.sash);
     for (let i = 0; i < SKIRT_N; i++) {
       child("skirt" + i, "hips", R5["skirt" + i]);
       child("skirtK" + i, "skirt" + i, R5["skirtK" + i]);
@@ -93475,7 +93482,7 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
       const k = pelvisPt(sh, 0.05, -1.25, 0.02);
       add7(Prim.sphere(q2.sph[0], q2.sph[1]), M(k[0], k[1], k[2], 0, 0, 0, [0.03, 0.032, 0.026]), shade(cc.waist, -0.08), B.hips);
       for (const [dx, len, rot] of [[0.012, 0.2, 0.12], [-0.02, 0.16, -0.08]]) {
-        add7(Prim.rbox(0.35, ...q2.rboxS), mul(M(k[0] + dx, k[1] - len / 2, k[2] - 0.01, rot, 0, 0.1), M(0, 0, 0, 0, 0, 0, [0.022, len / 2, 8e-3])), cc.waist, B.hips);
+        add7(Prim.rbox(0.35, ...q2.rboxS), mul(M(k[0] + dx, k[1] - len / 2, k[2] - 0.01, rot, 0, 0.1), M(0, 0, 0, 0, 0, 0, [0.022, len / 2, 8e-3])), cc.waist, B.sash);
       }
     } else if (o.waist === "haramaki" || o.waist === "obi") {
       const hi = o.waist === "obi" ? 0.32 : 0.3, lo = o.waist === "obi" ? 0.08 : -0.06;
@@ -96707,7 +96714,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       this.group.add(this.mesh, this.outline);
       const d = this.d;
       const R5 = restOffsets(d);
-      for (const n of ["hairTail", "tail", "wingR", "wingL"]) this.bones[B[n]].position.set(...R5[n]);
+      for (const n of ["hairTail", "tail", "wingR", "wingL", "sash"]) this.bones[B[n]].position.set(...R5[n]);
       for (let i = 0; i < SKIRT_N; i++) {
         this.bones[B["skirt" + i]].position.set(...R5["skirt" + i]);
         this.bones[B["skirtK" + i]].position.set(...R5["skirtK" + i]);
@@ -96839,6 +96846,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const h2 = new Dangle(this.bones[B.hairTail], d.headR * 2.2, new Vector3(-0.35, -1, 0), { K: 70, g: 0.55, drag: 0.32, damp: 5, fwd: 0.12, back: 1, side: 0.45 });
         h2.caps = () => this.bodyCaps(true);
         out.push(h2);
+      }
+      if (u.has(B.sash)) {
+        const s = new Dangle(this.bones[B.sash], 0.2, new Vector3(0, -1, 0), { K: 60, g: 0.5, drag: 0.35, damp: 4.5, fwd: 0.9, back: 0.9, side: 0.6 });
+        s.caps = () => this.bodyCaps(false);
+        out.push(s);
       }
       if (u.has(B.coatTail)) {
         const c = new Dangle(this.bones[B.coatTail], 0.62 * d.Lg, new Vector3(-0.03, -1, 0), { K: 45, g: 0.45, drag: 0.45, damp: 4, fwd: 0.05, back: 1.1, side: 0.3 });

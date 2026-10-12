@@ -13,6 +13,7 @@
 //                 and tip; each segment hangs along -Y from its joint, and
 //                 bends toward the palm (-X) about its Z axis
 //   coatTail, wing*, tail, hairTail, sheath, hilts, backWpn: attachments
+//   sash          a sash's knot on the left hip, its hanging ends swinging from it
 //   skirt0..skirt11 a skirt's panels, hung round the waist from the front (0)
 //                 toward the right; each swings out about its own
 //                 horizontal axis to clear the legs (model.js skirtPanels);
@@ -38,7 +39,7 @@ export const BONES = [
   'uarmR', 'farmR', 'handR', 'fistR', 'palmR', 'fingerR',
   'uarmL', 'farmL', 'handL', 'fistL', 'palmL', 'fingerL',
   'thighR', 'shinR', 'footR', 'thighL', 'shinL', 'footL',
-  'coatTail', 'tail', 'wingR', 'wingL', 'hairTail', 'sheath', 'hilts', 'backWpn',
+  'coatTail', 'tail', 'wingR', 'wingL', 'hairTail', 'sheath', 'hilts', 'backWpn', 'sash',
   ...['R', 'L'].flatMap((H) => ['k1', 'k2', 'k3', 'k4', 'j1', 'j2', 'j3', 'j4', 'tb', 'tc'].map((n) => n + H)),
   ...Array.from({ length: 12 }, (_, i) => 'skirt' + i), ...Array.from({ length: 12 }, (_, i) => 'skirtK' + i),
   ...chain('ra'), ...chain('rl'),
@@ -52,7 +53,7 @@ export const RUB = ['R', 'L'].map((H) => Array.from({ length: RUB_N }, (_, i) =>
 export const RUBL = ['R', 'L'].map((H) => Array.from({ length: RUB_N }, (_, i) => B[`rl${H}${i + 1}`]));
 export const PARENT = {
   fistR: 'handR', palmR: 'handR', fingerR: 'handR', fistL: 'handL', palmL: 'handL', fingerL: 'handL',
-  coatTail: 'chest', wingR: 'chest', wingL: 'chest', backWpn: 'chest', tail: 'hips', sheath: 'hips', hilts: 'hips', hairTail: 'head',
+  coatTail: 'chest', wingR: 'chest', wingL: 'chest', backWpn: 'chest', tail: 'hips', sash: 'hips', sheath: 'hips', hilts: 'hips', hairTail: 'head',
 };
 for (let i = 0; i < SKIRT_N; i++) { PARENT['skirt' + i] = 'hips'; PARENT['skirtK' + i] = 'skirt' + i; }
 for (let i = 0; i < COAT_N; i++) { PARENT['coat' + i] = 'hips'; PARENT['coatK' + i] = 'coat' + i; }
@@ -132,6 +133,8 @@ export function restOffsets(d) {
     hairTail: [d.hx, d.hc, 0], tail: [-0.13 * d.Bk, -0.06, 0],
     wingR: [-0.11 * d.Bk, d.chestLen * 0.8, 0.05], wingL: [-0.11 * d.Bk, d.chestLen * 0.8, -0.05],
   };
+  // (the sash's knot, on the waist toward the left hip: body.js)
+  { const [Dp, Wp] = skirtWaist(d), a = -1.25; R.sash = [Math.cos(a) * (Dp + 0.02), 0.05, Math.sin(a) * (Wp + 0.02)]; }
   // the skirt's panels hang from the waist, just inside the hips; a long
   // skirt's lower panels bend from them at the height of the knee
   const [Dp, Wp] = skirtWaist(d);
@@ -211,7 +214,7 @@ export function bindPose(d) {
   const child = (n, parent, off = [0, 0, 0]) => { m[B[n]] = m[B[parent]].clone().multiply(T(off[0], off[1], off[2])); };
   child('coatTail', 'chest'); child('backWpn', 'chest'); child('sheath', 'hips'); child('hilts', 'hips');
   child('tail', 'hips', R.tail); child('wingR', 'chest', R.wingR); child('wingL', 'chest', R.wingL);
-  child('hairTail', 'head', R.hairTail);
+  child('hairTail', 'head', R.hairTail); child('sash', 'hips', R.sash);
   for (let i = 0; i < SKIRT_N; i++) { child('skirt' + i, 'hips', R['skirt' + i]); child('skirtK' + i, 'skirt' + i, R['skirtK' + i]); }
   for (let i = 0; i < COAT_N; i++) { child('coat' + i, 'hips', R['coat' + i]); child('coatK' + i, 'coat' + i, R['coatK' + i]); }
   return m;

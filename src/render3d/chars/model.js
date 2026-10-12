@@ -222,7 +222,7 @@ export class CharacterModel {
     // attachments' rest offsets
     const d = this.d;
     const R = restOffsets(d);
-    for (const n of ['hairTail', 'tail', 'wingR', 'wingL']) this.bones[B[n]].position.set(...R[n]);
+    for (const n of ['hairTail', 'tail', 'wingR', 'wingL', 'sash']) this.bones[B[n]].position.set(...R[n]);
     for (let i = 0; i < SKIRT_N; i++) { this.bones[B['skirt' + i]].position.set(...R['skirt' + i]); this.bones[B['skirtK' + i]].position.set(...R['skirtK' + i]); }
     for (let i = 0; i < COAT_N; i++) { this.bones[B['coat' + i]].position.set(...R['coat' + i]); this.bones[B['coatK' + i]].position.set(...R['coatK' + i]); }
     this.restFingers();
@@ -356,6 +356,11 @@ export class CharacterModel {
     if (u.has(B.hairTail)) {
       const h = new Dangle(this.bones[B.hairTail], d.headR * 2.2, new THREE.Vector3(-0.35, -1, 0), { K: 70, g: 0.55, drag: 0.32, damp: 5, fwd: 0.12, back: 1.0, side: 0.45 });
       h.caps = () => this.bodyCaps(true); out.push(h);
+    }
+    if (u.has(B.sash)) {
+      // (a sash's ends: light, swung by the stride, off the thigh)
+      const s = new Dangle(this.bones[B.sash], 0.2, new THREE.Vector3(0, -1, 0), { K: 60, g: 0.5, drag: 0.35, damp: 4.5, fwd: 0.9, back: 0.9, side: 0.6 });
+      s.caps = () => this.bodyCaps(false); out.push(s);
     }
     if (u.has(B.coatTail)) {
       const c = new Dangle(this.bones[B.coatTail], 0.62 * d.Lg, new THREE.Vector3(-0.03, -1, 0), { K: 45, g: 0.45, drag: 0.45, damp: 4, fwd: 0.05, back: 1.1, side: 0.3 });

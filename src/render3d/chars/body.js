@@ -630,8 +630,9 @@ export function buildFigure(add0, look, d, pal, q) {
     // the knot on the left hip and its hanging ends
     const k = pelvisPt(sh, 0.05, -1.25, 0.02);
     add(Prim.sphere(q.sph[0], q.sph[1]), M(k[0], k[1], k[2], 0, 0, 0, [0.03, 0.032, 0.026]), shade(cc.waist, -0.08), B.hips);
+    // (the ends hang from the knot and swing from it, off the thigh: model.js)
     for (const [dx, len, rot] of [[0.012, 0.2, 0.12], [-0.02, 0.16, -0.08]]) {
-      add(Prim.rbox(0.35, ...q.rboxS), mul(M(k[0] + dx, k[1] - len / 2, k[2] - 0.01, rot, 0, 0.1), M(0, 0, 0, 0, 0, 0, [0.022, len / 2, 0.008])), cc.waist, B.hips);
+      add(Prim.rbox(0.35, ...q.rboxS), mul(M(k[0] + dx, k[1] - len / 2, k[2] - 0.01, rot, 0, 0.1), M(0, 0, 0, 0, 0, 0, [0.022, len / 2, 0.008])), cc.waist, B.sash);
     }
   } else if (o.waist === 'haramaki' || o.waist === 'obi') {
     const hi = o.waist === 'obi' ? 0.32 : 0.3, lo = o.waist === 'obi' ? 0.08 : -0.06;
