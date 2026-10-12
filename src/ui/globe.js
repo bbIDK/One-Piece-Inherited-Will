@@ -415,11 +415,14 @@ export class GlobeView {
     const v = uvToSphere(globeU(x, y, this.anchors), y / H, 1, this._v);
     v.applyMatrix4(this.spin.matrixWorld);
     this._c.copy(this.camera.position).sub(v);
-    if (v.dot(this._c) < 0.002) return null; // (round the back of the ball)
+    const dot = v.dot(this._c);
+    if (dot < 0.002) return null; // (round the back of the ball)
+    // (how squarely it faces you: 1 dead ahead, falling to 0 at the rim — for fading what's going round the edge)
+    const facing = dot / ((v.length() * this._c.length()) || 1);
     v.project(this.camera);
     if (v.z > 1) return null;
     const cw = this.el.clientWidth || 1280, chh = this.el.clientHeight || 720;
-    return [(v.x + 1) / 2 * cw, (1 - v.y) / 2 * chh];
+    return [(v.x + 1) / 2 * cw, (1 - v.y) / 2 * chh, facing];
   }
 
   /** Which way north is on the screen at chart point (x, y) (radians, screen-up = 0), for arrows drawn there. */

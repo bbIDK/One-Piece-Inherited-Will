@@ -271,26 +271,46 @@ function drawLabels(game, r, cam, layer, proj = null) {
   const key = proj ? proj.key : `${w.id}|${cam.x.toFixed(2)}|${cam.y.toFixed(2)}|${z.toFixed(4)}|${r.cw}x${r.ch}|${Math.floor(performance.now() / 600)}`;
   if (layer.dataset.key === key) return;
   layer.dataset.key = key;
-  clear(layer);
+  // (the labels and markers are kept from one layout to the next and only moved — not torn down and
+  // made again — so they don't flicker as the chart or the globe turns; whatever isn't laid out this
+  // time goes. What was showing last time keeps its place a little more easily than a newcomer takes
+  // one, so names don't flick in and out as they slide past one another.)
+  if (layer._mode !== (proj ? 'g' : 'f')) { clear(layer); layer._els = new Map(); layer._mode = proj ? 'g' : 'f'; }
+  const els = layer._els, shown = layer._shown || new Set(), used = new Set();
+  const take = (k, build) => {
+    while (used.has(k)) k += '+'; // (two of the same on the one spot)
+    let e = els.get(k);
+    if (!e) { e = build(); els.set(k, e); layer.appendChild(e); }
+    used.add(k);
+    return e;
+  };
+  const hyst = (k) => (shown.has(k) ? 0.85 : 1.15);
+  // (on the globe, names fade as they go round the rim rather than blinking out)
+  const rim = (f) => (f === undefined ? 1 : Math.max(0, Math.min(1, (f - 0.03) / 0.2)));
   const toS = proj ? proj.toS : (x, y) => {
     let dx = x - cam.x;
     if (!zone) dx -= W * Math.round(dx / W);
     return [dx * z + r.cw / 2, (y - cam.y) * z + r.ch / 2];
   };
   const placed = [];
-  const add = (cls, text, x, y, extra = {}, declutter = false) => {
-    const [sx, sy] = toS(x, y);
+  const add = (cls, text, x, y, extra = {}, declutter = false, id = null) => {
+    const [sx, sy, f] = toS(x, y);
     if (sx < -200 || sy < -50 || sx > r.cw + 200 || sy > r.ch + 50) return null;
+    const a = rim(f);
+    if (a <= 0.02) return null;
+    const k = `L${cls}|${id ?? text}|${x.toFixed(1)}|${y.toFixed(1)}`;
     if (declutter) {
       // skip labels that would overlap one already on the chart
       const fs = parseFloat(extra.fontSize) || 13;
       const len = typeof text === 'string' ? text.length : 8;
-      const w2 = len * fs * 0.28, h2 = fs * 0.62;
-      if (placed.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2)) return null;
+      const w2 = len * fs * 0.28, h2 = fs * 0.62, m = hyst(k);
+      if (placed.some((b) => Math.abs(b.x - sx) < b.w + w2 * m && Math.abs(b.y - sy) < b.h + h2 * m)) return null;
       placed.push({ x: sx, y: sy, w: w2, h: h2 });
     }
-    const e = h('div.wm-label' + cls, { style: { left: sx + 'px', top: sy + 'px', ...extra } }, text);
-    layer.appendChild(e);
+    const e = take(k, () => h('div.wm-label' + cls, {}, text));
+    Object.assign(e.style, extra);
+    e.style.left = sx + 'px'; e.style.top = sy + 'px';
+    e.style.opacity = ((extra.opacity !== undefined ? +extra.opacity : 1) * a).toFixed(3);
     return e;
   };
   // a marker standing exactly on its spot (an icon), with a name beside it
@@ -298,17 +318,28 @@ function drawLabels(game, r, cam, layer, proj = null) {
   const icons = [];
   const fits = (list, sx, sy, w2, h2) => !list.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2);
   const pin = (cls, icon, size, text, x, y, room = false) => {
-    const [sx, sy] = toS(x, y);
+    const [sx, sy, f] = toS(x, y);
     if (sx < -100 || sy < -40 || sx > r.cw + 100 || sy > r.ch + 40) return;
+    const a = rim(f);
+    if (a <= 0.02) return;
+    const k = `P${cls}|${icon}|${x.toFixed(1)}|${y.toFixed(1)}`;
     if (room) {
-      if (!fits(icons, sx, sy, size * 0.42, size * 0.42)) return;
-      icons.push({ x: sx, y: sy, w: size * 0.42, h: size * 0.42 });
+      const m = hyst(k), s2 = size * 0.42;
+      if (!fits(icons, sx, sy, s2 * m, s2 * m)) return;
+      icons.push({ x: sx, y: sy, w: s2, h: s2 });
       if (text) {
-        const w2 = text.length * 3.3, tx = sx + size * 0.4 + w2;
-        if (fits(placed, tx, sy, w2, 7) && fits(icons, tx, sy, w2, 7)) placed.push({ x: tx, y: sy, w: w2, h: 7 }); else text = null;
+        const w2 = text.length * 3.3, tx = sx + size * 0.4 + w2, mt = hyst(k + '|t');
+        if (fits(placed, tx, sy, w2 * mt, 7 * mt) && fits(icons, tx, sy, w2 * mt, 7 * mt)) { placed.push({ x: tx, y: sy, w: w2, h: 7 }); used.add(k + '|t'); } else text = null;
       }
     }
-    layer.appendChild(h('div.wm-pin' + cls, { style: { left: sx + 'px', top: sy + 'px' } }, uiImg(icon, size), text ? h('span', text) : null));
+    const e = take(k, () => h('div.wm-pin' + cls, {}, uiImg(icon, size)));
+    if (e._text !== text) {
+      e._text = text;
+      while (e.childNodes.length > 1) e.lastChild.remove();
+      if (text) e.appendChild(h('span', text));
+    }
+    e.style.left = sx + 'px'; e.style.top = sy + 'px';
+    e.style.opacity = a < 1 ? a.toFixed(3) : '';
   };
   if (zone) add('.sea', w.name, w.width / 2, 14 / z, { fontSize: '26px' });
   // (the seas' names: big from afar, fading as you close in on an island)
@@ -356,7 +387,7 @@ function drawLabels(game, r, cam, layer, proj = null) {
   // quest givers: who can start your story, and side quests waiting on the islands you know
   if (!zone) {
     for (const p of game.storyPins?.() || []) {
-      add(p.main ? '.giver.main' : '.giver', [h('b.pin', { style: { background: p.color } }, '!'), ' ' + p.label], p.x, p.y, { fontSize: p.main ? '15px' : '13px' }, true);
+      add(p.main ? '.giver.main' : '.giver', [h('b.pin', { style: { background: p.color } }, '!'), ' ' + p.label], p.x, p.y, { fontSize: p.main ? '15px' : '13px' }, true, p.label);
     }
   }
   // where the needle of the pose in your Log Pose slot points (the island, by name if it goes by one)
@@ -397,9 +428,12 @@ function drawLabels(game, r, cam, layer, proj = null) {
   const p = game.player;
   const [mx, my] = toS(p.x, p.y);
   const yaw = game.view3d?.rig?.yaw ?? p.facing ?? 0;
-  const me = h('div.wm-me', { style: { left: mx + 'px', top: my + 'px' } }, h('i'));
+  const me = take('me', () => h('div.wm-me', {}, h('i')));
+  me.style.left = mx + 'px'; me.style.top = my + 'px';
   me.firstChild.style.transform = `rotate(${(yaw + Math.PI / 2 + (proj?.north?.(p.x, p.y) || 0)).toFixed(3)}rad)`;
-  layer.appendChild(me);
+  // (and whatever wasn't laid out this time goes)
+  for (const [k, e] of els) if (!used.has(k)) { e.remove(); els.delete(k); }
+  layer._shown = used;
 }
 
 /** Has an island been seen (its middle or the middle of a side of it explored, sailing by)? */

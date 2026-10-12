@@ -125702,11 +125702,13 @@ button:disabled { cursor: not-allowed; }
       const v = uvToSphere(globeU(x, y, this.anchors), y / H, 1, this._v);
       v.applyMatrix4(this.spin.matrixWorld);
       this._c.copy(this.camera.position).sub(v);
-      if (v.dot(this._c) < 2e-3) return null;
+      const dot = v.dot(this._c);
+      if (dot < 2e-3) return null;
+      const facing = dot / (v.length() * this._c.length() || 1);
       v.project(this.camera);
       if (v.z > 1) return null;
       const cw = this.el.clientWidth || 1280, chh = this.el.clientHeight || 720;
-      return [(v.x + 1) / 2 * cw, (1 - v.y) / 2 * chh];
+      return [(v.x + 1) / 2 * cw, (1 - v.y) / 2 * chh, facing];
     }
     /** Which way north is on the screen at chart point (x, y) (radians, screen-up = 0), for arrows drawn there. */
     northAt(x, y) {
@@ -126052,42 +126054,80 @@ button:disabled { cursor: not-allowed; }
     const key2 = proj ? proj.key : `${w.id}|${cam.x.toFixed(2)}|${cam.y.toFixed(2)}|${z.toFixed(4)}|${r4.cw}x${r4.ch}|${Math.floor(performance.now() / 600)}`;
     if (layer.dataset.key === key2) return;
     layer.dataset.key = key2;
-    clear(layer);
+    if (layer._mode !== (proj ? "g" : "f")) {
+      clear(layer);
+      layer._els = /* @__PURE__ */ new Map();
+      layer._mode = proj ? "g" : "f";
+    }
+    const els = layer._els, shown = layer._shown || /* @__PURE__ */ new Set(), used = /* @__PURE__ */ new Set();
+    const take = (k, build5) => {
+      while (used.has(k)) k += "+";
+      let e = els.get(k);
+      if (!e) {
+        e = build5();
+        els.set(k, e);
+        layer.appendChild(e);
+      }
+      used.add(k);
+      return e;
+    };
+    const hyst = (k) => shown.has(k) ? 0.85 : 1.15;
+    const rim3 = (f) => f === void 0 ? 1 : Math.max(0, Math.min(1, (f - 0.03) / 0.2));
     const toS = proj ? proj.toS : (x, y) => {
       let dx = x - cam.x;
       if (!zone) dx -= W * Math.round(dx / W);
       return [dx * z + r4.cw / 2, (y - cam.y) * z + r4.ch / 2];
     };
     const placed = [];
-    const add7 = (cls, text2, x, y, extra = {}, declutter = false) => {
-      const [sx, sy] = toS(x, y);
+    const add7 = (cls, text2, x, y, extra = {}, declutter = false, id = null) => {
+      const [sx, sy, f] = toS(x, y);
       if (sx < -200 || sy < -50 || sx > r4.cw + 200 || sy > r4.ch + 50) return null;
+      const a = rim3(f);
+      if (a <= 0.02) return null;
+      const k = `L${cls}|${id ?? text2}|${x.toFixed(1)}|${y.toFixed(1)}`;
       if (declutter) {
         const fs = parseFloat(extra.fontSize) || 13;
         const len = typeof text2 === "string" ? text2.length : 8;
-        const w2 = len * fs * 0.28, h2 = fs * 0.62;
-        if (placed.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2)) return null;
+        const w2 = len * fs * 0.28, h2 = fs * 0.62, m = hyst(k);
+        if (placed.some((b) => Math.abs(b.x - sx) < b.w + w2 * m && Math.abs(b.y - sy) < b.h + h2 * m)) return null;
         placed.push({ x: sx, y: sy, w: w2, h: h2 });
       }
-      const e = h("div.wm-label" + cls, { style: { left: sx + "px", top: sy + "px", ...extra } }, text2);
-      layer.appendChild(e);
+      const e = take(k, () => h("div.wm-label" + cls, {}, text2));
+      Object.assign(e.style, extra);
+      e.style.left = sx + "px";
+      e.style.top = sy + "px";
+      e.style.opacity = ((extra.opacity !== void 0 ? +extra.opacity : 1) * a).toFixed(3);
       return e;
     };
     const icons = [];
     const fits = (list, sx, sy, w2, h2) => !list.some((b) => Math.abs(b.x - sx) < b.w + w2 && Math.abs(b.y - sy) < b.h + h2);
     const pin = (cls, icon, size2, text2, x, y, room2 = false) => {
-      const [sx, sy] = toS(x, y);
+      const [sx, sy, f] = toS(x, y);
       if (sx < -100 || sy < -40 || sx > r4.cw + 100 || sy > r4.ch + 40) return;
+      const a = rim3(f);
+      if (a <= 0.02) return;
+      const k = `P${cls}|${icon}|${x.toFixed(1)}|${y.toFixed(1)}`;
       if (room2) {
-        if (!fits(icons, sx, sy, size2 * 0.42, size2 * 0.42)) return;
-        icons.push({ x: sx, y: sy, w: size2 * 0.42, h: size2 * 0.42 });
+        const m = hyst(k), s2 = size2 * 0.42;
+        if (!fits(icons, sx, sy, s2 * m, s2 * m)) return;
+        icons.push({ x: sx, y: sy, w: s2, h: s2 });
         if (text2) {
-          const w2 = text2.length * 3.3, tx = sx + size2 * 0.4 + w2;
-          if (fits(placed, tx, sy, w2, 7) && fits(icons, tx, sy, w2, 7)) placed.push({ x: tx, y: sy, w: w2, h: 7 });
-          else text2 = null;
+          const w2 = text2.length * 3.3, tx = sx + size2 * 0.4 + w2, mt = hyst(k + "|t");
+          if (fits(placed, tx, sy, w2 * mt, 7 * mt) && fits(icons, tx, sy, w2 * mt, 7 * mt)) {
+            placed.push({ x: tx, y: sy, w: w2, h: 7 });
+            used.add(k + "|t");
+          } else text2 = null;
         }
       }
-      layer.appendChild(h("div.wm-pin" + cls, { style: { left: sx + "px", top: sy + "px" } }, uiImg(icon, size2), text2 ? h("span", text2) : null));
+      const e = take(k, () => h("div.wm-pin" + cls, {}, uiImg(icon, size2)));
+      if (e._text !== text2) {
+        e._text = text2;
+        while (e.childNodes.length > 1) e.lastChild.remove();
+        if (text2) e.appendChild(h("span", text2));
+      }
+      e.style.left = sx + "px";
+      e.style.top = sy + "px";
+      e.style.opacity = a < 1 ? a.toFixed(3) : "";
     };
     if (zone) add7(".sea", w.name, w.width / 2, 14 / z, { fontSize: "26px" });
     const seaA = (1 - Math.max(0, Math.min(1, (z - 0.45) / 0.5))).toFixed(2);
@@ -126129,7 +126169,7 @@ button:disabled { cursor: not-allowed; }
     }
     if (!zone) {
       for (const p2 of game.storyPins?.() || []) {
-        add7(p2.main ? ".giver.main" : ".giver", [h("b.pin", { style: { background: p2.color } }, "!"), " " + p2.label], p2.x, p2.y, { fontSize: p2.main ? "15px" : "13px" }, true);
+        add7(p2.main ? ".giver.main" : ".giver", [h("b.pin", { style: { background: p2.color } }, "!"), " " + p2.label], p2.x, p2.y, { fontSize: p2.main ? "15px" : "13px" }, true, p2.label);
       }
     }
     const lp = game.logPoseTarget?.();
@@ -126165,9 +126205,15 @@ button:disabled { cursor: not-allowed; }
     const p = game.player;
     const [mx, my] = toS(p.x, p.y);
     const yaw = game.view3d?.rig?.yaw ?? p.facing ?? 0;
-    const me = h("div.wm-me", { style: { left: mx + "px", top: my + "px" } }, h("i"));
+    const me = take("me", () => h("div.wm-me", {}, h("i")));
+    me.style.left = mx + "px";
+    me.style.top = my + "px";
     me.firstChild.style.transform = `rotate(${(yaw + Math.PI / 2 + (proj?.north?.(p.x, p.y) || 0)).toFixed(3)}rad)`;
-    layer.appendChild(me);
+    for (const [k, e] of els) if (!used.has(k)) {
+      e.remove();
+      els.delete(k);
+    }
+    layer._shown = used;
   }
   function seenIsland(w, isl) {
     if (w.isExplored(isl.x, isl.y)) return true;
