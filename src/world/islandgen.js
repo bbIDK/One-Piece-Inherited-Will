@@ -361,6 +361,9 @@ export function generateIsland(world, def, noise, rng) {
   // (a ring of sheer cliffs round the coast, open at the landings: Wano)
   if (def.cliffRing) placeCliffRing(world, rec, def.cliffRing, P);
 
+  // the country between the towns of a grown island: farms, camps, ruins, graves
+  if ((def._grow || 1) > 1 && !def.noCountry) placeCountry(world, rec, def, rng.fork('country'), ground);
+
   // vegetation ----------------------------------------------------------------
   def._clearings = rec.clearings;
   const treeKinds = def.treeKind ? [def.treeKind] : def.trees || preset.trees;
@@ -506,6 +509,85 @@ function settleLandmark(world, rec, o, ground) {
   rec.clearings.push({ x: o.x, y: o.y, r: r + 1.2 });
 }
 const RAISED_GROUND = new Set([T.ROCK, T.FOREST, T.JUNGLE].filter((t) => t !== undefined));
+
+/**
+ * What stands out in the country on a grown island (data/islands GROW): an
+ * island grown bigger has more ground between its towns than the towns need,
+ * and that ground should be somewhere — a farmstead with its windmill and
+ * field, a camp, the ruins of something older, a little graveyard — each
+ * reached by a dirt trail from the nearest town. A site keeps clear of the
+ * towns, the shore, the island's own landmarks and the other sites.
+ */
+const COUNTRY = [
+  { name: 'Farmstead', parts: [['windmill', 0, 0], ['haystack', 7, 3], ['haystack', 8.5, -2.5], ['sacks', -4, 4], ['barrel', -4.5, 5.6]], field: [10, 6, 16, 11] },
+  { name: 'Camp', parts: [['tent', 0, 0], ['campfire', 4, 2.5], ['crate', -3.5, 2.5], ['barrel', -3.2, 4.1], ['sacks', 2.5, -3]] },
+  { name: 'Old Ruins', parts: [['ruins', 0, 0], ['pillar', 5.5, 2], ['pillar', -5, -1.5], ['ruins', -2, 6, { s: 0.6 }]] },
+  { name: 'Graveyard', parts: [['grave', -2.4, 0], ['grave', 0, 0], ['grave', 2.4, 0], ['grave', -1.2, 2.8], ['grave', 1.2, 2.8], ['lantern', 4.5, -1]] },
+  { name: 'Woodcutters\' Camp', parts: [['tent', 0, 0, { v: 1 }], ['campfire', 3.5, 3], ['crate', -3, 3], ['crate', -4.2, 3.6]] },
+];
+function placeCountry(world, rec, def, rng, ground) {
+  const b = rec.landBox;
+  if (!b) return;
+  const g = def._grow || 1, area = (b.x1 - b.x0) * (b.y1 - b.y0);
+  const n = Math.max(1, Math.min(8, Math.round(area * 0.5 * (1 - 1 / (g * g)) / 35000)));
+  const dist = (ax, ay, bx, by) => Math.hypot(world.dx(ax, bx), by - ay);
+  const sites = [];
+  /** Open, dry, level-ish ground with room round it. */
+  const open = (x, y) => {
+    for (let a = 0; a < 8; a++) {
+      for (const r of [6, 13]) {
+        const px = Math.floor(world.wx(x + Math.cos(a * Math.PI / 4) * r)), py = Math.floor(y + Math.sin(a * Math.PI / 4) * r);
+        if (!world.walkable(px, py) || world.isBlocked(px, py) || MANMADE[world.type(px, py)]) return false;
+      }
+    }
+    return true;
+  };
+  for (let tries = 0; tries < 400 && sites.length < n; tries++) {
+    const x = world.wx(b.x0 + rng.next() * (b.x1 - b.x0)), y = b.y0 + rng.next() * (b.y1 - b.y0);
+    if (!open(x, y)) continue;
+    if (rec.towns.some((t) => dist(x, y, t.x, t.y) < Math.max(t.w || 30, t.h || 30) * 0.6 + 28)) continue;
+    if ((rec.landmarks || []).some((o) => dist(x, y, o.x, o.y) < 30)) continue;
+    if ((rec.docks || []).some((d) => d.land && dist(x, y, d.land.x, d.land.y) < 35)) continue;
+    if (sites.some((s) => dist(x, y, s.x, s.y) < 70)) continue;
+    // (well in from the shore)
+    let wet = false;
+    for (let a = 0; a < 12 && !wet; a++) wet = world.isLiquid(Math.floor(world.wx(x + Math.cos(a * Math.PI / 6) * 22)), Math.floor(y + Math.sin(a * Math.PI / 6) * 22));
+    if (wet) continue;
+    sites.push({ x, y });
+  }
+  rec.country = [];
+  // (each island its own mix: no two the same until every kind's been used)
+  const first = Math.floor(rng.next() * COUNTRY.length);
+  sites.forEach((c, i) => {
+    const S = COUNTRY[(first + i) % COUNTRY.length];
+    const yaw = rng.next() * Math.PI * 2, cs = Math.cos(yaw), sn = Math.sin(yaw);
+    const at = (dx, dy) => ({ x: world.wx(c.x + dx * cs - dy * sn), y: c.y + dx * sn + dy * cs });
+    if (S.field) {
+      // (the farm's field: a ploughed patch beside the yard, crops growing in it)
+      const [fx, fy, fw, fh] = S.field;
+      for (let v = 0; v < fh; v++) {
+        for (let u = 0; u < fw; u++) {
+          const p = at(fx + u, fy + v - fh / 2), tx = Math.floor(p.x), ty = Math.floor(p.y);
+          const t = world.type(tx, ty);
+          if (world.walkable(tx, ty) && !world.isBlocked(tx, ty) && !MANMADE[t] && !OVERLAY[t]) world.setType(tx, ty, T.FARM);
+        }
+      }
+    }
+    for (const [kind, dx, dy, opt] of S.parts) {
+      const p = at(dx, dy);
+      const o = { kind, x: p.x, y: p.y, yaw: yaw + (kind === 'tent' ? Math.PI : 0), block: true, country: S.name, ...opt };
+      settleLandmark(world, rec, o, ground);
+      placeObject(world, o);
+      rec.landmarks.push(o);
+    }
+    // (a trail to it from the nearest town)
+    const town = rec.towns.slice().sort((u, w) => dist(c.x, c.y, u.plaza.x, u.plaza.y) - dist(c.x, c.y, w.plaza.x, w.plaza.y))[0];
+    const gate = at(0, 9);
+    if (town) connectRoad(world, gate.x, gate.y, town.plaza.x, town.plaza.y, T.DIRT);
+    rec.clearings.push({ x: c.x, y: c.y, r: 14 });
+    rec.country.push({ name: S.name, x: c.x, y: c.y });
+  });
+}
 
 // ---------------------------------------------------------------------------
 
