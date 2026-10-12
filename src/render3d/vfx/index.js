@@ -150,7 +150,7 @@ export class VFX {
       if (pv && pv.model) {
         this.ghostsWarm = true;
         this.ghosts.warm(pv);
-        try { if (v.parallelCompile) v.compileAsync(this.ghosts.group); else v.renderer.compile(this.ghosts.group, cam, v.scene); } catch { /* (compiled when first drawn) */ }
+        try { if (v.parallelCompile) v.compileAsync(this.ghosts.group); else v.compileFor(this.ghosts.group, v.scene); } catch { /* (compiled when first drawn) */ }
         this.ghosts.unwarm();
       }
     }

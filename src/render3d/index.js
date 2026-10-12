@@ -1043,7 +1043,7 @@ export class Renderer3D {
     // while the game goes on; the stall only comes at the first draw) and
     // bring the object in a moment later
     const n = this.renderer.info.programs.length;
-    try { this.renderer.compile(obj, this.rig.camera, this.scene); } catch (e) { /* (it's drawn regardless) */ }
+    try { this.compileFor(obj, this.scene); } catch (e) { /* (it's drawn regardless) */ }
     if (this.renderer.info.programs.length === n) join();
     else setTimeout(join, 150);
   }
@@ -1077,8 +1077,8 @@ export class Renderer3D {
         this.compileAsync(this.scene, null);
         this.compileAsync(zoo);
       } else {
-        this.renderer.compile(this.scene, this.rig.camera);
-        this.renderer.compile(zoo, this.rig.camera, this.scene);
+        this.compileFor(this.scene, this.scene);
+        this.compileFor(zoo, this.scene);
       }
     } catch (e) { console.warn('shader warm-up failed', e); }
     this.vfx.warmEnd();
@@ -1095,9 +1095,23 @@ export class Renderer3D {
    * be added to the scene: people you could talk to but not see. This one
    * shrugs that off, and gives up waiting after a couple of seconds.)
    */
+  /**
+   * renderer.compile against the target the scene is really drawn into: a
+   * shader's program depends on where it draws (the post chain's linear
+   * buffer, or straight to the sRGB screen), and compiling for the wrong one
+   * warms up a program that's never used — and the real one still stalls the
+   * frame it first appears in.
+   */
+  compileFor(obj, target) {
+    const r = this.renderer, prev = r.getRenderTarget();
+    const rt = this.post ? (this.post.scenePass?.rt || this.post.composer?.readBuffer || null) : null;
+    r.setRenderTarget(rt);
+    try { return r.compile(obj, this.rig.camera, target); } finally { r.setRenderTarget(prev); }
+  }
+
   compileAsync(obj, target = this.scene) {
     let mats;
-    try { mats = this.renderer.compile(obj, this.rig.camera, target || obj); } catch (e) { return Promise.resolve(); }
+    try { mats = this.compileFor(obj, target || obj); } catch (e) { return Promise.resolve(); }
     const props = this.renderer.properties, t0 = performance.now();
     return new Promise((resolve) => {
       const check = () => {

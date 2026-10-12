@@ -114,8 +114,12 @@ vec2 scell(vec3 p) {
 const _t = new THREE.Vector3(), _sd = new THREE.Vector3(), _nr = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0), _tmp = new THREE.Vector3();
 const inkShellMat = (w) => {
   const m = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
-  m.onBeforeCompile = (sh) => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\ntransformed += normal * ${w.toFixed(4)};`); };
-  m.customProgramCacheKey = () => 'zoan-ink-' + w.toFixed(4);
+  // (the width a uniform: one compiled program for every ink line, however thick)
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uInkW = { value: w };
+    sh.vertexShader = 'uniform float uInkW;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normal * uInkW;');
+  };
+  m.customProgramCacheKey = () => 'zoan-ink-u';
   return m;
 };
 class Tube {

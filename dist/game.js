@@ -69541,10 +69541,10 @@ vec2 scell(vec3 p) {
   var inkShellMat = (w) => {
     const m = new MeshBasicMaterial({ color: INK2, side: BackSide });
     m.onBeforeCompile = (sh) => {
-      sh.vertexShader = sh.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>
-transformed += normal * ${w.toFixed(4)};`);
+      sh.uniforms.uInkW = { value: w };
+      sh.vertexShader = "uniform float uInkW;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\ntransformed += normal * uInkW;");
     };
-    m.customProgramCacheKey = () => "zoan-ink-" + w.toFixed(4);
+    m.customProgramCacheKey = () => "zoan-ink-u";
     return m;
   };
   var Tube = class {
@@ -92150,7 +92150,7 @@ vec3 paneView(vec3 dir, float night) {
           this.ghosts.warm(pv);
           try {
             if (v.parallelCompile) v.compileAsync(this.ghosts.group);
-            else v.renderer.compile(this.ghosts.group, cam, v.scene);
+            else v.compileFor(this.ghosts.group, v.scene);
           } catch {
           }
           this.ghosts.unwarm();
@@ -101414,7 +101414,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       }
       const n = this.renderer.info.programs.length;
       try {
-        this.renderer.compile(obj, this.rig.camera, this.scene);
+        this.compileFor(obj, this.scene);
       } catch (e) {
       }
       if (this.renderer.info.programs.length === n) join2();
@@ -101448,8 +101448,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
           this.compileAsync(this.scene, null);
           this.compileAsync(zoo);
         } else {
-          this.renderer.compile(this.scene, this.rig.camera);
-          this.renderer.compile(zoo, this.rig.camera, this.scene);
+          this.compileFor(this.scene, this.scene);
+          this.compileFor(zoo, this.scene);
         }
       } catch (e) {
         console.warn("shader warm-up failed", e);
@@ -101467,10 +101467,27 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
      * be added to the scene: people you could talk to but not see. This one
      * shrugs that off, and gives up waiting after a couple of seconds.)
      */
+    /**
+     * renderer.compile against the target the scene is really drawn into: a
+     * shader's program depends on where it draws (the post chain's linear
+     * buffer, or straight to the sRGB screen), and compiling for the wrong one
+     * warms up a program that's never used — and the real one still stalls the
+     * frame it first appears in.
+     */
+    compileFor(obj, target2) {
+      const r4 = this.renderer, prev = r4.getRenderTarget();
+      const rt = this.post ? this.post.scenePass?.rt || this.post.composer?.readBuffer || null : null;
+      r4.setRenderTarget(rt);
+      try {
+        return r4.compile(obj, this.rig.camera, target2);
+      } finally {
+        r4.setRenderTarget(prev);
+      }
+    }
     compileAsync(obj, target2 = this.scene) {
       let mats;
       try {
-        mats = this.renderer.compile(obj, this.rig.camera, target2 || obj);
+        mats = this.compileFor(obj, target2 || obj);
       } catch (e) {
         return Promise.resolve();
       }

@@ -210,7 +210,7 @@ export const scenarios = {
       }
       // at sea at the helm of a war galleon, other ships about
       if (want('sea')) {
-        await page.evaluate(() => {
+        await page.evaluate((beast) => {
           const g = window.OP.game, w = g.world, isl = w.islands.find((i) => i.id === 'dawn_island');
           let spot = null;
           for (const need of [-40, -30, -24]) for (let k = 0; k < 20000 && !spot; k++) {
@@ -232,8 +232,10 @@ export const scenarios = {
             const a = Math.random() * Math.PI * 2;
             g.traffic.spawn({ kind: k, type: t, x: w.wx(s.x + Math.cos(a) * 70), y: s.y + Math.sin(a) * 70, heading: a, level: 8, dest: { x: s.x, y: s.y } });
           }
+          // (--beast=kraken|seaking|monkeys: one of the Grand Line's monsters beside her too)
+          if (beast) g.sea.spawnBeast(g.player, s, 5, beast);
           void hs; void it;
-        });
+        }, args.beast || null);
         out.sea = await measure(page, 'sea (big ship, traffic)');
         if (args.snap) await snap('sea');
       }
