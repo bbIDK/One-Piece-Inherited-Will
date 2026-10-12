@@ -90954,11 +90954,6 @@ vec3 paneView(vec3 dir, float night) {
           const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, top = G5 + 4.2 * (1 - sp);
           v.ribbons.start(RK.SPEED, RM2.FACE, GRAV_DEEP, a * 0.85 * (1 - ph * 0.4), c2, 0.5).point(x, top + 1.1, z, 0.05).point(x, top, z, 0.03).finish();
         }
-        for (let i = 0; i < 8; i++) {
-          const ph = (v.time * 0.5 + hash8(s.seed + i * 5)) % 1, cyc = Math.floor(v.time * 0.5 + hash8(s.seed + i * 5));
-          const th = hash8(s.seed + i * 13 + cyc) * TAU15, rr = R5 * (0.3 + 0.7 * ph);
-          v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G5 + 0.05, Z2 + Math.sin(th) * rr, 0.22 + 0.22 * ph, GRAV_DEEP, a * Math.sin(ph * PI) * 0.3, GRAV_DEEP, 0, ph * 2, s.seed + i, 0.2 + ph * 0.5);
-        }
         for (let i = 0; i < 3; i++) {
           const ph = (v.time * 0.8 + i / 3) % 1, rr = R5 * (1 - ph);
           v.ribbons.start(RK.LINE, RM2.FLAT, GRAV_DEEP, a * 0.55 * ph, c, 0);
