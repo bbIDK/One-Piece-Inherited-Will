@@ -90885,6 +90885,7 @@ vec3 paneView(vec3 dir, float night) {
   var BOLT_EMBER = col5("#ffd54f");
   var ROOM_LINE = col5("#e1f5fe");
   var SMEAR = col5("#e3f4ff");
+  var GRAV_DEEP = col5("#4a2c8a");
   var DUST2 = col5("#efe2c0");
   var DUST22 = col5("#fffaf0");
   var ZONE_COL = { dark: ["#7e57c2", "#12001c"], ice: ["#e1f5fe", "#ffffff"], storm: ["#e1c16e", "#fff3c4"], gravity: ["#b39ddb", "#ede7f6"], mochi: ["#e8dcc4", "#fff8e1"] };
@@ -90943,11 +90944,25 @@ vec3 paneView(vec3 dir, float night) {
           v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G5 + 0.1 + ph * 1.1, Z2 + Math.sin(th) * rr, 0.25 + 0.35 * ph, DARKNESS, a * Math.sin(ph * PI) * 0.9, DARKNESS, 0, ph * 2, s.seed + i, 0.15 + ph * 0.6);
         }
       } else if (kind === "gravity") {
-        for (let i = 0; i < 10; i++) {
-          const th = hash8(s.seed + i) * TAU15, rr = Math.sqrt(hash8(s.seed + i * 3)) * R5 * 0.9;
-          const ph = (v.time * 1.6 + hash8(s.seed + i * 7)) % 1;
-          const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, top = G5 + 3.2 * (1 - ph);
-          v.ribbons.start(RK.SPEED, RM2.FACE, c2, a * 0.8, c2, 0.5).point(x, top + 0.7, z, 0.02).point(x, top, z, 0.014).finish();
+        for (let i = 0; i < 16; i++) {
+          const th = hash8(s.seed + i) * TAU15, rr = Math.sqrt(hash8(s.seed + i * 3)) * R5 * 0.92;
+          const ph = (v.time * 2.2 + hash8(s.seed + i * 7)) % 1, sp = ph * ph;
+          const x = X2 + Math.cos(th) * rr, z = Z2 + Math.sin(th) * rr, top = G5 + 4.2 * (1 - sp);
+          v.ribbons.start(RK.SPEED, RM2.FACE, GRAV_DEEP, a * 0.85 * (1 - ph * 0.4), c2, 0.5).point(x, top + 1.1, z, 0.05).point(x, top, z, 0.03).finish();
+        }
+        for (let i = 0; i < 8; i++) {
+          const ph = (v.time * 0.5 + hash8(s.seed + i * 5)) % 1, cyc = Math.floor(v.time * 0.5 + hash8(s.seed + i * 5));
+          const th = hash8(s.seed + i * 13 + cyc) * TAU15, rr = R5 * (0.3 + 0.7 * ph);
+          v.sprites.put(SK2.SMOKE, X2 + Math.cos(th) * rr, G5 + 0.08, Z2 + Math.sin(th) * rr, 0.35 + 0.4 * ph, GRAV_DEEP, a * Math.sin(ph * PI) * 0.45, c, 0, ph * 2, s.seed + i, 0.2 + ph * 0.5);
+        }
+        for (let i = 0; i < 3; i++) {
+          const ph = (v.time * 0.8 + i / 3) % 1, rr = R5 * (1 - ph);
+          v.ribbons.start(RK.LINE, RM2.FLAT, GRAV_DEEP, a * 0.55 * ph, c, 0);
+          for (let j = 0; j <= 24; j++) {
+            const t = j / 24 * TAU15;
+            v.ribbons.point(X2 + Math.cos(t) * rr, G5 + 0.05, Z2 + Math.sin(t) * rr, 0.06);
+          }
+          v.ribbons.finish();
         }
       } else if (kind === "arms") {
         const r4 = v.rec(s);

@@ -1258,6 +1258,7 @@ const DARKNESS = col('#120a1a');
 const SCORCH_COL = col('rgba(30,18,12,1)'), BOLT_EMBER = col('#ffd54f');
 const ROOM_LINE = col('#e1f5fe');
 const SMEAR = col('#e3f4ff');
+const GRAV_DEEP = col('#4a2c8a');
 const DUST = col('#efe2c0'), DUST2 = col('#fffaf0');
 const ZONE_COL = { dark: ['#7e57c2', '#12001c'], ice: ['#e1f5fe', '#ffffff'], storm: ['#e1c16e', '#fff3c4'], gravity: ['#b39ddb', '#ede7f6'], mochi: ['#e8dcc4', '#fff8e1'] };
 const FIELD_FIRE = col('#ff7a1a'), FIELD_FIRE_CORE = col('#ffe08a'), GAS_LIGHT = col('#e1bee7'), MOCHI_SHADE = col('#d7ccc8');
@@ -1328,12 +1329,24 @@ SHAPES.zone = {
         v.sprites.put(SK.SMOKE, X + Math.cos(th) * rr, G + 0.1 + ph * 1.1, Z + Math.sin(th) * rr, 0.25 + 0.35 * ph, DARKNESS, a * Math.sin(ph * PI) * 0.9, DARKNESS, 0, ph * 2, s.seed + i, 0.15 + ph * 0.6);
       }
     } else if (kind === 'gravity') {
-      // the air pressing down: lines falling through the area
-      for (let i = 0; i < 10; i++) {
-        const th = hash(s.seed + i) * TAU, rr = Math.sqrt(hash(s.seed + i * 3)) * R * 0.9;
-        const ph = (v.time * 1.6 + hash(s.seed + i * 7)) % 1;
-        const x = X + Math.cos(th) * rr, z = Z + Math.sin(th) * rr, top = G + 3.2 * (1 - ph);
-        v.ribbons.start(RK.SPEED, RM.FACE, c2, a * 0.8, c2, 0.5).point(x, top + 0.7, z, 0.02).point(x, top, z, 0.014).finish();
+      // the air pressing down: heavy violet streaks driven into the ground, the dust there flattened
+      // outward in a low haze, and the ground itself sagging under it (rings sinking inward)
+      for (let i = 0; i < 16; i++) {
+        const th = hash(s.seed + i) * TAU, rr = Math.sqrt(hash(s.seed + i * 3)) * R * 0.92;
+        const ph = (v.time * 2.2 + hash(s.seed + i * 7)) % 1, sp = ph * ph;
+        const x = X + Math.cos(th) * rr, z = Z + Math.sin(th) * rr, top = G + 4.2 * (1 - sp);
+        v.ribbons.start(RK.SPEED, RM.FACE, GRAV_DEEP, a * 0.85 * (1 - ph * 0.4), c2, 0.5).point(x, top + 1.1, z, 0.05).point(x, top, z, 0.03).finish();
+      }
+      for (let i = 0; i < 8; i++) {
+        const ph = (v.time * 0.5 + hash(s.seed + i * 5)) % 1, cyc = Math.floor(v.time * 0.5 + hash(s.seed + i * 5));
+        const th = hash(s.seed + i * 13 + cyc) * TAU, rr = R * (0.3 + 0.7 * ph);
+        v.sprites.put(SK.SMOKE, X + Math.cos(th) * rr, G + 0.08, Z + Math.sin(th) * rr, 0.35 + 0.4 * ph, GRAV_DEEP, a * Math.sin(ph * PI) * 0.45, c, 0, ph * 2, s.seed + i, 0.2 + ph * 0.5);
+      }
+      for (let i = 0; i < 3; i++) {
+        const ph = (v.time * 0.8 + i / 3) % 1, rr = R * (1 - ph);
+        v.ribbons.start(RK.LINE, RM.FLAT, GRAV_DEEP, a * 0.55 * ph, c, 0);
+        for (let j = 0; j <= 24; j++) { const t = (j / 24) * TAU; v.ribbons.point(X + Math.cos(t) * rr, G + 0.05, Z + Math.sin(t) * rr, 0.06); }
+        v.ribbons.finish();
       }
     } else if (kind === 'arms') {
       // arms sprouting all over the area (laid out as the 2D drawer lays them out)
