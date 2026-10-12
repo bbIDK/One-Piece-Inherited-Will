@@ -10526,9 +10526,11 @@
       }
       if (h2.element === "explosion" && h2.blast) {
         const circ2 = h2.shape === "circle" || h2.shape === "ring";
-        const d = circ2 ? 0 : (h2.offset || 0) + range * 0.6;
+        const fp = actor.isPlayer && fx.game?.view3d?.rig?.mode === "first";
+        const R5 = Math.max(1.2, range * (circ2 ? 0.8 : 0.7)) * (fp ? 0.7 : 1);
+        const d = circ2 ? fp ? R5 + 1.4 : 0 : Math.max((h2.offset || 0) + range * 0.6, fp ? R5 + 1.4 : 0);
         const bx = (circ2 && hb.x != null ? hb.x : actor.x) + Math.cos(ang) * d, by = (circ2 && hb.y != null ? hb.y : actor.y) + Math.sin(ang) * d;
-        explosionFx(fx, bx, by - 0.45, { range: Math.max(1.2, range * (circ2 ? 0.8 : 0.7)), element: "explosion" }, actor, range < 2.5);
+        explosionFx(fx, bx, by - 0.45, { range: R5, element: "explosion", noGlow: fp }, actor, range < 2.5);
         if (!circ2) return;
       }
       if (vfx === "slash" || !vfx && h2.slashing) slashFx(fx, actor, a, h2, ang, range, col6, st, clip2);
@@ -12005,7 +12007,7 @@
     const E = elemOf(el);
     const cols = e.colors || (el === "explosion" ? ["#ffab40", "#ff7043", "#fff176", "#616161"] : E.spark);
     const gy = y + 0.45;
-    glow(fx, x, gy, 0.5, R5 * 1.1, cols[0], 0.3);
+    if (!e.noGlow) glow(fx, x, gy, 0.5, R5 * 1.1, cols[0], 0.3);
     if (el === "explosion" || el === "fire" || el === "magma") fx.add("blast", { x, y: gy, r: R5, color: el === "magma" ? "#ff5722" : cols[0], life: 0.5 + R5 * 0.05 });
     fx.add("impact", { x, y: gy, z: 0.5, angle: 0, size: R5 * 0.55, color: cols[0], core: "#ffffff", life: 0.22, spikes: 12, lines: 6 });
     fx.ring(x, gy, 0.2, R5, e.color || cols[0], 0.35, 0.3, { add: true });

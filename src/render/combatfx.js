@@ -779,9 +779,13 @@ const DEFAULTS = {
     // a blow that goes off (Bomu's kick, punch, breath, stomp): a real blast where it lands, not just a ring
     if (h.element === 'explosion' && h.blast) {
       const circ = h.shape === 'circle' || h.shape === 'ring';
-      const d = circ ? 0 : (h.offset || 0) + range * 0.6;
+      // (your own blast in first person: the fireball goes off out in front, clear of your eyes,
+      // with no glow washing out the view — at arm's length it would swallow the camera whole)
+      const fp = actor.isPlayer && fx.game?.view3d?.rig?.mode === 'first';
+      const R = Math.max(1.2, range * (circ ? 0.8 : 0.7)) * (fp ? 0.7 : 1);
+      const d = circ ? (fp ? R + 1.4 : 0) : Math.max((h.offset || 0) + range * 0.6, fp ? R + 1.4 : 0);
       const bx = (circ && hb.x != null ? hb.x : actor.x) + Math.cos(ang) * d, by = (circ && hb.y != null ? hb.y : actor.y) + Math.sin(ang) * d;
-      explosionFx(fx, bx, by - 0.45, { range: Math.max(1.2, range * (circ ? 0.8 : 0.7)), element: 'explosion' }, actor, range < 2.5);
+      explosionFx(fx, bx, by - 0.45, { range: R, element: 'explosion', noGlow: fp }, actor, range < 2.5);
       if (!circ) return;
     }
     if (vfx === 'slash' || (!vfx && h.slashing)) slashFx(fx, actor, a, h, ang, range, col, st, clip);
@@ -1896,7 +1900,7 @@ export function explosionFx(fx, x, y, e, owner, small) {
   const E = elemOf(el);
   const cols = e.colors || (el === 'explosion' ? ['#ffab40', '#ff7043', '#fff176', '#616161'] : E.spark);
   const gy = y + 0.45; // the projectile flies at chest height; the blast sits on the ground
-  glow(fx, x, gy, 0.5, R * 1.1, cols[0], 0.3);
+  if (!e.noGlow) glow(fx, x, gy, 0.5, R * 1.1, cols[0], 0.3);
   // (the ball of fire itself: only the 3D view draws a 'blast')
   if (el === 'explosion' || el === 'fire' || el === 'magma') fx.add('blast', { x, y: gy, r: R, color: el === 'magma' ? '#ff5722' : cols[0], life: 0.5 + R * 0.05 });
   fx.add('impact', { x, y: gy, z: 0.5, angle: 0, size: R * 0.55, color: cols[0], core: '#ffffff', life: 0.22, spikes: 12, lines: 6 });
