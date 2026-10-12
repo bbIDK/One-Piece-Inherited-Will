@@ -117160,13 +117160,16 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
   };
 
   // src/data/islands/index.js
+  var GROW = { east_blue: 1.75 };
   function toWorld(d) {
     if (d._scale) return d;
+    const g = GROW[d.sea] || 1;
     d.x = Math.round(d.x * POS_SCALE);
     d.y = Math.round(d.y * POS_SCALE);
-    d.w = Math.round(d.w * SIZE_SCALE);
-    d.h = Math.round(d.h * SIZE_SCALE);
-    d._scale = SIZE_SCALE;
+    d.w = Math.round(d.w * SIZE_SCALE * g);
+    d.h = Math.round(d.h * SIZE_SCALE * g);
+    d._scale = SIZE_SCALE * g;
+    d._grow = g;
     return d;
   }
   function marinePosts(d) {
@@ -122408,7 +122411,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     saveLegacy(legacy);
     return will;
   }
-  var WORLD_VERSION = 3;
+  var WORLD_VERSION = 4;
   var OLD_SCALE = 1.5;
   var BLUE_K = 498 / 698;
   function relayRow(y) {
@@ -122434,7 +122437,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       let best = null, bd = Infinity;
       for (const d of islandDefs) {
         const ox = d.x / POS_SCALE * OLD_SCALE, oy = oldY(d) / POS_SCALE * OLD_SCALE;
-        const r4 = Math.max(d.w, d.h) / SIZE_SCALE * OLD_SCALE * 0.5;
+        const r4 = Math.max(d.w, d.h) / (d._scale || SIZE_SCALE) * OLD_SCALE * 0.5;
         const dd = Math.hypot(pt.x - ox, pt.y - oy) - r4;
         if (dd < bd) {
           bd = dd;
@@ -122442,7 +122445,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         }
       }
       if (best && bd < 40) {
-        const k = SIZE_SCALE / OLD_SCALE;
+        const k = (best.d._scale || SIZE_SCALE) / OLD_SCALE;
         pt.x = best.d.x + (pt.x - best.ox) * k;
         pt.y = oldY(best.d) + (pt.y - best.oy) * k;
       } else {
@@ -122480,12 +122483,34 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       fn(char.spawn);
       for (const s of char.ships || []) if (!s.zone || s.zone === "surface") fn(s);
     };
+    const grow = (pt) => {
+      if (!pt || typeof pt.x !== "number" || pt.zone && pt.zone !== "surface") return;
+      let best = null, bd = Infinity;
+      for (const d of islandDefs) {
+        if (!(d._grow > 1)) continue;
+        const dd = Math.hypot(world.dx(d.x, pt.x), pt.y - d.y) - Math.max(d.w, d.h) * 0.5 / d._grow;
+        if (dd < bd) {
+          bd = dd;
+          best = d;
+        }
+      }
+      if (!best || bd > 150) return;
+      pt.x = world.wx(best.x + world.dx(best.x, pt.x) * best._grow);
+      pt.y = best.y + (pt.y - best.y) * best._grow;
+      if (pt.tx != null && pt.ty != null) pt.tx = void 0;
+    };
     if (ver < 2) {
       all2(move);
       for (const s of char.zoneShips || []) move(s);
     }
-    all2(relay);
-    for (const f of char.world?.fruitSpawns || []) relay(f);
+    if (ver < 3) {
+      all2(relay);
+      for (const f of char.world?.fruitSpawns || []) relay(f);
+    }
+    if (ver < 4) {
+      all2(grow);
+      for (const f of char.world?.fruitSpawns || []) grow(f);
+    }
     char.fogSurface = null;
     char.worldVer = WORLD_VERSION;
     return true;
