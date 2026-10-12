@@ -62051,7 +62051,7 @@ void main() {
       const isClockWise = ShapeUtils.isClockWise;
       const subPaths = this.subPaths;
       if (subPaths.length === 0) return [];
-      let solid, tmpPath, tmpShape;
+      let solid2, tmpPath, tmpShape;
       const shapes = [];
       if (subPaths.length === 1) {
         tmpPath = subPaths[0];
@@ -62072,9 +62072,9 @@ void main() {
       for (let i = 0, l = subPaths.length; i < l; i++) {
         tmpPath = subPaths[i];
         tmpPoints = tmpPath.getPoints();
-        solid = isClockWise(tmpPoints);
-        solid = isCCW ? !solid : solid;
-        if (solid) {
+        solid2 = isClockWise(tmpPoints);
+        solid2 = isCCW ? !solid2 : solid2;
+        if (solid2) {
           if (!holesFirst && newShapes[mainIdx]) mainIdx++;
           newShapes[mainIdx] = { s: new Shape(), p: tmpPoints };
           newShapes[mainIdx].s.curves = tmpPath.curves;
@@ -67858,24 +67858,14 @@ ${GLSL}
     "hilts",
     "backWpn",
     ...["R", "L"].flatMap((H5) => ["k1", "k2", "k3", "k4", "j1", "j2", "j3", "j4", "tb", "tc"].map((n) => n + H5)),
-    "skirt0",
-    "skirt1",
-    "skirt2",
-    "skirt3",
-    "skirt4",
-    "skirt5",
-    "skirtK0",
-    "skirtK1",
-    "skirtK2",
-    "skirtK3",
-    "skirtK4",
-    "skirtK5",
+    ...Array.from({ length: 12 }, (_, i) => "skirt" + i),
+    ...Array.from({ length: 12 }, (_, i) => "skirtK" + i),
     ...chain("ra"),
     ...chain("rl"),
     ...Array.from({ length: COAT_N }, (_, i) => "coat" + i),
     ...Array.from({ length: COAT_N }, (_, i) => "coatK" + i)
   ];
-  var SKIRT_N = 6;
+  var SKIRT_N = 12;
   var B = Object.fromEntries(BONES.map((n, i) => [n, i]));
   var RUB = ["R", "L"].map((H5) => Array.from({ length: RUB_N }, (_, i) => B[`ra${H5}${i + 1}`]));
   var RUBL = ["R", "L"].map((H5) => Array.from({ length: RUB_N }, (_, i) => B[`rl${H5}${i + 1}`]));
@@ -93522,8 +93512,9 @@ ${NOISE3}`).replace("vec4 diffuseColor = vec4( diffuse, opacity );", frag);
         const t = sstep(SS.hK - 0.07, SS.hK + 0.07, -y);
         return [B["skirt" + i], B["skirt" + j], B["skirtK" + i], B["skirtK" + j], w * (1 - t), (1 - w) * t, w * t];
       } };
-      add7(band2((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U4, false, (y, a) => atlasUV("skirt", (a + Math.PI) / TAU17, 1 - clamp5((0.08 - y) / (0.08 - yb), 0, 1))), M(), col6, B.hips, 0, skirtW);
-      if (cloth) add7(band2((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, U4, true), M(), shade(col6, -0.35), B.hips, 0, skirtW);
+      const sU = Math.max(U4, SKIRT_N * 2);
+      add7(band2((y, a) => sp(y, a), rows, -Math.PI, Math.PI, sU, false, (y, a) => atlasUV("skirt", (a + Math.PI) / TAU17, 1 - clamp5((0.08 - y) / (0.08 - yb), 0, 1))), M(), col6, B.hips, 0, skirtW);
+      if (cloth) add7(band2((y, a) => sp(y, a, 8e-3), rows.slice(-2), -Math.PI, Math.PI, sU, true), M(), shade(col6, -0.35), B.hips, 0, skirtW);
       skirtInfo = { yb, Wh, Dh, hK: bends ? SS.hK : 0 };
     }
     const armCol = pal.sleeve || (TOP2 === "coat" ? look.coat || pal.top : TOP2 === "jacket" ? pal.top : TOP2 === "striped" ? pal.top : pal.top);
@@ -96546,7 +96537,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var smooth6 = (x) => x * x * (3 - 2 * x);
   var TAU20 = Math.PI * 2;
   var LEG3 = [[B.thighR, B.shinR, B.footR], [B.thighL, B.shinL, B.footL]];
-  var SKIRT_T = [0.4, 0.7, 1, 0.35, 0.7, 1];
+  var SKIRT_T = [0.25, 0.45, 0.65, 0.85, 1, 0.2, 0.4, 0.6, 0.8, 1];
+  var SKIRT_TH = 5;
   var SKIRT_REACH = Math.PI / SKIRT_N * 2;
   var SKIRT_FADE = 0.35;
   var _sq2 = new Quaternion();
@@ -96563,6 +96555,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     const phi = R5 <= r4 ? 1.75 : Math.acos(Math.max(-1, -r4 / R5)) - Math.atan2(h2, u);
     return phi * fade2;
   }
+  var SKIRT_FEEL = { g: 9.8, wind: 0.8, damp: 4.2, damp2: 3.4, link: 9, max: 1.2, max2: 1.2, smooth: 0.09 };
   var COAT_FEEL = { g: 9.8, wind: 1.05, damp: 3.2, damp2: 2.6, link: 5, max: 1.15, max2: 1.4, smooth: 0.09 };
   var _cv = new Vector3();
   var _cv2 = new Vector3();
@@ -96818,10 +96811,11 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     /** Swing the long hair and the coat's tail (after the model and its root are posed for the frame). */
     swing(dt, root4) {
       const D4 = this.dangles || (this.dangles = this.makeDangles());
-      if (!D4.length && !this.body.coat) return;
+      if (!D4.length && !this.body.coat && !this.body.skirt) return;
       root4.updateMatrixWorld(true);
       for (const s of D4) s.step(dt);
       if (this.body.coat) this.coatSwing(dt);
+      if (this.body.skirt) this.skirtSwing(dt);
     }
     /** Show or hide a bone's geometry (scale 0 hides; children follow). */
     showBone(i, on) {
@@ -97023,63 +97017,177 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
       bones2[B.wingL].scale.setScalar(sc);
     }
     /**
-     * A skirt's six panels (bones skirt0..5, hung round the waist from the front
-     * toward the right): each swings out about its own horizontal axis just as
-     * far as it must for the thighs, knees and shins beneath it to stay inside
-     * the cloth — a stride, a knee bent at rest, sitting down — and settles back
-     * more gently than it was pushed, as cloth falls. A long skirt bends again
-     * at the knee (skirtK0..5): the upper panel lies over the thigh, the lower
-     * hangs from the knee, clear of the shin.
+     * A skirt as cloth: twelve panels (bones skirt0..11, hung round the waist
+     * from the front toward the right), each a pendulum about its own
+     * horizontal axis (skirtSwing) — the body's moves swing it, the wind of a
+     * run streams it back, it settles hanging, and neighbours pull on each
+     * other so the hem holds together — and whatever it's doing, never inside
+     * the legs: every panel is kept out at least as far as the thighs, knees
+     * and shins under it need (a stride, a knee bent at rest, sitting down).
+     * A long skirt bends again at the knee (skirtK0..11): the upper panel lies
+     * over the thigh, the lower hangs from the knee, clear of the shin.
+     * Here, every frame: how far out each panel must be; further off (nothing
+     * swinging it), the cloth just falls back to hang, held out by the legs.
      */
     skirtPanels(dt) {
-      const S6 = this.body.skirt, d = this.d, rig = this.rig, bones2 = this.bones;
-      const th = this.skirtTh || (this.skirtTh = new Float32Array(SKIRT_N * 2));
+      const S6 = this.body.skirt, d = this.d, rig = this.rig, N8 = SKIRT_N;
+      const K = this.skirtS || (this.skirtS = { th: new Float32Array(N8 * 2), om: new Float32Array(N8 * 2), need: new Float32Array(N8), live: 0, n: 0, p: new Vector3(), v: new Vector3(), q: new Quaternion(), on: false });
       const F4 = d.F || {}, Bk = d.Bk;
-      const rT = 0.088 * (F4.th || 1) * Bk + 0.028, rS = 0.056 * (F4.ca || 1) * Bk + 0.024;
+      const rT = 0.088 * (F4.th || 1) * Bk + 0.03, rS = 0.056 * (F4.ca || 1) * Bk + 0.026;
       const [Dp, Wp] = skirtWaist(d);
-      const hHem = -S6.yb, hK = S6.hK, two = hK > 0;
+      const hHem = -S6.yb, two = S6.hK > 0;
       _sq2.copy(rig.quat[B.hips]).invert();
       const H5 = rig.pos[B.hips];
       let n = 0;
       for (const [hi, ki, fi] of LEG3) {
-        const A2 = rig.pos[hi], K = rig.pos[ki], Ft = rig.pos[fi];
+        const A2 = rig.pos[hi], Kn = rig.pos[ki], Ft = rig.pos[fi];
         for (let s = 0; s < SKIRT_T.length; s++) {
-          const t = SKIRT_T[s], P6 = _spts[n];
-          (s < 3 ? P6.lerpVectors(A2, K, t) : P6.lerpVectors(K, Ft, t)).sub(H5).applyQuaternion(_sq2);
-          _srad[n] = s < 3 ? rT - 0.018 * t : rS - 0.012 * t;
-          _sleg[n] = s < 3 ? t === 1 ? 2 : 0 : 1;
+          const t = SKIRT_T[s], P6 = _spts[n], thigh = s < SKIRT_TH;
+          (thigh ? P6.lerpVectors(A2, Kn, t) : P6.lerpVectors(Kn, Ft, t)).sub(H5).applyQuaternion(_sq2);
+          _srad[n] = thigh ? rT - 0.018 * t : rS - 0.012 * t;
+          _sleg[n] = thigh ? t === 1 ? 2 : 0 : 1;
           n++;
         }
       }
-      const fall2 = Math.min(0.2, dt || 0.016) * 2.6;
-      for (let i = 0; i < SKIRT_N; i++) {
-        const a = i / SKIRT_N * TAU20, ca = Math.cos(a), sa = Math.sin(a);
+      K.n = n;
+      for (let i = 0; i < N8; i++) {
+        const a = i / N8 * TAU20, ca = Math.cos(a), sa = Math.sin(a);
         const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S6.Dh, sa * S6.Wh);
         const phi0 = Math.atan2(rh - rp, hHem);
-        let phiA = phi0;
+        let need = phi0;
         for (let k = 0; k < n; k++) {
           if (two && _sleg[k] === 1) continue;
           const P6 = _spts[k];
-          const need = panelNeed(P6.x * ca + P6.z * sa - rp, -P6.y, _srad[k], hHem, Math.atan2(P6.z, P6.x), a);
-          if (need > phiA) phiA = need;
+          const v = panelNeed(P6.x * ca + P6.z * sa - rp, -P6.y, _srad[k], hHem, Math.atan2(P6.z, P6.x), a);
+          if (v > need) need = v;
         }
-        const tA = Math.min(1.75, phiA) - phi0;
-        th[i] = tA >= th[i] ? tA : Math.max(tA, th[i] - fall2);
-        bones2[B["skirt" + i]].quaternion.setFromAxisAngle(_sax.set(-sa, 0, ca), th[i]);
+        K.need[i] = Math.min(1.75, need) - phi0;
+      }
+      for (let r4 = 0; r4 < 2; r4++) for (let i = 0; i < N8; i++) {
+        const m = Math.max(K.need[(i + N8 - 1) % N8], K.need[(i + 1) % N8]) - 0.22;
+        if (m > K.need[i]) K.need[i] = m;
+      }
+      K.live -= dt || 0.016;
+      if (K.live > 0) return;
+      const fall2 = Math.min(0.2, dt || 0.016) * 2.6;
+      for (let i = 0; i < N8; i++) {
+        const up = Math.max(K.need[i], K.th[i] > 0 ? Math.max(0, K.th[i] - fall2) : Math.min(0, K.th[i] + fall2));
+        K.th[i] = up;
+        K.om[i] = 0;
         if (!two) continue;
-        const ang = phi0 + th[i], L3 = hK / Math.cos(phi0);
-        const ku = rp + Math.sin(ang) * L3, kh = Math.cos(ang) * L3;
-        let phiB = phi0;
-        for (let k = 0; k < n; k++) {
-          if (_sleg[k] !== 1) continue;
-          const P6 = _spts[k], hB = -P6.y - kh;
-          if (hB < 0.04) continue;
-          const need = panelNeed(P6.x * ca + P6.z * sa - ku, hB, _srad[k], hHem - hK, Math.atan2(P6.z, P6.x), a);
-          if (need > phiB) phiB = need;
+        const j = N8 + i, lo = this.skirtLowNeed(i, up), cur = K.th[j];
+        K.th[j] = Math.max(lo, cur > 0 ? Math.max(0, cur - fall2) : Math.min(0, cur + fall2));
+        K.om[j] = 0;
+      }
+      this.skirtApply();
+    }
+    /** How far out (from hanging) a long skirt's lower panel i must swing to clear the shins, its upper panel `up` out from its rest. */
+    skirtLowNeed(i, up) {
+      const S6 = this.body.skirt, K = this.skirtS, d = this.d, N8 = SKIRT_N;
+      const [Dp, Wp] = skirtWaist(d);
+      const hHem = -S6.yb, hK = S6.hK;
+      const a = i / N8 * TAU20, ca = Math.cos(a), sa = Math.sin(a);
+      const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S6.Dh, sa * S6.Wh);
+      const phi0 = Math.atan2(rh - rp, hHem);
+      const ang = phi0 + up, L3 = hK / Math.cos(phi0);
+      const ku = rp + Math.sin(ang) * L3, kh = Math.cos(ang) * L3;
+      let need = phi0;
+      for (let k = 0; k < K.n; k++) {
+        if (_sleg[k] !== 1) continue;
+        const P6 = _spts[k], hB = -P6.y - kh;
+        if (hB < 0.04) continue;
+        const v = panelNeed(P6.x * ca + P6.z * sa - ku, hB, _srad[k], hHem - hK, Math.atan2(P6.z, P6.x), a);
+        if (v > need) need = v;
+      }
+      return Math.min(1.3, need) - phi0;
+    }
+    /**
+     * The skirt swung as cloth (close by: after the model's posed and placed in
+     * the world for the frame): the hips' own motion — how fast they go, how
+     * that changes, how fast they turn — in their own frame drives each panel's
+     * pendulum, neighbours tug each other along, and the legs keep it out.
+     */
+    skirtSwing(dt) {
+      const K = this.skirtS, S6 = this.body.skirt, N8 = SKIRT_N, F4 = SKIRT_FEEL;
+      if (!K) return;
+      const hips = this.bones[B.hips];
+      const p = _cv.setFromMatrixPosition(hips.matrixWorld);
+      _cq.setFromRotationMatrix(_cm.extractRotation(hips.matrixWorld));
+      K.live = 0.25;
+      if (!K.on || !(dt > 0) || dt > 0.3 || p.distanceToSquared(K.p) > 4) {
+        K.p.copy(p);
+        K.v.set(0, 0, 0);
+        K.q.copy(_cq);
+        K.on = true;
+        for (let i = 0; i < N8; i++) {
+          K.th[i] = Math.max(K.th[i], K.need[i]);
+          K.om[i] = 0;
         }
-        const pB = Math.min(1.3, phiB), j = SKIRT_N + i;
-        th[j] = pB >= th[j] ? pB : Math.max(pB, th[j] - fall2);
-        bones2[B["skirtK" + i]].quaternion.setFromAxisAngle(_sax, Math.max(phi0, th[j]) - phi0 - th[i]);
+        this.skirtApply();
+        return;
+      }
+      const v = _cv2.subVectors(p, K.p).divideScalar(dt);
+      v.y = 0;
+      v.lerpVectors(K.v, v, 1 - Math.exp(-dt / F4.smooth));
+      const acc = _cv3.subVectors(v, K.v).divideScalar(dt);
+      if (acc.lengthSq() > 900) acc.setLength(30);
+      _cq2.copy(K.q).invert().premultiply(_cq);
+      const yawRate = 2 * Math.atan2(_cq2.y, _cq2.w) / dt;
+      K.p.copy(p);
+      K.v.copy(v);
+      K.q.copy(_cq);
+      _cq2.copy(_cq).invert();
+      v.applyQuaternion(_cq2);
+      acc.applyQuaternion(_cq2);
+      const [Dp, Wp] = skirtWaist(this.d);
+      const two = S6.hK > 0, hHem = -S6.yb;
+      const lU = (two ? S6.hK : hHem) * 0.6, lL = (hHem - S6.hK) * 0.6;
+      const g = F4.g, w2 = Math.min(25, yawRate * yawRate), th = K.th, om = K.om;
+      const steps = Math.min(4, Math.ceil(dt / (1 / 60))), h2 = dt / steps;
+      for (let st = 0; st < steps; st++) {
+        for (let i = 0; i < N8; i++) {
+          const a = i / N8 * TAU20, ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * Dp, sa * Wp);
+          const wind = -(v.x * ca + v.z * sa) * F4.wind;
+          const push = -(acc.x * ca + acc.z * sa) + w2 * rp;
+          const t0 = th[i], ip = (i + N8 - 1) % N8, inx = (i + 1) % N8;
+          const link = F4.link * (th[ip] + th[inx] - 2 * t0);
+          const al = (-g * Math.sin(t0) + (wind + push) * Math.cos(t0)) / lU - F4.damp * om[i] + link;
+          om[i] += al * h2;
+          th[i] += om[i] * h2;
+          if (th[i] < K.need[i]) {
+            th[i] = K.need[i];
+            if (om[i] < 0) om[i] = 0;
+          }
+          if (th[i] > F4.max) {
+            th[i] = F4.max;
+            if (om[i] > 0) om[i] = 0;
+          }
+          if (!two) continue;
+          const j = N8 + i, t1 = th[j];
+          const linkL = F4.link * (th[N8 + ip] + th[N8 + inx] - 2 * t1);
+          const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - al * S6.hK) * Math.cos(t1)) / lL - F4.damp2 * om[j] + linkL;
+          om[j] += alL * h2;
+          th[j] += om[j] * h2;
+          const lo = this.skirtLowNeed(i, th[i]);
+          if (th[j] < lo) {
+            th[j] = lo;
+            if (om[j] < 0) om[j] = 0;
+          }
+          if (th[j] > F4.max2) {
+            th[j] = F4.max2;
+            if (om[j] > 0) om[j] = 0;
+          }
+        }
+      }
+      this.skirtApply();
+    }
+    /** Set the skirt panels' bones from their swings. */
+    skirtApply() {
+      const K = this.skirtS, S6 = this.body.skirt, bones2 = this.bones, N8 = SKIRT_N, two = S6.hK > 0;
+      for (let i = 0; i < N8; i++) {
+        const a = i / N8 * TAU20;
+        bones2[B["skirt" + i]].quaternion.setFromAxisAngle(_sax.set(-Math.sin(a), 0, Math.cos(a)), K.th[i]);
+        if (two) bones2[B["skirtK" + i]].quaternion.setFromAxisAngle(_sax, K.th[N8 + i] - K.th[i]);
       }
     }
     /**
@@ -97107,9 +97215,9 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         const A2 = rig.pos[hi], K = rig.pos[ki], Ft = rig.pos[fi];
         for (let s = 0; s < SKIRT_T.length; s++) {
           const t = SKIRT_T[s], P6 = _cpts[n];
-          (s < 3 ? P6.lerpVectors(A2, K, t) : P6.lerpVectors(K, Ft, t)).sub(H5).applyQuaternion(_cq);
-          _crad[n] = s < 3 ? rT - 0.018 * t : rS - 0.012 * t;
-          _cleg[n] = s < 3 ? t === 1 ? 2 : 0 : 1;
+          (s < SKIRT_TH ? P6.lerpVectors(A2, K, t) : P6.lerpVectors(K, Ft, t)).sub(H5).applyQuaternion(_cq);
+          _crad[n] = s < SKIRT_TH ? rT - 0.018 * t : rS - 0.012 * t;
+          _cleg[n] = s < SKIRT_TH ? t === 1 ? 2 : 0 : 1;
           n++;
         }
       }
@@ -117358,6 +117466,81 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     };
   }
 
+  // src/game/bodies.js
+  var CELL7 = 2;
+  var REACH2 = 60;
+  var _grid = /* @__PURE__ */ new Map();
+  var _list = [];
+  function solid(a) {
+    if (!a.alive || a.state === "dead" || a.state === "knocked") return false;
+    if (a.noBody || a.invulnerable && a.noTarget) return false;
+    if ((a.r || 0.3) > 2.5) return false;
+    if (a.mode === "sail" || a.climb || a.rope || a.zip || a.seatOn) return false;
+    if (a.dash && a.dash.t > 0) return false;
+    return true;
+  }
+  function give(a) {
+    if (a.act3d && (a.act3d.pose === "sit" || a.act3d.stance)) return 0;
+    if (a.immovable || a.dummy) return 0;
+    const r4 = a.r || 0.3;
+    return 1 / (r4 * r4);
+  }
+  function separateBodies(game, dt) {
+    const w = game.world, p = game.player;
+    if (!w || !p) return;
+    _grid.clear();
+    _list.length = 0;
+    const crew = game.crew?.followers;
+    for (const a of game.actors) {
+      if (a.world && a.world !== w) continue;
+      if (a !== p && w.dist2(a.x, a.y, p.x, p.y) > REACH2 * REACH2) continue;
+      if (!solid(a)) continue;
+      const k2 = Math.floor(w.wx(a.x) / CELL7) * 73856093 ^ Math.floor(a.y / CELL7) * 19349663;
+      let c = _grid.get(k2);
+      if (!c) _grid.set(k2, c = []);
+      a._sepI = _list.length;
+      c.push(a);
+      _list.push(a);
+    }
+    if (_list.length < 2) return;
+    const friend = (a) => a === p || a.isPlayer || a.remote || crew && a.crewId && crew.get(a.crewId) === a || a.crewMember;
+    const k = Math.min(1, (dt || 0.016) * 14);
+    for (const a of _list) {
+      const cx = Math.floor(w.wx(a.x) / CELL7), cy = Math.floor(a.y / CELL7);
+      for (let gx = cx - 1; gx <= cx + 1; gx++) {
+        for (let gy = cy - 1; gy <= cy + 1; gy++) {
+          const cell = _grid.get(gx * 73856093 ^ gy * 19349663);
+          if (!cell) continue;
+          for (const b of cell) {
+            if (b._sepI <= a._sepI) continue;
+            if (Math.abs((a.z || 0) - (b.z || 0)) > 1.3) continue;
+            if (a.onShip !== b.onShip && (a.onShip || b.onShip)) continue;
+            const dx = w.dx(a.x, b.x), dy = b.y - a.y;
+            const both2 = friend(a) && friend(b);
+            const R5 = ((a.r || 0.3) + (b.r || 0.3)) * (both2 ? 0.55 : 0.95);
+            const d2 = dx * dx + dy * dy;
+            if (d2 >= R5 * R5) continue;
+            let d = Math.sqrt(d2), nx, ny;
+            if (d < 1e-4) {
+              const t = (a.seed || 0.37) * 6.28;
+              nx = Math.cos(t);
+              ny = Math.sin(t);
+              d = 0;
+            } else {
+              nx = dx / d;
+              ny = dy / d;
+            }
+            const over = (R5 - d) * k;
+            const ga = give(a), gb = give(b), tot = ga + gb;
+            if (tot <= 0) continue;
+            if (ga > 0) a.moveBy(w, -nx * over * ga / tot, -ny * over * ga / tot);
+            if (gb > 0) b.moveBy(w, nx * over * gb / tot, ny * over * gb / tot);
+          }
+        }
+      }
+    }
+  }
+
   // src/render/fxshapes.js
   var TAU25 = Math.PI * 2;
   var easeOut2 = (k) => 1 - (1 - k) ** 3;
@@ -123296,6 +123479,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
         a._skipDt = 0;
         a.update(simDt, this);
       }
+      separateBodies(this, simDt);
       prof("s.actors", t0);
       t0 = performance.now();
       for (let i = this.ships.length - 1; i >= 0; i--) {
@@ -176160,7 +176344,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const seaK = Math.min(3, 0.5 + bountySea(game) * 0.4);
     const f = a.faction, beast = f === "beast" || !!a.def?.beast;
     const items9 = [];
-    const give = (id, n = 1) => {
+    const give2 = (id, n = 1) => {
       if (ITEMS[id]) {
         const e = items9.find((x) => x.id === id);
         if (e) e.qty += n;
@@ -176170,7 +176354,7 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
     const r4 = Math.random;
     let berries = 0;
     if (beast) {
-      give("meat", 1 + (r4() < 0.5 ? 1 : 0));
+      give2("meat", 1 + (r4() < 0.5 ? 1 : 0));
     } else {
       const purse = f === "pirate" || f === "bandit" || f === "baroque" || f === "rival" ? 1 : f === "marine" || f === "cp" ? 0.6 : 0.35;
       berries = Math.round((40 + r4() * 140) * (1 + lvl / 8) * seaK * purse);
@@ -176179,19 +176363,19 @@ Click or press ${HOTBAR_KEYS[i]} \xB7 drag to rearrange`;
         const high = lvl >= 25, mid = lvl >= 12;
         const held = a.weapon.ids?.[0], own = held && ITEMS[held] && !ITEMS[held].unique && ITEMS[held].kind === w ? held : null;
         const id = own || (w === "sword" ? f === "marine" ? "marine_saber" : high ? "fine_katana" : mid ? "cutlass" : "rusty_katana" : w === "gun" ? f === "marine" ? "marine_rifle" : "flintlock" : w === "staff" ? "bo_staff" : w === "axe" ? "woodsman_axe" : null);
-        if (id) give(id);
+        if (id) give2(id);
       }
-      if (r4() < 0.4) give(f === "marine" ? "rice_ball" : r4() < 0.5 ? "meat" : "sake");
-      if (r4() < (f === "marine" ? 0.35 : 0.2)) give("bandage");
+      if (r4() < 0.4) give2(f === "marine" ? "rice_ball" : r4() < 0.5 ? "meat" : "sake");
+      if (r4() < (f === "marine" ? 0.35 : 0.2)) give2("bandage");
       if (f === "pirate" || f === "bandit") {
-        if (r4() < 0.1) give("gold_coins");
-        if (r4() < 0.03) give("jewels");
+        if (r4() < 0.1) give2("gold_coins");
+        if (r4() < 0.03) give2("jewels");
       }
-      if (f === "marine" && r4() < 0.05) give("marine_cap");
-      if (f === "civilian" && r4() < 0.3) give(r4() < 0.5 ? "apple" : "rice_ball");
+      if (f === "marine" && r4() < 0.05) give2("marine_cap");
+      if (f === "civilian" && r4() < 0.3) give2(r4() < 0.5 ? "apple" : "rice_ball");
       if (a.named || a.boss) {
         berries = Math.round(berries * 2.5);
-        if (r4() < 0.5) give(r4() < 0.4 ? "jewels" : "gold_coins");
+        if (r4() < 0.5) give2(r4() < 0.4 ? "jewels" : "gold_coins");
       }
     }
     return { berries, items: items9 };

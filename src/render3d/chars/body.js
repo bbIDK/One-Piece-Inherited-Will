@@ -657,7 +657,7 @@ export function buildFigure(add0, look, d, pal, q) {
       const hx = Math.cos(a) * (Dh - inset), hz = Math.sin(a) * (Wh - inset);
       return [p[0] + (hx - p[0]) * f, y, p[2] + (hz - p[2]) * f];
     };
-    // (from the waist down the cloth hangs from six panels round it, each of
+    // (from the waist down the cloth hangs from twelve panels round it, each of
     // which swings out as far as it must to clear the legs — a stride, a knee
     // bent at rest, sitting down — rather than a knee coming through it:
     // model.js skirtPanels; above, it follows the waist as it twists)
@@ -672,8 +672,10 @@ export function buildFigure(add0, look, d, pal, q) {
       const t = sstep(SS.hK - 0.07, SS.hK + 0.07, -y);
       return [B['skirt' + i], B['skirt' + j], B['skirtK' + i], B['skirtK' + j], w * (1 - t), (1 - w) * t, w * t];
     } };
-    add(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, U, false, (y, a) => atlasUV('skirt', (a + Math.PI) / TAU, 1 - clamp((0.08 - y) / (0.08 - yb), 0, 1))), M(), col, B.hips, 0, skirtW);
-    if (cloth) add(band((y, a) => sp(y, a, 0.008), rows.slice(-2), -Math.PI, Math.PI, U, true), M(), shade(col, -0.35), B.hips, 0, skirtW);
+    // (enough segments round it that every panel bends its own stretch of hem)
+    const sU = Math.max(U, SKIRT_N * 2);
+    add(band((y, a) => sp(y, a), rows, -Math.PI, Math.PI, sU, false, (y, a) => atlasUV('skirt', (a + Math.PI) / TAU, 1 - clamp((0.08 - y) / (0.08 - yb), 0, 1))), M(), col, B.hips, 0, skirtW);
+    if (cloth) add(band((y, a) => sp(y, a, 0.008), rows.slice(-2), -Math.PI, Math.PI, sU, true), M(), shade(col, -0.35), B.hips, 0, skirtW);
     skirtInfo = { yb, Wh, Dh, hK: bends ? SS.hK : 0 };
   }
 

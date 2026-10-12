@@ -13,10 +13,10 @@
 //                 and tip; each segment hangs along -Y from its joint, and
 //                 bends toward the palm (-X) about its Z axis
 //   coatTail, wing*, tail, hairTail, sheath, hilts, backWpn: attachments
-//   skirt0..skirt5 a skirt's panels, hung round the waist from the front (0)
+//   skirt0..skirt11 a skirt's panels, hung round the waist from the front (0)
 //                 toward the right; each swings out about its own
 //                 horizontal axis to clear the legs (model.js skirtPanels);
-//   skirtK0..5    and a long skirt's lower panels, bending from them at the knee
+//   skirtK0..11   and a long skirt's lower panels, bending from them at the knee
 //   coat0..coat5  a coat's tail: panels round the back, hung from the waist
 //                 from its front-right edge (0) round to its front-left;
 //                 each swings out about its own horizontal axis, as cloth
@@ -40,12 +40,12 @@ export const BONES = [
   'thighR', 'shinR', 'footR', 'thighL', 'shinL', 'footL',
   'coatTail', 'tail', 'wingR', 'wingL', 'hairTail', 'sheath', 'hilts', 'backWpn',
   ...['R', 'L'].flatMap((H) => ['k1', 'k2', 'k3', 'k4', 'j1', 'j2', 'j3', 'j4', 'tb', 'tc'].map((n) => n + H)),
-  'skirt0', 'skirt1', 'skirt2', 'skirt3', 'skirt4', 'skirt5',
-  'skirtK0', 'skirtK1', 'skirtK2', 'skirtK3', 'skirtK4', 'skirtK5',
+  ...Array.from({ length: 12 }, (_, i) => 'skirt' + i), ...Array.from({ length: 12 }, (_, i) => 'skirtK' + i),
   ...chain('ra'), ...chain('rl'),
   ...Array.from({ length: COAT_N }, (_, i) => 'coat' + i), ...Array.from({ length: COAT_N }, (_, i) => 'coatK' + i),
 ];
-export const SKIRT_N = 6;
+/** Panels round a skirt (each swings as cloth: model.js skirtPanels / skirtSwing). */
+export const SKIRT_N = 12;
 export const B = Object.fromEntries(BONES.map((n, i) => [n, i]));
 /** A limb's rubber chain, wrist- or ankle-ward: RUB[k] for the arms (0 right, 1 left), RUBL[k] the legs. */
 export const RUB = ['R', 'L'].map((H) => Array.from({ length: RUB_N }, (_, i) => B[`ra${H}${i + 1}`]));

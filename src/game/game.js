@@ -1,4 +1,5 @@
 // The Game: owns the world, entities and subsystems and runs the main loop.
+import { separateBodies } from './bodies.js';
 import { tickDeform, DEFORM } from '../world/deform.js';
 import { PROF, prof } from '../core/prof.js';
 import { FX } from './fx.js';
@@ -183,6 +184,8 @@ export class Game {
       a._skipDt = 0;
       a.update(simDt, this);
     }
+    // (people are solid to one another: anyone standing in someone else is eased out — bodies.js)
+    separateBodies(this, simDt);
     prof('s.actors', t0); t0 = performance.now();
     for (let i = this.ships.length - 1; i >= 0; i--) {
       const s = this.ships[i];

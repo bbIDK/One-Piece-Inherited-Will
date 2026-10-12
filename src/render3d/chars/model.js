@@ -42,7 +42,8 @@ const TAU = Math.PI * 2;
 // a skirt's panels: the legs (hip joint, knee, ankle), the points down them it
 // must clear (thigh, then shin), and how far each panel reaches round
 const LEG3 = [[B.thighR, B.shinR, B.footR], [B.thighL, B.shinL, B.footL]];
-const SKIRT_T = [0.4, 0.7, 1.0, 0.35, 0.7, 1.0];
+// (where along the thigh, then the shin, a skirt or coat checks it's clear of the leg)
+const SKIRT_T = [0.25, 0.45, 0.65, 0.85, 1.0, 0.2, 0.4, 0.6, 0.8, 1.0], SKIRT_TH = 5;
 const SKIRT_REACH = Math.PI / SKIRT_N * 2, SKIRT_FADE = 0.35;
 const _sq = new THREE.Quaternion(), _sax = new THREE.Vector3();
 const _spts = Array.from({ length: SKIRT_T.length * 2 }, () => new THREE.Vector3());
@@ -69,6 +70,8 @@ function panelNeed(u, h, r, len, psi, a, reach = SKIRT_REACH) {
 // it (per m/s), how quickly its swing dies (upper, lower), how hard each
 // panel pulls its neighbours along (so the tail holds together), and how far
 // out it may swing (radians) — the feel of the cloth
+// a skirt (skirtSwing): the same, a lighter cloth hung all round
+export const SKIRT_FEEL = { g: 9.8, wind: 0.8, damp: 4.2, damp2: 3.4, link: 9, max: 1.2, max2: 1.2, smooth: 0.09 };
 export const COAT_FEEL = { g: 9.8, wind: 1.05, damp: 3.2, damp2: 2.6, link: 5, max: 1.15, max2: 1.4, smooth: 0.09 };
 const _cv = new THREE.Vector3(), _cv2 = new THREE.Vector3(), _cv3 = new THREE.Vector3(), _cq = new THREE.Quaternion(), _cq2 = new THREE.Quaternion(), _cm = new THREE.Matrix4(), _cax = new THREE.Vector3();
 const _cpts = Array.from({ length: SKIRT_T.length * 2 }, () => new THREE.Vector3());
@@ -324,10 +327,11 @@ export class CharacterModel {
   /** Swing the long hair and the coat's tail (after the model and its root are posed for the frame). */
   swing(dt, root) {
     const D = this.dangles || (this.dangles = this.makeDangles());
-    if (!D.length && !this.body.coat) return;
+    if (!D.length && !this.body.coat && !this.body.skirt) return;
     root.updateMatrixWorld(true);
     for (const s of D) s.step(dt);
     if (this.body.coat) this.coatSwing(dt);
+    if (this.body.skirt) this.skirtSwing(dt);
   }
 
   /** Show or hide a bone's geometry (scale 0 hides; children follow). */
@@ -539,72 +543,167 @@ export class CharacterModel {
   }
 
   /**
-   * A skirt's six panels (bones skirt0..5, hung round the waist from the front
-   * toward the right): each swings out about its own horizontal axis just as
-   * far as it must for the thighs, knees and shins beneath it to stay inside
-   * the cloth — a stride, a knee bent at rest, sitting down — and settles back
-   * more gently than it was pushed, as cloth falls. A long skirt bends again
-   * at the knee (skirtK0..5): the upper panel lies over the thigh, the lower
-   * hangs from the knee, clear of the shin.
+   * A skirt as cloth: twelve panels (bones skirt0..11, hung round the waist
+   * from the front toward the right), each a pendulum about its own
+   * horizontal axis (skirtSwing) — the body's moves swing it, the wind of a
+   * run streams it back, it settles hanging, and neighbours pull on each
+   * other so the hem holds together — and whatever it's doing, never inside
+   * the legs: every panel is kept out at least as far as the thighs, knees
+   * and shins under it need (a stride, a knee bent at rest, sitting down).
+   * A long skirt bends again at the knee (skirtK0..11): the upper panel lies
+   * over the thigh, the lower hangs from the knee, clear of the shin.
+   * Here, every frame: how far out each panel must be; further off (nothing
+   * swinging it), the cloth just falls back to hang, held out by the legs.
    */
   skirtPanels(dt) {
-    const S = this.body.skirt, d = this.d, rig = this.rig, bones = this.bones;
-    const th = this.skirtTh || (this.skirtTh = new Float32Array(SKIRT_N * 2));
+    const S = this.body.skirt, d = this.d, rig = this.rig, N = SKIRT_N;
+    const K = this.skirtS || (this.skirtS = { th: new Float32Array(N * 2), om: new Float32Array(N * 2), need: new Float32Array(N), live: 0, n: 0, p: new THREE.Vector3(), v: new THREE.Vector3(), q: new THREE.Quaternion(), on: false });
     const F = d.F || {}, Bk = d.Bk;
     // (the legs' reach: the thigh's and shin's radius and a little room for the cloth)
-    const rT = 0.088 * (F.th || 1) * Bk + 0.028, rS = 0.056 * (F.ca || 1) * Bk + 0.024;
+    const rT = 0.088 * (F.th || 1) * Bk + 0.03, rS = 0.056 * (F.ca || 1) * Bk + 0.026;
     const [Dp, Wp] = skirtWaist(d);
-    const hHem = -S.yb, hK = S.hK, two = hK > 0;
+    const hHem = -S.yb, two = S.hK > 0;
     _sq.copy(rig.quat[B.hips]).invert();
     const H = rig.pos[B.hips];
     // the leg points it must clear, in the hips' frame (+X forward, +Z right)
     let n = 0;
     for (const [hi, ki, fi] of LEG3) {
-      const A = rig.pos[hi], K = rig.pos[ki], Ft = rig.pos[fi];
+      const A = rig.pos[hi], Kn = rig.pos[ki], Ft = rig.pos[fi];
       for (let s = 0; s < SKIRT_T.length; s++) {
-        const t = SKIRT_T[s], P = _spts[n];
-        (s < 3 ? P.lerpVectors(A, K, t) : P.lerpVectors(K, Ft, t)).sub(H).applyQuaternion(_sq);
-        _srad[n] = s < 3 ? rT - 0.018 * t : rS - 0.012 * t;
-        _sleg[n] = s < 3 ? (t === 1 ? 2 : 0) : 1; // 0 thigh, 1 shin, 2 knee
+        const t = SKIRT_T[s], P = _spts[n], thigh = s < SKIRT_TH;
+        (thigh ? P.lerpVectors(A, Kn, t) : P.lerpVectors(Kn, Ft, t)).sub(H).applyQuaternion(_sq);
+        _srad[n] = thigh ? rT - 0.018 * t : rS - 0.012 * t;
+        _sleg[n] = thigh ? (t === 1 ? 2 : 0) : 1; // 0 thigh, 1 shin, 2 knee
         n++;
       }
     }
-    const fall = Math.min(0.2, dt || 0.016) * 2.6;
-    for (let i = 0; i < SKIRT_N; i++) {
-      const a = (i / SKIRT_N) * TAU, ca = Math.cos(a), sa = Math.sin(a);
+    K.n = n;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * TAU, ca = Math.cos(a), sa = Math.sin(a);
       const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S.Dh, sa * S.Wh);
       const phi0 = Math.atan2(rh - rp, hHem);
       // the upper panel (or the whole of a short skirt), from the waist
-      let phiA = phi0;
+      let need = phi0;
       for (let k = 0; k < n; k++) {
         if (two && _sleg[k] === 1) continue;
         const P = _spts[k];
-        const need = panelNeed(P.x * ca + P.z * sa - rp, -P.y, _srad[k], hHem, Math.atan2(P.z, P.x), a);
-        if (need > phiA) phiA = need;
+        const v = panelNeed(P.x * ca + P.z * sa - rp, -P.y, _srad[k], hHem, Math.atan2(P.z, P.x), a);
+        if (v > need) need = v;
       }
-      const tA = Math.min(1.75, phiA) - phi0;
-      th[i] = tA >= th[i] ? tA : Math.max(tA, th[i] - fall);
-      bones[B['skirt' + i]].quaternion.setFromAxisAngle(_sax.set(-sa, 0, ca), th[i]);
+      K.need[i] = Math.min(1.75, need) - phi0;
+    }
+    // (a panel can't be pulled in past its neighbours' swing by much: a leg
+    // between two panels holds them both out, and the cloth between doesn't sag in)
+    for (let r = 0; r < 2; r++) for (let i = 0; i < N; i++) {
+      const m = Math.max(K.need[(i + N - 1) % N], K.need[(i + 1) % N]) - 0.22;
+      if (m > K.need[i]) K.need[i] = m;
+    }
+    // (nothing swinging it: it falls back to hanging, as gently as cloth falls, held out by the legs)
+    K.live -= dt || 0.016;
+    if (K.live > 0) return;
+    const fall = Math.min(0.2, dt || 0.016) * 2.6;
+    for (let i = 0; i < N; i++) {
+      const up = Math.max(K.need[i], K.th[i] > 0 ? Math.max(0, K.th[i] - fall) : Math.min(0, K.th[i] + fall));
+      K.th[i] = up; K.om[i] = 0;
       if (!two) continue;
-      // the lower panel: hangs from where the upper one reaches at the knee, clear of the shin
-      const ang = phi0 + th[i], L = hK / Math.cos(phi0);
-      const ku = rp + Math.sin(ang) * L, kh = Math.cos(ang) * L; // (the bend: out from the axis, down from the waist)
-      let phiB = phi0;
-      for (let k = 0; k < n; k++) {
-        // (the shins below the bend: the knee is the upper panel's to clear —
-        // it sits right at the bend, inside the cloth, where no swing of the
-        // lower panel could take it any further in, and it would fling that
-        // out flat)
-        if (_sleg[k] !== 1) continue;
-        const P = _spts[k], hB = -P.y - kh;
-        if (hB < 0.04) continue;
-        const need = panelNeed(P.x * ca + P.z * sa - ku, hB, _srad[k], hHem - hK, Math.atan2(P.z, P.x), a);
-        if (need > phiB) phiB = need;
+      const j = N + i, lo = this.skirtLowNeed(i, up), cur = K.th[j];
+      K.th[j] = Math.max(lo, cur > 0 ? Math.max(0, cur - fall) : Math.min(0, cur + fall)); K.om[j] = 0;
+    }
+    this.skirtApply();
+  }
+
+  /** How far out (from hanging) a long skirt's lower panel i must swing to clear the shins, its upper panel `up` out from its rest. */
+  skirtLowNeed(i, up) {
+    const S = this.body.skirt, K = this.skirtS, d = this.d, N = SKIRT_N;
+    const [Dp, Wp] = skirtWaist(d);
+    const hHem = -S.yb, hK = S.hK;
+    const a = (i / N) * TAU, ca = Math.cos(a), sa = Math.sin(a);
+    const rp = Math.hypot(ca * Dp, sa * Wp), rh = Math.hypot(ca * S.Dh, sa * S.Wh);
+    const phi0 = Math.atan2(rh - rp, hHem);
+    const ang = phi0 + up, L = hK / Math.cos(phi0);
+    const ku = rp + Math.sin(ang) * L, kh = Math.cos(ang) * L; // (the bend: out from the axis, down from the waist)
+    let need = phi0;
+    for (let k = 0; k < K.n; k++) {
+      // (only the shins below the bend: the knee sits right at it, the upper panel's to clear)
+      if (_sleg[k] !== 1) continue;
+      const P = _spts[k], hB = -P.y - kh;
+      if (hB < 0.04) continue;
+      const v = panelNeed(P.x * ca + P.z * sa - ku, hB, _srad[k], hHem - hK, Math.atan2(P.z, P.x), a);
+      if (v > need) need = v;
+    }
+    return Math.min(1.3, need) - phi0;
+  }
+
+  /**
+   * The skirt swung as cloth (close by: after the model's posed and placed in
+   * the world for the frame): the hips' own motion — how fast they go, how
+   * that changes, how fast they turn — in their own frame drives each panel's
+   * pendulum, neighbours tug each other along, and the legs keep it out.
+   */
+  skirtSwing(dt) {
+    const K = this.skirtS, S = this.body.skirt, N = SKIRT_N, F = SKIRT_FEEL;
+    if (!K) return;
+    const hips = this.bones[B.hips];
+    const p = _cv.setFromMatrixPosition(hips.matrixWorld);
+    _cq.setFromRotationMatrix(_cm.extractRotation(hips.matrixWorld));
+    K.live = 0.25;
+    if (!K.on || !(dt > 0) || dt > 0.3 || p.distanceToSquared(K.p) > 4) {
+      K.p.copy(p); K.v.set(0, 0, 0); K.q.copy(_cq); K.on = true;
+      for (let i = 0; i < N; i++) { K.th[i] = Math.max(K.th[i], K.need[i]); K.om[i] = 0; }
+      this.skirtApply();
+      return;
+    }
+    const v = _cv2.subVectors(p, K.p).divideScalar(dt);
+    v.y = 0;
+    v.lerpVectors(K.v, v, 1 - Math.exp(-dt / F.smooth));
+    const acc = _cv3.subVectors(v, K.v).divideScalar(dt);
+    if (acc.lengthSq() > 900) acc.setLength(30);
+    _cq2.copy(K.q).invert().premultiply(_cq);
+    const yawRate = 2 * Math.atan2(_cq2.y, _cq2.w) / dt;
+    K.p.copy(p); K.v.copy(v); K.q.copy(_cq);
+    _cq2.copy(_cq).invert();
+    v.applyQuaternion(_cq2); acc.applyQuaternion(_cq2);
+    const [Dp, Wp] = skirtWaist(this.d);
+    const two = S.hK > 0, hHem = -S.yb;
+    const lU = (two ? S.hK : hHem) * 0.6, lL = (hHem - S.hK) * 0.6;
+    const g = F.g, w2 = Math.min(25, yawRate * yawRate), th = K.th, om = K.om;
+    const steps = Math.min(4, Math.ceil(dt / (1 / 60))), h = dt / steps;
+    for (let st = 0; st < steps; st++) {
+      for (let i = 0; i < N; i++) {
+        const a = (i / N) * TAU, ca = Math.cos(a), sa = Math.sin(a), rp = Math.hypot(ca * Dp, sa * Wp);
+        // the air on its face (a run lifts the back of it), the lag of its own weight as the body speeds up, slows or turns
+        const wind = -(v.x * ca + v.z * sa) * F.wind;
+        const push = -(acc.x * ca + acc.z * sa) + w2 * rp;
+        const t0 = th[i], ip = (i + N - 1) % N, inx = (i + 1) % N;
+        const link = F.link * (th[ip] + th[inx] - 2 * t0);
+        const al = (-g * Math.sin(t0) + (wind + push) * Math.cos(t0)) / lU - F.damp * om[i] + link;
+        om[i] += al * h;
+        th[i] += om[i] * h;
+        // (never inside the legs; never flung up past what cloth does)
+        if (th[i] < K.need[i]) { th[i] = K.need[i]; if (om[i] < 0) om[i] = 0; }
+        if (th[i] > F.max) { th[i] = F.max; if (om[i] > 0) om[i] = 0; }
+        if (!two) continue;
+        const j = N + i, t1 = th[j];
+        const linkL = F.link * (th[N + ip] + th[N + inx] - 2 * t1);
+        const alL = (-g * Math.sin(t1) + (wind * 1.15 + push - al * S.hK) * Math.cos(t1)) / lL - F.damp2 * om[j] + linkL;
+        om[j] += alL * h;
+        th[j] += om[j] * h;
+        const lo = this.skirtLowNeed(i, th[i]);
+        if (th[j] < lo) { th[j] = lo; if (om[j] < 0) om[j] = 0; }
+        if (th[j] > F.max2) { th[j] = F.max2; if (om[j] > 0) om[j] = 0; }
       }
-      // (its own angle from the vertical settles back; it turns against the upper panel's)
-      const pB = Math.min(1.3, phiB), j = SKIRT_N + i;
-      th[j] = pB >= th[j] ? pB : Math.max(pB, th[j] - fall);
-      bones[B['skirtK' + i]].quaternion.setFromAxisAngle(_sax, Math.max(phi0, th[j]) - phi0 - th[i]);
+    }
+    this.skirtApply();
+  }
+
+  /** Set the skirt panels' bones from their swings. */
+  skirtApply() {
+    const K = this.skirtS, S = this.body.skirt, bones = this.bones, N = SKIRT_N, two = S.hK > 0;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * TAU;
+      bones[B['skirt' + i]].quaternion.setFromAxisAngle(_sax.set(-Math.sin(a), 0, Math.cos(a)), K.th[i]);
+      // (the lower panel's own angle from hanging, turned back against the upper's)
+      if (two) bones[B['skirtK' + i]].quaternion.setFromAxisAngle(_sax, K.th[N + i] - K.th[i]);
     }
   }
 
@@ -634,9 +733,9 @@ export class CharacterModel {
       const A = rig.pos[hi], K = rig.pos[ki], Ft = rig.pos[fi];
       for (let s = 0; s < SKIRT_T.length; s++) {
         const t = SKIRT_T[s], P = _cpts[n];
-        (s < 3 ? P.lerpVectors(A, K, t) : P.lerpVectors(K, Ft, t)).sub(H).applyQuaternion(_cq);
-        _crad[n] = s < 3 ? rT - 0.018 * t : rS - 0.012 * t;
-        _cleg[n] = s < 3 ? (t === 1 ? 2 : 0) : 1;
+        (s < SKIRT_TH ? P.lerpVectors(A, K, t) : P.lerpVectors(K, Ft, t)).sub(H).applyQuaternion(_cq);
+        _crad[n] = s < SKIRT_TH ? rT - 0.018 * t : rS - 0.012 * t;
+        _cleg[n] = s < SKIRT_TH ? (t === 1 ? 2 : 0) : 1;
         n++;
       }
     }
