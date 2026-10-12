@@ -115,7 +115,7 @@ export class Projectiles {
     r.back(0, P);
     const L = this.land, o = (this.landI++ % LAND) * LF, sp = Math.hypot(p.vx, p.vy) || 1;
     L[o] = P[0]; L[o + 1] = P[1]; L[o + 2] = P[2]; L[o + 3] = p.vx / sp; L[o + 4] = p.vy / sp;
-    L[o + 5] = this.v.time; L[o + 6] = p.size || 1; L[o + 7] = (hash(P[0] * 3.1 + P[1] * 7.7) * 100) | 0;
+    L[o + 5] = this.v.time; L[o + 6] = Math.min(1.3, p.size || 1); // (a big fist lands with a bigger DON, but never one that fills the screen) L[o + 7] = (hash(P[0] * 3.1 + P[1] * 7.7) * 100) | 0;
   }
 
   /** Is this projectile drawn here (not as a plain mesh)? */

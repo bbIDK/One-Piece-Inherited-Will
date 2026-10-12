@@ -91346,8 +91346,7 @@ vec3 paneView(vec3 dir, float night) {
       L3[o + 3] = p.vx / sp;
       L3[o + 4] = p.vy / sp;
       L3[o + 5] = this.v.time;
-      L3[o + 6] = p.size || 1;
-      L3[o + 7] = hash8(P3[0] * 3.1 + P3[1] * 7.7) * 100 | 0;
+      L3[o + 6] = Math.min(1.3, p.size || 1);
     }
     /** Is this projectile drawn here (not as a plain mesh)? */
     owns(pr) {
