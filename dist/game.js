@@ -96567,6 +96567,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
   var _cpts = Array.from({ length: SKIRT_T.length * 2 }, () => new Vector3());
   var _crad = new Float32Array(SKIRT_T.length * 2);
   var _cleg = new Uint8Array(SKIRT_T.length * 2);
+  var _d5 = new Vector3();
+  var _d6 = new Vector3();
   var _d1 = new Vector3();
   var _d22 = new Vector3();
   var _d3 = new Vector3();
@@ -96607,6 +96609,35 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
         acc.addScaledVector(pv, -o.drag);
         this.vel.multiplyScalar(Math.exp(-o.damp * dt)).addScaledVector(acc, dt);
         this.tip.addScaledVector(this.vel, dt);
+      }
+      if (this.caps) {
+        const cs = this.caps();
+        if (!this.capK) {
+          this.capK = cs.map((C3) => {
+            let m = 1;
+            for (const f of [1, 0.5]) {
+              _d4.lerpVectors(piv, this.tip, f);
+              const ab = _d5.subVectors(C3.b, C3.a), t = Math.max(0, Math.min(1, _d6.subVectors(_d4, C3.a).dot(ab) / Math.max(1e-6, ab.lengthSq())));
+              m = Math.min(m, _d6.copy(C3.a).addScaledVector(ab, t).distanceTo(_d4) / C3.r);
+            }
+            return Math.max(0.4, m * 0.97);
+          });
+        }
+        for (let ci = 0; ci < cs.length; ci++) {
+          const C3 = cs[ci], r4 = C3.r * this.capK[ci];
+          for (const f of [1, 0.5]) {
+            _d4.lerpVectors(piv, this.tip, f);
+            const ab = _d5.subVectors(C3.b, C3.a), t = Math.max(0, Math.min(1, _d6.subVectors(_d4, C3.a).dot(ab) / Math.max(1e-6, ab.lengthSq())));
+            const off = _d6.copy(C3.a).addScaledVector(ab, t).sub(_d4).negate(), dd = off.length();
+            if (dd >= r4) continue;
+            if (dd < 1e-5) off.copy(restW);
+            else off.divideScalar(dd);
+            this.tip.addScaledVector(off, (r4 - dd) / f);
+            this.vel.addScaledVector(off, -Math.min(0, this.vel.dot(off)));
+          }
+        }
+        const dl = _d4.subVectors(this.tip, piv).length();
+        if (dl > 1e-5) this.tip.copy(piv).addScaledVector(_d4, L3 / dl);
       }
       const dir = _d3.subVectors(this.tip, piv).normalize();
       _dq2.setFromRotationMatrix(_dm).invert();
@@ -96804,9 +96835,48 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.016, 0.01, 0.026), uShadow);`).r
     /** The swinging parts this body has (long hair, a coat's tail). */
     makeDangles() {
       const u = this.body.used || /* @__PURE__ */ new Set(), d = this.d, out = [];
-      if (u.has(B.hairTail)) out.push(new Dangle(this.bones[B.hairTail], d.headR * 2.2, new Vector3(-0.35, -1, 0), { K: 70, g: 0.55, drag: 0.32, damp: 5, fwd: 0.12, back: 1, side: 0.45 }));
-      if (u.has(B.coatTail)) out.push(new Dangle(this.bones[B.coatTail], 0.62 * d.Lg, new Vector3(-0.03, -1, 0), { K: 45, g: 0.45, drag: 0.45, damp: 4, fwd: 0.05, back: 1.1, side: 0.3 }));
+      if (u.has(B.hairTail)) {
+        const h2 = new Dangle(this.bones[B.hairTail], d.headR * 2.2, new Vector3(-0.35, -1, 0), { K: 70, g: 0.55, drag: 0.32, damp: 5, fwd: 0.12, back: 1, side: 0.45 });
+        h2.caps = () => this.bodyCaps(true);
+        out.push(h2);
+      }
+      if (u.has(B.coatTail)) {
+        const c = new Dangle(this.bones[B.coatTail], 0.62 * d.Lg, new Vector3(-0.03, -1, 0), { K: 45, g: 0.45, drag: 0.45, damp: 4, fwd: 0.05, back: 1.1, side: 0.3 });
+        c.caps = () => this.bodyCaps(false);
+        out.push(c);
+      }
       return out;
+    }
+    /**
+     * The body as capsules in the world, for what swings against it: the
+     * back and shoulders (for hair), or the thighs and shins (for a coat's
+     * tail). Measured once a frame from the posed bones.
+     */
+    bodyCaps(upper) {
+      const C3 = this._caps || (this._caps = Array.from({ length: 4 }, () => ({ a: new Vector3(), b: new Vector3(), r: 0 })));
+      const d = this.d, bn = this.bones, sc = _d5.setFromMatrixScale(bn[B.hips].matrixWorld).y;
+      if (upper) {
+        const m = bn[B.chest].matrixWorld;
+        C3[0].a.set(0, d.chestLen * 0.3, 0).applyMatrix4(m);
+        C3[0].b.set(0, d.chestLen - 0.03, 0).applyMatrix4(m);
+        C3[0].r = d.shW * 0.6 * sc;
+        bn[B.uarmR].getWorldPosition(C3[1].a);
+        bn[B.uarmL].getWorldPosition(C3[1].b);
+        C3[1].r = d.shW * 0.32 * sc;
+        return C3.slice(0, 2);
+      }
+      const F4 = d.F || {}, Bk = d.Bk;
+      const rT = (0.088 * (F4.th || 1) * Bk + 0.03) * sc, rS = (0.056 * (F4.ca || 1) * Bk + 0.026) * sc;
+      let n = 0;
+      for (const [hi, ki, fi] of LEG3) {
+        bn[hi].getWorldPosition(C3[n].a);
+        bn[ki].getWorldPosition(C3[n].b);
+        C3[n++].r = rT;
+        bn[ki].getWorldPosition(C3[n].a);
+        bn[fi].getWorldPosition(C3[n].b);
+        C3[n++].r = rS;
+      }
+      return C3;
     }
     /** Swing the long hair and the coat's tail (after the model and its root are posed for the frame). */
     swing(dt, root4) {

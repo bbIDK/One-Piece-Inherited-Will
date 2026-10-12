@@ -83,6 +83,7 @@ const _crad = new Float32Array(SKIRT_T.length * 2), _cleg = new Uint8Array(SKIRT
 // you stop or turn, stream back in the wind of a run and settle hanging when
 // you stand. Swings are kept off the body (hair doesn't swing into the head,
 // a coat tail not forward into the legs).
+const _d5 = new THREE.Vector3(), _d6 = new THREE.Vector3();
 const _d1 = new THREE.Vector3(), _d2 = new THREE.Vector3(), _d3 = new THREE.Vector3(), _d4 = new THREE.Vector3(), _dm = new THREE.Matrix4(), _dq = new THREE.Quaternion();
 class Dangle {
   /** bone; len (metres); rest: the direction it hangs in its parent's frame; o: { K spring, g gravity, drag, damp, fwd/back/side limits (radians) } */
@@ -110,6 +111,39 @@ class Dangle {
       acc.addScaledVector(pv, -o.drag);
       this.vel.multiplyScalar(Math.exp(-o.damp * dt)).addScaledVector(acc, dt);
       this.tip.addScaledVector(this.vel, dt);
+    }
+    // never inside the body: out of each capsule (world segment a–b, radius r)
+    // it would pass through, at its tip or half way along
+    if (this.caps) {
+      const cs = this.caps();
+      // (as it hangs when first seen, it's where its geometry was built: a
+      // body part it already lies against is that far out, not further)
+      if (!this.capK) {
+        this.capK = cs.map((C) => {
+          let m = 1;
+          for (const f of [1, 0.5]) {
+            _d4.lerpVectors(piv, this.tip, f);
+            const ab = _d5.subVectors(C.b, C.a), t = Math.max(0, Math.min(1, _d6.subVectors(_d4, C.a).dot(ab) / Math.max(1e-6, ab.lengthSq())));
+            m = Math.min(m, _d6.copy(C.a).addScaledVector(ab, t).distanceTo(_d4) / C.r);
+          }
+          return Math.max(0.4, m * 0.97);
+        });
+      }
+      for (let ci = 0; ci < cs.length; ci++) {
+        const C = cs[ci], r = C.r * this.capK[ci];
+        for (const f of [1, 0.5]) {
+          _d4.lerpVectors(piv, this.tip, f);
+          const ab = _d5.subVectors(C.b, C.a), t = Math.max(0, Math.min(1, _d6.subVectors(_d4, C.a).dot(ab) / Math.max(1e-6, ab.lengthSq())));
+          const off = _d6.copy(C.a).addScaledVector(ab, t).sub(_d4).negate(), dd = off.length();
+          if (dd >= r) continue;
+          // (pushed straight out; dead on the axis, out the way it hangs)
+          if (dd < 1e-5) off.copy(restW); else off.divideScalar(dd);
+          this.tip.addScaledVector(off, (r - dd) / f);
+          this.vel.addScaledVector(off, -Math.min(0, this.vel.dot(off)));
+        }
+      }
+      const dl = _d4.subVectors(this.tip, piv).length();
+      if (dl > 1e-5) this.tip.copy(piv).addScaledVector(_d4, L / dl);
     }
     // keep its length, and its swing off the body (limits in the parent's frame)
     const dir = _d3.subVectors(this.tip, piv).normalize();
@@ -319,9 +353,42 @@ export class CharacterModel {
   /** The swinging parts this body has (long hair, a coat's tail). */
   makeDangles() {
     const u = this.body.used || new Set(), d = this.d, out = [];
-    if (u.has(B.hairTail)) out.push(new Dangle(this.bones[B.hairTail], d.headR * 2.2, new THREE.Vector3(-0.35, -1, 0), { K: 70, g: 0.55, drag: 0.32, damp: 5, fwd: 0.12, back: 1.0, side: 0.45 }));
-    if (u.has(B.coatTail)) out.push(new Dangle(this.bones[B.coatTail], 0.62 * d.Lg, new THREE.Vector3(-0.03, -1, 0), { K: 45, g: 0.45, drag: 0.45, damp: 4, fwd: 0.05, back: 1.1, side: 0.3 }));
+    if (u.has(B.hairTail)) {
+      const h = new Dangle(this.bones[B.hairTail], d.headR * 2.2, new THREE.Vector3(-0.35, -1, 0), { K: 70, g: 0.55, drag: 0.32, damp: 5, fwd: 0.12, back: 1.0, side: 0.45 });
+      h.caps = () => this.bodyCaps(true); out.push(h);
+    }
+    if (u.has(B.coatTail)) {
+      const c = new Dangle(this.bones[B.coatTail], 0.62 * d.Lg, new THREE.Vector3(-0.03, -1, 0), { K: 45, g: 0.45, drag: 0.45, damp: 4, fwd: 0.05, back: 1.1, side: 0.3 });
+      c.caps = () => this.bodyCaps(false); out.push(c);
+    }
     return out;
+  }
+
+  /**
+   * The body as capsules in the world, for what swings against it: the
+   * back and shoulders (for hair), or the thighs and shins (for a coat's
+   * tail). Measured once a frame from the posed bones.
+   */
+  bodyCaps(upper) {
+    const C = this._caps || (this._caps = Array.from({ length: 4 }, () => ({ a: new THREE.Vector3(), b: new THREE.Vector3(), r: 0 })));
+    const d = this.d, bn = this.bones, sc = _d5.setFromMatrixScale(bn[B.hips].matrixWorld).y;
+    if (upper) {
+      const m = bn[B.chest].matrixWorld;
+      C[0].a.set(0, d.chestLen * 0.3, 0).applyMatrix4(m); C[0].b.set(0, d.chestLen - 0.03, 0).applyMatrix4(m);
+      C[0].r = d.shW * 0.6 * sc;
+      // (each shoulder, so hair over it lies on it)
+      bn[B.uarmR].getWorldPosition(C[1].a); bn[B.uarmL].getWorldPosition(C[1].b);
+      C[1].r = d.shW * 0.32 * sc;
+      return C.slice(0, 2);
+    }
+    const F = d.F || {}, Bk = d.Bk;
+    const rT = (0.088 * (F.th || 1) * Bk + 0.03) * sc, rS = (0.056 * (F.ca || 1) * Bk + 0.026) * sc;
+    let n = 0;
+    for (const [hi, ki, fi] of LEG3) {
+      bn[hi].getWorldPosition(C[n].a); bn[ki].getWorldPosition(C[n].b); C[n++].r = rT;
+      bn[ki].getWorldPosition(C[n].a); bn[fi].getWorldPosition(C[n].b); C[n++].r = rS;
+    }
+    return C;
   }
 
   /** Swing the long hair and the coat's tail (after the model and its root are posed for the frame). */
