@@ -10524,6 +10524,13 @@
         fx.burst(x1, y1, 4, { angle: ang, spread: 0.4, speed: 7, kind: "line", color: "#ffffff", z: 0.7, vz: 0, g: 0, life: 0.14, size: 0.05 });
         return;
       }
+      if (h2.element === "explosion" && h2.blast) {
+        const circ2 = h2.shape === "circle" || h2.shape === "ring";
+        const d = circ2 ? 0 : (h2.offset || 0) + range * 0.6;
+        const bx = (circ2 && hb.x != null ? hb.x : actor.x) + Math.cos(ang) * d, by = (circ2 && hb.y != null ? hb.y : actor.y) + Math.sin(ang) * d;
+        explosionFx(fx, bx, by - 0.45, { range: Math.max(1.2, range * (circ2 ? 0.8 : 0.7)), element: "explosion" }, actor, range < 2.5);
+        if (!circ2) return;
+      }
       if (vfx === "slash" || !vfx && h2.slashing) slashFx(fx, actor, a, h2, ang, range, col6, st, clip2);
       else if (vfx === "ring" || h2.shape === "circle" || h2.shape === "ring") ringFx(fx, actor, a, h2, hb, col6, E, st);
       else if (vfx === "beam" || h2.shape === "line") beamFx(fx, actor, s, a, h2, ang, range, col6, E);

@@ -776,6 +776,14 @@ const DEFAULTS = {
       fx.burst(x1, y1, 4, { angle: ang, spread: 0.4, speed: 7, kind: 'line', color: '#ffffff', z: 0.7, vz: 0, g: 0, life: 0.14, size: 0.05 });
       return;
     }
+    // a blow that goes off (Bomu's kick, punch, breath, stomp): a real blast where it lands, not just a ring
+    if (h.element === 'explosion' && h.blast) {
+      const circ = h.shape === 'circle' || h.shape === 'ring';
+      const d = circ ? 0 : (h.offset || 0) + range * 0.6;
+      const bx = (circ && hb.x != null ? hb.x : actor.x) + Math.cos(ang) * d, by = (circ && hb.y != null ? hb.y : actor.y) + Math.sin(ang) * d;
+      explosionFx(fx, bx, by - 0.45, { range: Math.max(1.2, range * (circ ? 0.8 : 0.7)), element: 'explosion' }, actor, range < 2.5);
+      if (!circ) return;
+    }
     if (vfx === 'slash' || (!vfx && h.slashing)) slashFx(fx, actor, a, h, ang, range, col, st, clip);
     else if (vfx === 'ring' || h.shape === 'circle' || h.shape === 'ring') ringFx(fx, actor, a, h, hb, col, E, st);
     else if (vfx === 'beam' || h.shape === 'line') beamFx(fx, actor, s, a, h, ang, range, col, E);
