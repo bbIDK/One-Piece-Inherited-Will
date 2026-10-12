@@ -235,13 +235,16 @@ export function generateIsland(world, def, noise, rng) {
   for (const f of def.shipyards || []) placeShipyard(world, rec, f);
 
   // towns ---------------------------------------------------------------------
+  // (on a grown island the towns grow by less — √ of it across, as many more
+  // houses as the island has more ground — and the rest is country between)
+  const tk = 1 / Math.sqrt(def._grow || 1);
   for (const town of def.towns || []) {
     const c = P(town);
     const t = generateTown(world, {
       ...town,
       x: c.x, y: c.y,
-      w: rel(town.w ?? 0.4, hw) * (Math.abs(town.w ?? 0.4) <= 1.5 ? 2 : 1),
-      h: rel(town.h ?? 0.3, hh) * (Math.abs(town.h ?? 0.3) <= 1.5 ? 2 : 1),
+      w: rel(town.w ?? 0.4, hw) * (Math.abs(town.w ?? 0.4) <= 1.5 ? 2 : 1) * tk,
+      h: rel(town.h ?? 0.3, hh) * (Math.abs(town.h ?? 0.3) <= 1.5 ? 2 : 1) * tk,
       islandId: def.id, climate: clim,
     }, rng.fork(town.id || town.name), noise);
     t.island = rec;
