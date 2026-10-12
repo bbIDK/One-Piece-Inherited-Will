@@ -660,7 +660,7 @@ export { DREAMS, FRUITS, STYLES, unlockedFruitTechniques };
  * The layout of the world a character's positions were saved in. 1: the seas
  * 1.5× the chart; 2: the seas 6× (islands 2.25×) — see POS_SCALE.
  */
-export const WORLD_VERSION = 3;
+export const WORLD_VERSION = 4;
 const OLD_SCALE = 1.5;
 
 // 3: the Grand Line twice as wide (GL_HALF 200 → 400 chart rows), its islands
@@ -699,12 +699,12 @@ export function migrateWorld(char, world, islandDefs) {
     let best = null, bd = Infinity;
     for (const d of islandDefs) {
       const ox = (d.x / POS_SCALE) * OLD_SCALE, oy = (oldY(d) / POS_SCALE) * OLD_SCALE;
-      const r = (Math.max(d.w, d.h) / SIZE_SCALE) * OLD_SCALE * 0.5;
+      const r = (Math.max(d.w, d.h) / (d._scale || SIZE_SCALE)) * OLD_SCALE * 0.5;
       const dd = Math.hypot(pt.x - ox, pt.y - oy) - r;
       if (dd < bd) { bd = dd; best = { d, ox, oy }; }
     }
     if (best && bd < 40) {
-      const k = SIZE_SCALE / OLD_SCALE;
+      const k = (best.d._scale || SIZE_SCALE) / OLD_SCALE;
       pt.x = best.d.x + (pt.x - best.ox) * k;
       pt.y = oldY(best.d) + (pt.y - best.oy) * k;
     } else {
@@ -736,9 +736,24 @@ export function migrateWorld(char, world, islandDefs) {
     fn(char.pos); fn(char.rest); fn(char.spawn);
     for (const s of char.ships || []) if (!s.zone || s.zone === 'surface') fn(s);
   };
+  // v3 → v4: some seas' islands grew (data/islands GROW) round their centres:
+  // a place on or just off one moves out with it
+  const grow = (pt) => {
+    if (!pt || typeof pt.x !== 'number' || (pt.zone && pt.zone !== 'surface')) return;
+    let best = null, bd = Infinity;
+    for (const d of islandDefs) {
+      if (!(d._grow > 1)) continue;
+      const dd = Math.hypot(world.dx(d.x, pt.x), pt.y - d.y) - Math.max(d.w, d.h) * 0.5 / d._grow;
+      if (dd < bd) { bd = dd; best = d; }
+    }
+    if (!best || bd > 150) return;
+    pt.x = world.wx(best.x + world.dx(best.x, pt.x) * best._grow);
+    pt.y = best.y + (pt.y - best.y) * best._grow;
+    if (pt.tx != null && pt.ty != null) pt.tx = undefined;
+  };
   if (ver < 2) { all(move); for (const s of char.zoneShips || []) move(s); }
-  all(relay);
-  for (const f of char.world?.fruitSpawns || []) relay(f);
+  if (ver < 3) { all(relay); for (const f of char.world?.fruitSpawns || []) relay(f); }
+  if (ver < 4) { all(grow); for (const f of char.world?.fruitSpawns || []) grow(f); }
   char.fogSurface = null; // (the chart is redrawn from the islands they know)
   char.worldVer = WORLD_VERSION;
   return true;
