@@ -14,6 +14,7 @@ import './render3d/ripples3d.js';
 import './render3d/seabed.js';
 import './render3d/rmCanals3d.js';
 import './render3d/sealife3d.js';
+import './render3d/seasurface3d.js';
 import './render3d/lamplight.js';
 import './render3d/precip3d.js';
 import './render3d/gangway3d.js';
