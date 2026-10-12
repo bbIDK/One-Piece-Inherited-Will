@@ -108525,6 +108525,7 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
       rec.spots[s.id] = { x: c.x, y: c.y, ...s, dx: void 0, dy: void 0 };
     }
     if (def.cliffRing) placeCliffRing(world, rec, def.cliffRing, P6);
+    if ((def._grow || 1) > 1 && !def.noCountry) placeCountry(world, rec, def, rng4.fork("country"), ground);
     def._clearings = rec.clearings;
     const treeKinds = def.treeKind ? [def.treeKind] : def.trees || preset.trees;
     const density = def.treeDensity ?? preset.density;
@@ -108649,6 +108650,71 @@ ${DEFORM_GLSL}`).replace("#include <project_vertex>", `{ vec4 dq = modelMatrix *
     rec.clearings.push({ x: o.x, y: o.y, r: r4 + 1.2 });
   }
   var RAISED_GROUND = new Set([T2.ROCK, T2.FOREST, T2.JUNGLE].filter((t) => t !== void 0));
+  var COUNTRY = [
+    { name: "Farmstead", parts: [["windmill", 0, 0], ["haystack", 7, 3], ["haystack", 8.5, -2.5], ["sacks", -4, 4], ["barrel", -4.5, 5.6]], field: [10, 6, 16, 11] },
+    { name: "Camp", parts: [["tent", 0, 0], ["campfire", 4, 2.5], ["crate", -3.5, 2.5], ["barrel", -3.2, 4.1], ["sacks", 2.5, -3]] },
+    { name: "Old Ruins", parts: [["ruins", 0, 0], ["pillar", 5.5, 2], ["pillar", -5, -1.5], ["ruins", -2, 6, { s: 0.6 }]] },
+    { name: "Graveyard", parts: [["grave", -2.4, 0], ["grave", 0, 0], ["grave", 2.4, 0], ["grave", -1.2, 2.8], ["grave", 1.2, 2.8], ["lantern", 4.5, -1]] },
+    { name: "Woodcutters' Camp", parts: [["tent", 0, 0, { v: 1 }], ["campfire", 3.5, 3], ["crate", -3, 3], ["crate", -4.2, 3.6]] }
+  ];
+  function placeCountry(world, rec, def, rng4, ground) {
+    const b = rec.landBox;
+    if (!b) return;
+    const g = def._grow || 1, area2 = (b.x1 - b.x0) * (b.y1 - b.y0);
+    const n = Math.max(1, Math.min(8, Math.round(area2 * 0.5 * (1 - 1 / (g * g)) / 35e3)));
+    const dist = (ax, ay, bx, by) => Math.hypot(world.dx(ax, bx), by - ay);
+    const sites = [];
+    const open = (x, y) => {
+      for (let a = 0; a < 8; a++) {
+        for (const r4 of [6, 13]) {
+          const px2 = Math.floor(world.wx(x + Math.cos(a * Math.PI / 4) * r4)), py2 = Math.floor(y + Math.sin(a * Math.PI / 4) * r4);
+          if (!world.walkable(px2, py2) || world.isBlocked(px2, py2) || MANMADE[world.type(px2, py2)]) return false;
+        }
+      }
+      return true;
+    };
+    for (let tries = 0; tries < 400 && sites.length < n; tries++) {
+      const x = world.wx(b.x0 + rng4.next() * (b.x1 - b.x0)), y = b.y0 + rng4.next() * (b.y1 - b.y0);
+      if (!open(x, y)) continue;
+      if (rec.towns.some((t) => dist(x, y, t.x, t.y) < Math.max(t.w || 30, t.h || 30) * 0.6 + 28)) continue;
+      if ((rec.landmarks || []).some((o) => dist(x, y, o.x, o.y) < 30)) continue;
+      if ((rec.docks || []).some((d) => d.land && dist(x, y, d.land.x, d.land.y) < 35)) continue;
+      if (sites.some((s) => dist(x, y, s.x, s.y) < 70)) continue;
+      let wet = false;
+      for (let a = 0; a < 12 && !wet; a++) wet = world.isLiquid(Math.floor(world.wx(x + Math.cos(a * Math.PI / 6) * 22)), Math.floor(y + Math.sin(a * Math.PI / 6) * 22));
+      if (wet) continue;
+      sites.push({ x, y });
+    }
+    rec.country = [];
+    const first = Math.floor(rng4.next() * COUNTRY.length);
+    sites.forEach((c, i) => {
+      const S6 = COUNTRY[(first + i) % COUNTRY.length];
+      const yaw = rng4.next() * Math.PI * 2, cs = Math.cos(yaw), sn = Math.sin(yaw);
+      const at4 = (dx, dy) => ({ x: world.wx(c.x + dx * cs - dy * sn), y: c.y + dx * sn + dy * cs });
+      if (S6.field) {
+        const [fx, fy, fw, fh] = S6.field;
+        for (let v = 0; v < fh; v++) {
+          for (let u = 0; u < fw; u++) {
+            const p = at4(fx + u, fy + v - fh / 2), tx = Math.floor(p.x), ty = Math.floor(p.y);
+            const t = world.type(tx, ty);
+            if (world.walkable(tx, ty) && !world.isBlocked(tx, ty) && !MANMADE[t] && !OVERLAY[t]) world.setType(tx, ty, T2.FARM);
+          }
+        }
+      }
+      for (const [kind, dx, dy, opt] of S6.parts) {
+        const p = at4(dx, dy);
+        const o = { kind, x: p.x, y: p.y, yaw: yaw + (kind === "tent" ? Math.PI : 0), block: true, country: S6.name, ...opt };
+        settleLandmark(world, rec, o, ground);
+        placeObject(world, o);
+        rec.landmarks.push(o);
+      }
+      const town = rec.towns.slice().sort((u, w) => dist(c.x, c.y, u.plaza.x, u.plaza.y) - dist(c.x, c.y, w.plaza.x, w.plaza.y))[0];
+      const gate = at4(0, 9);
+      if (town) connectRoad(world, gate.x, gate.y, town.plaza.x, town.plaza.y, T2.DIRT);
+      rec.clearings.push({ x: c.x, y: c.y, r: 14 });
+      rec.country.push({ name: S6.name, x: c.x, y: c.y });
+    });
+  }
   function coarseField(fn, x0, y0, w, h2) {
     const GW = (w >> 1) + 2, GH = (h2 >> 1) + 2;
     const g = new Float32Array(GW * GH).fill(NaN);
