@@ -414,7 +414,23 @@ function draw(v, pr, r, Y, sc) {
       }
       break;
     }
-    case 'smokefist':
+    case 'smokefist': {
+      // White Blow: a great fist of smoke punching out ahead — knuckles first, its
+      // surface boiling with billows — and the arm of smoke it trails behind it
+      const R = 0.42 * s, roll = Math.sin(t * 6 + seed) * 0.2;
+      putAlong(v.solids.fists, X, Y, Z, dx, 0, dz, R, R, roll, col('#e8edf1'), OK.PLAIN, 0.15, seed, 0);
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * TAU + t * 3, rr = R * 0.75;
+        v.sprites.put(SK.SMOKE, X - dx * R * 0.3 + Math.cos(a) * rr * -dz, Y + Math.sin(a) * rr, Z - dz * R * 0.3 + Math.cos(a) * rr * dx, R * 0.75, col('#eceff1'), 0.85, WHITE, 0, i + t, seed + i, 0.2);
+      }
+      const m = Math.min(r.n, 12);
+      for (let i = m - 1; i >= 1; i--) {
+        r.back(i, P);
+        const q = i / Math.max(1, m - 1);
+        v.sprites.put(SK.SMOKE, v.world.dx(v.ox, P[0]), P[2], P[1] - v.oy, (0.5 - q * 0.2) * s, col('#e3e8ec'), 0.9 - q * 0.5, WHITE, 0, i, seed + i, 0.15 + q * 0.4);
+      }
+      break;
+    }
     case 'smokesnake': {
       const m = Math.min(r.n, 10);
       for (let i = m - 1; i >= 0; i--) {

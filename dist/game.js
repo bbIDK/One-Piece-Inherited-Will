@@ -88337,6 +88337,10 @@ vec3 paneView(vec3 dir, float night) {
       // two tones (the lit side lifted toward white a little, so dark smoke still reads as billows)
       vec3 shade = cloud ? vec3(0.55, 0.55, 0.66) : dust ? vec3(0.74, 0.7, 0.68) : vec3(0.7, 0.72, 0.82);
       vec3 hi = cloud ? vCol.rgb * 1.9 + 0.1 : vCol.rgb * 1.18 + 0.08;
+      // (white smoke \u2014 Smoker's, steam \u2014 would wash out to flat discs: its shadow side cooler and
+      // deeper, so each billow keeps its form)
+      float pale = cloud ? 0.0 : smoothstep(0.75, 0.95, dot(vCol.rgb, vec3(0.3, 0.59, 0.11)));
+      shade = mix(shade, vec3(0.56, 0.6, 0.72), pale);
       c = mix(vCol.rgb * shade, hi, lit);
       a = m * (cloud ? 0.95 : dust ? 0.6 : 0.78);
       // darkness (deep, strongly coloured smoke \u2014 the Yami Yami's): not a
@@ -91644,7 +91648,21 @@ vec3 paneView(vec3 dir, float night) {
         }
         break;
       }
-      case "smokefist":
+      case "smokefist": {
+        const R5 = 0.42 * s, roll2 = Math.sin(t * 6 + seed) * 0.2;
+        putAlong(v.solids.fists, X2, Y2, Z2, dx, 0, dz, R5, R5, roll2, col5("#e8edf1"), OK2.PLAIN, 0.15, seed, 0);
+        for (let i = 0; i < 7; i++) {
+          const a = i / 7 * TAU15 + t * 3, rr = R5 * 0.75;
+          v.sprites.put(SK2.SMOKE, X2 - dx * R5 * 0.3 + Math.cos(a) * rr * -dz, Y2 + Math.sin(a) * rr, Z2 - dz * R5 * 0.3 + Math.cos(a) * rr * dx, R5 * 0.75, col5("#eceff1"), 0.85, WHITE8, 0, i + t, seed + i, 0.2);
+        }
+        const m = Math.min(r4.n, 12);
+        for (let i = m - 1; i >= 1; i--) {
+          r4.back(i, P3);
+          const q2 = i / Math.max(1, m - 1);
+          v.sprites.put(SK2.SMOKE, v.world.dx(v.ox, P3[0]), P3[2], P3[1] - v.oy, (0.5 - q2 * 0.2) * s, col5("#e3e8ec"), 0.9 - q2 * 0.5, WHITE8, 0, i, seed + i, 0.15 + q2 * 0.4);
+        }
+        break;
+      }
       case "smokesnake": {
         const m = Math.min(r4.n, 10);
         for (let i = m - 1; i >= 0; i--) {

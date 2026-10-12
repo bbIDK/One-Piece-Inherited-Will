@@ -158,6 +158,10 @@ const FS = /* glsl */`
       // two tones (the lit side lifted toward white a little, so dark smoke still reads as billows)
       vec3 shade = cloud ? vec3(0.55, 0.55, 0.66) : dust ? vec3(0.74, 0.7, 0.68) : vec3(0.7, 0.72, 0.82);
       vec3 hi = cloud ? vCol.rgb * 1.9 + 0.1 : vCol.rgb * 1.18 + 0.08;
+      // (white smoke — Smoker's, steam — would wash out to flat discs: its shadow side cooler and
+      // deeper, so each billow keeps its form)
+      float pale = cloud ? 0.0 : smoothstep(0.75, 0.95, dot(vCol.rgb, vec3(0.3, 0.59, 0.11)));
+      shade = mix(shade, vec3(0.56, 0.6, 0.72), pale);
       c = mix(vCol.rgb * shade, hi, lit);
       a = m * (cloud ? 0.95 : dust ? 0.6 : 0.78);
       // darkness (deep, strongly coloured smoke — the Yami Yami's): not a
